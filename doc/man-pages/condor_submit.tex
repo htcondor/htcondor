@@ -158,15 +158,81 @@ tool \Prog{globus\_url\_copy} understands.
 
 \item[arguments = $<$argument\_list$>$]
 \index{submit commands!arguments}
+\label{man-condor-submit-arguments}
 List of arguments to be supplied
 to the program on the command line.   In the Java Universe, the first
 argument must be the name of the class containing \Code{main}.
-Arguments are delimited (separated) by space characters.
-Jobs submitted for the grid universe will parse arguments
-differently 
-due to the differences between the ClassAd representation in Condor and 
-the Resource Specification Language (RSL) used in Globus.
-See section~\ref{sec:CondorG-Submit-Args} for further details.
+
+There are two permissible formats for specifying arguments.  The new
+syntax supports uniform quoting of spaces within arguments; the old
+syntax supports spaces in arguments only in special circumstances.
+
+In the old syntax, arguments are delimited (separated) by space
+characters.  Double-quotes must be escaped with a backslash (i.e. put
+a backslash in front of each double-quote).
+
+Further interpretation of the argument string differs depending on the
+universe and operating system.  On Windows, your argument string is
+simply passed verbatim (other than the backslash in front of
+double-quotes) to the windows application.  Most Windows applications
+will allow you to put spaces within an argument value by surrounding
+the argument with double-quotes.  In the grid universe, arguments are
+passed verbatim (other than the backslash in front of double-quotes)
+into the RSL string used by Globus.  See
+section~\ref{sec:CondorG-Submit-Args} for further details.  In all
+other cases, there is no further interpretation of the arguments.
+
+Example:
+
+\begin{verbatim}
+arguments = one \"two\" 'three'
+\end{verbatim}
+
+Produces in unix vanilla universe:
+
+\begin{verbatim}
+argument 1: one
+argument 2: "two"
+argument 3: 'three'
+\end{verbatim}
+
+Here are the rules for using the new syntax:
+
+\begin{enumerate}
+
+\item Put double quotes around the entire argument string.  This
+distinguishes the new syntax from the old, because these double-quotes
+are not escaped with backslashes, as required in the old syntax.  Any
+literal double-quotes within the string must be escaped by repeating
+them.
+
+\item Use whitespace (e.g. spaces or tabs) to separate arguments.
+
+\item To put any whitespace in an argument, you must surround the
+space and as much of the surrounding argument as you like with
+single-quotes.
+
+\item To insert a literal single-quote, you must repeat it anywhere
+inside of a single-quoted section.
+
+\end{enumerate}
+
+Example:
+
+\begin{verbatim}
+arguments = "one ""two"" 'spacey ''quoted'' argument'"
+\end{verbatim}
+
+Produces:
+
+\begin{verbatim}
+argument 1: one
+argument 2: "two"
+argument 3: spacey 'quoted' argument
+\end{verbatim}
+
+Notice that in the new syntax, backslash has no special meaning.  This
+is for the convenience of Windows users.
 
 %%%%%%%%%%%%%%%%%%%
 %% initialdir
@@ -780,11 +846,6 @@ will skip this step.  Defaults to \Expr{True}.
 shell environment variables at the time of job submission into the job
 ClassAd. The job will therefore execute with the same set of environment
 variables that the user had at submit time. Defaults to \Expr{False}.
-%You must be careful when using this feature, since the maximum allowed
-%size of the environment in Condor is 10240 characters.  
-%If your environment is larger than that, Condor will not allow you to
-%submit your job, and you will have to use the ``Environment'' setting
-%described below, instead.
 
 %%%%%%%%%%%%%%%%%%%
 %% hold
@@ -800,23 +861,85 @@ Defaults to false.
 %% environment
 %%%%%%%%%%%%%%%%%%%
 
-\item[environment = $<$parameter\_list$>$] List of environment variables
+\item[environment = $<$parameter\_list$>$] List of environment
 \index{submit commands!environment}
 \index{environment variables!setting, for a job}
-of the form :
+\label{man-condor-submit-environment}
+variables.
+
+There are two different formats for specifying the environment
+variables: the old format and the new format.  The old format is
+retained for backward-compatibility.  It suffers from a
+platform-dependent syntax and the inability to insert some special
+characters into the environment.
+
+The new syntax for specifying environment values is this:
+
+\begin{enumerate}
+
+\item Put double quotes around the entire argument string.  This
+distinguishes the new syntax from the old, which does not have
+double-quotes around it.  Any literal double-quotes within the string
+must be escaped by repeating them.
+
+\item Each environment entry has the form
+
 \begin{verbatim}
-        <parameter>=<value>
+        <name>=<value>
 \end{verbatim}
-Multiple environment variables can be specified by separating them with a
-semicolon (;) when submitting from a Unix platform.
-Multiple environment variables can be specified by separating them with a
-vertical bar (\Bar) when submitting from a Windows platform.
-These environment variables will be placed (as given) into the
-job's environment before execution. The length of all characters
-specified in the environment is currently limited to 10240 characters.  
-Note that spaces are accepted, but rarely desired,
-characters within parameter names and values.
-Place spaces within the parameter list only if required.
+
+\item Use whitespace (e.g. spaces or tabs) to separate environment entries.
+
+\item To put any whitespace in an environment entry, you must surround
+the space and as much of the surrounding entry as you like with
+single-quotes.
+
+\item To insert a literal single-quote, you must repeat it anywhere
+inside of a single-quoted section.
+
+\end{enumerate}
+
+Example:
+
+\begin{verbatim}
+environment = "one=1 two=""2"" three='spacey ''quoted'' value'"
+\end{verbatim}
+
+Produces the following environment entries:
+
+\begin{verbatim}
+one=1
+two="2"
+three=spacey 'quoted' value
+\end{verbatim}
+
+In the old environment syntax, you do not put double-quotes around the
+environment specification.  Each environment entry is still of the form
+\begin{verbatim}
+        <name>=<value>
+\end{verbatim}
+Under unix, list multiple environment entries by separating them with
+a semicolon (;).  Under Windows, separate multiple entries with a
+vertical bar (\Bar).  There is no way to insert a literal semicolon
+under unix or a literal vertical bar under Windows.  Note that spaces
+are accepted, but rarely desired, characters within parameter names
+and values, because they are treated as literal characters, not
+separators or ignored whitespace.  Place spaces within the parameter
+list only if required.
+
+Example:
+
+\begin{verbatim}
+environment = one=1;two=2;three="quotes have no 'special' meaning"
+\end{verbatim}
+
+Produces the following when submitted under unix:
+
+\begin{verbatim}
+one=1
+two=2
+three="quotes have no 'special' meaning"
+\end{verbatim}
 
 %%%%%%%%%%%%%%%%%%%
 %% log
