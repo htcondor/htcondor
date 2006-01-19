@@ -810,9 +810,11 @@ accept_request_claim( Resource* rip )
 
 		// Figure out the hostname of our client.
 	if( ! (tmp = sin_to_hostname(sock->endpoint(), NULL)) ) {
+		char *sinful = sin_to_string(sock->endpoint());
+		char *ip = string_to_ipstr(sinful);
 		rip->dprintf( D_FULLDEBUG,
-					  "Can't find hostname of client machine\n" );
-		rip->r_cur->client()->sethost( sin_to_string(sock->endpoint()) );
+					  "Can't find hostname of client machine %s\n", ip );
+		rip->r_cur->client()->sethost( ip );
 	} else {
 		client_host = strdup( tmp );
 			// Try to make sure we've got a fully-qualified hostname.

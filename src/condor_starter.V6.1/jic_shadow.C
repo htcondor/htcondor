@@ -1235,7 +1235,12 @@ JICShadow::sameUidDomain( void )
 		return true;
 	}
 	dprintf( D_ALWAYS, "ERROR: the submitting host claims to be in our "
-			 "UidDomain (%s), yet its hostname (%s) does not match\n",
+			 "UidDomain (%s), yet its hostname (%s) does not match.  "
+			 "If the above hostname is actually an IP address, Condor "
+			 "could not perform a reverse DNS lookup to convert the IP "
+			 "back into a name.  To solve this problem, you can either "
+			 "correctly configure DNS to allow the reverse lookup, or you "
+			 "can enable TRUST_UID_DOMAIN in your condor configuration.\n",
 			 uid_domain, shadow->name() );
 
 		// TODO: maybe we should be more harsh in this case than just
