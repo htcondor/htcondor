@@ -45,12 +45,12 @@ extern CStarter *Starter;
 ReliSock *syscall_sock = NULL;
 
 
-JICShadow::JICShadow( char* shadow_sinful ) : JobInfoCommunicator()
+JICShadow::JICShadow( char* shadow_name ) : JobInfoCommunicator()
 {
-	if( ! shadow_sinful ) {
-		EXCEPT( "Trying to instantiate JICShadow with no shadow address!" );
+	if( ! shadow_name ) {
+		EXCEPT( "Trying to instantiate JICShadow with no shadow name!" );
 	}
-	shadow_addr = strdup( shadow_sinful );
+	m_shadow_name = strdup( shadow_name );
 
 	shadow = NULL;
 	shadow_version = NULL;
@@ -97,8 +97,8 @@ JICShadow::~JICShadow()
 	if( filetrans ) {
 		delete filetrans;
 	}
-	if( shadow_addr ) {
-		free( shadow_addr );
+	if( m_shadow_name ) {
+		free( m_shadow_name );
 	}
 	if( uid_domain ) {
 		free( uid_domain );
@@ -132,7 +132,7 @@ JICShadow::init( void )
 	if( shadow ) {
 		delete shadow;
 	}
-	shadow = new DCShadow( shadow_addr );
+	shadow = new DCShadow( m_shadow_name );
 	ASSERT( shadow );
 
 		// Now, initalize our version information about the shadow
@@ -458,8 +458,22 @@ JICShadow::reconnect( ReliSock* s, ClassAd* ad )
 	delete shadow;
 	shadow = new DCShadow;
 	initShadowInfo( ad );	// this dprintf's D_ALWAYS for us
-	free( shadow_addr );
-	shadow_addr = strdup( shadow->addr() );
+	free( m_shadow_name );
+		/*
+		  normally, it'd be nice to have a hostname here for
+		  dprintf(), etc.  unfortunately, because of how the
+		  information flows, we don't know the real hostname at this
+		  point.  the reconnect command classad only contains the
+		  ip/port (sinful string), not the shadow's hostname.  so, if
+		  we want a hostname here, we'd have to do a reverse DNS
+		  lookup.  someday, we might do that, but admins have
+		  (rightfully) complained about the load Condor puts on DNS
+		  servers, and since we don't *really* need this to be a
+		  hostname anymore (we've already decided what UID/FS domain
+		  to spawn the starter as, so we don't need it for that),
+		  we'll just use the sinful string as the shadow's name...
+		*/
+	m_shadow_name = strdup( shadow->addr() );
 
 		// tell our FileTransfer object to point to the new 
 		// shadow using the transsock and key in the ad from the
