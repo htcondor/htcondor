@@ -1,3 +1,8 @@
+01/23/06 V6_7-cron-4-{root,branch}
+   This branch will be used to merge my work from V6_7-cron-3-branch but
+   remove all the ErrorAction attribute code. Created from the
+   V6_7-branch of V6_7_CODE.
+
 01/19/06 V6_7_15-branch
   Branch for V6_7_15 release.
 
