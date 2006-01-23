@@ -1228,13 +1228,11 @@ server, shadow, and starter, none of which use DaemonCore yet).
   given daemon's ClassAd.
   Frequently used to add attributes to machines so that the
   machines can discriminate between other machines in a job's 
-  \Opt{rank}
-  and \Opt{requirements}.
+  \Opt{rank} and \Opt{requirements}.
 
-  These settings are synonyms; you can use them interchangeably or use both.
-  For example, \MacroNI{STARTD\_ATTRS} and
-  \MacroNI{STARTD\_EXPRS} are interchangeable.
-  
+  \MacroNI{SUBSYS\_EXPRS} is a historic setting that functions identically to
+  \MacroNI{SUBSYS\_ATTRS}. Use \MacroNI{SUBSYS\_ATTRS}.
+
   \Note The \Condor{kbdd} does not send
   ClassAds now, so this entry does not affect it.  The
   \Condor{startd}, \Condor{schedd}, \Condor{master}, and
@@ -2188,6 +2186,10 @@ Configuring The Startd Policy.
 \item[\Macro{START}] \label{param:Start}  A boolean expression
   that, when \Expr{True}, indicates that the machine is willing
   to start running a Condor job.
+  \MacroNI{START} is considered when the \Condor{negotiator} daemon
+  is considering evicting the job to replace it with one that will
+  generate a better rank for the \Condor{startd} daemon,
+  or a user with a higher priority.
 
 \item[\Macro{SUSPEND}] \label{param:Suspend}  A boolean expression
    that, when \Expr{True}, causes Condor to suspend running
@@ -2196,9 +2198,8 @@ Configuring The Startd Policy.
    progress, and Condor does not generate a load on the machine.
 
 \item[\Macro{PREEMPT}] \label{param:Preempt}   A boolean expression
-   that, when \Expr{True}, causes Condor to not continue
-   running a currently suspended job in favor of running a different one 
-   (with higher priority or better rank).
+   that, when \Expr{True}, causes Condor to stop a currently
+   running job.
 
 \item[\Macro{CONTINUE}] \label{param:Continue}  A boolean expression
    that, when \Expr{True}, causes Condor to continue the execution

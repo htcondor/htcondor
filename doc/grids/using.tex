@@ -180,7 +180,7 @@ globusscheduler = machinename[:port]/jobmanagername[:X.509 distinguished name]
 \end{verbatim}
 \normalsize
 The portions of this syntax specification enclosed within
-square brackets (\Lbr and \Rbr) are optional.
+square brackets (\Lbr\ and \Rbr) are optional.
 On a machine where the jobmanager is listening on a nonstandard port,
 include the port number.
 The \verb@jobmanagername@
@@ -497,7 +497,7 @@ This value is placed on two lines for
 formatting purposes, but is all on a single line within
 a submit description file.
 The portion of this syntax specification enclosed within
-square brackets (\Lbr and \Rbr) is optional.
+square brackets (\Lbr\ and \Rbr) is optional.
 The substring \verb@XXX@ within the last part of the value
 is replaced by one of five strings that (like for 
 \SubmitCmd{gt2}) identifies and selects the correct service to perform.
@@ -556,7 +556,8 @@ the submit description file is much the same as for
 \SubmitCmd{grid\_type} \SubmitCmd{gt2} or \SubmitCmd{gt3} jobs.
 \index{submit commands!globusscheduler}
 The \SubmitCmd{globusscheduler} command is still required,
-and is given in the form of a URL; the syntax follows the form:
+and is given in the form of a URL. 
+The syntax follows the form:
 \footnotesize
 \begin{verbatim}
 globusscheduler = [https://]hostname[:port][/wsrf/services/ManagedJobFactoryService]
@@ -570,7 +571,7 @@ globusscheduler = [https://]IPaddress[:port][/wsrf/services/ManagedJobFactorySer
 \end{verbatim}
 \normalsize
 The portions of this syntax specification enclosed within
-square brackets (\Lbr and \Rbr) is optional.
+square brackets (\Lbr\ and \Rbr) are optional.
 
 \index{submit commands!jobmanager\_type}
 A new submit command called \SubmitCmd{jobmanager\_type}

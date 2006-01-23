@@ -5,6 +5,7 @@
 
 \SynProg{\Condor{rm}}
 \ToolDebugOption
+\oOpt{-forcex}
 \ToolLocate
 \ToolJobs
 $|$ \OptArg{-constraint}{expression} \Dots
@@ -28,18 +29,29 @@ described below.
 For any given job, only the owner of the job or one of the queue super users
 (defined by the \MacroNI{QUEUE\_SUPER\_USERS} macro) can remove the job.
 
+When removing a grid job, the job may remain in
+the ``X'' state for a very long time. 
+This is normal, as Condor is attempting to communicate with the
+remote scheduling system, 
+ensuring that the job has been properly cleaned up.
+If it takes too long, or in rare circumstances is never removed,
+the job may be forced to
+leave the job queue by using the \Opt{-forcex} option.
+This forcibly removes jobs that are in the ``X'' state without attempting
+to finish any clean up at the remote scheduler.
+
 \begin{Options}
 	\ToolArgsBaseDesc
 	\ToolLocateDesc
         \ToolDebugDesc
+	\OptItem{\Opt{-forcex}}{Force the immediate local removal of
+	jobs in the 'X' state (only affects jobs already being removed)}
 	\OptItem{\Arg{cluster}}{Remove all jobs in the specified cluster}
 	\OptItem{\Arg{cluster.process}}{Remove the specific job in the cluster}
 	\OptItem{\Arg{user}}{Remove jobs belonging to specified user}
 	\OptItem{\OptArg{-constraint}{expression}} {Remove all jobs which match
 	                the job ClassAd expression constraint}
         \OptItem{\Opt{-all}}{Remove all the jobs in the queue}
-	\OptItem{\Opt{-forcex}}{Force the immediate local removal of
-	jobs in the 'X' state (only affects jobs already being removed)}
 \end{Options}
 
 \GenRem

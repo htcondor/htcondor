@@ -498,7 +498,7 @@ failed.
 on was unavailable, but is now available.
 
 \noindent\Bold{Event Number:} 020 \\
-\Bold{Event Name:} Globus resource down \\
+\Bold{Event Name:} Detected Down Globus Resource \\
 \Bold{Event Description:} The Globus resource that a job wants to run
 on has become unavailable. 
 
@@ -523,6 +523,21 @@ contact before the job lease expired.
 \Bold{Event Description:} The \Condor{shadow} and \Condor{starter}
 (which communicate while the job runs) were unable to resume
 contact before the job lease expired.
+
+\noindent\Bold{Event Number:} 025 \\
+\Bold{Event Name:} Grid Resource Back Up \\
+\Bold{Event Description:} A grid resource that was previously
+unavailable is now available.
+
+\noindent\Bold{Event Number:} 026 \\
+\Bold{Event Name:} Detected Down Grid Resource \\
+\Bold{Event Description:} The grid resource that a job is to
+run on is unavailable.
+
+\noindent\Bold{Event Number:} 027 \\
+\Bold{Event Name:} Job submitted to grid resource \\
+\Bold{Event Description:} A job has been submitted,
+and is under the auspices of the grid resource.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%e
 \subsection{\label{sec:job-completion}Job Completion}

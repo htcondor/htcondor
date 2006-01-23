@@ -176,46 +176,40 @@ For convenience, the specific entries of
 \SubmitCmd{globus\_rsl}, 
 \SubmitCmd{globus\_xml}, and
 \SubmitCmd{globus\_scheduler}
-can be specified as \SubmitCmd{remote\_} commands
-using the standard submit file syntax and without the
-leading '+'.  So instead of 
+may be specified as \SubmitCmd{remote\_} commands
+without the leading '+'. 
+Instead of 
 \footnotesize
 \begin{verbatim}
 +remote_universe = 5
 \end{verbatim}
 \normalsize
-you can say
+
+the submit description file command may appear as
+
 \footnotesize
 \begin{verbatim}
 remote_universe = vanilla
 \end{verbatim}
 \normalsize
-.
-Similarly, instead of
+
+Similarly, the command
 \footnotesize
 \begin{verbatim}
 +remote_remote_schedd = "schedd.example.com"
 \end{verbatim}
 \normalsize
-you can write
+
+may be given as
+
 \footnotesize
 \begin{verbatim}
 remote_remote_schedd = schedd.example.com
 \end{verbatim}
 \normalsize
-.
-This behavior only works for the specific entries 
-\SubmitCmd{universe}, 
-\SubmitCmd{remote\_schedd}, 
-\SubmitCmd{remote\_pool}, 
-\SubmitCmd{globus\_rsl}, 
-\SubmitCmd{globus\_xml}, and
-\SubmitCmd{globus\_scheduler}.
-For all other entries, you will need to use the '+' syntax,
-remembering to place strings in quotation marks.
 
 % why we need +remote_ShouldTransferFiles, etc.
-For this particular example,
+For the given example,
 the job is to be run as a \SubmitCmd{vanilla} 
 \SubmitCmd{universe} job at the remote pool.
 The (remote pool's) \Condor{schedd} daemon is likely to
@@ -260,7 +254,9 @@ grid      & 9 & \\
  & grid\_type = condor & works well \\
  & grid\_type = gt2  & untested \\
  & grid\_type = gt3 & untested \\
- & grid\_type = gt4 & untested \\ \hline
+ & grid\_type = gt4 & untested \\ 
+ & grid\_type = nordugrid & untested \\ 
+ & grid\_type = unicore & untested \\ \hline
 java & 10 & untested \\ \hline
 parallel & 11 & untested \\ \hline
 local & 12 & works well \\ \hline
@@ -284,7 +280,7 @@ remote_pool = machine1.example.com
 \end{verbatim}
 \normalsize
 If the remote \Condor{collector} is not listening on the standard port
-(9618), then the port it is listening on needs to be specified, like so:
+(9618), then the port it \emph{is} listening on needs to be specified:
 \footnotesize
 \begin{verbatim}
 remote_pool = machine1.example.com:12345

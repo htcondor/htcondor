@@ -1,263 +1,44 @@
-% We should change this label name, but we need to ensure all references
-% to it are updated as well.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Grid-Matchmaking}Matchmaking in the Grid Universe}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{universe!Globus}
-\index{Globus}
 \index{matchmaking!on the Grid}
 \index{grid computing!matchmaking}
 
-In it simplest usage, the grid universe allows users to specify the single
-grid site they wish to submit their job to.
-Often this is sufficient: perhaps a user knows exactly which
+In a simple usage, the grid universe allows users to specify a single
+grid site as a destination for jobs.
+This is sufficient when a user knows exactly which
 grid site they wish to use,
 or a higher-level resource broker
 (such as the European Data Grid's resource broker)
 has decided which grid site should be used.
-But when users have a variety of sites to choose from and there
-is no other resource broker to make the decision, the grid universe can use
-matchmaking to decide which grid site a job should run on. 
 
-Please note that the grid universe's matchmaking ability is relatively
-new. Work is being done to improve it and make it easier to use. For
-now, please expect some rough edges. 
+When a user has a variety of grid sites to choose from,
+Condor allows matchmaking of grid universe jobs
+to decide which grid resource a job should run on. 
+Please note that this form of matchmaking is relatively new.
+There are some rough edges as continual improvement occurs.
 
-The grid universe uses the same matchmaking mechanism that the other
-Condor universes use: the
-\Condor{collector} and \Condor{negotiator} daemons, which are described in
-Section~\ref{sec:Condor-Daemons}. 
-
-There are two differences in how matchmaking is done in the grid
-universe, versus the other universes.
-First,
-advertise grid sites that are available so that they are
-known and considered during the matchmaking process.
-This is accomplished by writing ClassAd attributes and
-using \Condor{advertise} to place the attributes into the
-ClassAd used in matchmaking.
-The second change is to the
-submit description file.
-This file needs to specify requirements that describe what
-type of grid site can be used, instead of identifying a specific grid site.
-
-% Karen had editted to this point.
-
-In the following sections, examples are given for a GT2 grid-type job and
-resource. A couple minor changes may be required for other grid-types.
-Primarily, an attribute other than \AdAttr{globusscheduler} may have to be
-used.
+To facilitate Condor's matching of jobs with grid resources,
+both the jobs and the grid resources are involved.
+The job's submit description file provides all commands
+needed to make the
+job work on a matched grid resource.
+The grid resource identifies itself to Condor by advertising
+a ClassAd.
+This ClassAd specifies all necessary attributes, such that Condor
+can properly make matches.
+The grid resource identification is accomplished by 
+using \Condor{advertise} to send a ClassAd representing the
+grid resource, which is then used by Condor to make matches.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Advertising grid sites to Condor}
+\subsubsection{Job Submission}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Each grid site that is available for matching purposes needs to be
-advertised to the \Condor{collector}. Normally in Condor this is done
-with the \Condor{startd} daemon, and you do not normally need to be
-aware of the contents of this advertisement. Currently, there is no
-equivalent to the \Condor{startd} daemon for advertising grid sites,
-so you need have a deeper understanding.
-
-To properly advertise a grid site, a ClassAd needs to be sent
-periodically to the \Condor{collector}. A ClassAd is a list of
-attributes and values that describe a job, a machine, or a grid
-site. ClassAds are briefly described in
-Section~\ref{sec:matchmaking-with-classads} and some of the common
-attributes of machine ClassAds are described in
-Section~\ref{user-man-machad}.
-
-When you advertise a grid site, it looks very similar to a ClassAd for
-a machine. In fact, the \Condor{collector} will believe it is a
-machine, but with a different set of attributes. 
-
-To advertise a grid site, you first need to describe the site in a
-file. Here is a sample ClassAd that describes a grid site:
-
-\footnotesize
-\begin{verbatim}
-# This is a comment
-MyType                = "Machine"
-TargetType            = "Job"
-Name                  = "Example1_Gatekeeper"
-Machine               = "Example1_Gatekeeper"
-gatekeeper_url        = "grid.example.com/jobmanager"
-Requirements          = (CurMatches < 10) && (TARGET.JobUniverse == 9) && (TARGET.JobGridType =?= ``gt2'')
-Rank                  = 0.000000
-CurrentRank           = 0.000000
-WantAdRevaluate       = True
-UpdateSequenceNumber  = 4
-CurMatches            = 0
-\end{verbatim}
-\normalsize
-
-Let's look at each line:
-
-\begin{verbatim}
-# This is a comment
-\end{verbatim}
-
-Your file can have comments that begin with the hash mark (\#). 
-
-\begin{verbatim}
-MyType                = "Machine"
-\end{verbatim}
-
-Your grid site is pretending to be a single machine, for the purpose
-of matchmaking. \Attr{MyType} is an attribute that the \Condor{negotiator}
-daemon
-will expect to be a string. Strings must be surrounded by double-quote
-marks, as in this example. You may have surprising, unintuitive errors
-if they are not quoted. You will always want \Attr{MyType} to be
-``Machine''. 
-
-\begin{verbatim}
-TargetType            = "Job"
-\end{verbatim}
-
-This is an attribute that says the grid site (machine) wants to be
-matched with a job. Leave this as it is. 
-
-
-\footnotesize
-\begin{verbatim}
-Name                  = "Example1_Gatekeeper"
-\end{verbatim}
-\normalsize
-
-You will want a unique name for each grid site. Any name is fine, as long as
-it is quoted.
-
-\footnotesize
-\begin{verbatim}
-Machine               = "Example1_Gatekeeper"
-\end{verbatim}
-\normalsize
-
-Machine is just like Name. Normally in Condor, the Machine and Name
-may be slightly different if you have multiple CPUs. For grid
-matchmaking, they should probably be the same.
-
-\footnotesize
-\begin{verbatim}
-gatekeeper_url        = "grid.example.com/jobmanager"
-\end{verbatim}
-\normalsize
-
-This is the Globus gatekeeper contact string for your grid site. It is
-probably a machine name followed by a slash followed by the name of
-the jobmanager. If you have different job managers, you can only
-specify one per ClassAd. 
-
-\begin{verbatim}
-UpdateSequenceNumber  = 4
-\end{verbatim}
-
-UpdateSequenceNumber is a positive number that must increase each time
-you advertise a grid site. Normally you advertise your grid site
-every five minutes. The \Condor{collector} daemon will discard a grid site's
-ClassAd after 15 minutes if there have been no updates. A good number
-to set this to is the current time in seconds (the epoch, as given by
-the C \Procedure{time} function call), but if you are worried about your clock
-running backward, you can set it to whatever you like. If ClassAds are
-received with a sequence number older than the last ClassAd, they are
-ignored. 
-
-\begin{verbatim}
-CurMatches            = 0
-\end{verbatim}
-
-This number is incremented each time a match is made for this grid
-site. Unlike a normal machine ClassAd that can only be matched against
-once, grid site advertisements can be matched against many time. 
-
-You will probably want to set this number to be the number of grid
-jobs that you have running on your site, and keep it updated each time
-you submit a new ClassAd. If you do not specify CurMatches, Condor
-will assume it is 0.
-
-Condor will increment this number every time it makes a match against
-a grid site.
-
-\footnotesize
-\begin{verbatim}
-Requirements          = (CurMatches < 10) && (TARGET.JobUniverse == 9) && (TARGET.JobGridType =?= ``gt2'')
-\end{verbatim}
-\normalsize
-
-These are the requirements that the grid site insists must be true
-before it will accept a job. These could refer to features of the
-job's ClassAd. In this case, we will take any grid universe job that's
-of grid-type gt2, as
-long we have less than 10 matches currently. This will ensure that
-Condor will only run 10 jobs at your site---assuming that you keep
-CurMatches up to date when jobs finish. Of course, you can edit this
-statement to have different requirements. For example, if you want to
-accept all jobs, you can have \ShortExpr{Requirements = True}.
-
-\footnotesize
-\begin{verbatim}
-Rank                  = 0.000000
-CurrentRank           = 0.000000
-\end{verbatim}
-\normalsize
-
-This is a numerical ranking that will be assigned to a job. Right now
-it is not used, but should be set to 0. 
-
-\begin{verbatim}
-WantAdRevaluate       = True
-\end{verbatim}
-
-The \Attr{WantAdRevaluate} attribute distinguishes grid site
-ClassAds from normal machine ClassAds and allows multiple matches to
-be made against a single site. It should be in your ad and should be
-true. Note that True is not in quotes, and it should not be.
-
-You can add other attributes to your ClassAd, to make it easy for a
-job to decide which grid site it wants to use. For instance, if you
-have pre-installed the Bamboozle software environment on your grid
-site, you could advertise, \ShortExpr{HaveBamboozle = True} and
-\ShortExpr{BamboozleVersion = 10}. Jobs can require a grid site that has
-Bamboozle installed by extending their requirements with
-\ShortExpr{HaveBamboozle == True}. (Note the double equal sign in the
-requirements.) 
-
-As an aside, we recommend that jobs that need specific applications
-should bring them with them instead of relying on having them
-pre-installed at a Grid site. You will have more reliable execution if
-you do. 
-
-Once you have a file that describes your site, you need to send it to
-the \Condor{collector} daemon. For this, use \Condor{advertise}.
-We recommend that you write a script to create the file
-containing the ClassAd, then run the script every five minutes with
-\Prog{cron}. The script should probably update the \Attr{CurMatches}
-variable, if you
-want to restrict the number of grid jobs that can be submitted at one
-time. 
-
-For \Condor{advertise}, specify \Arg{UPDATE\_STARTD\_AD} for
-the update command. For example, if your ClassAd is specified in a
-file named \File{grid-ad} you would do:
-
-\footnotesize
-\begin{verbatim}
-    condor_advertise UPDATE_STARTD_AD grid-ad
-\end{verbatim}
-\normalsize
-
-\Condor{advertise} usually uses UDP to transmit your ClassAd. In
-wide-area networks, this may be insufficient. You can use TCP by
-specifying the \Opt{-tcp} option. 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Submitting grid universe jobs that use matchmaking}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-Submitting a grid universe job that requires matchmaking is
-straightforward. Instead of specifying a particular scheduler with
-globussheduler like this:
+To submit a grid universe job intended for a single, specific
+\SubmitCmd{gt2} resource,
+the submit description file for the job explicitly specifies
+the resource:
 
 \footnotesize
 \begin{verbatim}
@@ -265,41 +46,366 @@ globusscheduler = grid.example.com/jobmanager
 \end{verbatim}
 \normalsize
 
-you instead specify requirements and tell Condor where to find the
-gatekeeper URL in the grid site ClassAd:
+If there were multiple \SubmitCmd{gt2} resources that
+might be matched to the job,
+the submit description file changes:
 
 \footnotesize
 \begin{verbatim}
-globusscheduler = $$(gatekeeper_url)
-requirements    = TARGET.gatekeeper_url =!= UNDEFINED
+globusscheduler = $$(scheduler_location)
+requirements    = TARGET.scheduler_location =!= UNDEFINED
 \end{verbatim}
 \normalsize
 
-This will allow to run at any grid site, and will extract the
-gatekeeper\_url attribute from the ClassAd. There is no magic meaning
-behind gatekeeper\_url---you could use GatekeeperContactString if you
-desired, as long as it is the same in both the job description and the
-grid site ClassAd. 
+The \SubmitCmd{globusscheduler} command uses a substitution
+macro.
+The substitution macro defines the value 
+of \Attr{scheduler\_location} using attributes
+as specified by the matched grid resource.
+The \SubmitCmd{requirements} command further restricts that
+the job may only run on a machine (grid resource) that
+defines \Attr{scheduler\_location}.
+Note that this attribute name is invented for this example.
+To make matchmaking work in this way,
+both the job (as used here within the submit description file)
+and the grid resource (in its created and advertised ClassAd)
+must agree upon the name of the attribute.
 
-The requirements specified here are a bit simple. Perhaps you only
-want to run at a site that has the Bamboozle software installed, and
-the sites that have it installed specify ``HaveBamboozle = True'', as
-described above. A complete job description may look like this:
+As a more complex example,
+consider a job that wants
+to run not only
+on a \SubmitCmd{gt2} resource,
+but on one that has the Bamboozle software installed.
+The complete submit description file might appear:
 
 \footnotesize
 \begin{verbatim}
 universe        = grid
-grid_typd       = gt2
+grid_type       = gt2
 executable      = analyze_bamboozle_data
 output          = aaa.$(Cluster).out
 error           = aaa.$(Cluster).err
 log             = aaa.log
-globusscheduler = $$(gatekeeper_url)
-requirements    = (HaveBamboozle == True) && (TARGET.gatekeeper_url =!= UNDEFINED)
+globusscheduler = $$(scheduler_location)
+requirements    = (TARGET.HaveBamboozle == True) && (TARGET.scheduler_location =!= UNDEFINED)
 leave_in_queue  = jobstatus == 4
 queue
 \end{verbatim}
 \normalsize
+
+Any grid resource which has the
+\Attr{HaveBamboozle} attribute defined as well as
+set to \Expr{True} is further checked to have the
+\Attr{scheduler\_location} attribute defined.
+Where this occurs, a match may be made (from the
+job's point of view).
+A grid resource that has one of these attributes defined,
+but not the other results in no match being made.
+
+If the job may run on any grid resource,
+not only those with
+\SubmitCmd{grid\_type} \SubmitCmd{gt2},
+then the submit description file for the job
+uses the substitution macro within the 
+\SubmitCmd{grid\_resource} command:
+
+\footnotesize
+\begin{verbatim}
+universe      = grid
+grid_resource = $$(resource_type)
+executable    = aaa
+output        = aaa.$(Cluster).out
+error         = aaa.$(Cluster).err
+log           = aaa.log
+requirements  = TARGET.resource_type =!= UNDEFINED
+queue
+\end{verbatim}
+\normalsize
+
+Any grid resource that advertises the attribute \Attr{resource\_type}
+may be matched with the job.
+At match time,
+the substitution macro causes the
+value given by \SubmitCmd{grid\_resource}
+to specify the \SubmitCmd{grid\_type},
+as well as set all other necessary grid-related job attributes.
+Therefore, the submit description file does not
+specify a \SubmitCmd{grid\_type} command.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Advertising Grid Resources to Condor}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Any grid resource that wishes to be matched by Condor with
+a job must advertise itself to Condor using a ClassAd.
+To properly advertise, a ClassAd is sent
+periodically to the \Condor{collector} daemon.
+A ClassAd is a list of pairs, where each pair consists of
+an attribute name and value that describes an entity.
+There are two entities relevant to Condor:
+a job, and a machine.
+A grid resource is a machine.
+The ClassAd describes the grid resource, as well
+as identifying the capabilities of grid resource.
+It may also state both requirements and preferences
+(called \SubmitCmd{rank}) for the jobs it will run.
+See
+Section~\ref{sec:matchmaking-with-classads} for an overview
+of the interaction between matchmaking and ClassAds.
+A list of common machine ClassAd attributes is given in
+Section~\ref{user-man-machad}.
+
+To advertise a grid site, place the attributes
+in a file.
+Here is a sample ClassAd that describes a grid resource
+that is capable of running a
+\SubmitCmd{grid\_type} \SubmitCmd{gt2} job,
+and presumes that the job requests to be matched
+with a gt2-capable resource:
+
+\footnotesize
+\begin{verbatim}
+# example grid resource ClassAd for a gt2 job
+MyType         = "Machine"
+TargetType     = "Job"
+Name           = "Example1_Gatekeeper"
+Machine        = "Example1_Gatekeeper"
+scheduler_location = "grid.example.com/jobmanager"
+UpdateSequenceNumber  = 4
+Requirements   = (TARGET.JobUniverse == 9) && (TARGET.JobGridType =?= "gt2")
+Rank           = 0.000000
+CurrentRank    = 0.000000
+\end{verbatim}
+\normalsize
+
+%% JobUniverse = 9 is the grid universe
+
+Some attributes are defined as expressions, while
+others are integers, floating point values, or strings.
+The type is important, and must be correct for the
+ClassAd to be effective.
+The attributes
+\begin{verbatim}
+MyType         = "Machine"
+TargetType     = "Job"
+\end{verbatim}
+identify the grid resource as a machine,
+and that the machine is to be matched with a job.
+In Condor, machines are matched with jobs, and jobs are matched with
+machines.
+These attributes are strings.
+Strings are surrounded by double quote marks.
+
+The attributes \Attr{Name} and \Attr{Machine}
+are likely to be defined to be the same string value as in the
+example:
+\footnotesize
+\begin{verbatim}
+Name           = "Example1_Gatekeeper"
+Machine        = "Example1_Gatekeeper"
+\end{verbatim}
+\normalsize
+
+Both give the fully qualified host name for the resource.
+The \Attr{Name} may be different on an SMP machine,
+where the individual CPUs are given names that can
+be distiguished from each other.
+Each separate grid resource must have a unique name.
+
+Where the job depends on the resource to specify the
+value of the \SubmitCmd{globusscheduler} command by
+the use of the substitution macro,
+the ClassAd for the grid resource (machine)
+defines this value.
+The example given as
+\footnotesize
+\begin{verbatim}
+scheduler_location = "grid.example.com/jobmanager"
+\end{verbatim}
+\normalsize
+defines this value.
+Note that the invented name of this variable must match the
+one utilized within the submit description file.
+To make the matchmaking work,
+both the job (as used within the submit description file)
+and the grid resource (in this created and advertised ClassAd)
+must agree upon the name of the attribute.
+
+A machine's ClassAd information can be time sensitive,
+and may change over time.
+Therefore, ClassAds expire and are thrown away.
+In addition, the communication method by which ClassAds
+are sent implies that entire ads may be lost without notice
+or may arrive out of order.
+Out of order arrival leads to the definition of an
+attribute which provides an ordering.
+This positive integer value is given in the example
+ClassAd as
+\footnotesize
+\begin{verbatim}
+UpdateSequenceNumber  = 4
+\end{verbatim}
+\normalsize
+This value must increase for each subsequent ClassAd.
+If state information for the ClassAd is kept in a file,
+a script executed each time the ClassAd is to be sent
+may use a counter for this value.
+An alternative for a stateless implementation sends
+the current time in seconds (since the epoch, as given by
+the C \Procedure{time} function call).
+
+The requirements that the grid resource sets for any job
+that it will accept are given as
+\footnotesize
+\begin{verbatim}
+Requirements     = (TARGET.JobUniverse == 9) && (TARGET.JobGridType =?= "gt2")
+\end{verbatim}
+\normalsize
+This set of requirments state that any job is
+required to be for the \SubmitCmd{grid} universe,
+and that the \SubmitCmd{grid\_type} must be \SubmitCmd{gt2}.
+
+The attributes
+\footnotesize
+\begin{verbatim}
+Rank             = 0.000000
+CurrentRank      = 0.000000
+\end{verbatim}
+\normalsize
+are both necessary for Condor's negotiation to procede,
+but are not relevant to grid matchmaking.
+Set both to the floating point value 0.0.
+
+
+The example machine ClassAd becomes more complex
+for the case where the grid resource allows matches with more
+than one job:
+\footnotesize
+\begin{verbatim}
+# example grid resource ClassAd for a gt2 job
+MyType         = "Machine"
+TargetType     = "Job"
+Name           = "Example1_Gatekeeper"
+Machine        = "Example1_Gatekeeper"
+scheduler_location = "grid.example.com/jobmanager"
+UpdateSequenceNumber  = 4
+Requirements   = (CurMatches < 10) &&
+   (TARGET.JobUniverse == 9) && (TARGET.JobGridType =?= "gt2")
+Rank           = 0.000000
+CurrentRank    = 0.000000
+WantAdRevaluate = True
+CurMatches     = 1
+\end{verbatim}
+\normalsize
+
+In this example, the two attributes \Attr{WantAdRevaluate}
+and \Attr{CurMatches} appear, and the \Attr{Requirements}
+expression has changed.
+
+\Attr{WantAdRevaluate} is a boolean value, and may be set to
+either \Expr{True} or \Expr{False}.
+When \Expr{True} in the ClassAd and a match is made (of a job
+to the grid resource), the machine (grid resource)
+is not removed from the set of machines to be considered for
+further matches.
+This implements the ability for a single grid resource to
+be matched to more than one job at a time.
+Note that the spelling of this attribute is incorrect,
+and remains incorrect to maintain backward compatibility.
+
+To limit the number of matches made to the single grid resource,
+the resource must have the ability to keep track of the number 
+of Condor jobs it has.
+This integer value is given as the \Attr{CurMatches} attribute
+in the advertised ClassAd.
+It is then compared in order to limit the number of jobs matched
+with the grid resource.
+\footnotesize
+\begin{verbatim}
+Requirements   = (CurMatches < 10) &&
+   (TARGET.JobUniverse == 9) && (TARGET.JobGridType =?= "gt2")
+CurMatches     = 1
+\end{verbatim}
+\normalsize
+
+This example assumes that the grid resource already has
+one job, and is willing to accept a maximum of 9 jobs.
+If \Attr{CurMatches} does not appear in the ClassAd,
+Condor uses a default value of 0.
+
+Where the job uses the substitution macro within the
+\SubmitCmd{grid\_resource} submit description file command,
+it is expected that the grid resource supplies the
+definition of the macro.
+This sets values for all necessary attributes that
+are specific to a grid type, including the grid type.
+For the grid resource capable of accepting jobs intended
+for multiple grid types,
+an individual ClassAd must be produced and advertised for
+each of the unique grid types offered.
+
+As an example, assume that the job does not restrict
+the grid type of the grid resource to which it may be matched.
+The submit description file for the job uses the substitution
+macro in the line:
+\footnotesize
+\begin{verbatim}
+grid_resource = $$(gridtype_and_args)
+\end{verbatim}
+\normalsize
+Assume that the grid resource may run \SubmitCmd{gt2}
+or \SubmitCmd{nordugrid} jobs.
+The grid resource produces and advertises two separate ClassAds.
+One of these ClassAds defines \Attr{gridtype\_and\_args}
+with a string that defines the correct resource-specific values
+for \SubmitCmd{gt2},
+such as
+\footnotesize
+\begin{verbatim}
+gridtype_and_args = "gt2 grid.example.com/jobmanager-lsf"
+\end{verbatim}
+\normalsize
+The first argument within the string specifies the \SubmitCmd{grid\_type}
+for the job as \SubmitCmd{gt2},
+and the second argument specifies the \SubmitCmd{globusscheduler} 
+for the job.
+
+The second ClassAd defines \Attr{gridtype\_and\_args}
+with a string that defines the correct resource-specific values
+for \SubmitCmd{nordugrid},
+such as
+\footnotesize
+\begin{verbatim}
+gridtype_and_args = "nordugrid grid.example.com"
+\end{verbatim}
+\normalsize
+The first argument within the string specifies the \SubmitCmd{grid\_type}
+for the job as \SubmitCmd{nordugrid},
+and the second argument specifies the \SubmitCmd{nordugrid\_resource} 
+value as the host name of the grid resource.
+
+% COMMENTED OUT, AS THERE IS NOTHING ANYWHERE THAT SAYS HOW TO DO THIS!
+% As an aside, we recommend that jobs that need specific applications
+% should bring them with them instead of relying on having them
+% pre-installed at a Grid site. You will have more reliable execution if
+% you do. 
+
+This ClassAd (likely in a file)
+is to be periodically sent to the \Condor{collector} daemon
+using \Condor{advertise}.
+A recommended implementation uses a script to create or modify
+the ClassAd together with
+\Prog{cron} to send the ClassAd every five minutes.
+The \Condor{advertise} program must be installed on the 
+machine sending the ClassAd, but the remainder of Condor
+does not need to be installed.
+The required argument for the \Condor{advertise} command
+is \Arg{UPDATE\_STARTD\_AD}.
+
+\Condor{advertise} uses UDP to transmit the ClassAd.
+Where this is insufficient,
+specify the \Opt{-tcp} option to \Condor{advertise}
+to use TCP for communication. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Advanced usage}
