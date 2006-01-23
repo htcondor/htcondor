@@ -59,7 +59,7 @@ my @OsInfo = (
 		  pused => 4,
 		  mnt => 5 },
 		mount =>
-		{ command => "/sbin/mount",
+		{ command => "/usr/sbin/mount",
 		  mountpoint => 0,
 		  fs => 2, },
 	      },
