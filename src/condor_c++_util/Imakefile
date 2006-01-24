@@ -14,11 +14,13 @@
 
 #if HAVE_CC_SHARED_FLAG
 LIBCONDORAPI = libcondorapi.a libcondorapi.so
+TEST_LIBCONDORAPI = test_libcondorapi test_libcondorapi_shared
 #else
 LIBCONDORAPI = libcondorapi.a
+TEST_LIBCONDORAPI = test_libcondorapi
 #endif
 
-all_target(cplus_lib.a liburl.a $(LIBCONDORAPI) test_libcondorapi)
+all_target(cplus_lib.a liburl.a $(LIBCONDORAPI) $(TEST_LIBCONDORAPI))
 
 C_PLUS_FLAGS =	\
 				$(STD_C_PLUS_FLAGS) \
@@ -120,7 +122,6 @@ CONLIBAPI_OBJ = \
 	my_distribution.o \
 	$(CLASSAD_OBJ) \
 	../condor_util_lib/get_random_num.o \
-	$(DH_OBJ) \
 	c++_util_instantiate.o \
 	libcondorapi_stubs.o \
 	$(SETEUID_OBJ) \
@@ -187,6 +188,10 @@ test_libcondorapi.o: test_libcondorapi.C
 	$(CPlusPlus) -I../h -I../condor_includes -c test_libcondorapi.C
 
 c_plus_nowrap_target(test_libcondorapi,test_libcondorapi.o,libcondorapi.a)
+
+#if HAVE_CC_SHARED_FLAG
+c_plus_nowrap_target(test_libcondorapi_shared,test_libcondorapi.o,libcondorapi.so)
+#endif
 
 c_plus_target(test_check_events,test_check_events.o,$(LIB) New_classads_lib)
 c_plus_target(test_multi_log,test_multi_log.o,$(LIB) New_classads_lib)
