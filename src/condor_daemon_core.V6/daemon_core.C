@@ -4929,7 +4929,7 @@ int DaemonCore::Create_Process(
 		dprintf(D_FULLDEBUG, "GetBinaryType() returned %d\n", binType);
 	}
 
-   	if ( priv != PRIV_USER_FINAL ) {
+   	if ( priv != PRIV_USER_FINAL || !can_switch_ids() ) {
 		cp_result = ::CreateProcess(bIs16Bit ? NULL : namebuf,(char*)args,NULL,
 			NULL,inherit_handles, new_process_group,newenv,cwd,&si,&piProcess);
 	} else {

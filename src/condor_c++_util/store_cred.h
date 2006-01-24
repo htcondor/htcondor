@@ -32,7 +32,9 @@
 // store cred return codes
 const int SUCCESS = 1; 				// it worked!
 const int FAILURE = 0;				// communication error
-const int FAILURE_BAD_PASSWORD = 2; // bad (wrong) password
+const int FAILURE_BAD_PASSWORD = 2;		// bad (wrong) password
+const int FAILURE_NOT_SUPPORTED = 3;		// user switching not supported
+						// (not running as SYSTEM)
 
 // store cred modes
 const int ADD_MODE = 100;

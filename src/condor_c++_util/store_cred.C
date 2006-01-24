@@ -100,91 +100,96 @@ void store_cred_handler(void *, int i, Stream *s) {
 		}
 	}
 
-	priv = set_root_priv();
-	
-	switch(mode) {
-	case ADD_MODE:
-		bool retval;
-
-		dprintf( D_FULLDEBUG, "Adding %S to credential storage.\n", 
-			userbuf );
-
-		retval = isValidCredential(user, pw);
-
-		if ( ! retval ) {
-			answer=FAILURE_BAD_PASSWORD; 
-			break; // bail out 
-		}
-
-		if (pw) {
-			swprintf(pwbuf, L"%S", pw); // make a wide-char copy first
-			ZeroMemory(pw, strlen(pw));
-		}
-
-		// call lsa_mgr api
-		// answer = return code
-		if (!lsa_man.add(userbuf, pwbuf)){
-			answer = FAILURE;
-		} else {
-			answer = SUCCESS;
-		}
-		ZeroMemory(pwbuf, MAX_PASSWORD_LENGTH*sizeof(wchar_t)); 
-		ZeroMemory(userbuf, MAX_PASSWORD_LENGTH*sizeof(wchar_t));
-		break;
-	case DELETE_MODE:
-		dprintf( D_FULLDEBUG, "Deleting %S from credential storage.\n", 
-			userbuf );
-		// call lsa_mgr api
-		// answer = return code
-		swprintf(userbuf, L"%S", user);
-		if (!lsa_man.remove(userbuf)) {
-			answer = FAILURE;
-		} else {
-			answer = SUCCESS;
-		}
-		break;
-	case QUERY_MODE:
-		{
-		dprintf( D_FULLDEBUG, "Checking for %S in credential storage.\n", 
-			userbuf );
-		swprintf(userbuf, L"%S", user);
-
-		char passw[MAX_PASSWORD_LENGTH];
-		wchar_t *pw_wc = NULL;
-		pw_wc = lsa_man.query(userbuf);
-
-		if ( !pw_wc ) {
-			answer = FAILURE;
-		} else {
-			sprintf(passw, "%S", pw_wc);
-			ZeroMemory(pw_wc, wcslen(pw_wc));
-			delete[] pw_wc;
-
-			if ( isValidCredential(user, passw) ) {
-				answer = SUCCESS;
-			} else {
-				answer = FAILURE_BAD_PASSWORD;
+	if (!can_switch_ids()) {
+		answer = FAILURE_NOT_SUPPORTED;
+	}
+	else {
+		priv = set_root_priv();
+		
+		switch(mode) {
+		case ADD_MODE:
+			bool retval;
+			
+			dprintf( D_FULLDEBUG, "Adding %S to credential storage.\n", 
+				 userbuf );
+			
+			retval = isValidCredential(user, pw);
+			
+			if ( ! retval ) {
+				answer=FAILURE_BAD_PASSWORD; 
+				break; // bail out 
 			}
-
-			ZeroMemory(passw, MAX_PASSWORD_LENGTH);
+			
+			if (pw) {
+				swprintf(pwbuf, L"%S", pw); // make a wide-char copy first
+				ZeroMemory(pw, strlen(pw));
+			}
+			
+			// call lsa_mgr api
+			// answer = return code
+			if (!lsa_man.add(userbuf, pwbuf)){
+				answer = FAILURE;
+			} else {
+				answer = SUCCESS;
+			}
+			ZeroMemory(pwbuf, MAX_PASSWORD_LENGTH*sizeof(wchar_t)); 
+			ZeroMemory(userbuf, MAX_PASSWORD_LENGTH*sizeof(wchar_t));
+			break;
+		case DELETE_MODE:
+			dprintf( D_FULLDEBUG, "Deleting %S from credential storage.\n", 
+				 userbuf );
+			// call lsa_mgr api
+			// answer = return code
+			swprintf(userbuf, L"%S", user);
+			if (!lsa_man.remove(userbuf)) {
+				answer = FAILURE;
+			} else {
+				answer = SUCCESS;
+			}
+			break;
+		case QUERY_MODE:
+		{
+			dprintf( D_FULLDEBUG, "Checking for %S in credential storage.\n", 
+				 userbuf );
+			swprintf(userbuf, L"%S", user);
+			
+			char passw[MAX_PASSWORD_LENGTH];
+			wchar_t *pw_wc = NULL;
+			pw_wc = lsa_man.query(userbuf);
+			
+			if ( !pw_wc ) {
+				answer = FAILURE;
+			} else {
+				sprintf(passw, "%S", pw_wc);
+				ZeroMemory(pw_wc, wcslen(pw_wc));
+				delete[] pw_wc;
+				
+				if ( isValidCredential(user, passw) ) {
+					answer = SUCCESS;
+				} else {
+					answer = FAILURE_BAD_PASSWORD;
+				}
+				
+				ZeroMemory(passw, MAX_PASSWORD_LENGTH);
+			}
+			break;
 		}
-		break;
+		default:
+			dprintf( D_ALWAYS, "store_cred: Unknown access mode (%d).\n", mode );
+			answer=0;
+			break;
 		}
-	default:
-		dprintf( D_ALWAYS, "store_cred: Unknown access mode (%d).\n", mode );
-		answer=0;
-		break;
+		
+		if (pw) {
+			free(pw);
+		}
+		if (user) {
+			free(user);
+		}
+		
+		dprintf(D_FULLDEBUG, "Switching back to old priv state.\n");
+		set_priv(priv);
 	}
-
-	if (pw) {
-		free(pw);
-	}
-	if (user) {
-		free(user);
-	}
-	
-	dprintf(D_FULLDEBUG, "Switching back to old priv state.\n");
-	set_priv(priv);
 	
 	s->encode();
 	if( ! s->code(answer) ) {
