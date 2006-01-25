@@ -41,6 +41,12 @@ The details of each version are described below.
   classads and continue to negotiate with any other \Condor{schedd} in
   the system that has idle jobs.
 
+\item Fixed a bug which caused log messages which should contain
+  ``PRIV\_USER\_FINAL'' to be ``PRIV\_USER\_FINALPRIV\_FILE\_OWNER''.
+  It's also possible that this same bug could cause crashes if any
+  daemon attempts to log a message which would refer to
+  ``PRIV\_FILE\_OWNER''.
+
 \end{itemize}
 
 
