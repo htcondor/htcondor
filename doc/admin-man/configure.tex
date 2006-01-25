@@ -4394,7 +4394,7 @@ jobs from the \Condor{schedd} that were already submitted
 (that is, their \MacroNI{GlobusContactString} is not "X").
 In these cases, submitted jobs will not be killed,
 but no new jobs can be submitted until the number of submitted
-jobs falls below the current limit.
+jobs falls below the current limit. The default is 100.
 
 \item[\Macro{GRIDMANAGER\_MAX\_PENDING\_SUBMITS\_PER\_RESOURCE}]
 \label{param:GridmanagerMaxPendingSubmitsPerResource} The maximum
