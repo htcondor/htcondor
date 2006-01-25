@@ -46,7 +46,7 @@ static char *priv_state_name[] = {
 	"PRIV_ROOT",
 	"PRIV_CONDOR",
 	"PRIV_USER",
-	"PRIV_USER_FINAL"
+	"PRIV_USER_FINAL",
 	"PRIV_FILE_OWNER"
 };
 
