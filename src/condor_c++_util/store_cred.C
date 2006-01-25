@@ -180,17 +180,17 @@ void store_cred_handler(void *, int i, Stream *s) {
 			break;
 		}
 		
-		if (pw) {
-			free(pw);
-		}
-		if (user) {
-			free(user);
-		}
-		
 		dprintf(D_FULLDEBUG, "Switching back to old priv state.\n");
 		set_priv(priv);
 	}
 	
+	if (pw) {
+		free(pw);
+	}
+	if (user) {
+		free(user);
+	}
+
 	s->encode();
 	if( ! s->code(answer) ) {
 		dprintf( D_ALWAYS,
