@@ -53,13 +53,13 @@ Programs
     [-localdir local_install_dir] [-localconfig local_config_file]
     [-logarchive log_archive] [-spoolarchive spool_archive]
     [-execarchive exec_archive]
-    [-linklock] [-flock] [-bpid] [-artifact artifact_file]
+    [-linklock] [-flock] [-pid] [-artifact artifact_file]
     [-wget] [-globuslocation globus_location]
     [-dyn] [-help]\n
   - Subprograms:
     + linklock_midwife
     + flock_midwife
-    + bpid_midwife
+    + uniq_pid_midwife
     + condor_config_val
     + condor_config_bind
     + condor_install_local
@@ -89,7 +89,7 @@ Programs
     [-localdir local_dir] [-runlocalconfig local_config_file]
     [-logarchive log_archive] [-spoolarchive spool_archive].
     [-execarchive exec_archive]
-    [-linklock] [-flock] [-bpid] [-artifact artifact_file]
+    [-linklock] [-flock] [-pid] [-artifact artifact_file]
     [-wget] [-globuslocation globus_location]
     [-help]
   - Subprograms:
@@ -112,7 +112,7 @@ Programs
     log, execute, and/or spool directories.
   - Usage: condor_local_stop [-f] 
     <-configfile condor_config_file> <-basedir release_dir>
-    [-linklock] [-flock] [-bpid] [-artifact artifact_file] [-timeout max]
+    [-linklock] [-flock] [-pid] [-artifact artifact_file] [-timeout max]
     [-localconfig config_file] [-help]
   - Subprograms:
     + condor_q
@@ -121,7 +121,7 @@ Programs
     + condor_off
     + linklock_undertaker
     + flock_undertaker
-    + bpid_undertaker
+    + uniq_pid_undertaker
 
 + cleanup_release 
   - Purpose: Uninstalls a previously installed software release done
@@ -139,7 +139,7 @@ Programs
     [-localdir local_dir] [-runlocalconfig config_file]
     [-cleaninstall] [-cleanlocal] [-stop]
     [-logarchive] [-spoolarchive] [-execarchive]
-    [-linklock] [-flock] [-bpid] [-artifact artifact_file]
+    [-linklock] [-flock] [-pid] [-artifact artifact_file]
     [-nogurl] [-globuslocation globus_location]
   - Subprograms
     + condor_local_stop

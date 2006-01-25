@@ -41,34 +41,10 @@ LIST OF SHAME
 10. condor_cleanup_local doesn't work with dynamically named local
     dirs 
 
-12. bpid_undertaker may mistakenly determine that a process is still
-    alive.
-    - the kernel can and does return different bday values for a given
-      process
-    - we are forced to accept a range of birthdays
-    - if the pid is reused in this range, then the undertaker may be
-      fooled 
-    - alternatively, it may return that a process is dead when it
-      is actually alive because the bday returned is so wrong it
-      doesn't even fit in the range we accept
-    - POSSIBLE SOLUTION:
-      Midwife
-      -------
-      bday = systime()
-      sleep(1)
-      fork child with MIDWIFE_BIRTHDAY = bday
-      write bday and pid to file
-      Undertaker
-      ----------
-      read pid + bday from file
-      use procapi to get env from pid
-      if( env contains MIDWIFE_BIRTHDAY and it equals bday from file)
-      then process is still alive
-
-13. bpid_midwife always blocks until the "midwifed" process is dead.
+13. uniq_pid_midwife always blocks until the "midwifed" process is dead.
     - unlike flock and linklock it doesn't need to do this
     - however to keep the interfaces and behavior the same across
-      midwifes I had the bpid_midwife block as well
+      midwifes I had the uniq_pid_midwife block as well
 
 14. condor_local_start cannot execute the master in the background
     - the midwife blocks until the midwifed process is dead
@@ -84,3 +60,7 @@ LIST OF SHAME
     - cold_stop cleans up the local_dir structure
     - either local_stop should clean up the local_dir structure
     - OR cold_start should create it
+
+16. uniq_pid_undertaker does not ensure that it is being run on the same
+    machine that the midwife was.  This could cause false answers.
+    - can be remedied by storing machine id in bpid log (IP Address?)

@@ -36,7 +36,7 @@ my $USAGE =
     "[-localdir local_dir] [-runlocalconfig config_file]\n".
     "[-cleaninstall] [-cleanlocal] [-stop]\n".
     "[-logarchive] [-spoolarchive] [-execarchive]\n".
-    "[-linklock] [-flock] [-bpid] [-artifact artifact_file]\n".
+    "[-linklock] [-flock] [-pid] [-artifact artifact_file]\n".
     "[-log install_log]\n".
     "[-nogurl] [-globuslocation globus_location]\n".
     "[-help]\n";
@@ -53,7 +53,7 @@ my $DYN_OPT = '-dyn';
 my $FG_OPT = '-fg';
 my $LINKLOCK_OPT = '-linklock';
 my $FLOCK_OPT = '-flock';
-my $BPID_OPT = '-bpid';
+my $PID_OPT = '-pid';
 my $ARTIFACT_OPT ='-artifact';
 
 
@@ -86,7 +86,7 @@ my $local_config_file = 0;
 my $install_log_path = 0;
 my $flock_flag = 0;
 my $linklock_flag = 0;
-my $bpid_flag = 0;
+my $pid_flag = 0;
 my $midwife_artifact = 0;
 my $no_gurl_flag = 0;
 my $globus_location = '/opt/globus';
@@ -111,7 +111,7 @@ GetOptions( 'force'=>\$force,
 	    'log=s'=>\$install_log_path,
 	    'linklock'=>\$linklock_flag,
 	    'flock'=>\$flock_flag,
-	    'bpid'=>\$bpid_flag,
+	    'pid'=>\$pid_flag,
 	    'artifact=s'=>\$midwife_artifact,
 	    'nogurl'=>\$no_gurl_flag,
 	    'globuslocation=s'=>\$globus_location,
@@ -167,7 +167,7 @@ sub StopIt(){
      # midwife args
     push @args, $LINKLOCK_OPT if( $linklock_flag );
     push @args, $FLOCK_OPT if( $flock_flag );
-    push @args, $BPID_OPT if( $bpid_flag );
+    push @args, $PID_OPT if( $pid_flag );
     push @args, ($ARTIFACT_OPT, $midwife_artifact) if( $midwife_artifact);
 
     # Execute local_stop

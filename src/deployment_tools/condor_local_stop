@@ -21,7 +21,7 @@ use File::Temp qw/ tempfile /;
 #***
 my $USAGE = 
     "Usage: condor_local_stop [-f] <-configfile condor_config_file> <-basedir release_dir>\n".
-    "[-linklock] [-flock] [-bpid] [-artifact artifact_file] [-timeout max]\n".
+    "[-linklock] [-flock] [-pid] [-artifact artifact_file] [-timeout max]\n".
     "[-localconfig config_file] [-help]\n";
 
 my $CONDOR_Q = 'condor_q';
@@ -41,7 +41,7 @@ my %JOB_STATUS_HASH = ( 1 => 'Idle',
 
 my $LINKLOCK_UNDERTAKER = 'linklock_undertaker';
 my $FLOCK_UNDERTAKER = 'flock_undertaker';
-my $BPID_UNDERTAKER = 'bpid_undertaker';
+my $PID_UNDERTAKER = 'uniq_pid_undertaker';
 my $UNDERTAKER_FILE_OPT ='--file';
 
 #  environment variable names
@@ -61,7 +61,7 @@ my $global_config_file = 0;
 my $local_config_file = 0;
 my $linklock_flag = 0;
 my $flock_flag = 0;
-my $bpid_flag = 0;
+my $pid_flag = 0;
 my $midwife_artifact = 'MasterMidwife.artifact';
 my $timeout = 120;
 my $help = 0;
@@ -83,9 +83,9 @@ GetOptions('configfile=s'=>\$global_config_file,
 	   'basedir=s'=>\$release_dir,
 	   'linklock'=>\$linklock_flag,
 	   'flock'=>\$flock_flag,
-	   'bpid'=>\$bpid_flag,
+	   'pid'=>\$pid_flag,
 	   'artifact=s'=>\$midwife_artifact,
-	   'timeout'=>\$timeout,
+	   'timeout=s'=>\$timeout,
 	   'f'=>\$force,
 	   'localconfig=s'=>\$local_config_file,
 	   'help'=>\$help);
@@ -367,9 +367,9 @@ sub StopMaster(){
     elsif( $flock_flag ){
 	$undertaker = $FLOCK_UNDERTAKER;
     }
-    #defaults to bpid undertaker
+    #defaults to pid undertaker
     else{
-	$undertaker = $BPID_UNDERTAKER;
+	$undertaker = $PID_UNDERTAKER;
     }
     
     # construct the arguments for the undertaker program
@@ -415,7 +415,7 @@ sub StopMaster(){
 #*********************************************************************
 sub Cleanup(){
     
-    # clean up the bpid file, if neccessary
+    # clean up the pid file, if neccessary
     if( !$linklock_flag && !$flock_flag ){
 	unlink $midwife_artifact;
     }

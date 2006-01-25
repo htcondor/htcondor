@@ -66,7 +66,7 @@ my $USAGE =
     "[-localdir local_dir] [-runlocalconfig local_config_file]\n".
     "[-logarchive log_archive] [-spoolarchive spool_archive]\n".
     "[-execarchive exec_archive]\n".
-    "[-linklock] [-flock] [-bpid] [-artifact artifact_file]\n".
+    "[-linklock] [-flock] [-pid] [-artifact artifact_file]\n".
     "[-wget] [-globuslocation globus_location]\n".
     "[-help]\n";
 
@@ -97,7 +97,7 @@ my $DYN_OPT = '-dyn';
 my $FG_OPT = '-fg';
 my $LINKLOCK_OPT = '-linklock';
 my $FLOCK_OPT = '-flock';
-my $BPID_OPT = '-bpid';
+my $PID_OPT = '-pid';
 my $ARTIFACT_OPT ='-artifact';
 my $LOG_ARCHIVE_OPT = '-logarchive';
 my $SPOOL_ARCHIVE_OPT = '-spoolarchive';
@@ -125,7 +125,7 @@ my $spool_archive = 0;
 my $exec_archive = 0;
 my $flock_flag = 0;
 my $linklock_flag = 0;
-my $bpid_flag = 0;
+my $pid_flag = 0;
 my $midwife_artifact = 0;
 my $globus_location = 0;
 my $wget_flag = 0;
@@ -155,7 +155,7 @@ GetOptions('basedir=s'=>\$base_dir,
 	   'execarchive=s'=>\$exec_archive,
 	   'linklock'=>\$linklock_flag,
 	   'flock'=>\$flock_flag,
-	   'bpid'=>\$bpid_flag,
+	   'pid'=>\$pid_flag,
 	   'artifact=s'=>\$midwife_artifact,
 	   'wget'=>\$wget_flag,
 	   'globuslocation=s'=>\$globus_location,
@@ -292,7 +292,7 @@ sub Startup(){
     # midwife args
     push @args, $LINKLOCK_OPT if( $linklock_flag );
     push @args, $FLOCK_OPT if( $flock_flag );
-    push @args, $BPID_OPT if( $bpid_flag );
+    push @args, $PID_OPT if( $pid_flag );
     push @args, ($ARTIFACT_OPT, $midwife_artifact) if( $midwife_artifact);
 
     # add the transfer option flags if neccessary
