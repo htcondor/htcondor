@@ -15,6 +15,7 @@ use lib ($FindBin::Bin, "$FindBin::Bin/lib");
 use Execute;
 use Getopt::Long;
 use File::Temp qw/ tempfile /;
+use File::Spec;
 
 #***
 # Constant Static Variables
@@ -300,7 +301,9 @@ sub CreateBindingConfig(){
 
     # Create a dynamically named temporary binding file
     my ($binding_config_fh, $binding_config_file) = 
-	tempfile( "$BINDING_CONFIG_NAME.XXXX", DIR => '.', UNLINK => 1);
+	tempfile( "$BINDING_CONFIG_NAME.XXXX", 
+		  DIR => File::Spec->tmpdir(), 
+		  UNLINK => 1);
 
     # close the given file handle
     close $binding_config_fh;
