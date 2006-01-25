@@ -1997,6 +1997,7 @@ jobIsSandboxed( ClassAd * ad )
 	case CONDOR_UNIVERSE_LOCAL:
 	case CONDOR_UNIVERSE_STANDARD:
 	case CONDOR_UNIVERSE_PVM:
+	case CONDOR_UNIVERSE_GRID:
 		return false;
 		break;
 
@@ -2012,7 +2013,7 @@ jobIsSandboxed( ClassAd * ad )
 				 "ERROR: unknown universe (%d) in jobIsSandboxed()\n", univ );
 		break;
 	}
-	return true;
+	return false;
 }
 
 
