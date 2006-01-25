@@ -27,7 +27,7 @@ use File::Basename;
 my $USAGE = "Usage: condor_install_local <-localdir local_dir>\n".
     "[-logarchive log_archive] [-spoolarchive spool_archive]\n".
     "[-execarchive exec_archive]\n".
-    "[-configname config_name]\n".
+    "[-configfile config_name]\n".
     "[-wget] [-globuslocation globus_location]\n".
     "[-f][-help]\n";
 
@@ -69,7 +69,7 @@ GetOptions('localdir=s'=>\$local_dir,
 	   'logarchive=s'=>\$log_archive,
 	   'spoolarchive=s'=>\$spool_archive,
 	   'execarchive=s'=>\$exec_archive,
-	   'configname=s'=>\$config_file,
+	   'configfile=s'=>\$config_file,
 	   'wget'=>\$wget_flag,
 	   'globuslocation=s'=>\$globus_location,
 	   'force'=>\$force,

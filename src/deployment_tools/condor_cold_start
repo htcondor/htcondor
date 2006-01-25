@@ -60,7 +60,6 @@ use Getopt::Long;
 my $USAGE = 
     "Usage: condor_cold_start [-basedir base_dir] <-configfile config_file>\n".
     "[-force] [-dyn]\n".
-    "[-fg]\n".
     "[-setuponly || -runonly]\n".
     "[-arch architecture_string][-site install_repository_site]\n".
     "[-localdir local_dir] [-runlocalconfig local_config_file]\n".
@@ -94,7 +93,6 @@ my $CONFIG_OPT = '-configfile';
 my $LOCAL_DIR_OPT = '-localdir';
 my $LOCAL_CONFIG_OPT = '-localconfig';
 my $DYN_OPT = '-dyn';
-my $FG_OPT = '-fg';
 my $LINKLOCK_OPT = '-linklock';
 my $FLOCK_OPT = '-flock';
 my $PID_OPT = '-pid';
@@ -142,7 +140,6 @@ GetOptions('basedir=s'=>\$base_dir,
 	   'localdir=s'=>\$local_dir,
 	   'force'=>\$force,
 	   'dyn'=>\$dynamic_naming,
-	   'fg'=>\$foreground,
 	   'setuponly'=>\$setup_only,
 	   'runonly'=>\$run_only,
 	   'arch=s'=>\$arch_str,
@@ -282,7 +279,6 @@ sub Startup(){
 	push @args, ($LOCAL_CONFIG_OPT, $run_local_config_file);    
     }
     push @args, $DYN_OPT if( $dynamic_naming );
-    push @args, $FG_OPT if( $foreground );
 
     # archive args
     push @args, ($LOG_ARCHIVE_OPT, $log_archive) if( $log_archive );
