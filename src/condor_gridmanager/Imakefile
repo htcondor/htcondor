@@ -65,13 +65,13 @@ release_copy_target(grid_monitor.sh,sbin,grid_monitor.sh,EXECUTABLE_MODE)
 static_copy_target(grid_monitor.sh,sbin,grid_monitor.sh,EXECUTABLE_MODE)
 strip_copy_target(grid_monitor.sh,sbin,grid_monitor.sh,EXECUTABLE_MODE)
 
-release_copy_target($(GLOBUS_DIR)/sbin/globus-gridftp-server.dynamic,sbin,globus-gridftp-server,EXECUTABLE_MODE)
-static_copy_target($(GLOBUS_DIR)/sbin/globus-gridftp-server.static,sbin,globus-gridftp-server,EXECUTABLE_MODE)
-strip_copy_target($(GLOBUS_DIR)/sbin/globus-gridftp-server.dynamic,sbin,globus-gridftp-server,EXECUTABLE_MODE)
+release_copy_target($(GLOBUS_DIR)/sbin/globus-gridftp-server.dynamic,libexec,globus-gridftp-server,EXECUTABLE_MODE)
+static_copy_target($(GLOBUS_DIR)/sbin/globus-gridftp-server.static,libexec,globus-gridftp-server,EXECUTABLE_MODE)
+strip_copy_target($(GLOBUS_DIR)/sbin/globus-gridftp-server.dynamic,libexec,globus-gridftp-server,EXECUTABLE_MODE)
 
-release_copy_target($(GRIDFTP_WRAPPER_NAME),sbin,$(GRIDFTP_WRAPPER_NAME),EXECUTABLE_MODE)
-static_copy_target($(GRIDFTP_WRAPPER_NAME),sbin,$(GRIDFTP_WRAPPER_NAME),EXECUTABLE_MODE)
-strip_copy_target($(GRIDFTP_WRAPPER_NAME),sbin,$(GRIDFTP_WRAPPER_NAME),EXECUTABLE_MODE)
+release_copy_target($(GRIDFTP_WRAPPER_NAME),libexec,$(GRIDFTP_WRAPPER_NAME),EXECUTABLE_MODE)
+static_copy_target($(GRIDFTP_WRAPPER_NAME),libexec,$(GRIDFTP_WRAPPER_NAME),EXECUTABLE_MODE)
+strip_copy_target($(GRIDFTP_WRAPPER_NAME),libexec,$(GRIDFTP_WRAPPER_NAME),EXECUTABLE_MODE)
 
 grid_monitor.sh: grid_monitor_wrapper grid_manager_monitor_agent
 	cat grid_monitor_wrapper grid_manager_monitor_agent > grid_monitor.sh
