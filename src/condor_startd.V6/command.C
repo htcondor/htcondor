@@ -275,7 +275,7 @@ command_release_claim( Service*, int cmd, Stream* stream )
 	rip = resmgr->get_by_any_id( id );
 	if( !rip ) {
 		dprintf( D_ALWAYS, 
-				 "Error: can't find resource with ClaimId (%s)\n", id );
+				 "Warning: can't find resource with ClaimId (%s)\n", id );
 		free( id );
 		refuse( stream );
 		return FALSE;
