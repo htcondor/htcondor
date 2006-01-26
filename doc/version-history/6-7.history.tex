@@ -37,6 +37,10 @@ enable \Macro{TRUST\_UID\_DOMAIN}, since the authenticity of the
 submit-host's uid domain cannot be verified without the DNS
 information.
 
+\item Fixed a few bugs with \AdAttr{transfer\_output\_remaps} that caused
+files to be remapped while in a temporary sandbox. Now, the remapping
+occurs only when the files are returned to the job submitter.
+
 \end{itemize}
 
 \noindent Known Bugs:
