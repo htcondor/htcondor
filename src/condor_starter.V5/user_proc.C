@@ -311,7 +311,7 @@ UserProc::transfer_executable( char *src, int &error_code )
 	int		attempts = 0;
 	int tmp_errno;
 
-	dprintf( D_ALWAYS, "Going to try %d %s at getting the inital executable\n",
+	dprintf( D_ALWAYS, "Going to try %d %s at getting the initial executable\n",
 		ExecTransferAttempts, ExecTransferAttempts==1?"attempt":"attempts" );
 
 	do
