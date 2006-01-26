@@ -71,6 +71,7 @@
 #include "enum_utils.h"
 #include "setenv.h"
 #include "classad_hashtable.h"
+#include "directory.h"
 #include "filename_tools.h"
 
 #include "list.h"
@@ -1158,6 +1159,15 @@ SetExecutable()
 
 	if ( !strstr(ename,"$$") && *copySpool != 'F' && *copySpool != 'f' &&
 		 transfer_it ) {
+
+		StatInfo si(ename);
+		if (!si.Error() && (si.GetFileSize() == 0)) {
+			fprintf( stderr,
+					 "\nERROR: Executable file %s has zero length\n", 
+					 ename );
+			DoCleanup(0,0,NULL);
+			exit( 1 );
+		}
 
 		if (SendSpoolFile(IckptName) < 0) {
 			fprintf( stderr, "\nERROR: Permission to transfer executable "
