@@ -2896,6 +2896,22 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 			// Modify the IWD to point to the spool space			
 		SetAttributeString(cluster,proc,ATTR_JOB_IWD,SpoolSpace);
 
+			// Backup the original TRANSFER_OUTPUT_REMAPS at submit time
+		if (buf) free(buf);
+		buf = NULL;
+		ad->LookupString(ATTR_TRANSFER_OUTPUT_REMAPS,&buf);
+		if ( buf ) {
+			sprintf(new_attr_value,"SUBMIT_%s",ATTR_TRANSFER_OUTPUT_REMAPS);
+			SetAttributeString(cluster,proc,new_attr_value,buf);
+			free(buf);
+			buf = NULL;
+		}
+			// Set TRANSFER_OUTPUT_REMAPS to Undefined so that we don't
+			// do remaps when the job's output files come back into the
+			// spool space. We only want to remap when the submitter
+			// retrieves the files.
+		SetAttribute(cluster,proc,ATTR_TRANSFER_OUTPUT_REMAPS,"Undefined");
+
 			// Now, for all the attributes listed in 
 			// AttrsToModify, change them to be relative to new IWD
 			// by taking the basename of all file paths.
