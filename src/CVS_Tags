@@ -1,3 +1,7 @@
+01/26/06 V6_7-buffered_jobq-branch
+   This branch will be used by the yahoo folks to use stdio
+   buffered to access the jobq.
+
 01/23/06 V6_7-cron-4-{root,branch}
    This branch will be used to merge my work from V6_7-cron-3-branch but
    remove all the ErrorAction attribute code. Created from the
