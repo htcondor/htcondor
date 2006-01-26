@@ -1217,6 +1217,7 @@ ClassAd *MirrorJob::buildSubmitAd()
 	submit_ad->Delete( ATTR_GLOBAL_JOB_ID );
 	submit_ad->Delete( ATTR_STAGE_IN_START );
 	submit_ad->Delete( ATTR_STAGE_IN_FINISH );
+	submit_ad->Delete( ATTR_TRANSFER_OUTPUT_REMAPS );
 
 	submit_ad->Assign( ATTR_JOB_STATUS, HELD );
 	submit_ad->Assign( ATTR_HOLD_REASON, "submitted on hold at user's request" );
