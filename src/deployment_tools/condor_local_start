@@ -59,7 +59,7 @@ my $BINDING_CONFIG_NAME = 'condor_config.binding';
 
 my $CONDOR_INSTALL_LOCAL = 'condor_install_local';
 my $LOCALDIR_OPT = '-localdir';
-my $CONFIGNAME_OPT = '-configname';
+my $CONFIGFILE_OPT = '-configfile';
 my $CONDOR_INSTALL_CONFIG = 'condor_config.local_install';
 my $LOG_ARCHIVE_OPT = '-logarchive';
 my $SPOOL_ARCHIVE_OPT = '-spoolarchive';
@@ -218,7 +218,7 @@ sub SetupLocalDir(){
 						  $CONDOR_INSTALL_CONFIG);
 						  
     my @args = ($LOCALDIR_OPT, $local_install_dir,
-		$CONFIGNAME_OPT, $install_config_path,
+		$CONFIGFILE_OPT, $install_config_path,
 		);
 
     # add the archive args if neccessary

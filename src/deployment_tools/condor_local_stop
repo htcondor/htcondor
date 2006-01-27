@@ -16,14 +16,16 @@ use Execute;
 use Getopt::Long;
 use File::Temp qw/ tempfile /;
 use File::Spec;
+use Cwd;
 
 #***
 # Constant Static Variables
 #***
 my $USAGE = 
     "Usage: condor_local_stop [-f] <-configfile condor_config_file> <-basedir release_dir>\n".
+    "[-localdir local_dir]\n".
     "[-linklock] [-flock] [-pid] [-artifact artifact_file] [-timeout max]\n".
-    "[-localconfig config_file] [-help]\n";
+    "[-localconfig config_file] [-installconfig config_file] [-help]\n";
 
 my $CONDOR_Q = 'condor_q';
 my $CONDOR_OFF = 'condor_off';
@@ -58,8 +60,10 @@ my $MASTER_NAME_ATTR = 'MASTER_NAME';
 #***
 my $force = 0;
 my $release_dir = 0;
+my $local_dir = cwd;
 my $global_config_file = 0;
 my $local_config_file = 0;
+my $install_config_file = 0;
 my $linklock_flag = 0;
 my $flock_flag = 0;
 my $pid_flag = 0;
@@ -82,6 +86,7 @@ my $condor_config_val_cmd = 0;
 # set the location of the release_dir
 GetOptions('configfile=s'=>\$global_config_file,
 	   'basedir=s'=>\$release_dir,
+	   'localdir=s'=>\$local_dir,
 	   'linklock'=>\$linklock_flag,
 	   'flock'=>\$flock_flag,
 	   'pid'=>\$pid_flag,
@@ -89,6 +94,7 @@ GetOptions('configfile=s'=>\$global_config_file,
 	   'timeout=s'=>\$timeout,
 	   'f'=>\$force,
 	   'localconfig=s'=>\$local_config_file,
+	   'installconfig=s'=>\$install_config_file,
 	   'help'=>\$help);
 
 # Process command-line arguments
@@ -169,6 +175,8 @@ sub FindBinary(){
     } else{
 	die "Failed to locate $binaryName in either $flat_path OR $bin_path";
     }
+
+    return($binaryPath);
 }
 
 
@@ -185,7 +193,7 @@ sub SetupEnvironment(){
         
     # Append the given local configuration file to the list already in 
     # the global config
-    if( $local_config_file ){
+    if( $local_config_file || $install_config_file ){
 	&CreateBindingConfig();
     }
 
@@ -308,10 +316,14 @@ sub CreateBindingConfig(){
     # close the given file handle
     close $binding_config_fh;
 
+    # Construct the arguments to condor_config_bind
+    my @args = ('-o', $binding_config_file, $global_config_file );
+    push @args, $local_config_file if( $local_config_file );
+    push @args, $install_config_file if( $install_config_file );
+
     # Execute condor_config_bind to bind the config_files
     my $config_bind_path = File::Spec->catpath(0, $FindBin::Bin, $CONDOR_CONFIG_BIND);
-    !system $config_bind_path, '-o', $binding_config_file, 
-    $global_config_file, $local_config_file
+    !system $config_bind_path, @args
 	or die "FAILED: $config_bind_path failed to create the binding file: $!";
 
     # Reset the environment variable to the new binding config
@@ -323,11 +335,6 @@ sub CreateBindingConfig(){
 # Queries the condor configuration with the given parameters.
 #*********************************************************************
 sub QueryCondorConfig(){
-
-    # If we haven't found condor_config_val, look it up now
-    if( !$condor_config_val_cmd ){
-	&FindCondorConfigVal();
-    }
 
     my $returnHash = ExecuteAndCapture($condor_config_val_cmd, @_);
     
@@ -391,8 +398,10 @@ sub StopMaster(){
 	
 	# attempt to shutdown the master
 	# repeat this step in case the CEDAR packet was lost (UDP)
-	!system $condor_off_cmd, @condor_off_params
-	    or die "ERROR: Failed to shutdown condor";
+	# Ignore errors here
+	# the big error (no shutdown) is caught by the undertaker
+	# system $condor_off_cmd, @condor_off_params;
+	ExecuteAndCapture($condor_off_cmd, @condor_off_params);
 
 	# see if it shutdown (returns 1 for alive, 0 for dead)
 	my $returnHashRef = ExecuteAndCapture($undertaker_path, @undertaker_args);
@@ -419,7 +428,16 @@ sub StopMaster(){
 sub Cleanup(){
     
     # clean up the pid file, if neccessary
-    if( !$linklock_flag && !$flock_flag ){
+    #if( !$linklock_flag && !$flock_flag ){
+    if( -e $midwife_artifact ){
 	unlink $midwife_artifact;
+    }
+
+    # Remove the binding configuration file
+    # If we can find it
+    my $binding_config_file = File::Spec->catfile($local_dir, $BINDING_CONFIG_NAME);
+    if( -e $binding_config_file ){
+	unlink $binding_config_file
+	    or die "FAILED: Could not remove $binding_config_file: $!";
     }
 }

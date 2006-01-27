@@ -1,16 +1,5 @@
 LIST OF SHAME
 ==============
-1. condor_local_stop needs to query the collector to shut off the
-   master 
-   - normally condor_off uses the config to find the masters address
-   file, which is usually stored in log/
-   - condor_local_off doesn't know the location of the local dir or
-     the log_dir so it cannot find the masters address file
-   - Possible Solution: Tree of collectors
-     + a collector for each machine, with its port listed in config
-     + the machine collector aggregates info for the machine and sends
-       it to its parent collector
-
 2. condor_cold_start does not allow the setup process to install local
    configs
    - this requires configMD to bind the local config files into the

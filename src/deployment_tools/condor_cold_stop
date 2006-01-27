@@ -26,6 +26,7 @@ use FindBin;
 use Getopt::Long;
 use File::Spec;
 use File::Basename;
+use Cwd;
 
 #***
 # Constant Static Variables
@@ -49,6 +50,7 @@ my $BASE_DIR_OPT = '-basedir';
 my $CONFIG_OPT = '-configfile';
 my $LOCAL_DIR_OPT = '-localdir';
 my $LOCAL_CONFIG_OPT = '-localconfig';
+my $INSTALL_CONFIG_OPT = '-installconfig';
 my $DYN_OPT = '-dyn';
 my $FG_OPT = '-fg';
 my $LINKLOCK_OPT = '-linklock';
@@ -59,6 +61,7 @@ my $ARTIFACT_OPT ='-artifact';
 
 my $INSTALL_CLEANUP_PROGRAM = 'cleanup_release';
 
+
 my $LOCAL_CLEANUP_PROGRAM = 'condor_cleanup_local';
 my $LOCALDIR_OPT          = '-localdir';
 my $ARCHIVEONLY_OPT       = '-archiveonly';
@@ -67,6 +70,7 @@ my $SPOOLARCHIVE_OPT      = '-spoolarchive';
 my $EXECARCHIVE_OPT       = '-execarchive';
 my $GLOBUS_LOC_OPT        = '-globuslocation';
 my $NO_GURL_OPT           = '-nogurl';
+my $CONDOR_LOCAL_INSTALL_CONFIG = 'condor_config.local_install';
 
 
 #***
@@ -79,8 +83,8 @@ my $stop_flag = 0;
 my $log_archive = 0;
 my $spool_archive = 0;
 my $exec_archive = 0;
-my $local_dir = '.';
-my $base_dir = '.';
+my $local_dir = cwd;
+my $base_dir = cwd;
 my $global_config_file = 0;
 my $local_config_file = 0; 
 my $install_log_path = 0;
@@ -161,6 +165,16 @@ sub StopIt(){
 	push @args, $LOCAL_CONFIG_OPT, $local_config_path;
     }
 
+    # Add the install configuration
+    my $local_install_config = 
+	File::Spec->catpath(0, 
+			    $local_dir, 
+			    $CONDOR_LOCAL_INSTALL_CONFIG);
+    push @args, $INSTALL_CONFIG_OPT,  $local_install_config if( -e $local_install_config );
+
+    # Add the local directory
+    push @args, $LOCAL_DIR_OPT, $local_dir;
+
     # Add the force option if neccessary
     push @args, $FORCE_OPT if( $force );
 
@@ -214,7 +228,14 @@ sub FindConfigFilePath(){
 sub CleanUpLocal(){
     
     # Construct the basic arguments to condor_cleanup_local
-    my @args = ($LOCALDIR_OPT, $local_dir);
+    my @args = ($LOCALDIR_OPT, $local_dir,
+		$BASE_DIR_OPT, $base_dir);
+
+    # Remove the local install configuration
+    my $local_install_config = File::Spec->catpath(0, 
+						   $local_dir, 
+						   $CONDOR_LOCAL_INSTALL_CONFIG);
+    push @args, ($CONFIG_OPT, $local_install_config);
 
     # Archive only if required
     push @args, $ARCHIVEONLY_OPT if( !$clean_local_flag );

@@ -54,10 +54,14 @@ my @logEntries = &ExtractFromLog();
 my @removals = &CreateRemovalPlan(@logEntries);
 
 # Perform removals according to plan
-my $exit_value = &PerformRemovals(@removals);
+my $success = &PerformRemovals(@removals);
+
+# If the uninstall was a success
+# remove the installation log
+unlink $install_log_name if( $success );
 
 # Return success or failure
-exit !$exit_value;
+exit !$success;
 
 #DONE
 
