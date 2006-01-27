@@ -38,6 +38,17 @@ typedef HashTable <int, FileTransfer *> TransThreadHashTable;
 
 typedef int		(Service::*FileTransferHandler)(FileTransfer *);
 
+// NOTE:  This code is implemented in a much better way in 6.7; this is
+// a quick hack to make Gloucester happy -- they can't switch to 6.7
+// DO NOT merge this into 6.7
+#if defined(LINUX)
+  typedef long long filesize_t;
+#elif defined(WIN32)
+  typedef __int64 filesize_t;
+#else
+  typedef long filesize_t;
+#endif
+
 class FileTransfer {
 
   public:
@@ -103,7 +114,7 @@ class FileTransfer {
 	struct FileTransferInfo {
 		FileTransferInfo() : bytes(0), duration(0), type(NoType),
 			success(true), in_progress(false) {}
-		int bytes;
+		filesize_t bytes;
 		time_t duration;
 		TransferType type;
 		bool success;
@@ -124,9 +135,9 @@ class FileTransfer {
 
 	int Continue();
 
-	float TotalBytesSent() { return bytesSent; }
+	filesize_t TotalBytesSent() { return bytesSent; }
 
-	float TotalBytesReceived() { return bytesRcvd; };
+	filesize_t TotalBytesReceived() { return bytesRcvd; };
 
 	void RemoveInputFiles(const char *sandbox_path = NULL);
 
@@ -150,12 +161,12 @@ class FileTransfer {
 		/** Actually download the files.
 			@return -1 on failure, bytes transferred otherwise
 		*/
-	int DoDownload(ReliSock *s);
-	int DoUpload(ReliSock *s);
+	filesize_t DoDownload(ReliSock *s);
+	filesize_t DoUpload(ReliSock *s);
 
 	void CommitFiles();
 	void ComputeFilesToSend();
-	float bytesSent, bytesRcvd;
+	filesize_t bytesSent, bytesRcvd;
 
   private:
 

@@ -104,8 +104,8 @@ FileTransfer::FileTransfer()
 	TransferStart = 0;
 	ClientCallback = 0;
 	TransferPipe[0] = TransferPipe[1] = -1;
-	bytesSent = 0.0;
-	bytesRcvd = 0.0;
+	bytesSent = 0;
+	bytesRcvd = 0;
 	m_final_transfer_flag = FALSE;
 #ifdef WIN32
 	perm_obj = NULL;
@@ -1028,7 +1028,7 @@ FileTransfer::DownloadThread(void *arg, Stream *s)
 {
 	dprintf(D_FULLDEBUG,"entering FileTransfer::DownloadThread\n");
 	FileTransfer * myobj = ((download_info *)arg)->myobj;
-	int total_bytes = myobj->DoDownload((ReliSock *)s);
+	filesize_t total_bytes = myobj->DoDownload((ReliSock *)s);
 	write(myobj->TransferPipe[1],	// write-end of pipe
 				(char *)&total_bytes, sizeof(int));
 	return (total_bytes >= 0);
@@ -1047,10 +1047,11 @@ FileTransfer::DownloadThread(void *arg, Stream *s)
     return i;
 
 
-int
+filesize_t
 FileTransfer::DoDownload(ReliSock *s)
 {
-	int reply, bytes, total_bytes = 0;
+	filesize_t bytes, total_bytes = 0;
+	int reply;
 	char filename[_POSIX_PATH_MAX];
 	char* p_filename = filename;
 	char fullname[_POSIX_PATH_MAX];
@@ -1150,7 +1151,7 @@ FileTransfer::DoDownload(ReliSock *s)
 		if( !s->end_of_message() ) {
 			return_and_resetpriv( -1 );
 		}
-		total_bytes += bytes;
+		total_bytes += (filesize_t) bytes;
 	}
 
 	bytesRcvd += total_bytes;
@@ -1280,19 +1281,19 @@ FileTransfer::UploadThread(void *arg, Stream *s)
 {
 	dprintf(D_FULLDEBUG,"entering FileTransfer::UploadThread\n");
 	FileTransfer * myobj = ((upload_info *)arg)->myobj;
-	int total_bytes = myobj->DoUpload((ReliSock *)s);
+	filesize_t total_bytes = myobj->DoUpload((ReliSock *)s);
 	write(myobj->TransferPipe[1],	// write end
 			(char *)&total_bytes, sizeof(int));
 	return (total_bytes >= 0);
 }
 
-int
+filesize_t
 FileTransfer::DoUpload(ReliSock *s)
 {
 	char *filename;
 	char *basefilename;
 	char fullname[_POSIX_PATH_MAX];
-	int bytes, total_bytes=0;
+	filesize_t bytes, total_bytes=0;
 	bool is_the_executable;
 	StringList * filelist = FilesToSend;
 	
