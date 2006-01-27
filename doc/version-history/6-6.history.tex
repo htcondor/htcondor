@@ -47,6 +47,11 @@ The details of each version are described below.
   daemon attempts to log a message which would refer to
   ``PRIV\_FILE\_OWNER''.
 
+\item Fixed a bug which caused the \Condor{starter} to exit with an
+  error when the sum total of the file transfer size exceeded 2G.
+  This, in turn, caused a ``shadow exeception'', and the job would
+  fail.
+
 \end{itemize}
 
 
