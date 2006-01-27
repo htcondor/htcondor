@@ -25,6 +25,17 @@ The details of each version are described below.
 \item For those platforms which support it, libcondorapi.so is now
 produced and available in the lib/ directory after installing Condor.
 
+\item The negotiation protocol between the \Condor{schedd} and
+the \Condor{negotiator} daemons has been improved for both scalability and
+correctness.  In general, most sites will see faster negotiation 
+cycles when many jobs are submitted after upgrading both the negotiator
+and all schedd daemons to version 6.7.15.  This means the scheduling overhead
+per job is reduced.  For sites that have been using the undocumented
+\Macro{SIGNIFICANT\_ATTRIBUTES} setting in the config file, we suggest
+removing that setting, as Condor will now pick an optimal value
+for \Macro{SIGNIFICANT\_ATTRIBUTES} automatically if it is not
+explicitly specified.
+
 \item Due to kernel bugs between the Linux 2.4.x and 2.6.x kernels,
 Condor now implements "checkpointing signatures" which allow more fine
 grained and automatic control over whether or not a particular machine
