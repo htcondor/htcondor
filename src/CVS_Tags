@@ -1,3 +1,9 @@
+01/30/06 V6_6-merge-53
+  The state of the V6_6-branch for a merge into V6_7-branch. Brings
+  in the ability to run condor_master -f on NT, some file transfer bug
+  fixes, and a check to make sure build tags include externals in the
+  nmi_glue.
+
 01/17/06 V6_6-merge-52
   The state of the V6_6-branch for a merge into V6_7-branch.  Uses
   my_popenv() in favor of regular popen() to avoid unnecessarily
