@@ -360,8 +360,7 @@ Only do so if you know what you are doing.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Condor-wide-Config-File-Entries}Condor-wide
-  Configuration File Entries} 
+\subsection{\label{sec:Condor-wide-Config-File-Entries}Condor-wide Configuration File Entries} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration!Condor-wide configuration variables}
@@ -819,8 +818,7 @@ File System Configuration File Entries''.
 % Default value check end here: PKK 8 Jan 2004
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Daemon-Logging-Config-File-Entries}Daemon
-  Logging Config File Entries} 
+\subsection{\label{sec:Daemon-Logging-Config-File-Entries}Daemon Logging Config File Entries} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration!daemon logging configuration variables}
@@ -1114,8 +1112,7 @@ Log files may optionally be specified per debug level as follows:
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:DaemonCore-Config-File-Entries}DaemonCore
-  Config File Entries} 
+\subsection{\label{sec:DaemonCore-Config-File-Entries}DaemonCore Config File Entries} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration!DaemonCore configuration variables}
@@ -1265,8 +1262,7 @@ server, shadow, and starter, none of which use DaemonCore yet).
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Network-Related-Config-File-Entries}Network-Related
-  Configuration File Entries}
+\subsection{\label{sec:Network-Related-Config-File-Entries}Network-Related Configuration File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{configuration!network-related configuration variables}
 
@@ -1418,8 +1414,7 @@ section~\ref{sec:GCB} on page~\pageref{sec:GCB}.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Shared-Filesystem-Config-File-Entries}Shared
-  File System Configuration File Macros} 
+\subsection{\label{sec:Shared-Filesystem-Config-File-Entries}Shared File System Configuration File Macros} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{configuration!shared file system configuration variables}
 
@@ -1702,8 +1697,7 @@ section~\ref{sec:shared-fs}.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{Checkpoint-Server-Config-File-Entries}Checkpoint
-  Server Configuration File Macros} 
+\subsection{\label{Checkpoint-Server-Config-File-Entries}Checkpoint Server Configuration File Macros} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration!checkpoint server configuration variables}
@@ -1762,8 +1756,7 @@ checkpoint server host (see below).
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Master-Config-File-Entries}\condor{master}
-  Configuration File Macros} 
+\subsection{\label{sec:Master-Config-File-Entries}\Condor{master} Configuration File Macros} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration!condor\_master configuration variables}
@@ -2166,7 +2159,7 @@ will not want to change them for any reason.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Startd-Config-File-Entries}\condor{startd}
+\subsection{\label{sec:Startd-Config-File-Entries}\Condor{startd}
 Configuration File Macros}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -2181,6 +2174,7 @@ Examples using these configuration macros,
 as well as further explanation is found in
 section~\ref{sec:Configuring-Policy} on
 Configuring The Startd Policy.
+
 \begin{description}
 
 \item[\Macro{START}] \label{param:Start}  A boolean expression
@@ -2215,6 +2209,29 @@ Configuring The Startd Policy.
    that Condor uses to compare potential jobs.
    A larger value for a specific job ranks that job above
    others with lower values for \MacroNI{RANK}.
+
+\item[\Macro{IS\_VALID\_CHECKPOINT\_PLATFORM}] \label{param:IsValidCheckpointPlatform} A boolean expression that is logically anded with the
+   with the \MacroNI{START} expression to limit which machines a
+   standard universe job may continue execution on once they have
+   produced a checkpoint.
+   The default expression is
+
+   \footnotesize
+   \begin{verbatim}
+   IS_VALID_CHECKPOINT_PLATFORM =
+   (
+     ( (TARGET.JobUniverse == 1) == FALSE) ||
+   
+     (
+       (MY.CheckpointPlatform =!= UNDEFINED) &&
+       (
+         (TARGET.LastCheckpointPlatform =?= MY.CheckpointPlatform) ||
+         (TARGET.NumCkpts == 0)
+       )
+     )
+   )
+   \end{verbatim}
+   \normalsize
 
 \item[\Macro{WANT\_SUSPEND}] \label{param:WantSuspend}  A boolean expression
    that, when \Expr{True}, defines that a currently running

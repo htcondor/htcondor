@@ -8,15 +8,20 @@
 
 %%% ClassAd attribute: CkptArch
 \index{ClassAd job attribute!CkptArch}
+\index{CkptArch!job ClassAd attribute}
 \item[\AdAttr{CkptArch}] : String describing the architecture of the machine
-where this job last checkpointed.  If the job has never checkpointed,
-this attribute is UNDEFINED.
+this job executed on at the time it last produced a checkpoint.
+If the job has never produced a checkpoint,
+this attribute is \Expr{undefined}.
 
 %%% ClassAd attribute: CkptOpSys
 \index{ClassAd job attribute!CkptOpSys}
+\index{CkptOpSys!job ClassAd attribute}
 \item[\AdAttr{CkptOpSys}] : String describing the operating system of
-the machine where this job last checkpointed.  If the job has never
-checkpointed, this attribute is UNDEFINED.
+the machine
+this job executed on at the time it last produced a checkpoint.
+If the job has never produced a checkpoint,
+this attribute is \Expr{undefined}.
 
 %%% ClassAd attribute: ClusterId
 \index{ClassAd job attribute!ClusterId}
@@ -172,11 +177,11 @@ universe, where 1 = Standard, 4 = PVM, 5 = Vanilla, 7 = Scheduler,
 \index{ClassAd job attribute!LastCheckpointPlatform}
 \item[\AdAttr{LastCheckpointPlatform}] : An opaque string which is the
 \AdAttr{CheckpointPlatform} identifier from the last machine where this
-standard universe job had checkpointed successfully.
+standard universe job had successfully produced a checkpoint.
 
 %%% ClassAd attribute: LastCkptServer
 \index{ClassAd job attribute!LastCkptServer}
-\item[\AdAttr{LastCkptServer}] : Hostname of the last checkpoint
+\item[\AdAttr{LastCkptServer}] : Host name of the last checkpoint
 server used by this job.  When a pool is using multiple checkpoint
 servers, this tells the job where to find its checkpoint file.
 
