@@ -705,7 +705,8 @@ main( int argc, char *argv[] )
 	sprintf(userdom, "%s@%s", the_username, the_domainname);
 	free(the_username);
 	free(the_domainname);
-	if ( store_cred(userdom, NULL, QUERY_MODE, MySchedd) != SUCCESS ) {
+	int store_cred_result = store_cred(userdom, NULL, QUERY_MODE, MySchedd);
+	if ( store_cred_result != SUCCESS && store_cred_result != FAILURE_NOT_SUPPORTED) {
 		fprintf( stderr, "\nERROR: No credential stored for %s\n"
 				"\n\tCorrect this by running:\n"
 				"\tcondor_store_cred add\n", userdom );

@@ -1,3 +1,9 @@
+01/30/06 V6_6-merge-53
+  The state of the V6_6-branch for a merge into V6_7-branch. Brings
+  in the ability to run condor_master -f on NT, some file transfer bug
+  fixes, and a check to make sure build tags include externals in the
+  nmi_glue.
+
 01/26/06 V6_7-buffered_jobq-branch
    This branch will be used by the yahoo folks to use stdio
    buffered to access the jobq.

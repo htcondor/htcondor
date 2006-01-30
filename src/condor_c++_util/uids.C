@@ -46,7 +46,7 @@ static char *priv_state_name[] = {
 	"PRIV_ROOT",
 	"PRIV_CONDOR",
 	"PRIV_USER",
-	"PRIV_USER_FINAL"
+	"PRIV_USER_FINAL",
 	"PRIV_FILE_OWNER"
 };
 
@@ -89,7 +89,7 @@ void
 display_priv_log(void)
 {
 	int i, idx;
-	if (SwitchIds) {
+	if (can_switch_ids()) {
 		dprintf(D_ALWAYS, "running as root; privilege switching in effect\n");
 	} else {
 		dprintf(D_ALWAYS, "running as non-root; no privilege switching\n");
@@ -114,6 +114,16 @@ get_priv()
 int
 can_switch_ids( void )
 {
+	static bool HasCheckedIfRoot = false;
+
+	// can't switch users if we're not root/SYSTEM
+	if (!HasCheckedIfRoot) {
+		if (!is_root()) {
+			SwitchIds = FALSE;
+		}
+		HasCheckedIfRoot = true;
+	}
+
 	return SwitchIds;
 }
 
@@ -241,6 +251,12 @@ init_user_ids(const char username[], const char domain[])
 				   		CurrUserHandle);
 			return 1;
 		}
+	}
+
+	// anything beyond this requires user switching
+	if (!can_switch_ids()) {
+		dprintf(D_ALWAYS, "init_user_ids: failed because user switching is disabled\n");
+		return 0;
 	}
 
 	if ( strcmp(username,"nobody") != 0 ) {
@@ -379,7 +395,7 @@ _set_priv(priv_state s, char file[], int line, int dologging)
 	}
 
 	CurrentPrivState = s;
-	if (SwitchIds) {
+	if (can_switch_ids()) {
 		switch (s) {
 		case PRIV_ROOT:
 		case PRIV_CONDOR:
@@ -492,13 +508,6 @@ clear_passwd_cache() {
 	// no-op on Windows
 }
 
-void
-_condor_disable_uid_switching()
-{
-	SwitchIds = FALSE;
-}
-
-
 #else  // end of ifdef WIN32, now below starts Unix-specific code
 
 #include <grp.h>
@@ -585,13 +594,6 @@ pcache(void) {
 }
 
 void
-_condor_disable_uid_switching()
-{
-	CondorIdsInited = TRUE;
-	SwitchIds = FALSE;
-}
-
-void
 clear_passwd_cache() {
 	pcache()->reset();
 }
@@ -668,7 +670,7 @@ init_condor_ids()
 
 	/* If we're root, set the Condor Uid and Gid to the value
 	   specified in the "CONDOR_IDS" environment variable */
-	if( MyUid == ROOT ) {
+	if( can_switch_ids() ) {
 		const char	*envName = EnvGetName( ENV_UG_IDS ); 
 		if( envCondorUid != MAXINT ) {	
 			/* CONDOR_IDS are set, use what it said */
@@ -728,11 +730,6 @@ init_condor_ids()
 			RealCondorUid = MyUid;
 			RealCondorGid = MyGid;
 		}
-
-		/* no need to try to switch ids when running as non-root */
-		/* Can't dprintf() here, see above comment. -Derek 12/21/98 */
-		/* dprintf(D_PRIV, "running as non-root; no privilege switching\n"); */
-		SwitchIds = FALSE;
 	}
 	
 	(void)endpwent();
@@ -1006,7 +1003,7 @@ _set_priv(priv_state s, char file[], int line, int dologging)
 		init_condor_ids();
 	}
 
-	if (SwitchIds) {
+	if (can_switch_ids()) {
 		switch (s) {
 		case PRIV_ROOT:
 			set_root_euid();

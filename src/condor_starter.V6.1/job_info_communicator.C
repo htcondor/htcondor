@@ -372,7 +372,8 @@ JobInfoCommunicator::initUserPrivNoOwner( void )
 	return true;
 }
 
-
+#ifdef WIN32
+#include "my_username.h"
 bool
 JobInfoCommunicator::initUserPrivWindows( void )
 {
@@ -406,6 +407,17 @@ JobInfoCommunicator::initUserPrivWindows( void )
 			init_priv_succeeded = false;			
 		} 
 		free(run_jobs_as);		
+	} else if ( !can_switch_ids() ) {
+		char *u = my_username();
+		char *d = my_domainname();
+
+		if ( !init_user_ids(u, d) ) {
+			// shouldn't happen - we always can get our own token
+			dprintf(D_ALWAYS, "Could not initialize user_priv with our own token!\n");
+			init_priv_succeeded = false;
+		}
+		free(u);
+		free(d);
 	} else if( ! init_user_ids("nobody", ".") ) {
 		
 		// just init a new nobody user; dynuser handles the rest.
@@ -419,7 +431,7 @@ JobInfoCommunicator::initUserPrivWindows( void )
 	user_priv_is_initialized = init_priv_succeeded;
 	return init_priv_succeeded;
 }
-
+#endif // WIN32
 
 void
 JobInfoCommunicator::checkForStarterDebugging( void )
