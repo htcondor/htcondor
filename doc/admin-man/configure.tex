@@ -4240,9 +4240,10 @@ group users.
   The group name must also be specified in the \MacroNI{GROUP\_NAMES} list.
   \MacroNI{GROUP\_PRIO\_FACTOR\_<groupname>} is evaluated when
   the negotiator first negotiates for the user as a member of the group.
-  All members of the group inherit the default priority factor.
+  All members of the group inherit the default priority factor
+  when no other value is present.
   For example, the following setting
-  specifies that all member of the group named \verb@group_physics@
+  specifies that all members of the group named \verb@group_physics@
   inherit a default user priority factor of 2.0:
   \begin{verbatim}
     GROUP_PRIO_FACTOR_group_physics = 2.0
