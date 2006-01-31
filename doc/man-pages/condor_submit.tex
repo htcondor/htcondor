@@ -1018,45 +1018,54 @@ or a different resource than a previous match.
 
 
 %%%%%%%%%%%%%%%%%%%
-%% MaxJobRetirementTime
+%% max_job_retirement_time
 %%%%%%%%%%%%%%%%%%%
 
-\item[MaxJobRetirementTime] 
-\index{MaxJobRetirementTime}
-\index{submit commands!MaxJobRetirementTime}
-This setting
-does nothing unless the machine that runs your job has been configured
-to provide retirement time (see
-section~\ref{sec:State-Expression-Summary}).  Retirement time is a
-grace period given to your job to finish naturally (no kill signals
-are sent) when a resource claim is about to be preempted.  The default
-behavior in many cases is to take as much retirement time as the
-machine offers, so you usually do not need or want to use this
-expression in your submit file.
+\item[max\_job\_retirement\_time = $<$integer expression$>$]
+\index{max\_job\_retirement\_time}
+\index{submit commands!max\_job\_retirement\_time}
+An integer-valued expression (in seconds) that
+does nothing unless the machine that runs the job has been configured
+to provide retirement time
+(see section~\ref{sec:State-Expression-Summary}).
+Retirement time is a
+grace period given to a job to finish naturally
+when a resource claim is about to be preempted.
+No kill signals are sent during a retirement time.
+The default behavior in many cases is to take as much
+retirement time as the machine offers,
+so this command will rarely appear in a submit description file.
 
-When a resource claim is being preempted, this expression in the
-submit file specifies the maximum runtime of the job (in seconds since
-the job started).  This expression has no effect if it is greater than
-the maximum retirement time provided by the machine policy.  If the
-resource claim is \emph{not} preempted, this expression and the machine
-retirement policy are irrelevant.  If the resource claim \emph{is} preempted
-and your job finishes sooner than the maximum time, then the claim
-closes gracefully and all is well.  If the resource claim is preempted
-and your job does \emph{not} finish in time, then the usual preemption
+When a resource claim is to be preempted, this expression in the
+submit file specifies the maximum run time of the job (in seconds, since
+the job started).
+This expression has no effect,
+if it is greater than the maximum retirement time provided
+by the machine policy.
+If the resource claim is \emph{not} preempted,
+this expression and the machine retirement policy are irrelevant. 
+If the resource claim \emph{is} preempted
+and the job finishes sooner than the maximum time,
+the claim closes gracefully and all is well.
+If the resource claim is preempted
+and the job does \emph{not} finish in time,
+the usual preemption
 procedure is followed (typically a soft kill signal, followed by some
 time to gracefully shut down, followed by a hard kill signal).
 
-Standard universe jobs and any jobs running with nice\_user priority
-have a default \AdAttr{MaxJobRetirementTime} of 0, so no retirement
-time is utilized by default.  In all other cases, no default value is
-provided, so the maximum amount of retirement time is utilized by
-default.
+Standard universe jobs and any jobs running with \SubmitCmd{nice\_user}
+priority have a default \SubmitCmd{max\_job\_retirement\_time} of 0,
+so no retirement time is utilized by default.
+In all other cases,
+no default value is provided,
+so the maximum amount of retirement time is utilized by default.
 
-Setting this expression does not affect your job's resource
-requirements or preferences.  If you want your job to only run on
-machines with some minimal \AdAttr{MaxJobRetirementTime} or if you
-just want to preferentially run on such machines, you must explicitly
-specify what you want in the requirements and/or rank expressions.
+Setting this expression does not affect the job's resource
+requirements or preferences.  
+For a job to only run on
+a machine with a minimum \AdAttr{},
+or to preferentially run on such machines, explicitly
+specify this in the requirements and/or rank expressions.
 
 %%%%%%%%%%%%%%%%%%%
 %% MyProxyCredentialName
