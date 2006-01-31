@@ -332,16 +332,15 @@ desire the Condor source code, please contact the Condor Team in order to discus
 \begin{center}
 \begin{table}[hbt]
 \begin{tabular}{|p{6cm}p{7cm}|} \hline
-\emph{Architecture} & \emph{Operating System} \\ \hline  \hline
+\emph{Architecture} & \emph{Operating System} \\ \hline \hline
 Hewlett Packard PA-RISC (both PA7000 and PA8000 series) & - HPUX 10.20 \\
  & - HPUX 11.00 (clipped) \\ \hline
 Sun SPARC Sun4m, Sun4c, Sun UltraSPARC & - Solaris 8, 9 \\
  & - Solaris 10 (clipped), using the Solaris 9 binaries \\ \hline
 Silicon Graphics MIPS (R5000, R8000, R10000) & - IRIX 6.5 (clipped) \\ \hline
 Intel x86 & - Red Hat Linux 7.1, 7.2, 7.3, 8.0, 9 \\
- & - RedHat Enterprise Linux 3 \\
- & - RedHat Enterprise Linux 4 (full) \\
-% & - RedHat Enterprise Linux 4 (full), with \File{compat-glibc} and \File{compat-glibc-headers} packages \\
+ & - RedHat Enterprise Linux 3, 4 \\
+% & - RedHat Enterprise Linux 4, with \File{compat-glibc} and \File{compat-glibc-headers} packages \\
  & - Debian Linux 3.1 (sarge) \\
  & - Fedora Core 1, 2, 3, 4 \\
 % & - Fedora Core 2, 3, with \File{compat-glibc} and \File{compat-glibc-headers} packages \\
@@ -353,7 +352,7 @@ ALPHA & - Tru64 5.1 (clipped) \\
  & - Red Hat Linux 7.1, 7.2, 7.3 (clipped) \\ \hline
 PowerPC & - Macintosh OS X (clipped) \\
  & - AIX 5.2 (clipped) \\
- & - Yellowdog Linux 3.0 \\ \hline
+ & - Yellowdog Linux 3.0 (clipped) \\ \hline
 Itanium (IA64) & - Red Hat Enterprise Linux 3 (clipped) \\
  & - SuSE Linux Enterprise Server 8.1 (clipped) \\ \hline
 Opteron (x86\_64) & - Red Hat Enterprise Linux 3 (clipped) \\ \hline
@@ -386,45 +385,41 @@ Other compilers may work, but are not supported.
 % This table must be formatted oddly, to make the pdf version look OK.
 \begin{center}
 \begin{table}[hbt]
-\begin{tabular}{|ll|l|}
+\begin{tabular}{|ll|l|} \hline
 \textbf{Platform} & \textbf{Compiler} & \textbf{Notes}\\ \hline \hline
-Solaris (all versions) on SPARC \\ 
+Solaris (all versions) on SPARC & & \\ 
 & gcc, g++, and g77 & The entire GNU compiler suite \\
 & & must be versions 2.95.3 or 2.95.4 \\ 
 & cc, CC & use the standard, native compiler \\ 
 & f77, f90 & use the standard, native compiler \\ 
 \hline
-Red Hat Linux, versions 7.2, and 7.3 \\
+Red Hat Linux, versions 7.2, and 7.3 & & \\
 on Intel x86 & gcc, g++, and g77 & as shipped \\ 
-& pgf77 and pgf90, \\
+& pgf77 and pgf90, & \\
 & version 5.0 & Portland Group compilers \\ 
 & pghpf, version 5.0 & Portland Group high performance \\
 & & Fortran compiler \\ 
-& pgcc, version 5.0 \\ 
+& pgcc, version 5.0 & \\ 
 \hline
-Red Hat Linux, version 8 on x86 \\ 
+Red Hat Linux, version 8 on x86 & & \\ 
 & gcc, g++, and g77 & version 3.2 \\ 
-& pgf77 and pgf90, \\
+& pgf77 and pgf90, & \\
 & version 5.0 & Portland Group compilers \\ 
 & pghpf, version 5.0 & Portland Group high performance \\
 & & Fortran compiler \\ 
-& pgcc, version 5.0 \\ 
+& pgcc, version 5.0 & \\ 
 \hline
 Red Hat Linux, version 9 on x86 & gcc, g++, and g77 & as shipped  \\ 
 \hline
-Red Hat Enterprise Linux 3 on x86 & gcc, g++, and g77 & as shipped  \\ 
+Red Hat Enterprise Linux 3, 4 on x86 & gcc, g++, and g77 & as shipped  \\ 
 \hline
-Red Hat Debian Linux 3.1 (sarge) on x86 & gcc up to version 3.4.1 \\ 
+Red Hat Debian Linux 3.1 (sarge) on x86 & gcc up to version 3.4.1 &  \\ 
 \hline
-Fedora Core 1 on x86 & gcc, g++, and g77 & as shipped  \\ 
+Fedora Core 1, 2, 3, 4 on x86 & gcc, g++, and g77 & as shipped  \\ 
 \hline
-Fedora Core 2 on x86 & gcc, g++, and g77 & as shipped  \\ 
-\hline
-Fedora Core 3 on x86 & gcc, g++, and g77 & as shipped  \\ 
-\hline
-HPUX 10.20 on HP PA-RISC \\
-(both PA7000 and PA8000) & gcc, g++, and g77; \\
-& version egcs-1.1.2 \\ 
+HPUX 10.20 on HP PA-RISC & & \\
+(both PA7000 and PA8000) & gcc, g++, and g77 & \\
+& version egcs-1.1.2 & \\ 
 & cc, CC, aCC & cc and aCC cannot use C++ \\
 & & exceptions \\ 
 \hline
