@@ -1,3 +1,8 @@
+01/31/06 V6_7_15
+   The official 6.7.15 release.  The packages for all platforms came
+   from NMI build #18195.  The version string for this release is:
+       $CondorVersion: 6.7.15 Jan 26 2006 $
+
 01/30/06 V6_6-merge-53
   The state of the V6_6-branch for a merge into V6_7-branch. Brings
   in the ability to run condor_master -f on NT, some file transfer bug
