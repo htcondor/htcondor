@@ -131,9 +131,40 @@ class Daemons daemons;
 // for daemonCore
 char *mySubSystem = "MASTER";
 
+
+// called at exit to deallocate stuff so that memory checking tools are
+// happy and don't think we leaked any of this...
+static void
+cleanup_memory( void )
+{
+	if ( ad ) {
+		delete ad;
+		ad = NULL;
+	}
+	if ( MasterName ) {
+		delete [] MasterName;
+		MasterName = NULL;
+	}
+	if ( FS_Preen ) {
+		free( FS_Preen );
+		FS_Preen = NULL;
+	}
+	if ( Collector ) {
+		delete Collector;
+		Collector = NULL;
+	}
+	if ( secondary_collectors ) {
+		delete secondary_collectors;
+		secondary_collectors = NULL;
+	}
+}
+
+
 int
 master_exit(int retval)
 {
+	cleanup_memory();
+
 #ifdef WIN32
 	if ( NT_ServiceFlag == TRUE ) {
 		terminate(retval);
