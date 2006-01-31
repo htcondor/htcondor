@@ -100,8 +100,6 @@ DaemonList* secondary_collectors = NULL;
 int		ceiling = 3600;
 float	e_factor = 2.0;								// exponential factor
 int		r_factor = 300;								// recover factor
-char*	config_location;						// config file from server
-int		doConfigFromServer = FALSE; 
 char	*FS_Preen = NULL;
 int		NT_ServiceFlag = FALSE;		// TRUE if running on NT as an NT Service
 
