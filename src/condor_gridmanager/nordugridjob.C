@@ -201,6 +201,18 @@ NordugridJob::NordugridJob( ClassAd *classad )
 		goto error_exit;
 	}
 
+	gahp_path = param( "NORDUGRID_GAHP" );
+	if ( gahp_path == NULL ) {
+		error_string = "NORDUGRID_GAHP not defined";
+		goto error_exit;
+	}
+	snprintf( buff, sizeof(buff), "NORDUGRID/%s",
+			  jobProxy->subject->subject_name );
+	gahp = new GahpClient( buff, gahp_path );
+	gahp->setNotificationTimerId( evaluateStateTid );
+	gahp->setMode( GahpClient::normal );
+	gahp->setTimeout( gahpCallTimeout );
+
 	buff[0] = '\0';
 	jobAd->LookupString( ATTR_GRID_RESOURCE, buff );
 	if ( buff[0] != '\0' ) {
@@ -242,18 +254,6 @@ NordugridJob::NordugridJob( ClassAd *classad )
 	} else {
 		SetRemoteJobId( NULL );
 	}
-
-	gahp_path = param( "NORDUGRID_GAHP" );
-	if ( gahp_path == NULL ) {
-		error_string = "NORDUGRID_GAHP not defined";
-		goto error_exit;
-	}
-	snprintf( buff, sizeof(buff), "NORDUGRID/%s",
-			  jobProxy->subject->subject_name );
-	gahp = new GahpClient( buff, gahp_path );
-	gahp->setNotificationTimerId( evaluateStateTid );
-	gahp->setMode( GahpClient::normal );
-	gahp->setTimeout( gahpCallTimeout );
 
 	return;
 

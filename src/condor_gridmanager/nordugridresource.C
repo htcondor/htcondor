@@ -77,20 +77,13 @@ NordugridResource::NordugridResource( const char *resource_name,
 
 	gahp = NULL;
 
-	char *gahp_path = param("NORDUGRID_GAHP");
-	if ( gahp_path == NULL ) {
-		EXCEPT( "NORDUGRID_GAHP not defined in condor config file" );
-	} else {
-		MyString buff;
-		buff.sprintf( "NORDUGRID/%s", proxySubject );
+	MyString buff;
+	buff.sprintf( "NORDUGRID/%s", proxySubject );
 
-		gahp = new GahpClient( buff.Value(), gahp_path );
-		gahp->setNotificationTimerId( pingTimerId );
-		gahp->setMode( GahpClient::normal );
-		gahp->setTimeout( NordugridJob::gahpCallTimeout );
-
-		free( gahp_path );
-	}
+	gahp = new GahpClient( buff.Value() );
+	gahp->setNotificationTimerId( pingTimerId );
+	gahp->setMode( GahpClient::normal );
+	gahp->setTimeout( NordugridJob::gahpCallTimeout );
 }
 
 NordugridResource::~NordugridResource()
