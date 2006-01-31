@@ -21,86 +21,162 @@ my @OsInfo = (
 	      # Any version of IRIX
 	      { ostype => "IRIX.*", osrev => ".*",
 		df =>
-		{ command => "df",
+		{
+		 Command => "df",
+		 BlockSize => 512,
+		 Fields =>
+		 {
 		  fs => 0,
 		  size => 2,
 		  used => 3,
 		  avail => 4,
 		  pused => 5,
-		  mnt => 6 },
-		mount =>
-		{ command => "/sbin/mount",
-		  mountpoint => 0,
-		  fs => 2, },
+		  mnt => 6,
+		 },
+		},
 	      },
 	      # Any version of HP-UX
 	      { ostype => "HP-UX", osrev => ".*",
 		df =>
-		{ command => "bdf",
+		{
+		 Command => "bdf",
+		 BlockSize => 1024,
+		 Fields =>
+		 {
 		  fs => 0,
 		  size => 1,
 		  used => 2,
 		  avail => 3,
 		  pused => 4,
-		  mnt => 5 },
-		mount =>
-		{ command => "/sbin/mount",
-		  mountpoint => 0,
-		  fs => 2, },
+		  mnt => 5,
+		 },
+		},
 	      },
 	      # Solaris
 	      { ostype => "SunOS", osrev => "5",
 	        df =>
-		{ command => "df -k",
+		{
+		 Command => "/usr/bin/df -k",
+		 BlockSize => 1024,
+		 Fields =>
+		 {
 		  fs => 0,
 		  size => 1,
 		  used => 2,
 		  avail => 3,
 		  pused => 4,
-		  mnt => 5 },
-		mount =>
-		{ command => "/usr/sbin/mount",
-		  mountpoint => 0,
-		  fs => 2, },
+		  mnt => 5,
+		 },
+		},
 	      },
 	      # SunOS 4.x
 	      { ostype => "SunOS", osrev => "4",
 		df =>
-		{ command => "df",
+		{
+		 Command => "df",
+		 BlockSize => 512,
+		 Fields =>
+		 {
 		  fs => 0,
 		  size => 1,
 		  used => 2,
 		  avail => 3,
 		  pused => 4,
-		  mnt => 5 },
-		mount =>
-		{ command => "/sbin/mount",
-		  mountpoint => 0,
-		  fs => 2, },
+		  mnt => 5,
+		 },
+		},
 	      },
 	      # Any Linux
 	      { ostype => "Linux", osrev => ".*",
 		df =>
-		{ command => "df",
+		{
+		 Command => "df",
+		 BlockSize => 1024,
+		 Fields =>
+		 {
 		  fs => 0,
 		  size => 1,
 		  used => 2,
 		  avail => 3,
 		  pused => 4,
-		  mnt => 5 },
-		mount =>
-		{ command => "/bin/mount",
-		  mountpoint => 2,
-		  fs => 0, },
-	      }
+		  mnt => 5,
+		 },
+		},
+	      },
+	      # Apple OS/X
+	      { ostype => "Darwin", osrev => ".*",
+		df =>
+		{
+		 Command => "df",
+		 BlockSize => 512,
+		 Fields =>
+		 {
+		  fs => 0,
+		  size => 1,
+		  used => 2,
+		  avail => 3,
+		  pused => 4,
+		  mnt => 5,
+		 },
+		},
+	      },
+	      # OS/F
+	      { ostype => "OSF1", osrev => ".*",
+		df =>
+		{
+		 Command => "/usr/bin/df",
+		 BlockSize => 512,
+		 Fields =>
+		 {
+		  fs => 0,
+		  size => 1,
+		  used => 2,
+		  avail => 3,
+		  pused => 4,
+		  mnt => 5,
+		 },
+		},
+	      },
 	  );
-my %DfFields = (
-		fs => "fs",
-		size => "size",
-		used => "used",
-		avail => "avail",
-		pct_used => "pused",
-		mnt => "mnt"
+
+my @MountProgs = (
+		  "/bin/mount",
+		  "/sbin/mount",
+		  "/usr/sbin/mount",
+		  "/usr/bin/mount",
+		 );
+
+my @DfFields = (
+		{
+		 Name => "fs",
+		 Field => "fs",
+		 Type => HawkeyePublish::TypeString,
+		},
+		{
+		 Name => "size",
+		 Field => "size",
+		 Type => HawkeyePublish::TypeNumber,
+		},
+		{
+		 Name => "used",
+		 Field => "used",
+		 Type => HawkeyePublish::TypeNumber,
+		},
+		{
+		 Name => "avail",
+		 Field => "avail",
+		 Type => HawkeyePublish::TypeNumber,
+		},
+		{
+		 Name => "pct_used",
+		 Field => "pused",
+		 Type => HawkeyePublish::TypePercent,
+		},
+		{
+		 Name => "mnt",
+		 Field => "mnt",
+		 Type => HawkeyePublish::TypeString,
+		},
 	       );
 
 main();
@@ -143,99 +219,129 @@ sub RunIt
 
 
     # Get the real mount points
+    my $Mount = "";
+    foreach my $Tmp ( @MountProgs )
+    {
+	if ( -x $Tmp )
+	{
+	    $Mount = $Tmp;
+	}
+    }
+    die "Can't find a mount program" if ( $Mount eq "" );
+
+    # Run mount, store it's output in @Lines
     my %RealMountPoints;
     my $CheckMountPoints = 0;
-    my $OsMount = $OS->{mount};
-    if ( open ( MOUNT, $OsMount->{command}."|" ) )
+    my @Lines;
+    my $MountFs = 0;
+    if ( open ( MOUNT, "$Mount |" ) )
     {
 	while ( <MOUNT> )
 	{
 	    chomp;
-	    my @Mount = split;
-	    if ( $Mount[1] ne "on" )
+	    if ( ! /on/ )
 	    {
 		print STDERR "df: I don't understand '$_'\n";
 		next;
 	    }
-	    $CheckMountPoints++;
-	    my $Fs = $Mount[$OsMount->{fs}];
-	    my $MPoint = $Mount[$OsMount->{mountpoint}];
-	    $RealMountPoints{$MPoint} = $Fs;
+	    push( @Lines, $_ );
 	}
-	close( MOUNT );
+    }
+    close( MOUNT );
+
+    # Which type of mount do we have ( 'dev on mp' or 'mp on dev' ) ?
+    my @Tmp1a = grep( /^\/dev[\w\/]+\s+on\s+\//, @Lines );
+    my @Tmp1b = grep( /^[\w\#]+\s+on\s+\//, @Lines ); # OS/F 'usr_domain#usr'
+    my @Tmp2 = grep( /^\/[\w\/]+\s+on\s+\/dev/, @Lines );
+    if ( scalar(@Tmp1a) or scalar(@Tmp1b) )
+    {
+	foreach my $Line ( @Lines )
+	{
+	    if ( $Line =~ /(\S+)\s+on\s+(\S+)/ )
+	    {
+		$CheckMountPoints++;
+		my $Fs = $1;
+		my $MPoint = $2;
+		$RealMountPoints{$MPoint} = $Fs;
+	    }
+	}
+    }
+    elsif ( scalar( @Tmp2 ) )
+    {
+	foreach my $Line ( @Lines )
+	{
+	    if ( $Line =~ /(\S+)\s+on\s+(\S+)/ )
+	    {
+		$CheckMountPoints++;
+		my $MPoint = $1;
+		my $Fs = $2;
+		$RealMountPoints{$MPoint} = $Fs;
+	    }
+	}
+    }
+    else
+    {
+	die "I can't understand the output of $Mount";
     }
 
     my %DfOut;
-    my $MountPoint;
-    foreach $MountPoint (@MountPoints)
+    foreach my $MP (@MountPoints)
     {
-	my $mount = $MountPoint;
-
 	# Verify it
-	if ( ! -d $mount )
+	if ( ! -d $MP )
 	{
-	    print STDERR "df: '$mount' is not a directory! (skipping)\n";
+	    print STDERR "df: '$MP' is not a directory! (skipping)\n";
 	    next;
 	}
-	if (  ( $CheckMountPoints ) && ( ! exists $RealMountPoints{$mount} )  )
+	if ( ( $CheckMountPoints ) && ( ! exists $RealMountPoints{$MP} ) )
 	{
-	    print STDERR "df: '$mount' is not a mount point! (skipping)\n";
+	    print STDERR "df: '$MP' is not a mount point! (skipping)\n";
 	    next;
 	}
 
 	# Run df on it
-	my $Cmd = $OS->{df}{command} . " $mount | grep -v Filesystem";
+	my $DF = $OS->{df};
+	my $Cmd = $DF->{Command} . " $MP | grep -v Filesystem";
         chop( my $df_out = `$Cmd` );
 
 	my @Tmp = split (/\s+/, $df_out);
 
-	# Store into the 'DfOut' hash
-	my $Key;
-	foreach $Key ( keys %DfFields )
-	{
-	    $DfOut{$mount}{$Key} = $Tmp[$OS->{df}{$DfFields{$Key}}];
-	}
-    }
-
-    # Store the fields used
-    $Hawkeye->StoreValue( "FIELDS" ,
-			  join( " ", keys %DfFields ),
-			  HawkeyePublish::TypeString );
-
-    # Now, walk through the point point array
-    foreach $MountPoint ( keys %DfOut )
-    {
-	my $PublishName = $MountPoint;
-	$PublishName = "root" if ( $PublishName eq "/" );
-
         # Clean up the published name...
+	my $PublishName = $MP;
+	$PublishName = "root" if ( $PublishName eq "/" );
         $PublishName =~ s/^\/$/root/;
         $PublishName =~ s/^\///;
         $PublishName =~ s/[\/\.]/_/g;
 
-	# Publish to Hawkeye
-	my $Key;
-	$Hawkeye->StoreIndex( $PublishName );
-	foreach $Key ( keys %DfFields )
+	# Store into the 'DfOut' hash
+	my $Mult = $DF->{BlockSize} / 1024;
+	print "BlockSize = " . $DF->{BlockSize} . "\n";
+	print "Mult = $Mult\n";
+	foreach my $Field ( @DfFields )
 	{
-	    # Pull out & clean up the value, and store it away
-	    my $Value = $DfOut{$MountPoint}{$Key};
-	    my $Name = $PublishName . "_" . $Key;
-	    if ( $Value =~ /^(\d+)\%?$/ )
+	    my $FieldName = $Field->{Field};
+	    my $Offset = $DF->{Fields}{$FieldName};
+	    my $Value = $Tmp[$Offset];
+	    my $Name = $PublishName . "_" . $Field->{Name};
+	    if ( $Field->{Type} == HawkeyePublish::TypeNumber )
 	    {
-		$Value = $1;
-		$Hawkeye->StoreValue( $Name,
-				      $Value,
-				      HawkeyePublish::TypeNumber );
+		$Value = int( $Value * $Mult );
 	    }
-	    else
-	    {
-		$Hawkeye->StoreValue( $Name,
-				      $Value,
-				      HawkeyePublish::TypeAuto );
-	    }
+	    $Hawkeye->StoreValue( $Name,
+				  $Value,
+				  $Field->{Type} );
 	}
     }
+
+    # Store the fields used
+    my @Fields;
+    foreach my $Field ( @DfFields )
+    {
+	push( @Fields, $Field->{Name} );
+    }
+    $Hawkeye->StoreValue( "FIELDS" ,
+			  join( " ", @Fields ),
+			  HawkeyePublish::TypeString );
 
     $Hawkeye->Publish( );
 }
