@@ -302,7 +302,6 @@ doContactSchedd()
 							strcpy (error_msg, "Unknown Result");
 					} // hctiws
 
-					delete result_ad;
 				} else {
 					strcpy (error_msg, "Unable to get result");
 				} // fi lookup result for job
@@ -336,6 +335,10 @@ doContactSchedd()
 			// Mark the status
 			current_command->status = SchedDRequest::SDCS_COMPLETED;
 		} // elihw this_batch
+
+		if ( result_ad ) {
+			delete result_ad;
+		}
 	}
 
 	dprintf (D_FULLDEBUG, "Processing JOB_STAGE_IN requests\n");
