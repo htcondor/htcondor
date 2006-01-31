@@ -74,7 +74,9 @@ sub DoConfig( )
 	    $HardConfigs{$Var} = $2;
 	}
 	# Don't queury the config from the startd _at all_
-	elsif ( ( $Arg eq "--noquery" ) || ( $Arg eq "-nq" ) )
+	elsif ( ( $Arg eq "--noquery" ) or
+		( $Arg eq "--no-query" ) or
+		( $Arg eq "-nq" ) )
 	{
 	    $ConfigQuery = 0;
 	}
