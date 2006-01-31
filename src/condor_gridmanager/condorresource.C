@@ -165,6 +165,9 @@ CondorResource::~CondorResource()
 	if ( scheddName != NULL ) {
 		free( scheddName );
 	}
+	if ( poolName != NULL ) {
+		free( poolName );
+	}
 }
 
 void CondorResource::Reconfig()

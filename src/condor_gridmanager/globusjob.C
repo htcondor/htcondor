@@ -809,6 +809,10 @@ GlobusJob::GlobusJob( ClassAd *classad )
 		}
 	}
 
+	if ( gahp_path ) {
+		free( gahp_path );
+	}
+
 	return;
 
  error_exit:

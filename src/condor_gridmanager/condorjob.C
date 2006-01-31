@@ -846,6 +846,10 @@ int CondorJob::doEvaluateState()
 						 "(%d.%d) condor_job_status_constrained() returned %d ads\n",
 						 procID.cluster, procID.proc, num_ads );
 				errorString = "Remote schedd returned multiple ads";
+				for ( int i = 0; i < num_ads; i++ ) {
+					delete status_ads[i];
+				}
+				free( status_ads );
 				gmState = GM_CANCEL;
 				break;
 			}
@@ -860,6 +864,8 @@ int CondorJob::doEvaluateState()
 			if ( hold_reason == "Spooling input data files" ) {
 				dprintf( D_FULLDEBUG, "(%d.%d) Job not yet released from stage-in hold, retrying poll\n",
 						 procID.cluster, procID.proc );
+				delete status_ads[0];
+				free( status_ads );
 				reevaluate_state = true;
 				break;
 			}
