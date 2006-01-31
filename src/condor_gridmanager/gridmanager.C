@@ -43,10 +43,7 @@
 #include "oraclejob.h"
 #endif
 
-#if defined(NORDUGRID_UNIVERSE)
 #include "nordugridjob.h"
-#endif
-
 #include "unicorejob.h"
 #include "mirrorjob.h"
 #include "condorjob.h"
@@ -327,7 +324,6 @@ Init()
 	jobTypes.Append( new_type );
 #endif
 
-#if defined(NORDUGRID_UNIVERSE)
 	new_type = new JobType;
 	new_type->Name = strdup( "Nordugrid" );
 	new_type->InitFunc = NordugridJobInit;
@@ -335,7 +331,6 @@ Init()
 	new_type->AdMatchFunc = NordugridJobAdMatch;
 	new_type->CreateFunc = NordugridJobCreate;
 	jobTypes.Append( new_type );
-#endif
 
 	new_type = new JobType;
 	new_type->Name = strdup( "Unicore" );
