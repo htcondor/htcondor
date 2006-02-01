@@ -1,0 +1,43 @@
+# Data file describing the DU module
+ModuleFiles: du
+
+Description:
+Used to monitor disk space usage (based on the "du" program)
+You should set the HAWKEYE_DU_LIST and related parameters by hand
+
+Default: du
+options: kill
+period: 1d
+prefix: usage_
+
+# It's parameters
+parameter: LIST = HOME
+Flags: required
+Example: LIST = HOME
+Comma-separated list of logical names
+
+parameter: MaxEntries
+Example: MaxEntries = 20
+Maximum number of directory entries to publish
+
+parameter: MinSize
+Example: MaxSize = 100
+Minimum size (in kbytes) to publish
+
+parameter: HOME_PATH = /home/*
+HOME_PATH = /home/*
+Flags: required
+This needs to be defined for each entry in LIST; it can be
+a glob (as in /home/*) or just a path (/tmp)
+
+parameter: HOME_MaxEntries = 10
+HOME_MaxEntries = 10
+This can be individually defined for each entry in LIST; it specifies
+the maxiumum number of entries to publish if HOME_PATH is a glob.
+
+parameter: HOME_MinSize = 100
+HOME_MinSize = 100
+This can be individually defined for each entry in LIST; it specifies
+the miniumum size (in kbytes) to publish
+
+

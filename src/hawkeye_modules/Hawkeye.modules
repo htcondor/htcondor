@@ -3,13 +3,14 @@ directory: /local.chopin/nleroy/Hawkeye-Release/modules
 test-directory: /scratch.1/nleroy/Hawkeye-Release-test/modules
 
 target: all
-version: 1.0.rc12
+version: 1.0.rc13
 os: Unix-Any
 +condor_jobhist
 +condor_node
 +condor_pool
 +condor_ckpt
 +df
++du
 +downlist
 +gass_cache
 +gdmphb
@@ -57,8 +58,13 @@ version: 1.0.rc2
 
 target: df
 os: Unix-Any
-version: 1.0.rc3
+version: 1.0.rc4
 +df
+
+target: du
+os: Unix-Any
+version: 1.0.rc1
++du
 
 target: gass_cache
 os: Unix-Any
