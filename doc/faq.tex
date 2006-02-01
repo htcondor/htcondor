@@ -1754,6 +1754,30 @@ service gsigatekeeper
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{If I see \texttt{PERMISSION DENIED} in my log files,
+what does that mean?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{permission denied}
+
+Most likely, the Condor installation has been misconfigured
+and Condor's access control security functionality is preventing
+daemons and tools from communicating with each other.
+Other symptoms of this problem include Condor tools (such as
+\Condor{status} and \Condor{q}) not producing any output, or commands
+that appear to have no effect (for example, \Condor{off} or
+\Condor{on}). 
+
+The solution is to properly configure the \Macro{HOSTALLOW\_*} and
+\Macro{HOSTDENY\_*} settings (for host/IP based authentication) or to
+configure strong authentication and set \Macro{ALLOW\_*} and
+\Macro{DENY\_*} as appropriate.
+Host-based authentiation is described in
+section~\ref{sec:Host-Security} on page~\pageref{sec:Host-Security}.
+Information about other forms of authentication is provided in 
+section~\ref{sec:Config-Security} on page~\pageref{sec:Config-Security}.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{What happens if the central manager crashes?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{crashes}

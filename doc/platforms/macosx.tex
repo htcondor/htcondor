@@ -11,14 +11,6 @@ detect keyboard activity, and it does not use Cocoa at all.
 Condor on the Macintosh is a relatively new port, and it 
 is not yet well-integrated
 into the Macintosh environment. 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:platform-macos-panther}Macintosh OS X Panther (10.3)}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{platform-specific information!Mac OS 10.3}
-
-Condor \VersionNotice
-is known to run on Panther as well
-as Jaguar (10.2). 
 
 Condor on the Macintosh has a few shortcomings:
 \begin{itemize}
@@ -29,4 +21,42 @@ noticed for console activity.
 \item The example start up scripts do not follow Macintosh conventions.
 \item Kerberos is not supported.
 \end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:platform-macos-panther}Macintosh OS X Panther (10.3)}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{platform-specific information!Mac OS 10.3}
+
+Condor \VersionNotice 
+is built on a machine running Panther (10.3).
+Therefore, these binaries work on any PPC machine running MacOS 10.3.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:platform-macos-tiger}Macintosh OS X Tiger (10.4)}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{platform-specific information!Mac OS 10.4}
+
+Even though Condor \VersionNotice 
+is built on a machine running Panther (10.3), the resulting binaries
+are known to work on PPC machines running MacOS 10.4.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:platform-macos-tiger-x86}Macintosh OS X Tiger
+ (10.4) for Intel CPUs}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{platform-specific information!Mac OS 10.4 for Intel}
+
+Condor does not yet provide Universal binaries or natively-built
+binaries for Intel MacOS 10.4.
+Given MacOS's support for running PPC binaries in emulation (their
+``Rosetta'' system), the existing Condor binaries built for PPC MacOS
+10.3 might work.
+Very few parts of the Condor system are performance bottle-necks, so
+running in emulation will hopefully cause no problems.
+The end-user applications (the jobs submitted to Condor), should
+probably be Universal binaries or x86-specific, to provide the most
+throughput on these machines. 
 
