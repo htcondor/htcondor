@@ -205,7 +205,10 @@ DC_Exit( int status )
 
 		// Free up the memory from the config hash table, too.
 	clear_config();
-	
+
+		// and deallocate the memory from the passwd_cache (uids.C)
+	delete_passwd_cache();
+
 		/*
 		  Log a message.  We want to do this *AFTER* we delete the
 		  daemonCore object and free up other memory, just to make

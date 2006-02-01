@@ -508,6 +508,11 @@ clear_passwd_cache() {
 	// no-op on Windows
 }
 
+void
+delete_passwd_cache() {
+	// no-op on Windows
+}
+
 #else  // end of ifdef WIN32, now below starts Unix-specific code
 
 #include <grp.h>
@@ -582,20 +587,25 @@ static int set_condor_rgid();
    to avoid declaring the passwd_cache globally, since it's contructor
    calls param(), which we shouldn't do until the config file has 
    been parsed. */
+static passwd_cache *pcache_ptr = NULL;
+
 passwd_cache* 
 pcache(void) {
-
-	static passwd_cache *pcache = NULL;
-
-	if ( pcache == NULL ) {
-		pcache = new passwd_cache();
+	if ( pcache_ptr == NULL ) {
+		pcache_ptr = new passwd_cache();
 	}
-	return pcache;
+	return pcache_ptr;
 }
 
 void
 clear_passwd_cache() {
 	pcache()->reset();
+}
+
+void
+delete_passwd_cache() {
+	delete pcache_ptr;
+	pcache_ptr = NULL;
 }
 
 void
