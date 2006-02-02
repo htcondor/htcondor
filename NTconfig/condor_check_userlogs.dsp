@@ -88,5 +88,9 @@ LINK32=link.exe
 
 SOURCE=..\src\condor_userlog\condor_check_userlogs.C
 # End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\dc_stub.C"
+# End Source File
 # End Target
 # End Project
