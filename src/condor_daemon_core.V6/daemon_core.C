@@ -5104,33 +5104,37 @@ int DaemonCore::Create_Process(
 	}
 
 
-	// Deal with environment.  If the user specified an environment, we
-	// augment augment it with default system environment variables and
-	// the CONDOR_INHERIT var.  If the user did not specify an e
-	if ( env || ( HAS_DCJOBOPT_NO_ENV_INHERIT(job_opt_mask) ) ) {
+	// Deal with environment.
+
+	// compiler complains about job_environ's initialization being skipped
+	// by "goto wrapup", so we start a new block here
+	{
 		Env job_environ;
 		char envbuf[_POSIX_PATH_MAX];
-		const char * default_vars[] = { "SystemDrive", "SystemRoot",
-			"COMPUTERNAME", "NUMBER_OF_PROCESSORS", "OS", "COMSPEC",
-			"PROCESSOR_ARCHITECTURE", "PROCESSOR_IDENTIFIER",
-			"PROCESSOR_LEVEL", "PROCESSOR_REVISION", "PROGRAMFILES", "WINDIR",
-			"\0" };		// must end list with NULL string
 
-			// add in what is likely the system default path.  we do this
-			// here, before merging the user env, because if the user
-			// specifies a path in the job ad we want top use that instead.
-		envbuf[0]='\0';
-		GetEnvironmentVariable("PATH",envbuf,sizeof(envbuf));
-		if (envbuf[0]) {
-			job_environ.SetEnv("PATH",envbuf);
+			// if not using inheritance, start with default values for
+			// PATH and TEMP, othwise just start with our environment
+		if ( HAS_DCJOBOPT_NO_ENV_INHERIT(job_opt_mask) ) {
+
+				// add in what is likely the system default path.  we do this
+				// here, before merging the user env, because if the user
+				// specifies a path in the job ad we want top use that instead.
+			envbuf[0]='\0';
+			GetEnvironmentVariable("PATH",envbuf,sizeof(envbuf));
+			if (envbuf[0]) {
+				job_environ.SetEnv("PATH",envbuf);
+			}
+
+			// do the same for what likely is the system default TEMP
+			// directory.
+			envbuf[0]='\0';
+			GetEnvironmentVariable("TEMP",envbuf,sizeof(envbuf));
+			if (envbuf[0]) {
+				job_environ.SetEnv("TEMP",envbuf);
+			}
 		}
-
-		// do the same for what likely is the system default TEMP
-		// directory.
-		envbuf[0]='\0';
-		GetEnvironmentVariable("TEMP",envbuf,sizeof(envbuf));
-		if (envbuf[0]) {
-			job_environ.SetEnv("TEMP",envbuf);
+		else {
+			job_environ.MergeFrom((const char**)_environ);
 		}
 
 			// now add in env vars from user
@@ -5141,6 +5145,11 @@ int DaemonCore::Create_Process(
 			// next, add in default system env variables.  we do this after
 			// the user vars are in place, because we want the values for
 			// these system variables to override whatever the user said.
+		const char * default_vars[] = { "SystemDrive", "SystemRoot",
+			"COMPUTERNAME", "NUMBER_OF_PROCESSORS", "OS", "COMSPEC",
+			"PROCESSOR_ARCHITECTURE", "PROCESSOR_IDENTIFIER",
+			"PROCESSOR_LEVEL", "PROCESSOR_REVISION", "PROGRAMFILES", "WINDIR",
+			"\0" };		// must end list with NULL string
 		int i = 0;
 		while ( default_vars[i][0] ) {
 			envbuf[0]='\0';
@@ -5159,16 +5168,7 @@ int DaemonCore::Create_Process(
 			// be allocated on the heap with new [].
 		newenv = job_environ.getNullDelimitedString();
 
-	} else {
-
-		newenv = NULL;
-		if( !SetEnv( EnvGetName( ENV_INHERIT ), inheritbuf.Value() ) ) {
-			dprintf(D_ALWAYS, "Create_Process: Failed to set %s env.\n",
-					EnvGetName( ENV_INHERIT ) );
-			goto wrapup;
-		}
-	}	
-
+	}
 	// end of dealing with the environment....
 
 	// Check if it's a 16-bit application
