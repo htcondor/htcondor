@@ -8,9 +8,41 @@
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
 
+2/2/06  V6_7-pre-merge-V6_7_15-doc-merge-1
+        V6_7-post-merge-V6_7_15-doc-merge-1
+   The state of the doc directory in V6_7-branch before and after
+   merging changes from the V6_7_15-branch as tagged  V6_7_15-doc-merge-1.
+
+2/2/06  V6_7_15-doc-merge-1
+   The state of the doc directory in the V6_7_15-branch for a 
+   first time merge into the V6_7-branch.
+
+2/1/06 V6_7_15-pre-merge-V6_6-doc-merge-24
+       V6_7_15-post-merge-V6_6-doc-merge-24
+   The state of the doc directory in V6_7_15-branch before and after
+   merging changes from the V6_6-branch as tagged V6_6-doc-merge-24.
+
+2/1/06 V6_6-doc-merge-24
+   The state of the doc directory in the V6_6-branch for a merge
+   into the V6_7-branch. This goes into the V6_7_15-branch.
+
+2/1/06 V6_6-pre-merge-V6_6_10-doc-merge-3
+       V6_6-post-merge-V6_6_10-doc-merge-3
+   The state of the doc directory in V6_6-branch before and after
+   merging changes from the V6_6_10-branch as tagged V6_6_10-doc-merge-3.
+
+2/1/06 V6_6_10-doc-merge-3
+   The state of the doc directory in the V6_6_10-branch for a merge
+   into the V6_6-branch.
+
 1/23/06  V6_7_15-root and V6_7_15-branch
    A branch for the 6.7.15 doc release, created from V6_7_15-root
    on V6_7-branch.
+
+1/23/06  V6_7-pre-merge-V6_7_14-doc-merge-2
+        V6_7-post-merge-V6_7_14-doc-merge-2
+   The state of the doc directory in V6_7-branch before and after
+   merging changes from the V6_7-14-branch as tagged V6_7_14-doc-merge-2.
 
 1/23/06  V6_7-pre-merge-V6_7_14-doc-merge-2
         V6_7-post-merge-V6_7_14-doc-merge-2
