@@ -570,8 +570,11 @@ doContactSchedd()
 		}
 
 		char *tmp = job_ids.print_to_string();
-		dprintf( D_FULLDEBUG, "Calling vacateJobs on %s\n", tmp );
-		free(tmp);
+		if ( tmp ) {
+			dprintf( D_FULLDEBUG, "Calling vacateJobs on %s\n", tmp );
+			free(tmp);
+			tmp = NULL;
+		}
 
 		rval = ScheddObj->vacateJobs( &job_ids, VACATE_FAST, &errstack );
 		if ( rval == NULL ) {

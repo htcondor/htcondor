@@ -659,15 +659,19 @@ DCSchedd::actOnJobs( JobAction action, const char* action_str,
 		tmp = NULL;
 	} else if( ids ) {
 		char* action_ids = ids->print_to_string();
-		size = strlen(action_ids) + strlen(ATTR_ACTION_IDS) + 7;
-		tmp = (char*) malloc( size*sizeof(char) );
-		if( !tmp ) {
-			EXCEPT( "Out of memory!" );
+		if ( action_ids ) {
+			size = strlen(action_ids) + strlen(ATTR_ACTION_IDS) + 7;
+			tmp = (char*) malloc( size*sizeof(char) );
+			if( !tmp ) {
+				EXCEPT( "Out of memory!" );
+			}
+			sprintf( tmp, "%s = \"%s\"", ATTR_ACTION_IDS, action_ids );
+			cmd_ad.Insert( tmp );
+			free( tmp );
+			tmp = NULL;
+			free(action_ids);
+			action_ids = NULL;
 		}
-		sprintf( tmp, "%s = \"%s\"", ATTR_ACTION_IDS, action_ids );
-		cmd_ad.Insert( tmp );
-		free( tmp );
-		tmp = NULL;
 	} else {
 		EXCEPT( "DCSchedd::actOnJobs called without constraint or ids" );
 	}

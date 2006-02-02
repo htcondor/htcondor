@@ -2402,12 +2402,18 @@ DedicatedScheduler::addReconnectAttributes(AllocationNode *allocation)
 				free(hosts);
 			}
 			char *claims_str = claims.print_to_string();
-			SetAttributeString(allocation->cluster, p, "ClaimIds", claims_str);
-			free(claims_str);
+			if ( claims_str ) {
+				SetAttributeString(allocation->cluster, p, "ClaimIds", claims_str);
+				free(claims_str);
+				claims_str = NULL;
+			}
 
 			char *hosts_str = remoteHosts.print_to_string();
-			SetAttributeString(allocation->cluster, p, "RemoteHosts", hosts_str);
-			free(hosts_str);
+			if ( hosts_str ) {
+				SetAttributeString(allocation->cluster, p, "RemoteHosts", hosts_str);
+				free(hosts_str);
+				hosts_str = NULL;
+			}
 		}
 }
 

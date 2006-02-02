@@ -1,3 +1,6 @@
+02/02/06 V6_7_15-merge-1
+  First merge of V6_7_15 back into V6_7 branch.
+
 01/31/06 V6_7_15
    The official 6.7.15 release.  The packages for all platforms came
    from NMI build #18195.  The version string for this release is:

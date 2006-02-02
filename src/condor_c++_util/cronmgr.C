@@ -895,7 +895,7 @@ CronMgrBase::ParseOldJobList( const char *jobString )
 		Env envobj;
 		MyString env_error_msg;
 
-		if(envobj.MergeFromV1RawOrV2Quoted(paramEnv,&env_error_msg)) {
+		if(!envobj.MergeFromV1RawOrV2Quoted(paramEnv,&env_error_msg)) {
 			dprintf( D_ALWAYS,
 					 "CronMgr: Job '%s': "
 					 "Failed to parse environment: %s\n",

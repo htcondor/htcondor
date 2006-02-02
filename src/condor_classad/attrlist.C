@@ -2283,33 +2283,30 @@ bool AttrList::IsExternalReference(const char *name, char **simplified_name) con
 	//    internal variable definition, it's internal. 
 	// 2. If it is prefixed with TARGET or another non-MY prefix, or if
 	//    it has no prefix, but there is no other variable it could refer to.
-	char  *prefix;
-	char  *rest;
-	int   number_of_fields;
-	int   name_length;
+	const char  *prefix = name;
+	const char  *rest = name;
+	char *seperator;
 	bool  is_external;
 
 	if (name == NULL) {
 		is_external = false;
 	}
 
-	name_length = strlen(name);
-	prefix      = (char *) malloc(name_length + 1);
-	rest        = (char *) malloc(name_length + 1);
-
-	number_of_fields = sscanf(name, "%[^.].%s", prefix, rest);
+	seperator = strchr(name,'.');
 
 	// We have a prefix, so we examine it. 
-	if (number_of_fields == 2) {
-		if (!strcmp(prefix, "MY")) {
-			is_external = FALSE;
+	if (seperator) {
+		*seperator = '\0';
+		rest = seperator + 1;
+		if (!stricmp(prefix, "TARGET")) {
+			is_external = TRUE;
 		}
 		else {
-			is_external = TRUE;
+			is_external = FALSE;
 		}
 	} else {
 		// No prefix means that we have to see if the name occurs within
-		// the attrlist or not. We lookup not only the name, but 
+		// the attrlist or not. We lookup not only the name.
 		if (Lookup(name)) {
 			is_external = FALSE;
 		}
@@ -2319,16 +2316,15 @@ bool AttrList::IsExternalReference(const char *name, char **simplified_name) con
 	}
 
 	if (simplified_name != NULL) {
-		if (number_of_fields == 1) {
-			*simplified_name = prefix;
-			free(rest);
+		if (rest) {
+			*simplified_name = strdup(rest);
 		} else {
-			*simplified_name = rest;
-			free(prefix);
+			*simplified_name = NULL;
 		}
-	} else {
-		free(prefix);
-		free(rest);
+	} 
+
+	if ( seperator ) {
+		*seperator = '.';
 	}
 
 	return is_external;

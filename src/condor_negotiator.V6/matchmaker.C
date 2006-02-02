@@ -708,8 +708,26 @@ compute_signficant_attrs(ClassAdList & startdAds)
 		while ( (attr_name = AttrsToExpand.next()) ) {
 			startd_ad->GetReferences(attr_name,internal_references,
 					external_references);
-		}
-	}
+
+#if 0	// Debug code
+			static int extlen = 0;
+			result = external_references.print_to_string();
+			if ( result && (strlen(result) != extlen) ) {
+				extlen = strlen(result);
+				dprintf(D_FULLDEBUG,"CHANGE: Startd being considered in compute_significant_attrs() is:\n");
+				startd_ad->dPrint(D_FULLDEBUG);
+				dprintf(D_FULLDEBUG,"CHANGE: In compute_signficant_attrs() attr=%s - result=%s\n",
+						attr_name, result ? result : "(none)" );
+				if ( result ) {
+					free(result);
+				}
+				result = NULL;
+			}
+#endif
+
+		}	// while attr_name
+	}	// while startd_ad
+
 	// Now add external attributes references from negotiator policy exprs; at
 	// this point, we only have to worry about PREEMPTION_REQUIREMENTS.
 	// PREEMPTION_REQUIREMENTS is evaluated in the context of a machine ad 

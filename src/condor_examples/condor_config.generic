@@ -1561,8 +1561,8 @@ GT4_LOCATION = $(LIB)/gt4
 ## wrapper script needed to properly set the path to the gridmap file.
 ##
 #GRIDFTP_URL_BASE = gsiftp://$(FULL_HOSTNAME)
-GRIDFTP_SERVER = $(SBIN)/globus-gridftp-server
-GRIDFTP_SERVER_WRAPPER = $(SBIN)/gridftp_wrapper.sh
+GRIDFTP_SERVER = $(LIBEXEC)/globus-gridftp-server
+GRIDFTP_SERVER_WRAPPER = $(LIBEXEC)/gridftp_wrapper.sh
 
 ##
 ## The location of the wrapper for invoking the Unicore GAHP server

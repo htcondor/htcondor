@@ -307,6 +307,9 @@ int Variable::_EvalTreeRecursive( char *name, const AttrList* my_classad, const 
 
 	if( !val || !name ) return FALSE;
 
+	memset(prefix,0,sizeof(prefix));
+	memset(rest,0,sizeof(prefix));
+
 	fields = sscanf(name,"%[^.].%s",prefix,rest);
 
 	if(fields==2) {
