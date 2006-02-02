@@ -220,6 +220,22 @@ SOURCE=..\src\condor_gridmanager\mirrorresource.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_gridmanager\nordugridjob.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_gridmanager\nordugridjob.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_gridmanager\nordugridresource.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_gridmanager\nordugridresource.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_gridmanager\proxymanager.C
 # End Source File
 # Begin Source File
