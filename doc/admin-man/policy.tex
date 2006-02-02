@@ -2,6 +2,7 @@
 % Note: the label was on a separate line from the name, but 
 % while that makes it look neat, it also adds an extra space in 
 % the PDF output, so don't do it. 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{\label{sec:Configuring-Policy}Startd Policy Configuration}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -181,39 +182,56 @@ assuming you had enough free memory for the Condor jobs that there
 was little swapping.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Is-Valid-Checkpoint-Platform}
-The \Expr{IS\_VALID\_CHECKPOINT\_PLATFORM} expression}
+\subsection{\label{sec:Is-Valid-Checkpoint-Platform}The \Expr{IS\_VALID\_CHECKPOINT\_PLATFORM} expression}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{expression!\Expr{IS\_VALID\_CHECKPOINT\_PLATFORM}}
 
-When a standard universe jobs checkpoints, there are certain information
-embedded in the checkpoint which limits the machines able to resume
-the checkpoint. 
-Usually, these are obvious things like architecture or operating system,
-but they also can be very subtle, like the difference between normal,
-bigmem, and hugemem kernels for the Linux platform.
+A checkpoint is the platform-dependent information necessary
+to continue the execution of a standard universe job.
+Therefore, the machine (platform) upon which a job executed
+and produced a checkpoint limits the machines (platforms)
+which may use the checkpoint to continue job execution.
+This platform-dependent information is no longer
+the obvious combination of architecture and operating system, 
+but may include subtle items such as the 
+difference between the normal, bigmem, and hugemem kernels
+within the Linux operating system.
+This results in the incorporation of a separate
+expression to indicate the ability of a machine to
+resume and continue the execution of a job that has produced
+a checkpoint.
+The \Expr{REQUIREMENTS} expression is dependent on this information.
 
 At a high level, \Expr{IS\_VALID\_CHECKPOINT\_PLATFORM} is an expression
 which becomes true when a job's checkpoint platform matches the
 current checkpointing platform of the machine. 
+Since this expression is \Bold{and}ed with the \Expr{START} expression
+to produce the \Expr{REQUIREMENTS} expression,
+it must also behave correctly when evaluating in the context of jobs
+that are not standard universe.
 
-Since this expression is \Bold{and}ed with the \Expr{START} expression,
-it must also behave correctly when evaluating in the context of non
-standard universe jobs.
+In words,
+the current default policy for this expression:
 
-The current default policy for this expression in prose is this:
-
-\Bold{ Allow all non standard universe jobs to run normally.  
-Only allow standard universe jobs to run on machines with the new checkpointing
+\Bold{ Any non standard universe job may run on this machine.  
+A standard universe job may run on machines with the new checkpointing
 identification system. 
-Run the job if it is a standard universe job, but had not ever checkpointed 
-before. 
-If the standard universe job had checkpointed before, then make sure the 
+A standard universe job may run if it has not yet produced a
+first checkpoint.
+If a standard universe job has produced a checkpoint, then make sure the 
 checkpoint platforms between the job and the machine match.}
 
-The default boolean expression for the above policy (which may be
-over ridden in the Condor configuration files) is:
+The following  is the default boolean expression for this
+policy.
+A \Attr{JobUniverse} value of 1 denotes the standard universe.
+This expression  may be
+overridden in the Condor configuration files.
 
+%% Karen's note:
+%%  (TARGET.JobUniverse == 1) == FALSE
+%%  really ought to be
+%%  (TARGET.JobUniverse != 1) 
+\footnotesize
 \begin{verbatim}
 IS_VALID_CHECKPOINT_PLATFORM = 
 (
@@ -228,11 +246,13 @@ IS_VALID_CHECKPOINT_PLATFORM =
   )
 )
 \end{verbatim}
+\normalsize
 
-The reason why \Expr{IS\_VALID\_CHECKPOINT\_PLATFORM}
-is a seperate policy expression is because the complexity of
-\Expr{IS\_VALID\_CHECKPOINT\_PLATFORM} can be very high and while this
-functionality is conceptually seperate from the normal \Expr{START}
+\Expr{IS\_VALID\_CHECKPOINT\_PLATFORM}
+is a separate policy expression because the complexity of
+\Expr{IS\_VALID\_CHECKPOINT\_PLATFORM} can be very high.
+While this
+functionality is conceptually separate from the normal \Expr{START}
 policies usually constructed, it is also a part of the \Expr{Requirements}
 to allow the job to run.
 
@@ -427,22 +447,22 @@ The following list describes all the possible state/activity pairs.
 \index{machine activity!Unclaimed}
 \item Unclaimed
 \begin{description}
-\item[Idle] This is the normal activity of Unclaimed machines.
-  The machine is still Idle in that the machine owner is willing to
-  let Condor jobs run, but Condor is not using the
-  machine for anything.
+  \item[Idle] This is the normal activity of Unclaimed machines.
+    The machine is still Idle in that the machine owner is willing to
+    let Condor jobs run, but Condor is not using the
+    machine for anything.
   
-\index{machine activity!Benchmarking}
-\item[Benchmarking] The machine is running benchmarks to
-  determine the speed on this machine.
-  This activity only occurs in the Unclaimed state.
-  How often the activity occurs is
-  determined by the \Expr{RunBenchmarks} expression.
+  \index{machine activity!Benchmarking}
+  \item[Benchmarking] The machine is running benchmarks to
+    determine the speed on this machine.
+    This activity only occurs in the Unclaimed state.
+    How often the activity occurs is
+    determined by the \Expr{RunBenchmarks} expression.
 \end{description}
 
 \item Matched
 \begin{description}
-\item[Idle] When Matched, the machine is still Idle to Condor.
+  \item[Idle] When Matched, the machine is still Idle to Condor.
 \end{description}
 
 \item Claimed
@@ -1055,7 +1075,7 @@ claim will never be interrupted; it can keep running more jobs.  The
 solution is to use \Expr{CLAIM\_WORKLIFE} to force the claim to stop
 running additional jobs after a certain amount of time.
 
-\item[\Expr{MaxJobRetirementTime}] If the machine is in the
+\item[\Expr{MAXJOBRETIREMENTTIME}] If the machine is in the
 Claimed/Retiring state, this expression specifies the maximum time (in
 seconds) that the startd will wait for the job to finish naturally
 (without any kill signals from the startd).  The clock starts when the

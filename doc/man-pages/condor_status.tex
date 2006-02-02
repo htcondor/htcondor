@@ -112,6 +112,16 @@ options} may be specified.
 
 \GenRem
 \begin{itemize}
+	\item The default output from \Condor{status} is formatted to
+	be human readable, not script readable.
+	In an effort to make the output fit within 80 characters,
+	values in some fields might be truncated.
+	Furthermore, the Condor Project can (and does) change the
+	formatting of this default output as we see fit.
+	Therefore, any script that is attempting to parse data from
+	\Condor{status} is strongly encouraged to use the
+	\Opt{-format} option (described above).
+
 	\item The information obtained from \Condor{startd} and \Condor{schedd}
 	daemons
 	may sometimes appear to be inconsistent.  This is normal since

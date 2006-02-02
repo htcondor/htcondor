@@ -64,10 +64,31 @@ occurs only when the files are returned to the job submitter.
 
 \begin{itemize}
 
-\item None.
+\item If you have not used the undocumented configuration setting
+\Macro{SIGNIFICANT\_ATTRIBUTES}, there is no need to read the rest of
+this paragraph.  For sites that have been using
+\Macro{SIGNIFICANT\_ATTRIBUTES} in the config file, we suggest
+removing that setting, because Condor now automatically selects the
+list of attributes that are used to cluster job ClassAds into distinct
+ads for negotiation.  In 6.7.15, any setting of
+\Macro{SIGNIFICANT\_ATTRIBUTES} will be combined with the automated
+list of attributes that Condor produces.  In the future, this behavior
+may change (e.g. it might override the automated behavior rather than
+combining with it).  If you know in advance that your use of Condor
+heavily depends on \Macro{SIGNIFICANT\_ATTRIBUTES} \emph{not}
+including some attributes that \emph{are} used in requirements
+expressions (e.g.  ImageSize), then you should be aware that 6.7.15
+provides \emph{no} way for you to suppress such attributes.  In
+that case, we recommend that you wait for 6.7.16 before upgrading.
+This should not concern most users--especially anyone who is not even
+using \Macro{SIGNIFICANT\_ATTRIBUTES}, or who has defined
+\Macro{SIGNIFICANT\_ATTRIBUTES} to include all attributes that are
+used in requirements expressions (which is the normal usage case).
+
+\item Added a clipped port of Condor to YellowDog Linux 3.0 on the
+PowerPC architecture.
 
 \end{itemize}
-
 
 \noindent New Features:
 
@@ -75,6 +96,16 @@ occurs only when the files are returned to the job submitter.
 
 \item For those platforms which support it, libcondorapi.so is now
 produced and available in the lib/ directory after installing Condor.
+
+\item The negotiation protocol between the \Condor{schedd} and
+the \Condor{negotiator} daemons has been improved for both scalability and
+correctness.  In general, most sites will see faster negotiation 
+cycles when many jobs are submitted after upgrading both the negotiator
+and all schedd daemons to version 6.7.15.  This means the scheduling overhead
+per job is reduced.  If you have used the undocumented macro
+\Macro{SIGNIFICANT\_ATTRIBUTES}, please read the note above in the release
+notes, because this new automated behavior affects the use of that
+configuration setting--in most cases making it unnecessary.
 
 \item Due to kernel bugs between the Linux 2.4.x and 2.6.x kernels,
 Condor now implements "checkpointing signatures" which allow more fine
@@ -160,6 +191,8 @@ specifications.  Stork job output is now optional, and
 specified in the job submit file.  Previous, per-server Stork user log in 
 \File{LOG/Stork-module.stderr} and \File{LOG/Stork-module.stdout} has been
 removed.
+
+\item The Condor installer for Windows is now MSI compliant.
 
 \end{itemize}
 

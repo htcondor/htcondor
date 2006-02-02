@@ -360,8 +360,7 @@ Only do so if you know what you are doing.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Condor-wide-Config-File-Entries}Condor-wide
-  Configuration File Entries} 
+\subsection{\label{sec:Condor-wide-Config-File-Entries}Condor-wide Configuration File Entries} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration!Condor-wide configuration variables}
@@ -819,8 +818,7 @@ File System Configuration File Entries''.
 % Default value check end here: PKK 8 Jan 2004
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Daemon-Logging-Config-File-Entries}Daemon
-  Logging Config File Entries} 
+\subsection{\label{sec:Daemon-Logging-Config-File-Entries}Daemon Logging Config File Entries} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration!daemon logging configuration variables}
@@ -1114,8 +1112,7 @@ Log files may optionally be specified per debug level as follows:
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:DaemonCore-Config-File-Entries}DaemonCore
-  Config File Entries} 
+\subsection{\label{sec:DaemonCore-Config-File-Entries}DaemonCore Config File Entries} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration!DaemonCore configuration variables}
@@ -1169,7 +1166,7 @@ server, shadow, and starter, none of which use DaemonCore yet).
   %		file, then the server verifies the ownership of that file. \Note
   %		This is the default method used on Unix systems.
   %	\item FS\_REMOTE Use a shared filesystem to authenticate the user.
-  %		This is useful for submitting jobs to a remote schedd.
+  %		This is useful for submitting jobs to a remote \Condor{schedd}.
   %		Similar to FS authentication, except the temporary file to be
   %		created by the user must be on a shared filesystem (AFS, NFS, etc.)
   %		If the client's submit description file does not define the 
@@ -1250,7 +1247,7 @@ server, shadow, and starter, none of which use DaemonCore yet).
   given entry into a ClassAd.  In particular, ClassAds require quote
   marks (") around strings.  Numeric values and boolean expressions
   can go in directly.  
-  For example, if the startd is to advertise a string macro, a numeric
+  For example, if the \Condor{startd} is to advertise a string macro, a numeric
   macro, and a boolean expression, do something similar to:
 
   \begin{verbatim}
@@ -1265,8 +1262,7 @@ server, shadow, and starter, none of which use DaemonCore yet).
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Network-Related-Config-File-Entries}Network-Related
-  Configuration File Entries}
+\subsection{\label{sec:Network-Related-Config-File-Entries}Network-Related Configuration File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{configuration!network-related configuration variables}
 
@@ -1418,8 +1414,7 @@ section~\ref{sec:GCB} on page~\pageref{sec:GCB}.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Shared-Filesystem-Config-File-Entries}Shared
-  File System Configuration File Macros} 
+\subsection{\label{sec:Shared-Filesystem-Config-File-Entries}Shared File System Configuration File Macros} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{configuration!shared file system configuration variables}
 
@@ -1702,8 +1697,7 @@ section~\ref{sec:shared-fs}.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{Checkpoint-Server-Config-File-Entries}Checkpoint
-  Server Configuration File Macros} 
+\subsection{\label{Checkpoint-Server-Config-File-Entries}Checkpoint Server Configuration File Macros} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration!checkpoint server configuration variables}
@@ -1762,8 +1756,7 @@ checkpoint server host (see below).
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Master-Config-File-Entries}\condor{master}
-  Configuration File Macros} 
+\subsection{\label{sec:Master-Config-File-Entries}\Condor{master} Configuration File Macros} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration!condor\_master configuration variables}
@@ -2166,7 +2159,7 @@ will not want to change them for any reason.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Startd-Config-File-Entries}\condor{startd}
+\subsection{\label{sec:Startd-Config-File-Entries}\Condor{startd}
 Configuration File Macros}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -2181,6 +2174,7 @@ Examples using these configuration macros,
 as well as further explanation is found in
 section~\ref{sec:Configuring-Policy} on
 Configuring The Startd Policy.
+
 \begin{description}
 
 \item[\Macro{START}] \label{param:Start}  A boolean expression
@@ -2216,6 +2210,29 @@ Configuring The Startd Policy.
    A larger value for a specific job ranks that job above
    others with lower values for \MacroNI{RANK}.
 
+\item[\Macro{IS\_VALID\_CHECKPOINT\_PLATFORM}] \label{param:IsValidCheckpointPlatform} A boolean expression that is logically anded with the
+   with the \MacroNI{START} expression to limit which machines a
+   standard universe job may continue execution on once they have
+   produced a checkpoint.
+   The default expression is
+
+   \footnotesize
+   \begin{verbatim}
+   IS_VALID_CHECKPOINT_PLATFORM =
+   (
+     ( (TARGET.JobUniverse == 1) == FALSE) ||
+   
+     (
+       (MY.CheckpointPlatform =!= UNDEFINED) &&
+       (
+         (TARGET.LastCheckpointPlatform =?= MY.CheckpointPlatform) ||
+         (TARGET.NumCkpts == 0)
+       )
+     )
+   )
+   \end{verbatim}
+   \normalsize
+
 \item[\Macro{WANT\_SUSPEND}] \label{param:WantSuspend}  A boolean expression
    that, when \Expr{True}, defines that a currently running
    Condor job is to be suspended, instead of killed.
@@ -2241,69 +2258,78 @@ Configuring The Startd Policy.
 \begin{description}
 
 \item[\Macro{STARTER}] \label{param:Starter}  This macro holds the
-  full path to the \Condor{starter} binary that the startd should 
+  full path to the \Condor{starter} binary that the \Condor{startd} should 
   spawn.
   It is normally defined relative to \MacroUNI{SBIN}.
   
 \item[\Macro{ALTERNATE\_STARTER\_1}] \label{param:AlternateStarter1}
   This macro holds the full path to the \Condor{starter.pvm}
-  binary that the startd spawns to service PVM jobs.  It is normally
+  binary that the \Condor{startd} spawns to service PVM jobs.  It is normally
   defined relative to \MacroUNI{SBIN}, since by default,
   \Condor{starter.pvm} is installed in the regular Condor release
   directory. 
   
 \item[\Macro{POLLING\_INTERVAL}] \label{param:PollingInterval} When a
-  startd enters the claimed state, this macro determines how often
+  \Condor{startd} enters the claimed state, this macro determines how often
   the state of the machine is polled to check the need to suspend, resume,
   vacate or kill the job.  It is defined in terms of seconds and defaults to
   5.
   
 \item[\Macro{UPDATE\_INTERVAL}] \label{param:UpdateInterval}
-  Determines how often the startd should send a ClassAd update
-  to the \Condor{collector}.  The startd also sends update on any
+  Determines how often the \Condor{startd} should send a ClassAd update
+  to the \Condor{collector}.  The \Condor{startd} also sends update on any
   state or activity change, or if the value of its \Expr{START} expression
-  changes.  See section~\ref{sec:States} on \condor{startd}
-  states, section~\ref{sec:Activities} on \condor{startd}
-  Activities, and section~\ref{sec:Start-Expr} on \condor{startd}
+  changes.  See section~\ref{sec:States} on \Condor{startd}
+  states, section~\ref{sec:Activities} on \Condor{startd}
+  Activities, and section~\ref{sec:Start-Expr} on \Condor{startd}
   \Expr{START} expression for details on states, activities, and the
   \Expr{START} expression.  This macro is defined in
   terms of seconds and defaults to 300 (5 minutes).
   
+\item[\Macro{MAXJOBRETIREMENTTIME}] \label{param:MaxJobRetirementTime}
+  An integer value representing the number of seconds allotted as
+  a retirement. The default value of 0 (when the configuration
+  variable is not present) implements the expected policy that
+  there is no retirement time.
+  See \MacroNI{MAXJOBRETIREMENTTIME} in
+  section~\ref{sec:State-Expression-Summary} for further explanation.
+
+
 \item[\Macro{MAX\_CLAIM\_ALIVES\_MISSED}]
-  \label{param:MaxClaimAlivesMissed} The schedd sends periodic updates
-  to each startd as a keep alive (see the description of
+  \label{param:MaxClaimAlivesMissed} The \Condor{schedd} sends periodic updates
+  to each \Condor{startd} as a keep alive (see the description of
   \Macro{ALIVE\_INTERVAL} on page~\pageref{param:AliveInterval}).  
-  If the startd does not receive any keep alive messages, it assumes
-  that something has gone wrong with the schedd and that the resource
+  If the \Condor{startd} does not receive any keep alive messages, it assumes
+  that something has gone wrong with the \Condor{schedd} and that the resource
   is not being effectively used.
-  Once this happens, the startd considers the claim to have timed out,
+  Once this happens, the \Condor{startd} considers the claim to have timed out,
   it releases the claim, and starts advertising itself as available
   for other jobs.
   Because these keep alive messages are sent via UDP, they are
   sometimes dropped by the network.
-  Therefore, the startd has some tolerance for missed keep alive
-  messages, so that in case a few keep alives are lost, the startd
+  Therefore, the \Condor{startd} has some tolerance for missed keep alive
+  messages, so that in case a few keep alives are lost, the \Condor{startd}
   will not immediately release the claim.
   This setting controls how many keep alive messages can be missed
-  before the startd considers the claim no longer valid.
+  before the \Condor{startd} considers the claim no longer valid.
   The default is 6.
 
 \item[\Macro{STARTD\_HAS\_BAD\_UTMP}] \label{param:StartdHasBadUtmp}
-  When the startd is computing the idle time of all the
+  When the \Condor{startd} is computing the idle time of all the
   users of the machine (both local and remote), it checks the
   \File{utmp} file to find all the currently active ttys, and only
   checks access time of the devices associated with active logins.
   Unfortunately, on some systems, \File{utmp} is unreliable, and the
-  startd might miss keyboard activity by doing this.  So, if your
+  \Condor{startd} might miss keyboard activity by doing this.  So, if your
   \File{utmp} is unreliable, set this macro to TRUE and the
-  startd will check the access time on all tty and pty devices.
+  \Condor{startd} will check the access time on all tty and pty devices.
   
 \item[\Macro{CONSOLE\_DEVICES}] \label{param:ConsoleDevices} This
-  macro allows the startd to monitor console (keyboard and mouse)
+  macro allows the \Condor{startd} to monitor console (keyboard and mouse)
   activity by checking the access times on special files in
   \File{/dev}.  Activity on these files shows up as 
   \AdAttr{ConsoleIdle}
-  time in the startd's ClassAd.  Give a comma-separated list of
+  time in the \Condor{startd}'s ClassAd.  Give a comma-separated list of
   the names of devices considered the console, without the
   \File{/dev/} portion of the pathname.  The defaults vary from
   platform to platform, and are usually correct.  
@@ -2325,7 +2351,7 @@ Configuring The Startd Policy.
   information by connecting to the X server.
   
 \item[\Macro{STARTD\_JOB\_EXPRS}] \label{param:StartdJobExprs} When
-  the machine is claimed by a remote user, the startd can also advertise
+  the machine is claimed by a remote user, the \Condor{startd} can also advertise
   arbitrary attributes from the job ClassAd in the machine
   ClassAd.
   List the attribute names to be advertised.  \Note Since
@@ -2337,7 +2363,7 @@ Configuring The Startd Policy.
   \Macro{SUBSYS\_ATTRS}.
 
 \item[\Macro{STARTD\_DEBUG}] \label{param:StartdDebug} This macro
-  (and other settings related to debug logging in the startd) is
+  (and other settings related to debug logging in the \Condor{startd}) is
   described in section~\ref{param:SubsysDebug} as
   \Macro{SUBSYS\_DEBUG}.
 
@@ -2367,7 +2393,7 @@ Configuring The Startd Policy.
   portion of the file name.
 
 \item[\Macro{NUM\_CPUS}] \label{param:NumCpus}
-  This macro can be used to ``lie'' to the startd about how many CPUs
+  This macro can be used to ``lie'' to the \Condor{startd} about how many CPUs
   your machine has.
   If you set this, it will override Condor's automatic computation of
   the number of CPUs in your machine, and Condor will use whatever
@@ -2429,8 +2455,14 @@ Configuring The Startd Policy.
   section~\ref{param:MasterName} on page~\pageref{param:MasterName}
   for a description of valid Condor daemon names.
 
-\item[\Macro{RunBenchmarks}] \label{param:RunBenchmarks}
-  Specifies when to run benchmarks.  When the machine is in the Unclaimed state and this expression evaluates to TRUE, benchmarks will be run.  If RunBenchmarks is specified and set to anything other than FALSE additional benchmarks will be run when the startd initially starts.  To disable startup benchmarks you must set \MacroNI{RunBenchmarks} to FALSE or comment it out of the configuration file.
+\item[\Macro{RUNBENCHMARKS}] \label{param:RunBenchmarks}
+  Specifies when to run benchmarks.
+  When the machine is in the Unclaimed state and this expression
+  evaluates to TRUE, benchmarks will be run.
+  If RunBenchmarks is specified and set to anything other than FALSE,
+  additional benchmarks will be run when the \Condor{startd} initially starts.
+  To disable startup benchmarks, set \MacroNI{RunBenchmarks} to FALSE,
+  or comment it out of the configuration file.
 
 \end{description}
 
@@ -2445,14 +2477,14 @@ SMP Machines for details.
 \item[\Macro{VIRTUAL\_MACHINES\_CONNECTED\_TO\_CONSOLE}] 
 \label{param:VirtualMachinesConnectedToConsole}
   An integer which indicates how many of the virtual
-  machines the startd is representing should be "connected" to the
+  machines the \Condor{startd} is representing should be "connected" to the
   console (in other words, notice when there's console activity).
   This defaults to all virtual machines (N in a machine with N CPUs).
 
 \item[\Macro{VIRTUAL\_MACHINES\_CONNECTED\_TO\_KEYBOARD}]
 \label{param:VirtualMachinesConnectedToKeyboard}
   An integer which indicates how many of the virtual
-  machines the startd is representing should be "connected" to the
+  machines the \Condor{startd} is representing should be "connected" to the
   keyboard (for remote tty activity, as well as console activity).
   Defaults to 1.
 
@@ -2460,11 +2492,11 @@ SMP Machines for details.
 \label{param:DisconnectedKeyboardIdleBoost}
   If there are virtual machines not connected to either the keyboard
   or the console, the corresponding idle time reported will be the
-  time since the startd was spawned, plus the value of this macro.
+  time since the \Condor{startd} was spawned, plus the value of this macro.
   It defaults to 1200 seconds (20 minutes). 
   We do this because if the virtual machine is configured not to care
   about keyboard activity, we want it to be available to Condor jobs
-  as soon as the startd starts up, instead of having to wait for 15
+  as soon as the \Condor{startd} starts up, instead of having to wait for 15
   minutes or more (which is the default time a machine must be idle
   before Condor will start a job).
   If you do not want this boost, set the value to 0.  
@@ -2930,16 +2962,16 @@ HAWKEYE_JOB2_ENV = lwpi=somevalue
 \end{description}
 
 The following macros control the optional computation of resource
-availability statistics in the startd.
+availability statistics in the \Condor{startd}.
 
 \begin{description}
 
 \item[\Macro{STARTD\_COMPUTE\_AVAIL\_STATS}]
 \label{param:StartdComputeAvailStats}
-  A boolean that determines if the startd computes resource
+  A boolean that determines if the \Condor{startd} computes resource
   availability statistics.  The default is False.
 
-If \Macro{STARTD\_COMPUTE\_AVAIL\_STATS} = True, the startd will
+If \Macro{STARTD\_COMPUTE\_AVAIL\_STATS} = True, the \Condor{startd} will
 define the following ClassAd attributes for resources:
 
 \begin{description}
@@ -2970,7 +3002,7 @@ not in the Owner state:
 \item[\Macro{STARTD\_AVAIL\_CONFIDENCE}]
 \label{param:StartdAvailConfidence}
   A floating point number representing the confidence level of the
-  startd daemon's AvailTime estimate.
+  \Condor{startd} daemon's AvailTime estimate.
   By default, the estimate is based on
   the 80th percentile of past values
   (that is, the value is initially set to 0.8).
@@ -2978,7 +3010,7 @@ not in the Owner state:
 \item[\Macro{STARTD\_MAX\_AVAIL\_PERIOD\_SAMPLES}]
 \label{param:StartdMaxAvailPeriodSamples}
   An integer that limits the number of samples of past available
-  intervals stored by the startd to limit memory and disk consumption.
+  intervals stored by the \Condor{startd} to limit memory and disk consumption.
   Each sample requires 4 bytes of memory and approximately 10 bytes of
   disk space.
 
@@ -3167,29 +3199,29 @@ These macros control the \Condor{schedd}.
   leave the job queue, e.g. they have completed or been removed.  This
   integer-valued macro specifies a delay in seconds to place between the
   taking jobs permanently out of the queue.  The default value is 0, which
-  tells the schedd to not impose any delay.  
+  tells the \Condor{schedd} to not impose any delay.  
   
 \item[\Macro{ALIVE\_INTERVAL}] \label{param:AliveInterval} This
   macro determines how often the \Condor{schedd} should send a keep
-  alive message to any startd it has claimed.
-  When the schedd claims a startd, it tells the startd how often it is
+  alive message to any \Condor{startd} it has claimed.
+  When the \Condor{schedd} claims a \Condor{startd}, it tells the \Condor{startd} how often it is
   going to send these messages.
-  If the startd does not receive any of these keep alive messages
+  If the \Condor{startd} does not receive any of these keep alive messages
   during a certain period of time (defined via
   \Macro{MAX\_CLAIM\_ALIVES\_MISSED}, described on
   page~\pageref{param:MaxClaimAlivesMissed})
-  the startd releases the claim, and the schedd no longer pays for
+  the \Condor{startd} releases the claim, and the \Condor{schedd} no longer pays for
   the resource (in terms of user priority in the system).
   The macro is defined in terms of seconds and defaults to 300 (every
   5 minutes).
 
 \item[\Macro{REQUEST\_CLAIM\_TIMEOUT}]
   \label{param:RequestClaimTimeout} This macro sets the time (in
-  seconds) that the schedd will wait for a claim to be granted by the
-  startd.  The default is 30 minutes.  This is only likely to matter
-  if the startd has an existing claim and it takes a long time for the
+  seconds) that the \Condor{schedd} will wait for a claim to be granted by the
+  \Condor{startd}.  The default is 30 minutes.  This is only likely to matter
+  if the \Condor{startd} has an existing claim and it takes a long time for the
   existing claim to be preempted due to \Expr{MaxJobRetirementTime}.
-  Once a request times out, the schedd will simply begin the process
+  Once a request times out, the \Condor{schedd} will simply begin the process
   of finding a machine for the job all over again.
 
 \item[\Macro{SHADOW\_SIZE\_ESTIMATE}] \label{param:ShadowSizeEstimate}
@@ -3198,7 +3230,7 @@ These macros control the \Condor{schedd}.
   varies from platform to platform.
 
 \item[\Macro{SHADOW\_RENICE\_INCREMENT}]
-  \label{param:ShadowReniceIncrement} When the schedd spawns a new
+  \label{param:ShadowReniceIncrement} When the \Condor{schedd} spawns a new
   \Condor{shadow}, it can do so with a \Term{nice-level}.  A
   nice-level is a
   Unix mechanism that allows users to assign their own processes a lower 
@@ -3218,20 +3250,20 @@ These macros control the \Condor{schedd}.
   default value and range of legal values are the same.
 
 \item[\Macro{QUEUE\_CLEAN\_INTERVAL}] \label{param:QueueCleanInterval}
-  The schedd maintains the job queue on a given machine.  It does so
-  in a persistent way such that if the schedd crashes, it can recover
+  The \Condor{schedd} maintains the job queue on a given machine.  It does so
+  in a persistent way such that if the \Condor{schedd} crashes, it can recover
   a valid state of the job queue.  The mechanism it uses is a
   transaction-based log file (the \File{job\_queue.log} file,
   not the \File{SchedLog} file).  This file contains an initial
   state of the job queue, and a series of transactions that were
   performed on the queue (such as new jobs submitted, jobs completing,
-  and checkpointing).  Periodically, the schedd will go through
+  and checkpointing).  Periodically, the \Condor{schedd} will go through
   this log, truncate all the transactions and create a new file with
   containing only the new initial state of the log.
   This is a somewhat expensive operation,
-  but it speeds up when the schedd restarts since there are
+  but it speeds up when the \Condor{schedd} restarts since there are
   fewer transactions it has to play to figure out what state the job
-  queue is really in.  This macro determines how often the schedd
+  queue is really in.  This macro determines how often the \Condor{schedd}
   should rework this queue to cleaning it up.  It is defined in terms of
   seconds and defaults to 86400 (once a day). 
   
@@ -3239,13 +3271,13 @@ These macros control the \Condor{schedd}.
   The job queue contains a counter for each job's ``wall clock'' run
   time, i.e., how long each job has executed so far.  This counter is
   displayed by \Condor{q}.  The counter is updated when the job is
-  evicted or when the job completes.  When the schedd crashes, the run
+  evicted or when the job completes.  When the \Condor{schedd} crashes, the run
   time for jobs that are currently running will not be added to the
   counter (and so, the run time counter may become smaller than the
-  cpu time counter).  The schedd saves run time ``checkpoints''
-  periodically for running jobs so if the schedd crashes, only run
+  cpu time counter).  The \Condor{schedd} saves run time ``checkpoints''
+  periodically for running jobs so if the \Condor{schedd} crashes, only run
   time since the last checkpoint is lost.  This macro controls how
-  often the schedd saves run time checkpoints.  It is defined in terms
+  often the \Condor{schedd} saves run time checkpoints.  It is defined in terms
   of seconds and defaults to 3600 (one hour).  A value of 0 will
   disable wall clock checkpoints.
 
@@ -3306,7 +3338,7 @@ These macros control the \Condor{schedd}.
   \MacroNI{SUBSYS\_ATTRS}.
 
 \item[\Macro{SCHEDD\_DEBUG}] \label{param:ScheddDebug} This macro
-  (and other settings related to debug logging in the schedd) is
+  (and other settings related to debug logging in the \Condor{schedd}) is
   described in section~\ref{param:SubsysDebug} as
   \MacroNI{SUBSYS\_DEBUG}.
 
@@ -3322,22 +3354,22 @@ These macros control the \Condor{schedd}.
 \item[\Macro{FLOCK\_NEGOTIATOR\_HOSTS}] \label{param:FlockNegotiatorHosts} 
   This macro defines a list of negotiator host names (not including the
   local \MacroUNI{NEGOTIATOR\_HOST} machine) for pools in which the
-  schedd should attempt to run jobs.  Hosts in the list should be in
-  order of preference.  The schedd will only send a request to a
+  \Condor{schedd} should attempt to run jobs.  Hosts in the list should be in
+  order of preference.  The \Condor{schedd} will only send a request to a
   central manager in the list if the local pool and pools earlier in
   the list are not satisfying all the job requests.
   \MacroUNI{HOSTALLOW\_NEGOTIATOR\_SCHEDD} (see
   section~\ref{param:HostAllow}) must also be configured to allow
   negotiators from all of the \MacroUNI{FLOCK\_NEGOTIATOR\_HOSTS} to
-  contact the schedd.  Please make sure the
+  contact the \Condor{schedd}.  Please make sure the
   \MacroUNI{NEGOTIATOR\_HOST} is first in the
   \MacroUNI{HOSTALLOW\_NEGOTIATOR\_SCHEDD} list.  Similarly, the
   central managers of the remote pools must be configured to listen to
-  requests from this schedd.
+  requests from this \Condor{schedd}.
 
 \item[\Macro{FLOCK\_COLLECTOR\_HOSTS}] \label{param:FLockCollectorHosts}
   This macro defines a list of collector host names for pools in which
-  the schedd should attempt to run jobs.  The
+  the \Condor{schedd} should attempt to run jobs.  The
   collectors must be specified in order, corresponding to the
   \MacroUNI{FLOCK\_NEGOTIATOR\_HOSTS} list.  In the typical case, where each pool
   has the collector and negotiator running on the same machine,
@@ -3361,7 +3393,7 @@ These macros control the \Condor{schedd}.
 
 \item[\Macro{NEGOTIATE\_ALL\_JOBS\_IN\_CLUSTER}]
   \label{param:NegotiateAllJobsInCluster}
-  If this macro is set to False (the default), when the schedd fails
+  If this macro is set to False (the default), when the \Condor{schedd} fails
   to start an idle job, it will not try to start any other
   idle jobs in the same cluster during that negotiation cycle.  This
   makes negotiation much more efficient for large job clusters.
@@ -3371,7 +3403,7 @@ These macros control the \Condor{schedd}.
   operating system requirements.  Or, machines may be willing to run
   only some jobs in the cluster, because their requirements reference
   the jobs' virtual memory size or other attribute.  Setting this
-  macro to True will force the schedd to try to start all idle jobs in
+  macro to True will force the \Condor{schedd} to try to start all idle jobs in
   each negotiation cycle.  This will make negotiation cycles last
   longer, but it will ensure that all jobs that can be started will be
   started.
@@ -3381,7 +3413,7 @@ These macros control the \Condor{schedd}.
   in seconds, between evaluation of periodic job control expressions,
   such as periodic\_hold, periodic\_release, and periodic\_remove,
   given by the user in a Condor submit file. By default, this value is
-  300 seconds (5 minutes).  A value of 0 prevents the schedd from
+  300 seconds (5 minutes).  A value of 0 prevents the \Condor{schedd} from
   performing the periodic evaluations.
 
 \item[\Macro{SCHEDD\_ASSUME\_NEGOTIATOR\_GONE}]
@@ -4036,7 +4068,7 @@ These macros affect the \Condor{negotiator}.
 
 \item[\Macro{NEGOTIATOR\_TIMEOUT}] \label{param:NegotiatorTimeout}
   Sets the timeout that the negotiator uses on its network connections
-  to the schedds and startds.  It is defined in seconds and defaults to 30.
+  to the \Condor{schedd} and \Condor{startd}s.  It is defined in seconds and defaults to 30.
   
 \item[\Macro{PRIORITY\_HALFLIFE}] \label{param:PriorityHalfLife} This
   macro defines the half-life of the user priorities.  See
@@ -4090,7 +4122,7 @@ These macros affect the \Condor{negotiator}.
   protocol more efficient by eliminating the need for socket
   connection establishment for each negotiation cycle.  The default is
   currently 16.  To be effective, this parameter should be set to a
-  value greater than the number of schedds submitting jobs to the
+  value greater than the number of \Condor{schedd}s submitting jobs to the
   negotiator at any time.  If you lower this number, you must run
   \Condor{restart} and not just \Condor{reconfig} for the change to
   take effect.
@@ -4223,9 +4255,10 @@ group users.
   The group name must also be specified in the \MacroNI{GROUP\_NAMES} list.
   \MacroNI{GROUP\_PRIO\_FACTOR\_<groupname>} is evaluated when
   the negotiator first negotiates for the user as a member of the group.
-  All members of the group inherit the default priority factor.
+  All members of the group inherit the default priority factor
+  when no other value is present.
   For example, the following setting
-  specifies that all member of the group named \verb@group_physics@
+  specifies that all members of the group named \verb@group_physics@
   inherit a default user priority factor of 2.0:
   \begin{verbatim}
     GROUP_PRIO_FACTOR_group_physics = 2.0
@@ -4350,7 +4383,7 @@ refreshed, at which point management of the job will resume.
 
 \item[\Macro{GRIDMANAGER\_CONTACT\_SCHEDD\_DELAY}]
 \label{param:GridmanagerContactScheddDelay} The minimum number of
-seconds between connections to the schedd. The default is 5 seconds.
+seconds between connections to the \Condor{schedd}. The default is 5 seconds.
 
 \item[\Macro{GRIDMANAGER\_JOB\_PROBE\_INTERVAL}]
 \label{param:GridmanagerJobProbeInterval}
@@ -4360,7 +4393,7 @@ should probe the remote jobmanager to ensure it is still alive and well.
 \item[\Macro{CONDOR\_JOB\_POLL\_INTERVAL}]
 \label{param:CondorJobPollInterval}
 After a condor grid type job is submitted, how often (in seconds) the \Condor{gridmanager}
-should probe the remote schedd to check the jobs status.  
+should probe the remote \Condor{schedd} to check the jobs status.  
 This defaults to 300 seconds (5 minutes).
 Setting this to a lower number will decrease latency (Condor will discover
 that a job has finished more quickly), but will increase network traffic.
@@ -4395,6 +4428,7 @@ jobs from the \Condor{schedd} that were already submitted
 In these cases, submitted jobs will not be killed,
 but no new jobs can be submitted until the number of submitted
 jobs falls below the current limit.
+Defaults to 100.
 
 \item[\Macro{GRIDMANAGER\_MAX\_PENDING\_SUBMITS\_PER\_RESOURCE}]
 \label{param:GridmanagerMaxPendingSubmitsPerResource} The maximum

@@ -293,6 +293,17 @@ per machine basis.
 \end{Options}
 
 \GenRem
+
+The default output from \Condor{q} is formatted to be human readable,
+not script readable.
+In an effort to make the output fit within 80 characters, values in
+some fields might be truncated.
+Furthermore, the Condor Project can (and does) change the formatting
+of this default output as we see fit.
+Therefore, any script that is attempting to parse data from \Condor{q}
+is strongly encouraged to use the \Opt{-format} option (described
+above, examples given below).
+
 Although \Arg{-analyze} provides a very good first approximation, the analyzer 
 cannot diagnose all possible situations because the analysis is based on 
 instantaneous and local information.  Therefore, there are some situations 
