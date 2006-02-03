@@ -8,6 +8,7 @@ LIB = libcedar.a $(STD_LIBS)
 
 #if CONDOR_3DES_ENCRYPTION
 CONDOR_DES_OBJ = condor_crypt_3des.o
+AUTH_PASSWD_OBJ = condor_auth_passwd.o
 #endif
 
 #if CONDOR_BLOWFISH_ENCRYPTION
@@ -27,7 +28,7 @@ AUTH_X509_OBJ = condor_auth_x509.o
 
 CONDOR_AUTH_OBJ = condor_auth.o condor_auth_claim.o condor_auth_fs.o \
 	          condor_auth_sspi.o condor_auth_anonymous.o         \
-		  $(AUTH_X509_OBJ) $(AUTH_KERB_OBJ) authentication.o
+		  $(AUTH_X509_OBJ) $(AUTH_KERB_OBJ) $(AUTH_PASSWD_OBJ) authentication.o
 
 CONDOR_TYPE_OBJ = sig_num.o proc.o open_flags.o fcntl_cmd.o errno_num.o
 
