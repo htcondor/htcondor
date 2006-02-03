@@ -50,14 +50,23 @@ const char CONFIG_CREDENTIAL[] = "config";
 #define MAX_PASSWORD_LENGTH 255
 
 void store_cred_handler(void *, int i, Stream *s);
-int store_cred(char *user, char* pw, int mode, Daemon *d = NULL );
+int store_cred(const char *user, const char* pw, int mode, Daemon *d = NULL );
+int store_cred_service(const char *user, const char *pw, int mode);
 
 bool read_no_echo(char* buf, int maxlength);
-char* get_password(void);
-bool isValidCredential( char *user, char* pw );
-int addCredential(char* user, char* pw);
-int deleteCredential(char* user); // not checking password before removal yet
-int queryCredential(char* user);  // just tell me if I have one stashed
+char* get_password(void);	// get password from user w/o echo on the screen
+bool isValidCredential( const char *user, const char* pw );
+int addCredential(const char* user, const char* pw);
+int deleteCredential(const char* user); // not checking password before removal yet
+int queryCredential(const char* user);  // just tell me if I have one stashed
+
+/** Get the stored password from our password staff in the registry.  
+	Result must be deallocated with free()
+	by the caller if not NULL.  Will fail if not LocalSystem when
+	called.
+	@return malloced string with the password, or NULL if failure.
+*/
+char* getStoredCredential(const char *user, const char *domain);
 
 #endif // WIN32
 #endif // STORE_CRED_H
