@@ -1,3 +1,9 @@
+02/03/06 V6_7_16
+  The official 6.7.16 release.  The packages for all platforms came
+  from NMI build #18640.  The version strings for this release are:
+    $CondorVersion: 6.7.16 Feb  2 2006 $
+    $CondorVersion: 6.7.16 Feb  3 2006 $
+
 02/02/06 V6_7_16-branch
   The branch for V6_7_16 from V6_7_16-root off of V6_7-branch.
 
