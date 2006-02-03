@@ -1787,6 +1787,8 @@ SecMan::sec_char_to_auth_method( char* method ) {
 		return CAUTH_GSI;
 	} else if ( !stricmp( method, "NTSSPI" ) ) {
 		return CAUTH_NTSSPI;
+	} else if ( !stricmp( method, "PASSWORD" ) ) {
+		return CAUTH_PASSWORD;
 	} else if ( !stricmp( method, "FS" ) ) {
 		return CAUTH_FILESYSTEM;
 	} else if ( !stricmp( method, "FS_REMOTE" ) ) {

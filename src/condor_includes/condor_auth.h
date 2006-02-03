@@ -40,6 +40,7 @@ const int CAUTH_NTSSPI                  = 16;
 const int CAUTH_GSI                     = 32;
 const int CAUTH_KERBEROS                = 64;
 const int CAUTH_ANONYMOUS               = 128;
+const int CAUTH_PASSWORD				= 256;
 
 const char STR_DEFAULT_CONDOR_USER[]    = "condor";    // Default condor user
 const char STR_DEFAULT_CONDOR_SPOOL[]   = "SPOOL";

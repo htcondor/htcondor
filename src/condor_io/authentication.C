@@ -31,6 +31,7 @@
 #include "condor_auth_sspi.h"
 #include "condor_auth_x509.h"
 #include "condor_auth_kerberos.h"
+#include "condor_auth_passwd.h"
 #include "condor_secman.h"
 #include "condor_environ.h"
 #include "../condor_daemon_core.V6/condor_ipverify.h"
@@ -69,7 +70,8 @@ Authentication::~Authentication()
 #endif
 }
 
-int Authentication::authenticate( char *hostAddr, KeyInfo *& key, const char* auth_methods, CondorError* errstack)
+int Authentication::authenticate( char *hostAddr, KeyInfo *& key, 
+								  const char* auth_methods, CondorError* errstack)
 {
     int retval = authenticate(hostAddr, auth_methods, errstack);
     
@@ -79,6 +81,10 @@ int Authentication::authenticate( char *hostAddr, KeyInfo *& key, const char* au
         // this will be gone
         mySock->allow_empty_message_flag = FALSE;
         retval = exchangeKey(key);
+		if ( !retval ) {
+			errstack->push("AUTHENTICATE",AUTHENTICATE_ERR_KEYEXCHANGE_FAILED,
+				"Failed to securely exchange session key");
+		}
         mySock->allow_one_empty_message();
     }
 #endif
@@ -139,6 +145,13 @@ Condor_Auth_Base * auth = NULL;
 			case CAUTH_KERBEROS:
 				auth = new Condor_Auth_Kerberos(mySock);
 				method_name = strdup("KERBEROS");
+				break;
+#endif
+
+#if defined(CONDOR_3DES_ENCRYPTION)  // 3DES is the prequisite for passwd auth
+			case CAUTH_PASSWORD:
+				auth = new Condor_Auth_Passwd(mySock);
+				method_name = strdup("PASSWORD");
 				break;
 #endif
  
@@ -538,9 +551,15 @@ int Authentication::exchangeKey(KeyInfo *& key)
             mySock->get_bytes(encryptedKey, inputLen);
             mySock->end_of_message();
 
-            // Now, unwrap it
-            authenticator_->unwrap(encryptedKey,  inputLen, decryptedKey, outputLen);
-            key = new KeyInfo((unsigned char *)decryptedKey, keyLength,(Protocol) protocol,duration);
+            // Now, unwrap it.  
+            if ( authenticator_->unwrap(encryptedKey,  inputLen, decryptedKey, outputLen) ) {
+					// Success
+				key = new KeyInfo((unsigned char *)decryptedKey, keyLength,(Protocol) protocol,duration);
+			} else {
+					// Failure!
+				retval = 0;
+				key = NULL;
+			}
         }
         else {
             key = NULL;
@@ -563,7 +582,11 @@ int Authentication::exchangeKey(KeyInfo *& key)
             protocol  = (int) key->getProtocol();
             duration  = key->getDuration();
 
-            authenticator_->wrap((char *)key->getKeyData(), keyLength, encryptedKey, outputLen);
+            if (!authenticator_->wrap((char *)key->getKeyData(), keyLength, encryptedKey, outputLen))
+			{
+				// failed to wrap key.
+				return 0;
+			}
 
             if (!mySock->code(keyLength) || 
                 !mySock->code(protocol)  ||
