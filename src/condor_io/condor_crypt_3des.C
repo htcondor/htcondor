@@ -30,9 +30,11 @@ Condor_Crypt_3des :: Condor_Crypt_3des(const KeyInfo& key)
     : Condor_Crypt_Base(CONDOR_3DES, key)
 {
     KeyInfo k(key);
-    const unsigned char * keyData = k.getKeyData();
-
-    ASSERT(k.getKeyLength() >= 24);
+    
+		// triple des requires a key of 8 x 3 = 24 bytes
+		// so pad the key out to at least 24 bytes if needed
+	unsigned char * keyData = k.getPaddedKeyData(24);
+	ASSERT(keyData);
 
     des_set_key((des_cblock *)  keyData    , keySchedule1_);
     des_set_key((des_cblock *) (keyData+8) , keySchedule2_);
@@ -40,6 +42,8 @@ Condor_Crypt_3des :: Condor_Crypt_3des(const KeyInfo& key)
 
     // initialize ivsec
     resetState();
+
+	free(keyData);
 }
 #else
 {
