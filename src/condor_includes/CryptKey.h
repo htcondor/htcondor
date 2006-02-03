@@ -81,11 +81,20 @@ class KeyInfo {
     // REQUIRE: None
     // REQUIRE: None
     //------------------------------------------
+
+	/** Returns a padded key.
+		@param len Minimum length of padded key in bytes.
+		@return A buffer with the padded key that be deallocated via free() 
+				by the caller, or NULL on failure.
+	*/
+	unsigned char * getPaddedKeyData(int len) const;
+
  private:
     void init(unsigned char * keyData, int keyDataLen);
 
     unsigned char * keyData_;
     int             keyDataLen_;
+	int				keyBufferLen_;
     Protocol        protocol_;
     int             duration_;
 };

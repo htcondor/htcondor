@@ -113,3 +113,30 @@ int KeyInfo :: getDuration() const
 {
     return duration_;
 }
+
+unsigned char * KeyInfo :: getPaddedKeyData(int len) const
+{
+	unsigned char* padded_key_buf = NULL;
+	int i;
+
+		// fail if we have no key to pad!
+	if ( keyDataLen_ < 1  || !keyData_ ) {
+		return NULL;
+	}
+
+		// Allocate new buffer that the caller must free()
+	padded_key_buf = (unsigned char *)malloc(len + 1);
+	ASSERT(padded_key_buf);
+	memset(padded_key_buf, 0, len + 1);
+		// copy the key into our new large-sized buffer
+	memcpy(padded_key_buf, keyData_, keyDataLen_);
+
+		// Pad the key by if needed by
+		// simply repeating the key over and over until the 
+		// desired length is obtained.
+	for ( i = keyDataLen_ ; i < len; i++ ) {
+		padded_key_buf[i] = padded_key_buf[ i - keyDataLen_ ];
+	}
+	
+	return padded_key_buf;
+}
