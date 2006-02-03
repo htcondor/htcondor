@@ -21,6 +21,7 @@
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
+#include "condor_common.h"
 #include "condor_crypt_blowfish.h"
 //#include <string.h>
 //#include <malloc.h>
