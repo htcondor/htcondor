@@ -418,25 +418,42 @@ CronMgrBase::DoConfig( bool initial )
 {
 	char *paramBuf;
 
+	// Clear all marks
+	Cron.ClearAllMarks( );
+
+	// Look for _JOBS first (any job here will be overriden by the
+	// corresponding entry in _JOBLIST
+	paramBuf = GetParam( "JOBS" );
+	if ( paramBuf ) {
+		dprintf( D_ALWAYS,
+				 "Warning: The \"%s_JOBS\" configuration syntax "
+				 "is obsolete and\n",
+				 ParamBase );
+		dprintf( D_ALWAYS,
+				 "         is being replaced by the \"%s_JOBLIST\" syntax.\n",
+				 ParamBase );
+		dprintf( D_ALWAYS,
+				 "         See the Condor manual for more details\n" );
+		ParseOldJobList( paramBuf );
+		free( paramBuf );
+	}
+
+	// Look for _JOBLIST
 	paramBuf = GetParam( "JOBLIST" );
 	if ( paramBuf != NULL ) {
 		ParseJobList( paramBuf );
-	} else {
-		paramBuf = GetParam( "JOBS" );
-
-		// Find our environment variable, if it exits..
-		dprintf( D_FULLDEBUG, "CronMgr: Doing config (%s)\n",
-				 initial ? "initial" : "reconfig" );
-		if ( !paramBuf ) {
-			paramBuf = strdup( "" );
-		}
-		ASSERT( paramBuf );
-		ParseOldJobList( paramBuf );
-	}
-
-	if( paramBuf ) {
 		free( paramBuf );
 	}
+
+	// Delete all jobs that didn't get marked
+	Cron.DeleteUnmarked( );
+
+	// And, initialize all jobs (they ignore it if already initialized)
+	Cron.InitializeAll( );
+
+	// Find our environment variable, if it exits..
+	dprintf( D_FULLDEBUG, "CronMgr: Doing config (%s)\n",
+			 initial ? "initial" : "reconfig" );
 
 	// Reconfigure all running jobs
 	if ( ! initial ) {
@@ -487,9 +504,6 @@ CronMgrBase::ParseJobList( const char *jobListString )
 {
 	// Debug
 	dprintf( D_JOB, "CronMgr: Job string is '%s'\n", jobListString );
-
-	// Clear all marks
-	Cron.ClearAllMarks( );
 
 	// Break it into a string list
 	StringList	jobList( jobListString );
@@ -639,10 +653,11 @@ CronMgrBase::ParseJobList( const char *jobListString )
 		// Force the first arg to be the "Job Name"..
 		args.AppendArg(jobName);
 
-		if(!args.AppendArgsV1RawOrV2Quoted(paramArgs.Value(),&args_errors)) {
+		if( !args.AppendArgsV1RawOrV2Quoted( paramArgs.Value(),
+											 &args_errors ) ) {
 			dprintf( D_ALWAYS,
 					 "CronMgr: Job '%s': "
-					 "Failed to parse arguments: %s\n",
+					 "Failed to parse arguments: '%s'\n",
 					 jobName, args_errors.Value());
 			jobOk = false;
 		}
@@ -651,10 +666,11 @@ CronMgrBase::ParseJobList( const char *jobListString )
 		Env envobj;
 		MyString env_error_msg;
 
-		if(!envobj.MergeFromV1RawOrV2Quoted(paramEnv.Value(),&env_error_msg)) {
+		if( !envobj.MergeFromV1RawOrV2Quoted( paramEnv.Value(),
+											  &env_error_msg ) ) {
 			dprintf( D_ALWAYS,
 					 "CronMgr: Job '%s': "
-					 "Failed to parse environment: %s\n",
+					 "Failed to parse environment: '%s'\n",
 					 jobName, env_error_msg.Value());
 			jobOk = false;
 		}
@@ -663,9 +679,11 @@ CronMgrBase::ParseJobList( const char *jobListString )
 		// Create the job & add it to the list (if it's new)
 		CronJobBase *job = NULL;
 		if ( jobOk ) {
+			bool add_it = false;
 			job = Cron.FindJob( jobName );
 			if ( NULL == job ) {
 				job = NewJob( jobName );
+				add_it = true;
 
 				// Ok?
 				if ( NULL == job ) {
@@ -677,12 +695,18 @@ CronMgrBase::ParseJobList( const char *jobListString )
 
 			// Put the job in the list
 			if ( NULL != job ) {
-				if ( Cron.AddJob( jobName, job ) < 0 ) {
-					dprintf( D_ALWAYS,
-							 "CronMgr: Error creating job '%s'\n", 
+				if ( add_it ) {
+					if ( Cron.AddJob( jobName, job ) < 0 ) {
+						dprintf( D_ALWAYS,
+								 "CronMgr: Error creating job '%s'\n", 
+								 jobName );
+						delete job;
+						job = NULL;
+					}
+				} else {
+					dprintf( D_FULLDEBUG,
+							 "CronMgr: Not adding duplicate job '%s' (OK)\n",
 							 jobName );
-					delete job;
-					job = NULL;
 				}
 			}
 		}
@@ -715,14 +739,8 @@ CronMgrBase::ParseJobList( const char *jobListString )
 		dprintf( D_FULLDEBUG,
 				 "CronMgr: Done processing job '%s'\n", jobName );
 
-		// Finally, have the job finish it's initialization
-		if ( job ) {
-			job->Initialize( );
-		}
+		// Job initialization is done by Cron::InitializeAll()
 	}
-
-	// Delete all jobs that didn't get marked
-	Cron.DeleteUnmarked( );
 
 	// All ok
 	return 0;
@@ -735,9 +753,6 @@ CronMgrBase::ParseOldJobList( const char *jobString )
 	// Debug
 	dprintf( D_JOB, "CronMgr: Old job string is '%s'\n", jobString );
 
-	// Clear all marks
-	Cron.ClearAllMarks( );
-
 	// Walk through the job list
 	JobListParser parser( jobString );
 	while ( parser.nextJob() ) {
@@ -748,7 +763,7 @@ CronMgrBase::ParseOldJobList( const char *jobString )
 		const char *jobName = parser.getName( );
 		if ( NULL == jobName ) {
 			dprintf( D_ALWAYS, 
-					 "CronMgr: skipping invalid job description '%s'"
+					 "CronMgr(old): skipping invalid job description '%s'"
 					 " (No name)\n",
 					 parser.getJobString( ) );
 			continue;
@@ -758,7 +773,7 @@ CronMgrBase::ParseOldJobList( const char *jobString )
 		const char *jobPrefix = parser.getPrefix( );
 		if ( NULL == jobPrefix ) {
 			dprintf( D_ALWAYS,
-					 "CronMgr: skipping invalid job description '%s'"
+					 "CronMgr(old): skipping invalid job description '%s'"
 					 " (No prefix)\n",
 					 parser.getJobString( ) );
 			continue;
@@ -769,7 +784,7 @@ CronMgrBase::ParseOldJobList( const char *jobString )
 		if ( NULL == jobPath )
 		{
 			dprintf( D_ALWAYS, 
-					 "CronMgr: skipping invalid job description '%s'"
+					 "CronMgr(old): skipping invalid job description '%s'"
 					 " (No path)\n",
 					 parser.getJobString( ) );
 			continue;
@@ -781,7 +796,7 @@ CronMgrBase::ParseOldJobList( const char *jobString )
 			char	modifier;
 			if ( sscanf( jobPeriodStr, "%d%c", &jobPeriod, &modifier ) < 1 ) {
 				dprintf( D_ALWAYS,
-						 "CronMgr: skipping invalid job description '%s'"
+						 "CronMgr(old): skipping invalid job description '%s'"
 						 " (Bad Period '%s')\n",
 						 parser.getJobString( ), jobPeriodStr );
 				continue;
@@ -797,7 +812,7 @@ CronMgrBase::ParseOldJobList( const char *jobString )
 				jobPeriod *= ( 60 * 60 );
 			} else {
 				dprintf( D_ALWAYS,
-						 "CronMgr: '%s': Invalid period modifier '%c'\n",
+						 "CronMgr(old): '%s': Invalid period modifier '%c'\n",
 						 parser.getJobString( ), modifier );
 				continue;
 			}
@@ -815,32 +830,38 @@ CronMgrBase::ParseOldJobList( const char *jobString )
 
 			// And, parse it
 			if ( !strcasecmp( option, "kill" ) ) {
-				dprintf( D_FULLDEBUG, "CronMgr: '%s': Kill option ok\n",
+				dprintf( D_FULLDEBUG,
+						 "CronMgr(old): '%s': Kill option ok\n",
 						 jobName );
 				killMode = true;
 			} else if ( !strcasecmp( option, "nokill" ) ) {
-				dprintf( D_FULLDEBUG, "CronMgr: '%s': NoKill option ok\n",
+				dprintf( D_FULLDEBUG,
+						 "CronMgr(old): '%s': NoKill option ok\n",
 						 jobName );
 				killMode = false;
 			} else if ( !strcasecmp( option, "reconfig" ) ) {
-				dprintf( D_FULLDEBUG, "CronMgr: '%s': Reconfig option ok\n",
+				dprintf( D_FULLDEBUG,
+						 "CronMgr(old): '%s': Reconfig option ok\n",
 						 jobName );
 				reconfig = true;
 			} else if ( !strcasecmp( option, "noreconfig" ) ) {
-				dprintf( D_FULLDEBUG, "CronMgr: '%s': NoReconfig option ok\n",
+				dprintf( D_FULLDEBUG,
+						 "CronMgr(old): '%s': NoReconfig option ok\n",
 						 jobName );
 				reconfig = false;
 			} else if ( !strcasecmp( option, "WaitForExit" ) ) {
-				dprintf( D_FULLDEBUG, "CronMgr: '%s': WaitForExit option ok\n",
+				dprintf( D_FULLDEBUG,
+						 "CronMgr(old): '%s': WaitForExit option ok\n",
 						 jobName );
 				jobMode = CRON_WAIT_FOR_EXIT;
 			} else if ( !strcasecmp( option, "continuous" ) ) {
-				dprintf( D_FULLDEBUG, "CronMgr: '%s': Continuous option ok\n",
+				dprintf( D_FULLDEBUG,
+						 "CronMgr(old): '%s': Continuous option ok\n",
 						 jobName );
 				jobMode = CRON_WAIT_FOR_EXIT;
 				reconfig = true;
 			} else {
-				dprintf( D_ALWAYS, "CronMgr: Job '%s':"
+				dprintf( D_ALWAYS, "CronMgr(old): Job '%s':"
 						 " Ignoring unknown option '%s'\n",
 						 jobName, option );
 			}
@@ -855,13 +876,16 @@ CronMgrBase::ParseOldJobList( const char *jobString )
 			if ( jobMode == CRON_WAIT_FOR_EXIT ) {
 				jobPeriod = 1;
 				dprintf( D_ALWAYS, 
-						 "CronMgr: WARNING: Job '%s' period = 0, but this "
+						 "CronMgr(old): "
+						 "WARNING: Job '%s' period = 0, but this "
 						 "can cause busy-loops; resetting to 1.\n",
 						 jobName );
 			} else {
 				dprintf( D_ALWAYS,
-						 "CronMgr: ERROR: Job '%s' not 'WaitForExit', but "
-						 "period = 0; ignoring Job.\n", jobName );
+						 "CronMgr(old): "
+						 "ERROR: Job '%s' not 'WaitForExit', but "
+						 "period = 0; ignoring Job.\n",
+						 jobName );
 				continue; 
 			}
 		}
@@ -880,7 +904,7 @@ CronMgrBase::ParseOldJobList( const char *jobString )
 
 		if(!args.AppendArgsV1RawOrV2Quoted(paramArgs,&args_errors)) {
 			dprintf( D_ALWAYS,
-					 "CronMgr: Job '%s': "
+					 "CronMgr(old): Job '%s': "
 					 "Failed to parse arguments: %s\n",
 					 jobName, args_errors.Value());
 			free(paramArgs);
@@ -895,10 +919,10 @@ CronMgrBase::ParseOldJobList( const char *jobString )
 		Env envobj;
 		MyString env_error_msg;
 
-		if(!envobj.MergeFromV1RawOrV2Quoted(paramEnv,&env_error_msg)) {
+		if( !envobj.MergeFromV1RawOrV2Quoted( paramEnv, &env_error_msg ) ) {
 			dprintf( D_ALWAYS,
-					 "CronMgr: Job '%s': "
-					 "Failed to parse environment: %s\n",
+					 "CronMgr(old): Job '%s': "
+					 "Failed to parse environment: '%s'\n",
 					 jobName, env_error_msg.Value());
 			free(paramEnv);
 			continue;
@@ -917,7 +941,7 @@ CronMgrBase::ParseOldJobList( const char *jobString )
 
 			// Put the job in the list
 			if ( Cron.AddJob( jobName, job ) < 0 ) {
-				dprintf( D_ALWAYS, "CronMgr: Error creating job '%s'\n", 
+				dprintf( D_ALWAYS, "CronMgr(old): Error creating job '%s'\n", 
 						 jobName );
 			}
 		}
@@ -950,14 +974,11 @@ CronMgrBase::ParseOldJobList( const char *jobString )
 		}
 
 		// Debug info
-		dprintf( D_FULLDEBUG, "CronMgr: Done processing job '%s'\n", jobName );
+		dprintf( D_FULLDEBUG,
+				 "CronMgr(old): Done processing job '%s'\n", jobName );
 
-		// Finally, have the job finish it's initialization
-		job->Initialize( );
+		// Job initialization is done by Cron::InitializeAll()
 	}
-
-	// Delete all jobs that didn't get marked
-	Cron.DeleteUnmarked( );
 
 	// All ok
 	return 0;

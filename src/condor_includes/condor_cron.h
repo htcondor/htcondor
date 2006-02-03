@@ -39,6 +39,7 @@ class CondorCron : public Service
 	~CondorCron( );
 
 	// Methods to manipulate the job list
+	int InitializeAll( void );
 	int Reconfig( void );
 	int DeleteAll( void );
 	int KillAll( bool force );

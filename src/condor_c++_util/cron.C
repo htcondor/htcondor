@@ -111,6 +111,20 @@ CondorCron::Reconfig( )
 	return 0;
 }
 
+// Initialize all jobs
+int
+CondorCron::InitializeAll( )
+{
+	CronJobBase	*curJob;
+
+	// Walk through the list
+	JobList.Rewind( );
+	while ( JobList.Next( curJob ) ) {
+		curJob->Initialize( );
+	}
+	return 0;
+}
+
 // Clear all job marks
 void
 CondorCron::ClearAllMarks( )

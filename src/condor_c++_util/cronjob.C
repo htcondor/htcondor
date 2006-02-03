@@ -201,9 +201,9 @@ CronJobBase::~CronJobBase( )
 int
 CronJobBase::Initialize( )
 {
-	// Make sure we're not already initialized...
+	// If we're already initialized, do nothing...
 	if ( state != CRON_NOINIT )	{
-		return -1;
+		return 0;
 	}
 
 	// Update our state to idle..
@@ -642,8 +642,9 @@ CronJobBase::RunProcess( void )
 		return -1;
 	}
 
+	// Add the name to the argument list, then any specified in the config
+	final_args.AppendArg( name.GetCStr() );
 	if(args.Count()) {
-		args.AppendArg(name.GetCStr());
 		final_args.AppendArgsFromArgList(args);
 	}
 
