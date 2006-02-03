@@ -158,7 +158,8 @@ tdp_wait_stopped_child (pid_t pid)
 
 #endif /* LINUX && TDP */
 
-#define SECURITY_HACK_ENABLE
+#undef SECURITY_HACK_ENABLE
+
 void zz2printf(KeyInfo *k) {
 	if (k) {
 		char hexout[260];  // holds (at least) a 128 byte key.
