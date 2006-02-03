@@ -2857,10 +2857,13 @@ HAWKEYE_job2_ENV = lwpi=somevalue
   named HAWKEYE\_JOBS.
 
   Note: This syntax is now deprecated, and replaced by the new
-  \MacroNI{STARTD\_CRON\_JOBLIST} syntax (see above).
+  \MacroNI{STARTD\_CRON\_JOBLIST} syntax (see above) which should be
+  used instead.
   For more information on the Cron logic, read the above discussion.
-  If \MacroNI{STARTD\_CRON\_JOBLIST} is defined,
-  \MacroNI{STARTD\_CRON\_JOBS} is ignored.
+  Currently, both \MacroNI{STARTD\_CRON\_JOBLIST} and
+  \MacroNI{STARTD\_CRON\_JOBS} are procesed, but any conficting
+  entries in \MacroNI{STARTD\_CRON\_JOBS} will be ingored.  Future
+  versions of Condor may ignore \MacroNI{STARTD\_CRON\_JOBS}.
 
   This configuration variable is defined by
   a whitespace or newline separated list of jobs (called modules) to run, of the form:
@@ -2871,7 +2874,7 @@ HAWKEYE_job2_ENV = lwpi=somevalue
   (single quote or double quote, but they must match).  This allows
   colon and whitespace characters to be specified.  For example, the
   following specifies an executable name with a colon and a space in it:
-  \begin{verbatim}foo:foo_:''c:/some dir/foo.exe'':10m\end{verbatim}
+  \begin{verbatim}foo:foo_:"c:/some dir/foo.exe":10m\end{verbatim}
   These individual fields are described below: \begin{itemize}
 
     \item \MacroNI{modulename} The logical name of the module.  This 

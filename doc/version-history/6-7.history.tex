@@ -29,6 +29,18 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Since the addition of the ``new'' cron syntax (introduced in
+version 6.7.11), the \Condor{startd} has (silently) ignored any jobs
+defined with the ``old'' syntax if any jobs are defined with the
+``new'' syntax.  Now, the \Condor{startd} will honor both definitions,
+but will log a warning to it's log file if any jobs with the ``old''
+syntax are found (whether or not any new jobs are found).
+The \Condor{schedd} (which also has the ``cron'' logic) will behave in
+the same way.
+
+\item The bug which was causing the ``Cron'' job command lines to have
+the name added each invocation has been fixed.
+
 \item Fixed some messages about keyboard and mouse idle time had been logged
 too often in the \Condor{startd} logs under certain conditions to be logged
 less often.
@@ -130,6 +142,12 @@ used in requirements expressions (which is the normal usage case).
 
 \item Added a clipped port of Condor to YellowDog Linux 3.0 on the
 PowerPC architecture.
+
+\item ``Cron'' jobs defined with the ``old'' configuration syntax
+(usually through ``STARTD\_CRON\_JOBS'' or ``HAWKEYE\_CRON\_JOBS'' --
+see the \Condor{startd} manual section for more details) are broken.
+Using the ``new'' syntax (``STARTD\_CRON\_JOBLIST'') will work around
+this problem.
 
 \end{itemize}
 
