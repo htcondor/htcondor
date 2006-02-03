@@ -1319,7 +1319,6 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 		
 		if( !( offer->FlattenAndInline( reqExpr, val, flatReqExpr ) ) ) {
 			cerr << "error flattening request" << endl << endl;
-			delete reqExpr;
             delete currReq;
 			reqList.Rewind( );
 			while( reqList.Next( currReq ) ) {
@@ -1336,7 +1335,6 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 				pp.Unparse( buffer, flatReqExpr );
 				cerr << buffer << endl << endl;
 				buffer = "";
-				delete reqExpr;
 				delete flatReqExpr;
                 delete currReq;
 				reqList.Rewind( );
@@ -1348,7 +1346,6 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 			
 			if( !( BoolExpr::ExprToMultiProfile( prunedReqExpr, currReq ) ) ) {
 				cerr << "error in ExprToMultiProfile" << endl << endl;
-				delete reqExpr;
 				delete flatReqExpr;
 				delete prunedReqExpr;
 				delete currReq;
@@ -1369,7 +1366,6 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 				// we have a literal boolean expression
 			if( !( BoolExpr::ValToMultiProfile( val, currReq ) ) ) {
 				cerr << "error in ValToMultiProfile" << endl << endl;
-				delete reqExpr;
 				delete currReq;
 				reqList.Rewind( );
 				while( reqList.Next( currReq ) ) {
@@ -1379,7 +1375,6 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 			}
 			reqList.Append( currReq );
 		}			
-		delete reqExpr;
 	}
 
 		////////////////////////////////////
@@ -2393,13 +2388,6 @@ PruneAtom( classad::ExprTree *expr, classad::ExprTree *&result )
 		if( val.IsBooleanValue( boolValue ) && !boolValue ) {
 			return PruneAtom( right, result );
 		}
-	}
-
-	if( !(op >= classad::Operation::__COMPARISON_START__ && 
-		  op <= classad::Operation::__COMPARISON_END__) ) {
-		cerr << "PA error: operator not comparison: " << (int)op << endl;
-			// error: operator not comparison
-		return false;
 	}
 
 	if( left == NULL || right == NULL ) {
