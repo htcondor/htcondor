@@ -60,6 +60,8 @@ int addCredential(const char* user, const char* pw);
 int deleteCredential(const char* user); // not checking password before removal yet
 int queryCredential(const char* user);  // just tell me if I have one stashed
 
+#endif // WIN32
+
 /** Get the stored password from our password staff in the registry.  
 	Result must be deallocated with free()
 	by the caller if not NULL.  Will fail if not LocalSystem when
@@ -68,7 +70,6 @@ int queryCredential(const char* user);  // just tell me if I have one stashed
 */
 char* getStoredCredential(const char *user, const char *domain);
 
-#endif // WIN32
 #endif // STORE_CRED_H
 
 

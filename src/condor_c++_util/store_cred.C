@@ -30,6 +30,20 @@
 #include "lsa_mgr.h"
 #include "store_cred.h"
 #include "condor_config.h"
+
+#ifndef WIN32
+	// **** UNIX CODE *****
+
+// TODO: stub functions for now
+char* getStoredCredential(const char *username, const char *domain)
+{
+	return NULL;
+}
+
+#else
+	// **** WIN32 CODE ****
+
+
 #include <conio.h>
 
 
@@ -517,4 +531,5 @@ char* getStoredCredential(const char *username, const char *domain)
 	return strdup(pw);
 }
 
+#endif	// of Win32 Code
 
