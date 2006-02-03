@@ -24,6 +24,7 @@
 #**********************************************************************/
 use strict;
 use warnings;
+use File::Temp qw(tempfile);
 
 
 # ******************************************************
@@ -626,11 +627,12 @@ sub WriteUpdates( $ )
     my $FileRef = $self->{Update};
     my $Name = $FileRef->{Name};
     my $File = $FileRef->{File};
-    my $TmpFile = "$File.tmp.$$";
-    unlink( $TmpFile );
-    if ( ! open( TMP, ">$TmpFile" ) )
-    {
-	print STDERR "Can't create temp config '$TmpFile'\n";
+
+    my $Pattern = $File . ".XXXXXXX";
+    my ( $TmpFh, $TmpFile ) =
+	File::Temp::tempfile( $Pattern, UNLINK => 0 );
+    if ( !defined $TmpFh ) {
+	print STDERR "error: Can't create temporary file\n";
 	return undef;
     }
 
@@ -658,15 +660,15 @@ sub WriteUpdates( $ )
 		$EmacsLocal = 0;
 	    }
 	}
-	print TMP "$_\n";
+	print $TmpFh "$_\n";
     }
 
     # Now, append the new text
     foreach ( @{$self->{NewText}} )
     {
-	print TMP "$_\n";
+	print $TmpFh "$_\n";
     }
-    close( TMP );
+    close( $TmpFh );
 
     # Return the name of the temp file
     return ( $File, $TmpFile );
