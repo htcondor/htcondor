@@ -128,6 +128,14 @@ SOURCE=..\src\condor_io\condor_auth_kerberos.C
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_io\condor_auth_passwd.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_includes\condor_auth_passwd.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_io\condor_auth_sspi.C
 # End Source File
 # Begin Source File
