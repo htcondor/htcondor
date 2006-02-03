@@ -617,7 +617,11 @@ sub UpdateConfigFile( )
 	unlink( $Backup );
 	rename( $File, $Backup );
 	rename( $TmpFile, $File );
-	print "\n$File updated\n";
+	print "\n$File updated\nBackup saved in $Backup\n";
+	my $Cmd = $ConfigFiles->GetConfigProg() . " " .
+	    $Config{CronJobListVar};
+	my $List = `$Cmd`;
+	print "After reconfig: List of jobs: $List\n";
     }
     else
     {
