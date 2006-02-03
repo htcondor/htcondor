@@ -61,6 +61,16 @@ class Condor_Auth_SSPI : public Condor_Auth_Base {
     // RETURNS: 1 -- true; 0 -- false
     //------------------------------------------
 
+	int wrap(	char *   input, 
+				int      input_len, 
+				char* &  output, 
+				int &    output_len);
+
+	int unwrap(	char *   input, 
+				int      input_len, 
+				char* &  output, 
+				int &    output_len);
+
  private:
     sspi_client_auth( CredHandle&    cred, 
                       CtxtHandle&    cliCtx, 
@@ -83,6 +93,7 @@ class Condor_Auth_SSPI : public Condor_Auth_Base {
     //------------------------------------------
 
     static PSecurityFunctionTable pf;
+	CtxtHandle theCtx;
 };
 
 #endif

@@ -35,10 +35,14 @@ PSecurityFunctionTable Condor_Auth_SSPI::pf = NULL;
 Condor_Auth_SSPI :: Condor_Auth_SSPI(ReliSock * sock)
     : Condor_Auth_Base(sock, CAUTH_NTSSPI)
 {
+	theCtx.dwLower = 0L;
+	theCtx.dwUpper = 0L;
 }
 
 Condor_Auth_SSPI :: ~Condor_Auth_SSPI()
 {
+	if ( theCtx.dwLower != 0L || theCtx.dwUpper != 0L )
+		(pf->DeleteSecurityContext)( &theCtx );
 }
 
 int 
@@ -354,17 +358,119 @@ Condor_Auth_SSPI::sspi_server_auth(CredHandle& cred,CtxtHandle& srvCtx)
 	return it_worked;
 }
 
+int 
+Condor_Auth_SSPI::wrap(char *   input, 
+                             int      input_len, 
+                             char*&   output, 
+                             int&     output_len)
+{
+	if ( !input || !input_len ) {
+		return FALSE;
+	}
+
+	if ( !isValid() ) {
+		return FALSE;
+	}
+
+	const void* pvMessage = input;
+	DWORD cbMessage = input_len;
+	void** ppvSealedMessage = (void**)&output;
+
+	// see how much extra space the SSP needs
+    SecPkgContext_Sizes sizes;
+    SECURITY_STATUS err = 
+        (pf->QueryContextAttributes)(&theCtx,
+                                        SECPKG_ATTR_SIZES,
+                                        &sizes);
+
+    // allocate a buffer and copy plaintext into it, since 
+	// the encryption must happen in place
+    *ppvSealedMessage = malloc(cbMessage +
+                               sizes.cbSecurityTrailer);
+    CopyMemory(*ppvSealedMessage, pvMessage, cbMessage);
+
+    // describe our buffer for SSPI
+    SecBuffer rgsb[] = {
+        {cbMessage, SECBUFFER_DATA, *ppvSealedMessage},
+        {sizes.cbSecurityTrailer, SECBUFFER_TOKEN,
+            static_cast<BYTE*>(*ppvSealedMessage) +
+            cbMessage},
+    };
+    SecBufferDesc sbd = {SECBUFFER_VERSION,
+                         sizeof rgsb / sizeof *rgsb, rgsb};
+    // encrypt in place
+    err = (pf->EncryptMessage)(&theCtx, 0, &sbd, 0);
+    bool bOk = true;
+    if (err) {
+        bOk = false;
+        free(*ppvSealedMessage);
+        *ppvSealedMessage = 0;
+    }
+    output_len = cbMessage + rgsb[1].cbBuffer;
+	dprintf(D_SECURITY,
+		"Condor_Auth_SSPI::wrap() - input_len=%d output_len=%d\n",
+		input_len,output_len);
+    return bOk ? TRUE : FALSE;
+}
+
+int 
+Condor_Auth_SSPI::unwrap(char *   input, 
+                             int      input_len, 
+                             char*&   output, 
+                             int&     output_len)
+{
+	if ( !input || !input_len ) {
+		return FALSE;
+	}
+
+	if ( !isValid() ) {
+		return FALSE;
+	}
+
+	const void* pvSealedMessage = input;
+	DWORD cbSealedMessage = input_len;
+	ASSERT(input_len > 16);
+	DWORD cbMessage = input_len - 16;	// 16 should not be hard-coded!
+	output_len = input_len - 16;
+	void** ppvMessage = (void**)&output;
+
+	// allocate a buffer and copy ciphertext into it
+    *ppvMessage = malloc(cbSealedMessage);
+    CopyMemory(*ppvMessage,
+               pvSealedMessage,
+               cbSealedMessage);
+    const DWORD cbTrailer = cbSealedMessage - cbMessage;
+
+    // describe our buffer to SSPI
+    SecBuffer rgsb[] = {
+        {cbMessage, SECBUFFER_DATA, *ppvMessage},
+        {cbTrailer, SECBUFFER_TOKEN,
+         static_cast<BYTE*>(*ppvMessage) + cbMessage},
+    };
+    SecBufferDesc sbd = {SECBUFFER_VERSION,
+                         sizeof rgsb / sizeof *rgsb,
+                         rgsb};
+    // decrypt in place
+    SECURITY_STATUS err =
+       (pf->DecryptMessage)(&theCtx, &sbd, 0, 0);
+    if (err) {
+        free(*ppvMessage);
+        *ppvMessage = 0;
+		output_len = 0;
+		dprintf(D_ALWAYS,"Condor_Auth_SSPI::unwrap() failed!\n");
+		return FALSE;
+    }
+	return TRUE;
+}
+
 int
 Condor_Auth_SSPI::authenticate(const char * remoteHost, CondorError* errstack)
 {
 	int ret_value;
 	CredHandle cred;
-	CtxtHandle theCtx;
 
 	cred.dwLower = 0L;
 	cred.dwUpper = 0L;
-	theCtx.dwLower = 0L;
-	theCtx.dwUpper = 0L;
 
 	if ( pf == NULL ) {
 		PSecurityFunctionTable (*pSFT)( void );
@@ -382,6 +488,12 @@ Condor_Auth_SSPI::authenticate(const char * remoteHost, CondorError* errstack)
 		}
 	}
 
+	if ( theCtx.dwLower != 0L || theCtx.dwUpper != 0L )
+		(pf->DeleteSecurityContext)( &theCtx );
+	theCtx.dwLower = 0L;
+	theCtx.dwUpper = 0L;
+
+
 	if ( mySock_->isClient() ) {
 		//client authentication
 		
@@ -394,20 +506,31 @@ Condor_Auth_SSPI::authenticate(const char * remoteHost, CondorError* errstack)
 	}
 
 	// clean up
-	if ( theCtx.dwLower != 0L || theCtx.dwUpper != 0L )
-		(pf->DeleteSecurityContext)( &theCtx );
 	if ( cred.dwLower != 0L || cred.dwUpper != 0L )
 		(pf->FreeCredentialHandle)( &cred );
 
 	//return 1 for success, 0 for failure. Server should send sucess/failure
 	//back to client so client can know what to return.
 	
+	if ( ret_value == 0 ) {
+		// if we failed, the security context is useless to us for wrapping, 
+		// get rid of it.
+		if ( theCtx.dwLower != 0L || theCtx.dwUpper != 0L )
+			(pf->DeleteSecurityContext)( &theCtx );
+		theCtx.dwLower = 0L;
+		theCtx.dwUpper = 0L;
+	}
+
 	return ret_value;
 }
 
 int Condor_Auth_SSPI :: isValid() const
 {
-    return TRUE;
+	if ( theCtx.dwLower != 0L || theCtx.dwUpper != 0L ) {
+		return TRUE;
+	} else {
+		return FALSE;
+	}
 }
 
 #endif	// of if defined(WIN32)
