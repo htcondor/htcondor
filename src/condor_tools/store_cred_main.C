@@ -84,11 +84,11 @@ int main(int argc, char *argv[]) {
 				// got the passwd from the command line.
 				pw = new char[MAX_PASSWORD_LENGTH];
 				strncpy(pw, options.pw, MAX_PASSWORD_LENGTH);
-				ZeroMemory(options.pw, MAX_PASSWORD_LENGTH);
+				SecureZeroMemory(options.pw, MAX_PASSWORD_LENGTH);
 			}
 			if ( pw ) {
 				result = addCredential( my_full_name, pw );			
-				ZeroMemory(pw, MAX_PASSWORD_LENGTH);
+				SecureZeroMemory(pw, MAX_PASSWORD_LENGTH);
 				delete[] pw;
 				if ( result == FAILURE_BAD_PASSWORD ) {
 					fprintf(stdout, "\n\nPassword is invalid for this account"
@@ -126,9 +126,7 @@ int main(int argc, char *argv[]) {
 			break;
 		case 0:
 			usage();
-			break;
-
-	
+			break;	
 	}
 
 
