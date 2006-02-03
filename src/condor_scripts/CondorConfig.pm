@@ -307,6 +307,18 @@ sub new( $$ )
 # ******************************************************
 
 # ******************************************************
+# Get the config_val program
+# ******************************************************
+sub GetConfigProg( $ )
+{
+    my $self = shift;
+
+    return $self->{ConfigProg};
+
+} # GetConfigProg()
+# ******************************************************
+
+# ******************************************************
 # Find the 'base' config file to use
 # ******************************************************
 sub FindConfig( $$$$ )
@@ -327,6 +339,8 @@ sub FindConfig( $$$$ )
 	    if ( ! -f $ENV{$ConfigEnvVar} );
 	$BaseFile = $ENV{$ConfigEnvVar};
     }
+
+    $self->{ConfigProg} = $Distribution . "_config_val";
 
     # Fallbacks...
     my @FallbackConfigs = [ "/home/$Distribution", ];
