@@ -385,28 +385,60 @@ JobInfoCommunicator::initUserPrivWindows( void )
 	// is specifed in the config file, and the account's password
 	// is properly stored in our credential stash.
 
+	char *name = NULL;
+	char *domain = NULL;
 	bool init_priv_succeeded = true;
-	char vm_user[255];
-	
-	int vm_num = Starter->getMyVMNumber();
-	if( ! vm_num ) {
-		vm_num = 1;
+	bool run_as_owner = param_boolean("STARTER_ALLOW_RUNAS_OWNER",false);
+
+	if ( run_as_owner ) {
+		if( ! job_ad ) {
+			EXCEPT( "initUserPrivWindows() called with no job ad!" );
+		}
+
+		bool user_wants_runas_owner = false;
+		job_ad->LookupBool(ATTR_JOB_RUNAS_OWNER,user_wants_runas_owner);
+		if ( user_wants_runas_owner ) {
+			job_ad->LookupString(ATTR_OWNER,&name);
+			job_ad->LookupString(ATTR_NT_DOMAIN,&domain);
+		}
 	}
-	sprintf(vm_user, "VM%d_USER", vm_num);
-	char *run_jobs_as = param(vm_user);
 
-	if (run_jobs_as) {
-		char *domain, *name;
-		getDomainAndName(run_jobs_as, domain, name);
+	if ( !name ) {
+		char vm_user[255];
+		int vm_num = Starter->getMyVMNumber();
 
+		if ( vm_num < 1 ) {
+			vm_num = 1;
+		}
+		sprintf(vm_user, "VM%d_USER", vm_num);
+		char *run_jobs_as = param(vm_user);
+		if (run_jobs_as) {		
+			getDomainAndName(run_jobs_as, domain, name);
+				/* 
+				 * name and domain are now just pointers into run_jobs_as
+				 * buffer.  copy these values into their own buffer so we
+				 * deallocate below.
+				 */
+			if ( name ) {
+				name = strdup(name);
+			}
+			if ( domain ) {
+				domain = strdup(domain);
+			}
+			free(run_jobs_as);
+		}
+	}
+
+	if ( name ) {
+		
 		if (!init_user_ids(name, domain)) {
 
 			dprintf(D_ALWAYS, "Could not initialize user_priv as \"%s\\%s\".\n"
 				"\tMake sure this account's password is securely stored "
-				"with condor_store_cred on this machine.\n", domain, name );
+				"with condor_store_cred.\n", domain, name );
 			init_priv_succeeded = false;			
 		} 
-		free(run_jobs_as);		
+
 	} else if ( !can_switch_ids() ) {
 		char *u = my_username();
 		char *d = my_domainname();
@@ -426,7 +458,11 @@ JobInfoCommunicator::initUserPrivWindows( void )
 		dprintf( D_ALWAYS, "ERROR: Could not initialize user_priv "
 				 "as \"nobody\"\n" );
 		init_priv_succeeded = false;
+	
 	}
+
+	if ( name ) free(name);
+	if ( domain ) free(domain);
 
 	user_priv_is_initialized = init_priv_succeeded;
 	return init_priv_succeeded;
