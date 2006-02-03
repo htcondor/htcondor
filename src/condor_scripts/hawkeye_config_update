@@ -466,6 +466,7 @@ sub WriteConfigFile( )
 
     # OK, now read the whole file, write to the temp file
     my @Stack;
+    my @JobList;
     while( <ORIG> )
     {
 	chomp; s/\s+$//;
@@ -478,8 +479,17 @@ sub WriteConfigFile( )
 	    my $Comment = ( $t1 =~ /#/ ) ? "# " : "";
 
 	    my @Tmp = ParseOldJob( $t2, $Comment );
+	    if ( ! @Tmp )
+	    {
+		print STDERR "Error importing old job '$t2'\n";
+		next;
+	    }
+	    my $Name = shift( @Tmp );
+	    print "  Importing old job '$Name' ($t2): " .
+		( ( $Comment eq "" ) ? "OK\n" : "Commented out\n" );
+	    push( @JobList, $Name ) if ( $Comment eq "" );
 
-	    my $Line = "$t1" . shift( @Tmp ) . "$t3";
+	    my $Line = "$t1" . $Name . "$t3";
 	    $Line .= " \\" if ( defined $t4 );
 	    print $tmp_fh "$Line\n";
 
@@ -493,8 +503,17 @@ sub WriteConfigFile( )
 	    my $Comment = ( $t1 =~ /#/ ) ? "# " : "";
 
 	    my @Tmp = ParseOldJob( $t2, $Comment );
+	    if ( ! @Tmp )
+	    {
+		print STDERR "Error importing old job '$t2'\n";
+		next;
+	    }
+	    my $Name = shift( @Tmp );
+	    print "  Importing old job '$Name' ($t2): " .
+		( ( $Comment eq "" ) ? "OK\n" : "Commented out\n" );
+	    push( @JobList, $Name ) if ( $Comment eq "" );
 
-	    my $Line = "$t1" . shift( @Tmp ) . "$t3";
+	    my $Line = "$t1" . $Name . "$t3";
 	    $Line .= " \\" if ( defined $t4 );
 	    print $tmp_fh "$Line\n";
 
@@ -517,7 +536,7 @@ sub WriteConfigFile( )
     close( $tmp_fh );
 
     # Done
-    return ( $File, $tmp_filename );
+    return ( $File, $tmp_filename, @JobList );
 
 }
 # ******************************************************
@@ -589,7 +608,7 @@ sub UpdateConfigFile( )
 {
 
     # Write the updates to the temp file
-    my ( $File, $TmpFile ) = WriteConfigFile( );
+    my ( $File, $TmpFile, @ImportedJobs ) = WriteConfigFile( );
     if ( ! $File or ! $TmpFile )
     {
 	die "Error writing update";
@@ -621,7 +640,19 @@ sub UpdateConfigFile( )
 	my $Cmd = $ConfigFiles->GetConfigProg() . " " .
 	    $Config{CronJobListVar};
 	my $List = `$Cmd`;
-	print "After reconfig: List of jobs: $List\n";
+	chomp $List;
+	$List =~ s/\s+$//; $List =~ s/^\s+//;
+	my @List = split( /\s+/, $List );
+
+	print "List of jobs after reconfig:\n\t" .
+	    join( " ", sort( @List ) ) . "\n";
+	print "Imported job list:\n\t" .
+	    join( " ", sort( @ImportedJobs ) ) . "\n";
+	if ( $#List != $#ImportedJobs )
+	{
+	    print STDERR "\n!! WARNING: Lists are different size. !!\n";
+	    print STDERR "\tYou should hand examine the files\n";
+	}
     }
     else
     {
