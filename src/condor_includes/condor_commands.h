@@ -331,12 +331,12 @@ const int INVALIDATE_HAD_ADS = 57;
 #define STORK_STATUS (STORK_BASE+2)
 #define STORK_LIST 	 (STORK_BASE+3)
 
-#define CREDD_BASE 81000
+#define CREDD_BASE 81000	
 #define CREDD_STORE_CRED (CREDD_BASE+0)
 #define CREDD_GET_CRED (CREDD_BASE+1)
 #define CREDD_REMOVE_CRED (CREDD_BASE+2)
 #define CREDD_QUERY_CRED (CREDD_BASE+3)
-
+#define CREDD_GET_PASSWD (CREDD_BASE+99)	// used by the Win32 credd only
 
 /*
 *** Used only in THE TOOL to choose the condor_squawk option.
