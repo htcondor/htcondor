@@ -29,7 +29,8 @@
 #include "condor_environ.h"
 #include "condor_distribution.h"
 #include "my_username.h"
-
+#include "daemon.h"
+#include "store_cred.h"
 
 /* See condor_uid.h for description. */
 static char* CondorUserName = NULL;
@@ -269,6 +270,8 @@ init_user_ids(const char username[], const char domain[])
 		char dom[255];
 		wchar_t w_fullname[255];
 		wchar_t *w_pw;
+		bool got_password = false;
+		bool got_password_from_credd = false;
 
 		// these should probably be snprintfs
 		swprintf(w_fullname, L"%S@%S", username, domain);
@@ -277,21 +280,15 @@ init_user_ids(const char username[], const char domain[])
 		
 		// make sure we're SYSTEM when we do this
 		w_pw = lsaMan.query(w_fullname);
-
-
-		if ( ! w_pw ) {
-			dprintf(D_ALWAYS, "ERROR: Could not locate credential for user "
-				"'%s@%s'\n", username, domain);
-			UserIdsInited = false;
-			return 0;
-		} else {
-			sprintf(pw, "%S", w_pw);
-
+		if ( w_pw ) {
+			// copy password into a char buffer
+			sprintf(pw, "%S", w_pw);			
 			// we don't need the wide char pw anymore, so clean it up
-			ZeroMemory(w_pw, wcslen(w_pw)*sizeof(wchar_t));
+			SecureZeroMemory(w_pw, wcslen(w_pw)*sizeof(wchar_t));
 			delete[](w_pw);
+			w_pw = NULL;
 
-			dprintf(D_FULLDEBUG, "Found credential for user '%s'\n", username);
+			// now that we got a password, see if it is good.
 			retval = LogonUser(
 				user,						// user name
 				dom,						// domain or server - local for now
@@ -301,9 +298,83 @@ init_user_ids(const char username[], const char domain[])
 				LOGON32_PROVIDER_DEFAULT,	// logon provider
 				&CurrUserHandle				// receive tokens handle
 			);
+			
+			if ( !retval ) {
+				dprintf(D_FULLDEBUG,"Locally stored credential for %s@%s is stale\n",
+					user,dom);
+				// Set handle to NULL to make certain we recall LogonUser again below
+				CurrUserHandle = NULL;	
+			} else {
+				got_password = true;	// so we don't bother going to a credd
+			}
+		}
 
-			// clear pw from memory
-			ZeroMemory(pw, 255);
+		// if we don't have the password from our local stash, try to fetch
+		// it from a credd
+
+		char *credd_host = param("CREDD_HOST");
+		if (credd_host && got_password==false) {
+			MyString credd_sinful;
+			credd_sinful = "<" ;
+			credd_sinful += credd_host;
+			credd_sinful += ">";
+			free(credd_host);
+			credd_host = NULL;
+
+			dprintf(D_FULLDEBUG,"Fetching credential from credd at %s\n",
+					credd_sinful.Value());
+			Daemon credd(DT_ANY,credd_sinful.Value());
+			Sock * credd_sock = credd.startCommand(CREDD_GET_PASSWD,Stream::reli_sock,10);
+			if ( credd_sock ) {
+				credd_sock->put((char*)username);	// send user
+				credd_sock->put((char*)domain);		// send domain
+				credd_sock->end_of_message();
+				credd_sock->decode();
+				pw[0] = '\0';
+				int my_stupid_sizeof_int_for_damn_cedar = sizeof(pw);
+				char *my_buffer = pw;
+				if ( credd_sock->code(my_buffer,my_stupid_sizeof_int_for_damn_cedar) && pw[0] ) {
+					got_password = true;
+					got_password_from_credd = true;
+				} else {
+					dprintf(D_FULLDEBUG,
+							"credd at %s did not have info for %s@%s\n",
+							credd_sinful.Value(), username,domain);
+				}
+				delete credd_sock;
+				credd_sock = NULL;
+			} else {
+				dprintf(D_FULLDEBUG,"Failed to contact credd %s: %s\n",
+					credd_sinful.Value(),credd.error() ? credd.error() : "");
+			}
+		}
+		if (credd_host) free(credd_host);
+
+		if ( ! got_password ) {
+			dprintf(D_ALWAYS, "ERROR: Could not locate valid credential for user "
+				"'%s@%s'\n", username, domain);
+			UserIdsInited = false;
+			return 0;
+		} else {
+			dprintf(D_FULLDEBUG, "Found credential for user '%s'\n", username);
+
+			// If we have not yet called LogonUser, then CurrUserHandle is NULL,
+			// and we need to call it here.
+			if ( CurrUserHandle == NULL ) {
+				retval = LogonUser(
+					user,						// user name
+					dom,						// domain or server - local for now
+					pw,							// password
+					LOGON32_LOGON_INTERACTIVE,	// type of logon operation. 
+												// LOGON_BATCH doesn't seem to work right here.
+					LOGON32_PROVIDER_DEFAULT,	// logon provider
+					&CurrUserHandle				// receive tokens handle
+				);
+			} else {
+				// we already have a good user handle from calling LogonUser to check to
+				// see if our stashed credential was stale or not, so set retval to success
+				retval = 1;	// LogonUser returns nonzero value on success
+			}
 
 			dprintf(D_FULLDEBUG, "LogonUser completed.\n");
 
@@ -322,13 +393,38 @@ init_user_ids(const char username[], const char domain[])
 				dprintf(D_ALWAYS, "init_user_ids: LogonUser failed with NT Status %ld\n", 
 					GetLastError());
 				UserIdsInited = false;
-				return 0;
+				retval =  0;	// return of 0 means FAILURE
 			} else {
 				// stash the new token in our cache
 				cached_tokens.storeToken(UserLoginName, UserDomainName,
 					   	CurrUserHandle);
-				return 1;
+
+				// if we got the password from the credd, and the admin wants passwords stashed
+				// locally on this machine, then do it.
+				if ( got_password_from_credd &&
+					 param_boolean("CREDD_CACHE_LOCALLY",false) ) 
+				{
+					MyString my_full_name;
+					my_full_name.sprintf("%s@%s",username,domain);
+					if ( addCredential(my_full_name.Value(),pw) == SUCCESS ) {
+						dprintf(D_FULLDEBUG,
+							"init_user_ids: "
+							"Successfully stashed credential in registry for user %s\n",
+							my_full_name.Value());
+					} else {
+						dprintf(D_FULLDEBUG,
+							"init_user_ids: "
+							"Failed to stash credential in registry for user %s\n",
+							my_full_name.Value());
+					}
+				}
+				retval = 1;	// return of 1 means SUCCESS
 			}
+
+			// clear pw from memory
+			SecureZeroMemory(pw, 255);
+
+			return retval;
 		}
 		
 	} else {
