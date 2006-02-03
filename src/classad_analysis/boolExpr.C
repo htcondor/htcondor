@@ -370,9 +370,12 @@ ExprToCondition( classad::ExprTree *expr, Condition *&c )
 
 	if( !( op >= classad::Operation::__COMPARISON_START__ && 
 		   op <= classad::Operation::__COMPARISON_END__) ) {
-		cerr << "error: operator not comparison: " << (int)op << endl;
-			// error: operator not comparison
-		return false;
+		if( !c->InitComplex( expr ) ) {
+			cerr << "error: operator not comparison: " << (int)op << endl;
+				// error: operator not comparison
+			return false;
+		}
+		return true;
 	}
 
 	if( left == NULL || right == NULL ) {
