@@ -641,16 +641,21 @@ get_mouse_info(idle_t *fill_me)
 		     strstr(buf, "Mouse") != NULL || strstr(buf, "mouse") != NULL)  
 		{
 
-		    dprintf(D_FULLDEBUG, "Mouse IRQ: %d\n", atoi(buf));
+			if( (DebugFlags & D_IDLE) && (DebugFlags & D_FULLDEBUG) ) {
+		   		dprintf(D_FULLDEBUG, "Mouse IRQ: %d\n", atoi(buf));
+			}
 		    tok = strtok_r(buf, DELIMS, &tok_loc);  /* Ignore [IRQ #]: */
 		    do {
 			tok = strtok_r(NULL, DELIMS, &tok_loc);
 			if (is_number(tok)) {
 			    /* It is ok if this overflows */
 			    fill_me->num_mouse_intr += strtoul(tok, NULL, 10);
-			    dprintf(D_FULLDEBUG, 
-				    "Add %lu mouse interrupts.  Total: %lu\n",
-				    strtoul(tok, NULL, 10), fill_me->num_mouse_intr);
+
+				if( (DebugFlags & D_IDLE) && (DebugFlags & D_FULLDEBUG) ) {
+					dprintf(D_FULLDEBUG, 
+					"Add %lu mouse interrupts.  Total: %lu\n",
+					strtoul(tok, NULL, 10), fill_me->num_mouse_intr);
+				}
 			} else {
 			    break;  /* device type column */
 			}
@@ -688,6 +693,22 @@ get_keyboard_mouse_info(idle_t *fill_me)
 time_t
 km_idle_time(const time_t now)
 {
+	/* we want certain debugging messages to only happen rarely since otherwise
+		they fill the logs with useless garbage. */
+	static int timer_initialized = FALSE;
+	static struct timeval msg_delay;
+	static struct timeval msg_now;
+	time_t msg_timeout = 60 * 60; /* 1 hour seems good */
+	static int msg_emit_immediately = TRUE;
+
+	/* initialize the message timer to force certain messages to print out
+		much less frequently */
+	if (timer_initialized == FALSE) {
+		gettimeofday(&msg_delay, NULL);
+		timer_initialized = TRUE;
+	}
+	gettimeofday(&msg_now, NULL);
+
 	/* We need to store information about the state of the keyboard
 	   and mouse the last time we saw activity on either of them.  Thus,
 	   last_km_activity is a static variable that is initialized when
@@ -707,11 +728,19 @@ km_idle_time(const time_t now)
 		last_km_activity.timepoint = now;		
 
 		if (!get_keyboard_mouse_info(&last_km_activity)) {
-			dprintf(D_ALWAYS,
-				"Failed to obtain keyboard or mouse idle information.\n");
-			dprintf(D_ALWAYS,
-				"Assuming the keyboard and mouse to be infinitely idle.\n");
 
+			/* emit the error on msg delay boundaries */
+			if (msg_emit_immediately == TRUE || 
+				(msg_now.tv_sec - msg_delay.tv_sec) > msg_timeout) 
+			{
+				dprintf(D_ALWAYS,
+					"Unable to calculate keyboard/mouse idle time due to them "
+					"both being USB or not present, assuming infinite "
+					"idle time for these devices.\n");
+
+				msg_delay = msg_now;
+				msg_emit_immediately = FALSE;
+			}
 
 			/* Here we'll try to initialize it again hoping whatever
 			   the problem was was transient and went away.
@@ -726,8 +755,19 @@ km_idle_time(const time_t now)
 
 	/* Take current measurement */
 	if (!get_keyboard_mouse_info(&current)) {
-		dprintf(D_ALWAYS, 
-			"Failed to obtain keyboard or mouse idle information\n");
+		if ((msg_now.tv_sec - msg_delay.tv_sec) > msg_timeout) {
+			/* This is kind of a rare error, it would mean someone unplugged
+				the keyboard and mouse after Condor has already recognized
+				them. */
+			dprintf(D_ALWAYS,
+				"Condor had been able to determine keybaord and idle times, "
+				"but something has changed about the hardware and Condor is now"
+				"unable to calculate keyboard/mouse idle time due to them "
+				"both being USB or not present, assuming infinite "
+				"idle time for these devices.\n");
+
+			msg_delay = msg_now;
+		}
 		/* Report latest idle time we know about */
 		return now - last_km_activity.timepoint;
 	}
