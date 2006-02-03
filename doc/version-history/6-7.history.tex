@@ -45,6 +45,11 @@ the name added each invocation has been fixed.
 too often in the \Condor{startd} logs under certain conditions to be logged
 less often.
 
+% Gnats PR 589
+\item Fixed the \Opt{-dag} option to \Condor{q}.  Previously, this did not
+print DAG node names as it should have.  (This bug has existed since
+approximately v6.7.11.)
+
 \end{itemize}
 
 \noindent Known Bugs:
