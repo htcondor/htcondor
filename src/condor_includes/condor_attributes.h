@@ -96,6 +96,7 @@ const char ATTR_CURRENT_RANK			 [] = "CurrentRank";
 const char ATTR_CURRENT_TIME			 [] = "CurrentTime";
 const char ATTR_DAEMON_START_TIME		 [] = "DaemonStartTime";
 const char ATTR_DAG_NODE_NAME			 [] = "DAGNodeName";
+const char ATTR_DAG_NODE_NAME_ALT		 [] = "dag_node_name";
 const char ATTR_DAGMAN_JOB_ID			 [] = "DAGManJobId";
 const char ATTR_DEFERRAL_OFFSET			 [] = "DeferralOffset";
 const char ATTR_DEFERRAL_TIME			 [] = "DeferralTime";

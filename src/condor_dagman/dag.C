@@ -25,6 +25,7 @@
 // Local DAGMan includes
 //
 #include "condor_common.h"
+#include "condor_attributes.h"
 #include "dag.h"
 #include "debug.h"
 #include "submit.h"
@@ -59,6 +60,9 @@ Dag::Dag( /* const */ StringList &dagFiles, char *condorLogName,
 		  bool retryNodeFirst) :
     _maxPreScripts        (maxPreScripts),
     _maxPostScripts       (maxPostScripts),
+	DAG_ERROR_CONDOR_SUBMIT_FAILED (-1001),
+	DAG_ERROR_CONDOR_JOB_ABORTED (-1002),
+	DAG_ERROR_DAGMAN_HELPER_COMMAND_FAILED (-1101),
 	_condorLogName		  (NULL),
     _condorLogInitialized (false),
     _dapLogName           (NULL),
@@ -68,9 +72,6 @@ Dag::Dag( /* const */ StringList &dagFiles, char *condorLogName,
     _numJobsSubmitted     (0),
     _maxJobsSubmitted     (maxJobsSubmitted),
 	_numIdleNodes		  (0),
-	DAG_ERROR_CONDOR_SUBMIT_FAILED (-1001),
-	DAG_ERROR_CONDOR_JOB_ABORTED (-1002),
-	DAG_ERROR_DAGMAN_HELPER_COMMAND_FAILED (-1101),
 	_maxIdleNodes		  (maxIdleNodes),
 	_allowLogError		  (allowLogError),
 	m_retrySubmitFirst	  (retrySubmitFirst),
@@ -1423,7 +1424,7 @@ void Dag::RemoveRunningJobs ( const Dagman &dm) const {
 
 	if ( haveCondorJob ) {
 		snprintf( cmd, ARG_MAX, "%s -const \'%s == %d\'",
-			  dm.condorRmExe, DAGManJobIdAttrName,
+			  dm.condorRmExe, ATTR_DAGMAN_JOB_ID,
 			  dm.DAGManJobId._cluster );
 		debug_printf( DEBUG_VERBOSE, "Executing: %s\n", cmd );
 		if ( util_popen( cmd ) ) {

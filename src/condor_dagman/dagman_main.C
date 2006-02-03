@@ -40,9 +40,6 @@ void ExitSuccess();
 //---------------------------------------------------------------------------
 char* mySubSystem = "DAGMAN";         // used by Daemon Core
 
-// the name of the attr we insert in job ads, recording DAGMan's job id
-const char* DAGManJobIdAttrName = "DAGManJobID";
-
 static char* lockFileName = NULL;
 
 static Dagman dagman;

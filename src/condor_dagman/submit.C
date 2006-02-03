@@ -186,8 +186,8 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 	// one DAG complete before any jobs from another begin.
 
 	prependLines = prependLines +
-		" -a " + argQuote + "dag_node_name = " + DAGNodeName + argQuote +
-		" -a " + argQuote + "+" + DAGManJobIdAttrName + " = " + dm.DAGManJobId._cluster + argQuote +
+		" -a " + argQuote + ATTR_DAG_NODE_NAME_ALT + " = " + DAGNodeName + argQuote +
+		" -a " + argQuote + "+" + ATTR_DAGMAN_JOB_ID + " = " + dm.DAGManJobId._cluster + argQuote +
 		" -a " + argQuote + "submit_event_notes = DAG Node: " + DAGNodeName + argQuote;
 
 	MyString DAGParentNodeNamesStr;

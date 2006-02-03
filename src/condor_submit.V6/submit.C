@@ -259,7 +259,6 @@ char	*GlobusRematch = "globus_rematch";
 
 char	*LastMatchListLength = "match_list_length";
 
-char	*DAGNodeName = "dag_node_name";
 char	*DAGManJobId = "dagman_job_id";
 char	*LogNotesCommand = "submit_event_notes";
 char	*UserNotesCommand = "submit_event_user_notes";
@@ -2956,7 +2955,7 @@ SetMatchListLen()
 void
 SetDAGNodeName()
 {
-	char* name = condor_param( DAGNodeName, ATTR_DAG_NODE_NAME );
+	char* name = condor_param( ATTR_DAG_NODE_NAME_ALT, ATTR_DAG_NODE_NAME );
 	if( name ) {
 		(void) sprintf( buffer, "%s = \"%s\"", ATTR_DAG_NODE_NAME, name );
 		InsertJobExpr( buffer );
