@@ -1347,7 +1347,7 @@ bufferJobShort( ClassAd *ad ) {
 	char *tmp = NULL;
 
 	float utime  = 0.0;
-	char owner[64], cmd[ATTRLIST_MAX_EXPRESSION], args[ATTRLIST_MAX_EXPRESSION];
+	char owner[64], cmd[ATTRLIST_MAX_EXPRESSION];
 	char buffer[ATTRLIST_MAX_EXPRESSION];
 
 	if (!ad->EvalInteger (ATTR_CLUSTER_ID, NULL, cluster)		||
@@ -1579,13 +1579,20 @@ format_owner (char *owner, AttrList *ad)
 	// >= v6.3 inserts "unknown..." into DAGManJobId when run under a
 	// pre-v6.3 schedd)
 
-	char dagman_job_id[ATTRLIST_MAX_EXPRESSION];
-	char dag_node_name[ATTRLIST_MAX_EXPRESSION];
-	if( dag && ad->LookupString( ATTR_DAGMAN_JOB_ID, dagman_job_id ) &&
-		strstr( dagman_job_id, "unknown" ) != dagman_job_id &&
-		ad->LookupString( ATTR_DAG_NODE_NAME, dag_node_name ) ) {
-		sprintf( result, " |-%-11.11s", dag_node_name );
-		return result;
+	if ( dag ) {
+		if ( ad->Lookup( ATTR_DAGMAN_JOB_ID ) ) {
+
+				// We have a DAGMan job ID, this means we have a DAG node
+				// -- don't worry about what type the DAGMan job ID is.
+			char dag_node_name[ATTRLIST_MAX_EXPRESSION];
+			if ( ad->LookupString( ATTR_DAG_NODE_NAME, dag_node_name ) ) {
+				sprintf( result, " |-%-11.11s", dag_node_name );
+				return result;
+			} else {
+				fprintf(stderr, "DAG node job with no %s attribute!\n",
+						ATTR_DAG_NODE_NAME);
+			}
+		}
 	}
 
 	int niceUser;
