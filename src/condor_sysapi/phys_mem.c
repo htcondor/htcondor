@@ -207,22 +207,29 @@ sysapi_phys_memory_raw(void)
 	return (int)(s.physmem/(1024*1024));
 }
 
-// This will fail on machines that are more than two gigs
-// See GNATS 529. I may fix it later, but it's not likely I'd be able to
-// test it well, so I note it there.
+// See GNATS 529. This code should now detect >= 2Gigs properly.
 #elif defined(Darwin)
 #include <sys/sysctl.h>
 int
 sysapi_phys_memory_raw(void)
 {
+	int megs;
+	uint64_t mem;
+	size_t len = sizeof(mem);
+
 	sysapi_internal_reconfig();
-        int mib[2], physmem;
-        size_t len;   
-        mib[0] = CTL_HW;     
-        mib[1] = HW_PHYSMEM;        
-        len = sizeof(physmem);   
-        sysctl(mib, 2, &physmem, &len, NULL, 0);   
-	return physmem / ( 1024 * 1024);
+
+	if (sysctlbyname("hw.memsize", &mem, &len, NULL, 0) < 0) {
+        dprintf(D_ALWAYS, 
+			"sysapi_phys_memory_raw(): sysctlbyname(\"hw.memsize\") "
+			"failed: %d(%s)\n",
+			errno, strerror(errno));
+		return -1;
+	}
+
+	megs = mem / (1024 * 1024);
+
+	return megs;
 }
 #elif defined(AIX)
 int
