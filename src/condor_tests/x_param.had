@@ -1,0 +1,21 @@
+startjobs = 10
+incrementjobs = 10
+maxjobs = 30
+duration = 20
+
+universe = vanilla
+type = jobs
+
+ports = dynamic
+condor = install
+condorconfig = condor_config
+condorlocal = condor_config.local
+condortemplate = x_condor_config_template
+condordaemons = master,schedd,collector,negotiator,startd,had
+#condordomain = cs.wisc.edu
+condordomain = cs.technion.ac.il
+collector=128.105.185.11:64101,128.105.185.11:64102,128.105.185.11:64103
+vms=1
+localpostsrc=job_had_basic.localpostsrc
+#encryption = 3DES,BLOWFISH
+#authentication = GSI

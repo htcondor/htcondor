@@ -79,6 +79,14 @@ BUILD_DEP_LIB($(CPlusPlus),x_write_joblog,C,,../release_dir/lib/libcondorapi.a)
 	GNATS entry #558 for core condor software / proapi
 */
 
+#if !defined( IS_HPUX10 )
+DESC(job_had_basic," Basic High Availability Daemon Test")
+RUN(job_had_basic)
+TESTCLASS(job_had_basic,core)
+TESTCLASS(job_had_basic,quick)
+TESTCLASS(job_had_basic,btdebug)
+#endif
+
 #if !defined(IS_PPC_AIX)
 DESC(lib_procapi_pidtracking-snapshot,"Fast Termination Child Cleanup Test")
 RUN(lib_procapi_pidtracking-snapshot)
