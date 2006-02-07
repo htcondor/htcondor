@@ -29,6 +29,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug introduced in 6.7.14 where the job attributes RemoteUserCpu 
+and RemoteSysCpu were incorrectly reported as 0 in the history file and the job queue
+for non-standard universe jobs.
+
 \item Fixed a physical memory reporting bug for the Mac OSX port of Condor.
 
 \item Since the addition of the ``new'' cron syntax (introduced in
