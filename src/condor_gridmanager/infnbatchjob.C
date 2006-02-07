@@ -778,10 +778,10 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 	int index;
 	const char *attrs_to_copy[] = {
 		ATTR_JOB_CMD,
-		ATTR_JOB_ARGUMENTS1,
-		ATTR_JOB_ARGUMENTS2,
-		ATTR_JOB_ENVIRONMENT1,
-		ATTR_JOB_ENVIRONMENT2,
+//		ATTR_JOB_ARGUMENTS1,
+//		ATTR_JOB_ARGUMENTS2,
+//		ATTR_JOB_ENVIRONMENT1,
+//		ATTR_JOB_ENVIRONMENT2,
 		ATTR_JOB_INPUT,
 		ATTR_JOB_OUTPUT,
 		ATTR_JOB_ERROR,
@@ -817,6 +817,28 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 	if ( strcmp( batchType, "blah" ) != 0 ) {
 		submit_ad->Assign( "gridtype", batchType );
 	}
+
+	MyString error_str;
+	MyString value_str;
+	ArgList args;
+	Env env;
+
+	if ( !args.AppendArgsFromClassAd( jobAd, &error_str ) ||
+		 !args.GetArgsStringV1Raw( &value_str, &error_str ) ) {
+		errorString = error_str;
+		delete submit_ad;
+		return NULL;
+	}
+	submit_ad->Assign( ATTR_JOB_ARGUMENTS1, value_str.Value() );
+
+	value_str = "";
+	if ( !env.MergeFrom( jobAd, &error_str ) ||
+		 !env.getDelimitedStringV1Raw( &value_str, &error_str ) ) {
+		errorString = error_str;
+		delete submit_ad;
+		return NULL;
+	}
+	submit_ad->Assign( ATTR_JOB_ENVIRONMENT1, value_str.Value() );
 
 //	submit_ad->Assign( ATTR_JOB_STATUS, IDLE );
 //submit_ad->Assign( ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_VANILLA );
