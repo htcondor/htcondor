@@ -813,25 +813,25 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 
 	if( update_ad->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, float_value) ) {
 		remote_rusage.ru_stime.tv_sec = (int) float_value; 
-		sprintf(tmp,"%s=%lu",ATTR_JOB_REMOTE_SYS_CPU,float_value);
+		sprintf(tmp,"%s=%f",ATTR_JOB_REMOTE_SYS_CPU,float_value);
 		jobAd->Insert( tmp );
 	}
 			
 	if( update_ad->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, float_value) ) {
 		remote_rusage.ru_utime.tv_sec = (int) float_value; 
-		sprintf(tmp,"%s=%lu",ATTR_JOB_REMOTE_USER_CPU,float_value);
+		sprintf(tmp,"%s=%f",ATTR_JOB_REMOTE_USER_CPU,float_value);
 		jobAd->Insert( tmp );
 	}
 
 	if( update_ad->LookupInteger(ATTR_IMAGE_SIZE, int_value) ) {
 		image_size = int_value;
-		sprintf(tmp,"%s=%lu",ATTR_IMAGE_SIZE,int_value);
+		sprintf(tmp,"%s=%d",ATTR_IMAGE_SIZE,int_value);
 		jobAd->Insert( tmp );
 	}
 			
 	if( update_ad->LookupInteger(ATTR_DISK_USAGE, int_value) ) {
 		disk_usage = int_value;
-		sprintf(tmp,"%s=%lu",ATTR_DISK_USAGE,int_value);
+		sprintf(tmp,"%s=%d",ATTR_DISK_USAGE,int_value);
 		jobAd->Insert( tmp );
 	}
 
