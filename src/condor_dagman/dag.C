@@ -67,9 +67,9 @@ Dag::Dag( /* const */ StringList &dagFiles, char *condorLogName,
     _condorLogInitialized (false),
     _dapLogName           (NULL),
     _dapLogInitialized    (false),             //<--DAP
-    _numJobsDone          (0),
-    _numJobsFailed        (0),
-    _numJobsSubmitted     (0),
+    _numNodesDone          (0),
+    _numNodesFailed        (0),
+    _numNodesSubmitted     (0),
     _maxJobsSubmitted     (maxJobsSubmitted),
 	_numIdleNodes		  (0),
 	_maxIdleNodes		  (maxIdleNodes),
@@ -209,8 +209,8 @@ bool Dag::Bootstrap (bool recovery) {
 			TerminateJob( job, true );
 		}
     }
-    debug_printf( DEBUG_VERBOSE, "Number of pre-completed jobs: %d\n",
-				  NumJobsDone() );
+    debug_printf( DEBUG_VERBOSE, "Number of pre-completed nodes: %d\n",
+				  NumNodesDone() );
     
     if (recovery) {
         debug_printf( DEBUG_NORMAL, "Running in RECOVERY mode...\n" );
@@ -547,8 +547,8 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
 			return;
 		}
 
-		_numJobsSubmitted--;
-		ASSERT( _numJobsSubmitted >= 0 );
+		_numNodesSubmitted--;
+		ASSERT( _numNodesSubmitted >= 0 );
 
 		job->_Status = Job::STATUS_ERROR;
 
@@ -569,7 +569,7 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
 			delete tmp;
 		}
 		if( job->_scriptPost == NULL ) {
-			_numJobsFailed++;
+			_numNodesFailed++;
 			return;
 		}
 
@@ -589,8 +589,8 @@ void
 Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 		bool recovery) {
 	if( job ) {
-		_numJobsSubmitted--;
-		ASSERT( _numJobsSubmitted >= 0 );
+		_numNodesSubmitted--;
+		ASSERT( _numNodesSubmitted >= 0 );
 
 		JobTerminatedEvent * termEvent = (JobTerminatedEvent*) event;
 
@@ -642,7 +642,7 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 				}
 
 				if( job->_scriptPost == NULL ) {
-					_numJobsFailed++;
+					_numNodesFailed++;
 					return;
 				}
 			}
@@ -743,7 +743,7 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 				RestartNode( job, recovery );
 			} else {
 					// no more retries -- node failed
-				_numJobsFailed++;
+				_numNodesFailed++;
 
 				MyString	errMsg;
 
@@ -794,7 +794,7 @@ Dag::ProcessSubmitEvent(const ULogEvent *event, Job *job, bool recovery) {
 
 	if ( recovery ) {
 		job->_Status = Job::STATUS_SUBMITTED;
-		_numJobsSubmitted++;
+		_numNodesSubmitted++;
 		return;
 	}
 
@@ -1032,7 +1032,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
     }
 
     // max jobs already submitted
-    if( _maxJobsSubmitted && (_numJobsSubmitted >= _maxJobsSubmitted) ) {
+    if( _maxJobsSubmitted && (_numNodesSubmitted >= _maxJobsSubmitted) ) {
         debug_printf( DEBUG_VERBOSE,
                       "Max jobs (%d) already running; "
 					  "deferring submission of %d ready job%s.\n",
@@ -1115,7 +1115,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 	  _postScriptQ->Run( job->_scriptPost );
 	} else {
 	  job->_Status = Job::STATUS_ERROR;
-	  _numJobsFailed++;
+	  _numNodesFailed++;
 	}
 	// the problem might be specific to that job, so keep submitting...
 	continue;  // while( numSubmitsThisCycle < max_submits_per_interval )
@@ -1182,7 +1182,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 	      _postScriptQ->Run( job->_scriptPost );
         } else {
 	      job->_Status = Job::STATUS_ERROR;
-	      _numJobsFailed++;
+	      _numNodesFailed++;
         }
 
 	  } else {
@@ -1215,7 +1215,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 	}
 
     job->_Status = Job::STATUS_SUBMITTED;
-    _numJobsSubmitted++;
+    _numNodesSubmitted++;
     
         // stash the job ID reported by the submit command, to compare
         // with what we see in the userlog later as a sanity-check
@@ -1272,7 +1272,7 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 			RestartNode( job, false );
 		}
 		else {
-			_numJobsFailed++;
+			_numNodesFailed++;
 			if( job->GetRetryMax() > 0 ) {
 				// add # of retries to error_text
 				char *tmp = strnewp( job->error_text );
@@ -1508,9 +1508,9 @@ void Dag::Rescue (const char * rescue_file, const char * datafile,
     fprintf (fp, "# Rescue DAG file, created after running\n");
     fprintf (fp, "#   the %s DAG file\n", datafile);
     fprintf (fp, "#\n");
-    fprintf (fp, "# Total number of Nodes: %d\n", NumJobs());
-    fprintf (fp, "# Nodes premarked DONE: %d\n", _numJobsDone);
-    fprintf (fp, "# Nodes that failed: %d\n", _numJobsFailed);
+    fprintf (fp, "# Total number of Nodes: %d\n", NumNodes());
+    fprintf (fp, "# Nodes premarked DONE: %d\n", _numNodesDone);
+    fprintf (fp, "# Nodes that failed: %d\n", _numNodesFailed);
 
     //
     // Print the names of failed Jobs
@@ -1672,9 +1672,9 @@ Dag::TerminateJob( Job* job, bool recovery )
 		// called multiple times for the same job, we need to be
 		// careful not to double-count...
 	if( job->countedAsDone == false ) {
-		_numJobsDone++;
+		_numNodesDone++;
 		job->countedAsDone = true;
-		ASSERT( _numJobsDone <= _jobs.Number() );
+		ASSERT( _numNodesDone <= _jobs.Number() );
 	}
 }
 
@@ -1704,7 +1704,7 @@ Dag::RestartNode( Job *node, bool recovery )
         debug_printf( DEBUG_NORMAL, "Aborting further retries of node %s "
                       "(last attempt returned %d)\n",
                       node->GetJobName(), node->retval);
-        _numJobsFailed++;
+        _numNodesFailed++;
         return;
     }
 	node->_Status = Job::STATUS_READY;
@@ -2188,12 +2188,12 @@ Dag::RemoveNode( const char *name, MyString &whynot )
 	bool removed = false;
 
 	if( node->GetStatus() == Job::STATUS_DONE ) {
-		_numJobsDone--;
-		ASSERT( _numJobsDone >= 0 );
+		_numNodesDone--;
+		ASSERT( _numNodesDone >= 0 );
 	}
 	else if( node->GetStatus() == Job::STATUS_ERROR ) {
-		_numJobsFailed--;
-		ASSERT( _numJobsFailed >= 0 );
+		_numNodesFailed--;
+		ASSERT( _numNodesFailed >= 0 );
 	}
 	else if( node->GetStatus() == Job::STATUS_READY ) {
 		ASSERT( _readyQ );

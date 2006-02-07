@@ -256,8 +256,8 @@ int main_shutdown_rescue( int exitVal ) {
 			// removing them, we would leave the DAG in an
 			// unrecoverable state...
 		debug_printf( DEBUG_DEBUG_1, "We have %d running jobs to remove\n",
-					dagman.dag->NumJobsSubmitted() );
-		if( dagman.dag->NumJobsSubmitted() > 0 ) {
+					dagman.dag->NumNodesSubmitted() );
+		if( dagman.dag->NumNodesSubmitted() > 0 ) {
 			debug_printf( DEBUG_NORMAL, "Removing submitted jobs...\n" );
 			dagman.dag->RemoveRunningJobs(dagman);
 		}
@@ -564,7 +564,7 @@ int main_init (int argc, char ** const argv) {
 	}
 #endif
     debug_printf( DEBUG_VERBOSE, "Dag contains %d total jobs\n",
-				  dagman.dag->NumJobs() );
+				  dagman.dag->NumNodes() );
 
 	dagman.dag->DumpDotFile();
 
@@ -610,13 +610,13 @@ int main_init (int argc, char ** const argv) {
 
 void
 print_status() {
-	int total = dagman.dag->NumJobs();
-	int done = dagman.dag->NumJobsDone();
+	int total = dagman.dag->NumNodes();
+	int done = dagman.dag->NumNodesDone();
 	int pre = dagman.dag->PreRunNodeCount();
-	int submitted = dagman.dag->NumJobsSubmitted();
+	int submitted = dagman.dag->NumNodesSubmitted();
 	int post = dagman.dag->PostRunNodeCount();
-	int ready =  dagman.dag->NumJobsReady();
-	int failed = dagman.dag->NumJobsFailed();
+	int ready =  dagman.dag->NumNodesReady();
+	int failed = dagman.dag->NumNodesFailed();
 	int unready = total - (done + pre + submitted + post + ready + failed );
 
 	debug_printf( DEBUG_VERBOSE, "Of %d nodes total:\n", total );
@@ -683,19 +683,19 @@ void condor_event_timer () {
     }
   
     // print status if anything's changed (or we're in a high debug level)
-    if( prevJobsDone != dagman.dag->NumJobsDone()
-        || prevJobs != dagman.dag->NumJobs()
-        || prevJobsFailed != dagman.dag->NumJobsFailed()
-        || prevJobsSubmitted != dagman.dag->NumJobsSubmitted()
-        || prevJobsReady != dagman.dag->NumJobsReady()
+    if( prevJobsDone != dagman.dag->NumNodesDone()
+        || prevJobs != dagman.dag->NumNodes()
+        || prevJobsFailed != dagman.dag->NumNodesFailed()
+        || prevJobsSubmitted != dagman.dag->NumNodesSubmitted()
+        || prevJobsReady != dagman.dag->NumNodesReady()
         || prevScriptRunNodes != dagman.dag->ScriptRunNodeCount()
 		|| DEBUG_LEVEL( DEBUG_DEBUG_4 ) ) {
 		print_status();
-        prevJobsDone = dagman.dag->NumJobsDone();
-        prevJobs = dagman.dag->NumJobs();
-        prevJobsFailed = dagman.dag->NumJobsFailed();
-        prevJobsSubmitted = dagman.dag->NumJobsSubmitted();
-        prevJobsReady = dagman.dag->NumJobsReady();
+        prevJobsDone = dagman.dag->NumNodesDone();
+        prevJobs = dagman.dag->NumNodes();
+        prevJobsFailed = dagman.dag->NumNodesFailed();
+        prevJobsSubmitted = dagman.dag->NumNodesSubmitted();
+        prevJobsReady = dagman.dag->NumNodesReady();
         prevScriptRunNodes = dagman.dag->ScriptRunNodeCount();
 		
 		if( dagman.dag->GetDotFileUpdate() ) {
@@ -703,14 +703,14 @@ void condor_event_timer () {
 		}
 	}
 
-    ASSERT( dagman.dag->NumJobsDone() + dagman.dag->NumJobsFailed()
-			<= dagman.dag->NumJobs() );
+    ASSERT( dagman.dag->NumNodesDone() + dagman.dag->NumNodesFailed()
+			<= dagman.dag->NumNodes() );
 
     //
     // If DAG is complete, hurray, and exit.
     //
     if( dagman.dag->Done() ) {
-        ASSERT( dagman.dag->NumJobsSubmitted() == 0 );
+        ASSERT( dagman.dag->NumNodesSubmitted() == 0 );
 		dagman.dag->CheckAllJobs();
         debug_printf( DEBUG_NORMAL, "All jobs Completed!\n" );
 		if ( dagman.dag->NumIdleNodes() != 0 ) {
@@ -728,10 +728,10 @@ void condor_event_timer () {
     // dag is not complete, then at least one job failed, or a cycle
     // exists.
     // 
-    if( dagman.dag->NumJobsSubmitted() == 0 &&
-		dagman.dag->NumJobsReady() == 0 &&
+    if( dagman.dag->NumNodesSubmitted() == 0 &&
+		dagman.dag->NumNodesReady() == 0 &&
 		dagman.dag->ScriptRunNodeCount() == 0 ) {
-		if( dagman.dag->NumJobsFailed() > 0 ) {
+		if( dagman.dag->NumNodesFailed() > 0 ) {
 			if( DEBUG_LEVEL( DEBUG_QUIET ) ) {
 				debug_printf( DEBUG_QUIET,
 							  "ERROR: the following job(s) failed:\n" );

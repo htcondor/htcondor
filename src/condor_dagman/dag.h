@@ -36,9 +36,6 @@
 #include "check_events.h"
 #include "condor_id.h"
 
-// the name of the attr we insert in job ads, recording DAGMan's job id
-extern const char* DAGManJobIdAttrName;
-
 // NOTE: must be kept in sync with Job::job_type_t
 enum Log_source{
   CONDORLOG,
@@ -230,25 +227,25 @@ class Dag {
     void PrintJobList() const;
     void PrintJobList( Job::status_t status ) const;
 
-    /** @return the total number of jobs in the DAG
+    /** @return the total number of nodes in the DAG
      */
-    inline int NumJobs() const { return _jobs.Number(); }
+    inline int NumNodes() const { return _jobs.Number(); }
 
-    /** @return the number of jobs completed
+    /** @return the number of nodes completed
      */
-    inline int NumJobsDone() const { return _numJobsDone; }
+    inline int NumNodesDone() const { return _numNodesDone; }
 
-    /** @return the number of jobs that failed in the DAG
+    /** @return the number of nodes that failed in the DAG
      */
-    inline int NumJobsFailed() const { return _numJobsFailed; }
+    inline int NumNodesFailed() const { return _numNodesFailed; }
 
     /** @return the number of jobs currently submitted to Condor
      */
-    inline int NumJobsSubmitted() const { return _numJobsSubmitted; }
+    inline int NumNodesSubmitted() const { return _numNodesSubmitted; }
 
-    /** @return the number of jobs ready to submit to Condor
+    /** @return the number of nodes ready to submit to Condor
      */
-    inline int NumJobsReady() const { return _readyQ->Number(); }
+    inline int NumNodesReady() const { return _readyQ->Number(); }
 
     /** @return the number of PRE scripts currently running
      */
@@ -283,7 +280,7 @@ class Dag {
 	inline int ScriptRunNodeCount() const
 		{ return _preRunNodeCount + _postRunNodeCount; }
 
-	inline bool Done() const { return NumJobsDone() == NumJobs(); }
+	inline bool Done() const { return NumNodesDone() == NumNodes(); }
 
 		/** Submit all ready jobs, provided they are not waiting on a
 			parent job or being throttled.
@@ -397,17 +394,6 @@ class Dag {
     // child jobs by removing job ID from each child's waiting queue
     void TerminateJob( Job* job, bool bootstrap = false );
   
-    /*  Get the first appearing job in the termination queue marked SUBMITTED.
-        This function is called by ProcessLogEvents when a SUBMIT log
-        entry is read.  The challenge is to correctly match the condorID
-        found in the SUBMIT log event written by Condor with the Job object
-        (currently with condorID (-1,-1,-1) that was recently submitted
-        with condor_submit.<p>
-
-        @return address of Job object, or NULL if not found
-    */
-    Job * GetSubmittedJob (bool recovery);
-
 	void PrintEvent( debug_level_t level, const ULogEvent* event,
 					 Job* node );
 
@@ -481,14 +467,14 @@ class Dag {
     /// List of Job objects
     List<Job>     _jobs;
 
-    // Number of Jobs that are done (completed execution)
-    int _numJobsDone;
+    // Number of nodes that are done (completed execution)
+    int _numNodesDone;
     
-    // Number of Jobs that failed (or their PRE or POST script failed).
-    int _numJobsFailed;
+    // Number of nodes that failed (job or PRE or POST script failed)
+    int _numNodesFailed;
 
-    // Number of Jobs currently running (submitted to Condor)
-    int _numJobsSubmitted;
+    // Number of nodes currently running (submitted to Condor)
+    int _numNodesSubmitted;
 
     /*  Maximum number of jobs to submit at once.  Non-negative.  Zero means
         unlimited

@@ -354,7 +354,7 @@ private:
     // name given to the job by the user
     const char* _jobName;
   
-    /*  Job queue's
+    /*  Job queues
       
         parents -> dependencies coming into the Job
         children -> dependencies going out of the Job
@@ -362,7 +362,7 @@ private:
     */
     SimpleList<JobID_t> _queues[3];
   
-    /*  The ID of this job.  This serves as a primary key for Job's, where each
+    /*  The ID of this job.  This serves as a primary key for Jobs, where each
         Job's ID is unique from all the rest
     */
     JobID_t _jobID;
