@@ -1422,8 +1422,8 @@ SegMap::Read( int fd, ssize_t pos )
 		if( nbytes <= 0 ) {
 			dprintf(D_ALWAYS, "in Segmap::Read(): fd = %d, read_size=%d\n", fd,
 				read_size);
-			dprintf(D_ALWAYS, "core_loc=%x, nbytes=%d\n",
-				core_loc, nbytes);
+			dprintf(D_ALWAYS, "core_loc=%x, nbytes=%d, errno=%d(%s)\n",
+				core_loc, nbytes, errno, strerror(errno));
 			return -1;
 		}
 		bytes_to_go -= nbytes;
