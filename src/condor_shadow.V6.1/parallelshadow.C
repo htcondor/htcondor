@@ -619,6 +619,8 @@ int
 ParallelShadow::updateFromStarter(int command, Stream *s)
 {
 	ClassAd update_ad;
+    ClassAd *jobad = getJobAd();
+
 	MpiResource* mpi_res = NULL;
 	int mpi_node = -1;
 	
@@ -644,6 +646,8 @@ ParallelShadow::updateFromStarter(int command, Stream *s)
 		return FALSE;
 	}
 
+	struct rusage prev_rusage = getRUsage();;
+	int prev_disk = getDiskUsage();
 		// Now, we're in good shape.  Grab all the info we care about
 		// and put it in the appropriate place.
 	mpi_res->updateFromStarter( &update_ad );
@@ -651,6 +655,27 @@ ParallelShadow::updateFromStarter(int command, Stream *s)
 		// XXX TODO: Do we want to update our local job ad?  Do we
 		// want to store the maximum in there?  Seperate stuff for
 		// each node?  
+
+    int diskUsage = getDiskUsage();
+	char buf[256];
+    if( diskUsage > prev_disk ) {
+        sprintf( buf, "%s=%d", ATTR_DISK_USAGE, diskUsage );
+        jobad->Insert( buf );
+    }
+
+    struct rusage rusage_val = getRUsage();
+
+    if( rusage_val.ru_stime.tv_sec > prev_rusage.ru_stime.tv_sec ) {
+        sprintf( buf, "%s=%f", ATTR_JOB_REMOTE_SYS_CPU,
+                 (float)rusage_val.ru_stime.tv_sec );
+        jobad->Insert( buf );
+    }
+    if( rusage_val.ru_utime.tv_sec > prev_rusage.ru_utime.tv_sec ) {
+        sprintf( buf, "%s=%f", ATTR_JOB_REMOTE_USER_CPU,
+                 (float)rusage_val.ru_utime.tv_sec );
+        jobad->Insert( buf );
+    }
+
 
 	return TRUE;
 }
