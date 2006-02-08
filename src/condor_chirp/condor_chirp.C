@@ -1,5 +1,5 @@
 /*
- *
+ * condor_chirp -- a program wrapper around the chirp API
  */
 
 
@@ -62,7 +62,7 @@ chirp_get_one_file(char *remote, char *local) {
 			return -1;
 		}
 
-	} while (num_read == 8192);
+	} while (num_read > 0);
 
 	::fclose(wfd);
 	chirp_client_close(client, rfd);
@@ -130,8 +130,7 @@ chirp_put_one_file(char *local, char *remote, char *mode, int perm) {
 			return -1;
 		}
 
-	} while (num_read == 8192);
-
+	} while (num_read > 0);
 	::fclose(rfd);
 	chirp_client_close(client, wfd);
 	chirp_client_disconnect(client);
@@ -142,8 +141,10 @@ chirp_put_one_file(char *local, char *remote, char *mode, int perm) {
 
 void usage() {
 	printf("Usage:\n");
-	printf("condor_chirp fetch remote_file local_file\n");
-	printf("condor_chirp put   local_file remote_file\n");
+	printf("condor_chirp fetch  remote_file local_file\n");
+	printf("condor_chirp put    local_file remote_file\n");
+	printf("condor_chirp remove remote_file\n");
+	printf("condor_chirp get_job_attr job_attribute\n");
 }
 
 /*
@@ -193,8 +194,57 @@ int chirp_put(int argc, char **argv) {
 	return chirp_put_one_file(argv[fileOffset], argv[fileOffset + 1], mode, perm);
 }
 
+/*
+ * chirp_remove
+ *   call chirp_remove to do the real work
+ */
+
+int chirp_remove(int argc, char **argv) {
+	if (argc != 3) {
+		printf("condor_chirp remove remote_file\n");
+		return -1;
+	}
+
+	struct chirp_client *client = 0;
+
+		// First, connect to the submit host
+	client = chirp_client_connect_default();
+	if (!client) {
+		fprintf(stderr, "cannot chirp_connect to shadow\n");
+		return -1;
+	}
+
+    return chirp_client_unlink(client, argv[2]);
+}
+	
+/*
+ * chirp_getattr
+ *   call chirp_getattr to do the real work
+ */
+
+int chirp_get_job_attr(int argc, char **argv) {
+	if (argc != 3) {
+		printf("condor_chirp get_job_attr AttributeName\n");
+		return -1;
+	}
+
+	struct chirp_client *client = 0;
+
+		// First, connect to the submit host
+	client = chirp_client_connect_default();
+	if (!client) {
+		fprintf(stderr, "cannot chirp_connect to shadow\n");
+		return -1;
+	}
+
+	char *p = 0;
+    chirp_client_get_job_attr(client, argv[2], &p);
+	printf("%s\n", p);
+	return 0;
+}
 int
 main(int argc, char **argv) {
+
 	if (argc == 1) {
 		usage();
 		exit(-1);
@@ -206,6 +256,14 @@ main(int argc, char **argv) {
 
 	if (strcmp("put", argv[1]) == 0) {
 		return chirp_put(argc, argv);
+	}
+
+	if (strcmp("remove", argv[1]) == 0) {
+		return chirp_remove(argc, argv);
+	}
+
+	if (strcmp("get_job_attr", argv[1]) == 0) {
+		return chirp_get_job_attr(argc, argv);
 	}
 
 	usage();
