@@ -51,6 +51,8 @@ template class HashTable<PROC_ID, ClassAd *>;
 template class HashBucket<PROC_ID, ClassAd *>;
 //template class HashTable<PROC_ID, CronTab *>;
 //template class HashBucket<PROC_ID, CronTab *>;
+template class HashTable<UserIdentity, GridJobCounts>;
+template class HashBucket<UserIdentity, GridJobCounts>;
 template class Queue<shadow_rec*>;
 template class Queue<ContactStartdArgs*>;
 template class List<shadow_rec*>;

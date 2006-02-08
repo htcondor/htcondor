@@ -84,11 +84,9 @@ struct OwnerData {
   int JobsFlocked;
   int FlockLevel;
   int OldFlockLevel;
-  int GlobusJobs;
-  int GlobusUnmanagedJobs;
   time_t NegotiationTimestamp;
   OwnerData() { Name=NULL; Domain=NULL;
-  JobsRunning=JobsIdle=JobsHeld=JobsFlocked=FlockLevel=OldFlockLevel=GlobusJobs=GlobusUnmanagedJobs=0; }
+  JobsRunning=JobsIdle=JobsHeld=JobsFlocked=FlockLevel=OldFlockLevel=0; }
 };
 
 class match_rec
@@ -123,6 +121,41 @@ class match_rec
 		// Set the mrec status to the given value (also updates
 		// entered_current_status)
 	void	setStatus( int stat );
+};
+
+class UserIdentity {
+	public:
+			// The default constructor is not recommended as it
+			// has no real identity.  It only exists so
+			// we can put UserIdentities in various templates.
+		UserIdentity() : m_username(""), m_domain("") { }
+		UserIdentity(const char * username, const char * domain)
+			: m_username(username), m_domain(domain) { }
+		UserIdentity(const UserIdentity & src)
+			: m_username(src.m_username), m_domain(src.m_domain) { }
+		const UserIdentity & operator=(const UserIdentity & src) {
+			m_username = src.m_username;
+			m_domain = src.m_domain;
+			return *this;
+		}
+		const bool operator==(const UserIdentity & rhs) {
+			return m_username == rhs.m_username && m_domain == rhs.m_domain;
+		}
+		MyString username() const { return m_username; }
+		MyString domain() const { return m_domain; }
+
+			// For use in HashTables
+		static int HashFcn(const UserIdentity & index, int numBuckets);
+	private:
+		MyString m_username;
+		MyString m_domain;
+};
+
+
+struct GridJobCounts {
+	GridJobCounts() : GridJobs(0), UnmanagedGridJobs(0) { }
+	unsigned int GridJobs;
+	unsigned int UnmanagedGridJobs;
 };
 
 enum MrecStatus {
@@ -383,7 +416,8 @@ private:
 	//int				RejectedClusters[MAX_REJECTED_CLUSTERS];
 	ExtArray<int>   RejectedClusters;
 	int				N_RejectedClusters;
-	ExtArray<OwnerData> Owners;
+	ExtArray<OwnerData> Owners; // May be tracking AccountingGroup instead of owner username/domain
+	HashTable<UserIdentity, GridJobCounts> GridJobOwners;
 	int				N_Owners;
 	time_t			NegotiationRequestTime;
 	int				ExitWhenDone;  // Flag set for graceful shutdown
@@ -410,6 +444,12 @@ private:
 
 	SelfDrainingQueue job_is_finished_queue;
 	int jobIsFinishedHandler( ServiceData* job_id );
+
+		// Get the associated GridJobCounts object for a given
+		// user identity.  If necessary, will create a new one for you.
+		// You can read or write the values, but don't go
+		// deleting the pointer!
+	GridJobCounts * GetGridJobCounts(UserIdentity user_identity);
 
 	// useful names
 	char*			CondorAdministrator;

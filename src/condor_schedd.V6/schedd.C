@@ -147,6 +147,18 @@ int STARTD_CONTACT_TIMEOUT = 45;
 struct shadow_rec *find_shadow_by_cluster( PROC_ID * );
 #endif
 
+int UserIdentity::HashFcn(const UserIdentity & index, int numBuckets)
+{
+	MyString username = index.username();
+	MyString domain = index.domain();
+	unsigned int i = 
+		hashFuncChars(username.Value(), numBuckets) +
+		hashFuncChars(domain.Value(), numBuckets);
+
+	return i % numBuckets;
+}
+
+
 struct job_data_transfer_t {
 	int mode;
 	char *peer_version;
@@ -237,8 +249,11 @@ ContactStartdArgs::~ContactStartdArgs()
 	free( csa_sinful );
 }
 
+	// Years of careful research
+static const int USER_HASH_SIZE = 100;
 
 Scheduler::Scheduler() :
+	GridJobOwners(USER_HASH_SIZE, UserIdentity::HashFcn, updateDuplicateKeys),
 	job_is_finished_queue( "job_is_finished_queue", 1,
 						   &CondorID::ServiceDataCompare )
 {
@@ -572,10 +587,10 @@ Scheduler::count_jobs()
 		Owners[i].JobsFlocked = 0;
 		Owners[i].FlockLevel = 0;
 		Owners[i].OldFlockLevel = 0;
-		Owners[i].GlobusJobs = 0;
-		Owners[i].GlobusUnmanagedJobs = 0;
 		Owners[i].NegotiationTimestamp = current_time;
 	}
+
+	GridJobOwners.clear();
 
 		// Clear out the DedicatedScheduler's list of idle dedicated
 		// job cluster ids, since we're about to re-create it.
@@ -865,11 +880,17 @@ Scheduler::count_jobs()
 	 // of Globus Jobs per owner.
 	 // Don't bother if we are starting a gridmanager per job.
 	if ( !gridman_per_job ) {
-		for (i=0; i < N_Owners; i++) {
-			if ( Owners[i].GlobusJobs > 0 ) {
-				GridUniverseLogic::JobCountUpdate(Owners[i].Name, 
-						Owners[i].Domain,NULL, NULL, 0, 0, 
-						Owners[i].GlobusJobs,Owners[i].GlobusUnmanagedJobs);
+		GridJobOwners.startIterations();
+		UserIdentity userident("nobody","");
+		GridJobCounts gridcounts;
+		while( GridJobOwners.iterate(userident, gridcounts) ) {
+			if(gridcounts.GridJobs > 0) {
+				GridUniverseLogic::JobCountUpdate(
+						userident.username().Value(),
+						userident.domain().Value(),
+						NULL, NULL, 0, 0, 
+						gridcounts.GridJobs,
+						gridcounts.UnmanagedGridJobs);
 			}
 		}
 	}
@@ -1030,6 +1051,14 @@ count( ClassAd *job )
 		universe = CONDOR_UNIVERSE_STANDARD;
 	}
 
+	// Sometimes we need the read username owner, not the accounting group
+	MyString real_owner;
+	if( ! job->LookupString(ATTR_OWNER,real_owner) ) {
+		dprintf(D_ALWAYS, "Job has no %s attribute.  Ignoring...\n",
+				ATTR_OWNER);
+		return 0;
+	}
+
 	// calculate owner for per submittor information.
 	buf[0] = '\0';
 	job->LookupString(ATTR_ACCOUNTING_GROUP,buf,sizeof(buf));	// TODDCORE
@@ -1079,11 +1108,8 @@ count( ClassAd *job )
 			needs_management = false;
 		}
 		if ( needs_management ) {
-				// note: get owner again cuz we don't want accounting group here.
-			char owner[_POSIX_PATH_MAX];
-			owner[0] = '\0';	
-			job->LookupString(ATTR_OWNER,owner);	
-			GridUniverseLogic::JobCountUpdate(owner,domain,mirror_schedd_name,ATTR_MIRROR_SCHEDD,
+			GridUniverseLogic::JobCountUpdate(real_owner.Value(),
+				domain,mirror_schedd_name,ATTR_MIRROR_SCHEDD,
 				0, 0, 1, job_managed ? 0 : 1);
 		}
 		free(mirror_schedd_name);
@@ -1172,15 +1198,19 @@ count( ClassAd *job )
 		// Don't count HELD jobs that aren't externally (gridmanager) managed
 		// Don't count jobs that the gridmanager has said it's completely
 		// done with.
+		UserIdentity userident(real_owner.Value(),domain);
 		if ( ( status != HELD || job_managed != false ) &&
 			 job_managed_done == false ) 
 		{
-			needs_management = 1;
-			scheduler.Owners[OwnerNum].GlobusJobs++;
+			GridJobCounts * gridcounts = scheduler.GetGridJobCounts(userident);
+			ASSERT(gridcounts);
+			gridcounts->GridJobs++;
 		}
 		if ( status != HELD && job_managed == 0 && job_managed_done == 0 ) 
 		{
-			scheduler.Owners[OwnerNum].GlobusUnmanagedJobs++;
+			GridJobCounts * gridcounts = scheduler.GetGridJobCounts(userident);
+			ASSERT(gridcounts);
+			gridcounts->UnmanagedGridJobs++;
 		}
 		if ( gridman_per_job ) {
 			int cluster = 0;
@@ -11215,6 +11245,20 @@ Scheduler::jobThrottle( void )
 	return delay;
 }
 
+GridJobCounts *
+Scheduler::GetGridJobCounts(UserIdentity user_identity) {
+	GridJobCounts * gridcounts = 0;
+	if( GridJobOwners.lookup(user_identity, gridcounts) == 0 ) {
+		ASSERT(gridcounts);
+		return gridcounts;
+	}
+	// No existing entry.
+	GridJobCounts newcounts;
+	GridJobOwners.insert(user_identity, newcounts);
+	GridJobOwners.lookup(user_identity, gridcounts);
+	ASSERT(gridcounts); // We just added it. Where did it go?
+	return gridcounts;
+}
 
 int
 Scheduler::jobIsFinishedHandler( ServiceData* data )
