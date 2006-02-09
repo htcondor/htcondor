@@ -564,10 +564,24 @@ GahpServer::Startup()
 
 	newenv.SetEnv( "GAHP_TEMP", GridmanagerScratchDir );
 
-	if ( get_port_range( &low_port, &high_port ) == TRUE ) {
+	// forward the port ranges through the environment:
+	//
+	// there are two settings for globus, one for incoming and one for
+	// outgoing connections.  we check for both and put them in the
+	// environment if present.
+	//
+	// THIS WILL NOT WORK IF THE RANGE IS BELOW 1024, SINCE THE GAHP
+	// IS NOT SPAWNED WITH ROOT PRIV.
+	//
+	if ( get_port_range( FALSE, &low_port, &high_port ) == TRUE ) {
 		MyString buff;
 		buff.sprintf( "%d,%d", low_port, high_port );
 		newenv.SetEnv( "GLOBUS_TCP_PORT_RANGE", buff.Value() );
+	}
+	if ( get_port_range( TRUE, &low_port, &high_port ) == TRUE ) {
+		MyString buff;
+		buff.sprintf( "%d,%d", low_port, high_port );
+		newenv.SetEnv( "GLOBUS_TCP_SOURCE_RANGE", buff.Value() );
 	}
 
 		// Now register a reaper, if we haven't already done so.

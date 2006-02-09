@@ -1479,7 +1479,8 @@ create_tcp_port( unsigned int *ip, u_short *port, int *fd )
 
         /* bind it to an address */
 
-    if( ! _condor_local_bind(*fd) ) {
+        /* FALSE means this is an incoming connection */
+    if( ! _condor_local_bind(FALSE, *fd) ) {
         EXCEPT( "bind" );
     }
 

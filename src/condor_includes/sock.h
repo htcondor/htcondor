@@ -137,7 +137,7 @@ public:
 #if defined(WIN32) && defined(_WINSOCK2API_)
 	int assign(LPWSAPROTOCOL_INFO);		// to inherit sockets from other processes
 #endif
-	int bind(int =0);
+	int bind(int, int =0);
     int setsockopt(int, int, const char*, int); 
 
 	/**  Set the size of the operating system buffers (in the IP stack) for
@@ -153,7 +153,7 @@ public:
 
 	static int set_timeout_multiplier(int secs);
 	
-	inline int bind(char *s) { return bind(getportbyserv(s)); }
+	inline int bind(int is_outgoing, char *s) { return bind(is_outgoing, getportbyserv(s)); }
 	int close();
 	/** if any operation takes more than sec seconds, timeout
         call timeout(0) to set blocking mode (default)

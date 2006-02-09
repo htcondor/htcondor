@@ -4964,8 +4964,9 @@ int DaemonCore::Create_Process(
 				dprintf(D_ALWAYS,"Warning: setsockopt() TCP_NODELAY failed\n");
 			}
 
+			/* bind(FALSE,...) means this is an incoming connection */
 			if ( (!rsock.listen( want_command_port)) ||
-				 (!ssock.bind( want_command_port)) ) {
+				 (!ssock.bind(FALSE, want_command_port)) ) {
 				dprintf(D_ALWAYS,"Create_Process:Failed to post listen "
 						"on command socket(s) (port %d)\n", want_command_port );
 				goto wrapup;
@@ -6541,8 +6542,9 @@ DaemonCore::InitCommandSocket( int command_port )
 				dprintf(D_ALWAYS,"Warning: setsockopt() TCP_NODELAY failed\n");
 			}
 
+			/* bind(FALSE,...) means this is an incoming connection */
 			if( (!dc_rsock->listen(command_port)) ||
-				(!dc_ssock->bind(command_port)) ) {
+				(!dc_ssock->bind(FALSE, command_port)) ) {
 				EXCEPT("Failed to bind to or post listen on command socket(s)");
 			}
 		}
@@ -7387,7 +7389,8 @@ int
 BindAnyCommandPort(ReliSock *rsock, SafeSock *ssock)
 {
 	for(int i = 0; i < 1000; i++) {
-		if ( !rsock->bind() ) {
+		/* bind(FALSE,...) means this is an incoming connection */
+		if ( !rsock->bind(FALSE) ) {
 			dprintf(D_ALWAYS, "Failed to bind to command ReliSock\n");
 
 #ifndef WIN32
@@ -7399,8 +7402,9 @@ BindAnyCommandPort(ReliSock *rsock, SafeSock *ssock)
 
 			return FALSE;
 		}
-		// now open a SafeSock _on the same port_ choosen above
-		if ( !ssock->bind(rsock->get_port()) ) {
+		// now open a SafeSock _on the same port_ chosen above
+		/* bind(FALSE,...) means this is an incoming connection */
+		if ( !ssock->bind(FALSE, rsock->get_port()) ) {
 			rsock->close();
 			continue;
 		}

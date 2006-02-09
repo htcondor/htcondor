@@ -583,10 +583,18 @@ bool GridftpServer::SubmitServerJob()
 		//   absolute path.
 	env_obj.SetEnv( "GRIDMAP", condor_basename( mapfile ) );
 
-	if ( get_port_range( &low_port, &high_port ) == TRUE ) {
+		// if the condor_config has set any of the incoming or
+		// outgoing LOWPORT/HIGHPORT settings, pass them through
+		// to globus via the appropriate environment variables.
+	if ( get_port_range( FALSE, &low_port, &high_port ) == TRUE ) {
 		MyString buff;
 		buff.sprintf( "%d.%d", low_port, high_port );
 		env_obj.SetEnv( "GLOBUS_TCP_PORT_RANGE", buff.Value() );
+	}
+	if ( get_port_range( TRUE, &low_port, &high_port ) == TRUE ) {
+		MyString buff;
+		buff.sprintf( "%d.%d", low_port, high_port );
+		env_obj.SetEnv( "GLOBUS_TCP_SOURCE_RANGE", buff.Value() );
 	}
 
 		// TODO Should check config parameter GSI_DAEMON_TRUSTED_CA_DIR

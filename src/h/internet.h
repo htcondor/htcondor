@@ -104,8 +104,9 @@ char* getHostFromAddr( const char* addr );
 char* getAddrFromClaimId( const char* id );
 
 /* Binds the given fd to any port on the correct local interface for
-   this machine.   Returns 1 if successful, 0 on error. */
-int _condor_local_bind( int fd );
+   this machine.   is_outgoing tells it how to param.  Returns 1 if
+   successful, 0 on error. */
+int _condor_local_bind( int is_outgoing, int fd );
 
 int is_priv_net(uint32_t ip);
 int in_same_net(uint32_t ipA, uint32_t ipB);

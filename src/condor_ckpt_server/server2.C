@@ -978,7 +978,8 @@ void Server::Replicate()
 				dprintf(D_ALWAYS, "ERROR: I_socket failed.\n");
 				exit(server_sd);
 			}
-			if( ! _condor_local_bind(server_sd) ) {
+			/* TRUE means this is an outgoing connection */
+			if( ! _condor_local_bind(TRUE, server_sd) ) {
 				close( server_sd );
 				dprintf(D_ALWAYS, "ERROR: unable to bind new socket to local interface\n");
 				exit(1);
@@ -1016,7 +1017,8 @@ void Server::Replicate()
 						__LINE__);
 				exit(server_sd);
 			}
-			if( ! _condor_local_bind(server_sd) ) {
+			/* TRUE means this is an outgoing connection */
+			if( ! _condor_local_bind(TRUE, server_sd) ) {
 				close( server_sd );
 				dprintf(D_ALWAYS, 
 						"ERROR: unable to bind new socket to local interface\n");
@@ -1063,7 +1065,8 @@ void Server::Replicate()
 						__LINE__);
 				exit(server_sd);
 			}
-			if( ! _condor_local_bind(server_sd) ) {
+			/* TRUE means this is an outgoing connection */
+			if( ! _condor_local_bind(TRUE, server_sd) ) {
 				close( server_sd );
 				dprintf(D_ALWAYS, "ERROR: unable to bind new socket to local interface\n");
 				exit(1);

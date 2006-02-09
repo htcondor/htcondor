@@ -43,6 +43,7 @@
 #include "condor_random_num.h"
 #include "../condor_sysapi/sysapi.h"
 #include "build_job_env.h"
+#include "get_port_range.h"
 
 #include "perm.h"
 #include "filename_tools.h"
@@ -1178,28 +1179,20 @@ CStarter::PublishToEnv( Env* proc_env )
 		// pass through the pidfamily ancestor env vars this process
 		// currently has to the job.
 
-		// port regulation stuff
-	char* low = param( "LOWPORT" );
-	char* high = param( "HIGHPORT" );
-	if( low && high ) {
+		// port regulation stuff.  assume the outgoing port range.
+	int low, high;
+	if (get_port_range (TRUE, &low, &high) == TRUE) {
+		MyString tmp_port_number;
+
+		tmp_port_number = high;
 		env_name = base.GetCStr();
 		env_name += "HIGHPORT";
-		proc_env->SetEnv( env_name.GetCStr(), high );
+		proc_env->SetEnv( env_name.GetCStr(), tmp_port_number.GetCStr() );
 
+		tmp_port_number = low;
 		env_name = base.GetCStr();
 		env_name += "LOWPORT";
-		proc_env->SetEnv( env_name.GetCStr(), low );
-
-		free( high );
-		free( low );
-	} else if( low ) {
-		dprintf( D_ALWAYS, "LOWPORT is defined but HIGHPORT is not, "
-				 "ignoring LOWPORT\n" );
-		free( low );
-	} else if( high ) {
-		dprintf( D_ALWAYS, "HIGHPORT is defined but LOWPORT is not, "
-				 "ignoring HIGHPORT\n" );
-		free( high );
+		proc_env->SetEnv( env_name.GetCStr(), tmp_port_number.GetCStr() );
     }
 }
 

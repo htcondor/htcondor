@@ -28,6 +28,7 @@
 #include "condor_config.h"
 #include "condor_uid.h"
 #include "condor_file_info.h"
+#include "get_port_range.h"
 #include "name_tab.h"
 #include "proto.h"
 #include "condor_io.h"
@@ -1259,24 +1260,14 @@ UserProc::UserProc( STARTUP_INFO &s ) :
 	env_obj.SetEnv(VirtualMachineName);	
 
 	/* Port regulation for user job */
-	char *low = NULL, *high = NULL;
 	int low_port, high_port;
 
-	if ( (low = param("LOWPORT")) != NULL ) {
-		if ( (high = param("HIGHPORT")) != NULL ) {
-			low_port = atoi(low);
-			high_port = atoi(high);
-			sprintf(buf, "_condor_LOWPORT=%d", low_port);
-			env_obj.SetEnv(buf);
-			sprintf(buf, "_condor_HIGHPORT=%d", high_port);
-			env_obj.SetEnv(buf);
-			free(low);
-			free(high);
-		} else {
-			dprintf(D_ALWAYS, "LOWPORT is defined but HIGHPORT is not!\n");
-			dprintf(D_ALWAYS, "LOWPORT will be ignored!\n");
-			free(low);
-		}
+		// assume outgoing port range
+	if (get_port_range(TRUE, &low_port, &high_port) == TRUE) {
+		sprintf(buf, "_condor_LOWPORT=%d", low_port);
+		env_obj.SetEnv(buf);
+		sprintf(buf, "_condor_HIGHPORT=%d", high_port);
+		env_obj.SetEnv(buf);
 	}
 	/* end - Port regulation for user job */
 

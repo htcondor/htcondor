@@ -199,7 +199,8 @@ int             listen_count;
 		return -1;
 	}
 	
-	if( ! _condor_local_bind(socket_fd) ) {
+	/* FALSE means this is an incoming connection */
+	if( ! _condor_local_bind(FALSE, socket_fd) ) {
 		close( socket_fd );
 		fprintf(stderr, "condor_exec: bind failed\n");
 		return -1;

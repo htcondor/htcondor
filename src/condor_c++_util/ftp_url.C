@@ -95,7 +95,8 @@ int open_ftp( const char *name, int flags, size_t n_bytes )
 		return sock_fd;
 	}
 
-	if( ! _condor_local_bind(sock_fd) ) {
+	/* TRUE means this is an outgoing connection */
+	if( ! _condor_local_bind(TRUE, sock_fd) ) {
 		close( sock_fd );
 		return -1;
 	}

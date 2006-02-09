@@ -81,10 +81,10 @@ public:
 
     ///
 	int listen();
-    ///
-	inline int listen(int p) { if (!bind(p)) return FALSE; return listen(); }
-    ///
-	inline int listen(char *s) { if (!bind(s)) return FALSE; return listen(); }
+    /// FALSE means this is an incoming connection
+	inline int listen(int p) { if (!bind(FALSE,p)) return FALSE; return listen(); }
+    /// FALSE means this is an incoming connection
+	inline int listen(char *s) { if (!bind(FALSE,s)) return FALSE; return listen(); }
 
     ///
 	ReliSock *accept();

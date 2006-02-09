@@ -132,9 +132,12 @@ _condor_dprintf_va( int flags, char* fmt, va_list args )
 }
 
 
-int get_port_range(int *low_port, int *high_port)
+int get_port_range(int is_outgoing, int *low_port, int *high_port)
 {
 	char *low = NULL, *high = NULL;
+
+	// is_outgoing is ignored here.  all connections are assumed to be outgoing
+	// since cedar should not be opening any listen sockets in the userjob.
 
 	if ( (low = getenv("_condor_LOWPORT")) == NULL ) {
         dprintf(D_NETWORK, "_condor_LOWPORT undefined\n");

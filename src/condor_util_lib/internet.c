@@ -30,6 +30,7 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
+#include "condor_uid.h"
 #include "internet.h"
 #include "my_hostname.h"
 #include "condor_config.h"
@@ -556,10 +557,9 @@ string_to_hostname( const char* addr )
 	return result;
 }
 
-
 /* Bind the given fd to the correct local interface. */
 int
-_condor_local_bind( int fd )
+_condor_local_bind( int is_outgoing, int fd )
 {
 	/* Note: this function is completely WinNT screwed.  However,
 	 * only non-Cedar components call this function (ckpt-server,
@@ -571,13 +571,14 @@ _condor_local_bind( int fd )
 	 */
 #ifndef WIN32
 	int lowPort, highPort;
-	if ( get_port_range(&lowPort, &highPort) == TRUE ) {
+	if ( get_port_range(is_outgoing, &lowPort, &highPort) == TRUE ) {
 		if ( bindWithin(fd, lowPort, highPort) == TRUE )
             return TRUE;
         else
 			return FALSE;
 	} else {
 		struct sockaddr_in sin;
+
 		memset( (char *)&sin, 0, sizeof(sin) );
 		sin.sin_family = AF_INET;
 		sin.sin_port = 0;
@@ -591,6 +592,7 @@ _condor_local_bind( int fd )
 			  Derek <wright@cs.wisc.edu> 2005-09-20
 			*/
 		sin.sin_addr.s_addr = htonl(INADDR_ANY);
+
 		if( bind(fd, (struct sockaddr*)&sin, sizeof(sin)) < 0 ) {
 			dprintf( D_ALWAYS, "ERROR: bind(%s:%d) failed, errno: %d\n",
 					 inet_ntoa(sin.sin_addr), sin.sin_port, errno );
@@ -616,13 +618,29 @@ int bindWithin(const int fd, const int low_port, const int high_port)
     this_trial = start_trial;
 	do {
 		struct sockaddr_in sin;
+		priv_state old_priv;
+		int bind_return_value;
 
 		memset(&sin, 0, sizeof(sin));
 		sin.sin_family = AF_INET;
 		sin.sin_addr.s_addr = htonl(INADDR_ANY);
 		sin.sin_port = htons((u_short)this_trial++);
 
-		if (bind(fd, (struct sockaddr *)&sin, sizeof(sin)) == 0) { // success
+// windows doesn't have privileged ports.
+#ifndef WIN32
+		if (this_trial <= 1024) {
+			// use root priv for the call to bind to allow privileged ports
+			old_priv = PRIV_UNKNOWN;
+			old_priv = set_root_priv();
+		}
+#endif
+		bind_return_value = bind(fd, (struct sockaddr *)&sin, sizeof(sin));
+#ifndef WIN32
+		if (this_trial <= 1024) {
+			set_priv (old_priv);
+		}
+#endif
+		if (bind_return_value == 0) { // success
 			dprintf(D_NETWORK, "_condor_local_bind - bound to %d...\n", this_trial-1);
 			return TRUE;
 		} else {

@@ -24,6 +24,7 @@
 #include "condor_common.h"
 #include "condor_constants.h"
 #include "condor_io.h"
+#include "condor_uid.h"
 #include "sock.h"
 #include "condor_network.h"
 #include "internet.h"
@@ -382,6 +383,8 @@ int Sock::bindWithin(const int low_port, const int high_port)
 	int this_trial = start_trial;
 	do {
 		sockaddr_in		sin;
+		priv_state old_priv;
+		int bind_return_val;
 
 		memset(&sin, 0, sizeof(sockaddr_in));
 		sin.sin_family = AF_INET;
@@ -392,16 +395,30 @@ int Sock::bindWithin(const int low_port, const int high_port)
 		}
 		sin.sin_port = htons((u_short)this_trial++);
 
-		if ( ::bind(_sock, (sockaddr *)&sin, sizeof(sockaddr_in)) == 0 ) { // success
+#ifndef WIN32
+		if (this_trial <= 1024) {
+			// use root priv for the call to bind to allow privileged ports
+			old_priv = PRIV_UNKNOWN;
+			old_priv = set_root_priv();
+		}
+#endif
+		bind_return_val = ::bind(_sock, (sockaddr *)&sin, sizeof(sockaddr_in));
+#ifndef WIN32
+		if (this_trial <= 1024) {
+			set_priv (old_priv);
+		}
+#endif
+
+		if (  bind_return_val == 0 ) { // success
 			dprintf(D_NETWORK, "Sock::bindWithin - bound to %d...\n", this_trial-1);
 			return TRUE;
 		} else {
 #ifdef WIN32
 			int error = WSAGetLastError();
 			dprintf(D_NETWORK, 
-				"Sock::bindWithin - failed to bind: WSAError = %d\n", error );
+				"Sock::bindWithin - failed to bind to port %d: WSAError = %d\n", this_trial-1, error );
 #else
-			dprintf(D_NETWORK, "Sock::bindWithin - failed to bind: %s\n", strerror(errno));
+			dprintf(D_NETWORK, "Sock::bindWithin - failed to bind to port %d: %s\n", this_trial-1, strerror(errno));
 #endif
 		}
 
@@ -416,9 +433,11 @@ int Sock::bindWithin(const int low_port, const int high_port)
 }
 
 
-int Sock::bind(int port)
+int Sock::bind(int is_outgoing, int port)
 {
 	sockaddr_in		sin;
+	priv_state old_priv;
+	int bind_return_value;
 
 	// Following lines are added because some functions in condor call
 	// this method without checking the port numbers returned from
@@ -437,8 +456,33 @@ int Sock::bind(int port)
 	// in the config file for security, we will bind this Sock to one of
 	// the port within the range defined by these variables rather than
 	// an arbitrary free port. /* 07/27/2000 - sschang */
+	//
+	// zmiller on 2006-02-09 says:
+	//
+	// however,
+	//
+	// now that we have the ability to bind to privileged ports (below 1024)
+	// for the daemons, we need a separate port range for the client tools
+	// (which do not run as root) to bind to.  if none is specified, we bind
+	// to any non-privileged port.  lots of firewalls still allow arbitrary
+	// ports for outgoing connections, and this will work for that setup.
+	// if the firewall doesn't allow it, the connect will just fail anyways.
+	//
+	// this is why there is an is_outgoing flag passed in.  when this is true,
+	// we know to check OUT_LOWPORT and OUT_HIGHPORT first, and then fall back
+	// to LOWPORT and HIGHPORT.
+	//
+	// likewise, in the interest of consistency, the server side will now
+	// check first for IN_LOWPORT and IN_HIGHPORT, then fallback to
+	// LOWPORT and HIGHPORT, and then to an arbitrary port.
+	//
+	// errors in configuration (like LOWPORT being greater than HIGHPORT)
+	// still return FALSE whenever they are encountered which will cause
+	// condor to attempt to bind to a dynamic port instead. an error is
+	// printed to D_ALWAYS in get_port_range.
+
 	int lowPort, highPort;
-	if ( port == 0 && get_port_range(&lowPort, &highPort) == TRUE ) {
+	if ( port == 0 && get_port_range(is_outgoing, &lowPort, &highPort) == TRUE ) {
 			// Bind in a specific port range.
 		if ( bindWithin(lowPort, highPort) != TRUE ) {
 			return FALSE;
@@ -455,7 +499,20 @@ int Sock::bind(int port)
 		}
 		sin.sin_port = htons((u_short)port);
 
-		if (::bind(_sock, (sockaddr *)&sin, sizeof(sockaddr_in)) < 0) {
+#ifndef WIN32
+		if(port < 1024) {
+			// use root priv for the call to bind to allow privileged ports
+			old_priv = PRIV_UNKNOWN;
+			old_priv = set_root_priv();
+		}
+#endif
+		bind_return_value = ::bind(_sock, (sockaddr *)&sin, sizeof(sockaddr_in));
+#ifndef WIN32
+		if(port < 1024) {
+			set_priv (old_priv);
+		}
+#endif
+		if ( bind_return_value < 0) {
 	#ifdef WIN32
 			int error = WSAGetLastError();
 			dprintf( D_ALWAYS, "bind failed: WSAError = %d\n", error );
@@ -568,7 +625,8 @@ int Sock::do_connect(
 
 		/* we bind here so that a sock may be	*/
 		/* assigned to the stream if needed		*/
-	if (_state == sock_virgin || _state == sock_assigned) bind();
+		/* TRUE means this is an outgoing connection */
+	if (_state == sock_virgin || _state == sock_assigned) bind( TRUE );
 
 	if (_state != sock_bound) return FALSE;
 
@@ -849,7 +907,8 @@ bool Sock::do_connect_tryit()
 		}
 
 		// finally, bind the socket
-		bind();
+		/* TRUE means this is an outgoing connection */
+		bind( TRUE );
 	}
 #endif /* end of unix code */
 

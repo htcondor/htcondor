@@ -832,7 +832,10 @@ RESERVED_DISK		= 5
 ## system-assigned ports, but will restrict them to the range you
 ## specify here. If you want to change the well-known ports for the
 ## collector or negotiator, see COLLECTOR_HOST or NEGOTIATOR_HOST.
-## Note that both LOWPORT and HIGHPORT must be at least 1024. 
+## Note that both LOWPORT and HIGHPORT must be at least 1024 if you
+## are not starting your daemons as root.  You may also specify
+## different port ranges for incoming and outgoing connections by
+## using IN_HIGHPORT/IN_LOWPORT and OUT_HIGHPORT/OUT_LOWPORT.
 #HIGHPORT = 9700 
 #LOWPORT = 9600
 

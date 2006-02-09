@@ -212,7 +212,8 @@ int SafeSock::connect(
 
 	/* we bind here so that a sock may be	*/
 	/* assigned to the stream if needed		*/
-	if (_state == sock_virgin || _state == sock_assigned) bind();
+	/* TRUE means this is an outgoing connection */
+	if (_state == sock_virgin || _state == sock_assigned) bind( TRUE );
 
 	if (_state != sock_bound) {
 		dprintf(D_ALWAYS,

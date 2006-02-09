@@ -68,7 +68,8 @@ int ConnectToServer(request_type type)
 		return CKPT_SERVER_SOCKET_ERROR;
     }
 
-	if( ! _condor_local_bind(conn_req_sd) ) {
+	/* TRUE means this is an outgoing connection */
+	if( ! _condor_local_bind(TRUE, conn_req_sd) ) {
 		close( conn_req_sd );
 		dprintf( D_ALWAYS, "ERROR: unable to bind new socket to local interface\n");
 		return CKPT_SERVER_SOCKET_ERROR;

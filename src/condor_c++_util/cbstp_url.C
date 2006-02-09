@@ -42,7 +42,8 @@ int condor_bytes_stream_open_ckpt_file( const char *name, int flags,
 		return sock_fd;
 	}
 
-	if( ! _condor_local_bind(sock_fd) ) {
+	/* TRUE means this is an outgoing connection */
+	if( ! _condor_local_bind(TRUE, sock_fd) ) {
 		close( sock_fd );
 		return -1;
 	}

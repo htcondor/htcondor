@@ -105,7 +105,8 @@ bool IOProxy::init( const char *config_file )
 		return false;
 	}
 
-	if(!server->bind()) {
+	/* FALSE means this is an incomming connection */
+	if(!server->bind(FALSE)) {
 		dprintf(D_ALWAYS,"IOProxy: couldn't bind: %s\n",strerror(errno));
 		return false;
 	}

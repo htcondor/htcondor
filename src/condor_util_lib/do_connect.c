@@ -70,7 +70,8 @@ do_connect_with_timeout( const char* host, const char* service,
 	}
 
 		/* Now, bind this socket to the right interface. */
-	_condor_local_bind( fd );
+		/* TRUE means this is an outgoing connection */
+	_condor_local_bind( TRUE, fd );
 
     if (host[0]=='<'){ /* dhaval */
     	string_to_sin(host,&sin);
@@ -135,7 +136,8 @@ udp_connect( char* host, u_short port )
 	}
 
 		/* Now, bind this socket to the right interface. */
-	_condor_local_bind( sock );
+		/* TRUE means this is an outgoing connection */
+	_condor_local_bind( TRUE, sock );
 
 	memset( (char *)&sin,0,sizeof(sin) );
 	memcpy( (char *)&sin.sin_addr, hostentp->h_addr, (unsigned)hostentp->h_length );

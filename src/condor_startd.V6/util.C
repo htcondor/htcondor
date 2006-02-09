@@ -149,7 +149,8 @@ compute_rank( ClassAd* mach_classad, ClassAd* req_classad )
 int
 create_port( ReliSock* rsock )
 {
-	rsock->bind();
+	/* FALSE means this is an incoming connection */
+	rsock->bind( FALSE );
 	rsock->listen();
 	return rsock->get_file_desc();
 }
