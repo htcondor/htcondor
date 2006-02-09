@@ -97,6 +97,11 @@ sub Main( )
     my $ConfigOut = "$TargetDir/etc/hawkeye_config";
     DoConfig( $ConfigIn, $ConfigOut );
 
+    # Build up the new config...
+    my $LocalIn = "$TargetDir/install/hawkeye_config.local.example";
+    my $LocalOut = "$TargetDir/etc/hawkeye_config.local";
+    DoConfig( $LocalIn, $LocalOut );
+
     # Fix up the ClassAd viewer 'prefs'
     my $Prefs = "$TargetDir/condor/classadView/prefs";
     DoPrefs( $Prefs ) if ( -f $Prefs );
@@ -228,7 +233,7 @@ sub DoConfig( $$ )
 	}
 
 	# Actual cronjob list
-	elsif ( /^HAWKEYE_JOBS\s+=/ )
+	elsif ( /^HAWKEYE_JOBLIST\s+=/ )
 	{
 	    if ( $#Modules < 0 )
 	    {
@@ -238,7 +243,8 @@ sub DoConfig( $$ )
 	    {
 		print OUT "$Line \\\n";
 	    }
-	    foreach my $i ( 0 .. $#Modules )
+
+	    for my $i ( 0 .. $#Modules )
 	    {
 		my $Module = $Modules[$i];
 		my $ModName = $Module->{Name};
@@ -247,8 +253,13 @@ sub DoConfig( $$ )
 		my $Period = $Module->{Period};
 		my $Opt = $Module->{Options};
 		my $Cont = ( $i == $#Modules ) ? "" : "\\";
-		print OUT
-		    "\t$ModName:$Prefix:$Path:$Period:$Opt $Cont\n";
+		my $Start = "HAWKEYE_" . $ModName;
+		print OUT "\t$ModName $Cont\n";
+		print OUT $Start . "_PREFIX = " . $Module->{Prefix};
+		print OUT $Start . "_EXECUTABLE = " . $Module->{Path};
+		print OUT $Start . "_MODE = " . $Module->{Mode};
+		print OUT $Start . "_RECONFIG = " . $Module->{Reconfig};
+		print OUT $Start . "_PERIOD = " . $Module->{Period};
 	    }
 	    next;
 	}

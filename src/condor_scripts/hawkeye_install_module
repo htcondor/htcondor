@@ -26,6 +26,8 @@
 use strict;
 use warnings;
 
+use File::Temp qw(tempdir);
+
 # Update the module include path
 BEGIN
 {
@@ -44,6 +46,7 @@ sub CommandLine( @ );
 sub FindConfigFile( );
 sub ReadConfigFiles( );
 sub InstallModules( );
+sub ImportOption( $$ );
 sub ReadDescriptionFile( $$ );
 sub InstallModule( $ );
 sub ConfigureModule( $ );
@@ -87,16 +90,26 @@ my %Config = (
 	      Startd => -1,
 	      CronName => "",
 
-	      # Valid "Options"
-	      Options => {
-			  continuous => [ "reconfig", "waitforexit", ],
-			  kill => [ "kill", ],
-			  nokill => [ "nokill", ],
-			  reconfig => [ "reconfig", ],
-			  waitforexit => [ "waitforexit", ],
-			 },
-
 	      );
+
+# Valid setup info
+my %ConfigParms =
+(
+ # Valid "Options"
+ Options => {
+	     continuous => { Mode => 1, Reconfig => 1, },
+	     kill => { Kill => 1, },
+	     nokill => { Kill => 0, },
+	     reconfig => { Reconfig => 1, },
+	     waitforexit => { Mode => 1, },
+	    },
+
+ # Modes
+ Modes => { periodic => 0, waitforexit => 1, },
+ Reconfig => { true => 1, t => 1, false => 0, f => 0, },
+ Kill => { true => 1, t => 1, false => 0, f => 0, },
+ ModeStrings => [ qw(Periodic WaitForExit) ],
+);
 
 # Condor config stuff
 my $ConfigMacros;
@@ -386,15 +399,15 @@ sub ReadConfigFiles( )
 	if ( $Config{ModulesDir} eq "" );
     print "Found modules directory '$Config{ModulesDir}'\n";
 
-    # Jobs defined?
-    my $CronJobsVar = uc( $Config{CronName} . "_JOBS" );
-    my $Jobs = $ConfigMacros->Expand( $CronJobsVar );
-    if ( ! defined $Jobs )
+    # Job list defined?
+    my $CronJobListVar = uc( $Config{CronName} . "_JOBLIST" );
+    my $JobList = $ConfigMacros->Expand( $CronJobListVar );
+    if ( ! defined $JobList )
     {
-	$ConfigFiles->AddText( "$CronJobsVar = " );
-	$ConfigMacros->Set( "$CronJobsVar", "" );
+	$ConfigFiles->AddText( "$CronJobListVar = " );
+	$ConfigMacros->Set( "$CronJobListVar", "" );
     }
-    $Config{CronJobsVar} = $CronJobsVar;
+    $Config{CronJobListVar} = $CronJobListVar;
 
     # Try to find the file that last definied the job list
     if ( $Config{ConfigFile}{Updated} eq "" )
@@ -406,11 +419,23 @@ sub ReadConfigFiles( )
     # Try to find the file that last definied the job list
     if ( $Config{ConfigFile}{Updated} eq "" )
     {
-	my $Info = $ConfigMacros->GetInfo( $CronJobsVar );
+	my $Info = $ConfigMacros->GetInfo( $CronJobListVar );
 	if ( ( $Info ) && ( $Info->{File} ) )
 	{
 	    $Config{ConfigFile}{Updated} = $Info->{File};
-	    print "Found '$CronJobsVar' in "
+	    print "Found '$CronJobListVar' in "
+		. $Info->{File} . " line " . $Info->{Line} . "\n";
+	}
+    }
+
+    # Try to find the file that last definied the old job list
+    if ( $Config{ConfigFile}{Updated} eq "" )
+    {
+	my $Info = $ConfigMacros->GetInfo( $CronJobListVar );
+	if ( ( $Info ) && ( $Info->{File} ) )
+	{
+	    $Config{ConfigFile}{Updated} = $Info->{File};
+	    print "Found '$CronJobListVar' in "
 		. $Info->{File} . " line " . $Info->{Line} . "\n";
 	}
     }
@@ -454,10 +479,10 @@ sub ReadConfigFiles( )
 # ******************************************************
 sub InstallModules ( )
 {
-    my $TmpDir = "/tmp/$$";
+    my $TmpDir = File::Temp::tempdir( );
+    die "tempdir() failed" if ( ! defined $TmpDir );
+    print "Temp dir = $TmpDir\n";
     my $OrigDir = $ENV{PWD};
-    die "$TmpDir already exists!" if ( -d $TmpDir );
-    mkdir( $TmpDir, 0700 ) || die "Can't mkdir '$TmpDir'";
     chdir $TmpDir || die "Can't chdir to $TmpDir";
 
     # Summary info
@@ -485,7 +510,8 @@ sub InstallModules ( )
 	my @DatFiles = grep { /\.hawk$/ } @Files;
 	if ( $#DatFiles < 0 )
 	{
-	    print STDERR "$Module does not appear to be a valid module file\n";
+	    print STDERR
+		"$Module does not appear to be a valid module file\n";
 	    system "/bin/rm *";
 	    next;
 	}
@@ -614,9 +640,16 @@ sub ReadDescriptionFile( $$ )
 
     # List of keywords..
     my @KeyWords =
-	qw ( modulefiles default options parameter period version );
+	qw ( modulefiles default options parameter period version
+	     mode reconfig kill );
     my $KeyWordsRe =
 	"^(" . join( ":)|(", @KeyWords ) . ":)";
+
+
+    # Default mode, etc.
+    $Data->{Mode} = 0;
+    $Data->{Kill} = 1;
+    $Data->{Reconfig} = 0;
 
     # Read the description file
     my $Errors = 0;
@@ -720,7 +753,8 @@ sub ReadDescriptionFile( $$ )
 	{
 	    if ( $Value eq "" )
 	    {
-		print STDERR "$DescriptionFile line $.: No version specfied\n";
+		print STDERR
+		    "$DescriptionFile line $.: No version specfied\n";
 		$Errors++;
 		last;
 	    }
@@ -762,20 +796,78 @@ sub ReadDescriptionFile( $$ )
 	{
 	    foreach my $Opt ( split( /\s+/, $Value ) )
 	    {
-		$Opt = lc( $Opt );
-		if ( ! exists $Config{Options}{$Opt} )
+		if ( ! ImportOption( $Opt, $Data ) )
 		{
 		    print STDERR "Line $.: Unknown option '$Opt'\n";
 		    $Errors++;
 		}
-		else
-		{
-		    foreach my $Tmp ( @{$Config{Options}{$Opt}} )
-		    {
-			push( @{$Data->{Options}}, $Tmp );
-		    }
-		}
 	    }
+	}
+
+	# Mode
+	elsif ( $Attribute eq "MODE" )
+	{
+	    if ( $Value eq "" )
+	    {
+		print STDERR
+		    "$DescriptionFile line $.: No mode specfied\n";
+		$Errors++;
+		last;
+	    }
+	    my $Tmp = lc $Value;
+	    if ( ! exists $ConfigParms{Modes}{$Tmp} )
+	    {
+		print STDERR
+		    "$DescriptionFile line $.: " .
+			"Invalid mode specfied '$Value'\n";
+		$Errors++;
+		last;
+	    }
+	    $Data->{Mode} = $ConfigParms{Modes}{$Tmp};
+	}
+
+	# Reconfig yes/no
+	elsif ( $Attribute eq "RECONFIG" )
+	{
+	    if ( $Value eq "" )
+	    {
+		print STDERR
+		    "$DescriptionFile line $.: No reconfig specfied\n";
+		$Errors++;
+		last;
+	    }
+	    my $Tmp = lc $Value;
+	    if ( ! exists $ConfigParms{Reconfig}{$Tmp} )
+	    {
+		print STDERR
+		    "$DescriptionFile line $.: " .
+			"Invalid reconfig specfied '$Value'\n";
+		$Errors++;
+		last;
+	    }
+	    $Data->{Reconfig} = $ConfigParms{Reconfig}{$Tmp};
+	}
+
+	# Kill yes/no
+	elsif ( $Attribute eq "KILL" )
+	{
+	    if ( $Value eq "" )
+	    {
+		print STDERR
+		    "$DescriptionFile line $.: No kill specfied\n";
+		$Errors++;
+		last;
+	    }
+	    my $Tmp = lc $Value;
+	    if ( ! exists $ConfigParms{Kill}{$Tmp} )
+	    {
+		print STDERR
+		    "$DescriptionFile line $.: " .
+			"Invalid kill specfied '$Value'\n";
+		$Errors++;
+		last;
+	    }
+	    $Data->{Kill} = $ConfigParms{Kill}{$Tmp};
 	}
 
 	# Parameter
@@ -878,6 +970,11 @@ sub ReadDescriptionFile( $$ )
     }
     close( DESCRIPTION );
 
+    print "Data Dump " . __LINE__ . "\n";
+    foreach my $k ( keys %{$Data} )
+    {
+	print "$k = $Data->{$k}\n";
+    }
 
     # For backward compatibility, message the old HAWKEYE_<NAME>_<PARAM>
     # parameter names to just plain <PARAM>
@@ -961,7 +1058,7 @@ sub InstallModule( $ )
 
     # Check to see if it's already configured
     my $Found = 0;
-    my $JobString = $ConfigMacros->Expand( $Config{CronJobsVar} );
+    my $JobString = $ConfigMacros->Expand( $Config{CronJobListVar} );
     foreach my $Job ( split( /\s+/, $JobString ) )
     {
 	my @Fields = split( /:/, $Job );
@@ -974,13 +1071,13 @@ sub InstallModule( $ )
 		$Data->{Current}{Prefix} = shift @Fields;
 		$Data->{Current}{Path} = shift @Fields;
 		$Data->{Current}{Period} = shift @Fields;
-		if ( scalar @Fields )
+
+		foreach my $Opt ( @Fields )
 		{
-		    @{$Data->{Current}{Options}} = @Fields;
-		}
-		else
-		{
-		    $#{@{$Data->{Current}{Options}}} = -1;
+		    if ( ! ImportOption( $Opt, \$Data->{Current} ) )
+		    {
+			print STDERR "Line $.: Unknown option '$Opt'\n";
+		    }
 		}
 		last;
 	    }
@@ -1039,8 +1136,11 @@ sub ConfigureModule( $ )
 	if ( $Import )
 	{
 	    print "  Importing settings for $Name ...";
-	    $Data->{Prefix}  = $Data->{Current}{Prefix};
-	    $Data->{Period}  = $Data->{Current}{Period};
+	    $Data->{Prefix}   = $Data->{Current}{Prefix};
+	    $Data->{Period}   = $Data->{Current}{Period};
+	    $Data->{Mode}     = $Data->{Current}{Mode};
+	    $Data->{Reconfig} = $Data->{Current}{Reconfig};
+	    $Data->{Kill}     = $Data->{Current}{Kill};
 
 	    # Import the options
 	    $#{$Data->{Options}} = -1;
@@ -1085,22 +1185,23 @@ sub ConfigureModule( $ )
 
     # Give the user an update
     my @Required;
-    $#{@{$Data->{Options}}} = -1 if ( ! $Data->{Options} );
     print "  Logical name: $Name\n";
-    print "  Options: " . join( " ", @{$Data->{Options}} ) . "\n";
     print "  ClassAd prefix: " . $Data->{Prefix} . "\n";
+    print "  Mode: " . $ConfigParms{ModeStrings}[$Data->{Mode}] . "\n";
+    print "  Kill: " . ($Data->{Kill} ? "True" : "False") . "\n";
+    print "  Reconfig: " . ($Data->{Reconfig} ? "True" : "False") . "\n";
     print "  Parameters:\n";
     foreach my $Param ( @{$Data->{Parameters}} )
     {
 	$Param->{String} = "<NONE>";
-	if ( exists $Param->{Default} && $Param->{Default} ne "" )
+	if ( exists $Param->{Default} and $Param->{Default} ne "" )
 	{
 	    $Param->{String} = $Param->{Default};
 	}
-	print "    $Param->{Name} = $Param->{String}\n";
+	print "    " . $Param->{Name} . " = " . $Param->{String} . "\n";
 	if ( $Param->{Required} )
 	{
-	    if ( !exists $Param->{Default} || $Param->{Default} eq "" )
+	    if ( !exists $Param->{Default} or $Param->{Default} eq "" )
 	    {
 		push( @Required, $Param->{Name} );
 		$NeedsConfig++;
@@ -1143,8 +1244,9 @@ sub ConfigureModule( $ )
     }
     else
     {
-	print "  Would you like to change these settings (N/y): ";
+	print "  Would you like to change these settings (N/y/q): ";
 	$_ = <>;
+	return 0 if ( $_ =~ /^q/i );
 	$NeedsConfig = 1 if ( $_ =~ /^y/i );
     }
 
@@ -1166,49 +1268,78 @@ sub ConfigureModule( $ )
 	}
     }
 
-    # Options
+    # Mode value
     if ( $NeedsConfig )
     {
-	print "  Default options for $Name = " .
-	    join( " ", @{$Data->{Options}} ) . "\n";
+	print "  Default run mode for $Name = ",
+	    $ConfigParms{ModeStrings}[$Data->{Mode}] . "\n";
 
 	# Get options from the user
 	while( 1 )
 	{
-	    print "  What options would you like set ".
-		"<enter = default; \"none\"; list>: ";
+	    print "  What run mode should this module use (" .
+		join( ", ", @{$ConfigParms{ModeStrings}} ) .
+		    ") <enter = default> \n";
 	    $_ = <>; chomp; s/^\s+//;
-	    if ( $_ eq "none" )
+	    my $Mode = lc $_;
+	    if ( $_ eq "" )
 	    {
-		$#{@{$Data->{Options}}} = -1;
+		# Do nothing
 		last;
 	    }
-	    elsif ( $_ ne "" )
+	    elsif ( exists $ConfigParms{Modes}{$Mode} )
 	    {
-		my @Options;
-		foreach my $Opt ( split )
-		{
-		    $Opt = lc( $Opt );
-		    if ( ! exists $Config{Options}{$Opt} )
-		    {
-			print STDERR "  -> Unknown option '$Opt'\n";
-			$Errors++;
-		    }
-		    else
-		    {
-			foreach my $Tmp ( @{$Config{Options}{$Opt}} )
-			{
-			    push( @{$Data->{Options}}, $Tmp );
-			};
-			$Data->{ConfigChanged}++;
-		    }
-		}
-		last if ( ! $Errors );
+		$Data->{Mode} = $ConfigParms{Modes}{$Mode};
+		$Data->{ConfigChanged}++;
+		last;
 	    }
 	    else
 	    {
-		# Empty line; use defaults
+		print "Unknown mode '$_'\n";
+	    }
+	}
+    }
+
+    # Reconfig value -- don't allow user to change this
+    if ( $NeedsConfig )
+    {
+	printf( "  Using default reconfig for $Name = %s\n",
+		( $Data->{Reconfig} ? "True" : "False" ) );
+    }
+
+    # Kill value
+    if ( $NeedsConfig )
+    {
+	printf( "  Default kill mode for $Name = %s\n",
+		( $Data->{Kill} ? "True" : "False" ) );
+
+	# Get options from the user
+	while( 1 )
+	{
+	    print "  What kill mode should this module use (true/false)".
+		" <enter = default>\n";
+	    $_ = <>; chomp; s/^\s+//;
+	    my $Kill = lc $_;
+	    if ( $_ eq "" )
+	    {
+		# Do nothing
 		last;
+	    }
+	    elsif ( $Kill eq "t" or $Kill eq "true" )
+	    {
+		$Data->{Kill} = 1;
+		$Data->{ConfigChanged}++;
+		last;
+	    }
+	    elsif ( $Kill eq "f" or $Kill eq "false" )
+	    {
+		$Data->{Kill} = 0;
+		$Data->{ConfigChanged}++;
+		last;
+	    }
+	    else
+	    {
+		print "Unknown kill '$_'\n";
 	    }
 	}
     }
@@ -1289,6 +1420,34 @@ sub ConfigureModule( $ )
 # ******************************************************
 
 # ******************************************************
+# Find the configuration file to use
+# ******************************************************
+sub ImportOption( $$ )
+{
+    my $Opt = shift;
+    my $Data = shift;
+
+    $Opt = lc( $Opt );
+    if ( ! exists $ConfigParms{Options}{$Opt} )
+    {
+	print "Can't find option '$Opt'\n";
+	return 0;
+    }
+    else
+    {
+	foreach my $Key ( keys %{$ConfigParms{Options}{$Opt}} )
+	{
+	    $Data->{$Key} = $ConfigParms{Options}{$Opt}{$Key};
+	    print "Importing '$Key': " . $Data->{$Key} . "\n";
+	}
+    }
+
+    return 1;
+
+} # ImportOption()
+# ******************************************************
+
+# ******************************************************
 # DoUpdateConfig
 # ******************************************************
 sub DoUpdateConfig( $ )
@@ -1311,13 +1470,22 @@ sub DoUpdateConfig( $ )
 	$ConfigFiles->AddText( "##\t$Text" );
     }
 
+    my $Prefix = uc( $Config{CronName} . "_" . $Name . "_" );
     $ConfigFiles->AddText
-	(
-	 "$Config{CronJobsVar} = \$($Config{CronJobsVar}) " .
-	 $Name . ":" . $Data->{Prefix} . ":" .
-	 "\$(MODULES)/" . $Data->{ModuleFile} . ":" .
-	 $Data->{Period} . ":" . join(":", @{$Data->{Options}} )
-	);
+	( "$Config{CronJobListVar} = \$($Config{CronJobListVar}) $Name" );
+    $ConfigFiles->AddText
+	( $Prefix . "EXECUTABLE = " ."\$(MODULES)/" . $Data->{ModuleFile} );
+    $ConfigFiles->AddText
+	( $Prefix . "PREFIX = " . $Data->{Prefix} );
+    $ConfigFiles->AddText
+	( $Prefix . "PERIOD = " . $Data->{Period} );
+    $ConfigFiles->AddText
+	( $Prefix . "MODE = " . $ConfigParms{ModeStrings}[$Data->{Mode}] );
+    $ConfigFiles->AddText
+	( $Prefix . "RECONFIG = " . $Data->{Reconfig} );
+    $ConfigFiles->AddText
+	( $Prefix . "KILL = " . $Data->{Kill} );
+
     $ConfigFiles->AddText( "##  Parameters for module $Name:" );
     foreach my $Param ( @{$Data->{Parameters}} )
     {
