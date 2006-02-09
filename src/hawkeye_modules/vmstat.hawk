@@ -6,9 +6,10 @@ Monitors the status of the Virtual Memory (VM) subsystem You may
 want set the vmstat parameters by hand
 
 Default: vmstat
-options: ReConfig WaitForExit
 period: 1s
 prefix: vmstat_
+mode: WaitForExit
+reconfig: True
 
 # It's parameters
 parameter: PERIOD = 30s

@@ -7,12 +7,13 @@ attributes (based on the "top" program) You may want set the top
 parameters by hand
 
 Default: top
-options: ReConfig WaitForExit
 period: 1s
 prefix: top_
+mode: WaitForExit
+reconfig: True
 
 # It's parameters
-parameter: PERIOD = 30s
+parameter: DATA_PERIOD = 30s
 Sets the frequency with which top collects data (i.e. 30s, 5m)
 
 parameter: SORT = :2 mem:2

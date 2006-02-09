@@ -285,7 +285,7 @@ sub Init( )
 	} elsif ( $Arg =~ /^-c$/ ) {
 	    HawkeyeLib::HardConfig( "_sort" );
 	    HawkeyeLib::HardConfig( "_fields" );
-	    HawkeyeLib::HardConfig( "_period" );
+	    HawkeyeLib::HardConfig( "_data_period" );
 	}
 	elsif ( $Arg =~ /^-d$/ ) {
 	    $Config{Debug}++;
@@ -346,7 +346,9 @@ sub Configure( )
     #ReadConfig();
     my $ConfigStringSort = HawkeyeLib::ReadConfig( "_sort", ":5" );
     my $ConfigStringFields = HawkeyeLib::ReadConfig( "_fields", "*" );
-    my $ConfigStringPeriod = HawkeyeLib::ReadConfig( "_period", "30" );
+    my $PeriodNew = HawkeyeLib::ReadConfig( "_data_period", "" );
+    my $PeriodOld = HawkeyeLib::ReadConfig( "_period", "30s" );
+    my $ConfigStringPeriod = ( ($PeriodNew ne "") ? $PeriodNew : $PeriodOld );
 
     # Max loops
     $Config{MaxLoops} = HawkeyeLib::ReadConfig( "_maxloops", "1000" );
