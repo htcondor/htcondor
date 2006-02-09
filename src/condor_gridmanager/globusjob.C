@@ -44,6 +44,7 @@
 #include "condor_holdcodes.h"
 #include "condor_parameters.h"
 #include "string_list.h"
+#include "filename_tools.h"
 //#include "myproxy_manager.h"
 
 #include "gridmanager.h"
@@ -172,24 +173,23 @@ HashTable <HashKey, GlobusJob *> JobsByContact( HASH_TABLE_SIZE,
 
 static List<OrphanCallback_t> OrphanCallbackList;
 
+/* Take the job id returned by the jobmanager
+ * (https://foo.edu:123/456/7890) and remove the port, so that we
+ * end up with an id that won't change if the jobmanager restarts.
+ */
 char *
 globusJobId( const char *contact )
 {
 	static char buff[1024];
-	char *first_end;
-	char *second_begin;
+	char url_scheme[_POSIX_PATH_MAX];
+	char url_host[_POSIX_PATH_MAX];
+	char url_path[_POSIX_PATH_MAX];
+	int url_port;
 
-	ASSERT( strlen(contact) < sizeof(buff) );
-
-	first_end = strrchr( contact, ':' );
-	ASSERT( first_end );
-
-	second_begin = strchr( first_end, '/' );
-	ASSERT( second_begin );
-
-	strncpy( buff, contact, first_end - contact );
-	strcpy( buff + ( first_end - contact ), second_begin );
-
+	filename_url_parse( (char*)contact, url_scheme, url_host, &url_port,
+						url_path );
+	snprintf( buff, sizeof(buff), "%s://%s%s", url_scheme, url_host,
+			  url_path );
 	return buff;
 }
 
@@ -731,7 +731,26 @@ GlobusJob::GlobusJob( ClassAd *classad )
 					"(%d.%d) Non-NULL contact string and unknown gram version!\n",
 					procID.cluster, procID.proc);
 		}
-		SetRemoteJobId( strrchr( buff, ' ' ) + 1 );
+
+		const char *token;
+		MyString str = buff;
+
+		str.Tokenize();
+
+		token = str.GetNextToken( " ", false );
+		if ( !token || stricmp( token, "gt2" ) ) {
+			error_string.sprintf( "%s not of type gt2", ATTR_GRID_JOB_ID );
+			goto error_exit;
+		}
+
+		token = str.GetNextToken( " ", false );
+		token = str.GetNextToken( " ", false );
+		if ( !token ) {
+			error_string.sprintf( "%s missing job ID",
+								  ATTR_GRID_JOB_ID );
+			goto error_exit;
+		}
+		SetRemoteJobId( token );
 		job_already_submitted = true;
 	}
 
