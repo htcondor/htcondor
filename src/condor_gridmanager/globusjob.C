@@ -3174,9 +3174,11 @@ GlobusJob::JmShouldSleep()
 		return false;
 	}
 
+	/*
 	if ( myResource->GridJobMonitorActive() == false ) {
 		return false;
 	}
+	*/
 
 	switch ( globusState ) {
 	case GLOBUS_GRAM_PROTOCOL_JOB_STATE_PENDING:
