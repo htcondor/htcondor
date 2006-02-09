@@ -65,6 +65,10 @@ less often.
 print DAG node names as it should have.  (This bug has existed since
 approximately v6.7.11.)
 
+\item Enabled COLLECTOR\_QUERY\_WORKERS in the default
+\Condor{collector} configuration, and set this value to 16.  Note this
+COLLECTOR\_QUERY\_WORKERS has no effect on non-UNIX systems (Windows).
+
 \end{itemize}
 
 \noindent Known Bugs:
