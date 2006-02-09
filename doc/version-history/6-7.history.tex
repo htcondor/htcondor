@@ -69,6 +69,10 @@ approximately v6.7.11.)
 \Condor{collector} configuration, and set this value to 16.  Note this
 COLLECTOR\_QUERY\_WORKERS has no effect on non-UNIX systems (Windows).
 
+\item Fixed a bug that could cause the \Condor{gridmanager} to crash
+if the GridJobId attribute for a gt2 job became mangled. The cause of
+mangling seen by some users is still unknown.
+
 \end{itemize}
 
 \noindent Known Bugs:
