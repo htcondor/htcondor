@@ -168,6 +168,15 @@ NEGOTIATOR    = $(SBIN)/condor_negotiator
 ## disable this feature.
 #COLLECTOR_CLASS_HISTORY_SIZE	= 1024
 
+## Setting COLLECTOR_QUERY_WORKERS to any non-zero value enables
+## the collector to fork off a separate worker process for each
+## query request.  Up to COLLECTOR_QUERY_WORKERS worker processes
+## will be created in this way.  If more than these are already running
+## and another query arrives, the main process will handle this query.
+## Fork workers are available for UNIX systems only, and this setting
+## is ingored in all others (Windows).
+COLLECTOR_CLASS_HISTORY_SIZE	= 16
+
 
 ##--------------------------------------------------------------------
 ##  condor_negotiator
