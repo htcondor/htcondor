@@ -21,7 +21,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item When the Grid Monitor encounters problems, Condor no longer tries
+to restart the Globus JobManagers for all of the affected grid universe
+jobs. Restarting the JobManagers can easily bring down a remote headnode.
+Condor will attempt to restart the Grid Monitor, but there will be
+no update of job status in the mean time. 
 
 \end{itemize}
 
