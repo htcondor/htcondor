@@ -22,6 +22,7 @@ my $Hawkeye;
 my $Hash;
 my @Params = "";
 my $CmdLine = join( " ", $0, @ARGV );
+print STDERR "$CmdLine\n";
 
 # Do it
 Init();
@@ -84,9 +85,30 @@ sub RunIt()
     $Hash->Add( "CmdLine", HawkeyePublish::TypeString, $CmdLine );
     $Hash->Add( "ModuleName", HawkeyePublish::TypeString,
 		HawkeyeLib::GetModuleName() );
-    my $hcv = `/usr/bin/which hawkeye_config_val`; chomp $hcv;
-    print STDERR "Hawkeye config val program: '$hcv'\n";
-    $Hash->Add( "HawkeyeConfigVal", HawkeyePublish::TypeString, $hcv );
+
+    my $StartdNameEnv = "STARTD_CRON_NAME";
+    my $StartdName = "Hawkeye";
+    my $ConfigVal = "hawkeye_config_val";
+    my $InterfaceVersionEnv = "HAWKEYE_INTERFACE_VERSION";
+    my $InterfaceVersion = 0;
+    if ( exists $ENV{$StartdNameEnv} )
+    {
+	$StartdName = $ENV{$StartdNameEnv};
+	my $NameUc = uc( $StartdName );
+	$InterfaceVersionEnv = $NameUc . "_INTERFACE_VERSION";
+	$ConfigVal = "condor_config_val" if ( $NameUc ne "HAWKEYE" );
+    }
+    $InterfaceVersion = $ENV{$InterfaceVersionEnv}
+	if ( exists $ENV{$InterfaceVersionEnv} );
+
+    $Hash->Add( "StartdName", HawkeyePublish::TypeString, $StartdName );
+    $Hash->Add( "InterfaceVersion", HawkeyePublish::TypeNumber,
+		$InterfaceVersion );
+    $Hash->Add( "StartdName", HawkeyePublish::TypeString, $StartdName );
+
+    my $cvp = `/usr/bin/which $ConfigVal`; chomp $cvp;
+    $cvp = $ConfigVal if ( $cvp eq "" );
+    $Hash->Add( "ConfigValProgram", HawkeyePublish::TypeString, $cvp );
     foreach my $Env ( keys %ENV )
     {
 	$Hash->Add( "Env_" . $Env, HawkeyePublish::TypeAuto, $ENV{$Env} );
