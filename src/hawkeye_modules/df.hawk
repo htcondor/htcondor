@@ -6,9 +6,10 @@ Used to monitor free disk space (based on the "df" program)
 You should set the HAWKEYE_DF_FSLIST parameter by hand
 
 Default: df
-options: kill
 period: 30m
 prefix: disk_
+kill: true
+mode: periodic
 
 # It's parameters
 parameter: FSLIST = /,/home,/var

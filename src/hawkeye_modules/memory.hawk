@@ -6,9 +6,10 @@ Description:
 Monitors system memory usage
 
 Default: memory
-options:
 period: 1m
 prefix: ram_
+mode: periodic
+kill: true
 
 # It's parameters
 # none

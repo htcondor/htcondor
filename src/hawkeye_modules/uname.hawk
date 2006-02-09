@@ -5,9 +5,10 @@ Description:
 Generates architecture and other O/S information
 
 Default: uname
-options: 
 period: 30d
 prefix: uname__
+mode: periodic
+kill: true
 
 # It's parameters
 # <NONE>

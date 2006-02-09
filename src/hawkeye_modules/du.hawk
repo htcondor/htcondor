@@ -6,9 +6,10 @@ Used to monitor disk space usage (based on the "du" program)
 You should set the HAWKEYE_DU_LIST and related parameters by hand
 
 Default: du
-options: kill
 period: 1d
 prefix: usage_
+kill: du
+mode: periodic
 
 # It's parameters
 parameter: LIST = HOME

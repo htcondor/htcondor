@@ -5,9 +5,10 @@ Description:
 Monitors hardware status using the lmsensors system
 
 Default: lmsensors
-options: 
 period: 5m
 prefix: sensors_
+mode: periodic
+kill: true
 
 # It's parameters
 paramater: LMSENSORS_CMD = /usr/bin/sensors

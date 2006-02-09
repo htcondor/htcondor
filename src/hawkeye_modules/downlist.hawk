@@ -8,9 +8,10 @@ reports back to Hawkeye which machines are missing and which machines
 appeared unexpectedly.
 
 Default: down
-options:
 period: 10m
 prefix: down_
+mode: periodic
+kill: true
 
 # It's parameters
 parameter: MACHINES

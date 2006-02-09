@@ -28,17 +28,17 @@ os: Unix-Any
 
 target: condor_jobhist
 os: Unix-Any
-version: 1.0.rc2
+version: 1.0.rc3
 +condor_jobhist
 
 target: condor_node
 os: Unix-Any
-version: 1.0.rc3
+version: 1.0.rc4
 +condor_node
 
 target: condor_pool
 os: Unix-Any
-version: 1.0.rc4
+version: 1.0.rc5
 +condor_pool
 
 target: condor_ckpt
@@ -48,12 +48,12 @@ version: 1.0.rc1
 
 target: cvs_locks
 os: Unix-Any
-version: 1.0.rc3
+version: 1.0.rc4
 +cvs_locks
 
 target: downlist
 os: Unix-Any
-version: 1.0.rc2
+version: 1.0.rc3
 +downlist
 
 target: df
@@ -68,37 +68,37 @@ version: 1.0.rc1
 
 target: gass_cache
 os: Unix-Any
-version: 1.0.rc2
+version: 1.0.rc3
 +gass_cache
 
 target: gdmphb
 os: Unix-Any
-version: 1.0.rc2
+version: 1.0.rc3
 +gdmphb
 
 target: grid_probe
 os: Unix-Any
-version: 1.0.rc2
+version: 1.0.rc3
 +grid_probe
 
 target: memory
 os: Unix-Any
-version: 1.0.rc2
+version: 1.0.rc3
 +memory
 
 target: network_stats
 os: Unix-Any
-version: 1.0.rc2
+version: 1.0.rc3
 +network_stats
 
 target: open_files
 os: Unix-Any
-version: 1.0.rc2
+version: 1.0.rc3
 +open_files
 
 target: pbs_qstat
 os: Unix-Any
-version: 1.0.rc3
+version: 1.0.rc4
 +pbs_qstat
 
 target: top
@@ -123,11 +123,11 @@ version: 1.0.rc4
 
 target: w
 os: Unix-Any
-version: 1.0.rc2
+version: 1.0.rc3
 +w
 
 target: who
 os: Unix-Any
-version: 1.0.rc2
+version: 1.0.rc3
 +who
 

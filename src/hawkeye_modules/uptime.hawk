@@ -6,9 +6,10 @@ Monitors the uptime and load averages of the system (based on the
 "uptime" program)
 
 Default: uptime
-options: 
 period: 5m
 prefix: uptime_
+mode: periodic
+kill: true
 
 # It's parameters
 # <NONE>

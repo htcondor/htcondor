@@ -6,9 +6,10 @@ Description:
 Monitors the status of GDMP for the US/CMS test bed
 
 Default: gdmp
-options:
 period: 20m
 prefix: gdmp_
+mode: periodic
+kill: true
 
 # It's parameters
 # None

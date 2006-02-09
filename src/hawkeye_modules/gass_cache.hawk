@@ -7,9 +7,10 @@ GASS_CACHE_ parameters by hand In particular, the
 HAWKEYE_GASS_CACHE_DIRECTORY is most likely not valid for your system
 
 Default: gass_cache
-options: nokill
 period: 12h
 prefix: cache_
+kill: false
+mode: periodic
 
 # It's parameters
 parameter: DIRECTORY = $(HOME)/.globus/.gass_cache

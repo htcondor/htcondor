@@ -7,9 +7,10 @@ need set the condor_node parameters by hand In particular, the
 ENV will most likely need to be set
 
 Default: condor
-options: kill
 period: 1h
 prefix: condor_
+kill: true
+mode: periodic
 
 # It's parameters
 Parameter: CONDOR = /home/condor

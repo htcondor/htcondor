@@ -6,11 +6,11 @@ Description:
 Monitors the users, uptime, and load averages of the system
 (based on the "w" program)
 
-
 Default: w
-options:
 period: 5m
 prefix: w_
+mode: periodic
+kill: true
 
 # It's parameters
 # none

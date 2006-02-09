@@ -6,9 +6,10 @@ Description:
 Monitors the number of open file descriptors
 
 Default: files
-options: kill
 period: 10m
 prefix: files_
+mode: periodic
+kill: true
 
 # It's parameters
 # None

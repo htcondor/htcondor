@@ -5,9 +5,10 @@ Description:
 Used to monitor a Condor CheckPoint Server
 
 Default: ckpt
-options: kill
 period: 30m
 prefix: ckpt_
+kill: true
+mode: periodic
 
 # It's parameters
 parameter: log_file

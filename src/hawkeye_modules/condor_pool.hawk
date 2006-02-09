@@ -7,9 +7,10 @@ condor_pool parameters by hand.  In particular, the ENV
 PATH & CONDOR_CONFIG will most likely need to be set.
 
 Default: pool
-options: kill
 period: 10m
 prefix: pool_
+kill: true
+mode: periodic
 
 
 parameter: NAME

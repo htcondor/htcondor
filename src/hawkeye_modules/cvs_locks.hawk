@@ -5,9 +5,10 @@ Description:
 Used to monitor CVS locks
 
 Default: cvs
-options: kill
 period: 30m
 prefix: cvslocks_
+kill: true
+mode: periodic
 
 # It's parameters
 parameter: REPOSITORIES
