@@ -263,11 +263,12 @@ to implement this policy.
 SUSPEND    = Scheduler =!= $(DedicatedScheduler) && ($(SUSPEND))
 PREEMPT    = Scheduler =!= $(DedicatedScheduler) && ($(PREEMPT))
 RANK_FACTOR    = 1000000
-RANK   = (Scheduler =?= $(DedicatedScheduler) * $(RANK_FACTOR)) + $(RANK)
+RANK   = (Scheduler =?= $(DedicatedScheduler) * $(RANK_FACTOR)) \
+               + $(RANK)
 START  = (Scheduler =?= $(DedicatedScheduler)) || ($(START))
 \end{verbatim}
 
-\Note For everything to work, you MUST set Macro{RANK\_FACTOR} to be a
+\Note For everything to work, you MUST set \Macro{RANK\_FACTOR} to be a
 larger value than the maximum value your existing rank expression
 could possibly evaluate to.
 \Macro{RANK} is just a floating point value, so there is no harm in
