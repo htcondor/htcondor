@@ -34,6 +34,11 @@ jobs. Restarting the JobManagers can easily bring down a remote headnode.
 Condor will attempt to restart the Grid Monitor, but there will be
 no update of job status in the mean time. 
 
+\item When started as root on a Linux 32-bit x86 machine, Condor daemons will
+leave core files in the log directory when they crash.  Recent changes to the
+Linux kernel default to blocking these core files.  This change means
+Condor behaves more consistently across different Unix-like operating systems.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
