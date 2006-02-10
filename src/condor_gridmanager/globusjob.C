@@ -186,10 +186,10 @@ globusJobId( const char *contact )
 	char url_path[_POSIX_PATH_MAX];
 	int url_port;
 
-	filename_url_parse( (char*)contact, url_scheme, url_host, &url_port,
-						url_path );
-	snprintf( buff, sizeof(buff), "%s://%s%s", url_scheme, url_host,
-			  url_path );
+	snprintf( buff, sizeof(buff), "%s", contact );
+	filename_url_parse( buff, url_scheme, url_host, &url_port, url_path );
+
+	snprintf( buff, sizeof(buff), "%s://%s%s", url_scheme, url_host, url_path );
 	return buff;
 }
 
