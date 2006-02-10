@@ -44,6 +44,9 @@
 #ifdef WIN32
 #include "exphnd.WIN32.h"
 #endif
+#if HAVE_EXT_COREDUMPER
+#include "google/coredumper.h"
+#endif
 
 // Externs to Globals
 extern char* mySubSystem;	// the subsys ID, such as SCHEDD, STARTD, etc. 
@@ -477,6 +480,47 @@ handle_dynamic_dirs()
 	}
 }
 
+#if HAVE_EXT_COREDUMPER
+void
+linux_sig_coredump(int signum)
+{
+		// Just in case we're running as condor or a user.
+	setuid(0);
+	setgid(0);
+	WriteCoreDump("core");
+
+		// It would be idea to actually terminate for the same reason.
+	struct sigaction sa;
+	sa.sa_handler = SIG_DFL;
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = 0;
+	sigaction(signum, &sa, NULL);
+	sigprocmask(SIG_SETMASK, &sa.sa_mask, NULL);
+
+	raise(signum);
+
+	exit(1); // Just in case.
+}
+#endif
+
+void
+install_core_dump_handler()
+{
+#if HAVE_EXT_COREDUMPER
+		// We only need to do this if we're root.
+		if( getuid() == 0) {
+			dprintf(D_FULLDEBUG, "Running as root.  Enabling specialized core dump routines\n");
+			sigset_t fullset;
+			sigfillset( &fullset );
+			install_sig_handler_with_mask(SIGSEGV, &fullset, linux_sig_coredump);
+			install_sig_handler_with_mask(SIGABRT, &fullset, linux_sig_coredump);
+			install_sig_handler_with_mask(SIGILL, &fullset, linux_sig_coredump);
+			install_sig_handler_with_mask(SIGFPE, &fullset, linux_sig_coredump);
+			install_sig_handler_with_mask(SIGBUS, &fullset, linux_sig_coredump);
+		}
+#	endif // of ifdef HAVE_EXT_COREDUMPER
+}
+
 
 void
 drop_core_in_log( void )
@@ -496,6 +540,11 @@ drop_core_in_log( void )
 				 "not calling chdir()\n" );
 		return;
 	}
+
+	// in some case we need to hook up our own handler to generate
+	// core files.
+	install_core_dump_handler();
+
 #ifdef WIN32
 	{
 		// give our Win32 exception handler a filename for the core file
@@ -902,6 +951,8 @@ unix_sigusr2(int)
 	daemonCore->Send_Signal( daemonCore->getpid(), SIGUSR2 );
 }
 
+
+
 #endif /* ! WIN32 */
 
 
@@ -1194,6 +1245,7 @@ int main( int argc, char** argv )
 	install_sig_handler_with_mask(SIGUSR1, &fullset, unix_sigusr1);
 	install_sig_handler_with_mask(SIGUSR2, &fullset, unix_sigusr2);
 	install_sig_handler(SIGPIPE, SIG_IGN );
+
 #endif // of ifndef WIN32
 
 	// set myName to be argv[0] with the path stripped off

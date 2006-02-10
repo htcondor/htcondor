@@ -387,6 +387,9 @@ ext_target(EXT_PCRE_VERSION,$(NULL))
 #if HAVE_EXT_GCB
 ext_target(EXT_GCB_VERSION,$(NULL))
 #endif
+#if WANT_COREDUMPER
+ext_target(EXT_COREDUMPER_VERSION,$(NULL))
+#endif
 
 #if HAVE_EXT_DRMAA
 ext_target(EXT_DRMAA_VERSION,$(NULL))

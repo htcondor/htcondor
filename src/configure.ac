@@ -1477,6 +1477,15 @@ else
   AC_SUBST(ext_glibc_version,UNUSED)
 fi
 
+# Google's coredumper is Linux specific and only officially supports
+# a few architectures.
+if test "$os" = "Linux" -a "x$_cv_arch" = "xI386" ; then
+    CONDOR_EXTERNAL_VERSION([coredumper],[0.2])
+	AC_SUBST(want_coredumper,YES)
+else
+	AC_SUBST(want_coredumper,NO)
+fi
+
 # DRMAA only builds on RedHat 8.0, RedHat 9, and Sles8-ia64 platforms
 if test x$_cv_linux_distro = "xRH80" -o x$_cv_linux_distro = "xRH9" -o x$_cv_linux_distro = "xSLES81" ; then
   CONDOR_EXTERNAL_VERSION([drmaa],[1.1])

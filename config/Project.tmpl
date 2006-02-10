@@ -432,6 +432,14 @@ NETMAN_LIB =
 NETMAN_FLAGS =
 #endif
 
+#if WANT_COREDUMPER
+COREDUMPER_FLAGS = -I$(COREDUMPER_INC)
+COREDUMPER_LINK_LIB = $(COREDUMPER_LIB)/libcoredumper.a
+#else
+COREDUMPER_FLAGS =
+COREDUMPER_LINK_LIB =
+#endif
+
 /* PCRE is sorta required everywhere at the moment */
 PCRE_FLAGS = -I$(PCRE_INC)
 PCRE_LIB = $(PCRE_DIR)/lib/libpcre.a
@@ -475,7 +483,7 @@ GPP_VERS_FLAGS =
 #endif
 GPP_SHARED_FLAGS = -fno-implicit-templates $(GPP_VERS_FLAGS)
 
-STD_C_FLAGS = $(VENDOR_C_FLAGS) $(DEBUG_FLAG) PlatformFlags PlatformGccFlags $(CCOMPILER_ID) $(GSOAP_CFLAGS) $(PCRE_FLAGS)
+STD_C_FLAGS = $(VENDOR_C_FLAGS) $(DEBUG_FLAG) $(CC_PIC_FLAG) PlatformFlags PlatformGccFlags $(CCOMPILER_ID) $(GSOAP_CFLAGS) $(PCRE_FLAGS) $(COREDUMPER_FLAGS)
 STD_C_PLUS_FLAGS = $(STD_C_FLAGS) $(GPP_SHARED_FLAGS) PlatformGppFlags
 /* We basically want INST_C_PLUS_FLAGS to be equal to STD_C_PLUS_FLAGS,
 	but make sure there isn't -fno-implicit-templates in it
@@ -500,7 +508,7 @@ CPLUS_LIB = ../condor_c++_util/cplus_lib.a
 PROCAPI_LIB = ../condor_procapi/libprocapi.a
 SYSAPI_LIB = ../condor_sysapi/libsysapi.a
 ACCT_LIB    = ../condor_accountant.V6/libacct.a
-DAEMONCORE_LIB = ../condor_daemon_core.V6/daemon_core.a
+DAEMONCORE_LIB = ../condor_daemon_core.V6/daemon_core.a $(COREDUMPER_LINK_LIB)
 
 
 /* common ld flags which should be first in the list */
