@@ -195,6 +195,9 @@ universe = parallel
 executable = mp1script
 arguments = my_mpich_linked_executable arg1 arg2
 machine_count = 4
+should_transfer_files = yes
+when_to_transfer_output = on_exit
+transfer_input_files = my_mpich_linked_executable
 queue
 \end{verbatim}
 
@@ -207,6 +210,9 @@ universe = parallel
 executable = lamscript
 arguments = my_lam_linked_executable arg1 arg2
 machine_count = 4
+should_transfer_files = yes
+when_to_transfer_output = on_exit
+transfer_input_files = my_lam_linked_executable
 queue
 \end{verbatim}
 
