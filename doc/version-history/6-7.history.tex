@@ -21,6 +21,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Added a \Opt{-format} option to the \Condor{history} command which
+behaves just like the -format option to \Condor{status} and \Condor{q}
+commands.
+
+\item Added remove and get\_job\_attr options to the \Condor{chirp}
+command line tool.
+
 \item When the Grid Monitor encounters problems, Condor no longer tries
 to restart the Globus JobManagers for all of the affected grid universe
 jobs. Restarting the JobManagers can easily bring down a remote headnode.
