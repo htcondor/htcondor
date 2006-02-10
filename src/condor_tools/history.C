@@ -31,6 +31,7 @@
 #include "internet.h"
 #include "print_wrapped_text.h"
 #include "MyString.h"
+#include "ad_printmask.h"
 
 #include "history_utils.h"
 
@@ -45,9 +46,9 @@
 static void Usage(char* name) 
 {
 #if WANT_QUILL
-  printf("Usage: %s [-l] [-f history-filename] [-name quill-name] [-constraint expr | cluster_id | cluster_id.proc_id | owner | -completedsince date/time]\n",name);
+  printf("Usage: %s [-l] [-f history-filename] [-name quill-name] [-format spec attribute] [-constraint expr | cluster_id | cluster_id.proc_id | owner | -completedsince date/time]\n",name);
 #else 
-  printf("Usage: %s [-l] [-f history-filename] [-constraint expr | cluster_id | cluster_id.proc_id | owner]\n",name);
+  printf("Usage: %s [-l] [-f history-filename] [-format spec attribute] [-constraint expr | cluster_id | cluster_id.proc_id | owner]\n",name);
 #endif /* WANT_QUILL */
 
   exit(1);
@@ -89,6 +90,7 @@ main(int argc, char* argv[])
 
 
   bool longformat=false;
+  bool customFormat=false;
   char* constraint=NULL;
   ExprTree *constraintExpr=NULL;
 
@@ -104,6 +106,8 @@ main(int argc, char* argv[])
   int i;
   parameters = (void **) malloc(NUM_PARAMETERS * sizeof(void *));
   myDistro->Init( argc, argv );
+
+  AttrListPrintMask mask;
 
 #if WANT_QUILL
   queryhor.setQuery(HISTORY_ALL_HOR, NULL);
@@ -156,6 +160,19 @@ main(int argc, char* argv[])
     }
     else if (strcmp(argv[i],"-help")==0) {
 		Usage(argv[0]);
+    }
+    else if (strcmp(argv[i],"-format")==0) {
+		if (argc <= i + 2) {
+			fprintf(stderr,
+					"Error: Argument -format requires a spec and "
+					"classad attribute name as parameters.\n");
+			fprintf(stderr,
+					"\t\te.g. condor_history -format '%%d' ClusterId\n");
+			exit(1);
+		}
+		mask.registerFormat(argv[i + 1], argv[i + 2]);
+		customFormat = true;
+		i += 2;
     }
     else if (strcmp(argv[i],"-constraint")==0) {
 		if (i+1==argc || constraint) break;
@@ -221,8 +238,6 @@ main(int argc, char* argv[])
     }
   }
   if (i<argc) Usage(argv[0]);
-  
-  if (constraint) puts(constraint);
   
   config();
   
@@ -316,7 +331,7 @@ main(int argc, char* argv[])
 		  exit(1);
 	  }
 	  
-	  if(!longformat) {
+	  if ((!longformat) && (!customFormat)) {
 		  short_header();
 	  }
 
@@ -346,7 +361,11 @@ main(int argc, char* argv[])
 			  if (longformat) { 
 				  ad->fPrint(stdout); printf("\n"); 
 			  } else {
-				  displayJobShort(ad);
+                  if (customFormat) {
+					mask.display(stdout, ad);
+                  } else {
+				    displayJobShort(ad);
+				  }
 			  }
 		  }
 		  if(ad) {
