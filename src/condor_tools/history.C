@@ -59,12 +59,17 @@ static char * getDBConnStr(char *&quillName, char *&databaseIp, char *&databaseN
 static bool checkDBconfig();
 #endif /* WANT_QUILL */
 
+static void readHistoryFromFile(char *JobHistoryFileName, char* constraint, ExprTree *constraintExpr);
+
 //------------------------------------------------------------------------
 
 static CollectorList * Collectors = NULL;
 static	QueryResult result;
 static	CondorQuery	quillQuery(QUILL_AD);
 static	ClassAdList	quillList;
+static  bool longformat=false;
+static  bool customFormat=false;
+static  AttrListPrintMask mask;
 
 int
 main(int argc, char* argv[])
@@ -89,14 +94,9 @@ main(int argc, char* argv[])
   char *dbIpAddr=NULL, *dbName=NULL,*queryPassword=NULL,*quillName=NULL;
 
 
-  bool longformat=false;
-  bool customFormat=false;
   char* constraint=NULL;
   ExprTree *constraintExpr=NULL;
 
-  int EndFlag=0;
-  int ErrorFlag=0;
-  int EmptyFlag=0;
   AttrList *ad=0;
 
   int flag = 1;
@@ -106,8 +106,6 @@ main(int argc, char* argv[])
   int i;
   parameters = (void **) malloc(NUM_PARAMETERS * sizeof(void *));
   myDistro->Init( argc, argv );
-
-  AttrListPrintMask mask;
 
 #if WANT_QUILL
   queryhor.setQuery(HISTORY_ALL_HOR, NULL);
@@ -322,58 +320,7 @@ main(int argc, char* argv[])
   }
   
   if(readfromfile == true) {
-	  if (!JobHistoryFileName) {
-		  JobHistoryFileName=param("HISTORY");
-	  }
-	  FILE* LogFile=fopen(JobHistoryFileName,"r");
-	  if (!LogFile) {
-		  fprintf(stderr,"History file not found or empty.\n");
-		  exit(1);
-	  }
-	  
-	  if ((!longformat) && (!customFormat)) {
-		  short_header();
-	  }
-
-	  while(!EndFlag) {
-		  if( !( ad=new AttrList(LogFile,"***", EndFlag, ErrorFlag, EmptyFlag) ) ){
-			  fprintf( stderr, "Error:  Out of memory\n" );
-			  exit( 1 );
-		  } 
-		  if( ErrorFlag ) {
-			  printf( "\t*** Warning: Bad history file; skipping malformed ad(s)\n" );
-			  ErrorFlag=0;
-			  if(ad) {
-				  delete ad;
-				  ad = NULL;
-			  }
-			  continue;
-		  } 
-		  if( EmptyFlag ) {
-			  EmptyFlag=0;
-			  if(ad) {
-				  delete ad;
-				  ad = NULL;
-			  }
-			  continue;
-		  }
-		  if (!constraint || EvalBool(ad, constraintExpr)) {
-			  if (longformat) { 
-				  ad->fPrint(stdout); printf("\n"); 
-			  } else {
-                  if (customFormat) {
-					mask.display(stdout, ad);
-                  } else {
-				    displayJobShort(ad);
-				  }
-			  }
-		  }
-		  if(ad) {
-			  delete ad;
-			  ad = NULL;
-		  }
-	  }
-	  fclose(LogFile);
+      readHistoryFromFile(JobHistoryFileName, constraint, constraintExpr);
   }
   
   
@@ -513,3 +460,64 @@ static char * getDBConnStr(char *&quillName,
 
 #endif /* WANT_QUILL */
 
+static void readHistoryFromFile(char *JobHistoryFileName, char* constraint, ExprTree *constraintExpr)
+{
+    int EndFlag   = 0;
+    int ErrorFlag = 0;
+    int EmptyFlag = 0;
+    AttrList *ad = NULL;
+
+    if (!JobHistoryFileName) {
+        JobHistoryFileName=param("HISTORY");
+    }
+    FILE* LogFile=fopen(JobHistoryFileName,"r");
+    if (!LogFile) {
+        fprintf(stderr,"History file not found or empty.\n");
+        exit(1);
+    }
+    
+    if ((!longformat) && (!customFormat)) {
+        short_header();
+    }
+    
+    while(!EndFlag) {
+        if( !( ad=new AttrList(LogFile,"***", EndFlag, ErrorFlag, EmptyFlag) ) ){
+            fprintf( stderr, "Error:  Out of memory\n" );
+            exit( 1 );
+        } 
+        if( ErrorFlag ) {
+            printf( "\t*** Warning: Bad history file; skipping malformed ad(s)\n" );
+            ErrorFlag=0;
+            if(ad) {
+                delete ad;
+                ad = NULL;
+            }
+            continue;
+        } 
+        if( EmptyFlag ) {
+            EmptyFlag=0;
+            if(ad) {
+                delete ad;
+                ad = NULL;
+            }
+            continue;
+        }
+        if (!constraint || EvalBool(ad, constraintExpr)) {
+            if (longformat) { 
+                ad->fPrint(stdout); printf("\n"); 
+            } else {
+                if (customFormat) {
+					mask.display(stdout, ad);
+                } else {
+				    displayJobShort(ad);
+                }
+            }
+        }
+        if(ad) {
+            delete ad;
+            ad = NULL;
+        }
+    }
+    fclose(LogFile);
+    return;
+}
