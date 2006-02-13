@@ -47,10 +47,16 @@
 #include "env.h"
 #include "condor_classad_util.h"
 #include "condor_ver_info.h"
+#include "directory.h"      // for StatInfo
+#include "util_lib_proto.h" // for rotate_file
+#include "iso_dates.h"
 
 extern char *Spool;
 extern char *Name;
 extern char* JobHistoryFileName;
+extern bool        DoHistoryRotation;
+extern filesize_t  MaxHistoryFileSize;
+extern int         NumberBackupHistoryFiles;
 extern Scheduler scheduler;
 extern DedicatedScheduler dedicated_scheduler;
 
@@ -91,6 +97,11 @@ static int 	MAX_PRIO_REC=INITIAL_MAX_PRIO_REC ;	// INITIAL_MAX_* in prio_rec.h
 const char HeaderKey[] = "0.0";
 
 static void AppendHistory(ClassAd*);
+static void MaybeRotateHistory(int size_to_append);
+static void RemoveExtraHistoryFiles(void);
+static int MaybeDeleteOneHistoryBackup(void);
+static bool IsHistoryFilename(const char *filename, time_t *backup_time);
+static void RotateHistory(void);
 
 // Create a hash table which, given a cluster id, tells how
 // many procs are in the cluster
@@ -3104,11 +3115,21 @@ static void AppendHistory(ClassAd* ad)
   if (!JobHistoryFileName) return;
   dprintf(D_FULLDEBUG, "Saving classad to history file\n");
 
+  // First we serialize the ad. If history file rotation is on,
+  // we'll need to know how big the ad is before we write it to the 
+  // history file. 
+  MyString ad_string;
+  int ad_size;
+  ad->sPrint(ad_string);
+  ad_size = ad_string.Length();
+
+  MaybeRotateHistory(ad_size);
+
   // save job ad to the log
   // Note that we are passing O_LARGEFILE, which lets us deal with files
   // that are larger than 2GB. On systems where O_LARGEFILE isn't defined, 
   // the Condor source defines it to be 0 which has no effect. So we'll take
-  // advantage of large files where we can, but not where we can't.
+ // advantage of large files where we can, but not where we can't.
   int fd = open(JobHistoryFileName,
                 O_WRONLY|O_CREAT|O_APPEND|O_LARGEFILE,
                 0644);
@@ -3160,6 +3181,192 @@ static void AppendHistory(ClassAd* ad)
   return;
 }
 
+// --------------------------------------------------------------------------
+// Decide if we should rotate the history file, and do the rotation if 
+// necessary.
+// --------------------------------------------------------------------------
+static void MaybeRotateHistory(int size_to_append)
+{
+    if (!JobHistoryFileName) {
+        // We aren't writing to the history file, so we will
+        // not rotate it.
+        return;
+    } else if (!DoHistoryRotation) {
+        // The user, for some reason, decided to turn off history
+        // file rotation. 
+        return;
+    } else {
+        filesize_t  history_file_size;
+        StatInfo    history_stat_info(JobHistoryFileName);
+        if (history_stat_info.Error() == SINoFile) {
+            ; // Do nothing, the history file doesn't exist
+        } else if (history_stat_info.Error() != SIGood) {
+            dprintf(D_ALWAYS, "Couldn't stat history file, will not rotate.\n");
+        } else {
+            history_file_size = history_stat_info.GetFileSize();
+            if (history_file_size + size_to_append > MaxHistoryFileSize) {
+                // Writing the new ClassAd will make the history file too 
+                // big, so we will rotate the history file after removing
+                // extra history files. 
+                dprintf(D_ALWAYS, "Will rotate history file.\n");
+                RemoveExtraHistoryFiles();
+                RotateHistory();
+            }
+        }
+    }
+    return;
+    
+}
+
+// --------------------------------------------------------------------------
+// We only keep a certain number of history files, so before we rotate the 
+// history file, we need to make sure that we get rid of any old ones, so we
+// don't go over the max once we do the rotation. 
+//
+// Our algorithm is simple (easy to debug) but might have pathological behavior.
+// We walk through the directory that the history file is in, count how many
+// history files there are, and if there are >= max, we delete the oldest. 
+// If we need to delete more than one (perhaps someone changed the configured
+// max to be smaller), then we walk through the whole directory more than once. 
+// I am willing to bet that this is rare enough that it's not worth making this
+// more complicated. 
+// --------------------------------------------------------------------------
+static void RemoveExtraHistoryFiles(void)
+{
+    int num_backups;
+
+    do {
+        num_backups = MaybeDeleteOneHistoryBackup();
+    } while (num_backups >= NumberBackupHistoryFiles);
+    return;
+}
+
+// --------------------------------------------------------------------------
+// Count the number of history file backups. Delete the oldest one if we
+// are at the maximum. See RemoveExtraHistoryFiles();
+// --------------------------------------------------------------------------
+static int MaybeDeleteOneHistoryBackup(void)
+{
+    int num_backups = 0;
+    char *history_dir = condor_dirname(JobHistoryFileName);
+
+    if (history_dir != NULL) {
+        Directory dir(history_dir);
+        const char *current_filename;
+        time_t current_time;
+        char *oldest_history_filename = NULL;
+        time_t oldest_time = 0;
+
+        // Find number of backups and oldest backup
+        for (current_filename = dir.Next(); 
+             current_filename != NULL; 
+             current_filename = dir.Next()) {
+            
+            if (IsHistoryFilename(current_filename, &current_time)) {
+                num_backups++;
+                if (oldest_history_filename == NULL 
+                    || current_time < oldest_time) {
+
+                    if (oldest_history_filename != NULL) {
+                        free(oldest_history_filename);
+                    }
+                    oldest_history_filename = strdup(current_filename);
+                    oldest_time = current_time;
+                }
+            }
+        }
+
+        // If we have too many backups, delete the oldest
+        if (oldest_history_filename != NULL && num_backups >= NumberBackupHistoryFiles) {
+            dprintf(D_ALWAYS, "Before rotation, deleting old history file %s\n",
+                    oldest_history_filename);
+            num_backups--;
+
+            if (dir.Find_Named_Entry(oldest_history_filename)) {
+                if (!dir.Remove_Current_File()) {
+                    dprintf(D_ALWAYS, "Failed to delete %s\n", oldest_history_filename);
+                    num_backups = 0; // prevent looping forever
+                }
+            } else {
+                dprintf(D_ALWAYS, "Failed to find/delete %s\n", oldest_history_filename);
+                num_backups = 0; // prevent looping forever
+            }
+        }
+        free(history_dir);
+    }
+    return num_backups;
+}
+
+// --------------------------------------------------------------------------
+// A history file should being with the base that the user specified, 
+// and it should end with an ISO time. We check both, and return the time
+// specified by the ISO time. 
+// --------------------------------------------------------------------------
+static bool IsHistoryFilename(const char *filename, time_t *backup_time)
+{
+    bool       is_history_filename;
+    const char *history_base;
+    int        history_base_length;
+
+    is_history_filename = false;
+    history_base        = condor_basename(JobHistoryFileName);
+    history_base_length = strlen(history_base);
+
+    if (   !strncmp(filename, history_base, history_base_length)
+        && filename[history_base_length] == '.') {
+        // The filename begins correctly, now see if it ends in an 
+        // ISO time
+        struct tm file_time;
+        bool is_utc;
+
+        iso8601_to_time(filename + history_base_length + 1, &file_time, &is_utc);
+        if (   file_time.tm_year != -1 && file_time.tm_mon != -1 
+            && file_time.tm_mday != -1 && file_time.tm_hour != -1
+            && file_time.tm_min != -1  && file_time.tm_sec != -1
+            && !is_utc) {
+            // This appears to be a proper history file backup.
+            is_history_filename = true;
+            *backup_time = mktime(&file_time);
+        }
+    }
+
+    return is_history_filename;
+}
+
+// --------------------------------------------------------------------------
+// Rotate the history file. This is called by MaybeRotateHistory()
+// --------------------------------------------------------------------------
+static void RotateHistory(void)
+{
+    // The job history will be named with the current time. 
+    // I hate timestamps of seconds, because they aren't readable by 
+    // humans, so we'll use ISO 8601, which is easily machine and human
+    // readable, and it sorts nicely. So first we create a representation
+    // for the current time.
+    time_t     current_time;
+    struct tm  *local_time;
+    char       *iso_time;
+
+    current_time = time(NULL);
+    local_time = localtime(&current_time);
+    iso_time = time_to_iso8601(*local_time, ISO8601_ExtendedFormat, 
+                               ISO8601_DateAndTime, false);
+
+    // First, select a name for the rotated history file
+    MyString   rotated_history_name(JobHistoryFileName);
+    rotated_history_name += '.';
+    rotated_history_name += iso_time;
+    free(iso_time); // It was malloced by time_to_iso8601()
+
+    // Now rotate the file
+    if (rotate_file(JobHistoryFileName, rotated_history_name.Value())) {
+        dprintf(D_ALWAYS, "Failed to rotate history file to %s\n",
+                rotated_history_name.Value());
+        dprintf(D_ALWAYS, "Because rotation failed, the history file may get very large.\n");
+    }
+
+    return;
+}
 
 void
 dirtyJobQueue()

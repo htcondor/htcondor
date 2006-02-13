@@ -112,6 +112,10 @@ static char * NameInEnv = NULL;
 extern char * JobHistoryFileName;
 extern char * mySubSystem;
 
+extern bool        DoHistoryRotation; 
+extern filesize_t  MaxHistoryFileSize;
+extern int         NumberBackupHistoryFiles;
+
 extern FILE *DebugFP;
 extern char *DebugFile;
 extern char *DebugLock;
@@ -9200,6 +9204,27 @@ Scheduler::Init()
 	if( ! (JobHistoryFileName = param("HISTORY")) ) {
 		  dprintf(D_FULLDEBUG, "No history file specified in config file\n" );
 	}
+
+    // If history rotation is off, then the maximum file size and
+    // number of backup files is ignored. 
+    DoHistoryRotation = param_boolean("ENABLE_HISTORY_ROTATION", true);
+
+    MaxHistoryFileSize = param_integer("HISTORY_MAX_SIZE", 
+                                       20 * 1024 * 1024); // 20MB is default
+    NumberBackupHistoryFiles = param_integer("HISTORY_NUMBER_BACKUPS", 
+                                          2,  // default
+                                          1); // minimum
+
+    if (DoHistoryRotation) {
+        dprintf(D_ALWAYS, "History file rotation is enabled.\n");
+        dprintf(D_ALWAYS, "  Maximum history file size is: %d bytes\n", 
+                (int) MaxHistoryFileSize);
+        dprintf(D_ALWAYS, "  Number of backup history files is: %d\n", 
+                NumberBackupHistoryFiles);
+    } else {
+        dprintf(D_ALWAYS, "WARNING: History file rotation is disabled and it "
+                "may grownq very large.\n");
+    }
 
 	 tmp = param( "SCHEDD_INTERVAL" );
 	 if( ! tmp ) {

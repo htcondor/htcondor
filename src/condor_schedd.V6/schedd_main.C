@@ -60,6 +60,9 @@ char* 		JobHistoryFileName = NULL;
 char*		Name = NULL;
 char*		mySubSystem = "SCHEDD";
 char*		X509Directory = NULL;
+bool        DoHistoryRotation = true;
+filesize_t  MaxHistoryFileSize = 20 * 1024 * 1024; // 20MB
+int         NumberBackupHistoryFiles = 2; // In addition to history file, how many to keep?
 
 // global objects
 Scheduler	scheduler;
