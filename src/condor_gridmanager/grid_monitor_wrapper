@@ -1,5 +1,9 @@
 #! /usr/bin/env perl
 
+# WARNING! Do not alter or remove the following comment ('Sends results...').
+#   It is used by some GRAM servers to identify the grid monitor and give
+#   it special permissions (don't restrict when it can run, allow it to
+#   stream output, etc).
 # Sends results from the grid_manager_monitor_agent back to a
 # globus-url-copy friendly URL whenever those results are updated.
 # If necessary, starts the grid_manager_monitor_agent (packaged here as
