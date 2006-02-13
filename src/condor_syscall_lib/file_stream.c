@@ -159,7 +159,7 @@ open_tcp_stream( unsigned int ip_addr, unsigned short port )
 	dprintf( D_FULLDEBUG, "Generated a data socket - fd = %d\n", fd );
 		
 		/* Now we need to bind to the right interface. */
-	if( ! _condor_local_bind(fd) ) {
+	if( ! _condor_local_bind(TRUE, fd) ) {
 			/* error in bind() */
 		close(fd);
 		SetSyscalls( scm );
