@@ -685,6 +685,25 @@ File System Configuration File Entries''.
   % Default definition in config file: $(SPOOL)/history
   % Result if not defined or RHS is empty: no history file is kept.
 
+\item[\Macro{ENABLE\_HISTORY\_ROTATION}] \label{param:EnableHistoryRotation} 
+  If this is defined to be true, then the
+  history file will be rotated. If it is false, then it will not be
+  rotated, and it will grow indefinitely, to the limits allowed by the
+  operating system. If this is not defined, it is assumed to be true.
+
+\item[\Macro{HISTORY\_MAX\_SIZE}] \label{param:HistoryMaxSize}
+  Defines the maximum size for the history file, in bytes. It defaults
+  to 20MB. This parameter is only used if history file rotation is
+  enabled. 
+
+\item[\Macro{HISTORY\_NUMBER\_BACKUPS}] \label{param:HistoryNumberBackups}
+  When history file rotation is turned on, this controls how many
+  backup files there are. It default to 2, which means that there may
+  be up to three history files (two backups, plus the history file
+  that is being currently written to). When the history file is
+  rotated, and this rotation would cause the number of backups to be
+  too large, the oldest file is removed. 
+
 \item[\Macro{DEFAULT\_DOMAIN\_NAME}] \label{param:DefaultDomainName}
   If you do not use a fully qualified name in file \File{/etc/hosts}
   (or NIS, etc.) for either your official hostname or as an
