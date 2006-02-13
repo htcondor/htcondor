@@ -66,7 +66,7 @@ pid=$!
 
 # Give sshd some time
 sleep 2
-if grep "^Server listening on 0.0.0.0 port" sshd.out > /dev/null 2>&1
+if grep "Server listening" sshd.out > /dev/null 2>&1
 then
 	done=1
 else
@@ -121,7 +121,7 @@ then
 				# Erase the contact file from the spool directory, in case
 				# this job is held and rescheduled
 	
-				$CONDOR_CHIRP put /dev/null $_CONDOR_REMOTE_SPOOL_DIR/contact
+				$CONDOR_CHIRP remove $_CONDOR_REMOTE_SPOOL_DIR/contact
 			else
 				sleep 1
 			fi
