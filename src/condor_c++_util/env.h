@@ -138,6 +138,9 @@ class Env {
 		// receiver.
 	bool InsertEnvIntoClassAd( ClassAd *ad, MyString *error_msg, char const *opsys=NULL, CondorVersionInfo *condor_version=NULL ) const;
 
+		// Returns true if specified condor version requires V1 env syntax.
+	static bool CondorVersionRequiresV1(CondorVersionInfo const &condor_version);
+
 		// Modern style: space delimited (and quoted as necessary).
 		// If mark_v2=true, then result will be identifiable as V2 by
 		// MergeV1or2()

@@ -430,6 +430,13 @@ ArgList::AppendArgsFromClassAd(ClassAd const *ad,MyString *error_msg)
 }
 
 bool
+ArgList::CondorVersionRequiresV1(CondorVersionInfo const &condor_version)
+{
+		// Is it earlier than 6.7.15?
+	return !condor_version.built_since_version(6,7,15);
+}
+
+bool
 ArgList::InsertArgsIntoClassAd(ClassAd *ad,CondorVersionInfo *condor_version,MyString *error_msg)
 {
 	bool has_args1 = ad->Lookup(ATTR_JOB_ARGUMENTS1) != NULL;
@@ -437,17 +444,7 @@ ArgList::InsertArgsIntoClassAd(ClassAd *ad,CondorVersionInfo *condor_version,MyS
 
 	bool requires_args1 = false;
 	if(condor_version) {
-		int major = condor_version->getMajorVer();
-		int minor = condor_version->getMinorVer();
-		int sub = condor_version->getSubMinorVer();
-
-		// Is it earlier than 6.7.15?
-		if( major <  6 ||
-			(major == 6 && minor < 7) ||
-			(major == 6 && minor == 7 && sub < 15))
-		{
-			requires_args1 = true;
-		}
+		requires_args1 = CondorVersionRequiresV1(*condor_version);
 	}
 	else if(input_was_v1) {
 		requires_args1 = true;

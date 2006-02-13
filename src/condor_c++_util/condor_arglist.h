@@ -168,6 +168,9 @@ class ArgList {
 	bool AppendArgsFromClassAd(ClassAd const *ad,MyString *error_msg);
 	bool InsertArgsIntoClassAd(ClassAd *ad,CondorVersionInfo *condor_version,MyString *error_string);
 
+		// Returns true if specified condor version requires V1 args syntax.
+	static bool CondorVersionRequiresV1(CondorVersionInfo const &condor_version);
+
 		// Get arguments from ClassAd for descriptional purposes.
 	static void GetArgsStringForDisplay(ClassAd const *ad,MyString *result);
 

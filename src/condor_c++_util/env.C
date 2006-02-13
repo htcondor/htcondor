@@ -99,6 +99,13 @@ Env::MergeFrom( const ClassAd *ad, MyString *error_msg )
 }
 
 bool
+Env::CondorVersionRequiresV1(CondorVersionInfo const &condor_version)
+{
+		// Is it earlier than 6.7.15?
+	return !condor_version.built_since_version(6,7,15);
+}
+
+bool
 Env::InsertEnvIntoClassAd( ClassAd *ad, MyString *error_msg, char const *opsys, CondorVersionInfo *condor_version) const
 {
 
@@ -107,17 +114,7 @@ Env::InsertEnvIntoClassAd( ClassAd *ad, MyString *error_msg, char const *opsys, 
 
 	bool requires_env1 = false;
 	if(condor_version) {
-		int major = condor_version->getMajorVer();
-		int minor = condor_version->getMinorVer();
-		int sub = condor_version->getSubMinorVer();
-
-		// Is it earlier than 6.7.15?
-		if( major <  6 ||
-			(major == 6 && minor < 7) ||
-			(major == 6 && minor == 7 && sub < 15))
-		{
-			requires_env1 = true;
-		}
+		requires_env1 = CondorVersionRequiresV1(*condor_version);
 	}
 
 	if(requires_env1) {

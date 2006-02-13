@@ -2359,7 +2359,7 @@ SetJavaVMArgs()
 		exit( 1 );
 	}
 
-	if(args.InputWasV1()) {
+	if(args.InputWasV1() || args.CondorVersionRequiresV1(MySchedd->version())) {
 		args_success = args.GetArgsStringV1Raw(&value,&error_msg);
 		if(!value.IsEmpty()) {
 			buffer.sprintf("%s = \"%s\"",ATTR_JOB_JAVA_VM_ARGS1,
@@ -3060,7 +3060,7 @@ SetArguments()
 
 	MyString buffer;
 	MyString value;
-	if(arglist.InputWasV1()) {
+	if(arglist.InputWasV1() || arglist.CondorVersionRequiresV1(MySchedd->version())) {
 		args_success = arglist.GetArgsStringV1Raw(&value,&error_msg);
 		buffer.sprintf("%s = \"%s\"",ATTR_JOB_ARGUMENTS1,
 					   value.EscapeChars("\"",'\\').Value());
@@ -3222,7 +3222,7 @@ SetEnvironment()
 
 	MyString newenv;
 	MyString newenv_raw;
-	if(envobject.InputWasV1()) {
+	if(envobject.InputWasV1() || envobject.CondorVersionRequiresV1(MySchedd->version())) {
 		env_success = envobject.getDelimitedStringV1Raw(&newenv_raw,&error_msg);
 		newenv.sprintf("%s = \"%s\"",
 					   ATTR_JOB_ENVIRONMENT1,
@@ -3428,7 +3428,7 @@ SetTDP( void )
 	}
 
 	MyString args_value;
-	if(args.InputWasV1()) {
+	if(args.InputWasV1() || args.CondorVersionRequiresV1(MySchedd->version())) {
 		args_success = args.GetArgsStringV1Raw(&args_value,&error_msg);
 		if(!args_value.IsEmpty()) {
 			buf.sprintf("%s = \"%s\"",ATTR_TOOL_DAEMON_ARGS1,
