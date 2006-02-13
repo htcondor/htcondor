@@ -411,7 +411,7 @@ GT4Job::GT4Job( ClassAd *classad )
 	myResource = GT4Resource::FindOrCreateResource( resourceManagerString,
 													jobProxy->subject->subject_name);
 	if ( myResource == NULL ) {
-		error_string = "Failed to initialized GT4Resource object";
+		error_string = "Failed to initialize GT4Resource object";
 		goto error_exit;
 	}
 
