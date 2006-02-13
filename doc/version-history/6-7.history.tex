@@ -21,6 +21,16 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item The history file, which is a flat file for each submitting
+computer that stores information about all jobs completed on that
+computer is now rotated automatically. By default, the file will be
+rotated when it is more than 20MB and two backup files will be allowed
+(for a total of three history files with 60MB of data). This means
+that older history will be lost once it is rotated out. You can
+disable the history file rotation if you like, and you can change the
+number and size of the backup files. \Condor{history} has been updated
+to understand these backup history files. 
+
 \item Added a \Opt{-format} option to the \Condor{history} command which
 behaves just like the -format option to \Condor{status} and \Condor{q}
 commands.
