@@ -89,6 +89,14 @@ COLLECTOR\_QUERY\_WORKERS has no effect on non-UNIX systems (Windows).
 if the GridJobId attribute for a gt2 job became mangled. The cause of
 mangling seen by some users is still unknown.
 
+\item Submission from 6.7.15 or 6.7.16 \Condor{submit} to a 6.7.14 or
+earlier \Condor{schedd} was not working unless the submit file
+explicitly set both arguments and environment using the old syntax.
+Now \Condor{submit} automatically converts the environment and
+argument syntax when necessary.  If the conversion is not possible,
+due to limitations in the old syntax, \Condor{submit} will generate
+an error message and refuse to complete the submission.
+
 \end{itemize}
 
 \noindent Known Bugs:
