@@ -1,3 +1,9 @@
++ See UniqueProcessId.pdf in this folder for a more indepth discussion of
+how the new ProcAPI ProcessId code works.  The functionality discussed
+therein is available through  ProcAPI ProcessId functions and the
+ProcessId object itself.  For a usage example see uniq_pid_tool_main.C
+in deployment_tools.
+  
 
 + Here is a testing algorithm that used to be in ProcAPI.C. We NEVER
 compile that code with this flag, and I suspect these alghorithms were

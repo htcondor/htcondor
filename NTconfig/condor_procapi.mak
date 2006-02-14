@@ -38,6 +38,7 @@ ALL : "$(OUTDIR)\condor_procapi.lib"
 
 CLEAN :
 	-@erase "$(INTDIR)\procapi.obj"
+	-@erase "$(INTDIR)\processid.obj"
 	-@erase "$(INTDIR)\procinterface.obj"
 	-@erase "$(INTDIR)\vc60.idb"
 	-@erase "$(INTDIR)\vc60.pdb"
@@ -88,7 +89,8 @@ LIB32=link.exe -lib
 LIB32_FLAGS=/nologo /out:"$(OUTDIR)\condor_procapi.lib" 
 LIB32_OBJS= \
 	"$(INTDIR)\procapi.obj" \
-	"$(INTDIR)\procinterface.obj"
+	"$(INTDIR)\procinterface.obj" \
+	"$(INTDIR)\processid.obj"
 
 "$(OUTDIR)\condor_procapi.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -108,6 +110,7 @@ ALL : "$(OUTDIR)\condor_procapi.lib"
 
 CLEAN :
 	-@erase "$(INTDIR)\procapi.obj"
+	-@erase "$(INTDIR)\processid.obj"
 	-@erase "$(INTDIR)\procinterface.obj"
 	-@erase "$(INTDIR)\vc60.idb"
 	-@erase "$(OUTDIR)\condor_procapi.lib"
@@ -157,7 +160,8 @@ LIB32=link.exe -lib
 LIB32_FLAGS=/nologo /out:"$(OUTDIR)\condor_procapi.lib" 
 LIB32_OBJS= \
 	"$(INTDIR)\procapi.obj" \
-	"$(INTDIR)\procinterface.obj"
+	"$(INTDIR)\procinterface.obj" \
+	"$(INTDIR)\processid.obj"
 
 "$(OUTDIR)\condor_procapi.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -180,6 +184,12 @@ LIB32_OBJS= \
 SOURCE=..\src\condor_procapi\procapi.C
 
 "$(INTDIR)\procapi.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\src\condor_procapi\processid.C
+
+"$(INTDIR)\processid.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 

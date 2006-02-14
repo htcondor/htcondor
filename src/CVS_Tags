@@ -3,6 +3,10 @@
 	The state of the V6_7-branch before merging V6_7-uniq_pid-branch
 	into it at tag V6_7-pre_merge-V6_7-uniq_pid-merge-1.
 
+2/14/06 V6_7-uniq_pid-merge-1
+   The state of the V6_7-uniq_pid-branch when merged into the 
+   V6_7-branch.	
+
 02/03/06 V6_7_16
   The official 6.7.16 release.  The packages for all platforms came
   from NMI build #18640.  The version strings for this release are:

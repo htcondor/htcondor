@@ -84,6 +84,7 @@ CLEAN :
 	-@erase "$(INTDIR)\enum_utils.obj"
 	-@erase "$(INTDIR)\env.obj"
 	-@erase "$(INTDIR)\error_utils.obj"
+	-@erase "$(INTDIR)\exponential_backoff.obj"
 	-@erase "$(INTDIR)\extra_param_info.obj"
 	-@erase "$(INTDIR)\file_lock.obj"
 	-@erase "$(INTDIR)\file_transfer.obj"
@@ -291,7 +292,8 @@ LIB32_OBJS= \
 	"$(INTDIR)\user_log.obj" \
 	"$(INTDIR)\utc_time.obj" \
 	"$(INTDIR)\which.obj" \
-	"$(INTDIR)\windows_firewall.obj"
+	"$(INTDIR)\windows_firewall.obj" \
+	"$(INTDIR)\exponential_backoff.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -357,6 +359,7 @@ CLEAN :
 	-@erase "$(INTDIR)\enum_utils.obj"
 	-@erase "$(INTDIR)\env.obj"
 	-@erase "$(INTDIR)\error_utils.obj"
+	-@erase "$(INTDIR)\exponential_backoff.obj"
 	-@erase "$(INTDIR)\extra_param_info.obj"
 	-@erase "$(INTDIR)\file_lock.obj"
 	-@erase "$(INTDIR)\file_transfer.obj"
@@ -563,7 +566,8 @@ LIB32_OBJS= \
 	"$(INTDIR)\user_log.obj" \
 	"$(INTDIR)\utc_time.obj" \
 	"$(INTDIR)\which.obj" \
-	"$(INTDIR)\windows_firewall.obj"
+	"$(INTDIR)\windows_firewall.obj" \
+	"$(INTDIR)\exponential_backoff.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -904,6 +908,12 @@ SOURCE="..\src\condor_c++_util\env.C"
 SOURCE="..\src\condor_c++_util\error_utils.C"
 
 "$(INTDIR)\error_utils.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE="..\src\condor_c++_util\exponential_backoff.C"
+
+"$(INTDIR)\exponential_backoff.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 

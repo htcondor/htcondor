@@ -32,6 +32,7 @@
 #include "HashTable.h"
 #include "extArray.h"
 #include "condor_pidenvid.h"
+#include "processid.h"
 
 #ifndef WIN32 // all the below is for UNIX
 
@@ -165,7 +166,17 @@ enum {
 	PROCAPI_GARBLED,
 
 	// an error happened, but we didn't specify exactly what it was
-	PROCAPI_UNSPECIFIED
+	PROCAPI_UNSPECIFIED,
+
+		// the process is definitely alive
+	PROCAPI_ALIVE,
+
+		// the process is definitely dead
+	PROCAPI_DEAD,
+	
+		// it is uncertain whether the process is 
+		// alive or dead
+	PROCAPI_UNCERTAIN
 };
 
 
@@ -252,6 +263,46 @@ struct procInfo {
 
 /// piPTR is typedef'ed as a pointer to a procInfo structure.
 typedef struct procInfo * piPTR;
+
+/*
+  Special structure for holding the raw, unchecked, unconverted,
+  values returned by the OS when inquiring about a process.
+  The range, units and in some cases even the type of each field 
+  are determined by the OS.
+*/
+typedef struct procInfoRaw{
+	  unsigned long imgsize;
+	  unsigned long rssize;
+	  long minfault;
+	  long majfault;
+		  // some systems return these times
+		  // in a combination of 2 units
+		  // *_1 is always the larger units
+	  long user_time_1;
+	  long user_time_2;
+	  long sys_time_1;
+	  long sys_time_2;
+
+	  pid_t pid;
+	  pid_t ppid;
+	  long creation_time;
+	  uid_t owner;
+
+#ifndef WIN32
+	  long sample_time;
+#endif // not defined WIN32
+// Windows does it different
+#ifdef WIN32 
+	  double sample_time;
+	  double object_frequency;
+	  double cpu_time;
+#endif //WIN32
+
+// special process flags for Linux
+#ifdef LINUX
+	  unsigned long proc_flags;
+#endif //LINUX
+}procInfoRaw;
 
 /* The pidlist struct is used for getting all the pids on a machine
    at once.  It is used by getpidlist() */
@@ -388,6 +439,7 @@ class ProcAPI {
       @see procInfo
    */
   static void printProcInfo ( piPTR pi );
+  static void printProcInfo ( FILE* fp, piPTR pi );
 
   /** This function returns a list of pids that are 'descendents' of that pid.
       I call this a 'family' of pids.  This list is put into pidFamily, which
@@ -396,7 +448,7 @@ class ProcAPI {
 
       @param pid The 'elder' pid of the family you want a list of pids for.
       @param pidFamily An array for holding pids in the family
-      @return A -1 is returned on failure, 0 otherwise.
+      @return A -1 is returned on failure, otherwise the number of pids in the array.
   */
   static int getPidFamily( pid_t pid, PidEnvID *penvid, pid_t *pidFamily,
   			int &status );
@@ -405,9 +457,48 @@ class ProcAPI {
    	
 	 @param pidFamily An array for holding pids in the family
 	 @param searchLogin A string specifying the owner who's pids we want
-	 @return A -1 is returned on failure, 0 otherwise.
+	 @return A -1 is returned on failure, otherwise the number of pids in the array.
   */
   static int getPidFamilyByLogin( const char *searchLogin, pid_t *pidFamily );
+
+	  /*	
+		Creates a ProcessId from the given pid.
+		This process id can be used at a later time
+		to determine whether a process is alive or dead.
+		@param pid The pid of the process we want an ProcessId for
+		@param pProcId an out parameter that is a pointer to a ProcessId.  
+		This call initializes heap memory only in the case of success.
+		@param status an out paramter that contains the failure code.
+		@param precision_range is a parameter that specifies allowable precision error in the processId.  
+		If it is NULL ProcAPI uses a system default.
+		@return PROCAPI_SUCCESS or PROCAPI_FAILURE
+	  */
+  static int createProcessId(pid_t pid, ProcessId*& pProcId, int& status, int* precision_range = 0);
+  
+	  /*
+		Determines whether the given process id is alive or dead.
+		@param procId is the process id we are interested in
+		@param status is an out parameter that contains PROCAPI_ALIVE, PROCAPI_DEAD, or PROCAPI_UNCERTAIN.
+		@return PROCAPI_SUCCESS or PROCAPI_FAILURE
+	  */
+  static int isAlive(const ProcessId& procId, int& status);
+  
+	  /*
+		Confirms that this process id is unique.  
+  
+		An entity MUST ensure that this process is not reaped for the
+		amount of time returned by computeWaitTime() before confirming
+		a this id.  Typically, the only entity that can confirm
+		another process is its parent, since it is the only one that
+		can ensure that the process is not reaped.  Although, any
+		entity that has fail-safe mechanism of ensuring the process
+		hasn't been reaped, outside of the functions provided in this
+		class, can confirm it.  Think hard before you confirm a
+		process you are not the parent of.
+	  */
+  static int confirmProcessId(ProcessId& procId, int& status);
+  
+  
 
 #ifdef WANT_STANDALONE_DEBUG
   /** This is a menu driver for tests 1-7.  Please don't try and break it. */
@@ -468,6 +559,56 @@ class ProcAPI {
 
   static uid_t getFileOwner(int fd); // used to get process owner from /proc
   static void closeFamilyHandles(); // closes all open handles for the family
+
+  /**  
+	Returns the raw OS stored data about the given pid.  Does no conversion
+	of units, performs no sanity checking, merely gets the raw data
+	from the OS.  This ensures that the values returned, if faulty, are
+	faulty due to the OS rather than due to any conversions or sanity
+	checks.
+
+	@param pid The pid of the process you want info on.
+	@param procRaw  A reference to a procInfoRaw structure.
+	@param status An indicator of the reason why a success or failure happened
+	@return A 0 on success, and number less than 0 on failure.
+ */
+  static int getProcInfoRaw(pid_t pid, procInfoRaw& procRaw, int &status);
+
+	  /**
+		 Clears the memory of a procInfoRaw struct.
+		 @param procRaw A reference to a procInfoRaw structure.
+	  
+	  */
+  static void initProcInfoRaw(procInfoRaw& procRaw);
+
+  
+	  /**
+		 Generates a control time by which a process birthday can be
+		 shifted in case of time shifting due to ntpd or the admin.
+		 @param ctl_time out parameter that is filled with the control time
+		 @param status out parameter that is filled with the failure code on failure.
+		 @return A 0 on success, and a number less than 0 on failure
+	   */
+  static int generateControlTime(long& clt_time,  int& status);
+
+	  /**
+		 Generates a confirm time that confirms the process was alive
+		 at said time.  The confirm time is in the same time units and time
+		 space as the birthday.
+		 @param confirm_time out parameter that is filled with the confirm time
+		 @param status out parameter that is filled with the failure code on failure.
+		 @return A 0 on success, and a number less than 0 on failure
+	   */
+  static int generateConfirmTime(long& confirm_time, int& status);
+
+#ifdef LINUX
+	  // extracts the environment from the system
+	  // Currently only have a linux implementation
+  static int fillProcInfoEnv(piPTR);
+	  // updates the statically stored boottime variable if neccessary
+	  // something similar probably belongs in sys_api
+  static int checkBootTime(long now);
+#endif //LINUX
 
   // works with the hashtable; finds cpuusage, maj/min page faults.
   static void do_usage_sampling( piPTR& pi, 
@@ -550,13 +691,19 @@ class ProcAPI {
   static long unsigned boottime; // this is used only in linux.  It
 		// represents the number of seconds after the epoch that the
 		// machine was booted.  Used in age calculation.
-  static long unsigned boottime_expiration; // the boottime value will
+  static long boottime_expiration; // the boottime value will
 		// change if the time is adjusted on this machine (by ntpd or afs,
 		// for example), so we recompute it when our value expires
 
 #endif // LINUX
 
 #endif // not defined WIN32
+
+  static int MAX_SAMPLES;
+  static int DEFAULT_PRECISION_RANGE;
+
+	  // number of birthday time units per second for the given OS
+  static double TIME_UNITS_PER_SEC;
 
 }; 
 

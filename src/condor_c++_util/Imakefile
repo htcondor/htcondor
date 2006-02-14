@@ -160,11 +160,11 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	$(QUILL_OBJS) \
 	New_classads_obj setenv.o condor_id.o build_job_env.o job_lease.o \
 	gahp_common.o \
-	condor_arglist.o store_cred.o
+	condor_arglist.o store_cred.o \
+	exponential_backoff.o
 
 library_target(cplus_lib.a,$(OBJ))
 library_target(liburl.a,$(URL_OBJ))
-
 library_target(libcondorapi.a,$(CONLIBAPI_OBJ))
 
 #if HAVE_CC_SHARED_FLAG

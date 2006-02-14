@@ -1,0 +1,88 @@
+PROGRAMS = 	uniq_pid_command
+
+all_target($(PROGRAMS))
+
+CFLAGS = $(STD_C_FLAGS)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
+LIB = $(STD_LIBS)
+
+OBJ = uniq_pid_tool_main.o
+
+
+/* C++ Tools */
+c_plus_target(uniq_pid_command,$(OBJ),$(LIB))
+
+release_target(uniq_pid_command,sbin,EXECUTABLE_MODE)
+strip_target(uniq_pid_command,sbin,EXECUTABLE_MODE)
+static_target(uniq_pid_command,$(OBJ),$(LIB),$(STATIC_DIR)/sbin)
+
+release_link_target($(RELEASE_DIR)/sbin/uniq_pid_command,sbin,uniq_pid_midwife)
+strip_link_target($(RELEASE_DIR)/sbin/uniq_pid_command,sbin,uniq_pid_midwife)
+static_link_target($(RELEASE_DIR)/sbin/uniq_pid_command,sbin,uniq_pid_midwife)
+
+release_link_target($(RELEASE_DIR)/sbin/uniq_pid_command,sbin,uniq_pid_undertaker)
+strip_link_target($(RELEASE_DIR)/sbin/uniq_pid_command,sbin,uniq_pid_undertaker)
+static_link_target($(RELEASE_DIR)/sbin/uniq_pid_command,sbin,uniq_pid_undertaker)
+
+/* Perl Tools */
+release_copy_target(cleanup_release,sbin,cleanup_release,EXECUTABLE_MODE)
+strip_copy_target(cleanup_release,sbin,cleanup_release,EXECUTABLE_MODE)
+static_copy_target(cleanup_release,sbin,cleanup_release,EXECUTABLE_MODE)
+
+release_copy_target(condor_local_stop,sbin,condor_local_stop,EXECUTABLE_MODE)
+strip_copy_target(condor_local_stop,sbin,condor_local_stop,EXECUTABLE_MODE)
+static_copy_target(condor_local_stop,sbin,condor_local_stop,EXECUTABLE_MODE)
+
+release_copy_target(condor_cleanup_local,sbin,condor_cleanup_local,EXECUTABLE_MODE)
+strip_copy_target(condor_cleanup_local,sbin,condor_cleanup_local,EXECUTABLE_MODE)
+static_copy_target(condor_cleanup_local,sbin,condor_cleanup_local,EXECUTABLE_MODE)
+
+release_copy_target(condor_cold_start,sbin,condor_cold_start,EXECUTABLE_MODE)
+strip_copy_target(condor_cold_start,sbin,condor_cold_start,EXECUTABLE_MODE)
+static_copy_target(condor_cold_start,sbin,condor_cold_start,EXECUTABLE_MODE)
+
+release_copy_target(condor_cold_stop,sbin,condor_cold_stop,EXECUTABLE_MODE)
+strip_copy_target(condor_cold_stop,sbin,condor_cold_stop,EXECUTABLE_MODE)
+static_copy_target(condor_cold_stop,sbin,condor_cold_stop,EXECUTABLE_MODE)
+
+release_copy_target(condor_config_bind,sbin,condor_config_bind,EXECUTABLE_MODE)
+strip_copy_target(condor_config_bind,sbin,condor_config_bind,EXECUTABLE_MODE)
+static_copy_target(condor_config_bind,sbin,condor_config_bind,EXECUTABLE_MODE)
+
+release_copy_target(flock_midwife,sbin,flock_midwife,EXECUTABLE_MODE)
+strip_copy_target(flock_midwife,sbin,flock_midwife,EXECUTABLE_MODE)
+static_copy_target(flock_midwife,sbin,flock_midwife,EXECUTABLE_MODE)
+
+release_copy_target(flock_undertaker,sbin,flock_undertaker,EXECUTABLE_MODE)
+strip_copy_target(flock_undertaker,sbin,flock_undertaker,EXECUTABLE_MODE)
+static_copy_target(flock_undertaker,sbin,flock_undertaker,EXECUTABLE_MODE)
+
+release_copy_target(condor_install_local,sbin,condor_install_local,EXECUTABLE_MODE)
+strip_copy_target(condor_install_local,sbin,condor_install_local,EXECUTABLE_MODE)
+static_copy_target(condor_install_local,sbin,condor_install_local,EXECUTABLE_MODE)
+
+release_copy_target(condor_local_start,sbin,condor_local_start,EXECUTABLE_MODE)
+strip_copy_target(condor_local_start,sbin,condor_local_start,EXECUTABLE_MODE)
+static_copy_target(condor_local_start,sbin,condor_local_start,EXECUTABLE_MODE)
+
+release_copy_target(install_release,sbin,install_release,EXECUTABLE_MODE)
+strip_copy_target(install_release,sbin,install_release,EXECUTABLE_MODE)
+static_copy_target(install_release,sbin,install_release,EXECUTABLE_MODE)
+
+/* Perl libaries */
+release_copy_target(Execute.pm,lib,Execute.pm,OBJECT_MODE)
+strip_copy_target(Execute.pm,lib,Execute.pm,OBJECT_MODE)
+static_copy_target(Execute.pm,lib,Execute.pm,OBJECT_MODE)
+
+release_copy_target(FileLock.pm,lib,FileLock.pm,OBJECT_MODE)
+strip_copy_target(Execute.pm,lib,Execute.pm,OBJECT_MODE)
+static_copy_target(Execute.pm,lib,Execute.pm,OBJECT_MODE)
+
+
+html:
+release::
+stripped:: 
+static:: 
+clean::
+
+

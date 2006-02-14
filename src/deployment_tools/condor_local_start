@@ -28,7 +28,7 @@
 #***
 use strict;
 use FindBin;
-use lib ($FindBin::Bin, "$FindBin::Bin/lib");
+use lib ($FindBin::Bin, "$FindBin::Bin/lib", "$FindBin::Bin/../lib");
 use Execute;
 use Getopt::Long;
 use File::Find;

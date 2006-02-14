@@ -36,7 +36,7 @@ my $USAGE =
     "[-basedir base_dir]\n".
     "[-localdir local_dir] [-runlocalconfig config_file]\n".
     "[-cleaninstall] [-cleanlocal] [-stop]\n".
-    "[-logarchive] [-spoolarchive] [-execarchive]\n".
+    "[-logarchive archive] [-spoolarchive archive] [-execarchive archive]\n".
     "[-linklock] [-flock] [-pid] [-artifact artifact_file]\n".
     "[-log install_log]\n".
     "[-nogurl] [-globuslocation globus_location]\n".

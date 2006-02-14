@@ -82,7 +82,7 @@ TEST_SUITE_BASE = test_suite_base
 		tools KbddProgs collector.V6 PvmProgs dagman userlog Eventd \
 		GlobusProgs starter.V6.1 shadow.V6.1 dcskel c-gahp had \
 		CreddProgs StorkProgs \
-		QuillProgs
+		QuillProgs DeploymentTools
 
 #define Libraries \
 		util_lib daemon_core.V6 daemon_client classad c++_util	\
@@ -287,6 +287,8 @@ object_dir_target(condor_sdk)
 #if WANT_STORK
 object_target(Stork,stork)
 #endif
+
+object_target(DeploymentTools,deployment_tools)
 
 single_target(condor_procapi,libprocapi.a)
 single_target(condor_sysapi,libsysapi.a)
