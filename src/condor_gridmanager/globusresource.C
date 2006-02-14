@@ -29,8 +29,6 @@
 #include "globusresource.h"
 #include "gridmanager.h"
 
-#define DEFAULT_MAX_PENDING_SUBMITS_PER_RESOURCE	5
-#define DEFAULT_MAX_SUBMITTED_JOBS_PER_RESOURCE		100
 #define DEFAULT_MAX_JOBMANAGERS_PER_RESOURCE		10
 
 // If the grid_monitor appears hosed, how long do we
