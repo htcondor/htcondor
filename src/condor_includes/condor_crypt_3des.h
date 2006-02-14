@@ -24,6 +24,8 @@
 #ifndef CONDOR_CRYPTO_3DES_H
 #define CONDOR_CRYPTO_3DES_H
 
+#if defined(CONDOR_3DES_ENCRYPTION)
+
 #include "condor_common.h"
 #include "condor_crypt.h"          // base class
 #include <openssl/des.h>
@@ -67,5 +69,7 @@ class Condor_Crypt_3des : public Condor_Crypt_Base {
     int               num_;
 };
 
+
+#endif /* defined(CONDOR_3DES_ENCRYPTION) */
 
 #endif /* CONDOR_CRYPTO_3DES_H */
