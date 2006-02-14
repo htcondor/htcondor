@@ -1,4 +1,9 @@
 02/14/06
+	V6_7-post_merge-V6_7-uniq_pid-merge-1
+	The state of V6_7-branch AFTER the first merge of the
+	V6_7-uniq_pid-branch.
+
+02/14/06
 	V6_7-pre_merge-V6_7-uniq_pid-merge-1
 	The state of the V6_7-branch before merging V6_7-uniq_pid-branch
 	into it at tag V6_7-pre_merge-V6_7-uniq_pid-merge-1.
