@@ -2,6 +2,7 @@
 {View log of condor jobs completed to date}
 \Synopsis \SynProg{\Condor{history}}
 \oOpt{-help} \oOpt{-l} \oOptArg{-f}{filename}
+\oOptArg{-format}{formatString AttributeName}
 \oOptArg{-completedsince}{postgrestimestamp}
 \oArg{-constraint expr \Bar cluster \Bar cluster.process \Bar owner}
 
@@ -37,6 +38,7 @@ specified boolean expression.
     \OptItem{\Opt{-help}}{Get a brief description of the supported options}
     \OptItem{\OptArg{-f}{filename}}{Use the specified file instead of the default history file}
     \OptItem{\OptArg{-constraint}{expr}}{Display jobs that satisfy the expression}
+    \OptItem{\OptArg{-format}{formatSpec}{AttributeName}}{display jobs with a custom format. See \Condor{q} man page for details.}
     \OptItem{\Opt{-l}}{Display job ads in long format}
     \OptItem{\OptArg{-completedsince}{postgrestimestamp}}{Display only job
       ads that were in the Completed job state on or after the date and
