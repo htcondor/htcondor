@@ -173,7 +173,7 @@ int Condor_Auth_X509 :: wrap(char*  data_in,
     gss_buffer_t    output_token      = &output_token_desc;
     
     if (!isValid())
-        return GSS_S_FAILURE;	
+        return FALSE;	
     
     input_token->value  = (void *)data_in;
     input_token->length = length_in;
@@ -189,7 +189,8 @@ int Condor_Auth_X509 :: wrap(char*  data_in,
     data_out = (char*)output_token -> value;
     length_out = output_token -> length;
 
-    return major_status;
+	// return TRUE on success
+    return (major_status == GSS_S_COMPLETE);
 }
     
 int Condor_Auth_X509 :: unwrap(char*  data_in, 
@@ -206,7 +207,7 @@ int Condor_Auth_X509 :: unwrap(char*  data_in,
     gss_buffer_t    output_token      = &output_token_desc;
     
     if (!isValid()) {
-        return GSS_S_FAILURE;
+        return FALSE;
     }
     
     input_token -> value = (void *)data_in;
@@ -223,7 +224,8 @@ int Condor_Auth_X509 :: unwrap(char*  data_in,
     data_out = (char*)output_token -> value;
     length_out = output_token -> length;
 
-    return major_status;
+	// return TRUE on success
+    return (major_status == GSS_S_COMPLETE);
 }
 
 int Condor_Auth_X509 :: endTime() const
