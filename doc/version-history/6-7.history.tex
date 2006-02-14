@@ -107,6 +107,9 @@ argument syntax when necessary.  If the conversion is not possible,
 due to limitations in the old syntax, \Condor{submit} will generate
 an error message and refuse to complete the submission.
 
+\item \Condor{submit} now returns an error if the executable file
+specified in the submit file exists but is zero length.
+
 \end{itemize}
 
 \noindent Known Bugs:
