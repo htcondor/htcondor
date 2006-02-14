@@ -195,7 +195,7 @@ int Condor_Auth_FS::authenticate(const char * remoteHost, CondorError* errstack)
 					// we could have an else that fails here, but we may as well still
 					// check for the file -- this was just an attempt to make NFS sync.
 					// if the file still isn't there, we'll fail anyways.
-					dprintf( D_ALWAYS, "FS_REMOTE: warning, failed to make temp file %s\n");
+					dprintf( D_ALWAYS, "FS_REMOTE: warning, failed to make temp file %s\n", filename_inout );
 				}
 
 				free (filename_inout);
