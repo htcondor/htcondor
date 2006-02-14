@@ -89,6 +89,8 @@ template class HashTable<HashKey, GlobusJob *>;
 template class HashBucket<HashKey, GlobusJob *>;
 template class HashTable<HashKey, GlobusResource *>;
 template class HashBucket<HashKey, GlobusResource *>;
+template class List<GlobusJob>;
+template class Item<GlobusJob>;
 
 template class HashTable<HashKey, GT3Resource *>;
 template class HashBucket<HashKey, GT3Resource *>;

@@ -577,6 +577,11 @@ GRIDMANAGER_LOG = /tmp/GridmanagerLog.$(USERNAME)
 ##  Various other settings that the Condor-G can use.
 ##--------------------------------------------------------------------
 
+## For grid-type gt2 jobs (pre-WS GRAM), limit the number of jobmanager
+## processes the gridmanager will let run on the headnode. Letting too
+## many jobmanagers run causes severe load on the headnode.
+GRIDMANAGER_MAX_JOBMANAGERS_PER_RESOURCE = 10
+
 ## If we're talking to a Globus 2.0 resource, Condor-G will use the new
 ## version of the GRAM protocol. The first option is how often to check the
 ## proxy on the submit site of things. If the GridManager discovers a new

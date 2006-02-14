@@ -139,6 +139,7 @@ static char *GMStateNames[] = {
 #define GOTO_RESTART_IF_JM_DOWN \
 { \
     if ( jmDown == true ) { \
+        myResource->JMComplete( this ); \
         gmState = GM_RESTART; \
         globusError =  GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER; \
 		break; \
@@ -1003,9 +1004,15 @@ int GlobusJob::doEvaluateState()
 			// one-time initialization has been taken care of.
 			// If we think there's a running jobmanager
 			// out there, we try to register for callbacks (in GM_REGISTER).
-			// The one way jobs can end up back in this state is if we
-			// attempt a restart of a jobmanager only to be told that the
-			// old jobmanager process is still alive.
+			// There are two ways a job can end up back in this state:
+			// 1. If we attempt a restart of a jobmanager only to be told
+			//    that the old jobmanager process is still alive.
+			// 2. If our proxy expires and is then renewed.
+
+			// Here, we assume there isn't a jobmanager running until we
+			// learn otherwise.
+			myResource->JMComplete( this );
+
 			errorString = "";
 			if ( jobContact == NULL ) {
 				if ( condorState == COMPLETED ) {
@@ -1063,18 +1070,21 @@ int GlobusJob::doEvaluateState()
 				// is a status query or a commit to exit.  switch into 
 				// GM_SUBMITTED state and do an immediate probe to figure out
 				// if the state is done or failed, and move on from there.
+				myResource->JMAlreadyRunning( this );
 				probeNow = true;
 				gmState = GM_SUBMITTED;
 				break;
 			}
 			if ( rc != GLOBUS_SUCCESS ) {
 				// unhandled error
+				myResource->JMAlreadyRunning( this );
 				LOG_GLOBUS_ERROR( "globus_gram_client_job_callback_register()", rc );
 				globusError = rc;
 				gmState = GM_STOP_AND_RESTART;
 				break;
 			}
 				// Now handle the case of we got GLOBUS_SUCCESS...
+			myResource->JMAlreadyRunning( this );
 			callbackRegistered = true;
 			UpdateGlobusState( status, error );
 			gmState = GM_STDIO_UPDATE;
@@ -1140,6 +1150,7 @@ int GlobusJob::doEvaluateState()
 			char *job_contact;
 			if ( condorState == REMOVED || condorState == HELD ) {
 				myResource->CancelSubmit(this);
+				myResource->JMComplete(this);
 				gmState = GM_UNSUBMITTED;
 				break;
 			}
@@ -1157,8 +1168,10 @@ int GlobusJob::doEvaluateState()
 			if ( now >= lastSubmitAttempt + submitInterval ) {
 				CHECK_PROXY;
 				// Once RequestSubmit() is called at least once, you must
-				// CancelRequest() once you're done with the request call
-				if ( myResource->RequestSubmit(this) == false ) {
+				// SubmitComplete() or CancelSubmit() once you're done with
+				// the request call
+				if ( myResource->RequestSubmit(this) == false ||
+					 myResource->RequestJM(this) == false ) {
 					break;
 				}
 				if ( RSL == NULL ) {
@@ -1186,6 +1199,7 @@ int GlobusJob::doEvaluateState()
 					break;
 				}
 				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_USER_PROXY_EXPIRED ) {
+					myResource->JMComplete( this );
 					gmState = GM_PROXY_EXPIRED;
 					break;
 				}
@@ -1216,6 +1230,7 @@ int GlobusJob::doEvaluateState()
 					gmState = GM_HOLD;
 				} else {
 					// unhandled error
+					myResource->JMComplete( this );
 					LOG_GLOBUS_ERROR( "globus_gram_client_job_request()", rc );
 					dprintf(D_ALWAYS,"(%d.%d)    RSL='%s'\n",
 							procID.cluster, procID.proc,RSL->Value());
@@ -1570,6 +1585,7 @@ int GlobusJob::doEvaluateState()
 				// the job will errantly go on hold when the user
 				// subsequently does a condor_rm.
 			if ( jobContact != NULL ) {
+				myResource->JMComplete( this );
 				myResource->CancelSubmit( this );
 				SetRemoteJobId( NULL );
 				jmDown = false;
@@ -1604,6 +1620,7 @@ int GlobusJob::doEvaluateState()
 				globusError = rc;
 				gmState = GM_CANCEL;
 			} else {
+				myResource->JMComplete( this );
 				gmState = GM_RESTART;
 			}
 			} break;
@@ -1628,8 +1645,10 @@ int GlobusJob::doEvaluateState()
 
 				CHECK_PROXY;
 				// Once RequestSubmit() is called at least once, you must
-				// CancelRequest() once you're done with the request call
-				if ( myResource->RequestSubmit(this) == false ) {
+				// call SubmitComplete() or CancelSubmit() once you're done
+				// with the request call
+				if ( myResource->RequestSubmit(this) == false ||
+					 myResource->RequestJM(this) == false ) {
 					break;
 				}
 				if ( RSL == NULL ) {
@@ -1653,6 +1672,7 @@ int GlobusJob::doEvaluateState()
 					break;
 				}
 				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_USER_PROXY_EXPIRED ) {
+					myResource->JMComplete( this );
 					gmState = GM_PROXY_EXPIRED;
 					break;
 				}
@@ -1695,6 +1715,7 @@ int GlobusJob::doEvaluateState()
 					// responding, start new jm, new jm says old one still
 					// running, try to contact old jm again. How likely is
 					// this to happen?
+					myResource->JMComplete( this );
 					jmDown = false;
 					gmState = GM_START;
 					break;
@@ -1871,6 +1892,7 @@ int GlobusJob::doEvaluateState()
 			if ( globusStateErrorCode ==
 				 GLOBUS_GRAM_PROTOCOL_ERROR_USER_PROXY_EXPIRED ) {
 
+				myResource->JMComplete( this );
 				gmState = GM_PROXY_EXPIRED;
 
 			} else if ( FailureIsRestartable( globusStateErrorCode ) ) {
@@ -1881,6 +1903,7 @@ int GlobusJob::doEvaluateState()
 					globusError = globusStateErrorCode;
 					gmState = GM_STOP_AND_RESTART;
 				} else {
+					myResource->JMComplete( this );
 					gmState = GM_RESTART;
 				}
 
@@ -1918,6 +1941,7 @@ int GlobusJob::doEvaluateState()
 				}
 
 				myResource->CancelSubmit( this );
+				myResource->JMComplete( this );
 				jmDown = false;
 				SetRemoteJobId( NULL );
 				jmVersion = GRAM_V_UNKNOWN;
@@ -1944,10 +1968,12 @@ int GlobusJob::doEvaluateState()
 
 			CHECK_PROXY;
 			// Once RequestSubmit() is called at least once, you must
-			// CancelRequest() once you're done with the request call
+			// SubmitComplete() or CancelSubmit() once you're done with
+			// the request call
 			char cleanup_rsl[4096];
 			char *dummy_job_contact;
-			if ( myResource->RequestSubmit(this) == false ) {
+			if ( myResource->RequestSubmit(this) == false ||
+				 myResource->RequestJM(this) == false ) {
 				break;
 			}
 			snprintf( cleanup_rsl, sizeof(cleanup_rsl), "&(cleanup=%s)", jobContact );
@@ -2042,8 +2068,9 @@ int GlobusJob::doEvaluateState()
 			useGridJobMonitor = true;
 			// HACK!
 			retryStdioSize = true;
+			myResource->CancelSubmit( this );
+			myResource->JMComplete( this );
 			if ( jobContact != NULL ) {
-				myResource->CancelSubmit( this );
 				SetRemoteJobId( NULL );
 				jmDown = false;
 			}
@@ -2160,6 +2187,10 @@ int GlobusJob::doEvaluateState()
 				gmState = GM_HOLD;
 				break;
 			}
+			// If our proxy is expired, then the jobmanager's is as well,
+			// and it will exit.
+			myResource->JMComplete( this );
+
 			now = time(NULL);
 			// if ( jobProxy->expiration_time > JM_MIN_PROXY_TIME + now ) {
 			if ( jobProxy->expiration_time > (minProxy_time + 60) + now ) {
@@ -2191,6 +2222,7 @@ int GlobusJob::doEvaluateState()
 				globusError = rc;
 				gmState = GM_CANCEL;
 			} else {
+				myResource->JMComplete( this );
 				gmState = GM_JOBMANAGER_ASLEEP;
 			}
 			} break;
@@ -3174,7 +3206,7 @@ GlobusJob::JmShouldSleep()
 		return false;
 	}
 
-	/*
+	/* Don't restart jobmanagers if the grid monitor is having trouble
 	if ( myResource->GridJobMonitorActive() == false ) {
 		return false;
 	}
@@ -3185,7 +3217,9 @@ GlobusJob::JmShouldSleep()
 		return true;
 	case GLOBUS_GRAM_PROTOCOL_JOB_STATE_ACTIVE:
 	case GLOBUS_GRAM_PROTOCOL_JOB_STATE_SUSPENDED:
-		if ( !streamOutput && !streamError ) {
+		if ( ( !streamOutput && !streamError ) ||
+			 myResource->GetJMLimit() != GM_RESOURCE_UNLIMITED ) {
+
 			return true;
 		} else {
 			return false;

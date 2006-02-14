@@ -32,6 +32,7 @@
 #include "baseresource.h"
 #include "gahp-client.h"
 
+#define GM_RESOURCE_UNLIMITED	1000000000
 
 class GlobusJob;
 class GlobusResource;
@@ -45,6 +46,13 @@ class GlobusResource : public BaseResource
  public:
 	bool Init();
 	void Reconfig();
+	void UnregisterJob( GlobusJob *job );
+
+	bool RequestJM( GlobusJob *job );
+	void JMComplete( GlobusJob *job );
+	void JMAlreadyRunning( GlobusJob *job );
+	int GetJMLimit()
+		{ return jmLimit; };
 
 	bool GridJobMonitorActive() { return monitorActive; }
 
@@ -81,6 +89,12 @@ class GlobusResource : public BaseResource
 
 	char *proxySubject;
 	static int gahpCallTimeout;
+
+	// jobs allowed allowed to have a jobmanager running
+	List<GlobusJob> jmsAllowed;
+	// jobs that want a jobmanager but can't due to jmLimit
+	List<GlobusJob> jmsWanted;
+	int jmLimit;		// max number of running jobmanagers
 
 	static bool enableGridMonitor;
 	int checkMonitorTid;

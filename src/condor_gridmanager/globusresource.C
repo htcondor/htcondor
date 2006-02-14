@@ -31,6 +31,7 @@
 
 #define DEFAULT_MAX_PENDING_SUBMITS_PER_RESOURCE	5
 #define DEFAULT_MAX_SUBMITTED_JOBS_PER_RESOURCE		100
+#define DEFAULT_MAX_JOBMANAGERS_PER_RESOURCE		10
 
 // If the grid_monitor appears hosed, how long do we
 // disable grid_monitoring that site for?
@@ -83,6 +84,8 @@ GlobusResource::GlobusResource( const char *resource_name,
 {
 	initialized = false;
 	proxySubject = strdup( proxy_subject );
+
+	jmLimit = DEFAULT_MAX_JOBMANAGERS_PER_RESOURCE;
 
 	checkMonitorTid = TIMER_UNSET;
 	monitorActive = false;
@@ -137,6 +140,21 @@ void GlobusResource::Reconfig()
 
 	gahp->setTimeout( gahpCallTimeout );
 
+	jmLimit = param_integer( "GRIDMANAGER_MAX_JOBMANAGERS_PER_RESOURCE",
+							 DEFAULT_MAX_JOBMANAGERS_PER_RESOURCE );
+	if ( jmLimit == 0 ) {
+		jmLimit = GM_RESOURCE_UNLIMITED;
+	}
+
+	// If the jmLimit was widened, move jobs from Wanted to Allowed and
+	// signal them
+	while ( jmsAllowed.Length() < jmLimit && jmsWanted.Length() > 0 ) {
+		GlobusJob *wanted_job = jmsWanted.Head();
+		jmsWanted.Delete( wanted_job );
+		jmsAllowed.Append( wanted_job );
+		wanted_job->SetEvaluateState();
+	}
+
 	if ( enableGridMonitor && checkMonitorTid == TIMER_UNSET ) {
 		// start grid monitor
 		checkMonitorTid = daemonCore->Register_Timer( 0,
@@ -177,6 +195,68 @@ const char *GlobusResource::HashName( const char *resource_name,
 	hash_name.sprintf( "%s#%s", resource_name, proxy_subject );
 
 	return hash_name.Value();
+}
+
+void GlobusResource::UnregisterJob( GlobusJob *job )
+{
+	JMComplete( job );
+
+	BaseResource::UnregisterJob( job );
+		// This object may be deleted now. Don't do anything below here!
+}
+
+bool GlobusResource::RequestJM( GlobusJob *job )
+{
+	GlobusJob *jobptr;
+
+	jmsWanted.Rewind();
+	while ( jmsWanted.Next( jobptr ) ) {
+		if ( jobptr == job ) {
+			return false;
+		}
+	}
+
+	jmsAllowed.Rewind();
+	while ( jmsAllowed.Next( jobptr ) ) {
+		if ( jobptr == job ) {
+			return true;
+		}
+	}
+
+	if ( jmsAllowed.Length() < jmLimit && jmsWanted.Length() > 0 ) {
+		EXCEPT("In GlobusResource for %s, jmsWanted is not empty and jmsAllowed is not full\n",resourceName);
+	}
+
+	if ( jmsAllowed.Length() < jmLimit ) {
+		jmsAllowed.Append( job );
+		return true;
+	} else {
+		jmsWanted.Append( job );
+		return false;
+	}
+}
+
+void GlobusResource::JMComplete( GlobusJob *job )
+{
+	if ( jmsAllowed.Delete( job ) ) {
+		if ( jmsAllowed.Length() < jmLimit && jmsWanted.Length() > 0 ) {
+			GlobusJob *queued_job = jmsWanted.Head();
+			jmsWanted.Delete( queued_job );
+			jmsAllowed.Append( queued_job );
+			queued_job->SetEvaluateState();
+		}
+	} else {
+		// We only have to check jmsWanted if the job wasn't in
+		// jmsAllowed.
+		jmsWanted.Delete( job );
+	}
+
+	return;
+}
+
+void GlobusResource::JMAlreadyRunning( GlobusJob *job )
+{
+	jmsAllowed.Append( job );
 }
 
 void GlobusResource::DoPing( time_t& ping_delay, bool& ping_complete,
