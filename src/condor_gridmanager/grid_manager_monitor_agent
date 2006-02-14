@@ -517,8 +517,8 @@ sub RunCheck( )
 	    my $Stat = File::stat::stat( $LockFile );
 	    my $LockMtime = @{$Stat}[9];
 
-	    # Ok, let's grab a time 2 minutes in the past..
-	    my $MinTime = time() - 120;
+	    # Ok, let's grab a time 5 minutes in the past..
+	    my $MinTime = time() - 300;
 
 	    # If the file's mtime is recent, assume that $LockPid
 	    # is alive and is the process that modified it.
@@ -792,12 +792,44 @@ sub GetJobState( $ )
 }
 
 # Touch the lock file to indicate that I'm alive & well.
+# Also check that I haven't exceeded my max lifetime and
+# that I still have the lock
 sub Alive( )
 {
     # And, update its mtime..
     my $Now = time( );	
+    # Ignore my max lifetime until I finish a full cycle of polls.
+    # Otherwise, we may never get job statuses.
+#    if ( $Now > $QuitTime )
+#    {
+#	exit 0;
+#    }
     if ( $Now > ( $LastAlive + 5 ) )
     {
+	# Check that I still have the lock.
+	# Check for & read the lock file...
+	if ( open( LOCK, $Config{LockFile} ) )
+	{
+	    my $LockPid;
+	    my $LockTime;
+	    $_ = <LOCK>;
+	    if ( /(\d+) (\d+)/ )
+	    {
+		$LockPid = $1;
+		$LockTime = $2;
+	    }
+	    close( LOCK );
+	    if ( ( $LockPid <= 0 ) || ( $LockTime <= 0 ) )
+	    {
+		warn "Invalid lock file '$Config{LockFile}'";
+	    }
+	    if ( $LockPid > 0 && $LockPid != $$ ) {
+		print "Lock $Config{LockFile} stolen from me, exitting\n"
+		    if ( $Config{Debug} );
+		exit 0;
+	    }
+	}
+
 	print "Touching $Config{LockFile} -> $Now\n" if ( $Config{Debug} > 2 );
 	utime( $Now, $Now, $Config{LockFile} );
 	$LastAlive = $Now;
