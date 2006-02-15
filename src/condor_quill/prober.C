@@ -153,7 +153,7 @@ Prober::probe(ClassAdLogEntry *curCALogEntry,
 	st = caLogParser.readLogEntry(op_type);
 	
 	if (st != FILE_READ_SUCCESS) {
-		return ERROR;
+		return PROBE_ERROR;
 	}
 
 	dprintf(D_ALWAYS, "first log entry: %s %s %s\n", 
@@ -178,7 +178,7 @@ Prober::probe(ClassAdLogEntry *curCALogEntry,
 	st = caLogParser.readLogEntry(op_type);
 	
 	if (st != FILE_READ_EOF && st != FILE_READ_SUCCESS) {
-		return ERROR;
+		return PROBE_ERROR;
 	}
 		
 
@@ -194,7 +194,7 @@ Prober::probe(ClassAdLogEntry *curCALogEntry,
 	}
 		//if it wasn't captured by any of the above cases, 
 		//it must have been an error
-	return ERROR;		
+	return PROBE_ERROR;		
 }
 
 void
