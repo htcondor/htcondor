@@ -162,10 +162,7 @@ sub InstallOtherFiles(){
 }
 
 #*********************************************************************
-# Installs a file from the given path name.  Currently assumes that 
-# all the files are in a local or distributed file system should be
-# modified to be able to handle HTTP, FTP, and GSIFTP.  Preferably 
-# with the same mechanism as fetching the binary tar.
+# Installs a file from the given path name.
 # Returns the base file name.
 #*********************************************************************
 sub InstallFile(){

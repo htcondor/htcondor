@@ -12,7 +12,7 @@
 ## Note1: If the user wants to bind the configuration to the
 ## binaries at startup time.  The configuration attributes that
 ## detail the location of the binaries (MASTER, SCHEDD, etc...)
-## should be defined relative the the attribute LB_RELEASE_DIR,
+## should be defined relative the the attribute DEPLOYMENT_RELEASE_DIR,
 ## which stands for late-binding release directory.  This attribute
 ## is set to the given release directory immediately prior to 
 ## startup.
@@ -46,9 +46,10 @@ my $USAGE =
     "[-localdir local_install_dir] [-localconfig local_config_file]\n".
     "[-logarchive log_archive] [-spoolarchive spool_archive]\n".
     "[-execarchive exec_archive]\n".
-    "[-linklock] [-flock] [-pid] [-artifact artifact_file]\n".
+    "[-flock] [-pid] [-artifact artifact_file]\n".
     "[-wget] [-globuslocation globus_location]\n".
-    "[-dyn] [-help]\n";
+    #"[-dyn] [-help]\n";
+    "[-help]\n";
 
 my $FG_OPT = '-f';
 
@@ -67,7 +68,6 @@ my $EXEC_ARCHIVE_OPT = '-execarchive';
 my $WGET_OPT = '-wget';
 my $GLOBUS_LOC_OPT = '-globuslocation';
 
-my $LINKLOCK_MIDWIFE = 'linklock_midwife';
 my $FLOCK_MIDWIFE = 'flock_midwife';
 my $PID_MIDWIFE = 'uniq_pid_midwife';
 my $MIDWIFE_FILE_OPT ='--file';
@@ -75,8 +75,8 @@ my $MIDWIFE_FILE_OPT ='--file';
 #  environment variable names
 my $GLOBAL_CONFIG_ENV = 'CONDOR_CONFIG';
 my $LOCAL_CONFIG_FILE_ENV = '_CONDOR_LOCAL_CONFIG_FILE';
-my $LB_RELEASE_DIR_ENV = '_CONDOR_LB_RELEASE_DIR';
-my $LB_LOCAL_DIR_ENV = '_CONDOR_LB_LOCAL_DIR';
+my $DEPLOYMENT_RELEASE_DIR_ENV = '_CONDOR_DEPLOYMENT_RELEASE_DIR';
+my $DEPLOYMENT_LOCAL_DIR_ENV = '_CONDOR_DEPLOYMENT_LOCAL_DIR';
 my $EXECUTE_DIR_ENV = '_CONDOR_EXECUTE';
 my $LOG_DIR_ENV = '_CONDOR_LOG';
 my $SPOOL_DIR_ENV = '_CONDOR_SPOOL';
@@ -89,25 +89,28 @@ my $REQUIRED_DIR_ATTR = 'DEPLOYMENT_REQUIRED_DIRS';
 my $RECOMMENDED_EXEC_ATTR = 'DEPLOYMENT_RECOMMENDED_EXECS';
 my $RECOMMENDED_DIR_ATTR = 'DEPLOYMENT_RECOMMENDED_DIRS';
 
+# Defaults
+my $DEFAULT_ARTIFACT = 'MasterMidwife.artifact';
+
 #***
 # Non-constant Static Variables
 #***
 my $condor_config_file = 0;
 my $release_dir = 0;
-my $local_install_dir = '.';  #Defaults to the working directory
+my $local_install_dir = cwd;  #Defaults to the working directory
 my $local_config_file = 0;
 my $help = 0;
 my $condor_config_val_cmd = 0;
-my $dynamic_naming = 0;
+#my $dynamic_naming = 0;
 my @master_params = ();
 my $local_install_config = 0;
 my $log_archive = 0;
 my $spool_archive = 0;
 my $exec_archive = 0;
 my $flock_flag = 0;
-my $linklock_flag = 0;
 my $pid_flag = 0;
-my $midwife_artifact = 'MasterMidwife.artifact';
+#my $midwife_artifact = 'MasterMidwife.artifact';
+my $midwife_artifact = 0;
 my $globus_location = 0;
 my $wget_flag = 0;
 
@@ -121,13 +124,12 @@ GetOptions('configfile=s'=>\$condor_config_file,
 	   'logarchive=s'=>\$log_archive,
 	   'spoolarchive=s'=>\$spool_archive,
 	   'execarchive=s'=>\$exec_archive,
-	   'linklock'=>\$linklock_flag,
 	   'flock'=>\$flock_flag,
 	   'pid'=>\$pid_flag,
 	   'artifact=s'=>\$midwife_artifact,
 	   'wget'=>\$wget_flag,
 	   'globuslocation=s'=>\$globus_location,
-	   'dyn'=>\$dynamic_naming,
+	   #'dyn'=>\$dynamic_naming,
 	   'help'=>\$help);
 
 
@@ -156,11 +158,14 @@ if( $local_config_file && !-e $local_config_file ){
 &ConvertToAbPaths();
 
 # Perform any setup required of the local directory
-if( $dynamic_naming ){
-    &SetupLocalDirDyn();
-} else{
-    $local_install_config = &SetupLocalDir();
-}
+$local_install_config = &SetupLocalDir();
+
+# Commented out until dynamic naming is enabled
+#if( $dynamic_naming ){
+#    &SetupLocalDirDyn();
+#} else{
+     #$local_install_config = &SetupLocalDir();
+#}
 
 # Setup the environment
 &SetupEnvironment();
@@ -288,8 +293,8 @@ sub SetupEnvironment(){
 
     # set the location of the late-binding 
     # release_dir and local dir
-    $ENV{$LB_RELEASE_DIR_ENV} = $release_dir;
-    $ENV{$LB_LOCAL_DIR_ENV} = $local_install_dir;
+    $ENV{$DEPLOYMENT_RELEASE_DIR_ENV} = $release_dir;
+    $ENV{$DEPLOYMENT_LOCAL_DIR_ENV} = $local_install_dir;
 }
 
 #*********************************************************************
@@ -309,9 +314,11 @@ sub CreateBindingConfig(){
     # The binding config is local to this installation so 
     # it should be in the local dir
     my $binding_config_file = $BINDING_CONFIG_NAME;
-    if( $dynamic_naming ){
-	$binding_config_file = &AddDynamicPostFix($BINDING_CONFIG_NAME);
-    } 
+    
+    # Commented out until dynamic naming is enabled
+    #if( $dynamic_naming ){
+    #$binding_config_file = &AddDynamicPostFix($BINDING_CONFIG_NAME);
+    #} 
 
     # put the file in the local install dir
     $binding_config_file = File::Spec->catfile($local_install_dir, $binding_config_file);
@@ -476,27 +483,29 @@ sub RecommendedDir(){
 #*********************************************************************
 sub StartMaster(){
     #Determine the midwife to use
-    my $midwife = 0;
-    if( $linklock_flag ){
-	$midwife = $LINKLOCK_MIDWIFE;
-    } 
-    
-    elsif( $flock_flag ){
-	$midwife = $FLOCK_MIDWIFE;
-    } 
-    
     # defaults to the pid midwife
-    else{
+    my $midwife = 0;
+    if( $flock_flag ){
+	$midwife = $FLOCK_MIDWIFE;
+    } else{
 	$midwife = $PID_MIDWIFE;
-    } 
-    
+    }
+
+    # Ensure the artifact file is set
+    if( !$midwife_artifact ){
+	# Give the default name and put it in the local dir
+	$midwife_artifact = File::Spec->catpath(0, 
+						$local_install_dir, 
+						$DEFAULT_ARTIFACT);
+    }
+
     # construct the arguments for the midwife program
     my $midwife_path = File::Spec->catpath(0, $FindBin::Bin, $midwife);
     my @args = ($MIDWIFE_FILE_OPT, $midwife_artifact);
 
 
     #Construct the master arguments
-    push(@master_params, '-dyn') if( $dynamic_naming );
+    #push(@master_params, '-dyn') if( $dynamic_naming );
     push @master_params, $FG_OPT;
     my $master_cmd = QueryCondorConfig($MASTER_ATTR);
     

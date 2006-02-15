@@ -15,8 +15,7 @@ our @ISA = qw(Exporter);
 our @EXPORT = qw(AcquireLinkLock AcquireLinkLockNB 
 		 ReleaseLinkLock TestLinkLock 
 		 AcquireFLock AcquireFLockNB
-		 ReleaseFLock TestFLock 
-		 DetermineLockType);  #Symbols to export by default
+		 ReleaseFLock TestFLock);  #Symbols to export by default
 
 our $VERSION = 1.00;  #Version number
 
@@ -36,6 +35,8 @@ my $MAX_BACKOFF = 60;
 # Attempts to acquire a link-lock.  The link-lock will automatically
 # expire if this program dies or is exec'ed over top of.
 # Returns a "lock handle" that is required to unlock this link-lock.
+# WARNING: Due to the inconsistency in implementations of NFS this
+# may not work on all versions of NFS.
 #*********************************************************************
 sub AcquireLinkLock{
 
@@ -94,6 +95,8 @@ sub AcquireLinkLock{
 # top of. If successful this function returns a "lock handle" that is 
 # required to unlock this link-lock.  If the lock was already held 
 # this function returns "undef".
+# WARNING: Due to the inconsistency in implementations of NFS this
+# may not work on all versions of NFS.
 #*********************************************************************
 sub AcquireLinkLockNB{
     my ($lock_file) = @_;  #Name the parameters
@@ -148,6 +151,8 @@ sub AcquireLinkLockNB{
 
 #*********************************************************************
 # Releases a link lock
+# WARNING: Due to the inconsistency in implementations of NFS this
+# may not work on all versions of NFS.
 #*********************************************************************
 sub ReleaseLinkLock{
     my ($fh, $file_name) = @_;   #Name the parameters
@@ -165,6 +170,8 @@ sub ReleaseLinkLock{
 #*********************************************************************
 # Test to see if the lock is available.
 # Return true if it was available, false otherwise.
+# WARNING: Due to the inconsistency in implementations of NFS this
+# may not work on all versions of NFS.
 #*********************************************************************
 sub TestLinkLock{
     my ($lock_file) = @_;   #Name the parameters
@@ -464,65 +471,6 @@ sub LinkCount(){
 
     return $nlink;
 }
-
-#=====================================================================
-# Unfinished Functions
-#=====================================================================
-
-sub DetermineLockType{
-
-    # Test FLocks
-
-    # Test Link Locks
-
-    #flocks may be inherited across forks
-}
-
-sub TestFlocking(){
-    
-    # make a lock file
-    my $lock_file = 'lock.file.test';
-    $lock_file = &AddDynamicPostFix($lock_file);
-    
-    # ensure it doesn't already exist
-    if( -e $lock_file ){
-	die "FAILED: Cannot test flocking because lock file".
-	    " [$lock_file] already exists";
-    }
-
-    open LOCK_FILE, '>', $lock_file
-	or die "FAILED: Cannot open $lock_file: $!";
-
-    close LOCK_FILE;
-
-    # make a process to get the lock
-    defined(my $pid1 = fork) or die "FAILED: Cannot fork: $!";
-    
-    # child
-    if( $pid1 == 0 ){
-	&AcquireFLock($lock_file, 'X');
-	while(1){}
-	return 0;
-    }
-
-    # make another process to test the lock (TestFLock)
-    # if this succeeds the TestFLock doesn't work in this filesystem
-    defined(my $pid2 = fork) or die "FAILED: Cannot fork: $!";
-    # child 
-    if( $pid2 == 0 ){
-
-    }
-    
-    # make another porcess to get the lock
-    # if this succeeds then flock doesn't work in this system
-    defined(my $pid3 = fork) or die "FAILED: Cannot fork: $!";
-    # child 
-    if( $pid3 == 0 ){
-	
-    }
-
-}
-
 
 # loading module was a success
 1;

@@ -17,12 +17,12 @@
 # configuration explicitly reference the local configuration files
 # if it cannot know where they will be installed?"  The 'basedir'
 # where the global and setup local configuration files will be 
-# installed is dynamically assigned to LB_RELEASE_DIR 
+# installed is dynamically assigned to DEPLOY_RELEASE_DIR 
 # configuration file.  Therefore the global configuration file
 # can reference the local configuration files relative to 
-# LB_RELEASE_DIR.  For example: 
-# LOCAL_CONFIGURATION = $(LB_RELEASE_DIR)/condor_config.security,\
-#                       $(LB_RELEASE_DIR)/condor_config.logging
+# DEPLOYMENT_RELEASE_DIR.  For example: 
+# LOCAL_CONFIGURATION = $(DEPLOYMENT_RELEASE_DIR)/condor_config.security,\
+#                       $(DEPLOYMENT_RELEASE_DIR)/condor_config.logging
 # 
 # On the otherhand the -runlocalconfig is run option used to 
 # indicate that the current run (and only the current run) should 
@@ -31,6 +31,9 @@
 # The user is responsible for ensuring that the config file 
 # specified is accessible (i.e., in the locally mounted 
 # filesystem).
+# 
+# Note2: Dynamic naming is temporarily disabled until the issue
+# of cleanup can be resolved.
 #******************************************************************
 
 #***
@@ -47,25 +50,16 @@ use Getopt::Long;
 #***
 # Constant Static Variables
 #***
-
-#my $USAGE = 
-#    "Usage: condor_cold_start <-basedir base_dir> <-configfile config_file>\n".
-#    "[-f]\n".
-#    "[-setuponly || -runonly]\n".
-#    "[-arch architecture_string][-site install_repository_site]\n".
-#    "[-localdir local_dir][-setuplocalconfigs config_file1, config_file2, ...]\n".
-#    "[-runlocalconfig local_config_file]\n".
-#    "[-help]\n";
-
 my $USAGE = 
     "Usage: condor_cold_start [-basedir base_dir] <-configfile config_file>\n".
-    "[-force] [-dyn]\n".
+    #"[-force] [-dyn]\n".
+    "[-force]\n".
     "[-setuponly || -runonly]\n".
     "[-arch architecture_string][-site install_repository_site]\n".
     "[-localdir local_dir] [-runlocalconfig local_config_file]\n".
     "[-logarchive log_archive] [-spoolarchive spool_archive]\n".
     "[-execarchive exec_archive]\n".
-    "[-linklock] [-flock] [-pid] [-artifact artifact_file]\n".
+    "[-flock] [-pid] [-artifact artifact_file]\n".
     "[-wget] [-globuslocation globus_location]\n".
     "[-help]\n";
 
@@ -92,8 +86,7 @@ my $CONDOR_LOCAL_START = 'condor_local_start';
 my $CONFIG_OPT = '-configfile';
 my $LOCAL_DIR_OPT = '-localdir';
 my $LOCAL_CONFIG_OPT = '-localconfig';
-my $DYN_OPT = '-dyn';
-my $LINKLOCK_OPT = '-linklock';
+#my $DYN_OPT = '-dyn';
 my $FLOCK_OPT = '-flock';
 my $PID_OPT = '-pid';
 my $ARTIFACT_OPT ='-artifact';
@@ -107,7 +100,7 @@ my $EXEC_ARCHIVE_OPT = '-execarchive';
 my $base_dir = '.';
 my $local_dir = '.';
 my $force = 0;
-my $dynamic_naming = 0;
+#my $dynamic_naming = 0;
 my $foreground = 0;
 my $setup_only = 0;
 my $run_only = 0;
@@ -122,7 +115,6 @@ my $log_archive = 0;
 my $spool_archive = 0;
 my $exec_archive = 0;
 my $flock_flag = 0;
-my $linklock_flag = 0;
 my $pid_flag = 0;
 my $midwife_artifact = 0;
 my $globus_location = 0;
@@ -139,7 +131,7 @@ my $help = 0;
 GetOptions('basedir=s'=>\$base_dir,
 	   'localdir=s'=>\$local_dir,
 	   'force'=>\$force,
-	   'dyn'=>\$dynamic_naming,
+	   #'dyn'=>\$dynamic_naming,
 	   'setuponly'=>\$setup_only,
 	   'runonly'=>\$run_only,
 	   'arch=s'=>\$arch_str,
@@ -150,7 +142,6 @@ GetOptions('basedir=s'=>\$base_dir,
 	   'logarchive=s'=>\$log_archive,
 	   'spoolarchive=s'=>\$spool_archive,
 	   'execarchive=s'=>\$exec_archive,
-	   'linklock'=>\$linklock_flag,
 	   'flock'=>\$flock_flag,
 	   'pid'=>\$pid_flag,
 	   'artifact=s'=>\$midwife_artifact,
@@ -278,7 +269,7 @@ sub Startup(){
     if( $run_local_config_file ){
 	push @args, ($LOCAL_CONFIG_OPT, $run_local_config_file);    
     }
-    push @args, $DYN_OPT if( $dynamic_naming );
+    #push @args, $DYN_OPT if( $dynamic_naming );
 
     # archive args
     push @args, ($LOG_ARCHIVE_OPT, $log_archive) if( $log_archive );
@@ -286,7 +277,6 @@ sub Startup(){
     push @args, ($EXEC_ARCHIVE_OPT, $exec_archive) if($exec_archive);
     
     # midwife args
-    push @args, $LINKLOCK_OPT if( $linklock_flag );
     push @args, $FLOCK_OPT if( $flock_flag );
     push @args, $PID_OPT if( $pid_flag );
     push @args, ($ARTIFACT_OPT, $midwife_artifact) if( $midwife_artifact);

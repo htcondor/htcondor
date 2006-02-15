@@ -7,7 +7,7 @@ LIST OF SHAME
      local configs until after they are installed, environment variables
      won't work for this)
    - Adding ConfigMD will move functionality out of local_start,
-     namely LB_RELEASE_DIR
+     namely DEPLOYMENT_RELEASE_DIR
 
 5. Warnings: Warnings are kind of glommed together.  Its like endlines
    don't work.
@@ -53,3 +53,14 @@ LIST OF SHAME
 16. uniq_pid_undertaker does not ensure that it is being run on the same
     machine that the midwife was.  This could cause false answers.
     - can be remedied by storing machine id in bpid log (IP Address?)
+
+17. Dynamic naming is temporarily disabled until it can be cleaned up properly
+    - The master creates a dynamically named log, spool, and execute
+      directories by appending the IP address and pid of the master
+    - No process but the master knows this value
+    - Two possible solutions:
+      1) dynamic naming can be provided completely by the deployment
+	 tools and then the install configuration will have the names
+      2) use the artifact file to determine the master pid
+      
+    
