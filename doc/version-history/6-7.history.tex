@@ -49,6 +49,11 @@ leave core files in the log directory when they crash.  Recent changes to the
 Linux kernel default to blocking these core files.  This change means
 Condor behaves more consistently across different Unix-like operating systems.
 
+\item Added support for Parallel scheduling groups for the parallel
+universe.  This is useful if you have machines connected by infiniband
+switches, and want to constrain your parallel jobs to never run across
+two different switches.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
