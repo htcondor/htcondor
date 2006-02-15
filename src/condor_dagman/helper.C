@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -24,7 +24,7 @@
 // File: Helper.cpp
 // Author: Francesco Giacomini, INFN <Francesco.Giacomini@cnaf.infn.it>
 
-// $Id: helper.C,v 1.1.4.5.14.1 2003-12-02 22:27:01 wright Exp $
+// $Id: helper.C,v 1.1.4.5.14.2 2006-02-15 22:07:14 nleroy Exp $
 
 #include "condor_common.h"
 #include "helper.h"

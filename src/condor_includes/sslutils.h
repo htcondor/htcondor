@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -30,9 +30,9 @@ Description:
 CVS Information:
 
         $Source: /space/home/matt/CVS2GIT/CONDOR_SRC-src/src/condor_includes/sslutils.h,v $
-        $Date: 2004-11-17 15:27:38 $
-        $Revision: 1.1.2.1.22.2 $
-        $Author: roy $
+        $Date: 2006-02-15 22:07:32 $
+        $Revision: 1.1.2.1.22.3 $
+        $Author: nleroy $
 
 **********************************************************************/
 

@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -23,12 +23,12 @@
 
  
 
-/* $Header: /space/home/matt/CVS2GIT/CONDOR_SRC-src/src/h/syscall.aix.h,v 1.2.106.1 2003-12-02 22:28:25 wright Exp $ */
+/* $Header: /space/home/matt/CVS2GIT/CONDOR_SRC-src/src/h/syscall.aix.h,v 1.2.106.2 2006-02-15 22:08:48 nleroy Exp $ */
 /* $ACIS:syscall.h 12.0$ */
 /* $Source: /space/home/matt/CVS2GIT/CONDOR_SRC-src/src/h/syscall.aix.h,v $ */
 
 #if !defined(lint) && !defined(LOCORE) && defined(RCS_HDRS)
-static char *rcsidsyscall = "$Header: /space/home/matt/CVS2GIT/CONDOR_SRC-src/src/h/syscall.aix.h,v 1.2.106.1 2003-12-02 22:28:25 wright Exp $";
+static char *rcsidsyscall = "$Header: /space/home/matt/CVS2GIT/CONDOR_SRC-src/src/h/syscall.aix.h,v 1.2.106.2 2006-02-15 22:08:48 nleroy Exp $";
 #endif
 
 #define VFS

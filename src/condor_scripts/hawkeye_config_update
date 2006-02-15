@@ -1,28 +1,26 @@
 #! /usr/bin/env perl
-#***********************************************************************
-#
-# Copyright (C) 2004, Computer Sciences Department,
-# University of Wisconsin-Madison, WI, and Nick LeRoy,
-# and other members of the Condor Project
-#
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License version
-# 2 as published by the Free Software Foundation.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
-# 02111-1307, USA.
-#
-# For contact information, please visit:
-#      http://www.cs.wisc.edu/condor
-#
-#**********************************************************************/
+##/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+##
+## Condor Software Copyright Notice
+## Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+##
+## This source code is covered by the Condor Public License, which can
+## be found in the accompanying LICENSE.TXT file, or online at
+## www.condorproject.org.
+##
+## THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+## AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+## IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+## WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+## FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+## HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+## MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+## ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+## PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+## RIGHT.
+##
+##***************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 use strict;
 use warnings;
 use File::Temp qw(tempfile);

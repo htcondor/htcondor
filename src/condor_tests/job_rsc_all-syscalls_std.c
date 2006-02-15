@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -4596,7 +4596,7 @@ int main(int argc, char **argv)
 		{BasicGetSetlimit, "BasicGetSetLimit: Can I change proc limits?"},
 	};
 
-	printf("Condor System Call Tester $Revision: 1.1.4.1 $\n\n");
+	printf("Condor System Call Tester $Revision: 1.1.4.2 $\n\n");
 
 	printf("The length of the string:\n'%s'\nIs: %d\n\n", 
 		STR(passage), strlen(passage));

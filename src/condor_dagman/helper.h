@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -23,7 +23,7 @@
 
 // Author: Francesco Giacomini, INFN <Francesco.Giacomini@cnaf.infn.it>
 
-// $Id: helper.h,v 1.1.4.2.22.1 2003-12-02 22:27:01 wright Exp $
+// $Id: helper.h,v 1.1.4.2.22.2 2006-02-15 22:07:14 nleroy Exp $
 
 #ifndef HELPER_H
 #define HELPER_H
