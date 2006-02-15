@@ -76,6 +76,13 @@ advanced of which are the \Prog{uniq\_pid\_midwife} and
 \Prog{uniq\_pid\_undertaker}.  Currently these programs are only
 supported on Linux.
 
+\item Added \Macro{MAX\_JOB\_QUEUE\_LOG\_ROTATIONS} to control how
+many historical job queue logs are kept when the job queue log is
+rotated.  These historical logs are used by Quill to avoid missing
+information in Quill's job history information when the schedd rotates
+to a new log.  The default value for this configuration setting is 1,
+so one old copy of the job queue log file will be kept.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
