@@ -45,6 +45,7 @@
 #include "condor_email.h"
 #include "daemon.h"
 #include "condor_distribution.h"
+#include "basename.h" // for condor_basename 
 
 State get_machine_state();
 
@@ -214,16 +215,21 @@ produce_output()
 void
 check_spool_dir()
 {
+    int             history_length;
 	const char  	*f;
+    const char      *history;
 	Directory  		dir(Spool, PRIV_ROOT);
 	StringList 		well_known_list, bad_spool_files;
 	Qmgr_connection *qmgr;
+
+    history = param("HISTORY");
+    history = condor_basename(history);
+    history_length = strlen(history);
 
 	well_known_list.initializeFromString (ValidSpoolFiles);
 		// add some reasonable defaults that we never want to remove
 	well_known_list.append( "job_queue.log" );
 	well_known_list.append( "job_queue.log.tmp" );
-	well_known_list.append( "history" );
 	well_known_list.append( "Accountant.log" );
 	well_known_list.append( "Accountantnew.log" );
 	well_known_list.append( "local_univ_execute" );
@@ -240,7 +246,14 @@ check_spool_dir()
 		if( well_known_list.contains(f) ) {
 			good_file( Spool, f );
 			continue;
-		}
+		} 
+
+            // see if it's a rotated history file. 
+        if (   strlen(f) >= history_length 
+            && strncmp(f, history, history_length) == 0) {
+            good_file( Spool, f );
+            continue;
+        }
 
 			// see if it's a legitimate checkpoint
 		if( is_ckpt_file(f) ) {
