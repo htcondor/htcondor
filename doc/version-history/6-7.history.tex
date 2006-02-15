@@ -52,6 +52,17 @@ leave core files in the log directory when they crash.  Recent changes to the
 Linux kernel default to blocking these core files.  This change means
 Condor behaves more consistently across different Unix-like operating systems.
 
+\item Made several changes to make Condor-G much less likely to overload a
+pre-WS GRAM server for grid-type gt2 jobs. Added configuration parameter
+GRIDMANAGER\_MAX\_JOBMANAGERS\_PER\_RESOURCE, which limits the number of
+globus-job-manager processes Condor will let run on the server at a time.
+Streaming of output for gt2 jobs is disabled if
+GRIDMANAGER\_MAX\_JOBMANAGERS\_PER\_RESOURCE isn't set to unlimited.
+If the Grid Monitor encounters problems, the \Condor{gridmanager} doesn't
+restart the globus-job-managers of the affected jobs. Fixed a couple bugs
+in the Grid Monitor that could cause it to spawn extra polling processes
+on the server.
+
 \item Added support for Parallel scheduling groups for the parallel
 universe.  This is useful if you have machines connected by infiniband
 switches, and want to constrain your parallel jobs to never run across

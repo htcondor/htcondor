@@ -4480,6 +4480,18 @@ GRIDMANAGER_MAX_PENDING_SUBMITS_PER_RESOURCE=20,nostos,5,beak,50
 still recognized, but the name has changed to be
 \MacroNI{GRIDMANAGER\_MAX\_PENDING\_SUBMITS\_PER\_RESOURCE}.
 
+\item[\Macro{GRIDMANAGER\_MAX\_JOBMANAGERS\_PER\_RESOURCE}]
+\label{param:GridmanagerMaxJobmanagersPerResource}
+For grid-type gt2 jobs, limits the number of globus-job-manager
+processes that the \Condor{gridmanager} lets run at a time on
+the remote headnode. Allowing too many globus-job-managers to run
+causes severe load on the headnode, possibly making it
+non-functional.
+This number may be exceeded if it is reduced through the use
+of \Condor{reconfig} while the \Condor{gridmanager} is running
+or if some globus-job-managers take a few extra seconds to exit.
+The value 0 means there is no limit. The default value is 10.
+
 \item[\Macro{GAHP}]
 \label{param:Gahp} The full path to the binary of the GAHP server.
 
