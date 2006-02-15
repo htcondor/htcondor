@@ -317,7 +317,7 @@ MyString::operator+=( long l )
 {
 	const int bufLen = 64;
 	char tmp[bufLen];
-	::snprintf( tmp, bufLen, "%l", l );
+	::snprintf( tmp, bufLen, "%ld", l );
 	int s_len = strlen( tmp );
 	ASSERT(s_len < bufLen);
 	if( s_len + Len > capacity ) {
