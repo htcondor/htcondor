@@ -138,7 +138,34 @@ specified in the submit file exists but is zero length.
 
 \begin{itemize}
 
-\item None.
+% Gnats PR 617.
+\item Multi-cluster condor submits will cause \Condor{dagman} to hang.
+This bug was introduced by the implementation of parallel universe
+support.  Prior to version 6.7.17, any Condor submit file creating
+more than one Condor process would be treated as an error by
+\Condor{dagman}.  Now this is not the case, because a single cluster
+with multiple processes will work; but \Condor{dagman} does
+not deal properly with multi-cluster submits (e.g., a submit file
+queueing jobs with different executables).
+(Bug introduced in version 6.7.17.)
+
+% Gnats PR 618.
+\item The \Opt{-maxjobs} and \Opt{-maxidle} settings for \Condor{dagman} are
+inconsistent: maxjobs applies to job clusters, but maxidle applies
+to individual processes.  Note that this only makes any difference
+in the case of node submit files that queue more than one process,
+which has only been supported since version 6.7.17.
+(Bug introduced in version 6.7.17.)
+
+% Gnats PR 619.
+\item \Condor{dagman} does not properly handle failures when removing
+jobs for a failed node.  Note that this only makes any difference
+in the case of node submit files that queue more than one process,
+which has only been supported since version 6.7.17.  If one process
+for a node fails, the entire cluster is considered failed, and any
+other processes in that cluster are removed.  If removing the processes
+fails, \Condor{dagman} may hang, waiting for those processes to abort.
+(Bug introduced in version 6.7.17.)
 
 \end{itemize}
 
