@@ -9209,9 +9209,9 @@ Scheduler::Init()
     // number of backup files is ignored. 
     DoHistoryRotation = param_boolean("ENABLE_HISTORY_ROTATION", true);
 
-    MaxHistoryFileSize = param_integer("HISTORY_MAX_SIZE", 
+    MaxHistoryFileSize = param_integer("MAX_HISTORY_LOG", 
                                        20 * 1024 * 1024); // 20MB is default
-    NumberBackupHistoryFiles = param_integer("HISTORY_NUMBER_BACKUPS", 
+    NumberBackupHistoryFiles = param_integer("MAX_HISTORY_ROTATIONS", 
                                           2,  // default
                                           1); // minimum
 
@@ -9219,7 +9219,7 @@ Scheduler::Init()
         dprintf(D_ALWAYS, "History file rotation is enabled.\n");
         dprintf(D_ALWAYS, "  Maximum history file size is: %d bytes\n", 
                 (int) MaxHistoryFileSize);
-        dprintf(D_ALWAYS, "  Number of backup history files is: %d\n", 
+        dprintf(D_ALWAYS, "  Number of rotated history files is: %d\n", 
                 NumberBackupHistoryFiles);
     } else {
         dprintf(D_ALWAYS, "WARNING: History file rotation is disabled and it "
