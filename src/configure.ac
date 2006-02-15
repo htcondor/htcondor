@@ -1542,6 +1542,13 @@ CONDOR_EXTERNAL_VERSION([pcre],[5.0])
 
 CONDOR_EXTERNAL_VERSION([postgresql],[8.0.2])
 
+# temporary hack until we can reliably build BOINC everywhere.  for
+# now, just enable it manually, and pretend we've got it.  since we're
+# not actually linking anything with BOINC in phase 1, we don't *need*
+# the external to enable the BOINC + Backfill code paths.
+AC_DEFINE(HAVE_BACKFILL,1,[are we compiling support for any backfill systems])
+AC_DEFINE(HAVE_BOINC,1,[are we compiling support for backfill with BOINC])
+
 # GCB only matters and works if we have GNU ld...
 if test x$_cv_ld_is_gnu = xyes; then
   CONDOR_EXTERNAL_VERSION([gcb],[1.3.1])

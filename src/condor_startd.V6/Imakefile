@@ -9,6 +9,12 @@ CFLAGS = $(STD_C_FLAGS)
 LDFLAGS = -framework IOKit -framework Carbon
 #endif
 
+#if HAVE_BACKFILL
+#if HAVE_BOINC
+BOINC_OBJS = boinc_mgr.o
+#endif /* HAVE_BOINC */
+BACKFILL_OBJS = $(BOINC_OBJS) backfill_mgr.o
+#endif /* HAVE_BACKFILL */
 
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
 LIB= $(DAEMONCORE_LIB) $(STD_LIBS)
@@ -19,7 +25,7 @@ OBJ = LoadQueue.o claim.o Reqexp.o ResAttributes.o ResMgr.o ResState.o \
 	Resource.o Starter.o command.o startd_main.o util.o \
 	startd_cronmgr.o startd_cronjob.o starter_mgr.o mds.o \
 	setsyscalls.o startd_instantiate.o AvailStats.o cod_mgr.o \
-	$(SOAP_OBJS)
+	$(BACKFILL_OBJS) $(SOAP_OBJS)
 
 template_inst( startd_instantiate.C, startd_instantiate.o )
 

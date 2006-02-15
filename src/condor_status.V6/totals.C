@@ -179,6 +179,9 @@ StartdNormalTotal()
 	claimed = 0;
 	matched = 0;
 	preempting = 0;
+#if HAVE_BACKFILL
+	backfill = 0;
+#endif /* HAVE_BACKFILL */
 }
 
 
@@ -195,6 +198,9 @@ update (ClassAd *ad)
 		case claimed_state:		claimed++;		break;
 		case matched_state:		matched++;		break;
 		case preempting_state:	preempting++;	break;
+#if HAVE_BACKFILL
+		case backfill_state:	backfill++;		break;
+#endif
 		default: return 0;
 	}
 	machines++;
@@ -205,16 +211,28 @@ update (ClassAd *ad)
 void StartdNormalTotal::
 displayHeader(FILE *file)
 {
+#if HAVE_BACKFILL
+	fprintf (file, "%6.6s %5.5s %7.7s %9.9s %7.7s %10.10s %8.8s\n",
+					"Total", "Owner", "Claimed", "Unclaimed", "Matched",
+					"Preempting", "Backfill");
+#else
 	fprintf (file, "%9.9s %5.5s %7.7s %9.9s %7.7s %10.10s\n", "Machines", 
 					"Owner", "Claimed", "Unclaimed", "Matched", "Preempting");
+#endif /* HAVE_BACKFILL */
 }
 
 
 void StartdNormalTotal::
 displayInfo (FILE *file, int)
 {
+#if HAVE_BACKFILL
+	fprintf ( file, "%6d %5d %7d %9d %7d %10d %8d\n", machines, owner,
+			  claimed, unclaimed, matched, preempting, backfill );
+
+#else 
 	fprintf (file, "%9d %5d %7d %9d %7d %10d\n", machines, owner, claimed,
 					unclaimed, matched, preempting);
+#endif /* HAVE_BACKFILL */
 }
 
 
@@ -339,6 +357,9 @@ StartdStateTotal()
 	claimed = 0;
 	preempt = 0;
 	matched = 0;
+#if HAVE_BACKFILL
+	backfill = 0;
+#endif
 }
 
 int StartdStateTotal::
@@ -357,6 +378,9 @@ update( ClassAd *ad )
 		case claimed_state	:	claimed++;		break;
 		case preempting_state:	preempt++;		break;
 		case matched_state	:	matched++;		break;
+#if HAVE_BACKFILL
+		case backfill_state:	backfill++;		break;
+#endif
 		default				:	return false;
 	}
 
@@ -367,16 +391,27 @@ update( ClassAd *ad )
 void StartdStateTotal::
 displayHeader(FILE *file)
 {
+#if HAVE_BACKFILL
+	fprintf (file, "%6.6s %5.5s %9.9s %7.7s %10.10s %7.7s %8.8s\n",
+					"Total", "Owner", "Unclaimed", "Claimed", 
+					"Preempting", "Matched", "Backfill");
+#else
 	fprintf( file, "%10.10s %5.5s %9.9s %7.7s %10.10s %7.7s\n", "Machines", 
 				"Owner", "Unclaimed", "Claimed", "Preempting", "Matched" );
+#endif /* HAVE_BACKFILL */
 }
 
 
 void StartdStateTotal::
 displayInfo( FILE *file, int )
 {
-	fprintf(file,"%10d %5d %9d %7d %10d %7d\n",machines,owner,unclaimed,claimed,
-			preempt,matched);
+#if HAVE_BACKFILL
+	fprintf( file, "%6d %5d %9d %7d %10d %7d %8d\n", machines, owner, 
+			 unclaimed, claimed, preempt, matched, backfill );
+#else
+	fprintf( file, "%10d %5d %9d %7d %10d %7d\n", machines, owner, 
+			 unclaimed, claimed, preempt, matched );
+#endif /* HAVE_BACKFILL */
 }
 
 

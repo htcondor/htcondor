@@ -32,10 +32,19 @@
 
 #include "simplelist.h"
 #include "extArray.h"
+#include "condor_classad_namedlist.h"
+
 #include "Resource.h"
 #include "claim.h"
 #include "starter_mgr.h"
-#include "condor_classad_namedlist.h"
+
+#if HAVE_BACKFILL
+#include "backfill_mgr.h"
+#if HAVE_BOINC
+#include "boinc_mgr.h"
+#endif /* HAVE_BOINC */
+#endif /* HAVE_BACKFILL */
+
 
 typedef int (Resource::*ResourceMember)();
 typedef float (Resource::*ResourceFloatMember)();
@@ -72,7 +81,7 @@ public:
 	void	assign_load( void );
 	void	assign_keyboard( void );
 
-	bool 	hasOppClaim( void );
+	bool 	needsPolling( void );
 	bool 	hasAnyClaim( void );
 	bool	is_smp( void ) { return( num_cpus() > 1 ); }
 	int		num_cpus( void ) { return m_attr->num_cpus(); }
@@ -142,6 +151,7 @@ public:
 	Resource*	get_by_cur_id(char*);	// Find rip by ClaimId of r_cur
 	Resource*	get_by_any_id(char*);	// Find rip by r_cur or r_pre
 	Resource*	get_by_name(char*);		// Find rip by r_name
+	Resource*	get_by_vm_id(int);		// Find rip by r_id
 	State		state( void );			// Return the machine state
 
 
@@ -165,6 +175,11 @@ public:
 	bool		isShuttingDown() { return is_shutting_down; };
 
 	StarterMgr starter_mgr;
+
+#if HAVE_BACKFILL
+	BackfillMgr* m_backfill_mgr;
+	void backfillMgrDone();
+#endif /* HAVE_BACKFILL */
 
 	time_t	now( void ) { return cur_time; };
 
@@ -261,6 +276,11 @@ private:
 		   STARTD_NOCLAIM_SHUTDOWN parameter).
 		*/
 	void check_use( void );
+
+#if HAVE_BACKFILL
+	bool backfillConfig( void );
+	bool m_backfill_shutdown_pending;
+#endif /* HAVE_BACKFILL */
 
 };
 

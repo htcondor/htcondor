@@ -35,3 +35,11 @@ template class SimpleList<Claim*>;
 template class SimpleList<Starter*>;
 template class SimpleList<Resource*>;
 template class SimpleList<CpuAttributes*>;
+
+
+#if HAVE_BACKFILL
+class BackfillVM;
+template class ExtArray<BackfillVM*>;
+#endif /* HAVE_BACKFILL */
+
+

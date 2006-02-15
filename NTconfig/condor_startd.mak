@@ -49,6 +49,8 @@ CLEAN :"condor_util_lib - Win32 DebugCLEAN" "condor_cpp_util - Win32 DebugCLEAN"
 CLEAN :
 !ENDIF 
 	-@erase "$(INTDIR)\AvailStats.obj"
+	-@erase "$(INTDIR)\backfill_mgr.obj"
+	-@erase "$(INTDIR)\boinc_mgr.obj"
 	-@erase "$(INTDIR)\claim.obj"
 	-@erase "$(INTDIR)\cod_mgr.obj"
 	-@erase "$(INTDIR)\command.obj"
@@ -141,6 +143,8 @@ LINK32_OBJS= \
 	"$(INTDIR)\Starter.obj" \
 	"$(INTDIR)\starter_mgr.obj" \
 	"$(INTDIR)\util.obj" \
+	"$(INTDIR)\backfill_mgr.obj" \
+	"$(INTDIR)\boinc_mgr.obj" \
 	"..\src\condor_util_lib\condor_util.lib" \
 	"$(OUTDIR)\condor_cpp_util.lib" \
 	"$(OUTDIR)\condor_classad.lib" \
@@ -178,6 +182,8 @@ CLEAN :"condor_util_lib - Win32 ReleaseCLEAN" "condor_cpp_util - Win32 ReleaseCL
 CLEAN :
 !ENDIF 
 	-@erase "$(INTDIR)\AvailStats.obj"
+	-@erase "$(INTDIR)\backfill_mgr.obj"
+	-@erase "$(INTDIR)\boinc_mgr.obj"
 	-@erase "$(INTDIR)\claim.obj"
 	-@erase "$(INTDIR)\cod_mgr.obj"
 	-@erase "$(INTDIR)\command.obj"
@@ -267,6 +273,8 @@ LINK32_OBJS= \
 	"$(INTDIR)\Starter.obj" \
 	"$(INTDIR)\starter_mgr.obj" \
 	"$(INTDIR)\util.obj" \
+	"$(INTDIR)\backfill_mgr.obj" \
+	"$(INTDIR)\boinc_mgr.obj" \
 	"..\src\condor_util_lib\condor_util.lib" \
 	"$(OUTDIR)\condor_cpp_util.lib" \
 	"$(OUTDIR)\condor_classad.lib" \
@@ -479,6 +487,18 @@ LINK32_OBJS= \
 SOURCE=..\src\condor_startd.V6\AvailStats.C
 
 "$(INTDIR)\AvailStats.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\src\condor_startd.V6\backfill_mgr.C
+
+"$(INTDIR)\backfill_mgr.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\src\condor_startd.V6\boinc_mgr.C
+
+"$(INTDIR)\boinc_mgr.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 

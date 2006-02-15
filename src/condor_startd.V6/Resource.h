@@ -73,6 +73,8 @@ public:
 	State		state( void )		{return r_state->state();};
 	Activity	activity( void )	{return r_state->activity();};
 	int		eval_state( void )		{return r_state->eval();};
+		// does this resource need polling frequency for compute/eval?
+	bool	needsPolling( void );
 	bool	hasOppClaim( void );
 	bool	hasAnyClaim( void );
 	bool	isDeactivating( void )	{return r_cur->isDeactivating();};
@@ -160,6 +162,14 @@ public:
 	int		eval_start( void );			// returns -1 on undefined
 	int		eval_cpu_busy( void );		// returns FALSE on undefined
 
+#if HAVE_BACKFILL
+	int		eval_start_backfill( void ); 
+	int		eval_evict_backfill( void ); 
+	bool	start_backfill( void );
+	bool	softkill_backfill( void );
+	bool	hardkill_backfill( void );
+#endif /* HAVE_BACKFILL */
+
 	bool    claimWorklifeExpired();
 	int		retirementExpired( void );
 	int		mayUnretire( void );
@@ -201,6 +211,8 @@ private:
 	float	r_pre_cod_condor_load;
 	void 	startTimerToEndCODLoadHack( void );
 	void	endCODLoadHack( void );
+	int		eval_expr( const char* expr_name, bool fatal, bool check_vanilla );
+
 };
 
 

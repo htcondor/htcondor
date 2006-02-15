@@ -137,6 +137,13 @@ Resource::retire_claim( void )
 		return change_state( retiring_act );
 	case matched_state:
 		return change_state( owner_state );
+#if HAVE_BACKFILL
+	case backfill_state:
+			// we don't want retirement to mean anything special for
+			// backfill jobs... they should be killed immediately 
+		set_destination_state( owner_state );
+		return TRUE;
+#endif /* HAVE_BACKFILL */
 	default:
 			// For good measure, try directly killing the starter if
 			// we're in any other state.  If there's no starter, this
@@ -146,6 +153,7 @@ Resource::retire_claim( void )
 	}
 	return TRUE;
 }
+
 
 int
 Resource::release_claim( void )
@@ -160,11 +168,17 @@ Resource::release_claim( void )
 		break;
 	case matched_state:
 		return change_state( owner_state );
+#if HAVE_BACKFILL
+	case backfill_state:
+		set_destination_state( owner_state );
+		return TRUE;
+#endif /* HAVE_BACKFILL */
 	default:
 		return (int)r_cur->starterKillHard();
 	}
 	return TRUE;
 }
+
 
 int
 Resource::kill_claim( void )
@@ -178,6 +192,11 @@ Resource::kill_claim( void )
 		return change_state( preempting_state, killing_act );
 	case matched_state:
 		return change_state( owner_state );
+#if HAVE_BACKFILL
+	case backfill_state:
+		set_destination_state( owner_state );
+		return TRUE;
+#endif /* HAVE_BACKFILL */
 	default:
 			// In other states, try direct kill.  See above.
 		return (int)r_cur->starterKillHard();
@@ -314,6 +333,30 @@ Resource::shutdownAllClaims( bool graceful )
 }
 
 
+bool
+Resource::needsPolling( void )
+{
+	if( hasOppClaim() ) {
+		return true;
+	}
+#if HAVE_BACKFILL
+		/*
+		  if we're backfill-enabled, we want to always do polling if
+		  we're in the backfill state.  if we're busy/killing, we'll
+		  want frequent recompute + eval to make sure we kill backfill
+		  jobs when necessary.  even if we're in Backfill/Idle, we
+		  want to do polling since we should try to spawn the backfill
+		  client quickly after entering Backfill/Idle.
+		*/
+	if( state() == backfill_state ) {
+		return true;
+	}
+#endif /* HAVE_BACKFILL */
+	return false;
+}
+
+
+
 // This one *only* looks at opportunistic claims
 bool
 Resource::hasOppClaim( void )
@@ -333,6 +376,11 @@ Resource::hasAnyClaim( void )
 	if( r_cod_mgr->hasClaims() ) {
 		return true;
 	}
+#if HAVE_BACKFILL
+	if( state() == backfill_state && activity() != idle_act ) {
+		return true;
+	}
+#endif /* HAVE_BACKFILL */
 	return hasOppClaim();
 }
 
@@ -483,6 +531,13 @@ Resource::starterExited( Claim* cur_claim )
  		r_cod_mgr->starterExited( cur_claim );
 		return;
 	}
+
+		// let our ResState object know the starter exited, so it can
+		// deal with destination state stuff...  we'll eventually need
+		// to move more of the code from below here into the
+		// destination code in ResState, to keep things simple and in
+		// 1 place...
+	r_state->starterExited();
 
 		// All of the potential paths from here result in a state
 		// change, and all of them are triggered by the starter
@@ -1032,151 +1087,151 @@ Resource::retirementExpired()
 	return (JobAge >= MaxJobRetirementTime);
 }
 
+
+// returns -1 on undefined, 0 on false, 1 on true
+int
+Resource::eval_expr( const char* expr_name, bool fatal, bool check_vanilla )
+{
+	int tmp;
+	if( check_vanilla && r_cur->universe() == CONDOR_UNIVERSE_VANILLA ) {
+		MyString tmp_expr_name = expr_name;
+		tmp_expr_name += "_VANILLA";
+		tmp = eval_expr( tmp_expr_name.Value(), false, false );
+		if( tmp >= 0 ) {
+				// found it, just return the value;
+			return tmp;
+		}
+			// otherwise, fall through and try the non-vanilla version
+	}
+	if( (r_classad->EvalBool(expr_name, r_cur->ad(), tmp) ) == 0 ) { 
+		if( fatal ) {
+			EXCEPT( "Can't evaluate %s", expr_name );
+		} else {
+				// anything else for here?
+			return -1;
+		}
+	}
+		// EvalBool returned success, we can just return the value
+	return tmp;
+}
+
+
 int
 Resource::eval_kill()
 {
-	int tmp;
-	if( r_cur->universe() == CONDOR_UNIVERSE_VANILLA ) {
-		if( (r_classad->EvalBool( "KILL_VANILLA",
-									r_cur->ad(), tmp) ) == 0 ) {  
-			if( (r_classad->EvalBool( "KILL",
-										r_cur->ad(),
-										tmp) ) == 0 ) { 
-				EXCEPT("Can't evaluate KILL");
-			}
-		}
-	} else {
-		if( (r_classad->EvalBool( "KILL",
-									r_cur->ad(), 
-									tmp)) == 0 ) { 
-			EXCEPT("Can't evaluate KILL");
-		}	
-	}
-	return tmp;
+		// fatal if undefined, check vanilla
+	return eval_expr( "KILL", true, true );
 }
 
 
 int
 Resource::eval_preempt( void )
 {
-	int tmp;
-	if( r_cur->universe() == CONDOR_UNIVERSE_VANILLA ) {
-		if( (r_classad->EvalBool( "PREEMPT_VANILLA",
-								   r_cur->ad(), 
-								   tmp)) == 0 ) {
-			if( (r_classad->EvalBool( "PREEMPT",
-									   r_cur->ad(), 
-									   tmp)) == 0 ) {
-				EXCEPT("Can't evaluate PREEMPT");
-			}
-		}
-	} else {
-		if( (r_classad->EvalBool( "PREEMPT",
-								   r_cur->ad(), 
-								   tmp)) == 0 ) {
-			EXCEPT("Can't evaluate PREEMPT");
-		}
-	}
-	return tmp;
+		// fatal if undefined, check vanilla
+	return eval_expr( "PREEMPT", true, true );
 }
 
 
 int
 Resource::eval_suspend( void )
 {
-	int tmp;
-	if( r_cur->universe() == CONDOR_UNIVERSE_VANILLA ) {
-		if( (r_classad->EvalBool( "SUSPEND_VANILLA",
-								   r_cur->ad(),
-								   tmp)) == 0 ) {
-			if( (r_classad->EvalBool( "SUSPEND",
-									   r_cur->ad(),
-									   tmp)) == 0 ) {
-				EXCEPT("Can't evaluate SUSPEND");
-			}
-		}
-	} else {
-		if( (r_classad->EvalBool( "SUSPEND",
-								   r_cur->ad(),
-								   tmp)) == 0 ) {
-			EXCEPT("Can't evaluate SUSPEND");
-		}
-	}
-	return tmp;
+		// fatal if undefined, check vanilla
+	return eval_expr( "SUSPEND", true, true );
 }
 
 
 int
 Resource::eval_continue( void )
 {
-	int tmp;
-	if( r_cur->universe() == CONDOR_UNIVERSE_VANILLA ) {
-		if( (r_classad->EvalBool( "CONTINUE_VANILLA",
-								   r_cur->ad(),
-								   tmp)) == 0 ) {
-			if( (r_classad->EvalBool( "CONTINUE",
-									   r_cur->ad(),
-									   tmp)) == 0 ) {
-				EXCEPT("Can't evaluate CONTINUE");
-			}
-		}
-	} else {	
-		if( (r_classad->EvalBool( "CONTINUE",
-								   r_cur->ad(),
-								   tmp)) == 0 ) {
-			EXCEPT("Can't evaluate CONTINUE");
-		}
-	}
-	return tmp;
+		// fatal if undefined, check vanilla
+	return eval_expr( "CONTINUE", true, true );
 }
 
 
 int
 Resource::eval_is_owner( void )
 {
-	int tmp;
-	if( (r_classad->EvalBool( ATTR_IS_OWNER, 
-							  r_cur->ad(),
-							  tmp)) == 0 ) {
-		EXCEPT("Can't evaluate %s", ATTR_IS_OWNER);
-	}
-	return tmp;
+		// fatal if undefined, don't check vanilla
+	return eval_expr( ATTR_IS_OWNER, true, false );
 }
 
 
 int
 Resource::eval_start( void )
 {
-	int tmp;
-	if( (r_classad->EvalBool( "START", 
-							  r_cur->ad(),
-							  tmp)) == 0 ) {
-			// Undefined
-		return -1;
-	}
-	return tmp;
+		// -1 if undefined, don't check vanilla
+	return eval_expr( "START", false, false );
 }
 
 
 int
 Resource::eval_cpu_busy( void )
 {
-	int tmp = 0;
+	int rval = 0;
 	if( ! r_classad ) {
 			// We don't have our classad yet, so just return that
 			// we're not busy.
 		return 0;
 	}
-	if( (r_classad->EvalBool( ATTR_CPU_BUSY, r_cur->ad(), tmp )) == 0 ) {
+		// not fatal, don't check vanilla
+	rval = eval_expr( ATTR_CPU_BUSY, false, false );
+	if( rval < 0 ) { 
 			// Undefined, try "cpu_busy"
-		if( (r_classad->EvalBool( "CPU_BUSY", r_cur->ad(), 
-								  tmp )) == 0 ) {   
-				// Totally undefined, return false;
-			return 0;
-		}
+		rval = eval_expr( "CPU_BUSY", false, false );
 	}
-	return tmp;
+	if( rval < 0 ) { 
+			// Totally undefined, return false;
+		return 0;
+	}
+	return rval;
 }
+
+
+#if HAVE_BACKFILL
+
+int
+Resource::eval_start_backfill( void )
+{
+	int rval = 0;
+	rval = eval_expr( "START_BACKFILL", false, false );
+	if( rval < 0 ) {
+			// Undefined, return false
+		return 0;
+	}
+	return rval;
+}
+
+
+int
+Resource::eval_evict_backfill( void )
+{
+		// return -1 on undefined (not fatal), don't check vanilla
+	return eval_expr( "EVICT_BACKFILL", false, false );
+}
+
+
+bool
+Resource::start_backfill( void )
+{
+	return resmgr->m_backfill_mgr->start(r_id);
+}
+
+
+bool
+Resource::softkill_backfill( void )
+{
+	return resmgr->m_backfill_mgr->softkill(r_id);
+}
+
+
+bool
+Resource::hardkill_backfill( void )
+{
+	return resmgr->m_backfill_mgr->hardkill(r_id);
+}
+
+
+#endif /* HAVE_BACKFILL */
 
 
 void

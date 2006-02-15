@@ -25,6 +25,7 @@
 #include "startd.h"
 #include "condor_classad_namedlist.h"
 
+
 ResMgr::ResMgr()
 {
 	totals_classad = NULL;
@@ -33,6 +34,12 @@ ResMgr::ResMgr()
 	poll_tid = -1;
 
 	m_attr = new MachAttributes;
+
+#if HAVE_BACKFILL
+	m_backfill_mgr = NULL;
+	m_backfill_shutdown_pending = false;
+#endif
+
 	id_disp = NULL;
 
 	nresources = 0;
@@ -51,6 +58,13 @@ ResMgr::~ResMgr()
 	if( totals_classad ) delete totals_classad;
 	if( id_disp ) delete id_disp;
 	delete m_attr;
+
+#if HAVE_BACKFILL
+	if( m_backfill_mgr ) {
+		delete m_backfill_mgr;
+	}
+#endif
+
 	if( resources ) {
 		for( i = 0; i < nresources; i++ ) {
 			delete resources[i];
@@ -97,6 +111,10 @@ ResMgr::init_config_classad( void )
 	configInsert( config_classad, "KILL_VANILLA", false );
 	configInsert( config_classad, "WANT_SUSPEND_VANILLA", false );
 	configInsert( config_classad, "WANT_VACATE_VANILLA", false );
+#if HAVE_BACKFILL
+	configInsert( config_classad, "START_BACKFILL", false );
+	configInsert( config_classad, "EVICT_BACKFILL", false );
+#endif /* HAVE_BACKFILL */
 
 		// Next, try the IS_OWNER expression.  If it's not there, give
 		// them a resonable default, instead of leaving it undefined. 
@@ -129,6 +147,161 @@ ResMgr::init_config_classad( void )
 		// Now, bring in anything the user has said to include
 	config_fill_ad( config_classad );
 }
+
+
+
+#if HAVE_BACKFILL
+
+void
+ResMgr::backfillMgrDone()
+{
+	ASSERT( m_backfill_mgr );
+	dprintf( D_FULLDEBUG, "BackfillMgr now ready to be deleted\n" );
+	delete m_backfill_mgr;
+	m_backfill_mgr = NULL;
+	m_backfill_shutdown_pending = false;
+
+		// We should call backfillConfig() again, since now that the
+		// "old" manager is gone, we might want to allocate a new one
+	backfillConfig();
+}
+
+
+static bool
+verifyBackfillSystem( const char* sys )
+{
+
+#if HAVE_BOINC
+	if( ! stricmp(sys, "BOINC") ) {
+		return true;
+	}
+#endif /* HAVE_BOINC */
+
+	return false;
+}
+
+
+bool
+ResMgr::backfillConfig()
+{
+	if( m_backfill_shutdown_pending ) {
+			/*
+			  we're already in the middle of trying to reconfig the
+			  backfill manager, anyway.  we can only get to this point
+			  if we had 1 backfill system running, then we either
+			  change the system we want or disable backfill entirely,
+			  and while we're waiting for the old system to cleanup,
+			  we get *another* reconfig.  in this case, we do NOT want
+			  to act on the new reconfig until the old reconfig had a
+			  chance to complete.  since we'll call backfillConfig()
+			  from backfillMgrDone(), anyway, there's no harm in just
+			  returning immediately at this point, and plenty of harm
+			  that could come from trying to proceed. ;)
+			*/
+		dprintf( D_ALWAYS, "Got another reconfig while waiting for the old "
+				 "backfill system to finish cleaning up, delaying\n" );
+		return true;
+	}
+
+	if( ! param_boolean("ENABLE_BACKFILL", false) ) {
+		if( m_backfill_mgr ) {
+			dprintf( D_ALWAYS, 
+					 "ENABLE_BACKFILL is false, destroying BackfillMgr\n" );
+			if( m_backfill_mgr->destroy() ) {
+					// nothing else to cleanup now, we can delete it 
+					// immediately...
+				delete m_backfill_mgr;
+				m_backfill_mgr = NULL;
+			} else {
+					// backfill_mgr told us we have to wait, so just
+					// return for now and we'll finish deleting this
+					// in ResMgr::backfillMgrDone(). 
+				dprintf( D_ALWAYS, "BackfillMgr still has cleanup to "
+						 "perform, postponing delete\n" );
+				m_backfill_shutdown_pending = true;
+			}
+		}
+		return false;
+	}
+
+	char* new_system = param( "BACKFILL_SYSTEM" );
+	if( ! new_system ) {
+		dprintf( D_ALWAYS, "ERROR: ENABLE_BACKFILL is TRUE, but "	
+				 "BACKFILL_SYSTEM is undefined!\n" );
+		return false;
+	}
+	if( ! verifyBackfillSystem(new_system) ) {
+		dprintf( D_ALWAYS,
+				 "ERROR: BACKFILL_SYSTEM '%s' not supported, ignoring\n",
+				 new_system );
+		free( new_system );
+		return false;
+	}
+		
+	if( m_backfill_mgr ) {
+		if( ! stricmp(new_system, m_backfill_mgr->backfillSystemName()) ) {
+				// same as before
+			free( new_system );
+				// since it's already here and we're keeping it, tell
+				// it to reconfig (if that matters)
+			m_backfill_mgr->reconfig();
+				// we're done 
+			return true;
+		} else { 
+				// different!
+			dprintf( D_ALWAYS, "BACKFILL_SYSTEM has changed "
+					 "(old: '%s', new: '%s'), re-initializing\n",
+					 m_backfill_mgr->backfillSystemName(), new_system );
+			if( m_backfill_mgr->destroy() ) {
+					// nothing else to cleanup now, we can delete it 
+					// immediately...
+				delete m_backfill_mgr;
+				m_backfill_mgr = NULL;
+			} else {
+					// backfill_mgr told us we have to wait, so just
+					// return for now and we'll finish deleting this
+					// in ResMgr::backfillMgrDone(). 
+				dprintf( D_ALWAYS, "BackfillMgr still has cleanup to "
+						 "perform, postponing delete\n" );
+				m_backfill_shutdown_pending = true;
+				return true;
+			}
+		}
+	}
+
+		// if we got this far, it means we've got a valid system, but
+		// no manager object.  so, depending on the system,
+		// instantiate the right thing.
+#if HAVE_BOINC
+	if( ! stricmp(new_system, "BOINC") ) {
+		m_backfill_mgr = new BOINC_BackfillMgr();
+		if( ! m_backfill_mgr->init() ) {
+			dprintf( D_ALWAYS, "ERROR initializing BOINC_BackfillMgr\n" );
+			delete m_backfill_mgr;
+			m_backfill_mgr = NULL;
+			free( new_system );
+			return false;
+		}
+	}
+#endif /* HAVE_BOINC */
+
+	if( ! m_backfill_mgr ) {
+			// this is impossible, since we've already verified above
+		EXCEPT( "IMPOSSILE: unrecognized BACKFILL_SYSTEM: '%s'",
+				new_system );
+	}
+
+	dprintf( D_ALWAYS, "Created a %s Backfill Manager\n", 
+			 m_backfill_mgr->backfillSystemName() );
+
+	free( new_system );
+
+	return true;
+}
+
+
+
+#endif /* HAVE_BACKFILL */
 
 
 void
@@ -191,6 +364,11 @@ ResMgr::init_resources( void )
 		// Resource objects.  Since it's an array of pointers, this
 		// won't touch the objects at all.
 	delete [] new_cpu_attrs;
+
+#if HAVE_BACKFILL
+	backfillConfig();
+#endif
+
 }
 
 
@@ -204,6 +382,9 @@ ResMgr::reconfig_resources( void )
 	Resource*** sorted_resources;	// Array of arrays of pointers.
 	Resource* rip;
 
+#if HAVE_BACKFILL
+	backfillConfig();
+#endif
 		// See if any new types were defined.  Don't except if there's
 		// any errors, just dprintf().
 	initTypes( 0 );
@@ -859,14 +1040,14 @@ ResMgr::adlist_publish( ClassAd *resAd, amask_t mask )
 
 
 bool
-ResMgr::hasOppClaim( void )
+ResMgr::needsPolling( void )
 {
 	if( ! resources ) {
 		return false;
 	}
 	int i;
 	for( i = 0; i < nresources; i++ ) {
-		if( resources[i]->hasOppClaim() ) {
+		if( resources[i]->needsPolling() ) {
 			return true;
 		}
 	}
@@ -1053,6 +1234,20 @@ ResMgr::get_by_name( char* name )
 }
 
 
+Resource*
+ResMgr::get_by_vm_id( int id )
+{
+	if( ! resources ) {
+		return NULL;
+	}
+	int i;
+	for( i = 0; i < nresources; i++ ) {
+		if( resources[i]->r_id == id ) {
+			return resources[i];
+		}
+	}
+	return NULL;
+}
 
 
 State
@@ -1357,7 +1552,7 @@ ResMgr::check_polling( void )
 		return;
 	}
 
-	if( hasOppClaim() || m_attr->condor_load() > 0 ) {
+	if( needsPolling() || m_attr->condor_load() > 0 ) {
 		start_poll_timer();
 	} else {
 		cancel_poll_timer();

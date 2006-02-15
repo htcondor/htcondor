@@ -87,6 +87,9 @@ class StartdNormalTotal : public ClassTotal
 		int claimed;
 		int matched;
 		int preempting;
+#if HAVE_BACKFILL
+		int backfill;
+#endif
 };
 
 
@@ -139,6 +142,9 @@ class StartdStateTotal : public ClassTotal
 		int claimed;
 		int preempt;
 		int matched;
+#if HAVE_BACKFILL
+		int backfill;
+#endif
 };
 
 

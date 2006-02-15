@@ -37,6 +37,7 @@ public:
 	int		change( State, Activity );
 	int 	eval( void );
 	void	set_destination( State );
+	int		starterExited( void );
 	State	destination( void ) { return r_destination; };
 
 	void	dprintf( int, char*, ... );

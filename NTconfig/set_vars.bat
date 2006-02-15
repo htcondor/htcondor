@@ -52,7 +52,7 @@ REM Some have been defined, but are not in use yet.
 REM ======================================================================
 
 REM ** GSOAP
-set CONDOR_GSOAP_INCLUDE=/I %EXT_INSTALL%\%EXT_GSOAP_VERSION%\src
+set CONDOR_GSOAP_INCLUDE=/I %EXT_INSTALL%\%EXT_GSOAP_VERSION%\src /DHAVE_BACKFILL=1 /DHAVE_BOINC=1
 set CONDOR_GSOAP_LIB=
 set CONDOR_GSOAP_LIBPATH=
 

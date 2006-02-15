@@ -335,13 +335,21 @@ command_name_handler( Service*, int cmd, Stream* stream )
 	State s = rip->state();
 	switch( cmd ) {
 	case VACATE_CLAIM:
-		if( (s == claimed_state) || (s == matched_state) ) {
+		switch( s ) {
+		case claimed_state:
+		case matched_state:
+#if HAVE_BACKFILL
+		case backfill_state:
+#endif /* HAVE_BACKFILL */
 			rip->dprintf( D_ALWAYS, 
 						  "State change: received VACATE_CLAIM command\n" );
 			return rip->retire_claim();
-		} else {
+			break;
+
+		default:
 			rip->log_ignore( cmd, s );
 			return FALSE;
+			break;
 		}
 		break;
 	case VACATE_CLAIM_FAST:
@@ -349,6 +357,9 @@ command_name_handler( Service*, int cmd, Stream* stream )
 		case claimed_state:
 		case matched_state:
 		case preempting_state:
+#if HAVE_BACKFILL
+		case backfill_state:
+#endif /* HAVE_BACKFILL */
 			rip->dprintf( D_ALWAYS, 
 						  "State change: received VACATE_CLAIM_FAST command\n" );
 			return rip->kill_claim();
@@ -724,24 +735,37 @@ request_claim( Resource* rip, char* id, Stream* stream )
 		}		
 	}	
 
-	if( cmd == OK ) {
-			// We decided to accept the request, save the schedd's
-			// stream, the rank and the classad of this request.
-		rip->r_cur->setRequestStream( stream );
-		rip->r_cur->setad( req_classad );
-		rip->r_cur->setrank( rank );
-		rip->r_cur->setoldrank( oldrank );
-
-			// Call this other function to actually reply to the
-			// schedd and perform the last half of the protocol.  We
-			// use the same function after the preemption has
-			// completed when the startd is finally ready to reply to
-			// the and finish the claiming process.
-		return accept_request_claim( rip );
-	} else {
+	if( cmd != OK ) {
 		refuse( stream );
 		ABORT;
 	}
+
+		// We decided to accept the request, save the schedd's
+		// stream, the rank and the classad of this request.
+	rip->r_cur->setRequestStream( stream );
+	rip->r_cur->setad( req_classad );
+	rip->r_cur->setrank( rank );
+	rip->r_cur->setoldrank( oldrank );
+
+#if HAVE_BACKFILL
+	if( rip->state() == backfill_state ) {
+			// we're currently in Backfill, so we can't just accept
+			// the request immediately, we have to first kill our
+			// backfill job on this resource.  so, we'll set the
+			// destination state to claimed, and allow that to finish
+			// the claiming protocol once the backfill is gone...
+		rip->set_destination_state( claimed_state );
+		return KEEP_STREAM;
+	}
+#endif /* HAVE_BACKFILL */
+
+		// If we're still here, we're ready to accpet the claim now.
+		// Call this other function to actually reply to the schedd
+		// and perform the last half of the protocol.  We use the same
+		// function after the preemption has completed when the startd
+		// is finally ready to reply to the and finish the claiming
+		// process.
+	return accept_request_claim( rip );
 }
 #undef ABORT
 
@@ -1127,19 +1151,45 @@ match_info( Resource* rip, char* id )
 			EXCEPT( "Should never get here" );
 		}
 		break;
+
+#if HAVE_BACKFILL
+	case backfill_state:
+#endif /* HAVE_BACKFILL */
 	case unclaimed_state:
 	case owner_state:
 		if( rip->r_cur->idMatches(id) ) {
 			rip->dprintf( D_ALWAYS, "Received match %s\n", id );
 
+			if( rip->destination_state() != no_state ) {
+					// we've already got a destination state.
+					// therefore, we don't want to act on this match
+					// notification, we want to allow our destination
+					// logic to run its course and just return.
+				dprintf( D_ALWAYS, "Got match while destination state "
+						 "set to %s, ignoring\n",
+						 state_to_string(rip->destination_state()) );
+				return TRUE;
+			}
+
 				// Start a timer to prevent staying in matched state
 				// too long. 
 			rip->r_cur->start_match_timer();
 
+			rip->dprintf( D_FAILURE|D_ALWAYS, "State change: "
+						  "match notification protocol successful\n" );
+
+#if HAVE_BACKFILL
+			if( rip->state() == backfill_state ) {
+					// if we're currently in backfill, we can't go
+					// immediately to matched, since we have to kill
+					// our existing backfill client/starter, first.
+				rip->set_destination_state( matched_state );
+				return TRUE;
+			}
+#endif /* HAVE_BACKFILL */
+
 				// Entering matched state sets our reqexp to unavail
 				// and updates CM.
-			rip->dprintf( D_FAILURE|D_ALWAYS, 
-						  "State change: match notification protocol successful\n" );
 			rip->change_state( matched_state );
 			rval = TRUE;
 		} else {

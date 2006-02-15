@@ -20,62 +20,61 @@
   * RIGHT.
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
 #include "condor_common.h"
-#include "condor_state.h"
+#include "backfill_mgr.h"
 
-static char* condor_states [] = 
-{ "None", "Owner", "Unclaimed", "Matched",  "Claimed", "Preempting",
-  "Shutdown", "Delete", "Backfill" };
 
-static char* condor_activities [] = 
-{ "None", "Idle", "Busy", "Retiring", "Vacating", "Suspended", "Benchmarking",
-  "Killing" };
+// // // // // // // // // // // // 
+// BackfillVM
+// // // // // // // // // // // // 
 
-State 
-string_to_state(char* state_string) 
+BackfillVM::BackfillVM( int vm_id )
 {
-	int i;
-	for( i=0; i<_state_threshold_; i++ ) {
-		if( !strcmp(condor_states[i], state_string) ) {
-			return (State)i;
-		}
-	}
-	return _error_state_;
+	m_vm_id = vm_id;
 }
 
 
-char*
-state_to_string( State state )
+BackfillVM::~BackfillVM()
 {
-	if( state < _state_threshold_ ) {
-		return condor_states[state];
-	} else {
-		return "Unknown";
-	}
 }
 
 
-Activity
-string_to_activity( char* act_string ) 
+bool
+BackfillVM::enterActivity( Activity act )
 {
-	int i;
-	for( i=0; i<_act_threshold_; i++ ) {
-		if( !strcmp(condor_activities[i], act_string) ) {
-			return (Activity)i;
-		}
+	if( m_activity == act ) {
+			// already there, nothing else to do
+		return true;
 	}
-	return _error_act_;
+
+		// verify before we do?
+	m_activity = act;
+	m_entered_current_activity = time(0);
+
+	return true;
 }
 
 
-char*
-activity_to_string( Activity act )
+
+// // // // // // // // // // // // 
+// BackfillMgr
+// // // // // // // // // // // // 
+
+BackfillMgr::BackfillMgr()
 {
-	if( act < _act_threshold_ ) {
-		return condor_activities[act];
-	} else {
-		return "Unknown";
-	}
+	dprintf( D_FULLDEBUG, "Instantiating a BackfillMgr\n" );
+
+	m_num_vms = 0;
+		// make sure our array is initialized with NULLs
+	m_vms.fill( NULL );
+	m_vms.setFiller( NULL );
+}
+
+
+BackfillMgr::~BackfillMgr()
+{
+	dprintf( D_FULLDEBUG, "Destroying a BackfillMgr\n" );
 }
 
 

@@ -60,6 +60,7 @@ public:
 	unsigned long	imageSize( void );
 
 	int		spawn( time_t now, Stream* s );
+	void	setReaperID( int reaper_id ) { s_reaper_id = reaper_id; };
 
 	bool	killHard( void );
 	bool	killSoft( void );
@@ -79,6 +80,11 @@ public:
 	void	setPath( const char* path );
 	void	setIsDC( bool is_dc );
 
+#if HAVE_BOINC
+	bool	isBOINC( void ) { return s_is_boinc; };
+	void	setIsBOINC( bool is_boinc ) { s_is_boinc = is_boinc; };
+#endif /* HAVE_BOINC */
+
 	void	setClaim( Claim* c );
 	void	setPorts( int, int );
 
@@ -95,6 +101,10 @@ private:
 	int		execDCStarter( Stream* s );
 	int		execDCStarter( ArgList const &args, Env const *env, 
 						   int std_fds[], Stream* s );
+#if HAVE_BOINC
+	int 	execBOINCStarter( void );
+#endif /* HAVE_BOINC */
+
 	void	initRunData( void );
 
 	int		startKillTimer( void );	    // Timer for how long we're willing 
@@ -123,6 +133,11 @@ private:
 	procInfo	s_pinfo;	// aggregate ProcAPI info for starter & job
 	int		s_port1;
 	int		s_port2;
+#if HAVE_BOINC
+	bool 	s_is_boinc;
+#endif /* HAVE_BOINC */
+	int		s_reaper_id;
+
 };
 
 #endif /* _CONDOR_STARTD_STARTER_H */

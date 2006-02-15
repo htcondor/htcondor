@@ -86,6 +86,12 @@ Starter::initRunData( void )
 	s_kill_tid = -1;
 	s_port1 = -1;
 	s_port2 = -1;
+	s_reaper_id = -1;
+
+#if HAVE_BOINC
+	s_is_boinc = false;
+#endif /* HAVE_BOINC */
+
 		// Initialize our procInfo structure so we don't use any
 		// values until we've actually computed them.
 	memset( (void*)&s_pinfo, 0, (size_t)sizeof(s_pinfo) );
@@ -116,8 +122,13 @@ bool
 Starter::satisfies( ClassAd* job_ad, ClassAd* mach_ad )
 {
 	int requirements = 0;
-	ClassAd* merged_ad = new ClassAd( *mach_ad );
-	MergeClassAds( merged_ad, s_ad, true );
+	ClassAd* merged_ad;
+	if( mach_ad ) {
+		merged_ad = new ClassAd( *mach_ad );
+		MergeClassAds( merged_ad, s_ad, true );
+	} else {
+		merged_ad = new ClassAd( *s_ad );
+	}
 	if( ! job_ad->EvalBool(ATTR_REQUIREMENTS, merged_ad, requirements) ) { 
 		requirements = 0;
 	}
@@ -499,6 +510,10 @@ Starter::spawn( time_t now, Stream* s )
 {
 	if( isCOD() ) {
 		s_pid = execCODStarter();
+#if HAVE_BOINC
+	} else if( isBOINC() ) {
+		s_pid = execBOINCStarter(); 
+#endif /* HAVE_BOINC */
 	} else if( is_dc() ) {
 		s_pid = execDCStarter( s ); 
 	} else {
@@ -614,6 +629,22 @@ Starter::execCODStarter( void )
 }
 
 
+#if HAVE_BOINC
+int
+Starter::execBOINCStarter( void )
+{
+	ArgList args;
+	args.AppendArg("condor_starter");
+	args.AppendArg("-f");
+	args.AppendArg("-append");
+	args.AppendArg("boinc");
+	args.AppendArg("-job-keyword");
+	args.AppendArg("boinc");
+	return execDCStarter( args, NULL, NULL, NULL );
+}
+#endif /* HAVE_BOINC */
+
+
 int
 Starter::execDCStarter( Stream* s )
 {
@@ -656,8 +687,15 @@ Starter::execDCStarter( ArgList const &args, Env const *env,
 				 args_string.Value() );
 	}
 
+	int reaper_id;
+	if( s_reaper_id > 0 ) {
+		reaper_id = s_reaper_id;
+	} else {
+		reaper_id = main_reaper;
+	}
+
 	s_pid = daemonCore->
-		Create_Process( s_path, args, PRIV_ROOT, main_reaper,
+		Create_Process( s_path, args, PRIV_ROOT, reaper_id,
 						TRUE, env, NULL, TRUE, inherit_list, std_fds );
 	if( s_pid == FALSE ) {
 		dprintf( D_ALWAYS, "ERROR: exec_starter failed!\n");
@@ -807,6 +845,9 @@ Starter::execOldStarter( void )
 bool
 Starter::isCOD()
 {
+	if( ! s_claim ) {
+		return false;
+	}
 	return s_claim->isCOD();
 }
 

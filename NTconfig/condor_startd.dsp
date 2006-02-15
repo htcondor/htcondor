@@ -95,6 +95,22 @@ SOURCE=..\src\condor_startd.V6\AvailStats.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_startd.V6\backfill_mgr.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_startd.V6\backfill_mgr.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_startd.V6\boinc_mgr.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_startd.V6\boinc_mgr.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_startd.V6\claim.C
 # End Source File
 # Begin Source File
