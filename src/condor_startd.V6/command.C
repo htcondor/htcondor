@@ -1092,6 +1092,11 @@ activate_claim( Resource* rip, Stream* stream )
 		// clear out our pointer to avoid confusion/problems.
 	rip->r_cur->setStarter( tmp_starter );
 	tmp_starter = NULL;
+
+		// update the current rank on this claim
+	float rank = compute_rank( mach_classad, req_classad ); 
+	rip->r_cur->setrank( rank );
+
 		// Grab the job ID, so we've got it.  Once we give the
 		// req_classad to the Claim object, we no longer control it. 
 	rip->r_cur->saveJobInfo( req_classad );
