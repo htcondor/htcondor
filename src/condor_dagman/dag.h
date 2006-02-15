@@ -76,20 +76,23 @@ class Dag {
 			   have an error determining the job log files
 		@param useDagDir run DAGs in directories from DAG file paths
 		       if true
-		@param maxIdleNodes the maximum number of idle nodes to allow
-		       at one time (0 means unlimited)
+		@param maxIdleJobProcs the maximum number of idle job procss to
+			   allow at one time (0 means unlimited)
 		@param retrySubmitFirst whether, when a submit fails for a node's
 		       job, to put the node at the head of the ready queue
 		@param retryNodeFirst whether, when a node fails and has retries,
 			   to put the node at the head of the ready queue
+		@param condorRmExe executable to remove Condor jobs
+		@param storkRmExe executable to remove Stork jobs
     */
 
     Dag( /* const */ StringList &dagFiles, char *condorLogName,
 		 const int maxJobsSubmitted,
 		 const int maxPreScripts, const int maxPostScripts, 
 		 int allowEvents, const char *dapLogName, bool allowLogError,
-		 bool useDagDir, int maxIdleNodes, bool retrySubmitFirst,
-		 bool retryNodeFirst);
+		 bool useDagDir, int maxIdleJobProcs, bool retrySubmitFirst,
+		 bool retryNodeFirst, const char *condorRmExe,
+		 const char *storkRmExe);
 
     ///
     ~Dag();
@@ -162,6 +165,21 @@ class Dag {
 	*/
 	void ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 			bool recovery);
+
+	/** Remove the batch system job for the given DAG node.
+		@param The node for which to remove the job.
+	*/
+	void RemoveBatchJob(Job *node);
+
+	/** Processing common to all "end-of-job proc" events.
+		@param The node the event is associated with.
+		@param Whether we're in recovery mode.
+		@param Whether the job resulted in an error (signal or non-zero
+			exit value).
+		@param Whether the job aborted.
+	*/
+	void ProcessJobProcEnd(Job *node, bool recovery, bool isError,
+			bool isAbort);
 
 	/** Process a post script terminated event.
 	    @param The event.
@@ -239,11 +257,11 @@ class Dag {
      */
     inline int NumNodesFailed() const { return _numNodesFailed; }
 
-    /** @return the number of jobs currently submitted to Condor
+    /** @return the number of jobs currently submitted to batch system(s)
      */
-    inline int NumNodesSubmitted() const { return _numNodesSubmitted; }
+    inline int NumJobsSubmitted() const { return _numJobsSubmitted; }
 
-    /** @return the number of nodes ready to submit to Condor
+    /** @return the number of nodes ready to submit job to batch system
      */
     inline int NumNodesReady() const { return _readyQ->Number(); }
 
@@ -350,12 +368,12 @@ class Dag {
 		*/
 	const MyString ParentListString( Job *node, const char delim = ',' ) const;
 
-	int NumIdleNodes() { return _numIdleNodes; }
+	int NumIdleJobProcs() const { return _numIdleJobProcs; }
 
 		/** Get the number of Stork (nee DaP) log files.
 			@return The number of Stork log files (can be 0).
 		*/
-	int GetStorkLogCount() { return _storkLogFiles.number(); }
+	int GetStorkLogCount() const { return _storkLogFiles.number(); }
 
 
 		// non-exe failure codes for return value integers -- we
@@ -473,21 +491,21 @@ class Dag {
     // Number of nodes that failed (job or PRE or POST script failed)
     int _numNodesFailed;
 
-    // Number of nodes currently running (submitted to Condor)
-    int _numNodesSubmitted;
+    // Number of batch system jobs currently submitted
+    int _numJobsSubmitted;
 
     /*  Maximum number of jobs to submit at once.  Non-negative.  Zero means
         unlimited
     */
     const int _maxJobsSubmitted;
 
-		// Number of DAG nodes currently idle.
-	int _numIdleNodes;
+		// Number of DAG job procs currently idle.
+	int _numIdleJobProcs;
 
-    	// Maximum number of idle nodes to allow (stop submitting if the
-		// number of idle nodes hits this limit).  Non-negative.  Zero
+    	// Maximum number of idle job procs to allow (stop submitting if the
+		// number of idle job procs hits this limit).  Non-negative.  Zero
 		// means unlimited.
-    const int _maxIdleNodes;
+    const int _maxIdleJobProcs;
 
 		// Whether to allow the DAG to run even if we have an error
 		// determining the job log files.
@@ -503,6 +521,12 @@ class Dag {
 		// otherwise a node failure puts a node at the back of the ready
 		// queue.  (Default is false.)
 	bool		m_retryNodeFirst;
+
+		// Executable to remove Condor jobs.
+	const char *	_condorRmExe;
+
+		// Executable to remove Stork jobs.
+	const char *	_storkRmExe;
 
 	// queue of jobs ready to be submitted to Condor
 	SimpleList<Job*>* _readyQ;

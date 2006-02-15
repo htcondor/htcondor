@@ -256,8 +256,8 @@ int main_shutdown_rescue( int exitVal ) {
 			// removing them, we would leave the DAG in an
 			// unrecoverable state...
 		debug_printf( DEBUG_DEBUG_1, "We have %d running jobs to remove\n",
-					dagman.dag->NumNodesSubmitted() );
-		if( dagman.dag->NumNodesSubmitted() > 0 ) {
+					dagman.dag->NumJobsSubmitted() );
+		if( dagman.dag->NumJobsSubmitted() > 0 ) {
 			debug_printf( DEBUG_NORMAL, "Removing submitted jobs...\n" );
 			dagman.dag->RemoveRunningJobs(dagman);
 		}
@@ -533,7 +533,8 @@ int main_init (int argc, char ** const argv) {
 						  dagman.allow_events, dapLogName, //<-- DaP
 						  dagman.allowLogError, dagman.useDagDir,
 						  dagman.maxIdle, dagman.retrySubmitFirst,
-						  dagman.retryNodeFirst );
+						  dagman.retryNodeFirst, dagman.condorRmExe,
+						  dagman.storkRmExe );
 
     if( dagman.dag == NULL ) {
         EXCEPT( "ERROR: out of memory!\n");
@@ -613,7 +614,7 @@ print_status() {
 	int total = dagman.dag->NumNodes();
 	int done = dagman.dag->NumNodesDone();
 	int pre = dagman.dag->PreRunNodeCount();
-	int submitted = dagman.dag->NumNodesSubmitted();
+	int submitted = dagman.dag->NumJobsSubmitted();
 	int post = dagman.dag->PostRunNodeCount();
 	int ready =  dagman.dag->NumNodesReady();
 	int failed = dagman.dag->NumNodesFailed();
@@ -659,6 +660,8 @@ void condor_event_timer () {
 	int justSubmitted;
 	justSubmitted = dagman.dag->SubmitReadyJobs(dagman);
 	if( justSubmitted ) {
+			// Note: it would be nice to also have the proc submit
+			// count here.  wenger, 2006-02-08.
 		debug_printf( DEBUG_VERBOSE, "Just submitted %d job%s this cycle...\n",
 					  justSubmitted, justSubmitted == 1 ? "" : "s" );
 	}
@@ -686,7 +689,7 @@ void condor_event_timer () {
     if( prevJobsDone != dagman.dag->NumNodesDone()
         || prevJobs != dagman.dag->NumNodes()
         || prevJobsFailed != dagman.dag->NumNodesFailed()
-        || prevJobsSubmitted != dagman.dag->NumNodesSubmitted()
+        || prevJobsSubmitted != dagman.dag->NumJobsSubmitted()
         || prevJobsReady != dagman.dag->NumNodesReady()
         || prevScriptRunNodes != dagman.dag->ScriptRunNodeCount()
 		|| DEBUG_LEVEL( DEBUG_DEBUG_4 ) ) {
@@ -694,7 +697,7 @@ void condor_event_timer () {
         prevJobsDone = dagman.dag->NumNodesDone();
         prevJobs = dagman.dag->NumNodes();
         prevJobsFailed = dagman.dag->NumNodesFailed();
-        prevJobsSubmitted = dagman.dag->NumNodesSubmitted();
+        prevJobsSubmitted = dagman.dag->NumJobsSubmitted();
         prevJobsReady = dagman.dag->NumNodesReady();
         prevScriptRunNodes = dagman.dag->ScriptRunNodeCount();
 		
@@ -710,13 +713,13 @@ void condor_event_timer () {
     // If DAG is complete, hurray, and exit.
     //
     if( dagman.dag->Done() ) {
-        ASSERT( dagman.dag->NumNodesSubmitted() == 0 );
+        ASSERT( dagman.dag->NumJobsSubmitted() == 0 );
 		dagman.dag->CheckAllJobs();
         debug_printf( DEBUG_NORMAL, "All jobs Completed!\n" );
-		if ( dagman.dag->NumIdleNodes() != 0 ) {
+		if ( dagman.dag->NumIdleJobProcs() != 0 ) {
 			debug_printf( DEBUG_NORMAL, "Warning:  DAGMan thinks there "
-						"are %d idle nodes, even though the DAG is "
-						"completed!\n", dagman.dag->NumIdleNodes() );
+						"are %d idle jobs, even though the DAG is "
+						"completed!\n", dagman.dag->NumIdleJobProcs() );
 		}
 		ExitSuccess();
 		return;
@@ -728,7 +731,7 @@ void condor_event_timer () {
     // dag is not complete, then at least one job failed, or a cycle
     // exists.
     // 
-    if( dagman.dag->NumNodesSubmitted() == 0 &&
+    if( dagman.dag->NumJobsSubmitted() == 0 &&
 		dagman.dag->NumNodesReady() == 0 &&
 		dagman.dag->ScriptRunNodeCount() == 0 ) {
 		if( dagman.dag->NumNodesFailed() > 0 ) {

@@ -65,7 +65,7 @@ ScriptQ::Run( Script *script )
 		script->_post ? _dag->_maxPostScripts : _dag->_maxPreScripts;
 	// if we have no script limit, or we're under the limit, run now
 	if( maxScripts == 0 || _numScriptsRunning < maxScripts ) {
-		debug_printf( DEBUG_NORMAL, "Running %s script of Job %s...\n",
+		debug_printf( DEBUG_NORMAL, "Running %s script of Node %s...\n",
 					  prefix, script->GetNodeName() );
 		if( int pid = script->BackgroundRun( _scriptReaperId ) ) {
 			_numScriptsRunning++;

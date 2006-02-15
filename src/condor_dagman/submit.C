@@ -85,7 +85,16 @@ submit_try( const char *command, CondorID &condorID, Job::job_type_t type )
 
   if ( type == Job::TYPE_CONDOR ) {
     marker = "cluster";
-    scanfStr = "1 job(s) submitted to cluster %d";
+
+	  // Note: we *could* check how many jobs got submitted here, and
+	  // correlate that with how many submit events we see later on.
+	  // I'm not worrying about that for now...  wenger 2006-02-07.
+	  // We also have to check the number of jobs to get an accurate
+	  // count of submitted jobs to report in the dagman.out file.
+
+	  // We should also check whether we got more than one cluster, and
+	  // either deal with it correctly or generate an error message.
+    scanfStr = "%*d job(s) submitted to cluster %d";
   } else if ( type == Job::TYPE_STORK ) {
     marker = "assigned id";
     scanfStr = "Request assigned id: %d";

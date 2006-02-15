@@ -22,6 +22,17 @@
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 //
+// Terminology note:
+// We are calling a *node* the combination of pre-script, job, and
+// post-script.
+// We are calling a *job* essentially what results from one invocation
+// of condor_submit or stork_submit.
+// We are calling a *job proc* an individual batch system process within
+// a cluster.
+// So nodes-to-jobs is 1-to-1; jobs to job procs is 1-to-n.
+// wenger 2006-02-14.
+
+//
 // Local DAGMan includes
 //
 #include "condor_common.h"
@@ -56,8 +67,9 @@ Dag::Dag( /* const */ StringList &dagFiles, char *condorLogName,
 		  const int maxJobsSubmitted,
 		  const int maxPreScripts, const int maxPostScripts,
 		  int allow_events, const char* dapLogName, bool allowLogError,
-		  bool useDagDir, int maxIdleNodes, bool retrySubmitFirst,
-		  bool retryNodeFirst) :
+		  bool useDagDir, int maxIdleJobProcs, bool retrySubmitFirst,
+		  bool retryNodeFirst, const char *condorRmExe,
+		  const char *storkRmExe) :
     _maxPreScripts        (maxPreScripts),
     _maxPostScripts       (maxPostScripts),
 	DAG_ERROR_CONDOR_SUBMIT_FAILED (-1001),
@@ -69,13 +81,15 @@ Dag::Dag( /* const */ StringList &dagFiles, char *condorLogName,
     _dapLogInitialized    (false),             //<--DAP
     _numNodesDone          (0),
     _numNodesFailed        (0),
-    _numNodesSubmitted     (0),
+    _numJobsSubmitted     (0),
     _maxJobsSubmitted     (maxJobsSubmitted),
-	_numIdleNodes		  (0),
-	_maxIdleNodes		  (maxIdleNodes),
+	_numIdleJobProcs		  (0),
+	_maxIdleJobProcs		  (maxIdleJobProcs),
 	_allowLogError		  (allowLogError),
 	m_retrySubmitFirst	  (retrySubmitFirst),
 	m_retryNodeFirst	  (retryNodeFirst),
+	_condorRmExe		  (condorRmExe),
+	_storkRmExe			  (storkRmExe),
 	_preRunNodeCount	  (0),
 	_postRunNodeCount	  (0),
 	_checkCondorEvents    (allow_events),
@@ -525,62 +539,43 @@ void
 Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
 		bool recovery) {
 
+  // NOTE: while there are known Condor bugs leading to a "double"
+  // terminate-then-abort event pair for the same job proc abortion,
+  // this method will no longer actually see the second (abort) event,
+  // because the event-checking code will suppress it.  Therefore, this
+  // code no longer has to worry about it.  Note, though, that we can
+  // still see a combination of terminated and aborted events for the
+  // same *job* (not job proc).
+
 	if ( job ) {
-
-			// Note: this code doesn't work correctly if the node has
-			// retries left, because that means the status won't be
-			// set to STATUS_ERROR.  If the event checking is turned on
-			// we're okay because we'll totally ignore the "extra" abort
-			// event, but if it's turned off we'll try to submit the
-			// node's job twice (once for the terminated event and once
-			// for the abort event) and end up asserting.  (See Gnats
-			// PR 467.)  wenger 2005-04-08.
-		if( job->_Status == Job::STATUS_ERROR ) {
-				// sometimes condor prints *both* a
-				// termination and an abort event for a job;
-				// in such cases, we need to make sure not
-				// to process both...
-			debug_printf( DEBUG_NORMAL,
-							"WARNING: Job %s already marked %s; "
-							"ignoring job aborted event...\n",
-							job->GetJobName(), job->GetStatusName() );
-			return;
+		job->_queuedNodeJobProcs--;
+		ASSERT( job->_queuedNodeJobProcs >= 0 );
+		if( job->_queuedNodeJobProcs == 0 ) {
+			_numJobsSubmitted--;
 		}
+		ASSERT( _numJobsSubmitted >= 0 );
 
-		_numNodesSubmitted--;
-		ASSERT( _numNodesSubmitted >= 0 );
-
-		job->_Status = Job::STATUS_ERROR;
-
-		if( job->GetRetries() < job->GetRetryMax() ) {
-			RestartNode( job, recovery );
-			return;
-		}
-
-		snprintf( job->error_text, JOB_ERROR_TEXT_MAXLEN,
-				"Condor reported %s event",
-				ULogEventNumberNames[event->eventNumber] );
-		if( job->GetRetryMax() > 0 ) {
-				// add # of retries to error_text
-			char *tmp = strnewp( job->error_text );
+			// Only change the node status, error info,
+			// etc., if we haven't already gotten an error
+			// from another job proc in this job cluster
+		if ( job->_Status != Job::STATUS_ERROR ) {
+			job->_Status = Job::STATUS_ERROR;
 			snprintf( job->error_text, JOB_ERROR_TEXT_MAXLEN,
-					"%s (after %d node retries)",
-					tmp, job->GetRetries() );
-			delete tmp;
-		}
-		if( job->_scriptPost == NULL ) {
-			_numNodesFailed++;
-			return;
+				  "Condor reported %s event for job proc (%d.%d)",
+				  ULogEventNumberNames[event->eventNumber],
+				  event->cluster, event->proc );
+			job->retval = DAG_ERROR_CONDOR_JOB_ABORTED;
+			if ( job->_queuedNodeJobProcs > 0 ) {
+			  // once one job proc fails, remove the whole cluster
+				RemoveBatchJob( job );
+			}
+			if ( job->_scriptPost != NULL) {
+					// let the script know the job's exit status
+				job->_scriptPost->_retValJob = job->retval;
+			}
 		}
 
-			// a POST script is specified for the job, so run it
-		job->_Status = Job::STATUS_POSTRUN;
-		_postRunNodeCount++;
-
-		job->_scriptPost->_retValJob = DAG_ERROR_CONDOR_JOB_ABORTED;
-		if( !recovery ) {
-			_postScriptQ->Run( job->_scriptPost );
-		}
+		ProcessJobProcEnd( job, recovery, false, true );
 	}
 }
 
@@ -589,91 +584,181 @@ void
 Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 		bool recovery) {
 	if( job ) {
-		_numNodesSubmitted--;
-		ASSERT( _numNodesSubmitted >= 0 );
+		job->_queuedNodeJobProcs--;
+		ASSERT( job->_queuedNodeJobProcs >= 0 );
+		if( job->_queuedNodeJobProcs == 0 ) {
+			_numJobsSubmitted--;
+		}
+		ASSERT( _numJobsSubmitted >= 0 );
 
 		JobTerminatedEvent * termEvent = (JobTerminatedEvent*) event;
 
-		if( !(termEvent->normal && termEvent->returnValue == 0) ) {
+
+		bool isError = !(termEvent->normal && termEvent->returnValue == 0);
+
+		if( isError ) {
 				// job failed or was killed by a signal
+
 			if( termEvent->normal ) {
-				job->retval = termEvent->returnValue;
-				snprintf( job->error_text, JOB_ERROR_TEXT_MAXLEN,
-						"Job failed with status %d",
-						termEvent->returnValue );
-				debug_printf( DEBUG_QUIET, "Job %s failed with "
-						"status %d.\n", job->GetJobName(),
+				debug_printf( DEBUG_QUIET, "Node %s job proc (%d.%d) "
+						"failed with status %d.\n", job->GetJobName(),
+						event->cluster, event->proc,
 						termEvent->returnValue );
 			} else {
-				job->retval = (0 - termEvent->signalNumber);
-				snprintf( job->error_text, JOB_ERROR_TEXT_MAXLEN,
-						"Job failed with signal %d",
-						termEvent->signalNumber );
-				debug_printf( DEBUG_QUIET, "Job %s failed with "
-						"signal %d.\n", job->GetJobName(),
+				debug_printf( DEBUG_QUIET, "Node %s job proc (%d.%d) "
+						"failed with signal %d.\n", job->GetJobName(),
+						event->cluster, event->proc,
 						termEvent->signalNumber );
 			}
 
-			job->_Status = Job::STATUS_ERROR;
+				// Only change the node status, error info, etc.,
+				// if we haven't already gotten an error on this node.
+			if ( job->_Status != Job::STATUS_ERROR ) {
+				if( termEvent->normal ) {
+					snprintf( job->error_text, JOB_ERROR_TEXT_MAXLEN,
+							"Job proc (%d.%d) failed with status %d",
+							termEvent->cluster, termEvent->proc,
+							termEvent->returnValue );
+					job->retval = termEvent->returnValue;
+					if ( job->_scriptPost != NULL) {
+							// let the script know the job's exit status
+						job->_scriptPost->_retValJob = job->retval;
+					}
+				} else {
+					snprintf( job->error_text, JOB_ERROR_TEXT_MAXLEN,
+							"Job proc (%d.%d) failed with signal %d",
+							termEvent->cluster, termEvent->proc,
+							termEvent->signalNumber );
+					job->retval = (0 - termEvent->signalNumber);
+					if ( job->_scriptPost != NULL) {
+							// let the script know the job's exit status
+						job->_scriptPost->_retValJob = job->retval;
+					}
+				}
+
+				job->_Status = Job::STATUS_ERROR;
+				if ( job->_queuedNodeJobProcs > 0 ) {
+				  // once one job proc fails, remove
+				  // the whole cluster
+					RemoveBatchJob( job );
+				}
+			}
 
 			if( job->_scriptPost == NULL ) {
 				CheckForDagAbort(job, job->retval, "node");
+				// if dag abort happened, we never return here!
 			}
 
-				// Note: check for job->_scriptPost != NULL here fixes
-				// Gnats PR PR 469 (retries with POST script not handled
-				// correctly).  wenger 2005-11-10
-			if( job->_scriptPost != NULL ) {
-				//
-				// Fall thru and run POST script below.
-				//
-			} else if( job->GetRetries() < job->GetRetryMax() ) {
-				RestartNode( job, recovery );
-				return;
-			} else {
-					// no more retries -- job failed
-				if( job->GetRetryMax() > 0 ) {
-						// add # of retries to error_text
-					char *tmp = strnewp( job->error_text );
-					snprintf( job->error_text, JOB_ERROR_TEXT_MAXLEN,
-							"%s (after %d node retries)", tmp,
-							job->GetRetries() );
-					delete tmp;   
-				}
-
-				if( job->_scriptPost == NULL ) {
-					_numNodesFailed++;
-					return;
-				}
-			}
 		} else {
 			// job succeeded
 			ASSERT( termEvent->returnValue == 0 );
-			job->retval = 0;
+
+				// Only change the node status if we haven't already
+				// gotten an error on this node.
+			if ( job->_Status != Job::STATUS_ERROR ) {
+				job->retval = 0;
+				if ( job->_scriptPost != NULL) {
+						// let the script know the job's exit status
+					job->_scriptPost->_retValJob = job->retval;
+				}
+			}
 			debug_printf( DEBUG_NORMAL,
-							"Job %s completed successfully.\n",
-							job->GetJobName() );
+							"Node %s job proc (%d.%d) completed "
+							"successfully.\n", job->GetJobName(),
+							termEvent->cluster, termEvent->proc );
 		}
+
+		ProcessJobProcEnd( job, recovery, isError, false );
+
+		PrintReadyQ( DEBUG_DEBUG_2 );
+
+		return;
+	}
+}
+
+//---------------------------------------------------------------------------
+void
+Dag::RemoveBatchJob(Job *node) {
+
+	char cmd[ARG_MAX];
+
+	switch ( node->JobType() ) {
+	case Job::TYPE_CONDOR:
+       	snprintf( cmd, ARG_MAX, "%s %d", _condorRmExe,
+					node->_CondorID._cluster);
+		break;
+
+	case Job::TYPE_STORK:
+       	snprintf( cmd, ARG_MAX, "%s %d", _storkRmExe,
+					node->_CondorID._cluster);
+		break;
+
+	default:
+		ASSERT( false );
+		break;
+	}
+	
+	debug_printf( DEBUG_VERBOSE, "Executing: %s\n", cmd );
+	if ( util_popen( cmd ) ) {
+			// Note: error here can't be fatal because there's a
+			// race condition where you could do a condor_rm on
+			// a job that already terminated.  wenger 2006-02-08.
+		debug_printf( DEBUG_VERBOSE, "Error removing DAG node jobs\n");
+	}
+}
+
+//---------------------------------------------------------------------------
+void
+Dag::ProcessJobProcEnd(Job *job, bool recovery, bool isError, bool isAbort) {
+
+	if ( isError || isAbort ) {
+		if( job->_scriptPost != NULL ) {
+			//
+			// Fall thru and maybe run POST script below.
+			//
+
+		} else if( job->GetRetries() < job->GetRetryMax() ) {
+			RestartNode( job, recovery );
+			return;
+
+		} else {
+				// no more retries -- job failed
+			if( job->GetRetryMax() > 0 ) {
+					// add # of retries to error_text
+				char *tmp = strnewp( job->error_text );
+				snprintf( job->error_text, JOB_ERROR_TEXT_MAXLEN,
+						"%s (after %d node retries)", tmp,
+						job->GetRetries() );
+				delete [] tmp;   
+			}
+
+			if ( job->_queuedNodeJobProcs == 0 ) {
+				_numNodesFailed++;
+			}
+
+			return;
+		}
+	}
+
+	if ( job->_queuedNodeJobProcs == 0 ) {
+			// All procs for this job are done.
+			debug_printf( DEBUG_NORMAL, "Node %s job completed\n",
+						job->GetJobName() );
 
 			// if a POST script is specified for the job, run it
 		if (job->_scriptPost != NULL) {
 			job->_Status = Job::STATUS_POSTRUN;
 			_postRunNodeCount++;
-			// let the script know the job's exit status
-			job->_scriptPost->_retValJob = termEvent->normal
-				? termEvent->returnValue : -1;
+
 			if( !recovery ) {
 				_postScriptQ->Run( job->_scriptPost );
 			}
 		}
 			// no POST script was specified, so update DAG with
-			// job's successful completion
-		else {
+			// node's successful completion if the node succeeded.
+		else if ( job->_Status != Job::STATUS_ERROR ) {
 			TerminateJob( job, recovery );
 		}
-		PrintReadyQ( DEBUG_DEBUG_2 );
-
-		return;
 	}
 }
 
@@ -697,7 +782,7 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 		PostScriptTerminatedEvent *termEvent =
 			(PostScriptTerminatedEvent*) event;
 
-		debug_printf( DEBUG_NORMAL, "POST Script of Job %s ",
+		debug_printf( DEBUG_NORMAL, "POST Script of Node %s ",
 				job->GetJobName() );
 
 		if( !(termEvent->normal && termEvent->returnValue == 0) ) {
@@ -747,8 +832,16 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 
 				MyString	errMsg;
 
-				if( mainJobRetval != 0 ) {
-					errMsg.sprintf( "Job failed with status %d and ",
+				if( mainJobRetval > 0 ) {
+					errMsg.sprintf( "Job exited with status %d and ",
+								mainJobRetval);
+				}
+				else if( mainJobRetval < 0  && mainJobRetval >= -64 ) {
+					errMsg.sprintf( "Job died on signal %d and ",
+								0 - mainJobRetval);
+				}
+				else {
+					errMsg.sprintf( "Job failed due to DAGMAN error %d and ",
 								mainJobRetval);
 				}
 
@@ -792,9 +885,18 @@ Dag::ProcessSubmitEvent(const ULogEvent *event, Job *job, bool recovery) {
 		return;
 	}
 
+	job->_queuedNodeJobProcs++;
+
+		// Note:  in non-recovery mode, we increment _numJobsSubmitted
+		// in SubmitReadyJobs().
 	if ( recovery ) {
 		job->_Status = Job::STATUS_SUBMITTED;
-		_numNodesSubmitted++;
+
+			// Only increment the submitted job count on
+			// the *first* proc of a job.
+		if( job->_queuedNodeJobProcs == 1 ) {
+			_numJobsSubmitted++;
+		}
 		return;
 	}
 
@@ -806,7 +908,7 @@ Dag::ProcessSubmitEvent(const ULogEvent *event, Job *job, bool recovery) {
 		// any order, so we can't sanity-check
 		// in this way
 
-	if ( TotalLogFileCount() == 1 ) {
+	if ( TotalLogFileCount() == 1 && job->_queuedNodeJobProcs == 1 ) {
 
 			// as a sanity check, compare the job from the
 			// submit event to the job we expected to see from
@@ -846,12 +948,13 @@ Dag::ProcessIsIdleEvent(const ULogEvent *event, Job *job) {
 
 	if ( !job->GetIsIdle() ) {
 		job->SetIsIdle(true);
-		_numIdleNodes++;
+		_numIdleJobProcs++;
 	}
 
 	// Do some consistency checks here?
 
-	debug_printf( DEBUG_VERBOSE, "Number of idle nodes: %d\n", _numIdleNodes);
+	debug_printf( DEBUG_VERBOSE, "Number of idle job procs: %d\n",
+				_numIdleJobProcs);
 }
 
 //---------------------------------------------------------------------------
@@ -864,12 +967,13 @@ Dag::ProcessNotIdleEvent(const ULogEvent *event, Job *job) {
 
 	if ( job->GetIsIdle() ) {
 		job->SetIsIdle(false);
-		_numIdleNodes--;
+		_numIdleJobProcs--;
 	}
 
 	// Do some consistency checks here?
 
-	debug_printf( DEBUG_VERBOSE, "Number of idle nodes: %d\n", _numIdleNodes);
+	debug_printf( DEBUG_VERBOSE, "Number of idle job procs: %d\n",
+				_numIdleJobProcs);
 }
 
 //---------------------------------------------------------------------------
@@ -913,7 +1017,10 @@ Job * Dag::GetJob (int logsource, const CondorID condorID) const {
     ListIterator<Job> iList (_jobs);
     Job * job;
     while ((job = iList.Next())) {
-		if (job->_CondorID == condorID &&
+			// Note: we're comparing only on cluster ID
+			// here so all procs in a single cluster get
+			// mapped back to the corresponding node.
+		if (job->_CondorID._cluster == condorID._cluster &&
 					logsource == job->JobType()) return job;
 	}
     return NULL;
@@ -1032,7 +1139,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
     }
 
     // max jobs already submitted
-    if( _maxJobsSubmitted && (_numNodesSubmitted >= _maxJobsSubmitted) ) {
+    if( _maxJobsSubmitted && (_numJobsSubmitted >= _maxJobsSubmitted) ) {
         debug_printf( DEBUG_VERBOSE,
                       "Max jobs (%d) already running; "
 					  "deferring submission of %d ready job%s.\n",
@@ -1040,11 +1147,11 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 					  _readyQ->Number() == 1 ? "" : "s" );
         return numSubmitsThisCycle;
     }
-	if ( _maxIdleNodes && (_numIdleNodes >= _maxIdleNodes) ) {
+	if ( _maxIdleJobProcs && (_numIdleJobProcs >= _maxIdleJobProcs) ) {
         debug_printf( DEBUG_VERBOSE,
 					  "Hit max number of idle DAG nodes (%d); "
 					  "deferring submission of %d ready job%s.\n",
-					  _maxIdleNodes, _readyQ->Number(),
+					  _maxIdleJobProcs, _readyQ->Number(),
 					  _readyQ->Number() == 1 ? "" : "s" );
         return numSubmitsThisCycle;
 	}
@@ -1084,7 +1191,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 		sleep( dm.submit_delay );
 	}
 
-	debug_printf( DEBUG_VERBOSE, "Submitting %s Job %s ...\n",
+	debug_printf( DEBUG_VERBOSE, "Submitting %s Node %s job(s)...\n",
 				  job->JobTypeString(), job->GetJobName() );
 
     MyString cmd_file = job->GetCmdFile();
@@ -1111,7 +1218,8 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 	  // a POST script is specified for the job, so run it
 	  job->_Status = Job::STATUS_POSTRUN;
 	  _postRunNodeCount++;
-	  job->_scriptPost->_retValJob = DAG_ERROR_DAGMAN_HELPER_COMMAND_FAILED;
+	  job->retval = DAG_ERROR_DAGMAN_HELPER_COMMAND_FAILED;
+	  job->_scriptPost->_retValJob = job->retval;
 	  _postScriptQ->Run( job->_scriptPost );
 	} else {
 	  job->_Status = Job::STATUS_ERROR;
@@ -1215,7 +1323,12 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 	}
 
     job->_Status = Job::STATUS_SUBMITTED;
-    _numNodesSubmitted++;
+
+		// Note: I assume we're incrementing this here instead of when
+		// we see the submit events so that we don't accidentally exceed
+		// maxjobs (now really maxnodes) if it takes a while to see
+		// the submit events.  wenger 2006-02-10.
+    _numJobsSubmitted++;
     
         // stash the job ID reported by the submit command, to compare
         // with what we see in the userlog later as a sanity-check
@@ -1279,12 +1392,12 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 				snprintf( job->error_text, JOB_ERROR_TEXT_MAXLEN,
 						 "%s (after %d node retries)", tmp,
 						 job->GetRetries() );
-				delete tmp;   
+				delete [] tmp;   
 			}
 		}
 	}
 	else {
-		debug_printf( DEBUG_QUIET, "PRE Script of Job %s completed "
+		debug_printf( DEBUG_QUIET, "PRE Script of Node %s completed "
 					  "successfully.\n", job->GetJobName() );
 		job->retval = 0; // for safetey on retries
 		job->_Status = Job::STATUS_READY;
@@ -1346,7 +1459,7 @@ Dag::PostScriptReaper( const char* nodeName, int status )
 		UserLog ulog;
 		ulog.setUseXML( useXml );
 		ulog.initialize( job->_logFile, job->_CondorID._cluster,
-					 	job->_CondorID._proc, job->_CondorID._subproc );
+					 	0, 0 );
 
 		if( !ulog.writeEvent( &e ) ) {
 			debug_printf( DEBUG_QUIET,
@@ -1683,12 +1796,11 @@ PrintEvent( debug_level_t level, const ULogEvent* event, Job* node )
 {
 	ASSERT( event );
 	if( node ) {
-	    debug_printf( level, "Event: %s for %s Job %s (%d.%d)\n",
+	    debug_printf( level, "Event: %s for %s Node %s (%d.%d)\n",
 					  event->eventName(), node->JobTypeString(),
-					  node->GetJobName(), node->_CondorID._cluster,
-					  node->_CondorID._proc );
+					  node->GetJobName(), event->cluster, event->proc );
 	} else {
-        debug_printf( level, "Event: %s for Unknown Job (%d.%d): "
+        debug_printf( level, "Event: %s for unknown Node (%d.%d): "
 					  "ignoring...\n", event->eventName(),
 					  event->cluster, event->proc );
 	}
@@ -2444,8 +2556,7 @@ Dag::SanityCheckSubmitEvent( const CondorID condorID, const Job* node,
 			// we no longer have the submit command stdout to check against
 		return true;
 	}
-	if( condorID.Compare( node->_CondorID ) == 0 ) {
-			// everything matches up as expected
+	if( condorID._cluster == node->_CondorID._cluster ) {
 		return true;
 	}
 	debug_printf( DEBUG_QUIET,

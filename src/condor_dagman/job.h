@@ -329,6 +329,10 @@ class Job {
 	List<MyString> *varNamesFromDag;
 	List<MyString> *varValsFromDag;
 
+		// Count of the number of job procs currently in the batch system
+		// queue for this node.
+	int _queuedNodeJobProcs;
+
 private:
 
 		// Note: Init moved to private section because calling int more than

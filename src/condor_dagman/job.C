@@ -112,6 +112,8 @@ Init( const char* jobName, const char* directory, const char* cmdFile )
     have_abort_dag_val = false;
 	_visited = false;
 
+	_queuedNodeJobProcs = 0;
+
 		// Note: we use "" for the directory here because when this method
 		// is called we should *already* be in the directory from which
 		// this job is to be run.
@@ -161,12 +163,12 @@ void Job::Dump () const {
 		dprintf( D_ALWAYS, "          Retry: %d\n", retry_max );
 	}
 	if( _CondorID._cluster == -1 ) {
-		dprintf( D_ALWAYS, "%8s Job ID: [not yet submitted]\n",
+		dprintf( D_ALWAYS, " %7s Job ID: [not yet submitted]\n",
 				 JobTypeString() );
 	}
 	else {
-		dprintf( D_ALWAYS, "%7s Job ID: (%d.%d.%d)\n", JobTypeString(),
-				 _CondorID._cluster, _CondorID._proc, _CondorID._subproc );
+		dprintf( D_ALWAYS, " %7s Job ID: (%d)\n", JobTypeString(),
+				 _CondorID._cluster );
 	}
   
     for (int i = 0 ; i < 3 ; i++) {
