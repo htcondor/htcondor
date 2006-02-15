@@ -689,14 +689,16 @@ File System Configuration File Entries''.
   If this is defined to be true, then the
   history file will be rotated. If it is false, then it will not be
   rotated, and it will grow indefinitely, to the limits allowed by the
-  operating system. If this is not defined, it is assumed to be true.
+  operating system. If this is not defined, it is assumed to be
+  true. The rotated files wil be stored in the same directory as the
+  history file. 
 
-\item[\Macro{HISTORY\_MAX\_SIZE}] \label{param:HistoryMaxSize}
+\item[\Macro{MAX\_HISTORY\_LOG}] \label{param:MaxHistoryLog}
   Defines the maximum size for the history file, in bytes. It defaults
   to 20MB. This parameter is only used if history file rotation is
   enabled. 
 
-\item[\Macro{HISTORY\_NUMBER\_BACKUPS}] \label{param:HistoryNumberBackups}
+\item[\Macro{MAX\_HISTORY\_ROTATIONS}] \label{param:MaxHistoryRotations}
   When history file rotation is turned on, this controls how many
   backup files there are. It default to 2, which means that there may
   be up to three history files (two backups, plus the history file
