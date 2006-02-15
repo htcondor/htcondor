@@ -146,7 +146,7 @@ more than one Condor process would be treated as an error by
 \Condor{dagman}.  Now this is not the case, because a single cluster
 with multiple processes will work; but \Condor{dagman} does
 not deal properly with multi-cluster submits (e.g., a submit file
-queueing jobs with different executables).
+queuing jobs with different executables).
 (Bug introduced in version 6.7.17.)
 
 % Gnats PR 618.
@@ -195,7 +195,7 @@ fails, \Condor{dagman} may hang, waiting for those processes to abort.
 
 \begin{itemize}
 
-\item Support for NorduGrid jobs was accidently left out of the
+\item Support for NorduGrid jobs was accidentally left out of the
 \Condor{gridmanager} in previous releases. This has been corrected.
 
 \item The \Condor{starter} was refusing to run jobs if it could not
@@ -309,7 +309,7 @@ distinguishable return codes for non-exe job failures (e.g.,
 batch job submission, or batch job removal).  In the past these errors
 were reported as various signals (e.g., SIGABRT for job removal or
 SIGUSR1 for failed job submission), making it impossible to
-distinugish them from the real signals as which they were
+distinguish them from the real signals as which they were
 masquerading.  We now represent these errors using the
 previously-unused return-code space below -64 (we start below -1000,
 in fact).  As before, 0-255 reflect normal exe return codes, and -1 to
