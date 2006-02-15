@@ -1,0 +1,37 @@
+\begin{ManPage}{\label{man-cleanup-release}\Prog{cleanup\_release}}{1}
+{ 
+  Uninstalls a previously installed software release performed by
+  \Prog{install\_release}. 
+} 
+
+\Synopsis \SynProg{cleanup\_release}
+\oOpt{-help}
+\Arg{file}
+
+\index{Deployment commands!cleanup\_release}
+\index{cleanup\_release}
+
+\Description \Prog{cleanup\_release} uninstalls a previously installed
+software release performed by \Prog{install\_release}.  The program
+plays the install log in reverse, removing files as it goes.
+Each delete is written to the install log to allow recovery from a
+crash.  The install log name is provided as the \Arg{file} argument to
+this program.
+
+\begin{Options}
+  \OptItem{\Opt{-help}}{
+    Display brief usage information and exits.
+  }
+  \OptItem{\Arg{file}}{
+    The install log to use as a basis for the uninstallation.
+  }
+\end{Options}
+
+\ExitStatus
+\Prog{cleanup\_release} will exit with a status of 0 (zero) upon success,
+and non-zero otherwise.
+
+\SeeAlso
+\Prog{install\_release} (on page~\pageref{man-install-release}).
+
+\end{ManPage}

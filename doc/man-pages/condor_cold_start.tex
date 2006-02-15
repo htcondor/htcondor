@@ -1,0 +1,165 @@
+\begin{ManPage}{\label{man-condor-cold-start}\Condor{cold\_start}}{1}
+{installs and starts condor on this machine}
+
+\Synopsis \SynProg{\Condor{cold\_start}}
+\oOpt{-help}
+\OptArg{-configfile}{file}
+\oOptArg{-basedir}{directory}
+\oOpt{-force}
+%\oOpt{-dyn}
+\oOpt{\Opt{-setuponly} \Bar \Opt{-runonly}}
+\oOptArg{-arch}{architecture}
+\oOptArg{-site}{repository}
+\oOptArg{-localdir}{directory}
+\oOptArg{-runlocalconfig}{file}
+\oOptArg{-logarchive}{archive}
+\oOptArg{-spoolarchive}{archive}
+\oOptArg{-execarchive}{archive}
+\oOpt{-flock}
+\oOpt{-pid}
+\oOptArg{-artifact}{filename}
+\oOpt{-wget}
+\oOptArg{-globuslocation}{directory}
+
+\index{Condor commands!condor\_cold\_start}
+\index{Deployment commands!condor\_cold\_start}
+\index{condor\_cold\_start}
+
+\Description
+
+\Condor{cold\_start} installs and starts Condor on this machine.
+Essentially, \Condor{cold\_start} binds \Prog{install\_release} and
+\Condor{local\_start} together, passing information from the install
+process to the start process.  In addition, it has the functionality
+to determine the local architecture if one is not specified.
+Additionally, this program can install pre-made log, execute, and/or
+spool directories by specifying the archived versions.
+
+\Examples
+
+To start a Condor installation on the current machine, using
+\texttt{http://www.example.com/Condor/deployment} as the installation
+site: 
+\begin{verbatim}
+% condor_cold_start \
+  -configfile http://www.example.com/Condor/deployment/condor_config.mobile \
+  -site http://www.example.com/Condor/deployment \
+\end{verbatim}
+
+Optionally if this instance of Condor requires a local configuration
+file \File{condor\_config.local}:
+\begin{verbatim}
+% condor_cold_start \
+  -configfile http://www.example.com/Condor/deployment/condor_config.mobile \
+  -site http://www.example.com/Condor/deployment \
+  -runlocalconfig condor_config.local
+\end{verbatim}
+  
+\begin{Options}
+  \OptItem{\OptArg{-arch}{architecture}}{
+    Uses the given architecture string to fetch the installation
+    package.  The string is in the format: \textless condor\_version
+    \textgreater-\textless machine\_arch\textgreater -\textless
+    os\_name\textgreater -\textless os\_version\textgreater (e.g.,
+    6.6.7-i686-Linux-2.4).  \textless condor\_version\textgreater may
+    be replaced with ``latest'' (e.g., latest-i686-Linux-2.4).
+  }
+  \OptItem{\OptArg{-artifact}{filename}}{
+    Uses \Arg{filename} for name of the artifact file that is used to
+    determine whether the master is still alive.
+  }
+  \OptItem{\OptArg{-basedir}{directory}}{
+    The directory to install/find the Condor executables and
+    libraries.  Defaults to the current working directory.
+  }
+  \OptItem{\OptArg{-configfile}{file}}{
+    Specifies the Condor configuration file to use for this
+    installation.  This file can be located on a http, ftp, or gsiftp
+    site, or alternatively on a mounted file system.
+  }
+%  \OptItem{\Opt{-dyn}}{
+%    Use dynamic names for the log, spool, and execute directories, as
+%    well as the binding configuration file.  This option can be used
+%    to run multiple instances of condor in the same local directory.
+%    This option cannot be used with \Opt{-*archive} options.  The
+%    dynamic names are created by appending the IP address and process
+%    id of the master to the file names.
+%  }
+  \OptItem{\OptArg{-execarchive}{archive}}{
+    Creates the Condor execute directory from the given archive file.
+  }
+  \OptItem{\Opt{-flock}}{
+    Specifies that this program should use a POSIX file lock midwife
+    program to create an artifact of the birth of a Condor Master.  A
+    flock undertaker can later be used to determine whether the
+    Master has exited.  This is the preferred option if the user wants
+    to check the status of the Master from another machine that
+    shares a distributed file system that supports POSIX file locking,
+    e.g., AFS.
+  }
+  \OptItem{\Opt{-force}}{
+    Overwrite previously installed files if neccessary.
+  }
+  \OptItem{\OptArg{-globuslocation}{directory}}{
+    The location of the globus installation on this machine. Defaults
+    to \File{/opt/globus}. This option is only needed if the
+    \Opt{-*archive} options are used.
+  }
+  \OptItem{\Opt{-help}}{
+    Display brief usage information and exit.
+  }
+  \OptItem{\OptArg{-localdir}{directory}}{
+    The directory where the Condor log, spool, and execute directories
+    will be installed.  Each running instance of Condo must have its
+    own local directory. %or the dynamic naming option must be enabled.
+  }
+  \OptItem{\OptArg{-logarchive}{archive}}{
+    Creates the Condor log directory from the given archive file.
+  }
+  \OptItem{\Opt{-pid}}{
+    Specifies that this program should use a unique process id midwife
+    program to create an artifact of the birth of a Condor Master.  A
+    unique pid undertaker can later be used to determine whether the
+    Master has exited.  This is the default option and the preferred method
+    to check the status of the Master from the same machine it was
+    started on.
+  }
+  \OptItem{\OptArg{-runlocalconfig}{file}}{
+    A special local configuration file bound into the Condor
+    configuration at runtime.  This file will only affect the instance
+    of Condor started by this command.  No other Condor instance
+    sharing the same global configuration file will be affected.
+  }
+  \OptItem{\Opt{-runonly}}{
+    Runs condor from the specified installation directory without
+    installing it.  It is possible to run several instantiations of
+    Condor from a single installation.
+  }
+  \OptItem{\Opt{-setuponly}}{
+    Installs Condor without running it.
+  }
+  \OptItem{\OptArg{-site}{repository}}{
+    The ftp, http, gsiftp, or mounted file system directory where the
+    installation packages can be found (e.g.,
+    www.cs.example.edu/packages/coldstart).
+  }
+  \OptItem{\OptArg{-spoolarchive}{archive}}{
+    Creates the Condor spool directory from the given archive file.
+  }
+  \OptItem{\Opt{-wget}}{
+    Uses \Prog{wget} to fetch the log, spool, and execute directories,
+    if specified with the \Opt{-*archive} options.  \Prog{wget} must
+    be installed on the machine and in the user's path.
+  }
+\end{Options}
+
+\ExitStatus
+\Condor{cold\_start} will exit with a status value of 0 (zero) upon
+success, and non-zero otherwise.
+
+\SeeAlso
+\Condor{cold\_stop} (on page~\pageref{man-condor-cold-stop}), 
+\Prog{flock\_midwife} (on page~\pageref{man-flock-midwife}), 
+\Prog{uniq\_pid\_midwife} (on page~\pageref{man-uniq-pid-midwife}).
+
+\end{ManPage}

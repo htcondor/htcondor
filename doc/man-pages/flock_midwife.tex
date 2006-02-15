@@ -1,0 +1,41 @@
+\begin{ManPage}{\label{man-flock-midwife}\Prog{flock\_midwife}}{1}
+{creates an artifact of the creation of a process.}
+
+\Synopsis \SynProg{\Prog{flock\_midwife}}
+\oOptArg{--file}{filename}
+\Arg{program}
+\oOpt{args}
+
+\index{Deployment commands!flock\_midwife}
+\index{flock\_midwife}
+
+\Description \Prog{flock\_midwife} starts a given program, while
+creating an artifact of the program's birth.  At a later time the
+\Prog{flock\_undertaker} can examine the artifact to determine whether
+the program is still running or whether it has exited.  It
+accomplishes this by obtaining a file lock on the given artifact file
+before starting the program.  Warning, this will not work on NFS
+unless the separate file lock server is running.
+
+\begin{Options}
+  \OptItem{\OptArg{--file}{filename}}{
+    The \Arg{filename} to use for the artifact file.  Defaults to
+    \File{lock.file}. 
+  }
+  \OptItem{\Arg{program}}{
+    Forks a process and executes \Arg{program} with \ldots
+  }
+  \OptItem{\Opt{args}}{
+    the following \Arg{args} arguments.
+  }
+\end{Options}
+
+\ExitStatus
+\Prog{flock\_midwife} will exit with a status of 0 (zero) upon
+success, and non-zero otherwise.
+
+\SeeAlso
+\Prog{uniq\_pid\_midwife} (on page~\pageref{man-uniq-pid-midwife}),
+\Prog{flock\_undertaker} (on page~\pageref{man-flock-undertaker}).
+
+\end{ManPage}

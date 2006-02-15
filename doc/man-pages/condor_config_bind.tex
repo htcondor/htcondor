@@ -1,0 +1,51 @@
+\begin{ManPage}{\label{man-condor-config-bind}\Condor{config\_bind}}{1}
+{bind together a set of configuration files}
+
+\Synopsis \SynProg{\Condor{config\_bind}}
+\oOpt{-help}
+\OptArg{-o}{outputfile}
+\Arg{configfile1}
+\Arg{configfile2}
+\oArg{configfile3\ldots}
+
+\index{Condor commands!condor\_config\_bind}
+\index{condor\_config\_bind command}
+
+\Description
+
+\Condor{config\_bind} dynamically binds two or more condor
+configuration files through the use of a new configuration file.  The
+purpose of this tool is to allow the user to dynamically bind a local
+configuration file into an already created, and possible immutable,
+configuration file.  This is particularly useful we the user wants to
+modify a configuration but can't actually make any changes to the
+global configuration file (even changing the list of local config
+files).  This program does not modify the given configuration files,
+rather it creates a new configuration file that specifies the given
+configuration files as local configuration files.  Condor evaluates
+the configuration files left to right.  That is, if a value is defined
+in two or more of the configuration files, the rightmost configuration
+file that contains this value overrides the others.  If a user wants to
+bind a new local configuration into a global configuration, the user
+should specify the local configuration second.
+
+\begin{Options}
+  \OptItem{\Arg{configfile1}}{First configuration file to
+    bind.}
+  \OptItem{\Arg{configfile2}}{Second configuration file to
+    bind.} 
+  \OptItem{\Arg{configfile3\ldots}}{An optional list of other
+    configuration files to bind.}
+  \OptItem{\Opt{-help}}{Display brief usage information and exit}
+  \OptItem{\OptArg{-o}{output\_file}} {
+    Specifies the file name where this program should output the
+    binding configuration. 
+  }
+\end{Options}
+
+\ExitStatus
+
+\Condor{config\_bind} will exit with a status value of 0 (zero) upon
+success, and non-zero on error.
+
+\end{ManPage}

@@ -1,0 +1,40 @@
+\begin{ManPage}{\label{man-flock-undertaker}\Prog{flock\_undertaker}}{1}
+{determines whether a process has exited.}
+
+\Synopsis \SynProg{\Prog{flock\_undertaker}}
+\oOptArg{--file}{file}
+\oOpt{--block}
+
+\index{Deployment commands!flock\_undertaker}
+\index{flock\_undertaker}
+
+\Description
+\Prog{flock\_undertaker} can examine an artifact file created by
+\Prog{flock\_midwife} and determine whether the program started by
+the \Prog{midwife} has exited.  It does this by attempting to aqcuire
+a file lock.  Warning, this will not work on NFS unless the separate
+file lock server is running.
+
+\begin{Options}
+  \OptItem{\Opt{--block}}{
+    If the process has not exited, block until it does.
+  }
+  \OptItem{\OptArg{--file}{file}}{
+    The name of the \Prog{flock\_midwife} created artifact file.
+    Defaults to \File{lock.file}.
+  }
+\end{Options}
+
+\ExitStatus 
+\Prog{flock\_undertaker} will exit with a status of 0 (zero) if the
+monitored process has exited, with a status of 1 (one) if the
+monitored process has definitely not exited, with a status of 2 if it
+is uncertain whether the process has exited (this is generally due to
+a failure by the \Prog{flock\_midwife}), or with any other value
+for program failure.
+
+\SeeAlso
+\Prog{uniq\_pid\_undertaker} (on page~\pageref{man-uniq-pid-undertaker}),
+\Prog{flock\_midwife} (on page~\pageref{man-flock-midwife}).
+
+\end{ManPage}
