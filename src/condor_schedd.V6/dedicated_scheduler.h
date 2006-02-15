@@ -121,6 +121,7 @@ class ResList : public CAList {
 	
 	static int machineSortByRank(const void *lhs, const void *rhs);
 
+	void selectGroup( CAList *group, char   *groupName);
 };
 
 class CandidateList : public CAList {
@@ -330,6 +331,7 @@ class DedicatedScheduler : public Service {
 
 	void sortResources( void );
 	void clearResources( void );
+	void addToSchedulingGroup( ClassAd *r );
 
 	bool sortJobs( void );
 
@@ -383,6 +385,8 @@ class DedicatedScheduler : public Service {
 	bool hasDedicatedShadow( void );
 
 	void holdAllDedicatedJobs( void );
+
+	void satisfyJobWithGroups(CAList *jobs, int cluster, int nprocs);
 
 		// // // // // // 
 		// Data members 
@@ -466,6 +470,8 @@ class DedicatedScheduler : public Service {
 
 	SimpleList<PROC_ID> jobsToReconnect;
 	int				checkReconnectQueue_tid;
+	
+	StringList scheduling_groups;
 };
 
 

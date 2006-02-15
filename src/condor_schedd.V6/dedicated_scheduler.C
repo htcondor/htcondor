@@ -489,6 +489,29 @@ ResList::machineSortByRank(const void *left, const void *right) {
 }
 
 void
+ResList::selectGroup( CAList *group,
+					  char   *groupName) {
+	this->Rewind();
+	ClassAd *machine;
+
+		// For each machine in the whole list
+	while ((machine = this->Next())) {
+		char *thisGroupName = 0;
+		machine->LookupString(ATTR_PARALLEL_SCHEDULING_GROUP, &thisGroupName);
+
+			// If it has a groupname, and its the same as the param
+		if (thisGroupName && 
+			(strcmp(thisGroupName, groupName) == 0)) {
+			group->Append(machine); // Not transfering ownership!
+		}
+
+		if (thisGroupName) {
+			free(thisGroupName);
+		}
+	}
+}
+
+void
 ResList::display( int debug_level )
 {
 	if( Number() == 0) {
@@ -2143,8 +2166,12 @@ DedicatedScheduler::sortResources( void )
 	limbo_resources = new ResList;
 	busy_resources = new ResList;
 
+	scheduling_groups.clearAll();
+
 	resources->Rewind();
 	while( (res = resources->Next()) ) {
+		addToSchedulingGroup(res);
+
 			// getMrec from the dec sched -- won't have matches
 			// for non dedicated jobs
 		if( ! (mrec = getMrec(res, buf)) ) {
@@ -2240,6 +2267,21 @@ DedicatedScheduler::clearResources( void )
 	}
 }
 
+
+void
+DedicatedScheduler::addToSchedulingGroup(ClassAd *r) {
+	char *group = 0;
+	r->LookupString(ATTR_PARALLEL_SCHEDULING_GROUP, &group);
+
+	// If this startd is a member of a scheduling group..
+
+	if (group) {
+		if (!scheduling_groups.contains(group)) {
+			// add it to our list of groups, if it isn't already there
+			scheduling_groups.append(group); // transfers ownership
+		}
+	}
+}
 
 void
 DedicatedScheduler::listDedicatedResources( int debug_level,
@@ -2579,6 +2621,16 @@ DedicatedScheduler::computeSchedule( void )
 		    // A parallel list for the jobs that match each above
 		idle_candidates_jobs = new CAList;
 		
+		bool want_groups = false;;
+		job = jobs->Head();
+		jobs->Rewind();
+		job->LookupBool(ATTR_WANT_PARALLEL_SCHEDULING_GROUPS, want_groups);
+
+		if (want_groups) {
+			satisfyJobWithGroups(jobs, cluster, nprocs);
+			continue; // on to the next job
+		}
+
 			// First, try to satisfy the requirements of this cluster
 			// by going after machine resources that are idle &
 			// claimed by us
@@ -3163,6 +3215,130 @@ DedicatedScheduler::removeAllocation( shadow_rec* srec )
 	delete alloc;
 }
 
+
+void
+DedicatedScheduler::satisfyJobWithGroups(CAList *jobs, int cluster, int nprocs) {
+	dprintf(D_ALWAYS, "Trying to satisfy job with group scheduling\n");
+
+	if (scheduling_groups.number() == 0) {
+		dprintf(D_ALWAYS, "Job requested parallel scheduling groups, but no groups found\n");
+		return;
+	}
+
+	scheduling_groups.rewind();
+	char *groupName = 0;
+
+		// For each of our scheduling groups...
+	while ((groupName = scheduling_groups.next())) {
+		dprintf(D_ALWAYS, "Attempting to find enough idle machines in group %s to run job.\n", groupName);
+
+			// From all the idle machines, select just those machines that are in this group
+		ResList group; 
+		idle_resources->selectGroup(&group, groupName);
+
+			// And try to match the jobs in the cluster to the machine just in this group
+		CandidateList candidate_machines;
+		CAList candidate_jobs;
+
+		CAList allJobs; // copy jobs to allJobs, so satisfyJobs can mutate it
+		jobs->Rewind();
+		ClassAd *j = 0;
+		while ((j = jobs->Next())) {
+		    allJobs.Append(j);
+		}
+
+		if (group.satisfyJobs(&allJobs, &candidate_machines, &candidate_jobs)) {
+
+				// Remove the allocated machines from the idle list
+			candidate_machines.Rewind();
+			ClassAd *cm = 0;
+			while ((cm = candidate_machines.Next())) {
+				idle_resources->Delete(cm);
+			}
+			
+				// This group satisfies the request, so create the allocations
+			printSatisfaction( cluster, &candidate_machines, NULL, NULL, NULL );
+			createAllocations( &candidate_machines, &candidate_jobs,
+							   cluster, nprocs, false );
+
+				// We successfully allocated machines, our work here is done
+			return;
+		}
+	}
+
+		// We couldn't allocate from the claimed/idle machines, try the
+		// unclaimed ones as well.
+	scheduling_groups.rewind();
+	groupName = 0;
+
+		// For each of our scheduling groups...
+	while ((groupName = scheduling_groups.next())) {
+		dprintf(D_ALWAYS, "Attempting to find enough idle or unclaimed machines in group %s to run job.\n", groupName);
+
+		ResList idle_group; 
+		ResList unclaimed_group; 
+		CandidateList idle_candidate_machines;
+		CAList idle_candidate_jobs;
+		CandidateList unclaimed_candidate_machines;
+		CAList unclaimed_candidate_jobs;
+
+			// copy the idle machines into idle_group
+		idle_resources->selectGroup(&idle_group, groupName);
+		unclaimed_resources->selectGroup(&unclaimed_group, groupName); // and the unclaimed ones, too
+		
+			// copy jobs
+		CAList allJobs; // copy jobs to allJobs, so satisfyJobs can mutate it
+		jobs->Rewind();
+		ClassAd *j = 0;
+		while ((j = jobs->Next())) {
+		    allJobs.Append(j);
+		}
+
+			// This might match some, but not all jobs and machines,
+			// but fills in the candidate lists of the partial matches as a side effect
+		idle_group.satisfyJobs(&allJobs, &idle_candidate_machines, &idle_candidate_jobs);
+
+		if (unclaimed_group.satisfyJobs(&allJobs, &unclaimed_candidate_machines, &unclaimed_candidate_jobs)) {
+				// idle + unclaimed could satsify this request
+
+				// Remove the allocated machines from the idle list
+			idle_candidate_machines.Rewind();
+			ClassAd *cm = 0;
+			while ((cm = idle_candidate_machines.Next())) {
+				idle_resources->Delete(cm);
+			}
+			
+				// Remote the unclaimed machines from the unclaimed list
+			unclaimed_candidate_machines.Rewind();
+			cm = 0;
+			while ((cm = unclaimed_candidate_machines.Next())) {
+				unclaimed_resources->Delete(cm);
+			}
+
+				// Mark the unclaimed ones as scheduled
+			idle_candidate_machines.markScheduled();
+
+				// And claim the unclaimed ones
+			unclaimed_candidate_machines.Rewind();
+			unclaimed_candidate_jobs.Rewind();
+			ClassAd *um;
+			while( (um = unclaimed_candidate_machines.Next()) ) {
+						// Make a resource request out of this job
+				generateRequest(unclaimed_candidate_jobs.Next());
+			}
+				
+
+				// This group satisfies the request, so try to claim the unclaimed ones
+			printSatisfaction( cluster, &idle_candidate_machines, NULL, &unclaimed_candidate_machines, NULL );
+
+				// We successfully allocated machines, our work here is done
+			return;
+		}
+	}
+
+		// Could not schedule this job.
+	return;
+}
 
 // This function is used to deactivate all the claims used by a
 // given shadow.
