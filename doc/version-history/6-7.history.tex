@@ -54,6 +54,14 @@ universe.  This is useful if you have machines connected by infiniband
 switches, and want to constrain your parallel jobs to never run across
 two different switches.
 
+\item Added a new suite of tools to dynamically deploy Condor.  The
+most important of these tools are \Condor{cold\_start} and
+\Condor{cold\_stop}. Another significant subset of this suite are
+tools to determine whether a process is alive or dead.  The most
+advanced of which are the \Prog{uniq\_pid\_midwife} and
+\Prog{uniq\_pid\_undertaker}.  Currently these programs are only
+supported on Linux.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
