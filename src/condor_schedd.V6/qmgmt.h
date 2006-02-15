@@ -36,8 +36,9 @@ class Service;
 #if defined(__cplusplus)
 extern "C" {
 #endif
-void InitJobQueue(const char *job_queue_name);
+void InitJobQueue(const char *job_queue_name,int max_historical_logs);
 void InitQmgmt();
+void SetMaxHistoricalLogs(int max_historical_logs);
 void CleanJobQueue();
 void DestroyJobQueue( void );
 int handle_q(Service *, int, Stream *sock);

@@ -9891,6 +9891,12 @@ Scheduler::reconfig()
 		WalkJobQueue( (int(*)(ClassAd *))clear_autocluster_id );
 	}
 	timeout();
+
+	char *tmp = param( "MAX_JOB_QUEUE_LOG_ROTATIONS" );
+	if(tmp) {
+		SetMaxHistoricalLogs(atoi(tmp));
+		free(tmp);
+	}
 }
 
 // This function is called by a timer when we are shutting down

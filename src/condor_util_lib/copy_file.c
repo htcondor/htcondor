@@ -116,3 +116,20 @@ copy_file(const char *old_filename, const char *new_filename)
 	return -1;
 #endif
 }
+
+int
+hardlink_or_copy_file(const char *old_filename, const char *new_filename)
+{
+#if defined(WIN32)
+	/* There are no hardlinks under Windows, so just copy the file. */
+	return copy_file(old_filename,new_filename);
+#else
+	if(link(old_filename,new_filename) == -1) {
+		// Hardlink may fail for a number of reasons, some of which
+		// can be solved by doing a plain old copy instead.  No harm
+		// in trying.
+		return copy_file(old_filename,new_filename);
+	}
+	return 0;
+#endif
+}

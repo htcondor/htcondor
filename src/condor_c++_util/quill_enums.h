@@ -63,7 +63,8 @@ enum FileOpErrCode {    FILE_OPEN_ERROR,
 						FILE_READ_ERROR,
 						FILE_WRITE_ERROR,
 						FILE_READ_EOF,
-                        FILE_READ_SUCCESS};
+                        FILE_READ_SUCCESS,
+                        FILE_OP_SUCCESS};
 
 #endif
 

@@ -241,7 +241,7 @@ int SendSpoolFileBytes(char *filename);
 void WalkJobQueue(scan_func);
 
 void InitQmgmt();
-void InitJobQueue(const char *job_queue_name);
+void InitJobQueue(const char *job_queue_name,int max_historical_logs);
 void CleanJobQueue();
 bool setQSock( ReliSock* rsock );
 void unsetQSock();

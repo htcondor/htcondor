@@ -176,6 +176,15 @@ ClassAdLogEntry::equal(ClassAdLogEntry* caLogEntry)
 		case CondorLogOp_EndTransaction:
 			return 1;
 			break;
+		case CondorLogOp_LogHistoricalSequenceNumber: // key, value
+			if (valcmp(caLogEntry->key, key) == 0 &&
+				valcmp(caLogEntry->value, value) == 0) {
+				return 1;
+			}
+			else {
+				return 0;
+			}
+			break;
 		}
 	}
 

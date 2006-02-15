@@ -47,6 +47,7 @@ char* getExecPath();
 
 int rotate_file(const char *old_filename, const char *new_filename);
 int copy_file(const char *old_filename, const char *new_filename);
+int hardlink_or_copy_file(const char *old_filename, const char *new_filename);
 
 void schedule_event ( int month, int day, int hour, int minute, int second, void (*func)() );
 void event_mgr ( void );

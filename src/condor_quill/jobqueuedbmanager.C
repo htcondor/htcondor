@@ -308,13 +308,13 @@ QuillErrCode
 JobQueueDBManager::maintain()
 {	
 	QuillErrCode st, ret_st;
+	FileOpErrCode fst;
 	ProbeResultType probe_st;
 	time_t t1, t2;
 
 		//reset the reporting counters at the beginning of each probe
 	lastBatchSqlProcessed = 0;
 	
-
 	st = getJQPollingInfo(); // get the last polling information
 
 		//if we are unable to get to the database, then either the 
@@ -327,9 +327,15 @@ JobQueueDBManager::maintain()
 		}
 	}
 
-	probe_st = prober->probe(caLogParser->getCurCALogEntry(),caLogParser->getJobQueueName());	// polling
-	
-		//this and the time call just below the switch together
+	fst = caLogParser->openFile();
+	if(fst == FILE_OPEN_ERROR) {
+		return FAILURE;
+	}
+
+	probe_st = prober->probe(caLogParser->getCurCALogEntry(),
+							 caLogParser->getFileDescriptor());	// polling
+
+		//this and the gettimeofday call just below the switch together
 		//determine the period of time taken by this whole batch of sql
 		//statements
 	t1 = time(NULL);
@@ -348,7 +354,10 @@ JobQueueDBManager::maintain()
 		break;
 	case COMPRESSED:
 		dprintf(D_ALWAYS, "POLLING RESULT: COMPRESSED\n");
-		ret_st = initJobQueueTables();
+		ret_st = addOldJobQueueRecords();
+		if(ret_st != FAILURE) {
+			ret_st = initJobQueueTables();
+		}
 		break;
 	case PROBE_ERROR:
 		dprintf(D_ALWAYS, "POLLING RESULT: ERROR\n");
@@ -369,6 +378,7 @@ JobQueueDBManager::maintain()
 	
 	totalSqlProcessed += lastBatchSqlProcessed;
 
+	fst = caLogParser->closeFile();
 	return ret_st;
 }
 
@@ -563,12 +573,7 @@ JobQueueDBManager::buildJobQueue(JobQueueCollection *jobQueue)
 	int		op_type;
 	FileOpErrCode st;
 	
-
 	st = caLogParser->readLogEntry(op_type);
-
-	if(st == FILE_OPEN_ERROR) {
-		return FAILURE;
-	}
 
 	while(st == FILE_READ_SUCCESS) {	   
 		if (processLogEntry(op_type, jobQueue) == FAILURE) {
@@ -825,23 +830,117 @@ JobQueueDBManager::buildAndWriteJobQueue()
 /*! incrementally read and process log entries from file 
  */
 QuillErrCode 
-JobQueueDBManager::readAndWriteLogEntries()
+JobQueueDBManager::readAndWriteLogEntries(ClassAdLogParser *parser)
 {
 	int		op_type;
 	FileOpErrCode st;
 	
-	st = caLogParser->readLogEntry(op_type);
+	st = parser->readLogEntry(op_type);
 	while(st == FILE_READ_SUCCESS) {	   
-		if (processLogEntry(op_type, false) == FAILURE) {
+		if (processLogEntry(op_type, false, parser) == FAILURE) {
 				// process each ClassAd Log Entry
 			return FAILURE;
 		}
 	   	lastBatchSqlProcessed++;
 		
-		st = caLogParser->readLogEntry(op_type);
+		st = parser->readLogEntry(op_type);
 	}
 
 	return SUCCESS;
+}
+
+QuillErrCode
+JobQueueDBManager::addOldJobQueueRecords() {
+	
+		//get the lastseqnum and cur_probed_seq_num
+		//iterate through files job_queue.log.lastseqnum through cur_probed_seq_num - 1
+		//for each file
+		//initialize a new classadlogparser
+		//if first file, set its offset to caLogParser->curCALogEntry->next_offset
+		//go on reading and processing till end
+
+	long int lastseqnum;
+	long int curprobedseqnum;
+	ClassAdLogParser parser;
+	QuillErrCode st;
+	FileOpErrCode fst;
+	char *spool=NULL, *jqfileroot=NULL, *jqfile=NULL;
+
+	lastseqnum = prober->getLastSequenceNumber();
+	curprobedseqnum = prober->getCurProbedSequenceNumber();
+
+		//bail out if no SPOOL variable is defined since its used to 
+		//figure out the location of the job_queue.log file
+	spool = param("SPOOL");
+	if(!spool) {
+		EXCEPT("No SPOOL variable found in config file\n");
+	}
+  
+	jqfile = (char *) malloc(_POSIX_PATH_MAX * sizeof(char));
+	jqfileroot = (char *) malloc(_POSIX_PATH_MAX * sizeof(char));
+	sprintf(jqfileroot, "%s/job_queue.log", spool);
+
+		//for the first old job queue file, we need to read past the last offset 
+		//for successive files, we'll read from the beginning
+	parser.setNextOffset(((ClassAdLogEntry *)caLogParser->getCurCALogEntry())->next_offset);
+
+	st = connectDB(NOT_IN_XACT); // connect to DBMS
+
+	if(st == FAILURE) {
+		displayDBErrorMsg("addOldJobQueueRecords unable to connect to database --- ERROR");
+		return FAILURE; 
+	}
+
+	for(long int i=lastseqnum; i < curprobedseqnum; i++) {
+			//dont clean up state of job queue tables if this is the first file in the list
+			//as we will start processing it from somewhere in the middle in which case we
+			//need the state from that point up to the beginning of the file
+		if(i > lastseqnum) { 
+			st = cleanupJobQueueTables(); // delete all job queue tables
+			
+			if(st == FAILURE) {
+				displayDBErrorMsg("addOldJobQueueRecords unable to clean up job queue tables --- ERROR");
+				return FAILURE; 
+			}
+		}
+		sprintf(jqfile, "%s.%ld", jqfileroot, i);
+		parser.setJobQueueName(jqfile);
+
+		fst = parser.openFile();
+		if(fst == FILE_OPEN_ERROR) {
+			dprintf(D_ALWAYS, "Could not open file old job queue file %s --- ERROR\n", jqfile);
+			dprintf(D_ALWAYS, "Skipping over and going to the next job queue file\n");
+		}
+		else {
+			dprintf(D_ALWAYS, "Reading from file %s\n", jqfile);
+			st = readAndWriteLogEntries(&parser);
+			dprintf(D_ALWAYS, "End reading from file %s\n", jqfile);
+			
+			parser.closeFile();
+			
+			if(st == FAILURE) {
+				break;
+			}
+		}
+			//regardless of whether the file was successfully opened or not
+		parser.setNextOffset(0);
+	}
+
+	disconnectDB(NOT_IN_XACT);
+
+	if(spool) {
+		free(spool);
+		spool = NULL;
+	}
+	if(jqfile) {
+		free(jqfile);
+		jqfile = NULL;
+	}
+	if(jqfileroot) {
+		free(jqfileroot);
+		jqfileroot = NULL;
+	}
+	return st;
 }
 
 /*! process only DELTA, i.e. entries of the job queue log which were
@@ -858,7 +957,7 @@ JobQueueDBManager::addJobQueueTables()
 
 	caLogParser->setNextOffset();
 
-	st = readAndWriteLogEntries();
+	st = readAndWriteLogEntries(caLogParser);
 
 		// Store a polling information into DB
 	if (st == SUCCESS) {
@@ -889,47 +988,35 @@ JobQueueDBManager::addJobQueueTables()
 QuillErrCode  
 JobQueueDBManager::initJobQueueTables()
 {
-	QuillErrCode st;
+        QuillErrCode st;
+        
+        st = connectDB(); // connect to DBMS
+                
+        if(st == FAILURE) {
+                displayDBErrorMsg("Init Job Queue Tables unable to connect to database --- ERROR");
+                return FAILURE;
+        }
+         
+        st = cleanupJobQueueTables(); // delete all job queue tables
+        
+        if(st == FAILURE) {
+                displayDBErrorMsg("Init Job Queue Table unable to clean up job queue tables --- ERROR");
+                return FAILURE;
+        }
+ 
+        st = buildAndWriteJobQueue(); // bulk load job queue log
 
-	st = connectDB(); // connect to DBMS
-
-	if(st == FAILURE) {
-		displayDBErrorMsg("Init Job Queue Tables unable to connect to database --- ERROR");
-		return FAILURE; 
-	}
-
-	st = cleanupJobQueueTables(); // delete all job queue tables
-
-	if(st == FAILURE) {
-		displayDBErrorMsg("Init Job Queue Table unable to clean up job queue tables --- ERROR");
-		return FAILURE; 
-	}
-
-	st = buildAndWriteJobQueue(); // bulk load job queue log
-
-		// Store polling information in database
-	if (st == SUCCESS) {
-		setJQPollingInfo();
-
-			// VACUUM should be called outside XACT
-			// So, Commit XACT shouble be invoked beforehand.
-		jqDatabase->commitTransaction(); // end XACT
-		xactState = NOT_IN_XACT;
-		
-		st = tuneupJobQueueTables();
-		if(st == FAILURE) {
-			displayDBErrorMsg("Init Job Queue Table unable to tune up job queue tables --- ERROR");
-			return FAILURE; 
-		}
-
-		disconnectDB(NOT_IN_XACT); // commit and end Xact
-	}
-
-	else {
-		disconnectDB(ABORT_XACT); // disconnect
-	}
-
-	return st;	
+			// Store polling information in database
+        if (st == SUCCESS) {
+                setJQPollingInfo();
+                disconnectDB(COMMIT_XACT); // end Xact
+        }
+                
+        else {
+			disconnectDB(ABORT_XACT); // disconnect
+        }
+        
+        return st;
 }
 
 
@@ -952,6 +1039,8 @@ JobQueueDBManager::processLogEntry(int op_type, JobQueueCollection* jobQueue)
 		// 	parameters. Therefore, they all must be deallocated here,
 		// and they are at the end of the routine
 	switch(op_type) {
+	case CondorLogOp_LogHistoricalSequenceNumber: 
+		break;
 	case CondorLogOp_NewClassAd: {
 		if (caLogParser->getNewClassAdBody(key, mytype, targettype) == FAILURE) {
 			st = FAILURE; 
@@ -1120,7 +1209,7 @@ JobQueueDBManager::processLogEntry(int op_type, JobQueueCollection* jobQueue)
  * writes to the database in an eager fashion
  */
 QuillErrCode 
-JobQueueDBManager::processLogEntry(int op_type, bool exec_later)
+JobQueueDBManager::processLogEntry(int op_type, bool exec_later, ClassAdLogParser *parser)
 {
 	char *key, *mytype, *targettype, *name, *value;
 	key = mytype = targettype = name = value = NULL;
@@ -1131,29 +1220,31 @@ JobQueueDBManager::processLogEntry(int op_type, bool exec_later)
 		// 	parameters. Therefore, they all must be deallocated here,
 		//  and they are at the end of the routine
 	switch(op_type) {
+	case CondorLogOp_LogHistoricalSequenceNumber: 
+		break;
 	case CondorLogOp_NewClassAd:
-		if (caLogParser->getNewClassAdBody(key, mytype, targettype) == FAILURE) {
+		if (parser->getNewClassAdBody(key, mytype, targettype) == FAILURE) {
 			return FAILURE; 
 		}
 		st = processNewClassAd(key, mytype, targettype, exec_later);
 			
 		break;
 	case CondorLogOp_DestroyClassAd:
-		if (caLogParser->getDestroyClassAdBody(key) == FAILURE) {
+		if (parser->getDestroyClassAdBody(key) == FAILURE) {
 			return FAILURE;
 		}		
 		st = processDestroyClassAd(key, exec_later);
 			
 		break;
 	case CondorLogOp_SetAttribute:
-		if (caLogParser->getSetAttributeBody(key, name, value) == FAILURE) {
+		if (parser->getSetAttributeBody(key, name, value) == FAILURE) {
 			return FAILURE;
 		}
 		st = processSetAttribute(key, name, value, exec_later);
 			
 		break;
 	case CondorLogOp_DeleteAttribute:
-		if (caLogParser->getDeleteAttributeBody(key, name) == FAILURE) {
+		if (parser->getDeleteAttributeBody(key, name) == FAILURE) {
 			return FAILURE;
 		}
 		st = processDeleteAttribute(key, name, exec_later);
@@ -1817,6 +1908,12 @@ QuillErrCode
 JobQueueDBManager::init(bool initJQDB)
 {
 	QuillErrCode st;
+	FileOpErrCode fst;
+
+	fst = caLogParser->openFile();
+	if(fst == FILE_OPEN_ERROR) {
+		return FAILURE;
+	}
 
 	st = checkSchema();
 
@@ -1825,8 +1922,9 @@ JobQueueDBManager::init(bool initJQDB)
 			return FAILURE;
 		}
 
-		prober->probe(caLogParser->getCurCALogEntry(),caLogParser->getJobQueueName());	// polling
-		return initJobQueueTables();
+		prober->probe(caLogParser->getCurCALogEntry(),caLogParser->getFileDescriptor());	// polling
+		st = initJobQueueTables();
+		caLogParser->closeFile();
 	}
 
 	return st;
@@ -1839,6 +1937,9 @@ JobQueueDBManager::getJQPollingInfo()
 {
 	long mtime;
 	long size;
+	long int seq_num;
+	long int creation_time;
+
 	ClassAdLogEntry* lcmd;
 	char 	sql_str[MAX_FIXED_SQL_STR_LENGTH];
 	int		ret_st, num_result=0;
@@ -1852,7 +1953,8 @@ JobQueueDBManager::getJQPollingInfo()
 	sprintf(sql_str, 
 			"SELECT last_file_mtime, last_file_size, last_next_cmd_offset, "
 			"last_cmd_offset, last_cmd_type, last_cmd_key, last_cmd_mytype,"
-			"last_cmd_targettype, last_cmd_name, last_cmd_value FROM "
+			"last_cmd_targettype, last_cmd_name, last_cmd_value,"
+			"log_seq_num, log_creation_time FROM "
 			"JobQueuePollingInfo;");
 	
 		// connect to DB
@@ -1881,11 +1983,15 @@ JobQueueDBManager::getJQPollingInfo()
 		return FAILURE;
 	} 
 	
-	mtime = atoi(jqDatabase->getValue(0,0)); // last_file_mtime
-	size = atoi(jqDatabase->getValue(0,1)); // last_file_size
+	mtime = atol(jqDatabase->getValue(0,0)); // last_file_mtime
+	size = atol(jqDatabase->getValue(0,1)); // last_file_size
+	seq_num = atol(jqDatabase->getValue(0,10)); //historical sequence number
+	creation_time = atol(jqDatabase->getValue(0,11)); //creation time
 
-	prober->setJQFile_Last_MTime(mtime);
-	prober->setJQFile_Last_Size(size);
+	prober->setLastModifiedTime(mtime);
+	prober->setLastSize(size);
+	prober->setLastSequenceNumber(seq_num);
+	prober->setLastCreationTime(creation_time);
 
 	lcmd->next_offset = atoi(jqDatabase->getValue(0,2)); // last_next_cmd_offset
 	lcmd->offset = atoi(jqDatabase->getValue(0,3)); // last_cmd_offset
@@ -1943,16 +2049,21 @@ JobQueueDBManager::setJQPollingInfo()
 {
 	long mtime;
 	long size;
+	long int seq_num;
+	long int creation_time;
+
 	ClassAdLogEntry* lcmd;
 	char 	       *sql_str;
 	QuillErrCode   ret_st;
 	int            num_result=0, db_err_code=0;
 
 	prober->incrementProbeInfo();
-	mtime = prober->getJQFile_Last_MTime();
-	size = prober->getJQFile_Last_Size();
+	mtime = prober->getLastModifiedTime();
+	size = prober->getLastSize();
+	seq_num = prober->getLastSequenceNumber();
+	creation_time = prober->getLastCreationTime();
 	lcmd = caLogParser->getCurCALogEntry();	
-
+	
 	int sql_str_len = (sizeof(lcmd->value) + MAX_FIXED_SQL_STR_LENGTH);
 	sql_str = (char *) malloc(sql_str_len * sizeof(char));
 	memset(sql_str, 0, sql_str_len);
@@ -1960,16 +2071,18 @@ JobQueueDBManager::setJQPollingInfo()
 	sprintf(sql_str, 
 			"UPDATE JobQueuePollingInfo SET last_file_mtime = %ld, "
 			"last_file_size = %ld, last_next_cmd_offset = %ld, "
-			"last_cmd_offset = %ld, last_cmd_type = %d", 
-			mtime, size, lcmd->next_offset, lcmd->offset, lcmd->op_type);
+			"last_cmd_offset = %ld, last_cmd_type = %d, "
+			"log_seq_num = %ld, log_creation_time = %ld",
+			mtime, size, lcmd->next_offset, lcmd->offset, lcmd->op_type,
+			seq_num, creation_time);
 
 	addJQPollingInfoSQL(sql_str, "last_cmd_key", lcmd->key);
 	addJQPollingInfoSQL(sql_str, "last_cmd_mytype", lcmd->mytype);
 	addJQPollingInfoSQL(sql_str, "last_cmd_targettype", lcmd->targettype);
 	addJQPollingInfoSQL(sql_str, "last_cmd_name", lcmd->name);
 	addJQPollingInfoSQL(sql_str, "last_cmd_value", lcmd->value);
+	
 	strcat(sql_str, ";");
-
 	
 	ret_st = jqDatabase->execCommand(sql_str, num_result, db_err_code);
 	
@@ -1982,9 +2095,9 @@ JobQueueDBManager::setJQPollingInfo()
 			// This case is a rare one since the jobqueuepollinginfo
 			// table contains one tuple at all times 
 		
-		dprintf(D_ALWAYS, "Update JobQueuePollInfo --- ERROR [SQL] %s\n", 
+		dprintf(D_ALWAYS, "Update JobQueuePollingInfo --- ERROR [SQL] %s\n", 
 				sql_str);
-		displayDBErrorMsg("Update JobQueuePollInfo --- ERROR");
+		displayDBErrorMsg("Update JobQueuePollingInfo --- ERROR");
 		ret_st = FAILURE;
 	} 
 

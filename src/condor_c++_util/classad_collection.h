@@ -73,7 +73,7 @@ public:
     @param filename the name of the log file.
     @return nothing
   */
-  ClassAdCollection(const char* filename);
+  ClassAdCollection(const char* filename,int max_historical_logs=0);
 
   /** Destructor - frees the memory used by the collections
     @return nothing
@@ -117,6 +117,9 @@ public:
     @return nothing
   */
   void TruncLog() { ClassAdLog::TruncLog(); }
+
+  void SetMaxHistoricalLogs(int max) { ClassAdLog::SetMaxHistoricalLogs(max); }
+  int GetMaxHistoricalLogs() { return ClassAdLog::GetMaxHistoricalLogs(); }
 
   //@}
   //------------------------------------------------------------------------

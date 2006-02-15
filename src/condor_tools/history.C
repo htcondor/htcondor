@@ -254,7 +254,7 @@ main(int argc, char* argv[])
 
 #if WANT_QUILL
 	/* This call must happen AFTER config() is called */
-  if (checkDBconfig() == true) {
+  if (checkDBconfig() == true && !readfromfile) {
   	readfromfile = false;
   } else {
   	readfromfile = true;

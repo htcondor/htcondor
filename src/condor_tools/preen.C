@@ -246,8 +246,19 @@ check_spool_dir()
 		if( well_known_list.contains(f) ) {
 			good_file( Spool, f );
 			continue;
-		} 
-
+		}
+		if( !strncmp(f,"job_queue.log",13) ) {
+			// Historical job queue log files have names like: job_queue.log.3
+			// In theory, we could clean up any such files that are not
+			// in the range allowed by SCHEDD_MAX_HISTORICAL_LOGS, but
+			// the sequence number keeps increasing each time a new
+			// one is added, so we would have to find out what the latest
+			// sequence number is in order to know what is safe to delete.
+			// Therefore, this issue is ignored.  We rely on the schedd
+			// to clean up after itself.
+			good_file( Spool, f );
+			continue;
+		}
             // see if it's a rotated history file. 
         if (   strlen(f) >= history_length 
             && strncmp(f, history, history_length) == 0) {

@@ -146,9 +146,6 @@ JobQueueSnapshot::getNextClusterAd(const char*& cluster_id, ClassAd*& ad)
 		return FAILURE;
 	}
 
-	if (ad != NULL) {
-		delete ad;
-	}
 		//
 		// build a Next ClusterAd
 		//

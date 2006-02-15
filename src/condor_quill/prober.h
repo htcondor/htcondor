@@ -43,7 +43,8 @@ public:
 	void			Init();
 
 	//! probe job_queue.log file
-	ProbeResultType probe(ClassAdLogEntry *curCALogEntry,char const *job_queue_name);
+	ProbeResultType probe(ClassAdLogEntry *curCALogEntry,
+						  int job_queue_fd);
 
 	//! update state information about size of log file last probed etc.
 	//! Call this after successfully responding to probe() result.
@@ -54,21 +55,32 @@ public:
 		//
 	void			setJobQueueName(char* jqn);
 	char*			getJobQueueName();
-	void			setJQFile_Last_MTime(time_t t);
-	time_t			getJQFile_Last_MTime();
-	void			setJQFile_Last_Size(size_t s);
-	size_t			getJQFile_Last_Size();
+	void			setLastModifiedTime(time_t t);
+	time_t			getLastModifiedTime();
+	void			setLastSize(size_t s);
+	size_t			getLastSize();
 
+	long int		getLastSequenceNumber();
+	void			setLastSequenceNumber(long int seq_num);
+	time_t			getLastCreationTime();
+	void			setLastCreationTime(time_t ctime);
+
+	long int		getCurProbedSequenceNumber();
+	long int 		getCurProbedCreationTime();
 
 private:
-		// information about a job_queuq.log file and polling state
+		// information about a job_queue.log file and polling state
 	char			job_queue_name[_POSIX_PATH_MAX]; //!< job queue file path
 		// stored metadata in DB
-	long int		jqfile_last_mod_time;	 //!< last modification time
-	long int		jqfile_last_size;		 //!< last size
+	long int		last_mod_time;	//!< last modification time
+	long int		last_size;	//!< last size
+	long int		last_seq_num;	//!< historical sequence number
+	long int		last_creation_time; //!< creation time of cur file 
 		// currently probed...
-	long int		cur_probed_jqfile_last_mod_time; //!< last modification time
-	long int		cur_probed_jqfile_last_size;	 //!< last size
+	long int		cur_probed_mod_time; //!< last modification time
+	long int		cur_probed_size;	 //!< last size
+	long int		cur_probed_seq_num;	//!< historical sequence number
+	long int		cur_probed_creation_time;  //!< creation time of cur file 
 
 	ClassAdLogEntry	lastCALogEntry;		//!< last command (ClassAd Log Entry)
 

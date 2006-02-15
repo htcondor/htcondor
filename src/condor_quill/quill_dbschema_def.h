@@ -128,12 +128,14 @@ CREATE TABLE JobQueuePollingInfo (
 	last_cmd_targettype 	text,
 	last_cmd_name		text,
 	last_cmd_value		text
+	log_seq_num		BIGINT,
+	log_creation_time	BIGINT
 );
 
-INSERT INTO JobQueuePollingInfo (last_file_mtime, last_file_size) VALUES (0,0);
+INSERT INTO JobQueuePollingInfo (last_file_mtime, last_file_size,log_seq_num,log_creation_time) VALUES (0,0,0,0);
 */
 
-#define SCHEMA_CREATE_JOBQUEUEPOLLINGINFO_TABLE_STR "CREATE TABLE JobQueuePollingInfo (last_file_mtime BIGINT, last_file_size BIGINT, last_next_cmd_offset BIGINT, last_cmd_offset BIGINT, last_cmd_type SMALLINT, last_cmd_key text, last_cmd_mytype text, last_cmd_targettype text, last_cmd_name text, last_cmd_value text); INSERT INTO JobQueuePollingInfo (last_file_mtime, last_file_size) VALUES (0,0);"
+#define SCHEMA_CREATE_JOBQUEUEPOLLINGINFO_TABLE_STR "CREATE TABLE JobQueuePollingInfo (last_file_mtime BIGINT, last_file_size BIGINT, last_next_cmd_offset BIGINT, last_cmd_offset BIGINT, last_cmd_type SMALLINT, last_cmd_key text, last_cmd_mytype text, last_cmd_targettype text, last_cmd_name text, last_cmd_value text, log_seq_num BIGINT, log_creation_time BIGINT); INSERT INTO JobQueuePollingInfo (last_file_mtime, last_file_size, log_seq_num, log_creation_time) VALUES (0,0,0,0);"
 
 /*
         Definition of Create History Tables String

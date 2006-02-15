@@ -58,10 +58,13 @@ ClassAdLog::ClassAdLog() : table(1024, hashFunction)
 	log_fd = -1;
 }
 
-ClassAdLog::ClassAdLog(const char *filename) : table(1024, hashFunction)
+ClassAdLog::ClassAdLog(const char *filename,int max_historical_logs) : table(1024, hashFunction)
 {
 	strcpy(log_filename, filename);
 	active_transaction = NULL;
+
+	this->max_historical_logs = max_historical_logs;
+	historical_sequence_number = 1;
 
 	log_fd = open(log_filename, O_RDWR | O_CREAT, 0600);
 	if (log_fd < 0) {
@@ -70,7 +73,9 @@ ClassAdLog::ClassAdLog(const char *filename) : table(1024, hashFunction)
 
 	// Read all of the log records
 	LogRecord		*log_rec;
+	unsigned long count = 0;
 	while ((log_rec = ReadLogEntry(log_fd, InstantiateLogEntry)) != 0) {
+		count++;
 		switch (log_rec->get_op_type()) {
 		case CondorLogOp_BeginTransaction:
 			if (active_transaction) {
@@ -90,6 +95,13 @@ ClassAdLog::ClassAdLog(const char *filename) : table(1024, hashFunction)
 				delete active_transaction;
 				active_transaction = NULL;
 			}
+			delete log_rec;
+			break;
+		case CondorLogOp_LogHistoricalSequenceNumber:
+			if(count != 1) {
+				dprintf(D_ALWAYS, "Warning: Encountered historical sequence number after first log entry (entry number = %ld)\n",count);
+			}
+			historical_sequence_number = ((LogHistoricalSequenceNumber *)log_rec)->get_historical_sequence_number();
 			delete log_rec;
 			break;
 		default:
@@ -146,6 +158,57 @@ ClassAdLog::AppendLog(LogRecord *log)
 	}
 }
 
+bool
+ClassAdLog::SaveHistoricalLogs()
+{
+	if(!max_historical_logs) return true;
+
+	MyString new_histfile;
+	if(!new_histfile.sprintf("%s.%d",log_filename,historical_sequence_number))
+	{
+		dprintf(D_ALWAYS,"Aborting save of historical log: out of memory.\n");
+		return false;
+	}
+
+	dprintf(D_FULLDEBUG,"About to save historical log %s\n",new_histfile.GetCStr());
+
+	if( hardlink_or_copy_file(log_filename, new_histfile.GetCStr()) < 0) {
+		dprintf(D_ALWAYS,"Failed to copy %s to %s.\n",log_filename,new_histfile.GetCStr());
+		return false;
+	}
+
+	MyString old_histfile;
+	if(!old_histfile.sprintf("%s.%d",log_filename,historical_sequence_number - max_historical_logs))
+	{
+		dprintf(D_ALWAYS,"Aborting cleanup of historical logs: out of memory.\n");
+		return true; // this is not a fatal error
+	}
+
+	if( unlink(old_histfile.GetCStr()) == 0 ) {
+		dprintf(D_FULLDEBUG,"Removed historical log %s.\n",old_histfile.GetCStr());
+	}
+	else {
+		// It's ok if the old file simply doesn't exist.
+		if( errno != ENOENT ) {
+			// Otherwise, it's not a fatal error, but definitely odd that
+			// we failed to remove it.
+			dprintf(D_ALWAYS,"WARNING: failed to remove '%s': %s\n",old_histfile.GetCStr(),strerror(errno));
+		}
+		return true; // this is not a fatal error
+	}
+	return true;
+}
+
+void
+ClassAdLog::SetMaxHistoricalLogs(int max) {
+	this->max_historical_logs = max;
+}
+
+int
+ClassAdLog::GetMaxHistoricalLogs() {
+	return max_historical_logs;
+}
+
 void
 ClassAdLog::TruncLog()
 {
@@ -153,6 +216,12 @@ ClassAdLog::TruncLog()
 	int new_log_fd;
 
 	dprintf(D_FULLDEBUG,"About to truncate log %s\n",log_filename);
+
+	if(!SaveHistoricalLogs()) {
+		dprintf(D_ALWAYS,"Skipping log truncation, because saving of historical log failed.\n");
+		return;
+	}
+
 	sprintf(tmp_log_filename, "%s.tmp", log_filename);
 	new_log_fd = open(tmp_log_filename, O_RDWR | O_CREAT, 0600);
 	if (new_log_fd < 0) {
@@ -160,11 +229,23 @@ ClassAdLog::TruncLog()
 				tmp_log_filename, new_log_fd);
 		return;
 	}
+
+	// Now it is time to move courageously into the future.
+	historical_sequence_number++;
+
 	LogState(new_log_fd);
 	close(log_fd);
 	close(new_log_fd);	// avoid sharing violation on move
 	if (rotate_file(tmp_log_filename, log_filename) < 0) {
 		dprintf(D_ALWAYS, "failed to truncate job queue log!\n");
+
+		// Beat a hasty retreat into the past.
+		historical_sequence_number--;
+
+		log_fd = open(log_filename, O_RDWR, 0600);
+		if (log_fd < 0) {
+			EXCEPT("failed to reopen log %s, errno = %d after failing to rotate log.",log_filename,errno);
+		}
 		return;
 	}
 	log_fd = open(log_filename, O_RDWR | O_APPEND, 0600);
@@ -342,6 +423,13 @@ ClassAdLog::LogState(int fd)
 	char		*attr_val;
 	void*		chain;
 
+	// This must always be the first entry in the log.
+	log = new LogHistoricalSequenceNumber( historical_sequence_number, time(NULL) );
+	if (log->Write(fd) < 0) {
+		EXCEPT("write to %s failed, errno = %d", log_filename, errno);
+	}
+	delete log;
+
 	table.startIterations();
 	while(table.iterate(ad) == 1) {
 		table.getCurrentKey(hashval);
@@ -378,6 +466,52 @@ ClassAdLog::LogState(int fd)
 	if (fsync(fd) < 0) {
 		EXCEPT("fsync of %s failed, errno = %d", log_filename, errno);
 	} 
+}
+
+LogHistoricalSequenceNumber::LogHistoricalSequenceNumber(unsigned long historical_sequence_number,time_t timestamp)
+{
+	op_type = CondorLogOp_LogHistoricalSequenceNumber;
+	this->historical_sequence_number = historical_sequence_number;
+	this->timestamp = timestamp;
+}
+int
+LogHistoricalSequenceNumber::Play(void *data_structure)
+{
+	// Would like to update ClassAdLog here, but we only have
+	// a pointer to the classad hash table, so ClassAdLog must
+	// update its own sequence number when it reads this event.
+	return 1;
+}
+
+int
+LogHistoricalSequenceNumber::ReadBody(int fd)
+{
+	int rval,rval1;
+	char *buf = NULL;
+	rval = readword(fd, buf);
+	if (rval < 0) return rval;
+	sscanf(buf,"%lu",&historical_sequence_number);
+	free(buf);
+
+	rval1 = readword(fd, buf); //the label of the attribute 
+				//we ignore it
+	if (rval1 < 0) return rval1; 
+	free(buf);
+
+	rval1 = readword(fd, buf);
+	if (rval1 < 0) return rval1;
+	sscanf(buf,"%lu",&timestamp);
+	free(buf);
+	return rval + rval1;
+}
+
+int
+LogHistoricalSequenceNumber::WriteBody(int fd)
+{
+	char buf[100];
+	sprintf(buf,"%lu CreationTimestamp %lu",
+		historical_sequence_number,timestamp);
+	return write(fd, buf, strlen(buf));
 }
 
 LogNewClassAd::LogNewClassAd(const char *k, const char *m, const char *t)
@@ -691,6 +825,9 @@ InstantiateLogEntry(int fd, int type)
 			break;
 		case CondorLogOp_EndTransaction:
 			log_rec = new LogEndTransaction();
+			break;
+		case CondorLogOp_LogHistoricalSequenceNumber:
+			log_rec = new LogHistoricalSequenceNumber(0,0);
 			break;
 	    default:
 		    return 0;

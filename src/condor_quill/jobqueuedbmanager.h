@@ -122,6 +122,8 @@ class JobQueueDBManager : public Service
 	QuillErrCode 	initJobQueueTables();
 		//! process only the DELTA
 	QuillErrCode 	addJobQueueTables();
+		//! process records from previous job queue files during truncation
+	QuillErrCode 	addOldJobQueueRecords();
 	
 
 		/*! 
@@ -160,30 +162,32 @@ class JobQueueDBManager : public Service
 		//! incrementally read and write log entries to database
 		//! calls processLogEntry on each new log entry in the job_queue.log file
 	
-	QuillErrCode    readAndWriteLogEntries();
+	QuillErrCode    readAndWriteLogEntries(ClassAdLogParser *parser);
 
 		//! is a wrapper over all the processXXX functions
 		//! in this and all the processXXX routines, if exec_later == true, 
 		//! a SQL string is returned instead of actually sending it to the DB.
 		//! However, we always have exec_later = false, which means it actually
 		//! writes to the database in an eager fashion
-	QuillErrCode	processLogEntry(int op_type, bool exec_later);
+	QuillErrCode	processLogEntry(int op_type, 
+					bool exec_later, 
+					ClassAdLogParser *parser);
 	QuillErrCode	processNewClassAd(char* key, 
-							  char* mytype, 
-							  char* ttype, 
-							  bool exec_later = false);
+					char* mytype, 
+					char* ttype, 
+					bool exec_later = false);
 		//! in addition to deleting the classad, this routine is also 
 		//! responsible for maintaining the history tables.  Thanks to
 		//! this catch, we can get history for free, i.e. without having
 		//! to sniff the history file
 	QuillErrCode    processDestroyClassAd(char* key, bool exec_later = false);
 	QuillErrCode	processSetAttribute(char* key, 
-								char* name, 
-								char* value, 
-								bool exec_later = false);
+						char* name, 
+						char* value, 
+						bool exec_later = false);
 	QuillErrCode    processDeleteAttribute(char* key, 
-										   char* name, 
-										   bool exec_later = false);
+						char* name, 
+						bool exec_later = false);
 	QuillErrCode    processBeginTransaction(bool exec_later = false);
 	QuillErrCode	processEndTransaction(bool exec_later = false);
 
@@ -206,8 +210,8 @@ class JobQueueDBManager : public Service
 
 		//! split key into cid and pid
 	JobIdType	    getProcClusterIds(const char* key, 
-								  char* cid, 
-								  char* pid);
+						char* cid, 
+						char* pid);
 
 		//! utility routine to show database error mesage
 	void	displayDBErrorMsg(const char* errmsg);
@@ -229,11 +233,11 @@ class JobQueueDBManager : public Service
 		//
 		// members
 		//
-	Prober*	            prober;			//!< Prober
-	ClassAdLogParser*   caLogParser;	//!< ClassAd Log Parser
-	JobQueueDatabase*   jqDatabase;		//!< Job Queue Database
+	Prober*	            prober;	//!< Prober
+	ClassAdLogParser*   caLogParser;//!< ClassAd Log Parser
+	JobQueueDatabase*   jqDatabase;	//!< Job Queue Database
 
-	XactState	xactState;		    //!< current XACT state
+	XactState	xactState;	//!< current XACT state
 
 		//together these constitute the dynamic attributes that are inserted
 		//into the quill ad sent to the collector
@@ -242,8 +246,8 @@ class JobQueueDBManager : public Service
 	int     secsLastBatch;
 	bool    isConnectedToDB;
 
-	char*	jobQueueLogFile; 		//!< Job Queue Log File Path
-	char*	jobQueueDBConn;  		//!< DB connection string
+	char*	jobQueueLogFile; 	//!< Job Queue Log File Path
+	char*	jobQueueDBConn;  	//!< DB connection string
 	char*	jobQueueDBIpAddress;    //!< <IP:PORT> address of DB
 	char*	jobQueueDBName;         //!< DB Name
 
@@ -252,12 +256,12 @@ class JobQueueDBManager : public Service
 	int     historyCleaningInterval;//!< number of hours between two successive
 	                                //!< successive calls to purgeOldHistoryRows
 
-	int		pollingTimeId;			//!< timer handler id of pollingTime function
-	int		pollingPeriod;			//!< polling time period in seconds
+	int		pollingTimeId;	//!< timer handler id of pollingTime function
+	int		pollingPeriod;	//!< polling time period in seconds
 
-	char*	multi_sql_str;			//!< buffer for SQL
+	char*	multi_sql_str;		//!< buffer for SQL
 
-	int		numTimesPolled;			//!< used to vacuum and analyze job queue tables
+	int		numTimesPolled;	//!< used to vacuum and analyze job queue tables
 };
 
 #endif /* _JOBQUEUEDBMANAGER_H_ */

@@ -47,6 +47,15 @@ public:
 		//
 		// accessors
 		//
+	
+	    //! get the file handles
+	int     getFileDescriptor();
+	FILE *  getFilePointer();
+
+		//! set the file handles
+	void    setFileDescriptor(int fd);
+	void    setFilePointer(FILE *fp);
+
 		//! return the current ClassAd log entry
 	ClassAdLogEntry* 	getLastCALogEntry();
 		//! return the last ClassAd log entry
@@ -74,20 +83,29 @@ public:
 	//!	get a current classad log entry data as a Delete Attribute command
 	QuillErrCode 	getDeleteAttributeBody(char*& key, char*& name);
 
+	//!	get the body of a historical sequence number command
+	QuillErrCode	getLogHistoricalSNBody(char*& seqnum, char*& timestamp);
+
 	//! read a classad log entry in the current offset of a file
 	FileOpErrCode readLogEntry(int &op_type, bool ex = false);
+
+	FileOpErrCode openFile(bool ex = false);
+	FileOpErrCode closeFile(bool ex = false);
 
 private:
 		//
 		// helper functions
 		// 
-	int		readHeader(int fd, int& op_type);
+	int	readHeader(int fd, int& op_type);
 	int 	readHeader(FILE *fp, int& op_type);
 	int 	readword(FILE *fp, char *&);
 	int 	readword(int, char *&);
 	int 	readline(FILE *fp, char *&);
 	int 	readline(int, char *&);
 
+
+	int	    readLogHistoricalSNBody(int fd);
+	int	    readLogHistoricalSNBody(FILE *fp);	
 	int 	readNewClassAdBody(int fd);
 	int 	readNewClassAdBody(FILE *fp);
 	int 	readDestroyClassAdBody(int fd);
@@ -109,6 +127,9 @@ private:
 
 	ClassAdLogEntry		curCALogEntry; 	//!< current ClassAd log entry
 	ClassAdLogEntry		lastCALogEntry; //!< last ClassAd log entry 
+
+	FILE 	*log_fp;
+	int	    log_fd;
 };
 
 #endif /* _CLASSADLOGPARSER_H_ */

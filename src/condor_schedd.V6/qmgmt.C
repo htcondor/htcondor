@@ -495,12 +495,17 @@ InitQmgmt()
 	}
 }
 
+void
+SetMaxHistoricalLogs(int max_historical_logs)
+{
+	JobQueue->SetMaxHistoricalLogs(max_historical_logs);
+}
 
 void
-InitJobQueue(const char *job_queue_name)
+InitJobQueue(const char *job_queue_name,int max_historical_logs)
 {
 	assert(!JobQueue);
-	JobQueue = new ClassAdCollection(job_queue_name);
+	JobQueue = new ClassAdCollection(job_queue_name,max_historical_logs);
 	ClusterSizeHashTable = new ClusterSizeHashTable_t(37,compute_clustersize_hash);
 	TotalJobsCount = 0;
 

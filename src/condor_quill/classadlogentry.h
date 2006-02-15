@@ -38,10 +38,13 @@
 #define CondorLogOp_DeleteAttribute		104
 
 //! Definition of Begin Transaction Command Type Constant
-#define CondorLogOp_BeginTransaction	105
+#define CondorLogOp_BeginTransaction		105
 
 //! Definition of End Transaction Command Type Constant
 #define CondorLogOp_EndTransaction		106
+
+//! Definition of End Transaction Command Type Constant
+#define CondorLogOp_LogHistoricalSequenceNumber	107
 
 
 //! ClassAdLogEntry
@@ -70,7 +73,7 @@ public:
 		// data
 	long				offset;			//!< offset of this entry
 	long				next_offset;	//!< offset of the next entry
-	int					op_type;		//!< command type
+	int				op_type;		//!< command type
 
 	char				*key;			//!< key
 	char				*mytype;		//!< mytype

@@ -56,13 +56,14 @@
 #define CondorLogOp_DeleteAttribute		104
 #define CondorLogOp_BeginTransaction	105
 #define CondorLogOp_EndTransaction		106
+#define CondorLogOp_LogHistoricalSequenceNumber 107
 
 typedef HashTable <HashKey, ClassAd *> ClassAdHashTable;
 
 class ClassAdLog {
 public:
 	ClassAdLog();
-	ClassAdLog(const char *filename);
+	ClassAdLog(const char *filename,int max_historical_logs=0);
 	~ClassAdLog();
 
 	void AppendLog(LogRecord *log);	// perform a log operation
@@ -80,12 +81,39 @@ public:
 	int LookupInTransaction(const char *key, const char *name, char *&val);
 
 	ClassAdHashTable table;
+
+	// When the log is truncated (i.e. compacted), old logs
+	// may be saved, up to some limit.  The default is not
+	// to save any history (max = 0).
+	void SetMaxHistoricalLogs(int max);
+	int GetMaxHistoricalLogs();
+
 private:
 	void LogState(int fd);
 	char log_filename[_POSIX_PATH_MAX];
 	int log_fd;
 	Transaction *active_transaction;
 	bool EmptyTransaction;
+	int max_historical_logs;
+	unsigned long historical_sequence_number;
+
+	bool SaveHistoricalLogs();
+};
+
+class LogHistoricalSequenceNumber : public LogRecord {
+public:
+	LogHistoricalSequenceNumber(unsigned long historical_sequence_number, time_t timestamp);
+	int Play(void *data_structure);
+
+	unsigned long get_historical_sequence_number() {return historical_sequence_number;}
+	time_t get_timestamp() {return timestamp;}
+
+private:
+	virtual int WriteBody(int fd);
+	virtual int ReadBody(int fd);
+
+	unsigned long historical_sequence_number;
+	time_t timestamp; //time is logged for purely informational purposes
 };
 
 class LogNewClassAd : public LogRecord {

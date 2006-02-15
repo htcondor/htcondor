@@ -30,9 +30,15 @@
 //! constructor
 Prober::Prober()
 {
-	jqfile_last_mod_time = 0;
-	jqfile_last_size = 0;
-
+	last_mod_time = 0;
+	last_size = 0;
+	last_seq_num = 0;
+	last_creation_time = 0;
+	
+	cur_probed_mod_time = 0;
+	cur_probed_size = 0;
+	cur_probed_seq_num = 0;
+	cur_probed_creation_time = 0;
 }
 
 //! destructor
@@ -58,139 +64,145 @@ Prober::getJobQueueName()
 }
 
 void
-Prober::setJQFile_Last_MTime(time_t t)
+Prober::setLastModifiedTime(time_t t)
 {
-	jqfile_last_mod_time = t;
+	last_mod_time = t;
 }
 
 
 time_t
-Prober::getJQFile_Last_MTime()
+Prober::getLastModifiedTime()
 {
-	return jqfile_last_mod_time;
+	return last_mod_time;
 }
 
 void
-Prober::setJQFile_Last_Size(size_t s)
+Prober::setLastSize(size_t s)
 {
-	jqfile_last_size = s;
+	last_size = s;
 }
 
 
 size_t
-Prober::getJQFile_Last_Size()
+Prober::getLastSize()
 {
-	return jqfile_last_size;
+	return last_size;
 }
+
+long int
+Prober::getLastSequenceNumber() 
+{
+	return last_seq_num;
+}
+
+void
+Prober::setLastSequenceNumber(long int seq_num) 
+{
+	last_seq_num = seq_num;
+}
+
+time_t
+Prober::getLastCreationTime() 
+{
+	return last_creation_time;
+}
+
+void
+Prober::setLastCreationTime(time_t ctime) 
+{
+	last_creation_time = ctime;
+}
+
+long int
+Prober::getCurProbedSequenceNumber() {
+	return cur_probed_seq_num;
+}
+
+long int
+Prober::getCurProbedCreationTime() {
+	return cur_probed_creation_time;
+}
+
 
 
 //! probe job_queue.log file
 ProbeResultType
-Prober::probe(ClassAdLogEntry *curCALogEntry,char const *job_queue_name)
+Prober::probe(ClassAdLogEntry *curCALogEntry,
+			  int job_queue_fd)
 {
 	FileOpErrCode   st;
 	int op_type;
+	struct stat filestat;
 
-	struct stat fstat;
 	//TODO: should use condor's StatInfo instead.
-	if (stat(job_queue_name, &fstat) == -1)
+	if (fstat(job_queue_fd, &filestat) == -1)
 		dprintf(D_ALWAYS,"ERROR: calling stat()\n");
 	
 	dprintf(D_ALWAYS, "=== Current Probing Information ===\n");
 	dprintf(D_ALWAYS, "fsize: %ld\t\tmtime: %ld\n", 
-				(long)fstat.st_size, (long)fstat.st_mtime);
+				(long)filestat.st_size, (long)filestat.st_mtime);
 
 	// get the new state
-	cur_probed_jqfile_last_mod_time = fstat.st_mtime;
-	cur_probed_jqfile_last_size = fstat.st_size;
+	cur_probed_mod_time = filestat.st_mtime;
+	cur_probed_size = filestat.st_size;
 
-	if (jqfile_last_mod_time == 0) {
-		// This is the start phase of quill
+	ClassAdLogParser caLogParser;
+	
+	caLogParser.setFileDescriptor(job_queue_fd);
+	caLogParser.setNextOffset(0);
+	st = caLogParser.readLogEntry(op_type);
+	
+	if (st != FILE_READ_SUCCESS) {
+		return ERROR;
+	}
+
+	dprintf(D_ALWAYS, "first log entry: %s %s %s\n", 
+			((ClassAdLogEntry *)caLogParser.getCurCALogEntry())->key,
+			((ClassAdLogEntry *)caLogParser.getCurCALogEntry())->name,
+			((ClassAdLogEntry *)caLogParser.getCurCALogEntry())->value);
+	cur_probed_seq_num = 
+		atol(((ClassAdLogEntry *)caLogParser.getCurCALogEntry())->key);
+	cur_probed_creation_time = 
+		atol(((ClassAdLogEntry *)caLogParser.getCurCALogEntry())->value);
+
+	if (last_size == 0) {
+			// starting phase
 		return INIT_QUILL;
 	}	
-		// If there is no change in last modification time,
-		// no action is needed.
-	if (fstat.st_mtime >= jqfile_last_mod_time) {
 
-		if (fstat.st_size > jqfile_last_size) {
-				// File has been increased
-				// New logs may be added
-				// ------- ACTION ----------
-				// Get the Delta & Check Last Command
-				// 1. if it's the same as the last one, that's normal addition
-				// return ADDITION;
-				// 2. if not, it's error state
-				// return PROBE_ERROR;
-
-				//
-				// check the last command
-			ClassAdLogParser caLogParser;
-
-			caLogParser.setJobQueueName((char *)job_queue_name);
-
-
-			caLogParser.setNextOffset(curCALogEntry->offset);
-			st = caLogParser.readLogEntry(op_type);
-
-			if (st != FILE_READ_SUCCESS) {
-				return PROBE_ERROR;
-			}
-
-			if (caLogParser.getCurCALogEntry()->equal(curCALogEntry))
-			{ 
-				return ADDITION;
-			}
-			else 
-			{
-				return PROBE_ERROR;
-			}
-		}
-		else if (fstat.st_size < jqfile_last_size) {
-				// File has been decreased
-				// Compression may happen
-				return COMPRESSED;
-		}
-		else {
-				// File has not been increased or decreased
-				// ------- ACTION ----------
-				// Need to check last command --> 2 cases
-				// 1. if it's the same as the last one, that's OK
-				// return NO_CHANGE; 
-				// 2. if not, it's error state
-				// return PROBE_ERROR;
-
-				//
-				// check the last command
-
-			ClassAdLogParser caLogParser;
-			caLogParser.setJobQueueName((char *)job_queue_name);
-
-			caLogParser.setNextOffset(curCALogEntry->offset);
-
-			st = caLogParser.readLogEntry(op_type); 
-
-			if (st != FILE_READ_EOF && st != FILE_READ_SUCCESS) {
-				return PROBE_ERROR;
-			}
-
-			if (caLogParser.getCurCALogEntry()->equal(curCALogEntry)) { 
-				return NO_CHANGE;
-			}
-			else {
-				return PROBE_ERROR;
-			}
-		}
-	}
-	else {
-		return PROBE_ERROR;
+	if(cur_probed_seq_num != last_seq_num) {
+		return COMPRESSED;
 	}
 
-	return NO_CHANGE;
+	caLogParser.setNextOffset(curCALogEntry->offset);
+	st = caLogParser.readLogEntry(op_type);
+	
+	if (st != FILE_READ_EOF && st != FILE_READ_SUCCESS) {
+		return ERROR;
+	}
+		
+
+	if((filestat.st_size == last_size) && 
+	   caLogParser.getCurCALogEntry()->equal(curCALogEntry)) {
+			// File size and contents stay the same
+		return NO_CHANGE;
+	}
+	else if((filestat.st_size > last_size) &&
+			caLogParser.getCurCALogEntry()->equal(curCALogEntry)) {
+			// File has been increased and new entries have been added
+		return ADDITION;
+	}
+		//if it wasn't captured by any of the above cases, 
+		//it must have been an error
+	return ERROR;		
 }
 
 void
 Prober::incrementProbeInfo() {
 	// store the currently probed stat
-	jqfile_last_mod_time = cur_probed_jqfile_last_mod_time;
-	jqfile_last_size = cur_probed_jqfile_last_size;
+	last_mod_time = cur_probed_mod_time;
+	last_size = cur_probed_size;
+
+	last_seq_num = cur_probed_seq_num;
+	last_creation_time = cur_probed_creation_time;
 }
