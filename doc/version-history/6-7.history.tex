@@ -71,6 +71,12 @@ supported on Linux.
 
 \begin{itemize}
 
+\item Previously, the \Condor{startd} would not recompute the
+  \Attr{CurrentRank} attribute each time a new job was spawned, but
+  only computed it whenever a new claim was made.
+  Now, the \Condor{startd} correctly recomputes \Attr{CurrentRank}
+  each time a new job starts running.
+
 \item When running a gridftp server for grid-type gt4 jobs, Condor will now
 start the server so as to ignore /etc/grid-security/gridftp.conf and
 \$GLOBUS\_LOCATION/etc/gridftp.conf. These files may contain options that
