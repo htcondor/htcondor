@@ -75,13 +75,12 @@
 #define GM_CLEAR_REQUEST		19
 #define GM_HOLD					20
 #define GM_PROXY_EXPIRED		21
-#define GM_CLEAN_JOBMANAGER		22
-#define GM_REFRESH_PROXY		23
-#define GM_PROBE_JOBMANAGER		24
-#define GM_OUTPUT_WAIT			25
-#define GM_PUT_TO_SLEEP			26
-#define GM_JOBMANAGER_ASLEEP	27
-#define GM_START				28
+#define GM_REFRESH_PROXY		22
+#define GM_PROBE_JOBMANAGER		23
+#define GM_OUTPUT_WAIT			24
+#define GM_PUT_TO_SLEEP			25
+#define GM_JOBMANAGER_ASLEEP	26
+#define GM_START				27
 
 static char *GMStateNames[] = {
 	"GM_INIT",
@@ -106,7 +105,6 @@ static char *GMStateNames[] = {
 	"GM_CLEAR_REQUEST",
 	"GM_HOLD",
 	"GM_PROXY_EXPIRED",
-	"GM_CLEAN_JOBMANAGER",
 	"GM_REFRESH_PROXY",
 	"GM_PROBE_JOBMANAGER",
 	"GM_OUTPUT_WAIT",
@@ -1021,7 +1019,7 @@ int GlobusJob::doEvaluateState()
 					gmState = GM_CLEAR_REQUEST;
 				}
 			} else if ( wantResubmit || doResubmit ) {
-				gmState = GM_CLEAN_JOBMANAGER;
+				gmState = GM_CLEAR_REQUEST;
 			} else {
 				if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_STAGE_IN ||
 					 globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_PENDING ||
@@ -1962,59 +1960,6 @@ int GlobusJob::doEvaluateState()
 			// to the schedd, then delete this object.
 			DoneWithJob();
 			// This object will be deleted when the update occurs
-			} break;
-		case GM_CLEAN_JOBMANAGER: {
-			// Tell the jobmanager to cleanup an un-restartable job submission
-
-			CHECK_PROXY;
-			// Once RequestSubmit() is called at least once, you must
-			// SubmitComplete() or CancelSubmit() once you're done with
-			// the request call
-			char cleanup_rsl[4096];
-			char *dummy_job_contact;
-			if ( myResource->RequestSubmit(this) == false ||
-				 myResource->RequestJM(this) == false ) {
-				break;
-			}
-			snprintf( cleanup_rsl, sizeof(cleanup_rsl), "&(cleanup=%s)", jobContact );
-			rc = gahp->globus_gram_client_job_request( 
-										resourceManagerString, 
-										cleanup_rsl,
-										GLOBUS_GRAM_PROTOCOL_JOB_STATE_ALL,
-										gramCallbackContact,
-										&dummy_job_contact );
-			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
-				 rc == GAHPCLIENT_COMMAND_PENDING ) {
-				break;
-			}
-			myResource->SubmitComplete(this);
-			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONNECTION_FAILED ||
-				 //rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
-				 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
-				connect_failure_gatekeeper = true;
-				break;
-			}
-			if ( rc == GLOBUS_SUCCESS ||
-				 rc == GLOBUS_GRAM_PROTOCOL_ERROR_JOB_CANCEL_FAILED ) {
-				 // All is good... deed is done.
-				gmState = GM_CLEAR_REQUEST;
-			} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_UNDEFINED_EXE ) {
-				// Jobmanager doesn't support cleanup attribute.
-				gmState = GM_CLEAR_REQUEST;
-			} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_NO_STATE_FILE ) {
-				// State file disappeared.  Could be a normal condition
-				// if we never successfully committed a submit (and
-				// thus the jobmanager removed the state file when it timed
-				// out waiting for the submit commit signal).
-				gmState = GM_CLEAR_REQUEST;
-			} else {
-				// unhandled error
-				LOG_GLOBUS_ERROR( "globus_gram_client_job_request()", rc );
-				dprintf(D_ALWAYS,"(%d.%d)    RSL='%s'\n",
-						procID.cluster, procID.proc,cleanup_rsl);
-				globusError = rc;
-				gmState = GM_CLEAR_REQUEST;
-			}
 			} break;
 		case GM_CLEAR_REQUEST: {
 			// Remove all knowledge of any previous or present job
