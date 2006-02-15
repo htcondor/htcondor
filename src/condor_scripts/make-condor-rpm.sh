@@ -200,13 +200,14 @@ EOF
 # Build RPM
 echo "*** Building the RPM..."
 
-if [ -f /etc/SuSE-release ]; then
-	# SuSE doesn't have rpmbuild, so this should work instead.
+# determine if I should use rpm or rpmbuild
+if [ `rpm -bb --help > /dev/null 2>&1` ]; then
 	RPMBUILD_CMD="rpm"
 else
 	RPMBUILD_CMD="rpmbuild"
 fi
 
+echo "$RPMBUILD_CMD --define "_topdir rpmbuild" -bb condor.spec"
 $RPMBUILD_CMD --define "_topdir rpmbuild" -bb condor.spec
 
 if [ $? != 0 ]; then
@@ -218,7 +219,7 @@ arch=`ls -1 rpmbuild/RPMS/ | sed -e 's|\/||'`
 rpm_name=`ls -1 rpmbuild/RPMS/${arch}`
 
 # Place RPM in the resulting directory
-echo "*** Copying the RPM."
+echo "*** Copying the RPM: (arch=$arch, rpm_name=$rpm_name)"
 popd >> /dev/null
 cp ${builddir}/rpmbuild/RPMS/${arch}/${rpm_name} \
    ./${naked_name}-${release}.${arch}.rpm

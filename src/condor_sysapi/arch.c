@@ -237,6 +237,15 @@ sysapi_translate_arch( char *machine, char *sysname )
 	else if( !strcmp(machine, "Power Macintosh") ) { //LDAP entry
 		sprintf( tmp, "PPC" );
 	} 
+	else if( !strcmp(machine, "ppc") ) {
+		sprintf( tmp, "PPC" );
+	} 
+	else if( !strcmp(machine, "ppc32") ) {
+		sprintf( tmp, "PPC" );
+	} 
+	else if( !strcmp(machine, "ppc64") ) {
+		sprintf( tmp, "PPC64" );
+	} 
 	else {
 			// Unknown, just use what uname gave:
 		sprintf( tmp, machine );
