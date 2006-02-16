@@ -8,6 +8,10 @@
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
 
+2/16/06  V6_7_17-root and V6_7_17-branch
+   A branch for the 6.7.17 doc release, created from V6_7_17-root
+   on V6_7-branch.
+
 2/16/06  V6_7-pre-merge-V6_7_16-doc-merge-1
          V6_7-post-merge-V6_7_16-doc-merge-1
    The state of the doc directory in V6_7-branch before and after
