@@ -534,7 +534,7 @@ int main_init (int argc, char ** const argv) {
 						  dagman.allowLogError, dagman.useDagDir,
 						  dagman.maxIdle, dagman.retrySubmitFirst,
 						  dagman.retryNodeFirst, dagman.condorRmExe,
-						  dagman.storkRmExe );
+						  dagman.storkRmExe, &dagman.DAGManJobId );
 
     if( dagman.dag == NULL ) {
         EXCEPT( "ERROR: out of memory!\n");

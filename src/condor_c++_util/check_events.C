@@ -32,7 +32,7 @@
 CheckEvents::CheckEvents(int allowEvents) :
 		jobHash(JOB_HASH_SIZE, ReadMultipleUserLogs::hashFuncJobID,
 			rejectDuplicateKeys),
-		noSubmitId(-1, -1, -1)
+		noSubmitId(-1, 0, 0)
 {
 	this->allowEvents = allowEvents;
 }

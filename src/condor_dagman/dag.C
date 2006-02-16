@@ -69,12 +69,13 @@ Dag::Dag( /* const */ StringList &dagFiles, char *condorLogName,
 		  int allow_events, const char* dapLogName, bool allowLogError,
 		  bool useDagDir, int maxIdleJobProcs, bool retrySubmitFirst,
 		  bool retryNodeFirst, const char *condorRmExe,
-		  const char *storkRmExe) :
+		  const char *storkRmExe, const CondorID *DAGManJobId) :
     _maxPreScripts        (maxPreScripts),
     _maxPostScripts       (maxPostScripts),
 	DAG_ERROR_CONDOR_SUBMIT_FAILED (-1001),
 	DAG_ERROR_CONDOR_JOB_ABORTED (-1002),
 	DAG_ERROR_DAGMAN_HELPER_COMMAND_FAILED (-1101),
+	MAX_SIGNAL			  (64),
 	_condorLogName		  (NULL),
     _condorLogInitialized (false),
     _dapLogName           (NULL),
@@ -90,6 +91,7 @@ Dag::Dag( /* const */ StringList &dagFiles, char *condorLogName,
 	m_retryNodeFirst	  (retryNodeFirst),
 	_condorRmExe		  (condorRmExe),
 	_storkRmExe			  (storkRmExe),
+	_DAGManJobId		  (DAGManJobId),
 	_preRunNodeCount	  (0),
 	_postRunNodeCount	  (0),
 	_checkCondorEvents    (allow_events),
@@ -575,7 +577,7 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
 			}
 		}
 
-		ProcessJobProcEnd( job, recovery, false, true );
+		ProcessJobProcEnd( job, recovery, true );
 	}
 }
 
@@ -594,9 +596,9 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 		JobTerminatedEvent * termEvent = (JobTerminatedEvent*) event;
 
 
-		bool isError = !(termEvent->normal && termEvent->returnValue == 0);
+		bool failed = !(termEvent->normal && termEvent->returnValue == 0);
 
-		if( isError ) {
+		if( failed ) {
 				// job failed or was killed by a signal
 
 			if( termEvent->normal ) {
@@ -645,8 +647,11 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 			}
 
 			if( job->_scriptPost == NULL ) {
-				CheckForDagAbort(job, job->retval, "node");
+				bool abort = CheckForDagAbort(job, job->retval, "node");
 				// if dag abort happened, we never return here!
+				if( abort ) {
+					return;
+				}
 			}
 
 		} else {
@@ -668,7 +673,7 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 							termEvent->cluster, termEvent->proc );
 		}
 
-		ProcessJobProcEnd( job, recovery, isError, false );
+		ProcessJobProcEnd( job, recovery, failed );
 
 		PrintReadyQ( DEBUG_DEBUG_2 );
 
@@ -684,7 +689,12 @@ Dag::RemoveBatchJob(Job *node) {
 
 	switch ( node->JobType() ) {
 	case Job::TYPE_CONDOR:
-       	snprintf( cmd, ARG_MAX, "%s %d", _condorRmExe,
+			// Adding this DAGMan's cluster ID as a constraint to
+			// be extra-careful to avoid removing someone else's
+			// job.
+       	snprintf( cmd, ARG_MAX, "%s -const \'%s == %d && ClusterId == %d\'",
+					_condorRmExe,
+					ATTR_DAGMAN_JOB_ID, _DAGManJobId->_cluster,
 					node->_CondorID._cluster);
 		break;
 
@@ -709,9 +719,15 @@ Dag::RemoveBatchJob(Job *node) {
 
 //---------------------------------------------------------------------------
 void
-Dag::ProcessJobProcEnd(Job *job, bool recovery, bool isError, bool isAbort) {
+Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 
-	if ( isError || isAbort ) {
+	//
+	// Note: structure here should be cleaned up, but I'm leaving it for
+	// now to make sure parallel universe support is complete for 6.7.17.
+	// wenger 2006-02-15.
+	//
+
+	if ( failed ) {
 		if( job->_scriptPost != NULL ) {
 			//
 			// Fall thru and maybe run POST script below.
@@ -806,7 +822,11 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 							"POST script %s", errBuf );
 
 				job->retval = termEvent->returnValue;
-				CheckForDagAbort(job, termEvent->returnValue, "POST script");
+				bool abort = CheckForDagAbort(job, job->retval, "node");
+				// if dag abort happened, we never return here!
+				if( abort ) {
+					return;
+				}
 
 			} else {
 					// Abnormal termination -- POST script killed by signal
@@ -836,7 +856,8 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 					errMsg.sprintf( "Job exited with status %d and ",
 								mainJobRetval);
 				}
-				else if( mainJobRetval < 0  && mainJobRetval >= -64 ) {
+				else if( mainJobRetval < 0  &&
+							mainJobRetval >= -MAX_SIGNAL ) {
 					errMsg.sprintf( "Job died on signal %d and ",
 								0 - mainJobRetval);
 				}
@@ -1375,7 +1396,11 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 					WEXITSTATUS(status) );
             job->retval = WEXITSTATUS( status );
 
-			CheckForDagAbort(job, WEXITSTATUS( status ), "PRE script");
+			bool abort = CheckForDagAbort(job, job->retval, "node");
+			// if dag abort happened, we never return here!
+			if( abort ) {
+				return true;
+			}
 		}
 
         job->_Status = Job::STATUS_ERROR;
@@ -1910,7 +1935,7 @@ Dag::isCycle ()
 	return cycle;
 }
 
-void
+bool
 Dag::CheckForDagAbort(Job *job, int exitVal, const char *type)
 {
 	if ( job->have_abort_dag_val &&
@@ -1918,7 +1943,10 @@ Dag::CheckForDagAbort(Job *job, int exitVal, const char *type)
 		debug_printf( DEBUG_QUIET, "Aborting DAG because we got "
 				"the ABORT exit value from a %s\n", type);
 		main_shutdown_rescue( exitVal );
+		return true;
 	}
+
+	return false;
 }
 
 

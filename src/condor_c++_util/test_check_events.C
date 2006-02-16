@@ -205,8 +205,8 @@ int main(int argc, char **argv)
 	PostScriptTerminatedEvent pt1;
 		// Note: special "no submit" ID.
 	pt1.cluster = -1;
-	pt1.proc = -1;
-	pt1.subproc = -1;
+	pt1.proc = 0;
+	pt1.subproc = 0;
 
 	printf("Testing post script terminated...");
 	CheckThisEvent(__LINE__, ce2, &pt1, CheckEvents::EVENT_OKAY, result);
@@ -547,11 +547,11 @@ int main(int argc, char **argv)
 	CheckEvents		ce11;
 
 	PostScriptTerminatedEvent pt2;
-		// ID of POST script terminated event is -1.-1.-1 if all submit
+		// ID of POST script terminated event is -1.0.0 if all submit
 		// attempts of the node job failed.
 	pt2.cluster = -1;
-	pt2.proc = -1;
-	pt2.subproc = -1;
+	pt2.proc = 0;
+	pt2.subproc = 0;
 
 	printf("Testing post script terminated... ");
 	CheckThisEvent(__LINE__, ce11, &pt2, CheckEvents::EVENT_OKAY, result);

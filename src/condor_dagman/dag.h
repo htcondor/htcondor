@@ -84,6 +84,7 @@ class Dag {
 			   to put the node at the head of the ready queue
 		@param condorRmExe executable to remove Condor jobs
 		@param storkRmExe executable to remove Stork jobs
+		@param DAGManJobId Condor ID of this DAGMan process
     */
 
     Dag( /* const */ StringList &dagFiles, char *condorLogName,
@@ -92,7 +93,7 @@ class Dag {
 		 int allowEvents, const char *dapLogName, bool allowLogError,
 		 bool useDagDir, int maxIdleJobProcs, bool retrySubmitFirst,
 		 bool retryNodeFirst, const char *condorRmExe,
-		 const char *storkRmExe);
+		 const char *storkRmExe, const CondorID *DAGManJobId);
 
     ///
     ~Dag();
@@ -174,12 +175,9 @@ class Dag {
 	/** Processing common to all "end-of-job proc" events.
 		@param The node the event is associated with.
 		@param Whether we're in recovery mode.
-		@param Whether the job resulted in an error (signal or non-zero
-			exit value).
-		@param Whether the job aborted.
+		@param Whether the job proc failed
 	*/
-	void ProcessJobProcEnd(Job *node, bool recovery, bool isError,
-			bool isAbort);
+	void ProcessJobProcEnd(Job *node, bool recovery, bool failed);
 
 	/** Process a post script terminated event.
 	    @param The event.
@@ -385,6 +383,10 @@ class Dag {
 	const int DAG_ERROR_CONDOR_SUBMIT_FAILED;
 	const int DAG_ERROR_CONDOR_JOB_ABORTED;
 	const int DAG_ERROR_DAGMAN_HELPER_COMMAND_FAILED;
+
+		// The maximum signal we can deal with in the error-reporting
+		// code.
+	const int MAX_SIGNAL;
 	
   protected:
 
@@ -426,8 +428,10 @@ class Dag {
 			@param The exit value of the relevant script or job.
 			@param The "type" of script or job we're dealing with (PRE
 				script, POST script, or node).
+			@return True iff aborting the DAG (it really should not
+			    return in that case)
 		*/
-	static void CheckForDagAbort(Job *job, int exitVal, const char *type);
+	static bool CheckForDagAbort(Job *job, int exitVal, const char *type);
 
 		// takes a userlog event and returns the corresponding node
 	Job* LogEventNodeLookup( int logsource, const ULogEvent* event,
@@ -527,6 +531,9 @@ class Dag {
 
 		// Executable to remove Stork jobs.
 	const char *	_storkRmExe;
+
+		// Condor ID of this DAGMan process.
+	const CondorID *	_DAGManJobId;
 
 	// queue of jobs ready to be submitted to Condor
 	SimpleList<Job*>* _readyQ;
