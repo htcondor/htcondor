@@ -8,14 +8,18 @@ DRMAA_SRC = $(DRMAA_DIR)/src
 
 /* copy the DRMAA files from the externals build */
 
+#if IS_DARWIN 
+public_copy_target($(DRMAA_LIB)/libdrmaa.dylib,lib,libdrmaa.dylib,TEXT_MODE) 
+#else
 public_copy_target($(DRMAA_LIB)/libdrmaa.so,lib,libdrmaa.so,TEXT_MODE) 
+#endif
+
 public_copy_target($(DRMAA_LIB)/libcondordrmaa.a,lib,libcondordrmaa.a,TEXT_MODE)
 public_copy_target($(DRMAA_INC)/drmaa.h,include,drmaa.h,TEXT_MODE)
 public_copy_target($(DRMAA_SRC)/README,include,README,TEXT_MODE)
 
 public_copy_target($(DRMAA_SRC)/auxDrmaa.c,src/drmaa,auxDrmaa.c,TEXT_MODE)
 public_copy_target($(DRMAA_SRC)/auxDrmaa.h,src/drmaa,auxDrmaa.h,TEXT_MODE)
-public_copy_target($(DRMAA_SRC)/config.h,src/drmaa,config.h,TEXT_MODE)
 public_copy_target($(DRMAA_SRC)/config.h.in,src/drmaa,config.h.in,TEXT_MODE)
 
 public_copy_target($(DRMAA_SRC)/configure,src/drmaa,configure,TEXT_MODE)
