@@ -55,6 +55,9 @@ my $SCHEDD_NAME_ENV = '_CONDOR_SCHEDD_NAME';
 my $LOCAL_CONFIG_FILE_ATTR = 'LOCAL_CONFIG_FILE';
 my $MASTER_NAME_ATTR = 'MASTER_NAME';
 
+# Defaults
+my $DEFAULT_ARTIFACT = 'MasterMidwife.artifact';
+
 #***
 # Non-constant Static Variables
 #***
@@ -66,7 +69,7 @@ my $local_config_file = 0;
 my $install_config_file = 0;
 my $flock_flag = 0;
 my $pid_flag = 0;
-my $midwife_artifact = 'MasterMidwife.artifact';
+my $midwife_artifact = 0;
 my $timeout = 120;
 my $help = 0;
 
@@ -159,7 +162,7 @@ sub FindBinary(){
     my $binaryName = shift @_;  #Name the parameter
     my $binaryPath = 0;
 
-    # set up the 2 possible paths
+    # set up the possible paths
     my $flat_path = $release_dir.'/'.$binaryName;
     my $bin_path = $release_dir.'/bin/'.$binaryName;
     my $sbin_path = $release_dir.'/sbin/'.$binaryName;
@@ -172,7 +175,7 @@ sub FindBinary(){
     } elsif( -e $sbin_path ){
 	$binaryPath = $sbin_path;
     } else{
-	die "Failed to locate $binaryName in either $flat_path OR $bin_path";
+	die "Failed to locate $binaryName in either $flat_path, $bin_path or $sbin_path";
     }
 
     return($binaryPath);
@@ -376,6 +379,14 @@ sub StopMaster(){
 	$undertaker = $PID_UNDERTAKER;
     }
     
+     # Ensure the artifact file is set
+    if( !$midwife_artifact ){
+	# Give the default name and put it in the local dir
+	$midwife_artifact = File::Spec->catpath(0, 
+						$local_dir, 
+						$DEFAULT_ARTIFACT);
+    }
+
     # construct the arguments for the undertaker program
     my $undertaker_path = File::Spec->catpath(0, $FindBin::Bin, $undertaker);
     my @undertaker_args = ($UNDERTAKER_FILE_OPT, $midwife_artifact);
