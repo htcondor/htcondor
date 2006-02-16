@@ -1,4 +1,5 @@
 #!/bin/sh
+unset GLOBUS_LOCATION
 GRIDMAP=`pwd`/$GRIDMAP
 export GRIDMAP
 cmd=$1
