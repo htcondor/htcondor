@@ -143,9 +143,10 @@ They create definitions that Condor refuses to parse.
 %macros.
 
 All entries in a configuration file must have an operator,
-which will be an equals sign (``='').
-%or a colon character (``:'').
-Identifiers must be alphanumerics combined with the underscore character.
+which will be an equals sign (\verb@=@).
+%or a colon character (\verb@:@).
+Identifiers are alphanumerics combined with the underscore character,
+optionally with a subsystem name and a period as a prefix.
 As a special case,
 a line without an operator that begins with a left square bracket
 will be ignored.
@@ -155,6 +156,47 @@ and correctly handles the second line.
   [Condor Settings]
   my_classad = [ foo=bar ]
 \end{verbatim}
+
+% functionality added to version 6.7.13
+To simplify pool administration,
+any configuration variable name may be prefixed by
+a subsystem 
+(see the \MacroUNI{SUBSYSTEM} macro in 
+section~\ref{sec:Pre-Defined-Macros}
+for the list of subsystems)
+and the period (\verb@.@) character.
+For configuration variables defined this way,
+the value is applied to the specific subsystem.
+For example,
+the ports that Condor may use can be restricted to a range 
+using the \MacroNI{HIGHPORT} and \MacroNI{LOWPORT} configuration
+variables.
+If the range of intended ports is different for specific
+daemons, this syntax may be used.
+\begin{verbatim}
+  MASTER.LOWPORT   = 20000
+  MASTER.HIGHPORT  = 20100
+  NEGOTIATOR.LOWPORT   =  22000 
+  NEGOTIATOR.HIGHPORT  =  22100
+\end{verbatim}
+
+Note that all configuration variables may utilize this syntax,
+but nonsense configuration variables may result.
+For example, it makes no sense to define
+\begin{verbatim}
+  NEGOTIATOR.MASTER_UPDATE_INTERVAL = 60
+\end{verbatim}
+since the \Condor{negotiator} daemon does not use the
+\MacroNI{MASTER\_UPDATE\_INTERVAL} variable.
+
+It makes little sense to do so, but Condor will configure
+correctly with a definition such as
+\begin{verbatim}
+  MASTER.MASTER_UPDATE_INTERVAL = 60
+\end{verbatim}
+The \Condor{master} uses this configuration variable,
+and the prefix of \MacroNI{MASTER.} causes this configuration
+to be specific to the \Condor{master} daemon.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Config-File-Special}Special Configuration

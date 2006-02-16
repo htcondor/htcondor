@@ -219,11 +219,15 @@ fails, \Condor{dagman} may hang, waiting for those processes to abort.
 \Condor{gridmanager} in previous releases. This has been corrected.
 
 \item The \Condor{starter} was refusing to run jobs if it could not
-perform a reverse-DNS lookup of the submit-host.  It is now possible
-to run without the reverse-DNS lookup, but you may still have to
-enable \Macro{TRUST\_UID\_DOMAIN}, since the authenticity of the
-submit-host's uid domain cannot be verified without the DNS
-information.
+perform a reverse-DNS lookup of the submit-host.  Now that this is
+fixed, when the reverse-DNS lookup fails, the job can still run, but
+Condor will not be able to verify the authenticity of the
+submit-hosts's uid domain.  In this case, if you enable
+\Macro{TRUST\_UID\_DOMAIN}, everything will function as normal, minus
+the verification of the domain; if you do not enable
+\Macro{TRUST\_UID\_DOMAIN}, the starter will treat the job as being
+from a different uid domain, regardless of what uid domain the job
+advertises.
 
 \item Fixed a few bugs with \AdAttr{transfer\_output\_remaps} that caused
 files to be remapped while in a temporary sandbox. Now, the remapping
@@ -241,7 +245,39 @@ instead of the new-style configuration setting \Macro{STARTD\_CRON\_JOBLIST}.
 
 \begin{itemize}
 
-\item None.
+\item The command line string used in starting \Prog{cron} jobs is correct
+the first time the job is run,
+but incorrect each subsequent time the job is run.
+The error is that the job's name is incorrectly appended to the
+previous run's command line.
+As an example, the first time the job is run with the correct command line
+\begin{verbatim}
+/path/to/job jobname
+\end{verbatim}
+The second time, this job is run with the incorrect command line 
+\begin{verbatim}
+/path/to/job jobname jobname
+\end{verbatim}
+And, the third time, this job is run with the incorrect command line
+\begin{verbatim}
+/path/to/job jobname jobname jobname
+\end{verbatim}
+
+% Gnats PR 607/admin RUST 13153.
+\item On Windows only (as far as we know) a \Condor{rm} of a scheduler
+universe job after a \Condor{qedit} may cause the schedd to crash.
+(This bug has existed at least since 6.7.12.)
+
+% Gnats PR 612/admin RUST 13153
+\item On Windows only (as far as we know) a \Condor{hold} followed by a
+\Condor{release} on a job sometimes results in the job being removed
+instead of going into the idle state.  (This bug has existed at
+least since 6.7.12.)
+
+% Gnats PR 608/admin RUST 13231.
+\item On Windows only, \Condor{dagman} may fail with a "DLL not
+initialized" error (exit code -1073741502).  (This bug has existed at
+least since 6.7.12.)
 
 \end{itemize}
 
@@ -268,7 +304,8 @@ heavily depends on \Macro{SIGNIFICANT\_ATTRIBUTES} \emph{not}
 including some attributes that \emph{are} used in requirements
 expressions (e.g.  ImageSize), then you should be aware that 6.7.15
 provides \emph{no} way for you to suppress such attributes.  In
-that case, we recommend that you wait for 6.7.16 before upgrading.
+that case, we recommend that you wait for this issue to be addressed
+before upgrading.
 This should not concern most users--especially anyone who is not even
 using \Macro{SIGNIFICANT\_ATTRIBUTES}, or who has defined
 \Macro{SIGNIFICANT\_ATTRIBUTES} to include all attributes that are
@@ -459,7 +496,24 @@ output files.
 
 \begin{itemize}
 
-\item None.
+\item The command line string used in starting \Prog{cron} jobs is correct
+the first time the job is run,
+but incorrect each subsequent time the job is run.
+The error is that the job's name is incorrectly appended to the 
+previous run's command line.
+As an example, the first time the job is run with the correct command line
+\begin{verbatim}
+/path/to/job jobname
+\end{verbatim}
+The second time, this job is run with the incorrect command line
+\begin{verbatim}
+/path/to/job jobname jobname
+\end{verbatim}
+And, the third time, this job is run with the incorrect command line
+\begin{verbatim}
+/path/to/job jobname jobname jobname
+\end{verbatim}
+
 
 \end{itemize}
 
