@@ -1486,9 +1486,9 @@ else
 	AC_SUBST(want_coredumper,NO)
 fi
 
-# DRMAA only builds on RedHat 8.0, RedHat 9, and Sles8-ia64 platforms
-if test x$_cv_linux_distro = "xRH80" -o x$_cv_linux_distro = "xRH9" -o x$_cv_linux_distro = "xSLES81" ; then
-  CONDOR_EXTERNAL_VERSION([drmaa],[1.1])
+# build DRMAA on RedHat 8.0, RedHat 9, Sles8-ia64, and MacOS 10.3
+if test x$_cv_linux_distro = "xRH80" -o x$_cv_linux_distro = "xRH9" -o x$_cv_linux_distro = "xSLES81" -o x$_cv_sysname = "xppc_macosx" ; then
+   CONDOR_EXTERNAL_VERSION([drmaa],[1.2])  
 fi
 
 if test "$os" = "AIX" ; then
