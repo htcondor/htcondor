@@ -521,8 +521,25 @@ V6_7_15_EXT	-a V6_7_14_EXT \
 # Externals needed for V6_7_16 (same as V6_7_15)
 V6_7_16_EXT	-a V6_7_15_EXT
 
-# Externals needed for V6_7_17 (same as V6_7_16)
-V6_7_17_EXT	-a V6_7_16_EXT
+# Externals needed for V6_7_17 (same as V6_7_16, but update drmaa)
+V6_7_17_EXT	-a V6_7_COMMON_EXT \
+		   externals/bundles/krb5/1.2.7 \
+		   externals/bundles/gahp/1.0.14 \
+		   externals/bundles/globus/4.0.1 \
+		   externals/bundles/gt3gahp/2.0 \
+		   externals/bundles/gt4gahp/1.4 \
+		   externals/bundles/classads/0.9.8-b3 \
+		   externals/bundles/gsoap/2.7.6c \
+		   externals/bundles/srb/3.2.1 \
+		   externals/bundles/pcre/5.0 \
+		   externals/bundles/openssl/0.9.8 \
+		   externals/bundles/postgresql/8.0.2 \
+		   externals/bundles/gcb/1.3.1 \
+		   externals/bundles/unicoregahp/1.0.0 \
+		   externals/bundles/nordugridgahp/1.0.0 \
+		   externals/bundles/linuxlibcheaders \
+		   externals/bundles/coredumper \
+		   externals/bundles/drmaa/1.2
 
 # Externals needed for the head of the V6_7-branch
 V6_7_EXT	-a V6_7_17_EXT
