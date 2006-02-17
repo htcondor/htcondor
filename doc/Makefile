@@ -1,5 +1,5 @@
-SUBDIR = v6.7.17
-SUBVER = V6_7_17
+SUBDIR = v6.7.18
+SUBVER = V6_7_18
 MANDIR = /p/condor/public/html/manual/$(SUBDIR)
 TARGETDIR = $(MANDIR).new
 all:  ref.dvi
