@@ -29,7 +29,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Fixed a bug which was causing jobs to never leave the "run"
+state if the \Condor{schedd}'s cron/hawkeye feature is enabled.  This
+bug was introduced with the addition of the cron logic to the
+\Condor{schedd} in 6.7.8.
 
 \end{itemize}
 
