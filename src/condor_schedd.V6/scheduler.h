@@ -426,6 +426,8 @@ private:
 	int				timeoutid;		// daemoncore timer id for timeout()
 	int				startjobsid;	// daemoncore timer id for StartJobs()
 
+	int				shadowReaperId; // daemoncore reaper id for shadows
+
 	int             startJobsDelayBit;  // for delay when starting jobs.
 
 		// used so that we don't register too many Sockets at once & fd panic

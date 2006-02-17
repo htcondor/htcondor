@@ -6533,11 +6533,13 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
         nice_config = NULL;
     }
 
-	int rid = 1;
+	int rid;
 	if( ( srec->universe == CONDOR_UNIVERSE_MPI) ||
 		( srec->universe == CONDOR_UNIVERSE_PARALLEL)) {
 		rid = dedicated_scheduler.rid;
-		}
+	} else {
+		rid = shadowReaperId;
+	}
 	
 
 		/*
@@ -6839,7 +6841,8 @@ Scheduler::start_pvm(match_rec* mrec, PROC_ID *job_id)
 		}
 		
 		pid = daemonCore->Create_Process( shadow_path, args, PRIV_ROOT, 
-										  1, FALSE, NULL, NULL, FALSE, 
+										  shadowReaperId,
+										  FALSE, NULL, NULL, FALSE, 
 										  NULL, fds );
 
 		delete( shadow_obj );
@@ -7359,7 +7362,8 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	}
 	
 	pid = daemonCore->Create_Process( a_out_name, args, PRIV_USER_FINAL, 
-							1, FALSE, &envobject, iwd, FALSE, NULL, inouterr,
+									  shadowReaperId, FALSE,
+									  &envobject, iwd, FALSE, NULL, inouterr,
 									  niceness );
 	
 	// now close those open fds - we don't want them here.
@@ -9765,9 +9769,10 @@ Scheduler::Register()
 
 
 	 // reaper
-	daemonCore->Register_Reaper( "reaper",
-                                 (ReaperHandlercpp)&Scheduler::child_exit,
-								 "child_exit", this );
+	shadowReaperId = daemonCore->Register_Reaper(
+		"reaper",
+		(ReaperHandlercpp)&Scheduler::child_exit,
+		"child_exit", this );
 
 	// register all the timers
 	RegisterTimers();
