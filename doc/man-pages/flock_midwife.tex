@@ -1,5 +1,5 @@
 \begin{ManPage}{\label{man-flock-midwife}\Prog{flock\_midwife}}{1}
-{creates an artifact of the creation of a process.}
+{creates an artifact of the creation of a process}
 
 \Synopsis \SynProg{\Prog{flock\_midwife}}
 \oOptArg{--file}{filename}
@@ -19,8 +19,9 @@ unless the separate file lock server is running.
 
 \begin{Options}
   \OptItem{\OptArg{--file}{filename}}{
-    The \Arg{filename} to use for the artifact file.  Defaults to
-    \File{lock.file}. 
+    The \Arg{filename} to use for the artifact file.  
+    The file \File{lock.file} is the default file used when
+    this option is not specified.
   }
   \OptItem{\Arg{program}}{
     Forks a process and executes \Arg{program} with \ldots
