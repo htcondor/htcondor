@@ -34,6 +34,10 @@ state if the \Condor{schedd}'s cron/hawkeye feature is enabled.  This
 bug was introduced with the addition of the cron logic to the
 \Condor{schedd} in 6.7.8.
 
+\item Improved how the \Condor{gridmanager} reacts to proxy delegation
+commands failing for grid-type gt4 jobs. Before, it could end up retrying
+the commands every couple seconds. Now, it retries them every 5 minutes.
+
 \end{itemize}
 
 \noindent Known Bugs:
