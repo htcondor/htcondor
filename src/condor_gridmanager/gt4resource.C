@@ -45,10 +45,16 @@ HashTable <HashKey, GT4Resource *>
     GT4Resource::ResourcesByName( HASH_TABLE_SIZE,
 								  hashFunction );
 
+#define CHECK_DELEGATION_INTERVAL	300
+#define LIFETIME_EXTEND_INTERVAL	300
+#define PROXY_REFRESH_INTERVAL		300
+
 struct ProxyDelegation {
 	char *deleg_uri;
 	time_t lifetime;
+	time_t last_lifetime_extend;
 	time_t proxy_expire;
+	time_t last_proxy_refresh;
 	Proxy *proxy;
 };
 
@@ -277,6 +283,8 @@ dprintf(D_FULLDEBUG,"    creating new ProxyDelegation\n");
 	next_deleg->deleg_uri = strdup( deleg_uri );
 	next_deleg->proxy_expire = 0;
 	next_deleg->lifetime = 0;
+	next_deleg->last_lifetime_extend = 0;
+	next_deleg->last_proxy_refresh = 0;
 	next_deleg->proxy = job_proxy;
 		// acquire proxy?
 	AcquireProxy( job_proxy, delegationTimerId );
@@ -307,6 +315,8 @@ dprintf(D_FULLDEBUG,"    creating new ProxyDelegation\n");
 	next_deleg->deleg_uri = NULL;
 	next_deleg->proxy_expire = 0;
 	next_deleg->lifetime = 0;
+	next_deleg->last_lifetime_extend = 0;
+	next_deleg->last_proxy_refresh = 0;
 	next_deleg->proxy = job_proxy;
 		// acquire proxy?
 	AcquireProxy( job_proxy, delegationTimerId );
@@ -318,14 +328,12 @@ dprintf(D_FULLDEBUG,"    creating new ProxyDelegation\n");
 	return NULL;
 }
 
-// BUG: If proxy refresh fails, we go into an infinite loop of starting
-//   a set-lifetime, then starting a proxy refresh when we check on the
-//   set-lifetime.
 int GT4Resource::checkDelegation()
 {
 dprintf(D_FULLDEBUG,"*** checkDelegation()\n");
 	bool signal_jobs;
 	ProxyDelegation *next_deleg;
+	time_t now = time( NULL );
 
 	if ( deleg_gahp->isInitialized() == false ) {
 		dprintf( D_ALWAYS,"gahp server not up yet, delaying checkDelegation\n" );
@@ -333,7 +341,7 @@ dprintf(D_FULLDEBUG,"*** checkDelegation()\n");
 		return 0;
 	}
 
-	daemonCore->Reset_Timer( delegationTimerId, 60*60 );
+	daemonCore->Reset_Timer( delegationTimerId, CHECK_DELEGATION_INTERVAL );
 
 	delegatedProxies.Rewind();
 
@@ -367,13 +375,14 @@ dprintf(D_FULLDEBUG,"      %s\n",delegation_uri);
 					// we are assuming responsibility to free this
 				next_deleg->deleg_uri = delegation_uri;
 				next_deleg->proxy_expire = next_deleg->proxy->expiration_time;
-				next_deleg->lifetime = time(NULL) + 12*60*60;
+				next_deleg->lifetime = now + 12*60*60;
 				signal_jobs = true;
 			}
 		}
 
 		if ( next_deleg->deleg_uri &&
-			 next_deleg->proxy_expire < next_deleg->proxy->expiration_time ) {
+			 next_deleg->proxy_expire < next_deleg->proxy->expiration_time &&
+			 now >= next_deleg->last_proxy_refresh + PROXY_REFRESH_INTERVAL ) {
 dprintf(D_FULLDEBUG,"    refreshing %s\n",next_deleg->deleg_uri);
 			int rc;
 			deleg_gahp->setDelegProxy( next_deleg->proxy );
@@ -383,6 +392,7 @@ dprintf(D_FULLDEBUG,"    refreshing %s\n",next_deleg->deleg_uri);
 				activeDelegationCmd = next_deleg;
 				return 0;
 			}
+			next_deleg->last_proxy_refresh = now;
 			if ( rc != 0 ) {
 					// Failure, what to do?
 				dprintf( D_ALWAYS, "refresh_credentials(%s) failed!\n",
@@ -398,7 +408,8 @@ dprintf(D_FULLDEBUG,"      done\n");
 		}
 
 		if ( next_deleg->deleg_uri &&
-			 next_deleg->lifetime < time(NULL) + 11*60*60 ) {
+			 next_deleg->lifetime < now + 11*60*60 &&
+			 now >= next_deleg->last_lifetime_extend + LIFETIME_EXTEND_INTERVAL ) {
 dprintf(D_FULLDEBUG,"    extending %s\n",next_deleg->deleg_uri);
 			int rc;
 			time_t new_lifetime = 12*60*60;
@@ -408,6 +419,7 @@ dprintf(D_FULLDEBUG,"    extending %s\n",next_deleg->deleg_uri);
 				activeDelegationCmd = next_deleg;
 				return 0;
 			}
+			next_deleg->last_lifetime_extend = now;
 			if ( rc != 0 ) {
 					// Failure, what to do?
 				dprintf( D_ALWAYS, "refresh_credentials(%s) failed!\n",
