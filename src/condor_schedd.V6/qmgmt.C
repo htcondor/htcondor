@@ -2435,6 +2435,40 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 				Q_SOCK = saved_sock;
 			}
 
+
+			// Now convert the arguments to a form understood by the starter.
+			ArgList arglist;
+			MyString arg_error_msg;
+			if(!arglist.AppendArgsFromClassAd(expanded_ad,&arg_error_msg) ||
+			   !arglist.InsertArgsIntoClassAd(expanded_ad,&ver_info,&arg_error_msg))
+			{
+				attribute_not_found = true;
+				MyString hold_reason;
+				hold_reason.sprintf(
+					"Failed to convert arguments to target syntax"
+					" for starter: %s\n",
+					arg_error_msg.Value());
+
+
+				dprintf( D_ALWAYS, 
+					"Putting job %d.%d on hold - cannot convert arguments"
+					" to target syntax for starter: %s\n",
+					cluster_id, proc_id,
+					arg_error_msg.Value() );
+
+				// SetAttribute does security checks if Q_SOCK is
+				// not NULL.  So, set Q_SOCK to be NULL before
+				// placing the job on hold so that SetAttribute
+				// knows this request is not coming from a client.
+				// Then restore Q_SOCK back to the original value.
+
+				ReliSock* saved_sock = Q_SOCK;
+				Q_SOCK = NULL;
+				holdJob(cluster_id, proc_id, hold_reason.Value());
+				Q_SOCK = saved_sock;
+			}
+
+
 			if(opsys) free(opsys);
 			if(startd_version) free(startd_version);
 		}
