@@ -39,20 +39,31 @@
 /* GridftpServer:
  *   Invariant: Both m_urlBase and m_requestedUrlBase may not both be
  *     defined at the same time.
+ *   m_urlBase is non-NULL when the gridftp server is running and we
+ *     know what port it's listening on.
+ *   m_requestedUrlBase is non-NULL when the gridftp server isn't running
+ *     and we have a preferred port for it to listen on when we (re)start it.
+ *   m_jobId.cluster is 0 if there is no gridftp server job in the queue
+ *     for this object. Otherwise, m_jobId is the job id of the server job.
  */
 
 #define QMGMT_TIMEOUT 15
 
 #define CHECK_SERVER_INTERVAL	60
+#define POLL_JOB_INTERVAL		60
 #define SERVER_JOB_LEASE		900
 #define SUBMIT_ATTEMPT_INTERVAL	60
+#define PROXY_UPDATE_ATTEMPT_INTERVAL	60
 
-#define STATUS_UNSUBMITTED	1
-#define STATUS_IDLE			2
-#define STATUS_ACTIVE		3
-#define STATUS_DONE			4
+#define CONDITION_UNSUBMITTED	1
+#define CONDITION_IDLE			2
+#define CONDITION_ACTIVE		3
+#define CONDITION_DONE			4
 
 #define HASH_TABLE_SIZE			50
+
+#define STDOUT_NAME				"gridftp.out"
+#define STDERR_NAME				"gridftp.err"
 
 HashTable <HashKey, GridftpServer *>
     GridftpServer::m_serversByProxy( HASH_TABLE_SIZE,
@@ -63,8 +74,6 @@ int GridftpServer::m_updateLeasesTid = TIMER_UNSET;
 bool GridftpServer::m_configRead = false;
 char *GridftpServer::m_configUrlBase = NULL;
 
-bool WriteSubmitEventToUserLog( ClassAd *job_ad );
-
 GridftpServer::GridftpServer( Proxy *proxy )
 {
 	m_urlBase = NULL;
@@ -74,13 +83,15 @@ GridftpServer::GridftpServer( Proxy *proxy )
 	m_jobId.cluster = 0;
 	m_jobId.proc = 0;
 	m_proxy = proxy->subject->master_proxy;
-	m_userLog = NULL;
-	m_outputFile = NULL;
-	m_errorFile = NULL;
-	m_proxyFile = NULL;
 	m_proxyExpiration = 0;
+	m_lastProxyUpdateAttempt = 0;
 	m_errorMessage = "";
 	m_lastSubmitAttempt = 0;
+	m_submitNow = false;
+	m_lastJobPoll = 0;
+	m_pollJobNow = false;
+	m_jobCondition = CONDITION_UNSUBMITTED;
+	m_outputFile = NULL;
 	m_checkServerTid = daemonCore->Register_Timer( 0,
 								(TimerHandlercpp)&GridftpServer::CheckServer,
 								"GridftpServer::CheckServer", (Service*)this );
@@ -98,20 +109,11 @@ GridftpServer::~GridftpServer()
 	if ( m_requestedUrlBase ) {
 		free( m_requestedUrlBase );
 	}
-	if ( m_userLog ) {
-		free( m_userLog );
+	if ( m_checkServerTid != TIMER_UNSET ) {
+		daemonCore->Cancel_Timer( m_checkServerTid );
 	}
 	if ( m_outputFile ) {
 		free( m_outputFile );
-	}
-	if ( m_errorFile ) {
-		free( m_errorFile );
-	}
-	if ( m_proxyFile ) {
-		free( m_proxyFile );
-	}
-	if ( m_checkServerTid != TIMER_UNSET ) {
-		daemonCore->Cancel_Timer( m_checkServerTid );
 	}
 }
 
@@ -287,13 +289,16 @@ int GridftpServer::CheckServer()
 
 		// TODO wait for an explicit request from a job before
 		//   starting a server?
-	int job_status;
-	job_status = CheckJobStatus();
+	CheckJobStatus();
 
 		// TODO If a job exits for an unknown reason, put the stdout/err
 		//   in the log
-	if ( job_status == STATUS_DONE ) {
+	if ( m_jobCondition == CONDITION_DONE ) {
 		if ( m_requestedUrlBase && CheckPortError() ) {
+				// If we requested a specific port and got a port-in-use
+				// error, submit a new job immediately, rather than
+				// waiting like we normally do.
+			m_submitNow = true;
 			free( m_requestedUrlBase );
 			m_requestedUrlBase = NULL;
 		} else if ( m_urlBase ) {
@@ -303,25 +308,14 @@ int GridftpServer::CheckServer()
 		
 		RemoveJob();
 		m_jobId.cluster = 0;
+		m_jobCondition = CONDITION_UNSUBMITTED;
 		if ( m_outputFile ) {
 			free( m_outputFile );
 			m_outputFile = NULL;
 		}
-		if ( m_errorFile ) {
-			free( m_errorFile );
-			m_errorFile = NULL;
-		}
-		if ( m_userLog ) {
-			free( m_userLog );
-			m_userLog = NULL;
-		}
-		if ( m_proxyFile ) {
-			free( m_proxyFile );
-			m_proxyFile = NULL;
-		}
 	}
 
-	if ( job_status == STATUS_ACTIVE && m_urlBase == NULL ) {
+	if ( m_jobCondition == CONDITION_ACTIVE && m_urlBase == NULL ) {
 		if ( m_requestedUrlBase == NULL ) {
 			if ( ReadUrlBase() ) {
 				int tid;
@@ -345,23 +339,26 @@ int GridftpServer::CheckServer()
 		}
 	}
 
-		// TODO if proxy refresh fails, wait some time between retries
-	if ( job_status == STATUS_ACTIVE ) {
+	if ( m_jobCondition == CONDITION_ACTIVE ) {
 		CheckProxy();
 	}
 
-	if ( job_status == STATUS_UNSUBMITTED ) {
+	if ( m_jobCondition == CONDITION_UNSUBMITTED ) {
 			// If we did a submit recently, wait a while before trying again
 		int now = time(NULL);
-		if ( now < m_lastSubmitAttempt + SUBMIT_ATTEMPT_INTERVAL ) {
+		if ( now < m_lastSubmitAttempt + SUBMIT_ATTEMPT_INTERVAL &&
+			 m_submitNow == false ) {
+
 			CheckServerSoon( m_lastSubmitAttempt + SUBMIT_ATTEMPT_INTERVAL
 							 - now );
 		} else {
 				// If our submit was successful, come back into this
 				// function real soon to see if the server is working
 			if ( SubmitServerJob() ) {
+				m_pollJobNow = true;
 				CheckServerSoon( 1 );
 			}
+			m_submitNow = false;
 			m_lastSubmitAttempt = now;
 		}
 	}
@@ -393,22 +390,23 @@ bool GridftpServer::ScanSchedd()
 							"GridftpServer::UpdateLeases", NULL );
 	}
 
-	schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, true );
+	schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, false );
 	if ( !schedd ) {
 		dprintf( D_ALWAYS, "GridftpServer::ScanSchedd: "
 				 "Failed to connect to schedd\n" );
 		return false;
 	}
 
-		// TODO ignore jobs that aren't IDLE or RUNNING
-	expr.sprintf( "%s == \"%s\" && %s =?= True", ATTR_OWNER, Owner,
-				  ATTR_GRIDFTP_SERVER_JOB );
+	expr.sprintf( "%s == \"%s\" && %s =?= True && ( %s == %d || %s == %d )",
+				  ATTR_OWNER, Owner, ATTR_GRIDFTP_SERVER_JOB, ATTR_JOB_STATUS,
+				  IDLE, ATTR_JOB_STATUS, RUNNING );
 
 		// TODO check that this didn't return NULL due to a connection
 		//   failure
 	next_ad = GetNextJobByConstraint( expr.Value(), 1 );
 	while ( next_ad != NULL ) {
 		MyString buff;
+		MyString buff2;
 		GridftpServer *server;
 
 			// If we have a Server object for this proxy subect with
@@ -429,10 +427,14 @@ bool GridftpServer::ScanSchedd()
 		}
 
 		if ( server->m_jobId.cluster == 0 ) {
+			int status;
 			next_ad->LookupInteger( ATTR_CLUSTER_ID,
 									server->m_jobId.cluster );
 			next_ad->LookupInteger( ATTR_PROC_ID,
 									server->m_jobId.proc );
+			next_ad->LookupInteger( ATTR_JOB_STATUS, status );
+			server->SetJobStatus( status );
+			server->m_lastJobPoll = time(NULL);
 			if ( server->m_requestedUrlBase ) {
 				free( server->m_requestedUrlBase );
 				server->m_requestedUrlBase = NULL;
@@ -440,16 +442,26 @@ bool GridftpServer::ScanSchedd()
 			MyString value;
 			next_ad->LookupString( ATTR_JOB_OUTPUT, value );
 			server->m_outputFile = strdup( value.Value() );
-			next_ad->LookupString( ATTR_JOB_ERROR, value );
-			server->m_errorFile = strdup( value.Value() );
-			next_ad->LookupString( ATTR_ULOG_FILE, value );
-			server->m_userLog = strdup( value.Value() );
-			next_ad->LookupString( ATTR_X509_USER_PROXY, value );
-			server->m_proxyFile = strdup( value.Value() );
 			if ( next_ad->LookupString( ATTR_REQUESTED_GRIDFTP_URL_BASE,
 										value ) ) {
 				server->m_requestedUrlBase = strdup( value.Value() );
 			}
+				// TODO should check these SetAttributeString calls
+				//   for errors.
+			buff.sprintf( "SUBMIT_%s", ATTR_JOB_IWD );
+			SetAttributeString( server->m_jobId.cluster,
+								server->m_jobId.proc,
+								buff.Value(), GridmanagerScratchDir );
+			buff.sprintf( "SUBMIT_%s", ATTR_JOB_OUTPUT );
+			buff2.sprintf( "%s/%s", GridmanagerScratchDir, STDOUT_NAME );
+			SetAttributeString( server->m_jobId.cluster,
+								server->m_jobId.proc,
+								buff.Value(), buff2.Value() );
+			buff.sprintf( "SUBMIT_%s", ATTR_JOB_ERROR );
+			buff2.sprintf( "%s/%s", GridmanagerScratchDir, STDERR_NAME );
+			SetAttributeString( server->m_jobId.cluster,
+								server->m_jobId.proc,
+								buff.Value(), buff2.Value() );
 				// TODO check expiration time on proxy?
 		}
 
@@ -488,7 +500,6 @@ bool GridftpServer::SubmitServerJob()
 	Env env_obj;
 	int low_port, high_port;
 	const char *value;
-	MyString userlog;
 	MyString buff;
 	CondorVersionInfo ver_info;
 	ArgList args_list;
@@ -542,10 +553,11 @@ bool GridftpServer::SubmitServerJob()
 	job_ad->Assign( ATTR_X509_USER_PROXY, m_proxy->proxy_filename );
 	job_ad->Assign( ATTR_X509_USER_PROXY_SUBJECT,
 					m_proxy->subject->subject_name );
-	job_ad->Assign( ATTR_JOB_OUTPUT, "/tmp/out" );
-	job_ad->Assign( ATTR_JOB_ERROR, "/tmp/err" );
-	userlog.sprintf( "%s/gridftp.log", GridmanagerScratchDir );
-	job_ad->Assign( ATTR_ULOG_FILE, userlog.Value() );
+	job_ad->Assign( ATTR_JOB_IWD, GridmanagerScratchDir );
+	buff.sprintf( "%s/%s", GridmanagerScratchDir, STDOUT_NAME );
+	job_ad->Assign( ATTR_JOB_OUTPUT, buff.Value() );
+	buff.sprintf( "%s/%s", GridmanagerScratchDir, STDERR_NAME );
+	job_ad->Assign( ATTR_JOB_ERROR, buff.Value() );
 
 	job_ad->Assign( ATTR_TIMER_REMOVE_CHECK,
 					(int)time(NULL) + SERVER_JOB_LEASE );
@@ -578,9 +590,9 @@ bool GridftpServer::SubmitServerJob()
 
 	job_ad->Assign( ATTR_TRANSFER_INPUT_FILES, mapfile );
 
-		// TODO The gridftp server doesn't like having a relative path
-		//   to the grid-mapfile. We need a wrapper script to set the
-		//   absolute path.
+		// The gridftp server doesn't like having a relative path
+		// to the grid-mapfile. We need a wrapper script to set the
+		// absolute path.
 	env_obj.SetEnv( "GRIDMAP", condor_basename( mapfile ) );
 
 		// if the condor_config has set any of the incoming or
@@ -597,7 +609,7 @@ bool GridftpServer::SubmitServerJob()
 		env_obj.SetEnv( "GLOBUS_TCP_SOURCE_RANGE", buff.Value() );
 	}
 
-		// TODO Should check config parameter GSI_DAEMON_TRUSTED_CA_DIR
+		// TODO Should check config parameter GSI_DAEMON_TRUSTED_CA_DIR?
 	value = GetEnv( "X509_CERT_DIR" );
 	if ( value ) {
 		env_obj.SetEnv( "X509_CERT_DIR", value );
@@ -631,7 +643,7 @@ bool GridftpServer::SubmitServerJob()
 				url_port = 2811;
 			}
 			args_list.AppendArg( "-p" );
-			buff.sprintf( "%d ", url_port );
+			buff.sprintf( "%d", url_port );
 			args_list.AppendArg( buff.Value() );
 
 			job_ad->Assign( ATTR_REQUESTED_GRIDFTP_URL_BASE,
@@ -713,8 +725,6 @@ bool GridftpServer::SubmitServerJob()
 	DisconnectQ( schedd );
 	schedd = NULL;
 
-	WriteSubmitEventToUserLog( job_ad );
-
 	if ( !dc_schedd.spoolJobFiles( 1, &job_ad, &errstack ) ) {
 		dprintf( D_ALWAYS, "GridftpServer::SubmitServerJob: Failed to "
 				 "stage in files: %s\n", errstack.getFullText() );
@@ -722,11 +732,7 @@ bool GridftpServer::SubmitServerJob()
 	}
 
 	m_outputFile = NULL;
-	m_errorFile = NULL;
-	m_userLog = NULL;
-	m_proxyFile = NULL;
-	while ( m_userLog == NULL ) {
-
+	while ( m_outputFile == NULL ) {
 		schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, true );
 		if ( !schedd ) {
 			dprintf( D_ALWAYS, "GridftpServer::SubmitServerJob: "
@@ -741,14 +747,7 @@ bool GridftpServer::SubmitServerJob()
 		if ( GetAttributeInt( cluster_id, proc_id, ATTR_STAGE_IN_FINISH,
 							  &val ) == 0 ) {
 			if ( GetAttributeStringNew( cluster_id, proc_id, ATTR_JOB_OUTPUT, 
-										&m_outputFile ) < 0 ||
-				 GetAttributeStringNew( cluster_id, proc_id, ATTR_JOB_ERROR, 
-										&m_errorFile ) < 0 ||
-				 GetAttributeStringNew( cluster_id, proc_id, ATTR_ULOG_FILE, 
-										&m_userLog ) < 0 ||
-				 GetAttributeStringNew( cluster_id, proc_id,
-										ATTR_X509_USER_PROXY,
-										&m_proxyFile ) < 0 ) {
+										&m_outputFile ) < 0 ) {
 				dprintf( D_ALWAYS, "GridftpServer::SubmitServerJob: Failed "
 						 "to read job attributes\n" );
 				goto error_exit;
@@ -761,9 +760,13 @@ bool GridftpServer::SubmitServerJob()
 		sleep( 1 );
 	}
 
+
 	m_jobId.cluster = cluster_id;
 	m_jobId.proc = proc_id;
 	m_proxyExpiration = m_proxy->expiration_time;
+	SetJobStatus( IDLE );
+	m_lastJobPoll = time( NULL );
+	m_pollJobNow = true;
 
 	if ( unlink( mapfile ) < 0 ) {
 		dprintf( D_ALWAYS, "GridftpServer::SubmitServerJob: Failed to "
@@ -771,16 +774,12 @@ bool GridftpServer::SubmitServerJob()
 	}
 
 	delete job_ad;
-	unlink( userlog.Value() );
 
 	return true;
 
  error_exit:
 	free( server_path );
 	free( wrapper_path );
-	if ( userlog.Length() > 0 ) {
-		unlink( userlog.Value() );
-	}
 	if ( job_ad ) {
 		delete job_ad;
 	}
@@ -797,18 +796,6 @@ bool GridftpServer::SubmitServerJob()
 		free( m_outputFile );
 		m_outputFile = NULL;
 	}
-	if ( m_errorFile ) {
-		free( m_errorFile );
-		m_errorFile = NULL;
-	}
-	if ( m_userLog ) {
-		free( m_userLog );
-		m_userLog = NULL;
-	}
-	if ( m_proxyFile ) {
-		free( m_proxyFile );
-		m_proxyFile = NULL;
-	}
 	return false;
 }
 
@@ -820,6 +807,42 @@ bool GridftpServer::ReadUrlBase()
 		return false;
 	}
 
+		// Currently, we can't fetch output files for running jobs, so we
+		// have to use the old way of directly opening the job's stdout
+		// in the spool directory.
+#if 0
+	if ( m_jobId.cluster <= 0 ) {
+		dprintf( D_ALWAYS, "GridftpServer::ReadUrlBase: Reading URL base "
+				 "of unsubmitted job\n" );
+		return false;
+	}
+
+	if ( FetchJobFiles() == false ) {
+		return false;
+	}
+
+	MyString out_name;
+	FILE *out_fp;
+
+	out_name.sprintf( "%s/%s", GridmanagerScratchDir, STDOUT_NAME );
+	out_fp = fopen( out_name.Value(), "r" );
+	if ( out_fp == NULL ) {
+		dprintf( D_ALWAYS, "GridftpServer::ReadUrlBase: Failed to open "
+				 "'%s': errno=%d\n", out_name.Value(), errno );
+		return false;
+	}
+
+	char buff[1024];
+	if ( fscanf( out_fp, "Server listening at %[^\n]\n", buff ) == 1 ) {
+		MyString buff2;
+		buff2.sprintf( "gsiftp://%s", buff );
+		m_urlBase = strdup( buff2.Value() );
+	}
+
+	fclose( out_fp );
+
+	return (m_urlBase != NULL);
+#else
 	if ( m_jobId.cluster <= 0 || m_outputFile == NULL ) {
 		dprintf( D_ALWAYS, "GridftpServer::ReadUrlBase: Reading URL base "
 				 "of unsubmitted job\n" );
@@ -844,114 +867,112 @@ bool GridftpServer::ReadUrlBase()
 	fclose( out );
 
 	return (m_urlBase != NULL);
+#endif
 }
 
-int GridftpServer::CheckJobStatus()
+void GridftpServer::CheckJobStatus()
 {
+	int new_status;
 
-	if ( m_jobId.cluster <= 0 || m_userLog == NULL ) {
-		return STATUS_UNSUBMITTED;
+	if ( m_jobId.cluster <= 0 ) {
+		m_jobCondition = CONDITION_UNSUBMITTED;
+		return;
 	}
 
-	ReadUserLog user_log;
-	ULogEventOutcome rc;
-	ULogEvent *event;
-
-	if ( user_log.initialize( m_userLog ) == false ) {
-		dprintf( D_ALWAYS, "GridftpServer::CheckJobStatus: Failed to "
-				 "initialize ReadUserLog(%s)\n", m_userLog );
-		return STATUS_DONE;
+	if ( time(NULL) < m_lastJobPoll + POLL_JOB_INTERVAL && !m_pollJobNow ) {
+		return;
 	}
 
-	int status;
-	bool status_known = false;
+	if ( requestJobStatus( m_jobId, m_checkServerTid, new_status ) ) {
+		m_pollJobNow = false;
+		m_lastJobPoll = time( NULL );
+		SetJobStatus( new_status );
+	} else {
+		m_pollJobNow = true;
+	}
+}
 
-	for ( rc = user_log.readEvent( event ); rc == ULOG_OK; 
-		  rc = user_log.readEvent( event ) ) {
-
-		if ( event->cluster != m_jobId.cluster ||
-			 event->proc != m_jobId.proc ) {
-			continue;
-		}
-
-		switch( event->eventNumber ) {
-		case ULOG_SUBMIT:
-			status_known = true;
-			status = STATUS_IDLE;
-			break;
-		case ULOG_EXECUTE:
-			status_known = true;
-			status = STATUS_ACTIVE;
-			break;
-		case ULOG_JOB_TERMINATED:
-		case ULOG_JOB_ABORTED:
-		case ULOG_JOB_HELD:
-			status_known = true;
-			status = STATUS_DONE;
-			break;
-		default:
-				// Do nothing
-			break;
-		}
-
+void GridftpServer::SetJobStatus( int new_status )
+{
+	if ( m_jobId.cluster <= 0 ) {
+		dprintf( D_ALWAYS, "GridftpServer::SetJobStatus: Set job status of unsubmitted job\n" );
+		return;
 	}
 
-	if ( rc == ULOG_RD_ERROR || rc == ULOG_UNK_ERROR ) {
-		dprintf( D_ALWAYS, "GridftpServer::CheckJobStatus: Error reading "
-				 "user log\n" );
+	switch ( new_status ) {
+	case IDLE:
+		m_jobCondition = CONDITION_IDLE;
+		break;
+	case RUNNING:
+		m_jobCondition = CONDITION_ACTIVE;
+		break;
+	case REMOVED:
+	case COMPLETED:
+	case HELD:
+		m_jobCondition = CONDITION_DONE;
+		break;
+	default:
+		dprintf( D_ALWAYS, "GridftpServer::SetJobStatus: Invalid job status %d\n", new_status );
 	}
-
-	if ( !status_known ) {
-		//dprintf( D_ALWAYS, "GridftpServer::ReadUrlBase: No status read from user log!\n" );
-		// TODO Shouldn't EXCEPT here, because user log can disappear
-		//   along with job
-		EXCEPT( "GridftpServer::CheckJobStatus: No status read from user log!\n" );
-	}
-
-	return status;
 }
 
 void GridftpServer::CheckProxy()
 {
-	if ( m_jobId.cluster <= 0 || m_proxyFile == NULL ) {
+	if ( m_jobId.cluster <= 0 ) {
 		dprintf( D_ALWAYS, "GridftpServer::CheckProxy: Checking proxy of unsubmitted job\n" );
 		return;
 	}
 
-		// TODO Should probably use the schedd's proxy refresh call
-	if ( m_proxyExpiration < m_proxy->expiration_time ) {
-		int rc;
-		MyString tmp_file;
+	if ( m_proxyExpiration >= m_proxy->expiration_time ||
+		 time(NULL) < m_lastProxyUpdateAttempt + PROXY_UPDATE_ATTEMPT_INTERVAL ) {
+		return;
+	}
 
-		tmp_file.sprintf( "%s.tmp", m_proxyFile );
+	DCSchedd dc_schedd ( ScheddAddr );
+	if ( dc_schedd.error() || !dc_schedd.locate() ) {
+		dprintf( D_ALWAYS, "GridftpServer::CheckProxy: Can't find our "
+				 "schedd!?\n" );
+		return;
+	}
 
-		rc = copy_file( m_proxy->proxy_filename, tmp_file.Value() );
-		if ( rc != 0 ) {
-			return;
-		}
+	CondorError errstack;
+	bool result;
 
-		rc = rotate_file( tmp_file.Value(), m_proxyFile );
-		if ( rc != 0 ) {
-			unlink( tmp_file.Value() );
-			return;
-		}
+	result = dc_schedd.updateGSIcredential( m_jobId.cluster, m_jobId.proc,
+											m_proxy->proxy_filename,
+											&errstack );
 
+	m_lastProxyUpdateAttempt = time(NULL);
+
+	if ( result == false ) {
+		dprintf( D_ALWAYS, "GridftpServer::CheckProxy: Failed to update proxy"
+				 " for job %d.%d: %s", m_jobId.cluster, m_jobId.proc,
+				 errstack.getFullText() );
+	} else {
 		m_proxyExpiration = m_proxy->expiration_time;
 	}
 }
 
 bool GridftpServer::CheckPortError()
 {
-	if ( m_jobId.cluster <= 0 || m_errorFile == NULL ) {
+	if ( m_jobId.cluster <= 0 ) {
 		dprintf( D_ALWAYS, "GridftpServer::CheckPortError: Checking "
 				 "port-in-use error of unsubmitted job\n" );
 		return false;
 	}
 
-	FILE *err = fopen( m_errorFile, "r" );
-	if ( err == NULL ) {
+	if ( FetchJobFiles() == false ) {
+		return false;
+	}
+
+	MyString err_name;
+	FILE *err_fp;
+
+	err_name.sprintf( "%s/%s", GridmanagerScratchDir, STDERR_NAME );
+	err_fp = fopen( err_name.Value(), "r" );
+	if ( err_fp == NULL ) {
 		dprintf( D_ALWAYS, "GridftpServer::CheckPortError: Failed to "
-				 "open '%s': %d\n", m_errorFile, errno );
+				 "open '%s': errno=%d\n", err_name.Value(), errno );
 		return false;
 	}
 
@@ -959,22 +980,22 @@ bool GridftpServer::CheckPortError()
 
 	char buff[1024];
 #if 0
-	if ( fgets( buff, sizeof(buff), err ) == NULL ) {
+	if ( fgets( buff, sizeof(buff), err_fp ) == NULL ) {
 		dprintf(D_FULLDEBUG,"    0: '%s'\n",buff);
 		port_in_use = false;
-	} else if ( fgets( buff, sizeof(buff), err ) == NULL ||
+	} else if ( fgets( buff, sizeof(buff), err_fp ) == NULL ||
 		 strcmp( buff, "globus_xio: globus_l_xio_tcp_create_listener failed.\n" ) ) {
 		dprintf(D_FULLDEBUG,"    1: '%s'\n",buff);
 		port_in_use = false;
-	} else if ( fgets( buff, sizeof(buff), err ) == NULL ||
+	} else if ( fgets( buff, sizeof(buff), err_fp ) == NULL ||
 				strcmp( buff, "globus_xio: globus_l_xio_tcp_bind failed.\n" ) ) {
 		dprintf(D_FULLDEBUG,"    2: '%s'\n",buff);
 		port_in_use = false;
-	} else if ( fgets( buff, sizeof(buff), err ) == NULL ||
+	} else if ( fgets( buff, sizeof(buff), err_fp ) == NULL ||
 				strcmp( buff, "globus_xio: System error in bind: Address already in use\n" ) ) {
 		dprintf(D_FULLDEBUG,"    3: '%s'\n",buff);
 		port_in_use = false;
-	} else if ( fgets( buff, sizeof(buff), err ) == NULL ||
+	} else if ( fgets( buff, sizeof(buff), err_fp ) == NULL ||
 				strcmp( buff, "globus_xio: A system call failed: Address already in use\n" ) ) {
 		dprintf(D_FULLDEBUG,"    4: '%s'\n",buff);
 		port_in_use = false;
@@ -983,22 +1004,53 @@ bool GridftpServer::CheckPortError()
 		port_in_use = true;
 	}
 #else
-	if ( fgets( buff, sizeof(buff), err ) && // skip first line
-		 fgets( buff, sizeof(buff), err ) && 
+	if ( fgets( buff, sizeof(buff), err_fp ) && // skip first line
+		 fgets( buff, sizeof(buff), err_fp ) && 
 		 !strcmp( buff, "globus_xio: globus_l_xio_tcp_create_listener failed.\n" ) &&
-		 fgets( buff, sizeof(buff), err ) &&
+		 fgets( buff, sizeof(buff), err_fp ) &&
 		 !strcmp( buff, "globus_xio: globus_l_xio_tcp_bind failed.\n" ) &&
-		 fgets( buff, sizeof(buff), err ) &&
+		 fgets( buff, sizeof(buff), err_fp ) &&
 		 !strcmp( buff, "globus_xio: System error in bind: Address already in use\n" ) &&
-		 fgets( buff, sizeof(buff), err ) &&
+		 fgets( buff, sizeof(buff), err_fp ) &&
 		 !strcmp( buff, "globus_xio: A system call failed: Address already in use\n" ) ) {
 		port_in_use = true;
 	}
 #endif
 
-	fclose( err );
+	fclose( err_fp );
 
 	return port_in_use;
+}
+
+bool GridftpServer::FetchJobFiles()
+{
+	if ( m_jobId.cluster <= 0 ) {
+		dprintf( D_ALWAYS, "GridftpServer::FetchJobFiles: No job defined\n" );
+		return false;
+	}
+
+	DCSchedd dc_schedd ( ScheddAddr );
+	if ( dc_schedd.error() || !dc_schedd.locate() ) {
+		dprintf( D_ALWAYS, "GridftpServer::FetchJobFiles: Can't find our "
+				 "schedd!?\n" );
+		return false;
+	}
+
+	bool result;
+	CondorError errstack;
+	MyString constraint;
+
+	constraint.sprintf( "%s == %d && %s == %d", ATTR_CLUSTER_ID,
+						m_jobId.cluster, ATTR_PROC_ID, m_jobId.proc );
+
+	result = dc_schedd.receiveJobSandbox( constraint.Value(), &errstack );
+	if ( result == false ) {
+		dprintf( D_ALWAYS, "GridftpServer::FetchJobFiles: Failed to fetch "
+				 "files: %s\n", errstack.getFullText() );
+		return false;
+	} else {
+		return true;
+	}
 }
 
 bool GridftpServer::RemoveJob()
@@ -1077,37 +1129,4 @@ bool GridftpServer::RemoveJob()
 
 		return success;
 	}
-}
-
-bool
-WriteSubmitEventToUserLog( ClassAd *job_ad )
-{
-	int cluster, proc;
-
-	UserLog *ulog = InitializeUserLog( job_ad );
-	if ( ulog == NULL ) {
-		// User doesn't want a log
-		return true;
-	}
-
-	job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
-	job_ad->LookupInteger( ATTR_PROC_ID, proc );
-
-	dprintf( D_FULLDEBUG, 
-			 "(%d.%d) Writing submit record to user logfile\n",
-			 cluster, proc );
-
-	SubmitEvent event;
-	strcpy( event.submitHost, ScheddAddr );
-	int rc = ulog->writeEvent(&event);
-	delete ulog;
-
-	if (!rc) {
-		dprintf( D_ALWAYS,
-				 "(%d.%d) Unable to log ULOG_SUBMIT event\n",
-				 cluster, proc );
-		return false;
-	}
-
-	return true;
 }

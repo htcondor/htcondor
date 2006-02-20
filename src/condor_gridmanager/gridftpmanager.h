@@ -62,10 +62,12 @@ class GridftpServer : public Service
 	int CheckServer();
 	bool SubmitServerJob();
 	bool ReadUrlBase();
-	int CheckJobStatus();
+	void CheckJobStatus();
 	void CheckProxy();
 	bool CheckPortError();
+	bool FetchJobFiles();
 	bool RemoveJob();
+	void SetJobStatus( int new_status );
 
 	int m_checkServerTid;
 	Proxy *m_proxy;
@@ -73,15 +75,17 @@ class GridftpServer : public Service
 	char *m_requestedUrlBase;
 	bool m_canRequestUrlBase;
 	int m_refCount;
-	char *m_userLog;
-	char *m_outputFile;
-	char *m_errorFile;
-	char *m_proxyFile;
 	int m_proxyExpiration;
+	int m_lastProxyUpdateAttempt;
 	SimpleList<int> m_registeredClients;
 	PROC_ID m_jobId;
 	MyString m_errorMessage;
 	int m_lastSubmitAttempt;
+	bool m_submitNow;
+	int m_lastJobPoll;
+	bool m_pollJobNow;
+	int m_jobCondition;
+	char *m_outputFile;
 };
 
 #endif

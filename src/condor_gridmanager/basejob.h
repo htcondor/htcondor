@@ -113,12 +113,13 @@ class BaseJob
 	bool resourcePingPending;
 	bool resourcePingComplete;
 
+	int evaluateStateTid;
+
  protected:
 	static int periodicPolicyEvalTid;
 
 	void UpdateRuntimeStats();
 
-	int evaluateStateTid;
 	int jobLeaseSentExpiredTid;
 	int jobLeaseReceivedExpiredTid;
 };

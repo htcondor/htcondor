@@ -81,7 +81,8 @@ HashTable <PROC_ID, VacateRequest> completedScheddVacates( HASH_TABLE_SIZE,
 														   hashFuncPROC_ID );
 
 struct JobStatusRequest {
-	BaseJob *job;
+	PROC_ID job_id;
+	int tid;
 	int job_status;
 };
 
@@ -233,27 +234,34 @@ requestScheddVacate( BaseJob *job, action_result_t &result )
 }
 
 bool
-requestJobStatus( BaseJob *job, int &job_status )
+requestJobStatus( PROC_ID job_id, int tid, int &job_status )
 {
 	JobStatusRequest hashed_request;
 
 	// Check if this is an old request that's completed
-	if ( completedJobStatus.lookup( job->procID, hashed_request ) == 0 ) {
+	if ( completedJobStatus.lookup( job_id, hashed_request ) == 0 ) {
 		// If the request is done, remove it from the hashtable and return
 		// the job status
-		completedJobStatus.remove( job->procID );
+		completedJobStatus.remove( job_id );
 		job_status = hashed_request.job_status;
 		return true;
 	}
 
-	if ( pendingJobStatus.lookup( job->procID, hashed_request ) != 0 ) {
+	if ( pendingJobStatus.lookup( job_id, hashed_request ) != 0 ) {
 		// A new request; add it to the hash table
-		hashed_request.job = job;
-		pendingJobStatus.insert( job->procID, hashed_request );
+		hashed_request.job_id = job_id;
+		hashed_request.tid = tid;
+		pendingJobStatus.insert( job_id, hashed_request );
 		RequestContactSchedd();
 	}
 
 	return false;
+}
+
+bool
+requestJobStatus( BaseJob *job, int &job_status )
+{
+	return requestJobStatus( job->procID, job->evaluateStateTid, job_status );
 }
 
 void
@@ -914,8 +922,8 @@ contact_schedd_next_add_job:
 			int rc;
 			int status;
 
-			rc = GetAttributeInt( curr_request.job->procID.cluster,
-								  curr_request.job->procID.proc,
+			rc = GetAttributeInt( curr_request.job_id.cluster,
+								  curr_request.job_id.proc,
 								  ATTR_JOB_STATUS, &status );
 			if ( rc < 0 ) {
 				if ( errno == ETIMEDOUT ) {
@@ -931,12 +939,12 @@ contact_schedd_next_add_job:
 			}
 				// return status
 			dprintf( D_FULLDEBUG, "%d.%d job status: %d\n",
-					 curr_request.job->procID.cluster,
-					 curr_request.job->procID.proc,status);
-			pendingJobStatus.remove( curr_request.job->procID );
+					 curr_request.job_id.cluster,
+					 curr_request.job_id.proc, status );
+			pendingJobStatus.remove( curr_request.job_id );
 			curr_request.job_status = status;
-			curr_request.job->SetEvaluateState();
-			completedJobStatus.insert( curr_request.job->procID,
+			daemonCore->Reset_Timer( curr_request.tid, 0 );
+			completedJobStatus.insert( curr_request.job_id,
 									   curr_request );
 		}
 
