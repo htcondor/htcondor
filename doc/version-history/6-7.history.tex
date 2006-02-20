@@ -42,6 +42,9 @@ bug was introduced with the addition of the cron logic to the
 commands failing for grid-type gt4 jobs. Before, it could end up retrying
 the commands every couple seconds. Now, it retries them every 5 minutes.
 
+\item Fixed Condor's code for automatically starting a gridftp server for
+grid-type gt4 jobs to work when Condor is started as root.
+
 \end{itemize}
 
 \noindent Known Bugs:
