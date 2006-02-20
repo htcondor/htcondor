@@ -48,6 +48,12 @@ grid-type gt4 jobs to work when Condor is started as root.
 \item Scheduler universe jobs no longer inherit the environment of the
 \Condor{schedd}.
 
+\item Fixed a bug causing jobs to fail to run when submitted from a
+6.7.15+ \Condor{schedd} to an older \Condor{starter}.  This problem
+only affected jobs with no argument specification in the submit file
+or jobs with arguments specified in the new syntax (surrounded by
+double quotes).
+
 \end{itemize}
 
 \noindent Known Bugs:
