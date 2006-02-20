@@ -29,6 +29,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug which caused the update proxy command to the
+\Condor{schedd} to fail if the job was running and Condor was started
+as root.
+
 \item Fixed a bug which was causing jobs to never leave the "run"
 state if the \Condor{schedd}'s cron/hawkeye feature is enabled.  This
 bug was introduced with the addition of the cron logic to the
