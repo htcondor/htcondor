@@ -7419,7 +7419,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	pid = daemonCore->Create_Process( a_out_name, args, PRIV_USER_FINAL, 
 									  shadowReaperId, FALSE,
 									  &envobject, iwd, FALSE, NULL, inouterr,
-									  niceness );
+									  niceness, DCJOBOPT_NO_ENV_INHERIT );
 	
 	// now close those open fds - we don't want them here.
 	for ( i=0 ; i<3 ; i++ ) {
