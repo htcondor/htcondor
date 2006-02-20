@@ -3493,6 +3493,56 @@ Scheduler::updateGSICred(int, Stream* s)
 	temp_proxy_path += ".tmp";
 	free(proxy_path);
 
+#ifndef WIN32
+		// Check the ownership of the proxy and switch our priv state
+		// if needed
+	StatInfo si( final_proxy_path.Value() );
+	if ( si.Error() == SINoFile ) {
+		dprintf( D_ALWAYS, "updateGSICred(): failed, "
+			 "job %d.%d's proxy doesn't exist\n", 
+			 jobid.cluster, jobid.proc );
+		refuse(s);
+		return FALSE;
+	}
+	uid_t proxy_uid = si.GetOwner();
+	passwd_cache *p_cache = pcache();
+	uid_t job_uid;
+	char *job_owner = NULL;
+	jobad->LookupString( ATTR_OWNER, &job_owner );
+	if ( !job_owner ) {
+		EXCEPT( "No %s for job %d.%d!", ATTR_OWNER, jobid.cluster,
+				jobid.proc );
+	}
+	if ( !p_cache->get_user_uid( job_owner, job_uid ) ) {
+			// Failed to find uid for this owner, badness.
+		dprintf( D_ALWAYS, "Failed to find uid for user %s (job %d.%d)\n",
+				 job_owner, jobid.cluster, jobid.proc );
+		free( job_owner );
+		refuse(s);
+		return FALSE;
+	}
+		// If the uids match, then we need to switch to user priv to
+		// access the proxy file.
+	priv_state priv;
+	if ( proxy_uid == job_uid ) {
+			// We're not Windows here, so we don't need the NT Domain
+		if ( !init_user_ids( job_owner, NULL ) ) {
+			dprintf( D_ALWAYS, "init_user_ids() failed for user %s!\n",
+					 job_owner );
+			free( job_owner );
+			refuse(s);
+			return FALSE;
+		}
+		priv = set_user_priv();
+	} else {
+			// We should already be in condor priv, but we want to save it
+			// in the 'priv' variable.
+		priv = set_condor_priv();
+	}
+	free( job_owner );
+	job_owner = NULL;
+#endif
+
 		// Decode the proxy off the wire, and store into the
 		// file temp_proxy_path, which is known to be in the SPOOL dir
 	rsock->decode();
@@ -3514,6 +3564,11 @@ Scheduler::updateGSICred(int, Stream* s)
 			reply = 1;	// reply of 1 means success
 		}
 	}
+
+#ifndef WIN32
+		// Now switch back to our old priv state
+	set_priv( priv );
+#endif
 
 		// Send our reply back to the client
 	rsock->encode();
