@@ -938,7 +938,8 @@ int GT4Job::doEvaluateState()
 				}
 				MyString url_base;
 				jobAd->LookupString( ATTR_GRIDFTP_URL_BASE, url_base );
-				if ( strcmp( url_base.Value(),
+				if ( gridftpServer->GetUrlBase() &&
+					 strcmp( url_base.Value(),
 							 gridftpServer->GetUrlBase() ) ) {
 					gmState = GM_CANCEL;
 					break;
