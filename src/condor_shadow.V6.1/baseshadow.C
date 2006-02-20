@@ -808,6 +808,13 @@ BaseShadow::checkSwap( void )
 	} else {
 		reserved_swap = 5 * 1024;
 	}
+
+	if( reserved_swap == 0 ) {
+			// We're not supposed to care about swap space at all, so
+			// none of the rest of the checks matter at all.
+		return;
+	}
+
 	free_swap = sysapi_swap_space();
 
 	dprintf( D_FULLDEBUG, "*** Reserved Swap = %d\n", reserved_swap );
