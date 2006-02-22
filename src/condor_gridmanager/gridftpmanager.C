@@ -397,9 +397,24 @@ bool GridftpServer::ScanSchedd()
 		return false;
 	}
 
-	expr.sprintf( "%s == \"%s\" && %s =?= True && ( %s == %d || %s == %d )",
+		// We only want jobs the meet the following criteria:
+		// 1) they're owned by our user
+		// 2) they're our gridftp server jobs
+		// 3) they're either RUNNING or IDLE
+		// 4) either we've set what port they should listen on or they
+		//    are still on their first execution
+		// Since we only run one gridftp server per proxy DN, we don't want
+		// a client restart to result in a restarted gridftp server
+		// listening on a different port, requiring all of the associated
+		// jobs to be canceled and resubmitted. Instead, we'll ignore the
+		// restarted server and submit a one that's told to listen on
+		// the old port.
+	expr.sprintf( "%s == \"%s\" && %s =?= True && ( %s == %d || %s == %d ) && "
+				  "( %s =!= Undefined || ( %s + ( %s == %d ) ) <= 1 )",
 				  ATTR_OWNER, Owner, ATTR_GRIDFTP_SERVER_JOB, ATTR_JOB_STATUS,
-				  IDLE, ATTR_JOB_STATUS, RUNNING );
+				  IDLE, ATTR_JOB_STATUS, RUNNING,
+				  ATTR_REQUESTED_GRIDFTP_URL_BASE, ATTR_JOB_RUN_COUNT,
+				  ATTR_JOB_STATUS, IDLE );
 
 		// TODO check that this didn't return NULL due to a connection
 		//   failure
