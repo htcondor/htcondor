@@ -55,6 +55,11 @@ only affected jobs with no argument specification in the submit file
 or jobs with arguments specified in the new syntax (surrounded by
 double quotes).
 
+\item When running grid-type gt4 jobs with an automatically-started
+gridftp server, a restart of Condor could cause all of the gt4 jobs to
+be canceled and resubmitted due to the gridftp server's port changing.
+Now, the old port will be reused when possible.
+
 \end{itemize}
 
 \noindent Known Bugs:
