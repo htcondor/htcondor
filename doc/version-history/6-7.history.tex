@@ -60,6 +60,10 @@ gridftp server, a restart of Condor could cause all of the gt4 jobs to
 be canceled and resubmitted due to the gridftp server's port changing.
 Now, the old port will be reused when possible.
 
+\item Fixed a bug that could cause the \Condor{gridmanager} to crash
+when running grid-type gt4 jobs with an automatically-started gridftp
+server.
+
 \end{itemize}
 
 \noindent Known Bugs:
