@@ -87,13 +87,29 @@ server.
 
 \begin{itemize}
 
-\item None.
+
+\item The default output for \Condor{status} was changed between
+  6.7.16 and 6.7.17 to support the new \Term{Backfill} state which
+  Condor resources can now enter (described below in more detail).
 
 \end{itemize}
 
 \noindent New Features:
 
 \begin{itemize}
+
+\item Added support for Condor resources to perform backfill
+  computations when there are no Condor jobs to run.
+  Condor can be configured such that whenever a machine is in the
+  Unclaimed/Idle state and otherwise has nothing else to do, the
+  \Condor{startd} will automatically spawn backfill jobs to continue
+  to perform useful work.
+  Currently, Condor only supports using the Berkeley Open
+  Infrastructure for Network Computing (BOINC) to provide the backfill
+  jobs (see \URL{http://boinc.berkeley.edu} for more information about
+  BOINC).
+  See section~\ref{sec:Backfill} on page~\pageref{sec:Backfill} for
+  more information about running backfill jobs with Condor.
 
 \item The history file, which is a flat file for each submitting
 computer that stores information about all jobs completed on that
@@ -138,7 +154,7 @@ in the Grid Monitor that could cause it to spawn extra polling processes
 on the server.
 
 \item Added support for Parallel scheduling groups for the parallel
-universe.  This is useful if you have machines connected by infiniband
+universe.  This is useful if you have machines connected by InfiniBand
 switches, and want to constrain your parallel jobs to never run across
 two different switches.
 
@@ -159,6 +175,30 @@ so one old copy of the job queue log file will be kept.
 
 \item Added support for DRMAA on the Mac OSX platform.
 
+\item Enabled \Macro{COLLECTOR\_QUERY\_WORKERS} in the default
+\Condor{collector} configuration, and set this value to 16.  This
+replaces the previous implicit default of 0 and will result in a more responsive \Condor{collector} in the common case.
+Note this
+\MacroNI{COLLECTOR\_QUERY\_WORKERS} has no effect on non-UNIX systems (Windows).
+
+\item \Macro{HIGHPORT} and \Macro{LOWPORT} can now specify ports
+below 1024 when Condor is started as root on Unix systems.  This
+always worked on Windows.
+
+\item It is now possible to specify separate port ranges for
+binding incoming (listen) sockets and outgoing (connect) sockets
+by using \Macro{IN\_LOWPORT}/\Macro{IN\_HIGHPORT} and
+\Macro{OUT\_LOWPORT}/\Macro{OUT\_HIGHPORT}. if not present, we
+still fall back to the regular \Macro{LOWPORT}/\Macro{HIGHPORT}
+settings.
+
+\item Port ranges from \Macro{LOWPORT}, \Macro{HIGHPORT},
+\Macro{IN\_LOWPORT}, \Macro{IN\_HIGHPORT}, \Macro{OUT\_LOWPORT}, and
+\Macro{OUT\_HIGHPORT} are now passed to Globus through the correct
+environment variables.
+
+
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -174,7 +214,7 @@ so one old copy of the job queue log file will be kept.
 \item When running a gridftp server for grid-type gt4 jobs, Condor will now
 start the server so as to ignore /etc/grid-security/gridftp.conf and
 \$GLOBUS\_LOCATION/etc/gridftp.conf. These files may contain options that
-would cause the gridftp server to fail when not run as root.
+would cause the gridftp server to fail when not run as root.  Also, Condor's gridftp server is started to ensure that it does not erroneously try to load libraries from an existing Globus installation, causing the gridftp server to crash.
 
 \item Fixed a bug where jobs using the grid (or globus) universe that specified
 an AccountingGroup would never run because the \Condor{gridmanager} would fail
@@ -207,10 +247,6 @@ less often.
 print DAG node names as it should have.  (This bug has existed since
 approximately v6.7.11.)
 
-\item Enabled COLLECTOR\_QUERY\_WORKERS in the default
-\Condor{collector} configuration, and set this value to 16.  Note this
-COLLECTOR\_QUERY\_WORKERS has no effect on non-UNIX systems (Windows).
-
 \item Fixed a bug that could cause the \Condor{gridmanager} to crash
 if the GridJobId attribute for a gt2 job became mangled. The cause of
 mangling seen by some users is still unknown.
@@ -232,6 +268,26 @@ specified in the submit file exists but is zero length.
 
 \begin{itemize}
 
+\item Jobs with no arguments submitting using Condor versions 6.7.15 up to and
+including 6.7.17 that try to run on a pre-6.7.15 \Condor{starter} will fail to
+start.  The \Condor{starter} will fail and exit.  The job will not run until
+matched with a \Condor{starter} from 6.7.15 or later.  The workaround is to
+always specify arguments in the submit file using the old syntax.  You must
+specify the arguments, even if they are empty.  For example: "argument=".
+Existing jobs in the queue can be modified with \Condor{qedit}.  For example:
+``\Condor{qedit} <jobid> Args '""'''.  Jobs submitted prior to upgrading to
+6.7.15 or later are not affected.
+(Bug introduced in version 6.7.15)
+
+
+\item Enabling the cron/Hawkeye feature of the \Condor{schedd} causes
+jobs to never leave the "run" state.  This bug was introduced with the
+addition of the cron logic to the \Condor{schedd} in version 6.7.8.
+This functionality is not enabled by default, so most users will not
+encounter it.
+This does not affect the cron/Hawkeye feature in \Condor{startd}.
+(Bug introduced in version 6.7.8)
+
 % Gnats PR 617.
 \item Multi-cluster condor submits will cause \Condor{dagman} to hang.
 This bug was introduced by the implementation of parallel universe
@@ -241,6 +297,8 @@ more than one Condor process would be treated as an error by
 with multiple processes will work; but \Condor{dagman} does
 not deal properly with multi-cluster submits (e.g., a submit file
 queuing jobs with different executables).
+As a workaround, take care that submit files submitted by \Condor{dagman}
+only submit mutiple processes, not mutiple clusters.
 (Bug introduced in version 6.7.17.)
 
 % Gnats PR 618.
@@ -506,8 +564,9 @@ removed.
 
 \begin{itemize}
 
-\item Configuration parameters \Macro{LOWPORT} and \Macro{HIGHPORT} are
-now respected for ports created for interaction with Globus GRAM servers.
+\item Fixed a bug introduced in Condor 6.7.14 that caused the GT2 GAHP
+server to ignore configuration parameters \Macro{LOWPORT} and
+\Macro{HIGHPORT} and the GT4 GAHP to fail at startup.
 
 \item \Condor{status} \Opt{-any} now reports quill ads when quill is enabled.
 
@@ -860,6 +919,8 @@ job.
 
 \item Fixed a bug in Quill that could result in an infinite loop in
 \Condor{q} when querying Quill.
+
+\item \Condor{preen} now looks at the \Macro{HISTORY} setting in the configuration file when considering files to erase.  Previously it assumed the history file was always called "history."
 
 \end{itemize}
 

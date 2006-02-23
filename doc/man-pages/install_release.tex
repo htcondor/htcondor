@@ -1,5 +1,5 @@
 \begin{ManPage}{\label{man-install-release}\Prog{install\_release}}{1}
-{installs an arbitrary software release into a named directory}
+{install an arbitrary software release into a named directory}
 \Synopsis \SynProg{\Prog{install\_release}}
 \oOpt{-help}
 \oOpt{-f}
@@ -55,7 +55,7 @@ server.
     appropriate protocol (\URL{http:}, \URL{ftp:}, \URL{gsiftp:}).
   }
   \OptItem{\Opt{-wget}}{
-    This program defaults to using globus-url-copy
+    This program defaults to using \Prog{globus-url-copy}
     to fetch the installation package.  This option specifies that this
     program should use \Prog{wget} for http and ftp requests and Perl's
     copy function for file system requests.  \Prog{wget} must be

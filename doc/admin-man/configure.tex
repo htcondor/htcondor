@@ -2529,6 +2529,69 @@ Configuring The Startd Policy.
 
 \end{description}
 
+These macros control if the \Condor{startd} daemon should perform
+backfill computations whenever resources would otherwise be idle.  
+See section~\ref{sec:backfill} on page~\pageref{sec:backfill} on
+Configuring Condor for Running Backfill Jobs for details.
+
+\begin{description}
+
+\item[\Macro{ENABLE\_BACKFILL}] \label{param:EnableBackfill} A boolean
+  value that, when \Expr{True}, indicates that the machine is willing
+  to perform backfill computations when it would otherwise be idle.
+  This is not a policy expression that is evaluated, it is a simple
+  \Expr{True} or \Expr{False}.
+  This setting controls if any of the other backfill-related
+  expressions should be evaluated.
+  The default is \Expr{False}.
+
+\item[\Macro{BACKFILL\_SYSTEM}] \label{param:BackfillSystem} A string
+  that defines what backfill system to use for spawning and managing
+  backfill computations.
+  Currently, the only supported value for this is \AdStr{BOINC}, which
+  stands for the \Term{Berkeley Open Infrastructure for Network
+  Computing}.
+  See \URL{http://boinc.berkeley.edu} for more information about
+  BOINC.
+  There is no default value, administrators must define this.
+  
+\item[\Macro{START\_BACKFILL}] \label{param:StartBackfill} A boolean
+  expression that is evaluated whenever a Condor resource is in the
+  Unclaimed/Idle state and the \MacroNI{ENABLE\_BACKFILL} expression
+  is \Expr{True}.  
+  If \MacroNI{START\_BACKFILL} evaluates to \Expr{True}, the machine
+  will enter the Backfill state and attempt to spawn a backfill
+  computation. 
+  This expression is analogous to the \Macro{START} expression that
+  controls when a Condor resource is available to run normal Condor
+  jobs.
+  The default value is \Expr{False} (which means do not spawn a
+  backfill job even if the machine is idle and
+  \MacroNI{ENABLE\_BACKFILL} expression is \Expr{True}).
+  For more information about policy expressions and the Backfill
+  state, see section~\ref{sec:Configuring-Policy} beginning on
+  page~\pageref{sec:Configuring-Policy}, especially
+  sections~\ref{sec:States}, \ref{sec:Activities}, and
+  \ref{sec:State-and-Activity-Transitions}.
+
+\item[\Macro{EVICT\_BACKFILL}] \label{param:EvictBackfill} A boolean
+  expression that is evaluated whenever a Condor resource is in the
+  Backfill state which, when \Expr{True}, indicates the machine should
+  immediately kill the currently running backfill computation and
+  return to the Owner state.
+  This expression is a way for administrators to define a policy where
+  interactive users on a machine will cause backfill jobs to be
+  removed.
+  The default value is \Expr{False}.
+  For more information about policy expressions and the Backfill
+  state, see section~\ref{sec:Configuring-Policy} beginning on
+  page~\pageref{sec:Configuring-Policy}, especially
+  sections~\ref{sec:States}, \ref{sec:Activities}, and
+  \ref{sec:State-and-Activity-Transitions}.
+
+\end{description}
+
+
 These macros only apply to the \Condor{startd} daemon when it is running on an
 SMP machine. 
 See section~\ref{sec:Configuring-SMP} on

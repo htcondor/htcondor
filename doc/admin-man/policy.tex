@@ -1,4 +1,3 @@
-
 % Note: the label was on a separate line from the name, but 
 % while that makes it look neat, it also adds an extra space in 
 % the PDF output, so don't do it. 
@@ -408,6 +407,13 @@ The possible states are
   \item another request that this resource would rather serve was found
   \end{enumerate}
 
+\index{machine state!Backfill}
+\item[Backfill] The machine is running a backfill computation while
+  waiting for either the machine owner to come back or to be matched
+  with a Condor job.
+  This state is only entered if the machine is specifically configured
+  to enable backfill jobs.
+
 \end{description}
 
 Figure~\ref{fig:machine-states} shows
@@ -418,6 +424,148 @@ the states and the possible transitions between the states.
 \includegraphics{admin-man/machine-states.eps}
 \caption{\label{fig:machine-states}Machine States}
 \end{figure}
+
+Each transition is labeled with a letter.
+The cause of each transition is described below.
+
+
+\begin{itemize}
+
+
+\item Transitions out of the Owner state
+
+\begin{description}
+
+\item[A] The machine switches from Owner to Unclaimed whenever the
+  \Expr{START} expression no longer locally evaluates to FALSE.
+  This indicates that the machine is potentially available to run a
+  Condor job.
+
+\end{description}
+
+
+\item Transitions out of the Unclaimed state
+
+\begin{description}
+
+\item[B] The machine switches from Unclaimed back to Owner whenever the
+  \Expr{START} expression locally evaluates to FALSE.
+  This indicates that the machine is unavailable to run a Condor job
+  and is in use by the resource owner.
+
+\item[C] The transition from Unclaimed to Matched happens whenever the
+  \Condor{negotiator} matches this resource with a Condor job.
+
+\item[D] The transition from Unclaimed directly to Claimed also happens
+  if the \Condor{negotiator} matches this resource with a Condor job.
+  In this case the \Condor{schedd} recieves the match and initiates
+  the claiming protocol with the machine before the \Condor{startd}
+  recieves the match notification from the \Condor{negotiator}.
+
+\item[E] The transition from Unclaimed to Backfill happens if the
+  machine is configured to run backfill computations (see
+  section~\ref{sec:Backfill}) and the \Expr{START\_BACKFILL}
+  expression evaluates to TRUE.
+
+\end{description}
+
+
+\item Transitions out of the Matched state
+
+\begin{description}
+
+\item[F] The machine moves from Matched to Owner if either the
+  \Expr{START} expression locally evalutes to FALSE, or if the 
+  \Macro{MATCH\_TIMEOUT} timer expires.
+  This timeout is used to ensure that if a machine is matched with a
+  given \Condor{schedd}, but that \Condor{schedd} does not contact the
+  \Condor{startd} to claim it, that the machine will give up on the
+  match and become available to be matched again.
+  In this case, since the \Expr{START} expression does not locally
+  evaluate to FALSE, as soon as transition \Bold{F} is complete, the
+  machine will immediately enter the Unclaimed state again (via
+  transition \Bold{A}).
+  The machine might also go from Matched to Owner if the
+  \Condor{schedd} attempts to perform the claiming protocol but
+  encounters some sort of error.
+  Finally, the machine will move into the Owner state if the
+  \Condor{startd} recieves a \Condor{vacate} command while it is in
+  the Matched state.
+
+\item[G] The transition from Matched to Claimed occurs when the
+  \Condor{schedd} successfully completes the claiming protocol with
+  the \Condor{startd}.
+
+\end{description}
+
+\item Transitions out of the Claimed state
+
+\begin{description}
+
+\item[H] From the Claimed state, the only possible destination is the
+  Preempting state.
+  This transition can be caused by many reasons:
+  \begin{itemize}
+  \item The \Condor{schedd} that has claimed the machine has no more
+    work to perform and releases the claim
+  \item The \Expr{PREEMPT} expression evaluates to TRUE (which usually
+    means the resource owner has started using the machine again and
+    is now using the keyboard, mouse, CPU, etc)  
+  \item The \Condor{startd} receives a \Condor{vacate} command
+  \item The \Condor{startd} is told to shutdown (either via a signal
+    or a \Condor{off} command)
+  \item The resource is matched to a job with a better priority
+    (either a better user priority, or one where the machine rank is
+    higher)
+  \end{itemize}
+
+\end{description}
+
+
+\item Transitions out of the Preempting state
+
+\begin{description}
+
+\item[I] The resource will move from Preempting back to Claimed if the
+  resource was matched to a job with a better priority.
+
+\item[J] The resource will move from Preempting to Owner if the
+  \Expr{PREEMPT} expression had evaluated to TRUE, if \Condor{vacate}
+  was used, or if the \Expr{START} expression locally evalutes to
+  FALSE when the \Condor{startd} has finished evicting whatever job it
+  was running when it entered the Preempting state.
+
+\end{description}
+
+
+\item Transitions out of the Backfill state
+
+\begin{description}
+
+\item[K] The resource will move from Backfill to Owner for the
+  following reasons:
+  \begin{itemize}
+  \item The \Expr{EVICT\_BACKFILL} expression evalutes to TRUE
+  \item The \Condor{startd} receives a \Condor{vacate} command
+  \item The \Condor{startd} is being shutdown
+  \end{itemize}
+ 
+\item[L] The transition from Backfill to Matched occurs whenever a
+  resource running a backfill computation is matched with a
+  \Condor{schedd} that wants to run a Condor job.
+
+\item[M] The transition from Backfill directly to Claimed is similar
+  to the transition from Unclaimed directly to Claimed.
+  It only occurs if the \Condor{schedd} completes the claiming
+  protocol before the \Condor{startd} receives the match notification
+  from the \Condor{negotiator}.
+
+\end{description}
+
+
+\end{itemize}
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Activities}
@@ -511,6 +659,21 @@ entered.
 \index{machine activity!Killing}
 \item[Killing] Killing means that the machine has requested the running
   job to exit the machine immediately, without checkpointing.
+\end{description}
+
+\index{machine activity!Backfill}
+\item Backfill
+\begin{description}
+\item[Idle] The machine is configured to run backfill jobs and is
+  ready to do so, but it has not yet had a chance to spawn a backfill
+  manager (for example, the BOINC client).
+
+\item[Busy] The machine is performing a backfill computation.
+
+\item[Killing] The machine was running a backfill computation, but it
+  is now killing the job to either return resources to the machine
+  owner, or to make room for a regular Condor job.
+
 \end{description}
 
 \end{itemize}
@@ -722,8 +885,10 @@ To disable benchmarks, both at startup and at any time thereafter,
 set \Expr{RunBenchmarks} to FALSE or comment it out of the
 configuration file.
 
-From the Unclaimed state, the machine can go to three other possible
-states: Owner (transition \Bold{2}), Matched, or Claimed/Idle.
+From the Unclaimed state, the machine can go to four other possible
+states: Owner (transition \Bold{2}), Backfill/Idle, Matched, or
+Claimed/Idle.
+
 Once the \Condor{negotiator} matches an Unclaimed machine with a
 requester at a given schedd, the negotiator sends a command to both
 parties, notifying them of the match.  
@@ -734,6 +899,14 @@ and the machine goes
 directly to the Claimed/Idle state (transition \Bold{5}).
 However, normally the machine will enter the Matched state (transition
 \Bold{6}), even if it is only for a brief period of time.
+
+If the machine has been configured to perform backfill jobs (see
+section~\ref{sec:Backfill}), while it is in Unclaimed/Idle it will
+evaluate the \Expr{START\_BACKFILL} expression.
+Once \Expr{START\_BACKFILL} evaluates to TRUE, the machine will enter
+the Backfill/Idle state (transition \Bold{7}) to begin the process of
+running backfill jobs.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Matched-State}Matched State}
@@ -751,17 +924,17 @@ The timer is set with the \Macro{MATCH\_TIMEOUT}
 It is specified in seconds and defaults to 120 (2 minutes).
 If the schedd that was matched with this machine does not
 claim it within this period of time, the machine gives up,
-and goes back into the Owner state via transition \Bold{7}.
+and goes back into the Owner state via transition \Bold{8}.
 It will probably leave the Owner state right away for the
 Unclaimed state again and wait for another match. 
 
 At any time while the machine is in the Matched state, if the
 \Expr{START} expression locally evaluates to FALSE, the machine enters
-the Owner state directly (transition \Bold{7}).
+the Owner state directly (transition \Bold{8}).
 
 If the schedd that was matched with the machine claims it before the
 \MacroNI{MATCH\_TIMEOUT} expires, the machine goes into the Claimed/Idle
-state (transition \Bold{8}).
+state (transition \Bold{9}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Claimed-State}Claimed State}
@@ -818,7 +991,7 @@ the same time.
 There are a variety of events that may cause the startd to try to get
 rid of or temporarily suspend a running job.  Activity on the
 machine's console, load from other jobs, or shutdown of the startd via
-an administrative command are all possible sources of inteference.
+an administrative command are all possible sources of interference.
 Another one is the appearance of a higher priority claim to the
 machine by a different Condor user.
 
@@ -858,10 +1031,10 @@ the more drastic stages.
 
 When the machine first enters the Claimed state, it goes to the Idle
 activity.  From there, it has two options.  
-It can enter the Preempting state via transition \Bold{9} (if a 
+It can enter the Preempting state via transition \Bold{10} (if a 
 \Condor{vacate} arrives, or if the \Expr{START} expression locally
 evaluates to FALSE),  
-or it can enter the Busy activity (transition \Bold{10}) if the
+or it can enter the Busy activity (transition \Bold{11}) if the
 schedd that has claimed the machine decides to activate the claim and
 start a job.
 
@@ -880,11 +1053,11 @@ By transition, the possible state/activity destinations from Claimed/Busy:
   
 \item[Claimed/Idle] If the starter that is serving a given job exits
   (for example because the jobs completes), the machine will go
-  to Claimed/Idle (transition \Bold{11}).
+  to Claimed/Idle (transition \Bold{12}).
   
 \item[Claimed/Retiring] If \Expr{WANT\_SUSPEND} is FALSE and the
   \Expr{PREEMPT} expression is TRUE, the machine enters the
-  Retiring activity (transition \Bold{12}).  From there, it
+  Retiring activity (transition \Bold{13}).  From there, it
   waits for a configurable amount of time for the job to finish
   before moving on to preemption.
 
@@ -929,8 +1102,9 @@ may occur:
 
 \item[Preempting] If the claim is in suspended retirement and the
   retirement time expires, the job enters the Preempting state
-  (transition \Bold{18b}).  This is only possible if
-  \Expr{MaxJobRetirementTime} \emph{decreases}  during the suspension.
+  (transition \Bold{17}).  This is only possible if
+  \Expr{MaxJobRetirementTime} \emph{decreases} during the suspension.
+
 
 \end{description}
 
@@ -948,17 +1122,19 @@ to effectively be infinite, avoiding any killing of jobs.)
 
 \item[Claimed/Busy] If the startd was retiring because of a preempting
 claim only and the preempting claim goes away, the normal Claimed/Busy
-state is resumed (transition \Bold{13}).  If instead the retirement
+state is resumed (transition \Bold{19}).  If instead the retirement
 is due to owner activity (\Expr{PREEMPT}) or the startd is being shut down,
 no unretirement is possible.
 
 \item[Claimed/Suspended] In exactly the same way that suspension may
 happen from the Claimed/Busy state, it may also happen during the
-Claimed/Retiring state (transition \Bold{17}).  In this case, when the
-job continues from suspension, it transitions back into
-Claimed/Retiring instead of Claimed/Busy (transition \Bold{16}).
+Claimed/Retiring state (transition \Bold{20}).
+In this case, when the job continues from suspension, it moves back
+into Claimed/Retiring (transition \Bold{16}) instead of Claimed/Busy
+(transition \Bold{15}).
 
 \end{description}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Preempting-State}Preempting State}
@@ -989,21 +1165,26 @@ do a graceful shutdown, by intercepting the soft kill signal.
 If the machine is in the Vacating activity, it keeps evaluating the 
 \Expr{KILL} expression.
 As soon as this expression evaluates to TRUE,
-the machine enters the Killing activity (transition \Bold{19}).
+the machine enters the Killing activity (transition \Bold{21}).
 
 When the starter exits, or if there was no starter running when the
-machine enters the Preempting state (transition \Bold{9}),
+machine enters the Preempting state (transition \Bold{10}),
 the other purpose of the Preempting state is completed:
 notifying the schedd that had claimed this machine that the claim is
 broken.
 
 At this point, the machine enters either the Owner state by
-transition \Bold{20} (if the job was preempted because the machine
-owner came back) or the Claimed/Idle state by transition \Bold{21}
+transition \Bold{22} (if the job was preempted because the machine
+owner came back) or the Claimed/Idle state by transition \Bold{23}
 (if the job was preempted because a better match was found).
-The machine enters the Killing activity, and it starts a timer, the
-length of which is defined by the \Macro{KILLING\_TIMEOUT}
-\label{param:KillingTimeout} macro.
+
+If the machine enters the Killing activity, (because either
+\Expr{WANT\_VACATE} was FALSE or the \Expr{KILL} expression evaluated
+to TRUE), it attempts to force the \Condor{starter} to immediately
+kill the underlying Condor job.
+Once the machine has begun to hard kill the Condor job, the
+\Condor{startd} starts a timer, the length of which is defined by the
+\Macro{KILLING\_TIMEOUT} \label{param:KillingTimeout} macro.
 This macro is defined in seconds and defaults to 30.
 If this timer expires and the machine is still in
 the Killing activity, something has gone seriously wrong with the
@@ -1011,12 +1192,99 @@ the Killing activity, something has gone seriously wrong with the
 sending SIGKILL to all of the \Condor{starter}'s children, and then to
 the \Condor{starter} itself.
 
-Once the starter is gone and the schedd that had claimed the
-machine is notified that the claim is broken, the machine will either
-enter the Owner state by transition \Bold{22} (if the job was
-preempted because the machine owner came back) or the Claimed/Idle
-state by transition \Bold{23} (if the job was preempted because a
-better match was found). 
+Once the \Condor{starter} has killed off all the processes associated
+with the job and exited, and once the schedd that had claimed the
+machine is notified that the claim is broken, the machine will leave
+the Preempting/Killing state.
+If the job was preempted because a better match was found, the machine
+will enter Claimed/Idle (transition \Bold{24}).
+If the preemption was caused by the machine owner (the \Expr{PREEMPT}
+expression evaluated to TRUE, \Condor{vacate} was used, etc), the
+machine will enter the Owner state (transition \Bold{25}).
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Backfill-State}Backfill State}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The Backfill state is used whenever the machine is performing low
+priority background tasks to keep itself busy.
+For more information about backfill support in Condor, see
+section~\ref{sec:Backfill} on page~\pageref{sec:Backfill}.
+This state is only used if the machine has been configured to enable
+backfill computation, if a specific backfill manager has been
+installed and configured, and if the machine is otherwise idle (not
+being used interactively or for regular Condor computations).
+If the machine meets all these requirements, and the
+\Expr{START\_BACKFILL} expression evalutes to TRUE, the machine will
+move from the Unclaimed/Idle state to Backfill/Idle (transition
+\Bold{7}).
+
+Once a machine is in Backfill/Idle, it will immediately attempt to
+spawn whatever backfill manager it has been configured to use
+(currently, only the BOINC client is supported as a backfill manager
+in Condor).
+Once the BOINC client is running, the machine will enter
+Backfill/Busy (transition \Bold{26}) to indicate that it is now
+performing a backfill computation.
+
+\Note On SMP machines, the \Condor{startd} will only spawn a single
+instance of the BOINC client, even if multiple virtual machines are
+available to run backfill jobs.
+Therefore, only the first machine to enter Backfill/Idle will cause a
+copy of the BOINC client to start running.
+If a given virtual machine on an SMP enters the Backfill state and a
+BOINC client is already running under this \Condor{startd}, the
+virtual machine will immediately enter Backfill/Busy without waiting
+to spawn another copy of the BOINC client.
+
+If the BOINC client ever exits on its own (which normally wouldn't
+happen), the machine will go back to Backfill/Idle (transition
+\Bold{27}) where it will immediately attempt to respawn the BOINC
+client (and return to Backfill/Busy via transition \Bold{26}).
+
+As the BOINC client is running a backfill computation, a number of
+events can occur that will drive the machine out of the Backfill
+state.
+The machine can get matched or claimed for a Condor job, interactive
+users can start using the machine again, the machine might be evicted
+with \Condor{vacate}, or the \Condor{startd} might be shutdown.
+All of these events cause the \Condor{startd} to kill the BOINC client
+and all its descendants, and enter the Backfill/Killing state
+(transition \Bold{28}).
+
+Once the BOINC client and all its children have exited the system, the
+machine will enter the Backfill/Idle state to indicate that the BOINC
+client is now gone (transition \Bold{29}).
+As soon as it enters Backfill/Idle after the BOINC client exits, the
+machine will go into another state, depending on what caused the BOINC
+client to be killed in the first place.
+
+If the \Expr{EVICT\_BACKFILL} expression evaluates to TRUE while a
+machine is in Backfill/Busy, after the BOINC client is gone, the
+machine will go back into the Owner/Idle state (transition
+\Bold{30}).
+The machine will also return to the Owner/Idle state after the BOINC
+client exits if \Condor{vacate} was used, or if the \Condor{startd} is
+being shutdown.
+
+When a machine running backfill jobs is matched with a requester that
+wants to run a Condor job, the machine will either enter the Matched
+state, or go directly into Claimed/Idle.
+As with the case of a machine in Unclaimed/Idle (described above), the
+\Condor{negotiator} informs both the \Condor{startd} and the
+\Condor{schedd} of the match, and the exact state transitions at the
+machine depend on what order the various entities initiate
+communication with each other.
+If the \Condor{schedd} is notified of the match and sends a request to
+claim the \Condor{startd} before the \Condor{negotiator} has a chance
+to notify the \Condor{startd}, once the BOINC client exits, the
+machine will immediately enter Claimed/Idle (transition \Bold{31}).
+Normally, the notification from the \Condor{negotiator} will reach the
+\Condor{startd} before the \Condor{schedd} attempts to claim it.
+In this case, once the BOINC client exits, the machine will enter
+Matched/Idle (transition \Bold{32}).
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:State-Expression-Summary}
@@ -1116,6 +1384,14 @@ enters the Preempting state.
   Preempting/Vacating state).  When the preemption is complete, the
   machine enters the Claimed/Idle state with the new resource
   request claiming it.
+
+\item[\Expr{START\_BACKFILL}] When TRUE, if the machine is otherwise
+  idle, it will enter the Backfill state and spawn a backfill
+  computation (using BOINC).
+
+\item[\Expr{EVICT\_BACKFILL}] When TRUE, if the machine is currently
+  running a backfill computation, it will kill the BOINC client and
+  return to the Owner/Idle state.
 
 \end{description}
 \index{machine state!transitions|)}

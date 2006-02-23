@@ -117,14 +117,6 @@ release-html: ref.html $(TARGETDIR)
 	mv -f $(TARGETDIR) $(MANDIR)
 	rm -f ref.html
 
-admin-man/machine-states.eps: admin-man/machine-states.fig
-	rm -f $@
-	fig2dev -L eps -m .6 $< > $@
-
-admin-man/machine-activities.eps: admin-man/machine-activities.fig
-	rm -f $@
-	fig2dev -L eps -m .6 $< > $@
-
 admin-man/pool-arch.eps: admin-man/pool-arch.fig
 	rm -f $@
 	fig2dev -L eps -m .4 $< > $@
@@ -159,7 +151,7 @@ $(TARGETDIR):
 	mkdir $(TARGETDIR)
 
 clean:
-	rm -rf ref ref.new man user admin *.1 *.dvi *.ps *.html *.log *.aux *.toc *.pdf */*.log *.ind *.idx *.ilg timesfont.tex user-man/dagman-diamond.eps admin-man/pool-arch.eps admin-man/machine-activities.eps admin-man/machine-states.eps *.out
+	rm -rf ref ref.new man user admin *.1 *.dvi *.ps *.html *.log *.aux *.toc *.pdf */*.log *.ind *.idx *.ilg timesfont.tex user-man/dagman-diamond.eps admin-man/pool-arch.eps *.out
 	cd makeman; make clean
 
 reallyclean: clean
