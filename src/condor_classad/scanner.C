@@ -481,6 +481,12 @@ static void scan_operator(
 		token.length++;
 		break;
 
+	case ',':
+		token.type = LX_COMMA;
+		input = input + 1;
+		token.length++;
+		break;
+
 	case ';':
 		token.type = LX_SEMICOLON;
 		input = input + 1;

@@ -82,6 +82,7 @@ typedef enum
 
   LX_FUNCTION,
   LX_SEMICOLON,
+  LX_COMMA,
 
   NOT_KEYWORD
 } LexemeType;

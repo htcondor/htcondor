@@ -150,7 +150,9 @@ ParseFunction(char *functionName, char*& s, ExprTree*& newTree, int& count)
 					count += next_token->length;
 					parse_succeeded = TRUE;
 					break;
-				} else if (next_token->type == LX_SEMICOLON) {
+				} else if (next_token->type==LX_COMMA || 
+						   next_token->type==LX_SEMICOLON) 
+				{
 					ReadToken(s);
 					count += next_token->length;
 					continue;
