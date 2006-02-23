@@ -1893,7 +1893,11 @@ int GlobusJob::doEvaluateState()
 				myResource->JMComplete( this );
 				gmState = GM_PROXY_EXPIRED;
 
-			} else if ( FailureIsRestartable( globusStateErrorCode ) ) {
+			//} else if ( FailureIsRestartable( globusStateErrorCode ) ) {
+			} else if ( condorState != HELD && condorState != REMOVED &&
+						( RetryFailureAlways( globusStateErrorCode ) ||
+						  ( RetryFailureOnce( globusStateErrorCode ) &&
+							globusStateErrorCode != lastRestartReason ) ) ) {
 
 				// The job may still be submitted and/or recoverable,
 				// so stop the jobmanager and restart it.
@@ -3082,6 +3086,30 @@ void GlobusJob::DeleteOutput()
 	umask( old_umask );
 }
 
+bool GlobusJob::RetryFailureOnce( int error_code )
+{
+	switch ( error_code ) {
+	case GLOBUS_GRAM_PROTOCOL_ERROR_STAGE_OUT_FAILED:
+	case GLOBUS_GRAM_PROTOCOL_ERROR_STDIO_SIZE:
+		return true;
+	default:
+		return false;
+	}
+}
+
+bool GlobusJob::RetryFailureAlways( int error_code )
+{
+	switch ( error_code ) {
+	case GLOBUS_GRAM_PROTOCOL_ERROR_TTL_EXPIRED:
+	case GLOBUS_GRAM_PROTOCOL_ERROR_JM_STOPPED:
+	case GLOBUS_GRAM_PROTOCOL_ERROR_USER_PROXY_EXPIRED:
+		return true;
+	default:
+		return false;
+	}
+}
+
+/*
 bool GlobusJob::FailureIsRestartable( int error_code )
 {
 	switch( error_code ) {
@@ -3110,8 +3138,13 @@ bool GlobusJob::FailureIsRestartable( int error_code )
 	case GLOBUS_GRAM_PROTOCOL_ERROR_OPENING_CACHE:
 	case GLOBUS_GRAM_PROTOCOL_ERROR_OPENING_USER_PROXY:
 	case GLOBUS_GRAM_PROTOCOL_ERROR_RSL_SCHEDULER_SPECIFIC:
-		return false;
+		// STAGE_OUT_FAILED can be a temporary error that a restart can
+		// fix, but it's often caused by having a file in the stage out
+		// list that the job didn't produce, which is a permanent error.
+		// Given our current limited handling of errors that may or may
+		// not be temporary, treat it as a permanent error.
 	case GLOBUS_GRAM_PROTOCOL_ERROR_STAGE_OUT_FAILED:
+		return false;
 	case GLOBUS_GRAM_PROTOCOL_ERROR_TTL_EXPIRED:
 	case GLOBUS_GRAM_PROTOCOL_ERROR_JM_STOPPED:
 	case GLOBUS_GRAM_PROTOCOL_ERROR_USER_PROXY_EXPIRED:
@@ -3119,6 +3152,7 @@ bool GlobusJob::FailureIsRestartable( int error_code )
 		return true;
 	}
 }
+*/
 
 bool GlobusJob::FailureNeedsCommit( int error_code )
 {

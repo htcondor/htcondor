@@ -177,7 +177,9 @@ class GlobusJob : public BaseJob
 	int connect_failure_counter;
 	bool AllowTransition( int new_state, int old_state );
 
-	bool FailureIsRestartable( int error_code );
+	bool RetryFailureOnce( int error_code );
+	bool RetryFailureAlways( int error_code );
+//	bool FailureIsRestartable( int error_code );
 	bool FailureNeedsCommit( int error_code );
 	bool JmShouldSleep();
 
