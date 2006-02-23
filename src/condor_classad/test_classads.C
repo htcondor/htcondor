@@ -1609,6 +1609,7 @@ void test_random(
     int  r2;
     bool have_different_numbers;
     bool numbers_in_range;
+	int	i;
 
     ClassAd *classad;
 
@@ -1617,7 +1618,7 @@ void test_random(
     // First we check that random gives us different numbers
     have_different_numbers = false;
     classad->EvalInteger("R1", NULL, base_r1);
-    for (int i = 0; i < 10; i++) {
+    for ( i = 0; i < 10; i++) {
         classad->EvalInteger("R1", NULL, r1);
         if (r1 != base_r1) {
             have_different_numbers = true;
@@ -1627,7 +1628,7 @@ void test_random(
 
     // Then we check that random gives numbers in the correct range
     numbers_in_range = true;
-    for (int i = 0; i < 10; i++) {
+    for ( i = 0; i < 10; i++) {
         classad->EvalInteger("R2", NULL, r2);
         if (r2 < 0 || r2 >= 10) {
             numbers_in_range = false;
