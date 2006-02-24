@@ -1784,7 +1784,7 @@ int GlobusJob::doEvaluateState()
 					   status == GLOBUS_GRAM_PROTOCOL_JOB_STATE_ACTIVE ) ) {
 					// TODO: should this get sent to the schedd in
 					//   GM_RESTART_SAVE??
-					dprintf(D_FULLDEBUG,"(%d.%d) jobmanager's job state went from DONE to %s across a restart, do the same here",
+					dprintf(D_FULLDEBUG,"(%d.%d) jobmanager's job state went from DONE to %s across a restart, do the same here\n",
 							procID.cluster, procID.proc, GlobusJobStatusName(status) );
 					globusState = status;
 					jobAd->Assign( ATTR_GLOBUS_STATUS, status );
