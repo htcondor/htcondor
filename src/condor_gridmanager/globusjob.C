@@ -978,6 +978,7 @@ int GlobusJob::doEvaluateState()
 
 			gahp->setDelegProxy( jobProxy );
 
+			GahpClient::mode saved_mode = gahp->getMode();
 			gahp->setMode( GahpClient::blocking );
 
 			err = gahp->globus_gram_client_callback_allow( gramCallbackHandler,
@@ -1001,7 +1002,7 @@ int GlobusJob::doEvaluateState()
 				break;
 			}
 
-			gahp->setMode( GahpClient::normal );
+			gahp->setMode( saved_mode );
 
 			gmState = GM_START;
 			} break;

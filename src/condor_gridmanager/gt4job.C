@@ -609,6 +609,7 @@ int GT4Job::doEvaluateState()
 
 			gahp->setDelegProxy( jobProxy );
 
+			GahpClient::mode saved_mode = gahp->getMode();
 			gahp->setMode( GahpClient::blocking );
 
 			err = gahp->gt4_gram_client_callback_allow( gt4GramCallbackHandler,
@@ -623,7 +624,7 @@ int GT4Job::doEvaluateState()
 				break;
 			}
 
-			gahp->setMode( GahpClient::normal );
+			gahp->setMode( saved_mode );
 
 			gmState = GM_START;
 			} break;
