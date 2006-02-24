@@ -1,3 +1,12 @@
+02/23/06 V6_7_17
+	The official 6.7.17 release.  Packages came from NMI build 19375 with the
+	exception of sun4u_sol_5.9 which came from 19424 because of problems with a
+	build machine. The version string for this release is:
+	  $CondorVersion: 6.7.17 Feb 18 2006 $
+	Note that psilord is providing TeraGrid with a ppc_sles9 build based on
+	6.7.17. This is not an official part of the release and the CondorVersion
+	should specifically note it.
+
 02/17/06 V6_7-amd64_port-branch
 	Branch for Opteron amd64 full port of Condor. 
 	Off V6_7-amd64_port-root.
