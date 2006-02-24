@@ -81,6 +81,10 @@
 #define GM_PUT_TO_SLEEP			25
 #define GM_JOBMANAGER_ASLEEP	26
 #define GM_START				27
+#define GM_CLEANUP_RESTART		28
+#define GM_CLEANUP_COMMIT		29
+#define GM_CLEANUP_CANCEL		30
+#define GM_CLEANUP_WAIT			31
 
 static char *GMStateNames[] = {
 	"GM_INIT",
@@ -110,7 +114,11 @@ static char *GMStateNames[] = {
 	"GM_OUTPUT_WAIT",
 	"GM_PUT_TO_SLEEP",
 	"GM_JOBMANAGER_ASLEEP",
-	"GM_START"
+	"GM_START",
+	"GM_CLEANUP_RESTART",
+	"GM_CLEANUP_COMMIT",
+	"GM_CLEANUP_CANCEL",
+	"GM_CLEANUP_WAIT",
 };
 
 #define MIN_SUPPORTED_GRAM_V GRAM_V_1_6
@@ -1019,7 +1027,7 @@ int GlobusJob::doEvaluateState()
 					gmState = GM_CLEAR_REQUEST;
 				}
 			} else if ( wantResubmit || doResubmit ) {
-				gmState = GM_CLEAR_REQUEST;
+				gmState = GM_CLEANUP_RESTART;
 			} else {
 				if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_STAGE_IN ||
 					 globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_PENDING ||
@@ -2196,6 +2204,148 @@ int GlobusJob::doEvaluateState()
 			globusError = 0;
 			if ( JmShouldSleep() == false ) {
 				gmState = GM_RESTART;
+			}
+			} break;
+		case GM_CLEANUP_RESTART: {
+			// We want cancel a job submission, but first we need to restart
+			// the jobmanager.
+			// This is best effort. If anything goes wrong, we ignore it.
+			//   (except for proxy expiration)
+			now = time(NULL);
+			if ( jobContact == NULL ) {
+				gmState = GM_CLEAR_REQUEST;
+			} else {
+				char *job_contact;
+
+				CHECK_PROXY;
+				// Once RequestSubmit() is called at least once, you must
+				// call SubmitComplete() or CancelSubmit() once you're done
+				// with the request call
+				if ( myResource->RequestSubmit(this) == false ||
+					 myResource->RequestJM(this) == false ) {
+					break;
+				}
+				if ( RSL == NULL ) {
+					RSL = buildRestartRSL();
+				}
+				rc = gahp->globus_gram_client_job_request(
+										resourceManagerString,
+										RSL->Value(),
+										GLOBUS_GRAM_PROTOCOL_JOB_STATE_ALL,
+										gramCallbackContact, &job_contact );
+				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+					 rc == GAHPCLIENT_COMMAND_PENDING ) {
+					break;
+				}
+				myResource->SubmitComplete(this);
+				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_USER_PROXY_EXPIRED ) {
+					myResource->JMComplete( this );
+					gmState = GM_PROXY_EXPIRED;
+					break;
+				}
+				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_NO_STATE_FILE &&
+					 condorState == COMPLETED ) {
+					// Our restart attempt failed because the jobmanager
+					// couldn't find the state file. If the job is marked
+					// COMPLETED, then it's almost certain that we told the
+					// jobmanager to clean up but died before we could
+					// remove the job from the queue. So let's just remove
+					// it now.
+					gmState = GM_DELETE;
+					break;
+				}
+				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_OLD_JM_ALIVE ) {
+					jmDown = false;
+					gmState = GM_CLEANUP_CANCEL;
+					break;
+				} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_WAITING_FOR_COMMIT ) {
+					jmProxyExpireTime = jobProxy->expiration_time;
+					jmDown = false;
+					SetRemoteJobId( job_contact );
+					gahp->globus_gram_client_job_contact_free( job_contact );
+					gmState = GM_CLEANUP_COMMIT;
+				} else {
+					// unhandled error
+					LOG_GLOBUS_ERROR( "globus_gram_client_job_request()", rc );
+					gmState = GM_CLEAR_REQUEST;
+				}
+			}
+			} break;
+		case GM_CLEANUP_COMMIT: {
+			// We are canceling a job submission.
+			// Tell the jobmanager it can proceed with the restart.
+			// This is best-effort. If anything goes wrong, we ignore it.
+			//   (except for proxy expiration)
+			CHECK_PROXY;
+			rc = gahp->globus_gram_client_job_signal( jobContact,
+								GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_COMMIT_REQUEST,
+								NULL, &status, &error );
+			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+				 rc == GAHPCLIENT_COMMAND_PENDING ) {
+				break;
+			}
+			if ( rc != GLOBUS_SUCCESS ) {
+				// unhandled error
+				LOG_GLOBUS_ERROR( "globus_gram_client_job_signal(COMMIT_REQUEST)", rc );
+			}
+			gmState = GM_CLEANUP_CANCEL;
+			} break;
+		case GM_CLEANUP_CANCEL: {
+			// We are canceling a job submission.
+			// This is best-effort. If anything goes wrong, we ignore it.
+			//   (except for proxy expiration)
+			CHECK_PROXY;
+			rc = gahp->globus_gram_client_job_cancel( jobContact );
+			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+				 rc == GAHPCLIENT_COMMAND_PENDING ) {
+				break;
+			}
+			gmState = GM_CLEANUP_WAIT;
+			} break;
+		case GM_CLEANUP_WAIT: {
+			// A cancel has been successfully issued. Wait for the
+			// accompanying FAILED callback. Probe the jobmanager
+			// occassionally to make sure it hasn't died on us.
+			// This is best-effort. If anything goes wrong, we ignore it.
+			//   (except for proxy expiration)
+			now = time(NULL);
+ 
+			if ( globusState != GLOBUS_GRAM_PROTOCOL_JOB_STATE_DONE &&
+				 globusState != GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED &&
+				 now < enteredCurrentGmState + 30 ) {
+
+				if ( lastProbeTime < enteredCurrentGmState ) {
+					lastProbeTime = enteredCurrentGmState;
+				}
+				if ( now >= lastProbeTime + 5 ) {
+					CHECK_PROXY;
+					rc = gahp->globus_gram_client_job_status( jobContact,
+														&status, &error );
+					if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+						 rc == GAHPCLIENT_COMMAND_PENDING ) {
+						break;
+					}
+					if ( rc != GLOBUS_SUCCESS ) {
+						// unhandled error
+						LOG_GLOBUS_ERROR( "globus_gram_client_job_status()", rc );
+						gmState = GM_CLEAR_REQUEST;
+					}
+					UpdateGlobusState( status, error );
+					ClearCallbacks();
+					lastProbeTime = now;
+				} else {
+					GetCallbacks();
+				}
+				unsigned int delay = 0;
+				if ( (lastProbeTime + 5) > now ) {
+					delay = (lastProbeTime + 5) - now;
+				}				
+				daemonCore->Reset_Timer( evaluateStateTid, delay );
+			} else {
+				rc = gahp->globus_gram_client_job_signal( jobContact,
+									GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_COMMIT_END,
+									NULL, &status, &error );
+				gmState = GM_CLEAR_REQUEST;
 			}
 			} break;
 		default:
