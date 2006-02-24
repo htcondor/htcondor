@@ -304,7 +304,7 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 			// code() is called.
 		char *my_version = strdup( CondorVersion() );
 		if ( !rsock.code(my_version) ) {
-			dprintf(D_ALWAYS,"DCSchedd:spoolJobFiles: "
+			dprintf(D_ALWAYS,"DCSchedd:receiveJobSandbox: "
 					"Can't send version string to the schedd\n");
 			free( my_version );
 			return false;
