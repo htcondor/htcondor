@@ -65,7 +65,7 @@ inet_ntoa( struct in_addr inaddr ) {
 	int i;
 
 	/* clean the ascii buffer out */
-	memcpy(buffer, 0, 
+	memset(buffer, 0, 
 		sizeof(struct in_addr) * 3 + (sizeof(struct in_addr)-1) + 1);
 
 	/* XXX This assumes big endian */

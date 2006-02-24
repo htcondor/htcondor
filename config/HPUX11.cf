@@ -1,13 +1,14 @@
 /* HPUX 11 Specific stuff */
 
-#define PlatformFlags		-DHPUX11=HPUX11 -L/usr/lib/pa20_64
-/* -lxnet is to allow use of the XOpen/Unix98 functions with a 64bit compiler */
-#define PlatformLdFlags		-lxnet
+#define PlatformFlags		-DHPUX11=HPUX11
+#define PlatformLdFlags		-Wl,+vnocompatwarnings
 
+/*
 #undef SimpleLibC
 #define SimpleLibC /usr/lib/pa20_64/libc.a
 #undef LibC
 #define LibC SimpleLibC
+*/
 
 
 #define HAS_ADJTIME			YES
@@ -30,6 +31,7 @@
 #define HAS_OPENSSL			NO
 
 #define WANT_PVM			NO
+#define WANT_KERBEROS       NO
 
 #define IS_CLIPPED YES
 

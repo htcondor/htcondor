@@ -13,8 +13,9 @@ case "x$os" in
 		exec /lib/cpp $*
 		;;
 	xHP-UX)
-		# This could also potentially be /usr/ccs/lbin/cpp...
-		exec /lib/cpp.ansi $*
+		# Use /lib/cpp.ansi if we've got it, otherwise try /usr/ccs/lbin
+		test -x /lib/cpp.ansi && exec /lib/cpp.ansi $*
+        exec /usr/ccs/lbin/cpp $*
 		;;
 	xIRIX)
 		# stupid irix, this is santctioned by the X distribution.

@@ -145,7 +145,7 @@ if test "$os" = "HP-UX"; then
   if test "$osrelease" = "B.10.20" ; then
     _cv_opsys_vers="HPUX10"
     _cv_sysname="hp_ux102"
-  elif test "$osversion" = "B.11.00" ; then
+  elif test "$osrelease" = "B.11.11" ; then
     _cv_opsys_vers="HPUX11"
     _cv_sysname="hp_ux110"
   fi
@@ -674,6 +674,12 @@ case "$gcc_vers" in
     CompilerMajor="3"
     CompilerMinor="4"
     CompilerPatch="2"
+    ;;
+ "3.4.3" )
+    CompilerKind="GCC"
+    CompilerMajor="3"
+    CompilerMinor="4"
+    CompilerPatch="3"
     ;;
  "3.4.4" )
     CompilerKind="GCC"
