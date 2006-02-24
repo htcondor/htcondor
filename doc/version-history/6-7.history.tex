@@ -29,6 +29,12 @@ universe job failure is unrecoverable and at cleaning up failed or canceled
 job submissions. This should reduce the number of jobs
 that perpetually return to held state when released.
 
+\item When job attribute \Attr{GlobusResubmit} evaluates to true for
+grid-type gt2 jobs, the
+\Condor{gridmanager} will try to cancel the existing job before starting
+the new submission. If the cancel attempt fails, the \Condor{gridmanager}
+will proceed with the new submission anyway.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
