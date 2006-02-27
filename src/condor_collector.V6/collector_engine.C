@@ -51,6 +51,7 @@ ClassAd* CollectorEngine::LONG_GONE	  = (ClassAd *) 0x3;
 ClassAd* CollectorEngine::THRESHOLD	  = (ClassAd *) 0x4;
 
 static void killHashTable (CollectorHashTable &);
+static int killGenericHashTable(CollectorHashTable *);
 static void purgeHashTable (CollectorHashTable &);
 
 int 	engine_clientTimeoutHandler (Service *);
@@ -74,7 +75,8 @@ CollectorEngine::CollectorEngine (CollectorStats *stats ) :
 	GatewayAds    (LESSER_TABLE_SIZE , &adNameHashFunction),
 	CollectorAds  (LESSER_TABLE_SIZE , &adNameHashFunction),
 	NegotiatorAds (LESSER_TABLE_SIZE , &adNameHashFunction),
-	HadAds        (LESSER_TABLE_SIZE , &adNameHashFunction)
+	HadAds        (LESSER_TABLE_SIZE , &adNameHashFunction),
+	GenericAds    (LESSER_TABLE_SIZE , &stringHashFunction)
 {
 	clientTimeout = 20;
 	machineUpdateInterval = 30;
@@ -104,6 +106,7 @@ CollectorEngine::
 	killHashTable (GatewayAds);
 	killHashTable (NegotiatorAds);
 	killHashTable (HadAds);
+	GenericAds.walk(killGenericHashTable);
 }
 
 
@@ -203,7 +206,14 @@ invokeHousekeeper (AdTypes adtype)
 
 		case HAD_AD:
 			cleanHashTable (HadAds, now, makeHadAdHashKey);
-			break;
+			break;			
+
+	        case GENERIC_AD:
+			CollectorHashTable *cht;
+			GenericAds.startIterations();
+			while (GenericAds.iterate(cht)) {
+				cleanHashTable (*cht, now, makeGenericAdHashKey);
+			}
 
 		default:
 			return 0;
@@ -247,6 +257,26 @@ void CollectorEngine::
 toggleLogging (void)
 {
 	log = !log;
+}
+
+
+int (*CollectorEngine::genericTableScanFunction)(ClassAd *) = NULL;
+
+int CollectorEngine::
+genericTableWalker(CollectorHashTable *cht)
+{
+	ASSERT(genericTableScanFunction != NULL);
+	return cht->walk(genericTableScanFunction);
+}
+
+int CollectorEngine::
+walkGenericTables(int (*scanFunction)(ClassAd *))
+{
+	int ret;
+	genericTableScanFunction = scanFunction;
+	ret = GenericAds.walk(genericTableWalker);
+	genericTableScanFunction = NULL;
+	return ret;
 }
 
 int CollectorEngine::
@@ -322,7 +352,8 @@ walkHashTable (AdTypes adType, int (*scanFunction)(ClassAd *))
 #if WANT_QUILL
 			QuillAds.walk(scanFunction) &&
 #endif
-			HadAds.walk(scanFunction);
+			HadAds.walk(scanFunction) &&
+			walkGenericTables(scanFunction);
 
 
 	  default:
@@ -343,6 +374,22 @@ walkHashTable (AdTypes adType, int (*scanFunction)(ClassAd *))
 	}
 
 	return 1;
+}
+
+CollectorHashTable *CollectorEngine::findOrCreateTable(MyString &type)
+{
+	CollectorHashTable *table;
+	if (GenericAds.lookup(type, table) == -1) {
+		dprintf(D_ALWAYS, "creating new table for type %s\n", type.Value());
+		table = new CollectorHashTable(LESSER_TABLE_SIZE , &adNameHashFunction);
+		if (GenericAds.insert(type, table) == -1) {
+			dprintf(D_ALWAYS,  "error adding new generic hash table\n");
+			delete table;
+			return NULL;
+		}
+	}
+
+	return table;
 }
 
 ClassAd *CollectorEngine::
@@ -619,6 +666,36 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 		retVal=updateClassAd (HadAds, "HadAd  ", "HAD",
 							  clientAd, hk, hashString, insert, from );
 		break;
+	  case UPDATE_AD_GENERIC:
+	  {
+		  const char *type_str = clientAd->GetMyTypeName();
+		  if (type_str == NULL) {
+			  dprintf(D_ALWAYS, "collect: UPDATE_AD_GENERIC: ad has no type\n");
+			  insert = -3;
+			  retVal = 0;
+			  break;
+		  }
+		  MyString type(type_str);
+		  CollectorHashTable *cht = findOrCreateTable(type);
+		  if (cht == NULL) {
+			  dprintf(D_ALWAYS, "collect: findOrCreateTable failed\n");
+			  insert = -3;
+			  retVal = 0;
+			  break;
+		  }
+		  if (!makeGenericAdHashKey (hk, clientAd, from))
+		  {
+			  dprintf(D_ALWAYS, "Could not make haskey --- ignoring ad\n");
+			  insert = -3;
+			  retVal = 0;
+			  break;
+		  }
+		  hashString.Build(hk);
+		  retVal = updateClassAd(*cht, type_str, type_str, clientAd,
+					 hk, hashString, insert, from);
+		  break;
+	  }
+		  
 
 	  case QUERY_STARTD_ADS:
 	  case QUERY_SCHEDD_ADS:
@@ -944,8 +1021,12 @@ housekeeper()
 	dprintf (D_ALWAYS, "\tCleaning HadAds ...\n");
 	cleanHashTable (HadAds, now, makeHadAdHashKey);
 
-	// add other ad types here ...
-
+	dprintf (D_ALWAYS, "\tCleaning Generic Ads ...\n");
+	CollectorHashTable *cht;
+	GenericAds.startIterations();
+	while (GenericAds.iterate(cht)) {
+		cleanHashTable (*cht, now, makeGenericAdHashKey);
+	}
 
 	// cron manager
 	event_mgr();
@@ -1019,7 +1100,6 @@ purgeHashTable( CollectorHashTable &table )
 		}
 	}
 }
-
 
 int CollectorEngine::
 masterCheck ()
@@ -1132,6 +1212,15 @@ killHashTable (CollectorHashTable &table)
 	{
 		if (ad > CollectorEngine::THRESHOLD) delete ad;
 	}
+}
+
+static int
+killGenericHashTable(CollectorHashTable *table)
+{
+	ASSERT(table != NULL);
+	killHashTable(*table);
+	delete table;
+	return 0;
 }
 
 char *

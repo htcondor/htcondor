@@ -88,6 +88,14 @@ class CollectorEngine : public Service
 	CollectorHashTable NegotiatorAds;
 	CollectorHashTable HadAds;
 
+	// table for "generic" ad types
+	GenericAdHashTable GenericAds;
+
+	// for walking through the generic hash tables
+	static int (*genericTableScanFunction)(ClassAd *);
+	static int genericTableWalker(CollectorHashTable *cht);
+	int walkGenericTables(int (*scanFunction)(ClassAd *));
+
 	// relevant variables from the config file
 	int	clientTimeout; 
 	int	machineUpdateInterval;
@@ -106,6 +114,9 @@ class CollectorEngine : public Service
 	ClassAd* updateClassAd(CollectorHashTable&,const char*, const char *,
 						   ClassAd*,AdNameHashKey&, const MyString &, int &, 
 						   const sockaddr_in * );
+
+	// support for dynamically created tables
+	CollectorHashTable *findOrCreateTable(MyString &str);
 
 	// Statistics
 	CollectorStats	*collectorStats;

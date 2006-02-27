@@ -41,7 +41,8 @@ enum AdTypes
 	NUM_AD_TYPES,
 	CLUSTER_AD,
 	NEGOTIATOR_AD,
-	HAD_AD
+	HAD_AD,
+	GENERIC_AD
 };
 
 #include "condor_commands.h"   // collector commands

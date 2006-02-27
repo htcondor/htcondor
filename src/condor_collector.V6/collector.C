@@ -196,6 +196,9 @@ void CollectorDaemon::Init()
 	daemonCore->Register_Command(INVALIDATE_HAD_ADS,
 		"INVALIDATE_HAD_ADS", (CommandHandler)receive_invalidation,
 		"receive_invalidation",NULL,DAEMON);
+	daemonCore->Register_Command(INVALIDATE_ADS_GENERIC,
+		"INVALIDATE_ADS_GENERIC", (CommandHandler)receive_invalidation,
+		"receive_invalidation",NULL,DAEMON);
 
 		// // // // // // // // // // // // // // // // // // // // //
 		// WARNING!!!! If you add other update commands here, you
@@ -230,6 +233,10 @@ void CollectorDaemon::Init()
 		(CommandHandler)receive_update,"receive_update",NULL,NEGOTIATOR);
 	daemonCore->Register_Command(UPDATE_HAD_AD,"UPDATE_HAD_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
+	daemonCore->Register_Command(UPDATE_AD_GENERIC, "UPDATE_AD_GENERIC",
+				     (CommandHandler)receive_update,
+				     "receive_update", NULL, DAEMON);
+				     
 
 	// ClassAd evaluations use this function to resolve names
 	// ClassAdLookupRegister( process_global_query, this );
@@ -477,6 +484,11 @@ int CollectorDaemon::receive_invalidation(Service* s, int command, Stream* sock)
 		whichAds = STORAGE_AD;
 		break;
 
+          case INVALIDATE_ADS_GENERIC:
+		dprintf(D_ALWAYS, "Got INVALIDATE_ADS_GENERIC\n");
+		whichAds = GENERIC_AD;
+		break;
+
 	  default:
 		dprintf(D_ALWAYS,"Unknown command %d in receive_invalidation()\n", 
 			command);
@@ -640,6 +652,7 @@ CollectorDaemon::sockCacheHandler( Service*, Stream* sock )
 	case UPDATE_HAD_AD:
 	case UPDATE_LICENSE_AD:
 	case UPDATE_STORAGE_AD:
+	case UPDATE_AD_GENERIC:
 		return receive_update( NULL, cmd, sock );
 		break;
 
@@ -784,7 +797,8 @@ void CollectorDaemon::process_invalidation (AdTypes whichAds, ClassAd &query, St
 	}
 
 	// first set all the "LastHeardFrom" attributes to low values ...
-	collector.walkHashTable (whichAds, invalidation_scanFunc);
+	AdTypes queryAds = (whichAds == GENERIC_AD) ? ANY_AD : whichAds;
+	collector.walkHashTable (queryAds, invalidation_scanFunc);
 
 	// ... then invoke the housekeeper
 	collector.invokeHousekeeper (whichAds);

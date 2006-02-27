@@ -49,12 +49,11 @@ class AdNameHashKey
 
 // the hash functions
 int adNameHashFunction (const AdNameHashKey &, int);
-#if 0
-int hashOnName   (const AdNameHashKey &, int);
-#endif
+int stringHashFunction (const MyString &, int);
 
 // type for the hash tables ...
 typedef HashTable <AdNameHashKey, ClassAd *> CollectorHashTable;
+typedef HashTable <MyString, CollectorHashTable *> GenericAdHashTable;
 
 // functions to make the hashkeys
 bool makeStartdAdHashKey (AdNameHashKey &, ClassAd *, sockaddr_in *);
@@ -67,6 +66,7 @@ bool makeCollectorAdHashKey (AdNameHashKey &, ClassAd *, sockaddr_in *);
 bool makeStorageAdHashKey (AdNameHashKey &, ClassAd *, sockaddr_in *);
 bool makeNegotiatorAdHashKey (AdNameHashKey &, ClassAd *, sockaddr_in *);
 bool makeHadAdHashKey (AdNameHashKey &, ClassAd *, sockaddr_in *);
+bool makeGenericAdHashKey (AdNameHashKey &, ClassAd *, sockaddr_in *);
 
 class HashString : public MyString
 {

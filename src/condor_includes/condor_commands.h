@@ -242,6 +242,9 @@ const int UPDATE_HAD_AD = 55;
 const int QUERY_HAD_ADS = 56;
 const int INVALIDATE_HAD_ADS = 57;
 
+const int UPDATE_AD_GENERIC = 58;
+const int INVALIDATE_ADS_GENERIC = 59;
+
 /*
 *** Daemon Core Signals
 */

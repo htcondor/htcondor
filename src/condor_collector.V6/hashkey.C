@@ -34,6 +34,8 @@
 extern "C" char * sin_to_string(struct sockaddr_in *);
 
 template class HashTable<AdNameHashKey, ClassAd *>;
+template class HashTable<MyString, CollectorHashTable *>;
+
 int parseIpPort (const MyString &, MyString &);
 
 void AdNameHashKey::sprint (MyString &s)
@@ -56,15 +58,28 @@ ostream &operator<< (ostream &out, const AdNameHashKey &hk)
 	return out;
 }
 
+static int sumOverString(const MyString &str)
+{
+	int sum = 0;
+	for (const char *p = str.GetCStr(); p && *p; p++) {
+		sum += *p;
+	}
+	return sum;
+}
+
+int stringHashFunction (const MyString &str, int numBuckets)
+{
+	return sumOverString(str) % numBuckets;
+}
+
 int adNameHashFunction (const AdNameHashKey &key, int numBuckets)
 {
     unsigned int bkt = 0;
-	const char *p;
 
-    for (p = key.name.GetCStr(); p && *p; bkt += *p++);
-    for (p = key.ip_addr.GetCStr(); p && *p; bkt += *p++);
-
+    bkt += sumOverString(key.name);
+    bkt += sumOverString(key.ip_addr);
     bkt %= numBuckets;
+
     return bkt;
 }
 
@@ -398,6 +413,27 @@ makeHadAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
 	return true;
 }
 
+// for anything that sends its updates via UPDATE_AD_GENERIC, this
+// needs to provide a key that will uniquely identify each entity
+// with respect to all entities of that type
+// (e.g. this wouldn't work for submitter ads - see code for
+// makeScheddAdHashKey above)
+bool
+makeGenericAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
+{
+	char	*name = NULL;
+	if (!ad->LookupString ("Name", &name ))
+	{
+		dprintf (D_ALWAYS, "Error:  No 'Name' attribute\n");
+		return false;
+	}
+	
+	hk.name = name;
+	free( name );
+	hk.ip_addr = "";
+	
+	return true;
+}
 
 // utility function:  parse the string "<aaa.bbb.ccc.ddd:pppp>"
 //  Extracts the ip address portion ("aaa.bbb.ccc.ddd")
