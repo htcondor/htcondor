@@ -29,7 +29,8 @@
 
 #include "dag.h"
 
-ScriptQ::ScriptQ( Dag* dag )
+ScriptQ::ScriptQ( Dag* dag ) : 
+	_scriptDeferredCount	(0)
 {
 	_dag = dag;
 	_numScriptsRunning = 0;
@@ -81,9 +82,10 @@ ScriptQ::Run( Script *script )
 	}
 	else {
 			// max scripts already running
-		debug_printf( DEBUG_VERBOSE, "Max %s scripts (%d) already running; "
+		debug_printf( DEBUG_DEBUG_1, "Max %s scripts (%d) already running; "
 					  "deferring %s script of Job %s\n", prefix, maxScripts,
 					  prefix, script->GetNodeName() );
+		_scriptDeferredCount++;
 	}
 	_waitingQueue->enqueue( script );
 	return 0;

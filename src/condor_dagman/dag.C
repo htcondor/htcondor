@@ -95,7 +95,9 @@ Dag::Dag( /* const */ StringList &dagFiles, char *condorLogName,
 	_preRunNodeCount	  (0),
 	_postRunNodeCount	  (0),
 	_checkCondorEvents    (allow_events),
-	_checkStorkEvents     (allow_events)
+	_checkStorkEvents     (allow_events),
+	_maxJobsDeferredCount (0),
+	_maxIdleDeferredCount (0)
 {
 	ASSERT( dagFiles.number() >= 1 );
 
@@ -1161,19 +1163,21 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 
     // max jobs already submitted
     if( _maxJobsSubmitted && (_numJobsSubmitted >= _maxJobsSubmitted) ) {
-        debug_printf( DEBUG_VERBOSE,
+        debug_printf( DEBUG_DEBUG_1,
                       "Max jobs (%d) already running; "
 					  "deferring submission of %d ready job%s.\n",
                       _maxJobsSubmitted, _readyQ->Number(),
 					  _readyQ->Number() == 1 ? "" : "s" );
+		_maxJobsDeferredCount += _readyQ->Number();
         return numSubmitsThisCycle;
     }
 	if ( _maxIdleJobProcs && (_numIdleJobProcs >= _maxIdleJobProcs) ) {
-        debug_printf( DEBUG_VERBOSE,
+        debug_printf( DEBUG_DEBUG_1,
 					  "Hit max number of idle DAG nodes (%d); "
 					  "deferring submission of %d ready job%s.\n",
 					  _maxIdleJobProcs, _readyQ->Number(),
 					  _readyQ->Number() == 1 ? "" : "s" );
+		_maxIdleDeferredCount += _readyQ->Number();
         return numSubmitsThisCycle;
 	}
 
@@ -2113,6 +2117,37 @@ Dag::CheckAllJobs()
 				jobError.Value() );
 	} else {
 		debug_printf( DEBUG_DEBUG_1, "All Stork job events okay\n");
+	}
+}
+
+//-------------------------------------------------------------------------
+void
+Dag::PrintDeferrals( debug_level_t level, bool force ) const
+{
+	if( _maxJobsDeferredCount > 0 || force ) {
+		debug_printf( level, "Note: %d total job deferrals because "
+					"of -MaxJobs limit (%d)\n", _maxJobsDeferredCount,
+					_maxJobsSubmitted );
+	}
+
+	if( _maxIdleDeferredCount > 0 || force ) {
+		debug_printf( level, "Note: %d total job deferrals because "
+					"of -MaxIdle limit (%d)\n", _maxIdleDeferredCount,
+					_maxIdleJobProcs );
+	}
+
+	if( _preScriptQ->GetScriptDeferredCount() > 0 || force ) {
+		debug_printf( level, "Note: %d total PRE script deferrals because "
+					"of -MaxPre limit (%d)\n",
+					_preScriptQ->GetScriptDeferredCount(),
+					_maxPreScripts );
+	}
+
+	if( _postScriptQ->GetScriptDeferredCount() > 0 || force ) {
+		debug_printf( level, "Note: %d total POST script deferrals because "
+					"of -MaxPost limit (%d)\n",
+					_postScriptQ->GetScriptDeferredCount(),
+					_maxPostScripts );
 	}
 }
 

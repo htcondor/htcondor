@@ -265,6 +265,7 @@ int main_shutdown_rescue( int exitVal ) {
 			debug_printf( DEBUG_NORMAL, "Removing running scripts...\n" );
 			dagman.dag->RemoveRunningScripts();
 		}
+		dagman.dag->PrintDeferrals( DEBUG_NORMAL, true );
 	}
 	unlink( lockFileName ); 
     dagman.CleanUp();
@@ -628,6 +629,7 @@ print_status() {
 
 	debug_printf( DEBUG_VERBOSE, "%5d   %5d    %5d   %5d   %5d      %5d    %5d\n",
 				  done, pre, submitted, post, ready, unready, failed );
+	dagman.dag->PrintDeferrals( DEBUG_VERBOSE, false );
 }
 
 void condor_event_timer () {
@@ -716,6 +718,7 @@ void condor_event_timer () {
         ASSERT( dagman.dag->NumJobsSubmitted() == 0 );
 		dagman.dag->CheckAllJobs();
         debug_printf( DEBUG_NORMAL, "All jobs Completed!\n" );
+		dagman.dag->PrintDeferrals( DEBUG_NORMAL, true );
 		if ( dagman.dag->NumIdleJobProcs() != 0 ) {
 			debug_printf( DEBUG_NORMAL, "Warning:  DAGMan thinks there "
 						"are %d idle jobs, even though the DAG is "

@@ -373,6 +373,13 @@ class Dag {
 		*/
 	int GetStorkLogCount() const { return _storkLogFiles.number(); }
 
+		/** Print the number of deferrals during the run (caused
+		    by MaxJobs, MaxIdle, MaxPre, or MaxPost).
+			@param level: debug level for output.
+			@param force: whether to force output even if there have
+				been no deferrals.
+		*/
+	void PrintDeferrals( debug_level_t level, bool force ) const;
 
 		// non-exe failure codes for return value integers -- we
 		// represent DAGMan, batch-system, or other external errors
@@ -571,6 +578,16 @@ class Dag {
 		// IDs could collide.
 	CheckEvents	_checkCondorEvents;
 	CheckEvents	_checkStorkEvents;
+
+		// Total count of jobs deferred because of MaxJobs limit (note
+		// that a single job getting deferred multiple times is counted
+		// multiple times).
+	int		_maxJobsDeferredCount;
+
+		// Total count of jobs deferred because of MaxIdle limit (note
+		// that a single job getting deferred multiple times is counted
+		// multiple times).
+	int		_maxIdleDeferredCount;
 
 		// The next time we're allowed to try submitting a job -- 0 means
 		// go ahead and submit right away.
