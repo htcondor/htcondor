@@ -647,6 +647,10 @@ int CondorJob::doEvaluateState()
 			} break;
 		case GM_STAGE_IN: {
 			// Now stage files to the remote schedd
+			if ( condorState == REMOVED ) {
+				gmState = GM_CANCEL;
+				break;
+			}
 			if ( gahpAd == NULL ) {
 				gahpAd = buildStageInAd();
 			}
@@ -885,6 +889,10 @@ int CondorJob::doEvaluateState()
 			} break;
 		case GM_STAGE_OUT: {
 			// Now stage files back from the remote schedd
+			if ( condorState == REMOVED ) {
+				gmState = GM_CANCEL;
+				break;
+			}
 			rc = gahp->condor_job_stage_out( remoteScheddName, remoteJobId );
 			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
