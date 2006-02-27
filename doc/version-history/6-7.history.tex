@@ -35,6 +35,17 @@ grid-type gt2 jobs, the
 the new submission. If the cancel attempt fails, the \Condor{gridmanager}
 will proceed with the new submission anyway.
 
+% Gnats PR 636.
+\item In \Condor{dagman}, the informational messages about hitting
+the \Opt{-maxidle}, \Opt{-maxjobs}, \Opt{-maxpre}, and \Opt{-maxpost}
+limits are no longer printed to the \File{dagman.out} file by default.
+To see these messages, add \Bold{-debug 4} to the \Condor{submit\_dag}
+command line.  A summary of the total number of job and script deferrals
+is now printed by default each time the node status is printed and at
+the end of the \File{dagman.out} file.  This can be turned off by
+setting the debug level to 2 or lower on the \Condor{submit\_dag} 
+command line.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -944,7 +955,7 @@ multi-directory rescue DAGs (which it didn't before), but the
 \File{.condor.sub} files are still portable.
 
 \item Added the Stork log file (if any) to the list of log files that
-\Condor{dagman} lists in the dagman.out file.
+\Condor{dagman} lists in the \File{dagman.out} file.
 
 \item \Condor{dagman} now reports the node return value for all failed
 nodes.
