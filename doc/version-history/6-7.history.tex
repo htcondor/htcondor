@@ -75,6 +75,10 @@ Now, the old port will be reused when possible.
 when running grid-type gt4 jobs with an automatically-started gridftp
 server.
 
+\item When a grid-type condor job is removed, any active file transfer
+for the job is aborted. Previously, the transfer would be allowed to
+complete before the job was canceled.
+
 \end{itemize}
 
 \noindent Known Bugs:
