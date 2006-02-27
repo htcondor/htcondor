@@ -1293,6 +1293,18 @@ Sock::mypoint( struct sockaddr_in *sin )
     return 0;
 }
 
+char *
+Sock::sender_ip_str()
+{
+		// We need to recompute this each in case we have reconnected via a different interface
+	struct sockaddr_in sin;
+	if(mypoint(&sin) == -1) {
+		return NULL;
+	}
+	memset(&_sender_ip_buf, 0, _ENDPOINT_BUF_SIZE );
+	strcpy( _sender_ip_buf, inet_ntoa(sin.sin_addr) );
+	return &(_sender_ip_buf[0]);
+}
 
 char *
 Sock::get_sinful()

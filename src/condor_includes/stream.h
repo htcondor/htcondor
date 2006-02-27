@@ -486,6 +486,9 @@ public:
 	/// get timeout time for pending connect operation;
 	virtual time_t connect_timeout_time() = 0;
 
+	/// For stream types that support it, this returns the ip address we are connecting from.
+	virtual char const *sender_ip_str() = 0;
+
 	/** Get this stream's type.
         @return the type of this stream
     */

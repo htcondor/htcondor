@@ -183,6 +183,9 @@ public:
     /// @ret: 0 if succeed, -1 if failed
     int mypoint(struct sockaddr_in *sin);
 
+	/// my IP address, string version (e.g. "128.105.101.17")
+	char* sender_ip_str();
+
 	/// local port number
 	int get_port();
 
@@ -305,6 +308,9 @@ private:
 	///
 	// Buffer to hold the string version of our endpoint's IP address. 
 	char _endpoint_ip_buf[_ENDPOINT_BUF_SIZE];	
+
+	// Buffer to hold the string version of our own IP address. 
+	char _sender_ip_buf[_ENDPOINT_BUF_SIZE];	
 
 	// struct to hold state info for do_connect() method
 	struct connect_state_struct {

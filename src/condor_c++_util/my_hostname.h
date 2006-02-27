@@ -39,4 +39,28 @@ extern  void	init_ipaddr( int config_done );
 }
 #endif
 
+#if defined( __cplusplus )
+
+// If the specified attribute name is recognized as an attribute used
+// to publish a daemon IP address, this function replaces any
+// reference to the default host IP with the actual connection IP in
+// the attribute's expression string.  If no replacement happens,
+// new_expr_string will be NULL.  Otherwise, it will be a new buffer
+// allocated with malloc().  The caller should free it.
+
+// You might consider this a dirty hack (and it is), but of the
+// methods that were considered, this was the one with the lowest
+// maintainance, least overhead, and least likelihood to have
+// unintended side-effects.
+
+void ConvertDefaultIPToSocketIP(char const *attr_name,char const *old_expr_string,char **new_expr_string,Stream& s);
+
+// This is a convenient interface to ConvertDefaultIPToSocketIP().
+// If a replacement occurs, expr_string will be freed and replaced
+// with a new buffer allocated with malloc().  The caller should free it.
+
+void ConvertDefaultIPToSocketIP(char const *attr_name,char **expr_string,Stream& s);
+
+#endif
+
 #endif /* MY_HOSTNAME_H */

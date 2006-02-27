@@ -199,4 +199,13 @@ CondorQuery::CondorQuery(AdTypes foo) { not_impl();}
 
 CondorQuery::~CondorQuery() {} 
 
+char*
+my_ip_string() {not_impl();}
 
+void ConvertDefaultIPToSocketIP(char const *attr_name,char const *old_expr_string,char **new_expr_string,Stream& s) {
+	not_impl();
+}
+
+void ConvertDefaultIPToSocketIP(char const *attr_name,char **expr_string,Stream& s) {
+	not_impl();
+}

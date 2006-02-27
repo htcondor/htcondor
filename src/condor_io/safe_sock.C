@@ -243,6 +243,22 @@ int SafeSock::connect(
 		}
 	}
 
+		/* Call connect(), even though this is UDP, so getsockname() works.
+		   This does not cause any actual communication yet, so there is
+		   no need for worry about timeouts etc.
+		 */
+	if(::connect(_sock, (sockaddr *)&_who, sizeof(sockaddr_in)) != 0) {
+#if defined(WIN32)
+		int lasterr = WSAGetLastError();
+		dprintf( D_ALWAYS, "Can't connect to %s:%d, errno = %d\n",
+				 host, port, lasterr );
+#else
+		dprintf( D_ALWAYS, "Can't connect to %s:%d, errno = %d\n",
+				 host, port, errno );
+#endif
+		return FALSE;
+	}
+
 	_state = sock_connect;
 	return TRUE;
 }

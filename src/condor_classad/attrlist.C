@@ -33,6 +33,7 @@
 #include "iso_dates.h"
 #include "condor_xml_classads.h"
 #include "condor_string.h" // for strnewp()
+#include "my_hostname.h"
 
 extern void evalFromEnvironment (const char *, EvalResult *);
 
@@ -2169,7 +2170,6 @@ void AttrListList::fPrintAttrListList(FILE* f, bool use_xml)
     Close();
 }
 
-
 // shipping functions for AttrList -- added by Lei Cao
 int AttrList::put(Stream& s)
 {
@@ -2206,6 +2206,7 @@ int AttrList::put(Stream& s)
 		for(elem = *chainedAttrs; elem; elem = elem->next) {
 			line = NULL;
 			elem->tree->PrintToNewStr(&line);
+			ConvertDefaultIPToSocketIP(elem->name,&line,s);
 			if(!s.code(line)) {
 				free(line);
 				return 0;
@@ -2216,6 +2217,7 @@ int AttrList::put(Stream& s)
     for(elem = exprList; elem; elem = elem->next) {
         line = NULL;
         elem->tree->PrintToNewStr(&line);
+		ConvertDefaultIPToSocketIP(elem->name,&line,s);
         if(!s.code(line)) {
 			free(line);
             return 0;

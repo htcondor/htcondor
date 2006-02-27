@@ -1588,7 +1588,17 @@ ClaimId::~ClaimId()
 bool
 ClaimId::matches( const char* id )
 {
-	return( strcmp(id, c_id) == 0 );
+	// When we send the claim ID, the IP in it may get rewritten, depending
+	// on which interface we use to talk to the collector.  Therefore,
+	// do not compare the IP portion of the claim ID.
+
+	char const *id_after_ip = strchr(id,':');
+	char const *c_id_after_ip = strchr(c_id,':');
+
+	if(!id_after_ip) return false; //caller gave us a bogus claim id
+	ASSERT(c_id_after_ip); //should never happen -- our claim id is bogus
+
+	return( strcmp(id_after_ip, c_id_after_ip) == 0 );
 }
 
 
