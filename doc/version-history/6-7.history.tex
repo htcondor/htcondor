@@ -35,6 +35,16 @@ grid-type gt2 jobs, the
 the new submission. If the cancel attempt fails, the \Condor{gridmanager}
 will proceed with the new submission anyway.
 
+\item When \Macro{BIND\_ALL\_INTERFACES} is enabled, Condor daemons
+now advertise their IP address as that of the network interface used
+to contact the collector.  This makes it possible, for example, to
+have a schedd on a multi-homed machine flock jobs to Condor pools in
+two seperate networks, because the schedd can advertise a different IP
+address to the two collectors.  This change also produces improved
+default behavior in cases such as \Condor{glidein} where the startd
+lands on a dual-homed machine and needs to choose between advertising
+a public IP address versus a private one.
+
 % Gnats PR 636.
 \item In \Condor{dagman}, the informational messages about hitting
 the \Opt{-maxidle}, \Opt{-maxjobs}, \Opt{-maxpre}, and \Opt{-maxpost}

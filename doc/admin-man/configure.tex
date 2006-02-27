@@ -1343,7 +1343,11 @@ section~\ref{sec:Networking} on page~\pageref{sec:Networking}.
   set to \verb@TRUE@ to cause Condor to bind to all interfaces on the
   machine.
   However, currently Condor is still only able to advertise a single
-  IP address, even if it is listening on multiple interfaces.
+  IP address, even if it is listening on multiple interfaces.  By
+  default, it will advertise the IP address of the network interface
+  used to contact the collector, since this is the most likely to be
+  accessible to other processes which query information from the same
+  collector.
   More information about using this setting can be found in
   section~\ref{sec:Using-BindAllInterfaces} on
   page~\pageref{sec:Using-BindAllInterfaces}. 

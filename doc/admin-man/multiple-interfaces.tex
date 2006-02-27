@@ -149,8 +149,9 @@ Here are descriptions of the limitations.
   each with a separate IP, the daemon must choose what IP address to
   publicly advertise so that other daemons and tools can locate it.
 
-  By default, Condor advertises the first IP address it finds
-  when looking up the host information for itself.  
+  By default, Condor advertises the IP address of the network interface
+  used to contact the collector, since this is the most likely to be
+  accessible to other processes that query the same collector.
   The \Macro{NETWORK\_INTERFACE} setting can still be used to
   specify the IP address Condor should advertise, even if
   \MacroNI{BIND\_ALL\_INTERFACES} is set to \Expr{True}.
