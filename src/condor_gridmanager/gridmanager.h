@@ -42,6 +42,7 @@
 #define TIMER_UNSET -1
 
 extern char *ScheddAddr;
+extern DCSchedd *ScheddObj;
 extern char *ScheddJobConstraint;
 extern char *GridmanagerScratchDir;
 extern char *Owner;

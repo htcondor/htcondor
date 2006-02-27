@@ -524,12 +524,6 @@ bool GridftpServer::SubmitServerJob()
 	if ( m_requestedUrlBase ) {
 		dprintf( D_FULLDEBUG, "   reusing URL %s\n", m_requestedUrlBase );
 	}
-	DCSchedd dc_schedd( ScheddAddr );
-	if ( dc_schedd.error() || !dc_schedd.locate() ) {
-		dprintf( D_ALWAYS, "GridftpServer::SubmitServerJob: Can't find "
-				 "our schedd!?\n" );
-		return false;
-	}
 
 	server_path = param( "GRIDFTP_SERVER" );
 	if ( !server_path ) {
@@ -740,7 +734,7 @@ bool GridftpServer::SubmitServerJob()
 	DisconnectQ( schedd );
 	schedd = NULL;
 
-	if ( !dc_schedd.spoolJobFiles( 1, &job_ad, &errstack ) ) {
+	if ( !ScheddObj->spoolJobFiles( 1, &job_ad, &errstack ) ) {
 		dprintf( D_ALWAYS, "GridftpServer::SubmitServerJob: Failed to "
 				 "stage in files: %s\n", errstack.getFullText() );
 		goto error_exit;
@@ -943,19 +937,12 @@ void GridftpServer::CheckProxy()
 		return;
 	}
 
-	DCSchedd dc_schedd ( ScheddAddr );
-	if ( dc_schedd.error() || !dc_schedd.locate() ) {
-		dprintf( D_ALWAYS, "GridftpServer::CheckProxy: Can't find our "
-				 "schedd!?\n" );
-		return;
-	}
-
 	CondorError errstack;
 	bool result;
 
-	result = dc_schedd.updateGSIcredential( m_jobId.cluster, m_jobId.proc,
-											m_proxy->proxy_filename,
-											&errstack );
+	result = ScheddObj->updateGSIcredential( m_jobId.cluster, m_jobId.proc,
+											 m_proxy->proxy_filename,
+											 &errstack );
 
 	m_lastProxyUpdateAttempt = time(NULL);
 
@@ -1044,13 +1031,6 @@ bool GridftpServer::FetchJobFiles()
 		return false;
 	}
 
-	DCSchedd dc_schedd ( ScheddAddr );
-	if ( dc_schedd.error() || !dc_schedd.locate() ) {
-		dprintf( D_ALWAYS, "GridftpServer::FetchJobFiles: Can't find our "
-				 "schedd!?\n" );
-		return false;
-	}
-
 	bool result;
 	CondorError errstack;
 	MyString constraint;
@@ -1058,7 +1038,7 @@ bool GridftpServer::FetchJobFiles()
 	constraint.sprintf( "%s == %d && %s == %d", ATTR_CLUSTER_ID,
 						m_jobId.cluster, ATTR_PROC_ID, m_jobId.proc );
 
-	result = dc_schedd.receiveJobSandbox( constraint.Value(), &errstack );
+	result = ScheddObj->receiveJobSandbox( constraint.Value(), &errstack );
 	if ( result == false ) {
 		dprintf( D_ALWAYS, "GridftpServer::FetchJobFiles: Failed to fetch "
 				 "files: %s\n", errstack.getFullText() );
@@ -1076,13 +1056,6 @@ bool GridftpServer::RemoveJob()
 		return false;
 	}
 
-	DCSchedd dc_schedd ( ScheddAddr );
-	if ( dc_schedd.error() || !dc_schedd.locate() ) {
-		dprintf( D_ALWAYS, "GridftpServer::RemoveJob: Can't find our "
-				 "schedd!?\n" );
-		return false;
-	}
-
 	bool success = true;
 
 	StringList id_list;
@@ -1093,7 +1066,7 @@ bool GridftpServer::RemoveJob()
 	CondorError errstack;
 	ClassAd *result_ad = NULL;
 
-	result_ad = dc_schedd.removeJobs( &id_list, "by gridmanager", &errstack );
+	result_ad = ScheddObj->removeJobs( &id_list, "by gridmanager", &errstack );
 
 	if (!result_ad) {
 		dprintf( D_ALWAYS, "GridftpServer::RemoveJob: Error connecting "
