@@ -2,6 +2,8 @@
 02/27/06 V6_7-dagman_classad-branch
 	Branch for work on adding classad-based workflows to DAGMan.
 	Work is mainly being done by Himani <himani@cs.wisc.edu>.
+	Created from the last known good build of V6_7-branch, which was tagged
+	BUILD-V6_7-branch-2006-2-26.
 
 02/23/06 V6_7_17
 	The official 6.7.17 release.  Packages came from NMI build 19375 with the
