@@ -250,9 +250,12 @@ RemoveMatchedAd(int cluster_id, int proc_id)
 // Look for attributes that have changed name or syntax in a previous
 // version of Condor and convert the old format to the current format.
 // *This function is not transaction-safe!*
+// If startup is true, then this job was read from the job queue log on
+//   schedd startup. Otherwise, it's a new job submission. Some of these
+//   conversion checks only need to be done for existing jobs at startup.
 // Returns true if the ad was modified, false otherwise.
 void
-ConvertOldJobAdAttrs( ClassAd *job_ad )
+ConvertOldJobAdAttrs( ClassAd *job_ad, bool startup )
 {
 	int universe, cluster, proc;
 
@@ -320,7 +323,7 @@ ConvertOldJobAdAttrs( ClassAd *job_ad )
 				JobQueueDirty = true;
 			}
 
-			if ( grid_job_id.IsEmpty() &&
+			if ( startup && grid_job_id.IsEmpty() &&
 				 job_ad->LookupString( ATTR_GLOBUS_CONTACT_STRING, attr ) ) {
 
 				if ( attr != NULL_JOB_CONTACT ) {
@@ -398,7 +401,7 @@ ConvertOldJobAdAttrs( ClassAd *job_ad )
 				JobQueueDirty = true;
 			}
 
-			if ( grid_job_id.IsEmpty() &&
+			if ( startup && grid_job_id.IsEmpty() &&
 				 job_ad->LookupString( ATTR_REMOTE_JOB_ID, jobid ) ) {
 
 					// Ugly: If the job is using match-making, we
@@ -438,7 +441,7 @@ ConvertOldJobAdAttrs( ClassAd *job_ad )
 				JobQueueDirty = true;
 			}
 
-			if ( grid_job_id.IsEmpty() &&
+			if ( startup && grid_job_id.IsEmpty() &&
 				 job_ad->LookupString( ATTR_REMOTE_JOB_ID, jobid ) ) {
 
 				MyString new_value;
@@ -448,6 +451,18 @@ ConvertOldJobAdAttrs( ClassAd *job_ad )
 				job_ad->AssignExpr( ATTR_REMOTE_JOB_ID, "Undefined" );
 				JobQueueDirty = true;
 			}
+		}
+	}
+
+		// CRUFT
+		// Starting in 6.7.11, ATTR_JOB_MANAGED changed from a boolean
+		// to a string.
+	int ntmp;
+	if( startup && job_ad->LookupBool(ATTR_JOB_MANAGED, ntmp) ) {
+		if(ntmp) {
+			job_ad->Assign(ATTR_JOB_MANAGED, MANAGED_EXTERNAL);
+		} else {
+			job_ad->Assign(ATTR_JOB_MANAGED, MANAGED_SCHEDD);
 		}
 	}
 
@@ -566,16 +581,6 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 				ad->ChainToAd(clusterad);
 			}
 
-			int ntmp;
-			if( ad->LookupBool(ATTR_JOB_MANAGED, ntmp) ) {
-				// "Managed" is no longer a bool.  It's a string state.
-				if(ntmp) {
-					ad->Assign(ATTR_JOB_MANAGED, MANAGED_EXTERNAL);
-				} else {
-					ad->Assign(ATTR_JOB_MANAGED, MANAGED_SCHEDD);
-				}
-			}
-
 			if (!ad->LookupString(ATTR_OWNER, owner)) {
 				dprintf(D_ALWAYS,
 						"Job %s has no %s attribute.  Removing....\n",
@@ -677,7 +682,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 				}
 			}
 
-			ConvertOldJobAdAttrs( ad );
+			ConvertOldJobAdAttrs( ad, true );
 
 			// count up number of procs in cluster, update ClusterSizeHashTable
 			IncrementClusterSize(cluster_num);
@@ -1853,7 +1858,7 @@ CloseConnection()
 				for ( i = 0; i < *numOfProcs; i++ ) {
 					if (JobQueue->LookupClassAd(IdToStr(cluster_id,i),procad)) {
 						procad->ChainToAd(clusterad);
-						ConvertOldJobAdAttrs(procad);
+						ConvertOldJobAdAttrs(procad, false);
 					}
 				}	// end of loop thru all proc in cluster cluster_id
 			}	
