@@ -325,6 +325,9 @@ sysapi_translate_opsys( char *sysname, char *release, char *version )
 		else if( !strcmp(release, "B.11.00") ) {
 			sprintf( tmp, "HPUX11" );
 		} 
+		else if( !strcmp(release, "B.11.11") ) {
+			sprintf( tmp, "HPUX11" );
+		} 
 		else {
 			sprintf( tmp, "HPUX%s", release );
 		}
@@ -410,7 +413,7 @@ get_hpux_arch( struct utsname *buf )
 {
 	FILE* fp;
 	static char *file = "/opt/langtools/lib/sched.models";
-	char machinfo[4096], line[128];
+	char line[128];
 	char *model;
 	char cputype[128], cpumodel[128];
 	int len, found_it = FALSE;

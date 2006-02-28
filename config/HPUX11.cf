@@ -1,7 +1,8 @@
 /* HPUX 11 Specific stuff */
 
 #define PlatformFlags		-DHPUX11=HPUX11
-#define PlatformLdFlags		-Wl,+vnocompatwarnings
+#undef  PlatformLdFlags
+#define PlatformLdFlags		-Wl,+vnocompatwarnings -static -lstdc++ -dynamic
 
 /*
 #undef SimpleLibC
@@ -30,7 +31,9 @@
 #define HAS_GSI				NO
 #define HAS_OPENSSL			NO
 
+#undef WANT_PVM
 #define WANT_PVM			NO
+#undef WANT_KERBEROS
 #define WANT_KERBEROS       NO
 
 #define IS_CLIPPED YES

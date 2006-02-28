@@ -15,7 +15,7 @@ case "x$os" in
 	xHP-UX)
 		# Use /lib/cpp.ansi if we've got it, otherwise try /usr/ccs/lbin
 		test -x /lib/cpp.ansi && exec /lib/cpp.ansi $*
-        exec /usr/ccs/lbin/cpp $*
+       		exec /usr/local/bin/cpp $*
 		;;
 	xIRIX)
 		# stupid irix, this is santctioned by the X distribution.
