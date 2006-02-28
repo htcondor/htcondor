@@ -1293,7 +1293,7 @@ Sock::mypoint( struct sockaddr_in *sin )
     return 0;
 }
 
-char *
+const char *
 Sock::sender_ip_str()
 {
 		// We need to recompute this each in case we have reconnected via a different interface

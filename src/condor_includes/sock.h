@@ -184,7 +184,7 @@ public:
     int mypoint(struct sockaddr_in *sin);
 
 	/// my IP address, string version (e.g. "128.105.101.17")
-	char* sender_ip_str();
+	const char* sender_ip_str();
 
 	/// local port number
 	int get_port();
