@@ -37,6 +37,7 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "sysapi.h"
+#include "../h/util_lib_proto.h"
 
 /* the cooked version */
 float
@@ -742,7 +743,7 @@ lookup_load_avg_via_uptime()
 	 *  next number.  This is the number we want.
 	 */
 	if (uptime_path != NULL) {
-		char *args = {uptime_path, NULL};
+		char *args[2] = {uptime_path, NULL};
 		if ((output_fp = my_popenv(args, "r")) == NULL) {
 			return DEFAULT_LOADAVG;
 		}
