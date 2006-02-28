@@ -75,8 +75,8 @@ strip_copy_target(Execute.pm,lib,Execute.pm,OBJECT_MODE)
 static_copy_target(Execute.pm,lib,Execute.pm,OBJECT_MODE)
 
 release_copy_target(FileLock.pm,lib,FileLock.pm,OBJECT_MODE)
-strip_copy_target(Execute.pm,lib,Execute.pm,OBJECT_MODE)
-static_copy_target(Execute.pm,lib,Execute.pm,OBJECT_MODE)
+strip_copy_target(FileLock.pm,lib,FileLock.pm,OBJECT_MODE)
+static_copy_target(FileLock.pm,lib,FileLock.pm,OBJECT_MODE)
 
 
 html:
