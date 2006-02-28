@@ -40,6 +40,7 @@ extern  void	init_ipaddr( int config_done );
 #endif
 
 #if defined( __cplusplus )
+#include "stream.h"
 
 // If the specified attribute name is recognized as an attribute used
 // to publish a daemon IP address, this function replaces any
