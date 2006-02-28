@@ -30,11 +30,15 @@
 
 
 // store cred return codes
-const int SUCCESS = 1; 				// it worked!
-const int FAILURE = 0;				// communication error
+const int SUCCESS = 1; 					// it worked!
+const int FAILURE = 0;					// communication error
 const int FAILURE_BAD_PASSWORD = 2;		// bad (wrong) password
-const int FAILURE_NOT_SUPPORTED = 3;		// user switching not supported
-						// (not running as SYSTEM)
+const int FAILURE_NOT_SUPPORTED = 3;	// user switching not supported
+const int FAILURE_NOT_SECURE = 4;		// channel is insecure
+const int FAILURE_NOT_FOUND = 5;		// user not found
+
+// not a return code - reserved for caller's use
+const int FAILURE_ABORTED = -1;	
 
 // store cred modes
 const int ADD_MODE = 100;
@@ -47,18 +51,21 @@ const char DELETE_CREDENTIAL[] = "delete";
 const char QUERY_CREDENTIAL[] = "query";
 const char CONFIG_CREDENTIAL[] = "config";
 
+const char POOL_PASSWORD_USERNAME[] = "condor_pool_password";
+
 #define MAX_PASSWORD_LENGTH 255
 
 void store_cred_handler(void *, int i, Stream *s);
-int store_cred(const char *user, const char* pw, int mode, Daemon *d = NULL );
+void store_pool_cred_handler(void *, int i, Stream *s);
+int store_cred(const char *user, const char* pw, int mode, Daemon *d = NULL, bool force = false);
 int store_cred_service(const char *user, const char *pw, int mode);
 
-bool read_no_echo(char* buf, int maxlength);
+bool read_from_keyboard(char* buf, int maxlength, bool echo = true);
 char* get_password(void);	// get password from user w/o echo on the screen
 bool isValidCredential( const char *user, const char* pw );
-int addCredential(const char* user, const char* pw);
-int deleteCredential(const char* user); // not checking password before removal yet
-int queryCredential(const char* user);  // just tell me if I have one stashed
+int addCredential(const char* user, const char* pw, Daemon *d = NULL);
+int deleteCredential(const char* user, const char* pw, Daemon *d = NULL);
+int queryCredential(const char* user, Daemon *d = NULL);  // just tell me if I have one stashed
 
 #endif // WIN32
 

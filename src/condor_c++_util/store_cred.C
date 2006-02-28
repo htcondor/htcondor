@@ -93,6 +93,7 @@ int store_cred_service(const char *user, const char *pw, int mode)
 	int errno_result = 0;
 	int answer = FAILURE;
 	lsa_mgr lsa_man;
+	wchar_t *pw_wc;
 	
 	// we'll need a wide-char version of the user name later
 	if ( user ) {
@@ -114,6 +115,7 @@ int store_cred_service(const char *user, const char *pw, int mode)
 			retval = isValidCredential(user, pw);
 
 			if ( ! retval ) {
+				dprintf(D_FULLDEBUG, "store_cred: tried to add invalid credential\n");
 				answer=FAILURE_BAD_PASSWORD; 
 				break; // bail out 
 			}
@@ -129,15 +131,30 @@ int store_cred_service(const char *user, const char *pw, int mode)
 			} else {
 				answer = SUCCESS;
 			}
-			ZeroMemory(pwbuf, MAX_PASSWORD_LENGTH*sizeof(wchar_t)); 
-			ZeroMemory(userbuf, MAX_PASSWORD_LENGTH*sizeof(wchar_t));
+			SecureZeroMemory(pwbuf, MAX_PASSWORD_LENGTH*sizeof(wchar_t)); 
 			break;
 		case DELETE_MODE:
 			dprintf( D_FULLDEBUG, "Deleting %S from credential storage.\n", 
 				userbuf );
+
+			pw_wc = lsa_man.query(userbuf);
+			if ( !pw_wc ) {
+				answer = FAILURE_NOT_FOUND;
+				break;
+			}
+			else {
+				SecureZeroMemory(pw_wc, wcslen(pw_wc));
+				delete[] pw_wc;
+			}
+
+			if (!isValidCredential(user, pw)) {
+				dprintf(D_FULLDEBUG, "store_cred: invalid credential given for delete\n");
+				answer = FAILURE_BAD_PASSWORD;
+				break;
+			}
+
 			// call lsa_mgr api
 			// answer = return code
-			swprintf(userbuf, L"%S", user);
 			if (!lsa_man.remove(userbuf)) {
 				answer = FAILURE;
 			} else {
@@ -148,17 +165,15 @@ int store_cred_service(const char *user, const char *pw, int mode)
 			{
 				dprintf( D_FULLDEBUG, "Checking for %S in credential storage.\n", 
 					 userbuf );
-				swprintf(userbuf, L"%S", user);
 				
 				char passw[MAX_PASSWORD_LENGTH];
-				wchar_t *pw_wc = NULL;
 				pw_wc = lsa_man.query(userbuf);
 				
 				if ( !pw_wc ) {
-					answer = FAILURE;
+					answer = FAILURE_NOT_FOUND;
 				} else {
 					sprintf(passw, "%S", pw_wc);
-					ZeroMemory(pw_wc, wcslen(pw_wc));
+					SecureZeroMemory(pw_wc, wcslen(pw_wc));
 					delete[] pw_wc;
 					
 					if ( isValidCredential(user, passw) ) {
@@ -167,7 +182,7 @@ int store_cred_service(const char *user, const char *pw, int mode)
 						answer = FAILURE_BAD_PASSWORD;
 					}
 					
-					ZeroMemory(passw, MAX_PASSWORD_LENGTH);
+					SecureZeroMemory(passw, MAX_PASSWORD_LENGTH);
 				}
 				break;
 			}
@@ -204,21 +219,15 @@ void store_cred_handler(void *, int i, Stream *s)
 		return;
 	} 
 
+	// ensure that the username has an '@' delimteter
+	// the only "user" allowed to not contain a '@' is POOL_PASSWORD_USERNAME
+	// (we allow queries on POOL_PASSWORD_USERNAME via this handler, but updates
+	//  must come in via store_pool_cred_handler)
 	if ( user ) {
-		char *tmp=NULL;
-		if ( (tmp=strchr(user,'@')) ) {
-			*tmp = '\0';		// replace @ sign with a NULL
-		}
-		if ( stricmp(user,"condor")==0 ) {
-				// Not allowed to set the user "condor" password over the network!
-			dprintf(D_ALWAYS, 
-				"store_cred_handler: "
-				"ERROR - attempt to set pool password via network!\n");
-			answer = FAILURE_BAD_PASSWORD;
+		if ((mode != QUERY_MODE) && (strchr(user, '@') == NULL)) {
+			dprintf(D_ALWAYS, "ERROR: attempt to set pool password via STORE_CRED! (must use STORE_POOL_CRED)\n");
+			answer = FAILURE;
 		} else {
-			if (tmp) {
-				*tmp = '@';		// put back the @ sign we removed above
-			}
 			answer = store_cred_service(user,pw,mode);
 		}
 	}
@@ -246,18 +255,49 @@ void store_cred_handler(void *, int i, Stream *s)
 	return;
 }	
 
+void store_pool_cred_handler(void *, int i, Stream *s)
+{
+	int result;
+	char *pw = NULL;
+
+	s->decode();
+	result = s->code(pw);
+	if(!result) {
+		dprintf(D_ALWAYS, "store_pool_cred: Failed to receive password.\n");
+		return;
+	}
+	result = s->end_of_message();
+	if( !result ) {
+		dprintf(D_ALWAYS, "store_pool_cred: Failed to receive eom.\n");
+		return;
+	}
+
+	// do the real work
+	if (pw) {
+		result = store_cred_service(POOL_PASSWORD_USERNAME, pw, ADD_MODE);
+		SecureZeroMemory(pw, strlen(pw));
+		free(pw);
+	}
+	else {
+		result = store_cred_service(POOL_PASSWORD_USERNAME, pw, DELETE_MODE);
+	}
+
+	s->encode();
+	if (!s->code(result)) {
+		dprintf(D_ALWAYS, "store_pool_cred: Failed to send result.\n");
+		return;
+	}
+	if (!s->eom()) {
+		dprintf(D_ALWAYS, "store_pool_cred: Failed to send end of message.\n");
+	}
+}
 
 int 
-store_cred(const char* user, const char* pw, int mode, Daemon* d) {
-//----For debugging purposes-----
-//	DebugFP = stdout;
-//	DebugFlags = D_ALL;
-//-------------------------------
+store_cred(const char* user, const char* pw, int mode, Daemon* d, bool force) {
 	
 	int result;
 	int return_val;
 	Sock* sock = NULL;
-	int cmd = STORE_CRED;
 
 		// If we are root / SYSTEM and we want the local schedd, 
 		// then do the work directly to the local registry.
@@ -267,65 +307,83 @@ store_cred(const char* user, const char* pw, int mode, Daemon* d) {
 			// do the work directly onto the local registry
 		return_val = store_cred_service(user,pw,mode);
 	} else {
-			// send out request remotely.
+			// send out the request remotely.
 
-			// If credd_host is defined, use that as a pointer to our credd on
-			// the network.  If not defined, try to use the schedd like 
-			// we've always done in the past.
-		char *credd_host = param("CREDD_HOST");
-		if (credd_host) {
-				// Setup a socket to a central credd
-			MyString credd_sinful;
-			credd_sinful = "<" ;
-			credd_sinful += credd_host;
-			credd_sinful += ">";
-			free(credd_host);
-			credd_host = NULL;
+			// if we're setting the pool password, we need to use STORE_POOL_CRED
+			// (which is handled by the master, rather than schedd, and requires
+			//  CONFIG authorization)
+		int cmd = STORE_CRED;
+		if ((mode == ADD_MODE) && (strcmp(user, POOL_PASSWORD_USERNAME) == 0)) {
+			cmd = STORE_POOL_CRED;
+		}
 
-			dprintf(D_FULLDEBUG,"Storing credential to credd at %s\n",
-					credd_sinful.Value());
-			Daemon credd(DT_ANY,credd_sinful.Value());
-			sock = credd.startCommand(cmd, Stream::reli_sock, 0);
-		} else {
-				// Setup a socket to a schedd
-			if (d == NULL) {
-				dprintf(D_FULLDEBUG,"Storing credential to local schedd\n");
-				Daemon my_schedd(DT_SCHEDD, NULL, NULL);
-				sock = my_schedd.startCommand(cmd, Stream::reli_sock, 0);
-			} else {
-				dprintf(D_FULLDEBUG,"Storing credential to remote schedd\n");
-				sock = d->startCommand(cmd, Stream::reli_sock, 0);
+		if (d == NULL) {
+			if (cmd == STORE_POOL_CRED) {
+				// need to go to the master for setting the pool password
+				dprintf(D_FULLDEBUG, "Storing credential to local master\n");
+				Daemon my_master(DT_MASTER);
+				sock = my_master.startCommand(cmd, Stream::reli_sock, 0);
 			}
+			else {
+				dprintf(D_FULLDEBUG, "Storing credential to local schedd\n");
+				Daemon my_schedd(DT_SCHEDD);
+				sock = my_schedd.startCommand(cmd, Stream::reli_sock, 0);
+			}
+		} else {
+			sock = d->startCommand(cmd, Stream::reli_sock, 0);
 		}
 		
 		if( !sock ) {
 			dprintf(D_ALWAYS, 
 				"STORE_CRED: Failed to start command.\n");
-			return FALSE;
+			return FAILURE;
+		}
+
+		// for remote updates, verify we have a secure channel,
+		// unless "force" is specified
+		if (((mode == ADD_MODE) || (mode == DELETE_MODE)) && !force && (d != NULL) &&
+			((sock->type() != Stream::reli_sock) || !((ReliSock*)sock)->isAuthenticated() || !sock->get_encryption())) {
+			dprintf(D_ALWAYS, "STORE_CRED: blocking attempt to update over insecure channel\n");
+			delete sock;
+			return FAILURE_NOT_SECURE;
 		}
 		
-		result = code_store_cred(sock, (char*&)user, (char*&)pw, mode);
-		
-		if( result == FALSE ) {
-			dprintf(D_ALWAYS, "store_cred: code_store_cred failed.\n");
-			delete sock;
-			return FALSE;
+		if (cmd == STORE_CRED) {
+			result = code_store_cred(sock, (char*&)user, (char*&)pw, mode);
+			if( result == FALSE ) {
+				dprintf(D_ALWAYS, "store_cred: code_store_cred failed.\n");
+				delete sock;
+				return FAILURE;
+			}
+		}
+		else {
+				// only need to send the password for STORE_POOL_CRED
+			if (!sock->code((char*&)pw)) {
+				dprintf(D_ALWAYS, "store_cred: failed to send pw for STORE_POOL_CRED\n");
+				delete sock;
+				return FAILURE;
+			}
+			if (!sock->end_of_message()) {
+				dprintf(D_ALWAYS, "store_cred: failed to receive eom for STORE_POOL_CRED\n");
+				delete sock;
+				return FAILURE;
+			}
 		}
 		
 		sock->decode();
 		
 		result = sock->code(return_val);
 		if( !result ) {
-			dprintf(D_ALWAYS, "store_cred: failed to recv schedd's answer.\n");
+			dprintf(D_ALWAYS, "store_cred: failed to recv answer.\n");
 			delete sock;
-			return FALSE;
+			return FAILURE;
 		}
 		
 		result = sock->end_of_message();
 		if( !result ) {
-			dprintf(D_ALWAYS, "store_cred: failed to code eom.\n");
+			dprintf(D_ALWAYS, "store_cred: failed to recv eom.\n");
 			delete sock;
-			return FALSE;
+			return FAILURE;
 		}
 	}	// end of case where we send out the request remotely
 	
@@ -362,14 +420,14 @@ store_cred(const char* user, const char* pw, int mode, Daemon* d) {
 
 // reads at most maxlength chars without echoing to the terminal into buf
 bool
-read_no_echo(char* buf, int maxlength) {
+read_from_keyboard(char* buf, int maxlength, bool echo) {
 	int ch, ch_count;
 
 	ch = ch_count = 0;
 	fflush(stdout);		
 			
 	while ( ch_count < maxlength-1 ) {
-		ch = _getch();
+		ch = echo ? _getche() : _getch();
 		if ( ch == '\r' ) {
 			break;
 		} else if ( ch == '\b') { // backspace
@@ -384,8 +442,6 @@ read_no_echo(char* buf, int maxlength) {
 	return TRUE;
 }
 
-
-
 char*
 get_password() {
 	char *buf;
@@ -396,7 +452,7 @@ get_password() {
 	
 		
 	printf("Enter password: ");
-	if ( ! read_no_echo(buf, MAX_PASSWORD_LENGTH) ) {
+	if ( ! read_from_keyboard(buf, MAX_PASSWORD_LENGTH, false) ) {
 		delete[] buf;
 		return NULL;
 	}
@@ -416,6 +472,11 @@ isValidCredential( const char *input_user, const char* input_pw ) {
 	retval = 0;
 	usrHnd = NULL;
 
+	// the POOL_PASSWORD_USERNAME does not correspond to an actual account
+	if ( strcmp(input_user,POOL_PASSWORD_USERNAME)==0 ) {
+		return true;
+	}
+
 	char * user = strdup(input_user);
 	
 	// split the domain and the user name for LogonUser
@@ -424,13 +485,6 @@ isValidCredential( const char *input_user, const char* input_pw ) {
 	if ( dom ) {
 		*dom = '\0';
 		dom++;
-	}
-
-	// user "condor" is magic and treated as the pool password - it doesn't 
-	// have to exist as an actual local user.
-	if ( stricmp(user,"condor")==0 ) {
-		if (user) free(user);
-		return true;
 	}
 
 	char * pw = strdup(input_pw);
@@ -478,16 +532,16 @@ isValidCredential( const char *input_user, const char* input_pw ) {
 	}
 }
 
-int deleteCredential( const char* user ) {
-	return store_cred(user, NULL, DELETE_MODE);	
+int deleteCredential( const char* user, const char* pw, Daemon *d ) {
+	return store_cred(user, pw, DELETE_MODE, d);	
 }
 
-int addCredential( const char* user, const char* pw ) {
-	return store_cred(user, pw, ADD_MODE);	
+int addCredential( const char* user, const char* pw, Daemon *d ) {
+	return store_cred(user, pw, ADD_MODE, d);	
 }
 
-int queryCredential( const char* user ) {
-	return store_cred(user, NULL, QUERY_MODE);	
+int queryCredential( const char* user, Daemon *d ) {
+	return store_cred(user, NULL, QUERY_MODE, d);	
 }
 
 char* getStoredCredential(const char *username, const char *domain)

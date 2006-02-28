@@ -46,6 +46,7 @@
 #ifdef WIN32
 
 #include "windows_firewall.h"
+#include "store_cred.h"
 
 extern void register_service();
 extern void terminate(DWORD);
@@ -312,7 +313,13 @@ main_init( int argc, char* argv[] )
 	daemonCore->Register_Command( CHILD_OFF_FAST, "CHILD_OFF_FAST",
 								  (CommandHandler)admin_command_handler, 
 								  "admin_command_handler", 0, ADMINISTRATOR );
-
+#if defined(WIN32)
+	// Command handler for stashing credentials.
+	daemonCore->Register_Command( STORE_POOL_CRED, "STORE_POOL_CRED",
+								(CommandHandler)&store_pool_cred_handler,
+								"store_pool_cred_handler", NULL, CONFIG_PERM,
+								D_FULLDEBUG );
+#endif
 	/*
 	daemonCore->Register_Command( START_AGENT, "START_AGENT",
 					  (CommandHandler)admin_command_handler, 

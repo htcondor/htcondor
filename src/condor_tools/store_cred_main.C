@@ -32,17 +32,24 @@
 #include "condor_distribution.h"
 #include "basename.h"
 #include "dynuser.h"
+#include "daemon.h"
+#include "get_daemon_name.h"
 
 struct StoreCredOptions {
 	int mode;
-	char pw[MAX_PASSWORD_LENGTH];
-	char username[MAX_PASSWORD_LENGTH];
+	char pw[MAX_PASSWORD_LENGTH + 1];
+	char username[MAX_PASSWORD_LENGTH + 1];
+	char *daemonname;
+	bool help;
 };
 
 const char *MyName;
 void usage(void);
-void parseCommandLine(StoreCredOptions *opts, int argc, char *argv[]);
+bool parseCommandLine(StoreCredOptions *opts, int argc, char *argv[]);
 void badOption(const char* option);
+void badCommand(const char* command);
+void optionNeedsArg(const char* option);
+bool goAheadAnyways();
 
 
 int main(int argc, char *argv[]) {
@@ -50,18 +57,29 @@ int main(int argc, char *argv[]) {
 	char* pw = NULL;
 	char my_full_name[_POSIX_PATH_MAX];
 	struct StoreCredOptions options;
+	int result = FAILURE_ABORTED;
+	bool pool_password_arg;
+	bool pool_password_delete;
+	Daemon *daemon;
+	char *credd_host;
 
-
-	int result;
-	
 	MyName = condor_basename(argv[0]);
 	
 	// load up configuration file
 	myDistro->Init( argc, argv );
 	config();
 
-	parseCommandLine(&options, argc, argv);
+	if (!parseCommandLine(&options, argc, argv)) {
+		goto cleanup;
+	}
 
+	// if -h was given, just print usage
+	if (options.help || (options.mode == 0)) {
+		usage();
+		goto cleanup;
+	}
+
+	// default to current user and domain
 	if ( strcmp(options.username, "") == 0 ) {
 		char* my_name = my_username();	
 		char* my_domain = my_domainname();
@@ -75,61 +93,148 @@ int main(int argc, char *argv[]) {
 	}
 	printf("Account: %s\n\n", my_full_name);
 
+	// determine where to direct our command
+	daemon = NULL;
+	credd_host = NULL;
+	pool_password_arg = (strcmp(my_full_name, POOL_PASSWORD_USERNAME) == 0);
+	if (options.daemonname != NULL) {
+		if (pool_password_arg) {
+			// daemon named on command line; go to master for pool password
+			//printf("sending command to master: %s\n", options.daemonname);
+			daemon = new Daemon(DT_MASTER, options.daemonname);
+		}
+		else {
+			// daemon named on command line; go to schedd for user password
+			//printf("sending command to schedd: %s\n", options.daemonname);
+			daemon = new Daemon(DT_SCHEDD, options.daemonname);
+		}
+	}
+	else if (!pool_password_arg && ((credd_host = param("CREDD_HOST")) != NULL)) {
+		// no daemon given, use credd for user passwords if CREDD_HOST is defined
+		// (otherwise, we use the local schedd)
+		//printf("sending command to CREDD: %s\n", credd_host);
+		MyString credd_sinful;
+		credd_sinful = "<" ;
+		credd_sinful += credd_host;
+		credd_sinful += ">";
+		free(credd_host);
+		credd_host = NULL;
+		daemon = new Daemon(DT_ANY, credd_sinful.Value());
+	}
+	else {
+		//printf("sending command to local daemon\n");
+	}
+
+	// flag the case where we're deleting the pool password.
+	// for this case, we'll use a STORE_POOL_CRED command
+	// with a NULL password argument - so we munge the
+	// options as needed
+	pool_password_delete = false;
+	if (pool_password_arg && (options.mode == DELETE_MODE)) {
+		pool_password_delete = true;
+		options.mode = ADD_MODE;
+		options.pw[0] = '\0';
+	}
+
 	switch (options.mode) {
 		case ADD_MODE:
+		case DELETE_MODE:
 			if ( strcmp(options.pw, "") == 0 ) {
-				// get password from the user.
-				pw = get_password();
-			} else { 
+				if (!pool_password_delete) {
+					// get password from the user.
+					pw = get_password();
+					printf("\n\n");
+				}
+			} else {
 				// got the passwd from the command line.
 				pw = new char[MAX_PASSWORD_LENGTH];
 				strncpy(pw, options.pw, MAX_PASSWORD_LENGTH);
 				SecureZeroMemory(options.pw, MAX_PASSWORD_LENGTH);
 			}
-			if ( pw ) {
-				result = addCredential( my_full_name, pw );			
-				SecureZeroMemory(pw, MAX_PASSWORD_LENGTH);
-				delete[] pw;
-				if ( result == FAILURE_BAD_PASSWORD ) {
-					fprintf(stdout, "\n\nPassword is invalid for this account"
-							".\n\n");
-				} else if ( result == SUCCESS ) {
-					fprintf(stdout, "\n\nPassword has been stored.\n");
-				} else {
-					fprintf(stdout, "\n\nFailure occured.\n\tMake sure your HOSTALLOW_WRITE setting includes this host.\n");
+			if ( pw || pool_password_delete) {
+				result = store_cred(my_full_name, pw, options.mode, daemon);
+				if ((result == FAILURE_NOT_SECURE) && goAheadAnyways()) {
+						// if user is ok with it, send the password in the clear
+					result = store_cred(my_full_name, pw, options.mode, daemon, true);
 				}
-			} else {
-				fprintf(stderr, "\nAborted.\n");
-			}
-			break;
-		case DELETE_MODE:
-			result = deleteCredential(my_full_name);
-			if ( result == SUCCESS ) {
-				fprintf(stdout, "Delete Successful.\n");
-			} else {
-				fprintf(stdout, "Delete failed.\n");
+				if (pw) {
+					SecureZeroMemory(pw, MAX_PASSWORD_LENGTH);
+					delete[] pw;
+				}
 			}
 			break;
 		case QUERY_MODE:
-			result = queryCredential(my_full_name);
-			if ( result == SUCCESS ) {
-				fprintf(stdout, "A credential is stored and is valid.\n");
-			} else if ( result == FAILURE_BAD_PASSWORD ){
-				fprintf(stdout, "A credential is stored, but it is invalid. "
-						"Run 'condor_store_cred add' again.\n");
-			} else {
-				fprintf(stdout, "No credential is stored.\n");
-			}
+			result = queryCredential(my_full_name, daemon);
 			break;
 		case CONFIG_MODE:
 			return interactive();
 			break;
-		case 0:
-			usage();
-			break;	
+		default:
+			fprintf(stderr, "Internal error\n");
+			goto cleanup;
 	}
 
+	// output result of operation
+	switch (result) {
+		case SUCCESS:
+			if (options.mode == QUERY_MODE) {
+				printf("A credential is stored and is valid.\n");
+			}
+			else {
+				printf("Operation succeeded.\n");
+			}
+			break;
 
+		case FAILURE:
+			printf("Operation failed.\n");
+			if (pool_password_arg && (options.mode != QUERY_MODE)) {
+				printf("    Make sure you have CONFIG access to the target Master.\n");
+			}
+			else {
+				printf("    Make sure your HOSTALLOW_WRITE setting includes this host.\n");
+			}
+			break;
+
+		case FAILURE_BAD_PASSWORD:
+			if (options.mode == QUERY_MODE) {
+				printf("A credential is stored, but it is invalid. "
+				       "Run 'condor_store_cred add' again.\n");
+			}
+			else {
+				printf("Operation failed: bad password.\n");
+			}
+			break;
+
+		case FAILURE_NOT_FOUND:
+			if (options.mode == QUERY_MODE) {
+				printf("No credential is stored.\n");
+			}
+			else {
+				printf("Operation failed: username not found.\n");
+			}
+			break;
+
+		case FAILURE_NOT_SECURE:
+		case FAILURE_ABORTED:
+			printf("Operation aborted.\n");
+			break;
+
+		case FAILURE_NOT_SUPPORTED:
+			printf("Operation failed.\n"
+			       "    The target daemon is not running as SYSTEM.\n");
+			break;
+
+		default:
+			fprintf(stderr, "Operation failed: unknown error code\n");
+	}
+
+cleanup:			
+	if (options.daemonname) {
+		delete[] options.daemonname;
+	}
+	if (daemon) {
+		delete daemon;
+	}
 	
 	if ( result == SUCCESS ) {
 	   	return 0;
@@ -138,95 +243,193 @@ int main(int argc, char *argv[]) {
 	}
 }
 
-void
+bool
 parseCommandLine(StoreCredOptions *opts, int argc, char *argv[]) {
 
 	int i;
 	opts->mode = 0;
-	opts->pw[0] = '\0';
-	opts->username[0] = '\0';
+	opts->pw[0] = opts->pw[MAX_PASSWORD_LENGTH] = '\0';
+	opts->username[0] = opts->username[MAX_PASSWORD_LENGTH] = '\0';
+	opts->daemonname = NULL;
+	opts->help = false;
 
-	for (i=1; i<argc; i++) {
+	bool err = false;
+	for (i=1; i<argc && !err; i++) {
 		switch(argv[i][0]) {
 		case 'a':
 		case 'A':	// Add
 			if (stricmp(argv[i], ADD_CREDENTIAL) == 0) {
-				opts->mode = ADD_MODE;
+				if (!opts->mode) {
+					opts->mode = ADD_MODE;
+				}
+				else {
+					fprintf(stderr, "ERROR: exactly one command must be provided\n");
+					usage();
+					err = true;
+				}
 			} else {
-				badOption(argv[i]);
+				err = true;
+				badCommand(argv[i]);
 			}	
 			break;
 		case 'd':	
 		case 'D':	// Delete
 			if (stricmp(argv[i], DELETE_CREDENTIAL) == 0) {
-				opts->mode = DELETE_MODE;
+				if (!opts->mode) {
+					opts->mode = DELETE_MODE;
+				}
+				else {
+					fprintf(stderr, "ERROR: exactly one command must be provided\n");
+					usage();
+					err = true;
+				}
 			} else {
-				badOption(argv[i]);
+				err = true;
+				badCommand(argv[i]);
 			}	
 			break;
 		case 'q':	
 		case 'Q':	// tell me if I have anything stored
 			if (stricmp(argv[i], QUERY_CREDENTIAL) == 0) {
-				opts->mode = QUERY_MODE;
+				if (!opts->mode) {
+					opts->mode = QUERY_MODE;
+				}
+				else {
+					fprintf(stderr, "ERROR: exactly one command must be provided\n");
+					usage();
+					err = true;
+				}
 			} else {
-				badOption(argv[i]);
+				err = true;
+				badCommand(argv[i]);
 			}	
 			break;
 		case 'c':	
 		case 'C':	// Config
 			if (stricmp(argv[i], CONFIG_CREDENTIAL) == 0) {
-				opts->mode = CONFIG_MODE;
+				if (!opts->mode) {
+					opts->mode = CONFIG_MODE;
+				}
+				else {
+					fprintf(stderr, "ERROR: exactly one command must be provided\n");
+					usage();
+					err = true;
+				}
 			} else {
-				badOption(argv[i]);
+				err = true;
+				badCommand(argv[i]);
 			}	
 			break;
 		case '-':
 			// various switches
 			switch (argv[i][1]) {
+				case 'n':
+					if (i+1 < argc) {
+						if (opts->daemonname != NULL) {
+							fprintf(stderr, "ERROR: only one '-n' arg my be provided\n");
+							usage();
+							err = true;
+						}
+						else {
+							opts->daemonname = get_daemon_name(argv[i+1]);
+							if (opts->daemonname == NULL) {
+								fprintf(stderr, "ERROR: %s is not a valid daemon name\n",
+									argv[i+1]);
+								err = true;
+							}
+							i++;
+						}
+					} else {
+						err = true;
+						optionNeedsArg(argv[i]);
+					}
+					break;
 				case 'p':
 					if (i+1 < argc) {
-						strncpy(opts->pw, argv[i+1], MAX_PASSWORD_LENGTH);
-						i++;
+						if (opts->pw[0] != '\0') {
+							fprintf(stderr, "ERROR: only one '-p' args may be provided\n");
+							usage();
+							err = true;
+						}
+						else {
+							strncpy(opts->pw, argv[i+1], MAX_PASSWORD_LENGTH);
+							i++;
+						}
 					} else {
-						badOption(argv[i]);
+						err = true;
+						optionNeedsArg(argv[i]);
+					}
+					break;
+				case 'c':
+					if (opts->username[0] != '\0') {
+						fprintf(stderr, "ERROR: only one '-c' or '-u' arg may be provided\n");
+						usage();
+						err = true;
+					}
+					else {
+						strcpy(opts->username, POOL_PASSWORD_USERNAME);
 					}
 					break;
 				case 'u':
 					if (i+1 < argc) {
-						strncpy(opts->username, argv[i+1], MAX_PASSWORD_LENGTH);
-						i++;
-						char* at_ptr = strchr(opts->username, '@');
-						// '@' must be in the string, but not the beginning
-						// or end of the string.
-						if (at_ptr == NULL || 
-							at_ptr == opts->username ||
-						   	at_ptr == opts->username+strlen(opts->username)-1) {
-							fprintf(stderr, "ERROR: Username '%s' is not of "
-								   "the form account@domain\n", opts->username);
-							badOption(argv[i]);
+						if (opts->username[0] != '\0') {
+							fprintf(stderr, "ERROR: only one of '-s' or '-u' may be provided\n");
+							usage();
+							err = true;
 						}
-
+						else {
+							strncpy(opts->username, argv[i+1], MAX_PASSWORD_LENGTH);
+							i++;
+							char* at_ptr = strchr(opts->username, '@');
+							// '@' must be in the string, but not the beginning
+							// or end of the string.
+							if (at_ptr == NULL || 
+								at_ptr == opts->username ||
+						   		at_ptr == opts->username+strlen(opts->username)-1) {
+								fprintf(stderr, "ERROR: Username '%s' is not of "
+									   "the form: account@domain\n", opts->username);
+								usage();
+							}
+						}
 					} else {
-						badOption(argv[i]);
+						err = true;
+						optionNeedsArg(argv[i]);
 					}
 					break;
 				case 'h':
-					usage();
-					
+					opts->help = true;
 					break;
+				default:
+					err = true;
+					badOption(argv[i]);
 			}
-			break;
-			// fail through
+			break;	// break for case '-'
 		default:
-			badOption(argv[i]);
+			err = true;
+			badCommand(argv[i]);
 			break;
 		}
 	}
+
+	return !err;
+}
+
+void
+badCommand(const char* command) {
+	fprintf(stderr, "ERROR: Unrecognized command - '%s'\n\n", command);
+	usage();
 }
 
 void
 badOption(const char* option) {
-	fprintf(stderr, "Unrecognized option - '%s'\n\n", option);
+	fprintf(stderr, "ERROR: Unrecognized option - '%s'\n\n", option);
+	usage();
+}
+
+void
+optionNeedsArg(const char* option)
+{
+	fprintf(stderr, "ERROR: Option '%s' requires an argument\n\n", option);
 	usage();
 }
 
@@ -235,16 +438,37 @@ usage()
 {
 	fprintf( stderr, "Usage: %s [options] action\n", MyName );
 	fprintf( stderr, "  where action is one of:\n" );
-	fprintf( stderr, "    add               (Add your credential to secure storage)\n" );
-	fprintf( stderr, "    delete            (Remove your credential from secure storage)\n" );
-	fprintf( stderr, "    query             (Check if your credential has been stored)\n" );
+	fprintf( stderr, "    add               (Add credential to secure storage)\n" );
+	fprintf( stderr, "    delete            (Remove credential from secure storage)\n" );
+	fprintf( stderr, "    query             (Check if a credential has been stored)\n" );
 	fprintf( stderr, "  and where [options] is one or more of:\n" );
 	fprintf( stderr, "    -u username       (use the specified username)\n" );
+	fprintf( stderr, "    -c                (update/query the condor pool password)\n");
 	fprintf( stderr, "    -p password       (use the specified password rather than prompting)\n" );
+	fprintf( stderr, "    -n name           (update/query to the named machine)\n" );
 	fprintf( stderr, "    -h                (display this message)\n" );
 	fprintf( stderr, "\n" );
 
 	exit( 1 );
 };
+
+bool
+goAheadAnyways()
+{
+	printf("\n\nWARNING: Continuing will result in your password "
+		   "being sent in the clear!\n"
+		   "  Do you want to continue? [y/N] ");
+	fflush(stdout);
+
+	const int BUFSIZE = 10;
+	char buf[BUFSIZE];
+	if (!read_from_keyboard(buf, BUFSIZE)) {
+		return false;
+	}
+	if ((buf[0] == 'y') || (buf[0] == 'Y')) {
+		return true;
+	}
+	return false;
+}
 
 #endif // WIN32
