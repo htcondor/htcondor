@@ -54,12 +54,13 @@ bool goAheadAnyways();
 
 int main(int argc, char *argv[]) {
 	
+	MyString my_full_name;
+	const char *full_name;
 	char* pw = NULL;
-	char my_full_name[_POSIX_PATH_MAX];
 	struct StoreCredOptions options;
 	int result = FAILURE_ABORTED;
-	bool pool_password_arg;
-	bool pool_password_delete;
+	bool pool_password_arg = false;
+	bool pool_password_delete = false;
 	Daemon *daemon;
 	char *credd_host;
 
@@ -79,26 +80,41 @@ int main(int argc, char *argv[]) {
 		goto cleanup;
 	}
 
-	// default to current user and domain
+	// determine the username to use
 	if ( strcmp(options.username, "") == 0 ) {
+			// default to current user and domain
 		char* my_name = my_username();	
 		char* my_domain = my_domainname();
 
-		sprintf(my_full_name, "%s@%s", my_name, my_domain);
+		my_full_name.sprintf("%s@%s", my_name, my_domain);
 		if ( my_name) { free(my_name); }
 		if ( my_domain) { free(my_domain); }
 		my_name = my_domain = NULL;
+	} else if (strcmp(options.username, POOL_PASSWORD_USERNAME) == 0) {
+			// append the correct domain name if we're using the pool pass
+			// we first try POOL_PASSWORD_DOMAIN, then UID_DOMAIN
+		pool_password_arg = true;
+		char *domain;
+		if ((domain = param("POOL_PASSWORD_DOMAIN")) == NULL) {
+			if ((domain = param("UID_DOMAIN")) == NULL) {
+				fprintf(stderr, "ERROR: could not domain for pool password\n");
+				goto cleanup;
+			}
+		}
+		my_full_name.sprintf(POOL_PASSWORD_USERNAME "@%s", domain);
+		free(domain);
 	} else {
-		strcpy(my_full_name, options.username);
+			// username was specified on the command line
+		my_full_name += options.username;
 	}
-	printf("Account: %s\n\n", my_full_name);
+	full_name = my_full_name.Value();
+	printf("Account: %s\n\n", full_name);
 
 	// determine where to direct our command
 	daemon = NULL;
 	credd_host = NULL;
-	pool_password_arg = (strcmp(my_full_name, POOL_PASSWORD_USERNAME) == 0);
 	if (options.daemonname != NULL) {
-		if (pool_password_arg) {
+		if (pool_password_arg && (options.mode != QUERY_MODE)) {
 			// daemon named on command line; go to master for pool password
 			//printf("sending command to master: %s\n", options.daemonname);
 			daemon = new Daemon(DT_MASTER, options.daemonname);
@@ -129,7 +145,6 @@ int main(int argc, char *argv[]) {
 	// for this case, we'll use a STORE_POOL_CRED command
 	// with a NULL password argument - so we munge the
 	// options as needed
-	pool_password_delete = false;
 	if (pool_password_arg && (options.mode == DELETE_MODE)) {
 		pool_password_delete = true;
 		options.mode = ADD_MODE;
@@ -152,10 +167,10 @@ int main(int argc, char *argv[]) {
 				SecureZeroMemory(options.pw, MAX_PASSWORD_LENGTH);
 			}
 			if ( pw || pool_password_delete) {
-				result = store_cred(my_full_name, pw, options.mode, daemon);
+				result = store_cred(full_name, pw, options.mode, daemon);
 				if ((result == FAILURE_NOT_SECURE) && goAheadAnyways()) {
 						// if user is ok with it, send the password in the clear
-					result = store_cred(my_full_name, pw, options.mode, daemon, true);
+					result = store_cred(full_name, pw, options.mode, daemon, true);
 				}
 				if (pw) {
 					SecureZeroMemory(pw, MAX_PASSWORD_LENGTH);
@@ -164,7 +179,7 @@ int main(int argc, char *argv[]) {
 			}
 			break;
 		case QUERY_MODE:
-			result = queryCredential(my_full_name, daemon);
+			result = queryCredential(full_name, daemon);
 			break;
 		case CONFIG_MODE:
 			return interactive();
@@ -455,14 +470,16 @@ usage()
 bool
 goAheadAnyways()
 {
-	printf("\n\nWARNING: Continuing will result in your password "
+	printf("WARNING: Continuing will result in your password "
 		   "being sent in the clear!\n"
 		   "  Do you want to continue? [y/N] ");
 	fflush(stdout);
 
 	const int BUFSIZE = 10;
 	char buf[BUFSIZE];
-	if (!read_from_keyboard(buf, BUFSIZE)) {
+	bool result = read_from_keyboard(buf, BUFSIZE);
+	printf("\n\n");
+	if (!result) {
 		return false;
 	}
 	if ((buf[0] == 'y') || (buf[0] == 'Y')) {

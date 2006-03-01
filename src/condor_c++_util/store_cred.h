@@ -51,7 +51,7 @@ const char DELETE_CREDENTIAL[] = "delete";
 const char QUERY_CREDENTIAL[] = "query";
 const char CONFIG_CREDENTIAL[] = "config";
 
-const char POOL_PASSWORD_USERNAME[] = "condor_pool_password";
+#define POOL_PASSWORD_USERNAME "condor_pool_password"
 
 #define MAX_PASSWORD_LENGTH 255
 

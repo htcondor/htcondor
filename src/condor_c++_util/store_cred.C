@@ -219,16 +219,21 @@ void store_cred_handler(void *, int i, Stream *s)
 		return;
 	} 
 
-	// ensure that the username has an '@' delimteter
-	// the only "user" allowed to not contain a '@' is POOL_PASSWORD_USERNAME
-	// (we allow queries on POOL_PASSWORD_USERNAME via this handler, but updates
-	//  must come in via store_pool_cred_handler)
 	if ( user ) {
-		if ((mode != QUERY_MODE) && (strchr(user, '@') == NULL)) {
-			dprintf(D_ALWAYS, "ERROR: attempt to set pool password via STORE_CRED! (must use STORE_POOL_CRED)\n");
+			// ensure that the username has an '@' delimteter
+		char *tmp = strchr(user, '@');
+		if ((tmp == NULL) || (tmp == user)) {
+			dprintf(D_ALWAYS, "store_cred_handler: user not in user@domain format\n");
 			answer = FAILURE;
-		} else {
-			answer = store_cred_service(user,pw,mode);
+		}
+		else {
+				// we don't allow updates to the pool password through this interface
+			if ((mode != QUERY_MODE) && (memcmp(user, POOL_PASSWORD_USERNAME, tmp - user) == 0)) {
+				dprintf(D_ALWAYS, "ERROR: attempt to set pool password via STORE_CRED! (must use STORE_POOL_CRED)\n");
+				answer = FAILURE;
+			} else {
+				answer = store_cred_service(user,pw,mode);
+			}
 		}
 	}
 	
@@ -259,37 +264,43 @@ void store_pool_cred_handler(void *, int i, Stream *s)
 {
 	int result;
 	char *pw = NULL;
+	char *domain = NULL;
+	MyString username = POOL_PASSWORD_USERNAME "@";
 
 	s->decode();
-	result = s->code(pw);
-	if(!result) {
-		dprintf(D_ALWAYS, "store_pool_cred: Failed to receive password.\n");
-		return;
+	if (!s->code(domain) || !s->code(pw) || !s->end_of_message()) {
+		dprintf(D_ALWAYS, "store_pool_cred: failed to receive all parameters\n");
+		goto spch_cleanup;
 	}
-	result = s->end_of_message();
-	if( !result ) {
-		dprintf(D_ALWAYS, "store_pool_cred: Failed to receive eom.\n");
-		return;
+	if (domain == NULL) {
+		dprintf(D_ALWAYS, "store_pool_cred_handler: domain is NULL\n");
+		goto spch_cleanup;
 	}
+
+	// construct the full pool username
+	username += domain;	
 
 	// do the real work
 	if (pw) {
-		result = store_cred_service(POOL_PASSWORD_USERNAME, pw, ADD_MODE);
+		result = store_cred_service(username.Value(), pw, ADD_MODE);
 		SecureZeroMemory(pw, strlen(pw));
-		free(pw);
 	}
 	else {
-		result = store_cred_service(POOL_PASSWORD_USERNAME, pw, DELETE_MODE);
+		result = store_cred_service(username.Value(), NULL, DELETE_MODE);
 	}
 
 	s->encode();
 	if (!s->code(result)) {
 		dprintf(D_ALWAYS, "store_pool_cred: Failed to send result.\n");
-		return;
+		goto spch_cleanup;
 	}
 	if (!s->eom()) {
 		dprintf(D_ALWAYS, "store_pool_cred: Failed to send end of message.\n");
 	}
+
+spch_cleanup:
+	if (pw) free(pw);
+	if (domain) free(domain);
 }
 
 int 
@@ -299,7 +310,7 @@ store_cred(const char* user, const char* pw, int mode, Daemon* d, bool force) {
 	int return_val;
 	Sock* sock = NULL;
 
-		// If we are root / SYSTEM and we want the local schedd, 
+		// If we are root / SYSTEM and we want a local daemon, 
 		// then do the work directly to the local registry.
 		// If not, then send the request over the wire to a remote credd or schedd.
 
@@ -309,12 +320,16 @@ store_cred(const char* user, const char* pw, int mode, Daemon* d, bool force) {
 	} else {
 			// send out the request remotely.
 
-			// if we're setting the pool password, we need to use STORE_POOL_CRED
-			// (which is handled by the master, rather than schedd, and requires
-			//  CONFIG authorization)
+			// first see if we're operating on the pool password
 		int cmd = STORE_CRED;
-		if ((mode == ADD_MODE) && (strcmp(user, POOL_PASSWORD_USERNAME) == 0)) {
+		char *tmp = strchr(user, '@');
+		if (tmp == NULL || tmp == user || *(tmp + 1) == '\0') {
+			dprintf(D_ALWAYS, "store_cred: user not in user@domain format\n");
+			return FAILURE;
+		}
+		if ((mode == ADD_MODE) && (memcmp(POOL_PASSWORD_USERNAME, user, tmp - user) == 0)) {
 			cmd = STORE_POOL_CRED;
+			user = tmp + 1;	// we only need to send the domain name for STORE_POOL_CRED
 		}
 
 		if (d == NULL) {
@@ -339,7 +354,7 @@ store_cred(const char* user, const char* pw, int mode, Daemon* d, bool force) {
 			return FAILURE;
 		}
 
-		// for remote updates, verify we have a secure channel,
+		// for remote updates (which send the password), verify we have a secure channel,
 		// unless "force" is specified
 		if (((mode == ADD_MODE) || (mode == DELETE_MODE)) && !force && (d != NULL) &&
 			((sock->type() != Stream::reli_sock) || !((ReliSock*)sock)->isAuthenticated() || !sock->get_encryption())) {
@@ -357,14 +372,9 @@ store_cred(const char* user, const char* pw, int mode, Daemon* d, bool force) {
 			}
 		}
 		else {
-				// only need to send the password for STORE_POOL_CRED
-			if (!sock->code((char*&)pw)) {
-				dprintf(D_ALWAYS, "store_cred: failed to send pw for STORE_POOL_CRED\n");
-				delete sock;
-				return FAILURE;
-			}
-			if (!sock->end_of_message()) {
-				dprintf(D_ALWAYS, "store_cred: failed to receive eom for STORE_POOL_CRED\n");
+				// only need to send the domain and password for STORE_POOL_CRED
+			if (!sock->code((char*&)user) || !sock->code((char*&)pw) || !sock->end_of_message()) {
+				dprintf(D_ALWAYS, "store_cred: failed to send STORE_POOL_CRED message\n");
 				delete sock;
 				return FAILURE;
 			}
@@ -472,11 +482,6 @@ isValidCredential( const char *input_user, const char* input_pw ) {
 	retval = 0;
 	usrHnd = NULL;
 
-	// the POOL_PASSWORD_USERNAME does not correspond to an actual account
-	if ( strcmp(input_user,POOL_PASSWORD_USERNAME)==0 ) {
-		return true;
-	}
-
 	char * user = strdup(input_user);
 	
 	// split the domain and the user name for LogonUser
@@ -485,6 +490,12 @@ isValidCredential( const char *input_user, const char* input_pw ) {
 	if ( dom ) {
 		*dom = '\0';
 		dom++;
+	}
+
+	// the POOL_PASSWORD_USERNAME account is not a real account
+	if (strcmp(user, POOL_PASSWORD_USERNAME) == 0) {
+		free(user);
+		return true;
 	}
 
 	char * pw = strdup(input_pw);
