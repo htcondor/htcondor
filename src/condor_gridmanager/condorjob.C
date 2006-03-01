@@ -532,7 +532,6 @@ int CondorJob::doEvaluateState()
 				gmState = GM_HOLD;
 				break;
 			}
-			now = time(NULL);
 			// After a submit, wait at least submitInterval before trying
 			// another one.
 			if ( now >= lastSubmitAttempt + submitInterval ) {

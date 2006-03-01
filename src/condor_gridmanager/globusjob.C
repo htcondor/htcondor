@@ -903,7 +903,7 @@ int GlobusJob::doEvaluateState()
 	int old_gm_state;
 	int old_globus_state;
 	bool reevaluate_state = true;
-	time_t now;	// make sure you set this before every use!!!
+	time_t now = time(NULL);
 
 	bool done;
 	int rc;
@@ -1169,7 +1169,6 @@ int GlobusJob::doEvaluateState()
 				gmState = GM_HOLD;
 				break;
 			}
-			now = time(NULL);
 			// After a submit, wait at least submitInterval before trying
 			// another one.
 			if ( now >= lastSubmitAttempt + submitInterval ) {
@@ -1347,7 +1346,6 @@ int GlobusJob::doEvaluateState()
 					gmState = GM_REFRESH_PROXY;
 					break;
 				}
-				now = time(NULL);
 				if ( lastProbeTime < enteredCurrentGmState ) {
 					lastProbeTime = enteredCurrentGmState;
 				}
@@ -1501,7 +1499,6 @@ int GlobusJob::doEvaluateState()
 				gmState = GM_DONE_COMMIT;
 				break;
 			}
-			now = time(NULL);
 			if ( outputWaitLastGrowth == 0 ) {
 				outputWaitLastGrowth = now;
 				outputWaitOutputSize = 0;
@@ -1634,7 +1631,6 @@ int GlobusJob::doEvaluateState()
 		case GM_RESTART: {
 			// Something has gone wrong with the jobmanager and we need to
 			// restart it.
-			now = time(NULL);
 			if ( jobContact == NULL ) {
 				gmState = GM_CLEAR_REQUEST;
 			} else if ( globusError != 0 && globusError == lastRestartReason ) {
@@ -1851,7 +1847,6 @@ int GlobusJob::doEvaluateState()
 			} else if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED ) {
 				gmState = GM_FAILED;
 			} else {
-				now = time(NULL);
 				if ( lastProbeTime < enteredCurrentGmState ) {
 					lastProbeTime = enteredCurrentGmState;
 				}
@@ -2149,7 +2144,6 @@ int GlobusJob::doEvaluateState()
 			// and it will exit.
 			myResource->JMComplete( this );
 
-			now = time(NULL);
 			// if ( jobProxy->expiration_time > JM_MIN_PROXY_TIME + now ) {
 			if ( jobProxy->expiration_time > (minProxy_time + 60) + now ) {
 				// resume handling the job.
@@ -2212,7 +2206,6 @@ int GlobusJob::doEvaluateState()
 			// the jobmanager.
 			// This is best effort. If anything goes wrong, we ignore it.
 			//   (except for proxy expiration)
-			now = time(NULL);
 			if ( jobContact == NULL ) {
 				gmState = GM_CLEAR_REQUEST;
 			} else {
@@ -2309,7 +2302,6 @@ int GlobusJob::doEvaluateState()
 			// occassionally to make sure it hasn't died on us.
 			// This is best-effort. If anything goes wrong, we ignore it.
 			//   (except for proxy expiration)
-			now = time(NULL);
  
 			if ( globusState != GLOBUS_GRAM_PROTOCOL_JOB_STATE_DONE &&
 				 globusState != GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED &&

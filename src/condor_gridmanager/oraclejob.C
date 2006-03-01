@@ -333,7 +333,7 @@ int OracleJob::doEvaluateState()
 {
 	int old_gm_state;
 	bool reevaluate_state = true;
-	time_t now;	// make sure you set this before every use!!!
+	time_t now = time(NULL);
 
 	bool done;
 	int rc;
@@ -399,7 +399,6 @@ int OracleJob::doEvaluateState()
 				gmState = GM_HOLD;
 				break;
 			}
-			now = time(NULL);
 			// After a submit, wait at least submitInterval before trying
 			// another one.
 			if ( now >= lastSubmitAttempt + submitInterval ) {

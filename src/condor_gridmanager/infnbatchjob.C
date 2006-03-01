@@ -262,7 +262,7 @@ int INFNBatchJob::doEvaluateState()
 	int old_gm_state;
 	int old_remote_state;
 	bool reevaluate_state = true;
-	time_t now;	// make sure you set this before every use!!!
+	time_t now = time(NULL);
 
 	bool done;
 	int rc;
@@ -347,7 +347,6 @@ int INFNBatchJob::doEvaluateState()
 				gmState = GM_HOLD;
 				break;
 			}
-			now = time(NULL);
 			// After a submit, wait at least submitInterval before trying
 			// another one.
 			if ( now >= lastSubmitAttempt + submitInterval ) {
@@ -424,7 +423,6 @@ int INFNBatchJob::doEvaluateState()
 			} else if ( jobProxy && remoteProxyExpireTime < jobProxy->expiration_time ) {
 					gmState = GM_REFRESH_PROXY;
 			} else {
-				now = time(NULL);
 				if ( lastPollTime < enteredCurrentGmState ) {
 					lastPollTime = enteredCurrentGmState;
 				}

@@ -442,7 +442,7 @@ int GT3Job::doEvaluateState()
 	int old_gm_state;
 	int old_globus_state;
 	bool reevaluate_state = true;
-	time_t now;	// make sure you set this before every use!!!
+	time_t now = time(NULL);
 
 	bool done;
 	int rc;
@@ -639,7 +639,6 @@ int GT3Job::doEvaluateState()
 				gmState = GM_HOLD;
 				break;
 			}
-			now = time(NULL);
 			// After a submit, wait at least submitInterval before trying
 			// another one.
 			if ( now >= lastSubmitAttempt + submitInterval ) {
@@ -749,7 +748,6 @@ int GT3Job::doEvaluateState()
 					gmState = GM_REFRESH_PROXY;
 					break;
 				}
-				now = time(NULL);
 				if ( lastProbeTime < enteredCurrentGmState ) {
 					lastProbeTime = enteredCurrentGmState;
 				}
@@ -1057,7 +1055,6 @@ rc=0;
 			// The proxy for this job is either expired or about to expire.
 			// If requested, put the job on hold. Otherwise, wait for the
 			// proxy to be refreshed, then resume handling the job.
-			now = time(NULL);
 			if ( jobProxy->expiration_time > JM_MIN_PROXY_TIME + now ) {
 				gmState = GM_START;
 			} else {
