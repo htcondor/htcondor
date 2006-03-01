@@ -158,21 +158,25 @@ tdp_wait_stopped_child (pid_t pid)
 
 #endif /* LINUX && TDP */
 
-#undef SECURITY_HACK_ENABLE
+/*
+void zz2printf(int debug_levels, KeyInfo *k) {
+	if (param_boolean("SEC_DEBUG_PRINT_KEYS", false)) {
+		if (k) {
+			char hexout[260];  // holds (at least) a 128 byte key.
+			const unsigned char* dataptr = k->getKeyData();
+			int   length  =  k->getKeyLength();
 
-void zz2printf(KeyInfo *k) {
-	if (k) {
-		char hexout[260];  // holds (at least) a 128 byte key.
-		const unsigned char* dataptr = k->getKeyData();
-		int   length  =  k->getKeyLength();
+			for (int i = 0; (i < length) && (i < 24); i++) {
+				sprintf (&hexout[i*2], "%02x", *dataptr++);
+			}
 
-		for (int i = 0; (i < length) && (i < 24); i++) {
-			sprintf (&hexout[i*2], "%02x", *dataptr++);
+			dprintf (debug_levels, "KEYPRINTF: [%i] %s\n", length, hexout);
+		} else {
+			dprintf (debug_levels, "KEYPRINTF: [NULL]\n");
 		}
-
-    	dprintf (D_SECURITY, "ZKM: [%i] %s\n", length, hexout);
 	}
 }
+*/
 
 static unsigned int ZZZZZ = 0;
 int ZZZ_always_increase() {
@@ -2642,9 +2646,7 @@ int DaemonCore::HandleReq(int socki)
 				goto finalize;
 			} else {
 				dprintf (D_SECURITY, "DC_AUTHENTICATE: message authenticator enabled with key id %s.\n", sess_id);
-#ifdef SECURITY_HACK_ENABLE
-				zz2printf (session->key());
-#endif
+				sec_man->key_printf (D_SECURITY, session->key());
 			}
 
             // Lookup remote user
@@ -2735,9 +2737,7 @@ int DaemonCore::HandleReq(int socki)
 				goto finalize;
 			} else {
 				dprintf (D_SECURITY, "DC_AUTHENTICATE: encryption enabled with key id %s.\n", sess_id);
-#ifdef SECURITY_HACK_ENABLE
-				zz2printf (session->key());
-#endif
+				sec_man->key_printf (D_SECURITY, session->key());
 			}
             // Lookup user if necessary
             if (who == NULL) {
@@ -3152,9 +3152,7 @@ int DaemonCore::HandleReq(int socki)
 							goto finalize;
 						}
 
-#ifdef SECURITY_HACK_ENABLE
-						zz2printf (the_key);
-#endif
+						sec_man->key_printf (D_SECURITY, the_key);
 					}
 
 					new_session = true;
@@ -3309,9 +3307,7 @@ int DaemonCore::HandleReq(int socki)
 						goto finalize;
 					} else {
 						dprintf (D_SECURITY, "DC_AUTHENTICATE: message authenticator enabled with key id %s.\n", the_sid);
-#ifdef SECURITY_HACK_ENABLE
-						zz2printf (the_key);
-#endif
+						sec_man->key_printf (D_SECURITY, the_key);
 					}
 				} else {
 					sock->set_MD_mode(MD_OFF, the_key);

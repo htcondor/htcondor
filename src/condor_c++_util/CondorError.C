@@ -38,7 +38,7 @@ CondorError::CondorError(CondorError& copy) {
 	deep_copy(copy);
 }
 
-CondorError& CondorError::operator==(CondorError& copy) {
+CondorError& CondorError::operator=(CondorError& copy) {
 	if (&copy != this) {
 		clear();
 		deep_copy(copy);
@@ -88,6 +88,8 @@ void CondorError::deep_copy(CondorError& copy) {
 	if(copy._next) {
 		_next = new CondorError();
 		_next->deep_copy(*(copy._next));
+	} else {
+		_next = 0;
 	}
 }
 

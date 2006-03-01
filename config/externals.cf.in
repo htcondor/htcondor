@@ -81,7 +81,8 @@ KERBEROS_INC = $(KERBEROS_DIR)/include
 #if KERBEROS_K5
 KERBEROS_LIB = $(KERBEROS_DIR)/lib/libkrb5.a \
    $(KERBEROS_DIR)/lib/libk5crypto.a \
-   $(KERBEROS_DIR)/lib/libcom_err.a
+   $(KERBEROS_DIR)/lib/libcom_err.a \
+   $(KERBEROS_DIR)/lib/libkrb5support.a
 #else
 KERBEROS_LIB = $(KERBEROS_DIR)/lib/libkrb5.a \
    $(KERBEROS_DIR)/lib/libcrypto.a \

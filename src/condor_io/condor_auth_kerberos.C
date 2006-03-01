@@ -56,12 +56,12 @@ Condor_Auth_Kerberos :: Condor_Auth_Kerberos( ReliSock * sock )
       krb_context_     ( NULL ),
       auth_context_    ( NULL ),
       krb_principal_   ( NULL ),
+      server_          ( NULL ),
+      sessionKey_      ( NULL ),
+      creds_           ( NULL ),
       ccname_          ( NULL ),
       defaultStash_    ( NULL ),
-      keytabName_      ( NULL ),
-      sessionKey_      ( NULL ),
-      server_          ( NULL ),
-      creds_           ( NULL )
+      keytabName_      ( NULL )
 {
 }
 
@@ -102,7 +102,6 @@ Condor_Auth_Kerberos :: ~Condor_Auth_Kerberos()
 int Condor_Auth_Kerberos :: authenticate(const char * remoteHost, CondorError* errstack)
 {
     int status = 0;
-    char * principal = NULL;
 
 	if ( mySock_->isClient() ) {
 		// we are the client.
@@ -160,18 +159,39 @@ int Condor_Auth_Kerberos :: wrap(char*  input,
                                  int&   output_len)
 {
     krb5_error_code code;
-    krb5_data       in_data, test;
+    krb5_data       in_data;
     krb5_enc_data   out_data;
-    krb5_pointer    ivec;
     int             index, tmp;
 
+	size_t blocksize, encrypted_length;
+	char* encrypted_data = 0;
+
+	// make a blank initialization vector
+	code = krb5_c_block_size(krb_context_, sessionKey_->enctype, &blocksize);
+	if (code) {
+		// err
+	}
+
     // Make the input buffer
-    in_data.length = input_len;
     in_data.data = input;
-    memcpy(in_data.data, input, input_len);
-    out_data.ciphertext.data = 0;
-    
-    if (code = krb5_encrypt_data(krb_context_, sessionKey_, 0, &in_data, &out_data)) {
+    in_data.length = input_len;
+
+    // Make the output buffer
+    code = krb5_c_encrypt_length(krb_context_, sessionKey_->enctype, input_len, &encrypted_length);
+	if(code) {
+		// err
+	}
+
+	encrypted_data = (char*)malloc(encrypted_length);
+	if (!encrypted_length) {
+		// err
+	}
+
+    out_data.ciphertext.data = (char*)encrypted_data;
+	out_data.ciphertext.length = encrypted_length;
+
+    if (code = krb5_c_encrypt(krb_context_, sessionKey_, 1024 /* key usage */,
+				0 /* no ivec */, &in_data, &out_data)) {
         output     = 0;
         output_len = 0;
         if (out_data.ciphertext.data) {    
@@ -205,7 +225,7 @@ int Condor_Auth_Kerberos :: wrap(char*  input,
     if (out_data.ciphertext.data) {    
         free(out_data.ciphertext.data);
     }
-    
+
     return TRUE;
 }
 
@@ -218,7 +238,9 @@ int Condor_Auth_Kerberos :: unwrap(char*  input,
     krb5_data       out_data;
     krb5_enc_data   enc_data;
     int index = 0, tmp;
+	size_t blocksize;
     out_data.data = 0;
+    out_data.length = 0;
 
     memcpy(&tmp, input, sizeof(enc_data.enctype));
     enc_data.enctype = ntohl(tmp);
@@ -231,14 +253,26 @@ int Condor_Auth_Kerberos :: unwrap(char*  input,
     memcpy(&tmp, input + index, sizeof(enc_data.ciphertext.length));
     enc_data.ciphertext.length = ntohl(tmp);
     index += sizeof(enc_data.ciphertext.length);
-    
+
     enc_data.ciphertext.data = input + index;
-    
-    if (code = krb5_decrypt_data(krb_context_, 
-                                 sessionKey_,
-                                 0, 
-                                 &enc_data, 
-                                 &out_data)) {
+
+	// DEBUG
+	dprintf (D_FULLDEBUG, "KERBEROS: input.enctype (%i) and session.enctype (%i)\n",
+			enc_data.enctype, sessionKey_->enctype);
+
+	// make a blank initialization vector
+	code = krb5_c_block_size(krb_context_, sessionKey_->enctype, &blocksize);
+	if (code) {
+    	dprintf(D_ALWAYS, "AUTH_ERROR: %s\n", error_message(code));
+	}
+
+    out_data.length = enc_data.ciphertext.length;
+	out_data.data = (char*)malloc(out_data.length);
+
+	if (code = krb5_c_decrypt(krb_context_, sessionKey_, 1024 /* key usage */,
+				0 /* no ivec */, &enc_data, &out_data)) {
+
+	//if (code = krb5_decrypt_data(krb_context_, sessionKey_, 0, &enc_data, &out_data)) {
         output_len = 0;
         output = 0;
         dprintf( D_ALWAYS, "KERBEROS: %s\n", error_message(code) );
@@ -247,7 +281,6 @@ int Condor_Auth_Kerberos :: unwrap(char*  input,
         }
         return false;
     }
-    //fprintf(stderr, "Decrypted\n");
     
     output_len = out_data.length;
     output = (char *) malloc(output_len);
@@ -260,31 +293,56 @@ int Condor_Auth_Kerberos :: unwrap(char*  input,
 }
 
 //----------------------------------------------------------------------
-// Authenticate to server as a daemon
+// Authenticate to server as a daemon (i.e. using the keytab)
 //----------------------------------------------------------------------
 int Condor_Auth_Kerberos :: init_daemon()
 {
     int            code, rc = TRUE;
     priv_state     priv;
-    krb5_keytab    keytab = 0;
+
     char *         daemonPrincipal = 0;
+
+	krb5_creds    *l_increds = (krb5_creds *) malloc(sizeof(krb5_creds));
+	krb5_creds    *l_outcreds = (krb5_creds *) malloc(sizeof(krb5_creds));
+
+    krb5_keytab    keytab = 0;
+	krb5_ccache    ccache = 0;
+
+	// init some member vars
     creds_ = (krb5_creds *) malloc(sizeof(krb5_creds));
-    memset(creds_, 0, sizeof(krb5_creds));
     keytabName_ = param(STR_KERBEROS_SERVER_KEYTAB);
-    
+
+	char*           ccnam = NULL;
+
+    memset(creds_, 0, sizeof(krb5_creds));
+    memset(l_increds, 0, sizeof(krb5_creds));
+    memset(l_outcreds, 0, sizeof(krb5_creds));
+
     //------------------------------------------
     // Initialize the principal for daemon (properly :-)
     //------------------------------------------
+	// this means using a keytab to obtain a tgt.
+	//
+	// in krb5-1.2 and earlier this was done with krb5_get_in_tkt_keytab()
+	//
+	// in krb5-1.3 and
+	// later this is done with krb5_get_init_creds_keytab.  then you
+	// put the creds in the cache and call krb5_get_credentials().
+
+	// select a server principal
     daemonPrincipal = param(STR_KERBEROS_SERVER_PRINCIPAL);
-    
+
 	if (daemonPrincipal) {
+		// it was defined explicitly in the config file
 		if ((code = krb5_parse_name(krb_context_, daemonPrincipal, &krb_principal_))) {
 			free(daemonPrincipal);
 			goto error;
 		}
 	} else {
+		// not defined in config, let's construct one from a service name
 		daemonPrincipal = param(STR_KERBEROS_SERVER_SERVICE);
 		if (!daemonPrincipal) {
+			// use the host credential if no service was specified
 			daemonPrincipal = strdup(STR_DEFAULT_CONDOR_SERVICE);
 		}
 
@@ -300,37 +358,104 @@ int Condor_Auth_Kerberos :: init_daemon()
 	free(daemonPrincipal);
 	daemonPrincipal = 0;
 
-    //------------------------------------------
-    // Copy the principal information 
-    //------------------------------------------
-    krb5_copy_principal(krb_context_, krb_principal_, &(creds_->client));
-    krb5_copy_principal(krb_context_, server_, &(creds_->server));
-    
-    dprintf(D_SECURITY, "Trying to get credential\n");
-    
+
+   
+	dprintf_krb5_principal( D_SECURITY, "init_daemon: client principal is '%s'\n", krb_principal_);
+
     if (keytabName_) {
+    	dprintf(D_SECURITY, "init_daemon: Using keytab %s\n", keytabName_);
         code = krb5_kt_resolve(krb_context_, keytabName_, &keytab);
-    }
-    else {
+    } else {
+		char defktname[_POSIX_PATH_MAX];
+		krb5_kt_default_name(krb_context_, defktname, _POSIX_PATH_MAX);
+    	dprintf(D_SECURITY, "init_daemon: Using default keytab %s\n", defktname);
         code = krb5_kt_default(krb_context_, &keytab);
     }
-    
+	if (code) {
+		goto error;
+	}
+
+
+	//------------------------------------------
+	// find the default credential cache
+	//------------------------------------------
+	ccnam = strdup(krb5_cc_default_name(krb_context_));
+	dprintf( D_FULLDEBUG, "init_daemon: krb5_cc_resolve(%s)\n", ccnam);
+	code = krb5_cc_resolve(krb_context_, ccnam, &ccache);
+	free(ccnam);
+
+	if (code) {
+		goto error;
+	}
+
+	dprintf_krb5_principal( D_FULLDEBUG, "init_daemon: krb5_cc_initialize(%s)\n", krb_principal_);
+	if((code = krb5_cc_initialize(krb_context_, ccache, krb_principal_))) {
+		goto error;
+	}
+
+    dprintf(D_SECURITY, "init_daemon: Trying to get tgt credential\n");
     priv = set_root_priv();   // Get the old privilige
-    
-    if (code = krb5_get_in_tkt_with_keytab(krb_context_,
-                                           0,
-                                           NULL,      //adderss
-                                           NULL,
-                                           NULL,
-                                           keytab,
-                                           0,
-                                           creds_,
-                                           0)) {
-        set_priv(priv);
+	code = krb5_get_init_creds_keytab(krb_context_, l_increds, krb_principal_, keytab, 0, 0, 0);
+    set_priv(priv);
+	if(code) {
+		goto error;
+	}
+
+	if ((DebugFlags & D_SECURITY) && (DebugFlags & D_FULLDEBUG)) {
+		dprintf_krb5_principal( D_SECURITY, "init_daemon: gic_kt l_increds->client is '%s'\n", l_increds->client );
+		dprintf_krb5_principal( D_SECURITY, "init_daemon: gic_kt l_increds->server is '%s'\n", l_increds->server );
+		dprintf( D_FULLDEBUG, "init_daemon: now calling krb5_cc_store_cred()\n");
+	}
+
+	if((code = krb5_cc_store_cred(krb_context_, ccache, l_increds))) {
+		krb5_free_cred_contents(krb_context_, l_increds);
+		krb5_free_creds(krb_context_, l_increds);
+		goto error;
+	}
+
+
+	//------------------------------------------
+	// Get principal info
+	//------------------------------------------
+	krb5_principal tmp_princ;
+	if ((code = krb5_cc_get_principal(krb_context_, ccache, &tmp_princ))) {
+		goto error;
+	}
+ 	dprintf_krb5_principal( D_FULLDEBUG, "init_daemon: krb5_cc_get_principal is '%s'\n", tmp_princ );
+	krb5_free_principal(krb_context_, tmp_princ);
+
+    //------------------------------------------
+    // Copy the request information into in increds
+    //------------------------------------------
+	krb5_free_cred_contents(krb_context_, l_increds);
+	//krb5_free_creds(krb_context_, l_increds);
+    memset(l_increds, 0, sizeof(krb5_creds));
+
+	dprintf( D_FULLDEBUG, "init_daemon: now calling krb5_get_credentials()\n");
+
+    krb5_copy_principal(krb_context_, krb_principal_, &(l_increds->client));
+    krb5_copy_principal(krb_context_, server_, &(l_increds->server));
+ 	dprintf_krb5_principal( D_FULLDEBUG, "init_daemon: post l_increds->client is '%s'\n", l_increds->client );
+	dprintf_krb5_principal( D_FULLDEBUG, "init_daemon: post l_increds->server is '%s'\n", l_increds->server );
+
+	code = krb5_get_credentials(krb_context_, 0, ccache, l_increds, &creds_);
+
+	dprintf_krb5_principal( D_FULLDEBUG, "init_daemon: post l_outcreds->client is '%s'\n", creds_->client );
+	dprintf_krb5_principal( D_FULLDEBUG, "init_daemon: post l_outcreds->server is '%s'\n", creds_->server );
+
+    if (code) {
+
+//    if (code = krb5_get_in_tkt_with_keytab(krb_context_,
+//                                           0,
+//                                           NULL,      //adderss
+//                                           NULL,
+//                                           NULL,
+//                                           keytab,
+//                                           0,
+//                                           creds_,
+//                                           0)) {
         goto error;
     }
-    
-    set_priv(priv);
     
     dprintf(D_SECURITY, "Success..........................\n");
     
@@ -369,28 +494,46 @@ int Condor_Auth_Kerberos :: init_user()
     //------------------------------------------
     ccname_ = strdup(krb5_cc_default_name(krb_context_));
     
-    if (code = krb5_cc_resolve(krb_context_, ccname_, &ccache)) {
+    if ((code = krb5_cc_resolve(krb_context_, ccname_, &ccache))) {
         goto error;
     }
     
     //------------------------------------------
     // Get principal info
     //------------------------------------------
-    if (code = krb5_cc_get_principal(krb_context_, ccache, &krb_principal_)) {
+    if ((code = krb5_cc_get_principal(krb_context_, ccache, &krb_principal_))) {
         goto error;
     }
 
-    if (code = krb5_copy_principal(krb_context_,krb_principal_,&mcreds.client)){
+    if ((code = krb5_copy_principal(krb_context_,krb_principal_,&mcreds.client))){
         goto error;
     }
     
-    if (code = krb5_copy_principal(krb_context_, server_, &mcreds.server)) {
+    if ((code = krb5_copy_principal(krb_context_, server_, &mcreds.server))) {
         goto error;
     }
     
-    if (code = krb5_get_credentials(krb_context_, 0, ccache, &mcreds, &creds_)) {
+   	dprintf_krb5_principal ( D_FULLDEBUG, "init_user: pre mcreds->client is '%s'\n", mcreds.client);
+	dprintf_krb5_principal ( D_FULLDEBUG, "init_user: pre mcreds->server is '%s'\n", mcreds.server);
+	if (creds_) {
+		dprintf_krb5_principal ( D_FULLDEBUG, "init_user: pre creds_->client is '%s'\n", creds_->client);
+		dprintf_krb5_principal ( D_FULLDEBUG, "init_user: pre creds_->server is '%s'\n", creds_->server);
+	} else {
+		dprintf ( D_FULLDEBUG, "init_user: pre creds_ is NULL\n");
+	}		
+
+    if ((code = krb5_get_credentials(krb_context_, 0, ccache, &mcreds, &creds_))) {
         goto error;
     }                                   
+
+	dprintf_krb5_principal ( D_FULLDEBUG, "init_user: post mcreds->client is '%s'\n", mcreds.client);
+	dprintf_krb5_principal ( D_FULLDEBUG, "init_user: post mcreds->server is '%s'\n", mcreds.server);
+	if (creds_) {
+		dprintf_krb5_principal ( D_FULLDEBUG, "init_user: post creds_->client is '%s'\n", creds_->client);
+		dprintf_krb5_principal ( D_FULLDEBUG, "init_user: post creds_->server is '%s'\n", creds_->server);
+	} else {
+		dprintf ( D_FULLDEBUG, "init_user: post creds_ is NULL\n");
+	}		
     
     dprintf(D_SECURITY, "Successfully located credential cache\n");
     
@@ -430,20 +573,24 @@ int Condor_Auth_Kerberos :: authenticate_client_kerberos()
     // Load local addresses
     //------------------------------------------
     if (creds_->addresses == NULL) {
-        if (code = krb5_os_localaddr(krb_context_, &(creds_->addresses))) {
+		dprintf ( D_SECURITY, "KERBEROS: creds_->addresses == NULL\n");
+        if ((code = krb5_os_localaddr(krb_context_, &(creds_->addresses)))) {
             goto error;
         }
     }
     
+	dprintf_krb5_principal ( D_FULLDEBUG, "KERBEROS: creds_->client is '%s'\n", creds_->client);
+	dprintf_krb5_principal ( D_FULLDEBUG, "KERBEROS: creds_->server is '%s'\n", creds_->server);
+   
     //------------------------------------------
     // Let's create the KRB_AP_REQ message
     //------------------------------------------    
-    if (code = krb5_mk_req_extended(krb_context_, 
+    if ((code = krb5_mk_req_extended(krb_context_, 
                                     &auth_context_, 
                                     flags,
                                     0, 
                                     creds_, 
-                                    &request)) {
+                                    &request))) {
         goto error;
     }
     
@@ -491,7 +638,7 @@ int Condor_Auth_Kerberos :: authenticate_client_kerberos()
     //------------------------------------------
     // Store the session key for encryption
     //------------------------------------------
-    if (code = krb5_copy_keyblock(krb_context_, &(creds_->keyblock), &sessionKey_)) {
+    if ((code = krb5_copy_keyblock(krb_context_, &(creds_->keyblock), &sessionKey_))) {
         goto error;			  
     } 
 
@@ -547,7 +694,7 @@ int Condor_Auth_Kerberos :: authenticate_server_kerberos()
     }
     
     if (code) {
-        dprintf( D_ALWAYS, "Kerberos server authentication error:%s\n",
+        dprintf( D_ALWAYS, "1: Kerberos server authentication error:%s\n",
 				 error_message(code) );
         goto error;
     }
@@ -561,28 +708,34 @@ int Condor_Auth_Kerberos :: authenticate_server_kerberos()
     }
     
 	dprintf( D_SECURITY, "Reading kerberos request object (krb5_rd_req)\n");
-    priv = set_root_priv();   // Get the old privilige
+
+	dprintf_krb5_principal( D_FULLDEBUG, "KERBEROS: krb_principal_ is '%s'\n", krb_principal_);
+
+ priv = set_root_priv();   // Get the old privilige
     
     if (code = krb5_rd_req(krb_context_,
                            &auth_context_,
                            &request,
-                           krb_principal_,
+                           //krb_principal_,
+						   NULL,
                            keytab,
                            &flags,
                            &ticket)) {
         set_priv(priv);   // Reset
-        dprintf( D_ALWAYS, "Kerberos server authentication error:%s\n",
+        dprintf( D_ALWAYS, "2: Kerberos server authentication error:%s\n",
 				 error_message(code) );
         goto error;
     }
     set_priv(priv);   // Reset
     
+	dprintf ( D_FULLDEBUG, "KERBEROS: krb5_rd_req done.\n");
+
     //------------------------------------------
     // See if mutual authentication is required
     //------------------------------------------
     if (flags & AP_OPTS_MUTUAL_REQUIRED) {
         if (code = krb5_mk_rep(krb_context_, auth_context_, &reply)) {
-            dprintf( D_ALWAYS, "Kerberos server authentication error:%s\n",
+            dprintf( D_ALWAYS, "3: Kerberos server authentication error:%s\n",
 					 error_message(code) );
             goto error;
         }
@@ -621,7 +774,7 @@ int Condor_Auth_Kerberos :: authenticate_server_kerberos()
     if (code = krb5_copy_keyblock(krb_context_, 
                                   ticket->enc_part2->session, 
                                   &sessionKey_)){
-        dprintf(D_SECURITY, "Kerberos server authentication error:%s\n", error_message(code));
+        dprintf(D_SECURITY, "4: Kerberos server authentication error:%s\n", error_message(code));
         goto error;
     }
     
@@ -790,7 +943,7 @@ int Condor_Auth_Kerberos :: map_kerberos_name(krb5_principal * princ_to_map)
 		return FALSE;
     } 
     else {
-		dprintf( D_SECURITY, "ZKM: krb5_unparse_name: %s\n", client );
+		dprintf( D_SECURITY, "KERBEROS: krb5_unparse_name: %s\n", client );
 
 		char * user = 0;
 		char * at_sign = strchr(client, '@');
@@ -799,17 +952,17 @@ int Condor_Auth_Kerberos :: map_kerberos_name(krb5_principal * princ_to_map)
 		// STR_KERBEROS_SERVER_PRINCIPAL
 		char * server_princ = param(STR_KERBEROS_SERVER_PRINCIPAL);
 		if (server_princ) {
-			dprintf ( D_SECURITY, "ZKM: param server princ: %s\n", server_princ );
+			dprintf ( D_SECURITY, "KERBEROS: param server princ: %s\n", server_princ );
 			if (strcmp(client, server_princ) == 0) {
 				user = param(STR_KERBEROS_SERVER_USER);
 				if (user) {
-					dprintf ( D_SECURITY, "ZKM: mapped to user: %s\n", user );
+					dprintf ( D_SECURITY, "KERBEROS: mapped to user: %s\n", user );
 				}
 			}
 		}
 
 		if (!user) {
-			dprintf ( D_SECURITY, "ZKM: no user yet determined, will grab up to slash\n" );
+			dprintf ( D_SECURITY, "KERBEROS: no user yet determined, will grab up to slash\n" );
 			char * tmp;
 			if ((tmp = strchr( client, '/')) == NULL) {
 				tmp = at_sign;
@@ -818,7 +971,7 @@ int Condor_Auth_Kerberos :: map_kerberos_name(krb5_principal * princ_to_map)
 			user = (char*) malloc( user_len + 1 );
 			strncpy ( user, client, user_len );
 			user[user_len] = '\0';
-			dprintf ( D_SECURITY, "ZKM: picked user: %s\n", user );
+			dprintf ( D_SECURITY, "KERBEROS: picked user: %s\n", user );
 		}
 
 		char * service = 0;
@@ -833,7 +986,7 @@ int Condor_Auth_Kerberos :: map_kerberos_name(krb5_principal * princ_to_map)
 			if (!user) {
 				user = strdup(STR_DEFAULT_CONDOR_USER);
 			}
-			dprintf ( D_SECURITY, "ZKM: remapping '%s' to '%s'\n", service, user );
+			dprintf ( D_SECURITY, "KERBEROS: remapping '%s' to '%s'\n", service, user );
 		}
  		setRemoteUser(user);
 		free(user);
@@ -1069,7 +1222,7 @@ int Condor_Auth_Kerberos :: init_server_info()
 
 	char * tmp = 0;
     krb5_unparse_name(krb_context_, *server, &tmp);
-	dprintf(D_SECURITY, "ZKM: Server principal is %s\n", tmp);
+	dprintf(D_SECURITY, "KERBEROS: Server principal is %s\n", tmp);
 	free(tmp);
 
     return 1;
@@ -1337,4 +1490,20 @@ int Condor_Auth_Kerberos :: isValid() const
 #endif
 
 
+void Condor_Auth_Kerberos :: dprintf_krb5_principal ( int deblevel, char *fmt, krb5_principal p ) {
+
+	if (p) {
+		char * tmpprincname = 0;
+		if (int code = krb5_unparse_name(krb_context_, p, &tmpprincname)){
+			dprintf( deblevel, fmt, "ERROR FOLLOWS");
+			dprintf( deblevel, fmt, error_message(code));
+		} else {
+			dprintf( deblevel, fmt, tmpprincname );
+		}
+		free (tmpprincname);
+		tmpprincname = 0;
+	} else {
+		dprintf ( deblevel, fmt, "(NULL)" );
+	}
+}
 

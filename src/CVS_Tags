@@ -1,3 +1,10 @@
+03/01/06 V6_7-post_merge-V6_7-kerb14-merge-1
+	The state of V6_7-branch AFTER the first merge of the
+	V6_7-kerb14-branch as tagged at V6_7-kerb14-merge-1
+
+03/01/06 V6_7-pre_merge-V6_7-kerb14-merge-1
+	The state of the V6_7-branch before merging V6_7-kerb14-branch
+	into it as tagged at V6_7-kerb14-merge-1
 
 02/27/06 V6_7-dagman_classad-branch
 	Branch for work on adding classad-based workflows to DAGMan.

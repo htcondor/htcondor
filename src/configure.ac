@@ -1497,19 +1497,7 @@ if test x$_cv_linux_distro = "xRH80" -o x$_cv_linux_distro = "xRH9" -o x$_cv_lin
    CONDOR_EXTERNAL_VERSION([drmaa],[1.2])  
 fi
 
-if test "$os" = "AIX" ; then
-  # for now, we don't even have a krb5 1.3.1 external, so even though
-  # that's what we think we want, we should just not use anything.
-  # the CONDOR_EXTERNAL_VERSION macro is smart enough to notice if
-  # we're missing a package, so we can't configure AIX to use 1.3.1
-  # until we really add the external and start using it...
-  AC_MSG_CHECKING(krb5)
-  AC_MSG_RESULT([NONE])
-  AC_SUBST(ext_krb5_version,UNUSED)
-  #CONDOR_EXTERNAL_VERSION([krb5],[1.3.1])
-else
-  CONDOR_EXTERNAL_VERSION([krb5],[1.2.7])
-fi
+CONDOR_EXTERNAL_VERSION([krb5],[1.4.3])
 
 CONDOR_EXTERNAL_VERSION([globus],[4.0.1])
 AC_MSG_CHECKING([globus flavor])

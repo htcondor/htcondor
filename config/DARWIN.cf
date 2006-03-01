@@ -8,5 +8,4 @@
 #define HAS_OPENSSL             YES
 #define HAS_GLOBUS              YES
 #define HAS_GSI                 YES
-#define	WANT_KERBEROS           NO
 
