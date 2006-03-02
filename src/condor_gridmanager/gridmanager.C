@@ -513,13 +513,13 @@ initJobExprs()
 
 	expr_matched_or_undef.sprintf("(%s =!= %s)", ATTR_JOB_MATCHED, expr_false);
 	expr_managed.sprintf("(%s =?= \"%s\")", ATTR_JOB_MANAGED, MANAGED_EXTERNAL);
-	expr_not_managed.sprintf("(%s != %s)", expr_managed.Value(), expr_true);
+	expr_not_managed.sprintf("(%s =!= \"%s\")", ATTR_JOB_MANAGED, MANAGED_EXTERNAL);
 	expr_not_held.sprintf("(%s != %d)", ATTR_JOB_STATUS, HELD);
 	expr_schedd_job_constraint.sprintf("(%s)", ScheddJobConstraint);
 	// The gridmanager never wants to see this job again.
 	// It should be in the process of leaving the queue.
 	expr_completely_done.sprintf("(%s =?= \"%s\")", ATTR_JOB_MANAGED, MANAGED_DONE);
-	expr_not_completely_done.sprintf("(%s == %s)", expr_completely_done.Value(), expr_false);
+	expr_not_completely_done.sprintf("(%s =!= \"%s\")", ATTR_JOB_MANAGED, MANAGED_DONE);
 
 	done = true;
 }
