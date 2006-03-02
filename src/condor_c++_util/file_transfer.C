@@ -1701,8 +1701,20 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			/* if we fail to transfer a file, EXCEPT so the other side can */
 			/* try again. SC2000 hackery. _WARNING_ - I think Keller changed */
 			/* all of this. -epaulson 11/22/2000 */
-			EXCEPT("DoUpload: Failed to send file %s, exiting at %d\n",
-				fullname,__LINE__);
+			/* If the starter fails to upload the job's output files, it */
+			/* assumes it has been disconnected from the shadow and waits */
+			/* for a reconnect. If the transfer fails due to local I/O */
+			/* on either machine, the starter ends up waiting for a */
+			/* reconnect that will never happen. Therefore, we EXCEPT */
+			/* here. But we don't want to EXCEPT if we're the c-gahp. */
+			/*   - jfrey 3/1/2006 */
+			if ( !simple_init ) {
+				EXCEPT("DoUpload: Failed to send file %s, exiting at %d\n",
+					   fullname,__LINE__);
+			} else {
+				dprintf(D_FULLDEBUG,"DoUpload: Failed to send file %s, "
+						"exiting ad %d\n",fullname,__LINE__);
+			}
 			return_and_resetpriv( -1 );
 		}
 
