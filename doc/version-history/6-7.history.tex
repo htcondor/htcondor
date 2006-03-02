@@ -87,6 +87,12 @@ only affected jobs with no argument specification in the submit file
 or jobs with arguments specified in the new syntax (surrounded by
 double quotes).
 
+\item The \Condor{c-gahp} now ensures that arguments and environment in
+the job ClassAd are converted to a syntax understood by the target
+schedd.  Previously (starting with 6.7.15), jobs with empty
+arguments/environment, or jobs using the new syntax for these would fail
+to run when submitted as Condor-C jobs targetting a pre 6.7.15 schedd.
+
 \item When running grid-type gt4 jobs with an automatically-started
 gridftp server, a restart of Condor could cause all of the gt4 jobs to
 be canceled and resubmitted due to the gridftp server's port changing.
