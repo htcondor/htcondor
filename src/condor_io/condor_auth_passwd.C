@@ -378,11 +378,8 @@ Condor_Auth_Passwd::authenticate_client()
 		// we are root on Unix or SYSTEM on Win32, then user "condor", else
 		// get the local user name here. 
 	char * username = NULL;
-	if ( is_root() ) {
-		username = strdup("condor");
-	} else {
-		username = my_username();
-	}
+	username = strdup(POOL_PASSWORD_USERNAME);
+
 		// and the domain ... should this be the UID_DOMAIN or the win32 domain??
 		// for now, use the UID_DOMAIN
 	char * localDomain = (char*) getLocalDomain();

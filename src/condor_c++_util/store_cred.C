@@ -34,23 +34,133 @@
 #ifndef WIN32
 	// **** UNIX CODE *****
 
-// TODO: stub functions for now
-char* getStoredCredential(const char *username, const char *domain)
+void SecureZeroMemory(void *p, size_t n)
 {
-	return NULL;
+	// TODO: make this Secure
+	memset(p, 0, n);
 }
 
-#else
-	// **** WIN32 CODE ****
+char* getStoredCredential(const char *username, const char*)
+{
+	// TODO: add support for multiple domains
 
+	if (strcmp(username, POOL_PASSWORD_USERNAME) != 0) {
+		dprintf(D_FULLDEBUG, "getStoredCredential: only pool password is supported on UNIX\n");
+		return NULL;
+	} 
 
-#include <conio.h>
+	char *filename = param("POOL_PASSWORD_FILE");
+	if (filename == NULL) {
+		dprintf(D_FULLDEBUG,
+			"getStoredCredential: POOL_PASSWORD_FILE undefined\n");
+		return NULL;
+	}
 
+	FILE* fp = fopen(filename, "r");
+	if (fp == NULL) {
+		dprintf(D_FULLDEBUG,
+			"getStoredCredential: error opening POOL_PASSWORD_FILE: %s\n", filename);
+		free(filename);
+		return NULL;
+	}
+	free(filename);
 
+	char *pw = (char *)malloc(MAX_PASSWORD_LENGTH + 1);
+	size_t sz = fread(pw, 1, MAX_PASSWORD_LENGTH, fp);
+	fclose(fp);
+	if (sz == 0) {
+		dprintf(D_FULLDEBUG,
+			"getStoredCredential: error reading pool password (file may be empty)\n");
+		free(pw);
+		return NULL;
+	}
+	pw[sz] = '\0';
 
-extern "C" FILE *DebugFP;
-extern "C" int DebugFlags;
+	return pw;
+}
 
+int store_cred_service(const char *user, const char *pw, int mode)
+{
+	char *at = strchr(user, '@');
+	if ((at == NULL) || (at == user) ||
+	    (memcmp(user, POOL_PASSWORD_USERNAME, at - user) != 0)) {
+		dprintf(D_FULLDEBUG, "getStoredCredential: only pool password is supported on UNIX\n");
+		return FAILURE;
+	}
+
+	char *filename;
+	if (mode != QUERY_MODE) {
+		filename = param("POOL_PASSWORD_FILE");
+		if (filename == NULL) {
+			dprintf(D_FULLDEBUG,
+				"getStoredCredential: POOL_PASSWORD_FILE undefined\n");
+			return FAILURE;
+		}
+	}
+
+	priv_state priv = set_condor_priv();
+
+	int answer;
+	switch (mode) {
+	case ADD_MODE: {
+		answer = FAILURE;
+		size_t pw_sz = strlen(pw);
+		if (pw_sz > MAX_PASSWORD_LENGTH) {
+			dprintf(D_ALWAYS, "store_cred_service: password too large\n");
+			break;
+		}
+		int fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+		if (fd == -1) {
+			dprintf(D_ALWAYS, "store_cred_service: open failed on %s\n", filename);
+			break;
+		}
+		FILE *fp = fdopen(fd, "w");
+		if (fp == NULL) {
+			dprintf(D_ALWAYS, "store_cred_service: fdopen failed\n");
+			break;
+		}
+		size_t sz = fwrite(pw, 1, pw_sz, fp);
+		fclose(fp);
+		if (sz != pw_sz) {
+			dprintf(D_ALWAYS, "store_cred_service: error writing to password file\n");
+			break;
+		}
+		answer = SUCCESS;
+		break;
+	}
+	case DELETE_MODE:
+		if (unlink(filename) == 0) {
+			answer = SUCCESS;
+		}
+		else {
+			answer = FAILURE_NOT_FOUND;
+		}
+		break;
+	case QUERY_MODE: {
+		char *pw = getStoredCredential(POOL_PASSWORD_USERNAME, NULL);
+		if (pw) {
+			answer = SUCCESS;
+			SecureZeroMemory(pw, MAX_PASSWORD_LENGTH);
+			free(pw);
+		}
+		else {
+			answer = FAILURE_NOT_FOUND;
+		}
+		break;
+	}
+	default:
+		dprintf(D_ALWAYS, "store_cred_service: unknown mode: %d\n", mode);
+		answer = FAILURE;
+	}
+
+	// clean up after ourselves
+	if (mode != QUERY_MODE) {
+		free(filename);
+	}
+	set_priv(priv);
+
+	return answer;
+}
 
 static int code_store_cred(Stream *socket, char* &user, char* &pw, int &mode) {
 	
@@ -83,6 +193,15 @@ static int code_store_cred(Stream *socket, char* &user, char* &pw, int &mode) {
 	return TRUE;
 	
 }
+
+#else
+	// **** WIN32 CODE ****
+
+#include <conio.h>
+
+extern "C" FILE *DebugFP;
+extern "C" int DebugFlags;
+
 
 int store_cred_service(const char *user, const char *pw, int mode) 
 {
@@ -260,6 +379,8 @@ void store_cred_handler(void *, int i, Stream *s)
 	return;
 }	
 
+#endif // WIN32
+
 void store_pool_cred_handler(void *, int i, Stream *s)
 {
 	int result;
@@ -428,17 +549,65 @@ store_cred(const char* user, const char* pw, int mode, Daemon* d, bool force) {
 	return return_val;
 }	
 
+int deleteCredential( const char* user, const char* pw, Daemon *d ) {
+	return store_cred(user, pw, DELETE_MODE, d);	
+}
+
+int addCredential( const char* user, const char* pw, Daemon *d ) {
+	return store_cred(user, pw, ADD_MODE, d);	
+}
+
+int queryCredential( const char* user, Daemon *d ) {
+	return store_cred(user, NULL, QUERY_MODE, d);	
+}
+
+#if !defined(WIN32)
+
+#include <termios.h>
+
+// helper routines for UNIX keyboard input
+static struct termios stored_settings;
+
+static void echo_off(void)
+{
+	struct termios new_settings;
+	tcgetattr(0, &stored_settings);
+	memcpy(&new_settings, &stored_settings, sizeof(struct termios));
+	new_settings.c_lflag &= (~ECHO);
+	tcsetattr(0, TCSANOW, &new_settings);
+	return;
+}
+
+static void echo_on(void)
+{
+    tcsetattr(0,TCSANOW,&stored_settings);
+    return;
+}
+
+#endif
+
 // reads at most maxlength chars without echoing to the terminal into buf
 bool
 read_from_keyboard(char* buf, int maxlength, bool echo) {
 	int ch, ch_count;
 
 	ch = ch_count = 0;
-	fflush(stdout);		
+	fflush(stdout);
+
+#if !defined(WIN32)
+	const char end_char = '\n';
+	if (!echo) echo_off();
+#else
+	const char end_char = '\r';
+#endif
 			
 	while ( ch_count < maxlength-1 ) {
+#if defined(WIN32)
 		ch = echo ? _getche() : _getch();
-		if ( ch == '\r' ) {
+#else
+		ch = getchar();
+#endif
+		if ( ch == end_char ) {
 			break;
 		} else if ( ch == '\b') { // backspace
 			if ( ch_count > 0 ) { ch_count--; }
@@ -449,6 +618,11 @@ read_from_keyboard(char* buf, int maxlength, bool echo) {
 		buf[ch_count++] = (char) ch;
 	}
 	buf[ch_count] = '\0';
+
+#if !defined(WIN32)
+	if (!echo) echo_on();
+#endif
+
 	return TRUE;
 }
 
@@ -469,6 +643,8 @@ get_password() {
 	
 	return buf;
 }
+
+#if defined(WIN32)
 
 // takes user@domain format for user argument
 bool
@@ -541,18 +717,6 @@ isValidCredential( const char *input_user, const char* input_pw ) {
 		CloseHandle(usrHnd);
 		return true;
 	}
-}
-
-int deleteCredential( const char* user, const char* pw, Daemon *d ) {
-	return store_cred(user, pw, DELETE_MODE, d);	
-}
-
-int addCredential( const char* user, const char* pw, Daemon *d ) {
-	return store_cred(user, pw, ADD_MODE, d);	
-}
-
-int queryCredential( const char* user, Daemon *d ) {
-	return store_cred(user, NULL, QUERY_MODE, d);	
 }
 
 char* getStoredCredential(const char *username, const char *domain)

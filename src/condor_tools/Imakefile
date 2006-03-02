@@ -1,7 +1,8 @@
 PROGRAMS =  	condor_config_val condor_preen condor_stats \
 		condor_userprio condor_history condor test_calc condor_transfer_data \
 		view_collection condor_qedit condor_advertise condor_version \
-		condor_fetchlog condor_findhost condor_cod condor_wait
+		condor_fetchlog condor_findhost condor_cod condor_wait \
+		condor_store_cred_win
 
 all_target( $(PROGRAMS) )
 
@@ -88,6 +89,8 @@ static_target(condor,tool.o,$(LIB),$(STATIC_DIR)/sbin)
 static_copy_target($(STATIC_DIR)/sbin/condor,$(STATIC_DIR)/bin,condor,EXECUTABLE_MODE)
 purecov_c_plus_target(condor.pc,tool.o,$(LIB))
 pure_c_plus_target(condor.pure,tool.o,$(LIB))
+
+c_plus_target(condor_store_cred_win,store_cred_main.o,$(LIB))
 
 release_link_target($(RELEASE_DIR)/sbin/condor,sbin,condor_on)
 release_link_target($(RELEASE_DIR)/sbin/condor,sbin,condor_off)

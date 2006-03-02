@@ -24,10 +24,13 @@
 #ifndef STORE_CRED_H
 #define STORE_CRED_H
 
-#ifdef WIN32
 #include "condor_common.h"
 #include "condor_io.h"
 
+#if !defined(WIN32)
+// TODO: move this to an appropriate place
+void SecureZeroMemory(void *, size_t);
+#endif
 
 // store cred return codes
 const int SUCCESS = 1; 					// it worked!
@@ -44,30 +47,34 @@ const int FAILURE_ABORTED = -1;
 const int ADD_MODE = 100;
 const int DELETE_MODE = 101;
 const int QUERY_MODE = 102;
-const int CONFIG_MODE = 103;
 
 const char ADD_CREDENTIAL[] = "add";
 const char DELETE_CREDENTIAL[] = "delete";
 const char QUERY_CREDENTIAL[] = "query";
+
+// config mode for debugging
+#if defined(WIN32)
+const int CONFIG_MODE = 103;
 const char CONFIG_CREDENTIAL[] = "config";
+#endif
 
 #define POOL_PASSWORD_USERNAME "condor_pool_password"
 
 #define MAX_PASSWORD_LENGTH 255
 
-void store_cred_handler(void *, int i, Stream *s);
 void store_pool_cred_handler(void *, int i, Stream *s);
 int store_cred(const char *user, const char* pw, int mode, Daemon *d = NULL, bool force = false);
 int store_cred_service(const char *user, const char *pw, int mode);
-
 bool read_from_keyboard(char* buf, int maxlength, bool echo = true);
 char* get_password(void);	// get password from user w/o echo on the screen
-bool isValidCredential( const char *user, const char* pw );
 int addCredential(const char* user, const char* pw, Daemon *d = NULL);
 int deleteCredential(const char* user, const char* pw, Daemon *d = NULL);
 int queryCredential(const char* user, Daemon *d = NULL);  // just tell me if I have one stashed
 
-#endif // WIN32
+#if defined(WIN32)
+void store_cred_handler(void *, int i, Stream *s);
+bool isValidCredential( const char *user, const char* pw );
+#endif
 
 /** Get the stored password from our password staff in the registry.  
 	Result must be deallocated with free()

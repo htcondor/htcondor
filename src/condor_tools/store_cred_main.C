@@ -23,17 +23,18 @@
 
 #include "condor_common.h"
 
-#ifdef WIN32
-
 #include "condor_config.h"
 #include "store_cred.h"
-#include "lsa_mgr.h"
 #include "my_username.h"
 #include "condor_distribution.h"
 #include "basename.h"
 #include "dynuser.h"
 #include "daemon.h"
 #include "get_daemon_name.h"
+
+#if defined(WIN32)
+#include "lsa_mgr.h"  // for CONFIG_MODE
+#endif
 
 struct StoreCredOptions {
 	int mode;
@@ -181,9 +182,11 @@ int main(int argc, char *argv[]) {
 		case QUERY_MODE:
 			result = queryCredential(full_name, daemon);
 			break;
+#if defined(WIN32)
 		case CONFIG_MODE:
 			return interactive();
 			break;
+#endif
 		default:
 			fprintf(stderr, "Internal error\n");
 			goto cleanup;
@@ -319,6 +322,7 @@ parseCommandLine(StoreCredOptions *opts, int argc, char *argv[]) {
 				badCommand(argv[i]);
 			}	
 			break;
+#if defined(WIN32)
 		case 'c':	
 		case 'C':	// Config
 			if (stricmp(argv[i], CONFIG_CREDENTIAL) == 0) {
@@ -335,6 +339,7 @@ parseCommandLine(StoreCredOptions *opts, int argc, char *argv[]) {
 				badCommand(argv[i]);
 			}	
 			break;
+#endif
 		case '-':
 			// various switches
 			switch (argv[i][1]) {
@@ -487,5 +492,3 @@ goAheadAnyways()
 	}
 	return false;
 }
-
-#endif // WIN32
