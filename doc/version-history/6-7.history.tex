@@ -364,11 +364,11 @@ fails, \Condor{dagman} may hang, waiting for those processes to abort.
 (Bug introduced in version 6.7.17.)
 
 \item The FileLock.pm perl module (written in-house) was not included
-  in this release.  As a direct result the -flock option of
-  condor_cold_start will not work.  This can be remedied by
+  in this release.  As a direct result the \Opt{-flock} option of
+  condor\_cold\_start will not work.  This can be remedied by
   downloading FileLock.pm from:
   ftp://ftp.cs.wisc.edu/condor/temporary/filelock/FileLock.pm and
-  installing in in the lib\ directory of your Condor installation.
+  installing it in the \File{lib} directory of your Condor installation.
   (Bug introduced in version 6.7.17)
 
 \end{itemize}
