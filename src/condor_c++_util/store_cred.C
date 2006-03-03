@@ -31,6 +31,8 @@
 #include "store_cred.h"
 #include "condor_config.h"
 
+static int code_store_cred(Stream *socket, char* &user, char* &pw, int &mode);
+
 #ifndef WIN32
 	// **** UNIX CODE *****
 
@@ -162,38 +164,6 @@ int store_cred_service(const char *user, const char *pw, int mode)
 	return answer;
 }
 
-static int code_store_cred(Stream *socket, char* &user, char* &pw, int &mode) {
-	
-	int result;
-	
-	result = socket->code(user);
-	if( !result ) {
-		dprintf(D_ALWAYS, "store_cred: Failed to send/recv user.\n");
-		return FALSE;
-	}
-	
-	result = socket->code(pw);
-	if( !result ) {
-		dprintf(D_ALWAYS, "store_cred: Failed to send/recv pw.\n");
-		return FALSE;
-	}
-	
-	result = socket->code(mode);
-	if( !result ) {
-		dprintf(D_ALWAYS, "store_cred: Failed to send/recv mode.\n");
-		return FALSE;
-	}
-	
-	result = socket->end_of_message();
-	if( !result ) {
-		dprintf(D_ALWAYS, "store_cred: Failed to send/recv eom.\n");
-		return FALSE;
-	}
-	
-	return TRUE;
-	
-}
-
 #else
 	// **** WIN32 CODE ****
 
@@ -202,6 +172,46 @@ static int code_store_cred(Stream *socket, char* &user, char* &pw, int &mode) {
 extern "C" FILE *DebugFP;
 extern "C" int DebugFlags;
 
+char* getStoredCredential(const char *username, const char *domain)
+{
+
+		// Hopefully we're
+		// running as LocalSystem here, otherwise we can't get at the 
+		// password stash.
+	lsa_mgr lsaMan;
+	char pw[255];
+	wchar_t w_fullname[512];
+	wchar_t *w_pw;
+
+	if ( !username || !domain ) {
+		return NULL;
+	}
+
+	if ( _snwprintf(w_fullname, 254, L"%S@%S", username, domain) < 0 ) {
+		return NULL;
+	}
+
+	// make sure we're SYSTEM when we do this
+	w_pw = lsaMan.query(w_fullname);
+
+	if ( ! w_pw ) {
+		dprintf(D_ALWAYS, 
+			"getStoredCredential(): Could not locate credential for user "
+			"'%s@%s'\n", username, domain);
+		return NULL;
+	}
+
+	if ( _snprintf(pw, 511, "%S", w_pw) < 0 ) {
+		return NULL;
+	}
+
+	// we don't need the wide char pw anymore, so clean it up
+	SecureZeroMemory(w_pw, wcslen(w_pw)*sizeof(wchar_t));
+	delete[](w_pw);
+
+	dprintf(D_FULLDEBUG, "Found credential for user '%s'\n", username);
+	return strdup(pw);
+}
 
 int store_cred_service(const char *user, const char *pw, int mode) 
 {
@@ -379,7 +389,112 @@ void store_cred_handler(void *, int i, Stream *s)
 	return;
 }	
 
+// takes user@domain format for user argument
+bool
+isValidCredential( const char *input_user, const char* input_pw ) {
+	// see if we can get a user token from this password
+	HANDLE usrHnd = NULL;
+	char* dom;
+	DWORD LogonUserError;
+	BOOL retval;
+
+	retval = 0;
+	usrHnd = NULL;
+
+	char * user = strdup(input_user);
+	
+	// split the domain and the user name for LogonUser
+	dom = strchr(user, '@');
+
+	if ( dom ) {
+		*dom = '\0';
+		dom++;
+	}
+
+	// the POOL_PASSWORD_USERNAME account is not a real account
+	if (strcmp(user, POOL_PASSWORD_USERNAME) == 0) {
+		free(user);
+		return true;
+	}
+
+	char * pw = strdup(input_pw);
+
+	retval = LogonUser(
+		user,						// user name
+		dom,						// domain or server - local for now
+		pw,							// password
+		LOGON32_LOGON_NETWORK,		// NETWORK is fastest. 
+		LOGON32_PROVIDER_DEFAULT,	// logon provider
+		&usrHnd						// receive tokens handle
+	);
+	LogonUserError = GetLastError();
+
+	if ( (retval == 0) && ((LogonUserError == ERROR_PRIVILEGE_NOT_HELD ) || 
+		 (LogonUserError == ERROR_LOGON_TYPE_NOT_GRANTED )) ) {
+		
+		dprintf(D_FULLDEBUG, "NETWORK logon failed. Attempting INTERACTIVE\n");
+
+		retval = LogonUser(
+			user,						// user name
+			dom,						// domain or server - local for now
+			pw,							// password
+			LOGON32_LOGON_INTERACTIVE,	// INTERACTIVE should be held by everyone.
+			LOGON32_PROVIDER_DEFAULT,	// logon provider
+			&usrHnd						// receive tokens handle
+		);
+		LogonUserError = GetLastError();
+	}
+
+	if (user) free(user);
+	if (pw) {
+		SecureZeroMemory(pw,strlen(pw));
+		free(pw);
+	}
+
+	if ( retval == 0 ) {
+		dprintf(D_ALWAYS, "Failed to log in %s with err=%d\n", 
+				input_user, LogonUserError);
+		return false;
+	} else {
+		dprintf(D_FULLDEBUG, "Succeeded to log in %s\n", input_user);
+		CloseHandle(usrHnd);
+		return true;
+	}
+}
+
 #endif // WIN32
+
+static int code_store_cred(Stream *socket, char* &user, char* &pw, int &mode) {
+	
+	int result;
+	
+	result = socket->code(user);
+	if( !result ) {
+		dprintf(D_ALWAYS, "store_cred: Failed to send/recv user.\n");
+		return FALSE;
+	}
+	
+	result = socket->code(pw);
+	if( !result ) {
+		dprintf(D_ALWAYS, "store_cred: Failed to send/recv pw.\n");
+		return FALSE;
+	}
+	
+	result = socket->code(mode);
+	if( !result ) {
+		dprintf(D_ALWAYS, "store_cred: Failed to send/recv mode.\n");
+		return FALSE;
+	}
+	
+	result = socket->end_of_message();
+	if( !result ) {
+		dprintf(D_ALWAYS, "store_cred: Failed to send/recv eom.\n");
+		return FALSE;
+	}
+	
+	return TRUE;
+	
+}
 
 void store_pool_cred_handler(void *, int i, Stream *s)
 {
@@ -563,9 +678,9 @@ int queryCredential( const char* user, Daemon *d ) {
 
 #if !defined(WIN32)
 
+// helper routines for UNIX keyboard input
 #include <termios.h>
 
-// helper routines for UNIX keyboard input
 static struct termios stored_settings;
 
 static void echo_off(void)
@@ -643,122 +758,3 @@ get_password() {
 	
 	return buf;
 }
-
-#if defined(WIN32)
-
-// takes user@domain format for user argument
-bool
-isValidCredential( const char *input_user, const char* input_pw ) {
-	// see if we can get a user token from this password
-	HANDLE usrHnd = NULL;
-	char* dom;
-	DWORD LogonUserError;
-	BOOL retval;
-
-	retval = 0;
-	usrHnd = NULL;
-
-	char * user = strdup(input_user);
-	
-	// split the domain and the user name for LogonUser
-	dom = strchr(user, '@');
-
-	if ( dom ) {
-		*dom = '\0';
-		dom++;
-	}
-
-	// the POOL_PASSWORD_USERNAME account is not a real account
-	if (strcmp(user, POOL_PASSWORD_USERNAME) == 0) {
-		free(user);
-		return true;
-	}
-
-	char * pw = strdup(input_pw);
-
-	retval = LogonUser(
-		user,						// user name
-		dom,						// domain or server - local for now
-		pw,							// password
-		LOGON32_LOGON_NETWORK,		// NETWORK is fastest. 
-		LOGON32_PROVIDER_DEFAULT,	// logon provider
-		&usrHnd						// receive tokens handle
-	);
-	LogonUserError = GetLastError();
-
-	if ( (retval == 0) && ((LogonUserError == ERROR_PRIVILEGE_NOT_HELD ) || 
-		 (LogonUserError == ERROR_LOGON_TYPE_NOT_GRANTED )) ) {
-		
-		dprintf(D_FULLDEBUG, "NETWORK logon failed. Attempting INTERACTIVE\n");
-
-		retval = LogonUser(
-			user,						// user name
-			dom,						// domain or server - local for now
-			pw,							// password
-			LOGON32_LOGON_INTERACTIVE,	// INTERACTIVE should be held by everyone.
-			LOGON32_PROVIDER_DEFAULT,	// logon provider
-			&usrHnd						// receive tokens handle
-		);
-		LogonUserError = GetLastError();
-	}
-
-	if (user) free(user);
-	if (pw) {
-		SecureZeroMemory(pw,strlen(pw));
-		free(pw);
-	}
-
-	if ( retval == 0 ) {
-		dprintf(D_ALWAYS, "Failed to log in %s with err=%d\n", 
-				input_user, LogonUserError);
-		return false;
-	} else {
-		dprintf(D_FULLDEBUG, "Succeeded to log in %s\n", input_user);
-		CloseHandle(usrHnd);
-		return true;
-	}
-}
-
-char* getStoredCredential(const char *username, const char *domain)
-{
-
-		// Hopefully we're
-		// running as LocalSystem here, otherwise we can't get at the 
-		// password stash.
-	lsa_mgr lsaMan;
-	char pw[255];
-	wchar_t w_fullname[512];
-	wchar_t *w_pw;
-
-	if ( !username || !domain ) {
-		return NULL;
-	}
-
-	if ( _snwprintf(w_fullname, 254, L"%S@%S", username, domain) < 0 ) {
-		return NULL;
-	}
-
-	// make sure we're SYSTEM when we do this
-	w_pw = lsaMan.query(w_fullname);
-
-	if ( ! w_pw ) {
-		dprintf(D_ALWAYS, 
-			"getStoredCredential(): Could not locate credential for user "
-			"'%s@%s'\n", username, domain);
-		return NULL;
-	}
-
-	if ( _snprintf(pw, 511, "%S", w_pw) < 0 ) {
-		return NULL;
-	}
-
-	// we don't need the wide char pw anymore, so clean it up
-	SecureZeroMemory(w_pw, wcslen(w_pw)*sizeof(wchar_t));
-	delete[](w_pw);
-
-	dprintf(D_FULLDEBUG, "Found credential for user '%s'\n", username);
-	return strdup(pw);
-}
-
-#endif	// of Win32 Code
-
