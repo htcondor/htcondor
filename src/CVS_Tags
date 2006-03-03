@@ -1,3 +1,9 @@
+03/03/06 V6_7-time_offset-{root,branch}
+   A new branch to work on my time offset code. I will be making it a
+   command available to all daemons. I will also add in a SOAP interface
+   for getting back the user priorities.
+   Created from the BUILD-V6_7-branch-2006-2-27 tag of V6_7_CODE.
+            
 03/01/06 V6_7-post_merge-V6_7-kerb14-merge-1
 	The state of V6_7-branch AFTER the first merge of the
 	V6_7-kerb14-branch as tagged at V6_7-kerb14-merge-1
