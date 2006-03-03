@@ -6,3 +6,5 @@
 
 #define PVM_ARCH       ALPHA
 
+#undef WANT_KERBEROS
+#define WANT_KERBEROS NO

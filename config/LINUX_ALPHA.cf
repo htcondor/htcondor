@@ -10,3 +10,6 @@
 #define HAS_GLOBUS YES
 #define HAS_GSI YES
 #define HAS_OPENSSL YES
+
+#undef WANT_KERBEROS
+#define WANT_KERBEROS NO
