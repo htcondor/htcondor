@@ -100,7 +100,7 @@ static int KernelLookupFailed = 0;
 
 static float kernel_load_avg();
 
-extern float lookup_load_avg_via_uptime();
+float lookup_load_avg_via_uptime();
 
 /*
 ** Where is FSCALE defined on IRIX ?  Apparently nowhere...
@@ -652,6 +652,8 @@ int main()
 
 /* For now, just get this value out of uptime.... */
 
+float lookup_load_avg_via_uptime();
+
 float
 sysapi_load_avg_raw(void)
 {
@@ -784,6 +786,7 @@ lookup_load_avg_via_uptime()
         
 		my_pclose(output_fp);
 	}
+
 	
 	/* not reached */
 	return DEFAULT_LOADAVG;
