@@ -65,6 +65,9 @@ public:
     **/
 	virtual int connect(char *s, int port=0, bool do_not_block = false);
 
+	/// my IP address, string version (e.g. "128.105.101.17")
+	virtual const char* sender_ip_str();
+
 	//
 	inline int connect(char *h, char *s) { return connect(h,getportbyserv(s));}
 	void getStat(unsigned long &noMsgs,

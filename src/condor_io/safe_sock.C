@@ -198,6 +198,55 @@ int SafeSock::end_of_message()
 	return ret_val;
 }
 
+const char *
+SafeSock::sender_ip_str()
+{
+	//In order to call getSockAddr(_sock), we would need to call
+	//::connect() on _sock, which changes semantics on what other
+	//calls are valid on _sock (e.g. must use send() on some platforms
+	//instead of sendto()).  Therefore, we create a new sock and
+	//connect that one, so as to leave the main one undisturbed.
+
+	if(_state != sock_connect) {
+		dprintf(D_ALWAYS,"ERROR: SafeSock::sender_ip_str() called on socket tht is not in connected state\n");
+		return NULL;
+	}
+
+	if(_sender_ip_buf[0]) {
+		// return cached result
+		return &(_sender_ip_buf[0]);
+	}
+
+	SafeSock s;
+	s.bind(TRUE);
+
+	if (s._state != sock_bound) {
+		dprintf(D_ALWAYS,
+		        "SafeSock::sender_ip_str() failed to bind: _state = %d\n",
+			  s._state); 
+		return NULL;
+	}
+
+	if(::connect(s._sock, (sockaddr *)&_who, sizeof(sockaddr_in)) != 0) {
+#if defined(WIN32)
+		int lasterr = WSAGetLastError();
+		dprintf( D_ALWAYS, "SafeSock::sender_ip_str() failed to connect, errno = %d\n",
+				 lasterr );
+#else
+		dprintf( D_ALWAYS, "SafeSock::sender_ip_str() failed to connect, errno = %d\n",
+				 errno );
+#endif
+		return NULL;
+	}
+
+	struct sockaddr_in sin;
+	if(s.mypoint(&sin) == -1) {
+		return NULL;
+	}
+	memset(&_sender_ip_buf, 0, _ENDPOINT_BUF_SIZE );
+	strcpy( _sender_ip_buf, inet_ntoa(sin.sin_addr) );
+	return &(_sender_ip_buf[0]);
+}
 
 int SafeSock::connect(
 	char	*host,
@@ -207,6 +256,10 @@ int SafeSock::connect(
 {
 	struct hostent	*hostp = NULL;
 	unsigned long	inaddr = 0;
+
+	// Remove any cached sender IP info, since the new target may route us
+	// through a different network interface.
+	_sender_ip_buf[0] = '\0';
 
 	if (!host || port < 0) return FALSE;
 

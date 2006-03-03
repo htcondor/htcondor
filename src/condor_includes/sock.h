@@ -184,7 +184,7 @@ public:
     int mypoint(struct sockaddr_in *sin);
 
 	/// my IP address, string version (e.g. "128.105.101.17")
-	const char* sender_ip_str();
+	virtual const char* sender_ip_str();
 
 	/// local port number
 	int get_port();
@@ -301,6 +301,10 @@ protected:
 	static int timeout_multiplier;
 
 	bool ignore_connect_timeout;	// Used by HA Daemon
+
+	// Buffer to hold the string version of our own IP address. 
+	char _sender_ip_buf[_ENDPOINT_BUF_SIZE];	
+
 private:
 	int _condor_read(SOCKET fd, char *buf, int sz, int timeout);
 	int _condor_write(SOCKET fd, char *buf, int sz, int timeout);
@@ -308,9 +312,6 @@ private:
 	///
 	// Buffer to hold the string version of our endpoint's IP address. 
 	char _endpoint_ip_buf[_ENDPOINT_BUF_SIZE];	
-
-	// Buffer to hold the string version of our own IP address. 
-	char _sender_ip_buf[_ENDPOINT_BUF_SIZE];	
 
 	// struct to hold state info for do_connect() method
 	struct connect_state_struct {
