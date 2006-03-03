@@ -1,6 +1,7 @@
 /* Darwin (a.k.a MacOSX) specific settings */
 
 /* #define PlatformLdFlags         -framework IOKit -framework Carbon */
+#define PlatformLdFlags -lresolv
 
 #define IS_CLIPPED              YES
 #define HAS_DYNAMIC_USER_JOBS   NO
