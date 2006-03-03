@@ -23,5 +23,8 @@
 #define WANT_PVM			YES
 #define PVM_ARCH			HPPA
 
+#undef WANT_KERBEROS
+#define WANT_KERBEROS NO
+
 #define VendorCTestFlags -Aa -Ae
 #define VendorCPPTestFlags -Aa -ext 
