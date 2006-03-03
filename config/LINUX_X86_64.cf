@@ -17,8 +17,4 @@
 #undef WANT_PVM
 #define WANT_PVM NO
 
-/* kerberos 1.2.7 is too old for this architecture, kerberos 1.4 will probably
-	work, but the condor code changes for it aren't in Condor yet. */
-#undef WANT_KERBEROS
-#define WANT_KERBEROS NO
 
