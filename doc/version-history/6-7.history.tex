@@ -109,6 +109,8 @@ transfer failed.
 for the job is aborted. Previously, the transfer would be allowed to
 complete before the job was canceled.
 
+\item Fixed bug where FileLock.pm was not included in release.
+
 \end{itemize}
 
 \noindent Known Bugs:
@@ -358,6 +360,14 @@ for a node fails, the entire cluster is considered failed, and any
 other processes in that cluster are removed.  If removing the processes
 fails, \Condor{dagman} may hang, waiting for those processes to abort.
 (Bug introduced in version 6.7.17.)
+
+\item The FileLock.pm perl module (written in-house) was not included
+  in this release.  As a direct result the -flock option of
+  condor_cold_start will not work.  This can be remedied by
+  downloading FileLock.pm from:
+  ftp://ftp.cs.wisc.edu/condor/temporary/filelock/FileLock.pm and
+  installing in in the lib\ directory of your Condor installation.
+  (Bug introduced in version 6.7.17)
 
 \end{itemize}
 
