@@ -708,7 +708,7 @@ int _condorOutMsg::sendMsg(const int sock,
 		              tempPkt->length + SAFE_MSG_HEADER_SIZE,
                       0, who, sizeof(struct sockaddr));
 		if(sent != tempPkt->length + SAFE_MSG_HEADER_SIZE) {
-			dprintf(D_NETWORK, "sendMsg:sendto failed - errno: %d\n", errno);
+			dprintf(D_ALWAYS, "sendMsg:sendto failed - errno: %d\n", errno);
 			headPacket = tempPkt;
 			clearMsg();
 			return -1;
@@ -735,7 +735,7 @@ int _condorOutMsg::sendMsg(const int sock,
 		sent = sendto(sock, lastPacket->data, lastPacket->length,
 		              0, who, sizeof(struct sockaddr));
 		if(sent != lastPacket->length) {
-			dprintf( D_NETWORK, 
+			dprintf( D_ALWAYS, 
 				 "SafeMsg: sending small msg failed. errno: %d\n",
 				 errno );
 			headPacket->reset();
@@ -757,7 +757,7 @@ int _condorOutMsg::sendMsg(const int sock,
                       lastPacket->length + SAFE_MSG_HEADER_SIZE,
                       0, who, sizeof(struct sockaddr));
         if(sent != lastPacket->length + SAFE_MSG_HEADER_SIZE) {
-            dprintf( D_NETWORK, "SafeMsg: sending last packet failed. errno: %d\n", errno );
+            dprintf( D_ALWAYS, "SafeMsg: sending last packet failed. errno: %d\n", errno );
             headPacket->reset();
             return -1;
         }
