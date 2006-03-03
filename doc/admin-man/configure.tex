@@ -748,6 +748,28 @@ File System Configuration File Entries''.
   rotated, and this rotation would cause the number of backups to be
   too large, the oldest file is removed. 
 
+\item[\Macro{MAX\_JOB\_QUEUE\_LOG\_ROTATIONS}]
+\label{param:MaxJobQueueLogRotations}
+  The schedd periodically rotates the job queue database file in order
+  to save disk space.  This option controls how many rotated files are
+  saved.  It defaults to 1, which means there may be up to two history
+  files (the previous one, which was rotated out of use, and the current one
+  that is being written to).  When the job queue file is rotated,
+  and this rotation would cause the number of backups to be larger
+  the the maximum specified, the oldest file is removed.  The primary
+  reason to save one or more rotated job queue files is if you are
+  using Quill, and you want to ensure that Quill keeps an accurate history
+  of all events logged in the job queue file.  Quill keeps track of where
+  it last left off when reading logged events, so when the file is rotated,
+  Quill will resume reading from where it last left off, provided that
+  the rotated file still exists.  If Quill finds that it needs to read
+  events from a rotated file that has been deleted, it will be forced to
+  skip the missing events and resume reading in the next chronological job
+  queue file that can be found.  Such an event should not lead to
+  an inconsistency in Quill's view of the current queue contents, but it
+  would create a inconsistency in Quill's record of the history of the
+  job queue.
+
 \item[\Macro{DEFAULT\_DOMAIN\_NAME}] \label{param:DefaultDomainName}
   If you do not use a fully qualified name in file \File{/etc/hosts}
   (or NIS, etc.) for either your official hostname or as an
