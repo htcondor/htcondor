@@ -142,10 +142,6 @@ int SafeSock::end_of_message()
                     _outMsgID.msgNo++; // It doesn't hurt to increment msgNO even if fails
                     resetCrypto();
 
-                    if ( allow_empty_message_flag ) {
-                        allow_empty_message_flag = FALSE;
-                        return TRUE;
-                    }
                     if (sent < 0) {
                         return FALSE;
                     } else {
