@@ -1894,11 +1894,19 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 				offer->LookupString(ATTR_NAME, &remoteHost);
 				remotePriority = accountant.GetPriority (remoteUser);
 
+
+				float newStartdRank;
+				float oldStartdRank = 0.0;
+				if(! offer->EvalFloat(ATTR_RANK, &request, newStartdRank)) {
+					newStartdRank = 0.0;
+				}
+				offer->LookupFloat(ATTR_CURRENT_RANK, oldStartdRank);
+
 				// got a candidate preemption --- print a helpful message
-				dprintf( D_ALWAYS, "      Preempting %s (prio=%.2f) on %s "
-						 "for %s (prio=%.2f)\n", remoteUser,
-						 remotePriority, remoteHost, scheddName,
-						 priority );
+				dprintf( D_ALWAYS, "      Preempting %s (user prio=%.2f, startd rank=%.2f) on %s "
+						 "for %s (user prio=%.2f, startd rank=%.2f)\n", remoteUser,
+						 remotePriority, oldStartdRank, remoteHost, scheddName,
+						 priority, newStartdRank );
                 free(remoteHost);
                 remoteHost = NULL;
 			} else {
