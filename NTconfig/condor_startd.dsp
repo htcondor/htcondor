@@ -272,5 +272,37 @@ SOURCE=..\src\condor_startd.V6\util.C
 
 SOURCE=..\src\condor_startd.V6\util.h
 # End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_startd.V6\vm_common.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_startd.V6\vm_common.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_startd.V6\VMMachine.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_startd.V6\VMMachine.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_startd.V6\VMManager.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_startd.V6\VMManager.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_startd.V6\VMRegister.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_startd.V6\VMRegister.h
+# End Source File
 # End Target
 # End Project
