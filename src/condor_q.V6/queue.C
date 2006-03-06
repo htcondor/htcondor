@@ -49,6 +49,7 @@
 #include "error_utils.h"
 #include "print_wrapped_text.h"
 #include "condor_distribution.h"
+#include "string_list.h"
 
 #ifdef WANT_CLASSAD_ANALYSIS
 #include "../classad_analysis/analysis.h"
@@ -1033,6 +1034,23 @@ processCommandLineArguments (int argc, char *argv[])
 				if( strstr( argv[i] , NiceUserName ) == argv[i] ) {
 					ownerName = argv[i]+strlen(NiceUserName)+1;
 				}
+				// ensure that the group prefix isn't inserted as part
+				// of the job ad constraint.
+				char *groups = param("GROUP_NAMES");
+				if ( groups && ownerName ) {
+					StringList groupList(groups);
+					char *dotptr = strchr(ownerName,'.');
+					if ( dotptr ) {
+						*dotptr = '\0';
+						if ( groupList.contains_anycase(ownerName) ) {
+							// this name starts with a group prefix.
+							// strip it off.
+							ownerName = dotptr + 1;	// add one for the '.'
+						}
+						*dotptr = '.';
+					}
+				}
+				if ( groups ) free(groups);
 				if (Q.add (CQ_OWNER, ownerName) != Q_OK) {
 					fprintf (stderr, "Error:  Argument %d (%s)\n", i, argv[i]);
 					exit (1);
