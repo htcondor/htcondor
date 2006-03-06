@@ -25,6 +25,9 @@
 #include "startd.h"
 #include "mds.h"
 #include "condor_environ.h"
+#include "classad_merge.h"
+#include "vm_common.h"
+#include "VMRegister.h"
 
 Resource::Resource( CpuAttributes* cap, int rid )
 {
@@ -827,6 +830,16 @@ Resource::do_update( void )
 	ClassAd public_ad;
 
 	this->publish( &public_ad, A_ALL_PUB );
+	if( vmapi_is_usable_for_condor() == FALSE ) {
+		public_ad.InsertOrUpdate( "Start = False" );
+	}
+
+	if( vmapi_is_virtual_machine() == TRUE ) {
+		ClassAd* host_classad;
+		host_classad = vmapi_get_host_classAd();
+		MergeClassAds( &public_ad, host_classad, true);
+	}
+
 	this->publish( &private_ad, A_PRIVATE | A_ALL );
 
 		// Send class ads to collector(s)
@@ -1151,7 +1164,10 @@ Resource::eval_continue( void )
 int
 Resource::eval_is_owner( void )
 {
-		// fatal if undefined, don't check vanilla
+	if( vmapi_is_usable_for_condor() == FALSE )
+		return 1;
+
+	// fatal if undefined, don't check vanilla
 	return eval_expr( ATTR_IS_OWNER, true, false );
 }
 
@@ -1159,7 +1175,10 @@ Resource::eval_is_owner( void )
 int
 Resource::eval_start( void )
 {
-		// -1 if undefined, don't check vanilla
+	if( vmapi_is_usable_for_condor() == FALSE )
+		return 0;
+
+	// -1 if undefined, don't check vanilla
 	return eval_expr( "START", false, false );
 }
 

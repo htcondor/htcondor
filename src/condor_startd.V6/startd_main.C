@@ -28,6 +28,9 @@
  */
 #define _STARTD_NO_DECLARE_GLOBALS 1
 #include "startd.h"
+#include "vm_common.h"
+#include "VMManager.h"
+#include "VMRegister.h"
 
 // Define global variables
 
@@ -319,6 +322,15 @@ main_init( int, char* argv[] )
 	daemonCore->Register_Command( CA_CMD, "CA_CMD",
 								  (CommandHandler)command_classad_handler,
 								  "command_classad_handler", 0, WRITE );
+	
+	// Virtual Machine commands
+	if( vmapi_is_host_machine() == TRUE ) {
+		daemonCore->Register_Command( VM_REGISTER,
+				"VM_REGISTER",
+				(CommandHandler)command_vm_register,
+				"command_vm_register", 0, DAEMON,
+				D_FULLDEBUG );
+	}
 
 		//////////////////////////////////////////////////
 		// Reapers 
@@ -602,6 +614,32 @@ init_params( int first_time)
 		valid_cod_users = new StringList();
 		valid_cod_users->initializeFromString( tmp );
 		free( tmp );
+	}
+
+	if( vmapi_is_virtual_machine() == TRUE ) {
+		vmapi_destroy_vmregister();
+	}
+	tmp = param( "VMP_HOST_MACHINE" );
+	if( tmp ) {
+		if( vmapi_is_my_machine(tmp) ) {
+			dprintf( D_ALWAYS, "WARNING: VMP_HOST_MACHINE should be the hostname of host machine. In host machine, it doesn't need to be defined\n");
+		} else {
+			vmapi_create_vmregister(tmp);
+		}
+		free(tmp);
+	}
+
+	if( vmapi_is_host_machine() == TRUE ) {
+		vmapi_destroy_vmmanager();
+	}
+	tmp = param( "VMP_VM_LIST" );
+	if( tmp ) {
+		if( vmapi_is_virtual_machine() == TRUE ) {
+			dprintf( D_ALWAYS, "WARNING: both VMP_HOST_MACHINE and VMP_VM_LIST are defined. Assuming this machine is a virtual machine\n");
+		}else {
+			vmapi_create_vmmanager(tmp);
+		}
+		free(tmp);
 	}
 
 	return TRUE;

@@ -23,6 +23,7 @@
 
 #include "condor_common.h"
 #include "startd.h"
+#include "vm_common.h"
 
 /* XXX fix me */
 #include "../condor_sysapi/sysapi.h"
@@ -515,6 +516,41 @@ command_query_ads( Service*, int, Stream* stream)
 	return TRUE;
 }
 
+int
+command_vm_register( Service*, int, Stream* s )
+{
+	char *raddr = NULL;
+
+	s->decode();
+    	s->timeout(5);
+	if( !s->code(raddr) ) {
+		dprintf( D_ALWAYS, "command_vm_register: Can't read register IP\n");
+		free(raddr);
+		return FALSE;
+	}
+
+	dprintf( D_FULLDEBUG, "command_vm_register() is called with IP(%s).\n", raddr );
+
+	if( !s->end_of_message() ){
+		dprintf( D_ALWAYS, "command_vm_register: Can't read end_of_message\n");
+		free(raddr);
+		return FALSE;
+	}
+
+	int permission = 0;
+
+	if( vmapi_register_cmd_handler(raddr, &permission) == TRUE ) {
+		s->encode();
+		s->code(permission);
+		s->end_of_message();
+	}else{
+		free(raddr);
+		return FALSE;
+	}
+
+	free(raddr);
+	return TRUE;
+}
 
 //////////////////////////////////////////////////////////////////////
 // Protocol helper functions

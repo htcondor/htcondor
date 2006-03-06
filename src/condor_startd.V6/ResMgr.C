@@ -24,6 +24,9 @@
 #include "condor_common.h"
 #include "startd.h"
 #include "condor_classad_namedlist.h"
+#include "classad_merge.h"
+#include "vm_common.h"
+#include "VMRegister.h"
 
 
 ResMgr::ResMgr()
@@ -1409,6 +1412,20 @@ ResMgr::compute( amask_t how_much )
 
 	assign_load();
 	assign_keyboard();
+
+	if( vmapi_is_virtual_machine() == TRUE ) {
+		ClassAd* host_classad;
+		vmapi_request_host_classAd();
+		host_classad = vmapi_get_host_classAd();
+		if( host_classad ) {
+			int i;
+			for( i = 0; i < nresources; i++ ) {
+				if( resources[i]->r_classad )
+					MergeClassAds( resources[i]->r_classad, host_classad, true );
+			}
+		}
+
+	}
 
 		// Now that everything has actually been computed, we can
 		// refresh our internal classad with all the current values of

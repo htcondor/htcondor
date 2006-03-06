@@ -1,0 +1,273 @@
+/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
+#include "condor_common.h"
+#include "startd.h"
+#include "VMManager.h"
+#include "vm_common.h"
+
+#define VM_UNREGISTER_TIMEOUT 3*vm_register_interval
+
+extern ResMgr* resmgr;
+VMManager *vmmanager = NULL;
+
+/* Interfaces for class VMManager */
+VMManager::VMManager()
+{
+	m_vm_unrg_tid = -1;
+	host_usable = 1;
+	m_vm_registered_num = 0;
+	allowed_vm_list = NULL;
+}
+
+VMManager::~VMManager()
+{
+	cancelUnRegisterTimer();
+
+	/* remove all registered VMs */
+	m_virtualmachines.Rewind();
+
+	VMMachine *i;
+	while( m_virtualmachines.Next(i) ) {
+		// Destructor will detach each virtual machine from vmmanger 
+		delete(i);
+		if( m_vm_registered_num == 0 ) {
+			if( host_usable == 0 ) {
+				host_usable = 1;
+				if( resmgr ) {
+					resmgr->eval_and_update_all();
+				}
+			}
+		}
+	}
+
+	if( allowed_vm_list )
+		delete(allowed_vm_list);
+}
+
+int
+VMManager::numOfVM(void)
+{
+	return m_vm_registered_num;
+}
+
+bool 
+VMManager::isRegistered(char *addr, int update_time) 
+{
+	m_virtualmachines.Rewind();
+
+	VMMachine *i;
+	bool result = FALSE;
+	while( m_virtualmachines.Next(i) ) {
+		result = i->match(addr);
+
+		if( result ) {
+			if( update_time )
+				i->updateTimeStamp();
+
+			return TRUE;
+		}
+	}
+
+	return FALSE;
+}
+
+void 
+VMManager::attach(VMMachine *o) 
+{
+	m_virtualmachines.Append(o);
+	m_vm_registered_num++;
+	startUnRegisterTimer();
+	dprintf( D_ALWAYS,"Virtual machine(%s) is attached\n", o->getVMSinful());
+}
+
+void 
+VMManager::detach(VMMachine *o) 
+{
+	m_virtualmachines.Delete(o);
+	m_vm_registered_num--;
+
+	if( m_vm_registered_num == 0 )
+		cancelUnRegisterTimer();
+
+	dprintf(D_ALWAYS,"Virtual machine(%s) is detached\n", o->getVMSinful());
+}
+
+void 
+VMManager::allNotify( char *except_ip, int cmd, void *data ) 
+{
+	m_virtualmachines.Rewind();
+
+	VMMachine *i;
+	while( m_virtualmachines.Next(i) ) {
+		if( except_ip && i->match(except_ip) ) {
+			i->updateTimeStamp();
+			continue;
+		}
+
+		i->sendEventToVM(cmd, data);
+	}
+}
+
+void 
+VMManager::checkRegisterTimeout(void)
+{
+	int timeout = VM_UNREGISTER_TIMEOUT;
+	m_virtualmachines.Rewind();
+
+	VMMachine *i;
+	time_t now;
+	now = time(NULL);
+
+	while( m_virtualmachines.Next(i) ) {
+		if( ( now - i->getTimeStamp() ) > timeout ) {
+		// Destructor will detach timeout virtual machine from vmmanger 
+			delete(i);
+			if( m_vm_registered_num == 0 ) {
+				if( host_usable == 0 ) {
+					host_usable = 1;
+					if( resmgr ) {
+						resmgr->eval_and_update_all();
+					}
+				}
+			}
+		}
+	}
+}
+
+void 
+VMManager::printAllElements(void) 
+{
+	m_virtualmachines.Rewind();
+
+	VMMachine *i;
+	while( m_virtualmachines.Next(i) ) {
+		i->print();
+	}
+}
+
+void 
+VMManager::startUnRegisterTimer(void)
+{
+	if( m_vm_unrg_tid >= 0 ) {
+		//Unregister Timer already started
+		return;
+	}
+
+	m_vm_unrg_tid = daemonCore->Register_Timer(VM_UNREGISTER_TIMEOUT,
+			VM_UNREGISTER_TIMEOUT,
+			(TimerHandlercpp)&VMManager::checkRegisterTimeout,
+			"poll_registered_vm", this);
+
+	if( m_vm_unrg_tid < 0 ) {
+		EXCEPT("Can't register DaemonCore Timer");
+	}
+
+	dprintf( D_FULLDEBUG, "Starting vm unregister timer.\n");
+}
+
+void 
+VMManager::cancelUnRegisterTimer(void)
+{
+	int rval;
+	if( m_vm_unrg_tid != -1 ) {
+		rval = daemonCore->Cancel_Timer(m_vm_unrg_tid);
+
+		if( rval < 0 ) {
+			dprintf( D_ALWAYS, "Failed to cancel vm unregister timer (%d): daemonCore error\n", m_vm_unrg_tid);
+		}else
+			dprintf( D_FULLDEBUG, "Canceled vm unregister timer (%d)\n", m_vm_unrg_tid);
+	}
+
+	m_vm_unrg_tid = -1;
+}
+
+void
+vmapi_create_vmmanager(char *list)
+{
+	StringList tmplist;
+
+	if( !list )
+		return;
+
+	if( vmmanager ) delete(vmmanager);
+
+	tmplist.initializeFromString(list);
+	if( tmplist.number() == 0 )
+		return;
+
+	char *vm_name;
+	struct hostent *he1;
+
+	StringList *vm_list;
+	vm_list = new StringList();
+	tmplist.rewind();
+	while( (vm_name = tmplist.next()) ) {
+		// checking valid IP
+		if( !is_ipaddr(vm_name, NULL) ) {
+			// hostname format
+			if( (he1 = gethostbyname(vm_name)) == NULL )
+				continue;
+
+			struct sockaddr_in sin;
+			memset(&sin, 0, sizeof(sin));
+			sin.sin_addr = *(struct in_addr *)(he1->h_addr_list[0]);
+
+			char *hostip;
+			hostip = inet_ntoa(sin.sin_addr);
+
+			vm_list->append(strdup(hostip));
+		}else {
+			// IP address format
+			vm_list->append(strdup(vm_name));
+		}
+	}
+
+	if( vm_list->number() > 0 ) {
+		vmmanager = new VMManager();
+		vmmanager->allowed_vm_list = vm_list;
+	}else {
+		dprintf( D_ALWAYS, "There is no valid name of virtual machine\n");
+		delete(vm_list);
+	}
+}
+
+void
+vmapi_destroy_vmmanager(void)
+{
+	if( vmmanager ) {
+		delete(vmmanager);
+		vmmanager = NULL;
+	}
+
+}
+
+
+bool
+vmapi_is_host_machine(void)
+{
+	if( vmmanager )
+		return TRUE;
+	else
+		return FALSE;
+}

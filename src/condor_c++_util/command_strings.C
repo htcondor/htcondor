@@ -152,6 +152,7 @@ struct Translation DCTranslation[] = {
 	{ "CHILD_OFF", CHILD_OFF },
 	{ "CHILD_OFF_FAST", CHILD_OFF_FAST },
 	{ "CHILD_ON", CHILD_ON },
+	{ "VM_REGISTER", VM_REGISTER },
 	{ "NULL", 0 }
 };
 

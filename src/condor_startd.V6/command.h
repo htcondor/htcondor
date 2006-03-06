@@ -61,6 +61,7 @@ int	command_give_state( Service*, int, Stream* );
 int	command_give_totals_classad( Service*, int, Stream* );
 int command_give_request_ad( Service*, int, Stream* );
 int command_query_ads( Service*, int, Stream* );
+int command_vm_register( Service*, int, Stream* );
 
 /*
    This command handler deals with commands that send a name as part
