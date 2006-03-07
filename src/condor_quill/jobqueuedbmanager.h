@@ -236,7 +236,7 @@ class JobQueueDBManager : public Service
 	Prober*	            prober;	//!< Prober
 	ClassAdLogParser*   caLogParser;//!< ClassAd Log Parser
 	JobQueueDatabase*   jqDatabase;	//!< Job Queue Database
-
+	
 	XactState	xactState;	//!< current XACT state
 
 		//together these constitute the dynamic attributes that are inserted
@@ -251,17 +251,18 @@ class JobQueueDBManager : public Service
 	char*	jobQueueDBIpAddress;    //!< <IP:PORT> address of DB
 	char*	jobQueueDBName;         //!< DB Name
 
-	int		purgeHistoryTimeId;		//!< timer handler id of purgeOldHistoryRows
-	int		purgeHistoryDuration;	//!< number of days to keep history around
+	int	purgeHistoryTimeId;	//!< timer handler id of purgeOldHistoryRows
+	int	purgeHistoryDuration;	//!< number of days to keep history around
 	int     historyCleaningInterval;//!< number of hours between two successive
 	                                //!< successive calls to purgeOldHistoryRows
 
-	int		pollingTimeId;	//!< timer handler id of pollingTime function
-	int		pollingPeriod;	//!< polling time period in seconds
+	int	pollingTimeId;		//!< timer handler id of pollingTime function
+	int	pollingPeriod;		//!< polling time period in seconds
 
 	char*	multi_sql_str;		//!< buffer for SQL
 
-	int		numTimesPolled;	//!< used to vacuum and analyze job queue tables
+	int	numTimesPolled;		//!< used to vacuum and analyze job queue tables
+	int     quillManageVacuum; 	//!< user defined flag that determines whether quill should perform vacuum or not
 };
 
 #endif /* _JOBQUEUEDBMANAGER_H_ */
