@@ -30,16 +30,43 @@ toNewClassAd( ClassAd *ad )
 	classad::ClassAdParser parser;
 	classad::ClassAd *newAd;
 	char *str;
+	ExprTree* expr;
+
+		// add brackets and semicolons to old ClassAd and parse
  	std::string buffer = "[";
 	ad->ResetExpr( );
-	ExprTree* expr;
 	while( ( expr = ad->NextExpr( ) ) ) {
 		str = NULL;
 		expr->PrintToNewStr( &str );
 		buffer += std::string( str ) + ";";
 	}
 	buffer += "]";
+
 	newAd = parser.ParseClassAd( buffer );
+
+	if( newAd == NULL ) {
+			// ad didn't parse so we try quoting atttibute names
+		buffer = "[";
+		ad->ResetExpr( );
+		while( ( expr = ad->NextExpr( ) ) ) {
+			buffer += "'";
+			str = NULL;
+			expr->LArg( )->PrintToNewStr( &str );
+			buffer += std::string( str ) + "' = ";
+			str = NULL;
+			expr->RArg( )->PrintToNewStr( &str );
+			buffer += std::string( str ) + ";";
+		}
+		buffer += "]";
+
+		newAd = parser.ParseClassAd( buffer );
+
+		if( newAd == NULL ) {
+				// no luck, return NULL
+			return NULL;
+		}
+	}
+
 	newAd->InsertAttr( "MyType", std::string( ad->GetMyTypeName( ) ) );
 	newAd->InsertAttr( "TargetType", std::string( ad->GetTargetTypeName( ) ) );
 	return newAd;
