@@ -113,6 +113,14 @@ complete before the job was canceled.
 
 \item Fixed bug where FileLock.pm was not included in release.
 
+%resolves gnats PR condor/634
+\item Clusters of jobs using transfer-file mode and output or error
+files containing path information and references to \MacroU{Process} or
+\MacroU{Cluster} were incorrectly storing the output files in the initial
+working directory rather than the specified path.  This happened for
+all jobs in the cluster except for the first job (process 0).  This
+bug was introduced in 6.7.13.
+
 \end{itemize}
 
 \noindent Known Bugs:
