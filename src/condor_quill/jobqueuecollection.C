@@ -750,6 +750,7 @@ JobQueueCollection::makeCopyStr(bool bStr, char* cid, char* pid, ClassAd* ad, ch
 	const int 	NUM_TYPE = 1;
 	const int	OTHER_TYPE = 2;	
 	int  		value_type; // 1: Number, 
+	double      doubleval = 0;
 
 	AssignOp*	expr;		// For Each Attribute in ClassAd
 	Variable* 	nameExpr;	// For Attribute Name
@@ -793,18 +794,19 @@ JobQueueCollection::makeCopyStr(bool bStr, char* cid, char* pid, ClassAd* ad, ch
 		if (val == NULL) break;
 		
 
-		if (strtod(val, &endptr) != 0) { // Number
-			value_type = NUM_TYPE;
+		doubleval = strtod(val, &endptr);
+		if(val == endptr) {
+			value_type = OTHER_TYPE;
 		}
+ 
 		else {
-			if (val != endptr) { // Number
-				value_type = NUM_TYPE;
-			}
-			else if (val == endptr) { // String or other types
+			if(*endptr != '\0') {
 				value_type = OTHER_TYPE;
 			}
+			else {
+				value_type = NUM_TYPE;
+			}
 		}
-
 
 		if ((bStr == true && value_type == OTHER_TYPE) ||
 			(bStr == false && value_type == NUM_TYPE))
