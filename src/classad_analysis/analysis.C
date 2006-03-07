@@ -59,6 +59,11 @@ AnalyzeJobReqToBuffer( ClassAd *request, ClassAdList &offers, string &buffer )
 	}
 
     converted_classad = toNewClassAd( request );
+	if( converted_classad == NULL ) {
+		buffer += "Unable to process job ClassAd";
+		buffer += "\n";
+		return true;
+	}
     explicit_classad  = AddExplicitTargets( converted_classad );
 	success = AnalyzeJobReqToBuffer( explicit_classad, rg, buffer );
 
@@ -103,6 +108,11 @@ AnalyzeJobAttrsToBuffer( ClassAd *request, ClassAdList &offers,
 	}
 
     converted_classad = toNewClassAd( request );
+	if( converted_classad == NULL ) {
+		buffer += "Unable to process job ClassAd";
+		buffer += "\n";
+		return true;
+	}
     explicit_classad  = AddExplicitTargets( converted_classad );
 	success = AnalyzeJobAttrsToBuffer( explicit_classad, rg, buffer );
 
@@ -706,6 +716,10 @@ MakeResourceGroup( ClassAdList &caList, ResourceGroup &rg )
         classad::ClassAd *explicit_classad;
 
         converted_classad = toNewClassAd(ad);
+		if( converted_classad == NULL ) {
+				// could not convert to new ClassAd (parse error)
+			return false;
+		}
         explicit_classad  = AddExplicitTargets(converted_classad);
 		newList.Append(explicit_classad);
         delete converted_classad;
