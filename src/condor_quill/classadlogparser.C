@@ -122,7 +122,7 @@ ClassAdLogParser::openFile(bool ex) {
 		log_fd = open(job_queue_name, O_RDONLY);
 		
 		if (log_fd < 0) {
-			dprintf(D_ALWAYS, "[QUILL] Error in Opening a job_queue.log file!\n");
+			dprintf(D_ALWAYS, "[QUILL] Unable to open the job_queue.log file!\n");
 			return FILE_OPEN_ERROR;
 		}
 	}
@@ -131,7 +131,7 @@ ClassAdLogParser::openFile(bool ex) {
 		log_fp = fopen(job_queue_name, "r");
 
 		if (log_fp == NULL) {
-			dprintf(D_ALWAYS, "[QUILL] Error in Opening a job_queue.log file!\n");
+			dprintf(D_ALWAYS, "[QUILL] Unable to open the job_queue.log file!\n");
 			return FILE_OPEN_ERROR;
 		}
 	}
