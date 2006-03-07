@@ -1853,7 +1853,13 @@ SetTransferFiles()
 		{
 			char const *working_name = "_condor_stdout";
 			sprintf(buffer,"%s = \"%s\"",ATTR_JOB_OUTPUT,working_name);
-			InsertJobExpr(buffer);
+				//Force setting value, even if we have already set it
+				//in the cluster ad, because whatever was in the
+				//cluster ad may have been overwritten (e.g. by a
+				//filename containing $(Process)).  At this time, the
+				//check in InsertJobExpr() is not smart enough to
+				//notice that.
+			InsertJobExpr(buffer,false);
 
 			if(!output_remaps.IsEmpty()) output_remaps += ";";
 			output_remaps.sprintf_cat("%s=%s",working_name,MyString(output).EscapeChars(";=",'\\').Value());
@@ -1869,7 +1875,13 @@ SetTransferFiles()
 				working_name = "_condor_stdout";
 			}
 			sprintf(buffer,"%s = \"%s\"",ATTR_JOB_ERROR,working_name);
-			InsertJobExpr(buffer);
+				//Force setting value, even if we have already set it
+				//in the cluster ad, because whatever was in the
+				//cluster ad may have been overwritten (e.g. by a
+				//filename containing $(Process)).  At this time, the
+				//check in InsertJobExpr() is not smart enough to
+				//notice that.
+			InsertJobExpr(buffer,false);
 
 			if(!output_remaps.IsEmpty()) output_remaps += ";";
 			output_remaps.sprintf_cat("%s=%s",working_name,MyString(error).EscapeChars(";=",'\\').Value());
