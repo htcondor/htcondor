@@ -53,6 +53,7 @@ JobQueueDBManager::JobQueueDBManager()
 	lastBatchSqlProcessed = 0;
 	secsLastBatch = 0;
 	isConnectedToDB = false;
+	quillManageVacuum = false;
 
 	ad = NULL;
 	
@@ -78,18 +79,23 @@ JobQueueDBManager::~JobQueueDBManager()
 		// release strings
 	if (jobQueueLogFile != NULL) {
 		free(jobQueueLogFile);
+		jobQueueLogFile = NULL;
 	}
 	if (jobQueueDBIpAddress != NULL) {
 		free(jobQueueDBIpAddress);
+		jobQueueDBIpAddress = NULL;
 	}
 	if (jobQueueDBName != NULL) {
 		free(jobQueueDBName);
+		jobQueueDBName = NULL;
 	}
 	if (jobQueueDBConn != NULL) {
 		free(jobQueueDBConn);
+		jobQueueDBConn = NULL;
 	}
 	if (multi_sql_str != NULL) {
 		free(multi_sql_str);
+		multi_sql_str = NULL;
 	}
 }
 
@@ -145,21 +151,18 @@ JobQueueDBManager::config(bool reconfig)
 	if(jobQueueDBIpAddress) {
 		len = strlen(jobQueueDBIpAddress);
 		
-			//the 6 is for the string "host= " or "port= "
-			//the rest is a subset of jobQueueDBIpAddress so a size of
+			//both are subsets of jobQueueDBIpAddress so a size of
 			//jobQueueDBIpAddress is more than enough
-		host = (char *) malloc((len+6) * sizeof(char));
-		port = (char *) malloc((len+6) * sizeof(char));
+		host = (char *) malloc(len * sizeof(char));
+		port = (char *) malloc(len * sizeof(char));
 
 			//split the <ipaddress:port> into its two parts accordingly
 		ptr_colon = strchr(jobQueueDBIpAddress, ':');
-		strcpy(host, "host= ");
-		strncat(host, 
+		strncpy(host, 
 				jobQueueDBIpAddress, 
 				ptr_colon - jobQueueDBIpAddress);
-		strcpy(port, "port= ");
-		strcat(port, ptr_colon+1);
-		port[strlen(port)] = '\0';
+
+		strcpy(port, ptr_colon+1);
 	}
 	else {
 		EXCEPT("No QUILL_DB_IP_ADDR variable found in config file\n");
@@ -193,8 +196,26 @@ JobQueueDBManager::config(bool reconfig)
 
 	jobQueueDBConn = (char *) malloc(tmp3 * sizeof(char));
 
-	sprintf(jobQueueDBConn, "%s %s user=quillwriter password=%s dbname=%s", host, port, writePassword, jobQueueDBName);
-	
+	sprintf(jobQueueDBConn, 
+			"host=%s port=%s user=quillwriter password=%s dbname=%s", 
+			host, port, writePassword, jobQueueDBName);
+
+	if(param_boolean("QUILL_MANAGE_VACUUM",false) == TRUE) {
+		quillManageVacuum = true;
+
+		dprintf(D_ALWAYS, "WARNING: You have chosen Quill to perform vacuuming\n");
+		dprintf(D_ALWAYS, "Currently, Quill's vacuum calls are synchronous.\n");
+		dprintf(D_ALWAYS, "Vacuum calls may take a long time to execute and in\n");
+		dprintf(D_ALWAYS, "certain situations, this may cause the Quill daemon to\n");
+		dprintf(D_ALWAYS, "be killed and restarted by the master. Instead, we\n");
+		dprintf(D_ALWAYS, "recommend the user to upgrade to postgresql's version 8.1\n");
+		dprintf(D_ALWAYS, "which manages all vacuuming tasks automatically.\n");
+		dprintf(D_ALWAYS, "QUILL_MANAGE_VACUUM can then be set to false\n\n");
+	}
+	else {
+		quillManageVacuum = false;
+	}
+
 	if(writePassword) {
 		free(writePassword);
 		writePassword = NULL;
@@ -221,6 +242,7 @@ JobQueueDBManager::config(bool reconfig)
 	if(pollingPeriod_str) {
 		pollingPeriod = atoi(pollingPeriod_str);
 		free(pollingPeriod_str);
+		pollingPeriod_str = NULL;
 	}
 	else {
 		pollingPeriod = 10;
@@ -232,6 +254,7 @@ JobQueueDBManager::config(bool reconfig)
 	if(purgeHistoryDuration_str) {
 		purgeHistoryDuration = atoi(purgeHistoryDuration_str);
 		free(purgeHistoryDuration_str);
+		purgeHistoryDuration_str = NULL;
 	}
 	else {
 		purgeHistoryDuration = 180;  //default of 6 months
@@ -252,6 +275,7 @@ JobQueueDBManager::config(bool reconfig)
 	if(historyCleaningInterval_str) {
 		historyCleaningInterval = atoi(historyCleaningInterval_str);
 		free(historyCleaningInterval_str);
+		historyCleaningInterval_str = NULL;
 	}
 	else {
 		historyCleaningInterval = 24;  //default of 24 hours
@@ -260,10 +284,13 @@ JobQueueDBManager::config(bool reconfig)
 	dprintf(D_ALWAYS, "Using Job Queue File %s\n", jobQueueLogFile);
 	dprintf(D_ALWAYS, "Using Database IpAddress = %s\n", jobQueueDBIpAddress);
 	dprintf(D_ALWAYS, "Using Database Name = %s\n", jobQueueDBName);
-	dprintf(D_ALWAYS, "Using Database Connection String = \"%s\"\n", jobQueueDBConn);
+	dprintf(D_ALWAYS, "Using Database Connection String = \"%s\"\n", 
+			jobQueueDBConn);
 	dprintf(D_ALWAYS, "Using Polling Period = %d\n", pollingPeriod);
-	dprintf(D_ALWAYS, "Using Purge History Duration = %d days\n", purgeHistoryDuration);
-	dprintf(D_ALWAYS, "Using History Cleaning Interval = %d hours\n", historyCleaningInterval);
+	dprintf(D_ALWAYS, "Using Purge History Duration = %d days\n", 
+			purgeHistoryDuration);
+	dprintf(D_ALWAYS, "Using History Cleaning Interval = %d hours\n", 
+			historyCleaningInterval);
 
 	if(ad) {
 		delete ad;
@@ -286,6 +313,23 @@ JobQueueDBManager::config(bool reconfig)
 		//this function assumes that certain members exist and so
 		//it should be done after constructing those objects
 	setJobQueueFileName(jobQueueLogFile);
+
+		// START version number sniffing code
+	int pg_version_number=0;
+       	if(connectDB(NOT_IN_XACT) == FAILURE) {
+		displayDBErrorMsg("Unable to connect to database in order to retrieve the PostgreSQL version --- ERROR");
+        }         
+	pg_version_number = jqDatabase->getDatabaseVersion();
+	if(pg_version_number <= 80100) {
+		dprintf(D_ALWAYS, "WARNING: You are using an older version of PostgreSQL\n");
+		dprintf(D_ALWAYS, "We recommend that users upgrade to version 8.1 of PostgreSQL\n");
+		dprintf(D_ALWAYS, "Maintenance tasks such as vacuuming in prior versions are not\n");
+		dprintf(D_ALWAYS, "automated. Over time, this can degrade Quill's performance\n");
+		dprintf(D_ALWAYS, "Starting 8.1, such maintenance tasks are completely integrated\n");
+		dprintf(D_ALWAYS, "and automated.\n\n");
+	}
+	disconnectDB(NOT_IN_XACT);
+		// END version number sniffing code
 }
 
 //! set the path to the job queue
@@ -361,7 +405,18 @@ JobQueueDBManager::maintain()
 		break;
 	case PROBE_ERROR:
 		dprintf(D_ALWAYS, "POLLING RESULT: ERROR\n");
-		ret_st = initJobQueueTables();
+        	ret_st = connectDB();                 
+        	if(ret_st == FAILURE) {
+			displayDBErrorMsg("Unable to connect to database in order to clean tables --- ERROR");
+			break;
+        	}         
+        	ret_st = cleanupJobQueueTables(); // delete all job queue tables
+
+        	if(ret_st == FAILURE) {
+			displayDBErrorMsg("Init Job Queue Table unable to clean up job queue tables --- ERROR");
+			break;
+        	}
+		disconnectDB(COMMIT_XACT);
 		break;
 	case NO_CHANGE:
 		dprintf(D_ALWAYS, "POLLING RESULT: NO CHANGE\n");
@@ -388,9 +443,9 @@ JobQueueDBManager::maintain()
 QuillErrCode
 JobQueueDBManager::cleanupJobQueueTables()
 {
-	const int		sqlNum = 4;
+	const int		sqlNum = 6;
 	int		i;
-	char 	sql_str[sqlNum][128];
+	char 	sql_str[sqlNum][256];
 
 		// we only delete job queue related information.
 		// historical information is deleted based on user policy
@@ -403,6 +458,10 @@ JobQueueDBManager::cleanupJobQueueTables()
 			"DELETE FROM ProcAds_Str;");
 	sprintf(sql_str[3], 
 			"DELETE FROM ProcAds_Num;");
+	sprintf(sql_str[4], 
+			"DELETE FROM JobQueuePollingInfo;");
+	sprintf(sql_str[5],
+			"INSERT INTO JobQueuePollingInfo (last_file_mtime, last_file_size,log_seq_num,log_creation_time) VALUES (0,0,0,0);");
 
 	for (i = 0; i < sqlNum; i++) {
 		if (jqDatabase->execCommand(sql_str[i]) == FAILURE) {
@@ -486,7 +545,7 @@ JobQueueDBManager::purgeOldHistoryRows()
 		//the vertical and vice versa
 	if(connectDB(BEGIN_XACT) == FAILURE) {
 		displayDBErrorMsg("Purge History Rows unable to connect--- ERROR");
-		return 0; 
+		return FAILURE; 
 	}
 
 		//ending at 2 since only the first 2 can be wrapped inside xact
@@ -494,28 +553,28 @@ JobQueueDBManager::purgeOldHistoryRows()
 		if (jqDatabase->execCommand(sql_str[i]) == FAILURE) {
 			displayDBErrorMsg("Purge History Rows --- ERROR");
 			disconnectDB(ABORT_XACT);
-			return 0; 
+			return FAILURE; 
 		}
 	}
 	disconnectDB(COMMIT_XACT);
 
-
+	if(quillManageVacuum) {
 		//vacuuming cannot be bound inside a transaction
-	if(connectDB(NOT_IN_XACT) == FAILURE) {
-		displayDBErrorMsg("Vacuum History Rows unable to connect--- ERROR");
-		return 0; 
-	}
-		//statements 2 and 3 should not wrapped inside xact
-	for (i = 2; i < 4; i++) {
-		if (jqDatabase->execCommand(sql_str[i]) == FAILURE) {
-			displayDBErrorMsg("Vacuum History Rows --- ERROR");
-			disconnectDB(NOT_IN_XACT);
-			return 0; 
+		if(connectDB(NOT_IN_XACT) == FAILURE) {
+			displayDBErrorMsg("Vacuum History Rows unable to connect--- ERROR");
+			return FAILURE; 
 		}
+		//statements 2 and 3 should not wrapped inside xact
+		for (i = 2; i < 4; i++) {
+			if (jqDatabase->execCommand(sql_str[i]) == FAILURE) {
+				displayDBErrorMsg("Vacuum History Rows --- ERROR");
+				disconnectDB(NOT_IN_XACT);
+				return FAILURE; 
+			}
+		}
+		disconnectDB(NOT_IN_XACT);
 	}
-	disconnectDB(NOT_IN_XACT);
-	
-	return 1;
+	return SUCCESS;
 }
 
 
@@ -970,7 +1029,16 @@ JobQueueDBManager::addJobQueueTables()
 		
 			//we VACUUM job queue tables twice every day, assuming that
 			//quill has been up for 12 hours
-		if ((numTimesPolled++ * pollingPeriod) > (60 * 60 * 12)) {
+		if (quillManageVacuum && 
+			(numTimesPolled++ * pollingPeriod) > (60 * 60 * 12)) {
+			dprintf(D_ALWAYS, "WARNING: You have chosen Quill to perform vacuuming\n");
+			dprintf(D_ALWAYS, "Currently, Quill's vacuum calls are synchronous.\n");
+			dprintf(D_ALWAYS, "Vacuum calls may take a long time to execute and in\n");
+			dprintf(D_ALWAYS, "certain situations, this may cause the Quill daemon to\n");
+			dprintf(D_ALWAYS, "be killed and restarted by the master. Instead, we\n");
+			dprintf(D_ALWAYS, "recommend the user to upgrade to postgresql's version 8.1\n");
+			dprintf(D_ALWAYS, "which manages all vacuuming tasks automatically.\n");
+			dprintf(D_ALWAYS, "QUILL_MANAGE_VACUUM can then be set to false\n\n");
 			tuneupJobQueueTables();
 			numTimesPolled = 0;
 		}
@@ -1003,7 +1071,7 @@ JobQueueDBManager::initJobQueueTables()
                 displayDBErrorMsg("Init Job Queue Table unable to clean up job queue tables --- ERROR");
                 return FAILURE;
         }
- 
+
         st = buildAndWriteJobQueue(); // bulk load job queue log
 
 			// Store polling information in database
@@ -1464,7 +1532,7 @@ JobQueueDBManager::processDestroyClassAd(char* key, bool exec_later)
 	char pid[100];
 	bool inserthistory = false;
 	int  job_id_type;
-	QuillErrCode  st1, st2;
+	QuillErrCode  st1, st2, st3;
 
   
 		// It could be ProcAd or ClusterAd
@@ -1578,21 +1646,41 @@ JobQueueDBManager::processDestroyClassAd(char* key, bool exec_later)
 	if (exec_later == false) {
 
 		if(inserthistory) { 
-			/*  st1 and st2 are not used anywhere below this.  
-				We dont check on errors as:
-				1) If there are connection errors, they'll get 
-				resolved below anyway and 
-				2) There can be integrity issues (duplicate key
-				error).  This comes up frequently as stuff
-				stays in history for long periods of time
-				So our semantics here is ignore the error and
-				move on to the next command in the job_queue.log
+			/*  
+				we can't afford to ignore the return values st1 and st2
+				because in rare cases, we may be in the midst of a 
+				xact and if either of these return values are FAILURE, 
+				we'd throw errors ad infinitum. Usually these failures 
+				are caused by integrity violations caused when trying
+				to insert jobs in the history tables when on with the 
+				same id already exists (possibly from a previous instance 
+				of quill). Our reaction to such failures, as implemented 
+				below is to roll back the erroneous transaction and 
+				proceed with processing the job queue file
 			*/
 			st1 = jqDatabase->execCommand(sql_str3);
+			if(st1 == FAILURE && xactState == BEGIN_XACT) {
+				st3 = jqDatabase->rollbackTransaction();
+				if(st3 == FAILURE) {
+					return FAILURE;
+				}
+			}
 			st2 = jqDatabase->execCommand(sql_str4);
+			if(st2 == FAILURE && xactState == BEGIN_XACT) {
+				st3 = jqDatabase->rollbackTransaction();
+				if(st3 == FAILURE) {
+					return FAILURE;
+				}
+			}
+			if((xactState == BEGIN_XACT) && 
+			   (st1 == FAILURE || st2 == FAILURE)) {
+				st3 = processBeginTransaction();
+				if(st3 == FAILURE) {
+					return FAILURE;
+				}
+			}
 		}
-    
-	
+
 		if (jqDatabase->execCommand(sql_str1) == FAILURE) {
 			displayDBErrorMsg("Destroy ClassAd Processing --- ERROR");
 			return FAILURE; 
@@ -1649,6 +1737,7 @@ JobQueueDBManager::processSetAttribute(char* key,
 	int   job_id_type;
 	char* endptr;
 	char* newvalue;  
+	double doubleval = 0;
 
 	int sql_str_len = (strlen(value) + MAX_FIXED_SQL_STR_LENGTH);
 	sql_str_del_in = (char *) malloc(sql_str_len * sizeof(char));
@@ -1658,70 +1747,77 @@ JobQueueDBManager::processSetAttribute(char* key,
 		// It could be ProcAd or ClusterAd
 		// So need to check
 	job_id_type = getProcClusterIds(key, cid, pid);
-  
+
+	doubleval = strtod(value, &endptr);
+
 	switch(job_id_type) {
 	case IS_CLUSTER_ID:
-		if (strtod(value, &endptr) != 0) {
-			sprintf(sql_str_del_in, 
-					"DELETE FROM ClusterAds_Num WHERE cid = %s "
-					"AND attr = '%s'; INSERT INTO ClusterAds_Num "
-					"(cid, attr, val) VALUES (%s, '%s', %s);", 
-					cid, name, cid, name, value);
-			
-		}
+		if(value == endptr) {
+			sprintf(sql_str_del_in,
+					"DELETE FROM ClusterAds_Str WHERE cid = %s "
+					"AND attr = '%s'; INSERT INTO ClusterAds_Str "
+					"(cid, attr, val) VALUES (%s, '%s', '%s');",
+					cid, name, cid, name, newvalue);
+		}         
+		
 		else {
-			if (value != endptr) { // the string means number zero.
-				sprintf(sql_str_del_in, 
-						"DELETE FROM ClusterAds_Num WHERE cid = %s "
-						"AND attr = '%s'; INSERT INTO ClusterAds_Num "
-						"(cid, attr, val) VALUES (%s, '%s', %s);", 
-						cid, name, cid, name, value);
-			}
-			else if (value == endptr) { // the string is not a number.
-				sprintf(sql_str_del_in, 
+			if(*endptr != '\0') {  
+				sprintf(sql_str_del_in,
 						"DELETE FROM ClusterAds_Str WHERE cid = %s "
 						"AND attr = '%s'; INSERT INTO ClusterAds_Str "
-						"(cid, attr, val) VALUES (%s, '%s', '%s');", 
+						"(cid, attr, val) VALUES (%s, '%s', '%s');",
 						cid, name, cid, name, newvalue);
 			}
-			break;
-		case IS_PROC_ID:
-			if (strtod(value, &endptr) != 0) {
-				sprintf(sql_str_del_in, 
-						"DELETE FROM ProcAds_Num WHERE cid = %s AND pid = %s "
-						"AND attr = '%s'; INSERT INTO ProcAds_Num "
-						"(cid, pid, attr, val) VALUES (%s, %s, '%s', %s);", 
-						cid, pid, name, cid, pid, name, value);
+			else {
+				sprintf(sql_str_del_in,
+						"DELETE FROM ClusterAds_Num WHERE cid = %s "
+						"AND attr = '%s'; INSERT INTO ClusterAds_Num "
+						"(cid, attr, val) VALUES (%s, '%s', %s);",
+						cid, name, cid, name, value);
+			}
+		}         
+		
+		break;
+		
+	case IS_PROC_ID:
+		if(value == endptr) {
+			sprintf(sql_str_del_in,
+					"DELETE FROM ProcAds_Str WHERE cid = %s AND "
+					"pid = %s AND attr = '%s'; INSERT INTO ProcAds_Str"
+					"(cid, pid, attr, val) VALUES (%s, %s, '%s', '%s');",
+					cid, pid, name, cid, pid, name, newvalue);
+		}
+		
+		else {
+			if(*endptr != '\0') {
+				sprintf(sql_str_del_in,
+						"DELETE FROM ProcAds_Str WHERE cid = %s AND "
+						"pid = %s AND attr = '%s'; INSERT INTO ProcAds_Str"
+						"(cid, pid, attr, val) VALUES (%s, %s, '%s', '%s');",
+						cid, pid, name, cid, pid, name, newvalue);
 			}
 			else {
-				if (value != endptr) { // the string means number zero.
-					sprintf(sql_str_del_in, 
-							"DELETE FROM ProcAds_Num WHERE cid = %s AND "
-							"pid = %s AND attr = '%s'; INSERT INTO ProcAds_Num"
-							"(cid, pid, attr, val) VALUES (%s, %s, '%s', %s);",
-							cid, pid, name, cid, pid, name, value);
-				}
-				else if (value == endptr) { // the string is not a number.
-					sprintf(sql_str_del_in, 
-						  "DELETE FROM ProcAds_Str WHERE cid = %s AND "
-						  "pid = %s AND attr = '%s'; INSERT INTO ProcAds_Str"
-						  "(cid, pid, attr, val) VALUES (%s, %s, '%s', '%s');",
-						  cid, pid, name, cid, pid, name, newvalue);
-				}
+				sprintf(sql_str_del_in,
+						"DELETE FROM ProcAds_Num WHERE cid = %s AND "
+						"pid = %s AND attr = '%s'; INSERT INTO ProcAds_Num"
+						"(cid, pid, attr, val) VALUES (%s, %s, '%s', %s);",
+						cid, pid, name, cid, pid, name, value);
 			}
-
-			break;
-		case IS_UNKNOWN_ID:
-			dprintf(D_ALWAYS, "Set Attribute Processing --- ERROR\n");
-			if(sql_str_del_in) {
-				free(sql_str_del_in);
-			}
-			if(newvalue) {
-				free(newvalue);
-			}
-			return FAILURE;
-			break;
 		}
+		break;    
+		
+	case IS_UNKNOWN_ID:
+		dprintf(D_ALWAYS, "Set Attribute Processing --- ERROR\n");
+		if(sql_str_del_in) {
+			free(sql_str_del_in);
+			sql_str_del_in = NULL;
+		}
+		if(newvalue) {
+			free(newvalue);
+			newvalue = NULL;
+		}
+		return FAILURE;
+		break;
 	}
   
 	QuillErrCode ret_st;
@@ -1735,9 +1831,11 @@ JobQueueDBManager::processSetAttribute(char* key,
 			displayDBErrorMsg("Set Attribute --- ERROR");     
  			if(sql_str_del_in) {
 				free(sql_str_del_in);
+				sql_str_del_in = NULL;
 			}
 			if(newvalue) {
 				free(newvalue);
+				newvalue = NULL;
 			}
 			return FAILURE;
 		}
@@ -1764,9 +1862,11 @@ JobQueueDBManager::processSetAttribute(char* key,
   
 	if(newvalue) {
 		free(newvalue);
+		newvalue = NULL;
 	}
 	if(sql_str_del_in) {
 		free(sql_str_del_in);
+		sql_str_del_in = NULL;
 	}
 	return SUCCESS;
 }
@@ -1876,13 +1976,13 @@ JobQueueDBManager::processDeleteAttribute(char* key,
 QuillErrCode 
 JobQueueDBManager::processBeginTransaction(bool exec_later)
 {
-	xactState = BEGIN_XACT;
 	if(!exec_later) {
 			// the connection is not in Xact by default, so begin it
 		if (jqDatabase->beginTransaction() == FAILURE) { 
 			return FAILURE;			   				   
 		}
 	}
+	xactState = BEGIN_XACT;
 	return SUCCESS;
 }
 
@@ -1892,12 +1992,12 @@ JobQueueDBManager::processBeginTransaction(bool exec_later)
 QuillErrCode
 JobQueueDBManager::processEndTransaction(bool exec_later)
 {
-	xactState = COMMIT_XACT;
 	if(!exec_later) {		
 		if (jqDatabase->commitTransaction() == FAILURE) {
 			return FAILURE;			   				   
 		}
 	}
+	xactState = COMMIT_XACT;
 	return SUCCESS;
 }
 
@@ -2087,9 +2187,9 @@ JobQueueDBManager::setJQPollingInfo()
 	ret_st = jqDatabase->execCommand(sql_str, num_result, db_err_code);
 	
 	if (ret_st == FAILURE) {
-		dprintf(D_ALWAYS, "Update JobQueuePollInfo --- ERROR [SQL] %s\n", 
+		dprintf(D_ALWAYS, "Update JobQueuePollingInfo --- ERROR [SQL] %s\n", 
 				sql_str);
-		displayDBErrorMsg("Update JobQueuePollInfo --- ERROR");
+		displayDBErrorMsg("Update JobQueuePollingInfo --- ERROR");
 	}
 	else if (ret_st == SUCCESS && num_result == 0) {
 			// This case is a rare one since the jobqueuepollinginfo
@@ -2103,6 +2203,7 @@ JobQueueDBManager::setJQPollingInfo()
 
 	if(sql_str) {
 		free(sql_str);
+		sql_str = NULL;
 	}
 	return ret_st;
 }
@@ -2150,6 +2251,7 @@ JobQueueDBManager::checkSchema()
 					jobQueueDBName);
 			delete tmp_jqdb;
 			free(tmp_conn);
+			tmp_conn = NULL;
 			return FAILURE;
 		}
 		tmp_st = tmp_jqdb->execCommand(sql_str);
@@ -2159,11 +2261,13 @@ JobQueueDBManager::checkSchema()
 					jobQueueDBName);
 			delete tmp_jqdb;
 			free(tmp_conn);
+			tmp_conn = NULL;
 			return FAILURE;
 		}
 		tmp_jqdb->disconnectDB();
 		delete tmp_jqdb;
 		free(tmp_conn);	  
+		tmp_conn = NULL;
 	}
 
 	strcpy(sql_str, SCHEMA_CHECK_STR); 
