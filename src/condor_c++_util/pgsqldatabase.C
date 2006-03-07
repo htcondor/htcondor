@@ -23,7 +23,6 @@
 
 #include "condor_common.h"
 #include "condor_io.h"
-
 #include "pgsqldatabase.h"
 
 //! constructor
@@ -105,6 +104,21 @@ char*
 PGSQLDatabase::getDBError()
 {
 	return PQerrorMessage(connection);
+}
+
+//! get the server version number, 
+//! -1 if connection is invalid
+int 
+PGSQLDatabase::getDatabaseVersion() 
+{
+	int pg_version_number = 0;   
+	pg_version_number = PQserverVersion(connection);
+	if(pg_version_number > 0) {
+		return pg_version_number;
+	}
+	else {
+		return -1;
+	}
 }
 
 //@ disconnect from DBMS

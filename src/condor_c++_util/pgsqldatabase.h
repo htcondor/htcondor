@@ -91,7 +91,9 @@ public:
 	const char*	         getJobQueueClusterAds_NumValue(int row, int col);
 	const char*          getHistoryHorValue(int row, int col);
 	const char*          getHistoryVerValue(int row, int col);
-	  
+
+	int                  getDatabaseVersion();
+
 private:
 	PGconn		         *connection;		//!< connection object
 	PGresult	         *queryRes; 	//!< result for general query
