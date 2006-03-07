@@ -62,11 +62,7 @@ main_init (int, char *[])
 {
     dprintf(D_ALWAYS,"Starting HAD ....\n");	
     try {
-#if USE_REPLICATION
-        stateMachine = new ReplicaStateMachine();
-#else
         stateMachine = new HADStateMachine();
-#endif // USE_REPLICATION
 	
         stateMachine->initialize();
         return TRUE;
@@ -100,13 +96,25 @@ main_shutdown_fast()
     DC_Exit(0);
     return 0;
 }
-
+// we employ the following terminology inside the function:
+// hard reconfiguration - for starting the HAD state machine from the scratch
+//                        and gracefully killing the negotiator
+// soft reconfiguration - for rereading configuration values from $CONDOR_CONFIG
+//						  without changing the state machine
 int
 main_config( bool is_full )
 {
-    //Why not reinilize everything even if one of then can't reinilialize?
-    bool ret = stateMachine->reinitialize();
-    return ret;
+	int returnValue = 0;
+	
+	if( stateMachine->isHardConfigurationNeeded( ) ) {
+    	dprintf( D_ALWAYS, "main_config hard configuration started\n" );
+		returnValue = stateMachine->reinitialize( );
+	} else {
+		dprintf( D_ALWAYS, "main_config soft configuration started\n" );
+		returnValue = stateMachine->softReconfigure( );
+	}
+	
+	return returnValue;
 }
 
 

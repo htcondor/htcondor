@@ -35,6 +35,8 @@
 **	Scheduler version number
 */
 #define SCHED_VERS			400
+#define HAD_COMMANDS_BASE                  (700)
+#define REPLICATION_COMMANDS_BASE          (800)
 #define CA_AUTH_CMD_BASE	1000
 // beware, QMGMT_CMD is 1111, so we don't want to use 1100...
 #define CA_CMD_BASE			1200
@@ -153,6 +155,23 @@
 #define SET_LASTTIME	(SCHED_VERS+96)		// negotiator
 #define STORE_POOL_CRED		(SCHED_VERS+97)	// master, store password for daemon-to-daemon shared secret auth (PASSWORD)
 #define VM_REGISTER	(SCHED_VERS+98)		// Virtual Machine
+
+// HAD-related commands
+#define HAD_ALIVE_CMD                   (HAD_COMMANDS_BASE + 0)
+#define HAD_SEND_ID_CMD                 (HAD_COMMANDS_BASE + 1)
+#define HAD_REPL_UPDATE_VERSION         (HAD_COMMANDS_BASE + 2)
+#define HAD_BEFORE_PASSIVE_STATE        (HAD_COMMANDS_BASE + 3)
+#define HAD_AFTER_ELECTION_STATE        (HAD_COMMANDS_BASE + 4)
+#define HAD_AFTER_LEADER_STATE          (HAD_COMMANDS_BASE + 5)
+#define HAD_IN_LEADER_STATE             (HAD_COMMANDS_BASE + 6)
+
+// Replication-related commands
+#define REPLICATION_TRANSFER_FILE          (REPLICATION_COMMANDS_BASE + 0)
+#define REPLICATION_LEADER_VERSION         (REPLICATION_COMMANDS_BASE + 1)
+#define REPLICATION_NEWLY_JOINED_VERSION   (REPLICATION_COMMANDS_BASE + 2)
+#define REPLICATION_GIVING_UP_VERSION      (REPLICATION_COMMANDS_BASE + 3)
+#define REPLICATION_SOLICIT_VERSION        (REPLICATION_COMMANDS_BASE + 4)
+#define REPLICATION_SOLICIT_VERSION_REPLY  (REPLICATION_COMMANDS_BASE + 5)
 
 /*
   The ClassAd-only protocol.  CA_CMD is the base command that's sent

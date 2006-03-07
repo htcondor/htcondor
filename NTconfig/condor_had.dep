@@ -191,6 +191,7 @@
 	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
 	"..\src\condor_daemon_core.V6\self_monitor.h"\
 	"..\src\condor_had\StateMachine.h"\
+	"..\src\condor_had\Utils.h"\
 	"..\src\condor_includes\buffers.h"\
 	"..\src\condor_includes\condor_adtypes.h"\
 	"..\src\condor_includes\condor_ast.h"\

@@ -1,0 +1,63 @@
+# Microsoft Developer Studio Generated Dependency File, included by condor_transferer.mak
+
+..\src\condor_had\BaseReplicaTransferer.C : \
+	"..\src\condor_daemon_core.V6\condor_daemon_core.h"\
+	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
+	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
+	"..\src\condor_daemon_core.V6\self_monitor.h"\
+	"..\src\condor_had\BaseReplicaTransferer.h"\
+	"..\src\condor_had\FilesOperations.h"\
+	"..\src\condor_had\Utils.h"\
+	
+
+..\src\condor_had\DownloadReplicaTransferer.C : \
+	"..\src\condor_daemon_core.V6\condor_daemon_core.h"\
+	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
+	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
+	"..\src\condor_daemon_core.V6\self_monitor.h"\
+	"..\src\condor_had\BaseReplicaTransferer.h"\
+	"..\src\condor_had\DownloadReplicaTransferer.h"\
+	"..\src\condor_had\FilesOperations.h"\
+	"..\src\condor_had\Utils.h"\
+	
+
+..\src\condor_had\FilesOperations.C : \
+	"..\src\condor_daemon_core.V6\condor_daemon_core.h"\
+	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
+	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
+	"..\src\condor_daemon_core.V6\self_monitor.h"\
+	"..\src\condor_had\FilesOperations.h"\
+	"..\src\condor_had\Utils.h"\
+	
+
+..\src\condor_had\Transferer.C : \
+	"..\src\condor_daemon_core.V6\condor_daemon_core.h"\
+	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
+	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
+	"..\src\condor_daemon_core.V6\self_monitor.h"\
+	"..\src\condor_had\BaseReplicaTransferer.h"\
+	"..\src\condor_had\DownloadReplicaTransferer.h"\
+	"..\src\condor_had\FilesOperations.h"\
+	"..\src\condor_had\UploadReplicaTransferer.h"\
+	"..\src\condor_had\Utils.h"\
+	
+
+..\src\condor_had\UploadReplicaTransferer.C : \
+	"..\src\condor_daemon_core.V6\condor_daemon_core.h"\
+	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
+	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
+	"..\src\condor_daemon_core.V6\self_monitor.h"\
+	"..\src\condor_had\BaseReplicaTransferer.h"\
+	"..\src\condor_had\FilesOperations.h"\
+	"..\src\condor_had\UploadReplicaTransferer.h"\
+	"..\src\condor_had\Utils.h"\
+	
+
+..\src\condor_had\Utils.C : \
+	"..\src\condor_daemon_core.V6\condor_daemon_core.h"\
+	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
+	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
+	"..\src\condor_daemon_core.V6\self_monitor.h"\
+	"..\src\condor_had\FilesOperations.h"\
+	"..\src\condor_had\Utils.h"\
+	

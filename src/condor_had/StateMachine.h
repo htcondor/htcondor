@@ -38,20 +38,8 @@
 
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 
-// TODO : to enter the commands to command types
-// file   condor_includes/condor_commands.h
-#define HAD_COMMANDS_BASE       700
-#define HAD_ALIVE_CMD           (HAD_COMMANDS_BASE + 0)
-#define HAD_SEND_ID_CMD         (HAD_COMMANDS_BASE + 1)
-
-// command names
-#define HAD_ALIVE_CMD_STR           "HAD_ALIVE_CMD"
-#define HAD_SEND_ID_CMD_STR         "HAD_SEND_ID_CMD"
-#define CHILD_ON_STR                "CHILD_ON"
-#define CHILD_OFF_FAST_STR          "CHILD_OFF_FAST"
-// end TODO
-
-
+//#undef IS_REPLICATION_USED
+//#define IS_REPLICATION_USED
 
 #define MESSAGES_PER_INTERVAL_FACTOR (2)
 #define SEND_COMMAND_TIMEOUT (5) // 5 seconds
@@ -63,6 +51,7 @@ typedef enum {
     LEADER_STATE = 4
 }STATES;
 
+class CollectorList;
 /*
   class HADStateMachine
 */
@@ -84,16 +73,19 @@ public:
     virtual void initialize();
 
     virtual int reinitialize();
+	
+	bool isHardConfigurationNeeded();
+	int softReconfigure();
 
 protected:
     /*
-      step() - called each hadInterval, implements one state of the
+      step() - called each m_hadInterval, implements one state of the
       state machine.
     */
     void  step();
     
     /*
-      cycle() - called MESSAGES_PER_INTERVAL_FACTOR times per hadInterval
+      cycle() - called MESSAGES_PER_INTERVAL_FACTOR times per m_hadInterval
     */
     void  cycle();
 
@@ -131,35 +123,33 @@ protected:
 
     void commandHandler(int cmd,Stream *strm) ;
 
-    void onError(char*);
+    int m_state;   
+    int m_stateMachineTimerID;
         
-    int state;   
-    int stateMachineTimerID;
-        
-    int hadInterval;
-    int connectionTimeout;
+    int m_hadInterval;
+    int m_connectionTimeout;
     
-    // if callsCounter equals to 0 ,
+    // if m_callsCounter equals to 0 ,
     // enter state machine , otherwise send messages
-    char callsCounter;
+    char m_callsCounter;
     
-    int selfId;
-    bool isPrimary;
-    bool usePrimary;
-    StringList* otherHADIPs;
-    Daemon* masterDaemon;
+    int m_selfId;
+    bool m_isPrimary;
+    bool m_usePrimary;
+    StringList* m_otherHADIPs;
+    Daemon* m_masterDaemon;
 
     List<int> receivedAliveList;
     List<int> receivedIdList;
 
-    void initializeHADList(char*);
+    static bool initializeHADList(char* , bool , StringList*, int* );
     int  checkList(List<int>*);
-    void removeAllFromList(List<int>*);
+    static void removeAllFromList(List<int>*);
     void clearBuffers();
     void printStep(char *curState,char *nextState);
-    char* commandToString(int command);
+    //char* commandToString(int command);
 
-    void finilize();
+    void finalize();
     void init();
     
     /*
@@ -168,16 +158,36 @@ protected:
             <IP:port>,IP:port,<name:port>,name:port
         return address in the format <IP:port>
     */
-    char* convertToSinfull(char* addr);
+    //char* convertToSinfull(char* addr);
     void printParamsInformation();
 
-    int myatoi(const char* str, bool* res);
+    //int myatoi(const char* str, bool* res);
 
     // debug information
-    bool standAloneMode;
-    void my_debug_print_list(StringList* str);
+    bool m_standAloneMode;
+    static void my_debug_print_list(StringList* str);
     void my_debug_print_buffers();
 
+	// usage of replication, controlled by configuration parameter 
+	// USE_REPLICATION
+	bool m_useReplication;
+
+	int sendReplicationCommand( int );
+	void setReplicationDaemonSinfulString( );
+
+	char* replicationDaemonSinfulString;
+// classad-specific data members and functions
+    void initializeClassAd();
+    // timer handler
+    void updateCollectors();
+    // updates collectors upon changing from/to leader state
+    void updateCollectorsClassAd( const MyString& isHadActive );
+
+    ClassAd*       m_classAd;
+    // info about our central manager
+    CollectorList* m_collectorsList;
+    int            m_updateCollectorTimerId;
+    int            m_updateCollectorInterval;
 };
 
 #endif // !HAD_StateMachine_H__

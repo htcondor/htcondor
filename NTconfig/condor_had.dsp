@@ -108,10 +108,21 @@ SOURCE=..\src\condor_had\soap_hadStub.C
 # Begin Source File
 
 SOURCE=..\src\condor_had\StateMachine.C
+# SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
 
 SOURCE=..\src\condor_had\StateMachine.h
 # End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_had\Utils.C
+# SUBTRACT CPP /YX /Yc /Yu
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_had\Utils.h
+# End Source File
 # End Target
+
 # End Project

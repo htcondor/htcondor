@@ -1,0 +1,61 @@
+# Microsoft Developer Studio Generated Dependency File, included by condor_replication.mak
+
+..\src\condor_had\AbstractReplicatorStateMachine.C : \
+	"..\src\condor_daemon_core.V6\condor_daemon_core.h"\
+	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
+	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
+	"..\src\condor_daemon_core.V6\self_monitor.h"\
+	"..\src\condor_had\AbstractReplicatorStateMachine.h"\
+	"..\src\condor_had\FilesOperations.h"\
+	"..\src\condor_had\ReplicatorState.h"\
+	"..\src\condor_had\Utils.h"\
+	
+
+..\src\condor_had\FilesOperations.C : \
+	"..\src\condor_daemon_core.V6\condor_daemon_core.h"\
+	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
+	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
+	"..\src\condor_daemon_core.V6\self_monitor.h"\
+	"..\src\condor_had\FilesOperations.h"\
+	"..\src\condor_had\Utils.h"\
+	
+
+..\src\condor_had\Replication.C : \
+	"..\src\condor_daemon_core.V6\condor_daemon_core.h"\
+	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
+	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
+	"..\src\condor_daemon_core.V6\self_monitor.h"\
+	"..\src\condor_had\AbstractReplicatorStateMachine.h"\
+	"..\src\condor_had\ReplicatorState.h"\
+	"..\src\condor_had\ReplicatorStateMachine.h"\
+	"..\src\condor_had\Utils.h"\
+	
+
+..\src\condor_had\ReplicatorStateMachine.C : \
+	"..\src\condor_daemon_core.V6\condor_daemon_core.h"\
+	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
+	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
+	"..\src\condor_daemon_core.V6\self_monitor.h"\
+	"..\src\condor_had\AbstractReplicatorStateMachine.h"\
+	"..\src\condor_had\FilesOperations.h"\
+	"..\src\condor_had\ReplicatorState.h"\
+	"..\src\condor_had\ReplicatorStateMachine.h"\
+	"..\src\condor_had\Utils.h"\
+	
+
+..\src\condor_had\Utils.C : \
+	"..\src\condor_daemon_core.V6\condor_daemon_core.h"\
+	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
+	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
+	"..\src\condor_daemon_core.V6\self_monitor.h"\
+	"..\src\condor_had\FilesOperations.h"\
+	"..\src\condor_had\Utils.h"\
+	
+
+..\src\condor_had\Version.C : \
+	"..\src\condor_daemon_core.V6\condor_daemon_core.h"\
+	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
+	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
+	"..\src\condor_daemon_core.V6\self_monitor.h"\
+	"..\src\condor_had\FilesOperations.h"\
+	
