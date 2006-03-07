@@ -51,23 +51,10 @@ JobQueueDBManager jqDBManager;
 int main_init(int argc, char *argv[])
 {
 	dprintf(D_ALWAYS, "main_init() called\n");
-
-	bool init = false;
-	char c;
-	while((c = getopt(argc, argv, "i")) != -1) {
-		switch(c) {
-		case 'i':
-			init = true;
-			break;
-		default:
-			dprintf(D_ALWAYS, "Not Supported Option: [%c]\n", c);
-			break;
-		}
-	}
-
+		
 	dprintf(D_ALWAYS, "configuring quill options from config file\n");
 	jqDBManager.config();
-	jqDBManager.init(init);
+	jqDBManager.init(false);
 	jqDBManager.registerAll();
 
 	return 0;
