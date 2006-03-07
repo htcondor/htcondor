@@ -29,12 +29,14 @@ class Resource;
 class CpuAttributes;
 class Starter;
 class Claim;
+class VMMachine;
 
 template class ExtArray<bool>;
 template class SimpleList<Claim*>;
 template class SimpleList<Starter*>;
 template class SimpleList<Resource*>;
 template class SimpleList<CpuAttributes*>;
+template class SimpleList<VMMachine*>;
 
 
 #if HAVE_BACKFILL

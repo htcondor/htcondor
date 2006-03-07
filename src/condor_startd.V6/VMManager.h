@@ -35,7 +35,6 @@ class VMManager;
 extern VMManager *vmmanager;
 
 class VMMachine;
-template class SimpleList<VMMachine*>;
 
 class VMManager : public Service {
 public:
