@@ -39,7 +39,7 @@ will proceed with the new submission anyway.
 now advertise their IP address as that of the network interface used
 to contact the collector.  This makes it possible, for example, to
 have a schedd on a multi-homed machine flock jobs to Condor pools in
-two seperate networks, because the schedd can advertise a different IP
+two separate networks, because the schedd can advertise a different IP
 address to the two collectors.  \Condor{cod} also benefits in the case
 where the startd is reachable through a network interface other than
 the default one that would normally be advertised.  This change also
@@ -62,6 +62,13 @@ command line.
   \Macro{STARTD\_RESOURCE\_PREFIX}.
   For more information, see section~\ref{param:StartdResourcePrefix}
   on page~\pageref{param:StartdResourcePrefix}.
+
+\item The number of CPUs Condor detects may now have an upper bound.
+  The \Macro{MAX\_NUM\_CPUS} configuration setting controls this.
+
+\item When preempting a claim, the \Condor{negotiator} now prints the 
+startd rank of the job that is being preempted and the startd rank of the 
+job it is causing the preemption.
 
 \end{itemize}
 
@@ -98,7 +105,7 @@ double quotes).
 the job ClassAd are converted to a syntax understood by the target
 schedd.  Previously (starting with 6.7.15), jobs with empty
 arguments/environment, or jobs using the new syntax for these would fail
-to run when submitted as Condor-C jobs targetting a pre 6.7.15 schedd.
+to run when submitted as Condor-C jobs targeting a pre 6.7.15 schedd.
 
 \item When running grid-type gt4 jobs with an automatically-started
 gridftp server, a restart of Condor could cause all of the gt4 jobs to
@@ -366,7 +373,7 @@ with multiple processes will work; but \Condor{dagman} does
 not deal properly with multi-cluster submits (e.g., a submit file
 queuing jobs with different executables).
 As a workaround, take care that submit files submitted by \Condor{dagman}
-only submit mutiple processes, not mutiple clusters.
+only submit multiple processes, not multiple clusters.
 (Bug introduced in version 6.7.17.)
 
 % Gnats PR 618.
