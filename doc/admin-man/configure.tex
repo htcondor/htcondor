@@ -2626,6 +2626,22 @@ SMP Machines for details.
 
 \begin{description}
 
+\item[\Macro{STARTD\_RESOURCE\_PREFIX}] 
+\label{param:StartdResourcePrefix}
+  A string which specifies what prefix to give the unique Condor
+  resources that are advertised on SMP machines.
+  Currently, Condor uses the term \Term{virtual machine} to describe
+  these resources, so the default value for this setting is ``vm''.
+  However, to avoid confusion with other kinds of virtual machines
+  (the ones created using tools like VMware or Xen), in a future
+  version of Condor, the current \Term{virtual machine} terminology
+  will change.
+  To aid in the transition to the new terms (and to provide a means
+  for sites that want to keep using ``vm'' even after the default has
+  changed), this setting enables sites to define what string the
+  \Condor{gstartd} will use to name the individual resources on an SMP
+  machine.
+
 \item[\Macro{VIRTUAL\_MACHINES\_CONNECTED\_TO\_CONSOLE}] 
 \label{param:VirtualMachinesConnectedToConsole}
   An integer which indicates how many of the virtual
