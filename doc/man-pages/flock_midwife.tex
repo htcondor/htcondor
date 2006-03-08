@@ -1,20 +1,26 @@
 \begin{ManPage}{\label{man-flock-midwife}\Prog{flock\_midwife}}{1}
-{creates an artifact of the creation of a process}
+{create an artifact of the creation of a process}
 
 \Synopsis \SynProg{\Prog{flock\_midwife}}
+\Opt{-help}
+
+\SynProg{\Prog{flock\_midwife}}
 \oOptArg{--file}{filename}
 \Arg{program}
-\oOpt{args}
+\oArg{programargs}
 
 \index{Deployment commands!flock\_midwife}
 \index{flock\_midwife}
 
-\Description \Prog{flock\_midwife} starts a given program, while
+\Description \Prog{flock\_midwife} starts a given \Arg{program}, while
 creating an artifact of the program's birth.  At a later time the
 \Prog{flock\_undertaker} can examine the artifact to determine whether
-the program is still running or whether it has exited.  It
+the program is still running, or whether the program has exited.
+\Prog{flock\_midwife}
 accomplishes this by obtaining a file lock on the given artifact file
-before starting the program.  Warning, this will not work on NFS
+before starting the program.
+
+Warning: \Prog{flock\_midwife} will not work on NFS
 unless the separate file lock server is running.
 
 \begin{Options}
@@ -23,11 +29,9 @@ unless the separate file lock server is running.
     The file \File{lock.file} is the default file used when
     this option is not specified.
   }
-  \OptItem{\Arg{program}}{
-    Forks a process and executes \Arg{program} with \ldots
-  }
-  \OptItem{\Opt{args}}{
-    the following \Arg{args} arguments.
+  \OptItem{\Arg{program} \oArg{programargs}}{
+    Forks a process and executes \Arg{program} with 
+    \Arg{programargs} as command-line arguments (when specified).
   }
 \end{Options}
 

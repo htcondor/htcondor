@@ -1,9 +1,11 @@
 \begin{ManPage}{\label{man-condor-cold-stop}\Condor{cold\_stop}}{1}
-{reliably shuts down and uninstalls a running Condor instance}
+{reliably shut down and uninstall a running Condor instance}
 
 \Synopsis \SynProg{\Condor{cold\_stop}}
+\Opt{-help}
+
+\SynProg{\Condor{cold\_stop}}
 \oOpt{-force}
-\OptArg{-configfile}{file}
 \oOptArg{-basedir}{directory}
 \oOptArg{-localdir}{directory}
 \oOptArg{-runlocalconfig}{file}
@@ -18,13 +20,14 @@
 \oOptArg{-artifact}{file}
 \oOpt{-nogurl}
 \oOptArg{-globuslocation}{directory}
+\OptArg{-configfile}{file}
 
 \index{Condor commands!condor\_cold\_stop}
 \index{Deployment commands!condor\_cold\_stop}
 \index{condor\_cold\_stop}
 
 \Description 
-\Condor{cold\_stop} reliably shuts down and uninstalls a
+\Condor{cold\_stop} reliably shuts down and uninstall a
 running Condor instance.  
 This program first uses \Condor{local\_stop} to
 reliably shut down the running Condor instance.
@@ -36,24 +39,26 @@ uninstall the Condor binaries and libraries using \Prog{cleanup\_release}.
 \begin{Options}
   \OptItem{\OptArg{-artifact}{file}}{
     Uses \Arg{file} as the artifact file to determine whether the
-    Condor Master is still alive. 
+    \Condor{master} daemon is still alive. 
   }
   \OptItem{\OptArg{-basedir}{directory}}{
-    Directory where the Condor installation can be found.  Defaults to
-    the current working directory.
+    Directory where the Condor installation can be found.
+    When not specified, the current working directory is assumed.
   }
   \OptItem{\Opt{-cleaninstall}}{
-    The program will remove the Condor installation.  If none of the
-    following options are provided: \Opt{-cleaninstall},
-    \Opt{-cleanlocal}, or \Opt{-stop}; the program behaves as though
+    Remove the Condor installation.
+    If none of the options 
+    \Opt{-cleaninstall}, \Opt{-cleanlocal}, or \Opt{-stop}
+    are specified, the program behaves as though
     all of them have been provided.
   }
   \OptItem{\Opt{-cleanlocal}}{
     The program will remove the \File{log}, \File{spool}, \File{exec}
-    directories for this Condor instance.  If none of the following
-    options are provided: \Opt{-cleaninstall}, \Opt{-cleanlocal}, or
-    \Opt{-stop}; the program behaves as though all of them have been
-    provided.
+    directories for this Condor instance. 
+    If none of the options
+    \Opt{-cleaninstall}, \Opt{-cleanlocal}, or \Opt{-stop}
+    are specified, the program behaves as though 
+    all of them have been provided.
   }
   \OptItem{\OptArg{-configfile}{file}}{
     The same configuration file path given to \Condor{cold\_start}.
@@ -66,19 +71,18 @@ uninstall the Condor binaries and libraries using \Prog{cleanup\_release}.
     \Arg{archive} can be a file path or a grid-ftp url.
   }
   \OptItem{\Opt{-flock}}{
-    The program will determine whether the \Condor{master} daemon
-    has exited
+    Determine whether the \Condor{master} daemon has exited
     using a file lock undertaker.  This option must match the
     corresponding option given to \Condor{cold\_start}.
   }
   \OptItem{\Opt{-force}}{
-    The program will ignore the status of the schedd, whether it has
-    jobs in the queue or not, when shutting down Condor.
+    Ignore the status of the \Condor{schedd} daemon (whether it has
+    jobs in the queue or not) when shutting down Condor.
   }
   \OptItem{\OptArg{-globuslocation}{directory}}{
-    The directoy containing the Globus installation.  This option is
-    required if any of the \Opt{-*archive} options are used and Globus
-    is not installed in \File{/opt/globus}.
+    The directory containing the Globus installation.  This option is
+    required if any of the options of the form \Opt{-*archive} are used,
+    and Globus is not installed in \File{/opt/globus}.
   }
   \OptItem{\OptArg{-localdir}{directory}}{
     Directory where the \File{log}, \File{spool}, and \File{execute}
@@ -91,19 +95,18 @@ uninstall the Condor binaries and libraries using \Prog{cleanup\_release}.
     \Arg{archive} can be a file path or a grid-ftp url.
   }
   \OptItem{\Opt{-nogurl}}{
-    This program will not use \Prog{globus-url-copy} to store the
-    archives.  This means that the archives can only be stored on
+    Do not use \Prog{globus-url-copy} to store the archives.
+    This implies that the archives can only be stored on
     mounted file systems.
   }
   \OptItem{\Opt{-pid}}{
-    The program will determine whether the \Condor{master} daemon
-    has exited
+    Determine whether the \Condor{master} daemon has exited
     using a unique process id undertaker.  This option must match the
     corresponding option given to \Condor{cold\_start}.
   }
   \OptItem{\OptArg{-runlocalconfig}{file}}{
-    Binds \Arg{file} into the configuration used by this instance of
-    Condor.  This option should be provided here, if it was provided to
+    Bind \Arg{file} into the configuration used by this instance of
+    Condor.  This option should the one provided to
     \Condor{cold\_start}.
   }
   \OptItem{\OptArg{-spoolarchive}{archive}}{
@@ -112,9 +115,10 @@ uninstall the Condor binaries and libraries using \Prog{cleanup\_release}.
     \Arg{archive} can be a file path or a grid-ftp url.
   }
   \OptItem{\Opt{-stop}}{
-    The program will shutdown this running instance of Condor.  If
-    none of the following options are provided: \Opt{-cleaninstall},
-    \Opt{-cleanlocal}, or \Opt{-stop}; the program behaves as though
+    The program will shut down this running instance of Condor.
+    If none of the options 
+    \Opt{-cleaninstall}, \Opt{-cleanlocal}, or \Opt{-stop}
+    are specified, the program behaves as though
     all of them have been provided.
   }
 \end{Options}
@@ -125,7 +129,7 @@ success, and non-zero otherwise.
 
 \Examples
 
-To shutdown a Condor instance on the target machine:
+To shut down a Condor instance on the target machine:
 
 \begin{verbatim}
 % condor_cold_stop -configfile condor_config.mobile

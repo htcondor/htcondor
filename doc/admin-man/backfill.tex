@@ -389,13 +389,13 @@ an additional macro must be defined:
 
 \footnotesize
 \begin{verbatim}
-# What user should be used for the boinc_client?
+# Specify the user that the boinc_client should run as:
 BOINC_Owner = nobody
 \end{verbatim}
 \normalsize
 
 In this case, Condor would spawn the \Prog{boinc\_client} as
-\Username{nobody}, so the directory specified in \MacroNI{BOINC\_HOME}
+\Username{nobody}, so the directory specified in \MacroUNI{BOINC\_HOME}
 would have to be writable by the \Username{nobody} user.
 
 A better choice would probably be to create a separate user account
@@ -413,21 +413,65 @@ BOINC project:
 \item The \Opt{--attach\_project} argument to the \Prog{boinc\_client}
   program, defined via the \MacroNI{BOINC\_Arguments} setting
   (described above). 
+  The \Prog{boinc\_client} will only accept a single
+  \Opt{--attach\_project} argument, so this method can only be used to
+  attach to one project.
 
 \item The \Prog{boinc\_cmd} command-line tool can perform various
   BOINC administrative tasks, including attaching to a BOINC project.
-  Using \Prog{boinc\_cmd}, the appropriate argument to is called
+  Using \Prog{boinc\_cmd}, the appropriate argument to use is called
   \Opt{--project\_attach}.
+  Unfortunately, the \Prog{boinc\_client} must be running for
+  \Prog{boinc\_cmd} to work, so this method can only be used once the
+  Condor resource has entered the Backfill state and has spawned the
+  \Prog{boinc\_client}. 
+  
+\item Manually create account files in the local BOINC directory.
+  Upon startup, the \Prog{boinc\_client} will scan its local directory
+  (the directory specified with \Macro{BOINC\_InitialDir})
+  for files of the form \File{account\_[URL].xml}, for example,
+  \File{account\_einstein.phys.uwm.edu.xml}. 
+  Any files with a name that matches this convention will be read and
+  processed.
+  The contents of the file define the project URL and the
+  authentication key.
+  The format is:
 
-\item The \Prog{boinc\_cmd} command-line tool can perform various
-  BOINC administrative tasks, including attaching to a BOINC project.
-  Using \Prog{boinc\_cmd}, the appropriate argument to is called
-  \Opt{--project\_attach}.
+\footnotesize
+\begin{verbatim}
+<account>
+  <master_url>[URL]</master_url>
+  <authenticator>[key]</authenticator>
+</account>
+\end{verbatim}
+\normalsize
+
+For example: 
+
+\footnotesize
+\begin{verbatim}
+<account>
+  <master_url>http://einstein.phys.uwm.edu</master_url>
+  <authenticator>aaaa1111bbbb2222cccc3333</authenticator>
+</account>
+\end{verbatim}
+\normalsize
+
+(Of course, the \verb@<authenticator>@ tag would use the real
+authentication key returned when the account was created at a given
+project).
+
+These account files can be copied to the local BOINC directory on all
+machines in a Condor pool, so administrators can either distribute
+them manually, or use symbolic links to point to a shared file
+system. 
 
 \end{itemize}
 
-In all of these cases, BOINC will write some files to the local BOINC
-directory on the machine, and then future invocations of the
+In the first two cases (using command-line arguments for
+\Prog{boinc\_client} or running the \Prog{boinc\_cmd} tool), BOINC
+will write out the resulting account file to the local BOINC directory
+on the machine, and then future invocations of the
 \Prog{boinc\_client} will already be attached to the appropriate
 project(s).
 More information about participating in multiple BOINC projects can be

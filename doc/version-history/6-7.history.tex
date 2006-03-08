@@ -325,6 +325,17 @@ specified in the submit file exists but is zero length.
 
 \begin{itemize}
 
+\item RPM packages of Condor may refuse to install because of a failed
+dependency on perl(FileLock).  The module in question is missing from the
+bundles.  
+As a workaround, use rpm's --nodeps option to ignore the requirement.
+(Bug introduced in version 6.7.17)
+
+\item The new dynamic deployment tools (\Condor{cold\_start} and others) may
+fail because FileLock.pm is missing.  If you would like to use the new dynamic
+deployments tools, contact \Email{condor-admin@cs.wisc.edu} to receive a copy
+of FileLock.pm.  (Bug introduced in version 6.7.17)
+
 \item Jobs with no arguments submitting using Condor versions 6.7.15 up to and
 including 6.7.17 that try to run on a pre-6.7.15 \Condor{starter} will fail to
 start.  The \Condor{starter} will fail and exit.  The job will not run until

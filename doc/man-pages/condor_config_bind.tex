@@ -2,7 +2,9 @@
 {bind together a set of configuration files}
 
 \Synopsis \SynProg{\Condor{config\_bind}}
-\oOpt{-help}
+\Opt{-help}
+
+\SynProg{\Condor{config\_bind}}
 \OptArg{-o}{outputfile}
 \Arg{configfile1}
 \Arg{configfile2}
@@ -17,17 +19,21 @@
 configuration files through the use of a new configuration file.  The
 purpose of this tool is to allow the user to dynamically bind a local
 configuration file into an already created, and possible immutable,
-configuration file.  This is particularly useful we the user wants to
-modify a configuration but can't actually make any changes to the
-global configuration file (even changing the list of local configuration
-files).  This program does not modify the given configuration files,
-rather it creates a new configuration file that specifies the given
-configuration files as local configuration files.  Condor evaluates
-the configuration files left to right.  That is, if a value is defined
-in two or more of the configuration files, the rightmost configuration
-file that contains this value overrides the others.  If a user wants to
-bind a new local configuration into a global configuration, the user
-should specify the local configuration second.
+configuration file.  This is particularly useful when the user wants to
+modify a configuration but cannot actually make any changes to the
+global configuration file (even to change the list of local configuration
+files).  This program does not modify the given configuration files.
+Rather, it creates a new configuration file that specifies the given
+configuration files as local configuration files.  
+
+Condor evaluates each of the configuration files in the given
+command-line order (left to right).
+A value defined 
+in two or more of the configuration files results in
+the last one evaluated defining the value. It overrides any others.
+To bind a new local configuration into a global configuration, 
+specify the local configuration second within the command-line
+ordering.
 
 \begin{Options}
   \OptItem{\Arg{configfile1}}{First configuration file to

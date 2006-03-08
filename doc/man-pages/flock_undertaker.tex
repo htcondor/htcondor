@@ -1,7 +1,10 @@
 \begin{ManPage}{\label{man-flock-undertaker}\Prog{flock\_undertaker}}{1}
-{determines whether a process has exited}
+{determine whether a process has exited}
 
 \Synopsis \SynProg{\Prog{flock\_undertaker}}
+\Opt{-help}
+
+\SynProg{\Prog{flock\_undertaker}}
 \oOptArg{--file}{filename}
 \oOpt{--block}
 
@@ -12,7 +15,9 @@
 \Prog{flock\_undertaker} can examine an artifact file created by
 \Prog{flock\_midwife} and determine whether the program started by
 the \Prog{midwife} has exited.  It does this by attempting to acquire
-a file lock.  Warning, this will not work on NFS unless the separate
+a file lock.
+
+Be warned that this will not work on NFS unless the separate
 file lock server is running.
 
 \begin{Options}
@@ -20,8 +25,7 @@ file lock server is running.
     If the process has not exited, block until it does.
   }
   \OptItem{\OptArg{--file}{filename}}{
-    The name of the
-    artifact file.
+    The name of the artifact file.
     created by \Prog{flock\_midwife}.
     The file \File{lock.file} is the default file used when
     this option is not specified.

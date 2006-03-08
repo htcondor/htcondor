@@ -6,6 +6,7 @@
 \oOptArg{-remote}{schedd\_name}
 \oOptArg{-pool}{pool\_name}
 \oOpt{-disable}
+\oOptArg{-password}{passphrase}
 \ToolDebugOption
 % this option needs the dots in boldface, so using the macro oOptArg won't work
 \Lbr\Opt{-append} \Arg{command} \Opt{\Dots}\Rbr 
@@ -1457,7 +1458,7 @@ credentials on the server (using \Prog{myproxy-init}).
 As an alternative to using \SubmitCmd{MyProxyPassword} in the
 submit description file,
 the password may be specified as a command line argument to \Condor{submit}
-with the \Arg{-p} argument.
+with the \Arg{-password} argument.
 
 %%%%%%%%%%%%%%%%%%%
 %% MyProxyRefreshThreshold
@@ -2201,17 +2202,23 @@ character are ignored by the submit description file parser.
 
 \begin{Options}
 
-\OptItem{\Opt{-verbose}}{Verbose output - display the created job class-ad}
+\OptItem{\Opt{-verbose}}{Verbose output - display the created job ClassAd}
 
-\OptItem{\OptArg{-name}{schedd\_name}}{Submit to the specified schedd. This option is used when you want to submit to a schedd other than the default local one.}
+\OptItem{\OptArg{-name}{schedd\_name}}{Submit to the specified \Condor{schedd}.
+Use this option to submit to a \Condor{schedd} other than the default local one.}
 
-\OptItem{\OptArg{-remote}{schedd\_name}}{Submit to the specified schedd, 
-spooling all required input files over the network connection. This option is equivalent to using both -name and -spool.}
+\OptItem{\OptArg{-remote}{schedd\_name}}{Submit to the specified
+\Condor{schedd}, spooling all required input files over the network connection.
+This option is equivalent to using both \Opt{-name} and \Opt{-spool}.}
 
-\OptItem{\OptArg{-pool}{pool\_name}}{Look in the specified pool for the schedd
-to submit to. This option is used with \Opt{-name} or \Opt{-remote}.}
+\OptItem{\OptArg{-pool}{pool\_name}}{Look in the specified pool for the 
+\Condor{schedd} to submit to.
+This option is used with \Opt{-name} or \Opt{-remote}.}
 
 \OptItem{\Opt{-disable}}{Disable file permission checks.}
+
+\OptItem{\OptArg{-password}{passphrase}}{Specify a password to the 
+\Prog{MyProxy} server. }
 
 \OptItem{\Opt{-debug}}{Cause debugging information to be sent to \File{stderr},
 based on the value of the configuration variable \MacroNI{SUBMIT\_DEBUG}.}
@@ -2228,13 +2235,14 @@ Commands with spaces in them will need to be enclosed in double quote
 marks.}
 
 \OptItem{\Opt{-spool}}{Spool all required input files, user log, and
-proxy over the connection to the schedd. After submission, you can modify
-your local copies of the files without affecting your jobs. Any output
+proxy over the connection to the \Condor{schedd}.
+After submission, modify
+local copies of the files without affecting your jobs. Any output
 files for completed jobs need to be retrieved with \Condor{transfer\_data}.}
 
-\OptItem{submit description file}{The pathname to the submit description
-file. If this optional argument is missing or equal to ``-'', then the commands are
-taken from standard input.}
+\OptItem{\Arg{submit description file}}{The pathname to the submit description
+file. If this optional argument is missing or equal to ``-'', then the commands
+are taken from standard input.}
 
 \end{Options}
 

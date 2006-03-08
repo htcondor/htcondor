@@ -6,7 +6,7 @@
 \oOptArg{--file}{filename}
 \oOptArg{--precision}{seconds}
 \Arg{program}
-\oOpt{args}
+\oArg{programargs}
 
 \index{Deployment commands!uniq\_pid\_midwife}
 \index{uniq\_pid\_midwife}
@@ -15,7 +15,8 @@
 \Prog{uniq\_pid\_midwife} starts a given program, while creating an
 artifact of the program's birth.  At a later time the
 \Prog{uniq\_pid\_undertaker} can examine the artifact to determine
-whether the program is still running or whether it has exited.  It
+whether the program is still running or whether it has exited.  
+\Prog{uniq\_pid\_midwife}
 accomplishes this by recording an enforced unique process identifier to
 the artifact.
 
@@ -26,18 +27,16 @@ the artifact.
   }
   \OptItem{\OptArg{--precision}{seconds}}{
     The precision the operating system is expected to have in regards
-    to process creation times.  Defaults to an operating specific
+    to process creation times.  Defaults to an operating system specific
     value.  The default is the best choice in most cases.
   }
   \OptItem{\Opt{--noblock}}{
     Exit after the program has been confirmed, typically 3 times the
     precision.  Defaults to block until the program exits.
   }
-  \OptItem{\Arg{program}}{
-    Forks a process and executes \Arg{program} with \ldots
-  }
-  \OptItem{\Opt{args}}{
-    the following \Arg{args} arguments.
+  \OptItem{\Arg{program} \oArg{programargs}}{
+    Forks a process and executes \Arg{program} with
+    \Arg{programargs} as command-line arguments (when specified).
   }
 \end{Options}
 
