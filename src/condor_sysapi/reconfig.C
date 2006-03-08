@@ -63,6 +63,7 @@ int _sysapi_config = 0;
 
 /* needed by ncpus.c */
 int _sysapi_ncpus = 0;
+int _sysapi_max_ncpus = 0;
 
 /* needed by phys_mem.c */
 int _sysapi_memory = 0;
@@ -150,6 +151,17 @@ sysapi_reconfig(void)
 		_sysapi_ncpus = atoi( tmp );
 		free( tmp );
 	}
+
+	_sysapi_max_ncpus = 0;
+	tmp = param( "MAX_NUM_CPUS" );
+	if( tmp ) {
+		_sysapi_max_ncpus = atoi( tmp );
+		if(_sysapi_max_ncpus < 0) {
+			_sysapi_max_ncpus = 0;
+		}
+		free( tmp );
+	}
+
 
 	_sysapi_memory = 0;
 	tmp = param( "MEMORY" );

@@ -60,6 +60,7 @@ extern int _sysapi_config;
 
 /* needed by ncpus.c */
 extern int _sysapi_ncpus;
+extern int _sysapi_max_ncpus;
 
 /* needed by phys_mem.c */
 extern int _sysapi_memory;

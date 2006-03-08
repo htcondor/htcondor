@@ -203,11 +203,17 @@ bogomips        : 299.01
 int
 sysapi_ncpus(void)
 {	
+	int detected_cpus;
 	sysapi_internal_reconfig();
 	if( _sysapi_ncpus ) {
 		return _sysapi_ncpus;
 	} else {
-		return sysapi_ncpus_raw();
+		detected_cpus = sysapi_ncpus_raw();
+		if(_sysapi_max_ncpus && (detected_cpus > _sysapi_max_ncpus)) {
+			return _sysapi_max_ncpus;
+		} else {
+			return detected_cpus;
+		}
 	}
 }
 
