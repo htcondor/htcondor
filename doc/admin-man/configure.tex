@@ -2512,6 +2512,18 @@ Configuring The Startd Policy.
   did not want to be matched with machines that were only really
   offering ``fractional CPUs''.
 
+\item[\Macro{MAX\_NUM\_CPUS}] \label{param:MaxNumCpus}
+  This macro will cap the number of CPUs detected by Condor on a machine.
+  If you set \MacroNI{NUM\_CPUS} this cap is ignored.
+  If it is set to zero, there is no cap. 
+  If it is not defined in the config file, it defaults to zero and there is
+  no cap. 
+
+  \Note This setting cannot be changed with a simple reconfig (either
+  by sending a SIGHUP or using \Condor{reconfig}.
+  If you change this, you must restart the \Condor{startd} for the
+  change to take effect (by using ``\condor{restart} -startd'').
+
 \item[\Macro{COUNT\_HYPERTHREAD\_CPUS}] \label{param:CountHyperthreadCpus}
   This macro controls how Condor sees hyperthreaded
   processors. When set to TRUE (the default), it includes virtual CPUs in
