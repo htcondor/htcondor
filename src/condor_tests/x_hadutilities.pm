@@ -15,12 +15,12 @@ use constant MORE_THAN_ONE => "More than one";
 use constant PROCESSED     => 2;
 use constant UPDATED       => 1;
 
-use constant HAD_STARTING_PORT         => 60100;
-use constant REPLICATION_STARTING_PORT => 61100;
-use constant SCHEDD_STARTING_PORT      => 62100;
-use constant NEGOTIATOR_STARTING_PORT  => 63100;
-use constant COLLECTOR_STARTING_PORT   => 64100;
-use constant STARTD_STARTING_PORT      => 65100;
+use constant HAD_STARTING_PORT         => 50100;
+use constant REPLICATION_STARTING_PORT => 51100;
+use constant SCHEDD_STARTING_PORT      => 52100;
+use constant NEGOTIATOR_STARTING_PORT  => 53100;
+use constant COLLECTOR_STARTING_PORT   => 54100;
+use constant STARTD_STARTING_PORT      => 55100;
 
 
 sub LoadTable
