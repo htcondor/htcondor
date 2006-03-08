@@ -31,13 +31,21 @@
 
 Resource::Resource( CpuAttributes* cap, int rid )
 {
-	char tmp[256];
+	MyString tmp;
 	char* tmpName;
 
 		// we need this before we instantiate any Claim objects... 
 	r_id = rid;
-	sprintf( tmp, "vm%d", rid );
-	r_id_str = strdup( tmp );
+	char* name_prefix = param( "STARTD_RESOURCE_PREFIX" );
+	if( name_prefix ) {
+		tmp.sprintf( "%s%d", name_prefix, rid );
+		free( name_prefix );
+	} else { 
+			// for now, default to "vm", this will become "slot" or
+			// "s" or something in 6.9.x
+		tmp.sprintf( "vm%d", rid );
+	}
+	r_id_str = strdup( tmp.Value() );
 	
 	r_classad = NULL;
 	r_state = new ResState( this );
@@ -53,8 +61,8 @@ Resource::Resource( CpuAttributes* cap, int rid )
 		tmpName = my_full_hostname();
 	}
 	if( resmgr->is_smp() ) {
-		sprintf( tmp, "%s@%s", r_id_str, tmpName );
-		r_name = strdup( tmp );
+		tmp.sprintf( "%s@%s", r_id_str, tmpName );
+		r_name = strdup( tmp.Value() );
 	} else {
 		r_name = strdup( tmpName );
 	}
@@ -72,7 +80,7 @@ Resource::Resource( CpuAttributes* cap, int rid )
 		if (log) {
 			MyString avail_stats_ckpt_file(log);
 			free(log);
-			sprintf(tmp, "%c.avail_stats.%d", DIR_DELIM_CHAR, rid);
+			tmp.sprintf( "%c.avail_stats.%d", DIR_DELIM_CHAR, rid);
 			avail_stats_ckpt_file += tmp;
 			r_avail_stats.checkpoint_filename(avail_stats_ckpt_file);
 		}
