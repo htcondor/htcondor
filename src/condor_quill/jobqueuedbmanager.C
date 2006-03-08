@@ -320,7 +320,8 @@ JobQueueDBManager::config(bool reconfig)
 		displayDBErrorMsg("Unable to connect to database in order to retrieve the PostgreSQL version --- ERROR");
         }         
 	pg_version_number = jqDatabase->getDatabaseVersion();
-	if(pg_version_number <= 80100) {
+	dprintf(D_ALWAYS, "Using PostgreSQL version %d\n",pg_version_number);
+	if(pg_version_number < 80100) {
 		dprintf(D_ALWAYS, "WARNING: You are using an older version of PostgreSQL\n");
 		dprintf(D_ALWAYS, "We recommend that users upgrade to version 8.1 of PostgreSQL\n");
 		dprintf(D_ALWAYS, "Maintenance tasks such as vacuuming in prior versions are not\n");
