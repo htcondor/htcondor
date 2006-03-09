@@ -213,6 +213,7 @@ DecrementClusterSize(int cluster_id)
 		//    checkpoint file and the entry in the ClusterSizeHashTable.
 		if ( *numOfProcs == 0 ) {
 			ClusterCleanup(cluster_id);
+			numOfProcs = NULL;
 		}
 	}
 	TotalJobsCount--;
