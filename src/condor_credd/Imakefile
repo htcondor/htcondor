@@ -6,40 +6,17 @@ C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -I$(NEW_CLASSADS_INC)
 LIB = $(STD_LIBS) -L$(NEW_CLASSADS_LIB) -lclassad_ns
 CRED_LIB = classadUtil.o
 
-c_plus_target(condor_store_cred, store_cred.o $(CRED_LIB),$(LIB))
-release_target(condor_store_cred,bin,EXECUTABLE_MODE)
-strip_target(condor_store_cred,bin,EXECUTABLE_MODE)
-static_target(condor_store_cred,store_cred.o $(CRED_LIB),$(LIB),$(STATIC_DIR)/bin)
-pure_c_plus_target(condor_store_cred.pure,store_cred.o,$(LIB))
+public_c_plus_target(condor_store_cred,bin,store_cred.o $(CRED_LIB),$(LIB))
 
-c_plus_target(condor_rm_cred,rm_cred.o $(CRED_LIB),$(LIB))
-release_target(condor_rm_cred,bin,EXECUTABLE_MODE)
-strip_target(condor_rm_cred,bin,EXECUTABLE_MODE)
-static_target(condor_rm_cred,rm_cred.o $(CRED_LIB),$(LIB),$(STATIC_DIR)/bin)
-pure_c_plus_target(condor_rm_cred.pure,rm_cred.o $(CRED_LIB),$(LIB))
+public_c_plus_target(condor_rm_cred,bin,rm_cred.o $(CRED_LIB),$(LIB))
 
-c_plus_target(condor_get_cred,get_cred.o $(CRED_LIB),$(LIB))
-release_target(condor_get_cred,bin,EXECUTABLE_MODE)
-strip_target(condor_get_cred,bin,EXECUTABLE_MODE)
-static_target(condor_get_cred,store_cred.o $(CRED_LIB),$(LIB),$(STATIC_DIR)/bin)
-pure_c_plus_target(condor_get_cred.pure,get_cred.o $(CRED_LIB),$(LIB))
+public_c_plus_target(condor_get_cred,bin,get_cred.o $(CRED_LIB),$(LIB))
 
-
-c_plus_target(condor_list_cred,list_cred.o $(CRED_LIB),$(LIB))
-release_target(condor_list_cred,bin,EXECUTABLE_MODE)
-strip_target(condor_list_cred,bin,EXECUTABLE_MODE)
-static_target(condor_list_cred,list_cred.o $(CRED_LIB),$(LIB),$(STATIC_DIR)/bin)
-pure_c_plus_target(condor_list_cred.pure,list_cred.o $(CRED_LIB),$(LIB))
+public_c_plus_target(condor_list_cred,bin,list_cred.o $(CRED_LIB),$(LIB))
 
 OBJ = credd_main.o credd.o $(CRED_LIB) X509credentialWrapper.o
-c_plus_target(condor_credd,$(OBJ), $(DAEMONCORE_LIB) $(LIB))
-release_target(condor_credd,sbin,EXECUTABLE_MODE)
-strip_target(condor_credd,sbin,EXECUTABLE_MODE)
-static_target(condor_credd,$(OBJ),$(DAEMONCORE_LIB) $(LIB),$(STATIC_DIR)/bin)
-pure_c_plus_target(condor_credd.pure,$(OBJ),$(LIB))
+
+public_c_plus_target(condor_credd,sbin,$(OBJ), $(DAEMONCORE_LIB) $(LIB))
 
 html:
-release:: all
-stripped:: all
-static:: all
 clean::

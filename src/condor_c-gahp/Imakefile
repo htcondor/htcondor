@@ -14,26 +14,14 @@ soapobjs(cgahp)
 
 WORKER_THREAD_OBJ = FdBuffer.o schedd_client.o schedd_client_main.o SchedDCommands.o cgahp_common.o $(SOAP_OBJS)
 
+public_c_plus_target($(WORKER_THREAD),sbin,$(WORKER_THREAD_OBJ),$(LIB))
 
-c_plus_target($(WORKER_THREAD),$(WORKER_THREAD_OBJ),$(LIB))
-release_target($(WORKER_THREAD),sbin,EXECUTABLE_MODE)
-strip_target($(WORKER_THREAD),sbin,EXECUTABLE_MODE)
-static_target($(WORKER_THREAD),$(WORKER_THREAD_OBJ),$(LIB),$(STATIC_DIR)/sbin)
-pure_c_plus_target($(WORKER_THREAD).pure,$(WORKER_THREAD_OBJ),$(LIB))
-purecov_c_plus_target($(WORKER_THREAD).pc,$(WORKER_THREAD_OBJ),$(LIB))
-quantify_c_plus_target($(WORKER_THREAD).quantify,$(WORKER_THREAD_OBJ),$(LIB))
 c_plus_target(AvailStats.t,AvailStats.o AvailStats.t.o startd_instantiate.o,$(LIB))
 
 
 IO_THREAD_OBJ = FdBuffer.o io_loop.o cgahp_common.o
 
-c_plus_target($(IO_THREAD),$(IO_THREAD_OBJ),$(LIB))
-release_target($(IO_THREAD),sbin,EXECUTABLE_MODE)
-strip_target($(IO_THREAD),sbin,EXECUTABLE_MODE)
-static_target($(IO_THREAD),$(IO_THREAD_OBJ),$(LIB),$(STATIC_DIR)/sbin)
-pure_c_plus_target($(IO_THREAD).pure,$(IO_THREAD_OBJ),$(LIB))
-purecov_c_plus_target($(IO_THREAD).pc,$(IO_THREAD_OBJ),$(LIB))
-quantify_c_plus_target($(IO_THREAD).quantify,$(IO_THREAD_OBJ),$(LIB))
+public_c_plus_target($(IO_THREAD),sbin,$(IO_THREAD_OBJ),$(LIB))
 
 
 html:

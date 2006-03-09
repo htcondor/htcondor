@@ -12,12 +12,7 @@ OBJ = shadow_v61_main.o baseshadow.o shadow.o mpishadow.o \
 	remoteresource.o mpiresource.o pseudo_ops.o NTreceivers.o \
 	shadow_v61_instantiate.o shadow_user_policy.o parallelshadow.o $(SOAP_OBJS)
 
-c_plus_target($(NAME),$(OBJ),$(LIB))
-release_target($(NAME),sbin,EXECUTABLE_MODE)
-strip_target($(NAME),sbin,EXECUTABLE_MODE)
-static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/sbin)
-pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))
-purecov_c_plus_target($(NAME).pc,$(OBJ),$(LIB))
+public_c_plus_target($(NAME),sbin,$(OBJ),$(LIB))
 html_target( baseshadow.h shadow.h mpishadow.h remoteresource.h )
 
 #if 0

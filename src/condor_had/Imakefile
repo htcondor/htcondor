@@ -10,12 +10,7 @@ HAD_OBJ =  StateMachine.o HAD.o Utils.o $(SOAP_OBJS)
 
 soapobjs(had)
 
-c_plus_target($(HAD_NAME),$(HAD_OBJ),$(LIB))
-release_target($(HAD_NAME),sbin,EXECUTABLE_MODE)
-strip_target($(HAD_NAME),sbin,EXECUTABLE_MODE)
-static_target($(HAD_NAME),$(HAD_OBJ),$(LIB),$(STATIC_DIR)/sbin)
-pure_c_plus_target($(HAD_NAME).pure,$(HAD_OBJ),$(LIB))
-purecov_c_plus_target($(HAD_NAME).pc,$(HAD_OBJ),$(LIB))
+public_c_plus_target($(HAD_NAME),sbin,$(HAD_OBJ),$(LIB))
 
 gen_soapfiles(had,condorHad)
 
@@ -24,22 +19,12 @@ all_target($(REPLICATION_NAME))
 
 REPLICATION_OBJ = AbstractReplicatorStateMachine.o ReplicatorStateMachine.o Version.o Utils.o Replication.o FilesOperations.o
 
-c_plus_target($(REPLICATION_NAME),$(REPLICATION_OBJ),$(LIB))
-release_target($(REPLICATION_NAME),sbin,EXECUTABLE_MODE)
-strip_target($(REPLICATION_NAME),sbin,EXECUTABLE_MODE)
-static_target($(REPLICATION_NAME),$(REPLICATION_OBJ),$(LIB),$(STATIC_DIR)/sbin)
-pure_c_plus_target($(REPLICATION_NAME).pure,$(REPLICATION_OBJ),$(LIB))
-purecov_c_plus_target($(REPLICATION_NAME).pc,$(REPLICATION_OBJ),$(LIB))
+public_c_plus_target($(REPLICATION_NAME),sbin,$(REPLICATION_OBJ),$(LIB))
 
 TRANSFERER_NAME = condor_transferer
 all_target($(TRANSFERER_NAME))
 
 TRANSFERER_OBJ =  BaseReplicaTransferer.o UploadReplicaTransferer.o DownloadReplicaTransferer.o Utils.o Transferer.o FilesOperations.o
 
-c_plus_target($(TRANSFERER_NAME),$(TRANSFERER_OBJ),$(LIB))
-release_target($(TRANSFERER_NAME),bin,EXECUTABLE_MODE)
-strip_target($(TRANSFERER_NAME),bin,EXECUTABLE_MODE)
-static_target($(TRANSFERER_NAME),$(TRANSFERER_OBJ),$(LIB),$(STATIC_DIR)/bin)
-purecov_c_plus_target($(TRANSFERER_NAME).pc,$(TRANSFERER_OBJ),$(LIB))
-pure_c_plus_target($(TRANSFERER_NAME).pure,$(TRANSFERER_OBJ),$(LIB))
+public_c_plus_target($(TRANSFERER_NAME),bin,$(TRANSFERER_OBJ),$(LIB))
 

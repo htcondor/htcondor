@@ -15,15 +15,14 @@ LIB = $(ANALYSIS_LIBS) $(STD_LIBS) $(QUILL_LIB)
 
 OBJ = queue.o queue_instantiate.o
 
-c_plus_target($(NAME),$(OBJ),$(LIB))
-release_target($(NAME),bin,EXECUTABLE_MODE)
-strip_target($(NAME),bin,EXECUTABLE_MODE)
-static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/bin)
-pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))
-purecov_c_plus_target($(NAME).pc,$(OBJ),$(LIB))
+public_c_plus_target($(NAME),bin,$(OBJ),$(LIB))
 
 html:
 
+/*
+  NOTE: since we're using a different input file depending on where
+  we're copying to, we can't use the unified public_copy_target().
+*/ 
 #if HAS_CONDOR_ANALYZE
 release_copy_target($(CONDOR_ANALYZE_RELEASE),bin,condor_analyze,EXECUTABLE_MODE)
 strip_copy_target($(CONDOR_ANALYZE_STRIP),bin,condor_analyze,EXECUTABLE_MODE)

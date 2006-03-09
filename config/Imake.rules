@@ -527,13 +527,13 @@ XCOMM End translation of func(release_plain_symlink_target)
 ** Target is released by creating a hard link to another.
 */
 #ifndef release_link_target
-#define release_link_target(src,dir,dest)		@@\
+#define release_link_target(dir,src,dest)	@@\
 XCOMM Begin translation of func(release_link_target) @@\
 release:: $(RELEASE_DIR)/dir/dest		@@\
-							@@\
-$(RELEASE_DIR)/dir/dest: src			@@\
+						@@\
+$(RELEASE_DIR)/dir/dest: $(RELEASE_DIR)/dir/src	@@\
 	/bin/rm -f $(RELEASE_DIR)/dir/dest	@@\
-	ln src $(RELEASE_DIR)/dir/dest		@@\
+	ln $(RELEASE_DIR)/dir/src $(RELEASE_DIR)/dir/dest	@@\
 XCOMM End translation of func(release_link_target)
 #endif /* release_link_target */
 
@@ -657,13 +657,13 @@ XCOMM End translation of func(strip_recursive_copy_target)
 ** Stripped target is released by creating a hard link to another. 
 */
 #ifndef strip_link_target
-#define strip_link_target(src,dir,dest)		@@\
+#define strip_link_target(dir,src,dest)		@@\
 XCOMM Begin translation of func(strip_link_target) @@\
 stripped:: $(STRIP_DIR)/dir/dest		@@\
-							@@\
-$(STRIP_DIR)/dir/dest: src			@@\
-	/bin/rm -f $(STRIP_DIR)/dir/dest		@@\
-	ln src $(STRIP_DIR)/dir/dest		@@\
+						@@\
+$(STRIP_DIR)/dir/dest: $(STRIP_DIR)/dir/src	@@\
+	/bin/rm -f $(STRIP_DIR)/dir/dest	@@\
+	ln $(STRIP_DIR)/dir/src $(STRIP_DIR)/dir/dest	@@\
 XCOMM End translation of func(strip_link_target)
 #endif /* strip_link_target */
 
@@ -706,18 +706,22 @@ XCOMM End translation of func(strip_symlink_target)
 #if HAS_STATIC
 #define	static_target(program,objlist,libs,dir)		@@\
 XCOMM Begin translation of func(static_target) @@\
-dir/program: program.static				@@\
-	/bin/rm -f dir/program				@@\
-	cp program.static dir/program			@@\
-	chmod EXECUTABLE_MODE dir/program			@@\
-	$(STRIP) dir/program				@@\
+$(STATIC_DIR)dir/program: program.static		@@\
+	/bin/rm -f $(STATIC_DIR)/dir/program		@@\
+	cp program.static $(STATIC_DIR)/dir/program	@@\
+	chmod EXECUTABLE_MODE $(STATIC_DIR)/dir/program	@@\
+	$(STRIP) $(STATIC_DIR)/dir/program		@@\
+$(STATIC_UNSTRIP_DIR)dir/program: program.static	@@\
+	/bin/rm -f $(STATIC_UNSTRIP_DIR)/dir/program	@@\
+	cp program.static $(STATIC_UNSTRIP_DIR)/dir/program	@@\
+	chmod EXECUTABLE_MODE $(STATIC_UNSTRIP_DIR)/dir/program	@@\
 program.static: $(filter DEP_FILTER,objlist libs)					@@\
 	$(PRELINK_CPP) $(PRELINK_CPP_FLAGS) -o __prelink__.o objlist libs @@\
 	$(CC_LINK) $(STATIC)  $(C_PLUS_FLAGS) -o program.static __prelink__.o $(ALL_LDFLAGS) $(DEMANGLE) @@\
 	rm -f __prelink__.o @@\
 clean:: 							@@\
 	rm -f program.static objlist				@@\
-static:: dir/program			@@\
+static:: $(STATIC_DIR)/dir/program $(STATIC_UNSTRIP_DIR)/dir/program	@@\
 XCOMM End translation of func(static_target)
 #else  /* ! HAS_STATIC */
 #define	static_target(program,objlist,libs,dir)		@@\
@@ -734,16 +738,20 @@ XCOMM End translation of func(static_target)
 #if HAS_STATIC
 #define static_target_real(program,objlist,libs,dir,ldflags)	@@\
 XCOMM Begin translation of func(static_target_real)		@@\
-dir/program: program.static					@@\
-	/bin/rm -f dir/program					@@\
-	cp program.static dir/program				@@\
-	chmod EXECUTABLE_MODE dir/program			@@\
-	$(STRIP) dir/program					@@\
+$(STATIC_DIR)/dir/program: program.static			@@\
+	/bin/rm -f $(STATIC_DIR)/dir/program			@@\
+	cp program.static $(STATIC_DIR)/dir/program		@@\
+	chmod EXECUTABLE_MODE $(STATIC_DIR)/dir/program		@@\
+	$(STRIP) $(STATIC_DIR)/dir/program			@@\
+$(STATIC_UNSTRIP_DIR)/dir/program: program.static		@@\
+	/bin/rm -f $(STATIC_UNSTRIP_DIR)/dir/program		@@\
+	cp program.static $(STATIC_UNSTRIP_DIR)/dir/program	@@\
+	chmod EXECUTABLE_MODE $(STATIC_UNSTRIP_DIR)/dir/program	@@\
 program.static: $(filter DEP_FILTER,objlist libs) 		@@\
 	$(CC_LINK) $(STATIC)  $(C_PLUS_FLAGS) -o program.static objlist libs ldflags $(DEMANGLE) @@\
 clean:: 							@@\
 	rm -f program.static objlist				@@\
-static:: dir/program			@@\
+static:: $(STATIC_DIR)/dir/program $(STATIC_UNSTRIP_DIR)/dir/program	@@\
 XCOMM End translation of func(static_target_real)
 #else  /* ! HAS_STATIC */
 #define static_target_real(program,objlist,libs,dir,ldflags)	@@\
@@ -782,7 +790,11 @@ $(STATIC_DIR)/dir/lib: lib			@@\
 	COPY_LIBRARY(lib,$(STATIC_DIR)/dir/lib) @@\
 	RANLIB_TOUCH($(STATIC_DIR)/dir/lib)	@@\
 	chmod OBJECT_MODE $(STATIC_DIR)/dir/lib	@@\
-static:: $(STATIC_DIR)/dir/lib			@@\
+$(STATIC_UNSTRIP_DIR)/dir/lib: lib			@@\
+	COPY_LIBRARY(lib,$(STATIC_UNSTRIP_DIR)/dir/lib) @@\
+	RANLIB_TOUCH($(STATIC_UNSTRIP_DIR)/dir/lib)	@@\
+	chmod OBJECT_MODE $(STATIC_UNSTRIP_DIR)/dir/lib	@@\
+static:: $(STATIC_DIR)/dir/lib $(STATIC_UNSTRIP_DIR)/dir/lib	@@\
 XCOMM End translation of func(static_library)
 #else  /* ! HAS_STATIC */
 #define static_library(lib,dir)			@@\
@@ -802,7 +814,10 @@ XCOMM Begin translation of func(static_shared_library) @@\
 $(STATIC_DIR)/dir/lib: lib			@@\
 	COPY_LIBRARY(lib,$(STATIC_DIR)/dir/lib) @@\
 	chmod OBJECT_MODE $(STATIC_DIR)/dir/lib	@@\
-static:: $(STATIC_DIR)/dir/lib			@@\
+$(STATIC_UNSTRIP_DIR)/dir/lib: lib			@@\
+	COPY_LIBRARY(lib,$(STATIC_UNSTRIP_DIR)/dir/lib) @@\
+	chmod OBJECT_MODE $(STATIC_UNSTRIP_DIR)/dir/lib	@@\
+static:: $(STATIC_DIR)/dir/lib $(STATIC_UNSTRIP_DIR)/dir/lib	@@\
 XCOMM End translation of func(static_shared_library)
 #else  /* ! HAS_STATIC */
 #define static_shared_library(lib,dir)			@@\
@@ -824,7 +839,11 @@ $(STATIC_DIR)/dir/file: src			@@\
 	/bin/rm -f $(STATIC_DIR)/dir/file	@@\
 	cp src $(STATIC_DIR)/dir/file		@@\
 	chmod mode $(STATIC_DIR)/dir/file	@@\
-static:: $(STATIC_DIR)/dir/file			@@\
+$(STATIC_UNSTRIP_DIR)/dir/file: src			@@\
+	/bin/rm -f $(STATIC_UNSTRIP_DIR)/dir/file	@@\
+	cp src $(STATIC_UNSTRIP_DIR)/dir/file		@@\
+	chmod mode $(STATIC_UNSTRIP_DIR)/dir/file	@@\
+static:: $(STATIC_DIR)/dir/file	$(STATIC_UNSTRIP_DIR)/dir/file	@@\
 XCOMM End translation of func(static_copy_target)
 #else  /* ! HAS_STATIC */
 #define static_copy_target(src,dir,file,mode)	@@\
@@ -842,10 +861,13 @@ XCOMM End translation of func(static_copy_target)
 #if HAS_STATIC
 #define static_recursive_copy_target(src,dest)			@@\
 XCOMM Begin translation of func(static_recursive_copy_target)	@@\
-static:: $(STATIC_DIR)/dest					@@\
+static:: $(STATIC_DIR)/dest $(STATIC_UNSTRIP_DIR)/dest		@@\
 $(STATIC_DIR)/dest: src						@@\
 	/bin/rm -rf $(STATIC_DIR)/dest				@@\
 	$(CP_CMD) src $(STATIC_DIR)/dest			@@\
+$(STATIC_UNSTRIP_DIR)/dest: src					@@\
+	/bin/rm -rf $(STATIC_UNSTRIP_DIR)/dest			@@\
+	$(CP_CMD) src $(STATIC_UNSTRIP_DIR)/dest		@@\
 XCOMM End translation of func(static_recursive_copy_target)
 #else  /* ! HAS_STATIC */
 #define static_recursive_copy_target(src,dest)			@@\
@@ -861,16 +883,19 @@ XCOMM End translation of func(static_recursive_copy_target)
 */
 #ifndef static_link_target
 #if HAS_STATIC
-#define static_link_target(src,dir,dest)	@@\
+#define static_link_target(dir,src,dest)	@@\
 XCOMM Begin translation of func(static_link_target) @@\
-static:: $(STATIC_DIR)/dir/dest			@@\
+static:: $(STATIC_DIR)/dir/dest	$(STATIC_UNSTRIP_DIR)/dir/dest	@@\
 						@@\
-$(STATIC_DIR)/dir/dest: src			@@\
+$(STATIC_DIR)/dir/dest: $(STATIC_DIR)/dir/src	@@\
 	/bin/rm -f $(STATIC_DIR)/dir/dest	@@\
-	ln src $(STATIC_DIR)/dir/dest		@@\
+	ln $(STATIC_DIR)/dir/src $(STATIC_DIR)/dir/dest	@@\
+$(STATIC_UNSTRIP_DIR)/dir/dest: $(STATIC_UNSTRIP_DIR)/dir/src	@@\
+	/bin/rm -f $(STATIC_UNSTRIP_DIR)/dir/dest	@@\
+	ln $(STATIC_UNSTRIP_DIR)/dir/src $(STATIC_UNSTRIP_DIR)/dir/dest	@@\
 XCOMM End translation of func(static_link_target)
 #else  /* ! HAS_STATIC */
-#define static_link_target(src,dir,dest)	@@\
+#define static_link_target(dir,src,dest)	@@\
 XCOMM Begin translation of func(static_link_target) @@\
 static::					@@\
 XCOMM End translation of func(static_link_target)
@@ -884,10 +909,13 @@ XCOMM End translation of func(static_link_target)
 #if HAS_STATIC
 #define static_symlink_target(src,dir,dest)	@@\
 XCOMM Begin translation of func(static_symlink_target) @@\
-static:: $(STATIC_DIR)/dir/dest			@@\
+static:: $(STATIC_DIR)/dir/dest $(STATIC_UNSTRIP_DIR)/dir/dest	@@\
 $(STATIC_DIR)/dir/dest: 			@@\
 	/bin/rm -f $(STATIC_DIR)/dir/dest	@@\
 	ln -s src $(STATIC_DIR)/dir/dest	@@\
+$(STATIC_UNSTRIP_DIR)/dir/dest: 			@@\
+	/bin/rm -f $(STATIC_UNSTRIP_DIR)/dir/dest	@@\
+	ln -s src $(STATIC_UNSTRIP_DIR)/dir/dest	@@\
 XCOMM End translation of func(static_symlink_target)
 #else  /* ! HAS_STATIC */
 #define static_symlink_target(src,dir,dest)	@@\
@@ -914,6 +942,39 @@ XCOMM End translation of func(static_symlink_target)
 **
 ***********************************************************************/
 
+/* Build public super target.
+ * Build a program from C++ source, as well as the most common
+ * dependent public release targets.
+ */
+#ifndef public_c_plus_target
+#define public_c_plus_target(program,dir,objlist,libs) @@\
+XCOMM Begin translation of func(c_plus_public_target) @@\
+all_target(program) @@\
+c_plus_target(program,objlist,libs) @@\
+release_target(program,dir,EXECUTABLE_MODE) @@\
+strip_target(program,dir,EXECUTABLE_MODE) @@\
+static_target(program,objlist,libs,dir) @@\
+pure_c_plus_target(program,objlist,libs) @@\
+purecov_c_plus_target(program,objlist,libs) @@\
+XCOMM End translation of func(c_plus_public_target)
+#endif /* public_c_plus_target */
+
+
+/* Build public super target without any --wrap flags
+ * Build a program from C++ source, as well as the most common
+ * dependent public release targets.
+ */
+#ifndef public_c_plus_nowrap_target
+#define public_c_plus_nowrap_target(program,dir,objlist,libs) @@\
+XCOMM Begin translation of func(c_plus_public_nowrap_target) @@\
+all_target(program) @@\
+c_plus_nowrap_target(program,objlist,libs) @@\
+release_target(program,dir,EXECUTABLE_MODE) @@\
+strip_target(program,dir,EXECUTABLE_MODE) @@\
+static_nowrap_target(program,objlist,libs,dir) @@\
+XCOMM End translation of func(c_plus_public_nowrap_target)
+#endif /* public_c_plus_nowrap_target */
+
 /*
 ** Target is released by copying
 */
@@ -927,6 +988,54 @@ XCOMM End translation of func(public_copy_target)
 #endif /* public_copy_target */
 
 
+/* Build the super public_link_target, which generates the other kinds
+   of hard-link targets.  all of these behave the same way, and we
+   almost always want all 3 whenever we want one of them, so just
+   group them.
+*/
+#ifndef public_link_target
+#define public_link_target(dir,src,dst) @@\
+XCOMM Begin translation of func(public_link_target) @@\
+release_link_target(dir,src,dst)		    @@\
+strip_link_target(dir,src,dst)			    @@\
+static_link_target(dir,src,dst)			    @@\
+XCOMM End translation of func(public_link_target)
+#endif /* public_link_target */
+
+
+/* Build the super public_symlink_target, which generates the other
+   kinds of symbolic-link targets.  all of these behave the same way,
+   and we almost always want all 3 whenever we want one of them, so
+   just group them.
+*/
+#ifndef public_symlink_target
+#define public_symlink_target(src,dir,dst) @@\
+XCOMM Begin translation of func(public_symlink_target) @@\
+release_symlink_target(src,dir,dst)		       @@\
+strip_symlink_target(src,dir,dst)		       @@\
+static_symlink_target(src,dir,dst)		       @@\
+XCOMM End translation of func(public_symlink_target)
+#endif /* public_symlink_target */
+
+
+#ifndef public_library
+#define public_library(lib,dir) 		@@\
+XCOMM Begin translation of func(public_library) @@\
+release_library(lib,dir)			@@\
+strip_library(lib,dir)				@@\
+static_library(lib,dir)				@@\
+XCOMM End translation of func(public_library)
+#endif /* public_symlink_target */
+
+
+#ifndef public_shared_library
+#define public_shared_library(lib,dir) 		@@\
+XCOMM Begin translation of func(public_shared_library) @@\
+release_shared_library(lib,dir)			@@\
+strip_shared_library(lib,dir)				@@\
+static_shared_library(lib,dir)				@@\
+XCOMM End translation of func(public_library)
+#endif /* public_symlink_target */
 
 
 /***********************************************************************
@@ -1211,40 +1320,6 @@ XCOMM End translation of func(quantify_c_plus_target)
 #endif /* quantify_c_plus_target */
 
 #endif	/* HAS_PURIFY */
-
-/* Build public super target.
- * Build a program from C++ source, as well as the most common
- * dependent public release targets.
- */
-#ifndef c_plus_public_target
-#define c_plus_public_target(program,dir,objlist,libs) @@\
-XCOMM Begin translation of func(c_plus_public_target) @@\
-all_target(program) @@\
-c_plus_target(program,objlist,libs) @@\
-release_target(program,dir,EXECUTABLE_MODE) @@\
-strip_target(program,dir,EXECUTABLE_MODE) @@\
-static_target(program,objlist,libs,$(STATIC_DIR)/dir) @@\
-pure_c_plus_target(program,objlist,libs) @@\
-purecov_c_plus_target(program,objlist,libs) @@\
-XCOMM End translation of func(c_plus_public_target)
-#endif /* c_plus_public_target */
-
-
-/* Build public super target without any --wrap flags
- * Build a program from C++ source, as well as the most common
- * dependent public release targets.
- */
-#ifndef c_plus_public_nowrap_target
-#define c_plus_public_nowrap_target(program,dir,objlist,libs) @@\
-XCOMM Begin translation of func(c_plus_public_nowrap_target) @@\
-all_target(program) @@\
-c_plus_nowrap_target(program,objlist,libs) @@\
-release_target(program,dir,EXECUTABLE_MODE) @@\
-strip_target(program,dir,EXECUTABLE_MODE) @@\
-static_nowrap_target(program,objlist,libs,$(STATIC_DIR)/dir) @@\
-XCOMM End translation of func(c_plus_public_nowrap_target)
-#endif /* c_plus_public_nowrap_target */
-
 
 
 /***********************************************************************

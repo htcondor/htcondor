@@ -30,13 +30,8 @@ OBJ = LoadQueue.o claim.o Reqexp.o ResAttributes.o ResMgr.o ResState.o \
 
 template_inst( startd_instantiate.C, startd_instantiate.o )
 
-c_plus_target($(NAME),$(OBJ),$(LIB))
-release_target($(NAME),sbin,EXECUTABLE_MODE)
-strip_target($(NAME),sbin,EXECUTABLE_MODE)
-static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/sbin)
-pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))
-purecov_c_plus_target($(NAME).pc,$(OBJ),$(LIB))
-quantify_c_plus_target($(NAME).quantify,$(OBJ),$(LIB))
+public_c_plus_target($(NAME),sbin,$(OBJ),$(LIB))
+
 c_plus_target(AvailStats.t,AvailStats.o AvailStats.t.o startd_instantiate.o,$(LIB))
 
 html:

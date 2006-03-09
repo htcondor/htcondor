@@ -165,8 +165,10 @@ $skel="release_skeleton";
 $realskel="condor_release";
 
 %releaselocation = (
+  "dynamic"       => "strip_dir",
   "static"        => "static_dir",
-  "dynamic"       => "strip_dir"
+  "unstripped-static"  => "static_unstrip_dir",
+  "unstripped-dynamic" => "release_dir",
 );
 
 # Convert from AFS @sys names to our names for the tarballs.
@@ -348,7 +350,8 @@ foreach $module ( @modules ) {
 
     # Now, handle static and/or dynamic versions, whatever exists... 
 
-    foreach $linktype ( "static", "dynamic" ) {
+    foreach $linktype ( "static", "dynamic", "unstripped-dynamic",
+			"unstripped-static" ) {
 	# Make sure the proper tar file exists
 	if( ! (-d $releaselocation{$linktype} && 
 	       -f "$releaselocation{$linktype}/$tarfile") ) {
@@ -359,10 +362,13 @@ foreach $module ( @modules ) {
 	# Figure out what our filenames should look like.
 	$platform="$opsys-$arch";
 	if( $libc ) {
-	    $platform = "$platform-$libc";
+	    $platform .= "-$libc";
 	}
 	if( $linktype =~ /dynamic/ ) {
-	    $platform = "$platform-dynamic";
+	    $platform .= "-dynamic";
+	}
+	if( $linktype =~ /unstripped/ ) {
+	    $platform .= "-unstripped";
 	}
 
 	# Copy the tarfile with the right permissions into the skeleton. 

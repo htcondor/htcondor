@@ -12,37 +12,18 @@ all:: $(LIBNAME) $(CONDOR_CHIRP_NAME)
 
 clean::
 
-release_copy_target($(NAME),lib,$(NAME),EXECUTABLE_MODE)
-strip_copy_target($(NAME),lib,$(NAME),EXECUTABLE_MODE)
-static_copy_target($(NAME),lib,$(NAME),EXECUTABLE_MODE)
+public_copy_target($(NAME),lib,$(NAME),EXECUTABLE_MODE)
+public_copy_target($(CONDOR_CHIRP_NAME),libexec,$(CONDOR_CHIRP_NAME),EXECUTABLE_MODE)
+public_copy_target(chirp_client.c,src/chirp,chirp_client.c,TEXT_MODE)
+public_copy_target(chirp_client.h,src/chirp,chirp_client.h,TEXT_MODE)
 
-release_copy_target($(CONDOR_CHIRP_NAME),libexec,$(CONDOR_CHIRP_NAME),EXECUTABLE_MODE)
-strip_copy_target($(CONDOR_CHIRP_NAME),libexec,$(CONDOR_CHIRP_NAME),EXECUTABLE_MODE)
-static_copy_target($(CONDOR_CHIRP_NAME),libexec,$(CONDOR_CHIRP_NAME),EXECUTABLE_MODE)
-
-release_copy_target(chirp_client.c,src/chirp,chirp_client.c,TEXT_MODE)
-strip_copy_target(chirp_client.c,src/chirp,chirp_client.c,TEXT_MODE)
-static_copy_target(chirp_client.c,src/chirp,chirp_client.c,TEXT_MODE)
-
-release_copy_target(chirp_client.h,src/chirp,chirp_client.h,TEXT_MODE)
-strip_copy_target(chirp_client.h,src/chirp,chirp_client.h,TEXT_MODE)
-static_copy_target(chirp_client.h,src/chirp,chirp_client.h,TEXT_MODE)
-
-release_symlink_target(../src/chirp/chirp_client.h,include,chirp_client.h)
-strip_symlink_target(../src/chirp/chirp_client.h,include,chirp_client.h)
-static_symlink_target(../src/chirp/chirp_client.h,include,chirp_client.h)
+public_symlink_target(../src/chirp/chirp_client.h,include,chirp_client.h)
 
 library_target($(LIBNAME),$(LIBOBJ))
-release_library($(LIBNAME),lib)
-strip_library($(LIBNAME),lib)
-static_library($(LIBNAME),lib)
+public_library($(LIBNAME),lib)
 
 html_target( ChirpClient.java ChirpInputStream.java ChirpOutputStream.java )
 
 /* chirp isn't (for now) going to be linked with GCB, so we don't want
 to include the --wrap options on the link-line for it */
-c_plus_nowrap_target($(CONDOR_CHIRP_NAME),$(CONDOR_CHIRP_OBJ),$(LIBNAME))
-release_target($(CONDOR_CHIRP_NAME),libexec,EXECUTABLE_MODE)
-strip_target($(CONDOR_CHIRP_NAME),libexec,EXECUTABLE_MODE)
-
-
+public_c_plus_nowrap_target($(CONDOR_CHIRP_NAME),libexec,$(CONDOR_CHIRP_OBJ),$(LIBNAME))

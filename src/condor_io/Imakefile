@@ -53,8 +53,11 @@ html_target( ../condor_includes/stream.h ../condor_includes/reli_sock.h ../condo
    they can't live in the top-level src/Imakefile itself.  since GCB
    is pretty closely tied with CEDAR, i figured this was the best
    place to put this stuff...
+
+   NOTE: because we're copying a static vs. dynamic version here, we
+   can't use the public_copy_target() to do the heavy lifting.
 */
-release_copy_target($(GCB_BIN)/gcb_broker,libexec,gcb_broker,EXECUTABLE_MODE)
+public_copy_target($(GCB_BIN)/gcb_broker,libexec,gcb_broker,EXECUTABLE_MODE)
 strip_copy_target($(GCB_BIN)/gcb_broker,libexec,gcb_broker,EXECUTABLE_MODE)
 static_copy_target($(GCB_BIN)/gcb_broker_static,libexec,gcb_broker,EXECUTABLE_MODE)
 

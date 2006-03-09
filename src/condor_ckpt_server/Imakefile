@@ -12,10 +12,6 @@ SERVER_API_OBJ = network2.o server_interface.o
 
 library_target(ckpt_server_api.a,$(SERVER_API_OBJ))
 
-c_plus_target($(NAME),$(OBJ),$(LIB))
-pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))
-release_target($(NAME),sbin,EXECUTABLE_MODE)
-strip_target($(NAME),sbin,EXECUTABLE_MODE)
-static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/sbin)
+public_c_plus_target($(NAME),sbin,$(OBJ),$(LIB))
 
 html:

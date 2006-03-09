@@ -14,10 +14,10 @@ public_copy_target(condor_compile.clipped,bin,condor_compile,EXECUTABLE_MODE)
 #else 
 public_copy_target(condor_compile,bin,condor_compile,EXECUTABLE_MODE)
 public_copy_target(ld,lib,ld,EXECUTABLE_MODE)
-release_link_target($(RELEASE_DIR)/lib/ld,lib,real-ld)
+public_link_target(lib,ld,real-ld)
 #endif /* IS_CLIPPED */
 
-
+/* TODO: this contrib hackery should go away, hopefully soon */
 strip_copy_target(condor_clean_checkpoints,$(STRIP_CONTRIB)/sbin,condor_clean_checkpoints,EXECUTABLE_MODE)
 static_copy_target(condor_clean_checkpoints,$(STATIC_CONTRIB)/sbin,condor_clean_checkpoints,EXECUTABLE_MODE)
 
@@ -28,40 +28,16 @@ all_symlink_target(ld,real-ld)
 
 #if IS_IRIX
 #if ! IS_CLIPPED
-release_link_target($(RELEASE_DIR)/lib/ld,lib,uld)
-release_link_target($(RELEASE_DIR)/lib/ld,lib,old_ld)
-release_link_target($(RELEASE_DIR)/lib/ld,lib,ld32)
+public_link_target(lib,ld,uld)
+public_link_target(lib,ld,old_ld)
+public_link_target(lib,ld,ld32)
 #endif /* ! IS_CLIPPED */
-release_symlink_target(/usr/lib/c++/c++filt,lib,c++filt)
-release_symlink_target(/usr/lib/c++/c++patch,lib,c++patch)
-release_symlink_target(/usr/lib/c++/cfront,lib,cfront)
-release_symlink_target(/usr/lib/c++/markc++,lib,markc++)
-release_symlink_target(/usr/lib/c++/ptcomp,lib,ptcomp)
-release_symlink_target(/usr/lib/c++/ptlink,lib,ptlink)
-
-#if ! IS_CLIPPED
-strip_link_target($(STRIP_DIR)/lib/ld,lib,uld)
-strip_link_target($(STRIP_DIR)/lib/ld,lib,old_ld)
-strip_link_target($(STRIP_DIR)/lib/ld,lib,ld32)
-#endif /* ! IS_CLIPPED */
-strip_symlink_target(/usr/lib/c++/c++filt,lib,c++filt)
-strip_symlink_target(/usr/lib/c++/c++patch,lib,c++patch)
-strip_symlink_target(/usr/lib/c++/cfront,lib,cfront)
-strip_symlink_target(/usr/lib/c++/markc++,lib,markc++)
-strip_symlink_target(/usr/lib/c++/ptcomp,lib,ptcomp)
-strip_symlink_target(/usr/lib/c++/ptlink,lib,ptlink)
-
-#if ! IS_CLIPPED
-static_link_target($(STATIC_DIR)/lib/ld,lib,uld)
-static_link_target($(STATIC_DIR)/lib/ld,lib,old_ld)
-static_link_target($(STATIC_DIR)/lib/ld,lib,ld32)
-#endif /* ! IS_CLIPPED */
-static_symlink_target(/usr/lib/c++/c++filt,lib,c++filt)
-static_symlink_target(/usr/lib/c++/c++patch,lib,c++patch)
-static_symlink_target(/usr/lib/c++/cfront,lib,cfront)
-static_symlink_target(/usr/lib/c++/markc++,lib,markc++)
-static_symlink_target(/usr/lib/c++/ptcomp,lib,ptcomp)
-static_symlink_target(/usr/lib/c++/ptlink,lib,ptlink)
+public_symlink_target(/usr/lib/c++/c++filt,lib,c++filt)
+public_symlink_target(/usr/lib/c++/c++patch,lib,c++patch)
+public_symlink_target(/usr/lib/c++/cfront,lib,cfront)
+public_symlink_target(/usr/lib/c++/markc++,lib,markc++)
+public_symlink_target(/usr/lib/c++/ptcomp,lib,ptcomp)
+public_symlink_target(/usr/lib/c++/ptlink,lib,ptlink)
 
 #if ! IS_CLIPPED
 all_symlink_target(ld,uld)
@@ -74,7 +50,7 @@ all_symlink_target(/usr/lib/c++/cfront,cfront)
 all_symlink_target(/usr/lib/c++/markc++,markc++)
 all_symlink_target(/usr/lib/c++/ptcomp,ptcomp)
 all_symlink_target(/usr/lib/c++/ptlink,ptlink)
-#endif
+#endif /* IS_IRIX */
 
 public_copy_target(Condor.pm,lib,Condor.pm,OBJECT_MODE)
 

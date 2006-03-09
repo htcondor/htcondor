@@ -28,17 +28,9 @@ OBJ = dagman_main.o submit.o dag.o job.o util.o parse.o debug.o \
 	script.o scriptQ.o helper.o dagman_instantiate.o dagman_commands.o \
 	dagman_multi_dag.o $(SOAP_OBJS)
 
-c_plus_target($(NAME),$(OBJ),$(LIB))
-release_target($(NAME),bin,EXECUTABLE_MODE)
-strip_target($(NAME),bin,EXECUTABLE_MODE)
-static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/bin)
-purecov_c_plus_target($(NAME).pc,$(OBJ),$(LIB))
-pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))
+public_c_plus_target($(NAME),bin,$(OBJ),$(LIB))
 
-c_plus_target(condor_submit_dag,condor_submit_dag.o dagman_multi_dag.o,$(TOOL_LIB))
-release_target(condor_submit_dag,bin,EXECUTABLE_MODE)
-strip_target(condor_submit_dag,bin,EXECUTABLE_MODE)
-static_target(condor_submit_dag,condor_submit_dag.o dagman_multi_dag.o,$(TOOL_LIB),$(STATIC_DIR)/bin)
+public_c_plus_target(condor_submit_dag,bin,condor_submit_dag.o dagman_multi_dag.o,$(TOOL_LIB))
 
 html_target( documentation )
 

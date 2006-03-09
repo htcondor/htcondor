@@ -435,9 +435,7 @@ uppercase_target($(SIMPLE_LIBC),waitpid.o,WAITPID.o,waitpid,WAITPID)
 #endif
 
 #if DOES_CHECKPOINTING || DOES_REMOTE_SYSCALLS
-release_copy_target(condor_rt0.o,lib,condor_rt0.o,OBJECT_MODE)
-strip_copy_target(condor_rt0.o,lib,condor_rt0.o,OBJECT_MODE)
-static_copy_target(condor_rt0.o,lib,condor_rt0.o,OBJECT_MODE)
+public_copy_target(condor_rt0.o,lib,condor_rt0.o,OBJECT_MODE)
 #endif
 
 #if IS_LINUX
@@ -453,21 +451,12 @@ libcondorsyscall.a: libtmp.a ToUpper
 #endif
 
 #if DOES_CHECKPOINTING || DOES_REMOTE_SYSCALLS
-release_library(libcondorsyscall.a,lib)
-strip_library(libcondorsyscall.a,lib)
-static_library(libcondorsyscall.a,lib)
-#endif
-
-#if DOES_CHECKPOINTING || DOES_REMOTE_SYSCALLS
-release_library(libcondor_z.a,lib)
-strip_library(libcondor_z.a,lib)
-static_library(libcondor_z.a,lib)
+public_library(libcondorsyscall.a,lib)
+public_library(libcondor_z.a,lib)
 #endif
 
 #if DOES_COMPRESS_CKPT
-release_library($(COMPRESS_LIB),lib)
-strip_library($(COMPRESS_LIB),lib)
-static_library($(COMPRESS_LIB),lib)
+public_library($(COMPRESS_LIB),lib)
 #endif
 
 XCOMM If no remote syscalls & no checkpointing support, then no need
@@ -617,20 +606,10 @@ all_symlink_target($(GLIBC_DIR)/libnss_files.a,libcondor_nss_files.a)
 all_symlink_target($(GLIBC_DIR)/libnss_dns.a,libcondor_nss_dns.a)
 all_symlink_target($(GLIBC_DIR)/libresolv.a,libcondor_resolv.a)
 
-release_copy_target($(GLIBC_DIR)/libc.a,lib,libcondor_c.a,OBJECT_MODE)
-release_copy_target($(GLIBC_DIR)/libnss_files.a,lib,libcondor_nss_files.a,OBJECT_MODE)
-release_copy_target($(GLIBC_DIR)/libnss_dns.a,lib,libcondor_nss_dns.a,OBJECT_MODE)
-release_copy_target($(GLIBC_DIR)/libresolv.a,lib,libcondor_resolv.a,OBJECT_MODE)
-
-static_copy_target($(GLIBC_DIR)/libc.a,lib,libcondor_c.a,OBJECT_MODE)
-static_copy_target($(GLIBC_DIR)/libnss_files.a,lib,libcondor_nss_files.a,OBJECT_MODE)
-static_copy_target($(GLIBC_DIR)/libnss_dns.a,lib,libcondor_nss_dns.a,OBJECT_MODE)
-static_copy_target($(GLIBC_DIR)/libresolv.a,lib,libcondor_resolv.a,OBJECT_MODE)
-
-strip_copy_target($(GLIBC_DIR)/libc.a,lib,libcondor_c.a,OBJECT_MODE)
-strip_copy_target($(GLIBC_DIR)/libnss_files.a,lib,libcondor_nss_files.a,OBJECT_MODE)
-strip_copy_target($(GLIBC_DIR)/libnss_dns.a,lib,libcondor_nss_dns.a,OBJECT_MODE)
-strip_copy_target($(GLIBC_DIR)/libresolv.a,lib,libcondor_resolv.a,OBJECT_MODE)
+public_copy_target($(GLIBC_DIR)/libc.a,lib,libcondor_c.a,OBJECT_MODE)
+public_copy_target($(GLIBC_DIR)/libnss_files.a,lib,libcondor_nss_files.a,OBJECT_MODE)
+public_copy_target($(GLIBC_DIR)/libnss_dns.a,lib,libcondor_nss_dns.a,OBJECT_MODE)
+public_copy_target($(GLIBC_DIR)/libresolv.a,lib,libcondor_resolv.a,OBJECT_MODE)
 
 #endif /* ! IS_CLIPPED && IS_GLIBC */
 
@@ -654,17 +633,9 @@ all_symlink_target($(GCC_LIBC),libcomp_libgcc.a)
 all_symlink_target($(LIB_GCC_EH),libcomp_libgcc_eh.a)
 all_symlink_target($(LIB_STDCPP),libcomp_libstdc++.a)
 
-release_copy_target(libcomp_libgcc.a,lib,libcomp_libgcc.a,OBJECT_MODE)
-release_copy_target(libcomp_libstdc++.a,lib,libcomp_libstdc++.a,OBJECT_MODE)
-release_copy_target(libcomp_libgcc_eh.a,lib,libcomp_libgcc_eh.a,OBJECT_MODE)
-
-static_copy_target(libcomp_libgcc.a,lib,libcomp_libgcc.a,OBJECT_MODE)
-static_copy_target(libcomp_libstdc++.a,lib,libcomp_libstdc++.a,OBJECT_MODE)
-static_copy_target(libcomp_libgcc_eh.a,lib,libcomp_libgcc_eh.a,OBJECT_MODE)
-
-strip_copy_target(libcomp_libgcc.a,lib,libcomp_libgcc.a,OBJECT_MODE)
-strip_copy_target(libcomp_libstdc++.a,lib,libcomp_libstdc++.a,OBJECT_MODE)
-strip_copy_target(libcomp_libgcc_eh.a,lib,libcomp_libgcc_eh.a,OBJECT_MODE)
+public_copy_target(libcomp_libgcc.a,lib,libcomp_libgcc.a,OBJECT_MODE)
+public_copy_target(libcomp_libstdc++.a,lib,libcomp_libstdc++.a,OBJECT_MODE)
+public_copy_target(libcomp_libgcc_eh.a,lib,libcomp_libgcc_eh.a,OBJECT_MODE)
 
 #endif /* ! IS_CLIPPED && IS_C_COMP_MAJOR_GCC_3 */
 

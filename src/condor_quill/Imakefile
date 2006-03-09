@@ -11,14 +11,6 @@ soapobjs(quill)
 
 OBJ = quill_main.o classadlogentry.o classadlogparser.o jobqueuedbmanager.o prober.o requestservice.o jobqueuecollection.o $(SOAP_OBJS)
 
-c_plus_target($(NAME),$(OBJ),$(LIB))
-
-strip_target($(NAME),sbin,EXECUTABLE_MODE)
-static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/sbin)
-pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))
-purecov_c_plus_target($(NAME).pc,$(OBJ),$(LIB))
-quantify_c_plus_target($(NAME).quantify,$(OBJ),$(LIB))
-
-release_target($(NAME),sbin,EXECUTABLE_MODE)
+public_c_plus_target($(NAME),sbin,$(OBJ),$(LIB))
 
 gen_soapfiles(quill,condorQuill)

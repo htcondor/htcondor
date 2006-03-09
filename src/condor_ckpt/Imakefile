@@ -151,9 +151,7 @@ static:: all
 
 #if NEEDS_CPP_SUPPORT_LIB
 library_target(libcondorc++support.a,$(CPP_SUPPORT_OBJ))
-release_library(libcondorc++support.a,lib)
-strip_library(libcondorc++support.a,lib)
-static_library(libcondorc++support.a,lib)
+public_library(libcondorc++support.a,lib)
 #endif /* NEEDS_CPP_SUPPORT_LIB */
 
 #else /* Not DOES_CHECKPOINTING */

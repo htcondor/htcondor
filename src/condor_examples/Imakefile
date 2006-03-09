@@ -11,7 +11,11 @@ all::
 
 clean::
 
-release:: all
+release:: $(RELEASE_DIR)/etc/examples/README
+
+$(RELEASE_DIR)/etc/examples/README: 
+	/bin/cp -f $(FILES) $(RELEASE_DIR)/etc/examples
+	perl ./customize $(RELEASE_DIR)
 
 stripped:: $(STRIP_DIR)/etc/examples/README
 
@@ -25,6 +29,13 @@ static:: $(STATIC_DIR)/etc/examples/README
 $(STATIC_DIR)/etc/examples/README:
 	/bin/cp -f $(FILES) $(STATIC_DIR)/etc/examples
 	perl ./customize $(STATIC_DIR)
+
+static:: $(STATIC_UNSTRIP_DIR)/etc/examples/README
+
+$(STATIC_UNSTRIP_DIR)/etc/examples/README:
+	/bin/cp -f $(FILES) $(STATIC_UNSTRIP_DIR)/etc/examples
+	perl ./customize $(STATIC_UNSTRIP_DIR)
+
 #else  /* ! HAS_STATIC */
 static::
 #endif  /* HAS_STATIC */

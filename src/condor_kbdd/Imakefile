@@ -16,6 +16,10 @@ LDFLAGS = -lX11
 
 OBJ = kbdd.o XInterface.o
 
+/*
+  NOTE: because of the static hackery below for DUX5, we can't use a
+  monolithic public_c_plus_target() for this...
+*/  
 c_plus_target($(NAME),$(OBJ),$(LIB))
 release_target($(NAME),sbin,EXECUTABLE_MODE)
 strip_target($(NAME),sbin,EXECUTABLE_MODE)
@@ -45,7 +49,7 @@ condor_kbdd.static: $(OBJ) $(LIB) ./libX11.a
 ToUpper:
 	ln -s ../condor_ckpt/ToUpper ToUpper
 
-static:: $(STATIC_DIR)/sbin/condor_kbdd
+static:: $(STATIC_DIR)/sbin/condor_kbdd $(STATIC_UNSTRIP_DIR)/sbin/condor_kbdd
 
 $(STATIC_DIR)/sbin/condor_kbdd: condor_kbdd.static
 	/bin/rm -f $(STATIC_DIR)/sbin/condor_kbdd
@@ -53,12 +57,17 @@ $(STATIC_DIR)/sbin/condor_kbdd: condor_kbdd.static
 	chmod EXECUTABLE_MODE $(STATIC_DIR)/sbin/condor_kbdd
 	$(STRIP) $(STATIC_DIR)/sbin/condor_kbdd
 
+$(STATIC_UNSTRIP_DIR)/sbin/condor_kbdd: condor_kbdd.static
+	/bin/rm -f $(STATIC_UNSTRIP_DIR)/sbin/condor_kbdd
+	cp condor_kbdd.static $(STATIC_UNSTRIP_DIR)/sbin/condor_kbdd
+	chmod EXECUTABLE_MODE $(STATIC_UNSTRIP_DIR)/sbin/condor_kbdd
+
 clean::
 	rm -f condor_kbdd.static $(OBJ) ./libX11.a ToUpper
 
 #else
 
-static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/sbin)
+static_target($(NAME),$(OBJ),$(LIB),sbin)
 
 #endif
 

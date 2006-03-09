@@ -221,39 +221,18 @@ IMPORT_LINKS = ../../config/import_links
 import(../condor_util_lib,mkargv.o)
 import(../condor_daemon_client,$(DAEMON_CLIENT_OBJ))
 
-release_library(libcondorapi.a,lib)
-strip_library(libcondorapi.a,lib)
-static_library(libcondorapi.a,lib)
+public_library(libcondorapi.a,lib)
 
 #if HAVE_CC_SHARED_FLAG
-release_shared_library(libcondorapi.so,lib)
-strip_shared_library(libcondorapi.so,lib)
-static_shared_library(libcondorapi.so,lib)
+public_shared_library(libcondorapi.so,lib)
 #endif
 
-release_copy_target(user_log.README,include,user_log.README,TEXT_MODE)
-strip_copy_target(user_log.README,include,user_log.README,TEXT_MODE)
-static_copy_target(user_log.README,include,user_log.README,TEXT_MODE)
-
-release_copy_target(user_log.c++.h,include,user_log.c++.h,TEXT_MODE)
-strip_copy_target(user_log.c++.h,include,user_log.c++.h,TEXT_MODE)
-static_copy_target(user_log.c++.h,include,user_log.c++.h,TEXT_MODE)
-
-release_copy_target(condor_event.h,include,condor_event.h,TEXT_MODE)
-strip_copy_target(condor_event.h,include,condor_event.h,TEXT_MODE)
-static_copy_target(condor_event.h,include,condor_event.h,TEXT_MODE)
-
-release_copy_target(condor_holdcodes.h,include,condor_holdcodes.h,TEXT_MODE)
-strip_copy_target(condor_holdcodes.h,include,condor_holdcodes.h,TEXT_MODE)
-static_copy_target(condor_holdcodes.h,include,condor_holdcodes.h,TEXT_MODE)
-
-release_copy_target(../h/file_lock.h,include,file_lock.h,TEXT_MODE)
-strip_copy_target(../h/file_lock.h,include,file_lock.h,TEXT_MODE)
-static_copy_target(../h/file_lock.h,include,file_lock.h,TEXT_MODE)
-
-release_copy_target(../condor_includes/condor_constants.h,include,condor_constants.h,TEXT_MODE)
-strip_copy_target(../condor_includes/condor_constants.h,include,condor_constants.h,TEXT_MODE)
-static_copy_target(../condor_includes/condor_constants.h,include,condor_constants.h,TEXT_MODE)
+public_copy_target(user_log.README,include,user_log.README,TEXT_MODE)
+public_copy_target(user_log.c++.h,include,user_log.c++.h,TEXT_MODE)
+public_copy_target(condor_event.h,include,condor_event.h,TEXT_MODE)
+public_copy_target(condor_holdcodes.h,include,condor_holdcodes.h,TEXT_MODE)
+public_copy_target(../h/file_lock.h,include,file_lock.h,TEXT_MODE)
+public_copy_target(../condor_includes/condor_constants.h,include,condor_constants.h,TEXT_MODE)
 
 foo.o: user_log.h
 test.o: user_log.h

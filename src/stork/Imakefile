@@ -61,16 +61,16 @@ SERVER_LIBS = \
 	$(DAEMONCORE_LIB) \
 	$(STD_LIBS) \
 	$(NEW_CLASSADS_LINK)
-c_plus_public_nowrap_target(stork_server,sbin,$(SERVER_OBJS),$(SERVER_LIBS))
+public_c_plus_nowrap_target(stork_server,sbin,$(SERVER_OBJS),$(SERVER_LIBS))
 
 /* user tools */
 TOOL_LIBS = \
 	$(STD_LIBS) \
 	$(NEW_CLASSADS_LINK)
-c_plus_public_nowrap_target(stork_submit,bin,dap_submit.o $(STORK_UTIL),$(TOOL_LIBS))
-c_plus_public_nowrap_target(stork_rm,bin,dap_rm.o $(STORK_UTIL),$(TOOL_LIBS))
-c_plus_public_nowrap_target(stork_status,bin,dap_status.o $(STORK_UTIL),$(TOOL_LIBS))
-c_plus_public_nowrap_target(stork_q,bin,dap_q.o $(STORK_UTIL),$(TOOL_LIBS))
+public_c_plus_nowrap_target(stork_submit,bin,dap_submit.o $(STORK_UTIL),$(TOOL_LIBS))
+public_c_plus_nowrap_target(stork_rm,bin,dap_rm.o $(STORK_UTIL),$(TOOL_LIBS))
+public_c_plus_nowrap_target(stork_status,bin,dap_status.o $(STORK_UTIL),$(TOOL_LIBS))
+public_c_plus_nowrap_target(stork_q,bin,dap_q.o $(STORK_UTIL),$(TOOL_LIBS))
 
 /* tools, for internal use only */
 c_plus_nowrap_target(stork_compute_md5,dap_compute_md5.o $(STORK_UTIL),$(TOOL_LIBS))
