@@ -316,7 +316,7 @@ Condor_Auth_SSPI::sspi_server_auth(CredHandle& cred,CtxtHandle& srvCtx)
     rc = (pf->ImpersonateSecurityContext)( &srvCtx );
 
 	char buf[256];
-	char *dom;
+	char *dom = NULL;
 	DWORD bufsiz = sizeof buf;
 
     if ( rc != SEC_E_OK ) {
