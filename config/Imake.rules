@@ -76,6 +76,9 @@ DEMANGLE = 2>&1 | Demangler && test -x $@
 #define junkdir(daemon)Concat3(junk,_,daemon)
 #define soapname(daemon)Concat(soap_,daemon)
 #define gsoapname(daemon)Concat(gsoap_,daemon)
+#define purifyname(program)Concat(program,.pure)
+#define purecovname(program)Concat(program,.pc)
+#define quantifyname(program)Concat(program,.quantify)
 
 /*
 ** Set up to make all the objects in a particular directory.
@@ -954,8 +957,9 @@ c_plus_target(program,objlist,libs) @@\
 release_target(program,dir,EXECUTABLE_MODE) @@\
 strip_target(program,dir,EXECUTABLE_MODE) @@\
 static_target(program,objlist,libs,dir) @@\
-pure_c_plus_target(program,objlist,libs) @@\
-purecov_c_plus_target(program,objlist,libs) @@\
+pure_c_plus_target(purifyname(program),objlist,libs) @@\
+purecov_c_plus_target(purecovname(program),objlist,libs) @@\
+quantify_c_plus_target(quantifyname(program),objlist,libs) @@\
 XCOMM End translation of func(c_plus_public_target)
 #endif /* public_c_plus_target */
 
