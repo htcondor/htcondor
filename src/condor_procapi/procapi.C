@@ -1287,12 +1287,14 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 	// it what it knows - for example, the image size and friends
 	task_port_t task;
 
-	if(task_for_pid(mach_task_self(), pid, &task) != KERN_SUCCESS) {
+	kern_return_t results;
+	results = task_for_pid(mach_task_self(), pid, &task);
+	if(results != KERN_SUCCESS) {
 		status = PROCAPI_UNSPECIFIED;
 
 		dprintf( D_FULLDEBUG, 
 			"ProcAPI: task_port_pid() on pid %d failed with %d(%s)\n",
-			pid, errno, strerror(errno) );
+			pid, results, mach_error_string(results) );
 
 		free(kp);
 
@@ -1303,14 +1305,15 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 	unsigned int 		count;	
 	
 	count = TASK_BASIC_INFO_COUNT;	
-	if(task_info(task, TASK_BASIC_INFO, (task_info_t)&ti, 
-			&count)  != KERN_SUCCESS) {
+	results = task_info(task, TASK_BASIC_INFO, (task_info_t)&ti, &count);  
+	if(results != KERN_SUCCESS) {
 		status = PROCAPI_UNSPECIFIED;
 
 		dprintf( D_FULLDEBUG, 
 			"ProcAPI: task_info() on pid %d failed with %d(%s)\n",
-			pid, errno, strerror(errno) );
+			pid, results, mach_error_string(results) );
 
+		mach_port_deallocate(mach_task_self(), task);
 		free(kp);
 
         return PROCAPI_FAILURE;
