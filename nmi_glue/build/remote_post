@@ -1,13 +1,18 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_post,v 1.1.4.2 2005-06-02 22:56:36 jfrey Exp $
+# $Id: remote_post,v 1.1.4.3 2006-03-10 00:27:33 wright Exp $
 # post script to cleanup after a Condor build, successful or not
 ######################################################################
 
 # autoflush our STDOUT
 $| = 1;
 
+use Cwd;
+my $BaseDir = getcwd();
+my $SrcDir = "$BaseDir/src";
+my $pub_dir = "$BaseDir/public";
+my $pub_logs = "$pub_dir/logs";
 
 # This is debugging output for the sake of the NWO infrastructure.
 # However, it might be useful to us some day so we can see what's
@@ -15,25 +20,64 @@ $| = 1;
 if( defined $ENV{_NMI_STEP_FAILED} ) { 
     my $nmi_task_failure = "$ENV{_NMI_STEP_FAILED}";
     print "The value of _NMI_STEP_FAILED is: '$nmi_task_failure'\n";
-
-    if ($nmi_task_failure eq "remote_pre"){  
-      # Tar up anything we might need for debugging if the remote_pre
-      # step fails.
-      print "Tarring up debugging info\n";
-      system( "tar zcvf results.tar.gz src/config.log" );
-      if( $? >> 8 ) {
-        print "Can't tar zcvf results.tar.gz src/config.log\n";
-        exit 1;
-      }
-      exit 0;
-    }
 } else {
     print "The _NMI_STEP_FAILED variable is not set\n";
 }
 
 
 ######################################################################
-# tar up test results
+# save debugging results
+######################################################################
+
+# create a directory to save build logs, if it doesn't already exist
+if( ! -d $pub_dir ) {
+    mkdir( "$pub_dir", 0777 ) || die("Can't mkdir($pub_dir): $!\n");
+}
+if( ! -d $pub_logs ) {
+    mkdir( "$pub_logs", 0777 ) || die("Can't mkdir($pub_logs): $!\n");
+}
+
+my $ext_build = "$BaseDir/externals/build";
+if( -d "$ext_build" ) {
+    # package up the externals build logs if they exist, even on 
+    # success.
+    my $pub_logs_ext = "$pub_logs/externals";
+    if( ! -d "$pub_logs_ext" ) {
+        mkdir( "$pub_logs_ext", 0777 ) || 
+            die("Can't mkdir($pub_logs_ext): $!\n");
+    }
+    opendir( DIR, "$ext_build" ) || 
+        die("Failed to opendir($ext_build): $!\n");
+    @files = readdir(DIR);
+    closedir DIR;
+    foreach $file ( @files ) {
+        if( $file =~ /log\..*/ ) {
+            system( "cp $ext_build/$file $pub_logs_ext" );
+            if( $? >> 8 ) {
+                die("Can't cp $ext_build/$file $pub_logs_ext\n");
+            }
+        }
+    }
+}
+
+
+# we don't care about autoconf stuff on windoze...
+if( $ENV{NMI_PLATFORM} ne "x86_winnt_5.1" ) {
+    my $pub_logs_ac = "$pub_logs/autoconf";
+    if( ! -d "$pub_logs_ac" ) {
+        mkdir( "$pub_logs_ac", 0777 ) || 
+            die("Can't mkdir($pub_logs_ac): $!\n");
+    }
+    @files = ( "config.h", "config.log", "config.status", "Makefile" );
+    foreach $file ( @files ) {
+        # don't die if one of these isn't there...
+        system( "cp $SrcDir/$file $pub_logs_ac" );
+    }
+}
+
+
+######################################################################
+# tar up build results
 ######################################################################
 
 print "Tarring up results\n";
