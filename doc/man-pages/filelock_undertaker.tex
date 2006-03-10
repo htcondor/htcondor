@@ -1,19 +1,19 @@
-\begin{ManPage}{\label{man-flock-undertaker}\Prog{flock\_undertaker}}{1}
+\begin{ManPage}{\label{man-filelock-undertaker}\Prog{filelock\_undertaker}}{1}
 {determine whether a process has exited}
 
-\Synopsis \SynProg{\Prog{flock\_undertaker}}
+\Synopsis \SynProg{\Prog{filelock\_undertaker}}
 \Opt{-help}
 
-\SynProg{\Prog{flock\_undertaker}}
+\SynProg{\Prog{filelock\_undertaker}}
 \oOptArg{--file}{filename}
 \oOpt{--block}
 
-\index{Deployment commands!flock\_undertaker}
-\index{flock\_undertaker}
+\index{Deployment commands!filelock\_undertaker}
+\index{filelock\_undertaker}
 
 \Description
-\Prog{flock\_undertaker} can examine an artifact file created by
-\Prog{flock\_midwife} and determine whether the program started by
+\Prog{filelock\_undertaker} can examine an artifact file created by
+\Prog{filelock\_midwife} and determine whether the program started by
 the \Prog{midwife} has exited.  It does this by attempting to acquire
 a file lock.
 
@@ -26,22 +26,22 @@ file lock server is running.
   }
   \OptItem{\OptArg{--file}{filename}}{
     The name of the artifact file.
-    created by \Prog{flock\_midwife}.
+    created by \Prog{filelock\_midwife}.
     The file \File{lock.file} is the default file used when
     this option is not specified.
   }
 \end{Options}
 
 \ExitStatus 
-\Prog{flock\_undertaker} will exit with a status of 0 (zero) if the
+\Prog{filelock\_undertaker} will exit with a status of 0 (zero) if the
 monitored process has exited, with a status of 1 (one) if the
 monitored process has definitely not exited, with a status of 2 if it
 is uncertain whether the process has exited (this is generally due to
-a failure by the \Prog{flock\_midwife}), or with any other value
+a failure by the \Prog{filelock\_midwife}), or with any other value
 for program failure.
 
 \SeeAlso
 \Prog{uniq\_pid\_undertaker} (on page~\pageref{man-uniq-pid-undertaker}),
-\Prog{flock\_midwife} (on page~\pageref{man-flock-midwife}).
+\Prog{filelock\_midwife} (on page~\pageref{man-filelock-midwife}).
 
 \end{ManPage}

@@ -15,7 +15,7 @@
 \oOptArg{-logarchive}{archive}
 \oOptArg{-spoolarchive}{archive}
 \oOptArg{-execarchive}{archive}
-\oOpt{-flock}
+\oOpt{-filelock}
 \oOpt{-pid}
 \oOptArg{-artifact}{file}
 \oOpt{-nogurl}
@@ -70,7 +70,7 @@ uninstall the Condor binaries and libraries using \Prog{cleanup\_release}.
     \File{execute} directory and stores it as \Arg{archive}.  The
     \Arg{archive} can be a file path or a grid-ftp url.
   }
-  \OptItem{\Opt{-flock}}{
+  \OptItem{\Opt{-filelock}}{
     Determine whether the \Condor{master} daemon has exited
     using a file lock undertaker.  This option must match the
     corresponding option given to \Condor{cold\_start}.
@@ -144,7 +144,7 @@ To shutdown a Condor instance and archive the log directory:
 
 \SeeAlso
 \Condor{cold\_start} (on page~\pageref{man-condor-cold-start}),
-\Prog{flock\_undertaker} (on page~\pageref{man-flock-undertaker}), 
+\Prog{filelock\_undertaker} (on page~\pageref{man-filelock-undertaker}), 
 \Prog{uniq\_pid\_undertaker} (on page~\pageref{man-uniq-pid-undertaker}).
 
 \end{ManPage}

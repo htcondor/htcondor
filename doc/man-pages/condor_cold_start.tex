@@ -16,7 +16,7 @@
 \oOptArg{-logarchive}{archive}
 \oOptArg{-spoolarchive}{archive}
 \oOptArg{-execarchive}{archive}
-\oOpt{-flock}
+\oOpt{-filelock}
 \oOpt{-pid}
 \oOptArg{-artifact}{filename}
 \oOpt{-wget}
@@ -72,7 +72,7 @@ Additionally, this program can install pre-made \File{log},
     Create the Condor \File{execute} directory from the given
     \Arg{archive} file.
   }
-  \OptItem{\Opt{-flock}}{
+  \OptItem{\Opt{-filelock}}{
     Specifies that this program should use a POSIX file lock midwife
     program to create an artifact of the birth of a \Condor{master} daemon.
     A file lock undertaker can later be used to determine whether the
@@ -178,7 +178,7 @@ file \File{condor\_config.local}:
   
 \SeeAlso
 \Condor{cold\_stop} (on page~\pageref{man-condor-cold-stop}), 
-\Prog{flock\_midwife} (on page~\pageref{man-flock-midwife}), 
+\Prog{filelock\_midwife} (on page~\pageref{man-filelock-midwife}), 
 \Prog{uniq\_pid\_midwife} (on page~\pageref{man-uniq-pid-midwife}).
 
 \end{ManPage}

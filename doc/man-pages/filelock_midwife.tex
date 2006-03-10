@@ -1,26 +1,26 @@
-\begin{ManPage}{\label{man-flock-midwife}\Prog{flock\_midwife}}{1}
+\begin{ManPage}{\label{man-filelock-midwife}\Prog{filelock\_midwife}}{1}
 {create an artifact of the creation of a process}
 
-\Synopsis \SynProg{\Prog{flock\_midwife}}
+\Synopsis \SynProg{\Prog{filelock\_midwife}}
 \Opt{-help}
 
-\SynProg{\Prog{flock\_midwife}}
+\SynProg{\Prog{filelock\_midwife}}
 \oOptArg{--file}{filename}
 \Arg{program}
 \oArg{programargs}
 
-\index{Deployment commands!flock\_midwife}
-\index{flock\_midwife}
+\index{Deployment commands!filelock\_midwife}
+\index{filelock\_midwife}
 
-\Description \Prog{flock\_midwife} starts a given \Arg{program}, while
+\Description \Prog{filelock\_midwife} starts a given \Arg{program}, while
 creating an artifact of the program's birth.  At a later time the
-\Prog{flock\_undertaker} can examine the artifact to determine whether
+\Prog{filelock\_undertaker} can examine the artifact to determine whether
 the program is still running, or whether the program has exited.
-\Prog{flock\_midwife}
+\Prog{filelock\_midwife}
 accomplishes this by obtaining a file lock on the given artifact file
 before starting the program.
 
-Warning: \Prog{flock\_midwife} will not work on NFS
+Warning: \Prog{filelock\_midwife} will not work on NFS
 unless the separate file lock server is running.
 
 \begin{Options}
@@ -36,11 +36,11 @@ unless the separate file lock server is running.
 \end{Options}
 
 \ExitStatus
-\Prog{flock\_midwife} will exit with a status of 0 (zero) upon
+\Prog{filelock\_midwife} will exit with a status of 0 (zero) upon
 success, and non-zero otherwise.
 
 \SeeAlso
 \Prog{uniq\_pid\_midwife} (on page~\pageref{man-uniq-pid-midwife}),
-\Prog{flock\_undertaker} (on page~\pageref{man-flock-undertaker}).
+\Prog{filelock\_undertaker} (on page~\pageref{man-filelock-undertaker}).
 
 \end{ManPage}
