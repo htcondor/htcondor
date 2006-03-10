@@ -239,7 +239,7 @@ sub Expand( $ )
 	}
 	else
 	{
-	    print STDERR "Warning: Unable to expand $Value\n";
+	    warn "Variable $Var: Error expanding '$Value'\n";
 	    last;
 	}
     }
@@ -276,6 +276,69 @@ sub ExpandString( $ )
     $Value;
 
 } # ExpandString()
+# ******************************************************
+
+# ******************************************************
+# Search through the parameters for a matching macro name
+# ******************************************************
+sub GrepName( $$ )
+{
+    my $self = shift;
+    my $Pattern = shift;
+
+    my @List;
+    foreach my $Var ( sort keys %{$self->{Macros}} )
+    {
+	push( @List, $Var ) if ( $Var =~ /$Pattern/ )
+    }
+    @List;
+
+} # GrepName()
+# ******************************************************
+
+# ******************************************************
+# Search through the parameters for a matching value
+# ******************************************************
+sub GrepValue( $$ )
+{
+    my $self = shift;
+    my $Pattern = shift;
+
+    my @List;
+    foreach my $Var ( sort keys %{$self->{Macros}} )
+    {
+	my $Value = $self->{Macros}{$Var}{Value};
+	push( @List, $Var ) if ( $Value =~ /$Pattern/ )
+    }
+    @List;
+
+} # GrepValue()
+# ******************************************************
+
+# ******************************************************
+# Search through the parameters for a matching name or value
+# ******************************************************
+sub Grep( $$ )
+{
+    my $self = shift;
+    my $Pattern = shift;
+
+    my @List;
+    foreach my $Var ( sort keys %{$self->{Macros}} )
+    {
+	if ( $Var =~ /$Pattern/ )
+	{
+	    push( @List, $Var );
+	}
+	else
+	{
+	    my $Value = $self->{Macros}{$Var}{Value};
+	    push( @List, $Var ) if ( $Value =~ /$Pattern/ );
+	}
+    }
+    @List;
+
+} # Grep()
 # ******************************************************
 
 # ******************************************************
@@ -556,7 +619,7 @@ sub ReadFile( $$ )
     $FileRef->{Inode} = $StatBuf[1];
 
     # Read it in
-    print "Reading config file $Name ...";
+    print "Reading config file $Name ... ";
     $FileRef->{Text} = [];
     my $Line = "";
     while( <CONFIG> )
@@ -749,7 +812,7 @@ sub Grep( $$ )
 # ******************************************************
 # Grep through the config names
 # ******************************************************
-sub GrepNames( $$ )
+sub GrepName( $$ )
 {
     my $self = shift;
     my $Pattern = shift;
@@ -764,27 +827,6 @@ sub GrepNames( $$ )
     # Return the list of files that match
     return @List;
 
-} # GrepNames
-# ******************************************************
-
-# ******************************************************
-# Text compare through list of config names
-# ******************************************************
-sub FindName( $$ )
-{
-    my $self = shift;
-    my $Name = shift;
-
-    # Search through them all....
-    my @List;
-    foreach my $File ( @{$self->{Files}} )
-    {
-	return 1 if ( $File->{File} eq $Name );
-    }
-
-    # Return the list of files that match
-    return 0;
-
-} # FindName
+} # GrepName
 # ******************************************************
 1;

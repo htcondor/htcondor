@@ -28,11 +28,11 @@ use File::Temp qw(tempfile);
 # Update the module include path
 BEGIN
 {
-	my $Dir = $0;
-	if ( $Dir =~ /(.*)\/.*/ )
-	{
-		push @INC, "$1";
-	}
+    my $Dir = $0;
+    if ( $Dir =~ /(.*)\/.*/ )
+    {
+	push @INC, "$1";
+    }
 }
 use CondorConfig;
 $| = 1;
@@ -43,9 +43,9 @@ sub CommandLine( @ );
 sub FindConfigFile( );
 sub ReadConfigFiles( );
 sub ConfigureModule( $ );
-sub WriteConfigFile( );
+sub ReWriteConfigFile( );
 sub UpdateConfigFile( );
-sub ParseOldJob( $$ );
+sub ParseOldJob( $$$ );
 sub ImportOption( $$ );
 sub Usage ( $ );
 sub Help ( );
@@ -58,14 +58,9 @@ my $Distribution = "hawkeye";
 my %Options =
     (
      "[--config=file]"	=> "Specify $Distribution config file",
-     "[--no-update|-n]"	=> "Don't update the config file",
      "[--update=file]"	=> "Specify config file to update",
-     "[--update|-u]"	=> "Enable config update <default>",
-     "[--manual|-m]"	=> "Manual mode; asks lots of questions",
-     "[--defaults]"	=> "Use defaults if possible",
-     "[--all|-a]"	=> "Install all modules found in packages",
-     "[--ask]"		=> "Ask before installing each module",
-     "File [File..]"	=> "List of module package files to install",
+     "[--condor]"	=> "\"Condor\" mode",
+     "[--hawkeye]"	=> "\"Hawkeye\" mode",
      "[--help|-h]"	=> "Dump help",
     );
 
@@ -78,11 +73,7 @@ my %Config =
   Base => "",
   Updated => "",
  },
- DoDoUpdateConfig => 0,
- UseDefaults => 1,
- AskAll => 0,
- InstallAll => 1,
- Startd => -1,
+ Daemon => "",
  CronName => "",
 
 );
@@ -117,15 +108,20 @@ sub main( )
 	$ENV{PWD} = `/bin/pwd`; chomp $ENV{PWD};
     }
 
-    # Look at $0, see what we can gleen from it...
-    if ( $0 =~ /(condor|hawkeye)_config_update/ )
+    # Guess what distribution this is..
+    if ( exists $ENV{CONDOR_DISTRIBUTION} )
     {
 	$Distribution = $1;
     }
-    elsif ( exists $ENV{CONDOR_DISTRIBUTION} )
+    elsif ( exists $ENV{HAWKEYE_CONFIG} )
     {
-	$Distribution = $1;
+	$Distribution = "hawkeye";
     }
+    elsif ( exists $ENV{CONDOR_CONFIG} )
+    {
+	$Distribution = "condor";
+    }
+
     $Program = $Distribution . "_config_update";
     $ConfigEnv = uc $Distribution . "_CONFIG";
 
@@ -180,33 +176,6 @@ sub CommandLine( @ )
 	elsif ( $Arg =~ /^--update=(.+)/ )
 	{
 	    $Config{ConfigFile}{Updated} = $1;
-	    $Config{DoUpdateConfig} = 1;
-	}
-
-	# Config update
-	elsif ( ( $Arg eq "-u") || ( $Arg eq "--update" ) )
-	{
-	    $Config{DoUpdateConfig} = 1;
-	}
-
-	# Don't update config
-	elsif ( ( $Arg eq "-n") || ( $Arg eq "--no-update" ) )
-	{
-	    $Config{DoUpdateConfig} = 0;
-	}
-
-	# "Ask" mode
-	elsif ( $Arg eq "--ask" )
-	{
-	    $Config{InstallAll} = 0;
-	}
-
-	# Manual mode
-	elsif ( ( $Arg eq "-m" ) || ( $Arg eq "--manual" ) )
-	{
-	    $Config{InstallAll} = 0;
-	    $Config{UseDefaults} = 0;
-	    $Config{AskAll} = 1;
 	}
 
 	# Hawkeye mode
@@ -219,6 +188,16 @@ sub CommandLine( @ )
 	elsif ( $Arg eq "--condor" )
 	{
 	    $Distribution = "condor";
+	}
+
+	# Set the daemon to import for
+	elsif ( $Arg =~ /^--daemon=(\w+)$/ )
+	{
+	    $Config{Daemon} = $1;
+	}
+	elsif ( $Arg =~ /^--(startd|schedd)$/ )
+	{
+	    $Config{Daemon} = $1;
 	}
 
 	# Help
@@ -280,15 +259,72 @@ sub ReadConfigFiles( )
     # Read them all in
     $ConfigFiles->ReadAll( );
 
+    # Get list of cron name variables
+    foreach my $Var ( $ConfigMacros->GrepName( "(?i:_cron_name)\$" ) )
+    {
+	my $Daemon = $Var;
+	$Daemon =~ s/_cron_name//g;
+	my $CronName = $ConfigMacros->Expand( $Var );
+	my $JlVar = uc($CronName) . "_JOBLIST";
+	my $JlVarOld = uc($CronName) . "_JOBS";
+	$Config{CronDaemons}{$Daemon}{NameVar} = $Var;
+	$Config{CronDaemons}{$Daemon}{CronName} =
+	$Config{CronDaemons}{$Daemon}{JobListVar} = $JlVar;
+	$Config{CronDaemons}{$Daemon}{JobListVarOld} = $JlVarOld;
+    }
+
+    # If we know the 
+    if ( $Config{Daemon} ne "" )
+    {
+	$Config{CronNameVar} = uc($Config{Daemon}) . "_CRON_NAME",
+    }
+
+    # If we don't know what daemon cron name variable we're looking for
+    # try to guess...
+    if ( $Config{CronNameVar} eq "" )
+    {
+	foreach my $Daemon ( "startd", "schedd" )
+	{
+	    if ( exists $Config{CronDaemons}{$Daemon} )
+	    {
+		$Config{Daemon} = $Daemon;
+		$Config{CronNameVar} =
+		    $Config{CronDaemons}{$Daemon}{NameVar};
+		last;
+	    }
+	}
+    }
+
+    # If we still don't know the daemon, assume startd
+    if ( exists $Config{CronNameVar} eq "" )
+    {
+	$Config{Daemon} = "startd";
+	$Config{CronNameVar} = "STARTD_CRON_NAME",
+    }
+
     # Add basic things to the config if they're not defined...
-    $Config{CronName} = $ConfigMacros->Expand( "STARTD_CRON_NAME" );
+    my $NameVar = $Config{CronNameVar};
+    $Config{CronName} = $ConfigMacros->Expand( $NameVar );
     if ( ! defined $Config{CronName} )
     {
-	$Config{CronName} =
-	    ( $Distribution eq "hawkeye" ) ? "Hawkeye" : "Cron";
-	$ConfigFiles->AddText( "STARTD_CRON_NAME = $Config{CronName}" );
-	$ConfigMacros->Set( "STARTD_CRON_NAME", $Config{CronName} );
+	if ( $Distribution eq "hawkeye" )
+	{
+	    $Config{CronName} = "Hawkeye";
+	}
+	elsif ( $Config{Daemon} eq "startd" )
+	{
+	    $Config{CronName} = "Cron";
+	}
+	else
+	{
+	    $Config{CronName} = "Scron";
+	}
+	$ConfigFiles->AddText( "$NameVar = $Config{CronName}" );
+	$ConfigMacros->Set( $NameVar, $Config{CronName} );
     }
+    print "Dist = '$Distribution'\n";
+    print "Var  = '$Config{CronNameVar}'\n";
+    print "Name = '$Config{CronName}'\n";
 
     # Jobs defined?
     my $CronJobsVar = uc( $Config{CronName} . "_JOBS" );
@@ -341,14 +377,14 @@ sub ReadConfigFiles( )
 	}
     }
 
-    # Try to find the file that last defined STARTD_CRON_NAME
+    # Try to find the file that last defined (STARTD|SCHEDD)_CRON_NAME
     if ( $Config{ConfigFile}{Updated} eq "" )
     {
-	my $Info = $ConfigMacros->GetInfo( "STARTD_CRON_NAME" );
+	my $Info = $ConfigMacros->GetInfo( $NameVar );
 	if ( ( $Info ) && ( $Info->{File} ) )
 	{
 	    $Config{ConfigFile}{Updated} = $Info->{File};
-	    print "Found 'STARTD_CRON_NAME' in "
+	    print "Found '$NameVar' in "
 		. $Info->{File} . " line " . $Info->{Line} . "\n";
 	}
     }
@@ -357,8 +393,8 @@ sub ReadConfigFiles( )
     # the config to modify
     if ( $Config{ConfigFile}{Updated} eq "" )
     {
-	my $Pat = "(jobs|joblist|hawkeye)\$";
-	my @List = $ConfigFiles->GrepNames( $Pat );
+	my $Pat = "(?i:jobs|joblist|hawkeye|scron)\$";
+	my @List = $ConfigFiles->GrepName( $Pat );
 	if ( scalar @List )
 	{
 	    $Config{ConfigFile}{Updated} = shift( @List );
@@ -450,7 +486,7 @@ sub UpdateConfig( $ )
 # ******************************************************
 # Write the new config file
 # ******************************************************
-sub WriteConfigFile( )
+sub ReWriteConfigFile( )
 {
     my $File = $ConfigFiles->GetUpdateFile( );
     open( ORIG, $File ) or die "Can't read config file '$File'";
@@ -469,58 +505,87 @@ sub WriteConfigFile( )
     {
 	chomp; s/\s+$//;
 	my $DumpStack = 0;
-	s/$Config{CronJobsVar}/$Config{CronJobListVar}/g;
-	if ( /(.*?)(\w+:\w+:\"[^\"]+\":\S+)([^\\]*)(\\?)/ )
+	my @Orig;
+	push( @Orig, $_ );
+
+	# Add in continuation lines
+	my $Line = "";
+	while (  ( !/\#/ ) and ( /(.*)\\$/ )  )
+	{
+	    $Line = ( $Line eq "" ) ? $1 : $Line . " " . $1;
+	    $_ = <ORIG>;
+	    chomp; s/\s+$//;
+	    push( @Orig, $_ );
+	    s/^\s+//;
+	    $Line .= $_;
+	}
+	$Line = $_ if ( $Line eq "" );
+
+	if ( $Line =~ /(.*?)(\w+:\w+:\"[^\"]+\":\S+)([^\\]*)(\\?)/ )
 	{
 	    my ( $t1, $t2, $t3, $t4 ) = ( $1, $2, $3, $4 );
 	    $t4 = undef if ( ( !defined $4 ) or ( $4 eq "" ) );
-	    my $Comment = ( $t1 =~ /#/ ) ? "# " : "";
+	    foreach my $t ( @Orig )
+	    {
+		print $tmp_fh "#OLD $t\n";
+	    }
 
-	    my @Tmp = ParseOldJob( $t2, $Comment );
-	    if ( ! @Tmp )
+	    my $r = ParseOldJob( $t1, $t2, \@Stack );
+	    if ( ! $r )
 	    {
 		print STDERR "Error importing old job '$t2'\n";
 		next;
 	    }
-	    my $Name = shift( @Tmp );
-	    print "  Importing old job '$Name' ($t2): " .
-		( ( $Comment eq "" ) ? "OK\n" : "Commented out\n" );
-	    push( @JobList, $Name ) if ( $Comment eq "" );
+	    my $Name      = $r->{Name};
+	    my $Prefix    = $r->{Prefix};
+	    my $IsComment = $r->{IsComment};
+	    print "  Importing old job '$Name' ($t2) from line $.: " .
+		( !$IsComment ? "OK\n" : "Commented out\n" );
+	    push( @JobList, $Name ) if ( ! $IsComment );
 
-	    my $Line = "$t1" . $Name . "$t3";
-	    $Line .= " \\" if ( defined $t4 );
-	    print $tmp_fh "$Line\n";
+	    my $New = "$Prefix" . $Name . "$t3";
+	    $New .= " \\" if ( defined $t4 );
+	    print $tmp_fh "$New\n";
 
-	    push( @Stack, @Tmp );
 	    $DumpStack = 1 if ( ! defined $t4 );
 	}
-	elsif ( /(.*?)(\w+:\w+:[^:]+:\S+)([^\\]*)(\\?)/ )
+	elsif ( $Line =~ /(.*?)(\w+:\w+:[^:]+:\S+)([^\\]*)(\\?)/ )
 	{
 	    my ( $t1, $t2, $t3, $t4 ) = ( $1, $2, $3, $4 );
 	    $t4 = undef if ( ( !defined $4 ) or ( $4 eq "" ) );
-	    my $Comment = ( $t1 =~ /#/ ) ? "# " : "";
+	    foreach my $t ( @Orig )
+	    {
+		print $tmp_fh "#OLD: $t\n";
+	    }
 
-	    my @Tmp = ParseOldJob( $t2, $Comment );
-	    if ( ! @Tmp )
+	    my $r = ParseOldJob( $t1, $t2, \@Stack );
+	    if ( ! $r )
 	    {
 		print STDERR "Error importing old job '$t2'\n";
 		next;
 	    }
-	    my $Name = shift( @Tmp );
-	    print "  Importing old job '$Name' ($t2): " .
-		( ( $Comment eq "" ) ? "OK\n" : "Commented out\n" );
-	    push( @JobList, $Name ) if ( $Comment eq "" );
+	    my $Name      = $r->{Name};
+	    my $Prefix    = $r->{Prefix};
+	    my $IsComment = $r->{IsComment};
+	    print "  Importing old job '$Name' ($t2) from line $.: " .
+		( !$IsComment ? "OK\n" : "Commented out\n" );
+	    push( @JobList, $Name ) if ( ! $IsComment );
 
-	    my $Line = "$t1" . $Name . "$t3";
-	    $Line .= " \\" if ( defined $t4 );
-	    print $tmp_fh "$Line\n";
+	    my $New = "$Prefix" . $Name . "$t3";
+	    $New .= " \\" if ( defined $t4 );
+	    print $tmp_fh "$New\n";
 
-	    push( @Stack, @Tmp );
 	    $DumpStack = 1 if ( ! defined $t4 );
 	}
 	else
 	{
-	    print $tmp_fh "$_\n";
+	    foreach my $d ( keys %{$Config{CronDaemons}} )
+	    {
+		my $JlVar = $Config{CronDaemons}{$d}{JobListVar};
+		my $JlVarOld = $Config{CronDaemons}{$d}{JobListVarOld};
+		$Line =~ s/$JlVarOld/$JlVar/ig;
+	    }
+	    print $tmp_fh "$Line\n";
 	}
 	if ( $DumpStack )
 	{
@@ -536,16 +601,27 @@ sub WriteConfigFile( )
     # Done
     return ( $File, $tmp_filename, @JobList );
 
-}
+} # ReWriteConfigFile()
 # ******************************************************
 
 # ******************************************************
 # Parse old job line
 # ******************************************************
-sub ParseOldJob( $$ )
+sub ParseOldJob( $$$ )
 {
+    my $LinePrefix = shift;
     my $Line = shift;
-    my $Comment = shift;
+    my $Stack = shift;
+
+    # Look at the prefix
+    my $IsComment = ( $LinePrefix =~ /#/ ) ? 1 : 0;
+    my $Comment = $IsComment ? "#" : "";
+    my $CronName = $Config{CronName};
+    if ( $LinePrefix =~ /(\w+)_jobs\)/i )
+    {
+	$CronName = $1;
+    }
+    $LinePrefix =~ s/_jobs/_JOBLIST/ig;
 
     my $Name;
     my $Prefix;
@@ -571,13 +647,15 @@ sub ParseOldJob( $$ )
     }
 
     my ( $Period,  @Opts ) = split( /:/, $End );
-    my $FullName = uc( $Config{CronName} . "_" . $Name );
-	
-    my @Stack;
-    push( @Stack, $Name );
-    push( @Stack, $Comment . $FullName . "_PREFIX = $Prefix" );
-    push( @Stack, $Comment . $FullName . "_EXECUTABLE = $Exe" );
-    push( @Stack, $Comment . $FullName . "_PERIOD = $Period" );
+    my $FullName = uc( $CronName . "_" . $Name );
+
+    my %r;
+    $r{Name} = $Name;
+    $r{Prefix} = $LinePrefix;
+    $r{IsComment} = $IsComment;
+    push( @{$Stack}, $Comment . $FullName . "_PREFIX = $Prefix" );
+    push( @{$Stack}, $Comment . $FullName . "_EXECUTABLE = $Exe" );
+    push( @{$Stack}, $Comment . $FullName . "_PERIOD = $Period" );
 
     my %Data;
     foreach my $Opt ( @Opts )
@@ -592,9 +670,9 @@ sub ParseOldJob( $$ )
     {
 	my $Parm = uc( $FullName . "_" . $Key );
 	my $Value = $Data{$Key};
-	push( @Stack, "$Comment$Parm = $Value" );
+	push( @{$Stack}, "$Comment$Parm = $Value" );
     }
-    return @Stack;
+    return \%r;
 
 } # ParseOldJob
 # ******************************************************
@@ -606,7 +684,7 @@ sub UpdateConfigFile( )
 {
 
     # Write the updates to the temp file
-    my ( $File, $TmpFile, @ImportedJobs ) = WriteConfigFile( );
+    my ( $File, $TmpFile, @ImportedJobs ) = ReWriteConfigFile( );
     if ( ! $File or ! $TmpFile )
     {
 	die "Error writing update";

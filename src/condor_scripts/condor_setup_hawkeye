@@ -63,8 +63,6 @@ my %Options =
      "[--no-update|-n]"	=> "Don't update the config file",
      "[--update=file]"	=> "Specify config file to update",
      "[--update|-u]"	=> "Enable config update <default>",
-     "[--manual|-m]"	=> "Manual mode; asks lots of questions",
-     "[--defaults]"	=> "Use defaults if possible",
      "[--help|-h]"	=> "Dump help",
     );
 
@@ -461,7 +459,7 @@ sub FindConfigToUpdate( )
     # the config to modify
     if ( ! $Raw )
     {
-	my @Match = $ConfigFiles->GrepNames( "(jobs|joblist|hawkeye)\$" );
+	my @Match = $ConfigFiles->GrepName( "(jobs|joblist|hawkeye)\$" );
 	if ( scalar @Match )
 	{
 	    $Raw = shift( @Match );
@@ -493,8 +491,8 @@ sub FindConfigToUpdate( )
 	# Ok, let's run with it...
 	$Raw = $Input;
 
-	my $Found = $ConfigFiles->FindName( $File );
-	if ( ! $Found )
+	my @List = $ConfigFiles->GrepName( "^$File\$" );
+	if ( $#Found < 0 )
 	{
 	    print "\n";
 	    print "WARNING; $Raw does not appear to be in the\n";
