@@ -25,7 +25,7 @@ case "x$os" in
 		exec /lib/cpp $*
 		;;
 	xFreeBSD)
-		exec /usr/bin/gcc -E $*
+		exec /usr/local/bin/sdcpp $*
 		;;
 	xDarwin)
 		# /usr/bin/cpp is funny on this OS, I can't figure out how to tell

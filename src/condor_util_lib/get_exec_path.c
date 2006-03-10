@@ -304,6 +304,41 @@ darwin_getExecPath()
 }
 #endif /* defined(Darwin) */
 
+#ifdef CONDOR_FREEBSD
+char*
+freebsd_getExecPath()
+{
+	int rval;
+	char* full_path;
+	char path_buf[MAXPATHLEN];
+	rval = readlink( "/proc/curproc/file", path_buf, MAXPATHLEN );
+	if( rval < 0 ) {
+
+		/*
+		   This error will occur when running a program from the valgrind
+		   memory debugger.  For this case, compiling with valgrind.h and
+		   testing RUNNING_ON_VALGRIND can prevent this error message.  But
+		   this remedy is too much overhead for now.
+		*/
+		dprintf( D_ALWAYS,"getExecPath: "
+				 "readlink(\"/proc/curproc/file\") failed: errno %d (%s)\n",
+				 errno, strerror(errno) );
+		return NULL;
+	}
+	if( rval == MAXPATHLEN ) {
+		dprintf( D_ALWAYS,"getExecPath: "
+				 "unable to find full path from /proc/curproc/file\n" );
+		return NULL;
+	}
+		/* Oddly, readlink doesn't terminate the string for you, so
+		   we've got to handle that ourselves... */
+	path_buf[rval] = '\0';
+	full_path = strdup( path_buf );
+	return full_path;
+	
+}
+#endif
+
 
 /*
   Now, the public method that just invokes the right platform-specific
@@ -319,6 +354,8 @@ getExecPath( void )
 	rval= solaris_getExecPath();
 #elif defined( Darwin )
 	rval = darwin_getExecPath();
+#elif defined( CONDOR_FREEBSD )
+	rval = freebsd_getExecPath();
 #elif defined( WIN32 )
 	rval = win32_getExecPath();
 #endif

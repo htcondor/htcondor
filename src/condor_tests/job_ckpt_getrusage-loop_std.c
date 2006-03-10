@@ -42,7 +42,7 @@
 #define getrusage __hide_getrusage
 #endif
 
-#if defined(Darwin)
+#if defined(Darwin) || defined(CONDOR_FREEBSD)
 #include <sys/time.h>
 #endif
 

@@ -208,18 +208,23 @@ sysapi_phys_memory_raw(void)
 }
 
 // See GNATS 529. This code should now detect >= 2Gigs properly.
-#elif defined(Darwin)
+#elif defined(Darwin) || defined(CONDOR_FREEBSD)
 #include <sys/sysctl.h>
 int
 sysapi_phys_memory_raw(void)
 {
 	int megs;
-	uint64_t mem;
+	uint64_t mem = 0;
 	size_t len = sizeof(mem);
 
 	sysapi_internal_reconfig();
 
-	if (sysctlbyname("hw.memsize", &mem, &len, NULL, 0) < 0) {
+#ifdef Darwin
+	if (sysctlbyname("hw.memsize", &mem, &len, NULL, 0) < 0) 
+#elif defined(CONDOR_FREEBSD)
+	if (sysctlbyname("hw.physmem", &mem, &len, NULL, 0) < 0) 
+#endif
+	{
         dprintf(D_ALWAYS, 
 			"sysapi_phys_memory_raw(): sysctlbyname(\"hw.memsize\") "
 			"failed: %d(%s)\n",

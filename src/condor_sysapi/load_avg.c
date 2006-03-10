@@ -382,10 +382,13 @@ get_k_vars()
 {
 }
 
-#elif defined(Darwin)
+#elif defined(Darwin) || defined(CONDOR_FREEBSD)
 
 #include <sys/resource.h>
 #include <sys/sysctl.h>
+#ifdef CONDOR_FREEBSD
+#include <vm/vm_param.h>
+#endif
 float
 sysapi_load_avg_raw(void)
 {

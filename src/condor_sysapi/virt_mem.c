@@ -256,11 +256,12 @@ sysapi_swap_space_raw()
 	}
 }
 
-#elif defined(Darwin)
+#elif defined(Darwin) || defined(CONDOR_FREEBSD)
 #include <sys/sysctl.h>
 int
 sysapi_swap_space_raw() {
-        int mib[2], usermem;
+        int mib[2];
+        unsigned int usermem;
         size_t len;   
         mib[0] = CTL_HW;     
         mib[1] = HW_USERMEM;        

@@ -25,7 +25,7 @@
 
 #if defined( AIX )
 #	include "syscall.aix.h"
-#elif defined(Solaris) || defined(Darwin)
+#elif defined(Solaris) || defined(Darwin) || defined(CONDOR_FREEBSD)
 #	include <sys/syscall.h>
 #elif defined(IRIX)
 #	undef SYSVoffset

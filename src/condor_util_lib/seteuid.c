@@ -27,7 +27,7 @@
 ** Compatibility routine for systems which utilize setresuid() for
 ** this purpose.
 */
-#if !defined(Darwin)
+#if !defined(Darwin) && !defined(CONDOR_FREEBSD)
 int seteuid( int euid )
 {
 	return setresuid( -1, euid, -1 );

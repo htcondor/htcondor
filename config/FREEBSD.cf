@@ -3,8 +3,6 @@
 
 #define IS_CLIPPED              YES
 #define HAS_DYNAMIC_USER_JOBS   NO
-#define WANT_PVM                NO
-#define HAS_OPENSSL             NO
-#define HAS_GLOBUS              NO
+#define HAS_OPENSSL             YES
+#define HAS_GLOBUS              YES
 #define HAS_GSI                 NO
-#define	WANT_KERBEROS           NO

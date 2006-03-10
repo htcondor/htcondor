@@ -359,7 +359,7 @@ elif test $os = "Darwin" ; then
 
 elif test $os = "FreeBSD" ; then
   _cv_arch="I386"
-  _cv_op_sys="FreeBSD"
+  _cv_op_sys="CONDOR_FREEBSD"
   _cv_opsys="CONDOR_FREEBSD"
   _cv_opsys_vers="5_3"
   _cv_sysname="i386_freebsd"
