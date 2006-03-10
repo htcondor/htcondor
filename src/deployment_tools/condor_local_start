@@ -46,7 +46,7 @@ my $USAGE =
     "[-localdir local_install_dir] [-localconfig local_config_file]\n".
     "[-logarchive log_archive] [-spoolarchive spool_archive]\n".
     "[-execarchive exec_archive]\n".
-    "[-flock] [-pid] [-artifact artifact_file]\n".
+    "[-filelock] [-pid] [-artifact artifact_file]\n".
     "[-wget] [-globuslocation globus_location]\n".
     #"[-dyn] [-help]\n";
     "[-help]\n";
@@ -68,7 +68,7 @@ my $EXEC_ARCHIVE_OPT = '-execarchive';
 my $WGET_OPT = '-wget';
 my $GLOBUS_LOC_OPT = '-globuslocation';
 
-my $FLOCK_MIDWIFE = 'flock_midwife';
+my $FILELOCK_MIDWIFE = 'filelock_midwife';
 my $PID_MIDWIFE = 'uniq_pid_midwife';
 my $MIDWIFE_FILE_OPT ='--file';
 
@@ -107,7 +107,7 @@ my $local_install_config = 0;
 my $log_archive = 0;
 my $spool_archive = 0;
 my $exec_archive = 0;
-my $flock_flag = 0;
+my $filelock_flag = 0;
 my $pid_flag = 0;
 #my $midwife_artifact = 'MasterMidwife.artifact';
 my $midwife_artifact = 0;
@@ -124,7 +124,7 @@ GetOptions('configfile=s'=>\$condor_config_file,
 	   'logarchive=s'=>\$log_archive,
 	   'spoolarchive=s'=>\$spool_archive,
 	   'execarchive=s'=>\$exec_archive,
-	   'flock'=>\$flock_flag,
+	   'filelock'=>\$filelock_flag,
 	   'pid'=>\$pid_flag,
 	   'artifact=s'=>\$midwife_artifact,
 	   'wget'=>\$wget_flag,
@@ -485,8 +485,8 @@ sub StartMaster(){
     #Determine the midwife to use
     # defaults to the pid midwife
     my $midwife = 0;
-    if( $flock_flag ){
-	$midwife = $FLOCK_MIDWIFE;
+    if( $filelock_flag ){
+	$midwife = $FILELOCK_MIDWIFE;
     } else{
 	$midwife = $PID_MIDWIFE;
     }

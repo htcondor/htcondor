@@ -25,7 +25,7 @@ my $USAGE =
     "Usage: condor_local_stop [-f]\n". 
     "<-configfile condor_config_file> <-basedir release_dir>\n".
     "[-localdir local_dir]\n".
-    "[-flock] [-pid] [-artifact artifact_file] [-timeout max]\n".
+    "[-filelock] [-pid] [-artifact artifact_file] [-timeout max]\n".
     "[-localconfig config_file] [-installconfig config_file] [-help]\n";
 
 my $CONDOR_Q = 'condor_q';
@@ -43,7 +43,7 @@ my %JOB_STATUS_HASH = ( 1 => 'Idle',
 			4 => 'Completed',
 			5 => 'Held',);
 
-my $FLOCK_UNDERTAKER = 'flock_undertaker';
+my $FILELOCK_UNDERTAKER = 'filelock_undertaker';
 my $PID_UNDERTAKER = 'uniq_pid_undertaker';
 my $UNDERTAKER_FILE_OPT ='--file';
 
@@ -67,7 +67,7 @@ my $local_dir = cwd;
 my $global_config_file = 0;
 my $local_config_file = 0;
 my $install_config_file = 0;
-my $flock_flag = 0;
+my $filelock_flag = 0;
 my $pid_flag = 0;
 my $midwife_artifact = 0;
 my $timeout = 120;
@@ -89,7 +89,7 @@ my $condor_config_val_cmd = 0;
 GetOptions('configfile=s'=>\$global_config_file,
 	   'basedir=s'=>\$release_dir,
 	   'localdir=s'=>\$local_dir,
-	   'flock'=>\$flock_flag,
+	   'filelock'=>\$filelock_flag,
 	   'pid'=>\$pid_flag,
 	   'artifact=s'=>\$midwife_artifact,
 	   'timeout=s'=>\$timeout,
@@ -373,8 +373,8 @@ sub StopMaster(){
     # Determine the undertaker to use
     # defaults to pid undertaker
     my $undertaker = 0;
-    if( $flock_flag ){
-	$undertaker = $FLOCK_UNDERTAKER;
+    if( $filelock_flag ){
+	$undertaker = $FILELOCK_UNDERTAKER;
     } else{
 	$undertaker = $PID_UNDERTAKER;
     }

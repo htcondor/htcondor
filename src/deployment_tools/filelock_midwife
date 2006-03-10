@@ -1,7 +1,7 @@
 #! /usr/bin/perl -w
 
 ##********************************************************************
-## Starts the given program with a flock artifact that an 
+## Starts the given program with a filelock artifact that an 
 ## undertaker can check later.
 ##********************************************************************
 
@@ -18,7 +18,7 @@ use Getopt::Long;
 # Constant Static Variables
 #***
 my $USAGE = 
-    "Usage: flock_midwife [--file lockfile] <program> [program_args]\n";
+    "Usage: filelock_midwife [--file lockfile] <program> [program_args]\n";
 
 #***
 # Non-constant Static Variables
@@ -58,7 +58,7 @@ if( !-e $lockfile ){
     chmod(0644, $lockfile);
     
 }
-# Acquire a flock on the lock file
+# Acquire a filelock on the lock file
 my $lock_handle = &AcquireFLockNB($lockfile, 'X');
 
 # The lock was already held

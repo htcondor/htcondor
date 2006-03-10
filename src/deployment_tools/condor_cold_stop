@@ -37,7 +37,7 @@ my $USAGE =
     "[-localdir local_dir] [-runlocalconfig config_file]\n".
     "[-cleaninstall] [-cleanlocal] [-stop]\n".
     "[-logarchive archive] [-spoolarchive archive] [-execarchive archive]\n".
-    "[-flock] [-pid] [-artifact artifact_file]\n".
+    "[-filelock] [-pid] [-artifact artifact_file]\n".
     "[-log install_log]\n".
     "[-nogurl] [-globuslocation globus_location]\n".
     "[-help]\n";
@@ -52,7 +52,7 @@ my $LOCAL_DIR_OPT = '-localdir';
 my $LOCAL_CONFIG_OPT = '-localconfig';
 my $INSTALL_CONFIG_OPT = '-installconfig';
 my $FG_OPT = '-fg';
-my $FLOCK_OPT = '-flock';
+my $FILELOCK_OPT = '-filelock';
 my $PID_OPT = '-pid';
 my $ARTIFACT_OPT ='-artifact';
 
@@ -86,7 +86,7 @@ my $base_dir = cwd;
 my $global_config_file = 0;
 my $local_config_file = 0; 
 my $install_log_path = 0;
-my $flock_flag = 0;
+my $filelock_flag = 0;
 my $pid_flag = 0;
 my $midwife_artifact = 0;
 my $no_gurl_flag = 0;
@@ -110,7 +110,7 @@ GetOptions( 'force'=>\$force,
 	    'spoolarchive=s'=>\$spool_archive,
 	    'execarchive=s'=>\$exec_archive,
 	    'log=s'=>\$install_log_path,
-	    'flock'=>\$flock_flag,
+	    'filelock'=>\$filelock_flag,
 	    'pid'=>\$pid_flag,
 	    'artifact=s'=>\$midwife_artifact,
 	    'nogurl'=>\$no_gurl_flag,
@@ -175,7 +175,7 @@ sub StopIt(){
     push @args, $FORCE_OPT if( $force );
 
      # midwife args
-    push @args, $FLOCK_OPT if( $flock_flag );
+    push @args, $FILELOCK_OPT if( $filelock_flag );
     push @args, $PID_OPT if( $pid_flag );
     push @args, ($ARTIFACT_OPT, $midwife_artifact) if( $midwife_artifact);
 

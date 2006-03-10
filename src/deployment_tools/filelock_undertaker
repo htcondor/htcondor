@@ -1,7 +1,7 @@
 #! /usr/bin/perl -w
 
 ##********************************************************************
-## Determines whether another program has exited by checking the flock
+## Determines whether another program has exited by checking the filelock
 ## on the lock file.  Exits 0 if the process is dead.  1 otherwise.
 ##********************************************************************
 
@@ -18,7 +18,7 @@ use Getopt::Long;
 # Constant Static Variables
 #***
 my $USAGE = 
-    "Usage: flock_undertaker [--file file][--block]\n";
+    "Usage: filelock_undertaker [--file file][--block]\n";
 
 #***
 # Non-constant Static Variables
