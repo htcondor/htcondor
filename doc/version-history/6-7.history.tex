@@ -139,6 +139,10 @@ working directory rather than the specified path.  This happened for
 all jobs in the cluster except for the first job (process 0).  This
 bug was introduced in 6.7.13.
 
+\item Previously, setting the default job environment within
+\Macro{SUBMIT\_EXPRS} did not work, because \Condor{submit} would
+always override this default with an empty environment.
+
 \end{itemize}
 
 \noindent Known Bugs:
