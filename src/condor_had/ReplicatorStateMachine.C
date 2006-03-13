@@ -201,15 +201,19 @@ ReplicatorStateMachine::reinitialize()
             (TimerHandlercpp) &ReplicatorStateMachine::replicationTimer,
             "Time to replicate file", this );
     // register the download/upload reaper for the transferer process
-    m_downloadReaperId = daemonCore->Register_Reaper(
-        "downloadReplicaTransfererReaper",
+    if( m_downloadReaperId == -1 ) {
+		m_downloadReaperId = daemonCore->Register_Reaper(
+        	"downloadReplicaTransfererReaper",
         (ReaperHandler)&ReplicatorStateMachine::downloadReplicaTransfererReaper,
-        "downloadReplicaTransfererReaper", this );
-    m_uploadReaperId     = daemonCore->Register_Reaper(
-        "uploadReplicaTransfererReaper",
+        	"downloadReplicaTransfererReaper", this );
+	}
+    if( m_uploadReaperId == -1 ) {
+		m_uploadReaperId = daemonCore->Register_Reaper(
+        	"uploadReplicaTransfererReaper",
         (ReaperHandler) &ReplicatorStateMachine::uploadReplicaTransfererReaper,
-        "uploadReplicaTransfererReaper", this );
-    // for debugging purposes only
+        	"uploadReplicaTransfererReaper", this );
+    }
+	// for debugging purposes only
 	printDataMembers( );
 	
 	beforePassiveStateHandler( );
@@ -483,7 +487,7 @@ ReplicatorStateMachine::onLeaderVersion( Stream* stream )
     }
     // replication leader must not send a version which hasn't been updated
     //assert(downloadNeeded);
-    REPLICATION_ASSERT(downloadNeeded);
+    //REPLICATION_ASSERT(downloadNeeded);
 	delete newVersion;
 }
 /* Function   : onTransferFile

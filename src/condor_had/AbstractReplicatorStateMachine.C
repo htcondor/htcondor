@@ -46,8 +46,8 @@ AbstractReplicatorStateMachine::finalize()
     utilClearList( m_replicationDaemonsList );
     m_releaseDirectoryPath = "";
 
-    utilCancelReaper(m_downloadReaperId);
-    utilCancelReaper(m_uploadReaperId);
+    //utilCancelReaper(m_downloadReaperId);
+    //utilCancelReaper(m_uploadReaperId);
 	// upon finalizing and/or reinitialiing the existing transferer processes
 	// must be killed, otherwise we will temporarily deny creation of new
 	// downloading transferers till the older ones are over
