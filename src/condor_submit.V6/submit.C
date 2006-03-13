@@ -3232,9 +3232,36 @@ SetEnvironment()
 		}
 	}
 
-	MyString newenv;
-	MyString newenv_raw;
-	if(envobject.InputWasV1() || envobject.CondorVersionRequiresV1(MySchedd->version())) {
+	//There may already be environment info in the ClassAd from SUBMIT_EXPRS.
+	//Check for that now.
+
+	bool ad_contains_env1 = job->Lookup(ATTR_JOB_ENVIRONMENT1);
+	bool ad_contains_env2 = job->Lookup(ATTR_JOB_ENVIRONMENT2);
+
+	bool insert_env1 = envobject.InputWasV1() || envobject.CondorVersionRequiresV1(MySchedd->version());
+	bool insert_env2 = !insert_env1;
+
+	if(!env1 && !env2 && envobject.Count() == 0 && \
+	   (ad_contains_env1 || ad_contains_env2)) {
+			// User did not specify any environment, but SUBMIT_EXPRS did.
+			// Do not do anything (i.e. avoid overwriting with empty env).
+		insert_env1 = insert_env2 = false;
+	}
+
+	// If we are going to write new environment into the ad and if there
+	// is already environment info in the ad, make sure we overwrite
+	// whatever is there.  Instead of doing things this way, we could
+	// remove the existing environment settings, but there is currently no
+	// function that undoes all the effects of InsertJobExpr().
+	if(insert_env1 && ad_contains_env2) insert_env2 = true;
+	if(insert_env2 && ad_contains_env1) insert_env1 = true;
+
+	env_success = true;
+
+	if(insert_env1 && env_success) {
+		MyString newenv;
+		MyString newenv_raw;
+
 		env_success = envobject.getDelimitedStringV1Raw(&newenv_raw,&error_msg);
 		newenv.sprintf("%s = \"%s\"",
 					   ATTR_JOB_ENVIRONMENT1,
@@ -3249,7 +3276,11 @@ SetEnvironment()
 							 envobject.GetEnvV1Delimiter());
 		InsertJobExpr(delim_assign.Value());
 	}
-	else {
+
+	if(insert_env2 && env_success) {
+		MyString newenv;
+		MyString newenv_raw;
+
 		env_success = envobject.getDelimitedStringV2Raw(&newenv_raw,&error_msg);
 		newenv.sprintf("%s = \"%s\"",
 					   ATTR_JOB_ENVIRONMENT2,
