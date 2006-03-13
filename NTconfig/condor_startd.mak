@@ -73,6 +73,10 @@ CLEAN :
 	-@erase "$(INTDIR)\util.obj"
 	-@erase "$(INTDIR)\vc60.idb"
 	-@erase "$(INTDIR)\vc60.pdb"
+	-@erase "$(INTDIR)\vm_common.obj"
+	-@erase "$(INTDIR)\VMMachine.obj"
+	-@erase "$(INTDIR)\VMManager.obj"
+	-@erase "$(INTDIR)\VMRegister.obj"
 	-@erase "$(OUTDIR)\condor_startd.exe"
 	-@erase "$(OUTDIR)\condor_startd.ilk"
 	-@erase "$(OUTDIR)\condor_startd.map"
@@ -123,6 +127,8 @@ LINK32=link.exe
 LINK32_FLAGS=../Debug/condor_common.obj ..\Debug\condor_common_c.obj pdh.lib $(CONDOR_LIB) $(CONDOR_LIBPATH) $(CONDOR_GSOAP_LIB) $(CONDOR_GSOAP_LIBPATH) $(CONDOR_KERB_LIB) $(CONDOR_KERB_LIBPATH) $(CONDOR_PCRE_LIB) $(CONDOR_PCRE_LIBPATH) $(CONDOR_GLOBUS_LIB) $(CONDOR_GLOBUS_LIBPATH) $(CONDOR_OPENSSL_LIB) $(CONDOR_POSTGRESQL_LIB) $(CONDOR_OPENSSL_LIBPATH) $(CONDOR_POSTGRESQL_LIBPATH) /nologo /subsystem:console /incremental:yes /pdb:"$(OUTDIR)\condor_startd.pdb" /map:"$(INTDIR)\condor_startd.map" /debug /machine:I386 /out:"$(OUTDIR)\condor_startd.exe" /SWAPRUN:NET 
 LINK32_OBJS= \
 	"$(INTDIR)\AvailStats.obj" \
+	"$(INTDIR)\backfill_mgr.obj" \
+	"$(INTDIR)\boinc_mgr.obj" \
 	"$(INTDIR)\claim.obj" \
 	"$(INTDIR)\cod_mgr.obj" \
 	"$(INTDIR)\command.obj" \
@@ -143,8 +149,10 @@ LINK32_OBJS= \
 	"$(INTDIR)\Starter.obj" \
 	"$(INTDIR)\starter_mgr.obj" \
 	"$(INTDIR)\util.obj" \
-	"$(INTDIR)\backfill_mgr.obj" \
-	"$(INTDIR)\boinc_mgr.obj" \
+	"$(INTDIR)\vm_common.obj" \
+	"$(INTDIR)\VMMachine.obj" \
+	"$(INTDIR)\VMManager.obj" \
+	"$(INTDIR)\VMRegister.obj" \
 	"..\src\condor_util_lib\condor_util.lib" \
 	"$(OUTDIR)\condor_cpp_util.lib" \
 	"$(OUTDIR)\condor_classad.lib" \
@@ -205,6 +213,10 @@ CLEAN :
 	-@erase "$(INTDIR)\starter_mgr.obj"
 	-@erase "$(INTDIR)\util.obj"
 	-@erase "$(INTDIR)\vc60.idb"
+	-@erase "$(INTDIR)\vm_common.obj"
+	-@erase "$(INTDIR)\VMMachine.obj"
+	-@erase "$(INTDIR)\VMManager.obj"
+	-@erase "$(INTDIR)\VMRegister.obj"
 	-@erase "$(OUTDIR)\condor_startd.exe"
 	-@erase "$(OUTDIR)\condor_startd.map"
 
@@ -253,6 +265,8 @@ LINK32=link.exe
 LINK32_FLAGS=../Release/condor_common.obj ../Release/condor_common_c.obj pdh.lib $(CONDOR_LIB) $(CONDOR_LIBPATH) $(CONDOR_GSOAP_LIB) $(CONDOR_GSOAP_LIBPATH) $(CONDOR_KERB_LIB) $(CONDOR_KERB_LIBPATH) $(CONDOR_PCRE_LIB) $(CONDOR_PCRE_LIBPATH) $(CONDOR_GLOBUS_LIB) $(CONDOR_GLOBUS_LIBPATH) $(CONDOR_OPENSSL_LIB) $(CONDOR_POSTGRESQL_LIB) $(CONDOR_OPENSSL_LIBPATH) $(CONDOR_POSTGRESQL_LIBPATH) /nologo /subsystem:console /pdb:none /map:"$(INTDIR)\condor_startd.map" /debug /machine:I386 /out:"$(OUTDIR)\condor_startd.exe" /SWAPRUN:NET 
 LINK32_OBJS= \
 	"$(INTDIR)\AvailStats.obj" \
+	"$(INTDIR)\backfill_mgr.obj" \
+	"$(INTDIR)\boinc_mgr.obj" \
 	"$(INTDIR)\claim.obj" \
 	"$(INTDIR)\cod_mgr.obj" \
 	"$(INTDIR)\command.obj" \
@@ -273,8 +287,10 @@ LINK32_OBJS= \
 	"$(INTDIR)\Starter.obj" \
 	"$(INTDIR)\starter_mgr.obj" \
 	"$(INTDIR)\util.obj" \
-	"$(INTDIR)\backfill_mgr.obj" \
-	"$(INTDIR)\boinc_mgr.obj" \
+	"$(INTDIR)\vm_common.obj" \
+	"$(INTDIR)\VMMachine.obj" \
+	"$(INTDIR)\VMManager.obj" \
+	"$(INTDIR)\VMRegister.obj" \
 	"..\src\condor_util_lib\condor_util.lib" \
 	"$(OUTDIR)\condor_cpp_util.lib" \
 	"$(OUTDIR)\condor_classad.lib" \
@@ -673,6 +689,30 @@ SOURCE=..\src\condor_startd.V6\starter_mgr.C
 SOURCE=..\src\condor_startd.V6\util.C
 
 "$(INTDIR)\util.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\src\condor_startd.V6\vm_common.C
+
+"$(INTDIR)\vm_common.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\src\condor_startd.V6\VMMachine.C
+
+"$(INTDIR)\VMMachine.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\src\condor_startd.V6\VMManager.C
+
+"$(INTDIR)\VMManager.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\src\condor_startd.V6\VMRegister.C
+
+"$(INTDIR)\VMRegister.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 

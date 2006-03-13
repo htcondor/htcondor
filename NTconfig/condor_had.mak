@@ -53,6 +53,7 @@ CLEAN :
 	-@erase "$(INTDIR)\soap_hadServer.obj"
 	-@erase "$(INTDIR)\soap_hadStub.obj"
 	-@erase "$(INTDIR)\StateMachine.obj"
+	-@erase "$(INTDIR)\Utils.obj"
 	-@erase "$(INTDIR)\vc60.idb"
 	-@erase "$(INTDIR)\vc60.pdb"
 	-@erase "$(OUTDIR)\condor_had.exe"
@@ -108,6 +109,7 @@ LINK32_OBJS= \
 	"$(INTDIR)\soap_hadServer.obj" \
 	"$(INTDIR)\soap_hadStub.obj" \
 	"$(INTDIR)\StateMachine.obj" \
+	"$(INTDIR)\Utils.obj" \
 	"$(OUTDIR)\condor_classad.lib" \
 	"$(OUTDIR)\condor_cpp_util.lib" \
 	"$(OUTDIR)\condor_daemon_core.lib" \
@@ -149,6 +151,7 @@ CLEAN :
 	-@erase "$(INTDIR)\soap_hadServer.obj"
 	-@erase "$(INTDIR)\soap_hadStub.obj"
 	-@erase "$(INTDIR)\StateMachine.obj"
+	-@erase "$(INTDIR)\Utils.obj"
 	-@erase "$(INTDIR)\vc60.idb"
 	-@erase "$(OUTDIR)\condor_had.exe"
 	-@erase "$(OUTDIR)\condor_had.map"
@@ -202,6 +205,7 @@ LINK32_OBJS= \
 	"$(INTDIR)\soap_hadServer.obj" \
 	"$(INTDIR)\soap_hadStub.obj" \
 	"$(INTDIR)\StateMachine.obj" \
+	"$(INTDIR)\Utils.obj" \
 	"$(OUTDIR)\condor_classad.lib" \
 	"$(OUTDIR)\condor_cpp_util.lib" \
 	"$(OUTDIR)\condor_daemon_core.lib" \
@@ -491,9 +495,51 @@ CPP_SWITCHES=/nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D
 
 SOURCE=..\src\condor_had\StateMachine.C
 
-"$(INTDIR)\StateMachine.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
+!IF  "$(CFG)" == "condor_had - Win32 Debug"
 
+CPP_SWITCHES=/nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c 
+
+"$(INTDIR)\StateMachine.obj" : $(SOURCE) "$(INTDIR)"
+	$(CPP) @<<
+  $(CPP_SWITCHES) $(SOURCE)
+<<
+
+
+!ELSEIF  "$(CFG)" == "condor_had - Win32 Release"
+
+CPP_SWITCHES=/nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c 
+
+"$(INTDIR)\StateMachine.obj" : $(SOURCE) "$(INTDIR)"
+	$(CPP) @<<
+  $(CPP_SWITCHES) $(SOURCE)
+<<
+
+
+!ENDIF 
+
+SOURCE=..\src\condor_had\Utils.C
+
+!IF  "$(CFG)" == "condor_had - Win32 Debug"
+
+CPP_SWITCHES=/nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c 
+
+"$(INTDIR)\Utils.obj" : $(SOURCE) "$(INTDIR)"
+	$(CPP) @<<
+  $(CPP_SWITCHES) $(SOURCE)
+<<
+
+
+!ELSEIF  "$(CFG)" == "condor_had - Win32 Release"
+
+CPP_SWITCHES=/nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c 
+
+"$(INTDIR)\Utils.obj" : $(SOURCE) "$(INTDIR)"
+	$(CPP) @<<
+  $(CPP_SWITCHES) $(SOURCE)
+<<
+
+
+!ENDIF 
 
 
 !ENDIF 
