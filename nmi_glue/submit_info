@@ -36,7 +36,7 @@ prereqs = tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, \
 # per-platform prereqs 
 prereqs_alpha_osf_V5.1   = gcc-2.95.3, binutils-2.15, perl-5.8.5
 prereqs_alpha_rh_7.2     = gcc-2.96, binutils-2.15, perl-5.8.5
-prereqs_hppa_hpux_11     = binutils-2.15, coreutils-5.2.1 
+prereqs_hppa_hpux_11     = binutils-2.15, coreutils-5.2.1, gcc-3.4.3
 prereqs_irix_6.5         = egcs-2.91.66, perl-5.8.5
 prereqs_ppc_aix_5.2      = vac-6, vacpp-6, perl-5.8.5
 prereqs_sun4u_sol_5.8    = gcc-2.95.3, binutils-2.15, perl-5.8.5
