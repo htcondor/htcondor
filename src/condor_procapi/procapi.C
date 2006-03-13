@@ -1612,9 +1612,9 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status )
 	double now_secs = procRaw.sample_time / procRaw.object_frequency;
 
 		// calculate the age
-	double age_wrong_scale = procRaw.sample_time - ((double)procRaw.creation_time);
+	double age_wrong_scale = procRaw.sample_time - (procRaw.creation_time);
 	pi->age = (long)(age_wrong_scale / procRaw.object_frequency);
-	
+
 			// copy the remainder of the field
 	pi->pid       = procRaw.pid;
     pi->ppid      = procRaw.ppid;
@@ -1780,12 +1780,12 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 
 	procRaw.majfault  = (long) *((long*)(ctrblk + offsets->faults  ));
 	procRaw.minfault  = 0;  // not supported by NT; all faults lumped into major.
-	procRaw.user_time_1 = (long) (LI_to_double( ut ));
+	procRaw.user_time_1 = LI_to_double(ut);
 	procRaw.user_time_2 = 0;
-    procRaw.sys_time_1  = (long) (LI_to_double( st ));
+    procRaw.sys_time_1  = LI_to_double(st);
 	procRaw.sys_time_2 = 0;
 
-	procRaw.creation_time = (long) (LI_to_double( elt ));
+	procRaw.creation_time = LI_to_double( elt );
 	procRaw.cpu_time	=  LI_to_double( pt );
 
 		// set the sample time and object frequency

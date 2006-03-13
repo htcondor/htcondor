@@ -280,31 +280,40 @@ typedef struct procInfo * piPTR;
   are determined by the OS.
 */
 typedef struct procInfoRaw{
-	  unsigned long imgsize;
-	  unsigned long rssize;
-	  long minfault;
-	  long majfault;
+	unsigned long imgsize;
+	unsigned long rssize;
+	long minfault;
+	long majfault;
+	pid_t pid;
+	pid_t ppid;
+	uid_t owner;
+	
+		// Times are different on Windows
+#ifndef WIN32
 		  // some systems return these times
 		  // in a combination of 2 units
 		  // *_1 is always the larger units
-	  long user_time_1;
-	  long user_time_2;
-	  long sys_time_1;
-	  long sys_time_2;
-
-	  pid_t pid;
-	  pid_t ppid;
-	  long creation_time;
-	  uid_t owner;
-
-#ifndef WIN32
-	  long sample_time;
+	long user_time_1;
+	long user_time_2;
+	long sys_time_1;
+	long sys_time_2;
+	long creation_time;
+	long sample_time;
 #endif // not defined WIN32
+
 // Windows does it different
 #ifdef WIN32 
-	  double sample_time;
-	  double object_frequency;
-	  double cpu_time;
+	double user_time_1;
+	double user_time_2;
+	double sys_time_1;
+	double sys_time_2;
+
+	
+	double creation_time;
+	double sample_time;
+
+	double object_frequency;
+	double cpu_time;
 #endif //WIN32
 
 // special process flags for Linux
