@@ -38,6 +38,7 @@
 
 #include "condor_common.h"
 #include "startd.h"
+#include "my_popen.h"
 
 
 StarterMgr::StarterMgr()

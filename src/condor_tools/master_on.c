@@ -37,6 +37,7 @@
 #include <afs/stds.h>
 #include <afs/afs.h>
 #include <sys/syscall.h>
+#include "my_popen.h"
 extern int errno;
 
 static char* static_master_path = "/unsup/condor/sbin/condor_master";

@@ -27,7 +27,7 @@
 #include "condor_uid.h"
 #include "condor_email.h"
 #include "my_hostname.h"
-#include "util_lib_proto.h"
+#include "my_popen.h"
 
 #define EMAIL_SUBJECT_PROLOG "[Condor] "
 

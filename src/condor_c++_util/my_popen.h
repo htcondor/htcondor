@@ -20,44 +20,22 @@
   * RIGHT.
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-#include "condor_common.h"
-#include "util_lib_proto.h"
 
-int main( int argc, const char *argv[] )
-{
-	int		status;
-	int		i;
+#ifndef __MY_POPEN__
+#define __MY_POPEN__
 
-	/* Check the command line */
-	if ( argc < 2 ) {
-		fprintf( stderr, "usage: test_spawn program [args]\n" );
-		exit( 1 );
-	}
+BEGIN_C_DECLS
 
-		/* set our effective uid/gid for testing */
-	setegid( 99 );
-	seteuid( 99 );
+FILE *my_popenv( char *const argv[], const char * mode );
+int my_pclose( FILE *fp );
+int my_spawnl( const char* cmd, ... );
+int my_spawnv( const char* cmd, char *const argv[] );
 
+END_C_DECLS
 
+#if defined(__cplusplus)
+#include "condor_arglist.h"
+FILE *my_popen( ArgList &args, const char * mode );
+#endif
 
-	/* Test spawnv */
-	char *const *targv = (char *const*) argv;
-	printf( "\nTesting spawnv:\n" );
-	printf( "  running: '" );
-	for( i = 1;  i < argc;  i++ ) {
-		printf( "%s ", argv[i] );
-	}
-	printf( "'\n" );
-	status = my_spawnv( argv[1], targv+1 );
-	printf( "  spawnv returned %d\n", status );
-
-
-	/* Test spawnl */
-	printf( "\nTesting spawnl:\n" );
-	printf( "  Running: '/bin/echo a b c d'\n" );
-	status = my_spawnl( "/bin/echo", TRUE,
-						"echo", "a", "b", "c", "d", NULL );
-	printf( "  spawnl returned %d\n", status );
-
-	return 0;
-}
+#endif

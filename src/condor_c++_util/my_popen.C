@@ -24,7 +24,8 @@
 #define _POSIX_SOURCE
 #include "condor_common.h"
 #include "condor_debug.h"
-#include "util_lib_proto.h"
+#include "condor_arglist.h"
+#include "my_popen.h"
 
 #ifdef WIN32
 typedef HANDLE child_handle_t;
@@ -44,7 +45,7 @@ struct popen_entry *popen_entry_head = NULL;
 
 static void add_child(FILE* fp, child_handle_t ch)
 {
-	struct popen_entry *pe = malloc(sizeof(struct popen_entry));
+	struct popen_entry *pe = (struct popen_entry *)malloc(sizeof(struct popen_entry));
 	pe->fp = fp;
 	pe->ch = ch;
 	pe->next = popen_entry_head;
@@ -81,11 +82,6 @@ static child_handle_t remove_child(FILE* fp)
   status so that it doesn't reap status information for other
   processes which the calling code may want to reap.
 
-  FIXME: The windows version of my_popenv() does not support
-  arguments that contain double quotes or end in a backslash.
-  This can be fixed by using the ArgList class to generate the
-  command line.
-
   However, we do *NOT* "eat" SIGCHLD, since a) SIGCHLD is
   probably blocked when this method is invoked, b) there are cases
   where our attempt to eat SIGCHLD might result in eating too many of
@@ -101,72 +97,6 @@ static child_handle_t remove_child(FILE* fp)
 #ifdef WIN32
 
 /* Windows versions of my_popen / my_pclose */
-
-/*
-  Utility function to build a command line suitable for Create_Process.
-  We quote each argument in order to handle spaces in args. The pointer
-  returned from this function should be free()d when no longer needed.
-  This function fails (returns NULL) if any argument contains double
-  quotes or ends in a backslash.
-*/
-static char*
-build_cmdline(char *const args[])
-{
-	const char *arg;
-	int i, arg_count;
-	char *cmdline;
-	int cmdline_size;
-	const char *srcp;
-	char *dstp;
-	int illegal = 0;
-
-	if (args == NULL)
-		return NULL;
-
-	/* first pass: determine size */
-	arg_count = 0;
-	cmdline_size = 0;
-	for (i = 0; (arg = args[i]) != NULL; i++) {
-		/* update size (add 3 for quotes and space/null) */
-		cmdline_size += 3 + strlen(args[i]);
-		arg_count++;
-	}
-	if (arg_count == 0)
-		return NULL;
-
-	/* second pass: build the string */
-	cmdline = (char *)malloc(cmdline_size);
-	dstp = cmdline;
-	for (i = 0; i < arg_count; i++) {
-		*(dstp++) = '\"';
-		srcp = args[i];
-		while (*srcp != '\0') {
-			if (*(srcp) == '\"') {
-				illegal = 1;
-			}
-			*(dstp++) = *(srcp++);
-		}
-		if (*(dstp - 1) == '\\') {
-			illegal = 1;
-		}
-		*(dstp++) = '\"';
-		*(dstp++) = ' ';
-	}
-	*(dstp - 1) = '\0';
-
-	if (illegal) {
-		/*
-		  bail out it any arg had a double quote or backslash as the last character
-		  this should be moved over to using the ArgList class in V6.7
-		*/
-		dprintf(D_ALWAYS, "my_popen: invalid double-quote or backslash in command line (%s)\n",
-			cmdline);
-		free(cmdline);
-		return NULL;
-	}
-
-	return cmdline;
-}
 
 static FILE *
 my_popen(const char *const_cmd, const char *mode)
@@ -270,23 +200,31 @@ my_popen(const char *const_cmd, const char *mode)
 	return retval;
 }
 
-FILE *my_popenv(char *const args[], const char *mode)
+FILE *
+my_popen(ArgList &args, const char *mode)
 {
-	char *cmdline;
-	FILE *fp;
-
-	cmdline = build_cmdline(args);
-	if (cmdline == NULL) {
-		dprintf(D_ALWAYS, "mypopenv: invalid args\n");
+	MyString cmdline, err;
+	if (!args.GetArgsStringWin32(&cmdline, 0, &err)) {
+		dprintf(D_ALWAYS, "my_popen: error making command line: %s\n", err.Value());
 		return NULL;
 	}
-	fp = my_popen(cmdline, mode);
-	free(cmdline);
 
-	return fp;
+	return my_popen(cmdline.Value(), mode);	
 }
 
-int
+extern "C" FILE *
+my_popenv(char *const args[], const char *mode)
+{
+	// build the argument list
+	ArgList arglist;
+	for (int i = 0; args[i] != NULL; i++) {
+		arglist.AppendArg(args[i]);
+	}
+
+	return my_popen(arglist, mode);
+}
+
+extern "C" int
 my_pclose(FILE *fp)
 {
 	HANDLE hChildProcess;
@@ -315,10 +253,12 @@ my_pclose(FILE *fp)
 
 /* UNIX versions of my_popen(v) / my_pclose */
 
+#include <grp.h> // for setgroups
+
 static int	READ_END = 0;
 static int	WRITE_END = 1;
 
-FILE *
+extern "C" FILE *
 my_popenv( char *const args[], const char * mode )
 {
 	int	pipe_d[2];
@@ -395,7 +335,17 @@ my_popenv( char *const args[], const char * mode )
 	return retp;
 }
 
-int
+FILE *
+my_popen(ArgList &args, const char *mode)
+{
+	char **string_array = args.GetStringArray();
+	FILE *fp = my_popenv(string_array, mode);
+	deleteStringArray(string_array);
+
+	return fp;
+}
+
+extern "C" int
 my_pclose(FILE *fp)
 {
 	int			status;
@@ -435,7 +385,7 @@ pid_t ChildPid = 0;
     0: Success (wait == true)
 */
 #define MAXARGS	32
-int
+extern "C" int
 my_spawnl( const char* cmd, ... )
 {
 	int		rval;
@@ -476,7 +426,7 @@ my_spawnl( const char* cmd, ... )
     -1: failure
     >0 == Return status of child
 */
-int
+extern "C" int
 my_spawnv( const char* cmd, char *const argv[] )
 {
 	int					status;
@@ -533,25 +483,3 @@ my_spawnv( const char* cmd, char *const argv[] )
 }
 
 #endif // ndef WIN32
-
-/*
-  This is a system(3)-like function that does not call out to
-  the shell. It is implemented on top of my_popenv().
-
-  FIXME: The windows version of my_systemv() does not support
-  arguments that contain double quotes or end in a backslash.
-  This can be fixed by using the ArgList class to generate the
-  command line.
-*/
-
-int
-my_systemv(char *const args[])
-{
-	FILE *fp;
-
-	fp = my_popenv(args, "w");
-	if (fp == NULL)
-		return -1;
-
-	return my_pclose(fp);
-}

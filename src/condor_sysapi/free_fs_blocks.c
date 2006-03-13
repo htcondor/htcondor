@@ -30,6 +30,7 @@
 
 #include "sysapi.h"
 #include "sysapi_externs.h"
+#include "my_popen.h"
 
 /* static function declarations */
 static int reserve_for_afs_cache();

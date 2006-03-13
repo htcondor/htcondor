@@ -43,6 +43,7 @@
 #include <errno.h>
 
 #include "list.h"
+#include "my_popen.h"
 
 class CondorPid {
 public:

@@ -161,7 +161,8 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	New_classads_obj setenv.o condor_id.o build_job_env.o job_lease.o \
 	gahp_common.o \
 	condor_arglist.o store_cred.o \
-	exponential_backoff.o
+	exponential_backoff.o \
+	my_popen.o
 
 library_target(cplus_lib.a,$(OBJ))
 library_target(liburl.a,$(URL_OBJ))
@@ -181,6 +182,7 @@ c_plus_target(test_classad_merge,test_classad_merge.o,$(LIB))
 c_plus_target(test_mystring,test_mystring.o,$(LIB))
 c_plus_target(test_condor_arglist,test_condor_arglist.o,$(LIB))
 c_plus_target(test_condor_crontab,test_condor_crontab.o,$(LIB))
+c_plus_target(test_spawn,test_spawn.o,$(LIB))
 
 /* this needs to be built more like a user would use the library, so it */
 /* can't have all of our usual cflags... */

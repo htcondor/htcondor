@@ -37,7 +37,7 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "sysapi.h"
-#include "../h/util_lib_proto.h"
+#include "my_popen.h"
 
 /* the cooked version */
 float

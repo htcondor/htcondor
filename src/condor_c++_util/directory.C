@@ -31,6 +31,7 @@
 #include "stat_wrapper.h"
 #include "perm.h"
 #include "my_username.h"
+#include "my_popen.h"
 
 
 // Set DEBUG_DIRECTORY_CLASS to 1 to not actually remove

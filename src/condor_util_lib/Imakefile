@@ -54,7 +54,7 @@ INET_NTOA_OBJ = inet_ntoa.o
 	$(GETDTABLESIZE_OBJ) $(MALLOC_OBJ)\
 	$(SETEGID_OBJ) $(SETEUID_OBJ) $(GETPAGESIZE_OBJ) $(SETLINEBUF_OBJ) \
 	$(GETWD_OBJ) ckpt_name.o \
-	lock_file.NON_POSIX.o my_popen.o $(GETMNT_OBJ) $(INET_NTOA_OBJ) \
+	lock_file.NON_POSIX.o $(GETMNT_OBJ) $(INET_NTOA_OBJ) \
 	syscall_numbers.o sig_install.o internet.o startup_info.o escapes.o\
 	ckpt_util.o get_random_num.o fdprintf.o rotate_file.o \
 	setsyscalls.o match_prefix.o sleep.o basename.o strcmp_until.o\
@@ -72,9 +72,6 @@ test_snprintf: test_snprintf.o util_lib.a
 
 test_uids: test_uids.o
 	$(CC) $(CFLAGS) -o test_uids test_uids.o
-
-test_spawn: test_spawn.o my_popen.o
-	$(CC) $(CFLAGS) -o test_spawn test_spawn.o my_popen.o
 
 test_exit_utils: test_exit_utils.o
 	$(CC) $(CFLAGS) -o test_exit_utils test_exit_utils.o util_lib.a

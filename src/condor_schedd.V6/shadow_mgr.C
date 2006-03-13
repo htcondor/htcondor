@@ -28,6 +28,7 @@
 #include "condor_attributes.h"
 #include "condor_string.h"
 #include "classad_merge.h"
+#include "my_popen.h"
 
 /*
 
