@@ -629,6 +629,14 @@ SOURCE="..\src\condor_c++_util\my_hostname.C"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\my_popen.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\my_popen.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\my_subsystem.C"
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File

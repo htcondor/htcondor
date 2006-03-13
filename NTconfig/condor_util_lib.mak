@@ -70,7 +70,6 @@ CLEAN :
 	-@erase "$(INTDIR)\match_prefix.obj"
 	-@erase "$(INTDIR)\mkargv.obj"
 	-@erase "$(INTDIR)\my_getopt.obj"
-	-@erase "$(INTDIR)\my_popen.obj"
 	-@erase "$(INTDIR)\nullfile.obj"
 	-@erase "$(INTDIR)\printf_format.obj"
 	-@erase "$(INTDIR)\proc.obj"
@@ -162,7 +161,6 @@ LIB32_OBJS= \
 	"$(INTDIR)\match_prefix.obj" \
 	"$(INTDIR)\mkargv.obj" \
 	"$(INTDIR)\my_getopt.obj" \
-	"$(INTDIR)\my_popen.obj" \
 	"$(INTDIR)\nullfile.obj" \
 	"$(INTDIR)\printf_format.obj" \
 	"$(INTDIR)\proc.obj" \
@@ -222,7 +220,6 @@ CLEAN :
 	-@erase "$(INTDIR)\match_prefix.obj"
 	-@erase "$(INTDIR)\mkargv.obj"
 	-@erase "$(INTDIR)\my_getopt.obj"
-	-@erase "$(INTDIR)\my_popen.obj"
 	-@erase "$(INTDIR)\nullfile.obj"
 	-@erase "$(INTDIR)\printf_format.obj"
 	-@erase "$(INTDIR)\proc.obj"
@@ -313,7 +310,6 @@ LIB32_OBJS= \
 	"$(INTDIR)\match_prefix.obj" \
 	"$(INTDIR)\mkargv.obj" \
 	"$(INTDIR)\my_getopt.obj" \
-	"$(INTDIR)\my_popen.obj" \
 	"$(INTDIR)\nullfile.obj" \
 	"$(INTDIR)\printf_format.obj" \
 	"$(INTDIR)\proc.obj" \
@@ -584,12 +580,6 @@ SOURCE=..\src\condor_util_lib\mkargv.c
 SOURCE=..\src\condor_util_lib\my_getopt.c
 
 "$(INTDIR)\my_getopt.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common_c.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
-
-
-SOURCE=..\src\condor_util_lib\my_popen.c
-
-"$(INTDIR)\my_popen.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common_c.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 

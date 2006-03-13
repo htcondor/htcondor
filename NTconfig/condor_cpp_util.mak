@@ -110,6 +110,7 @@ CLEAN :
 	-@erase "$(INTDIR)\my_distribution.obj"
 	-@erase "$(INTDIR)\my_dynuser.obj"
 	-@erase "$(INTDIR)\my_hostname.obj"
+	-@erase "$(INTDIR)\my_popen.obj"
 	-@erase "$(INTDIR)\my_subsystem.obj"
 	-@erase "$(INTDIR)\my_username.obj"
 	-@erase "$(INTDIR)\MyString.obj"
@@ -291,7 +292,8 @@ LIB32_OBJS= \
 	"$(INTDIR)\user_log.obj" \
 	"$(INTDIR)\utc_time.obj" \
 	"$(INTDIR)\which.obj" \
-	"$(INTDIR)\windows_firewall.obj"
+	"$(INTDIR)\windows_firewall.obj" \
+	"$(INTDIR)\my_popen.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -383,6 +385,7 @@ CLEAN :
 	-@erase "$(INTDIR)\my_distribution.obj"
 	-@erase "$(INTDIR)\my_dynuser.obj"
 	-@erase "$(INTDIR)\my_hostname.obj"
+	-@erase "$(INTDIR)\my_popen.obj"
 	-@erase "$(INTDIR)\my_subsystem.obj"
 	-@erase "$(INTDIR)\my_username.obj"
 	-@erase "$(INTDIR)\MyString.obj"
@@ -563,7 +566,8 @@ LIB32_OBJS= \
 	"$(INTDIR)\user_log.obj" \
 	"$(INTDIR)\utc_time.obj" \
 	"$(INTDIR)\which.obj" \
-	"$(INTDIR)\windows_firewall.obj"
+	"$(INTDIR)\windows_firewall.obj" \
+	"$(INTDIR)\my_popen.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -1060,6 +1064,12 @@ SOURCE="..\src\condor_c++_util\my_dynuser.C"
 SOURCE="..\src\condor_c++_util\my_hostname.C"
 
 "$(INTDIR)\my_hostname.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE="..\src\condor_c++_util\my_popen.C"
+
+"$(INTDIR)\my_popen.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
