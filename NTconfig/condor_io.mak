@@ -25,9 +25,6 @@ NULL=
 NULL=nul
 !ENDIF 
 
-CPP=cl.exe
-RSC=rc.exe
-
 !IF  "$(CFG)" == "condor_io - Win32 Debug"
 
 OUTDIR=.\..\Debug
@@ -70,7 +67,40 @@ CLEAN :
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
+CPP=cl.exe
 CPP_PROJ=/nologo /MTd /W3 /Gm /Gi /GX /Zi /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c 
+
+.c{$(INTDIR)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cpp{$(INTDIR)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cxx{$(INTDIR)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.c{$(INTDIR)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cpp{$(INTDIR)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cxx{$(INTDIR)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+RSC=rc.exe
 BSC32=bscmake.exe
 BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_io.bsc" 
 BSC32_SBRS= \
@@ -85,6 +115,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\condor_auth_anonymous.obj" \
 	"$(INTDIR)\condor_auth_claim.obj" \
 	"$(INTDIR)\condor_auth_kerberos.obj" \
+	"$(INTDIR)\condor_auth_passwd.obj" \
 	"$(INTDIR)\condor_auth_sspi.obj" \
 	"$(INTDIR)\condor_crypt.obj" \
 	"$(INTDIR)\condor_crypt_3des.obj" \
@@ -99,8 +130,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\SafeMsg.obj" \
 	"$(INTDIR)\sock.obj" \
 	"$(INTDIR)\sockCache.obj" \
-	"$(INTDIR)\stream.obj" \
-	"$(INTDIR)\condor_auth_passwd.obj"
+	"$(INTDIR)\stream.obj"
 
 "$(OUTDIR)\condor_io.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -148,44 +178,8 @@ CLEAN :
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
+CPP=cl.exe
 CPP_PROJ=/nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c 
-BSC32=bscmake.exe
-BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_io.bsc" 
-BSC32_SBRS= \
-	
-LIB32=link.exe -lib
-LIB32_FLAGS=/nologo /out:"$(OUTDIR)\condor_io.lib" 
-LIB32_OBJS= \
-	"$(INTDIR)\authentication.obj" \
-	"$(INTDIR)\buffers.obj" \
-	"$(INTDIR)\cedar_no_ckpt.obj" \
-	"$(INTDIR)\condor_auth.obj" \
-	"$(INTDIR)\condor_auth_anonymous.obj" \
-	"$(INTDIR)\condor_auth_claim.obj" \
-	"$(INTDIR)\condor_auth_kerberos.obj" \
-	"$(INTDIR)\condor_auth_sspi.obj" \
-	"$(INTDIR)\condor_crypt.obj" \
-	"$(INTDIR)\condor_crypt_3des.obj" \
-	"$(INTDIR)\condor_crypt_blowfish.obj" \
-	"$(INTDIR)\condor_rw.obj" \
-	"$(INTDIR)\condor_secman.obj" \
-	"$(INTDIR)\CryptKey.obj" \
-	"$(INTDIR)\errno_num.obj" \
-	"$(INTDIR)\open_flags.obj" \
-	"$(INTDIR)\reli_sock.obj" \
-	"$(INTDIR)\safe_sock.obj" \
-	"$(INTDIR)\SafeMsg.obj" \
-	"$(INTDIR)\sock.obj" \
-	"$(INTDIR)\sockCache.obj" \
-	"$(INTDIR)\stream.obj" \
-	"$(INTDIR)\condor_auth_passwd.obj"
-
-"$(OUTDIR)\condor_io.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
-    $(LIB32) @<<
-  $(LIB32_FLAGS) $(DEF_FLAGS) $(LIB32_OBJS)
-<<
-
-!ENDIF 
 
 .c{$(INTDIR)}.obj::
    $(CPP) @<<
@@ -216,6 +210,45 @@ LIB32_OBJS= \
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
+
+RSC=rc.exe
+BSC32=bscmake.exe
+BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_io.bsc" 
+BSC32_SBRS= \
+	
+LIB32=link.exe -lib
+LIB32_FLAGS=/nologo /out:"$(OUTDIR)\condor_io.lib" 
+LIB32_OBJS= \
+	"$(INTDIR)\authentication.obj" \
+	"$(INTDIR)\buffers.obj" \
+	"$(INTDIR)\cedar_no_ckpt.obj" \
+	"$(INTDIR)\condor_auth.obj" \
+	"$(INTDIR)\condor_auth_anonymous.obj" \
+	"$(INTDIR)\condor_auth_claim.obj" \
+	"$(INTDIR)\condor_auth_kerberos.obj" \
+	"$(INTDIR)\condor_auth_passwd.obj" \
+	"$(INTDIR)\condor_auth_sspi.obj" \
+	"$(INTDIR)\condor_crypt.obj" \
+	"$(INTDIR)\condor_crypt_3des.obj" \
+	"$(INTDIR)\condor_crypt_blowfish.obj" \
+	"$(INTDIR)\condor_rw.obj" \
+	"$(INTDIR)\condor_secman.obj" \
+	"$(INTDIR)\CryptKey.obj" \
+	"$(INTDIR)\errno_num.obj" \
+	"$(INTDIR)\open_flags.obj" \
+	"$(INTDIR)\reli_sock.obj" \
+	"$(INTDIR)\safe_sock.obj" \
+	"$(INTDIR)\SafeMsg.obj" \
+	"$(INTDIR)\sock.obj" \
+	"$(INTDIR)\sockCache.obj" \
+	"$(INTDIR)\stream.obj"
+
+"$(OUTDIR)\condor_io.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
+    $(LIB32) @<<
+  $(LIB32_FLAGS) $(DEF_FLAGS) $(LIB32_OBJS)
+<<
+
+!ENDIF 
 
 
 !IF "$(NO_EXTERNAL_DEPS)" != "1"

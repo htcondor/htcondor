@@ -112,22 +112,54 @@ SOURCE=..\src\condor_had\FilesOperations.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_had\Transferer.C
+SOURCE=..\src\condor_had\soap_transfererC.C
+
+!IF  "$(CFG)" == "condor_transferer - Win32 Release"
+
 # SUBTRACT CPP /YX /Yc /Yu
+
+!ELSEIF  "$(CFG)" == "condor_transferer - Win32 Debug"
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_had\soap_transfererC.C
-# SUBTRACT CPP /YX /Yc /Yu
+SOURCE=..\src\condor_had\soap_transfererH.h
 # End Source File
 # Begin Source File
 
 SOURCE=..\src\condor_had\soap_transfererServer.C
+
+!IF  "$(CFG)" == "condor_transferer - Win32 Release"
+
 # SUBTRACT CPP /YX /Yc /Yu
+
+!ELSEIF  "$(CFG)" == "condor_transferer - Win32 Debug"
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
 SOURCE=..\src\condor_had\soap_transfererStub.C
+
+!IF  "$(CFG)" == "condor_transferer - Win32 Release"
+
+# SUBTRACT CPP /YX /Yc /Yu
+
+!ELSEIF  "$(CFG)" == "condor_transferer - Win32 Debug"
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_had\soap_transfererStub.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_had\Transferer.C
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File

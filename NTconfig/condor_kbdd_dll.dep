@@ -1,12 +1,2 @@
 # Microsoft Developer Studio Generated Dependency File, included by condor_kbdd_dll.mak
 
-"..\src\condor_kbdd\NT-kbdd-dll.C" : \
-	"c:\program files\microsoft platform sdk\include\basetsd.h"\
-	"c:\program files\microsoft platform sdk\include\guiddef.h"\
-	"c:\program files\microsoft platform sdk\include\propidl.h"\
-	"c:\program files\microsoft platform sdk\include\reason.h"\
-	"c:\program files\microsoft platform sdk\include\specstrings.h"\
-	"c:\program files\microsoft platform sdk\include\stralign.h"\
-	"c:\program files\microsoft platform sdk\include\tvout.h"\
-	"c:\program files\microsoft platform sdk\include\winefs.h"\
-	

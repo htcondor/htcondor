@@ -89,8 +89,8 @@ LIB32=link.exe -lib
 LIB32_FLAGS=/nologo /out:"$(OUTDIR)\condor_procapi.lib" 
 LIB32_OBJS= \
 	"$(INTDIR)\procapi.obj" \
-	"$(INTDIR)\procinterface.obj" \
-	"$(INTDIR)\processid.obj"
+	"$(INTDIR)\processid.obj" \
+	"$(INTDIR)\procinterface.obj"
 
 "$(OUTDIR)\condor_procapi.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -160,8 +160,8 @@ LIB32=link.exe -lib
 LIB32_FLAGS=/nologo /out:"$(OUTDIR)\condor_procapi.lib" 
 LIB32_OBJS= \
 	"$(INTDIR)\procapi.obj" \
-	"$(INTDIR)\procinterface.obj" \
-	"$(INTDIR)\processid.obj"
+	"$(INTDIR)\processid.obj" \
+	"$(INTDIR)\procinterface.obj"
 
 "$(OUTDIR)\condor_procapi.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<

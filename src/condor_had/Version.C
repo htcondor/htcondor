@@ -1,4 +1,4 @@
-//#include "condor_common.h"
+#include "condor_common.h"
 // for 'daemonCore'
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 // for 'StatWrapper'
@@ -25,7 +25,7 @@ createFile(const MyString& filePath)
 
 Version::Version():
     m_gid( 0 ), m_logicalClock( 0 ), m_state( VERSION_REQUESTING ),
-	m_isPrimary( false )
+	m_isPrimary( FALSE )
 {
 }
 
@@ -119,7 +119,7 @@ Version::code( ReliSock& socket )
     if( ! socket.code( m_gid )          /*|| ! socket.eom( )*/ ||
         ! socket.code( m_logicalClock ) /*|| ! socket.eom( )*/ ||
         ! socket.code( temporarySinfulString ) /*|| ! socket.eom( )*/ || 
-		! socket.code( int( m_isPrimary ) ) ) {
+		! socket.code( m_isPrimary ) ) {
         dprintf( D_NETWORK, "Version::code "
                             "unable to code the version\n");
         return false;
@@ -169,7 +169,7 @@ Version::decode( Stream* stream )
     m_gid          = temporaryGid;
     m_logicalClock = temporaryLogicalClock;
     m_sinfulString = temporarySinfulString;
-	m_isPrimary    = bool( temporaryIsPrimary );
+	m_isPrimary    = temporaryIsPrimary;
     dprintf( D_FULLDEBUG, "Version::decode remote version %s\n", 
 			 toString( ).GetCStr( ) );
     free( temporarySinfulString );

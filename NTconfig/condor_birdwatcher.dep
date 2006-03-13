@@ -2,7 +2,9 @@
 
 ..\src\condor_birdwatcher\birdwatcher.cpp : \
 	"..\src\condor_birdwatcher\birdwatcher.h"\
-	"..\src\condor_birdwatcher\condorsystraycommon.h"\
+	"..\src\condor_birdwatcher\CondorSystrayCommon.h"\
+	"..\src\condor_birdwatcher\Resource.h"\
+	"..\src\condor_birdwatcher\StdAfx.h"\
 	"..\src\condor_birdwatcher\SystrayManager.h"\
 	"..\src\condor_birdwatcher\WindowsMessageReceiver.h"\
 	
@@ -16,12 +18,15 @@
 	"..\src\condor_birdwatcher\res\ico00002.ico"\
 	"..\src\condor_birdwatcher\res\ico00003.ico"\
 	"..\src\condor_birdwatcher\res\icon1.ico"\
+	"..\src\condor_birdwatcher\Resource.h"\
 	
 
 ..\src\condor_birdwatcher\birdWatcherDlg.cpp : \
 	"..\src\condor_birdwatcher\birdwatcher.h"\
 	"..\src\condor_birdwatcher\birdWatcherDlg.h"\
-	"..\src\condor_birdwatcher\condorsystraycommon.h"\
+	"..\src\condor_birdwatcher\CondorSystrayCommon.h"\
+	"..\src\condor_birdwatcher\Resource.h"\
+	"..\src\condor_birdwatcher\StdAfx.h"\
 	"..\src\condor_birdwatcher\SystrayManager.h"\
 	"..\src\condor_birdwatcher\SystrayMinimize.h"\
 	"..\src\condor_birdwatcher\WindowsMessageReceiver.h"\
@@ -29,22 +34,13 @@
 
 ..\src\condor_birdwatcher\StdAfx.cpp : \
 	"..\src\condor_birdwatcher\StdAfx.h"\
-	"c:\program files\microsoft platform sdk\include\basetsd.h"\
-	"c:\program files\microsoft platform sdk\include\guiddef.h"\
-	"c:\program files\microsoft platform sdk\include\propidl.h"\
-	"c:\program files\microsoft platform sdk\include\reason.h"\
-	"c:\program files\microsoft platform sdk\include\shldisp.h"\
-	"c:\program files\microsoft platform sdk\include\shobjidl.h"\
-	"c:\program files\microsoft platform sdk\include\shtypes.h"\
-	"c:\program files\microsoft platform sdk\include\specstrings.h"\
-	"c:\program files\microsoft platform sdk\include\stralign.h"\
-	"c:\program files\microsoft platform sdk\include\tvout.h"\
 	
 
 ..\src\condor_birdwatcher\SystrayManager.cpp : \
 	"..\src\condor_birdwatcher\birdwatcher.h"\
 	"..\src\condor_birdwatcher\birdWatcherDlg.h"\
-	"..\src\condor_birdwatcher\condorsystraycommon.h"\
+	"..\src\condor_birdwatcher\CondorSystrayCommon.h"\
+	"..\src\condor_birdwatcher\Resource.h"\
 	"..\src\condor_birdwatcher\SystrayManager.h"\
 	"..\src\condor_birdwatcher\SystrayMinimize.h"\
 	"..\src\condor_birdwatcher\WindowsMessageReceiver.h"\

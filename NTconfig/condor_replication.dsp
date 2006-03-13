@@ -106,22 +106,11 @@ SOURCE=..\src\condor_had\FilesOperations.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_had\had_Version.C
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_had\Replication.C
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_had\soap_replicationC.C
-# SUBTRACT CPP /YX /Yc /Yu
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_had\soap_replicationServer.C
-# SUBTRACT CPP /YX /Yc /Yu
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_had\soap_replicationStub.C
-# SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
 
@@ -138,17 +127,59 @@ SOURCE=..\src\condor_had\ReplicatorStateMachine.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_had\soap_replicationC.C
+
+!IF  "$(CFG)" == "condor_replication - Win32 Release"
+
+# SUBTRACT CPP /YX /Yc /Yu
+
+!ELSEIF  "$(CFG)" == "condor_replication - Win32 Debug"
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_had\soap_replicationH.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_had\soap_replicationServer.C
+
+!IF  "$(CFG)" == "condor_replication - Win32 Release"
+
+# SUBTRACT CPP /YX /Yc /Yu
+
+!ELSEIF  "$(CFG)" == "condor_replication - Win32 Debug"
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_had\soap_replicationStub.C
+
+!IF  "$(CFG)" == "condor_replication - Win32 Release"
+
+# SUBTRACT CPP /YX /Yc /Yu
+
+!ELSEIF  "$(CFG)" == "condor_replication - Win32 Debug"
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_had\soap_replicationStub.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_had\Utils.C
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
 
 SOURCE=..\src\condor_had\Utils.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_had\Version.C
-# SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
 

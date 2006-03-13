@@ -162,7 +162,7 @@ private:
 	ReplicatorState       m_state;
 	// added support for conservative policy of accepting updates from primary
 	// HAD machines only
-	bool				  m_isPrimary;
+	int					  m_isPrimary;
 };
 //bool operator == (const Version& , const Version& );
 
