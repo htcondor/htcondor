@@ -90,6 +90,12 @@ fails (this is only relevant if the \Opt{-UseDagDir} flag is used).
 
 \begin{itemize}
 
+\item Fixed a problem with parallel universe jobs with multiple
+procs (i.e. multiple queue statements in one submit file).
+Before, in such a case, the user log would have multiple
+submit events per cluster but only one terminate event.  This caused
+confusion for dagman.  Now there is one submit event and one terminate
+event for such parallel universe jobs.
 
 \item A ClassAd bug that has existed since the Condor 6.3 series has
 been fixed, and it might affect your pool. In a ClassAd, MY and TARGET
