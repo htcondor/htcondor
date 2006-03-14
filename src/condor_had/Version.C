@@ -115,11 +115,12 @@ Version::code( ReliSock& socket )
     socket.encode( );
 
     char* temporarySinfulString = const_cast<char*>( m_sinfulString.GetCStr() );
-    
+   	int isPrimaryAsInteger      = int( m_isPrimary );
+   
     if( ! socket.code( m_gid )          /*|| ! socket.eom( )*/ ||
         ! socket.code( m_logicalClock ) /*|| ! socket.eom( )*/ ||
         ! socket.code( temporarySinfulString ) /*|| ! socket.eom( )*/ || 
-		! socket.code( m_isPrimary ) ) {
+		! socket.code( isPrimaryAsInteger ) ) {
         dprintf( D_NETWORK, "Version::code "
                             "unable to code the version\n");
         return false;
