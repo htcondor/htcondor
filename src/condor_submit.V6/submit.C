@@ -4922,6 +4922,15 @@ queue(int num)
 		}
 		SubmitInfo[CurrentSubmitInfo].lastjob = ProcId;
 
+		// SubmitInfo[x].lastjob controls how many submit events we
+		// see in the user log.  For parallel jobs, we only want
+		// one "job" submit event per cluster, no matter how many 
+		// Procs are in that it.  Setting lastjob to zero makes this so.
+
+		if (JobUniverse == CONDOR_UNIVERSE_PARALLEL) {
+				SubmitInfo[CurrentSubmitInfo].lastjob = 0;
+		}
+
 		if ( job_ad_saved == false ) {
 			delete job;
 		}
