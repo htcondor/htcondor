@@ -323,6 +323,34 @@ public:
 		*/
 	bool startCommand( int cmd, Sock* sock,
 			int sec = 0, CondorError* errstack = NULL );
+			
+		/**
+		 * Contact another daemon and initiate the time offset range 
+		 * determination logic. We create a socket connection, pass the
+		 * DC_TIME_OFFSET command then pass the Stream to the cedar stub
+		 * code for time offset. If this method returns false, then
+		 * that means we were not able to coordinate our communications
+		 * with the remote daemon
+		 * 
+		 * @param offset - the reference placeholder for the range
+		 * @return true if it was able to contact the other Daemon
+		 **/
+ 	bool getTimeOffset( long &offset );
+ 	
+		/**
+		 * Contact another daemon and initiate the time offset range 
+		 * determination logic. We create a socket connection, pass the
+		 * DC_TIME_OFFSET command then pass the Stream to the cedar stub
+		 * code for time offset. The min/max range value placeholders
+		 * are passed in by reference. If this method returns false, then
+		 * that means for some reason we could not get the range and the
+		 * range values will default to a known value.
+		 * 
+		 * @param min_range - the minimum range value for the time offset
+		 * @param max_range - the maximum range value for the time offset
+		 * @return true if it was able to contact the other Daemon and get range
+		 **/
+	bool getTimeOffsetRange( long &min_range, long &max_range );
 
 protected:
 	// Data members

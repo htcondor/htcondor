@@ -39,6 +39,7 @@
 #include "HashTable.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "dc_collector.h"
+#include "time_offset.h"
 
 extern char *mySubSystem;
 
@@ -1704,3 +1705,99 @@ getCmHostFromConfig( const char * subsys )
 	return NULL;
 }
 
+/**
+ * Contact another daemon and initiate the time offset range 
+ * determination logic. We create a socket connection, pass the
+ * DC_TIME_OFFSET command then pass the Stream to the cedar stub
+ * code for time offset. If this method returns false, then
+ * that means we were not able to coordinate our communications
+ * with the remote daemon
+ * 
+ * @param offset - the reference placeholder for the range
+ * @return true if it was able to contact the other Daemon
+ **/
+bool
+Daemon::getTimeOffset( long &offset )
+{
+		//
+		// Initialize the offset to the default value
+		//
+	offset = TIME_OFFSET_DEFAULT;
+
+		//
+		// First establish a socket to the other daemon
+		//
+	ReliSock reli_sock;
+	reli_sock.timeout( 30 ); // I'm following what everbody else does
+	if( ! reli_sock.connect( this->_addr ) ) {
+		dprintf( D_FULLDEBUG, "Daemon::getTimeOffset() failed to connect "
+		     				  "to remote daemon at '%s'\n",
+		     				  this->_addr );
+		return ( false );
+	}
+		//
+		// Next send our command to prepare for the call out to the
+		// remote daemon
+		//
+	if( ! this->startCommand( DC_TIME_OFFSET, (Sock*)&reli_sock ) ) { 
+		dprintf( D_FULLDEBUG, "Daemon::getTimeOffset() failed to send "
+		     				  "command to remote daemon at '%s'\n", 
+		     				  this->_addr );
+		return ( false );
+	}
+		//
+		// Now that we have established a connection, we'll pass
+		// the ReliSock over to the time offset handling code
+		//
+	return ( time_offset_cedar_stub( (Stream*)&reli_sock, offset ) );
+}
+
+/**
+ * Contact another daemon and initiate the time offset range 
+ * determination logic. We create a socket connection, pass the
+ * DC_TIME_OFFSET command then pass the Stream to the cedar stub
+ * code for time offset. The min/max range value placeholders
+ * are passed in by reference. If this method returns false, then
+ * that means for some reason we could not get the range and the
+ * range values will default to a known value.
+ * 
+ * @param min_range - the minimum range value for the time offset
+ * @param max_range - the maximum range value for the time offset
+ * @return true if it was able to contact the other Daemon
+ **/
+bool
+Daemon::getTimeOffsetRange( long &min_range, long &max_range )
+{
+		//
+		// Initialize the ranges to the default value
+		//
+	min_range = max_range = TIME_OFFSET_DEFAULT;
+
+		//
+		// First establish a socket to the other daemon
+		//
+	ReliSock reli_sock;
+	reli_sock.timeout( 30 ); // I'm following what everbody else does
+	if( ! reli_sock.connect( this->_addr ) ) {
+		dprintf( D_FULLDEBUG, "Daemon::getTimeOffsetRange() failed to connect "
+		     				  "to remote daemon at '%s'\n",
+		     				  this->_addr );
+		return ( false );
+	}
+		//
+		// Next send our command to prepare for the call out to the
+		// remote daemon
+		//
+	if( ! this->startCommand( DC_TIME_OFFSET, (Sock*)&reli_sock ) ) { 
+		dprintf( D_FULLDEBUG, "Daemon::getTimeOffsetRange() failed to send "
+		     				  "command to remote daemon at '%s'\n", 
+		     				  this->_addr );
+		return ( false );
+	}
+		//
+		// Now that we have established a connection, we'll pass
+		// the ReliSock over to the time offset handling code
+		//
+	return ( time_offset_range_cedar_stub( (Stream*)&reli_sock,
+										   min_range, max_range ) );
+}

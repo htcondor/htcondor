@@ -138,57 +138,12 @@ UniShadow::init( ClassAd* job_ad, const char* schedd_addr )
 		Register_Command( SHADOW_UPDATEINFO, "SHADOW_UPDATEINFO",
 						  (CommandHandlercpp)&UniShadow::updateFromStarter, 
 						  "UniShadow::updateFromStarter", this, DAEMON );
-
-    	//
-    	// If the jobAd will ask to be deferred for execution on
-    	// the Starter side, the Shadow will first check to determine
-    	// what the time difference is between the Shadow & Starter
-    	// This offset will be stuffed into teh jobAd when it is shipped
-    	// over and the Starter will add the offset to the deferral time
-    	// 
-//    int deferralTime;
-//    if ( this->jobAd->LookupInteger( "DEFERRAL_TIME", deferralTime ) ) {
-//    	//
-//    	// Ask the Starter what the time difference is
-//    	//
-//		DCStartd* dc_startd = this->remRes->getDCStartd();
-//		if( ! dc_startd ) {
-//			dprintf( D_FULLDEBUG, "UniShadow::init() Failed to get dc_startd\n");
-//		} else {
-//				//
-//				// I am allocating this in since most of the time
-//				// it will never be needed
-//				//
-//			char buf[300];
-//			long offset;
-//			
-//			offset = dc_startd->getTimeOffset( );			
-//			sprintf( buf, "%s=%d", ATTR_DEFERRAL_OFFSET, offset );
-//		    if ( !this->jobAd->Insert( buf )) {
-//        		EXCEPT( "Failed to insert %s!", "DEFFERAL_OFFSET" );
-//    		} else {
-//    			dprintf( D_FULLDEBUG, "UniShadow::init(): Stored deferral time "
-//   									  "offset for starter as %d\n", offset );
-//		    }
-//		}
-//	} // DEFERRAL OFFSET
 }
 
 
 void
 UniShadow::spawn( void )
 {
-	/*
-		DCStartd* dc_startd = remRes->getDCStartd();
-		if( ! dc_startd ) {
-			dprintf( D_ALWAYS, "PAVLO: Failed to get the dc_startd!\n");
-		} else {
-			dprintf( D_ALWAYS, "PAVLO: Got the dc_startd, let's see if we "
-							   "can get the offset!\n" );
-			long offset = dc_startd->getTimeOffset( );
-		}
-	*/
-	
 	if( ! remRes->activateClaim() ) {
 			// we're screwed, give up:
 		shutDown( JOB_NOT_STARTED );

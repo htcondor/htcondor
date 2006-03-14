@@ -59,12 +59,6 @@ public:
 			@return true on success, false on invalid input (NULL)
 		*/
 	bool setClaimId( const char* id );
-	
-		/**
-		 * @return the time difference between the startd
-		 */
-	//long getTimeOffset( void );
-
 
 		/** @return the ClaimId string for this startd, NULL if we
 			don't have a value yet.

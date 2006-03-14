@@ -48,18 +48,27 @@ typedef struct TimeOffsetPacket {
 	time_t localArrive;
 } TimeOffsetPacket;
 
-//
+// --------------------------------------------
 // Cedar Specific Funtions
-//
-long time_offset_cedar_stub( Stream* );
-int time_offset_receive_cedar_stub( Service*, int, Stream* );
-int time_offset_codePacket_cedar( TimeOffsetPacket&, Stream* );
+// --------------------------------------------
+bool time_offset_cedar_stub( Stream*, long& );
+bool time_offset_range_cedar_stub( Stream*, long&, long& );
 
 //
-// Logic Functions
+// These methods are generic and could be used for the range
+// calculation or collecting offset information
 //
-int time_offset_receive( TimeOffsetPacket& );
-long time_offset_calculate( TimeOffsetPacket&, TimeOffsetPacket& );
+bool time_offset_send_cedar_stub( Stream*, TimeOffsetPacket&, TimeOffsetPacket& );
+bool time_offset_receive_cedar_stub( Service*, int, Stream* );
+bool time_offset_codePacket_cedar( TimeOffsetPacket&, Stream* );
+
+// --------------------------------------------
+// Logic Functions
+// --------------------------------------------
+bool time_offset_receive( TimeOffsetPacket& );
+bool time_offset_validate( TimeOffsetPacket&, TimeOffsetPacket& );
+bool time_offset_calculate( TimeOffsetPacket&, TimeOffsetPacket&, long& );
+bool time_offset_range_calculate( TimeOffsetPacket&, TimeOffsetPacket&, long&, long& );
 TimeOffsetPacket time_offset_initPacket( );
 
 #endif // TIME_OFFSET_H
