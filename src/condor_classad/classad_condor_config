@@ -4,5 +4,5 @@
 # two should point at this directory. Make sure to do 'make shared' to
 # get the shared library
 LOG = blah
-CLASSAD_LIB_PATH = /scratch/roy/v65/src/condor_classad/libshared.so
-CLASSAD_SCRIPT_DIRECTORY = /scratch/roy/v65/src/condor_classad
+CLASSAD_LIB_PATH = /scratch/roy/v67/src/condor_classad/libshared.so
+CLASSAD_SCRIPT_DIRECTORY = /scratch/roy/v67/src/condor_classad

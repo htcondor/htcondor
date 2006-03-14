@@ -77,9 +77,9 @@ char *classad_strings[] =
 	 * The first one is simple, but we can also check that things aren't listed twice. */
 	"Memory = 60, Disk = 40, OS = Linux, Requirements = ((ImageSize > Memory) "
 	"&& (AvailableDisk > Disk) && (AvailableDisk > Memory) && (ImageSize > Disk))",
-	/* The second one is to test MY and TARGET. OTHER should be treated like target. */
+	/* The second one is to test MY and TARGET. */
 	"Memory = 60, Disk = 40, OS = Linux, Requirements = ((TARGET.ImageSize > MY.Memory) "
-	"&& (AvailableDisk > Disk) && (OTHER.AvailableDisk > MY.Memory) && (TARGET.ImageSize > MY.Disk))",
+	"&& (AvailableDisk > Disk) && (TARGET.AvailableDisk > MY.Memory) && (TARGET.ImageSize > MY.Disk))",
 
 	/* Test case sensitivity */
 	"DoesMatch = \"Bone Machine\" == \"bone machine\" && \"a\" =?= \"a\" && \"a\" =!= \"A\","
@@ -209,6 +209,7 @@ static void make_big_string(int length, char **string,
 void test_random(TestResults *results);
 void test_equality(TestResults *results);
 void test_operators(TestResults *results);
+void test_scoping(TestResults *results);
 void test_debug_function_run(bool expect_run, int line_number, TestResults *results);
 
 int 
@@ -455,6 +456,7 @@ main(
     }
 
     test_operators(&test_results);
+    test_scoping(&test_results);
     test_equality(&test_results);
 
 	//ClassAd *many_ads[LARGE_NUMBER_OF_CLASSADS];
@@ -1774,6 +1776,81 @@ void test_operators(TestResults *results)
     test_eval_bool(c, "O", 1, __LINE__, results);
     test_debug_function_run(true, __LINE__, results);
 
+}
+
+/***************************************************************
+ *
+ * Function: test_scoping 
+ * Purpose:  Make sure that when someone specified MY. or TARGET.,
+ *           it only looks there. From 6.3.something through 
+ *           6.7.17, MY and TARGET provided a search order, not
+ *           a scope. 
+ *
+ ***************************************************************/
+void 
+test_scoping(TestResults *results)
+{
+    char *ad1_string = "A = MY.X, B = TARGET.X, C=MY.Y, D = TARGET.Y, E = Y, G=MY.Z, H=TARGET.Z, J=TARGET.K, L=5, X = 1, Z=4";
+    char *ad2_string = "X = 2, Y = 3, K=TARGET.L";
+    int value;
+    ClassAd *ad1  =  new ClassAd(ad1_string, ',');
+    ClassAd *ad2  =  new ClassAd(ad2_string, ',');
+
+    if (ad1->EvalInteger("A", ad2, value) && value == 1) {
+         printf("Passed: eval of A is good in line %d\n", __LINE__);
+        results->AddResult(true);
+    } else {
+        printf("Failed: eval of A is bad in line %d\n", __LINE__);
+    }
+
+    if (ad1->EvalInteger("B", ad2, value) && value == 2) {
+         printf("Passed: eval of B is good in line %d\n", __LINE__);
+        results->AddResult(true);
+    } else {
+        printf("Failed: eval of B is bad in line %d\n", __LINE__);
+    }
+
+    if (!ad1->EvalInteger("C", ad2, value)) {
+         printf("Passed: eval of C is good in line %d\n", __LINE__);
+        results->AddResult(true);
+    } else {
+        printf("Failed: eval of C is bad in line %d\n", __LINE__);
+    }
+
+    if (ad1->EvalInteger("D", ad2, value) && value == 3) {
+         printf("Passed: eval of D is good in line %d\n", __LINE__);
+        results->AddResult(true);
+    } else {
+        printf("Failed: eval of D is bad in line %d\n", __LINE__);
+    }
+
+    if (ad1->EvalInteger("E", ad2, value) && value == 3) {
+         printf("Passed: eval of E is good in line %d\n", __LINE__);
+        results->AddResult(true);
+    } else {
+        printf("Failed: eval of E is bad in line %d\n", __LINE__);
+    }
+
+    if (ad1->EvalInteger("G", ad2, value) && value == 4) {
+         printf("Passed: eval of G is good in line %d\n", __LINE__);
+        results->AddResult(true);
+    } else {
+        printf("Failed: eval of G is bad in line %d\n", __LINE__);
+    }
+
+    if (!ad1->EvalInteger("H", ad2, value)) {
+         printf("Passed: eval of H is good in line %d\n", __LINE__);
+        results->AddResult(true);
+    } else {
+        printf("Failed: eval of H is bad in line %d\n", __LINE__);
+    }
+    
+    if (ad1->EvalInteger("J", ad2, value) && value == 5) {
+         printf("Passed: eval of J is good in line %d\n", __LINE__);
+        results->AddResult(true);
+    } else {
+        printf("Failed: eval of J is bad in line %d\n", __LINE__);
+    }
 }
 
 /***************************************************************

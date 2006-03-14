@@ -104,8 +104,8 @@ class Variable : public VariableBase
 
 		virtual int         _EvalTree(const class AttrList*, EvalResult*);
 		virtual int         _EvalTree(const AttrList*, const AttrList*, EvalResult*);
-		virtual int         _EvalTreeRecursive(char *name, const AttrList*, const AttrList*, EvalResult*);
-		virtual int         _EvalTreeSimple(char *name, const AttrList*, const AttrList*, EvalResult*);
+		virtual int         _EvalTreeRecursive(char *name, const AttrList*, const AttrList*, EvalResult*, bool);
+		virtual int         _EvalTreeSimple(char *name, const AttrList*, const AttrList*, EvalResult*, bool);
 };
 
 class Integer : public IntegerBase

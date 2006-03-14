@@ -290,7 +290,7 @@ int Variable::_EvalTree(const AttrList* classad, EvalResult* val)
 
 int Variable::_EvalTree( const AttrList* my_classad, const AttrList* target_classad, EvalResult* val)
 {
-	return _EvalTreeRecursive( name, my_classad, target_classad, val );
+	return _EvalTreeRecursive( name, my_classad, target_classad, val, false );
 }
 
 /*
@@ -299,7 +299,7 @@ If there is no scope, evaluate it simply.
 Otherwise, identify the ClassAd corresponding to the scope, and re-evaluate.
 */
 
-int Variable::_EvalTreeRecursive( char *name, const AttrList* my_classad, const AttrList* target_classad, EvalResult* val)
+int Variable::_EvalTreeRecursive( char *name, const AttrList* my_classad, const AttrList* target_classad, EvalResult* val, bool restrict_search)
 {
 	char prefix[ATTRLIST_MAX_EXPRESSION];
 	char rest[ATTRLIST_MAX_EXPRESSION];
@@ -320,10 +320,16 @@ int Variable::_EvalTreeRecursive( char *name, const AttrList* my_classad, const 
 	}
 
 	if(prefix[0]) {	
+        // Note that we use restrict_search=true instead of simply 
+        // passing NULL for the other ClassAd. This is because we might
+        // still need to refer to the other ClassAd. For example, evaluating 
+        // A in ClassAd 1 should give 3
+        // ClassAd 1: A = TARGET.B; C = 3
+        // ClassAd 2: B = TARGET.C
 		if(!strcasecmp(prefix,"MY") ) {
-			return _EvalTreeRecursive(rest,my_classad,target_classad,val);
+			return _EvalTreeRecursive(rest,my_classad,target_classad,val, true);
 		} else if(!strcasecmp(prefix,"TARGET")) {
-			return _EvalTreeRecursive(rest,target_classad,my_classad,val);
+			return _EvalTreeRecursive(rest,target_classad,my_classad,val, true);
         }
         /*
          * This code has been deprecated. 
@@ -351,7 +357,7 @@ int Variable::_EvalTreeRecursive( char *name, const AttrList* my_classad, const 
 		}
         */
 	} else {
-		return this->_EvalTreeSimple(rest,my_classad,target_classad,val);
+		return this->_EvalTreeSimple(rest,my_classad,target_classad,val, restrict_search);
 	}
 
 	val->type = LX_UNDEFINED;	
@@ -363,7 +369,7 @@ Once it has been reduced to a simple name, resolve the variable by
 looking it up first in MY, then TARGET, and finally, the environment.
 */
 
-int Variable::_EvalTreeSimple( char *name, const AttrList *my_classad, const AttrList *target_classad, EvalResult *val )
+int Variable::_EvalTreeSimple( char *name, const AttrList *my_classad, const AttrList *target_classad, EvalResult *val, bool restrict_search )
 {
 	ExprTree *tmp;
 
@@ -373,13 +379,13 @@ int Variable::_EvalTreeSimple( char *name, const AttrList *my_classad, const Att
 		if(tmp) return (tmp->EvalTree(my_classad, target_classad, val));
 	}
 
-	if(target_classad)
+	if(!restrict_search && target_classad)
 	{
 		tmp = target_classad->Lookup(name);
 		if(tmp) return (tmp->EvalTree(target_classad, my_classad, val));
 	}
 
-	evalFromEnvironment(name,val);
+    evalFromEnvironment(name,val);
 	return TRUE;
 }
 
