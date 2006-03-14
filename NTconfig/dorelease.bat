@@ -44,5 +44,12 @@ copy condor.exe condor_reconfig.exe
 copy condor.exe condor_reschedule.exe
 copy condor.exe condor_vacate.exe
 copy condor_cod.exe condor_cod_request.exe
+cd ..
+if not exist include\NUL mkdir include
+copy %EXT_INSTALL%\%EXT_DRMAA_VERSION%\include\* include
+copy %EXT_INSTALL%\%EXT_DRMAA_VERSION%\lib\* lib
+if not exist src\NUL mkdir src
+if not exist src\drmaa\NUL mkdir src\drmaa
+copy %EXT_INSTALL%\%EXT_DRMAA_VERSION%\src\* src\drmaa
 popd
 :end
