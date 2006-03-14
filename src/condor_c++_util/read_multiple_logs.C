@@ -208,6 +208,23 @@ ReadMultipleUserLogs::detectLogGrowth()
 
 ///////////////////////////////////////////////////////////////////////////////
 
+int
+ReadMultipleUserLogs::getInitializedLogCount() const
+{
+    dprintf( D_FULLDEBUG, "ReadMultipleUserLogs::getInitializedLogCount()\n");
+
+	int result = 0;
+
+	for ( int i = 0; i < iLogFileCount; ++i ) {
+		LogFileEntry &log = pLogFileEntries[i];
+		if ( log.isInitialized ) ++result;
+	}
+
+	return result;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 void
 MultiLogFiles::DeleteLogs(StringList &logFileNames)
 {
@@ -304,6 +321,7 @@ ReadMultipleUserLogs::LogGrew(LogFileEntry &log)
 ULogEventOutcome
 ReadMultipleUserLogs::readEventFromLog(LogFileEntry &log)
 {
+    dprintf( D_FULLDEBUG, "ReadMultipleUserLogs::readEventFromLog()\n");
 
 	ULogEventOutcome	result;
 

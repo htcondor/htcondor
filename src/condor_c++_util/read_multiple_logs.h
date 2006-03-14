@@ -149,6 +149,11 @@ public:
 		 */
 	bool detectLogGrowth();
 
+		/** Returns the number of user logs that have been successfully
+		 	initialized.
+		 */
+	int getInitializedLogCount() const;
+
 protected:
 	friend class CheckEvents;
 

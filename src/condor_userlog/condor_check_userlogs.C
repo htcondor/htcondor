@@ -39,6 +39,10 @@ int main(int argc, char **argv)
 		exit(0);
 	}
 
+		// Set up dprintf.
+	Termlog = true;
+	dprintf_config("condor_check_userlogs", 2);
+	DebugFlags = D_ALWAYS;
 
 	StringList	logFiles;
 	for ( int argnum = 1; argnum < argc; ++argnum ) {
@@ -47,6 +51,21 @@ int main(int argc, char **argv)
 	logFiles.rewind();
 
 	ReadMultipleUserLogs	ru(logFiles);
+
+	int logCount = ru.getInitializedLogCount();
+	bool logsMissing = false;
+	if ( logCount == 0 ) {
+		fprintf( stderr, "Error: unable to initialize any log files\n"
+				"  Are log files read-only? (log reader needs write "
+				"permission)\n" );
+		return 1;
+	} else if ( logCount != logFiles.number() ) {
+		fprintf( stderr, "Only able to initialize %d of %d log files\n",
+				logCount, logFiles.number() );
+		fprintf( stderr, "  Are some read-only? (log reader needs write "
+				"permission)\n" );
+		logsMissing = true;
+	}
 
 	CheckEvents		ce;
 	int totalSubmitted = 0;
@@ -129,9 +148,14 @@ int main(int argc, char **argv)
 	}
 
 	if ( result == 0 ) {
-		printf("Log is okay\n");
+		if ( !logsMissing ) {
+			printf("Log(s) are okay\n");
+		} else {
+			printf("Log(s) may be okay\n");
+			printf(  "Some logs cannot be read\n");
+		}
 	} else {
-		printf("Log has error(s)\n");
+		printf("Log(s) have error(s)\n");
 	}
 	return result;
 }
