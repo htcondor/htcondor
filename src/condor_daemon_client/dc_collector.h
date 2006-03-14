@@ -69,7 +69,7 @@ class DCCollectorAdSeqMan {
 	int getNumAds( void ) const { return numAds; };
 
 	// Used for the copy constructor
-  public:
+  protected:
 	const ExtArray<DCCollectorAdSeq *> & getSeqInfo( void ) const
 		{ return adSeqInfo; };
 
@@ -115,7 +115,7 @@ public:
 	const char* updateDestination( void );
 
 
-  public:
+  protected:
 		// Get the ad sequence manager (for copy constructor)
 	const DCCollectorAdSeqMan &getAdSeqMan( void ) const
 		{ return *adSeqMan; };
