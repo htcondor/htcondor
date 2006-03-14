@@ -1148,6 +1148,26 @@ void FunctionBase::GetReferences(const AttrList *base_attrlist,
 								 StringList &internal_references,
 								 StringList &external_references) const
 {
+
+	ExprTree *arg;
+
+    // These two lines make me shudder. 
+    // This function is const, but calling Rewind() and Next() 
+    // on the arguments list makes it non-const. In practice, 
+    // though, it's really const: we always rewind before we 
+    // look at the arguments. The problem is that the iterator
+    // is part of the List class itself. In order to maintain
+    // const-ness of this function, I'm going to take the easy
+    // way out and magically turn it mutable, by hiding the 
+    // fact that it should be const. 
+    FunctionBase *mutable_this = (FunctionBase *) this;
+	mutable_this->arguments.Rewind();
+
+	while (mutable_this->arguments.Next(arg)) {
+        arg->GetReferences(base_attrlist, 
+                           internal_references, external_references);
+	}
+
 	return;
 }
 

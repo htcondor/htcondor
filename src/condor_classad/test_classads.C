@@ -75,11 +75,13 @@ char *classad_strings[] =
 
 	/* Some classads to test GetReferences() 
 	 * The first one is simple, but we can also check that things aren't listed twice. */
-	"Memory = 60, Disk = 40, OS = Linux, Requirements = ((ImageSize > Memory) "
-	"&& (AvailableDisk > Disk) && (AvailableDisk > Memory) && (ImageSize > Disk))",
+	"Memory = 60, Disk = 40, OS = Linux, X = 4, Requirements = ((ImageSize > Memory) "
+	"&& (AvailableDisk > Disk) && (AvailableDisk > Memory) && (ImageSize > Disk)) "
+    "&& foo(X; XX)",
 	/* The second one is to test MY and TARGET. */
 	"Memory = 60, Disk = 40, OS = Linux, Requirements = ((TARGET.ImageSize > MY.Memory) "
-	"&& (AvailableDisk > Disk) && (TARGET.AvailableDisk > MY.Memory) && (TARGET.ImageSize > MY.Disk))",
+	"&& (AvailableDisk > Disk) && (TARGET.AvailableDisk > MY.Memory) && (TARGET.ImageSize > MY.Disk)) "
+    "&& foo(TARGET.X; TARGET.XX)",
 
 	/* Test case sensitivity */
 	"DoesMatch = \"Bone Machine\" == \"bone machine\" && \"a\" =?= \"a\" && \"a\" =!= \"A\","
@@ -410,6 +412,7 @@ main(
 		test_in_references("Disk", *internal_references, __LINE__, &test_results);
 		test_in_references("ImageSize", *external_references, __LINE__, &test_results);
 		test_in_references("AvailableDisk", *external_references, __LINE__, &test_results);
+        test_in_references("XX", *external_references, __LINE__, &test_results);
 		
 		test_not_in_references("Memory", *external_references, __LINE__, &test_results);
 		test_not_in_references("Disk", *external_references, __LINE__, &test_results);
@@ -417,6 +420,7 @@ main(
 		test_not_in_references("AvailableDisk", *internal_references, __LINE__, &test_results);
 		test_not_in_references("Linux", *internal_references, __LINE__, &test_results);
 		test_not_in_references("Linux", *external_references, __LINE__, &test_results);
+        test_not_in_references("X", *external_references, __LINE__, &test_results);
 		delete internal_references;
 		delete external_references;
 
@@ -429,6 +433,8 @@ main(
 		test_in_references("Disk", *internal_references, __LINE__, &test_results);
 		test_in_references("ImageSize", *external_references, __LINE__, &test_results);
 		test_in_references("AvailableDisk", *external_references, __LINE__, &test_results);
+		test_in_references("X", *external_references, __LINE__, &test_results);
+		test_in_references("XX", *external_references, __LINE__, &test_results);
 		
 		test_not_in_references("Memory", *external_references, __LINE__, &test_results);
 		test_not_in_references("Disk", *external_references, __LINE__, &test_results);
