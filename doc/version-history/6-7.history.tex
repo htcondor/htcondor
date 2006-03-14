@@ -90,6 +90,24 @@ fails (this is only relevant if the \Opt{-UseDagDir} flag is used).
 
 \begin{itemize}
 
+
+\item A ClassAd bug that has existed since the Condor 6.3 series has
+been fixed, and it might affect your pool. In a ClassAd, MY and TARGET
+are supposed to narrow the scope for looking up a ClassAd
+variable. For instance, in a job's requirements, MY refers to the
+job's attributes, and TARGET refers to the machine's
+attributes. Unfortunately, since 6.3 MY and TARGET actually made a
+search order, not a scope restrction. That is, if a job's requirements
+had TARGET.foo and foo was undefined in the machine ad, it would look
+in the job ad for the value instead of deciding that foo was
+undefined. This is now fixed. However, there is a chance that users
+have made Classad expressions that confused MY and TARGET but
+worked. With this bug fix, they might not work anymore. We expect this
+bug fix to affect few users, but it may be tricky to understand for
+those of you that it affects. We needed to make this bug fix because
+the bug caused problems for some users that could not be worked
+around.
+
 \item Fixed a vague error message for the standard universe as to now
 emit reason for failure when reading a checkpoint image.
 
