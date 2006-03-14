@@ -90,6 +90,12 @@ fails (this is only relevant if the \Opt{-UseDagDir} flag is used).
 
 \begin{itemize}
 
+\item Fixed a vague error message for the standard universe as to now
+emit reason for failure when reading a checkpoint image.
+
+\item Fixed a bug which was causing erroneous load average numbers for
+the AIX port of Condor.
+
 \item Fixed a bug which caused the update proxy command to the
 \Condor{schedd} to fail if the job was running and Condor was started
 as root.
