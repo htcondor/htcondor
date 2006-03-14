@@ -37,15 +37,22 @@
 class DCCollectorAdSeq {
   public:
 	DCCollectorAdSeq( const char *, const char *, const char * );
+	DCCollectorAdSeq( const DCCollectorAdSeq & );
 	~DCCollectorAdSeq( void );
-	bool Match( const char *, const char *, const char * );
-	unsigned GetSequence( void );
+
+	bool Match( const char *, const char *, const char * ) const;
+	unsigned getSequenceAndIncrement( void );
+	unsigned getSequence( void ) const { return sequence; };
+
+	const char *getName( void ) const { return Name; };
+	const char *getMyType( void ) const { return MyType; };
+	const char *getMachine( void ) const { return Machine; };
 
   private:
 	char		*Name;			// "Name" in the ClassAd
 	char		*MyType;		// "MyType" in the ClassAd
 	char		*Machine;		// "Machine" in ClassAd
-	unsigned sequence;		// The sequence number for it.
+	unsigned	sequence;		// The sequence number for it.
 };
 
 /** Class to manage the sequence nubmers of all ClassAds published by
@@ -54,8 +61,17 @@ class DCCollectorAdSeq {
 class DCCollectorAdSeqMan {
   public:
 	DCCollectorAdSeqMan( void );
+	DCCollectorAdSeqMan( const DCCollectorAdSeqMan &copy,
+						 bool copy_array = true );
 	~DCCollectorAdSeqMan( void );
-	unsigned GetSequence( ClassAd *ad );
+
+	unsigned getSequence( const ClassAd *ad );
+	int getNumAds( void ) const { return numAds; };
+
+	// Used for the copy constructor
+  public:
+	const ExtArray<DCCollectorAdSeq *> & getSeqInfo( void ) const
+		{ return adSeqInfo; };
 
   private:
 	ExtArray<DCCollectorAdSeq *> adSeqInfo;
@@ -98,6 +114,13 @@ public:
 
 	const char* updateDestination( void );
 
+
+  public:
+		// Get the ad sequence manager (for copy constructor)
+	const DCCollectorAdSeqMan &getAdSeqMan( void ) const
+		{ return *adSeqMan; };
+
+
 private:
 
 	void init( void );
@@ -132,7 +155,7 @@ private:
 
 	// Items to manage the sequence numbers
 	time_t startTime;
-	DCCollectorAdSeqMan adSeqMan;
+	DCCollectorAdSeqMan *adSeqMan;
 };
 
 

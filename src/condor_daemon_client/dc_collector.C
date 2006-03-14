@@ -42,7 +42,6 @@ DCCollector::DCCollector( const char* name, UpdateType type )
 	init();
 }
 
-
 void
 DCCollector::init( void ) 
 {
@@ -54,6 +53,7 @@ DCCollector::init( void )
 	udp_update_destination = NULL;
 	tcp_update_destination = NULL;
 	startTime = time( NULL );
+	adSeqMan = new DCCollectorAdSeqMan( );
 	reconfig();
 }
 
@@ -216,12 +216,12 @@ DCCollector::sendUpdate( int cmd, ClassAd* ad1, ClassAd* ad2 )
 		ad2->InsertOrUpdate( buf );
 	}
 	if ( ad1 ) {
-		int	seq = adSeqMan.GetSequence( ad1 );
+		int	seq = adSeqMan->getSequence( ad1 );
 		sprintf( buf, "%s=%u", ATTR_UPDATE_SEQUENCE_NUMBER, seq );
 		ad1->InsertOrUpdate( buf );
 	}
 	if ( ad2 ) {
-		int	seq = adSeqMan.GetSequence( ad2 );
+		int	seq = adSeqMan->getSequence( ad2 );
 		sprintf( buf, "%s=%u", ATTR_UPDATE_SEQUENCE_NUMBER, seq );
 		ad2->InsertOrUpdate( buf );
 	}
@@ -500,6 +500,10 @@ DCCollector::initDestinationStrings( void )
 }
 
 
+//
+// Ad Sequence Number class methods
+//
+
 // Constructor for the Ad Sequence Number
 DCCollectorAdSeq::DCCollectorAdSeq( const char *inName,
 									const char *inMyType,
@@ -524,6 +528,35 @@ DCCollectorAdSeq::DCCollectorAdSeq( const char *inName,
 	sequence = 0;
 }
 
+// Copy constructor for the Ad Sequence Number
+DCCollectorAdSeq::DCCollectorAdSeq( const DCCollectorAdSeq &ref )
+{
+	const char *tmp;
+
+	tmp = ref.getName( );
+	if ( tmp ) {
+		this->Name = strdup( tmp );
+	} else {
+		this->Name = NULL;
+	}
+
+	tmp = ref.getMyType( );
+	if ( tmp ) {
+		this->MyType = strdup( tmp );
+	} else {
+		this->MyType = NULL;
+	}
+
+	tmp = ref.getMachine( );
+	if ( tmp ) {
+		this->Machine = strdup( tmp );
+	} else {
+		this->Machine = NULL;
+	}
+
+	this->sequence = ref.getSequence( );
+}
+
 // Destructor for the Ad Sequence Number
 DCCollectorAdSeq::~DCCollectorAdSeq( void )
 {
@@ -543,7 +576,7 @@ DCCollectorAdSeq::~DCCollectorAdSeq( void )
 bool
 DCCollectorAdSeq::Match( const char *inName,
 						 const char *inMyType,
-						 const char *inMachine )
+						 const char *inMachine ) const
 {	
 	// Check for complete match.. Return false if there are ANY mismatches
 	if ( inName ) {
@@ -588,17 +621,44 @@ DCCollectorAdSeq::Match( const char *inName,
 
 // Get the sequence number
 unsigned
-DCCollectorAdSeq::GetSequence( void )
+DCCollectorAdSeq::getSequenceAndIncrement( void )
 {
 	return sequence++;
 }
 
 
+//
+// Ad Sequence Number Mananager class methods
+//
+
 // Constructor for the Ad Sequence Number Manager
 DCCollectorAdSeqMan::DCCollectorAdSeqMan( void ) 
 {
-	// adSeqInfo = new ExtArray<DCCollectorAdSeq*>;
 	numAds = 0;
+}
+
+// Constructor for the Ad Sequence Number Manager
+DCCollectorAdSeqMan::DCCollectorAdSeqMan( const DCCollectorAdSeqMan &ref,
+										  bool copy_list )
+{
+	numAds = 0;
+	if ( ! copy_list ) {
+		return;
+	}
+
+	// Get list info from
+	int count = ref.getNumAds( );
+	const ExtArray<DCCollectorAdSeq *> &copy_array =
+		ref.getSeqInfo( );
+
+	// Now, copy the whole thing
+	int		adNum;
+	for( adNum = 0;  adNum < count;  adNum++ ) {
+		DCCollectorAdSeq *newAdSeq =
+			new DCCollectorAdSeq ( *(copy_array[adNum]) );
+		this->adSeqInfo[this->numAds++] = newAdSeq;
+	}
+	
 }
 
 // Destructor for the Ad Sequence Number Manager
@@ -613,9 +673,9 @@ DCCollectorAdSeqMan::~DCCollectorAdSeqMan( void )
 
 // Get the sequence number
 unsigned
-DCCollectorAdSeqMan::GetSequence( ClassAd *ad )
+DCCollectorAdSeqMan::getSequence( const ClassAd *ad )
 {
-	int				adNum;
+	int					adNum;
 	char				*name = NULL;
 	char				*myType = NULL;
 	char				*machine = NULL;
@@ -655,6 +715,6 @@ DCCollectorAdSeqMan::GetSequence( ClassAd *ad )
 	}
 
 	// Finally, return the sequence
-	return adSeq->GetSequence( );
+	return adSeq->getSequenceAndIncrement( );
 }
 
