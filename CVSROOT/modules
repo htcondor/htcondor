@@ -570,7 +570,8 @@ V6_7_NT_EXT -a EXT_COMMON \
                    externals/bundles/openssl/0.9.8 \
                    externals/bundles/postgresql/8.0.2 \
                    externals/bundles/pcre/5.0 \
-				   externals/bundles/krb5/1.4.3
+		   externals/bundles/krb5/1.4.3 \
+		   externals/bundles/drmaa/1.2
 
 # Externals needed for V6_7 with kerberos 1.4
 V6_7_KERB14_EXT -a V6_7_COMMON_EXT \
