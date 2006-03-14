@@ -158,7 +158,7 @@ Env::InsertEnvIntoClassAd( ClassAd *ad, MyString *error_msg, char const *opsys, 
 			char delim_str[2];
 			delim_str[0] = delim;
 			delim_str[1] = '\0';
-			ad->Assign(ATTR_JOB_ENVIRONMENT1_DELIM,delim);
+			ad->Assign(ATTR_JOB_ENVIRONMENT1_DELIM,delim_str);
 		}
 
 		MyString env1;

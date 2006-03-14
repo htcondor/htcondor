@@ -1413,6 +1413,9 @@ ClassAd *CondorJob::buildSubmitAd()
 
 	submit_ad->Assign( ATTR_SUBMITTER_ID, submitterId );
 
+	bool cleared_environment = false;
+	bool cleared_arguments = false;
+
 	jobAd->ResetExpr();
 	while ( (next_expr = jobAd->NextExpr()) != NULL ) {
 		if ( strncasecmp( ((Variable*)next_expr->LArg())->Name(),
@@ -1420,10 +1423,42 @@ ClassAd *CondorJob::buildSubmitAd()
 			 strlen( ((Variable*)next_expr->LArg())->Name() ) > 7 ) {
 
 			char *attr_value;
+			char const *attr_name = &((Variable*)next_expr->LArg())->Name()[7];
 			MyString buf;
+
+			if(strcasecmp(attr_name,ATTR_JOB_ENVIRONMENT1) == 0 ||
+			   strcasecmp(attr_name,ATTR_JOB_ENVIRONMENT1_DELIM) == 0 ||
+			   strcasecmp(attr_name,ATTR_JOB_ENVIRONMENT2) == 0)
+			{
+				//Any remote environment settings indicate that we
+				//should clear whatever environment was already copied
+				//over from the non-remote settings, so the non-remote
+				//settings can never trump the remote settings.
+				if(!cleared_environment) {
+					cleared_environment = true;
+					submit_ad->Delete(ATTR_JOB_ENVIRONMENT1);
+					submit_ad->Delete(ATTR_JOB_ENVIRONMENT1_DELIM);
+					submit_ad->Delete(ATTR_JOB_ENVIRONMENT2);
+				}
+			}
+
+			if(strcasecmp(attr_name,ATTR_JOB_ARGUMENTS1) == 0 ||
+			   strcasecmp(attr_name,ATTR_JOB_ARGUMENTS2) == 0)
+			{
+				//Any remote arguments settings indicate that we
+				//should clear whatever arguments was already copied
+				//over from the non-remote settings, so the non-remote
+				//settings can never trump the remote settings.
+				if(!cleared_arguments) {
+					cleared_arguments = true;
+					submit_ad->Delete(ATTR_JOB_ARGUMENTS1);
+					submit_ad->Delete(ATTR_JOB_ARGUMENTS2);
+				}
+			}
+
 			submit_ad->Delete( ((Variable*)next_expr->LArg())->Name() );
 			next_expr->RArg()->PrintToNewStr(&attr_value);
-			buf.sprintf( "%s = %s", &((Variable*)next_expr->LArg())->Name()[7],
+			buf.sprintf( "%s = %s", attr_name,
 						 attr_value );
 			submit_ad->Insert( buf.Value() );
 			free(attr_value);
