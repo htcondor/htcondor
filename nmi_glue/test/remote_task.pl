@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_task.pl,v 1.1.4.6 2005-04-20 18:32:58 bgietzel Exp $
+# $Id: remote_task.pl,v 1.1.4.7 2006-03-14 19:16:14 gquinn Exp $
 # run a test in the Condor testsuite
 # return val is the status of the test
 # 0 = built and passed
@@ -27,6 +27,10 @@ if( ! $fulltestname ) {
 }
 
 my $BaseDir = $ENV{BASE_DIR} || c_die("BASE_DIR is not in environment!\n");
+
+system ("ls $BaseDir");
+print "That was what is in $BaseDir\n";
+
 my $SrcDir = $ENV{SRC_DIR} || c_die("SRC_DIR is not in environment!\n");
 my $testdir = "condor_tests";
 
@@ -42,9 +46,14 @@ if( ! $testname ) {
     c_die("Invalid input for testname\n");
 }
 print "testname is $testname\n";
-if( $compiler ) {
-    print "compiler is $compiler\n";
-    $targetdir = "$SrcDir/$testdir/$compiler";
+if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
+	if( $compiler ) {
+    	print "compiler is $compiler\n";
+    	$targetdir = "$SrcDir/$testdir/$compiler";
+	} else {
+    	$compiler = ".";
+    	$targetdir = "$SrcDir/$testdir";
+	}
 } else {
     $compiler = ".";
     $targetdir = "$SrcDir/$testdir";
@@ -57,19 +66,23 @@ if( $compiler ) {
 
 chdir( "$targetdir" ) || c_die("Can't chdir($targetdir): $!\n");
 
-print "Attempting to build test in: $targetdir\n";
-print "Invoking \"make $testname\"\n";
-open( TESTBUILD, "make $testname 2>&1 |" ) || 
-    c_die("Can't run make $testname\n");
-while( <TESTBUILD> ) {
-    print $_;
-}
-close( TESTBUILD );
-$buildstatus = $?;
-print "BUILD TEST for $testname returned $buildstatus\n";
-if( $buildstatus != 0 ) {
-    print "Build failed for $testname\n";
-    exit 2;
+if( !($ENV{NMI_PLATFORM} =~ /winnt/)) {
+	print "Attempting to build test in: $targetdir\n";
+	print "Invoking \"make $testname\"\n";
+	open( TESTBUILD, "make $testname 2>&1 |" ) || 
+    	c_die("Can't run make $testname\n");
+	while( <TESTBUILD> ) {
+    	print $_;
+	}
+	close( TESTBUILD );
+	$buildstatus = $?;
+	print "BUILD TEST for $testname returned $buildstatus\n";
+	if( $buildstatus != 0 ) {
+    	print "Build failed for $testname\n";
+    	exit 2;
+	}
+} else {
+	print "No building tests on Windows yet...\n<<$testname>> should not need building\n";
 }
 
 
@@ -80,22 +93,31 @@ if( $buildstatus != 0 ) {
 print "RUNNING $testinfo\n";
 chdir("$SrcDir/$testdir") || c_die("Can't chdir($SrcDir/$testdir): $!\n");
 
-system( "make batch_test.pl" );
-if( $? >> 8 ) {
-    c_die("Can't build batch_test.pl\n");
+if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
+	system( "make batch_test.pl" );
+	if( $? >> 8 ) {
+    	c_die("Can't build batch_test.pl\n");
+	}
+	system( "make CondorTest.pm" );
+	if( $? >> 8 ) {
+    	c_die("Can't build CondorTest.pm\n");
+	}
+	system( "make Condor.pm" );
+	if( $? >> 8 ) {
+    	c_die("Can't build Condor.pm\n");
+	}
+	system( "make CondorPersonal.pm" );
+	if( $? >> 8 ) {
+    	c_die("Can't build CondorPersonal.pm\n");
+	}
+} else {
+	my $scriptdir = $SrcDir . "/" . "condor_scripts";
+	safe_copy("$scriptdir/batch_test.pl", "batch_test.pl");
+	safe_copy("$scriptdir/Condor.pm", "Condor.pm");
+	safe_copy("$scriptdir/CondorTest.pm", "CondorTest.pm");
+	safe_copy("$scriptdir/CondorPersonal.pm", "CondorPersonal.pm");
 }
-system( "make CondorTest.pm" );
-if( $? >> 8 ) {
-    c_die("Can't build CondorTest.pm\n");
-}
-system( "make Condor.pm" );
-if( $? >> 8 ) {
-    c_die("Can't build Condor.pm\n");
-}
-system( "make CondorPersonal.pm" );
-if( $? >> 8 ) {
-    c_die("Can't build CondorPersonal.pm\n");
-}
+print "About to run batch_test.pl\n";
 
 open(BATCHTEST, "perl ./batch_test.pl -d $compiler -t $testname 2>&1 |" ) || 
     c_die("Can't open \"batch_test.pl -d $compiler -t $testname\": $!\n");
@@ -131,6 +153,10 @@ if( ! -d "$resultdir" ) {
 }
 chdir( "$SrcDir/$testdir/$compiler" ) || 
     c_die("Can't chdir($SrcDir/$testdir/$compiler): $!\n");
+
+system("ls -l $BaseDir");
+system("ls -l $BaseDir/results");
+system("ls -l $BaseDir/results/base");
 
 $copy_failure = 0;
 $have_run_out_file = 0;
@@ -203,22 +229,23 @@ exit $teststatus;
 
 sub safe_copy {
     my( $src, $dest ) = @_;
-    system( "cp $src $dest" );
-    if( $? >> 8 ) {
-	print "Can't copy $src to $dest: $!\n";
-	$copy_failure = 1;
+	system("cp $src $dest");
+	if( $? >> 8 ) {
+		$copy_failure = 1;
+		print "Can't copy $src to $dest: $!\n";
     } else {
-	print "Copied $src to $dest\n";
+		print "Copied $src to $dest\n";
     }
 }
 
 sub unsafe_copy {
     my( $src, $dest ) = @_;
-    system( "cp $src $dest" );
-    if( $? >> 8 ) {
-	print "   Optional file $src not copied into $dest: $\n";
+	my $copyfailed = 0;
+	system("cp $src $dest");
+	if( $? >> 8 ) {
+		print "   Optional file $src not copied into $dest: $\n";
     } else {
-	print "Copied $src to $dest\n";
+		print "Copied $src to $dest\n";
     }
 }
 

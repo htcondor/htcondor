@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre,v 1.1.4.3 2005-06-02 22:56:36 jfrey Exp $
+# $Id: remote_pre,v 1.1.4.4 2006-03-14 19:16:13 gquinn Exp $
 # script to setup the Condor build
 ######################################################################
 
@@ -15,7 +15,7 @@ my $vers_file = "CONDOR-VERSION";
 $| = 1;
 
 print "------------------------- ENV DUMP ------------------------\n";
-if ($ENV{NMI_PLATFORM} eq "x86_winnt_5.1") {
+if ($ENV{NMI_PLATFORM} =~ /winnt/) {
     system("set");
 }
 else {
@@ -68,7 +68,7 @@ print "Move completed successfully\n";
 # run configure on the source tree
 ######################################################################
 
-if ($ENV{NMI_PLATFORM} eq "x86_winnt_5.1") {
+if ($ENV{NMI_PLATFORM} =~ /winnt/) {
     print "SKIPPING configure step for windows\n";
     exit 0;
 }

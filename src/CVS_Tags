@@ -1,3 +1,7 @@
+03/14/05 V6_7-win32_tests-merge-1
+   State of V6_7-win32_tests-branch before merge into V6_7-branch. Brings
+   automated testing capability to Windows.
+
 03/03/06 V6_7-time_offset-{root,branch}
    A new branch to work on my time offset code. I will be making it a
    command available to all daemons. I will also add in a SOAP interface

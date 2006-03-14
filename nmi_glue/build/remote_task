@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_task,v 1.1.4.8 2006-03-10 00:27:33 wright Exp $
+# $Id: remote_task,v 1.1.4.9 2006-03-14 19:16:13 gquinn Exp $
 # Perform a given build task, and return the status of that task
 # 0 = success
 # 1 = build failed
@@ -15,7 +15,7 @@ my $NTConfigDir = "$BaseDir/NTconfig";
 my $PublicDir = "$BaseDir/public";
 
 # WINDOWS SPECIFIC ENV...
-if ($ENV{NMI_PLATFORM} eq "x86_winnt_5.1") {
+if ($ENV{NMI_PLATFORM} =~ /winnt/) {
     $BaseDir =~ s/\//\\/g;
     $SrcDir = "$BaseDir\\src";
     $NTConfigDir = "$BaseDir\\NTconfig";
@@ -47,7 +47,7 @@ if( ! $taskname ) {
 }
 
 print "------------------------- ENV DUMP ------------------------\n";
-if ($ENV{NMI_PLATFORM} eq "x86_winnt_5.1") {
+if ($ENV{NMI_PLATFORM} =~ /winnt/) {
     system("set");
 } 
 else {

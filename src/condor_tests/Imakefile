@@ -292,12 +292,13 @@ RUN(job_core_onexitrem_van)
 TESTCLASS(job_core_onexitrem_van,core)
 TESTCLASS(job_core_onexitrem_van,quick)
 
+*/
+
 DESC(job_core_perhold_van,"Vanilla: verify true and false triggers for periodic hold")
 RUN(job_core_perhold_van)
 TESTCLASS(job_core_perhold_van,core)
 TESTCLASS(job_core_perhold_van,quick)
-
-*/
+TESTCLASS(job_core_perhold_van,btdebug)
 
 DESC(job_core_onexithold_van,"Vanilla: Verify true and false triggers of on_exit_hold")
 RUN(job_core_onexithold_van)

@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_post.pl,v 1.1.4.2 2005-04-19 21:04:30 bgietzel Exp $
+# $Id: remote_post.pl,v 1.1.4.3 2006-03-14 19:16:14 gquinn Exp $
 # post script for Condor testsuite runs
 ######################################################################
 
@@ -83,6 +83,8 @@ if( ! -d "$BaseDir/results" ) {
     mkdir( "$BaseDir/results", 0777 ) || die "Can't mkdir($BaseDir/results): $!\n";
 }
 
+system( "cp -r condor  $BaseDir/results/" );
+
 system( "cp tasklist.nmi $BaseDir/results/" );
 if( $? ) {
     print "Can't copy tasklist.nmi to $BaseDir/results\n";
@@ -96,16 +98,31 @@ if( ! -d $etc_dir ) {
         $exit_status = 1;
     }
 }
+
+my $fig = "";
+my $figloc = "";
+my $logs = "";
+
+if( ($ENV{NMI_PLATFORM} =~ /winnt/) ) {
+	$fig = "$BaseDir/condor/condor_config";
+	$figloc = "$BaseDir/condor/condor_config.local";
+	$logs = "$BaseDir/condor/log";
+} else {
+	$fig = "$BaseDir/condor/etc/condor_config";
+	$figloc = "$BaseDir/local/condor_config.local";
+	$logs = "$BaseDir/local/log";
+}
+
 if( -d $etc_dir ) {
     print "Copying config files to $etc_dir\n";
-    system( "cp $BaseDir/condor/etc/condor_config $etc_dir" );
+    system( "cp $fig $etc_dir" );
     if( $? >> 8 ) {
-        print "Can't copy $BaseDir/condor/etc/condor_config to $etc_dir\n";
+        print "Can't copy $fig to $etc_dir\n";
         $exit_status = 1;
     }
-    system( "cp $BaseDir/local/condor_config.local $etc_dir" );
+    system( "cp $figloc $etc_dir" );
     if( $? >> 8 ) {
-        print "Can't copy $BaseDir/local/condor_config.local to $etc_dir\n";
+        print "Can't copy $figloc to $etc_dir\n";
         $exit_status = 1;
     }
 }
@@ -118,9 +135,9 @@ if( ! -d $log_dir ) {
 }
 if( -d $log_dir ) {
     print "Copying log files to $log_dir\n";
-    system( "cp $BaseDir/local/log/* $log_dir" );
+    system( "cp $logs/* $log_dir" );
     if( $? >> 8 ) {
-        print "Can't copy $BaseDir/local/log/* to $log_dir\n";
+        print "Can't copy $logs/* to $log_dir\n";
         $exit_status = 1;
     }
     print "Tarring up all results\n";
