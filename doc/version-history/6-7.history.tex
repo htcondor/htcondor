@@ -76,6 +76,11 @@ command line.
 startd rank of the job that is being preempted and the startd rank of the 
 job it is causing the preemption.
 
+\item Improved the error messages from \Condor{check\_userlogs},
+especially if it fails because it doesn't have write permission
+on the log files (unfortunately, the log reading code requires write
+locks to avoid collisions between multiple readers and writers).
+
 \end{itemize}
 
 \noindent Bugs Fixed:
