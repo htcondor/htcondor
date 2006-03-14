@@ -411,6 +411,11 @@ MultiLogFiles::loadLogFileNameFromSubFile(const MyString &strSubFilename,
 	char	tmpCwd[PATH_MAX];
 	if ( getcwd(tmpCwd, PATH_MAX) ) {
 		currentDir = tmpCwd;
+	} else {
+		dprintf(D_ALWAYS,
+				"ERROR: getcwd() failed with errno %d (%s) at %s:%d\n",
+				errno, strerror(errno), __FILE__, __LINE__);
+		return "";
 	}
 
 	MyString strSubFile = readFileToString(strSubFilename);
@@ -612,8 +617,10 @@ MultiLogFiles::loadLogFileNamesFromStorkSubFile(
 		if ( ! fullpath(logfile.c_str() ) ) {
 			char	tmpCwd[PATH_MAX];
 			if ( ! getcwd(tmpCwd, sizeof(tmpCwd) ) ) {
-				rtnVal.sprintf("%s:%d strange and rare getcwd() error: %s",
-						__FILE__, __LINE__, strerror(errno) );
+				rtnVal.sprintf("getcwd() failed with errno %d (%s)",
+						errno, strerror(errno));
+				dprintf(D_ALWAYS, "ERROR: %s at %s:%d\n", rtnVal.Value(),
+						__FILE__, __LINE__);
 				return rtnVal;
 			}
 			std::string tmp  = tmpCwd;

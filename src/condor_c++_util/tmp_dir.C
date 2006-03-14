@@ -74,8 +74,8 @@ TmpDir::Cd2TmpDir(const char *directory, MyString &errMsg)
 		 	hasMainDir = true;
 		} else {
 			errMsg += MyString( "Unable to get cwd: " ) +
-				strerror( errno );
-			dprintf( D_FULLDEBUG, "ERROR: %s\n", errMsg.Value() );
+				strerror( errno ) + " (errno " + errno + ")";
+			dprintf( D_ALWAYS, "ERROR: %s\n", errMsg.Value() );
 			result = false;
 		}
 	}
