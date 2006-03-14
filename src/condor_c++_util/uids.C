@@ -613,17 +613,6 @@ delete_passwd_cache() {
 
 #include <grp.h>
 
-#if defined(HPUX11)
-/* XXX eh, this uid stuff needs to be cleaned up again... */
-#if defined(__cplusplus)
-extern "C" int seteuid(uid_t);
-extern "C" int setegid(gid_t);
-#else
-int seteuid(uid_t);
-int setegid(gid_t);
-#endif
-#endif
-
 #if defined(AIX31) || defined(AIX32)
 #include <sys/types.h>
 #include <sys/id.h>
