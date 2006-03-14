@@ -143,6 +143,20 @@ bug was introduced in 6.7.13.
 \Macro{SUBMIT\_EXPRS} did not work, because \Condor{submit} would
 always override this default with an empty environment.
 
+\item Since 6.7.15, Condor-C has incorrectly handled the use of both
+\SubmitCmd{remote\_env} and \SubmitCmd{remote\_args}.  The normal
+\SubmitCmd{environment} and \SubmitCmd{arguments} commands were
+honored, but the 'remote' versions were ignored unless the
+corresponding 'normal' command happened to be set to a double-quoted
+value (i.e. the new syntax for these settings).  Now that this problem
+is fixed, when \SubmitCmd{remote\_env} or \SubmitCmd{remote\_args} is
+specified, it correctly sets the respective property of the job
+ClassAd in the remote schedd.  It is still preferable to use the
+\SubmitCmd{environment} and \SubmitCmd{arguments} commands instead of
+the setting remote attributed directly, because then you can use either
+the new double-quoted environment/argument syntax or the old one, and
+\Condor{submit} will automatically set the correct ClassAd attributes.
+
 \end{itemize}
 
 \noindent Known Bugs:
