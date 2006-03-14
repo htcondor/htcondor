@@ -81,6 +81,9 @@ especially if it fails because it doesn't have write permission
 on the log files (unfortunately, the log reading code requires write
 locks to avoid collisions between multiple readers and writers).
 
+\item Improved error messages in \Condor{dagman} when \Code{getcwd()}
+fails (this is only relevant if the \Opt{-UseDagDir} flag is used).
+
 \end{itemize}
 
 \noindent Bugs Fixed:
