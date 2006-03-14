@@ -798,6 +798,14 @@ SOURCE="..\src\condor_c++_util\strnewp.C"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\time_offset.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\time_offset.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\tmp_dir.C"
 # End Source File
 # Begin Source File

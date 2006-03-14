@@ -27,10 +27,10 @@ NULL=nul
 
 !IF  "$(CFG)" == "condor_cpp_util - Win32 Debug"
 
-OUTDIR=..\Debug
-INTDIR=..\Debug
+OUTDIR=.\..\Debug
+INTDIR=.\..\Debug
 # Begin Custom Macros
-OutDir=..\Debug
+OutDir=.\..\Debug
 # End Custom Macros
 
 ALL : "$(OUTDIR)\condor_cpp_util.lib"
@@ -130,6 +130,7 @@ CLEAN :
 	-@erase "$(INTDIR)\string_list.obj"
 	-@erase "$(INTDIR)\stringSpace.obj"
 	-@erase "$(INTDIR)\strnewp.obj"
+	-@erase "$(INTDIR)\time_offset.obj"
 	-@erase "$(INTDIR)\tmp_dir.obj"
 	-@erase "$(INTDIR)\token_cache.obj"
 	-@erase "$(INTDIR)\translation_utils.obj"
@@ -264,6 +265,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\my_distribution.obj" \
 	"$(INTDIR)\my_dynuser.obj" \
 	"$(INTDIR)\my_hostname.obj" \
+	"$(INTDIR)\my_popen.obj" \
 	"$(INTDIR)\my_subsystem.obj" \
 	"$(INTDIR)\my_username.obj" \
 	"$(INTDIR)\MyString.obj" \
@@ -293,7 +295,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\utc_time.obj" \
 	"$(INTDIR)\which.obj" \
 	"$(INTDIR)\windows_firewall.obj" \
-	"$(INTDIR)\my_popen.obj"
+	"$(INTDIR)\time_offset.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -302,10 +304,10 @@ LIB32_OBJS= \
 
 !ELSEIF  "$(CFG)" == "condor_cpp_util - Win32 Release"
 
-OUTDIR=..\Release
-INTDIR=..\Release
+OUTDIR=.\..\Release
+INTDIR=.\..\Release
 # Begin Custom Macros
-OutDir=..\Release
+OutDir=.\..\Release
 # End Custom Macros
 
 ALL : "$(OUTDIR)\condor_cpp_util.lib"
@@ -405,6 +407,7 @@ CLEAN :
 	-@erase "$(INTDIR)\string_list.obj"
 	-@erase "$(INTDIR)\stringSpace.obj"
 	-@erase "$(INTDIR)\strnewp.obj"
+	-@erase "$(INTDIR)\time_offset.obj"
 	-@erase "$(INTDIR)\tmp_dir.obj"
 	-@erase "$(INTDIR)\token_cache.obj"
 	-@erase "$(INTDIR)\translation_utils.obj"
@@ -538,6 +541,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\my_distribution.obj" \
 	"$(INTDIR)\my_dynuser.obj" \
 	"$(INTDIR)\my_hostname.obj" \
+	"$(INTDIR)\my_popen.obj" \
 	"$(INTDIR)\my_subsystem.obj" \
 	"$(INTDIR)\my_username.obj" \
 	"$(INTDIR)\MyString.obj" \
@@ -567,7 +571,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\utc_time.obj" \
 	"$(INTDIR)\which.obj" \
 	"$(INTDIR)\windows_firewall.obj" \
-	"$(INTDIR)\my_popen.obj"
+	"$(INTDIR)\time_offset.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -1202,6 +1206,12 @@ SOURCE="..\src\condor_c++_util\stringSpace.C"
 SOURCE="..\src\condor_c++_util\strnewp.C"
 
 "$(INTDIR)\strnewp.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE="..\src\condor_c++_util\time_offset.C"
+
+"$(INTDIR)\time_offset.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 

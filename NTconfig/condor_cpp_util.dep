@@ -1,6 +1,7 @@
 # Microsoft Developer Studio Generated Dependency File, included by condor_cpp_util.mak
 
 "..\src\condor_c++_util\access.C" : \
+	"..\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
 	"..\src\condor_c++_util\access.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_arglist.h"\
@@ -71,6 +72,14 @@
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\ad_printmask.C" : \
@@ -122,6 +131,14 @@
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
 	"..\src\h\util_lib_proto.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\build_job_env.C" : \
@@ -173,6 +190,14 @@
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
 	"..\src\h\util_lib_proto.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\check_events.C" : \
@@ -204,6 +229,14 @@
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\classad_collection.C" : \
@@ -249,6 +282,14 @@
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\classad_command_util.C" : \
@@ -309,6 +350,14 @@
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\classad_hashtable.C" : \
@@ -332,6 +381,14 @@
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\classad_helpers.C" : \
@@ -376,6 +433,14 @@
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\classad_log.C" : \
@@ -423,6 +488,14 @@
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
 	"..\src\h\util_lib_proto.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\classad_merge.C" : \
@@ -461,6 +534,14 @@
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\classad_namedlist.C" : \
@@ -501,6 +582,14 @@
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\command_strings.C" : \
@@ -523,6 +612,14 @@
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\condor_arglist.C" : \
@@ -571,6 +668,14 @@
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
 	"..\src\h\util_lib_proto.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\condor_attributes.C" : \
@@ -592,6 +697,14 @@
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\condor_common.C" : \
@@ -611,6 +724,14 @@
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\condor_config.C" : \
@@ -672,6 +793,14 @@
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
 	"..\src\h\util_lib_proto.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\condor_environ.C" : \
@@ -694,6 +823,14 @@
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\condor_event.C" : \
@@ -745,6 +882,14 @@
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
 	"..\src\h\util_lib_proto.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\condor_id.C" : \
@@ -794,9 +939,20 @@
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
 	"..\src\h\util_lib_proto.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\condor_md.C" : \
+	"..\externals\install\openssl-0.9.8\inc32\openssl\e_os2.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\md5.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\opensslconf.h"\
 	"..\src\condor_includes\cedar_enums.h"\
 	"..\src\condor_includes\condor_blkng_full_disk_io.h"\
 	"..\src\condor_includes\condor_common.h"\
@@ -815,6 +971,14 @@
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\condor_parameters.C" : \
@@ -855,9 +1019,19 @@
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\condor_q.C" : \
+	"..\externals\install\postgresql-8.0.2\inc32\libpq-fe.h"\
+	"..\externals\install\postgresql-8.0.2\inc32\postgres_ext.h"\
 	"..\src\condor_c++_util\classad_collection.h"\
 	"..\src\condor_c++_util\classad_collection_types.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
@@ -927,6 +1101,14 @@
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\condor_query.C" : \
@@ -998,6 +1180,14 @@
 	"..\src\h\internet.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\condor_state.C" : \
@@ -1018,6 +1208,14 @@
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\condor_ver_info.C" : \
@@ -1038,6 +1236,14 @@
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\CondorError.C" : \
@@ -1062,6 +1268,14 @@
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\config.C" : \
@@ -1111,9 +1325,18 @@
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
 	"..\src\h\util_lib_proto.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\cron.C" : \
+	"..\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_arglist.h"\
 	"..\src\condor_c++_util\condor_ver_info.h"\
@@ -1183,9 +1406,18 @@
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\cronjob.C" : \
+	"..\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_arglist.h"\
 	"..\src\condor_c++_util\condor_ver_info.h"\
@@ -1263,9 +1495,18 @@
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
 	"..\src\h\util_lib_proto.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\cronjob_classad.C" : \
+	"..\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_arglist.h"\
 	"..\src\condor_c++_util\condor_ver_info.h"\
@@ -1343,9 +1584,18 @@
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
 	"..\src\h\util_lib_proto.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\cronmgr.C" : \
+	"..\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_arglist.h"\
 	"..\src\condor_c++_util\condor_ver_info.h"\
@@ -1423,9 +1673,18 @@
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
 	"..\src\h\util_lib_proto.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 ..\src\condor_daemon_client\daemon.C : \
+	"..\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_arglist.h"\
 	"..\src\condor_c++_util\condor_query.h"\
@@ -1446,6 +1705,7 @@
 	"..\src\condor_c++_util\simplelist.h"\
 	"..\src\condor_c++_util\string_list.h"\
 	"..\src\condor_c++_util\stringSpace.h"\
+	"..\src\condor_c++_util\time_offset.h"\
 	"..\src\condor_c++_util\translation_utils.h"\
 	"..\src\condor_daemon_client\daemon.h"\
 	"..\src\condor_daemon_client\daemon_list.h"\
@@ -1513,6 +1773,14 @@
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
 	"..\src\h\util_lib_proto.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 ..\src\condor_daemon_client\daemon_list.C : \
@@ -1592,6 +1860,14 @@
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
 	"..\src\h\util_lib_proto.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 ..\src\condor_daemon_client\daemon_types.C : \
@@ -1612,9 +1888,18 @@
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 ..\src\condor_daemon_client\dc_collector.C : \
+	"..\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_arglist.h"\
 	"..\src\condor_c++_util\condor_query.h"\
@@ -1700,9 +1985,18 @@
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
 	"..\src\h\util_lib_proto.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 ..\src\condor_daemon_client\dc_schedd.C : \
+	"..\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_arglist.h"\
 	"..\src\condor_c++_util\condor_ver_info.h"\
@@ -1778,6 +2072,14 @@
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 ..\src\condor_daemon_client\dc_shadow.C : \
@@ -1853,6 +2155,14 @@
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
 	"..\src\h\util_lib_proto.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 ..\src\condor_daemon_client\dc_startd.C : \
@@ -1928,6 +2238,14 @@
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
 	"..\src\h\util_lib_proto.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 ..\src\condor_daemon_client\dc_starter.C : \
@@ -2003,6 +2321,14 @@
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
 	"..\src\h\util_lib_proto.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\directory.C" : \
@@ -2057,6 +2383,14 @@
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
 	"..\src\h\util_lib_proto.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\distribution.C" : \
@@ -2077,6 +2411,14 @@
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\domain_tools.C" : \
@@ -2097,9 +2439,18 @@
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\dynuser.C" : \
+	"..\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_arglist.h"\
 	"..\src\condor_c++_util\condor_ver_info.h"\
@@ -2167,6 +2518,14 @@
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\email_cpp.C" : \
@@ -2213,6 +2572,14 @@
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\enum_utils.C" : \
@@ -2235,6 +2602,14 @@
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\env.C" : \
@@ -2284,6 +2659,14 @@
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
 	"..\src\h\util_lib_proto.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\error_utils.C" : \
@@ -2323,6 +2706,14 @@
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\extra_param_info.C" : \
@@ -2371,6 +2762,14 @@
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
 	"..\src\h\util_lib_proto.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\file_lock.C" : \
@@ -2390,9 +2789,18 @@
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\file_transfer.C" : \
+	"..\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_arglist.h"\
 	"..\src\condor_c++_util\condor_ver_info.h"\
@@ -2477,6 +2885,14 @@
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
 	"..\src\h\util_lib_proto.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\format_time.C" : \
@@ -2496,6 +2912,14 @@
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\gahp_common.C" : \
@@ -2516,6 +2940,14 @@
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\generic_query.C" : \
@@ -2557,6 +2989,14 @@
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\get_daemon_name.C" : \
@@ -2608,6 +3048,14 @@
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
 	"..\src\h\util_lib_proto.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\get_full_hostname.C" : \
@@ -2656,6 +3104,14 @@
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
 	"..\src\h\util_lib_proto.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\get_mysubsystem.C" : \
@@ -2675,6 +3131,14 @@
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\HashTable.C" : \
@@ -2697,9 +3161,19 @@
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\historysnapshot.C" : \
+	"..\externals\install\postgresql-8.0.2\inc32\libpq-fe.h"\
+	"..\externals\install\postgresql-8.0.2\inc32\postgres_ext.h"\
 	"..\src\condor_c++_util\classad_collection.h"\
 	"..\src\condor_c++_util\classad_collection_types.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
@@ -2748,6 +3222,14 @@
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\iso_dates.C" : \
@@ -2768,6 +3250,14 @@
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\java_config.C" : \
@@ -2809,6 +3299,14 @@
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\job_lease.C" : \
@@ -2847,9 +3345,19 @@
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\jobqueuesnapshot.C" : \
+	"..\externals\install\postgresql-8.0.2\inc32\libpq-fe.h"\
+	"..\externals\install\postgresql-8.0.2\inc32\postgres_ext.h"\
 	"..\src\condor_c++_util\classad_collection.h"\
 	"..\src\condor_c++_util\classad_collection_types.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
@@ -2898,6 +3406,14 @@
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\KeyCache.C" : \
@@ -2936,9 +3452,18 @@
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\killfamily.C" : \
+	"..\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_arglist.h"\
 	"..\src\condor_c++_util\condor_ver_info.h"\
@@ -3008,6 +3533,14 @@
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\linebuffer.C" : \
@@ -3028,6 +3561,14 @@
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\log.C" : \
@@ -3048,6 +3589,14 @@
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\log_transaction.C" : \
@@ -3069,6 +3618,14 @@
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\lsa_mgr.C" : \
@@ -3089,6 +3646,14 @@
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\metric_units.C" : \
@@ -3109,6 +3674,14 @@
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\misc_utils.C" : \
@@ -3147,6 +3720,14 @@
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\my_distribution.C" : \
@@ -3167,6 +3748,14 @@
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\my_dynuser.C" : \
@@ -3187,6 +3776,14 @@
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\my_hostname.C" : \
@@ -3244,6 +3841,14 @@
 	"..\src\h\internet.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\my_popen.C" : \
@@ -3284,6 +3889,14 @@
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\my_username.C" : \
@@ -3305,6 +3918,14 @@
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\MyString.C" : \
@@ -3354,6 +3975,14 @@
 	"..\src\h\startup.h"\
 	"..\src\h\strupr.h"\
 	"..\src\h\util_lib_proto.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\net_string_list.C" : \
@@ -3376,6 +4005,14 @@
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\internet.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\ntsysinfo.C" : \
@@ -3397,6 +4034,15 @@
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\psapi.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\perm.C" : \
@@ -3419,9 +4065,20 @@
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\lmjoin.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\pgsqldatabase.C" : \
+	"..\externals\install\postgresql-8.0.2\inc32\libpq-fe.h"\
+	"..\externals\install\postgresql-8.0.2\inc32\postgres_ext.h"\
 	"..\src\condor_c++_util\CondorError.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\jobqueuedatabase.h"\
@@ -3469,6 +4126,14 @@
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\print_wrapped_text.C" : \
@@ -3489,6 +4154,14 @@
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\proc_id.C" : \
@@ -3510,6 +4183,14 @@
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\read_multiple_logs.C" : \
@@ -3563,6 +4244,14 @@
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
 	"..\src\h\util_lib_proto.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\setenv.C" : \
@@ -3587,6 +4276,14 @@
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\sig_name.C" : \
@@ -3606,6 +4303,14 @@
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\sqlquery.C" : \
@@ -3626,6 +4331,14 @@
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\stat_wrapper.C" : \
@@ -3665,6 +4378,14 @@
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\status_string.C" : \
@@ -3686,6 +4407,14 @@
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\store_cred.C" : \
@@ -3752,6 +4481,14 @@
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\string_list.C" : \
@@ -3773,6 +4510,14 @@
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\internet.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\stringSpace.C" : \
@@ -3799,6 +4544,14 @@
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\strnewp.C" : \
@@ -3818,6 +4571,92 @@
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
+	
+
+"..\src\condor_c++_util\time_offset.C" : \
+	"..\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
+	"..\src\condor_c++_util\command_strings.h"\
+	"..\src\condor_c++_util\condor_arglist.h"\
+	"..\src\condor_c++_util\condor_ver_info.h"\
+	"..\src\condor_c++_util\CondorError.h"\
+	"..\src\condor_c++_util\dc_service.h"\
+	"..\src\condor_c++_util\env.h"\
+	"..\src\condor_c++_util\extArray.h"\
+	"..\src\condor_c++_util\HashTable.h"\
+	"..\src\condor_c++_util\my_hostname.h"\
+	"..\src\condor_c++_util\MyString.h"\
+	"..\src\condor_c++_util\net_string_list.h"\
+	"..\src\condor_c++_util\ntsysinfo.h"\
+	"..\src\condor_c++_util\simplelist.h"\
+	"..\src\condor_c++_util\string_list.h"\
+	"..\src\condor_c++_util\stringSpace.h"\
+	"..\src\condor_c++_util\time_offset.h"\
+	"..\src\condor_c++_util\translation_utils.h"\
+	"..\src\condor_daemon_core.V6\condor_daemon_core.h"\
+	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
+	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
+	"..\src\condor_daemon_core.V6\self_monitor.h"\
+	"..\src\condor_includes\buffers.h"\
+	"..\src\condor_includes\cedar_enums.h"\
+	"..\src\condor_includes\condor_adtypes.h"\
+	"..\src\condor_includes\condor_ast.h"\
+	"..\src\condor_includes\condor_astbase.h"\
+	"..\src\condor_includes\condor_attrlist.h"\
+	"..\src\condor_includes\condor_blkng_full_disk_io.h"\
+	"..\src\condor_includes\condor_classad.h"\
+	"..\src\condor_includes\condor_commands.h"\
+	"..\src\condor_includes\condor_common.h"\
+	"..\src\condor_includes\condor_constants.h"\
+	"..\src\condor_includes\condor_create_id.h"\
+	"..\src\condor_includes\condor_crypt.h"\
+	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_error_codes.h"\
+	"..\src\condor_includes\condor_exprtype.h"\
+	"..\src\condor_includes\condor_file_lock.h"\
+	"..\src\condor_includes\condor_fix_assert.h"\
+	"..\src\condor_includes\condor_header_features.h"\
+	"..\src\condor_includes\condor_io.h"\
+	"..\src\condor_includes\condor_macros.h"\
+	"..\src\condor_includes\condor_md.h"\
+	"..\src\condor_includes\condor_old_shadow_types.h"\
+	"..\src\condor_includes\condor_perms.h"\
+	"..\src\condor_includes\condor_pidenvid.h"\
+	"..\src\condor_includes\condor_random_num.h"\
+	"..\src\condor_includes\condor_secman.h"\
+	"..\src\condor_includes\condor_sys_nt.h"\
+	"..\src\condor_includes\condor_sys_types.h"\
+	"..\src\condor_includes\condor_system.h"\
+	"..\src\condor_includes\condor_uid.h"\
+	"..\src\condor_includes\condor_universe.h"\
+	"..\src\condor_includes\CryptKey.h"\
+	"..\src\condor_includes\keycache.h"\
+	"..\src\condor_includes\reli_sock.h"\
+	"..\src\condor_includes\safe_sock.h"\
+	"..\src\condor_includes\SafeMsg.h"\
+	"..\src\condor_includes\sock.h"\
+	"..\src\condor_includes\sockCache.h"\
+	"..\src\condor_includes\stream.h"\
+	"..\src\condor_sysapi\sysapi.h"\
+	"..\src\h\fake_flock.h"\
+	"..\src\h\file_lock.h"\
+	"..\src\h\proc.h"\
+	"..\src\h\startup.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\tmp_dir.C" : \
@@ -3841,6 +4680,14 @@
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\token_cache.C" : \
@@ -3866,6 +4713,14 @@
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\translation_utils.C" : \
@@ -3887,6 +4742,14 @@
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\uids.C" : \
@@ -3960,6 +4823,14 @@
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\usagemon.C" : \
@@ -3980,6 +4851,14 @@
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\user_job_policy.C" : \
@@ -4020,6 +4899,14 @@
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\user_log.C" : \
@@ -4062,6 +4949,14 @@
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\utc_time.C" : \
@@ -4082,6 +4977,14 @@
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\which.C" : \
@@ -4109,6 +5012,14 @@
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 "..\src\condor_c++_util\windows_firewall.C" : \
@@ -4149,4 +5060,14 @@
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
+	"e:\program files\microsoft platform sdk\include\basetsd.h"\
+	"e:\program files\microsoft platform sdk\include\guiddef.h"\
+	"e:\program files\microsoft platform sdk\include\icftypes.h"\
+	"e:\program files\microsoft platform sdk\include\netfw.h"\
+	"e:\program files\microsoft platform sdk\include\propidl.h"\
+	"e:\program files\microsoft platform sdk\include\reason.h"\
+	"e:\program files\microsoft platform sdk\include\specstrings.h"\
+	"e:\program files\microsoft platform sdk\include\stralign.h"\
+	"e:\program files\microsoft platform sdk\include\tvout.h"\
+	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
