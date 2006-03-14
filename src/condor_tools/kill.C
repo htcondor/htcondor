@@ -43,7 +43,6 @@
 #include <errno.h>
 
 #include "list.h"
-#include "my_popen.h"
 
 class CondorPid {
 public:
@@ -58,9 +57,9 @@ private:
 
 
 #if defined( BSD_PS ) 
-static char* PS_CMD[] = {"/bin/ps", "auwwx", NULL};
+static char* PS_CMD = "/bin/ps auwwx";
 #else 
-static char* PS_CMD[] = {"/bin/ps", "-ef", NULL};
+static char* PS_CMD = "/bin/ps -ef";
 #endif
 
 List<CondorPid>* condor_pids = NULL;
@@ -251,7 +250,7 @@ find_condor_pids() {
 		my_exit( 1 );
 	}
 
-	ps = my_popenv( PS_CMD, "r" );
+	ps = popen( PS_CMD, "r" );
 	if( !ps ) {
 		fprintf( stderr, "Error: can't open %s for reading.\n", 
 				 PS_CMD[0] );
@@ -267,7 +266,7 @@ find_condor_pids() {
 			condor_pids->Append( cpid );
 		}
 	}
-	my_pclose(ps);
+	pclose(ps);
 }
 
 #endif	// defined( linux )	
