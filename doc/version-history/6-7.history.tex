@@ -27,6 +27,12 @@ The details of each version are described below.
 %% by having an "outer" and and "inner" startd, where the inner can 
 %% refer to attributes in the "outer" startd.  
 
+\item You can now put extra information into the notification
+email. The information is a list of attributes, which you provide. For
+example, if your submit file has ``+EmailAttributes = "RemoteHost,
+Requirements"'', then RemoteHost and Requirements will be listed in
+the notification email. 
+
 \item Added a new clipped port of Condor to the SLES 9 distribution of
 Linux running on the PPC64 architecture.
 
