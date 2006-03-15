@@ -125,6 +125,24 @@ hardlink_or_copy_file(const char *old_filename, const char *new_filename)
 	return copy_file(old_filename,new_filename);
 #else
 	if(link(old_filename,new_filename) == -1) {
+		if(errno == EEXIST) {
+			//We definitely do not want to call copy_file() if the target
+			//file already exists, because the target might be a hard link
+			//to old_filename, and copy_file() will open and truncate it.
+
+			if(remove(new_filename) == -1) {
+				dprintf(D_ALWAYS,"Failed to remove %s (errno %d), so cannot create hard link from %s\n",new_filename,errno,old_filename);
+				return -1;
+			}
+			if(link(old_filename,new_filename) == 0) {
+				return 0;
+			}
+			if(errno == EEXIST) {
+				dprintf(D_ALWAYS,"Removed %s, but hard linking from %s still fails with errno %d\n",new_filename,old_filename,errno);
+				return -1;
+			}
+		}
+
 		// Hardlink may fail for a number of reasons, some of which
 		// can be solved by doing a plain old copy instead.  No harm
 		// in trying.
