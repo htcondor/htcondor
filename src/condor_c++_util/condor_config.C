@@ -90,6 +90,7 @@ void clear_config();
 void reinsert_specials(char*);
 void process_file(char*, char*, char*, int);
 void process_locals( char*, char*);
+void process_directory( char*, char*);
 static int  process_runtime_configs();
 void check_params();
 
@@ -392,7 +393,21 @@ real_config(char* host, int wantsQuiet)
 
 		// Read in the LOCAL_CONFIG_FILE as a string list and process
 		// all the files in the order they are listed.
+	char *dirlist = param("LOCAL_CONFIG_DIR");
+	if(dirlist) {
+		process_directory(dirlist, host);
+	}
 	process_locals( "LOCAL_CONFIG_FILE", host );
+
+	char* newdirlist = param("LOCAL_CONFIG_DIR");
+	if(newdirlist && dirlist) {
+		if(strcmp(dirlist, newdirlist) ) {
+			process_directory(newdirlist, host);
+		}
+	}
+
+	if(dirlist) { free(dirlist); dirlist = NULL; }
+	if(newdirlist) { free(newdirlist); newdirlist = NULL; }
 
         // The following lines should be placed very carefully. Must be after
         // global and local config files being processed but before any call that may
@@ -603,6 +618,65 @@ process_locals( char* param_name, char* host )
 	}
 }
 
+int compareFiles(const void *a, const void *b) {
+	 return strcmp(*(char **)a, *(char **)b);
+}
+
+// examine each file in a directory and treat it as a config file
+void
+process_directory( char* dirlist, char* host )
+{
+	StringList locals;
+	Directory *files;
+	char *file, *dirpath;
+	char **paths;
+	char *tmp;
+	int local_required;
+	
+	local_required = true;	
+	tmp = param( "REQUIRE_LOCAL_CONFIG_FILE" );
+	if( tmp ) {
+		if( tmp[0] == 'f' || tmp[0] == 'F' ) {
+			local_required = false;
+		}
+		free( tmp );
+	}
+
+	if(!dirlist) { return; }
+	locals.initializeFromString( dirlist );
+	locals.rewind();
+	while( (dirpath = locals.next()) ) {
+
+		paths = (char **)calloc(65536, sizeof(char *));
+		files = new Directory(dirpath);
+		int i = 0;
+		if(files == NULL) { 
+			fprintf(stderr, "Cannot open %s\n", dirpath);	 
+		} else {
+			while( (file = (char *)files->Next()) && i < 65536) {
+				// don't consider directories
+				// maybe we should squash symlinks here...
+				if(! files->IsDirectory() ) {
+					paths[i] = strdup((char *)files->GetFullPath());
+					i++;
+				}
+			}
+			delete files;
+		}
+		qsort(paths, i, sizeof(char *), compareFiles); 
+		char **pathCopy = paths;
+		while(*pathCopy) {
+			process_file( *pathCopy, "config file", host, local_required );
+			if (local_config_files.Length() > 0) {
+				local_config_files += " ";
+			}
+			local_config_files += *pathCopy;
+			free(*pathCopy);
+			pathCopy++;
+		}
+		free(paths);
+	}
+}
 
 // Try to find the "condor" user's home directory
 void
