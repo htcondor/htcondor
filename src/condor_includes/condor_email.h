@@ -84,6 +84,12 @@ public:
 	void writeBytes( float run_sent, float run_recv, float tot_sent,
 					 float tot_recv );
 
+        /** Write attributes that the user wants into the open Email
+            @param ad Job to extract attributes from
+        */
+    void writeCustom( ClassAd *ad );
+
+
 		/// Write out the introductory identification for a job
 	bool writeJobId( ClassAd* ad );
 

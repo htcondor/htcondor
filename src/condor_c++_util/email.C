@@ -41,6 +41,9 @@ extern "C" char* d_format_time(double);   // this should be in a .h
 static FILE* email_user_open_id( ClassAd *jobAd, int cluster, int proc, 
 								 const char *subject );
 
+static void
+construct_custom_attributes( MyString &attributes, ClassAd* job_ad );
+
 FILE *
 email_user_open( ClassAd *jobAd, const char *subject )
 {
@@ -102,13 +105,23 @@ email_user_open_id( ClassAd *jobAd, int cluster, int proc,
 	return fp;
 }
 
-
 void
 email_custom_attributes( FILE* mailer, ClassAd* job_ad )
 {
 	if( !mailer || !job_ad ) {
 		return;
 	}
+    MyString attributes;
+
+    construct_custom_attributes( attributes, job_ad );
+    fprintf( mailer, "%s", attributes.Value( ) );
+    return;
+}
+
+static void
+construct_custom_attributes( MyString &attributes, ClassAd* job_ad )
+{
+    attributes = "";
 
 	bool first_time = true;
 	char *attr_str = NULL, *tmp = NULL;
@@ -116,6 +129,7 @@ email_custom_attributes( FILE* mailer, ClassAd* job_ad )
 	if( ! tmp ) {
 		return;
 	}
+
 	StringList email_attrs;
 	email_attrs.initializeFromString( tmp );
 	free( tmp );
@@ -126,17 +140,20 @@ email_custom_attributes( FILE* mailer, ClassAd* job_ad )
 	while( (tmp = email_attrs.next()) ) {
 		expr_tree = job_ad->Lookup(tmp);
 		if( ! expr_tree ) {
+            dprintf(D_ALWAYS, "Custom email attribute (%s) is undefined.", 
+                    tmp);
 			continue;
 		}
 		if( first_time ) {
-			fprintf( mailer, "\n\n" );
+			attributes.sprintf_cat( "\n\n" );
 			first_time = false;
 		}
 		expr_tree->PrintToNewStr( &attr_str );
-		fprintf( mailer, "%s\n", attr_str );
+		attributes.sprintf_cat( "%s\n", attr_str );
 		free( attr_str );
 		attr_str = NULL;
 	}
+    return;
 }
 
 
@@ -420,6 +437,21 @@ Email::writeBytes( float run_sent, float run_recv, float tot_sent,
 			 metric_units(tot_sent) );
 }
 
+void 
+Email::writeCustom( ClassAd *ad )
+{
+		// if we're not currently open w/ a message, we're done
+	if( ! fp ) {
+		return;
+	}
+
+    MyString attributes;
+
+    construct_custom_attributes( attributes, ad );
+    fprintf( fp, "%s", attributes.Value() );
+
+    return;
+}
 
 bool
 Email::send( void )
@@ -438,6 +470,7 @@ Email::sendExit( ClassAd* ad, int exit_reason )
 {
 	open( ad, exit_reason );
 	writeExit( ad, exit_reason );
+    writeCustom( ad );
 	send();
 }
 
@@ -452,6 +485,7 @@ Email::sendExitWithBytes( ClassAd* ad, int exit_reason,
 	open( ad, exit_reason );
 	writeExit( ad, exit_reason );
 	writeBytes( run_sent, run_recv, tot_sent, tot_recv );
+    writeCustom( ad );
 	send();
 }
 
