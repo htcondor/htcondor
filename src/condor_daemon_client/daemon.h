@@ -103,6 +103,12 @@ public:
 		*/
 	Daemon( ClassAd* ad, daemon_t type, const char* pool );
 
+		/// Copy constructor (implemented via deepCopy())
+	Daemon( const Daemon &copy );
+
+		/// Overloaded assignment operator (implemented via deepCopy())
+	Daemon& operator = ( const Daemon& );
+
 		/// Destructor.
 	virtual ~Daemon();
 
@@ -380,9 +386,16 @@ protected:
 		/// Helper methods.
 		// //////////////////////////////////////////////////////////
 
-		/** Initializes the object.
+		/** Initializes the object by setting everything to NULL.
+			Shared by all the different constructors.
 		  */
 	void common_init();
+
+		/**
+		   Make a deep copy of this Daemon, used by copy constructor
+		   and assignment operator.
+		*/
+	void deepCopy( const Daemon& copy );
 
 		/** Helper for regular daemons (schedd, startd, master).
 		  This does all the real work of finding the right address,
@@ -549,13 +562,6 @@ protected:
            authenticated this socket, and if not, to try to do so.
 		*/
     bool forceAuthentication( ReliSock* rsock, CondorError* errstack );
-
-
- private:
-
-		// I can't be copied (yet)
-	Daemon( const Daemon& );
-	Daemon& operator = ( const Daemon& );
 
 };
 

@@ -184,6 +184,84 @@ Daemon::Daemon( ClassAd* ad, daemon_t type, const char* pool )
 }
 
 
+Daemon::Daemon( const Daemon &copy )
+{
+		// initialize all data members to NULL, since deepCopy() has
+		// code not to leak anything in case it's overwriting a value
+	common_init();
+	deepCopy( copy );
+}
+
+ 
+Daemon&
+Daemon::operator=(const Daemon &copy)
+{
+		// don't copy ourself!
+	if (&copy != this) {
+		deepCopy( copy );
+	}
+	return *this;
+}
+
+
+void
+Daemon::deepCopy( const Daemon &copy )
+{
+		// NOTE: strnewp(NULL) returns NULL, and doesn't seg fault,
+		// which is exactly what we want everywhere in this method.
+
+	New_name( strnewp(copy._name) );
+	New_hostname( strnewp(copy._hostname) );
+	New_full_hostname( strnewp(copy._full_hostname) );
+	New_addr( strnewp(copy._addr) );
+	New_version( strnewp(copy._version) );
+	New_platform( strnewp(copy._platform) );
+	New_pool( strnewp(copy._pool) );
+
+	if( copy._error ) {
+		newError( copy._error_code, copy._error );
+	} else {
+		if( _error ) { 
+			delete [] _error;
+			_error = NULL;
+		}
+		_error_code = copy._error_code;
+	}
+
+	if( _id_str ) {
+		delete [] _id_str;
+	}
+	_id_str = strnewp( copy._id_str );
+
+	if( _subsys ) {
+		delete [] _subsys;
+	}
+	_subsys = strnewp( copy._subsys );
+
+	if( _subsys ) {
+        delete [] _subsys;
+    }
+    _subsys = strnewp( copy._subsys );
+
+	_port = copy._port;
+	_type = copy._type;
+	_is_local = copy._is_local;
+	_tried_locate = copy._tried_locate;
+	_tried_init_hostname = copy._tried_init_hostname;
+	_tried_init_version = copy._tried_init_version;
+	_is_configured = copy._is_configured;
+
+		/*
+		  there's nothing to copy for _sec_man... it'll already be
+		  instantiated at this point, and the SecMan object is really
+		  static in CEDAR, anyway, so all it's doing is incrementing a
+		  reference count
+		*/
+
+	setCmdStr( copy._cmd_str );
+}
+
+
 Daemon::~Daemon() 
 {
 	if( DebugFlags & D_HOSTNAME ) {
