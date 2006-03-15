@@ -20,34 +20,38 @@
   * RIGHT.
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-#ifndef __COLLECTOR_H__
-#define __COLLECTOR_H__
 
+#ifndef __WIN_CREDD__
+#define __WIN_CREDD__
 
-enum AdTypes
-{
-	QUILL_AD,
-	STARTD_AD,
-	SCHEDD_AD,
-	MASTER_AD,
-	GATEWAY_AD,
-	CKPT_SRVR_AD,
-	STARTD_PVT_AD,
-	SUBMITTOR_AD,
-	COLLECTOR_AD,
-	LICENSE_AD,
-	STORAGE_AD,
-	ANY_AD,
-	NUM_AD_TYPES,
-	CLUSTER_AD,
-	NEGOTIATOR_AD,
-	HAD_AD,
-	GENERIC_AD,
-	CREDD_AD
+#include "condor_daemon_core.h"
+#include "daemon_list.h"
+
+class CredDaemon : public Service {
+
+public:
+	CredDaemon();
+	~CredDaemon();
+
+	void reconfig();
+	void cleanup();
+
+private:
+
+	void get_passwd_handler(int, Stream*);
+	void nop_handler(int, Stream*);
+	void initialize_classad();
+	void update_collector();
+	void invalidate_ad();
+
+	char* m_name;
+
+	CollectorList *m_collectors;
+
+	int m_update_collector_tid;
+	int m_update_collector_interval;
+
+	ClassAd m_classad;
 };
 
-#include "condor_commands.h"   // collector commands
-
-#endif // __COLLECTOR_H__
-
-
+#endif

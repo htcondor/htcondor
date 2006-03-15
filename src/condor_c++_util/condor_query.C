@@ -175,19 +175,26 @@ CondorQuery (AdTypes qType)
 		command = QUERY_HAD_ADS;
 		break;
 
-          case STORAGE_AD:
-                query.setNumStringCats (0);
-                query.setNumIntegerCats(0);
-                query.setNumFloatCats  (0);
-                command = QUERY_STORAGE_ADS;
-                break;
+	  case STORAGE_AD:
+		query.setNumStringCats (0);
+		query.setNumIntegerCats(0);
+		query.setNumFloatCats  (0);
+		command = QUERY_STORAGE_ADS;
+		break;
 
-          case ANY_AD:
-                query.setNumStringCats (0);
-                query.setNumIntegerCats(0);
-                query.setNumFloatCats  (0);
-                command = QUERY_ANY_ADS;
-                break;
+	  case CREDD_AD:
+		query.setNumStringCats (0);
+		query.setNumIntegerCats(0);
+		query.setNumFloatCats  (0);
+		command = QUERY_ANY_ADS;
+		break;
+
+	  case ANY_AD:
+		query.setNumStringCats (0);
+		query.setNumIntegerCats(0);
+		query.setNumFloatCats  (0);
+		command = QUERY_ANY_ADS;
+		break;
 
 	  default:
 		command = -1;
@@ -353,6 +360,10 @@ fetchAds (ClassAdList &adList, const char *poolName, CondorError* errstack)
 
 	  case STORAGE_AD:
 		queryAd.SetTargetTypeName (STORAGE_ADTYPE);
+		break;
+
+	  case CREDD_AD:
+		queryAd.SetTargetTypeName (CREDD_ADTYPE);
 		break;
 
 	  case ANY_AD:

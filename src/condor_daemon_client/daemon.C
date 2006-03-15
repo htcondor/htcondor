@@ -842,7 +842,7 @@ Daemon::locate( void )
 		}
 		break;
 	case DT_CREDD:
-	  rval = getDaemonInfo( "CREDD", ANY_AD, false );
+	  rval = getDaemonInfo( "CREDD", CREDD_AD );
 	  break;
 	case DT_STORK:
 	  rval = getDaemonInfo( "STORK", ANY_AD, false );
@@ -1091,9 +1091,7 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype, bool query_collector)
 			}
 		}
 
-
 			// We need to query the collector
-
 		CollectorList * collectors = CollectorList::create(_pool);
 		CondorError errstack;
 		if (collectors->query (query, ads) != Q_OK) {

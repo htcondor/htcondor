@@ -52,7 +52,6 @@ void badCommand(const char* command);
 void optionNeedsArg(const char* option);
 bool goAheadAnyways();
 
-
 int main(int argc, char *argv[]) {
 	
 	MyString my_full_name;
@@ -130,13 +129,7 @@ int main(int argc, char *argv[]) {
 		// no daemon given, use credd for user passwords if CREDD_HOST is defined
 		// (otherwise, we use the local schedd)
 		//printf("sending command to CREDD: %s\n", credd_host);
-		MyString credd_sinful;
-		credd_sinful = "<" ;
-		credd_sinful += credd_host;
-		credd_sinful += ">";
-		free(credd_host);
-		credd_host = NULL;
-		daemon = new Daemon(DT_ANY, credd_sinful.Value());
+		daemon = new Daemon(DT_CREDD);
 	}
 	else {
 		//printf("sending command to local daemon\n");
