@@ -308,7 +308,7 @@ CollectorList::query(CondorQuery & query, ClassAdList & adList) {
 bool
 CollectorList::next( DCCollector* & d )
 {
-	return DaemonList::Next( (Daemon*)d );
+	return DaemonList::Next( (Daemon*&)d );
 }
 
 
