@@ -39,11 +39,13 @@ DCCollector::DCCollector( const char* name, UpdateType type )
 	: Daemon( DT_COLLECTOR, name, NULL )
 {
 	up_type = type;
-	init();
+	init( true );
+	adSeqMan = new DCCollectorAdSeqMan();
 }
 
+
 void
-DCCollector::init( void ) 
+DCCollector::init( bool needs_reconfig )
 {
 	update_rsock = NULL;
 	tcp_collector_host = NULL;
@@ -53,8 +55,89 @@ DCCollector::init( void )
 	udp_update_destination = NULL;
 	tcp_update_destination = NULL;
 	startTime = time( NULL );
-	adSeqMan = new DCCollectorAdSeqMan( );
-	reconfig();
+	adSeqMan = NULL;
+	if( needs_reconfig ) {
+		reconfig();
+	}
+}
+
+
+DCCollector::DCCollector( const DCCollector& copy ) : Daemon(copy)
+{
+	init( false );
+	deepCopy( copy );
+}
+
+
+DCCollector&
+DCCollector::operator = ( const DCCollector& copy )
+{
+		// don't copy ourself!
+    if (&copy != this) {
+		deepCopy( copy );
+	}
+
+    return *this;
+}
+
+
+void
+DCCollector::deepCopy( const DCCollector& copy )
+{
+	if( update_rsock ) {
+		delete update_rsock;
+		update_rsock = NULL;
+	}
+		/*
+		  for now, we're not going to attempt to copy the update_rsock
+		  from the copy, since i'm not sure i trust ReliSock's copy
+		  constructor to do the right thing once the original goes
+		  away... DCCollector will be able to re-create this socket
+		  for TCP updates.  it's a little expensive, since we need a
+		  whole new connect(), etc, but in most cases, we're not going
+		  to be doing this very often, and correctness is more
+		  important than speed at the moment.  once we have more time
+		  for testing, we can figure out if just copying the
+		  update_rsock works and TCP updates are still happy...
+		*/
+
+	if( tcp_collector_host ) {
+		delete [] tcp_collector_host;
+	}
+	tcp_collector_host = strnewp( copy.tcp_collector_host );
+
+	if( tcp_collector_addr ) {
+		delete [] tcp_collector_addr;
+	}
+	tcp_collector_addr = strnewp( copy.tcp_collector_addr );
+
+	tcp_collector_port = copy.tcp_collector_port;
+
+	use_tcp = copy.use_tcp;
+
+	up_type = copy.up_type;
+
+	if( udp_update_destination ) {
+        delete [] udp_update_destination;
+    }
+	udp_update_destination = strnewp( copy.udp_update_destination );
+
+    if( tcp_update_destination ) {
+        delete [] tcp_update_destination;
+        tcp_update_destination = strnewp( tcp_update_destination );
+    }
+
+	startTime = copy.startTime;
+
+	if( adSeqMan ) {
+		delete adSeqMan;
+		adSeqMan = NULL;
+	}
+	if( copy.adSeqMan ) {
+		adSeqMan = new DCCollectorAdSeqMan( *copy.adSeqMan );
+	} else {
+		adSeqMan = new DCCollectorAdSeqMan();
+	}
 }
 
 

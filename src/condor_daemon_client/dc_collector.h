@@ -31,6 +31,7 @@
 #include "extArray.h"
 #include "daemon_list.h"
 
+
 /** Class to manage the sequence nubmers of individual ClassAds
  * published by the application
  **/
@@ -94,6 +95,10 @@ public:
 		*/
 	DCCollector( const char* name = NULL, UpdateType type = CONFIG );
 
+		/// Copy constructor (implemented using deepCopy())
+	DCCollector( const DCCollector& );
+	DCCollector& operator = ( const DCCollector& );
+
 		/// Destructor
 	~DCCollector();
 
@@ -123,11 +128,9 @@ public:
 
 private:
 
-	void init( void );
+	void init( bool needs_reconfig );
 
-		// I can't be copied (yet)
-	DCCollector( const DCCollector& );
-	DCCollector& operator = ( const DCCollector& );
+	void deepCopy( const DCCollector& copy );
 
 	ReliSock* update_rsock;
 
