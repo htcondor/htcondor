@@ -210,7 +210,8 @@ CollectorList::createForNegotiator() {
 	}
 
 	CollectorList * new_list = new CollectorList();
-	Daemon * daemon = NULL;
+	DCCollector *daemon = NULL;
+	DCCollector *copy = NULL;
 	collector_list->rewind();
 
 		// First, pick out collector(s) that is on this host
@@ -218,8 +219,10 @@ CollectorList::createForNegotiator() {
 		if (same_host (collector_for_negotiator, 
 					   daemon->fullHostname())) {
                 // This is a match, move it to the new list
+			copy = new DCCollector( *daemon );
 			collector_list->deleteCurrent();
-			new_list->append (daemon);
+			delete daemon;  // TODO: this will go away once we merge V6_6
+			new_list->append( copy );
 		}
 	}
 
@@ -228,8 +231,10 @@ CollectorList::createForNegotiator() {
        // Then add all the other collectors
 	collector_list->rewind();
 	while (collector_list->next(daemon)) {
+		copy = new DCCollector( *daemon );
 		collector_list->deleteCurrent();
-		new_list->append (daemon);
+		delete daemon;  // TODO: this will go away once we merge V6_6
+		new_list->append( copy );
 	}
 
 	free (collector_for_negotiator);
@@ -243,12 +248,12 @@ CollectorList::sendUpdates (int cmd, ClassAd * ad1, ClassAd* ad2) {
 	int success_count = 0;
 
 	this->rewind();
-	Daemon * daemon;
+	DCCollector * daemon;
 	while (this->next(daemon)) {
 		dprintf( D_FULLDEBUG, 
 				 "Trying to update collector %s\n", 
 				 daemon->addr() );
-		if (((DCCollector*)daemon)->sendUpdate (cmd, ad1, ad2)) {
+		if( daemon->sendUpdate(cmd, ad1, ad2) ) {
 			success_count++;
 		} 
 	}
@@ -264,7 +269,7 @@ CollectorList::query(CondorQuery & query, ClassAdList & adList) {
 		return Q_NO_COLLECTOR_HOST;
 	}
 
-	Daemon * daemon;
+	DCCollector * daemon;
 	int i=0;
 	QueryResult result;
 
@@ -283,8 +288,10 @@ CollectorList::query(CondorQuery & query, ClassAdList & adList) {
 		
 			// This collector is bad, it should be moved
 			// to the end of the list
+		DCCollector* copy = new DCCollector( *daemon );
 		this->deleteCurrent();
-		this->append (daemon);
+		delete daemon;  // TODO: must be removed once we merge V6_6
+		this->append (copy);
 		this->rewind();
 		
 			// Make sure we don't keep rotating through the list
@@ -295,6 +302,7 @@ CollectorList::query(CondorQuery & query, ClassAdList & adList) {
 		// If we've gotten here, there are no good collectors
 	return Q_COMMUNICATION_ERROR;
 }
+
 
 
 bool
