@@ -35,11 +35,11 @@ BEGIN_C_DECLS
 	libraries. Be warned, however, that they do require libc to be mapped
 	correctly. */
 ssize_t _condor_full_read(int fd, void *ptr, size_t nbytes);
-ssize_t _condor_full_write(int fd, void *ptr, size_t nbytes);
+ssize_t _condor_full_write(int fd, const void *ptr, size_t nbytes);
 
 /* For generic Condor code not in the above libraries, use these functions */
 ssize_t full_read(int filedes, void *ptr, size_t nbyte);
-ssize_t full_write(int filedes, void *ptr, size_t nbyte);
+ssize_t full_write(int filedes, const void *ptr, size_t nbyte);
 
 END_C_DECLS
 
