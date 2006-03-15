@@ -370,6 +370,7 @@ const char ATTR_STARTD_IP_ADDR           [] = "StartdIpAddr";
 const char ATTR_STATE                    [] = "State";
 const char ATTR_STARTER_IP_ADDR          [] = "StarterIpAddr";
 const char ATTR_STARTER_ABILITY_LIST     [] = "StarterAbilityList";
+const char ATTR_STARTER_IGNORED_ATTRS    [] = "StarterIgnoredAttributes";
 const char ATTR_STARTER_ULOG_FILE        [] = "StarterUserLog";
 const char ATTR_STARTER_ULOG_USE_XML     [] = "StarterUserLogUseXML";
 const char ATTR_STARTER_WAIT_FOR_DEBUG   [] = "StarterWaitForDebug";

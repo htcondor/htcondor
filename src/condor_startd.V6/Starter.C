@@ -198,9 +198,22 @@ Starter::publish( ClassAd* ad, amask_t mask, StringList* list )
 		return;
 	}
 
-		// Attributes that begin with "Has" go in the ClassAd and
-		// also in the StringList.  Attributes that begin with Java
-		// only go into the ClassAd.
+		// Check for ATTR_STARTER_IGNORED_ATTRS. If defined,
+		// we insert all attributes from the starter ad except those
+		// in the list. If not, we fall back on our old behavior
+		// of only inserting attributes prefixed with "Has" or
+		// "Java". Either way, we only add the "Has" attributes
+		// into the StringList (the StarterAbilityList)
+	char* ignored_attrs = NULL;
+	StringList* ignored_attr_list = NULL;
+	if (s_ad->LookupString(ATTR_STARTER_IGNORED_ATTRS, &ignored_attrs)) {
+		ignored_attr_list = new StringList(ignored_attrs);
+		free(ignored_attrs);
+
+		// of course, we don't want ATTR_STARTER_IGNORED_ATTRS
+		// in either!
+		ignored_attr_list->append(ATTR_STARTER_IGNORED_ATTRS);
+	}
 
 	ExprTree *tree, *lhs;
 	char *expr_str = NULL, *lhstr = NULL;
@@ -214,18 +227,36 @@ Starter::publish( ClassAd* ad, amask_t mask, StringList* list )
 			continue;
 		}
 		tree->PrintToNewStr( &expr_str );
-		if( strincmp(lhstr, "Has", 3) == MATCH ) {
-			ad->Insert( expr_str );
-			if( list ) {
-				list->append( lhstr );
+
+		if (ignored_attr_list) {
+				// insert every attr that's not in the ignored_attr_list
+			if (!ignored_attr_list->contains(lhstr)) {
+				ad->Insert(expr_str);
+				if (strincmp(lhstr, "Has", 3) == MATCH) {
+					list->append(lhstr);
+				}
 			}
-		} else if( strincmp(lhstr, "Java", 4) == MATCH ) {
-			ad->Insert( expr_str );
 		}
+		else {
+				// no list of attrs to ignore - fallback on old behavior
+			if( strincmp(lhstr, "Has", 3) == MATCH ) {
+				ad->Insert( expr_str );
+				if( list ) {
+					list->append( lhstr );
+				}
+			} else if( strincmp(lhstr, "Java", 4) == MATCH ) {
+				ad->Insert( expr_str );
+			}
+		}
+
 		free( expr_str );
 		expr_str = NULL;
 		free( lhstr );
 		lhstr = NULL;
+	}
+
+	if (ignored_attr_list) {
+		delete ignored_attr_list;
 	}
 }
 
