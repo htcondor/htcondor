@@ -235,7 +235,7 @@ LogRecord::WriteHeader(int fd)
 {
 	char op[20];
 	int  len = sprintf(op, "%d ", op_type);
-	return( write(fd, op, len) < len ? -1 : len );
+	return( full_write(fd, op, len) < len ? -1 : len );
 }
 
 
@@ -251,7 +251,7 @@ LogRecord::WriteHeader(FILE *fp)
 int
 LogRecord::WriteTail(int fd)
 {
-	return( write(fd, "\n", 1) < 1 ? -1 : 1 );
+	return( full_write(fd, "\n", 1) < 1 ? -1 : 1 );
 }
 
 

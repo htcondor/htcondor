@@ -511,7 +511,8 @@ LogHistoricalSequenceNumber::WriteBody(int fd)
 	char buf[100];
 	sprintf(buf,"%lu CreationTimestamp %lu",
 		historical_sequence_number,timestamp);
-	return write(fd, buf, strlen(buf));
+	int len = strlen(buf);
+	return full_write(fd, buf, len) < len ? -1 : len;
 }
 
 LogNewClassAd::LogNewClassAd(const char *k, const char *m, const char *t)
@@ -562,18 +563,18 @@ int
 LogNewClassAd::WriteBody(int fd)
 {
 	int rval, rval1;
-	rval = write(fd, key, strlen(key));
+	rval = full_write(fd, key, strlen(key));
 	if (rval < 0) return rval;
-	rval1 = write(fd, " ", 1);
+	rval1 = full_write(fd, " ", 1);
 	if (rval1 < 0) return rval1;
 	rval += rval1;
-	rval1 = write(fd, mytype, strlen(mytype));
+	rval1 = full_write(fd, mytype, strlen(mytype));
 	if (rval1 < 0) return rval1;
 	rval += rval1;
-	rval1 = write(fd, " ", 1);
+	rval1 = full_write(fd, " ", 1);
 	if (rval1 < 0) return rval1;
 	rval += rval1;
-	rval1 = write(fd, targettype, strlen(targettype));
+	rval1 = full_write(fd, targettype, strlen(targettype));
 	if (rval1 < 0) return rval1;
 	return rval + rval1;
 }
@@ -652,28 +653,28 @@ LogSetAttribute::WriteBody(int fd)
 	int		rval, rval1, len;
 
 	len = strlen(key);
-	rval = write(fd, key, len);
+	rval = full_write(fd, key, len);
 	if (rval < len) {
 		return -1;
 	}
-	rval1 = write(fd, " ", 1);
+	rval1 = full_write(fd, " ", 1);
 	if (rval1 < 1) {
 		return -1;
 	}
 	rval1 += rval;
 	len = strlen(name);
-	rval = write(fd, name, len);
+	rval = full_write(fd, name, len);
 	if (rval < len) {
 		return -1;
 	}
 	rval1 += rval;
-	rval = write(fd, " ", 1);
+	rval = full_write(fd, " ", 1);
 	if (rval < 1) {
-		return rval;
+		return -1;
 	}
 	rval1 += rval;
 	len = strlen(value);
-	rval = write(fd, value, len);
+	rval = full_write(fd, value, len);
 	if (rval < len) {
 		return -1;
 	}
@@ -740,17 +741,17 @@ LogDeleteAttribute::WriteBody(int fd)
 	int		rval, rval1, len;
 
 	len = strlen(key);
-	rval = write(fd, key, len);
+	rval = full_write(fd, key, len);
 	if (rval < len) {
 		return -1;
 	}
-	rval1 = write(fd, " ", 1);
+	rval1 = full_write(fd, " ", 1);
 	if (rval1 < 1) {
 		return -1;
 	}
 	rval1 += rval;
 	len = strlen(name);
-	rval = write(fd, name, len);
+	rval = full_write(fd, name, len);
 	if (rval < len) {
 		return -1;
 	}
