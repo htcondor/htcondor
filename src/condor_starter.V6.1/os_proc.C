@@ -255,8 +255,8 @@ OsProc::StartJob()
 		MyString reniceAttr = "Renice = ";
 		reniceAttr += ptmp;
 		if( !JobAd->Insert( reniceAttr.Value() ) ) {
-			dprintf( D_ALWAYS, "ERROR: unable to update job ad!  "
-					 "Aborting OsProc::StartJob...\n" );
+			dprintf( D_ALWAYS, "ERROR: failed to insert JOB_RENICE_INCREMENT "
+				"into job ad, Aborting OsProc::StartJob...\n" );
 			free( ptmp );
 			return 0;
 		}
