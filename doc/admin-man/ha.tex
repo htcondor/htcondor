@@ -113,6 +113,28 @@ Central Manager}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{High Availability!of central manager}
 
+\Note The Condor high availability mechanisms discussed below
+currently do not work well in configurations involving flocking.
+Several individual problems exist which interact to make the situation
+even worse.  Because of these problems, we advice against the use of
+flocking to pools with high availability mechanisms enabled.
+
+\begin{itemize}
+\item The \Condor{schedd} has a hard configured list of
+\Condor{collector}s and \Condor{negotiator}s, and doesn't query
+redundant collectors to get the current \Condor{negotiator} (as it
+does when communicating with it's local pool).  As a result, if the
+default \Condor{negotiator} fails, the \Condor{schedd} doesn't learn
+about it, and, thus, talk to the new \Condor{negotiator}.
+
+\item When the \Condor{negotiator} is unable to communicate with a
+\Condor{collector}, it ``moves'' to the next in the list.
+Unfortunately, it doesn't go back to the start of the list.  When
+combined with the above, a backup \Condor{negotiator} will never get
+jobs from a flocked \Condor{schedd}.
+
+\end{itemize}
+
 The \Condor{negotiator} and \Condor{collector} daemons
 are the heart of the Condor matchmaking system.
 The availability of these daemons is critical to a Condor pool's

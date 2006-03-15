@@ -16,6 +16,12 @@ Configuration variables allow the
 \Condor{schedd} daemon (which runs on each machine
 that may submit jobs) to implement flocking.
 
+\Note Flocking to pools which use Condor's high availability mechanims
+is not adviced in current verions of Condor.  See section
+~\ref{sec:HA-negotiator} ``High Availability of the Central Manager''
+of the Condor manual for a discussion of these problems.
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Configure-Flocking}Flocking Configuration}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
