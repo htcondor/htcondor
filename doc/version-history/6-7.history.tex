@@ -27,6 +27,11 @@ The details of each version are described below.
 %% by having an "outer" and and "inner" startd, where the inner can 
 %% refer to attributes in the "outer" startd.  
 
+\item Added a new \Macro{LOCAL\_CONFIG\_DIR} configuration setting. 
+This now allows entire directories of files to be included as though they
+were configuration files. 
+See ~\ref{param:LocalConfigDir} for more info.
+
 \item You can now put extra information into the notification
 email. The information is a list of attributes, which you provide. For
 example, if your submit file has ``+EmailAttributes = "RemoteHost,

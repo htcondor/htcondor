@@ -630,6 +630,20 @@ File System Configuration File Entries''.
   file cannot be read, unless \MacroNI{REQUIRE\_LOCAL\_CONFIG\_FILE} is set 
   to False 
 
+\item[\Macro{LOCAL\_CONFIG\_DIR}] \label{param:LocalConfigDir} 
+  Beginning in Condor 6.7.18, a directory may be used as a container for 
+  local configuration files. 
+  The files found in the directory are sorted into lexigraphical order, and 
+  then each file is treated as though it was listed in 
+  \MacroUNI{LOCAL\_CONFIG\_FILE}. 
+  \MacroUNI{LOCAL\_CONFIG\_DIR} is processed before any files listed in 
+  \MacroUNI{LOCAL\_CONFIG\_FILE}, and is checked again after processing
+  the \MacroUNI{LOCAL\_CONFIG\_FILE} list. 
+  It is a list of directories, and each directory is processed in the order
+  it appears in the list. 
+  The process is not recursive, so any directories found inside the directory
+  being processed are ignored. 
+
 \item[\Macro{CONDOR\_IDS}] \label{param:CondorIds}
   The User ID (UID) and Group ID (GID) pair that the Condor daemons
   should run as, if the daemons are spawned as root.
