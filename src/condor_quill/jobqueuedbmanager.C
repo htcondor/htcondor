@@ -316,18 +316,23 @@ JobQueueDBManager::config(bool reconfig)
 
 		// START version number sniffing code
 	int pg_version_number=0;
-       	if(connectDB(NOT_IN_XACT) == FAILURE) {
+	if(connectDB(NOT_IN_XACT) == FAILURE) {
 		displayDBErrorMsg("Unable to connect to database in order to retrieve the PostgreSQL version --- ERROR");
-        }         
+	}         
 	pg_version_number = jqDatabase->getDatabaseVersion();
-	dprintf(D_ALWAYS, "Using PostgreSQL version %d\n",pg_version_number);
-	if(pg_version_number < 80100) {
-		dprintf(D_ALWAYS, "WARNING: You are using an older version of PostgreSQL\n");
-		dprintf(D_ALWAYS, "We recommend that users upgrade to version 8.1 of PostgreSQL\n");
-		dprintf(D_ALWAYS, "Maintenance tasks such as vacuuming in prior versions are not\n");
-		dprintf(D_ALWAYS, "automated. Over time, this can degrade Quill's performance\n");
-		dprintf(D_ALWAYS, "Starting 8.1, such maintenance tasks are completely integrated\n");
-		dprintf(D_ALWAYS, "and automated.\n\n");
+	if(pg_version_number <= 0) {
+		dprintf(D_ALWAYS, "Using unknown PostgreSQL version\n");
+	}
+	else {
+		dprintf(D_ALWAYS, "Using PostgreSQL version %d\n",pg_version_number);
+		if(pg_version_number < 80100) {
+			dprintf(D_ALWAYS, "WARNING: You are using an older version of PostgreSQL\n");
+			dprintf(D_ALWAYS, "We recommend that users upgrade to version 8.1 of PostgreSQL\n");
+			dprintf(D_ALWAYS, "Maintenance tasks such as vacuuming in prior versions are not\n");
+			dprintf(D_ALWAYS, "automated. Over time, this can degrade Quill's performance\n");
+			dprintf(D_ALWAYS, "Starting 8.1, such maintenance tasks are completely integrated\n");
+			dprintf(D_ALWAYS, "and automated.\n\n");
+		}
 	}
 	disconnectDB(NOT_IN_XACT);
 		// END version number sniffing code
