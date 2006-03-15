@@ -112,6 +112,10 @@ to add the following line to your config file:
 
 \Macro{MAX\_JOB\_QUEUE\_LOG\_ROTATIONS} = 0
 
+\item Fixed a bug that could have caused corruption of the job queue
+log file in very rare circumstances involving a full disk.  This
+potential problem existed in all previous versions of Condor.
+
 \item Fixed a problem with parallel universe jobs with multiple
 procs (i.e. multiple queue statements in one submit file).
 Before, in such a case, the user log would have multiple
