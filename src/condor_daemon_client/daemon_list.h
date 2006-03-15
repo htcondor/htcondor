@@ -31,6 +31,7 @@
 #include "condor_query.h"
 
 
+class DCCollector;
 class CondorQuery;
 class ClassAdList;
 
@@ -116,6 +117,10 @@ class CollectorList : public DaemonList {
 		// Try querying all the collectors until you get a good one
 	QueryResult query (CondorQuery & query, ClassAdList & adList);
 
+    bool next( DCCollector* &);
+    bool Next( DCCollector* &);
+    bool next( Daemon* &);
+    bool Next( Daemon* &);
 
 };
 

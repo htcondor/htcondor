@@ -296,3 +296,30 @@ CollectorList::query(CondorQuery & query, ClassAdList & adList) {
 	return Q_COMMUNICATION_ERROR;
 }
 
+
+bool
+CollectorList::next( DCCollector* & d )
+{
+	return DaemonList::Next( (Daemon*)d );
+}
+
+
+bool
+CollectorList::Next( DCCollector* & d )
+{
+	return next( d );
+}
+
+
+bool
+CollectorList::next( Daemon* & d )
+{
+	return DaemonList::Next( d );
+}
+
+
+bool
+CollectorList::Next( Daemon* & d )
+{
+	return next( d );
+}
