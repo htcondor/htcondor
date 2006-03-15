@@ -101,6 +101,17 @@ fails (this is only relevant if the \Opt{-UseDagDir} flag is used).
 
 \begin{itemize}
 
+\item Fixed a bug in 6.7.17 that could cause the schedd state to be
+wiped out, clearing the contents of the job queue.  The most likely
+case in which this problem could have happened is when the disk
+containing the spool directory became full and the schedd restarted
+several times due to failures writing to job\_queue.log.  The problem
+no longer exists in 6.7.18, but for users who cannot upgrade
+immediately, the workaround to prevent the bug from ever happening is
+to add the following line to your config file:
+
+\Macro{MAX\_JOB\_QUEUE\_LOG\_ROTATIONS} = 0
+
 \item Fixed a problem with parallel universe jobs with multiple
 procs (i.e. multiple queue statements in one submit file).
 Before, in such a case, the user log would have multiple
@@ -477,6 +488,17 @@ fails, \Condor{dagman} may hang, waiting for those processes to abort.
   ftp://ftp.cs.wisc.edu/condor/temporary/filelock/FileLock.pm and
   installing it in the \File{lib} directory of your Condor installation.
   (Bug introduced in version 6.7.17)
+
+\item In some circumstances, the schedd state may be wiped out,
+clearing the contents of the job queue.  The most likely case in which
+this problem can happen is when the disk containing the spool
+directory becomes full and the schedd restarts several times due to
+failures writing to job\_queue.log.  The problem no longer exists in
+6.7.18, but for users who cannot upgrade immediately, the workaround
+to prevent the bug from ever happening is to add the following line to
+your config file:
+
+\Macro{MAX\_JOB\_QUEUE\_LOG\_ROTATIONS} = 0
 
 \end{itemize}
 
