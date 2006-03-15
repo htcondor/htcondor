@@ -125,6 +125,34 @@ printClassAd( void )
 		if(gotone>0) printf( "%s = True\n",ATTR_HAS_JAVA);		
 		delete ad;
 	}
+
+#if defined(WIN32)
+		// Advertise our ability to run jobs as the submitting user
+	printf("%s = True\n", ATTR_HAS_WIN_RUN_AS_OWNER);
+
+		// Attempt to perform a NOP on our CREDD_HOST. This will test
+		// our ability to authenticate with DAEMON-level auth, and thus
+		// fetch passwords. If we succeed, advertise the CREDD_HOST.
+	char *credd_host = param("CREDD_HOST");
+	if (credd_host) {
+		Daemon credd(DT_CREDD);
+		if (credd.locate()) {
+			Sock *sock = credd.startCommand(CREDD_NOP, Stream::reli_sock, 20);
+			sock->decode();
+			if (sock && sock->end_of_message()) {
+				printf("%s = \"%s\"\n", ATTR_LOCAL_CREDD, credd_host);
+			}
+		}
+		free(credd_host);
+	}
+
+		// Finally, in order for our startd to actually publish our
+		// ATTR_LOCAL_CREDD, we need to identify the attributes in this
+		// ad that we *don't* want it to publish. Otherwise, it will only
+		// publish stuff starting with "Has" or "Java".
+	printf("%s = \"%s,%s\"\n", ATTR_STARTER_IGNORED_ATTRS,
+		ATTR_VERSION, ATTR_IS_DAEMON_CORE);
+#endif
 }
 
 
