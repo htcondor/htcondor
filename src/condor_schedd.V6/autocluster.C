@@ -220,7 +220,6 @@ int AutoCluster::getAutoClusterid( ClassAd *job )
 		// get all internal references in the job ad.
 		StringList external_refs;	// we do not care about these
 		job->GetReferences(ATTR_REQUIREMENTS,internal_refs,external_refs);
-		job->GetReferences(ATTR_RANK,internal_refs,external_refs);
 		internal_refs.remove_anycase(ATTR_CURRENT_TIME);	// never want this attr
 		internal_refs.rewind();
 		next_attr = NULL;
