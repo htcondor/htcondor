@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre.pl,v 1.1.4.8 2006-03-14 19:16:14 gquinn Exp $
+# $Id: remote_pre.pl,v 1.1.4.9 2006-03-16 09:59:38 wright Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
@@ -275,6 +275,13 @@ if( ($ENV{NMI_PLATFORM} =~ /winnt/) )
 	# insure path from framework is injected into the new pool
 	print FIX "environment=\"PATH=\'$mypath\'\"\n";
 	print FIX "SUBMIT_EXPRS=environment\n";
+}
+if( ($ENV{NMI_PLATFORM} =~ /hpux_11/) )
+{
+    # evil hack b/c our ARCH-detection code is stupid on HPUX, and our
+    # HPUX11 build machine in NMI doesn't seem to have the files we're
+    # looking for...
+    print FIX "ARCH = HPPA2\n";
 }
 
 close ORIG;
