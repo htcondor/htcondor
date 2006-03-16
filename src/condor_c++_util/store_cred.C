@@ -503,6 +503,34 @@ void store_pool_cred_handler(void *, int i, Stream *s)
 	char *domain = NULL;
 	MyString username = POOL_PASSWORD_USERNAME "@";
 
+	if (s->type() != Stream::reli_sock) {
+		dprintf(D_ALWAYS, "ERROR: pool password set attempt via UDP\n");
+		return;
+	}
+
+	// if we're the CREDD_HOST, make sure any password setting is done locally
+	// (since knowing what the pool password is on the CREDD_HOST means being
+	//  able to fetch users' passwords)
+	char *credd_host = param("CREDD_HOST");
+	if (credd_host) {
+
+		// figure out if we're on the CREDD_HOST
+		bool on_credd_host = (stricmp(my_full_hostname(), credd_host) == MATCH);
+		on_credd_host = on_credd_host || (stricmp(my_hostname(), credd_host) == MATCH);
+		on_credd_host = on_credd_host || (strcmp(my_ip_string(), credd_host) == MATCH);
+
+		if (on_credd_host) {
+				// we're the CREDD_HOST; make sure the source address matches ours
+			const char *addr = ((ReliSock*)s)->endpoint_ip_str();
+			if (!addr || strcmp(my_ip_string(), addr)) {
+				dprintf(D_ALWAYS, "ERROR: attempt to set pool password remotely\n");
+				free(credd_host);
+				return;
+			}
+		}
+		free(credd_host);
+	}
+
 	s->decode();
 	if (!s->code(domain) || !s->code(pw) || !s->end_of_message()) {
 		dprintf(D_ALWAYS, "store_pool_cred: failed to receive all parameters\n");
