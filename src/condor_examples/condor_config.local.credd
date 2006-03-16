@@ -1,0 +1,59 @@
+######################################################################
+##
+##  condor_config.credd
+##
+##  This is the default local configuration file for the machine
+##  running the condor_credd.  You should copy this file to the appropriate
+##  location and customize it for your needs.  
+##
+######################################################################
+
+## Note: The following settings will need to be present in your
+## global config file:
+##
+##   CREDD_HOST = my-credd.cs.wisc.edu
+##   STARTER_ALLOW_RUNAS_OWNER = True
+##   CREDD_CACHE_LOCALLY = True
+##
+## You'll also need to ensure that clients are configured to use
+## PASSWORD authentication on any machine that can run jobs as the
+## submitting user. For example,
+##
+##   SEC_CLIENT_AUTHENTICATION_METHODS = NTSSPI, PASSWORD
+
+## CREDD_SETTINGS
+
+## CREDD logging settings
+## Customize these if you wish.
+CREDD_LOG = $(LOG)/CreddLog
+CREDD_DEBUG = D_COMMAND
+MAX_CREDD_LOG = 50000000
+
+#################################################
+## CREDD Expert settings
+## Everyting below is for the UBER-KNOWLEDGEABLE only!
+## Do not change these unless you know what you do!
+#################################################
+
+
+DAEMON_LIST = $(DAEMON_LIST), CREDD
+DC_DAEMON_LIST = $(DC_DAEMON_LIST), CREDD
+
+CREDD    = $(SBIN)/condor_credd.exe
+
+# Timeout session quickly since we normally only get contacted
+# once per starter
+SEC_CREDD_SESSION_TIMEOUT = 10
+
+
+# Set security settings so that full security to the credd is required
+CREDD.SEC_DEFAULT_AUTHENTICATION =REQUIRED
+CREDD.SEC_DEFAULT_ENCRYPTION = REQUIRED
+CREDD.SEC_DEFAULT_INTEGRITY = REQUIRED
+CREDD.SEC_DEFAULT_NEGOTIATION = REQUIRED 
+
+# Require PASSWORD auth for password fetching
+CREDD.SEC_DAEMON_AUTHENTICATION_METHODS = PASSWORD
+
+# Require NTSSPI for storing credentials
+CREDD.SEC_DEFAULT_AUTHENTICATION_METHODS = NTSSPI
