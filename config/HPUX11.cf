@@ -2,7 +2,7 @@
 
 #define PlatformFlags		-DHPUX11=HPUX11
 #undef  PlatformLdFlags
-#define PlatformLdFlags		-Wl,+vnocompatwarnings -static -lstdc++ -dynamic
+#define PlatformLdFlags		-Wl,+vnocompatwarnings /usr/local/lib/libstdc++.a
 
 /*
 #undef SimpleLibC
