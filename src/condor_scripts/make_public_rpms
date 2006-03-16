@@ -66,6 +66,9 @@ chdir $vers_dir;
 opendir VERS_DIR, "." || die "Can't opendir(public/$vers_dir): $!\n";
 @tarballs = ();
 foreach $file ( readdir(VERS_DIR) ) {
+    if( $file =~ /unstrip/ ) {
+        next;
+    }
     if( $file =~ /condor-\d*\.\d*\.\d*.*/ ) {
 	push @tarballs, $file; 
     }
