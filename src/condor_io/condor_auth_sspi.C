@@ -348,12 +348,6 @@ Condor_Auth_SSPI::sspi_server_auth(CredHandle& cred,CtxtHandle& srvCtx)
 		dom = my_domainname();
 		setRemoteDomain(dom);
 
-		MyString authenticated_name;
-		authenticated_name = buf;
-		authenticated_name += '@';
-		authenticated_name += dom;
-		setAuthenticatedName( authenticated_name.Value() );
-
 		dprintf( D_FULLDEBUG, "sspi_server_auth(): user name is: \"%s\"\n", buf );
 		if (dom) {
 			dprintf( D_FULLDEBUG, "sspi_server_auth(): domain name is: \"%s\"\n", dom);
