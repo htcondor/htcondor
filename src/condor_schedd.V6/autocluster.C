@@ -212,23 +212,28 @@ int AutoCluster::getAutoClusterid( ClassAd *job )
 		signature += buf;
 	}
 		// now put significant attrs from self into the signature.
-		// do this by gettings all internal references in the job ad.
+		// note: only do this if signficant_attributes is not explicitly
+		// defined in our config file; if it is in our condor_config, then
+		// we only want to consider the attributes listed by the admin.
 	StringList internal_refs;	// this is what we want to know
-	StringList external_refs;	// we do not care about these
-	job->GetReferences(ATTR_REQUIREMENTS,internal_refs,external_refs);
-	job->GetReferences(ATTR_RANK,internal_refs,external_refs);
-	internal_refs.remove_anycase(ATTR_CURRENT_TIME);	// never want this attr
-	internal_refs.rewind();
-	next_attr = NULL;
-	while ( (next_attr=internal_refs.next()) != NULL ) {
-			// skip this attr if already in our signature from above...
-		if ( significant_attrs->contains_anycase(next_attr) ) {
-			internal_refs.deleteCurrent();
-			continue;
+	if ( !sig_attrs_came_from_config_file ) {
+		// get all internal references in the job ad.
+		StringList external_refs;	// we do not care about these
+		job->GetReferences(ATTR_REQUIREMENTS,internal_refs,external_refs);
+		job->GetReferences(ATTR_RANK,internal_refs,external_refs);
+		internal_refs.remove_anycase(ATTR_CURRENT_TIME);	// never want this attr
+		internal_refs.rewind();
+		next_attr = NULL;
+		while ( (next_attr=internal_refs.next()) != NULL ) {
+				// skip this attr if already in our signature from above...
+			if ( significant_attrs->contains_anycase(next_attr) ) {
+				internal_refs.deleteCurrent();
+				continue;
+			}
+			buf[0] = '\0';
+			job->sPrintExpr(buf,sizeof(buf),next_attr);
+			signature += buf;
 		}
-		buf[0] = '\0';
-		job->sPrintExpr(buf,sizeof(buf),next_attr);
-		signature += buf;
 	}
 
 		// try to find a fit
