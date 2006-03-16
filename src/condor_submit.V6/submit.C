@@ -136,6 +136,9 @@ bool job_ad_saved = false;	// should we deallocate the job ad after storing it?
 bool HasTDP = false;
 char* tdp_cmd = NULL;
 char* tdp_input = NULL;
+#if defined(WIN32)
+char* RunAsOwnerCredD = NULL;
+#endif
 
 char* LogNotesVal = NULL;
 char* UserNotesVal = NULL;
@@ -274,6 +277,10 @@ char    *MaxJobRetirementTime = "max_job_retirement_time";
 char	*DeferralTime = "deferral_time";
 char	*DeferralWindow = "deferral_window";
 
+#if defined(WIN32)
+char	*RunAsOwner = "run_as_owner";
+#endif
+
 const char * REMOTE_PREFIX="Remote_";
 
 #if !defined(WIN32)
@@ -313,6 +320,9 @@ bool 	SetNewTransferFiles( void );
 void 	SetOldTransferFiles( bool, bool );
 void	InsertFileTransAttrs( FileTransferOutput_t when_output );
 void 	SetTDP();
+#if defined(WIN32)
+void	SetRunAsOwner();
+#endif
 void	SetRank();
 void 	SetIWD();
 void 	ComputeIWD();
@@ -3532,6 +3542,35 @@ SetTDP( void )
 	free(allow_arguments_v1);
 }
 
+#if defined(WIN32)
+void
+SetRunAsOwner()
+{
+	char *run_as_owner = condor_param(RunAsOwner, ATTR_JOB_RUNAS_OWNER);
+	if (run_as_owner == NULL) {
+		return;
+	}
+	if (!isTrue(run_as_owner)) {
+		free(run_as_owner);
+		return;
+	}
+			
+	free(run_as_owner);
+	sprintf (buffer, "%s = True", ATTR_JOB_RUNAS_OWNER );
+	InsertJobExpr (buffer);
+
+	// make sure we have a CredD
+	// (RunAsOwner is global for use in SetRequirements(),
+	//  the memory is freed() there)
+	RunAsOwnerCredD = param("CREDD_HOST");
+	if(RunAsOwnerCredD == NULL) {
+		fprintf(stderr,
+				"\nERROR: run_as_owner requires a valid CREDD_HOST configuration macro\n");
+		DoCleanup(0,0,NULL);
+		exit(1);
+	}
+}
+#endif
 
 void
 SetRank()
@@ -4852,6 +4891,9 @@ queue(int num)
 		SetLocalFiles();
 		SetTDP();			// before SetTransferFile() and SetRequirements()
 		SetTransferFiles();	 // must be called _before_ SetImageSize() 
+#if defined(WIN32)
+		SetRunAsOwner();
+#endif
 		SetPerFileEncryption();  // must be called _before_ SetRequirements()
 		SetImageSize();		// must be called _after_ SetTransferFiles()
 		SetJobDeferral();	// must be called _before SetRequirements()
@@ -4997,6 +5039,9 @@ check_requirements( char *orig )
 	bool	checks_pvm = false;
 	bool	checks_mpi = false;
 	bool	checks_tdp = false;
+#if defined(WIN32)
+	bool	checks_credd = false;
+#endif
 	char	*ptr, *tmp;
 	static char	answer[4096];
 	MyString ft_clause;
@@ -5053,6 +5098,9 @@ check_requirements( char *orig )
 	checks_opsys = findClause( answer, ATTR_OPSYS );
 	checks_disk =  findClause( answer, ATTR_DISK );
 	checks_tdp =  findClause( answer, ATTR_HAS_TDP );
+#if defined(WIN32)
+	checks_credd = findClause( answer, ATTR_LOCAL_CREDD );
+#endif
 
 	if( JobUniverse == CONDOR_UNIVERSE_STANDARD ) {
 		checks_ckpt_arch = findClause( answer, ATTR_CKPT_ARCH );
@@ -5254,6 +5302,30 @@ check_requirements( char *orig )
 		(void)strcat( answer, ATTR_HAS_JOB_DEFERRAL );
 		(void)strcat( answer, ")" );
 	}
+
+#if defined(WIN32)
+		//
+		// Windows CredD
+		// run_as_owner jobs on Windows require that the remote starter can
+		// reach the same credd as the submit machine. We add the following:
+		//   - HasWindowsRunAsOwner
+		//   - LocalCredd == <CREDD_HOST> (if LocalCredd not found)
+		//
+	if ( RunAsOwnerCredD ) {
+		MyString tmp_rao = " && (";
+		tmp_rao += ATTR_HAS_WIN_RUN_AS_OWNER;
+		if (!checks_credd) {
+			tmp_rao += " && (";
+			tmp_rao += ATTR_LOCAL_CREDD;
+			tmp_rao += " =?= \"";
+			tmp_rao += RunAsOwnerCredD;
+			tmp_rao += "\")";
+		}
+		tmp_rao += ")";
+		strcat(answer, tmp_rao.GetCStr());
+		free(RunAsOwnerCredD);
+	}
+#endif
 
 	/* if the user specified they want this feature, add it to the requirements */
 	return answer;
