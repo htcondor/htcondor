@@ -1049,6 +1049,7 @@ dc_config_auth()
 	char *cert_buf = 0;
 	char *key_buf = 0;
 	char *trustedca_buf = 0;
+	char *mapfile_buf = 0;
 
 	char buffer[(_POSIX_PATH_MAX * 3)];
 	memset(buffer, 0, (_POSIX_PATH_MAX * 3));
@@ -1079,7 +1080,7 @@ dc_config_auth()
     cert_buf = param( STR_GSI_DAEMON_CERT );
     key_buf = param( STR_GSI_DAEMON_KEY );
     trustedca_buf = param( STR_GSI_DAEMON_TRUSTED_CA_DIR );
-
+    mapfile_buf = param( STR_GSI_MAPFILE );
 
     if (pbuf) {
 
@@ -1095,6 +1096,11 @@ dc_config_auth()
 	
 		if (!key_buf ) {
 			sprintf( buffer, "%s%chostkey.pem", pbuf, DIR_DELIM_CHAR);
+        	SetEnv( STR_GSI_USER_KEY, buffer );
+		}
+
+		if (!mapfile_buf ) {
+			sprintf( buffer, "%s%cgrid-mapfile", pbuf, DIR_DELIM_CHAR);
         	SetEnv( STR_GSI_USER_KEY, buffer );
 		}
 
@@ -1121,11 +1127,9 @@ dc_config_auth()
 		free(trustedca_buf);
 	}
 
-
-    pbuf = param( STR_GSI_MAPFILE );
-    if (pbuf) {
-		SetEnv( STR_GSI_MAPFILE, pbuf );
-        free(pbuf);
+    if (mapfile_buf) {
+		SetEnv( STR_GSI_MAPFILE, mapfile_buf );
+        free(mapfile_buf);
     }
 #endif
 }
