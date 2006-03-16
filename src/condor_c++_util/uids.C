@@ -314,16 +314,8 @@ init_user_ids(const char username[], const char domain[])
 
 		char *credd_host = param("CREDD_HOST");
 		if (credd_host && got_password==false) {
-			MyString credd_sinful;
-			credd_sinful = "<" ;
-			credd_sinful += credd_host;
-			credd_sinful += ">";
-			free(credd_host);
-			credd_host = NULL;
-
-			dprintf(D_FULLDEBUG,"Fetching credential from credd at %s\n",
-					credd_sinful.Value());
-			Daemon credd(DT_ANY,credd_sinful.Value());
+			dprintf(D_FULLDEBUG, "trying to fetch password from credd: %s\n", credd_host);
+			Daemon credd(DT_CREDD);
 			Sock * credd_sock = credd.startCommand(CREDD_GET_PASSWD,Stream::reli_sock,10);
 			if ( credd_sock ) {
 				credd_sock->put((char*)username);	// send user
@@ -338,14 +330,14 @@ init_user_ids(const char username[], const char domain[])
 					got_password_from_credd = true;
 				} else {
 					dprintf(D_FULLDEBUG,
-							"credd at %s did not have info for %s@%s\n",
-							credd_sinful.Value(), username,domain);
+							"credd (%s) did not have info for %s@%s\n",
+							credd_host, username,domain);
 				}
 				delete credd_sock;
 				credd_sock = NULL;
 			} else {
 				dprintf(D_FULLDEBUG,"Failed to contact credd %s: %s\n",
-					credd_sinful.Value(),credd.error() ? credd.error() : "");
+					credd_host,credd.error() ? credd.error() : "");
 			}
 		}
 		if (credd_host) free(credd_host);
