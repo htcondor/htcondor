@@ -320,7 +320,7 @@ Condor_Auth_SSPI::sspi_server_auth(CredHandle& cred,CtxtHandle& srvCtx)
     rc = (pf->ImpersonateSecurityContext)( &srvCtx );
 
 	char buf[256];
-	char *dom;
+	char *dom = NULL;
 	DWORD bufsiz = sizeof buf;
 
     if ( rc != SEC_E_OK ) {
@@ -336,19 +336,30 @@ Condor_Auth_SSPI::sspi_server_auth(CredHandle& cred,CtxtHandle& srvCtx)
 		// probably will not have write access to the log file.
 
         GetUserName( buf, &bufsiz );
+
+		// revert as soon as possible.
+	   	(pf->RevertSecurityContext)( &srvCtx );
+
+		// Ok, safe to dprintf() now...
+
+		it_worked = TRUE;
+
 		setRemoteUser(buf);
 		dom = my_domainname();
 		setRemoteDomain(dom);
-		
-		it_worked = TRUE;
-	   	(pf->RevertSecurityContext)( &srvCtx );
+
+		MyString authenticated_name;
+		authenticated_name = buf;
+		authenticated_name += '@';
+		authenticated_name += dom;
+		setAuthenticatedName( authenticated_name.Value() );
+
+		dprintf( D_FULLDEBUG, "sspi_server_auth(): user name is: \"%s\"\n", buf );
+		if (dom) {
+			dprintf( D_FULLDEBUG, "sspi_server_auth(): domain name is: \"%s\"\n", dom);
+			free(dom);
+		}
     }
-
-	// Ok, safe to dprintf() now...
-
-	dprintf( D_FULLDEBUG, "sspi_server_auth(): user name is: \"%s\"\n", buf );
-	dprintf( D_FULLDEBUG, "sspi_server_auth(): domain name is: \"%s\"\n", dom);
-	if (dom) { free(dom); }
 
     (pf->FreeContextBuffer)( secPackInfo );
 
