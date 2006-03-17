@@ -10,7 +10,7 @@ my $base = getcwd();
 
 my $execbase = "";
 
-if($base =~ /(.*)\/execute\/.*$/) {
+if($base =~ /(.*)\/condor\/execute\/.*$/) {
 	$execbase = $1;
 }
 my $win_perl_wrapper, $win_sh_wrapper;
@@ -22,8 +22,8 @@ my $exe = shift @ARGV;
 
 
 
-$win_perl_wrapper = "$execbase/bin/win32toperl.bat";
-$win_sh_wrapper = "$execbase/bin/win32tosh.bat";
+$win_perl_wrapper = "$execbase/local/bin/win32toperl.bat";
+$win_sh_wrapper = "$execbase/local/bin/win32tosh.bat";
 $cygwinperl = `cygpath -u $win_perl_wrapper`;
 $cygwinsh = `cygpath -u $win_sh_wrapper`;
 
