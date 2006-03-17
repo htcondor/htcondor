@@ -1282,7 +1282,6 @@ set_persistent_config(char *admin, char *config)
 		}
 		
 			// commit config changes
-			// TODO: any security checks here?
 		if (rotate_file(tmp_filename.Value(), filename.Value()) < 0) {
 			dprintf( D_ALWAYS, "rotate_file(%s,%s) failed with '%s' "
 					 "(errno %d) in set_persistent_config()\n",
@@ -1358,8 +1357,6 @@ set_persistent_config(char *admin, char *config)
 		ABORT;
 	}
 	
-		// TODO: ensure toplevel_persistent_config doesn't already exist?
-		// at least that it's not a symlink?
 	rval = rotate_file( tmp_filename.Value(),
 						toplevel_persistent_config.Value() );
 	if (rval < 0) {
