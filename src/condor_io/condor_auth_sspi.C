@@ -336,6 +336,7 @@ Condor_Auth_SSPI::sspi_server_auth(CredHandle& cred,CtxtHandle& srvCtx)
 		// probably will not have write access to the log file.
 
         GetUserName( buf, &bufsiz );
+		dom = my_domainname();
 
 		// revert as soon as possible.
 	   	(pf->RevertSecurityContext)( &srvCtx );
@@ -345,7 +346,6 @@ Condor_Auth_SSPI::sspi_server_auth(CredHandle& cred,CtxtHandle& srvCtx)
 		it_worked = TRUE;
 
 		setRemoteUser(buf);
-		dom = my_domainname();
 		setRemoteDomain(dom);
 
 		dprintf( D_FULLDEBUG, "sspi_server_auth(): user name is: \"%s\"\n", buf );
