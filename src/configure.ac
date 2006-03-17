@@ -24,7 +24,9 @@
 ############################Copyright-DO-NOT-REMOVE-THIS-LINE##
 
 # We need a recent autoconf for many of the macros and tests we're using
-AC_PREREQ(2.57)
+# NOTE: 2.57 has a bug when testing for functions, which we now hit by
+# testing for mkstemp(), so we need at least 2.59... 
+AC_PREREQ(2.59)
 
 # Initialize autoconf
 AC_INIT
