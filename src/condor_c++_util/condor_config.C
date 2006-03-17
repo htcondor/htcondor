@@ -1260,9 +1260,10 @@ set_persistent_config(char *admin, char *config)
 			// write new config to temporary file
 		filename.sprintf( "%s.%s", toplevel_persistent_config.Value(), admin );
 		tmp_filename.sprintf( "%s.tmp", filename.Value() );
-			// TODO: make sure this doesn't exist!  at least ensure
-			// that it's not a symlink?
-		fd = open( tmp_filename.Value(), O_WRONLY|O_CREAT|O_TRUNC, 0644 );
+		do {
+			unlink( tmp_filename.Value() );
+			fd = open( tmp_filename.Value(), O_WRONLY|O_CREAT|O_EXCL, 0644 );
+		} while (fd == -1 && errno == EEXIST); 
 		if( fd < 0 ) {
 			dprintf( D_ALWAYS, "open(%s) returned %d '%s' (errno %d) in "
 					 "set_persistent_config()\n", tmp_filename.Value(),
@@ -1312,9 +1313,10 @@ set_persistent_config(char *admin, char *config)
 
 	// update admin list on disk
 	tmp_filename.sprintf( "%s.tmp", toplevel_persistent_config.Value() );
-
-		// TODO: ensure this file doesn't already exist!
-	fd = open( tmp_filename.Value(), O_WRONLY|O_CREAT|O_TRUNC, 0644 );
+	do {
+		unlink( tmp_filename.Value() );
+		fd = open( tmp_filename.Value(), O_WRONLY|O_CREAT|O_EXCL, 0644 );
+	} while (fd == -1 && errno == EEXIST); 
 	if( fd < 0 ) {
 		dprintf( D_ALWAYS, "open(%s) returned %d '%s' (errno %d) in "
 				 "set_persistent_config()\n", tmp_filename.Value(),
