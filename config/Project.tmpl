@@ -287,15 +287,13 @@ stuff, even if the rest of the imake configuration things we want it.
  depending on what features are enabled
 ****************************************/
 
-#if WANT_CONDOR_G && HAS_GLOBUS
-
-#  define NEEDS_GSI YES
+#if WANT_CONDOR_G
 
   CONDOR_G_FLAGS = -DCONDOR_G
 
 #else
  CONDOR_G_FLAGS =
-#endif /*HasGlobus && WantCondorG */
+#endif /* WantCondorG */
 
 /* GSI Authentication requires globus*/
 #if WANT_GSI && HAS_GSI
