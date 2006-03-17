@@ -1135,7 +1135,7 @@ template class ExtArray<RuntimeConfigItem>;
 
 static ExtArray<RuntimeConfigItem> rArray;
 
-static MyString toplevel_dynamic_config;
+static MyString toplevel_persistent_config;
 
 /*
   we want these two bools to be global, and only initialized on
@@ -1153,7 +1153,7 @@ static bool enable_runtime;
 static bool enable_persistent;
 
 static void
-set_toplevel_dynamic_config()
+init_dynamic_config()
 {
 	static bool initialized = false;
 
@@ -1166,8 +1166,8 @@ set_toplevel_dynamic_config()
 	enable_persistent = param_boolean( "ENABLE_PERSISTENT_CONFIG", false );
 	initialized = true;
 
-	if( !enable_runtime && !enable_persistent ) {
-			// we don't want this feature, leave the toplevel blank
+	if( !enable_persistent ) {
+			// we don't want persistent configs, leave the toplevel blank
 		return;
 	}
 
@@ -1179,13 +1179,13 @@ set_toplevel_dynamic_config()
 	filename_parameter.sprintf( "%s_CONFIG", mySubSystem );
 	tmp = param( filename_parameter.Value() );
 	if( tmp ) {
-		toplevel_dynamic_config = tmp;
+		toplevel_persistent_config = tmp;
 		free( tmp );
 		return;
 	}
 
 		// first try the knob to deal w/ root squashing in NFS
-	tmp = param( "DYNAMIC_CONFIG_DIR" );
+	tmp = param( "PERSISTENT_CONFIG_DIR" );
 	if( ! tmp ) {
 			// if that didn't work, fall back on the old behavior in LOG
 			// TODO: it'd be nice to warn the admin here, but dprintf()
@@ -1208,17 +1208,15 @@ set_toplevel_dynamic_config()
 			return;
 		} else {
 				// we are a daemon.  if we fail, we must exit.
-			dprintf( D_ALWAYS, "%s error: %s is TRUE, "
-					 "but neither %s, DYNAMIC_CONFIG_DIR, nor LOG is "
+			dprintf( D_ALWAYS, "%s error: ENABLE_PERSISTENT_CONFIG is TRUE, "
+					 "but neither %s, PERSISTENT_CONFIG_DIR, nor LOG is "
 					 "specified in the configuration file\n",
-					 enable_persistent ? "ENABLE_PERSISTENT_CONFIG" :
-					   "ENABLE_RUNTIME_CONFIG",
 					 myDistro->GetCap(), filename_parameter.Value() );
 			exit( 1 );
 		}
 	}
-	toplevel_dynamic_config.sprintf( "%s%c.config.%s", tmp,
-									 DIR_DELIM_CHAR, mySubSystem );
+	toplevel_persistent_config.sprintf( "%s%c.config.%s", tmp,
+										DIR_DELIM_CHAR, mySubSystem );
 	free(tmp);
 }
 
@@ -1250,12 +1248,17 @@ set_persistent_config(char *admin, char *config)
 	}
 
 	// make sure toplevel config filename is set
-	set_toplevel_dynamic_config();
+	init_dynamic_config();
+	if( ! toplevel_persistent_config.Length() ) {
+		EXCEPT( "Impossible: programmer error: toplevel_persistent_config "
+				"is 0-length, but we already initialized, enable_persistent "
+				"is TRUE, and set_persistent_config() has been called" );
+	}
 
 	if (config && config[0]) {	// (re-)set config
 		priv = set_root_priv();
 			// write new config to temporary file
-		filename.sprintf( "%s.%s", toplevel_dynamic_config.Value(), admin );
+		filename.sprintf( "%s.%s", toplevel_persistent_config.Value(), admin );
 		tmp_filename.sprintf( "%s.tmp", filename.Value() );
 			// TODO: make sure this doesn't exist!  at least ensure
 			// that it's not a symlink?
@@ -1308,7 +1311,7 @@ set_persistent_config(char *admin, char *config)
 	}		
 
 	// update admin list on disk
-	tmp_filename.sprintf( "%s.tmp", toplevel_dynamic_config.Value() );
+	tmp_filename.sprintf( "%s.tmp", toplevel_persistent_config.Value() );
 
 		// TODO: ensure this file doesn't already exist!
 	fd = open( tmp_filename.Value(), O_WRONLY|O_CREAT|O_TRUNC, 0644 );
@@ -1353,9 +1356,10 @@ set_persistent_config(char *admin, char *config)
 		ABORT;
 	}
 	
-		// TODO: ensure toplevel_dynamic_config doesn't already exist?
+		// TODO: ensure toplevel_persistent_config doesn't already exist?
 		// at least that it's not a symlink?
-	rval = rotate_file(tmp_filename.Value(), toplevel_dynamic_config.Value());
+	rval = rotate_file( tmp_filename.Value(),
+						toplevel_persistent_config.Value() );
 	if (rval < 0) {
 		dprintf( D_ALWAYS, "rotate_file(%s,%s) failed with '%s' (errno %d) "
 				 "in set_persistent_config()\n", tmp_filename.Value(),
@@ -1366,11 +1370,11 @@ set_persistent_config(char *admin, char *config)
 	// if we removed a config, then we should clean up by removing the file(s)
 	if (!config || !config[0]) {
 			// TODO: make sure this isn't a symlink?
-		filename.sprintf( "%s.%s", toplevel_dynamic_config.Value(), admin );
+		filename.sprintf( "%s.%s", toplevel_persistent_config.Value(), admin );
 		unlink( filename.Value() );
 		if (PersistAdminList.number() == 0) {
 			// TODO: make sure this isn't a symlink?
-			unlink( toplevel_dynamic_config.Value() );
+			unlink( toplevel_persistent_config.Value() );
 		}
 	}
 
@@ -1432,17 +1436,17 @@ process_persistent_configs()
 	bool processed = false;
 	MyString filename;
 
-	if( access( toplevel_dynamic_config.Value(), R_OK ) == 0 &&
+	if( access( toplevel_persistent_config.Value(), R_OK ) == 0 &&
 		PersistAdminList.number() == 0 )
 	{
 		processed = true;
 
-		rval = Read_config( toplevel_dynamic_config.Value(), ConfigTab,
+		rval = Read_config( toplevel_persistent_config.Value(), ConfigTab,
 							TABLESIZE, EXPAND_LAZY, true, extra_info );
 		if (rval < 0) {
 			dprintf( D_ALWAYS, "Configuration Error Line %d while reading "
 					 "top-level persistent config file: %s\n",
-					 ConfigLineNo, toplevel_dynamic_config.Value() );
+					 ConfigLineNo, toplevel_persistent_config.Value() );
 			exit(1);
 		}
 
@@ -1456,7 +1460,7 @@ process_persistent_configs()
 	PersistAdminList.rewind();
 	while ((tmp = PersistAdminList.next())) {
 		processed = true;
-		filename.sprintf( "%s.%s", toplevel_dynamic_config.Value(), tmp );
+		filename.sprintf( "%s.%s", toplevel_persistent_config.Value(), tmp );
 		rval = Read_config( filename.Value(), ConfigTab, TABLESIZE,
 							 EXPAND_LAZY, true, extra_info );
 		if (rval < 0) {
@@ -1536,7 +1540,7 @@ process_dynamic_configs()
 {
 	int per_rval, run_rval;
 
-	set_toplevel_dynamic_config();
+	init_dynamic_config();
 
 	if( enable_persistent ) {
 		per_rval = process_persistent_configs();
