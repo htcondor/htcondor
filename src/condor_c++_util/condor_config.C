@@ -1371,11 +1371,9 @@ set_persistent_config(char *admin, char *config)
 
 	// if we removed a config, then we should clean up by removing the file(s)
 	if (!config || !config[0]) {
-			// TODO: make sure this isn't a symlink?
 		filename.sprintf( "%s.%s", toplevel_persistent_config.Value(), admin );
 		unlink( filename.Value() );
 		if (PersistAdminList.number() == 0) {
-			// TODO: make sure this isn't a symlink?
 			unlink( toplevel_persistent_config.Value() );
 		}
 	}
