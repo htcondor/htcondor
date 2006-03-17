@@ -305,6 +305,15 @@ sub send_file {
 	if($timeout < $MIN_TIMEOUT) { $timeout = $MIN_TIMEOUT; }
 	my $ret = looping_timeout_system($max_timeouts, $timeout,
 		"$ENV{GLOBUS_LOCATION}/bin/globus-url-copy", $src_url, $dst_url);
+	if($ret != 0) {
+		# We have seen some sites where /etc/grid-security/certificates
+		# is no good, but $GL/share/certificates is. Give the second
+		# location a try before failing
+		$ENV{X509_CERT_DIR} = "$ENV{GLOBUS_LOCATION}/share/certificates";
+		report_info("Retrying globus-url-copy with X509_CERT_DIR=$ENV{X509_CERT_DIR}");
+		$ret = looping_timeout_system($max_timeouts, $timeout,
+			"$ENV{GLOBUS_LOCATION}/bin/globus-url-copy", $src_url, $dst_url);
+	}
 	if($ret == -1) {
 		fatal_error($ERROR_GUC_FAILED,
 			"Failed to execute globus-url-copy $src_url $dst_url "
