@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_post.pl,v 1.1.4.3 2006-03-14 19:16:14 gquinn Exp $
+# $Id: remote_post.pl,v 1.1.4.4 2006-03-17 01:59:57 bt Exp $
 # post script for Condor testsuite runs
 ######################################################################
 
@@ -82,8 +82,6 @@ if( ! -d "$BaseDir/results" ) {
     # might as well die, since there's nothing worth saving...
     mkdir( "$BaseDir/results", 0777 ) || die "Can't mkdir($BaseDir/results): $!\n";
 }
-
-system( "cp -r condor  $BaseDir/results/" );
 
 system( "cp tasklist.nmi $BaseDir/results/" );
 if( $? ) {

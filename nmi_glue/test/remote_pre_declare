@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre_declare,v 1.1.4.5 2006-03-14 19:16:14 gquinn Exp $
+# $Id: remote_pre_declare,v 1.1.4.6 2006-03-17 01:59:57 bt Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
@@ -84,7 +84,7 @@ else
     # windows distribution has condor all in bin
 	my $win32basedir = $BaseDir;
     my $gluedir = `cygpath -u $BaseDir/nmi_glue/test`;
-    my $condordir = `cygpath -u $BaseDir/condor/bin`;
+    my $condordir = `cygpath -u $BaseDir/local/bin`;
     my $configfile = `cygpath -u $BaseDir/condor/condor_config`;
     chomp($gluedir);
     chomp($condordir);

@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre.pl,v 1.1.4.9 2006-03-16 09:59:38 wright Exp $
+# $Id: remote_pre.pl,v 1.1.4.10 2006-03-17 01:59:57 bt Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
@@ -132,8 +132,9 @@ if( !($ENV{NMI_PLATFORM} =~ /winnt/) )
 else
 {
 	# windows personal condor setup
-	# release is extracted to condor
-	my $syscmd = "cp -r public/* $BaseDir/condor";
+	# release is extracted to local
+	mkdir( "$BaseDir/local", 0777 ) || die "Can't mkdir $BaseDir/local: $!\n";
+	my $syscmd = "cp -r public/* $BaseDir/local";
 	if( -d "condor")
 	{
 		system("rm -rf condor");
@@ -147,11 +148,11 @@ else
 	$win32base = $BaseDir;
 	$win32base =~ s/\/cygdrive\/c/C:/;
 
-	safe_copy("$SrcDir/condor_scripts/exe_switch.pl","$BaseDir/condor/bin/exe_switch.pl");
-	safe_copy("$SrcDir/condor_scripts/win32toperl.bat","$BaseDir/condor/bin/win32toperl.bat");
-	safe_copy("$SrcDir/condor_scripts/win32tosh.bat","$BaseDir/condor/bin/win32tosh.bat");
-	open( WRAPPER, ">$BaseDir/condor/bin/win32.perl.bat" ) || die "Can't open new job wrapper: $!\n";
-	print WRAPPER "\@c:\\perl\\bin\\perl.exe $win32base/condor/bin/exe_switch.pl %*\n";
+	safe_copy("$SrcDir/condor_scripts/exe_switch.pl","$BaseDir/local/bin/exe_switch.pl");
+	safe_copy("$SrcDir/condor_scripts/win32toperl.bat","$BaseDir/local/bin/win32toperl.bat");
+	safe_copy("$SrcDir/condor_scripts/win32tosh.bat","$BaseDir/local/bin/win32tosh.bat");
+	open( WRAPPER, ">$BaseDir/local/bin/win32.perl.bat" ) || die "Can't open new job wrapper: $!\n";
+	print WRAPPER "\@c:\\perl\\bin\\perl.exe $win32base/local/bin/exe_switch.pl %*\n";
 	close(WRAPPER);
 
 	print "Want to copy this<<$SrcDir/condor_scripts/win32.perl.bat>> to execute dir\n";
@@ -182,7 +183,7 @@ else
 		if($line =~ /^RELEASE_DIR\s*=.*/)
 		{
 			print "Matching <<$line>>\n";
-			print NEWFIG "RELEASE_DIR = $win32base/condor\n";
+			print NEWFIG "RELEASE_DIR = $win32base/local\n";
 		}
 		elsif($line =~ /^LOCAL_DIR\s*=.*/)
 		{
@@ -263,7 +264,7 @@ print FIX "PERIODIC_EXPR_INTERVAL = 15\n";
 if( ($ENV{NMI_PLATFORM} =~ /winnt/) )
 {
 	my $mypath = $ENV{PATH};
-	print FIX "USER_JOB_WRAPPER = $win32base/condor/bin/win32.perl.bat\n";
+	print FIX "USER_JOB_WRAPPER = $win32base/local/bin/win32.perl.bat\n";
 	print FIX "START = TRUE\n";
 	print FIX "PREEMPT = FALSE\n";
 	print FIX "SUSPEND = FALSE\n";
@@ -350,7 +351,7 @@ if( $master_pid == 0) {
 	}
 	else
 	{
-		exec("$BaseDir/condor/bin/condor_master -f");
+		exec("$BaseDir/local/bin/condor_master -f");
 	}
   	print "MASTER EXEC FAILED!!!!!\n";
   	exit 1;
