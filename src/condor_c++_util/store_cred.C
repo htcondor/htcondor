@@ -42,9 +42,13 @@ void SecureZeroMemory(void *p, size_t n)
 	memset(p, 0, n);
 }
 
-char* getStoredCredential(const char *username, const char*)
+char* getStoredCredential(const char *username, const char *domain)
 {
 	// TODO: add support for multiple domains
+
+	if ( !username || !domain ) {
+		return NULL;
+	}
 
 	if (strcmp(username, POOL_PASSWORD_USERNAME) != 0) {
 		dprintf(D_FULLDEBUG, "getStoredCredential: only pool password is supported on UNIX\n");
