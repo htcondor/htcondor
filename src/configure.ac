@@ -1155,8 +1155,8 @@ ac_have_libdl=0
 AC_CHECK_FUNC(dlopen,,AC_CHECK_LIB(dl,dlopen,[ac_have_libdl=1],))
 AC_SUBST(HAVE_LIBDL,$ac_have_libdl)
 
-AC_CHECK_FUNC(mkstemp,AC_SUBST(HAVE_MKSTEMP,1))
-AC_CHECK_FUNC(tmpnam,AC_SUBST(HAVE_TMPNAM,1))
+AC_CHECK_FUNC(mkstemp,AC_SUBST(HAVE_MKSTEMP,1),AC_SUBST(HAVE_MKSTEMP,0))
+AC_CHECK_FUNC(tmpnam,AC_SUBST(HAVE_TMPNAM,1),AC_SUBST(HAVE_TMPNAM,0))
 
 # checks for system services
 
