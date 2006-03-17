@@ -1255,8 +1255,8 @@ set_persistent_config(char *admin, char *config)
 				"is TRUE, and set_persistent_config() has been called" );
 	}
 
+	priv = set_root_priv();
 	if (config && config[0]) {	// (re-)set config
-		priv = set_root_priv();
 			// write new config to temporary file
 		filename.sprintf( "%s.%s", toplevel_persistent_config.Value(), admin );
 		tmp_filename.sprintf( "%s.tmp", filename.Value() );
