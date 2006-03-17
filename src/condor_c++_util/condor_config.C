@@ -71,12 +71,14 @@
 #include "condor_environ.h"
 #include "HashTable.h"
 #include "extra_param_info.h"
+#include "condor_uid.h"
 
 extern "C" {
 	
 // Function prototypes
 void real_config(char* host, int wantsQuiet);
-int Read_config(char*, BUCKET**, int, int, ExtraParamTable * = NULL);
+int Read_config(const char*, BUCKET**, int, int, bool,
+				ExtraParamTable* = NULL);
 int SetSyscalls(int);
 char* find_global();
 char* find_global_root();
@@ -89,7 +91,7 @@ void clear_config();
 void reinsert_specials(char*);
 void process_file(char*, char*, char*, int);
 void process_locals( char*, char*);
-static int  process_runtime_configs();
+static int  process_dynamic_configs();
 void check_params();
 
 // External variables
@@ -379,8 +381,8 @@ real_config(char* host, int wantsQuiet)
 		// to override them, since it's not going to work.
 	reinsert_specials( host );
 
-	if( process_runtime_configs() == 1 ) {
-			// if we found runtime config files, we process the root
+	if( process_dynamic_configs() == 1 ) {
+			// if we found dynamic config files, we process the root
 			// config file again
 		if (config_file) {
 			process_file( config_file, "global root config file", host, true );
@@ -437,7 +439,8 @@ process_file( char* file, char* name, char* host, int required )
 			exit( 1 );
 		} 
 	} else {
-		rval = Read_config( file, ConfigTab, TABLESIZE, EXPAND_LAZY, extra_info );
+		rval = Read_config( file, ConfigTab, TABLESIZE, EXPAND_LAZY, 
+							false, extra_info );
 		if( rval < 0 ) {
 			fprintf( stderr,
 					 "Configuration Error Line %d while reading %s %s\n",
@@ -1132,102 +1135,156 @@ template class ExtArray<RuntimeConfigItem>;
 
 static ExtArray<RuntimeConfigItem> rArray;
 
-static char toplevel_runtime_config[_POSIX_PATH_MAX] = { '\0' };
+static MyString toplevel_dynamic_config;
+
+/*
+  we want these two bools to be global, and only initialized on
+  startup, so that folks can't play tricks and change these
+  dynamically.  for example, if a site enables runtime but not
+  persistent configs, we can't allow someone to set
+  "ENABLE_PERSISTENT_CONFIG" with a condor_config_val -rset.
+  therefore, we only read these once, before we look at any of the
+  dynamic config files, to make sure we're happy.  this means it
+  requires a restart to change any of these, but i think that's a
+  reasonable burden on admins, considering the potential security
+  implications.  -derek 2006-03-17
+*/ 
+static bool enable_runtime;
+static bool enable_persistent;
 
 static void
-set_toplevel_runtime_config()
+set_toplevel_dynamic_config()
 {
-	if (!toplevel_runtime_config[0]) {
-		char filename_parameter[50], *tmp;
-		sprintf(filename_parameter, "%s_CONFIG", mySubSystem);
-		tmp = param(filename_parameter);
-		if (tmp) {
-			sprintf(toplevel_runtime_config, "%s", tmp);
-			free(tmp);
+	static bool initialized = false;
+
+	if( initialized ) {
+			// already have a value, we're done
+		return;
+	}
+
+	enable_runtime = param_boolean( "ENABLE_RUNTIME_CONFIG", false );
+	enable_persistent = param_boolean( "ENABLE_PERSISTENT_CONFIG", false );
+	initialized = true;
+
+	if( !enable_runtime && !enable_persistent ) {
+			// we don't want this feature, leave the toplevel blank
+		return;
+	}
+
+	char* tmp;
+
+		// if we're using runtime config, try a subsys-specific config
+		// knob for the root location
+	MyString filename_parameter;
+	filename_parameter.sprintf( "%s_CONFIG", mySubSystem );
+	tmp = param( filename_parameter.Value() );
+	if( tmp ) {
+		toplevel_dynamic_config = tmp;
+		free( tmp );
+		return;
+	}
+
+		// first try the knob to deal w/ root squashing in NFS
+	tmp = param( "DYNAMIC_CONFIG_DIR" );
+	if( ! tmp ) {
+			// if that didn't work, fall back on the old behavior in LOG
+			// TODO: it'd be nice to warn the admin here, but dprintf()
+			// isn't working yet... :(
+		tmp = param( "LOG" );
+	}
+
+	if( !tmp ) {
+		if( strcmp(mySubSystem,"SUBMIT")==0 || 
+			strcmp(mySubSystem,"TOOL")==0 ||
+			! have_config_file )
+		{
+				/* 
+				   we are just a tool, not a daemon.
+				   or, we were explicitly told we don't have
+				   the usual config files.
+				   thus it is not imperative that we find what we
+				   were looking for...
+				*/
+			return;
 		} else {
-			tmp = param("LOG");
-			if (!tmp) {
-				if ( strcmp(mySubSystem,"SUBMIT")==0 || 
-					 strcmp(mySubSystem,"TOOL")==0 ||
-					 ! have_config_file )
-				{
-						// we are just a tool, not a daemon.
-						// or, we were explicitly told we don't have
-						// the usual config files.
-						// thus it is not imperative that we find what we
-						// were looking for...
-					toplevel_runtime_config[0] = '\0';
-					return;
-				} else {
-						// we are a daemon.  if we fail, we must exit.
-					dprintf( D_ALWAYS, "%s error: neither %s nor LOG is "
-						 "specified in the configuration file.\n",
-						 myDistro->GetCap(), filename_parameter );
-					exit( 1 );
-				}
-			}
-			sprintf(toplevel_runtime_config, "%s%c.config.%s", tmp,
-					DIR_DELIM_CHAR,	mySubSystem);
-			free(tmp);
+				// we are a daemon.  if we fail, we must exit.
+			dprintf( D_ALWAYS, "%s error: %s is TRUE, "
+					 "but neither %s, DYNAMIC_CONFIG_DIR, nor LOG is "
+					 "specified in the configuration file\n",
+					 enable_persistent ? "ENABLE_PERSISTENT_CONFIG" :
+					   "ENABLE_RUNTIME_CONFIG",
+					 myDistro->GetCap(), filename_parameter.Value() );
+			exit( 1 );
 		}
 	}
+	toplevel_dynamic_config.sprintf( "%s%c.config.%s", tmp,
+									 DIR_DELIM_CHAR, mySubSystem );
+	free(tmp);
 }
+
 
 /* 
 ** Caller is responsible for allocating admin and config with malloc.
 ** Caller should not free admin and config after the call.
 */
+
+#define ABORT \
+	if(admin) { free(admin); } \
+	if(config) { free(config); } \
+	set_priv(priv); \
+	return -1
+
 int
 set_persistent_config(char *admin, char *config)
 {
-	char tmp_filename[_POSIX_PATH_MAX], filename[_POSIX_PATH_MAX];
-	int fd;
+	int fd, rval;
 	char *tmp;
+	MyString filename;
+	MyString tmp_filename;
+	priv_state priv;
 
-	if (!admin || !admin[0]) {
-		if (admin) free(admin);
-		if (config) free(config);
+	if (!admin || !admin[0] || !enable_persistent) {
+		if (admin)  { free(admin);  }
+		if (config) { free(config); }
 		return -1;
 	}
 
 	// make sure toplevel config filename is set
-	set_toplevel_runtime_config();
+	set_toplevel_dynamic_config();
 
 	if (config && config[0]) {	// (re-)set config
-		// write new config to temporary file
-		sprintf(filename, "%s.%s", toplevel_runtime_config, admin);
-		sprintf(tmp_filename, "%s.tmp", filename);
-		if ((fd = open(tmp_filename, O_WRONLY|O_CREAT|O_TRUNC, 0644)) < 0) {
-			dprintf( D_ALWAYS, "open(%s) returns %d, errno %d in "
-					 "set_persistent_config\n", tmp_filename,
-					 fd, errno );
-			free(admin);
-			free(config);
-			return -1;
+		priv = set_root_priv();
+			// write new config to temporary file
+		filename.sprintf( "%s.%s", toplevel_dynamic_config.Value(), admin );
+		tmp_filename.sprintf( "%s.tmp", filename.Value() );
+			// TODO: make sure this doesn't exist!  at least ensure
+			// that it's not a symlink?
+		fd = open( tmp_filename.Value(), O_WRONLY|O_CREAT|O_TRUNC, 0644 );
+		if( fd < 0 ) {
+			dprintf( D_ALWAYS, "open(%s) returned %d '%s' (errno %d) in "
+					 "set_persistent_config()\n", tmp_filename.Value(),
+					 fd, strerror(errno), errno );
+			ABORT;
 		}
 		if (write(fd, config, strlen(config)) != (ssize_t)strlen(config)) {
-			dprintf( D_ALWAYS, "write failed with errno %d in "
-					 "set_persistent_config\n", errno );
-			free(admin);
-			free(config);
-			return -1;
+			dprintf( D_ALWAYS, "write() failed with '%s' (errno %d) in "
+					 "set_persistent_config()\n", strerror(errno), errno );
+			ABORT;
 		}
 		if (close(fd) < 0) {
-			dprintf( D_ALWAYS, "close failed with errno %d in "
-					 "set_persistent_config\n", errno );
-			free(admin);
-			free(config);
-			return -1;
+			dprintf( D_ALWAYS, "close() failed with '%s' (errno %d) in "
+					 "set_persistent_config()\n", strerror(errno), errno );
+			ABORT;
 		}
 		
-		// commit config changes
-		if (rotate_file(tmp_filename, filename) < 0) {
-			dprintf( D_ALWAYS, "rotate_file(%s,%s) failed with errno %d in "
-					 "set_persistent_config\n", tmp_filename, filename,
-					 errno );
-			free(admin);
-			free(config);
-			return -1;
+			// commit config changes
+			// TODO: any security checks here?
+		if (rotate_file(tmp_filename.Value(), filename.Value()) < 0) {
+			dprintf( D_ALWAYS, "rotate_file(%s,%s) failed with '%s' "
+					 "(errno %d) in set_persistent_config()\n",
+					 tmp_filename.Value(), filename.Value(),
+					 strerror(errno), errno );
+			ABORT;
 		}
 	
 		// update admin list in memory
@@ -1236,6 +1293,7 @@ set_persistent_config(char *admin, char *config)
 		} else {
 			free(admin);
 			free(config);
+			set_priv(priv);
 			return 0;		// if no update is required, then we are done
 		}
 
@@ -1250,90 +1308,87 @@ set_persistent_config(char *admin, char *config)
 	}		
 
 	// update admin list on disk
-	sprintf(tmp_filename, "%s.tmp", toplevel_runtime_config);
-	if ((fd = open(tmp_filename, O_WRONLY|O_CREAT|O_TRUNC, 0644)) < 0) {
-		dprintf( D_ALWAYS, "open(%s) returns %d, errno %d in "
-				 "set_persistent_config\n", tmp_filename,
-				 fd, errno );
-		free(admin);
-		if (config) free(config);
-		return -1;
+	tmp_filename.sprintf( "%s.tmp", toplevel_dynamic_config.Value() );
+
+		// TODO: ensure this file doesn't already exist!
+	fd = open( tmp_filename.Value(), O_WRONLY|O_CREAT|O_TRUNC, 0644 );
+	if( fd < 0 ) {
+		dprintf( D_ALWAYS, "open(%s) returned %d '%s' (errno %d) in "
+				 "set_persistent_config()\n", tmp_filename.Value(),
+				 fd, strerror(errno), errno );
+		ABORT;
 	}
 	const char param[] = "RUNTIME_CONFIG_ADMIN = ";
 	if (write(fd, param, strlen(param)) != (ssize_t)strlen(param)) {
-		dprintf( D_ALWAYS, "write failed with errno %d in "
-				 "set_persistent_config\n", errno );
-		free(admin);
-		if (config) free(config);
-		return -1;
+		dprintf( D_ALWAYS, "write() failed with '%s' (errno %d) in "
+				 "set_persistent_config()\n", strerror(errno), errno );
+		ABORT;
 	}
 	PersistAdminList.rewind();
 	bool first_time = true;
 	while( (tmp = PersistAdminList.next()) ) {
 		if (!first_time) {
 			if (write(fd, ", ", 2) != 2) {
-				dprintf( D_ALWAYS, "write failed with errno %d in "
-						 "set_persistent_config\n", errno );
-				free(admin);
-				if (config) free(config);
-				return -1;
+				dprintf( D_ALWAYS, "write() failed with '%s' (errno %d) in "
+						 "set_persistent_config()\n", strerror(errno), errno );
+				ABORT;
 			}
 		} else {
 			first_time = false;
 		}
 		if (write(fd, tmp, strlen(tmp)) != (ssize_t)strlen(tmp)) {
-			dprintf( D_ALWAYS, "write failed with errno %d in "
-					 "set_persistent_config\n", errno );
-			free(admin);
-			if (config) free(config);
-			return -1;
+			dprintf( D_ALWAYS, "write() failed with '%s' (errno %d) in "
+					 "set_persistent_config()\n", strerror(errno), errno );
+			ABORT;
 		}
 	}
 	if (write(fd, "\n", 1) != 1) {
-		dprintf( D_ALWAYS, "write failed with errno %d in "
-				 "set_persistent_config\n", errno );
-		free(admin);
-		if (config) free(config);
-		return -1;
+		dprintf( D_ALWAYS, "write() failed with '%s' (errno %d) in "
+				 "set_persistent_config()\n", strerror(errno), errno );
+		ABORT;
 	}
 	if (close(fd) < 0) {
-		dprintf( D_ALWAYS, "close failed with errno %d in "
-				 "set_persistent_config\n", errno );
-		free(admin);
-		if (config) free(config);
-		return -1;
+		dprintf( D_ALWAYS, "close() failed with '%s' (errno %d) in "
+				 "set_persistent_config()\n", strerror(errno), errno );
+		ABORT;
 	}
 	
-	if (rotate_file(tmp_filename, toplevel_runtime_config) < 0) {
-		dprintf( D_ALWAYS, "rotate_file(%s,%s) failed with errno %d in "
-				 "set_persistent_config\n", tmp_filename, filename, errno );
-		free(admin);
-		if (config) free(config);
-		return -1;
+		// TODO: ensure toplevel_dynamic_config doesn't already exist?
+		// at least that it's not a symlink?
+	rval = rotate_file(tmp_filename.Value(), toplevel_dynamic_config.Value());
+	if (rval < 0) {
+		dprintf( D_ALWAYS, "rotate_file(%s,%s) failed with '%s' (errno %d) "
+				 "in set_persistent_config()\n", tmp_filename.Value(),
+				 filename.Value(), strerror(errno), errno );
+		ABORT;
 	}
 
 	// if we removed a config, then we should clean up by removing the file(s)
 	if (!config || !config[0]) {
-		sprintf(filename, "%s.%s", toplevel_runtime_config, admin);
-		unlink(filename);
+			// TODO: make sure this isn't a symlink?
+		filename.sprintf( "%s.%s", toplevel_dynamic_config.Value(), admin );
+		unlink( filename.Value() );
 		if (PersistAdminList.number() == 0) {
-			unlink(toplevel_runtime_config);
+			// TODO: make sure this isn't a symlink?
+			unlink( toplevel_dynamic_config.Value() );
 		}
 	}
 
-	free(admin);
-	if (config) free(config);
+	set_priv( priv );
+	free( admin );
+	if (config) { free( config ); }
 	return 0;
 }
+
 
 int
 set_runtime_config(char *admin, char *config)
 {
 	int i;
 
-	if (!admin || !admin[0]) {
-		if (admin) free(admin);
-		if (config) free(config);
+	if (!admin || !admin[0] || !enable_runtime) {
+		if (admin)  { free(admin);  }
+		if (config) { free(config); }
 		return -1;
 	}
 
@@ -1366,34 +1421,28 @@ set_runtime_config(char *admin, char *config)
 	return 0;
 }
 
-/* 
-** returns 1 if runtime configs were processed; 0 if no runtime configs
-** were defined, and -1 on error.  persistent configs are also processed
-** by this function.
-*/
+
 extern "C" {
 
 static int
-process_runtime_configs()
+process_persistent_configs()
 {
-	char filename[_POSIX_PATH_MAX];
 	char *tmp;
-	int i, rval, fd;
+	int rval;
 	bool processed = false;
+	MyString filename;
 
-	set_toplevel_runtime_config();
-
-	if( access( toplevel_runtime_config, R_OK ) == 0 &&
-		PersistAdminList.number() == 0 ) {
-
+	if( access( toplevel_dynamic_config.Value(), R_OK ) == 0 &&
+		PersistAdminList.number() == 0 )
+	{
 		processed = true;
 
-		rval = Read_config( toplevel_runtime_config, ConfigTab,
-							TABLESIZE, EXPAND_LAZY, extra_info );
+		rval = Read_config( toplevel_dynamic_config.Value(), ConfigTab,
+							TABLESIZE, EXPAND_LAZY, true, extra_info );
 		if (rval < 0) {
 			dprintf( D_ALWAYS, "Configuration Error Line %d while reading "
-					 "top-level runtime config file: %s\n",
-					 ConfigLineNo, toplevel_runtime_config );
+					 "top-level persistent config file: %s\n",
+					 ConfigLineNo, toplevel_dynamic_config.Value() );
 			exit(1);
 		}
 
@@ -1407,39 +1456,64 @@ process_runtime_configs()
 	PersistAdminList.rewind();
 	while ((tmp = PersistAdminList.next())) {
 		processed = true;
-		sprintf(filename, "%s.%s", toplevel_runtime_config, tmp);
-		rval = Read_config( filename, ConfigTab, TABLESIZE,
-							EXPAND_LAZY, extra_info );
+		filename.sprintf( "%s.%s", toplevel_dynamic_config.Value(), tmp );
+		rval = Read_config( filename.Value(), ConfigTab, TABLESIZE,
+							 EXPAND_LAZY, true, extra_info );
 		if (rval < 0) {
 			dprintf( D_ALWAYS, "Configuration Error Line %d "
-					 "while reading runtime config file: %s\n",
-					 ConfigLineNo, filename );
+					 "while reading persistent config file: %s\n",
+					 ConfigLineNo, filename.Value() );
 			exit(1);
 		}
 	}
+	return (int)processed;
+}
 
-	tmpnam(filename);
+
+static int
+process_runtime_configs()
+{
+	char filename[_POSIX_PATH_MAX];
+	int i, rval, fd;
+	bool processed = false;
+
 	for (i=0; i <= rArray.getlast(); i++) {
 		processed = true;
-		if ((fd = open(filename, O_WRONLY|O_CREAT|O_TRUNC, 0644)) < 0) {
-			dprintf( D_ALWAYS, "open(%s) returns %d, errno %d in "
-					 "process_runtime_configs\n", filename,
-					 fd, errno );
+
+#if HAVE_MKSTEMP && !defined( WIN32 )
+		sprintf( filename, "/tmp/cndrtmpXXXXXX" );
+		fd = mkstemp( filename ); 
+		if (fd < 0) {
+			dprintf( D_ALWAYS, "mkstemp(%s) returned %d, '%s' (errno %d) in "
+					 "process_dynamic_configs()\n", filename, fd,
+					 strerror(errno), errno );
 			exit(1);
 		}
+#else /* ! HAVE_MKSTEMP */
+		// EVIL!  tmpnam() isn't safe!
+		tmpnam( filename );
+		fd = open( filename, O_WRONLY|O_CREAT|O_TRUNC, 0644 );
+		if (fd < 0) {
+			dprintf( D_ALWAYS, "open(%s) returns %d, '%s' (errno %d) in "
+					 "process_dynamic_configs()\n", filename, fd,
+					 strerror(errno), errno );
+			exit(1);
+		}
+#endif /* ! HAVE_MKSTEMP */
+
 		if (write(fd, rArray[i].config, strlen(rArray[i].config))
 			!= (ssize_t)strlen(rArray[i].config)) {
 			dprintf( D_ALWAYS, "write failed with errno %d in "
-					 "process_runtime_configs\n", errno );
+					 "process_dynamic_configs\n", errno );
 			exit(1);
 		}
 		if (close(fd) < 0) {
 			dprintf( D_ALWAYS, "close failed with errno %d in "
-					 "process_runtime_configs\n", errno );
+					 "process_dynamic_configs\n", errno );
 			exit(1);
 		}
 		rval = Read_config( filename, ConfigTab, TABLESIZE,
-							EXPAND_LAZY, extra_info );
+							EXPAND_LAZY, false, extra_info );
 		if (rval < 0) {
 			dprintf( D_ALWAYS, "Configuration Error Line %d "
 					 "while reading %s, runtime config: %s\n",
@@ -1450,6 +1524,35 @@ process_runtime_configs()
 	}
 
 	return (int)processed;
+}
+
+
+/* 
+** returns 1 if dynamic (runtime or persistent) configs were
+** processed; 0 if no dynamic configs were defined, and -1 on error.
+*/
+static int
+process_dynamic_configs()
+{
+	int per_rval, run_rval;
+
+	set_toplevel_dynamic_config();
+
+	if( enable_persistent ) {
+		per_rval = process_persistent_configs();
+	}
+
+	if( enable_runtime ) {
+		run_rval = process_runtime_configs();
+	}
+
+	if( per_rval < 0 || run_rval < 0 ) {
+		return -1;
+	}
+	if( per_rval || run_rval ) {
+		return 1;
+	}
+	return 0;
 }
 
 } // end of extern "C" 
