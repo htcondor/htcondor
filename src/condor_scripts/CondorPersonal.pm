@@ -866,7 +866,7 @@ sub StartPersonalCondor
 
 	if( $portchanges eq "dynamic" )
 	{
-		sleep 6;
+		sleep 45 ;
 		return( FindCollectorPort() );
 	}
 	else
