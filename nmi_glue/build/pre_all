@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: pre_all,v 1.1.2.6 2006-01-25 23:20:31 wright Exp $ 
+# $Id: pre_all,v 1.1.2.7 2006-03-17 20:08:23 wright Exp $ 
 # Submit-side NMI build system infrastructure to prepare sources for
 # the Condor build
 #
@@ -17,7 +17,7 @@
 ######################################################################
 # NOTE: This script depends on the following bootstrap programs:
 # - GNU tar (so long as it supports --exclude)
-# - GNU autoconf (version 2.57 or greater)
+# - GNU autoconf (version 2.59 or greater)
 # - everything require for "make nroff"
 #    - latex
 #    - latex2html
@@ -28,6 +28,10 @@ use Cwd;
 
 # autoflush our STDOUT
 $| = 1;
+
+# NOTE: when/if the NMI framework provides a cleaner way to define
+# submit-host prereqs, we should use it.  for now, we have to hard-code
+my $autoconf = "/prereq/autoconf-2.59/bin/autoconf";
 
 my $CommonDir = getcwd();
 my $SrcDir = "$CommonDir/src";
@@ -83,12 +87,12 @@ close( VERS_FILE );
 # Step #2: run autoconf
 ######################################################################
 
-print "Running autoconf to generate configure script\n";
+print "Running $autoconf to generate configure script\n";
 chdir( "$SrcDir" ) || die "Can't chdir($SrcDir): $!\n";
-system( "autoconf" );
+system( "$autoconf" );
 $ac_status = $?;
 if( $ac_status ) {
-    die "Autoconf failed with status $ac_status\n";
+    die "$autoconf failed with status $ac_status\n";
 }
 system( "rm -rf autom4te.cache" );
 $status = $?;
