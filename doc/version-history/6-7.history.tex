@@ -95,6 +95,10 @@ locks to avoid collisions between multiple readers and writers).
 \item Improved error messages in \Condor{dagman} when \Code{getcwd()}
 fails (this is only relevant if the \Opt{-UseDagDir} flag is used).
 
+\item The Grid Monitor now works at sites where
+/etc/grid-security/certificates is out of date, but
+\$(GLOBUS\_LOCATION)/share/certificates is not.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
