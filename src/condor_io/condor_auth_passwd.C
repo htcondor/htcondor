@@ -1085,6 +1085,26 @@ Condor_Auth_Passwd::authenticate(const char * remoteHost,
 		
 	}
 
+		//ret_value is 1 for success, 0 for failure.
+	if ( ret_value == 1 ) {
+			// if all is good, set the remote user and domain names
+		char *login, *domain;
+		if ( mySock_->isClient() ) {
+			login = t_server.b;	// server is remote to client
+		} else {
+			login = t_client.a; // client is remote to server
+		}
+		ASSERT(login);
+		domain = strchr(login,'@');
+		if (domain) {
+			*domain='\0';
+			domain++;
+		}
+
+		setRemoteUser(login);
+		setRemoteDomain(domain);
+	}
+
 	destroy_t_buf(&t_client);
 	destroy_t_buf(&t_server);
 	destroy_sk(&sk);
