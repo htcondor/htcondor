@@ -113,27 +113,41 @@ Central Manager}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{High Availability!of central manager}
 
-\Note The Condor high availability mechanisms discussed below
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:HA-not-with-flocking} Interaction with Flocking} 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The Condor high availability mechanisms discussed in this section
 currently do not work well in configurations involving flocking.
-Several individual problems exist which interact to make the situation
-even worse.  Because of these problems, we advice against the use of
+The individual problems listed interact to make the situation
+worse.
+Because of these problems, we advice against the use of
 flocking to pools with high availability mechanisms enabled.
 
 \begin{itemize}
 \item The \Condor{schedd} has a hard configured list of
-\Condor{collector}s and \Condor{negotiator}s, and doesn't query
-redundant collectors to get the current \Condor{negotiator} (as it
-does when communicating with it's local pool).  As a result, if the
-default \Condor{negotiator} fails, the \Condor{schedd} doesn't learn
-about it, and, thus, talk to the new \Condor{negotiator}.
+\Condor{collector} and \Condor{negotiator} daemons, 
+and does not query
+redundant collectors to get the current \Condor{negotiator}, 
+as it does when communicating with its local pool.
+As a result, if the
+default \Condor{negotiator} fails, the \Condor{schedd} does not learn
+of the failure,
+and thus, talk to the new \Condor{negotiator}.
 
 \item When the \Condor{negotiator} is unable to communicate with a
-\Condor{collector}, it ``moves'' to the next in the list.
-Unfortunately, it doesn't go back to the start of the list.  When
-combined with the above, a backup \Condor{negotiator} will never get
+\Condor{collector}, it utilizes the next \Condor{collector}
+within the list.
+Unfortunately, it does not start over at the top of the list.
+When combined with the previous problem,
+a backup \Condor{negotiator} will never get
 jobs from a flocked \Condor{schedd}.
 
 \end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:HA-of-CM-intro} Introduction} 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 The \Condor{negotiator} and \Condor{collector} daemons
 are the heart of the Condor matchmaking system.
