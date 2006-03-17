@@ -391,12 +391,8 @@ sub parseOptions
     if( defined $opt_notify ) {
         $notify = "$opt_notify";
     } else {
-        if( defined $opt_workspace ) {
-            my $username = (getpwuid($<))[0];
-            $notify = "$username\@cs.wisc.edu";
-        } else {
-            $notify = "condor-build\@cs.wisc.edu";
-        }
+        my $username = (getpwuid($<))[0];
+        $notify = "$username\@cs.wisc.edu";
     }
 
     if ( defined $opt_tag && defined $opt_module ) {
