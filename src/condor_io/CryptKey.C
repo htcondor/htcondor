@@ -129,6 +129,18 @@ unsigned char * KeyInfo :: getPaddedKeyData(int len) const
 	padded_key_buf = (unsigned char *)malloc(len + 1);
 	ASSERT(padded_key_buf);
 	memset(padded_key_buf, 0, len + 1);
+
+		// If the key is larger than we want, just copy a prefix
+		// and XOR the remainder back to the start of the buffer
+	if(keyDataLen_ > len) {
+		memcpy(padded_key_buf, keyData_, len);
+			// XOR in the rest so two keys longer than the requested length
+			// do not appear equal to the caller.
+		for (i=len; i < keyDataLen_; i++) {
+			padded_key_buf[ i % len ] ^= keyData_[i];
+		}
+		return padded_key_buf;
+	}
 		// copy the key into our new large-sized buffer
 	memcpy(padded_key_buf, keyData_, keyDataLen_);
 
