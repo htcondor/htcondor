@@ -63,7 +63,7 @@ $submit = sub
 		$qstat = CondorTest::getJobStatus($cluster);
 	}
 
-	print "It better be on hold... status is $qstat(5 is correct)";
+	print "It better be on hold... status is $status(5 is correct)";
 	if($qstat != HELD)
 	{
 		print "Cluster $cluster failed to go on hold\n";

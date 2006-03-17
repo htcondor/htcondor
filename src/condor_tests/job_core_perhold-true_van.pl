@@ -32,7 +32,7 @@ $held = sub {
 	print "Held event expected, removing job.....\n";
 	my @adarray;
 	my $status = 1;
-	my $cmd = "condor_rm $cluster";
+	my $cmd = "condor_q -l $cluster";
 	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if(!$status)
 	{

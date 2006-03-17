@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_post.pl,v 1.1.4.4 2006-03-17 01:59:57 bt Exp $
+# $Id: remote_post.pl,v 1.1.4.5 2006-03-17 07:32:55 wright Exp $
 # post script for Condor testsuite runs
 ######################################################################
 
@@ -96,31 +96,16 @@ if( ! -d $etc_dir ) {
         $exit_status = 1;
     }
 }
-
-my $fig = "";
-my $figloc = "";
-my $logs = "";
-
-if( ($ENV{NMI_PLATFORM} =~ /winnt/) ) {
-	$fig = "$BaseDir/condor/condor_config";
-	$figloc = "$BaseDir/condor/condor_config.local";
-	$logs = "$BaseDir/condor/log";
-} else {
-	$fig = "$BaseDir/condor/etc/condor_config";
-	$figloc = "$BaseDir/local/condor_config.local";
-	$logs = "$BaseDir/local/log";
-}
-
 if( -d $etc_dir ) {
     print "Copying config files to $etc_dir\n";
-    system( "cp $fig $etc_dir" );
+    system( "cp $BaseDir/condor/etc/condor_config $etc_dir" );
     if( $? >> 8 ) {
-        print "Can't copy $fig to $etc_dir\n";
+        print "Can't copy $BaseDir/condor/etc/condor_config to $etc_dir\n";
         $exit_status = 1;
     }
-    system( "cp $figloc $etc_dir" );
+    system( "cp $BaseDir/local/condor_config.local $etc_dir" );
     if( $? >> 8 ) {
-        print "Can't copy $figloc to $etc_dir\n";
+        print "Can't copy $BaseDir/local/condor_config.local to $etc_dir\n";
         $exit_status = 1;
     }
 }
@@ -133,9 +118,9 @@ if( ! -d $log_dir ) {
 }
 if( -d $log_dir ) {
     print "Copying log files to $log_dir\n";
-    system( "cp $logs/* $log_dir" );
+    system( "cp $BaseDir/local/log/* $log_dir" );
     if( $? >> 8 ) {
-        print "Can't copy $logs/* to $log_dir\n";
+        print "Can't copy $BaseDir/local/log/* to $log_dir\n";
         $exit_status = 1;
     }
     print "Tarring up all results\n";

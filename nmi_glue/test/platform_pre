@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: platform_pre,v 1.1.4.6 2006-03-14 19:16:13 gquinn Exp $
+# $Id: platform_pre,v 1.1.4.7 2006-03-17 07:32:55 wright Exp $
 # Submit-side NMI build system infrastructure to setup platform
 # specific input for test jobs.  All we have to do is trim down the
 # architecture-dependent results.tar.gz file to remove all the
@@ -21,24 +21,6 @@ my $tarball_file = "CONDOR-TARBALL-NAME";
 my $results = "results.tar.gz";
 -f $results || die "$results does not exist!\n";
 
-######################################################################
-# -1) If we are dealing with a Windows build simply save the
-#     results.tar.gz name in the marker file because it holds only
-#     what we want. Then leave.
-######################################################################
-
-
-if( ($ENV{NMI_PLATFORM} =~ /winnt/) ) {
-    print "Writing tarball filename to $tarball_file\n";
-    open( TARBALL_FILE, ">$tarball_file" ) ||
-        die "Can't open $tarball_file: $!\n";
-    print TARBALL_FILE "$results\n";
-    close( TARBALL_FILE );
-
-
-    print "All steps completed successfully\n";
-    exit 0;
-}
 
 ######################################################################
 # 0) Grab command-line arg to decide what binaries to test

@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: platform_post,v 1.1.4.9 2006-03-14 19:16:13 gquinn Exp $
+# $Id: platform_post,v 1.1.4.10 2006-03-17 07:32:54 wright Exp $
 # post script to cleanup platform-specific files on the submit side
 ######################################################################
 
@@ -26,6 +26,15 @@ print "Initializing values from the environment\n";
 my $platform = $ENV{NMI_PLATFORM};
 print "ENV: NMI_PLATFORM = $platform\n";
 $platform || die "No platform to use, NOT submitting tests\n";
+
+# until we do a big day of reckoning for condor_tests and win32, we
+# know all the current test infrastructure will fail on that
+# platform.  so, for now, just exit success without submitting a test
+# job on win32...
+if( $platform eq "x86_winnt_5.1" ) {
+    print "NOT submitting tests for windows\n";
+    exit 0;
+}
 
 if( defined $opt_without_tests ) {
     print "--without-tests specified on command-line, NOT submitting tests\n";

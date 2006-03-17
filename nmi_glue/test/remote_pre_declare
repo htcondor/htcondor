@@ -1,19 +1,13 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre_declare,v 1.1.4.6 2006-03-17 01:59:57 bt Exp $
+# $Id: remote_pre_declare,v 1.1.4.7 2006-03-17 07:32:56 wright Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
 use Cwd;
 
 my $BaseDir = getcwd();
-
-if( ($ENV{NMI_PLATFORM} =~ /winnt/) ){
-	my $newbase = `cygpath -u $BaseDir`;
-	chomp($newbase);
-	$BaseDir = $newbase;
-} 
 my $SrcDir = "$BaseDir/src";
 my $vers_file = "CONDOR-VERSION";
 
@@ -54,7 +48,7 @@ if( $? ) {
 }
 print "Tar completed successfully, moving contents to base directory\n";
 
-system( "cp -r condor-$vers/* $BaseDir" );
+system( "mv condor-$vers/* $BaseDir" );
 if( $? ) {
     die "moving condor-$vers/* to $BaseDir failed with status $?\n";
  }
@@ -71,38 +65,14 @@ open( ENVSETUP, ">setup_test_env" ) ||
 
 print ENVSETUP "BASE_DIR=$BaseDir\n";
 print ENVSETUP "export BASE_DIR\n";
+print ENVSETUP "CONDOR_CONFIG=$BaseDir/condor/etc/condor_config\n";
+print ENVSETUP "export CONDOR_CONFIG\n";
 print ENVSETUP "CONDOR_VERSION=$vers\n";
 print ENVSETUP "export CONDOR_VERSION\n";
-
-if( !($ENV{NMI_PLATFORM} =~ /winnt/) )
-{
-    print ENVSETUP "PATH=$BaseDir/nmi_glue/test:$BaseDir/condor/bin:$BaseDir/condor/sbin:\$PATH\n";
-    print ENVSETUP "CONDOR_CONFIG=$BaseDir/condor/etc/condor_config\n";
-}
-else
-{
-    # windows distribution has condor all in bin
-	my $win32basedir = $BaseDir;
-    my $gluedir = `cygpath -u $BaseDir/nmi_glue/test`;
-    my $condordir = `cygpath -u $BaseDir/local/bin`;
-    my $configfile = `cygpath -u $BaseDir/condor/condor_config`;
-    chomp($gluedir);
-    chomp($condordir);
-    chomp($configfile);
-    my $otherplaces = "/bin:/usr/bin";
-    $win32basedir =~ s/\/cygdrive\/c\//C:\//;
-    print "Windows BaseDir is <<$win32basedir>>\n";
-    print "Gluedir is <<$gluedir>>\n";
-    print "condordir is <<$condordir>>\n";
-    print ENVSETUP "PATH=$gluedir:$condordir:$otherplaces:\$PATH\n";
-    print ENVSETUP "CONDOR_CONFIG=$win32basedir/condor/condor_config\n";
-}
-
-print ENVSETUP "export CONDOR_CONFIG\n";
+print ENVSETUP "PATH=$BaseDir/nmi_glue/test:$BaseDir/condor/bin:$BaseDir/condor/sbin:\$PATH\n";
 print ENVSETUP "export PATH\n";
 print ENVSETUP "SRC_DIR=$SrcDir\n";
 print ENVSETUP "export SRC_DIR\n";
 
-system("cp setup_test_env $BaseDir");
 print "All steps completed successfully\n";
 
