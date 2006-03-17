@@ -3,8 +3,8 @@
 ##  condor_config.credd
 ##
 ##  This is the default local configuration file for the machine
-##  running the condor_credd.  You should copy this file to the appropriate
-##  location and customize it for your needs.  
+##  running the condor_credd.  You should copy this file to the
+##  appropriate location and customize it for your needs.  
 ##
 ######################################################################
 
@@ -54,6 +54,9 @@ CREDD.SEC_DEFAULT_NEGOTIATION = REQUIRED
 
 # Require PASSWORD auth for password fetching
 CREDD.SEC_DAEMON_AUTHENTICATION_METHODS = PASSWORD
+
+# Only honor password fetch requests to the trusted "condor_pool" user
+CREDD.ALLOW_DAEMON = condor_pool@($UID_DOMAIN)
 
 # Require NTSSPI for storing credentials
 CREDD.SEC_DEFAULT_AUTHENTICATION_METHODS = NTSSPI
