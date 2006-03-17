@@ -58,7 +58,7 @@ const int CONFIG_MODE = 103;
 const char CONFIG_CREDENTIAL[] = "config";
 #endif
 
-#define POOL_PASSWORD_USERNAME "condor_pool_password"
+#define POOL_PASSWORD_USERNAME "condor_pool"
 
 #define MAX_PASSWORD_LENGTH 255
 
