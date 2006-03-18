@@ -1184,14 +1184,7 @@ init_dynamic_config()
 		return;
 	}
 
-		// first try the knob to deal w/ root squashing in NFS
 	tmp = param( "PERSISTENT_CONFIG_DIR" );
-	if( ! tmp ) {
-			// if that didn't work, fall back on the old behavior in LOG
-			// TODO: it'd be nice to warn the admin here, but dprintf()
-			// isn't working yet... :(
-		tmp = param( "LOG" );
-	}
 
 	if( !tmp ) {
 		if( strcmp(mySubSystem,"SUBMIT")==0 || 
@@ -1208,8 +1201,8 @@ init_dynamic_config()
 			return;
 		} else {
 				// we are a daemon.  if we fail, we must exit.
-			dprintf( D_ALWAYS, "%s error: ENABLE_PERSISTENT_CONFIG is TRUE, "
-					 "but neither %s, PERSISTENT_CONFIG_DIR, nor LOG is "
+			fprintf( stderr, "%s error: ENABLE_PERSISTENT_CONFIG is TRUE, "
+					 "but neither %s nor PERSISTENT_CONFIG_DIR is "
 					 "specified in the configuration file\n",
 					 myDistro->GetCap(), filename_parameter.Value() );
 			exit( 1 );
