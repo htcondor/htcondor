@@ -29,6 +29,36 @@ RELEASE_DIR		= /usr/local/condor
 ##  Pathnames and arguments.
 SBIN			= $(RELEASE_DIR)/sbin
 
+##  Full path to a mail delivery program that understands that "-s"   
+##  means you want to specify a subject:    
+MAIL			= /usr/ucb/mail
+
+
+##--------------------------------------------------------------------
+##  Security parameters for setting configuration values remotely:
+##--------------------------------------------------------------------
+
+## NOTE: If this functionality is enabled, administrators should
+## consider if they want to put all of the SETTABLE_ATTRS_* settings
+## (which must also be defined for this to work) in the
+## config_config.root file, as well...
+
+## Do you want to allow condor_config_val -rset to work at all?
+## Note: changing this requires a restart not just a reconfig.
+ENABLE_RUNTIME_CONFIG = False
+
+## Do you want to allow condor_config_val -set to work at all?
+## Note: changing this requires a restart not just a reconfig.
+ENABLE_PERSISTENT_CONFIG = False
+
+## Directory where daemons should write persisitent config files (used
+## to support condor_config_val -set).  This directory should *ONLY*
+## be writable by root (or the user the Condor daemons are running as
+## if non-root).  There is no default, administrators must define this.
+## Note: changing this requires a restart not just a reconfig.
+#PERSISTENT_CONFIG_DIR = /full/path/to/root-only/local/directory
+
+
 ##--------------------------------------------------------------------
 ##  condor_master
 ##--------------------------------------------------------------------
@@ -56,9 +86,6 @@ COLLECTOR		= $(SBIN)/condor_collector
 NEGOTIATOR		= $(SBIN)/condor_negotiator
 KBDD			= $(SBIN)/condor_kbdd
 
-##  Full path to a mail delivery program that understands that "-s"   
-##  means you want to specify a subject:    
-MAIL			= /usr/ucb/mail
 
 ##--------------------------------------------------------------------
 ##  condor_startd
@@ -68,6 +95,7 @@ STARTD			= $(SBIN)/condor_startd
 STARTER			= $(SBIN)/condor_starter
 ALTERNATE_STARTER_1	= $(SBIN)/condor_starter.pvm
 ALTERNATE_STARTER_2	= $(SBIN)/condor_starter.v63
+
 
 ##--------------------------------------------------------------------
 ##  condor_schedd
@@ -84,6 +112,7 @@ PVMD			= $(SBIN)/condor_pvmd
 
 ##  Where is the condor pvm group server daemon installed?
 PVMGS			= $(SBIN)/condor_pvmgs
+
 
 ##--------------------------------------------------------------------
 ##  condor_starter

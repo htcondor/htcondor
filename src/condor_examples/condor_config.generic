@@ -225,6 +225,7 @@ HOSTALLOW_WRITE_STARTD    = $(HOSTALLOW_WRITE), $(FLOCK_FROM)
 HOSTALLOW_READ_COLLECTOR  = $(HOSTALLOW_READ), $(FLOCK_FROM)
 HOSTALLOW_READ_STARTD     = $(HOSTALLOW_READ), $(FLOCK_FROM)
 
+
 ##--------------------------------------------------------------------
 ##  Security parameters for setting configuration values remotely:
 ##--------------------------------------------------------------------
@@ -235,6 +236,21 @@ HOSTALLOW_READ_STARTD     = $(HOSTALLOW_READ), $(FLOCK_FROM)
 ##  settings, what they're for, and how to use them.  There are no
 ##  default values for any of these settings.  If they are not
 ##  defined, no attributes can be set with condor_config_val.
+
+## Do you want to allow condor_config_val -rset to work at all?
+## Note: changing this requires a restart not just a reconfig.
+#ENABLE_RUNTIME_CONFIG = False
+
+## Do you want to allow condor_config_val -set to work at all?
+## Note: changing this requires a restart not just a reconfig.
+#ENABLE_PERSISTENT_CONFIG = False
+
+## Directory where daemons should write persisitent config files (used
+## to support condor_config_val -set).  This directory should *ONLY*
+## be writable by root (or the user the Condor daemons are running as
+## if non-root).  There is no default, administrators must define this.
+## Note: changing this requires a restart not just a reconfig.
+#PERSISTENT_CONFIG_DIR = /full/path/to/root-only/local/directory
 
 ##  Attributes that can be set by hosts with "CONFIG" permission (as
 ##  defined with HOSTALLOW_CONFIG and HOSTDENY_CONFIG above).
@@ -263,6 +279,7 @@ HOSTALLOW_READ_STARTD     = $(HOSTALLOW_READ), $(FLOCK_FROM)
 ##  changed in the condor_startd's configuration by hosts with OWNER
 ##  permission, you would use:
 #STARTD_SETTABLE_ATTRS_OWNER = your_custom_attribute_name
+
 
 ##--------------------------------------------------------------------
 ##  Network filesystem parameters:
