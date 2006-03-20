@@ -1,3 +1,9 @@
+03/20/06 V6_6-merge-54
+  The state of the V6_6-branch for a merge into V6_7-branch.  Major
+  change is the security fix for condor_config_val -set.  Also
+  included are DaemonList memory fixes, minor memory cleanup in the
+  master, and some fixes to the build/test glue.
+
 01/30/06 V6_6-merge-53
   The state of the V6_6-branch for a merge into V6_7-branch. Brings
   in the ability to run condor_master -f on NT, some file transfer bug
