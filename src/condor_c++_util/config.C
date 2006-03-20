@@ -28,6 +28,7 @@
 #include "condor_string.h"
 #include "extra_param_info.h"
 #include "condor_random_num.h"
+#include "condor_uid.h"
 
 #if defined(__cplusplus)
 extern "C" {
@@ -62,9 +63,11 @@ condor_isalnum(int c)
 // Magic macro to represent a dollar sign, i.e. $(DOLLAR)="$"
 #define DOLLAR_ID "DOLLAR"
 
-int Read_config( char* config_file, BUCKET** table, 
-				 int table_size, int expand_flag,
-				 ExtraParamTable *extra_info)
+int
+Read_config( const char* config_file, BUCKET** table, 
+			 int table_size, int expand_flag,
+			 bool check_runtime_security,
+			 ExtraParamTable *extra_info)
 {
   	FILE	*conf_fp;
 	char	*name, *value, *rhs;
@@ -78,6 +81,41 @@ int Read_config( char* config_file, BUCKET** table,
 		printf("Can't open file %s\n", config_file);
 		return( -1 );
 	}
+	if( check_runtime_security ) {
+#ifndef WIN32
+			// unfortunately, none of this works on windoze... (yet)
+		int fd = fileno(conf_fp);
+		struct stat statbuf;
+		uid_t f_uid;
+		int rval = fstat( fd, &statbuf );
+		if( rval < 0 ) {
+			fprintf( stderr,
+		"Configuration Error File <%s>, fstat() failed: %s (errno: %d)\n",
+					 config_file, strerror(errno), errno );
+			return( -1 );
+		}
+		f_uid = statbuf.st_uid;
+		if( can_switch_ids() ) {
+				// if we can switch, the file *must* be owned by root
+			if( f_uid != 0 ) {
+				fprintf( stderr, "Configuration Error File <%s>, "
+						 "running as root yet runtime config file owned "
+						 "by uid %d, not 0!\n", config_file, (int)f_uid );
+				return( -1 );
+			}
+		} else {
+				// if we can't switch, at least ensure we own the file
+			if( f_uid != get_my_uid() ) {
+				fprintf( stderr, "Configuration Error File <%s>, "
+						 "running as uid %d yet runtime config file owned "
+						 "by uid %d!\n", config_file, (int)get_my_uid(),
+						 (int)f_uid );
+				return( -1 );
+			}
+		}
+#endif /* ! WIN32 */
+	} // if( check_runtime_security )
+
 
 	for(;;) {
 		name = getline_implementation(conf_fp,128);

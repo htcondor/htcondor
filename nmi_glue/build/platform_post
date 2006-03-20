@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: platform_post,v 1.1.4.10 2006-03-17 07:32:54 wright Exp $
+# $Id: platform_post,v 1.1.4.11 2006-03-20 23:38:49 wright Exp $
 # post script to cleanup platform-specific files on the submit side
 ######################################################################
 
@@ -48,10 +48,17 @@ if( defined $opt_test_args ) {
 
 my $tag = $ENV{NMI_tag};
 my $module = $ENV{NMI_module};
+my $notify = $ENV{NMI_notify};
 my $gid = $ENV{_NMI_GID};
 print "ENV: NMI_tag = $tag\n";
 print "ENV: NMI_module = $module\n";
+print "ENV: NMI_notify = $notify\n";
 print "ENV: _NMI_GID = $gid\n";
+
+my $notify_arg = '';
+if( $notify ) {
+    $notify_arg = "--notify=$notify";
+}
 
 $tag || die "No tag to use, NOT submitting tests\n";
 $module || die "No module to use, NOT submitting tests\n";
@@ -73,7 +80,7 @@ if( ! -x $cns ) {
 }
 
 my $cmd = "$cns --test --buildid=$runid --platform=$platform " .
-          "--tag=$tag --module=$module $opt_test_args";
+          "--tag=$tag --module=$module $notify_arg $opt_test_args";
 
 print "Invoking CNS ($cmd)\n";
 open( CNS, "$cmd|" ) || 

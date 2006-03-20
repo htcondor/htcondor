@@ -123,10 +123,25 @@ bool
 DaemonList::AtEnd() { return list.AtEnd(); } 
 
 void
-DaemonList::deleteCurrent() { list.DeleteCurrent(); } 
+DaemonList::deleteCurrent() { this->DeleteCurrent(); }
 
+/*
+  NOTE: SimpleList does NOT delete the Daemon objects themselves,
+  DeleteCurrent() is only going to delete the pointer itself.  Since
+  we're responsible for all this memory (we create the Daemon objects 
+  in DaemonList::init() and DaemonList::buildDaemon()), we have to be
+  responsbile to deallocate it when we're done.  We're already doing
+  this correctly in the DaemonList destructor, and we have to do it
+  here in the DeleteCurrent() interface, too.
+*/
 void
-DaemonList::DeleteCurrent() { list.DeleteCurrent(); } 
+DaemonList::DeleteCurrent() {
+	Daemon* cur = NULL;
+	if( list.Current(cur) && cur ) {
+		delete cur;
+	}
+	list.DeleteCurrent();
+}
 
 
 CollectorList::CollectorList() {

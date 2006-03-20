@@ -20,15 +20,25 @@ LIBCONDORAPI = libcondorapi.a
 TEST_LIBCONDORAPI = test_libcondorapi
 #endif
 
+AUTOCONF_ARG = 
+
+#if HAVE_MKSTEMP
+AUTOCONF_ARGS += -DHAVE_MKSTEMP=1
+#endif
+
+#if HAVE_TMPNAM
+AUTOCONF_ARGS += -DHAVE_TMPNAM=1
+#endif
+
 all_target(cplus_lib.a liburl.a $(LIBCONDORAPI) $(TEST_LIBCONDORAPI))
 
 C_PLUS_FLAGS =	\
-				$(STD_C_PLUS_FLAGS) \
-				New_classads_defines \
-				New_classads_includes \
-				$(QUILL_INC)
+		$(STD_C_PLUS_FLAGS) \
+		New_classads_defines \
+		New_classads_includes \
+		$(QUILL_INC) $(AUTOCONF_ARGS)
 
-CFLAGS = $(STD_C_FLAGS) New_classads_includes
+CFLAGS = $(STD_C_FLAGS) New_classads_includes $(AUTOCONF_ARGS)
 LIB = $(STD_LIBS)
 
 #if !HAS_FLOCK

@@ -1,3 +1,9 @@
+03/20/06 V6_6-merge-54
+  The state of the V6_6-branch for a merge into V6_7-branch.  Major
+  change is the security fix for condor_config_val -set.  Also
+  included are DaemonList memory fixes, minor memory cleanup in the
+  master, and some fixes to the build/test glue.
+
 03/14/06 V6_7-time_offset-merge-1
 	The state of the V6_7-time_offset-branch for a merge into V6_7-branch
 

@@ -103,6 +103,8 @@ JAVAC = @JAVAC@
 #define HAVE_JAR @HAVE_JAR@
 JAR = @JAR@
 
+#define HAVE_MKSTEMP @HAVE_MKSTEMP@
+#define HAVE_TMPNAM @HAVE_TMPNAM@
 
 TAR_CMD = @TarCmd@
 

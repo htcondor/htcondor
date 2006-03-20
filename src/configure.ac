@@ -24,7 +24,9 @@
 ############################Copyright-DO-NOT-REMOVE-THIS-LINE##
 
 # We need a recent autoconf for many of the macros and tests we're using
-AC_PREREQ(2.57)
+# NOTE: 2.57 has a bug when testing for functions, which we now hit by
+# testing for mkstemp(), so we need at least 2.59... 
+AC_PREREQ(2.59)
 
 # Initialize autoconf
 AC_INIT
@@ -1333,6 +1335,8 @@ AC_CHECK_FUNC(crypt, ,AC_CHECK_LIB(crypt,crypt))
 AC_CHECK_FUNC(dirname,,AC_CHECK_LIB(gen,dirname,
 AC_DEFINE(HAVE_LIBGEN,1,[Define to 1 if you have the `gen' library (-lgen)])))
 
+AC_CHECK_FUNC(mkstemp,AC_SUBST(HAVE_MKSTEMP,1),AC_SUBST(HAVE_MKSTEMP,0))
+AC_CHECK_FUNC(tmpnam,AC_SUBST(HAVE_TMPNAM,1),AC_SUBST(HAVE_TMPNAM,0))
 
 # checks for system services
 
