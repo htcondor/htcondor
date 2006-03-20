@@ -1335,8 +1335,7 @@ AC_CHECK_FUNC(crypt, ,AC_CHECK_LIB(crypt,crypt))
 AC_CHECK_FUNC(dirname,,AC_CHECK_LIB(gen,dirname,
 AC_DEFINE(HAVE_LIBGEN,1,[Define to 1 if you have the `gen' library (-lgen)])))
 
-AC_CHECK_FUNC(mkstemp,AC_SUBST(HAVE_MKSTEMP,1),AC_SUBST(HAVE_MKSTEMP,0))
-AC_CHECK_FUNC(tmpnam,AC_SUBST(HAVE_TMPNAM,1),AC_SUBST(HAVE_TMPNAM,0))
+AC_CHECK_FUNCS(mkstemp tmpnam)
 
 # checks for system services
 
