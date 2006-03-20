@@ -87,7 +87,8 @@ TESTCLASS(job_had_basic,quick)
 TESTCLASS(job_had_basic,btdebug)
 #endif
 
-#if !defined(IS_PPC_AIX)
+/* gthain says this is expected to fail on HPUX11 */
+#if !defined(IS_PPC_AIX) && !defined(IS_HPUX11)
 DESC(lib_procapi_pidtracking-snapshot,"Fast Termination Child Cleanup Test")
 RUN(lib_procapi_pidtracking-snapshot)
 TESTCLASS(lib_procapi_pidtracking-snapshot,core)
@@ -164,7 +165,7 @@ RUN(job_filexfer_streamerr_van)
 TESTCLASS(job_filexfer_streamerr_van,core)
 TESTCLASS(job_filexfer_streamerr_van,quick)
 
-#if !defined( IS_ALPHA_LINUX) && !defined(IS_HPUX10)
+#if !defined( IS_ALPHA_LINUX) && !defined(IS_HPUX10) && !defined(IS_HPUX11)
 /* 
    NOTE: this is an unfortunate way to do this selection.  we should
    have reliable HAVE_GLOBUS, HAVE_CONDOR_C, and HAVE_CONDOR_G macros
@@ -173,6 +174,7 @@ TESTCLASS(job_filexfer_streamerr_van,quick)
 
    Gnats 544 Linux rh 7.2 on alph chip is broken
    Gnats 561 HPUX 10 does not allow submits for lack of globus support.
+   gthain says condor-c is not support to work on HPUX 11, either
 */
 DESC(job_condorc_ab_van,"Condor-C AB test")
 RUN(job_condorc_ab_van)
