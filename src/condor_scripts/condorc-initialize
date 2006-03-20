@@ -97,7 +97,8 @@ executable=$fullpath
 universe=scheduler
 output=/tmp/$executable.$>.$$.out
 error=/tmp/$executable.$>.$$.err
-environment=PATH=$ENV{PATH}
+getenv=true
+#environment=PATH=$ENV{PATH};CONDOR_CONFIG=$ENV{CONDOR_CONFIG};GLITE_HOST_CERT=$ENV{GLITE_HOST_CERT};GLITE_HOST_KEY=$ENV{GLITE_HOST_KEY};LD_LIBRARY_PATH=$ENV{LD_LIBRARY_PATH}
 notification=never
 on_exit_remove=false
 queue
