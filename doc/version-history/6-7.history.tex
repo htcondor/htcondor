@@ -98,6 +98,12 @@ locks to avoid collisions between multiple readers and writers).
 \item Improved error messages in \Condor{dagman} when \Code{getcwd()}
 fails (this is only relevant if the \Opt{-UseDagDir} flag is used).
 
+\item Added QUILL\_MANAGE\_VACUUM to determine whether Quill needs to 
+perform vacuuming tasks or not. In the latter case, 
+vacuuming tasks can be automatically managed by \Prog{PostgreSQL} 
+version 8.1 onwards. Please see Quill's section in the Administrator's 
+Manual for more details.
+
 \item The Grid Monitor now works at sites where
 /etc/grid-security/certificates is out of date, but
 \$(GLOBUS\_LOCATION)/share/certificates is not.
@@ -228,6 +234,15 @@ the setting remote attributed directly, because then you can use either
 the new double-quoted environment/argument syntax or the old one, and
 \Condor{submit} will automatically set the correct ClassAd attributes.
 
+\item Fixed a bug in the \Opt{-l} option to \Condor{q} which, when 
+querying Quill, used to display the attributes of the last cluster in 
+every job ad even though they were submitted as part of different 
+clusters.
+
+\item Fixed a bug in the Quill daemon which used to incorrectly parse 
+classad attribute values of the form "number and some stuff" (e.g. 
+attribute=Rank and value=1000 * memory). 
+
 \item Added HAD to the default DC\_DAEMON\_LIST, both in the default
 condor\_config and in the default list hard coded into \Condor{master}.
 
@@ -248,7 +263,6 @@ condor\_config and in the default list hard coded into \Condor{master}.
 \noindent Release Notes:
 
 \begin{itemize}
-
 
 \item The default output for \Condor{status} was changed between
   6.7.16 and 6.7.17 to support the new \Term{Backfill} state which

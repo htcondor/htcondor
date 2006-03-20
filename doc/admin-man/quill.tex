@@ -15,9 +15,11 @@ Quill uses the \Prog{PostgreSQL} database management system.
 Quill uses the \Prog{PostgreSQL} server as its back end
 and client library, 
 \Prog{libpq} to talk to the server.
-Quill works with \Prog{PostgreSQL}
-version 8.0;
-it has also been tested with version 7.4.
+While Quill works and has been tested with \Prog{PostgreSQL}
+versions 7.4 and beyond, we \Bold{strongly recommend} the use of version 
+8.1 or 
+later due to its integrated facilities of certain key database maintenance 
+tasks. 
 
 Obtain \Prog{PostgreSQL} from
 
@@ -144,6 +146,7 @@ QUILL_POLLING_PERIOD    = 10
 QUILL_HISTORY_CLEANING_INTERVAL = 24
 # the following parameter's units is in days
 QUILL_HISTORY_DURATION 	= 30
+QUILL_MANAGE_VACUUM = FALSE
 QUILL_IS_REMOTELY_QUERYABLE = TRUE
 QUILL_DB_QUERY_PASSWORD =  password-for-database-user-quillreader
 QUILL_ADDRESS_FILE      = $(LOG)/.quill_address
@@ -171,6 +174,9 @@ server, then the \MacroNI{QUILL\_DB\_NAME} variable for all of them should
 be unique.  Otherwise, there would be record overwriting and corruption
 of job queue information.
 
+\item \Macro{QUILL\_NAME}\\
+Each quill daemon in the pool has to be uniquely named.
+
 \item \Macro{QUILL\_POLLING\_PERIOD}\\
 This controls the frequency with which Quill polls the
 \File{job\_queue.log} file.  By default, it is 10 seconds.  Since Quill
@@ -192,6 +198,24 @@ so the other variable \MacroNI{QUILL\_HISTORY\_CLEANING\_INTERVAL}
 is the number of hours between two successive scans.  By default,
 \MacroNI{QUILL\_HISTORY\_DURATION} is set to 180 days and
 \MacroNI{QUILL\_HISTORY\_CLEANING\_INTERVAL} is set to 24 hours.
+
+\item \Macro{QUILL\_MANAGE\_VACUUM}\\
+Set to FALSE by default, this variable determines whether Quill is to 
+perform vacuuming tasks on its tables or not. Vacuuming is a maintenance 
+task that needs to be performed on tables in \Prog{PostgreSQL}. The 
+frequency with which a table is vacuumed typically depends on the number 
+of updates (inserts/deletes) performed on the table. Fortunately, with 
+\Prog{PostgreSQL} version 8.1, vacuuming tasks can be configured to be 
+performed automatically by the database server. We recommend that users 
+upgrade to 8.1 and use the integrated vacuuming facilities of the database 
+server instead of having Quill do them. If the user does prefer having 
+Quill perform those vacuuming tasks, it can be achieved by setting this 
+variable to TRUE. However it cannot be overstated that Quill's vacuuming 
+policy is quite rudimentary as compared to the integrated facilities 
+of the database server and, under high update workloads, can prove to 
+be a bottleneck on the Quill daemon. As such, setting this variable to 
+TRUE results in some warning messages in the log file regarding this 
+issue.
 
 \item \Macro{QUILL\_IS\_REMOTELY\_QUERYABLE}\\
 Thanks to 

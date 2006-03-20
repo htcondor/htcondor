@@ -5378,11 +5378,12 @@ management and interface to its representation of the job queue.
 \item[\Macro{QUILL\_<NAME>}] \label{param:QuillName}
   A string that uniquely identifies an instance of the \Condor{quill}
   server.  It also must be unique from the name of any \Condor{schedd}
-  daemon.
+  daemon. So each quill must have a name that uniquely identifies itself
+  from every other quill daemon and schedd daemon in the pool.  
   A convenient name to choose is of the form
 \footnotesize
 \begin{verbatim}
-quill@machinename.fully.qualified.address
+quill-for-schedd_name@machinename.fully.qualified.address
 \end{verbatim}
 \normalsize
 
