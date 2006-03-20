@@ -87,8 +87,7 @@ TESTCLASS(job_had_basic,quick)
 TESTCLASS(job_had_basic,btdebug)
 #endif
 
-/* gthain says this is expected to fail on HPUX11 */
-#if !defined(IS_PPC_AIX) && !defined(IS_HPUX11)
+#if !defined(IS_PPC_AIX)
 DESC(lib_procapi_pidtracking-snapshot,"Fast Termination Child Cleanup Test")
 RUN(lib_procapi_pidtracking-snapshot)
 TESTCLASS(lib_procapi_pidtracking-snapshot,core)
