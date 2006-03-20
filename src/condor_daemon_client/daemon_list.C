@@ -236,7 +236,6 @@ CollectorList::createForNegotiator() {
                 // This is a match, move it to the new list
 			copy = new DCCollector( *daemon );
 			collector_list->deleteCurrent();
-			delete daemon;  // TODO: this will go away once we merge V6_6
 			new_list->append( copy );
 		}
 	}
@@ -248,7 +247,6 @@ CollectorList::createForNegotiator() {
 	while (collector_list->next(daemon)) {
 		copy = new DCCollector( *daemon );
 		collector_list->deleteCurrent();
-		delete daemon;  // TODO: this will go away once we merge V6_6
 		new_list->append( copy );
 	}
 
@@ -305,7 +303,6 @@ CollectorList::query(CondorQuery & query, ClassAdList & adList) {
 			// to the end of the list
 		DCCollector* copy = new DCCollector( *daemon );
 		this->deleteCurrent();
-		delete daemon;  // TODO: must be removed once we merge V6_6
 		this->append (copy);
 		this->rewind();
 		
