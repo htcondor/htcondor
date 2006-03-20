@@ -5235,21 +5235,22 @@ These macros affect the high availability operation of Condor.
   \MacroNI{HA\_daemon\_POLL\_PERIOD} is ignored,
   and the value of \MacroNI{HA\_POLL\_PERIOD} is used.
 
-\item[\Macro{MASTER\_<name>\_CONTROLLER}]
-  \label{param:Master<Name>Controller} Used only in HA configurations
+\item[\Macro{MASTER\_<SUBSYS>\_CONTROLLER}]
+  \label{param:MasterSubsysController} Used only in HA configurations
   involving the \Condor{had}.
 
-  The master now has the concept of a ``controller'' daemon, typically
-  with the \Condor{had} daemon serving as the controller process.
-  With this is setup, all ``daemon on'' \& ``daemon off'' commands to
-  the controlled daemon are directed to the controller daemon, which
+  The \Condor{master} has the concept of a controlling and controlled
+  daemon, typically
+  with the \Condor{had} daemon serving as the controlling process.
+  In this case, all \Condor{on} and \Condor{off} commands directed
+  at controlled daemons are given to the controlling daemon, which
   then handles the command, and, when required, sends appropriate
   commands to the \Condor{master} to do the actual work.  This allows
   the controlling daemon to know the state of the controlled daemon.
 
-  As of 6.7.14, this should be specified for all configurations using
-  \Condor{had}.   To configurate the \Condor{negotiator}
-  to controlled by \Condor{had}:
+  As of 6.7.14, this configuration variable must be specified for all
+  configurations using \Condor{had}.
+  To configure the \Condor{negotiator} controlled by \Condor{had}:
 
 \begin{verbatim}
 MASTER_NEGOTIATOR_CONTROLLER = HAD
