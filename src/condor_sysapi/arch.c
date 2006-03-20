@@ -121,7 +121,7 @@ static char* opsys = NULL;
 static char* uname_opsys = NULL;
 
 #ifdef HPUX
-char* get_hpux_arch( struct utsname* );
+char* get_hpux_arch();
 #endif
 
 #ifdef AIX
@@ -174,20 +174,8 @@ sysapi_translate_arch( char *machine, char *sysname )
 	return( get_aix_arch( &buf ) );
 
 #elif defined(HPUX)
-	/*
-	  On HPUX, to figure out if we're HPPA1 or HPPA2, we have to
-	  lookup what we get back from uname in a file that lists all the
-	  different HP models and what kinds of CPU each one has.  We do
-	  this in a seperate function to keep this function somewhat
-	  readable.   -Derek Wright 7/20/98
-	*/
-	struct utsname buf;	
 
-	if( uname(&buf) < 0 ) {
-		return NULL;
-	}
-
-	return( get_hpux_arch( &buf ) );
+	return( get_hpux_arch( ) );
 #else
 
 		// Get ARCH
@@ -409,46 +397,15 @@ sysapi_uname_opsys()
 
 #if defined(HPUX)
 char*
-get_hpux_arch( struct utsname *buf )
+get_hpux_arch( )
 {
-	FILE* fp;
-	static char *file = "/opt/langtools/lib/sched.models";
-	char line[128];
-	char *model;
-	char cputype[128], cpumodel[128];
-	int len, found_it = FALSE;
-	char *tmparch;
-
-	model = strchr( buf->machine, '/' );
-	model++;
-	len = strlen( model );
-
-	fp = fopen( file, "r" );
-	if( ! fp ) {
-		return NULL;
-	}	
-	while( ! feof(fp) ) {
-		fgets( line, 128, fp );
-		if( !strncmp(line, model, len) ) {
-			found_it = TRUE;
-			break;
-		}
-	}
-	fclose( fp );
-	if( found_it ) {
-  		sscanf( line, "%s\t%s", cpumodel, cputype );
-		if( !strcmp(cputype, "2.0") ) {
-			tmparch = strdup( "HPPA2" );
-		} else {
-			tmparch = strdup( "HPPA1" );
-		}
-		if( !tmparch ) {
-			EXCEPT( "Out of memory!" );
-		}
-	} else {
-		tmparch = strdup("Unknown");
-	}
-	return tmparch;
+	/* As of 3/22/2006, it has been ten years since HP has made
+		a HPPA1 machine.  Just assume that this is a HPPA2 machine,
+		and if it is not the user can force the setting in the 
+		ARCH config file setting
+   	*/
+	
+	return strdup("HPPA2");
 }
 #endif /* HPUX */
 
