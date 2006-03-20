@@ -155,9 +155,9 @@ cleanup_memory( void )
 		free( FS_Preen );
 		FS_Preen = NULL;
 	}
-	if ( Collector ) {
-		delete Collector;
-		Collector = NULL;
+	if ( Collectors ) {
+		delete Collectors;
+		Collectors = NULL;
 	}
 	if ( secondary_collectors ) {
 		delete secondary_collectors;
