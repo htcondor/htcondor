@@ -502,10 +502,16 @@ RUN(job_core_queue_sched)
 TESTCLASS(job_core_queue_sched,core)
 TESTCLASS(job_core_queue_sched,quick)
 
+
+#if 0
+	/* Andy says he has a new version of everything waiting a merge
+	and that it should be turned off for now.
+	*/
 DESC(job_core_time-deferral,"Vanilla: Verify deferred execution")
 RUN(job_core_time-deferral)
 TESTCLASS(job_core_time-deferral,core)
 TESTCLASS(job_core_time-deferral,quick)
+#endif
 
 DESC(job_core_max-running_local,"Local: Max job running limit")
 RUN(job_core_max-running_local)
