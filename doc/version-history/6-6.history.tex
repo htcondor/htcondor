@@ -335,7 +335,7 @@ job had not actually ran.
   like this will now succeed.
 
 \item Removed a fixed-length buffer in the code that handled the
-  \Macro{SUBSYS\_EXPRS} config file setting.
+  \MacroNI{SUBSYS\_EXPRS} config file setting.
   Previously, if any attributes referred to were larger than
   approximate 1000 bytes, Condor daemons would crash.
   Now, there is no limit to the size of the attributes listed in 
@@ -562,7 +562,7 @@ with the message, "caInsert: Can't insert CpuBusy into target ClassAd."
 
 \begin{itemize}
 
-\item Fixed a discrepancy in the \Macro{SUBSYS\_ADDRESS\_FILE}
+\item Fixed a discrepancy in the \MacroNI{SUBSYS\_ADDRESS\_FILE}
   setting.
   Previously, this setting did not work for \MacroNI{SUBSYS} values of
   \ShortExpr{COLLECTOR} or \ShortExpr{NEGOTIATOR} (for example, defining

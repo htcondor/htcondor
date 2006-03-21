@@ -2399,7 +2399,7 @@ The most secure use of this feature allows Condor users to set
 attributes in the configuration file which are not used by Condor
 directly.
 These are custom attributes published by various Condor
-daemons with the \Macro{SUBSYS\_ATTRS} setting described in
+daemons with the \MacroNI{<SUBSYS>\_ATTRS} setting described in
 section~\ref{param:SubsysAttrs} on page~\pageref{param:SubsysAttrs}.
 It is secure to grant access only to modify attributes that are used by Condor
 to publish information.
@@ -2417,22 +2417,22 @@ The name of the control lists have the following form:
 
 \footnotesize
 \begin{verbatim}
-SUBSYS_SETTABLE_ATTRS_PERMISSION-LEVEL
+<SUBSYS>_SETTABLE_ATTRS_PERMISSION-LEVEL
 \end{verbatim}
 \normalsize
 
 The two parts of this name that can vary are
-PERMISSION-LEVEL and the SUBSYS.
+PERMISSION-LEVEL and the <SUBSYS>.
 The PERMISSION-LEVEL can be any of the security access levels
 described earlier in this section.
 Examples include \DCPerm{WRITE}, \DCPerm{OWNER}, and \DCPerm{CONFIG}.
 
-The SUBSYS is an optional portion of the name. 
+The <SUBSYS> is an optional portion of the name. 
 It can be used to
 define separate rules for which configuration attributes can be set
 for each kind of Condor daemon (for example, STARTD, SCHEDD, MASTER).
 There are many configuration settings that can be defined differently
-for each daemon that use this SUBSYS naming convention.
+for each daemon that use this <SUBSYS> naming convention.
 See section~\ref{sec:Condor-Subsystem-Names} on
 page~\pageref{sec:Condor-Subsystem-Names} for a list.
 If there is no daemon-specific value for a given daemon, Condor will

@@ -18,7 +18,7 @@ section~\ref{sec:Configuring-Policy} on Startd Policy Configuration.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Intro-to-Config-Files}Introduction to
-  Configuration Files} 
+Configuration Files} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 The Condor configuration files are used to customize how Condor
@@ -66,7 +66,7 @@ parsing them in order to do evaluation.
 
 Macro definitions are of the form:
 \begin{verbatim}
-  <macro_name> = <macro_definition>
+<macro_name> = <macro_definition>
 \end{verbatim}
 
 \Note There must be white space between the macro name, the
@@ -74,7 +74,7 @@ Macro definitions are of the form:
 
 Macro invocations are of the form: 
 \begin{verbatim}
-  $(macro_name)
+$(macro_name)
 \end{verbatim}
 
 Macro definitions may contain references to other macros, even ones
@@ -85,8 +85,8 @@ All macro expansion is done after all configuration files have been parsed
 below). 
 
 \begin{verbatim}
-  A = xxx
-  C = $(A) 
+A = xxx
+C = $(A) 
 \end{verbatim}
 is a legal set of macro definitions, and the resulting value of 
 \MacroNI{C} is
@@ -97,9 +97,9 @@ Note that
 
 As a further example,
 \begin{verbatim}
-  A = xxx
-  C = $(A)
-  A = yyy
+A = xxx
+C = $(A)
+A = yyy
 \end{verbatim}
 is also a legal set of macro definitions, and the resulting value of
 \MacroNI{C} is \Expr{yyy}.  
@@ -107,10 +107,10 @@ is also a legal set of macro definitions, and the resulting value of
 A macro may be incrementally defined by invoking itself in its
 definition.  For example,
 \begin{verbatim}
-  A = xxx
-  B = $(A)
-  A = $(A)yyy
-  A = $(A)zzz
+A = xxx
+B = $(A)
+A = $(A)yyy
+A = $(A)zzz
 \end{verbatim}
 is a legal set of macro definitions, and the resulting value of 
 \MacroNI{A}
@@ -124,8 +124,8 @@ evaluate.
 
 Recursively defined macros such as
 \begin{verbatim}
-  A = $(B)
-  B = $(A)
+A = $(B)
+B = $(A)
 \end{verbatim}
 are not allowed.
 They create definitions that Condor refuses to parse. 
@@ -153,8 +153,8 @@ will be ignored.
 The following two-line example treats the first line as a comment,
 and correctly handles the second line.
 \begin{verbatim}
-  [Condor Settings]
-  my_classad = [ foo=bar ]
+[Condor Settings]
+my_classad = [ foo=bar ]
 \end{verbatim}
 
 % functionality added to version 6.7.13
@@ -220,10 +220,9 @@ Environment references are not currently used in standard Condor
 configurations.
 However, they can sometimes be useful in custom configurations.
 
-\index{RANDOM\_CHOICE() macro!use in configuration file}
 \index{\$RANDOM\_CHOICE()!in configuration}
-\index{configuration macro!RANDOM\_CHOICE() macro}
-This same syntax is used to allow a random choice of a parameter
+This same syntax is used in the \Macro{RANDOM\_CHOICE()} macro to
+allow a random choice of a parameter
 within a configuration file.
 These references are of the form:
 \begin{verbatim}
@@ -925,11 +924,13 @@ These entries control how and where the Condor daemons write their log
 files.  Each of the entries in this section represents multiple
 macros. There is one for each subsystem (listed
 in section~\ref{sec:Condor-Subsystem-Names}).
-The macro name for each substitutes \MacroNI{SUBSYS} with the name
+The macro name for each substitutes \MacroNI{<SUBSYS>} with the name
 of the subsystem corresponding to the daemon.
 \begin{description}
   
-\item[\Macro{SUBSYS\_LOG}] \label{param:SubsysLog} The name of
+\item[\MacroB{<SUBSYS>\_LOG}] \label{param:SubsysLog}
+\index{SUBSYS\_LOG macro@\texttt{<SUBSYS>\_LOG} macro}
+  The name of
   the log file for a given subsystem.  For example,
   \MacroUNI{STARTD\_LOG} gives the location of the log file for
   \Condor{startd}.
@@ -941,7 +942,7 @@ of the subsystem corresponding to the daemon.
   \MacroUNI{VALID\_LOG\_FILES} entry as well, or \Condor{preen} will
   delete your newly named log files.
 
-\item[\Macro{MAX\_SUBSYS\_LOG}] \label{param:MaxSubsysLog} Controls
+\item[\Macro{MAX\_<SUBSYS>\_LOG}] \label{param:MaxSubsysLog} Controls
   the maximum length in bytes to which a
   log will be allowed to grow.  Each log file will grow to the
   specified length, then be saved to a file with the suffix
@@ -951,17 +952,19 @@ of the subsystem corresponding to the daemon.
   maximum length of its log file.  A value of 0 specifies that the
   file may grow without bounds.  The default is 1 Mbyte.
 
-\item[\Macro{TRUNC\_SUBSYS\_LOG\_ON\_OPEN}]
+\item[\Macro{TRUNC\_<SUBSYS>\_LOG\_ON\_OPEN}]
   \label{param:TruncSubsysLogOnOpen}  If this macro is defined and set
   to TRUE, the affected log will be truncated and started from an
   empty file with each invocation of the program.  Otherwise, new
   invocations of the program will append to the previous log
   file.  By default this setting is FALSE for all daemons. 
 
-\item[\Macro{SUBSYS\_LOCK}] \label{param:SubsysLock} This macro
+\item[\MacroB{<SUBSYS>\_LOCK}] \label{param:SubsysLock} 
+\index{SUBSYS\_LOCK macro@\texttt{<SUBSYS>\_LOCK} macro}
+This macro
   specifies the lock file used to synchronize append operations to the
   log file for this subsystem.  It must be a separate file from the
-  \MacroUNI{SUBSYS\_LOG} file, since the \MacroUNI{SUBSYS\_LOG} file may be
+  \MacroUNI{<SUBSYS>\_LOG} file, since the \MacroUNI{<SUBSYS>\_LOG} file may be
   rotated and you want to be able to synchronize access across log
   file rotations.  A lock file is only required for log files which
   are accessed by more than one process.  Currently, this includes
@@ -985,7 +988,9 @@ of the subsystem corresponding to the daemon.
   will be locked before being written to.
   If \Expr{False}, Condor will not lock the file before writing.
 
-\item[\Macro{SUBSYS\_DEBUG}] \label{param:SubsysDebug} All of the
+\item[\MacroB{<SUBSYS>\_DEBUG}] \label{param:SubsysDebug}
+\index{SUBSYS\_DEBUG macro@\texttt{<SUBSYS>\_DEBUG} macro}
+  All of the
   Condor daemons can produce different levels of output depending on
   how much information is desired.  The various levels of
   verbosity for a given daemon are determined by this macro.  All
@@ -998,7 +1003,7 @@ of the subsystem corresponding to the daemon.
     \label{list:debug-level-description}
 
   \item[\Dflag{ALL}] \label{dflag:all}
-    \index{SUBSYS\_DEBUG macro levels@\texttt{SUBSYS\_DEBUG} macro levels!D\_ALL@\texttt{D\_ALL}}
+    \index{SUBSYS\_DEBUG macro levels@\texttt{<SUBSYS>\_DEBUG} macro levels!D\_ALL@\texttt{D\_ALL}}
     This flag turns on \emph{all} debugging output by enabling all of the debug
     levels at once.  There is no need to list any other debug levels in addition
     to \Dflag{ALL}; doing so would be redundant.  Be warned: this will
@@ -1009,7 +1014,7 @@ of the subsystem corresponding to the daemon.
     using this option.
 
   \item[\Dflag{FULLDEBUG}] \label{dflag:fulldebug}
-    \index{SUBSYS\_DEBUG macro levels@\texttt{SUBSYS\_DEBUG} macro levels!D\_FULLDEBUG@\texttt{D\_FULLDEBUG}}
+    \index{SUBSYS\_DEBUG macro levels@\texttt{<SUBSYS>\_DEBUG} macro levels!D\_FULLDEBUG@\texttt{D\_FULLDEBUG}}
     This level
     provides verbose output of a general nature into the log files.  
     Frequent log messages for very specific debugging
@@ -1018,7 +1023,7 @@ of the subsystem corresponding to the daemon.
     listed in the configuration file.
 
   \item[\Dflag{DAEMONCORE}] \label{dflag:daemoncore} 
-    \index{SUBSYS\_DEBUG macro levels@\texttt{SUBSYS\_DEBUG} macro levels!D\_DAEMONCORE@\texttt{D\_DAEMONCORE}}
+    \index{SUBSYS\_DEBUG macro levels@\texttt{<SUBSYS>\_DEBUG} macro levels!D\_DAEMONCORE@\texttt{D\_DAEMONCORE}}
     Provides log
     file entries specific to DaemonCore, such as
     timers the daemons have set and the commands that are registered.
@@ -1026,13 +1031,13 @@ of the subsystem corresponding to the daemon.
     expect \emph{very} verbose output.
 
   \item[\Dflag{PRIV}] \label{dflag:priv}
-    \index{SUBSYS\_DEBUG macro levels@\texttt{SUBSYS\_DEBUG} macro levels!D\_PRIV@\texttt{D\_PRIV}}
+    \index{SUBSYS\_DEBUG macro levels@\texttt{<SUBSYS>\_DEBUG} macro levels!D\_PRIV@\texttt{D\_PRIV}}
     This flag provides log
     messages about the \Term{privilege state} switching that the daemons
     do.  See section~\ref{sec:uids} on UIDs in Condor for details.
 
   \item[\Dflag{COMMAND}] \label{dflag:command}
-    \index{SUBSYS\_DEBUG macro levels@\texttt{SUBSYS\_DEBUG} macro levels!D\_COMMAND@\texttt{D\_COMMAND}}
+    \index{SUBSYS\_DEBUG macro levels@\texttt{<SUBSYS>\_DEBUG} macro levels!D\_COMMAND@\texttt{D\_COMMAND}}
     With this flag set, any
     daemon that uses DaemonCore will print out a log message
     whenever a command comes in.  The name and integer of the command,
@@ -1045,7 +1050,7 @@ of the subsystem corresponding to the daemon.
     is used for all daemons.
 
   \item[\Dflag{LOAD}] \label{dflag:load}
-    \index{SUBSYS\_DEBUG macro levels@\texttt{SUBSYS\_DEBUG} macro levels!D\_LOAD@\texttt{D\_LOAD}}
+    \index{SUBSYS\_DEBUG macro levels@\texttt{<SUBSYS>\_DEBUG} macro levels!D\_LOAD@\texttt{D\_LOAD}}
     The \Condor{startd} keeps track
     of the load average on the machine where it is running.  Both the
     general system load average, and the load average being generated by
@@ -1056,13 +1061,13 @@ of the subsystem corresponding to the daemon.
     \Condor{startd}.
 
   \item[\Dflag{KEYBOARD}] \label{dflag:keyboard} 
-    \index{SUBSYS\_DEBUG macro levels@\texttt{SUBSYS\_DEBUG} macro levels!D\_KEYBOARD@\texttt{D\_KEYBOARD}}
+    \index{SUBSYS\_DEBUG macro levels@\texttt{<SUBSYS>\_DEBUG} macro levels!D\_KEYBOARD@\texttt{D\_KEYBOARD}}
     With this flag set, the \Condor{startd} will print out a log message
     with the current values for remote and local keyboard idle time.
     This flag affects only the \Condor{startd}.
 
   \item[\Dflag{JOB}] \label{dflag:job}
-    \index{SUBSYS\_DEBUG macro levels@\texttt{SUBSYS\_DEBUG} macro levels!D\_JOB@\texttt{D\_JOB}}
+    \index{SUBSYS\_DEBUG macro levels@\texttt{<SUBSYS>\_DEBUG} macro levels!D\_JOB@\texttt{D\_JOB}}
     When this flag is set, the
     \Condor{startd} will send to its log file the contents of any
     job ClassAd that the \Condor{schedd} sends to claim the
@@ -1070,7 +1075,7 @@ of the subsystem corresponding to the daemon.
     \Condor{startd}.
     
   \item[\Dflag{MACHINE}] \label{dflag:machine}
-    \index{SUBSYS\_DEBUG macro levels@\texttt{SUBSYS\_DEBUG} macro levels!D\_MACHINE@\texttt{D\_MACHINE}}
+    \index{SUBSYS\_DEBUG macro levels@\texttt{<SUBSYS>\_DEBUG} macro levels!D\_MACHINE@\texttt{D\_MACHINE}}
     When this flag is set,
     the \Condor{startd} will send to its log file the contents of
     its resource ClassAd when the \Condor{schedd} tries to claim the
@@ -1078,7 +1083,7 @@ of the subsystem corresponding to the daemon.
     \Condor{startd}.
 
   \item[\Dflag{SYSCALLS}] \label{dflag:syscalls}
-    \index{SUBSYS\_DEBUG macro levels@\texttt{SUBSYS\_DEBUG} macro levels!D\_SYSCALLS@\texttt{D\_SYSCALLS}}
+    \index{SUBSYS\_DEBUG macro levels@\texttt{<SUBSYS>\_DEBUG} macro levels!D\_SYSCALLS@\texttt{D\_SYSCALLS}}
     This flag is used to
     make the \Condor{shadow} log remote syscall requests and return
     values.  This can help track down problems a user is having with a
@@ -1090,19 +1095,19 @@ of the subsystem corresponding to the daemon.
     queue management operations the \Condor{schedd} performs.  
 
   \item[\Dflag{MATCH}] \label{dflag:match}
-    \index{SUBSYS\_DEBUG macro levels@\texttt{SUBSYS\_DEBUG} macro levels!D\_MATCH@\texttt{D\_MATCH}}
+    \index{SUBSYS\_DEBUG macro levels@\texttt{<SUBSYS>\_DEBUG} macro levels!D\_MATCH@\texttt{D\_MATCH}}
     When this flag is
     set, the \Condor{negotiator} logs a message for every match.
 
   \item[\Dflag{NETWORK}] \label{dflag:network}
-    \index{SUBSYS\_DEBUG macro levels@\texttt{SUBSYS\_DEBUG} macro levels!D\_NETWORK@\texttt{D\_NETWORK}}
+    \index{SUBSYS\_DEBUG macro levels@\texttt{<SUBSYS>\_DEBUG} macro levels!D\_NETWORK@\texttt{D\_NETWORK}}
     When this flag is set,
     all Condor daemons will log a message on every TCP accept, connect,
     and close, and on every UDP send and receive.  This flag is not
     yet fully supported in the \Condor{shadow}.
 
   \item[\Dflag{HOSTNAME}] \label{dflag:hostname}
-    \index{SUBSYS\_DEBUG macro levels@\texttt{SUBSYS\_DEBUG} macro levels!D\_HOSTNAME@\texttt{D\_HOSTNAME}}
+    \index{SUBSYS\_DEBUG macro levels@\texttt{<SUBSYS>\_DEBUG} macro levels!D\_HOSTNAME@\texttt{D\_HOSTNAME}}
     When this flag is set, the Condor daemons and/or tools will print
     verbose messages explaining how they resolve host names, domain
     names, and IP addresses.
@@ -1111,14 +1116,14 @@ of the subsystem corresponding to the daemon.
     systems in use.
 
   \item[\Dflag{CKPT}] \label{dflag:ckpt}
-    \index{SUBSYS\_DEBUG macro levels@\texttt{SUBSYS\_DEBUG} macro levels!D\_CKPT@\texttt{D\_CKPT}}
+    \index{SUBSYS\_DEBUG macro levels@\texttt{<SUBSYS>\_DEBUG} macro levels!D\_CKPT@\texttt{D\_CKPT}}
     When this flag is set,
     the Condor process checkpoint support code, which is linked into a STANDARD 
     universe user job, will output some low-level details about the checkpoint
     procedure into the \MacroUNI{SHADOW\_LOG}.
 
   \item[\Dflag{SECURITY}] \label{dflag:security}
-    \index{SUBSYS\_DEBUG macro levels@\texttt{SUBSYS\_DEBUG} macro levels!D\_SECURITY@\texttt{D\_SECURITY}}
+    \index{SUBSYS\_DEBUG macro levels@\texttt{<SUBSYS>\_DEBUG} macro levels!D\_SECURITY@\texttt{D\_SECURITY}}
     This flag will enable debug messages pertaining to the setup of 
     secure network communication, 
     including messages for the negotiation of a socket 
@@ -1128,25 +1133,25 @@ of the subsystem corresponding to the daemon.
     secure communication configuration.
 
   \item[\Dflag{PROCFAMILY}] \label{dflag:procfamily}
-    \index{SUBSYS\_DEBUG macro levels@\texttt{SUBSYS\_DEBUG} macro levels!D\_PROCFAMILY@\texttt{D\_PROCFAMILY}}
+    \index{SUBSYS\_DEBUG macro levels@\texttt{<SUBSYS>\_DEBUG} macro levels!D\_PROCFAMILY@\texttt{D\_PROCFAMILY}}
     Condor often times needs to manage an entire family of processes, (that
     is, a 
     process and all descendants of that process).  This debug flag will 
     turn on debugging output for the management of families of processes.
 
   \item[\Dflag{ACCOUNTANT}] \label{dflag:accountant}
-    \index{SUBSYS\_DEBUG macro levels@\texttt{SUBSYS\_DEBUG} macro levels!D\_ACCOUNTANT@\texttt{D\_ACCOUNTANT}}
+    \index{SUBSYS\_DEBUG macro levels@\texttt{<SUBSYS>\_DEBUG} macro levels!D\_ACCOUNTANT@\texttt{D\_ACCOUNTANT}}
     When this flag is set,
     the \Condor{negotiator} will output debug messages relating to the computation
     of user priorities (see section~\ref{sec:UserPrio}).
 
   \item[\Dflag{PROTOCOL}] \label{dflag:protocol}
-    \index{SUBSYS\_DEBUG macro levels@\texttt{SUBSYS\_DEBUG} macro levels!D\_PROTOCOL@\texttt{D\_PROTOCOL}}
+    \index{SUBSYS\_DEBUG macro levels@\texttt{<SUBSYS>\_DEBUG} macro levels!D\_PROTOCOL@\texttt{D\_PROTOCOL}}
     Enable debug messages relating to the protocol for Condor's matchmaking and
     resource claiming framework.
     
   \item[\Dflag{PID}] \label{dflag:pid}
-    \index{SUBSYS\_DEBUG macro levels@\texttt{SUBSYS\_DEBUG} macro levels!D\_PID@\texttt{D\_PID}}
+    \index{SUBSYS\_DEBUG macro levels@\texttt{<SUBSYS>\_DEBUG} macro levels!D\_PID@\texttt{D\_PID}}
     This flag is different from the other flags, because it is
     used to change the formatting of all log messages that are printed,
     as opposed to specifying what kinds of messages should be printed.
@@ -1158,7 +1163,7 @@ of the subsystem corresponding to the daemon.
     of execution is generating each log message.
     
   \item[\Dflag{FDS}] \label{dflag:fds}
-    \index{SUBSYS\_DEBUG macro levels@\texttt{SUBSYS\_DEBUG} macro levels!D\_FDS@\texttt{D\_FDS}}
+    \index{SUBSYS\_DEBUG macro levels@\texttt{<SUBSYS>\_DEBUG} macro levels!D\_FDS@\texttt{D\_FDS}}
     This flag is different from the other flags, because it is
     used to change the formatting of all log messages that are printed,
     as opposed to specifying what kinds of messages should be printed.
@@ -1178,12 +1183,12 @@ of the subsystem corresponding to the daemon.
   \verb$ALL_DEBUG = D_ALL$.
 
 \item[\Macro{TOOL\_DEBUG}] \label{param:ToolDebug} Uses the same
-  values (debugging levels) as \MacroNI{SUBSYS\_DEBUG} to
+  values (debugging levels) as \MacroNI{<SUBSYS>\_DEBUG} to
   describe the amount of debugging information sent to \File{stderr} 
   for Condor tools.
 
 \item[\Macro{SUBMIT\_DEBUG}] \label{param:SubmitDebug} Uses the same
-  values (debugging levels) as \MacroNI{SUBSYS\_DEBUG} to
+  values (debugging levels) as \MacroNI{<SUBSYS>\_DEBUG} to
   describe the amount of debugging information sent to \File{stderr} 
   for \Condor{submit}.
 
@@ -1192,21 +1197,23 @@ of the subsystem corresponding to the daemon.
 Log files may optionally be specified per debug level as follows:
 \begin{description}
 
-\item[\Macro{SUBSYS\_LEVEL\_LOG}] \label{param:SubsysLevelLog} This is
+\item[\MacroB{<SUBSYS>\_LEVEL\_LOG}] \label{param:SubsysLevelLog}
+\index{SUBSYS\_LEVEL\_LOG macro@\texttt{<SUBSYS>\_LEVEL\_LOG} macro}
+  This is
   the name of a log file for messages at a specific debug level for a
   specific subsystem.  If the debug level is included in
-  \MacroUNI{SUBSYS\_DEBUG}, then all messages of this debug level will be
-  written both to the \MacroUNI{SUBSYS\_LOG} file and the
-  \MacroUNI{SUBSYS\_LEVEL\_LOG} file.  For example,
+  \MacroUNI{<SUBSYS>\_DEBUG}, then all messages of this debug level will be
+  written both to the \MacroUNI{<SUBSYS>\_LOG} file and the
+  \MacroUNI{<SUBSYS>\_LEVEL\_LOG} file.  For example,
   \MacroUNI{SHADOW\_SYSCALLS\_LOG} specifies a log file for all remote
   system call debug messages.
 
-\item[\Macro{MAX\_SUBSYS\_LEVEL\_LOG}] \label{param:MaxSubsysLevelLog}
-  Similar to \Macro{MAX\_SUBSYS\_LOG}.
+\item[\Macro{MAX\_<SUBSYS>\_LEVEL\_LOG}] \label{param:MaxSubsysLevelLog}
+  Similar to \Macro{MAX\_<SUBSYS>\_LOG}.
 
-\item[\Macro{TRUNC\_SUBSYS\_LEVEL\_LOG\_ON\_OPEN}]
+\item[\Macro{TRUNC\_<SUBSYS>\_LEVEL\_LOG\_ON\_OPEN}]
   \label{param:TruncSubsysLevelLogOnOpen} Similar to
-  \Macro{TRUNC\_SUBSYS\_LOG\_ON\_OPEN}.
+  \Macro{TRUNC\_<SUBSYS>\_LOG\_ON\_OPEN}.
 
 \end{description}
 
@@ -1230,7 +1237,7 @@ server, shadow, and starter, none of which use DaemonCore yet).
 
 \item[\Macro{SETTABLE\_ATTRS\Dots}] \label{param:SettableAttrs} All
   macros that begin with \Macro{SETTABLE\_ATTRS} or
-  \Macro{SUBSYS\_SETTABLE\_ATTRS} are settings used to restrict the 
+  \MacroNI{<SUBSYS>\_SETTABLE\_ATTRS} are settings used to restrict the 
   configuration values that can be changed using the \Condor{config\_val} 
   command.
   Section~\ref{sec:Host-Security} on Setting up
@@ -1283,9 +1290,9 @@ server, shadow, and starter, none of which use DaemonCore yet).
   %		pool if you enable CLAIMTOBE authentication.
   %  \end{itemize}
 
-\item[\Macro{SUBSYS\_ADDRESS\_FILE}]
+\item[\MacroB{<SUBSYS>\_ADDRESS\_FILE}]
   \label{param:SubsysAddressFile}
-  \index{}
+  \index{SUBSYS\_ADDRESS\_FILE macro@\texttt{<SUBSYS>\_ADDRESS\_FILE} macro}
   \index{NEGOTIATOR\_ADDRESS\_FILE macro@\texttt{NEGOTIATOR\_ADDRESS\_FILE} macro}
   \index{configuration macro!\texttt{NEGOTIATOR\_ADDRESS\_FILE}}
   \index{COLLECTOR\_ADDRESS\_FILE macro@\texttt{COLLECTOR\_ADDRESS\_FILE} macro}
@@ -1314,10 +1321,12 @@ server, shadow, and starter, none of which use DaemonCore yet).
   \Condor{rm} do not need to send any messages over the network to
   locate the \Condor{schedd} daemon.
   This macro is not necessary for the \Condor{collector} 
-  daemon, since it's command socket is at a well-known port.  
+  daemon, since its command socket is at a well-known port.  
   
-\item[\Macro{SUBSYS\_ATTRS} or \label{param:SubsysExprs}
-  \Macro{SUBSYS\_EXPRS}] \label{param:SubsysAttrs}
+\item[\MacroB{<SUBSYS>\_ATTRS} or \label{param:SubsysExprs}
+  \MacroB{<SUBSYS>\_EXPRS}] \label{param:SubsysAttrs}
+  \index{SUBSYS\_ATTRS macro@\texttt{<SUBSYS>\_ATTRS} macro}
+  \index{SUBSYS\_EXPRS macro@\texttt{<SUBSYS>\_EXPRS} macro}
   Allows any DaemonCore daemon to advertise arbitrary
   expressions from the configuration file in its ClassAd.  Give the
   comma-separated list of entries from the configuration file you want in the
@@ -1326,8 +1335,8 @@ server, shadow, and starter, none of which use DaemonCore yet).
   machines can discriminate between other machines in a job's 
   \Opt{rank} and \Opt{requirements}.
 
-  \MacroNI{SUBSYS\_EXPRS} is a historic setting that functions identically to
-  \MacroNI{SUBSYS\_ATTRS}. Use \MacroNI{SUBSYS\_ATTRS}.
+  \MacroNI{<SUBSYS>\_EXPRS} is a historic setting that functions identically to
+  \MacroNI{<SUBSYS>\_ATTRS}. Use \MacroNI{<SUBSYS>\_ATTRS}.
 
   \Note The \Condor{kbdd} does not send
   ClassAds now, so this entry does not affect it.  The
@@ -1335,7 +1344,7 @@ server, shadow, and starter, none of which use DaemonCore yet).
   \Condor{collector} do send ClassAds, so those would be valid
   subsystems to set this entry for.
   
-  \MacroNI{SUBMIT\_EXPRS} not part of the \MacroNI{SUBSYS\_EXPRS}, it is
+  \MacroNI{SUBMIT\_EXPRS} not part of the \MacroNI{<SUBSYS>\_EXPRS}, it is
   documented in section~\ref{sec:Submit-Config-File-Entries}
 
   The \Condor{startd} \MacroU{STARTD\_ATTRS} defaults to
@@ -1902,7 +1911,9 @@ These macros control the \Condor{master}.
   currently includes all Condor daemons except the checkpoint server
   by default.
   
-\item[\Macro{SUBSYS}] \label{param:SUBSYS} Once you have defined which
+\item[\MacroB{<SUBSYS>}] \label{param:SUBSYS}
+  \index{SUBSYS macro@\texttt{<SUBSYS>} macro}
+  Once you have defined which
   subsystems you want the \Condor{master} to start, you must provide
   it with the full path to each of these binaries.  For example:
   \begin{verbatim}
@@ -1928,7 +1939,9 @@ These macros control the \Condor{master}.
   When the \Condor{schedd} was started by the \Condor{master}, it would
   see the specified values of \Env{TMP} and \Env{CONDOR\_CONFIG}.
 
-\item[\Macro{SUBSYS\_ARGS}] \label{param:SubsysArgs} This macro allows
+\item[\MacroB{<SUBSYS>\_ARGS}] \label{param:SubsysArgs}
+  \index{SUBSYS\_ARGS macro@\texttt{<SUBSYS>\_ARGS} macro}
+  This macro allows
   the specification of additional command line arguments for any
   process spawned by the \Condor{master}.  List the desired arguments
   using the same syntax as the arguments specification in a
@@ -1951,7 +1964,7 @@ These macros control the \Condor{master}.
 \item[\Macro{PREEN\_ARGS}] \label{param:PreenArgs}
   Controls how \Condor{preen} behaves by allowing the specification
   of command-line arguments.
-  This macro works as \MacroUNI{SUBSYS\_ARGS} does.
+  This macro works as \MacroUNI{<SUBSYS>\_ARGS} does.
   The difference is that you must specify this macro for
   \Condor{preen} if you want it to do anything.
   \Condor{preen} takes action only
@@ -2196,16 +2209,16 @@ will not want to change them for any reason.
 
 \item[\Macro{MASTER\_ATTRS}] \label{param:MasterExprs} This macro is
   described in section~\ref{param:SubsysExprs} as
-  \MacroNI{SUBSYS\_ATTRS}.
+  \MacroNI{<SUBSYS>\_ATTRS}.
 
 \item[\Macro{MASTER\_DEBUG}] \label{param:MasterDebug} This macro
   is described in section~\ref{param:SubsysDebug} as
-  \MacroNI{SUBSYS\_DEBUG}.
+  \MacroNI{<SUBSYS>\_DEBUG}.
 
 \item[\Macro{MASTER\_ADDRESS\_FILE}] \label{param:MasterAddressFile}
   This macro is described in
   section~\ref{param:SubsysAddressFile} as
-  \Macro{SUBSYS\_ADDRESS\_FILE} 
+  \MacroNI{<SUBSYS>\_ADDRESS\_FILE}. 
 
 \item[\Macro{SECONDARY\_COLLECTOR\_LIST}]
   \label{param:SecondaryCollectorList} This macro lists the host names
@@ -2463,17 +2476,17 @@ Configuring The Startd Policy.
 
 \item[\Macro{STARTD\_ATTRS}] \label{param:StartdAttrs} This macro is
   described in section~\ref{param:SubsysAttrs} as
-  \Macro{SUBSYS\_ATTRS}.
+  \MacroNI{<SUBSYS>\_ATTRS}.
 
 \item[\Macro{STARTD\_DEBUG}] \label{param:StartdDebug} This macro
   (and other settings related to debug logging in the \Condor{startd}) is
   described in section~\ref{param:SubsysDebug} as
-  \Macro{SUBSYS\_DEBUG}.
+  \MacroNI{<SUBSYS>\_DEBUG}.
 
 \item[\Macro{STARTD\_ADDRESS\_FILE}] \label{param:StartdAddressFile}
   This macro is described in
   section~\ref{param:SubsysAddressFile} as
-  \Macro{SUBSYS\_ADDRESS\_FILE} 
+  \MacroNI{<SUBSYS>\_ADDRESS\_FILE} 
 
 \item[\Macro{STARTD\_SHOULD\_WRITE\_CLAIM\_ID\_FILE}] \label{param:StartdShouldWriteClaimIdFile}
   Starting with version 6.7.10, the \Condor{startd} can be configured
@@ -2931,7 +2944,7 @@ This set is to be used for all new applications.
 
     The default ``Periodic'' mode is used for most modules.  In
     this mode, the module is expected to be started by the
-    \Condor{startd} daemon, gather and publish it's data, and then
+    \Condor{startd} daemon, gather and publish its data, and then
     exit.
 
     The ``WaitForExit'' mode is used to specify a module
@@ -2952,7 +2965,7 @@ This set is to be used for all new applications.
     The ``ReConfig'' macro is used to specify whether a module
     can handle HUP signals, and should be sent a HUP signal when
     the \Condor{startd} daemon is reconfigured.  The module is
-    expected to reread it's configuration at that time.  A value
+    expected to reread its configuration at that time.  A value
     of ``True'' enables this setting, and ``False'' disables it.
 
     If \MacroNI{STARTD\_CRON\_NAME}
@@ -3117,7 +3130,7 @@ Future releases of Condor may disable the use of this set.
 	``WaitForExit'' and ``ReConfig'' options which replace
 	``Continuous''.
 
-	This option is now deprecated, and it's functionality has been
+	This option is now deprecated, and its functionality has been
 	replaced by the new ``WaitForExit'' and ``ReConfig'' options,
 	which together implement the capabilities of ``Continuous''.
 	This option will be removed from a future version of Condor.
@@ -3554,17 +3567,17 @@ These macros control the \Condor{schedd}.
 
 \item[\Macro{SCHEDD\_ATTRS}] \label{param:ScheddAttrs} This macro is
   described in section~\ref{param:SubsysExprs} as
-  \MacroNI{SUBSYS\_ATTRS}.
+  \MacroNI{<SUBSYS>\_ATTRS}.
 
 \item[\Macro{SCHEDD\_DEBUG}] \label{param:ScheddDebug} This macro
   (and other settings related to debug logging in the \Condor{schedd}) is
   described in section~\ref{param:SubsysDebug} as
-  \MacroNI{SUBSYS\_DEBUG}.
+  \MacroNI{<SUBSYS>\_DEBUG}.
 
 \item[\Macro{SCHEDD\_ADDRESS\_FILE}] \label{param:ScheddAddressFile}
   This macro is described in
   section~\ref{param:SubsysAddressFile} as
-  \MacroNI{SUBSYS\_ADDRESS\_FILE}. 
+  \MacroNI{<SUBSYS>\_ADDRESS\_FILE}. 
 
 \item[\Macro{SCHEDD\_EXECUTE}] \label{param:ScheddExecute}
   A directory to use as a temporary sandbox for local universe jobs.
@@ -3702,7 +3715,7 @@ These settings affect the \Condor{shadow}.
 \item[\Macro{SHADOW\_DEBUG}] \label{param:ShadowDebug} This macro
   (and other settings related to debug logging in the shadow) is
   described in section~\ref{param:SubsysDebug} as
-  \MacroNI{SUBSYS\_DEBUG}.
+  \MacroNI{<SUBSYS>\_DEBUG}.
 
 \item[\Macro{SHADOW\_QUEUE\_UPDATE\_INTERVAL}]
 \label{param:ShadowQueueUpdateInterval}
@@ -3825,7 +3838,7 @@ These settings affect the \Condor{starter}.
 \item[\Macro{STARTER\_DEBUG}] \label{param:StarterDebug} This setting
   (and other settings related to debug logging in the starter) is
   described above in section~\ref{param:SubsysDebug} as
-  \MacroUNI{SUBSYS\_DEBUG}.
+  \MacroUNI{<SUBSYS>\_DEBUG}.
 
 \item[\Macro{STARTER\_UPDATE\_INTERVAL}] \label{param:StarterUpdateInterval}
 The amount of time (in seconds) between ClassAd updates that the
@@ -4040,7 +4053,7 @@ These macros affect \Condor{preen}.
   directory.  Defaults to all the files that are valid.  A change
   to the names of any of the log files above requires a change to this
   macro as well.  In addition, the defaults for the
-  \MacroU{SUBSYS\_ADDRESS\_FILE} are listed here, so a change to
+  \MacroUNI{<SUBSYS>\_ADDRESS\_FILE} are listed here, so a change to
   those requires a change this entry as well.
 
 \end{description}
@@ -4201,7 +4214,7 @@ These macros affect the \Condor{collector}.
   updates (of this ad type) the Collector has received from this host.
   ``UpdatesSequenced'' is the number of updates that the Collector
   could have as lost.  In particular, for the first update from a
-  daemon it's impossible to tell if any previous ones have been lost
+  daemon it is impossible to tell if any previous ones have been lost
   or not.  ``UpdatesLost'' is the number of updates that the Collector
   has detected as being lost.
 
@@ -4226,7 +4239,7 @@ These macros affect the \Condor{collector}.
   For example, if the last update was not lost, the previous lost, and
   the previous two not, the bitmap would be 0100, and the matching hex
   digit would be ``4''.  Note that the MSB can never be marked as lost
-  because it's loss can only be detected by a non-lost update (a
+  because its loss can only be detected by a non-lost update (a
   ``gap'' is found in the sequence numbers).  Thus, UpdatesHistory =
   "0x40" would be the history for the last 8 updates.  If the next
   updates are all successful, the values published, after each update,
@@ -4256,13 +4269,13 @@ These macros affect the \Condor{collector}.
   process to handle the query, freeing the main process to handle
   other requests.  When the number of outstanding ``worker'' processes
   reaches this maximum, the request is handled by the main process.
-  This macro is ignored on Windows, and it's default value is zero.
+  This macro is ignored on Windows, and its default value is zero.
   The default configuration, however, has this set to 16.
 
 \item[\Macro{COLLECTOR\_DEBUG}] \label{param:CollectorDebug} This
   macro (and other macros related to debug logging in the collector)
   is described in section~\ref{param:SubsysDebug} as
-  \MacroNI{SUBSYS\_DEBUG}.
+  \MacroNI{<SUBSYS>\_DEBUG}.
 
 \end{description}
 
@@ -4399,7 +4412,7 @@ These macros affect the \Condor{negotiator}.
 
 \item[\Macro{NEGOTIATOR\_DEBUG}] \label{param:NegotiatorDebug} This macro
   (and other settings related to debug logging in the negotiator) is
-  described in section~\ref{param:SubsysDebug} as \MacroNI{SUBSYS\_DEBUG}.
+  described in section~\ref{param:SubsysDebug} as \MacroNI{<SUBSYS>\_DEBUG}.
 
 \item[\Macro{NEGOTIATOR\_MAX\_TIME\_PER\_SUBMITTER}] \label{param:NegotiatorMaxTimePerSubmitter} This macro limits the amount of time the negotiator will 
 spend with a submitter. It defaults to one year.
@@ -4980,7 +4993,7 @@ This macro should almost always remain set to the default value!
 
 \item[\Macro{DAGMAN\_DEBUG}] \label{param:DAGManDebug} This macro
 is described in section~\ref{param:SubsysDebug} as
-\Macro{SUBSYS\_DEBUG}.
+\MacroNI{<SUBSYS>\_DEBUG}.
 
 \item[\Macro{DAGMAN\_CONDOR\_SUBMIT\_EXE}]
 \label{param:DAGManCondorSubmitExe}
@@ -5341,7 +5354,7 @@ MASTER_NEGOTIATOR_CONTROLLER = HAD
 \item[\Macro{HAD\_DEBUG}]
   \label{param:HADDebug}
   Logging level for the \Condor{had} daemon.
-  See \MacroNI{SUBSYS\_DEBUG} for values.
+  See \MacroNI{<SUBSYS>\_DEBUG} for values.
 
 \item[\Macro{HAD\_LOG}]
   \label{param:HADLog}
@@ -5457,12 +5470,13 @@ refresh proxy certificates.  By default, this macro is undefined.
 %   In addition, web commands are considered a READ command,
 %   so the client will be checked by host-based security.
 % 
-% \item[\Macro{SUBSYS\_ENABLE\_SOAP\_SSL}]
+% \item[\MacroB{<SUBSYS>\_ENABLE\_SOAP\_SSL}]
 %   \label{param:SubsysEnableSoapSSL}
+%   \index{SUBSYS\_ENABLE\_SOAP\_SSL macro@\texttt{<SUBSYS>\_ENABLE\_SOAP\_SSL} macro}
 %   A boolean value that defaults to \Expr{False}.
 %   When \Expr{True}, enables SOAP over SSL for the specified
-%   \MacroNI{SUBSYS}.
-%   Any specific \MacroNI{SUBSYS\_ENABLE\_SOAP\_SSL} setting overrides
+%   \MacroNI{<SUBSYS>}.
+%   Any specific \MacroNI{<SUBSYS>\_ENABLE\_SOAP\_SSL} setting overrides
 %   the value of \MacroNI{ENABLE\_SOAP\_SSL}.
 % 
 % \item[\Macro{ENABLE\_SOAP\_SSL}]
@@ -5470,46 +5484,52 @@ refresh proxy certificates.  By default, this macro is undefined.
 %   A boolean value that defaults to \Expr{False}.
 %   When \Expr{True}, enables SOAP over SSL for all daemons.
 % 
-% \item[\Macro{SUBSYS\_SOAP\_SSL\_PORT}]
+% \item[\MacroB{<SUBSYS>\_SOAP\_SSL\_PORT}]
 %   \label{param:SubsysSoapSSLPort}
+%   \index{SUBSYS\_SOAP\_SSL\_PORT macro@\texttt{<SUBSYS>\_SOAP\_SSL\_PORT} macro}
 %   A required port number on which SOAP over SSL messages are
 %   accepted, when SOAP over SSL is enabled.
-%   The \MacroNI{SUBSYS} must be specified, because multiple daemons
+%   The \MacroNI{<SUBSYS>} must be specified, because multiple daemons
 %   running on a single machine may not share a port.
 %   There is no default value.
 % 
-% \item[\Macro{SUBSYS\_SOAP\_SSL\_SERVER\_KEYFILE}]
+% \item[\MacroB{<SUBSYS>\_SOAP\_SSL\_SERVER\_KEYFILE}]
 %   \label{param:SubsysSoapSSLServerKeyfile}
+%   \index{SUBSYS\_SOAP\_SSL\_SERVER\_KEYFILE macro@\texttt{<SUBSYS>\_SOAP\_SSL\_SERVER\_KEYFILE} macro}
 %   A required complete path and file name to specify the daemon's
 %   identity, as used in authentication when SOAP over SSL is enabled.
 %   The file is to be  an OpenSSL PEM file containing a certificate
 %   and private key.
 %   There is no default value.
 % 
-% \item[\Macro{SUBSYS\_SOAP\_SSL\_SERVER\_KEYFILE\_PASSWORD}]
+% \item[\MacroB{<SUBSYS>\_SOAP\_SSL\_SERVER\_KEYFILE\_PASSWORD}]
 %   \label{param:SubsysSoapSSLServerKeyfilePassword}
+%   \index{SUBSYS\_SOAP\_SSL\_SERVER\_KEYFILE\_PASSWORD macro@\texttt{<SUBSYS>\_SOAP\_SSL\_SERVER\_KEYFILE\_PASSWORD} macro}
 %   An optional complete path and file name to specify
 %   a password for unlocking the daemon's private key.
 %   There is no default value.
 % 
-% \item[\Macro{SUBSYS\_SOAP\_SSL\_CA\_FILE}]
+% \item[\MacroB{<SUBSYS>\_SOAP\_SSL\_CA\_FILE}]
 %   \label{param:SubsysSoapSSLCaFile}
+%   \index{SUBSYS\_SOAP\_SSL\_CA\_FILE macro@\texttt{<SUBSYS>\_SOAP\_SSL\_CA\_FILE} macro}
 %   A required complete path and file name to specify 
 %   a file containing certificates of trusted Certificate Authorities (CAs).
 %   Only clients who present a certificate signed by a trusted
 %   CA will be authenticated.
 %   There is no default value.
 % 
-% \item[\Macro{SUBSYS\_SOAP\_SSL\_CA\_DIR}]
+% \item[\MacroB{<SUBSYS>\_SOAP\_SSL\_CA\_DIR}]
 %   \label{param:SubsysSoapSSLCaDir}
+%   \index{SUBSYS\_SOAP\_SSL\_CA\_DIR macro@\texttt{<SUBSYS>\_SOAP\_SSL\_CA\_DIR} macro}
 %   A required complete path to a directory
 %   containing certificates of trusted Certificate Authorities (CAs).
 %   Only clients who present a certificate signed by a trusted
 %   CA will be authenticated.
 %   There is no default value.
 % 
-% \item[\Macro{SUBSYS\_SOAP\_SSL\_DH\_FILE}]
+% \item[\MacroB{<SUBSYS>\_SOAP\_SSL\_DH\_FILE}]
 %   \label{param:SubsysSoapSSLDhFile}
+%   \index{SUBSYS\_SOAP\_SSL\_DH\_FILE macro@\texttt{<SUBSYS>\_SOAP\_SSL\_DH\_FILE} macro}
 %   An optional complete path and file name to a DH file
 %   containing keys for a DH key exchange.
 %   There is no default value.
