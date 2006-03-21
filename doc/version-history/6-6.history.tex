@@ -52,6 +52,16 @@ The details of each version are described below.
   This, in turn, caused a ``shadow exeception'', and the job would
   fail.
 
+\item Fixed a bug which caused the \Condor{collector} incorrectly
+  handle ads in which the ``UpdateInterval'' attribute is set.  In
+  particular, the current \Condor{collector} will use the
+  ``UpdateInterval'' value as the maximum ``lifetime'' of the ad when
+  aging the ads, which could cause it to remove the ad prematurely.
+  The \Condor{collector} now looks at the ``ClassAdLifetime''
+  attribute, and uses it's value (if it's set).
+  \Note No current Condor daemons are publishing either of these
+  attributes, but may do so in the future.
+
 \end{itemize}
 
 
