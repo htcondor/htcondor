@@ -238,10 +238,14 @@ HOSTALLOW_READ_STARTD     = $(HOSTALLOW_READ), $(FLOCK_FROM)
 ##  defined, no attributes can be set with condor_config_val.
 
 ## Do you want to allow condor_config_val -rset to work at all?
+## This feature is disabled by default, so to enable, you must
+## uncomment the following setting and change the value to "True". 
 ## Note: changing this requires a restart not just a reconfig.
 #ENABLE_RUNTIME_CONFIG = False
 
 ## Do you want to allow condor_config_val -set to work at all?
+## This feature is disabled by default, so to enable, you must
+## uncomment the following setting and change the value to "True". 
 ## Note: changing this requires a restart not just a reconfig.
 #ENABLE_PERSISTENT_CONFIG = False
 
