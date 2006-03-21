@@ -861,6 +861,11 @@ sub writeTestGlue
     print $fh "remote_pre = nmi_glue/test/remote_pre\n";
     print $fh "remote_task = nmi_glue/test/remote_task\n";
     print $fh "remote_task_timeout = $test_timeout\n";
+    if( grep(/alpha_osf_V5\.1/, @platforms) ) {
+        # we know tests take longer on DUX...
+        my $dux_test_timeout = $test_timeout * 2;
+        print $fh "alpha_osf_V5.1_remote_task_timeout = $dux_test_timeout\n";
+    }
     print $fh "remote_post = nmi_glue/test/remote_post\n";
     print $fh "\n";
 }
