@@ -161,6 +161,7 @@ JobQueueDBManager::config(bool reconfig)
 		strncpy(host, 
 				jobQueueDBIpAddress, 
 				ptr_colon - jobQueueDBIpAddress);
+		host[ptr_colon - jobQueueDBIpAddress] = '\0';
 
 		strcpy(port, ptr_colon+1);
 	}
