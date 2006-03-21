@@ -28,6 +28,23 @@ The details of each version are described below.
 %
 %\end{itemize}
 
+\noindent Bugs fixed that are included in version 6.7.18:
+
+\begin{itemize}
+
+\item Fixed a bug which caused the \Condor{collector} incorrectly
+  handle ads in which the \AdAttr{UpdateInterval} attribute is set.
+  In particular, the previous versions of the \Condor{collector} will
+  use the \AdAttr{UpdateInterval} value as the maximum \Term{lifetime}
+  of the ad when aging the ads, which could cause it to remove the ad
+  prematurely.
+  The \Condor{collector} now looks at the \AdAttr{ClassAdLifetime}
+  attribute, and uses its value (if set).
+  \Note No current Condor daemons are publishing either of these
+  attributes, but may do so in the future.
+
+\end{itemize}
+
 \noindent Bugs fixed that are included in version 6.7.14:
 
 \begin{itemize}
@@ -51,16 +68,6 @@ The details of each version are described below.
   error when the sum total of the file transfer size exceeded 2G.
   This, in turn, caused a ``shadow exeception'', and the job would
   fail.
-
-\item Fixed a bug which caused the \Condor{collector} incorrectly
-  handle ads in which the ``UpdateInterval'' attribute is set.  In
-  particular, the current \Condor{collector} will use the
-  ``UpdateInterval'' value as the maximum ``lifetime'' of the ad when
-  aging the ads, which could cause it to remove the ad prematurely.
-  The \Condor{collector} now looks at the ``ClassAdLifetime''
-  attribute, and uses it's value (if it's set).
-  \Note No current Condor daemons are publishing either of these
-  attributes, but may do so in the future.
 
 \end{itemize}
 
