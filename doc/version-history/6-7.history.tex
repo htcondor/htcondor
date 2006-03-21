@@ -118,6 +118,10 @@ Manual for more details.
 
 \begin{itemize}
 
+\item Fixed a security hole in \Condor{quill} where the daemon would
+emit the quillwriter user's password in cleartext into the \Condor{quill}
+logfile.
+
 \item Fixed a bug in 6.7.17 that could cause the schedd state to be
 wiped out, clearing the contents of the job queue.  The most likely
 case in which this problem could have happened is when the disk
