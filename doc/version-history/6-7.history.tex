@@ -118,6 +118,9 @@ Manual for more details.
 
 \begin{itemize}
 
+\item Fixed a memory corruption bug in \Condor{quill} where it could
+miscalculate the hostname of the db server to which it connects.
+
 \item Fixed a security hole in \Condor{quill} where the daemon would
 emit the quillwriter user's password in cleartext into the \Condor{quill}
 logfile.
