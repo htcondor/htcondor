@@ -217,26 +217,6 @@ JobQueueDBManager::config(bool reconfig)
 		quillManageVacuum = false;
 	}
 
-	if(writePassword) {
-		free(writePassword);
-		writePassword = NULL;
-	}
-	if(writePasswordFile) {
-		free(writePasswordFile);
-		writePasswordFile = NULL;
-	}
-	if(spool) {
-		free(spool);
-		spool = NULL;
-	}
-	if(host) {
-		free(host);
-		host = NULL;
-	}
-	if(port) {
-		free(port);
-		port = NULL;
-	}
 		// read the polling period and if one is not specified use 
 		// default value of 10 seconds
 	char *pollingPeriod_str = param("QUILL_POLLING_PERIOD");
@@ -285,8 +265,11 @@ JobQueueDBManager::config(bool reconfig)
 	dprintf(D_ALWAYS, "Using Job Queue File %s\n", jobQueueLogFile);
 	dprintf(D_ALWAYS, "Using Database IpAddress = %s\n", jobQueueDBIpAddress);
 	dprintf(D_ALWAYS, "Using Database Name = %s\n", jobQueueDBName);
-	dprintf(D_ALWAYS, "Using Database Connection String = \"%s\"\n", 
-			jobQueueDBConn);
+
+	dprintf(D_ALWAYS, "Using Database Connection Information = "
+			"host=%s port=%s user=quillwriter password=XXX dbname=%s", 
+			host, port, jobQueueDBName);
+
 	dprintf(D_ALWAYS, "Using Polling Period = %d\n", pollingPeriod);
 	dprintf(D_ALWAYS, "Using Purge History Duration = %d days\n", 
 			purgeHistoryDuration);
@@ -296,6 +279,27 @@ JobQueueDBManager::config(bool reconfig)
 	if(ad) {
 		delete ad;
 		ad = NULL;
+	}
+
+	if(writePassword) {
+		free(writePassword);
+		writePassword = NULL;
+	}
+	if(writePasswordFile) {
+		free(writePasswordFile);
+		writePasswordFile = NULL;
+	}
+	if(spool) {
+		free(spool);
+		spool = NULL;
+	}
+	if(host) {
+		free(host);
+		host = NULL;
+	}
+	if(port) {
+		free(port);
+		port = NULL;
 	}
 
 		// this function is also called when condor_reconfig is issued
@@ -2246,7 +2250,13 @@ JobQueueDBManager::checkSchema()
 		strcpy(tmp_conn,jobQueueDBConn);
 		char *tmp_found = strstr(tmp_conn, "dbname=");
 		strcpy(tmp_found, "dbname=template1");
-		dprintf(D_ALWAYS, "tmp = %s\n", tmp_conn);	  
+
+		/* Comment this out because it prints out the password to LOG. 
+			Do a better job for next revision of Condor. */
+/*		dprintf(D_ALWAYS, "tmp = %s\n", tmp_conn);	  */
+		dprintf(D_ALWAYS, "<Temporary connection to DB. Supressing output of "
+							"connection information for security reasons.>\n");
+
 		sprintf(sql_str, "CREATE DATABASE \"%s\"", jobQueueDBName);
 		JobQueueDatabase *tmp_jqdb = new PGSQLDatabase(tmp_conn);
 
