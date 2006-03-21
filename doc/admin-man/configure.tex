@@ -3103,13 +3103,15 @@ These macros affect the \Condor{collector}.
 \begin{description}
   
 \item[\Macro{CLASSAD\_LIFETIME}] \label{param:ClassadLifetime} This
-  macro determines how long a ClassAd can remain in the collector
-  before it is discarded as stale information.  The ClassAds sent to
-  the collector might also have an attribute that says how long the
-  lifetime should be for that specific ad.  If that attribute is
-  present, the collector will either use it or the
-  \MacroUNI{CLASSAD\_LIFETIME}, whichever is greater.  The macro is
-  defined in terms of seconds, and defaults to 900 (15 minutes).
+  macro determines the default maximum age for ClassAds collected by the
+  \Condor{collector}.  ClassAd older than the maximum age are
+  discarded by the \Condor{collector} as stale.
+
+  If present, the ClassAd attribute ``ClassAdLifetime'' specifies the
+  ad's lifetime in seconds.  If ``ClassAdLifetime'' is not present in
+  the ad, the \Condor{collector} will use the value of
+  \MacroUNI{CLASSAD\_LIFETIME}.  The macro is defined in terms of
+  seconds, and defaults to 900 (15 minutes).
   
 \item[\Macro{MASTER\_CHECK\_INTERVAL}]
   \label{param:MasterCheckInterval}  This macro defines how often the
