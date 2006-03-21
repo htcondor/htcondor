@@ -1,3 +1,8 @@
+03/21/06 V6_6-merge-55
+  The state of the V6_6-branch for a merge into V6_7-branch.  The only
+  change is the fix to the collector to look at "ClassAdLifetime"
+  instead of UpdateInterval when aging ads.
+
 03/20/06 V6_6-merge-54
   The state of the V6_6-branch for a merge into V6_7-branch.  Major
   change is the security fix for condor_config_val -set.  Also
