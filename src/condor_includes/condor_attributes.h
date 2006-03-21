@@ -422,6 +422,7 @@ const char ATTR_UID_DOMAIN               [] = "UidDomain";
 const char ATTR_ULOG_FILE				 [] = "UserLog";
 const char ATTR_ULOG_USE_XML             [] = "UserLogUseXML";
 const char ATTR_UPDATE_INTERVAL			 [] = "UpdateInterval";
+const char ATTR_CLASSAD_LIFETIME		 [] = "ClassAdLifetime";
 const char ATTR_UPDATE_PRIO              [] = "UpdatePrio";
 const char ATTR_UPDATE_SEQUENCE_NUMBER   [] = "UpdateSequenceNumber";
 const char ATTR_USE_GRID_SHELL           [] = "UseGridShell";

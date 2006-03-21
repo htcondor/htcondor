@@ -1041,7 +1041,7 @@ cleanHashTable (CollectorHashTable &hashTable, time_t now,
 {
 	ClassAd  *ad;
 	int   	 timeStamp;
-	int		 updateInterval;
+	int		 max_lifetime;
 	AdNameHashKey  hk;
 	double   timeDiff;
 	MyString	hkString;
@@ -1061,12 +1061,12 @@ cleanHashTable (CollectorHashTable &hashTable, time_t now,
 		// how long has it been since the last update?
 		timeDiff = difftime( now, timeStamp );
 
-		if( !ad->LookupInteger( ATTR_UPDATE_INTERVAL, updateInterval ) ) {
-			updateInterval = machineUpdateInterval;
+		if( !ad->LookupInteger( ATTR_CLASSAD_LIFETIME, max_lifetime ) ) {
+			max_lifetime = machineUpdateInterval;
 		}
 
 		// check if it has expired
-		if (timeDiff > (double) updateInterval )
+		if ( timeDiff > (double) max_lifetime )
 		{
 			// then remove it from the segregated table
 			(*makeKey) (hk, ad, NULL);
