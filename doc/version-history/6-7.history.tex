@@ -17,6 +17,10 @@ The details of each version are described below.
   \Condor{cold\_stop} has been replaced by \Opt{-filelock} to avoid
   any confusion between file locking and Condor job flocking.
 
+\item As of 6.7.17, Quill's database schema has been slightly altered. 
+For more information, please see the corresponding 6.7.17 version history entry in 
+section~\ref{param:quill-schema-change} on page~\pageref{param:quill-schema-change}.
+
 \end{itemize}
 
 \noindent New Features:
@@ -267,6 +271,27 @@ condor\_config and in the default list hard coded into \Condor{master}.
 \item The default output for \Condor{status} was changed between
   6.7.16 and 6.7.17 to support the new \Term{Backfill} state which
   Condor resources can now enter (described below in more detail).
+
+\item \label{param:quill-schema-change} 
+Added two new columns to the Quill database schema to support 
+historical job queue logs (see \Macro{MAX\_JOB\_QUEUE\_LOG\_ROTATIONS} 
+in the New Features section below). These are log\_seq\_num and 
+log\_creation\_time.
+  For a description of those two columns, check out the schema of 
+  the JobQueuePollingInfo table in section~\ref{sec:Quill-Schema} on   
+  page~\pageref{sec:Quill-Schema}.
+
+Databases created by versions of Quill prior to 6.7.17 must be updated to 
+reflect these two new columns. This can be achieved by either dropping the 
+database and letting Quill recreate it on the next polling cycle, or by manually 
+adding the two columns and initializing their values via the following sql commands:
+\begin{verbatim}
+	alter table jobqueuepollinginfo add column log_seq_num bigint;
+	alter table jobqueuepollinginfo add column log_creation_time bigint;
+	update jobqueuepollinginfo set log_seq_num = 0, log_creation_time=0;
+\end{verbatim}
+If the schema is being manually changed, it must be done so \Bold{before} the 
+\Condor{quill} daemon is started. 
 
 \end{itemize}
 

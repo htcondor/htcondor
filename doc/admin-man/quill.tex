@@ -398,7 +398,9 @@ stores metadata information related to the \File{job\_queue.log} file.
         last\_cmd\_mytype         text,
         last\_cmd\_targettype     text,
         last\_cmd\_name           text,
-        last\_cmd\_value          text}
+        last\_cmd\_value          text,
+        log\_seq\_num             BIGINT,
+        log\_creation\_time       BIGINT}
 \end{itemize}
 	
 At all times, there is only 1 row in this table and it describes
@@ -424,6 +426,14 @@ information related to the last time Quill polled the \File{job\_queue.log} file
 	refers to the combined "cid.pid" pair, mytype and target usually
 	contains Job and Machine respectively, and finally the name and
 	value contains the <attribute,value> pair.
+
+\item \Bold{log\_seq\_num} and \Bold{log\_creation\_time}\\
+	Together, these form the first record of the job queue log file. They 
+	describe the sequence number of the next historical job queue log file
+	and the creation time of the current job queue log file respectively.
+	Together, they help Quill detect whether the schedd has rotated the 
+	job queue log file and, if so, take appropriate actions. 
+
 \end{itemize}
 
 The historical information on the other hand is slightly differently
