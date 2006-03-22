@@ -45,7 +45,7 @@ sub RunIt
     my $LimitMaxDirs = HawkeyeLib::ReadConfig(  "_MaxEntries", "20" );
     my $LimitMinSize = HawkeyeLib::ReadConfig(  "_MinSize", "100" );
 
-    # Read the directory list (FSLIST)
+    # Read the directory list (LIST)
     my $ConfigList = HawkeyeLib::ReadConfig(  "_list", "" );
     my @ConfigList = split( /[\s,]+/,
 			    HawkeyeLib::ReadConfig(  "_list", "" ) );
