@@ -1384,6 +1384,8 @@ updateX509Proxy(ReliSock * rsock, const char * path, const char * local_user)
 
 	rsock->decode();
 
+	priv_state old_priv = set_priv(PRIV_USER);
+
 	int reply;
 	filesize_t size = 0;
 	if ( rsock->get_file(&size,tmp_path.Value()) < 0 ) {
@@ -1400,6 +1402,7 @@ updateX509Proxy(ReliSock * rsock, const char * path, const char * local_user)
 			reply = 1; // == success
 		}
 	}
+	set_priv(old_priv);
 
 		// Send our reply back to the client
 	rsock->encode();
