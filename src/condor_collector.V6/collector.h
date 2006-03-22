@@ -95,6 +95,10 @@ public:
 	static int sendCollectorAd();
 
 	static void send_classad_to_sock( int cmd, Daemon * d, ClassAd* theAd);	
+
+	// A get method to support SOAP
+	static CollectorEngine & getCollector( void ) { return collector; };
+
 protected:
 
 	static CollectorStats collectorStats;
