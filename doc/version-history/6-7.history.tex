@@ -257,6 +257,12 @@ attribute=Rank and value=1000 * memory).
 \item Added HAD to the default DC\_DAEMON\_LIST, both in the default
 condor\_config and in the default list hard coded into \Condor{master}.
 
+\item Java universe jobs submitted with the old-style arguments syntax
+(argument string not surrounded by double quotes in the submit file)
+would fail to run (and therefore stay in the schedd job queue) if the
+path to Condor's execute directory contained a space (e.g. ``Program
+Files'').  This bug was introduced in 6.7.15.
+
 \end{itemize}
 
 \noindent Known Bugs:
