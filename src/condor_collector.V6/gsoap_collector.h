@@ -21,13 +21,31 @@
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 //gsoap condor service name: condorCollector
-//gsoap condor service style: document
-//gsoap condor service encoding: literal
-//gsoap condor service namespace: urn:condor
 
 #import "gsoap_daemon_core_types.h"
 
 #import "gsoap_daemon_core.h"
+
+enum condor__ClassAdType
+{
+	STARTD_AD_TYPE,
+	QUILL_AD_TYPE,
+	SCHEDD_AD_TYPE,
+	SUBMITTOR_AD_TYPE,
+	LICENSE_AD_TYPE,
+	MASTER_AD_TYPE,
+	CKPTSRVR_AD_TYPE,
+	COLLECTOR_AD_TYPE,
+	STORAGE_AD_TYPE,
+	NEGOTIATOR_AD_TYPE,
+	HAD_AD_TYPE
+};
+
+int condor__insertAd(enum condor__ClassAdType type,
+					 struct condor__ClassAdStruct ad,
+					 struct condor__insertAdResponse {
+						 struct condor__Status status;
+					 } & result);
 
 int condor__queryStartdAds(char *constraint,
 						   struct condor__ClassAdStructArray & result);
@@ -49,5 +67,4 @@ int condor__queryStorageAds(char *constraint,
 
 int condor__queryAnyAds(char *constraint,
 						struct condor__ClassAdStructArray & result);
-
 
