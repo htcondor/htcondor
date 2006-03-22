@@ -1,3 +1,10 @@
+03/22/06 V6_7-freebsd-{root,branch}
+   I'm happy to announce that this branch will be used to port Condor
+   to FreeBSD 5.X and 6.X. This branch will update the patches sent in by
+   Yahoo to make real system calls to the OS to get process information
+   instead of scraping /proc, which doesn't exist by default in FreeBSD
+   Created from the BUILD-V6_7-branch-2006-3-21 tag of V6_7_CODE.
+
 03/22/06 V6_7_18-branch
   The branch for V6_7_18 from V6_7_18-root off of V6_7-branch.
 
