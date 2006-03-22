@@ -58,19 +58,21 @@ sub DoConfig( )
     foreach my $Arg ( @ARGV )
     {
 	# Command line parameter value
-	if ( $Arg =~ /^--($ModuleName\_\w+)=(.*)/ )
+	if ( $Arg =~ /^(?:--)?($ModuleName\_\w+)=(.*)/i )
 	{
-	    $HardConfigs{$1} = $2;
+	    my $Var = uc $1;
+	    $HardConfigs{$Var} = $2;
 	}
 	# Special case; just an no "name" (i.e. "--df=/home,/scratch" )
-	elsif ( $Arg =~ /^--($ModuleName)=(.*)/ )
+	elsif ( $Arg =~ /^--($ModuleName)=(.*)/i )
 	{
-	    $HardConfigs{$1} = $2;
+	    my $Var = uc $1;
+	    $HardConfigs{$Var} = $2;
 	}
 	# Easier for user: --(variable)=value
-	elsif ( $Arg =~ /^--(\w+)=(.*)/ )
+	elsif ( $Arg =~ /^(?:--)?(\w+)=(.*)/ )
 	{
-	    my $Var = $ModuleName . "_" . $1;
+	    my $Var = uc( $ModuleName . "_" . $1 );
 	    $HardConfigs{$Var} = $2;
 	}
 	# Don't queury the config from the startd _at all_
@@ -131,7 +133,7 @@ sub GetHawkeyeInterfaceVersion( )
 sub HardConfig( $;$ )
 {
     my $Name = shift;
-    my $Label = "$ModuleName$Name";
+    my $Label = uc "$ModuleName$Name";
 
     if ( $#_ >= 0 ) {
 	$HardConfigs{$Label} = shift;
@@ -146,11 +148,19 @@ sub ReadConfig( $$ )
     my $Default = shift;
 
     # Get the config
-    my $Label = "$ModuleName$Ext";
+    my $Label = uc "$ModuleName$Ext";
     my $String = "not defined";
-    if ( exists( $HardConfigs{$Label} )  ) {
+
+    if ( exists( $HardConfigs{$Label} )  )
+    {
 	$String = $HardConfigs{$Label};
-    } elsif ( $ConfigQuery ) {
+    }
+    elsif ( exists $ENV{$Label} )
+    {
+	$String = $ENV{$Label};
+    }
+    elsif ( $ConfigQuery )
+    {
 	my $Cmd = $ConfigVal . " -startd " . $StartdName . "_$ModuleName$Ext";
 	$String = `$Cmd`;
 	$String = "not defined" if ( -1 == $? );
