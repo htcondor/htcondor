@@ -1243,6 +1243,11 @@ UserProc::UserProc( STARTUP_INFO &s ) :
 	cmd = new char [ strlen(s.cmd) + 1 ];
 	strcpy( cmd, s.cmd );
 
+	// Since we are adding to the argument list, we may need to deal
+	// with platform-specific arg syntax in the user's args in order
+	// to successfully merge them with the additional args.
+	args.SetArgV1SyntaxToCurrentPlatform();
+
 	MyString args_errors;
 	if(!args.AppendArgsV1or2Raw(s.args_v1or2,&args_errors)) {
 		EXCEPT("ERROR: Failed to parse arguments string: %s\n%s\n",

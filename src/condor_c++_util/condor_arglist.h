@@ -211,7 +211,7 @@ class ArgList {
 		// Create an args string for windows CreateProcess().
 	bool GetArgsStringWin32(MyString *result,int skip_args,MyString *error_msg) const;
 
-	bool InputWasV1() {return input_was_v1;}
+	bool InputWasV1() {return input_was_unknown_platform_v1;}
 
 		// Return true if the string is a V2Quoted string.  Such
 		// strings begin and end with double-quotes, since that is not
@@ -244,9 +244,37 @@ class ArgList {
 		// Each new message begins on a new line.
 	static void AddErrorMessage(char const *msg,MyString *error_buffer);
 
+	enum ArgV1Syntax {
+		UNKNOWN_ARGV1_SYNTAX,
+		WIN32_ARGV1_SYNTAX,
+		UNIX_ARGV1_SYNTAX
+	};
+
+		// Sets the platform-specific syntax to use when parsing V1
+		// args.  If this is not called, we don't know what platform
+		// to assume, so V1 args are preserved in the original form
+		// and we are therefore restricted in how the args can be
+		// manipulated.
+	void SetArgV1Syntax(ArgV1Syntax v1_syntax);
+
+		// Sets the platform-specific syntax to use when parsing V1
+		// args to the platform we are running on (i.e. same platform
+		// we were compiled under).  If this is not called, then we
+		// don't know what platform to assume, so V1 args are
+		// preserved in the original form and we are therefore
+		// restricted in how the args can be manipulated.
+	void SetArgV1SyntaxToCurrentPlatform();
+
+		// Parse V1Raw args in win32 format.
+	bool AppendArgsV1Raw_win32(char const *args,MyString *error_msg);
+
+		// Parse V1Raw args in unix format.
+	bool AppendArgsV1Raw_unix(char const *args,MyString *error_msg);
+
  private:
 	SimpleList<MyString> args_list;
-	bool input_was_v1; //true if we got arguments in V1 format
+	bool input_was_unknown_platform_v1; //true if we got arguments in V1 format for unknown platform
+	ArgV1Syntax v1_syntax;
 
 	bool IsSafeArgV1Value(char const *str) const;
 

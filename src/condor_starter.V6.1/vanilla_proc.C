@@ -93,6 +93,11 @@ VanillaProc::StartJob()
 		ArgList args;
 		MyString arg_errors;
 
+			// Since we are adding to the argument list, we may need to deal
+			// with platform-specific arg syntax in the user's args in order
+			// to successfully merge them with the additional args.
+		args.SetArgV1SyntaxToCurrentPlatform();
+
 		args.AppendArg("/Q");
 		args.AppendArg("/C");
 		args.AppendArg("condor_exec.bat");
