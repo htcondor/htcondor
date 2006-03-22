@@ -1783,7 +1783,9 @@ void SecMan :: remove_commands(KeyCacheEntry * keyEntry)
 
 int
 SecMan::sec_char_to_auth_method( char* method ) {
-	if (!stricmp( method, "GSI" )  ) {
+    if (!stricmp( method, "SSL" )  ) {
+        return CAUTH_SSL;
+    } else if (!stricmp( method, "GSI" )  ) {
 		return CAUTH_GSI;
 	} else if ( !stricmp( method, "NTSSPI" ) ) {
 		return CAUTH_NTSSPI;

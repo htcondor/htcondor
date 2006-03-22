@@ -30,6 +30,7 @@
 #include "condor_auth_fs.h"
 #include "condor_auth_sspi.h"
 #include "condor_auth_x509.h"
+#include "condor_auth_ssl.h"
 #include "condor_auth_kerberos.h"
 #include "condor_auth_passwd.h"
 #include "condor_secman.h"
@@ -140,6 +141,13 @@ Condor_Auth_Base * auth = NULL;
 				method_name = strdup("GSI");
 				break;
 #endif /* GSI_AUTHENTICATION */
+
+#if defined(SSL_AUTHENTICATION)
+            case CAUTH_SSL:
+                auth = new Condor_Auth_SSL(mySock);
+                method_name = strdup("SSL");
+                break;
+#endif /* defined(SSL_AUTHENTICATION) */
 
 #if defined(KERBEROS_AUTHENTICATION) 
 			case CAUTH_KERBEROS:
