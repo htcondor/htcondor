@@ -326,8 +326,11 @@ V6_6_10_EXT -a V6_6_9_EXT
 # externals needed for V6_6_11 (same as V6_6_10)
 V6_6_11_EXT -a V6_6_10_EXT
 
+# externals needed for V6_6_12 (same as V6_6_11)
+V6_6_12_EXT -a V6_6_11_EXT
+
 # Externals needed for the head of the V6_6-branch
-V6_6_EXT	-a V6_6_11_EXT
+V6_6_EXT	-a V6_6_12_EXT
 
 # The common externals needed for all V6_7_* releases
 V6_7_COMMON_EXT	-a EXT_COMMON \
