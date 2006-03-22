@@ -12,5 +12,5 @@ mode: WaitForExit
 reconfig: True
 
 # It's parameters
-parameter: PERIOD = 30s
+parameter: INTERVAL = 30s
 Sets the frequency with which vmstat collects data (i.e. 30s, 5m)

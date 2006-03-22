@@ -27,7 +27,7 @@ my $Hawkeye;
 my %Config =
     (
      Debug	=> 0,
-     TopPeriod	=> 30,
+     TopInterval	=> 30,
      RunOnce	=> 0,
      MaxLoops	=> 1000,
      TopOpt	=> {
@@ -214,7 +214,7 @@ $SIG{ALRM} = sub {
 	print STDERR "Previous alarm pending; bailing out\n";
 	exit 1;
     }
-    alarm( $Config{TopPeriod} * 4 );
+    alarm( $Config{TopInterval} * 4 );
     $AllDone++;
     $AlarmPending++;
 };
@@ -344,20 +344,22 @@ sub Configure( )
     ###  15:*
 
     #ReadConfig();
-    my $ConfigStringSort = HawkeyeLib::ReadConfig( "_sort", ":5" );
-    my $ConfigStringFields = HawkeyeLib::ReadConfig( "_fields", "*" );
-    my $PeriodNew = HawkeyeLib::ReadConfig( "_data_period", "" );
-    my $PeriodOld = HawkeyeLib::ReadConfig( "_period", "30s" );
-    my $ConfigStringPeriod = ( ($PeriodNew ne "") ? $PeriodNew : $PeriodOld );
+    my $CfgSort = HawkeyeLib::ReadConfig( "_sort", ":5" );
+    my $CfgFields = HawkeyeLib::ReadConfig( "_fields", "*" );
+    my $CfgInterval = HawkeyeLib::ReadConfig( "_interval", "" );
+    if ( $CfgInterval eq "" )
+    {
+	$CfgInterval = HawkeyeLib::ReadConfig( "_period", "30s" );
+    }
 
     # Max loops
     $Config{MaxLoops} = HawkeyeLib::ReadConfig( "_maxloops", "1000" );
     $Config{MaxLoops} = 1 if ( $Config{RunOnce} );
 
     # Check the config period string
-    if ( $ConfigStringPeriod =~ /(\d+)([sSmMhH]?)/ )
+    if ( $CfgInterval =~ /(\d+)([sSmMhH]?)/ )
     {
-	$Config{TopPeriod} = $1;
+	$Config{TopInterval} = $1;
 	my $Modifier = ( defined $2 ? uc( $2 ) : "" );
 	if ( $Modifier eq "S" )
 	{
@@ -365,11 +367,11 @@ sub Configure( )
 	}
 	elsif ( $Modifier eq "M" )
 	{
-	    $Config{TopPeriod} *= 60;
+	    $Config{TopInterval} *= 60;
 	}
 	elsif ( $Modifier eq "H" )
 	{
-	    $Config{TopPeriod} *= ( 60 * 60 );
+	    $Config{TopInterval} *= ( 60 * 60 );
 	}
 	elsif ( $Modifier ne "" )
 	{
@@ -378,8 +380,9 @@ sub Configure( )
     }
     else
     {
-	print STDERR "Ignoring top config time '$ConfigStringPeriod'\n";
+	print STDERR "Ignoring top config time '$CfgInterval'\n";
     }
+    print "Interval: $CfgInterval -> $Config{TopInterval}\n"; exit 0;
 
     # Examine the field names that we got at startup
     foreach my $Key ( keys %TopFields )
@@ -419,8 +422,8 @@ sub Configure( )
 
     # Extract the sort info
     {
-	$ConfigStringSort =~ s/\s+/,/g;
-	my ( @List ) = split ( /,+/, $ConfigStringSort );
+	$CfgSort =~ s/\s+/,/g;
+	my ( @List ) = split ( /,+/, $CfgSort );
 	my $String;
 	foreach $String ( @List )
 	{
@@ -448,7 +451,7 @@ sub Configure( )
     {
 	my $Fields = "";
 	my $Name;
-	my ( @List ) = split ( /[\s\,]+/, $ConfigStringFields );
+	my ( @List ) = split ( /[\s\,]+/, $CfgFields );
 	print STDERR "Enable list: " . join( " ", @List ) . "\n"
 	    if ( $Config{Debug} );
 	if ( $List[0] eq "*" )
@@ -479,7 +482,8 @@ sub Configure( )
 		elsif ( $TopFields{$Name}{offset} < 0 )
 		{
 		    print STDERR
-			"Warning: Field name '$Name' not found in top output\n";
+			"Warning: Field name '$Name' not found in" .
+			    " top output\n";
 		    next;
 		}
 		$TopFields{$Name}{enabled} = 1;
@@ -501,7 +505,7 @@ sub RunIt( )
 {
     # Build the command & start it
     my $Cmd = "nice -20 top " . $Config{TopOpt}{Batch} . " " .
-	$Config{TopOpt}{Delay} . "$Config{TopPeriod}";
+	$Config{TopOpt}{Delay} . "$Config{TopInterval}";
     $TopPid = open ( TOP, "$Cmd|" );
     Carp::confess( "Can't run top '$Cmd'" ) if ( ! $TopPid );
     print STDERR "$Cmd => $TopPid\n";
@@ -526,7 +530,7 @@ sub RunIt( )
     {
 	# Fire off an alarm if we get hung up...
 	$AlarmPending = 0;
-	alarm( $Config{TopPeriod} * 4 );
+	alarm( $Config{TopInterval} * 4 );
 
 	# Throw away the first line
 	$_ = <TOP> if ( $SkipFirst );
@@ -790,11 +794,12 @@ sub RunIt( )
 	# Timing logic
 	my $CurTime = time();
 	my $TimeDiff = $CurTime - $LastTime;
-	my $MaxTime = $Config{TopPeriod} * 1.5;
-	my $MinTime = $Config{TopPeriod} * 0.5;
+	my $MaxTime = $Config{TopInterval} * 1.5;
+	my $MinTime = $Config{TopInterval} * 0.5;
 	if ( ( $LastTime > 0 ) && ( $TimeDiff < $MinTime ) )
 	{
-	    print STDERR "output looped in $TimeDiff seconds ($Proc lines)!\n";
+	    print STDERR
+		"output looped in $TimeDiff seconds ($Proc lines)!\n";
 	    $Done++ if ( ++$FastCount > 1 );
 	}
 	else

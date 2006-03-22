@@ -134,7 +134,7 @@ sub Init( )
 	if ( $Arg =~ /^-1$/ ) {
 	    $Config{RunOnce} = 1;
 	} elsif ( $Arg =~ /^-c$/ ) {
-	    HawkeyeLib::HardConfig( "vmstat", "_period" );
+	    HawkeyeLib::HardConfig( "vmstat", "_interval" );
 	}
 	elsif ( $Arg =~ /^-d$/ ) {
 	    $Config{Debug}++;
@@ -160,11 +160,15 @@ sub Configure( )
     ###  10:pid,command
     ###  15:*
 
-    my $ConfigStringPeriod =
-	HawkeyeLib::ReadConfig( "_period", "30" );
+    # Use interval if defined, otherwise period
+    my $Interval = HawkeyeLib::ReadConfig( "_interval", "" );
+    if ( $Interval eq "" )
+    {
+	$Interval = HawkeyeLib::ReadConfig( "_period", "30s" );
+    }
 
     # Check the config time string
-    if ( $ConfigStringPeriod =~ /(\d+)([sSmMhH]?)/ )
+    if ( $Interval =~ /(\d+)([sSmMhH]?)/ )
     {
 	$Config{Period} = $1;
 	if ( ( $2 eq "s" ) || ( $2 eq "S" ) )
@@ -182,7 +186,7 @@ sub Configure( )
     }
     else
     {
-	print STDERR "Ignoring vmstat config time '$ConfigStringPeriod'\n";
+	print STDERR "Ignoring vmstat interval '$Interval'\n";
     }
 }
 
