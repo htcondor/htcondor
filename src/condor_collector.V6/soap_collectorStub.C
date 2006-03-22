@@ -61,6 +61,7 @@ condor__insertAd(struct soap *soap,
 	case STORAGE_AD_TYPE:    command = UPDATE_STORAGE_AD;    break;
 	case NEGOTIATOR_AD_TYPE: command = UPDATE_NEGOTIATOR_AD; break;
 	case HAD_AD_TYPE:        command = UPDATE_HAD_AD;        break;
+	case GENERIC_AD_TYPE:    command = UPDATE_AD_GENERIC;    break;
 	default:
 		command = -1; // Let's hope a command is never -1
 		result.status.code = FAIL;

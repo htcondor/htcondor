@@ -38,7 +38,8 @@ enum condor__ClassAdType
 	COLLECTOR_AD_TYPE,
 	STORAGE_AD_TYPE,
 	NEGOTIATOR_AD_TYPE,
-	HAD_AD_TYPE
+	HAD_AD_TYPE,
+	GENERIC_AD_TYPE
 };
 
 int condor__insertAd(enum condor__ClassAdType type,
