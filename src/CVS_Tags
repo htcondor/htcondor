@@ -1,3 +1,6 @@
+03/22/06 V6_7_18-branch
+  The branch for V6_7_18 from V6_7_18-root off of V6_7-branch.
+
 03/21/06 V6_6-merge-55
   The state of the V6_6-branch for a merge into V6_7-branch.  The only
   change is the fix to the collector to look at "ClassAdLifetime"
