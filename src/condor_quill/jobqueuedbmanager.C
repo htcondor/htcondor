@@ -266,8 +266,8 @@ JobQueueDBManager::config(bool reconfig)
 	dprintf(D_ALWAYS, "Using Database IpAddress = %s\n", jobQueueDBIpAddress);
 	dprintf(D_ALWAYS, "Using Database Name = %s\n", jobQueueDBName);
 
-	dprintf(D_ALWAYS, "Using Database Connection Information = "
-			"host=%s port=%s user=quillwriter password=XXX dbname=%s", 
+	dprintf(D_ALWAYS, "Using Database Connection Information: "
+			"host=%s port=%s user=quillwriter dbname=%s", 
 			host, port, jobQueueDBName);
 
 	dprintf(D_ALWAYS, "Using Polling Period = %d\n", pollingPeriod);
@@ -2254,8 +2254,7 @@ JobQueueDBManager::checkSchema()
 		/* Comment this out because it prints out the password to LOG. 
 			Do a better job for next revision of Condor. */
 /*		dprintf(D_ALWAYS, "tmp = %s\n", tmp_conn);	  */
-		dprintf(D_ALWAYS, "<Temporary connection to DB. Supressing output of "
-							"connection information for security reasons.>\n");
+		dprintf(D_FULLDEBUG, "Temporary connection to DB created\n");
 
 		sprintf(sql_str, "CREATE DATABASE \"%s\"", jobQueueDBName);
 		JobQueueDatabase *tmp_jqdb = new PGSQLDatabase(tmp_conn);
