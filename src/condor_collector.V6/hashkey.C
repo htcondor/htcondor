@@ -68,36 +68,60 @@ int hashFunction (const HashKey &key, int numBuckets)
     return bkt;
 }
 
+bool lookup( ClassAd *ad,
+			const char *attrname,
+			const char *attrold,
+			MyString &string,
+			bool warn = false )
+{
+	char	buf[128];
+	bool	rval = true;
+
+    if ( !ad->LookupString( attrname, buf, sizeof(buf) ) ) {
+		if ( warn ) {
+			dprintf(D_FULLDEBUG,
+					"Warning: No '%s' attribute; trying '%s'\n",
+					attrname, attrold );
+		}
+
+		if ( !attrold ) {
+			buf[0] = '\0';
+			rval = false;
+		} else {
+			if ( !ad->LookupString( attrold, buf, sizeof(buf) ) ) {
+				if ( warn ) {
+					dprintf (D_ALWAYS,
+							 "Error: Neither '%s' nor '%s' specified\n",
+							 attrname, attrold );
+				}
+				buf[0] = '\0';
+				rval = false;
+			}
+		}
+	}
+
+	buf[sizeof(buf)-1] = '\0';
+	string = buf;
+
+	return rval;
+}
+
 int getIpAddr( ClassAd *ad,
 			   const char * attrname,
 			   const char *attrold,
 			   sockaddr_in *from,
 			   MyString &ip )
 {
-	ExprTree	*tree;
-	MyString	buf2;
 
-	// Reset IP string
-	ip = "";
-
-	// get the IP and port of the startd 
-	tree = ad->Lookup ( attrname );
-	
-	// if not there, try to lookup the old style "STARTD_IP_ADDR" string
-	if ( ! tree && attrold) {
-		tree = ad->Lookup ( attrold );
-	}
-
-	// Extract the string from it...
-	if (tree)
-	{
-		ip = ((String *)tree->RArg())->Value();
-	}
+	// get the IP and port of the startd
+	lookup( ad, attrname, attrold, ip, false );
 
 	// If no valid string, do our own thing..
 	if ( ip.Length() == 0 )
 	{
 		ip = sin_to_string( from );
+
+		MyString	buf2;
 
 		buf2.sprintf( "%s = \"%s\"", attrname, ip.GetCStr() );
 		ad->Insert( buf2.GetCStr() );
@@ -113,26 +137,11 @@ int getIpAddr( ClassAd *ad,
 bool
 makeStartdAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 {
-	ExprTree	*tree;
 	MyString	buffer;
 	MyString	buf2;
 
 	// get the name of the startd
-	if (!(tree = ad->Lookup ("Name")))
-	{		
-		// ... if name was not specified
-		dprintf(D_FULLDEBUG,"Warning: No 'Name' attribute; trying 'Machine'\n");
-		tree = ad->Lookup ("Machine");
-	}
-
-	if (tree)
-	{
-		hk.name = ((String *)tree->RArg())->Value();
-	}
-	else
-	{
-		// neither Name nor Machine specified in ad
-		dprintf (D_ALWAYS, "Error: Neither 'Name' nor 'Machine' specified\n");
+	if ( !lookup( ad, "Name", "Machine", hk.name, true ) ) {
 		return false;
 	}
 
@@ -148,26 +157,11 @@ makeStartdAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 bool
 makeScheddAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 {
-	ExprTree	*tree;
 	MyString	buffer;
 	MyString	buf2;
 
-	// get the name of the startd
-	if (!(tree = ad->Lookup ("Name")))
-	{
-		dprintf(D_FULLDEBUG,"Warning: No 'Name' attribute; trying 'Machine'\n");
-		// ... if name was not specified
-		tree = ad->Lookup ("Machine");
-	}
-
-	if (tree)
-	{
-		hk.name = ((String *)tree->RArg())->Value();
-	}
-	else
-	{
-		dprintf (D_ALWAYS, "Error: Neither 'Name' nor 'Machine' specified\n");
-		// neither Name nor Machine specified
+	// get the name of the schedd
+	if ( !lookup( ad, "Name", "Machine", hk.name, true ) ) {
 		return false;
 	}
 
@@ -184,26 +178,11 @@ makeScheddAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 bool
 makeLicenseAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 {
-	ExprTree *tree;
 	MyString buffer;
 	MyString buf2;
 
-	// get the name of the startd
-	if (!(tree = ad->Lookup ("Name")))
-	{
-		dprintf(D_FULLDEBUG,"Warning: No 'Name' attribute; trying 'Machine'\n");
-		// ... if name was not specified
-		tree = ad->Lookup ("Machine");
-	}
-
-	if (tree)
-	{
-		hk.name = ((String *)tree->RArg())->Value();
-	}
-	else
-	{
-		dprintf (D_ALWAYS, "Error: Neither 'Name' nor 'Machine' specified\n");
-		// neither Name nor Machine specified
+	// get the name of the license
+	if ( !lookup( ad, "Name", "Machine", hk.name, true ) ) {
 		return false;
 	}
 	
@@ -220,24 +199,9 @@ makeLicenseAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 bool
 makeMasterAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 {
-	ExprTree *tree;
 
-	if (!(tree = ad->Lookup ("Name")))
-	{
-		dprintf( D_FULLDEBUG, 
-				 "Warning: No 'Name' attribute; trying 'Machine'\n" );
-			// ... if name was not specified
-		tree = ad->Lookup ("Machine");
-	}
-
-	if (tree)
-	{
-		hk.name = ((String *)tree->RArg())->Value ();
-	}
-	else
-	{
-		dprintf (D_ALWAYS, "Error: Neither 'Name' nor 'Machine' specified\n");
-		// neither Name nor Machine specified
+	// get the name of the license
+	if ( !lookup( ad, "Name", "Machine", hk.name, true ) ) {
 		return false;
 	}
 
@@ -268,32 +232,20 @@ makeCkptSrvrAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 bool
 makeCollectorAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 {
-	char	*name = NULL;
-	if (!ad->LookupString ("Machine", &name ))
-	{
-		dprintf (D_ALWAYS, "Error:  No 'Machine' attribute\n");
+
+	if ( !lookup( ad, "Machine", NULL, hk.name, true ) ) {
 		return false;
 	}
-
-	hk.name = name;
-	free( name );
 	hk.ip_addr = "";
-
 	return true;
 }
 
 bool
 makeStorageAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 {
-	char	*name = NULL;
-	if (!ad->LookupString ("Name", &name ))
-	{
-		dprintf (D_ALWAYS, "Error:  No 'Name' attribute\n");
+	if ( !lookup( ad, "Name", NULL, hk.name, true ) ) {
 		return false;
 	}
-
-	hk.name = name;
-	free( name );
 	hk.ip_addr = "";
 
 	return true;
