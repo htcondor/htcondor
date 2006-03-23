@@ -1,7 +1,7 @@
 #!/s/std/bin/bash
 #!/bin/bash
 # CredD test harness.  Currently, this harness tests condor_credd,
-# condor_list_cred, condor_rm_cred, condor_store_cred.  Tests can optionally be
+# stork_list_cred, stork_rm_cred, stork_store_cred.  Tests can optionally be
 # run from a memory debugger, such as valgrind.
 
 # Stork, CredD common test harness variables, functions.
@@ -18,11 +18,11 @@ MYPROXY_TESTS=false
 #PERL_DAP_ID_FIND='/^\s*Request assigned id:\s+(\d+)/ && print $1,"\n"'
 
 # list_cred invocation
-CRED_LIST=condor_list_cred
+CRED_LIST=stork_list_cred
 CRED_LIST_OPTS="$CRED_LIST_OPTS -d"
 
 # rm_cred invocation
-CRED_RM=condor_rm_cred
+CRED_RM=stork_rm_cred
 CRED_RM_OPTS="$CRED_RM_OPTS -d"
 
 # The following parameters for setting a brief proxy valid duration, and
