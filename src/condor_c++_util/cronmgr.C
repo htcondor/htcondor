@@ -290,6 +290,7 @@ CronMgrBase::CronMgrBase( const char *name )
 	// Make sure that SetName doesn't try to free Name or ParamBase...
 	Name = NULL;
 	ParamBase = NULL;
+	configValProg = NULL;
 
 	// Set 'em
 	SetName( name, name, "_cron" );
@@ -323,8 +324,8 @@ CronMgrBase::Initialize( void )
 // Set new name..
 int
 CronMgrBase::SetName( const char *newName, 
-						const char *newParamBase,
-						const char *newParamExt )
+					  const char *newParamBase,
+					  const char *newParamExt )
 {
 	int		retval = 0;
 
@@ -351,7 +352,7 @@ CronMgrBase::SetName( const char *newName,
 
 // Set new name..
 int CronMgrBase::SetParamBase( const char *newParamBase,
-								 const char *newParamExt )
+							   const char *newParamExt )
 {
 	dprintf( D_FULLDEBUG, "CronMgr: Setting parameter base to '%s'\n",
 			 newParamBase );
@@ -418,6 +419,12 @@ CronMgrBase::DoConfig( bool initial )
 {
 	char *paramBuf;
 
+	// Is the config val program specified?
+	if( configValProg ) {
+		free( (void*) configValProg );
+	}
+	configValProg = GetParam( "CONFIG_VAL" );
+
 	// Clear all marks
 	Cron.ClearAllMarks( );
 
@@ -467,7 +474,7 @@ CronMgrBase::DoConfig( bool initial )
 // Read a parameter
 char *
 CronMgrBase::GetParam( const char *paramName, 
-						 const char	*paramName2 )
+					   const char *paramName2 )
 {
 
 	// Defaults...
@@ -726,6 +733,7 @@ CronMgrBase::ParseJobList( const char *jobListString )
 			job->SetArgs( args );
 			job->SetCwd( paramCwd.Value() );
 			job->SetPeriod( jobMode, jobPeriod );
+			job->SetConfigVal( configValProg );
 
 			char **env_array = envobj.getStringArray();
 			job->SetEnv( env_array );
@@ -963,6 +971,7 @@ CronMgrBase::ParseOldJobList( const char *jobString )
 		job->SetArgs( args );
 		job->SetCwd( cwdBuf );
 		job->SetPeriod( jobMode, jobPeriod );
+		job->SetConfigVal( configValProg );
 
 		char **env_array = envobj.getStringArray();
 		job->SetEnv( env_array );

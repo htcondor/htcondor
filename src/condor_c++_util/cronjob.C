@@ -257,6 +257,18 @@ CronJobBase::SetArgs( ArgList const &new_args )
 	return AddArgs(new_args);
 }
 
+// Set job characteristics: Path
+int
+CronJobBase::SetConfigVal( const char *newPath )
+{
+	if ( NULL == newPath ) {
+		configValProg = "";
+	} else {
+		configValProg = newPath;
+	}
+	return 0;
+}
+
 // Set job characteristics: Environment
 int
 CronJobBase::SetEnv( char const * const *env_array )

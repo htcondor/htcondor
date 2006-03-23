@@ -47,18 +47,19 @@ ClassAdCronJob::ClassAdCronJob( const char *mgrName,
 				*namePtr = toupper( *namePtr );
 			}
 		}
-		MyString EnvStr;
-
-		EnvStr = nameUc;
-		EnvStr += "_INTERFACE_VERSION=" INTERFACE_VERSION;
-		classad_env.SetEnv(EnvStr.Value());
-
-		EnvStr = get_mySubSystem( );
-		EnvStr += "_CRON_NAME=";
-		EnvStr += mgrName;
-		classad_env.SetEnv(EnvStr.Value());
-
+		mgrNameUc = nameUc;
 		free( nameUc );
+
+		MyString EnvName;
+
+		EnvName = mgrNameUc;
+		EnvName += "_INTERFACE_VERSION";
+		classad_env.SetEnv( EnvName, INTERFACE_VERSION );
+
+		EnvName = get_mySubSystem( );
+		EnvName += "_CRON_NAME";
+		classad_env.SetEnv( EnvName, mgrName );
+
 	}
 }
 
@@ -75,6 +76,13 @@ ClassAdCronJob::~ClassAdCronJob( )
 int
 ClassAdCronJob::Initialize( )
 {
+	if ( configValProg.Length() && mgrNameUc.Length() ) {
+		MyString	env_name;
+		env_name = mgrNameUc;
+		env_name += "_CONFIG_VAL";
+		classad_env.SetEnv( env_name.Value(), configValProg );
+	}
+
 	char **env_array = classad_env.getStringArray();
 	AddEnv( env_array );
 	deleteStringArray(env_array);

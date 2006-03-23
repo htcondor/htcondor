@@ -42,6 +42,7 @@ class ClassAdCronJob : public CronJobBase
 	int			OutputAdCount;
 
 	Env         classad_env;
+	MyString	mgrNameUc;
 };
 
 #endif /* _CONDOR_CRONJOB_CLASSAD_H */

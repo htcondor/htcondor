@@ -42,6 +42,15 @@ sub DoConfig( )
 	$ConfigVal = "condor_config_val" if ( $NameUc ne "HAWKEYE" );
     }
 
+    # Look for a config val environment
+    {
+	my $Tmp = uc( $StartdName . "_CONFIG_VAL" );
+	if ( exists $ENV{$Tmp} )
+	{
+	    $ConfigVal = $ENV{$Tmp};
+	}
+    }
+
     # Get the module name from the command line
     $ModuleName = shift( @ARGV) if ( $#ARGV >= 0 );
 

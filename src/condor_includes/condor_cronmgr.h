@@ -50,6 +50,7 @@ class CronMgrBase : public Service
 	CondorCron	Cron;
 	const char	*Name;			// Logical name
 	const char	*ParamBase;		// Used for base of calls to param()
+	const char	*configValProg;	// Config val program to run
 
 	// Private member functions
 	int DoConfig( bool initial = false );

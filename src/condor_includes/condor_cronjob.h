@@ -119,6 +119,7 @@ class CronJobBase : public Service
 
 	int Reconfig( void );
 
+	int SetConfigVal( const char *path );
 	int SetName( const char *name );
 	int SetPrefix( const char *prefix );
 	int SetPath( const char *path );	
@@ -142,6 +143,9 @@ class CronJobBase : public Service
 	virtual int ProcessOutput( const char *line ) = 0;
 
 	int SetEventHandler( CronEventHandler handler, Service *s );
+
+  protected:
+	MyString		configValProg;	// Path to _config_val
 
   private:
 	MyString		name;			// Logical name of the job
