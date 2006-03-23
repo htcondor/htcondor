@@ -45,8 +45,15 @@ JobLogReader::GetJobLogFileName() {
 void
 JobLogReader::poll(classad::ClassAdCollection *ad_collection) {
 	ProbeResultType probe_st;
+	FileOpErrCode fst;
 
-	probe_st = prober.probe(parser.getLastCALogEntry(),parser.getJobQueueName());
+	fst = parser.openFile();
+	if(fst == FILE_OPEN_ERROR) {
+		dprintf(D_ALWAYS,"Failed to open %s\n",parser.getJobQueueName());
+		return;
+	}
+
+	probe_st = prober.probe(parser.getLastCALogEntry(),parser.getFileDescriptor());
 
 	bool success = true;
 	switch(probe_st) {
@@ -187,6 +194,8 @@ JobLogReader::ProcessLogEntry( ClassAdLogEntry *log_entry, classad::ClassAdColle
 		// bulk reload.
 		break;
 	case CondorLogOp_EndTransaction:
+		break;
+	case CondorLogOp_LogHistoricalSequenceNumber:
 		break;
 	default:
 		dprintf(D_ALWAYS, "[QUILL] Unsupported Job Queue Command\n");
