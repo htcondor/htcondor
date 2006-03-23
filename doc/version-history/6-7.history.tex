@@ -26,6 +26,15 @@ The details of each version are described below.
 \item The \Condor{collector} now has the ability to recieve ClassAds
 via it's SOAP interface.
 
+\item Added the ability to pass a specific \Condor{config\_val} program
+to the cron/Hawkeye ``modules''.  If ``HAWKEYE\_CONFIG\_VAL'' is
+specified in the configuration, an environment variable with the same
+name and the same value will be added to all cron job environments.
+This change has no effect if the above macro is not specified in the
+configuration.  The above name ``HAWKEYE\_CONFIG\_VAL'' is
+derived from the cron name (i.e. STARTD\_CRON\_NAME or
+SCHEDD\_CRON\_NAME).
+
 \end{itemize}
 
 
