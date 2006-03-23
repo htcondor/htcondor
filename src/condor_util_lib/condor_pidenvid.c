@@ -137,7 +137,12 @@ int pidenvid_format_from_envid(char *src, pid_t *forker_pid,
 
 }
 
-/* determine if the left side is a perfect subset of the right side */
+/* Determine if the left side is a perfect subset of the right side. 
+	It must be the case that if two empty PidEnvID structures, a
+	filled left and an empty right, or an empty left and a filled
+	right are compared to each other, they will NOT match. This
+	handles cases where OSes can't/don't read this information from
+	the proc pid interface. */
 int pidenvid_match(PidEnvID *left, PidEnvID *right)
 {
 	int l, r;
