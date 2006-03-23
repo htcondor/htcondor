@@ -1,3 +1,7 @@
+03/23/06 V6_7-new_classad-merge-1
+   The state of the V6_7-new_classad-branch for a merge into
+   V6_7-new_classads-2-branch
+
 03/23/06 V6_7-new_classad-2-(root,branch}
    Branch for merging code that builds on Centos with V6_7-new_classad-branch
    which does not currently build on Centos.
