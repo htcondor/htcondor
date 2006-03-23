@@ -13,7 +13,7 @@ condor_master.  If started by condor_master, stork and CredD should be stopped
 by condor_master_off.
 1) User creates a GSI proxy with grid-proxy-init
 2) User submits GSI proxy to the CredD on the Stork server machine using:
-    condor_store_cred -file /tmp/x509up_u500 -Name MyCred -s <stork server>
+    stork_store_cred -file /tmp/x509up_u500 -Name MyCred -s <stork server>
 3) User creates a Stork submit file that contains a line:
    ...
    cred_name = "MyCred";
@@ -37,7 +37,7 @@ CredD ("credential daemon") is a new Condor daemon that is responsible for stori
       etc
 
 User can store/remove credentials on the server using
-condor_store_cred/condor_rm_cred tools. Various other daemons (Stork,
+stork_store_cred/stork_rm_cred tools. Various other daemons (Stork,
 Gridmanager, StartD) will then be able to request from CredD the specified user
 credentials needed to run a user job, provided they can authenticate with the
 CredD using standard Condor authentication methods (GSI, KERBEROS, FS, etc).
@@ -45,7 +45,7 @@ CredD using standard Condor authentication methods (GSI, KERBEROS, FS, etc).
 CredD can also be responsible for automatically refreshing credentials when
 they are about to expire. For GSI credentials, for instance, this involves
 sending a request to the specified MyProxy server (the MyProxy server/password)
-is specified at credential submit time with options to condor_store_cred
+is specified at credential submit time with options to stork_store_cred
 
 
 =====
@@ -213,8 +213,8 @@ this directory must be writeable by user "condor".
 Submitting credentials to the CredD
 =====
 
-condor_store_cred has the following options:
-Usage: condor_store_cred [options] [cmdfile]
+stork_store_cred has the following options:
+Usage: stork_store_cred [options] [cmdfile]
       Valid options:
       -d        debug output
 
@@ -240,11 +240,11 @@ Usage: condor_store_cred [options] [cmdfile]
 
 Currently CredD only supports X509 credentials.
 
-You do NOT have to specify the "-s ..." option if the CredD is running on the same machine as the one you're running condor_store_cred from (provided that both executables have CONDOR_CONFIG set in their environments beforehand).
+You do NOT have to specify the "-s ..." option if the CredD is running on the same machine as the one you're running stork_store_cred from (provided that both executables have CONDOR_CONFIG set in their environments beforehand).
 
-condor_list_cred
+stork_list_cred
 and
-condor_rm_cred
+stork_rm_cred
 have similar interfaces. Use "-h" flag for command-line option help.
 
 =====

@@ -36,7 +36,7 @@ CREDD=condor_credd
 CREDD_OPTS="$CREDD_OPTS -f"
 
 # store_cred invocation
-CRED_STORE=condor_store_cred
+CRED_STORE=stork_store_cred
 CRED_STORE_OPTS="$CRED_STORE_OPTS -d"
 CRED_STORE_OPTS="$CRED_STORE_OPTS -t x509"
 
