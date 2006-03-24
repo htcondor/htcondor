@@ -371,6 +371,7 @@ void writeSubmitFile(/* const */ SubmitDagOptions &opts)
 		// this is so that DAGMan is automatically requeued if killed
 		// by something other than the schedd (e.g., a fast reboot)
     fprintf(pSubFile, "on_exit_remove\t= (ExitBySignal == false || ExitSignal =!= 9)\n" );
+    fprintf(pSubFile, "copy_to_spool\t= False\n" );
 
 	ArgList args;
 
