@@ -35,6 +35,11 @@ configuration.  The above name ``HAWKEYE\_CONFIG\_VAL'' is
 derived from the cron name (i.e. STARTD\_CRON\_NAME or
 SCHEDD\_CRON\_NAME).
 
+\item \Condor{submit\_dag} now generates a submit file with
+\Code{copy\_to\_spool} set to \Code{false}.  This reduces the load and
+saves file space on the submit machine, especially if you are running
+multiple instances of \Condor{dagman}.
+
 \end{itemize}
 
 
