@@ -333,7 +333,13 @@ reinitialize ()
 	if (Collectors) {
 		delete Collectors;
 	}
-	Collectors = CollectorList::createForNegotiator();
+	Collectors = CollectorList::create( );
+
+	char *preferred_collector = param ("COLLECTOR_HOST_FOR_NEGOTIATOR");
+	Collectors->resortLocal( preferred_collector );
+	if ( preferred_collector ) {
+		free( preferred_collector );
+	}
 
 	want_simple_matching = param_boolean("NEGOTIATOR_SIMPLE_MATCHING",false);
 	want_matchlist_caching = param_boolean("NEGOTIATOR_MATCHLIST_CACHING",false);

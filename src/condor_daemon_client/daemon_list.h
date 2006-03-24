@@ -82,6 +82,7 @@ public:
 	void DeleteCurrent();
 
  protected:
+	SimpleList<Daemon*> list;
 
 
  private:
@@ -90,8 +91,6 @@ public:
 			and contact info.  This is used to initalize the list. 
 		*/
 	Daemon* buildDaemon( daemon_t type, const char* str );
-
-	SimpleList<Daemon*> list;
 
 		// I can't be copied (yet)
 	DaemonList( const DaemonList& );
@@ -108,7 +107,8 @@ class CollectorList : public DaemonList {
 		// based on configruation settings
 	static CollectorList * create(const char * pool = NULL);
 
-	static CollectorList * createForNegotiator();
+		// Resort a collector list for locality (for negotiator)
+	int resortLocal( const char *preferred_collector );
 
 		// Send updates to all the collectors
 		// return - number of successfull updates
