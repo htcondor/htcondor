@@ -12,6 +12,4 @@ condorlocal = condor_config.local
 condortemplate = x_condor_config_template
 
 ports = dynamic
-vms	= 10
-#encryption = 3DES,BLOWFISH
-#authentication = FS,CLAIMTOBE
+vms	= 1 
