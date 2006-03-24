@@ -396,14 +396,14 @@ NOTE: we also need the same crap for libpcre.a...
 #if NEEDS_OPENSSL && HAS_OPENSSL
 
 #  if USE_GLOBUS_OPENSSL
-    OPENSSL_FLAGS = -I$(OPENSSL_DIR)/include/$(GlobusFlavor)
+    OPENSSL_FLAGS = -I$(OPENSSL_DIR)/include/$(GlobusFlavor) -DSSL_AUTHENTICATION
     OPENSSL_LIB = $(PRE_GLOBUS_LIBS) \
 		  $(OPENSSL_DIR)/lib/libssl_$(GlobusFlavor).a \
 		  $(OPENSSL_DIR)/lib/libcrypto_$(GlobusFlavor).a \
 		  $(POST_GLOBUS_LIBS)
     OPENSSL_MD_LIB = $(OPENSSL_DIR)/lib/libcrypto_$(GlobusFlavor).a 
 #  else
-    OPENSSL_FLAGS = -I$(OPENSSL_DIR)/include
+    OPENSSL_FLAGS = -I$(OPENSSL_DIR)/include -DSSL_AUTHENTICATION
     OPENSSL_LIB = $(OPENSSL_DIR)/lib/libssl.a $(OPENSSL_DIR)/lib/libcrypto.a
     OPENSSL_MD_LIB = $(OPENSSL_DIR)/lib/libcrypto.a 
 #  endif

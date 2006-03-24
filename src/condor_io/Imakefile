@@ -18,6 +18,10 @@ CONDOR_BLOWFISH_OBJ = condor_crypt_blowfish.o
 CONDOR_CRYPT_OBJ = $(CONDOR_DES_OBJ) $(CONDOR_BLOWFISH_OBJ)
 #endif
 
+#if HAS_OPENSSL
+AUTH_SSL_OBJ = condor_auth_ssl.o
+#endif
+
 #if WANT_KERBEROS
 AUTH_KERB_OBJ = condor_auth_kerberos.o
 #endif
@@ -28,7 +32,7 @@ AUTH_X509_OBJ = condor_auth_x509.o
 
 CONDOR_AUTH_OBJ = condor_auth.o condor_auth_claim.o condor_auth_fs.o \
 	          condor_auth_sspi.o condor_auth_anonymous.o         \
-		  $(AUTH_X509_OBJ) $(AUTH_KERB_OBJ) $(AUTH_PASSWD_OBJ) authentication.o
+		  $(AUTH_X509_OBJ) $(AUTH_KERB_OBJ) $(AUTH_PASSWD_OBJ) $(AUTH_SSL_OBJ) authentication.o
 
 CONDOR_TYPE_OBJ = sig_num.o proc.o open_flags.o fcntl_cmd.o errno_num.o
 
