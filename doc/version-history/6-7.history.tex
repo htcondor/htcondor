@@ -55,6 +55,9 @@ has no active jobs to that resource.
 \Macro{ENABLE\_GRID\_MONITOR} to be ignored. The value would always be
 considered true.
 
+\item Improved fault recovery of gt2 grid jobs. This includes a work-around
+for Globus bugzilla ticket 871.
+
 \item When the \Condor{gridmanager} cancels a job after
 \Attr{GlobusResubmit} evaluates to true, it will no longer put the job
 on hold if the cancel fails.
