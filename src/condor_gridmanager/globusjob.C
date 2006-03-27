@@ -1096,7 +1096,16 @@ int GlobusJob::doEvaluateState()
 			myResource->JMAlreadyRunning( this );
 			callbackRegistered = true;
 			UpdateGlobusState( status, error );
-			gmState = GM_STDIO_UPDATE;
+			if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED ) {
+				// The jobmanager is waiting for the submit commit and won't
+				// respond to a stdio update signal until after it receives
+				// the commit signal. But if we commit without a stdio
+				// update, file stage-in will fail. So we cancel the submit
+				// and start a fresh one.
+				gmState = GM_CLEANUP_CANCEL;
+			} else {
+				gmState = GM_STDIO_UPDATE;
+			}
 			} break;
 		case GM_STDIO_UPDATE: {
 			// Update an already-running jobmanager to send its I/O to us
