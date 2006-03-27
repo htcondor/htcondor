@@ -1,3 +1,8 @@
+03/27/06 V6_7_18
+  The official 6.7.18 release.  The packages for all platforms came
+  from NMI build #20796.  The version string for this release is:
+    $CondorVersion: 6.7.18 Mar 22 2006 $
+
 03/23/06 V6_7-new_classad-merge-1
    The state of the V6_7-new_classad-branch for a merge into
    V6_7-new_classads-2-branch
