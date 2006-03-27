@@ -1145,11 +1145,7 @@ int GlobusJob::doEvaluateState()
 				gmState = GM_STOP_AND_RESTART;
 				break;
 			}
-			if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED ) {
-				gmState = GM_SUBMIT_COMMIT;
-			} else {
-				gmState = GM_SUBMITTED;
-			}
+			gmState = GM_SUBMITTED;
 			} break;
 		case GM_UNSUBMITTED: {
 			// There are no outstanding gram submissions for this job (if
