@@ -431,7 +431,7 @@ ReadUserLog (const char * filename)
 	clear();
 
     if (!initialize(filename)) {
-		dprintf(D_ALWAYS, "Failed to open %s", filename);
+		dprintf(D_ALWAYS, "Failed to open %s\n", filename);
     }
 }
 
