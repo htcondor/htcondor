@@ -172,6 +172,8 @@ class GlobusJob : public BaseJob
 	MyString outputClassadFilename;
 	bool useGridShell;
 
+	int jmShouldBeStoppingTime;
+
  protected:
 	bool callbackRegistered;
 	int connect_failure_counter;

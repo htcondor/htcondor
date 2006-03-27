@@ -651,6 +651,7 @@ GlobusJob::GlobusJob( ClassAd *classad )
 
 	useGridShell = false;
 	mergedGridShellOutClassad = false;
+	jmShouldBeStoppingTime = 0;
 
 	{
 		int use_gridshell;
@@ -1204,6 +1205,7 @@ int GlobusJob::doEvaluateState()
 					break;
 				}
 				myResource->SubmitComplete(this);
+				jmShouldBeStoppingTime = 0;
 				lastSubmitAttempt = time(NULL);
 				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONNECTION_FAILED ||
 					 //rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
@@ -1631,6 +1633,9 @@ int GlobusJob::doEvaluateState()
 				globusError = rc;
 				gmState = GM_CANCEL;
 			} else {
+				if ( !jmShouldBeStoppingTime ) {
+					jmShouldBeStoppingTime = now;
+				}
 				myResource->JMComplete( this );
 				gmState = GM_RESTART;
 			}
@@ -1721,6 +1726,33 @@ int GlobusJob::doEvaluateState()
 				numRestartAttempts++;
 				numRestartAttemptsThisSubmit++;
 				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_OLD_JM_ALIVE ) {
+					// If the jobmanager should be stopped now (because
+					// either we told it to stop or we got a callback saying
+					// it was stopping), give it a little time to finish
+					// exiting. If it's still around then, assume it's
+					// hosed.
+					if ( jmShouldBeStoppingTime ) {
+						int jm_gone_timeout = param_integer( "GRIDMANAGER_JM_EXIT_LIMIT", 30 );
+						if ( jmShouldBeStoppingTime + jm_gone_timeout < now ) {
+							dprintf( D_ALWAYS, "(%d.%d) Found old jobmanager "
+									 "still alive when it should be stopped\n",
+									 procID.cluster, procID.proc );
+							globusError = rc;
+							gmState = GM_CLEAR_REQUEST;
+							break;
+						} else {
+							unsigned int delay = 0;
+							if ( (jmShouldBeStoppingTime + jm_gone_timeout) > now ) {
+								delay = (jmShouldBeStoppingTime + jm_gone_timeout) - now;;
+							}
+							dprintf( D_ALWAYS, "(%d.%d) Found old jobmanager "
+									 "still alive, will wait %d seconds for "
+									 "it to stop.\n", procID.cluster,
+									 procID.proc, delay );
+							daemonCore->Reset_Timer( evaluateStateTid, delay );
+							break;
+						}
+					}
 					// TODO: need to avoid an endless loop of old jm not
 					// responding, start new jm, new jm says old one still
 					// running, try to contact old jm again. How likely is
@@ -1730,6 +1762,7 @@ int GlobusJob::doEvaluateState()
 					gmState = GM_START;
 					break;
 				}
+				jmShouldBeStoppingTime = 0;
 				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_UNDEFINED_EXE ) {
 					gmState = GM_CLEAR_REQUEST;
 				} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_WAITING_FOR_COMMIT ) {
@@ -2082,6 +2115,7 @@ int GlobusJob::doEvaluateState()
 			terminateLogged = false;
 			abortLogged = false;
 			evictLogged = false;
+			jmShouldBeStoppingTime = 0;
 			gmState = GM_UNSUBMITTED;
 			} break;
 		case GM_HOLD: {
@@ -2181,6 +2215,9 @@ int GlobusJob::doEvaluateState()
 				globusError = rc;
 				gmState = GM_CANCEL;
 			} else {
+				if ( !jmShouldBeStoppingTime ) {
+					jmShouldBeStoppingTime = now;
+				}
 				myResource->JMComplete( this );
 				gmState = GM_JOBMANAGER_ASLEEP;
 			}
@@ -2619,6 +2656,14 @@ bool GlobusJob::GetCallbacks()
 
 		callbackGlobusState = 0;
 		callbackGlobusStateErrorCode = 0;
+
+		if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED &&
+			 globusStateErrorCode == GLOBUS_GRAM_PROTOCOL_ERROR_JM_STOPPED &&
+			 !jmShouldBeStoppingTime ) {
+
+			jmShouldBeStoppingTime = time(NULL);
+		}
+
 		return true;
 	} else {
 		return false;
