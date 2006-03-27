@@ -1154,7 +1154,7 @@ int GlobusJob::doEvaluateState()
 			} break;
 		case GM_SUBMIT: {
 			// Start a new gram submission for this job.
-			char *job_contact;
+			char *job_contact = NULL;
 			if ( condorState == REMOVED || condorState == HELD ) {
 				myResource->CancelSubmit(this);
 				myResource->JMComplete(this);
@@ -1644,7 +1644,7 @@ int GlobusJob::doEvaluateState()
 				daemonCore->Reset_Timer( evaluateStateTid,
 								(lastRestartAttempt + restartInterval) - now );
 			} else {
-				char *job_contact;
+				char *job_contact = NULL;
 
 				CHECK_PROXY;
 				// Once RequestSubmit() is called at least once, you must
@@ -2209,7 +2209,7 @@ int GlobusJob::doEvaluateState()
 			if ( jobContact == NULL ) {
 				gmState = GM_CLEAR_REQUEST;
 			} else {
-				char *job_contact;
+				char *job_contact = NULL;
 
 				CHECK_PROXY;
 				// Once RequestSubmit() is called at least once, you must
