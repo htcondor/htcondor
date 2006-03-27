@@ -3324,6 +3324,9 @@ GlobusJob::JmShouldSleep()
 	if ( condorState != IDLE && condorState != RUNNING ) {
 		return false;
 	}
+	if ( GlobusResource::GridMonitorEnabled() == false ) {
+		return false;
+	}
 	if ( useGridJobMonitor == false ) {
 		return false;
 	}

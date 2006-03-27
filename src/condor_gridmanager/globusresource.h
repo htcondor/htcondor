@@ -68,6 +68,8 @@ class GlobusResource : public BaseResource
 
 	static void setEnableGridMonitor( bool enable )
 		{ enableGridMonitor = enable; }
+	static bool GridMonitorEnabled()
+		{ return enableGridMonitor; }
 
 	// This should be private, but GlobusJob references it directly for now
 	static HashTable <HashKey, GlobusResource *> ResourcesByName;
