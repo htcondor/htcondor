@@ -430,7 +430,7 @@ MultiLogFiles::loadLogFileNameFromSubFile(const MyString &strSubFilename,
 	MyString	combineResult = CombineLines(physicalLines, '\\',
 				strSubFilename, logicalLines);
 	if ( combineResult != "" ) {
-		return combineResult;
+		return "";
 	}
 	logicalLines.rewind();
 
