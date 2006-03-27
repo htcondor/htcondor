@@ -37,6 +37,7 @@ int BaseResource::probeDelay = 15;		// default value
 BaseResource::BaseResource( const char *resource_name )
 {
 	resourceName = strdup( resource_name );
+	deleteMeTid = TIMER_UNSET;
 
 	resourceDown = false;
 	firstPingDone = false;
@@ -62,6 +63,9 @@ BaseResource::BaseResource( const char *resource_name )
 
 BaseResource::~BaseResource()
 {
+	if ( deleteMeTid != TIMER_UNSET ) {
+		daemonCore->Cancel_Timer( deleteMeTid );
+	}
  	daemonCore->Cancel_Timer( pingTimerId );
 	if ( updateLeasesTimerId != TIMER_UNSET ) {
 		daemonCore->Cancel_Timer( updateLeasesTimerId );
@@ -150,6 +154,17 @@ char *BaseResource::ResourceName()
 	return resourceName;
 }
 
+int BaseResource::DeleteMe()
+{
+	deleteMeTid = TIMER_UNSET;
+
+	if ( IsEmpty() ) {
+		delete this;
+		// DO NOT REFERENCE ANY MEMBER VARIABLES BELOW HERE!!!!!!!
+	}
+	return TRUE;
+}
+
 void BaseResource::RegisterJob( BaseJob *job )
 {
 	registeredJobs.Append( job );
@@ -160,6 +175,11 @@ void BaseResource::RegisterJob( BaseJob *job )
 		} else {
 			job->NotifyResourceUp();
 		}
+	}
+
+	if ( deleteMeTid != TIMER_UNSET ) {
+		daemonCore->Cancel_Timer( deleteMeTid );
+		deleteMeTid = TIMER_UNSET;
 	}
 }
 
@@ -172,7 +192,10 @@ void BaseResource::UnregisterJob( BaseJob *job )
 	leaseUpdates.Delete( job );
 
 	if ( IsEmpty() ) {
-		delete this;
+		int delay = param_integer( "GRIDMANAGER_EMPTY_RESOURCE_DELAY", 5*60 );
+		deleteMeTid = daemonCore->Register_Timer( delay,
+								(TimerHandlercpp)&BaseResource::DeleteMe,
+								"BaseResource::DeleteMe", (Service*)this );
 	}
 }
 
