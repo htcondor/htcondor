@@ -50,6 +50,10 @@ multiple instances of \Condor{dagman}.
 \Macro{ENABLE\_GRID\_MONITOR} to be ignored. The value would always be
 considered true.
 
+\item When the \Condor{gridmanager} cancels a job after
+\Attr{GlobusResubmit} evaluates to true, it will no longer put the job
+on hold if the cancel fails.
+
 \end{itemize}
 
 
