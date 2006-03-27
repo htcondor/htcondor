@@ -2261,6 +2261,11 @@ int GlobusJob::doEvaluateState()
 				} else {
 					// unhandled error
 					LOG_GLOBUS_ERROR( "globus_gram_client_job_request()", rc );
+					// Clear out the job id so that the job won't be held
+					// in GM_CLEAR_REQUEST
+					SetRemoteJobId( NULL );
+					globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED;
+					jobAd->Assign( ATTR_GLOBUS_STATUS, globusState );
 					gmState = GM_CLEAR_REQUEST;
 				}
 			}
@@ -2321,6 +2326,11 @@ int GlobusJob::doEvaluateState()
 					if ( rc != GLOBUS_SUCCESS ) {
 						// unhandled error
 						LOG_GLOBUS_ERROR( "globus_gram_client_job_status()", rc );
+						// Clear out the job id so that the job won't be held
+						// in GM_CLEAR_REQUEST
+						SetRemoteJobId( NULL );
+						globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED;
+						jobAd->Assign( ATTR_GLOBUS_STATUS, globusState );
 						gmState = GM_CLEAR_REQUEST;
 					}
 					UpdateGlobusState( status, error );
@@ -2338,6 +2348,11 @@ int GlobusJob::doEvaluateState()
 				rc = gahp->globus_gram_client_job_signal( jobContact,
 									GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_COMMIT_END,
 									NULL, &status, &error );
+				// Clear out the job id so that the job won't be held
+				// in GM_CLEAR_REQUEST
+				SetRemoteJobId( NULL );
+				globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED;
+				jobAd->Assign( ATTR_GLOBUS_STATUS, globusState );
 				gmState = GM_CLEAR_REQUEST;
 			}
 			} break;
