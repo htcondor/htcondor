@@ -37,6 +37,11 @@ SCHEDD\_CRON\_NAME).
 saves file space on the submit machine, especially if you are running
 multiple instances of \Condor{dagman}.
 
+\item Added configuration parameter
+\Macro{GRIDMANAGER\_EMPTY\_RESOURCE\_DELAY}, which sets how long the
+\Condor{gridmanager} retains information about a grid resource after it
+has no active jobs to that resource.
+
 \end{itemize}
 
 
