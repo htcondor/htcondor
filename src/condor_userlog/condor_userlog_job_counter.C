@@ -1,12 +1,9 @@
-// $Id: condor_userlog_job_counter.C,v 1.1.2.1 2006-03-28 23:16:38 pfc Exp $
+// $Id: condor_userlog_job_counter.C,v 1.1.2.2 2006-03-28 23:17:39 pfc Exp $
 //
 // given a userlog, returns the number of queued (e.g., submitted but
 // not yet terminated or aborted) jobs found from 0 to 254, or 255 to
 // indicate an error (e.g., a userlog reading/parsing error, no events
 // found, a job count <0 or >254, improper usage, etc.)
-//
-// to make, first do a "make libs" in a condor workspace, then:
-// g++ userlog-job-counter.C -I $CONDOR_BUILD_DIR/src/condor_dagman -I $CONDOR_BUILD_DIR/src/condor_c++_util -I $CONDOR_BUILD_DIR/src/h -I $CONDOR_BUILD_DIR/src/condor_includes -L$CONDOR_BUILD_DIR/src/condor_c++_util -lcondorapi
 
 #include <stdio.h>
 #include <time.h>
