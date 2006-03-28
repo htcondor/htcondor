@@ -32,6 +32,7 @@ void condor_arglist_unit_test() {
 	char const *test_string = "This '''quoted''' arg' 'string 'contains ''many'' \"\"surprises\\'";
 	char const *test_cooked_string = "\"This '''quoted''' arg' 'string 'contains ''many'' \"\"\"\"surprises\\'\"";
 	char const *test_v1_wacked = "one \\\"two\\\" 'three\\ four'";
+	char const *test_win32_v1 = "one \"two three\" four\\ \"five \\\"six\\\\\\\"\" \"seven\\\\\\\"\"";
 	MyString joined_args,joined_args2;
 	MyString error_msg;
 	char **string_array;
@@ -149,6 +150,41 @@ void condor_arglist_unit_test() {
 	ASSERT(!strcmp(arglist.GetArg(1),"arg string"));
 	ASSERT(!strcmp(arglist.GetArg(2),"contains 'many' \"\"surprises\\"));
 	ASSERT(!strcmp(arglist.GetArg(3),"appended"));
+
+	arglist.Clear();
+	arglist.SetArgV1Syntax(ArgList::WIN32_ARGV1_SYNTAX);
+	ASSERT(arglist.AppendArgsV1Raw(test_win32_v1,NULL));
+	ASSERT(!arglist.InputWasV1());
+	ASSERT(arglist.Count() == 5);
+	ASSERT(!strcmp(arglist.GetArg(0),"one"));
+	ASSERT(!strcmp(arglist.GetArg(1),"two three"));
+	ASSERT(!strcmp(arglist.GetArg(2),"four\\"));
+	ASSERT(!strcmp(arglist.GetArg(3),"five \"six\\\""));
+	ASSERT(!strcmp(arglist.GetArg(4),"seven\\\""));
+
+	MyString win32_result;
+	ASSERT(arglist.GetArgsStringWin32(&win32_result,1,NULL));
+	arglist.Clear();
+	arglist.SetArgV1Syntax(ArgList::WIN32_ARGV1_SYNTAX);
+	ASSERT(arglist.AppendArgsV1Raw(win32_result.Value(),NULL));
+	ASSERT(!arglist.InputWasV1());
+	ASSERT(arglist.Count() == 4);
+	ASSERT(!strcmp(arglist.GetArg(0),"two three"));
+	ASSERT(!strcmp(arglist.GetArg(1),"four\\"));
+	ASSERT(!strcmp(arglist.GetArg(2),"five \"six\\\""));
+	ASSERT(!strcmp(arglist.GetArg(3),"seven\\\""));
+
+	arglist.Clear();
+	arglist.SetArgV1Syntax(ArgList::UNIX_ARGV1_SYNTAX);
+	ASSERT(arglist.AppendArgsV1Raw("one 'two three' four",NULL));
+	ASSERT(!arglist.InputWasV1());
+	ASSERT(arglist.Count() == 4);
+
+	arglist.Clear();
+	arglist.SetArgV1Syntax(ArgList::UNKNOWN_ARGV1_SYNTAX);
+	ASSERT(arglist.AppendArgsV1Raw("one 'two three' four",NULL));
+	ASSERT(arglist.InputWasV1());
+	ASSERT(arglist.Count() == 4);
 }
 
 int main() {

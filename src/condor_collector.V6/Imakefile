@@ -9,9 +9,9 @@ ENGINE_OBJ = hashkey.o collector_engine.o
 
 soapobjs(collector)
 
-OBJ = collector_main.o collector.o view_server.o \
-      collector_instantiate.o totals.o collector_stats.o forkwork.o \
-      $(SOAP_OBJS)
+OBJ = $(SOAP_OBJS) \
+      collector_main.o collector.o view_server.o \
+      collector_instantiate.o totals.o collector_stats.o forkwork.o
 
 library_target(collector_engine.a, $(ENGINE_OBJ))
 

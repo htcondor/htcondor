@@ -119,6 +119,11 @@ OsProc::StartJob()
 
 	ArgList args;
 
+		// Since we may be adding to the argument list, we may need to deal
+		// with platform-specific arg syntax in the user's args in order
+		// to successfully merge them with the additional wrapper args.
+	args.SetArgV1SyntaxToCurrentPlatform();
+
 		// First, put "condor_exec" at the front of Args, since that
 		// will become argv[0] of what we exec(), either the wrapper
 		// or the actual job.

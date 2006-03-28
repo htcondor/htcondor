@@ -1,3 +1,8 @@
+03/28/06 V6_7_18-merge-1
+  Merging V6_7_18 changes to V6_7-branch.  This includes Dan's fixes for
+  argument string merging when mixing argument syntaxes.
+  This also includes Nick's changes for the soap collector.
+
 03/27/06 V6_7_18
   The official 6.7.18 release.  The packages for all platforms came
   from NMI build #20796.  The version string for this release is:

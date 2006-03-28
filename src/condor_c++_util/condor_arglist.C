@@ -191,6 +191,7 @@ ArgList::Count() const {
 void
 ArgList::Clear() {
 	args_list.Clear();
+	input_was_unknown_platform_v1 = false;
 }
 
 char const *
@@ -309,14 +310,88 @@ ArgList::AppendArgsV2Quoted(char const *args,MyString *error_msg)
 }
 
 bool
-ArgList::AppendArgsV1Raw(char const *args,MyString *error_msg)
+ArgList::AppendArgsV1Raw_win32(char const *args,MyString *error_msg)
+{
+	// Parse an args string in the format expected by the Windows
+	// function CommandLineToArgv().
+
+	while(*args) {
+		char const *begin_arg = args;
+		MyString buf = "";
+		while(*args) {
+			if(*args == ' ' || *args == '\t' || \
+			   *args == '\n' || *args == '\r') {
+				break;
+			}
+			else if(*args != '"') {
+				buf += *(args++);
+			}
+			else {
+					// quoted section
+				char const *begin_quote = args;
+				args++; //begin quote
+
+				while(*args) {
+					int backslashes = 0;
+					while(*args == '\\') {
+						backslashes++;
+						args++;
+					}
+					if(backslashes && *args == '"') {
+							//2n backslashes followed by quote
+							// --> n backslashes
+							//2n+1 backslashes followed by quote
+							// --> n backslashes followed by quote
+						while(backslashes >= 2) {
+							backslashes -= 2;
+							buf += '\\';
+						}
+						if(backslashes) {
+							buf += *(args++); //literal quote
+						}
+						else {
+							break; //terminal quote
+						}
+					}
+					else if(backslashes) {
+							//literal backslashes
+						while(backslashes--) {
+							buf += '\\';
+						}
+					}
+					else if(*args == '"') {
+						break; //terminal quote
+					}
+					else {
+						buf += *(args++);
+					}
+				}
+
+				if(*args != '"') {
+					MyString msg;
+					msg.sprintf("Unterminated quote in windows argument string starting here: %s",begin_quote);
+					AddErrorMessage(msg.Value(),error_msg);
+					return false;
+				}
+				args++;
+			}
+		}
+		if(args > begin_arg) {
+			ASSERT(args_list.Append(buf));
+		}
+		while(*args == ' ' || *args == '\t' || *args == '\n' || *args == '\r')
+		{
+			args++;
+		}
+	}
+	return true;
+}
+
+bool
+ArgList::AppendArgsV1Raw_unix(char const *args,MyString *error_msg)
 {
 	MyString buf = "";
 	bool parsed_token = false;
-
-	if(!args) return true;
-
-	input_was_v1 = true;
 
 	while(*args) {
 		switch(*args) {
@@ -342,6 +417,44 @@ ArgList::AppendArgsV1Raw(char const *args,MyString *error_msg)
 		args_list.Append(buf);
 	}
 	return true;
+}
+
+bool
+ArgList::AppendArgsV1Raw(char const *args,MyString *error_msg)
+{
+	if(!args) return true;
+
+	if(v1_syntax == WIN32_ARGV1_SYNTAX) {
+		return AppendArgsV1Raw_win32(args,error_msg);
+	}
+	else if(v1_syntax == UNIX_ARGV1_SYNTAX) {
+		return AppendArgsV1Raw_unix(args,error_msg);
+	}
+	else if(v1_syntax == UNKNOWN_ARGV1_SYNTAX) {
+
+		// We don't know yet what the final v1_syntax will be, so just
+		// slurp in the args by splitting on whitespace (unix
+		// style).  Since we are setting the
+		// input_was_unknown_platform_v1 flag, any attempt to
+		// reconstruct the arguments will apply this same
+		// interpretation, so we get back what we started with
+		// and will choke on any other arguments that are
+		// not expressible in this general V1 syntax (i.e. args
+		// containing spaces).  Most argument manipulation happens
+		// once we know the final platform (e.g. in the starter),
+		// so we should only get here in cases where we don't yet
+		// know the final platform (e.g. condor_submit) or haven't
+		// bothered to specify it, because we don't add any
+		// additional arguments and therefore don't need to worry
+		// about how the args are interpreted yet.
+
+		input_was_unknown_platform_v1 = true;
+		return AppendArgsV1Raw_unix(args,error_msg);
+	}
+	else {
+		EXCEPT("Unexpected v1_syntax=%d in AppendArgsV1Raw",v1_syntax);
+	}
+	return false;
 }
 
 bool
@@ -371,7 +484,7 @@ ArgList::AppendArgsV1or2Raw(char const *args,MyString *error_msg)
 void
 ArgList::AppendArgsFromArgList(ArgList const &args)
 {
-	input_was_v1 = args.input_was_v1;
+	input_was_unknown_platform_v1 = args.input_was_unknown_platform_v1;
 
 	SimpleListIterator<MyString> it(args.args_list);
 	MyString *arg=NULL;
@@ -409,18 +522,15 @@ ArgList::AppendArgsFromClassAd(ClassAd const *ad,MyString *error_msg)
 
 	if( ad->LookupString(ATTR_JOB_ARGUMENTS2, &args2) == 1 ) {
 		success = AppendArgsV2Raw(args2,error_msg);
-		input_was_v1 = false;
 	}
 	else if( ad->LookupString(ATTR_JOB_ARGUMENTS1, &args1) == 1 ) {
 		success = AppendArgsV1Raw(args1,error_msg);
-		input_was_v1 = true;
 	}
 	else {
 			// this shouldn't be considered an error... maybe the job
 			// just doesn't define any args.  condor_submit always
 			// adds an empty string, but we should't rely on that.
 		success = true;
-			// leave input_was_v1 untouched... (at dan's recommendation)
 	}
 
 	if(args1) free(args1);
@@ -442,39 +552,39 @@ ArgList::InsertArgsIntoClassAd(ClassAd *ad,CondorVersionInfo *condor_version,MyS
 	bool has_args1 = ad->Lookup(ATTR_JOB_ARGUMENTS1) != NULL;
 	bool has_args2 = ad->Lookup(ATTR_JOB_ARGUMENTS2) != NULL;
 
-	bool requires_args1 = false;
+	bool requires_v1 = false;
+	bool condor_version_requires_v1 = false;
 	if(condor_version) {
-		requires_args1 = CondorVersionRequiresV1(*condor_version);
+		requires_v1 = CondorVersionRequiresV1(*condor_version);
+		condor_version_requires_v1 = true;
 	}
-	else if(input_was_v1) {
-		requires_args1 = true;
-	}
-
-	if(requires_args1) {
-		if(has_args2) {
-			ad->Delete(ATTR_JOB_ARGUMENTS2);
-		}
+	else if(input_was_unknown_platform_v1) {
+		requires_v1 = true;
 	}
 
-	if( (has_args2 || !has_args1) && !requires_args1)
+	if( !requires_v1 )
 	{
 		MyString args2;
 		if(!GetArgsStringV2Raw(&args2,error_msg)) return false;
 		ad->Assign(ATTR_JOB_ARGUMENTS2,args2.Value());
 	}
-	if(has_args1 || requires_args1) {
+	else if(has_args2) {
+		ad->Delete(ATTR_JOB_ARGUMENTS2);
+	}
+
+	if(requires_v1) {
 		MyString args1;
 
 		if(GetArgsStringV1Raw(&args1,error_msg)) {
 			ad->Assign(ATTR_JOB_ARGUMENTS1,args1.Value());
 		}
 		else {
-			if(has_args2) {
-				// We failed to convert to V1 syntax, but we started
-				// with V2, so this is a special kind of failure.
+			if(condor_version_requires_v1 && !input_was_unknown_platform_v1) {
+				// We failed to convert to V1 syntax, but otherwise we could
+				// have converted to V2 syntax.
 				// Rather than failing outright, simply remove
 				// all arguments from the ClassAd, which will
-				// cause failures in subsequent AppendArgsFromClassAd().
+				// cause failures in older versions of Condor.
 				// We get here, for example, when the schedd is
 				// generating the expanded ad to send to an older
 				// starter that does not understand V2 syntax.
@@ -495,10 +605,13 @@ ArgList::InsertArgsIntoClassAd(ClassAd *ad,CondorVersionInfo *condor_version,MyS
 				// Failed to convert to V1 syntax, and the ad does not
 				// already contain V2 syntax, so we should assume the
 				// worst.
-				AddErrorMessage("Failed to convert to target arguments syntax.",error_msg);
+				AddErrorMessage("Failed to convert arguments to V1 syntax.",error_msg);
 				return false;
 			}
 		}
+	}
+	else if(has_args1) {
+		ad->Delete(ATTR_JOB_ARGUMENTS1);
 	}
 	return true;
 }
@@ -634,7 +747,8 @@ ArgList::AddErrorMessage(char const *msg,MyString *error_buf)
 
 ArgList::ArgList()
 {
-	input_was_v1 = false;
+	input_was_unknown_platform_v1 = false;
+	v1_syntax = UNKNOWN_ARGV1_SYNTAX;
 }
 
 ArgList::~ArgList()
@@ -651,7 +765,7 @@ ArgList::GetArgsStringWin32(MyString *result,int skip_args,MyString *error_msg) 
 	for(i=0;it.Next(arg);i++) {
 		if(i<skip_args) continue;
 		if(result->Length()) (*result) += ' ';
-		if(input_was_v1) {
+		if(input_was_unknown_platform_v1) {
 			// In V1 arg syntax, we just pass on whatever the user entered
 			// directly to the Windows OS, assuming the user wants the
 			// OS to interpret whatever quotes, backslashes, etc., that
@@ -679,13 +793,19 @@ ArgList::GetArgsStringWin32(MyString *result,int skip_args,MyString *error_msg) 
 							n++;
 							(*result) += *(argstr++);
 						}
-						if(*argstr == '"') {
-							// to produce n backslashes followed by a quote,
-							// put 2n backslashes followed by a quote.
+						if(*argstr == '"' || *argstr == '\0') {
+							// To produce n backslashes followed by a
+							// literal quote, put 2n+1 backslashes
+							// followed by a quote.  To produce n
+							// backslashes before the terminal quote,
+							// put 2n backslashes.
 							while(n--) {
 								(*result) += '\\';
 							}
-							(*result) += *(argstr++);
+							if(*argstr == '"') {
+								(*result) += '\\';
+								(*result) += *(argstr++);
+							}
 						}
 					}
 					else if(*argstr == '"') {
@@ -800,4 +920,20 @@ ArgList::V1WackedToV1Raw(char const *v1_input,MyString *v1_raw,MyString *errmsg)
 		}
 	}
 	return true;
+}
+
+void
+ArgList::SetArgV1Syntax(ArgV1Syntax v1_syntax)
+{
+	this->v1_syntax = v1_syntax;
+}
+
+void
+ArgList::SetArgV1SyntaxToCurrentPlatform()
+{
+#ifdef WIN32
+	v1_syntax = WIN32_ARGV1_SYNTAX;
+#else
+	v1_syntax = UNIX_ARGV1_SYNTAX;
+#endif
 }
