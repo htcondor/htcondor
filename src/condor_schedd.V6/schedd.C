@@ -4359,7 +4359,7 @@ Scheduler::negotiate(int command, Stream* s)
 		Daemon negotiator (DT_NEGOTIATOR);
 		char *negotiator_hostname = negotiator.fullHostname();
 		if (!negotiator_hostname) {
-			dprintf(D_ALWAYS, "Negotiator hostname lookup failed!");
+			dprintf(D_ALWAYS, "Negotiator hostname lookup failed!\n");
 			return (!(KEEP_STREAM));
 		}
 		hent = gethostbyname(negotiator_hostname);
