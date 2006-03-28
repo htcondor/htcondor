@@ -6,7 +6,7 @@
 #define New_classads_lib
 #endif
 
-all_target(condor_userlog condor_check_userlogs)
+all_target(condor_userlog condor_check_userlogs condor_userlog_job_counter)
 
 CFLAGS = $(STD_C_FLAGS) New_classads_defines
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) New_classads_defines
@@ -17,5 +17,7 @@ OBJ = userlog.o
 public_c_plus_target(condor_userlog,bin,$(OBJ),$(LIB))
 
 public_c_plus_target(condor_check_userlogs,bin,condor_check_userlogs.o,$(LIB))
+
+public_c_plus_target(condor_userlog_job_counter,bin,condor_userlog_job_counter.o,$(LIB))
 
 html:
