@@ -136,6 +136,14 @@ SOURCE=..\src\condor_includes\condor_auth_passwd.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_io\condor_auth_ssl.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_includes\condor_auth_ssl.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_io\condor_auth_sspi.C
 # End Source File
 # Begin Source File

@@ -21,9 +21,10 @@
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
+#include "condor_common.h"
+
 #if !defined(SKIP_AUTHENTICATION) && defined(SSL_AUTHENTICATION)
 #define ouch(x) dprintf(D_ALWAYS,x)
-#include "condor_common.h"
 #include "condor_auth_ssl.h"
 #include "condor_string.h"
 #include "condor_environ.h"
