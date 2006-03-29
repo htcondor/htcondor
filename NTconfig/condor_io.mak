@@ -45,6 +45,7 @@ CLEAN :
 	-@erase "$(INTDIR)\condor_auth_claim.obj"
 	-@erase "$(INTDIR)\condor_auth_kerberos.obj"
 	-@erase "$(INTDIR)\condor_auth_passwd.obj"
+	-@erase "$(INTDIR)\condor_auth_ssl.obj"
 	-@erase "$(INTDIR)\condor_auth_sspi.obj"
 	-@erase "$(INTDIR)\condor_crypt.obj"
 	-@erase "$(INTDIR)\condor_crypt_3des.obj"
@@ -116,6 +117,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\condor_auth_claim.obj" \
 	"$(INTDIR)\condor_auth_kerberos.obj" \
 	"$(INTDIR)\condor_auth_passwd.obj" \
+	"$(INTDIR)\condor_auth_ssl.obj" \
 	"$(INTDIR)\condor_auth_sspi.obj" \
 	"$(INTDIR)\condor_crypt.obj" \
 	"$(INTDIR)\condor_crypt_3des.obj" \
@@ -157,6 +159,7 @@ CLEAN :
 	-@erase "$(INTDIR)\condor_auth_claim.obj"
 	-@erase "$(INTDIR)\condor_auth_kerberos.obj"
 	-@erase "$(INTDIR)\condor_auth_passwd.obj"
+	-@erase "$(INTDIR)\condor_auth_ssl.obj"
 	-@erase "$(INTDIR)\condor_auth_sspi.obj"
 	-@erase "$(INTDIR)\condor_crypt.obj"
 	-@erase "$(INTDIR)\condor_crypt_3des.obj"
@@ -227,6 +230,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\condor_auth_claim.obj" \
 	"$(INTDIR)\condor_auth_kerberos.obj" \
 	"$(INTDIR)\condor_auth_passwd.obj" \
+	"$(INTDIR)\condor_auth_ssl.obj" \
 	"$(INTDIR)\condor_auth_sspi.obj" \
 	"$(INTDIR)\condor_crypt.obj" \
 	"$(INTDIR)\condor_crypt_3des.obj" \
@@ -324,6 +328,12 @@ CPP_SWITCHES=/nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /F
 SOURCE=..\src\condor_io\condor_auth_passwd.C
 
 "$(INTDIR)\condor_auth_passwd.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\src\condor_io\condor_auth_ssl.C
+
+"$(INTDIR)\condor_auth_ssl.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
