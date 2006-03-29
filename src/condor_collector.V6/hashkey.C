@@ -89,7 +89,7 @@ bool lookup( const ClassAd *ad,
 			 MyString &string,
 			 bool warn = false )
 {
-	char	buf[128];
+	char	buf[256];
 	bool	rval = true;
 
     if ( !ad->LookupString( attrname, buf, sizeof(buf) ) ) {
@@ -124,22 +124,27 @@ bool lookup( const ClassAd *ad,
 	return rval;
 }
 
-int getIpAddr( const ClassAd *ad,
-			   const char *attrname,
-			   const char *attrold,
-			   MyString &ip )
+bool getIpAddr( const ClassAd *ad,
+				const char *attrname,
+				const char *attrold,
+				MyString &ip )
 {
+	MyString	tmp;
+
 	// get the IP and port of the startd
-	lookup( ad, attrname, attrold, ip, false );
+	lookup( ad, attrname, attrold, tmp, false );
 
 	// If no valid string, do our own thing..
-	if ( ip.Length() == 0 )
+	if ( tmp.Length() == 0 )
 	{
 		dprintf (D_ALWAYS, "No IP address in classAd \n");
-		return -1;
+		return false;
+	}
+	if ( parseIpPort ( tmp, ip ) < 0 ) {
+		return false;
 	}
 
-	return 0;
+	return true;
 }
 
 // functions to make the hashkeys ...
@@ -147,18 +152,14 @@ int getIpAddr( const ClassAd *ad,
 bool
 makeStartdAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
 {
-	MyString	buffer;
 
 	// get the name of the startd
 	if ( !lookup( ad, "Name", "Machine", hk.name, true ) ) {
 		return false;
 	}
 
-	if ( getIpAddr( ad, ATTR_STARTD_IP_ADDR, "STARTD_IP_ADDR", buffer ) < 0) {
+	if ( !getIpAddr( ad, ATTR_STARTD_IP_ADDR, "STARTD_IP_ADDR", hk.ip_addr)) {
 		dprintf (D_ALWAYS, "Error: Invalid StartAd\n");
-		return false;
-	}
-	if ( parseIpPort (buffer, hk.ip_addr) < 0 ) {
 		return false;
 	}
 
@@ -191,7 +192,6 @@ makeQuillAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from) {
 bool
 makeScheddAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
 {
-	MyString	buffer;
 
 	// get the name of the schedd
 	if ( !lookup( ad, "Name", "Machine", hk.name, true ) ) {
@@ -209,11 +209,8 @@ makeScheddAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
 	}
 
 	// get the IP and port of the schedd 
-	if ( getIpAddr( ad, ATTR_SCHEDD_IP_ADDR, "SCHEDD_IP_ADDR", buffer ) < 0) {
+	if ( !getIpAddr( ad, ATTR_SCHEDD_IP_ADDR, "SCHEDD_IP_ADDR", hk.ip_addr)) {
 		dprintf (D_ALWAYS, "Error: Invalid SchedAd\n");
-		return false;
-	}
-	if ( parseIpPort (buffer, hk.ip_addr) < 0 ) {
 		return false;
 	}
 
@@ -224,7 +221,6 @@ makeScheddAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
 bool
 makeLicenseAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
 {
-	MyString buffer;
 
 	// get the name of the license
 	if ( !lookup( ad, "Name", "Machine", hk.name, true ) ) {
@@ -232,11 +228,8 @@ makeLicenseAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
 	}
 	
 	// get the IP and port of the startd 
-	if ( getIpAddr( ad, ATTR_MY_ADDRESS, NULL, buffer ) < 0 ) {
+	if ( !getIpAddr( ad, ATTR_MY_ADDRESS, NULL, hk.ip_addr ) ) {
 		dprintf (D_ALWAYS, "Error: Invalid LicenseAd\n");
-		return false;
-	}
-	if ( parseIpPort (buffer, hk.ip_addr) < 0 ) {
 		return false;
 	}
 
@@ -247,91 +240,46 @@ makeLicenseAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
 bool
 makeMasterAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
 {
-
-	// get the name of the license
-	if ( !lookup( ad, "Name", "Machine", hk.name, true ) ) {
-		return false;
-	}
-
-	// ip_addr not necessary
 	hk.ip_addr = "";
-
-	return true;
+	return lookup( ad, "Name", "Machine", hk.name, true );
 }
 
 
 bool
 makeCkptSrvrAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
 {
-	char	*name = NULL;
-	if (!ad->LookupString ("Machine", &name ))
-	{
-		dprintf (D_ALWAYS, "Error:  No 'Machine' attribute\n");
-		return false;
-	}
-
-	hk.name = name;
-	free( name );
 	hk.ip_addr = "";
-
-	return true;
+	return lookup( ad, "Machine", NULL, hk.name, true );
 }
 
 bool
 makeCollectorAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
 {
-
-	if ( !lookup( ad, "Machine", NULL, hk.name, true ) ) {
-		return false;
-	}
 	hk.ip_addr = "";
-	return true;
+	return lookup( ad, "Machine", NULL, hk.name, true );
 }
 
 bool
 makeStorageAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
 {
-	if ( !lookup( ad, "Name", NULL, hk.name, true ) ) {
-		return false;
-	}
 	hk.ip_addr = "";
-
-	return true;
+	return lookup( ad, "Name", NULL, hk.name, true );
 }
 
 
 bool
 makeNegotiatorAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
 {
-	char	*name = NULL;
-	if( !ad->LookupString( ATTR_NAME, &name ) ) {
-		dprintf( D_ALWAYS, "Error: No '%s' attribute\n", ATTR_NAME );
-		return false;
-	}
-
-	hk.name = name;
-	free( name );
 	hk.ip_addr = "";
-
-	return true;
+	return lookup( ad, ATTR_NAME, NULL, hk.name, true );
 }
 
 
 bool
 makeHadAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
 {
-	char	*name = NULL;
-	if (!ad->LookupString ("Name", &name ))
-	{
-		dprintf (D_ALWAYS, "Error:  No 'Name' attribute\n");
-		return false;
-	}
-
-	hk.name = name;
-	free( name );
 	hk.ip_addr = "";
-
-	return true;
+	return lookup( ad, "Name", NULL, hk.name, true );
 }
 
 // for anything that sends its updates via UPDATE_AD_GENERIC, this
@@ -342,18 +290,8 @@ makeHadAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
 bool
 makeGenericAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
 {
-	char	*name = NULL;
-	if (!ad->LookupString ("Name", &name ))
-	{
-		dprintf (D_ALWAYS, "Error:  No 'Name' attribute\n");
-		return false;
-	}
-	
-	hk.name = name;
-	free( name );
 	hk.ip_addr = "";
-	
-	return true;
+	return lookup( ad, "Name", NULL, hk.name, true );
 }
 
 // utility function:  parse the string "<aaa.bbb.ccc.ddd:pppp>"
