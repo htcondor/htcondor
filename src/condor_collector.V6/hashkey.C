@@ -83,41 +83,51 @@ int adNameHashFunction (const AdNameHashKey &key, int numBuckets)
     return bkt;
 }
 
+bool lookup( const ClassAd *ad,
+			 const char *attrname,
+			 const char *attrold,
+			 MyString &string,
+			 bool warn = false )
+{
+	char	buf[128];
+	bool	rval = true;
+
+    if ( !ad->LookupString( attrname, buf, sizeof(buf) ) ) {
+		if ( warn ) {
+			dprintf(D_FULLDEBUG,
+					"Warning: No '%s' attribute; trying '%s'\n",
+					attrname, attrold );
+		}
+
+		if ( !attrold ) {
+			buf[0] = '\0';
+			rval = false;
+		} else {
+			if ( !ad->LookupString( attrold, buf, sizeof(buf) ) ) {
+				if ( warn ) {
+					dprintf (D_ALWAYS,
+							 "Error: Neither '%s' nor '%s' specified\n",
+							 attrname, attrold );
+				}
+				buf[0] = '\0';
+				rval = false;
+			}
+		}
+	}
+
+	buf[sizeof(buf)-1] = '\0';
+	string = buf;
+
+	return rval;
+}
+
 int getIpAddr( const ClassAd *ad,
 			   const char *attrname,
 			   const char *attrold,
 			   MyString &ip )
 {
-	ExprTree	*tree;
-
-	// Reset IP string
-	ip = "";
-
-	// get the IP and port of the startd 
-	tree = ad->Lookup( attrname );
-	if ( tree ) {
-		dprintf (D_ALWAYS, "Found %s\n", attrname );
-		ip = ((String *)tree->RArg())->Value();
-	}
-	
-	// if not there, try to lookup the old style "STARTD_IP_ADDR" string
-	if ( ! tree && attrold ) {
-		tree = ad->Lookup( attrold );
-		if ( tree ) {
-			dprintf (D_ALWAYS, "Found %s\n", attrold );
-			ip = ((String *)tree->RArg())->Value();
-		}
-	}
-	
-	// Finally, try to lookup "MyAddress"...
-	if ( ip.Length() == 0 ) {
-		tree = ad->Lookup( ATTR_MY_ADDRESS );
-		if ( tree ) {
-			dprintf (D_ALWAYS, "Found %s\n", ATTR_MY_ADDRESS );
-			ip = ((String *)tree->RArg())->Value();
-		}
-	}
-	dprintf( D_ALWAYS, "Got IP = '%s'\n", ip.GetCStr() );
+	// get the IP and port of the startd
+	lookup( ad, attrname, attrold, ip, false );
 
 	// If no valid string, do our own thing..
 	if ( ip.Length() == 0 )
@@ -134,29 +144,14 @@ int getIpAddr( const ClassAd *ad,
 bool
 makeStartdAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
 {
-	ExprTree	*tree;
 	MyString	buffer;
 
 	// get the name of the startd
-	if (!(tree = ad->Lookup ("Name")))
-	{		
-		// ... if name was not specified
-		dprintf(D_FULLDEBUG,"Warning: No 'Name' attribute; trying 'Machine'\n");
-		tree = ad->Lookup ("Machine");
-	}
-
-	if (tree)
-	{
-		hk.name = ((String *)tree->RArg())->Value();
-	}
-	else
-	{
-		// neither Name nor Machine specified in ad
-		dprintf (D_ALWAYS, "Error: Neither 'Name' nor 'Machine' specified\n");
+	if ( !lookup( ad, "Name", "Machine", hk.name, true ) ) {
 		return false;
 	}
 
-	if ( getIpAddr( ad, ATTR_STARTD_IP_ADDR, "STARTD_IP_ADDR", buffer ) < 0 ) {
+	if ( getIpAddr( ad, ATTR_STARTD_IP_ADDR, "STARTD_IP_ADDR", buffer ) < 0) {
 		dprintf (D_ALWAYS, "Error: Invalid StartAd\n");
 		return false;
 	}
@@ -170,36 +165,20 @@ makeStartdAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
 #if WANT_QUILL
 bool
 makeQuillAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from) {
-	ExprTree	*tree;
-	MyString	buffer;
-	MyString	buf2;
 
 	// get the name of the quill daemon
-	if (!(tree = ad->Lookup ("Name")))
-	{
-		dprintf(D_FULLDEBUG,"Warning: No 'Name' attribute; trying 'Machine'\n");
-		// ... if name was not specified
-		tree = ad->Lookup ("Machine");
-	}
-
-	if (tree)
-	{
-		hk.name = ((String *)tree->RArg())->Value();
-	}
-	else
-	{
-		dprintf (D_ALWAYS, "Error: Neither 'Name' nor 'Machine' specified\n");
-		// neither Name nor Machine specified
+	if ( !lookup( ad, "Name", "Machine", hk.name, true ) ) {
 		return false;
 	}
 	
-	// as in the case of submittor ads (see makeScheddAdHashKey), we also use the 
-	// schedd name to construct the hash key for a quill ad.  this 
-	// solves the problem of multiple quill daemons on the same name on the same 
-	// machine submitting to the same pool
+	// as in the case of submittor ads (see makeScheddAdHashKey), we
+	// also use the schedd name to construct the hash key for a quill
+	// ad.  this solves the problem of multiple quill daemons on the
+	// same name on the same machine submitting to the same pool
 	// -Ameet Kini <akini@cs.wisc.edu> 8/2005
-	if ( (tree = ad->Lookup(ATTR_SCHEDD_NAME)) ) {
-		hk.name += (((String *)tree->RArg())->Value());
+	MyString	tmp;
+	if ( lookup( ad, ATTR_SCHEDD_NAME, NULL, tmp, true ) ) {
+		hk.name += tmp;
 	}
 
 	return true;
@@ -209,44 +188,25 @@ makeQuillAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from) {
 bool
 makeScheddAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
 {
-	ExprTree	*tree;
 	MyString	buffer;
 
-	// get the name of the startd
-	if (!(tree = ad->Lookup ("Name")))
-	{
-		dprintf(D_FULLDEBUG,"Warning: No 'Name' attribute; trying 'Machine'\n");
-		// ... if name was not specified
-		tree = ad->Lookup ("Machine");
-	}
-
-	if (tree)
-	{
-		hk.name = ((String *)tree->RArg())->Value();
-	}
-	else
-	{
-		dprintf (D_ALWAYS, "Error: Neither 'Name' nor 'Machine' specified\n");
-		// neither Name nor Machine specified
+	// get the name of the schedd
+	if ( !lookup( ad, "Name", "Machine", hk.name, true ) ) {
 		return false;
 	}
 	
-	// this may be a submittor ad.  if so, we also want to append the schedd name to the
-	// hash.  this will fix problems were submittor ads will clobber one another
-	// if the more than one schedd runs on the same IP address submitting into the same pool.
+	// this may be a submittor ad.  if so, we also want to append the
+	// schedd name to the hash.  this will fix problems were submittor
+	// ads will clobber one another if the more than one schedd runs
+	// on the same IP address submitting into the same pool.
 	// -Todd Tannenbaum <tannenba@cs.wisc.edu> 2/2005
-	if ( (tree = ad->Lookup(ATTR_SCHEDD_NAME)) ) {
-		hk.name += (((String *)tree->RArg())->Value());
+	MyString	tmp;
+	if ( lookup( ad, ATTR_SCHEDD_NAME, NULL, tmp, true ) ) {
+		hk.name += tmp;
 	}
 
-	// get the IP and port of the startd 
-	tree = ad->Lookup (ATTR_SCHEDD_IP_ADDR);
-	
-	if (!tree)
-		tree = ad->Lookup ("SCHEDD_IP_ADDR");
-
 	// get the IP and port of the schedd 
-	if ( getIpAddr( ad, ATTR_SCHEDD_IP_ADDR, "SCHEDD_IP_ADDR", buffer ) < 0 ) {
+	if ( getIpAddr( ad, ATTR_SCHEDD_IP_ADDR, "SCHEDD_IP_ADDR", buffer ) < 0) {
 		dprintf (D_ALWAYS, "Error: Invalid SchedAd\n");
 		return false;
 	}
@@ -261,25 +221,10 @@ makeScheddAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
 bool
 makeLicenseAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
 {
-	ExprTree *tree;
 	MyString buffer;
 
-	// get the name of the startd
-	if (!(tree = ad->Lookup ("Name")))
-	{
-		dprintf(D_FULLDEBUG,"Warning: No 'Name' attribute; trying 'Machine'\n");
-		// ... if name was not specified
-		tree = ad->Lookup ("Machine");
-	}
-
-	if (tree)
-	{
-		hk.name = ((String *)tree->RArg())->Value();
-	}
-	else
-	{
-		dprintf (D_ALWAYS, "Error: Neither 'Name' nor 'Machine' specified\n");
-		// neither Name nor Machine specified
+	// get the name of the license
+	if ( !lookup( ad, "Name", "Machine", hk.name, true ) ) {
 		return false;
 	}
 	
@@ -299,24 +244,9 @@ makeLicenseAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
 bool
 makeMasterAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
 {
-	ExprTree *tree;
 
-	if (!(tree = ad->Lookup ("Name")))
-	{
-		dprintf( D_FULLDEBUG, 
-				 "Warning: No 'Name' attribute; trying 'Machine'\n" );
-			// ... if name was not specified
-		tree = ad->Lookup ("Machine");
-	}
-
-	if (tree)
-	{
-		hk.name = ((String *)tree->RArg())->Value ();
-	}
-	else
-	{
-		dprintf (D_ALWAYS, "Error: Neither 'Name' nor 'Machine' specified\n");
-		// neither Name nor Machine specified
+	// get the name of the license
+	if ( !lookup( ad, "Name", "Machine", hk.name, true ) ) {
 		return false;
 	}
 
@@ -347,32 +277,20 @@ makeCkptSrvrAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
 bool
 makeCollectorAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
 {
-	char	*name = NULL;
-	if (!ad->LookupString ("Machine", &name ))
-	{
-		dprintf (D_ALWAYS, "Error:  No 'Machine' attribute\n");
+
+	if ( !lookup( ad, "Machine", NULL, hk.name, true ) ) {
 		return false;
 	}
-
-	hk.name = name;
-	free( name );
 	hk.ip_addr = "";
-
 	return true;
 }
 
 bool
 makeStorageAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
 {
-	char	*name = NULL;
-	if (!ad->LookupString ("Name", &name ))
-	{
-		dprintf (D_ALWAYS, "Error:  No 'Name' attribute\n");
+	if ( !lookup( ad, "Name", NULL, hk.name, true ) ) {
 		return false;
 	}
-
-	hk.name = name;
-	free( name );
 	hk.ip_addr = "";
 
 	return true;

@@ -261,7 +261,7 @@ HOSTALLOW_READ_STARTD     = $(HOSTALLOW_READ), $(FLOCK_FROM)
 ## Note: changing this requires a restart not just a reconfig.
 #ENABLE_PERSISTENT_CONFIG = False
 
-## Directory where daemons should write persisitent config files (used
+## Directory where daemons should write persistent config files (used
 ## to support condor_config_val -set).  This directory should *ONLY*
 ## be writable by root (or the user the Condor daemons are running as
 ## if non-root).  There is no default, administrators must define this.

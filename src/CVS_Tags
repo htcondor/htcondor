@@ -1,3 +1,14 @@
+03/29/06 V6_7-{pre,post}_merge-V6_6-merge-56
+  The pre and post tags of for the 56th V6_6-branch merge into
+  V6_7-branch.  The only  change is the fix to the collector to not
+  crash on ads with invalid Machine and other attributes used in
+  hashkey generation.
+
+03/29/06 V6_6_11-merge-1
+  The state of the V6_6_11-branch for a merge into V6_6-branch.  The only
+  change is the fix to the collector to not crash on ads with invalid
+  Machine and other attributes used in hashkey generation.
+
 03/28/06 V6_7_18-merge-1
   Merging V6_7_18 changes to V6_7-branch.  This includes Dan's fixes for
   argument string merging when mixing argument syntaxes.
@@ -26,6 +37,10 @@
 
 03/22/06 V6_7_18-branch
   The branch for V6_7_18 from V6_7_18-root off of V6_7-branch.
+
+03/22/06 V6_6_11
+   The official 6.6.11 release tag. This lives on V6_6_ALL and
+   V6_6_11_EXT.  NWO Build# 20864
 
 03/21/06 V6_6-merge-55
   The state of the V6_6-branch for a merge into V6_7-branch.  The only
