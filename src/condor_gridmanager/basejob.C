@@ -185,11 +185,18 @@ void BaseJob::JobIdle()
 	if ( condorState != IDLE && condorState != HELD &&
 		 condorState != REMOVED ) {
 
+		bool write_evict = (condorState==RUNNING);
+
 		condorState = IDLE;
 		jobAd->Assign( ATTR_JOB_STATUS, condorState );
 		jobAd->Assign( ATTR_ENTERED_CURRENT_STATUS, (int)time(NULL) );
 
 		UpdateRuntimeStats();
+
+		if( write_evict ) {
+			WriteEvictEventToUserLog( jobAd );
+			executeLogged = false;
+		}
 
 		requestScheddUpdate( this );
 	}

@@ -1040,7 +1040,6 @@ int GlobusJob::doEvaluateState()
 					submitLogged = true;
 				}
 				if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_ACTIVE ||
-					 globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_SUSPENDED ||
 					 globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_STAGE_OUT ||
 					 globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_DONE ) {
 					executeLogged = true;
@@ -2609,10 +2608,7 @@ void GlobusJob::UpdateGlobusState( int new_state, int new_error_code )
 				jobAd->Assign( ATTR_NUM_GLOBUS_SUBMITS, num_globus_submits );
 			}
 		}
-		if ( (new_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_ACTIVE ||
-			  new_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_STAGE_OUT ||
-			  new_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_DONE ||
-			  new_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_SUSPENDED)
+		if ( (new_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_DONE)
 			 && !executeLogged ) {
 			WriteExecuteEventToUserLog( jobAd );
 			executeLogged = true;
