@@ -49,6 +49,13 @@ has no active jobs to that resource.
 
 \begin{itemize}
 
+\item Grid universe jobs sent to Globus Toolkit 2 resources now
+generate an evict user log event when the job transitions from Running
+to Idle, along with another execute even when the job restarts.  Previously
+no events were logged in these cases, leading to the potentially confusing
+situation where a job would be Idle in the queue, but the last job log entry
+would indicate that the job was Running.
+
 \item Fixed a permissions problem that would cause automatic X509 proxy renewal for vanilla universe jobs to fail.
 
 \item Fixed a bug introduced in 6.7.17 that caused the configuration paramter
