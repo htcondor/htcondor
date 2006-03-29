@@ -93,10 +93,13 @@ bool lookup( const ClassAd *ad,
 	bool	rval = true;
 
     if ( !ad->LookupString( attrname, buf, sizeof(buf) ) ) {
-		if ( warn ) {
+		if ( warn && attrold ) {
 			dprintf(D_FULLDEBUG,
 					"Warning: No '%s' attribute; trying '%s'\n",
 					attrname, attrold );
+		} else if ( warn ) {
+			dprintf(D_FULLDEBUG,
+					"Warning: No '%s' attribute; giving up\n", attrname );
 		}
 
 		if ( !attrold ) {
@@ -177,7 +180,7 @@ makeQuillAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from) {
 	// same name on the same machine submitting to the same pool
 	// -Ameet Kini <akini@cs.wisc.edu> 8/2005
 	MyString	tmp;
-	if ( lookup( ad, ATTR_SCHEDD_NAME, NULL, tmp, true ) ) {
+	if ( lookup( ad, ATTR_SCHEDD_NAME, NULL, tmp, false ) ) {
 		hk.name += tmp;
 	}
 
@@ -201,7 +204,7 @@ makeScheddAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
 	// on the same IP address submitting into the same pool.
 	// -Todd Tannenbaum <tannenba@cs.wisc.edu> 2/2005
 	MyString	tmp;
-	if ( lookup( ad, ATTR_SCHEDD_NAME, NULL, tmp, true ) ) {
+	if ( lookup( ad, ATTR_SCHEDD_NAME, NULL, tmp, false ) ) {
 		hk.name += tmp;
 	}
 

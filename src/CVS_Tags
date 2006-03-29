@@ -1,8 +1,24 @@
+03/29/06 V6_7-{pre,post}_merge-V6_6-merge-57
+  The pre and post tags of for the 57th V6_6-branch merge into
+  V6_7-branch.  The only  change is the fix to the collector to not
+  crash on certain ads with missing attributes on certain platforms.
+
+03/29/06 V6_6-merge-57
+  The state of the V6_6-branch for a merge into V6_7-branch.  The only
+  change is the fix to the collector to not crash on Collector ads
+  missing the Machine attribute and Storage ads missing the Name
+  attribute.
+
 03/29/06 V6_7-{pre,post}_merge-V6_6-merge-56
   The pre and post tags of for the 56th V6_6-branch merge into
   V6_7-branch.  The only  change is the fix to the collector to not
   crash on ads with invalid Machine and other attributes used in
   hashkey generation.
+
+03/29/06 V6_6-merge-56
+  The state of the V6_6-branch for a merge into V6_7-branch.  The only
+  change is the fix to the collector to not crash on ads with invalid
+  Machine and other attributes used in hashkey generation.
 
 03/29/06 V6_6_11-merge-1
   The state of the V6_6_11-branch for a merge into V6_6-branch.  The only
