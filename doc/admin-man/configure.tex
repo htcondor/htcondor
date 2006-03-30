@@ -4636,8 +4636,9 @@ seconds between connections to the \Condor{schedd}. The default is 5 seconds.
 
 \item[\Macro{GRIDMANAGER\_JOB\_PROBE\_INTERVAL}]
 \label{param:GridmanagerJobProbeInterval}
-After a job is submitted, how often (in seconds) the \Condor{gridmanager}
-should probe the remote jobmanager to ensure it is still alive and well.
+The number of seconds between
+active probes of the status of a submitted job. The default is 5
+minutes (300 seconds).
 
 \item[\Macro{CONDOR\_JOB\_POLL\_INTERVAL}]
 \label{param:CondorJobPollInterval}
@@ -4647,10 +4648,6 @@ This defaults to 300 seconds (5 minutes).
 Setting this to a lower number will decrease latency (Condor will discover
 that a job has finished more quickly), but will increase network traffic.
 
-\item[\Macro{GRIDMANAGER\_JOB\_PROBE\_DELAY}]
-\label{param:GridmanagerJobProbeDelay} The number of seconds between
-active probes of the status of a submitted job. The default is 5
-minutes (300 seconds).
 
 \item[\Macro{GRIDMANAGER\_RESOURCE\_PROBE\_INTERVAL}]
 \label{param:GridmanagerResourceProbeInterval}
