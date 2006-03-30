@@ -1689,6 +1689,17 @@ Specifies a list of additional JAR files to include when using
 the Java universe.  JAR files will be transferred along with
 the executable and automatically added to the classpath.
 
+%%%%%%%%%%%%%%%%%%%
+%% java_vm_args
+%%%%%%%%%%%%%%%%%%%
+
+\item[java\_vm\_args = $<$argument\_list$>$]
+\index{submit commands!java\_vm\_args}
+Specifies a list of additional arguments to the Java VM itself,
+When Condor runs the Java program, these are the arguments that 
+go before the class name.  This can be used to set VM-specific 
+arguments like stack size, garbage-collector arguments 
+and initial property values.
 
 %%%%%%%%%%%%%%%%%%%
 %% machine_count
