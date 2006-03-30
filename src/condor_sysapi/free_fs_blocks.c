@@ -96,14 +96,6 @@ extern char* param();
 #define FS_COMMAND "getcacheparms"
 #define FS_OUTPUT_FORMAT "\nAFS using %d of the cache's available %d"
 
-#if defined(__STDC__)
-FILE * my_popen( char * cmd, char * mode );
-int my_pclose( FILE *fp );
-#else
-FILE * my_popen();
-int my_pclose();
-#endif
-
 #endif
 
 /*
@@ -133,7 +125,7 @@ reserve_for_afs_cache()
 		/* Run an AFS utility program to learn how big the cache is and
 		   how much is in use. */
 	dprintf( D_FULLDEBUG, "Checking AFS cache parameters\n" );
-	fp = my_popenv( args, "r" );
+	fp = my_popenv( args, "r", FALSE );
 	fscanf( fp, FS_OUTPUT_FORMAT, &cache_in_use, &cache_size );
 	my_pclose( fp );
 	dprintf( D_FULLDEBUG, "cache_in_use = %d, cache_size = %d\n",

@@ -260,7 +260,7 @@ ShadowMgr::makeShadow( const char* path )
 
 		// first, try to execute the given path with a "-classad"
 		// option, and grab the output as a ClassAd
-	fp = my_popenv( args, "r" );
+	fp = my_popenv( args, "r", FALSE );
 
 	if( ! fp ) {
 		dprintf( D_ALWAYS, "Failed to execute %s, ignoring\n", path );

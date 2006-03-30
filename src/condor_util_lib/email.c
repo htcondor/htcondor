@@ -163,7 +163,7 @@ email_open_implementation(char *Mailer, char *const final_args[])
 		set to something useable for the open operation. -pete 9/11/99
 	*/
 	prev_umask = umask(022);
-	mailerstream = my_popenv(final_args,EMAIL_POPEN_FLAGS);
+	mailerstream = my_popenv(final_args,EMAIL_POPEN_FLAGS,FALSE);
 	umask(prev_umask);
 
 	/* Set priv state back */

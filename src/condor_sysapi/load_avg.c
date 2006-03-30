@@ -749,7 +749,7 @@ lookup_load_avg_via_uptime()
 	 */
 	if (uptime_path != NULL) {
 		char *args[2] = {uptime_path, NULL};
-		if ((output_fp = my_popenv(args, "r")) == NULL) {
+		if ((output_fp = my_popenv(args, "r", FALSE)) == NULL) {
 			return DEFAULT_LOADAVG;
 		}
 		

@@ -71,7 +71,8 @@ static child_handle_t remove_child(FILE* fp)
 
 /*
 
-  FILE *my_popenv(char *const args[]);
+  FILE *my_popenv(char *const args[], const char *mode, int want_stderr);
+  FILE *my_popen(ArgList &args, const char *mode, int want_stderr);
 
   This is a popen(3)-like function that intentionally avoids
   calling out to the shell in order to limit what can be done for
@@ -99,7 +100,7 @@ static child_handle_t remove_child(FILE* fp)
 /* Windows versions of my_popen / my_pclose */
 
 static FILE *
-my_popen(const char *const_cmd, const char *mode)
+my_popen(const char *const_cmd, const char *mode, int want_stderr)
 {
 	BOOL read_mode;
 	SECURITY_ATTRIBUTES saPipe;
@@ -144,13 +145,19 @@ my_popen(const char *const_cmd, const char *mode)
 	si.cb = sizeof(STARTUPINFO);
 	if (read_mode) {
 		si.hStdOutput = hChildPipe;
+		if (want_stderr) {
+			si.hStdError = hChildPipe;
+		}
+		else {
+			si.hStdError = GetStdHandle(STD_ERROR_HANDLE);
+		}
 		si.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
 	}
 	else {
 		si.hStdInput = hChildPipe;
 		si.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
+		si.hStdError = GetStdHandle(STD_ERROR_HANDLE);
 	}
-	si.hStdError = GetStdHandle(STD_ERROR_HANDLE);
 	si.dwFlags = STARTF_USESTDHANDLES;
 
 	// make call to CreateProcess
@@ -201,7 +208,7 @@ my_popen(const char *const_cmd, const char *mode)
 }
 
 FILE *
-my_popen(ArgList &args, const char *mode)
+my_popen(ArgList &args, const char *mode, int want_stderr)
 {
 	MyString cmdline, err;
 	if (!args.GetArgsStringWin32(&cmdline, 0, &err)) {
@@ -209,11 +216,11 @@ my_popen(ArgList &args, const char *mode)
 		return NULL;
 	}
 
-	return my_popen(cmdline.Value(), mode);	
+	return my_popen(cmdline.Value(), mode, want_stderr);
 }
 
 extern "C" FILE *
-my_popenv(char *const args[], const char *mode)
+my_popenv(char *const args[], const char *mode, int want_stderr)
 {
 	// build the argument list
 	ArgList arglist;
@@ -221,7 +228,7 @@ my_popenv(char *const args[], const char *mode)
 		arglist.AppendArg(args[i]);
 	}
 
-	return my_popen(arglist, mode);
+	return my_popen(arglist, mode, want_stderr);
 }
 
 extern "C" int
@@ -259,7 +266,7 @@ static int	READ_END = 0;
 static int	WRITE_END = 1;
 
 extern "C" FILE *
-my_popenv( char *const args[], const char * mode )
+my_popenv( char *const args[], const char * mode, int want_stderr )
 {
 	int	pipe_d[2];
 	int	parent_reads;
@@ -290,9 +297,21 @@ my_popenv( char *const args[], const char * mode )
 		if( parent_reads ) {
 				/* Close stdin, dup pipe to stdout */
 			close( pipe_d[READ_END] );
+			bool close_pipe_end = false;
 			if( pipe_d[WRITE_END] != 1 ) {
 				dup2( pipe_d[WRITE_END], 1 );
-				close( pipe_d[WRITE_END] );
+				close_pipe_end = true;
+			}
+			if (want_stderr) {
+				if ( pipe_d[WRITE_END] != 2 ) {
+					dup2( pipe_d[WRITE_END], 2 );
+				}
+				else {
+					close_pipe_end = false;
+				}
+			}
+			if (close_pipe_end) {
+				close(pipe_d[WRITE_END]);
 			}
 		} else {
 				/* Close stdout, dup pipe to stdin */
@@ -336,10 +355,10 @@ my_popenv( char *const args[], const char * mode )
 }
 
 FILE *
-my_popen(ArgList &args, const char *mode)
+my_popen(ArgList &args, const char *mode, int want_stderr)
 {
 	char **string_array = args.GetStringArray();
-	FILE *fp = my_popenv(string_array, mode);
+	FILE *fp = my_popenv(string_array, mode, want_stderr);
 	deleteStringArray(string_array);
 
 	return fp;
