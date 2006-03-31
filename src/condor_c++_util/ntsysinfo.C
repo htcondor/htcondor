@@ -127,7 +127,10 @@ CSysinfo::~CSysinfo()
 	reference_count--;
 	if ( reference_count == 0 ) {
 		FreeLibrary(hNtDll);
-		VirtualFree (memptr, 0, MEM_RELEASE);
+		if ( memptr ) {
+			VirtualFree (memptr, 0, MEM_RELEASE);
+			memptr = NULL;
+		}
 	}
 }
 
