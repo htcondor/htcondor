@@ -806,8 +806,8 @@ daemon::Stop( bool never_forward )
 
 	stop_fast_tid = 
 		daemonCore->Register_Timer( shutdown_graceful_timeout, 0, 
-									(TimerHandlercpp)&daemon::StopFast,
-									"daemon::StopFast()", this );
+									(TimerHandlercpp)&daemon::StopFastTimer,
+									"daemon::StopFastTimer()", this );
 }
 
 
@@ -847,6 +847,12 @@ daemon::StopPeaceful()
 	Kill( SIGTERM );
 }
 
+int
+daemon::StopFastTimer()
+{
+	StopFast(false);
+	return TRUE;
+}
 
 void
 daemon::StopFast( bool never_forward )
@@ -1801,13 +1807,13 @@ Daemons::FinalRestartMaster()
 	sprintf( tmps, "%s=", EnvGetName( ENV_INHERIT ) );
 	putenv( tmps );
 
+#ifdef WIN32
+	dprintf(D_ALWAYS,"Running as NT Service = %d\n", NT_ServiceFlag);
+#endif
 		// Make sure the exec() of the master works.  If it fails,
 		// we'll fall past the execl() call, and hit the exponential
 		// backoff code.
 	while(1) {
-		dprintf( D_ALWAYS, "Doing exec( \"%s\" )\n", 
-				 daemon_ptr[master]->process_name);
-
 		// On Win32, if we are running as an NT service,
 		// we cannot just exec ourselves again.  This is because
 		// the SCM (Service Control Manager) needs to know our PID,
@@ -1817,13 +1823,22 @@ Daemons::FinalRestartMaster()
 		if ( NT_ServiceFlag == TRUE ) {
 #ifdef WIN32
 			char systemshell[MAX_PATH];
+			extern char* _condor_myServiceName; // created by daemonCore
 
 			::GetSystemDirectory(systemshell,MAX_PATH);
 			strcat(systemshell,"\\cmd.exe");
+			MyString command;
+			command.sprintf("net stop %s & net start %s", 
+				_condor_myServiceName, _condor_myServiceName);
+			dprintf( D_ALWAYS, "Doing exec( \"%s /Q /C %s\" )\n", 
+				 systemshell,command.Value());
 			(void)execl(systemshell, "/Q", "/C",
-				"net stop Condor & net start Condor", 0);
+				command.Value(), 0);
 #endif
 		} else {
+			dprintf( D_ALWAYS, "Doing exec( \"%s\" )\n", 
+				 daemon_ptr[master]->process_name);
+
 			if( MasterName ) {
 				(void)execl(daemon_ptr[master]->process_name, 
 							"condor_master", "-f", "-n", MasterName, 0);
