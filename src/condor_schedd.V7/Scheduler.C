@@ -57,6 +57,8 @@ Scheduler::InitPublicAd() {
 
 	//TODO: this is the wrong ADTYPE.
 	//Use the new generic ad type when it becomes available.
+	//Until then, actual writes to the collector are disabled,
+	//because it conflicts with the schedd on the same host..
 
 	m_public_ad.SetMyTypeName( SCHEDD_ADTYPE );
 	m_public_ad.SetTargetTypeName( "" );
@@ -150,10 +152,10 @@ Scheduler::TimerHandler_JobLogPolling() {
 
 void
 Scheduler::TimerHandler_UpdateCollector() {
-	m_collectors->sendUpdates(UPDATE_SCHEDD_AD, &m_public_ad);
+	//m_collectors->sendUpdates(UPDATE_SCHEDD_AD, &m_public_ad);
 }
 
 void
 Scheduler::InvalidatePublicAd() {
-	m_collectors->sendUpdates(INVALIDATE_SCHEDD_ADS, &m_public_ad);
+	//m_collectors->sendUpdates(INVALIDATE_SCHEDD_ADS, &m_public_ad);
 }
