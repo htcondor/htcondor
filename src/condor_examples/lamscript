@@ -18,6 +18,7 @@ if [ $_CONDOR_PROCNO -ne 0 ]
 then
 		wait
 		sshd_cleanup
+		exit 0
 fi
 
 EXECUTABLE=$1
