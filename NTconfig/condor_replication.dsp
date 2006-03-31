@@ -128,15 +128,7 @@ SOURCE=..\src\condor_had\ReplicatorStateMachine.h
 # Begin Source File
 
 SOURCE=..\src\condor_had\soap_replicationC.C
-
-!IF  "$(CFG)" == "condor_replication - Win32 Release"
-
 # SUBTRACT CPP /YX /Yc /Yu
-
-!ELSEIF  "$(CFG)" == "condor_replication - Win32 Debug"
-
-!ENDIF 
-
 # End Source File
 # Begin Source File
 
@@ -145,28 +137,12 @@ SOURCE=..\src\condor_had\soap_replicationH.h
 # Begin Source File
 
 SOURCE=..\src\condor_had\soap_replicationServer.C
-
-!IF  "$(CFG)" == "condor_replication - Win32 Release"
-
 # SUBTRACT CPP /YX /Yc /Yu
-
-!ELSEIF  "$(CFG)" == "condor_replication - Win32 Debug"
-
-!ENDIF 
-
 # End Source File
 # Begin Source File
 
 SOURCE=..\src\condor_had\soap_replicationStub.C
-
-!IF  "$(CFG)" == "condor_replication - Win32 Release"
-
 # SUBTRACT CPP /YX /Yc /Yu
-
-!ELSEIF  "$(CFG)" == "condor_replication - Win32 Debug"
-
-!ENDIF 
-
 # End Source File
 # Begin Source File
 
