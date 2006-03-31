@@ -72,6 +72,7 @@ public:
 	bool	OnHold( void ) { return on_hold; };
 	void	Stop( bool never_forward = false );
 	void	StopFast( bool never_forward = false );
+	int		StopFastTimer();
 	void	StopPeaceful();
 	void	HardKill();
 	void	Exited( int );
