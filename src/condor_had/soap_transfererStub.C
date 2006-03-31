@@ -20,6 +20,8 @@
   * RIGHT.
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+#include "condor_common.h"
+
 #include "condorTransferer.nsmap"
   
 #include "../condor_daemon_core.V6/soap_daemon_core.cpp"
