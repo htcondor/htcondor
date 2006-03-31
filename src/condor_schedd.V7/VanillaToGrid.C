@@ -77,6 +77,9 @@ bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, const char * gridresour
 	ad->Delete(ATTR_Q_DATE);
 	ad->Delete(ATTR_JOB_REMOTE_WALL_CLOCK);
 	ad->Delete(ATTR_SERVER_TIME);
+	ad->Delete(ATTR_AUTO_CLUSTER_ID);
+	ad->Delete(ATTR_AUTO_CLUSTER_ATTRS);
+	ad->Delete(ATTR_TRANSFER_OUTPUT_REMAPS);
 
 
 
