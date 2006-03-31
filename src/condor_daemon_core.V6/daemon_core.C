@@ -4045,6 +4045,7 @@ int DaemonCore::Shutdown_Graceful(pid_t pid)
 			// don't leak handles!
 			CloseDesktop(hdesk);
 			CloseWindowStation(hwinsta);
+			CloseHandle(threadHandle);
 		}
 	}
 
@@ -4565,7 +4566,6 @@ BOOL CALLBACK
 DCFindWinSta(LPTSTR winsta_name, LPARAM p)
 {
 	BOOL ret_value;
-	priv_state priv;
 	BOOL check_winsta0;
 	char* use_visible;
 	check_winsta0 = FALSE;
@@ -5254,6 +5254,15 @@ int DaemonCore::Create_Process(
 	}
 
    	if ( priv != PRIV_USER_FINAL || !can_switch_ids() ) {
+
+			// If are not switching ids, and yet we want PRIV_USER_FINAL,
+			// we need to add flag CREATE_NEW_CONSOLE to be certain the user
+			// job starts in a new console windows.  This allows Condor to 
+			// actually find the window when we want to send it a WM_CLOSE.
+		if ( priv == PRIV_USER_FINAL ) {
+			new_process_group |= CREATE_NEW_CONSOLE;
+		}
+
 		cp_result = ::CreateProcess(bIs16Bit ? NULL : namebuf,(char*)strArgs.Value(),NULL,
 			NULL,inherit_handles, new_process_group,newenv,cwd,&si,&piProcess);
 	} else {
