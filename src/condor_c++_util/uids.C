@@ -463,6 +463,13 @@ _set_priv(priv_state s, char file[], int line, int dologging)
 {
 	priv_state PrevPrivState = CurrentPrivState;
 
+	/* NOTE  NOTE   NOTE  NOTE
+	 * This function is called from deep inside dprintf.  To
+	 * avoid potentially nasty recursive situations, ONLY call
+	 * dprintf() from inside of this function if the 
+	 * dologging parameter is non-zero.  
+	 */
+
 	// On NT, PRIV_CONDOR = PRIV_ROOT, but we let it switch so daemoncore's
 	// priv state checking won't get totally confused.
 	if ( ( s == PRIV_CONDOR  || s == PRIV_ROOT ) &&
@@ -477,8 +484,10 @@ _set_priv(priv_state s, char file[], int line, int dologging)
 	}
 
 	if (CurrentPrivState == PRIV_USER_FINAL) {
-		dprintf(D_ALWAYS,
+		if ( dologging ) {
+			dprintf(D_ALWAYS,
 				"warning: attempted switch out of PRIV_USER_FINAL\n");
+		}
 		return PRIV_USER_FINAL;
 	}
 
@@ -491,7 +500,11 @@ _set_priv(priv_state s, char file[], int line, int dologging)
 			break;
 		case PRIV_USER:
 		case PRIV_USER_FINAL:
-			dprintf(D_FULLDEBUG, "TokenCache contents: \n%s", cached_tokens.cacheToString().Value());
+			if ( dologging ) {
+				dprintf(D_FULLDEBUG, 
+						"TokenCache contents: \n%s", 
+						cached_tokens.cacheToString().Value());
+			}
 			if ( CurrUserHandle ) {
 				if ( PrevPrivState == PRIV_UNKNOWN ) {
 					// make certain we're back to 'condor' before impersonating
@@ -507,12 +520,16 @@ _set_priv(priv_state s, char file[], int line, int dologging)
 		case PRIV_UNKNOWN:		/* silently ignore */
 			break;
 		default:
-			dprintf( D_ALWAYS, "set_priv: Unknown priv state %d\n", (int)s);
+			if ( dologging ) {
+				dprintf( D_ALWAYS, "set_priv: Unknown priv state %d\n", (int)s);
+			}
 		}
 	}
 
 logandreturn:
-	if (dologging) log_priv(PrevPrivState, CurrentPrivState, file, line);
+	if (dologging) {
+		log_priv(PrevPrivState, CurrentPrivState, file, line);
+	}
 	return PrevPrivState;
 }	
 
