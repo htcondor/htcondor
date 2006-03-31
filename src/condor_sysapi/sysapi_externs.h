@@ -69,4 +69,7 @@ extern int _sysapi_reserve_memory;
 /* needed by ckptpltfrm.c */
 extern char* _sysapi_ckptpltfrm;
 
+/* needed by load_avg.c */
+extern int _sysapi_getload;
+
 #endif /* SYSAPI_EXTERNS_H */

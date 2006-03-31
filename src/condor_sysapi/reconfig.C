@@ -72,6 +72,9 @@ int _sysapi_reserve_memory = 0;
 /* needed by ckptpltfrm.c */
 char *_sysapi_ckptpltfrm = NULL;
 
+/* needed by load_avg.c */
+int _sysapi_getload = 0;
+
 
 BEGIN_C_DECLS
 
@@ -190,6 +193,8 @@ sysapi_reconfig(void)
 		_sysapi_ckptpltfrm = strdup(tmp);
 		free(tmp);
 	}
+
+	_sysapi_getload = param_boolean_int("SYSAPI_GET_LOADAVG",1);
 
 	/* tell the library I have configured myself */
 	_sysapi_config = TRUE;

@@ -37,6 +37,7 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "sysapi.h"
+#include "sysapi_externs.h"
 #include "my_popen.h"
 
 /* the cooked version */
@@ -45,7 +46,11 @@ sysapi_load_avg(void)
 {
 	sysapi_internal_reconfig();
 
-	return sysapi_load_avg_raw();
+	if ( _sysapi_getload ) {
+		return sysapi_load_avg_raw();
+	} else {
+		return 0.0;
+	}
 }
 
 #if defined(HPUX)
