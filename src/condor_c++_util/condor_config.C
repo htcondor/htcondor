@@ -1815,7 +1815,8 @@ process_runtime_configs()
 static int
 process_dynamic_configs()
 {
-	int per_rval, run_rval;
+	int per_rval = 0;
+	int run_rval = 0;
 
 	init_dynamic_config();
 
