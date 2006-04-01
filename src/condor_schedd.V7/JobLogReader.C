@@ -68,6 +68,9 @@ JobLogReader::poll(classad::ClassAdCollection *ad_collection) {
 	case NO_CHANGE:
 		break;
 	}
+
+	parser.closeFile();
+
 	if(success) {
 		// update prober to most recent observations about the job log file
 		prober.incrementProbeInfo();
