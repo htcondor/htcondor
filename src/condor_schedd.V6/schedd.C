@@ -2896,6 +2896,7 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 	int i,cluster,proc,index;
 	char new_attr_value[500];
 	char *buf = NULL;
+	ExprTree *expr = NULL;
 	char *SpoolSpace = NULL;
 		// figure out how many jobs we're dealing with
 	int len = (*jobs).getlast() + 1;
@@ -2932,14 +2933,15 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 		SetAttributeString(cluster,proc,ATTR_JOB_IWD,SpoolSpace);
 
 			// Backup the original TRANSFER_OUTPUT_REMAPS at submit time
-		if (buf) free(buf);
-		buf = NULL;
-		ad->LookupString(ATTR_TRANSFER_OUTPUT_REMAPS,&buf);
-		if ( buf ) {
+		expr = ad->Lookup(ATTR_TRANSFER_OUTPUT_REMAPS);
+		if ( expr ) {
+			char *remap_buf = NULL;
+			ASSERT( expr->RArg() );
 			sprintf(new_attr_value,"SUBMIT_%s",ATTR_TRANSFER_OUTPUT_REMAPS);
-			SetAttributeString(cluster,proc,new_attr_value,buf);
-			free(buf);
-			buf = NULL;
+			expr->RArg()->PrintToNewStr(&remap_buf);
+			ASSERT(remap_buf);
+			SetAttribute(cluster,proc,new_attr_value,remap_buf);
+			free(remap_buf);
 		}
 			// Set TRANSFER_OUTPUT_REMAPS to Undefined so that we don't
 			// do remaps when the job's output files come back into the
