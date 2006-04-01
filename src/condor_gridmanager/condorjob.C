@@ -1365,7 +1365,6 @@ ClassAd *CondorJob::buildSubmitAd()
 	submit_ad->Delete( ATTR_LAST_JOB_LEASE_RENEWAL_FAILED );
 	submit_ad->Delete( ATTR_TIMER_REMOVE_CHECK );
 	submit_ad->Delete( ATTR_TIMER_REMOVE_CHECK_SENT );
-	submit_ad->Delete( ATTR_TRANSFER_OUTPUT_REMAPS );
 	submit_ad->Delete( ATTR_AUTO_CLUSTER_ID );
 	submit_ad->Delete( ATTR_AUTO_CLUSTER_ATTRS );
 
