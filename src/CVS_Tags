@@ -1,3 +1,8 @@
+04/03/06 V6_7-freebsd-2-{root,branch}
+   I am starting over with a fresh branch because I messed up #define's
+   This is following advice from Erik
+   Created from the BUILD-V6_7-branch-2006-3-30 tag of V6_7_CODE.
+
 03/29/06 V6_7-{pre,post}_merge-V6_6-merge-57
   The pre and post tags of for the 57th V6_6-branch merge into
   V6_7-branch.  The only  change is the fix to the collector to not
