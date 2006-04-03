@@ -865,6 +865,7 @@ GlobusJob::~GlobusJob()
 		free( resourceManagerString );
 	}
 	if ( jobContact ) {
+		JobsByContact.remove(HashKey(globusJobId(jobContact)));
 		free( jobContact );
 	}
 	if ( RSL ) {
