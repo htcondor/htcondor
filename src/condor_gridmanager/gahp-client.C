@@ -142,6 +142,8 @@ GahpServer::GahpServer(const char *id, const char *path, const ArgList *args)
 	globus_gt4_gram_callback_reqid = 0;
 	globus_gt4_gram_callback_contact = NULL;
 
+	unicore_gahp_callback_func = NULL;
+	unicore_gahp_callback_reqid = 0;
 
 	my_id = strdup(id);
 	binary_path = strdup(path);
@@ -2109,6 +2111,20 @@ GahpServer::poll()
 			} else {
 				dprintf(D_FULLDEBUG,
 					"GAHP - Bad client_callback results line\n");
+			}
+			continue;
+		}
+
+			// Check and see if this is a unicore callback.  If so,
+			// deal with it here and now.
+		if ( result_reqid == unicore_gahp_callback_reqid ) {
+			if ( result->argc == 2 ) {
+				(*unicore_gahp_callback_func)( 
+									strcmp(result->argv[1],NULLSTRING) ?
+									result->argv[1] : NULL );
+			} else {
+				dprintf(D_FULLDEBUG,
+					"GAHP - Bad unicore callback results line\n");
 			}
 			continue;
 		}
@@ -5354,4 +5370,50 @@ free(desc);
 
 		// If we made it here, command is still pending...
 	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+int 
+GahpClient::unicore_job_callback(unicore_gahp_callback_func_t callback_func)
+{
+	char buf[150];
+	static const char* command = "UNICORE_JOB_CALLBACK";
+
+		// First check if we already enabled callbacks; if so,
+		// just return our stashed contact.
+	if ( server->unicore_gahp_callback_func != NULL ) {
+		if ( callback_func != server->unicore_gahp_callback_func ) {
+			EXCEPT("unicore_job_callback called twice");
+		}
+		return 0;
+	}
+
+		// Check if this command is supported
+	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+
+		// This command is always synchronous, so results_only mode
+		// must always fail...
+	if ( m_mode == results_only ) {
+		return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+	}
+
+	int reqid = server->new_reqid();
+	int x = snprintf(buf,sizeof(buf),"%s %d",command,reqid);
+	ASSERT( x > 0 && x < (int)sizeof(buf) );
+	server->write_line(buf);
+	Gahp_Args result;
+	server->read_argv(result);
+	if ( result.argc != 1 || result.argv[0][0] != 'S' ) {
+			// Badness !
+		dprintf(D_ALWAYS,"GAHP command '%s' failed\n",command);
+		error_string = "";
+		return 1;
+	} 
+
+		// Goodness !
+	server->unicore_gahp_callback_reqid = reqid;
+ 	server->unicore_gahp_callback_func = callback_func;
+
+	return 0;
 }

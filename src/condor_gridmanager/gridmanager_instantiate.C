@@ -44,6 +44,7 @@
 #include "mirrorresource.h"
 #include "nordugridjob.h"
 #include "nordugridresource.h"
+#include "unicorejob.h"
 
 template class List<NordugridJob>;
 template class Item<NordugridJob>;
@@ -102,6 +103,9 @@ template class HashTable<HashKey, MirrorJob *>;
 template class HashBucket<HashKey, MirrorJob *>;
 template class HashTable<HashKey, MirrorResource *>;
 template class HashBucket<HashKey, MirrorResource *>;
+
+template class HashTable<HashKey, UnicoreJob *>;
+template class HashBucket<HashKey, UnicoreJob *>;
 
 template class HashTable<HashKey, Proxy *>;
 template class HashBucket<HashKey, Proxy *>;

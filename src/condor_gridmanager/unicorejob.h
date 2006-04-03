@@ -64,6 +64,10 @@ class UnicoreJob : public BaseJob
 	static void setGahpCallTimeout( int new_timeout )
 		{ gahpCallTimeout = new_timeout; }
 
+	static HashTable<HashKey, UnicoreJob *> JobsByUnicoreId;
+
+	static void UnicoreGahpCallbackHandler( const char *update_ad_string );
+
 	int gmState;
 	int unicoreState;
 	time_t lastProbeTime;
@@ -73,14 +77,18 @@ class UnicoreJob : public BaseJob
 	time_t lastSubmitAttempt;
 	int numSubmitAttempts;
 	int submitFailureCode;
+	ClassAd *newRemoteStatusAd;
 
 	GahpClient *gahp;
 
 	void UpdateUnicoreState( const char *update_ad_string );
+	void UpdateUnicoreState( ClassAd *update_ad );
 	MyString *buildSubmitAd();
+	void SetRemoteJobId( const char *job_id );
 
 	void DeleteOutput();
 
+	char *resourceName;
 	char *jobContact;
 		// If we're in the middle of a job create call, the ad
 		// string is stored here (so that we don't have to reconstruct

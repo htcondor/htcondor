@@ -47,6 +47,8 @@ typedef void (* globus_gt4_gram_callback_func_t)(void * user_callback_arg,
 												 const char * fault,
 												 const int exit_code);
 
+typedef void (* unicore_gahp_callback_func_t)(const char *update_ad_string);
+
 static const char *GAHPCLIENT_DEFAULT_SERVER_ID = "DEFAULT";
 static const char *GAHPCLIENT_DEFAULT_SERVER_PATH = "DEFAULT";
 
@@ -188,6 +190,9 @@ class GahpServer : public Service {
 	void *globus_gt4_gram_user_callback_arg;
 	globus_gt4_gram_callback_func_t globus_gt4_gram_callback_func;
 	int globus_gt4_gram_callback_reqid;
+
+	unicore_gahp_callback_func_t unicore_gahp_callback_func;
+	int unicore_gahp_callback_reqid;
 
 	GahpProxyInfo *master_proxy;
 	int proxy_check_tid;
@@ -593,6 +598,9 @@ class GahpClient : public Service {
 		///
 		int
 		unicore_job_recover(const char * description);
+
+		int
+		unicore_job_callback(unicore_gahp_callback_func_t callback_func);
 
 #ifdef CONDOR_GLOBUS_HELPER_WANT_DUROC
 	// Not yet ready for prime time...

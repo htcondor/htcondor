@@ -85,6 +85,8 @@ static char *GMStateNames[] = {
 // evalute PeriodicHold expression in job ad.
 #define MAX_SUBMIT_ATTEMPTS	1
 
+#define HASH_TABLE_SIZE			500
+
 
 void UnicoreJobInit()
 {
@@ -120,17 +122,72 @@ BaseJob *UnicoreJobCreate( ClassAd *jobad )
 }
 
 
+void
+UnicoreJob::UnicoreGahpCallbackHandler( const char *update_ad_string )
+{
+	ClassAd *update_ad = NULL;
+	MyString job_id;
+	ClassAdXMLParser xml_parser;
+	UnicoreJob *job;
+
+	dprintf( D_FULLDEBUG, "UnicoreGahpCallbackHandler: got job callback: %s\n",
+			 update_ad_string );
+
+	update_ad = xml_parser.ParseClassAd( update_ad_string );
+	if ( update_ad == NULL ) {
+		dprintf( D_ALWAYS, "UnicoreGahpCallbackHandler: unparsable ad\n" );
+		return;
+	}
+
+	if ( update_ad->LookupString( "UnicoreJobId", job_id ) == 0 ) {
+		dprintf( D_ALWAYS, "UnicoreGahpCallbackHandler: no UnicoreJobId in "
+				 "status ad\n" );
+		delete update_ad;
+		return;
+	}
+	
+	if ( JobsByUnicoreId.lookup( HashKey( job_id.Value() ), job ) != 0 ||
+		 job == NULL ) {
+		dprintf( D_FULLDEBUG, "UnicoreGahpCallbackHandler: status ad for "
+				 "unknown job, ignoring\n" );
+		delete update_ad;
+		return;
+	}
+
+	if ( job->newRemoteStatusAd == NULL ) {
+		job->newRemoteStatusAd = update_ad;
+		job->SetEvaluateState();
+		return;
+	}
+
+		// If we already have an unprocessed update ad, merge the two,
+		// with the new one overwriting duplicate attributes.
+	ExprTree *new_expr;
+
+	update_ad->ResetExpr();
+	while ( (new_expr = update_ad->NextExpr()) ) {
+		job->newRemoteStatusAd->Insert( new_expr->DeepCopy() );
+	}
+
+	job->SetEvaluateState();
+
+	delete update_ad;
+}
+
 int UnicoreJob::probeInterval = 300;			// default value
 int UnicoreJob::submitInterval = 300;			// default value
 int UnicoreJob::gahpCallTimeout = 300;			// default value
 
+HashTable<HashKey, UnicoreJob *> UnicoreJob::JobsByUnicoreId( HASH_TABLE_SIZE,
+															  hashFunction );
+
 UnicoreJob::UnicoreJob( ClassAd *classad )
 	: BaseJob( classad )
 {
-	char buff[4096];
-	bool job_already_submitted = false;
+	MyString buff;
 	MyString error_string = "";
 
+	resourceName = NULL;
 	jobContact = NULL;
 	gmState = GM_INIT;
 	unicoreState = condorState;
@@ -142,6 +199,7 @@ UnicoreJob::UnicoreJob( ClassAd *classad )
 	numSubmitAttempts = 0;
 	submitFailureCode = 0;
 	submitAd = NULL;
+	newRemoteStatusAd = NULL;
 	gahp = NULL;
 	errorString = "";
 
@@ -163,11 +221,29 @@ UnicoreJob::UnicoreJob( ClassAd *classad )
 	gahp->setMode( GahpClient::normal );
 	gahp->setTimeout( gahpCallTimeout );
 
-	buff[0] = '\0';
-	jobAd->LookupString( "GridJobId", buff );
-	if ( buff[0] != '\0' && strrchr( buff, ' ' ) != NULL ) {
-		jobContact = strdup( strrchr( buff, ' ' ) + 1 );
-		job_already_submitted = true;
+	jobAd->LookupString( ATTR_GRID_RESOURCE, &resourceName );
+
+	jobAd->LookupString( ATTR_GRID_JOB_ID, buff );
+	if ( !buff.IsEmpty() ) {
+		const char *token;
+
+		buff.Tokenize();
+
+		token = buff.GetNextToken( " ", false );
+		if ( !token || stricmp( token, "unicore" ) ) {
+			error_string.sprintf( "%s not of type unicore", ATTR_GRID_JOB_ID );
+			goto error_exit;
+		}
+
+		token = buff.GetNextToken( " ", false );
+		token = buff.GetNextToken( " ", false );
+		token = buff.GetNextToken( " ", false );
+		if ( !token ) {
+			error_string.sprintf( "%s missing job ID",
+								  ATTR_GRID_JOB_ID );
+			goto error_exit;
+		}
+		SetRemoteJobId( token );
 	}
 
 	return;
@@ -185,7 +261,14 @@ UnicoreJob::UnicoreJob( ClassAd *classad )
 UnicoreJob::~UnicoreJob()
 {
 	if ( jobContact ) {
+		JobsByUnicoreId.remove(HashKey(jobContact));
 		free( jobContact );
+	}
+	if ( resourceName ) {
+		free( resourceName );
+	}
+	if ( newRemoteStatusAd ) {
+		delete newRemoteStatusAd;
 	}
 	if ( gahp != NULL ) {
 		delete gahp;
@@ -239,6 +322,21 @@ int UnicoreJob::doEvaluateState()
 				gmState = GM_HOLD;
 				break;
 			}
+
+			GahpClient::mode saved_mode = gahp->getMode();
+			gahp->setMode( GahpClient::blocking );
+
+			rc = gahp->unicore_job_callback( UnicoreGahpCallbackHandler );
+			if ( rc != GLOBUS_SUCCESS ) {
+				dprintf( D_ALWAYS,
+						 "(%d.%d) Error enabling unicore callback, err=%d\n", 
+						 procID.cluster, procID.proc, rc );
+				jobAd->Assign( ATTR_HOLD_REASON, "Failed to initialize GAHP" );
+				gmState = GM_HOLD;
+				break;
+			}
+
+			gahp->setMode( saved_mode );
 
 			gmState = GM_START;
 			} break;
@@ -334,12 +432,8 @@ int UnicoreJob::doEvaluateState()
 				if ( rc == GLOBUS_SUCCESS ) {
 						// job_contact was strdup()ed for us. Now we take
 						// responsibility for free()ing it.
-					jobContact = job_contact;
-					char val[80];
-					jobAd->LookupString( "GridResource", val );
-					strcat( val, " " );
-					strcat( val, jobContact );
-					jobAd->Assign( "GridJobId", val );
+					SetRemoteJobId( job_contact );
+					free( job_contact );
 					gmState = GM_SUBMIT_SAVE;
 				} else {
 					// unhandled error
@@ -347,6 +441,9 @@ int UnicoreJob::doEvaluateState()
 							procID.cluster, procID.proc);
 					dprintf(D_ALWAYS,"(%d.%d)    submitAd='%s'\n",
 							procID.cluster, procID.proc,submitAd->Value());
+					if ( job_contact ) {
+						free( job_contact );
+					}
 					gmState = GM_UNSUBMITTED;
 					reevaluate_state = true;
 				}
@@ -403,6 +500,15 @@ int UnicoreJob::doEvaluateState()
 //				gmState = GM_CANCEL;
 			} else if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
+			} else if ( newRemoteStatusAd ) {
+dprintf(D_FULLDEBUG,"(%d.%d) *** Processing callback ad\n",procID.cluster, procID.proc );
+				lastProbeTime = now;
+				UpdateUnicoreState( newRemoteStatusAd );
+				delete newRemoteStatusAd;
+				newRemoteStatusAd = NULL;
+				reevaluate_state = true;
+/* Now that the gahp tells us when a job status changes, we don't need to
+ * do active probes.
 			} else {
 				if ( lastProbeTime < enteredCurrentGmState ) {
 					lastProbeTime = enteredCurrentGmState;
@@ -420,13 +526,14 @@ int UnicoreJob::doEvaluateState()
 					delay = (lastProbeTime + probeInterval) - now;
 				}				
 				daemonCore->Reset_Timer( evaluateStateTid, delay );
+*/
 			}
 			} break;
 		case GM_PROBE_JOBMANAGER: {
 			if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
 			} else {
-				char *status_ad;
+				char *status_ad = NULL;
 				rc = gahp->unicore_job_status( jobContact,
 											   &status_ad );
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
@@ -437,10 +544,20 @@ int UnicoreJob::doEvaluateState()
 					// unhandled error
 					dprintf(D_ALWAYS,"(%d.%d) unicore_job_status() failed\n",
 							procID.cluster, procID.proc);
+					if ( status_ad ) {
+						free( status_ad );
+					}
 					gmState = GM_CANCEL;
 					break;
 				}
 				UpdateUnicoreState( status_ad );
+				if ( status_ad ) {
+					free( status_ad );
+				}
+				if ( newRemoteStatusAd ) {
+					delete newRemoteStatusAd;
+					newRemoteStatusAd = NULL;
+				}
 				lastProbeTime = now;
 				gmState = GM_SUBMITTED;
 			}
@@ -521,11 +638,7 @@ if ( unicoreState != COMPLETED ) {
 			// submission, in both the gridmanager and the schedd.
 
 			errorString = "";
-			if ( jobContact != NULL ) {
-				free( jobContact );
-				jobContact = NULL;
-				jobAd->Assign( "GridJobId", "Undefined" );
-			}
+			SetRemoteJobId( NULL );
 			JobIdle();
 
 			// If there are no updates to be done when we first enter this
@@ -625,15 +738,36 @@ void UnicoreJob::UpdateUnicoreState( const char *update_ad_string )
 {
 	ClassAd *update_ad;
 	ClassAdXMLParser xml_parser;
+
+	if ( update_ad_string == NULL ) {
+		dprintf( D_ALWAYS, "(%d.%d) Received NULL unicore status ad string\n",
+				 procID.cluster, procID.proc );
+		return;
+	}
+
+	update_ad = xml_parser.ParseClassAd( update_ad_string );
+
+	UpdateUnicoreState( update_ad );
+
+	delete update_ad;
+}
+
+void UnicoreJob::UpdateUnicoreState( ClassAd *update_ad )
+{
 	const char *next_attr_name;
 	ExprTree *next_expr;
 
-	update_ad = xml_parser.ParseClassAd( update_ad_string );
+	if ( update_ad == NULL ) {
+		dprintf( D_ALWAYS, "(%d.%d) Received NULL unicore status ad\n",
+				 procID.cluster, procID.proc );
+		return;
+	}
 
 	update_ad->ResetName();
 	while ( ( next_attr_name = update_ad->NextName() ) != NULL ) {
 		if ( strcasecmp( next_attr_name, ATTR_MY_TYPE ) == 0 ||
-			 strcasecmp( next_attr_name, ATTR_TARGET_TYPE ) == 0 ) {
+			 strcasecmp( next_attr_name, ATTR_TARGET_TYPE ) == 0 ||
+			 strcasecmp( next_attr_name, "UnicoreJobId" ) == 0 ) {
 			continue;
 		}
 		if ( strcasecmp( next_attr_name, ATTR_JOB_STATUS ) == 0 ) {
@@ -650,8 +784,32 @@ void UnicoreJob::UpdateUnicoreState( const char *update_ad_string )
 		next_expr = update_ad->Lookup( next_attr_name );
 		jobAd->Insert( next_expr->DeepCopy() );
 	}
+}
 
-	delete update_ad;
+void UnicoreJob::SetRemoteJobId( const char *job_id )
+{
+		// We need to maintain a hashtable based on the job id returned
+		// but the unicore gahp. This is because the job status
+		// notifications we receive don't include the unicore resource.
+	if ( jobContact ) {
+		JobsByUnicoreId.remove(HashKey(jobContact));
+	}
+	if ( job_id ) {
+		JobsByUnicoreId.insert(HashKey(job_id), this);
+	}
+
+	free( jobContact );
+	if ( job_id ) {
+		jobContact = strdup( job_id );
+	} else {
+		jobContact = NULL;
+	}
+
+	MyString full_job_id;
+	if ( job_id ) {
+		full_job_id.sprintf( "%s %s", resourceName, job_id );
+	}
+	BaseJob::SetRemoteJobId( full_job_id.Value() );
 }
 
 MyString *UnicoreJob::buildSubmitAd()
