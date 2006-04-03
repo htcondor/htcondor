@@ -2934,14 +2934,21 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 
 			// Backup the original TRANSFER_OUTPUT_REMAPS at submit time
 		expr = ad->Lookup(ATTR_TRANSFER_OUTPUT_REMAPS);
+		sprintf(new_attr_value,"SUBMIT_%s",ATTR_TRANSFER_OUTPUT_REMAPS);
 		if ( expr ) {
 			char *remap_buf = NULL;
 			ASSERT( expr->RArg() );
-			sprintf(new_attr_value,"SUBMIT_%s",ATTR_TRANSFER_OUTPUT_REMAPS);
 			expr->RArg()->PrintToNewStr(&remap_buf);
 			ASSERT(remap_buf);
 			SetAttribute(cluster,proc,new_attr_value,remap_buf);
 			free(remap_buf);
+		}
+		else if(ad->Lookup(new_attr_value)) {
+				// SUBMIT_TransferOutputRemaps is defined, but
+				// TransferOutputRemaps is not; disable the former,
+				// so that when somebody fetches the sandbox, nothing
+				// gets remapped.
+			SetAttribute(cluster,proc,new_attr_value,"Undefined");
 		}
 			// Set TRANSFER_OUTPUT_REMAPS to Undefined so that we don't
 			// do remaps when the job's output files come back into the
