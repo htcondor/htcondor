@@ -173,7 +173,7 @@ StatInfo::stat_file( const char *path )
 		if ( ENOENT == si_errno ) {
 			si_error = SINoFile;
 		} else {
-			dprintf( D_ALWAYS, 
+			dprintf( D_FULLDEBUG, 
 					 "StatInfo::%s(%s) failed, errno: %d = %s\n",
 					 statbuf.GetStatFn(), path, errno, strerror( errno ) );
 		}
@@ -216,7 +216,7 @@ StatInfo::stat_file( int fd )
 		if ( ENOENT == si_errno ) {
 			si_error = SINoFile;
 		} else {
-			dprintf( D_ALWAYS, 
+			dprintf( D_FULLDEBUG, 
 					 "StatInfo::%s(fd=%d) failed, errno: %d = %s\n",
 					 statbuf.GetStatFn(), fd, errno, strerror( errno ) );
 		}
