@@ -92,6 +92,7 @@ class NordugridJob : public BaseJob
 	MyString *RSL;
 		// Same as for RSL, but used by the file staging calls.
 	StringList *stageList;
+	StringList *stageLocalList;
 
 		// These get set before file stage out, but don't get handed
 		// to JobTerminated() until after file stage out succeeds.
@@ -101,6 +102,7 @@ class NordugridJob : public BaseJob
 	MyString *buildSubmitRSL();
 	StringList *buildStageInList();
 	StringList *buildStageOutList();
+	StringList *buildStageOutLocalList( StringList *stage_list );
 
  protected:
 };

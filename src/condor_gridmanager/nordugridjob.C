@@ -29,6 +29,7 @@
 #include "basename.h"
 #include "condor_ckpt_name.h"
 #include "nullfile.h"
+#include "filename_tools.h"
 
 #include "globus_utils.h"
 #include "gridmanager.h"
@@ -183,6 +184,7 @@ NordugridJob::NordugridJob( ClassAd *classad )
 	gahp = NULL;
 	RSL = NULL;
 	stageList = NULL;
+	stageLocalList = NULL;
 
 	// In GM_HOLD, we assume HoldReason to be set only if we set it, so make
 	// sure it's unset when we start (unless the job is already held).
@@ -284,6 +286,9 @@ NordugridJob::~NordugridJob()
 	}
 	if ( stageList ) {
 		delete stageList;
+	}
+	if ( stageLocalList ) {
+		delete stageLocalList;
 	}
 }
 
@@ -579,8 +584,12 @@ int NordugridJob::doEvaluateState()
 			if ( stageList == NULL ) {
 				stageList = buildStageOutList();
 			}
-			rc = gahp->nordugrid_stage_out( resourceManagerString, remoteJobId,
-											*stageList );
+			if ( stageLocalList == NULL ) {
+				stageLocalList = buildStageOutLocalList( stageList );
+			}
+			rc = gahp->nordugrid_stage_out2( resourceManagerString,
+											 remoteJobId,
+											 *stageList, *stageLocalList );
 			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
@@ -798,6 +807,10 @@ int NordugridJob::doEvaluateState()
 			if ( stageList ) {
 				delete stageList;
 				stageList = NULL;
+			}
+			if ( stageLocalList ) {
+				delete stageLocalList;
+				stageLocalList = NULL;
 			}
 		}
 
@@ -1052,9 +1065,7 @@ StringList *NordugridJob::buildStageInList()
 
 StringList *NordugridJob::buildStageOutList()
 {
-	StringList *tmp_list = NULL;
 	StringList *stage_list = NULL;
-	char *filename = NULL;
 	MyString buf;
 	MyString iwd = "/";
 	bool transfer = TRUE;
@@ -1066,14 +1077,14 @@ StringList *NordugridJob::buildStageOutList()
 	}
 
 	jobAd->LookupString( ATTR_TRANSFER_OUTPUT_FILES, buf );
-	tmp_list = new StringList( buf.Value(), "," );
+	stage_list = new StringList( buf.Value(), "," );
 
 	jobAd->LookupBool( ATTR_TRANSFER_OUTPUT, transfer );
 	if ( transfer && jobAd->LookupString( ATTR_JOB_OUTPUT, buf ) == 1) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
 		if ( ! nullFile(buf.Value()) ) {
-			if ( !tmp_list->file_contains( buf.Value() ) ) {
-				tmp_list->append( buf.Value() );
+			if ( !stage_list->file_contains( buf.Value() ) ) {
+				stage_list->append( buf.Value() );
 			}
 		}
 	}
@@ -1083,25 +1094,56 @@ StringList *NordugridJob::buildStageOutList()
 	if ( transfer && jobAd->LookupString( ATTR_JOB_ERROR, buf ) == 1) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
 		if ( ! nullFile(buf.Value()) ) {
-			if ( !tmp_list->file_contains( buf.Value() ) ) {
-				tmp_list->append( buf.Value() );
+			if ( !stage_list->file_contains( buf.Value() ) ) {
+				stage_list->append( buf.Value() );
 			}
 		}
 	}
 
-	stage_list = new StringList;
+	return stage_list;
+}
 
-	tmp_list->rewind();
-	while ( ( filename = tmp_list->next() ) ) {
-		if ( filename[0] == '/' ) {
-			buf.sprintf( "%s", filename );
-		} else {
-			buf.sprintf( "%s%s", iwd.Value(), filename );
+StringList *NordugridJob::buildStageOutLocalList( StringList *stage_list )
+{
+	StringList *stage_local_list;
+	char *remaps = NULL;
+	char local_name[_POSIX_PATH_MAX*3];
+	char *remote_name;
+	MyString buff;
+	MyString iwd = "/";
+
+	if ( jobAd->LookupString( ATTR_JOB_IWD, iwd ) ) {
+		if ( iwd.Length() > 1 && iwd[iwd.Length() - 1] != '/' ) {
+			iwd += '/';
 		}
-		stage_list->append( buf.Value() );
 	}
 
-	delete tmp_list;
+	stage_local_list = new StringList;
 
-	return stage_list;
+	jobAd->LookupString( ATTR_TRANSFER_OUTPUT_REMAPS, &remaps );
+
+	stage_list->rewind();
+	while ( (remote_name = stage_list->next()) ) {
+		if( remaps && filename_remap_find( remaps, remote_name,
+										   local_name ) ) {
+				// file is remapped
+		} else {
+			strncpy( local_name, condor_basename( remote_name ),
+					 sizeof(local_name) );
+			local_name[sizeof(local_name)-1] = '\0';
+		}
+
+		if ( local_name[0] == '/' ) {
+			buff.sprintf( "%s", local_name );
+		} else {
+			buff.sprintf( "%s%s", iwd.Value(), local_name );
+		}
+		stage_local_list->append( buff.Value() );
+	}
+
+	if ( remaps ) {
+		free( remaps );
+	}
+
+	return stage_local_list;
 }

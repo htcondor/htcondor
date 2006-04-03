@@ -569,6 +569,10 @@ class GahpClient : public Service {
 							StringList &files);
 
 		int
+		nordugrid_stage_out2(const char *hostname, const char *job_id,
+							 StringList &src_files, StringList &dest_files);
+
+		int
 		nordugrid_exit_info(const char *hostname, const char *job_id,
 							bool &normal_exit, int &exit_code,
 							float &wallclock, float &sys_cpu,
