@@ -1523,7 +1523,7 @@ CONDOR_EXTERNAL_VERSION([gt4gahp],[1.4])
 
 CONDOR_EXTERNAL_VERSION([unicoregahp],[1.2.0])
 
-CONDOR_EXTERNAL_VERSION([nordugridgahp],[1.0.0])
+CONDOR_EXTERNAL_VERSION([nordugridgahp],[1.1.0])
 
 CONDOR_EXTERNAL_VERSION([zlib],[1.1.3])
 
