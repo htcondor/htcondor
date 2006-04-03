@@ -3042,22 +3042,37 @@ MyString *GlobusJob::buildSubmitRSL()
 				*rsl += ')';
 			}
 
+			char *remaps = NULL;
+			char new_name[_POSIX_PATH_MAX*3];
+			jobAd->LookupString( ATTR_TRANSFER_OUTPUT_REMAPS, &remaps );
+
 			filelist.rewind();
 			while ( (filename = filelist.next()) != NULL ) {
 				// append file pairs to rsl
 				*rsl += '(';
-				buff = riwd;
-				buff += condor_basename( filename );
-				*rsl += rsl_stringify( buff );
-				*rsl += ' ';
-				buff = "$(GRIDMANAGER_GASS_URL)";
+				buff = "";
 				if ( filename[0] != '/' ) {
-					buff += iwd;
+					buff = riwd;
 				}
 				buff += filename;
 				*rsl += rsl_stringify( buff );
+				*rsl += ' ';
+				buff = "$(GRIDMANAGER_GASS_URL)";
+				if ( remaps && filename_remap_find( remaps,
+												condor_basename( filename ),
+												new_name ) ) {
+					if ( new_name[0] != '/' ) {
+						buff += iwd;
+					}
+					buff += new_name;
+				} else {
+					buff += iwd;
+					buff += condor_basename( filename );
+				}
+				*rsl += rsl_stringify( buff );
 				*rsl += ')';
 			}
+			free( remaps );
 		}
 	}
 	if ( attr_value ) {

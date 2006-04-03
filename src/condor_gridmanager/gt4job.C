@@ -30,6 +30,7 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "basename.h"
 #include "condor_ckpt_name.h"
+#include "filename_tools.h"
 
 #include "gridmanager.h"
 #include "gt4job.h"
@@ -1918,18 +1919,29 @@ MyString *GT4Job::buildSubmitRSL()
 		*rsl += delegation_epr;
 		*rsl += "</transferCredentialEndpoint>";
 
+		char *remaps = NULL;
+		char new_name[_POSIX_PATH_MAX*3];
+		jobAd->LookupString( ATTR_TRANSFER_OUTPUT_REMAPS, &remaps );
+
 		stage_out_list.rewind();
 		while ( (filename = stage_out_list.next()) != NULL ) {
 
 			*rsl += "<transfer>";
 			buff.sprintf ("file://%s%s",
-						  remote_iwd.Value(),
-						  condor_basename (filename));
+						  filename[0]=='/' ? "" : remote_iwd.Value(),
+						  filename);
 			*rsl += printXMLParam ("sourceUrl", 
 								   buff.Value());
-			buff.sprintf( "%s%s%s", local_url_base.Value(),
-						  filename[0] == '/' ? "" : local_iwd.Value(),
-						  filename );
+			if ( remaps && filename_remap_find( remaps, filename,
+												new_name ) ) {
+				buff.sprintf( "%s%s%s", local_url_base.Value(),
+							  new_name[0] == '/' ? "" : local_iwd.Value(),
+							  new_name );
+			} else {
+				buff.sprintf( "%s%s%s", local_url_base.Value(),
+							  local_iwd.Value(),
+							  condor_basename( filename ) );
+			}
 			*rsl += printXMLParam ("destinationUrl", 
 								   buff.Value());
 			if ( gridftpServer->UseSelfCred() ) {
@@ -1941,6 +1953,7 @@ MyString *GT4Job::buildSubmitRSL()
 			*rsl += "</transfer>";
 
 		}
+		free( remaps );
 
 		*rsl += "</fileStageOut>";
 	}
