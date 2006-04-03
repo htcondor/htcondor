@@ -564,7 +564,8 @@ V6_7_18_EXT	-a V6_7_COMMON_EXT \
 		   externals/bundles/coredumper \
 		   externals/bundles/drmaa/1.2
 
-# Externals needed for V6_7_19 (same as V6_7_18, but update unicoregahp)
+# Externals needed for V6_7_19 (same as V6_7_18, but update unicoregahp
+# and nordugridgahp)
 V6_7_19_EXT	-a V6_7_COMMON_EXT \
 		   externals/bundles/krb5/1.4.3 \
 		   externals/bundles/gahp/1.0.14 \
@@ -579,7 +580,7 @@ V6_7_19_EXT	-a V6_7_COMMON_EXT \
 		   externals/bundles/postgresql/8.0.2 \
 		   externals/bundles/gcb/1.3.1 \
 		   externals/bundles/unicoregahp/1.2.0 \
-		   externals/bundles/nordugridgahp/1.0.0 \
+		   externals/bundles/nordugridgahp/1.1.0 \
 		   externals/bundles/linuxlibcheaders \
 		   externals/bundles/coredumper \
 		   externals/bundles/drmaa/1.2
