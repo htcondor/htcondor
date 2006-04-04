@@ -3848,19 +3848,26 @@ void
 SetJobLease( void )
 {
 	static bool warned_too_small = false;
+	int lease_duration = 0;
 	char *tmp = condor_param( "job_lease_duration", ATTR_JOB_LEASE_DURATION );
 	if( ! tmp ) {
-		return;
+		if( universeCanReconnect(JobUniverse) ) { 
+				/*
+				  if the user didn't define a lease duration, but is
+				  submitting a job from a universe that supports
+				  reconnect, we want to define a default of 20 minutes
+				  so that reconnectable jobs can survive schedd
+				  crashes and the like...
+				*/
+			lease_duration = 20 * 60;
+		} else {
+				// not defined and can't reconnect, we're done.
+			return;
+		}
+	} else {
+		lease_duration = atoi( tmp );
 	}
-/*
-	if( ! universeCanReconnect(JobUniverse) ) { 
-		fprintf( stderr, "\nERROR: cannot specify %s for %s universe jobs\n",
-				 ATTR_JOB_LEASE_DURATION, CondorUniverseName(JobUniverse) );
-		DoCleanup(0,0,NULL);
-		exit( 1 );
-	}
-*/
-	int lease_duration = atoi( tmp );
+
 	if( lease_duration <= 0 ) {
 		fprintf( stderr, "\nERROR: invalid %s given: %s\n",
 				 ATTR_JOB_LEASE_DURATION, tmp );
@@ -3869,8 +3876,8 @@ SetJobLease( void )
 	}
 	if( lease_duration < 20 ) {
 		if( ! warned_too_small ) { 
-			fprintf( stderr, "\nWARNING: %s less than 20 is not allowed, "
-					 "using 20 instead\n", ATTR_JOB_LEASE_DURATION );
+			fprintf( stderr, "\nWARNING: %s less than 20 seconds is not "
+					 "allowed, using 20 instead\n", ATTR_JOB_LEASE_DURATION );
 			warned_too_small = true;
 		}
 		lease_duration = 20;
