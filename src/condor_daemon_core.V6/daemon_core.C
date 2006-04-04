@@ -5065,6 +5065,7 @@ int DaemonCore::Create_Process(
 		if ( valid ) {
 			si.dwFlags |= STARTF_USESTDHANDLES;
 			inherit_handles = TRUE;
+			
 		}
 	}
 
@@ -5099,6 +5100,14 @@ int DaemonCore::Create_Process(
     if ( nice_inc > 0 ) {
 		// or new_process_group with whatever we set above...
 		new_process_group |= IDLE_PRIORITY_CLASS;
+		
+		if ( inherit_handles ) {
+			// since we're presumably using streaming i/o, we need to
+			// set the parent (eg. starter's) priority at the same level as the 
+			// child (eg. user job), otherwise streaming i/o won't work.
+			// -stolley, 04/2006
+			SetPriorityClass(GetCurrentProcess(), IDLE_PRIORITY_CLASS);
+		}
 	}
 
 
