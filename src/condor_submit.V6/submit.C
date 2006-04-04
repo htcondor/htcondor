@@ -3851,13 +3851,14 @@ SetJobLease( void )
 	int lease_duration = 0;
 	char *tmp = condor_param( "job_lease_duration", ATTR_JOB_LEASE_DURATION );
 	if( ! tmp ) {
-		if( universeCanReconnect(JobUniverse) ) { 
+		if( universeCanReconnect(JobUniverse) && !stream_std_file ) {
 				/*
 				  if the user didn't define a lease duration, but is
 				  submitting a job from a universe that supports
-				  reconnect, we want to define a default of 20 minutes
-				  so that reconnectable jobs can survive schedd
-				  crashes and the like...
+				  reconnect and is NOT trying to use streaming I/O, we
+				  want to define a default of 20 minutes so that
+				  reconnectable jobs can survive schedd crashes and
+				  the like...
 				*/
 			lease_duration = 20 * 60;
 		} else {
