@@ -50,6 +50,7 @@
 #include "directory.h"      // for StatInfo
 #include "util_lib_proto.h" // for rotate_file
 #include "iso_dates.h"
+#include "condor_scanner.h"	// for Token, etc.
 
 extern char *Spool;
 extern char *Name;
@@ -1574,6 +1575,66 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			}
 			free(sigAttrs);
 			sigAttrs = NULL;
+		}
+	}
+
+	// This block handles rounding of attributes.
+	MyString temp_buf;
+	temp_buf = "SCHEDD_ROUND_ATTR_";
+	temp_buf += attr_name;
+
+	int exp = param_integer(temp_buf.Value(),0,0,9);
+	if ( exp ) {
+		long ivalue;
+		unsigned int base;
+		extern	void Scanner(char*&, Token&);	// in classad library
+		Token token;
+
+			// See if attr_value is a scalar (int or float) by
+			// invoking the ClassAd scanner.  We do it this way
+			// to make certain we scan the value the same way that
+			// the ClassAd library will (i.e. support exponential
+			// notation, etc).
+		char *avalue = strdup(attr_value);	// gotta dup it cuz Scanner could write
+		ASSERT(avalue);
+		char *save_avalue = avalue;	// scanner will modify avalue, so save it
+		Scanner(avalue,token);
+		free(save_avalue);
+		if ( token.type == LX_INTEGER || token.type == LX_FLOAT ) {
+			// first, store the actual value
+			temp_buf = attr_name;
+			temp_buf += "_RAW";
+			JobQueue->SetAttribute(key, temp_buf.Value(), attr_value);
+
+			// now compute the rounded value
+			// set base to be 10^exp
+			for (base=1 ; exp > 0; exp--, base *= 10);
+
+			if ( token.type == LX_INTEGER ) {
+				ivalue = token.intVal;
+			} else {
+				ivalue = (long) token.floatVal;	// truncation conversion
+			}
+
+			// round it.  note we always round UP!!  
+			ivalue = ((ivalue / base ) + 1) * base;  // +1 means round up
+
+			// make it a string, courtesty MyString conversion.
+			temp_buf = ivalue;
+
+			// if it was a float, append ".0" to keep it a float
+			if ( token.type == LX_FLOAT ) {
+				temp_buf += ".0";
+			}
+
+			// change attr_value, so when we do the SetAttribute below
+			// we really set to the rounded value.
+			attr_value = temp_buf.Value();
+
+		} else {
+			dprintf(D_FULLDEBUG,
+				"%s=%d, but value '%s' is not a scalar - ignored\n",
+				temp_buf.Value(),exp,attr_value);
 		}
 	}
 

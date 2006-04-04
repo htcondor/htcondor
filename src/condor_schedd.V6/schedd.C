@@ -9176,6 +9176,32 @@ Scheduler::Init()
 		// Grab all the essential parameters we need from the config file.
 		////////////////////////////////////////////////////////////////////
 
+		// set defaults for rounding attributes for autoclustering
+		// only set these values if nothing is specified in condor_config.
+	MyString tmpstr;
+	tmpstr.sprintf("SCHEDD_ROUND_ATTR_%s",ATTR_EXECUTABLE_SIZE);
+	tmp = param(tmpstr.Value());
+	if ( !tmp ) {
+		config_insert(tmpstr.Value(),"4");	// round from Kb to 10Mb
+	} else {
+		free(tmp);
+	}
+	tmpstr.sprintf("SCHEDD_ROUND_ATTR_%s",ATTR_IMAGE_SIZE);
+	tmp = param(tmpstr.Value());
+	if ( !tmp ) {
+		config_insert(tmpstr.Value(),"4");	// round from Kb to 10Mb
+	} else {
+		free(tmp);
+	}
+	tmpstr.sprintf("SCHEDD_ROUND_ATTR_%s",ATTR_DISK_USAGE);
+	tmp = param(tmpstr.Value());
+	if ( !tmp ) {
+		config_insert(tmpstr.Value(),"4");	// round from Kb to 10Mb
+	} else {
+		free(tmp);
+	}
+
+
 	if( Spool ) free( Spool );
 	if( !(Spool = param("SPOOL")) ) {
 		EXCEPT( "No spool directory specified in config file" );
@@ -9953,18 +9979,23 @@ prio_compar(prio_rec* a, prio_rec* b)
 void
 Scheduler::reconfig()
 {
+	char *tmpbuf;
+
 	Init();
 	RegisterTimers();			// reset timers
-	if ( autocluster.config() ) {
+
+
 		// clear out auto cluster id attributes
+	if ( autocluster.config() ) {
 		WalkJobQueue( (int(*)(ClassAd *))clear_autocluster_id );
 	}
+
 	timeout();
 
-	char *tmp = param( "MAX_JOB_QUEUE_LOG_ROTATIONS" );
-	if(tmp) {
-		SetMaxHistoricalLogs(atoi(tmp));
-		free(tmp);
+	tmpbuf = param( "MAX_JOB_QUEUE_LOG_ROTATIONS" );
+	if(tmpbuf) {
+		SetMaxHistoricalLogs(atoi(tmpbuf));
+		free(tmpbuf);
 	}
 }
 
