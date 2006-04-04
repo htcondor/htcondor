@@ -175,7 +175,7 @@ StatInfo::stat_file( const char *path )
 		} else {
 			dprintf( D_FULLDEBUG, 
 					 "StatInfo::%s(%s) failed, errno: %d = %s\n",
-					 statbuf.GetStatFn(), path, errno, strerror( errno ) );
+					 statbuf.GetStatFn(),path,si_errno,strerror(si_errno) );
 		}
 		return;
 	}
@@ -218,7 +218,7 @@ StatInfo::stat_file( int fd )
 		} else {
 			dprintf( D_FULLDEBUG, 
 					 "StatInfo::%s(fd=%d) failed, errno: %d = %s\n",
-					 statbuf.GetStatFn(), fd, errno, strerror( errno ) );
+					 statbuf.GetStatFn(), fd, si_errno, strerror(si_errno) );
 		}
 		return;
 	}
