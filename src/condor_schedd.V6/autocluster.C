@@ -77,6 +77,13 @@ bool AutoCluster::config(const char* significant_target_attrs)
 	}
 
 	if ( new_sig_attrs ) {
+		if ( sig_attrs_came_from_config_file == false ) {
+			// in this case, we were autocomputing sig attrs, and now
+			// they are set in the config file -- so wipe the slate clean.
+			sig_attrs_changed = true;
+			delete significant_attrs;
+			significant_attrs = NULL;
+		}
 		sig_attrs_came_from_config_file = true;
 	} 
 
@@ -96,7 +103,7 @@ bool AutoCluster::config(const char* significant_target_attrs)
 	}
 
 
-	if ( old_sig_attrs  && (stricmp(new_sig_attrs,old_sig_attrs)==0) )
+	if ( significant_attrs && old_sig_attrs  && (stricmp(new_sig_attrs,old_sig_attrs)==0) )
 	{
 		/* 	Just compare new and old attr strings directly.
 			If they match, then we already have dealt with the
