@@ -52,9 +52,6 @@ bool operator== (const StatsHashKey &lhs, const StatsHashKey &rhs)
 			 ( lhs.type == rhs.type) );
 }
 
-// utility function:  parse the string <aaa.bbb.ccc.ddd:pppp>
-int parseIpPort( const MyString &ip_port_pair, MyString &ip_addr );
-
 // Instantiate things
 template class ExtArray<CollectorClassStats *>;
 template class HashTable <StatsHashKey, CollectorBaseStats *>;

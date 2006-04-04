@@ -36,8 +36,6 @@ extern "C" char * sin_to_string(struct sockaddr_in *);
 template class HashTable<AdNameHashKey, ClassAd *>;
 template class HashTable<MyString, CollectorHashTable *>;
 
-bool parseIpPort (const MyString &, MyString &);
-
 void AdNameHashKey::sprint (MyString &s)
 {
 	if (ip_addr.Length() )

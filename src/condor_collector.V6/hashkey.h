@@ -68,6 +68,9 @@ bool makeNegotiatorAdHashKey (AdNameHashKey &, ClassAd *, sockaddr_in *);
 bool makeHadAdHashKey (AdNameHashKey &, ClassAd *, sockaddr_in *);
 bool makeGenericAdHashKey (AdNameHashKey &, ClassAd *, sockaddr_in *);
 
+// utility function:  parse the string <aaa.bbb.ccc.ddd:pppp>
+bool parseIpPort( const MyString &ip_port_pair, MyString &ip_addr );
+
 class HashString : public MyString
 {
   public:
