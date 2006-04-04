@@ -257,14 +257,16 @@ CollectorBaseStats::getHistoryString ( char *buf )
 
 		// Convert to a char
 		if ( ++outbit == 4 ) {
-			buf[outoff++] = ( outword <= 9 ) ? ( '0' + outword ) : ( 'a' + outword - 10 );
+			buf[outoff++] =
+				( outword <= 9 ) ? ( '0' + outword ) : ( 'a' + outword - 10 );
 			outbit = 0;
 			outword = 0x0;
 		}
 
 	}
 	if ( outbit ) {
-		buf[outoff++] = outword <= 9 ? ( '0' + outword ) : ( 'a' + outword - 10 );
+		buf[outoff++] =
+			outword <= 9 ? ( '0' + outword ) : ( 'a' + outword - 10 );
 		outbit = 0;
 		outword = 0x0;
 	}
@@ -390,26 +392,36 @@ CollectorClassStatsList::publish( ClassAd *ad )
 {
 	int		classNum;
 	int		last = classStats.getlast();
-    char		line[1000];
+    char	line[1024];
 
 	// Walk through them all & publish 'em
 	for ( classNum = 0;  classNum <= last;  classNum++ ) {
 		const char *name = classStats[classNum]->getName( );
-		sprintf( line, "%s_%s = %d", ATTR_UPDATESTATS_TOTAL,
-				 name, classStats[classNum]->getTotal( ) );
+		snprintf( line, sizeof(line),
+				  "%s_%s = %d", ATTR_UPDATESTATS_TOTAL,
+				  name, classStats[classNum]->getTotal( ) );
+		line[sizeof(line)-1] = '\0';
 		ad->Insert(line);
-		sprintf( line, "%s_%s = %d", ATTR_UPDATESTATS_SEQUENCED,
-				 name, classStats[classNum]->getSequenced( ) );
+
+		snprintf( line, sizeof(line),
+				  "%s_%s = %d", ATTR_UPDATESTATS_SEQUENCED,
+				  name, classStats[classNum]->getSequenced( ) );
+		line[sizeof(line)-1] = '\0';
 		ad->Insert(line);
-		sprintf( line, "%s_%s = %d", ATTR_UPDATESTATS_LOST,
-				 name, classStats[classNum]->getDropped( ) );
+
+		snprintf( line, sizeof(line),
+				  "%s_%s = %d", ATTR_UPDATESTATS_LOST,
+				  name, classStats[classNum]->getDropped( ) );
+		line[sizeof(line)-1] = '\0';
 		ad->Insert(line);
 
 		// Get the history string & insert it if it's valid
 		char	*tmp = classStats[classNum]->getHistoryString( );
 		if ( tmp ) {
-			sprintf( line, "%s_%s = \"0x%s\"", ATTR_UPDATESTATS_HISTORY,
-					 name, tmp );
+			snprintf( line, sizeof(line),
+					  "%s_%s = \"0x%s\"", ATTR_UPDATESTATS_HISTORY,
+					  name, tmp );
+			line[sizeof(line)-1] = '\0';
 			ad->Insert(line);
 			delete [] tmp;
 		}
@@ -502,7 +514,8 @@ CollectorDaemonStatsList::updateStats( const char *class_name,
 
 		MyString	string;
 		key.getstr( string );
-		dprintf( D_ALWAYS, "stats: Inserting new hashent for %s\n", string.GetCStr() );
+		dprintf( D_ALWAYS,
+				 "stats: Inserting new hashent for %s\n", string.GetCStr() );
 	}
 
 	// Compute the size of the string we need..
@@ -512,25 +525,35 @@ CollectorDaemonStatsList::updateStats( const char *class_name,
 	}
 	size += strlen( ATTR_UPDATESTATS_SEQUENCED );	// Longest one
 	size += 20;										// Some "buffer" space
-    char		*line = new char [size];
+    char		*line = new char [size+1];
 
 	// Update the daemon object...
 	daemon->updateStats( sequenced, dropped );
 
-	sprintf( line, "%s = %d", ATTR_UPDATESTATS_TOTAL,
-			 daemon->getTotal( ) );
+	snprintf( line, size,
+			  "%s = %d", ATTR_UPDATESTATS_TOTAL,
+			  daemon->getTotal( ) );
+	line[size] = '\0';
 	ad->Insert(line);
-	sprintf( line, "%s = %d", ATTR_UPDATESTATS_SEQUENCED,
-			 daemon->getSequenced( ) );
+
+	snprintf( line, size,
+			  "%s = %d", ATTR_UPDATESTATS_SEQUENCED,
+			  daemon->getSequenced( ) );
+	line[size] = '\0';
 	ad->Insert(line);
-	sprintf( line, "%s = %d", ATTR_UPDATESTATS_LOST,
+
+	snprintf( line, size,
+			  "%s = %d", ATTR_UPDATESTATS_LOST,
 			 daemon->getDropped( ) );
+	line[size] = '\0';
 	ad->Insert(line);
 
 	// Get the history string & insert it if it's valid
 	char	*tmp = daemon->getHistoryString( );
 	if ( tmp ) {
-		sprintf( line, "%s = \"0x%s\"", ATTR_UPDATESTATS_HISTORY, tmp );
+		snprintf( line, size,
+				  "%s = \"0x%s\"", ATTR_UPDATESTATS_HISTORY, tmp );
+		line[size] = '\0';
 		ad->Insert(line);
 		delete [] tmp;
 	}
@@ -590,7 +613,8 @@ CollectorDaemonStatsList::enable( bool enable )
 void
 StatsHashKey::getstr( MyString &buf )
 {
-	buf.sprintf( "'%s':'%s':'%s'", type.GetCStr(), name.GetCStr(), ip_addr.GetCStr()  );
+	buf.sprintf( "'%s':'%s':'%s'",
+				 type.GetCStr(), name.GetCStr(), ip_addr.GetCStr()  );
 }
 
 // Generate a hash key
@@ -607,7 +631,9 @@ CollectorDaemonStatsList::hashKey (StatsHashKey &key,
 	// The 'name'
 	if (  ( ! ad->LookupString( ATTR_NAME, &string ) ) &&
 		  ( ! ad->LookupString( ATTR_MACHINE, &string ) )  ) {
-		dprintf (D_ALWAYS, "Error: Neither 'Name' nor 'Machine' specified\n");
+		dprintf (D_ALWAYS,
+				 "stats Error: Neither 'Name' nor 'Machine' found in %s ad\n",
+				 class_name );
 		return false;
 	}
 	key.name = string;
@@ -716,13 +742,21 @@ CollectorStats::update( const char *className,
 int 
 CollectorStats::publishGlobal( ClassAd *ad )
 {
-    char line[100];
+    char line[1024];
 
-    sprintf(line,"%s = %d", ATTR_UPDATESTATS_TOTAL, global.getTotal( ));
+    snprintf( line, sizeof(line),
+			  "%s = %d", ATTR_UPDATESTATS_TOTAL, global.getTotal() );
+	line[sizeof(line)-1] = '\0';
     ad->Insert(line);
-    sprintf(line,"%s = %d", ATTR_UPDATESTATS_SEQUENCED, global.getSequenced( ));
+
+    snprintf( line, sizeof(line),
+			  "%s = %d", ATTR_UPDATESTATS_SEQUENCED, global.getSequenced() );
+	line[sizeof(line)-1] = '\0';
     ad->Insert(line);
-    sprintf(line,"%s = %d", ATTR_UPDATESTATS_LOST, global.getDropped( ));
+
+    snprintf( line, sizeof(line),
+			  "%s = %d", ATTR_UPDATESTATS_LOST, global.getDropped() );
+	line[sizeof(line)-1] = '\0';
     ad->Insert(line);
 
 	classList->publish( ad );
