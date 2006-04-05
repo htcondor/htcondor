@@ -623,28 +623,37 @@ CollectorDaemonStatsList::hashKey (StatsHashKey &key,
 								   const char *class_name,
 								   ClassAd *ad )
 {
-	char	*string = NULL;
 
 	// Fill in pieces..
 	key.type = class_name;
 
 	// The 'name'
-	if (  ( ! ad->LookupString( ATTR_NAME, &string ) ) &&
-		  ( ! ad->LookupString( ATTR_MACHINE, &string ) )  ) {
-		dprintf (D_ALWAYS,
-				 "stats Error: Neither 'Name' nor 'Machine' found in %s ad\n",
-				 class_name );
-		return false;
+	char	buf[256]   = "";
+	char	vmbuf[256] = "";
+	if ( !ad->LookupString( ATTR_NAME, buf, sizeof(buf))  ) {
+
+		// No "Name" found; fall back to Machine
+		if ( !ad->LookupString( ATTR_MACHINE, buf, sizeof(buf))  ) {
+			dprintf (D_ALWAYS,
+					 "stats Error: Neither 'Name' nor 'Machine'"
+					 " found in %s ad\n",
+					 class_name );
+			return false;
+		}
+
+		// If there is a virtual machine ID, append it to Machine
+		int		vm;
+		if ( ad->LookupInteger( ATTR_VIRTUAL_MACHINE_ID, vm ) ) {
+			snprintf( vmbuf, sizeof(vmbuf), ":%d", vm );
+		}
 	}
-	key.name = string;
-	free( string );
-	string = NULL;
+	key.name = buf;
+	key.name += vmbuf;
 
 	// get the IP and port of the daemon
-	if ( ad->LookupString (ATTR_MY_ADDRESS, &string ) ) {
-		MyString	myString( string );
+	if ( ad->LookupString (ATTR_MY_ADDRESS, buf, sizeof(buf) ) ) {
+		MyString	myString( buf );
 		parseIpPort( myString, key.ip_addr );
-		free( string );
 	} else {
 		return false;
 	}
@@ -725,8 +734,7 @@ CollectorStats::update( const char *className,
 	{
 		sequenced = true;
 		int		expected = old_seq + 1;
-		if (  ( new_stime == old_stime ) && ( expected != new_seq ) )
-		{
+		if (  ( new_stime == old_stime ) && ( expected != new_seq ) ) {
 			dropped = ( new_seq < expected ) ? 1 : ( new_seq - expected );
 		}
 	}
