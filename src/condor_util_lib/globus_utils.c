@@ -76,6 +76,16 @@ x509_error_string()
 	return _globus_error_message;
 }
 
+static
+void
+set_error_string( const char *message )
+{
+	if ( _globus_error_message ) {
+		free( _globus_error_message );
+	}
+	_globus_error_message = strdup( message );
+}
+
 /* Activate the globus gsi modules for use by functions in this file.
  * Returns zero if the modules were successfully activated. Returns -1 if
  * something went wrong.
@@ -85,7 +95,7 @@ int
 activate_globus_gsi()
 {
 #if !defined(CONDOR_GSI)
-	_globus_error_message = "This version of Condor doesn't support X509 credentials!" ;
+	set_error_string( "This version of Condor doesn't support X509 credentials!" );
 	return -1;
 #else
 	static int globus_gsi_activated = 0;
@@ -96,25 +106,25 @@ activate_globus_gsi()
 
 /* This module is activated by GLOBUS_GSI_CREDENTIAL_MODULE
 	if ( globus_module_activate(GLOBUS_GSI_SYSCONFIG_MODULE) ) {
-		_globus_error_message = "couldn't activate globus gsi sysconfig module";
+		set_error_string( "couldn't activate globus gsi sysconfig module" );
 		return -1;
 	}
 */
 
 	if ( globus_module_activate(GLOBUS_GSI_CREDENTIAL_MODULE) ) {
-		_globus_error_message = "couldn't activate globus gsi credential module";
+		set_error_string( "couldn't activate globus gsi credential module" );
 		return -1;
 	}
 
 
 	if ( globus_module_activate(GLOBUS_GSI_GSSAPI_MODULE) ) {
-		_globus_error_message = "couldn't activate globus gsi gssapi module";
+		set_error_string( "couldn't activate globus gsi gssapi module" );
 		return -1;
 	}
 
 
 	if ( globus_module_activate(GLOBUS_GSI_PROXY_MODULE) ) {
-		_globus_error_message = "couldn't activate globus gsi proxy module";
+		set_error_string( "couldn't activate globus gsi proxy module" );
 		return -1;
 	}
 
@@ -141,7 +151,7 @@ get_x509_proxy_filename()
 
 	if ( GLOBUS_GSI_SYSCONFIG_GET_PROXY_FILENAME(&proxy_file, file_type) !=
 		 GLOBUS_SUCCESS ) {
-		_globus_error_message = "unable to locate proxy file";
+		set_error_string( "unable to locate proxy file" );
 	}
 #endif
 	return proxy_file;
@@ -157,7 +167,7 @@ char *
 x509_proxy_subject_name( const char *proxy_file )
 {
 #if !defined(CONDOR_GSI)
-	_globus_error_message = "This version of Condor doesn't support X509 credentials!" ;
+	set_error_string( "This version of Condor doesn't support X509 credentials!" );
 	return NULL;
 #else
 
@@ -171,12 +181,12 @@ x509_proxy_subject_name( const char *proxy_file )
 	}
 
 	if (globus_gsi_cred_handle_attrs_init(&handle_attrs)) {
-		_globus_error_message = "problem during internal initialization1";
+		set_error_string( "problem during internal initialization1" );
 		goto cleanup;
 	}
 
 	if (globus_gsi_cred_handle_init(&handle, handle_attrs)) {
-		_globus_error_message = "problem during internal initialization2";
+		set_error_string( "problem during internal initialization2" );
 		goto cleanup;
 	}
 
@@ -191,12 +201,12 @@ x509_proxy_subject_name( const char *proxy_file )
 
 	// We should have a proxy file, now, try to read it
 	if (globus_gsi_cred_read_proxy(handle, proxy_file)) {
-		_globus_error_message = "unable to read proxy file";
+		set_error_string( "unable to read proxy file" );
 	   goto cleanup;
 	}
 
 	if (globus_gsi_cred_get_subject_name(handle, &subject_name)) {
-		_globus_error_message = "unable to extract subject name";
+		set_error_string( "unable to extract subject name" );
 		goto cleanup;
 	}
 
@@ -233,7 +243,7 @@ char *
 x509_proxy_identity_name( const char *proxy_file )
 {
 #if !defined(CONDOR_GSI)
-	_globus_error_message = "This version of Condor doesn't support X509 credentials!" ;
+	set_error_string( "This version of Condor doesn't support X509 credentials!" );
 	return NULL;
 #else
 
@@ -247,12 +257,12 @@ x509_proxy_identity_name( const char *proxy_file )
 	}
 
 	if (globus_gsi_cred_handle_attrs_init(&handle_attrs)) {
-		_globus_error_message = "problem during internal initialization1";
+		set_error_string( "problem during internal initialization1" );
 		goto cleanup;
 	}
 
 	if (globus_gsi_cred_handle_init(&handle, handle_attrs)) {
-		_globus_error_message = "problem during internal initialization2";
+		set_error_string( "problem during internal initialization2" );
 		goto cleanup;
 	}
 
@@ -267,12 +277,12 @@ x509_proxy_identity_name( const char *proxy_file )
 
 	// We should have a proxy file, now, try to read it
 	if (globus_gsi_cred_read_proxy(handle, proxy_file)) {
-		_globus_error_message = "unable to read proxy file";
+		set_error_string( "unable to read proxy file" );
 	   goto cleanup;
 	}
 
 	if (globus_gsi_cred_get_identity_name(handle, &subject_name)) {
-		_globus_error_message = "unable to extract identity name";
+		set_error_string( "unable to extract identity name" );
 		goto cleanup;
 	}
 
@@ -300,7 +310,7 @@ time_t
 x509_proxy_expiration_time( const char *proxy_file )
 {
 #if !defined(CONDOR_GSI)
-	_globus_error_message = "This version of Condor doesn't support X509 credentials!" ;
+	set_error_string( "This version of Condor doesn't support X509 credentials!" );
 	return -1;
 #else
 
@@ -315,12 +325,12 @@ x509_proxy_expiration_time( const char *proxy_file )
 	}
 
     if (globus_gsi_cred_handle_attrs_init(&handle_attrs)) {
-        _globus_error_message = "problem during internal initialization";
+        set_error_string( "problem during internal initialization" );
         goto cleanup;
     }
 
     if (globus_gsi_cred_handle_init(&handle, handle_attrs)) {
-        _globus_error_message = "problem during internal initialization";
+        set_error_string( "problem during internal initialization" );
         goto cleanup;
     }
 
@@ -335,12 +345,12 @@ x509_proxy_expiration_time( const char *proxy_file )
 
     // We should have a proxy file, now, try to read it
     if (globus_gsi_cred_read_proxy(handle, proxy_file)) {
-       _globus_error_message = "unable to read proxy file";
+       set_error_string( "unable to read proxy file" );
        goto cleanup;
     }
 
 	if (globus_gsi_cred_get_lifetime(handle, &time_left)) {
-		_globus_error_message = "unable to extract expiration time";
+		set_error_string( "unable to extract expiration time" );
         goto cleanup;
     }
 
@@ -372,7 +382,7 @@ int
 x509_proxy_seconds_until_expire( const char *proxy_file )
 {
 #if !defined(CONDOR_GSI)
-	_globus_error_message = "This version of Condor doesn't support X509 credentials!" ;
+	set_error_string( "This version of Condor doesn't support X509 credentials!" );
 	return -1;
 #else
 
@@ -407,7 +417,7 @@ x509_proxy_try_import( const char *proxy_file )
 {
 #if !defined(CONDOR_GSI)
 
-	_globus_error_message = "This version of Condor doesn't support X509 credentials!";
+	set_error_string( "This version of Condor doesn't support X509 credentials!" );
 	return -1;
 
 #else
@@ -415,7 +425,7 @@ x509_proxy_try_import( const char *proxy_file )
 	int min_stat;
 	gss_buffer_desc import_buf;
 	gss_cred_id_t cred_handle;
-	static char buf_value[4096];
+	char buf_value[4096];
 	int must_free_proxy_file = FALSE;
 
 	if ( activate_globus_gsi() != 0 ) {
@@ -450,7 +460,7 @@ x509_proxy_try_import( const char *proxy_file )
 //		snprintf( buf_value, sizeof(buf_value),
 //				  "Failed to import credential maj=%d min=%d", rc,
 //				  min_stat );
-		_globus_error_message = buf_value;
+		set_error_string( buf_value );
 		return -1;
 	}
 
@@ -470,7 +480,7 @@ check_x509_proxy( const char *proxy_file )
 {
 #if !defined(CONDOR_GSI)
 
-	_globus_error_message = "This version of Condor doesn't support X509 credentials!" ;
+	set_error_string( "This version of Condor doesn't support X509 credentials!" );
 	return -1;
 
 #else
@@ -501,12 +511,12 @@ check_x509_proxy( const char *proxy_file )
 	}
 
 	if ( time_diff == 0 ) {
-		_globus_error_message =	"proxy has expired";
+		set_error_string( "proxy has expired" );
 		return -1;
 	}
 
 	if ( time_diff < min_time_left ) {
-		_globus_error_message =	"proxy lifetime too short";
+		set_error_string( "proxy lifetime too short" );
 		return -1;
 	}
 
