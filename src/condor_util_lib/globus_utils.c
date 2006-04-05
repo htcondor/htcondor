@@ -24,6 +24,7 @@
 #include "condor_common.h"
 #include "condor_config.h"
 #include "condor_debug.h"
+#include "util_lib_proto.h"
 
 #include "globus_utils.h"
 
@@ -523,6 +524,360 @@ check_x509_proxy( const char *proxy_file )
 	return 0;
 
 #endif /* !defined(GSS_AUTHENTICATION) */
+}
+
+
+static int
+buffer_to_bio( char *buffer, int buffer_len, BIO **bio )
+{
+	if ( buffer == NULL ) {
+		return FALSE;
+	}
+
+	*bio = BIO_new( BIO_s_mem() );
+	if ( *bio == NULL ) {
+		return FALSE;
+	}
+
+	if ( BIO_write( *bio, buffer, buffer_len ) < buffer_len ) {
+		BIO_free( *bio );
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+static int
+bio_to_buffer( BIO *bio, char **buffer, int *buffer_len )
+{
+	if ( bio == NULL ) {
+		return FALSE;
+	}
+
+	*buffer_len = BIO_pending( bio );
+
+	*buffer = (char *)malloc( *buffer_len );
+	if ( *buffer == NULL ) {
+		return FALSE;
+	}
+
+	if ( BIO_read( bio, *buffer, *buffer_len ) < *buffer_len ) {
+		free( *buffer );
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+int
+x509_send_delegation( const char *source_file,
+					  int (*recv_data_func)(void *, void **, size_t *), 
+					  void *recv_data_ptr,
+					  int (*send_data_func)(void *, void *, size_t),
+					  void *send_data_ptr )
+{
+#if !defined(CONDOR_GSI)
+
+	_globus_error_message = "This version of Condor doesn't support X509 credentials!" ;
+	return -1;
+
+#else
+	int rc = 0;
+	int error_line = 0;
+	globus_result_t result = GLOBUS_SUCCESS;
+	globus_gsi_cred_handle_t source_cred =  NULL;
+	globus_gsi_proxy_handle_t new_proxy = NULL;
+	char *buffer = NULL;
+	int buffer_len = 0;
+	BIO *bio = NULL;
+	X509 *cert = NULL;
+	STACK_OF(X509) *cert_chain = NULL;
+	int idx = 0;
+	globus_gsi_cert_utils_cert_type_t cert_type;
+
+	if ( activate_globus_gsi() != 0 ) {
+		return -1;
+	}
+
+	result = globus_gsi_cred_handle_init( &source_cred, NULL );
+	if ( result != GLOBUS_SUCCESS ) {
+		rc = -1;
+		error_line = __LINE__;
+		goto cleanup;
+	}
+
+	result = globus_gsi_proxy_handle_init( &new_proxy, NULL );
+	if ( result != GLOBUS_SUCCESS ) {
+		rc = -1;
+		error_line = __LINE__;
+		goto cleanup;
+	}
+
+	result = globus_gsi_cred_read_proxy( source_cred, source_file );
+	if ( result != GLOBUS_SUCCESS ) {
+		rc = -1;
+		error_line = __LINE__;
+		goto cleanup;
+	}
+
+	if ( recv_data_func( recv_data_ptr, &buffer, &buffer_len ) != 0 ) {
+		rc = -1;
+		error_line = __LINE__;
+		goto cleanup;
+	}
+
+	if ( buffer_to_bio( buffer, buffer_len, &bio ) == FALSE ) {
+		rc = -1;
+		error_line = __LINE__;
+		goto cleanup;
+	}
+
+	free( buffer );
+	buffer = NULL;
+
+	result = globus_gsi_proxy_inquire_req( new_proxy, bio );
+	if ( result != GLOBUS_SUCCESS ) {
+		rc = -1;
+		error_line = __LINE__;
+		goto cleanup;
+	}
+
+	BIO_free( bio );
+	bio = NULL;
+
+		// modify certificate properties
+		// set the appropriate proxy type
+	result = globus_gsi_cred_get_cert_type( source_cred, &cert_type );
+	if ( result != GLOBUS_SUCCESS ) {
+		rc = -1;
+		error_line = __LINE__;
+		goto cleanup;
+	}
+	if ( cert_type == GLOBUS_GSI_CERT_UTILS_TYPE_CA ) {
+		rc = -1;
+		error_line = __LINE__;
+		goto cleanup;
+	} else if ( cert_type == GLOBUS_GSI_CERT_UTILS_TYPE_EEC ) {
+		cert_type = GLOBUS_GSI_CERT_UTILS_TYPE_GSI_3_IMPERSONATION_PROXY;
+	} else if ( GLOBUS_GSI_CERT_UTILS_IS_GSI_2_PROXY( cert_type ) ) {
+		cert_type = GLOBUS_GSI_CERT_UTILS_TYPE_GSI_2_PROXY;
+	} else if ( GLOBUS_GSI_CERT_UTILS_IS_RFC_PROXY( cert_type ) ) {
+		cert_type = GLOBUS_GSI_CERT_UTILS_TYPE_RFC_IMPERSONATION_PROXY;
+	}
+	result = globus_gsi_proxy_handle_set_type( new_proxy, cert_type);
+	if ( result != GLOBUS_SUCCESS ) {
+		rc = -1;
+		error_line = __LINE__;
+		goto cleanup;
+	}
+
+	/* TODO Do we have to destroy and re-create bio, or can we reuse it? */
+	bio = BIO_new( BIO_s_mem() );
+	if ( bio == NULL ) {
+		rc = -1;
+		error_line = __LINE__;
+		goto cleanup;
+	}
+
+	result = globus_gsi_proxy_sign_req( new_proxy, source_cred, bio );
+	if ( result != GLOBUS_SUCCESS ) {
+		rc = -1;
+		error_line = __LINE__;
+		goto cleanup;
+	}
+
+		// Now we need to stuff the certificate chain into in the bio.
+		// This consists of the signed certificate and its whole chain.
+	result = globus_gsi_cred_get_cert( source_cred, &cert );
+	if ( result != GLOBUS_SUCCESS ) {
+		rc = -1;
+		error_line = __LINE__;
+		goto cleanup;
+	}
+	i2d_X509_bio( bio, cert );
+	X509_free( cert );
+	cert = NULL;
+
+	result = globus_gsi_cred_get_cert_chain( source_cred, &cert_chain );
+	if ( result != GLOBUS_SUCCESS ) {
+		rc = -1;
+		error_line = __LINE__;
+		goto cleanup;
+	}
+
+	for( idx = 0; idx < sk_X509_num( cert_chain ); idx++ ) {
+		X509 *next_cert;
+		next_cert = sk_X509_value( cert_chain, idx );
+		i2d_X509_bio( bio, next_cert );
+	}
+	sk_X509_pop_free( cert_chain, X509_free );
+	cert_chain = NULL;
+
+	if ( bio_to_buffer( bio, &buffer, &buffer_len ) == FALSE ) {
+		rc = -1;
+		error_line = __LINE__;
+		goto cleanup;
+	}
+
+	if ( send_data_func( send_data_ptr, buffer, buffer_len ) != 0 ) {
+		rc = -1;
+		error_line = __LINE__;
+		goto cleanup;
+	}
+
+ cleanup:
+	/* TODO Extract Globus error message if result isn't GLOBUS_SUCCESS */
+	if ( error_line ) {
+		char buff[1024];
+		snprintf( buff, sizeof(buff), "x509_send_delegation failed at line %d",
+				  error_line );
+		set_error_string( buff );
+	}
+
+	if ( bio ) {
+		BIO_free( bio );
+	}
+	if ( buffer ) {
+		free( buffer );
+	}
+	if ( new_proxy ) {
+		globus_gsi_proxy_handle_destroy( new_proxy );
+	}
+	if ( source_cred ) {
+		globus_gsi_cred_handle_destroy( source_cred );
+	}
+	if ( cert ) {
+		X509_free( cert );
+	}
+	if ( cert_chain ) {
+		sk_X509_pop_free( cert_chain, X509_free );
+	}
+
+	return rc;
+#endif
+}
+
+
+int
+x509_receive_delegation( const char *destination_file,
+						 int (*recv_data_func)(void *, void **, size_t *), 
+						 void *recv_data_ptr,
+						 int (*send_data_func)(void *, void *, size_t),
+						 void *send_data_ptr )
+{
+#if !defined(CONDOR_GSI)
+
+	_globus_error_message = "This version of Condor doesn't support X509 credentials!" ;
+	return -1;
+
+#else
+	int rc = 0;
+	int error_line = 0;
+	globus_result_t result = GLOBUS_SUCCESS;
+	globus_gsi_cred_handle_t proxy_handle =  NULL;
+	globus_gsi_proxy_handle_t request_handle = NULL;
+	char *buffer = NULL;
+	int buffer_len = 0;
+	BIO *bio = NULL;
+
+	if ( activate_globus_gsi() != 0 ) {
+		return -1;
+	}
+
+	result = globus_gsi_proxy_handle_init( &request_handle, NULL );
+	if ( result != GLOBUS_SUCCESS ) {
+		rc = -1;
+		error_line = __LINE__;
+		goto cleanup;
+	}
+
+	bio = BIO_new( BIO_s_mem() );
+	if ( bio == NULL ) {
+		rc = -1;
+		error_line = __LINE__;
+		goto cleanup;
+	}
+
+	result = globus_gsi_proxy_create_req( request_handle, bio );
+	if ( result != GLOBUS_SUCCESS ) {
+		rc = -1;
+		error_line = __LINE__;
+		goto cleanup;
+	}
+
+
+	if ( bio_to_buffer( bio, &buffer, &buffer_len ) == FALSE ) {
+		rc = -1;
+		error_line = __LINE__;
+		goto cleanup;
+	}
+
+	BIO_free( bio );
+	bio = NULL;
+
+	if ( send_data_func( send_data_ptr, buffer, buffer_len ) != 0 ) {
+		rc = -1;
+		error_line = __LINE__;
+		goto cleanup;
+	}
+
+	free( buffer );
+	buffer = NULL;
+
+	if ( recv_data_func( recv_data_ptr, &buffer, &buffer_len ) != 0 ) {
+		rc = -1;
+		error_line = __LINE__;
+		goto cleanup;
+	}
+
+	if ( buffer_to_bio( buffer, buffer_len, &bio ) == FALSE ) {
+		rc = -1;
+		error_line = __LINE__;
+		goto cleanup;
+	}
+
+	result = globus_gsi_proxy_assemble_cred( request_handle, &proxy_handle,
+											 bio );
+	if ( result != GLOBUS_SUCCESS ) {
+		rc = -1;
+		error_line = __LINE__;
+		goto cleanup;
+	}
+
+	/* globus_gsi_cred_write_proxy() declares its second argument non-const,
+	 * but never modifies it. The cast gets rid of compiler warnings.
+	 */
+	result = globus_gsi_cred_write_proxy( proxy_handle, (char *)destination_file );
+	if ( result != GLOBUS_SUCCESS ) {
+		rc = -1;
+		error_line = __LINE__;
+		goto cleanup;
+	}
+
+ cleanup:
+	/* TODO Extract Globus error message if result isn't GLOBUS_SUCCESS */
+	if ( error_line ) {
+		char buff[1024];
+		snprintf( buff, sizeof(buff), "x509_receive_delegation failed "
+				  "at line %d", error_line );
+		set_error_string( buff );
+	}
+
+	if ( bio ) {
+		BIO_free( bio );
+	}
+	if ( buffer ) {
+		free( buffer );
+	}
+	if ( request_handle ) {
+		globus_gsi_proxy_handle_destroy( request_handle );
+	}
+	if ( proxy_handle ) {
+		globus_gsi_cred_handle_destroy( proxy_handle );
+	}
+
+	return rc;
+#endif
 }
 
 

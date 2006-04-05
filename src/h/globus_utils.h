@@ -254,6 +254,20 @@ int x509_proxy_try_import( const char *proxy_file );
 
 const char* x509_error_string();
 
+int
+x509_send_delegation( const char *source_file,
+					  int (*recv_data_func)(void *, void **, size_t *), 
+					  void *recv_data_ptr,
+					  int (*send_data_func)(void *, void *, size_t),
+					  void *send_data_ptr );
+
+int
+x509_receive_delegation( const char *destination_file,
+						 int (*recv_data_func)(void *, void **, size_t *), 
+						 void *recv_data_ptr,
+						 int (*send_data_func)(void *, void *, size_t),
+						 void *send_data_ptr );
+
 int have_condor_g();
 
 void parse_resource_manager_string( const char *string, char **host,
