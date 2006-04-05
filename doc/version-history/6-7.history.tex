@@ -23,6 +23,14 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Condor can now delegate a job's GSI X509 credentials when
+transferring them over the wire, instead of copying them. This is
+much more secure when communications are not encrypted. As this can
+be a major performance hit when submitting large numbers of jobs
+remotely, the old behavior can be forced by setting
+\Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS} to False in the configuration
+file.
+
 \item Added the ability to pass a specific \Condor{config\_val} program
 to the cron/Hawkeye ``modules''.  If ``HAWKEYE\_CONFIG\_VAL'' is
 specified in the configuration, an environment variable with the same
