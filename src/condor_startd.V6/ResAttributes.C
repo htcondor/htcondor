@@ -46,6 +46,8 @@ MachAttributes::MachAttributes()
 		// value for this as soon as the MachAttributes object exists.
 	m_num_cpus = sysapi_ncpus();
 
+	m_num_real_cpus = sysapi_ncpus_raw();
+
 		// The same is true of physical memory.  If we had an error in
 		// sysapi_phys_memory(), we need to just EXCEPT with a message
 		// telling the user to define MEMORY manually.

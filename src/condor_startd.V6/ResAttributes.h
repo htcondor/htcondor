@@ -92,6 +92,7 @@ public:
 
 		// Functions to return the value of shared attributes
 	int				num_cpus()	{ return m_num_cpus; };
+	int				num_real_cpus()	{ return m_num_real_cpus; };
 	int				phys_mem()	{ return m_phys_mem; };
 	unsigned long   virt_mem()	{ return m_virt_mem; };
 	unsigned long   disk()		{ return m_disk; };
@@ -119,6 +120,7 @@ private:
 	int				m_clock_min;
 		// Static info
 	int				m_num_cpus;
+	int				m_num_real_cpus;
 	int				m_phys_mem;
 	char*			m_arch;
 	char*			m_opsys;

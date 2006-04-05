@@ -85,6 +85,7 @@ public:
 	bool 	hasAnyClaim( void );
 	bool	is_smp( void ) { return( num_cpus() > 1 ); }
 	int		num_cpus( void ) { return m_attr->num_cpus(); }
+	int		num_real_cpus( void ) { return m_attr->num_real_cpus(); }
 	int		num_vms( void ) { return nresources; }
 
 	int		send_update( int, ClassAd*, ClassAd* );

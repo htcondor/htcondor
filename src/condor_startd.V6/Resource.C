@@ -1588,7 +1588,7 @@ float
 Resource::compute_condor_load( void )
 {
 	float cpu_usage, avg, max, load;
-	int numcpus = resmgr->num_cpus();
+	int numcpus = resmgr->num_real_cpus();
 
 	time_t now = resmgr->now();
 	int num_since_last = now - r_last_compute_condor_load;
