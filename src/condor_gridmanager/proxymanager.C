@@ -177,7 +177,7 @@ AcquireProxy( const ClassAd *job_ad, MyString &error, int notify_tid )
 	char *subject_name = NULL;
 	MyString proxy_path;
 
-	char *param_str = param( "JOB_PROXY_FILE" );
+	char *param_str = param( "JOB_PROXY_OVERRIDE_FILE" );
 	if ( param_str ) {
 		proxy_path = param_str;
 		free( param_str );
