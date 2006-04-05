@@ -49,3 +49,20 @@ ReliSock::put_file_with_permissions( filesize_t *, const char * )
 	return FALSE;
 }
 
+int
+ReliSock::get_x509_delegation( filesize_t*, const char *, bool )
+{
+	EXCEPT( "ReliSock::get_x509_delegation() should never be "
+			"called within the Condor syscall library" );
+	return FALSE;
+}
+
+
+int
+ReliSock::put_x509_delegation( filesize_t *, const char * )
+{
+	EXCEPT( "ReliSock::put_x509_delegation() should never be "
+			"called within the Condor syscall library" );
+	return FALSE;
+}
+

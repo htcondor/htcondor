@@ -37,6 +37,8 @@
 #include "condor_debug.h"
 #include "condor_io.h"
 #include "directory.h"
+#include "globus_utils.h"
+#include "condor_auth_x509.h"
 
 
 int
@@ -131,5 +133,168 @@ ReliSock::put_file_with_permissions( filesize_t *size, const char *source )
 	result = put_file( size, source );
 
 	return result;
+}
+
+int
+ReliSock::get_x509_delegation( filesize_t *size, const char *destination,
+							   bool flush_buffers )
+{
+	int in_encode_mode;
+
+		// store if we are in encode or decode mode
+	in_encode_mode = is_encode();
+
+	if ( !prepare_for_nobuffering( stream_unknown ) ||
+		 !end_of_message() ) {
+		dprintf( D_ALWAYS, "ReliSock::get_x509_delegation(): failed to "
+				 "flush buffers\n" );
+		return -1;
+	}
+
+	if ( x509_receive_delegation( destination, relisock_gsi_get, (void *) this,
+								  relisock_gsi_put, (void *) this ) != 0 ) {
+		dprintf( D_ALWAYS, "ReliSock::get_x509_delegation(): "
+				 "delegation failed: %s\n", x509_error_string() );
+		return -1;
+	}
+
+		// restore stream mode (either encode or decode)
+	if ( in_encode_mode && is_decode() ) {
+		encode();
+	} else if ( !in_encode_mode && is_encode() ) { 
+		decode();
+	}
+	if ( !prepare_for_nobuffering( stream_unknown ) ) {
+		dprintf( D_ALWAYS, "ReliSock::get_x509_delegation(): failed to "
+				 "flush buffers afterwards\n" );
+		return -1;
+	}
+
+	if ( flush_buffers ) {
+		int rc = 0;
+		int fd = open( destination, O_WRONLY, 0 );
+		if ( fd < 0 ) {
+			rc = fd;
+		} else {
+			rc = fsync( fd );
+			::close( fd );
+		}
+		if ( rc < 0 ) {
+			dprintf( D_ALWAYS, "ReliSock::get_x509_delegation(): open/fsync "
+					 "failed, errno=%d (%s)\n", errno,
+					 strerror( errno ) );
+		}
+	}
+
+		// We should figure out how many bytes were sent
+	*size = 0;
+
+	return 0;
+}
+
+int
+ReliSock::put_x509_delegation( filesize_t *size, const char *source )
+{
+	int in_encode_mode;
+
+		// store if we are in encode or decode mode
+	in_encode_mode = is_encode();
+
+	if ( !prepare_for_nobuffering( stream_unknown ) ||
+		 !end_of_message() ) {
+		dprintf( D_ALWAYS, "ReliSock::get_x509_delegation(): failed to "
+				 "flush buffers\n" );
+		return -1;
+	}
+
+	if ( x509_send_delegation( source, relisock_gsi_get, (void *) this,
+							   relisock_gsi_put, (void *) this ) != 0 ) {
+		dprintf( D_ALWAYS, "ReliSock::put_x509_delegation(): delegation "
+				 "failed: %s\n", x509_error_string() );
+		return -1;
+	}
+
+		// restore stream mode (either encode or decode)
+	if ( in_encode_mode && is_decode() ) {
+		encode();
+	} else if ( !in_encode_mode && is_encode() ) { 
+		decode();
+	}
+	if ( !prepare_for_nobuffering( stream_unknown ) ) {
+		dprintf( D_ALWAYS, "ReliSock::get_x509_delegation(): failed to "
+				 "flush buffers afterwards\n" );
+		return -1;
+	}
+
+		// We should figure out how many bytes were sent
+	*size = 0;
+
+	return 0;
+}
+
+
+int relisock_gsi_get(void *arg, void **bufp, size_t *sizep)
+{
+    /* globus code which calls this function expects 0/-1 return vals */
+    
+    ReliSock * sock = (ReliSock*) arg;
+    size_t stat;
+    
+    sock->decode();
+    
+    //read size of data to read
+    stat = sock->code( *((int *)sizep) );
+    
+    *bufp = malloc( *((int *)sizep) );
+    if ( !*bufp ) {
+        dprintf( D_ALWAYS, "malloc failure relisock_gsi_get\n" );
+        stat = FALSE;
+    }
+    
+    //if successfully read size and malloced, read data
+    if ( stat ) {
+        sock->code_bytes( *bufp, *((int *)sizep) );
+    }
+    
+    sock->end_of_message();
+    
+    //check to ensure comms were successful
+    if ( stat == FALSE ) {
+        dprintf( D_ALWAYS, "relisock_gsi_get (read from socket) failure\n" );
+        return -1;
+    }
+    return 0;
+}
+
+int relisock_gsi_put(void *arg,  void *buf, size_t size)
+{
+    //param is just a ReliSock*
+    ReliSock *sock = (ReliSock *) arg;
+    int stat;
+    
+    sock->encode();
+    
+    //send size of data to send
+    stat = sock->code( (int &)size );
+    
+    
+    //if successful, send the data
+    if ( stat ) {
+        if ( !(stat = sock->code_bytes( buf, ((int) size )) ) ) {
+            dprintf( D_ALWAYS, "failure sending data (%d bytes) over sock\n",size);
+        }
+    }
+    else {
+        dprintf( D_ALWAYS, "failure sending size (%d) over sock\n", size );
+    }
+    
+    sock->end_of_message();
+    
+    //ensure data send was successful
+    if ( stat == FALSE) {
+        dprintf( D_ALWAYS, "relisock_gsi_put (write to socket) failure\n" );
+        return -1;
+    }
+    return 0;
 }
 

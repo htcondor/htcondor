@@ -460,75 +460,6 @@ int Condor_Auth_X509::nameGssToLocal(char * GSSClientname)
 	return 1;
 }
 
-//cannot make this an AuthSock method, since gss_assist method expects
-//three parms, methods have hidden "this" parm first. Couldn't figure out
-//a way around this, so made AuthSock have a member of type AuthComms
-//to pass in to this method to manage buffer space.  //mju
-int authsock_get(void *arg, void **bufp, size_t *sizep)
-{
-    /* globus code which calls this function expects 0/-1 return vals */
-    
-    ReliSock * sock = (ReliSock*) arg;
-    size_t stat;
-    
-    sock->decode();
-    
-    //read size of data to read
-    stat = sock->code( *((int *)sizep) );
-    
-    *bufp = malloc( *((int *)sizep) );
-    if ( !*bufp ) {
-        dprintf( D_ALWAYS, "malloc failure authsock_get\n" );
-        stat = FALSE;
-    }
-    
-    //if successfully read size and malloced, read data
-    if ( stat ) {
-        sock->code_bytes( *bufp, *((int *)sizep) );
-    }
-    
-    sock->end_of_message();
-    
-    //check to ensure comms were successful
-    if ( stat == FALSE ) {
-        dprintf( D_ALWAYS, "authsock_get (read from socket) failure\n" );
-        return -1;
-    }
-    return 0;
-}
-
-int authsock_put(void *arg,  void *buf, size_t size)
-{
-    //param is just a AS*
-    ReliSock *sock = (ReliSock *) arg;
-    int stat;
-    
-    sock->encode();
-    
-    //send size of data to send
-    stat = sock->code( (int &)size );
-    
-    
-    //if successful, send the data
-    if ( stat ) {
-        if ( !(stat = sock->code_bytes( buf, ((int) size )) ) ) {
-            dprintf( D_ALWAYS, "failure sending data (%d bytes) over sock\n",size);
-        }
-    }
-    else {
-        dprintf( D_ALWAYS, "failure sending size (%d) over sock\n", size );
-    }
-    
-    sock->end_of_message();
-    
-    //ensure data send was successful
-    if ( stat == FALSE) {
-        dprintf( D_ALWAYS, "authsock_put (write to socket) failure\n" );
-        return -1;
-    }
-    return 0;
-}
-
 StringList * getDaemonList(ReliSock * sock)
 {
     // Now, we substitu all $$FULL_HOST_NAME with actual host name, then
@@ -711,9 +642,9 @@ int Condor_Auth_X509::authenticate_client_gss(CondorError* errstack)
                                                       GSS_C_MUTUAL_FLAG,
                                                       &ret_flags, 
                                                       &token_status,
-                                                      authsock_get, 
+                                                      relisock_gsi_get, 
                                                       (void *) mySock_,
-                                                      authsock_put, 
+                                                      relisock_gsi_put, 
                                                       (void *) mySock_
                                                       );
     
@@ -829,9 +760,9 @@ int Condor_Auth_X509::authenticate_server_gss(CondorError* errstack)
                                                         /* don't need user_to_user */
                                                         &token_status,
                                                         NULL,     /* don't delegate credential */
-                                                        authsock_get, 
+                                                        relisock_gsi_get, 
                                                         (void *) mySock_,
-                                                        authsock_put, 
+                                                        relisock_gsi_put, 
                                                         (void *) mySock_
                                                         );
     

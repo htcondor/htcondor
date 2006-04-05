@@ -35,6 +35,11 @@
 **	R E L I A B L E    S O C K
 */
 
+// These functions exchange arbitrary data blocks over a ReliSock.
+// They are for use with the Globus GSI gss-assist library.
+int relisock_gsi_get(void *arg, void **bufp, size_t *sizep);
+int relisock_gsi_put(void *arg,  void *buf, size_t size);
+
 class Authentication;
 class Condor_MD_MAC;
 /** The ReliSock class implements the Sock interface with TCP. */
@@ -119,6 +124,11 @@ public:
 	int put_file( filesize_t *size, const char *source);
     /// returns -1 on failure, 0 for ok
 	int put_file( filesize_t *size, int fd );
+	/// returns -1 on failure, 0 for ok
+	int get_x509_delegation( filesize_t *size, const char *destination,
+							 bool flush_buffers=false );
+	/// returns -1 on failure, 0 for ok
+	int put_x509_delegation( filesize_t *size, const char *source );
     ///
 	float get_bytes_sent() { return _bytes_sent; }
     ///
