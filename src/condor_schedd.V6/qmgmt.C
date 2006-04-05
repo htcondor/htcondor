@@ -60,6 +60,7 @@ extern filesize_t  MaxHistoryFileSize;
 extern int         NumberBackupHistoryFiles;
 extern Scheduler scheduler;
 extern DedicatedScheduler dedicated_scheduler;
+extern void Scanner(char*&, Token&);	// in classad library
 
 extern "C" {
 	int	prio_compar(prio_rec*, prio_rec*);
@@ -1587,7 +1588,6 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	if ( exp ) {
 		long ivalue;
 		unsigned int base;
-		extern	void Scanner(char*&, Token&);	// in classad library
 		Token token;
 
 			// See if attr_value is a scalar (int or float) by
