@@ -85,6 +85,13 @@ on hold if the cancel fails.
 central manager config\_config; due to a cut and paste error it was
 COLLECTOR\_CLASS\_HISTORY\_SIZE.
 
+\item In some cases, \Attr{CondorLoadAvg} was reporting a different
+result, depending on the setting of \MacroNI{NUM\_CPUS}, even with
+everything else, such as the actual number of cpus, being the same.
+The specific case in which this effect was noticable was when the
+machine load was greater than \MacroNI{NUM\_CPUS}.  \Attr{CondorLoadAvg}
+is now independent of the setting of \MacroNI{NUM\_CPUS}.
+
 \end{itemize}
 
 
