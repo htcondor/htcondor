@@ -170,7 +170,7 @@ StatInfo::stat_file( const char *path )
 
 		// If we've failed, just bail out
 	if ( status ) {
-		if ( ENOENT == si_errno ) {
+		if (( ENOENT == si_errno ) || (EBADF == si_errno) ) {
 			si_error = SINoFile;
 		} else {
 			dprintf( D_FULLDEBUG, 
@@ -213,7 +213,7 @@ StatInfo::stat_file( int fd )
 
 		// If we've failed, just bail out
 	if ( status ) {
-		if ( ENOENT == si_errno ) {
+		if (( ENOENT == si_errno ) || (EBADF == si_errno) ) {
 			si_error = SINoFile;
 		} else {
 			dprintf( D_FULLDEBUG, 
