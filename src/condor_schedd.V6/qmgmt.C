@@ -104,6 +104,7 @@ static void RemoveExtraHistoryFiles(void);
 static int MaybeDeleteOneHistoryBackup(void);
 static bool IsHistoryFilename(const char *filename, time_t *backup_time);
 static void RotateHistory(void);
+static int findHistoryOffset(FILE *LogFile);
 
 // Create a hash table which, given a cluster id, tells how
 // many procs are in the cluster
@@ -3237,19 +3238,20 @@ static void AppendHistory(ClassAd* ad)
   // the Condor source defines it to be 0 which has no effect. So we'll take
  // advantage of large files where we can, but not where we can't.
   int fd = open(JobHistoryFileName,
-                O_WRONLY|O_CREAT|O_APPEND|O_LARGEFILE,
+                O_RDWR|O_CREAT|O_APPEND|O_LARGEFILE,
                 0644);
   if (fd < 0) {
 	dprintf(D_ALWAYS,"ERROR saving to history file (%s): %s\n",
 			JobHistoryFileName, strerror(errno));
     failed = true;
   } else {
-	  FILE *LogFile=fdopen(fd, "a");
+	  FILE *LogFile=fdopen(fd, "r+");
       if (!LogFile) {
           dprintf(D_ALWAYS,"ERROR saving to history file (%s): %s\n",
                   JobHistoryFileName, strerror(errno));
           failed = true;
       } else {
+          int offset = findHistoryOffset(LogFile);
           if (!ad->fPrint(LogFile)) {
               dprintf(D_ALWAYS, 
                       "ERROR: failed to write job class ad to history file %s\n",
@@ -3257,7 +3259,24 @@ static void AppendHistory(ClassAd* ad)
               fclose(LogFile);
               failed = true;
           } else {
-              fprintf(LogFile,"***\n");   // separator
+              int cluster, proc, completion;
+              MyString owner;
+
+              if (!ad->LookupInteger("ClusterId", cluster)) {
+                  cluster = -1;
+              }
+              if (!ad->LookupInteger("ProcId", proc)) {
+                  proc = -1;
+              }
+              if (!ad->LookupInteger("CompletionDate", completion)) {
+                  completion = -1;
+              }
+              if (!ad->LookupString("Owner", owner)) {
+                  owner = "?";
+              }
+              fprintf(LogFile,
+                      "*** Offset = %d ClusterId = %d ProcId = %d Owner = \"%s\" CompletionDate = %d\n",
+                      offset, cluster, proc, owner.Value(), completion);
               fclose(LogFile);
           }
       }
@@ -3472,6 +3491,74 @@ static void RotateHistory(void)
     }
 
     return;
+}
+
+// --------------------------------------------------------------------------
+// Figure out how far from the end the beginning of the last line in the
+// history file is. We assume that the file is open. We reset the file pointer
+// to the end of the file when we are done.
+// --------------------------------------------------------------------------
+static int findHistoryOffset(FILE *LogFile)
+{
+    int offset;
+    int file_size;
+    const int JUMP = 200;
+
+    fseek(LogFile, 0, SEEK_END);
+    file_size = ftell(LogFile);
+    if (file_size == 0 || file_size == -1) {
+        // If there is nothing in the file, the offset of the previous
+        // line is 0. 
+        offset = 0;
+    } else {
+        bool found = false;
+        char *buffer = (char *) malloc(JUMP + 1);
+        int current_offset; 
+
+        // We need to skip the last newline
+        if (file_size > 1) {
+            file_size--;
+        }
+
+        current_offset = file_size;
+        while (!found) {
+            current_offset -= JUMP;
+            if (current_offset < 0) {
+                current_offset = 0;
+            }
+            memset(buffer, 0, JUMP+1);
+            if (fseek(LogFile, current_offset, SEEK_SET)) {
+                // We failed for some reason
+                offset = -1;
+                break;
+            }
+            int n = fread(buffer, 1, JUMP, LogFile);
+            if (n < JUMP) {
+                // We failed for some reason: we know we should 
+                // be able to read this much. 
+                offset = -1;
+                break;
+            }
+            // Look for the newline, backwards through this buffer
+            for (int i = JUMP-1; i >= 0; i--) {
+                if (buffer[i] == '\n') {
+                    found = true;
+                    offset = current_offset + i + 1;
+                    break;
+                }
+            }
+            if (current_offset == 0) {
+                // We read all the way back to the beginning
+                if (!found) {
+                    offset = 0;
+                    found = true;
+                }
+                break;
+            }
+        }
+    }
+    fseek(LogFile, 0, SEEK_END);
+    return offset;
 }
 
 void
