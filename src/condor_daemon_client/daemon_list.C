@@ -207,6 +207,7 @@ CollectorList::resortLocal( const char *preferred_collector )
 		// this host. This is determined either by
 		// a) preferred_collector passed in
         // b) the collector that has the same hostname as this negotiator
+	char * tmp_preferred_collector = NULL;
 
 	if ( !preferred_collector ) {
         // figure out our hostname for plan b) above
@@ -216,7 +217,8 @@ CollectorList::resortLocal( const char *preferred_collector )
 			return -1;
 		}
 
-		preferred_collector = strdup(_hostname);
+		tmp_preferred_collector = strdup(_hostname);
+		preferred_collector = preferred_collector; // So we know to free later
 	}
 
 
@@ -239,7 +241,7 @@ CollectorList::resortLocal( const char *preferred_collector )
 		this->list.Prepend( daemon );
 	}
 	
-
+	free(tmp_preferred_collector); // Warning, preferred_collector (may have) just became invalid, so do this just before returning.
 	return 0;
 }
 
