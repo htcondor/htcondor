@@ -57,6 +57,10 @@ ssize_t stream_file_xfer( int src_fd, int dst_fd, size_t n_bytes );
 int tcp_accept_timeout( int, struct sockaddr*, int*, int );
 }
 
+/* Ensure the checkpoint's filename I'm about to read or write stays in
+	the checkpointing directory. */
+int ValidateNoPathComponents(char *path);
+
 
 Server::Server()
 {
@@ -97,11 +101,10 @@ void Server::Init()
 {
 	char		*ckpt_server_dir, *level, *interval, *collection_log;
 	char		*tmp;
-#ifdef DEBUG
 	char        log_msg[256];
 	char        hostname[100];
-	int         buf_size, len;
-#endif
+	int         buf_size;
+	socklen_t	len;
 	static bool first_time = true;
 	
 	num_store_xfers = 0;
@@ -247,8 +250,7 @@ void Server::Init()
 	}
 	SetUpPeers();
 	xfer_summary.init();
-#ifdef DEBUG
-	Log(req_ID, "Server Initializing:");
+	Log("Server Initializing");
 	Log("Server:                            ");
 	if (gethostname(hostname, 99) == 0) {
 		hostname[99] = '\0';
@@ -312,7 +314,6 @@ void Server::Init()
 	sprintf(log_msg, "%s%d", "Number of restoring transfers:     ",
 			max_restore_xfers);
 	Log(log_msg);
-#endif
 
 	first_time = false;
 }
@@ -459,7 +460,7 @@ void Server::Execute()
 			last_reclaim_time = current_time;
 			if (replication_level)
 				Replicate();
-			Log("Sending ckpt server ad to collector...");
+			dprintf(D_ALWAYS, "Sending ckpt server ad to collector...\n");
             xfer_summary.time_out(current_time, canon_name);
 		}
 		if (((unsigned int) current_time - (unsigned int) last_clean_time)
@@ -504,21 +505,22 @@ void Server::HandleRequest(int req_sd,
 		exit(ACCEPT_ERROR);
     }
 	req_ID++;
+	dprintf(D_ALWAYS, "----------------------------------------------------\n");
 	switch (req) {
         case SERVICE_REQ:
-		    sprintf(log_msg, "%s%s", "Receiving service request from ", 
+		    sprintf(log_msg, "%s%s", "Receiving SERVICE request from ", 
 					inet_ntoa(shadow_sa.sin_addr));
 			break;
 		case STORE_REQ:
-			sprintf(log_msg, "%s%s", "Receiving store request from ", 
+			sprintf(log_msg, "%s%s", "Receiving STORE request from ", 
 					inet_ntoa(shadow_sa.sin_addr));
 			break;
 		case RESTORE_REQ:
-			sprintf(log_msg, "%s%s", "Receiving restore request from ", 
+			sprintf(log_msg, "%s%s", "Receiving RESTORE request from ", 
 					inet_ntoa(shadow_sa.sin_addr));
 			break;
 		case REPLICATE_REQ:
-			sprintf(log_msg, "%s%s", "Receiving replicate request from ", 
+			sprintf(log_msg, "%s%s", "Receiving REPLICATE request from ", 
 					inet_ntoa(shadow_sa.sin_addr));
 			break;
 		default:
@@ -652,34 +654,77 @@ void Server::ProcessServiceReq(int             req_id,
 		net_write(req_sd, (char*) &service_reply, sizeof(service_reply_pkt));
 		sprintf(log_msg, "Request for service from %s DENIED:", 
 				inet_ntoa(shadow_IP));
-		Log(req_id, log_msg);
+		Log(log_msg);
 		Log("Invalid authentication ticket used");
 		close(req_sd);
 		return;
     }
 	service_req.service = ntohs(service_req.service);
 	service_req.key = ntohl(service_req.key);
-#if defined(DEBUG)
+
 	switch (service_req.service) {
         case CKPT_SERVER_SERVICE_STATUS:
-		    sprintf(log_msg, "Service CKPT_SERVER_SERVICE_STATUS request from %s", 
-					service_req.owner_name);
+		    sprintf(log_msg, "Service: CKPT_SERVER_SERVICE_STATUS");
 			break;
 		case SERVICE_RENAME:
-			sprintf(log_msg, "Service SERVICE_RENAME request from %s", 
-					service_req.owner_name);
+			sprintf(log_msg, "Service: SERVICE_RENAME");
 			break;
 		case SERVICE_DELETE:
-			sprintf(log_msg, "Service SERVICE_DELETE request from %s", 
-					service_req.owner_name);
+			sprintf(log_msg, "Service: SERVICE_DELETE");
 			break;
 		case SERVICE_EXIST:
-			sprintf(log_msg, "Service SERVICE_EXIST request from %s", 
-					service_req.owner_name);
+			sprintf(log_msg, "Service: SERVICE_EXIST");
 			break;
 		}
-	Log(req_id, log_msg);  
-#endif
+	Log(log_msg);  
+	sprintf(log_msg, "Owner:   %s", service_req.owner_name);
+	Log(log_msg);  
+	sprintf(log_msg, "File:    %s", service_req.file_name);
+	Log(log_msg);  
+
+	/* Make sure the various pieces we will be using from the client 
+		don't escape the checkpointing directory by rejecting
+		it if it is '.' '..' or contains a path separator. */
+
+	if (ValidateNoPathComponents(service_req.owner_name) == FALSE) {
+		service_reply.server_addr.s_addr = htonl(0);
+		service_reply.port = htons(0);
+		service_reply.req_status = htons(BAD_REQ_PKT);
+		net_write(req_sd, (char*) &service_reply, sizeof(service_reply_pkt));
+		sprintf(log_msg, "Owner field contans illegal path components!");
+		Log(log_msg);
+		sprintf(log_msg, "Service request DENIED!");
+		Log(log_msg);
+		close(req_sd);
+		return;
+	}
+
+	if (ValidateNoPathComponents(service_req.file_name) == FALSE) {
+		service_reply.server_addr.s_addr = htonl(0);
+		service_reply.port = htons(0);
+		service_reply.req_status = htons(BAD_REQ_PKT);
+		net_write(req_sd, (char*) &service_reply, sizeof(service_reply_pkt));
+		sprintf(log_msg, "Filename field contans illegal path components");
+		Log(log_msg);
+		sprintf(log_msg, "Service request DENIED!");
+		Log(log_msg);
+		close(req_sd);
+		return;
+	}
+
+	if (ValidateNoPathComponents(inet_ntoa(shadow_IP)) == FALSE) {
+		service_reply.server_addr.s_addr = htonl(0);
+		service_reply.port = htons(0);
+		service_reply.req_status = htons(BAD_REQ_PKT);
+		net_write(req_sd, (char*) &service_reply, sizeof(service_reply_pkt));
+		sprintf(log_msg, "ShadowIpAddr field contans illegal path components");
+		Log(log_msg);
+		sprintf(log_msg, "Service request DENIED!");
+		Log(log_msg);
+		close(req_sd);
+		return;
+	}
+
 	switch (service_req.service) {
         case CKPT_SERVER_SERVICE_STATUS:
 		    num_files = imds.GetNumFiles();
@@ -695,7 +740,7 @@ void Server::ProcessServiceReq(int             req_id,
 							  sizeof(service_reply));
 					sprintf(log_msg, "Service request from %s DENIED:", 
 							inet_ntoa(shadow_IP));
-					Log(req_id, log_msg);
+					Log(log_msg);
 					Log("Insufficient buffers/ports to handle request");
 					close(req_sd);
 					return;
@@ -707,7 +752,7 @@ void Server::ProcessServiceReq(int             req_id,
 							  sizeof(service_reply));
 					sprintf(log_msg, "Service request from %s DENIED:", 
 							inet_ntoa(shadow_IP));
-					Log(req_id, log_msg);
+					Log(log_msg);
 					Log("Cannot obtain a new socket from server");
 					close(req_sd);
 					return;
@@ -843,6 +888,11 @@ void Server::ProcessServiceReq(int             req_id,
 				sprintf(pathname, "%s%s/%s/%s", LOCAL_DRIVE_PREFIX, 
 						inet_ntoa(shadow_IP), service_req.owner_name, 
 						service_req.file_name);
+
+				sprintf(log_msg, "Checking existance of file: %s",
+					pathname);
+				Log(log_msg);
+
 				if (stat(pathname, &chkpt_file_status) == 0) {
 						service_reply.req_status = htons(0);
 				} else
@@ -861,19 +911,19 @@ void Server::ProcessServiceReq(int             req_id,
 		close(req_sd);
 		sprintf(log_msg, "Service request from %s DENIED:", 
 				inet_ntoa(shadow_IP));
-		Log(req_id, log_msg);
+		Log(log_msg);
 		Log("Cannot sent IP/port to shadow (socket closed)");
     } else {
 		close(req_sd);
 		if (service_req.service == CKPT_SERVER_SERVICE_STATUS) {
 			if (num_files == 0) {
-				Log(req_id, "Request for server status GRANTED:");
+				Log("Request for server status GRANTED:");
 				Log("No files on checkpoint server");
 			} else {
 				child_pid = fork();
 				if (child_pid < 0) {
 					close(data_conn_sd);
-					Log(req_id, "Unable to honor status service request:");
+					Log("Unable to honor status service request:");
 					Log("Cannot fork child processes");	  
 				} else if (child_pid != 0)  {
 					// Parent (Master) process
@@ -881,7 +931,7 @@ void Server::ProcessServiceReq(int             req_id,
 									 "Server Status",
 									 "Condor", 0, service_req.key, 0,
 									 FILE_STATUS);
-					Log(req_id, "Request for server status GRANTED");
+					Log("Request for server status GRANTED");
 				} else {
 					// Child process
 					close(store_req_sd);
@@ -892,9 +942,9 @@ void Server::ProcessServiceReq(int             req_id,
 				}
 			}
 		} else if (service_reply.req_status == htons(CKPT_OK))
-			Log(req_id, "Service request successfully completed");
+			Log("Service request successfully completed");
 		else {
-			Log(req_id, "Service request cannot be completed:");
+			Log("Service request cannot be completed:");
 			sprintf(log_msg, "Attempt returns error #%d", 
 					ntohs(service_reply.req_status));
 			Log(log_msg);
@@ -1212,6 +1262,27 @@ file_stream_progress_report(int bytes_moved)
 }
 #endif
 
+/* check to make sure something being used as a filename that we will
+	be reading or writing isn't trying to do anything funny. This
+	means the filename can't be "." ".." or have a path separator
+	in it. */
+int ValidateNoPathComponents(char *path)
+{
+	if (path == NULL) {
+		return FALSE;
+	}
+
+	if (path[0] == '\0' ||
+		strcmp(path, ".") == MATCH || 
+		strcmp(path, "..") == MATCH ||
+		strstr(path, "/") != NULL)
+	{
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
 void Server::ProcessStoreReq(int            req_id,
 							 int            req_sd,
 							 struct in_addr shadow_IP,
@@ -1234,7 +1305,7 @@ void Server::ProcessStoreReq(int            req_id,
 		net_write(req_sd, (char*) &store_reply, sizeof(store_reply_pkt));
 		sprintf(log_msg, "Store request from %s DENIED:", 
 				inet_ntoa(shadow_IP));
-		Log(req_id, log_msg);
+		Log(log_msg);
 		Log("Invalid authentication ticket used");
 		close(req_sd);
 		return;
@@ -1246,20 +1317,63 @@ void Server::ProcessStoreReq(int            req_id,
 		net_write(req_sd, (char*) &store_reply, sizeof(store_reply_pkt));
 		sprintf(log_msg, "Store request from %s DENIED:", 
 				inet_ntoa(shadow_IP));
-		Log(req_id, log_msg);
+		Log(log_msg);
 		Log("Incomplete request packet");
 		close(req_sd);
 		return;
     }
 
-#if defined(DEBUG)
-	sprintf(log_msg, "STORE request from %s", store_req.owner);
-	Log(req_id, log_msg);
+	sprintf(log_msg, "Owner:     %s", store_req.owner);
+	Log(log_msg);
 	sprintf(log_msg, "File name: %s", store_req.filename);
 	Log(log_msg);
 	sprintf(log_msg, "File size: %d", ntohl(store_req.file_size));
 	Log(log_msg);
-#endif
+
+	/* Make sure the various pieces we will be using from the client 
+		don't escape the checkpointing directory by rejecting
+		it if it is '.' '..' or contains a path separator. */
+	
+	if (ValidateNoPathComponents(store_req.owner) == FALSE) {
+		store_reply.server_name.s_addr = htonl(0);
+		store_reply.port = htons(0);
+		store_reply.req_status = htons(BAD_REQ_PKT);
+		net_write(req_sd, (char*) &store_reply, sizeof(store_reply_pkt));
+		sprintf(log_msg, "Owner field contans illegal path components!");
+		Log(log_msg);
+		sprintf(log_msg, "STORE request DENIED!");
+		Log(log_msg);
+		close(req_sd);
+		return;
+	}
+
+	if (ValidateNoPathComponents(store_req.filename) == FALSE) {
+		store_reply.server_name.s_addr = htonl(0);
+		store_reply.port = htons(0);
+		store_reply.req_status = htons(BAD_REQ_PKT);
+		net_write(req_sd, (char*) &store_reply, sizeof(store_reply_pkt));
+		sprintf(log_msg, "Filename field contans illegal path components!");
+		Log(log_msg);
+		sprintf(log_msg, "STORE request DENIED!");
+		Log(log_msg);
+		close(req_sd);
+		return;
+	}
+
+	if (ValidateNoPathComponents(inet_ntoa(shadow_IP)) == FALSE) {
+		store_reply.server_name.s_addr = htonl(0);
+		store_reply.port = htons(0);
+		store_reply.req_status = htons(BAD_REQ_PKT);
+		net_write(req_sd, (char*) &store_reply, sizeof(store_reply_pkt));
+		sprintf(log_msg, "ShadowIpAddr field contans illegal path components!");
+		Log(log_msg);
+		sprintf(log_msg, "STORE request DENIED!");
+		Log(log_msg);
+		close(req_sd);
+		return;
+	}
+
+
 	store_req.file_size = ntohl(store_req.file_size);
 	data_conn_sd = I_socket();
 	if (data_conn_sd == INSUFFICIENT_RESOURCES) {
@@ -1269,7 +1383,7 @@ void Server::ProcessStoreReq(int            req_id,
 		net_write(req_sd, (char*) &store_reply, sizeof(store_reply_pkt));
 		sprintf(log_msg, "Store request from %s DENIED:", 
 				inet_ntoa(shadow_IP));
-		Log(req_id, log_msg);
+		Log(log_msg);
 		Log("Insufficient buffers/ports to handle request");
 		close(req_sd);
 		return;
@@ -1280,7 +1394,7 @@ void Server::ProcessStoreReq(int            req_id,
 		net_write(req_sd, (char*) &store_reply, sizeof(store_reply_pkt));
 		sprintf(log_msg, "Store request from %s DENIED:", 
 				inet_ntoa(shadow_IP));
-		Log(req_id, log_msg);
+		Log(log_msg);
 		Log("Cannot obtain a new socket from server");
 		close(req_sd);
 		return;
@@ -1300,7 +1414,7 @@ void Server::ProcessStoreReq(int            req_id,
 
 	if (I_listen(data_conn_sd, 1) != CKPT_OK) {
 		sprintf(log_msg, "ERROR: I_listen() fails to listen");
-		Log(0, log_msg);
+		Log(log_msg);
 		exit(LISTEN_ERROR);
 	}
 
@@ -1316,7 +1430,7 @@ void Server::ProcessStoreReq(int            req_id,
 		close(req_sd);
 		sprintf(log_msg, "Store request from %s DENIED:", 
 				inet_ntoa(shadow_IP));
-		Log(req_id, log_msg);
+		Log(log_msg);
 		Log("Cannot send IP/port to shadow (socket closed)");
 		imds.RemoveFile(shadow_IP, store_req.owner, store_req.filename);
 		close(data_conn_sd);
@@ -1327,7 +1441,7 @@ void Server::ProcessStoreReq(int            req_id,
 
 		if (child_pid < 0) {
 			close(data_conn_sd);
-			Log(req_id, "Unable to honor store request:");
+			Log("Unable to honor store request:");
 			Log("Cannot fork child processes");
 		} else if (child_pid != 0) {
 			// Parent (Master) process
@@ -1337,7 +1451,7 @@ void Server::ProcessStoreReq(int            req_id,
 							 store_req.filename, store_req.owner,
 							 store_req.file_size, store_req.key,
 							 store_req.priority, RECV);
-			Log(req_id, "Request to store checkpoint file GRANTED");
+			Log("Request to store checkpoint file GRANTED");
 			int len = strlen(store_req.filename);
 			if (strcmp(store_req.filename+len-4, ".tmp") == MATCH) {
 				store_req.filename[len-4] = '\0';
@@ -1397,6 +1511,10 @@ void Server::ReceiveCheckpointFile(int         data_conn_sd,
 	int				   peer_info_fd;
 	char			   peer_info_filename[100];
 	bool			   incomplete_file = false;
+	char               log_msg[256];
+	
+	sprintf(log_msg, "Receiving checkpoint to file: %s", pathname);
+	Log(log_msg);
 	
 #if 1
 	file_fd = open(pathname, O_WRONLY|O_CREAT|O_TRUNC,0664);
@@ -1487,7 +1605,7 @@ void Server::ProcessRestoreReq(int             req_id,
 		net_write(req_sd, (char*) &restore_reply, sizeof(restore_reply_pkt));
 		sprintf(log_msg, "Restore request from %s DENIED:", 
 				inet_ntoa(shadow_IP));
-		Log(req_id, log_msg);
+		Log(log_msg);
 		Log("Invalid authentication ticket used");
 		close(req_sd);
 		return;
@@ -1501,17 +1619,60 @@ void Server::ProcessRestoreReq(int             req_id,
 		net_write(req_sd, (char*) &restore_reply, sizeof(restore_reply_pkt));
 		sprintf(log_msg, "Restore request from %s DENIED:", 
 				inet_ntoa(shadow_IP));
-		Log(req_id, log_msg);
+		Log(log_msg);
 		Log("Incomplete request packet");
 		close(req_sd);
 		return;
     }
-#ifdef DEBUG  
-	sprintf(log_msg, "RESTORE request from %s", restore_req.owner);
-	Log(req_id, log_msg);
+
+	sprintf(log_msg, "Owner:     %s", restore_req.owner);
+	Log(log_msg);
 	sprintf(log_msg, "File name: %s", restore_req.filename);
 	Log(log_msg);
-#endif
+
+	/* Make sure the various pieces we will be using from the client 
+		don't escape the checkpointing directory by rejecting
+		it if it is '.' '..' or contains a path separator. */
+
+	if (ValidateNoPathComponents(restore_req.owner) == FALSE) {
+		restore_reply.server_name.s_addr = htonl(0);
+		restore_reply.port = htons(0);
+		restore_reply.req_status = htons(BAD_REQ_PKT);
+		net_write(req_sd, (char*) &restore_reply, sizeof(restore_reply_pkt));
+		sprintf(log_msg, "Owner field contans illegal path components!");
+		Log(log_msg);
+		sprintf(log_msg, "RESTORE request DENIED!");
+		Log(log_msg);
+		close(req_sd);
+		return;
+	}
+
+	if (ValidateNoPathComponents(restore_req.filename) == FALSE) {
+		restore_reply.server_name.s_addr = htonl(0);
+		restore_reply.port = htons(0);
+		restore_reply.req_status = htons(BAD_REQ_PKT);
+		net_write(req_sd, (char*) &restore_reply, sizeof(restore_reply_pkt));
+		sprintf(log_msg, "Filename field contans illegal path components!");
+		Log(log_msg);
+		sprintf(log_msg, "RESTORE request DENIED!");
+		Log(log_msg);
+		close(req_sd);
+		return;
+	}
+
+	if (ValidateNoPathComponents(inet_ntoa(shadow_IP)) == FALSE) {
+		restore_reply.server_name.s_addr = htonl(0);
+		restore_reply.port = htons(0);
+		restore_reply.req_status = htons(BAD_REQ_PKT);
+		net_write(req_sd, (char*) &restore_reply, sizeof(restore_reply_pkt));
+		sprintf(log_msg, "ShadowIpAddr field contans illegal path components!");
+		Log(log_msg);
+		sprintf(log_msg, "RESTORE request DENIED!");
+		Log(log_msg);
+		close(req_sd);
+		return;
+	}
+
 	sprintf(pathname, "%s%s/%s/%s", LOCAL_DRIVE_PREFIX, inet_ntoa(shadow_IP),
 			restore_req.owner, restore_req.filename);
 	if ((preexist=stat(pathname, &chkpt_file_status)) != 0) {
@@ -1522,7 +1683,7 @@ void Server::ProcessRestoreReq(int             req_id,
 		net_write(req_sd, (char*) &restore_reply, sizeof(restore_reply_pkt));
 		sprintf(log_msg, "Restore request from %s DENIED:", 
 				inet_ntoa(shadow_IP));
-		Log(req_id, log_msg);
+		Log(log_msg);
 		Log("Requested file does not exist on server");
 		close(req_sd);
 		return;
@@ -1539,7 +1700,7 @@ void Server::ProcessRestoreReq(int             req_id,
 		  net_write(req_sd, (char*) &restore_reply, sizeof(restore_reply_pkt));
 		  sprintf(log_msg, "Restore request from %s DENIED:", 
 				  inet_ntoa(shadow_IP));
-		  Log(req_id, log_msg);
+		  Log(log_msg);
 		  Log("Insufficient buffers/ports to handle request");
 		  close(req_sd);
 		  return;
@@ -1551,7 +1712,7 @@ void Server::ProcessRestoreReq(int             req_id,
 		  net_write(req_sd, (char*) &restore_reply, sizeof(restore_reply_pkt));
 		  sprintf(log_msg, "Restore request from %s DENIED:", 
 				  inet_ntoa(shadow_IP));
-		  Log(req_id, log_msg);
+		  Log(log_msg);
 		  Log("Cannot botain a new socket from server");
 		  close(req_sd);
 		  return;
@@ -1581,7 +1742,7 @@ void Server::ProcessRestoreReq(int             req_id,
 		  close(req_sd);
 		  sprintf(log_msg, "Restore request from %s DENIED:", 
 				  inet_ntoa(shadow_IP));
-		  Log(req_id, log_msg);
+		  Log(log_msg);
 		  Log("Cannot send IP/port to shadow (socket closed)");
 		  close(data_conn_sd);
 	  } else {
@@ -1589,7 +1750,7 @@ void Server::ProcessRestoreReq(int             req_id,
 		  child_pid = fork();
 		  if (child_pid < 0) {
 			  close(data_conn_sd);
-			  Log(req_id, "Unable to honor restore request:");
+			  Log("Unable to honor restore request!");
 			  Log("Cannot fork child processes");
 		  } else if (child_pid != 0) {            // Parent (Master) process
 			  close(data_conn_sd);
@@ -1598,7 +1759,7 @@ void Server::ProcessRestoreReq(int             req_id,
 							   restore_req.filename, restore_req.owner,
 							   chkpt_file_status.st_size, restore_req.key,
 							   restore_req.priority, XMIT);
-			  Log(req_id, "Request to restore checkpoint file GRANTED");
+			  Log("Request to restore checkpoint file GRANTED");
 		  } else {
 			  // Child process
 			  close(store_req_sd);
@@ -1632,7 +1793,11 @@ void Server::TransmitCheckpointFile(int         data_conn_sd,
 	int				   file_fd;
 	int				   peer_info_fd;
 	char			   peer_info_filename[100];
+	char               log_msg[256];
 	
+	sprintf(log_msg, "Transmitting checkpoint file: %s", pathname);
+	Log(log_msg);
+
 	file_fd = open(pathname, O_RDONLY);
 	if (file_fd < 0) {
 		dprintf(D_ALWAYS, "ERROR: Can't open file '%s'\n", pathname);
@@ -1888,7 +2053,7 @@ void Server::ChildComplete()
 void Server::NoMore()
 {
   more = 0;
-  Log(0, "SIGTERM trapped; shutting down checkpoint server");
+  dprintf(D_ALWAYS, "SIGTERM trapped; shutting down checkpoint server\n");
 }
 
 
@@ -1902,19 +2067,13 @@ void Server::ServerDump()
 void Server::Log(int         request,
 				 const char* event)
 {
-	dprintf(D_ALWAYS, "\t");
-	if (strlen(event) > LOG_EVENT_WIDTH_1) {
-		dprintf(D_ALWAYS | D_NOHEADER, "%s\n", event);
-		Log(event+LOG_EVENT_WIDTH_1);
-    } else {
-		dprintf(D_ALWAYS | D_NOHEADER, "%s\n", event);
-	}
+	dprintf(D_ALWAYS, "[reqid: %d] %s\n", request, event);
 }
 
 
 void Server::Log(const char* event)
 {
-	dprintf(D_ALWAYS | D_NOHEADER, "\t\t\t%s\n", event);
+	dprintf(D_ALWAYS, "    %s\n", event);
 }
 
 

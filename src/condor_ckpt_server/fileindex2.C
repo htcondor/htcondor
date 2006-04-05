@@ -424,6 +424,7 @@ int FileIndex::DeleteFile(struct in_addr machine_IP,
 
 	sprintf(pathname, "%s%s/%s/%s", LOCAL_DRIVE_PREFIX, machine_name, 
 			owner_name, file_name);
+	dprintf(D_ALWAYS, "    Deleting file: %s\n", pathname);
 	if (unlink(pathname)) {
 		retCode = CANNOT_DELETE_FILE;
 	}

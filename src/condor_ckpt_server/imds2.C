@@ -25,6 +25,7 @@
 #include "imds2.h"
 #include "fileinfo2.h"
 #include "fileindex2.h"
+#include "condor_debug.h"
 
 
 u_lint IMDS::GetNumFiles()
@@ -87,8 +88,11 @@ int IMDS::RenameFile(struct in_addr machine_IP,
 			old_file_ptr->data.machine_IP_name, owner_name, new_file_name);
 	new_fn = Index.GetFileNode(machine_IP, owner_name, new_file_name);
 	if (new_fn == NULL) {
-		if (rename(old_pathname, new_pathname) != 0)
+		dprintf(D_ALWAYS, "    Renaming file: %s to %s\n", 
+			old_pathname, new_pathname);
+		if (rename(old_pathname, new_pathname) != 0) {
 			return CANNOT_RENAME_FILE;
+		}
 		strncpy(old_file_ptr->data.machine_IP_name, new_file_name, 
 				MAX_CONDOR_FILENAME_LENGTH);
 		old_file_ptr->data.last_modified_time = time(NULL);
@@ -98,9 +102,14 @@ int IMDS::RenameFile(struct in_addr machine_IP,
 		new_file_ptr = new_fn->file_data;
 		if (new_file_ptr->data.last_modified_time >
 			old_file_ptr->data.last_modified_time)
+		{
 			return CANNOT_RENAME_OVER_NEWER_FILE;
-		if (rename(old_pathname, new_pathname) != 0)
+		}
+		dprintf(D_ALWAYS, "    Renaming file: %s to %s\n", 
+			old_pathname, new_pathname);
+		if (rename(old_pathname, new_pathname) != 0) {
 			return CANNOT_RENAME_FILE;
+		}
 		new_file_ptr->data.size = old_file_ptr->data.size;
 		new_file_ptr->data.state = old_file_ptr->data.state;
 		new_file_ptr->data.last_modified_time = time(NULL);
