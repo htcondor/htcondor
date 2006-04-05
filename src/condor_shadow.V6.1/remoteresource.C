@@ -1544,7 +1544,13 @@ RemoteResource::updateX509Proxy(const char * filename)
 	dprintf( D_FULLDEBUG, "Attempting to connect to starter %s to update X509 proxy\n", 
 			 starterAddress );
 
-	DCStarter::X509UpdateStatus ret = starter.updateX509Proxy(filename);
+	DCStarter::X509UpdateStatus ret = DCStarter::XUS_Error;
+	if ( param_boolean( "DELEGATE_JOB_GSI_CREDENTIALS", true ) == false ) {
+		ret = starter.delegateX509Proxy(filename);
+	}
+	if ( ret != DCStarter::XUS_Okay ) {
+		ret = starter.updateX509Proxy(filename);
+	}
 	switch(ret) {
 		case DCStarter::XUS_Error:
 			dprintf( D_FULLDEBUG, "Failed to send updated X509 proxy to starter.\n");

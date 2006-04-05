@@ -345,7 +345,7 @@ JobInfoCommunicator::usingFileTransfer( void )
 }
 
 bool
-JobInfoCommunicator::updateX509Proxy( ReliSock *  )
+JobInfoCommunicator::updateX509Proxy( int cmd, ReliSock *  )
 {
 	return false;
 }

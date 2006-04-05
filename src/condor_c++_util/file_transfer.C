@@ -90,6 +90,7 @@ static int compute_transthread_hash(const int &pid, int numBuckets)
 FileTransfer::FileTransfer()
 {
 	TransferFilePermissions = false;
+	DelegateX509Credentials = false;
 	Iwd = NULL;
 	InputFiles = NULL;
 	OutputFiles = NULL;
@@ -1318,7 +1319,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		if( !reply ) {
 			break;
 		}
-		if (reply == 1) {
+		if (reply == 1 || reply == 4) {
 			s->set_crypto_mode(socket_default_crypto);
 		} else if (reply == 2) {
 			s->set_crypto_mode(true);
@@ -1380,7 +1381,13 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		// minutes!  MLOP!! Since we are doing this, we may as well
 		// not bother to fsync every file.
 //		dprintf(D_FULLDEBUG,"TODD filetransfer DoDownload fullname=%s\n",fullname);
-		if ( TransferFilePermissions ) {
+		if ( reply == 4 ) {
+			if ( s->end_of_message() ) {
+				rc = s->get_x509_delegation( &bytes, fullname );
+			} else {
+				rc = -1;
+			}
+		} else if ( TransferFilePermissions ) {
 			rc = s->get_file_with_permissions( &bytes, fullname );
 		} else {
 			rc = s->get_file( &bytes, fullname );
@@ -1618,6 +1625,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 		// 1 - use socket default (on or off) for next file
 		// 2 - force encryption on for next file.
 		// 3 - force encryption off for next file.
+		// 4 - do an x509 credential delegation (using the socket default)
 
 		// default to the socket default
 		int file_command = 1;
@@ -1636,6 +1644,14 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			file_command = 2;
 		}
 
+		// We want to delegate the job's x509 proxy, rather than just
+		// copy it.
+		if ( file_strcmp( filename, X509UserProxy ) == 0 &&
+			 DelegateX509Credentials ) {
+
+			file_command = 4;
+		}
+
 		dprintf ( D_SECURITY, "FILETRANSFER: outgoing file_command is %i for %s\n",
 				file_command, filename );
 
@@ -1649,7 +1665,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 		}
 
 		// now enable the crypto decision we made:
-		if (file_command == 1) {
+		if (file_command == 1 || file_command == 4) {
 			s->set_crypto_mode(socket_default_crypto);
 		} else if (file_command == 2) {
 			s->set_crypto_mode(true);
@@ -1692,7 +1708,13 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 		}
 #endif
 
-		if ( TransferFilePermissions ) {
+		if ( file_command == 4 ) {
+			if ( s->end_of_message() ) {
+				rc = s->put_x509_delegation( &bytes, fullname );
+			} else {
+				rc = -1;
+			}
+		} else if ( TransferFilePermissions ) {
 			rc = s->put_file_with_permissions( &bytes, fullname );
 		} else {
 			rc = s->put_file( &bytes, fullname );
@@ -1830,6 +1852,15 @@ FileTransfer::setPeerVersion( const CondorVersionInfo &peer_version )
 		TransferFilePermissions = true;
 	} else {
 		TransferFilePermissions = false;
+	}
+		// The sender tells the receiver whether they're delegating or
+		// copying credential files, so it's ok for them to have different
+		// values for DelegateX509Credentials.
+	if ( peer_version.built_since_version(6,7,19) &&
+		 param_boolean( "DELEGATE_JOB_GSI_CREDENTIALS", true ) ) {
+		DelegateX509Credentials = true;
+	} else {
+		DelegateX509Credentials = false;
 	}
 }
 

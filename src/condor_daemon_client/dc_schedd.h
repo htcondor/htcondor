@@ -252,6 +252,9 @@ public:
 	bool updateGSIcredential(const int cluster, const int proc, 
 		const char* path_to_proxy_file, CondorError * errstack);
 
+	bool delegateGSIcredential(const int cluster, const int proc, 
+		const char* path_to_proxy_file, CondorError * errstack);
+
 private:
 		/** This method actually does all the brains for all versions
 			of holdJobs(), removeJobs(), and releaseJobs().  This

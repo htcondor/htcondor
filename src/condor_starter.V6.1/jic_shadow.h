@@ -352,7 +352,7 @@ private:
 	bool usingFileTransfer( void );
 
 		// The shadow is feeding us a new proxy. Override from parent
-	bool updateX509Proxy(ReliSock * s);
+	bool updateX509Proxy(int cmd, ReliSock * s);
 
 		// // // // // // // //
 		// Private Data Members

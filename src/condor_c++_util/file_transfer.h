@@ -203,6 +203,7 @@ class FileTransfer {
   private:
 
 	bool TransferFilePermissions;
+	bool DelegateX509Credentials;
 	char* Iwd;
 	StringList* OutputFiles;
 	StringList* EncryptInputFiles;

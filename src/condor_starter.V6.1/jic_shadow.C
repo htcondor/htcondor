@@ -1337,7 +1337,8 @@ ensureAuthenticated(ReliSock * rsock, CondorError & errstack)
 
 // Based on Scheduler::updateGSICred
 static bool
-updateX509Proxy(ReliSock * rsock, const char * path, const char * local_user)
+updateX509Proxy(int cmd, ReliSock * rsock, const char * path,
+				const char * local_user)
 {
 	ASSERT(rsock);
 	ASSERT(path);
@@ -1388,7 +1389,17 @@ updateX509Proxy(ReliSock * rsock, const char * path, const char * local_user)
 
 	int reply;
 	filesize_t size = 0;
-	if ( rsock->get_file(&size,tmp_path.Value()) < 0 ) {
+	int rc;
+	if ( cmd == UPDATE_GSI_CRED ) {
+		rc = rsock->get_file(&size,tmp_path.Value());
+	} else if ( cmd == DELEGATE_GSI_CRED_STARTER ) {
+		rc = rsock->get_x509_delegation(&size,tmp_path.Value());
+	} else {
+		dprintf( D_ALWAYS, "unknown CEDAR command %d in updateX509Proxy\n",
+				 cmd );
+		rc = -1;
+	}
+	if ( rc < 0 ) {
 			// transfer failed
 		reply = 0; // == failure
 	} else {
@@ -1419,7 +1430,7 @@ updateX509Proxy(ReliSock * rsock, const char * path, const char * local_user)
 }
 
 bool
-JICShadow::updateX509Proxy(ReliSock * s)
+JICShadow::updateX509Proxy(int cmd, ReliSock * s)
 {
 	if( ! usingFileTransfer() ) {
 		s->encode();
@@ -1439,7 +1450,7 @@ JICShadow::updateX509Proxy(ReliSock * s)
 		return false;
 	}
 	const char * proxyfilename = condor_basename(path.Value());
-	return ::updateX509Proxy(s, proxyfilename, local_user.Value());
+	return ::updateX509Proxy(cmd, s, proxyfilename, local_user.Value());
 }
 
 

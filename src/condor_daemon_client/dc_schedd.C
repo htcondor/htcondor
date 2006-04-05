@@ -607,6 +607,76 @@ DCSchedd::updateGSIcredential(const int cluster, const int proc,
 		return false;
 }
 
+bool 
+DCSchedd::delegateGSIcredential(const int cluster, const int proc, 
+								const char* path_to_proxy_file,
+								CondorError * errstack)
+{
+	int reply;
+	ReliSock rsock;
+
+		// check the parameters
+	if ( cluster < 1 || proc < 0 || !path_to_proxy_file || !errstack ) {
+		dprintf(D_FULLDEBUG,"DCSchedd::delegateGSIcredential: bad parameters\n");
+		return false;
+	}
+
+		// connect to the schedd, send the DELEGATE_GSI_CRED_SCHEDD command
+	rsock.timeout(20);   // years of research... :)
+	if( ! rsock.connect(_addr) ) {
+		dprintf( D_ALWAYS, "DCSchedd::delegateGSIcredential: "
+				 "Failed to connect to schedd (%s)\n", _addr );
+		return false;
+	}
+	if( ! startCommand(DELEGATE_GSI_CRED_SCHEDD, (Sock*)&rsock, 0, errstack) ) {
+		dprintf( D_ALWAYS, "DCSchedd::delegateGSIcredential: "
+				 "Failed send command to the schedd: %s\n",
+				 errstack->getFullText());
+		return false;
+	}
+
+
+		// If we're not already authenticated, force that now. 
+	if (!forceAuthentication( &rsock, errstack )) {
+		dprintf( D_ALWAYS, 
+				"DCSchedd::delegateGSIcredential authentication failure: %s\n",
+				 errstack->getFullText() );
+		return false;
+	}
+
+		// Send the job id
+	rsock.encode();
+	PROC_ID jobid;
+	jobid.cluster = cluster;
+	jobid.proc = proc;	
+	if ( !rsock.code(jobid) || !rsock.eom() ) {
+		dprintf(D_ALWAYS,"DCSchedd::delegateGSIcredential: "
+				"Can't send jobid to the schedd\n");
+		return false;
+	}
+
+		// Delegate the gsi proxy
+	filesize_t file_size = 0;	// will receive the size of the file
+	if ( rsock.put_x509_delegation(&file_size,path_to_proxy_file) < 0 ) {
+		dprintf(D_ALWAYS,
+			"DCSchedd::delegateGSIcredential "
+			"failed to send proxy file %s (size=%ld)\n",
+			path_to_proxy_file, (long) file_size);
+		return false;
+	}
+		
+		// Fetch the result
+	rsock.decode();
+	reply = 0;
+	rsock.code(reply);
+	rsock.eom();
+
+	if ( reply == 1 ) 
+		return true;
+	else
+		return false;
+}
+
 ClassAd*
 DCSchedd::actOnJobs( JobAction action, const char* action_str, 
 					 const char* constraint, StringList* ids, 

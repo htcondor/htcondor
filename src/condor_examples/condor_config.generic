@@ -439,6 +439,14 @@ GLIDEIN_SITES =
 #CLASSAD_SCRIPT_DIRECTORY =
 #CLASSAD_LIB_PATH =
 
+## This setting tells Condor whether to delegate or copy GSI X509
+## credentials when sending them over the wire between daemons.
+## Delegation can take up to a second, which is very slow when
+## submitting a large number of jobs. Copying exposes the credential
+## to third parties if Condor isn't set to encrypt communications.
+## By default, Condor will delegate rather than copy.
+DELEGATE_JOB_GSI_CREDENTIALS = True
+
 ##--------------------------------------------------------------------
 ##  Settings that control the daemon's debugging output:
 ##--------------------------------------------------------------------

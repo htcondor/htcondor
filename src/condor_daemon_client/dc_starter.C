@@ -173,3 +173,59 @@ DCStarter::updateX509Proxy( const char * filename)
 		"as an error.\n", reply);
 	return XUS_Error;
 }
+
+DCStarter::X509UpdateStatus
+DCStarter::delegateX509Proxy( const char * filename)
+{
+	ReliSock rsock;
+	rsock.timeout(60);
+	if( ! rsock.connect(_addr) ) {
+		dprintf(D_ALWAYS, "DCStarter::delegateX509Proxy: "
+			"Failed to connect to starter %s\n", _addr);
+		return XUS_Error;
+	}
+
+	CondorError errstack;
+	if( ! startCommand(DELEGATE_GSI_CRED_STARTER, &rsock, 0, &errstack) ) {
+		dprintf( D_ALWAYS, "DCStarter::delegateX509Proxy: "
+				 "Failed send command to the starter: %s\n",
+				 errstack.getFullText());
+		return XUS_Error;
+	}
+		// If we're not already authenticated, force that now. 
+	if (!forceAuthentication( &rsock, &errstack )) {
+		dprintf( D_ALWAYS, 
+			"Problem connecting to starter to delegate X509 user proxy. "
+			"It's possible the starter is version 6.7.18 or earlier "
+			"and does not support delegating proxies.  "
+			"(Failed to autheDCStarter::delegateX509Proxy authentication failure: %s)\n",
+				 errstack.getFullText() );
+		return XUS_Error;
+	}
+
+		// Send the gsi proxy
+	filesize_t file_size = 0;	// will receive the size of the file
+	if ( rsock.put_x509_delegation(&file_size,filename) < 0 ) {
+		dprintf(D_ALWAYS,
+			"DCStarter::delegateX509Proxy "
+			"failed to delegate proxy file %s (size=%d)\n",
+			filename, file_size);
+		return XUS_Error;
+	}
+
+		// Fetch the result
+	rsock.decode();
+	int reply = 0;
+	rsock.code(reply);
+	rsock.eom();
+
+	switch(reply) {
+		case 0: return XUS_Error;
+		case 1: return XUS_Okay;
+		case 2: return XUS_Declined;
+	}
+	dprintf(D_ALWAYS, "DCStarter::delegateX509Proxy: "
+		"remote side returned unknown code %d. Treating "
+		"as an error.\n", reply);
+	return XUS_Error;
+}

@@ -254,7 +254,7 @@ public:
 
 			jic_shadow knows how to do the right thing.
 		 */
-	virtual bool updateX509Proxy( ReliSock * s );
+	virtual bool updateX509Proxy( int cmd, ReliSock * s );
 
 
 protected:

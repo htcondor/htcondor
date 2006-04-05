@@ -73,6 +73,7 @@ public:
 	//      to try again.
 	enum X509UpdateStatus { XUS_Error = 0, XUS_Okay = 1, XUS_Declined = 2 };
 	X509UpdateStatus updateX509Proxy(const char * filename);
+	X509UpdateStatus delegateX509Proxy(const char * filename);
 
  private:
 	bool is_initialized;

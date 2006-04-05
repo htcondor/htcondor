@@ -475,6 +475,15 @@ doContactSchedd()
 
 	dprintf (D_FULLDEBUG, "Processing JOB_REFRESH_PROXY requests\n");
 
+	CondorVersionInfo ver_info(dc_schedd.version());
+	bool delegate_credential;
+	if ( ver_info.built_since_version(6,7,19) &&
+		 param_boolean( "DELEGATE_JOB_GSI_CREDENTIALS", true ) ) {
+		delegate_credential = true;
+	} else {
+		delegate_credential = false;
+	}
+
 	// JOB_REFRESH_PROXY
 	command_queue.Rewind();
 	while (command_queue.Next(current_command)) {
@@ -487,10 +496,19 @@ doContactSchedd()
 
 		bool result;
 		errstack.clear();
-		result = dc_schedd.updateGSIcredential (current_command->cluster_id,
+		if ( delegate_credential ) {
+			result = dc_schedd.delegateGSIcredential( 
+												current_command->cluster_id,
 												current_command->proc_id,
 												current_command->proxy_file,
-												&errstack);
+												&errstack );
+		} else {
+			result = dc_schedd.updateGSIcredential( 
+												current_command->cluster_id,
+												current_command->proc_id,
+												current_command->proxy_file,
+												&errstack );
+		}
 
 		current_command->status = SchedDRequest::SDCS_COMPLETED;
 

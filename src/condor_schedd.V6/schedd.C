@@ -3407,7 +3407,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 }
 
 int
-Scheduler::updateGSICred(int, Stream* s)
+Scheduler::updateGSICred(int cmd, Stream* s)
 {
 	ReliSock* rsock = (ReliSock*)s;
 	PROC_ID jobid;
@@ -3438,7 +3438,7 @@ Scheduler::updateGSICred(int, Stream* s)
 				// need better error propagation for that...
 			errstack.push( "SCHEDD", SCHEDD_ERR_UPDATE_GSI_CRED_FAILED,
 					"Failure to update GSI cred - Authentication failed" );
-			dprintf( D_ALWAYS, "updateGSICred() aborting: %s\n",
+			dprintf( D_ALWAYS, "updateGSICred(%d) aborting: %s\n", cmd,
 					 errstack.getFullText() );
 			refuse( s );
 			return FALSE;
@@ -3449,17 +3449,17 @@ Scheduler::updateGSICred(int, Stream* s)
 		// read the job id from the client
 	rsock->decode();
 	if ( !rsock->code(jobid) || !rsock->eom() ) {
-			dprintf( D_ALWAYS, "updateGSICred(): "
-					 "failed to read job id\n" );
+			dprintf( D_ALWAYS, "updateGSICred(%d): "
+					 "failed to read job id\n", cmd );
 			refuse(s);
 			return FALSE;
 	}
-	dprintf(D_FULLDEBUG,"updateGSICred(): read job id %d.%d\n",
-		jobid.cluster,jobid.proc);
+	dprintf(D_FULLDEBUG,"updateGSICred(%d): read job id %d.%d\n",
+		cmd,jobid.cluster,jobid.proc);
 	jobad = GetJobAd(jobid.cluster,jobid.proc);
 	if ( !jobad ) {
-		dprintf( D_ALWAYS, "updateGSICred(): failed, "
-				 "job %d.%d not found\n", jobid.cluster, jobid.proc );
+		dprintf( D_ALWAYS, "updateGSICred(%d): failed, "
+				 "job %d.%d not found\n", cmd, jobid.cluster, jobid.proc );
 		refuse(s);
 		return FALSE;
 	}
@@ -3474,8 +3474,8 @@ Scheduler::updateGSICred(int, Stream* s)
 	}
 	unsetQSock();
 	if ( !authorized ) {
-		dprintf( D_ALWAYS, "updateGSICred(): failed, "
-				 "user %s not authorized to edit job %d.%d\n", 
+		dprintf( D_ALWAYS, "updateGSICred(%d): failed, "
+				 "user %s not authorized to edit job %d.%d\n", cmd,
 				 rsock->getFullyQualifiedUser(),jobid.cluster, jobid.proc );
 		refuse(s);
 		return FALSE;
@@ -3488,9 +3488,9 @@ Scheduler::updateGSICred(int, Stream* s)
 	char *proxy_path = NULL;
 	jobad->LookupString(ATTR_X509_USER_PROXY,&proxy_path);
 	if ( !proxy_path || strncmp(SpoolSpace,proxy_path,strlen(SpoolSpace)) ) {
-		dprintf( D_ALWAYS, "updateGSICred(): failed, "
+		dprintf( D_ALWAYS, "updateGSICred(%d): failed, "
 			 "job %d.%d does not contain a gsi credential in SPOOL\n", 
-			 jobid.cluster, jobid.proc );
+			 cmd, jobid.cluster, jobid.proc );
 		refuse(s);
 		free(SpoolSpace);
 		if (proxy_path) free(proxy_path);
@@ -3507,9 +3507,9 @@ Scheduler::updateGSICred(int, Stream* s)
 		// if needed
 	StatInfo si( final_proxy_path.Value() );
 	if ( si.Error() == SINoFile ) {
-		dprintf( D_ALWAYS, "updateGSICred(): failed, "
+		dprintf( D_ALWAYS, "updateGSICred(%d): failed, "
 			 "job %d.%d's proxy doesn't exist\n", 
-			 jobid.cluster, jobid.proc );
+			 cmd, jobid.cluster, jobid.proc );
 		refuse(s);
 		return FALSE;
 	}
@@ -3556,7 +3556,17 @@ Scheduler::updateGSICred(int, Stream* s)
 		// file temp_proxy_path, which is known to be in the SPOOL dir
 	rsock->decode();
 	filesize_t size = 0;
-	if ( rsock->get_file(&size,temp_proxy_path.Value()) < 0 ) {
+	int rc;
+	if ( cmd == UPDATE_GSI_CRED ) {
+		rc = rsock->get_file(&size,temp_proxy_path.Value());
+	} else if ( cmd == DELEGATE_GSI_CRED_SCHEDD ) {
+		rc = rsock->get_x509_delegation(&size,temp_proxy_path.Value());
+	} else {
+		dprintf( D_ALWAYS, "updateGSICred(%d): unknown CEDAR command %d\n",
+				 cmd, cmd );
+		rc = -1;
+	}
+	if ( rc < 0 ) {
 			// transfer failed
 		reply = 0;	// reply of 0 means failure
 	} else {
@@ -3565,9 +3575,9 @@ Scheduler::updateGSICred(int, Stream* s)
 						 final_proxy_path.Value()) < 0 ) 
 		{
 				// the rename failed!!?!?!
-			dprintf( D_ALWAYS, "updateGSICred(): failed, "
+			dprintf( D_ALWAYS, "updateGSICred(%d): failed, "
 				 "job %d.%d  - could not rename file\n",
-				 jobid.cluster,jobid.proc);
+				 cmd, jobid.cluster,jobid.proc);
 			reply = 0;
 		} else {
 			reply = 1;	// reply of 1 means success
@@ -9823,6 +9833,10 @@ Scheduler::Register()
 			(CommandHandlercpp)&Scheduler::spoolJobFiles, 
 			"spoolJobFiles", this, WRITE);
 	 daemonCore->Register_Command(UPDATE_GSI_CRED,"UPDATE_GSI_CRED",
+			(CommandHandlercpp)&Scheduler::updateGSICred,
+			"updateGSICred", this, WRITE);
+	 daemonCore->Register_Command(DELEGATE_GSI_CRED_SCHEDD,
+			"DELEGATE_GSI_CRED_SCHEDD",
 			(CommandHandlercpp)&Scheduler::updateGSICred,
 			"updateGSICred", this, WRITE);
 
