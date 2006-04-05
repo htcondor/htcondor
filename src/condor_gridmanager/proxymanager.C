@@ -177,7 +177,12 @@ AcquireProxy( const ClassAd *job_ad, MyString &error, int notify_tid )
 	char *subject_name = NULL;
 	MyString proxy_path;
 
-	if ( job_ad->LookupString( ATTR_X509_USER_PROXY, proxy_path ) == 0 ) {
+	char *param_str = param( "JOB_PROXY_FILE" );
+	if ( param_str ) {
+		proxy_path = param_str;
+		free( param_str );
+	} else if ( job_ad->LookupString( ATTR_X509_USER_PROXY,
+									  proxy_path ) == 0 ) {
 
 		// Special handling for "use best proxy"
 		if ( job_ad->LookupString( ATTR_X509_USER_PROXY_SUBJECT,
