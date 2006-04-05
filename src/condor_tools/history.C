@@ -49,9 +49,9 @@
 static void Usage(char* name) 
 {
 #if WANT_QUILL
-  printf("Usage: %s [-l] [-f history-filename] [-name quill-name] [-format spec attribute] [-constraint expr | cluster_id | cluster_id.proc_id | owner | -completedsince date/time]\n",name);
+  printf("Usage: %s [-l] [-f history-filename] [-backwards] [-match number] [-name quill-name] [-format spec attribute] [-constraint expr | cluster_id | cluster_id.proc_id | owner | -completedsince date/time]\n",name);
 #else 
-  printf("Usage: %s [-l] [-f history-filename] [-format spec attribute] [-constraint expr | cluster_id | cluster_id.proc_id | owner]\n",name);
+  printf("Usage: %s [-l] [-f history-filename] [-backwards] [-match number] [-format spec attribute] [-constraint expr | cluster_id | cluster_id.proc_id | owner]\n",name);
 #endif /* WANT_QUILL */
 
   exit(1);
@@ -76,8 +76,11 @@ static	CondorQuery	quillQuery(QUILL_AD);
 static	ClassAdList	quillList;
 static  bool longformat=false;
 static  bool customFormat=false;
+static  bool backwards=false;
 static  AttrListPrintMask mask;
 static  char *BaseJobHistoryFileName = NULL;
+static int cluster=-1, proc=-1;
+static int specifiedMatch = 0, matchCount = 0;
 
 int
 main(int argc, char* argv[])
@@ -93,7 +96,6 @@ main(int argc, char* argv[])
 
   void **parameters;
   char *dbconn=NULL;
-  int cluster=-1, proc=-1;
   char *completedsince = NULL;
   char *owner=NULL;
   bool readfromfile = false,remotequill=false;
@@ -123,6 +125,21 @@ main(int argc, char* argv[])
   for(i=1; i<argc; i++) {
     if (strcmp(argv[i],"-l")==0) {
       longformat=TRUE;   
+    }
+    
+    else if (strcmp(argv[i],"-backwards") == 0) {
+        backwards=TRUE;
+    }
+
+    else if (strcmp(argv[i],"-match") == 0) {
+        i++;
+        if (argc <= i) {
+            fprintf(stderr,
+                    "Error: Argument -match requires a number value "
+                    " as a parameter.\n");
+            exit(1);
+        }
+        specifiedMatch = atoi(argv[i]);
     }
 
 #if WANT_QUILL
@@ -489,9 +506,17 @@ static void readHistoryFromFiles(char *JobHistoryFileName, char* constraint, Exp
         historyFiles = findHistoryFiles(&numHistoryFiles);
         if (historyFiles && numHistoryFiles > 0) {
             int fileIndex;
-            for (fileIndex = 0; fileIndex < numHistoryFiles; fileIndex++) {
-                readHistoryFromFile(historyFiles[fileIndex], constraint, constraintExpr);
-                free(historyFiles[fileIndex]);
+            if (backwards) { // Reverse reading of history files array
+                for(fileIndex = numHistoryFiles - 1; fileIndex >= 0; fileIndex--) {
+                    readHistoryFromFile(historyFiles[fileIndex], constraint, constraintExpr);
+                    free(historyFiles[fileIndex]);
+                }
+            }
+            else {
+                for (fileIndex = 0; fileIndex < numHistoryFiles; fileIndex++) {
+                    readHistoryFromFile(historyFiles[fileIndex], constraint, constraintExpr);
+                    free(historyFiles[fileIndex]);
+                }
             }
             free(historyFiles);
         }
@@ -608,6 +633,109 @@ static int compareHistoryFilenames(const void *item1, const void *item2)
     return time1 - time2;
 }
 
+// Given a history file, returns the position offset of the last delimiter
+// The last delimiter will be found in the last line of file, 
+// and will start with the "***" character string 
+static long findLastDelimiter(FILE *fd, char *filename)
+{
+    int         i;
+    bool        found;
+    long        seekOffset, lastOffset;
+    MyString    buf;
+    struct stat st;
+  
+    // Get file size
+    stat(filename, &st);
+  
+    found = false;
+    i = 0;
+    while (!found) {
+        // 200 is arbitrary, but it works well in practice
+        seekOffset = st.st_size - (++i * 200); 
+	
+        fseek(fd, seekOffset, SEEK_SET);
+        
+        while (1) {
+            if (buf.readLine(fd) == false) 
+                break;
+	  
+            // If line starts with *** and its last line of file
+            if (strncmp(buf.GetCStr(), "***", 3) == 0 && buf.readLine(fd) == false) {
+                found = true;
+                break;
+            }
+        } 
+	
+        if (seekOffset <= 0) {
+            fprintf(stderr, "Error: Unable to find last delimiter in file: (%s)\n", filename);
+            exit(1);
+        }
+    } 
+  
+    // lastOffset = beginning of delimiter
+    lastOffset = ftell(fd) - buf.Length();
+    
+    return lastOffset;
+}
+
+// Given an offset count that points to a delimiter, this function returns the 
+// previous delimiter offset position.
+// If clusterId and procId is specified, it will not return the immediately
+// previous delimiter, but the nearest previous delimiter that matches
+static long findPrevDelimiter(FILE *fd, char* filename, long currOffset)
+{
+    MyString buf;
+    char *owner;
+    long prevOffset = -1, completionDate = -1;
+    int clusterId = -1, procId = -1;
+  
+    fseek(fd, currOffset, SEEK_SET);
+    buf.readLine(fd);
+  
+    owner = (char *) malloc(buf.Length() * sizeof(char)); 
+
+    // Current format of the delimiter:
+    // *** ProcId = a ClusterId = b Owner = "cde" CompletionDate = f
+    // For the moment, owner and completionDate are just parsed in, reserved for future functionalities. 
+
+    sscanf(buf.GetCStr(), "%*s %*s %*s %ld %*s %*s %d %*s %*s %d %*s %*s %s %*s %*s %ld", 
+           &prevOffset, &clusterId, &procId, owner, &completionDate);
+
+    if (prevOffset == -1 && clusterId == -1 && procId == -1) {
+        fprintf(stderr, 
+                "Error: (%s) is an incompatible history file, please run condor_convert_history.\n",
+                filename);
+        free(owner);
+        exit(1);
+    }
+
+    // If clusterId.procId is specified
+    if (cluster != -1 || proc != -1) {
+
+        // Ok if only clusterId specified
+        while (clusterId != cluster || (proc != -1 && procId != proc)) {
+	  
+            if (prevOffset == 0) { // no match
+                free(owner);
+                return -1;
+            }
+
+            // Find previous delimiter + summary
+            fseek(fd, prevOffset, SEEK_SET);
+            buf.readLine(fd);
+            
+            owner = (char *) realloc (owner, buf.Length() * sizeof(char));
+      
+            sscanf(buf.GetCStr(), "%*s %*s %*s %ld %*s %*s %d %*s %*s %d %*s %*s %s %*s %*s %ld", 
+                   &prevOffset, &clusterId, &procId, owner, &completionDate);
+        }
+    }
+ 
+    free(owner);
+		 
+    return prevOffset;
+} 
+
 // Read the history from a single file and print it out. 
 static void readHistoryFromFile(char *JobHistoryFileName, char* constraint, ExprTree *constraintExpr)
 {
@@ -616,13 +744,49 @@ static void readHistoryFromFile(char *JobHistoryFileName, char* constraint, Expr
     int EmptyFlag = 0;
     AttrList *ad = NULL;
 
+    long offset = 0;
+    bool BOF = false; // Beginning Of File
+    MyString buf;
+    
     FILE* LogFile=fopen(JobHistoryFileName,"r");
-    if (!LogFile) {
+    
+	if (!LogFile) {
         fprintf(stderr,"History file (%s) not found or empty.\n", JobHistoryFileName);
         exit(1);
     }
-    
+
+	// In case of rotated history files, check if we have already reached the number of 
+	// matches specified by the user before reading the next file
+	if (specifiedMatch != 0) { 
+        if (matchCount == specifiedMatch) { // Already found n number of matches, cleanup  
+            fclose(LogFile);
+            return;
+        }
+	}
+
+	if (backwards) {
+        offset = findLastDelimiter(LogFile, JobHistoryFileName);	
+    }
+
     while(!EndFlag) {
+
+        if (backwards) { // Read history file backwards
+            if (BOF) { // If reached beginning of file
+                break;
+            }
+            
+            offset = findPrevDelimiter(LogFile, JobHistoryFileName, offset);
+            if (offset == -1) { // Unable to match constraint
+                break;
+            } else if (offset != 0) {
+                fseek(LogFile, offset, SEEK_SET);
+                buf.readLine(LogFile); // Read one line to skip delimiter and adjust to actual offset of ad
+            } else { // Offset set to 0
+                BOF = true;
+                fseek(LogFile, offset, SEEK_SET);
+            }
+        }
+      
         if( !( ad=new AttrList(LogFile,"***", EndFlag, ErrorFlag, EmptyFlag) ) ){
             fprintf( stderr, "Error:  Out of memory\n" );
             exit( 1 );
@@ -649,12 +813,27 @@ static void readHistoryFromFile(char *JobHistoryFileName, char* constraint, Expr
                 ad->fPrint(stdout); printf("\n"); 
             } else {
                 if (customFormat) {
-					mask.display(stdout, ad);
+                    mask.display(stdout, ad);
                 } else {
-				    displayJobShort(ad);
+                    displayJobShort(ad);
                 }
             }
-        }
+
+            matchCount++; // if control reached here, match has occured
+
+            if (specifiedMatch != 0) { // User specified a match number
+                if (matchCount == specifiedMatch) { // Found n number of matches, cleanup  
+                    if (ad) {
+                        delete ad;
+                        ad = NULL;
+                    }
+                    
+                    fclose(LogFile);
+                    return;
+                }
+            }
+		}
+		
         if(ad) {
             delete ad;
             ad = NULL;
