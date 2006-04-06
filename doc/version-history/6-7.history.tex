@@ -23,6 +23,17 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Condor's format for storing the history file has been improved
+so that some queries will now go much faster. In particular,
+\Condor{history} now accepts the ``-backwards'' flag, which will take
+advantage of this change. Queries that only reference the job's
+cluster id and proc id will be able to take advantage of this speed
+increase, and in the near future, more fast queries will be
+supported. You need to make no changes in order to deal with this new
+history file format, unless you want to be able to search your entire
+history file backwards, in which case you should run the new
+\Condor{convert\_history} program.
+
 \item Condor can now delegate a job's GSI X509 credentials when
 transferring them over the wire, instead of copying them. This is
 much more secure when communications are not encrypted. As this can
