@@ -94,6 +94,9 @@ class EvalResult
    	    char* s;
         };
   	LexemeType type;
+
+	private :
+	void deepcopy(const EvalResult & copyfrom);
 };
 
 class Variable : public VariableBase

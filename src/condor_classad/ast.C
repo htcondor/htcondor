@@ -58,12 +58,13 @@ EvalResult::~EvalResult()
 	}
 }
 
-// EvalResult copy ctor
-EvalResult::EvalResult(const EvalResult & rhs)
+void
+EvalResult::deepcopy(const EvalResult & rhs)
 {
 	type = rhs.type;
 	switch ( type ) {
 		case LX_INTEGER:
+		case LX_BOOL:
 			i = rhs.i;
 			break;
 		case LX_FLOAT:
@@ -73,7 +74,15 @@ EvalResult::EvalResult(const EvalResult & rhs)
 				// need to make a deep copy of the string
 			s = strnewp( rhs.s );
 			break;
+		default:
+			break;
 	}
+}
+
+// EvalResult copy ctor
+EvalResult::EvalResult(const EvalResult & rhs)
+{
+	deepcopy(rhs);
 }
 
 // EvalResult assignment op
@@ -84,10 +93,10 @@ EvalResult & EvalResult::operator=(const EvalResult & rhs)
 	}
 
 		// deallocate any state in this object by invoking dtor
-	EvalResult::~EvalResult();
+	this->~EvalResult();
 
 		// call copy ctor to make a deep copy of data
-	EvalResult::EvalResult(rhs);
+	deepcopy(rhs);
 
 		// return reference to invoking object
 	return *this;
