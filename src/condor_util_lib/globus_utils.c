@@ -527,6 +527,8 @@ check_x509_proxy( const char *proxy_file )
 }
 
 
+#if defined(CONDOR_GSI)
+
 static int
 buffer_to_bio( char *buffer, int buffer_len, BIO **bio )
 {
@@ -568,6 +570,8 @@ bio_to_buffer( BIO *bio, char **buffer, int *buffer_len )
 
 	return TRUE;
 }
+
+#endif /* defined(CONDOR_GSI) */
 
 int
 x509_send_delegation( const char *source_file,
