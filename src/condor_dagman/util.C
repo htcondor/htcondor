@@ -25,8 +25,9 @@
 #include "condor_debug.h"
 #include "debug.h"
 #include "util.h"
-
-extern "C" {
+#include "util_lib_proto.h"
+#include "condor_arglist.h"
+#include "my_popen.h"
 
 //------------------------------------------------------------------------
 int util_getline(FILE *fp, char *line, int max) {
@@ -45,19 +46,19 @@ int util_getline(FILE *fp, char *line, int max) {
 }
 
 //-----------------------------------------------------------------------------
-int util_popen (const char * cmd) {
-    FILE *fp;
-    debug_printf( DEBUG_VERBOSE, "Running: %s\n", cmd);
-    fp = popen (cmd, "r");
+int util_popen (ArgList &args) {
+	MyString cmd; // for debug output
+	args.GetArgsStringForDisplay( &cmd );
+    debug_printf( DEBUG_VERBOSE, "Running: %s\n", cmd.Value() );
+
+	FILE *fp = my_popen( args, "r", TRUE );
+
     int r;
     if (fp == NULL || (r = pclose(fp)) != 0) {
-		debug_printf( DEBUG_QUIET, "WARNING: failure: %s\n", cmd );
+		debug_printf( DEBUG_QUIET, "WARNING: failure: %s\n", cmd.Value() );
 		if( fp != NULL ) {
 			debug_printf ( DEBUG_QUIET, "\t(pclose() returned %d)\n", r );
 		}
     }
     return r;
-}
-
-
 }

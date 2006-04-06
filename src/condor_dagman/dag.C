@@ -687,22 +687,26 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 void
 Dag::RemoveBatchJob(Job *node) {
 
-	char cmd[ARG_MAX];
+	ArgList args;
+	MyString constraint;
 
 	switch ( node->JobType() ) {
 	case Job::TYPE_CONDOR:
+		args.AppendArg( _condorRmExe );
+		args.AppendArg( "-const" );
+
 			// Adding this DAGMan's cluster ID as a constraint to
 			// be extra-careful to avoid removing someone else's
 			// job.
-       	snprintf( cmd, ARG_MAX, "%s -const \'%s == %d && ClusterId == %d\'",
-					_condorRmExe,
+		constraint.sprintf( "%s == %d && %s == %d",
 					ATTR_DAGMAN_JOB_ID, _DAGManJobId->_cluster,
-					node->_CondorID._cluster);
+					ATTR_CLUSTER_ID, node->_CondorID._cluster);
+		args.AppendArg( constraint.Value() );
 		break;
 
 	case Job::TYPE_STORK:
-       	snprintf( cmd, ARG_MAX, "%s %d", _storkRmExe,
-					node->_CondorID._cluster);
+		args.AppendArg( _storkRmExe );
+		args.AppendArg( node->_CondorID._cluster );
 		break;
 
 	default:
@@ -710,8 +714,10 @@ Dag::RemoveBatchJob(Job *node) {
 		break;
 	}
 	
-	debug_printf( DEBUG_VERBOSE, "Executing: %s\n", cmd );
-	if ( util_popen( cmd ) ) {
+	MyString display;
+	args.GetArgsStringForDisplay( &display );
+	debug_printf( DEBUG_VERBOSE, "Executing: %s\n", display.Value() );
+	if ( util_popen( args ) ) {
 			// Note: error here can't be fatal because there's a
 			// race condition where you could do a condor_rm on
 			// a job that already terminated.  wenger 2006-02-08.
@@ -1548,7 +1554,7 @@ void Dag::RemoveRunningJobs ( const Dagman &dm) const {
 	debug_printf( DEBUG_NORMAL, "Removing any/all submitted Condor/"
 				"Stork jobs...\n");
 
-    char cmd[ARG_MAX];
+	ArgList args;
 
 		// first, remove all Condor jobs submitted by this DAGMan
 		// Make sure we have at least one Condor (not Stork) job before
@@ -1565,11 +1571,16 @@ void Dag::RemoveRunningJobs ( const Dagman &dm) const {
 	}
 
 	if ( haveCondorJob ) {
-		snprintf( cmd, ARG_MAX, "%s -const \'%s == %d\'",
-			  dm.condorRmExe, ATTR_DAGMAN_JOB_ID,
-			  dm.DAGManJobId._cluster );
-		debug_printf( DEBUG_VERBOSE, "Executing: %s\n", cmd );
-		if ( util_popen( cmd ) ) {
+		MyString constraint;
+
+		args.Clear();
+		args.AppendArg( _condorRmExe );
+		args.AppendArg( "-const" );
+
+		constraint.sprintf( "%s == %d", ATTR_DAGMAN_JOB_ID,
+					dm.DAGManJobId._cluster );
+		args.AppendArg( constraint.Value() );
+		if ( util_popen( args ) ) {
 			debug_printf( DEBUG_VERBOSE, "Error removing DAGMan jobs\n");
 		}
 	}
@@ -1585,10 +1596,10 @@ void Dag::RemoveRunningJobs ( const Dagman &dm) const {
 			// like we do with Condor; this should be fixed)
 		if( job->JobType() == Job::TYPE_STORK &&
 			job->GetStatus() == Job::STATUS_SUBMITTED ) {
-			snprintf( cmd, ARG_MAX, "%s %d", dm.storkRmExe,
-					  job->_CondorID._cluster );
-			debug_printf( DEBUG_VERBOSE, "Executing: %s\n", cmd );
-			if ( util_popen( cmd ) ) {
+			args.Clear();
+			args.AppendArg( dm.storkRmExe );
+			args.AppendArg( job->_CondorID._cluster );
+			if ( util_popen( args ) ) {
 				debug_printf( DEBUG_VERBOSE, "Error removing Stork job\n");
 			}
         }

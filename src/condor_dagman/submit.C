@@ -23,6 +23,8 @@
 
 #include "condor_common.h"
 #include "condor_attributes.h"
+#include "util_lib_proto.h"
+#include "my_popen.h"
 
 //
 // Local DAGMan includes
@@ -34,33 +36,17 @@
 #include "debug.h"
 #include "tmp_dir.h"
 
-
-		// argQuote: the characters we should use to quote
-		// command-line arguments when specifying shell commands
-
-		// innerQuote: the characters we should use to represent a
-		// double-quote character *within* a quoted command-line
-		// argument
-
-#ifdef WIN32
-	static const char* argQuote = "\"";
-	static const char* innerQuote = "\\\"";
-#else
-	static const char* argQuote = "\'";
-	static const char* innerQuote = "\"";
-#endif
-
 static bool
-submit_try( const char *command, CondorID &condorID, Job::job_type_t type )
+submit_try( ArgList &args, CondorID &condorID, Job::job_type_t type )
 {
-  MyString  command_output("");
+  MyString cmd; // for debug output
+  args.GetArgsStringForDisplay( &cmd );
 
-  // this is dangerous ... we need to be much more careful about
-  // auditing what we're about to run via popen(), rather than
-  // accepting an arbitary command string...
-  FILE * fp = popen(command, "r");
+  FILE * fp = my_popen( args, "r", TRUE );
   if (fp == NULL) {
-    debug_printf( DEBUG_NORMAL, "%s: popen() in submit_try failed!\n", command);
+    debug_printf( DEBUG_NORMAL, 
+		  "ERROR: my_popen(%s) in submit_try() failed!\n",
+		  cmd.Value() );
     return false;
   }
   
@@ -108,6 +94,7 @@ submit_try( const char *command, CondorID &condorID, Job::job_type_t type )
   // wrong with the submit, so we return false.  The caller of this
   // function can retry the submit by repeatedly calling this function.
 
+  MyString  command_output("");
   do {
     if (util_getline(fp, buffer, UTIL_MAX_LINE_LENGTH) == EOF) {
       pclose(fp);
@@ -124,7 +111,7 @@ submit_try( const char *command, CondorID &condorID, Job::job_type_t type )
 		debug_printf(DEBUG_NORMAL, "Read from pipe: %s\n", 
 					 command_output.Value());
 		debug_printf( DEBUG_QUIET, "ERROR while running \"%s\": "
-					  "pclose() failed!\n", command );
+					  "pclose() failed!\n", cmd.Value() );
 		return false;
     }
   }
@@ -145,18 +132,22 @@ submit_try( const char *command, CondorID &condorID, Job::job_type_t type )
 }
 
 //-------------------------------------------------------------------------
+// NOTE: this and submit_try should probably be merged into a single
+// method -- submit_batch_job or something like that.  wenger/pfc 2006-04-05.
 static bool
-do_submit( const char *command, CondorID &condorID, Job::job_type_t jobType )
+do_submit( ArgList &args, CondorID &condorID, Job::job_type_t jobType )
 {
-	debug_printf(DEBUG_VERBOSE, "submitting: %s\n", command);
+	MyString cmd; // for debug output
+	args.GetArgsStringForDisplay( &cmd );
+	debug_printf( DEBUG_VERBOSE, "submitting: %s\n", cmd.Value() );
   
 	bool success = false;
 
-	success = submit_try( command, condorID, jobType );
+	success = submit_try( args, condorID, jobType );
 
 	if( !success ) {
 	    debug_printf( DEBUG_QUIET, "ERROR: submit attempt failed\n" );
-		debug_printf( DEBUG_QUIET, "submit command was: %s\n", command );
+		debug_printf( DEBUG_QUIET, "submit command was: %s\n", cmd.Value() );
 	}
 
 	return success;
@@ -178,8 +169,7 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 		return false;
 	}
 
-	MyString prependLines;
-	MyString command;
+	ArgList args;
 
 	// construct arguments to condor_submit to add attributes to the
 	// job classad which identify the job's node name in the DAG, the
@@ -194,13 +184,27 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 	// submit many DAGs to the same schedd, all the ready jobs from
 	// one DAG complete before any jobs from another begin.
 
-	prependLines = prependLines +
-		" -a " + argQuote + ATTR_DAG_NODE_NAME_ALT + " = " + DAGNodeName + argQuote +
-		" -a " + argQuote + "+" + ATTR_DAGMAN_JOB_ID + " = " + dm.DAGManJobId._cluster + argQuote +
-		" -a " + argQuote + "submit_event_notes = DAG Node: " + DAGNodeName + argQuote;
+	args.AppendArg( dm.condorSubmitExe );
 
-	MyString DAGParentNodeNamesStr;
-	DAGParentNodeNamesStr = DAGParentNodeNamesStr + " -a " + argQuote + "+DAGParentNodeNames = " + innerQuote + DAGParentNodeNames + innerQuote + argQuote;
+	args.AppendArg( "-a" );
+	MyString nodeName = MyString(ATTR_DAG_NODE_NAME_ALT) + " = " + DAGNodeName;
+	args.AppendArg( nodeName.Value() );
+
+	args.AppendArg( "-a" );
+	MyString dagJobId = MyString( "+" ) + ATTR_DAGMAN_JOB_ID + " = " +
+				dm.DAGManJobId._cluster;
+	args.AppendArg( dagJobId.Value() );
+
+	args.AppendArg( "-a" );
+	MyString submitEventNotes = MyString(
+				"submit_event_notes = DAG Node: " ) + DAGNodeName;
+	args.AppendArg( submitEventNotes.Value() );
+
+	ArgList parentNameArgs;
+	parentNameArgs.AppendArg( "-a" );
+	MyString parentNodeNames = MyString( "+DAGParentNodeNames = " ) +
+	                        "\"" + DAGParentNodeNames + "\"";
+	parentNameArgs.AppendArg( parentNodeNames.Value() );
 
 		// set any VARS specified in the DAG file
 	MyString anotherLine;
@@ -208,17 +212,24 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 	ListIterator<MyString> valIter(*vals);
 	MyString name, val;
 	while(nameIter.Next(name) && valIter.Next(val)) {
-		anotherLine = MyString(" -a ") + argQuote +
-			name + " = " + val + argQuote;
-		prependLines += anotherLine;
+		args.AppendArg( "-a" );
+		MyString var = name + " = " + val;
+		args.AppendArg( var.Value() );
 	}
 
 		// how big is the command line so far
-	int cmdLineSize = prependLines.Length();
-		// how big is the DAGParentNodeNames string
-	int DAGParentNodeNamesLen = DAGParentNodeNamesStr.Length();
+	MyString display;
+	args.GetArgsStringForDisplay( &display );
+	int cmdLineSize = display.Length();
+
+	parentNameArgs.GetArgsStringForDisplay( &display );
+	int DAGParentNodeNamesLen = display.Length();
 		// how many additional chars must we still add to command line
-	int reserveNeeded = strlen( dm.condorSubmitExe ) + strlen( cmdFile ) + 10;
+	        // NOTE: according to the POSIX spec, the args +
+   	        // environ given to exec() cannot exceed
+   	        // _POSIX_ARG_MAX, so we also need to calculate & add
+   	        // the size of environ** to reserveNeeded
+	int reserveNeeded = strlen( cmdFile );
 	int maxCmdLine = _POSIX_ARG_MAX;
 
 		// if we don't have room for DAGParentNodeNames, leave it unset
@@ -227,19 +238,12 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 					  "to list in its classad; leaving its DAGParentNodeNames "
 					  "attribute undefined\n", DAGNodeName );
 	} else {
-		prependLines = prependLines + DAGParentNodeNamesStr;
+		args.AppendArgsFromArgList( parentNameArgs );
 	}
 
-#ifdef WIN32
-	command = MyString( dm.condorSubmitExe ) + " " + prependLines + " " +
-		cmdFile;
-#else
-	// we use 2>&1 to make sure we get both stdout and stderr from command
-	command = MyString( dm.condorSubmitExe ) + " " + prependLines + " " +
-		cmdFile + " 2>&1";
-#endif
-	
-	bool success = do_submit( command.Value(), condorID, Job::TYPE_CONDOR );
+	args.AppendArg( cmdFile );
+
+	bool success = do_submit( args, condorID, Job::TYPE_CONDOR );
 
 	if ( !tmpDir.Cd2MainDir( errMsg ) ) {
 		debug_printf( DEBUG_QUIET,
@@ -265,14 +269,17 @@ stork_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 		return false;
 	}
 
-  MyString command;
+  ArgList args;
 
-  // we use 2>&1 to make sure we get both stdout and stderr from command
-  command.sprintf("%s -lognotes %sDAG Node: %s%s %s 2>&1", 
-				  dm.storkSubmitExe, argQuote, DAGNodeName, argQuote,
-				  cmdFile );
+  args.AppendArg( dm.storkSubmitExe );
+  args.AppendArg( "-lognotes" );
 
-  bool success = do_submit( command.Value(), condorID, Job::TYPE_STORK );
+  MyString logNotes = MyString( "DAG node: " ) + DAGNodeName;
+  args.AppendArg( logNotes.Value() );
+
+  args.AppendArg( cmdFile );
+
+  bool success = do_submit( args, condorID, Job::TYPE_STORK );
 
 	if ( !tmpDir.Cd2MainDir( errMsg ) ) {
 		debug_printf( DEBUG_QUIET,
