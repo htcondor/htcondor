@@ -653,6 +653,19 @@ AbstractReplicatorStateMachine::killTransferers()
                    m_downloadTransfererMetadata.m_pid );
         //kill( m_downloadTransfererMetadata.m_pid, SIGKILL );
         daemonCore->Send_Signal( m_downloadTransfererMetadata.m_pid, SIGKILL );
+		// when the process is killed, it could have not yet erased its
+        // temporary files, this is why we ensure it by erasing it in killer
+        // function
+        MyString extension( m_downloadTransfererMetadata.m_pid );
+        // the .down ending is needed in order not to confuse between upload and
+        // download processes temporary files
+        extension += ".";
+        extension += DOWNLOADING_TEMPORARY_FILES_EXTENSION;
+
+        FilesOperations::safeUnlinkFile( m_versionFilePath.GetCStr( ),
+                                         extension.GetCStr( ) );
+        FilesOperations::safeUnlinkFile( m_stateFilePath.GetCStr( ),
+                                         extension.GetCStr( ) );
 		m_downloadTransfererMetadata.set();
     }
 
@@ -668,6 +681,21 @@ AbstractReplicatorStateMachine::killTransferers()
                 uploadTransfererMetadata->m_pid );
             //kill( uploadTransfererMetadata->m_pid, SIGKILL );
 			daemonCore->Send_Signal( uploadTransfererMetadata->m_pid, SIGKILL );
+			
+			            // when the process is killed, it could have not yet
+			            // erased its
+            // temporary files, this is why we ensure it by erasing it in killer
+            // function
+            MyString extension( uploadTransfererMetadata->m_pid );
+            // the .up ending is needed in order not to confuse between
+            // upload and download processes temporary files
+            extension += ".";
+            extension += UPLOADING_TEMPORARY_FILES_EXTENSION;
+
+            FilesOperations::safeUnlinkFile( m_versionFilePath.GetCStr( ),
+                                             extension.GetCStr( ) );
+            FilesOperations::safeUnlinkFile( m_stateFilePath.GetCStr( ),
+                                             extension.GetCStr( ) );
 			delete uploadTransfererMetadata;
 			// after deletion the iterator is moved to the previous member
 			// so advancing the iterator twice and missing one entry does not
