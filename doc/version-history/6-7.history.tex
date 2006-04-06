@@ -97,6 +97,12 @@ The specific case in which this effect was noticable was when the
 machine load was greater than \MacroNI{NUM\_CPUS}.  \Attr{CondorLoadAvg}
 is now independent of the setting of \MacroNI{NUM\_CPUS}.
 
+\item When the Grid Monitor encounters problems, Condor will now try to
+restart the Globus JobManagers for the affect grid universe jobs,
+limited by \Macro{GRIDMANAGER\_MAX\_JOBMANAGERS\_PER\_RESOURCE}. The
+previous behavior caused problems with sites that don't have a fork
+JobManager, and Condor wouldn't react when a job's proxy expired.
+
 \item Fixed a bug that could cause extra Grid Monitor file to accumulate
 under /tmp until the \Condor{gridmanager} exited.
 
