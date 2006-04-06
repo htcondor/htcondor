@@ -30,6 +30,7 @@
 
 void SetDefaultJobLeaseDuration( int duration );
 
-bool CalculateJobLease( const ClassAd *job_ad, int &new_expiration );
+bool CalculateJobLease( const ClassAd *job_ad, int &new_expiration,
+						int default_duration = -1 );
 
 #endif

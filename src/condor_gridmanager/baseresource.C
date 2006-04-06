@@ -471,7 +471,7 @@ dprintf(D_FULLDEBUG,"    UpdateLeases: calc'ing new leases\n");
 		leaseUpdates.Rewind();
 		while ( leaseUpdates.Next( curr_job ) ) {
 			bool exists, dirty;
-			curr_job->jobAd->GetDirtyFlag( ATTR_TIMER_REMOVE_CHECK_SENT,
+			curr_job->jobAd->GetDirtyFlag( ATTR_JOB_LEASE_EXPIRATION,
 										   &exists, &dirty );
 			if ( !exists ) {
 					// What!? The attribute disappeared? Forget about renewing

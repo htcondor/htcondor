@@ -412,7 +412,7 @@ void BaseJob::SetJobLeaseTimers()
 dprintf(D_FULLDEBUG,"(%d.%d) SetJobLeaseTimers()\n",procID.cluster,procID.proc);
 	int expiration_time = -1;
 
-	jobAd->LookupInteger( ATTR_TIMER_REMOVE_CHECK_SENT, expiration_time );
+	jobAd->LookupInteger( ATTR_JOB_LEASE_EXPIRATION, expiration_time );
 
 	if ( expiration_time == -1 ) {
 		if ( jobLeaseSentExpiredTid != TIMER_UNSET ) {
@@ -464,7 +464,7 @@ void BaseJob::UpdateJobLeaseSent( int new_expiration_time )
 dprintf(D_FULLDEBUG,"(%d.%d) UpdateJobLeaseSent(%d)\n",procID.cluster,procID.proc,(int)new_expiration_time);
 	int old_expiration_time = TIMER_UNSET;
 
-	jobAd->LookupInteger( ATTR_TIMER_REMOVE_CHECK_SENT,
+	jobAd->LookupInteger( ATTR_JOB_LEASE_EXPIRATION,
 						  old_expiration_time );
 
 	if ( new_expiration_time <= 0 ) {
@@ -474,11 +474,11 @@ dprintf(D_FULLDEBUG,"(%d.%d) UpdateJobLeaseSent(%d)\n",procID.cluster,procID.pro
 	if ( new_expiration_time != old_expiration_time ) {
 
 		if ( new_expiration_time == TIMER_UNSET ) {
-			jobAd->AssignExpr( ATTR_TIMER_REMOVE_CHECK_SENT, "Undefined" );
+			jobAd->AssignExpr( ATTR_JOB_LEASE_EXPIRATION, "Undefined" );
 			jobAd->AssignExpr( ATTR_LAST_JOB_LEASE_RENEWAL_FAILED,
 							   "Undefined" );
 		} else {
-			jobAd->Assign( ATTR_TIMER_REMOVE_CHECK_SENT,
+			jobAd->Assign( ATTR_JOB_LEASE_EXPIRATION,
 						   new_expiration_time );
 		}
 

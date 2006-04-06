@@ -1364,7 +1364,7 @@ ClassAd *CondorJob::buildSubmitAd()
 	submit_ad->Delete( ATTR_JOB_LEASE_DURATION );
 	submit_ad->Delete( ATTR_LAST_JOB_LEASE_RENEWAL_FAILED );
 	submit_ad->Delete( ATTR_TIMER_REMOVE_CHECK );
-	submit_ad->Delete( ATTR_TIMER_REMOVE_CHECK_SENT );
+	submit_ad->Delete( ATTR_JOB_LEASE_EXPIRATION );
 	submit_ad->Delete( ATTR_AUTO_CLUSTER_ID );
 	submit_ad->Delete( ATTR_AUTO_CLUSTER_ATTRS );
 
@@ -1395,7 +1395,7 @@ ClassAd *CondorJob::buildSubmitAd()
 	expr.sprintf( "%s = %s == %d", ATTR_JOB_LEAVE_IN_QUEUE, ATTR_JOB_STATUS,
 				  COMPLETED );
 
-	if ( jobAd->LookupInteger( ATTR_TIMER_REMOVE_CHECK_SENT, tmp_int ) ) {
+	if ( jobAd->LookupInteger( ATTR_JOB_LEASE_EXPIRATION, tmp_int ) ) {
 		submit_ad->Assign( ATTR_TIMER_REMOVE_CHECK, tmp_int );
 		expr.sprintf_cat( " && ( %s < %s )", ATTR_CURRENT_TIME,
 						  ATTR_TIMER_REMOVE_CHECK );

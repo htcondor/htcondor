@@ -31,6 +31,7 @@
 #include "basename.h"
 #include "condor_ckpt_name.h"
 #include "filename_tools.h"
+#include "job_lease.h"
 
 #include "gridmanager.h"
 #include "gt4job.h"
@@ -61,6 +62,7 @@
 #define GM_GENERATE_ID			19
 #define GM_DELEGATE_PROXY		20
 #define GM_SUBMIT_ID_SAVE		21
+#define GM_SUBMIT_SET_LIFETIME	22
 
 static char *GMStateNames[] = {
 	"GM_INIT",
@@ -84,7 +86,8 @@ static char *GMStateNames[] = {
 	"GM_START",
 	"GM_GENERATE_ID",
 	"GM_DELEGATE_PROXY",
-	"GM_SUBMIT_ID_SAVE"
+	"GM_SUBMIT_ID_SAVE",
+	"GM_SUBMIT_SET_LIFETIME"
 };
 
 #define GT4_JOB_STATE_PENDING		1
@@ -103,6 +106,8 @@ static char *GMStateNames[] = {
 // let this be set in the config file or set it to
 // GRIDMANAGER_MINIMUM_PROXY_TIME + 60
 #define JM_MIN_PROXY_TIME		(minProxy_time + 60)
+
+#define DEFAULT_LEASE_DURATION	12*60*60
 
 // TODO: Let the maximum submit attempts be set in the job ad or, better yet,
 // evalute PeriodicHold expression in job ad.
@@ -853,11 +858,10 @@ int GT4Job::doEvaluateState()
 				numSubmitAttempts++;
 				jmProxyExpireTime = jobProxy->expiration_time;
 				if ( rc == GLOBUS_SUCCESS ) {
-					jmLifetime = time(NULL) + 12*60*60;
 					callbackRegistered = true;
 					SetRemoteJobId( job_contact );
 					free( job_contact );
-					gmState = GM_SUBMIT_SAVE;
+					gmState = GM_SUBMIT_SET_LIFETIME;
 				} else {
 					// unhandled error
 					LOG_GLOBUS_ERROR( "gt4_gram_client_job_create()", rc );
@@ -880,6 +884,42 @@ int GT4Job::doEvaluateState()
 				daemonCore->Reset_Timer( evaluateStateTid, delay );
 			}
 			} break;
+		case GM_SUBMIT_SET_LIFETIME: {
+			if ( condorState == REMOVED || condorState == HELD ) {
+				gmState = GM_CANCEL;
+				break;
+			}
+			if ( jmLifetime == 0 ) {
+				int new_lease;	// CalculateJobLease needs an int
+				if ( CalculateJobLease( jobAd, new_lease,
+										DEFAULT_LEASE_DURATION ) == false ) {
+					dprintf( D_ALWAYS, "(%d.%d) No lease for gt4 job!?\n",
+							 procID.cluster, procID.proc );
+					jmLifetime = now + DEFAULT_LEASE_DURATION;
+				} else {
+					jmLifetime = new_lease;
+				}
+			}
+			time_t new_lifetime = jmLifetime - now;
+			CHECK_PROXY;
+			rc = gahp->gt4_set_termination_time( jobContact,
+												 new_lifetime );
+
+			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+				 rc == GAHPCLIENT_COMMAND_PENDING ) {
+				break;
+			}
+			if ( rc != GLOBUS_SUCCESS ) {
+				// unhandled error
+				LOG_GLOBUS_ERROR("refresh_credentials()",rc);
+				globusErrorString = gahp->getErrorString();
+				gmState = GM_CANCEL;
+				break;
+			}
+			jmLifetime = new_lifetime;
+			UpdateJobLeaseSent( jmLifetime );
+			gmState = GM_SUBMIT_SAVE;
+		} break;
 		case GM_SUBMIT_SAVE: {
 			// Save the jobmanager's contact for a new gram submission.
 			if ( condorState == REMOVED || condorState == HELD ) {
@@ -950,7 +990,10 @@ int GT4Job::doEvaluateState()
 					reevaluate_state = true;
 					break;
 				}
-				if ( jmLifetime < time(NULL) + 11*60*60 ) {
+				int new_lease;	// CalculateJobLease needs an int
+				if ( CalculateJobLease( jobAd, new_lease,
+										DEFAULT_LEASE_DURATION ) ) {
+					jmLifetime = new_lease;
 					gmState = GM_EXTEND_LIFETIME;
 					break;
 				}
@@ -974,7 +1017,7 @@ int GT4Job::doEvaluateState()
 				gmState = GM_CANCEL;
 			} else {
 				CHECK_PROXY;
-				time_t new_lifetime = 12*60*60;
+				time_t new_lifetime = jmLifetime - now;
 				rc = gahp->gt4_set_termination_time( jobContact,
 													 new_lifetime );
 
@@ -990,6 +1033,7 @@ int GT4Job::doEvaluateState()
 					break;
 				}
 				jmLifetime = new_lifetime;
+				UpdateJobLeaseSent( jmLifetime );
 				gmState = GM_SUBMITTED;
 			}
 			} break;
@@ -1184,6 +1228,8 @@ int GT4Job::doEvaluateState()
 			globusErrorString = "";
 			errorString = "";
 			ClearCallbacks();
+			jmLifetime = 0;
+			UpdateJobLeaseSent( -1 );
 			myResource->CancelSubmit( this );
 			if ( jobContact != NULL ) {
 				SetRemoteJobId( NULL );

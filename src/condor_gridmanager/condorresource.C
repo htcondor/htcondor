@@ -398,7 +398,7 @@ dprintf(D_FULLDEBUG,"*** DoUpdateLeases called\n");
 			if ( ((CondorJob*)curr_job)->remoteJobId.cluster != 0 ) {
 				int exp = 0;
 				jobs.Append( ((CondorJob*)curr_job)->remoteJobId );
-				curr_job->jobAd->LookupInteger( ATTR_TIMER_REMOVE_CHECK_SENT,
+				curr_job->jobAd->LookupInteger( ATTR_JOB_LEASE_EXPIRATION,
 												exp );
 				expirations.Append( exp );
 			}

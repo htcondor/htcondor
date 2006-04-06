@@ -32,7 +32,8 @@ void SetDefaultJobLeaseDuration( int duration )
 	defaultJobLeaseDuration = duration;
 }
 
-bool CalculateJobLease( const ClassAd *job_ad, int &new_expiration )
+bool CalculateJobLease( const ClassAd *job_ad, int &new_expiration,
+						int default_duration )
 {
 int cluster,proc;
 	int expire_received = -1;
@@ -40,12 +41,16 @@ int cluster,proc;
 	int lease_duration = defaultJobLeaseDuration;
 	bool last_renewal_failed = false;
 
+	if ( default_duration != -1 ) {
+		lease_duration = default_duration;
+	}
+
 	new_expiration = -1;
 
 job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
 job_ad->LookupInteger( ATTR_PROC_ID, proc );
 	job_ad->LookupInteger( ATTR_TIMER_REMOVE_CHECK, expire_received );
-	job_ad->LookupInteger( ATTR_TIMER_REMOVE_CHECK_SENT, expire_sent );
+	job_ad->LookupInteger( ATTR_JOB_LEASE_EXPIRATION, expire_sent );
 	job_ad->LookupBool( ATTR_LAST_JOB_LEASE_RENEWAL_FAILED,
 						last_renewal_failed );
 	job_ad->LookupInteger( ATTR_JOB_LEASE_DURATION,	lease_duration );
