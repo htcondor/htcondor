@@ -30,6 +30,7 @@
 #include "internet.h"
 #include "my_hostname.h"
 #include "condor_version.h"
+#include "condor_socket_types.h"
 
 #include "server2.h"
 #include "gen_lib.h"
