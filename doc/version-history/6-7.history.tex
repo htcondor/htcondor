@@ -55,6 +55,10 @@ which lets an admin force a particular X509 proxy to be used for all
 grid universe jobs, overriding whatever proxy may be specified in the
 job ad.
 
+\item \Condor{dagman} no longer uses the \Code{popen()} system
+call when running commands; this provides better security and
+allows it to run on Windows without being a service.
+
 \end{itemize}
 
 
