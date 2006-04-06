@@ -44,6 +44,56 @@ bool classad_debug_function_run = 0;
 
 #define EatSpace(ptr)  while(*ptr != '\0') ptr++;
 
+// EvalResult ctor
+EvalResult::EvalResult()
+{
+	type = LX_UNDEFINED;
+}
+
+// EvalResult dtor
+EvalResult::~EvalResult()
+{
+	if ((type == LX_STRING) && (s)) {
+		delete [] s;
+	}
+}
+
+// EvalResult copy ctor
+EvalResult::EvalResult(const EvalResult & rhs)
+{
+	type = rhs.type;
+	switch ( type ) {
+		case LX_INTEGER:
+			i = rhs.i;
+			break;
+		case LX_FLOAT:
+			f = rhs.f;
+			break;
+		case LX_STRING:
+				// need to make a deep copy of the string
+			s = strnewp( rhs.s );
+			break;
+	}
+}
+
+// EvalResult assignment op
+EvalResult & EvalResult::operator=(const EvalResult & rhs)
+{
+	if ( this == &rhs )	{	// object assigned to itself
+		return *this;		// all done.
+	}
+
+		// deallocate any state in this object by invoking dtor
+	EvalResult::~EvalResult();
+
+		// call copy ctor to make a deep copy of data
+	EvalResult::EvalResult(rhs);
+
+		// return reference to invoking object
+	return *this;
+}
+
+
 void EvalResult::fPrintResult(FILE *f)
 {
     switch(type)
@@ -1526,11 +1576,37 @@ int Function::_EvalTree(const AttrList *attrlist1, const AttrList *attrlist2, Ev
 	int        number_of_args, i;
 	int        successful_eval;
 	EvalResult *evaluated_args;
+	bool must_eval_to_strings = false;
+	bool done = false;
+
+	if ( result == NULL ) {
+		return FALSE;
+	}
 
 	successful_eval = FALSE;
 	result->type = LX_UNDEFINED;
 
-	if (result != NULL) {
+		// treat calls to function IfThenElse() special, because we cannot
+		// evaluate the arguments ahead of time (argument evaluation must
+		// be lazy for IfThenElse).
+		// also, many of the string functions need all their arguments
+		// converted to strings - set a flag if we need to do this.
+	if ( !strcasecmp(name,"ifthenelse") ) {
+		successful_eval = FunctionIfThenElse(attrlist1,attrlist2,result);
+		done = true;
+	} else
+	if ( !strcasecmp(name,"string")  ||
+		 !strcasecmp(name,"strcat") ||
+		 !strcasecmp(name,"strcmp") ||
+		 !strcasecmp(name,"stricmp") ||
+		 !strcasecmp(name,"toUpper") ||
+		 !strcasecmp(name,"toLower") ||
+		 !strcasecmp(name,"size") ) 
+	{
+		must_eval_to_strings = true;
+	}
+
+	if (!done) {
 		number_of_args = arguments.Length();
 		evaluated_args = new EvalResult[number_of_args];
 		
@@ -1539,23 +1615,55 @@ int Function::_EvalTree(const AttrList *attrlist1, const AttrList *attrlist2, Ev
 
 		i = 0;
 		while (iter.Next(arg)) {
-			if (attrlist2 == NULL) {
-				// This will let us refer to attributes in a ClassAd, like "MY"
-				arg->EvalTree(attrlist1, &evaluated_args[i++]);
+			if ( must_eval_to_strings ) {
+				if (!EvaluateArgumentToString(arg, attrlist1,attrlist2,
+											  &evaluated_args[i++]))
+				{
+					// if all args must be converted to strings, and we 
+					// fail to convert an arg to a string, then fail.
+					result->type = LX_ERROR;
+					done = true;
+					break;		// no need to look at the other args
+				}
 			} else {
-				// This will let us refer to attributes in two ClassAds: like 
-				// "My" and "Target"
-				arg->EvalTree(attrlist1, attrlist2, &evaluated_args[i++]);
+				EvaluateArgument( arg, attrlist1, attrlist2, &evaluated_args[i++] );
 			}
 		}
-		
+	
+		if ( !done ) {	
         if (!strcasecmp(name, "gettime")) {
 			successful_eval = FunctionGetTime(number_of_args, evaluated_args, result);
 		} else if (!strcasecmp(name, "random")) {
 			successful_eval = FunctionRandom(number_of_args, evaluated_args, result);
 		} else if (!strcasecmp(name, "_debug_function_")) {
             successful_eval = FunctionClassadDebugFunction(number_of_args, evaluated_args, result);
-        }
+		} else if (!strcasecmp(name, "isundefined")) {
+			successful_eval = FunctionIsUndefined(number_of_args, evaluated_args, result);
+		} else if (!strcasecmp(name, "iserror")) {
+			successful_eval = FunctionIsError(number_of_args, evaluated_args, result);
+		} else if (!strcasecmp(name, "isstring")) {
+			successful_eval = FunctionIsString(number_of_args, evaluated_args, result);
+		} else if (!strcasecmp(name, "isinteger")) {
+			successful_eval = FunctionIsInteger(number_of_args, evaluated_args, result);
+		} else if (!strcasecmp(name, "isreal")) {
+			successful_eval = FunctionIsReal(number_of_args, evaluated_args, result);
+		} else if (!strcasecmp(name, "isboolean")) {
+			successful_eval = FunctionIsBoolean(number_of_args, evaluated_args, result);
+		} else if (!strcasecmp(name, "string")) {
+			successful_eval = FunctionString(number_of_args, evaluated_args, result);
+		} else if (!strcasecmp(name, "real")) {
+			successful_eval = FunctionReal(number_of_args, evaluated_args, result);
+		} else if (!strcasecmp(name, "int")) {
+			successful_eval = FunctionInt(number_of_args, evaluated_args, result);
+		} else if (!strcasecmp(name, "floor")) {
+			successful_eval = FunctionFloor(number_of_args, evaluated_args, result);
+		} else if (!strcasecmp(name, "round")) {
+			successful_eval = FunctionRound(number_of_args, evaluated_args, result);
+		} else if (!strcasecmp(name, "ceiling")) {
+			successful_eval = FunctionCeiling(number_of_args, evaluated_args, result);
+		} else if (!strcasecmp(name, "strcat")) {
+			successful_eval = FunctionStrcat(number_of_args, evaluated_args, result);
+		}
 #ifdef CLASSAD_FUNCTIONS
         else {
 			successful_eval = FunctionSharedLibrary(number_of_args, 
@@ -1566,10 +1674,46 @@ int Function::_EvalTree(const AttrList *attrlist1, const AttrList *attrlist2, Ev
             successful_eval = false;
         }
 #endif
+		}	// of if (!done)
+
 		delete [] evaluated_args;
 	}
 
 	return successful_eval;
+}
+
+int Function::EvaluateArgumentToString(
+	ExprTree *arg,
+	const AttrList *attrlist1,
+	const AttrList *attrlist2,
+	EvalResult *result) const        // OUT: the result of calling the function
+{
+	result->type = LX_ERROR;
+
+	EvaluateArgument( arg, attrlist1, attrlist2, result );
+
+	if ( result->type != LX_STRING ) {
+		// if type is anything but string, return unparsed canonical form.
+		// note we cannot just call PrintToNewStr() here, since that function 
+		// allocates memory with malloc(), and result->s needs to be 
+		// allocated with new[].
+		char *tmp = NULL;
+		arg->PrintToNewStr(&tmp);
+		if (tmp) {
+			// convert from malloc buffer to new[] buffer, since
+			// the destructor in EvalResult calls delete[].
+			result->s = strnewp(tmp);
+			free(tmp);
+		} else {
+			result->type = LX_ERROR;
+		}
+	}
+
+	if ( result->type == LX_STRING ) {
+		return TRUE;
+	} else {
+		return FALSE;
+	}
 }
 
 bool string_is_all_whitespace(char *s)
@@ -1685,42 +1829,482 @@ int Function::FunctionGetTime(
 }
 
 extern "C" int get_random_int();
+extern "C" float get_random_float();
 
 int Function::FunctionRandom(
 	int number_of_args,         // IN:  size of evaluated args array
 	EvalResult *evaluated_args, // IN:  the arguments to the function
 	EvalResult *result)         // OUT: the result of calling the function
 {
-    int   random_number;
-    bool  success;
+    bool  success = false;
+	result->type = LX_ERROR;
 
     if (number_of_args == 0) {
-        // If we get no arguments, we return a random number between 0 and MAXINT
-        random_number = get_random_int();
+        // If we get no arguments, we return a random number between 0 and 1.0
+        result->f = get_random_float();
+		result->type = LX_FLOAT;
         success = true;
     } else if (number_of_args == 1) {
         // If we get one integer argument, we return a random number
         // between 0 and that number
         if (evaluated_args[0].type == LX_INTEGER) {
-            random_number = get_random_int() % evaluated_args[0].i;
+			result->type = LX_INTEGER;
+            result->i = get_random_int() % evaluated_args[0].i;
             success = true;
-        } else if (evaluated_args[0].type == LX_FLOAT) {
-            random_number = get_random_int() % (int) evaluated_args[0].f;
+        } 
+		if (evaluated_args[0].type == LX_FLOAT) {
+			result->type = LX_FLOAT;
+            result->f = get_random_float() * evaluated_args[0].f;
             success = true;
-        } else {
-            success = false;
         }
-    } else {
-        success = false;
     }
 
-    if (success) {
-        result->i    = random_number;
-        result->type = LX_INTEGER;
-    } else {
-        result->type = LX_ERROR;
-    }
 	return success;
+}
+
+int Function::FunctionIsUndefined(
+	int number_of_args,         // IN:  size of evaluated args array
+	EvalResult *evaluated_args, // IN:  the arguments to the function
+	EvalResult *result)         // OUT: the result of calling the function
+{
+	if ( number_of_args != 1 ) {
+		result->type = LX_ERROR;
+		return false;
+	}
+
+	result->type = LX_BOOL;
+	if ( evaluated_args[0].type == LX_UNDEFINED ) {
+		result->i = 1;
+	} else {
+		result->i = 0;
+	}
+
+	return true;
+}
+
+int Function::FunctionIsError(
+	int number_of_args,         // IN:  size of evaluated args array
+	EvalResult *evaluated_args, // IN:  the arguments to the function
+	EvalResult *result)         // OUT: the result of calling the function
+{
+	if ( number_of_args != 1 ) {
+		result->type = LX_ERROR;
+		return false;
+	}
+
+	result->type = LX_BOOL;
+	if ( evaluated_args[0].type == LX_ERROR ) {
+		result->i = 1;
+	} else {
+		result->i = 0;
+	}
+
+	return true;
+}
+
+int Function::FunctionIsString(
+	int number_of_args,         // IN:  size of evaluated args array
+	EvalResult *evaluated_args, // IN:  the arguments to the function
+	EvalResult *result)         // OUT: the result of calling the function
+{
+	if ( number_of_args != 1 ) {
+		result->type = LX_ERROR;
+		return false;
+	}
+
+	result->type = LX_BOOL;
+	if ( evaluated_args[0].type == LX_STRING ) {
+		result->i = 1;
+	} else {
+		result->i = 0;
+	}
+
+	return true;
+}
+
+
+int Function::FunctionIsInteger(
+	int number_of_args,         // IN:  size of evaluated args array
+	EvalResult *evaluated_args, // IN:  the arguments to the function
+	EvalResult *result)         // OUT: the result of calling the function
+{
+	if ( number_of_args != 1 ) {
+		result->type = LX_ERROR;
+		return false;
+	}
+
+	result->type = LX_BOOL;
+	if ( evaluated_args[0].type == LX_INTEGER ) {
+		result->i = 1;
+	} else {
+		result->i = 0;
+	}
+
+	return true;
+}
+
+
+int Function::FunctionIsReal(
+	int number_of_args,         // IN:  size of evaluated args array
+	EvalResult *evaluated_args, // IN:  the arguments to the function
+	EvalResult *result)         // OUT: the result of calling the function
+{
+	if ( number_of_args != 1 ) {
+		result->type = LX_ERROR;
+		return false;
+	}
+
+	result->type = LX_BOOL;
+	if ( evaluated_args[0].type == LX_FLOAT ) {
+		result->i = 1;
+	} else {
+		result->i = 0;
+	}
+
+	return true;
+}
+
+int Function::FunctionIsBoolean(
+	int number_of_args,         // IN:  size of evaluated args array
+	EvalResult *evaluated_args, // IN:  the arguments to the function
+	EvalResult *result)         // OUT: the result of calling the function
+{
+	if ( number_of_args != 1 ) {
+		result->type = LX_ERROR;
+		return false;
+	}
+
+	result->type = LX_BOOL;
+	if ( (evaluated_args[0].type == LX_BOOL) ||
+		 (evaluated_args[0].type == LX_INTEGER && // int val of 0 or 1 is bool
+		     (evaluated_args[0].i == 0  || evaluated_args[0].i == 1)) )
+	{
+		result->i = 1;
+	} else {
+		result->i = 0;
+	}
+
+	return true;
+}
+
+
+int Function::FunctionString(
+	int number_of_args,         // IN:  size of evaluated args array
+	EvalResult *evaluated_args, // IN:  the arguments to the function
+	EvalResult *result)         // OUT: the result of calling the function
+{
+	// NOTE: ALL ARGUMENTS HAVE BEEN CONVERTED INTO STRING TYPES
+	// BEFORE THIS FUNCTION WAS INVOKED.
+	
+	if ( number_of_args != 1 ) {
+		result->type = LX_ERROR;
+		return FALSE;
+	}
+
+	ASSERT(evaluated_args[0].type == LX_STRING);
+
+	result->type = LX_STRING;
+	result->s = strnewp(evaluated_args[0].s);
+
+	return TRUE;
+}
+
+int Function::FunctionReal(
+	int number_of_args,         // IN:  size of evaluated args array
+	EvalResult *evaluated_args, // IN:  the arguments to the function
+	EvalResult *result)         // OUT: the result of calling the function
+{
+	if ( number_of_args != 1 ) {
+		result->type = LX_ERROR;
+		return false;
+	}
+
+	result->type = LX_FLOAT;
+	result->f = 0;
+
+	switch ( evaluated_args[0].type ) {
+		case LX_FLOAT:
+			// if input x is a Real, the result is x.
+			result->f = evaluated_args[0].f;
+			break;
+		case LX_INTEGER:
+			// if integer, upgrade to a Real.
+			// to implement, we just cast, since this is what C++ will do.
+			result->f = (float)(evaluated_args[0].i);
+			break;
+		case LX_BOOL:
+			if ( evaluated_args[0].i ) 
+				result->f = 1.0;
+			else
+				result->f = 0.0;
+			break;
+		case LX_STRING: 
+			// convert string to Real, or return error if string
+			// does not represent a Real.
+			if (!evaluated_args[0].s) {
+				result->type = LX_ERROR;
+				return false;
+			}
+			if (sscanf(evaluated_args[0].s,"%f",&result->f) != 1) {
+				result->type = LX_ERROR;
+				return false;
+			}
+			break;
+		default:
+			// likely error or undefined
+			result->type = LX_ERROR;
+			return false;
+	}
+
+	return true;
+}
+
+int Function::FunctionFloor(
+	int number_of_args,         // IN:  size of evaluated args array
+	EvalResult *evaluated_args, // IN:  the arguments to the function
+	EvalResult *result)         // OUT: the result of calling the function
+{
+	if ( number_of_args != 1 ) {
+		result->type = LX_ERROR;
+		return FALSE;
+	}
+
+	result->type = LX_INTEGER;
+	result->i = 0;
+
+	// If input arg x is integer, return x.  Otherwise, x is converted
+	// to a real w/ FunctionReal(), and floor() is applied.
+	if ( evaluated_args[0].type == LX_INTEGER ) {
+		result->i = evaluated_args[0].i;
+	} else {
+		EvalResult real_result;
+		if ( FunctionReal(number_of_args,evaluated_args,&real_result) ) {
+			result->i = (int)floor(real_result.f);
+		} else {
+			result->type = LX_ERROR;
+			return FALSE;
+		}
+	}
+
+	return TRUE;
+}
+
+
+int Function::FunctionRound(
+	int number_of_args,         // IN:  size of evaluated args array
+	EvalResult *evaluated_args, // IN:  the arguments to the function
+	EvalResult *result)         // OUT: the result of calling the function
+{
+	if ( number_of_args != 1 ) {
+		result->type = LX_ERROR;
+		return FALSE;
+	}
+
+	result->type = LX_INTEGER;
+	result->i = 0;
+
+	// If input arg x is integer, return x.  Otherwise, x is converted
+	// to a real w/ FunctionReal(), and ceil() is applied.
+	if ( evaluated_args[0].type == LX_INTEGER ) {
+		result->i = evaluated_args[0].i;
+	} else {
+		EvalResult real_result;
+		if ( FunctionReal(number_of_args,evaluated_args,&real_result) ) {
+			result->i = (int)rint(real_result.f);
+		} else {
+			result->type = LX_ERROR;
+			return FALSE;
+		}
+	}
+
+	return TRUE;
+}
+
+int Function::FunctionCeiling(
+	int number_of_args,         // IN:  size of evaluated args array
+	EvalResult *evaluated_args, // IN:  the arguments to the function
+	EvalResult *result)         // OUT: the result of calling the function
+{
+	if ( number_of_args != 1 ) {
+		result->type = LX_ERROR;
+		return FALSE;
+	}
+
+	result->type = LX_INTEGER;
+	result->i = 0;
+
+	// If input arg x is integer, return x.  Otherwise, x is converted
+	// to a real w/ FunctionReal(), and ceil() is applied.
+	if ( evaluated_args[0].type == LX_INTEGER ) {
+		result->i = evaluated_args[0].i;
+	} else {
+		EvalResult real_result;
+		if ( FunctionReal(number_of_args,evaluated_args,&real_result) ) {
+			result->i = (int)ceil(real_result.f);
+		} else {
+			result->type = LX_ERROR;
+			return FALSE;
+		}
+	}
+
+	return TRUE;
+}
+
+int Function::FunctionStrcat(
+	int number_of_args,         // IN:  size of evaluated args array
+	EvalResult *evaluated_args, // IN:  the arguments to the function
+	EvalResult *result)         // OUT: the result of calling the function
+{
+	// NOTE: ALL ARGUMENTS HAVE BEEN CONVERTED INTO STRING TYPES
+	// BEFORE THIS FUNCTION WAS INVOKED.
+	
+	int i;
+	MyString tempStr;
+
+	for (i=0; i< number_of_args; i++) {
+		ASSERT(evaluated_args[i].type == LX_STRING);
+		tempStr += evaluated_args[i].s;
+	}
+
+	result->type = LX_STRING;
+	result->s = strnewp( tempStr.Value() );
+
+	return TRUE;
+}
+
+
+
+int Function::FunctionInt(
+	int number_of_args,         // IN:  size of evaluated args array
+	EvalResult *evaluated_args, // IN:  the arguments to the function
+	EvalResult *result)         // OUT: the result of calling the function
+{
+	if ( number_of_args != 1 ) {
+		result->type = LX_ERROR;
+		return false;
+	}
+
+	result->type = LX_INTEGER;
+	result->i = 0;
+
+	switch ( evaluated_args[0].type ) {
+		case LX_INTEGER:
+			// if input x is an Integer, the result is x.
+			result->i = evaluated_args[0].i;
+			break;
+		case LX_FLOAT:
+			// if input x is Float, it is truncated towards zero.
+			// to implement, we just cast, since this is what C++ will do.
+			result->i = (int)(evaluated_args[0].f);
+			break;
+		case LX_BOOL:
+			if ( evaluated_args[0].i ) 
+				result->i = 1;
+			else
+				result->i = 0;
+			break;
+		case LX_STRING: 
+			// convert string to int, or return error if string
+			// does not represent an int.
+			if (!evaluated_args[0].s) {
+				result->type = LX_ERROR;
+				return false;
+			}
+			result->i = atoi(evaluated_args[0].s);
+			if ( result->i == 0 ) {
+				// this sucks.  atoi returns 0 on error, so
+				// here we try to figure out if we have a 0
+				// because that is what the string has, or 
+				// we have a 0 due to an error.
+				int c;
+				int i=0;
+				while ( (c=evaluated_args[0].s[i++]) ) {
+					if ( (!isspace(c)) && c!='0' &&
+						 c!='+' && c!='-' && c!='.' ) 
+					{
+						result->type = LX_ERROR;
+						return false;
+					}
+				}
+			}
+			break;
+		default:
+			// likely error or undefined
+			result->type = LX_ERROR;
+			return false;
+	}
+
+	return true;
+}
+
+
+
+/*
+	IfThenElse( condition ; then ; else )
+	If condition evaluates to TRUE, return evaluated 'then'.
+	If condition evaluates to FALSE, return evaluated 'else'.
+	If condition evaluates to UNDEFIEND, return UNDEFINED.
+	If condition evaluates to ERROR, return ERROR.
+	If condition is of type string or null, return ERROR.
+	If three arguments are not passed in, return ERROR.
+*/
+int Function::FunctionIfThenElse(
+	const AttrList *attrlist1,
+	const AttrList *attrlist2,
+	EvalResult *result)         // OUT: the result of calling the function
+{
+	bool condition = false;
+	EvalResult conditionclause;
+	ExprTree *arg = NULL;
+
+	int number_of_args = arguments.Length();
+
+	if ( number_of_args != 3 ) {
+		// we must have three arguments
+		result->type = LX_ERROR;	
+		return false;
+	}
+
+	ListIterator<ExprTree> iter(arguments);
+
+		// pop off and evaluate the condition clause (1st argument)
+	iter.Next(arg);		// arg now has the first argument (condition clause)
+	EvaluateArgument( arg, attrlist1, attrlist2, &conditionclause );
+
+	switch ( conditionclause.type ) {
+		case LX_BOOL:
+		case LX_INTEGER:
+			if ( conditionclause.i ) {
+				condition = true;
+			}
+			break;
+		case LX_FLOAT:
+			if ( conditionclause.f ) {
+				condition = true;
+			}
+			break;
+		case LX_UNDEFINED:
+			result->type = LX_UNDEFINED;
+			return true;
+		default:  // will catch types null, error, string
+			result->type = LX_ERROR;	
+			return false;
+	}	// end of switch
+
+	if ( condition ) {
+			// Condition is true - we want to return the second argument
+		iter.Next(arg);		// arg now has the second argument (then clause)
+			// evaluate the second argument (then clause), store in result
+		EvaluateArgument( arg, attrlist1, attrlist2, result );	
+	} else {
+			// Condition is false - we want to return the third argument
+		iter.Next(arg);		// arg now has the second argument (then clause)
+		iter.Next(arg);		// arg now has the third argument (else clause)
+			// evaluate the third argument (else clause), store in result
+		EvaluateArgument( arg, attrlist1, attrlist2, result );	
+	}
+
+	return true;
 }
 
 int Function::FunctionClassadDebugFunction(

@@ -1178,4 +1178,22 @@ FunctionBase::AppendArgument(ExprTree *argument)
 	return;
 }
 
-
+void
+FunctionBase::EvaluateArgument(
+	ExprTree *arg,
+	const AttrList *attrlist1, 
+	const AttrList *attrlist2,
+	EvalResult *result) const
+{
+	if ( arg ) {
+		if (attrlist2 == NULL) {
+			// This will let us refer to attributes in a ClassAd, like "MY"
+			arg->EvalTree(attrlist1, result);
+		} else {
+			// This will let us refer to attributes in two ClassAds: like 
+			// "My" and "Target"
+			arg->EvalTree(attrlist1, attrlist2, result);
+		}
+	}
+	return;
+}

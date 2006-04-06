@@ -77,8 +77,13 @@ class EvalResult
 {
     public :
 
-    	EvalResult() { type = LX_UNDEFINED; }
-  	~EvalResult() { if(type == LX_STRING) delete [] s; }
+    EvalResult();
+  	~EvalResult();
+
+		/// copy constructor
+	EvalResult(const EvalResult & copyfrom);
+		/// assignment operator
+	EvalResult & operator=(const EvalResult & rhs);
 
 	void fPrintResult(FILE *); // for debugging
 
@@ -391,6 +396,9 @@ class Function: public FunctionBase
   	virtual int     _EvalTree(const AttrList*, EvalResult*);
     virtual int     _EvalTree(const AttrList*, const AttrList*, EvalResult*);
 
+	int EvaluateArgumentToString(ExprTree *arg, const AttrList *attrlist1, 	
+						const AttrList *attrlist2, EvalResult *result) const;
+
 	int FunctionScript(int number_of_arguments, EvalResult *arguments, 
 					   EvalResult *result);
 #ifdef CLASSAD_FUNCTIONS
@@ -401,8 +409,36 @@ class Function: public FunctionBase
 						EvalResult *result);
     int FunctionRandom(int number_of_arguments, EvalResult *arguments, 
 						EvalResult *result);
-    int FunctionClassadDebugFunction(int number_of_args, EvalResult *evaluated_args, 
-                                     EvalResult *result);
+	int FunctionIsUndefined(int number_of_args,	EvalResult *arguments,
+						EvalResult *result);
+	int FunctionIsError(int number_of_args,	EvalResult *arguments,
+						EvalResult *result);
+	int FunctionIsString(int number_of_args,	EvalResult *arguments,
+						EvalResult *result);
+	int FunctionIsInteger(int number_of_args,	EvalResult *arguments,
+						EvalResult *result);
+	int FunctionIsReal(int number_of_args,	EvalResult *arguments,
+						EvalResult *result);
+	int FunctionIsBoolean(int number_of_args,	EvalResult *arguments,
+						EvalResult *result);
+	int FunctionIfThenElse(const AttrList *attrlist1,
+						const AttrList *attrlist2, EvalResult *result);
+    int FunctionClassadDebugFunction(int number_of_args, EvalResult *evaluated_args,
+						EvalResult *result);
+	int FunctionString(int number_of_args, EvalResult *evaluated_args, 
+						EvalResult *result);
+	int FunctionReal(int number_of_args, EvalResult *evaluated_args, 
+						EvalResult *result);
+	int FunctionInt(int number_of_args, EvalResult *evaluated_args, 
+						EvalResult *result);
+	int FunctionFloor(int number_of_args, EvalResult *evaluated_args, 
+						EvalResult *result);
+	int FunctionRound(int number_of_args, EvalResult *evaluated_args, 
+						EvalResult *result);
+	int FunctionCeiling(int number_of_args, EvalResult *evaluated_args, 
+						EvalResult *result);
+	int FunctionStrcat(int number_of_args, EvalResult *evaluated_args, 
+						EvalResult *result);
 
 };
 

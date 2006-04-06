@@ -468,6 +468,9 @@ class FunctionBase : public ExprTree
 		friend	class	AttrList;
 
 		void AppendArgument(ExprTree *argument);
+		
+		void EvaluateArgument(ExprTree *arg, const AttrList *attrlist1, 
+			const AttrList *attrlist2, EvalResult *result) const;
 
     protected :
 
