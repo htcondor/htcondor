@@ -5581,18 +5581,13 @@ Scheduler::checkReconnectQueue( void )
 		}
 	}
 
-		// now, make sure all our jobs are gone from the list.  if
-		// not, "We have a problem, Houston..."
 	if( ! jobsToReconnect.IsEmpty() ) {
-		dprintf( D_ALWAYS, "ERROR: couldn't find ClassAds for some "
-				 "disconnected jobs!\n" );
-		jobsToReconnect.Rewind();
-		while( jobsToReconnect.Next(job) ) {
-			dprintf( D_ALWAYS, "Missing match ClassAd for job %d.%d\n",
-					 job.cluster, job.proc );
-				// TODO handle this error better!
-			mark_job_stopped(&job);
-		}
+		dprintf( D_FULLDEBUG, "Could not find machine ClassAds for one or more  jobs.  May be flocking, or machine may be down.  Attempting to reconnect anyway\n");
+	}
+	jobsToReconnect.Rewind();
+	while( jobsToReconnect.Next(job) ) {
+		makeReconnectRecords(&job, NULL);
+		jobsToReconnect.DeleteCurrent();
 	}
 }
 
