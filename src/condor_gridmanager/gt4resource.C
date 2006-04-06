@@ -32,8 +32,6 @@
 #define DEFAULT_MAX_PENDING_SUBMITS_PER_RESOURCE	5
 #define DEFAULT_MAX_SUBMITTED_JOBS_PER_RESOURCE		100
 
-#define LOG_FILE_TIMEOUT		300
-
 template class List<ProxyDelegation>;
 template class Item<ProxyDelegation>;
 
