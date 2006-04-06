@@ -2051,6 +2051,13 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 		// we can use cached information.  pop off the best
 		// candidate from our sorted list.
 		cached_bestSoFar = MatchList->pop_candidate();
+		dprintf(D_FULLDEBUG,"Attempting to use cached MatchList: %s (MatchList length: %d, Autocluster: %d, Schedd Name: %s, Schedd Address: %s)\n",
+			cached_bestSoFar?"Succeeded.":"Failed",
+			MatchList->length(),
+			requestAutoCluster,
+			scheddName,
+			scheddAddr
+			);
 		if ( ! cached_bestSoFar ) {
 				// if we don't have a candidate, fill in
 				// all the rejection reason counts.
