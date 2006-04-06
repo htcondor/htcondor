@@ -2231,6 +2231,7 @@ int GlobusJob::doEvaluateState()
 			} else {
 				GetCallbacks();
 			}
+			CHECK_PROXY;
 			if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED ) {
 				// The GRAM poll script returned FAILED, which the
 				// jobmanager considers a permanent, fatal error.
@@ -3410,11 +3411,9 @@ GlobusJob::JmShouldSleep()
 		return false;
 	}
 
-	/* Don't restart jobmanagers if the grid monitor is having trouble
 	if ( myResource->GridJobMonitorActive() == false ) {
 		return false;
 	}
-	*/
 
 	switch ( globusState ) {
 	case GLOBUS_GRAM_PROTOCOL_JOB_STATE_PENDING:
