@@ -101,6 +101,7 @@ class GlobusResource : public BaseResource
 	static bool enableGridMonitor;
 	int checkMonitorTid;
 	bool monitorActive;
+	char *monitorDirectory;
 	char *monitorJobStatusFile;
 	char *monitorLogFile;
 		// These two timers default to the submission time of the

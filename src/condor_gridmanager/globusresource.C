@@ -25,6 +25,7 @@
 #include "condor_common.h"
 #include "condor_config.h"
 #include "string_list.h"
+#include "directory.h"
 
 #include "globusresource.h"
 #include "gridmanager.h"
@@ -88,8 +89,9 @@ GlobusResource::GlobusResource( const char *resource_name,
 	checkMonitorTid = TIMER_UNSET;
 	monitorActive = false;
 
-	monitorJobStatusFile = 0;
-	monitorLogFile = 0;
+	monitorDirectory = NULL;
+	monitorJobStatusFile = NULL;
+	monitorLogFile = NULL;
 	logFileTimeoutLastReadTime = 0;
 	initialMonitorStart = true;
 	gahp = NULL;
@@ -488,17 +490,29 @@ GlobusResource::StopMonitorJob()
 void
 GlobusResource::CleanupMonitorJob()
 {
+	if ( monitorDirectory ) {
+		MyString tmp_dir;
+
+		tmp_dir.sprintf( "%s.remove", monitorDirectory );
+
+		rename( monitorDirectory, tmp_dir.Value() );
+		free( monitorDirectory );
+		monitorDirectory = NULL;
+
+		Directory tmp( tmp_dir.Value() );
+		tmp.Remove_Entire_Directory();
+
+		rmdir( tmp_dir.Value() );
+	}
 	if(monitorJobStatusFile)
 	{
-		unlink( monitorJobStatusFile );
 		free(monitorJobStatusFile);
-		monitorJobStatusFile = 0;
+		monitorJobStatusFile = NULL;
 	}
 	if(monitorLogFile)
 	{
-		unlink( monitorLogFile );
 		free(monitorLogFile);
-		monitorLogFile = 0;
+		monitorLogFile = NULL;
 	}
 }
 
@@ -515,51 +529,47 @@ GlobusResource::SubmitMonitorJob()
 
 	StopMonitorJob();
 	
-	/* Create monitor file names */
-	{
-		g_MonitorUID++;
-		MyString buff;
+	/* Create monitor directory and files */
+	g_MonitorUID++;
+	MyString buff;
 
-		buff.sprintf( "%s/grid-monitor-job-status.%s.%d.%d",
-		              GridmanagerScratchDir,
-		              resourceName, getpid(), g_MonitorUID );
-		monitorJobStatusFile = strdup( buff.Value() );
+	buff.sprintf( "%s/grid-monitor.%s.%d", GridmanagerScratchDir,
+				  resourceName, g_MonitorUID );
+	monitorDirectory = strdup( buff.Value() );
 
-		buff.sprintf( "%s/grid-monitor-log.%s.%d.%u", GridmanagerScratchDir,
-					  resourceName, getpid(), g_MonitorUID );
-		monitorLogFile = strdup( buff.Value() );
-	}
-
-
-	rc = unlink( monitorJobStatusFile );
-	if ( rc < 0 && errno != ENOENT ) {
-		dprintf( D_ALWAYS, "Failed to submit grid_monitor to %s: "
-			"unlink(%s) failed, errno=%d\n",
-			 resourceName, monitorJobStatusFile, errno );
+	if ( mkdir( monitorDirectory, 0700 ) < 0 ) {
+		dprintf( D_ALWAYS, "SubmitMonitorJob: mkdir(%s,0700) failed, "
+				 "errno=%d (%s)\n", monitorDirectory, errno,
+				 strerror( errno ) );
+		free( monitorDirectory );
+		monitorDirectory = NULL;
 		return false;
 	}
+
+	buff.sprintf( "%s/grid-monitor-job-status", monitorDirectory );
+	monitorJobStatusFile = strdup( buff.Value() );
+
+	buff.sprintf( "%s/grid-monitor-log", monitorDirectory );
+	monitorLogFile = strdup( buff.Value() );
+
+
 	rc = creat( monitorJobStatusFile, S_IREAD|S_IWRITE );
 	if ( rc < 0 ) {
 		dprintf( D_ALWAYS, "Failed to submit grid_monitor to %s: "
-			"creat(%s,%d) failed, errno=%d\n",
-			 resourceName, monitorJobStatusFile, S_IREAD|S_IWRITE, errno );
+			"creat(%s,%d) failed, errno=%d (%s)\n",
+			resourceName, monitorJobStatusFile, S_IREAD|S_IWRITE, errno,
+			strerror( errno ) );
 		return false;
 	} else {
 		close( rc );
 	}
 
-	rc = unlink( monitorLogFile );
-	if ( rc < 0 && errno != ENOENT ) {
-		dprintf( D_ALWAYS, "Failed to submit grid_monitor to %s: "
-			"unlink(%s) failed, errno=%d\n",
-			 resourceName, monitorLogFile, errno );
-		return false;
-	}
 	rc = creat( monitorLogFile, S_IREAD|S_IWRITE );
 	if ( rc < 0 ) {
 		dprintf( D_ALWAYS, "Failed to submit grid_monitor to %s: "
-			"creat(%s,%d) failed, errno=%d\n",
-			 resourceName, monitorLogFile, S_IREAD|S_IWRITE, errno );
+			"creat(%s,%d) failed, errno=%d (%s)\n",
+			 resourceName, monitorLogFile, S_IREAD|S_IWRITE, errno,
+			strerror( errno ) );
 		return false;
 	} else {
 		close( rc );
