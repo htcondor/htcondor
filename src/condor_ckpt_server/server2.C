@@ -104,7 +104,7 @@ void Server::Init()
 	char        log_msg[256];
 	char        hostname[100];
 	int         buf_size;
-	socklen_t	len;
+	SOCKET_LENGTH_TYPE	len;
 	static bool first_time = true;
 	
 	num_store_xfers = 0;
