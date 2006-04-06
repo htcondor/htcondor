@@ -2,7 +2,7 @@ PROGRAMS =  	condor_config_val condor_preen condor_stats \
 		condor_userprio condor_history condor test_calc condor_transfer_data \
 		view_collection condor_qedit condor_advertise condor_version \
 		condor_fetchlog condor_findhost condor_cod condor_wait \
-		condor_store_cred_win
+		condor_store_cred_win condor_convert_history
 
 all_target( $(PROGRAMS) )
 
@@ -37,6 +37,8 @@ public_c_plus_target(condor_transfer_data,bin,transfer_data.o,$(LIB))
 public_c_plus_target(condor_version,bin,version.o,$(LIB))
 
 public_c_plus_target(condor_wait,bin,wait.o,$(LIB))
+
+public_c_plus_target(condor_convert_history,sbin,convert_history.o,$(LIB))
 
 public_c_plus_target(condor,sbin,tool.o,$(LIB))
 
