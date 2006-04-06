@@ -1646,7 +1646,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 
 		// We want to delegate the job's x509 proxy, rather than just
 		// copy it.
-		if ( file_strcmp( filename, X509UserProxy ) == 0 &&
+		if ( X509UserProxy && file_strcmp( filename, X509UserProxy ) == 0 &&
 			 DelegateX509Credentials ) {
 
 			file_command = 4;
