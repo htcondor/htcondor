@@ -124,6 +124,18 @@ JobManager, and Condor wouldn't react when a job's proxy expired.
 \item Fixed a bug that could cause extra Grid Monitor file to accumulate
 under /tmp until the \Condor{gridmanager} exited.
 
+\item Fixed a problem in which preempting claims waiting on retiring
+jobs (i.e. waiting on MaxJobRetirementTime) could get preempted
+without sufficient rank or priority (because the new preemption only
+had to beat the retiring job, not the preempting claim).  Furthermore,
+both the new preempting claim and the original preempting claim had
+the same claim id, so they collided in a way that ultimately caused
+both to be removed, and the respective jobs would go back into
+unmatched state.  The result was unnecessary negotiation churn and
+slower convergence of resource usage to the desired distribution.
+Now, preemption of preempting claims during long job retirement is
+correctly handled.
+
 \end{itemize}
 
 
