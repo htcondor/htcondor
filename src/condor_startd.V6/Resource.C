@@ -51,6 +51,7 @@ Resource::Resource( CpuAttributes* cap, int rid )
 	r_state = new ResState( this );
 	r_cur = new Claim( this );
 	r_pre = NULL;
+	r_pre_pre = NULL;
 	r_cod_mgr = new CODMgr( this );
 	r_reqexp = new Reqexp( this );
 	r_load_queue = new LoadQueue( 60 );
@@ -119,6 +120,9 @@ Resource::~Resource()
 	delete r_cur;		
 	if( r_pre ) {
 		delete r_pre;		
+	}
+	if( r_pre_pre ) {
+		delete r_pre_pre;
 	}
 	delete r_cod_mgr;
 	delete r_reqexp;   
@@ -296,6 +300,11 @@ Resource::removeClaim( Claim* c )
 	if( c == r_pre ) {
 		remove_pre();
 		r_pre = new Claim( this );
+		return;
+	}
+	if( c == r_pre_pre ) {
+		delete r_pre_pre;
+		r_pre_pre = new Claim( this );
 		return;
 	}
 
@@ -1350,7 +1359,11 @@ Resource::publish( ClassAd* cap, amask_t mask )
 			// in the ClassAd, but for backwards compatibility it is.
 			// When we finally remove all the evil startd private ad
 			// junk this can go away, too.
-		if( r_pre ) {
+		if( r_pre_pre ) {
+			sprintf( line, "%s = \"%s\"", ATTR_CAPABILITY, r_pre_pre->id() );
+			cap->Insert( line );
+		}
+		else if( r_pre ) {
 			sprintf( line, "%s = \"%s\"", ATTR_CAPABILITY, r_pre->id() );
 			cap->Insert( line );
 		} else if( r_cur ) {
@@ -1404,6 +1417,9 @@ Resource::publish( ClassAd* cap, amask_t mask )
 		// Update info from the current Claim object, if it exists.
 	if( r_cur ) {
 		r_cur->publish( cap, mask );
+	}
+	if( r_pre ) {
+		r_pre->publishPreemptingClaim( cap, mask );
 	}
 
 		// Put in availability statistics
@@ -1708,6 +1724,10 @@ Resource::remove_pre( void )
 		delete r_pre;
 		r_pre = NULL;
 	}	
+	if( r_pre_pre ) {
+		delete r_pre_pre;
+		r_pre_pre = NULL;
+	}
 }
 
 

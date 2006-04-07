@@ -327,6 +327,10 @@ const char ATTR_PARALLEL_SCRIPT_SHADOW   [] = "ParallelScriptShadow";
 const char ATTR_PARALLEL_SCRIPT_STARTER  [] = "ParallelScriptStarter"; 
 const char ATTR_PERIODIC_CHECKPOINT      [] = "PeriodicCheckpoint";
 #define ATTR_PLATFORM					AttrGetName( ATTRE_PLATFORM )
+const char ATTR_PREEMPTING_ACCOUNTING_GROUP [] = "PreemptingAccountingGroup";
+const char ATTR_PREEMPTING_RANK			 [] = "PreemptingRank";
+const char ATTR_PREEMPTING_OWNER		 [] = "PreemptingOwner";
+const char ATTR_PREEMPTING_USER          [] = "PreemptingUser";
 const char ATTR_PREFERENCES				 [] = "Preferences";
 const char ATTR_PREV_SEND_ESTIMATE		 [] = "PrevSendEstimate";
 const char ATTR_PREV_RECV_ESTIMATE		 [] = "PrevRecvEstimate";

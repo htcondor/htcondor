@@ -291,6 +291,13 @@ command_release_claim( Service*, int cmd, Stream* stream )
 		rip->removeClaim(rip->r_pre);
 		return TRUE;
 	}
+	else if( rip->r_pre_pre && rip->r_pre_pre->idMatches(id) ) {
+		// preempting preempting claim is being canceled by schedd
+		rip->dprintf( D_ALWAYS, 
+		              "State change: received RELEASE_CLAIM command from preempting preempting claim\n" );
+		rip->removeClaim(rip->r_pre_pre);
+		return TRUE;
+	}
 	else if( rip->r_cur && rip->r_cur->idMatches(id) ) {
 		if( (s == claimed_state) || (s == matched_state) ) {
 			rip->dprintf( D_ALWAYS, 
@@ -560,8 +567,14 @@ command_vm_register( Service*, int, Stream* s )
 delete req_classad;						\
 if (client_addr) free(client_addr);		\
 if( s == claimed_state ) {				\
-	delete rip->r_pre;					\
-	rip->r_pre = new Claim( rip );		\
+	if(rip->r_pre_pre) {				\
+		delete rip->r_pre_pre;			\
+		rip->r_pre_pre = new Claim( rip ); \
+	}									\
+	else {								\
+		delete rip->r_pre;				\
+		rip->r_pre = new Claim( rip );	\
+	}                                   \
 } else {								\
     if( s != owner_state ) {			\
         rip->dprintf( D_ALWAYS, "State change: claiming protocol failed\n" ); \
@@ -598,7 +611,12 @@ request_claim( Resource* rip, char* id, Stream* stream )
 		   -Derek Wright 3/11/99 
 		*/
 	if( rip->state() == claimed_state ) {
-		rip->r_pre->cancel_match_timer();
+		if(rip->r_pre_pre) {
+			rip->r_pre_pre->cancel_match_timer();
+		}
+		else {
+			rip->r_pre->cancel_match_timer();
+		}
 	} else {
 		rip->r_cur->cancel_match_timer();
 	}
@@ -624,8 +642,14 @@ request_claim( Resource* rip, char* id, Stream* stream )
 		}
 			// Now, store them into r_cur or r_pre, as appropiate
 		if ( rip->state() == claimed_state ) {
-			rip->r_pre->setaliveint( interval );
-			rip->r_pre->client()->setaddr( client_addr );
+			if(rip->r_pre_pre) {
+				rip->r_pre_pre->setaliveint( interval );
+				rip->r_pre_pre->client()->setaddr( client_addr );
+			}
+			else {
+				rip->r_pre->setaliveint( interval );
+				rip->r_pre->client()->setaddr( client_addr );
+			}
 		} else {
 			rip->r_cur->setaliveint( interval );
 			rip->r_cur->client()->setaddr( client_addr );
@@ -712,6 +736,43 @@ request_claim( Resource* rip, char* id, Stream* stream )
 			refuse( stream );
 			ABORT;
 		}
+		if( rip->r_pre_pre ) {
+			if(!rip->r_pre_pre->idMatches(id)) {
+				rip->dprintf( D_ALWAYS,
+							  "ClaimId from schedd (%s) doesn't match (%s)\n",
+							  id, rip->r_pre_pre->id() );
+				refuse( stream );
+				ABORT;
+			}
+			rip->dprintf(
+					 D_ALWAYS,
+					"Preempting preempting claim has correct ClaimId.\n");
+			if( rank < rip->r_pre->rank() ) {
+				rip->dprintf( D_ALWAYS, 
+							  "Preempting claim doesn't have sufficient "
+							  "rank to replace existing preempting claim; "
+							  "refusing.\n" );
+				refuse( stream );
+				ABORT;
+			}
+
+			if( rank > rip->r_pre->rank() ) {
+				rip->dprintf(D_ALWAYS,
+							 "Replacing existing preempting claim with "
+							 "new preempting claim based on machine rank.\n");
+			}
+			else {
+				rip->dprintf(D_ALWAYS,
+							 "Replacing existing preempting claim with "
+							 "new preempting claim based on user priority.\n");
+			}
+
+			Claim *pre_pre = rip->r_pre_pre;
+			rip->r_pre_pre = NULL;
+			rip->removeClaim(rip->r_pre); // cancel existing preempting claim
+			rip->r_pre = pre_pre;         // replace with new one
+		}
+
 		if( rip->r_pre->idMatches(id) ) {
 			rip->dprintf( D_ALWAYS, 
 						  "Preempting claim has correct ClaimId.\n" );
@@ -729,8 +790,13 @@ request_claim( Resource* rip, char* id, Stream* stream )
 					// need to know into r_pre.
 				rip->r_pre->setRequestStream( stream );
 				rip->r_pre->setad( req_classad );
+				rip->r_pre->loadAccountingInfo();
 				rip->r_pre->setrank( rank );
 				rip->r_pre->setoldrank( rip->r_cur->rank() );
+
+					// Create a new claim id for preempting this preempting
+					// claim (in case of long retirement).
+				rip->r_pre_pre = new Claim( rip );
 
 					// Get rid of the current claim.
 				if( rank > rip->r_cur->rank() ) {
@@ -1184,6 +1250,15 @@ match_info( Resource* rip, char* id )
 			rip->r_reqexp->unavail();
 			rip->update();
 			rip->r_pre->start_match_timer();
+			rval = TRUE;
+		} else if( rip->r_pre_pre && rip->r_pre_pre->idMatches(id) ) {
+				// The ClaimId we got matches the preempting preempting
+				// ClaimId we've been advertising.  Advertise
+				// ourself as unavailable for future claims, update
+				// the CM, and set the timer for this match.
+			rip->r_reqexp->unavail();
+			rip->update();
+			rip->r_pre_pre->start_match_timer();
 			rval = TRUE;
 		} else {
 				// The ClaimId doesn't match any of our ClaimIds.

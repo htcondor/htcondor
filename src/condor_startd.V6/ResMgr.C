@@ -1216,6 +1216,10 @@ ResMgr::get_by_any_id( char* id )
 			resources[i]->r_pre->idMatches(id) ) {
 			return resources[i];
 		}
+		if( resources[i]->r_pre_pre &&
+			resources[i]->r_pre_pre->idMatches(id) ) {
+			return resources[i];
+		}
 	}
 	return NULL;
 }

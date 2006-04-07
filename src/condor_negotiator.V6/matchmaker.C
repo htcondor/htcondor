@@ -1891,7 +1891,9 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 				continue;
 			}
 
-			if ((offer->LookupString(ATTR_ACCOUNTING_GROUP, remoteUser)==1) ||
+			if ((offer->LookupString(ATTR_PREEMPTING_ACCOUNTING_GROUP, remoteUser)==1) ||
+				(offer->LookupString(ATTR_PREEMPTING_USER, remoteUser)==1) ||
+				(offer->LookupString(ATTR_ACCOUNTING_GROUP, remoteUser)==1) ||
 			    (offer->LookupString(ATTR_REMOTE_USER, remoteUser)==1))
 			{
                 char	*remoteHost = NULL;
@@ -1915,8 +1917,6 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 						 priority, newStartdRank );
                 free(remoteHost);
                 remoteHost = NULL;
-			} else {
-				strcpy(remoteUser, "none");
 			}
 
 			// 2e(ii).  perform the matchmaking protocol
@@ -2160,8 +2160,14 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 		candidatePreemptState = NO_PREEMPTION;
 
 		remoteUser[0] = '\0';
-		if (!candidate->LookupString(ATTR_ACCOUNTING_GROUP, remoteUser)) {
-			candidate->LookupString(ATTR_REMOTE_USER, remoteUser);
+			// If there is already a preempting user, we need to preempt that user.
+			// Otherwise, we need to preempt the user who is running the job.
+		if (!candidate->LookupString(ATTR_PREEMPTING_ACCOUNTING_GROUP, remoteUser)) {
+			if (!candidate->LookupString(ATTR_PREEMPTING_USER, remoteUser)) {
+				if (!candidate->LookupString(ATTR_ACCOUNTING_GROUP, remoteUser)) {
+					candidate->LookupString(ATTR_REMOTE_USER, remoteUser);
+				}
+			}
 		}
 
 		// if only_for_startdrank flag is true, check if the offer strictly
@@ -2619,14 +2625,27 @@ addRemoteUserPrios( ClassAdList &cal )
 	char    vm_prefix[16];
 	float	prio;
 	int     totalVMs, i;
+	float     preemptingRank;
 
 	cal.Open();
 	while( ( ad = cal.Next() ) ) {
-		if( ad->LookupString( ATTR_ACCOUNTING_GROUP , remoteUser ) ||
+			// If there is a preempting user, use that for computing remote user prio.
+			// Otherwise, use the current user.
+		if( ad->LookupString( ATTR_PREEMPTING_ACCOUNTING_GROUP , remoteUser ) ||
+			ad->LookupString( ATTR_PREEMPTING_USER , remoteUser ) ||
+			ad->LookupString( ATTR_ACCOUNTING_GROUP , remoteUser ) ||
 			ad->LookupString( ATTR_REMOTE_USER , remoteUser ) ) 
 		{
 			prio = (float) accountant.GetPriority( remoteUser );
 			(void) sprintf( buffer , "%s = %f" , ATTR_REMOTE_USER_PRIO , prio );
+			ad->Insert( buffer );
+		}
+		if( ad->LookupFloat( ATTR_PREEMPTING_RANK, preemptingRank ) ) {
+				// There is already a preempting claim (waiting for the previous
+				// claim to retire), so set current rank to the preempting
+				// rank, since any new preemption must trump the
+				// current preempter.
+			sprintf( buffer, "%s = %f", ATTR_CURRENT_RANK, preemptingRank );
 			ad->Insert( buffer );
 		}
 		if( ad->LookupInteger( ATTR_TOTAL_VIRTUAL_MACHINES, totalVMs) ) {

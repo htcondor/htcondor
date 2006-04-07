@@ -222,6 +222,56 @@ Claim::publish( ClassAd* ad, amask_t how_much )
 
 }
 
+void
+Claim::publishPreemptingClaim( ClassAd* ad, amask_t how_much )
+{
+	MyString line;
+	char* tmp;
+	char *remoteUser;
+
+	if( IS_PRIVATE(how_much) ) {
+			// None of this belongs in private ads
+		return;
+	}
+
+	if( c_client && c_client->user() ) {
+		line.sprintf( "%s = %f", ATTR_PREEMPTING_RANK, c_rank );
+		ad->Insert( line.Value() );
+
+		remoteUser = c_client->user();
+		if( remoteUser ) {
+			line.sprintf( "%s=\"%s\"", ATTR_PREEMPTING_USER, remoteUser );
+			ad->Insert( line.Value() );
+		}
+		tmp = c_client->owner();
+		if( tmp ) {
+			line.sprintf( "%s=\"%s\"", ATTR_PREEMPTING_OWNER, tmp );
+			ad->Insert( line.Value() );
+		}
+		tmp = c_client->accountingGroup();
+		if( tmp ) {
+			char *uidDom = NULL;
+				// The accountant wants to see ATTR_ACCOUNTING_GROUP 
+				// fully qualified
+			if ( remoteUser ) {
+				uidDom = strchr(remoteUser,'@');
+			}
+			if ( uidDom ) {
+				line.sprintf("%s=\"%s%s\"",ATTR_PREEMPTING_ACCOUNTING_GROUP,tmp,uidDom);
+			} else {
+				line.sprintf("%s=\"%s\"", ATTR_PREEMPTING_ACCOUNTING_GROUP, tmp );
+			}
+			ad->Insert( line.Value() );
+		}
+	}
+	else {
+		ad->Delete(ATTR_PREEMPTING_RANK);
+		ad->Delete(ATTR_PREEMPTING_OWNER);
+		ad->Delete(ATTR_PREEMPTING_USER);
+		ad->Delete(ATTR_PREEMPTING_ACCOUNTING_GROUP);
+	}
+}
+
 
 void
 Claim::publishCOD( ClassAd* ad )
@@ -534,10 +584,8 @@ Claim::beginClaim( void )
 	}
 }
 
-
-
 void
-Claim::beginActivation( time_t now )
+Claim::loadAccountingInfo()
 {
 		// Get a bunch of info out of the request ad that is now
 		// relevant, and store it in this Claim object
@@ -567,6 +615,21 @@ Claim::beginActivation( time_t now )
 		free( tmp );
 		tmp = NULL;
 	}
+
+	if(!c_client->owner()) {
+			// Only if Owner has never been initialized, load it now.
+		if(c_ad->LookupString(ATTR_OWNER, &tmp)) {
+			c_client->setowner( tmp );
+			free( tmp );
+			tmp = NULL;
+		}
+	}
+}
+
+void
+Claim::beginActivation( time_t now )
+{
+	loadAccountingInfo();
 
 	c_job_start = (int)now;
 

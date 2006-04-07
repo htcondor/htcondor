@@ -1006,7 +1006,20 @@ int Accountant::CheckClaimedOrMatched(ClassAd* ResourceAd, const MyString& Custo
   }
 
   if (CustomerName!=MyString(RemoteUser)) {
-    dprintf(D_ACCOUNTANT,"Remote user for startd ad: %s does not match customer name\n",RemoteUser);
+    if(DebugFlags & D_ACCOUNTANT) {
+      char *PreemptingUser = NULL;
+      if(ResourceAd->LookupString(ATTR_PREEMPTING_ACCOUNTING_GROUP, &PreemptingUser) ||
+         ResourceAd->LookupString(ATTR_PREEMPTING_USER, &PreemptingUser))
+      {
+		  if(CustomerName == PreemptingUser) {
+			  dprintf(D_ACCOUNTANT,"Remote user for startd ad (%s) does not match customer name, because customer %s is still waiting for %s to retire.\n",RemoteUser,PreemptingUser,RemoteUser);
+			  free(PreemptingUser);
+			  return 0;
+		  }
+		  free(PreemptingUser);
+      }
+    }
+    dprintf(D_ACCOUNTANT,"Remote user for startd ad (%s) does not match customer name\n",RemoteUser);
     return 0;
   }
 

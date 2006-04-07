@@ -117,6 +117,7 @@ public:
 	void alive();	// Process a keep alive for this claim
 
 	void publish( ClassAd*, amask_t );
+	void publishPreemptingClaim( ClassAd* ad, amask_t how_much );
 	void publishCOD( ClassAd* );
 	void publishStateTimes( ClassAd* );
 
@@ -135,6 +136,11 @@ public:
 			attributes that care about the time the job was spawned. 
 		*/
 	void beginActivation( time_t now ); 
+
+		/** Load info used by the accountant into this object from the
+			current classad.
+		 */
+	void loadAccountingInfo();
 
 		/** We're servicing a request to activate a claim and we want
 			to save the request classad into our claim object for
