@@ -1497,7 +1497,7 @@ fi
 
 # build DRMAA on RedHat 8.0, RedHat 9, Sles8-ia64, and MacOS 10.3
 if test x$_cv_linux_distro = "xRH80" -o x$_cv_linux_distro = "xRH9" -o x$_cv_linux_distro = "xSLES81" -o x$_cv_sysname = "xppc_macosx" ; then
-   CONDOR_EXTERNAL_VERSION([drmaa],[1.2])  
+   CONDOR_EXTERNAL_VERSION([drmaa],[1.2.1])
 fi
 
 CONDOR_EXTERNAL_VERSION([krb5],[1.4.3])
