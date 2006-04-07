@@ -93,7 +93,7 @@ would indicate that the job was Running.
 
 \item Fixed a permissions problem that would cause automatic X509 proxy renewal for vanilla universe jobs to fail.
 
-\item Fixed a bug introduced in 6.7.17 that caused the configuration paramter
+\item Fixed a bug introduced in 6.7.17 that caused the configuration parameter
 \Macro{ENABLE\_GRID\_MONITOR} to be ignored. The value would always be
 considered true.
 
@@ -111,7 +111,7 @@ COLLECTOR\_CLASS\_HISTORY\_SIZE.
 \item In some cases, \Attr{CondorLoadAvg} was reporting a different
 result, depending on the setting of \MacroNI{NUM\_CPUS}, even with
 everything else, such as the actual number of cpus, being the same.
-The specific case in which this effect was noticable was when the
+The specific case in which this effect was noticeable was when the
 machine load was greater than \MacroNI{NUM\_CPUS}.  \Attr{CondorLoadAvg}
 is now independent of the setting of \MacroNI{NUM\_CPUS}.
 
@@ -285,7 +285,7 @@ are supposed to narrow the scope for looking up a ClassAd
 variable. For instance, in a job's requirements, MY refers to the
 job's attributes, and TARGET refers to the machine's
 attributes. Unfortunately, since 6.3 MY and TARGET actually made a
-search order, not a scope restrction. That is, if a job's requirements
+search order, not a scope restriction. That is, if a job's requirements
 had TARGET.foo and foo was undefined in the machine ad, it would look
 in the job ad for the value instead of deciding that foo was
 undefined. This is now fixed. However, there is a chance that users
@@ -703,7 +703,7 @@ your config file:
 perform a reverse-DNS lookup of the submit-host.  Now that this is
 fixed, when the reverse-DNS lookup fails, the job can still run, but
 Condor will not be able to verify the authenticity of the
-submit-hosts's uid domain.  In this case, if you enable
+submit-host's uid domain.  In this case, if you enable
 \Macro{TRUST\_UID\_DOMAIN}, everything will function as normal, minus
 the verification of the domain; if you do not enable
 \Macro{TRUST\_UID\_DOMAIN}, the starter will treat the job as being
