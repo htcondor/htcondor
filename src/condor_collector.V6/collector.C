@@ -1088,6 +1088,7 @@ void CollectorDaemon::Config()
     tmp = param ("COLLECTOR_CLASS_HISTORY_SIZE");
     if( tmp ) {
 		int	size = atoi( tmp );
+		free( tmp );
         collectorStats.setClassHistorySize( size );
     } else {
         collectorStats.setClassHistorySize( 1024 );
@@ -1108,6 +1109,7 @@ void CollectorDaemon::Config()
     tmp = param ("COLLECTOR_DAEMON_HISTORY_SIZE");
     if( tmp ) {
 		int	size = atoi( tmp );
+		free( tmp );
         collectorStats.setDaemonHistorySize( size );
     } else {
         collectorStats.setDaemonHistorySize( 128 );
@@ -1116,6 +1118,7 @@ void CollectorDaemon::Config()
     tmp = param ("COLLECTOR_QUERY_WORKERS");
     if( tmp ) {
 		int	num = atoi( tmp );
+		free( tmp );
         forkQuery.setMaxWorkers( num );
     } else {
         forkQuery.setMaxWorkers( 0 );
