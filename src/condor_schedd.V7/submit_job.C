@@ -101,14 +101,17 @@ static priv_state set_user_priv_from_ad(ClassAd const &ad)
 	char *owner = NULL;
 	char *domain = NULL;
 	if( !ad.LookupString(ATTR_OWNER,&owner) ) {
-		EXCEPT("Failed to find %s in job ad.\n",ATTR_OWNER);
+		ClassAd ad_copy;
+		ad_copy = ad;
+		ad_copy.dPrint(D_ALWAYS);
+		EXCEPT("Failed to find %s in job ad.",ATTR_OWNER);
 	}
 	if( !ad.LookupString(ATTR_NT_DOMAIN,&domain) ) {
 		domain = strdup("");
 	}
 
 	if( !init_user_ids(owner,domain) ) {
-		EXCEPT("Failed in init_user_ids(%s,%s)\n",owner ? owner : "(nil)",domain ? domain : "(nil)");
+		EXCEPT("Failed in init_user_ids(%s,%s)",owner ? owner : "(nil)",domain ? domain : "(nil)");
 	}
 
 	free(owner);
@@ -122,12 +125,18 @@ static priv_state set_user_priv_from_ad(classad::ClassAd const &ad)
 	std::string owner;
 	std::string domain;
 	if( !ad.EvaluateAttrString(ATTR_OWNER,owner) ) {
-		EXCEPT("Failed to find %s in job ad.\n",ATTR_OWNER);
+		classad::ClassAd ad_copy;
+		ClassAd old_ad;
+		ad_copy = ad;
+		if(new_to_old(ad_copy,old_ad)) {
+			old_ad.dPrint(D_ALWAYS);
+		}
+		EXCEPT("Failed to find %s in job ad.",ATTR_OWNER);
 	}
 	ad.EvaluateAttrString(ATTR_NT_DOMAIN,domain);
 
 	if( !init_user_ids(owner.c_str(),domain.c_str()) ) {
-		EXCEPT("Failed in init_user_ids(%s,%s)\n",owner.c_str(),domain.c_str());
+		EXCEPT("Failed in init_user_ids(%s,%s)",owner.c_str(),domain.c_str());
 	}
 
 	return set_user_priv();

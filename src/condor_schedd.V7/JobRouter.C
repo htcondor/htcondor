@@ -206,7 +206,6 @@ JobRouter::config() {
 			if(!route.ParseClassAd(routing_string,offset,&router_defaults_ad,allow_empty_requirements))
 			{
 				dprintf(D_ALWAYS,"JobRouter CONFIGURATION ERROR: Ignoring the malformed route entry, starting here: %s\n",routing_string.c_str() + this_offset);
-				EXCEPT("DEBUG");
 
 				// skip any junk and try parsing the next route in the list
 				while(routing_string.size() > offset && routing_string[offset] != '[') offset++;
@@ -472,6 +471,10 @@ JobRouter::AdoptOrphans() {
 	dest_jobs += " == \"";
 	dest_jobs += m_job_router_name;
 	dest_jobs += "\"";
+		//Have observed problems in which we get inconsistent snapshot
+		//of the job queue; ensure that we at least have the Owner
+		//attribute, or we'll run into trouble.
+	dest_jobs += " && other.Owner isnt Undefined";
 
 	constraint_tree = parser.ParseExpression(dest_jobs.c_str());
 	if(!constraint_tree) {
@@ -552,6 +555,10 @@ JobRouter::AdoptOrphans() {
 	src_jobs = "other.Managed == \"External\" && other.ManagedManager == \"";
 	src_jobs += m_job_router_name;
 	src_jobs += "\"";
+		//Have observed problems in which we get inconsistent snapshot
+		//of the job queue; ensure that we at least have the Owner
+		//attribute, or we'll run into trouble.
+	src_jobs += " && other.Owner isnt Undefined";
 
 	constraint_tree = parser.ParseExpression(src_jobs.c_str());
 	if(!constraint_tree) {
@@ -656,7 +663,7 @@ JobRouter::GetCandidateJobs() {
 
 	//Add on basic requirements to keep things sane.
 	//For now, require vanilla universe, but in future this may be removed.
-	umbrella_constraint += " && (other.ProcId >= 0 && other.JobStatus == 1 && other.JobUniverse == 5 && other.Managed isnt \"ScheddDone\" && other.Managed isnt \"External\")";
+	umbrella_constraint += " && (other.ProcId >= 0 && other.JobStatus == 1 && other.JobUniverse == 5 && other.Managed isnt \"ScheddDone\" && other.Managed isnt \"External\" && other.Owner isnt Undefined)";
 
 	if(!can_switch_ids()) {
 			// We are not running as root.  Ensure that we only try to
