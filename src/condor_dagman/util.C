@@ -54,10 +54,11 @@ int util_popen (ArgList &args) {
 	FILE *fp = my_popen( args, "r", TRUE );
 
     int r;
-    if (fp == NULL || (r = pclose(fp)) != 0) {
+    if (fp == NULL || (r = my_pclose(fp) & 0xff) != 0) {
 		debug_printf( DEBUG_QUIET, "WARNING: failure: %s\n", cmd.Value() );
 		if( fp != NULL ) {
-			debug_printf ( DEBUG_QUIET, "\t(pclose() returned %d)\n", r );
+			debug_printf ( DEBUG_QUIET, "\t(my_pclose() returned %d (errno %d, %s)\n",
+			r, errno, strerror( errno ) );
 		}
     }
     return r;

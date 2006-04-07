@@ -97,7 +97,7 @@ submit_try( ArgList &args, CondorID &condorID, Job::job_type_t type )
   MyString  command_output("");
   do {
     if (util_getline(fp, buffer, UTIL_MAX_LINE_LENGTH) == EOF) {
-      pclose(fp);
+      my_pclose(fp);
 	  debug_printf(DEBUG_NORMAL, "failed while reading from pipe.\n");
 	  debug_printf(DEBUG_NORMAL, "Read so far: %s\n", command_output.Value());
       return false;
@@ -106,12 +106,13 @@ submit_try( ArgList &args, CondorID &condorID, Job::job_type_t type )
   } while (strstr(buffer, marker) == NULL);
   
   {
-    int status = pclose(fp);
-    if (status == -1) {
+    int status = my_pclose(fp) & 0xff;
+    if (status != 0) {
 		debug_printf(DEBUG_NORMAL, "Read from pipe: %s\n", 
 					 command_output.Value());
 		debug_printf( DEBUG_QUIET, "ERROR while running \"%s\": "
-					  "pclose() failed!\n", cmd.Value() );
+					  "my_pclose() failed (errno %d, %s)!\n", cmd.Value(),
+					  errno, strerror( errno ) );
 		return false;
     }
   }
