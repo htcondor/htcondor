@@ -355,7 +355,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 			xferExec=1;
 		}
 
-		if ( xferExec && !InputFiles->contains(ExecFile) ) {
+		if ( xferExec && !InputFiles->file_contains(ExecFile) ) {
 			InputFiles->append(ExecFile);	
 		}	
 	}
@@ -829,7 +829,7 @@ FileTransfer::ComputeFilesToSend()
 						 f, dir.GetModifyTime(), last_download_time );
 				send_it = true;
 			}
-			else if(final_files_to_send.contains(f)) {
+			else if(final_files_to_send.file_contains(f)) {
 				dprintf( D_FULLDEBUG, 
 						 "Sending previously changed file %s, mod=%ld, dow=%ld\n",	
 						 f, dir.GetModifyTime(), last_download_time );
@@ -1082,7 +1082,10 @@ FileTransfer::HandleCommands(Service *, int command, Stream *s)
 					continue;
 				} else {
 						// We aren't looking at the userlog file... ship it!
-					transobject->InputFiles->append(spool_space.GetFullPath());
+					const char *filename = spool_space.GetFullPath();
+					if ( !transobject->InputFiles->file_contains(filename) ) {
+						transobject->InputFiles->append(filename);
+					}
 				}
 			}
 			transobject->FilesToSend = transobject->InputFiles;
@@ -1799,7 +1802,7 @@ FileTransfer::addOutputFile( const char* filename )
 	if( ! OutputFiles ) {
 		return false;
 	}
-	if( OutputFiles->contains(filename) ) {
+	if( OutputFiles->file_contains(filename) ) {
 		return true;
 	}
 	OutputFiles->append( filename );
