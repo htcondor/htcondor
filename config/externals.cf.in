@@ -21,6 +21,7 @@ EXT_POSTGRESQL_VERSION = @ext_postgresql_version@
 EXT_UNICOREGAHP_VERSION = @ext_unicoregahp_version@
 EXT_NORDUGRIDGAHP_VERSION = @ext_nordugridgahp_version@
 EXT_COREDUMPER_VERSION = @ext_coredumper_version@
+EXT_BLAHP_VERSION = @ext_blahp_version@
 
 #define WANT_EXT_LINUXLIBCHEADERS @want_ext_linuxlibcheaders@
 
@@ -153,6 +154,8 @@ PCRE_INC = $(PCRE_DIR)/include
 UNICOREGAHP_DIR = $(EXT_INSTALL)/$(EXT_UNICOREGAHP_VERSION)
 
 NORDUGRIDGAHP_DIR = $(EXT_INSTALL)/$(EXT_NORDUGRIDGAHP_VERSION)
+
+BLAHP_DIR = $(EXT_INSTALL)/$(EXT_BLAHP_VERSION)
 
 #if HAS_EXTERNALS
 #define WANT_COREDUMPER @want_coredumper@

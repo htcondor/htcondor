@@ -35,6 +35,8 @@ EXT_UNICOREGAHP_VERSION=@ext_unicoregahp_version@
 
 EXT_NORDUGRIDGAHP_VERSION=@ext_nordugridgahp_version@
 
+EXT_BLAHP_VERSION=@ext_blahp_version@
+
 WANT_COREDUMPER=@want_coredumper@
 EXT_COREDUMPER_VERSION=@ext_coredumper_version@
 

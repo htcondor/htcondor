@@ -23,6 +23,10 @@
 #	define WANT_STORK                     YES
 #endif
 
+#if WANT_NEW_CLASSADS && HAS_GLOBUS
+#define WANT_BLAHP	YES
+#endif
+
 #define WANT_PVM	YES
 #define PVM_ARCH	LINUX
 

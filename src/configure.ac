@@ -1539,6 +1539,8 @@ CONDOR_EXTERNAL_VERSION([pcre],[5.0])
 
 CONDOR_EXTERNAL_VERSION([postgresql],[8.0.2])
 
+CONDOR_EXTERNAL_VERSION([blahp],[1.7.0])
+
 # temporary hack until we can reliably build BOINC everywhere.  for
 # now, just enable it manually, and pretend we've got it.  since we're
 # not actually linking anything with BOINC in phase 1, we don't *need*

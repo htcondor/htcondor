@@ -59,6 +59,12 @@ release_recursive_copy_target($(GT4GAHP_DIR)/gt4,lib/gt4)
 static_recursive_copy_target($(GT4GAHP_DIR)/gt4,lib/gt4)
 strip_recursive_copy_target($(GT4GAHP_DIR)/gt4,lib/gt4)
 
+#if WANT_BLAHP
+release_recursive_copy_target($(BLAHP_DIR)/dynamic,lib/glite)
+static_recursive_copy_target($(BLAHP_DIR)/static,lib/glite)
+strip_recursive_copy_target($(BLAHP_DIR)/dynamic,lib/glite)
+#endif
+
 public_copy_target($(UNICOREGAHP_DIR)/ugahp.jar,lib,ugahp.jar,TEXT_MODE)
 
 release_copy_target($(NORDUGRIDGAHP_DIR)/bin/nordugrid_gahp.dynamic,sbin,nordugrid_gahp,EXECUTABLE_MODE)
