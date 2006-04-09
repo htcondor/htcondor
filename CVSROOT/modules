@@ -565,7 +565,7 @@ V6_7_18_EXT	-a V6_7_COMMON_EXT \
 		   externals/bundles/drmaa/1.2
 
 # Externals needed for V6_7_19 (same as V6_7_18, but update unicoregahp
-# and nordugridgahp and drmaa)
+# and nordugridgahp and drmaa, and add blahp 1.7.0)
 V6_7_19_EXT	-a V6_7_COMMON_EXT \
 		   externals/bundles/krb5/1.4.3 \
 		   externals/bundles/gahp/1.0.14 \
@@ -583,7 +583,8 @@ V6_7_19_EXT	-a V6_7_COMMON_EXT \
 		   externals/bundles/nordugridgahp/1.1.0 \
 		   externals/bundles/linuxlibcheaders \
 		   externals/bundles/coredumper \
-		   externals/bundles/drmaa/1.2.1
+		   externals/bundles/drmaa/1.2.1 \
+		   externals/bundles/blahp/1.7.0
 
 # Externals needed for the head of the V6_7-branch
 V6_7_EXT	-a V6_7_19_EXT
