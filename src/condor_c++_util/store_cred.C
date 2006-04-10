@@ -42,6 +42,17 @@ void SecureZeroMemory(void *p, size_t n)
 	memset(p, 0, n);
 }
 
+// trivial scramble on password file to prevent accidental viewing
+// NOTE: its up to the caller to ensure scrambled has enough room
+void simple_scramble(char* scrambled,  const char* orig, int len)
+{
+	const char deadbeef[] = {0xDE, 0xAD, 0xBE, 0xEF};
+
+	for (int i = 0; i < len; i++) {
+		scrambled[i] = orig[i] ^ deadbeef[i % sizeof(deadbeef)];
+	}
+}
+
 char* getStoredCredential(const char *username, const char *domain)
 {
 	// TODO: add support for multiple domains
@@ -51,36 +62,56 @@ char* getStoredCredential(const char *username, const char *domain)
 	}
 
 	if (strcmp(username, POOL_PASSWORD_USERNAME) != 0) {
-		dprintf(D_FULLDEBUG, "getStoredCredential: only pool password is supported on UNIX\n");
+		dprintf(D_ALWAYS, "getStoredCredential: only pool password is supported on UNIX\n");
 		return NULL;
 	} 
 
 	char *filename = param("POOL_PASSWORD_FILE");
 	if (filename == NULL) {
-		dprintf(D_FULLDEBUG,
-			"getStoredCredential: POOL_PASSWORD_FILE undefined\n");
+		dprintf(D_ALWAYS, "error fetching pool password; POOL_PASSWORD_FILE not defined\n");
 		return NULL;
 	}
 
+	// open the pool password file with root priv
+	priv_state priv = set_root_priv();
 	FILE* fp = fopen(filename, "r");
-	if (fp == NULL) {
-		dprintf(D_FULLDEBUG,
-			"getStoredCredential: error opening POOL_PASSWORD_FILE: %s\n", filename);
-		free(filename);
-		return NULL;
-	}
+	set_priv(priv);
 	free(filename);
-
-	char *pw = (char *)malloc(MAX_PASSWORD_LENGTH + 1);
-	size_t sz = fread(pw, 1, MAX_PASSWORD_LENGTH, fp);
-	fclose(fp);
-	if (sz == 0) {
-		dprintf(D_FULLDEBUG,
-			"getStoredCredential: error reading pool password (file may be empty)\n");
-		free(pw);
+	if (fp == NULL) {
+		dprintf(D_FULLDEBUG, "error opening POOL_PASSWORD_FILE (%s), %s (errno: %d)\n",
+			filename, strerror(errno), errno);
 		return NULL;
 	}
-	pw[sz] = '\0';
+
+	// make sure the file owner matches our real uid
+	struct stat st;
+	if (fstat(fileno(fp), &st) == -1) {
+		dprintf(D_ALWAYS, "fstat failed on POOL_PASSWORD_FILE (%s), %s (errno: %d)\n",
+			filename, strerror(errno), errno);
+		fclose(fp);
+		return NULL;
+	}
+	if (st.st_uid != get_my_uid()) {
+		dprintf(D_ALWAYS, "error: POOL_PASSWORD_FILE must be owned by Condor's real uid\n");
+		fclose(fp);
+		return NULL;
+	}
+
+	char scrambled_pw[MAX_PASSWORD_LENGTH + 1];
+	size_t sz = fread(scrambled_pw, 1, MAX_PASSWORD_LENGTH, fp);
+	fclose(fp);
+
+	if (sz == 0) {
+		dprintf(D_ALWAYS, "error reading pool password (file may be empty)\n");
+		return NULL;
+	}
+	scrambled_pw[sz] = '\0';  // ensure the last char is nil
+
+	// undo the trivial scramble
+	int len = strlen(scrambled_pw);
+	char *pw = (char *)malloc(len + 1);
+	simple_scramble(pw, scrambled_pw, len);
+	pw[len] = '\0';
 
 	return pw;
 }
@@ -90,7 +121,7 @@ int store_cred_service(const char *user, const char *pw, int mode)
 	char *at = strchr(user, '@');
 	if ((at == NULL) || (at == user) ||
 	    (memcmp(user, POOL_PASSWORD_USERNAME, at - user) != 0)) {
-		dprintf(D_FULLDEBUG, "getStoredCredential: only pool password is supported on UNIX\n");
+		dprintf(D_FULLDEBUG, "store_cred: only pool password is supported on UNIX\n");
 		return FAILURE;
 	}
 
@@ -98,24 +129,27 @@ int store_cred_service(const char *user, const char *pw, int mode)
 	if (mode != QUERY_MODE) {
 		filename = param("POOL_PASSWORD_FILE");
 		if (filename == NULL) {
-			dprintf(D_FULLDEBUG,
-				"getStoredCredential: POOL_PASSWORD_FILE undefined\n");
+			dprintf(D_ALWAYS, "store_cred: POOL_PASSWORD_FILE not defined\n");
 			return FAILURE;
 		}
 	}
-
-	priv_state priv = set_condor_priv();
 
 	int answer;
 	switch (mode) {
 	case ADD_MODE: {
 		answer = FAILURE;
 		size_t pw_sz = strlen(pw);
+		if (!pw_sz) {
+			dprintf(D_ALWAYS, "store_cred_service: empty password not allowed\n");
+			break;
+		}
 		if (pw_sz > MAX_PASSWORD_LENGTH) {
 			dprintf(D_ALWAYS, "store_cred_service: password too large\n");
 			break;
 		}
+		priv_state priv = set_root_priv();
 		int fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+		set_priv(priv);
 		if (fd == -1) {
 			dprintf(D_ALWAYS, "store_cred_service: open failed on %s\n", filename);
 			break;
@@ -125,23 +159,30 @@ int store_cred_service(const char *user, const char *pw, int mode)
 			dprintf(D_ALWAYS, "store_cred_service: fdopen failed\n");
 			break;
 		}
-		size_t sz = fwrite(pw, 1, pw_sz, fp);
+		char scrambled_pw[MAX_PASSWORD_LENGTH + 1];
+		memset(scrambled_pw, 0, MAX_PASSWORD_LENGTH + 1);
+		simple_scramble(scrambled_pw, pw, pw_sz);
+		size_t sz = fwrite(scrambled_pw, 1, MAX_PASSWORD_LENGTH + 1, fp);
 		fclose(fp);
-		if (sz != pw_sz) {
+		if (sz != MAX_PASSWORD_LENGTH + 1) {
 			dprintf(D_ALWAYS, "store_cred_service: error writing to password file\n");
 			break;
 		}
 		answer = SUCCESS;
 		break;
 	}
-	case DELETE_MODE:
-		if (unlink(filename) == 0) {
+	case DELETE_MODE: {
+		priv_state priv = set_root_priv();
+		int err = unlink(filename);
+		set_priv(priv);
+		if (!err) {
 			answer = SUCCESS;
 		}
 		else {
 			answer = FAILURE_NOT_FOUND;
 		}
 		break;
+	}
 	case QUERY_MODE: {
 		char *pw = getStoredCredential(POOL_PASSWORD_USERNAME, NULL);
 		if (pw) {
@@ -163,7 +204,6 @@ int store_cred_service(const char *user, const char *pw, int mode)
 	if (mode != QUERY_MODE) {
 		free(filename);
 	}
-	set_priv(priv);
 
 	return answer;
 }
@@ -777,13 +817,13 @@ char*
 get_password() {
 	char *buf;
 	
-	buf = new char[MAX_PASSWORD_LENGTH];
+	buf = new char[MAX_PASSWORD_LENGTH + 1];
 	
 	if (! buf) { fprintf(stderr, "Out of Memory!\n\n"); return NULL; }
 	
 		
 	printf("Enter password: ");
-	if ( ! read_from_keyboard(buf, MAX_PASSWORD_LENGTH, false) ) {
+	if ( ! read_from_keyboard(buf, MAX_PASSWORD_LENGTH + 1, false) ) {
 		delete[] buf;
 		return NULL;
 	}

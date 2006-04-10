@@ -61,7 +61,7 @@ int main(int argc, char *argv[]) {
 	int result = FAILURE_ABORTED;
 	bool pool_password_arg = false;
 	bool pool_password_delete = false;
-	Daemon *daemon;
+	Daemon *daemon = NULL;
 	char *credd_host;
 
 	MyName = condor_basename(argv[0]);
@@ -91,6 +91,15 @@ int main(int argc, char *argv[]) {
 		if ( my_domain) { free(my_domain); }
 		my_name = my_domain = NULL;
 	} else if (strcmp(options.username, POOL_PASSWORD_USERNAME) == 0) {
+#if !defined(WIN32)
+		// we don't support querying the pool password on UNIX
+		// (since it is not possible to do so through the
+		//  STORE_POOL_CRED command)
+		if (options.mode == QUERY_MODE) {
+			fprintf(stderr, "Querying the pool password is not supported.\n");
+			goto cleanup;
+		}
+#endif
 			// append the correct domain name if we're using the pool pass
 			// we first try POOL_PASSWORD_DOMAIN, then UID_DOMAIN
 		pool_password_arg = true;
