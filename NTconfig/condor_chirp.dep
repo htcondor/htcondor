@@ -1,0 +1,5 @@
+# Microsoft Developer Studio Generated Dependency File, included by condor_chirp.mak
+
+..\src\condor_chirp\condor_chirp.C : \
+	"..\src\condor_chirp\chirp_client.h"\
+	

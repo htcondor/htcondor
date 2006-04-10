@@ -282,6 +282,33 @@ Package=<4>
 
 ###############################################################################
 
+Project: "condor_chirp"=".\condor_chirp.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name condor_chirp_client
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "condor_chirp_client"=".\condor_chirp_client.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
 Project: "condor_classad"=".\condor_classad.dsp" - Package Owner=<4>
 
 Package=<5>

@@ -52,7 +52,7 @@ chirp_get_one_file(char *remote, char *local) {
 	if (strcmp(local, "-") == 0) {
 		wfd = stdout;
 	} else {
-		wfd = ::fopen(local, "w+");
+		wfd = ::fopen(local, "wb+");
 	}
 
 	if (wfd == NULL) {
@@ -108,7 +108,7 @@ chirp_put_one_file(char *local, char *remote, char *mode, int perm) {
 	if (strcmp(local, "-") == 0) {
 		rfd = stdin;
 	} else {
-		rfd = ::fopen(local, "r");
+		rfd = ::fopen(local, "rb");
 	}
 
 	if (rfd == NULL) {

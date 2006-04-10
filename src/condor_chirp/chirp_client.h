@@ -34,6 +34,13 @@ for details.
 extern "C" {
 #endif
 
+/* Dll Export */
+#if defined(WIN32) && defined(CHIRP_DLL)
+	#define DLLEXPORT __declspec(dllexport)
+#else
+	#define DLLEXPORT
+#endif
+
 /*
 Error codes:
 
@@ -51,19 +58,19 @@ Error codes:
 -12  UNKNOWN           An unknown error occurred.
 */
 
-struct chirp_client * chirp_client_connect_default();
+DLLEXPORT struct chirp_client * chirp_client_connect_default();
 /*chirp_client_connect_default()
   Opens connection to the default chirp server.  The default connection
   information is determined by reading ./chirp.config.  Under Condor,
   the starter can automatically create this file if you specify
   +WantIOProxy=True in the submit file.
 */
-struct chirp_client * chirp_client_connect( const char *host, int port );
+DLLEXPORT struct chirp_client * chirp_client_connect( const char *host, int port );
 /*chirp_client_connect()
   Connect to a chirp server at the specified address.
  */
 
-struct chirp_client * chirp_client_connect_url( const char *url, const char **path_part);
+DLLEXPORT struct chirp_client * chirp_client_connect_url( const char *url, const char **path_part);
 /*
   chirp_client_connect_url()
 
@@ -94,17 +101,17 @@ struct chirp_client * chirp_client_connect_url( const char *url, const char **pa
 
 */
 
-void chirp_client_disconnect( struct chirp_client *c );
+DLLEXPORT void chirp_client_disconnect( struct chirp_client *c );
 /*chirp_client_disconnect()
   Closes the connection to a chirp server.
 */
 
-int chirp_client_cookie( struct chirp_client *c, const char *cookie );
+DLLEXPORT int chirp_client_cookie( struct chirp_client *c, const char *cookie );
 /*chirp_client_cookie
   Authenticate with the server using the specified cookie.
  */
 
-int chirp_client_lookup( struct chirp_client *c, const char *logical_name, char **url );
+DLLEXPORT int chirp_client_lookup( struct chirp_client *c, const char *logical_name, char **url );
 /*chirp_client_lookup()
   Ask the chirp server to translate the filename "logical_name".  This is
   done internally on any filename presented to chirp_client_open().  Under
@@ -112,22 +119,22 @@ int chirp_client_lookup( struct chirp_client *c, const char *logical_name, char 
   available to redirect paths in Standard Universe.
 */
 
-int chirp_client_constrain( struct chirp_client *c, const char *expr );
+DLLEXPORT int chirp_client_constrain( struct chirp_client *c, const char *expr );
 /*chirp_client_constrain()
   When running under Condor, set the job's requirement expression.
 */
 
-int chirp_client_get_job_attr( struct chirp_client *c, const char *name, char **expr );
+DLLEXPORT int chirp_client_get_job_attr( struct chirp_client *c, const char *name, char **expr );
 /*chirp_client_get_job_attr()
   When running under Condor, obtain the value of a job ClassAd attribute.
 */
 
-int chirp_client_set_job_attr( struct chirp_client *c, const char *name, const char *expr );
+DLLEXPORT int chirp_client_set_job_attr( struct chirp_client *c, const char *name, const char *expr );
 /*chirp_client_set_job_attr()
   When running under Condor, set the value of a job ClassAd attribute.
 */
 
-int chirp_client_open( struct chirp_client *c, const char *path, const char *flags, int mode );
+DLLEXPORT int chirp_client_open( struct chirp_client *c, const char *path, const char *flags, int mode );
 /*chirp_client_open()
   Open a file through the chirp server.  Note that if you want to create a
   new file, you _must_ include "c" or "x" in the flags.  The mode is the same
@@ -145,51 +152,51 @@ int chirp_client_open( struct chirp_client *c, const char *path, const char *fla
   On error, returns a value less than 0.
 */
 
-int chirp_client_close( struct chirp_client *c, int fd );
+DLLEXPORT int chirp_client_close( struct chirp_client *c, int fd );
 /*chirp_client_close()
   Closes a file opened via chirp_client_open().
 */
 
-int chirp_client_read( struct chirp_client *c, int fd, void *buffer, int length );
+DLLEXPORT int chirp_client_read( struct chirp_client *c, int fd, void *buffer, int length );
 /*chirp_client_read()
   Reads from a file and puts the result in a buffer.  The number of bytes
   actually read is returned.
 */
 
-int chirp_client_write( struct chirp_client *c, int fd, const void *buffer, int length );
+DLLEXPORT int chirp_client_write( struct chirp_client *c, int fd, const void *buffer, int length );
 /*chirp_client_write()
   Writes from a buffer into a file.  On success, returns the number of
   bytes written, which will always be the number of bytes requested.
   On error, returns a negative error code.
 */
 
-int chirp_client_unlink( struct chirp_client *c, const char *path );
+DLLEXPORT int chirp_client_unlink( struct chirp_client *c, const char *path );
 /*chirp_client_unlink()
   Removes a file.
 */
 
-int chirp_client_rename( struct chirp_client *c, const char *oldpath, const char *newpath );
+DLLEXPORT int chirp_client_rename( struct chirp_client *c, const char *oldpath, const char *newpath );
 /*chirp_client_rename()
   Renames a file.
 */
 
-int chirp_client_fsync( struct chirp_client *c, int fd );
+DLLEXPORT int chirp_client_fsync( struct chirp_client *c, int fd );
 /*chirp_client_fsync()
   Flushes any buffered data to disk.
 */
 
-int chirp_client_lseek( struct chirp_client *c, int fd, int offset, int whence );
+DLLEXPORT int chirp_client_lseek( struct chirp_client *c, int fd, int offset, int whence );
 /*chirp_client_lseek()
   Changes the read/write file offset.  The values for whence are the same
   as for the POSIX lseek() call.
 */
 
-int chirp_client_mkdir( struct chirp_client *c, char const *name, int mode );
+DLLEXPORT int chirp_client_mkdir( struct chirp_client *c, char const *name, int mode );
 /*chirp_client_mkdir()
   Create a directory with the specified mode.
 */
 
-int chirp_client_rmdir( struct chirp_client *c, char const *name );
+DLLEXPORT int chirp_client_rmdir( struct chirp_client *c, char const *name );
 /*chirp_client_rmdir()
   Removes an empty directory.
 */
