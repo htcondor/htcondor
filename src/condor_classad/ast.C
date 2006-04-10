@@ -2649,4 +2649,4 @@ int Function::FunctionRegexp(
 	return TRUE;
 }
 	
-/******************** END OF STUBS TO FINISH *********************/*
+/******************** END OF STUBS TO FINISH *********************/
