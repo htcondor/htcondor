@@ -442,7 +442,34 @@ class Function: public FunctionBase
 						EvalResult *result);
 	int FunctionStrcat(int number_of_args, EvalResult *evaluated_args, 
 						EvalResult *result);
-
+	int FunctionSubstr(int number_of_args, EvalResult *evaluated_args, 
+						EvalResult *result);
+	int FunctionStrcmp(int number_of_args, EvalResult *evaluated_args, 
+						EvalResult *result);
+	int FunctionStricmp(int number_of_args, EvalResult *evaluated_args, 
+						EvalResult *result);
+	int FunctionToUpper(int number_of_args, EvalResult *evaluated_args, 
+						EvalResult *result);
+	int FunctionToLower(int number_of_args, EvalResult *evaluated_args, 
+						EvalResult *result);
+	int FunctionSize(int number_of_args, EvalResult *evaluated_args, 
+						EvalResult *result);
+	int FunctionStringlistSize(int number_of_args, EvalResult *evaluated_args, 
+						EvalResult *result);
+	int FunctionStringlistSum(int number_of_args, EvalResult *evaluated_args, 
+						EvalResult *result);
+	int FunctionStringlistAvg(int number_of_args, EvalResult *evaluated_args, k
+						EvalResult *result);
+	int FunctionStringlistMin(int number_of_args, EvalResult *evaluated_args, 
+						EvalResult *result);
+	int FunctionStringlistMax(int number_of_args, EvalResult *evaluated_args, 
+						EvalResult *result);
+	int FunctionStringlistMember(int number_of_args, EvalResult *evaluated_args, 
+						EvalResult *result);
+	int FunctionStringlistIMember(int number_of_args, EvalResult *evaluated_args, 
+						EvalResult *result);
+	int FunctionRegexp(int number_of_args, EvalResult *evaluated_args, 
+						EvalResult *result);
 };
 
 extern	int		Parse(const char*, ExprTree*&);

@@ -1672,6 +1672,34 @@ int Function::_EvalTree(const AttrList *attrlist1, const AttrList *attrlist2, Ev
 			successful_eval = FunctionCeiling(number_of_args, evaluated_args, result);
 		} else if (!strcasecmp(name, "strcat")) {
 			successful_eval = FunctionStrcat(number_of_args, evaluated_args, result);
+		} else if (!strcasecmp(name, "substr")) {
+			successful_eval = FunctionSubstr(number_of_args, evaluated_args, result);
+		} else if (!strcasecmp(name, "strcmp")) {
+			successful_eval = FunctionStrcmp(number_of_args, evaluated_args, result);
+		} else if (!strcasecmp(name, "stricmp")) {
+			successful_eval = FunctionStricmp(number_of_args, evaluated_args, result);
+		} else if (!strcasecmp(name, "toupper")) {
+			successful_eval = FunctionToUpper(number_of_args, evaluated_args, result);
+		} else if (!strcasecmp(name, "tolower")) {
+			successful_eval = FunctionToLower(number_of_args, evaluated_args, result);
+		} else if (!strcasecmp(name, "size")) {
+			successful_eval = FunctionSize(number_of_args, evaluated_args, result);
+		} else if (!strcasecmp(name, "stringlistsize")) {
+			successful_eval = FunctionStringlistSize(number_of_args, evaluated_args, result);
+		} else if (!strcasecmp(name, "stringlistsum")) {
+			successful_eval = FunctionStringlistSum(number_of_args, evaluated_args, result);
+		} else if (!strcasecmp(name, "stringlistavg")) {
+			successful_eval = FunctionStringlistAvg(number_of_args, evaluated_args, result);
+		} else if (!strcasecmp(name, "stringlistmin")) {
+			successful_eval = FunctionStringlistMin(number_of_args, evaluated_args, result);
+		} else if (!strcasecmp(name, "stringlistmax")) {
+			successful_eval = FunctionStringlistMax(number_of_args, evaluated_args, result);
+		} else if (!strcasecmp(name, "stringlistmember")) {
+			successful_eval = FunctionStringlistMember(number_of_args, evaluated_args, result);
+		} else if (!strcasecmp(name, "stringlistimember")) {
+			successful_eval = FunctionStringlistIMember(number_of_args, evaluated_args, result);
+		} else if (!strcasecmp(name, "regexp")) {
+			successful_eval = FunctionRegexp(number_of_args, evaluated_args, result);
 		}
 #ifdef CLASSAD_FUNCTIONS
         else {
@@ -2159,6 +2187,7 @@ int Function::FunctionCeiling(
 	return TRUE;
 }
 
+
 int Function::FunctionStrcat(
 	int number_of_args,         // IN:  size of evaluated args array
 	EvalResult *evaluated_args, // IN:  the arguments to the function
@@ -2328,3 +2357,296 @@ int Function::FunctionClassadDebugFunction(
 	return TRUE;
 }
 
+/************ BEGIN OF STUBS TO FINISH *****************/
+
+int Function::FunctionSubstr(
+	int number_of_args,         // IN:  size of evaluated args array
+	EvalResult *evaluated_args, // IN:  the arguments to the function
+	EvalResult *result)         // OUT: the result of calling the function
+{
+
+	/* 
+	substr(string s, int offset [, int length ]) returns string.
+
+	The result is the substring of s starting at the position indicated by
+	offset with the length indicated by length. The first character of s is at
+	offset 0. If offset is negative, it is replaced by length(s) - offset. If
+	length is omitted, the substring extends to the end of s. If length is
+	negative, an intermediate result is computed as if length were omitted, and
+	then -length characters are deleted from the right end of the result. If
+	the resulting substring lies partially outside the limits of s, the part
+	that lies within s is returned. If the substring lies entirely outside s or
+	has negative length (because of a negative length argument), the result is
+	the null string. 
+	*/
+
+	return TRUE;
+}
+	
+int Function::FunctionStrcmp(
+	int number_of_args,         // IN:  size of evaluated args array
+	EvalResult *evaluated_args, // IN:  the arguments to the function
+	EvalResult *result)         // OUT: the result of calling the function
+{
+	/*
+	strcmp(any a, any b) returns int.
+
+	The operands are converted to Strings by the ``string'' function above. The
+	result is an Integer less than, equal to, or greater than zero according to
+	whether a is lexicographically less than, equal to, or greater than b. Note
+	that case is significant in the comparison.
+	*/
+
+	// NOTE: ALL ARGUMENTS HAVE BEEN CONVERTED INTO STRING TYPES
+	// BEFORE THIS FUNCTION WAS INVOKED.
+	
+	return TRUE;
+}
+	
+int Function::FunctionStricmp(
+	int number_of_args,         // IN:  size of evaluated args array
+	EvalResult *evaluated_args, // IN:  the arguments to the function
+	EvalResult *result)         // OUT: the result of calling the function
+{
+	/*
+	stricmp(any a, any b) returns int.
+
+	The same as strcmp except that upper and lower case letters are considered
+	equivalent.
+	*/
+
+	// NOTE: ALL ARGUMENTS HAVE BEEN CONVERTED INTO STRING TYPES
+	// BEFORE THIS FUNCTION WAS INVOKED.
+	
+	return TRUE;
+}
+	
+int Function::FunctionToUpper(
+	int number_of_args,         // IN:  size of evaluated args array
+	EvalResult *evaluated_args, // IN:  the arguments to the function
+	EvalResult *result)         // OUT: the result of calling the function
+{
+	/*
+	toUpper(any s) returns string.
+
+	The operand is converted to a String by the ``string'' function above. The
+	result is a String that is identical to s except that all lowercase letters
+	in s are converted to uppercase.
+	*/
+
+	// NOTE: ALL ARGUMENTS HAVE BEEN CONVERTED INTO STRING TYPES
+	// BEFORE THIS FUNCTION WAS INVOKED.
+	
+	return TRUE;
+}
+	
+int Function::FunctionToLower(
+	int number_of_args,         // IN:  size of evaluated args array
+	EvalResult *evaluated_args, // IN:  the arguments to the function
+	EvalResult *result)         // OUT: the result of calling the function
+{
+	/*
+	toLower(any s) returns string.
+
+	The operand is converted to a String by the ``string'' function above. The
+	result is a String that is identical to s except that all uppercase letters
+	in s are converted to lowercase.
+	*/
+		
+	// NOTE: ALL ARGUMENTS HAVE BEEN CONVERTED INTO STRING TYPES
+	// BEFORE THIS FUNCTION WAS INVOKED.
+	
+	return TRUE;
+}
+	
+int Function::FunctionSize(
+	int number_of_args,         // IN:  size of evaluated args array
+	EvalResult *evaluated_args, // IN:  the arguments to the function
+	EvalResult *result)         // OUT: the result of calling the function
+{
+	/*
+	size(string s) returns int.
+
+    Returns the number of characters of the string s.
+	*/
+	 
+	// NOTE: ALL ARGUMENTS HAVE BEEN CONVERTED INTO STRING TYPES
+	// BEFORE THIS FUNCTION WAS INVOKED.
+	
+	return TRUE;
+}
+	
+int Function::FunctionStringlistSize(
+	int number_of_args,         // IN:  size of evaluated args array
+	EvalResult *evaluated_args, // IN:  the arguments to the function
+	EvalResult *result)         // OUT: the result of calling the function
+{
+	/*
+	stringlistSize(string l [, string d]) returns int.
+    
+	If any of the arguments is not of type String, the result is an error.
+	Returns the number of elements in the string list l. The characters
+	specified in optional argument d are treated as the delimiters for the
+	string list.  If not specified, d defaults to " ," (space and comma
+	characters). 
+	*/
+
+	return TRUE;
+}
+	
+int Function::FunctionStringlistSum(
+	int number_of_args,         // IN:  size of evaluated args array
+	EvalResult *evaluated_args, // IN:  the arguments to the function
+	EvalResult *result)         // OUT: the result of calling the function
+{
+	/*
+	stringlistSum(string l [, string d]) returns number.
+
+	If any of the arguments is not of type String, the result is an error. If l
+	is composed only of numbers, the result is the sum of the values, as a Real
+	if any value is Real, and as an Integer otherwise. If the list is empty,
+	the result is 0. In other cases, the result is ERROR.  The characters
+	specified in optional argument d are treated as the delimiters for the
+	string list.  If not specified, d defaults to " ," (space and comma
+	characters). 
+	*/
+
+	return TRUE;
+}
+	
+int Function::FunctionStringlistAvg(
+	int number_of_args,         // IN:  size of evaluated args array
+	EvalResult *evaluated_args, // IN:  the arguments to the function
+	EvalResult *result)         // OUT: the result of calling the function
+{
+	/*
+	stringlistAvg(string l [, string d]) returns number.
+
+	If any of the arguments is not of type String, the result is an error. If l
+	is composed only of numbers, the result is the average of the values, as a
+	Real. If the list is empty, the result is 0. In other cases, the result is
+	ERROR.  The characters specified in optional argument d are treated as the
+	delimiters for the string list.  If not specified, d defaults to " ,"
+	(space and comma characters). 
+	*/
+
+	return TRUE;
+}
+	
+int Function::FunctionStringlistMin(
+	int number_of_args,         // IN:  size of evaluated args array
+	EvalResult *evaluated_args, // IN:  the arguments to the function
+	EvalResult *result)         // OUT: the result of calling the function
+{
+	/*
+	stringlistMin(string l [, string d]) returns number.
+
+	If any of the arguments is not of type String, the result is an error. If l
+	is composed only of numbers, the result is the minimum of the values, as a
+	Real if any value is Real, and as an Integer otherwise. If the list is
+	empty, the result is UNDEFINED. In other cases, the result is ERROR. The
+	characters specified in optional argument d are treated as the delimiters
+	for the string list.  If not specified, d defaults to " ," (space and comma
+	characters). 
+	*/
+
+	return TRUE;
+}
+	
+int Function::FunctionStringlistMax(
+	int number_of_args,         // IN:  size of evaluated args array
+	EvalResult *evaluated_args, // IN:  the arguments to the function
+	EvalResult *result)         // OUT: the result of calling the function
+{
+	/*
+	stringlistMax(string l [, string d]) returns number.
+ 
+	If any of the arguments is not of type String, the result is an error. If l
+	is composed only of numbers, the result is the maximum of the values, as a
+	Real if any value is Real, and as an Integer otherwise. If the list is
+	empty, the result is UNDEFINED. In other cases, the result is ERROR.  The
+	characters specified in optional argument d are treated as the delimiters
+	for the string list.  If not specified, d defaults to " ," (space and comma
+	characters). 
+	*/
+
+	return TRUE;
+}
+	
+int Function::FunctionStringlistMember(
+	int number_of_args,         // IN:  size of evaluated args array
+	EvalResult *evaluated_args, // IN:  the arguments to the function
+	EvalResult *result)         // OUT: the result of calling the function
+{
+	/*
+	stringlistMember(string x, string l [, string d]) returns boolean.
+
+	If any of the arguments is not of type String, the result is an error. If
+	any of the values in string list l are equal to x in the sense of the
+	strcmp() function, then the result is true, otherwise it is false.  The
+	characters specified in optional argument d are treated as the delimiters
+	for the string list.  If not specified, d defaults to " ," (space and comma
+	characters). 
+	*/
+
+	return TRUE;
+}
+	
+int Function::FunctionStringlistIMember(
+	int number_of_args,         // IN:  size of evaluated args array
+	EvalResult *evaluated_args, // IN:  the arguments to the function
+	EvalResult *result)         // OUT: the result of calling the function
+{
+	/*
+	stringlistIMember(string x, string l [, string d]) returns boolean.
+
+	If any of the arguments is not of type String, the result is an error. If
+	any of the values in string list l are equal to x in the sense of the
+	stricmp() function, then the result is true, otherwise it is false.  The
+	characters specified in optional argument d are treated as the delimiters
+	for the string list.  If not specified, d defaults to " ," (space and comma
+	characters).
+	*/
+
+	return TRUE;
+}
+	
+int Function::FunctionRegexp(
+	int number_of_args,         // IN:  size of evaluated args array
+	EvalResult *evaluated_args, // IN:  the arguments to the function
+	EvalResult *result)         // OUT: the result of calling the function
+{
+	/*
+	regexp(string pattern, string target [, string options ]) returns boolean.
+
+	If any of the arguments is not of type String or if pattern is not a valid
+	regular expression, the result is an error. Otherwise, if pattern matches
+	target, the result is true, otherwise it is false.
+
+	The details of the syntax and semantics of the regular expressions follows
+	the perl-compatible regular expression format as supported by the PCRE
+	library (see http://www.pcre.org/).   The options argument, if present, may
+	contain the following characters to alter the exact details. Unrecognized
+	options are silently ignored. 
+
+    i or I
+
+        Ignore case.
+
+    m or M
+
+        Multi-line: A carat (^) matches not only the start of the subject string, but also after each newline. Similarly, dollar ($) matches before a newline. 
+
+    s or S
+
+        Single-line: Dot (.) matches any character, including newline.
+
+    x or X
+
+        Extended: Whitespace and comments (from # to the next newline) in the pattern are ignored.
+	*/
+
+	return TRUE;
+}
+	
+/******************** END OF STUBS TO FINISH *********************/*
