@@ -1027,7 +1027,11 @@ Condor_Auth_Passwd::authenticate(const char * remoteHost,
 				dprintf(D_SECURITY, "PW: Server generating rb.\n");
 		//server_status = server_gen_rand_rb(&t_server);
 	            t_server.rb = Condor_Crypt_Base::randomKey(AUTH_PW_KEY_LEN);
-				t_server.a = strdup(t_client.a);
+				if(t_client.a) {
+					t_server.a = strdup(t_client.a);
+				} else {
+					t_server.a = NULL;
+				}
 				t_server.ra = (unsigned char *)malloc(AUTH_PW_KEY_LEN);
 				if(!t_server.ra || !t_server.rb) {
 					dprintf(D_SECURITY, "Malloc error 1.\n"); 
@@ -1050,7 +1054,11 @@ Condor_Auth_Passwd::authenticate(const char * remoteHost,
 
 			// Protocol step (d)
 		dprintf(D_SECURITY, "PW: Server receiving 2.\n");
-        t_client.a = strdup(t_server.a);
+		if(t_server.a) {
+			t_client.a = strdup(t_server.a);
+		} else { 
+			t_client.a = NULL;
+		}
         if(server_status == AUTH_PW_A_OK) {
 			t_client.rb = (unsigned char *)malloc(AUTH_PW_KEY_LEN);
 			if(!t_client.rb) {
@@ -1262,7 +1270,11 @@ int Condor_Auth_Passwd::client_check_t_validity(msg_t_buf *t_client,
 	}
 		
 		// Fill in the information supplied by the server.
-	t_client->b = strdup(t_server->b);
+	if(t_server->b) {
+		t_client->b = strdup(t_server->b);
+	} else {
+		t_client->b = NULL;
+	}
 	if((t_client->rb = (unsigned char *)malloc(AUTH_PW_KEY_LEN))) {
 		memcpy(t_client->rb, t_server->rb, AUTH_PW_KEY_LEN);
 	} else {
