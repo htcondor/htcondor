@@ -103,8 +103,8 @@ class StartdRunTotal : public ClassTotal
 
 	protected:
 		int machines;
-		int condor_mips;
-		int kflops;
+		long condor_mips;
+		long kflops;
 		float loadavg;
 };
 
@@ -120,10 +120,10 @@ class StartdServerTotal : public ClassTotal
   	protected:
 		int machines;
 		int avail;
-		int memory;
-		unsigned long disk;
-		int condor_mips;
-		int kflops;
+		long memory;
+		unsigned long long disk;
+		long condor_mips;
+		long kflops;
 };
 
 
@@ -224,7 +224,7 @@ class CkptSrvrNormalTotal : public ClassTotal
 
 	protected:
 		int numServers;
-		unsigned long disk;
+		unsigned long long disk;
 };
 
 int getCODInt( ClassAd* ad, const char* id, const char* attr,
