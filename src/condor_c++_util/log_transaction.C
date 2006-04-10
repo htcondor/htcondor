@@ -108,29 +108,33 @@ LogPtrList::NextEntry(LogRecord *prev)
 	}
 }
 
-
 void
-Transaction::Commit(int fd, void *data_structure)
+Transaction::Commit(FILE* fp, void *data_structure)
 {
 	LogRecord		*log;
-
+	int fd;
 	for (log = op_log.FirstEntry(); log != 0; 
 		 log = op_log.NextEntry(log)) 
 	{
-		if (fd >= 0) {
-			if (log->Write(fd) < 0) {
+		if (fp != NULL) {
+			if (log->Write(fp) < 0) {
 				EXCEPT("write inside a transaction failed, errno = %d",errno);
 			}
 		}
 		log->Play(data_structure);
 	}
-	if (fd >= 0) {
-		if (fsync(fd) < 0) {
-			EXCEPT("fsync inside a transaction failed, errno = %d",errno);
-		}
+	if (fp != NULL){
+	  if (fflush(fp) !=0){
+	    EXCEPT("fflush inside a transaction failed, errno = %d",errno);
+	  }
+	  fd = fileno(fp);
+	  if (fd >= 0) {
+	    if (fsync(fd) < 0) {
+	      EXCEPT("fsync inside a transaction failed, errno = %d",errno);
+	    }
+	  }
 	}
 }
-
 
 void
 Transaction::AppendLog(LogRecord *log)

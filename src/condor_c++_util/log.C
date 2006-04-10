@@ -29,6 +29,8 @@
 
 #include "log.h"
 
+#include "condor_debug.h"
+
 LogRecord::LogRecord()
 {
 }
@@ -36,42 +38,6 @@ LogRecord::LogRecord()
 
 LogRecord::~LogRecord()
 {
-}
-
-int
-LogRecord::readword(int fd, char * &str)
-{
-	int		i, rval, bufsize = 1024;
-	char	*buf = (char *)malloc(bufsize);
-
-	// ignore leading whitespace but don't pass newline
-	do {
-		rval = read(fd, &(buf[0]), 1);
-		if (rval < 0) {
-			free(buf);
-			return -1;
-		}
-	} while( rval>0 && isspace(buf[0]) && buf[0]!='\n' );
-
-	// read until whitespace
-	for (i = 1; rval > 0 && !isspace(buf[i-1]) && buf[i-1] != '\0'; i++) {
-		if (i == bufsize) {
-			buf = (char *)realloc(buf, bufsize*2);
-			bufsize *= 2;
-		} 
-		rval = read(fd, &(buf[i]), 1);
-	}
-
-		// check for error (no input is also an error)
-	if (rval <= 0 || i==1 ) {
-		free(buf);
-		return -1;
-	}
-
-	buf[i-1] = '\0';
-	str = strdup(buf);
-	free(buf);
-	return i-1;
 }
 
 int
@@ -116,41 +82,6 @@ LogRecord::readword(FILE *fp, char * &str)
 
 
 int
-LogRecord::readline(int fd, char * &str)
-{
-	int		i, rval, bufsize = 1024;
-	char	*buf = (char *)malloc(bufsize);
-
-	// ignore leading whitespace but don't pass newline
-	do {
-		rval = read(fd, &(buf[0]), 1);
-		if (rval < 0) {
-			return rval;
-		}
-	} while( rval>0 && isspace(buf[0]) && buf[0] != '\n' );
-
-	// read until newline
-	for (i = 1; rval > 0 && buf[i-1] != '\n' && buf[i-1] != '\0'; i++) {
-		if (i == bufsize) {
-			buf = (char *)realloc(buf, bufsize*2);
-			bufsize *= 2;
-		}
-		rval = read(fd, &(buf[i]), 1);
-	}
-
-		// report read errors, EOF and no input as errors
-	if (rval <= 0 || i==1 ) {
-		free(buf);
-		return -1;
-	}
-
-	buf[i-1] = '\0';
-	str = strdup(buf);
-	free(buf);
-	return i-1;
-}
-
-int
 LogRecord::readline(FILE *fp, char * &str)
 {
 	int		i, bufsize = 1024;
@@ -191,32 +122,12 @@ LogRecord::readline(FILE *fp, char * &str)
 }
 
 int
-LogRecord::Write(int fd)
-{
-	int rval1, rval2, rval3;
-	return( ( rval1=WriteHeader(fd) )<0 || 
-			( rval2=WriteBody(fd) )  <0 || 
-			( rval3=WriteTail(fd) )  <0 ? -1 : rval1+rval2+rval3);
-}
-
-
-int
 LogRecord::Write(FILE *fp)
 {
 	int rval1, rval2, rval3;
 	return( ( rval1=WriteHeader(fp) )<0 || 
 			( rval2=WriteBody(fp) )  <0 || 
 			( rval3=WriteTail(fp) )  <0 ? -1 : rval1+rval2+rval3);
-}
-
-
-int
-LogRecord::Read(int fd)
-{
-	int rval1, rval2, rval3;
-	return( ( rval1=ReadHeader(fd) )<0 || 
-			( rval2=ReadBody(fd) )  <0 || 
-			( rval3=ReadTail(fd) )  <0 ? -1 : rval1+rval2+rval3);
 }
 
 
@@ -229,29 +140,12 @@ LogRecord::Read(FILE *fp)
 			( rval3=ReadTail(fp) )  <0 ? -1 : rval1+rval2+rval3);
 }
 
-
-int
-LogRecord::WriteHeader(int fd)
-{
-	char op[20];
-	int  len = sprintf(op, "%d ", op_type);
-	return( full_write(fd, op, len) < len ? -1 : len );
-}
-
-
 int
 LogRecord::WriteHeader(FILE *fp)
 {
 	char op[20];
 	int  len = sprintf(op, "%d ", op_type);
-	return( fprintf(fp, "%s ", op) < len ? -1 : len );
-}
-
-
-int
-LogRecord::WriteTail(int fd)
-{
-	return( full_write(fd, "\n", 1) < 1 ? -1 : 1 );
+	return( fprintf(fp, "%s", op) < len ? -1 : len );
 }
 
 
@@ -262,26 +156,20 @@ LogRecord::WriteTail(FILE *fp)
 }
 
 
-int
-LogRecord::ReadHeader(int fd)
-{
-	int	rval;
-	char *op = NULL;
-
-	rval = readword(fd, op);
-	if (rval < 0) {
-		return rval;
-	}
-	op_type = atoi(op);
-	free(op);
-	return rval;
-}
-
 
 int
 LogRecord::ReadHeader(FILE *fp)
 {
-	return( fscanf(fp, "%d ", &op_type) < 1 ? -1 : 1 );
+    int rval;
+    char *op = NULL;
+
+    rval = readword(fp, op);
+    if (rval < 0) {
+        return rval;
+    }
+    op_type = atoi(op);
+    free(op);
+    return rval;
 }
 
 
@@ -290,34 +178,6 @@ LogRecord::ReadTail(FILE *fp)
 {
 	return( 0 );
 }
-
-
-int
-LogRecord::ReadTail(int fd)
-{
-	return( 0 );
-}
-
-
-LogRecord *
-ReadLogEntry(int fd, LogRecord* (*InstantiateLogEntry)(int fd, int type))
-{
-	LogRecord		*log_rec;
-	LogRecord		head_only;
-	int				rval;
-
-	rval = head_only.ReadHeader(fd);
-	if (rval < 0) {
-		return 0;
-	}
-	log_rec = InstantiateLogEntry(fd, head_only.get_op_type());
-	if (head_only.ReadTail(fd) < 0) {
-		delete log_rec;
-		return 0;
-	}
-	return log_rec;
-}
-
 
 LogRecord *
 ReadLogEntry(FILE *fp, LogRecord* (*InstantiateLogEntry)(FILE *fp, int type))

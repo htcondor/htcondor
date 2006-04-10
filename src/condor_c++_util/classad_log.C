@@ -55,7 +55,8 @@ ClassAdLog::ClassAdLog() : table(1024, hashFunction)
 {
 	log_filename[0] = '\0';
 	active_transaction = NULL;
-	log_fd = -1;
+	log_fp = NULL;
+
 }
 
 ClassAdLog::ClassAdLog(const char *filename,int max_historical_logs) : table(1024, hashFunction)
@@ -66,15 +67,21 @@ ClassAdLog::ClassAdLog(const char *filename,int max_historical_logs) : table(102
 	this->max_historical_logs = max_historical_logs;
 	historical_sequence_number = 1;
 
-	log_fd = open(log_filename, O_RDWR | O_CREAT, 0600);
+	int log_fd = open(log_filename, O_RDWR | O_CREAT, 0600);
 	if (log_fd < 0) {
 		EXCEPT("failed to open log %s, errno = %d", log_filename, errno);
 	}
 
+	log_fp = fdopen(log_fd, "r+");
+	if (log_fp == NULL) {
+		EXCEPT("failed to fdopen log %s, errno = %d", log_filename, errno);
+	}
+
+
 	// Read all of the log records
 	LogRecord		*log_rec;
 	unsigned long count = 0;
-	while ((log_rec = ReadLogEntry(log_fd, InstantiateLogEntry)) != 0) {
+	while ((log_rec = ReadLogEntry(log_fp, InstantiateLogEntry)) != 0) {
 		count++;
 		switch (log_rec->get_op_type()) {
 		case CondorLogOp_BeginTransaction:
@@ -91,7 +98,7 @@ ClassAdLog::ClassAdLog(const char *filename,int max_historical_logs) : table(102
 				dprintf(D_ALWAYS, "Warning: Encountered unmatched end transaction in %s, "
 						"log may be bogus...", filename);
 			} else {
-				active_transaction->Commit(-1, (void *)&table); // commit in memory only
+				active_transaction->Commit(NULL, (void *)&table); // commit in memory only
 				delete active_transaction;
 				active_transaction = NULL;
 			}
@@ -133,7 +140,6 @@ ClassAdLog::~ClassAdLog()
 		delete ad;
 	}
 }
-
 void
 ClassAdLog::AppendLog(LogRecord *log)
 {
@@ -145,14 +151,20 @@ ClassAdLog::AppendLog(LogRecord *log)
 		}
 		active_transaction->AppendLog(log);
 	} else {
-		if (log_fd>=0) {
-			if (log->Write(log_fd) < 0) {
-				EXCEPT("write to %s failed, errno = %d", log_filename, errno);
-			}
-			if (fsync(log_fd) < 0) {
-				EXCEPT("fsync of %s failed, errno = %d", log_filename, errno);
-			}
-		}
+	  //MD: using file pointer
+	  if (log_fp!=NULL) {
+	    if (log->Write(log_fp) < 0) {
+	      EXCEPT("write to %s failed, errno = %d", log_filename, errno);
+	    }
+	    //MD: flushing data -- using a file pointer
+	    if (fflush(log_fp) !=0){
+	      EXCEPT("flush to %s failed, errno = %d", log_filename, errno);
+	    }
+	    //MD: syncing the data as done before
+	    if (fsync(fileno(log_fp)) < 0) {
+	      EXCEPT("fsync of %s failed, errno = %d", log_filename, errno);
+	    }
+	  }
 		log->Play((void *)&table);
 		delete log;
 	}
@@ -214,6 +226,7 @@ ClassAdLog::TruncLog()
 {
 	char	tmp_log_filename[_POSIX_PATH_MAX];
 	int new_log_fd;
+	FILE *new_log_fp;
 
 	dprintf(D_FULLDEBUG,"About to truncate log %s\n",log_filename);
 
@@ -230,30 +243,52 @@ ClassAdLog::TruncLog()
 		return;
 	}
 
+	new_log_fp = fdopen(new_log_fd, "r+");
+	if (new_log_fp == NULL) {
+		dprintf(D_ALWAYS, "failed to truncate log: fdopen(%s) returns NULL\n",
+				tmp_log_filename);
+		return;
+	}
+
+
 	// Now it is time to move courageously into the future.
 	historical_sequence_number++;
 
-	LogState(new_log_fd);
-	close(log_fd);
-	close(new_log_fd);	// avoid sharing violation on move
+	LogState(new_log_fp);
+	fclose(log_fp);
+	fclose(new_log_fp);	// avoid sharing violation on move
 	if (rotate_file(tmp_log_filename, log_filename) < 0) {
 		dprintf(D_ALWAYS, "failed to truncate job queue log!\n");
 
 		// Beat a hasty retreat into the past.
 		historical_sequence_number--;
 
-		log_fd = open(log_filename, O_RDWR, 0600);
+		int log_fd = open(log_filename, O_RDWR, 0600);
 		if (log_fd < 0) {
 			EXCEPT("failed to reopen log %s, errno = %d after failing to rotate log.",log_filename,errno);
 		}
+
+		log_fp = fdopen(log_fd, "r+");
+		if (log_fp == NULL) {
+			EXCEPT("failed to refdopen log %s, errno = %d after failing to rotate log.",log_filename,errno);
+		}
+
 		return;
 	}
-	log_fd = open(log_filename, O_RDWR | O_APPEND, 0600);
+	int log_fd = open(log_filename, O_RDWR | O_APPEND, 0600);
 	if (log_fd < 0) {
 		dprintf(D_ALWAYS, "failed to open log in append mode: "
 			"open(%s) returns %d\n", log_filename, log_fd);
 		return;
 	}
+	log_fp = fdopen(log_fd, "a+");
+	if (log_fp == NULL) {
+		close(log_fd);
+		dprintf(D_ALWAYS, "failed to fdopen log in append mode: "
+			"fdopen(%s) returns %d\n", log_filename, log_fd);
+		return;
+	}
+
 }
 
 void
@@ -286,7 +321,7 @@ ClassAdLog::CommitTransaction()
 	if (!EmptyTransaction) {
 		LogEndTransaction *log = new LogEndTransaction;
 		active_transaction->AppendLog(log);
-		active_transaction->Commit(log_fd, (void *)&table);
+		active_transaction->Commit(log_fp, (void *)&table);
 	}
 	delete active_transaction;
 	active_transaction = NULL;
@@ -412,7 +447,7 @@ ClassAdLog::LookupInTransaction(const char *key, const char *name, char *&val)
 }
 
 void
-ClassAdLog::LogState(int fd)
+ClassAdLog::LogState(FILE *fp)
 {
 	LogRecord	*log=NULL;
 	ClassAd		*ad=NULL;
@@ -425,7 +460,7 @@ ClassAdLog::LogState(int fd)
 
 	// This must always be the first entry in the log.
 	log = new LogHistoricalSequenceNumber( historical_sequence_number, time(NULL) );
-	if (log->Write(fd) < 0) {
+	if (log->Write(fp) < 0) {
 		EXCEPT("write to %s failed, errno = %d", log_filename, errno);
 	}
 	delete log;
@@ -435,7 +470,7 @@ ClassAdLog::LogState(int fd)
 		table.getCurrentKey(hashval);
 		hashval.sprint(key);
 		log = new LogNewClassAd(key, ad->GetMyTypeName(), ad->GetTargetTypeName());
-		if (log->Write(fd) < 0) {
+		if (log->Write(fp) < 0) {
 			EXCEPT("write to %s failed, errno = %d", log_filename, errno);
 		}
 		delete log;
@@ -450,7 +485,7 @@ ClassAdLog::LogState(int fd)
 			if (expr) {
 				expr->RArg()->PrintToNewStr(&attr_val);
 				log = new LogSetAttribute(key, attr_name, attr_val);
-				if (log->Write(fd) < 0) {
+				if (log->Write(fp) < 0) {
 					EXCEPT("write to %s failed, errno = %d", log_filename,
 						   errno);
 				}
@@ -463,7 +498,10 @@ ClassAdLog::LogState(int fd)
 			// ok, now that we're done writing out this ad, restore the chain
 		ad->RestoreChain(chain);
 	}
-	if (fsync(fd) < 0) {
+	if (fflush(fp) !=0){
+	  EXCEPT("fflush of %s failed, errno = %d", log_filename, errno);
+	}
+	if (fsync(fileno(fp)) < 0) {
 		EXCEPT("fsync of %s failed, errno = %d", log_filename, errno);
 	} 
 }
@@ -484,21 +522,21 @@ LogHistoricalSequenceNumber::Play(void *data_structure)
 }
 
 int
-LogHistoricalSequenceNumber::ReadBody(int fd)
+LogHistoricalSequenceNumber::ReadBody(FILE *fp)
 {
 	int rval,rval1;
 	char *buf = NULL;
-	rval = readword(fd, buf);
+	rval = readword(fp, buf);
 	if (rval < 0) return rval;
 	sscanf(buf,"%lu",&historical_sequence_number);
 	free(buf);
 
-	rval1 = readword(fd, buf); //the label of the attribute 
+	rval1 = readword(fp, buf); //the label of the attribute 
 				//we ignore it
 	if (rval1 < 0) return rval1; 
 	free(buf);
 
-	rval1 = readword(fd, buf);
+	rval1 = readword(fp, buf);
 	if (rval1 < 0) return rval1;
 	sscanf(buf,"%lu",&timestamp);
 	free(buf);
@@ -506,13 +544,13 @@ LogHistoricalSequenceNumber::ReadBody(int fd)
 }
 
 int
-LogHistoricalSequenceNumber::WriteBody(int fd)
+LogHistoricalSequenceNumber::WriteBody(FILE *fp)
 {
 	char buf[100];
 	sprintf(buf,"%lu CreationTimestamp %lu",
 		historical_sequence_number,timestamp);
 	int len = strlen(buf);
-	return full_write(fd, buf, len) < len ? -1 : len;
+	return (fwrite(buf, 1, len, fp) < len) ? -1: len;
 }
 
 LogNewClassAd::LogNewClassAd(const char *k, const char *m, const char *t)
@@ -540,42 +578,40 @@ LogNewClassAd::Play(void *data_structure)
 	return table->insert(HashKey(key), ad);
 }
 
-
 int
-LogNewClassAd::ReadBody(int fd)
+LogNewClassAd::ReadBody(FILE* fp)
 {
 	int rval, rval1;
 	free(key);
-	rval = readword(fd, key);
+	rval = readword(fp, key);
 	if (rval < 0) return rval;
 	free(mytype);
-	rval1 = readword(fd, mytype);
+	rval1 = readword(fp, mytype);
 	if (rval1 < 0) return rval1;
 	rval += rval1;
 	free(targettype);
-	rval1 = readword(fd, targettype);
+	rval1 = readword(fp, targettype);
 	if (rval1 < 0) return rval1;
 	return rval + rval1;
 }
 
-
 int
-LogNewClassAd::WriteBody(int fd)
+LogNewClassAd::WriteBody(FILE* fp)
 {
 	int rval, rval1;
-	rval = full_write(fd, key, strlen(key));
-	if (rval < 0) return rval;
-	rval1 = full_write(fd, " ", 1);
-	if (rval1 < 0) return rval1;
+	rval = fwrite(key, sizeof(char), strlen(key), fp);
+	if (rval < strlen(key)) return -1;
+	rval1 = fwrite( " ", sizeof(char), 1, fp);
+	if (rval1 < 1) return -1;
 	rval += rval1;
-	rval1 = full_write(fd, mytype, strlen(mytype));
-	if (rval1 < 0) return rval1;
+	rval1 = fwrite(mytype, sizeof(char), strlen(mytype), fp);
+	if (rval1 < strlen(mytype)) return -1;
 	rval += rval1;
-	rval1 = full_write(fd, " ", 1);
-	if (rval1 < 0) return rval1;
+	rval1 = fwrite(" ", sizeof(char), 1, fp);
+	if (rval1 < 1) return -1;
 	rval += rval1;
-	rval1 = full_write(fd, targettype, strlen(targettype));
-	if (rval1 < 0) return rval1;
+	rval1 = fwrite(targettype, sizeof(char), strlen(targettype),fp);
+	if (rval1 < strlen(targettype)) return -1;
 	return rval + rval1;
 }
 
@@ -605,12 +641,11 @@ LogDestroyClassAd::Play(void *data_structure)
 	return table->remove(hkey);
 }
 
-
 int
-LogDestroyClassAd::ReadBody(int fd)
+LogDestroyClassAd::ReadBody(FILE* fp)
 {
 	free(key);
-	return readword(fd, key);
+	return readword(fp, key);
 }
 
 
@@ -646,62 +681,60 @@ LogSetAttribute::Play(void *data_structure)
 	return rval;
 }
 
-
 int
-LogSetAttribute::WriteBody(int fd)
+LogSetAttribute::WriteBody(FILE* fp)
 {
 	int		rval, rval1, len;
 
 	len = strlen(key);
-	rval = full_write(fd, key, len);
+	rval = fwrite(key, sizeof(char), len, fp);
 	if (rval < len) {
 		return -1;
 	}
-	rval1 = full_write(fd, " ", 1);
+	rval1 = fwrite(" ", sizeof(char), 1,fp);
 	if (rval1 < 1) {
 		return -1;
 	}
 	rval1 += rval;
 	len = strlen(name);
-	rval = full_write(fd, name, len);
+	rval = fwrite(name, sizeof(char), len, fp);
 	if (rval < len) {
 		return -1;
 	}
 	rval1 += rval;
-	rval = full_write(fd, " ", 1);
+	rval = fwrite( " ",sizeof(char), 1, fp);
 	if (rval < 1) {
 		return -1;
 	}
 	rval1 += rval;
 	len = strlen(value);
-	rval = full_write(fd, value, len);
+	rval = fwrite( value, sizeof(char), len,fp);
 	if (rval < len) {
 		return -1;
 	}
 	return rval1 + rval;
 }
 
-
 int
-LogSetAttribute::ReadBody(int fd)
+LogSetAttribute::ReadBody(FILE* fp)
 {
 	int rval, rval1;
 
 	free(key);
-	rval1 = readword(fd, key);
+	rval1 = readword(fp, key);
 	if (rval1 < 0) {
 		return rval1;
 	}
 
 	free(name);
-	rval = readword(fd, name);
+	rval = readword(fp, name);
 	if (rval < 0) {
 		return rval;
 	}
 	rval1 += rval;
 
 	free(value);
-	rval = readline(fd, value);
+	rval = readline(fp, value);
 	if (rval < 0) {
 		return rval;
 	}
@@ -734,77 +767,72 @@ LogDeleteAttribute::Play(void *data_structure)
 	return ad->Delete(name);
 }
 
-
 int
-LogDeleteAttribute::WriteBody(int fd)
+LogDeleteAttribute::WriteBody(FILE* fp)
 {
 	int		rval, rval1, len;
 
 	len = strlen(key);
-	rval = full_write(fd, key, len);
+	rval = fwrite(key, sizeof(char), len, fp);
 	if (rval < len) {
 		return -1;
 	}
-	rval1 = full_write(fd, " ", 1);
+	rval1 = fwrite(" ", sizeof(char), 1, fp);
 	if (rval1 < 1) {
 		return -1;
 	}
 	rval1 += rval;
 	len = strlen(name);
-	rval = full_write(fd, name, len);
+	rval = fwrite(name, sizeof(char), len, fp);
 	if (rval < len) {
 		return -1;
 	}
 	return rval1 + rval;
 }
 
-
 int 
-LogBeginTransaction::ReadBody( int fd )
+LogBeginTransaction::ReadBody(FILE* fp)
 {
 	char 	ch;
-	int		rval = read( fd, &ch, 1 );
+	int		rval = fread( &ch, sizeof(char), 1, fp);
 	if( rval < 1 || ch != '\n' ) {
 		return( -1 );
 	}
 	return( 1 );
 }
 
-
 int 
-LogEndTransaction::ReadBody( int fd )
+LogEndTransaction::ReadBody( FILE* fp )
 {
 	char 	ch;
-	int		rval = read( fd, &ch, 1 );
+	int		rval = fread( &ch, sizeof(char), 1, fp );
 	if( rval < 1 || ch != '\n' ) {
 		return( -1 );
 	}
 	return( 1 );
 }
-
 
 int
-LogDeleteAttribute::ReadBody(int fd)
+LogDeleteAttribute::ReadBody(FILE* fp)
 {
 	int rval, rval1;
 
 	free(key);
-	rval1 = readword(fd, key);
+	rval1 = readword(fp, key);
 	if (rval1 < 0) {
 		return rval1;
 	}
 
 	free(name);
-	rval = readword(fd, name);
+	rval = readword(fp, name);
 	if (rval < 0) {
 		return rval;
 	}
 	return rval + rval1;
 }
 
-
 LogRecord	*
-InstantiateLogEntry(int fd, int type)
+InstantiateLogEntry(FILE *fp, int type)
 {
 	LogRecord	*log_rec;
 
@@ -836,14 +864,13 @@ InstantiateLogEntry(int fd, int type)
 	}
 
 		// check if we got a bogus record indicating a bad log file
-	if( log_rec->ReadBody(fd) < 0 ) {
+	if( log_rec->ReadBody(fp) < 0 ) {
 
 			// check if this bogus record is in the midst of a transaction
 			// (try to find a CloseTransaction log record)
 
 
 		char	line[ATTRLIST_MAX_EXPRESSION + 64];
-		FILE	*fp = fdopen( fd, "r" );
 		int		op;
 
 		delete log_rec;

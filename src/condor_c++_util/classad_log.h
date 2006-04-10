@@ -89,9 +89,10 @@ public:
 	int GetMaxHistoricalLogs();
 
 private:
-	void LogState(int fd);
+	void LogState(FILE* fp);
+	FILE* log_fp;
+
 	char log_filename[_POSIX_PATH_MAX];
-	int log_fd;
 	Transaction *active_transaction;
 	bool EmptyTransaction;
 	int max_historical_logs;
@@ -109,8 +110,8 @@ public:
 	time_t get_timestamp() {return timestamp;}
 
 private:
-	virtual int WriteBody(int fd);
-	virtual int ReadBody(int fd);
+	virtual int WriteBody(FILE *fp);
+	virtual int ReadBody(FILE *fp);
 
 	unsigned long historical_sequence_number;
 	time_t timestamp; //time is logged for purely informational purposes
@@ -126,8 +127,8 @@ public:
 	char *get_targettype() { return strdup(targettype); }
 
 private:
-	virtual int WriteBody(int fd);
-	virtual int ReadBody(int fd);
+	virtual int WriteBody(FILE *fp);
+	virtual int ReadBody(FILE* fp);
 
 	char *key;
 	char *mytype;
@@ -143,8 +144,8 @@ public:
 	char *get_key() { return strdup(key); }
 
 private:
-	virtual int WriteBody(int fd) { return write(fd, key, strlen(key)); }
-	virtual int ReadBody(int fd);
+	virtual int WriteBody(FILE* fp) { int r=fwrite(key, sizeof(char), strlen(key), fp); return r < strlen(key) ? -1 : r;}
+	virtual int ReadBody(FILE* fp);
 
 	char *key;
 };
@@ -160,8 +161,8 @@ public:
 	char *get_value() { return strdup(value); }
 
 private:
-	virtual int WriteBody(int fd);
-	virtual int ReadBody(int fd);
+	virtual int WriteBody(FILE* fp);
+	virtual int ReadBody(FILE* fp);
 
 	char *key;
 	char *name;
@@ -177,8 +178,8 @@ public:
 	char *get_name() { return strdup(name); }
 
 private:
-	virtual int WriteBody(int fd);
-	virtual int ReadBody(int fd);
+	virtual int WriteBody(FILE* fp);
+	virtual int ReadBody(FILE* fp);
 
 	char *key;
 	char *name;
@@ -189,8 +190,10 @@ public:
 	LogBeginTransaction() { op_type = CondorLogOp_BeginTransaction; }
 	virtual ~LogBeginTransaction(){};
 private:
-	virtual int WriteBody(int fd) { return 0; }
-	virtual int ReadBody(int fd);
+
+	virtual int WriteBody(FILE* fp) {return 0;}
+	virtual int ReadBody(FILE* fp);
+
 };
 
 class LogEndTransaction : public LogRecord {
@@ -198,9 +201,11 @@ public:
 	LogEndTransaction() { op_type = CondorLogOp_EndTransaction; }
 	virtual ~LogEndTransaction(){};
 private:
-	virtual int WriteBody(int fd) { return 0; }
-	virtual int ReadBody(int fd);
+	virtual int WriteBody(FILE* fp) {return 0;}
+	virtual int ReadBody(FILE* fp);
+
 };
 
-LogRecord *InstantiateLogEntry(int fd, int type);
+LogRecord *InstantiateLogEntry(FILE* fp, int type);
+
 #endif

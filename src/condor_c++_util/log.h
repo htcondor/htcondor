@@ -43,33 +43,23 @@ public:
 	LogRecord *get_next() { return next; }
 	int get_op_type() { return op_type; }
 
-	int Write(int fd);
 	int Write(FILE *fp);
-	int Read(int fd);
 	int Read(FILE *fp);
-	int ReadHeader(int fd);
 	int ReadHeader(FILE *fp);
-	virtual int ReadBody(int) { return 0; }
 	virtual int ReadBody(FILE *) { return 0; }
-	int ReadTail(int fd);
 	int ReadTail(FILE *fp);
 
 	virtual int Play(void *) { return 0; }
 
 	static int readword(FILE*, char *&);
 	static int readline(FILE*, char *&);
-	static int readword(int, char *&);
-	static int readline(int, char *&);
 
 protected:
 	int op_type;	/* This is the type of operation being performed */
 
 private:
-	int WriteHeader(int fd);
 	int WriteHeader(FILE *fp);
-	virtual int WriteBody(int) { return 0; }
 	virtual int WriteBody(FILE *) { return 0; }
-	int WriteTail(int fd);
 	int WriteTail(FILE *fp);
 
 	LogRecord *next;
