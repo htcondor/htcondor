@@ -458,7 +458,7 @@ class Function: public FunctionBase
 						EvalResult *result);
 	int FunctionStringlistSum(int number_of_args, EvalResult *evaluated_args, 
 						EvalResult *result);
-	int FunctionStringlistAvg(int number_of_args, EvalResult *evaluated_args, k
+	int FunctionStringlistAvg(int number_of_args, EvalResult *evaluated_args, 
 						EvalResult *result);
 	int FunctionStringlistMin(int number_of_args, EvalResult *evaluated_args, 
 						EvalResult *result);
