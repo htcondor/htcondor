@@ -2,7 +2,7 @@
 directory: /local.chopin/nleroy/Hawkeye-Release/modules
 test-directory: /scratch.1/nleroy/Hawkeye-Release-test/modules
 
-target: all
+target: hawkeye
 version: 1.0.rc14
 os: Unix-Any
 +condor_jobhist
@@ -25,6 +25,15 @@ os: Unix-Any
 +vmstat
 +w
 +who
+
+target: condor
+version: 1.0.rc1
+os: Unix-Any
++uname
++uptime
++memory
++open_files
++w
 
 target: condor_jobhist
 os: Unix-Any
