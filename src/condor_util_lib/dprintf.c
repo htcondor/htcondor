@@ -80,6 +80,16 @@ extern int _condor_dprintf_works;
 FILE	*DebugFP = 0;
 
 /*
+ * This is last modification time of the main debug file as returned
+ * by stat() before the current process has written anything to the
+ * file. It is set in dprintf_config, which sets it to -errno if that
+ * stat() fails.
+ * DaemonCore uses this as an approximation of when the daemon
+ * was last alive.
+ */
+time_t	DebugLastMod = 0;
+
+/*
 ** These arrays must be D_NUMLEVELS+1 in size since we can have a
 ** debug file for each level plus an additional catch-all debug file
 ** at index 0.
@@ -830,6 +840,20 @@ set_debug_flags( char *strflags )
 	_condor_set_debug_flags( strflags );
 }
 
+
+time_t
+dprintf_last_modification()
+{
+	return DebugLastMod;
+}
+
+void
+dprintf_touch_log()
+{
+	if ( _condor_dprintf_works ) {
+		utime( DebugFile[0], NULL );
+	}
+}
 
 int
 mkargv( int* argc, char* argv[], char* line )

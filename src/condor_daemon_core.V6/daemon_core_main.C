@@ -412,6 +412,18 @@ handle_log_append( char* append_str )
 }
 
 
+int
+dc_touch_log_file( Service* )
+{
+	dprintf_touch_log();
+
+	daemonCore->Register_Timer( param_integer( "TOUCH_LOG_INTERVAL", 60 ),
+				(TimerHandler)dc_touch_log_file, "dc_touch_log_file" );
+
+	return TRUE;
+}
+
+
 void
 set_dynamic_dir( char* param_name, const char* append_str )
 {
@@ -1621,6 +1633,16 @@ int main( int argc, char** argv )
 	dprintf(D_ALWAYS,"** %s\n", CondorVersion());
 	dprintf(D_ALWAYS,"** %s\n", CondorPlatform());
 	dprintf(D_ALWAYS,"** PID = %lu\n", (unsigned long) daemonCore->getpid());
+	time_t log_last_mod_time = dprintf_last_modification();
+	if ( log_last_mod_time <= 0 ) {
+		dprintf(D_ALWAYS,"** Log last touched time unavailable (%s)\n",
+				strerror(-log_last_mod_time));
+	} else {
+		struct tm *tm = localtime( &log_last_mod_time );
+		dprintf(D_ALWAYS,"** Log last touched %d/%d %02d:%02d:%02d\n",
+				tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min,
+				tm->tm_sec);
+	}
 
 #ifndef WIN32
 		// Want to do this dprintf() here, since we can't do it w/n 
@@ -1731,6 +1753,9 @@ int main( int argc, char** argv )
 				(TimerHandler)check_parent, "check_parent" );
 	}
 #endif
+
+	daemonCore->Register_Timer( 0,
+				(TimerHandler)dc_touch_log_file, "dc_touch_log_file" );
 
 	daemonCore->Register_Timer( 0, 5 * 60,
 				(TimerHandler)check_session_cache, "check_session_cache" );

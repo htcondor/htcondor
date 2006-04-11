@@ -103,6 +103,9 @@ void Suicide();
 void set_debug_flags( char *strflags );
 void _condor_fd_panic( int line, char *file );
 
+time_t dprintf_last_modification();
+void dprintf_touch_log();
+
 /*
 **	Definition of exception macro
 */

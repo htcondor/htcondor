@@ -42,6 +42,7 @@ extern char		*DebugFile[D_NUMLEVELS+1];
 extern char		*DebugLock;
 extern char		*_condor_DebugFlagNames[];
 extern int		_condor_dprintf_works;
+extern time_t	DebugLastMod;
 
 extern void		_condor_set_debug_flags( char *strflags );
 extern void		_condor_dprintf_saved_lines( void );
@@ -119,6 +120,15 @@ int logfd;		/* logfd is the descriptor to use if the log output goes to a tty */
 			if( debug_level == 0 && DebugFile[0] == NULL ) {
 				EXCEPT("No '%s' parameter specified.", pname);
 			} else if ( DebugFile[debug_level] != NULL ) {
+
+				if (debug_level == 0 && first_time) {
+					struct stat stat_buf;
+					if ( stat( DebugFile[debug_level], &stat_buf ) >= 0 ) {
+						DebugLastMod = stat_buf.st_mtime;
+					} else {
+						DebugLastMod = -errno;
+					}
+				}
 
 				if (debug_level == 0) {
 					(void)sprintf(pname, "TRUNC_%s_LOG_ON_OPEN", subsys);

@@ -241,6 +241,13 @@ MASTER_DEBUG		= D_COMMAND
 ##  When the master starts up, should it truncate it's log file?
 #TRUNC_MASTER_LOG_ON_OPEN        = False
 
+## The daemons touch their log file periodically, even when they have
+## nothing to write. When a daemon starts up, it prints the last time
+## the log file was modified. This lets you estimate when a previous
+## instance of a daemon stopped running. This paramete controls often
+## the daemons touch the file (in seconds).
+TOUCH_LOG_INTERVAL = 60
+
 
 ######################################################################
 ######################################################################
