@@ -164,9 +164,49 @@ directory.
 
 \begin{itemize}
 
+\item A security team at UW-Madison is conducting an onging security
+audit of the Condor system and has identified a few important
+vulnerabilities.
+Condor versions 6.6.11 and 6.7.18 fix these security problems and
+other bugs.
+There have been no reported exploits, but all sites are urged to
+upgrade immediately.
+
+The Condor Team will publish detailed reports of these vulnerabilities
+on 2006-04-24, 4 weeks from the date when the fixes were first
+released (2006-03-27).
+This will allow all sites time to upgrade before enough information to
+exploit these bugs is widely available.
+
 \item The \Opt{-flock} option in \Condor{cold\_start} and
   \Condor{cold\_stop} has been replaced by \Opt{-filelock} to avoid
   any confusion between file locking and Condor job flocking.
+
+\item As of 6.7.17, Quill's database schema has been slightly altered. 
+For more information, please see the corresponding 6.7.17 version history entry in 
+section~\ref{param:quill-schema-change} on page~\pageref{param:quill-schema-change}.
+
+\end{itemize}
+
+\noindent Security Bugs Fixed:
+
+\begin{itemize}
+
+\item Bugs in previous versions of Condor could allow any user who can
+submit jobs on a machine to gain access to the ``condor'' account
+(or whatever non-privileged user the Condor daemons are running as).
+This bug can not be exploited remotely, only by users already logged
+onto a submit machine in the Condor pool.
+
+\item The security of the ``\condor{config\_val} -set'' feature was
+found to be insufficient, so this feature is now disabled by default.
+There are new configuration settings to enable this feature in a
+secure manner.
+Please read the descriptions of \Macro{ENABLE\_RUNTIME\_CONFIG},
+\Macro{ENABLE\_PERSISTENT\_CONFIG} and \Macro{PERSISTENT\_CONFIG\_DIR}
+in the example configuration file shipped with the latest Condor
+releases, or in section~\ref{param:EnableRuntimeConfig} on
+page~\pageref{param:EnableRuntimeConfig}. 
 
 \end{itemize}
 
@@ -192,8 +232,8 @@ the notification email.
 \item Added a new clipped port of Condor to HP-UX 11 running on 
 the HP-PA architecture.
 
-\item Added a new clipped port of Condor to the SLES 9 distribution of
-Linux running on the PPC64 architecture.
+%%\item Added a new clipped port of Condor to the SLES 9 distribution of
+%%Linux running on the PPC64 architecture.
 
 \item Condor is now much better at recognizing when a grid-type gt2 grid
 universe job failure is unrecoverable and at cleaning up failed or canceled
@@ -259,11 +299,48 @@ Manual for more details.
 /etc/grid-security/certificates is out of date, but
 \$(GLOBUS\_LOCATION)/share/certificates is not.
 
+\item A new authentication method, PASSWORD, has been added; it
+provides mutual authentication between a client and server using a
+shared secret. Password authentication currently only works on
+Windows, and only for daemon-to-daemon communication.
+
+\item Condor on Windows now supports running jobs as the submitting
+user. This feature requires the use of a central daemon for storing
+users' passwords (the \Condor{credd}). See the example configuration
+file \File{condor\_config.local.credd} included with the Condor
+distrubution for more information.
+
+\item Added a \Opt{-n} option to \Condor{store\_cred} to allow for
+storing a password to a remote host.
+
+\item Support for DRMAA on Windows has been added.
+
+\item Kerberos support has been upgraded to use version 1.4.3 of the
+Kerberos library.  This adds support for Kerberos as an authentication
+method on Windows.
+
+\item Added the new \Condor{replication} daemon which works with
+  \Condor{had} to enable replication of data for daemons configured
+  for high availability.  In particular, \Condor{replication} can be
+  configured to replicate the accountant log so the a fail-over
+  \Condor{negotiator} can share the user priority state from the
+  primary \Condor{negotitor}.
+
+\item The \Condor{collector} now has the ability to recieve ClassAds
+  via it's SOAP interface.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a memory corruption bug in \Condor{quill} where it could
+miscalculate the hostname of the db server to which it connects.
+
+\item Fixed a security hole in \Condor{quill} where the daemon would
+emit the quillwriter user's password in cleartext into the \Condor{quill}
+logfile.
 
 \item Fixed a bug in 6.7.17 that could cause the schedd state to be
 wiped out, clearing the contents of the job queue.  The most likely
@@ -397,6 +474,21 @@ attribute=Rank and value=1000 * memory).
 \item Added HAD to the default DC\_DAEMON\_LIST, both in the default
 condor\_config and in the default list hard coded into \Condor{master}.
 
+\item Java universe jobs submitted with the old-style arguments syntax
+(argument string not surrounded by double quotes in the submit file)
+would fail to run (and therefore stay in the schedd job queue) if the
+path to Condor's execute directory contained a space (e.g. ``Program
+Files'').  This bug was introduced in 6.7.15.
+
+\item Fixed a problem introduced in 6.7.17 where repeated ``ProcAPI
+sanity failure'' entries would appear in daemon logs on Windows.
+
+\item The \Opt{-submitter} option to \Condor{q} has been fixed to
+handle submitters in accounting groups.
+
+\item The \Condor{shadow} now correctly handles the case where
+RESERVED\_SWAP is set to 0.
+
 \end{itemize}
 
 \noindent Known Bugs:
@@ -418,6 +510,27 @@ condor\_config and in the default list hard coded into \Condor{master}.
 \item The default output for \Condor{status} was changed between
   6.7.16 and 6.7.17 to support the new \Term{Backfill} state which
   Condor resources can now enter (described below in more detail).
+
+\item \label{param:quill-schema-change} 
+Added two new columns to the Quill database schema to support 
+historical job queue logs (see \Macro{MAX\_JOB\_QUEUE\_LOG\_ROTATIONS} 
+in the New Features section below). These are log\_seq\_num and 
+log\_creation\_time.
+  For a description of those two columns, check out the schema of 
+  the JobQueuePollingInfo table in section~\ref{sec:Quill-Schema} on   
+  page~\pageref{sec:Quill-Schema}.
+
+Databases created by versions of Quill prior to 6.7.17 must be updated to 
+reflect these two new columns. This can be achieved by either dropping the 
+database and letting Quill recreate it on the next polling cycle, or by manually 
+adding the two columns and initializing their values via the following sql commands:
+\begin{verbatim}
+	alter table jobqueuepollinginfo add column log_seq_num bigint;
+	alter table jobqueuepollinginfo add column log_creation_time bigint;
+	update jobqueuepollinginfo set log_seq_num = 0, log_creation_time=0;
+\end{verbatim}
+If the schema is being manually changed, it must be done so \Bold{before} the 
+\Condor{quill} daemon is started. 
 
 \end{itemize}
 
@@ -1250,7 +1363,7 @@ certain cases, the forwarded lease could exceed \Attr{JobLeaseDuration}.
 \item The startd no longer advertises itself as available to run jobs
 when it is in shutdown mode (e.g. waiting for jobs to finish).  This
 was a noticeable problem when using large values for
-\Macro{MaxJobRetirementTime} on multi-VM startds; while waiting for
+\Macro{MAXJOBRETIREMENTTIME} on multi-VM startds; while waiting for
 one of its VMs to finish running a job, the startd would be available
 for matching to jobs, but it would reject them when the schedd tried
 to start them, possibly causing an endless cycle of matching, attempting

@@ -8,8 +8,9 @@ All new features added or bugs fixed in the 6.5 series are available
 in the 6.6 series.
 The details of each version are described below.
 
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{\label{sec:New-6-6-11}Version 6.6.11}
+\subsection{\label{sec:New-6-6-12}Version 6.6.12}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent Release Notes:
@@ -27,6 +28,113 @@ The details of each version are described below.
 %\item None.
 %
 %\end{itemize}
+
+\noindent Bugs fixed that are included in version 6.7.19:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+\noindent Bugs fixes irrelevant to the 6.7 series:
+
+\begin{itemize}
+
+\item Fixed a bug which caused the \Condor{collector} incorrectly
+  handle Collector ads in which the \AdAttr{Machine} attribute is
+  missing, or Storage ads in which the \AdAttr{Name} is missing.  In
+  these cases, a \Condor{collector} running on some platforms
+  (notably, Solaris) could crash.
+
+\end{itemize}
+
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-6-6-11}Version 6.6.11}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item A security team at UW-Madison is conducting an onging security
+audit of the Condor system and has identified a few important
+vulnerabilities.
+Condor versions 6.6.11 and 6.7.18 fix these security problems and
+other bugs.
+There have been no reported exploits, but all sites are urged to
+upgrade immediately.
+
+The Condor Team will publish detailed reports of these vulnerabilities
+on 2006-04-24, 4 weeks from the date when the fixes were first
+released (2006-03-27).
+This will allow all sites time to upgrade before enough information to
+exploit these bugs is widely available.
+
+\end{itemize}
+
+%\noindent New Features:
+%
+%\begin{itemize}
+%
+%\item None.
+%
+%\end{itemize}
+
+\noindent Security Bugs Fixed:
+
+\begin{itemize}
+
+\item Bugs in previous versions of Condor could allow any user who can
+submit jobs on a machine to gain access to the ``condor'' account
+(or whatever non-privileged user the Condor daemons are running as).
+This bug can not be exploited remotely, only by users already logged
+onto a submit machine in the Condor pool.
+
+\item The security of the ``\condor{config\_val} -set'' feature was
+found to be insufficient, so this feature is now disabled by default.
+There are new configuration settings to enable this feature in a
+secure manner.
+Please read the descriptions of \Macro{ENABLE\_RUNTIME\_CONFIG},
+\Macro{ENABLE\_PERSISTENT\_CONFIG} and \Macro{PERSISTENT\_CONFIG\_DIR}
+in the example configuration file shipped with the latest Condor
+releases, or in section~\ref{param:EnableRuntimeConfig} on
+page~\pageref{param:EnableRuntimeConfig}. 
+
+\end{itemize}
+
+
+\noindent Other bugs fixed that are included in version 6.7.18:
+
+\begin{itemize}
+
+% gnats PR #646
+\item Fixed a bug which could cause the \Condor{collector} to crash
+  when it receives certain types of malformed ads.
+
+\item Fixed a bug which caused the \Condor{collector} incorrectly
+  handle ads in which the \AdAttr{UpdateInterval} attribute is set.
+  In particular, the previous versions of the \Condor{collector} will
+  use the \AdAttr{UpdateInterval} value as the maximum \Term{lifetime}
+  of the ad when aging the ads, which could cause it to remove the ad
+  prematurely.
+  The \Condor{collector} now looks at the \AdAttr{ClassAdLifetime}
+  attribute, and uses its value (if set).
+  \Note No current Condor daemons are publishing either of these
+  attributes, but may do so in the future.
+
+\end{itemize}
 
 \noindent Bugs fixed that are included in version 6.7.14:
 
@@ -130,7 +238,12 @@ that version.
 
 \begin{itemize}
 
-\item None.
+\item A bug has been found which can cause a \Condor{collector} to
+  crash on some platforms (notably, Solaris).  This can happen if the
+  \Condor{collector} receives a Collector ad in which the
+  \AdAttr{Machine} attribute is missing, or a Storage ad in which the
+  \AdAttr{Name} is missing.  There is no security threat involved in
+  either case.
 
 \end{itemize}
 

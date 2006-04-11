@@ -28,12 +28,14 @@ server.
 \begin{Options}
   \OptItem{\OptArg{-basedir}{directory}}{
     The directory where the package should be installed.
+    When not specified, the directory defaults to the current
+    working directory.
   }
   \OptItem{\Opt{-f}}{
     Forcefully overwrite files if they exist.
   }
   \OptItem{\OptArg{-globuslocation}{directory}}{
-    This program does not come prepackaged with globus-url-copy or the
+    This program does not come prepackaged with \Prog{globus-url-copy} or the
     supporting libraries.  If globus is not installed in the
     \File{/opt/globus} directory, the user must specify the installation
     location of globus using this option.
@@ -42,12 +44,12 @@ server.
     Display brief usage information and exit.
   }
   \OptItem{\OptArg{-log}{filename}}{
-    The name this program should use when creating the installation
-    log.
+    The file name for the installation log.
   }
   \OptItem{\OptArg{-o}{otherfile1\ldots}}{
-    A list of files that will be installed alongside the installation
-    package.  They will only be copied, no extraction or decompression
+    A space-separated list of files that will be installed
+    along with the installation package.
+    The files will only be copied. No extraction or decompression
     will be performed on these files.  These files will be logged in the
     installation log.
   }

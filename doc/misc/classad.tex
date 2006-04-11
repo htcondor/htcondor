@@ -2,8 +2,9 @@
 \section{\label{classad-reference}
 Condor's ClassAd Mechanism}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 \label{sec:classadref}
+
+\index{ClassAd|(}
 ClassAds are a flexible mechanism for representing the characteristics and
 constraints of machines and jobs in the Condor system.  ClassAds are used
 extensively in the Condor system to represent jobs, resources, submitters
@@ -57,6 +58,7 @@ most operators are strict with respect to \texttt{UNDEFINED}.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Syntax}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{ClassAd!expression syntax}
 ClassAd expressions are formed by composing literals, attribute references and 
 other sub-expressions with operators. 
 \subsubsection{Literals}
@@ -86,6 +88,7 @@ error types.  The syntax of these literals is as follows:
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Attributes}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{ClassAd!attributes}
 Every expression in a ClassAd is named by an \Term{attribute name}.  Together,
 the (name,expression) pair is called an \Term{attribute}.  An attributes may be
 referred to in other expressions through its attribute name.
@@ -105,6 +108,7 @@ Section~\ref{ClassAd:evaluation}.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Operators}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{ClassAd!expression operators}
 The operators that may be used in ClassAd expressions are similar to those
 available in C.  The available operators and their relative precedence is shown 
 in figure~\ref{ClassAd:operator-fig}.
@@ -146,6 +150,10 @@ error values evaluate to themselves.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Attribute References}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{ClassAd!scope of evaluation, MY.}
+\index{ClassAd!scope of evaluation, TARGET.}
+\index{TARGET., ClassAd scope resolution prefix}
+\index{MY., ClassAd scope resolution prefix}
 Since the expression evaluation is being carried out in the context of two
 ClassAds, there is a potential for namespace ambiguities.  The following
 rules define the semantics of attribute references made by ad $A$ that is being 
@@ -193,6 +201,7 @@ evaluated in a context with another ad $B$:
 \subsubsection{Operators}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \label{ClassAd:evaluation-meta}
+\index{ClassAd!expression operators}
 All operators in the ClassAd language are \Term{total}, and thus have well
 defined behavior regardless of the supplied operands.  Furthermore, most
 operators are \Term{strict} with respect to \texttt{ERROR} and 
@@ -278,6 +287,8 @@ or queries over other ads.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Constraints and Preferences}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{ClassAd attribute!requirements}
+\index{ClassAd attribute!rank}
 The \AdAttr{requirements} and \AdAttr{rank} expressions
 within the submit description file
 are the mechanism
@@ -285,6 +296,8 @@ by which users specify the constraints and preferences of jobs.
 For machines, the configuration determines both 
 constraints and preferences of the machines.
 
+\index{rank attribute!examples}
+\index{requirements attribute}
 For both machine and job, 
 the \Attr{rank} expression specifies
 the desirability of the match (where higher numbers mean better matches).
@@ -370,3 +383,4 @@ beatrice.c INTEL    SOLARIS251   Claimed    Busy       1.000  128   0+01:30:02
 
 The similar flexibility exists in querying job queues in the Condor system.
 
+\index{ClassAd|)}

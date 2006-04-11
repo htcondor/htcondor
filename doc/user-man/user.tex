@@ -2098,7 +2098,11 @@ The default expression that ships with Condor is configured to only preempt
 lower priority jobs that have run
 for at least one hour. So in the previous example, in the worse case it
 could take up to a maximum of one hour until the higher priority user
-receives his fair share of machines. 
+receives his fair share of machines.
+For a general discussion of
+limiting preemption,
+please see
+section \ref{sec:Disabling Preemption} of the Administrator's manual.
 
 User priorities are keyed on ``username@domain'', for example
 ``johndoe@cs.wisc.edu''. The domain name to use, if any, is configured by
@@ -2109,7 +2113,7 @@ even if the user submits jobs from multiple machines.
 \index{nice job}
 \index{priority!nice job}
 An extra feature is the ability to submit a job as
-a ``nice'' job (see page~\pageref{man-condor-submit-nice}).
+a \Term{nice} job (see page~\pageref{man-condor-submit-nice}).
 Nice jobs artificially boost the user priority 
 by one million just for the nice job.
 This effectively means that nice jobs will only run on

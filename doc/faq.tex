@@ -368,6 +368,60 @@ NETWORK_INTERFACE = machine-ip-address
 Where \verb@machine-ip-address@ is the IP address of the interface you wish
 Condor to use.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Why do standard universe jobs never run after an upgrade?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\label{sec:checkpoint-platform-faq}
+
+Standard universe jobs that remain in the job queue across an upgrade
+from any Condor release previous to 6.7.15
+to any Condor release of 6.7.15 or more recent
+cannot run.
+They are missing a required ClassAd attribute
+(\Attr{LastCheckpointPlatform}) added for
+all standard universe jobs as of Condor version 6.7.15.
+This new attribute describes the platform where a job was
+running when it produced a checkpoint.
+The attribute is utilized to identify platforms capable of 
+continuing the job (using the checkpoint).
+
+This attribute becomes necessary due to bugs in some Linux kernels.
+A standard universe job may be continued on some, but not all
+Linux machines.
+And, the \Attr{CkptOpSys} attribute is not specific enough
+to be utilized.
+
+There are two possible solutions for these standard universe jobs that
+cannot run, yet are in the queue:
+
+\begin{enumerate}
+  \item Remove and resubmit the standard universe jobs that
+  remain in the queue across the upgrade. 
+  This includes all standard universe jobs that have flocked in to 
+  the pool.
+  Note that the resubmitted jobs will start over again from the beginning.
+
+  \item For each standard universe job in the queue,
+  modify its job ClassAd such that it can possibly run within the
+  upgraded pool.
+  If the job has already run and produced a checkpoint on a machine
+  before the upgrade, determine the machine that produced the checkpoint
+  using the \Attr{LastRemoteHost} attribute
+  in the job's ClassAd.
+  Then look at that machine's ClassAd (after the upgrade) to
+  determine and extract the value of the \Attr{CheckpointPlatform} attribute.
+  Add this (using \Condor{qedit}) as the value of the 
+  new attribute \Attr{LastCheckpointPlatform} in the job's ClassAd.
+  Note that this operation must also have to be performed on standard
+  universe jobs flocking in to an upgraded pool. 
+  It is recommended that pools that flock between each other upgrade to a
+  post 6.7.15 version of Condor.
+\end{enumerate}
+
+Note that if the upgrade to Condor takes place at the same time
+as a platform change (such as booting an upgraded kernel),
+there is no way to properly set the \Attr{LastCheckpointPlatform} attribute.
+The only option is to remove and resubmit the standard universe jobs.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Setting up Condor}
@@ -864,7 +918,7 @@ Note that this applies to standard universe jobs only.
 \subsection*{Why have standard universe jobs in Condor 6.6.x have begun unexpectedly segmentation faulting during a checkpoint after an upgrade of Redhat Enterprise Linux 3 to current update levels?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Redhat has apparently backported a 2.6 kernel feature called
+Redhat has apparently back-ported a 2.6 kernel feature called
 ``exec\_shield'' to the current patch levels of the RHEL3 product line. 
 This feature is designed to make buffer overflow attacks incredibly difficult
 to exploit. 
@@ -1435,21 +1489,6 @@ the TRANSFER\_INPUT\_FILES list in the job's submit file.
 To find out what DLLs your program depends on, right-click the program
 in Explorer, choose Quickview, and look under ``Import List''.
 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{Why does the startd crash on Condor with the error\\
-"caInsert: Can't insert CpuBusy into target classad."?}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{decimal point!problems with}
-
-This is a common problem with European installations on Windows.
-The problem is Condor expects all decimal points to be the
-period character (.),
-but the Windows locale defines them as the comma character(,).
-This will be fixed in the next version of Condor,
-however we have users who have fixed the problem by 
-changing the following registry value to a period instead of a comma:
-\verb@HKEY_USERS\.DEFAULT\Control Panel\International\sDecimal@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{How can I access network files with Condor on Windows?}

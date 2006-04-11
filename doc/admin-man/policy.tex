@@ -1830,12 +1830,12 @@ In all other cases, the default policy described above will ignore
 keyboard activity.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{policy!disabling preemption}
-\index{preemption!disabling}
 \subsubsection{\label{sec:Disabling Preemption}
 Disabling Preemption}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\index{policy!disabling preemption}
+\index{preemption!disabling}
 Preemption can result in jobs being killed by Condor.  When this
 happens, the jobs remain in the queue and will be automatically
 rescheduled.  We highly recommend designing jobs that work well in
@@ -1843,31 +1843,81 @@ this environment, rather than simply disabling preemption.
 
 Planning for preemption makes jobs more robust in the face of other
 sources of failure.  One way to live happily with preemption is to use
-Condor's standard universe, which provides checkpointing.  If your job
-is incompatible with the requirements of standard universe, you can
-still have it gracefully shutdown and restart by intercepting the soft
+Condor's standard universe, which provides the ability to produce
+checkpoints.
+If a job is incompatible with the requirements of standard universe,
+the job can still gracefully shutdown and restart by intercepting the soft
 kill signal.
 
-All that being said, there still may be cases where you want to be
-sure that Condor is never responsible for killing jobs within some
-upper time limit.  This can be achieved with the following policy:
+All that being said, there may be cases where it is appropriate
+to force 
+Condor to never kill jobs within some upper time limit.
+This can be achieved with the following configuration policy:
 
+\index{MAXJOBRETIREMENTTIME macro@\texttt{MAXJOBRETIREMENTTIME} macro}
+\index{configuration macro!\texttt{MAXJOBRETIREMENTTIME}}
+\footnotesize
 \begin{verbatim}
 # When we want to kick a job off, let it run uninterrupted for
 # up to 2 days before forcing it to vacate.
-MaxJobRetirementTime = $(HOUR) * 24 * 2
+MAXJOBRETIREMENTTIME = $(HOUR) * 24 * 2
 \end{verbatim}
+\normalsize
 
-The expression may be more complicated.  For example, it could provide
+Construction of this expression may be more complicated.
+For example, it could provide
 a different retirement time to different users or different types of
 jobs.  Also be aware that the job may come with its own definition
-of \Expr{MaxJobRetirementTime}, but this may only cause \emph{less}
+of \AdAttr{MaxJobRetirementTime}, but this may only cause \emph{less}
 retirement time to be used, never more than what the machine offers.
 
 The longer the retirement time that is given, the slower reallocation
-of resources in the pool can become if there are long jobs.  However,
-by preventing jobs from being killed, you may decrease the number of
+of resources in the pool can become if there are long-running jobs.
+However, by preventing jobs from being killed, 
+you may decrease the number of
 cycles that are wasted on non-checkpointable jobs that are killed.
+
+Note that the use of \MacroNI{MAXJOBRETIREMENTTIME} limits the killing
+of jobs, but it does not prevent the preemption of resource claims.
+Therefore, it is technically not a way of disabling preemption, but
+simply a way of forcing preempting claims to wait until an existing
+job finishes or runs out of time.  In other words, it limits the preemption
+of jobs but not the preemption of claims.
+
+Limiting the preemption of jobs is often more desirable than limiting
+the preemption of resource claims.  
+The following configuration limits the preemptions of resource claims:
+
+\footnotesize
+\begin{verbatim}
+#Disable preemption by machine activity.
+PREEMPT = False
+#Disable preemption by user priority.
+PREEMPTION_REQUIREMENTS = False
+#Disable preemption by machine RANK by ranking all jobs equally.
+RANK = 0
+#Since we are disabling claim preemption, we
+# may as well optimize negotiation for this case:
+NEGOTIATOR_CONSIDER_PREEMPTION = False
+\end{verbatim}
+\normalsize
+
+Be aware of the consequences of this policy. 
+Without any preemption of resource claims, once the 
+\Condor{negotiator} gives
+the \Condor{schedd} a match to a machine,
+the \Condor{schedd} may hold onto this claim indefinitely,
+as long as the user keeps supplying more jobs to run.
+If this is not desired, force claims to be retired after
+some amount of time using \Macro{CLAIM\_WORKLIFE}. 
+This behaves just
+as though the claim were preempted by a higher priority job after the
+specified amount of time.  The retiring claim will allow the existing
+job to complete, but will not allow any new jobs to be started.
+If there is more work to do,
+the \Condor{schedd} must go back to
+the \Condor{negotiator} to request a new match.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Job-Suspension}Job Suspension}

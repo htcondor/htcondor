@@ -314,18 +314,21 @@ the library routine which parses the configuration files.
   \index{subsystem names}
   \index{macro!subsystem names}
   \begin{itemize}
-  \item STARTD
-  \item SCHEDD
-  \item MASTER
-  \item COLLECTOR
-  \item NEGOTIATOR
-  \item KBDD 
-  \item SHADOW
-  \item STARTER
-  \item CKPT\_SERVER
-  \item SUBMIT
-  \item GRIDMANAGER
-  \item TOOL
+  \item \verb@STARTD@
+  \item \verb@SCHEDD@
+  \item \verb@MASTER@
+  \item \verb@COLLECTOR@
+  \item \verb@NEGOTIATOR@
+  \item \verb@KBDD@ 
+  \item \verb@SHADOW@
+  \item \verb@STARTER@
+  \item \verb@CKPT_SERVER@
+  \item \verb@SUBMIT@
+  \item \verb@GRIDMANAGER@
+  \item \verb@TOOL@
+  \item \verb@HAD@
+  \item \verb@REPLICATION@
+  \item \verb@QUILL@
     \label{list:subsystem names}
   \end{itemize}
 
@@ -389,9 +392,8 @@ determined automatically at runtime but which can be overwritten.
   \label{param:UIDDomain}
   Defaults to the fully
   qualified hostname of the machine it is evaluated on.  See
-  section~\ref{sec:Shared-Filesystem-Config-File-Entries} on ``Shared
-  File System Configuration File Entries'' for the full description of
-  its use and under what conditions you would want to change it.
+  section~\ref{sec:Shared-Filesystem-Config-File-Entries} 
+  for the full description of this configuration variable.
 
 \end{description}
 
@@ -1227,13 +1229,62 @@ on DaemonCore.  There are certain configuration file settings that
 DaemonCore uses which affect all Condor daemons (except the checkpoint
 server, shadow, and starter, none of which use DaemonCore yet).
 \begin{description}
-  
+
 \item[\Macro{HOSTALLOW\Dots}] \label{param:HostAllow} All
   macros that begin with either \Macro{HOSTALLOW} or
   \Macro{HOSTDENY} are settings for Condor's host-based security.
   See section~\ref{sec:Host-Security} on Setting up
   IP/host-based security in Condor for details on these
   macros and how to configure them.
+
+\item[\Macro{ENABLE\_RUNTIME\_CONFIG}]
+  \label{param:EnableRuntimeConfig}
+  The \Condor{config\_val} tool has an option \Opt{-rset} for
+  dynamically setting runtime configuration values (which only effect
+  the in-memory configuration variables).
+  Because of the potential security implications of this feature, by
+  default, Condor daemons will not honor these requests.
+  To use this functionality, Condor administrators must specifically
+  enable it by setting \MacroNI{ENABLE\_RUNTIME\_CONFIG} to TRUE, and
+  specify what configuration variables can be changed using the
+  \MacroNI{SETTABLE\_ATTRS\Dots} family of configuration options
+  (described below).
+  Defaults to FALSE.
+
+\item[\Macro{ENABLE\_PERSISTENT\_CONFIG}]
+  \label{param:EnablePersistentConfig}
+  The \Condor{config\_val} tool has a \Opt{-set} option for
+  dynamically setting persistent configuration values.
+  These values override options in the normal Condor configuration
+  files.
+  Because of the potential security implications of this feature, by
+  default, Condor daemons will not honor these requests.
+  To use this functionality, Condor administrators must specifically
+  enable it by setting \MacroNI{ENABLE\_PERSISTENT\_CONFIG} to TRUE,
+  creating a directory where the Condor daemons will hold these
+  dynamically-generated persistent configuration files (declared using
+  \MacroNI{PERSISTENT\_CONFIG\_DIR}, described below) and specify what
+  configuration variables can be changed using the
+  \MacroNI{SETTABLE\_ATTRS\Dots} family of configuration options
+  (described below).
+  Defaults to FALSE.
+
+\item[\Macro{PERSISTENT\_CONFIG\_DIR}]
+  \label{param:PersistentConfigDir}
+  Directory where daemons should store dynamically-generated
+  persistent configuration files (used to support
+  \Condor{config\_val} \Opt{-set})
+  This directory should \Bold{only} be writable by root, or the user
+  the Condor daemons are running as (if non-root).
+  There is no default, administrators that wish to use this
+  functionality must create this directory and define this setting.
+  This directory must not be shared by multiple Condor installations,
+  though it can be shared by all Condor daemons on the same host.
+  Keep in mind that this directory should not be placed on an NFS
+  mount where ``root-squashing'' is in effect, or else Condor daemons
+  running as root will not be able to write to them.
+  A directory (only writable by root) on the local filesystem is
+  usually the best location for this directory.
 
 \item[\Macro{SETTABLE\_ATTRS\Dots}] \label{param:SettableAttrs} All
   macros that begin with \Macro{SETTABLE\_ATTRS} or
@@ -1323,6 +1374,10 @@ server, shadow, and starter, none of which use DaemonCore yet).
   This macro is not necessary for the \Condor{collector} 
   daemon, since its command socket is at a well-known port.  
   
+  The macro is named by substituting \MacroNI{<SUBSYS>}
+  with the appropriate subsystem string as defined in
+  section~\ref{sec:Condor-Subsystem-Names}.
+  
 \item[\MacroB{<SUBSYS>\_ATTRS} or \label{param:SubsysExprs}
   \MacroB{<SUBSYS>\_EXPRS}] \label{param:SubsysAttrs}
   \index{SUBSYS\_ATTRS macro@\texttt{<SUBSYS>\_ATTRS} macro}
@@ -1334,6 +1389,10 @@ server, shadow, and starter, none of which use DaemonCore yet).
   Frequently used to add attributes to machines so that the
   machines can discriminate between other machines in a job's 
   \Opt{rank} and \Opt{requirements}.
+
+  The macro is named by substituting \MacroNI{<SUBSYS>}
+  with the appropriate subsystem string as defined in
+  section~\ref{sec:Condor-Subsystem-Names}.
 
   \MacroNI{<SUBSYS>\_EXPRS} is a historic setting that functions identically to
   \MacroNI{<SUBSYS>\_ATTRS}. Use \MacroNI{<SUBSYS>\_ATTRS}.
@@ -1541,74 +1600,74 @@ section~\ref{sec:shared-fs}.
 
 \item[\Macro{UID\_DOMAIN}] \label{param:UidDomain}
   The \MacroNI{UID\_DOMAIN} macro
-  is used to decide under which user to run your jobs.
+  is used to decide under which user to run jobs.
   If the \MacroUNI{UID\_DOMAIN}
   on the submitting machine is different than
   the \MacroUNI{UID\_DOMAIN}
-  on the machine that runs your job, then Condor will run
-  the job as the user called ``nobody''.
+  on the machine that runs a job, then Condor runs
+  the job as the user \Login{nobody}.
   For example, if the submit machine has
-  the \MacroUNI{UID\_DOMAIN}
-  ``flippy.cs.wisc.edu'' and the machine where the job will execute
-  has the \MacroUNI{UID\_DOMAIN}
-  ``cs.wisc.edu'', the job will run as user nobody, because
+  a \MacroUNI{UID\_DOMAIN} of
+  flippy.cs.wisc.edu, and the machine where the job will execute
+  has a \MacroUNI{UID\_DOMAIN} of
+  cs.wisc.edu, the job will run as user \Login{nobody}, because
   the two \MacroUNI{UID\_DOMAIN}s are not the same.
   If the \MacroUNI{UID\_DOMAIN}
   is the same on both the submit and execute machines,
   then Condor will run the job as the user that submitted the job.
 
   A further check attempts to assure that the submitting
-  machine can not lie about its \MacroUNI{UID\_DOMAIN}.
+  machine can not lie about its \MacroNI{UID\_DOMAIN}.
   Condor compares the 
-  submit machine's claimed \MacroUNI{UID\_DOMAIN}
+  submit machine's claimed value for \MacroNI{UID\_DOMAIN}
   to its fully qualified name.
   If the two do not end the same, then the submit machine
-  is presumed to be lying about its \MacroUNI{UID\_DOMAIN}.
-  In this case, Condor will run the job as user nobody.
+  is presumed to be lying about its \MacroNI{UID\_DOMAIN}.
+  In this case, Condor will run the job as user \Login{nobody}.
   For example, a job submission to the Condor pool at the UW Madison
-  from ``flippy.example.com'', claiming a \MacroUNI{UID\_DOMAIN}
-  of ``cs.wisc.edu'',
-  will run the job as the user nobody.
+  from flippy.example.com, claiming a \MacroNI{UID\_DOMAIN} of
+  of cs.wisc.edu,
+  will run the job as the user \Login{nobody}.
 
   Because of this verification,
   \MacroUNI{UID\_DOMAIN} must be a real domain name.
   At the Computer Sciences department
   at the UW Madison, we set the \MacroUNI{UID\_DOMAIN}
-  to be ``cs.wisc.edu'' to
+  to be cs.wisc.edu to
   indicate that whenever someone submits from a department machine, we
   will run the job as the user who submits it.
 
-  Also see \Macro{SOFT\_UID\_DOMAIN}
+  Also see \MacroNI{SOFT\_UID\_DOMAIN}
   below for information about one more check
   that Condor performs before running a job as a given user.
 
   A few details:
 
-  You could set \MacroU{UID\_DOMAIN}
-  to ``*''. This will match all domains,
+  An administrator could set \MacroNI{UID\_DOMAIN}
+  to *. This will match all domains,
   but it is a gaping security hole. It is not recommended.
 
-  You can also leave \MacroU{UID\_DOMAIN} undefined. This will
-  force Condor to always run jobs as user nobody.
-  Running standard universe jobs as user nobody enhances
-  your security and should cause no problems, because the jobs use remote
+  An administrator can also leave \MacroNI{UID\_DOMAIN} undefined.
+  This will force Condor to always run jobs as user \Login{nobody}.
+  Running standard universe jobs as user \Login{nobody} enhances
+  security and should cause no problems, because the jobs use remote
   I/O to access all of their files.
   However, if vanilla jobs are run as
-  user nobody, then files that need to be accessed by the job will need
-  to be marked as world readable/writable so the user nobody can access
+  user \Login{nobody}, then files that need to be accessed by the job will need
+  to be marked as world readable/writable so the user \Login{nobody} can access
   them.
 
   When Condor sends e-mail about a job, Condor sends the e-mail to
   %% This is the wrong LaTeX  macro to use, but we don't have a correct one.
-  \File{user@UID\_DOMAIN}.
-  If \MacroUNI{UID\_DOMAIN}
+  \File{user@\$(UID\_DOMAIN)}.
+  If \MacroNI{UID\_DOMAIN}
   is undefined, the e-mail is sent to \File{user@submitmachinename}.
 
 
 \item[\Macro{TRUST\_UID\_DOMAIN}]
   \label{param:TrustUidDomain}
   As an added security precaution when Condor is about to spawn a job,
-  it ensures that the \MacroNI{UID\_DOMAIN} (defined above) of a given
+  it ensures that the \MacroNI{UID\_DOMAIN} of a given
   submit machine is a substring of that machine's fully-qualified
   host name.
   However, at some sites, there may be multiple UID spaces that do
@@ -1617,12 +1676,12 @@ section~\ref{sec:shared-fs}.
   UID domains which are not substrings of the hostnames of the
   machines.
   For this to work, Condor must not do this regular security check.
-  If the \MacroNI{TRUST\_UID\_DOMAIN} setting is defined to TRUE,
+  If the \MacroNI{TRUST\_UID\_DOMAIN} setting is defined to \Expr{True},
   Condor will not perform this test, and will trust whatever
   \MacroNI{UID\_DOMAIN} is presented by the submit machine when trying
-  to spawn a job, instead of making sure the submit machine's hostname
+  to spawn a job, instead of making sure the submit machine's host name
   matches the \MacroNI{UID\_DOMAIN}.
-  When not defined, the default is FALSE,
+  When not defined, the default is \Expr{False},
   since it is more secure to perform this test. 
   % PKK
   % Described in default config file: YES
@@ -1631,18 +1690,17 @@ section~\ref{sec:shared-fs}.
   % Result if not defined or RHS is empty: this entry is considered False
 
 \item[\Macro{SOFT\_UID\_DOMAIN}] \label{param:SoftUidDomain}
-  When Condor is about to run a job as a particular user (instead of the
-  user nobody, see \Macro{UID\_DOMAIN} above for when this happens),
+  A boolean variable that defaults to \Expr{False} when not defined.
+  When Condor is about to run a job as a particular user 
+  (instead of as user \Login{nobody}),
   it verifies that the UID given for the user is in the
   password file and actually matches the given user name.
-  However, some
-  installations may not have every user in every machine's password
-  file, so this check will fail and the execution attempt will be
-  aborted. If you prefer that Condor not do
-  this check, because users are not in every password file, set
-  this attribute to \Expr{True}. Condor will then run the job under the
-  user's UID anyway.
-
+  However, under installations that do not have every user
+  in every machine's password file,
+  this check will fail and the execution attempt will be aborted.
+  To cause Condor not to do
+  this check, set this configuration variable to \Expr{True}.
+  Condor will then run the job under the user's UID.
 
 \item[\Macro{VMx\_USER}] \label{param:VMxUser}
   The name of a user for Condor to use instead of
@@ -1923,6 +1981,10 @@ These macros control the \Condor{master}.
   \end{verbatim}
   These are most often defined relative to the \MacroUNI{SBIN} macro.
 
+  The macro is named by substituting \MacroNI{<SUBSYS>}
+  with the appropriate subsystem string as defined in
+  section~\ref{sec:Condor-Subsystem-Names}.
+
 \item[\Macro{DAEMONNAME\_ENVIRONMENT}] \label{param:DaemonNameEnvironment}
   For each subsystem defined in \MacroNI{DAEMON\_LIST}, you may specify
   changes to the environment that daemon is started with by setting
@@ -1953,6 +2015,10 @@ These macros control the \Condor{master}.
   daemon. Define one of these for each daemon the \Condor{master} is
   controlling.  For example, set \MacroUNI{STARTD\_ARGS} to specify
   any extra command line arguments to the \Condor{startd}.
+
+  The macro is named by substituting \MacroNI{<SUBSYS>}
+  with the appropriate subsystem string as defined in
+  section~\ref{sec:Condor-Subsystem-Names}.
 
 \item[\Macro{PREEN}] \label{param:Preen} In addition to the daemons
   defined in \MacroUNI{DAEMON\_LIST}, the \Condor{master} also starts up
@@ -2410,6 +2476,18 @@ Configuring The Startd Policy.
   See \MacroNI{MAXJOBRETIREMENTTIME} in
   section~\ref{sec:State-Expression-Summary} for further explanation.
 
+\item[\Macro{CLAIM\_WORKLIFE}] \label{param:ClaimWorklife}
+  An integer value representing the number of seconds after which
+  a \Condor{schedd} daemon's claim to a \Condor{startd} daemon
+  will enter retirement.  In retirement,
+  any existing job may continue to run (subject to other preemption policy
+  expressions), but no new jobs may be started.  This forces the 
+  \Condor{schedd} daemon
+  to go back to the \Condor{negotiator} daemon to request a new claim,
+  rather than
+  keeping resource claims indefinitely while it has jobs to run on them.
+  The default value of -1 is treated as an infinite claim worklife, so
+  claims may be held indefinitely.
 
 \item[\Macro{MAX\_CLAIM\_ALIVES\_MISSED}]
   \label{param:MaxClaimAlivesMissed} The \Condor{schedd} sends periodic updates
@@ -2678,7 +2756,7 @@ SMP Machines for details.
   To aid in the transition to the new terms (and to provide a means
   for sites that want to keep using ``vm'' even after the default has
   changed), this setting enables sites to define what string the
-  \Condor{gstartd} will use to name the individual resources on an SMP
+  \Condor{startd} will use to name the individual resources on an SMP
   machine.
 
 \item[\Macro{VIRTUAL\_MACHINES\_CONNECTED\_TO\_CONSOLE}] 
@@ -3380,8 +3458,7 @@ These macros control the \Condor{schedd}.
   The actual
   number of \Condor{shadow}s may be less if you have reached
   your \MacroUNI{RESERVED\_SWAP} limit.
-  When undefined, and therefore the default value,
-  there is no maximum limit on the number of processes spawned.
+  This macro has a default value of 200.
 
 \item[\Macro{MAX\_SHADOW\_EXCEPTIONS}]
   \label{param:MaxShadowExceptions} This macro controls the maximum
@@ -4085,13 +4162,15 @@ These macros affect the \Condor{collector}.
 \begin{description}
   
 \item[\Macro{CLASSAD\_LIFETIME}] \label{param:ClassadLifetime} This
-  macro determines how long a ClassAd can remain in the collector
-  before it is discarded as stale information.  The ClassAds sent to
-  the collector might also have an attribute that says how long the
-  lifetime should be for that specific ad.  If that attribute is
-  present, the collector will either use it or the
-  \MacroUNI{CLASSAD\_LIFETIME}, whichever is greater.  The macro is
-  defined in terms of seconds, and defaults to 900 (15 minutes).
+  macro determines the default maximum age for ClassAds collected by the
+  \Condor{collector}.  ClassAd older than the maximum age are
+  discarded by the \Condor{collector} as stale.
+
+  If present, the ClassAd attribute ``ClassAdLifetime'' specifies the
+  ad's lifetime in seconds.  If ``ClassAdLifetime'' is not present in
+  the ad, the \Condor{collector} will use the value of
+  \MacroUNI{CLASSAD\_LIFETIME}.  The macro is defined in terms of
+  seconds, and defaults to 900 (15 minutes).
   
 \item[\Macro{MASTER\_CHECK\_INTERVAL}]
   \label{param:MasterCheckInterval}  This macro defines how often the
@@ -4379,8 +4458,8 @@ These macros affect the \Condor{negotiator}.
 \item[\Macro{NEGOTIATOR\_PRE\_JOB\_RANK}]
   \label{param:NegotiatorPreJobRank} Resources that match a request
   are first sorted by this expression, then by the user-supplied rank
-  in the job ClassAd, then by \Macro{NEGOTIATOR\_POST\_JOB\_RANK}, then by
-  \Macro{PREEMPTION\_RANK} (if the match would cause preemption).  The purpose
+  in the job ClassAd, then by \MacroNI{NEGOTIATOR\_POST\_JOB\_RANK}, then by
+  \MacroNI{PREEMPTION\_RANK} (if the match would cause preemption).  The purpose
   of the pre job rank is to allow the pool administrator to override any
   other rankings, in order to optimize overall throughput.  For example,
   it is generally used to prevent preemption when possible, even if the job
@@ -4392,8 +4471,8 @@ These macros affect the \Condor{negotiator}.
   \label{param:NegotiatorPostJobRank} Resources that match a request
   are first sorted by the \Macro{NEGOTIATOR\_PRE\_JOB\_RANK}
   expression, then by the user-supplied rank in the job ClassAd, then
-  by \Macro{NEGOTIATOR\_POST\_JOB\_RANK}, then by
-  \Macro{PREEMPTION\_RANK} (if the match would cause preemption).  The
+  by \MacroNI{NEGOTIATOR\_POST\_JOB\_RANK}, then by
+  \MacroNI{PREEMPTION\_RANK} (if the match would cause preemption).  The
   purpose of the post job rank is to allow the pool administrator to
   choose between machines that the job ranks equally.  For example,
   you might want breadth-first instead of depth-first filling of a
@@ -4402,21 +4481,25 @@ These macros affect the \Condor{negotiator}.
   to have no effect on the ranking of matches.
 
 \item[\Macro{PREEMPTION\_REQUIREMENTS}]
-  \label{param:PreemptionRequirements} The negotiator will not preempt
+  \label{param:PreemptionRequirements} When considering user priorities, the negotiator will not preempt
   a job running on a given machine unless the
   \MacroNI{PREEMPTION\_REQUIREMENTS} expression evaluates to TRUE and the
   owner of the idle job has a better priority than the owner of the
   running job.  By default, this expression allows jobs to be
   preempted only after they have run for one hour, and only if the
   priority of the competing user is 20\% higher, in order to prevent
-  ``churning'' of jobs in the pool.
+  ``churning'' of jobs in the pool.  Note that this setting does not
+  influence other potential causes of preemption, such as startd
+  \MacroNI{RANK}, or \MacroNI{PREEMPT} expressions.  See
+  section \ref{sec:Disabling Preemption} for a general discussion of
+  limiting preemption.
 
 \item[\Macro{PREEMPTION\_RANK}] \label{param:PreemptionRank}
   Resources that match a request are first sorted by the
-  \Macro{NEGOTIATOR\_POST\_JOB\_RANK} expression, then by the
+  \MacroNI{NEGOTIATOR\_POST\_JOB\_RANK} expression, then by the
   user-supplied rank in the job ClassAd, then by
-  \Macro{NEGOTIATOR\_POST\_JOB\_RANK}, then by
-  \Macro{PREEMPTION\_RANK} (if the match would cause preemption).
+  \MacroNI{NEGOTIATOR\_POST\_JOB\_RANK}, then by
+  \MacroNI{PREEMPTION\_RANK} (if the match would cause preemption).
   This expression is used to rank machines that the job and the other
   negotiation expressions rank the same.  For example, if the job has
   no preference, it is usually preferable to preempt a job with a
@@ -5161,7 +5244,7 @@ These macros affect the high availability operation of Condor.
 
 \begin{description}
 \item[\Macro{MASTER\_HA\_LIST}] \label{param:MasterHAList} Similar to
-  \Macro{DAEMON\_LIST}, this macro defines a list of daemons that
+  \MacroNI{DAEMON\_LIST}, this macro defines a list of daemons that
   the \Condor{master} starts and keeps its watchful eyes on.
   However, the \MacroNI{MASTER\_HA\_LIST} daemons are run in a
   \emph{High Availability} mode.
@@ -5207,13 +5290,13 @@ These macros affect the high availability operation of Condor.
 
   There is no default value for \MacroNI{HA\_LOCK\_URL}.
 
-\item[\Macro{HA\_daemon\_LOCK\_URL}]
-  \label{param:HAdaemonLockURL} This macro controls the 
-  \emph{High Availability} lock URL for a specific \Expr{daemon}
+\item[\Macro{HA\_<SUBSYS>\_LOCK\_URL}]
+  \label{param:HASubsysLockURL} This macro controls the 
+  \emph{High Availability} lock URL for a specific subsystem
   as specified in the configuration variable name,
   and it overrides the system-wide lock URL specified by
-  \MacroNI{HA\_LOCK\_URL}.  If not defined for each daemon,
-  \MacroNI{HA\_daemon\_LOCK\_URL} is ignored, and the value of
+  \MacroNI{HA\_LOCK\_URL}.  If not defined for each subsystem,
+  \MacroNI{HA\_<SUBSYS>\_LOCK\_URL} is ignored, and the value of
   \MacroNI{HA\_LOCK\_URL} is used.
 
 \item[\Macro{HA\_LOCK\_HOLD\_TIME}] \label{param:HALockHoldTime}
@@ -5223,21 +5306,21 @@ These macros affect the high availability operation of Condor.
   Upon gaining the shared lock,
   the \Condor{master} will hold the lock for this number of seconds.
   Additionally, the \Condor{master} will periodically renew
-  each lock as long as the \Condor{master} and the daemon is running.
+  each lock as long as the \Condor{master} and the daemon are running.
   When the daemon dies, or the \Condor{master} exists, the
   \Condor{master} will immediately release the lock(s) it holds.
 
   \MacroNI{HA\_LOCK\_HOLD\_TIME} defaults to 3600 seconds (one hour).
 
-\item[\Macro{HA\_daemon\_LOCK\_HOLD\_TIME}]
-  \label{param:HAdaemonLockHoldTime}
+\item[\Macro{HA\_<SUBSYS>\_LOCK\_HOLD\_TIME}]
+  \label{param:HASubsysLockHoldTime}
   This macro controls the \emph{High Availability} lock
-  hold time for a specific \Expr{daemon}
+  hold time for a specific subsystem
   as specified in the configuration variable name,
   and it overrides the system wide poll period specified by
   \MacroNI{HA\_LOCK\_HOLD\_TIME}.
-  If not defined for each daemon,
-  \MacroNI{HA\_daemon\_LOCK\_HOLD\_TIME} is ignored,
+  If not defined for each subsystem,
+  \MacroNI{HA\_<SUBSYS>\_LOCK\_HOLD\_TIME} is ignored,
   and the value of \MacroNI{HA\_LOCK\_HOLD\_TIME} is used.
 
 \item[\Macro{HA\_POLL\_PERIOD}] \label{param:HALockPollPeriod} 
@@ -5250,15 +5333,15 @@ These macros affect the high availability operation of Condor.
 
   \MacroNI{HA\_POLL\_PERIOD} defaults to 300 seconds (five minutes).
 
-\item[\Macro{HA\_daemon\_POLL\_PERIOD}]
-  \label{param:HALockPolldaemonPeriod}
-  This macro controls the \emph{High Availability} pool period
-  for a specific \Expr{daemon}
+\item[\Macro{HA\_<SUBSYS>\_POLL\_PERIOD}]
+  \label{param:HALockPollSubsysPeriod}
+  This macro controls the \emph{High Availability} poll period
+  for a specific subsystem
   as specified in the configuration variable name,
   and it overrides the system wide poll period specified by
   \MacroNI{HA\_POLL\_PERIOD}.
-  If not defined for each daemon,
-  \MacroNI{HA\_daemon\_POLL\_PERIOD} is ignored,
+  If not defined for each subsystem,
+  \MacroNI{HA\_<SUBSYS>\_POLL\_PERIOD} is ignored,
   and the value of \MacroNI{HA\_POLL\_PERIOD} is used.
 
 \item[\Macro{MASTER\_<SUBSYS>\_CONTROLLER}]
@@ -5281,6 +5364,10 @@ These macros affect the high availability operation of Condor.
 \begin{verbatim}
 MASTER_NEGOTIATOR_CONTROLLER = HAD
 \end{verbatim}
+
+  The macro is named by substituting \MacroNI{<SUBSYS>}
+  with the appropriate subsystem string as defined in
+  section~\ref{sec:Condor-Subsystem-Names}.
 
 
 \item[\Macro{HAD\_LIST}]
@@ -5340,8 +5427,8 @@ MASTER_NEGOTIATOR_CONTROLLER = HAD
   \begin{verbatim}
    -p $(HAD_PORT_NUMBER)
   \end{verbatim}
-  where \MacroNI{HAD\_PORT\_NUMBER} is defined with the
-  desired port number.
+  where \MacroNI{HAD\_PORT\_NUMBER} is a helper configuration variable
+  defined with the desired port number.
   Note that this port number must be the same value here as
   used in \MacroNI{HAD\_LIST}.
   There is no default value.
@@ -5371,7 +5458,98 @@ MASTER_NEGOTIATOR_CONTROLLER = HAD
 
 \item[\Macro{HAD\_LOG}]
   \label{param:HADLog}
-  Path to the log file.
+  Full path and file name of the log file.
+  There is no default value.
+
+\item[\Macro{REPLICATION\_LIST}]
+  \label{param:ReplicationList}
+  A comma-separated list of all \Condor{replication} daemons
+  in the form \Expr{IP:port} or \Expr{hostname:port}.
+  Each central manager machine that runs the \Condor{had} daemon
+  should appear in this list.
+  All potential central manager machines must be configured with
+  an identical \MacroNI{REPLICATION\_LIST}.
+
+\item[\Macro{STATE\_FILE}]
+  \label{param:StateFile}
+  A full path and file name of the file protected by the replication
+  mechanism.
+  When not defined, the default path and file used is
+  \begin{verbatim}
+  $(SPOOL)/Accountantnew.log
+  \end{verbatim}
+
+\item[\Macro{REPLICATION\_INTERVAL}]
+  \label{param:ReplicationInterval}
+  Sets how often the \Condor{replication} daemon initiates its tasks of
+  replicating the \MacroUNI{STATE\_FILE}.
+  It is defined in seconds and defaults to 300 (5 minutes).
+  This is the same as the default \MacroNI{NEGOTIATOR\_INTERVAL}.
+
+\item[\Macro{MAX\_TRANSFER\_LIFETIME}]
+  \label{param:MaxTransferLifetime}
+  A timeout period within which the process that
+  transfers the state file must complete its transfer.
+  The recommended value is
+  \Expr{2 * average size of state file / network rate}.
+  It is defined in seconds and defaults to 300 (5 minutes).
+
+\item[\Macro{HAD\_UPDATE\_INTERVAL}]
+  \label{param:HADUpdateInterval}
+  Like \MacroNI{UPDATE\_INTERVAL},
+  determines how often the \Condor{had} is to send a ClassAd update
+  to the \Condor{collector}.
+  Updates are also sent at each and every change in state.
+  It is defined in seconds and defaults to 300 (5 minutes).
+
+\item[\Macro{HAD\_USE\_REPLICATION}]
+  \label{param:HADUseReplication}
+  A boolean value that defaults to \Expr{False}.
+  When \Expr{True}, the use of \Condor{replication} daemons is enabled.
+
+\item[\Macro{REPLICATION\_ARGS}]
+  \label{param:ReplicationArgs}
+  Command line arguments passed by the \Condor{master} daemon
+  as it invokes the \Condor{replication} daemon.
+  To make high availability work, the \Condor{replication} daemon
+  requires the port number it is to use.
+  This argument is of the form
+  \begin{verbatim}
+  -p $(REPLICATION_PORT_NUMBER)
+  \end{verbatim}
+  where \MacroNI{REPLICATION\_PORT\_NUMBER} is a helper configuration
+  variable defined with the desired port number.
+  Note that this port number must be the same value as
+  used in \MacroNI{REPLICATION\_LIST}.
+  There is no default value.
+
+\item[\Macro{REPLICATION}]
+  \label{param:Replication}
+  The full path and file name of the \Condor{replication} executable.
+  It is normally defined relative to \MacroUNI{SBIN}.
+  There is no default value.
+
+\item[\Macro{MAX\_REPLICATION\_LOG}]
+  \label{param:MaxReplicationLog}
+  Controls the maximum length in bytes to which the \Condor{replication}
+  daemon log will be allowed to grow. It will grow to the specified length,
+  then be saved to a file with the suffix \File{.old}.
+  The \File{.old}  file is overwritten each time the log is saved,
+  thus the maximum space devoted to logging is twice the maximum length
+  of this log file.
+  A value of 0 specifies that this file may grow without bounds.
+  The default is 1 Mbyte.
+
+\item[\Macro{REPLICATION\_DEBUG}]
+  \label{param:ReplicationDebug}
+  Logging level for the \Condor{replication} daemon.
+  See \MacroNI{<SUBSYS>\_DEBUG} for values.
+
+
+\item[\Macro{REPLICATION\_LOG}]
+  \label{param:ReplicationLog}
+  Full path and file name to the log file.
+  There is no default value.
 
 \end{description}
 
@@ -5492,6 +5670,10 @@ refresh proxy certificates.  By default, this macro is undefined.
 %   Any specific \MacroNI{<SUBSYS>\_ENABLE\_SOAP\_SSL} setting overrides
 %   the value of \MacroNI{ENABLE\_SOAP\_SSL}.
 % 
+%   The macro is named by substituting \MacroNI{<SUBSYS>}
+%   with the appropriate subsystem string as defined in
+%   section~\ref{sec:Condor-Subsystem-Names}.
+% 
 % \item[\Macro{ENABLE\_SOAP\_SSL}]
 %   \label{param:EnableSoapSSL}
 %   A boolean value that defaults to \Expr{False}.
@@ -5506,6 +5688,10 @@ refresh proxy certificates.  By default, this macro is undefined.
 %   running on a single machine may not share a port.
 %   There is no default value.
 % 
+%   The macro is named by substituting \MacroNI{<SUBSYS>}
+%   with the appropriate subsystem string as defined in
+%   section~\ref{sec:Condor-Subsystem-Names}.
+% 
 % \item[\MacroB{<SUBSYS>\_SOAP\_SSL\_SERVER\_KEYFILE}]
 %   \label{param:SubsysSoapSSLServerKeyfile}
 %   \index{SUBSYS\_SOAP\_SSL\_SERVER\_KEYFILE macro@\texttt{<SUBSYS>\_SOAP\_SSL\_SERVER\_KEYFILE} macro}
@@ -5515,12 +5701,20 @@ refresh proxy certificates.  By default, this macro is undefined.
 %   and private key.
 %   There is no default value.
 % 
+%   The macro is named by substituting \MacroNI{<SUBSYS>}
+%   with the appropriate subsystem string as defined in
+%   section~\ref{sec:Condor-Subsystem-Names}.
+% 
 % \item[\MacroB{<SUBSYS>\_SOAP\_SSL\_SERVER\_KEYFILE\_PASSWORD}]
 %   \label{param:SubsysSoapSSLServerKeyfilePassword}
 %   \index{SUBSYS\_SOAP\_SSL\_SERVER\_KEYFILE\_PASSWORD macro@\texttt{<SUBSYS>\_SOAP\_SSL\_SERVER\_KEYFILE\_PASSWORD} macro}
 %   An optional complete path and file name to specify
 %   a password for unlocking the daemon's private key.
 %   There is no default value.
+% 
+%   The macro is named by substituting \MacroNI{<SUBSYS>}
+%   with the appropriate subsystem string as defined in
+%   section~\ref{sec:Condor-Subsystem-Names}.
 % 
 % \item[\MacroB{<SUBSYS>\_SOAP\_SSL\_CA\_FILE}]
 %   \label{param:SubsysSoapSSLCaFile}
@@ -5531,6 +5725,10 @@ refresh proxy certificates.  By default, this macro is undefined.
 %   CA will be authenticated.
 %   There is no default value.
 % 
+%   The macro is named by substituting \MacroNI{<SUBSYS>}
+%   with the appropriate subsystem string as defined in
+%   section~\ref{sec:Condor-Subsystem-Names}.
+% 
 % \item[\MacroB{<SUBSYS>\_SOAP\_SSL\_CA\_DIR}]
 %   \label{param:SubsysSoapSSLCaDir}
 %   \index{SUBSYS\_SOAP\_SSL\_CA\_DIR macro@\texttt{<SUBSYS>\_SOAP\_SSL\_CA\_DIR} macro}
@@ -5540,12 +5738,20 @@ refresh proxy certificates.  By default, this macro is undefined.
 %   CA will be authenticated.
 %   There is no default value.
 % 
+%   The macro is named by substituting \MacroNI{<SUBSYS>}
+%   with the appropriate subsystem string as defined in
+%   section~\ref{sec:Condor-Subsystem-Names}.
+% 
 % \item[\MacroB{<SUBSYS>\_SOAP\_SSL\_DH\_FILE}]
 %   \label{param:SubsysSoapSSLDhFile}
 %   \index{SUBSYS\_SOAP\_SSL\_DH\_FILE macro@\texttt{<SUBSYS>\_SOAP\_SSL\_DH\_FILE} macro}
 %   An optional complete path and file name to a DH file
 %   containing keys for a DH key exchange.
 %   There is no default value.
+% 
+%   The macro is named by substituting \MacroNI{<SUBSYS>}
+%   with the appropriate subsystem string as defined in
+%   section~\ref{sec:Condor-Subsystem-Names}.
 % 
 % \end{description}
 % 
@@ -5602,32 +5808,35 @@ File Macros}
 
 \item[\Macro{STORK\_MAX\_NUM\_JOBS}]
 \label{param:StorkMaxNumJobs}
-Limits the number of concurrent data placements handled by Stork.
-Default value = 10.
+An integer limit on the number of concurrent data placement jobs
+handled by Stork.  The default value when not defined is 10.
 
 \item[\Macro{STORK\_MAX\_RETRY}]
 \label{param:StorkMaxRetry}
-Limits the number attempts for a data placement.  For data transfers,
-this includes transfer attempts on the primary protocol and all
+An integer limit on the
+number of attempts for a single data placement job.  For data transfers,
+this includes transfer attempts on the primary protocol, all
 alternate protocols, and all retries.
-Default value = 10.
+The default value when not defined is 10.
 
 \item[\Macro{STORK\_MAXDELAY\_INMINUTES}]
 \label{param:StorkMaxDelayInMinutes}
-Limits the run time for a data placement job, after which the
-placement is considered failed.
-Units = minutes, default value = 10, minimum value = 1.
+An integer limit (in minutes) on the run time for a data placement job,
+after which the job is considered failed.
+The default value when not defined is 10,
+and the minimum legal value is 1.
 
 \item[\Macro{STORK\_TMP\_CRED\_DIR}]
 \label{param:StorkTmpCredDir}
-Temporary credential storage directory used by Stork.
-Default value = \File{/tmp}.
+The full path to the temporary credential storage directory used by Stork.
+The default value is \File{/tmp} when not defined. 
 
 \item[\Macro{STORK\_MODULE\_DIR}]
 \label{param:StorkModuleDir}
-Directory containing Stork modules.  If not defined, the value for the
-\Macro{LIBEXEC} macro is used.  It is a fatal error for
-both of these macros to be undefined.
+The full path to the directory containing Stork modules.
+The default value when not defined is 
+as defined by \MacroUNI{LIBEXEC}.  It is a fatal error for
+both \MacroNI{STORK\_MODULE\_DIR} and \MacroNI{LIBEXEC} to be undefined.
 
 \end{description}
 

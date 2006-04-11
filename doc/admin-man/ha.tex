@@ -171,7 +171,7 @@ have a \Condor{collector} daemon running;
 these are the idle central managers.
 
 All submit and execute machines are configured to report
-to all potential central managers machines.
+to all potential central manager machines.
 
 Each potential central manager machine runs the high
 availability daemon, \Condor{had}.
@@ -231,16 +231,23 @@ and it operates based only on first
 A lack of executing daemons does \emph{not}
 cause the protocol to choose or use a new active central manager. 
 
-%In order for all machines in the pool to take advantage of the high
-%availability capability, they all should run the version of Condor
-%with implemented High Availability mechanism. However, the machines
-%running older versions of Condor will still function properly after
-%upgrade, as long as the machine which served a central manager before
-%the upgrade is configured as primary central manager. Having said
-%that, the machines with the older version will not be able to take
-%advantage of the central manager fail-over, and will suffer from the
-%old problems in case of failure of the central manager
+The central manager machine contains state information,
+and this includes information about user priorities.
+The information is kept in a single file, 
+and is used by the central manager machine.
+Should the primary central manager fail,
+a pool with high availability enabled would lose this information
+(and continue operation, but with re-initialized priorities). 
+Therefore, the \Condor{replication} daemon exists
+to replicate this file on all potential central manager machines.
+This daemon promulgates the file in a way that is safe from error,
+and more secure than dependence on a shared file system copy.
 
+The \Condor{replication} daemon runs on each
+potential central manager machine as well as on
+the active central manager machine.
+There is a unidirectional communication between the \Condor{had}
+daemon and the \Condor{replication} daemon on each machine.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:HA-configuration} Configuration} 
@@ -258,19 +265,20 @@ for definitions of these configuration variables.
 The stabilization period is the time it takes for the 
 \Condor{had} daemons
 to detect a change in the pool state such as
-a active central manager failure
+an active central manager failure
 or network partition, and recover from this change.
 It may be computed using the following formula:
 \footnotesize
 \begin{verbatim}
-stabilization period = 12 * (number of central managers) * HAD_CONNECTION_TIMEOUT
+stabilization period = 12 * (number of central managers) *
+                          $(HAD_CONNECTION_TIMEOUT)
 \end{verbatim}
 \normalsize
 
 
 To disable the high availability of central managers mechanism,
 it is sufficient to remove
-\Expr{HAD} and \Expr{NEGOTIATOR} from the
+\Expr{HAD}, \Expr{REPLICATION},  and \Expr{NEGOTIATOR} from the
 \MacroNI{DAEMON\_LIST} configuration variable on all machines,
 leaving only one \Condor{negotiator} in the pool. 
 
@@ -279,31 +287,45 @@ follow the given steps.
 All commands must be invoked
 from a host which has administrative permissions
 on all central managers.
-The first two commands kill all \Condor{had}
+The first three commands kill all \Condor{had},
+\Condor{replication},
 and all running \Condor{negotiator} daemons.
 The last command is invoked on the host where the
 single \Condor{negotiator} daemon is to run.
 
 \begin{enumerate}
 \item \verb@condor_off -all -neg@
-\item \verb@condor_off -all -had@
+\item \verb@condor_off -all -subsystem -replication@
+\item \verb@condor_off -all -subsystem -had@
 \item \verb@condor_on -neg@
 \end{enumerate}
 
 When configuring \Condor{had} to control the \Condor{negotiator},
-the default backoff constant value is too small, and can result in
-a ``churning'' of the negotitor, especially in cases in which the
-primary negotiator is unable to run due to misconfiguration, etc.
+if the default backoff constant value is too small, it can result in
+a churning of the \Condor{negotiator}, especially in cases in which the
+primary negotiator is unable to run due to misconfiguration.
 In these cases, the \Condor{master} will kill the \Condor{had} after
 the \Condor{negotiator} exists, wait a short period, then restart
-\Condor{had}.  The \Condor{had} will then ``win'' the election, so
+\Condor{had}.  The \Condor{had} will then win the election, so
 the secondary \Condor{negotiator} will be killed, and the primary
 will be restarted, only to exit again.  If this happens to quickly,
-neither negotiator will run long enough to complete a negotiation
+neither \Condor{negotiator} will run long enough to complete a negotiation
 cycle, resulting in no jobs getting started.  Increasing this value
 via \Macro{MASTER\_HAD\_BACKOFF\_CONSTANT}
 to be larger than a typical negotiation cycle can help solve this
 problem.
+
+To run a high availability pool without the replication feature,
+do the following operations:
+\begin{enumerate}
+  \item Set the \Macro{HAD\_USE\_REPLICATION} configuration 
+  variable to \Expr{false},
+  and thus disable the replication on configuration level.
+
+  \item Remove \Expr{REPLICATION} from both \MacroNI{DAEMON\_LIST} and
+  \MacroNI{DC\_DAEMON\_LIST} in the configuration file.
+\end{enumerate}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:HA-sample-config} Sample Configuration} 
@@ -350,6 +372,20 @@ COLLECTOR_HOST = $(CENTRAL_MANAGER1),$(CENTRAL_MANAGER2)
 HAD_PORT = 51450
 HAD_ARGS = -p $(HAD_PORT)
 
+## The following macro defines the port number condor_replication will listen
+## on on this machine. This port should match the port number specified
+## for that replication daemon in the REPLICATION_LIST
+## Port number is arbitrary (make sure no collision with other applications)
+## This is a sample port number
+REPLICATION_PORT = 41450
+REPLICATION_ARGS = -p $(REPLICATION_PORT)
+
+## The following list must contain the same addresses
+## as HAD_LIST. In addition, for each hostname, it should specify 
+## the port number of condor_replication daemon running on that host.
+## This parameter is mandatory and has no default value
+REPLICATION_LIST = $(CENTRAL_MANAGER1):$(REPLICATION_PORT),$(CENTRAL_MANAGER2):$( REPLICATION_PORT)
+
 ## The following list must contain the same addresses in the same order 
 ## as COLLECTOR_HOST. In addition, for each hostname, it should specify 
 ## the port number of condor_had daemon running on that host.
@@ -392,10 +428,34 @@ HOSTALLOW_NEGOTIATOR = $(COLLECTOR_HOST)
 
 ## The location of executable files
 HAD = $(SBIN)/condor_had
+REPLICATION = $(SBIN)/condor_replication
+
 ## the master should start at least these four daemons
 DAEMON_LIST = MASTER, COLLECTOR, NEGOTIATOR, HAD
 ## DC_Daemon list should contain at least these four
 DC_DAEMON_LIST = MASTER, COLLECTOR, NEGOTIATOR, HAD
+
+## Enables/disables the replication feature of HAD daemon
+## Default: no
+HAD_USE_REPLICATION = true
+
+## Name of the file from the SPOOL directory that will be replicated
+## Default: $(SPOOL)/Accountantnew.log
+STATE_FILE = $(SPOOL)/Accountantnew.log
+
+## Period of time between two successive awakenings of the replication daemon
+## Default: 300
+REPLICATION_INTERVAL = 300
+
+# Period of time, in which transferer daemons have to accomplish the 
+## downloading/uploading process
+## Default: 300
+MAX_TRANSFERER_LIFETIME = 300
+
+## Period of time between two successive sends of classads to the collector by HAD
+## Default: 300
+HAD_UPDATE_INTERVAL = 300
+
 
 ## The HAD controlls the negotiator, and should have a larger
 ## backoff constant
@@ -408,6 +468,13 @@ MAX_HAD_LOG = 640000
 HAD_DEBUG = D_COMMAND
 ## location of the condor_had log file
 HAD_LOG = $(LOG)/HADLog
+
+## The size of replication log file
+MAX_REPLICATION_LOG = 640000
+## Replication debug level 
+REPLICATION_DEBUG = D_COMMAND
+## Replication log file
+REPLICATION_LOG = $(LOG)/ReplicationLog
 
 \end{verbatim}
 \normalsize
