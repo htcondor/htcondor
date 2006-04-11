@@ -63,9 +63,10 @@ sub make_dir {
     opendir( DIR, "$root/$dir" );
     foreach $file ( readdir(DIR) ) {
 	# Skip over ".", "..", and "CVS", but allow other dot files
-	next if( $file =~ /^\.$/ );
-	next if( $file =~ /^\.\.$/ );
+	next if( $file eq "." );
+	next if( $file eq ".." );
 	next if( $file =~ /^CVS/ );
+	next if( $file =~ /~$/ );	# skip emacs backup files
 	if( -d "$root/$dir/$file" ) {
 	    # It's a directory we're about to create, so just call
 	    # ourself recursively to do the job.
