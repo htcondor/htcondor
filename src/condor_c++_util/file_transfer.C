@@ -1305,17 +1305,21 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 	// find out if this is the final download.  if so, we put the files
 	// into the user's Iwd instead of our SpoolSpace.
 	if( !s->code(final_transfer) ) {
+		dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
 		return_and_resetpriv( -1 );
 	}
 //	dprintf(D_FULLDEBUG,"TODD filetransfer DoDownload final_transfer=%d\n",final_transfer);
 	if( !s->end_of_message() ) {
+		dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
 		return_and_resetpriv( -1 );
 	}	
 	for (;;) {
 		if( !s->code(reply) ) {
+			dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
 			return_and_resetpriv( -1 );
 		}
 		if( !s->end_of_message() ) {
+			dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
 			return_and_resetpriv( -1 );
 		}
 		dprintf( D_SECURITY, "FILETRANSFER: incoming file_command is %i\n", reply);
@@ -1331,6 +1335,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		}
 
 		if( !s->code(p_filename) ) {
+			dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
 			return_and_resetpriv( -1 );
 		}
 
@@ -1397,6 +1402,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		}
 
 		if( rc < 0 ) {
+			dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
 			return_and_resetpriv( -1 );
 		}
 		if ( want_fsync ) {
@@ -1589,9 +1595,11 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 	// if it is the final transfer, the server places the files
 	// into the user's Iwd.  if not, the files go into SpoolSpace.
 	if( !s->code(m_final_transfer_flag) ) {
+		dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",__LINE__);
 		return_and_resetpriv( -1 );
 	}
 	if( !s->end_of_message() ) {
+		dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",__LINE__);
 		return_and_resetpriv( -1 );
 	}
 	if ( filelist ) {
