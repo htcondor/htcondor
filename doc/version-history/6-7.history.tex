@@ -42,6 +42,12 @@ remotely, the old behavior can be forced by setting
 \Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS} to False in the configuration
 file.
 
+\item Condor daemons now touch their daemon log file periodically. When
+a daemon starts up, it prints to the log the last time the log file was
+modified. This lets an admin estimate when a daemon stopped running.
+The configuration parameter \Macro{TOUCH\_LOG\_INTERVAL} sets the time
+between touches (in seconds) and defaults to 60 seconds.
+
 \item Added the ability to pass a specific \Condor{config\_val} program
 to the cron/Hawkeye ``modules''.  If ``HAWKEYE\_CONFIG\_VAL'' is
 specified in the configuration, an environment variable with the same
