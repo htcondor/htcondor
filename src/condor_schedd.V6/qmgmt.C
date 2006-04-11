@@ -2277,12 +2277,11 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 				}
 			}
 
-			while( !no_startd_ad && !attribute_not_found &&
+			while( !attribute_not_found &&
 					get_var(attribute_value,&left,&name,&right,NULL,true) )
 			{
 				if (!startd_ad && job_universe != CONDOR_UNIVERSE_GRID) {
 					no_startd_ad = true;
-					break;
 				}
 
 				// If the name contains a colon, then it
@@ -2308,7 +2307,6 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 					value_came_from_jobad = false;
 				} else {
 						// No startd ad -- use value from last match.
-						// Note: we will only do this for GRID universe.
 					MyString expr;
 					expr = "MATCH_";
 					expr += name;
@@ -2358,22 +2356,15 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 					MyString expr;
 					expr = "MATCH_";
 					expr += name;
-						// If we are GRID universe, we must
-						// store the values from the startd ad
-						// persistantly to disk right now.  
-						// If any other universe, just updating
-						// our RAM image is fine since we will get
-						// a new match every time.
-					if ( job_universe == CONDOR_UNIVERSE_GRID ) {
-						if ( SetAttribute(cluster_id,proc_id,expr.Value(),tvalue) < 0 )
-						{
-							EXCEPT("Failed to store %s into job ad %d.%d",
-								expr.Value(),cluster_id,proc_id);
-						}
-					} else {
-						expr += "=";
-						expr += tvalue;
-						ad->Insert(expr.Value());
+
+					// We used to only bother saving the MATCH_ entry for
+					// the GRID universe, but we now need it for flocked
+					// jobs using disconnected starter-shadow (job-leases).
+					// So just always do it.
+					if ( SetAttribute(cluster_id,proc_id,expr.Value(),tvalue) < 0 )
+					{
+						EXCEPT("Failed to store %s into job ad %d.%d",
+							expr.Value(),cluster_id,proc_id);
 					}
 				}
 				// skip any quotation marks around strings
@@ -2413,7 +2404,7 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 		}
 
 
-		if ( no_startd_ad || attribute_not_found ) {
+		if ( attribute_not_found ) {
 			MyString hold_reason;
 			hold_reason.sprintf("Cannot expand $$(%s).",name);
 
@@ -2464,6 +2455,9 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 		if ( startd_ad && job_universe != CONDOR_UNIVERSE_GRID ) {
 			// Produce an environment description that is compatible with
 			// whatever the starter expects.
+			// Note: this code path is skipped when we flock and reconnect
+			//  after a disconnection (job lease).  In this case we don't
+			//  have a startd_ad!
 
 			Env env_obj;
 
@@ -2544,7 +2538,7 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 		if ( attribute_value ) free(attribute_value);
 		if ( bigbuf2 ) free (bigbuf2);
 
-		if ( no_startd_ad || attribute_not_found )
+		if ( attribute_not_found )
 			return NULL;
 		else 
 			return expanded_ad;
