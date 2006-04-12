@@ -680,24 +680,25 @@ int ViewServer::SubmittorTotalFunc(void)
 
 int ViewServer::StartdScanFunc(ClassAd* ad)
 {
-	char Name[200];
+	char Name[200] = "";
 	char StateDesc[50];
 	float LoadAvg;
 	int KbdIdle, st;
 	
 	// Get Data From Class Ad
 
-	if (ad->LookupString(ATTR_NAME,Name)<0) return 1;
-	if (ad->LookupInteger(ATTR_KEYBOARD_IDLE,KbdIdle)<0) KbdIdle=0;
-	if (ad->LookupFloat(ATTR_LOAD_AVG,LoadAvg)<0) LoadAvg=0;
-	if (ad->LookupString(ATTR_STATE,StateDesc)<0) strcpy(StateDesc,"");
-	State StateEnum=string_to_state(StateDesc);
+	if ( !ad->LookupString(ATTR_NAME,Name) ) return 1;
+	if ( !ad->LookupInteger(ATTR_KEYBOARD_IDLE,KbdIdle) ) KbdIdle=0;
+	if ( !ad->LookupFloat(ATTR_LOAD_AVG,LoadAvg) ) LoadAvg=0;
+	if ( !ad->LookupString(ATTR_STATE,StateDesc) ) strcpy(StateDesc,"");
+	State StateEnum=string_to_state( StateDesc );
 	switch(StateEnum) {
 		case owner_state:		st=5; break;
 		case preempting_state:	st=4; break;
 		case claimed_state:		st=3; break;
 		case matched_state:		st=2; break;
 		case unclaimed_state:	st=1; break;
+		default: return 1;
 	}
 
 	// Get Group Name
@@ -711,6 +712,13 @@ int ViewServer::StartdScanFunc(ClassAd* ad)
 	// Add to group Totals
 
 	GeneralRecord* GenRec=GetAccData(GroupHash,"Total");
+	if ( ( NULL == GenRec ) || ( st < 0 ) ) {
+		dprintf( D_ALWAYS,
+				 "View collector state hosed: sd=%s, se=%d, st=%d, ad:\n",
+				 StateDesc, StateEnum, st );
+		ad->dPrint( D_ALWAYS );
+		EXCEPT( "View collector is fucked" );
+	}
 	GenRec->Data[st-1]++;
 	GenRec=GetAccData(GroupHash,GroupName);
 	GenRec->Data[st-1]++;
@@ -803,10 +811,24 @@ int ViewServer::CkptScanFunc(ClassAd* ad)
 
 GeneralRecord* ViewServer::GetAccData(AccHash* AccData,const MyString& Key)
 {
-	GeneralRecord* GenRec;
-	if (AccData->lookup(Key,GenRec)==-1) {
+	GeneralRecord* GenRec = NULL;
+	int rval;
+
+	rval = AccData->lookup( Key, GenRec );
+	if ( ( rval < 0 ) || ( GenRec == NULL ) ) {
+		if ( rval >= 0 ) {
+			dprintf( D_ALWAYS,
+					 "Hash %p lookup returned %d, but NULL record!\n",
+					 AccData, rval );
+			EXCEPT( "Bad lookup" );
+		}
 		GenRec=new GeneralRecord;
-		AccData->insert(Key,GenRec);
+		if ( GenRec == NULL ) {
+			EXCEPT( "Failed to allocate a GeneralRecord" );
+		}
+		if ( AccData->insert(Key,GenRec) < 0 ) {
+			EXCEPT( "Insert failed: Key=%s", Key.GetCStr() );
+		}
 	}
 	return GenRec;
 }
