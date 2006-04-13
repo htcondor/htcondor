@@ -31,9 +31,27 @@
 
 //---------------------------------------------------
 
+typedef enum {
+	VIEW_STATE_UNDEFINED = 0,
+	VIEW_STATE_UNCLAIMED = 1,
+	VIEW_STATE_MATCHED = 2,
+	VIEW_STATE_CLAIMED = 3,
+	VIEW_STATE_PREEMPTING = 4,
+	VIEW_STATE_OWNER = 5,
+	VIEW_STATE_SHUTDOWN = 6,
+	VIEW_STATE_DELETE = 7,
+	VIEW_STATE_BACKFILL = 8,
+
+	VIEW_STATE_MAX = VIEW_STATE_BACKFILL,
+	VIEW_STATE_MAX_OFFSET = VIEW_STATE_MAX - 1,
+} ViewStates;
 struct GeneralRecord {
-	float Data[5];
-	GeneralRecord() { Data[0]=Data[1]=Data[2]=Data[3]=Data[4]=0.0; }
+	float Data[VIEW_STATE_MAX];
+	GeneralRecord() {
+		for( int i=0; i<(int)VIEW_STATE_MAX_OFFSET; i++ ) {
+			Data[i] = 0.0;
+		}
+	};
 };
 
 //---------------------------------------------------

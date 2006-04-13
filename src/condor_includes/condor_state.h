@@ -25,7 +25,8 @@
 
 enum State { no_state=0, owner_state, unclaimed_state, matched_state, 
 			 claimed_state, preempting_state, shutdown_state,
-			 delete_state, backfill_state, 
+			 delete_state, backfill_state,
+			 _machine_max_state = backfill_state,
 			 _state_threshold_, _error_state_ }; 
 
 enum Activity { no_act=0, idle_act, busy_act, retiring_act, vacating_act,

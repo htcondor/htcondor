@@ -70,6 +70,15 @@ void ViewServer::Init()
 		free( tmp );
 	}
 
+	// We can't do this check at compile time, but we'll except if
+	// the startd states has changed and we haven't been updated
+	// to match
+	if ( (int)VIEW_STATE_MAX != (int)_machine_max_state ) {
+		EXCEPT( "_max_state=%d (from condor_state.h) doesn't match "
+				" VIEW_STATE_MAX=%d (from view_server.h)",
+				(int)_machine_max_state, (int)VIEW_STATE_MAX );
+	}
+
 	// Initialize collector daemon
 
 	CollectorDaemon::Init();
@@ -683,7 +692,7 @@ int ViewServer::StartdScanFunc(ClassAd* ad)
 	char Name[200] = "";
 	char StateDesc[50];
 	float LoadAvg;
-	int KbdIdle, st;
+	int KbdIdle;
 	
 	// Get Data From Class Ad
 
@@ -692,13 +701,37 @@ int ViewServer::StartdScanFunc(ClassAd* ad)
 	if ( !ad->LookupFloat(ATTR_LOAD_AVG,LoadAvg) ) LoadAvg=0;
 	if ( !ad->LookupString(ATTR_STATE,StateDesc) ) strcpy(StateDesc,"");
 	State StateEnum=string_to_state( StateDesc );
+
+	ViewStates st = VIEW_STATE_UNDEFINED;
 	switch(StateEnum) {
-		case owner_state:		st=5; break;
-		case preempting_state:	st=4; break;
-		case claimed_state:		st=3; break;
-		case matched_state:		st=2; break;
-		case unclaimed_state:	st=1; break;
-		default: return 1;
+	case owner_state:
+		st=VIEW_STATE_OWNER;
+		break;
+	case preempting_state:
+		st=VIEW_STATE_PREEMPTING;
+		break;
+	case claimed_state:
+		st=VIEW_STATE_CLAIMED;
+		break;
+	case matched_state:
+		st=VIEW_STATE_MATCHED;
+		break;
+	case unclaimed_state:
+		st=VIEW_STATE_UNCLAIMED;
+		break;
+	case shutdown_state:
+		st=VIEW_STATE_SHUTDOWN;
+		break;
+	case delete_state:
+		st=VIEW_STATE_DELETE;
+		break;
+	case backfill_state:
+		st=VIEW_STATE_BACKFILL;
+		break;
+	default:
+		EXCEPT( "Unknown machine state %d from '%s'",
+				(int)StateEnum, Name );
+		return 0;
 	}
 
 	// Get Group Name
@@ -711,23 +744,26 @@ int ViewServer::StartdScanFunc(ClassAd* ad)
 
 	// Add to group Totals
 
-	GeneralRecord* GenRec=GetAccData(GroupHash,"Total");
-	if ( ( NULL == GenRec ) || ( st < 0 ) ) {
-		dprintf( D_ALWAYS,
-				 "View collector state hosed: sd=%s, se=%d, st=%d, ad:\n",
-				 StateDesc, StateEnum, st );
-		ad->dPrint( D_ALWAYS );
-		EXCEPT( "View collector is fucked" );
+	int group_index = (int)st - 1;
+	if( group_index > (int)VIEW_STATE_MAX_OFFSET ) {
+		EXCEPT( "Invalid group_index = %d (max %d)",
+				group_index, (int)VIEW_STATE_MAX_OFFSET );
 	}
-	GenRec->Data[st-1]++;
+	GeneralRecord* GenRec=GetAccData(GroupHash,"Total");
+	ASSERT( GenRec );
+	GenRec->Data[group_index] += 1.0;
+
 	GenRec=GetAccData(GroupHash,GroupName);
-	GenRec->Data[st-1]++;
+	ASSERT( GenRec );
+	GenRec->Data[group_index] += 1.0;
 	
 	// Add to accumulated data
 
 	int NumSamples;
 	for (int j=0; j<HistoryLevels; j++) {
 		GenRec=GetAccData(DataSet[StartdData][j].AccData, Name);
+		ASSERT( GenRec );
+
 		NumSamples=DataSet[StartdData][j].NumSamples;
 		GenRec->Data[0]=(GenRec->Data[0]*NumSamples+KbdIdle)/(NumSamples+1);
 		GenRec->Data[1]=(GenRec->Data[1]*NumSamples+LoadAvg)/(NumSamples+1);
@@ -755,7 +791,7 @@ int ViewServer::StartdTotalFunc(void)
 		for (int j=0; j<HistoryLevels; j++) {
 			AccValue=GetAccData(DataSet[GroupsData][j].AccData, GroupName);
 			NumSamples=DataSet[GroupsData][j].NumSamples;
-			for (int k=0; k<5; k++) {
+			for (int k=0; k<(int)VIEW_STATE_MAX; k++) {
 				AccValue->Data[k]=(AccValue->Data[k]*NumSamples+CurValue->Data[k])/(NumSamples+1);
 			}
 		}
