@@ -224,7 +224,7 @@ class Scheduler : public Service
 	void			reschedule_negotiator(int, Stream *);
 	void			vacate_service(int, Stream *);
 	AutoCluster		autocluster;
-	void			sendReschedule( void );
+	void			sendReschedule( bool checkRecent = true );
 
 	// job managing
 	int				abort_job(int, Stream *);

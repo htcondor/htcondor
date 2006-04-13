@@ -2452,7 +2452,7 @@ DedicatedScheduler::addReconnectAttributes(AllocationNode *allocation)
 
 			char *hosts_str = remoteHosts.print_to_string();
 			if ( hosts_str ) {
-				SetAttributeString(allocation->cluster, p, "RemoteHosts", hosts_str);
+				SetAttributeString(allocation->cluster, p, ATTR_REMOTE_HOSTS, hosts_str);
 				free(hosts_str);
 				hosts_str = NULL;
 			}
@@ -3661,7 +3661,7 @@ DedicatedScheduler::requestResources( void )
 			// to ask to negotiate for them...
 		displayResourceRequests();
 		publishRequestAd();
-		scheduler.sendReschedule();
+		scheduler.sendReschedule(true);
 	} else {
 			// We just want to publish another add to let the
 			// negotiator know we're satisfied.
@@ -4103,7 +4103,7 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 		}
 
 		char *remote_hosts = NULL;
-		GetAttributeStringNew(id.cluster, id.proc, "RemoteHosts", &remote_hosts);
+		GetAttributeStringNew(id.cluster, id.proc, ATTR_REMOTE_HOSTS, &remote_hosts);
 
 		StringList hosts(remote_hosts);
 
@@ -4187,7 +4187,7 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 			// 3.) Call createAllocations to do the rest  
 
 		char *remote_hosts = NULL;
-		GetAttributeStringNew(id.cluster, id.proc, "RemoteHosts", &remote_hosts);
+		GetAttributeStringNew(id.cluster, id.proc, ATTR_REMOTE_HOSTS, &remote_hosts);
 
 		char *claims = NULL;
 		GetAttributeStringNew(id.cluster, id.proc, "ClaimIds", &claims);

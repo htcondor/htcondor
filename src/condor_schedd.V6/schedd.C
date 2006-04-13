@@ -10210,15 +10210,17 @@ Scheduler::reschedule_negotiator(int, Stream *)
 
 
 void
-Scheduler::sendReschedule( void )
+Scheduler::sendReschedule( bool checkRecent /* = true */ )
 {
 		// MIN_RESCHEDULE_GAP: If we've sent a reschedule request in the
 		// last MIN_RESCHEDULE_GAP second
-	const int MIN_RESCHEDULE_GAP = 30;
-	time_t now = time(0);
-	if( (last_reschedule_request + MIN_RESCHEDULE_GAP) > now ) {
-		dprintf( D_FULLDEBUG, "Skipping RESCHEDULE as optimization: sent one %d seconds ago and still haven't heard from negotiatator.  Will not reschedule more frequently than every %d seconds\n", (int)(now - last_reschedule_request), MIN_RESCHEDULE_GAP);
-		return;
+	if( checkRecent) {
+		const int MIN_RESCHEDULE_GAP = 30;
+		time_t now = time(0);
+		if( (last_reschedule_request + MIN_RESCHEDULE_GAP) > now ) {
+			dprintf( D_FULLDEBUG, "Skipping RESCHEDULE as optimization: sent one %d seconds ago and still haven't heard from negotiatator.  Will not reschedule more frequently than every %d seconds\n", (int)(now - last_reschedule_request), MIN_RESCHEDULE_GAP);
+			return;
+		}
 	}
 	dprintf( D_FULLDEBUG, "Sending RESCHEDULE command to negotiator(s)\n" );
 

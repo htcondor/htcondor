@@ -341,6 +341,7 @@ const char ATTR_RANK					 [] = "Rank";
 const char ATTR_REAL_UID				 [] = "RealUid";
 const char ATTR_RELEASE_REASON			 [] = "ReleaseReason";
 const char ATTR_REMOTE_HOST				 [] = "RemoteHost";
+const char ATTR_REMOTE_HOSTS			 [] = "RemoteHosts";
 const char ATTR_REMOTE_JOB_ID			 [] = "RemoteJobId";
 const char ATTR_REMOTE_OWNER			 [] = "RemoteOwner";
 const char ATTR_REMOTE_POOL				 [] = "RemotePool";
