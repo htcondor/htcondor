@@ -132,6 +132,13 @@ void ViewServer::Init()
 
 	// File data format
 
+	// Note that the printf format for GroupsData does not print out
+	// the data above offset 5 (in fact, they aren't even being pushed
+	// onto the stack in WriteHistory().  This is because we're not
+	// sure what effect adding the state outputs would have on the
+	// rest of the condor_stats tool chain.  This may be fixed in the
+	// future once all of the interactions are better understood.
+
 	DataFormat[SubmittorData]="%d\t%s\t:\t%.0f\t%.0f\n";
 	DataFormat[SubmittorGroupsData]="%d\t%s\t:\t%.0f\t%.0f\n";
 	DataFormat[StartdData]="%d\t%s\t:\t%.0f\t%7.3f\t%.0f\n";
@@ -703,7 +710,7 @@ int ViewServer::StartdScanFunc(ClassAd* ad)
 	State StateEnum=string_to_state( StateDesc );
 
 	// This block should be kept in sync with view_server.h and
-	// condor_state.h
+	// condor_state.h.
 	ViewStates st = VIEW_STATE_UNDEFINED;
 	switch(StateEnum) {
 	case owner_state:
@@ -745,6 +752,9 @@ int ViewServer::StartdScanFunc(ClassAd* ad)
 	GroupName+=tmp;
 
 	// Add to group Totals
+	// NRL: I'm not sure exactly what this block of code does, but
+	// now it at least does it safely.  It's obviously updating
+	// the GroupHash <group name> and "Total" chunks.
 
 	int group_index = (int)st - 1;
 	if( group_index > (int)VIEW_STATE_MAX_OFFSET ) {
