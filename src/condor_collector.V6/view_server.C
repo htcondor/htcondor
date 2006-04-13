@@ -702,6 +702,8 @@ int ViewServer::StartdScanFunc(ClassAd* ad)
 	if ( !ad->LookupString(ATTR_STATE,StateDesc) ) strcpy(StateDesc,"");
 	State StateEnum=string_to_state( StateDesc );
 
+	// This block should be kept in sync with view_server.h and
+	// condor_state.h
 	ViewStates st = VIEW_STATE_UNDEFINED;
 	switch(StateEnum) {
 	case owner_state:

@@ -23,6 +23,9 @@
 #ifndef _CONDOR_STATE_H
 #define _CONDOR_STATE_H
 
+// Note: This should be kept in sync with view_server.h and view_server.C
+// Also note that if you add a state, you should update
+// _machine_max_state to match
 enum State { no_state=0, owner_state, unclaimed_state, matched_state, 
 			 claimed_state, preempting_state, shutdown_state,
 			 delete_state, backfill_state,
