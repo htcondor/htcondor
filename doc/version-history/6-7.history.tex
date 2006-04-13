@@ -86,6 +86,11 @@ allows it to run on Windows without being a service.
 
 \begin{itemize}
 
+\item Fixed a bug in the \Condor{collector} that could cause it to
+crash if it's configured as a view collector
+(i.e. \Macro{KEEP\_POOL\_HISTORY} is TRUE).  In particular, machine
+ads with a State value of ``Backfill'' could trigger this crash.
+
 \item Disconnected starter-shadow connections (job leases) now work for flocked jobs.
 
 \item Fixed numeric value wrap-around bug for the totals in \Condor{status}.
