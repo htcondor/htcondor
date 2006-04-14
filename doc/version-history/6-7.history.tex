@@ -42,6 +42,12 @@ remotely, the old behavior can be forced by setting
 \Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS} to False in the configuration
 file.
 
+\item Added configuration parameter \Macro{NO\_DNS}, which allows Condor
+to work on machines with no DNS. When this option is set to True, Condor
+will use pseudo-hostnames constructed from a machine's IP address and
+\Macro{DEFAULT\_DOMAIN\_NAME}, rather than attempting to resolve hostnames
+into IP addresses and vice-versa.
+
 \item Condor daemons now touch their daemon log file periodically. When
 a daemon starts up, it prints to the log the last time the log file was
 modified. This lets an admin estimate when a daemon stopped running.
