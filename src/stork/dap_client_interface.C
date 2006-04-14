@@ -32,6 +32,7 @@
 #include "dap_server_interface.h"
 #include "condor_version.h"
 #include "condor_debug.h"
+#include "condor_netdb.h"
 
 char * 
 get_stork_sinful_string (const char * hostname) {
@@ -47,7 +48,7 @@ get_stork_sinful_string (const char * hostname) {
   // Lookup ip
   struct hostent *phe = NULL;
   if (host) {
-    phe=gethostbyname(host);
+    phe=condor_gethostbyname(host);
   }
   if (!phe) {
     return NULL;

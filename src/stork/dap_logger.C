@@ -32,6 +32,7 @@
 #include "dap_error.h"
 #include "dap_server_interface.h"
 #include "user_log.c++.h"
+#include "condor_netdb.h"
 
 extern char *clientagenthost;
 
@@ -267,7 +268,7 @@ int send_log_to_client_agent(const char *log)
   struct hostent* client;
   int dap_conn;
 
-  if ( (client = gethostbyname(clientagenthost)) == NULL ){
+  if ( (client = condor_gethostbyname(clientagenthost)) == NULL ){
     fprintf(stderr, "Cannot get address for host %s\n",clientagenthost);
     return DAP_ERROR;
     //exit(1);	

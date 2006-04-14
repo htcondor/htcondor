@@ -75,6 +75,7 @@ All rights reserved.
 //////////////// Includes ////////////////////////////////////////////
 #include "stdafx.h"
 #include "smtp.h"
+#include "condor_netdb.h"
 
 
 //////////////// Macros / Locals /////////////////////////////////////
@@ -130,7 +131,7 @@ BOOL CSMTPSocket::Connect(LPCTSTR pszHostAddress, int nPort)
 	if (sockAddr.sin_addr.s_addr == INADDR_NONE)
 	{
 		LPHOSTENT lphost;
-		lphost = gethostbyname(lpszAscii);
+		lphost = condor_gethostbyname(lpszAscii);
 		if (lphost != NULL)
 			sockAddr.sin_addr.s_addr = ((LPIN_ADDR)lphost->h_addr)->s_addr;
 		else
@@ -661,7 +662,7 @@ BOOL CSMTPConnection::Connect(LPCTSTR pszHostName, int nPort)
 
 		//retreive the localhost name
     char sHostName[100];
-		gethostname(sHostName, sizeof(sHostName));
+		condor_gethostname(sHostName, sizeof(sHostName));
     TCHAR* pszHostName = A2T(sHostName);
 
     //Send the HELO command

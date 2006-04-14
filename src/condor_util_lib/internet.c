@@ -36,6 +36,7 @@
 #include "condor_config.h"
 #include "get_port_range.h"
 #include "condor_socket_types.h"
+#include "condor_netdb.h"
 
 int bindWithin(const int fd, const int low_port, const int high_port);
 
@@ -68,7 +69,7 @@ string_to_sin( const char *addr, struct sockaddr_in *sin )
 	}
 	*colon = '\0';
 	if ( is_ipaddr(string,NULL) != TRUE &&	// only call gethostbyname if not numbers
-		((hostptr=gethostbyname(string)) != NULL && hostptr->h_addrtype==AF_INET) )
+		((hostptr=condor_gethostbyname(string)) != NULL && hostptr->h_addrtype==AF_INET) )
 	{
 			sin->sin_addr = *(struct in_addr *)(hostptr->h_addr_list[0]);
 			string = colon + 1;
@@ -143,9 +144,6 @@ char *
 sin_to_hostname( const struct sockaddr_in *from, char ***aliases)
 {
     struct hostent  *hp;
-#ifndef WIN32
-	struct hostent  *gethostbyaddr();
-#endif
     struct sockaddr_in caddr;
 
 	if( !from ) {
@@ -160,7 +158,7 @@ sin_to_hostname( const struct sockaddr_in *from, char ***aliases)
         caddr.sin_addr.s_addr = my_ip_addr();
     }
 
-    if( (hp=gethostbyaddr((char *)&caddr.sin_addr,
+    if( (hp=condor_gethostbyaddr((char *)&caddr.sin_addr,
                 sizeof(struct in_addr), AF_INET)) == NULL ) {
 		// could not find a name for this address
         return NULL;
@@ -181,9 +179,6 @@ display_from( from )
 struct sockaddr_in  *from;
 {
     struct hostent  *hp;
-#ifndef WIN32
-	struct hostent  *gethostbyaddr();
-#endif
     struct sockaddr_in caddr;
 
 	if( !from ) {
@@ -198,7 +193,7 @@ struct sockaddr_in  *from;
         caddr.sin_addr.s_addr = my_ip_addr();
     }
 
-    if( (hp=gethostbyaddr((char *)&caddr.sin_addr,
+    if( (hp=condor_gethostbyaddr((char *)&caddr.sin_addr,
                 sizeof(struct in_addr), AF_INET)) == NULL ) {
         dprintf( D_ALWAYS, "from (%s), port %d\n",
             inet_ntoa(caddr.sin_addr), ntohs(caddr.sin_port) );
@@ -254,14 +249,14 @@ same_host(const char *h1, const char *h2)
 		return TRUE;
 	}
 	
-	if ((he1 = gethostbyname(h1)) == NULL) {
+	if ((he1 = condor_gethostbyname(h1)) == NULL) {
 		return -1;
 	}
 
 	// stash h_name before our next call to gethostbyname
 	strncpy(cn1, he1->h_name, MAXHOSTNAMELEN);
 
-	if ((he2 = gethostbyname(h2)) == NULL) {
+	if ((he2 = condor_gethostbyname(h2)) == NULL) {
 		return -1;
 	}
 

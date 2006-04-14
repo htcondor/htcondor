@@ -56,6 +56,7 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_uid.h"
+#include "condor_netdb.h"
 
 #if !defined(WIN32)
 #include <sys/types.h>
@@ -218,7 +219,7 @@ char* gethostnamebyaddr(struct in_addr* addr)
 {
   struct hostent* h;
 
-  h = gethostbyaddr((char*)addr, sizeof(struct in_addr), AF_INET);
+  h = condor_gethostbyaddr((char*)addr, sizeof(struct in_addr), AF_INET);
   if (h == NULL)
     {
       fprintf(stderr, "\nERROR:\n");

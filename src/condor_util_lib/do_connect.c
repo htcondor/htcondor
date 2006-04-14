@@ -25,6 +25,7 @@
 #include "internet.h"
 #include "condor_debug.h"
 #include "condor_socket_types.h"
+#include "condor_netdb.h"
 
 /*
  * FYI: This code is used by the old shadow/starter and by the syscall lib
@@ -76,7 +77,7 @@ do_connect_with_timeout( const char* host, const char* service,
     if (host[0]=='<'){ /* dhaval */
     	string_to_sin(host,&sin);
     } else {
-		hostentp = gethostbyname( host );
+		hostentp = condor_gethostbyname( host );
 		if( hostentp == NULL ) {
 		#if defined(vax) && !defined(ultrix)
 			herror( "gethostbyname" );
@@ -120,7 +121,7 @@ udp_connect( char* host, u_short port )
 	struct sockaddr_in	sin;
 	struct hostent		*hostentp;
 
-	hostentp = gethostbyname( host );
+	hostentp = condor_gethostbyname( host );
 	if( hostentp == NULL ) {
 #if defined(vax) && !defined(ultrix)
 		herror( "gethostbyname" );

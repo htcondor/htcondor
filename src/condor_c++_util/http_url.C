@@ -25,6 +25,7 @@
 #include "url_condor.h"
 #include "internet.h"
 #include "condor_debug.h"
+#include "condor_netdb.h"
 
 #define HTTP_PORT	80
 
@@ -106,7 +107,7 @@ int open_http( const char *name, int flags, size_t n_bytes )
 	}
 	sin.sin_port = htons(port_num);
 
-	he = gethostbyname( name );
+	he = condor_gethostbyname( name );
 	if ( he ) {
 		sin.sin_family = he->h_addrtype;
 		sin.sin_addr = *((struct in_addr *) he->h_addr_list[0]);

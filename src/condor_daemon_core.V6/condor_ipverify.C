@@ -25,6 +25,7 @@
 #include "internet.h"
 #include "condor_config.h"
 #include "condor_perms.h"
+#include "condor_netdb.h"
 
 // Externs to Globals
 extern char* mySubSystem;	// the subsys ID, such as SCHEDD, STARTD, etc. 
@@ -468,7 +469,7 @@ IpVerify::add_host_entry( const char* addr, int mask )
             result = false;
         } else {
             // No wildcards; resolve the name
-			if ( (hostptr=gethostbyname(host)) != NULL) {
+			if ( (hostptr=condor_gethostbyname(host)) != NULL) {
 				if ( hostptr->h_addrtype == AF_INET ) {
 					for (int i=0; hostptr->h_addr_list[i]; i++) {
 						add_hash_entry( (*(struct in_addr *)

@@ -74,6 +74,7 @@
 #include "schedd_cronmgr.h"
 #include "misc_utils.h"  // for startdClaimFile()
 //#include "condor_crontab.h"
+#include "condor_netdb.h"
 
 
 #define DEFAULT_SHADOW_SIZE 125
@@ -4381,7 +4382,7 @@ Scheduler::negotiate(int command, Stream* s)
 			dprintf(D_ALWAYS, "Negotiator hostname lookup failed!\n");
 			return (!(KEEP_STREAM));
 		}
-		hent = gethostbyname(negotiator_hostname);
+		hent = condor_gethostbyname(negotiator_hostname);
 		if (!hent) {
 			dprintf(D_ALWAYS, "gethostbyname for local negotiator (%s) failed!"
 					"  Aborting negotiation.\n", negotiator_hostname);
@@ -4400,7 +4401,7 @@ Scheduler::negotiate(int command, Stream* s)
 			int n;
 			for( n=1, FlockNegotiators->rewind();
 				 !match && FlockNegotiators->next(neg_host); n++) {
-				hent = gethostbyname(neg_host->fullHostname());
+				hent = condor_gethostbyname(neg_host->fullHostname());
 				if (hent && hent->h_addrtype == AF_INET) {
 					for (int a=0;
 						 !match && (addr = hent->h_addr_list[a]);
@@ -6061,7 +6062,7 @@ Scheduler::RequestBandwidth(int cluster, int proc, match_rec *rec)
 		request.Insert(buf);
 		if ((GetAttributeString(cluster, proc,
                                 ATTR_LAST_CKPT_SERVER, source)) == 0) {
-			struct hostent *hp = gethostbyname(source);
+			struct hostent *hp = condor_gethostbyname(source);
 			if (!hp) {
 				dprintf(D_FAILURE|D_ALWAYS, "DNS lookup for %s %s failed!\n",
 						ATTR_LAST_CKPT_SERVER, source);

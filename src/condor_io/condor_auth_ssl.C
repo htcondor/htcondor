@@ -31,6 +31,7 @@
 #include "CondorError.h"
 #include "get_full_hostname.h"
 #include "openssl/rand.h"
+#include "condor_netdb.h"
 
 Condor_Auth_SSL :: Condor_Auth_SSL(ReliSock * sock, int remote)
     : Condor_Auth_Base    ( sock, CAUTH_SSL )
@@ -68,10 +69,10 @@ int Condor_Auth_SSL::authenticate(const char * remoteHost, CondorError* errstack
     /* After some discussion with Zach, we don't actually do any checking
        that involves the host name, so whatever...
     const char *peerHostAddr = getRemoteHost();
-    struct hostent *he = gethostbyname(peerHostAddr);
+    struct hostent *he = condor_gethostbyname(peerHostAddr);
     dprintf(D_SECURITY,"Peer addr: '%s'\n", peerHostAddr);
     const char *peerHostName = get_full_hostname_from_hostent(
-        gethostbyaddr(he->h_addr, sizeof he->h_addr, AF_INET), NULL);
+        condor_gethostbyaddr(he->h_addr, sizeof he->h_addr, AF_INET), NULL);
     dprintf(D_SECURITY,"Got hostname for peer: '%s'\n", peerHostName);
     */
     

@@ -191,6 +191,15 @@ LOCK		= $(LOG)
 ##  the global config file (not the LOCAL_CONFIG_FILE from above). 
 #DEFAULT_DOMAIN_NAME = your.domain.name
 
+##  If you don't have DNS set up, Condor will normally fail in many
+##  places because it can't resolve hostnames to IP addresses and
+##  vice-versa. If you enable this option, Condor will use
+##  pseudo-hostnames constructed from a machine's IP address and the
+##  DEFAULT_DOMAIN_NAME. Both NO_DNS and DEFAULT_DOMAIN must set in
+##  your top-level config file for this mode of operation to work
+##  properly.
+#NO_DNS = True
+
 ##  Condor can be told whether or not you want the Condor daemons to
 ##  create a core file if something really bad happens.  This just
 ##  sets the resource limit for the size of a core file.  By default,

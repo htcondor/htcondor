@@ -26,6 +26,7 @@
 #include "condor_string.h"
 #include "condor_config.h"
 #include "internet.h"
+#include "condor_netdb.h"
 
 
 char* get_full_hostname_from_hostent( struct hostent* host_ptr,
@@ -74,7 +75,7 @@ get_full_hostname( const char* host, struct in_addr* sin_addrp )
 	}
 
 	dprintf( D_HOSTNAME, "Calling gethostbyname(%s)\n", host );
-	if( (host_ptr = gethostbyname( host )) == NULL ) {
+	if( (host_ptr = condor_gethostbyname( host )) == NULL ) {
 			// If the resolver can't find it, just return NULL
 		if( sin_addrp ) {
 			memset( sin_addrp, 0, sizeof(struct in_addr) );

@@ -40,6 +40,7 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "dc_collector.h"
 #include "time_offset.h"
+#include "condor_netdb.h"
 
 extern char *mySubSystem;
 
@@ -1331,7 +1332,7 @@ Daemon::initHostname( void )
 	struct sockaddr_in sockaddr;
 	struct hostent* hostp;
 	string_to_sin( _addr, &sockaddr );
-	hostp = gethostbyaddr( (char*)&sockaddr.sin_addr, 
+	hostp = condor_gethostbyaddr( (char*)&sockaddr.sin_addr, 
 						   sizeof(struct in_addr), AF_INET ); 
 	if( ! hostp ) {
 		New_hostname( NULL );

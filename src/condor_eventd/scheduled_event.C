@@ -29,6 +29,7 @@
 #include "dc_collector.h"
 #include "daemon.h"
 #include "daemon_list.h"
+#include "condor_netdb.h"
 
 #include "scheduled_event.h"
 
@@ -739,7 +740,7 @@ ScheduledShutdownEvent::UpdateSchedule()
 					ATTR_CKPT_SERVER, startdName);
 			continue;
 		}
-		struct hostent *hp = gethostbyname(ckptServer);
+		struct hostent *hp = condor_gethostbyname(ckptServer);
 		if (!hp) {
 			dprintf(D_ALWAYS, "DNS lookup for %s %s failed!\n",
 					ATTR_CKPT_SERVER, ckptServer);

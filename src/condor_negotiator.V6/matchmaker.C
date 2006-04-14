@@ -35,6 +35,7 @@
 #include "dc_collector.h"
 #include "condor_string.h"  // for strlwr() and friends
 #include "get_daemon_name.h"
+#include "condor_netdb.h"
 
 // the comparison function must be declared before the declaration of the
 // matchmaker class in order to preserve its static-ness.  (otherwise, it
@@ -2122,7 +2123,7 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 			if (ckptSize > 0) {
 				if (request.LookupString(ATTR_LAST_CKPT_SERVER,
 										 lastCkptServer)) {
-					struct hostent *hp = gethostbyname(lastCkptServer);
+					struct hostent *hp = condor_gethostbyname(lastCkptServer);
 					if (!hp) {
 						dprintf(D_ALWAYS,
 								"      DNS lookup for %s %s failed!\n",

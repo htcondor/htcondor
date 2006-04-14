@@ -26,6 +26,7 @@
 #include "condor_daemon_core.h"
 #include "condor_timer_manager.h"
 #include "condor_lock_file.h"
+#include "condor_netdb.h"
 
 // Check URL static method
 int
@@ -135,7 +136,7 @@ CondorLockFile::BuildLock( const char	*lock_url,
 
 		// Build a temporary file name
 	char	hostname[128];
-	if ( gethostname( hostname, sizeof( hostname ) ) ) {
+	if ( condor_gethostname( hostname, sizeof( hostname ) ) ) {
 		sprintf( hostname, "unknown-%d", rand( ) );
 	}
 	temp_file.sprintf( "%s.%s-%d", lock_file.Value(), hostname, getpid( ) );

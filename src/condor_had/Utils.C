@@ -12,6 +12,7 @@
 #ifdef CONDOR_MD
 #include <openssl/md5.h>
 #endif
+#include "condor_netdb.h"
 
 // for MD5 blocks computation
 #define FILE_CHUNK_SIZE               (100)
@@ -142,7 +143,7 @@ utilToSinful( char* address )
     struct in_addr sin;
     
     if( ! is_ipaddr( ipAddress, &sin ) ) {
-        struct hostent *entry = gethostbyname( hostName );
+        struct hostent *entry = condor_gethostbyname( hostName );
         
         if( entry == 0 ) {
             free( hostName );

@@ -25,6 +25,7 @@
 #include "startd.h"
 #include "VMManager.h"
 #include "vm_common.h"
+#include "condor_netdb.h"
 
 #define VM_UNREGISTER_TIMEOUT 3*vm_register_interval
 
@@ -226,7 +227,7 @@ vmapi_create_vmmanager(char *list)
 		// checking valid IP
 		if( !is_ipaddr(vm_name, NULL) ) {
 			// hostname format
-			if( (he1 = gethostbyname(vm_name)) == NULL )
+			if( (he1 = condor_gethostbyname(vm_name)) == NULL )
 				continue;
 
 			struct sockaddr_in sin;

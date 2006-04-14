@@ -29,6 +29,7 @@
 #include "get_full_hostname.h"
 #include "my_hostname.h"
 #include "condor_attributes.h"
+#include "condor_netdb.h"
 
 static char* hostname = NULL;
 static char* full_hostname = NULL;
@@ -228,7 +229,7 @@ init_hostnames()
 
         // Get our local hostname, and strip off the domain if
         // gethostname returns it.
-    if( gethostname(hostbuf, sizeof(hostbuf)) == 0 ) {
+    if( condor_gethostname(hostbuf, sizeof(hostbuf)) == 0 ) {
         if( hostbuf[0] ) {
             if( (tmp = strchr(hostbuf, '.')) ) {
                     // There's a '.' in the hostname, assume we've got

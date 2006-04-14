@@ -27,6 +27,7 @@
 #include "constants2.h"
 #include "network2.h"
 #include "internet.h"
+#include "condor_netdb.h"
 #include <string.h>
 
 static char* getserveraddr();
@@ -431,7 +432,7 @@ static char* getserveraddr()
 
 	if (server_host == NULL) return NULL;
 
-	h = gethostbyname(server_host);
+	h = condor_gethostbyname(server_host);
 	if (h == NULL) {
 		dprintf(D_ALWAYS,
 				"Can't get address for checkpoint server host %s: %s\n",

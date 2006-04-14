@@ -31,6 +31,7 @@
 #include "my_hostname.h"
 #include "condor_version.h"
 #include "condor_socket_types.h"
+#include "condor_netdb.h"
 
 #include "server2.h"
 #include "gen_lib.h"
@@ -253,7 +254,7 @@ void Server::Init()
 	xfer_summary.init();
 	Log("Server Initializing");
 	Log("Server:                            ");
-	if (gethostname(hostname, 99) == 0) {
+	if (condor_gethostname(hostname, 99) == 0) {
 		hostname[99] = '\0';
 		Log(hostname);
     }

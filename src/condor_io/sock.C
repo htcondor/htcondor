@@ -32,6 +32,7 @@
 #include "condor_debug.h"
 #include "condor_socket_types.h"
 #include "get_port_range.h"
+#include "condor_netdb.h"
 
 #if !defined(WIN32)
 #define closesocket close
@@ -644,7 +645,7 @@ int Sock::do_connect(
 	}
 	/* if dotted notation fails, try host database	*/
 	else{
-		if ((hostp = gethostbyname(host)) == (hostent *)0) return FALSE;
+		if ((hostp = condor_gethostbyname(host)) == (hostent *)0) return FALSE;
 		memcpy(&_who.sin_addr, hostp->h_addr, hostp->h_length);
 	}
 

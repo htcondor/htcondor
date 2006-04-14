@@ -24,6 +24,7 @@
 #include "condor_common.h"
 #include "condor_classad.h"
 #include "mds.h"
+#include "condor_netdb.h"
 
 int MdsGenerate(ClassAd *machine, const char *file )
 {
@@ -41,7 +42,7 @@ int MdsGenerate(ClassAd *machine, const char *file )
 		strncpy( HostBuf, Host, sizeof( HostBuf ) );
 		HostBuf[sizeof( HostBuf ) - 1] = '\0';
 		free( Host );
-	} else if ( gethostname( HostBuf, sizeof(HostBuf ) ) == 0  ) {
+	} else if ( condor_gethostname( HostBuf, sizeof(HostBuf ) ) == 0  ) {
 		// Do nothing
 	} else {
 		strcpy( HostBuf, "unknown" );

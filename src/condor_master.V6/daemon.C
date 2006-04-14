@@ -37,6 +37,7 @@
 #include "sig_name.h"
 #include "internet.h"
 #include "strupr.h"
+#include "condor_netdb.h"
 
 
 // these are defined in master.C
@@ -183,11 +184,11 @@ daemon::runs_on_this_host()
 			}
 		} else {
 			if (this_host_addr_list == 0) {
-				if (gethostname(hostname, sizeof(hostname)) < 0) {
+				if (condor_gethostname(hostname, sizeof(hostname)) < 0) {
 					EXCEPT( "gethostname(0x%x,%d)", hostname, 
 						   sizeof(hostname));
 				}
-				if( (hp=gethostbyname(hostname)) == 0 ) {
+				if( (hp=condor_gethostbyname(hostname)) == 0 ) {
 					EXCEPT( "gethostbyname(%s)", hostname );
 				}
 				for (host_addr_count = 0; hp->h_addr_list[host_addr_count];
@@ -210,7 +211,7 @@ daemon::runs_on_this_host()
 				return FALSE;
 			}
 			runs_here = FALSE;
-			hp = gethostbyname( tmp );
+			hp = condor_gethostbyname( tmp );
 			if (hp == 0) {
 				dprintf(D_ALWAYS, "Master couldn't lookup host %s\n", tmp);
 				return FALSE;

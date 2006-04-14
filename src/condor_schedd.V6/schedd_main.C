@@ -40,6 +40,7 @@
 #include "condor_adtypes.h"
 #include "condor_uid.h"
 #include "grid_universe.h"
+#include "condor_netdb.h"
 
 #if defined(BSD43) || defined(DYNIX)
 #	define WEXITSTATUS(x) ((x).w_retcode)
@@ -111,7 +112,7 @@ main_init(int argc, char* argv[])
 	if ( tmp ) {
 		if ( (*tmp == 't') || (*tmp == 'T') ) {
 			char	hostname[128];
-			if ( gethostname( hostname, sizeof( hostname ) ) ) {
+			if ( condor_gethostname( hostname, sizeof( hostname ) ) ) {
 				strcpy( hostname, "" );
 			}
 			char		job_queue_backup[_POSIX_PATH_MAX];

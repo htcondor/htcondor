@@ -228,7 +228,7 @@ SshdWrapper::getSshRuntimeInfo(char* & sinful_string, char* & dir, char* &
 					   username)
 {
 	char hostname[_POSIX_PATH_MAX];
-	gethostname(hostname, _POSIX_PATH_MAX);
+	condor_gethostname(hostname, _POSIX_PATH_MAX);
 
 	sinful_string = (char *) malloc(strlen(hostname) + 10);
 	sprintf(sinful_string, "<%s:%d>", hostname, port);

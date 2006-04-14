@@ -32,6 +32,7 @@
 #include "internet.h"
 #include "condor_socket_types.h"
 #include "condor_string.h"
+#include "condor_netdb.h"
 
 _condorMsgID SafeSock::_outMsgID = {0, 0, 0, 0};
 unsigned long SafeSock::_noMsgs = 0;
@@ -284,7 +285,7 @@ int SafeSock::connect(
 		memcpy((char *)&_who.sin_addr, &inaddr, sizeof(inaddr));
 	} else {
 		/* if dotted notation fails, try host database	*/
-		hostp = gethostbyname(host);
+		hostp = condor_gethostbyname(host);
 		if( hostp == (struct hostent *)0 ) {
 			return FALSE;
 		} else {

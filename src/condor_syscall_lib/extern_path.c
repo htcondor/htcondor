@@ -24,6 +24,7 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_getmnt.h"
+#include "condor_netdb.h"
 
 static void init( void );
 static char * remote_part( char *mnt_pt, char *name );
@@ -123,7 +124,7 @@ init( void )
 {
 	int		start = 0;
 
-	if( gethostname(Hostname,sizeof(Hostname)) < 0 ) {
+	if( condor_gethostname(Hostname,sizeof(Hostname)) < 0 ) {
 		dprintf( D_ALWAYS, "gethostname failed in extern_path.c: %s\n",
 				 strerror(errno) );
 		return;

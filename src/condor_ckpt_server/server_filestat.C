@@ -462,7 +462,7 @@ int FileStat::Hash(const char* machine_name)
   int             value=0;
   int             count;
 
-  h = gethostbyname((char*)machine_name);
+  h = condor_gethostbyname((char*)machine_name);
   if (h == NULL)
     return(BAD_MACHINE_NAME);
   x = (u_char*) h->h_addr;
