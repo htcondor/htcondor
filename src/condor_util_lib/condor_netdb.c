@@ -279,6 +279,7 @@ convert_ip_to_hostname(const char *addr,
 	char *default_domain_name;
 
 	if (NULL != (default_domain_name = param("DEFAULT_DOMAIN_NAME"))) {
+		int h_name_len;
 		int i;
 		bzero(h_name, maxlen);
 		strncpy(h_name, inet_ntoa(*((struct in_addr *) addr)), maxlen - 1);
@@ -287,7 +288,7 @@ convert_ip_to_hostname(const char *addr,
 				h_name[i] = '-';
 			}
 		}
-		int h_name_len = strlen(h_name);
+		h_name_len = strlen(h_name);
 		snprintf(&(h_name[h_name_len]), maxlen - h_name_len, ".%s",
 				 default_domain_name);
 
