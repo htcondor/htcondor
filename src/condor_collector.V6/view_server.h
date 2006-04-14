@@ -31,8 +31,9 @@
 
 //---------------------------------------------------
 
-// Note: This should be kept in sync with condor_state.h and with
-// StartdScanFunc() of view_server.C
+// Note: This should be kept in sync with condor_state.h,  and with
+// StartdScanFunc() of view_server.C, and with
+// ResConvStr() of condor_tools/stats.C .
 // Also, make sure that you keep VIEW_STATE_MAX pointing at
 // the last "normal" VIEW_STATE
 typedef enum {

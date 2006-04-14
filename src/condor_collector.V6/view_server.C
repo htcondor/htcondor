@@ -142,6 +142,9 @@ void ViewServer::Init()
 	DataFormat[SubmittorData]="%d\t%s\t:\t%.0f\t%.0f\n";
 	DataFormat[SubmittorGroupsData]="%d\t%s\t:\t%.0f\t%.0f\n";
 	DataFormat[StartdData]="%d\t%s\t:\t%.0f\t%7.3f\t%.0f\n";
+	// FIXME: When this code was written, only 5 machine states were defined.
+	// Fix write of GroupsData to write all machine states.
+	// This may also drive changes into the condor-view-applet.
 	DataFormat[GroupsData]="%d\t%s\t:\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\n";
 	DataFormat[CkptData]="%d\t%s\t:\t%.3f\t%.3f\t%.3f\t%.3f\n";
 	
@@ -584,6 +587,10 @@ void ViewServer::WriteHistory()
 
 			DataSet[i][j].AccData->startIterations();
 			while(DataSet[i][j].AccData->iterate(Key,GenRec)) {
+				// FIXME: When this code was written, only 5 machine states
+				// were defined.  Fix write of GroupsData to write all machine
+				// states.  This may also drive changes into the
+				// condor-view-applet.
 				sprintf(OutLine,DataFormat[i].Value(),TimeStamp,Key.Value(),GenRec->Data[0],GenRec->Data[1],GenRec->Data[2],GenRec->Data[3],GenRec->Data[4]);
 				delete GenRec;
 				fputs(OutLine, DataFile);
