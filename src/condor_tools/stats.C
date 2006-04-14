@@ -34,6 +34,7 @@
 #include "condor_io.h"
 #include "daemon.h"
 #include "condor_distribution.h"
+#define NUM_ELEMENTS(_ary)   (sizeof(_ary) / sizeof((_ary)[0]))
 
 //------------------------------------------------------------------------
 
@@ -77,8 +78,26 @@ int ResConvStr(char* InpStr, char* OutStr)
   int KbdIdle;
   int State;
   if (sscanf(InpStr," %f %d %f %d",&T,&KbdIdle,&LoadAvg,&State)!=4) return -1;
-  char* StateName[]={"UNCLAIMED","MATCHED","CLAIMED","PRE-EMPTING","OWNER"};
-  sprintf(OutStr,"%f\t%d\t%f\t%s\n",T,KbdIdle,LoadAvg,StateName[State-1]);
+  char *stateStr;
+  // Note: This should be kept in sync with condor_state.h, and with
+  // StartdScanFunc() of view_server.C, and with
+  // typedef enum ViewStates of view_server.h
+  char* StateName[] = {
+	  "UNCLAIMED",
+	  "MATCHED",
+	  "CLAIMED",
+	  "PRE-EMPTING",
+	  "OWNER",
+	  "SHUTDOWN",
+	  "DELETE",
+	  "BACKFILL",
+  };
+  if (State <= NUM_ELEMENTS(StateName) ) {
+	stateStr = StateName[State-1];
+  } else {
+	stateStr = "UNKNOWN";
+  }
+  sprintf(OutStr,"%f\t%d\t%f\t%s\n",T,KbdIdle,LoadAvg,stateStr);
   return 0;
 }
 
