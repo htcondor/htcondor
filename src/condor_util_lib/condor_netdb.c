@@ -25,6 +25,7 @@
 #include "condor_config.h"
 #include "condor_debug.h"
 #include "internet.h"
+#include "condor_socket_types.h"
 
 /* SPECIAL NAMES:
  *
@@ -95,7 +96,7 @@ condor_gethostbyname(const char *name) {
 }
 
 struct hostent *
-condor_gethostbyaddr(const char *addr, socklen_t len, int type) {
+condor_gethostbyaddr(const char *addr, SOCKET_LENGTH_TYPE len, int type) {
 	static struct hostent hostent;
 	static char *h_aliases[1] = {NULL};
 	static char h_name[MAXHOSTNAMELEN]; // from /usr/include/sys/param.h
@@ -165,7 +166,8 @@ condor_gethostname(char *name, size_t namelen) {
 		if ( (param_buf = param( "COLLECTOR_HOST" )) ) {
 
 			struct hostent *collector_ent;
-			int s, addr_len;
+			int s;
+			SOCKET_LENGTH_TYPE addr_len;
 			char collector_host[MAXHOSTNAMELEN];
 			char *idx;
 			struct sockaddr_in addr, collector_addr;
@@ -217,7 +219,7 @@ condor_gethostname(char *name, size_t namelen) {
 			addr_len = sizeof(struct sockaddr_in);
 			if (getsockname(s,
 							(struct sockaddr *) &addr,
-							(socklen_t *) &addr_len)) {
+							&addr_len)) {
 				dprintf(D_HOSTNAME,
 						"NO_DNS: Failed to get socket name, errno=%d (%s)\n",
 						errno, strerror(errno));
