@@ -200,7 +200,7 @@ CondorQuery::CondorQuery(AdTypes foo) { not_impl();}
 CondorQuery::~CondorQuery() {} 
 
 char*
-my_ip_string() {not_impl();}
+my_ip_string() {not_impl(); return 0;}
 
 void ConvertDefaultIPToSocketIP(char const *attr_name,char const *old_expr_string,char **new_expr_string,Stream& s) {
 	not_impl();
@@ -209,3 +209,10 @@ void ConvertDefaultIPToSocketIP(char const *attr_name,char const *old_expr_strin
 void ConvertDefaultIPToSocketIP(char const *attr_name,char **expr_string,Stream& s) {
 	not_impl();
 }
+
+#include "Regex.h"
+
+Regex::Regex() {not_impl();}
+Regex::~Regex() {not_impl();}
+bool Regex::compile(MyString const& a, char const** b, int* c, int d) {not_impl();return false;}
+bool Regex::match(MyString const& a, ExtArray<MyString>* b) {not_impl();return false;}

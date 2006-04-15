@@ -1475,15 +1475,33 @@ static void test_functions(
 	char   big_string[1024];
 	int    integer;
     float  real;
-	char classad_string[] = "D=GetTime(),"
-		                    "E=sharedstring(),"
-                            "G=sharedinteger(2),"
-	                        "H=sharedfloat(3.14)";
+
+	char classad_string[] = "D=GetTime():"
+		                    "E=sharedstring():"
+                            "G=sharedinteger(2):"
+	                        "H=sharedfloat(3.14):"
+							"I=substr(\"abcdefg\", 3, -1):"
+							"J=strcmp(\"ABCDEFgxx\"; \"ABCDEFg\"):"
+							"K=stricmp(\"ABCDEFg\"; \"abcdefg\"):"
+							"L=toupper(\"AbCdEfg\"):"
+							"M=toLower(\"ABCdeFg\"):"
+							"N=size(\"ABC\"):"
+							"O=stringlistsize(\"A,B,C\"):"
+							"P=stringlistsum(\"1,2,3\"):"
+							"Q=stringlistmin(\"-1,2,-3\"):"
+							"R=stringlistmax(\"1 , 4.5, -5\"):"
+							"S=stringlistavg(\"10, 20, 30, 40\"):"
+							"U=stringlistmember(\"green\", \"red, blue, green\"):"
+							"V=stringlistimember(\"ReD\", \"RED, BLUE, GREEN\"):"
+							"W=regexp(\"[Mm]atcH.i\", \"thisisamatchlist\", \"i\"):"
+							"X=regexps(\"([Mm]at)c(h).i\", \"thisisamatchlist\", \"one is \\1 two is \\2\"):"
+							"";
+
 	ClassAd  *classad;
 
 	config(0);
 
-	classad = new ClassAd(classad_string, ',');
+	classad = new ClassAd(classad_string, ':');
 	if (classad == NULL) {
 		printf("Can't parse ClassAd for testing functions in line %d\n", 
 			   __LINE__);
@@ -1530,6 +1548,160 @@ static void test_functions(
 		} else {
 			printf("Failed: Evaluating sharedfloat in line %d\n",
 				   __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalString("I", NULL, big_string) && 
+				(strcmp(big_string, "def") == 0)) {
+			printf("Passed: Evaluting substr gives: %s in line %d\n", 
+				   big_string, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating substr gives %s in line %d\n",
+				   big_string, __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalInteger("J", NULL, integer) && (integer != 0)) {
+			printf("Passed: Evaluting strcmp gives: %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating strcmp gave %d in line %d\n",
+				   integer, __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalInteger("K", NULL, integer) && (integer == 0)) {
+			printf("Passed: Evaluting stricmp gives: %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating stricmp gave %d in line %d\n",
+				   integer, __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalString("L", NULL, big_string) && 
+				(strcmp(big_string, "ABCDEFG") == 0)) {
+			printf("Passed: Evaluting toupper gives: %s in line %d\n", 
+				   big_string, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating toupper gave %s in line %d\n",
+				   big_string, __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalString("M", NULL, big_string) && 
+				(strcmp(big_string, "abcdefg") == 0)) {
+			printf("Passed: Evaluting tolower gives: %s in line %d\n", 
+				   big_string, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating toupper gave %s in line %d\n",
+				   big_string, __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalInteger("N", NULL, integer) && (integer == 3)) {
+			printf("Passed: Evaluting size gives: %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating size gave %d in line %d\n",
+				   integer, __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalInteger("O", NULL, integer) && (integer == 3)) {
+			printf("Passed: Evaluting stringlistsize gives: %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating stringlistsize gave %d in line %d\n",
+				   integer, __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalInteger("P", NULL, integer) && (integer == 6)) {
+			printf("Passed: Evaluting stringlistsum gives: %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating stringlistsum gave %d in line %d\n",
+				   integer, __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalInteger("Q", NULL, integer) && (integer == -3)) {
+			printf("Passed: Evaluting stringlistmin gives: %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating stringlistmin gave %d in line %d\n",
+				   integer, __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalFloat("R", NULL, real) && (real == 4.5)) {
+			printf("Passed: Evaluting stringlistmax gives: %f in line %d\n", 
+				   real, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating stringlistmax gave %f in line %d\n",
+				   real, __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalFloat("S", NULL, real) && (real == 25.0)) {
+			printf("Passed: Evaluting stringlistavg gives: %f in line %d\n", 
+				   real, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating stringlistavg gave %f in line %d\n",
+				   real, __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalBool("U", NULL, integer) && (integer == 1)) {
+			printf("Passed: Evaluting stringlistmember gives: %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating stringlistmember gave %d in line %d\n",
+				   integer, __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalBool("V", NULL, integer) && (integer == 1)) {
+			printf("Passed: Evaluting stringlistimember gives: %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating stringlistimember gave %d in line %d\n",
+				   integer, __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalBool("W", NULL, integer) && (integer == 1)) {
+			printf("Passed: Evaluting regexp gives: %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating regexp gave %d in line %d\n",
+				   integer, __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalString("X", NULL, big_string) ||
+				strcmp(big_string, "one is mat two is h")) {
+			printf("Passed: Evaluting regexps gives: %s in line %d\n", 
+				   big_string, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating regexps gave %s in line %d\n",
+				   big_string, __LINE__);
 			results->AddResult(false);
 		}
         delete classad;

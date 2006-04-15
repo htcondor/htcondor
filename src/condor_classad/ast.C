@@ -35,6 +35,8 @@
 #include "condor_classad_lookup.h"
 #include "condor_string.h"
 
+#include "Regex.h"
+
 extern void evalFromEnvironment (const char *, EvalResult *);
 static bool name_in_list(const char *name, StringList &references);
 static void printComparisonOpToStr (char *, ExprTree *, ExprTree *, char *);
@@ -1700,6 +1702,8 @@ int Function::_EvalTree(const AttrList *attrlist1, const AttrList *attrlist2, Ev
 			successful_eval = FunctionStringlistIMember(number_of_args, evaluated_args, result);
 		} else if (!strcasecmp(name, "regexp")) {
 			successful_eval = FunctionRegexp(number_of_args, evaluated_args, result);
+		} else if (!strcasecmp(name, "regexps")) {
+			successful_eval = FunctionRegexps(number_of_args, evaluated_args, result);
 		}
 #ifdef CLASSAD_FUNCTIONS
         else {
@@ -2357,8 +2361,6 @@ int Function::FunctionClassadDebugFunction(
 	return TRUE;
 }
 
-/************ BEGIN OF STUBS TO FINISH *****************/
-
 int Function::FunctionSubstr(
 	int number_of_args,         // IN:  size of evaluated args array
 	EvalResult *evaluated_args, // IN:  the arguments to the function
@@ -2379,7 +2381,60 @@ int Function::FunctionSubstr(
 	has negative length (because of a negative length argument), the result is
 	the null string. 
 	*/
+	int length;
+	int offset;
+	char *s;
 
+	if ( (number_of_args < 2) || ( number_of_args >  3 )) {
+		result->type = LX_ERROR;
+		return FALSE;
+	}
+
+	if( (evaluated_args[0].type != LX_STRING) || 
+		(evaluated_args[1].type != LX_INTEGER)) {
+		result->type = LX_ERROR;
+		return FALSE;
+	}
+
+	s = evaluated_args[0].s;
+	offset = evaluated_args[1].i;
+
+	if (offset < 0) {
+		offset = strlen(s) + offset;
+	}
+
+	if ( number_of_args == 3 ) {
+        if (evaluated_args[2].type != LX_INTEGER) {
+				result->type = LX_ERROR;
+				return FALSE;
+		}
+		length = evaluated_args[2].i;
+	} else {
+		length = strlen(s) - offset;
+	}
+
+	if( ( offset < 0) || ( ((unsigned) offset) > strlen(s) )) {
+		result->type = LX_NULL;
+		result->s = 0;
+		return TRUE;
+	}
+
+	if (length > (signed) strlen(s + offset)) {
+		length = strlen(s) - offset;
+	}
+
+	if (length < 0) {
+		length = strlen(s) - offset + length;
+	}
+
+	if (length <= 0) {
+		result->type = LX_NULL;
+		return TRUE;
+	}
+
+	result->type = LX_STRING;
+	result->s = strnewp(s + offset);
+	result->s[length] = '\0';
 	return TRUE;
 }
 	
@@ -2400,6 +2455,14 @@ int Function::FunctionStrcmp(
 	// NOTE: ALL ARGUMENTS HAVE BEEN CONVERTED INTO STRING TYPES
 	// BEFORE THIS FUNCTION WAS INVOKED.
 	
+	if ( number_of_args != 2 ) {
+		result->type = LX_ERROR;
+		return FALSE;
+	}
+
+	result->type = LX_INTEGER;
+	result->i = strcmp( evaluated_args[0].s, evaluated_args[1].s);
+
 	return TRUE;
 }
 	
@@ -2418,6 +2481,14 @@ int Function::FunctionStricmp(
 	// NOTE: ALL ARGUMENTS HAVE BEEN CONVERTED INTO STRING TYPES
 	// BEFORE THIS FUNCTION WAS INVOKED.
 	
+	if ( number_of_args != 2 ) {
+		result->type = LX_ERROR;
+		return FALSE;
+	}
+
+	result->type = LX_INTEGER;
+	result->i = ::strcasecmp( evaluated_args[0].s, evaluated_args[1].s);
+
 	return TRUE;
 }
 	
@@ -2437,6 +2508,19 @@ int Function::FunctionToUpper(
 	// NOTE: ALL ARGUMENTS HAVE BEEN CONVERTED INTO STRING TYPES
 	// BEFORE THIS FUNCTION WAS INVOKED.
 	
+	if ( number_of_args != 1 ) {
+		result->type = LX_ERROR;
+		return FALSE;
+	}
+
+	result->type = LX_STRING;
+	result->s = strnewp( evaluated_args[0].s);
+	char *p = result->s;
+	while (*p) {
+		*p = toupper(*p);
+		p++;
+	}
+
 	return TRUE;
 }
 	
@@ -2456,6 +2540,19 @@ int Function::FunctionToLower(
 	// NOTE: ALL ARGUMENTS HAVE BEEN CONVERTED INTO STRING TYPES
 	// BEFORE THIS FUNCTION WAS INVOKED.
 	
+	if ( number_of_args != 1 ) {
+		result->type = LX_ERROR;
+		return FALSE;
+	}
+
+	result->type = LX_STRING;
+	result->s = strnewp( evaluated_args[0].s);
+	char *p = result->s;
+	while (*p) {
+		*p = tolower(*p);
+		p++;
+	}
+
 	return TRUE;
 }
 	
@@ -2472,6 +2569,13 @@ int Function::FunctionSize(
 	 
 	// NOTE: ALL ARGUMENTS HAVE BEEN CONVERTED INTO STRING TYPES
 	// BEFORE THIS FUNCTION WAS INVOKED.
+	if ( number_of_args != 1 ) {
+		result->type = LX_ERROR;
+		return FALSE;
+	}
+
+	result->type = LX_INTEGER;
+	result->i = strlen( evaluated_args[0].s);
 	
 	return TRUE;
 }
@@ -2491,9 +2595,93 @@ int Function::FunctionStringlistSize(
 	characters). 
 	*/
 
+	char *d;
+
+	if (( number_of_args == 0) || ( number_of_args > 2 )) {
+		result->type = LX_ERROR;
+		return FALSE;
+	}
+
+
+	if ( number_of_args == 2) {
+		d = evaluated_args[1].s;
+	} else {
+		d = " ,";
+	}
+
+	StringList sl(evaluated_args[0].s, d);
+	result->type = LX_INTEGER;
+	result->i = sl.number();
 	return TRUE;
 }
 	
+static int StringListNumberIterator(
+	int number_of_args,         // IN:  size of evaluated args array
+	EvalResult *evaluated_args, // IN:  the arguments to the function
+	EvalResult *result,         // OUT: the result of calling the function
+	void (*func)(double, double *),
+	double *accumulator)
+{
+	char *d;
+
+	if (( number_of_args == 0) || ( number_of_args > 2 )) {
+		result->type = LX_ERROR;
+		return FALSE;
+	}
+
+	if ( number_of_args == 2) {
+		if (evaluated_args[1].type != LX_STRING) {
+			result->type = LX_ERROR;
+			return FALSE;
+		}
+		d = evaluated_args[1].s;
+	} else {
+		d = " ,";
+	}
+
+	if (evaluated_args[0].type != LX_STRING) {
+		result->type = LX_ERROR;
+		return FALSE;
+	}
+	char *s = evaluated_args[0].s;
+
+	StringList sl(s, d);
+
+	if (sl.number() == 0) {
+		result->type = LX_UNDEFINED;
+		return TRUE;
+	}
+
+	result->type = LX_INTEGER;
+
+	sl.rewind();
+	char *entry;
+	while( (entry = sl.next())) {
+		float temp;
+		int r = sscanf(entry, "%f", &temp);
+		if (r != 1) {
+			result->type = LX_ERROR;
+			return FALSE;
+		}
+		if (strspn(entry, "+-0123456789") != strlen(entry)) {
+			result->type = LX_FLOAT;
+		}
+		func(temp, accumulator);
+	}
+	
+	if (result->type == LX_INTEGER) {
+			result->i = (int)*accumulator;
+	} else {
+			result->f = *accumulator;
+	}
+
+	return TRUE;
+}
+
+static void sum(double entry, double *accumulator) {
+	*accumulator += entry;
+}
+
 int Function::FunctionStringlistSum(
 	int number_of_args,         // IN:  size of evaluated args array
 	EvalResult *evaluated_args, // IN:  the arguments to the function
@@ -2511,9 +2699,23 @@ int Function::FunctionStringlistSum(
 	characters). 
 	*/
 
-	return TRUE;
+	double accumulator = 0.0;;
+	int r = StringListNumberIterator(
+		number_of_args, evaluated_args, result, sum, &accumulator);
+
+	// zero length array sums to zero
+	if (result->type == LX_UNDEFINED) {
+		result->type = LX_INTEGER;
+		result->i = 0;
+	}
+	return r;
 }
 	
+static void avg(double entry, double *pair) {
+	pair[0] += entry;
+	pair[1]++;
+}
+
 int Function::FunctionStringlistAvg(
 	int number_of_args,         // IN:  size of evaluated args array
 	EvalResult *evaluated_args, // IN:  the arguments to the function
@@ -2530,9 +2732,32 @@ int Function::FunctionStringlistAvg(
 	(space and comma characters). 
 	*/
 
+	// array[0] is the sum of all the entries, array[1] is the number of entries
+	double array[2];
+	array[0] = 0.0;
+	array[1] = 0.0;
+
+	int r = StringListNumberIterator(
+		number_of_args, evaluated_args, result, avg, array);
+
+	if (!r) {
+		return FALSE;
+	}
+
+	if (result->type == LX_UNDEFINED) {
+		result->f = 0.0;
+	}
+	result->type = LX_FLOAT;
+	result->f    = array[0] / array[1];
 	return TRUE;
 }
 	
+static void minner(double entry, double *best) {
+	if (entry < *best) {
+		*best = entry;
+	}
+}
+
 int Function::FunctionStringlistMin(
 	int number_of_args,         // IN:  size of evaluated args array
 	EvalResult *evaluated_args, // IN:  the arguments to the function
@@ -2550,9 +2775,17 @@ int Function::FunctionStringlistMin(
 	characters). 
 	*/
 
-	return TRUE;
+	double lowest = MAXFLOAT;
+	return StringListNumberIterator(
+		number_of_args, evaluated_args, result, minner, &lowest);
 }
 	
+static void maxer(double entry, double *best) {
+	if (entry > *best) {
+		*best = entry;
+	}
+}
+
 int Function::FunctionStringlistMax(
 	int number_of_args,         // IN:  size of evaluated args array
 	EvalResult *evaluated_args, // IN:  the arguments to the function
@@ -2570,9 +2803,60 @@ int Function::FunctionStringlistMax(
 	characters). 
 	*/
 
-	return TRUE;
+	double maxest = MINFLOAT;
+	return StringListNumberIterator(
+		number_of_args, evaluated_args, result, maxer, &maxest);
 }
 	
+static int stringlistmember(
+	int number_of_args,         // IN:  size of evaluated args array
+	EvalResult *evaluated_args, // IN:  the arguments to the function
+	EvalResult *result,         // OUT: the result of calling the function
+	bool ignore_case)
+{
+	if ((number_of_args < 2) || (number_of_args > 3)) {
+		result->type = LX_ERROR;
+		return FALSE;
+	}
+
+	if ((evaluated_args[0].type != LX_STRING) ||
+		(evaluated_args[1].type != LX_STRING)) {
+		result->type = LX_ERROR;
+		return FALSE;
+	}
+
+	char *d = " ,";
+	if (number_of_args == 3) {
+		if (evaluated_args[2].type != LX_STRING) {
+			result->type = LX_ERROR;
+			return FALSE;
+		}
+
+		d = evaluated_args[2].s;
+	}
+
+	result->type = LX_INTEGER;
+	StringList sl(evaluated_args[1].s, d);
+	sl.rewind();
+	char *entry;
+	while( (entry = sl.next())) {
+		if (ignore_case) {
+			if (strcasecmp(entry, evaluated_args[0].s) == 0) {
+				result->i = 1;
+				return TRUE;
+			}
+		} else {
+			if (strcmp(entry, evaluated_args[0].s) == 0) {
+				result->i = 1;
+				return TRUE;
+			}
+		}
+	}
+
+	result->i = 0;
+	return TRUE;
+}
+
 int Function::FunctionStringlistMember(
 	int number_of_args,         // IN:  size of evaluated args array
 	EvalResult *evaluated_args, // IN:  the arguments to the function
@@ -2589,7 +2873,7 @@ int Function::FunctionStringlistMember(
 	characters). 
 	*/
 
-	return TRUE;
+	return stringlistmember(number_of_args, evaluated_args, result, false);
 }
 	
 int Function::FunctionStringlistIMember(
@@ -2608,10 +2892,114 @@ int Function::FunctionStringlistIMember(
 	characters).
 	*/
 
-	return TRUE;
+	return stringlistmember(number_of_args, evaluated_args, result, true);
 }
 	
+static int regexp_str_to_options(char *option_str) {
+	int options = 0;
+	while (*option_str) {
+		switch (*option_str) {
+			case 'i':
+			case 'I':
+				options |= Regex::caseless;
+				break;
+			case 'm':
+			case 'M':
+				options |= Regex::multiline;
+				break;
+			case 's':
+			case 'S':
+				options |= Regex::dotall;
+				break;
+			case 'x':
+			case 'X':
+				options |= Regex::extended;
+				break;
+			default:
+				// Ignore for forward compatibility 
+				break;
+		}
+		option_str++;
+	}
+	return options;
+}
+
 int Function::FunctionRegexp(
+	int number_of_args,         // IN:  size of evaluated args array
+	EvalResult *evaluated_args, // IN:  the arguments to the function
+	EvalResult *result)         // OUT: the result of calling the function
+{
+	/*
+	regexp(string pattern, string target , string output[, string options ]) returns boolean.
+
+	If any of the arguments is not of type String or if pattern is not a valid
+	regular expression, the result is an error. Otherwise, if pattern matches
+	target, the result is string, otherwise error.  The resultant string is the
+	string "output", with backticks references (e.g. \1 \2) replaced by the captured
+	regexps inside the pattern.
+
+	The details of the syntax and semantics of the regular expressions follows
+	the perl-compatible regular expression format as supported by the PCRE
+	library (see http://www.pcre.org/).   The options argument, if present, may
+	contain the following characters to alter the exact details. Unrecognized
+	options are silently ignored. 
+
+    i or I
+
+        Ignore case.
+
+    m or M
+
+        Multi-line: A carat (^) matches not only the start of the subject string, but also after each newline. Similarly, dollar ($) matches before a newline. 
+
+    s or S
+
+        Single-line: Dot (.) matches any character, including newline.
+
+    x or X
+
+        Extended: Whitespace and comments (from # to the next newline) in the pattern are ignored.
+	*/
+
+	if (( number_of_args < 2) || ( number_of_args > 3 )) {
+		result->type = LX_ERROR;
+		return FALSE;
+	}
+
+	char *option_str = "";
+
+	if (number_of_args == 3) {
+		if (evaluated_args[2].type != LX_STRING) {
+				result->type = LX_ERROR;
+				return FALSE;
+		}
+		option_str = evaluated_args[2].s;
+	}
+
+	if ((evaluated_args[0].type != LX_STRING) || (evaluated_args[1].type != LX_STRING)) {
+		result->type = LX_ERROR;
+		return FALSE;
+	}
+
+	Regex r;
+	const char *errstr = 0;
+	int errpos = 0;
+	bool valid;
+	int options = regexp_str_to_options(option_str);
+
+	valid = r.compile(evaluated_args[0].s, &errstr, &errpos, options);
+	if (!valid) {
+		result->type = LX_ERROR;
+		return FALSE;
+	}
+
+	result->i = r.match(evaluated_args[1].s);
+	result->type = LX_INTEGER;
+
+	return TRUE;
+}
+
+int Function::FunctionRegexps(
 	int number_of_args,         // IN:  size of evaluated args array
 	EvalResult *evaluated_args, // IN:  the arguments to the function
 	EvalResult *result)         // OUT: the result of calling the function
@@ -2646,7 +3034,65 @@ int Function::FunctionRegexp(
         Extended: Whitespace and comments (from # to the next newline) in the pattern are ignored.
 	*/
 
+	if (( number_of_args < 3) || ( number_of_args > 4 )) {
+		result->type = LX_ERROR;
+		return FALSE;
+	}
+
+	char *option_str = "";
+
+	if (number_of_args == 4) {
+		if (evaluated_args[3].type != LX_STRING) {
+				result->type = LX_ERROR;
+				return FALSE;
+		}
+		option_str = evaluated_args[3].s;
+	}
+
+	if ((evaluated_args[0].type != LX_STRING) || 
+		(evaluated_args[1].type != LX_STRING) ||
+		(evaluated_args[2].type != LX_STRING)) {
+		result->type = LX_ERROR;
+		return FALSE;
+	}
+
+	Regex r;
+	const char *errstr = 0;
+	int errpos = 0;
+	bool valid;
+	int options = regexp_str_to_options(option_str);
+
+
+	valid = r.compile(evaluated_args[0].s, &errstr, &errpos, options);
+	if (!valid) {
+		result->type = LX_ERROR;
+		return FALSE;
+	}
+
+	ExtArray<MyString> a;
+	MyString output;
+	char *input = evaluated_args[2].s;
+
+	if (!r.match(evaluated_args[1].s, &a)) {
+		result->type = LX_NULL;
+		return TRUE;
+	}
+
+	result->type = LX_STRING;
+	while (*input) {
+		if (*input == '\\') {
+			if (isdigit(input[1])) {
+				int offset = input[1] - '0';
+				input++;
+				output += a[offset];
+			} else {
+				output += '\\';
+			}
+		} else {
+			output += *input;
+		}
+		input++;
+	}
+	result->s    = strnewp(output.GetCStr());
 	return TRUE;
 }
-	
-/******************** END OF STUBS TO FINISH *********************/

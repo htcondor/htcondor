@@ -470,6 +470,8 @@ class Function: public FunctionBase
 						EvalResult *result);
 	int FunctionRegexp(int number_of_args, EvalResult *evaluated_args, 
 						EvalResult *result);
+	int FunctionRegexps(int number_of_args, EvalResult *evaluated_args, 
+						EvalResult *result);
 };
 
 extern	int		Parse(const char*, ExprTree*&);
