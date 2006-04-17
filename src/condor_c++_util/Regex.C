@@ -24,9 +24,6 @@
 #include "Regex.h"
 
 
-template class ExtArray<MyString>;
-
-
 Regex::Regex()
 {
 	this->options = 0;
