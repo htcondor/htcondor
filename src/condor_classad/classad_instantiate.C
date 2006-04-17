@@ -25,7 +25,6 @@
 #include "ad_printmask.h"
 #include "ListCache.h"
 
-template class ExtArray<MyString>;
 template class List<Formatter>;
 template class Item<Formatter>;
 template class ListCache<ClassAd>;
