@@ -2775,7 +2775,7 @@ int Function::FunctionStringlistMin(
 	characters). 
 	*/
 
-	double lowest = MAXFLOAT;
+	double lowest = FLT_MAX;
 	return StringListNumberIterator(
 		number_of_args, evaluated_args, result, minner, &lowest);
 }
@@ -2803,7 +2803,7 @@ int Function::FunctionStringlistMax(
 	characters). 
 	*/
 
-	double maxest = MINFLOAT;
+	double maxest = FLT_MIN;
 	return StringListNumberIterator(
 		number_of_args, evaluated_args, result, maxer, &maxest);
 }
