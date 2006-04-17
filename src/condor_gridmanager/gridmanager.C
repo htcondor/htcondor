@@ -823,9 +823,9 @@ contact_schedd_next_add_job:
 
 		dprintf( D_FULLDEBUG, "querying for removed/held jobs\n" );
 
-		// Grab jobs marked as REMOVED or marked as HELD that we haven't
-		// previously indicated that we're done with (by setting JobManaged
-		// to FALSE. If JobManaged is undefined, equate it with false.
+		// Grab jobs marked as REMOVED/COMPLETED or marked as HELD that we
+		// haven't previously indicated that we're done with (by setting
+		// JobManaged to "Schedd".
 		sprintf( expr_buf, "(%s) && (%s) && (%s == %d || %s == %d || (%s == %d && %s =?= \"%s\"))",
 				 ScheddJobConstraint, expr_not_completely_done.Value(),
 				 ATTR_JOB_STATUS, REMOVED,
