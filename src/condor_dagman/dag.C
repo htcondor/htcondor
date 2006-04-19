@@ -2532,6 +2532,10 @@ Dag::LogEventNodeLookup( int logsource, const ULogEvent* event,
 					SanityCheckSubmitEvent( condorID, node, recovery );
 					node->_CondorID = condorID;
 				}
+			} else {
+				debug_printf( DEBUG_QUIET, "ERROR: 'DAG Node:' not found "
+							"in submit event notes: <%s>\n",
+							submit_event->submitEventLogNotes );
 			}
 		}
 		return node;

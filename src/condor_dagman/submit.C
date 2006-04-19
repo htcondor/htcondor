@@ -275,7 +275,7 @@ stork_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
   args.AppendArg( dm.storkSubmitExe );
   args.AppendArg( "-lognotes" );
 
-  MyString logNotes = MyString( "DAG node: " ) + DAGNodeName;
+  MyString logNotes = MyString( "DAG Node: " ) + DAGNodeName;
   args.AppendArg( logNotes.Value() );
 
   args.AppendArg( cmdFile );
