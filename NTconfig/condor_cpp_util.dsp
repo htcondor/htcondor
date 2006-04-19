@@ -722,6 +722,10 @@ SOURCE="..\src\condor_c++_util\read_multiple_logs.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\Regex.C"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\Set.h"
 # End Source File
 # Begin Source File

@@ -1,11 +1,13 @@
 # Microsoft Developer Studio Generated Dependency File, included by condor_classad.mak
 
 ..\src\condor_classad\ast.C : \
+	"..\externals\install\pcre-5.0\include\pcre.h"\
 	"..\src\condor_c++_util\condor_arglist.h"\
 	"..\src\condor_c++_util\condor_ver_info.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\MyString.h"\
+	"..\src\condor_c++_util\regex.h"\
 	"..\src\condor_c++_util\simplelist.h"\
 	"..\src\condor_c++_util\string_list.h"\
 	"..\src\condor_c++_util\stringSpace.h"\
