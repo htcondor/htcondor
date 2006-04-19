@@ -342,7 +342,7 @@ convert_hostname_to_ip(const char *name,
 // 			}
 //
 //			addr.s_addr = inet_addr(tmp_name);
-// 			if (addr.s_addr == INADDR_NONE) {
+// 			if (addr.s_addr == (unsigned long)(-1L)) {
 // 					// Parsing failed, so we will too
 // 				h_addr_list[0] = NULL;
 //
@@ -377,7 +377,7 @@ convert_hostname_to_ip(const char *name,
 		}
 
 		addr.s_addr = inet_addr(tmp_name);
-		if (addr.s_addr == INADDR_NONE) {
+		if (addr.s_addr == (unsigned long)(-1L)) {
 				// Parsing failed, so we will too
 			h_addr_list[0] = NULL;
 
