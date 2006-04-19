@@ -50,7 +50,7 @@ CString my_get_hostname() {
 	char temp[100];
 	int blah;
 
-	blah = condor_gethostname(temp,sizeof(temp));
+	blah = gethostname(temp,sizeof(temp));
 
 	if (blah) {
 		blah = WSAGetLastError();
