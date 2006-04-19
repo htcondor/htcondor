@@ -80,7 +80,7 @@ condor_gethostbyname(const char *name) {
 				// We've failed
 			return NULL;
 		} else {
-			bzero(h_name, MAXSIMULATEDADDRS);
+			memset(h_name, 0, MAXSIMULATEDADDRS);
 			strncpy(h_name, name, MAXSIMULATEDADDRS - 1);
 			hostent.h_name = h_name;
 			hostent.h_aliases = h_aliases;
@@ -199,7 +199,7 @@ condor_gethostname(char *name, size_t namelen) {
 				return -1;
 			}
 
-			bzero((char *) &collector_addr, sizeof(struct sockaddr_in));
+			memset((char *) &collector_addr, 0, sizeof(struct sockaddr_in));
 			memcpy(&collector_addr.sin_addr,
 				   collector_ent->h_addr_list[0],
 				   sizeof(struct in_addr));
@@ -283,7 +283,7 @@ convert_ip_to_hostname(const char *addr,
 	if (NULL != (default_domain_name = param("DEFAULT_DOMAIN_NAME"))) {
 		int h_name_len;
 		int i;
-		bzero(h_name, maxlen);
+		memset(h_name, 0, maxlen);
 		strncpy(h_name, inet_ntoa(*((struct in_addr *) addr)), maxlen - 1);
 		for (i = 0; h_name[i]; i++) {
 			if ('.' == h_name[i]) {
@@ -333,7 +333,7 @@ convert_hostname_to_ip(const char *name,
 // This is the code I want, but it's not what I get to use (below)
 // 		if (NULL != (idx = strstr(name, default_domain_name))) {
 //			int i;
-//    		bzero(tmp_name, MAXHOSTNAMELEN);
+//    		memset(tmp_name, 0, MAXHOSTNAMELEN);
 // 			strncpy(tmp_name, name, idx - name);
 // 			for (i = 0; tmp_name[i]; i++) {
 // 				if ('-' == tmp_name[i]) {
@@ -341,7 +341,8 @@ convert_hostname_to_ip(const char *name,
 // 				}
 // 			}
 //
-// 			if (0 == inet_aton(tmp_name, &addr)) {
+//			addr.s_addr = inet_addr(tmp_name);
+// 			if (addr.s_addr == INADDR_NONE) {
 // 					// Parsing failed, so we will too
 // 				h_addr_list[0] = NULL;
 //
@@ -360,7 +361,7 @@ convert_hostname_to_ip(const char *name,
 // 			return -1;
 // 		}
 
-		bzero(tmp_name, MAXHOSTNAMELEN);
+		memset(tmp_name, 0, MAXHOSTNAMELEN);
 		if (NULL != (idx = strstr(name, default_domain_name))) {
 			strncpy(tmp_name, name, idx - name - 1);
 		} else {
@@ -375,7 +376,8 @@ convert_hostname_to_ip(const char *name,
 			}
 		}
 
-		if (0 == inet_aton(tmp_name, &addr)) {
+		addr.s_addr = inet_addr(tmp_name);
+		if (addr.s_addr == INADDR_NONE) {
 				// Parsing failed, so we will too
 			h_addr_list[0] = NULL;
 
