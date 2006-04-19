@@ -34,6 +34,7 @@
 #include "exit.h"
 #include "shared_utils.h"
 #include "get_port_range.h"
+#include "condor_netdb.h"
 
 extern	ReliSock* syscall_sock;
 
@@ -186,6 +187,26 @@ _condor_bind_all_interfaces( void )
 	}
 
 	return bind_all;
+}
+
+
+struct hostent *
+condor_gethostbyname( const char *name )
+{
+	return gethostbyname( name );
+}
+
+struct hostent *
+condor_gethostbyaddr( const char *addr, SOCKET_LENGTH_TYPE len, int type )
+
+{
+	return gethostbyaddr( addr, len, type );
+}
+
+int
+condor_gethostname( char *name, size_t namelen )
+{
+	return gethostname( name, namelen );
 }
 
 
