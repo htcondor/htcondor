@@ -7,7 +7,6 @@
 \oOptArg{-maxjobs}{numberOfJobs}
 \oOptArg{-maxpre}{NumberOfPREscripts}
 \oOptArg{-maxpost}{NumberOfPOSTscripts}
-\oOpt{-nopostfail}
 \oOpt{-noeventchecks}
 \oOpt{-allowlogerror}
 \oOpt{-usedagdir}
@@ -105,12 +104,6 @@ Level values and what they produce is described as
         \Condor{dagman}.
        If not specified,
        the default number of POST scripts is unlimited.}
-    \OptItem{\Opt{-nopostfail}}{A command-line option to
-       \Condor{submit\_dag}, further passed to \Condor{dagman},
-       is applied to all nodes within
-       the DAG and prevents the POST script within a node
-       from running in the case that the job within the node fails.
-       Without this option, POST scripts always run when jobs fail.}
     \OptItem{\Opt{-noeventchecks}}{This argument is no longer used;
        it is now ignored.  Its functionality is now implemented by
        the \MacroNI{DAGMAN\_ALLOW\_EVENTS} configuration macro
