@@ -161,6 +161,11 @@ correctly handled.
 twice to the starter if the files were stored in Condor's spool
 directory.
 
+\item On some systems, when Condor starts a gridftp server for gt4 grid
+jobs, all transfers to or from the server will fail if it's not told
+where its executable is located (using '-exec' on the command line).
+Condor now gives this option to the gridftp server.
+
 \end{itemize}
 
 
