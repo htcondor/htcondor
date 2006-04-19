@@ -661,7 +661,7 @@ BOOL CSMTPConnection::Connect(LPCTSTR pszHostName, int nPort)
 
 		//retreive the localhost name
     char sHostName[100];
-		condor_gethostname(sHostName, sizeof(sHostName));
+    gethostname(sHostName, sizeof(sHostName));
     TCHAR* pszHostName = A2T(sHostName);
 
     //Send the HELO command
