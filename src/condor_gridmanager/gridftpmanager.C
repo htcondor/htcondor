@@ -636,6 +636,11 @@ bool GridftpServer::SubmitServerJob()
 		args_list.AppendArg( server_path );
 	}
 
+		// On some machines, the gridftp server must be told where its
+		// binary is so it can exec() it in child processes.
+	args_list.AppendArg( "-exec" );
+	args_list.AppendArg( server_path );
+
 	if ( m_requestedUrlBase ) {
 		char url_scheme[_POSIX_PATH_MAX];
 		char url_host[_POSIX_PATH_MAX];
