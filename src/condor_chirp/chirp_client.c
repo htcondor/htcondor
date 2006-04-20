@@ -29,7 +29,6 @@ for details.
 
 #include "chirp_protocol.h"
 #include "chirp_client.h"
-#include "condor_netdb.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -568,7 +567,7 @@ tcp_connect( const char *host, int port )
 	if(!initialize_sockets())
 		return INVALID_SOCKET;
 
-	h = condor_gethostbyname(host);
+	h = gethostbyname(host);
 	if(!h) return INVALID_SOCKET;
 
 	address.sin_port = htons((unsigned short)port);
