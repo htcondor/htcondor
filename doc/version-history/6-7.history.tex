@@ -115,6 +115,9 @@ no events were logged in these cases, leading to the potentially confusing
 situation where a job would be Idle in the queue, but the last job log entry
 would indicate that the job was Running.
 
+\item All grid universe jobs now properly handle the new job attributes
+\Attr{Arguments}, \Attr{Environment}, and \Attr{TransferOutputRemaps}.
+
 \item Fixed a permissions problem that would cause automatic X509 proxy renewal for vanilla universe jobs to fail.
 
 \item Fixed a bug introduced in 6.7.17 that caused the configuration parameter
