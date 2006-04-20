@@ -85,6 +85,9 @@ allows it to run on Windows without being a service.
 \item Added a new version of DRMAA which includes fixes and updates per
  DRMAA spec finalization.
 
+\item For grid-type gt4 jobs, the resource lifetime on the remote server
+will be based on \Attr{job\_lease\_duration}, if it's set.
+
 \item Improved the error message in \Condor{dagman} for
 \Code{pclose()} failures after submitting a node job.
 
