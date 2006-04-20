@@ -26,7 +26,7 @@
 #include "condor_debug.h"
 #include <stdio.h>
 
-static const char *	VERSION = "0.9.1";
+static const char *	VERSION = "0.9.2";
 
 enum Status { STATUS_OK, STATUS_CANCEL, STATUS_ERROR };
 
@@ -37,6 +37,8 @@ struct Arguments {
 	const char *	logFile;
 	int				numExec;
 	int				sleep;
+	bool			stork;
+	const char *	submitNote;
 	int				verbosity;
 };
 
@@ -83,6 +85,8 @@ CheckArgs(int argc, char **argv, Arguments &args)
 			"  -logfile <filename>: the log file to write\n"
 			"  -numexec <number>: number of execute events to write\n"
 			"  -sleep <number>: how many seconds to sleep between events\n"
+			"  -stork: simulate Stork (-1 for proc and subproc)\n"
+			"  -submit_note <string>: submit event note\n"
 			"  -usage: print this message and exit\n"
 			"  -verbosity <number>: set verbosity level (default is 1)\n"
 			"  -version: print the version number and compile date\n"
@@ -92,6 +96,8 @@ CheckArgs(int argc, char **argv, Arguments &args)
 	args.logFile = NULL;
 	args.numExec = 10;
 	args.sleep = 5;
+	args.stork = false;
+	args.submitNote = "";
 	args.verbosity = 1;
 
 	for ( int index = 1; index < argc; ++index ) {
@@ -129,6 +135,18 @@ CheckArgs(int argc, char **argv, Arguments &args)
 				status = STATUS_ERROR;
 			} else {
 				args.sleep = atoi(argv[index]);
+			}
+
+		} else if ( !strcmp(argv[index], "-stork") ) {
+			args.stork = true;
+
+		} else if ( !strcmp(argv[index], "-submit_note") ) {
+			if ( ++index >= argc ) {
+				fprintf(stderr, "Value needed for -submit_note argument\n");
+				printf("%s", usage);
+				status = STATUS_ERROR;
+			} else {
+				args.submitNote = argv[index];
 			}
 
 		} else if ( !strcmp(argv[index], "-usage") ) {
@@ -172,7 +190,14 @@ WriteEvents(Arguments &args)
 {
 	int		result = 0;
 
-	UserLog	log("owner", args.logFile, getpid(), 0, 0, args.isXml);
+	int proc = 0;
+	int subproc = 0;
+	if ( args.stork ) {
+		proc = -1;
+		subproc = -1;
+	}
+
+	UserLog	log("owner", args.logFile, getpid(), proc, subproc, args.isXml);
 
 		//
 		// Write the submit event.
@@ -185,7 +210,7 @@ WriteEvents(Arguments &args)
 		// Note: the line below is designed specifically to work with
 		// Kent's dummy stork_submit script for testing DAGs with
 		// DATA nodes.
-	submit.submitEventLogNotes = strdup("DAG Node: B");
+	submit.submitEventLogNotes = strdup(args.submitNote);
 	submit.submitEventUserNotes = strdup("User info");
 
 	if ( !log.writeEvent(&submit) ) {
@@ -194,7 +219,6 @@ WriteEvents(Arguments &args)
 		}
 		result = 1;
 	}
-
 
 		//
 		// Write execute events.
@@ -215,7 +239,6 @@ WriteEvents(Arguments &args)
 
 		sleep(args.sleep);
 	}
-
 
 		//
 		// Write the terminated event.
