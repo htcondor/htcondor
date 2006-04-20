@@ -111,8 +111,8 @@ submit_try( ArgList &args, CondorID &condorID, Job::job_type_t type )
 		debug_printf(DEBUG_NORMAL, "Read from pipe: %s\n", 
 					 command_output.Value());
 		debug_printf( DEBUG_QUIET, "ERROR while running \"%s\": "
-					  "my_pclose() failed (errno %d, %s)!\n", cmd.Value(),
-					  errno, strerror( errno ) );
+					  "my_pclose() failed with status %d (errno %d, %s)!\n",
+					  cmd.Value(), status, errno, strerror( errno ) );
 		return false;
     }
   }
