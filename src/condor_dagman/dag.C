@@ -1037,10 +1037,9 @@ Dag::NodeExists( const char* nodeName ) const
   return false;
 }
 
-
 //---------------------------------------------------------------------------
 Job * Dag::GetJob (int logsource, const CondorID condorID) const {
-	if ( condorID == CondorID(-1, -1, -1) ) {
+	if ( condorID._cluster == -1 ) {
 		return NULL;
 	}
     ListIterator<Job> iList (_jobs);
