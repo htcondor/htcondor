@@ -23,6 +23,9 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Implemented all of the functions from new classads into the
+"old" classads now in Condor.
+
 \item Condor's format for storing the history file has been improved
 so that some queries will now go much faster. In particular,
 \Condor{history} now accepts the ``-backwards'' flag, which will take
@@ -97,6 +100,10 @@ will be based on \Attr{job\_lease\_duration}, if it's set.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a bug in the dedicated scheduler where parallel and mpi
+jobs with more than one proc in a cluster would only have the
+Scheduler attribute set in the first proc.
 
 \item Fixed a bug in the \Condor{collector} that could cause it to
 crash if it's configured as a view collector
