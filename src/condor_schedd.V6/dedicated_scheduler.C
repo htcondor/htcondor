@@ -1981,8 +1981,14 @@ DedicatedScheduler::sortJobs( void )
 			// so put it in our array.
 		(*verified_clusters)[next_cluster++] = cluster;
 
-			// While we're at it, make sure ATTR_SCHEDULER is right
-		setScheduler( job );
+			// While we're at it, make sure ATTR_SCHEDULER is right for all procs
+		ClassAd *jobIter = job;
+		int proc = 0;
+		do {
+			setScheduler( jobIter );
+			proc++;
+			jobIter = GetJobAd(cluster, proc);
+		} while (jobIter != NULL);
 	}
 
 		// No matter what, we want to remove our old array and start
@@ -3776,9 +3782,10 @@ DedicatedScheduler::setScheduler( ClassAd* job_ad )
 	if( ! job_ad->LookupInteger(ATTR_PROC_ID, proc) ) {
 		return false;
 	}
-	if( SetAttributeString(cluster, proc, ATTR_SCHEDULER,
-						   ds_name) < 0 ) {
-		return false;
+
+	while( SetAttributeString(cluster, proc, ATTR_SCHEDULER,
+						   ds_name) ==  0 ) {
+		proc++;
 	}
 	return true;
 }
