@@ -38,7 +38,7 @@ extern	int		DebugFlags;
 
 
 void
-_condor_dprintf_va( int flags, char* fmt, va_list args )
+_condor_dprintf_va( int flags, const char* fmt, va_list args )
 {
 	int scm;
 
