@@ -31,6 +31,7 @@
 #include "MyString.h"
 #include "condor_ver_info.h"
 #include "condor_attributes.h"
+#include "exit.h"
 
 // Initialize static data members
 const int GridUniverseLogic::job_added_delay = 3;
@@ -322,16 +323,23 @@ GridUniverseLogic::GManagerReaper(Service *,int pid, int exit_status)
 		}
 	}
 
+	MyString owner_safe;
+	if(gman_node) { owner_safe = owner; }
+	else { owner_safe = "Unknown"; }
+	dprintf(D_ALWAYS, "condor_gridmanager (PID %d, owner %s) exited %s %d.\n",
+		pid, owner_safe.Value(), 
+		WIFEXITED(exit_status)?"with return code":"because of signal",
+		WIFEXITED(exit_status)?WEXITSTATUS(exit_status):WTERMSIG(exit_status)
+		);
+
+	if(WIFEXITED(exit_status) && WEXITSTATUS(exit_status) == DPRINTF_ERROR) {
+		dprintf(D_ALWAYS, "The gridmanager may have had a problem writing its log.  Check the permissions of the file specified by GRIDMANAGER_LOG; it usually needs to be writable by the owner of the job.\n");
+	}
+
 	if (!gman_node) {
-		dprintf(D_ALWAYS,
-			"condor_gridmanager exited pid=%d status=%d owner=Unknown\n",
-			pid,exit_status);
 		// nothing more to do, so return
 		return 0;
 	}
-
-	dprintf(D_ALWAYS,"condor_gridmanager exited pid=%d status=%d owner=%s\n",
-			pid,exit_status,owner.Value());
 
 	// Cancel any timers before removing the node!!
 	if (gman_node->add_timer_id != -1) {
