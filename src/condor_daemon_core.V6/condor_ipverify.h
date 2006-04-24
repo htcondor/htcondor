@@ -27,6 +27,12 @@
  * that specifies level of access, such as READ, WRITE, ADMINISTRATOR,
  * whatever.  Methods specify the level of access for a given IP address,
  * or subnet, or domain name.  
+ *
+ * Most of the access levels form a heirarchy.
+ * DAEMON and ADMINISTRATOR levels imply WRITE level.
+ * WRITE, NEGOTIATOR, and CONFIG levels imply READ level.
+ * Thus, a client that has DAEMON level access will be authorized if
+ * the required access level is READ.
  */
 
 #ifndef _CONDOR_IPVERIFY_H_

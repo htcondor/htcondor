@@ -692,6 +692,7 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
         }
 
 		if ( found_match == FALSE ) {
+			mask = 0;
 			// did not find an existing entry, so try subnets
 			unsigned char *cur_byte = (unsigned char *) &sin_addr;
 			for (i=3; i>0; i--) {
@@ -788,11 +789,30 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
 			// do a gethostbyaddr() next time.  if we still do not have a mask
 			// (perhaps because this host doesn't appear in any list), create one
 			// and then add to the table.
+			// But first, check our parent permission levels in the
+			// authorization heirarchy.
+			// DAEMON and ADMINISTRATOR imply WRITE.
+			// WRITE, NEGOTIATOR, and CONFIG_PERM imply READ.
 			if ( mask == 0 ) {
-				if ( PermTypeArray[perm]->behavior == USERVERIFY_ONLY_DENIES ) 
+				if ( PermTypeArray[perm]->behavior == USERVERIFY_ONLY_DENIES ) {
 					mask |= allow_mask(perm);
-				else 
+				} else if ( perm == READ &&
+							( Verify( WRITE, sin,
+									  user ) == USER_AUTH_SUCCESS ||
+							  Verify( NEGOTIATOR, sin,
+									  user ) == USER_AUTH_SUCCESS ||
+							  Verify( CONFIG_PERM, sin,
+									  user ) == USER_AUTH_SUCCESS ) ) {
+					mask |= allow_mask(perm);
+				} else if ( perm == WRITE &&
+							( Verify( ADMINISTRATOR, sin,
+									  user ) == USER_AUTH_SUCCESS ||
+							  Verify( DAEMON, sin,
+									  user ) == USER_AUTH_SUCCESS ) ) {
+					mask |= allow_mask(perm);
+				} else {
 					mask |= deny_mask(perm);
+				}
 			}
 
 			// finally, add the mask we computed into the table with this IP addr
