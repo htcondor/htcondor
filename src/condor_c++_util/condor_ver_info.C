@@ -226,11 +226,29 @@ CondorVersionInfo::get_version_from_file(const char* filename,
 		maxlen = 100;
 	}
 
+		// Look for the magic version string
+		// '$CondorVersion: x.y.z <date> <extra info> $' in the file.
+		// What we look for is a string that begins with '$CondorVersion: '
+		// and continues with a non-NULL character. We need to be careful
+		// not to match the string '$CondorVersion: \0' which this file
+		// includes as static data in a Condor executable.
 	int i = 0;
 	bool got_verstring = false;
-	const char* verprefix = CondorVersion();
+	const char* verprefix = "$CondorVersion: ";
 	int ch;
 	while( (ch=fgetc(fp)) != EOF ) {
+		if ( verprefix[i] == '\0' && ch != '\0' ) {
+			do {
+				ver[i++] = ch;
+				if ( ch == '$' ) {
+					got_verstring = true;
+					ver[i] = '\0';
+					break;
+				}
+			} while ( (i < maxlen) && ((ch=fgetc(fp)) != EOF) );
+			break;
+		}
+
 		if ( ch != verprefix[i] ) {
 			i = 0;
 			if ( ch != verprefix[0] ) {
@@ -239,18 +257,6 @@ CondorVersionInfo::get_version_from_file(const char* filename,
 		}
 
 		ver[i++] = ch;
-
-		if ( ch == ':' ) {
-			while ( (i < maxlen) && ((ch=fgetc(fp)) != EOF) ) {
-				ver[i++] = ch;
-				if ( ch == '$' ) {
-					got_verstring = true;
-					ver[i] = '\0';
-					break;
-				}
-			}
-			break;
-		}
 	}
 
 	fclose(fp);
