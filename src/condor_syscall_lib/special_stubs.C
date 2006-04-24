@@ -97,7 +97,7 @@ void REMOTE_syscall(void) {} ;
   need to do anything complex with priv states, locking, etc.
 */
 void
-_condor_dprintf_va( int flags, char* fmt, va_list args )
+_condor_dprintf_va( int flags, const char* fmt, va_list args )
 {
 	int scm;
 	int no_fd = FALSE;

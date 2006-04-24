@@ -74,7 +74,7 @@ char *_condor_DebugFlagNames[] = {
    the messages going to stderr, instead of being dropped.
 */
 void
-dprintf(int flags, char* fmt, ...)
+dprintf(int flags, const char* fmt, ...)
 {
     va_list args;
     va_start( args, fmt );

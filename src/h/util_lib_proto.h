@@ -57,7 +57,7 @@ void ProcessLogging ( int request, int extraInteger );
 void detach ( void );
 int do_connect ( const char *host, const char *service, u_int port );
 int udp_connect ( char *host, u_int port );
-void dprintf ( int flags, char* fmt, ... );
+void dprintf ( int flags, const char* fmt, ... );
 FILE * debug_lock ( void );
 void debug_unlock ( void );
 void _EXCEPT_ ( char *fmt, ... );
