@@ -111,8 +111,14 @@ BaseJob::BaseJob( ClassAd *classad )
 	jobLeaseReceivedExpiredTid = TIMER_UNSET;
 	SetJobLeaseTimers();
 
+	int tmp_int;
+	if ( jobAd->LookupInteger( ATTR_GRID_RESOURCE_UNAVAILABLE_TIME,
+							   tmp_int ) ) {
+		resourceDown = true;
+	} else {
+		resourceDown = false;
+	}
 	resourceStateKnown = false;
-	resourceDown = false;
 	resourcePingPending = false;
 	resourcePingComplete = false;
 }
@@ -822,6 +828,8 @@ void BaseJob::NotifyResourceDown()
 			// The GlobusResourceDown event is now deprecated
 		WriteGlobusResourceDownEventToUserLog( jobAd );
 		WriteGridResourceDownEventToUserLog( jobAd );
+		jobAd->Assign( ATTR_GRID_RESOURCE_UNAVAILABLE_TIME, (int)time(NULL) );
+		requestScheddUpdate( this );
 	}
 	resourceDown = true;
 	if ( resourcePingPending ) {
@@ -838,6 +846,8 @@ void BaseJob::NotifyResourceUp()
 			// The GlobusResourceUp event is now deprecated
 		WriteGlobusResourceUpEventToUserLog( jobAd );
 		WriteGridResourceUpEventToUserLog( jobAd );
+		jobAd->AssignExpr( ATTR_GRID_RESOURCE_UNAVAILABLE_TIME, "Undefined" );
+		requestScheddUpdate( this );
 	}
 	resourceDown = false;
 	if ( resourcePingPending ) {
