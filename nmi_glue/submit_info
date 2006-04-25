@@ -24,7 +24,7 @@ testargs = quick
 # common-prereq platforms
 ########################################
 [
-platforms = alpha_osf_V5.1 alpha_rh_7.2, \
+platforms = alpha_osf_V5.1, \
 	  hppa_hpux_11, irix_6.5, ppc_aix_5.2, \
 	  sun4u_sol_5.8 sun4u_sol_5.9, \
 	  x86_rh_7.2, x86_rh_8.0, x86_rh_9,
@@ -35,7 +35,6 @@ prereqs = tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, \
 
 # per-platform prereqs 
 prereqs_alpha_osf_V5.1   = gcc-2.95.3, binutils-2.15, perl-5.8.5, gzip-1.2.4
-prereqs_alpha_rh_7.2     = gcc-2.96, binutils-2.15, perl-5.8.5, gzip-1.2.4
 prereqs_hppa_hpux_11     = binutils-2.16, coreutils-5.2.1, gcc-3.4.3, gzip-1.2.4
 prereqs_irix_6.5         = egcs-2.91.66, perl-5.8.5, gzip-1.2.4
 prereqs_ppc_aix_5.2      = vac-6, vacpp-6, perl-5.8.5, gzip-1.2.4
