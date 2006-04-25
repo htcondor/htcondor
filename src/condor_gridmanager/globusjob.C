@@ -964,11 +964,17 @@ int GlobusJob::doEvaluateState()
 				break;
 			}
 
+			/* This code was added for 'use best proxy' support, which I
+			 * don't believe anyone is using. It affects jobs that aren't
+			 * explicitly using this 'feature' and keeps the gridmanager
+			 * managing jobs even when they've become HELD or REMOVED in
+			 * the schedd.
 			if ( !PROXY_IS_VALID(jobProxy) ) {
 				dprintf( D_FULLDEBUG, "(%d.%d) proxy not valid, waiting\n",
 						 procID.cluster, procID.proc );
 				break;
 			}
+			*/
 
 			if ( gahp->Initialize( jobProxy ) == false ) {
 				dprintf( D_ALWAYS, "(%d.%d) Error initializing GAHP\n",
