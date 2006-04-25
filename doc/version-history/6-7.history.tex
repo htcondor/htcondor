@@ -99,6 +99,13 @@ will be based on \Attr{job\_lease\_duration}, if it's set.
 \item Improved the error message in \Condor{dagman} for
 \Code{pclose()} failures after submitting a node job.
 
+\item Added new job attribute \Attr{GridResourceUnavailableTime}, which
+is equivalent to \Attr{GlobusResourceUnavailableTime}, but is used for
+all grid universe jobs. One benefit of this new attribute is that grid
+resource up/down user log events are logged correctly when the gridmanager
+crashes and restarts.
+
+
 \end{itemize}
 
 
