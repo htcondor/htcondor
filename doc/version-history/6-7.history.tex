@@ -196,6 +196,10 @@ This bug existed in versions 6.7.17 and 6.7.18.
 executable. This was preventing the grid universe from working on
 Tru64 5.1 on Alpha.
 
+\item Fixed a bug in the \Condor{gridmanager} that could cause gt2 grid
+jobs with an invalid proxy to become stuck (the \Condor{gridmanager}
+would do nothing with the jobs and not acknowledge a hold or removal).
+
 \end{itemize}
 
 
