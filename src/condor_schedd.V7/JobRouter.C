@@ -42,6 +42,7 @@ template HashTable<std::string,std::string>;
 template std::vector<JobRoute *>;
 
 const char JR_ATTR_MAX_JOBS[] = "MaxJobs";
+const char JR_ATTR_MAX_IDLE_JOBS[] = "MaxIdleJobs";
 const char JR_ATTR_ROUTED_FROM_JOB_ID[] = "RoutedFromJobId";
 const char JR_ATTR_ROUTED_TO_JOB_ID[] = "RoutedToJobId";
 const char JR_ATTR_ROUTED_FROM_MANAGER[] = "RoutedFromManager";
@@ -380,6 +381,7 @@ RoutedJob::RoutedJob() {
 	dest_proc_id.proc = -1;
 	is_claimed = false;
 	is_done = false;
+	is_running = false;
 	submission_time = 0;
 }
 RoutedJob::~RoutedJob() {
@@ -612,7 +614,7 @@ JobRouter::GetCandidateJobs() {
 
 	m_routes->startIterations();
 	while(m_routes->iterate(route)) {
-		dprintf(D_FULLDEBUG,"JobRouter (route=%s): %d/%d jobs.\n",route->Name(),route->CurrentRoutedJobs(),route->MaxJobs());
+		dprintf(D_FULLDEBUG,"JobRouter (route=%s): %d/%d jobs (%d/%d idle).\n",route->Name(),route->CurrentRoutedJobs(),route->MaxJobs(),route->CurrentIdleJobs(),route->MaxIdleJobs());
 	}
 
 	if(!AcceptingMoreJobs()) return; //router is full
@@ -805,6 +807,9 @@ JobRouter::UpdateRouteStats() {
 		if(!job->route_name.empty()) {
 			if(m_routes->lookup(job->route_name,route) != -1) {
 				route->IncrementCurrentRoutedJobs();
+				if(job->IsRunning()) {
+					route->IncrementCurrentRunningJobs();
+				}
 			}
 		}
 	}
@@ -967,6 +972,7 @@ JobRouter::CheckSubmittedJobStatus(RoutedJob *job) {
 		GracefullyRemoveJob(job);
 		return;
 	}
+	job->is_running = (job_status == RUNNING);
 
 	int job_finished = 0;
 	if( !ad->EvaluateAttrInt( ATTR_JOB_FINISHED_HOOK_DONE, job_finished ) ) {
@@ -1135,6 +1141,10 @@ JobRouter::CleanupRetiredJob(RoutedJob *job) {
 }
 
 JobRoute::JobRoute() {
+	m_num_jobs = 0;
+	m_num_running_jobs = 0;
+	m_max_jobs = 0;
+	m_max_idle_jobs = 0;
 }
 
 JobRoute::~JobRoute() {
@@ -1144,6 +1154,9 @@ bool
 JobRoute::DigestRouteAd(bool allow_empty_requirements) {
 	if( !m_route_ad.EvaluateAttrInt( JR_ATTR_MAX_JOBS, m_max_jobs ) ) {
 		m_max_jobs = 100;
+	}
+	if( !m_route_ad.EvaluateAttrInt( JR_ATTR_MAX_IDLE_JOBS, m_max_idle_jobs ) ) {
+		m_max_idle_jobs = 50;
 	}
 	if( !m_route_ad.EvaluateAttrString( ATTR_GRID_RESOURCE, m_grid_resource ) ) {
 		dprintf(D_ALWAYS, "JobRouter: Missing or invalid %s in job route.\n",ATTR_GRID_RESOURCE);

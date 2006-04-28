@@ -172,6 +172,7 @@ class JobRoute {
 	classad::ClassAd *RouteAd() {return &m_route_ad;}
 	char const *Name() {return m_name.c_str();}
 	int MaxJobs() {return m_max_jobs;}
+	int MaxIdleJobs() {return m_max_idle_jobs;}
 	int CurrentRoutedJobs() {return m_num_jobs;}
 	char const *GridResource() {return m_grid_resource.c_str();}
 	classad::ExprTree *RouteRequirementExpr() {return m_route_requirements;}
@@ -189,12 +190,17 @@ class JobRoute {
 	//   copy_XXX = YYY    (copies value of XXX to YYY in job ad)
 	bool ApplyRoutingJobEdits(classad::ClassAd *src_ad);
 
-	bool AcceptingMoreJobs() {return m_num_jobs < m_max_jobs;}
+	bool AcceptingMoreJobs() {return m_num_jobs < m_max_jobs && (m_max_idle_jobs <= 0 || CurrentIdleJobs() < m_max_idle_jobs);}
 	void IncrementCurrentRoutedJobs() {m_num_jobs++;}
-	void ResetCurrentRoutedJobs() {m_num_jobs = 0;}
+	void ResetCurrentRoutedJobs() {m_num_jobs = 0;m_num_running_jobs=0;}
+
+	void IncrementCurrentRunningJobs() {m_num_running_jobs++;}
+	int CurrentRunningJobs() {return m_num_running_jobs;}
+	int CurrentIdleJobs() {return m_num_jobs - m_num_running_jobs;}
 
  private:
 	int m_num_jobs;               // current number of jobs on this route
+	int m_num_running_jobs;       // number of jobs currently running
 
 	classad::ClassAd m_route_ad;  // ClassAd describing the route
 
@@ -202,6 +208,7 @@ class JobRoute {
 	std::string m_name;           // name distinguishing this route from others
 	std::string m_grid_resource;  // the target to which jobs are routed
 	int m_max_jobs;               // maximum jobs to route
+	int m_max_idle_jobs;          // maximum jobs in the idle state (requirement for submitting more jobs)
 	classad::ExprTree *m_route_requirements; // jobs must match these requirements
 	std::string m_route_requirements_str;    // unparsed version of above
 
@@ -237,6 +244,7 @@ class RoutedJob {
 	                  // and therefore need to unclaim the job eventually.
 
 	bool is_done;     // true if src job should be marked finished
+	bool is_running;  // true if job status is RUNNING
 
 	time_t submission_time;
 	time_t retirement_time;
@@ -250,6 +258,7 @@ class RoutedJob {
 
 	bool SetSrcJobAd(char const *key,classad::ClassAd *ad,classad::ClassAdCollection *ad_collection);
 	void SetDestJobAd(classad::ClassAd const *ad);
+	bool IsRunning() {return is_running;}
 };
 
 #endif
