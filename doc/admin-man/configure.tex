@@ -3452,7 +3452,7 @@ These macros control the \Condor{schedd}.
 \item[\Macro{MAX\_JOBS\_RUNNING}] \label{param:MaxJobsRunning} This
   macro limits the number of processes spawned by a given
   \Condor{schedd}, for all job universes except the 
-  globus [grid] universe.  See section~\ref{sec:Choosing-Universe}.
+  grid universe.  See section~\ref{sec:Choosing-Universe}.
   This includes, but is not limited to \Condor{shadow} processes,
   and scheduler universe processes, including \Condor{dagman}.
   The actual
@@ -4704,7 +4704,7 @@ a refreshed proxy credential. The default is 3 minutes (180 seconds).
 \item[\Macro{HOLD\_JOB\_IF\_CREDENTIAL\_EXPIRES}]
 \label{param:HoldJobIfCredentialExpires} True or False.
 Defaults to True.
-If True, and for globus universe jobs only,
+If True, and for grid universe jobs only,
 Condor-G will place a job on hold
 \MacroNI{GRIDMANAGER\_MINIMUM\_PROXY\_TIME} seconds
 before the proxy expires.
@@ -4753,7 +4753,7 @@ This number may be exceeded if it is reduced through the use
 of \Condor{reconfig} while the \Condor{gridmanager} is running
 or if the \Condor{gridmanager} receives new
 jobs from the \Condor{schedd} that were already submitted
-(that is, their \MacroNI{GlobusContactString} is not "X").
+(that is, their \MacroNI{GridJobId} is not undefined).
 In these cases, submitted jobs will not be killed,
 but no new jobs can be submitted until the number of submitted
 jobs falls below the current limit.
@@ -4850,7 +4850,7 @@ two phase commit timeout to Globus.  This maps directly to the \texttt{two\_phas
 
 \item[\Macro{GLOBUS\_GATEKEEPER\_TIMEOUT}]
 \label{param:GlobusGatekeeperTimeout} The number of seconds after
-which if a globus
+which if a grid
 universe job fails to ping the gatekeeper,
 the job will be put on hold.
 Defaults to 5 days (in seconds).
@@ -4874,7 +4874,7 @@ These macros affect the \Prog{grid\_monitor}.
 \item[\Macro{ENABLE\_GRID\_MONITOR}] \label{param:EnableGridMonitor}
   When set to \Expr{True} enables the \Prog{grid\_monitor} tool.  The
   \Prog{grid\_monitor} tool is used to reduce load on Globus gatekeepers.
-  This parameter only affects globus universe jobs.
+  This parameter only affects grid-type gt2 grid universe jobs.
   \MacroNI{GRID\_MONITOR} must also be correctly configured.
   Defaults to \Expr{False}.
   See section~\ref{sec:Condor-G-GridMonitor} on
@@ -4883,7 +4883,7 @@ These macros affect the \Prog{grid\_monitor}.
 
 \item[\Macro{GRID\_MONITOR}] \label{param:GridMonitor}
   The complete pathname of the \Prog{grid\_monitor} tool used to reduce load on
-  Globus gatekeepers.  This parameter only affects globus
+  Globus gatekeepers.  This parameter only affects grid-type gt2 grid
   universe jobs.  This parameter is not referenced unless
   \MacroNI{ENABLE\_GRID\_MONITOR} is set to \Expr{True}. 
   See section~\ref{sec:Condor-G-GridMonitor} on

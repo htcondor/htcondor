@@ -450,7 +450,7 @@ a new cluster is defined.
 %%%%%%%%%%%%%%%%%%%
 
 \item[universe = $<$vanilla \Bar\ standard \Bar\ pvm \Bar\ scheduler
-\Bar\ local \Bar\ globus \Bar\ grid \Bar\ mpi \Bar\ java$>$]
+\Bar\ local \Bar\ grid \Bar\ mpi \Bar\ java$>$]
 \index{submit commands!universe}
 Specifies which Condor Universe to use when running this job.  The Condor
 Universe specifies a Condor execution environment.  The standard
@@ -464,11 +464,7 @@ Condor libraries.  \emph{Note:} Use the \SubmitCmd{vanilla} Universe to
 submit shell scripts to Condor.  The \SubmitCmd{pvm} Universe is for a
 parallel job written with PVM 3.4. The \SubmitCmd{scheduler} is for a job that
 should act as a metascheduler.
-The \SubmitCmd{globus} universe by default uses the Globus
-GRAM API to contact the Globus resource specified and requests it run the job.
-The \SubmitCmd{globus} and \SubmitCmd{grid} universes default to using Globus 2.
-Further specification of the \SubmitCmd{grid} universe is done with the
-\SubmitCmd{grid\_type} command.
+
 The \SubmitCmd{mpi} universe is
 for running mpi jobs made with the MPICH package.
 The \SubmitCmd{java} Universe is for programs written to the Java Virtual Machine.
@@ -604,7 +600,7 @@ and transferred back when the job completes.
 This command is ignored if the job ClassAd attribute
 \Attr{TransferErr} is
 \Expr{False}.
-The default value is \Expr{True} in the grid and globus
+The default value is \Expr{True} in the grid
 universe and \Expr{False} otherwise.
 
 %%%%%%%%%%%%%%%%%%%
@@ -617,7 +613,7 @@ machine from which the job was submitted.
 The default value is \Expr{False},
 the command is only relevant for jobs submitted to
 the vanilla or java universes, and
-it is ignored by the grid and globus
+it is ignored by the grid
 universe.
 
 %%%%%%%%%%%%%%%%%%%
@@ -632,7 +628,7 @@ and transferred back when the job completes.
 This command is ignored if the job ClassAd attribute
 \Attr{TransferOut} is
 \Expr{False}.
-The default value is \Expr{True} in the grid and globus
+The default value is \Expr{True} in the grid
 universe and \Expr{False} otherwise.
 
 %%%%%%%%%%%%%%%%%%%
@@ -1224,28 +1220,6 @@ conditions that were present when the job checkpointed.
 \begin{description} 
 
 %%%%%%%%%%%%%%%%%%%
-%% globusscheduler
-%%%%%%%%%%%%%%%%%%%
-
-\item[globusscheduler = $<$scheduler-name$>$]
-\index{submit commands!globusscheduler}
-Identifies a resource and jobmanager service needed for the
-job.
-The various \SubmitCmd{grid\_type}s use different syntax for
-this command.
-See section~\ref{sec:Condor-G} with details on the Condor-G
-\SubmitCmd{grid\_type}s for the syntax associated with each.
-
-More than one \SubmitCmd{queue} command allows job submission to 
-separate resources.
-
-The \SubmitCmd{globusscheduler} command is required when
-the \SubmitCmd{universe} is \SubmitCmd{grid},
-and \SubmitCmd{grid\_type} is one of \SubmitCmd{gt2}, \SubmitCmd{gt3},
-or \SubmitCmd{gt4}.
-
-
-%%%%%%%%%%%%%%%%%%%
 %% globus_rematch
 %%%%%%%%%%%%%%%%%%%
 
@@ -1277,17 +1251,17 @@ the \Condor{gridmanager} gets a job ad to manage.
 Therefore, the expression is evaluated:
 \begin{enumerate}
 \item
-   when a globus universe job is first submitted to Condor-G
+   when a grid universe job is first submitted to Condor-G
 \item
-   when a globus universe job is released from the hold state
+   when a grid universe job is released from the hold state
 \item
    when Condor-G is restarted (specifically, whenever the \Condor{gridmanager}
    is restarted)
 \end{enumerate}
 If the expression evaluates to \Expr{True},
-then any previous submission to the globus universe will be
+then any previous submission to the grid universe will be
 forgotten and this job will be submitted again as a fresh submission to
-the globus universe.
+the grid universe.
 This may be useful if there is a desire to give up on a
 previous submission and try again.
 Note that this may result in the same job running more than
@@ -1316,7 +1290,7 @@ file parameters. Used for \SubmitCmd{grid\_type} \SubmitCmd{gt4} jobs.
 %%%%%%%%%%%%%%%%%%%
 %% grid_resource
 %%%%%%%%%%%%%%%%%%%
-\item[grid\_resource = $<$ grid\_type-string grid-specific-parameter-list $>$ ]
+\item[grid\_resource = $<$grid\_type-string$>$ $<$grid-specific-parameter-list$>$ ]
 \index{submit commands!grid\_resource}
 For each \SubmitCmd{grid\_type-string} value, 
 there are further type-specific values that must specified.
@@ -1325,67 +1299,37 @@ be given in a space-separated list.
 Allowable \SubmitCmd{grid\_type-string} values are
 \SubmitCmd{gt2}, \SubmitCmd{gt3}, \SubmitCmd{gt4},
 \SubmitCmd{condor}, \SubmitCmd{nordugrid}, and \SubmitCmd{unicore}.
+See section~\ref{sec:Condor-G} for details on the syntax for each
+grid-type.
 
 For a \SubmitCmd{grid\_type-string} of \SubmitCmd{gt2},
-the single parameter is the required value that may be set with the
-\SubmitCmd{globusscheduler} command.
-See section~\ref{sec:Using-gt2} 
-for syntax of the \SubmitCmd{globusscheduler} command.
+the single parameter is the name of the pre-WS GRAM resource to be used.
+See section~\ref{sec:Using-gt2} for details.
 
 For a \SubmitCmd{grid\_type-string} of \SubmitCmd{gt3},
-the single parameter is the required value that may be set with the
-\SubmitCmd{globusscheduler} command.
-See section~\ref{sec:Using-gt3} 
-for syntax of the \SubmitCmd{globusscheduler} command.
+the single parameter is the name of the OSGA GRAM service to be used.
+See section~\ref{sec:Using-gt3} for details.
 
 For a \SubmitCmd{grid\_type-string} of \SubmitCmd{gt4},
-the first parameter is the required value that may be set with the
-\SubmitCmd{globusscheduler} command.
-The second parameter is the required value that may be set with the
-\SubmitCmd{jobmanager\_type} command.
-See section~\ref{sec:Using-gt4} 
-for the syntax of these commands.
+the first parameter is the name of the WS GRAM service to be used.
+The second parameter is the name of WS resource to be used (usually the
+name of the back-end scheduler).
+See section~\ref{sec:Using-gt4} for details.
 
 For a \SubmitCmd{grid\_type-string} of \SubmitCmd{condor},
-the first parameter is the required value that may be set with the
-\SubmitCmd{remote\_schedd} command.
-The second parameter is the required value that may be set with the
-\SubmitCmd{remote\_pool} command.
-See section~\ref{sec:Condor-C-Submit} 
-for the syntax of these commands.
+the first parameter is the name of the remote schedd.
+The second parameter is the name of the pool to which the remote
+schedd belongs.
+See section~\ref{sec:Condor-C-Submit} for details.
 
 For a \SubmitCmd{grid\_type-string} of \SubmitCmd{nordugrid},
-the single parameter is the required value that may be set with the
-\SubmitCmd{nordugrid\_resource} command.
-See section~\ref{sec:NorduGrid} 
-for the syntax of this command.
+the single parameter is the name of the NorduGrid resource to be used.
+See section~\ref{sec:NorduGrid} for details.
 
 For a \SubmitCmd{grid\_type-string} of \SubmitCmd{unicore},
-the first parameter is the required value that may be set with the
-\SubmitCmd{unicore\_\_u\_site} command.
-The second parameter is the required value that may be set with the
-\SubmitCmd{unicore\_\_v\_site} command.
-See section~\ref{sec:Unicore} 
-for the syntax of these commands.
-
-%%%%%%%%%%%%%%%%%%%
-%% grid_type
-%%%%%%%%%%%%%%%%%%%
-\item[grid\_type = $<$ gt2 \Bar\ gt3 \Bar\ gt4 \Bar\ condor \Bar\ nordugrid
-\Bar\ unicore $>$ ] A
-\index{submit commands!grid\_type}
-case insensitive string to further specify the intended type of resource
-for \SubmitCmd{grid} universe jobs.
-The default value is \SubmitCmd{gt2}.
-
-%%%%%%%%%%%%%%%%%%%
-%% jobmanager_type
-%%%%%%%%%%%%%%%%%%%
-
-\item[jobmanager\_type = $<$Fork \Bar\ Condor \Bar\ PBS \Bar\ LSF \Bar\ SGE$>$]
-\index{submit commands!jobmanager\_type}
-Used only with \SubmitCmd{grid\_type} \SubmitCmd{gt4} to
-specify the correct service for the jobmanager to perform.
+the first parameter is the name of the Unicore Usite to be used.
+The second parameter is the name of the Unicore Vsite to be used.
+See section~\ref{sec:Unicore} for details.
 
 %%%%%%%%%%%%%%%%%%%
 %% keystore_alias
@@ -1489,19 +1433,6 @@ example, when the  \Prog{MyProxy} server DN begins with a user credential.
 
 
 %%%%%%%%%%%%%%%%%%%
-%% nordugrid_resource
-%%%%%%%%%%%%%%%%%%%
-
-\item[nordugrid\_resource = $<$hostname$>$]
-\index{submit commands!nordugrid\_resource}
-Identifies the NorduGrid resource to which the job should be
-submitted.
-
-This is a required submit file entry when
-the \SubmitCmd{universe} is \SubmitCmd{grid},
-and the \SubmitCmd{grid\_type} is \SubmitCmd{nordugrid}.
-
-%%%%%%%%%%%%%%%%%%%
 %% nordugrid_rsl
 %%%%%%%%%%%%%%%%%%%
 
@@ -1512,32 +1443,6 @@ string attributes which are not covered by regular submit description
 file parameters. Used when the \SubmitCmd{universe} is \SubmitCmd{grid},
 and the \SubmitCmd{grid\_type} is \SubmitCmd{nordugrid}.
 
-
-%%%%%%%%%%%%%%%%%%%
-%% remote_pool
-%%%%%%%%%%%%%%%%%%%
-\item[remote\_pool = $<$centralmanagerhostname$>$[:$<$portnumber$>$]]
-\index{submit commands!remote\_pool}
-A required command for a \Arg{grid} universe job with a
-\SubmitCmd{grid\_type} of \Arg{condor}.
-Use the \Argnm{centralmanagerhostname} as
-the central manager to
-locate the \Condor{schedd} to which the job will be submitted.
-The value
-is the same as you would use for the \Opt{-pool} option of \Condor{q} to
-dispay the job queue of the intended \Condor{schedd}.
-
-%%%%%%%%%%%%%%%%%%%
-%% remote_schedd
-%%%%%%%%%%%%%%%%%%%
-\item[remote\_schedd = $<$schedd-name$>$]
-\index{submit commands!remote\_schedd}
-A required command for a \Arg{grid} universe job with a
-\SubmitCmd{grid\_type} of \Arg{condor}.
-It is the name of the \Condor{schedd} to which the job should be submitted.
-%It is the machine with the job queue in the remote pool.
-The value ought to be the same as the \AdAttr{Name} ClassAd attribute
-of the \Condor{schedd} daemon as reported to its \Condor{collector}.
 
 %%%%%%%%%%%%%%%%%%%
 %% transfer_error
@@ -1593,47 +1498,6 @@ For transferring files other than \File{stdout},
 see \SubmitCmd{transfer\_output\_files}.
 
 %%%%%%%%%%%%%%%%%%%
-%% unicore_u_site
-%%%%%%%%%%%%%%%%%%%
-
-\item[unicore\_u\_site = $<$hostname$>$]
-\index{submit commands!unicore\_u\_site}
-Identifies the Unicore gateway to which the job should be
-submitted.
-
-This is a required submit file entry when
-the \SubmitCmd{universe} is \SubmitCmd{grid},
-and \SubmitCmd{grid\_type} is \SubmitCmd{unicore}.
-
-%%%%%%%%%%%%%%%%%%%
-%% unicore_v_site
-%%%%%%%%%%%%%%%%%%%
-
-\item[unicore\_v\_site = $<$hostname$>$]
-\index{submit commands!unicore\_v\_site}
-Identifies the Unicore virtual resource to which the job should be
-submitted.
-
-This is a required submit file entry when
-the \SubmitCmd{universe} is \SubmitCmd{grid},
-and \SubmitCmd{grid\_type} is \SubmitCmd{unicore}.
-
-
-%%%%%%%%%%%%%%%%%%%
-%% x509directory
-%%%%%%%%%%%%%%%%%%%
-%
-% \item[x509directory = $<$directory-path$>$] Used to specify the directory
-% \index{submit commands!x509directory}
-% which contains the certificate, private key, and trusted certificate directory
-% for GSS authentication.
-% If this attribute is set, the environment variables
-% X509\_USER\_KEY, X509\_USER\_CERT, and X509\_CERT\_DIR are exported with
-% default values.
-%Commented out by Karen for 6.4.3.
-%See section~\ref{sec:X509-Authentication} for more information.
-
-%%%%%%%%%%%%%%%%%%%
 %% x509userproxy
 %%%%%%%%%%%%%%%%%%%
 
@@ -1653,7 +1517,7 @@ it will search in the default location.
 
 \SubmitCmd{x509userproxy} is relevant when
 the \SubmitCmd{universe} is \SubmitCmd{grid},
-and \SubmitCmd{grid\_type} is one of \SubmitCmd{gt2}, \SubmitCmd{gt3},
+and the grid-type is one of \SubmitCmd{gt2}, \SubmitCmd{gt3},
 \SubmitCmd{gt4}, or \SubmitCmd{nordugrid}.
 
 \end{description} 

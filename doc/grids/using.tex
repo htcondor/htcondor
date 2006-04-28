@@ -114,7 +114,6 @@ include the the pre-web services GRAM.
 \subsubsection{\label{sec:Using-gt2}The gt2 grid\_type}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\index{universe!globus}
 \index{universe!grid, grid\_type gt2}
 Condor-G supports submitting jobs to remote resources running
 the Globus Toolkit versions 1 and 2, also called the pre-web
@@ -122,9 +121,8 @@ services GRAM.
 These Condor-G jobs are submitted the same as any other Condor job.
 The \SubmitCmd{universe} is \SubmitCmd{grid},
 and the pre-web services GRAM protocol is specified by
-setting the submit command \SubmitCmd{grid\_type} to \SubmitCmd{gt2}.
-Older submit description files specifying a \SubmitCmd{globus} universe job
-will default to this.
+setting a grid-type of \SubmitCmd{gt2} in the \SubmitCmd{grid\_resource}
+submit command.
 
 \index{Condor-G!job submission}
 \index{Condor-G!proxy}
@@ -151,9 +149,8 @@ an NCSA machine.
 
 \begin{verbatim}
 executable = test
-globusscheduler = modi4.ncsa.uiuc.edu/jobmanager
 universe = grid
-grid_type = gt2
+grid_resource = gt2 modi4.ncsa.uiuc.edu/jobmanager
 output = test.out
 log = test.log
 queue
@@ -167,16 +164,16 @@ By default, Condor transfers the executable, as well as any
 files specified by an \SubmitCmd{input} command.
 Note that the executable must be compiled for its intended platform.
 
-\index{submit commands!globusscheduler}
-The command \SubmitCmd{globusscheduler} is a required command
-for Condor-G jobs.
-It specifies the scheduling software to be used on the remote resource.
+\index{submit commands!grid\_resource}
+The command \SubmitCmd{grid\_resource} is a required command
+for grid universe jobs.
+The second field specifies the scheduling software to be used on the remote resource.
 There is a specific jobmanager for each type of
 batch system supported by Globus.
 The full syntax for this command line appears as
 \footnotesize
 \begin{verbatim}
-globusscheduler = machinename[:port]/jobmanagername[:X.509 distinguished name]
+grid_resource = gt2 machinename[:port]/jobmanagername[:X.509 distinguished name]
 \end{verbatim}
 \normalsize
 The portions of this syntax specification enclosed within
@@ -275,9 +272,8 @@ program on a different Globus resource.
 \begin{verbatim}
 executable = /bin/ls
 transfer_executable = false
-globusscheduler = vulture.cs.wisc.edu/jobmanager
 universe = grid
-grid_type = gt2
+grid_resource = gt2 vulture.cs.wisc.edu/jobmanager
 output = ls-test.out
 log = ls-test.log
 queue
@@ -288,7 +284,7 @@ In this example, the executable (the binary) has been pre-staged.
 The executable is on the remote machine, and it is not to
 be transferred before execution.
 Note that the required 
-\SubmitCmd{globusscheduler} and \SubmitCmd{universe}
+\SubmitCmd{grid\_resource} and \SubmitCmd{universe}
 commands are present.
 The command
 \begin{verbatim}
@@ -331,9 +327,8 @@ you are authorized to use.
 \footnotesize
 \begin{verbatim}
 executable = env-test.pl
-globusscheduler = example.cs.wisc.edu/jobmanager
 universe = grid
-grid_type = gt2
+grid_resource = gt2 example.cs.wisc.edu/jobmanager
 environment = foo=bar; zot=qux
 output = env-test.out
 log = env-test.log
@@ -415,9 +410,8 @@ a Condor job appears as:
 \footnotesize
 \begin{verbatim}
 executable = gass-example.pl
-globusscheduler = example.cs.wisc.edu/jobmanager
 universe = grid
-grid_type = gt2
+grid_resource = gt2 example.cs.wisc.edu/jobmanager
 output = gass.out
 log = gass.log
 queue
@@ -473,14 +467,14 @@ for more information about the Globus Toolkit version 3.2.
 For \SubmitCmd{grid\_type} \SubmitCmd{gt3} jobs,
 the submit description file is much the same as for
 \SubmitCmd{grid\_type} \SubmitCmd{gt2} jobs.
-\index{submit commands!globusscheduler}
-The \SubmitCmd{globusscheduler} command is still required,
+\index{submit commands!grid\_resource}
+The \SubmitCmd{grid\_resource} command is still required,
 but the format changes from \SubmitCmd{gt2}
 to one that is a URL. 
 The syntax follows the form:
 \footnotesize
 \begin{verbatim}
-globusscheduler = http://hostname[:port]/ogsa/services/base/gram/
+grid_resource = gt3 http://hostname[:port]/ogsa/services/base/gram/
 XXXManagedJobFactoryService
 \end{verbatim}
 \normalsize
@@ -488,7 +482,7 @@ XXXManagedJobFactoryService
 or
 \footnotesize
 \begin{verbatim}
-globusscheduler = http://IPaddress[:port]/ogsa/services/base/gram/
+grid_resource = gt3 http://IPaddress[:port]/ogsa/services/base/gram/
 XXXManagedJobFactoryService
 \end{verbatim}
 \normalsize
@@ -514,7 +508,7 @@ SGE
 An example, given on two lines (again, for formatting reasons) is 
 \footnotesize
 \begin{verbatim}
-globusscheduler = http://198.51.254.40:8080/ogsa/services/base/gram/
+grid_resource = gt3 http://198.51.254.40:8080/ogsa/services/base/gram/
 ForkManagedJobFactoryService
 \end{verbatim}
 \normalsize
@@ -553,31 +547,29 @@ for more information about the Globus Toolkit version 4.0.
 
 For \SubmitCmd{grid\_type} \SubmitCmd{gt4} jobs,
 the submit description file is much the same as for
-\SubmitCmd{grid\_type} \SubmitCmd{gt2} or \SubmitCmd{gt3} jobs.
-\index{submit commands!globusscheduler}
-The \SubmitCmd{globusscheduler} command is still required,
+\SubmitCmd{gt2} or \SubmitCmd{gt3} jobs.
+\index{submit commands!grid\_resource}
+The \SubmitCmd{grid\_resource} command is still required,
 and is given in the form of a URL. 
 The syntax follows the form:
 \footnotesize
 \begin{verbatim}
-globusscheduler = [https://]hostname[:port][/wsrf/services/ManagedJobFactoryService]
+grid_resource = gt4 [https://]hostname[:port][/wsrf/services/ManagedJobFactoryService] Scheduler
 \end{verbatim}
 \normalsize
 
 or
 \footnotesize
 \begin{verbatim}
-globusscheduler = [https://]IPaddress[:port][/wsrf/services/ManagedJobFactoryService]
+grid_resource = gt4 [https://]IPaddress[:port][/wsrf/services/ManagedJobFactoryService] Scheduler
 \end{verbatim}
 \normalsize
 The portions of this syntax specification enclosed within
 square brackets (\Lbr\ and \Rbr) are optional.
 
-\index{submit commands!jobmanager\_type}
-A new submit command called \SubmitCmd{jobmanager\_type}
-distinguishes the correct service to perform.
-The value of \SubmitCmd{jobmanager\_type} is one of five
-strings:
+The last field of \SubmitCmd{grid\_resource} indicates which job execution
+system should to be used on the remote system to execute the job. One of
+these values should be subsitituted for \SubmitCmd{Scheduler}:
 \begin{verbatim}
 Fork
 Condor
@@ -891,8 +883,7 @@ An example contains commands of the form:
 \begin{verbatim}
 executable      = /usr/bin/my-executable
 universe        = grid
-grid_type       = gt3
-globusscheduler = condor-unsup-7
+grid_resource   = gt4 condor-unsup-7
 MyProxyHost     = example.cs.wisc.edu:7512
 MyProxyServerDN = /O=doesciencegrid.org/OU=People/CN=Jane Doe 25900
 MyProxyPassword = password

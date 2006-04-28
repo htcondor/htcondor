@@ -11,11 +11,11 @@ for more information about NorduGrid software.
 
 Condor jobs may be submitted to
 NorduGrid resources using the \SubmitCmd{grid} universe.
-The \SubmitCmd{grid\_type} is specified in the submit description
-file as \SubmitCmd{nordugrid}.
-
-An extra submit description file command (\SubmitCmd{nordugrid\_resource})
-is required to specify the host name of the NorduGrid resource.
+The \SubmitCmd{grid\_resource} command specifies the name of the
+NorduGrid resource as follows:
+\begin{verbatim}
+grid_resource = nordugrid ng.example.com
+\end{verbatim}
 
 NorduGrid uses X.509 credentials for authentication,
 usually in the form a proxy certificate. 
