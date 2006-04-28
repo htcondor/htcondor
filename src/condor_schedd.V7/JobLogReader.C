@@ -49,7 +49,7 @@ JobLogReader::poll(classad::ClassAdCollection *ad_collection) {
 
 	fst = parser.openFile();
 	if(fst == FILE_OPEN_ERROR) {
-		dprintf(D_ALWAYS,"Failed to open %s\n",parser.getJobQueueName());
+		dprintf(D_ALWAYS,"Failed to open %s: errno=%d\n",parser.getJobQueueName(),errno);
 		return;
 	}
 
@@ -105,13 +105,13 @@ bool JobLogReader::IncrementalLoad(classad::ClassAdCollection *ad_collection) {
 			//dprintf(D_ALWAYS, "Read op_type %d\n",op_type);
 			bool processed = ProcessLogEntry(parser.getCurCALogEntry(), ad_collection, &parser);
 			if(!processed) {
-				dprintf(D_ALWAYS, "Failed to process log entry.\n");
+				dprintf(D_ALWAYS, "ERROR reading %s: Failed to process log entry.\n",GetJobLogFileName());
 				return false;
 			}
 		}
 	}while(err == FILE_READ_SUCCESS);
 	if (err != FILE_READ_EOF) {
-		dprintf(D_ALWAYS, "Error reading from %s: %d, %d\n",parser.getJobQueueName(),err,errno);
+		dprintf(D_ALWAYS, "Error reading from %s: %d, %d\n",GetJobLogFileName(),err,errno);
 		return false;
 	}
 	return true;
@@ -125,7 +125,18 @@ JobLogReader::ProcessLogEntry( ClassAdLogEntry *log_entry, classad::ClassAdColle
 
 	switch(log_entry->op_type) {
 	case CondorLogOp_NewClassAd: {
-		classad::ClassAd* ad = new classad::ClassAd();
+		classad::ClassAd* ad;
+		bool using_existing_ad = false;
+
+		ad = ad_collection->GetClassAd(log_entry->key);
+		if(ad && ad->size() == 0) {
+				//This is a cluster ad created in advance so that children
+				//could be chained from it.
+			using_existing_ad = true;
+		}
+		else {
+			ad = new classad::ClassAd();
+		}
 
 		//The following classad methods are deprecated.
 		//We may not need these anyway, so leave them commented out for now.
@@ -140,14 +151,24 @@ JobLogReader::ProcessLogEntry( ClassAdLogEntry *log_entry, classad::ClassAdColle
 			sprintf(cluster_key,"0%d.-1",proc.cluster);
 			classad::ClassAd* cluster_ad = ad_collection->GetClassAd(cluster_key);
 			if(!cluster_ad) {
-				dprintf(D_ALWAYS,"JobLogReader warning: cluster ad not found for %s\n",log_entry->key);
+					// The cluster ad doesn't exist yet.  This is expected.
+					// For example, once the job queue is rewritten (i.e.
+					// truncated), the order of entries in it is arbitrary.
+				cluster_ad = new classad::ClassAd();
+				if(!ad_collection->AddClassAd(cluster_key,cluster_ad)) {
+					dprintf(D_ALWAYS,"ERROR processing %s: failed to add '%s' to ClassAd collection.\n",GetJobLogFileName(),cluster_key);
+					break;
+				}
 			}
-			else {
-				ad->ChainToAd(cluster_ad);
-			}
+
+			ad->ChainToAd(cluster_ad);
 		}
 
-		ad_collection->AddClassAd(log_entry->key,ad);
+		if( !using_existing_ad ) {
+			if(!ad_collection->AddClassAd(log_entry->key,ad)) {
+				dprintf(D_ALWAYS,"ERROR processing %s: failed to add '%s' to ClassAd collection.\n",GetJobLogFileName(),log_entry->key);
+			}
+		}
 
 		break;
 	}
@@ -158,7 +179,7 @@ JobLogReader::ProcessLogEntry( ClassAdLogEntry *log_entry, classad::ClassAdColle
 	case CondorLogOp_SetAttribute: {	
 		classad::ClassAd *ad = ad_collection->GetClassAd(log_entry->key); //pointer to classad in collection
 		if(!ad) {
-			dprintf(D_ALWAYS, "ERROR: no such ad in collection: %s\n",log_entry->key);
+			dprintf(D_ALWAYS, "ERROR reading %s: no such ad in collection: %s\n",GetJobLogFileName(),log_entry->key);
 			return false;
 		}
 		//NOTE: assuming here that we can parse the old-style classad expression using the new classad parser
@@ -166,7 +187,7 @@ JobLogReader::ProcessLogEntry( ClassAdLogEntry *log_entry, classad::ClassAdColle
 
 		classad::ExprTree *expr = parser.ParseExpression(log_entry->value);
 		if(!expr) {
-			dprintf(D_ALWAYS, "ERROR: failed to parse expression: %s\n",log_entry->value);
+			dprintf(D_ALWAYS, "ERROR reading %s: failed to parse expression: %s\n",GetJobLogFileName(),log_entry->value);
 			ASSERT(expr);
 			return false;
 		}
@@ -177,7 +198,7 @@ JobLogReader::ProcessLogEntry( ClassAdLogEntry *log_entry, classad::ClassAdColle
 	case CondorLogOp_DeleteAttribute: {
 		classad::ClassAd *ad = ad_collection->GetClassAd(log_entry->key);
 		if(!ad) {
-			dprintf(D_ALWAYS, "ERROR: no such ad in collection: %s\n",log_entry->key);
+			dprintf(D_ALWAYS, "ERROR reading %s: no such ad in collection: %s\n",GetJobLogFileName(),log_entry->key);
 			return false;
 		}
 		ad->Delete(log_entry->name);
@@ -201,7 +222,7 @@ JobLogReader::ProcessLogEntry( ClassAdLogEntry *log_entry, classad::ClassAdColle
 	case CondorLogOp_LogHistoricalSequenceNumber:
 		break;
 	default:
-		dprintf(D_ALWAYS, "[QUILL] Unsupported Job Queue Command\n");
+		dprintf(D_ALWAYS, "ERROR reading %s: Unsupported Job Queue Command\n",GetJobLogFileName());
 		return false;
 	}
 	return true;
