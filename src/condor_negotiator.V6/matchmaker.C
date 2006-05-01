@@ -1010,13 +1010,17 @@ negotiationTime ()
 			// assigned to a group that did match, insert the submitter
 			// ad back into the main scheddAds list.  this way, we will
 			// try to match it again below .
-		if ( param_boolean("GROUP_AUTOREGROUP",false) )  {
-			for (i=0; i<groupArrayLen; i++) {
-				ad = NULL;
+		bool default_autoregroup = param_boolean("GROUP_AUTOREGROUP",false);
+		for (i=0; i<groupArrayLen; i++) {
+			ad = NULL;
+			MyString autoregroup_param;
+			autoregroup_param.sprintf("GROUP_AUTOREGROUP_%s",groupArray[i].groupName);
+			if(param_boolean(autoregroup_param.Value(),default_autoregroup)) {
 				dprintf(D_ALWAYS,
-					"Group %s - autoregroup inserting %d submitters\n",
-					groupArray[i].groupName,
-					groupArray[i].submitterAds.MyLength());
+						"Group %s - autoregroup inserting %d submitters\n",
+						groupArray[i].groupName,
+						groupArray[i].submitterAds.MyLength());
+
 				groupArray[i].submitterAds.Open();
 				while( (ad=groupArray[i].submitterAds.Next()) ) {
 					scheddAds.Insert(ad);				
