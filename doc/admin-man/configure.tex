@@ -4604,6 +4604,12 @@ group users.
   This allows group submitted jobs to be matched with idle machines
   even if the group is over its quota.
 
+\item[\Macro{GROUP\_AUTOREGROUP\_<groupname>}]
+  This is the same as \MacroNI{GROUP\_AUTOREGROUP}, but it is settable
+  on a per-group basis.  If no value is specified for a given group,
+  the default behavior is determined by \MacroNI{GROUP\_AUTOREGROUP},
+  which in turn defaults to \Expr{False}.
+
 \item[\Macro{NEGOTIATOR\_CONSIDER\_PREEMPTION}] \label{param:NegotiatorConsiderPreemption}
   For expert users only. A boolean value (defaults to \Expr{True}),
   that when \Expr{False},
