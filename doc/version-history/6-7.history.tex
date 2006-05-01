@@ -207,6 +207,16 @@ Tru64 5.1 on Alpha.
 jobs with an invalid proxy to become stuck (the \Condor{gridmanager}
 would do nothing with the jobs and not acknowledge a hold or removal).
 
+\item It used to be impossible to use the \Macro{SUBMIT\_EXPRS}
+  configuration setting to provide default values for job submit file
+  keywords that were recognized by \Condor{submit}.
+  For example, administrators could define a default value for a
+  custom job attribute, but not something like \Attr{Notification} or
+  \Attr{WantRemoteIO}.
+  Now, administrators can use \MacroNI{SUBMIT\_EXPRS} for any
+  settings, whether they are regular \Condor{submit} keywords or
+  custom job attributes.
+
 \end{itemize}
 
 
