@@ -4719,12 +4719,33 @@ condor_param( const char* name, const char* alt_name )
 	bool used_alt = false;
 	char *pval = lookup_macro( name, ProcVars, PROCVARSIZE );
 
+	static StringList* submit_exprs = NULL;
+	static bool submit_exprs_initialized = false;
+	if( ! submit_exprs_initialized ) {
+		char* tmp = param( "SUBMIT_EXPRS" );
+		if( tmp ) {
+			submit_exprs = new StringList( tmp );
+			free( tmp ); 
+		}
+		submit_exprs_initialized = true;
+	}
+
 	if( ! pval && alt_name ) {
 		pval = lookup_macro( alt_name, ProcVars, PROCVARSIZE );
 		used_alt = true;
 	}
 
 	if( ! pval ) {
+			// if the value isn't in the submit file, check in the
+			// submit_exprs list and use that as a default.  
+		if( submit_exprs ) {
+			if( submit_exprs->contains_anycase(name) ) {
+				return( param(name) );
+			}
+			if( alt_name && submit_exprs->contains_anycase(alt_name) ) {
+				return( param(alt_name) );
+			}
+		}			
 		return( NULL );
 	}
 
