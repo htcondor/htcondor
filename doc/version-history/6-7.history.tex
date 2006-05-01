@@ -29,6 +29,11 @@ command should be used instead.
 
 \begin{itemize}
 
+\item A \Condor{schedd} can now submit jobs directly to a local PBS
+or LSF installation. To do this, submit the job with a
+\SubmitCmd{universe} of \SubmitCmd{grid} and a
+\SubmitCmd{grid\_resource} of \SubmitCmd{pbs} or \SubmitCmd{lsf}.
+
 \item Implemented all of the functions from new classads into the
 "old" classads now in Condor.
 
