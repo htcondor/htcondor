@@ -1,0 +1,21 @@
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:PBS}The pbs grid\_type }
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{PBS}
+
+PBS (Portable Batch System) is a popular batch system. It comes in
+several varieties: OpenPBS (\URL{http://www.openpbs.org}),
+PBS Pro (\URL{http://www.altair.com/software/pbspro.htm}), and
+Torque
+(\URL{http://www.clusterresources.com/pages/products/torque-resource-manager.php}).
+
+Condor jobs may be submitted to a local PBS system
+using the \SubmitCmd{grid} universe and the
+\SubmitCmd{grid\_resource} command as follows:
+\begin{verbatim}
+grid_resource = pbs
+\end{verbatim}
+
+Details on where PBS is installed on the local system are
+given in the file \$(GLITE\_LOCATION)/etc/blah.config.
