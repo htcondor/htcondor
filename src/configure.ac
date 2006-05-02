@@ -215,6 +215,9 @@ elif test $os = "Linux" ; then
 	 "4.2" )
        _cv_linux_distro="CENTOS42"
        ;;
+	 "4.3" )
+       _cv_linux_distro="CENTOS43"
+       ;;
      * )
        AC_MSG_WARN([Condor is not yet ported to redhat version $_rh_vers])
        AC_MSG_WARN([You may have trouble building and/or packaging Condor]) 
