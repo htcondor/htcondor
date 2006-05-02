@@ -32,7 +32,8 @@
 #include "internet.h"            // sinful->hostname stuff
 #include "daemon.h"
 #include "env.h"
-
+#include "condor_config.h"
+#include "condor_ckpt_name.h"
 
 ParallelShadow::ParallelShadow() {
     nextResourceToStart = 0;
@@ -80,6 +81,12 @@ ParallelShadow::init( ClassAd* job_ad, const char* schedd_addr )
 
     ClassAd *temp = new ClassAd( *(getJobAd() ) );
 
+
+	char buffer[1024];
+	sprintf (buffer, "%s = \"%s%c%s\"", ATTR_REMOTE_SPOOL_DIR, 
+		param("SPOOL"), DIR_DELIM_CHAR, 
+		gen_ckpt_name(0, getCluster(), 0, 0));
+	temp->Insert(buffer);
 
     sprintf( buf, "%s = %s", ATTR_MPI_IS_MASTER, "TRUE" );
     if( !temp->Insert(buf) ) {
@@ -223,6 +230,7 @@ ParallelShadow::getResources( void )
         /* Now, do stuff for each proc: */
     for ( int i=0 ; i<numProcs ; i++ ) {
 		job_ad = new ClassAd();
+
 		if( !job_ad->initFromStream(*sock)  ) {
             EXCEPT( "Failed to get job classad for proc %d", i );
 		}
@@ -272,6 +280,13 @@ ParallelShadow::getResources( void )
 			sprintf( buf, "%s = \"%s\"", ATTR_MY_ADDRESS,
 					 daemonCore->InfoCommandSinfulString() );
 			tmp_ad->InsertOrUpdate( buf );
+
+			char buffer[1024];
+			sprintf (buffer, "%s = \"%s%c%s\"", ATTR_REMOTE_SPOOL_DIR, 
+				param("SPOOL"), DIR_DELIM_CHAR, 
+				gen_ckpt_name(0, cluster, 0, 0));
+			tmp_ad->Insert(buffer);
+
 			rr->setJobAd( tmp_ad );
 			nodenum++;
 

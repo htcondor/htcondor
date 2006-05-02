@@ -1184,10 +1184,6 @@ SetExecutable()
 	// generate initial checkpoint file
 	strcpy( IckptName, gen_ckpt_name(0,ClusterId,ICKPT,0) );
 
-	(void) sprintf (buffer, "%s = \"%s%c%s\"", ATTR_REMOTE_SPOOL_DIR, Spool, DIR_DELIM_CHAR, 
-					gen_ckpt_name(0, ClusterId, 0, 0));
-	InsertJobExpr (buffer);
-	
 	// spool executable only if no $$(arch).$$(opsys) specified
 
 	if ( !strstr(ename,"$$") && *copySpool != 'F' && *copySpool != 'f' &&
