@@ -8,6 +8,8 @@ if exist ..\Release goto process2
 echo Compile a Release Build of Condor first.
 goto end
 :process2
+REM Set up environment
+call set_vars.bat
 REM Set up release-dir directories
 echo Creating Release Directory...
 if not exist %1\bin\NUL mkdir %1\bin
