@@ -176,8 +176,17 @@ AcquireProxy( const ClassAd *job_ad, MyString &error, int notify_tid )
 	ProxySubject *proxy_subject = NULL;
 	char *subject_name = NULL;
 	MyString proxy_path;
+	MyString owner;
+	char *param_str = NULL;
 
-	char *param_str = param( "JOB_PROXY_OVERRIDE_FILE" );
+	if ( job_ad->LookupString( ATTR_OWNER, owner ) ) {
+		MyString param_name;
+		param_name.sprintf( "JOB_PROXY_OVERRIDE_FILE_%s", owner.Value() );
+		param_str = param( param_name.Value() );
+	}
+	if ( param_str == NULL ) {
+		param_str = param( "JOB_PROXY_OVERRIDE_FILE" );
+	}
 	if ( param_str ) {
 		proxy_path = param_str;
 		free( param_str );
