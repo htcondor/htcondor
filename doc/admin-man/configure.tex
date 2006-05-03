@@ -4485,10 +4485,15 @@ These macros affect the \Condor{negotiator}.
   a job running on a given machine unless the
   \MacroNI{PREEMPTION\_REQUIREMENTS} expression evaluates to TRUE and the
   owner of the idle job has a better priority than the owner of the
-  running job.  By default, this expression allows jobs to be
-  preempted only after they have run for one hour, and only if the
-  priority of the competing user is 20\% higher, in order to prevent
-  ``churning'' of jobs in the pool.  Note that this setting does not
+  running job. 
+  The \MacroNI{PREEMPTION\_REQUIREMENTS} expression is evaluated within the
+  context of the candidate machine ClassAd and the candidate idle job
+  ClassAd; thus the \verb@MY@ scope prefix refers to the machine ClassAd,
+  and the \verb@TARGET@ scope prefix refers to the ClassAd of the idle
+  (candidate) job.  
+  If not explicitly set in the Condor configuration file, the default value
+  for this expression is TRUE.
+  Note that this setting does not
   influence other potential causes of preemption, such as startd
   \MacroNI{RANK}, or \MacroNI{PREEMPT} expressions.  See
   section \ref{sec:Disabling Preemption} for a general discussion of
