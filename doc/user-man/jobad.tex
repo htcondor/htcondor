@@ -82,24 +82,24 @@ will equal the number of seconds that the job has been on hold.
 \index{ExitBySignal!job ClassAd attribute}
 \item[\AdAttr{ExitBySignal}:]  An attribute that is \Expr{True}
 when a user job exits via a signal and \Expr{False} otherwise.
-For certain grid-types of the grid universe, how the job exited is
-unavailable. In this case, a normal exit code of 0 is assumed.
+It is available for use 
+in all universes except the globus universe.
 
 %%% ClassAd attribute: ExitCode
 \index{ClassAd job attribute!ExitCode}
 \index{ExitCode!job ClassAd attribute}
 \item[\AdAttr{ExitCode}:]  When a user job exits by means other than a signal,
 this is the exit return code of the user job.
-For certain grid-types of the grid universe, how the job exited is
-unavailable. In this case, a normal exit code of 0 is assumed.
+It is available for use 
+in all universes except the globus universe.
 
 %%% ClassAd attribute: ExitSignal
 \index{ClassAd job attribute!ExitSignal}
 \index{ExitSignal!job ClassAd attribute}
 \item[\AdAttr{ExitSignal}:]  When a user job exits by means of an unhandled 
 signal, this attribute takes on the numeric value of the signal.
-For certain grid-types of the grid universe, how the job exited is
-unavailable. In this case, a normal exit code of 0 is assumed.
+It is available for use 
+in all universes except the globus universe.
 
 %% Karen added proper index entries up to this point in the file
 
@@ -144,6 +144,22 @@ checkpoint file contains the job's memory image).
 A vanilla universe job's \AdAttr{ImageSize} is recomputed
 internally every 15 seconds.
 
+%%% ClassAd attribute: JobGridType
+\index{ClassAd job attribute!JobGridType}
+\index{JobGridType!job ClassAd attribute}
+\item[\AdAttr{JobGridType}:]  A case-insensitive string which indicates
+the external batch system intended for a globus or grid universe job.
+Defined values are
+\footnotesize
+\begin{verbatim}
+   "gt2" to indicate jobs intended for resources under Globus 2
+   "gt3" to indicate jobs intended for resources under Globus 3
+   "oracle" to indicate jobs intended for resources under the Oracle batch system
+   "nordugrid" to indicate jobs intended for resources under Nordugrid
+\end{verbatim}
+\normalsize
+
+
 %%% ClassAd attribute: JobLeaseDuration
 \index{ClassAd job attribute!JobLeaseDuration}
 \index{JobLeaseDuration!job ClassAd attribute}
@@ -180,7 +196,7 @@ Completed, and 5 = Held.
 \index{JobUniverse!job ClassAd attribute}
 \item[\AdAttr{JobUniverse}:]  Integer which indicates the job
 universe, where 1 = Standard, 4 = PVM, 5 = Vanilla, 7 = Scheduler,
-8 = MPI, 9 = Grid, and 10 = Java.
+8 = MPI, 9 = Globus, 9 = Grid, and 10 = Java.
 \index{job!universe}
 \index{universe!job attribute definitions}
 
@@ -392,7 +408,7 @@ a signal to be sent to the job if the job is removed.
 \index{ClassAd job attribute!StreamErr}
 \index{StreamErr!job ClassAd attribute}
 \item[\AdAttr{StreamErr}:]   
-An attribute utilized only for grid universe jobs.
+An attribute utilized only for globus universe jobs.
 The default value is \Expr{True}.
 If \Expr{True}, and \Attr{TransferErr} is \Expr{True}, then 
 standard error is streamed back to the submit machine, instead
@@ -406,7 +422,7 @@ If \Attr{TransferErr} is \Expr{False}, then this job attribute is ignored.
 \index{ClassAd job attribute!StreamOut}
 \index{StreamOut!job ClassAd attribute}
 \item[\AdAttr{StreamOut}:]   
-An attribute utilized only for grid universe jobs.
+An attribute utilized only for globus universe jobs.
 The default value is \Expr{True}.
 If \Expr{True}, and \Attr{TransferOut} is \Expr{True}, then 
 job output is streamed back to the submit machine, instead
@@ -426,7 +442,7 @@ has been suspended during its lifetime.
 \index{ClassAd job attribute!TransferErr}
 \index{TransferErr!job ClassAd attribute}
 \item[\AdAttr{TransferErr}:]   
-An attribute utilized only for grid universe jobs.
+An attribute utilized only for globus universe jobs.
 The default value is \Expr{True}.
 If \Expr{True}, then the error output from the job
 is transferred from the remote machine back to the submit machine.
@@ -440,7 +456,7 @@ by job attribute \Attr{Err}.
 \index{ClassAd job attribute!TransferExecutable}
 \index{TransferExecutable!job ClassAd attribute}
 \item[\AdAttr{TransferExecutable}:]   
-An attribute utilized only for grid universe jobs.
+An attribute utilized only for globus universe jobs.
 The default value is \Expr{True}.
 If \Expr{True}, then the job executable is transferred from the submit
 machine to the remote machine.
@@ -455,7 +471,7 @@ given in the job attribute \Attr{Cmd}.
 \index{ClassAd job attribute!TransferIn}
 \index{TransferIn!job ClassAd attribute}
 \item[\AdAttr{TransferIn}:]   
-An attribute utilized only for grid universe jobs.
+An attribute utilized only for globus universe jobs.
 The default value is \Expr{True}.
 If \Expr{True}, then the job input is transferred from the submit
 machine to the remote machine.
@@ -469,7 +485,7 @@ the name of the file is given by the job attribute \Attr{In}.
 \index{ClassAd job attribute!TransferOut}
 \index{TransferOut!job ClassAd attribute}
 \item[\AdAttr{TransferOut}:]   
-An attribute utilized only for grid universe jobs.
+An attribute utilized only for globus universe jobs.
 The default value is \Expr{True}.
 If \Expr{True}, then the output from the job
 is transferred from the remote machine back to the submit machine.

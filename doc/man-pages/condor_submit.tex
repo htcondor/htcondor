@@ -450,7 +450,7 @@ a new cluster is defined.
 %%%%%%%%%%%%%%%%%%%
 
 \item[universe = $<$vanilla \Bar\ standard \Bar\ pvm \Bar\ scheduler
-\Bar\ local \Bar\ grid \Bar\ mpi \Bar\ java$>$]
+\Bar\ local \Bar\ globus \Bar\ grid \Bar\ mpi \Bar\ java$>$]
 \index{submit commands!universe}
 Specifies which Condor Universe to use when running this job.  The Condor
 Universe specifies a Condor execution environment.  The standard
@@ -464,10 +464,11 @@ Condor libraries.  \emph{Note:} Use the \SubmitCmd{vanilla} Universe to
 submit shell scripts to Condor.  The \SubmitCmd{pvm} Universe is for a
 parallel job written with PVM 3.4. The \SubmitCmd{scheduler} is for a job that
 should act as a metascheduler.
-The \SubmitCmd{grid} universe forwards the job to an external job
-management system.
+The \SubmitCmd{globus} universe by default uses the Globus
+GRAM API to contact the Globus resource specified and requests it run the job.
+The \SubmitCmd{globus} and \SubmitCmd{grid} universes default to using Globus 2.
 Further specification of the \SubmitCmd{grid} universe is done with the
-\SubmitCmd{grid\_resource} command.
+\SubmitCmd{grid\_type} command.
 The \SubmitCmd{mpi} universe is
 for running mpi jobs made with the MPICH package.
 The \SubmitCmd{java} Universe is for programs written to the Java Virtual Machine.
@@ -603,7 +604,7 @@ and transferred back when the job completes.
 This command is ignored if the job ClassAd attribute
 \Attr{TransferErr} is
 \Expr{False}.
-The default value is \Expr{True} in the grid
+The default value is \Expr{True} in the grid and globus
 universe and \Expr{False} otherwise.
 
 %%%%%%%%%%%%%%%%%%%
@@ -616,7 +617,7 @@ machine from which the job was submitted.
 The default value is \Expr{False},
 the command is only relevant for jobs submitted to
 the vanilla or java universes, and
-it is ignored by the grid
+it is ignored by the grid and globus
 universe.
 
 %%%%%%%%%%%%%%%%%%%
@@ -631,7 +632,7 @@ and transferred back when the job completes.
 This command is ignored if the job ClassAd attribute
 \Attr{TransferOut} is
 \Expr{False}.
-The default value is \Expr{True} in the grid
+The default value is \Expr{True} in the grid and globus
 universe and \Expr{False} otherwise.
 
 %%%%%%%%%%%%%%%%%%%
