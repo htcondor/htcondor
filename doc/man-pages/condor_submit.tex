@@ -464,7 +464,10 @@ Condor libraries.  \emph{Note:} Use the \SubmitCmd{vanilla} Universe to
 submit shell scripts to Condor.  The \SubmitCmd{pvm} Universe is for a
 parallel job written with PVM 3.4. The \SubmitCmd{scheduler} is for a job that
 should act as a metascheduler.
-
+The \SubmitCmd{grid} universe forwards the job to an external job
+management system.
+Further specification of the \SubmitCmd{grid} universe is done with the
+\SubmitCmd{grid\_resource} command.
 The \SubmitCmd{mpi} universe is
 for running mpi jobs made with the MPICH package.
 The \SubmitCmd{java} Universe is for programs written to the Java Virtual Machine.
