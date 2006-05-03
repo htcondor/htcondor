@@ -1406,9 +1406,6 @@ server, shadow, and starter, none of which use DaemonCore yet).
   \MacroNI{SUBMIT\_EXPRS} not part of the \MacroNI{<SUBSYS>\_EXPRS}, it is
   documented in section~\ref{sec:Submit-Config-File-Entries}
 
-  The \Condor{startd} \MacroU{STARTD\_ATTRS} defaults to
-  ``JobUniverse''.
-
   Because of the different syntax of the configuration
   file and ClassAds, a little extra work is required to get a
   given entry into a ClassAd.  In particular, ClassAds require quote
@@ -2550,7 +2547,8 @@ Configuring The Startd Policy.
   ClassAd.
   List the attribute names to be advertised.  \Note Since
   these are already ClassAd expressions, do not do anything
-  unusual with strings.
+  unusual with strings.   
+  This setting defaults to ``JobUniverse''.
 
 \item[\Macro{STARTD\_ATTRS}] \label{param:StartdAttrs} This macro is
   described in section~\ref{param:SubsysAttrs} as
