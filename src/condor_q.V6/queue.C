@@ -410,7 +410,7 @@ int main (int argc, char **argv)
 						if ( (retval = sqfp( NULL, NULL, NULL, NULL, TRUE) ) ) {
 							/* if the queue was retrieved, then I am done */
 							freeConnectionStrings();
-							exit(retval);
+							exit(retval?EXIT_SUCCESS:EXIT_FAILURE);
 						}
 						
 						fprintf( stderr, 
@@ -419,7 +419,7 @@ int main (int argc, char **argv)
 						if (direct == DIRECT_RDBMS) {
 							fprintf(stderr,
 								"\t- Not failing over due to -direct\n");
-							exit(retval);
+							exit(retval?EXIT_SUCCESS:EXIT_FAILURE);
 						} 
 
 						fprintf(stderr,
@@ -462,7 +462,7 @@ int main (int argc, char **argv)
 						{
 							/* if the queue was retrieved, then I am done */
 							freeConnectionStrings();
-							exit(retval);
+							exit(retval?EXIT_SUCCESS:EXIT_FAILURE);
 						}
 
 						fprintf( stderr,
@@ -475,7 +475,7 @@ int main (int argc, char **argv)
 						if (direct == DIRECT_QUILLD) {
 							fprintf(stderr,
 								"\t- Not failing over due to -direct\n");
-							exit(retval);
+							exit(retval?EXIT_SUCCESS:EXIT_FAILURE);
 						}
 
 						fprintf(stderr,
@@ -505,7 +505,7 @@ int main (int argc, char **argv)
 			
 					/* Hopefully I got the queue from the schedd... */
 					freeConnectionStrings();
-					exit(!retval);
+					exit(retval?EXIT_SUCCESS:EXIT_FAILURE);
 					break;
 
 				case DIRECT_UNKNOWN:
