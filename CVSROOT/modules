@@ -586,8 +586,11 @@ V6_7_19_EXT	-a V6_7_COMMON_EXT \
 		   externals/bundles/drmaa/1.2.1 \
 		   externals/bundles/blahp/1.7.0
 
+# Externals needed for V6_7_20 (same as V6_7_19)
+V6_7_20_EXT	-a V6_7_19_EXT
+
 # Externals needed for the head of the V6_7-branch
-V6_7_EXT	-a V6_7_19_EXT
+V6_7_EXT	-a V6_7_20_EXT
 
 # Externals needed for the head of the V6_7-branch on Windows
 V6_7_NT_EXT -a EXT_COMMON \
