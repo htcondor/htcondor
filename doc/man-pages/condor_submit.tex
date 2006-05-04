@@ -170,29 +170,30 @@ retained for backward-compatibility.  It suffers from a
 platform-dependent syntax and the inability to insert some special
 characters into the environment.
 
-The new syntax for specifying environment values is this:
+The new syntax for specifying environment values:
 
 \begin{enumerate}
 
-\item Put double quotes around the entire argument string.  This
-distinguishes the new syntax from the old, which does not have
-double-quotes around it.  Any literal double-quotes within the string
-must be escaped by repeating them.
+\item Put double quote marks around the entire argument string.  This
+distinguishes the new syntax from the old.
+The old syntax does not have double quote marks around it.
+Any literal double quote marks within the string
+must be escaped by repeating the double quote mark.
 
 \item Each environment entry has the form
 
 \begin{verbatim}
-        <name>=<value>
+<name>=<value>
 \end{verbatim}
 
-\item Use whitespace (e.g. spaces or tabs) to separate environment entries.
+\item Use whitespace (space or tab characters) to separate environment entries.
 
-\item To put any whitespace in an environment entry, you must surround
-the space and as much of the surrounding entry as you like with
-single-quotes.
+\item To put any whitespace in an environment entry, surround
+the space and as much of the surrounding entry as desired with
+single quote marks.
 
-\item To insert a literal single-quote, you must repeat it anywhere
-inside of a single-quoted section.
+\item To insert a literal single quote mark, repeat the single quote mark
+anywhere inside of a section surrounded by single quote marks.
 
 \end{enumerate}
 
@@ -210,27 +211,27 @@ two="2"
 three=spacey 'quoted' value
 \end{verbatim}
 
-In the old environment syntax, you do not put double-quotes around the
-environment specification.  Each environment entry is still of the form
+Under the old syntax, there are no double quote marks surrounding the
+environment specification.  Each environment entry remains of the form
 \begin{verbatim}
-        <name>=<value>
+<name>=<value>
 \end{verbatim}
-Under unix, list multiple environment entries by separating them with
+Under Unix, list multiple environment entries by separating them with
 a semicolon (;).  Under Windows, separate multiple entries with a
 vertical bar (\Bar).  There is no way to insert a literal semicolon
-under unix or a literal vertical bar under Windows.  Note that spaces
+under Unix or a literal vertical bar under Windows.  Note that spaces
 are accepted, but rarely desired, characters within parameter names
 and values, because they are treated as literal characters, not
 separators or ignored whitespace.  Place spaces within the parameter
 list only if required.
 
-Example:
+A Unix example:
 
 \begin{verbatim}
 environment = one=1;two=2;three="quotes have no 'special' meaning"
 \end{verbatim}
 
-Produces the following when submitted under unix:
+This produces the following:
 
 \begin{verbatim}
 one=1
@@ -246,7 +247,7 @@ three="quotes have no 'special' meaning"
 
 \item[error = $<$pathname$>$]
 \index{submit commands!error}
-The \SubmitCmd{error} file name will capture any
+A path and file name used by Condor to capture any
 error messages the program would normally write to the screen
 (that is, this file becomes \File{stderr}).
 If not specified, the default value of
@@ -265,11 +266,19 @@ tool \Prog{globus\_url\_copy} understands.
 %% executable
 %%%%%%%%%%%%%%%%%%%
 
-\item[executable = $<$name$>$]
+\item[executable = $<$pathname$>$]
 \index{submit commands!executable}
-The name of the executable file for this
-job cluster. Only one executable command may be present in a description
-file. If submitting into the standard universe, which is the default,
+An optional path and a required file name of the executable file for this
+job cluster. Only one \SubmitCmd{executable} command within a
+submit description file is guaranteed to work properly.
+More than one often works.
+
+If no path or a relative path is used, then the executable file
+is presumed to be relative
+to the current working directory of the user as the
+\Condor{submit} command is issued.
+
+If submitting into the standard universe (the default),
 then the named executable must have been re-linked with the Condor
 libraries (such as via the \Condor{compile} command). If submitting into
 the vanilla universe, then the named executable need not be re-linked and
@@ -326,10 +335,12 @@ the \SubmitCmd{arguments} command.
 \item[log = $<$pathname$>$] Use \SubmitCmd{log} to specify a file name where
 \index{submit commands!log}
 Condor will write a log file of what is happening with this job cluster.
-For example, Condor will log into this file when and where the job
-begins running, when the job is checkpointed and/or migrated, when the
-job completes, etc. Most users find specifying a \SubmitCmd{log} file to be very
-handy; its use is recommended. If no \SubmitCmd{log} entry is specified, 
+For example, Condor will place a log entry into this file
+when and where the job begins running,
+when the job produces a checkpoint, or moves (migrates) to another machine,
+and when the job completes.
+Most users find specifying a \SubmitCmd{log} file to be handy;
+its use is recommended. If no \SubmitCmd{log} entry is specified, 
 Condor does not create a log for this cluster.
 
 %%%%%%%%%%%%%%%%%%%
@@ -338,30 +349,34 @@ Condor does not create a log for this cluster.
 
 \item[log\_xml = $<$True \Bar\ False$>$]
 \index{submit commands!log\_xml}
-If \SubmitCmd{log\_xml} is true, 
-then the log file will be written in ClassAd XML. If it isn't
-specified, XML is not used. Note that it's an XML fragment, and is
-missing the file header and footer. Also note that you should never
-mix XML and non-XML in a single file: if multiple jobs write to a
-single log file, it is up to you to make sure that all of them specify
-(or don't specify) this option in the same way.
+If \SubmitCmd{log\_xml} is \Expr{True}, 
+then the log file will be written in ClassAd XML.
+If not specified, XML is not used.
+Note that the file is an XML fragment; it is
+missing the file header and footer.
+Do not mix XML and non-XML within a single file.
+If multiple jobs write to a
+single log file, ensure that all of the jobs specify
+this option in the same way.
 
 %%%%%%%%%%%%%%%%%%%
 %% notification
 %%%%%%%%%%%%%%%%%%%
 
-\item[notification = $<$when$>$]\label{man-condor-submit-notification} Owners of Condor jobs are notified by
+\item[notification = $<$Always \Bar\ Complete \Bar\ Error \Bar\ Never$>$]
+\label{man-condor-submit-notification}
 \index{submit commands!notification}
-email when certain events occur.
-If \Arg{when} is set to \mbox{Always}, the owner will be notified
-whenever the job is checkpointed, and when it completes.
-If \Arg{when} is set to \mbox{Complete} (the default), the owner will
+Owners of Condor jobs are notified by
+e-mail when certain events occur.
+If defined by \Arg{Always}, the owner will be notified
+whenever the job produces a checkpoint, as well as when the job completes.
+If defined by \Arg{Complete} (the default), the owner will
 be notified when the job terminates.
-If \Arg{when} is set to \mbox{Error}, the owner will only be notified
+If defined by \Arg{Error}, the owner will only be notified
 if the job terminates abnormally.
-If \Arg{when} is set to \mbox{Never}, the owner will not be mailed,
-regardless what happens to the job.
-The statistics included in the email are documented in
+If defined by \Arg{Never}, the owner will not receive e-mail,
+regardless to what happens to the job.
+The statistics included in the e-mail are documented in
 section~\ref{sec:job-completion} on
 page~\pageref{sec:job-completion}.
 
@@ -369,18 +384,21 @@ page~\pageref{sec:job-completion}.
 %% notify_user
 %%%%%%%%%%%%%%%%%%%
 
-\item[notify\_user = $<$email-address$>$]\label{man-condor-submit-notify-user} Used to specify the email
+\item[notify\_user = $<$email-address$>$]
+\label{man-condor-submit-notify-user}
 \index{submit commands!notify\_user}
-address to use when Condor sends email about a job.  If not specified,
-Condor will default to using :
+Used to specify the e-mail
+address to use when Condor sends e-mail about a job.  If not specified,
+Condor defaults to using the e-mail address defined by
 \begin{verbatim}
-        job-owner@UID_DOMAIN
+job-owner@UID_DOMAIN
 \end{verbatim}
-where \Macro{UID\_DOMAIN} is specified by the Condor site administrator.  If
-\Macro{UID\_DOMAIN} has not been specified, Condor will send the email
-to :
+where the configuration variable \Macro{UID\_DOMAIN}
+is specified by the Condor site administrator.
+If \Macro{UID\_DOMAIN} has not been specified,
+Condor sends the e-mail to:
 \begin{verbatim}
-        job-owner@submit-machine-name
+job-owner@submit-machine-name
 \end{verbatim}
 
 %%%%%%%%%%%%%%%%%%%
@@ -388,9 +406,10 @@ to :
 %%%%%%%%%%%%%%%%%%%
 
 \item[output = $<$pathname$>$]
+\label{man-condor-submit-output}
 \index{submit commands!output}
-The \SubmitCmd{output} file name will capture
-any information the program would normally write to the screen
+The \SubmitCmd{output} file captures
+any information the program would ordinarily write to the screen
 (that is, this file becomes \File{stdout}).
 If not specified, the default value of
 \File{/dev/null} is used for submission to a Unix machine.
@@ -404,18 +423,25 @@ as the outputs will overwrite each other or be lost.
 For grid universe jobs, \SubmitCmd{output} may be a URL that the Globus
 tool \Prog{globus\_url\_copy} understands.
 
-Note that if your program explicitly opens and writes to a file,
-that file should \emph{not} be specified as the output file.
+Note that if a program explicitly opens and writes to a file,
+that file should \emph{not} be specified as the \SubmitCmd{output} file.
 
 %%%%%%%%%%%%%%%%%%%
 %% priority
 %%%%%%%%%%%%%%%%%%%
 
-\item[priority = $<$priority$>$] A condor job priority \index{submit commands!priority} can be any integer, with 0 being the default. Jobs with higher numerical priority will
+\item[priority = $<$integer$>$] 
+\index{submit commands!priority}
+\label{man-condor-submit-priority}
+A Condor job priority 
+can be any integer, with 0 being the default.
+Jobs with higher numerical priority will
 run before jobs with lower numerical priority. Note that this priority
-is on a per user basis; setting the priority will determine the order in
-which the local \condor{schedd} will attempt to execute your own jobs, but will have no effect on whether or
-not your jobs will run ahead of another user's jobs.
+is on a per user basis.
+One user with many jobs may use this command
+to order his/her own jobs,
+and this will have no effect on whether or
+not these jobs will run ahead of another user's jobs.
 
 %%%%%%%%%%%%%%%%%%%
 %% queue
@@ -428,22 +454,17 @@ not your jobs will run ahead of another user's jobs.
 % and it isn't worth the time.
 \item[queue \oOptnm{number-of-procs}] Places one or more
 \index{submit commands!queue}
-copies of the job into
-the Condor queue.
+\label{man-condor-submit-queue}
+copies of the job into the Condor queue.
 The optional
 argument \Arg{number-of-procs} specifies how many times to submit the
 job to the queue, and it defaults to 1.
 If desired, any commands may be placed
 between subsequent \SubmitCmd{queue} commands, such as new \SubmitCmd{input},
-\SubmitCmd{output}, \SubmitCmd{error}, \SubmitCmd{initialdir}, \SubmitCmd{arguments}, or
-\SubmitCmd{executable} commands.
+\SubmitCmd{output}, \SubmitCmd{error}, \SubmitCmd{initialdir},
+or \SubmitCmd{arguments} commands.
 This is handy when submitting multiple runs into one cluster with
 one submit description file.
-Multiple clusters may be specified within a single
-submit description file by changing the executable between
-\SubmitCmd{queue} commands.
-Each time the \SubmitCmd{executable} command is issued (between \SubmitCmd{queue} commands),
-a new cluster is defined.
 
 %%%%%%%%%%%%%%%%%%%
 %% universe
@@ -452,6 +473,7 @@ a new cluster is defined.
 \item[universe = $<$vanilla \Bar\ standard \Bar\ pvm \Bar\ scheduler
 \Bar\ local \Bar\ grid \Bar\ mpi \Bar\ java$>$]
 \index{submit commands!universe}
+\label{man-condor-submit-universe}
 Specifies which Condor Universe to use when running this job.  The Condor
 Universe specifies a Condor execution environment.  The standard
 Universe is the default (except where the configuration variable
@@ -471,7 +493,6 @@ Further specification of the \SubmitCmd{grid} universe is done with the
 The \SubmitCmd{mpi} universe is
 for running mpi jobs made with the MPICH package.
 The \SubmitCmd{java} Universe is for programs written to the Java Virtual Machine.
-See the Condor User's Manual for more information about using Universe.
 
 \end{description} 
 
@@ -497,7 +518,9 @@ highest rank.  For example,
         rank = Memory
 \end{verbatim}
 asks Condor to find all available machines with more than 60 megabytes of memory
-and give the job the one with the most amount of memory.  See the Condor Users
+and give to the job the machine with the most amount of memory.
+See section~\ref{sec:user-man-req-and-rank} 
+within the Condor Users
 Manual for complete information on the syntax and available attributes
 that can be used in the ClassAd expression.
 
@@ -511,7 +534,7 @@ The requirements
 command is a boolean ClassAd expression which uses C-like operators. In
 order for any job in this cluster to run on a given machine, this
 requirements expression must evaluate to true on the given machine. For
-example, to require that whatever machine executes your program has a
+example, to require that whatever machine executes a Condor job has a
 least 64 Meg of RAM and has a MIPS performance rating greater than 45,
 use:
 \begin{verbatim}
@@ -566,23 +589,23 @@ that can be used in the ClassAd expression.
 \index{submit commands!should\_transfer\_files}
 \index{file transfer mechanism}
 The \SubmitCmd{should\_transfer\_files} setting is used to define if Condor
-should transfer files to and from the remote machine where your job
+should transfer files to and from the remote machine where the job
 runs.
 The file transfer mechanism is used to run jobs which are not in the
 standard universe (and can therefore use remote system calls for file
 access) on machines which do not have a shared file system with the
 submit machine.
 \SubmitCmd{should\_transfer\_files} equal to \Arg{YES} will cause Condor to
-always transfer files for your job.
+always transfer files for the job.
 \Arg{NO} disables Condor's file transfer mechanism.
-\Arg{IF\_NEEDED} will not transfer files for your job if it is matched
-with a resource in the same \Attr{FileSystemDomain} as your submit
+\Arg{IF\_NEEDED} will not transfer files for the job if it is matched
+with a resource in the same \Attr{FileSystemDomain} as the submit
 machine (and therefore, on a machine with the same shared file
 system).
 If the job is matched with a remote resource in a different 
 \Attr{FileSystemDomain}, Condor will transfer the necessary files. 
 
-If you define \SubmitCmd{should\_transfer\_files} you \emph{must} also
+If defining \SubmitCmd{should\_transfer\_files} you \emph{must} also
 define \SubmitCmd{when\_to\_transfer\_output} (described below).
 For more information about this and other settings related to
 transferring files, see section~\ref{sec:file-transfer} on
@@ -612,9 +635,9 @@ universe and \Expr{False} otherwise.
 \item[stream\_input = $<$True \Bar\ False$>$]
 \index{submit commands!stream\_input}
 If \Expr{True}, then \File{stdin} is streamed from the
-machine from which the job was submitted.
-The default value is \Expr{False},
-the command is only relevant for jobs submitted to
+machine on which the job was submitted.
+The default value is \Expr{False}.
+The command is only relevant for jobs submitted to
 the vanilla or java universes, and
 it is ignored by the grid
 universe.
@@ -639,14 +662,14 @@ universe and \Expr{False} otherwise.
 %%%%%%%%%%%%%%%%%%%
 
 \item[transfer\_executable = $<$True \Bar\ False$>$]
-For jobs submitted to the grid universe, as well as vanilla and MPI.
-If \SubmitCmd{transfer\_executable} is set to
 \index{submit commands!transfer\_executable}
+This command is applicable to jobs submitted to the grid,
+vanilla, and MPI universes.
+If \SubmitCmd{transfer\_executable} is set to
 \Expr{False}, then Condor looks for the executable on the remote machine, and
 does not transfer the executable over.
-This is useful if you have already pre-staged your
-executable and wish to have Condor behave more like rsh.
-Defaults to \Expr{True}.
+This is useful for an already pre-staged 
+executable; Condor behaves more like rsh.
 The default value is \Expr{True}.
 
 %%%%%%%%%%%%%%%%%%%
