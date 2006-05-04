@@ -6,6 +6,53 @@ This is the development release series of Condor.
 The details of each version are described below.
 
 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-6-7-20}Version 6.7.20}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+% Mar 4th checkin to condor_daemon_core.V6/condor_ipverify
+% to fix broken caching behavior.  Flocking auto-allow
+% appears to have been the only user of that code path.
+\item When a job is matched to a remote machine through flocking,
+the remote machine is given WRITE and DAEMON permissions on the
+submit machine.  This functionality previously worked, but broken
+some time in the 6.7 series.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-6-7-19}Version 6.7.19}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
