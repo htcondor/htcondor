@@ -1,3 +1,6 @@
+05/04/06 V6_7_19-{root,branch}
+  The branch for V6_7_19 off of V6_7-branch.
+
 04/03/06 V6_7-freebsd-2-{root,branch}
    I am starting over with a fresh branch because I messed up #define's
    This is following advice from Erik
