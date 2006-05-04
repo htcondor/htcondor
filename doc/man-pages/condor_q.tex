@@ -10,6 +10,7 @@
 \oOptArg{-name}{name} 
 \oOptArg{-pool}{centralmanagerhostname[:portnumber]}
 \oOpt{-analyze}
+\oOpt{-better-analyze}
 \oOpt{-run}
 \oOpt{-hold}
 \oOpt{-globus}
@@ -196,6 +197,16 @@ resource owner preferences and prevention of preemption by the
 along with the \Arg{-analyze} option, the reason for failure is displayed on a 
 per machine basis.
 
+The \Arg{-better-analyze} option does a more thorough job of determining
+why jobs are not running than \Arg{-analyze}.
+There are scalability issues present when run on a pool with
+a large number of machines,
+as well as when run to analyze a large number of queued jobs.
+The \Arg{-better-analyze} option make take an excessively long time
+to complete in these cases.
+Therefore, it is recommended to constrain \Arg{-better-analyze} 
+to only analyze one job at a time.
+
 \begin{Options}
   \OptItem{\Opt{-help}}{Get a brief description of the supported options}
   \OptItem{\Opt{-global}}{Get queues of all the submitters in the system}
@@ -212,6 +223,9 @@ per machine basis.
     are only meaningful for jobs using Condor's matchmaker.  This option
     is never meaningful for Scheduler universe jobs and only meaningful
     for grid universe jobs doing matchmaking.}
+  \OptItem{\Opt{-better-analyze}}{Perform a more time-consuming, but
+    potentially more extensive analysis to determine
+    how many resources are available to run the requested jobs.}
   \OptItem{\Opt{-run}}{Get information about running jobs.}
   \OptItem{\Opt{-hold}}{Get information about jobs in the hold state.
     Also displays the time the job was placed into the hold state
