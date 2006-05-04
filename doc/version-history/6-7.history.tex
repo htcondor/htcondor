@@ -115,6 +115,9 @@ basis, using the syntax GROUP\_AUTOREGROUP\_<groupname> = True/False.
 
 \begin{itemize}
 
+\item Fixed a bug where \Condor{q} would exit with a non-zero exit status
+even though it found and displayed the requested information or job queue.
+
 \item Fixed a bug in the dedicated scheduler where parallel and mpi
 jobs with more than one proc in a cluster would only have the
 Scheduler attribute set in the first proc.
