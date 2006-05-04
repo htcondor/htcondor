@@ -171,7 +171,8 @@ number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970).
 \index{ClassAd job attribute!JobStatus}
 \index{JobStatus!job ClassAd attribute}
 \item[\AdAttr{JobStatus}:]  Integer which indicates the current
-status of the job, where 1 = Idle, 2 = Running, 3 = Removed, 4 =
+status of the job, where 0 = Unexpanded (means that the job has never run),
+1 = Idle, 2 = Running, 3 = Removed, 4 =
 Completed, and 5 = Held.
 \index{job!state}
 
