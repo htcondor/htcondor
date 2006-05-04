@@ -868,6 +868,11 @@ IpVerify::process_allow_users( void )
 
 // AddAllowHost is now equivalent to adding */host, where host 
 // is actual host name with no wild card!
+//
+// Additions persist across a reconfig.  This is intended
+// for transient permissions (like to automatic permission
+// granted to a remote startd host when a shadow starts up.)
+
 bool
 IpVerify::AddAllowHost( const char* host, DCpermission perm )
 {
@@ -894,7 +899,14 @@ IpVerify::AddAllowHost( const char* host, DCpermission perm )
 			dprintf( D_DAEMONCORE, 
 					 "IpVerify::AddAllowHost: Changing mask, was %d, adding %d)\n",
 					 *mask_p, new_mask );
-			*mask_p = *mask_p | new_mask;
+			new_mask = *mask_p | new_mask;
+			*mask_p = new_mask;
+			if( add_host_entry(addr.Value(), new_mask) ) {
+				dprintf( D_DAEMONCORE, "Added.\n");
+				return true;
+			} else {
+				return false;
+			}
 		} else {
 			dprintf( D_DAEMONCORE, 
 					 "IpVerify::AddAllowHost: Already have %s with %d\n", 
