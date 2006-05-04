@@ -542,10 +542,11 @@ RemoteResource::initStartdInfo( const char *name, const char *pool,
 		*/
 	char *ip = string_to_ipstr( dc_startd->addr() );
 	if( ip ) {
+		dprintf( D_SECURITY, "Granting remote host \"%s\" (%s)  WRITE and DAEMON permission.\n", ip, dc_startd->addr());
 		daemonCore->AddAllowHost( ip, WRITE );
 		daemonCore->AddAllowHost( ip, DAEMON );
 	} else {
-		dprintf( D_ALWAYS, "ERROR: Can't convert \"%s\" to an IP address!\n", 
+		dprintf( D_ALWAYS, "ERROR: Can't convert \"%s\" to an IP address!  Unable to automatically grant WRITE and DAEMON permissions to the machine.\n", 
 				 dc_startd->addr() );
 	}
 }
