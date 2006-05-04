@@ -656,6 +656,7 @@ sub clearGlobalSubmitInfo
     undef %platform_prereqs;
     undef %platform_test_prereqs;
     undef %platform_testargs;
+    undef %platforms;
     undef @platforms;
 }
 
