@@ -278,6 +278,17 @@ CollectorList::query(CondorQuery & query, ClassAdList & adList) {
 
 	this->rewind();
 	while (this->next(daemon)) {
+		if ( ! daemon->addr() ) {
+			if ( daemon->name() ) {
+				dprintf( D_ALWAYS,
+						 "Can't resolve collector %s; skipping\n",
+						 daemon->name() );
+			} else {
+				dprintf( D_ALWAYS,
+						 "Can't resolve nameless collector; skipping\n" );
+			}
+			continue;
+		}
 		dprintf (D_FULLDEBUG, 
 				 "Trying to query collector %s\n", 
 				 daemon->addr());
