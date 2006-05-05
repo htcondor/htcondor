@@ -76,6 +76,13 @@ will use pseudo-hostnames constructed from a machine's IP address and
 \Macro{DEFAULT\_DOMAIN\_NAME}, rather than attempting to resolve hostnames
 into IP addresses and vice-versa.
 
+\item The \Attr{JobLeaseDuration} now defaults to 20 minutes for all
+jobs that support this feature (everything except standard and PVM
+universe, and jobs that request streaming I/O).
+This way, by default, if the submit host crashes or there is a short
+network outage, the \Condor{schedd} will be able to reconnect to jobs
+that were executing at the time of problem.
+
 \item Condor daemons now touch their daemon log file periodically. When
 a daemon starts up, it prints to the log the last time the log file was
 modified. This lets an admin estimate when a daemon stopped running.
