@@ -811,8 +811,9 @@ HADStateMachine::sendNegotiatorCmdToMaster( int comm )
     }
 
     int cmd = comm;
-    dprintf( D_FULLDEBUG,"send command %s(%d) to master %s\n",
-                utilToString(cmd), cmd,m_masterDaemon->addr() );
+    char* subsys = (char*)daemonString( DT_NEGOTIATOR );
+    dprintf( D_FULLDEBUG,"send command %s(%d) [%s] to master %s\n",
+                utilToString(cmd), cmd, subsys, m_masterDaemon->addr() );
 
     // startCommand - max timeout is m_connectionTimeout sec
     if(! (m_masterDaemon->startCommand(cmd,&sock,m_connectionTimeout )) ) {
@@ -821,8 +822,6 @@ HADStateMachine::sendNegotiatorCmdToMaster( int comm )
         sock.close();
         return FALSE;
     }
-
-    char* subsys = (char*)daemonString( DT_NEGOTIATOR );
 
     if( !sock.code(subsys) || !sock.eom() ) {
         dprintf( D_ALWAYS,"send to master , !sock.code false \n");
