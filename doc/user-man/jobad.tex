@@ -82,24 +82,24 @@ will equal the number of seconds that the job has been on hold.
 \index{ExitBySignal!job ClassAd attribute}
 \item[\AdAttr{ExitBySignal}:]  An attribute that is \Expr{True}
 when a user job exits via a signal and \Expr{False} otherwise.
-For certain grid-types of the grid universe, how the job exited is
-unavailable. In this case, a normal exit code of 0 is assumed.
+For some grid universe jobs, how the job exited is
+unavailable. In this case, \AdAttr{ExitBySignal} is set to  \Expr{False}.
 
 %%% ClassAd attribute: ExitCode
 \index{ClassAd job attribute!ExitCode}
 \index{ExitCode!job ClassAd attribute}
 \item[\AdAttr{ExitCode}:]  When a user job exits by means other than a signal,
 this is the exit return code of the user job.
-For certain grid-types of the grid universe, how the job exited is
-unavailable. In this case, a normal exit code of 0 is assumed.
+For some grid universe jobs, how the job exited is
+unavailable. In this case, \AdAttr{ExitCode} is set to  0.
 
 %%% ClassAd attribute: ExitSignal
 \index{ClassAd job attribute!ExitSignal}
 \index{ExitSignal!job ClassAd attribute}
 \item[\AdAttr{ExitSignal}:]  When a user job exits by means of an unhandled 
 signal, this attribute takes on the numeric value of the signal.
-For certain grid-types of the grid universe, how the job exited is
-unavailable. In this case, a normal exit code of 0 is assumed.
+For some grid universe jobs, how the job exited is
+unavailable. In this case, \AdAttr{ExitSignal} will be undefined.
 
 %% Karen added proper index entries up to this point in the file
 
