@@ -40,6 +40,10 @@ the remote machine is given WRITE and DAEMON permissions on the
 submit machine.  This functionality previously worked, but broken
 some time in the 6.7 series.
 
+\item Fixed a bug which could cause \Condor{status} (and probably
+other tools and possibly even daemons) to crash on Solaris machines
+if address resolution fails because of an ill-configured DNS server.
+
 \end{itemize}
 
 \noindent Known Bugs:
