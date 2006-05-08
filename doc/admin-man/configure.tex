@@ -2413,12 +2413,11 @@ Configuring The Startd Policy.
    \normalsize
 
 \item[\Macro{WANT\_SUSPEND}] \label{param:WantSuspend}  A boolean expression
-   that, when \Expr{True}, defines that a currently running
-   Condor job is to be suspended, instead of killed.
+   that, when \Expr{True}, tells Condor to evaluate the \MacroNI{SUSPEND} expression.
 
 \item[\Macro{WANT\_VACATE}] \label{param:WantVacate}  A boolean expression
-   that, when \Expr{True}, defines that a currently running
-   Condor job is to be killed, instead of suspended.
+   that, when \Expr{True}, defines that a preempted
+   Condor job is to be vacated, instead of killed.
 
 \item[\Macro{IS\_OWNER}] \label{param:IsOwner}  A boolean expression that
    defaults to being defined as
