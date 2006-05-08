@@ -1,7 +1,7 @@
 \index{Condor-C|(}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Condor-C}Condor-C, the condor grid\_type }
+\subsection{\label{sec:Condor-C}Condor-C, the condor grid type }
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{grid computing!Condor-C}
@@ -108,10 +108,11 @@ SEC_DEFAULT_AUTHENTICATION_METHODS = CLAIMTOBE
 \index{universe!grid}
 Job submission of Condor-C jobs is the same as for any Condor job.
 The \SubmitCmd{universe} is \SubmitCmd{grid}.
-\SubmitCmd{grid\_resource} specifies the remote schedd to which
+\SubmitCmd{grid\_resource} specifies the remote \Condor{schedd} daemon to which
 the job should be submitted, and its value consists of three fields.
-The first field is the grid\_type, which is \SubmitCmd{condor}.
-The second field is the name of the remote schedd. Its value is the
+The first field is the grid type, which is \SubmitCmd{condor}.
+The second field is the name of the remote \Condor{schedd} daemon.
+Its value is the
 same as the \Condor{schedd} ClassAd attribute \Attr{Name} on the
 remote machine.
 The third field is the name of the remote pool's \Condor{collector}.
@@ -129,20 +130,19 @@ a job.
 
 \footnotesize
 \begin{verbatim}
-   # minimal submit description file for a Condor-C job
-   universe = grid
-   grid_type = condor
-   executable = myjob
-   output = myoutput
-   error = myerror
-   log = mylog
+# minimal submit description file for a Condor-C job
+universe = grid
+executable = myjob
+output = myoutput
+error = myerror
+log = mylog
 
-   grid_resource = condor joe@remotemachine.example.com remotecentralmanager.example.com
-   +remote_jobuniverse = 5
-   +remote_requirements = True
-   +remote_ShouldTransferFiles = "YES"
-   +remote_WhenToTransferOutput = "ON_EXIT"
-   queue
+grid_resource = condor joe@remotemachine.example.com remotecentralmanager.example.com
++remote_jobuniverse = 5
++remote_requirements = True
++remote_ShouldTransferFiles = "YES"
++remote_WhenToTransferOutput = "ON_EXIT"
+queue
 \end{verbatim}
 \normalsize
 
@@ -255,12 +255,14 @@ vanilla   & 5 & works well \\ \hline
 scheduler & 7 & works well \\ \hline
 MPI       & 8 & untested \\ \hline
 grid      & 9 & \\
- & grid\_type = condor & works well \\
- & grid\_type = gt2  & untested \\
- & grid\_type = gt3 & untested \\
- & grid\_type = gt4 & untested \\ 
- & grid\_type = nordugrid & untested \\ 
- & grid\_type = unicore & untested \\ \hline
+ & grid type = condor & works well \\
+ & grid type = gt2  & works well \\
+ & grid type = gt3 & untested \\
+ & grid type = gt4 & untested \\ 
+ & grid type = nordugrid & untested \\ 
+ & grid type = unicore & untested \\
+ & grid type = lsf & works well \\
+ & grid type = pbs & works well \\ \hline
 java & 10 & untested \\ \hline
 parallel & 11 & untested \\ \hline
 local & 12 & works well \\ \hline

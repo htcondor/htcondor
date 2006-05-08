@@ -1297,11 +1297,13 @@ once.  Do not treat this operation lightly.
 %% globus_rsl
 %%%%%%%%%%%%%%%%%%%
 
-\item[globus\_rsl = $<$RSL-string$>$] Used to provide any additional Globus RSL
+\item[globus\_rsl = $<$RSL-string$>$]
 \index{submit commands!globus\_rsl}
-string attributes which are not covered by regular submit description
-file parameters. Used for \SubmitCmd{grid\_type}
-\SubmitCmd{gt2} and \SubmitCmd{gt3} jobs.
+Used to provide any additional Globus RSL
+string attributes which are not covered by other submit description
+file commands or job attributes. Used for \SubmitCmd{grid} \SubmitCmd{universe}
+jobs, where the grid resource has a \SubmitCmd{grid-type-string} of
+\SubmitCmd{gt2} or \SubmitCmd{gt3}.
 
 %%%%%%%%%%%%%%%%%%%
 %% globus_xml
@@ -1311,59 +1313,60 @@ file parameters. Used for \SubmitCmd{grid\_type}
 \index{submit commands!globus\_xml}
 Used to provide any additional attributes in the GRAM XML job description
 that Condor writes which are not covered by regular submit description
-file parameters. Used for \SubmitCmd{grid\_type} \SubmitCmd{gt4} jobs.
+file parameters. Used for grid type \SubmitCmd{gt4} jobs.
 
 %%%%%%%%%%%%%%%%%%%
 %% grid_resource
 %%%%%%%%%%%%%%%%%%%
-\item[grid\_resource = $<$grid\_type-string$>$ $<$grid-specific-parameter-list$>$ ]
+\item[grid\_resource = $<$grid-type-string$>$ $<$grid-specific-parameter-list$>$ ]
 \index{submit commands!grid\_resource}
-For each \SubmitCmd{grid\_type-string} value, 
+For each \SubmitCmd{grid-type-string} value, 
 there are further type-specific values that must specified.
 This submit description file command allows each to
 be given in a space-separated list.
-Allowable \SubmitCmd{grid\_type-string} values are
+Allowable \SubmitCmd{grid-type-string} values are
 \SubmitCmd{gt2}, \SubmitCmd{gt3}, \SubmitCmd{gt4},
 \SubmitCmd{condor}, \SubmitCmd{nordugrid}, and \SubmitCmd{unicore}.
-See section~\ref{sec:Condor-G} for details on the syntax for each
-grid-type.
+See section~\ref{sec:GridUniverse} for details on the variety of 
+grid types.
 
-For a \SubmitCmd{grid\_type-string} of \SubmitCmd{gt2},
+For a \SubmitCmd{grid-type-string} of \SubmitCmd{condor},
+the first parameter is the name of the remote \Condor{schedd}
+daemon.
+The second parameter is the name of the pool to which the remote
+\Condor{schedd} daemon belongs.
+See section~\ref{sec:Condor-C-Submit} for details.
+
+For a \SubmitCmd{grid-type-string} of \SubmitCmd{gt2},
 the single parameter is the name of the pre-WS GRAM resource to be used.
 See section~\ref{sec:Using-gt2} for details.
 
-For a \SubmitCmd{grid\_type-string} of \SubmitCmd{gt3},
+For a \SubmitCmd{grid-type-string} of \SubmitCmd{gt3},
 the single parameter is the name of the OSGA GRAM service to be used.
 See section~\ref{sec:Using-gt3} for details.
 
-For a \SubmitCmd{grid\_type-string} of \SubmitCmd{gt4},
+For a \SubmitCmd{grid-type-string} of \SubmitCmd{gt4},
 the first parameter is the name of the WS GRAM service to be used.
 The second parameter is the name of WS resource to be used (usually the
 name of the back-end scheduler).
 See section~\ref{sec:Using-gt4} for details.
 
-For a \SubmitCmd{grid\_type-string} of \SubmitCmd{condor},
-the first parameter is the name of the remote schedd.
-The second parameter is the name of the pool to which the remote
-schedd belongs.
-See section~\ref{sec:Condor-C-Submit} for details.
+For a \SubmitCmd{grid-type-string} of \SubmitCmd{lsf}, no additional
+parameters are used.
+See section~\ref{sec:LSF} for details.
 
-For a \SubmitCmd{grid\_type-string} of \SubmitCmd{nordugrid},
+For a \SubmitCmd{grid-type-string} of \SubmitCmd{nordugrid},
 the single parameter is the name of the NorduGrid resource to be used.
 See section~\ref{sec:NorduGrid} for details.
 
-For a \SubmitCmd{grid\_type-string} of \SubmitCmd{unicore},
-the first parameter is the name of the Unicore Usite to be used.
-The second parameter is the name of the Unicore Vsite to be used.
-See section~\ref{sec:Unicore} for details.
-
-For a \SubmitCmd{grid\_type-string} of \SubmitCmd{pbs}, no additional
+For a \SubmitCmd{grid-type-string} of \SubmitCmd{pbs}, no additional
 parameters are used.
 See section~\ref{sec:PBS} for details.
 
-For a \SubmitCmd{grid\_type-string} of \SubmitCmd{lsf}, no additional
-parameters are used.
-See section~\ref{sec:LSF} for details.
+For a \SubmitCmd{grid-type-string} of \SubmitCmd{unicore},
+the first parameter is the name of the Unicore Usite to be used.
+The second parameter is the name of the Unicore Vsite to be used.
+See section~\ref{sec:Unicore} for details.
 
 
 %%%%%%%%%%%%%%%%%%%
@@ -1476,7 +1479,7 @@ example, when the  \Prog{MyProxy} server DN begins with a user credential.
 Used to provide any additional RSL
 string attributes which are not covered by regular submit description
 file parameters. Used when the \SubmitCmd{universe} is \SubmitCmd{grid},
-and the \SubmitCmd{grid\_type} is \SubmitCmd{nordugrid}.
+and the type of grid system is \SubmitCmd{nordugrid}.
 
 
 %%%%%%%%%%%%%%%%%%%
@@ -1538,7 +1541,7 @@ see \SubmitCmd{transfer\_output\_files}.
 
 \item[x509userproxy = $<$full-pathname$>$] Used to override the default
 \index{submit commands!x509userproxy}
-pathname for X509 user certificates. The default location for X509 proxies
+path name for X.509 user certificates. The default location for X.509 proxies
 is the \File{/tmp} directory,
 which is generally a local file system.
 Setting
@@ -1552,7 +1555,7 @@ it will search in the default location.
 
 \SubmitCmd{x509userproxy} is relevant when
 the \SubmitCmd{universe} is \SubmitCmd{grid},
-and the grid-type is one of \SubmitCmd{gt2}, \SubmitCmd{gt3},
+and the type of grid system is one of \SubmitCmd{gt2}, \SubmitCmd{gt3},
 \SubmitCmd{gt4}, or \SubmitCmd{nordugrid}.
 
 \end{description} 
