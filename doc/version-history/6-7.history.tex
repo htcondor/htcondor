@@ -177,6 +177,8 @@ Scheduler attribute set in the first proc.
 crash if it's configured as a view collector
 (i.e. \Macro{KEEP\_POOL\_HISTORY} is TRUE).  In particular, machine
 ads with a State value of ``Backfill'' could trigger this crash.
+\item Fixed a related bug in \Condor{stats} that could cause a crash
+when encountering a machine state of ``Backfill''.
 
 \item Disconnected starter-shadow connections (job leases) now work for flocked jobs.
 
