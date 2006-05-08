@@ -149,6 +149,14 @@ will store the pool password in the file defined by the configuration
 parameter \Macro{POOL\_PASSWORD\_FILE}. This file will be owned by the
 real UID that Condor runs as and will only be accessible by that user.
 
+\item A new tool, \Condor{userlog\_job\_counter}, has been added.
+Given a userlog file as an argument, it determines the number of
+queued (e.g., submitted but not yet terminated or aborted) jobs
+recorded in that userlog, and returns that value as an exit code.  It
+returns 255 if there are more than 254 queued jobs or to indicate an
+error (e.g., a userlog reading/parsing error, no events found, a job
+count <0 or >254, improper usage, etc.).
+
 \end{itemize}
 
 
