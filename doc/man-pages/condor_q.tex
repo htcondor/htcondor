@@ -111,14 +111,14 @@ host count is displayed instead.
 If the \Opt{-globus} option is specified, the ST, PRI, SIZE, and CMD
 columns are replaced with:
 \begin{description}
-\item[STATUS] The state that Condor-G believes the job is in.
+\item[STATUS] The state that Condor believes the job is in.
 Possible values are
   \begin{description}
     \item[PENDING] The job is waiting for resources to become available
     in order to run.
     \item[ACTIVE] The job has received resources, and the application
     is executing.
-    \item[FAILED] The job terminated before completion because an error,
+    \item[FAILED] The job terminated before completion because of an error,
     user-triggered cancel, or system-triggered cancel.
     \item[DONE] The job completed successfully.
     \item[SUSPENDED] The job has been suspended.
@@ -135,7 +135,7 @@ Possible values are
   \end{description}
 \item[MANAGER] 
 A guess at what remote batch system is running the job.
-It is a guess because Condor looks at the Globus jobmanager contact
+It is a guess, because Condor looks at the Globus jobmanager contact
 string to attempt identification.
 If the value is fork, the job is running on the
 remote host without a jobmanager.
@@ -175,8 +175,9 @@ from the application's point of view.
 \item{BLOCKSIZE} The desired block size for large data transfers.
 \end{description}
 
-These fields are updated when a job checkpoints or completes.  If a job
-has not yet checkpointed, this information is not available.
+These fields are updated when a job produces a checkpoint or completes.
+If a job
+has not yet produced a checkpoint, this information is not available.
 
 If the \Opt{-cputime} option is specified, the RUN\_TIME 
 column is replaced with:
@@ -185,7 +186,7 @@ column is replaced with:
 \item[CPU\_TIME] The remote CPU time accumulated by the job to date
 (which has been stored in a checkpoint) in days, hours, minutes, and
 seconds.  (If the job is currently running, time accumulated during
-the current run is \emph{not} shown.  If the job has not checkpointed,
+the current run is \emph{not} shown.  If the job has not produced a checkpoint,
 this column contains 0+00:00:00.)
 \end{description}
 
@@ -231,7 +232,8 @@ to only analyze one job at a time.
     Also displays the time the job was placed into the hold state
     and the reason why the job was placed in the hold state.}
   \OptItem{\Opt{-globus}}{Get information only about jobs submitted
-    to Globus jobs in the grid universe.}
+    to grid resources described as \SubmitCmd{gt2},
+    \SubmitCmd{gt3}, or \SubmitCmd{gt4}.}
   \OptItem{\Opt{-goodput}}{Display job goodput statistics.}
   \OptItem{\Opt{-io}}{Display job input/output summaries.}
   \OptItem{\Opt{-dag}}{Display DAG jobs under their DAGMan.}
