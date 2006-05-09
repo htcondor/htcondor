@@ -356,13 +356,26 @@ ResState::eval( void )
 		if( ! resmgr->m_backfill_mgr ) { 
 			EXCEPT( "in Backfill state but m_backfill_mgr is NULL!" );
 		}
+		if( r_act == killing_act ) {
+				// maybe we should have a safety-valve timeout here to
+				// prevent ourselves from staying in Backfill/Killing
+				// for too long.  however, for now, there's nothing to
+				// do here...
+			return 0;
+		}
 			// see if we should leave the Backfill state
 		kill_rval = rip->eval_evict_backfill(); 
 		if( kill_rval > 0 ) {
 			dprintf( D_ALWAYS, "State change: EVICT_BACKFILL is TRUE\n" );
+			if( r_act == idle_act ) {
+					// no sense going to killing if we're already
+					// idle, go to owner immediately.
+				return change( owner_state );
+			}
 				// we can change into Backfill/Killing then set our
 				// destination, since set_dest() won't take any
 				// additional action if we're already in killing_act
+			ASSERT( r_act == busy_act );
 			change( backfill_state, killing_act );
 			set_destination( owner_state );
 			return TRUE;
