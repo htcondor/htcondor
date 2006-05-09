@@ -117,6 +117,15 @@ STARTD_EXPRS = $(STARTD_EXPRS), DedicatedScheduler
 Substitute the real host name of the dedicated scheduler
 machine. 
 
+When running a "Personal Condor", the name of the scheduler includes
+the user name it was started as, so the attribute would look
+like this:
+
+\begin{verbatim}
+DedicatedScheduler = "DedicatedScheduler@username@full.host.name"
+STARTD_EXPRS = $(STARTD_EXPRS), DedicatedScheduler
+\end{verbatim}
+
 All dedicated resources must have policy expressions which allow for
 dedicated jobs to always run and to never be evicted.
 The resource must also be configured to prefer jobs from the dedicated 
