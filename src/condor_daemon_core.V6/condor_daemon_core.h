@@ -61,6 +61,9 @@
 #include "condor_arglist.h"
 #include "env.h"
 
+#if defined(WIN32)
+#include "pipe.WIN32.h"
+#endif
 
 #define DEBUG_SETTABLE_ATTR_LISTS 0
 
@@ -523,16 +526,16 @@ class DaemonCore : public Service
 	 */
 	//@{
     /** Not_Yet_Documented
-        @param pipefd           Not_Yet_Documented
-        @param iosock_descrip   Not_Yet_Documented
+        @param pipe_end            Not_Yet_Documented
+        @param pipe_descrip     Not_Yet_Documented
         @param handler          Not_Yet_Documented
         @param handler_descrip  Not_Yet_Documented
         @param s                Not_Yet_Documented
         @param perm             Not_Yet_Documented
         @return Not_Yet_Documented
     */
-    int Register_Pipe (int		           pipefd,
-                         char *            iosock_descrip,
+    int Register_Pipe (int		           pipe_end,
+                         char *            pipe_descrip,
                          PipeHandler       handler,
                          char *            handler_descrip,
                          Service *         s                = NULL,
@@ -540,46 +543,51 @@ class DaemonCore : public Service
                          DCpermission      perm             = ALLOW);
 
     /** Not_Yet_Documented
-        @param pipefd           Not_Yet_Documented
-        @param iosock_descrip   Not_Yet_Documented
+        @param pipe_end         Not_Yet_Documented
+        @param pipe_descrip     Not_Yet_Documented
         @param handlercpp       Not_Yet_Documented
         @param handler_descrip  Not_Yet_Documented
         @param s                Not_Yet_Documented
         @param perm             Not_Yet_Documented
         @return Not_Yet_Documented
     */
-    int Register_Pipe (int					  pipefd,
-                         char *               iosock_descrip,
+    int Register_Pipe (int					  pipe_end,
+                         char *               pipe_descrip,
                          PipeHandlercpp       handlercpp,
                          char *               handler_descrip,
                          Service*             s,
                          HandlerType          handler_type = HANDLE_READ,    
                          DCpermission         perm = ALLOW);
 
-
     /** Not_Yet_Documented
-        @param pipefd           Not_Yet_Documented
+        @param pipe_end           Not_Yet_Documented
         @return Not_Yet_Documented
     */
-    int Cancel_Pipe ( int pipefd );
+    int Cancel_Pipe ( int pipe_end );
 
-	/// Cancel and close all registed pipes.
+	/// Cancel and close all pipes.
 	int Cancel_And_Close_All_Pipes(void);
 
 	/** Create an anonymous pipe.
 	*/
-	int Create_Pipe( int *pipefds, bool nonblocking_read = false, 
-		bool nonblocking_write = false, unsigned int psize = 0);
+	int Create_Pipe( int *pipe_ends,
+			 bool can_register_read = false, bool can_register_write = false,
+			 bool nonblocking_read = false, bool nonblocking_write = false,
+			 unsigned int psize = 4096);
 
+	/** Make DaemonCore aware of an inherited pipe.
+	*/
+	int Inherit_Pipe( int p, bool write, bool can_register, bool nonblocking, int psize = 4096);
+
+	int Read_Pipe(int pipe_end, void* buffer, int len);
+
+	int Write_Pipe(int pipe_end, const void* buffer, int len);
+					 
 	/** Close an anonymous pipe.  This function will also call 
-	 * Cancel_Pipe() on behalf of the caller if the pipefd had
+	 * Cancel_Pipe() on behalf of the caller if the pipe_end had
 	 * been registed via Register_Pipe().
 	*/
-	int Close_Pipe(int piepfd);
-
-	/** Close a pipe stream 
-	*/
-	int Close_Pipe(FILE *pipefp);
+	int Close_Pipe(int pipe_end);
 
 	//@}
 
@@ -1136,12 +1144,23 @@ class DaemonCore : public Service
   	struct soap		  soap;
 	time_t			  only_allow_soap;
 
+#if defined(WIN32)
+	typedef PipeEnd* PipeHandle;
+#else
+	typedef int PipeHandle;
+#endif
+	ExtArray<PipeHandle>* pipeHandleTable;
+	int maxPipeHandleIndex;
+	int pipeHandleTableInsert(PipeHandle);
+	void pipeHandleTableRemove(int);
+
+	// this table is for dispatching registered pipes
 	struct PidEntry;  // forward reference
     struct PipeEnt
     {
-        int				pipefd;
-        PipeHandler	   handler;
-        PipeHandlercpp    handlercpp;
+        int				index;		// index into the pipeHandleTable
+        PipeHandler		handler;
+        PipeHandlercpp  handlercpp;
         int             is_cpp;
         DCpermission    perm;
         Service*        service; 
@@ -1149,8 +1168,8 @@ class DaemonCore : public Service
         char*           handler_descrip;
         void*           data_ptr;
 		bool			call_handler;
-		PidEntry*		pentry;
 		HandlerType		handler_type;
+		PidEntry*		pentry;
 		bool			in_handler;
     };
     // void              DumpPipeTable(int, const char* = NULL);
@@ -1184,8 +1203,8 @@ class DaemonCore : public Service
         HANDLE hThread;
         DWORD tid;
         HWND hWnd;
-		HANDLE hPipe;
 		LONG pipeReady;
+		PipeEnd *pipeEnd;
 		LONG deallocate;
 		HANDLE watcherEvent;
 #endif

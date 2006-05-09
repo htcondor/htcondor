@@ -762,7 +762,7 @@ CronJobBase::StdoutHandler ( int pipe )
 	while ( ( ++reads < 10 ) && ( stdOut >= 0 ) ) {
 
 		// Read a block from it
-		bytes = read( stdOut, buf, STDOUT_READBUF_SIZE );
+		bytes = daemonCore->Read_Pipe( stdOut, buf, STDOUT_READBUF_SIZE );
 
 		// Zero means it closed
 		if ( bytes == 0 ) {
@@ -825,7 +825,7 @@ CronJobBase::StderrHandler ( int pipe )
 	int				bytes;
 
 	// Read a block from it
-	bytes = read( stdErr, buf, STDERR_READBUF_SIZE );
+	bytes = daemonCore->Read_Pipe( stdErr, buf, STDERR_READBUF_SIZE );
 
 	// Zero means it closed
 	if ( bytes == 0 )
@@ -870,7 +870,12 @@ CronJobBase::OpenFds ( void )
 	childFds[0] = -1;
 
 	// Pipe to stdout
-	if ( daemonCore->Create_Pipe( tmpfds, true ) < 0 ) {
+	if ( !daemonCore->Create_Pipe( tmpfds,	// pipe ends
+				       true,	// read end registerable
+				       false,	// write end not registerable
+				       true	// read end nonblocking
+				     ) )
+	{
 		dprintf( D_ALWAYS, "Cron: Can't create pipe, errno %d : %s\n",
 				 errno, strerror( errno ) );
 		CleanAll( );
@@ -885,7 +890,12 @@ CronJobBase::OpenFds ( void )
 							   this );
 
 	// Pipe to stderr
-	if ( daemonCore->Create_Pipe( tmpfds, true ) < 0 ) {
+	if ( !daemonCore->Create_Pipe( tmpfds,	// pipe ends	
+				       true,	// read end registerable
+				       false,	// write end not registerable
+				       true	// read end nonblocking
+				    ) )
+	{
 		dprintf( D_ALWAYS, "Cron: Can't create STDERR pipe, errno %d : %s\n",
 				 errno, strerror( errno ) );
 		CleanAll( );

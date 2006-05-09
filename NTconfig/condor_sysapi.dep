@@ -18,14 +18,6 @@
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
-	"e:\program files\microsoft platform sdk\include\basetsd.h"\
-	"e:\program files\microsoft platform sdk\include\guiddef.h"\
-	"e:\program files\microsoft platform sdk\include\propidl.h"\
-	"e:\program files\microsoft platform sdk\include\reason.h"\
-	"e:\program files\microsoft platform sdk\include\specstrings.h"\
-	"e:\program files\microsoft platform sdk\include\stralign.h"\
-	"e:\program files\microsoft platform sdk\include\tvout.h"\
-	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 ..\src\condor_sysapi\ckptpltfrm.c : \
@@ -47,14 +39,6 @@
 	"..\src\condor_sysapi\sysapi_externs.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
-	"e:\program files\microsoft platform sdk\include\basetsd.h"\
-	"e:\program files\microsoft platform sdk\include\guiddef.h"\
-	"e:\program files\microsoft platform sdk\include\propidl.h"\
-	"e:\program files\microsoft platform sdk\include\reason.h"\
-	"e:\program files\microsoft platform sdk\include\specstrings.h"\
-	"e:\program files\microsoft platform sdk\include\stralign.h"\
-	"e:\program files\microsoft platform sdk\include\tvout.h"\
-	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 ..\src\condor_sysapi\dhry21a.c : \
@@ -84,14 +68,6 @@
 	"..\src\condor_sysapi\sysapi_externs.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
-	"e:\program files\microsoft platform sdk\include\basetsd.h"\
-	"e:\program files\microsoft platform sdk\include\guiddef.h"\
-	"e:\program files\microsoft platform sdk\include\propidl.h"\
-	"e:\program files\microsoft platform sdk\include\reason.h"\
-	"e:\program files\microsoft platform sdk\include\specstrings.h"\
-	"e:\program files\microsoft platform sdk\include\stralign.h"\
-	"e:\program files\microsoft platform sdk\include\tvout.h"\
-	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 ..\src\condor_sysapi\idle_time.C : \
@@ -113,14 +89,6 @@
 	"..\src\condor_sysapi\sysapi_externs.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
-	"e:\program files\microsoft platform sdk\include\basetsd.h"\
-	"e:\program files\microsoft platform sdk\include\guiddef.h"\
-	"e:\program files\microsoft platform sdk\include\propidl.h"\
-	"e:\program files\microsoft platform sdk\include\reason.h"\
-	"e:\program files\microsoft platform sdk\include\specstrings.h"\
-	"e:\program files\microsoft platform sdk\include\stralign.h"\
-	"e:\program files\microsoft platform sdk\include\tvout.h"\
-	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 ..\src\condor_sysapi\kernel_memory_model.c : \
@@ -142,14 +110,6 @@
 	"..\src\condor_sysapi\sysapi_externs.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
-	"e:\program files\microsoft platform sdk\include\basetsd.h"\
-	"e:\program files\microsoft platform sdk\include\guiddef.h"\
-	"e:\program files\microsoft platform sdk\include\propidl.h"\
-	"e:\program files\microsoft platform sdk\include\reason.h"\
-	"e:\program files\microsoft platform sdk\include\specstrings.h"\
-	"e:\program files\microsoft platform sdk\include\stralign.h"\
-	"e:\program files\microsoft platform sdk\include\tvout.h"\
-	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 ..\src\condor_sysapi\kernel_version.c : \
@@ -171,14 +131,6 @@
 	"..\src\condor_sysapi\sysapi_externs.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
-	"e:\program files\microsoft platform sdk\include\basetsd.h"\
-	"e:\program files\microsoft platform sdk\include\guiddef.h"\
-	"e:\program files\microsoft platform sdk\include\propidl.h"\
-	"e:\program files\microsoft platform sdk\include\reason.h"\
-	"e:\program files\microsoft platform sdk\include\specstrings.h"\
-	"e:\program files\microsoft platform sdk\include\stralign.h"\
-	"e:\program files\microsoft platform sdk\include\tvout.h"\
-	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 ..\src\condor_sysapi\last_x_event.c : \
@@ -199,14 +151,6 @@
 	"..\src\condor_sysapi\sysapi_externs.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
-	"e:\program files\microsoft platform sdk\include\basetsd.h"\
-	"e:\program files\microsoft platform sdk\include\guiddef.h"\
-	"e:\program files\microsoft platform sdk\include\propidl.h"\
-	"e:\program files\microsoft platform sdk\include\reason.h"\
-	"e:\program files\microsoft platform sdk\include\specstrings.h"\
-	"e:\program files\microsoft platform sdk\include\stralign.h"\
-	"e:\program files\microsoft platform sdk\include\tvout.h"\
-	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 ..\src\condor_sysapi\load_avg.c : \
@@ -228,14 +172,6 @@
 	"..\src\condor_sysapi\sysapi_externs.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
-	"e:\program files\microsoft platform sdk\include\basetsd.h"\
-	"e:\program files\microsoft platform sdk\include\guiddef.h"\
-	"e:\program files\microsoft platform sdk\include\propidl.h"\
-	"e:\program files\microsoft platform sdk\include\reason.h"\
-	"e:\program files\microsoft platform sdk\include\specstrings.h"\
-	"e:\program files\microsoft platform sdk\include\stralign.h"\
-	"e:\program files\microsoft platform sdk\include\tvout.h"\
-	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 ..\src\condor_sysapi\ncpus.c : \
@@ -257,14 +193,6 @@
 	"..\src\condor_sysapi\sysapi_externs.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
-	"e:\program files\microsoft platform sdk\include\basetsd.h"\
-	"e:\program files\microsoft platform sdk\include\guiddef.h"\
-	"e:\program files\microsoft platform sdk\include\propidl.h"\
-	"e:\program files\microsoft platform sdk\include\reason.h"\
-	"e:\program files\microsoft platform sdk\include\specstrings.h"\
-	"e:\program files\microsoft platform sdk\include\stralign.h"\
-	"e:\program files\microsoft platform sdk\include\tvout.h"\
-	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 ..\src\condor_sysapi\phys_mem.c : \
@@ -285,14 +213,6 @@
 	"..\src\condor_sysapi\sysapi_externs.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
-	"e:\program files\microsoft platform sdk\include\basetsd.h"\
-	"e:\program files\microsoft platform sdk\include\guiddef.h"\
-	"e:\program files\microsoft platform sdk\include\propidl.h"\
-	"e:\program files\microsoft platform sdk\include\reason.h"\
-	"e:\program files\microsoft platform sdk\include\specstrings.h"\
-	"e:\program files\microsoft platform sdk\include\stralign.h"\
-	"e:\program files\microsoft platform sdk\include\tvout.h"\
-	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 ..\src\condor_sysapi\reconfig.C : \
@@ -323,14 +243,6 @@
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\util_lib_proto.h"\
-	"e:\program files\microsoft platform sdk\include\basetsd.h"\
-	"e:\program files\microsoft platform sdk\include\guiddef.h"\
-	"e:\program files\microsoft platform sdk\include\propidl.h"\
-	"e:\program files\microsoft platform sdk\include\reason.h"\
-	"e:\program files\microsoft platform sdk\include\specstrings.h"\
-	"e:\program files\microsoft platform sdk\include\stralign.h"\
-	"e:\program files\microsoft platform sdk\include\tvout.h"\
-	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 ..\src\condor_sysapi\resource_limits.c : \
@@ -351,25 +263,9 @@
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
-	"e:\program files\microsoft platform sdk\include\basetsd.h"\
-	"e:\program files\microsoft platform sdk\include\guiddef.h"\
-	"e:\program files\microsoft platform sdk\include\propidl.h"\
-	"e:\program files\microsoft platform sdk\include\reason.h"\
-	"e:\program files\microsoft platform sdk\include\specstrings.h"\
-	"e:\program files\microsoft platform sdk\include\stralign.h"\
-	"e:\program files\microsoft platform sdk\include\tvout.h"\
-	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 ..\src\condor_sysapi\timers_b.c : \
-	"e:\program files\microsoft platform sdk\include\basetsd.h"\
-	"e:\program files\microsoft platform sdk\include\guiddef.h"\
-	"e:\program files\microsoft platform sdk\include\propidl.h"\
-	"e:\program files\microsoft platform sdk\include\reason.h"\
-	"e:\program files\microsoft platform sdk\include\specstrings.h"\
-	"e:\program files\microsoft platform sdk\include\stralign.h"\
-	"e:\program files\microsoft platform sdk\include\tvout.h"\
-	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 ..\src\condor_sysapi\virt_mem.c : \
@@ -389,12 +285,4 @@
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
-	"e:\program files\microsoft platform sdk\include\basetsd.h"\
-	"e:\program files\microsoft platform sdk\include\guiddef.h"\
-	"e:\program files\microsoft platform sdk\include\propidl.h"\
-	"e:\program files\microsoft platform sdk\include\reason.h"\
-	"e:\program files\microsoft platform sdk\include\specstrings.h"\
-	"e:\program files\microsoft platform sdk\include\stralign.h"\
-	"e:\program files\microsoft platform sdk\include\tvout.h"\
-	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	

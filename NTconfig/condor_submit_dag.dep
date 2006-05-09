@@ -21,12 +21,4 @@
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
-	"e:\program files\microsoft platform sdk\include\basetsd.h"\
-	"e:\program files\microsoft platform sdk\include\guiddef.h"\
-	"e:\program files\microsoft platform sdk\include\propidl.h"\
-	"e:\program files\microsoft platform sdk\include\reason.h"\
-	"e:\program files\microsoft platform sdk\include\specstrings.h"\
-	"e:\program files\microsoft platform sdk\include\stralign.h"\
-	"e:\program files\microsoft platform sdk\include\tvout.h"\
-	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	

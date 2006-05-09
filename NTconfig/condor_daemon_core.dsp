@@ -163,6 +163,14 @@ SOURCE=..\src\condor_daemon_core.V6\httpget.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_daemon_core.V6\pipe.WIN32.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_daemon_core.V6\pipe.WIN32.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_daemon_core.V6\self_draining_queue.C
 # End Source File
 # Begin Source File

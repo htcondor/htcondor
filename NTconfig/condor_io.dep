@@ -1,53 +1,6 @@
 # Microsoft Developer Studio Generated Dependency File, included by condor_io.mak
 
 ..\src\condor_io\authentication.C : \
-	"..\externals\install\krb5-1.4.3\include\com_err.h"\
-	"..\externals\install\krb5-1.4.3\include\krb5.h"\
-	"..\externals\install\krb5-1.4.3\include\win-mac.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\asn1.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\bio.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\bn.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\comp.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\conf.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\crypto.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\des.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\des_old.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\dh.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\dsa.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\dtls1.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\e_os2.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\ec.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\ecdh.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\ecdsa.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\err.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\evp.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\kssl.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\lhash.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\obj_mac.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\objects.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\opensslconf.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\opensslv.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\ossl_typ.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\pem.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\pem2.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\pkcs7.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\pq_compat.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\pqueue.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\rsa.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\safestack.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\sha.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\ssl.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\ssl2.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\ssl23.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\ssl3.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\stack.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\symhacks.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\tls1.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\ui.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\ui_compat.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\x509.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\x509_vfy.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\x509v3.h"\
 	"..\src\condor_c++_util\CondorError.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
@@ -116,14 +69,6 @@
 	"..\src\h\internet.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
-	"e:\program files\microsoft platform sdk\include\basetsd.h"\
-	"e:\program files\microsoft platform sdk\include\guiddef.h"\
-	"e:\program files\microsoft platform sdk\include\propidl.h"\
-	"e:\program files\microsoft platform sdk\include\reason.h"\
-	"e:\program files\microsoft platform sdk\include\specstrings.h"\
-	"e:\program files\microsoft platform sdk\include\stralign.h"\
-	"e:\program files\microsoft platform sdk\include\tvout.h"\
-	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 ..\src\condor_io\buffers.C : \
@@ -171,14 +116,6 @@
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
-	"e:\program files\microsoft platform sdk\include\basetsd.h"\
-	"e:\program files\microsoft platform sdk\include\guiddef.h"\
-	"e:\program files\microsoft platform sdk\include\propidl.h"\
-	"e:\program files\microsoft platform sdk\include\reason.h"\
-	"e:\program files\microsoft platform sdk\include\specstrings.h"\
-	"e:\program files\microsoft platform sdk\include\stralign.h"\
-	"e:\program files\microsoft platform sdk\include\tvout.h"\
-	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 ..\src\condor_io\cedar_no_ckpt.C : \
@@ -229,14 +166,6 @@
 	"..\src\h\globus_utils.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
-	"e:\program files\microsoft platform sdk\include\basetsd.h"\
-	"e:\program files\microsoft platform sdk\include\guiddef.h"\
-	"e:\program files\microsoft platform sdk\include\propidl.h"\
-	"e:\program files\microsoft platform sdk\include\reason.h"\
-	"e:\program files\microsoft platform sdk\include\specstrings.h"\
-	"e:\program files\microsoft platform sdk\include\stralign.h"\
-	"e:\program files\microsoft platform sdk\include\tvout.h"\
-	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 ..\src\condor_io\condor_auth.C : \
@@ -304,14 +233,6 @@
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
 	"..\src\h\util_lib_proto.h"\
-	"e:\program files\microsoft platform sdk\include\basetsd.h"\
-	"e:\program files\microsoft platform sdk\include\guiddef.h"\
-	"e:\program files\microsoft platform sdk\include\propidl.h"\
-	"e:\program files\microsoft platform sdk\include\reason.h"\
-	"e:\program files\microsoft platform sdk\include\specstrings.h"\
-	"e:\program files\microsoft platform sdk\include\stralign.h"\
-	"e:\program files\microsoft platform sdk\include\tvout.h"\
-	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 ..\src\condor_io\condor_auth_anonymous.C : \
@@ -364,14 +285,6 @@
 	"..\src\h\internet.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
-	"e:\program files\microsoft platform sdk\include\basetsd.h"\
-	"e:\program files\microsoft platform sdk\include\guiddef.h"\
-	"e:\program files\microsoft platform sdk\include\propidl.h"\
-	"e:\program files\microsoft platform sdk\include\reason.h"\
-	"e:\program files\microsoft platform sdk\include\specstrings.h"\
-	"e:\program files\microsoft platform sdk\include\stralign.h"\
-	"e:\program files\microsoft platform sdk\include\tvout.h"\
-	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 ..\src\condor_io\condor_auth_claim.C : \
@@ -423,20 +336,9 @@
 	"..\src\h\internet.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
-	"e:\program files\microsoft platform sdk\include\basetsd.h"\
-	"e:\program files\microsoft platform sdk\include\guiddef.h"\
-	"e:\program files\microsoft platform sdk\include\propidl.h"\
-	"e:\program files\microsoft platform sdk\include\reason.h"\
-	"e:\program files\microsoft platform sdk\include\specstrings.h"\
-	"e:\program files\microsoft platform sdk\include\stralign.h"\
-	"e:\program files\microsoft platform sdk\include\tvout.h"\
-	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 ..\src\condor_io\condor_auth_kerberos.C : \
-	"..\externals\install\krb5-1.4.3\include\com_err.h"\
-	"..\externals\install\krb5-1.4.3\include\krb5.h"\
-	"..\externals\install\krb5-1.4.3\include\win-mac.h"\
 	"..\src\condor_c++_util\condor_arglist.h"\
 	"..\src\condor_c++_util\condor_ver_info.h"\
 	"..\src\condor_c++_util\CondorError.h"\
@@ -504,39 +406,9 @@
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
 	"..\src\h\util_lib_proto.h"\
-	"e:\program files\microsoft platform sdk\include\basetsd.h"\
-	"e:\program files\microsoft platform sdk\include\guiddef.h"\
-	"e:\program files\microsoft platform sdk\include\propidl.h"\
-	"e:\program files\microsoft platform sdk\include\reason.h"\
-	"e:\program files\microsoft platform sdk\include\specstrings.h"\
-	"e:\program files\microsoft platform sdk\include\stralign.h"\
-	"e:\program files\microsoft platform sdk\include\tvout.h"\
-	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 ..\src\condor_io\condor_auth_passwd.C : \
-	"..\externals\install\openssl-0.9.8\inc32\openssl\asn1.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\bio.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\bn.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\crypto.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\des.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\des_old.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\e_os2.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\err.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\evp.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\hmac.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\lhash.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\obj_mac.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\objects.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\opensslconf.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\opensslv.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\ossl_typ.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\rand.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\safestack.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\stack.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\symhacks.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\ui.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\ui_compat.h"\
 	"..\src\condor_c++_util\CondorError.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
@@ -587,62 +459,9 @@
 	"..\src\h\internet.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
-	"e:\program files\microsoft platform sdk\include\basetsd.h"\
-	"e:\program files\microsoft platform sdk\include\guiddef.h"\
-	"e:\program files\microsoft platform sdk\include\propidl.h"\
-	"e:\program files\microsoft platform sdk\include\reason.h"\
-	"e:\program files\microsoft platform sdk\include\specstrings.h"\
-	"e:\program files\microsoft platform sdk\include\stralign.h"\
-	"e:\program files\microsoft platform sdk\include\tvout.h"\
-	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 ..\src\condor_io\condor_auth_ssl.C : \
-	"..\externals\install\openssl-0.9.8\inc32\openssl\asn1.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\bio.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\bn.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\comp.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\conf.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\crypto.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\des.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\des_old.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\dh.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\dsa.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\dtls1.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\e_os2.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\ec.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\ecdh.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\ecdsa.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\err.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\evp.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\kssl.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\lhash.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\obj_mac.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\objects.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\opensslconf.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\opensslv.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\ossl_typ.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\pem.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\pem2.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\pkcs7.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\pq_compat.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\pqueue.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\rand.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\rsa.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\safestack.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\sha.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\ssl.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\ssl2.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\ssl23.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\ssl3.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\stack.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\symhacks.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\tls1.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\ui.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\ui_compat.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\x509.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\x509_vfy.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\x509v3.h"\
 	"..\src\condor_c++_util\condor_arglist.h"\
 	"..\src\condor_c++_util\condor_ver_info.h"\
 	"..\src\condor_c++_util\CondorError.h"\
@@ -714,14 +533,6 @@
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
 	"..\src\h\util_lib_proto.h"\
-	"e:\program files\microsoft platform sdk\include\basetsd.h"\
-	"e:\program files\microsoft platform sdk\include\guiddef.h"\
-	"e:\program files\microsoft platform sdk\include\propidl.h"\
-	"e:\program files\microsoft platform sdk\include\reason.h"\
-	"e:\program files\microsoft platform sdk\include\specstrings.h"\
-	"e:\program files\microsoft platform sdk\include\stralign.h"\
-	"e:\program files\microsoft platform sdk\include\tvout.h"\
-	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 ..\src\condor_io\condor_auth_sspi.C : \
@@ -773,21 +584,9 @@
 	"..\src\h\internet.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
-	"e:\program files\microsoft platform sdk\include\basetsd.h"\
-	"e:\program files\microsoft platform sdk\include\guiddef.h"\
-	"e:\program files\microsoft platform sdk\include\propidl.h"\
-	"e:\program files\microsoft platform sdk\include\reason.h"\
-	"e:\program files\microsoft platform sdk\include\specstrings.h"\
-	"e:\program files\microsoft platform sdk\include\stralign.h"\
-	"e:\program files\microsoft platform sdk\include\tvout.h"\
-	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 ..\src\condor_io\condor_crypt.C : \
-	"..\externals\install\openssl-0.9.8\inc32\openssl\e_os2.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\opensslconf.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\ossl_typ.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\rand.h"\
 	"..\src\condor_includes\cedar_enums.h"\
 	"..\src\condor_includes\condor_blkng_full_disk_io.h"\
 	"..\src\condor_includes\condor_common.h"\
@@ -808,29 +607,9 @@
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
-	"e:\program files\microsoft platform sdk\include\basetsd.h"\
-	"e:\program files\microsoft platform sdk\include\guiddef.h"\
-	"e:\program files\microsoft platform sdk\include\propidl.h"\
-	"e:\program files\microsoft platform sdk\include\reason.h"\
-	"e:\program files\microsoft platform sdk\include\specstrings.h"\
-	"e:\program files\microsoft platform sdk\include\stralign.h"\
-	"e:\program files\microsoft platform sdk\include\tvout.h"\
-	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 ..\src\condor_io\condor_crypt_3des.C : \
-	"..\externals\install\openssl-0.9.8\inc32\openssl\crypto.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\des.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\des_old.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\e_os2.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\opensslconf.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\opensslv.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\ossl_typ.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\safestack.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\stack.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\symhacks.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\ui.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\ui_compat.h"\
 	"..\src\condor_includes\cedar_enums.h"\
 	"..\src\condor_includes\condor_blkng_full_disk_io.h"\
 	"..\src\condor_includes\condor_common.h"\
@@ -850,20 +629,9 @@
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
-	"e:\program files\microsoft platform sdk\include\basetsd.h"\
-	"e:\program files\microsoft platform sdk\include\guiddef.h"\
-	"e:\program files\microsoft platform sdk\include\propidl.h"\
-	"e:\program files\microsoft platform sdk\include\reason.h"\
-	"e:\program files\microsoft platform sdk\include\specstrings.h"\
-	"e:\program files\microsoft platform sdk\include\stralign.h"\
-	"e:\program files\microsoft platform sdk\include\tvout.h"\
-	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 ..\src\condor_io\condor_crypt_blowfish.C : \
-	"..\externals\install\openssl-0.9.8\inc32\openssl\blowfish.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\e_os2.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\opensslconf.h"\
 	"..\src\condor_includes\cedar_enums.h"\
 	"..\src\condor_includes\condor_blkng_full_disk_io.h"\
 	"..\src\condor_includes\condor_common.h"\
@@ -883,14 +651,6 @@
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
-	"e:\program files\microsoft platform sdk\include\basetsd.h"\
-	"e:\program files\microsoft platform sdk\include\guiddef.h"\
-	"e:\program files\microsoft platform sdk\include\propidl.h"\
-	"e:\program files\microsoft platform sdk\include\reason.h"\
-	"e:\program files\microsoft platform sdk\include\specstrings.h"\
-	"e:\program files\microsoft platform sdk\include\stralign.h"\
-	"e:\program files\microsoft platform sdk\include\tvout.h"\
-	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 ..\src\condor_io\condor_rw.C : \
@@ -937,18 +697,9 @@
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
-	"e:\program files\microsoft platform sdk\include\basetsd.h"\
-	"e:\program files\microsoft platform sdk\include\guiddef.h"\
-	"e:\program files\microsoft platform sdk\include\propidl.h"\
-	"e:\program files\microsoft platform sdk\include\reason.h"\
-	"e:\program files\microsoft platform sdk\include\specstrings.h"\
-	"e:\program files\microsoft platform sdk\include\stralign.h"\
-	"e:\program files\microsoft platform sdk\include\tvout.h"\
-	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 ..\src\condor_io\condor_secman.C : \
-	"..\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
 	"..\src\condor_c++_util\classad_merge.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_arglist.h"\
@@ -1035,14 +786,6 @@
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
 	"..\src\h\util_lib_proto.h"\
-	"e:\program files\microsoft platform sdk\include\basetsd.h"\
-	"e:\program files\microsoft platform sdk\include\guiddef.h"\
-	"e:\program files\microsoft platform sdk\include\propidl.h"\
-	"e:\program files\microsoft platform sdk\include\reason.h"\
-	"e:\program files\microsoft platform sdk\include\specstrings.h"\
-	"e:\program files\microsoft platform sdk\include\stralign.h"\
-	"e:\program files\microsoft platform sdk\include\tvout.h"\
-	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 ..\src\condor_io\CryptKey.C : \
@@ -1063,14 +806,6 @@
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
-	"e:\program files\microsoft platform sdk\include\basetsd.h"\
-	"e:\program files\microsoft platform sdk\include\guiddef.h"\
-	"e:\program files\microsoft platform sdk\include\propidl.h"\
-	"e:\program files\microsoft platform sdk\include\reason.h"\
-	"e:\program files\microsoft platform sdk\include\specstrings.h"\
-	"e:\program files\microsoft platform sdk\include\stralign.h"\
-	"e:\program files\microsoft platform sdk\include\tvout.h"\
-	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 ..\src\condor_io\errno_num.C : \
@@ -1090,14 +825,6 @@
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
-	"e:\program files\microsoft platform sdk\include\basetsd.h"\
-	"e:\program files\microsoft platform sdk\include\guiddef.h"\
-	"e:\program files\microsoft platform sdk\include\propidl.h"\
-	"e:\program files\microsoft platform sdk\include\reason.h"\
-	"e:\program files\microsoft platform sdk\include\specstrings.h"\
-	"e:\program files\microsoft platform sdk\include\stralign.h"\
-	"e:\program files\microsoft platform sdk\include\tvout.h"\
-	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 ..\src\condor_io\open_flags.c : \
@@ -1117,14 +844,6 @@
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
-	"e:\program files\microsoft platform sdk\include\basetsd.h"\
-	"e:\program files\microsoft platform sdk\include\guiddef.h"\
-	"e:\program files\microsoft platform sdk\include\propidl.h"\
-	"e:\program files\microsoft platform sdk\include\reason.h"\
-	"e:\program files\microsoft platform sdk\include\specstrings.h"\
-	"e:\program files\microsoft platform sdk\include\stralign.h"\
-	"e:\program files\microsoft platform sdk\include\tvout.h"\
-	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 ..\src\condor_io\reli_sock.C : \
@@ -1187,14 +906,6 @@
 	"..\src\h\internet.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
-	"e:\program files\microsoft platform sdk\include\basetsd.h"\
-	"e:\program files\microsoft platform sdk\include\guiddef.h"\
-	"e:\program files\microsoft platform sdk\include\propidl.h"\
-	"e:\program files\microsoft platform sdk\include\reason.h"\
-	"e:\program files\microsoft platform sdk\include\specstrings.h"\
-	"e:\program files\microsoft platform sdk\include\stralign.h"\
-	"e:\program files\microsoft platform sdk\include\tvout.h"\
-	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 ..\src\condor_io\safe_sock.C : \
@@ -1261,14 +972,6 @@
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
 	"..\src\h\util_lib_proto.h"\
-	"e:\program files\microsoft platform sdk\include\basetsd.h"\
-	"e:\program files\microsoft platform sdk\include\guiddef.h"\
-	"e:\program files\microsoft platform sdk\include\propidl.h"\
-	"e:\program files\microsoft platform sdk\include\reason.h"\
-	"e:\program files\microsoft platform sdk\include\specstrings.h"\
-	"e:\program files\microsoft platform sdk\include\stralign.h"\
-	"e:\program files\microsoft platform sdk\include\tvout.h"\
-	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 ..\src\condor_io\SafeMsg.C : \
@@ -1316,14 +1019,6 @@
 	"..\src\h\internet.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
-	"e:\program files\microsoft platform sdk\include\basetsd.h"\
-	"e:\program files\microsoft platform sdk\include\guiddef.h"\
-	"e:\program files\microsoft platform sdk\include\propidl.h"\
-	"e:\program files\microsoft platform sdk\include\reason.h"\
-	"e:\program files\microsoft platform sdk\include\specstrings.h"\
-	"e:\program files\microsoft platform sdk\include\stralign.h"\
-	"e:\program files\microsoft platform sdk\include\tvout.h"\
-	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 ..\src\condor_io\sock.C : \
@@ -1379,14 +1074,6 @@
 	"..\src\h\internet.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
-	"e:\program files\microsoft platform sdk\include\basetsd.h"\
-	"e:\program files\microsoft platform sdk\include\guiddef.h"\
-	"e:\program files\microsoft platform sdk\include\propidl.h"\
-	"e:\program files\microsoft platform sdk\include\reason.h"\
-	"e:\program files\microsoft platform sdk\include\specstrings.h"\
-	"e:\program files\microsoft platform sdk\include\stralign.h"\
-	"e:\program files\microsoft platform sdk\include\tvout.h"\
-	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 ..\src\condor_io\sockCache.C : \
@@ -1433,30 +1120,9 @@
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
-	"e:\program files\microsoft platform sdk\include\basetsd.h"\
-	"e:\program files\microsoft platform sdk\include\guiddef.h"\
-	"e:\program files\microsoft platform sdk\include\propidl.h"\
-	"e:\program files\microsoft platform sdk\include\reason.h"\
-	"e:\program files\microsoft platform sdk\include\specstrings.h"\
-	"e:\program files\microsoft platform sdk\include\stralign.h"\
-	"e:\program files\microsoft platform sdk\include\tvout.h"\
-	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	
 
 ..\src\condor_io\stream.C : \
-	"..\externals\install\openssl-0.9.8\inc32\openssl\blowfish.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\crypto.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\des.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\des_old.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\e_os2.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\opensslconf.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\opensslv.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\ossl_typ.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\safestack.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\stack.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\symhacks.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\ui.h"\
-	"..\externals\install\openssl-0.9.8\inc32\openssl\ui_compat.h"\
 	"..\src\condor_c++_util\CondorError.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
@@ -1502,12 +1168,4 @@
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
-	"e:\program files\microsoft platform sdk\include\basetsd.h"\
-	"e:\program files\microsoft platform sdk\include\guiddef.h"\
-	"e:\program files\microsoft platform sdk\include\propidl.h"\
-	"e:\program files\microsoft platform sdk\include\reason.h"\
-	"e:\program files\microsoft platform sdk\include\specstrings.h"\
-	"e:\program files\microsoft platform sdk\include\stralign.h"\
-	"e:\program files\microsoft platform sdk\include\tvout.h"\
-	"e:\program files\microsoft platform sdk\include\winefs.h"\
 	

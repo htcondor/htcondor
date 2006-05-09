@@ -207,8 +207,8 @@ GahpServer::write_line(const char *command)
 		return;
 	}
 	
-	write(m_gahp_writefd,command,strlen(command));
-	write(m_gahp_writefd,"\r\n",2);
+	daemonCore->Write_Pipe(m_gahp_writefd,command,strlen(command));
+	daemonCore->Write_Pipe(m_gahp_writefd,"\r\n",2);
 
 	if ( logGahpIo ) {
 		MyString debug = command;
@@ -233,12 +233,12 @@ GahpServer::write_line(const char *command, int req, const char *args)
 
 	char buf[20];
 	sprintf(buf," %d ",req);
-	write(m_gahp_writefd,command,strlen(command));
-	write(m_gahp_writefd,buf,strlen(buf));
+	daemonCore->Write_Pipe(m_gahp_writefd,command,strlen(command));
+	daemonCore->Write_Pipe(m_gahp_writefd,buf,strlen(buf));
 	if ( args ) {
-		write(m_gahp_writefd,args,strlen(args));
+		daemonCore->Write_Pipe(m_gahp_writefd,args,strlen(args));
 	}
-	write(m_gahp_writefd,"\r\n",2);
+	daemonCore->Write_Pipe(m_gahp_writefd,"\r\n",2);
 
 	if ( logGahpIo ) {
 		MyString debug = command;
@@ -342,7 +342,7 @@ GahpServer::read_argv(Gahp_Args &g_args)
 	for (;;) {
 
 		ASSERT(ibuf < buf_size);
-		result = read(m_gahp_readfd, &(buf[ibuf]), 1 );
+		result = daemonCore->Read_Pipe(m_gahp_readfd, &(buf[ibuf]), 1 );
 
 		/* Check return value from read() */
 		if ( result < 0 ) {		/* Error - try reading again */
@@ -601,9 +601,18 @@ GahpServer::Startup()
 
 		// Create two pairs of pipes which we will use to 
 		// communicate with the GAHP server.
-	if ( (daemonCore->Create_Pipe(stdin_pipefds) == FALSE) ||
-	     (daemonCore->Create_Pipe(stdout_pipefds) == FALSE) ||
-	     (daemonCore->Create_Pipe(stderr_pipefds, TRUE) == FALSE)) 
+
+		// NASTY HACK: if we're creating a C-GAHP, we need to make the
+		// stdin pipe "registerable". We determine if it's a C-GAHP by
+		// comparing the beginning of our id with "CONDOR/"
+	bool is_c_gahp = false;
+	if (strncmp(my_id, "CONDOR/", 7) == 0) {
+		is_c_gahp = true;
+	}
+
+	if ( (daemonCore->Create_Pipe(stdin_pipefds, is_c_gahp) == FALSE) ||
+	     (daemonCore->Create_Pipe(stdout_pipefds, true) == FALSE) ||
+	     (daemonCore->Create_Pipe(stderr_pipefds, true, false, true) == FALSE)) 
 	{
 		dprintf(D_ALWAYS,"GahpServer::Startup - pipe() failed, errno=%d\n",
 			errno);
@@ -1158,7 +1167,7 @@ GahpServer::err_pipe_ready()
 	char buff[5001];
 	buff[0] = '\0';
 
-	while (((count = (read(m_gahp_errorfd, &buff, 5000))))>0) {
+	while (((count = (daemonCore->Read_Pipe(m_gahp_errorfd, &buff, 5000))))>0) {
 
 		char *prev_line = buff;
 		char *newline = buff - 1;
@@ -1297,7 +1306,7 @@ GahpServer::command_version(bool banner_string)
 	j = sizeof(m_gahp_version);
 	i = 0;
 	while ( i < j ) {
-		result = read(m_gahp_readfd, &(m_gahp_version[i]), 1 );
+		result = daemonCore->Read_Pipe(m_gahp_readfd, &(m_gahp_version[i]), 1 );
 		/* Check return value from read() */
 		if ( result < 0 ) {		/* Error - try reading again */
 			continue;

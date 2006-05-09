@@ -77,7 +77,7 @@ extern char *myUserName;
 extern int main_shutdown_graceful();
 
 int
-request_pipe_handler() {
+request_pipe_handler(Service*, int) {
 
 	MyString * next_line = NULL;
 
@@ -1346,7 +1346,7 @@ enqueue_result (int req_id, const char ** results, const int argc) {
 	buffer += "\n";
 
 	// Now flush:
-	write (RESULT_OUTBOX, buffer.Value(), buffer.Length());
+	daemonCore->Write_Pipe (RESULT_OUTBOX, buffer.Value(), buffer.Length());
 }
 
 char *

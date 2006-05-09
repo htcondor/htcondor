@@ -6703,17 +6703,20 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 			// 2) dump out the job ad to the write end, since the
 			// handler is now alive and can read from the pipe.
 		ASSERT( job_ad );
-		FILE* fp = fdopen( pipe_fds[1], "w" );
-		job_ad->fPrint( fp );
-
-			// since this is probably a DC pipe that we have to close
-			// with Close_Pipe(), we can't call fclose() on it.  so,
-			// unless we call fflush(), we won't get any output. :(
-		if( fflush(fp) < 0 ) {
-			dprintf( D_ALWAYS,
-					 "writeJobAd: fflush() failed: %s (errno %d)\n",
-					 strerror(errno), errno );
+		MyString ad_str;
+		job_ad->sPrint(ad_str);
+		const char* ptr = ad_str.Value();
+		int len = ad_str.Length();
+		while (len) {
+			int bytes_written = daemonCore->Write_Pipe(pipe_fds[1], ptr, len);
+			if (bytes_written == -1) {
+				dprintf(D_ALWAYS, "writeJobAd: Write_Pipe failed\n");
+				break;
+			}
+			ptr += bytes_written;
+			len -= bytes_written;
 		}
+
 			// TODO: if this is an MPI job, we should really write all
 			// the match info (ClaimIds, sinful strings and machine
 			// ads) to the pipe before we close it, but that's just a
@@ -6721,7 +6724,7 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 
 			// Now that all the data is written to the pipe, we can
 			// safely close the other end, too.  
-		daemonCore->Close_Pipe( fp );
+		daemonCore->Close_Pipe(pipe_fds[1]);
 	}
 
 	if( job_ad ) {

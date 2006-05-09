@@ -45,7 +45,6 @@ extern char * ScheddAddr;
 extern int RESULT_OUTBOX;
 extern int REQUEST_INBOX;
 
-
 extern FdBuffer request_buffer;
 
 int io_loop_pid = -1;
@@ -93,22 +92,6 @@ main_init( int argc, char ** const argv )
 			ScheddPool = strdup( argv[i + 1] );
 			i++;
 			break;
-		case 'I':
-				// specify fd of the read-end of request pipe
-		   if ( argc <= i + 1 )
-				usage( argv[0] );
-			REQUEST_INBOX = atoi( argv[i + 1] );
-			i++;
-			break;
-		case 'O':
-				// specify fd of the write-end of result pipe
-		   if ( argc <= i + 1 )
-				usage( argv[0] );
-			RESULT_OUTBOX = atoi( argv[i + 1] );
-			i++;
-			break;
-
-
 		default:
 			usage( argv[0] );
 			break;
@@ -124,6 +107,15 @@ main_init( int argc, char ** const argv )
 	Register();
 	Reconfig();
 
+	// inherit the DaemonCore pipes that our parent created
+	REQUEST_INBOX = daemonCore->Inherit_Pipe(fileno(stdin),
+						 false,		// read pipe
+						 true,		// registerable
+						 false);	// blocking
+	RESULT_OUTBOX = daemonCore->Inherit_Pipe(fileno(stdout),
+						 true,		// write pipe
+						 false,		// nonregistrable
+						 false);	// blocking
 
 	request_buffer.setFd( REQUEST_INBOX );
 

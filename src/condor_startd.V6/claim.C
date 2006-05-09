@@ -1453,28 +1453,27 @@ Claim::getClaimAge()
 }
 
 bool
-Claim::writeJobAd( int fd )
+Claim::writeJobAd( int pipe_end )
 {
-	FILE* fp;
-	int rval;
-	fp = fdopen( fd, "w" );
-	if( ! fp ) { 
-		dprintf( D_ALWAYS, "Failed to open FILE* from fd %d: %s "
-				 "(errno %d)\n", fd, strerror(errno), errno );
-		return false;
+	// pipe_end is a DaemonCore pipe, so we must use
+	// DC::Write_Pipe for writing to it
+	
+	MyString ad_str;
+	c_ad->sPrint(ad_str);
+
+	const char* ptr = ad_str.Value();
+	int len = ad_str.Length();
+	while (len) {
+		int bytes_written = daemonCore->Write_Pipe(pipe_end, ptr, len);
+		if (bytes_written == -1) {
+			dprintf(D_ALWAYS, "writeJobAd: Write_Pipe failed\n");
+			return false;
+		}
+		ptr += bytes_written;
+		len -= bytes_written;
 	}
 
-	rval = c_ad->fPrint( fp );
-
-		// since this is really a DC pipe that we have to close with
-		// Close_Pipe(), we can't call fclose() on it.  so, unless we
-		// call fflush(), we won't get any output. :(
-	if( fflush(fp) < 0 ) {
-		dprintf( D_ALWAYS, "writeJobAd: fflush() failed: %s (errno %d)\n", 
-				 strerror(errno), errno );
-	}  
-
-	return rval;
+	return true;
 }
 
 ///////////////////////////////////////////////////////////////////////////

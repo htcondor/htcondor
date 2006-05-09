@@ -198,7 +198,6 @@ static int compute_pid_hash(const pid_t &key, int numBuckets)
 	return ( key % numBuckets );
 }
 
-
 // DaemonCore constructor.
 
 DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
@@ -280,7 +279,11 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	nPipe = 0;
 	PipeEnt blankPipeEnt;
 	memset(&blankPipeEnt,'\0',sizeof(PipeEnt));
+	blankPipeEnt.index = -1;
 	pipeTable->fill(blankPipeEnt);
+
+	pipeHandleTable = new ExtArray<PipeHandle>(maxPipe);
+	maxPipeHandleIndex = -1;
 
 	if(maxReap == 0)
 		maxReap = DEFAULT_MAXREAPS;
@@ -427,6 +430,11 @@ DaemonCore::~DaemonCore()
 	if( pipeTable ) {
 		delete( pipeTable );
 	}
+
+	if (pipeHandleTable) {
+		delete pipeHandleTable;
+	}
+
 	t.CancelAllTimers();
 
 	if (_cookie_data) {
@@ -502,20 +510,20 @@ int	DaemonCore::Register_Socket(Stream* iosock, char* iosock_descrip,
 							handler_descrip, s, perm, TRUE) );
 }
 
-int	DaemonCore::Register_Pipe(int pipefd, char* pipefd_descrip,
+int	DaemonCore::Register_Pipe(int pipe_end, char* pipe_descrip,
 				PipeHandler handler, char* handler_descrip,
 				Service* s, HandlerType handler_type, DCpermission perm)
 {
-	return( Register_Pipe(pipefd, pipefd_descrip, handler,
+	return( Register_Pipe(pipe_end, pipe_descrip, handler,
 							(PipeHandlercpp)NULL, handler_descrip, s,
 							handler_type, perm, FALSE) );
 }
 
-int	DaemonCore::Register_Pipe(int pipefd, char* piepfd_descrip,
+int	DaemonCore::Register_Pipe(int pipe_end, char* pipe_descrip,
 				PipeHandlercpp handlercpp, char* handler_descrip,
 				Service* s, HandlerType handler_type, DCpermission perm)
 {
-	return( Register_Pipe(pipefd, piepfd_descrip, NULL, handlercpp,
+	return( Register_Pipe(pipe_end, pipe_descrip, NULL, handlercpp,
 							handler_descrip, s, handler_type, perm, TRUE) );
 }
 
@@ -1044,28 +1052,6 @@ DaemonCore::Cancel_And_Close_All_Sockets(void)
 }
 
 
-int
-DaemonCore::Cancel_And_Close_All_Pipes(void)
-{
-	// This method will cancel *and delete* all registered pipes.
-	// It will return the number of pipes cancelled + closed.
-	int i = 0;
-
-	while ( nPipe > 0 ) {
-		if ( (*pipeTable)[0].pipefd ) {	// if a valid entry....
-				// Note:  calling Close_Pipe will decrement
-				// variable nPipe (number of registered Sockets)
-				// by one.
-			Close_Pipe( (*pipeTable)[0].pipefd );
-			i++;
-		}
-	}
-
-	return i;
-}
-
-
-
 int DaemonCore::Cancel_Socket( Stream* insock)
 {
 	int i,j;
@@ -1117,165 +1103,99 @@ int DaemonCore::Cancel_Socket( Stream* insock)
 	return TRUE;
 }
 
+// We no longer return "real" file descriptors from Create_Pipe. This
+// is to force people to use Read_Pipe or Write_Pipe to do I/O on a pipe,
+// which is necessary to encapsulate all the weird platform specifics
+// (i.e. our wacky Windows pipe implementation). What we return from
+// Create_Pipe is a pair of "pipe ends" that are actually just indices into
+// the pipeHandleTable with the following offset added in. While the caller
+// cannot do I/O directly on these handles, they *can* pass them unaltered
+// to Create_Process (via the std[] parameter) and we'll do the right thing.
+//    - Greg Quinn, 04/12/2006
+static const int PIPE_INDEX_OFFSET = 0x10000;
 
-int DaemonCore::Register_Pipe(int pipefd, char* pipefd_descrip,
-				PipeHandler handler, PipeHandlercpp handlercpp,
-				char *handler_descrip, Service* s,
-				HandlerType handler_type, DCpermission perm,
-				int is_cpp)
+int DaemonCore::pipeHandleTableInsert(PipeHandle entry)
 {
-    int     i;
-    int     j;
-
-	// Since FD_ISSET only allows us to probe, we do not bother using a
-	// hash table for pipes.  We simply store them in an array.
-
-	// ckireyev: this used to be:
-	// if (pipefd < 1)
-    //	 why? what about stdin(0)?
-    if ( pipefd < 0 ) {
-		dprintf(D_DAEMONCORE, "Register_Pipe: invalid pipefd \n");
-		return -1;
-    }
-
-#if 0
-	_lock_fhandle(pipefd);
-	if ( ((unsigned)pipefd >= (unsigned)_nhandle) ||
-			!(_osfile(pipefd) & FOPEN) ||
-			!(_osfile(pipefd) & (FPIPE|FDEV)) )
-	{
-		dprintf(D_DAEMONCORE, "Register_Pipe: invalid pipefd \n");
-		_unlock_fhandle(pipefd);
-		return -1;
-	}
-	_unlock_fhandle(pipefd);
-#endif
-
-#ifdef WIN32
-	HANDLE dupped_pipe_handle;
-	if ( _get_osfhandle(pipefd) == -1L ) {
-		dprintf(D_DAEMONCORE, "Register_Pipe: invalid pipefd \n");
-		return -1;
-    }
-	if (!DuplicateHandle(GetCurrentProcess(),
-        (HANDLE)_get_osfhandle(pipefd),
-        GetCurrentProcess(),
-        (HANDLE*)&dupped_pipe_handle,
-        0,
-        0, // inheritable flag
-        DUPLICATE_SAME_ACCESS)) {
-			// failed to duplicate
-			dprintf(D_ALWAYS,
-				"ERROR: DuplicateHandle() failed in Register_Pipe\n");
-			return -1;
-	}
-#endif
-
-	i = nPipe;
-
-	// Make certain that entry i is empty.
-	if ( (*pipeTable)[i].pipefd ) {
-        EXCEPT("Pipe table fubar!  nPipe = %d\n", nPipe );
+	// try to find a free slot
+	for (int i = 0; i <= maxPipeHandleIndex; i++) {
+		if ((*pipeHandleTable)[i] == (PipeHandle)-1) {
+			(*pipeHandleTable)[i] = entry;
+			return i;
+		}
 	}
 
-	// Verify that this piepfd has not already been registered
-	for ( j=0; j < nPipe; j++ )
-	{
-		if ( (*pipeTable)[j].pipefd == pipefd ) {
-			EXCEPT("DaemonCore: Same pipe registered twice");
-        }
-	}
-
-	// Found a blank entry at index i. Now add in the new data.
-	(*pipeTable)[i].pentry = NULL;
-	(*pipeTable)[i].call_handler = false;
-	(*pipeTable)[i].in_handler = false;
-	(*pipeTable)[i].pipefd = pipefd;
-	(*pipeTable)[i].handler = handler;
-	(*pipeTable)[i].handler_type = handler_type;
-	(*pipeTable)[i].handlercpp = handlercpp;
-	(*pipeTable)[i].is_cpp = is_cpp;
-	(*pipeTable)[i].perm = perm;
-	(*pipeTable)[i].service = s;
-	(*pipeTable)[i].data_ptr = NULL;
-	free_descrip((*pipeTable)[i].pipe_descrip);
-	if ( pipefd_descrip )
-		(*pipeTable)[i].pipe_descrip = strdup(pipefd_descrip);
-	else
-		(*pipeTable)[i].pipe_descrip = EMPTY_DESCRIP;
-	free_descrip((*pipeTable)[i].handler_descrip);
-	if ( handler_descrip )
-		(*pipeTable)[i].handler_descrip = strdup(handler_descrip);
-	else
-		(*pipeTable)[i].handler_descrip = EMPTY_DESCRIP;
-
-	// Increment the counter of total number of entries
-	nPipe++;
-
-	// Update curr_regdataptr for SetDataPtr()
-	curr_regdataptr = &((*pipeTable)[i].data_ptr);
-
-#ifdef WIN32
-	// On Win32, make a "pid entry" and pass it to our Pid Watcher thread.
-	// This thread will then watch over the pipe handle and notify us
-	// when there is something to read.
-	// NOTE: WatchPid() must be called at the very end of this function.
-	(*pipeTable)[i].pentry = new PidEntry;
-	(*pipeTable)[i].pentry->hPipe = dupped_pipe_handle;
-	(*pipeTable)[i].pentry->hProcess = 0;
-	(*pipeTable)[i].pentry->hThread = 0;
-	(*pipeTable)[i].pentry->pipeReady = 0;
-	(*pipeTable)[i].pentry->deallocate = 0;
-	WatchPid((*pipeTable)[i].pentry);
-#endif
-
-	return pipefd;
+	// no vacant slots found, increment maxPipeHandleIndex and use it
+	(*pipeHandleTable)[++maxPipeHandleIndex] = entry;
+	return maxPipeHandleIndex;
 }
 
-int DaemonCore::Create_Pipe( int *filedes, bool nonblocking_read,
-		bool nonblocking_write, unsigned int psize)
+void DaemonCore::pipeHandleTableRemove(int index)
+{
+	// invalidate this index
+	(*pipeHandleTable)[index] = (PipeHandle)-1;
+
+	// shrink down maxPipeHandleIndex, if necessary
+	if (index == maxPipeHandleIndex) {
+		maxPipeHandleIndex--;
+	}
+}
+
+int DaemonCore::Create_Pipe( int *pipe_ends,
+			     bool can_register_read,
+			     bool can_register_write,
+			     bool nonblocking_read,
+			     bool nonblocking_write,
+			     unsigned int psize)
 {
 	dprintf(D_DAEMONCORE,"Entering Create_Pipe()\n");
 
-	if ( psize == 0 ) {
-		// set default pipe size at 4k, the size of one page on most platforms
-		psize = 1024 * 4;
-	}
-
-	bool failed = false;
+	PipeHandle read_handle, write_handle;
 
 #ifdef WIN32
-	// WIN32
-	long handle;
-	DWORD Mode = PIPE_READMODE_BYTE | PIPE_NOWAIT;
-	if ( _pipe(filedes, psize, _O_BINARY) == -1 ) {
-		dprintf(D_ALWAYS,"Create_Pipe(): call to pipe() failed\n");
+	DWORD overlapped_read_flag = 0, overlapped_write_flag = 0;
+	if (can_register_read) {
+		overlapped_read_flag = FILE_FLAG_OVERLAPPED;
+	}
+	if (can_register_write || nonblocking_write) {
+		overlapped_write_flag = FILE_FLAG_OVERLAPPED;
+	}
+
+	static unsigned pipe_counter = 0;
+	MyString pipe_name;
+	pipe_name.sprintf("\\\\.\\pipe\\condor_pipe_%u_%u", GetCurrentProcessId(), pipe_counter++);
+	HANDLE w =
+		CreateNamedPipe(pipe_name.Value(),  // the name
+				PIPE_ACCESS_OUTBOUND |      // "server" to "client" only
+				overlapped_write_flag,      // overlapped mode
+				0,                          // byte-mode, blocking
+				1,                          // only one instance
+				psize,                      // outgoing buffer size
+				0,                          // incoming buffer size (not used)
+				0,                          // default wait timeout (not used)
+				NULL);                      // we mark handles inheritable in Create_Process
+	if (w == INVALID_HANDLE_VALUE) {
+		dprintf(D_ALWAYS, "CreateNamedPipe error: %d\n", GetLastError());
 		return FALSE;
 	}
-	if ( nonblocking_read ) {
-		handle = _get_osfhandle( filedes[0] );
-		if ( SetNamedPipeHandleState(
-				(HANDLE) handle,					// handle to pipe
-				&Mode,	// new pipe mode
-				NULL,  // maximum collection count
-				NULL   // time-out value
-				) == 0 ) {
-			failed = true;
-		}
+	HANDLE r =
+		CreateFile(pipe_name.Value(),   // the named pipe
+			   GENERIC_READ,            // desired access
+			   0,                       // no sharing
+			   NULL,                    // we mark handles inheritable in Create_Process
+			   OPEN_EXISTING,           // existing named pipe
+			   overlapped_read_flag,    // disable overlapped i/o on read end
+			   NULL);                   // no template file
+	if (r == INVALID_HANDLE_VALUE) {
+		CloseHandle(w);
+		dprintf(D_ALWAYS, "CreateFile error on named pipe: %d\n", GetLastError());
+		return FALSE;
 	}
-	if ( nonblocking_write ) {
-		handle = _get_osfhandle( filedes[1] );
-		if ( SetNamedPipeHandleState(
-				(HANDLE) handle,					// handle to pipe
-				&Mode,	// new pipe mode
-				NULL,  // maximum collection count
-				NULL   // time-out value
-				) == 0 ) {
-			failed = true;
-		}
-	}
+	read_handle = new ReadPipeEnd(r, overlapped_read_flag, nonblocking_read, psize);
+	write_handle = new WritePipeEnd(w, overlapped_write_flag, nonblocking_write, psize);
 #else
 	// Unix
+	bool failed = false;
+	int filedes[2];
 	if ( pipe(filedes) == -1 ) {
 		dprintf(D_ALWAYS,"Create_Pipe(): call to pipe() failed\n");
 		return FALSE;
@@ -1303,8 +1223,6 @@ int DaemonCore::Create_Pipe( int *filedes, bool nonblocking_read,
 			}
 		}
 	}
-#endif
-
 	if ( failed == true ) {
 		close(filedes[0]);
 		filedes[0] = -1;
@@ -1312,86 +1230,136 @@ int DaemonCore::Create_Pipe( int *filedes, bool nonblocking_read,
 		filedes[1] = -1;
 		dprintf(D_ALWAYS,"Create_Pipe() failed to set non-blocking mode\n");
 		return FALSE;
-	} else {
-		dprintf(D_DAEMONCORE,"Create_Pipe() success readfd=%d writefd=%d\n",
-			filedes[0],filedes[1]);
-		return TRUE;
 	}
+
+	read_handle = filedes[0];
+	write_handle = filedes[1];
+#endif
+
+	// add PipeHandles to pipeHandleTable
+	pipe_ends[0] = pipeHandleTableInsert(read_handle) + PIPE_INDEX_OFFSET;
+	pipe_ends[1] = pipeHandleTableInsert(write_handle) + PIPE_INDEX_OFFSET;
+
+	dprintf(D_DAEMONCORE,"Create_Pipe() success read_handle=%d write_handle=%d\n",
+	        pipe_ends[0],pipe_ends[1]);
+	return TRUE;
 }
 
-
-int DaemonCore::Close_Pipe( FILE* pipefp ) {
-
-	int pipefd = fileno(pipefp);
-
-	// First, call Cancel_Pipe on this pipefd.
-	int i,j;
-	i = -1;
-	for (j=0;j<nPipe;j++) {
-		if ( (*pipeTable)[j].pipefd == pipefd ) {
-			i = j;
-			break;
-		}
-	}
-
-	if ( i != -1 ) {
-		// We now know that this pipefd is registed.  Cancel it.
-		int result = Cancel_Pipe(pipefd);
-		// ASSERT that it did not fail, because the only reason it should
-		// fail is if it is not registered.  And we already checked that.
-		ASSERT( result == TRUE );
-	}
-
-	// since its a stream, call fclose() instead of close()
-
-	if ( 0 == fclose(pipefp) ) {
-		return TRUE;
-	} else {
-		dprintf(D_ALWAYS, "fclose() failed in Pipe_Close() with errno=%d\n",
-			errno);
-		return FALSE;
-	}
-}
-
-int DaemonCore::Close_Pipe( int pipefd )
+int DaemonCore::Inherit_Pipe(int fd, bool is_write, bool can_register, bool nonblocking, int psize)
 {
-	// First, call Cancel_Pipe on this pipefd.
-	int i,j;
-	i = -1;
-	for (j=0;j<nPipe;j++) {
-		if ( (*pipeTable)[j].pipefd == pipefd ) {
-			i = j;
-			break;
-		}
+	PipeHandle pipe_handle;
+
+#if defined(WIN32)
+	HANDLE h = (HANDLE)_get_osfhandle(fd);
+	if (is_write) {
+		pipe_handle = new WritePipeEnd(h, can_register, nonblocking, psize);
 	}
-	if ( i != -1 ) {
-		// We now know that this pipefd is registed.  Cancel it.
-		int result = Cancel_Pipe(pipefd);
-		// ASSERT that it did not fail, because the only reason it should
-		// fail is if it is not registered.  And we already checked that.
-		ASSERT( result == TRUE );
+	else {
+		pipe_handle = new ReadPipeEnd(h, can_register, nonblocking, psize);
+	}
+#else
+	pipe_handle = fd;
+#endif
+
+	return pipeHandleTableInsert(pipe_handle) + PIPE_INDEX_OFFSET;
+}
+
+int DaemonCore::Register_Pipe(int pipe_end, char* pipe_descrip,
+				PipeHandler handler, PipeHandlercpp handlercpp,
+				char *handler_descrip, Service* s,
+				HandlerType handler_type, DCpermission perm,
+				int is_cpp)
+{
+    int     i;
+    int     j;
+
+	int index = pipe_end - PIPE_INDEX_OFFSET;
+
+    if ( index < 0 ) {
+		dprintf(D_DAEMONCORE, "Register_Pipe: invalid index\n");
+		return -1;
+    }
+
+	i = nPipe;
+
+	// Make certain that entry i is empty.
+	if ( (*pipeTable)[i].index != -1 ) {
+        EXCEPT("Pipe table fubar!  nPipe = %d\n", nPipe );
 	}
 
-	// Now, close the fd.
-	if ( close(pipefd) < 0 ) {
-		dprintf(D_ALWAYS,
-			"Close_Pipe(pipefd=%d) failed, errno=%d\n",pipefd,errno);
-		return FALSE;  // probably a bad fd
-	} else {
-		dprintf(D_DAEMONCORE,
-			"Close_Pipe(pipefd=%d) succeeded\n",pipefd);
-		return TRUE;
+	// Verify that this piepfd has not already been registered
+	for ( j=0; j < nPipe; j++ )
+	{
+		if ( (*pipeTable)[j].index == index ) {
+			EXCEPT("DaemonCore: Same pipe registered twice");
+        }
 	}
+
+	// Found a blank entry at index i. Now add in the new data.
+	(*pipeTable)[i].pentry = NULL;
+	(*pipeTable)[i].call_handler = false;
+	(*pipeTable)[i].in_handler = false;
+	(*pipeTable)[i].index = index;
+	(*pipeTable)[i].handler = handler;
+	(*pipeTable)[i].handler_type = handler_type;
+	(*pipeTable)[i].handlercpp = handlercpp;
+	(*pipeTable)[i].is_cpp = is_cpp;
+	(*pipeTable)[i].perm = perm;
+	(*pipeTable)[i].service = s;
+	(*pipeTable)[i].data_ptr = NULL;
+	free_descrip((*pipeTable)[i].pipe_descrip);
+	if ( pipe_descrip )
+		(*pipeTable)[i].pipe_descrip = strdup(pipe_descrip);
+	else
+		(*pipeTable)[i].pipe_descrip = EMPTY_DESCRIP;
+	free_descrip((*pipeTable)[i].handler_descrip);
+	if ( handler_descrip )
+		(*pipeTable)[i].handler_descrip = strdup(handler_descrip);
+	else
+		(*pipeTable)[i].handler_descrip = EMPTY_DESCRIP;
+
+	// Increment the counter of total number of entries
+	nPipe++;
+
+	// Update curr_regdataptr for SetDataPtr()
+	curr_regdataptr = &((*pipeTable)[i].data_ptr);
+
+#ifdef WIN32
+	// On Win32, make a "pid entry" and pass it to our Pid Watcher thread.
+	// This thread will then watch over the pipe handle and notify us
+	// when there is something to read.
+	// NOTE: WatchPid() must be called at the very end of this function.
+
+	// tell our PipeEnd object that we're registered
+	(*pipeHandleTable)[index]->set_registered();
+
+	(*pipeTable)[i].pentry = new PidEntry;
+	(*pipeTable)[i].pentry->hProcess = 0;
+	(*pipeTable)[i].pentry->hThread = 0;
+	(*pipeTable)[i].pentry->pipeReady = 0;
+	(*pipeTable)[i].pentry->deallocate = 0;
+	(*pipeTable)[i].pentry->pipeEnd = (*pipeHandleTable)[index];
+
+	WatchPid((*pipeTable)[i].pentry);
+#endif
+
+	return pipe_end;
 }
 
 
-int DaemonCore::Cancel_Pipe( int pipefd )
+int DaemonCore::Cancel_Pipe( int pipe_end )
 {
+	int index = pipe_end - PIPE_INDEX_OFFSET;
+	if (index < 0) {
+		dprintf(D_ALWAYS, "Cancel_Pipe on invalid pipe end: %d\n", pipe_end);
+		EXCEPT("Cancel_Pipe error");
+	} 
+
 	int i,j;
 
 	i = -1;
 	for (j=0;j<nPipe;j++) {
-		if ( (*pipeTable)[j].pipefd == pipefd ) {
+		if ( (*pipeTable)[j].index == index ) {
 			i = j;
 			break;
 		}
@@ -1399,7 +1367,7 @@ int DaemonCore::Cancel_Pipe( int pipefd )
 
 	if ( i == -1 ) {
 		dprintf( D_ALWAYS,"Cancel_Pipe: called on non-registered pipe!\n");
-		dprintf( D_ALWAYS,"Offending pipe fd number %d\n", pipefd );
+		dprintf( D_ALWAYS,"Offending pipe end number %d\n", pipe_end );
 		return FALSE;
 	}
 
@@ -1413,38 +1381,50 @@ int DaemonCore::Cancel_Pipe( int pipefd )
 
 	// Log a message
 	dprintf(D_DAEMONCORE,
-			"Cancel_Pipe: cancelled pipe fd %d <%s> (entry=%d)\n",
-			pipefd,(*pipeTable)[i].pipe_descrip, i );
+			"Cancel_Pipe: cancelled pipe end %d <%s> (entry=%d)\n",
+			pipe_end,(*pipeTable)[i].pipe_descrip, i );
 
 	// Remove entry, move the last one in the list into this spot
-	(*pipeTable)[i].pipefd = 0;
+	(*pipeTable)[i].index = -1;
 	free_descrip( (*pipeTable)[i].pipe_descrip );
 	(*pipeTable)[i].pipe_descrip = NULL;
 	free_descrip( (*pipeTable)[i].handler_descrip );
 	(*pipeTable)[i].handler_descrip = NULL;
+
 #ifdef WIN32
-	// Instead of deallocating, just set deallocate flag and then
-	// the pointer to NULL --
-	// actual memory will get dealloacted by a seperate thread.
+	// we need to notify the PID-watcher thread that it should
+	// no longer watch this pipe
 	// note: we must acccess the deallocate flag in a thread-safe manner.
 	ASSERT( (*pipeTable)[i].pentry );
 	InterlockedExchange(&((*pipeTable)[i].pentry->deallocate),1L);
-	// Now if we are called from inside of our handler, we have nothing more to
-	// do because when we return to DaemonCore, DaemonCore will call WatchPid() again
-	// to hand this PidEntry off to a watcher thread which will then deallocate.
-	// However, if we are not called from inside of our handler, we need to call
-	// SetEvent to get the attention of the thread watching this entry.
-	if ( (*pipeTable)[i].in_handler == false &&
-		 (*pipeTable)[i].pentry->watcherEvent )
-	{
-		::SetEvent((*pipeTable)[i].pentry->watcherEvent);
+	if ((*pipeTable)[i].pentry->watcherEvent) {
+		SetEvent((*pipeTable)[i].pentry->watcherEvent);
+	}
+
+	// call cancel on the PipeEnd, which won't return until the
+	// PID-watcher is no longer using the object and it has been
+	// marked as unregistered
+	(*pipeTable)[i].pentry->pipeEnd->cancel();
+
+	if ((*pipeTable)[i].in_handler) {
+		// Cancel_Pipe is being called from the handler. when the
+		// handler returns, the Driver needs to know whether to
+		// call WatchPid on our PidEntry again. we set the pipeEnd
+		// member of our PidEntry to NULL to tell it not to. the
+		// Driver will deallocate the PidEntry then
+		(*pipeTable)[i].pentry->pipeEnd = NULL;
+	}
+	else {
+		// we're not in the handler so we can simply deallocate the
+		// PidEntry now
+		delete (*pipeTable)[i].pentry;
 	}
 #endif
 	(*pipeTable)[i].pentry = NULL;
 	if ( i < nPipe - 1 ) {
             // if not the last entry in the table, move the last one here
 		(*pipeTable)[i] = (*pipeTable)[nPipe - 1];
-		(*pipeTable)[nPipe - 1].pipefd = 0;
+		(*pipeTable)[nPipe - 1].index = -1;
 		(*pipeTable)[nPipe - 1].pipe_descrip = NULL;
 		(*pipeTable)[nPipe - 1].handler_descrip = NULL;
 		(*pipeTable)[nPipe - 1].pentry = NULL;
@@ -1454,6 +1434,151 @@ int DaemonCore::Cancel_Pipe( int pipefd )
 	return TRUE;
 }
 
+#if defined(WIN32)
+// If Close_Pipe is called on a Windows WritePipeEnd and there is
+// an outstanding overlapped write operation, we can't immediately
+// close the pipe. Instead, we call this function in a separate
+// thread and close the pipe once the operation is complete
+unsigned __stdcall pipe_close_thread(void *arg)
+{
+	WritePipeEnd* wpe = (WritePipeEnd*)arg;
+	wpe->complete_async_write(false);
+
+	dprintf(D_DAEMONCORE, "finally closing pipe %p\n", wpe);
+	delete wpe;
+
+	return 0;
+}
+#endif
+
+int DaemonCore::Close_Pipe( int pipe_end )
+{
+	int index = pipe_end - PIPE_INDEX_OFFSET;
+	if (index < 0) {
+		dprintf(D_ALWAYS, "Close_Pipe on invalid pipe end: %d\n", pipe_end);
+		EXCEPT("Close_Pipe error");
+	}
+
+	// First, call Cancel_Pipe on this pipefd.
+	int i,j;
+	i = -1;
+	for (j=0;j<nPipe;j++) {                                    
+		if ( (*pipeTable)[j].index == index ) {
+			i = j;
+			break;
+		}
+	}
+	if ( i != -1 ) {
+		// We now know that this pipe end is registed.  Cancel it.
+		int result = Cancel_Pipe(pipe_end);
+		// ASSERT that it did not fail, because the only reason it should
+		// fail is if it is not registered.  And we already checked that.
+		ASSERT( result == TRUE );
+	}
+
+	// Now, close the pipe.
+	int retval = TRUE;
+#if defined(WIN32)
+	WritePipeEnd* wpe = dynamic_cast<WritePipeEnd*>((*pipeHandleTable)[index]);
+	if (wpe && wpe->needs_delayed_close()) {
+		// We can't close this pipe yet, because it has an incomplete
+		// overalapped write and we need to let it finish. Start a
+		// thread to complete the operation then close the pipe
+		CloseHandle((HANDLE)_beginthreadex(NULL, 0,
+		            pipe_close_thread,
+		            wpe, 0, NULL));
+	}
+	else {
+		// no outstanding I/O - just delete the object (which
+		// will close the pipe)
+		delete (*pipeHandleTable)[index];
+	}
+#else
+	int pipefd = (*pipeHandleTable)[index];
+	if ( close(pipefd) < 0 ) {
+		dprintf(D_ALWAYS,
+			"Close_Pipe(pipefd=%d) failed, errno=%d\n",pipefd,errno);
+		retval = FALSE;  // probably a bad fd
+	}
+#endif
+
+	// remove from the pipe handle table
+	pipeHandleTableRemove(index);
+
+	if (retval == TRUE) {
+		dprintf(D_DAEMONCORE,
+				"Close_Pipe(pipe_end=%d) succeeded\n",pipe_end);
+	}
+
+	return retval;
+}
+
+
+int
+DaemonCore::Cancel_And_Close_All_Pipes(void)
+{
+	// This method will cancel *and delete* all registered pipes.
+	// It will return the number of pipes cancelled + closed.
+	int i = 0;
+
+	while ( nPipe > 0 ) {
+		if ( (*pipeTable)[0].index != -1 ) {	// if a valid entry....
+				// Note:  calling Close_Pipe will decrement
+				// variable nPipe (number of registered Sockets)
+				// by one.
+			Close_Pipe( (*pipeTable)[0].index );
+			i++;
+		}
+	}
+
+	return i;
+}
+
+int
+DaemonCore::Read_Pipe(int pipe_end, void* buffer, int len)
+{
+	if (len < 0) {
+		dprintf(D_ALWAYS, "Read_Pipe: invalid len: %d\n", len);
+		EXCEPT("Read_Pipe");
+	}
+
+	int index = pipe_end - PIPE_INDEX_OFFSET;
+	if (index < 0) {
+		dprintf(D_ALWAYS, "Read_Pipe: invalid pipe_end: %d\n", pipe_end);
+		EXCEPT("Read_Pipe\n");
+	}
+
+#if defined(WIN32)
+	ReadPipeEnd* rpe = dynamic_cast<ReadPipeEnd*>((*pipeHandleTable)[index]);
+	ASSERT(rpe != NULL);
+	return rpe->read(buffer, len);
+#else
+	return read((*pipeHandleTable)[index], buffer, len);
+#endif
+}
+
+int
+DaemonCore::Write_Pipe(int pipe_end, const void* buffer, int len)
+{
+	if (len < 0) {
+		dprintf(D_ALWAYS, "Write_Pipe: invalid len: %d\n", len);
+		EXCEPT("Write_Pipe");
+	}
+
+	int index = pipe_end - PIPE_INDEX_OFFSET;
+	if (index < 0) {
+		dprintf(D_ALWAYS, "Write_Pipe: invalid pipe_end: %d\n", pipe_end);
+		EXCEPT("Write_Pipe: invalid pipe end\n");
+	}
+
+#if defined(WIN32)
+	WritePipeEnd* wpe = dynamic_cast<WritePipeEnd*>((*pipeHandleTable)[index]);
+	ASSERT(wpe != NULL);
+	return wpe->write(buffer, len);
+#else
+	return write((*pipeHandleTable)[index], buffer, len);
+#endif
+}
 
 int DaemonCore::Register_Reaper(int rid, char* reap_descrip,
 				ReaperHandler handler, ReaperHandlercpp handlercpp,
@@ -1959,7 +2084,7 @@ void DaemonCore::Driver()
 		FD_ZERO(&writefds);
 		FD_ZERO(&exceptfds);
 		min_connect_timeout = 0;
-        int maxfd = 0;
+		int maxfd = 0;
 		for (i = 0; i < nSock; i++) {
 			if ( (*sockTable)[i].iosock ) {	// if a valid entry....
 					// Setup our fdsets
@@ -2001,20 +2126,21 @@ void DaemonCore::Driver()
 		// Add the registered pipe fds into the list of descriptors to
 		// select on.
 		for (i = 0; i < nPipe; i++) {
-			if ( (*pipeTable)[i].pipefd ) {	// if a valid entry....
-                if ( (*pipeTable)[i].pipefd >= maxfd ) {
-                    maxfd = (*pipeTable)[i].pipefd + 1;
-                }
+			if ( (*pipeTable)[i].index != -1 ) {	// if a valid entry....
+				int pipefd = (*pipeHandleTable)[(*pipeTable)[i].index];
+				if ( pipefd >= maxfd ) {
+					maxfd = pipefd + 1;
+				}
 				switch( (*pipeTable)[i].handler_type ) {
 				case HANDLE_READ:
-					FD_SET( (*pipeTable)[i].pipefd,&readfds);
+					FD_SET(pipefd,&readfds);
 					break;
 				case HANDLE_WRITE:
-					FD_SET( (*pipeTable)[i].pipefd,&writefds);
+					FD_SET(pipefd,&writefds);
 					break;
 				case HANDLE_READ_WRITE:
-					FD_SET( (*pipeTable)[i].pipefd,&readfds);
-					FD_SET( (*pipeTable)[i].pipefd,&writefds);
+					FD_SET(pipefd,&readfds);
+					FD_SET(pipefd,&writefds);
 					break;
 				}
 			}
@@ -2158,7 +2284,7 @@ void DaemonCore::Driver()
 
 			// scan through the pipe table to find which ones select() set
 			for(i = 0; i < nPipe; i++) {
-				if ( (*pipeTable)[i].pipefd ) {	// if a valid entry...
+				if ( (*pipeTable)[i].index != -1 ) {	// if a valid entry...
 					// figure out if we should call a handler.
 					(*pipeTable)[i].call_handler = false;
 #ifdef WIN32
@@ -2171,11 +2297,12 @@ void DaemonCore::Driver()
 					}
 #else
 					// For Unix, check if select set the bit
-					if( FD_ISSET((*pipeTable)[i].pipefd, &readfds) )
+					int pipefd = (*pipeHandleTable)[(*pipeTable)[i].index];
+					if( FD_ISSET(pipefd, &readfds) )
 					{
 						(*pipeTable)[i].call_handler = true;
 					}
-					if (FD_ISSET((*pipeTable)[i].pipefd, &writefds))
+					if (FD_ISSET(pipefd, &writefds))
 					{
 						(*pipeTable)[i].call_handler = true;
 					}
@@ -2186,7 +2313,7 @@ void DaemonCore::Driver()
 
 			// Now loop through all pipe entries, calling handlers if required.
 			for(i = 0; i < nPipe; i++) {
-				if ( (*pipeTable)[i].pipefd ) {	// if a valid entry...
+				if ( (*pipeTable)[i].index != -1 ) {	// if a valid entry...
 
 					if ( (*pipeTable)[i].call_handler ) {
 
@@ -2210,31 +2337,21 @@ void DaemonCore::Driver()
 							//       when were in a timer handler or whatever.
 #ifdef WIN32
 							// WINDOWS
-							DWORD num_bytes_avail = 0;
-							if ( saved_pentry && saved_pentry->hPipe )
-							{
-								PeekNamedPipe(
-								  saved_pentry->hPipe,	// handle to pipe
-								  NULL,				// data buffer
-								  0,				// size of data buffer
-								  NULL,				// number of bytes read
-								  &num_bytes_avail,	// number of bytes available
-								  NULL  // unread bytes
-								);
-							}
-							if ( num_bytes_avail == 0 ) {
-								// there is no longer anything available to read
-								// on the pipe.  try the next entry....
+							if (!saved_pentry->pipeEnd->io_ready()) {
+								// hand this pipe end back to the PID-watcher thread
+								WatchPid(saved_pentry);
 								continue;
 							}
+
 #else
 							// UNIX
+							int pipefd = (*pipeHandleTable)[(*pipeTable)[i].index];
 							FD_ZERO(&readfds);
-							FD_SET( (*pipeTable)[i].pipefd,&readfds);
+							FD_SET(pipefd,&readfds);
 							struct timeval stimeout;
 							stimeout.tv_sec = 0;	// set timeout for a poll
 							stimeout.tv_usec = 0;
-							int sresult = select( (*pipeTable)[i].pipefd + 1,
+							int sresult = select( pipefd + 1,
 								(SELECT_FDSET_PTR) &readfds,
 								(SELECT_FDSET_PTR) 0,(SELECT_FDSET_PTR) 0,
 								&stimeout );
@@ -2247,12 +2364,12 @@ void DaemonCore::Driver()
 
 						(*pipeTable)[i].in_handler = true;
 
-
 						// log a message
+						int pipe_end = (*pipeTable)[i].index + PIPE_INDEX_OFFSET;
 						dprintf(D_DAEMONCORE,
-									"Calling Handler <%s> for Pipe fd=%d <%s>\n",
+									"Calling Handler <%s> for Pipe end=%d <%s>\n",
 									(*pipeTable)[i].handler_descrip,
-									(*pipeTable)[i].pipefd,
+									pipe_end,
 									(*pipeTable)[i].pipe_descrip);
 
 						// Update curr_dataptr for GetDataPtr()
@@ -2260,16 +2377,18 @@ void DaemonCore::Driver()
 						recheck_status = true;
 						if ( (*pipeTable)[i].handler )
 							// a C handler
-							result = (*( (*pipeTable)[i].handler))( (*pipeTable)[i].service, (*pipeTable)[i].pipefd);
+							result = (*( (*pipeTable)[i].handler))( (*pipeTable)[i].service, pipe_end);
 						else
 						if ( (*pipeTable)[i].handlercpp )
 							// a C++ handler
-							result = ((*pipeTable)[i].service->*( (*pipeTable)[i].handlercpp))((*pipeTable)[i].pipefd);
+							result = ((*pipeTable)[i].service->*( (*pipeTable)[i].handlercpp))(pipe_end);
 						else
 						{
 							// no handler registered
 							EXCEPT("No pipe handler callback");
 						}
+
+						(*pipeTable)[i].in_handler = false;
 
 						// Make sure we didn't leak our priv state
 						CheckPrivState();
@@ -2277,14 +2396,12 @@ void DaemonCore::Driver()
 						// Clear curr_dataptr
 						curr_dataptr = NULL;
 
-						(*pipeTable)[i].in_handler = false;
-
 #ifdef WIN32
 						// Ask a pid watcher thread to watch over this pipe
 						// handle.  Note that if Cancel_Pipe() was called by the
-						// handler above, the deallote flag will be set in the
-						// pentry and the pidwatcher thread will cleanup.
-						if ( saved_pentry ) {
+						// handler above, pipeEnd will be NULL, so we stop
+						// watching
+						if ( saved_pentry->pipeEnd ) {
 							WatchPid(saved_pentry);
 						}
 #endif
@@ -5027,6 +5144,7 @@ int DaemonCore::Create_Process(
 
 	// Now make inhertiable the fds that we specified in fd_inherit_list[]
 	if (fd_inherit_list) {
+		inherit_handles = TRUE;
 		for (i=0; fd_inherit_list[i] != 0; i++) {
 			SetFDInheritFlag (fd_inherit_list[i], TRUE);
 		}
@@ -5036,36 +5154,31 @@ int DaemonCore::Create_Process(
 	// set all our file handles to non-inheritable, so for any files
 	// being redirected, we need to reset to inheritable.
 	if ( std ) {
-		long longTemp;
 		int valid = FALSE;
-		if ( std[0] > -1 ) {
-			SetFDInheritFlag(std[0],TRUE);	// set handle inheritable
-			longTemp = _get_osfhandle(std[0]);
-			if (longTemp != -1 ) {
-				valid = TRUE;
-				si.hStdInput = (HANDLE)longTemp;
-			}
-		}
-		if ( std[1] > -1 ) {
-			SetFDInheritFlag(std[1],TRUE);	// set handle inheritable
-			longTemp = _get_osfhandle(std[1]);
-			if (longTemp != -1 ) {
-				valid = TRUE;
-				si.hStdOutput = (HANDLE)longTemp;
-			}
-		}
-		if ( std[2] > -1 ) {
-			SetFDInheritFlag(std[2],TRUE);	// set handle inheritable
-			longTemp = _get_osfhandle(std[2]);
-			if (longTemp != -1 ) {
-				valid = TRUE;
-				si.hStdError = (HANDLE)longTemp;
+		HANDLE *std_handles[3] = {&si.hStdInput, &si.hStdOutput, &si.hStdError};
+		for (int i = 0; i < 3; i++) {
+			if ( std[i] > -1 ) {
+				if (std[i] >= PIPE_INDEX_OFFSET) {
+					// we are handing down a DaemonCore pipe
+					int index = std[i] - PIPE_INDEX_OFFSET;
+					*std_handles[i] = (*pipeHandleTable)[index]->get_handle();
+					SetHandleInformation(*std_handles[i], HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT);
+					valid = TRUE;
+				}
+				else {
+					// we are handing down a C library FD
+					SetFDInheritFlag(std[i],TRUE);	// set handle inheritable
+					long longTemp = _get_osfhandle(std[i]);
+					if (longTemp != -1 ) {
+						valid = TRUE;
+						*std_handles[i] = (HANDLE)longTemp;
+					}
+				}
 			}
 		}
 		if ( valid ) {
 			si.dwFlags |= STARTF_USESTDHANDLES;
 			inherit_handles = TRUE;
-			
 		}
 	}
 
@@ -5100,14 +5213,6 @@ int DaemonCore::Create_Process(
     if ( nice_inc > 0 ) {
 		// or new_process_group with whatever we set above...
 		new_process_group |= IDLE_PRIORITY_CLASS;
-		
-		if ( inherit_handles ) {
-			// since we're presumably using streaming i/o, we need to
-			// set the parent (eg. starter's) priority at the same level as the 
-			// child (eg. user job), otherwise streaming i/o won't work.
-			// -stolley, 04/2006
-			SetPriorityClass(GetCurrentProcess(), IDLE_PRIORITY_CLASS);
-		}
 	}
 
 
@@ -5692,35 +5797,28 @@ int DaemonCore::Create_Process(
 
 			dprintf ( D_DAEMONCORE, "Re-mapping std(in|out|err) in child.\n");
 
-			if ( std[0] > -1 ) {
-				if ( ( dup2 ( std[0], 0 ) ) == -1 ) {
-					dprintf( D_ALWAYS, "dup2 of std[0] failed, errno %d\n",
-							 errno );
+			for (int i = 0; i < 3; i++) {
+				if ( std[i] > -1 ) {
+					if (std[i] >= PIPE_INDEX_OFFSET) {
+						// this is a DaemonCore pipe we'd like to pass down.
+						// replace the std array entry, which is an index into
+						// the pipeHandleTable, with the actual file descriptor
+						int index = std[i] - PIPE_INDEX_OFFSET;
+						std[i] = (*pipeHandleTable)[index];
+					}
+					if ( ( dup2 ( std[i], i ) ) == -1 ) {
+						dprintf( D_ALWAYS, "dup2 of std[i] failed, errno %d\n",
+								 errno );
+					}
+					close( std[i] );  // We don't need this in the child...
+
+				} else {
+						// if we don't want to inherit it, we better close
+						// what's there
+					close( i );
 				}
-				close( std[0] );  // We don't need this in the child...
-			} else {
-					// if we don't want to inherit it, we better close
-					// what's there
-				close( 0 );
 			}
-			if ( std[1] > -1 ) {
-				if ( ( dup2 ( std[1], 1 ) ) == -1 ) {
-					dprintf( D_ALWAYS, "dup2 of std[1] failed, errno %d\n",
-							 errno );
-				}
-				close( std[1] );  // We don't need this in the child...
-			} else {
-				close( 1 );
-			}
-			if ( std[2] > -1 ) {
-				if ( ( dup2 ( std[2], 2 ) ) == -1 ) {
-					dprintf( D_ALWAYS, "dup2 of std[2] failed, errno %d\n",
-							 errno );
-				}
-				close( std[2] );  // We don't need this in the child...
-			} else {
-				close( 2 );
-			}
+
 		} else {
 			MyString msg = "Just closed standard file fd(s): ";
 
@@ -6067,9 +6165,9 @@ int DaemonCore::Create_Process(
 #ifdef WIN32
 	pidtmp->hProcess = piProcess.hProcess;
 	pidtmp->hThread = piProcess.hThread;
+	pidtmp->pipeEnd = NULL;
 	pidtmp->tid = piProcess.dwThreadId;
 	pidtmp->hWnd = 0;
-	pidtmp->hPipe = 0;
 	pidtmp->pipeReady = 0;
 	pidtmp->deallocate = 0;
 #endif 
@@ -6313,9 +6411,9 @@ DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
 	pidtmp->pid = tid;
 	pidtmp->hProcess = NULL;	// setting this to NULL means this is a thread
 	pidtmp->hThread = hThread;
+	pidtmp->pipeEnd = NULL;
 	pidtmp->tid = tid;
 	pidtmp->hWnd = 0;
-	pidtmp->hPipe = 0;
 	pidtmp->deallocate = 0;
 #else
 	pidtmp->pid = tid;
@@ -6397,7 +6495,6 @@ DaemonCore::Inherit( void )
 		pidtmp->was_not_responding = FALSE;
 #ifdef WIN32
 		pidtmp->deallocate = 0L;
-		pidtmp->hPipe = 0;
 
 		pidtmp->hProcess = ::OpenProcess( SYNCHRONIZE |
 				PROCESS_QUERY_INFORMATION, FALSE, ppid );
@@ -6425,6 +6522,7 @@ DaemonCore::Inherit( void )
 		}
 
 		pidtmp->hThread = NULL;		// do not allow child to suspend parent
+		pidtmp->pipeEnd = NULL;
 		pidtmp->deallocate = 0L;
 #endif
 		int insert_result = pidTable->insert(ppid,pidtmp);
@@ -6781,12 +6879,11 @@ pidWatcherThread( void* arg )
 		if ( (i != last_pidentry_exited) && (entry->pidentries[i]) ) {
 			if (InterlockedExchange(&(entry->pidentries[i]->deallocate),0L))
 			{
-				// deallocate flag was set.  delete this pidentry.
-				// no need to close any process/thread handles, since we
-				// know this is a pipe - deallocate is flag only set for pipes
-				ASSERT( entry->pidentries[i]->hPipe );
-				::CloseHandle(entry->pidentries[i]->hPipe);
-				delete entry->pidentries[i];
+				// deallocate flag was set.  call set_unregistered on the
+				// PipeEnd and then remove this pentry
+				// from our watch list.  Cancel_Pipe will take care of
+				// the rest
+				entry->pidentries[i]->pipeEnd->set_unregistered();
 				entry->pidentries[i] = NULL;
 				continue;	// on to the next i...
 			}
@@ -6797,8 +6894,11 @@ pidWatcherThread( void* arg )
 				hKids[numentries] = entry->pidentries[i]->hThread;
 			}
 			if ( hKids[numentries] == NULL ) {
-				// if it is still NULL, it is a pipe entry
-				hKids[numentries] = entry->pidentries[i]->hPipe;
+				
+				// This is a pipe. We use overlapped I/O to similate the
+				// semantics of select. This is all handled by the
+				// PipeEnd classes. (see pipe.WIN32.[Ch])
+				hKids[numentries] = entry->pidentries[i]->pipeEnd->pre_wait();
 			}
 			entry->pidentries[numentries] = entry->pidentries[i];
 			numentries++;
@@ -6825,7 +6925,12 @@ pidWatcherThread( void* arg )
 		process/thread from being reaped when many new processes are being
 		continuously created.
 	*/
-	result = ::WaitForMultipleObjects(numentries + 1, hKids, FALSE, 0);
+	result = WAIT_TIMEOUT;
+	// if we are no longer watching anything (but we still have a signal
+	// to send), simulate the wait function returning WAIT_TIMEOUT
+	if (numentries) {
+		result = ::WaitForMultipleObjects(numentries + 1, hKids, FALSE, 0);
+	}
 	if ( result == WAIT_TIMEOUT ) {
 			// our poll saw nothing.  so if need to wake up the main thread
 			// out of select, do so now before we block waiting for another event.
@@ -6870,7 +6975,13 @@ pidWatcherThread( void* arg )
 			} else {
 				must_send_signal = false;
 			}
-		}		
+		}
+		if (numentries == 0) {
+			// now there's nothing left to do if we are no longer
+			// watching anything
+			return TRUE;
+		}
+
 		// now just wait for something to happen instead of busy looping.
 		result = ::WaitForMultipleObjects(numentries + 1, hKids, FALSE, INFINITE);
 	}
@@ -6894,7 +7005,7 @@ pidWatcherThread( void* arg )
 		// note: if it was a thread which exited, the entry's
 		// pid contains the tid.  if we are talking about a pipe,
 		// set the exited_pid to be zero.
-		if ( entry->pidentries[result]->hPipe ) {
+		if ( entry->pidentries[result]->pipeEnd ) {
 			exited_pid = 0;
 			if (entry->pidentries[result]->deallocate) {
 				// this entry should be deallocated.  set things up so
@@ -6904,8 +7015,15 @@ pidWatcherThread( void* arg )
 				last_pidentry_exited = MAXIMUM_WAIT_OBJECTS + 5;
 			} else {
 				// pipe is ready and has not been deallocated.
-				InterlockedExchange(&(entry->pidentries[result]->pipeReady),1L);
-				must_send_signal = true;
+				if (entry->pidentries[result]->pipeEnd->post_wait()) {
+					// the handler is ready to be fired
+					InterlockedExchange(&(entry->pidentries[result]->pipeReady),1L);
+					must_send_signal = true;
+				}
+				else {
+					// not ready yet...
+					last_pidentry_exited = MAXIMUM_WAIT_OBJECTS + 5;
+				}
 			}
 		} else {
 			exited_pid = entry->pidentries[result]->pid;
@@ -6920,6 +7038,11 @@ pidWatcherThread( void* arg )
 			MyExitedQueue.enqueue(wait_entry);
 			must_send_signal = true;
 		}
+
+		// we will no longer be watching this PidEntry, so detach
+		// it from our watcherEvent
+		entry->pidentries[result]->watcherEvent = NULL;
+
 	} else {
 		// no pid/thread/pipe was signaled; we were signaled because our
 		// pidentries array was modified.
@@ -6937,6 +7060,12 @@ DaemonCore::WatchPid(PidEntry *pidentry)
 {
 	struct PidWatcherEntry* entry = NULL;
 	int alldone = FALSE;
+
+	// If this PidEntry actually represents a pipe, we tell its
+	// PipeEnd object that it will now be managed by a PID-watcher
+	if (pidentry->pipeEnd) {
+		pidentry->pipeEnd->set_watched();
+	}
 
 	// First see if we can just add this entry to an existing thread
 	PidWatcherList.Rewind();

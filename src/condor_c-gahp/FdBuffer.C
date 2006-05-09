@@ -23,6 +23,7 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
+#include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "FdBuffer.h"
 
 FdBuffer::FdBuffer (int _fd) {
@@ -49,7 +50,7 @@ FdBuffer::GetNextLine () {
 		// we only read one at a time to avoid blocking
 
 	char buff;
-	if (read (this->fd, &buff, 1) > 0) {
+	if (daemonCore->Read_Pipe (this->fd, &buff, 1) > 0) {
 
 		if (buff == '\n' && !last_char_was_escape) {
 					// We got a completed line!
@@ -90,7 +91,7 @@ FdBuffer::Write (const char * towrite) {
 	if (len == 0)
 		return 0;
 
-	int numwritten = write (fd, buffer.Value(), len);
+	int numwritten = daemonCore->Write_Pipe (fd, buffer.Value(), len);
 	if (numwritten > 0) {
 			// shorten the buffer
 		buffer = buffer.Substr (numwritten, len);

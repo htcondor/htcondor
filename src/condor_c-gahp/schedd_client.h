@@ -75,7 +75,7 @@ int enqueue_command (SchedDRequest *);
 char * escape_string (const char *);
 
 int doContactSchedd();
-int request_pipe_handler();
+int request_pipe_handler(Service*, int);
 
 int handle_gahp_command(char ** argv, int argc);
 int parse_gahp_command (const char *, Gahp_Args *);

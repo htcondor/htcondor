@@ -123,13 +123,17 @@ main_init( int argc, char ** const argv )
 	Register();
 	Reconfig();
 
-	stdin_buffer.setFd (dup(STDIN_FILENO));
+	// inherit the DaemonCore pipe that the gridmanager create
+	int stdin_pipe = daemonCore->Inherit_Pipe(fileno(stdin),
+						  false,	// read pipe
+						  true,		// registerable
+						  false);	// blocking
+	stdin_buffer.setFd (stdin_pipe);
 
 	(void)daemonCore->Register_Pipe (stdin_buffer.getFd(),
-									 "stdin pipe",
-									 (PipeHandler)&stdin_pipe_handler,
-									 "stdin_pipe_handler");
-
+					 "stdin pipe",
+					 (PipeHandler)&stdin_pipe_handler,
+					 "stdin_pipe_handler");
 
 	for (i=0; i<NUMBER_WORKERS; i++) {
 
@@ -137,8 +141,16 @@ main_init( int argc, char ** const argv )
 
 			// The IO (this) process cannot block, otherwise it's poosible
 			// to create deadlock between these two pipes
-		if (daemonCore->Create_Pipe (workers[i].request_pipe, true, true) == FALSE ||
-			daemonCore->Create_Pipe (workers[i].result_pipe, true) == FALSE) {
+		if (!daemonCore->Create_Pipe (workers[i].request_pipe,
+					      true,	// read end registerable
+					      false,	// write end not registerable
+					      false,	// read end blocking
+					      true	// write end blocking
+					     ) ||
+		    !daemonCore->Create_Pipe (workers[i].result_pipe,
+					      true	// read end registerable
+					     ) )
+		{
 			return -1;
 		}
 
@@ -150,8 +162,6 @@ main_init( int argc, char ** const argv )
 										 (PipeHandlercpp)&Worker::result_handler,
 										 "Worker::result_handler",
 										 (Service*)&workers[i]);
-
-
 	}
 
 	// Create child process
@@ -175,11 +185,18 @@ main_init( int argc, char ** const argv )
 									  
 
 
-	char * c_gahp_name = param ("CONDOR_GAHP");
-	ASSERT (c_gahp_name);
 	MyString exec_name;
-	exec_name.sprintf ("%s_worker_thread", c_gahp_name);
-	free (c_gahp_name);
+	char * c_gahp_worker_thread = param("CONDOR_GAHP_WORKER");
+	if (c_gahp_worker_thread) {
+		exec_name = c_gahp_worker_thread;
+		free(c_gahp_worker_thread);
+	}
+	else {
+		char * c_gahp_name = param ("CONDOR_GAHP");
+		ASSERT (c_gahp_name);
+		exec_name.sprintf ("%s_worker_thread", c_gahp_name);
+		free (c_gahp_name);
+	}
 
 	for (i=0; i<NUMBER_WORKERS; i++) {
 		ArgList args;
@@ -196,22 +213,16 @@ main_init( int argc, char ** const argv )
 			args.AppendArg("-P");
 			args.AppendArg(ScheddPool.Value());
 		}
-	
-
-		args.AppendArg("-I");
-		args.AppendArg(workers[i].request_pipe[0]);
-		args.AppendArg("-O");
-		args.AppendArg(workers[i].result_pipe[1]);
 
 		MyString args_string;
 		args.GetArgsStringForDisplay(&args_string);
 		dprintf (D_FULLDEBUG, "Staring worker # %d: %s\n", i, args_string.Value());
 
 			// We want IO thread to inherit these ends of pipes
-		int inherit_fds[3];
-		inherit_fds[0] = workers[i].request_pipe[0];
-		inherit_fds[1] = workers[i].result_pipe[1];
-		inherit_fds[2] = 0;
+		int std_fds[3];
+		std_fds[0] = workers[i].request_pipe[0];
+		std_fds[1] = workers[i].result_pipe[1];
+		std_fds[2] = fileno(stderr);
 
 		workers[i].pid = 
 			daemonCore->Create_Process (
@@ -224,10 +235,7 @@ main_init( int argc, char ** const argv )
 										NULL,
 										FALSE,
 										NULL,
-										NULL,
-										0,				// nice inc
-										0,				// job opt mask
-										inherit_fds);
+										std_fds);
 
 
 		if (workers[i].pid > 0) {
@@ -235,8 +243,6 @@ main_init( int argc, char ** const argv )
 			close (workers[i].result_pipe[1]);
 		}
 	}
-	
-	close(STDIN_FILENO);
 			
 	// Setup dprintf to display pid
 	DebugId = display_dprintf_header;
@@ -253,7 +259,7 @@ main_init( int argc, char ** const argv )
 
 
 int
-stdin_pipe_handler(int pipe) {
+stdin_pipe_handler(Service*, int pipe) {
 		// Don't make this a while() loop b/c
 		// stdin read is blocking
 	MyString * line = NULL;

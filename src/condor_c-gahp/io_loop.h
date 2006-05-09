@@ -62,7 +62,7 @@ struct inter_thread_io_t {
 
 };
 
-int stdin_pipe_handler(int);
+int stdin_pipe_handler(Service*, int);
 int result_pipe_handler(int);
 
 
