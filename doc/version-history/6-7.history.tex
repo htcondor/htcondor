@@ -44,6 +44,10 @@ some time in the 6.7 series.
 other tools and possibly even daemons) to crash on Solaris machines
 if address resolution fails because of an ill-configured DNS server.
 
+\item Fixed a bug which could cause network write operations to block
+Condor daemons for the full networking timeout time when the connection
+was closed while the daemon was still writing to it.
+
 \end{itemize}
 
 \noindent Known Bugs:
