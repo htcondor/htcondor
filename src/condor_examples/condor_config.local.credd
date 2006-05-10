@@ -56,7 +56,7 @@ CREDD.SEC_DEFAULT_NEGOTIATION = REQUIRED
 CREDD.SEC_DAEMON_AUTHENTICATION_METHODS = PASSWORD
 
 # Only honor password fetch requests to the trusted "condor_pool" user
-CREDD.ALLOW_DAEMON = condor_pool@($UID_DOMAIN)
+CREDD.ALLOW_DAEMON = condor_pool@$(UID_DOMAIN)
 
 # Require NTSSPI for storing credentials
 CREDD.SEC_DEFAULT_AUTHENTICATION_METHODS = NTSSPI
