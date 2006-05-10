@@ -252,6 +252,24 @@ condor_write( SOCKET fd, char *buf, int sz, int timeout, int flags )
 					if( FD_ISSET(fd, &readfds) ) {
 							// see if the socket was closed
 						nro = recv(fd, tmpbuf, 1, MSG_PEEK);
+						if( nro == -1 ) {
+							int the_error;
+#ifdef WIN32
+							the_error = WSAGetLastError();
+#else
+							the_error = errno;
+#endif
+							if(errno_is_temporary( the_error )) {
+								continue;
+							}
+
+							dprintf( D_ALWAYS, "condor_write(): "
+									 "Socket closed when trying "
+									 "to write buffer, fd is %d, "
+									 "errno=%d\n", fd, the_error );
+							return -1;
+						}
+
 						if( ! nro ) {
 							dprintf( D_ALWAYS, "condor_write(): "
 									 "Socket closed when trying "
