@@ -1526,7 +1526,7 @@ DaemonCore::Cancel_And_Close_All_Pipes(void)
 				// Note:  calling Close_Pipe will decrement
 				// variable nPipe (number of registered Sockets)
 				// by one.
-			Close_Pipe( (*pipeTable)[0].index );
+			Close_Pipe( (*pipeTable)[0].index + PIPE_INDEX_OFFSET );
 			i++;
 		}
 	}
