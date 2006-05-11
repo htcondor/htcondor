@@ -115,6 +115,7 @@ unsigned int TransferInputSize;	/* total size of files transfered to exec machin
 const char	*MyName;
 int		Quiet = 1;
 int		DisableFileChecks = 0;
+int		MaxProcsPerCluster;
 int	  ClusterId = -1;
 int	  ProcId = -1;
 int	  JobUniverse;
@@ -693,6 +694,8 @@ main( int argc, char *argv[] )
 		}
 		free(dis_check);
 	}
+
+	MaxProcsPerCluster = param_integer("SUBMIT_MAX_PROCS_IN_CLUSTER", 0, 0);
 
 		// Instantiate our DCSchedd so we can locate and communicate
 		// with our schedd.  
@@ -4853,6 +4856,12 @@ queue(int num)
 			}
 			DoCleanup(0,0,NULL);
 			exit(1);
+		}
+
+		if (MaxProcsPerCluster && ProcId >= MaxProcsPerCluster) {
+			fprintf(stderr, "\nERROR: number of procs exceeds SUBMIT_MAX_PROCS_IN_CLUSTER\n");
+			DoCleanup(0,0,NULL);
+			exit(-1);
 		}
 
 		/*
