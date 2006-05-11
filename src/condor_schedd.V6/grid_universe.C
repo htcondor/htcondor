@@ -483,21 +483,13 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 		}
 		MyString constraint;
 		MyString full_owner_name(owner);
-		const char *owner_or_user;
-		if ( domain && domain[0] ) {
-			owner_or_user = ATTR_USER;
-			full_owner_name += "@";
-			full_owner_name += domain;
-		} else {
-			owner_or_user = ATTR_OWNER;
-		}
 		if ( !attr_name  ) {
 			constraint.sprintf("(%s=?=\"%s\"&&%s==%d)",
-				owner_or_user,full_owner_name.Value(),
+				ATTR_OWNER,full_owner_name.Value(),
 				ATTR_JOB_UNIVERSE,CONDOR_UNIVERSE_GRID);
 		} else {
 			constraint.sprintf("(%s=?=\"%s\"&&%s=?=\"%s\")",
-				owner_or_user,full_owner_name.Value(),
+				ATTR_OWNER,full_owner_name.Value(),
 				attr_name,attr_value);
 		}
 		args.AppendArg("-C");

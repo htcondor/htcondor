@@ -2215,7 +2215,22 @@ aboutToSpawnJobHandler( int cluster, int proc, void* )
 	job_ad = 0;
 #else	/* WIN32 */
 
-// #    error "directory chowning on Win32.  Do we need it?"
+	MyString owner;
+	job_ad->LookupString(ATTR_OWNER, owner);
+	MyString nt_domain;
+	job_ad->LookupString(ATTR_NT_DOMAIN, nt_domain);
+
+	if (!recursive_chown(sandbox.Value(), owner.Value(), nt_domain.Value())) {
+		dprintf( D_ALWAYS, "(%d.%d) Failed to chown %s from to %d\\%d. "
+		         "Job may run into permissions problems when it starts.\n",
+		         cluster, proc, sandbox.Value(), nt_domain.Value(), owner.Value() );
+	}
+
+	if (!recursive_chown(sandbox_tmp.Value(), owner.Value(), nt_domain.Value())) {
+		dprintf( D_ALWAYS, "(%d.%d) Failed to chown %s from to %d\\%d. "
+		         "Job may run into permissions problems when it starts.\n",
+		         cluster, proc, sandbox.Value(), nt_domain.Value(), owner.Value() );
+	}
 
 #endif
 	return 0;
@@ -3023,7 +3038,7 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 	}
 
 	daemonCore->Register_Timer( 0, 
-						(TimerHandlercpp)&Scheduler::reschedule_negotiator,
+						(TimerHandlercpp)&Scheduler::reschedule_negotiator_timer,
 						"Scheduler::reschedule_negotiator", this );
 
 	spoolJobFileWorkers->remove(tid);
@@ -10179,12 +10194,12 @@ Scheduler::invalidate_ads()
 }
 
 
-void
+int
 Scheduler::reschedule_negotiator(int, Stream *)
 {
 		// don't bother the negotiator if we are shutting down
 	if ( ExitWhenDone ) {
-		return;
+		return 0;
 	}
 
 	timeout();							// update the central manager now
@@ -10209,7 +10224,7 @@ Scheduler::reschedule_negotiator(int, Stream *)
 		StartLocalJobs();
 	}
 
-	 return;
+	 return 0;
 }
 
 
