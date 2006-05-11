@@ -1913,7 +1913,7 @@ int Function::FunctionIsUndefined(
 		return false;
 	}
 
-	result->type = LX_BOOL;
+	result->type = LX_INTEGER;
 	if ( evaluated_args[0].type == LX_UNDEFINED ) {
 		result->i = 1;
 	} else {
@@ -1933,7 +1933,7 @@ int Function::FunctionIsError(
 		return false;
 	}
 
-	result->type = LX_BOOL;
+	result->type = LX_INTEGER;
 	if ( evaluated_args[0].type == LX_ERROR ) {
 		result->i = 1;
 	} else {
@@ -1953,7 +1953,7 @@ int Function::FunctionIsString(
 		return false;
 	}
 
-	result->type = LX_BOOL;
+	result->type = LX_INTEGER;
 	if ( evaluated_args[0].type == LX_STRING ) {
 		result->i = 1;
 	} else {
@@ -1974,7 +1974,7 @@ int Function::FunctionIsInteger(
 		return false;
 	}
 
-	result->type = LX_BOOL;
+	result->type = LX_INTEGER;
 	if ( evaluated_args[0].type == LX_INTEGER ) {
 		result->i = 1;
 	} else {
@@ -1995,7 +1995,7 @@ int Function::FunctionIsReal(
 		return false;
 	}
 
-	result->type = LX_BOOL;
+	result->type = LX_INTEGER;
 	if ( evaluated_args[0].type == LX_FLOAT ) {
 		result->i = 1;
 	} else {
@@ -2015,7 +2015,7 @@ int Function::FunctionIsBoolean(
 		return false;
 	}
 
-	result->type = LX_BOOL;
+	result->type = LX_INTEGER;
 	if ( (evaluated_args[0].type == LX_BOOL) ||
 		 (evaluated_args[0].type == LX_INTEGER && // int val of 0 or 1 is bool
 		     (evaluated_args[0].i == 0  || evaluated_args[0].i == 1)) )
