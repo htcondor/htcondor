@@ -24,7 +24,21 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Condor-C is now supported on Windows. When using Condor-C to
+direct a job to a Windows remote schedd, one must be careful to ensure
+that their credential is accessible to the remote schedd and that the
+\Attr{NTDomain} attribute in the remote job ClassAd is set
+correctly. In particular, if the local schedd resides in a different
+Windows domain from that of the remote schedd, it is necessary to
+include a line like the following in the submit file:
+\begin{verbatim}
+remote_NTDomain = OTHERDOMAIN
+\end{verbatim}
+
+\item Added a \Macro{SUBMIT\_MAX\_PROCS\_IN\_CLUSTER} configuration
+parameter to allow administrators to limit the number of jobs that can
+be submitted in a single cluster when using \Condor{submit}. This
+parameter defaults to 0, which implies no limit.
 
 \end{itemize}
 
@@ -47,6 +61,15 @@ if address resolution fails because of an ill-configured DNS server.
 \item Fixed a bug which could cause network write operations to block
 Condor daemons for the full networking timeout time when the connection
 was closed while the daemon was still writing to it.
+
+% May 9th checkin to fix DaemonCore pipes on Windows. The only
+% functionality that we previously claimed to support that relied
+% on registered DC pipes working properly was streaming I/O.
+\item Streaming standard input, output, and error has been fixed for
+Windows jobs.
+
+\item The sample configuration file \File{condor\_config.local.credd}
+contained a typo which has now been fixed.
 
 \end{itemize}
 
