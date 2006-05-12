@@ -1,3 +1,14 @@
+05/12/06 V6_7-nick_fs_util-{root,branch}
+  Branch for the development of some file system utilities that
+  are very O/S specific; initially just for detection of whether
+  a file / directory is on NFS or not.
+  Created from the BUILD-V6_7-branch-2006-5-12 tag of V6_7_CODE.
+
+05/12/06 V6_7-Technion_ha6-{root,branch}
+  A branch based off V6_7-branch in which further HA development
+  will be done.
+  Created from the BUILD-V6_7-branch-2006-5-12 tag of V6_7_CODE.
+
 05/04/06 V6_7_19-{root,branch}
   The branch for V6_7_19 off of V6_7-branch.
 
