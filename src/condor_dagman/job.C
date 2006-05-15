@@ -142,6 +142,15 @@ bool Job::Remove (const queue_t queue, const JobID_t jobID) {
 }  
 
 //---------------------------------------------------------------------------
+bool
+Job::CheckForLogFile() const
+{
+    MyString logFile = MultiLogFiles::loadLogFileNameFromSubFile(_cmdFile, "");
+	bool result = (logFile != "");
+	return result;
+}
+
+//---------------------------------------------------------------------------
 void Job::Dump () const {
     dprintf( D_ALWAYS, "---------------------- Job ----------------------\n");
     dprintf( D_ALWAYS, "      Node Name: %s\n", _jobName );

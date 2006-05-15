@@ -79,16 +79,10 @@ GetLogFiles(/* const */ StringList &dagFiles, bool useDagDir,
 		msg = MultiLogFiles::getJobLogsFromSubmitFiles(
 				file, "data", "dir", storkLogFiles);
 		if ( msg != "" ) {
-#if 1
-				// Get rid of this after 6.7.15 release.  wenger 2006-01-11.
-			dprintf( D_ALWAYS, "Warning: failed to locate Stork job log "
-					"files (%s) but continuing anyhow\n", msg.Value() );
-#else
 			AppendError( errMsg,
 					MyString("Failed to locate Stork job log files: ") +
 					msg );
 			result = false;
-#endif
 		}
 
 		MyString	tmpErrMsg;

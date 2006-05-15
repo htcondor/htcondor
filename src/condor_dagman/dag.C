@@ -1269,6 +1269,21 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 	bool submit_success;
     CondorID condorID(0,0,0);
 
+		// Note: we're checking for a missing log file spec here instead of
+		// inside the submit code because we don't want to re-try the submit
+		// if the log file spec is missing in the submit file.  wenger
+	if ( !_allowLogError && !job->CheckForLogFile() ) {
+		debug_printf( DEBUG_NORMAL, "ERROR: No 'log =' value found in "
+					"submit file %s for node %s\n", job->GetCmdFile(),
+					job->GetJobName() );
+		job->_Status = Job::STATUS_ERROR;
+		snprintf( job->error_text, JOB_ERROR_TEXT_MAXLEN,
+					"No 'log =' value found in submit file %s",
+					job->GetCmdFile() );
+	  	_numNodesFailed++;
+		continue;
+	}
+
     if( job->JobType() == Job::TYPE_CONDOR ) {
 	  job->_submitTries++;
       submit_success =

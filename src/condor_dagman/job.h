@@ -195,6 +195,12 @@ class Job {
     */
     bool Remove (const queue_t queue, const JobID_t jobID);
 
+	/** Check whether the submit file for this job has a log file
+	    defined.
+		@return true iff the submit file defines a log file
+	*/
+	bool CheckForLogFile() const;
+
     /** Returns true if a queue is empty (has no jobs)
         @param queue Selects which queue to look at
         @return true: queue is empty, false: otherwise

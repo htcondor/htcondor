@@ -735,17 +735,6 @@ MultiLogFiles::getJobLogsFromSubmitFiles(const MyString &strDagFileName,
 					if ( tmpResult != "" ) return tmpResult;
 					tmpLogFiles.rewind();
 					strLogFilename = tmpLogFiles.next();
-
-#  if 1 // Remove for 6.7.16
-						// Temporarily allow old-style Stork submit files
-						// with no log file specification.  wenger 2006-01-17.
-					if ( strLogFilename == "" ) {
-						dprintf(D_ALWAYS, "Warning: No 'log =' value found "
-								"in submit file %s for node %s\n",
-								strSubFile.Value(), nodeName);
-						continue;
-					}
-#  endif
 #else
 					return "Stork unavailable on this platform because "
 								"new classads are not yet supported";
