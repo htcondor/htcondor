@@ -40,6 +40,13 @@ parameter to allow administrators to limit the number of jobs that can
 be submitted in a single cluster when using \Condor{submit}. This
 parameter defaults to 0, which implies no limit.
 
+% Gnats PR 659
+\item \Condor{dagman} now re-checks immediately before job submission
+that every node job submit file defines a log file.
+
+\item \Condor{dagman} now requires that all Stork submit files used
+in a DAG define a log file.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
