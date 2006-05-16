@@ -2,9 +2,9 @@
 {create an artifact of the creation of a process}
 
 \Synopsis \SynProg{\Prog{uniq\_pid\_midwife}}
-\oOpt{--noblock}
-\oOptArg{--file}{filename}
-\oOptArg{--precision}{seconds}
+\oOpt{-\,-noblock}
+\oOptArg{-\,-file}{filename}
+\oOptArg{-\,-precision}{seconds}
 \Arg{program}
 \oArg{programargs}
 
@@ -21,16 +21,16 @@ accomplishes this by recording an enforced unique process identifier to
 the artifact.
 
 \begin{Options}
-  \OptItem{\OptArg{--file}{filename}}{
+  \OptItem{\OptArg{-\,-file}{filename}}{
     The \Arg{filename} to use for the artifact file.  Defaults to
     \File{pid.file}. 
   }
-  \OptItem{\OptArg{--precision}{seconds}}{
+  \OptItem{\OptArg{-\,-precision}{seconds}}{
     The precision the operating system is expected to have in regards
     to process creation times.  Defaults to an operating system specific
     value.  The default is the best choice in most cases.
   }
-  \OptItem{\Opt{--noblock}}{
+  \OptItem{\Opt{-\,-noblock}}{
     Exit after the program has been confirmed, typically 3 times the
     precision.  Defaults to block until the program exits.
   }

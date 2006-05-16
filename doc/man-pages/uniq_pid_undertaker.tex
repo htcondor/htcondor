@@ -2,9 +2,9 @@
 {determine whether a process has exited}
 
 \Synopsis \SynProg{\Prog{uniq\_pid\_undertaker}}
-\oOpt{--block}
-\oOptArg{--file}{file}
-\oOptArg{--precision}{seconds}
+\oOpt{-\,-block}
+\oOptArg{-\,-file}{file}
+\oOptArg{-\,-precision}{seconds}
 
 \index{Deployment commands!uniq\_pid\_undertaker}
 \index{uniq\_pid\_undertaker}
@@ -15,14 +15,14 @@
 the \Prog{midwife} has exited.
 
 \begin{Options}
-  \OptItem{\Opt{--block}}{
+  \OptItem{\Opt{-\,-block}}{
     If the process has not exited, block until it does.
   }
-  \OptItem{\OptArg{--file}{file}}{
+  \OptItem{\OptArg{-\,-file}{file}}{
     The name of the \Prog{uniq\_pid\_midwife} created artifact file.
     Defaults to \File{pid.file}.
   }
-  \OptItem{\OptArg{--precision}{seconds}}{
+  \OptItem{\OptArg{-\,-precision}{seconds}}{
     Uses \Arg{seconds} as the precision range within which the
     operating system will provide a process's birthday.  Defaults to
     an operating system specific value.  Only use this option if the
