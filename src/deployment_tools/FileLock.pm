@@ -12,12 +12,10 @@ use Sys::Hostname;
 use Socket;
 
 our @ISA = qw(Exporter);
-our @EXPORT = qw(AcquireLinkLock AcquireLinkLockNB 
-		 ReleaseLinkLock TestLinkLock 
-		 AcquireFLock AcquireFLockNB
+our @EXPORT = qw(AcquireFLock AcquireFLockNB
 		 ReleaseFLock TestFLock);  #Symbols to export by default
 
-our $VERSION = 1.00;  #Version number
+our $VERSION = 1.01;  #Version number
 
 #***
 # Constant Static Variables
@@ -26,6 +24,17 @@ my $EXCLUSIVE_LOCK = 'X';
 my $SHARED_LOCK = 'S';
 my $MAX_BACKOFF = 60;
 
+######################################################################
+######################################################################
+## WARNING!!!!
+## All of the linklock functions are deprecated.  They do not work
+## with versions of AFS installed in Linux 2.6.  It may not work on
+## all versions of NFS.
+## These functions are therefore no longer exported.
+## Reexport at your own risk
+## -Joe Meehean
+######################################################################
+######################################################################
 
 #=====================================================================
 # Exported Functions

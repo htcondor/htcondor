@@ -5,6 +5,18 @@
 ## undertaker can check later.
 ##********************************************************************
 
+######################################################################
+######################################################################
+## WARNING!!!!
+## This program is deprecated.  It does not work in versions of AFS
+## installed on Linux 2.6.  It may not work in all versions of NFS.
+## Test before using, if you use it at all.
+## To use you must reenable the linklock functions in FileLock.pm
+## or obtain FileLock.pm v 1.00
+######################################################################
+######################################################################
+
+
 #***
 # Uses
 #***
