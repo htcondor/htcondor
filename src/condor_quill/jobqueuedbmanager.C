@@ -2493,7 +2493,7 @@ void JobQueueDBManager::createQuillAd(void) {
 	ad->Insert(expr);
 
 	if(scheddName) {
-		delete scheddName;
+		delete [] scheddName;
 	}
 
 	sprintf( expr, "%s = \"%s\"", ATTR_MACHINE, my_full_hostname() ); 
