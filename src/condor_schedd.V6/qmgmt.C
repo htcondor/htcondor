@@ -2284,116 +2284,156 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 					no_startd_ad = true;
 				}
 
-				// If the name contains a colon, then it
-				// is a	fallback value, should the startd
-				// leave it undefined, e.g.
-				// $$(NearestStorage:turkey)
+				
+				size_t namelen = strlen(name);
+				if(name[0] == '[' && name[namelen-1] == ']') {
+					// This is a classad expression to be considered
 
-				char *fallback;
+					MyString expr_to_add = name + 1;
+					expr_to_add.setChar(expr_to_add.Length()-1, 0);
 
-				fallback = strchr(name,':');
-				if(fallback) {
-					*fallback = 0;
-					fallback++;
-				}
-
-				// Look for the name in the ad.
-				// If it is not there, use the fallback.
-				// If no fallback value, then fail.
-
-				if ( startd_ad ) {
-						// We have a startd ad in memory, use it
-					value = startd_ad->sPrintExpr(NULL,0,name);
-					value_came_from_jobad = false;
-				} else {
-						// No startd ad -- use value from last match.
-					MyString expr;
-					expr = "MATCH_";
-					expr += name;
-					value = ad->sPrintExpr(NULL,0,expr.Value());
-					value_came_from_jobad = true;
-				}
-
-				if (!value) {
-					if(fallback) {
-						char *rebuild = (char *) malloc(  strlen(name)
-							+ 3  // " = "
-							+ 1  // optional '"'
-							+ strlen(fallback)
-							+ 1  // optional '"'
-							+ 1); // null terminator
-						if(strlen(fallback) == 0) {
-							// fallback is nothing?  That confuses all sorts of
-							// things.  How about a nothing string instead?
-							sprintf(rebuild,"%s = \"%s\"",name,fallback);
-						} else {
-							sprintf(rebuild,"%s = %s",name,fallback);
-						}
-						value = rebuild;
-					}
-					if(!fallback || !value) {
+					ClassAd tmpJobAd(*ad);
+					const char * INTERNAL_DD_EXPR = "InternalDDExpr";
+					bool isok = tmpJobAd.AssignExpr(INTERNAL_DD_EXPR, expr_to_add.Value());
+					if( ! isok ) {
 						attribute_not_found = true;
 						break;
 					}
-				}
 
-
-				// we just want the attribute value, so strip
-				// out the "attrname=" prefix and any quotation marks 
-				// around string value.
-				tvalue = strchr(value,'=');
-				ASSERT(tvalue);	// we better find the "=" sign !
-				// now skip past the "=" sign
-				tvalue++;
-				while ( *tvalue && isspace(*tvalue) ) {
-					tvalue++;
-				}
-				// insert the expression into the original job ad
-				// before we mess with it any further.  however, no need to
-				// re-insert it if we got the value from the job ad
-				// in the first place.
-				if ( !value_came_from_jobad ) {
-					MyString expr;
-					expr = "MATCH_";
-					expr += name;
-
-					// We used to only bother saving the MATCH_ entry for
-					// the GRID universe, but we now need it for flocked
-					// jobs using disconnected starter-shadow (job-leases).
-					// So just always do it.
-					if ( SetAttribute(cluster_id,proc_id,expr.Value(),tvalue) < 0 )
-					{
-						EXCEPT("Failed to store %s into job ad %d.%d",
-							expr.Value(),cluster_id,proc_id);
+					MyString result;
+					isok = tmpJobAd.EvalString(INTERNAL_DD_EXPR, startd_ad, result);
+					if( ! isok ) {
+						attribute_not_found = true;
+						break;
 					}
-				}
-				// skip any quotation marks around strings
-				if (*tvalue == '"') {
-					tvalue++;
-					int endquoteindex = strlen(tvalue) - 1;
-					if ( endquoteindex >= 0 && 
-						 tvalue[endquoteindex] == '"' ) {
-						    tvalue[endquoteindex] = '\0';
+					MyString replacement_value;
+					replacement_value += left;
+					replacement_value += result;
+					replacement_value += right;
+					MyString replacement_attr = curr_attr_to_expand;
+					replacement_attr += "=";
+					replacement_attr += replacement_value;
+					expanded_ad->Insert(replacement_attr.Value());
+					dprintf(D_FULLDEBUG,"$$([]) substitution: %s\n",replacement_attr.Value());
+
+					free(attribute_value);
+					attribute_value = strdup(replacement_value.Value());
+
+
+				} else  {
+					// This is an attribute from the machine ad
+
+					// If the name contains a colon, then it
+					// is a	fallback value, should the startd
+					// leave it undefined, e.g.
+					// $$(NearestStorage:turkey)
+
+					char *fallback;
+
+					fallback = strchr(name,':');
+					if(fallback) {
+						*fallback = 0;
+						fallback++;
 					}
+
+					// Look for the name in the ad.
+					// If it is not there, use the fallback.
+					// If no fallback value, then fail.
+
+					if ( startd_ad ) {
+							// We have a startd ad in memory, use it
+						value = startd_ad->sPrintExpr(NULL,0,name);
+						value_came_from_jobad = false;
+					} else {
+							// No startd ad -- use value from last match.
+						MyString expr;
+						expr = "MATCH_";
+						expr += name;
+						value = ad->sPrintExpr(NULL,0,expr.Value());
+						value_came_from_jobad = true;
+					}
+
+					if (!value) {
+						if(fallback) {
+							char *rebuild = (char *) malloc(  strlen(name)
+								+ 3  // " = "
+								+ 1  // optional '"'
+								+ strlen(fallback)
+								+ 1  // optional '"'
+								+ 1); // null terminator
+							if(strlen(fallback) == 0) {
+								// fallback is nothing?  That confuses all sorts of
+								// things.  How about a nothing string instead?
+								sprintf(rebuild,"%s = \"%s\"",name,fallback);
+							} else {
+								sprintf(rebuild,"%s = %s",name,fallback);
+							}
+							value = rebuild;
+						}
+						if(!fallback || !value) {
+							attribute_not_found = true;
+							break;
+						}
+					}
+
+
+					// we just want the attribute value, so strip
+					// out the "attrname=" prefix and any quotation marks 
+					// around string value.
+					tvalue = strchr(value,'=');
+					ASSERT(tvalue);	// we better find the "=" sign !
+					// now skip past the "=" sign
+					tvalue++;
+					while ( *tvalue && isspace(*tvalue) ) {
+						tvalue++;
+					}
+					// insert the expression into the original job ad
+					// before we mess with it any further.  however, no need to
+					// re-insert it if we got the value from the job ad
+					// in the first place.
+					if ( !value_came_from_jobad ) {
+						MyString expr;
+						expr = "MATCH_";
+						expr += name;
+
+						// We used to only bother saving the MATCH_ entry for
+						// the GRID universe, but we now need it for flocked
+						// jobs using disconnected starter-shadow (job-leases).
+						// So just always do it.
+						if ( SetAttribute(cluster_id,proc_id,expr.Value(),tvalue) < 0 )
+						{
+							EXCEPT("Failed to store %s into job ad %d.%d",
+								expr.Value(),cluster_id,proc_id);
+						}
+					}
+					// skip any quotation marks around strings
+					if (*tvalue == '"') {
+						tvalue++;
+						int endquoteindex = strlen(tvalue) - 1;
+						if ( endquoteindex >= 0 && 
+							 tvalue[endquoteindex] == '"' ) {
+								tvalue[endquoteindex] = '\0';
+						}
+					}
+					bigbuf2 = (char *) malloc(  strlen(left) 
+											  + strlen(tvalue) 
+											  + strlen(right)
+											  + 1);
+					sprintf(bigbuf2,"%s%s%s",left,tvalue,right);
+					free(attribute_value);
+					attribute_value = (char *) malloc(  strlen(curr_attr_to_expand)
+													  + 3 // = and quotes
+													  + strlen(bigbuf2)
+													  + 1);
+					sprintf(attribute_value,"%s=%s",curr_attr_to_expand,
+						bigbuf2);
+					expanded_ad->Insert(attribute_value);
+					dprintf(D_FULLDEBUG,"$$ substitution: %s\n",attribute_value);
+					free(value);	// must use free here, not delete[]
+					free(attribute_value);
+					attribute_value = bigbuf2;
+					bigbuf2 = NULL;
 				}
-				bigbuf2 = (char *) malloc(  strlen(left) 
-									      + strlen(tvalue) 
-									      + strlen(right)
-									      + 1);
-				sprintf(bigbuf2,"%s%s%s",left,tvalue,right);
-				free(attribute_value);
-				attribute_value = (char *) malloc(  strlen(curr_attr_to_expand)
-												  + 3 // = and quotes
-												  + strlen(bigbuf2)
-												  + 1);
-				sprintf(attribute_value,"%s=%s",curr_attr_to_expand,
-					bigbuf2);
-				expanded_ad->Insert(attribute_value);
-				dprintf(D_FULLDEBUG,"$$ substitution: %s\n",attribute_value);
-				free(value);	// must use free here, not delete[]
-				free(attribute_value);
-			    attribute_value = bigbuf2;
-				bigbuf2 = NULL;
 			}
 		}
 
