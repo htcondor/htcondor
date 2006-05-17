@@ -2136,6 +2136,16 @@ DeleteAttribute(int cluster_id, int proc_id, const char *attr_name)
 ClassAd *
 GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 {
+	// This is prepended to attributes that we've already expanded,
+	// making them available if the match ad is no longer available.
+	// So 
+	//   GlobusScheduler=$$(RemoteGridSite)
+	// matches an ad containing
+	//   RemoteGridSide=foobarqux
+	// you'll get
+	//   MATCH_EXP_GlobusScheduler=foobarqux
+	const char * MATCH_EXP = "MATCH_EXP_";
+
 	char	key[_POSIX_PATH_MAX];
 	ClassAd	*ad;
 
@@ -2277,9 +2287,11 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 				}
 			}
 
+			bool expanded_something = false;
 			while( !attribute_not_found &&
 					get_var(attribute_value,&left,&name,&right,NULL,true) )
 			{
+				expanded_something = true;
 				if (!startd_ad && job_universe != CONDOR_UNIVERSE_GRID) {
 					no_startd_ad = true;
 				}
@@ -2435,6 +2447,21 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 					bigbuf2 = NULL;
 				}
 			}
+
+			if(expanded_something && ! attribute_not_found) {
+				// Cache the expanded string so that we still
+				// have it after, say, a restart and the collector
+				// is no longer available.
+				MyString attrName = MATCH_EXP;
+				attrName += curr_attr_to_expand;
+
+				if ( SetAttribute(cluster_id,proc_id,attrName.Value(),attribute_value) < 0 )
+				{
+					EXCEPT("Failed to store '%s=%s' into job ad %d.%d",
+						attrName.Value(), attribute_value, cluster_id, proc_id);
+				}
+			}
+
 		}
 
 		if ( startd_ad && job_universe == CONDOR_UNIVERSE_GRID ) {
