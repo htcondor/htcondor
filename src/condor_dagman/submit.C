@@ -36,8 +36,57 @@
 #include "debug.h"
 #include "tmp_dir.h"
 
+typedef bool (* parse_submit_fnc)( char *buffer, int &jobProcCount,
+			int &cluster );
+
+//-------------------------------------------------------------------------
+/** Parse output from condor_submit, determine the number of job procs
+    and the cluster.
+	@param buffer containing the line to be parsed
+	@param integer to be filled in with the number of job procs generated
+	       by the condor_submit
+	@param integer to be filled in with the cluster ID
+	@return true iff the line was correctly parsed
+*/
 static bool
-submit_try( ArgList &args, CondorID &condorID, Job::job_type_t type )
+parse_condor_submit( char *buffer, int &jobProcCount, int &cluster )
+{
+  if ( 2 != sscanf( buffer, "%d job(s) submitted to cluster %d",
+  			&jobProcCount, &cluster) ) {
+	debug_printf( DEBUG_QUIET, "ERROR: parse_condor_submit failed:\n\t%s\n",
+				buffer );
+    return false;
+  }
+  
+  return true;
+}
+
+//-------------------------------------------------------------------------
+/** Parse output from stork_submit, determine the number of job procs
+    and the cluster.
+	@param buffer containing the line to be parsed
+	@param integer to be filled in with the number of job procs generated
+	       by the stork_submit
+	@param integer to be filled in with the cluster ID
+	@return true iff the line was correctly parsed
+*/
+static bool
+parse_stork_submit( char *buffer, int &jobProcCount, int &cluster )
+{
+  if ( 1 != sscanf( buffer, "Request assigned id: %d", &cluster) ) {
+	debug_printf( DEBUG_QUIET, "ERROR: parse_stork_submit failed:\n\t%s\n",
+				buffer );
+    return false;
+  }
+
+  jobProcCount = 1;
+  return true;
+}
+
+//-------------------------------------------------------------------------
+static bool
+submit_try( ArgList &args, CondorID &condorID, Job::job_type_t type,
+			bool prohibitMultiJobs )
 {
   MyString cmd; // for debug output
   args.GetArgsStringForDisplay( &cmd );
@@ -67,7 +116,7 @@ submit_try( ArgList &args, CondorID &condorID, Job::job_type_t type )
   	// Configure what we look for in the command output according to
 	// which type of job we have.
   const char *marker = NULL;
-  const char *scanfStr = NULL;
+  parse_submit_fnc parseFnc = NULL;
 
   if ( type == Job::TYPE_CONDOR ) {
     marker = "cluster";
@@ -80,10 +129,10 @@ submit_try( ArgList &args, CondorID &condorID, Job::job_type_t type )
 
 	  // We should also check whether we got more than one cluster, and
 	  // either deal with it correctly or generate an error message.
-    scanfStr = "%*d job(s) submitted to cluster %d";
+	parseFnc = parse_condor_submit;
   } else if ( type == Job::TYPE_STORK ) {
     marker = "assigned id";
-    scanfStr = "Request assigned id: %d";
+	parseFnc = parse_stork_submit;
   } else {
 	debug_printf( DEBUG_QUIET, "Illegal job type: %d\n", type );
 	ASSERT(false);
@@ -117,8 +166,8 @@ submit_try( ArgList &args, CondorID &condorID, Job::job_type_t type )
     }
   }
 
-  if ( 1 != sscanf( buffer, scanfStr, &condorID._cluster) ) {
-	  debug_printf( DEBUG_QUIET, "ERROR: submit failed:\n\t%s\n", buffer );
+  int	jobProcCount;
+  if ( !parseFnc( buffer, jobProcCount, condorID._cluster) ) {
 	  return false;
   }
 
@@ -128,6 +177,14 @@ submit_try( ArgList &args, CondorID &condorID, Job::job_type_t type )
 	  condorID._proc = -1;
 	  condorID._subproc = -1;
   }
+
+  	// Check for multiple job procs if configured to disallow that.
+  if ( prohibitMultiJobs && (jobProcCount > 1) ) {
+	debug_printf( DEBUG_NORMAL, "Submit generated %d job procs; "
+				"disallowed by DAGMAN_PROHIBIT_MULTI_JOBS setting\n",
+				jobProcCount );
+	main_shutdown_rescue( EXIT_ERROR );
+  }
   
   return true;
 }
@@ -136,7 +193,8 @@ submit_try( ArgList &args, CondorID &condorID, Job::job_type_t type )
 // NOTE: this and submit_try should probably be merged into a single
 // method -- submit_batch_job or something like that.  wenger/pfc 2006-04-05.
 static bool
-do_submit( ArgList &args, CondorID &condorID, Job::job_type_t jobType )
+do_submit( ArgList &args, CondorID &condorID, Job::job_type_t jobType,
+			bool prohibitMultiJobs )
 {
 	MyString cmd; // for debug output
 	args.GetArgsStringForDisplay( &cmd );
@@ -144,7 +202,7 @@ do_submit( ArgList &args, CondorID &condorID, Job::job_type_t jobType )
   
 	bool success = false;
 
-	success = submit_try( args, condorID, jobType );
+	success = submit_try( args, condorID, jobType, prohibitMultiJobs );
 
 	if( !success ) {
 	    debug_printf( DEBUG_QUIET, "ERROR: submit attempt failed\n" );
@@ -244,7 +302,8 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 
 	args.AppendArg( cmdFile );
 
-	bool success = do_submit( args, condorID, Job::TYPE_CONDOR );
+	bool success = do_submit( args, condorID, Job::TYPE_CONDOR,
+				dm.prohibitMultiJobs );
 
 	if ( !tmpDir.Cd2MainDir( errMsg ) ) {
 		debug_printf( DEBUG_QUIET,
@@ -280,7 +339,8 @@ stork_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 
   args.AppendArg( cmdFile );
 
-  bool success = do_submit( args, condorID, Job::TYPE_STORK );
+  bool success = do_submit( args, condorID, Job::TYPE_STORK,
+  			dm.prohibitMultiJobs );
 
 	if ( !tmpDir.Cd2MainDir( errMsg ) ) {
 		debug_printf( DEBUG_QUIET,

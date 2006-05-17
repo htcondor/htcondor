@@ -347,6 +347,38 @@ ReadMultipleUserLogs::readEventFromLog(LogFileEntry &log)
 ///////////////////////////////////////////////////////////////////////////////
 
 MyString
+MultiLogFiles::fileNameToLogicalLines(const MyString &filename,
+			StringList &logicalLines)
+{
+	MyString	result("");
+
+	MyString fileContents = readFileToString(filename);
+	if (fileContents == "") {
+		result = "Unable to read file: " + filename;
+		dprintf(D_ALWAYS, "MultiLogFiles: %s\n", result.Value());
+		return result;
+	}
+
+		// Split the file string into physical lines.
+		// Note: StringList constructor removes leading whitespace from lines.
+	StringList physicalLines(fileContents.Value(), "\r\n");
+	physicalLines.rewind();
+
+		// Combine lines with continuation characters.
+	MyString	combineResult = CombineLines(physicalLines, '\\',
+				filename, logicalLines);
+	if ( combineResult != "" ) {
+		result = combineResult;
+		return result;
+	}
+	logicalLines.rewind();
+
+	return result;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+MyString
 MultiLogFiles::readFileToString(const MyString &strFilename)
 {
 	dprintf( D_FULLDEBUG, "MultiLogFiles::readFileToString(%s)\n",
@@ -418,21 +450,10 @@ MultiLogFiles::loadLogFileNameFromSubFile(const MyString &strSubFilename,
 		return "";
 	}
 
-	MyString strSubFile = readFileToString(strSubFilename);
-	
-		// Split the node submit file string into lines.
-		// Note: StringList constructor removes leading whitespace from lines.
-	StringList physicalLines( strSubFile.Value(), "\r\n");
-	physicalLines.rewind();
-
-		// Combine lines with continuation characters.
 	StringList	logicalLines;
-	MyString	combineResult = CombineLines(physicalLines, '\\',
-				strSubFilename, logicalLines);
-	if ( combineResult != "" ) {
+	if ( fileNameToLogicalLines( strSubFilename, logicalLines ) != "" ) {
 		return "";
 	}
-	logicalLines.rewind();
 
 	MyString	logFileName("");
 	MyString	initialDir("");
@@ -655,6 +676,59 @@ MultiLogFiles::loadLogFileNamesFromStorkSubFile(
 
 ///////////////////////////////////////////////////////////////////////////////
 
+int
+MultiLogFiles::getQueueCountFromSubmitFile(const MyString &strSubFilename,
+			const MyString &directory, MyString &errorMsg)
+{
+	dprintf( D_FULLDEBUG,
+				"MultiLogFiles::getQueueCountFromSubmitFile(%s, %s)\n",
+				strSubFilename.Value(), directory.Value() );
+
+	int queueCount = 0;
+	errorMsg = "";
+
+	MyString	fullpath("");
+	if ( directory != "" ) {
+		fullpath = directory + DIR_DELIM_STRING + strSubFilename;
+	} else {
+		fullpath = strSubFilename;
+	}
+
+	StringList	logicalLines;
+	if ( (errorMsg = fileNameToLogicalLines( strSubFilename,
+				logicalLines)) != "" ) {
+		return -1;
+	}
+
+		// Now look through the submit file logical lines to find any
+		// queue commands, and count up the total number of job procs
+		// to be queued.
+	const char *	paramName = "queue";
+	const char *logicalLine;
+	while( (logicalLine = logicalLines.next()) != NULL ) {
+		MyString	submitLine(logicalLine);
+		submitLine.Tokenize();
+		const char *DELIM = " ";
+		const char *rawToken = submitLine.GetNextToken( DELIM, true );
+		if ( rawToken ) {
+			MyString	token(rawToken);
+			token.trim();
+			if ( !strcasecmp(token.Value(), paramName) ) {
+				rawToken = submitLine.GetNextToken( DELIM, true );
+				if ( rawToken ) {
+					queueCount += atoi( rawToken );
+				} else {
+					queueCount++;
+				}
+			}
+		}
+	}
+
+	return queueCount;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 MyString
 MultiLogFiles::getJobLogsFromSubmitFiles(const MyString &strDagFileName,
             const MyString &jobKeyword, const MyString &dirKeyword,
@@ -663,26 +737,12 @@ MultiLogFiles::getJobLogsFromSubmitFiles(const MyString &strDagFileName,
 	dprintf( D_FULLDEBUG, "MultiLogFiles::getJobLogsFromSubmitFiles(%s)\n",
 				strDagFileName.Value() );
 
-	MyString strDagFileContents = readFileToString(strDagFileName);
-	if (strDagFileContents == "") {
-		MyString result = "Unable to read DAG file";
-		dprintf(D_ALWAYS, "MultiLogFiles: %s\n", result.Value());
-		return result;
-	}
-
-		// Split the DAG submit file string into lines.
-		// Note: StringList constructor removes leading whitespace from lines.
-	StringList physicalLines(strDagFileContents.Value(), "\r\n");
-	physicalLines.rewind();
-
-		// Combine lines with continuation characters.
+	MyString	errorMsg;
 	StringList	logicalLines;
-	MyString	combineResult = CombineLines(physicalLines, '\\',
-				strDagFileName, logicalLines);
-	if ( combineResult != "" ) {
-		return combineResult;
+	if ( (errorMsg = fileNameToLogicalLines( strDagFileName,
+				logicalLines )) != "" ) {
+		return errorMsg;
 	}
-	logicalLines.rewind();
 
 	const char *	logicalLine;
 	while ( (logicalLine = logicalLines.next()) ) {

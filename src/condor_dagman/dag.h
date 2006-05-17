@@ -85,6 +85,8 @@ class Dag {
 		@param condorRmExe executable to remove Condor jobs
 		@param storkRmExe executable to remove Stork jobs
 		@param DAGManJobId Condor ID of this DAGMan process
+		@param prohibitMultiJobs whether submit files queueing multiple
+			   job procs are prohibited
     */
 
     Dag( /* const */ StringList &dagFiles, char *condorLogName,
@@ -93,7 +95,8 @@ class Dag {
 		 int allowEvents, const char *dapLogName, bool allowLogError,
 		 bool useDagDir, int maxIdleJobProcs, bool retrySubmitFirst,
 		 bool retryNodeFirst, const char *condorRmExe,
-		 const char *storkRmExe, const CondorID *DAGManJobId);
+		 const char *storkRmExe, const CondorID *DAGManJobId,
+		 bool prohibitMultiJobs);
 
     ///
     ~Dag();
@@ -394,6 +397,8 @@ class Dag {
 		// The maximum signal we can deal with in the error-reporting
 		// code.
 	const int MAX_SIGNAL;
+
+	bool ProhibitMultiJobs() const { return _prohibitMultiJobs; }
 	
   protected:
 
@@ -589,6 +594,10 @@ class Dag {
 		// multiple times).
 	int		_maxIdleDeferredCount;
 
+		// whether or not to prohibit multiple job proc submitsn (e.g.,
+		// node jobs that create more than one job proc)
+	bool		_prohibitMultiJobs;
+
 		// The next time we're allowed to try submitting a job -- 0 means
 		// go ahead and submit right away.
 	time_t		_nextSubmitTime;
@@ -602,6 +611,7 @@ class Dag {
 		// the PR 554 fix in PostScriptReaper -- otherwise it gets passed
 		// down thru the call stack.
 	bool		_recovery;
+
 };
 
 #endif /* #ifndef DAG_H */

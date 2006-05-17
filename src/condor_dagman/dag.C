@@ -69,7 +69,8 @@ Dag::Dag( /* const */ StringList &dagFiles, char *condorLogName,
 		  int allow_events, const char* dapLogName, bool allowLogError,
 		  bool useDagDir, int maxIdleJobProcs, bool retrySubmitFirst,
 		  bool retryNodeFirst, const char *condorRmExe,
-		  const char *storkRmExe, const CondorID *DAGManJobId) :
+		  const char *storkRmExe, const CondorID *DAGManJobId,
+		  bool prohibitMultiJobs) :
     _maxPreScripts        (maxPreScripts),
     _maxPostScripts       (maxPostScripts),
 	DAG_ERROR_CONDOR_SUBMIT_FAILED (-1001),
@@ -97,7 +98,8 @@ Dag::Dag( /* const */ StringList &dagFiles, char *condorLogName,
 	_checkCondorEvents    (allow_events),
 	_checkStorkEvents     (allow_events),
 	_maxJobsDeferredCount (0),
-	_maxIdleDeferredCount (0)
+	_maxIdleDeferredCount (0),
+	_prohibitMultiJobs	  (prohibitMultiJobs)
 {
 	ASSERT( dagFiles.number() >= 1 );
 

@@ -68,11 +68,31 @@ public:
 		StringList &listLogFilenames);
 #endif
 
+		/** Gets the number of job procs queued by a submit file
+			@param The submit file name
+			@param The submit file directory
+			@param A MyString to receive any error message
+			@return -1 if an error, otherwise the number of job procs
+				queued by the submit file
+		*/
+	static int getQueueCountFromSubmitFile(const MyString &strSubFilename,
+	            const MyString &directory, MyString &errorMsg);
+
 	    /** Deletes the given log files.
 		 */
 	static void DeleteLogs(StringList &logFileNames);
 
 private:
+		/** Reads in the specified file, breaks it into lines, and
+			combines the lines into "logical" lines (joins continued
+			lines).
+			@param The filename
+			@param The StringList to receive the logical lines
+			@return "" if okay, error message otherwise
+		*/
+	static MyString fileNameToLogicalLines(const MyString &filename,
+				StringList &logicalLines);
+
 	    /** Read the entire contents of the given file into a MyString.
 		 * @param The name of the file.
 		 * @return The contents of the file.

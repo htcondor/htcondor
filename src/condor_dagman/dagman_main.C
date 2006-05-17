@@ -192,30 +192,38 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_DELETE_OLD_LOGS setting: %d\n",
 				  deleteOldLogs );
 
+	prohibitMultiJobs = param_boolean( "DAGMAN_PROHIBIT_MULTI_JOBS", false );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_PROHIBIT_MULTI_JOBS setting: %d\n",
+				prohibitMultiJobs );
+
 	free( condorSubmitExe );
 	condorSubmitExe = param( "DAGMAN_CONDOR_SUBMIT_EXE" );
 	if( !condorSubmitExe ) {
 		condorSubmitExe = strdup( "condor_submit" );
 		ASSERT( condorSubmitExe );
 	}
+
 	free( condorRmExe );
 	condorRmExe = param( "DAGMAN_CONDOR_RM_EXE" );
 	if( !condorRmExe ) {
 		condorRmExe = strdup( "condor_rm" );
 		ASSERT( condorRmExe );
 	}
+
 	free( storkSubmitExe );
 	storkSubmitExe = param( "DAGMAN_STORK_SUBMIT_EXE" );
 	if( !storkSubmitExe ) {
 		storkSubmitExe = strdup( "stork_submit" );
 		ASSERT( storkSubmitExe );
 	}
+
 	free( storkRmExe );
 	storkRmExe = param( "DAGMAN_STORK_RM_EXE" );
 	if( !storkRmExe ) {
 		storkRmExe = strdup( "stork_rm" );
 		ASSERT( storkRmExe );
 	}
+
 	return true;
 }
 
@@ -535,7 +543,8 @@ int main_init (int argc, char ** const argv) {
 						  dagman.allowLogError, dagman.useDagDir,
 						  dagman.maxIdle, dagman.retrySubmitFirst,
 						  dagman.retryNodeFirst, dagman.condorRmExe,
-						  dagman.storkRmExe, &dagman.DAGManJobId );
+						  dagman.storkRmExe, &dagman.DAGManJobId,
+						  dagman.prohibitMultiJobs );
 
     if( dagman.dag == NULL ) {
         EXCEPT( "ERROR: out of memory!\n");

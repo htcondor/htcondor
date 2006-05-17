@@ -25,6 +25,7 @@
 #include "job.h"
 #include "condor_string.h"
 #include "condor_debug.h"
+#include "dagman_main.h"
 #include "read_multiple_logs.h"
 
 //---------------------------------------------------------------------------
@@ -72,15 +73,16 @@ Job::~Job() {
 
 Job::
 Job( const job_type_t jobType, const char* jobName, const char *directory,
-			const char* cmdFile ) :
+			const char* cmdFile, bool prohibitMultiJobs ) :
 	_jobType( jobType )
 {
-	Init( jobName, directory, cmdFile );
+	Init( jobName, directory, cmdFile, prohibitMultiJobs );
 }
 
 
 void Job::
-Init( const char* jobName, const char* directory, const char* cmdFile )
+Init( const char* jobName, const char* directory, const char* cmdFile,
+			bool prohibitMultiJobs )
 {
 	ASSERT( jobName != NULL );
 	ASSERT( cmdFile != NULL );
@@ -98,6 +100,24 @@ Init( const char* jobName, const char* directory, const char* cmdFile )
     _jobName = strnewp (jobName);
 	_directory = strnewp (directory);
     _cmdFile = strnewp (cmdFile);
+
+	if ( (_jobType == TYPE_CONDOR) && prohibitMultiJobs ) {
+		MyString	errorMsg;
+		int queueCount = MultiLogFiles::getQueueCountFromSubmitFile(
+					MyString( _cmdFile ), MyString( _directory ),
+					errorMsg );
+		if ( queueCount == -1 ) {
+			debug_printf( DEBUG_NORMAL, "ERROR in "
+						"MultiLogFiles::getQueueCountFromSubmitFile(): %s\n",
+						errorMsg.Value() );
+			main_shutdown_rescue( EXIT_ERROR );
+		} else if ( queueCount != 1 ) {
+			debug_printf( DEBUG_NORMAL, "ERROR: node %s job queues %d "
+						"job procs, but DAGMAN_PROHIBIT_MULTI_JOBS is "
+						"set\n", _jobName, queueCount );
+			main_shutdown_rescue( EXIT_ERROR );
+		}
+	}
 
     // _condorID struct initializes itself
 

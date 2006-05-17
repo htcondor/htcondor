@@ -115,6 +115,10 @@ class Dagman {
 		// instances of the same DAG and think they're ours
 	bool deleteOldLogs;
 
+		// whether or not to prohibit multiple job proc submitsn (e.g.,
+		// node jobs that create more than one job proc)
+	bool prohibitMultiJobs;
+
 		// the Condor job id of the DAGMan job
 	CondorID DAGManJobId;
 

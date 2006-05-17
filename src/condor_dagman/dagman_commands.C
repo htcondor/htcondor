@@ -78,7 +78,8 @@ AddNode( Dag *dag, Job::job_type_t type, const char *name,
 		failReason = why;
 		return false;
 	}
-	Job* node = new Job( type, name, directory, submitFile );
+	Job* node = new Job( type, name, directory, submitFile,
+				dag->ProhibitMultiJobs() );
 	if( !node ) {
 		dprintf( D_ALWAYS, "ERROR: out of memory!\n" );
 			// we already know we're out of memory, so filling in
