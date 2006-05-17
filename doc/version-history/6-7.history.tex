@@ -49,6 +49,12 @@ in a DAG define a log file.
 
 \item New macro functionality in job ClassAds: \$\$([ClassAd Expression]).  The contained ClassAd expression is evaluated when the job is matched.  "My" refers to attributes in the job's ClassAd, "Target" refers to attributes in the machine classad.
 
+% Gnats PR 662
+\item Added the \Condor{dagman} configuration parameter
+\Macro{DAGMAN\_PROHIBIT\_MULTI\_JOBS}, which prohibits \Condor{dagman}
+from running a DAG that references node job submit files that
+queue multiple jobs (other than parallel universe).
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -162,7 +168,7 @@ saves file space on the submit machine, especially if you are running
 multiple instances of \Condor{dagman}.
 
 \item The authorization levels in Condor's security system now form a
-heirarchy. A client with DAEMON or ADMINISTRATOR access also have WRITE
+hierarchy. A client with DAEMON or ADMINISTRATOR access also have WRITE
 access. A client with WRITE, NEGOTIATOR, or CONFIG access also have
 READ access.
 
@@ -468,7 +474,7 @@ Windows, and only for daemon-to-daemon communication.
 user. This feature requires the use of a central daemon for storing
 users' passwords (the \Condor{credd}). See the example configuration
 file \File{condor\_config.local.credd} included with the Condor
-distrubution for more information.
+distribution for more information.
 
 \item Added a \Opt{-n} option to \Condor{store\_cred} to allow for
 storing a password to a remote host.
