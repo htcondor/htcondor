@@ -47,6 +47,8 @@ that every node job submit file defines a log file.
 \item \Condor{dagman} now requires that all Stork submit files used
 in a DAG define a log file.
 
+\item New macro functionality in job ClassAds: \$\$([ClassAd Expression]).  The contained ClassAd expression is evaluated when the job is matched.  "My" refers to attributes in the job's ClassAd, "Target" refers to attributes in the machine classad.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
