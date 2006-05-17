@@ -197,6 +197,7 @@ class AttrList : public AttrListAbstract
 		// evaluate values in classads
 		int         EvalString (const char *, class AttrList *, char *);
         int         EvalString (const char *, class AttrList *, char **value);
+        int         EvalString (const char *, class AttrList *, MyString & value);
 		int         EvalInteger (const char *, class AttrList *, int &);
 		int         EvalFloat (const char *, class AttrList *, float &);
 		int         EvalBool  (const char *, class AttrList *, int &);
