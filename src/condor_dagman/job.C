@@ -145,7 +145,8 @@ bool Job::Remove (const queue_t queue, const JobID_t jobID) {
 bool
 Job::CheckForLogFile() const
 {
-    MyString logFile = MultiLogFiles::loadLogFileNameFromSubFile(_cmdFile, "");
+    MyString logFile = MultiLogFiles::loadLogFileNameFromSubFile( _cmdFile,
+				_directory );
 	bool result = (logFile != "");
 	return result;
 }
