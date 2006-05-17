@@ -1437,6 +1437,16 @@ int AttrList::EvalString (const char *name, AttrList *target, char **value)
 	return 0;
 }
 
+int AttrList::EvalString (const char *name, AttrList *target, MyString & value)
+{
+	char * pvalue = NULL;
+	int ret = EvalString(name, target, &pvalue);
+	if(ret == 0) { return ret; }
+	value = pvalue;
+	free(pvalue);
+	return ret;
+}
+
 int AttrList::EvalInteger (const char *name, AttrList *target, int &value) 
 {
     ExprTree *tree;
