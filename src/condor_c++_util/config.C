@@ -687,54 +687,78 @@ tryagain:
 		}
 
 		if( *++value == '(' ) {
-			if ( getdollardollar ) {
+			if( getdollardollar && *value != NULL && value[1] == '[' ) {
+
+				// This is a classad expression to be evaled.  This layer
+				// doesn't need any intelligence, just scan for "])" which
+				// terminates it.  If we get to end of string without finding
+				// the terminating pattern, this $$ match fails, try again.
+
+				char * end_marker = strstr(value, "])");
+				if( end_marker == NULL ) { goto tryagain; }
+
 				left_end = value - 2;
-			} else {
-				left_end = value - 1;
-			}
-			name = ++value;
-			while( *value && *value != ')' ) {
-				char c = *value++;
-				if( getdollardollar ) {
-					if( !ISDDCHAR(c) ) {
-						tvalue = name;
-						goto tryagain;
-					}
+				name = ++value;
+				right = end_marker + 1;
+				break;
+
+			} else { 
+
+				// This might be a "normal" values $(FOO), $$(FOO) or
+				// $$(FOO:Bar) Skim until ")".  We only allow valid characters
+				// inside (basically alpha-numeric. $$ adds ":"); a non-valid
+				// character means this $$ match fails.  End of string before
+				// ")" means this match fails, try again.
+
+				if ( getdollardollar ) {
+					left_end = value - 2;
 				} else {
-					if( !ISIDCHAR(c) ) {
-						tvalue = name;
-						goto tryagain;
+					left_end = value - 1;
+				}
+				name = ++value;
+				while( *value && *value != ')' ) {
+					char c = *value++;
+					if( getdollardollar ) {
+						if( !ISDDCHAR(c) ) {
+							tvalue = name;
+							goto tryagain;
+						}
+					} else {
+						if( !ISIDCHAR(c) ) {
+							tvalue = name;
+							goto tryagain;
+						}
 					}
 				}
-			}
 
-			if( *value == ')' ) {
-				// We pass (value-name) to strncmp since name contains
-				// the entire line starting from the identifier and value
-				// points to the end of the identifier.  Thus, the difference
-				// between these two pointers gives us the length of the
-				// identifier.
-				int namelen = value-name;
-				if( !self || ( namelen == selflen &&
-							   strincmp( name, self, namelen ) == MATCH ) ) {
-						// $(DOLLAR) has special meaning; it is
-						// set to "$" and is _not_ recursively
-						// expanded.  To implement this, we have
-						// get_var() ignore $(DOLLAR) and we then
-						// handle it in expand_macro().
-					if ( !self && strincmp(name,DOLLAR_ID,namelen) == MATCH ) {
+				if( *value == ')' ) {
+					// We pass (value-name) to strncmp since name contains
+					// the entire line starting from the identifier and value
+					// points to the end of the identifier.  Thus, the difference
+					// between these two pointers gives us the length of the
+					// identifier.
+					int namelen = value-name;
+					if( !self || ( namelen == selflen &&
+								   strincmp( name, self, namelen ) == MATCH ) ) {
+							// $(DOLLAR) has special meaning; it is
+							// set to "$" and is _not_ recursively
+							// expanded.  To implement this, we have
+							// get_var() ignore $(DOLLAR) and we then
+							// handle it in expand_macro().
+						if ( !self && strincmp(name,DOLLAR_ID,namelen) == MATCH ) {
+							tvalue = name;
+							goto tryagain;
+						}
+						right = value;
+						break;
+					} else {
 						tvalue = name;
 						goto tryagain;
 					}
-					right = value;
-					break;
 				} else {
 					tvalue = name;
 					goto tryagain;
 				}
-			} else {
-				tvalue = name;
-				goto tryagain;
 			}
 		} else {
 			tvalue = value;
