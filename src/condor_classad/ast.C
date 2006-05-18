@@ -2429,6 +2429,7 @@ int Function::FunctionSubstr(
 
 	if (length <= 0) {
 		result->type = LX_NULL;
+		result->s = 0;
 		return TRUE;
 	}
 
@@ -2602,8 +2603,16 @@ int Function::FunctionStringlistSize(
 		return FALSE;
 	}
 
+	if(evaluated_args[0].type != LX_STRING) {
+		result->type = LX_ERROR;
+		return FALSE;
+	}
 
 	if ( number_of_args == 2) {
+		if(evaluated_args[1].type != LX_STRING) {
+			result->type = LX_ERROR;
+			return FALSE;
+		}
 		d = evaluated_args[1].s;
 	} else {
 		d = " ,";
@@ -2746,9 +2755,10 @@ int Function::FunctionStringlistAvg(
 
 	if (result->type == LX_UNDEFINED) {
 		result->f = 0.0;
+	} else {
+		result->f    = array[0] / array[1];
 	}
 	result->type = LX_FLOAT;
-	result->f    = array[0] / array[1];
 	return TRUE;
 }
 	
