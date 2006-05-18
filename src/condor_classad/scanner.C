@@ -144,6 +144,7 @@ static bool scan_keyword(
 		keyword = &(keywords[keyword_index]);
 		if (!strncasecmp(input, keyword->keyword, keyword->keyword_length)
 			&& !isalpha(*(input + keyword->keyword_length))
+			&& !isdigit(*(input + keyword->keyword_length))
 			&& *(input + keyword->keyword_length) != '_') {
 
 			input        += keyword->keyword_length;
