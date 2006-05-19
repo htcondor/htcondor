@@ -23,6 +23,7 @@
 
 #include "condor_common.h"
 #include "jobqueuecollection.h"
+#include "jobqueuedbmanager.h"
 
 //! constructor
 JobQueueCollection::JobQueueCollection(int iBucketNum)
@@ -520,7 +521,8 @@ JobQueueCollection::makeHistoryAdSqlStr(char* cid, char* pid, ClassAd* ad,
 					char*& historyad_hor_str, char*& historyad_ver_str)
 {
 	char* 	val = NULL;
-	char	tmp_line_str1[MAX_FIXED_SQL_STR_LENGTH];
+	//char	tmp_line_str1[MAX_FIXED_SQL_STR_LENGTH];
+	char	tmp_line_str1[65536]; // FIXME !
 	char    tmp_line_str2[MAX_FIXED_SQL_STR_LENGTH];
 
 	AssignOp*	expr;		// For Each Attribute in ClassAd
@@ -554,7 +556,6 @@ JobQueueCollection::makeHistoryAdSqlStr(char* cid, char* pid, ClassAd* ad,
 	historyad_hor_str = (char*)malloc(strlen(tmp_line_str2) + 1);
 	strcpy(historyad_hor_str, tmp_line_str2);
 	
-		
 	ad->ResetExpr(); // for iteration initialization
 
 	while((expr = (AssignOp*)(ad->NextExpr())) != NULL) {
@@ -564,6 +565,8 @@ JobQueueCollection::makeHistoryAdSqlStr(char* cid, char* pid, ClassAd* ad,
 	  if (val == NULL) {
 		  break;
 	  }
+
+	  val = JobQueueDBManager::fillEscapeCharacters(val);
 	  
 	  
 	  // make a SQL line for each attribute
@@ -572,6 +575,7 @@ JobQueueCollection::makeHistoryAdSqlStr(char* cid, char* pid, ClassAd* ad,
 	  //			   + strlen(pid) + strlen("\t\t\t\n") + 1);
 	  if(strcmp(nameExpr->Name(),"ClusterId") == 0 ||
 	     strcmp(nameExpr->Name(),"ProcId") == 0) {
+		free(val);
 	    continue;
 	  }
 	  else if(strcmp(nameExpr->Name(),"QDate") == 0 ||
@@ -624,6 +628,7 @@ JobQueueCollection::makeHistoryAdSqlStr(char* cid, char* pid, ClassAd* ad,
 	    strcat(historyad_ver_str, tmp_line_str1);		
 	  }
 	  
+	  free(val);
 	}
 }
 

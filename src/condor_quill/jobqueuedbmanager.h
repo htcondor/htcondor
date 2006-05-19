@@ -95,6 +95,11 @@ class JobQueueDBManager : public Service
 		//! is directly not accessible.  
 	int 		handle_q(int, Stream*);
 	
+
+		//! escape quoted strings since postgres doesn't like 
+		//! unescaped single quotes
+	static char *   fillEscapeCharacters(char *str);
+	
  private:
 	CollectorList 	*collectors;
 	ClassAd 	    *ad;
@@ -104,11 +109,6 @@ class JobQueueDBManager : public Service
 
 		//! update the QUILL_AD's dynamic attributes
 	void 	 updateQuillAd(void);
-
-		//! escape quoted strings since postgres doesn't like 
-		//! unescaped single quotes
-	char *   fillEscapeCharacters(char *str);
-	
 		//
 		// helper functions
 		// ----
