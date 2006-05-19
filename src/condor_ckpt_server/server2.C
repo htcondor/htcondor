@@ -402,12 +402,15 @@ void Server::Execute()
 	
 	current_time = last_reclaim_time = last_clean_time = time(NULL);
 
-	dprintf( D_FULLDEBUG, "Sending initial ckpt server ad to collector\n" );
+	dprintf( D_ALWAYS, "Sending initial ckpt server ad to collector\n" );
     struct sockaddr_in *tmp = getSockAddr(store_req_sd);
     if (tmp == NULL) {
         EXCEPT("Can't get the address that store_req_sd is bound to");
     }
-    char *canon_name = inet_ntoa(tmp->sin_addr);
+    char *canon_name = strdup( inet_ntoa( server_addr) );
+	if ( canon_name == NULL ) {
+        EXCEPT("strdup() of server address failed");
+	}
     xfer_summary.time_out(current_time, canon_name);
 
 	while (more) {                          // Continues until SIGUSR2 signal
@@ -462,8 +465,8 @@ void Server::Execute()
 			last_reclaim_time = current_time;
 			if (replication_level)
 				Replicate();
-			dprintf(D_ALWAYS, "Sending ckpt server ad to collector...\n");
-            xfer_summary.time_out(current_time, canon_name);
+			dprintf(D_ALWAYS, "Sending ckpt server ad to collector...\n"); 
+			xfer_summary.time_out(current_time, canon_name);
 		}
 		if (((unsigned int) current_time - (unsigned int) last_clean_time)
 			>= clean_interval) {
@@ -475,6 +478,7 @@ void Server::Execute()
 			last_clean_time = current_time;
 		}
     }
+	free( canon_name );
 	close(service_req_sd);
 	close(store_req_sd);
 	close(restore_req_sd);
