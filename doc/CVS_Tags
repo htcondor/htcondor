@@ -8,6 +8,15 @@
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
 
+5/22/06 V6_7-pre-merge-V6_7-19-doc-merge-1
+        V6_7-post-merge-V6_7-19-doc-merge-1
+   The state of the doc directory in V6_7-branch before and after
+   merging changes from the V6_7_19-branch as tagged V6_7-19-doc-merge-1.
+
+5/22/06 V6_7-19-doc-merge-1
+   The state of the doc directory in the V6_7_19-branch for a merge
+   into V6_7-branch.
+
 4/28/06 V6_7_19-root and V6_7_19-branch
 	A branch for the 6.7.19 doc release, created from V6_7_19-root
 	on V6_7-branch.
