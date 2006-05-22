@@ -1,6 +1,6 @@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:NorduGrid}The nordugrid grid\_type }
+\subsection{\label{sec:NorduGrid}The nordugrid grid type }
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{NorduGrid}
 
@@ -11,11 +11,11 @@ for more information about NorduGrid software.
 
 Condor jobs may be submitted to
 NorduGrid resources using the \SubmitCmd{grid} universe.
-The \SubmitCmd{grid\_type} is specified in the submit description
-file as \SubmitCmd{nordugrid}.
-
-An extra submit description file command (\SubmitCmd{nordugrid\_resource})
-is required to specify the host name of the NorduGrid resource.
+The \SubmitCmd{grid\_resource} command specifies the name of the
+NorduGrid resource as follows:
+\begin{verbatim}
+grid_resource = nordugrid ng.example.com
+\end{verbatim}
 
 NorduGrid uses X.509 credentials for authentication,
 usually in the form a proxy certificate. 
@@ -24,7 +24,7 @@ please consult the Alliance PKI pages at
 \URL{http://archive.ncsa.uiuc.edu/SCD/Alliance/GridSecurity/}.
 \Condor{submit} looks in default locations for the proxy. 
 The submit description file command \SubmitCmd{x509userproxy}
-is used to give the full pathname to the directory containing the proxy,
+is used to give the full path name to the directory containing the proxy,
 when the proxy is not in a default location.
 If this optional command is not present in the submit description file,
 then the value of the environment variable

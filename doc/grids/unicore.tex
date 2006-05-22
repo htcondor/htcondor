@@ -1,6 +1,6 @@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Unicore}The unicore grid\_type }
+\subsection{\label{sec:Unicore}The unicore grid type }
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Unicore}
 
@@ -9,21 +9,22 @@ See \URL{http://unicore.sourceforge.net} for more information about Unicore.
 
 Condor jobs may be submitted to
 Unicore resources using the \SubmitCmd{grid} universe.
-The \SubmitCmd{grid\_type} is specified in the submit description
-file as \SubmitCmd{unicore}.
+The \SubmitCmd{grid\_resource} command specifies the name of the
+Unicore resource as follows:
+\begin{verbatim}
+grid_resource = unicore usite.example.com vsite
+\end{verbatim}
+\SubmitCmd{usite.example.com} is the host name of the Unicore gateway
+machine to which the Condor job is to be submitted.
+\SubmitCmd{vsite} is the name of the Unicore virtual resource to which
+the Condor job is to be submitted.
+
 Unicore uses certificates stored in a Java keystore file for
 authentication. 
-
 The following submit description file commands
-are required.
+are required to properly use the keystore file.
 
 \begin{description}
-\item[\SubmitCmd{unicore\_u\_site}]
-  Supplies the host name of the Unicore gateway machine to which
-  the Condor job is to be submitted.
-\item[\SubmitCmd{unicore\_v\_site}]
-  Supplies the host name of the Unicore virtual resource to which
-  the Condor job is to be submitted.
 \item[\SubmitCmd{keystore\_file}] 
   Specifies the complete path and file name of the Java keystore file to use. 
 \item[\SubmitCmd{keystore\_alias}] 

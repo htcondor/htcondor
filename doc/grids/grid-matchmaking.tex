@@ -42,7 +42,7 @@ the resource:
 
 \footnotesize
 \begin{verbatim}
-globusscheduler = grid.example.com/jobmanager
+grid_resource = gt2 grid.example.com/jobmanager-pbs
 \end{verbatim}
 \normalsize
 
@@ -52,19 +52,19 @@ the submit description file changes:
 
 \footnotesize
 \begin{verbatim}
-globusscheduler = $$(scheduler_location)
-requirements    = TARGET.scheduler_location =!= UNDEFINED
+grid_resource   = $$(resource_name)
+requirements    = TARGET.resource_name =!= UNDEFINED
 \end{verbatim}
 \normalsize
 
-The \SubmitCmd{globusscheduler} command uses a substitution
+The \SubmitCmd{grid\_resource} command uses a substitution
 macro.
 The substitution macro defines the value 
-of \Attr{scheduler\_location} using attributes
+of \Attr{resource\_name} using attributes
 as specified by the matched grid resource.
 The \SubmitCmd{requirements} command further restricts that
 the job may only run on a machine (grid resource) that
-defines \Attr{scheduler\_location}.
+defines \Attr{grid\_resource}.
 Note that this attribute name is invented for this example.
 To make matchmaking work in this way,
 both the job (as used here within the submit description file)
@@ -81,14 +81,12 @@ The complete submit description file might appear:
 \footnotesize
 \begin{verbatim}
 universe        = grid
-grid_type       = gt2
 executable      = analyze_bamboozle_data
 output          = aaa.$(Cluster).out
 error           = aaa.$(Cluster).err
 log             = aaa.log
-globusscheduler = $$(scheduler_location)
-requirements    = (TARGET.HaveBamboozle == True) && (TARGET.scheduler_location =!= UNDEFINED)
-leave_in_queue  = jobstatus == 4
+grid_resource   = $$(resource_name)
+requirements    = (TARGET.HaveBamboozle == True) && (TARGET.resource_name =!= UNDEFINED)
 queue
 \end{verbatim}
 \normalsize
@@ -96,41 +94,15 @@ queue
 Any grid resource which has the
 \Attr{HaveBamboozle} attribute defined as well as
 set to \Expr{True} is further checked to have the
-\Attr{scheduler\_location} attribute defined.
+\Attr{resource\_name} attribute defined.
 Where this occurs, a match may be made (from the
 job's point of view).
 A grid resource that has one of these attributes defined,
 but not the other results in no match being made.
 
-If the job may run on any grid resource,
-not only those with
-\SubmitCmd{grid\_type} \SubmitCmd{gt2},
-then the submit description file for the job
-uses the substitution macro within the 
-\SubmitCmd{grid\_resource} command:
-
-\footnotesize
-\begin{verbatim}
-universe      = grid
-grid_resource = $$(resource_type)
-executable    = aaa
-output        = aaa.$(Cluster).out
-error         = aaa.$(Cluster).err
-log           = aaa.log
-requirements  = TARGET.resource_type =!= UNDEFINED
-queue
-\end{verbatim}
-\normalsize
-
-Any grid resource that advertises the attribute \Attr{resource\_type}
-may be matched with the job.
-At match time,
-the substitution macro causes the
-value given by \SubmitCmd{grid\_resource}
-to specify the \SubmitCmd{grid\_type},
-as well as set all other necessary grid-related job attributes.
-Therefore, the submit description file does not
-specify a \SubmitCmd{grid\_type} command.
+Note that the entire value of \SubmitCmd{grid\_resource} comes from
+the grid resource's ad. This means that the job can be matched with
+a resource of any type, not just \SubmitCmd{gt2}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Advertising Grid Resources to Condor}
@@ -146,7 +118,7 @@ There are two entities relevant to Condor:
 a job, and a machine.
 A grid resource is a machine.
 The ClassAd describes the grid resource, as well
-as identifying the capabilities of grid resource.
+as identifying the capabilities of the grid resource.
 It may also state both requirements and preferences
 (called \SubmitCmd{rank}) for the jobs it will run.
 See
@@ -159,9 +131,7 @@ To advertise a grid site, place the attributes
 in a file.
 Here is a sample ClassAd that describes a grid resource
 that is capable of running a
-\SubmitCmd{grid\_type} \SubmitCmd{gt2} job,
-and presumes that the job requests to be matched
-with a gt2-capable resource:
+\SubmitCmd{gt2} job.
 
 \footnotesize
 \begin{verbatim}
@@ -170,9 +140,9 @@ MyType         = "Machine"
 TargetType     = "Job"
 Name           = "Example1_Gatekeeper"
 Machine        = "Example1_Gatekeeper"
-scheduler_location = "grid.example.com/jobmanager"
+resource_name  = "gt2 grid.example.com/jobmanager-pbs"
 UpdateSequenceNumber  = 4
-Requirements   = (TARGET.JobUniverse == 9) && (TARGET.JobGridType =?= "gt2")
+Requirements   = (TARGET.JobUniverse == 9)
 Rank           = 0.000000
 CurrentRank    = 0.000000
 \end{verbatim}
@@ -213,14 +183,14 @@ be distiguished from each other.
 Each separate grid resource must have a unique name.
 
 Where the job depends on the resource to specify the
-value of the \SubmitCmd{globusscheduler} command by
+value of the \SubmitCmd{grid\_resource} command by
 the use of the substitution macro,
 the ClassAd for the grid resource (machine)
 defines this value.
 The example given as
 \footnotesize
 \begin{verbatim}
-scheduler_location = "grid.example.com/jobmanager"
+grid_resource = "gt2 grid.example.com/jobmanager-pbs"
 \end{verbatim}
 \normalsize
 defines this value.
@@ -258,12 +228,11 @@ The requirements that the grid resource sets for any job
 that it will accept are given as
 \footnotesize
 \begin{verbatim}
-Requirements     = (TARGET.JobUniverse == 9) && (TARGET.JobGridType =?= "gt2")
+Requirements     = (TARGET.JobUniverse == 9)
 \end{verbatim}
 \normalsize
 This set of requirments state that any job is
-required to be for the \SubmitCmd{grid} universe,
-and that the \SubmitCmd{grid\_type} must be \SubmitCmd{gt2}.
+required to be for the \SubmitCmd{grid} universe.
 
 The attributes
 \footnotesize
@@ -287,10 +256,9 @@ MyType         = "Machine"
 TargetType     = "Job"
 Name           = "Example1_Gatekeeper"
 Machine        = "Example1_Gatekeeper"
-scheduler_location = "grid.example.com/jobmanager"
+resource_name  = "gt2 grid.example.com/jobmanager-pbs"
 UpdateSequenceNumber  = 4
-Requirements   = (CurMatches < 10) &&
-   (TARGET.JobUniverse == 9) && (TARGET.JobGridType =?= "gt2")
+Requirements   = (CurMatches < 10) && (TARGET.JobUniverse == 9)
 Rank           = 0.000000
 CurrentRank    = 0.000000
 WantAdRevaluate = True
@@ -322,8 +290,7 @@ It is then compared in order to limit the number of jobs matched
 with the grid resource.
 \footnotesize
 \begin{verbatim}
-Requirements   = (CurMatches < 10) &&
-   (TARGET.JobUniverse == 9) && (TARGET.JobGridType =?= "gt2")
+Requirements   = (CurMatches < 10) && (TARGET.JobUniverse == 9)
 CurMatches     = 1
 \end{verbatim}
 \normalsize
@@ -332,57 +299,6 @@ This example assumes that the grid resource already has
 one job, and is willing to accept a maximum of 9 jobs.
 If \Attr{CurMatches} does not appear in the ClassAd,
 Condor uses a default value of 0.
-
-Where the job uses the substitution macro within the
-\SubmitCmd{grid\_resource} submit description file command,
-it is expected that the grid resource supplies the
-definition of the macro.
-This sets values for all necessary attributes that
-are specific to a grid type, including the grid type.
-For the grid resource capable of accepting jobs intended
-for multiple grid types,
-an individual ClassAd must be produced and advertised for
-each of the unique grid types offered.
-
-As an example, assume that the job does not restrict
-the grid type of the grid resource to which it may be matched.
-The submit description file for the job uses the substitution
-macro in the line:
-\footnotesize
-\begin{verbatim}
-grid_resource = $$(gridtype_and_args)
-\end{verbatim}
-\normalsize
-Assume that the grid resource may run \SubmitCmd{gt2}
-or \SubmitCmd{nordugrid} jobs.
-The grid resource produces and advertises two separate ClassAds.
-One of these ClassAds defines \Attr{gridtype\_and\_args}
-with a string that defines the correct resource-specific values
-for \SubmitCmd{gt2},
-such as
-\footnotesize
-\begin{verbatim}
-gridtype_and_args = "gt2 grid.example.com/jobmanager-lsf"
-\end{verbatim}
-\normalsize
-The first argument within the string specifies the \SubmitCmd{grid\_type}
-for the job as \SubmitCmd{gt2},
-and the second argument specifies the \SubmitCmd{globusscheduler} 
-for the job.
-
-The second ClassAd defines \Attr{gridtype\_and\_args}
-with a string that defines the correct resource-specific values
-for \SubmitCmd{nordugrid},
-such as
-\footnotesize
-\begin{verbatim}
-gridtype_and_args = "nordugrid grid.example.com"
-\end{verbatim}
-\normalsize
-The first argument within the string specifies the \SubmitCmd{grid\_type}
-for the job as \SubmitCmd{nordugrid},
-and the second argument specifies the \SubmitCmd{nordugrid\_resource} 
-value as the host name of the grid resource.
 
 % COMMENTED OUT, AS THERE IS NOTHING ANYWHERE THAT SAYS HOW TO DO THIS!
 % As an aside, we recommend that jobs that need specific applications

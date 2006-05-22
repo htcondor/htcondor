@@ -183,14 +183,32 @@ in section~\ref{sec:Condor-wide-Config-File-Entries}.
 All of these ports must be greater than 0 and less than 65,536.
 Note that both \MacroNI{HIGHPORT} and \MacroNI{LOWPORT} must be at 
 least 1024 for Condor version 6.6.8.
-In general, it is a good idea to use ports greater than 1024,
+In general, use ports greater than 1024,
 in order
 to avoid port conflicts with standard services on the machine.
-This is also
-the case when the daemons are not run as \Login{root}
-(since only \Login{root} may listen to a port lower than 1024).
+Another reason for using ports greater than 1024 is that
+daemons and tools are often not run as \Login{root},
+and only \Login{root} may listen to a port lower than 1024.
 Also, the range must include enough ports that are not in use, 
 or Condor cannot work.
+
+The range of ports assigned may be restricted based on 
+incoming (listening) and outgoing (connect) ports
+with the configuration variables
+\Macro{IN\_HIGHPORT},
+\Macro{IN\_LOWPORT},
+\Macro{OUT\_HIGHPORT}, and
+\Macro{OUT\_LOWPORT}.
+See section~\ref{sec:Network-Related-Config-File-Entries}
+for complete definitions of these configuration variables.
+A range of ports lower than 1024 for daemons
+running as \Login{root} is appropriate for incoming ports,
+but not for outgoing ports.
+The use of ports below 1024 (versus above 1024)
+has security implications; 
+therefore, it is inappropriate to assign a range that crosses
+the 1024 boundary.
+
 
 \Note Setting \MacroNI{HIGHPORT} and \MacroNI{LOWPORT} will not
 automatically force the \Condor{collector} to bind to a port within

@@ -114,7 +114,67 @@ contained a typo which has now been fixed.
 
 \begin{itemize}
 
-\item None.
+\item A major security hole has been fixed in the checkpoint server.
+The hole allows arbitrary
+files owned by the condor UID, or the UID of a Personal Condor running a
+checkpoint server, to be read and written. Users who can not upgrade
+to this release of Condor are urged to replace the \Condor{ckpt\_server}
+binary
+with the version in this release. This applies to all versions of Condor,
+including the 6.6 series.
+
+To replace only the \Condor{ckpt\_server} binary,
+  \begin{enumerate}
+  \item Download the 6.7.19 \Condor{ckpt\_server} binary,
+  from the contrib page at
+  \URL{http://www.cs.wisc.edu/condor/downloads/contrib.license.html}.
+  \item Rename the binary, and place it in the
+  \MacroUNI{SBIN} directory.
+  \item Turn off the checkpoint server that is currently running,
+  by turning off Condor on the machine where it is running.
+  \begin{verbatim}
+    condor_off 
+  \end{verbatim}
+  \item Change the configuration variable that specifies the
+  path and name of the checkpoint server to the renamed 
+  6.7.19 \Condor{ckpt\_server} binary.
+  For example
+  \begin{verbatim}
+    CKPT_SERVER = $(SBIN)/ckpt_server.v6719
+  \end{verbatim}
+  \item Reconfigure, and turn Condor back on.
+  \begin{verbatim}
+    condor_reconfig -master 
+    condor_on
+  \end{verbatim}
+  \item Check the checkpoint server log to verify that the
+  correct 6.7.19 \Condor{ckpt\_server} binary is running.
+  \end{enumerate}
+
+\item Condor is no longer available for HPUX 10.20 on Hewlett
+Packard PA-RISC or Red Hat Linux on ALPHA.
+
+\item The \SubmitCmd{globus} universe and the follow commands
+that have been used in submit description files are retired.
+Please remove from submit description files:
+\SubmitCmd{globusscheduler}, \SubmitCmd{grid\_type},
+\SubmitCmd{jobmanager\_type}, \SubmitCmd{nordugrid\_resource},
+\SubmitCmd{remote\_pool}, \SubmitCmd{remote\_schedd},
+\SubmitCmd{unicore\_u\_site}, and \SubmitCmd{unicore\_v\_site}.
+For the newer syntax of \SubmitCmd{grid} universe jobs,
+please see
+section~\ref{sec:GridUniverse} on the \SubmitCmd{grid} universe,
+as well as the \Condor{submit} manual page
+on page~\pageref{man-condor-submit}.
+
+\item The utilities \Condor{store\_cred}, \Condor{get\_cred},
+\Condor{list\_cred}, and \Condor{rm\_cred} for dealing with
+credentials for Stork on UNIX have been renamed to
+\Stork{store\_cred}, \Stork{get\_cred}, \Stork{list\_cred}, and
+\Stork{rm\_cred}, respectively. This is beacuse the Windows
+\Condor{store\_cred} tool, which can be used to set the shared secret
+for the password authentication method, is now present on all
+platforms.
 
 \end{itemize}
 
@@ -122,6 +182,11 @@ contained a typo which has now been fixed.
 \noindent New Features:
 
 \begin{itemize}
+
+\item A \Condor{schedd} can now submit jobs directly to a local PBS
+or LSF installation. To do this, submit the job with a
+\SubmitCmd{universe} of \SubmitCmd{grid} and a
+\SubmitCmd{grid\_resource} of \SubmitCmd{pbs} or \SubmitCmd{lsf}.
 
 \item Implemented all of the functions from new classads into the
 "old" classads now in Condor.
@@ -151,11 +216,37 @@ will use pseudo-hostnames constructed from a machine's IP address and
 \Macro{DEFAULT\_DOMAIN\_NAME}, rather than attempting to resolve hostnames
 into IP addresses and vice-versa.
 
+\item The \Attr{JobLeaseDuration} now defaults to 20 minutes for all
+jobs that support this feature (everything except standard and PVM
+universe, and jobs that request streaming I/O).
+This way, by default, if the submit host crashes or there is a short
+network outage, the \Condor{schedd} will be able to reconnect to jobs
+that were executing at the time of problem.
+
 \item Condor daemons now touch their daemon log file periodically. When
 a daemon starts up, it prints to the log the last time the log file was
 modified. This lets an admin estimate when a daemon stopped running.
 The configuration parameter \Macro{TOUCH\_LOG\_INTERVAL} sets the time
 between touches (in seconds) and defaults to 60 seconds.
+
+\item For Condor's auto-clustering of jobs for matchmaking, numerical
+job attributes can now be rounded to improving clustering. Add the
+following to your configuration file:
+\Attr{SCHEDD\_ROUND\_ATTR\_<foo>} = X, where \Attr{<foo>} is the attribute
+to round and X is the number of decimal places to round. Rounding always
+rounds UP. So to round a value up to the nearest 100, set X = 2.
+The actual, non-rounded value will also be stored in the job ad as an
+attribute named \Attr{<foo>\_RAW}.
+
+The following are set by default:
+\begin{verbatim}
+SCHEDD_ROUND_ATTR_ImageSize = 4
+SCHEDD_ROUND_ATTR_ExecutableSize = 4
+SCHEDD_ROUND_ATTR_DiskUsage = 4
+\end{verbatim}
+
+Thus, the above attributes are all rounded up from kbytes to the nearest
+10 megabytes.
 
 \item Added the ability to pass a specific \Condor{config\_val} program
 to the cron/Hawkeye ``modules''.  If ``HAWKEYE\_CONFIG\_VAL'' is
@@ -208,6 +299,36 @@ crashes and restarts.
 \item Added the ability to set \MacroNI{GROUP\_AUTOREGROUP} on a per-group
 basis, using the syntax GROUP\_AUTOREGROUP\_<groupname> = True/False.
 
+\item The password authentication method now works on all
+platforms. It was previously only available on Windows. UNIX platforms
+will store the pool password in the file defined by the configuration
+parameter \Macro{POOL\_PASSWORD\_FILE}. This file will be owned by the
+real UID that Condor runs as and will only be accessible by that user.
+
+\item A new tool, \Condor{userlog\_job\_counter}, has been added.
+Given a userlog file as an argument, it determines the number of
+queued (e.g., submitted but not yet terminated or aborted) jobs
+recorded in that userlog, and returns that value as an exit code.  It
+returns 255 if there are more than 254 queued jobs or to indicate an
+error (e.g., a userlog reading/parsing error, no events found, a job
+count <0 or >254, improper usage, etc.).
+
+\item The \Condor{chirp} tool has been added to the Windows
+distribution.
+
+\item Added configuration parameter \Macro{SYSAPI\_GET\_LOADAVG}, which
+can be used to disable the calculation of system load average on
+execute machines. The default value is true (same behavior as previous
+versions of Condor). If set to false, load average is not computed and
+a value of 0.0 is used.
+
+\item
+\index{environment variables!X509\_USER\_PROXY}
+\index{X509\_USER\_PROXY}
+The environment variable \Env{X509\_USER\_PROXY} is now set to the
+full path of the proxy for scheduler universe jobs if a proxy is
+associated with the job.
+
 \end{itemize}
 
 
@@ -233,10 +354,6 @@ when encountering a machine state of ``Backfill''.
 
 \item Fixed numeric value wrap-around bug for the totals in \Condor{status}.
 
-\item Fixed a security hole in the checkpoint server where arbitrary
-files owned by the condor uid, or the uid of a personal condor running a
-checkpoint server, could be read and written.
-
 \item Grid universe jobs sent to Globus Toolkit 2 resources now
 generate an evict user log event when the job transitions from Running
 to Idle, along with another execute even when the job restarts.  Previously
@@ -246,6 +363,20 @@ would indicate that the job was Running.
 
 \item All grid universe jobs now properly handle the new job attributes
 \Attr{Arguments}, \Attr{Environment}, and \Attr{TransferOutputRemaps}.
+
+\item In some cases, a restart of Condor was required to properly handle
+a change in the undocumented configuration parameter
+\Attr{SIGNIFICANT\_ATTRIBUTES}. Now, a \Condor{reconfig} is sufficient.
+
+\item When auto-clustering jobs for matchmaking, ensure that the job's
+\Attr{Requirements} expression is always considered significant.
+
+\item On Windows, when Condor was running as a normal user (i.e. not as
+local system), sending a soft-kill (i.e. WM\_CLOSE message) to a user
+job would always fail. This is now fixed.
+
+\item Fixed a couple bugs that could cause the \Condor{master} to crash
+on a shut-down or restart.
 
 \item Fixed a permissions problem that would cause automatic X509 proxy renewal for vanilla universe jobs to fail.
 
@@ -313,6 +444,21 @@ Tru64 5.1 on Alpha.
 \item Fixed a bug in the \Condor{gridmanager} that could cause gt2 grid
 jobs with an invalid proxy to become stuck (the \Condor{gridmanager}
 would do nothing with the jobs and not acknowledge a hold or removal).
+
+\item It used to be impossible to use the \Macro{SUBMIT\_EXPRS}
+  configuration setting to provide default values for job submit file
+  keywords that were recognized by \Condor{submit}.
+  For example, administrators could define a default value for a
+  custom job attribute, but not something like \Attr{Notification} or
+  \Attr{WantRemoteIO}.
+  Now, administrators can use \MacroNI{SUBMIT\_EXPRS} for any
+  settings, whether they are regular \Condor{submit} keywords or
+  custom job attributes.
+
+\item Fixed a bug in the \Condor{startd} that could cause resources to
+  get stuck in the Backill/Killing state if both the
+  \Macro{START\_BACKFILL} and \Macro{EVICT\_BACKFILL} expressions
+  evaluated to TRUE at the same time.
 
 \end{itemize}
 

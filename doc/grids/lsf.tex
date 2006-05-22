@@ -1,0 +1,19 @@
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:LSF}The lsf grid type }
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{LSF}
+
+Platform LSF is a popular batch system. See the Platform LSF web page
+(\URL{http://www.platform.com/Products/Platform.LSF.Family})
+for more information about LSF.
+
+Condor jobs may be submitted to a local LSF system
+using the \SubmitCmd{grid} universe and the
+\SubmitCmd{grid\_resource} command as follows:
+\begin{verbatim}
+grid_resource = lsf
+\end{verbatim}
+
+Details on where LSF is installed on the local system are
+given in the file \$(GLITE\_LOCATION)/etc/batch\_gahp.config.

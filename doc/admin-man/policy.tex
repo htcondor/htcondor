@@ -1342,6 +1342,10 @@ job or in the negotiator's rank expressions, but then the low-priority
 claim will never be interrupted; it can keep running more jobs.  The
 solution is to use \Expr{CLAIM\_WORKLIFE} to force the claim to stop
 running additional jobs after a certain amount of time.
+The default value for \Expr{CLAIM\_WORKLIFE} is -1, which is treated
+as an infinite claim worklife, so claims may be held indefinitely (as
+long as they are not preempted and the schedd does not relinquish
+them, of course).
 
 \item[\Expr{MAXJOBRETIREMENTTIME}] If the machine is in the
 Claimed/Retiring state, this expression specifies the maximum time (in
@@ -1910,13 +1914,10 @@ the \Condor{schedd} may hold onto this claim indefinitely,
 as long as the user keeps supplying more jobs to run.
 If this is not desired, force claims to be retired after
 some amount of time using \Macro{CLAIM\_WORKLIFE}. 
-This behaves just
-as though the claim were preempted by a higher priority job after the
-specified amount of time.  The retiring claim will allow the existing
-job to complete, but will not allow any new jobs to be started.
-If there is more work to do,
-the \Condor{schedd} must go back to
-the \Condor{negotiator} to request a new match.
+This enforces a time limit, beyond which no new jobs may be started on
+an existing claim; therefore \Condor{schedd} is forced to go back to
+\Condor{negotiator} to request a new match if there is still
+more work to do.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

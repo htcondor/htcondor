@@ -1,46 +1,77 @@
 \begin{ManPage}{\label{man-condor-history}\Condor{history}}{1}
-{View log of condor jobs completed to date}
-\Synopsis \SynProg{\Condor{history}}
-\oOpt{-help} \oOpt{-l} \oOptArg{-f}{filename}
+{View log of Condor jobs completed to date}
+\Synopsis
+\SynProg{\Condor{history}}
+\oOpt{-help} 
+
+\SynProg{\Condor{history}}
+\oOpt{-l} 
+\oOptArg{-f}{filename}
 \oOptArg{-format}{formatString AttributeName}
-\oOptArg{-completedsince}{postgrestimestamp}
-\oArg{-constraint expr \Bar cluster \Bar cluster.process \Bar owner}
+\oOpt{-backwards}
+\oArg{-constraint expr \Bar cluster \Bar cluster.process \Bar owner \Bar
+-completedsince postgrestimestamp}
 
 \Description
-\Condor{history} displays a summary of all condor jobs listed in the
-specified history files.  If no history files are specified (with the \Opt{-f} option), the local
+\Condor{history} displays a summary of all Condor jobs listed in the
+specified history files.
+If no history files are specified (with the \Opt{-f} option), the local
 history file as specified in Condor's configuration file
-(~condor/spool/history by default) is read.  The default listing
-summarizes each job on a single line, and  contains the following items:
+(\File{\MacroUNI{SPOOL}/history} by default) is read.  
+The default listing
+summarizes (in chronological order)
+each job on a single line, and  contains the following items:
 
 \index{Condor commands!condor\_history}
 \index{condor\_history command}
 
 \begin{description}
-\item[ID] The cluster/process id of the condor job. 
+\item[ID] The cluster/process id of the job. 
 \item[OWNER] The owner of the job. 
 \item[SUBMITTED] The month, day, hour, and minute the job was submitted to the queue. 
 \item[CPU\_USAGE] Remote user CPU time accumulated by the job to date in days, hours, minutes, and seconds.
 \item[ST] Completion status of the job (C = completed and X = removed).
 \item[COMPLETED] The time the job was completed.
 \item[PRI] User specified priority of the job, ranges from -20 to +20, with higher numbers corresponding to greater priority. 
-\item[SIZE] The virtual image size of the executable in megabytes. 
+\item[SIZE] The virtual image size of the executable in Megabytes. 
 \item[CMD] The name of the executable. 
 \end{description}
 
-If a job ID (in the form of cluster\_id or cluster\_id.proc\_id) or an
-owner is provided, output will be restricted to jobs with the
+If a job ID (in the form of \Argnm{cluster\_id} or \Argnm{cluster\_id.proc\_id}) or an
+\Argnm{owner} is provided, output will be restricted to jobs with the
 specified IDs and/or submitted by the specified owner.  
-The -constraint option can be used to display jobs that satisfy a
+The \Argnm{-constraint} option can be used to display jobs that satisfy a
 specified boolean expression.
 
+The history file is kept in chronological order,
+implying that new entries are appended at the end of the
+file.
+As of Condor version 6.7.19,
+the format of the history file is altered to enable faster
+reading of the history file backwards (most recent job first).
+History files written with earlier versions of Condor,
+as well as those that have entries of both
+the older and newer format
+need to be converted to the new format.
+See the \Condor{convert\_history} manual page 
+on page~\pageref{man-condor-convert-history}
+for details on converting history files to the new format.
+
 \begin{Options}
-    \OptItem{\Opt{-help}}{Get a brief description of the supported options}
-    \OptItem{\OptArg{-f}{filename}}{Use the specified file instead of the default history file}
-    \OptItem{\OptArg{-constraint}{expr}}{Display jobs that satisfy the expression}
-    \OptItem{\OptArg{-format}{formatSpec}{AttributeName}}{display jobs with a custom format. See \Condor{q} man page for details.}
-    \OptItem{\Opt{-l}}{Display job ads in long format}
-    \OptItem{\OptArg{-completedsince}{postgrestimestamp}}{Display only job
+  \OptItem{\Opt{-help}}{Display usage information and exit.}
+  \OptItem{\OptArg{-f}{filename}}{Use the specified file instead of the default     history file.}
+  \OptItem{\Opt{-backwards}}{List jobs in reverse chronological
+    order. The job most recently added to the history file is first.}
+  \OptItem{\OptArg{-match}{number}}{Limit the number of jobs displayed
+    to \Arg{number}.}
+  \OptItem{\OptArg{-name}{quill-name}}{Utilize the given Quill database
+    for history information, instead of the history file.}
+  \OptItem{\OptArg{-constraint}{expr}}{Display jobs that satisfy the
+    expression.}
+  \OptItem{\OptArg{-format}{formatSpec}{AttributeName}}{Display jobs
+    with a custom format. See \Condor{q} man page for details.}
+  \OptItem{\Opt{-l}}{Display job ads in long format.}
+  \OptItem{\OptArg{-completedsince}{postgrestimestamp}}{Display only job
       ads that were in the Completed job state on or after the date and
       time given by the \Arg{postgrestimestamp}. 
       The \Arg{postgrestimestamp} follows the syntax as given for

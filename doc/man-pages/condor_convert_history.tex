@@ -4,40 +4,60 @@
 
 \SynProg{\Condor{convert\_history}}
 \oOpt{-help}
-\Optnm{files}
+
+\SynProg{\Condor{convert\_history}}
+\Arg{history-file1}
+\oArg{history-file2\ldots}
 
 \index{Condor commands!condor\_convert\_history}
 \index{condor\_convert\_history command}
 
 \Description
 
-Beginning with Condor 6.7.19, the Condor history file was changed to a
-new format to allow fast searches backwards through the file. Not all
-queries can take advantage of the speed increase, but the ones that
-can are significantly faster. 
+As of Condor version 6.7.19,
+the Condor history file has a
+new format to allow fast searches backwards through the file.
+Not all queries can take advantage of the speed increase,
+but the ones that can are significantly faster. 
 
-New job ClassAds saved in the history file will automatically be saved
-in the new format. In order to search these new ClassAds, no changes
-are necessary. However, to be able to search the entire history, the
-history file must be converted, and \Condor{convert\_history} will do
-this for you. 
+Entries placed in the history file after upgrade
+to Condor 6.7.19 will automatically be saved
+in the new format.
+The new format adds information to the string which
+distinguishes and separates job entries.
+In order to search within this new format,
+no changes are necessary. 
+However, to be able to search the entire history,
+the history file must be converted to the updated format.
+\Condor{convert\_history} does this.
 
-To run this command, simply give it a list of history files to
-convert. The history file is normally in the Condor spool directory
-and is named ``history''. Note that the history file is rotated, so
+Turn the \Condor{schedd} daemon off while converting 
+history files.
+Turn it back on after conversion is completed.
+
+Arguments to \Condor{convert\_history} are the
+history files to convert.
+The history file is normally in the Condor spool directory;
+it is named \File{history}.
+Since the history file is rotated,
 there may be multiple history files, and all of them should be
-converted. On Unix variants, the easiest way to do this is:
+converted. On Unix platform variants, the easiest way to do this is:
 
 \begin{verbatim}
 cd `condor_config_val SPOOL`
 condor_convert_history history*
 \end{verbatim}
 
-Note that this will back up the original history files in case of a
-problem. It is best not to keep these in the spool directory, but to
-copy them elsewhere. If you keep them in the spool directory,
-\Condor{history} will find them and you will appear to have duplicate
-jobs. 
+\Condor{convert\_history} makes a
+back up of each original history files in case of a problem.
+The names of these back up files are listed;
+names are formed by appending the suffix \verb@.oldver@
+to the original file name.
+Move these back up files to a directory other than
+the spool directory.
+If kept in the spool directory,
+\Condor{history} will find the back ups,
+and will appear to have duplicate jobs. 
 
 \ExitStatus
 
