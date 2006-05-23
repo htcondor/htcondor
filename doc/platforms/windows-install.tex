@@ -28,11 +28,11 @@ but the job will never run.
 The Condor executable for distribution is packaged in
 a single file such as:
 \begin{verbatim}
-  condor-6.6.0-winnt40-x86.exe
+  condor-6.7.8-winnt40-x86.msi
 \end{verbatim}
 
 \index{Windows!installation!initial file size}
-This file is approximately 20 Mbytes in size, and may be
+This file is approximately 80 Mbytes in size, and may be
 removed once Condor is fully installed.
 
 Before installing Condor, please consider joining the condor-world mailing
@@ -47,7 +47,7 @@ To subscribe, follow the directions given at
 
 \item Condor for Windows requires Windows 2000 (or better) or Windows XP.
 
-\item 50 megabytes of free disk space is recommended.  Significantly more 
+\item 300 megabytes of free disk space is recommended.  Significantly more 
 disk space could be desired to be able to run jobs with large data files.
 
 \item Condor for Windows will operate on either an NTFS or FAT filesystem.  However, for security purposes, NTFS is preferred.
@@ -108,7 +108,7 @@ on the other machines within the pool.
 \index{Windows!installation!required disk space}
 The Condor release directory takes up a fair amount of space.
 The size requirement for the release
-directory is approximately 50 Mbytes.
+directory is approximately 200 Mbytes.
 
 Condor itself, however, needs space to store all of your jobs, and their
 input files.  If you will be submitting large amounts of jobs,
@@ -228,7 +228,7 @@ The Condor installation is completed by answering questions and choosing options
 The next step is where the destination of the Condor files will be
 decided.
 It is recommended that Condor be installed in the location shown as the default in the dialog box:
-\File{C:\Bs Condor}.
+\verb@C:\Condor@.
 
 Installation on the local disk is chosen for several reasons.
 
@@ -416,35 +416,117 @@ This section details how to run the Condor for Windows installer in an
 unattended batch mode, i.e. completely from the command prompt without the
 GUI interface.
 
-Currently, the Condor for Windows installer is based upon InstallShield's
-Package for the Web (PFTW) technology.  So say you download the
-\index{Windows!installation!InstallShield} \index{PFTW}
-self-extracting \File{.exe} file from the Condor web site, for example
-\File{condor-6.7.10-winnt50-x86.exe}.
+The Condor for Windows installer uses the Microsoft Installer (MSI)
+technology, and can be configured for unattended installs just like any
+other ordinary MSI installer.
 
-Then, to automate the installation of a PFTW package, you
-would first perform one installation as administrator ``by hand" via the GUI
-to create an answer file:
-\index{Windows!installation!answer file}
+The following is a sample batch file that is used to set all the
+properties necessary for an unattended install.
 
 \begin{verbatim}
-  condor-6.7.10-winnt50-x86.exe /a /r /f1c:\temp\foo.iss
+@echo on
+set ARGS=
+set ARGS=%ARGS% NEWPOOL=N
+set ARGS=%ARGS% POOLNAME=""
+set ARGS=%ARGS% RUNJOBS=C
+set ARGS=%ARGS% VACATEJOBS=Y
+set ARGS=%ARGS% SUBMITJOBS=Y
+set ARGS=%ARGS% CONDOREMAIL="you@yours.com"
+set ARGS=%ARGS% HOSTALLOWREAD="*"
+set ARGS=%ARGS% HOSTALLOWWRITE="*"
+set ARGS=%ARGS% HOSTALLOWADMINISTATOR="$(FULL_HOSTNAME)"
+set ARGS=%ARGS% INSTALLDIR="C:\Condor"
+set ARGS=%ARGS% POOLHOSTNAME="$(FULL_HOSTNAME)"
+set ARGS=%ARGS% ACCOUNTINGDOMAIN="none"
+set ARGS=%ARGS% JVMLOCATION="C:\Windows\system32\java.exe"
+set ARGS=%ARGS% SMTPSERVER="smtp.localhost"
+
+msiexec /qb /l* condor-install-log.txt /i condor-6.7.18-winnt50-x86.msi %ARGS%
 \end{verbatim}
 
-In this example, the answer file is \verb@c:\temp\foo.iss@.  You can
-provide whatever file name you want, but notice there is no space between
-the \Opt{/f1} option and the file name.
+Each property corresponds to answers supplied in the interactive installer
+as described above. The following is a brief explanation of each property
+as it applies to unattended installations:
 
-Next, to install the package completely silently using the same answers you
-provided above, you would run as administrator:
+\begin{description}
+\item [NEWPOOL = $<$ Y \Bar\ N $>$]
+determines whether the installer will create a new pool with the target
+machine as the central manager.
 
-\begin{verbatim}
-  start /wait condor-6.7.10-winnt50-x86.exe /s /a /s /sms /f1c:\temp\foo.iss
-\end{verbatim}
+\item [POOLNAME]
+sets the name of the pool if a new pool is to be created. Possible values
+are either the name or the empty string \verb@""@.
 
-The first \Opt{/s} is only needed for a completely silent installation. If
-you leave it off, the PFTW package will show you a status bar as it extracts
-the InstallShield tree to the temporary directory.
+\item [RUNJOBS = $<$ N \Bar\ A \Bar\ I \Bar\ C $>$]
+determines when Condor will run jobs. This can be set to:
+\begin{itemize}
+\item Never run jobs (N)
+\item Always run jobs (A)
+\item Only run jobs when the keyboard and mouse are Idle (I)
+\item Only run jobs when the keyboard and mouse are idle and the CPU
+usage is low (C)
+\end{itemize}
+
+\item [VACATEJOBS = $<$ Y \Bar\ N $>$]
+determines what Condor should do when it has to stop the execution of
+a user job. When set to Y, Condor will vacate the job and start
+it somewhere else if possible. When set to N, Condor will merely
+suspend the job in memory and wait for the machine to become available
+again. 
+
+\item[SUBMITJOBS  = $<$ Y \Bar\ N $>$]
+will cause the installer to configure the machine as a submit
+node when set to Y. 
+
+\item[CONDOREMAIL]
+sets the e-mail address of the Condor admininistrator. Possible values are
+an e-mail address or the empty string \verb@""@.
+
+\item[HOSTALLOWREAD]
+is a list of host names that are allowed to issue READ commands to
+Condor daemons. This value should be set in accordance with the
+\Macro{HOSTALLOW\_READ} setting in the configuration file, as described in
+section~\ref{sec:Host-Security} on page~\pageref{sec:Host-Security}.
+
+\item[HOSTALLOWWRITE]
+is a list of host names that are allowed to issue WRITE commands to
+Condor daemons. This value should be set in accordance with the
+\Macro{HOSTALLOW\_WRITE} setting in the configuration file, as described in
+section~\ref{sec:Host-Security} on page~\pageref{sec:Host-Security}.
+
+\item[HOSTALLOWADMINISTRATOR]
+is a list of host names that are allowed to issue ADMINISTRATOR commands to
+Condor daemons. This value should be set in accordance with the
+\Macro{HOSTALLOW\_ADMINISTRATOR} setting in the configuration file, 
+as described in
+section~\ref{sec:Host-Security} on page~\pageref{sec:Host-Security}.
+
+\item[INSTALLDIR]
+defines the path to where Condor will be installed. 
+
+\item[POOLHOSTNAME]
+defines the host name of the pool's central manager. 
+
+\item[ACCOUNTINGDOMAIN] 
+defines the accounting (or UID) domain the target machine will be in.
+
+\item[JVMLOCATION]
+defines the path to Java virtual machine on the target machine.
+
+\item[SMTPSERVER]
+defines the host name of the SMTP server that the target machine is to
+use to send e-mail.
+\end{description}
+
+After defining each of these properties for the MSI installer, the
+installer can be started with the \verb@msiexec@ command. The following
+command starts the installer in unattended mode, and dumps a journal of
+the installer's progress to a log file:\\
+\verb@msiexec /qb /l* condor-install-log.txt /i condor-6.7.18-winnt50-x86.msi@ [property=value] ... \\
+
+More information on the features of \verb@msiexec@
+can be found at Microsoft's website at
+\URL{http://www.microsoft.com/resources/documentation/windows/xp/all/proddocs/en-us/msiexec.mspx}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:NT-Manual-Install}Manual Installation Condor on Windows}
@@ -491,7 +573,8 @@ CONDOR\_CONFIG should point to the \File{condor\_config} file.  In this version
 of Condor, it \Bold{must} reside on the local disk.
 
 RELEASE\_DIR should point to the directory where Condor is installed.  This
-is typically \File{C:\Bs Condor}, and again, this \Bold{must} reside on the
+is typically
+\verb@C:\Condor@, and again, this \Bold{must} reside on the
 local disk.
 
 \item The other purpose is storing the entries from the last installation
@@ -526,7 +609,7 @@ manually, Condor must
 be started by hand, or you can simply reboot. \Note The Condor service
 will start automatically whenever you reboot your machine.
 
-To start condor by hand:
+To start Condor by hand:
 \begin{enumerate}
 \item From the Start menu, choose Settings.
 \item From the Settings menu, choose Control Panel.
@@ -554,11 +637,12 @@ to the Condor pool.
 
 Also, you should now be able to open up a new cmd (DOS prompt) window, and
 the Condor bin directory should be in your path, so you can issue the normal
-Condor commands, such as \condor{q} and \condor{status}.
+Condor commands, such as \Condor{q} and \Condor{status}.
 
 \index{installation!Windows|)}
 \index{Windows!installation|)}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{nt-running-now-what}
 Condor is running... now what?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
