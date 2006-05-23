@@ -240,7 +240,7 @@ main_config( bool is_full )
 int
 main_shutdown_fast()
 {
-    DC_Exit( EXIT_ERROR );
+    DC_Exit( EXIT_RESTART );
     return FALSE;
 }
 
@@ -248,7 +248,7 @@ main_shutdown_fast()
 // shutdown gracefully
 int main_shutdown_graceful() {
     dagman.CleanUp();
-	DC_Exit( EXIT_ERROR );
+	DC_Exit( EXIT_RESTART );
     return FALSE;
 }
 

@@ -31,6 +31,7 @@ enum exit_value {
 	EXIT_OKAY = 0,
 	EXIT_ERROR = 1,
 	EXIT_ABORT = 2, // condor_rm'ed or hit special abort DAG exit code
+	EXIT_RESTART = 3,	// exit but indicate that we should be restarted
 };
 
 int main_shutdown_rescue( int exitVal );
