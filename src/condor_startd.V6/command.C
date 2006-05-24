@@ -566,22 +566,61 @@ command_vm_register( Service*, int, Stream* s )
 #define ABORT \
 delete req_classad;						\
 if (client_addr) free(client_addr);		\
-if( s == claimed_state ) {				\
-	if(rip->r_pre_pre) {				\
-		delete rip->r_pre_pre;			\
-		rip->r_pre_pre = new Claim( rip ); \
-	}									\
-	else {								\
-		delete rip->r_pre;				\
-		rip->r_pre = new Claim( rip );	\
-	}                                   \
-} else {								\
-    if( s != owner_state ) {			\
-        rip->dprintf( D_ALWAYS, "State change: claiming protocol failed\n" ); \
-    }									\
-	rip->change_state( owner_state );	\
-}										\
-return FALSE
+return abort_claim(rip)
+
+int
+abort_claim( Resource* rip )
+{
+	switch( rip->state() ) {
+	case claimed_state:
+		if (rip->r_pre_pre) {
+			rip->removeClaim( rip->r_pre_pre );
+		}
+		else {
+			rip->removeClaim( rip->r_pre );
+		}
+		break;
+
+	case owner_state:
+			// no state change or other logic required
+		break;
+
+#if HAVE_BACKFILL
+	case backfill_state:
+			// For clarity, print this before changing the destination state.
+		rip->dprintf( D_ALWAYS, "Claiming protocol failed\n" );
+		if (rip->destination_state() == matched_state ) { 
+			/*
+			  We got the match notification, so we've already started
+			  evicting the backfill job.  In this case, if we have to
+			  abort the claim, the best we can do is change the
+			  destination so we go back to owner instead of matched.
+			  We still have to wait for the starter to exit. -Derek 
+			*/
+			rip->set_destination_state( owner_state );
+		} else {
+			/*
+			  Otherwise, we were running normally when the claim
+			  request came in we can just let it happily continue.  In
+			  this case, all we've got to do here is delete our
+			  current claim object and generate a new one. -Derek
+			*/
+			rip->removeClaim( rip->r_cur );
+		}
+		return FALSE;
+		break;
+#endif /* HAVE_BACKFILL */
+
+	default:
+		rip->dprintf( D_ALWAYS, "State change: claiming protocol failed\n" );
+		rip->change_state( owner_state );
+		return FALSE;
+		break;
+	}
+	rip->dprintf( D_ALWAYS, "Claiming protocol failed\n" );
+	return FALSE;
+}
+
 
 int
 request_claim( Resource* rip, char* id, Stream* stream )
@@ -594,7 +633,6 @@ request_claim( Resource* rip, char* id, Stream* stream )
 	float oldrank = 0;
 	char *client_addr = NULL;
 	int interval;
-	State s = rip->state();
 
 	if( !rip->r_cur ) {
 		EXCEPT( "request_claim: no current claim object." );
@@ -871,15 +909,34 @@ request_claim( Resource* rip, char* id, Stream* stream )
 }
 #undef ABORT
 
-#define ABORT 						\
-if( client_addr )					\
-    free( client_addr );			\
-stream->encode();					\
-stream->end_of_message();			\
-rip->r_cur->setRequestStream( NULL );	\
-rip->dprintf( D_ALWAYS, "State change: claiming protocol failed\n" ); \
-rip->change_state( owner_state );	\
-return KEEP_STREAM
+
+int
+abort_accept_claim( Resource* rip, Stream* stream )
+{
+	stream->encode();
+	stream->end_of_message();
+	rip->r_cur->setRequestStream( NULL );
+#if HAVE_BACKFILL
+	if (rip->state() == backfill_state &&
+		rip->destination_state() != owner_state)
+	{
+			/*
+			  If we're still in backfill when this happens, we can't
+			  go directly to owner state.  We've got to just set our
+			  destination and then wait for the starter to exit before
+			  we actually change states...
+			*/
+		rip->dprintf( D_ALWAYS, "Claiming protocol failed\n" );
+		rip->set_destination_state( owner_state );
+		return KEEP_STREAM;
+	}
+#endif /* HAVE_BACKFILL */
+
+	rip->dprintf( D_ALWAYS, "State change: claiming protocol failed\n" );
+	rip->change_state( owner_state );
+	return KEEP_STREAM;
+}
+
 
 int
 accept_request_claim( Resource* rip )
@@ -899,11 +956,11 @@ accept_request_claim( Resource* rip )
 	stream->encode();
 	if( !stream->put( OK ) ) {
 		rip->dprintf( D_ALWAYS, "Can't to send cmd to schedd.\n" );
-		ABORT;
+		return abort_accept_claim( rip, stream );
 	}
 	if( !stream->eom() ) {
 		rip->dprintf( D_ALWAYS, "Can't to send eom to schedd.\n" );
-		ABORT;
+		return abort_accept_claim( rip, stream );
 	}
 
 		// Grab the schedd addr and alive interval if the alive interval is still
@@ -915,13 +972,15 @@ accept_request_claim( Resource* rip )
 		stream->decode();
 		if( ! stream->code(client_addr) ) {
 			rip->dprintf( D_ALWAYS, "Can't receive schedd addr.\n" );
-			ABORT;
+			return abort_accept_claim( rip, stream );
 		} else {
 			rip->dprintf( D_FULLDEBUG, "Schedd addr = %s\n", client_addr );
 		}
 		if( !stream->code(interval) ) {
 			rip->dprintf( D_ALWAYS, "Can't receive alive interval\n" );
-			ABORT;
+			free( client_addr );
+			client_addr = NULL;
+			return abort_accept_claim( rip, stream );
 		} else {
 			rip->dprintf( D_FULLDEBUG, "Alive interval = %d\n", interval );
 		}
@@ -994,7 +1053,7 @@ accept_request_claim( Resource* rip )
 		// to delete the stream we've already deleted.
 	return KEEP_STREAM;
 }
-#undef ABORT
+
 
 
 #define ABORT \
