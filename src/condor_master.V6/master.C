@@ -405,7 +405,7 @@ admin_command_handler( Service*, int cmd, Stream* stream )
 		daemons.DaemonsOff( 1 );
 		return TRUE;
 	case DAEMONS_OFF_PEACEFUL:
-		daemons.DaemonsOff();
+		daemons.DaemonsOffPeaceful();
 		return TRUE;
 	case MASTER_OFF:
 		daemonCore->Send_Signal( daemonCore->getpid(), SIGTERM );
