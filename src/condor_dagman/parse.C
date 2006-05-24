@@ -919,6 +919,15 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber) {
 		value[i] = '\0';
 
 		*str++;
+
+			// Check for illegal variable name.
+		MyString tmpName(name);
+		tmpName.lower_case();
+		if ( tmpName.find( "queue" ) == 0 ) {
+			debug_printf(DEBUG_QUIET, "Illegal variable name: %s; variable "
+						"names cannot begin with \"queue\"\n", name );
+			return false;
+		}
 		
 		debug_printf(DEBUG_VERBOSE, "Argument added, Name=\"%s\"\tValue=\"%s\"\n", name, value);
 		job->varNamesFromDag->Append(new MyString(name));
