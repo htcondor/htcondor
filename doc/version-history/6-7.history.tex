@@ -140,6 +140,12 @@ possible result of this would be a job leaving the queue
 the output files.  The possibility of this bug happening was much less
 for large files (greater than 65536 bytes).
 
+% Gnats PR 683
+\item DAG variable names beginning with "queue" can goof up DAG node
+job submits; \Condor{dagman} now checks for such variable names and
+fails with an explicit error message if there are any.  This bug has
+probably existed for a long time, but was just recently discovered.
+
 \end{itemize}
 
 \noindent Known Bugs:
