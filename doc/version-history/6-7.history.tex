@@ -146,6 +146,10 @@ job submits; \Condor{dagman} now checks for such variable names and
 fails with an explicit error message if there are any.  This bug has
 probably existed for a long time, but was just recently discovered.
 
+\item \Condor{off} -peaceful was still resulting in a shutdown timeout
+after \MacroNI{GRACEFUL\_SHUTDOWN\_TIMEOUT}, which would then cause jobs
+to be preempted.
+
 \end{itemize}
 
 \noindent Known Bugs:
