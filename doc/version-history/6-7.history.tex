@@ -97,6 +97,16 @@ contained a typo which has now been fixed.
 (\Condor{ckpt\_server}) to publish an incorrect IP address in the
 \Attr{Machine} attribute of it's ClassAd.
 
+\item Fixed a big introduced in 6.7.19, which could cause the startd
+to get into a state where it would reject all new claims (requiring a
+restart of the startd to resume normal operation).  The symptom of
+this bug was a recurring message in the startd such as this:
+
+\begin{verbatim}
+5/19 23:51:47 vm1: ClaimId from schedd (<xxx.xxx.xxx.xxx:45877>#1147893880#1208) doesn't match (<xxx.xxx.xxx.xxx:45877>#1147893880#1207)
+5/19 23:51:47 vm1: State change: claiming protocol failed
+\end{verbatim}
+
 \end{itemize}
 
 \noindent Known Bugs:
