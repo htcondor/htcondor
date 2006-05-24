@@ -363,7 +363,21 @@ JICShadow::allJobsDone( void )
 		set_priv(saved_priv);
 
 		if( ! rval ) {
-				// failed to transfer, the shadow is probably gone.
+				// Failed to transfer.  See if there is a reason to put
+				// the job on hold.
+			FileTransfer::FileTransferInfo ft_info = filetrans->GetInfo();
+			if(!ft_info.success && !ft_info.try_again) {
+				ASSERT(ft_info.hold_code != 0);
+				notifyStarterError(ft_info.error_desc.Value(), true,
+				                   ft_info.hold_code,ft_info.hold_subcode);
+				return false;
+			}
+
+				// Some other kind of error.  Would like to know
+				// for sure whether this really means we are disconnected
+				// from the shadow, but for now, we just assume that
+				// is the case.
+			dprintf(D_ALWAYS,"File transfer failed, assuming disconnect.\n");
 			job_cleanup_disconnected = true;
 			return false;
 		}
@@ -614,11 +628,11 @@ JICShadow::notifyJobExit( int exit_status, int reason, UserProc*
 
 
 bool
-JICShadow::notifyStarterError( const char* err_msg, bool critical )
+JICShadow::notifyStarterError( const char* err_msg, bool critical, int hold_reason_code, int hold_reason_subcode )
 {
 	u_log->logStarterError( err_msg, critical );
 
-	if( REMOTE_CONDOR_ulog_printf(err_msg) < 0 ) {
+	if( REMOTE_CONDOR_ulog_error(hold_reason_code, hold_reason_subcode, err_msg) < 0 ) {
 		dprintf( D_ALWAYS, 
 				 "Failed to send starter error string to Shadow.\n" );
 		return false;
@@ -1604,7 +1618,15 @@ JICShadow::transferCompleted( FileTransfer *ftrans )
 		// Make certain the file transfer succeeded.  
 		// Until "multi-starter" has meaning, it's ok to EXCEPT here,
 		// since there's nothing else for us to do.
-	if ( ftrans &&  !((ftrans->GetInfo()).success) ) {
+	FileTransfer::FileTransferInfo ft_info = ftrans->GetInfo();
+	if ( ftrans &&  !ft_info.success ) {
+		if(!ft_info.try_again) {
+			// Put the job on hold.
+			ASSERT(ft_info.hold_code != 0);
+			notifyStarterError(ft_info.error_desc.Value(), true,
+			                   ft_info.hold_code,ft_info.hold_subcode);
+		}
+
 		EXCEPT( "Failed to transfer files" );
 	}
 

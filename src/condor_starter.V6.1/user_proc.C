@@ -307,7 +307,9 @@ UserProc::openStdFile( std_file_type type, const char* attr,
 		if( !handler->Init(filename, name, is_output) ) {
 			MyString err_msg;
 			err_msg.sprintf( "unable to establish %s stream", phrase );
-			Starter->jic->notifyStarterError( err_msg.Value(), true );
+			Starter->jic->notifyStarterError( err_msg.Value(), true,
+			    is_output ? CONDOR_HOLD_CODE_UnableToOpenOutputStream :
+			                CONDOR_HOLD_CODE_UnableToOpenInputStream, 0 );
 			return -1;
 		}
 		fd = handler->GetJobPipe();
@@ -331,12 +333,15 @@ UserProc::openStdFile( std_file_type type, const char* attr,
 		fd = open( filename, O_RDONLY );
 	}
 	if( fd < 0 ) {
+		int open_errno = errno;
 		char const *errno_str = strerror( errno );
 		MyString err_msg;
 		err_msg.sprintf( "Failed to open '%s' as %s: %s (errno %d)",
 						 filename, phrase, errno_str, errno );
 		dprintf( D_ALWAYS, "%s\n", err_msg.Value() );
-		Starter->jic->notifyStarterError( err_msg.Value(), true );
+		Starter->jic->notifyStarterError( err_msg.Value(), true,
+		  is_output ? CONDOR_HOLD_CODE_UnableToOpenOutput :
+		              CONDOR_HOLD_CODE_UnableToOpenInput, open_errno );
 		return -1;
 	}
 	dprintf( is_null_file ? D_FULLDEBUG : D_ALWAYS,

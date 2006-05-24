@@ -32,5 +32,14 @@ const int CONDOR_HOLD_CODE_UserRequest = 1;
 const int CONDOR_HOLD_CODE_GlobusGramError = 2;
 const int CONDOR_HOLD_CODE_JobPolicy   = 3;
 const int CONDOR_HOLD_CODE_CorruptedCredential = 4;
+const int CONDOR_HOLD_CODE_JobPolicyUndefined   = 5;
+const int CONDOR_HOLD_CODE_FailedToCreateProcess = 6;
+const int CONDOR_HOLD_CODE_UnableToOpenOutput = 7;
+const int CONDOR_HOLD_CODE_UnableToOpenInput = 8;
+const int CONDOR_HOLD_CODE_UnableToOpenOutputStream = 9;
+const int CONDOR_HOLD_CODE_UnableToOpenInputStream = 10;
+const int CONDOR_HOLD_CODE_InvalidTransferAck = 11;
+const int CONDOR_HOLD_CODE_DownloadFileError = 12;
+const int CONDOR_HOLD_CODE_UploadFileError = 13;
 
 #endif

@@ -412,10 +412,10 @@ BaseShadow::reconnectFailed( const char* reason )
 
 
 void
-BaseShadow::holdJob( const char* reason )
+BaseShadow::holdJob( const char* reason, int hold_reason_code, int hold_reason_subcode )
 {
-	dprintf( D_ALWAYS, "Job %d.%d going into Hold state: %s\n", 
-			 getCluster(), getProc(), reason );
+	dprintf( D_ALWAYS, "Job %d.%d going into Hold state (code %d,%d): %s\n", 
+			 getCluster(), getProc(), hold_reason_code, hold_reason_subcode,reason );
 
 	if( ! jobAd ) {
 		dprintf( D_ALWAYS, "In HoldJob() w/ NULL JobAd!" );
@@ -426,14 +426,9 @@ BaseShadow::holdJob( const char* reason )
 	cleanUp();
 
 		// Put the reason in our job ad.
-	int size = strlen( reason ) + strlen( ATTR_HOLD_REASON ) + 4;
-	char* buf = (char*)malloc( size * sizeof(char) );
-	if( ! buf ) {
-		EXCEPT( "Out of memory!" );
-	}
-	sprintf( buf, "%s=\"%s\"", ATTR_HOLD_REASON, reason );
-	jobAd->Insert( buf );
-	free( buf );
+	jobAd->Assign( ATTR_HOLD_REASON, reason );
+	jobAd->Assign( ATTR_HOLD_REASON_CODE, hold_reason_code );
+	jobAd->Assign( ATTR_HOLD_REASON_SUBCODE, hold_reason_subcode );
 
 		// try to send email (if the user wants it)
 	emailHoldEvent( reason );

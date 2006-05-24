@@ -26,6 +26,7 @@
 #include "baseshadow.h"
 #include "shadow_user_policy.h"
 #include "MyString.h"
+#include "condor_holdcodes.h"
 
 
 ShadowUserPolicy::ShadowUserPolicy() 
@@ -177,7 +178,7 @@ ShadowUserPolicy::doAction( int action, bool is_periodic )
 			   screwed something up and they better deal with it.  We
 			   don't just want the job to leave the queue...
 			*/
-		shadow->holdJob( reason.Value() );
+		shadow->holdJob( reason.Value(), CONDOR_HOLD_CODE_JobPolicyUndefined, 0 );
 		break;
 
 	case REMOVE_FROM_QUEUE:
@@ -197,7 +198,7 @@ ShadowUserPolicy::doAction( int action, bool is_periodic )
 		break;
 
 	case HOLD_IN_QUEUE:
-		shadow->holdJob( reason.Value() );
+		shadow->holdJob( reason.Value(), CONDOR_HOLD_CODE_JobPolicy, 0 );
 		break;
 
 	default:

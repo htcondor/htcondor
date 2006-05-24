@@ -704,7 +704,7 @@ extern "C"
 int exception_cleanup(int,int,char*errmsg)
 {
 	_EXCEPT_Cleanup = NULL;
-	Starter->jic->notifyStarterError(errmsg,true);
+	Starter->jic->notifyStarterError(errmsg,true,0,0);
 	Starter->ShutdownFast(0);
 	return 0;
 }

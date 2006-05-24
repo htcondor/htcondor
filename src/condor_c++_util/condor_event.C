@@ -1109,11 +1109,24 @@ RemoteErrorEvent::RemoteErrorEvent()
 	execute_host[0] = daemon_name[0] = '\0';
 	eventNumber = ULOG_REMOTE_ERROR;
 	critical_error = true;
+	hold_reason_code = 0;
+	hold_reason_subcode = 0;
 }
 
 RemoteErrorEvent::~RemoteErrorEvent()
 {
 	delete error_str;
+}
+
+void
+RemoteErrorEvent::setHoldReasonCode(int hold_reason_code)
+{
+	this->hold_reason_code = hold_reason_code;
+}
+void
+RemoteErrorEvent::setHoldReasonSubCode(int hold_reason_subcode)
+{
+	this->hold_reason_subcode = hold_reason_subcode;
 }
 
 int
@@ -1148,6 +1161,11 @@ RemoteErrorEvent::writeEvent(FILE *file)
 		if(!next_line) break;
 		*next_line = '\n';
 		line = next_line+1;
+	}
+
+	if (hold_reason_code) {
+		fprintf(file,"\tCode %d Subcode %d\n",
+		        hold_reason_code, hold_reason_subcode);
 	}
 
     return 1;
@@ -1199,6 +1217,13 @@ RemoteErrorEvent::readEvent(FILE *file)
 		l = line;
 		if(l[0] == '\t') l++;
 
+		int code,subcode;
+		if( sscanf(l,"Code %d Subcode %d",&code,&subcode) == 2 ) {
+			hold_reason_code = code;
+			hold_reason_subcode = subcode;
+			continue;
+		}
+
 		if(lines.Length()) lines += "\n";
 		lines += l;
 	}
@@ -1224,6 +1249,10 @@ RemoteErrorEvent::toClassAd()
 	}
 	if(!critical_error) { //default is true
 		myad->Assign("CriticalError",(int)critical_error);
+	}
+	if(hold_reason_code) {
+		myad->Assign(ATTR_HOLD_REASON_CODE, hold_reason_code);
+		myad->Assign(ATTR_HOLD_REASON_SUBCODE, hold_reason_subcode);
 	}
 
 	return myad;
@@ -1251,6 +1280,8 @@ RemoteErrorEvent::initFromClassAd(ClassAd* ad)
 	if( ad->LookupInteger("CriticalError",crit_err) ) {
 		critical_error = (crit_err != 0);
 	}
+	ad->LookupInteger(ATTR_HOLD_REASON_CODE, hold_reason_code);
+	ad->LookupInteger(ATTR_HOLD_REASON_SUBCODE, hold_reason_subcode);
 }
 
 void

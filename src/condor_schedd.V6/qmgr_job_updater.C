@@ -111,6 +111,8 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 
 	hold_job_queue_attrs = new StringList();
 	hold_job_queue_attrs->insert( ATTR_HOLD_REASON );
+	hold_job_queue_attrs->insert( ATTR_HOLD_REASON_CODE );
+	hold_job_queue_attrs->insert( ATTR_HOLD_REASON_SUBCODE );
 
 	evict_job_queue_attrs = new StringList();
 	evict_job_queue_attrs->insert( ATTR_LAST_VACATE_TIME );

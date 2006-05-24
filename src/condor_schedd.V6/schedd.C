@@ -2571,6 +2571,20 @@ Scheduler::WriteHoldToUserLog( PROC_ID job_id )
 		// regardless of the return value.
 	free( reason );
 
+	int hold_reason_code;
+	if( GetAttributeInt(job_id.cluster, job_id.proc,
+	                    ATTR_HOLD_REASON_CODE, &hold_reason_code) >= 0 )
+	{
+		event.setReasonCode(hold_reason_code);
+	}
+
+	int hold_reason_subcode;
+	if( GetAttributeInt(job_id.cluster, job_id.proc,
+	                    ATTR_HOLD_REASON_SUBCODE, &hold_reason_subcode)	>= 0 )
+	{
+		event.setReasonSubCode(hold_reason_subcode);
+	}
+
 	int status = ULog->writeEvent(&event);
 	delete ULog;
 

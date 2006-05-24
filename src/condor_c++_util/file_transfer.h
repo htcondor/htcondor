@@ -109,12 +109,17 @@ class FileTransfer {
 
 	struct FileTransferInfo {
 		FileTransferInfo() : bytes(0), duration(0), type(NoType),
-			success(true), in_progress(false) {}
+		    success(true), in_progress(false), try_again(true), hold_code(0),
+		    hold_subcode(0) {}
 		filesize_t bytes;
 		time_t duration;
 		TransferType type;
 		bool success;
 		bool in_progress;
+		bool try_again;
+		int hold_code;
+		int hold_subcode;
+		MyString error_desc;
 	};
 
 	FileTransferInfo FileTransfer::GetInfo() { return Info; }
@@ -198,12 +203,12 @@ class FileTransfer {
 	// or in other words, the format expected by the util function
 	// filename_remap_find().
 	void AddDownloadFilenameRemaps(char const *remaps);
-	
 
   private:
 
 	bool TransferFilePermissions;
 	bool DelegateX509Credentials;
+	bool PeerDoesTransferAck;
 	char* Iwd;
 	StringList* OutputFiles;
 	StringList* EncryptInputFiles;
@@ -247,6 +252,18 @@ class FileTransfer {
 	bool simple_init;
 	ReliSock *simple_sock;
 	MyString download_filename_remaps;
+
+	// Called internally by DoUpload() in order to handle common wrapup tasks.
+	int ExitDoUpload(filesize_t *total_bytes, ReliSock *s, priv_state saved_priv, bool socket_default_crypto, bool upload_success, bool do_upload_ack, bool do_download_ack, bool try_again, int hold_code, int hold_subcode, char const *upload_error_desc,int DoUpload_exit_line);
+
+	// Send acknowledgment of success/failure after downloading files.
+	void SendTransferAck(Stream *s,bool success,bool try_again,int hold_code,int hold_subcode,char const *hold_reason);
+
+	// Receive acknowledgment of success/failure after downloading files.
+	void GetTransferAck(Stream *s,bool &success,bool &try_again,int &hold_code,int &hold_subcode,MyString &error_desc);
+
+	// Report information about completed transfer from child thread.
+	bool WriteStatusToTransferPipe(filesize_t total_bytes);
 };
 
 #endif

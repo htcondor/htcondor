@@ -149,7 +149,7 @@ public:
 	bool notifyJobExit( int exit_status, int reason, 
 						UserProc* user_proc );  
 
-	bool notifyStarterError( const char* err_msg, bool critical );
+	bool notifyStarterError( const char* err_msg, bool critical, int hold_reason_code, int hold_reason_subcode );
 
 		// // // // // // // // // // // //
 		// Misc utilities

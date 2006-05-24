@@ -145,7 +145,14 @@ public:
 	bool notifyJobExit( int exit_status, int reason,
 						UserProc* user_proc );
 
-	bool notifyStarterError( const char* err_msg, bool critical );
+		/** Tell the shadow to log an error event in the user log.
+			@param err_msg A desription of the error
+			@param critical True if the shadow should exit
+			@param hold_reason_code If non-zero, put job on hold with this code
+			@param hold_reason_subcode The sub-code to record
+		 */
+	bool notifyStarterError( const char* err_msg, bool critical,
+	                         int hold_reason_code, int hold_reason_subcode);
 
 
 

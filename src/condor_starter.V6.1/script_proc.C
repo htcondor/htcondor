@@ -247,6 +247,7 @@ ScriptProc::StartJob()
 	//NOTE: Create_Process() saves the errno for us if it is an
 	//"interesting" error.
 	char const *create_process_error = NULL;
+	int create_process_errno = errno;
 	if( JobPid == FALSE && errno ) {
 		create_process_error = strerror( errno );
 	}
@@ -261,7 +262,7 @@ ScriptProc::StartJob()
 			err_msg += args_string;
 			err_msg += "': ";
 			err_msg += create_process_error;
-			Starter->jic->notifyStarterError( err_msg.Value(), true );
+			Starter->jic->notifyStarterError( err_msg.Value(), true, CONDOR_HOLD_CODE_FailedToCreateProcess, create_process_errno );
 		}
 
 		EXCEPT( "Create_Process(%s,%s, ...) failed",

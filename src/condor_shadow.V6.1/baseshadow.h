@@ -138,7 +138,7 @@ class BaseShadow : public Service
 			universe-specific code before we exit.
 			@param reason String describing why the job is held
 		*/
-	void holdJob( const char* reason );
+	void holdJob( const char* reason, int hold_reason_code, int hold_reason_subcode );
 
 		/** Remove the job from the queue, if requested, notify the
 			user about it, and exit with the appropriate status so

@@ -38,6 +38,8 @@
 #define NORMAL_HEADER_SIZE 5
 #define MAX_HEADER_SIZE MAC_SIZE + NORMAL_HEADER_SIZE
 
+const unsigned int PUT_FILE_EOM_NUM = 666;
+
 /**************************************************************/
 
 /* 
@@ -468,7 +470,7 @@ ReliSock::get_file( filesize_t *size, const char *destination, bool flush_buffer
 #endif
 		dprintf(D_ALWAYS, "get_file(): Failed to open file %s, errno = %d.\n",
 				destination, errno);
-		return -1;
+		return GET_FILE_OPEN_FAILED;
 	} 
 
 	dprintf(D_FULLDEBUG,"get_file(): going to write to filename %s\n",
@@ -556,8 +558,7 @@ ReliSock::get_file( filesize_t *size, int fd, bool flush_buffers )
 	}
 
 	if ( filesize == 0 ) {
-		get(eom_num);
-		if ( eom_num != 666 ) {
+		if ( !get(eom_num) || eom_num != PUT_FILE_EOM_NUM ) {
 			dprintf(D_ALWAYS,"get_file: Zero-length file check failed!\n");
 			return -1;
 		}			
@@ -596,7 +597,19 @@ ReliSock::put_file( filesize_t *size, const char *source)
 		dprintf(D_ALWAYS,
 				"ReliSock: put_file: Failed to open file %s, errno = %d.\n",
 				source, errno);
-		return -1;
+			// Give the receiver an empty file so that this message is
+			// complete.  The receiver _must_ detect failure through
+			// some additional communication that is not part of
+			// the put_file() message.
+
+		*size = 0;
+		if(!put(*size) || !end_of_message()) {
+			dprintf(D_ALWAYS,"ReliSock: put_file: failed to send dummy file size\n");
+			return -1;
+		}
+		put(PUT_FILE_EOM_NUM); //end the zero-length file
+
+		return PUT_FILE_OPEN_FAILED;
 	}
 
 	dprintf(D_FULLDEBUG,"put_file: going to send from filename %s\n",
@@ -617,7 +630,6 @@ ReliSock::put_file( filesize_t *size, int fd )
 {
 	filesize_t	filesize;
 	filesize_t	total = 0;
-	unsigned int eom_num = 666;
 
 
 	StatWrapper	filestat( fd );
@@ -695,7 +707,7 @@ ReliSock::put_file( filesize_t *size, int fd )
 	} // end of if filesize > 0
 
 	if ( filesize == 0 ) {
-		put(eom_num);
+		put(PUT_FILE_EOM_NUM);
 	}
 
 	dprintf(D_FULLDEBUG,

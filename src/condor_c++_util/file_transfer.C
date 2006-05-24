@@ -41,6 +41,7 @@
 #include "condor_ver_info.h"
 #include "globus_utils.h"
 #include "filename_tools.h"
+#include "condor_holdcodes.h"
 
 #define COMMIT_FILENAME ".ccommit.con"
 
@@ -91,6 +92,7 @@ FileTransfer::FileTransfer()
 {
 	TransferFilePermissions = false;
 	DelegateX509Credentials = false;
+	PeerDoesTransferAck = false;
 	Iwd = NULL;
 	InputFiles = NULL;
 	OutputFiles = NULL;
@@ -1138,9 +1140,68 @@ FileTransfer::Reaper(Service *, int pid, int exit_status)
 		}
 	}
 
-	read( transobject->TransferPipe[0],
-		  (char *)&transobject->Info.bytes,
-		  sizeof( filesize_t) );
+	bool read_failed = false;
+	int n;
+
+	if(!read_failed) {
+		n = read( transobject->TransferPipe[0],
+				  (char *)&transobject->Info.bytes,
+				  sizeof( filesize_t) );
+		if(n != sizeof( filesize_t )) read_failed = true;
+	}
+
+	if(!read_failed) {
+		n = read( transobject->TransferPipe[0],
+				  (char *)&transobject->Info.try_again,
+				  sizeof( bool ) );
+		if(n != sizeof( bool )) read_failed = true;
+	}
+
+	
+	if(!read_failed) {
+		n = read( transobject->TransferPipe[0],
+				  (char *)&transobject->Info.hold_code,
+				  sizeof( int ) );
+		if(n != sizeof( int )) read_failed = true;
+	}
+
+	if(!read_failed) {
+		n = read( transobject->TransferPipe[0],
+				  (char *)&transobject->Info.hold_subcode,
+				  sizeof( int ) );
+		if(n != sizeof( int )) read_failed = true;
+	}
+
+	int error_len = 0;
+	if(!read_failed) {
+		n = read( transobject->TransferPipe[0],
+				  (char *)&error_len,
+				  sizeof( int ) );
+		if(n != sizeof( int )) read_failed = true;
+	}
+
+	if(!read_failed && error_len) {
+		char *error_buf = new char[error_len];
+		ASSERT(error_buf);
+
+		n = read( transobject->TransferPipe[0],
+			  error_buf,
+			  error_len );
+		if(n != error_len) read_failed = true;
+		if(!read_failed) {
+			transobject->Info.error_desc = error_buf;
+		}
+
+		delete [] error_buf;
+	}
+
+	if(read_failed) {
+		transobject->Info.success = false;
+		transobject->Info.try_again = true;
+		transobject->Info.error_desc.sprintf("Failed to read status report from file transfer pipe (errno %d): %s",errno,strerror(errno));
+		dprintf(D_ALWAYS,"%s\n",transobject->Info.error_desc.Value());
+	}
+
 	close(transobject->TransferPipe[0]);
 	close(transobject->TransferPipe[1]);
 	transobject->TransferPipe[0] = transobject->TransferPipe[1] = -1;
@@ -1231,9 +1292,10 @@ FileTransfer::DownloadThread(void *arg, Stream *s)
 	dprintf(D_FULLDEBUG,"entering FileTransfer::DownloadThread\n");
 	FileTransfer * myobj = ((download_info *)arg)->myobj;
 	int status = myobj->DoDownload( &total_bytes, (ReliSock *)s );
-	write( myobj->TransferPipe[1],	// write-end of pipe
-		   (char *)&total_bytes,
-		   sizeof(filesize_t) );
+
+	if(!myobj->WriteStatusToTransferPipe(total_bytes)) {
+		return 0;
+	}
 	return ( status == 0 );
 }
 
@@ -1278,6 +1340,11 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 	char* p_filename = filename;
 	char fullname[_POSIX_PATH_MAX];
 	int final_transfer;
+	bool download_success = false;
+	bool try_again = true;
+	int hold_code = 0;
+	int hold_subcode = 0;
+	MyString error_buf;
 
 	priv_state saved_priv = PRIV_UNKNOWN;
 	*total_bytes = 0;
@@ -1369,8 +1436,14 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 			// check for write permission on this file, if we are supposed to check
 			if ( perm_obj && (perm_obj->write_access(fullname) != 1) ) {
 				// we do _not_ have permission to write this file!!
-				dprintf(D_ALWAYS,"DoDownload: Permission denied to write file %s!\n",
-					fullname);
+				error_buf.sprintf("Permission denied to write file %s!",
+				                   fullname);
+				dprintf(D_ALWAYS,"DoUpload: %s\n",error_buf.Value());
+				download_success = false;
+				try_again = false;
+				hold_code = CONDOR_HOLD_CODE_DownloadFilePermissions;
+				hold_subcode = EPERM;
+				SendTransferAck(s,download_success,try_again,hold_code,hold_subcode,error_buf.Value());
 				dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
 				return_and_resetpriv( -1 );
 			}
@@ -1402,6 +1475,37 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		}
 
 		if( rc < 0 ) {
+			int the_error = errno;
+			error_buf.sprintf("%s at %s failed to receive file %s",
+			                  mySubSystem,s->sender_ip_str(),fullname);
+			download_success = false;
+			if(rc == GET_FILE_OPEN_FAILED) {
+				// errno is well defined in this case
+
+				error_buf.replaceString("receive","write to");
+				error_buf.sprintf_cat(": (errno %d) %s",the_error,strerror(the_error));
+
+				// Since there is a well-defined errno describing what just
+				// went wrong while trying to open the file, put the job
+				// on hold.  Errors that are deemed to be transient can
+				// be periodically released from hold.
+
+				try_again = false;
+				hold_code = CONDOR_HOLD_CODE_DownloadFileError;
+				hold_subcode = the_error;
+			}
+			else {
+				// Assume we had some transient problem (e.g. network timeout)
+				// In the current implementation of get_file(), errno is not
+				// well defined in this case, so we can't report a specific
+				// error message.
+				try_again = true;
+			}
+
+			dprintf(D_ALWAYS,"DoDownload: %s\n",error_buf.Value());
+
+			SendTransferAck(s,download_success,try_again,hold_code,hold_subcode,error_buf.Value());
+
 			dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
 			return_and_resetpriv( -1 );
 		}
@@ -1430,6 +1534,40 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 #else
 	bytesRcvd += (*total_bytes);
 #endif
+
+	// Receive final report from the sender to make sure all went well.
+	bool upload_success = false;
+	MyString upload_error_buf;
+	GetTransferAck(s,upload_success,try_again,hold_code,hold_subcode,
+	               upload_error_buf);
+	if(!upload_success) {
+		// Our peer had some kind of problem sending the files.
+
+		char const *peer_ip_str = "unknown source";
+		if(s->type() == Stream::reli_sock) {
+			peer_ip_str = ((Sock *)s)->get_sinful();
+		}
+
+		error_buf.sprintf("%s failed to receive file(s) from %s",
+						  mySubSystem,peer_ip_str);
+		dprintf(D_ALWAYS,"DoDownload: %s; %s\n",
+				error_buf.Value(),upload_error_buf.Value());
+
+		download_success = false;
+		SendTransferAck(s,download_success,try_again,hold_code,hold_subcode,
+		                error_buf.Value());
+
+		// Save failure information.
+		Info.success = false;
+		Info.try_again = try_again;
+		Info.hold_code = hold_code;
+		Info.hold_subcode = hold_subcode;
+		Info.error_desc.sprintf("%s; %s",
+		                        error_buf.Value(),upload_error_buf.Value());
+
+		return_and_resetpriv( -1 );
+	}
+
 
 	if ( !final_transfer && IsServer() ) {
 		char buf[ATTRLIST_MAX_EXPRESSION];
@@ -1460,7 +1598,105 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 
 	}
 
+	download_success = true;
+	SendTransferAck(s,download_success,try_again,hold_code,hold_subcode,NULL);
+
 	return_and_resetpriv( 0 );
+}
+
+void
+FileTransfer::GetTransferAck(Stream *s,bool &success,bool &try_again,int &hold_code,int &hold_subcode,MyString &error_desc)
+{
+	if(!PeerDoesTransferAck) {
+		success = true;
+		return;
+	}
+
+	s->decode();
+
+	ClassAd ad;
+	if(!ad.initFromStream(*s) || !s->end_of_message()) {
+		char const *ip = NULL;
+		if(s->type() == Sock::reli_sock) {
+			ip = ((ReliSock *)s)->get_sinful();
+		}
+		dprintf(D_FULLDEBUG,"Failed to receive download acknowledgment from %s.\n",
+				ip ? ip : "(unknown source)");
+		success = false;
+		try_again = true; // could just be a transient network problem
+		return;
+	}
+	int result = -1;
+	if(!ad.LookupInteger(ATTR_RESULT,result)) {
+		dprintf(D_ALWAYS,"Download acknowledgment missing %s\n",ATTR_RESULT);
+		success = false;
+		try_again = false;
+		hold_code = CONDOR_HOLD_CODE_InvalidTransferAck;
+		hold_subcode = 0;
+		error_desc.sprintf("Download acknowledgment missing attribute: %s",ATTR_RESULT);
+		return;
+	}
+	if(result == 0) {
+		success = true;
+		try_again = false;
+	}
+	else if(result > 0) {
+		success = false;
+		try_again = true;
+	}
+	else {
+		success = false;
+		try_again = false;
+	}
+
+	if(!ad.LookupInteger(ATTR_HOLD_REASON_CODE,hold_code)) {
+		hold_code = 0;
+	}
+	if(!ad.LookupInteger(ATTR_HOLD_REASON_SUBCODE,hold_subcode)) {
+		hold_subcode = 0;
+	}
+	char *hold_reason_buf = NULL;
+	if(ad.LookupString(ATTR_HOLD_REASON,&hold_reason_buf)) {
+		error_desc = hold_reason_buf;
+		free(hold_reason_buf);
+	}
+}
+
+void
+FileTransfer::SendTransferAck(Stream *s,bool success,bool try_again,int hold_code,int hold_subcode,char const *hold_reason)
+{
+	if(!PeerDoesTransferAck) return;
+
+	ClassAd ad;
+	int result;
+	if(success) {
+		result = 0;
+	}
+	else if(try_again) {
+		result = 1;  //failed for transient reasons
+	}
+	else {
+		result = -1; //failed -- do not try again (ie put on hold)
+	}
+
+	ad.Assign(ATTR_RESULT,result);
+	if(!success) {
+		ad.Assign(ATTR_HOLD_REASON_CODE,hold_code);
+		ad.Assign(ATTR_HOLD_REASON_SUBCODE,hold_subcode);
+		if(hold_reason) {
+			ad.Assign(ATTR_HOLD_REASON,hold_reason);
+		}
+	}
+	s->encode();
+	if(!ad.put(*s) || !s->end_of_message()) {
+		char const *ip = NULL;
+		if(s->type() == Sock::reli_sock) {
+			ip = ((ReliSock *)s)->get_sinful();
+		}
+		dprintf(D_ALWAYS,"Failed to send download %s to %s.\n",
+		        success ? "acknowledgment" : "failure report",
+		        ip ? ip : "(unknown recipient)");
+	}
 }
 
 void
@@ -1557,6 +1793,61 @@ FileTransfer::Upload(ReliSock *s, bool blocking)
 	return 1;
 }
 
+bool
+FileTransfer::WriteStatusToTransferPipe(filesize_t total_bytes)
+{
+	int n;
+	bool write_failed = false;
+
+	if(!write_failed) {
+		n = write( TransferPipe[1],
+				   (char *)&total_bytes,
+				   sizeof(filesize_t) );
+		if(n != sizeof(filesize_t)) write_failed = true;
+	}
+	if(!write_failed) {
+		n = write( TransferPipe[1],
+				   (char *)&Info.try_again,
+				   sizeof(bool) );
+		if(n != sizeof(bool)) write_failed = true;
+	}
+	if(!write_failed) {
+		n = write( TransferPipe[1],
+				   (char *)&Info.hold_code,
+				   sizeof(int) );
+		if(n != sizeof(int)) write_failed = true;
+	}
+	if(!write_failed) {
+		n = write( TransferPipe[1],
+				   (char *)&Info.hold_subcode,
+				   sizeof(int) );
+		if(n != sizeof(int)) write_failed = true;
+	}
+	int error_len = Info.error_desc.Length();
+	if(error_len) {
+		error_len++; //write the null too
+	}
+	if(!write_failed) {
+		n = write( TransferPipe[1],
+				   (char *)&error_len,
+				   sizeof(int) );
+		if(n != sizeof(int)) write_failed = true;
+	}
+	if(!write_failed) {
+		n = write( TransferPipe[1],
+				   Info.error_desc.Value(),
+				   error_len );
+		if(n != error_len) write_failed = true;
+	}
+
+	if(write_failed) {
+		dprintf(D_ALWAYS,"Failed to write transfer status to pipe (errno %d): %s\n",errno,strerror(errno));
+		return false;
+	}
+
+	return true;
+}
+
 int
 FileTransfer::UploadThread(void *arg, Stream *s)
 {
@@ -1564,9 +1855,9 @@ FileTransfer::UploadThread(void *arg, Stream *s)
 	FileTransfer * myobj = ((upload_info *)arg)->myobj;
 	filesize_t	total_bytes;
 	int status = myobj->DoUpload( &total_bytes, (ReliSock *)s );
-	write( myobj->TransferPipe[1],	// write end
-		   (char *)&total_bytes,
-		   sizeof(filesize_t) );
+	if(!myobj->WriteStatusToTransferPipe(total_bytes)) {
+		return 0;
+	}
 	return ( status >= 0 );
 }
 
@@ -1580,6 +1871,13 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 	filesize_t bytes;
 	bool is_the_executable;
 	StringList * filelist = FilesToSend;
+	bool upload_success = false;
+	bool do_download_ack = false;
+	bool do_upload_ack = false;
+	bool try_again = false;
+	int hold_code = 0;
+	int hold_subcode = 0;
+	MyString error_desc;
 
 	*total_bytes = 0;
 	dprintf(D_FULLDEBUG,"entering FileTransfer::DoUpload\n");
@@ -1624,6 +1922,33 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 	while ( filelist && (filename=filelist->next()) ) {
 
 		dprintf(D_FULLDEBUG,"DoUpload: send file %s\n",filename);
+
+		if( filename[0] != '/' && filename[0] != '\\' && filename[1] != ':' ){
+			sprintf(fullname,"%s%c%s",Iwd,DIR_DELIM_CHAR,filename);
+		} else {
+			strcpy(fullname,filename);
+		}
+
+		// check for read permission on this file, if we are supposed to check.
+		// do not check the executable, since it is likely sitting in the SPOOL
+		// directory.
+#ifdef WIN32
+		if( perm_obj && !is_the_executable &&
+			(perm_obj->read_access(fullname) != 1) ) {
+			// we do _not_ have permission to read this file!!
+			upload_success = false;
+			error_desc.sprintf("error reading from %s: permission denied",fullname);
+			do_upload_ack = true;    // tell receiver that we failed
+			do_download_ack = true;
+			try_again = false; // put job on hold
+			hold_code = CONDOR_HOLD_CODE_UploadFileError;
+			hold_subcode = EPERM;
+			return ExitDoUpload(total_bytes,s,saved_priv,socket_default_crypto,
+			                    upload_success,do_upload_ack,do_download_ack,
+								try_again,hold_code,hold_subcode,
+								error_desc.Value(),__LINE__);
+		}
+#endif
 
 		// now we send an int to the other side to indicate the next
 		// action.  historically, we sent either 1 or 0.  zero meant
@@ -1699,26 +2024,6 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			return_and_resetpriv( -1 );
 		}
 
-		if( filename[0] != '/' && filename[0] != '\\' && filename[1] != ':' ){
-			sprintf(fullname,"%s%c%s",Iwd,DIR_DELIM_CHAR,filename);
-		} else {
-			strcpy(fullname,filename);
-		}
-
-		// check for read permission on this file, if we are supposed to check.
-		// do not check the executable, since it is likely sitting in the SPOOL
-		// directory.
-#ifdef WIN32
-		if( perm_obj && !is_the_executable &&
-			(perm_obj->read_access(fullname) != 1) ) {
-			// we do _not_ have permission to read this file!!
-			dprintf(D_ALWAYS,"DoUpload: Permission denied to read file %s!\n",
-				fullname);
-			dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",__LINE__);
-			return_and_resetpriv( -1 );
-		}
-#endif
-
 		if ( file_command == 4 ) {
 			if ( s->end_of_message() ) {
 				rc = s->put_x509_delegation( &bytes, fullname );
@@ -1731,24 +2036,44 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			rc = s->put_file( &bytes, fullname );
 		}
 		if( rc < 0 ) {
-			/* if we fail to transfer a file, EXCEPT so the other side can */
-			/* try again. SC2000 hackery. _WARNING_ - I think Keller changed */
-			/* all of this. -epaulson 11/22/2000 */
-			/* If the starter fails to upload the job's output files, it */
-			/* assumes it has been disconnected from the shadow and waits */
-			/* for a reconnect. If the transfer fails due to local I/O */
-			/* on either machine, the starter ends up waiting for a */
-			/* reconnect that will never happen. Therefore, we EXCEPT */
-			/* here. But we don't want to EXCEPT if we're the c-gahp. */
-			/*   - jfrey 3/1/2006 */
-			if ( !simple_init ) {
-				EXCEPT("DoUpload: Failed to send file %s, exiting at %d\n",
-					   fullname,__LINE__);
-			} else {
-				dprintf(D_FULLDEBUG,"DoUpload: Failed to send file %s, "
-						"exiting ad %d\n",fullname,__LINE__);
+			int the_error = errno;
+			upload_success = false;
+			error_desc.sprintf("error sending %s",fullname);
+			if(rc == PUT_FILE_OPEN_FAILED) {
+				// In this case, put_file() has transmitted a zero-byte
+				// file in place of the failed one, so that we can
+				// send the upload ack containing the full error message.
+				if(!s->end_of_message()) {
+					dprintf(D_ALWAYS,"Failed to end message after file open failure.\n");
+					dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",__LINE__);
+					return_and_resetpriv( -1 );
+				}
+				do_upload_ack = true;
+				do_download_ack = true;
+				error_desc.replaceString("sending","reading from");
+				error_desc.sprintf_cat(": (errno %d) %s",the_error,strerror(the_error));
+				try_again = false; // put job on hold
+				hold_code = CONDOR_HOLD_CODE_UploadFileError;
+				hold_subcode = the_error;
 			}
-			return_and_resetpriv( -1 );
+			else {
+				// We can't currently tell the different between other
+				// put_file() errors that will generate an ack error
+				// report, and those that are due to a genuine
+				// disconnect between us and the receiver.  Therefore,
+				// always try reading the download ack.
+				do_download_ack = true;
+				// The stream _from_ us to the receiver is in an undefined
+				// state.  Some network operation may have failed part
+				// way through the transmission, so we cannot expect
+				// the other side to be able to read our upload ack.
+				do_upload_ack = false;
+				try_again = true;
+			}
+			return ExitDoUpload(total_bytes,s,saved_priv,socket_default_crypto,
+			                    upload_success,do_upload_ack,do_download_ack,
+			                    try_again,hold_code,hold_subcode,
+			                    error_desc.Value(),__LINE__);
 		}
 
 		if( !s->end_of_message() ) {
@@ -1759,13 +2084,28 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 		*total_bytes += bytes;
 	}
 
-	// tell our peer we have nothing more to send
-	s->snd_int(0,TRUE);
+	upload_success = true;
+	do_download_ack = true;
+	do_upload_ack = true;
+	return ExitDoUpload(total_bytes,s,saved_priv,socket_default_crypto,
+	                    upload_success,do_upload_ack,do_download_ack,
+	                    try_again,hold_code,hold_subcode,NULL,__LINE__);
+}
 
-	// go back to the state we were in before file transfer
-	s->set_crypto_mode(socket_default_crypto);
+int
+FileTransfer::ExitDoUpload(filesize_t *total_bytes, ReliSock *s, priv_state saved_priv, bool socket_default_crypto, bool upload_success, bool do_upload_ack, bool do_download_ack, bool try_again, int hold_code, int hold_subcode, char const *upload_error_desc,int DoUpload_exit_line)
+{
+	int rc = upload_success ? 0 : -1;
+	bool download_success = false;
+	MyString error_buf;
+	MyString download_error_buf;
+	char const *error_desc = NULL;
 
-	dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",__LINE__);
+	dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",DoUpload_exit_line);
+
+	if( saved_priv != PRIV_UNKNOWN ) {
+		_set_priv(saved_priv,__FILE__,DoUpload_exit_line,1);
+	}
 
 #ifdef WIN32
 		// unsigned __int64 to float not implemented on Win32
@@ -1774,7 +2114,87 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 	bytesSent += *total_bytes;
 #endif
 
-	return_and_resetpriv( 0 );
+	if(do_upload_ack) {
+		// peer is still expecting us to send a file command
+		if(!PeerDoesTransferAck && !upload_success) {
+			// We have no way to tell the other side that something has
+			// gone wrong other than slamming the connection without
+			// sending the final file command 0.  Therefore, send nothing.
+		}
+		else {
+			// no more files to send
+			s->snd_int(0,TRUE);
+
+			MyString error_desc_to_send;
+			if(!upload_success) {
+				error_desc_to_send.sprintf("%s at %s failed to send file(s) to %s",
+										   mySubSystem,
+										   s->sender_ip_str(),
+										   s->get_sinful());
+				if(upload_error_desc) {
+					error_desc_to_send.sprintf_cat(": %s",upload_error_desc);
+				}
+			}
+			SendTransferAck(s,upload_success,try_again,hold_code,hold_subcode,
+			                error_desc_to_send.Value());
+		}
+	}
+
+	// Now find out whether there was an error on the receiver's
+	// (i.e. downloader's) end, such as failure to write data to disk.
+	// If we have already failed to communicate with the receiver
+	// for reasons that are likely to be transient network issues
+	// (e.g. timeout writing), then ideally do_download_ack would be false,
+	// and we will skip this step.
+	if(do_download_ack) {
+		GetTransferAck(s,download_success,try_again,hold_code,hold_subcode,
+		               download_error_buf);
+		if(!download_success) {
+			rc = -1;
+		}
+	}
+
+	if(rc != 0) {
+		char const *receiver_ip_str = s->get_sinful();
+		if(!receiver_ip_str) {
+			receiver_ip_str = "unknown recipient";
+		}
+
+		error_buf.sprintf("%s at %s failed to send file(s) to %s",mySubSystem,s->sender_ip_str(),receiver_ip_str);
+		if(upload_error_desc) {
+			error_buf.sprintf_cat(": %s",upload_error_desc);
+		}
+
+		if(!download_error_buf.IsEmpty()) {
+			error_buf.sprintf_cat("; %s",download_error_buf.Value());
+		}
+
+		error_desc = error_buf.Value();
+		if(!error_desc) {
+			error_desc = "";
+		}
+
+		if(try_again) {
+			dprintf(D_ALWAYS,"DoUpload: %s\n",error_desc);
+		}
+		else {
+			dprintf(D_ALWAYS,"DoUpload: (Condor error code %d, subcode %d) %s\n",hold_code,hold_subcode,error_desc);
+		}
+	}
+
+	// go back to the state we were in before file transfer
+	s->set_crypto_mode(socket_default_crypto);
+
+	// Record error information so it can be copied back through
+	// the transfer status pipe and/or observed by the caller
+	// of Upload().
+	Info.success = rc == 0;
+	Info.try_again = try_again;
+	Info.hold_code = hold_code;
+	Info.hold_subcode = hold_subcode;
+	Info.error_desc = error_desc;
+
+	return rc;
 }
 
 int
@@ -1872,6 +2292,12 @@ FileTransfer::setPeerVersion( const CondorVersionInfo &peer_version )
 		DelegateX509Credentials = true;
 	} else {
 		DelegateX509Credentials = false;
+	}
+	if ( peer_version.built_since_version(6,7,20) ) {
+		PeerDoesTransferAck = true;
+	}
+	else {
+		PeerDoesTransferAck = false;
 	}
 }
 

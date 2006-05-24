@@ -361,6 +361,9 @@ class RemoteErrorEvent : public ULogEvent
 	bool isCriticalError() {return critical_error;}
 	void setCriticalError(bool f);
 
+	void setHoldReasonCode(int hold_reason_code);
+	void setHoldReasonSubCode(int hold_reason_subcode);
+
  private:
     /// A host string in the form: "<128.105.165.12:32779>".
     char execute_host[128];
@@ -368,6 +371,8 @@ class RemoteErrorEvent : public ULogEvent
 	char daemon_name[128];
 	char *error_str;
 	bool critical_error; //tells shadow to give up
+	int hold_reason_code;
+	int hold_reason_subcode;
 };
 
 

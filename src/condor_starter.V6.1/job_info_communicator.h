@@ -28,6 +28,7 @@
 #include "condor_classad.h"
 #include "user_proc.h"
 #include "local_user_log.h"
+#include "condor_holdcodes.h"
 
 /** 
 	This class is a base class for the various ways a starter can
@@ -216,7 +217,7 @@ public:
 								UserProc* user_proc ) = 0;
 
 
-	virtual bool notifyStarterError( const char* err_msg, bool critical ) = 0;
+	virtual bool notifyStarterError( const char* err_msg, bool critical, int hold_reason_code, int hold_reason_subcode ) = 0;
 
 
 	void setOutputAdFile( const char* path );
