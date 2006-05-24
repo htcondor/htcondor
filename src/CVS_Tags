@@ -1,3 +1,10 @@
+05/24/06 V6_7-transactions-2-{root,branch}
+  Branch to add support for multiple simultaneous SOAP-initiated 
+  transactions in the schedd.
+  G-d willing, this branch will be merged back into V6_7 in 
+  about a week for the v6.7.20 release.
+  Created from BUILD-V6_7-branch-2006-5-24 tag of V6_7_CODE.
+
 05/12/06 V6_7-nick_fs_util-{root,branch}
   Branch for the development of some file system utilities that
   are very O/S specific; initially just for detection of whether
