@@ -531,6 +531,28 @@ Claim::match_timed_out()
 	}
 
 	if( rip->r_cur->idMatches( id() ) ) {
+#if HAVE_BACKFILL
+		if( rip->state() == backfill_state ) {
+				/*
+				  If the resource is in the backfill state when the
+				  match timed out, it means that the backfill job is
+				  taking longer to exit than the match timeout, which
+				  should be an extremely rare case.  However, if it
+				  happens, we need to handle it.  Luckily, all we have
+				  to do is change our destination state and return,
+				  since the ResState code will deal with resetting the
+				  claim objects once we hit the owner state...
+				*/
+			dprintf( D_FAILURE|D_ALWAYS, "WARNING: Match timed out "
+					 "while still in the %s state. This might mean "
+					 "your MATCH_TIMEOUT setting (%d) is too small, "
+					 "or that there's a problem with how quickly your "
+					 "backfill jobs can evict themselves.\n", 
+					 state_to_string(rip->state()), match_timeout );
+			rip->set_destination_state( owner_state );
+			return FALSE;
+		}
+#endif /* HAVE_BACKFILL */
 		if( rip->state() != matched_state ) {
 				/* 
 				   This used to be an EXCEPT(), since it really
