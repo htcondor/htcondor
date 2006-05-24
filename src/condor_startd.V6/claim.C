@@ -546,7 +546,7 @@ Claim::match_timed_out()
 				   of the log file or something.  -Derek 10/9/00
 				*/
 			dprintf( D_FAILURE|D_FULLDEBUG, 
-					 "WARNING: Current match timed out but in %s state.",
+					 "WARNING: Current match timed out but in %s state.\n",
 					 state_to_string(rip->state()) );
 			return FALSE;
 		}
