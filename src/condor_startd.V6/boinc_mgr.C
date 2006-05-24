@@ -347,11 +347,7 @@ BOINC_BackfillMgr::spawnClient( void )
 bool
 BOINC_BackfillMgr::killClient( void )
 {
-	bool rval = true;
-#ifdef WIN32
-	EXCEPT( "Condor BOINC support does NOT work on windows" ); 
-#else 
-	rval = m_boinc_starter->killHard();
+	bool rval = m_boinc_starter->killHard();
 	if( ! rval ) {
 		dprintf( D_ALWAYS, "BOINC_BackfillMgr::killClient(): "
 				 "ERROR telling BOINC starter (pid %d) to hardkill\n",
@@ -361,9 +357,6 @@ BOINC_BackfillMgr::killClient( void )
 				 "told BOINC starter (pid %d) to hardkill\n",
 				 (int)m_boinc_starter->pid() );
 	}
-
-#endif /* WIN32 */
-
 	return rval;
 }
 
