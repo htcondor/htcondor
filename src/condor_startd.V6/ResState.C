@@ -515,8 +515,7 @@ ResState::enter_action( State s, Activity a,
 		}
 		rip->r_cur = new Claim( rip );
 		if( rip->r_pre ) {
-			delete rip->r_pre;
-			rip->r_pre = NULL;
+			rip->remove_pre();
 		}
 			// See if we should be in owner or unclaimed state
 		if( ! rip->eval_is_owner() ) {

@@ -701,6 +701,9 @@ Resource::leave_preempting_state( void )
 	delete r_cur;		
 	r_cur = NULL;
 
+	// NOTE: all exit paths from this function should call remove_pre()
+	// in order to ensure proper cleanup of pre, pre_pre, etc.
+
 	State dest = destination_state();
 	switch( dest ) {
 	case claimed_state:
@@ -708,6 +711,7 @@ Resource::leave_preempting_state( void )
 		if( ! eval_is_owner() ) {
 			r_cur = r_pre;
 			r_pre = NULL;
+			remove_pre(); // do full cleanup of pre stuff
 				// STATE TRANSITION preempting -> claimed
 			accept_request_claim( this );
 			return;
@@ -758,6 +762,7 @@ Resource::leave_preempting_state( void )
 	if( allow_it ) {
 		r_cur = r_pre;
 		r_pre = NULL;
+		remove_pre(); // do full cleanup of pre stuff
 			// STATE TRANSITION preempting -> claimed
 		accept_request_claim( this );
 	} else {

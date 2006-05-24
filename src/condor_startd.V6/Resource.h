@@ -58,6 +58,7 @@ public:
 
 		// Remove the given claim from this Resource
 	void	removeClaim( Claim* );
+	void	remove_pre( void );	// If r_pre is set, refuse and delete it.
 
 		// Shutdown methods that deal w/ opportunistic *and* COD claims
 	int		shutdownAllClaims( bool graceful );
@@ -200,7 +201,6 @@ private:
 
 	int		fast_shutdown;	// Flag set if we're in fast shutdown mode.
 	bool    peaceful_shutdown;
-	void	remove_pre( void );	// If r_pre is set, refuse and delete it.
 	int		r_cpu_busy;
 	time_t	r_cpu_busy_start_time;
 	time_t	r_last_compute_condor_load;

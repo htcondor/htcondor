@@ -584,8 +584,7 @@ Claim::match_timed_out()
 		assert( rip->r_pre->idMatches( id() ) );
 			// We need to generate a new preempting claim object,
 			// restore our reqexp, and update the CM. 
-		delete rip->r_pre;
-		rip->r_pre = new Claim( rip );
+		rip->removeClaim( rip->r_pre );
 		rip->r_reqexp->restore();
 		rip->update();
 	}		
