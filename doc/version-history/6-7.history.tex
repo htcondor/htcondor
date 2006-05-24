@@ -59,6 +59,18 @@ in a DAG define a log file.
 from running a DAG that references node job submit files that
 queue multiple jobs (other than parallel universe).
 
+\item A number of types of failures to run a job now result in the job
+going on hold, rather than immediately being returned to the idle
+state and trying to run again.  This currently does not apply to
+standard universe jobs.  The types of errors that now result in the
+job going on hold are failure to execute the specified program,
+failure to transfer files, and failure to open input or output files.
+In all such cases, a specific hold reason is specified in the job
+ClassAd, along with a numeric hold code and subcode.  If you with to
+automatically retry in such cases (the old behavior), then you can
+specify a \MacroNI{PeriodicRelease} expression that checks for
+specific hold states.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -107,9 +119,26 @@ contained a typo which has now been fixed.
 (\Condor{ckpt\_server}) to publish an incorrect IP address in the
 \Attr{Machine} attribute of it's ClassAd.
 
+\item Fixed a bug introduced in 6.7.19, which could cause the startd
+to get into a state where it would reject all new claims (requiring a
+restart of the startd to resume normal operation).  The symptom of
+this bug was a recurring message in the startd such as this:
+
+\begin{verbatim}
+5/19 23:51:47 vm1: ClaimId from schedd (<xxx.xxx.xxx.xxx:45877>#1147893880#1208) doesn't match (<xxx.xxx.xxx.xxx:45877>#1147893880#1207)
+5/19 23:51:47 vm1: State change: claiming protocol failed
+\end{verbatim}
+
 \item Fixed some rare bugs when the Condor claiming protocol fails
   while a machine is running a backfill job.
   The \Condor{startd} now correctly recovers from these failures.
+
+\item Fixed a bug in Condor's file-transfer mode that could cause file
+transfer errors to go unnoticed by one side of the connection.  One
+possible result of this would be a job leaving the queue
+``successfully'' when there was actually an error copying back one of
+the output files.  The possibility of this bug happening was much less
+for large files (greater than 65536 bytes).
 
 \end{itemize}
 
