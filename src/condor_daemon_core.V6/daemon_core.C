@@ -6145,6 +6145,7 @@ int DaemonCore::Create_Process(
 		dprintf(D_ALWAYS, "Create Process: fork() failed: %s (%d)\n",
 				strerror(errno), errno );
 		close(errorpipe[0]); close(errorpipe[1]);
+		newpid = FALSE;
 		goto wrapup;
 	}
 #endif
