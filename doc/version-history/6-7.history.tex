@@ -102,6 +102,10 @@ some time in the 6.7 series.
 other tools and possibly even daemons) to crash on Solaris machines
 if address resolution fails because of an ill-configured DNS server.
 
+\item Fixed a bug on unix which could cause the Condor daemons to mistakenly
+think a child process was successfully created (when the fork() system
+call returned -1).
+
 \item Fixed a bug which could cause network write operations to block
 Condor daemons for the full networking timeout time when the connection
 was closed while the daemon was still writing to it.
