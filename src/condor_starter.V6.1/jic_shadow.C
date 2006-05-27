@@ -1618,16 +1618,18 @@ JICShadow::transferCompleted( FileTransfer *ftrans )
 		// Make certain the file transfer succeeded.  
 		// Until "multi-starter" has meaning, it's ok to EXCEPT here,
 		// since there's nothing else for us to do.
-	FileTransfer::FileTransferInfo ft_info = ftrans->GetInfo();
-	if ( ftrans &&  !ft_info.success ) {
-		if(!ft_info.try_again) {
-			// Put the job on hold.
-			ASSERT(ft_info.hold_code != 0);
-			notifyStarterError(ft_info.error_desc.Value(), true,
-			                   ft_info.hold_code,ft_info.hold_subcode);
-		}
+	if ( ftrans ) {
+		FileTransfer::FileTransferInfo ft_info = ftrans->GetInfo();
+		if ( !ft_info.success ) {
+			if(!ft_info.try_again) {
+					// Put the job on hold.
+				ASSERT(ft_info.hold_code != 0);
+				notifyStarterError(ft_info.error_desc.Value(), true,
+				                   ft_info.hold_code,ft_info.hold_subcode);
+			}
 
-		EXCEPT( "Failed to transfer files" );
+			EXCEPT( "Failed to transfer files" );
+		}
 	}
 
 		// Now that we're done transfering files, we can let the
