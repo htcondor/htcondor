@@ -583,6 +583,17 @@ ReliSock::get_file( filesize_t *size, int fd, bool flush_buffers )
 	return 0;
 }
 
+int
+ReliSock::put_empty_file( filesize_t *size )
+{
+	*size = 0;
+	if(!put(*size) || !end_of_message()) {
+		dprintf(D_ALWAYS,"ReliSock: put_file: failed to send dummy file size\n");
+		return -1;
+	}
+	put(PUT_FILE_EOM_NUM); //end the zero-length file
+	return 0;
+}
 
 int
 ReliSock::put_file( filesize_t *size, const char *source)
@@ -602,12 +613,10 @@ ReliSock::put_file( filesize_t *size, const char *source)
 			// some additional communication that is not part of
 			// the put_file() message.
 
-		*size = 0;
-		if(!put(*size) || !end_of_message()) {
-			dprintf(D_ALWAYS,"ReliSock: put_file: failed to send dummy file size\n");
-			return -1;
+		int rc = put_empty_file( size );
+		if(rc < 0) {
+			return rc;
 		}
-		put(PUT_FILE_EOM_NUM); //end the zero-length file
 
 		return PUT_FILE_OPEN_FAILED;
 	}

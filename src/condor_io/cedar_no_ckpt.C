@@ -108,7 +108,22 @@ ReliSock::put_file_with_permissions( filesize_t *size, const char *source )
 				 "Failed to stat file '%s': %s (errno: %d, si_error: %d)\n",
 				 source, strerror(stat_info.Errno()), stat_info.Errno(),
 				 stat_info.Error() );
-		return -1;
+
+		// Now send an empty file in order to recover sanity on this
+		// stream.
+		file_mode = NULL_FILE_PERMISSIONS;
+		this->encode();
+		if( this->code( file_mode) == FALSE ||
+			this->end_of_message() == FALSE ) {
+			dprintf( D_ALWAYS, "ReliSock:;put_file_with_permissions(): "
+			         "Failed to send dummy permissions\n" );
+			return -1;
+		}
+		int rc = put_empty_file( size );
+		if(rc < 0) {
+			return rc;
+		}
+		return PUT_FILE_OPEN_FAILED;
 	}
 	file_mode = (condor_mode_t)stat_info.GetMode();
 #else
