@@ -1441,7 +1441,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 				dprintf(D_ALWAYS,"DoUpload: %s\n",error_buf.Value());
 				download_success = false;
 				try_again = false;
-				hold_code = CONDOR_HOLD_CODE_DownloadFilePermissions;
+				hold_code = CONDOR_HOLD_CODE_DownloadFileError;
 				hold_subcode = EPERM;
 				SendTransferAck(s,download_success,try_again,hold_code,hold_subcode,error_buf.Value());
 				dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
