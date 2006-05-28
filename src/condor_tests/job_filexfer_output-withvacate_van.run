@@ -172,6 +172,11 @@ my $ina = "$basefile"."a.txt";
 my $inb = "$basefile"."b.txt";
 my $inc = "$basefile"."c.txt";
 
+my $basefile = "submit_filetrans_output" . "$job";
+my $oute = "$basefile"."e.txt";
+my $outf = "$basefile"."f.txt";
+my $outg = "$basefile"."g.txt";
+
 my $inputdir = "job_"."$job"."_dir";
 
 my $line = "";
@@ -196,10 +201,10 @@ while(<CMD>)
 	{
 		print NEWCMD "transfer_input_files = $inputdir/$ina,$inputdir/$inb,$inputdir/$inc\n";
 	}
-	#elsif( $line =~ /^\s*transfer_output_files\s*=\s*.*$/ )
-	#{
-		#print NEWCMD "transfer_output_files = $oute,$outf,$outg\n";
-	#}
+	elsif( $line =~ /^\s*transfer_output_files\s*=\s*.*$/ )
+	{
+		print NEWCMD "transfer_output_files = $oute,$outf,$outg\n";
+	}
 	elsif( $line =~ /^\s*arguments\s*=\s*.*$/)
 	{
 		print NEWCMD "arguments = $args\n";
