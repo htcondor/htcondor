@@ -37,6 +37,7 @@
 #include "sig_name.h"
 #include "exit.h"
 #include "condor_uid.h"
+#include "filename_tools.h"
 #ifdef WIN32
 #include "perm.h"
 #endif
@@ -82,6 +83,9 @@ OsProc::StartJob()
 		return 0;
 	}
 
+	const char* job_iwd = Starter->jic->jobRemoteIWD();
+	dprintf( D_ALWAYS, "IWD: %s\n", job_iwd );
+
 		// // // // // // 
 		// Arguments
 		// // // // // // 
@@ -102,6 +106,13 @@ OsProc::StartJob()
 			dprintf ( D_ALWAYS, "Failed to chmod %s!\n",JobName );
 			return 0;
 		}
+	}
+	else if(is_relative_to_cwd(JobName) && job_iwd && *job_iwd) {
+		// prepend full path to executable name
+		MyString full_name;
+		full_name.sprintf("%s%c%s",job_iwd,DIR_DELIM_CHAR,JobName);
+		ASSERT(full_name.Length() < sizeof(JobName));
+		strcpy(JobName,full_name.Value());
 	}
 
 	if( Starter->isGridshell() ) {
@@ -201,9 +212,6 @@ OsProc::StartJob()
 		// // // // // // 
 		// Standard Files
 		// // // // // // 
-
-	const char* job_iwd = Starter->jic->jobRemoteIWD();
-	dprintf( D_ALWAYS, "IWD: %s\n", job_iwd );
 
 	// handle stdin, stdout, and stderr redirection
 	int fds[3];
