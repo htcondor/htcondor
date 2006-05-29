@@ -231,6 +231,12 @@ protected:
 	int perform_authenticate( bool with_key, KeyInfo *& key, 
 							  const char* methods, CondorError* errstack );
 
+	// This is used internally to recover sanity on the stream after
+	// failing to open a file in put_file().
+	// returns -1 on failure, 0 for ok
+	int put_empty_file( filesize_t *size );
+
+
 	/*
 	**	Data structures
 	*/
