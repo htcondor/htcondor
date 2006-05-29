@@ -154,6 +154,9 @@ probably existed for a long time, but was just recently discovered.
 after \MacroNI{GRACEFUL\_SHUTDOWN\_TIMEOUT}, which would then cause jobs
 to be preempted.
 
+\item Vanilla universe jobs were failing to run if the executable was specified
+as a relative path and \Attr{transfer\_executable} was set to false.
+
 \end{itemize}
 
 \noindent Known Bugs:
