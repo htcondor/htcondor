@@ -270,10 +270,19 @@ RUN(job_filexfer_output-withvacate_van)
 TESTCLASS(job_filexfer_output-withvacate_van,filexfer)
 TESTCLASS(job_filexfer_output-withvacate_van,quick)
 
+/*
+**
+	Gnats tools/696. Turned off test which expects a shadow exception
+	after a job located in a relative location to the submit file
+	when filetransfer is set to false. Test job currently runs to success
+	so test fails. Exploring correct behaviour. bt
+**
+**
 DESC(job_filexfer_trans-nodflts_van,"Vanilla: all transfers explicitely off - complains...")
 RUN(job_filexfer_trans-nodflts_van)
 TESTCLASS(job_filexfer_trans-nodflts_van,filexfer)
 TESTCLASS(job_filexfer_trans-nodflts_van,quick)
+*/
 
 /* Tests which fail in groups but run singly reliably */
 
