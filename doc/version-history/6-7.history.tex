@@ -77,7 +77,12 @@ specific hold states.
 
 \begin{itemize}
 
-\item Fixed a big introduced in 6.7.19, which could cause the startd
+\item Fixed a bug in ClassAds where an attribute name which was
+constructed from a keyword with one or more digits appended would
+cause parse errors. Discovered with T1 and F1(short form of true
+and false).
+
+\item Fixed a bug introduced in 6.7.19, which could cause the startd
 to get into a state where it would reject all new claims (requiring a
 restart of the startd to resume normal operation).  The symptom of
 this bug was a recurring message in the startd such as this:
