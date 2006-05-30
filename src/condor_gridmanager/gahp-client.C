@@ -155,6 +155,8 @@ GahpServer::GahpServer(const char *id, const char *path, const ArgList *args)
 	is_initialized = false;
 	can_cache_proxies = false;
 	ProxiesByFilename = NULL;
+
+	m_gahp_version[0] = '\0';
 }
 
 GahpServer::~GahpServer()
@@ -1097,6 +1099,12 @@ const char *
 GahpClient::getErrorString()
 {
 	return error_string.Value();
+}
+
+const char *
+GahpClient::getVersion()
+{
+	return server->m_gahp_version;
 }
 
 void

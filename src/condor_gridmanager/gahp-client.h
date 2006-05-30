@@ -307,6 +307,8 @@ class GahpClient : public Service {
 
 		const char *getErrorString();
 
+		const char *getVersion();
+
 		//-----------------------------------------------------------
 		
 		/**@name Globus Methods
