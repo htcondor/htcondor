@@ -124,6 +124,8 @@ bool INFNBatchJobAdMatch( const ClassAd *job_ad ) {
 		//   system names should be used (pbs, lsf). Glite are the only
 		//   people who care about the old value. This changed happend in
 		//   Condor 6.7.12.
+		// TODO: Why are we doing a substring match? These are the exact
+		//   string we expect to see.
 	if ( job_ad->LookupInteger( ATTR_JOB_UNIVERSE, universe ) &&
 		 universe == CONDOR_UNIVERSE_GRID &&
 		 job_ad->LookupString( ATTR_GRID_RESOURCE, resource ) &&
