@@ -538,6 +538,7 @@ GahpServer::Startup()
 	int low_port;
 	int high_port;
 	Env newenv;
+	char *tmp_char;
 
 		// Check if we already have spawned a GAHP server.  
 	if ( m_gahp_pid != -1 ) {
@@ -586,6 +587,13 @@ GahpServer::Startup()
 		MyString buff;
 		buff.sprintf( "%d,%d", low_port, high_port );
 		newenv.SetEnv( "GLOBUS_TCP_SOURCE_RANGE", buff.Value() );
+	}
+
+		// GLITE_LOCATION needs to be set for the blahp
+	tmp_char = param("GLITE_LOCATION");
+	if ( tmp_char ) {
+		newenv.SetEnv( "GLITE_LOCATION", tmp_char );
+		free( tmp_char );
 	}
 
 		// Now register a reaper, if we haven't already done so.

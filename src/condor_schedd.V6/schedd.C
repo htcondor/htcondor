@@ -7224,6 +7224,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	char	input[_POSIX_PATH_MAX];
 	char	output[_POSIX_PATH_MAX];
 	char	error[_POSIX_PATH_MAX];
+	char	x509_proxy[_POSIX_PATH_MAX];
 	ArgList args;
 	MyString argbuf;
 	MyString error_msg;
@@ -7441,6 +7442,13 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	char condor_id_string[64];
 	sprintf( condor_id_string, "%d.%d", job_id->cluster, job_id->proc );
 	envobject.SetEnv("CONDOR_ID",condor_id_string);
+
+	// Set X509_USER_PROXY in the job's environment if the job ad says
+	// we have a proxy.
+	if (GetAttributeString(job_id->cluster, job_id->proc, 
+						   ATTR_X509_USER_PROXY, x509_proxy) == 0) {
+		envobject.SetEnv("X509_USER_PROXY",x509_proxy);
+	}
 
 	// Don't use a_out_name for argv[0], use
 	// "condor_scheduniv_exec.cluster.proc" instead. 

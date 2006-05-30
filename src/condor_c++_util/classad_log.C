@@ -898,7 +898,7 @@ InstantiateLogEntry(FILE *fp, int type)
 			// record wasn't bracketed by a CloseTransaction; ignore all
 			// records starting from the bad record to the end-of-file, and
 			// pretend that we hit the end-of-file.
-		fclose( fp );
+		fseek( fp , 0, SEEK_END);
 		return( NULL );
 	}
 

@@ -109,12 +109,6 @@ void INFNBatchJobReconfig()
 
 	tmp_int = param_integer("GRIDMANAGER_CONNECT_FAILURE_RETRY_COUNT",3);
 	INFNBatchJob::setConnectFailureRetry( tmp_int );
-
-	tmp_char = param("GLITE_LOCATION");
-	if ( tmp_char ) {
-		SetEnv( "GLITE_LOCATION", tmp_char );
-		free( tmp_char );
-	}
 }
 
 bool INFNBatchJobAdMatch( const ClassAd *job_ad ) {

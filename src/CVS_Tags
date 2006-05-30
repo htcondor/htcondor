@@ -1,3 +1,13 @@
+05/30/06 V6_7_19-merge-1
+  Merging V6_7_19-branch to V6_7-branch.
+
+05/12/06 V6_7_19
+  The official 6.7.19 release. The packages for all platforms came 
+  from NMI build #23300, except solaris 2.8, which came from #23370.   
+  The version string for this release is (date may vary slightly for some 
+  platforms):
+    $CondorVersion: 6.7.19 May  9 2006 $
+
 05/24/06 V6_7-transactions-2-{root,branch}
   Branch to add support for multiple simultaneous SOAP-initiated 
   transactions in the schedd.
