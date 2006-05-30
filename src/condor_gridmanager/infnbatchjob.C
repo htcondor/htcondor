@@ -129,7 +129,8 @@ bool INFNBatchJobAdMatch( const ClassAd *job_ad ) {
 		 job_ad->LookupString( ATTR_GRID_RESOURCE, resource ) &&
 		 ( strncasecmp( resource.Value(), "blah", 4 ) == 0 ||
 		   strncasecmp( resource.Value(), "pbs", 4 ) == 0 ||
-		   strncasecmp( resource.Value(), "lsf", 4 ) == 0 ) ) {
+		   strncasecmp( resource.Value(), "lsf", 4 ) == 0 ||
+		   strncasecmp( resource.Value(), "naregi", 6 ) ) ) {
 
 		return true;
 	}

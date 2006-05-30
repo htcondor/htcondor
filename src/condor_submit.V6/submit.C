@@ -1353,6 +1353,7 @@ SetUniverse()
 				(stricmp (JobGridType, "blah") == MATCH) ||
 				(stricmp (JobGridType, "pbs") == MATCH) ||
 				(stricmp (JobGridType, "lsf") == MATCH) ||
+				(stricmp (JobGridType, "naregi") == MATCH) ||
 				(stricmp (JobGridType, "condor") == MATCH) ||
 				(stricmp (JobGridType, "nordugrid") == MATCH) ||
 				(stricmp (JobGridType, "unicore") == MATCH) ||
