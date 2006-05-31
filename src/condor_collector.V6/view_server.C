@@ -132,20 +132,10 @@ void ViewServer::Init()
 
 	// File data format
 
-	// Note that the printf format for GroupsData does not print out
-	// the data above offset 5 (in fact, they aren't even being pushed
-	// onto the stack in WriteHistory().  This is because we're not
-	// sure what effect adding the state outputs would have on the
-	// rest of the condor_stats tool chain.  This may be fixed in the
-	// future once all of the interactions are better understood.
-
 	DataFormat[SubmittorData]="%d\t%s\t:\t%.0f\t%.0f\n";
 	DataFormat[SubmittorGroupsData]="%d\t%s\t:\t%.0f\t%.0f\n";
 	DataFormat[StartdData]="%d\t%s\t:\t%.0f\t%7.3f\t%.0f\n";
-	// FIXME: When this code was written, only 5 machine states were defined.
-	// Fix write of GroupsData to write all machine states.
-	// This may also drive changes into the condor-view-applet.
-	DataFormat[GroupsData]="%d\t%s\t:\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\n";
+	DataFormat[GroupsData]="%d\t%s\t:\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\n";
 	DataFormat[CkptData]="%d\t%s\t:\t%.3f\t%.3f\t%.3f\t%.3f\n";
 	
 	return;
@@ -587,11 +577,7 @@ void ViewServer::WriteHistory()
 
 			DataSet[i][j].AccData->startIterations();
 			while(DataSet[i][j].AccData->iterate(Key,GenRec)) {
-				// FIXME: When this code was written, only 5 machine states
-				// were defined.  Fix write of GroupsData to write all machine
-				// states.  This may also drive changes into the
-				// condor-view-applet.
-				sprintf(OutLine,DataFormat[i].Value(),TimeStamp,Key.Value(),GenRec->Data[0],GenRec->Data[1],GenRec->Data[2],GenRec->Data[3],GenRec->Data[4]);
+				sprintf(OutLine,DataFormat[i].Value(),TimeStamp,Key.Value(),GenRec->Data[0],GenRec->Data[1],GenRec->Data[2],GenRec->Data[3],GenRec->Data[4],GenRec->Data[5],GenRec->Data[6], GenRec->Data[7]);
 				delete GenRec;
 				fputs(OutLine, DataFile);
 			}
