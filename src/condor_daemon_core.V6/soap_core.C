@@ -28,6 +28,7 @@
 #include "reli_sock.h"
 #include "condor_io.h"
 #include "condor_debug.h"
+#include "condor_socket_types.h"
 #include "httpget.h"
 #include "directory.h"
 #include "stdsoap2.h"
@@ -132,6 +133,8 @@ init_soap(struct soap *soap)
 
 			soap_init(&ssl_soap);
 
+			soap_register_plugin_arg(&ssl_soap,http_get,(void*)http_get_handler);
+
 			ssl_soap.send_timeout = 20;
 			ssl_soap.recv_timeout = 20;
 			ssl_soap.accept_timeout = 200;	// years of careful reasearch!
@@ -194,7 +197,7 @@ init_soap(struct soap *soap)
 			}
 
 			struct sockaddr_in sockaddr;
-			socklen_t namelen = sizeof(struct sockaddr_in);
+			SOCKET_LENGTH_TYPE namelen = sizeof(struct sockaddr_in);
 			if (getsockname(sock_fd,
 							(struct sockaddr *) &sockaddr,
 							&namelen)) {
@@ -202,7 +205,7 @@ init_soap(struct soap *soap)
 			} else if (sizeof(struct sockaddr_in) == namelen) {
 				dprintf(D_ALWAYS,
 						"Setup SOAP SSL on port %d\n",
-						sockaddr.sin_port);
+						ntohs(sockaddr.sin_port));
 			} else {
 				dprintf(D_ALWAYS,
 						"Failed to get name of SOAP SSL socket, "
@@ -367,7 +370,9 @@ handle_soap_ssl_socket(Service *, Stream *stream)
 
 		return KEEP_STREAM;
 	}
-	char *subject = X509_NAME_oneline(peer_subject, NULL, 0);
+	char subject[1024];
+	subject[1023] = '\0';
+	X509_NAME_oneline(peer_subject, subject, 1023);
 	if (NULL == subject) {
 		dprintf(D_ALWAYS,
 				"SOAP SSL connection attempt from %s failed "
@@ -393,9 +398,6 @@ handle_soap_ssl_socket(Service *, Stream *stream)
 	MyString principal = MyString(subject);
 	if (peer_cert) {
 		X509_free(peer_cert); peer_cert = NULL;
-	}
-	if (subject) {
-		free(subject); subject = NULL;
 	}
 	if (daemonCore->mapfile->GetCanonicalization("SSL",
 												 principal,

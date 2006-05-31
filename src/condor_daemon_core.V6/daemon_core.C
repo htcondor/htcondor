@@ -78,10 +78,6 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "../condor_io/condor_rw.h"
 #include "httpget.h"
 
-#ifdef COMPILE_SOAP_SSL
-#include "MapFile.h"
-#endif
-
 // Make this the last include to fix assert problems on Win32 -- see
 // the comments about assert at the end of condor_debug.h to understand
 // why.
@@ -332,6 +328,10 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	peaceful_shutdown = false;
 
 	only_allow_soap = 0;
+
+#ifdef COMPILE_SOAP_SSL
+	mapfile =  NULL;
+#endif
 }
 
 // DaemonCore destructor. Delete the all the various handler tables, plus

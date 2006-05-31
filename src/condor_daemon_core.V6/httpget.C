@@ -80,8 +80,10 @@ static int http_get_init(struct soap *soap, struct http_get_data *data, int (*ha
 }
 
 static int http_get_copy(struct soap *soap, struct soap_plugin *dst, struct soap_plugin *src)
-{ *dst = *src;
-  return SOAP_OK;
+{  if (!(dst->data = (struct http_get_data*)malloc(sizeof(struct http_get_data))))
+      return SOAP_EOM;
+   memcpy(dst->data, src->data, sizeof(struct http_get_data));
+   return SOAP_OK; 
 }
 
 static void http_get_delete(struct soap *soap, struct soap_plugin *p)

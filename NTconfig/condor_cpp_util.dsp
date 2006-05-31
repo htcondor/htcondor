@@ -605,6 +605,14 @@ SOURCE="..\src\condor_c++_util\lsa_mgr.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\MapFile.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\MapFile.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\metric_units.C"
 # End Source File
 # Begin Source File
