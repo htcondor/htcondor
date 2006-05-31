@@ -70,6 +70,7 @@ static time_t now;
 
 const int DedicatedScheduler::MPIShadowSockTimeout = 60;
 
+void removeFromList(SimpleList<PROC_ID> *, CAList *);
 
 //////////////////////////////////////////////////////////////
 //  AllocationNode
@@ -2607,6 +2608,17 @@ DedicatedScheduler::computeSchedule( void )
 				break;
 			}
 
+			// If this job is waiting for a reconnect, don't even try here
+			jobsToReconnect.Rewind();
+			PROC_ID reconId;
+			while (jobsToReconnect.Next(reconId)) {
+				if ((reconId.cluster == cluster) &&
+				    (reconId.proc    == proc_id)) {
+					dprintf(D_FULLDEBUG, "skipping %d.%d because it is waitingn to reconnect\n", cluster, proc_id);
+					give_up = true;
+					break;
+				}
+			}
 			dprintf( D_FULLDEBUG, 
 					 "Trying to find %d resource(s) for dedicated job %d.%d\n",
 					 hosts, cluster, proc_id );
@@ -4047,10 +4059,11 @@ DedicatedScheduler::holdAllDedicatedJobs( void )
  * register a timer to call checkReconnectQueue when done
  */
 
+static int reconnect_tid = -1;
+
 bool
 DedicatedScheduler::enqueueReconnectJob( PROC_ID job) {
 
-	static int reconnect_tid = -1;
 	 
 	if( ! jobsToReconnect.Append(job) ) {
 		dprintf( D_ALWAYS, "Failed to enqueue job id (%d.%d)\n",
@@ -4095,6 +4108,8 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 	ClassAdList result;
 	ClassAdList ads;
 	MyString constraint;
+
+	SimpleList<PROC_ID> jobsToReconnectLater = jobsToReconnect;
 
 	jobsToReconnect.Rewind();
 	while( jobsToReconnect.Next(id) ) {
@@ -4169,6 +4184,11 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 			// create the allocation for what we've built up.
 		if (! firstTime && id.proc == 0) {
 			dprintf(D_ALWAYS, "DedicatedScheduler creating Allocations for reconnected job (%d.%d)\n", id.cluster, id.proc);
+
+			// We're going to try to start this reconnect job, so remove it
+			// from the reconnectLater list
+			removeFromList(&jobsToReconnectLater, &jobsToAllocate);
+
 			createAllocations(&machinesToAllocate, &jobsToAllocate, 
 							  last_id.cluster, nprocs, true);
 		
@@ -4267,12 +4287,27 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 		// Last time through, create the last bit of allocations, if there are any
 	if (machinesToAllocate.Number() > 0) {
 		dprintf(D_ALWAYS, "DedicatedScheduler creating Allocations for reconnected job (%d.%d)\n", id.cluster, id.proc);
+		// We're going to try to start this reconnect job, so remove it
+		// from the reconnectLater list
+		removeFromList(&jobsToReconnectLater, &jobsToAllocate);
+
 		createAllocations(&machinesToAllocate, &jobsToAllocate, 
 					  id.cluster, nprocs, true);
 		
 	}
 	spawnJobs();
 
+	jobsToReconnect = jobsToReconnectLater;
+
+	if (jobsToReconnect.Number() > 0) {
+		reconnect_tid = daemonCore->Register_Timer( 60,
+			  (TimerHandlercpp)&DedicatedScheduler::checkReconnectQueue,
+			   "checkReconnectQueue", this );
+		if( reconnect_tid == -1 ) {
+				// Error registering timer!
+			EXCEPT( "Can't register daemonCore timer for DedicatedScheduler::checkReconnectQueue!" );
+		}
+	}
 }	
 
 
@@ -4280,6 +4315,28 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 //////////////////////////////////////////////////////////////
 //  Utility functions
 //////////////////////////////////////////////////////////////
+
+// Set removal.  Remove each jobsToAllocate entry from jobsToReconnectLater
+void
+removeFromList(SimpleList<PROC_ID> *jobsToReconnectLater, CAList *jobsToAllocate) {
+	jobsToAllocate->Rewind();
+	ClassAd *job;
+	while ((job = jobsToAllocate->Next())) {
+		PROC_ID id;
+		job->LookupInteger(ATTR_CLUSTER_ID, id.cluster);
+		job->LookupInteger(ATTR_PROC_ID, id.proc);
+
+		PROC_ID id2;
+		jobsToReconnectLater->Rewind();
+		while ((jobsToReconnectLater->Next(id2))) {
+			if ((id.cluster == id2.cluster) &&
+			    (id.proc    == id2.proc)) {
+					jobsToReconnectLater->DeleteCurrent();
+					break;
+			}
+		}
+	}
+}
  
 // Given a pointer to a resource ClassAd, return the epoc time that
 // describes when the resource will next be available.
