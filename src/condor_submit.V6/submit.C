@@ -605,6 +605,10 @@ main( int argc, char *argv[] )
 	install_sig_handler(SIGPIPE, (SIG_HANDLER)SIG_IGN );
 #endif
 
+#if defined(WIN32)
+	bool query_credential = true;
+#endif
+
 	for( ptr=argv+1,argc--; argc > 0; argc--,ptr++ ) {
 		if( ptr[0][0] == '-' ) {
 			if ( match_prefix( ptr[0], "-verbose" ) ) {
@@ -634,6 +638,9 @@ main( int argc, char *argv[] )
 							 MyName, get_host_part(*ptr) );
 					exit(1);
 				}
+#if defined(WIN32)
+				query_credential = false;
+#endif
 			} else if ( match_prefix( ptr[0], "-name" ) ) {
 				if( !(--argc) || !(*(++ptr)) ) {
 					fprintf( stderr, "%s: -name requires another argument\n",
@@ -648,6 +655,9 @@ main( int argc, char *argv[] )
 							 MyName, get_host_part(*ptr) );
 					exit(1);
 				}
+#if defined(WIN32)
+				query_credential = false;
+#endif
 			} else if ( match_prefix( ptr[0], "-append" ) ) {
 				if( !(--argc) || !(*(++ptr)) ) {
 					fprintf( stderr, "%s: -append requires another argument\n",
@@ -713,40 +723,43 @@ main( int argc, char *argv[] )
 #ifdef WIN32
 
 	// make sure our shadow will have access to our credential
+	// (check is disabled for "-n" and "-r" submits)
+	if (query_credential) {
 
-	// setup the username to query
-	char userdom[256];
-	char* the_username = my_username();
-	char* the_domainname = my_domainname();
-	sprintf(userdom, "%s@%s", the_username, the_domainname);
-	free(the_username);
-	free(the_domainname);
+		// setup the username to query
+		char userdom[256];
+		char* the_username = my_username();
+		char* the_domainname = my_domainname();
+		sprintf(userdom, "%s@%s", the_username, the_domainname);
+		free(the_username);
+		free(the_domainname);
 
-	// if we have a credd, query it first
-	bool cred_is_stored = false;
-	int store_cred_result;
-	Daemon my_credd(DT_CREDD);
-	if (my_credd.locate()) {
-		store_cred_result = store_cred(userdom, NULL, QUERY_MODE, &my_credd);
-		if ( store_cred_result == SUCCESS ||
-						store_cred_result == FAILURE_NOT_SUPPORTED) {
-			cred_is_stored = true;
+		// if we have a credd, query it first
+		bool cred_is_stored = false;
+		int store_cred_result;
+		Daemon my_credd(DT_CREDD);
+		if (my_credd.locate()) {
+			store_cred_result = store_cred(userdom, NULL, QUERY_MODE, &my_credd);
+			if ( store_cred_result == SUCCESS ||
+							store_cred_result == FAILURE_NOT_SUPPORTED) {
+				cred_is_stored = true;
+			}
 		}
-	}
 
-	if (!cred_is_stored) {
-		// query the schedd
-		store_cred_result = store_cred(userdom, NULL, QUERY_MODE, MySchedd);
-		if ( store_cred_result == SUCCESS ||
-						store_cred_result == FAILURE_NOT_SUPPORTED) {
-			cred_is_stored = true;
+		if (!cred_is_stored) {
+			// query the schedd
+			store_cred_result = store_cred(userdom, NULL, QUERY_MODE, MySchedd);
+			if ( store_cred_result == SUCCESS ||
+							store_cred_result == FAILURE_NOT_SUPPORTED) {
+				cred_is_stored = true;
+			}
 		}
-	}
-	if (!cred_is_stored) {
-		fprintf( stderr, "\nERROR: No credential stored for %s\n"
-				"\n\tCorrect this by running:\n"
-				"\tcondor_store_cred add\n", userdom );
-		exit(1);
+		if (!cred_is_stored) {
+			fprintf( stderr, "\nERROR: No credential stored for %s\n"
+					"\n\tCorrect this by running:\n"
+					"\tcondor_store_cred add\n", userdom );
+			exit(1);
+		}
 	}
 #endif
 	
