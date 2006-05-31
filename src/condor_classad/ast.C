@@ -2414,8 +2414,8 @@ int Function::FunctionSubstr(
 	}
 
 	if( ( offset < 0) || ( ((unsigned) offset) > strlen(s) )) {
-		result->type = LX_NULL;
-		result->s = 0;
+		result->type = LX_STRING;
+		result->s = strnewp("");
 		return TRUE;
 	}
 
@@ -2428,8 +2428,8 @@ int Function::FunctionSubstr(
 	}
 
 	if (length <= 0) {
-		result->type = LX_NULL;
-		result->s = 0;
+		result->type = LX_STRING;
+		result->s = strnewp("");
 		return TRUE;
 	}
 
@@ -3015,7 +3015,10 @@ int Function::FunctionRegexps(
 	EvalResult *result)         // OUT: the result of calling the function
 {
 	/*
-	regexp(string pattern, string target [, string options ]) returns boolean.
+	regexps(string pattern, string target, string substitute [, string options ]) returns string.
+
+	Like regexp except that it returns the string substitute as modified by
+	matches from regexp.
 
 	If any of the arguments is not of type String or if pattern is not a valid
 	regular expression, the result is an error. Otherwise, if pattern matches
@@ -3084,7 +3087,8 @@ int Function::FunctionRegexps(
 	char *input = evaluated_args[2].s;
 
 	if (!r.match(evaluated_args[1].s, &a)) {
-		result->type = LX_NULL;
+		result->type = LX_STRING;
+		result->s = strnewp("");
 		return TRUE;
 	}
 
