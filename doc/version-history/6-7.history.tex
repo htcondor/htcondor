@@ -24,6 +24,9 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item condor\_stats and the view server are now aware of the new backfill
+state for machines, and record and report statistics on it.
+
 \item Condor now supports running backfill jobs on Windows machines.
   See section~\ref{sec:Backfill} on page~\pageref{sec:Backfill} for
   more information about running backfill jobs with Condor.
@@ -76,6 +79,11 @@ specific hold states.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed several bugs in quill that would cause it to crash when
+very long values for job classad attributes where in the queue.  This
+typically happened with jobs submitted with "getenv = true" in the
+submit file, and very large environments.
 
 \item Fixed a bug in ClassAds where an attribute name which was
 constructed from a keyword with one or more digits appended would
