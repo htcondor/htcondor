@@ -14,7 +14,6 @@
 
 #define HAS_DYNAMIC_USER_JOBS	NO
 
-#define HAS_GLOBUS			NO
 #define HAS_GSI				NO
 #define HAS_OPENSSL			NO
 #define HAS_DLOPEN			NO

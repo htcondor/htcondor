@@ -1556,6 +1556,53 @@ if test x$_cv_ld_is_gnu = xyes; then
   CONDOR_EXTERNAL_VERSION([gcb],[1.3.1])
 fi
 
+# determine whether we will be using globus on this platform (i.e. determine
+# HAS_GLOBUS). this logic used to be in the individual <platform>.cf
+# files; the variables HAS_GSI and HAS_OPENSSL are still determined there
+AC_MSG_CHECKING([if build uses globus])
+case "$os" in
+  "HP-UX" )
+    _cv_has_globus=no
+    ;;
+  "OSF1" )
+    _cv_has_globus=yes
+    ;;
+  "Linux" )
+    _cv_has_globus=yes
+    ;;
+  "SunOS" )
+    _cv_has_globus=yes
+    ;;
+  "IRIX" )
+    _cv_has_globus=yes
+    ;;
+  "Darwin" )
+    _cv_has_globus=yes
+    ;;
+  "FreeBSD" )
+    _cv_has_globus=yes
+    ;;
+  "AIX" )
+    _cv_has_globus=yes
+    ;;
+  * )
+    AC_MSG_RESULT([error])
+    AC_MSG_ERROR([Unrecognized platform: $os])
+esac
+AC_MSG_RESULT([$_cv_has_globus])
+if test "$_cv_has_globus" = "yes" ; then
+  AC_SUBST(_cv_has_globus,YES)
+else
+  AC_SUBST(_cv_has_globus,NO)
+fi
+
+# currently, if we are using globus (and the openssl
+# within), we define HAVE_OPENSSL_SSL_H (meaning we
+# have ssl.h) to make gsoap happy
+if test "$_cv_has_globus" = "YES" ; then
+  AC_DEFINE(HAVE_OPENSSL_SSL_H,1,[do we have openssl (via globus)])
+fi
+
 else
 # if there's no externals at all, we still need to define these to
 # avoid imake troubles...

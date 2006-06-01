@@ -1,6 +1,5 @@
 /* Things that are specific to IRIX 6.5 */
 
-#define HAS_GLOBUS		YES
 #define HAS_GSI			YES
 #define HAS_OPENSSL		YES
 

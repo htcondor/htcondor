@@ -4,7 +4,6 @@
 
 #define IS_CLIPPED YES
 
-#define HAS_GLOBUS	YES
 #define HAS_GSI		YES
 #define HAS_OPENSSL 	YES
 

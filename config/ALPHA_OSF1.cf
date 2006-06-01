@@ -53,7 +53,6 @@
 ** Settings related to various externals that are shared across all
 ** versions of Digital Unix.
 */
-#define HAS_GLOBUS	YES
 #define HAS_GSI		YES
 #define HAS_OPENSSL	YES
 

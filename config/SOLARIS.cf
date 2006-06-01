@@ -26,7 +26,6 @@
 
 #define	HAS_DYNAMIC_USER_JOBS	YES
 
-#define HAS_GLOBUS 			YES
 #define HAS_GSI				YES
 #define HAS_OPENSSL			YES
 

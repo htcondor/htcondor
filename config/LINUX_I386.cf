@@ -6,8 +6,6 @@
 #define ArchOptimizeFlag -m486
 #endif
 
-#define HAS_GLOBUS	YES
-
 #ifdef IS_GLIBC23
 /*#define NEEDS_64BIT_SYSCALLS            YES*/
 /*#define NEEDS_64BIT_STRUCTS             YES*/
