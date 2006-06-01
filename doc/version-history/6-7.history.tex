@@ -64,12 +64,13 @@ queue multiple jobs (other than parallel universe).
 
 \item A number of types of failures to run a job now result in the job
 going on hold, rather than immediately being returned to the idle
-state and trying to run again.  This currently does not apply to
+state to be tried again.  This currently does not apply to
 standard universe jobs.  The types of errors that now result in the
 job going on hold are failure to execute the specified program,
-failure to transfer files, and failure to open input or output files.
+failure to transfer files, failure to open input or output files,
+and failure to access the job's initial working directory.
 In all such cases, a specific hold reason is specified in the job
-ClassAd, along with a numeric hold code and subcode.  If you with to
+ClassAd, along with a numeric hold code and subcode.  If you wish to
 automatically retry in such cases (the old behavior), then you can
 specify a \MacroNI{PeriodicRelease} expression that checks for
 specific hold states.
