@@ -100,6 +100,10 @@ this bug was a recurring message in the startd such as this:
 5/19 23:51:47 vm1: State change: claiming protocol failed
 \end{verbatim}
 
+\item Fixed a bug introduced in 6.7.19 which could cause the startd to
+abort (signal 6 under unix) when a match timed out for a claim
+preempting the existing preempting claim.
+
 \item Fixed a bug which could cause \Condor{quill} to perform an illegal
 memory access and potential segmentation fault.
 
