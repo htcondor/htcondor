@@ -362,16 +362,41 @@ elif test $os = "Darwin" ; then
   # the form: major.minor.patch
   _cv_kernel_rev=`uname -r | sed -e 's#^\\([0-9]\\+\\.[0-9]\\+\\.[0-9]\\+\\).*#\\1#'`;
 
+# --------------------------------------------
+# FreeBSD
+# --------------------------------------------
 elif test $os = "FreeBSD" ; then
-  _cv_arch="I386"
-  _cv_op_sys="CONDOR_FREEBSD"
-  _cv_opsys="CONDOR_FREEBSD"
-  _cv_opsys_vers="5_3"
-  _cv_sysname="i386_freebsd"
+   ##	
+   ## Figure out the architecture
+   ##
+   if test $arch = "i686" -o $arch = "i586" -o $arch = "i486" -o $arch = "i386" ; then
+      _cv_arch="I386"
+   elif test $arch = "alpha" ; then
+      _cv_arch="ALPHA"
+   elif test $arch = "ia64" ; then
+      _cv_arch="IA64"
+   elif test $arch = "ppc" -o $arch = "ppc64" ; then
+      _cv_arch="CONDOR_PPC"
+   elif test $arch = "x86_64" ; then
+      _cv_arch="X86_64"
+   fi
+   _cv_sysname="${_cv_arch}_freebsd"
 
-  # now figure out the kernel revision. Under freebsd this will have
-  # the form: major.minor
-  _cv_kernel_rev=`uname -r | sed -e 's#^\\([0-9]\\+\\.[0-9]\\+\\).*#\\1#'`;
+   ##
+   ## Now figure out the OS Version
+   ## Format:  MAJOR.MINOR-TAG
+   ## Example: 6.0-RELEASE
+   ##
+   _cv_opsys_vers=`uname -r | sed -e 's#\([0-9]*\).*#\1#'`
+   _cv_kernel_rev=`uname -r | sed -e 's#[0-9]*\.\([0-9]*\).*#\1#'`
+
+   _cv_op_sys=CONDOR_FREEBSD
+   _cv_opsys=${_cv_op_sys}
+   
+   ##
+   ## Need to make _cv_opsys_vers like 'FREEBSD#'
+   ##
+   _cv_opsys_vers="FREEBSD${_cv_opsys_vers}"
 
 else
   AC_MSG_ERROR([Condor has not been ported to this platform])

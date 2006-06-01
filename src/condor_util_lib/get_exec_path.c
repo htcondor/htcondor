@@ -304,7 +304,8 @@ darwin_getExecPath()
 }
 #endif /* defined(Darwin) */
 
-#ifdef CONDOR_FREEBSD
+#if defined(CONDOR_FREEBSD4)
+// This assumes procfs!
 char*
 freebsd_getExecPath()
 {
@@ -337,6 +338,74 @@ freebsd_getExecPath()
 	return full_path;
 	
 }
+#elif defined(CONDOR_FREEBSD5) || defined(CONDOR_FREEBSD6) || defined(CONDOR_FREEBSD7)
+char*
+freebsd_getExecPath()
+{
+	return (NULL);
+	/*
+	const char* name;
+	char *result = NULL;
+	char *full_path = NULL;
+	char full_buf[PATH_MAX];
+	int size;
+
+		//
+		// Use the syctl method to get the current executable name
+		// Is there a better way to do this?
+		//
+	int mib[4];
+	struct kinfo_proc *kp, *kprocbuf;
+	size_t bufSize = 0;
+
+	mib[0] = CTL_KERN;
+	mib[1] = KERN_PROC;    
+	mib[2] = KERN_PROC_PID;
+	mib[3] = getppid();
+
+	if ( sysctl( mib, 4, NULL, &bufSize, NULL, 0 ) < 0 ) {
+		return ( NULL );
+	}
+
+	kprocbuf = kp = ( struct kinfo_proc * )malloc( bufSize );
+	if ( kp == NULL ) {
+		return ( NULL );
+	}
+
+	if ( sysctl( mib, 4, kp, &bufSize, NULL, 0 ) < 0 ) {
+		return ( NULL );
+	}
+	name = kp->ki_ocomm;
+
+	if( name[0] == '/' ) {
+		return strdup(name);
+	}
+		//
+		// If we're still here, we didn't get the full path, and the
+		// man pages say we can prepend the output of getcwd() to find
+		// the real value...
+		// 
+	result = getcwd( NULL, MAXPATHLEN );
+	size = strlen(result) + strlen(name) + 2;
+	full_path = malloc(size);
+	snprintf( full_path, size, "%s/%s", result, name );
+	free( result );
+	free( kp );
+	result = NULL;
+
+		//
+		// 
+		//
+	memset( full_buf, '\0', MAXPATHLEN );
+	result = realpath( full_path, full_buf );
+	if ( result ) {
+		printf("FULL PATH[real]: %s\n", full_buf);
+		return ( strdup( full_buf ) );
+	}
+	printf("FULL PATH: %s\n", full_path);
+	return ( full_path );
+	*/
+}
 #endif
 
 
@@ -354,7 +423,7 @@ getExecPath( void )
 	rval= solaris_getExecPath();
 #elif defined( Darwin )
 	rval = darwin_getExecPath();
-#elif defined( CONDOR_FREEBSD )
+#elif defined(CONDOR_FREEBSD4) || defined(CONDOR_FREEBSD5) || defined(CONDOR_FREEBSD6) || defined(CONDOR_FREEBSD7)
 	rval = freebsd_getExecPath();
 #elif defined( WIN32 )
 	rval = win32_getExecPath();

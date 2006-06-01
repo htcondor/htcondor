@@ -1345,6 +1345,7 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 
 #elif defined(CONDOR_FREEBSD)
 
+#if defined(CONDOR_FREEBSD4)
 	struct procstat {
 	char comm[MAXCOMLEN+1];
 	int pid;
@@ -1367,108 +1368,43 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 	int egid;
 	char groups[256];
 	};
+#endif
 
 int
 ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status ) 
 {
-
-	// First, let's get the BSD task info for this stucture. This
-	// will tell us things like the pid, ppid, etc. 
-
-	int mib[4];
-	struct kinfo_proc *kp, *kprocbuf;
-	size_t bufSize = 0;
-
-	status = PROCAPI_OK;
-
-	mib[0] = CTL_KERN;
-	mib[1] = KERN_PROC;    
-	mib[2] = KERN_PROC_PID;
-	mib[3] = pid;
-
-	if (sysctl(mib, 4, NULL, &bufSize, NULL, 0) < 0) {
-		status = PROCAPI_UNSPECIFIED;
-
-		dprintf( D_FULLDEBUG, 
-			"ProcAPI: sysctl() (pass 1) on pid %d failed with %d(%s)\n",
-			pid, errno, strerror(errno) );
-
-		return PROCAPI_FAILURE;
+	initpi(pi);
+		//
+		// get the raw system process data
+		//
+	procInfoRaw procRaw;
+	int retVal = ProcAPI::getProcInfoRaw( pid, procRaw, status );
+		//
+		// If a failure occurred, then returned the right status
+		//
+	if ( retVal != 0 ) {
+		return ( PROCAPI_FAILURE );
 	}
 
-	kprocbuf = kp = (struct kinfo_proc *)malloc(bufSize);
-	if (kp == NULL) {
-		EXCEPT("ProcAPI: getProcInfo() Out of memory!\n");
+		// if the page size has not yet been found, get it.
+	if ( pagesize == 0 ) {
+		pagesize = getpagesize() / 1024;
 	}
+	
+	pi->imgsize = procRaw.imgsize / 1024;	
+	pi->rssize = procRaw.rssize * getpagesize();
+	pi->ppid = procRaw.ppid;
+	pi->owner = procRaw.owner;
+	pi->creation_time = procRaw.creation_time;
+	pi->pid = procRaw.pid;
+	pi->user_time = procRaw.user_time_1;
+	pi->sys_time = procRaw.sys_time_1;
+	pi->age = secsSinceEpoch() - pi->creation_time;
 
-	if (sysctl(mib, 4, kp, &bufSize, NULL, 0) < 0) {
-		status = PROCAPI_UNSPECIFIED;
-
-		dprintf( D_FULLDEBUG, 
-			"ProcAPI: sysctl() (pass 2) on pid %d failed with %d(%s)\n",
-			pid, errno, strerror(errno) );
-
-		free(kp);
-
-		return PROCAPI_FAILURE;
-	}
-
-	FILE* fp;
-	char path[MAXPATHLEN];
-	struct procstat prs;
-	sprintf(path,"/proc/%d/status",pid);
-	if( (fp = fopen( path, "r" )) != NULL ){
-		fscanf(fp, 
-		"%s %d %d %d %d %d,%d %s %d,%d %d,%d %d,%d %s %d %d %d,%d,%s",
-		prs.comm, 
-		&prs.pid, 
-		&prs.ppid,
-		&prs.pgid,
-		&prs.sid, 
-		&prs.tdev_maj, 
-		&prs.tdev_min, 
-		prs.flags, 
-		&prs.start,
-		&prs.start_mic,
-		&prs.utime,
-		&prs.utime_mic,
-		&prs.stime, 
-		&prs.stime_mic, 
-		prs.wchan,
-		&prs.euid,
-		&prs.ruid,
-		&prs.rgid,
-		&prs.egid,
-		prs.groups
-		);
-	// This *could* allocate memory and make pi point to it if pi == NULL.
-	// It is up to the caller to get rid of it.
-		initpi(pi);
-		struct vmspace vm = (kp->kp_eproc).e_vm; 
-		pi->imgsize = vm.vm_map.size / 1024;
-		pi->rssize = vm.vm_pmap.pm_stats.resident_count * getpagesize();
-		pi->user_time = prs.utime;
-		pi->sys_time = prs.stime;
-		pi->creation_time = prs.start;
-		pi->age = secsSinceEpoch() - pi->creation_time; 
-		pi->pid = pid;
-		pi->ppid = kp->kp_eproc.e_ppid;
-		pi->owner = kp->kp_eproc.e_pcred.p_ruid; 
-
-		long nowminf, nowmajf;
-		double ustime = pi->user_time + pi->sys_time;
-
-		nowminf = 0;
-		nowmajf = 0;
-		do_usage_sampling(pi, ustime, nowmajf, nowminf);
-		fclose(fp);
-		free(kp);
-	  return PROCAPI_SUCCESS;
-	}
-	dprintf( D_FULLDEBUG, "ProcAPI: /proc/%d/status not found!\n", pid);
-	free(kp);
-	return PROCAPI_FAILURE;
-
+	double ustime = pi->user_time + pi->sys_time;
+	do_usage_sampling( pi, ustime, procRaw.majfault, procRaw.minfault );
+	
+	return PROCAPI_SUCCESS;
 }
 
 int
@@ -1479,55 +1415,64 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 	struct kinfo_proc *kp, *kprocbuf;
 	size_t bufSize = 0;
 
-		// assume success
+		//
+		// Assume success
+		//
 	status = PROCAPI_OK;
-
-		// clear memory for procRaw
+		//
+		// Clear memory for procRaw
+		//
 	initProcInfoRaw(procRaw);
-
-		// set the sample time
+		//
+		// Set the sample time
+		//
 	procRaw.sample_time = secsSinceEpoch();
 	
-		/* Collect the data from the system */
-	
+		//
+		// Collect the data from the system
 		// First, let's get the BSD task info for this stucture. This
 		// will tell us things like the pid, ppid, etc. 
-    mib[0] = CTL_KERN;
-    mib[1] = KERN_PROC;    
-    mib[2] = KERN_PROC_PID;
-    mib[3] = pid;
-    if (sysctl(mib, 4, NULL, &bufSize, NULL, 0) < 0) {
+		//
+	mib[0] = CTL_KERN;
+	mib[1] = KERN_PROC;    
+	mib[2] = KERN_PROC_PID;
+	mib[3] = pid;
+	if ( sysctl( mib, 4, NULL, &bufSize, NULL, 0 ) < 0 ) {
 		status = PROCAPI_UNSPECIFIED;
-
 		dprintf( D_FULLDEBUG, 
 			"ProcAPI: sysctl() (pass 1) on pid %d failed with %d(%s)\n",
 			pid, errno, strerror(errno) );
+		return PROCAPI_FAILURE;
+	}
 
-        return PROCAPI_FAILURE;
-    }
-
-    kprocbuf = kp = (struct kinfo_proc *)malloc(bufSize);
+	kprocbuf = kp = (struct kinfo_proc *)malloc(bufSize);
 	if (kp == NULL) {
 		EXCEPT("ProcAPI: getProcInfo() Out of memory!\n");
 	}
 
-    if (sysctl(mib, 4, kp, &bufSize, NULL, 0) < 0) {
-		status = PROCAPI_UNSPECIFIED;
-
+	if (sysctl(mib, 4, kp, &bufSize, NULL, 0) < 0) {
+		status = PROCAPI_UNSPECIFIED;	
 		dprintf( D_FULLDEBUG, 
 			"ProcAPI: sysctl() (pass 2) on pid %d failed with %d(%s)\n",
 			pid, errno, strerror(errno) );
+		free(kp);	
+		return PROCAPI_FAILURE;
+	}
 
-		free(kp);
-
-        return PROCAPI_FAILURE;
-    }
+#if defined(CONDOR_FREEBSD4)
+		//
+		// Bad! We're looking for /proc!
+		//
 	FILE* fp;
 	char path[MAXPATHLEN];
 	struct procstat prs;
 	sprintf(path,"/proc/%d/status",pid);
-	if( (fp = fopen( path, "r" )) != NULL ){
-		fscanf(fp,
+	if( (fp = fopen( path, "r" )) == NULL ) {
+		dprintf( D_FULLDEBUG, "ProcAPI: /proc/%d/status not found!\n", pid);
+		free(kp);
+		return PROCAPI_FAILURE;
+	}
+	fscanf(fp,
 		"%s %d %d %d %d %d,%d %s %d,%d %d,%d %d,%d %s %d %d %d,%d,%s",
 		prs.comm, 
 		&prs.pid, 
@@ -1549,32 +1494,37 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 		&prs.rgid,
 		&prs.egid,
 		prs.groups
-		);
-	// This *could* allocate memory and make pi point to it if pi == NULL.
-	// It is up to the caller to get rid of it.
-		struct vmspace vm = (kp->kp_eproc).e_vm; 
-		procRaw.imgsize = vm.vm_map.size / 1024;
-		procRaw.rssize = vm.vm_pmap.pm_stats.resident_count * getpagesize();
-		procRaw.user_time_1 = prs.utime;
-		procRaw.user_time_2 = 0;
-		procRaw.sys_time_1 = prs.stime;
-		procRaw.sys_time_2 = 0;
-		procRaw.creation_time = prs.start;
-		procRaw.pid = pid;
-		procRaw.ppid = kp->kp_eproc.e_ppid;
-		procRaw.owner = kp->kp_eproc.e_pcred.p_ruid; 
-	// We don't know the page faults
-		procRaw.majfault = 0;
-		procRaw.minfault = 0;
-
-		free(kp);
-
-		// success
-		return PROCAPI_SUCCESS;
-	}
-	dprintf( D_FULLDEBUG, "ProcAPI: /proc/%d/status not found!\n", pid);
+	);
+	struct vmspace vm = (kp->kp_eproc).e_vm; 
+	procRaw.imgsize = vm.vm_map.size;
+	procRaw.rssize = vm.vm_pmap.pm_stats.resident_count;
+	procRaw.user_time_1 = prs.utime;
+	procRaw.user_time_2 = 0;
+	procRaw.sys_time_1 = prs.stime;
+	procRaw.sys_time_2 = 0;
+	procRaw.creation_time = prs.start;
+	procRaw.pid = pid;
+	procRaw.ppid = kp->kp_eproc.e_ppid;
+	procRaw.owner = kp->kp_eproc.e_pcred.p_ruid; 
+		// We don't know the page faults
+	procRaw.majfault = 0;
+	procRaw.minfault = 0;
+#else
+	procRaw.imgsize = kp->ki_size;
+	procRaw.rssize = kp->ki_swrss;
+	procRaw.ppid = kp->ki_ppid;
+	procRaw.owner = kp->ki_uid;
+	procRaw.majfault = kp->ki_rusage.ru_majflt;
+	procRaw.minfault = kp->ki_rusage.ru_minflt;
+	procRaw.user_time_1 = kp->ki_rusage.ru_utime.tv_sec;
+	procRaw.user_time_2 = kp->ki_rusage.ru_utime.tv_usec;
+	procRaw.sys_time_1 = kp->ki_rusage.ru_stime.tv_sec;
+	procRaw.sys_time_2 = kp->ki_rusage.ru_stime.tv_usec;
+	procRaw.creation_time = kp->ki_start.tv_sec;
+	procRaw.pid = pid;
+#endif
 	free(kp);
-	return PROCAPI_FAILURE;
+	return PROCAPI_SUCCESS;
 }
 #elif defined(WIN32)
 
@@ -2945,7 +2895,7 @@ ProcAPI::buildPidList() {
 
 #endif
 
-#ifdef CONDOR_FREEBSD
+#if defined(CONDOR_FREEBSD)
 int
 ProcAPI::buildPidList() {
 
@@ -2989,7 +2939,11 @@ ProcAPI::buildPidList() {
 
 	for(int i = nentries; --i >=0; kp++) {
 		temp = new pidlist;
+#if defined(CONDOR_FREEBSD4)
 		temp->pid = (pid_t) kp->kp_proc.p_pid;
+#else
+		temp->pid = kp->ki_pid;
+#endif
 		temp->next = NULL;
 		current->next = temp;
 		current = temp;

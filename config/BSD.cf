@@ -18,6 +18,20 @@
 #include <DARWIN.cf>
 #endif
 
-#if defined ( IS_CONDOR_FREEBSD )
+#if defined (IS_CONDOR_FREEBSD)
 #include <FREEBSD.cf>
+#endif
+
+/* Specific FreeBSD Versions */
+#if defined ( IS_FREEBSD4 )
+#include <FREEBSD4.cf>
+#endif
+#if defined ( IS_FREEBSD5 )
+#include <FREEBSD5.cf>
+#endif
+#if defined ( IS_FREEBSD6 )
+#include <FREEBSD6.cf>
+#endif
+#if defined ( IS_FREEBSD7 )
+#include <FREEBSD7.cf>
 #endif

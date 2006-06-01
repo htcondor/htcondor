@@ -391,7 +391,7 @@ get_k_vars()
 
 #include <sys/resource.h>
 #include <sys/sysctl.h>
-#ifdef CONDOR_FREEBSD
+#if defined(CONDOR_FREEBSD)
 #include <vm/vm_param.h>
 #endif
 float

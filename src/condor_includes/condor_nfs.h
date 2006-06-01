@@ -42,7 +42,22 @@
 #if defined(Darwin) || defined(CONDOR_FREEBSD)
 #       include <nfs/rpcv2.h>
 #endif
+
+#if defined(CONDOR_FREEBSD)
+#if defined(CONDOR_FREEBSD4)
+	//
+	// This is only found in FreeBSD 4.X
+	//
 #	include <nfs/nfs.h>
+#else
+	//
+	// I am not 100% that this is the right file, but it seems to work
+	// Andy - 04.20.2006
+	//
+#	include <nfs/nfsproto.h>
+#endif
+#endif
+
 #if defined(LINUX) || defined(IRIX) || defined(HPUX10) 
 #	include <nfs/export.h>
 #endif

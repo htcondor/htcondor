@@ -1,0 +1,1 @@
+#define PlatformFlags -DCONDOR_FREEBSD6=CONDOR_FREEBSD6

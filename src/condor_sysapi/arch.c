@@ -343,6 +343,12 @@ sysapi_translate_opsys( char *sysname, char *release, char *version )
 			sprintf(tmp, "%s%s%s", sysname, version, release);
 		}
 	}
+	else if ( !strncmp(sysname, "FreeBSD", 7) ) {
+			//
+			// Pull the major version # out of the release information
+			//
+		sprintf( tmp, "FREEBSD%c", release[0]);
+	}
 	else {
 			// Unknown, just use what uname gave:
 		sprintf( tmp, "%s%s", sysname, release );

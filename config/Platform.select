@@ -20,7 +20,7 @@
 #elif defined( IS_DARWIN )
 #  define PlatformIncludeFile <BSD.cf>
 
-#elif defined ( IS_CONDOR_FREEBSD )
+#elif defined(IS_CONDOR_FREEBSD)
 #  define PlatformIncludeFile <BSD.cf>
 
 #elif defined( IS_SOLARIS )
