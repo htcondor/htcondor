@@ -123,7 +123,7 @@ usage()
 
 char* GetRemoteParam( Daemon*, char* );
 void  SetRemoteParam( Daemon*, char*, ModeType );
-static void PrintConfigFiles(void);
+static void PrintConfigSources(void);
 
 int
 main( int argc, char* argv[] )
@@ -133,7 +133,7 @@ main( int argc, char* argv[] )
 	int		i;
 	bool	ask_a_daemon = false;
 	bool    verbose = false;
-	bool    print_config_files = false;
+	bool    print_config_sources = false;
 	
 	PrintType pt = CONDOR_NONE;
 	ModeType mt = CONDOR_QUERY;
@@ -209,7 +209,7 @@ main( int argc, char* argv[] )
 		} else if( match_prefix( argv[i], "-mixedcase" ) ) {
 			mixedcase = true;
 		} else if( match_prefix( argv[i], "-config" ) ) {
-			print_config_files = true;
+			print_config_sources = true;
 		} else if( match_prefix( argv[i], "-verbose" ) ) {
 			verbose = true;
 		} else if( match_prefix( argv[i], "-" ) ) {
@@ -227,7 +227,7 @@ main( int argc, char* argv[] )
 
 		// We need to do this before we call config().  A) we don't
 		// need config() to find this out and B) config() will fail if
-		// all the config files aren't setup yet, and we use
+		// all the config sources aren't setup yet, and we use
 		// "condor_config_val -owner" for condor_init.  Derek 9/23/99 
 	if( pt == CONDOR_OWNER ) {
 		printf( "%s\n", get_condor_username() );
@@ -254,8 +254,8 @@ main( int argc, char* argv[] )
 		config_host( host );
 	} else {
 		config();
-		if (print_config_files) {
-			PrintConfigFiles();
+		if (print_config_sources) {
+			PrintConfigSources();
 		}
 	}
 
@@ -278,7 +278,7 @@ main( int argc, char* argv[] )
 				collector_addr = strdup(pool);
 			} else { 
 				CollectorList * collectors = CollectorList::create();
-				Daemon * collector;
+				Daemon * collector = NULL;
 				while (collectors->next (collector)) {
 					if (collector->locate()) break;
 				}
@@ -304,7 +304,7 @@ main( int argc, char* argv[] )
 
 	params.rewind();
 
-	if( ! params.number() && !print_config_files ) {
+	if( ! params.number() && !print_config_sources ) {
 		usage();
 	}
 
@@ -567,46 +567,45 @@ SetRemoteParam( Daemon* target, char* param_value, ModeType mt )
 	free( param_name );
 }
 
-static void PrintConfigFiles(void)
+static void PrintConfigSources(void)
 {
-		// print descriptive lines to stderr and config file names to
+		// print descriptive lines to stderr and config source names to
 		// stdout, so that the output can be cleanly piped into
 		// something like xargs...
 
-	if (global_config_file.Length() > 0) {
-		fprintf( stderr, "Config file:\n" );
+	if (global_config_source.Length() > 0) {
+		fprintf( stderr, "Config source:\n" );
 		fflush( stderr );
-		fprintf( stdout, "\t%s\n", global_config_file.Value() );
+		fprintf( stdout, "\t%s\n", global_config_source.Value() );
 		fflush( stdout );
 	} else {
-		fprintf( stderr, "Can't find the config file.\n" );
+		fprintf( stderr, "Can't find the config source.\n" );
 	}
-	if (global_root_config_file.Length() > 0) {
-		fprintf( stderr, "Root config file:\n" );
+	if (global_root_config_source.Length() > 0) {
+		fprintf( stderr, "Root config source:\n" );
 		fflush( stderr );
-		fprintf( stdout, "\t%s\n", global_root_config_file.Value() );
+		fprintf( stdout, "\t%s\n", global_root_config_source.Value() );
 		fflush( stdout );
 	}
-	if (local_config_files.Length() > 0) {
-		StringList files;
 
-		files.initializeFromString(local_config_files.Value());
-		
-		if (files.number() < 2) {
-			fprintf( stderr, "Local config file:\n" );
-			fflush( stderr );
-			fprintf( stdout, "\t%s\n", local_config_files.Value() );
-			fflush( stdout );
+	unsigned int numSources = local_config_sources.number();
+	if (numSources > 0) {
+		if (numSources == 1) {
+			fprintf( stderr, "Local config source:\n" );
 		} else {
-			fprintf( stderr, "Local config files:\n" );
-			fflush( stderr );
-			files.rewind();
-			char *file;
-			while ((file = files.next()) != NULL) {
-				fprintf( stdout, "\t%s\n", file );
-				fflush( stdout );
-			}
+			fprintf( stderr, "Local config sources:\n" );
 		}
+		fflush( stderr );
+
+		char *source;
+		local_config_sources.rewind();
+		while ( (source = local_config_sources.next()) != NULL ) {
+			fprintf( stdout, "\t%s\n", source );
+			fflush( stdout );
+		}
+
+		fprintf(stderr, "\n");
 	}
+
 	return;
 }

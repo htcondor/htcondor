@@ -176,7 +176,8 @@ set( int idx, Element elt )
 		// our size
 		//
 	} else if ( idx >= this->size ) {
-		this->resize( idx * 2 );
+		int newSize = idx * 2 + 2; // same as (idx + 1) * 2
+		this->resize( newSize );
 	}
 		//
 		// If this new value is the largest position, we'll 

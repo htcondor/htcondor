@@ -97,7 +97,9 @@ static child_handle_t remove_child(FILE* fp)
 
 #ifdef WIN32
 
-/* Windows versions of my_popen / my_pclose */
+//////////////////////////////////////////////////////////////////////////
+// Windows versions of my_popen / my_pclose 
+//////////////////////////////////////////////////////////////////////////
 
 static FILE *
 my_popen(const char *const_cmd, const char *mode, int want_stderr)
@@ -258,7 +260,9 @@ my_pclose(FILE *fp)
 
 #else
 
-/* UNIX versions of my_popen(v) / my_pclose */
+//////////////////////////////////////////////////////////////////////////
+// UNIX versions of my_popen(v) & my_pclose 
+//////////////////////////////////////////////////////////////////////////
 
 #include <grp.h> // for setgroups
 
@@ -276,15 +280,19 @@ my_popenv( char *const args[], const char * mode, int want_stderr )
 	FILE*	retp;
 
 		/* Figure out who reads and who writes on the pipe */
-	parent_reads = mode[0] == 'r';
+	parent_reads = (mode[0] == 'r');
 
 		/* Create the pipe */
 	if( pipe(pipe_d) < 0 ) {
+		dprintf(D_ALWAYS, "my_popenv: Failed to create the pipe, "
+				"errno=%d (%s)\n", errno, strerror(errno));
 		return NULL;
 	}
 
 		/* Create a new process */
 	if( (pid=fork()) < 0 ) {
+		dprintf(D_ALWAYS, "my_popenv: Failed to fork child, errno=%d (%s)\n",
+				errno, strerror(errno));
 			/* Clean up file descriptors */
 		close( pipe_d[0] );
 		close( pipe_d[1] );

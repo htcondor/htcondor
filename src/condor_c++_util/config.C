@@ -29,6 +29,7 @@
 #include "extra_param_info.h"
 #include "condor_random_num.h"
 #include "condor_uid.h"
+#include "my_popen.h"
 
 #if defined(__cplusplus)
 extern "C" {
@@ -63,24 +64,83 @@ condor_isalnum(int c)
 // Magic macro to represent a dollar sign, i.e. $(DOLLAR)="$"
 #define DOLLAR_ID "DOLLAR"
 
+bool 
+is_piped_command(const char* filename)
+{
+	bool retVal = false;
+
+	char* pdest = strchr( filename, '|' );
+	if ( pdest != NULL ) {
+		// This is not a filename (still not sure it's a valid command though)
+		retVal = true;
+	}
+
+	return retVal;
+}
+
+
+// Make sure the last character is the '|' char.  For now, that's our only criteria.
+bool 
+is_valid_command(const char* cmdToExecute)
+{
+	bool retVal = false;
+
+	int cmdStrLength = strlen(cmdToExecute);
+	if ( cmdToExecute[cmdStrLength - 1] == '|' ) {
+		retVal = true;
+	}
+
+	return retVal;
+}
+
+
 int
-Read_config( const char* config_file, BUCKET** table, 
+Read_config( const char* config_source, BUCKET** table, 
 			 int table_size, int expand_flag,
 			 bool check_runtime_security,
 			 ExtraParamTable *extra_info)
 {
-  	FILE	*conf_fp;
-	char	*name, *value, *rhs;
-	char	*ptr;
+  	FILE*	conf_fp = NULL;
+	char*	name = NULL;
+	char*	value = NULL;
+	char*	rhs = NULL;
+	char*	ptr = NULL;
 	char	op;
 
 	ConfigLineNo = 0;
+   
+	// Determine if the config file name specifies a file to open, or a
+	// pipe to suck on. Process each accordingly
+	if ( is_piped_command(config_source) ) {
+		if ( is_valid_command(config_source) ) {
+			// try to run the cmd specified before the '|' symbol, and
+			// get the configuration from it's output.
+			char *cmdToExecute = strdup( config_source );
+			cmdToExecute[strlen(cmdToExecute)-1] = '\0';
 
-	conf_fp = fopen(config_file, "r");
-	if( conf_fp == NULL ) {
-		printf("Can't open file %s\n", config_file);
-		return( -1 );
+			ArgList argList;
+			MyString args_errors;
+			argList.AppendArgsV1RawOrV2Quoted(cmdToExecute, &args_errors);
+			conf_fp = my_popen(argList, "r", FALSE);
+			if( conf_fp == NULL ) {
+				printf("Can't open cmd %s\n", cmdToExecute);
+				free( cmdToExecute );
+				return -1;
+			}
+			free( cmdToExecute );
+		} else {
+			printf("Specified cmd, %s, not a valid command to execute.  It must have a '|' "
+				   "character at the end.\n", config_source);
+			return( -1 );
+		}
+	} else {
+		conf_fp = fopen(config_source, "r");
+		if( conf_fp == NULL ) {
+			printf("Can't open file %s\n", config_source);
+			return( -1 );
+		}
 	}
+
 	if( check_runtime_security ) {
 #ifndef WIN32
 			// unfortunately, none of this works on windoze... (yet)
@@ -89,9 +149,8 @@ Read_config( const char* config_file, BUCKET** table,
 		uid_t f_uid;
 		int rval = fstat( fd, &statbuf );
 		if( rval < 0 ) {
-			fprintf( stderr,
-		"Configuration Error File <%s>, fstat() failed: %s (errno: %d)\n",
-					 config_file, strerror(errno), errno );
+			fprintf( stderr, "Configuration Error File <%s>, fstat() failed: %s (errno: %d)\n",
+					 config_source, strerror(errno), errno );
 			return( -1 );
 		}
 		f_uid = statbuf.st_uid;
@@ -100,7 +159,7 @@ Read_config( const char* config_file, BUCKET** table,
 			if( f_uid != 0 ) {
 				fprintf( stderr, "Configuration Error File <%s>, "
 						 "running as root yet runtime config file owned "
-						 "by uid %d, not 0!\n", config_file, (int)f_uid );
+						 "by uid %d, not 0!\n", config_source, (int)f_uid );
 				return( -1 );
 			}
 		} else {
@@ -108,7 +167,7 @@ Read_config( const char* config_file, BUCKET** table,
 			if( f_uid != get_my_uid() ) {
 				fprintf( stderr, "Configuration Error File <%s>, "
 						 "running as uid %d yet runtime config file owned "
-						 "by uid %d!\n", config_file, (int)get_my_uid(),
+						 "by uid %d!\n", config_source, (int)get_my_uid(),
 						 (int)f_uid );
 				return( -1 );
 			}
@@ -116,12 +175,18 @@ Read_config( const char* config_file, BUCKET** table,
 #endif /* ! WIN32 */
 	} // if( check_runtime_security )
 
-
-	for(;;) {
-		name = getline_implementation(conf_fp,128);
-		if( name == NULL ) {
+	bool firstRead = true;
+	while(true) {
+		name = getline_implementation(conf_fp, 128);
+		// If the file is empty the first time through, warn the user.
+		if (name == NULL) {
+			if (firstRead) {
+				dprintf(D_FULLDEBUG, "WARNING: Config source is empty: %s\n",
+						config_source);
+			}
 			break;
 		}
+		firstRead = false;
 		
 		/* Skip over comments */
 		if( *name == '#' || blankline(name) )
@@ -200,7 +265,7 @@ Read_config( const char* config_file, BUCKET** table,
 				(void) fclose( conf_fp );
 				fprintf( stderr,
 		"Configuration Error File <%s>, Line %d: Illegal Identifier: <%s>\n",
-					config_file, ConfigLineNo, name );
+					config_source, ConfigLineNo, name );
 				return( -1 );
 			}
 		}
@@ -232,21 +297,23 @@ Read_config( const char* config_file, BUCKET** table,
 			/* Put the value in the Configuration Table */
 			insert( name, value, table, table_size );
 			if (extra_info != NULL) {
-				extra_info->AddFileParam(name, config_file, ConfigLineNo);
+				extra_info->AddFileParam(name, config_source, ConfigLineNo);
 			}
 		} else {
 			fprintf( stderr,
 				"Configuration Error File <%s>, Line %d: Syntax Error\n",
-				config_file, ConfigLineNo );
+				config_source, ConfigLineNo );
 			(void)fclose( conf_fp );
 			return -1;
 		}
 
 		FREE( name );
+		name = NULL;
 		FREE( value );
+		value = NULL;
 	}
 
-	(void)fclose( conf_fp );
+	fclose( conf_fp );
 	return 0;
 }
 

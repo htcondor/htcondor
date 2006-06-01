@@ -44,9 +44,9 @@ typedef struct bucket {
 #define TABLESIZE 113
 
 #if defined(__cplusplus)
-	extern MyString global_config_file;
-	extern MyString global_root_config_file;
-	extern MyString local_config_files;
+	extern MyString global_config_source;
+	extern MyString global_root_config_source;
+	extern StringList local_config_sources;
 
     int param_integer( const char *name, int default_value,
 					   int min_value = INT_MIN, int max_value = INT_MAX );
