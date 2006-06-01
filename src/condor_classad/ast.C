@@ -1700,6 +1700,8 @@ int Function::_EvalTree(const AttrList *attrlist1, const AttrList *attrlist2, Ev
 			successful_eval = FunctionStringlistMember(number_of_args, evaluated_args, result);
 		} else if (!strcasecmp(name, "stringlistimember")) {
 			successful_eval = FunctionStringlistIMember(number_of_args, evaluated_args, result);
+		} else if (!strcasecmp(name, "stringlist_regexpMember")) {
+			successful_eval = FunctionStringlistRegexpMember(number_of_args, evaluated_args, result);
 		} else if (!strcasecmp(name, "regexp")) {
 			successful_eval = FunctionRegexp(number_of_args, evaluated_args, result);
 		} else if (!strcasecmp(name, "regexps")) {
@@ -2934,6 +2936,92 @@ static int regexp_str_to_options(char *option_str) {
 	return options;
 }
 
+int Function::FunctionStringlistRegexpMember(
+	int number_of_args,         // IN:  size of evaluated args array
+	EvalResult *evaluated_args, // IN:  the arguments to the function
+	EvalResult *result)         // OUT: the result of calling the function
+{
+	/*
+	stringlistRegexpMember(string pattern, string l 
+			[, string d] [, string options]) returns boolean.
+
+	If l is not a stringlist or any of the other arguments is not of type 
+	String, the result is an error. If any of the values in string list do
+	not eveluate to a string it returns an error. Otherwise, if any of the 
+	values in the list matches the pattern accoring to the regexp function,
+	the result is true. If there is no match the result is false.
+
+	The characters in the optional argument d are treated as the delimiters
+	for the stringlist. If this is not enumerated the delimiter defaults to
+	" ," (space and comma characters). The options string behaves as in
+	regexp function below.
+	*/
+
+	if (( number_of_args < 2) || ( number_of_args > 4 )) {
+		result->type = LX_ERROR;
+		return FALSE;
+	}
+
+	char *d = " ,";
+
+	if (number_of_args == 3) {
+		if (evaluated_args[2].type != LX_STRING) {
+			result->type = LX_ERROR;
+			return FALSE;
+		}
+
+		d = evaluated_args[2].s;
+	}
+
+	char *option_str = "";
+
+	if (number_of_args == 4) {
+		if (evaluated_args[3].type != LX_STRING) {
+				result->type = LX_ERROR;
+				return FALSE;
+		}
+		option_str = evaluated_args[3].s;
+	}
+
+	if ((evaluated_args[0].type != LX_STRING) || 
+		(evaluated_args[1].type != LX_STRING)) {
+		result->type = LX_ERROR;
+		return FALSE;
+	}
+
+	Regex r;
+	const char *errstr = 0;
+	int errpos = 0;
+	bool valid;
+	int options = regexp_str_to_options(option_str);
+
+	/* can the pattern be compiled */
+	valid = r.compile(evaluated_args[0].s, &errstr, &errpos, options);
+	if (!valid) {
+		result->type = LX_ERROR;
+		return FALSE;
+	}
+
+	result->type = LX_INTEGER;
+	StringList sl(evaluated_args[1].s, d);
+	sl.rewind();
+	char *entry;
+	int match = 0;
+	while( (entry = sl.next())) {
+			if (r.match(entry)) {
+				match = 1;
+			}
+	}
+
+	if(match) {
+		result->i = 1;
+		return TRUE;
+	}
+
+	result->i = 0;
+	return TRUE;
+}
+	
 int Function::FunctionRegexp(
 	int number_of_args,         // IN:  size of evaluated args array
 	EvalResult *evaluated_args, // IN:  the arguments to the function

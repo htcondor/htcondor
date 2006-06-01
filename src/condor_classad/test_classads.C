@@ -212,6 +212,7 @@ static void test_function_int( TestResults  *results);
 static void test_function_real( TestResults  *results);
 static void test_function_ifthenelse( TestResults  *results);
 static void test_function_stringlists( TestResults  *results);
+static void test_function_stringlists_regexpmember( TestResults  *results);
 static void test_function_string( TestResults  *results);
 static void test_function_strcat( TestResults  *results);
 static void test_function_floor( TestResults  *results);
@@ -1634,6 +1635,7 @@ static void test_functions(
 		test_function_strcmp(results);
 		test_function_attrnm(results);
 		test_function_regexp(results);
+		test_function_stringlists_regexpmember(results);
 		test_function_ifthenelse(results);
         delete classad;
 	}
@@ -2291,91 +2293,6 @@ static void test_function_stringlists(
 				   integer, __LINE__);
 			results->AddResult(false);
 		}
-
-/*
-**
-		if (classad->EvalBool("T0", NULL, integer) && (integer == 1)) {
-			printf("Passed: Evaluating stringlistmember gives: %d in line %d\n", 
-				   integer, __LINE__);
-			results->AddResult(true);
-		} else {
-			printf("Failed: Evaluating stringlistmember gave %d in line %d\n",
-				   integer, __LINE__);
-			results->AddResult(false);
-		}
-
-		if (classad->EvalFloat("T1", NULL, real) && (real == 0.0)) {
-			printf("Passed: Evaluating stringlistmember gives: %f in line %d\n", 
-				   real, __LINE__);
-			results->AddResult(true);
-		} else {
-			printf("Failed: Evaluating stringlistmember gave %f in line %d\n",
-				   real, __LINE__);
-			results->AddResult(false);
-		}
-
-		if (classad->EvalFloat("T2", NULL, real) && (real == 2.0)) {
-			printf("Passed: Evaluating stringlistmember gives: %f in line %d\n", 
-				   real, __LINE__);
-			results->AddResult(true);
-		} else {
-			printf("Failed: Evaluating stringlistmember gave %f in line %d\n",
-				   real, __LINE__);
-			results->AddResult(false);
-		}
-
-		if (classad->EvalBool("T3", NULL, integer) && (integer == 1)) {
-			printf("Passed: Evaluating stringlistmember expected error arg 2 not string: %d in line %d\n", 
-				   integer, __LINE__);
-			results->AddResult(true);
-		} else {
-			printf("Failed: Evaluating stringlistmember Got error arg 2 not string %d in line %d\n",
-				   integer, __LINE__);
-			results->AddResult(false);
-		}
-
-		if (classad->EvalBool("T4", NULL, integer) && (integer == 1)) {
-			printf("Passed: Evaluating stringlistmember expected error arg 1 not string: %d in line %d\n", 
-				   integer, __LINE__);
-			results->AddResult(true);
-		} else {
-			printf("Failed: Evaluating stringlistmember Got error arg 1 not string %d in line %d\n",
-				   integer, __LINE__);
-			results->AddResult(false);
-		}
-
-		if (classad->EvalBool("T5", NULL, integer) && (integer == 1)) {
-			printf("Passed: Evaluating stringlistmember expected error list not all numbers: %d in line %d\n", 
-				   integer, __LINE__);
-			results->AddResult(true);
-		} else {
-			printf("Failed: Evaluating stringlistmember Got error list not all numbers %d in line %d\n",
-				   integer, __LINE__);
-			results->AddResult(false);
-		}
-
-		if (classad->EvalBool("T6", NULL, integer) && (integer == 1)) {
-			printf("Passed: Evaluating stringlistmember expected error list not all numbers: %d in line %d\n", 
-				   integer, __LINE__);
-			results->AddResult(true);
-		} else {
-			printf("Failed: Evaluating stringlistmember Got error list not all numbers %d in line %d\n",
-				   integer, __LINE__);
-			results->AddResult(false);
-		}
-
-		if (classad->EvalFloat("T7", NULL, real) && (real > 0.6)) {
-			printf("Passed: Evaluating stringlistmember gives: %f in line %d\n", 
-				   real, __LINE__);
-			results->AddResult(true);
-		} else {
-			printf("Failed: Evaluating stringlistmember gave %f in line %d\n",
-				   real, __LINE__);
-			results->AddResult(false);
-		}
-**
-*/
-
 
 		if (classad->EvalBool("V", NULL, integer) && (integer == 1)) {
 			printf("Passed: Evaluating stringlistimember gives: %d in line %d\n", 
@@ -3754,6 +3671,7 @@ static void test_function_regexp(
 				   integer, __LINE__);
 			results->AddResult(false);
 		}
+
 		if (classad->EvalBool("E7", NULL, integer) &&
 				(integer == 1)) {
 			printf("Passed: Evaluating regexps optional option arg not a string: %d in line %d\n", 
@@ -3761,6 +3679,182 @@ static void test_function_regexp(
 			results->AddResult(true);
 		} else {
 			printf("Failed: Evaluating regexps optional option arg not a string: %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(false);
+		}
+
+        delete classad;
+	}
+	return;
+}
+
+static void test_function_stringlists_regexpmember(
+	TestResults  *results)     // OUT: Modified to reflect result of test
+{
+	char	big_string[1024];
+	int		integer;
+    float	real;
+	bool	found_bool;
+
+	char classad_string[] = 
+							"U0=stringlist_regexpMember(\"green\", \"red, blue, green\"):"
+							"U1=stringlist_regexpMember(\"green\", \"red; blue; green\",\"; \"):"
+							"U2=stringlist_regexpMember(\"([e]+)\", \"red, blue, green\"):"
+							"U3=stringlist_regexpMember(\"([p]+)\", \"red, blue, green\"):"
+							"W0=stringlist_regexpMember(\"[Mm]atcH.i\", 
+									\"thisisamatchlist\", \" ,\", \"i\"):"
+							"W1=stringlist_regexpMember(20, \"thisisamatchlist\", \"i\"):"
+							"E1=isError(W1):" 
+							"W2=stringlist_regexpMember(\"[Mm]atcH.i\", 20, \"i\"):"
+							"E2=isError(W2):" 
+							"W3=stringlist_regexpMember(\"[Mm]atcH.i\", \"thisisamatchlist\", 20):"
+							"E3=isError(W3):" 
+							"W7=stringlist_regexpMember(\"[Mm]atcH.i\", \"thisisamatchlist\", \" ,\", 20):"
+							"E4=isError(W7):" 
+							"W4=stringlist_regexpMember(\"[Mm]atcH.i\", \"thisisalist\", \" ,\", \"i\"):"
+							"W5=stringlist_regexpMember(\"[Mm]atcH.i\", \"thisisamatchlist\"):"
+							"W6=stringlist_regexpMember(\"([Mm]+[Nn]+)\", 
+									\"aaaaaaaaaabbbmmmmmNNNNNN\", \" ,\", \"i\"):"
+							"";
+
+	ClassAd  *classad;
+
+	config(0);
+
+	classad = new ClassAd(classad_string, ':');
+	if (classad == NULL) {
+		printf("Can't parse ClassAd for function stringlists_regexpmember() in line %d\n", 
+			   __LINE__);
+		results->AddResult(false);
+	} else {
+		printf("Parsed ClassAd for << function stringlists_regexpmember() >> in line %d\n", 
+			   __LINE__);
+		results->AddResult(true);
+
+		if (classad->EvalBool("U0", NULL, integer) &&
+				(integer == 1)) {
+			printf("Passed: Evaluating stringlist_regexpMember matching green : %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating stringlist_regexpMember failed matching green: %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalBool("U1", NULL, integer) &&
+				(integer == 1)) {
+			printf("Passed: Evaluating stringlist_regexpMember matching green(delimiter change) : %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating stringlist_regexpMember failed matching green(delimiter change): %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalBool("U2", NULL, integer) &&
+				(integer == 1)) {
+			printf("Passed: Evaluating stringlist_regexpMember matching multiple hits in stringlist: %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating stringlist_regexpMember failed matching multiple hits in stringlist: %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalBool("U3", NULL, integer) &&
+				(integer == 0)) {
+			printf("Passed: Evaluating stringlist_regexpMember multiple stringlist misses: %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating stringlist_regexpMember multiple stringlist misses: %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalBool("W0", NULL, integer) && (integer == 1)) {
+			printf("Passed: Evaluating stringlist_regexpMember match gives: %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating stringlist_regexpMember match gave %d in line %d\n",
+				   integer, __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalBool("E1", NULL, integer) &&
+				(integer == 1)) {
+			printf("Passed: Evaluating stringlist_regexpMember pattern arg not a string: %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating stringlist_regexpMember pattern arg not a string: %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalBool("E2", NULL, integer) &&
+				(integer == 1)) {
+			printf("Passed: Evaluating stringlist_regexpMember target arg not a string: %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating stringlist_regexpMember target arg not a string: %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalBool("E3", NULL, integer) &&
+				(integer == 1)) {
+			printf("Passed: Evaluating stringlist_regexpMember optional delimiter not a string: %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating stringlist_regexpMember optional delimiter not a string: %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalBool("E4", NULL, integer) &&
+				(integer == 1)) {
+			printf("Passed: Evaluating stringlist_regexpMember optional option arg not a string: %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating stringlist_regexpMember optional option arg not a string: %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalBool("W4", NULL, integer) && (integer == 0)) {
+			printf("Passed: Evaluating stringlist_regexpMember not a match gives: %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating stringlist_regexpMember not a match gave %d in line %d\n",
+				   integer, __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalBool("W5", NULL, integer) && (integer == 0)) {
+			printf("Passed: Evaluating stringlist_regexpMember not a match(case sensitive) gives: %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating stringlist_regexpMember not a match(case sensitive) gave %d in line %d\n",
+				   integer, __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalBool("W6", NULL, integer) && (integer == 1)) {
+			printf("Passed: Evaluating stringlist_regexpMember match gives: %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating stringlist_regexpMember match gave %d in line %d\n",
 				   integer, __LINE__);
 			results->AddResult(false);
 		}
