@@ -15,7 +15,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item \Condor{submit} on Windows no longer checks that the schedd has
+access to the submitter's credential if invoked with the \Opt{-n} or
+\Opt{-r} option. It is therefore necessary to make sure ahead of time
+that the credential is correctly stored with \Condor{store\_cred}
+before doing a remote submit.
 
 \end{itemize}
 
@@ -83,6 +87,8 @@ ClassAd, along with a numeric hold code and subcode.  If you wish to
 automatically retry in such cases (the old behavior), then you can
 specify a \MacroNI{PeriodicRelease} expression that checks for
 specific hold states.
+
+\item Authentication using SSL is now available for SOAP commands.
 
 \end{itemize}
 
