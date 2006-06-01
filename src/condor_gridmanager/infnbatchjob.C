@@ -199,7 +199,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	sprintf( buff, "%s_GAHP", batchType );
 	gahp_path = param(buff);
 	if ( gahp_path == NULL ) {
-		error_string = "BLAH_GAHP not defined";
+		error_string.sprintf( "%s not defined", buff );
 		goto error_exit;
 	}
 	gahp = new GahpClient( batchType, gahp_path );
