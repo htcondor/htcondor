@@ -570,7 +570,8 @@ bool GridftpServer::SubmitServerJob()
 
 	job_ad->Assign( ATTR_TIMER_REMOVE_CHECK,
 					(int)time(NULL) + SERVER_JOB_LEASE );
-	buff.sprintf( "%s > CurrentTime", ATTR_TIMER_REMOVE_CHECK );
+	buff.sprintf( "%s == %d && %s > CurrentTime", ATTR_JOB_STATUS, COMPLETED,
+				  ATTR_TIMER_REMOVE_CHECK );
 	job_ad->AssignExpr( ATTR_JOB_LEAVE_IN_QUEUE, buff.Value() );
 
 	snprintf( mapfile, sizeof(mapfile), "%s/grid-mapfile",
