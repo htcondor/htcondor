@@ -32,6 +32,7 @@
 #include "condor_version.h"
 #include "condor_ver_info.h"
 #include "enum_utils.h"
+#include "condor_holdcodes.h"
 
 
 // these are declared static in baseshadow.h; allocate space here
@@ -158,11 +159,6 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr )
 	set_user_priv();
 	daemonCore->Register_Priv_State( PRIV_USER );
 
-		// change directory, send mail if failure:
-	if ( cdToIwd() == -1 ) {
-		EXCEPT("Could not cd to initial working directory");
-	}
-
 	dumpClassad( "BaseShadow::baseInit()", this->jobAd, D_JOB );
 
 		// initialize the UserPolicy object
@@ -173,6 +169,11 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr )
 		// copy of the classad, so anything we touch after this will
 		// be updated to the schedd when appropriate.
 	job_updater = new QmgrJobUpdater( jobAd, scheddAddr );
+
+		// change directory; hold on failure
+	if ( cdToIwd() == -1 ) {
+		EXCEPT("Could not cd to initial working directory");
+	}
 
 		// CRUFT
 		// we want this *after* we clear the dirty flags so that if we
@@ -330,24 +331,15 @@ void BaseShadow::config()
 
 int BaseShadow::cdToIwd() {
 	if (chdir(iwd) < 0) {
+		int chdir_errno = errno;
 		dprintf(D_ALWAYS, "\n\nPath does not exist.\n"
 				"He who travels without bounds\n"
 				"Can't locate data.\n\n" );
-		dprintf( D_ALWAYS, "(Can't chdir to %s)\n", iwd);
-		char *buf = new char [strlen(iwd)+20];
-		sprintf(buf, "Can't access \"%s\".", iwd);
-		FILE *mailer = NULL;
-		if ( (mailer=emailUser(buf)) ) {
-			fprintf(mailer,"Your job %d.%d specified an initial working\n",
-				getCluster(),getProc());
-			fprintf(mailer,"directory of %s.\nThis directory currently does\n",
-				iwd);
-			fprintf(mailer,"not exist.  If this directory is on a shared\n"
-				"filesystem, this could be just a temporary problem.  Thus\n"
-				"I will try again later\n");
-			email_close(mailer);
-		}
-		delete buf;
+		MyString hold_reason;
+		hold_reason.sprintf("Cannot access initial working directory %s: %s",
+		                    iwd, strerror(chdir_errno));
+		dprintf( D_ALWAYS, "%s\n",hold_reason.Value());
+		holdJob(hold_reason.Value(),CONDOR_HOLD_CODE_IwdError,chdir_errno);
 		return -1;
 	}
 	return 0;

@@ -77,4 +77,8 @@ const int CONDOR_HOLD_CODE_DownloadFileError = 12;
 //The subcode will contain the unix errno.
 const int CONDOR_HOLD_CODE_UploadFileError = 13;
 
+//The initial working directory of the job cannot be accessed.
+//The subcode will contain the unix errno.
+const int CONDOR_HOLD_CODE_IwdError = 14;
+
 #endif
