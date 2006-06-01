@@ -56,6 +56,15 @@ in a DAG define a log file.
 
 \item New macro functionality in job ClassAds: \$\$([ClassAd Expression]).  The contained ClassAd expression is evaluated when the job is matched.  "My" refers to attributes in the job's ClassAd, "Target" refers to attributes in the machine classad.
 
+\item Condor can now run a program to obtain it's configuration
+parameters.
+If a configuration filename (such the environment variable CONDOR\_CONFIG
+or the configuration parameter LOCAL\_CONFIG\_FILE) ends with a vertical
+bar (``|''), it is executed in a shell and its standard output is parsed
+for configuration parameters. If LOCAL\_CONFIG\_FILE is used in this way,
+then it can only contain a single item, and spaces in the value will be
+interpreted as part of the command to be executed.
+
 % Gnats PR 662
 \item Added the \Condor{dagman} configuration parameter
 \Macro{DAGMAN\_PROHIBIT\_MULTI\_JOBS}, which prohibits \Condor{dagman}
