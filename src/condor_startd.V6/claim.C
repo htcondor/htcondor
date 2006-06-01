@@ -579,12 +579,28 @@ Claim::match_timed_out()
 		rip->r_cur = new Claim( rip );
 		rip->dprintf( D_FAILURE|D_ALWAYS, "State change: match timed out\n" );
 		rip->change_state( owner_state );
-	} else {
-			// The match that timed out was the preempting claim.
-		assert( rip->r_pre->idMatches( id() ) );
+	} else if( rip->r_pre_pre->idMatches( id() ) ) {
+			// The match that timed out was the preempting preempting claim.
 			// We need to generate a new preempting claim object,
 			// restore our reqexp, and update the CM. 
 		rip->removeClaim( rip->r_pre );
+		rip->r_reqexp->restore();
+		rip->update();
+	} else {
+			// The match that timed out was the preempting claim.
+		Claim *c = NULL;
+		if( rip->r_pre && rip->r_pre->idMatches( id() ) ) {
+			c = rip->r_pre;
+		}
+		else if( rip->r_pre_pre && rip->r_pre_pre->idMatches( id() ) ) {
+			c = rip->r_pre_pre;
+		}
+		else {
+			EXCEPT("Unexpected timeout of claim id: %s\n",id());
+		}
+			// We need to generate a new preempting claim object,
+			// restore our reqexp, and update the CM. 
+		rip->removeClaim( c );
 		rip->r_reqexp->restore();
 		rip->update();
 	}		
