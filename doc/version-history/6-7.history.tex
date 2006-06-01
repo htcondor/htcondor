@@ -294,7 +294,7 @@ or LSF installation. To do this, submit the job with a
 
 \item Condor's format for storing the history file has been improved
 so that some queries will now go much faster. In particular,
-\Condor{history} now accepts the ``-backwards'' flag, which will take
+\Condor{history} now accepts the \Opt{-backwards} option, which will take
 advantage of this change. Queries that only reference the job's
 cluster id and proc id will be able to take advantage of this speed
 increase, and in the near future, more fast queries will be
@@ -330,24 +330,6 @@ modified. This lets an admin estimate when a daemon stopped running.
 The configuration parameter \Macro{TOUCH\_LOG\_INTERVAL} sets the time
 between touches (in seconds) and defaults to 60 seconds.
 
-\item For Condor's auto-clustering of jobs for matchmaking, numerical
-job attributes can now be rounded to improving clustering. Add the
-following to your configuration file:
-\Attr{SCHEDD\_ROUND\_ATTR\_<foo>} = X, where \Attr{<foo>} is the attribute
-to round and X is the number of decimal places to round. Rounding always
-rounds UP. So to round a value up to the nearest 100, set X = 2.
-The actual, non-rounded value will also be stored in the job ad as an
-attribute named \Attr{<foo>\_RAW}.
-
-The following are set by default:
-\begin{verbatim}
-SCHEDD_ROUND_ATTR_ImageSize = 4
-SCHEDD_ROUND_ATTR_ExecutableSize = 4
-SCHEDD_ROUND_ATTR_DiskUsage = 4
-\end{verbatim}
-
-Thus, the above attributes are all rounded up from kbytes to the nearest
-10 megabytes.
 
 \item Added the ability to pass a specific \Condor{config\_val} program
 to the cron/Hawkeye ``modules''.  If ``HAWKEYE\_CONFIG\_VAL'' is
@@ -400,6 +382,14 @@ crashes and restarts.
 \item Added the ability to set \MacroNI{GROUP\_AUTOREGROUP} on a per-group
 basis, using the syntax GROUP\_AUTOREGROUP\_<groupname> = True/False.
 
+\item Added configuration variable \MacroNI{SYSAPI\_GET\_LOADAVG} to control
+if Condor should attempt to fetch the system load average.  
+See section~\ref{param:SysapiGetLoadavg}.
+
+\item Added configuration variable \MacroNI{SCHEDD\_ROUND\_ATTR\_<xxxx>}. See
+description in section~\ref{param:ScheddRoundAttr} on 
+page~\pageref{param:ScheddRoundAttr}.
+
 \item The password authentication method now works on all
 platforms. It was previously only available on Windows. UNIX platforms
 will store the pool password in the file defined by the configuration
@@ -417,11 +407,6 @@ count <0 or >254, improper usage, etc.).
 \item The \Condor{chirp} tool has been added to the Windows
 distribution.
 
-\item Added configuration parameter \Macro{SYSAPI\_GET\_LOADAVG}, which
-can be used to disable the calculation of system load average on
-execute machines. The default value is true (same behavior as previous
-versions of Condor). If set to false, load average is not computed and
-a value of 0.0 is used.
 
 \item
 \index{environment variables!X509\_USER\_PROXY}
@@ -468,16 +453,6 @@ would indicate that the job was Running.
 \item In some cases, a restart of Condor was required to properly handle
 a change in the undocumented configuration parameter
 \Attr{SIGNIFICANT\_ATTRIBUTES}. Now, a \Condor{reconfig} is sufficient.
-
-\item When auto-clustering jobs for matchmaking, ensure that the job's
-\Attr{Requirements} expression is always considered significant.
-
-\item On Windows, when Condor was running as a normal user (i.e. not as
-local system), sending a soft-kill (i.e. WM\_CLOSE message) to a user
-job would always fail. This is now fixed.
-
-\item Fixed a couple bugs that could cause the \Condor{master} to crash
-on a shut-down or restart.
 
 \item Fixed a permissions problem that would cause automatic X509 proxy renewal for vanilla universe jobs to fail.
 
@@ -545,6 +520,27 @@ Tru64 5.1 on Alpha.
 \item Fixed a bug in the \Condor{gridmanager} that could cause gt2 grid
 jobs with an invalid proxy to become stuck (the \Condor{gridmanager}
 would do nothing with the jobs and not acknowledge a hold or removal).
+
+\item Fixed a bug on Win32 that caused a failure when sending a WM\_CLOSE
+message to a job when the Condor daemons are running as a normal user (i.e. not
+running as LocalSystem).  Also, fixed a thread handle leak when sending a
+WM\_CLOSE message.
+
+\item On Win32, fixed a bug that would cause the \Condor{master} to exit upon a
+\Condor{restart} command when started as a service with
+a service name other than "condor" (the default name used by the installer).
+
+\item Fixed a bug that could cause the \Condor{master} to crash when
+sending a shutdown fast to a child process after the 
+\MacroNI{SHUTDOWN\_GRACEFUL\_TIMEOUT} timeout expired.
+
+
+\item Fixed a bug with automatically setting the undocumented
+\MacroNI{SIGNIFICANT\_ATTRIBUTES} configuration parameter in order to 
+speed up negotiation--- previously, the job's Requirements
+expression was not correctly considered.  With certain scheduling policy
+expressions, this bug could have resulted in jobs staying idle in the
+queue when they should have been launched.
 
 \item It used to be impossible to use the \Macro{SUBMIT\_EXPRS}
   configuration setting to provide default values for job submit file
@@ -967,6 +963,7 @@ If the schema is being manually changed, it must be done so \Bold{before} the
   BOINC).
   See section~\ref{sec:Backfill} on page~\pageref{sec:Backfill} for
   more information about running backfill jobs with Condor.
+  At this time, backfill jobs are not supported on windows machines.
 
 \item The history file, which is a flat file for each submitting
 computer that stores information about all jobs completed on that

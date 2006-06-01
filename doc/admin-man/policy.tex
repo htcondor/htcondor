@@ -1915,8 +1915,8 @@ as long as the user keeps supplying more jobs to run.
 If this is not desired, force claims to be retired after
 some amount of time using \Macro{CLAIM\_WORKLIFE}. 
 This enforces a time limit, beyond which no new jobs may be started on
-an existing claim; therefore \Condor{schedd} is forced to go back to
-\Condor{negotiator} to request a new match if there is still
+an existing claim; therefore the \Condor{schedd} daemon is forced to go back to
+the \Condor{negotiator} to request a new match, if there is still
 more work to do.
 
 

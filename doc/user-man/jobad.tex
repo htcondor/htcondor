@@ -115,6 +115,51 @@ Instead, see the attributes: \AdAttr{ExitBySignal},
 \AdAttr{ExitCode}, and
 \AdAttr{ExitSignal}.
 
+%%% ClassAd attribute: HoldCode
+\index{ClassAd job attribute!HoldCode}
+\index{HoldCode!job ClassAd attribute}
+\item[\AdAttr{HoldCode}:]    An integer value that represents the
+reason that a job was put on hold.
+
+\begin{center}
+\begin{table}[hbt]
+\begin{tabular}{|p{2cm}p{18cm}|} \hline
+\emph{Integer Code} & \emph{Reason for Hold} \\ \hline \hline
+1 & The user put the job on hold with \Condor{hold}.  \\ \hline
+2 & Globus middleware reported an error.  
+  \Attr{HoldSubCode} is the GRAM error number. \\ \hline
+3 & The \MacroNI{PERIODIC\_HOLD} expression evaluated to \Expr{True}.  \\ \hline
+4 & The credentials for the job are invalid. \\ \hline
+5 & A job policy expression evaluated to \Expr{Undefined}. \\ \hline
+6 & The \Condor{starter} failed to start the executable.
+  \Attr{HoldSubCode} is the Unix  error number. \\ \hline
+7 & The standard output file for the job could not be opened.
+  \Attr{HoldSubCode} is the Unix  error number. \\ \hline
+8 & The standard input file for the job could not be opened.
+  \Attr{HoldSubCode} is the Unix  error number. \\ \hline
+9 & The standard output stream for the job could not be opened.
+  \Attr{HoldSubCode} is the Unix  error number. \\ \hline
+10 & The standard input stream for the job could not be opened.
+  \Attr{HoldSubCode} is the Unix  error number. \\ \hline
+11 & An internal Condor protocol error was encountered when transferring files. \\ \hline
+12 & The \Condor{starter} failed to download input files.
+  \Attr{HoldSubCode} is the Unix  error number. \\ \hline
+13 & The \Condor{starter} failed to upload output files.
+  \Attr{HoldSubCode} is the Unix  error number. \\ \hline
+14 & The initial working directory of the job cannot be accessed.
+  \Attr{HoldSubCode} is the Unix  error number. \\ \hline
+\end{tabular}
+\end{table}
+\end{center}
+
+%%% ClassAd attribute: HoldSubCode
+\index{ClassAd job attribute!HoldSubCode}
+\index{HoldSubCode!job ClassAd attribute}
+\item[\AdAttr{HoldSubCode}:]    An integer value that represents further
+information to go along with the \Attr{HoldCode}, for
+some values of \Attr{HoldCode}.
+See \Attr{HoldCode} for the values.
+
 %%% ClassAd attribute: HoldKillSig
 \index{ClassAd job attribute!HoldKillSig}
 \index{HoldKillSig!job ClassAd attribute}
@@ -170,20 +215,45 @@ number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970).
 %%% ClassAd attribute: JobStatus
 \index{ClassAd job attribute!JobStatus}
 \index{JobStatus!job ClassAd attribute}
-\item[\AdAttr{JobStatus}:]  Integer which indicates the current
-status of the job, where 0 = Unexpanded (means that the job has never run),
-1 = Idle, 2 = Running, 3 = Removed, 4 =
-Completed, and 5 = Held.
 \index{job!state}
+\item[\AdAttr{JobStatus}:]  Integer which indicates the current
+status of the job.
+\begin{center}
+\begin{table}[hbt]
+\begin{tabular}{|p{2cm}p{10cm}|} \hline
+\emph{Value} & \emph{Status} \\ \hline \hline
+0 & Unexpanded (the job has never run) \\ \hline
+1 & Idle \\ \hline
+2 & Running \\ \hline
+3 & Removed \\ \hline
+4 & Completed \\ \hline
+5 & Held \\ \hline
+\end{tabular}
+\end{table}
+\end{center}
 
 %%% ClassAd attribute: JobUniverse
 \index{ClassAd job attribute!JobUniverse}
 \index{JobUniverse!job ClassAd attribute}
-\item[\AdAttr{JobUniverse}:]  Integer which indicates the job
-universe, where 1 = Standard, 4 = PVM, 5 = Vanilla, 7 = Scheduler,
-8 = MPI, 9 = Grid, and 10 = Java.
 \index{job!universe}
 \index{universe!job attribute definitions}
+\item[\AdAttr{JobUniverse}:]  Integer which indicates the job
+universe.
+
+\begin{center}
+\begin{table}[hbt]
+\begin{tabular}{|p{2cm}p{3cm}|} \hline
+\emph{Value} & \emph{Universe} \\ \hline \hline
+1 & standard \\ \hline
+4 & PVM \\ \hline
+5 & vanilla \\ \hline
+7 & scheduler \\ \hline
+8 & MPI \\ \hline
+9 & grid \\ \hline
+10 & java \\ \hline
+\end{tabular}
+\end{table}
+\end{center}
 
 %%% ClassAd attribute: LastCheckpointPlatform
 \index{ClassAd job attribute!LastCheckpointPlatform}

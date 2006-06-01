@@ -1,0 +1,33 @@
+\begin{ManPage}{\label{man-stork-list-cred}\Stork{list\_cred}}{1}
+{list all credentials stored on the \Condor{credd} daemon on behalf of Stork}
+\Synopsis \SynProg{\Stork{list\_cred}}
+\ToolArgsBase
+
+\SynProg{\Stork{list\_cred}}
+\oOpt{-debug}
+\oOptArg{-n}{hostname\Lbr :portnumber\Rbr}
+
+
+\index{Condor commands!stork\_list\_cred}
+\index{Stork commands!stork\_list\_cred}
+\index{stork\_list\_cred command}
+
+\Description 
+
+\Stork{list\_cred} lists all credentials stored on the \Condor{credd} daemon.
+
+% must include the format of what this prints out
+
+\begin{Options}
+  \ToolArgsBaseDesc
+  \OptItem{\Opt{-debug}}{Show extra debugging information.}
+  \OptItem{\OptArg{-n}{hostname\Lbr :portnumber\Rbr}}
+    {Identify the \Condor{credd} daemon by host name and optional port number.}
+\end{Options}
+
+\ExitStatus
+
+\Stork{list\_cred} will exit with a status value of 0 (zero) upon success,
+and it will exit with the value 1 (one) upon failure.
+
+\end{ManPage}

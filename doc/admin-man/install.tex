@@ -1127,5 +1127,28 @@ page~\pageref{sec:Non-Root}.
 \end{enumerate}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:upgrade-directions}Upgrading - Installing a Newer
+Version of Condor}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+An upgrade changes the running version of Condor 
+from the current installation to a newer version.
+The safe method 
+to install and start running a newer version of Condor 
+in essence is:
+shutdown the current installation of Condor,
+install the newer version,
+and then restart Condor using the newer version.
+
+To allow for falling back to the current version,
+place the new version in a separate directory.
+Copy the existing configuration files,
+and modify the copy to point to and use the new version.
+Set the \Env{CONDOR\_CONFIG} environment variable
+to point to the new copy of the configuration,
+so the new version of Condor will use the new configuration
+when restarted.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \input{admin-man/dynamic-deployment.tex}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

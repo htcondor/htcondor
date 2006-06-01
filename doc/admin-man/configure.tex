@@ -912,6 +912,10 @@ File System Configuration File Entries''.
   % Defined in the default config file: NO
   % Default definition in config file: N/A
   % Result if not defined or RHS is empty: 300 seconds
+\item[\Macro{SYSAPI\_GET\_LOADAVG}] \label{param:SysapiGetLoadavg}
+  If set to False, then Condor will not attempt to compute the load average
+  on the system, and instead will always report the system load average
+  to be 0.0.  Defaults to True.
 
 \end{description}
 
@@ -3827,6 +3831,32 @@ These macros control the \Condor{schedd}.
   \MacroNI{SCHEDD\_ASSUME\_NEGOTIATOR\_GONE} will default to 1200 (20
   minutes).
 
+\item[\Macro{SCHEDD\_ROUND\_ATTR\_<xxxx>}]
+  \label{param:ScheddRoundAttr} An integer-valued macro that
+  instructs the \Condor{schedd} to round up 
+  scalar job ClassAd attributes to a specific number of decimal places.  This is desirable to improve job
+  scheduling performance, since it allows Condor's auto-clustering algorithm
+  to bucket attributes such as \AdAttr{ImageSize}.  
+  Replace \verb@<xxxx>@ with the name of the attribute to round, and set this
+  macro equal to the number of decimal places to round up.  For example, to
+  round the value of job ClassAd attribute \Attr{foo}  up to the nearest
+  100, set 
+\begin{verbatim}
+        SCHEDD_ROUND_ATTR_foo = 2
+\end{verbatim}
+  When the schedd rounds up an attribute value, it will save the raw 
+  (un-rounded) actual value in an attribute with the same name appended
+  with ``\_RAW".  So in the above example, the raw value will be stored
+  in attribute \Attr{foo\_RAW} in the job ClassAd.
+  The following are set by default:
+\begin{verbatim}
+        SCHEDD_ROUND_ATTR_ImageSize = 4
+        SCHEDD_ROUND_ATTR_ExecutableSize = 4
+        SCHEDD_ROUND_ATTR_DiskUsage = 4
+\end{verbatim}
+  Thus, the above attributes are all rounded up from Kbytes to the nearest
+  10 Megabytes.
+
 \item[\Macro{SCHEDD\_BACKUP\_SPOOL}]
   \label{param:ScheddBackupSpool} This macro is used to enable the
   \Condor{schedd} to make a backup of the job queue as it starts.  If
@@ -4871,7 +4901,7 @@ still recognized, but the name has changed to be
 
 \item[\Macro{GRIDMANAGER\_MAX\_JOBMANAGERS\_PER\_RESOURCE}]
 \label{param:GridmanagerMaxJobmanagersPerResource}
-For grid-type gt2 jobs, limits the number of globus-job-manager
+For grid jobs of type \SubmitCmd{gt2}, limits the number of globus-job-manager
 processes that the \Condor{gridmanager} lets run at a time on
 the remote headnode. Allowing too many globus-job-managers to run
 causes severe load on the headnode, possibly making it
@@ -4959,7 +4989,8 @@ These macros affect the \Prog{grid\_monitor}.
 \item[\Macro{ENABLE\_GRID\_MONITOR}] \label{param:EnableGridMonitor}
   When set to \Expr{True} enables the \Prog{grid\_monitor} tool.  The
   \Prog{grid\_monitor} tool is used to reduce load on Globus gatekeepers.
-  This parameter only affects grid-type gt2 grid universe jobs.
+  This parameter only affects 
+  grid jobs of type \SubmitCmd{gt2}.
   \MacroNI{GRID\_MONITOR} must also be correctly configured.
   Defaults to \Expr{False}.
   See section~\ref{sec:Condor-G-GridMonitor} on
@@ -4968,8 +4999,9 @@ These macros affect the \Prog{grid\_monitor}.
 
 \item[\Macro{GRID\_MONITOR}] \label{param:GridMonitor}
   The complete pathname of the \Prog{grid\_monitor} tool used to reduce load on
-  Globus gatekeepers.  This parameter only affects grid-type gt2 grid
-  universe jobs.  This parameter is not referenced unless
+  Globus gatekeepers.  This parameter only affects 
+  grid jobs of type \SubmitCmd{gt2}.
+  This parameter is not referenced unless
   \MacroNI{ENABLE\_GRID\_MONITOR} is set to \Expr{True}. 
   See section~\ref{sec:Condor-G-GridMonitor} on
   page~\pageref{sec:Condor-G-GridMonitor}
