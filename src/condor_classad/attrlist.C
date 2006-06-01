@@ -793,7 +793,8 @@ int AttrList::Insert(const char* str, bool check_for_dups)
 
 int AttrList::Insert(ExprTree* expr, bool check_for_dups)
 {
-    if(expr == NULL || expr->MyType() != LX_ASSIGN)
+    if(expr == NULL || expr->MyType() != LX_ASSIGN ||
+	   expr->LArg()->MyType() != LX_VARIABLE)
     {
 		return FALSE;
     }
