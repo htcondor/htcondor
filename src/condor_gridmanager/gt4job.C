@@ -754,6 +754,7 @@ int GT4Job::doEvaluateState()
 			} break;
  		case GM_DELEGATE_PROXY: {
 			const char *deleg_uri;
+			const char *error_msg;
 				// TODO What happens if Gt4Resource can't delegate proxy?
 			if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_DELETE;
@@ -762,6 +763,11 @@ int GT4Job::doEvaluateState()
 			if ( delegatedCredentialURI != NULL ) {
 				gmState = GM_GENERATE_ID;
 				break;
+			}
+			if ( (error_msg = myResource->getDelegationError( jobProxy )) ) {
+					// There's a problem delegating the proxy
+				errorString = error_msg;
+				gmState = GM_HOLD;
 			}
 			deleg_uri = myResource->getDelegationURI( jobProxy );
 			if ( deleg_uri == NULL ) {

@@ -54,6 +54,7 @@ struct ProxyDelegation {
 	time_t proxy_expire;
 	time_t last_proxy_refresh;
 	Proxy *proxy;
+	MyString error_message;
 };
 
 GT4Resource *GT4Resource::FindOrCreateResource( const char *resource_name,
@@ -326,6 +327,27 @@ dprintf(D_FULLDEBUG,"    creating new ProxyDelegation\n");
 	return NULL;
 }
 
+const char *GT4Resource::getDelegationError( Proxy *job_proxy )
+{
+	ProxyDelegation *next_deleg;
+
+	delegatedProxies.Rewind();
+
+	while ( ( next_deleg = delegatedProxies.Next() ) != NULL ) {
+		if ( next_deleg->proxy == job_proxy ) {
+			if ( next_deleg->error_message.IsEmpty() ) {
+				return NULL;
+			} else {
+				return next_deleg->error_message.Value();
+			}
+		}
+	}
+
+	dprintf( D_FULLDEBUG, "getDelegationError(): failed to find "
+			 "ProxyDelegation for proxy %s\n", job_proxy->proxy_filename );
+	return NULL;
+}
+
 int GT4Resource::checkDelegation()
 {
 dprintf(D_FULLDEBUG,"*** checkDelegation()\n");
@@ -367,6 +389,8 @@ dprintf(D_FULLDEBUG,"    new delegation\n");
 				dprintf( D_ALWAYS, "delegate_credentials(%s) failed!\n",
 						 delegationServiceUri );
 				activeDelegationCmd = NULL;
+				next_deleg->error_message = "Failed to create proxy delegation";
+				signal_jobs = true;
 			} else {
 dprintf(D_FULLDEBUG,"      %s\n",delegation_uri);
 				activeDelegationCmd = NULL;
@@ -374,6 +398,7 @@ dprintf(D_FULLDEBUG,"      %s\n",delegation_uri);
 				next_deleg->deleg_uri = delegation_uri;
 				next_deleg->proxy_expire = next_deleg->proxy->expiration_time;
 				next_deleg->lifetime = now + 12*60*60;
+				next_deleg->error_message = "";
 				signal_jobs = true;
 			}
 		}

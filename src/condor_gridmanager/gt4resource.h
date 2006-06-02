@@ -50,6 +50,7 @@ class GT4Resource : public BaseResource
 
 	void registerDelegationURI( const char *deleg_uri, Proxy *job_proxy );
 	const char *getDelegationURI( Proxy *job_proxy );
+	const char *getDelegationError( Proxy *job_proxy );
 
 	static const char *CanonicalName( const char *name );
 	static const char *HashName( const char *resource_name,
