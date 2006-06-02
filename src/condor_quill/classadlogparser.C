@@ -29,7 +29,7 @@
 
 //! Definition of Maximum Length of Attribute List Expression
 #ifndef ATTRLIST_MAX_EXPRESSION
-#define ATTRLIST_MAX_EXPRESSION 	10240
+#define ATTRLIST_MAX_EXPRESSION 	(1024*200)
 #endif
 
 /***** Prevent calling free multiple times in this code *****/
