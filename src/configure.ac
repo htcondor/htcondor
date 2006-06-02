@@ -1581,6 +1581,23 @@ if test x$_cv_ld_is_gnu = xyes; then
   CONDOR_EXTERNAL_VERSION([gcb],[1.3.1])
 fi
 
+else
+# if there's no externals at all, we still need to define these to
+# avoid imake troubles...
+  AC_SUBST([want_ext_linuxlibcheaders],[NO])
+  AC_SUBST([ext_linuxlibcheaders_version],[UNUSED])
+  AC_SUBST(want_ext_glibc,NO)
+  AC_SUBST(ext_glibc_version,UNUSED)
+fi
+# end of if $ac_cv_has_externals = "YES" 
+
+#-----------------------------------------------------------------
+# NOTE: the checks for globus and SSL here must happen *outside*
+# the check for $ac_cv_has_externals, since we want these to be
+# set whether or not we're actually trying to build the externals
+# or not.  for example, the test suite needs to know these things, 
+# even though it's being configured using --without-externals.
+#-----------------------------------------------------------------
 # determine whether we will be using globus on this platform (i.e. determine
 # HAS_GLOBUS). this logic used to be in the individual <platform>.cf
 # files; the variables HAS_GSI and HAS_OPENSSL are still determined there
@@ -1627,17 +1644,6 @@ fi
 if test "$_cv_has_globus" = "YES" ; then
   AC_DEFINE(HAVE_OPENSSL_SSL_H,1,[do we have openssl (via globus)])
 fi
-
-else
-# if there's no externals at all, we still need to define these to
-# avoid imake troubles...
-  AC_SUBST([want_ext_linuxlibcheaders],[NO])
-  AC_SUBST([ext_linuxlibcheaders_version],[UNUSED])
-  AC_SUBST(want_ext_glibc,NO)
-  AC_SUBST(ext_glibc_version,UNUSED)
-fi
-# end of if $ac_cv_has_externals = "YES" 
-
 
 
 ############################################################
