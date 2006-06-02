@@ -152,6 +152,9 @@ was closed while the daemon was still writing to it.
 \item Streaming standard input, output, and error has been fixed for
 Windows jobs.
 
+\item Grid-type gt4 jobs will now go on hold if Condor can't delegate
+their X509 proxies to the remote Delegation Service.
+
 \item The sample configuration file \File{condor\_config.local.credd}
 contained a typo which has now been fixed.
 
