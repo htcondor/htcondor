@@ -410,6 +410,10 @@ class Function: public FunctionBase
 #endif
 	int FunctionGetTime(int number_of_arguments, EvalResult *arguments, 
 						EvalResult *result);
+	int FunctionTime(int number_of_arguments, EvalResult *arguments, 
+						EvalResult *result);
+	int FunctionInterval(int number_of_arguments, EvalResult *arguments, 
+						EvalResult *result);
     int FunctionRandom(int number_of_arguments, EvalResult *arguments, 
 						EvalResult *result);
 	int FunctionIsUndefined(int number_of_args,	EvalResult *arguments,
