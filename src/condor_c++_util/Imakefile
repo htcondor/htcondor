@@ -102,6 +102,7 @@ CONLIBAPI_OBJ = \
 	user_log.o \
 	iso_dates.o \
 	file_lock.o \
+	format_time.o \
 	../condor_util_lib/dprintf_common.o \
 	../condor_util_lib/dprintf.o \
 	../condor_util_lib/basename.o \
