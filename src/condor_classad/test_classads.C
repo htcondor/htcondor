@@ -1508,7 +1508,11 @@ static void test_functions(
 
 	char classad_string[] = 
 							/* batch 1 testing of functions */
-							"D=GetTime():"
+							"D0=GetTime():"
+							"D1=Time():"
+							"D2=Interval(60):"
+							"D3=Interval(3600):"
+							"D4=Interval(86400):"
 		                    "E=sharedstring():"
                             "G=sharedinteger(2):"
 	                        "H=sharedfloat(3.14):"
@@ -1532,12 +1536,55 @@ static void test_functions(
 			   __LINE__);
 		results->AddResult(true);
 
-		if (classad->EvalInteger("D", NULL, integer)) {
+		if (classad->EvalInteger("D0", NULL, integer)) {
 			printf("Passed: Evaluating gettime function gives: %d in line %d\n", 
 				   integer, __LINE__);
 			results->AddResult(true);
 		} else {
 			printf("Failed: Evaluating gettime function in line %d\n",
+				   __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalInteger("D1", NULL, integer)) {
+			printf("Passed: Evaluating time function gives: %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating time function in line %d\n",
+				   __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalString("D2", NULL, big_string)&&
+			(strcmp("  0+00:01:00",big_string) == 0)) {
+			printf("Passed: Evaluating interval(60) function gives: '%s' in line %d\n", 
+				   big_string, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating interval(60) wanted  0+00:01:00 got <<%s>>in line %d\n",
+				   big_string,__LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalString("D3", NULL, big_string)&&
+			(strcmp("  0+01:00:00",big_string) == 0)) {
+			printf("Passed: Evaluating interval(3600) function gives: '%s' in line %d\n", 
+				   big_string, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating interval(3600) in line %d\n",
+				   __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalString("D4", NULL, big_string)&&
+			(strcmp("  1+00:00:00",big_string) == 0)) {
+			printf("Passed: Evaluating interval(86400) function gives: '%s' in line %d\n", 
+				   big_string, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating interval(86400) in line %d\n",
 				   __LINE__);
 			results->AddResult(false);
 		}
@@ -1589,7 +1636,7 @@ static void test_functions(
 				   big_string, __LINE__);
 			results->AddResult(true);
 		} else {
-			printf("Failed: Evaluating toupper gave %s in line %d\n",
+			printf("Failed: Evaluating tolower gave %s in line %d\n",
 				   big_string, __LINE__);
 			results->AddResult(false);
 		}
@@ -1613,30 +1660,32 @@ static void test_functions(
 				   integer, __LINE__);
 			results->AddResult(false);
 		}
-
-
 		
-		test_function_int(results);
-		test_function_real(results);
-		test_function_stringlists(results);
-		test_function_string(results);
-		test_function_strcat(results);
-		test_function_floor(results);
-		test_function_ceiling(results);
-		test_function_round(results);
-		test_function_random(results);
 		test_function_isstring(results);
 		test_function_isundefined(results);
 		test_function_iserror(results);
 		test_function_isinteger(results);
 		test_function_isreal(results);
 		test_function_isboolean(results);
+
+		test_function_int(results);
+		test_function_real(results);
+		test_function_string(results);
+		test_function_stringlists(results);
+
+		test_function_floor(results);
+		test_function_ceiling(results);
+		test_function_round(results);
+		test_function_random(results);
+
+		test_function_ifthenelse(results);
+
+		test_function_strcat(results);
 		test_function_substr(results);
 		test_function_strcmp(results);
 		test_function_attrnm(results);
 		test_function_regexp(results);
 		test_function_stringlists_regexpmember(results);
-		test_function_ifthenelse(results);
         delete classad;
 	}
 	return;
@@ -1794,6 +1843,10 @@ static void test_function_ifthenelse(
 							"BB3=ifThenElse(BC > 5, \"big\",\"small\"):"
 							"BB4=ifThenElse(BD > 5, \"big\",\"small\"):"
 							"BB5=isUndefined(BB4):"
+							"BB6=ifThenElse(4 / \"hello\", \"big\",\"small\"):"
+							"BB7=ifThenElse(\"big\",\"small\"):"
+							"E0=isError(BB6):"
+							"E1=isError(BB7):"
 							"";
 
 	ClassAd  *classad;
@@ -1834,11 +1887,33 @@ static void test_function_ifthenelse(
 
 		if (classad->EvalBool("BB5", NULL, integer) &&
 				(integer == 1)) {
-			printf("Passed: Evaluating isUndefined(BB5) : %d in line %d\n", 
+			printf("Passed: Evaluating ifThenElse isUndefined(BB5) : %d in line %d\n", 
 				   integer, __LINE__);
 			results->AddResult(true);
 		} else {
-			printf("Failed: Evaluating isUndefined(BB5) : %d in line %d\n", 
+			printf("Failed: Evaluating ifThenElse isUndefined(BB5) : %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalBool("E0", NULL, integer) &&
+				(integer == 1)) {
+			printf("Passed: Evaluating ifThenElse conditional error (BB6) : %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating ifThenElse conditional error (BB6) : %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalBool("E1", NULL, integer) &&
+				(integer == 1)) {
+			printf("Passed: Evaluating ifThenElse missing arg(BB7) : %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating ifThenElse missing arg(BB7) : %d in line %d\n", 
 				   integer, __LINE__);
 			results->AddResult(false);
 		}
