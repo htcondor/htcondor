@@ -37,6 +37,7 @@
 
 #include "Regex.h"
 
+extern char * format_time(int);
 extern void evalFromEnvironment (const char *, EvalResult *);
 static bool name_in_list(const char *name, StringList &references);
 static void printComparisonOpToStr (char *, ExprTree *, ExprTree *, char *);
@@ -1644,6 +1645,10 @@ int Function::_EvalTree(const AttrList *attrlist1, const AttrList *attrlist2, Ev
 		if ( !done ) {	
         if (!strcasecmp(name, "gettime")) {
 			successful_eval = FunctionGetTime(number_of_args, evaluated_args, result);
+		} else if (!strcasecmp(name, "time")) {
+			successful_eval = FunctionTime(number_of_args, evaluated_args, result);
+		} else if (!strcasecmp(name, "interval")) {
+			successful_eval = FunctionInterval(number_of_args, evaluated_args, result);
 		} else if (!strcasecmp(name, "random")) {
 			successful_eval = FunctionRandom(number_of_args, evaluated_args, result);
 		} else if (!strcasecmp(name, "_debug_function_")) {
@@ -1868,6 +1873,34 @@ int Function::FunctionGetTime(
 
 	result->i = (int) current_time;
 	result->type = LX_INTEGER;
+	return TRUE;
+}
+
+int Function::FunctionTime(
+	int number_of_args,         // IN:  size of evaluated args array
+	EvalResult *evaluated_args, // IN:  the arguments to the function
+	EvalResult *result)         // OUT: the result of calling the function
+{
+	return FunctionGetTime(number_of_args, evaluated_args, result);
+}
+
+int Function::FunctionInterval(
+	int number_of_args,         // IN:  size of evaluated args array
+	EvalResult *evaluated_args, // IN:  the arguments to the function
+	EvalResult *result)         // OUT: the result of calling the function
+{
+	if ( number_of_args != 1 ) {
+		result->type = LX_ERROR;
+		return false;
+	}
+
+    if (evaluated_args[0].type != LX_INTEGER) {
+		result->type = LX_ERROR;
+		return false;
+	}
+
+	result->type = LX_STRING;
+	result->s = strnewp(format_time(evaluated_args[0].i));
 	return TRUE;
 }
 
