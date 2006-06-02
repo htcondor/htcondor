@@ -58,6 +58,7 @@
 extern "C" {
 	int JobIsStandard();
 	void NotifyUser( char *buf, PROC *proc );
+	int terminate_is_pending(void);
 	void publishNotifyEmail( FILE* mailer, char* buf, PROC* proc );
 	void HoldJob( const char* buf );
 	char *d_format_time( double dsecs );
@@ -111,6 +112,18 @@ extern char My_UID_Domain[];
 ClassAd *JobAd = NULL;			// ClassAd which describes this job
 extern char *schedd, *scheddName;
 extern "C" bool JobPreCkptServerScheddNameChange();
+
+int
+terminate_is_pending(void)
+{
+	int val = 0;
+
+	if (JobAd->LookupBool(ATTR_TERMINATION_PENDING, val)) {
+		return val?TRUE:FALSE;
+	}
+
+	return FALSE;
+}
 
 void
 NotifyUser( char *buf, PROC *proc )
@@ -491,6 +504,7 @@ void
 handle_termination( PROC *proc, char *notification, int *jobstatus,
 			char *coredir )
 {
+	MyString escapedbuf;
 	char buf[4096];
 	int status = *jobstatus;
 	char my_coredir[_POSIX_PATH_MAX];
@@ -528,6 +542,23 @@ handle_termination( PROC *proc, char *notification, int *jobstatus,
 		sprintf(buf, "%s = %d", ATTR_ON_EXIT_CODE, WEXITSTATUS(status));
 		JobAd->Insert(buf);
 
+		// set up the terminate pending "state"
+		sprintf(buf, "%s = TRUE", ATTR_TERMINATION_PENDING);
+		JobAd->Insert(buf);
+
+		// this can have newlines and crap in it, for now, just replace them
+		// with spaces. I know it is ugly, but the classadlog class which
+		// writes the job queue log file can't have literal newlines and such
+		// in the values. :(
+		escapedbuf.sprintf("%s = \"%s\"", 
+							ATTR_TERMINATION_REASON, notification);
+		escapedbuf.replaceString("\n", " ");
+		escapedbuf.replaceString("\t", " ");
+		JobAd->Insert(escapedbuf.Value());
+
+		sprintf(buf, "%s = %d", ATTR_TERMINATION_EXITREASON, ExitReason);
+		JobAd->Insert(buf);
+
 		break;
 
 	 case SIGKILL:	/* Kicked off without a checkpoint */
@@ -548,6 +579,12 @@ handle_termination( PROC *proc, char *notification, int *jobstatus,
 		JobAd->Insert(buf);
 		sprintf(buf, "%s = TRUE", ATTR_ON_EXIT_REMOVE_CHECK);
 		JobAd->Insert(buf);
+
+		// set up the terminate pending "state"
+		sprintf(buf, "%s = TRUE", ATTR_TERMINATION_PENDING);
+		JobAd->Insert(buf);
+		sprintf(buf, "%s = %d", ATTR_TERMINATION_EXITREASON, ExitReason);
+		JobAd->Insert(buf);
 		break;
 
 	 case SIGQUIT:	/* Kicked off, but with a checkpoint */
@@ -560,6 +597,17 @@ handle_termination( PROC *proc, char *notification, int *jobstatus,
 			wanting to be resubmitted or held by the shadow. */
 		sprintf(buf, "%s = FALSE", ATTR_ON_EXIT_HOLD_CHECK);
 		JobAd->Insert(buf);
+
+		// this can have newlines and crap in it, for now, just replace them
+		// with spaces. I know it is ugly, but the classadlog class which
+		// writes the job queue log file can't have literal newlines and such
+		// in the values. :(
+		escapedbuf.sprintf("%s = \"%s\"", 
+							ATTR_TERMINATION_REASON, notification);
+		escapedbuf.replaceString("\n", " ");
+		escapedbuf.replaceString("\t", " ");
+		JobAd->Insert(escapedbuf.Value());
+
 		sprintf(buf, "%s = TRUE", ATTR_ON_EXIT_REMOVE_CHECK);
 		JobAd->Insert(buf);
 
@@ -589,12 +637,18 @@ handle_termination( PROC *proc, char *notification, int *jobstatus,
 					"was killed by signal %d.\nCore file is %s/core.%d.%d.",
 					 WTERMSIG(status) ,
 						coredir, proc->id.cluster, proc->id.proc);
+				sprintf(buf, "%s = \"%s/core.%d.%d\"", ATTR_JOB_CORE_FILENAME,
+							coredir, proc->id.cluster, proc->id.proc);
 			} else {
 				(void)sprintf(notification,
 					"was killed by signal %d.\nCore file is %s%s/core.%d.%d.",
 					 WTERMSIG(status) ,proc->rootdir, coredir, 
 					 proc->id.cluster, proc->id.proc);
+				sprintf(buf, "%s = \"%s%s/core.%d.%d\"", ATTR_JOB_CORE_FILENAME,
+							proc->rootdir, coredir, proc->id.cluster, 
+							proc->id.proc);
 			}
+			JobAd->Insert(buf);
 			ExitReason = JOB_COREDUMPED;
 		} else {
 			(void)sprintf(notification,
@@ -611,8 +665,26 @@ handle_termination( PROC *proc, char *notification, int *jobstatus,
 		sprintf(buf, "%s = %d", ATTR_ON_EXIT_SIGNAL, WTERMSIG(status));
 		JobAd->Insert(buf);
 
+		// set up the terminate pending "state"
+		sprintf(buf, "%s = TRUE", ATTR_TERMINATION_PENDING);
+		JobAd->Insert(buf);
+
+		// this can have newlines and crap in it, for now, just replace them
+		// with spaces. I know it is ugly, but the classadlog class which
+		// writes the job queue log file can't have literal newlines and such
+		// in the values. :(
+		escapedbuf.sprintf("%s = \"%s\"", 
+							ATTR_TERMINATION_REASON, notification);
+		escapedbuf.replaceString("\n", " ");
+		escapedbuf.replaceString("\t", " ");
+		JobAd->Insert(escapedbuf.Value());
+
+		sprintf(buf, "%s = %d", ATTR_TERMINATION_EXITREASON, ExitReason);
+		JobAd->Insert(buf);
+
 		break;
 	}
+
 }
 
 

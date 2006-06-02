@@ -193,6 +193,7 @@ const char ATTR_JOB_ARGUMENTS2			 [] = "Arguments";
 const char ATTR_JOB_CMD					 [] = "Cmd";
 const char ATTR_JOB_CMDEXT				 [] = "CmdExt";
 const char ATTR_JOB_CORE_DUMPED			 [] = "JobCoreDumped";
+const char ATTR_JOB_CORE_FILENAME		 [] = "JobCoreFileName";
 const char ATTR_JOB_CURRENT_START_DATE	 [] = "JobCurrentStartDate";
 const char ATTR_JOB_DURATION			 [] = "JobDuration";
 const char ATTR_JOB_ENVIRONMENT1		 [] = "Env";
@@ -556,6 +557,16 @@ const char ATTR_IS_VALID_CHECKPOINT_PLATFORM  [] = "IsValidCheckpointPlatform";
 const char ATTR_HAD_IS_ACTIVE [] = "HadIsActive";
 const char ATTR_HAD_LIST[]       = "HadList";
 const char ATTR_HAD_INDEX[]      = "HadIndex";
+const char ATTR_TERMINATION_PENDING[]	= "TerminationPending";
+const char ATTR_TERMINATION_EXITREASON[]	= "TerminationExitReason";
+
+// This is a record of the job exit status from a standard universe job exit
+// via waitpid. It is in the job ad to implement the terminate_pending
+// feature. It has to be here because of rampant global variable usage in the
+// standard universe shadow. It saved a tremendous amount of code to just
+// put this value in the job ad.
+const char ATTR_WAITPID_STATUS[]	= "WaitpidStatus";
+const char ATTR_TERMINATION_REASON[]	= "TerminationReason";
 
 // Valid settings for ATTR_JOB_MANAGED.
 	// Managed by an external process (gridmanager)
@@ -564,6 +575,7 @@ const char MANAGED_EXTERNAL				 [] = "External";
 const char MANAGED_SCHEDD				 [] = "Schedd";
 	// Schedd should manage as normal.  External process doesn't want back.
 const char MANAGED_DONE				 [] = "ScheddDone";
+
 
 
 // Enumerate the ones that can't be constant strings..

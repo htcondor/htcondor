@@ -211,9 +211,29 @@ UniShadow::getExitReason( void )
 
 
 void
-UniShadow::emailTerminateEvent( int exitReason )
+UniShadow::emailTerminateEvent( int exitReason, update_style_t kind )
 {
 	Email mailer;
+	float recvd_bytes, sent_bytes;
+
+	if (kind == US_TERMINATE_PENDING) {
+		/* I don't have a remote resource, so get the values directly from
+			the jobad, and I know they should be present at this stage. */
+		jobAd->LookupFloat(ATTR_BYTES_SENT, sent_bytes);
+		jobAd->LookupFloat(ATTR_BYTES_RECVD, recvd_bytes);
+
+		// note, we want to reverse the order of the send/recv in the
+		// call, since we want the email from the job's perspective,
+		// not the shadow's.. 
+
+		mailer.sendExitWithBytes( jobAd, exitReason, 0, 0, 
+						  sent_bytes, recvd_bytes);
+		// all done.
+		return;
+	}
+
+	// the default case of kind == US_NORMAL
+	
 		// note, we want to reverse the order of the send/recv in the
 		// call, since we want the email from the job's perspective,
 		// not the shadow's.. 

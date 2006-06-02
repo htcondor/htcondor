@@ -32,6 +32,7 @@
 #include "exit.h"
 #include "internet.h"
 #include "qmgr_job_updater.h"
+#include "condor_update_style.h"
 
 /* Forward declaration to prevent loops... */
 class RemoteResource;
@@ -164,8 +165,11 @@ class BaseShadow : public Service
 			event, update the job queue, etc.<p>
 			This uses the virtual cleanUp() method to take care of any
 			universe-specific code before we exit.
+			The optional style parameter dictates if the job terminated of
+			its own accord or if the shadow had been born with a 
+			previously terminated job classad.
 		*/
-	void terminateJob( void );
+	void terminateJob( update_style_t kind = US_NORMAL );
 
 		/** The job exited but it's not ready to leave the queue.  
 			We still want to log an evict event, possibly email the
@@ -349,7 +353,7 @@ class BaseShadow : public Service
 	void logRequeueEvent( const char* reason );
 		// virtual void emailRequeueEvent( const char* reason );
 
-	void logTerminateEvent( int exitReason );
+	void logTerminateEvent( int exitReason, update_style_t kind = US_NORMAL );
 
 	void logEvictEvent( int exitReason );
 
@@ -357,7 +361,7 @@ class BaseShadow : public Service
 
 	virtual void logReconnectFailedEvent( const char* reason ) = 0;
 
-	virtual void emailTerminateEvent( int exitReason ) = 0;
+	virtual void emailTerminateEvent( int exitReason, update_style_t kind = US_NORMAL ) = 0;
 
  private:
 

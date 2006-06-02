@@ -85,6 +85,8 @@ extern "C" {
 	void send_vacate( char *host, char *capability );
 	void handle_termination( PROC *proc, char *notification,
 				int *jobstatus, char *coredir );
+	void handle_terminate_pending();
+	int terminate_is_pending(void);
 	void get_local_rusage( struct rusage *bsd_rusage );
 	void NotifyUser( char *buf, PROC *proc );
 	FILE	*fdopen(int, const char *);
@@ -552,6 +554,16 @@ main(int argc, char *argv[] )
 	block_signal(SIGCHLD);
 	block_signal(SIGUSR1);      
 
+	/* If the completed job had been committed to the job queue,
+		but for some reason the shadow exited wierdly and the
+		schedd is trying to run it again, then simply write
+		the job termination events and send the email as if the job had
+		just ended. */
+	if (terminate_is_pending() == TRUE) {
+		/* This function will exit()! */
+		handle_terminate_pending();
+	}
+
 	HandleSyscalls();
 
 	Wrapup();
@@ -582,7 +594,54 @@ main(int argc, char *argv[] )
 	exit( ExitReason );
 }
 
+/* If the job had technically ended ad we managed to correctly record that
+	fact via ATTR_TERMINATION_PENDING, then the shadow will call this function
+	which will mimic the termination procedure normally done and send emails
+	and write termination events if applicable */
+void
+handle_terminate_pending()
+{
+	struct rusage local_rusage;
+	char notification[1024*50] = {'\0'};
+	extern int WroteExecuteEvent; // global var found in log_events.C
 
+	dprintf(D_ALWAYS, "handle_terminate_pending() called.\n");
+
+	// This is an evil piece of code and I am embarrased by writing it.
+	// -psilord 05/31/06
+
+	// don't let the termination event function autotrigger an execution event.
+	WroteExecuteEvent  = TRUE;
+	// Restore a bunch of global variables hacked into the jobad.
+	JobAd->LookupInteger(ATTR_WAITPID_STATUS, JobStatus);
+	JobAd->LookupString(ATTR_TERMINATION_REASON, notification);
+	JobAd->LookupInteger(ATTR_TERMINATION_EXITREASON, ExitReason);
+	JobAd->LookupFloat(ATTR_BYTES_SENT, BytesSent);
+	JobAd->LookupFloat(ATTR_BYTES_RECVD, BytesRecvd);
+	// if we got here, then this must be the case.
+	Proc->status = COMPLETED;
+	Proc->completion_date = time(NULL);
+
+	dprintf(D_ALWAYS, "JobStatus = %d\n", JobStatus);
+	dprintf(D_ALWAYS, "notification = \"%s\"\n", notification);
+	dprintf(D_ALWAYS, "ExitReason = %d\n", ExitReason);
+	dprintf(D_ALWAYS, "BytesSent = %f\n", BytesSent);
+	dprintf(D_ALWAYS, "BytesRecvd = %f\n", BytesRecvd);
+
+	memcpy(&(Proc->exit_status[0]),&JobStatus,sizeof((Proc->exit_status[0])));
+	get_local_rusage( &local_rusage );
+
+	log_termination (&local_rusage, &JobRusage);
+
+	if( notification[0] ) {
+		NotifyUser( notification, Proc );
+	}
+
+	/* using the above ExitReason... */
+	dprintf( D_ALWAYS, "********** Shadow Exiting(%d) **********\n",
+		ExitReason );
+	exit(ExitReason);
+}
 
 void
 HandleSyscalls()
@@ -783,6 +842,7 @@ Wrapup( )
 	get_local_rusage( &local_rusage );
 	update_job_status( &local_rusage, &JobRusage );
 
+
 	/* log the event associated with the termination; pass local and remote
 	   rusage for the run.  The total local and remote rusages for the job are
 	   stored in the Proc --- these values were updated by update_job_status */
@@ -965,6 +1025,7 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 	float utime = 0.0;
 	float stime = 0.0;
 	int tot_sus=0, cum_sus=0, last_sus=0;
+	char buf[1024*50];
 
 	// If the job completed, and there is no HISTORY file specified,
 	// the don't bother to update the job ClassAd since it is about to be
@@ -1103,20 +1164,25 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 		}
 		// if the job completed, we should include the run-time in
 		// committed time, since it contributed to the completion of
-		// the job
+		// the job. Also, commit the exit code/signal stuff, plus any 
+		// core filenames.
 		if (Proc->status == COMPLETED) {
+			int exit_code, exit_signal, exit_by_signal;
+			int pending;
+
+			// update the time.
 			CommittedTime = 0;
 			GetAttributeInt(Proc->id.cluster, Proc->id.proc,
 							ATTR_JOB_COMMITTED_TIME, &CommittedTime);
 			CommittedTime += Proc->completion_date - LastRestartTime;
 			SetAttributeInt(Proc->id.cluster, Proc->id.proc,
 							ATTR_JOB_COMMITTED_TIME, CommittedTime);
-		}
 
-		// if the job completed, then update the exit code/signal attributes
-		if (Proc->status == COMPLETED)
-		{
-			int exit_code, exit_signal, exit_by_signal;
+			// if there is a core file, update that too.
+			if (JobAd->LookupString(ATTR_JOB_CORE_FILENAME, buf)) {
+				SetAttributeString(Proc->id.cluster, Proc->id.proc,
+			   		ATTR_JOB_CORE_FILENAME, buf);
+			}
 
 			// only new style ads have ATTR_ON_EXIT_BY_SIGNAL, so only
 			// SetAttribute for those types of ads
@@ -1138,12 +1204,50 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 						   			ATTR_ON_EXIT_CODE, exit_code);
 				}
 			}
+
+			// and now, let's try and mark this job as a terminate pending
+			// job. If the job already is, then fine. We'll mark it again.
+			if (JobAd->LookupBool(ATTR_TERMINATION_PENDING, pending)) {
+				SetAttribute(Proc->id.cluster, Proc->id.proc,
+			   			ATTR_TERMINATION_PENDING, pending?"TRUE":"FALSE");
+			} else {
+				// if it isn't in the job ad, then add it to the saved ad in the
+				// schedd.
+				SetAttribute(Proc->id.cluster, Proc->id.proc,
+			   			ATTR_TERMINATION_PENDING, "TRUE");
+			}
+
+			// store the reason why the job is marked completed.
+			if (JobAd->LookupString(ATTR_TERMINATION_REASON, buf)) {
+				SetAttributeString(Proc->id.cluster, Proc->id.proc,
+				   			ATTR_TERMINATION_REASON, buf);
+			}
+
+			// Set up the exit code the shadow was about to exit with to
+			// help support the terminate pending "state".
+			SetAttributeInt(Proc->id.cluster, Proc->id.proc,
+				   			ATTR_TERMINATION_EXITREASON, ExitReason);
+
+			// Put the job status as created by waitpid() into the job ad
+			// itself.  This is to implement the terminate_pending feature. It
+			// is done like this because EVERYWHERE in this codebase we do
+			// stuff like WIFEXITED(JobStatus) and it turns out there are no
+			// user level macros to will one of those status values as returned
+			// by waitpid() into existance. So, we'll put it directly into the
+			// job ad to prevent me having to reimplement a few large functions
+			// which deal with JobStatus directly--as it is sadly a global
+			// variable.
+			SetAttributeInt(Proc->id.cluster, Proc->id.proc,
+				   			ATTR_WAITPID_STATUS, JobStatus);
+
 		}
 	}
+
 
 	if (!DisconnectQ(0)) {
 		EXCEPT("Failed to commit updated job queue status!");
 	}
+
 }
 
 /*

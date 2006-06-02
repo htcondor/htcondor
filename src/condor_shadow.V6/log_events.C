@@ -49,7 +49,10 @@ extern ClassAd *JobAd;
 
 extern ReliSock *syscall_sock;
 
-static int WroteExecuteEvent = 0;
+/* This used to be static, but now handle_terminate_pending() can modify this
+variable to true so it doesn't get emitted when it isn't supposed to. */
+int WroteExecuteEvent = 0;
+
 extern char* ExecutingHost;
 
 // count of total network bytes previously send and received for this
@@ -229,29 +232,35 @@ log_termination (struct rusage *localr, struct rusage *remoter)
 		// abnormal termination
 		{
 			char coredir[_POSIX_PATH_MAX];
+			char coreFile[_POSIX_PATH_MAX];
 			JobTerminatedEvent event;
-
-#if defined(Solaris) || defined(HPUX)
-			getcwd(coredir,_POSIX_PATH_MAX);
-#else	
-			getwd( coredir );
-#endif
-
 			event.normal = false;
 			event.signalNumber = WTERMSIG(JobStatus);
+
 			if (WCOREDUMP(JobStatus))
 			{
-				char coreFile[_POSIX_PATH_MAX];
-				if (strcmp (Proc->rootdir, "/") == 0)
-				{
-					sprintf( coreFile, "%s/core.%d.%d", coredir, 
-							 Proc->id.cluster, Proc->id.proc );
-				}
-				else
-				{
-					sprintf( coreFile, "%s%s/core.%d.%d", Proc->rootdir,
-							 coredir, Proc->id.cluster, Proc->id.proc );
-				}
+				/* look up the corefile name in the job ad if one exists... */
+				if (!JobAd->LookupString(ATTR_JOB_CORE_FILENAME, coreFile)) {
+					/* if it didn't exist in the job ad, then construct what it
+						should be. */
+
+#if defined(Solaris) || defined(HPUX)
+					getcwd(coredir,_POSIX_PATH_MAX);
+#else	
+					getwd( coredir );
+#endif
+					if (strcmp (Proc->rootdir, "/") == 0)
+					{
+						sprintf( coreFile, "%s/core.%d.%d", coredir, 
+							 	Proc->id.cluster, Proc->id.proc );
+					}
+					else
+					{
+						sprintf( coreFile, "%s%s/core.%d.%d", Proc->rootdir,
+							 	coredir, Proc->id.cluster, Proc->id.proc );
+					}
+				} 
+				
 				event.setCoreFile( coreFile );
 			}
 			event.run_local_rusage = *localr;

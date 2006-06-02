@@ -133,6 +133,8 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 	terminate_job_queue_attrs->insert( ATTR_EXCEPTION_HIERARCHY );
 	terminate_job_queue_attrs->insert( ATTR_EXCEPTION_TYPE );
 	terminate_job_queue_attrs->insert( ATTR_EXCEPTION_NAME );
+	terminate_job_queue_attrs->insert( ATTR_TERMINATION_PENDING );
+	terminate_job_queue_attrs->insert( ATTR_JOB_CORE_FILENAME );
 }
 
 

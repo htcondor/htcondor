@@ -109,7 +109,8 @@ class ParallelShadow : public BaseShadow
 			terminated.  For MPI jobs, we print out all the hosts
 			where the job ran, and any other useful info.
 		*/
-	virtual void emailTerminateEvent( int exitReason );
+	virtual void emailTerminateEvent( int exitReason, 
+					update_style_t kind = US_NORMAL );
 
 		/** Do all work to cleanup before this shadow can exit.  To
 			cleanup an MPI job, we've got to kill all our starters.

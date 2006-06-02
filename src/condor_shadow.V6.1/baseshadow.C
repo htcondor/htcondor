@@ -43,6 +43,11 @@ BaseShadow* BaseShadow::myshadow_ptr = NULL;
 // this appears at the bottom of this file:
 extern "C" int display_dprintf_header(FILE *fp);
 
+// some helper functions
+int getJobAdExitCode(ClassAd *jad, int &exit_code);
+int getJobAdExitedBySignal(ClassAd *jad, int &exited_by_signal);
+int getJobAdExitSignal(ClassAd *jad, int &exit_signal);
+
 BaseShadow::BaseShadow() {
 	spool = NULL;
 	fsDomain = uidDomain = NULL;
@@ -75,6 +80,8 @@ BaseShadow::~BaseShadow() {
 void
 BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr )
 {
+	int pending = FALSE;
+
 	if( ! job_ad ) {
 		EXCEPT("baseInit() called with NULL job_ad!");
 	}
@@ -180,6 +187,19 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr )
 		// change anything, we consider that change dirty so it'll get
 		// updated the next time we connect to the job queue...
 	checkFileTransferCruft();
+
+		// check to see if this invocation of the shadow is just to write
+		// a terminate event and exit since this job had been recorded as
+		// pending termination, but somehow the job didn't leave the queue
+		// and the schedd is trying to restart it again..
+	if( jobAd->LookupInteger(ATTR_TERMINATION_PENDING, pending)) {
+		if (pending == TRUE) {
+			// If the classad of this job "thinks" that this job should be
+			// finished already, let's enact that belief.
+			// This function does not return.
+			this->terminateJob(US_TERMINATE_PENDING);
+		}
+	}
 }
 
 
@@ -473,39 +493,116 @@ BaseShadow::removeJob( const char* reason )
 }
 
 void
-BaseShadow::terminateJob( void )
+BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_NORMAL
 {
+	int reason;
+	bool signaled;
+	MyString str;
+
 	if( ! jobAd ) {
 		dprintf( D_ALWAYS, "In terminateJob() w/ NULL JobAd!" );
 	}
 
-		// cleanup this shadow (kill starters, etc)
-	cleanUp();
-
-	int reason;
-	reason = getExitReason();
-
-	bool signaled = exitedBySignal();
-	dprintf( D_ALWAYS, "Job %d.%d terminated: %s %d\n",
-			 getCluster(), getProc(), 
-			 signaled ? "killed by signal" : "exited with status",
-			 signaled ? exitSignal() : exitCode() );
-
-		// email the user
-	emailTerminateEvent( reason );
-
-		// write stuff to user log:
-	logTerminateEvent( reason );
-
-		// update the job ad in the queue with some important final
-		// attributes so we know what happened to the job when using
-		// condor_history...
-	if( !updateJobInQueue(U_TERMINATE) ) {
-			// trouble!  TODO: should we do anything else?
-		dprintf( D_ALWAYS, "Failed to update job queue!\n" );
+	/* The first thing we do is record that we are in a termination pending
+		state. */
+	if (kind == US_NORMAL) {
+		str.sprintf("%s = TRUE", ATTR_TERMINATION_PENDING);
+		jobAd->Insert(str.Value());
 	}
 
-		// does not return.
+	if (kind == US_TERMINATE_PENDING) {
+		// In this case, the job had already completed once and the
+		// status had been saved to the job queue, however, for
+		// some reason, the shadow didn't exit with a good value and
+		// the job had been requeued. When this style of update
+		// is used, it is a shortcut from the very birth of the shadow
+		// to here, and so there will not be a remote resource or
+		// anything like that set up. In this situation, we just
+		// want to write the log event and mail the user and exit
+		// with a good exit code so the schedd removes the job from
+		// the queue. If for some reason the logging fails once again,
+		// the process continues to repeat. 
+		// This means at least once semantics for the termination event
+		// and user email, but at no time should the job actually execute
+		// again.
+
+		int exited_by_signal = FALSE;
+		int exit_signal = 0;
+		int exit_code = 0;
+
+		getJobAdExitedBySignal(jobAd, exited_by_signal);
+		if (exited_by_signal == TRUE) {
+			getJobAdExitSignal(jobAd, exit_signal);
+		} else {
+			getJobAdExitCode(jobAd, exit_code);
+		}
+
+		if (exited_by_signal == TRUE) {
+			reason = JOB_COREDUMPED;
+			str.sprintf("%s = \"%s\"", ATTR_JOB_CORE_FILENAME, core_file_name);
+			jobAd->Insert(str.Value());
+		} else {
+			reason = JOB_EXITED;
+		}
+
+		dprintf( D_ALWAYS, "Job %d.%d terminated: %s %d\n",
+	 		getCluster(), getProc(), 
+	 		exited_by_signal? "killed by signal" : "exited with status",
+	 		exited_by_signal ? exit_signal : exit_code );
+		
+			// write stuff to user log, but get values from jobad
+		logTerminateEvent( reason, kind );
+
+			// email the user, but get values from jobad
+		emailTerminateEvent( reason, kind );
+
+		DC_Exit( reason );
+	}
+
+	// the default path when kind == US_NORMAL
+
+	// cleanup this shadow (kill starters, etc)
+	cleanUp();
+
+	reason = getExitReason();
+	signaled = exitedBySignal();
+
+	/* also store the corefilename into the jobad so we can recover this 
+		during a termination pending scenario. */
+	if( reason == JOB_COREDUMPED ) {
+		str.sprintf("%s = \"%s\"", ATTR_JOB_CORE_FILENAME, getCoreName());
+		jobAd->Insert(str.Value());
+	}
+
+	// update the job ad in the queue with some important final
+	// attributes so we know what happened to the job when using
+	// condor_history...
+	if( !updateJobInQueue(U_TERMINATE) ) {
+		dprintf( D_ALWAYS, 
+			"Failed to perform final update to job queue! "
+			"Forcing job requeue!\n" );
+		DC_Exit(JOB_SHOULD_REQUEUE);
+	}
+
+	// Let's maximize the effectiveness of that queue synchronization and
+	// only record the job as done if the update to the queue was successful.
+	// If any of these next operations fail and the shadow exits with an
+	// exit code which causes the job to get requeued, it will be in the
+	// "terminate pending" state marked by the ATTR_TERMINATION_PENDING
+	// attribute.
+
+	dprintf( D_ALWAYS, "Job %d.%d terminated: %s %d\n",
+	 	getCluster(), getProc(), 
+	 	signaled ? "killed by signal" : "exited with status",
+	 	signaled ? exitSignal() : exitCode() );
+
+	// write stuff to user log:
+	logTerminateEvent( reason );
+
+	// email the user
+	emailTerminateEvent( reason );
+
+	// does not return.
 	DC_Exit( reason );
 }
 
@@ -635,9 +732,46 @@ void BaseShadow::initUserLog()
 }
 
 
-void
-BaseShadow::logTerminateEvent( int exitReason )
+// returns TRUE if attribute found.
+int getJobAdExitCode(ClassAd *jad, int &exit_code)
 {
+	if( ! jad->LookupInteger(ATTR_ON_EXIT_CODE, exit_code) ) {
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+// returns TRUE if attribute found.
+int getJobAdExitedBySignal(ClassAd *jad, int &exited_by_signal)
+{
+	if( ! jad->LookupInteger(ATTR_ON_EXIT_BY_SIGNAL, exited_by_signal) ) {
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+// returns TRUE if attribute found.
+int getJobAdExitSignal(ClassAd *jad, int &exit_signal)
+{
+	if( ! jad->LookupInteger(ATTR_ON_EXIT_SIGNAL, exit_signal) ) {
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+// kind defaults to US_NORMAL.
+void
+BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
+{
+	struct rusage run_remote_rusage;
+	JobTerminatedEvent event;
+	MyString corefile;
+
+	memset( &run_remote_rusage, 0, sizeof(struct rusage) );
+
 	switch( exitReason ) {
 	case JOB_EXITED:
 	case JOB_COREDUMPED:
@@ -649,12 +783,64 @@ BaseShadow::logTerminateEvent( int exitReason )
 		return;
 	}
 
-	struct rusage run_remote_rusage;
-	memset( &run_remote_rusage, 0, sizeof(struct rusage) );
+	if (kind == US_TERMINATE_PENDING) {
+
+		float float_value;
+		int exited_by_signal = FALSE;
+		int exit_signal = 0;
+		int exit_code = 0;
+
+		getJobAdExitedBySignal(jobAd, exited_by_signal);
+		if (exited_by_signal == TRUE) {
+			getJobAdExitSignal(jobAd, exit_signal);
+			event.normal = false;
+			event.signalNumber = exit_signal;
+		} else {
+			getJobAdExitCode(jobAd, exit_code);
+			event.normal = true;
+			event.returnValue = exit_code;
+		}
+
+		/* grab usage information out of job ad */
+		if( jobAd->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, float_value) ) {
+			run_remote_rusage.ru_stime.tv_sec = (int) float_value;
+		}
+
+		if( jobAd->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, float_value) ) {
+			run_remote_rusage.ru_utime.tv_sec = (int) float_value;
+		}
+
+		event.run_remote_rusage = run_remote_rusage;
+		event.total_remote_rusage = run_remote_rusage;
+	
+		/*
+		  we want to log the events from the perspective of the user
+		  job, so if the shadow *sent* the bytes, then that means the
+		  user job *received* the bytes
+		*/
+		jobAd->LookupFloat(ATTR_BYTES_SENT, event.recvd_bytes);
+		jobAd->LookupFloat(ATTR_BYTES_RECVD, event.sent_bytes);
+
+		event.total_recvd_bytes = event.recvd_bytes;
+		event.total_sent_bytes = event.sent_bytes;
+	
+		if( exited_by_signal == TRUE ) {
+			jobAd->LookupString(ATTR_JOB_CORE_FILENAME, corefile);
+			event.setCoreFile( corefile.Value() );
+		}
+
+		if (!uLog.writeEvent (&event)) {
+			dprintf (D_ALWAYS,"Unable to log "
+				 	"ULOG_JOB_TERMINATED event\n");
+		}
+
+		return;
+	}
+
+	// the default kind == US_NORMAL path
 
 	run_remote_rusage = getRUsage();
 	
-	JobTerminatedEvent event;
 	if( exitedBySignal() ) {
 		event.normal = false;
 		event.signalNumber = exitSignal();

@@ -754,11 +754,13 @@ MPIShadow::gracefulShutDown( void )
 
 
 void
-MPIShadow::emailTerminateEvent( int exitReason )
+MPIShadow::emailTerminateEvent( int exitReason, update_style_t kind )
 {
 	int i;
 	FILE* mailer;
 	Email msg;
+	MyString str;
+	char *s;
 
 	mailer = msg.open( jobAd, exitReason );
 	if( ! mailer ) {
@@ -770,6 +772,32 @@ MPIShadow::emailTerminateEvent( int exitReason )
 			 getCluster(), getProc() );
 
 	fprintf( mailer, "\nHere are the machines that ran your MPI job.\n");
+
+	if (kind == US_TERMINATE_PENDING) {
+		fprintf( mailer, "    Machine Name         \n" );
+		fprintf( mailer, " ------------------------\n" );
+
+		// Don't print out things like the exit codes since they have
+		// been lost and it is a little too much work to add them into
+		// the jobad for the amount of time I have to get this working.
+		// This should be a more rare case in any event.
+
+		jobAd->LookupString(ATTR_REMOTE_HOSTS, str);
+		StringList slist(str.Value());
+		slist.rewind();
+		while((s = slist.next()) != NULL)
+		{
+			fprintf( mailer, "%s\n", s);
+
+		}
+
+		fprintf( mailer, "\nExit codes are currently unavailable.\n\n");
+		fprintf( mailer, "\nHave a nice day.\n" );
+
+		return;
+
+	}
+
 	fprintf( mailer, "They are listed in the order they were started\n" );
 	fprintf( mailer, "in, which is the same as MPI_Comm_rank.\n\n" );
 	
