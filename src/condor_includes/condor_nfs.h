@@ -37,31 +37,32 @@
     typedef struct fhandle fhandle_t;
 
 #elif !defined(IRIX)
+
+    /* ALL platforms except Linux and IRIX */
 #	include <rpc/rpc.h>
 
-#if defined(Darwin) || defined(CONDOR_FREEBSD)
+#	if defined(Darwin) || defined(CONDOR_FREEBSD)
 #       include <nfs/rpcv2.h>
-#endif
+#	endif
 
-#if defined(CONDOR_FREEBSD)
-#if defined(CONDOR_FREEBSD4)
-	//
-	// This is only found in FreeBSD 4.X
-	//
-#	include <nfs/nfs.h>
-#else
-	//
-	// I am not 100% that this is the right file, but it seems to work
-	// Andy - 04.20.2006
-	//
-#	include <nfs/nfsproto.h>
-#endif
-#endif
+#	if defined(CONDOR_FREEBSD) && !defined(CONDOR_FREEBSD4)
+        /*
+          <nfs/nfs.h> is only found in FreeBSD 4.X, every other
+          FreeBSD needs to use this header file, instead.  I am not
+          100% that this is the right file, but it seems to work.
+    	  Andy - 04.20.2006 
+        */
+#		include <nfs/nfsproto.h>
 
-#if defined(LINUX) || defined(IRIX) || defined(HPUX10) 
+#	else    // FreeBSD4, and all non-FreeBSD platforms...
+
+#		include <nfs/nfs.h>
+
+#   endif /* FreeBSDFreeBSD4 */
+#endif /* ! defined(LINUX || IRIX) */ 
+
+#if defined(HPUX10) 
 #	include <nfs/export.h>
-#endif
-
 #endif
 
 #endif /* _CONDOR_NFS_H */
