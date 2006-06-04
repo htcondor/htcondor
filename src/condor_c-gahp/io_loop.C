@@ -70,6 +70,46 @@ extern "C" int display_dprintf_header(FILE *fp);
 int STDIN_FILENO = fileno(stdin);
 #endif
 
+#if defined(WIN32)
+int forwarding_pipe = -1;
+unsigned __stdcall pipe_forward_thread(void *)
+{
+	const int FORWARD_BUFFER_SIZE = 4096;
+	char buf[FORWARD_BUFFER_SIZE];
+	
+	// just copy everything from stdin to the forwarding pipe
+	while (true) {
+
+		// read from stdin
+		int bytes = read(0, buf, FORWARD_BUFFER_SIZE);
+		if (bytes == -1) {
+			dprintf(D_ALWAYS, "pipe_forward_thread: error reading from stdin\n");
+			daemonCore->Close_Pipe(forwarding_pipe);
+			return 1;
+		}
+
+		// close forwarding pipe and exit on EOF
+		if (bytes == 0) {
+			daemonCore->Close_Pipe(forwarding_pipe);
+			return 0;
+		}
+
+		// write to the forwarding pipe
+		char* ptr = buf;
+		while (bytes) {
+			int bytes_written = daemonCore->Write_Pipe(forwarding_pipe, ptr, bytes);
+			if (bytes_written == -1) {
+				dprintf(D_ALWAYS, "pipe_forward_thread: error writing to forwarding pipe\n");
+				daemonCore->Close_Pipe(forwarding_pipe);
+				return 1;
+			}
+			ptr += bytes_written;
+			bytes -= bytes_written;
+		}
+	}
+
+}
+#endif
 
 void
 usage( char *name )
@@ -123,17 +163,50 @@ main_init( int argc, char ** const argv )
 	Register();
 	Reconfig();
 
-	// inherit the DaemonCore pipe that the gridmanager create
-	int stdin_pipe = daemonCore->Inherit_Pipe(fileno(stdin),
-						  false,	// read pipe
-						  true,		// registerable
-						  false);	// blocking
+	int stdin_pipe = -1;
+#if defined(WIN32)
+	// if our parent is not DaemonCore, then our assumption that
+	// the pipe we were passed in via stdin is overlapped-mode
+	// is probably wrong. we therefore create a new pipe with the
+	// read end overlapped and start a "forwarding thread"
+	char* tmp;
+	if ((tmp = daemonCore->InfoCommandSinfulString(daemonCore->getppid())) == NULL) {
+
+		dprintf(D_FULLDEBUG, "parent is not DaemonCore; creating a forwarding thread\n");
+
+		int pipe_ends[2];
+		if (daemonCore->Create_Pipe(pipe_ends, true) == FALSE) {
+			EXCEPT("failed to create forwarding pipe");
+		}
+		forwarding_pipe = pipe_ends[1];
+		HANDLE thread_handle = (HANDLE)_beginthreadex(NULL,                   // default security
+		                                              0,                      // default stack size
+		                                              pipe_forward_thread,    // start function
+		                                              NULL,                   // arg: write end of pipe
+		                                              0,                      // not suspended
+													  NULL);                  // don't care about the ID
+		if (thread_handle == NULL) {
+			EXCEPT("failed to create forwarding thread");
+		}
+		CloseHandle(thread_handle);
+		stdin_pipe = pipe_ends[0];
+	}
+#endif
+
+	if (stdin_pipe == -1) {
+		// create a DaemonCore pipe from our stdin
+		stdin_pipe = daemonCore->Inherit_Pipe(fileno(stdin),
+		                                      false,    // read pipe
+		                                      true,     // registerable
+		                                      false);   // blocking
+	}
+
 	stdin_buffer.setFd (stdin_pipe);
 
 	(void)daemonCore->Register_Pipe (stdin_buffer.getFd(),
-					 "stdin pipe",
-					 (PipeHandler)&stdin_pipe_handler,
-					 "stdin_pipe_handler");
+					"stdin pipe",
+					(PipeHandler)&stdin_pipe_handler,
+					"stdin_pipe_handler");
 
 	for (i=0; i<NUMBER_WORKERS; i++) {
 
