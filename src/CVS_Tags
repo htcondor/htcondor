@@ -1,3 +1,7 @@
+06/04/06 V6_7-nick_fs_util-merge-1
+  The first (and probably only) merge from V6_7-nick_fs_util-branch
+  into V6_7-branch
+
 06/01/06 V6_7-db_logs_nonblocking-4-branch
   A working branch for the db folks, branched from V6_7-branch-2006-5-16
   and continuing work previously on V6_7-db_logs_nonblocking-3-branch

@@ -73,6 +73,7 @@
 #include "classad_hashtable.h"
 #include "directory.h"
 #include "filename_tools.h"
+#include "fs_util.h"
 
 #include "list.h"
 
@@ -3789,6 +3790,20 @@ SetUserLog()
 			exit( 1 );
 		} else {
 			fclose(test);
+		}
+
+		// Check that the log file isn't on NFS
+		BOOLEAN	nfs = FALSE;
+		if ( fs_detect_nfs( ulog.Value(), &nfs ) ) {
+			fprintf(stderr,
+					"\nWARNING: Can't determine if log file %s is on NFS\n",
+					ulog.Value() );
+		}
+		if ( nfs ) {
+			fprintf(stderr,
+					"\nWARNING: Log file %s is on NFS.\nThis could cause"
+					" log file corruption and is _not_ recommended.\n",
+					ulog.Value() );
 		}
 
 		check_and_universalize_path(ulog, UserLogFile);

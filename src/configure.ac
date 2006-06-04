@@ -1331,10 +1331,17 @@ AC_SUBST([has_pthreads],[$_cv_has_pthreads])
 ############################################################
 
 AC_CHECK_HEADERS([sys/types.h])
+AC_CHECK_HEADERS([sys/param.h])
 AC_CHECK_HEADERS([stdint.h])
 AC_CHECK_HEADERS([inttypes.h])
 AC_CHECK_HEADERS([sys/personality.h])
 AC_CHECK_HEADERS([linux/personality.h])
+AC_CHECK_HEADERS([linux/nfsd/const.h])
+AC_CHECK_HEADERS([sys/statfs.h])
+AC_CHECK_HEADERS([sys/statvfs.h])
+AC_CHECK_HEADERS([sys/vfs.h])
+AC_CHECK_HEADERS([sys/mount.h])
+AC_CHECK_HEADERS([ustat.h])
 
 
 ############################################################
@@ -1344,7 +1351,6 @@ AC_CHECK_HEADERS([linux/personality.h])
 AC_CHECK_TYPES([int64_t])
 AC_CHECK_TYPES([long long])
 AC_CHECK_TYPES([__int64])
-
 
 # checks for structures
 
@@ -1357,6 +1363,110 @@ AC_CHECK_TYPES([__int64])
 AC_CHECK_FUNCS([stat64])
 AC_CHECK_FUNC(dlopen, ,AC_CHECK_LIB(dl, dlopen))
 AC_CHECK_FUNC(crypt, ,AC_CHECK_LIB(crypt,crypt))
+
+
+AC_CHECK_FUNCS(statfs statvfs)
+dnl
+dnl file system type member in statfs struct
+dnl
+AC_CHECK_MEMBERS([struct statfs.f_type], ,[
+  AC_CHECK_MEMBERS([struct statfs.f_fstyp], , , [#ifdef HAVE_SYS_PARAM_H
+#include <sys/param.h>
+#endif
+#ifdef HAVE_SYS_VFS_H
+#include <sys/vfs.h>
+#endif
+#ifdef HAVE_SYS_MOUNT_H
+#include <sys/mount.h>
+#endif
+#ifdef HAVE_SYS_STATFS_H
+#include <sys/statfs.h>
+#endif])], [#ifdef HAVE_SYS_PARAM_H
+#include <sys/param.h>
+#endif
+#ifdef HAVE_SYS_VFS_H
+#include <sys/vfs.h>
+#endif
+#ifdef HAVE_SYS_MOUNT_H
+#include <sys/mount.h>
+#endif
+#ifdef HAVE_SYS_STATFS_H
+#include <sys/statfs.h>
+#endif])
+
+AC_CHECK_MEMBERS([struct statfs.f_fstypename], , , [#ifdef HAVE_SYS_PARAM_H
+#include <sys/param.h>
+#endif
+#ifdef HAVE_SYS_VFS_H
+#include <sys/vfs.h>
+#endif
+#ifdef HAVE_SYS_MOUNT_H
+#include <sys/mount.h>
+#endif
+#ifdef HAVE_SYS_STATFS_H
+#include <sys/statfs.h>
+#endif])
+
+AC_CHECK_MEMBERS([struct statvfs.f_fsid], , , [#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_STATVFS_H
+#include <sys/statvfs.h>
+#endif])
+
+AC_CHECK_MEMBERS([struct statvfs.f_basetype], , , [#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_STATVFS_H
+#include <sys/statvfs.h>
+#endif])
+ 
+dnl
+dnl if statfs() takes 2 arguments or 4 (Solaris)
+dnl
+if test "$ac_cv_func_statfs" = yes ; then
+  AC_MSG_CHECKING([number of arguments to statfs()])
+  AC_TRY_COMPILE([#include <unistd.h>
+  #ifdef HAVE_SYS_TYPES_H
+  #include <sys/types.h>
+  #endif
+  #ifdef HAVE_SYS_PARAM_H
+  #include <sys/param.h>
+  #endif
+  #ifdef HAVE_SYS_VFS_H
+  #include <sys/vfs.h>
+  #endif
+  #ifdef HAVE_SYS_MOUNT_H
+  #include <sys/mount.h>
+  #endif
+  #ifdef HAVE_SYS_STATFS_H
+  #include <sys/statfs.h>
+  #endif
+  #ifdef HAVE_USTAT_H
+  #include <ustat.h>
+  #endif], [struct statfs st;
+  statfs(NULL, &st);],[
+    AC_MSG_RESULT([2])
+    AC_DEFINE(STATFS_ARGS, 2, [Number of arguments to statfs()])],[
+    AC_TRY_COMPILE([#include <unistd.h>
+  #ifdef HAVE_SYS_PARAM_H
+  #include <sys/param.h>
+  #endif
+  #ifdef HAVE_SYS_VFS_H
+  #include <sys/vfs.h>
+  #endif
+  #ifdef HAVE_SYS_MOUNT_H
+  #include <sys/mount.h>
+  #endif
+  #ifdef HAVE_SYS_STATFS_H
+  #include <sys/statfs.h>
+  #endif], [struct statfs st;
+  statfs(NULL, &st, sizeof (st), 0);],[
+      AC_MSG_RESULT([4])
+      AC_DEFINE(STATFS_ARGS, 4, [Number of arguments to statfs()])],[
+      AC_MSG_RESULT(unknown)
+      AC_MSG_ERROR([unable to determine number of arguments to statfs()])])])
+fi dnl test "$ac_cv_func_statfs" = yes
 
 # we don't actually want to add -lgen to our link line, but we do want
 # HAVE_LIBGEN defined correctly for our test suite builds... 

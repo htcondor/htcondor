@@ -209,6 +209,23 @@ SOURCE=..\src\condor_util_lib\filename_tools.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_util_lib\fs_util.c
+
+!IF  "$(CFG)" == "condor_util_lib - Win32 Debug"
+
+!ELSEIF  "$(CFG)" == "condor_util_lib - Win32 Release"
+
+# SUBTRACT CPP /YX /Yc /Yu
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_includes\fs_util.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_util_lib\get_exec_path.c
 # End Source File
 # Begin Source File
