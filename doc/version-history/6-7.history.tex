@@ -46,7 +46,7 @@ correctly. In particular, if the local schedd resides in a different
 Windows domain from that of the remote schedd, it is necessary to
 include a line like the following in the submit file:
 \begin{verbatim}
-remote_NTDomain = OTHERDOMAIN
++remote_NTDomain = "OTHERDOMAIN"
 \end{verbatim}
 
 \item Added a \Macro{SUBMIT\_MAX\_PROCS\_IN\_CLUSTER} configuration
