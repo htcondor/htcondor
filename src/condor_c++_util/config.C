@@ -106,12 +106,16 @@ Read_config( const char* config_source, BUCKET** table,
 	char*	rhs = NULL;
 	char*	ptr = NULL;
 	char	op;
+	int		retval = 0;
+	bool	is_pipe_cmd = false;
+	bool	firstRead = true;
 
 	ConfigLineNo = 0;
    
 	// Determine if the config file name specifies a file to open, or a
 	// pipe to suck on. Process each accordingly
 	if ( is_piped_command(config_source) ) {
+		is_pipe_cmd = true;
 		if ( is_valid_command(config_source) ) {
 			// try to run the cmd specified before the '|' symbol, and
 			// get the configuration from it's output.
@@ -134,6 +138,7 @@ Read_config( const char* config_source, BUCKET** table,
 			return( -1 );
 		}
 	} else {
+		is_pipe_cmd = false;
 		conf_fp = fopen(config_source, "r");
 		if( conf_fp == NULL ) {
 			printf("Can't open file %s\n", config_source);
@@ -144,6 +149,13 @@ Read_config( const char* config_source, BUCKET** table,
 	if( check_runtime_security ) {
 #ifndef WIN32
 			// unfortunately, none of this works on windoze... (yet)
+		if ( is_pipe_cmd ) {
+			fprintf( stderr, "Configuration Error File <%s>: runtime config "
+					 "not allowed to come from a pipe command\n",
+					 config_source );
+			retval = -1;
+			goto cleanup;
+		}
 		int fd = fileno(conf_fp);
 		struct stat statbuf;
 		uid_t f_uid;
@@ -151,7 +163,8 @@ Read_config( const char* config_source, BUCKET** table,
 		if( rval < 0 ) {
 			fprintf( stderr, "Configuration Error File <%s>, fstat() failed: %s (errno: %d)\n",
 					 config_source, strerror(errno), errno );
-			return( -1 );
+			retval = -1;
+			goto cleanup;
 		}
 		f_uid = statbuf.st_uid;
 		if( can_switch_ids() ) {
@@ -160,7 +173,8 @@ Read_config( const char* config_source, BUCKET** table,
 				fprintf( stderr, "Configuration Error File <%s>, "
 						 "running as root yet runtime config file owned "
 						 "by uid %d, not 0!\n", config_source, (int)f_uid );
-				return( -1 );
+				retval = -1;
+				goto cleanup;
 			}
 		} else {
 				// if we can't switch, at least ensure we own the file
@@ -169,13 +183,13 @@ Read_config( const char* config_source, BUCKET** table,
 						 "running as uid %d yet runtime config file owned "
 						 "by uid %d!\n", config_source, (int)get_my_uid(),
 						 (int)f_uid );
-				return( -1 );
+				retval = -1;
+				goto cleanup;
 			}
 		}
 #endif /* ! WIN32 */
 	} // if( check_runtime_security )
 
-	bool firstRead = true;
 	while(true) {
 		name = getline_implementation(conf_fp, 128);
 		// If the file is empty the first time through, warn the user.
@@ -216,8 +230,8 @@ Read_config( const char* config_source, BUCKET** table,
 				continue;
 			} else {
 				// No operator and no square bracket... bail.
-				(void)fclose( conf_fp );
-				return( -1 );
+				retval = -1;
+				goto cleanup;
 			}
 		}
 
@@ -233,8 +247,8 @@ Read_config( const char* config_source, BUCKET** table,
 			}
 
 			if( !*ptr ) {
-				(void)fclose( conf_fp );
-				return( -1 );
+				retval = -1;
+				goto cleanup;
 			}
 
 			op = *ptr++;
@@ -252,8 +266,8 @@ Read_config( const char* config_source, BUCKET** table,
 		/* Expand references to other parameters */
 		name = expand_macro( name, table, table_size );
 		if( name == NULL ) {
-			(void)fclose( conf_fp );
-			return( -1 );
+			retval = -1;
+			goto cleanup;
 		}
 
 		/* Check that "name" is a legal identifier : only
@@ -262,26 +276,26 @@ Read_config( const char* config_source, BUCKET** table,
 		while( *ptr ) {
 			char c = *ptr++;
 			if( !ISIDCHAR(c) ) {
-				(void) fclose( conf_fp );
 				fprintf( stderr,
 		"Configuration Error File <%s>, Line %d: Illegal Identifier: <%s>\n",
 					config_source, ConfigLineNo, name );
-				return( -1 );
+				retval = -1;
+				goto cleanup;
 			}
 		}
 
 		if( expand_flag == EXPAND_IMMEDIATE ) {
 			value = expand_macro( rhs, table, table_size );
 			if( value == NULL ) {
-				(void)fclose( conf_fp );
-				return( -1 );
+				retval = -1;
+				goto cleanup;
 			}
 		} else  {
 			/* expand self references only */
 			value = expand_macro( rhs, table, table_size, name );
 			if( value == NULL ) {
-				(void)fclose( conf_fp );
-				return( -1 ); 
+				retval = -1;
+				goto cleanup;
 			}
 		}  
 
@@ -303,8 +317,8 @@ Read_config( const char* config_source, BUCKET** table,
 			fprintf( stderr,
 				"Configuration Error File <%s>, Line %d: Syntax Error\n",
 				config_source, ConfigLineNo );
-			(void)fclose( conf_fp );
-			return -1;
+			retval = -1;
+			goto cleanup;
 		}
 
 		FREE( name );
@@ -313,8 +327,21 @@ Read_config( const char* config_source, BUCKET** table,
 		value = NULL;
 	}
 
-	fclose( conf_fp );
-	return 0;
+ cleanup:
+	if ( conf_fp ) {
+		if ( is_pipe_cmd ) {
+			int exit_code = my_pclose( conf_fp );
+			if ( retval == 0 && exit_code != 0 ) {
+				fprintf( stderr, "Configuration Error File <%s>: "
+						 "command terminated with exit code %d\n",
+						 config_source, exit_code );
+				retval = -1;
+			}
+		} else {
+			fclose( conf_fp );
+		}
+	}
+	return retval;
 }
 
 
