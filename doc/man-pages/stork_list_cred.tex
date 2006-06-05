@@ -1,11 +1,11 @@
 \begin{ManPage}{\label{man-stork-list-cred}\Stork{list\_cred}}{1}
-{list all credentials stored on the \Condor{credd} daemon on behalf of Stork}
+{list all credentials of a user stored on the \Condor{credd} daemon on behalf of Stork}
 \Synopsis \SynProg{\Stork{list\_cred}}
 \ToolArgsBase
 
 \SynProg{\Stork{list\_cred}}
 \oOpt{-debug}
-\oOptArg{-n}{hostname\Lbr :portnumber\Rbr}
+\OptArg{-n}{hostname:portnumber}
 
 
 \index{Condor commands!stork\_list\_cred}
@@ -14,15 +14,20 @@
 
 \Description 
 
-\Stork{list\_cred} lists all credentials stored on the \Condor{credd} daemon.
+\Stork{list\_cred} lists all credentials stored on the \Condor{credd} daemon
+of the user issuing the \Stork{list\_cred} command.
+Two fields appear for each item listed:
+the unique name for the credential,
+and the string "X.509".
+As more credential types are handled by the \Condor{credd} daemon,
+this second field with identify the credential type.
 
-% must include the format of what this prints out
 
 \begin{Options}
   \ToolArgsBaseDesc
   \OptItem{\Opt{-debug}}{Show extra debugging information.}
-  \OptItem{\OptArg{-n}{hostname\Lbr :portnumber\Rbr}}
-    {Identify the \Condor{credd} daemon by host name and optional port number.}
+  \OptItem{\OptArg{-n}{hostname:portnumber}}
+    {Identify the \Condor{credd} daemon by host name and port number.}
 \end{Options}
 
 \ExitStatus

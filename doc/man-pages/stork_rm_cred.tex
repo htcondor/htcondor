@@ -5,8 +5,8 @@
 
 \SynProg{\Stork{rm\_cred}}
 \oOpt{-debug}
-\oOptArg{-n}{hostname\Lbr :portnumber\Rbr}
 \oOptArg{-N}{credential-name}
+\OptArg{-n}{hostname:portnumber}
 
 
 \index{Condor commands!stork\_rm\_cred}
@@ -20,11 +20,12 @@
 \begin{Options}
   \ToolArgsBaseDesc
   \OptItem{\Opt{-debug}}{Show extra debugging information.}
-  \OptItem{\OptArg{-n}{hostname \Lbr :portnumber\Rbr}}
+  \OptItem{\OptArg{-n}{hostname:portnumber}}
     {Identify the \Condor{credd} daemon
-    by host name and optional port number.}
+    by host name and port number.}
   \OptItem{\OptArg{-N}{credential-name}}{The unique name of
-    the credential to be removed.}
+    the credential to be removed.  When not specified,
+    the \Condor{credd} daemon uses the string "DEFAULT" as the unique name.}
 \end{Options}
 
 \ExitStatus

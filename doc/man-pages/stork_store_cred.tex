@@ -5,12 +5,12 @@
 
 \SynProg{\Stork{store\_cred}}
 \oOpt{-debug}
-\oOptArg{-n}{hostname \Lbr :portnumber\Rbr}
-\oOptArg{-f}{filename}
 \oOptArg{-N}{credential-name}
 \oOptArg{-m}{\Lbr user@\Rbr hostname\Lbr :portnumber\Rbr}
 \oOptArg{-D}{proxy-server-name}
 \oOpt{-S}
+\OptArg{-n}{hostname:portnumber}
+\OptArg{-f}{filename}
 \Opt{-t x509}
 
 
@@ -29,8 +29,8 @@ is an X.509 certificate.
 \begin{Options}
   \ToolArgsBaseDesc
   \OptItem{\Opt{-debug}}{Show extra debugging information.}
-  \OptItem{\OptArg{-n}{hostname \Lbr :portnumber\Rbr}}{Identify the \Condor{credd} daemon
-    by host name and optional port number.}
+  \OptItem{\OptArg{-n}{hostname:portnumber}}{Identify the \Condor{credd} daemon
+    by host name and port number.}
   \OptItem{\OptArg{-f}{filename}}{A full path and file name where the
     credential is stored.}
   \OptItem{\OptArg{-N}{credential-name}}{A unique name used by
