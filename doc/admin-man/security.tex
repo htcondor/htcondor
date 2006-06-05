@@ -1210,6 +1210,7 @@ then the third place Condor looks for the map file is given by
 \subsubsection{\label{sec:Kerberos-Authentication}Kerberos Authentication}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{authentication!Kerberos}
+\index{Kerberos authentication}
 If Kerberos is used for authentication, then 
 the configuration variable
 \Macro{KERBEROS\_MAP\_FILE}
@@ -1271,6 +1272,12 @@ SEC_ADMINISTRATOR_AUTHENTICATION         = REQUIRED
 SEC_ADMINISTRATOR_AUTHENTICATION_METHODS = KERBEROS
 \end{verbatim}
 \normalsize
+
+Kerberos authentication requires access to various files that
+usually are only accessible by the root user.
+At this time,
+the only supported way to use KERBEROS authentication is to start
+daenons Condor as root.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:FS-Authentication}File System Authentication}
