@@ -1438,7 +1438,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 				// we do _not_ have permission to write this file!!
 				error_buf.sprintf("Permission denied to write file %s!",
 				                   fullname);
-				dprintf(D_ALWAYS,"DoUpload: %s\n",error_buf.Value());
+				dprintf(D_ALWAYS,"DoDownload: %s\n",error_buf.Value());
 				download_success = false;
 				try_again = false;
 				hold_code = CONDOR_HOLD_CODE_DownloadFileError;
