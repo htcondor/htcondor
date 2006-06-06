@@ -111,6 +111,12 @@ class CheckEvents {
 	*/
 	check_event_result_t CheckAllJobs(MyString &errorMsg);
 
+	/** Convert a check_event_result_t to the corresponding string.
+		@param The result.
+		@return The corresponding string.
+	*/
+	static const char * ResultToString(check_event_result_t resultIn);
+
   private:
 	class JobInfo
 	{

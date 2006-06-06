@@ -235,6 +235,11 @@ CheckEvents::CheckJobFinal(const MyString &idStr,
 		return;
 	}
 
+	if ( id._subproc != 0 ) {
+			// This is a parallel universe node.
+		return;
+	}
+
 	if ( info->submitCount != 1 ) {
 		errorMsg = idStr + " ended, submit count != 1 (" +
 				MyString(info->submitCount) + ")";
@@ -302,4 +307,32 @@ CheckEvents::CheckAllJobs(MyString &errorMsg)
 	}
 
 	return result;
+}
+
+//-----------------------------------------------------------------------------
+
+const char *
+CheckEvents::ResultToString(check_event_result_t resultIn)
+{
+	const char *	resultStr = NULL;
+
+	switch ( resultIn ) {
+	case EVENT_OKAY:
+		resultStr = "EVENT_OKAY";
+		break;
+
+	case EVENT_BAD_EVENT:
+		resultStr = "EVENT_BAD_EVENT";
+		break;
+
+	case EVENT_ERROR:
+		resultStr = "EVENT_ERROR";
+		break;
+
+	default:
+		resultStr = "Bad result value!!!!";
+		break;
+	}
+
+	return resultStr;
 }

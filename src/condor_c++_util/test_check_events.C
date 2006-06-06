@@ -27,7 +27,7 @@
 #include "string_list.h"
 #include "check_events.h"
 
-static const char * VERSION = "0.9.2";
+static const char * VERSION = "0.9.3";
 
 MULTI_LOG_HASH_INSTANCE; // For the multi-log-file code...
 CHECK_EVENTS_HASH_INSTANCE; // For the event checking code...
@@ -81,8 +81,8 @@ int main(int argc, char **argv)
 		// Test a submit event for a new job.
 	SubmitEvent		se2;
 	se2.cluster = 1234;
-	se2.proc = 0;
-	se2.subproc = 1;
+	se2.proc = 1;
+	se2.subproc = 0;
 
 	printf("Testing submit... ");
 	CheckThisEvent(__LINE__, ce1, &se2, CheckEvents::EVENT_OKAY, result);
@@ -100,8 +100,8 @@ int main(int argc, char **argv)
 		// Test a job aborted event.
 	JobAbortedEvent	ae2;
 	ae2.cluster = 1234;
-	ae2.proc = 0;
-	ae2.subproc = 1;
+	ae2.proc = 1;
+	ae2.subproc = 0;
 
 	printf("Testing job aborted... ");
 	CheckThisEvent(__LINE__, ce1, &ae2, CheckEvents::EVENT_OKAY, result);
@@ -110,8 +110,8 @@ int main(int argc, char **argv)
 		// got an aborted event for this job.
 	ExecuteEvent exec;
 	exec.cluster = 1234;
-	exec.proc = 0;
-	exec.subproc = 1;
+	exec.proc = 1;
+	exec.subproc = 0;
 
 	printf("Testing execute... ");
 	CheckThisEvent(__LINE__, ce1, &exec, CheckEvents::EVENT_ERROR, result);
@@ -120,7 +120,7 @@ int main(int argc, char **argv)
 		// gotten a submit event for this job.
 	exec.cluster = 1234;
 	exec.proc = 5;
-	exec.subproc = 1;
+	exec.subproc = 0;
 
 	printf("Testing execute... ");
 	CheckThisEvent(__LINE__, ce1, &exec, CheckEvents::EVENT_ERROR, result);
@@ -129,8 +129,8 @@ int main(int argc, char **argv)
 		// got an aborted event for this job.
 	JobTerminatedEvent	te2;
 	te2.cluster = 1234;
-	te2.proc = 0;
-	te2.subproc = 1;
+	te2.proc = 1;
+	te2.subproc = 0;
 
 	printf("Testing terminate... ");
 	CheckThisEvent(__LINE__, ce1, &te2, CheckEvents::EVENT_ERROR, result);
@@ -193,8 +193,8 @@ int main(int argc, char **argv)
 
 	ExecutableErrorEvent	ee2;
 	ee2.cluster = 1234;
-	ee2.proc = 0;
-	ee2.subproc = 1;
+	ee2.proc = 1;
+	ee2.subproc = 0;
 
 	printf("Testing executable error... ");
 	CheckThisEvent(__LINE__, ce2, &ee2, CheckEvents::EVENT_OKAY, result);
@@ -232,7 +232,7 @@ int main(int argc, char **argv)
 	SubmitEvent		se4;
 	se4.cluster = 9876;
 	se4.proc = 5;
-	se4.subproc = 9;
+	se4.subproc = 0;
 
 	printf("Testing submit... ");
 	CheckThisEvent(__LINE__, ce3, &se4, CheckEvents::EVENT_OKAY, result);
@@ -240,7 +240,7 @@ int main(int argc, char **argv)
 	ExecuteEvent exec2;
 	exec2.cluster = 9876;
 	exec2.proc = 5;
-	exec2.subproc = 9;
+	exec2.subproc = 0;
 
 	printf("Testing execute... ");
 	CheckThisEvent(__LINE__, ce3, &exec2, CheckEvents::EVENT_OKAY, result);
@@ -248,7 +248,7 @@ int main(int argc, char **argv)
 	JobTerminatedEvent	te3;
 	te3.cluster = 9876;
 	te3.proc = 5;
-	te3.subproc = 9;
+	te3.subproc = 0;
 
 	printf("Testing terminate... ");
 	CheckThisEvent(__LINE__, ce3, &te3, CheckEvents::EVENT_OKAY, result);
@@ -256,7 +256,7 @@ int main(int argc, char **argv)
 	JobAbortedEvent	ae4;
 	ae4.cluster = 9876;
 	ae4.proc = 5;
-	ae4.subproc = 9;
+	ae4.subproc = 0;
 
 	printf("Testing job aborted... ");
 	CheckThisEvent(__LINE__, ce3, &ae4, CheckEvents::EVENT_BAD_EVENT, result);
@@ -518,7 +518,7 @@ int main(int argc, char **argv)
 	CheckThisEvent(__LINE__, ce10, &se2, CheckEvents::EVENT_OKAY, result);
 
 	printf("Testing execute... ");
-	ee10.subproc = 1;
+	ee10.proc = 1;
 	CheckThisEvent(__LINE__, ce10, &ee10, CheckEvents::EVENT_OKAY, result);
 
 	printf("Testing terminate... ");
@@ -638,6 +638,64 @@ int main(int argc, char **argv)
 	te12.proc = 1;
 	te12.subproc = 0;
 	CheckThisEvent(__LINE__, ce12, &te12, CheckEvents::EVENT_ERROR, result);
+
+	//-------------------------------------------------------------------------
+
+	printf("\n### Testing parallel universe\n\n");
+
+	CheckEvents		ce13;
+
+	printf("Testing submit... ");
+	SubmitEvent		se13;
+	se13.cluster = 101176;
+	se13.proc = 0;
+	se13.subproc = 0;
+	CheckThisEvent(__LINE__, ce13, &se13, CheckEvents::EVENT_OKAY, result);
+
+	printf("Testing node execute... ");
+	NodeExecuteEvent	ne13;
+	ne13.cluster = 101176;
+	ne13.proc = 0;
+	ne13.subproc = 0;
+	CheckThisEvent(__LINE__, ce13, &ne13, CheckEvents::EVENT_OKAY, result);
+
+	printf("Testing node execute... ");
+	ne13.subproc = 1;
+	CheckThisEvent(__LINE__, ce13, &ne13, CheckEvents::EVENT_OKAY, result);
+
+	printf("Testing execute... ");
+	ExecuteEvent	exec13;
+	exec13.cluster = 101176;
+	exec13.proc = 0;
+	exec13.subproc = 0;
+	CheckThisEvent(__LINE__, ce13, &exec13, CheckEvents::EVENT_OKAY, result);
+
+	printf("Testing node terminated... ");
+	NodeExecuteEvent	nt13;
+	nt13.cluster = 101176;
+	nt13.proc = 0;
+	nt13.subproc = 0;
+	CheckThisEvent(__LINE__, ce13, &nt13, CheckEvents::EVENT_OKAY, result);
+
+	printf("Testing node terminated... ");
+	nt13.subproc = 1;
+	CheckThisEvent(__LINE__, ce13, &nt13, CheckEvents::EVENT_OKAY, result);
+
+	printf("Testing terminate... ");
+	JobTerminatedEvent	te13;
+	te13.cluster = 101176;
+	te13.proc = 0;
+	te13.subproc = 0;
+	CheckThisEvent(__LINE__, ce13, &te13, CheckEvents::EVENT_OKAY, result);
+
+	printf("\nTesting CheckAllJobs()... ");
+	if ( ce13.CheckAllJobs(errorMsg) == CheckEvents::EVENT_OKAY ) {
+		printf("...succeeded\n");
+	} else {
+		printf("...FAILED (%s)\n", errorMsg.Value());
+		printf("########## TEST FAILED HERE (line %d) ##########\n", __LINE__);
+		result = false;
+	}
 
 	//-------------------------------------------------------------------------
 

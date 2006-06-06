@@ -90,7 +90,9 @@ int main(int argc, char **argv)
  
         case ULOG_OK:
 
-			printf( "Log event: %s", ULogEventNumberNames[e->eventNumber] );
+			printf( "Log event: %s (%d.%d.%d)",
+						ULogEventNumberNames[e->eventNumber],
+						e->cluster, e->proc, e->subproc );
 
 			if ( ce.CheckAnEvent(e, errorMsg) != CheckEvents::EVENT_OKAY ) {
 				fprintf(stderr, "%s\n", errorMsg.Value());
@@ -142,8 +144,12 @@ int main(int argc, char **argv)
 	}
 
 	MyString errorMsg;
-	if ( !ce.CheckAllJobs(errorMsg) ) {
+	CheckEvents::check_event_result_t checkAllResult =
+				ce.CheckAllJobs(errorMsg);
+	if ( checkAllResult != CheckEvents::EVENT_OKAY ) {
 		fprintf(stderr, "%s\n", errorMsg.Value());
+		fprintf(stderr, "CheckAllJobs() result: %s\n",
+					CheckEvents::ResultToString(checkAllResult));
 		result = 1;
 	}
 
