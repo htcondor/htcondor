@@ -203,6 +203,13 @@ format when \Attr{log\_xml} was set to true.
 for grid-type gt4 jobs now properly leave the queue when they enter the
 REMOVED state.
 
+% Gnats PR 703
+\item Fixed a bug in the event checking code used by \Condor{dagman}
+and \Condor{check\_userlogs} which caused errors to be reported when
+they should not have been for parallel universe jobs.  Also fixed
+a bug in \Condor{check\_userlogs} that caused it to sometimes not
+report an error when it should have.
+
 \end{itemize}
 
 \noindent Known Bugs:
