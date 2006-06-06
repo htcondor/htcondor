@@ -96,15 +96,15 @@ SOURCE="..\src\condor_c-gahp\cgahp_common.h"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\condor_c-gahp\FdBuffer.C"
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\condor_c-gahp\FdBuffer.h"
-# End Source File
-# Begin Source File
-
 SOURCE="..\src\condor_c-gahp\gsoap_cgahp_worker.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c-gahp\PipeBuffer.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c-gahp\PipeBuffer.h"
 # End Source File
 # Begin Source File
 

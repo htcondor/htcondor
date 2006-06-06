@@ -27,7 +27,7 @@
 #include "condor_common.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h" // For Stream decl
 #include "gahp_common.h"
-#include "FdBuffer.h"
+#include "PipeBuffer.h"
 
 #define GAHP_COMMAND_JOB_SUBMIT "CONDOR_JOB_SUBMIT"
 #define GAHP_COMMAND_JOB_REMOVE "CONDOR_JOB_REMOVE"
@@ -95,8 +95,8 @@ class Worker : public Service {
 		return result_pipe_handler(id);
 	}
 				   
-	FdBuffer request_buffer;
-	FdBuffer result_buffer;
+	PipeBuffer request_buffer;
+	PipeBuffer result_buffer;
 
 	int result_pipe[2];
 	int request_pipe[2];

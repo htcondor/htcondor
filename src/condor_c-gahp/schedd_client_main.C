@@ -30,7 +30,7 @@
 
 #include "schedd_client.h"
 #include "io_loop.h"
-#include "FdBuffer.h"
+#include "PipeBuffer.h"
 
 // How often we contact the schedd (secs)
 extern int contact_schedd_interval;
@@ -45,7 +45,7 @@ extern char * ScheddAddr;
 extern int RESULT_OUTBOX;
 extern int REQUEST_INBOX;
 
-extern FdBuffer request_buffer;
+extern PipeBuffer request_buffer;
 
 int io_loop_pid = -1;
 
@@ -117,7 +117,7 @@ main_init( int argc, char ** const argv )
 						 false,		// nonregistrable
 						 false);	// blocking
 
-	request_buffer.setFd( REQUEST_INBOX );
+	request_buffer.setPipeEnd( REQUEST_INBOX );
 
 
 	daemonCore->Register_Timer(0, 
@@ -141,7 +141,7 @@ init_pipes() {
 	dprintf (D_FULLDEBUG, "PRE Request pipe initialized\n");
 
 	(void)daemonCore->Register_Pipe (
-									 request_buffer.getFd(),
+									 request_buffer.getPipeEnd(),
 									 "request pipe",
 									 (PipeHandler)&request_pipe_handler,
 									 "request_pipe_handler");

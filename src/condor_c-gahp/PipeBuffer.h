@@ -21,46 +21,53 @@
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#ifndef FD_BUFFER_H
-#define FD_BUFFER_H
+#ifndef PIPE_BUFFER_H
+#define PIPE_BUFFER_H
 
 #include "MyString.h"
 
-
 /**
  *
- * This class encapsulates a fd and provides buffering,
- * i.e. it allows you to hold a result read out of the pipe until
- * a full line is read. This is useful for non-blocking reads
- *
+ * This class encapsulates a DaemonCore pipe and provides buffering.
+ * E.g. it allows you to hold a result read out of the pipe until
+ * a full line is read. The getNextLine() and Write() methods are
+ * designed to be used in read pipe and write pipe handlers,
+ * respectively. Note that an object of this type is to be used
+ * either strictly for reading (using getNextLine()) or strictly
+ * for writing (using Write()).
  *
  **/
-class FdBuffer;
 
-class FdBuffer {
+const int PIPE_BUFFER_READAHEAD_SIZE = 1024;
+
+class PipeBuffer {
 public:
-	FdBuffer ();
-	FdBuffer (int fd);
+	PipeBuffer ();
+	PipeBuffer (int pipe_end);
 
 	MyString * GetNextLine();
-
-	int getFd() { return fd; }
-	void setFd(const int _fd) { fd = _fd; }
-	const char * getBuffer() { return buffer.Value(); }
-
 	int Write (const char * toWrite = NULL);
 
+	int getPipeEnd() { return pipe_end; }
+	void setPipeEnd(const int _pipe_end) { pipe_end = _pipe_end; }
+	const char * getBuffer() { return buffer.Value(); }
+
 	int IsEmpty();
-	int IsError() { return error; }
+	bool IsError() { return error; }
+	bool IsEOF() { return eof; }
 
 protected:
-	int fd;
+	int pipe_end;
 	MyString buffer;
 
-	int newlineCount;
-	int error;
+	bool error;
+	bool eof;
+
 	bool last_char_was_escape;
 
-
+	char readahead_buffer[PIPE_BUFFER_READAHEAD_SIZE];
+	int readahead_length;
+	int readahead_index;
 };
+
 #endif

@@ -24,65 +24,78 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
-#include "FdBuffer.h"
+#include "PipeBuffer.h"
 
-FdBuffer::FdBuffer (int _fd) {
-	fd = _fd;
+PipeBuffer::PipeBuffer (int _pipe_end) {
+	pipe_end = _pipe_end;
  	buffer.reserve (5000);
-	error = FALSE;
-	newlineCount=0;
+	error = false;
+	eof = false;
 	last_char_was_escape = false;
+	readahead_length = 0;
 }
 
-FdBuffer::FdBuffer() {
-	fd = -1;
+PipeBuffer::PipeBuffer() {
+	pipe_end = -1;
  	buffer.reserve (5000);
- 	newlineCount=0;
+	error = false;
+	eof = false;
 	last_char_was_escape = false;
+	readahead_length = 0;
 }
-
 
 MyString *
-FdBuffer::GetNextLine () {
-	MyString * result = NULL;
-	
-		// Read another byte from fd
-		// we only read one at a time to avoid blocking
+PipeBuffer::GetNextLine () {
 
-	char buff;
-	if (daemonCore->Read_Pipe (this->fd, &buff, 1) > 0) {
+	if (readahead_length == 0) {
 
-		if (buff == '\n' && !last_char_was_escape) {
+		// our readahead buffer is spent; read a new one in
+		readahead_length = daemonCore->Read_Pipe(pipe_end, readahead_buffer, PIPE_BUFFER_READAHEAD_SIZE);
+		if (readahead_length < 0) {
+			error = true;
+			dprintf (D_ALWAYS, "error reading from DaemonCore pipe %d\n", pipe_end);
+			return NULL;
+		}
+		if (readahead_length == 0) {
+			eof = true;
+			dprintf(D_ALWAYS, "EOF reached on DaemonCore pipe %d\n", pipe_end);
+			return NULL;
+		}
+
+		// buffer has new data; reset the readahead index back to the beginning
+		readahead_index = 0;
+	}
+
+	while (readahead_index != readahead_length) {
+
+		char c = readahead_buffer[readahead_index++];
+
+		if (c == '\n' && !last_char_was_escape) {
 					// We got a completed line!
-			newlineCount++;
-			result = new MyString(buffer);
+			MyString* result = new MyString(buffer);
 			buffer = "";
-		} else if (buff == '\r' && !last_char_was_escape) {
+			return result;
+		} else if (c == '\r' && !last_char_was_escape) {
 				// Ignore \r
 		} else {
-			buffer += buff;
+			buffer += c;
 
-			if (buff == '\\') {
+			if (c == '\\') {
 				last_char_was_escape = !last_char_was_escape;
 			}
 			else {
 				last_char_was_escape = false;
 			}
-		} 
-	} else {
-		dprintf (D_ALWAYS, 
-				 "Read 0 bytes from fd %d ==> fd must be closed\n", 
-				 this->fd);
-			// If the select (supposedly) triggered BUT we can't read anything
-			// the stream must have been closed
-		error = TRUE;
+		}
 	}
 
-	return result;
+	// we have used up our readahead buffer and have a partially completed line
+	readahead_length = 0;
+	return NULL;
 }
 
 int
-FdBuffer::Write (const char * towrite) {
+PipeBuffer::Write (const char * towrite) {
 	
 	if (towrite)
 		buffer += towrite;
@@ -91,7 +104,7 @@ FdBuffer::Write (const char * towrite) {
 	if (len == 0)
 		return 0;
 
-	int numwritten = daemonCore->Write_Pipe (fd, buffer.Value(), len);
+	int numwritten = daemonCore->Write_Pipe (pipe_end, buffer.Value(), len);
 	if (numwritten > 0) {
 			// shorten the buffer
 		buffer = buffer.Substr (numwritten, len);
@@ -99,16 +112,16 @@ FdBuffer::Write (const char * towrite) {
 	} else if ( numwritten == 0 ) {
 		return 0;
 	} else {
-		if (errno == EAGAIN)
+		if (errno == EAGAIN || errno == EWOULDBLOCK)
 			return 0;
 
-		dprintf (D_ALWAYS, "Error %d writing to fd %d\n", errno, fd);
-		error = TRUE;
+		dprintf (D_ALWAYS, "Error %d writing to DaemonCore pipe %d\n", errno, pipe_end);
+		error = true;
 		return -1;
 	}
 }
 
 int
-FdBuffer::IsEmpty() {
+PipeBuffer::IsEmpty() {
 	return (buffer.Length() == 0);
 }

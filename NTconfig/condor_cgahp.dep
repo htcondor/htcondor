@@ -1,37 +1,425 @@
 # Microsoft Developer Studio Generated Dependency File, included by condor_cgahp.mak
 
 "..\src\condor_c-gahp\cgahp_common.C" : \
+	"..\..\..\..\program files\microsoft platform sdk\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft platform sdk\include\guiddef.h"\
+	"..\..\..\..\program files\microsoft platform sdk\include\propidl.h"\
+	"..\..\..\..\program files\microsoft platform sdk\include\reason.h"\
+	"..\..\..\..\program files\microsoft platform sdk\include\specstrings.h"\
+	"..\..\..\..\program files\microsoft platform sdk\include\stralign.h"\
+	"..\..\..\..\program files\microsoft platform sdk\include\tvout.h"\
+	"..\..\..\..\program files\microsoft platform sdk\include\winefs.h"\
+	"..\src\condor_c++_util\gahp_common.h"\
 	"..\src\condor_c-gahp\cgahp_common.h"\
-	
-
-"..\src\condor_c-gahp\FdBuffer.C" : \
-	"..\src\condor_c-gahp\FdBuffer.h"\
+	"..\src\condor_includes\cedar_enums.h"\
+	"..\src\condor_includes\condor_blkng_full_disk_io.h"\
+	"..\src\condor_includes\condor_common.h"\
+	"..\src\condor_includes\condor_constants.h"\
+	"..\src\condor_includes\condor_create_id.h"\
+	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_file_lock.h"\
+	"..\src\condor_includes\condor_fix_assert.h"\
+	"..\src\condor_includes\condor_header_features.h"\
+	"..\src\condor_includes\condor_macros.h"\
+	"..\src\condor_includes\condor_sys_nt.h"\
+	"..\src\condor_includes\condor_sys_types.h"\
+	"..\src\condor_includes\condor_system.h"\
+	"..\src\condor_sysapi\sysapi.h"\
+	"..\src\h\fake_flock.h"\
+	"..\src\h\file_lock.h"\
 	
 
 "..\src\condor_c-gahp\io_loop.C" : \
-	"..\src\condor_c-gahp\FdBuffer.h"\
+	"..\..\..\..\program files\microsoft platform sdk\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft platform sdk\include\guiddef.h"\
+	"..\..\..\..\program files\microsoft platform sdk\include\propidl.h"\
+	"..\..\..\..\program files\microsoft platform sdk\include\reason.h"\
+	"..\..\..\..\program files\microsoft platform sdk\include\specstrings.h"\
+	"..\..\..\..\program files\microsoft platform sdk\include\stralign.h"\
+	"..\..\..\..\program files\microsoft platform sdk\include\tvout.h"\
+	"..\..\..\..\program files\microsoft platform sdk\include\winefs.h"\
+	"..\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\asn1.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\bio.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\bn.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\comp.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\crypto.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\dh.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\dsa.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\dtls1.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\e_os2.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\ec.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\ecdh.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\ecdsa.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\err.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\evp.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\kssl.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\lhash.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\obj_mac.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\objects.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\opensslconf.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\opensslv.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\ossl_typ.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\pem.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\pem2.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\pkcs7.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\pq_compat.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\pqueue.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\rand.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\rsa.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\safestack.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\sha.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\ssl.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\ssl2.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\ssl23.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\ssl3.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\stack.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\symhacks.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\tls1.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\x509.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\x509_vfy.h"\
+	"..\externals\install\pcre-5.0\include\pcre.h"\
+	"..\src\condor_c++_util\classad_hashtable.h"\
+	"..\src\condor_c++_util\command_strings.h"\
+	"..\src\condor_c++_util\condor_arglist.h"\
+	"..\src\condor_c++_util\condor_event.h"\
+	"..\src\condor_c++_util\condor_ver_info.h"\
+	"..\src\condor_c++_util\CondorError.h"\
+	"..\src\condor_c++_util\dc_service.h"\
+	"..\src\condor_c++_util\enum_utils.h"\
+	"..\src\condor_c++_util\env.h"\
+	"..\src\condor_c++_util\extArray.h"\
+	"..\src\condor_c++_util\gahp_common.h"\
+	"..\src\condor_c++_util\HashTable.h"\
+	"..\src\condor_c++_util\MapFile.h"\
+	"..\src\condor_c++_util\my_hostname.h"\
+	"..\src\condor_c++_util\MyString.h"\
+	"..\src\condor_c++_util\net_string_list.h"\
+	"..\src\condor_c++_util\ntsysinfo.h"\
+	"..\src\condor_c++_util\regex.h"\
+	"..\src\condor_c++_util\simplelist.h"\
+	"..\src\condor_c++_util\string_list.h"\
+	"..\src\condor_c++_util\stringSpace.h"\
+	"..\src\condor_c++_util\translation_utils.h"\
+	"..\src\condor_c++_util\user_log.c++.h"\
 	"..\src\condor_c-gahp\io_loop.h"\
+	"..\src\condor_c-gahp\PipeBuffer.h"\
 	"..\src\condor_c-gahp\schedd_client.h"\
 	"..\src\condor_c-gahp\SchedDCommands.h"\
+	"..\src\condor_daemon_client\daemon.h"\
+	"..\src\condor_daemon_client\daemon_types.h"\
+	"..\src\condor_daemon_client\dc_schedd.h"\
 	"..\src\condor_daemon_core.V6\condor_daemon_core.h"\
 	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
 	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
+	"..\src\condor_daemon_core.V6\pipe.WIN32.h"\
 	"..\src\condor_daemon_core.V6\self_monitor.h"\
+	"..\src\condor_includes\buffers.h"\
+	"..\src\condor_includes\cedar_enums.h"\
+	"..\src\condor_includes\condor_adtypes.h"\
+	"..\src\condor_includes\condor_ast.h"\
+	"..\src\condor_includes\condor_astbase.h"\
+	"..\src\condor_includes\condor_attrlist.h"\
+	"..\src\condor_includes\condor_blkng_full_disk_io.h"\
+	"..\src\condor_includes\condor_classad.h"\
+	"..\src\condor_includes\condor_collector.h"\
+	"..\src\condor_includes\condor_commands.h"\
+	"..\src\condor_includes\condor_common.h"\
+	"..\src\condor_includes\condor_config.h"\
+	"..\src\condor_includes\condor_constants.h"\
+	"..\src\condor_includes\condor_create_id.h"\
+	"..\src\condor_includes\condor_crypt.h"\
+	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_error_codes.h"\
+	"..\src\condor_includes\condor_exprtype.h"\
+	"..\src\condor_includes\condor_file_lock.h"\
+	"..\src\condor_includes\condor_fix_assert.h"\
+	"..\src\condor_includes\condor_header_features.h"\
+	"..\src\condor_includes\condor_io.h"\
+	"..\src\condor_includes\condor_macros.h"\
+	"..\src\condor_includes\condor_md.h"\
+	"..\src\condor_includes\condor_network.h"\
+	"..\src\condor_includes\condor_old_shadow_types.h"\
+	"..\src\condor_includes\condor_perms.h"\
+	"..\src\condor_includes\condor_pidenvid.h"\
+	"..\src\condor_includes\condor_random_num.h"\
+	"..\src\condor_includes\condor_secman.h"\
+	"..\src\condor_includes\condor_sys_nt.h"\
+	"..\src\condor_includes\condor_sys_types.h"\
+	"..\src\condor_includes\condor_system.h"\
+	"..\src\condor_includes\condor_uid.h"\
+	"..\src\condor_includes\condor_universe.h"\
+	"..\src\condor_includes\CryptKey.h"\
+	"..\src\condor_includes\keycache.h"\
+	"..\src\condor_includes\reli_sock.h"\
+	"..\src\condor_includes\safe_sock.h"\
+	"..\src\condor_includes\SafeMsg.h"\
+	"..\src\condor_includes\sock.h"\
+	"..\src\condor_includes\sockCache.h"\
+	"..\src\condor_includes\stream.h"\
+	"..\src\condor_sysapi\sysapi.h"\
+	"..\src\h\fake_flock.h"\
+	"..\src\h\file_lock.h"\
+	"..\src\h\globus_utils.h"\
+	"..\src\h\proc.h"\
+	"..\src\h\startup.h"\
+	
+
+"..\src\condor_c-gahp\PipeBuffer.C" : \
+	"..\..\..\..\program files\microsoft platform sdk\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft platform sdk\include\guiddef.h"\
+	"..\..\..\..\program files\microsoft platform sdk\include\propidl.h"\
+	"..\..\..\..\program files\microsoft platform sdk\include\reason.h"\
+	"..\..\..\..\program files\microsoft platform sdk\include\specstrings.h"\
+	"..\..\..\..\program files\microsoft platform sdk\include\stralign.h"\
+	"..\..\..\..\program files\microsoft platform sdk\include\tvout.h"\
+	"..\..\..\..\program files\microsoft platform sdk\include\winefs.h"\
+	"..\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\asn1.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\bio.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\bn.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\comp.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\crypto.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\dh.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\dsa.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\dtls1.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\e_os2.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\ec.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\ecdh.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\ecdsa.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\err.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\evp.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\kssl.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\lhash.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\obj_mac.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\objects.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\opensslconf.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\opensslv.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\ossl_typ.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\pem.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\pem2.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\pkcs7.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\pq_compat.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\pqueue.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\rand.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\rsa.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\safestack.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\sha.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\ssl.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\ssl2.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\ssl23.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\ssl3.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\stack.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\symhacks.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\tls1.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\x509.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\x509_vfy.h"\
+	"..\externals\install\pcre-5.0\include\pcre.h"\
+	"..\src\condor_c++_util\command_strings.h"\
+	"..\src\condor_c++_util\condor_arglist.h"\
+	"..\src\condor_c++_util\condor_ver_info.h"\
+	"..\src\condor_c++_util\CondorError.h"\
+	"..\src\condor_c++_util\dc_service.h"\
+	"..\src\condor_c++_util\env.h"\
+	"..\src\condor_c++_util\extArray.h"\
+	"..\src\condor_c++_util\HashTable.h"\
+	"..\src\condor_c++_util\MapFile.h"\
+	"..\src\condor_c++_util\my_hostname.h"\
+	"..\src\condor_c++_util\MyString.h"\
+	"..\src\condor_c++_util\net_string_list.h"\
+	"..\src\condor_c++_util\ntsysinfo.h"\
+	"..\src\condor_c++_util\regex.h"\
+	"..\src\condor_c++_util\simplelist.h"\
+	"..\src\condor_c++_util\string_list.h"\
+	"..\src\condor_c++_util\stringSpace.h"\
+	"..\src\condor_c++_util\translation_utils.h"\
+	"..\src\condor_c-gahp\PipeBuffer.h"\
+	"..\src\condor_daemon_core.V6\condor_daemon_core.h"\
+	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
+	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
+	"..\src\condor_daemon_core.V6\pipe.WIN32.h"\
+	"..\src\condor_daemon_core.V6\self_monitor.h"\
+	"..\src\condor_includes\buffers.h"\
+	"..\src\condor_includes\cedar_enums.h"\
+	"..\src\condor_includes\condor_adtypes.h"\
+	"..\src\condor_includes\condor_ast.h"\
+	"..\src\condor_includes\condor_astbase.h"\
+	"..\src\condor_includes\condor_attrlist.h"\
+	"..\src\condor_includes\condor_blkng_full_disk_io.h"\
+	"..\src\condor_includes\condor_classad.h"\
+	"..\src\condor_includes\condor_commands.h"\
+	"..\src\condor_includes\condor_common.h"\
+	"..\src\condor_includes\condor_constants.h"\
+	"..\src\condor_includes\condor_create_id.h"\
+	"..\src\condor_includes\condor_crypt.h"\
+	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_error_codes.h"\
+	"..\src\condor_includes\condor_exprtype.h"\
+	"..\src\condor_includes\condor_file_lock.h"\
+	"..\src\condor_includes\condor_fix_assert.h"\
+	"..\src\condor_includes\condor_header_features.h"\
+	"..\src\condor_includes\condor_io.h"\
+	"..\src\condor_includes\condor_macros.h"\
+	"..\src\condor_includes\condor_md.h"\
+	"..\src\condor_includes\condor_old_shadow_types.h"\
+	"..\src\condor_includes\condor_perms.h"\
+	"..\src\condor_includes\condor_pidenvid.h"\
+	"..\src\condor_includes\condor_random_num.h"\
+	"..\src\condor_includes\condor_secman.h"\
+	"..\src\condor_includes\condor_sys_nt.h"\
+	"..\src\condor_includes\condor_sys_types.h"\
+	"..\src\condor_includes\condor_system.h"\
+	"..\src\condor_includes\condor_uid.h"\
+	"..\src\condor_includes\condor_universe.h"\
+	"..\src\condor_includes\CryptKey.h"\
+	"..\src\condor_includes\keycache.h"\
+	"..\src\condor_includes\reli_sock.h"\
+	"..\src\condor_includes\safe_sock.h"\
+	"..\src\condor_includes\SafeMsg.h"\
+	"..\src\condor_includes\sock.h"\
+	"..\src\condor_includes\sockCache.h"\
+	"..\src\condor_includes\stream.h"\
+	"..\src\condor_sysapi\sysapi.h"\
+	"..\src\h\fake_flock.h"\
+	"..\src\h\file_lock.h"\
+	"..\src\h\proc.h"\
+	"..\src\h\startup.h"\
 	
 
 "..\src\condor_c-gahp\soap_cgahpC.C" : \
+	"..\..\..\..\program files\microsoft platform sdk\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft platform sdk\include\guiddef.h"\
+	"..\..\..\..\program files\microsoft platform sdk\include\propidl.h"\
+	"..\..\..\..\program files\microsoft platform sdk\include\reason.h"\
+	"..\..\..\..\program files\microsoft platform sdk\include\specstrings.h"\
+	"..\..\..\..\program files\microsoft platform sdk\include\stralign.h"\
+	"..\..\..\..\program files\microsoft platform sdk\include\tvout.h"\
+	"..\..\..\..\program files\microsoft platform sdk\include\winefs.h"\
+	"..\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\asn1.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\bio.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\bn.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\comp.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\crypto.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\dh.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\dsa.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\dtls1.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\e_os2.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\ec.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\ecdh.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\ecdsa.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\err.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\evp.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\kssl.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\lhash.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\obj_mac.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\objects.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\opensslconf.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\opensslv.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\ossl_typ.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\pem.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\pem2.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\pkcs7.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\pq_compat.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\pqueue.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\rand.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\rsa.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\safestack.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\sha.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\ssl.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\ssl2.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\ssl23.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\ssl3.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\stack.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\symhacks.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\tls1.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\x509.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\x509_vfy.h"\
 	"..\src\condor_c-gahp\soap_cgahpH.h"\
 	"..\src\condor_c-gahp\soap_cgahpStub.h"\
+	"..\src\condor_includes\cedar_enums.h"\
+	"..\src\condor_includes\condor_blkng_full_disk_io.h"\
+	"..\src\condor_includes\condor_common.h"\
+	"..\src\condor_includes\condor_constants.h"\
+	"..\src\condor_includes\condor_create_id.h"\
+	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_file_lock.h"\
+	"..\src\condor_includes\condor_fix_assert.h"\
+	"..\src\condor_includes\condor_header_features.h"\
+	"..\src\condor_includes\condor_macros.h"\
+	"..\src\condor_includes\condor_sys_nt.h"\
+	"..\src\condor_includes\condor_sys_types.h"\
+	"..\src\condor_includes\condor_system.h"\
+	"..\src\condor_sysapi\sysapi.h"\
+	"..\src\h\fake_flock.h"\
+	"..\src\h\file_lock.h"\
 	
 
 "..\src\condor_c-gahp\soap_cgahpServer.C" : \
+	"..\..\..\..\program files\microsoft platform sdk\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft platform sdk\include\guiddef.h"\
+	"..\..\..\..\program files\microsoft platform sdk\include\propidl.h"\
+	"..\..\..\..\program files\microsoft platform sdk\include\reason.h"\
+	"..\..\..\..\program files\microsoft platform sdk\include\specstrings.h"\
+	"..\..\..\..\program files\microsoft platform sdk\include\stralign.h"\
+	"..\..\..\..\program files\microsoft platform sdk\include\tvout.h"\
+	"..\..\..\..\program files\microsoft platform sdk\include\winefs.h"\
+	"..\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\asn1.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\bio.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\bn.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\comp.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\crypto.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\dh.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\dsa.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\dtls1.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\e_os2.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\ec.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\ecdh.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\ecdsa.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\err.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\evp.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\kssl.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\lhash.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\obj_mac.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\objects.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\opensslconf.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\opensslv.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\ossl_typ.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\pem.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\pem2.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\pkcs7.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\pq_compat.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\pqueue.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\rand.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\rsa.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\safestack.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\sha.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\ssl.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\ssl2.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\ssl23.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\ssl3.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\stack.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\symhacks.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\tls1.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\x509.h"\
+	"..\externals\install\openssl-0.9.8\inc32\openssl\x509_vfy.h"\
 	"..\src\condor_c-gahp\soap_cgahpH.h"\
 	"..\src\condor_c-gahp\soap_cgahpStub.h"\
-	
-
-"..\src\condor_c-gahp\soap_cgahpStub.C" : \
-	"..\src\condor_c-gahp\condorCgahp.nsmap"\
-	"..\src\condor_c-gahp\soap_cgahpH.h"\
-	"..\src\condor_c-gahp\soap_cgahpStub.h"\
-	"..\src\condor_daemon_core.V6\soap_daemon_core.cpp"\
+	"..\src\condor_includes\cedar_enums.h"\
+	"..\src\condor_includes\condor_blkng_full_disk_io.h"\
+	"..\src\condor_includes\condor_common.h"\
+	"..\src\condor_includes\condor_constants.h"\
+	"..\src\condor_includes\condor_create_id.h"\
+	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_file_lock.h"\
+	"..\src\condor_includes\condor_fix_assert.h"\
+	"..\src\condor_includes\condor_header_features.h"\
+	"..\src\condor_includes\condor_macros.h"\
+	"..\src\condor_includes\condor_sys_nt.h"\
+	"..\src\condor_includes\condor_sys_types.h"\
+	"..\src\condor_includes\condor_system.h"\
+	"..\src\condor_sysapi\sysapi.h"\
+	"..\src\h\fake_flock.h"\
+	"..\src\h\file_lock.h"\
 	

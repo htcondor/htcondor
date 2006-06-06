@@ -28,7 +28,7 @@
 #include "condor_config.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "schedd_client.h"
-#include "FdBuffer.h"
+#include "PipeBuffer.h"
 #include "globus_utils.h"
 
 
@@ -48,7 +48,7 @@ int flush_request_tid = -1;
 StringList result_list;
 
 // pipe buffers
-FdBuffer stdin_buffer; 
+PipeBuffer stdin_buffer; 
 
 // Each of these represent a thread that does the
 // actual work of communicating with the SchedD
@@ -201,9 +201,9 @@ main_init( int argc, char ** const argv )
 		                                      false);   // blocking
 	}
 
-	stdin_buffer.setFd (stdin_pipe);
+	stdin_buffer.setPipeEnd(stdin_pipe);
 
-	(void)daemonCore->Register_Pipe (stdin_buffer.getFd(),
+	(void)daemonCore->Register_Pipe (stdin_buffer.getPipeEnd(),
 					"stdin pipe",
 					(PipeHandler)&stdin_pipe_handler,
 					"stdin_pipe_handler");
@@ -227,10 +227,10 @@ main_init( int argc, char ** const argv )
 			return -1;
 		}
 
-		workers[i].request_buffer.setFd (workers[i].request_pipe[1]);
-		workers[i].result_buffer.setFd (workers[i].result_pipe[0]);
+		workers[i].request_buffer.setPipeEnd(workers[i].request_pipe[1]);
+		workers[i].result_buffer.setPipeEnd(workers[i].result_pipe[0]);
 
-		(void)daemonCore->Register_Pipe (workers[i].result_buffer.getFd(),
+		(void)daemonCore->Register_Pipe (workers[i].result_buffer.getPipeEnd(),
 										 "result pipe",
 										 (PipeHandlercpp)&Worker::result_handler,
 										 "Worker::result_handler",
@@ -333,16 +333,10 @@ main_init( int argc, char ** const argv )
 
 int
 stdin_pipe_handler(Service*, int pipe) {
-		// Don't make this a while() loop b/c
-		// stdin read is blocking
-	MyString * line = NULL;
 
-	if (stdin_buffer.IsError()) {
-		dprintf (D_ALWAYS, "Problem with stdin buffer, exiting\n");
-		DC_Exit (1);
-	}
+	MyString* line;
+	while ((line = stdin_buffer.GetNextLine()) != NULL) {
 
-	if ((line = stdin_buffer.GetNextLine()) != NULL) {
 		const char * command = line->Value();
 
 		dprintf (D_ALWAYS, "got stdin: %s\n", command);
@@ -428,22 +422,26 @@ stdin_pipe_handler(Service*, int pipe) {
 		} else {
 			gahp_output_return_error();
 		}
-		delete line;
 
-	} 
+		delete line;
+	}
+
+	// check if GetNextLine() returned NULL because of an error or EOF
+	if (stdin_buffer.IsError() || stdin_buffer.IsEOF()) {
+		dprintf (D_ALWAYS, "stdin buffer closed, exiting\n");
+		DC_Exit (1);
+	}
 
 	return TRUE;
 }
 
 int 
 result_pipe_handler(int id) {
-	MyString * line = NULL;
 
-		// Check that we get a full line
-		// if not, intermediate results will be stored in buffer
-	if ((line = workers[id].result_buffer.GetNextLine()) != NULL) {
+	MyString* line;
+	while ((line = workers[id].result_buffer.GetNextLine()) != NULL) {
 
-		dprintf (D_FULLDEBUG, "Master received:\"%s\"\n", line->Value());
+		dprintf (D_FULLDEBUG, "Received from worker:\"%s\"\n", line->Value());
 
 			// Add this to the list
 		result_list.append (line->Value());
@@ -459,7 +457,7 @@ result_pipe_handler(int id) {
 		delete line;
 	}
 
-	if (workers[id].result_buffer.IsError()) {
+	if (workers[id].result_buffer.IsError() || workers[id].request_buffer.IsEOF()) {
 		DC_Exit(1);
 	}
 

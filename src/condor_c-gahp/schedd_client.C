@@ -36,7 +36,7 @@
 #include "condor_new_classads.h"
 #include "setenv.h"
 #include "globus_utils.h"
-#include "FdBuffer.h"
+#include "PipeBuffer.h"
 #include "io_loop.h"
 
 #include "schedd_client.h"
@@ -58,7 +58,7 @@ template class SimpleList<SchedDRequest*>;
 SimpleList <SchedDRequest*> command_queue;
 
 // Buffer for reading requests from the IO thread
-FdBuffer request_buffer;
+PipeBuffer request_buffer;
 
 
 template class SimpleList <MyString*>;
@@ -79,14 +79,9 @@ extern int main_shutdown_graceful();
 int
 request_pipe_handler(Service*, int) {
 
-	MyString * next_line = NULL;
+	MyString* next_line;
+	while ((next_line = request_buffer.GetNextLine()) != NULL) {
 
-	if (request_buffer.IsError()) {
-		dprintf (D_ALWAYS, "Request pipe, closed. Exiting...\n");
-		main_shutdown_graceful();
-	}
-
-	if ( ((next_line = request_buffer.GetNextLine()) != NULL)) {
 		dprintf (D_FULLDEBUG, "got work request: %s\n", next_line->Value());
 
 		Gahp_Args args;
@@ -101,9 +96,13 @@ request_pipe_handler(Service*, int) {
 		delete  next_line;
 	}
 
+	// check for an error in GetNextLine
+	if (request_buffer.IsError() || request_buffer.IsEOF()) {
+		dprintf (D_ALWAYS, "Request pipe closed. Exiting...\n");
+	}
+
 	return TRUE;
 }
-
 
 
 int
