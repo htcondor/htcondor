@@ -84,6 +84,7 @@ public:
 	friend class DaemonCore;
 	friend class Daemon;
 	friend class SecMan;
+	friend class SecManStartCommand;
 
 	/*
 	**	Methods
@@ -245,7 +246,7 @@ protected:
     */
 	int do_connect(char *host, int port, bool non_blocking_flag = false);
 
-	bool do_connect_finish();
+	bool do_connect_finish(bool failed=false,bool timed_out=false);
 
 
 	inline SOCKET get_socket (void) { return _sock; }

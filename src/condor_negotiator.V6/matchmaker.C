@@ -91,6 +91,7 @@ Matchmaker ()
 	want_simple_matching = false;
 	want_matchlist_caching = false;
 	ConsiderPreemption = true;
+	want_nonblocking_startd_contact = true;
 
 	completedLastCycleTime = (time_t) 0;
 
@@ -345,6 +346,7 @@ reinitialize ()
 	want_simple_matching = param_boolean("NEGOTIATOR_SIMPLE_MATCHING",false);
 	want_matchlist_caching = param_boolean("NEGOTIATOR_MATCHLIST_CACHING",false);
 	ConsiderPreemption = param_boolean("NEGOTIATOR_CONSIDER_PREEMPTION",true);
+	want_nonblocking_startd_contact = param_boolean("NEGOTIATOR_USE_NONBLOCKING_STARTD_CONTACT",true);
 
 	if (DynQuotaMachConstraint) delete DynQuotaMachConstraint;
 	DynQuotaMachConstraint = NULL;
@@ -2377,6 +2379,71 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 	return bestSoFar;
 }
 
+class NotifyStartdOfMatchHandler {
+public:
+	MyString m_startdName;
+	MyString m_startdAddr;
+	int m_timeout;
+	MyString m_capability;
+	DCStartd m_startd;
+	bool m_nonblocking;
+
+	NotifyStartdOfMatchHandler(char const *startdName,char const *startdAddr,int timeout,char const *capability,bool nonblocking):
+		
+		m_startdName(startdName),
+		m_startdAddr(startdAddr),
+		m_timeout(timeout),
+		m_capability(capability),
+		m_startd(startdAddr),
+		m_nonblocking(nonblocking) {}
+
+	static void startCommandCallback(bool success,Sock *sock,CondorError *errstack,void *misc_data)
+	{
+		NotifyStartdOfMatchHandler *self = (NotifyStartdOfMatchHandler *)misc_data;
+		ASSERT(sock);
+		ASSERT(misc_data);
+
+		// pass the startd MATCH_INFO and capability string
+		dprintf (D_FULLDEBUG, "      Sending MATCH_INFO/capability to %s\n",
+		         self->m_startdName.Value());
+		dprintf (D_FULLDEBUG, "      (Capability is \"%s\" )\n",
+		         self->m_capability.Value());
+
+		if ( !sock->put ((char *)self->m_capability.Value()) || !sock->end_of_message())
+		{
+			dprintf (D_ALWAYS,
+			        "      Could not send MATCH_INFO/capability to %s\n",
+			        self->m_startdName.Value() );
+			dprintf (D_FULLDEBUG,
+			        "      (Capability is \"%s\")\n",
+			        self->m_capability.Value() );
+		}
+		delete sock;
+		delete self;
+	}
+
+	bool startCommand()
+	{
+		dprintf (D_FULLDEBUG, "      Connecting to startd %s at %s\n", 
+					m_startdName.Value(), m_startdAddr.Value()); 
+
+		if(!m_nonblocking) {
+			return m_startd.startCommand(MATCH_INFO,Sock::safe_sock,m_timeout);
+		}
+
+		m_startd.startCommand_nonblocking (
+			MATCH_INFO,
+			Sock::safe_sock,
+			m_timeout,
+			NULL,
+			NotifyStartdOfMatchHandler::startCommandCallback,
+			this);
+
+			// Since this is nonblocking, we cannot give any immediate
+			// feedback on whether the message to the startd succeeds.
+		return true;
+	}
+};
 
 int Matchmaker::
 matchmakingProtocol (ClassAd &request, ClassAd *offer, 
@@ -2457,28 +2524,17 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	// ---- real matchmaking protocol begins ----
 	// 1.  contact the startd 
 	if ( want_claiming ) {
-		dprintf (D_FULLDEBUG, "      Connecting to startd %s at %s\n", 
-					startdName.Value(), startdAddr); 
+			// The following sends a message to the startd to inform it
+			// of the match.  Although it is a UDP message, it still may
+			// block, because if there is no cached security session,
+			// a TCP connection is created.  Therefore, the following
+			// handler supports the nonblocking interface to startCommand.
 
-		startdSock.timeout (NegotiatorTimeout);
-		if (!startdSock.connect (startdAddr, 0))
-		{
-			dprintf(D_ALWAYS,"      Could not connect to %s\n", startdAddr);
-			return MM_BAD_MATCH;
-		}
+		NotifyStartdOfMatchHandler *h =
+			new NotifyStartdOfMatchHandler(
+				startdName.Value(),startdAddr,NegotiatorTimeout,capability,want_nonblocking_startd_contact);
 
-		DCStartd startd( startdAddr );
-		startd.startCommand (MATCH_INFO, &startdSock);
-
-		// 2.  pass the startd MATCH_INFO and capability string
-		dprintf (D_FULLDEBUG, "      Sending MATCH_INFO/capability\n" );
-		dprintf (D_FULLDEBUG, "      (Capability is \"%s\" )\n", capability);
-		startdSock.encode();
-		if ( !startdSock.put (capability) || !startdSock.end_of_message())
-		{
-			dprintf (D_ALWAYS,"      Could not send MATCH_INFO/capability to %s\n",
-						startdName.Value() );
-			dprintf (D_FULLDEBUG, "      (Capability is \"%s\")\n", capability );
+		if(!h->startCommand()) {
 			return MM_BAD_MATCH;
 		}
 	}	// end of if want_claiming
@@ -2925,7 +2981,7 @@ Matchmaker::updateCollector() {
 
    
 	if (Collectors && publicAd) {
-		Collectors->sendUpdates (UPDATE_NEGOTIATOR_AD, publicAd);
+		Collectors->sendUpdates (UPDATE_NEGOTIATOR_AD, publicAd, NULL, true);
 	}
 
 			// Reset the timer so we don't do another period update until 
@@ -2958,5 +3014,5 @@ Matchmaker::invalidateNegotiatorAd( void )
 				  daemonCore->InfoCommandSinfulString() );
 	invalidate_ad.Insert( line.Value() );
 
-	Collectors->sendUpdates( INVALIDATE_NEGOTIATOR_ADS, &invalidate_ad );
+	Collectors->sendUpdates( INVALIDATE_NEGOTIATOR_ADS, &invalidate_ad, NULL, false );
 }

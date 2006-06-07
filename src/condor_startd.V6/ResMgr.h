@@ -88,7 +88,7 @@ public:
 	int		num_real_cpus( void ) { return m_attr->num_real_cpus(); }
 	int		num_vms( void ) { return nresources; }
 
-	int		send_update( int, ClassAd*, ClassAd* );
+	int		send_update( int, ClassAd*, ClassAd*, bool nonblocking );
 	void	final_update( void );
 	
 		// Evaluate the state of all resources.

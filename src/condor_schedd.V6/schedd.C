@@ -743,7 +743,7 @@ Scheduler::count_jobs()
 	ad->InsertOrUpdate(tmp);
 
 		// Update collectors
-	int num_updates = Collectors->sendUpdates ( UPDATE_SCHEDD_AD, ad );
+	int num_updates = Collectors->sendUpdates ( UPDATE_SCHEDD_AD, ad, NULL, true );
 	dprintf( D_FULLDEBUG, 
 			 "Sent HEART BEAT ad to %d collectors. Number of submittors=%d\n",
 			 num_updates,
@@ -758,7 +758,7 @@ Scheduler::count_jobs()
 		FlockCollectors->next(d);
 		for( i=0; d && i < FlockLevel; i++ ) {
 			col = (DCCollector*)d;
-			col->sendUpdate( UPDATE_SCHEDD_AD, ad );
+			col->sendUpdate( UPDATE_SCHEDD_AD, ad, NULL, true );
 			FlockCollectors->next( d );
 		}
 	}
@@ -802,7 +802,7 @@ Scheduler::count_jobs()
 			   Owners[i].Name, UidDomain );
 
 		// Update collectors
-	  int num_updates = Collectors->sendUpdates( UPDATE_SUBMITTOR_AD, ad );
+	  int num_updates = Collectors->sendUpdates( UPDATE_SUBMITTOR_AD, ad, NULL, true );
 	  dprintf( D_ALWAYS, "Sent ad to %d collectors for %s@%s\n", 
 				 num_updates,
 				 Owners[i].Name, UidDomain );
@@ -872,7 +872,7 @@ Scheduler::count_jobs()
 				sprintf(tmp, "%s = \"%s@%s\"", ATTR_NAME, Owners[i].Name,
 						UidDomain);
 				ad->InsertOrUpdate(tmp);
-				flock_col->sendUpdate( UPDATE_SUBMITTOR_AD, ad );
+				flock_col->sendUpdate( UPDATE_SUBMITTOR_AD, ad, NULL, true );
 			}
 		}
 	}
@@ -938,7 +938,7 @@ Scheduler::count_jobs()
 
 		// Update collectors
 	  int num_updates = 
-		  Collectors->sendUpdates( UPDATE_SUBMITTOR_AD, ad );
+		  Collectors->sendUpdates( UPDATE_SUBMITTOR_AD, ad, NULL, true );
 	  dprintf (D_ALWAYS, "Sent owner (0 jobs) ad to %d collectors\n", num_updates);
 
 	  // also update all of the flock hosts
@@ -948,7 +948,7 @@ Scheduler::count_jobs()
 		  for( i=1, FlockCollectors->rewind();
 			   i <= OldOwners[i].OldFlockLevel &&
 				   FlockCollectors->next(d); i++ ) {
-			  ((DCCollector*)d)->sendUpdate( UPDATE_SUBMITTOR_AD, ad );
+			  ((DCCollector*)d)->sendUpdate( UPDATE_SUBMITTOR_AD, ad, NULL, true );
 		  }
 	  }
 	}
@@ -10194,7 +10194,7 @@ Scheduler::invalidate_ads()
 
 
 		// Update collectors
-	Collectors->sendUpdates ( INVALIDATE_SCHEDD_ADS, ad );
+	Collectors->sendUpdates ( INVALIDATE_SCHEDD_ADS, ad, NULL, false );
 
 	if (N_Owners == 0) return;	// no submitter ads to invalidate
 
@@ -10203,14 +10203,14 @@ Scheduler::invalidate_ads()
 			 Name );
     ad->InsertOrUpdate( line );
 
-	Collectors->sendUpdates ( INVALIDATE_SUBMITTOR_ADS, ad );
+	Collectors->sendUpdates ( INVALIDATE_SUBMITTOR_ADS, ad, NULL, false );
 
 
 	Daemon* d;
 	if( FlockCollectors && FlockLevel > 0 ) {
 		for( i=1, FlockCollectors->rewind();
 			 i <= FlockLevel && FlockCollectors->next(d); i++ ) {
-			((DCCollector*)d)->sendUpdate( INVALIDATE_SUBMITTOR_ADS, ad );
+			((DCCollector*)d)->sendUpdate( INVALIDATE_SUBMITTOR_ADS, ad, NULL, false );
 		}
 	}
 }

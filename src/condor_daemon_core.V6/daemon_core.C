@@ -77,6 +77,7 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "directory.h"
 #include "../condor_io/condor_rw.h"
 #include "httpget.h"
+#include "daemon_core_sock_adapter.h"
 
 // Make this the last include to fix assert problems on Win32 -- see
 // the comments about assert at the end of condor_debug.h to understand
@@ -204,6 +205,19 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	{
 		EXCEPT("Invalid argument(s) for DaemonCore constructor");
 	}
+
+		// Provide cedar sock with pointers to various daemonCore functions
+		// that cannot be directly referenced in cedar, because it
+		// is sometimes used in an application that is not linked with
+		// DaemonCore.
+	daemonCoreSockAdapter.EnableDaemonCore(
+		this,
+		// Typecast Register_Socket because it is overloaded, and some (all?)
+		// compilers have trouble choosing which one to use.
+		(DaemonCoreSockAdapterClass::Register_Socket_fnptr)&DaemonCore::Register_Socket,
+		&DaemonCore::Cancel_Socket,
+		&DaemonCore::Register_DataPtr,
+		&DaemonCore::GetDataPtr);
 
 	if ( PidSize == 0 )
 		PidSize = DEFAULT_PIDBUCKETS;
@@ -2267,8 +2281,9 @@ void DaemonCore::Driver()
 							// set or the connection attempt has timed out.
 							// Only call handler if CEDAR confirms the
 							// connect algorithm has completed.
+							bool failed = FD_ISSET((*sockTable)[i].sockd, &exceptfds);
 							if ( ((Sock *)(*sockTable)[i].iosock)->
-											do_connect_finish() )
+											do_connect_finish(failed,connect_timed_out) )
 							{
 								(*sockTable)[i].call_handler = true;
 							}

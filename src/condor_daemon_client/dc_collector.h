@@ -113,7 +113,7 @@ public:
 			@param ad ClassAd you want to use for the update
 			file)
 		*/
-	bool sendUpdate( int cmd, ClassAd* ad1, ClassAd* ad2 = NULL );
+	bool sendUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking );
 
 	void reconfig( void );
 
@@ -138,17 +138,21 @@ private:
 	char* tcp_collector_addr;
 	int tcp_collector_port;
 	bool use_tcp;
+	bool use_nonblocking_update;
 	UpdateType up_type;
 
-	bool sendTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2 );
-	bool sendUDPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2 );
+	class UpdateData *pending_update_list;
+	friend class UpdateData;
 
-	bool finishUpdate( Sock* sock, ClassAd* ad1, ClassAd* ad2 );
+	bool sendTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking );
+	bool sendUDPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking );
+
+	static bool finishUpdate( DCCollector *self, Sock* sock, ClassAd* ad1, ClassAd* ad2 );
 
 	void parseTCPInfo( void );
 	void initDestinationStrings( void );
 
-	bool initiateTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2 );
+	bool initiateTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking );
 
 	char* tcp_update_destination;
 	char* udp_update_destination;

@@ -247,7 +247,7 @@ CollectorList::resortLocal( const char *preferred_collector )
 
 
 int
-CollectorList::sendUpdates (int cmd, ClassAd * ad1, ClassAd* ad2) {
+CollectorList::sendUpdates (int cmd, ClassAd * ad1, ClassAd* ad2, bool nonblocking) {
 	int success_count = 0;
 
 	this->rewind();
@@ -256,7 +256,7 @@ CollectorList::sendUpdates (int cmd, ClassAd * ad1, ClassAd* ad2) {
 		dprintf( D_FULLDEBUG, 
 				 "Trying to update collector %s\n", 
 				 daemon->addr() );
-		if( daemon->sendUpdate(cmd, ad1, ad2) ) {
+		if( daemon->sendUpdate(cmd, ad1, ad2, nonblocking) ) {
 			success_count++;
 		} 
 	}

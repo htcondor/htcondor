@@ -1189,7 +1189,7 @@ int CollectorDaemon::sendCollectorAd()
     // Send the ad
 	char *update_addr = updateCollector->addr();
 	if (!update_addr) update_addr = "(null)";
-	if( ! updateCollector->sendUpdate(UPDATE_COLLECTOR_AD, ad) ) {
+	if( ! updateCollector->sendUpdate(UPDATE_COLLECTOR_AD, ad, NULL, false) ) {
 		dprintf( D_ALWAYS, "Can't send UPDATE_COLLECTOR_AD to collector "
 				 "(%s): %s\n", update_addr,
 				 updateCollector->error() );

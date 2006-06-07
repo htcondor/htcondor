@@ -112,7 +112,7 @@ class CollectorList : public DaemonList {
 
 		// Send updates to all the collectors
 		// return - number of successfull updates
-	int sendUpdates (int cmd, ClassAd* ad1, ClassAd* ad2 = NULL);
+	int sendUpdates (int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking);
 	
 		// Try querying all the collectors until you get a good one
 	QueryResult query (CondorQuery & query, ClassAdList & adList);

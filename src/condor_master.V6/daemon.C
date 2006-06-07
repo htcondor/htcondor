@@ -2124,7 +2124,7 @@ Daemons::UpdateCollector()
     daemonCore->monitor_data.ExportData(ad);
 
 	if (Collectors) {
-		Collectors->sendUpdates (UPDATE_MASTER_AD, ad);
+		Collectors->sendUpdates (UPDATE_MASTER_AD, ad, NULL, true);
 	}
 
 	if (secondary_collectors) {
@@ -2133,7 +2133,7 @@ Daemons::UpdateCollector()
 		DCCollector* col;
 		while( secondary_collectors->next(d) ) {
 			col = (DCCollector*)d;
-			if( ! col->sendUpdate(UPDATE_MASTER_AD, ad) ) {
+			if( ! col->sendUpdate(UPDATE_MASTER_AD, ad, NULL, true) ) {
 				dprintf( D_ALWAYS, "Can't send UPDATE_MASTER_AD to "
 						 "collector %s: %s\n", 
 						 col->updateDestination(), col->error() );

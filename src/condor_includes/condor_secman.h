@@ -41,6 +41,23 @@
 // #include "../condor_daemon_core.V6/condor_daemon_core.h"
 
 
+typedef void StartCommandCallbackType(bool success,Sock *sock,CondorError *errstack,void *misc_data);
+
+typedef enum {
+	StartCommandFailed = 0,
+	StartCommandSucceeded = 1,
+	StartCommandWouldBlock = 2,
+	StartCommandInProgress = 3
+}StartCommandResult;
+
+/*
+ Meaning of StartCommandWouldBlock:
+  Caller wants to send a non-blocking UDP message, but callback fn is NULL,
+  and we need to do a TCP key session exchange.  As a side-effect, the
+  TCP exchange will be initiated, but nothing further is done.  The caller
+  is expected to try again later (because by then the session key may
+  be ready for use).
+*/
 
 class SecMan {
 
@@ -66,14 +83,16 @@ public:
 	static HashTable<MyString, MyString> * command_map;
 	static int sec_man_ref_count;
 
+		// The following is indexed by session index name ( "addr,<cmd>" )
+	static HashTable<MyString, class SecManStartCommand *> *tcp_auth_in_progress;
+
 
 	SecMan(int numbuckets = 209);  // years of careful research... HA HA HA HA
 	SecMan(const SecMan &);
 	~SecMan();
 	const SecMan & operator=(const SecMan &);
 
-
-	bool 					startCommand( int cmd, Sock* sock, bool &can_neg, CondorError* errstack, int subcmd = 0);
+	StartCommandResult startCommand( int cmd, Sock* sock, bool can_neg, CondorError* errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking);
 
     //------------------------------------------
     // invalidate cache
@@ -123,7 +142,8 @@ public:
 	static char*		_my_unique_id;
 	static char*		_my_parent_unique_id;
 	static bool			_should_check_env_for_unique_id;
-};
 
+	friend class SecManStartCommand;
+};
 
 #endif

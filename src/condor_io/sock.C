@@ -33,6 +33,7 @@
 #include "condor_socket_types.h"
 #include "get_port_range.h"
 #include "condor_netdb.h"
+#include "daemon_core_sock_adapter.h"
 
 #if !defined(WIN32)
 #define closesocket close
@@ -40,6 +41,8 @@
 
 // initialize static data members
 int Sock::timeout_multiplier = 0;
+
+DaemonCoreSockAdapterClass daemonCoreSockAdapter;
 
 Sock::Sock() : Stream() {
 	_sock = INVALID_SOCKET;
@@ -755,9 +758,12 @@ int Sock::do_connect(
 	return FALSE;
 }
 
-bool Sock::do_connect_finish()
+bool Sock::do_connect_finish(bool failed,bool timed_out)
 {
-	if (test_connection()) {
+		// test_connection() does not reliably report failed connections,
+		// so the "failed" input variable, if set, indicates that
+		// select() has already told us that connect failed.
+	if (!failed && !timed_out && test_connection()) {
 		_state = sock_connect;
 		if( DebugFlags & D_NETWORK ) {
 			char* src = strdup(	sock_to_string(_sock) );
@@ -775,7 +781,7 @@ bool Sock::do_connect_finish()
 	
 	if (!connect_state.failed_once) {
 		dprintf( D_ALWAYS, 
-				 "getpeername failed so connect must have failed\n");
+				 "attempt to connect to %s %s\n",get_sinful(),timed_out ? "timed out" : "failed");
 		connect_state.failed_once = true;
 	}
 
@@ -932,6 +938,14 @@ bool Sock::test_connection()
     // Since a better way to check if a nonblocking connection has
     // succeed or not is to use getsockopt, I changed this routine
     // that way. --Sonny 7/16/2003
+
+	// Dan 6/4/2006: the following test reports "success" when the
+	// non-blocking connect is still in progress.  Therefore, it
+	// cannot be used as an indication of success.  This is why
+	// we now make use of a failure flag from DaemonCore's select()
+	// handler indicating if there is any additional reason to consider
+	// the connection failed (such as timeout).
+
     int error;
     SOCKET_LENGTH_TYPE len = sizeof(error);
     if (::getsockopt(_sock, SOL_SOCKET, SO_ERROR, (char*)&error, &len) < 0) {

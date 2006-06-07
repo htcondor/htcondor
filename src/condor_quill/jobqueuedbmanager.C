@@ -2555,7 +2555,7 @@ JobQueueDBManager::pollingTime()
 
 	updateQuillAd();
 
-	collectors->sendUpdates ( UPDATE_QUILL_AD, ad );
+	collectors->sendUpdates ( UPDATE_QUILL_AD, ad, NULL, true );
 	
 	dprintf(D_ALWAYS, "++++++++ Sent schedd ad to collector ++++++++\n");
 }

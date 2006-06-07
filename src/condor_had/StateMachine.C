@@ -1117,7 +1117,7 @@ HADStateMachine::updateCollectors()
 
     if (m_classAd) {
         int successfulUpdatesNumber =
-            m_collectorsList->sendUpdates (UPDATE_HAD_AD, m_classAd);
+            m_collectorsList->sendUpdates (UPDATE_HAD_AD, m_classAd, NULL, true);
         dprintf( D_ALWAYS, "HADStateMachine::updateCollectors %d "
                     "successful updates\n", successfulUpdatesNumber);
     }
@@ -1144,7 +1144,7 @@ HADStateMachine::updateCollectorsClassAd(const MyString& isHadActive)
     m_classAd->InsertOrUpdate( line.GetCStr( ) );
 
     int successfulUpdatesNumber =
-        m_collectorsList->sendUpdates ( UPDATE_HAD_AD, m_classAd );
+        m_collectorsList->sendUpdates ( UPDATE_HAD_AD, m_classAd, NULL, true );
     dprintf( D_ALWAYS, "HADStateMachine::updateCollectorsClassAd %d "
                     "successful updates\n", successfulUpdatesNumber);
 }

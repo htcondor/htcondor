@@ -1316,12 +1316,12 @@ ResMgr::force_benchmark( void )
 
 
 int
-ResMgr::send_update( int cmd, ClassAd* public_ad, ClassAd* private_ad )
+ResMgr::send_update( int cmd, ClassAd* public_ad, ClassAd* private_ad, bool nonblocking )
 {
 	int num = 0;
 
 	if( Collectors ) {
-		num = Collectors->sendUpdates (cmd, public_ad, private_ad);
+		num = Collectors->sendUpdates (cmd, public_ad, private_ad, nonblocking);
 	}  
 
 		// Increment the resmgr's count of updates.

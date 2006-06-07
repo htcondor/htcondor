@@ -309,6 +309,7 @@ public:
 		  @param cmd The command you want to send.
 		  @param st The type of the Sock you want to use.
 		  @param sec The timeout you want to use on your Sock.
+		  @param errstack NULL or error stack to dump errors into.
 		  @return NULL on error, or the Sock object to use for the
 		  rest of the command on success.
 		  */
@@ -320,16 +321,74 @@ public:
 		  gives the command they want to send, and a pointer to the
 		  Sock they want us to use to send it over.  This method will
 		  then place that Sock in encode() mode, send the command, and
-		  return true on success, false on failure.
+		  return true on success, false on failure.  See
+		  startCommand_nonblocking for a non-blocking interface.
 		  @param cmd The command you want to send.
 		  @param sock The Sock you want to use.
 		  @param sec The timeout you want to use on your Sock.
-		  @return NULL on error, or the Sock object to use for the
-		  rest of the command on success.
+		  @param errstack NULL or error stack to dump errors into.
+		  @return false on error, true on success.
 		*/
 	bool startCommand( int cmd, Sock* sock,
 			int sec = 0, CondorError* errstack = NULL );
 			
+		/** Start sending the given command to the daemon.  This
+			command claims to be nonblocking, but currently it only
+			uses nonblocking connects; everything else is blocking.
+			The caller gives the command they want to send, and the
+			type of Sock they want to use to send it over.  This
+			method will then allocate a new Sock of the right type,
+			send the command, and callback the specified function with
+			success indicator and a pointer to the sock while it is
+			still in encode() mode. THE CALLBACK FUNCTION (if any) IS
+			RESPONSIBLE FOR DELETING THE SOCK.
+			The caller MUST ensure that sock and errstack do not get
+			deleted before this operation completes.  It is ok if the
+			daemon client object itself gets deleted before then.
+			Note that this function will only work in DaemonCore
+			applications, because it relies on the DaemonCore non-blocking
+			event callbacks.
+			@param cmd The command you want to send.
+			@param st The type of the Sock you want to use.
+			@param sec The timeout you want to use on your Sock.
+			@param errstack NULL or error stack to dump errors into.
+			@param errstack NULL or errstack to dump errors into
+			@param callback_fn NULL or function to call when finished
+			                   If NULL and sock is UDP, will return
+			                   StartCommandWouldBlock if TCP session key
+			                   setup is in progress.
+			@param misc_data any data caller wants passed to callback_fn
+			@return see definition of StartCommandResult enumeration.
+		  */
+	StartCommandResult startCommand_nonblocking( int cmd, Stream::stream_type st, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data );
+
+		/** Start sending the given command to the daemon.  This
+			command claims to be nonblocking, but currently it only
+			uses nonblocking connects; everything else is blocking.
+			The caller gives the command they want to send, and a
+			pointer to the Sock they want us to use to send it over.
+			This method will then place that Sock in encode() mode,
+			send the command, and callback the specified function with
+			true on success, false on failure.
+			The caller MUST ensure that sock and errstack do not get
+			deleted before this operation completes.  It is ok if the
+			daemon client object itself gets deleted before then.
+			Note that this function will only work in DaemonCore
+			applications, because it relies on the DaemonCore non-blocking
+			event callbacks.
+			@param cmd The command you want to send.
+			@param sock The	Sock you want to use.
+			@param timeout The number of seconds you want to use on your Sock.
+			@param errstack NULL or errstack to dump errors into
+			@param callback_fn NULL or function to call when finished
+			                   If NULL and sock is UDP, will return
+							   StartCommandWouldBlock if TCP session key
+							   setup is in progress.
+			@param misc_data any data caller wants passed to callback_fn
+			@return see definition of StartCommandResult enumeration.
+		*/
+	StartCommandResult startCommand_nonblocking( int cmd, Sock* sock, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data );
+
 		/**
 		 * Contact another daemon and initiate the time offset range 
 		 * determination logic. We create a socket connection, pass the
@@ -563,6 +622,26 @@ protected:
 		*/
     bool forceAuthentication( ReliSock* rsock, CondorError* errstack );
 
+		/**
+		   Internal function used by public versions of startCommand().
+		   It may be either blocking or nonblocking, depending on the
+		   nonblocking flag.  This version uses an existing socket.
+		 */
+	static StartCommandResult startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char *version, SecMan *sec_man );
+
+		/**
+		   Internal function used by public versions of startCommand().
+		   It may be either blocking or nonblocking, depending on the
+		   nonblocking flag.  This version creates a socket of the
+		   specified type and connects it.
+		 */
+	StartCommandResult startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking );
+
+		/**
+		   Class used internally to handle non-blocking connects for
+		   startCommand().
+		*/
+	friend class StartCommandConnectCallback;
 };
 
 // Prototype to get sinful string.

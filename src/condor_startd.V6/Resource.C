@@ -866,7 +866,7 @@ Resource::do_update( void )
 
 		// Send class ads to collector(s)
 	rval = resmgr->send_update( UPDATE_STARTD_AD, &public_ad,
-								&private_ad ); 
+								&private_ad, true ); 
 	if( rval ) {
 		dprintf( D_FULLDEBUG, "Sent update to %d collector(s)\n", rval ); 
 	} else {
@@ -896,7 +896,7 @@ Resource::final_update( void )
 			 r_name );
 	invalidate_ad.Insert( line );
 
-	resmgr->send_update( INVALIDATE_STARTD_ADS, &invalidate_ad, NULL );
+	resmgr->send_update( INVALIDATE_STARTD_ADS, &invalidate_ad, NULL, false );
 }
 
 
