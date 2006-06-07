@@ -769,14 +769,28 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 	MyString expr;
 	ClassAd *submit_ad;
 	ExprTree *next_expr;
+	bool use_new_args_env = false;
+
+		// Older versions of the blahp don't know about the new
+		// Arguments and Environment job attributes. Newer version
+		// put "new_esc_format" in their version string to indicate
+		// that they understand these new attributes. If we're
+		// talking to an old blahp, convert to the old Args and Env
+		// attributes.
+	if ( strstr( gahp->getVersion(), "new_esc_format" ) ) {
+		use_new_args_env = true;
+	} else {
+		use_new_args_env = false;
+	}
 
 	int index;
 	const char *attrs_to_copy[] = {
 		ATTR_JOB_CMD,
-//		ATTR_JOB_ARGUMENTS1,
-//		ATTR_JOB_ARGUMENTS2,
-//		ATTR_JOB_ENVIRONMENT1,
-//		ATTR_JOB_ENVIRONMENT2,
+		ATTR_JOB_ARGUMENTS1,
+		ATTR_JOB_ARGUMENTS2,
+		ATTR_JOB_ENVIRONMENT1,
+		ATTR_JOB_ENVIRONMENT1_DELIM,
+		ATTR_JOB_ENVIRONMENT2,
 		ATTR_JOB_INPUT,
 		ATTR_JOB_OUTPUT,
 		ATTR_JOB_ERROR,
@@ -814,27 +828,33 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 		submit_ad->Assign( "gridtype", batchType );
 	}
 
-	MyString error_str;
-	MyString value_str;
-	ArgList args;
-	Env env;
+	if ( !use_new_args_env ) {
+		MyString error_str;
+		MyString value_str;
+		ArgList args;
+		Env env;
 
-	if ( !args.AppendArgsFromClassAd( jobAd, &error_str ) ||
-		 !args.GetArgsStringV1Raw( &value_str, &error_str ) ) {
-		errorString = error_str;
-		delete submit_ad;
-		return NULL;
-	}
-	submit_ad->Assign( ATTR_JOB_ARGUMENTS1, value_str.Value() );
+		submit_ad->Delete( ATTR_JOB_ARGUMENTS2 );
+		submit_ad->Delete( ATTR_JOB_ENVIRONMENT1_DELIM );
+		submit_ad->Delete( ATTR_JOB_ENVIRONMENT2 );
 
-	value_str = "";
-	if ( !env.MergeFrom( jobAd, &error_str ) ||
-		 !env.getDelimitedStringV1Raw( &value_str, &error_str ) ) {
-		errorString = error_str;
-		delete submit_ad;
-		return NULL;
+		if ( !args.AppendArgsFromClassAd( jobAd, &error_str ) ||
+			 !args.GetArgsStringV1Raw( &value_str, &error_str ) ) {
+			errorString = error_str;
+			delete submit_ad;
+			return NULL;
+		}
+		submit_ad->Assign( ATTR_JOB_ARGUMENTS1, value_str.Value() );
+
+		value_str = "";
+		if ( !env.MergeFrom( jobAd, &error_str ) ||
+			 !env.getDelimitedStringV1Raw( &value_str, &error_str ) ) {
+			errorString = error_str;
+			delete submit_ad;
+			return NULL;
+		}
+		submit_ad->Assign( ATTR_JOB_ENVIRONMENT1, value_str.Value() );
 	}
-	submit_ad->Assign( ATTR_JOB_ENVIRONMENT1, value_str.Value() );
 
 //	submit_ad->Assign( ATTR_JOB_STATUS, IDLE );
 //submit_ad->Assign( ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_VANILLA );
@@ -867,6 +887,9 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 //				  ATTR_STAGE_IN_START, ATTR_Q_DATE, 1800 );
 //	submit_ad->Insert( expr.Value() );
 
+	bool cleared_environment = false;
+	bool cleared_arguments = false;
+
 	jobAd->ResetExpr();
 	while ( (next_expr = jobAd->NextExpr()) != NULL ) {
 		if ( strncasecmp( ((Variable*)next_expr->LArg())->Name(),
@@ -874,15 +897,43 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 			 strlen( ((Variable*)next_expr->LArg())->Name() ) > 7 ) {
 
 			char *attr_value;
-			MyString buf;
+			char const *attr_name = &((Variable*)next_expr->LArg())->Name()[7];
+
+			if(strcasecmp(attr_name,ATTR_JOB_ENVIRONMENT1) == 0 ||
+			   strcasecmp(attr_name,ATTR_JOB_ENVIRONMENT1_DELIM) == 0 ||
+			   strcasecmp(attr_name,ATTR_JOB_ENVIRONMENT2) == 0)
+			{
+				//Any remote environment settings indicate that we
+				//should clear whatever environment was already copied
+				//over from the non-remote settings, so the non-remote
+				//settings can never trump the remote settings.
+				if(!cleared_environment) {
+					cleared_environment = true;
+					submit_ad->Delete(ATTR_JOB_ENVIRONMENT1);
+					submit_ad->Delete(ATTR_JOB_ENVIRONMENT1_DELIM);
+					submit_ad->Delete(ATTR_JOB_ENVIRONMENT2);
+				}
+			}
+
+			if(strcasecmp(attr_name,ATTR_JOB_ARGUMENTS1) == 0 ||
+			   strcasecmp(attr_name,ATTR_JOB_ARGUMENTS2) == 0)
+			{
+				//Any remote arguments settings indicate that we
+				//should clear whatever arguments was already copied
+				//over from the non-remote settings, so the non-remote
+				//settings can never trump the remote settings.
+				if(!cleared_arguments) {
+					cleared_arguments = true;
+					submit_ad->Delete(ATTR_JOB_ARGUMENTS1);
+					submit_ad->Delete(ATTR_JOB_ARGUMENTS2);
+				}
+			}
+
 			next_expr->RArg()->PrintToNewStr(&attr_value);
-			buf.sprintf( "%s = %s", &((Variable*)next_expr->LArg())->Name()[7],
-						 attr_value );
-			submit_ad->Insert( buf.Value() );
+			submit_ad->AssignExpr( attr_name, attr_value );
 			free(attr_value);
 		}
 	}
-
 
 		// worry about ATTR_JOB_[OUTPUT|ERROR]_ORIG
 
