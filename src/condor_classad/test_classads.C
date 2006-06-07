@@ -1847,6 +1847,8 @@ static void test_function_ifthenelse(
 							"BB7=ifThenElse(\"big\",\"small\"):"
 							"E0=isError(BB6):"
 							"E1=isError(BB7):"
+							"BB8=ifThenElse(BB > 5, 4 / 0,\"small\"):"
+							"BB9=ifThenElse(BC > 5, \"big\", 4 / 0):"
 							"";
 
 	ClassAd  *classad;
@@ -1915,6 +1917,28 @@ static void test_function_ifthenelse(
 		} else {
 			printf("Failed: Evaluating ifThenElse missing arg(BB7) : %d in line %d\n", 
 				   integer, __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalString("BB8", NULL, big_string) &&
+				(strcmp(big_string, "small") == 0)) {
+			printf("Passed: Evaluating ifThenElse <if false>: %s in line %d\n", 
+				   big_string, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating ifThenElse <if false> %s in line %d\n",
+				   big_string, __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalString("BB9", NULL, big_string) &&
+				(strcmp(big_string, "big") == 0)) {
+			printf("Passed: Evaluating ifThenElse <if true>: %s in line %d\n", 
+				   big_string, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating ifThenElse <if true> %s in line %d\n",
+				   big_string, __LINE__);
 			results->AddResult(false);
 		}
 
