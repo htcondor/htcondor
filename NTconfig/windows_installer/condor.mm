@@ -209,8 +209,4 @@
 
 ;--- Set directory Permissions ----------------------------------------------
 ;-------- Set INSTALLDIR perms first ---
-<$ExeCa EXE=^cmd.exe^ Args=^/c echo y|cacls "[INSTALLDIR_NTS]" /t /g Everyone:R Administrators:F^ WorkDir="INSTALLDIR"   Condition="<$CONDITION_EXCEPT_UNINSTALL>" Seq="InstallServices-">
-
-;-------- Set everything under INSTALLDIR ----
-<$ExeCa EXE=^cmd.exe^ Args=^/c echo y|cacls "[INSTALLDIR_NTS]"\*.* /t /g Everyone:R Administrators:F^ WorkDir="INSTALLDIR"   Condition="<$CONDITION_EXCEPT_UNINSTALL>" Seq="InstallServices-">
-
+<$ExeCa EXE=^cmd.exe^ Args=^/c condor_set_acls.exe "[INSTALLDIR_NTS]"^ WorkDir="INSTALLDIR"   Condition="<$CONDITION_EXCEPT_UNINSTALL>" Seq="InstallServices-">
