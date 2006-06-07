@@ -96,6 +96,28 @@ specific hold states.
 \item \Condor{submit} will now issue a warning if the user / job log
 is on an NFS mounted file system.
 
+\item Non-blocking connect operations are now used in two cases:
+sending ClassAd updates from Condor Daemons to the collector and
+sending match information from the negotiator to the startd.  Both of
+these operations are UDP-based (unless you enable TCP updates to the
+collector), so non-blocking connects would not be an issue, except
+that TCP connections are required whenever it is necessary to
+establish a new security session.  An example where the new non-blocking
+behavior is helpful is when a machine is down and TCP connections to it
+timeout.  Daemons that try to connect to it using non-blocking connections
+will no longer stop everything they are doing for the full duration of the
+timeout.
+
+This feature may result in a greater number of sockets being open at
+one time than previously (especially in the negotiator).  There is not
+yet support for placing a limit on the number of simultaneous
+connection attempts, therefore, if you need to turn off the use of
+non-blocking connects, you may do so with the following
+configuration settings:
+
+\Macro{NONBLOCKING\_COLLECTOR\_UPDATE} = False \\
+\Macro{NEGOTIATOR\_USE\_NONBLOCKING\_STARTD\_CONTACT} = False
+
 \end{itemize}
 
 \noindent Bugs Fixed:
