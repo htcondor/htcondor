@@ -1,4 +1,5 @@
 @echo off
+setlocal
 if exist %1 goto process1
 echo Error - directory %1 does not exist
 echo Usage: dorelease.bat path_to_release_subdirectory
