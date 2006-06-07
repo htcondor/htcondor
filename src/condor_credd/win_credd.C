@@ -124,7 +124,7 @@ void
 CredDaemon::update_collector()
 {
 	ASSERT(m_collectors != NULL);
-	m_collectors->sendUpdates(UPDATE_AD_GENERIC, &m_classad);
+	m_collectors->sendUpdates(UPDATE_AD_GENERIC, &m_classad, NULL, true);
 }
 
 void
@@ -138,7 +138,7 @@ CredDaemon::invalidate_ad()
 	line.sprintf("%s = %s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME, m_name);
     query_ad.Insert(line.Value());
 
-	m_collectors->sendUpdates(INVALIDATE_ADS_GENERIC, &query_ad);
+	m_collectors->sendUpdates(INVALIDATE_ADS_GENERIC, &query_ad, NULL, true);
 }
 
 void
