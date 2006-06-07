@@ -235,6 +235,11 @@ they should not have been for parallel universe jobs.  Also fixed
 a bug in \Condor{check\_userlogs} that caused it to sometimes not
 report an error when it should have.
 
+\item PBS and LSF grid universe jobs now fully handle the new job 
+attributes \Attr{Arguments} and \Attr{Environment}. Previously, jobs would 
+be put on hold if the values couldn't be converted to the old 
+representation used in attributes \Attr{Args} and \Attr{Env}.
+
 \end{itemize}
 
 \noindent Known Bugs:
