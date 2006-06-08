@@ -1434,11 +1434,26 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 		// will tell us things like the pid, ppid, etc. 
 		//
 	mib[0] = CTL_KERN;
-	mib[1] = KERN_PROC;    
+	mib[1] = KERN_PROC;
 	mib[2] = KERN_PROC_PID;
 	mib[3] = pid;
 	if ( sysctl( mib, 4, NULL, &bufSize, NULL, 0 ) < 0 ) {
-		status = PROCAPI_UNSPECIFIED;
+		//
+		// No such process
+		//
+		if (errno == ESRCH) {
+			status = PROCAPI_NOPID;
+		//
+		// Operation not permitted
+		//
+		} else if (errno == EPERM) {
+			status = PROCAPI_PERM;
+		//
+		// Unknown
+		//
+		} else {
+			status = PROCAPI_UNSPECIFIED;
+		}
 		dprintf( D_FULLDEBUG, 
 			"ProcAPI: sysctl() (pass 1) on pid %d failed with %d(%s)\n",
 			pid, errno, strerror(errno) );
@@ -1451,7 +1466,22 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 	}
 
 	if (sysctl(mib, 4, kp, &bufSize, NULL, 0) < 0) {
-		status = PROCAPI_UNSPECIFIED;	
+		//
+		// No such process
+		//
+		if (errno == ESRCH) {
+			status = PROCAPI_NOPID;
+		//
+		// Operation not permitted
+		//
+		} else if (errno == EPERM) {
+			status = PROCAPI_PERM;
+		//
+		// Unknown
+		//
+		} else {
+			status = PROCAPI_UNSPECIFIED;
+		}
 		dprintf( D_FULLDEBUG, 
 			"ProcAPI: sysctl() (pass 2) on pid %d failed with %d(%s)\n",
 			pid, errno, strerror(errno) );
