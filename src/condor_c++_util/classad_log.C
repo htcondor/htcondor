@@ -686,6 +686,12 @@ LogSetAttribute::WriteBody(FILE* fp)
 {
 	int		rval, rval1, len;
 
+	// Ensure no newlines sneak through (as they're a record seperator)
+	if( strchr(key, '\n') || strchr(name, '\n') || strchr(value, '\n') ) {
+		dprintf(D_ALWAYS, "Refusing attempt to add '%s' = '%s' to record '%s' as it contains a newline, which is not allowed.\n", name, value, key);
+		return -1;
+	}
+
 	len = strlen(key);
 	rval = fwrite(key, sizeof(char), len, fp);
 	if (rval < len) {
