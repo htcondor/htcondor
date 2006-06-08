@@ -1262,7 +1262,7 @@ void
 RemoteErrorEvent::initFromClassAd(ClassAd* ad)
 {
 	ULogEvent::initFromClassAd(ad);
-	char buf[ATTRLIST_MAX_EXPRESSION];
+	char *buf;
 	int crit_err = 0;
 
 	if( !ad ) return;
@@ -1273,9 +1273,9 @@ RemoteErrorEvent::initFromClassAd(ClassAd* ad)
 	if( ad->LookupString("ExecuteHost", execute_host, sizeof(execute_host)) ) {
 		execute_host[sizeof(execute_host)-1] = '\0';
 	}
-	if( ad->LookupString("ErrorMsg", buf, sizeof(buf)) ) {
-		buf[sizeof(buf)-1] = '\0';
+	if( ad->LookupString("ErrorMsg", &buf) ) {
 		setErrorText(buf);
+		free(buf);
 	}
 	if( ad->LookupInteger("CriticalError",crit_err) ) {
 		critical_error = (crit_err != 0);
