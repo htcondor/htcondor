@@ -1366,7 +1366,7 @@ bufferJobShort( ClassAd *ad ) {
 
 	float utime  = 0.0;
 	char owner[64], cmd[_POSIX_PATH_MAX];
-	char buffer[ATTRLIST_MAX_EXPRESSION];
+	MyString buffer;
 
 	if (!ad->EvalInteger (ATTR_CLUSTER_ID, NULL, cluster)		||
 		!ad->EvalInteger (ATTR_PROC_ID, NULL, proc)				||
@@ -1385,9 +1385,9 @@ bufferJobShort( ClassAd *ad ) {
 	MyString args_string;
 	ArgList::GetArgsStringForDisplay(ad,&args_string);
 	if (!args_string.IsEmpty()) {
-		sprintf( buffer, "%s %s", condor_basename(cmd), args_string.Value() );
+		buffer.sprintf( "%s %s", condor_basename(cmd), args_string.Value() );
 	} else {
-		sprintf( buffer, "%s", condor_basename(cmd) );
+		buffer.sprintf( "%s", condor_basename(cmd) );
 	}
 	utime = job_time(utime,ad);
 
@@ -1435,7 +1435,7 @@ bufferJobShort( ClassAd *ad ) {
 			 encoded_status,
 			 prio,
 			 (image_size / 1024.0),
-			 buffer );
+			 buffer.Value() );
 
 	return return_buff;
 }
