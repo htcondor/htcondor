@@ -31,6 +31,7 @@
 #include "condor_exprtype.h"
 #include "condor_astbase.h"
 #include "condor_debug.h"
+#include "MyString.h"
 
 #define AdvancePtr(ptr)  while(*ptr != '\0') ptr++;
 
@@ -515,6 +516,13 @@ void ExprTree::PrintToNewStr(char **str)
 	*str = new_str;
 
 	return;
+}
+
+void ExprTree::PrintToStr(MyString & str) {
+	char * tmp = 0;
+	PrintToNewStr(&tmp);
+	str = tmp;
+	free(tmp);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -81,6 +81,7 @@
 
 class AttrList;
 class EvalResult;
+class MyString;
 
 class ExprTree
 {
@@ -100,6 +101,7 @@ class ExprTree
 		virtual int         CalcPrintToStr(void) {return 0;}
 		virtual void        PrintToNewStr(char **str);
 		virtual void        PrintToStr(char*) {} // print the expr to a string
+		virtual void        PrintToStr(MyString &);
 
 		int         		EvalTree(const AttrList*, EvalResult*);
 		int         		EvalTree(const AttrList*, const AttrList*, EvalResult*);
