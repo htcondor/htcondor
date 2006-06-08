@@ -202,17 +202,18 @@ as well as the protocol to be used at the destination.
 \item[x509proxy = $<$path-to-proxy$>$]
 \index{Stork submit commands!x509proxy}
 The path to and file name of an X.509 proxy when needed
-for GSI authentication.
-Current implementation does not search standard or default locations,
-so the path is necessary when GSI authentication is used.
+for GSI authentication.  A value of \SubmitCmd{"default"} directs Stork to
+search in the standard Globus GSI proxy locations.
 
 %%%%%%%%%%%%%%%%%%%
 % cred_name
 %%%%%%%%%%%%%%%%%%%
-%\item[cred\_name = $<$credential-handle$>$]
-%\index{Stork submit commands!cred\_name}
-%Identification of a credential name (or handle) that the
-%\Prog{credential-manager} will use to provide a credential.
+\item[cred\_name = $<$credential-handle$>$]
+\index{Stork submit commands!cred\_name}
+Alternatively, a X.509 proxy may be managed via the Stork credential manager.
+The \SubmitCmd{cred\_name} specifies the name by which the credential was
+stored in the credential manager.  See the 
+\Prog{stork\_store\_cred} manual on page \pageref{man-stork-store-cred}.
 
 %%%%%%%%%%%%%%%%%%%
 % alt_protocols
