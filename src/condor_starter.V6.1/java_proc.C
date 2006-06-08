@@ -49,7 +49,6 @@ JavaProc::~JavaProc()
 
 int JavaProc::StartJob()
 {
-	char tmp[ATTRLIST_MAX_EXPRESSION];
 	
 	char java_cmd[_POSIX_PATH_MAX];
 	char* jarfiles = NULL;
@@ -118,8 +117,7 @@ int JavaProc::StartJob()
 		return 0;
 	}
 
-	sprintf(tmp,"%s=\"%s\"",ATTR_JOB_CMD,java_cmd);
-	JobAd->InsertOrUpdate(tmp);
+	JobAd->Assign(ATTR_JOB_CMD, java_cmd);
 
 	arg_buf.sprintf("-Dchirp.config=%s%cchirp.config",execute_dir,DIR_DELIM_CHAR);
 	args.AppendArg(arg_buf.Value());
@@ -361,24 +359,19 @@ then throw it into the update ad.
 
 bool JavaProc::PublishUpdateAd( ClassAd* ad )
 {
-	char tmp[ATTRLIST_MAX_EXPRESSION];
-
 	if(ex_hier[0]) {
-		sprintf(tmp,"%s=\"%s\"",ATTR_EXCEPTION_HIERARCHY,ex_hier);
-		ad->InsertOrUpdate(tmp);
-		dprintf(D_ALWAYS,"JavaProc: %s\n",tmp);
+		ad->Assign(ATTR_EXCEPTION_HIERARCHY,ex_hier);
+		dprintf(D_ALWAYS,"JavaProc: %s \"%s\"\n",ATTR_EXCEPTION_HIERARCHY,ex_hier);
 	}
 
 	if(ex_name[0]) {
-		sprintf(tmp,"%s=\"%s\"",ATTR_EXCEPTION_NAME,ex_name);
-		ad->InsertOrUpdate(tmp);
-		dprintf(D_ALWAYS,"JavaProc: %s\n",tmp);
+		ad->Assign(ATTR_EXCEPTION_NAME,ex_name);
+		dprintf(D_ALWAYS,"JavaProc: %s \"%s\"\n", ATTR_EXCEPTION_NAME, ex_name);
 	}
 
 	if(ex_type[0]) {
-		sprintf(tmp,"%s=\"%s\"",ATTR_EXCEPTION_TYPE,ex_type);
-		ad->InsertOrUpdate(tmp);
-		dprintf(D_ALWAYS,"JavaProc: %s\n",tmp);
+		ad->Assign(ATTR_EXCEPTION_TYPE,ex_type);
+		dprintf(D_ALWAYS,"JavaProc: %s \"%s\"\n",ATTR_EXCEPTION_TYPE,ex_type);
 	}
 
 	return VanillaProc::PublishUpdateAd(ad);
