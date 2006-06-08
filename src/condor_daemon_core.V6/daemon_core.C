@@ -3041,8 +3041,6 @@ int DaemonCore::HandleReq(int socki)
 			auth_info.dPrint (D_SECURITY);
 		}
 
-		char buf[ATTRLIST_MAX_EXPRESSION];
-
 		// look at the ad.  get the command number.
 		int real_cmd = 0;
 		int tmp_cmd = 0;
@@ -3214,8 +3212,7 @@ int DaemonCore::HandleReq(int socki)
 				}
 
 				// add our version to the policy to be sent over
-				sprintf (buf, "%s=\"%s\"", ATTR_SEC_REMOTE_VERSION, CondorVersion());
-				the_policy->InsertOrUpdate(buf);
+				the_policy->Assign(ATTR_SEC_REMOTE_VERSION, CondorVersion());
 
 				// handy policy vars
 				SecMan::sec_feat_act will_authenticate      = sec_man->sec_lookup_feat_act(*the_policy, ATTR_SEC_AUTHENTICATION);
@@ -3232,10 +3229,11 @@ int DaemonCore::HandleReq(int socki)
 #endif
 
 					// generate a unique ID.
-					sprintf( buf, "%s:%i:%i:%i", my_hostname(), mypid,
+					MyString tmpStr;
+					tmpStr.sprintf( "%s:%i:%i:%i", my_hostname(), mypid,
 							 (int)time(0), ZZZ_always_increase() );
 					assert (the_sid == NULL);
-					the_sid = strdup(buf);
+					the_sid = strdup(tmpStr.Value());
 
 					if (will_authenticate == SecMan::SEC_FEAT_ACT_YES) {
 
@@ -3396,8 +3394,7 @@ int DaemonCore::HandleReq(int socki)
 						// after authenticating, update the classad to reflect
 						// which method we actually used.
 						char* the_method = ((ReliSock*)sock)->authob->getMethodUsed();
-						sprintf(buf, "%s=\"%s\"", ATTR_SEC_AUTHENTICATION_METHODS, the_method);
-						the_policy->InsertOrUpdate(buf);
+						the_policy->Assign(ATTR_SEC_AUTHENTICATION_METHODS, the_method);
 
 						const char* sockip = sin_to_string(sock->endpoint());
 						const char* authip = ((ReliSock*)sock)->authob->getRemoteAddress() ;
@@ -3478,18 +3475,14 @@ int DaemonCore::HandleReq(int socki)
 					// session user
 					const char *fully_qualified_user = ((ReliSock*)sock)->getFullyQualifiedUser();
 					if ( fully_qualified_user ) {
-						sprintf (buf, "%s=\"%s\"", ATTR_SEC_USER,
-								fully_qualified_user);
-						pa_ad.Insert(buf);
+						pa_ad.Assign(ATTR_SEC_USER,fully_qualified_user);
 					}
 
 					// session id
-					sprintf (buf, "%s=\"%s\"", ATTR_SEC_SID, the_sid);
-					pa_ad.Insert(buf);
+					pa_ad.Assign(ATTR_SEC_SID, the_sid);
 
 					// other commands this session is good for
-					sprintf (buf, "%s=\"%s\"", ATTR_SEC_VALID_COMMANDS, GetCommandsInAuthLevel(comTable[cmd_index].perm).Value());
-					pa_ad.Insert(buf);
+					pa_ad.Assign(ATTR_SEC_VALID_COMMANDS, GetCommandsInAuthLevel(comTable[cmd_index].perm).Value());
 
 					// also put some attributes in the policy classad we are caching.
 					sec_man->sec_copy_attribute( *the_policy, auth_info, ATTR_SEC_SUBSYSTEM );
