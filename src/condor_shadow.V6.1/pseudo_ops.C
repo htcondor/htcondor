@@ -665,14 +665,28 @@ pseudo_get_job_attr( const char *name, char *expr )
 }
 
 int
+pseudo_get_job_attr( const char *name, MyString &expr )
+{
+	ClassAd *ad = thisRemoteResource->getJobAd();
+	ExprTree *e = ad->Lookup(name);
+	if(e) {
+		e->RArg()->PrintToStr(expr);
+		dprintf(D_SYSCALLS,"pseudo_get_job_attr(%s) = %s\n",name,expr.Value());
+		return 0;
+	} else {
+		dprintf(D_SYSCALLS,"pseudo_get_job_attr(%s) failed\n",name);
+		return -1;
+	}
+}
+
+int
 pseudo_set_job_attr( const char *name, const char *expr )
 {
 	if(Shadow->updateJobAttr(name,expr)) {
 		dprintf(D_SYSCALLS,"pseudo_set_job_attr(%s,%s) succeeded\n",name,expr);
-		char str[ATTRLIST_MAX_EXPRESSION];
-		sprintf(str,"%s = %s",name,expr);
 		ClassAd *ad = thisRemoteResource->getJobAd();
-		ad->Insert(str);
+		ASSERT(ad);
+		ad->AssignExpr(name,expr);
 		return 0;
 	} else {
 		dprintf(D_SYSCALLS,"pseudo_set_job_attr(%s,%s) failed\n",name,expr);
