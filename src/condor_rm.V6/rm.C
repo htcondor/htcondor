@@ -544,7 +544,7 @@ procArg(const char* arg)
 	int		c, p;								// cluster/proc #
 	char*	tmp;
 
-	char constraint[ATTRLIST_MAX_EXPRESSION];
+	MyString constraint;
 
 	if(isdigit(*arg))
 	// process by cluster/proc #
@@ -560,8 +560,8 @@ procArg(const char* arg)
 		// delete the cluster
 		{
 			CondorError errstack;
-			sprintf( constraint, "%s == %d", ATTR_CLUSTER_ID, c );
-			if( doWorkByConstraint(constraint, &errstack) ) {
+			constraint.sprintf( "%s == %d", ATTR_CLUSTER_ID, c );
+			if( doWorkByConstraint(constraint.Value(), &errstack) ) {
 				fprintf( old_messages ? stderr : stdout, 
 						 "Cluster %d %s.\n", c,
 						 (mode == JA_REMOVE_JOBS) ?
@@ -603,8 +603,8 @@ procArg(const char* arg)
 	// process by user name
 	{
 		CondorError errstack;
-		sprintf( constraint, "%s == \"%s\"", ATTR_OWNER, arg );
-		if( doWorkByConstraint(constraint, &errstack) ) {
+		constraint.sprintf("%s == \"%s\"", ATTR_OWNER, arg );
+		if( doWorkByConstraint(constraint.Value(), &errstack) ) {
 			fprintf( stdout, "User %s's job(s) %s.\n", arg,
 					 (mode == JA_REMOVE_JOBS) ?
 					 "have been marked for removal" :
