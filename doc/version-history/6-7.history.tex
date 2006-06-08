@@ -238,6 +238,12 @@ as a relative path and \Attr{transfer\_executable} was set to false.
 for grid-type gt4 jobs now properly leave the queue when they enter the
 REMOVED state.
 
+% This is actually a security hole, but we'll wait for Jim's announcement
+% before advertising it.  The more general problem is that a malicious user
+% could modify any attribute in any job.
+\item Eliminated a bug where a malformed ClassAd attribute could make the
+schedd's on-disk job queue unreadable.
+
 \end{itemize}
 
 \noindent Known Bugs:
