@@ -108,14 +108,18 @@ printClassAd( void )
 	if(ad) {
 		int gotone=0;
 		float mflops;
-		char str[ATTRLIST_MAX_EXPRESSION];
+		char *str = 0;
 
-		if(ad->LookupString(ATTR_JAVA_VENDOR,str)) {
+		if(ad->LookupString(ATTR_JAVA_VENDOR,&str)) {
 			printf("%s = \"%s\"\n",ATTR_JAVA_VENDOR,str);
+			free(str);
+			str = 0;
 			gotone++;
 		}
-		if(ad->LookupString(ATTR_JAVA_VERSION,str)) {
+		if(ad->LookupString(ATTR_JAVA_VERSION,&str)) {
 			printf("%s = \"%s\"\n",ATTR_JAVA_VERSION,str);
+			free(str);
+			str = 0;
 			gotone++;
 		}
 		if(ad->LookupFloat(ATTR_JAVA_MFLOPS,mflops)) {

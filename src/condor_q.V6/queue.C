@@ -1602,9 +1602,10 @@ format_owner (char *owner, AttrList *ad)
 
 				// We have a DAGMan job ID, this means we have a DAG node
 				// -- don't worry about what type the DAGMan job ID is.
-			char dag_node_name[ATTRLIST_MAX_EXPRESSION];
-			if ( ad->LookupString( ATTR_DAG_NODE_NAME, dag_node_name ) ) {
+			char *dag_node_name;
+			if ( ad->LookupString( ATTR_DAG_NODE_NAME, &dag_node_name ) ) {
 				sprintf( result, " |-%-11.11s", dag_node_name );
+				free(dag_node_name);
 				return result;
 			} else {
 				fprintf(stderr, "DAG node job with no %s attribute!\n",
