@@ -29,7 +29,7 @@
 
 ClassAd * java_detect()
 {
-	char path[ATTRLIST_MAX_EXPRESSION];
+	char path[_POSIX_PATH_MAX];
 	ArgList args;
 	char command[_POSIX_ARG_MAX];
 	MyString args_string;
