@@ -748,7 +748,7 @@ int main (int argc, char **argv)
 						"-- Quill daemon %s(%s)\n"
 						"\tassociated with schedd %s(%s)\n"
 						"\tis not reachable or can't talk to rdbms.\n",
-						quillName, quillAddr!=NULL?quillAddr:"<???>", 
+						quillName, quillAddr!=NULL?quillAddr:"<\?\?\?>", 
 						scheddName, scheddAddr);
 
 					if (quillAddr == NULL) {
@@ -1365,7 +1365,7 @@ bufferJobShort( ClassAd *ad ) {
 	char *tmp = NULL;
 
 	float utime  = 0.0;
-	char owner[64], cmd[ATTRLIST_MAX_EXPRESSION];
+	char owner[64], cmd[_POSIX_PATH_MAX];
 	char buffer[ATTRLIST_MAX_EXPRESSION];
 
 	if (!ad->EvalInteger (ATTR_CLUSTER_ID, NULL, cluster)		||
