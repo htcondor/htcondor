@@ -1584,19 +1584,19 @@ SetImageSize()
 void SetFileOptions()
 {
 	char *tmp;
-	char buffer[ATTRLIST_MAX_EXPRESSION];
+	MyString buffer;
 
 	tmp = condor_param( FileRemaps, ATTR_FILE_REMAPS );
 	if(tmp) {
-		sprintf(buffer,"%s = %s",ATTR_FILE_REMAPS,tmp);
-		InsertJobExpr(buffer);
+		buffer.sprintf("%s = %s",ATTR_FILE_REMAPS,tmp);
+		InsertJobExpr(buffer.Value());
 		free(tmp);
 	}
 
 	tmp = condor_param( BufferFiles, ATTR_BUFFER_FILES );
 	if(tmp) {
-		sprintf(buffer,"%s = %s",ATTR_BUFFER_FILES,tmp);
-		InsertJobExpr(buffer);
+		buffer.sprintf("%s = %s",ATTR_BUFFER_FILES,tmp);
+		InsertJobExpr(buffer.Value());
 		free(tmp);
 	}
 
@@ -1609,8 +1609,8 @@ void SetFileOptions()
 			tmp = strdup("524288");
 		}
 	}
-	sprintf(buffer,"%s = %s",ATTR_BUFFER_SIZE,tmp);
-	InsertJobExpr(buffer);
+	buffer.sprintf("%s = %s",ATTR_BUFFER_SIZE,tmp);
+	InsertJobExpr(buffer.Value());
 	free(tmp);
 
 	/* If not buffer block size is given, use 32 KB */
@@ -1622,8 +1622,8 @@ void SetFileOptions()
 			tmp = strdup("32768");
 		}
 	}
-	sprintf(buffer,"%s = %s",ATTR_BUFFER_BLOCK_SIZE,tmp);
-	InsertJobExpr(buffer);
+	buffer.sprintf("%s = %s",ATTR_BUFFER_BLOCK_SIZE,tmp);
+	InsertJobExpr(buffer.Value());
 	free(tmp);
 }
 
@@ -1647,7 +1647,7 @@ calc_image_size( const char *name)
 }
 
 void
-process_input_file_list(StringList * input_list, char *input_files, bool * files_specified)
+process_input_file_list(StringList * input_list, MyString *input_files, bool * files_specified)
 {
 	int count;
 	MyString tmp;
@@ -1669,7 +1669,7 @@ process_input_file_list(StringList * input_list, char *input_files, bool * files
 		}
 		if ( count ) {
 			tmp_ptr = input_list->print_to_string();
-			(void) sprintf( input_files, "%s = \"%s\"",
+			input_files->sprintf( "%s = \"%s\"",
 				ATTR_TRANSFER_INPUT_FILES, tmp_ptr );
 			free( tmp_ptr );
 			*files_specified = true;
@@ -1697,16 +1697,13 @@ SetTransferFiles()
 	char* tmp_ptr;
 	bool in_files_specified = false;
 	bool out_files_specified = false;
-	char	 buffer[ATTRLIST_MAX_EXPRESSION];
-	char	 input_files[ATTRLIST_MAX_EXPRESSION];
-	char	 output_files[ATTRLIST_MAX_EXPRESSION];
+	MyString	 input_files;
+	MyString	 output_files;
 	StringList input_file_list(NULL, ",");
 	StringList output_file_list(NULL,",");
 	MyString output_remaps;
 
 	should_transfer = STF_YES;
-
-	buffer[0] = input_files[0] = output_files[0] = '\0';
 
 	macro_value = condor_param( TransferInputFiles, "TransferInputFiles" ) ;
 	TransferInputSize = 0;
@@ -1745,7 +1742,7 @@ SetTransferFiles()
 #endif /* WIN32 */
 
 	if( ! input_file_list.isEmpty() ) {
-		process_input_file_list(&input_file_list, input_files, &in_files_specified);
+		process_input_file_list(&input_file_list, &input_files, &in_files_specified);
 	}
 
 
@@ -1768,7 +1765,7 @@ SetTransferFiles()
 		}
 		tmp_ptr = output_file_list.print_to_string();
 		if ( count ) {
-			(void) sprintf (output_files, "%s = \"%s\"", 
+			(void) output_files.sprintf ("%s = \"%s\"", 
 				ATTR_TRANSFER_OUTPUT_FILES, tmp_ptr);
 			free(tmp_ptr);
 			tmp_ptr = NULL;
@@ -1795,36 +1792,36 @@ SetTransferFiles()
 		  any) are included in the transfer_input_files list.
 		*/
 	if( should_transfer!=STF_NO && HasTDP ) {
-		char file_list[ATTRLIST_MAX_EXPRESSION];
+		char *file_list = NULL;
 		bool changed_it = false;
-		if(job->LookupString(ATTR_TRANSFER_INPUT_FILES,file_list)!=1) {
-			file_list[0] = 0;
+		if(job->LookupString(ATTR_TRANSFER_INPUT_FILES,&file_list)!=1) {
+			file_list = (char *)malloc(1);
+			file_list[0] = '\0';
 		}
+		MyString file_list_tdp;
+		file_list_tdp += file_list;
 		if( tdp_cmd && (!strstr(file_list, tdp_cmd)) ) {
 			TransferInputSize += calc_image_size(tdp_cmd);
 			if(file_list[0]) {
-				strcat(file_list,",");
-				strcat(file_list,tdp_cmd);
-			} else {
-				strcpy(file_list,tdp_cmd);
+				file_list_tdp += ",";
 			}
+			file_list_tdp += tdp_cmd;
 			changed_it = true;
 		}
 		if( tdp_input && (!strstr(file_list, tdp_input)) ) {
 			TransferInputSize += calc_image_size(tdp_input);
 			if(file_list[0]) {
-				strcat(file_list,",");
-				strcat(file_list,tdp_input);
+				file_list_tdp += ",";
+				file_list_tdp += tdp_input;
 			} else {
-				strcpy(file_list,tdp_input);
+				file_list_tdp += tdp_input;
 			}
 			changed_it = true;
 		}
 		if( changed_it ) {
-			sprintf( buffer, "%s = \"%s\"", ATTR_TRANSFER_INPUT_FILES,
-					 file_list );
-			InsertJobExpr( buffer );
+			InsertJobExprString(ATTR_TRANSFER_INPUT_FILES, file_list_tdp.Value() );
 		}
+		free(file_list);
 	}
 
 
@@ -1868,14 +1865,14 @@ SetTransferFiles()
 		}
 
 		if( ! input_file_list.isEmpty() ) {
-			process_input_file_list(&input_file_list, input_files, &in_files_specified);
+			process_input_file_list(&input_file_list, &input_files, &in_files_specified);
 		}
 
-		sprintf(buffer,"%s = \"java\"",ATTR_JOB_CMD);
-		InsertJobExpr( buffer );
+		InsertJobExprString( ATTR_JOB_CMD, "java");
 
-		sprintf(buffer,"%s = FALSE",ATTR_TRANSFER_EXECUTABLE);
-		InsertJobExpr( buffer );
+		MyString b;
+		b.sprintf("%s = FALSE", ATTR_TRANSFER_EXECUTABLE);
+		InsertJobExpr( b.Value() );
 	}
 
 	// If either stdout or stderr contains path information, and the
@@ -1898,14 +1895,13 @@ SetTransferFiles()
 		   strcmp(output,"/dev/null") != 0 && !stream_stdout_toggle)
 		{
 			char const *working_name = "_condor_stdout";
-			sprintf(buffer,"%s = \"%s\"",ATTR_JOB_OUTPUT,working_name);
 				//Force setting value, even if we have already set it
 				//in the cluster ad, because whatever was in the
 				//cluster ad may have been overwritten (e.g. by a
 				//filename containing $(Process)).  At this time, the
 				//check in InsertJobExpr() is not smart enough to
 				//notice that.
-			InsertJobExpr(buffer,false);
+			InsertJobExprString(ATTR_JOB_OUTPUT, working_name,false);
 
 			if(!output_remaps.IsEmpty()) output_remaps += ";";
 			output_remaps.sprintf_cat("%s=%s",working_name,MyString(output).EscapeChars(";=",'\\').Value());
@@ -1920,14 +1916,13 @@ SetTransferFiles()
 				//stderr will use same file as stdout
 				working_name = "_condor_stdout";
 			}
-			sprintf(buffer,"%s = \"%s\"",ATTR_JOB_ERROR,working_name);
 				//Force setting value, even if we have already set it
 				//in the cluster ad, because whatever was in the
 				//cluster ad may have been overwritten (e.g. by a
 				//filename containing $(Process)).  At this time, the
 				//check in InsertJobExpr() is not smart enough to
 				//notice that.
-			InsertJobExpr(buffer,false);
+			InsertJobExprString(ATTR_JOB_ERROR, working_name,false);
 
 			if(!output_remaps.IsEmpty()) output_remaps += ";";
 			output_remaps.sprintf_cat("%s=%s",working_name,MyString(error).EscapeChars(";=",'\\').Value());
@@ -1937,11 +1932,11 @@ SetTransferFiles()
 	// if we might be using file transfer, insert in input/output
 	// exprs  
 	if( should_transfer != STF_NO ) {
-		if ( input_files[0] ) {
-			InsertJobExpr (input_files);
+		if ( input_files.Length() > 0 ) {
+			InsertJobExpr (input_files.Value());
 		}
-		if ( output_files[0] ) {
-			InsertJobExpr (output_files);
+		if ( output_files.Length() > 0 ) {
+			InsertJobExpr (output_files.Value());
 		}
 	}
 
@@ -2013,8 +2008,6 @@ SetTransferFiles()
 
 void SetPerFileEncryption( void )
 {
-	char buffer[ATTRLIST_MAX_EXPRESSION];
-
 	char* encrypt_input_files;
 	char* encrypt_output_files;
 	char* dont_encrypt_input_files;
@@ -2022,29 +2015,25 @@ void SetPerFileEncryption( void )
 
 	encrypt_input_files = condor_param( EncryptInputFiles, "EncryptInputFiles");
 	if (encrypt_input_files) {
-		sprintf(buffer,"%s = \"%s\"",ATTR_ENCRYPT_INPUT_FILES,encrypt_input_files);
-		InsertJobExpr( buffer );
+		InsertJobExprString(ATTR_ENCRYPT_INPUT_FILES,encrypt_input_files);
 		NeedsPerFileEncryption = true;
 	}
 
 	encrypt_output_files = condor_param( EncryptOutputFiles, "EncryptOutputFiles");
 	if (encrypt_output_files) {
-		sprintf(buffer,"%s = \"%s\"",ATTR_ENCRYPT_OUTPUT_FILES,encrypt_output_files);
-		InsertJobExpr( buffer );
+		InsertJobExprString( ATTR_ENCRYPT_OUTPUT_FILES,encrypt_output_files);
 		NeedsPerFileEncryption = true;
 	}
 
 	dont_encrypt_input_files = condor_param( DontEncryptInputFiles, "DontEncryptInputFiles");
 	if (dont_encrypt_input_files) {
-		sprintf(buffer,"%s = \"%s\"",ATTR_DONT_ENCRYPT_INPUT_FILES,dont_encrypt_input_files);
-		InsertJobExpr( buffer );
+		InsertJobExprString( ATTR_DONT_ENCRYPT_INPUT_FILES,dont_encrypt_input_files);
 		NeedsPerFileEncryption = true;
 	}
 
 	dont_encrypt_output_files = condor_param( DontEncryptOutputFiles, "DontEncryptOutputFiles");
 	if (dont_encrypt_output_files) {
-		sprintf(buffer,"%s = \"%s\"",ATTR_DONT_ENCRYPT_OUTPUT_FILES,dont_encrypt_output_files);
-		InsertJobExpr( buffer );
+		InsertJobExprString( ATTR_DONT_ENCRYPT_OUTPUT_FILES,dont_encrypt_output_files);
 		NeedsPerFileEncryption = true;
 	}
 }
@@ -2301,65 +2290,55 @@ InsertFileTransAttrs( FileTransferOutput_t when_output )
 void
 SetFetchFiles()
 {
-	char buffer[ATTRLIST_MAX_EXPRESSION];
 	char *value;
 
 	value = condor_param( FetchFiles, ATTR_FETCH_FILES );
 	if(value) {
-		sprintf(buffer,"%s = \"%s\"",ATTR_FETCH_FILES,value);
-		InsertJobExpr (buffer);
+		InsertJobExprString(ATTR_FETCH_FILES,value);
 	}
 }
 
 void
 SetCompressFiles()
 {
-	char buffer[ATTRLIST_MAX_EXPRESSION];
 	char *value;
 
 	value = condor_param( CompressFiles, ATTR_COMPRESS_FILES );
 	if(value) {
-		sprintf(buffer,"%s = \"%s\"",ATTR_COMPRESS_FILES,value);
-		InsertJobExpr (buffer);
+		InsertJobExprString(ATTR_COMPRESS_FILES,value);
 	}
 }
 
 void
 SetAppendFiles()
 {
-	char buffer[ATTRLIST_MAX_EXPRESSION];
 	char *value;
 
 	value = condor_param( AppendFiles, ATTR_APPEND_FILES );
 	if(value) {
-		sprintf(buffer,"%s = \"%s\"",ATTR_APPEND_FILES,value);
-		InsertJobExpr (buffer);
+		InsertJobExprString(ATTR_APPEND_FILES,value);
 	}
 }
 
 void
 SetLocalFiles()
 {
-	char buffer[ATTRLIST_MAX_EXPRESSION];
 	char *value;
 
 	value = condor_param( LocalFiles, ATTR_LOCAL_FILES );
 	if(value) {
-		sprintf(buffer,"%s = \"%s\"",ATTR_LOCAL_FILES,value);
-		InsertJobExpr (buffer);
+		InsertJobExprString(ATTR_LOCAL_FILES,value);
 	}
 }
 
 void
 SetJarFiles()
 {
-	char buffer[ATTRLIST_MAX_EXPRESSION];
 	char *value;
 
 	value = condor_param( JarFiles, ATTR_JAR_FILES );
 	if(value) {
-		sprintf(buffer,"%s = \"%s\"",ATTR_JAR_FILES,value);
-		InsertJobExpr (buffer);
+		InsertJobExprString(ATTR_JAR_FILES,value);
 	}
 }
 
@@ -2450,19 +2429,16 @@ SetJavaVMArgs()
 void
 SetParallelStartupScripts() //JDB
 {
-	char buffer[ATTRLIST_MAX_EXPRESSION];
 	char *value;
 
 	value = condor_param( ParallelScriptShadow, ATTR_PARALLEL_SCRIPT_SHADOW );
 	if(value) {
-		sprintf(buffer,"%s = \"%s\"",ATTR_PARALLEL_SCRIPT_SHADOW,value);
-		InsertJobExpr (buffer);
+		InsertJobExprString(ATTR_PARALLEL_SCRIPT_SHADOW,value);
 	}
 	value = condor_param( ParallelScriptStarter,
 						  ATTR_PARALLEL_SCRIPT_STARTER );
 	if(value) {
-		sprintf(buffer,"%s = \"%s\"",ATTR_PARALLEL_SCRIPT_STARTER,value);
-		InsertJobExpr (buffer);
+		InsertJobExprString(ATTR_PARALLEL_SCRIPT_STARTER,value);
 	}
 }
 
@@ -3588,12 +3564,11 @@ SetRunAsOwner()
 void
 SetRank()
 {
-	static char rank[ATTRLIST_MAX_EXPRESSION];
+	MyString rank;
 	char *orig_pref = condor_param( Preferences, NULL );
 	char *orig_rank = condor_param( Rank, NULL );
 	char *default_rank = NULL;
 	char *append_rank = NULL;
-	rank[0] = '\0';
 
 	switch( JobUniverse ) {
 	case CONDOR_UNIVERSE_STANDARD:
@@ -3630,7 +3605,7 @@ SetRank()
 		// If we've got a rank to append to something that's already 
 		// there, we need to enclose the origional in ()'s
 	if( append_rank && (orig_rank || orig_pref || default_rank) ) {
-		(void)strcat( rank, "(" );
+		rank += "(";
 	}		
 
 	if( orig_pref && orig_rank ) {
@@ -3638,34 +3613,34 @@ SetRank()
 				 "for a job\n", Preferences, Rank );
 		exit(1);
 	} else if( orig_rank ) {
-		(void)strcat( rank, orig_rank );
+		rank +=  orig_rank;
 	} else if( orig_pref ) {
-		(void)strcat( rank, orig_pref );
+		rank += orig_pref;
 	} else if( default_rank ) {
-		(void)strcat( rank, default_rank );
+		rank += default_rank;
 	} 
 
 	if( append_rank ) {
-		if( rank[0] ) {
+		if( rank.Length() > 0 ) {
 				// We really want to add this expression to our
 				// existing Rank expression, not && it, since Rank is
 				// just a float.  If we && it, we're forcing the whole
 				// expression to now be a bool that evaluates to
 				// either 0 or 1, which is obviously not what we
 				// want.  -Derek W. 8/21/98
-			(void)strcat( rank, ") + (" );
+			rank += ") + (";
 		} else {
-			(void)strcat( rank, "(" );
+			rank +=  "(";
 		}
-		(void)strcat( rank, append_rank );
-		(void)strcat( rank, ")" );
+		rank += append_rank;
+		rank += ")";
 	}
 				
-	if( rank[0] == '\0' ) {
+	if( rank.Length() == 0 ) {
 		(void)sprintf( buffer, "%s = 0.0", ATTR_RANK );
 		InsertJobExpr( buffer );
 	} else {
-		(void)sprintf( buffer, "%s = %s", ATTR_RANK, rank );
+		(void)sprintf( buffer, "%s = %s", ATTR_RANK, rank.Value() );
 		InsertJobExpr( buffer );
 	}
 

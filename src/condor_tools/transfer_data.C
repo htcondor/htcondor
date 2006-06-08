@@ -85,7 +85,7 @@ procArg(const char* arg)
 	int		c, p;								// cluster/proc #
 	char*	tmp;
 
-	char constraint[ATTRLIST_MAX_EXPRESSION];
+	MyString constraint;
 
 	if(isdigit(*arg))
 	// process by cluster/proc #
@@ -100,8 +100,8 @@ procArg(const char* arg)
 		if(*tmp == '\0')
 		// delete the cluster
 		{
-			sprintf( constraint, "%s==%d", ATTR_CLUSTER_ID, c );
-			addConstraint(constraint);
+			constraint.sprintf( "%s==%d", ATTR_CLUSTER_ID, c );
+			addConstraint(constraint.Value());
 			return;
 		}
 		if(*tmp == '.')
@@ -116,10 +116,10 @@ procArg(const char* arg)
 			if(*tmp == '\0')
 			// process a proc
 			{
-				sprintf( constraint, "(%s==%d && %s==%d)", 
+				constraint.sprintf( "(%s==%d && %s==%d)", 
 					ATTR_CLUSTER_ID, c,
 					ATTR_PROC_ID, p);
-				addConstraint(constraint);
+				addConstraint(constraint.Value());
 				return;
 			}
 		}
@@ -129,8 +129,8 @@ procArg(const char* arg)
 	else if(isalpha(*arg))
 	// process by user name
 	{
-		sprintf( constraint, "%s == \"%s\"", ATTR_OWNER, arg );
-		addConstraint(constraint);
+		constraint.sprintf( "%s == \"%s\"", ATTR_OWNER, arg );
+		addConstraint(constraint.Value());
 	} else {
 		fprintf( stderr, "Warning: unrecognized \"%s\" skipped\n", arg );
 	}

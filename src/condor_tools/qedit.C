@@ -52,7 +52,8 @@ ProtectedAttribute(char attr[])
 int
 main(int argc, char *argv[])
 {
-	char *DaemonName = NULL, constraint[ATTRLIST_MAX_EXPRESSION];
+	char *DaemonName = NULL; 
+	MyString constraint;
 	Qmgr_connection *q;
 	int nextarg = 1, cluster, proc;
 	bool UseConstraint = false;
@@ -104,7 +105,7 @@ main(int argc, char *argv[])
 		if (argc <= nextarg) {
 			usage(argv[0]);
 		}
-		sprintf(constraint, "%s", argv[nextarg]);
+		constraint = argv[nextarg];
 		nextarg++;
 		UseConstraint = true;
 	} else if (isdigit(argv[nextarg][0])) {
@@ -122,12 +123,12 @@ main(int argc, char *argv[])
 			}
 			UseConstraint = false;
 		} else {
-			sprintf(constraint, "(%s == %d)", ATTR_CLUSTER_ID, cluster);
+			constraint.sprintf("(%s == %d)", ATTR_CLUSTER_ID, cluster);
 			UseConstraint = true;
 		}
 		nextarg++;
 	} else {
-		sprintf(constraint, "(%s == \"%s\")", ATTR_OWNER, argv[nextarg]);
+		constraint.sprintf("(%s == \"%s\")", ATTR_OWNER, argv[nextarg]);
 		nextarg++;
 		UseConstraint = true;
 	}
@@ -146,11 +147,11 @@ main(int argc, char *argv[])
 			exit(1);
 		}
 		if (UseConstraint) {
-			if (SetAttributeByConstraint(constraint, argv[nextarg],
+			if (SetAttributeByConstraint(constraint.Value(), argv[nextarg],
 										 argv[nextarg+1]) < 0) {
 				fprintf(stderr,
 						"Failed to set attribute \"%s\" by constraint: %s\n",
-						argv[nextarg], constraint);
+						argv[nextarg], constraint.Value());
 				exit(1);
 			}
 		} else {
