@@ -1365,7 +1365,8 @@ bufferJobShort( ClassAd *ad ) {
 	char *tmp = NULL;
 
 	float utime  = 0.0;
-	char owner[64], cmd[_POSIX_PATH_MAX];
+	char owner[64];
+	char *cmd = NULL;
 	MyString buffer;
 
 	if (!ad->EvalInteger (ATTR_CLUSTER_ID, NULL, cluster)		||
@@ -1376,7 +1377,7 @@ bufferJobShort( ClassAd *ad ) {
 		!ad->EvalInteger (ATTR_JOB_PRIO, NULL, prio)			||
 		!ad->EvalInteger (ATTR_IMAGE_SIZE, NULL, image_size)	||
 		!ad->EvalString  (ATTR_OWNER, NULL, owner)				||
-		!ad->EvalString  (ATTR_JOB_CMD, NULL, cmd) )
+		!ad->EvalString  (ATTR_JOB_CMD, NULL, &cmd) )
 	{
 		sprintf (return_buff, " --- ???? --- \n");
 		return( return_buff );
@@ -1389,6 +1390,7 @@ bufferJobShort( ClassAd *ad ) {
 	} else {
 		buffer.sprintf( "%s", condor_basename(cmd) );
 	}
+	free(cmd);
 	utime = job_time(utime,ad);
 
 	encoded_status = encode_status( status );
