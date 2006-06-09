@@ -800,8 +800,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 {
 	int int_value;
 	float float_value;
-	char string_value[ATTRLIST_MAX_EXPRESSION];
-	char tmp[ATTRLIST_MAX_EXPRESSION];
+	MyString string_value;
 
 	dprintf( D_FULLDEBUG, "Inside RemoteResource::updateFromStarter()\n" );
 	hadContact();
@@ -814,78 +813,57 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 
 	if( update_ad->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, float_value) ) {
 		remote_rusage.ru_stime.tv_sec = (int) float_value; 
-		sprintf(tmp,"%s=%f",ATTR_JOB_REMOTE_SYS_CPU,float_value);
-		jobAd->Insert( tmp );
+		jobAd->Assign(ATTR_JOB_REMOTE_SYS_CPU, float_value);
 	}
 			
 	if( update_ad->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, float_value) ) {
 		remote_rusage.ru_utime.tv_sec = (int) float_value; 
-		sprintf(tmp,"%s=%f",ATTR_JOB_REMOTE_USER_CPU,float_value);
-		jobAd->Insert( tmp );
+		jobAd->Assign(ATTR_JOB_REMOTE_USER_CPU, float_value);
 	}
 
 	if( update_ad->LookupInteger(ATTR_IMAGE_SIZE, int_value) ) {
 		image_size = int_value;
-		sprintf(tmp,"%s=%d",ATTR_IMAGE_SIZE,int_value);
-		jobAd->Insert( tmp );
+		jobAd->Assign(ATTR_IMAGE_SIZE, int_value);
 	}
 			
 	if( update_ad->LookupInteger(ATTR_DISK_USAGE, int_value) ) {
 		disk_usage = int_value;
-		sprintf(tmp,"%s=%d",ATTR_DISK_USAGE,int_value);
-		jobAd->Insert( tmp );
+		jobAd->Assign(ATTR_DISK_USAGE, int_value);
 	}
 
 	if( update_ad->LookupString(ATTR_EXCEPTION_HIERARCHY,string_value) ) {
-		sprintf(tmp,"%s=\"%s\"",ATTR_EXCEPTION_HIERARCHY,string_value);
-		jobAd->Insert( tmp );
+		jobAd->Assign(ATTR_EXCEPTION_HIERARCHY, string_value.Value());
 	}
 
 	if( update_ad->LookupString(ATTR_EXCEPTION_NAME,string_value) ) {
-		sprintf(tmp,"%s=\"%s\"",ATTR_EXCEPTION_NAME,string_value);
-		jobAd->Insert( tmp );
+		jobAd->Assign(ATTR_EXCEPTION_NAME, string_value.Value());
 	}
 
 	if( update_ad->LookupString(ATTR_EXCEPTION_TYPE,string_value) ) {
-		sprintf(tmp,"%s=\"%s\"",ATTR_EXCEPTION_TYPE,string_value);
-		jobAd->Insert( tmp );
+		jobAd->Assign(ATTR_EXCEPTION_TYPE, string_value.Value());
 	}
 
 	if( update_ad->LookupBool(ATTR_ON_EXIT_BY_SIGNAL, int_value) ) {
-		if( int_value ) {
-			sprintf( tmp, "%s=TRUE", ATTR_ON_EXIT_BY_SIGNAL );
-			exited_by_signal = true;
-		} else {
-			sprintf( tmp, "%s=FALSE", ATTR_ON_EXIT_BY_SIGNAL );
-			exited_by_signal = false;
-		}
-		jobAd->Insert( tmp );
+		exited_by_signal = (bool)int_value;
+		jobAd->Assign(ATTR_ON_EXIT_BY_SIGNAL, (bool)exited_by_signal);
 	}
 
 	if( update_ad->LookupInteger(ATTR_ON_EXIT_SIGNAL, int_value) ) {
-		sprintf( tmp, "%s=%d", ATTR_ON_EXIT_SIGNAL, int_value );
+		jobAd->Assign(ATTR_ON_EXIT_SIGNAL, int_value);
 		exit_value = int_value;
-		jobAd->Insert( tmp );
 	}
 
 	if( update_ad->LookupInteger(ATTR_ON_EXIT_CODE, int_value) ) {
-		sprintf( tmp, "%s=%d", ATTR_ON_EXIT_CODE, int_value );
+		jobAd->Assign(ATTR_ON_EXIT_CODE, int_value);
 		exit_value = int_value;
-		jobAd->Insert( tmp );
 	}
 
 	if( update_ad->LookupString(ATTR_EXIT_REASON,string_value) ) {
-		sprintf( tmp, "%s=\"%s\"", ATTR_EXIT_REASON, string_value );
-		jobAd->Insert( tmp );
+		jobAd->Assign(ATTR_EXIT_REASON, string_value.Value());
 	}
 
 	if( update_ad->LookupBool(ATTR_JOB_CORE_DUMPED, int_value) ) {
-		if( int_value ) {
-			sprintf( tmp, "%s=TRUE", ATTR_JOB_CORE_DUMPED );
-		} else {
-			sprintf( tmp, "%s=FALSE", ATTR_JOB_CORE_DUMPED );
-		}
-		jobAd->Insert( tmp );
+		jobAd->Assign(ATTR_JOB_CORE_DUMPED, (bool)int_value);
 	}
 
 	char* job_state = NULL;
