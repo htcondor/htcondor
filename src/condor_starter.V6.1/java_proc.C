@@ -238,7 +238,7 @@ java_exit_mode_t JavaProc::ClassifyExit( int status )
 	FILE *file;
 	int fields;
 
-	char tmp[ATTRLIST_MAX_EXPRESSION];
+	char tmp[11]; // enough for "abnormal"
 
 	int normal_exit = WIFEXITED(status);
 	int exit_code = WEXITSTATUS(status);
@@ -255,7 +255,7 @@ java_exit_mode_t JavaProc::ClassifyExit( int status )
 			file = fopen(endfile,"r");
 			if(file) {
 				dprintf(D_ALWAYS,"JavaProc: Wrapper left end record %s\n",endfile);
-				fields = fscanf(file,"%s",tmp);
+				fields = fscanf(file,"%10s",tmp); // no more than sizeof(tmp)
 				if(fields!=1) {
 					dprintf(D_FAILURE|D_ALWAYS,"JavaProc: Job called System.exit(%d)\n",exit_code);
 					exit_mode = JAVA_EXIT_NORMAL;
