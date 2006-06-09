@@ -250,6 +250,11 @@ representation used in attributes \Attr{Args} and \Attr{Env}.
 would fail to send e-mail when trying to send to multiple recipients
 has been fixed.
 
+% Gnats PR 706
+\item Fixed a bug in \Condor{dagman} that caused it to abort without
+generating a rescue DAG file if a node job user log somehow contained
+a bad event type number.
+
 \end{itemize}
 
 \noindent Known Bugs:
