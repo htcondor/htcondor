@@ -2017,7 +2017,13 @@ GetAttributeString( int cluster_id, int proc_id, const char *attr_name,
 	strcpy(key, IdToStr(cluster_id,proc_id) );
 
 	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
-		strcpy(val, attr_val);
+		int attr_len = strlen( attr_val );
+		if ( attr_val[0] != '"' || attr_val[attr_len-1] != '"' ) {
+			free( attr_val );
+			return -1;
+		}
+		attr_val[attr_len - 1] = '\0';
+		strcpy(val, &attr_val[1]);
 		free( attr_val );
 		return 1;
 	}
@@ -2046,7 +2052,13 @@ GetAttributeStringNew( int cluster_id, int proc_id, const char *attr_name,
 	strcpy(key, IdToStr(cluster_id,proc_id) );
 
 	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
-		*val = strdup(attr_val);
+		int attr_len = strlen( attr_val );
+		if ( attr_val[0] != '"' || attr_val[attr_len-1] != '"' ) {
+			free( attr_val );
+			return -1;
+		}
+		attr_val[attr_len - 1] = '\0';
+		*val = strdup(&attr_val[1]);
 		free( attr_val );
 		return 1;
 	}
