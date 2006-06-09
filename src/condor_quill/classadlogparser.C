@@ -27,11 +27,6 @@
 #include "classadlogentry.h"
 #include "classadlogparser.h"
 
-//! Definition of Maximum Length of Attribute List Expression
-#ifndef ATTRLIST_MAX_EXPRESSION
-#define ATTRLIST_MAX_EXPRESSION 	(1024*200)
-#endif
-
 /***** Prevent calling free multiple times in this code *****/
 /* This fixes bugs where we would segfault when reading in
  * a corrupted log file, because memory would be deallocated
@@ -295,7 +290,7 @@ ClassAdLogParser::readLogEntry(int &op_type, bool ex)
 			// check if this bogus record is in the midst of a transaction
 			// (try to find a CloseTransaction log record)
 		
-		char	line[ATTRLIST_MAX_EXPRESSION + 64];
+		MyString	line;
 		FILE 	*fp;
 		if (ex == false) {
 			fp = fdopen(log_fd, "r" );
@@ -309,8 +304,8 @@ ClassAdLogParser::readLogEntry(int &op_type, bool ex)
 			EXCEPT("Failed fdopen() when recovering corrupt log file");
 		}
 
-		while( fgets( line, ATTRLIST_MAX_EXPRESSION+64, fp ) ) {
-			if( sscanf( line, "%d ", &op ) != 1 ) {
+		while( line.readLine( fp ) ) {
+			if( sscanf( line.Value(), "%d ", &op ) != 1 ) {
 					// no op field in line; more bad log records...
 				continue;
 			}
