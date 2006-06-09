@@ -45,6 +45,36 @@ static void initialize_perm_checks() { return; }
 static bool read_access(const char *filename) { return true; }
 static bool write_access(const char *filename) { return true; }
 
+static const char * shadow_syscall_name(int condor_sysnum)
+{
+	switch(condor_sysnum) {
+        case CONDOR_register_machine_info: return "register_machine_info";
+        case CONDOR_register_starter_info: return "register_starter_info";
+        case CONDOR_get_job_info: return "get_job_info";
+        case CONDOR_get_user_info: return "get_user_info";
+        case CONDOR_job_exit: return "job_exit";
+        case CONDOR_begin_execution: return "begin_execution";
+        case CONDOR_open: return "open";
+        case CONDOR_close: return "close";
+        case CONDOR_read: return "read";
+        case CONDOR_write: return "write";
+        case CONDOR_lseek: return "lseek";
+        case CONDOR_lseek64: return "lseek64";
+        case CONDOR_llseek: return "llseek";
+        case CONDOR_unlink: return "unlink";
+        case CONDOR_rename: return "rename";
+        case CONDOR_register_mpi_master_info: return "register_mpi_master_info";
+        case CONDOR_mkdir: return "mkdir";
+        case CONDOR_rmdir: return "rmdir";
+        case CONDOR_fsync: return "fsync";
+        case CONDOR_get_file_info_new: return "get_file_info_new";
+        case CONDOR_ulog: return "ulog";
+        case CONDOR_get_job_attr: return "get_job_attr";
+        case CONDOR_set_job_attr: return "set_job_attr";
+        case CONDOR_constrain: return "constrain";
+	}
+	return "unknown";
+}
 
 int
 do_REMOTE_syscall()
@@ -95,10 +125,8 @@ do_REMOTE_syscall()
 	}
 
 	dprintf(D_SYSCALLS,
-		"Got request for syscall %d\n",
-		condor_sysnum
-		// , _condor_syscall_name(condor_sysnum)
-	);
+		"Got request for syscall %s (%d)\n",
+		shadow_syscall_name(condor_sysnum), condor_sysnum);
 
 	switch( condor_sysnum ) {
 
@@ -730,18 +758,14 @@ do_REMOTE_syscall()
 
 	case CONDOR_get_job_attr:
 	  {
-		char *  attrname;
-		char *  expr;
+		char *  attrname = 0;
 		condor_errno_t terrno;
 
-		expr = (char *)malloc( (unsigned)ATTRLIST_MAX_EXPRESSION );
-		memset( expr, 0, (unsigned)ATTRLIST_MAX_EXPRESSION );
-		attrname = (char *)malloc( (unsigned)ATTRLIST_MAX_EXPRESSION );
-		memset( attrname, 0, (unsigned)ATTRLIST_MAX_EXPRESSION );
 		assert( syscall_sock->code(attrname) );
 		assert( syscall_sock->end_of_message() );;
 
 		errno = (condor_errno_t)0;
+		MyString expr;
 		rval = pseudo_get_job_attr( attrname , expr);
 		terrno = (condor_errno_t)errno;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, (int)terrno );
@@ -752,9 +776,13 @@ do_REMOTE_syscall()
 			assert( syscall_sock->code(terrno) );
 		}
 		if( rval >= 0 ) {
-			assert( syscall_sock->code(expr) );
+			// sadly, we much cast away the constness because
+			// of code's interface.  This should be safe
+			// as we're in encode mode, so it should be
+			// treated as cost.
+			char * tmp = (char *)expr.Value();
+			assert( syscall_sock->code(tmp) );
 		}
-		free( (char *)expr );
 		free( (char *)attrname );
 		assert( syscall_sock->end_of_message() );;
 		return 0;
@@ -762,14 +790,10 @@ do_REMOTE_syscall()
 
 	case CONDOR_set_job_attr:
 	  {
-		char *  attrname;
-		char *  expr;
+		char *  attrname = 0;
+		char *  expr = 0;
 		condor_errno_t terrno;
 
-		expr = (char *)malloc( (unsigned)ATTRLIST_MAX_EXPRESSION );
-		memset( expr, 0, (unsigned)ATTRLIST_MAX_EXPRESSION );
-		attrname = (char *)malloc( (unsigned)ATTRLIST_MAX_EXPRESSION );
-		memset( attrname, 0, (unsigned)ATTRLIST_MAX_EXPRESSION );
 		assert( syscall_sock->code(expr) );
 		assert( syscall_sock->code(attrname) );
 		assert( syscall_sock->end_of_message() );;
@@ -792,11 +816,9 @@ do_REMOTE_syscall()
 
 	case CONDOR_constrain:
 	  {
-		char *  expr;
+		char *  expr = 0;
 		condor_errno_t terrno;
 
-		expr = (char *)malloc( (unsigned)ATTRLIST_MAX_EXPRESSION );
-		memset( expr, 0, (unsigned)ATTRLIST_MAX_EXPRESSION );
 		assert( syscall_sock->code(expr) );
 		assert( syscall_sock->end_of_message() );;
 
