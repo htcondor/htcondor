@@ -2594,10 +2594,9 @@ JobQueueDBManager::fillEscapeCharacters(char * str) {
 	
 	int len = strlen(str);
 
-		//here we allocate 1024 more than the size of the 
-		//old string assuming that there wouldn't be more than 1024
-		//quotes in there 
-	char *newstr = (char *) malloc((len + 1024) * sizeof(char));
+		// here we allocate for the worst case -- every byte going to the
+		// database needs to be escaped, except the trailing null
+	char *newstr = (char *) malloc(( 2 * len + 1) * sizeof(char));
 	
 	j = 0;
 	for (i = 0; i < len; i++) {
