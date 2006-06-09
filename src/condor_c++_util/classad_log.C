@@ -29,6 +29,7 @@
 #include "classad_log.h"
 #include "condor_debug.h"
 #include "util_lib_proto.h"
+#include "classad_merge.h"
 
 
 // explicitly instantiate the HashTable template
@@ -144,10 +145,9 @@ void
 ClassAdLog::AppendLog(LogRecord *log)
 {
 	if (active_transaction) {
-		if (EmptyTransaction) {
+		if (active_transaction->EmptyTransaction()) {
 			LogBeginTransaction *log = new LogBeginTransaction;
 			active_transaction->AppendLog(log);
-			EmptyTransaction = false;
 		}
 		active_transaction->AppendLog(log);
 	} else {
@@ -296,7 +296,6 @@ ClassAdLog::BeginTransaction()
 {
 	assert(!active_transaction);
 	active_transaction = new Transaction();
-	EmptyTransaction = true;
 }
 
 bool
@@ -318,7 +317,7 @@ ClassAdLog::CommitTransaction()
 	// Sometimes we do a CommitTransaction() when we don't know if there was
 	// an active transaction.  This is allowed.
 	if (!active_transaction) return;
-	if (!EmptyTransaction) {
+	if (!active_transaction->EmptyTransaction()) {
 		LogEndTransaction *log = new LogEndTransaction;
 		active_transaction->AppendLog(log);
 		active_transaction->Commit(log_fp, (void *)&table);
@@ -374,10 +373,49 @@ ClassAdLog::AdExistsInTableOrTransaction(const char *key)
 	return adexists;
 }
 
-int
+
+int 
 ClassAdLog::LookupInTransaction(const char *key, const char *name, char *&val)
 {
+	ClassAd *ad = NULL;
+
+	if (!name) return 0;
+
+	return ExamineTransaction(key, name, val, ad);
+}
+
+bool
+ClassAdLog::AddAttrsFromTransaction(const char *key, ClassAd &ad)
+{
+	char *val = NULL;
+	bool adexists = false;
+	ClassAd *attrsFromTransaction;
+
+	if ( !key ) {
+		return false;
+	}
+
+		// if there is no pending transaction, we're done
+	if (!active_transaction) {
+		return false;
+	}
+
+		// see what is going on in any current transaction
+	attrsFromTransaction = NULL;
+	ExamineTransaction(key,NULL,val,attrsFromTransaction);
+	if ( attrsFromTransaction ) {
+		MergeClassAds(&ad,attrsFromTransaction,true);
+		delete attrsFromTransaction;
+		return true;
+	}
+	return false;
+}
+
+int
+ClassAdLog::ExamineTransaction(const char *key, const char *name, char *&val, ClassAd* &ad)
+{
 	bool AdDeleted=false, ValDeleted=false, ValFound=false;
+	int attrsAdded = 0;
 
 	if (!active_transaction) return 0;
 
@@ -399,6 +437,11 @@ ClassAdLog::LookupInTransaction(const char *key, const char *name, char *&val)
 			char *lkey = ((LogDestroyClassAd *)log)->get_key();
 			if (strcmp(lkey, key) == 0) {
 				AdDeleted = true;
+				if ( ad ) {
+					delete ad;
+					ad = NULL;
+					attrsAdded = 0;
+				}
 			}
 			free(lkey);
 			break;
@@ -407,13 +450,26 @@ ClassAdLog::LookupInTransaction(const char *key, const char *name, char *&val)
 			char *lkey = ((LogSetAttribute *)log)->get_key();
 			if (strcmp(lkey, key) == 0) {
 				char *lname = ((LogSetAttribute *)log)->get_name();
-				if (stricmp(lname, name) == 0) {
+				if (name && stricmp(lname, name) == 0) {
 					if (ValFound) {
 						free(val);
 					}
 					val = ((LogSetAttribute *)log)->get_value();
 					ValFound = true;
 					ValDeleted = false;
+				}
+				if (!name) {
+					if ( !ad ) {
+						ad = new ClassAd;
+						ASSERT(ad);
+					}
+					if (val) {
+						free(val);
+						val = NULL;
+					}
+					val = ((LogSetAttribute *)log)->get_value();
+					ad->AssignExpr(lname,val);
+					attrsAdded++;
 				}
 				free(lname);
 			}
@@ -424,12 +480,18 @@ ClassAdLog::LookupInTransaction(const char *key, const char *name, char *&val)
 			char *lkey = ((LogDeleteAttribute *)log)->get_key();
 			if (strcmp(lkey, key) == 0) {
 				char *lname = ((LogDeleteAttribute *)log)->get_name();
-				if (stricmp(lname, name) == 0) {
+				if (name && stricmp(lname, name) == 0) {
 					if (ValFound) {
 						free(val);
 					}
 					ValFound = false;
 					ValDeleted = true;
+				}
+				if (!name) {
+					if (ad) {
+						ad->Delete(lname);
+						attrsAdded--;
+					}
 				}
 				free(lname);
 			}
@@ -441,10 +503,40 @@ ClassAdLog::LookupInTransaction(const char *key, const char *name, char *&val)
 		}
 	}
 
-	if (AdDeleted || ValDeleted) return -1;
-	if (ValFound) return 1;
-	return 0;
+	if ( name ) {
+		if (AdDeleted || ValDeleted) return -1;
+		if (ValFound) return 1;
+		return 0;
+	} else {
+		if (attrsAdded < 0 ) {
+			return 0;
+		}
+		return attrsAdded;
+	}
 }
+
+Transaction *
+ClassAdLog::getActiveTransaction()
+{
+	Transaction *ret_value = active_transaction;
+	active_transaction = NULL;	// it is IMPORTANT that we reset active_tranasction to NULL here!
+	return ret_value;
+}
+
+bool
+ClassAdLog::setActiveTransaction(Transaction* & transaction)
+{
+	if ( active_transaction ) {
+		return false;
+	}
+
+	active_transaction = transaction;
+
+	transaction = NULL;		// make certain caller doesn't mess w/ the handle 
+
+	return true;
+}
+
 
 void
 ClassAdLog::LogState(FILE *fp)

@@ -105,6 +105,12 @@ public:
   */
   bool AbortTransaction() { return ClassAdLog::AbortTransaction(); }
 
+  ///
+  Transaction* getActiveTransaction() { return ClassAdLog::getActiveTransaction(); }
+  ///
+  bool setActiveTransaction(Transaction* & transaction) { return ClassAdLog::setActiveTransaction(transaction); }
+
+
   /** Lookup an attribute's value in the current transaction. 
       @param key the key with which the class-ad was inserted into the repository.
       @param name the name of the attribute.
@@ -172,6 +178,8 @@ public:
       @return true on success, false otherwise.
   */
   bool LookupClassAd(const char* key, ClassAd*& Ad) { return (table.lookup(HashKey(key), Ad)==0); }
+
+  bool AddAttrsFromTransaction(const char* key, ClassAd & ad) { return (ClassAdLog::AddAttrsFromTransaction(key,ad)); }
   
   //@}
   //------------------------------------------------------------------------

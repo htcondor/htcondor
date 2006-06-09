@@ -11106,9 +11106,13 @@ abortJobsByConstraint( const char *constraint,
 	job_count = 0;
 	ClassAd *ad = GetNextJobByConstraint(constraint, 1);
 	while ( ad ) {
-			// MATT: What happens if these fail?
-		ad->LookupInteger(ATTR_CLUSTER_ID, jobs[job_count].cluster);
-		ad->LookupInteger(ATTR_PROC_ID, jobs[job_count].proc);
+		if (!ad->LookupInteger(ATTR_CLUSTER_ID, jobs[job_count].cluster) ||
+			!ad->LookupInteger(ATTR_PROC_ID, jobs[job_count].proc)) {
+
+			result = false;
+			job_count = 0;
+			break;
+		}
 
 		dprintf(D_FULLDEBUG, "remove by constrain matched: %d.%d\n",
 				jobs[job_count].cluster, jobs[job_count].proc);

@@ -30,6 +30,7 @@
 #include "HashTable.h"
 #include "directory.h"
 #include "list.h"
+#include "qmgmt.h"
 
 #include "soap_scheddH.h"
 
@@ -97,7 +98,7 @@ class Job
 		   @param clusterId The cluster the Job is in.
 		   @param jobId The Job's id.
 		 */
-	Job(int clusterId, int jobId);
+	Job(PROC_ID id);
 
 		/**
 		   Destruct the Job. This does not abort the job or remove any
@@ -186,10 +187,226 @@ class Job
 	int getClusterID();
 
  protected:
-	int clusterId;
-	int jobId;
+	PROC_ID id;
 	HashTable<MyString, JobFile> declaredFiles;
 	MyString spoolDirectory;
+};
+
+/**
+   The ScheddTransaction is an interface providing operations that are
+   to be performed transactionally within the Schedd. This class works
+   as an abstraction over the normal qmgmt API. It assists in
+   abstracting behavior out of the SOAP interface's implementation and
+   into a form that can be used from Cedar. Construction of a
+   ScheddTransaction should be done from the ScheddTransactionManager
+   (a factory).
+
+   This class does not implement all of the functionality in the qmgmt
+   API, and some calls such as removeJob, which have qmgmt correlaries
+   such as abortJob, behave only on the transaction's memory, not the
+   actual queue. This is because operations in the qmgmt API cannot
+   necessarily be rolled back on failure, such as abortJob (in schedd.C).
+ */
+class ScheddTransaction
+{
+		// Provide the ScheddTransactionManager with access to the
+		// constructor and destructor.
+	friend class ScheddTransactionManager;
+
+public:
+		/**
+		   Begin a new transaction, starting the underlying
+		   transaction. The value returned is 0 on success and non-0
+		   otherwise.
+		 */
+	virtual int begin();
+
+		/**
+		   Abort the transaction. A ScheddTransaction should be
+		   deleted and never used after an abort. Aborting a
+		   transaction cannot fail (should not).
+		 */
+	virtual void abort();
+
+		/**
+		   Commit the transaction, making all operations performed in
+		   the transaction lasting. The value returned is 0 on success
+		   and non-0 otherwise.
+		 */
+	virtual int commit();
+
+		/**
+		   Create a new cluster. The return value is 0 on success and
+		   non-0 otherwise.
+
+		   @param id The new cluster's id, returned.
+		 */
+	virtual int newCluster(int &id);
+
+		/**
+		   Create a new job, must be within the context of an existing
+		   cluster. The return value is 0 on success and non-0
+		   otherwise.
+
+		   @param clusterId The cluster (context) to house the new job
+		   @param id The new job's id, returned
+		   @param errstack A handy CondorError stack
+		 */
+	virtual int newJob(int clusterId, int &id, CondorError &errstack);
+
+ 		/**
+		   Retrieve a job that has previously been created with
+		   newJob. The return value is 0 on success and non-0
+		   otherwise.
+
+		   @param id The id of the job to return
+		   @param job A pointer to the job
+		 */
+	virtual int getJob(PROC_ID id, Job *&job);
+
+		/**
+		   Remove a job from the transaction's memory, this does not
+		   abort the job, for transactional reasons. To actually
+		   remove the job from the queue use abortJob (qmgmt).
+
+		   @param id The id of the job to remove
+		 */
+	virtual int removeJob(PROC_ID id);
+
+		/**
+		   Remove a cluster from the transaction's memory, this does
+		   not abort the cluster's jobs, for transactional reasons. To
+		   actually remove the jobs from the queue use abortJob
+		   (qmgmt). The return value is 0 on success and non-0
+		   otherwise.
+
+		   @param id The id of the cluster to remove
+		 */
+	virtual int removeCluster(int clusterId);
+
+		/**
+		   Query the queue for a job, which is returned in the ad
+		   parameter. The return value is 0 on success and non-0
+		   otherwise.
+
+		   @param id The id of the job to find in the queue
+		   @param ad The job's ClassAd
+		 */
+	int queryJobAd(PROC_ID id, ClassAd *&ad);
+
+		/**
+		   Given a constrain find all jobs that match it in the
+		   queue. The return value is 0 on success and non-0
+		   otherwise.
+
+		   @param constraint The constraint used for matching
+		   @param ads The ClassAds that matched
+		 */
+	int queryJobAds(const char *constraint, List<ClassAd> &ads);
+
+		/**
+		   Get access to the transaction's owner. This call is provide
+		   because ownership is thought to be an important aspect of
+		   security for the transaction. All access control must be
+		   performed by the user of the ScheddTransaction though 8o(
+		 */
+	const char *getOwner();
+
+		// Duration of transaction.
+	int duration;
+
+		// DaemonCore Timer ID for a timer when the transaction expires
+	int trans_timer_id;
+
+		// All the qmgmt layer state
+	QmgmtPeer* qmgmt_state;
+
+protected:
+		/**
+		   Private constructor that makes a copy of the incoming
+		   owner. Construction is performed by the
+		   ScheddTransactionManager.
+
+		   @param owner The transaction's owner
+		*/
+	ScheddTransaction(const char *owner);
+
+	virtual ~ScheddTransaction();
+
+	char *owner;
+	HashTable<PROC_ID, Job *> jobs;
+};
+
+/**
+   The ScheddTransactionManager is a factory for ScheddTransaction
+   objects. It also provides a mapping between an externalizable
+   transaction identifier and ScheddTransaction object.
+ */
+class ScheddTransactionManager
+{
+public:
+	ScheddTransactionManager();
+	~ScheddTransactionManager();
+
+		/**
+		   Create a new ScheddTransaction for the given owner and
+		   return the transaction itself and its id, for later
+		   lookup. The return value is 0 on success and non-0
+		   otherwise.
+
+		   @param owner The recorded owner of the transaction
+		   @param id Returns the transaction's externalizable id
+		   @param transaction Returns the newly created transaction
+		 */
+	int createTransaction(const char *owner,
+						  int &id,
+						  ScheddTransaction *&transaction);
+
+		/**
+		   Destroy a transaction. This does not abort or commit the
+		   transaction. The return value is 0 on success and non-0
+		   otherwise.
+
+		   @param id The id of the transaction to destroy
+		 */
+	int destroyTransaction(int id);
+
+		/**
+		   Lookup a transaction by id. The return value is 0 on
+		   success and non-0 otherwise.
+
+		   @param id The id used for lookup
+		   @param transaction Returned, the transaction with matching id
+		 */
+	int getTransaction(int id, ScheddTransaction *&transaction);
+
+protected:
+	HashTable<int, ScheddTransaction *> transactions;
+};
+
+
+/*****************************************************************************
+	   NullScheddTransaction, used when no ScheddTransaction is available...
+*****************************************************************************/
+
+class NullScheddTransaction: protected ScheddTransaction
+{
+	friend bool stub_prefix(const char*, const soap*, int, int, DCpermission, bool, condor__Transaction*&, condor__Status&, ScheddTransaction*&);
+
+public:
+	virtual int begin();
+	virtual void abort();
+	virtual int commit();
+	virtual int newCluster(int &id);
+	virtual int newJob(int clusterId, int &id, CondorError &errstack);
+	virtual int getJob(PROC_ID id, Job *&job);
+	virtual int removeJob(PROC_ID id);
+	virtual int removeCluster(int clusterId);
+
+protected:
+	NullScheddTransaction(const char *owner);
+
+	virtual ~NullScheddTransaction();
 };
 
 #endif

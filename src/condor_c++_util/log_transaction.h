@@ -67,12 +67,15 @@ private:
 
 class Transaction {
 public:
+	Transaction();
     void Commit(FILE* fp, void *data_structure);
 	void AppendLog(LogRecord *);
 	LogRecord *FirstEntry() { return op_log.FirstEntry(); }
 	LogRecord *NextEntry(LogRecord *ptr) { return op_log.NextEntry(ptr); }
+	bool EmptyTransaction() { return m_EmptyTransaction; }
 private:
 	LogPtrList op_log;
+	bool m_EmptyTransaction;
 };
 
 #endif

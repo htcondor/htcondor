@@ -39,11 +39,11 @@
 #include "schedd_api.h"
 
 
-Job::Job(int clusterId, int jobId):
+
+Job::Job(PROC_ID id):
 	declaredFiles(64, MyStringHash, rejectDuplicateKeys)
 {
-	this->clusterId = clusterId;
-	this->jobId = jobId;
+	this->id = id;
 }
 
 Job::~Job()
@@ -64,7 +64,7 @@ Job::initialize(CondorError &errstack)
 	char * Spool = param("SPOOL");
 	ASSERT(Spool);
 
-	spoolDirectory = gen_ckpt_name(Spool, clusterId, jobId, 0);
+	spoolDirectory = gen_ckpt_name(Spool, id.cluster, id.proc, 0);
 
 	if (Spool) {
 		free(Spool);
@@ -112,8 +112,8 @@ Job::initialize(CondorError &errstack)
 	} else {
 		dprintf(D_FULLDEBUG,
 				"WARNING: Job '%d.%d''s spool '%s' already exists.\n",
-				clusterId,
-				jobId,
+				id.cluster,
+				id.proc,
 				spoolDirectory.GetCStr());
 	}
 
@@ -140,7 +140,7 @@ Job::abort(CondorError &errstack)
 int
 Job::getClusterID()
 {
-	return clusterId;
+	return id.cluster;
 }
 
 JobFile::JobFile()
@@ -276,16 +276,16 @@ Job::submit(const struct condor__ClassAdStruct &jobAd,
 
 		// XXX: This is ugly, and only should happen when spooling,
 		// i.e. not always with cedar.
-	rval = SetAttributeString(clusterId,
-							  jobId,
+	rval = SetAttributeString(id.cluster,
+							  id.proc,
 							  ATTR_JOB_IWD,
 							  spoolDirectory.GetCStr());
 	if (rval < 0) {
 		errstack.pushf("SOAP",
 					   FAIL,
 					   "Failed to set job %d.%d's %s attribute to '%s'.",
-					   clusterId,
-					   jobId,
+					   id.cluster,
+					   id.proc,
 					   ATTR_JOB_IWD,
 					   spoolDirectory.GetCStr());
 
@@ -308,8 +308,8 @@ Job::submit(const struct condor__ClassAdStruct &jobAd,
 		ASSERT(fileList);
 	}
 
-	rval = SetAttributeString(clusterId,
-							  jobId,
+	rval = SetAttributeString(id.cluster,
+							  id.proc,
 							  ATTR_TRANSFER_INPUT_FILES,
 							  fileList);
 
@@ -322,8 +322,8 @@ Job::submit(const struct condor__ClassAdStruct &jobAd,
 		errstack.pushf("SOAP",
 					   FAIL,
 					   "Failed to set job %d.%d's %s attribute.",
-					   clusterId,
-					   jobId,
+					   id.cluster,
+					   id.proc,
 					   ATTR_TRANSFER_INPUT_FILES);
 
 		return rval;
@@ -350,17 +350,17 @@ Job::submit(const struct condor__ClassAdStruct &jobAd,
 
 			found_iwd = found_iwd || !strcmp(name, ATTR_JOB_IWD);
 
-			rval = SetAttributeString(clusterId, jobId, name, value);
+			rval = SetAttributeString(id.cluster, id.proc, name, value);
 		} else {
 				// all other types can be deduced by the ClassAd parser
-			rval = SetAttribute(clusterId,jobId,name,value);
+			rval = SetAttribute(id.cluster, id.proc, name, value);
 		}
 		if ( rval < 0 ) {
 		errstack.pushf("SOAP",
 					   FAIL,
 					   "Failed to set job %d.%d's %s attribute.",
-					   clusterId,
-					   jobId,
+					   id.cluster,
+					   id.proc,
 					   name);
 
 			return rval;
@@ -371,16 +371,16 @@ Job::submit(const struct condor__ClassAdStruct &jobAd,
 	if (!found_iwd) {
 			// We need to make sure the Iwd is rewritten so files
 			// in the spool directory can be found.
-		rval = SetAttributeString(clusterId,
-								  jobId,
+		rval = SetAttributeString(id.cluster,
+								  id.proc,
 								  ATTR_JOB_IWD,
 								  spoolDirectory.GetCStr());
 		if (rval < 0) {
 			errstack.pushf("SOAP",
 						   FAIL,
 						   "Failed to set %d.%d's %s attribute to '%s'.",
-						   clusterId,
-						   jobId,
+						   id.cluster,
+						   id.proc,
 						   ATTR_JOB_IWD,
 						   spoolDirectory.GetCStr());
 
@@ -496,5 +496,257 @@ Job::get_file(const MyString &name,
 		return 1;
 	}
 
+	return 0;
+}
+
+
+ScheddTransactionManager::ScheddTransactionManager():
+	transactions(16, hashFuncInt, rejectDuplicateKeys)
+{
+}
+
+ScheddTransactionManager::~ScheddTransactionManager()
+{
+}
+
+int
+ScheddTransactionManager::createTransaction(const char *owner,
+											int &id,
+											ScheddTransaction *&transaction)
+{
+	static int count = 0;
+
+	transaction = new ScheddTransaction(owner);
+
+		// This ID should allow for 256 transactions per second and
+		// only repeat every 2^24 seconds (~= 1/2 year).
+	id = time(NULL);
+	id = (id << 8) + count;
+	count = (count + 1) % 256;
+
+	return transactions.insert(id, transaction);
+}
+
+int
+ScheddTransactionManager::getTransaction(int id, ScheddTransaction *&transaction)
+{
+	transaction = NULL;
+	return transactions.lookup(id, transaction);
+}
+
+int
+ScheddTransactionManager::destroyTransaction(int id)
+{
+	ScheddTransaction *transaction;
+	if (-1 == this->getTransaction(id, transaction)) {
+   		return -1; // Unknown id
+	} else {
+		if (-1 == this->transactions.remove(id)) {
+			return -2; // Remove failed
+		} else {
+			delete transaction;
+
+			return 0;
+		}
+	}
+
+	return -3; // New error code from lookup or remove...
+}
+
+
+ScheddTransaction::ScheddTransaction(const char *owner):
+	jobs(32, hashFuncPROC_ID, rejectDuplicateKeys)
+{
+	this->owner = owner ? strdup(owner) : NULL;
+	duration = 0;
+	trans_timer_id = -1;
+	qmgmt_state = NULL;
+}
+
+ScheddTransaction::~ScheddTransaction()
+{
+	if (this->owner) {
+		free(this->owner);
+		this->owner = NULL;
+	}
+	if (qmgmt_state) {
+		delete qmgmt_state;
+		qmgmt_state = NULL;
+	}
+	if ( trans_timer_id != -1 ) {
+		daemonCore->Cancel_Timer(trans_timer_id);
+		trans_timer_id = -1;
+	}
+}
+
+int
+ScheddTransaction::begin()
+{
+		// XXX: This will need to return a transaction, which will be recorded
+	BeginTransaction();
+	
+	return 0;
+}
+
+void
+ScheddTransaction::abort()
+{
+		// XXX: This needs to take a transaction
+	AbortTransactionAndRecomputeClusters();
+}
+
+int
+ScheddTransaction::commit()
+{
+		// XXX: This will need to take a transaction
+	CommitTransaction();
+
+	return 0;
+}
+
+int
+ScheddTransaction::newCluster(int &id)
+{
+		// XXX: Need a transaction...
+	id = NewCluster();
+
+	return -1 == id ? -1 : 0;
+}
+
+int
+ScheddTransaction::newJob(int clusterId, int &id, CondorError &errstack)
+{
+	id = NewProc(clusterId);
+	if (-1 == id) {
+		return -1;
+	} else {
+			// Create a Job for this new job.
+		PROC_ID pid; pid.cluster = clusterId; pid.proc = id;
+		Job *job = new Job(pid);
+		ASSERT(job);
+		CondorError errstack;
+		if (job->initialize(errstack)) {
+			return -2; // XXX: Cleanup? How do you undo NewProc?
+		} else {
+			if (this->jobs.insert(pid, job)) {
+				return -3; // XXX: Cleanup? How do you undo NewProc?
+			} else {
+				return 0;
+			}
+		}
+	}
+}
+
+int
+ScheddTransaction::getJob(PROC_ID id, Job *&job)
+{
+	return jobs.lookup(id, job);
+}
+
+int
+ScheddTransaction::removeJob(PROC_ID id)
+{
+	return jobs.remove(id);
+}
+
+int
+ScheddTransaction::removeCluster(int clusterId)
+{
+	PROC_ID currentKey;
+	Job *job;
+	jobs.startIterations();
+	while (jobs.iterate(currentKey, job)) {
+		if (job->getClusterID() == clusterId) {
+			if (jobs.remove(currentKey)) {
+					// XXX: This is going to leave some jobs around, bad...
+				return -1;
+			}
+		}
+	}
+
+	return 0;
+}
+
+int
+ScheddTransaction::queryJobAds(const char *constraint, List<ClassAd> &ads)
+{
+		// XXX: Do this in a transaction (for ACID reasons)
+	ClassAd *ad = GetNextJobByConstraint(constraint, 1);
+	while (ad) {
+		ads.Append(ad);
+		ad = GetNextJobByConstraint(constraint, 0);
+	}
+
+	return 0;
+}
+
+int
+ScheddTransaction::queryJobAd(PROC_ID id, ClassAd *&ad)
+{
+	ad = GetJobAd(id.cluster, id.proc);
+
+	return 0;
+}
+
+
+const char *
+ScheddTransaction::getOwner()
+{
+	return this->owner;
+}
+
+/*****************************************************************************
+	   NullScheddTransaction, used when no ScheddTransaction is available...
+*****************************************************************************/
+
+NullScheddTransaction::NullScheddTransaction(const char *owner):
+	ScheddTransaction(NULL)
+{
+}
+
+NullScheddTransaction::~NullScheddTransaction() { }
+
+int
+NullScheddTransaction::begin()
+{
+	return -1;
+}
+
+void
+NullScheddTransaction::abort() { }
+
+int
+NullScheddTransaction::commit()
+{
+	return -1;
+}
+
+int
+NullScheddTransaction::newCluster(int &id)
+{
+	return -2;
+}
+
+int
+NullScheddTransaction::newJob(int clusterId, int &id, CondorError &errstack)
+{
+	return -4;
+}
+
+int
+NullScheddTransaction::getJob(PROC_ID id, Job *&job)
+{
+	return 0;
+}
+
+int
+NullScheddTransaction::removeJob(PROC_ID id)
+{
+	return 0;
+}
+
+int
+NullScheddTransaction::removeCluster(int clusterId)
+{
 	return 0;
 }

@@ -108,6 +108,12 @@ LogPtrList::NextEntry(LogRecord *prev)
 	}
 }
 
+
+Transaction::Transaction()
+{
+	m_EmptyTransaction = true;
+}
+
 void
 Transaction::Commit(FILE* fp, void *data_structure)
 {
@@ -140,4 +146,5 @@ void
 Transaction::AppendLog(LogRecord *log)
 {
 	op_log.NewEntry(log);
+	m_EmptyTransaction = false;
 }

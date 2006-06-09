@@ -38,6 +38,10 @@ typedef int (*scan_func)(ClassAd *ad);
 
 #define SHADOW_QMGMT_TIMEOUT 300
 
+// QmgmtPeer* getQmgmtConnectionInfo();
+// bool setQmgmtConnectionInfo(QmgmtPeer *peer);
+void unsetQmgmtConnection();
+
 
 #if defined(__cplusplus)
 extern "C" {
@@ -245,6 +249,7 @@ void InitJobQueue(const char *job_queue_name,int max_historical_logs);
 void CleanJobQueue();
 bool setQSock( ReliSock* rsock );
 void unsetQSock();
+
 
 int rusage_to_float(struct rusage, float *, float *);
 int float_to_rusage(float, float, struct rusage *);

@@ -81,3 +81,7 @@ template class Queue<PROC_ID>;
 // <HashKey, ClassAd*> here, but those are already instantiated in
 // classad_log.C in the c++_util_lib (not in c++_util_instantiate.C
 // where you'd expect to find it *sigh*)
+
+// schedd_api
+template class HashTable<int, ScheddTransaction*>;
+template class HashTable<PROC_ID, Job*>;
