@@ -1438,19 +1438,12 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 	mib[2] = KERN_PROC_PID;
 	mib[3] = pid;
 	if ( sysctl( mib, 4, NULL, &bufSize, NULL, 0 ) < 0 ) {
-		//
-		// No such process
-		//
 		if (errno == ESRCH) {
+			// No such process
 			status = PROCAPI_NOPID;
-		//
-		// Operation not permitted
-		//
 		} else if (errno == EPERM) {
+			// Operation not permitted
 			status = PROCAPI_PERM;
-		//
-		// Unknown
-		//
 		} else {
 			status = PROCAPI_UNSPECIFIED;
 		}
@@ -1466,19 +1459,12 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 	}
 
 	if (sysctl(mib, 4, kp, &bufSize, NULL, 0) < 0) {
-		//
-		// No such process
-		//
 		if (errno == ESRCH) {
+			// No such process
 			status = PROCAPI_NOPID;
-		//
-		// Operation not permitted
-		//
 		} else if (errno == EPERM) {
+			// Operation not permitted
 			status = PROCAPI_PERM;
-		//
-		// Unknown
-		//
 		} else {
 			status = PROCAPI_UNSPECIFIED;
 		}
@@ -1490,9 +1476,7 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 	}
 
 #if defined(CONDOR_FREEBSD4)
-		//
 		// Bad! We're looking for /proc!
-		//
 	FILE* fp;
 	char path[MAXPATHLEN];
 	struct procstat prs;
