@@ -2428,7 +2428,9 @@ public:
 					m_startdName.Value(), m_startdAddr.Value()); 
 
 		if(!m_nonblocking) {
-			return m_startd.startCommand(MATCH_INFO,Sock::safe_sock,m_timeout);
+			bool result =  m_startd.startCommand(MATCH_INFO,Sock::safe_sock,m_timeout);
+			delete this;
+			return result;
 		}
 
 		m_startd.startCommand_nonblocking (
