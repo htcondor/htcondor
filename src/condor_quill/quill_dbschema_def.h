@@ -28,6 +28,12 @@
 //this includes the 2 views
 #define SCHEMA_SYS_TABLE_NUM 	9
 
+#define SCHEMA_VERSION_STR "SELECT major, minor, back_to_major, back_to_minor FROM quill_schema_version LIMIT 1;"
+
+#define SCHEMA_VERSION_COUNT 	1
+
+#define SCHEMA_CREATE_SCHEMA_VERSION_TABLE_STR "CREATE TABLE quill_schema_version (major int, minor int, back_to_major int, back_to_minor int); INSERT INTO quill_schema_version (major, minor, back_to_major, back_to_minor) VALUES (1,0,1,0);"
+
 /* 
 	Definition of Delete String 
 

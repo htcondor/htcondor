@@ -2294,7 +2294,6 @@ JobQueueDBManager::checkSchema()
 
 	if (ret_st == SUCCESS && num_result == SCHEMA_SYS_TABLE_NUM) {
 		dprintf(D_ALWAYS, "Schema Check OK!\n");
-		disconnectDB(NOT_IN_XACT);
 	}
 	
 		// Schema is not defined in DB
@@ -2330,6 +2329,7 @@ JobQueueDBManager::checkSchema()
 			return FAILURE;
 		}
 
+
 		strcpy(sql_str, SCHEMA_CREATE_JOBQUEUEPOLLINGINFO_TABLE_STR);
 		ret_st = jqDatabase->execCommand(sql_str);
 		if(ret_st == FAILURE) {
@@ -2337,7 +2337,18 @@ JobQueueDBManager::checkSchema()
 			return FAILURE;
 		}
 
-		disconnectDB(COMMIT_XACT);		
+		strcpy(sql_str, SCHEMA_CREATE_SCHEMA_VERSION_TABLE_STR);
+		ret_st = jqDatabase->execCommand(sql_str);
+		if(ret_st == FAILURE) {
+			disconnectDB(ABORT_XACT);
+			return FAILURE;
+		}
+
+		if (jqDatabase->commitTransaction() == FAILURE) {			
+			// TODO: did this just leak transactionResults?
+			disconnectDB(ABORT_XACT);
+			return FAILURE;			   				 
+		}
 	}
 	else { // Unknown error
 		dprintf(D_ALWAYS, "Schema Check Unknown Error!\n");
@@ -2346,6 +2357,38 @@ JobQueueDBManager::checkSchema()
 		return FAILURE;
 	}
 
+	jqDatabase->releaseQueryResult();
+
+	strcpy(sql_str, SCHEMA_VERSION_STR); 
+		// SCHEMA_VERSION_STR is defined in quill_dbschema_def.h
+
+	ret_st = jqDatabase->execQuery(sql_str, num_result);
+
+	if (ret_st == SUCCESS && num_result == SCHEMA_VERSION_COUNT) {
+		dprintf(D_ALWAYS, "Schema Version Check OK!\n");
+		// this would be a good place to check if the version matchedup
+		// instead of just seeing if we got something back
+	} else {
+		// create a schema version table. this is cut and paste from
+		// above, so revamp this once it's working
+		if (jqDatabase->beginTransaction() == FAILURE) {			
+			return FAILURE;			   				 
+		}
+		strcpy(sql_str, SCHEMA_CREATE_SCHEMA_VERSION_TABLE_STR);
+		ret_st = jqDatabase->execCommand(sql_str);
+		if(ret_st == FAILURE) {
+			disconnectDB(ABORT_XACT);
+			return FAILURE;
+		}
+
+		if (jqDatabase->commitTransaction() == FAILURE) {			
+			// TODO: did this just leak transactionResults?
+			disconnectDB(ABORT_XACT);
+			return FAILURE;			   				 
+		}
+
+	}
+	disconnectDB(NOT_IN_XACT);
 	jqDatabase->releaseQueryResult();
 	return SUCCESS;
 }
