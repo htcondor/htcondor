@@ -625,17 +625,14 @@ void
 ParallelShadow::replaceNode ( ClassAd *ad, int nodenum ) {
 
 	ExprTree *tree = NULL, *rhs = NULL, *lhs = NULL;
-	char rhstr[ATTRLIST_MAX_EXPRESSION];
-	char lhstr[128];
-	char final[ATTRLIST_MAX_EXPRESSION];
 	char node[9];
 
 	sprintf( node, "%d", nodenum );
 
 	ad->ResetExpr();
 	while( (tree = ad->NextExpr()) ) {
-		rhstr[0] = '\0';
-		lhstr[0] = '\0';
+		MyString rhstr;
+		MyString lhstr;
 		if( (lhs = tree->LArg()) ) {
 			lhs->PrintToStr (lhstr);
 		}
@@ -650,10 +647,9 @@ ParallelShadow::replaceNode ( ClassAd *ad, int nodenum ) {
 		MyString strRh(rhstr);
 		if (strRh.replaceString("#pArAlLeLnOdE#", node))
 		{
-			sprintf( final, "%s = %s", lhstr, strRh.Value());
-			ad->InsertOrUpdate( final );
-			dprintf( D_FULLDEBUG, "Replaced $(NODE), now using: %s\n", 
-					 final );
+			ad->AssignExpr( lhstr.Value(), strRh.Value() );
+			dprintf( D_FULLDEBUG, "Replaced $(NODE), now using: %s = %s\n", 
+					 lhstr.Value(), strRh.Value() );
 		}
 	}	
 }
