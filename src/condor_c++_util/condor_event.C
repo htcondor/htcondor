@@ -181,8 +181,9 @@ instantiateEvent (ULogEventNumber event)
 
 	default:
 		dprintf( D_ALWAYS, "Invalid ULogEventNumber: %d\n", event );
-        EXCEPT( "Invalid ULogEventNumber" );
-
+		// Return NULL/0 here instead of EXCEPTing to fix Gnats PR 706.
+		// wenger 2006-06-08.
+		return 0;
 	}
 
     return 0;
