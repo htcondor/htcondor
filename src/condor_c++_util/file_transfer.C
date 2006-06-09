@@ -1570,17 +1570,17 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 
 
 	if ( !final_transfer && IsServer() ) {
-		char buf[ATTRLIST_MAX_EXPRESSION];
+		MyString buf;
 		int fd;
 		// we just stashed all the files in the TmpSpoolSpace.
 		// write out the commit file.
 
-		sprintf(buf,"%s%c%s",TmpSpoolSpace,DIR_DELIM_CHAR,COMMIT_FILENAME);
+		buf.sprintf("%s%c%s",TmpSpoolSpace,DIR_DELIM_CHAR,COMMIT_FILENAME);
 #if defined(WIN32)
-		if ((fd = ::open(buf, O_WRONLY | O_CREAT | O_TRUNC | 
+		if ((fd = ::open(buf.Value(), O_WRONLY | O_CREAT | O_TRUNC | 
 			_O_BINARY | _O_SEQUENTIAL, 0644)) < 0)
 #else
-		if ((fd = ::open(buf, O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0)
+		if ((fd = ::open(buf.Value(), O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0)
 #endif
 		{
 			dprintf(D_ALWAYS, 
@@ -1588,9 +1588,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 			return_and_resetpriv( -1 );
 		}
 
-		memset(buf,0,sizeof(buf));
 		// copy in list of files to remove here
-		::write(fd,buf,1+strlen(buf));
 		::close(fd);
 
 		// Now actually perform the commit.
