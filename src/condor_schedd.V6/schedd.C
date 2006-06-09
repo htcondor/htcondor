@@ -75,6 +75,7 @@
 #include "misc_utils.h"  // for startdClaimFile()
 //#include "condor_crontab.h"
 #include "condor_netdb.h"
+#include "fs_util.h"
 
 
 #define DEFAULT_SHADOW_SIZE 125
@@ -2364,19 +2365,6 @@ jobIsFinished( int cluster, int proc, void* )
 		// finally exited.  this is where we should do any clean-up we
 		// want now that the job is never going to leave this state...
 
-		/*
-		  make sure we can switch uids.  if not, there's nothing to
-		  do, so we should exit right away.
-
-		  WARNING: if we ever add anything to this function that
-		  doesn't require root/admin privledges, we'll also need to
-		  change jobCleanupNeedsThread()!
-		*/
-	if( ! can_switch_ids() ) {
-		return 0;
-	}
-
-
 	ASSERT( cluster > 0 );
 	ASSERT( proc >= 0 );
 
@@ -2392,6 +2380,64 @@ jobIsFinished( int cluster, int proc, void* )
 		dprintf( D_FULLDEBUG, 
 				 "jobIsFinished(): %d.%d already left job queue\n",
 				 cluster, proc );
+		return 0;
+	}
+
+#ifndef WIN32
+		/* For jobs whose Iwd is on NFS, create and unlink a file in the
+		   Iwd. This should force the NFS client to sync with the NFS
+		   server and see any files in the directory that were written
+		   on a different machine.
+		*/
+	MyString iwd;
+	MyString owner;
+	BOOLEAN is_nfs;
+
+	if ( job_ad->LookupString( ATTR_OWNER, owner ) &&
+		 job_ad->LookupString( ATTR_JOB_IWD, iwd ) &&
+		 fs_detect_nfs( iwd.Value(), &is_nfs ) == 0 && is_nfs ) {
+
+		priv_state priv;
+
+		dprintf( D_FULLDEBUG, "(%d.%d) Forcing NFS sync of Iwd\n", cluster,
+				 proc );
+
+			// We're not Windows, so we don't need the NT Domain
+		if ( !init_user_ids( owner.Value(), NULL ) ) {
+			dprintf( D_ALWAYS, "init_user_ids() failed for user %s!\n",
+					 owner.Value() );
+		} else {
+			int sync_fd;
+			MyString filename_template;
+			char *sync_filename;
+
+			priv = set_user_priv();
+
+			filename_template.sprintf( "%s/.condor_nfs_sync_XXXXXX",
+									   iwd.Value() );
+			sync_filename = strdup( filename_template.Value() );
+			sync_fd = mkstemp( sync_filename );
+			if ( sync_fd >= 0 ) {
+				close( sync_fd );
+				unlink( sync_filename );
+			}
+
+			free( sync_filename );
+
+			set_priv( priv );
+		}
+	}
+#endif /* WIN32 */
+
+		/*
+		  make sure we can switch uids.  if not, there's nothing to
+		  do, so we should exit right away.
+
+		  WARNING: if we ever add anything to this function that
+		  doesn't require root/admin privledges, we'll also need to
+		  change jobCleanupNeedsThread()!
+		*/
+	if( ! can_switch_ids() ) {
 		return 0;
 	}
 
