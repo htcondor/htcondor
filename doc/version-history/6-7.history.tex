@@ -224,6 +224,11 @@ probably existed for a long time, but was just recently discovered.
 after \MacroNI{GRACEFUL\_SHUTDOWN\_TIMEOUT}, which would then cause jobs
 to be preempted.
 
+% Gnats PR 705
+\item If \Attr{PeriodicHold} or \Attr{PeriodicRemove} triggered for a
+held or idle job, the hold or abort event would not be written to the user
+log if XML logging was enabled.
+
 \item Vanilla universe jobs were failing to run if the executable was specified
 as a relative path and \Attr{transfer\_executable} was set to false.
 
