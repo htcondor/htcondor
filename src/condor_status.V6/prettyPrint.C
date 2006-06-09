@@ -641,7 +641,7 @@ void
 printAnyNormal(ClassAd *ad)
 {
 	static bool first = true;
-	char name[ATTRLIST_MAX_EXPRESSION];
+	char *name;
 	const char *my_type, *target_type;
 
 	if (ad)
@@ -651,7 +651,9 @@ printAnyNormal(ClassAd *ad)
 			printf ("\n%-20.20s %-20.20s %-30.30s\n\n", ATTR_MY_TYPE, ATTR_TARGET_TYPE, ATTR_NAME );
 			first = false;
 		}
-		if(!ad->LookupString(ATTR_NAME,name)) {
+		name = 0;
+		if(!ad->LookupString(ATTR_NAME,&name)) {
+			name = (char *) malloc(strlen("[???]") + 1);
 			strcpy(name,"[???]");
 		}
 
@@ -662,6 +664,7 @@ printAnyNormal(ClassAd *ad)
 		if(!target_type[0]) target_type = "None";
 
 		printf("%-20.20s %-20.20s %-30.30s\n",my_type,target_type,name);
+		free(name);
 	}
 	pm.display (stdout, ad);
 }

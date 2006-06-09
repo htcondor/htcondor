@@ -210,13 +210,16 @@ int AutoCluster::getAutoClusterid( ClassAd *job )
 		// summarize job into a string "signature"
 		// first put significant attrs from target into the signature
 	MyString signature;
-	char buf[ATTRLIST_MAX_EXPRESSION];
+	char *buf;
 	significant_attrs->rewind();
 	const char* next_attr = NULL;
 	while ( (next_attr=significant_attrs->next()) != NULL ) {
-		buf[0] = '\0';
-		job->sPrintExpr(buf,sizeof(buf),next_attr);
-		signature += buf;
+		buf = NULL;
+		buf = job->sPrintExpr(NULL,0,next_attr);
+		if (buf) {
+			signature += buf;
+			free(buf);
+		}
 	}
 		// now put significant attrs from self into the signature.
 		// note: only do this if signficant_attributes is not explicitly
@@ -237,9 +240,12 @@ int AutoCluster::getAutoClusterid( ClassAd *job )
 				internal_refs.deleteCurrent();
 				continue;
 			}
-			buf[0] = '\0';
-			job->sPrintExpr(buf,sizeof(buf),next_attr);
-			signature += buf;
+			buf = NULL;
+			buf = job->sPrintExpr(NULL, 0,next_attr);
+			if (buf) {
+				signature += buf;
+				free(buf);
+			}
 		}
 	}
 
