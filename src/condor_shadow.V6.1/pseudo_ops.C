@@ -204,7 +204,7 @@ the file from.  For example, joe/data might become buffer:remote:/usr/joe/data
 
 int pseudo_get_file_info_new( const char *logical_name, char *actual_url )
 {
-	char	remap_list[ATTRLIST_MAX_EXPRESSION];
+	MyString remap_list;
 	char	split_dir[_POSIX_PATH_MAX];
 	char	split_file[_POSIX_PATH_MAX];
 	char	full_path[_POSIX_PATH_MAX];
@@ -222,9 +222,9 @@ int pseudo_get_file_info_new( const char *logical_name, char *actual_url )
 	/* Any name comparisons must check the logical name, the simple name, and the full path */
 
 	if(Shadow->getJobAd()->LookupString(ATTR_FILE_REMAPS,remap_list) &&
-	  (filename_remap_find( remap_list, (char*) logical_name, remap ) ||
-	   filename_remap_find( remap_list, split_file, remap ) ||
-	   filename_remap_find( remap_list, full_path, remap ))) {
+	  (filename_remap_find( remap_list.Value(), (char*) logical_name, remap ) ||
+	   filename_remap_find( remap_list.Value(), split_file, remap ) ||
+	   filename_remap_find( remap_list.Value(), full_path, remap ))) {
 
 		dprintf(D_SYSCALLS,"\tremapped to: %s\n",remap);
 
@@ -294,8 +294,8 @@ int pseudo_get_file_info_new( const char *logical_name, char *actual_url )
 
 static void append_buffer_info( char *url, char *method, char *path )
 {
-	char buffer_list[ATTRLIST_MAX_EXPRESSION];
-	char buffer_string[ATTRLIST_MAX_EXPRESSION];
+	MyString buffer_list;
+	char buffer_string[_POSIX_PATH_MAX*3+1];
 	char dir[_POSIX_PATH_MAX];
 	char file[_POSIX_PATH_MAX];
 	int s,bs,ps;
@@ -313,8 +313,8 @@ static void append_buffer_info( char *url, char *method, char *path )
 	/* These lines have the same syntax as a remap list */
 
 	if(Shadow->getJobAd()->LookupString(ATTR_BUFFER_FILES,buffer_list)) {
-		if( filename_remap_find(buffer_list,path,buffer_string) ||
-		    filename_remap_find(buffer_list,file,buffer_string) ) {
+		if( filename_remap_find(buffer_list.Value(),path,buffer_string) ||
+		    filename_remap_find(buffer_list.Value(),file,buffer_string) ) {
 
 			/* If the file is merely mentioned, turn on the default buffer */
 			strcat(url,"buffer:");
@@ -341,14 +341,13 @@ static int attr_list_has_file( const char *attr, const char *path )
 {
 	char dir[_POSIX_PATH_MAX];
 	char file[_POSIX_PATH_MAX];
-	char str[ATTRLIST_MAX_EXPRESSION];
+	MyString str;
 	StringList *list=0;
 
 	filename_split( path, dir, file );
 
-	str[0] = 0;
 	Shadow->getJobAd()->LookupString(attr,str);
-	list = new StringList(str);
+	list = new StringList(str.Value());
 
 	if( list->contains_withwildcard(path) || list->contains_withwildcard(file) ) {
 		delete list;
@@ -697,8 +696,8 @@ pseudo_set_job_attr( const char *name, const char *expr )
 int
 pseudo_constrain( const char *expr )
 {
-	char reqs[ATTRLIST_MAX_EXPRESSION];
-	char newreqs[ATTRLIST_MAX_EXPRESSION];
+	MyString reqs;
+	MyString newreqs;
 
 	dprintf(D_SYSCALLS,"pseudo_constrain(%s)\n",expr);
 	dprintf(D_SYSCALLS,"\tchanging AgentRequirements to %s\n",expr);
@@ -706,13 +705,13 @@ pseudo_constrain( const char *expr )
 	if(pseudo_set_job_attr("AgentRequirements",expr)!=0) return -1;
 	if(pseudo_get_job_attr("Requirements",reqs)!=0) return -1;
 
-	if(strstr(reqs,"AgentRequirements")) {
+	if(strstr(reqs.Value(),"AgentRequirements")) {
 		dprintf(D_SYSCALLS,"\tRequirements already refers to AgentRequirements\n");
 		return 0;
 	} else {
-		sprintf(newreqs,"(%s) && AgentRequirements",reqs);
-		dprintf(D_SYSCALLS,"\tchanging Requirements to %s\n",newreqs);
-		return pseudo_set_job_attr("Requirements",newreqs);
+		newreqs.sprintf("(%s) && AgentRequirements",reqs.Value());
+		dprintf(D_SYSCALLS,"\tchanging Requirements to %s\n",newreqs.Value());
+		return pseudo_set_job_attr("Requirements",newreqs.Value());
 	}
 }
 
