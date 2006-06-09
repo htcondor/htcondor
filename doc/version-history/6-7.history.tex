@@ -124,6 +124,10 @@ configuration settings:
 \Macro{NONBLOCKING\_COLLECTOR\_UPDATE} = False \\
 \Macro{NEGOTIATOR\_USE\_NONBLOCKING\_STARTD\_CONTACT} = False
 
+\item \Condor{quill} now includes an additional ``schema version'' table.
+If the database was created prior to 6.7.20, the new table is automatically
+added by the 6.7.20 Quill daemon.
+
 % Checking this in commented pending testing on a non-English system...
 %
 %\item The installer on Windows has been modified to work on
