@@ -96,6 +96,12 @@ specific hold states.
 \item \Condor{submit} will now issue a warning if the user / job log
 is on an NFS mounted file system.
 
+% Gnats PR 79
+\item When a job terminates or is removed and its working directory is
+on an NFS mounted file system, the \condor{schedd} creates and removes a
+file in the working directory to force the NFS client to sync with the
+NFS server and see any files written by the job.
+
 \item Non-blocking connect operations are now used in two cases:
 sending ClassAd updates from Condor Daemons to the collector and
 sending match information from the negotiator to the startd.  Both of
