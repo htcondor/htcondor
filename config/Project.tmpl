@@ -414,7 +414,7 @@ NOTE: we also need the same crap for libpcre.a...
 #endif
 
 #if HAS_GLOBUS
-    GSOAP_CFLAGS = -DWITH_OPENSSL -DCOMPILE_SOAP_SSL
+    GSOAP_FLAGS = -DWITH_OPENSSL -DCOMPILE_SOAP_SSL
 #endif
 
 /* Collect all the security-related variables into a single variable */
@@ -482,7 +482,7 @@ GPP_VERS_FLAGS =
 #endif
 GPP_SHARED_FLAGS = -fno-implicit-templates $(GPP_VERS_FLAGS)
 
-STD_C_FLAGS = $(VENDOR_C_FLAGS) $(DEBUG_FLAG) $(CC_PIC_FLAG) PlatformFlags PlatformGccFlags $(CCOMPILER_ID) $(PCRE_FLAGS) $(COREDUMPER_FLAGS)
+STD_C_FLAGS = $(VENDOR_C_FLAGS) $(DEBUG_FLAG) $(CC_PIC_FLAG) PlatformFlags PlatformGccFlags $(CCOMPILER_ID) $(GSOAP_FLAGS) $(PCRE_FLAGS) $(COREDUMPER_FLAGS)
 STD_C_PLUS_FLAGS = $(STD_C_FLAGS) $(GPP_SHARED_FLAGS) PlatformGppFlags
 /* We basically want INST_C_PLUS_FLAGS to be equal to STD_C_PLUS_FLAGS,
 	but make sure there isn't -fno-implicit-templates in it
