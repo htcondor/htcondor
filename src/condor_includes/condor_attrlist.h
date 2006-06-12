@@ -38,7 +38,7 @@
 #include "stream.h"
 #include "list.h"
 
-#define		ATTRLIST_MAX_EXPRESSION		(1024*200)
+#define		ATTRLIST_MAX_EXPRESSION		10240
 
 enum							// various AttrLists
 {
