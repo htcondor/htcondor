@@ -3675,6 +3675,9 @@ ProcAPI::getPidFamilyByLogin( const char *searchLogin, pid_t *pidFamily )
 
 	buildProcInfoList();  // HPUX has its own version of this, too.
 
+	// buildProcInfoList() just changed allProcInfos pointer, so update cur.
+	cur = allProcInfos;
+
 	while ( cur != NULL ) {
 		if ( cur->owner == searchUid ) {
 			dprintf(D_PROCFAMILY,
