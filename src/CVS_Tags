@@ -1,3 +1,6 @@
+06/12/06 V6_7_20-{root,branch}
+  The branch for V6_7_20 off of V6_7-branch.
+
 06/09/06 V6_7-storkd-rewrite-{root,branch}
   Rewrite of Stork daemon, from research-quality code to
   production quality.  As of 06/09/06, this effort is still
