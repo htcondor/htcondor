@@ -969,7 +969,7 @@ Directory::Next()
 	}
 	// Unix
 	struct dirent *dirent;
-	while( ! done && (dirent = readdir(dirp)) ) {
+	while( ! done && dirp && (dirent = readdir(dirp)) ) {
 		if( strcmp(".",dirent->d_name) == MATCH ) {
 			continue;
 		}
