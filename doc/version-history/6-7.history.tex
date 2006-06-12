@@ -139,6 +139,14 @@ added by the 6.7.20 Quill daemon.
 
 \begin{itemize}
 
+\item Fixed a bug introduced in 6.7.19 which prevented MPI
+jobs from running in some situations.
+
+\item Fixed a bug in the Dedicated scheduler where parallel jobs
+with job leases would get restarted from scratch if the collector
+had crashed when the schedd restarted.
+
+
 \item Fixed a rare bug where after a job has been marked terminated,
 it could be run again and another execute event could happen after the
 terminate event.  This fix is applicable to the vanilla, standard,
