@@ -521,8 +521,7 @@ JobQueueCollection::makeHistoryAdSqlStr(char* cid, char* pid, ClassAd* ad,
 					char*& historyad_hor_str, char*& historyad_ver_str)
 {
 	char* 	val = NULL;
-	//char	tmp_line_str1[MAX_FIXED_SQL_STR_LENGTH];
-	char	tmp_line_str1[65536]; // FIXME !
+	char	tmp_line_str1[MAX_FIXED_SQL_STR_LENGTH];
 	char    tmp_line_str2[MAX_FIXED_SQL_STR_LENGTH];
 
 	AssignOp*	expr;		// For Each Attribute in ClassAd
@@ -614,18 +613,22 @@ JobQueueCollection::makeHistoryAdSqlStr(char* cid, char* pid, ClassAd* ad,
 	    strcat(historyad_hor_str, tmp_line_str2);		
 	  }
 	  else {
-	    sprintf(tmp_line_str1, 
+		char *b = (char *) malloc(MAX_FIXED_SQL_STR_LENGTH + 
+				2 * strlen(nameExpr->Name()) +
+				strlen(val));
+	    sprintf(b, 
 				"INSERT INTO History_Vertical(cid,pid,attr,val) "
 				"SELECT %s,%s,'%s','%s' WHERE NOT EXISTS(SELECT cid,pid FROM "
 				"History_Vertical where cid=%s and pid=%s and attr='%s');",  
 				cid, pid, nameExpr->Name(), val,cid,pid,nameExpr->Name());
 	    historyad_ver_str = (char*)realloc(historyad_ver_str, 
 										   strlen(historyad_ver_str) + 
-										   strlen(tmp_line_str1) + 1);
+										   strlen(b) + 1);
 		if(!historyad_ver_str) {
 			EXCEPT("Call to realloc failed\n");
 		}
-	    strcat(historyad_ver_str, tmp_line_str1);		
+	    strcat(historyad_ver_str, b);		
+		free(b);
 	  }
 	  
 	  free(val);
