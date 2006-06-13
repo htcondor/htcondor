@@ -104,7 +104,7 @@ int main(int argc, char *argv[]) {
 			// we first try POOL_PASSWORD_DOMAIN, then UID_DOMAIN
 		pool_password_arg = true;
 		char *domain;
-		if ((domain = param("POOL_PASSWORD_DOMAIN")) == NULL) {
+		if ((domain = param("SEC_PASSWORD_DOMAIN")) == NULL) {
 			if ((domain = param("UID_DOMAIN")) == NULL) {
 				fprintf(stderr, "ERROR: could not domain for pool password\n");
 				goto cleanup;

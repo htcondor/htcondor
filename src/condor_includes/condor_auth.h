@@ -134,6 +134,8 @@ class Condor_Auth_Base {
     // RETURNS: mode -- see the enumeration above
     //------------------------------------------
 
+    const char * getAuthenticatedName() const;
+
     const char * getRemoteFQU();
     //------------------------------------------
     // PURPOSE: get the user in fully qualifed form
@@ -184,6 +186,13 @@ class Condor_Auth_Base {
     // RETUNRS: None (this)
     //------------------------------------------
     
+    Condor_Auth_Base& setRemoteDomain(const char * domain);
+    //------------------------------------------
+    // PURPOSE: Set the remote domain
+    // REQUIRE: Name of the remote domain
+    // RETUNRS: None (this)
+    //------------------------------------------
+
  protected:
 
     Condor_Auth_Base& setRemoteHost(const char * hostAddr);
@@ -193,12 +202,7 @@ class Condor_Auth_Base {
     // RETUNRS: None (this)
     //------------------------------------------
 
-    Condor_Auth_Base& setRemoteDomain(const char * domain);
-    //------------------------------------------
-    // PURPOSE: Set the remote domain
-    // REQUIRE: Name of the remote domain
-    // RETUNRS: None (this)
-    //------------------------------------------
+    Condor_Auth_Base& setAuthenticatedName(const char * auth_name);
 
     Condor_Auth_Base& setFullyQualifiedUser(const char * fqu);
 
@@ -229,6 +233,7 @@ class Condor_Auth_Base {
     char *          remoteHost_;     // Remote host
     char *          localDomain_;    // Local user domain
     char *          fqu_;            // Fully qualified
+    char *          authenticatedName_;   // Different for each method
 };
 
 #endif

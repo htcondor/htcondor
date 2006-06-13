@@ -66,9 +66,9 @@ char* getStoredCredential(const char *username, const char *domain)
 		return NULL;
 	} 
 
-	char *filename = param("POOL_PASSWORD_FILE");
+	char *filename = param("SEC_PASSWORD_FILE");
 	if (filename == NULL) {
-		dprintf(D_ALWAYS, "error fetching pool password; POOL_PASSWORD_FILE not defined\n");
+		dprintf(D_ALWAYS, "error fetching pool password; SEC_PASSWORD_FILE not defined\n");
 		return NULL;
 	}
 
@@ -78,7 +78,7 @@ char* getStoredCredential(const char *username, const char *domain)
 	set_priv(priv);
 	free(filename);
 	if (fp == NULL) {
-		dprintf(D_FULLDEBUG, "error opening POOL_PASSWORD_FILE (%s), %s (errno: %d)\n",
+		dprintf(D_FULLDEBUG, "error opening SEC_PASSWORD_FILE (%s), %s (errno: %d)\n",
 			filename, strerror(errno), errno);
 		return NULL;
 	}
@@ -127,9 +127,9 @@ int store_cred_service(const char *user, const char *pw, int mode)
 
 	char *filename;
 	if (mode != QUERY_MODE) {
-		filename = param("POOL_PASSWORD_FILE");
+		filename = param("SEC_PASSWORD_FILE");
 		if (filename == NULL) {
-			dprintf(D_ALWAYS, "store_cred: POOL_PASSWORD_FILE not defined\n");
+			dprintf(D_ALWAYS, "store_cred: SEC_PASSWORD_FILE not defined\n");
 			return FAILURE;
 		}
 	}

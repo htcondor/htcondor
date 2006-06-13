@@ -29,6 +29,7 @@
 #include "CryptKey.h"
 #include "../condor_daemon_core.V6/condor_ipverify.h"
 #include "CondorError.h"
+#include "MapFile.h"
 
 #define MAX_USERNAMELEN 128
 
@@ -169,6 +170,10 @@ class Authentication {
     // RETURNS: TRUE -- success, FALSE -- failure
     //------------------------------------------
     
+#if !defined(SKIP_AUTHENTICATION)
+	static void split_canonical_name(MyString can_name, MyString& user, MyString& domain );
+#endif
+
  private:
 #if !defined(SKIP_AUTHENTICATION)
     Authentication() {}; //should never be called, make private to help that!
@@ -180,6 +185,9 @@ class Authentication {
     void setAuthType( int state );
     
     int selectAuthenticationType( MyString my_methods, int remote_methods );
+
+	void map_authentication_name_to_canonical_name(int authentication_type, const char* method_string, const char* authentication_name);
+
     
 #endif /* !SKIP_AUTHENTICATION */
     
@@ -191,6 +199,10 @@ class Authentication {
     transfer_mode        t_mode;
     int                  auth_status;
     char*                method_used;
+
+	static MapFile* global_map_file;
+	static bool global_map_file_load_attempted;
+
 };
 
 #endif /* AUTHENTICATION_H */

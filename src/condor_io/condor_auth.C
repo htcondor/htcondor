@@ -36,7 +36,8 @@ Condor_Auth_Base :: Condor_Auth_Base(ReliSock * sock, int mode) :
 	remoteDomain_  ( NULL  ),
 	remoteHost_    ( NULL  ),
 	localDomain_   ( NULL  ),
-	fqu_           ( NULL  )
+	fqu_           ( NULL  ),
+	authenticatedName_      ( NULL  )
 {
     //if (mySock_->isClient()) {
         
@@ -92,6 +93,10 @@ Condor_Auth_Base :: ~Condor_Auth_Base()
     if (fqu_) {
         free(fqu_);
     }
+
+	if (authenticatedName_) {
+		free (authenticatedName_);
+	}
 }
 
 int Condor_Auth_Base :: wrap(char *   input, 
@@ -180,6 +185,11 @@ const char * Condor_Auth_Base :: getRemoteFQU()
     return fqu_;
 }
 
+const char * Condor_Auth_Base :: getAuthenticatedName() const
+{
+    return authenticatedName_;
+}
+
 const char * Condor_Auth_Base :: getLocalDomain() const
 {
     return localDomain_;
@@ -237,6 +247,25 @@ Condor_Auth_Base& Condor_Auth_Base :: setRemoteUser( const char *owner )
     }
     return *this;
 }
+
+// this is where you put the "User" that the authentication method itself
+// gives you back.  for kerb, this is user@FULL.REALM, for GSI it is the
+// certificate subject name.  this is later mapped to the "Canonical" condor
+// name.
+Condor_Auth_Base& Condor_Auth_Base :: setAuthenticatedName(const char * auth_name)
+{
+    if (authenticatedName_) {
+        free(authenticatedName_);
+        authenticatedName_ = NULL;
+    }
+    
+    if (auth_name) {
+        authenticatedName_ = strdup(auth_name);
+    }
+
+    return *this;
+}
+
 
 const bool Condor_Auth_Base :: isDaemon() const
 {

@@ -38,13 +38,21 @@
 #include "../condor_daemon_core.V6/condor_ipverify.h"
 #include "CondorError.h"
 
+
+
 #if !defined(SKIP_AUTHENTICATION)
 #   include "condor_debug.h"
 #   include "condor_config.h"
 #   include "string_list.h"
+#include "MapFile.h"
+#include "../condor_daemon_core.V6/condor_daemon_core.h"
 #endif /* !defined(SKIP_AUTHENTICATION) */
 
+
 //----------------------------------------------------------------------
+
+MapFile* Authentication::global_map_file = NULL;
+bool Authentication::global_map_file_load_attempted = false;
 
 Authentication::Authentication( ReliSock *sock )
 {
@@ -55,6 +63,7 @@ Authentication::Authentication( ReliSock *sock )
 	t_mode              = NORMAL;
 	authenticator_      = NULL;
 #endif
+
 }
 
 Authentication::~Authentication()
@@ -272,10 +281,175 @@ Condor_Auth_Base * auth = NULL;
 	}
 	dprintf(D_SECURITY, "Authentication was a %s.\n", retval == 1 ? "Success" : "FAILURE" );
 
+	// check to see if CERTIFICATE_MAPFILE was defined.  if so, use it.  if
+	// not, do nothing.  the user and domain have been filled in by the
+	// authentication method itself, so just leave that alone.
+	char * cert_map_file = param("CERTIFICATE_MAPFILE");
+	bool use_mapfile = (cert_map_file != NULL);
+	if (cert_map_file) {
+		free(cert_map_file);
+		cert_map_file = 0;
+	}
+
+	// if successful so far, invoke the security MapFile.  the output of that
+	// is the "canonical user".  if that has an '@' sign, split it up on the
+	// last '@' and set the user and domain.  if there is more than one '@',
+	// the user will contain the leftovers after the split and the domain
+	// always has none.
+	if (retval && use_mapfile) {
+		const char * name_to_map = authenticator_->getAuthenticatedName();
+		if (name_to_map) {
+			dprintf (D_SECURITY, "ZKM: name to map is '%s'\n", name_to_map);
+
+			dprintf (D_SECURITY, "ZKM: pre-map: current user is '%s'\n", authenticator_->getRemoteUser());
+			dprintf (D_SECURITY, "ZKM: pre-map: current domain is '%s'\n", authenticator_->getRemoteDomain());
+			map_authentication_name_to_canonical_name(auth_status, method_used, name_to_map);
+			dprintf (D_SECURITY, "ZKM: post-map: current user is '%s'\n", authenticator_->getRemoteUser());
+			dprintf (D_SECURITY, "ZKM: post-map: current domain is '%s'\n", authenticator_->getRemoteDomain());
+			dprintf (D_SECURITY, "ZKM: post-map: current FQU is '%s'\n", authenticator_->getRemoteFQU());
+
+		} else {
+			dprintf (D_SECURITY, "ZKM: name to map is null, not mapping.\n");
+		}
+	}
+
 	mySock->allow_one_empty_message();
 	return ( retval );
 #endif /* SKIP_AUTHENTICATION */
 }
+
+#if !defined(SKIP_AUTHENTICATION)
+// takes the type (as defined in handshake bitmask, CAUTH_*) and result of authentication,
+// and maps it to the cannonical condor name.
+//
+void Authentication::map_authentication_name_to_canonical_name(int authentication_type, const char* method_string, const char* authentication_name) {
+
+	// make sure the mapfile is loaded.  it's a static global variable.
+	if (global_map_file_load_attempted == false) {
+		if (global_map_file) {
+			delete global_map_file;
+			global_map_file = NULL;
+		}
+
+		global_map_file = new MapFile();
+
+		dprintf (D_ALWAYS, "ZKM: Parsing map file.\n");
+        char * credential_mapfile;
+        if (NULL == (credential_mapfile = param("CERTIFICATE_MAPFILE"))) {
+            dprintf(D_SECURITY, "ZKM: No CERTIFICATE_MAPFILE defined\n");
+			delete global_map_file;
+			global_map_file = NULL;
+        } else {
+        	int line;
+        	if (0 != (line = global_map_file->ParseCanonicalizationFile(credential_mapfile))) {
+            	dprintf(D_SECURITY, "ZKM: Error parsing %s at line %d", credential_mapfile, line);
+				delete global_map_file;
+				global_map_file = NULL;
+			}
+			free( credential_mapfile );
+		}
+		global_map_file_load_attempted = true;
+	} else {
+		dprintf (D_ALWAYS, "ZKM: NOT parsing map file.\n");
+	}
+
+	dprintf (D_ALWAYS, "ZKM: attempting to map '%s'\n", authentication_name);
+
+	if (global_map_file) {
+		MyString canonical_user;
+		if (!global_map_file->GetCanonicalization(method_string, authentication_name, canonical_user)) {
+			// returns true on failure?
+
+			// there is a switch for GSI to use the default globus function for this, in
+			// case there is some custom globus mapping add-on, or the admin just wants
+			// to use the grid-mapfile in use by other globus software.
+			//
+			// if they don't opt for globus to map, just fall through to the condor
+			// mapfile.
+			//
+			if ((authentication_type == CAUTH_GSI) && (canonical_user == "GSS_ASSIST_GRIDMAP")) {
+				// hack for now: call a function in the GSI object to map it, just
+				// so the globus code stays in that object and out of this one.
+				//
+				// at the moment, this function has already been invoked during
+				// the authentication itself, so this really isn't necessary and
+				// is in fact inefficient.  when the x509 auth gets clean up though,
+				// this will be the correct place to do this.
+
+				((Condor_Auth_X509*)authenticator_)->nameGssToLocal( authentication_name );
+
+				// that function calls setRemoteUser() and setRemoteDomain().
+				//
+				// this api should actually just return the canonical user,
+				// and we should split it into user and domain in this function,
+				// and not invoke setRemoteFoo() directly in nameGssToLocal().
+
+				return;
+			} else {
+
+				dprintf (D_ALWAYS, "ZKM: found user %s, splitting.\n", canonical_user.Value());
+
+				MyString user;
+				MyString domain;
+
+				// this sets user and domain
+				split_canonical_name( canonical_user, user, domain);
+
+				authenticator_->setRemoteUser( user.Value() );
+				authenticator_->setRemoteDomain( domain.Value() );
+
+				// we're done.
+				return;
+			}
+		} else {
+			dprintf (D_ALWAYS, "ZKM: did not find user %s.\n", canonical_user.Value());
+		}
+	}
+
+	// do some sane 'default' map, which is the method concatenated with a ':'
+	// and the authenticated name.
+	MyString user;
+	user = method_string;
+	user += ':';
+	user += authentication_name;
+
+	dprintf (D_ALWAYS, "ZKM: using default map to %s\n", user.Value());
+	authenticator_->setRemoteUser( user.Value() );
+
+	char* domain = param("UID_DOMAIN");
+	if (domain) {
+		authenticator_->setRemoteDomain( domain );
+		free(domain);
+	}
+
+}
+
+void Authentication::split_canonical_name(MyString can_name, MyString& user, MyString& domain ) {
+
+    char local_user[256];
+ 
+	// local storage so we can modify it.
+	strncpy (local_user, can_name.Value(), 255);
+
+    // split it into user@domain
+    char* tmp = strchr(local_user, '@');
+    if (tmp == NULL) {
+        user = local_user;
+        char * uid_domain = param("UID_DOMAIN");
+        if (uid_domain) {
+            domain = uid_domain;
+            free(uid_domain);
+        } else {
+            dprintf(D_SECURITY, "AUTHENTICATION: UID_DOMAIN not defined.\n");
+        }
+    } else {
+        // tmp is pointing to '@' in local_user[]
+        *tmp = 0;
+        user = local_user;
+        domain = (tmp+1);
+    }
+}
+#endif //SKIP_AUTHENTICATION
 
 
 int Authentication::isAuthenticated() const

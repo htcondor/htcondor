@@ -231,8 +231,9 @@ int Condor_Auth_FS::authenticate(const char * remoteHost, CondorError* errstack)
 					} else {
 							retval = 0;	// 0 means success here. sigh.
 							setRemoteUser( tmpOwner );
+							setAuthenticatedName( tmpOwner );
 							free( tmpOwner );
-							setRemoteDomain( getLocalDomain());
+							setRemoteDomain( getLocalDomain() );
 					}
                 }
             }

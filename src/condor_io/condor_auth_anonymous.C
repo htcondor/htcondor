@@ -52,6 +52,7 @@ int Condor_Auth_Anonymous :: authenticate(const char * remoteHost, CondorError* 
     } 
     else { //server side
         setRemoteUser( STR_ANONYMOUS );
+		setAuthenticatedName( STR_ANONYMOUS );
         mySock_->encode();
         retval = 1;
         mySock_->code( retval );

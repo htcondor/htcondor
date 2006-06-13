@@ -25,6 +25,7 @@
 
 #include "condor_common.h"
 #include "condor_auth_x509.h"
+#include "authentication.h"
 #include "condor_config.h"
 #include "condor_string.h"
 #include "CondorError.h"
@@ -380,7 +381,7 @@ int Condor_Auth_X509::ParseMapFile() {
    write address into '*to'.
  
 */
-int Condor_Auth_X509::condor_gss_assist_gridmap(char * from, char ** to) {
+int Condor_Auth_X509::condor_gss_assist_gridmap(const char * from, char ** to) {
 
 	if (GridMap == 0) {
 		ParseMapFile();
@@ -406,7 +407,15 @@ int Condor_Auth_X509::condor_gss_assist_gridmap(char * from, char ** to) {
 }
 #endif
 
-int Condor_Auth_X509::nameGssToLocal(char * GSSClientname) 
+
+// ZKM
+//
+// the following function needs cleanup.  the mapping function should exist in
+// this object, but it should just return the GSSClientname and not do the
+// splitting and setRemoteUser() here.  see authentication.C
+// map_authentication_name_to_canonical_name()
+
+int Condor_Auth_X509::nameGssToLocal(const char * GSSClientname) 
 {
 	//this might need to change with SSLK5 stuff
 	//just extract username from /CN=<username>@<domain,etc>
@@ -419,7 +428,7 @@ int Condor_Auth_X509::nameGssToLocal(char * GSSClientname)
 #ifdef WIN32
 	major_status = condor_gss_assist_gridmap(GSSClientname, &tmp_user);
 #else
-	major_status = globus_gss_assist_gridmap(GSSClientname, &tmp_user);
+	major_status = globus_gss_assist_gridmap((char*)GSSClientname, &tmp_user);
 #endif
 
 	if (tmp_user) {
@@ -435,28 +444,11 @@ int Condor_Auth_X509::nameGssToLocal(char * GSSClientname)
 
 	MyString user;
 	MyString domain;
-	// we found a map, let's check it now
-	// split it into user@domain
-	char* tmp = strchr(local_user, '@');
-	if (tmp == NULL) {
-		user = local_user;
-		char * uid_domain = param("UID_DOMAIN");
-		if (uid_domain) {
-			domain = uid_domain;
-			free(uid_domain);
-		} else {
-			dprintf(D_SECURITY, "GSI: failure: UID_DOMAIN not defined.\n");
-			return 0;
-		}
-	} else {
-		// tmp is pointing to '@'
-		*tmp = 0;
-		user = local_user;
-		domain = (tmp+1);
-	}
+	Authentication::split_canonical_name( local_user, user, domain );
     
 	setRemoteUser  (user.GetCStr());
 	setRemoteDomain(domain.GetCStr());
+	setAuthenticatedName(GSSClientname);
 	return 1;
 }
 
