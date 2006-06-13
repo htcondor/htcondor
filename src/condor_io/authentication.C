@@ -368,6 +368,7 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 			// mapfile.
 			//
 			if ((authentication_type == CAUTH_GSI) && (canonical_user == "GSS_ASSIST_GRIDMAP")) {
+#if defined(GSI_AUTHENTICATION)
 				// hack for now: call a function in the GSI object to map it, just
 				// so the globus code stays in that object and out of this one.
 				//
@@ -383,7 +384,9 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 				// this api should actually just return the canonical user,
 				// and we should split it into user and domain in this function,
 				// and not invoke setRemoteFoo() directly in nameGssToLocal().
-
+#else
+				dprintf(D_ALWAYS, "ZKM: GSI not compiled, but was used?!!");
+#endif
 				return;
 			} else {
 
