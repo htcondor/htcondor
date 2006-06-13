@@ -2075,8 +2075,21 @@ process_buffer_line( ClassAd *job )
 	// it sorts properly against dagman jobs.
 	char *dagman_job_string = NULL;
 	if (!job->LookupString(ATTR_DAGMAN_JOB_ID, &dagman_job_string)) {
-		tempCPS->dagman_cluster_id = tempCPS->cluster;
-		tempCPS->dagman_proc_id    = tempCPS->proc;
+			// we failed to find an DAGManJobId string attribute, 
+			// let's see if we find one that is an integer.
+		int temp_cluster = -1;
+		if (!job->LookupInteger(ATTR_DAGMAN_JOB_ID,temp_cluster)) {
+				// could not job DAGManJobId, so fall back on 
+				// just the regular job id
+			tempCPS->dagman_cluster_id = tempCPS->cluster;
+			tempCPS->dagman_proc_id    = tempCPS->proc;
+		} else {
+				// in this case, we found DAGManJobId set as
+				// an integer, not a string --- this means it is
+				// the cluster id.
+			tempCPS->dagman_cluster_id = temp_cluster;
+			tempCPS->dagman_proc_id    = 0;
+		}
 	} else {
 		// We've gotten a string, probably something like "201.0"
 		// we want to convert it to the numbers 201 and 0. To be safe, we
