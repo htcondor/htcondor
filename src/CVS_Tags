@@ -1,3 +1,11 @@
+06/12/06 V6_7_20-{pre,post}_merge-V6_7-mapfile-1
+  The pre and post tags of for the 1st (and only) V6_7-mapfile-branch merge
+  into V6_7_20-branch.
+
+06/12/06 V6_7-mapfile-merge-1
+  The first (and probably only) merge from V6_7-mapfile-branch
+  into V6_7_20-branch
+
 06/09/06 V6_7-storkd-rewrite-{root,branch}
   Rewrite of Stork daemon, from research-quality code to
   production quality.  As of 06/09/06, this effort is still
