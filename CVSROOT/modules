@@ -587,7 +587,7 @@ V6_7_19_EXT	-a V6_7_COMMON_EXT \
 		   externals/bundles/blahp/1.7.0
 
 # Externals needed for V6_7_20 (same as V6_7_19, but update GCB)
-V6_7_19_EXT	-a V6_7_COMMON_EXT \
+V6_7_20_EXT	-a V6_7_COMMON_EXT \
 		   externals/bundles/krb5/1.4.3 \
 		   externals/bundles/gahp/1.0.14 \
 		   externals/bundles/globus/4.0.1 \
