@@ -3888,7 +3888,9 @@ static int findHistoryOffset(FILE *LogFile)
                 break;
             }
         }
+		free(buffer);
     }
+	
     fseek(LogFile, 0, SEEK_END);
     return offset;
 }
