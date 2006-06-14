@@ -1392,6 +1392,34 @@ ClassAd *CondorJob::buildSubmitAd()
 	submit_ad->Assign( ATTR_ENTERED_CURRENT_STATUS, now  );
 	submit_ad->Assign( ATTR_JOB_NOTIFICATION, NOTIFY_NEVER );
 
+		// If stdout or stderr is not in the job's Iwd, rename them and
+		// add a transfer remap. Otherwise, the file transfer object will
+		// place them in the Iwd when we stage back the job's output files.
+	MyString output_remaps = "";
+	MyString filename = "";
+	submit_ad->LookupString( ATTR_TRANSFER_OUTPUT_REMAPS, output_remaps );
+
+	jobAd->LookupString( ATTR_JOB_OUTPUT, filename );
+	if ( strcmp( filename.Value(), condor_basename( filename.Value() ) ) ) {
+		char const *working_name = "_condor_stdout";
+		if ( !output_remaps.IsEmpty() ) output_remaps += ";";
+		output_remaps.sprintf_cat( "%s=%s", working_name, filename.Value() );
+		submit_ad->Assign( ATTR_JOB_OUTPUT, working_name );
+	}
+
+	jobAd->LookupString( ATTR_JOB_ERROR, filename );
+	if ( strcmp( filename.Value(), condor_basename( filename.Value() ) ) ) {
+		char const *working_name = "_condor_stderr";
+		if ( !output_remaps.IsEmpty() ) output_remaps += ";";
+		output_remaps.sprintf_cat( "%s=%s", working_name, filename.Value() );
+		submit_ad->Assign( ATTR_JOB_ERROR, working_name );
+	}
+
+	if ( !output_remaps.IsEmpty() ) {
+		submit_ad->Assign( ATTR_TRANSFER_OUTPUT_REMAPS,
+						   output_remaps.Value() );
+	}
+
 	expr.sprintf( "%s = %s == %d", ATTR_JOB_LEAVE_IN_QUEUE, ATTR_JOB_STATUS,
 				  COMPLETED );
 
