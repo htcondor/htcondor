@@ -40,6 +40,12 @@ The details of each version are described below.
 collector had not been resolved since the previous reconfig
 (e.g. because DNS was down during that time).
 
+% Gnats PR 707
+\item When using Condor-C or the -s or -r command-line options to
+\condor{submit}, the job's standard output and error would be placed
+in the job's initial working directory, even if the job ad said to
+place them in a different directory.
+
 \end{itemize}
 
 \noindent Known Bugs:
