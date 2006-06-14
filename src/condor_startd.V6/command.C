@@ -289,6 +289,7 @@ command_release_claim( Service*, int cmd, Stream* stream )
 		rip->dprintf( D_ALWAYS, 
 		              "State change: received RELEASE_CLAIM command from preempting claim\n" );
 		rip->removeClaim(rip->r_pre);
+		free(id);
 		return TRUE;
 	}
 	else if( rip->r_pre_pre && rip->r_pre_pre->idMatches(id) ) {
@@ -296,15 +297,18 @@ command_release_claim( Service*, int cmd, Stream* stream )
 		rip->dprintf( D_ALWAYS, 
 		              "State change: received RELEASE_CLAIM command from preempting preempting claim\n" );
 		rip->removeClaim(rip->r_pre_pre);
+		free(id);
 		return TRUE;
 	}
 	else if( rip->r_cur && rip->r_cur->idMatches(id) ) {
 		if( (s == claimed_state) || (s == matched_state) ) {
 			rip->dprintf( D_ALWAYS, 
 						  "State change: received RELEASE_CLAIM command\n" );
+			free(id);
 			return rip->release_claim();
 		} else {
 			rip->log_ignore( cmd, s );
+			free(id);
 			return FALSE;
 		}
 	}
