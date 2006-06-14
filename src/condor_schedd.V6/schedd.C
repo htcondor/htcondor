@@ -6255,9 +6255,9 @@ Scheduler::StartJobHandler()
 
 			// if we got this far, we're definitely starting the job,
 			// so deal with the aboutToSpawnJobHandler hook...
+		int universe = srec->universe;
 		callAboutToSpawnJobHandler( cluster, proc, srec );
 
-		int universe = srec->universe;
 		if( (universe == CONDOR_UNIVERSE_MPI) || 
 			(universe == CONDOR_UNIVERSE_PARALLEL)) {
 			
