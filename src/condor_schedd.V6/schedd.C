@@ -4566,6 +4566,9 @@ Scheduler::negotiate(int command, Stream* s)
 
 	if( ! strcmp(owner, dedicated_scheduler.name()) ) {
 			// Just let the DedicatedScheduler class do its thing. 
+		if (sig_attrs_from_cm) {
+			free(sig_attrs_from_cm);
+		}
 		return dedicated_scheduler.negotiate( s, negotiator_name );
 	}
 

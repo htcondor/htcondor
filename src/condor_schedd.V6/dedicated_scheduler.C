@@ -2286,6 +2286,8 @@ DedicatedScheduler::addToSchedulingGroup(ClassAd *r) {
 		if (!scheduling_groups.contains(group)) {
 			// add it to our list of groups, if it isn't already there
 			scheduling_groups.append(group); // transfers ownership
+		} else {
+			free(group);
 		}
 	}
 }
