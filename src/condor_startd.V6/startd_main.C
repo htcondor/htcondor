@@ -443,7 +443,9 @@ init_params( int first_time)
 				// See if this collector is no longer in the new list
 			new_collector_list->rewind();
 			while (new_collector_list->next (new_collector)) {
-				if ( strcmp (new_collector->addr(), old_collector->addr()) == MATCH ) {
+				char const *old_addr = old_collector->addr();
+				char const *new_addr = new_collector->addr();
+				if ( old_addr && new_addr && (strcmp (new_addr, old_addr) == MATCH) ) {
 					Collectors->deleteCurrent(); // this collector is still on the new list, don't worry about it
 					break;
 				}
