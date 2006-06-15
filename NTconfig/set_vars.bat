@@ -34,11 +34,11 @@ set EXTERNALS_NEEDED=%EXT_GSOAP_VERSION% %EXT_OPENSSL_VERSION% %EXT_KERBEROS_VER
 
 REM Put NTConfig in the PATH, since it's got lots of stuff we need
 REM like awk, gunzip, tar, bison, yacc...
-set PATH=%cd%;%SystemRoot%;%SystemRoot%\system32;%PERL_DIR%;%VC_DIR%
+set PATH=%cd%;%SystemRoot%;%SystemRoot%\system32;%PERL_DIR%;%VC_DIR%;%SDK_DIR%;C:\Program Files\Microsoft Platform SDK for Windows XP SP2
 
 call vcvars32.bat
 if not defined INCLUDE ( echo . && echo *** Failed to run VCVARS32.BAT! Is Microsoft Visual Studio 6.0 installed? && exit /B 1 )
-call "%SDK_DIR%\setenv" /2000 /RETAIL
+call setenv /2000 /RETAIL
 if not defined MSSDK ( echo . && echo *** Failed to run SETENV.BAT! Is Microsoft Platform SDK installed? && exit /B 1 )
 
 REM Set up some stuff for BISON
