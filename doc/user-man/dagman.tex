@@ -691,18 +691,6 @@ DAG file is \File{diamond.dag}, the \File{dagman.out} file is
 If a problem is detected,
 \Condor{submit\_dag} prints out an error message and aborts.
 
-DAGMan normally generates a list of job log files to
-monitor by examining all of the job submission files.  If
-that will not work (some job submission files will be generated
-by \Arg{PRE} scripts, for example), you can specify a single
-common log file with the \Arg{-log} option.
-An example of this submission:
-\begin{verbatim}
-condor_submit_dag -log diamond_condor.log
-\end{verbatim}
-This option tells \Condor{submit\_dag} use the given file as
-the log file, if no log files are specified in submit files.
-
 To remove an entire DAG, consisting of DAGMan plus
 any jobs submitted to Condor or Stork,
 remove the DAGMan job running under Condor.
@@ -725,7 +713,7 @@ Use the job number to remove the job, for example
 \end{verbatim}
 \normalsize
 
-Before the DAGMan job stops running, it uses \Condor{rm}, and/or
+Before the DAGMan job stops running, it uses \Condor{rm} and/or
 \Stork{rm} 
 to remove any jobs within the DAG that are running.
 
