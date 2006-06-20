@@ -56,6 +56,7 @@ struct SubmitDagOptions
 	StringList	dagFiles;
 	MyString strDagmanPath;
 	bool useDagDir;
+	MyString strDebugDir;
 	
 	// non-command line options
 	MyString strLibLog;
@@ -107,7 +108,13 @@ int main(int argc, char *argv[])
 	
 	opts.strLibLog = opts.primaryDagFile + ".lib.out";
 
-	opts.strDebugLog += opts.primaryDagFile + ".dagman.out";
+	if ( opts.strDebugDir != "" ) {
+		opts.strDebugLog = opts.strDebugDir + DIR_DELIM_STRING +
+					condor_basename( opts.primaryDagFile.Value() );
+	} else {
+		opts.strDebugLog = opts.primaryDagFile;
+	}
+	opts.strDebugLog += ".dagman.out";
 
 	opts.strSchedLog = opts.primaryDagFile + ".dagman.log";
 	opts.strSubFile = opts.primaryDagFile + ".condor.sub";
@@ -556,9 +563,13 @@ void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[])
 			{
 				opts.bAllowLogError = true;
 			}
-			else if (strArg.find("-usedagdir") != -1) // -usedagdir
+			else if (strArg.find("-use") != -1) // -usedagdir
 			{
 				opts.useDagDir = true;
+			}
+			else if (strArg.find("-out") != -1) // -outfile_dir
+			{
+				opts.strDebugDir = argv[++iArg];
 			}
 			else
 			{
@@ -581,28 +592,30 @@ int printUsage()
     printf("Usage: condor_submit_dag [options] dag_file [dag_file_2 ... dag_file_n]\n");
     printf("  where dag_file1, etc., is the name of a DAG input file\n");
     printf("  and where [options] is one or more of:\n");
-	printf("    -dagman             (Full path to an alternate condor_dagman executable)\n");
+	printf("    -dagman <path>      (Full path to an alternate condor_dagman executable)\n");
     printf("    -no_submit          (DAG is not submitted to Condor)\n");
     printf("    -verbose            (Verbose error messages from condor_submit_dag)\n");
     printf("    -force              (Overwrite files condor_submit_dag uses if they exist)\n");
-    printf("    -r schedd_name      (Submit to the specified remote schedd)\n");
-	printf("    -maxidle number     (Maximum number of idle nodes to allow)\n");
-    printf("    -maxjobs number     (Maximum number of jobs ever submitted at once)\n");
-    printf("    -MaxPre number      (Maximum number of PRE scripts to run at once)\n");
-    printf("    -MaxPost number     (Maximum number of POST scripts to run at once)\n");
-    printf("    -log filename       (Deprecated -- don't use)\n");
+    printf("    -r <schedd_name>    (Submit to the specified remote schedd)\n");
+	printf("    -maxidle <number>   (Maximum number of idle nodes to allow)\n");
+    printf("    -maxjobs <number>   (Maximum number of jobs ever submitted at once)\n");
+    printf("    -MaxPre <number>    (Maximum number of PRE scripts to run at once)\n");
+    printf("    -MaxPost <number>   (Maximum number of POST scripts to run at once)\n");
+    printf("    -log <filename>     (Deprecated -- don't use)\n");
 // -->STORK
-    printf("    -storklog filename  (Specify the Stork log file shared by all DaP jobs\n");
+    printf("    -storklog <filename> (Specify the Stork log file shared by all DaP jobs\n");
     printf("        in the DAG)\n");
 // <--STORK
-    printf("    -notification value (Determines how much email you get from Condor.\n");
+    printf("    -notification <value> (Determines how much email you get from Condor.\n");
     printf("        See the condor_submit man page for values.)\n");
     printf("    -NoEventChecks      (Turns off checks for \"bad\" events)\n"); 
     printf("    -AllowLogError      (Allows the DAG to attempt execution even if the log\n");
     printf("        reading code finds errors when parsing the submit files)\n"); 
 	printf("    -UseDagDir          (Run DAGs in directories specified in DAG file paths)\n");
-    printf("    -debug number       (Determines how verbosely DAGMan logs its work\n");
+    printf("    -debug <number>     (Determines how verbosely DAGMan logs its work\n");
     printf("         about the life of the condor_dagman job.  'value' must be\n");
     printf("         an integer with a value of 0-7 inclusive.)\n");
+    printf("    -outfile_dir <path> (Directory into which to put the dagman.out file,\n");
+	printf("         instead of the default\n");
 	exit(1);
 }
