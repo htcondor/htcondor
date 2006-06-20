@@ -39,6 +39,13 @@ $success = sub
 	}
 	if( $qstat == COMPLETED )
 	{
+		sleep 4;	# wait and test again
+		my $qstat = CondorTest::getJobStatus($cluster);
+		if($qstat == -1)
+		{
+			print "Job status unknown - exactly what we want..\n";
+			exit(0);
+		}
 		die "Job should not still be found in queue\n";
 	}
 };
