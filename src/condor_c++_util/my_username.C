@@ -91,7 +91,7 @@ char* my_domainname( ) {
 // current process's token that's returned.
 HANDLE my_usertoken() {
 	HANDLE hAccessToken = NULL;
-	if (! OpenThreadToken(GetCurrentThread(), TOKEN_READ, FALSE,
+	if (! OpenThreadToken(GetCurrentThread(), TOKEN_READ, TRUE,
 			   	&hAccessToken) ) {
 		OpenProcessToken(GetCurrentProcess(), TOKEN_READ, &hAccessToken);
 	}
