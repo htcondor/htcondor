@@ -16,6 +16,7 @@
 \oOptArg{-r}{schedd\_name}
 \oOptArg{-debug}{level}
 \oOpt{-usedagdir}
+\oOptArg{-outfile\_dir}{directory}
 \Arg{DAGInputFile1}
 \oArg{{DAGInputFile2} \Dots {DAGInputFileN} }
 
@@ -99,6 +100,10 @@ description.
      \Condor{dagman} to run each specified DAG as if \Condor{submit\_dag}
      had been run in the directory containing that DAG file.  This option
      is most useful when running multiple DAGs in a single \Condor{dagman}.
+     }
+  \OptItem{\OptArg{-outfile\_dir}{directory}}{
+     Specifies the directory in which the \File{dagman.out} file will
+     be written.  The default is the directory of the "primary" DAG file.
      }
   \end{Options}
 
