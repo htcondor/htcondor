@@ -699,7 +699,7 @@ ArgList::GetArgsStringV2Raw(MyString *result,MyString *error_msg,int start_arg) 
 void
 ArgList::GetArgsStringForDisplay(MyString *result,int start_arg) const
 {
-	GetArgsStringV2Raw(result,NULL);
+	GetArgsStringV2Raw(result,NULL,start_arg);
 }
 
 

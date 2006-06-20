@@ -377,9 +377,12 @@ OsProc::StartJob()
 		if(create_process_error) {
 			MyString err_msg = "Failed to execute '";
 			err_msg += JobName;
-			err_msg += ' ';
-			err_msg += args_string.Value();
-			err_msg += "': ";
+			err_msg += "'";
+			if(!args_string.IsEmpty()) {
+				err_msg += " with arguments ";
+				err_msg += args_string.Value();
+			}
+			err_msg += ": ";
 			err_msg += create_process_error;
 			Starter->jic->notifyStarterError( err_msg.Value(), true, CONDOR_HOLD_CODE_FailedToCreateProcess, create_process_errno );
 		}
