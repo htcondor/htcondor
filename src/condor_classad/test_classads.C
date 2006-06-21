@@ -1510,16 +1510,22 @@ static void test_functions(
 							/* batch 1 testing of functions */
 							"D0=GetTime():"
 							"D1=Time():"
+
 							"D2=Interval(60):"
 							"D3=Interval(3600):"
 							"D4=Interval(86400):"
+
 		                    "E=sharedstring():"
                             "G=sharedinteger(2):"
 	                        "H=sharedfloat(3.14):"
+
 							"L=toupper(\"AbCdEfg\"):"
 							"M=toLower(\"ABCdeFg\"):"
+
 							"N0=size(\"ABC\"):"
 							"N1=size(\"\"):"
+							"N2=size(foo):"
+							"E0=isError(N2):"
 							"";
 
 	ClassAd  *classad;
@@ -1661,6 +1667,17 @@ static void test_functions(
 			results->AddResult(false);
 		}
 		
+		if (classad->EvalBool("E0", NULL, integer) &&
+				(integer == 1)) {
+			printf("Passed: Evaluating size(foo) ): %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating size(foo) ) : %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(false);
+		}
+
 		test_function_isstring(results);
 		test_function_isundefined(results);
 		test_function_iserror(results);
@@ -1922,22 +1939,22 @@ static void test_function_ifthenelse(
 
 		if (classad->EvalString("BB8", NULL, big_string) &&
 				(strcmp(big_string, "small") == 0)) {
-			printf("Passed: Evaluating ifThenElse <if false>: %s in line %d\n", 
+			printf("Passed: Evaluating ifThenElse <if false do not evaluate true arg>: %s in line %d\n", 
 				   big_string, __LINE__);
 			results->AddResult(true);
 		} else {
-			printf("Failed: Evaluating ifThenElse <if false> %s in line %d\n",
+			printf("Failed: Evaluating ifThenElse <if false do not evaluate true arg> %s in line %d\n",
 				   big_string, __LINE__);
 			results->AddResult(false);
 		}
 
 		if (classad->EvalString("BB9", NULL, big_string) &&
 				(strcmp(big_string, "big") == 0)) {
-			printf("Passed: Evaluating ifThenElse <if true>: %s in line %d\n", 
+			printf("Passed: Evaluating ifThenElse <if true do not evaluate false arg>: %s in line %d\n", 
 				   big_string, __LINE__);
 			results->AddResult(true);
 		} else {
-			printf("Failed: Evaluating ifThenElse <if true> %s in line %d\n",
+			printf("Failed: Evaluating ifThenElse <if true do not evaluate false arg> %s in line %d\n",
 				   big_string, __LINE__);
 			results->AddResult(false);
 		}
@@ -2560,9 +2577,12 @@ static void test_function_string(
 	TestResults  *results)     // OUT: Modified to reflect result of test
 {
 	char	big_string[1024];
+	int		integer;
 
 	char classad_string[] = 
 							"BC0=string(\"-3\"):"
+							"BC1=string(-3):"
+							"E0=isError(BC1):"
 							"";
 
 	ClassAd  *classad;
@@ -2589,6 +2609,16 @@ static void test_function_string(
 			results->AddResult(false);
 		}
 
+		if (classad->EvalBool("E0", NULL, integer) &&
+				(integer == 1)) {
+			printf("Passed: Evaluating bad string passed in : %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: missed bad string passed in) : %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(false);
+		}
         delete classad;
 	}
 	return;
@@ -3041,7 +3071,7 @@ static void test_function_isundefined(
 
 		if (classad->EvalBool("BB0", NULL, integer) &&
 				(integer == 1)) {
-			printf("Passed: Evaluating isUndefined(BB0) : %d in line %d\n", 
+			printf("Passed: Evaluating isUndefined(BB0) returned true(1) when it should : %d in line %d\n", 
 				   integer, __LINE__);
 			results->AddResult(true);
 		} else {
@@ -3052,7 +3082,7 @@ static void test_function_isundefined(
 
 		if (classad->EvalBool("BB1", NULL, integer) &&
 				(integer == 0)) {
-			printf("Passed: Evaluating isUndefined(BB1) : %d in line %d\n", 
+			printf("Passed: Evaluating isUndefined(BB1) return false(0) : %d in line %d\n", 
 				   integer, __LINE__);
 			results->AddResult(true);
 		} else {
@@ -3258,6 +3288,8 @@ static void test_function_isreal(
 							"BC5=isReal( real(3) ):"
 							"BC6=isReal(real(\"-3\")):"
 							"BC7=isReal(3):"
+							"BC8=isReal(3,1):"
+							"BC9=isError(BC8):"
 							"";
 
 	ClassAd  *classad;
@@ -3344,6 +3376,16 @@ static void test_function_isreal(
 			results->AddResult(false);
 		}
 
+		if (classad->EvalBool("BC9", NULL, integer) && (integer == 1)) {
+			printf("Passed: Evaluating isReal( x,y) : %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating isReal( x,y) : %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(false);
+		}
+
         delete classad;
 	}
 	return;
@@ -3391,6 +3433,7 @@ static void test_function_substr(
 	TestResults  *results)     // OUT: Modified to reflect result of test
 {
 	char	big_string[1024];
+	int 	integer;
 
 	char classad_string[] = 
 							"I0=substr(\"abcdefg\", 3):"
@@ -3398,6 +3441,10 @@ static void test_function_substr(
 							"I2=substr(\"abcdefg\", -2, 1):"
 							"I3=substr(\"abcdefg\", 3, -1):"
 							"I4=substr(\"abcdefg\", 3, -9):"
+							"I5=substr(\"abcdefg\", 3.3, -9):"
+							"I6=substr(foo, 3, -9):"
+							"E0=isError(I5):"
+							"E1=isError(I6):"
 							"";
 
 	ClassAd  *classad;
@@ -3469,6 +3516,26 @@ static void test_function_substr(
 			results->AddResult(false);
 		}
 
+		if (classad->EvalBool("E0", NULL, integer) && (integer == 1)) {
+			printf("Passed: Caught error from a float for the offset) : %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: did not catch error from a float for the offset) : %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalBool("E1", NULL, integer) && (integer == 1)) {
+			printf("Passed: Bad string caught) : %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Bad string missed) : %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(false);
+		}
+
         delete classad;
 	}
 	return;
@@ -3483,9 +3550,17 @@ static void test_function_strcmp(
 							"J0=strcmp(\"ABCDEFgxx\"; \"ABCDEFg\"):"
 							"J1=strcmp(\"BBBBBBBxx\"; \"CCCCCCC\"):"
 							"J2=strcmp(\"AbAbAbAb\"; \"AbAbAbAb\"):"
+							"J3=strcmp(44; \"ffgghh\"):"
+							"J4=strcmp(\"aBabcd\"; foobar):"
 							"K0=stricmp(\"ABCDEFg\"; \"abcdefg\"):"
 							"K1=stricmp(\"ffgghh\"; \"aabbcc\"):"
 							"K2=stricmp(\"aBabcd\"; \"ffgghh\"):"
+							"K3=stricmp(44; \"ffgghh\"):"
+							"K4=stricmp(\"aBabcd\"; foobar):"
+							"E0=isError(K3):"
+							"E1=isError(K4):"
+							"E2=isError(J3):"
+							"E3=isError(J4):"
 							"";
 
 	ClassAd  *classad;
@@ -3558,6 +3633,46 @@ static void test_function_strcmp(
 			results->AddResult(true);
 		} else {
 			printf("Failed: Evaluating stricmp(\"aBabcd\"; \"ffgghh\") gave %d in line %d\n",
+				   integer, __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalBool("E0", NULL, integer) && (integer == 1)) {
+			printf("Passed: stricmp Caught non-string first arg) : %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: stricmp Missed non-string first arg) : %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalBool("E1", NULL, integer) && (integer == 1)) {
+			printf("Passed: stricmp Caught non-string second arg) : %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: stricmp Missed non-string second arg) : %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalBool("E2", NULL, integer) && (integer == 1)) {
+			printf("Passed: strcmp Caught non-string first arg) : %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: strcmp Missed non-string first arg) : %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalBool("E3", NULL, integer) && (integer == 1)) {
+			printf("Passed: strcmp Caught non-string second arg) : %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: strcmp Missed non-string second arg) : %d in line %d\n", 
 				   integer, __LINE__);
 			results->AddResult(false);
 		}
