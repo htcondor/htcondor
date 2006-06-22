@@ -501,6 +501,10 @@ class Dag {
     /// List of Job objects
     List<Job>     _jobs;
 
+	mutable HashTable<MyString, Job *>		_nodeNameHash;
+
+	mutable HashTable<JobID_t, Job *>		_nodeIDHash;
+
     // Number of nodes that are done (completed execution)
     int _numNodesDone;
     

@@ -942,7 +942,7 @@ ReadMultipleUserLogs::DuplicateLogExists(ULogEvent *event, LogFileEntry *log)
 int
 ReadMultipleUserLogs::hashFuncJobID(const CondorID &key, int numBuckets)
 {
-	int		result = key._cluster ^ key._proc ^ key._subproc;
+	int		result = (key._cluster * 29) ^ (key._proc * 7) ^ key._subproc;
 
 		// Make sure we produce a non-negative result (modulus on negative
 		// value may produce a negative result (implementation-dependent).

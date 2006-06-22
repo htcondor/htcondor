@@ -62,6 +62,8 @@ void touch (const char * filename) {
     close (fd);
 }
 
+static const int NODE_NAME_HASH_SIZE = 997; // prime, allow for big DAG...
+
 //---------------------------------------------------------------------------
 Dag::Dag( /* const */ StringList &dagFiles, char *condorLogName,
 		  const int maxJobsSubmitted,
@@ -81,8 +83,12 @@ Dag::Dag( /* const */ StringList &dagFiles, char *condorLogName,
     _condorLogInitialized (false),
     _dapLogName           (NULL),
     _dapLogInitialized    (false),             //<--DAP
-    _numNodesDone          (0),
-    _numNodesFailed        (0),
+	_nodeNameHash		  (NODE_NAME_HASH_SIZE, MyStringHash,
+							rejectDuplicateKeys),
+	_nodeIDHash			  (NODE_NAME_HASH_SIZE, hashFuncInt,
+							rejectDuplicateKeys),
+    _numNodesDone         (0),
+    _numNodesFailed       (0),
     _numJobsSubmitted     (0),
     _maxJobsSubmitted     (maxJobsSubmitted),
 	_numIdleJobProcs		  (0),
@@ -299,13 +305,15 @@ Dag::AddDependency( Job* parent, Job* child )
 
 //-------------------------------------------------------------------------
 Job * Dag::GetJob (const JobID_t jobID) const {
-    ListIterator<Job> iList (_jobs);
-    Job * job;
-    iList.ToBeforeFirst();
-    while ((job = iList.Next()) != NULL) {
-        if (job->GetJobID() == jobID) return job;
-    }
-    return NULL;
+	Job *	job = NULL;
+	if ( _nodeIDHash.lookup(jobID, job) != 0 ) {
+    	debug_printf( DEBUG_VERBOSE, "ERROR: job %d not found!\n", jobID);
+		job = NULL;
+	}
+
+	if ( job ) ASSERT( jobID == job->GetJobID() );
+
+	return job;
 }
 
 //-------------------------------------------------------------------------
@@ -1012,14 +1020,16 @@ Job * Dag::GetJob (const char * jobName) const {
 	if( !jobName ) {
 		return NULL;
 	}
-    ListIterator<Job> iList (_jobs);
-    Job * job;
-    while ((job = iList.Next())) {
-		if( strcasecmp( job->GetJobName(), jobName ) == 0 ) {
-			return job;
-		}
-    }
-    return NULL;
+
+	Job *	job = NULL;
+	if ( _nodeNameHash.lookup(jobName, job) != 0 ) {
+    	debug_printf( DEBUG_VERBOSE, "ERROR: job %s not found!\n", jobName);
+		job = NULL;
+	}
+
+	if ( job ) ASSERT( strcmp( jobName, job->GetJobName() ) == 0 );
+
+	return job;
 }
 
 //---------------------------------------------------------------------------
@@ -1029,17 +1039,24 @@ Dag::NodeExists( const char* nodeName ) const
   if( !nodeName ) {
     return false;
   }
-  ListIterator<Job> nodeList( _jobs );
-  Job *node;
-  while( (node = nodeList.Next()) ) {
-    if( strcasecmp( node->GetJobName(), nodeName ) == 0 ) {
-      return true;
-    }
+
+	// Note:  we don't just call GetJob() here because that would print
+	// an error message if the node doesn't exist.
+  Job *	job = NULL;
+  if ( _nodeNameHash.lookup(nodeName, job) != 0 ) {
+    return false;
   }
-  return false;
+
+  if ( job ) ASSERT( strcmp( nodeName, job->GetJobName() ) == 0 );
+
+  return job != NULL;
 }
 
 //---------------------------------------------------------------------------
+// Note: this could also be converted to a HashTable lookup, but it's
+// more complicated than the other GetJob methods, and it doesn't
+// seem so performance-critical, so I'm leaving it as-is for now.
+// wenger 2006-06-21.
 Job * Dag::GetJob (int logsource, const CondorID condorID) const {
 	if ( condorID._cluster == -1 ) {
 		return NULL;
@@ -2358,6 +2375,12 @@ Dag::ChooseDotFileName(MyString &dot_file_name)
 
 bool Dag::Add( Job& job )
 {
+	int insertResult = _nodeNameHash.insert(job.GetJobName(), &job);
+	ASSERT( insertResult == 0 );
+
+	insertResult = _nodeIDHash.insert(job.GetJobID(), &job);
+	ASSERT( insertResult == 0 );
+
 	return _jobs.Append(job);
 }
 

@@ -40,3 +40,5 @@ template class Queue<Script*>;
 template class Queue<Job*>;
 template class SimpleList<Job*>;
 CHECK_EVENTS_HASH_INSTANCE;
+template class HashTable<MyString, Job *>;
+template class HashTable<JobID_t, Job *>;
