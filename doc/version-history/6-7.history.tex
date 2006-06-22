@@ -49,6 +49,10 @@ collector had not been resolved since the previous reconfig
 in the job's initial working directory, even if the job ad said to
 place them in a different directory.
 
+% Gnats PRs 501 and 663
+\item Greatly speeded up the parsing of large DAGs (by a factor of 50
+or so) by using a hash table instead of linear search to find DAG nodes.
+
 \end{itemize}
 
 \noindent Known Bugs:
