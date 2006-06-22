@@ -58,6 +58,9 @@ init_soap(struct soap *soap)
 
 		// Register a plugin to handle HTTP GET messages.
 		// See httpget.c.
+		// Note: valgrind complains about a memory leak inside
+		// here, but Matt and Todd say it's not a problem because
+		// this is only called at initialization.  wenger 2006-06-22.
 	soap_register_plugin_arg(soap,http_get,(void*)http_get_handler);
 		// soap.accept_flags = SO_NOSIGPIPE;
 		// soap.accept_flags = MSG_NOSIGNAL;
