@@ -494,6 +494,12 @@ bool Dag::ProcessOneEvent (int logsource, ULogEventOutcome outcome,
 			switch(event->eventNumber) {
 
 			case ULOG_EXECUTABLE_ERROR:
+					// Don't do anything here, because we seem to always
+					// also get an ABORTED event when we get an
+					// EXECUTABLE_ERROR event.  (Not doing anything
+					// here fixes Gnats PR 697.)
+				break;
+
 			case ULOG_JOB_ABORTED:
 				ProcessAbortEvent(event, job, recovery);
 					// Make sure we don't count finished jobs as idle.
