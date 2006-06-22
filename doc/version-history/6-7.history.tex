@@ -53,6 +53,11 @@ place them in a different directory.
 \item Greatly speeded up the parsing of large DAGs (by a factor of 50
 or so) by using a hash table instead of linear search to find DAG nodes.
 
+% Gnats PR 697
+\item Fixed a bug in \Condor{dagman} that caused an EXECUTABLE\_ERROR
+event from a node job to abort the DAG instead of just marking the
+relevant node as failed.
+
 \end{itemize}
 
 \noindent Known Bugs:
