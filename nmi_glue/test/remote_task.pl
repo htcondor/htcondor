@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_task.pl,v 1.1.4.8 2006-03-17 07:32:56 wright Exp $
+# $Id: remote_task.pl,v 1.1.4.9 2006-06-26 21:32:10 gquinn Exp $
 # run a test in the Condor testsuite
 # return val is the status of the test
 # 0 = built and passed
@@ -35,16 +35,21 @@ my $testdir = "condor_tests";
 ######################################################################
 
 @testinfo = split(/\./, $fulltestname);
-my $testname = @testinfo[0];
-my $compiler = @testinfo[1];
+my $testname = $testinfo[0];
+my $compiler = $testinfo[1];
 
 if( ! $testname ) {
     c_die("Invalid input for testname\n");
 }
 print "testname is $testname\n";
-if( $compiler ) {
-    print "compiler is $compiler\n";
-    $targetdir = "$SrcDir/$testdir/$compiler";
+if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
+	if( $compiler ) {
+    	print "compiler is $compiler\n";
+    	$targetdir = "$SrcDir/$testdir/$compiler";
+	} else {
+    	$compiler = ".";
+    	$targetdir = "$SrcDir/$testdir";
+	}
 } else {
     $compiler = ".";
     $targetdir = "$SrcDir/$testdir";
@@ -57,19 +62,21 @@ if( $compiler ) {
 
 chdir( "$targetdir" ) || c_die("Can't chdir($targetdir): $!\n");
 
-print "Attempting to build test in: $targetdir\n";
-print "Invoking \"make $testname\"\n";
-open( TESTBUILD, "make $testname 2>&1 |" ) || 
-    c_die("Can't run make $testname\n");
-while( <TESTBUILD> ) {
-    print $_;
-}
-close( TESTBUILD );
-$buildstatus = $?;
-print "BUILD TEST for $testname returned $buildstatus\n";
-if( $buildstatus != 0 ) {
-    print "Build failed for $testname\n";
-    exit 2;
+if( !($ENV{NMI_PLATFORM} =~ /winnt/)) {
+	print "Attempting to build test in: $targetdir\n";
+	print "Invoking \"make $testname\"\n";
+	open( TESTBUILD, "make $testname 2>&1 |" ) || 
+    	c_die("Can't run make $testname\n");
+	while( <TESTBUILD> ) {
+    	print $_;
+	}
+	close( TESTBUILD );
+	$buildstatus = $?;
+	print "BUILD TEST for $testname returned $buildstatus\n";
+	if( $buildstatus != 0 ) {
+    	print "Build failed for $testname\n";
+    	exit 2;
+	}
 }
 
 
@@ -80,22 +87,31 @@ if( $buildstatus != 0 ) {
 print "RUNNING $testinfo\n";
 chdir("$SrcDir/$testdir") || c_die("Can't chdir($SrcDir/$testdir): $!\n");
 
-system( "make batch_test.pl" );
-if( $? >> 8 ) {
-    c_die("Can't build batch_test.pl\n");
+if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
+	system( "make batch_test.pl" );
+	if( $? >> 8 ) {
+    	c_die("Can't build batch_test.pl\n");
+	}
+	system( "make CondorTest.pm" );
+	if( $? >> 8 ) {
+    	c_die("Can't build CondorTest.pm\n");
+	}
+	system( "make Condor.pm" );
+	if( $? >> 8 ) {
+    	c_die("Can't build Condor.pm\n");
+	}
+	system( "make CondorPersonal.pm" );
+	if( $? >> 8 ) {
+    	c_die("Can't build CondorPersonal.pm\n");
+	}
+} else {
+	my $scriptdir = $SrcDir . "/condor_scripts";
+	safe_copy("$scriptdir/batch_test.pl", "batch_test.pl");
+	safe_copy("$scriptdir/Condor.pm", "Condor.pm");
+	safe_copy("$scriptdir/CondorTest.pm", "CondorTest.pm");
+	safe_copy("$scriptdir/CondorPersonal.pm", "CondorPersonal.pm");
 }
-system( "make CondorTest.pm" );
-if( $? >> 8 ) {
-    c_die("Can't build CondorTest.pm\n");
-}
-system( "make Condor.pm" );
-if( $? >> 8 ) {
-    c_die("Can't build Condor.pm\n");
-}
-system( "make CondorPersonal.pm" );
-if( $? >> 8 ) {
-    c_die("Can't build CondorPersonal.pm\n");
-}
+print "About to run batch_test.pl\n";
 
 open(BATCHTEST, "perl ./batch_test.pl -d $compiler -t $testname 2>&1 |" ) || 
     c_die("Can't open \"batch_test.pl -d $compiler -t $testname\": $!\n");
@@ -169,13 +185,13 @@ if( $? >> 8 ) {
 if( $copy_failure ) {
     if( $teststatus == 0 ) {
         # if the test passed but we failed to copy something, we
-	# should consider that some kind of weird error
-	c_die("Failed to copy some output to results!\n");
+		# should consider that some kind of weird error
+		c_die("Failed to copy some output to results!\n");
     } else {
-	# if the test failed, we can still mention we failed to copy
-	# something, but we should just treat it as if the test
-	# failed, not an internal error.
-	print "Failed to copy some output to results!\n";
+		# if the test failed, we can still mention we failed to copy
+		# something, but we should just treat it as if the test
+		# failed, not an internal error.
+		print "Failed to copy some output to results!\n";
     }
 }
 
@@ -186,8 +202,7 @@ if( $have_run_out_file ) {
 } else {
 	# spit out the contents of the run.out file to the stdout of
 	if( open(RES,"<$testname.run.out") ) {
-		while(<RES>)
-		{
+		while(<RES>) {
 			print "$_";
 		}
 		close RES;
@@ -203,22 +218,22 @@ exit $teststatus;
 
 sub safe_copy {
     my( $src, $dest ) = @_;
-    system( "cp $src $dest" );
-    if( $? >> 8 ) {
-	print "Can't copy $src to $dest: $!\n";
-	$copy_failure = 1;
+	system("cp $src $dest");
+	if( $? >> 8 ) {
+		$copy_failure = 1;
+		print "Can't copy $src to $dest: $!\n";
     } else {
-	print "Copied $src to $dest\n";
+		print "Copied $src to $dest\n";
     }
 }
 
 sub unsafe_copy {
     my( $src, $dest ) = @_;
-    system( "cp $src $dest" );
-    if( $? >> 8 ) {
-	print "   Optional file $src not copied into $dest: $\n";
+	system("cp $src $dest");
+	if( $? >> 8 ) {
+		print "   Optional file $src not copied into $dest: $!\n";
     } else {
-	print "Copied $src to $dest\n";
+		print "Copied $src to $dest\n";
     }
 }
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_post.pl,v 1.1.4.5 2006-03-17 07:32:55 wright Exp $
+# $Id: remote_post.pl,v 1.1.4.6 2006-06-26 21:32:10 gquinn Exp $
 # post script for Condor testsuite runs
 ######################################################################
 
@@ -41,7 +41,6 @@ if( -f "$pid_file" ) {
         print "ERROR: Can't kill condor_master (pid: $master_pid): $!\n";
         $exit_status = 1;
     }
-    
 } else {
     # if there's no pid_file, there must be no personal condor running
     # which we'd have to kill.  this would be caused by an empty
