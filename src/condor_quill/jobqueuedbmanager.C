@@ -1750,10 +1750,6 @@ JobQueueDBManager::processSetAttribute(char* key,
 	char* newvalue;  
 	double doubleval = 0;
 
-	int sql_str_len = (strlen(value) + MAX_FIXED_SQL_STR_LENGTH);
-	sql_str_del_in = (char *) malloc(sql_str_len * sizeof(char));
-	memset(sql_str_del_in, 0, sql_str_len);
-	
 	newvalue = fillEscapeCharacters(value);
 		// It could be ProcAd or ClusterAd
 		// So need to check
@@ -1761,6 +1757,10 @@ JobQueueDBManager::processSetAttribute(char* key,
 
 	doubleval = strtod(value, &endptr);
 
+	int sql_str_len = 2 * strlen(name) + (strlen(newvalue) + MAX_FIXED_SQL_STR_LENGTH);
+	sql_str_del_in = (char *) malloc(sql_str_len * sizeof(char));
+	memset(sql_str_del_in, 0, sql_str_len);
+	
 	switch(job_id_type) {
 	case IS_CLUSTER_ID:
 		if(value == endptr) {
