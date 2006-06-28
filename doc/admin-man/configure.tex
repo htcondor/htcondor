@@ -5180,6 +5180,9 @@ upon the functionality of the
 If \MacroNI{DAGMAN\_ALLOW\_EVENTS} is set, it overrides the
 setting of \MacroNI{DAGMAN\_IGNORE\_DUPLICATE\_JOB\_EXECUTION}.
 
+This macro now applies only during "normal" mode (not bootstrap mode).
+(See \MacroNI{DAGMAN\_BOOTSTRAP\_ALLOW\_EVENTS} below.)
+
 The \MacroNI{DAGMAN\_ALLOW\_EVENTS} value is a bitwise-OR of the
 following values:
 \begin{description}
@@ -5203,6 +5206,23 @@ after terminated event" bug.  A value of 0 means that any "bad"
 event will be considered a fatal error.
 
 This macro should almost always remain set to the default value!
+
+\item[\Macro{DAGMAN\_BOOTSTRAP\_ALLOW\_EVENTS}]
+\label{param:DAGManBootstrapAllowEvents}
+This macro is the same as \MacroNI{DAGMAN\_ALLOW\_EVENTS}, except that
+it only applies during bootstrap mode (not "normal" mode).  The event
+checking level for bootstrap mode was separated from the event checking
+level for "normal" mode because of the following error:  sometimes, if
+a schedd goes down and comes back up, it ends up writing a "job terminated"
+event in the log of a running job, but then re-running the job because
+it did not actually run to completion.  Therefore, we want to default
+to allowing the "job re-run after terminated event" condition during
+bootstrap mode without allowing it in "normal" mode.
+
+The default value is 54 (allow terminated/aborted event combination,
+allow job re-run after terminated event,
+allow execute event before job's submit event, and allow double terminated
+events).
 
 \item[\Macro{DAGMAN\_DEBUG}] \label{param:DAGManDebug} This macro
 is described in section~\ref{param:SubsysDebug} as
