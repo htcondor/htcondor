@@ -319,6 +319,10 @@ int main(int argc, char **argv)
 	CheckThisEvent(__LINE__, ce5, &te3, CheckEvents::EVENT_BAD_EVENT, result);
 
 	printf("\nTesting CheckAllJobs()... ");
+		// Note that here we're no longer explicitly allowing "run after
+		// terminate", but this check doesn't fail because we don't know
+		// whether any of the terminates came before the executes.
+	ce5.SetAllowEvents(CheckEvents::ALLOW_DOUBLE_TERMINATE);
 	if ( ce5.CheckAllJobs(errorMsg) != CheckEvents::EVENT_BAD_EVENT) {
 		printf("...should have gotten a bad event (test FAILED)\n");
 		printf("########## TEST FAILED HERE (line %d) ##########\n", __LINE__);

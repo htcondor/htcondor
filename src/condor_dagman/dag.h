@@ -67,10 +67,6 @@ class Dag {
 		       one time
         @param maxPostScripts the maximum number of POST scripts to spawn at
 		       one time
-		@param allowEvents what "bad" events to treat as non-fatal (as
-			   opposed to fatal) errors; see check_events.h for values.
-		@param allowExtraRuns whether to tolerate the Condor "submit once,
-			   run twice" bug
 		@param dapLogName the name of the Stork (DaP) log file
 		@param allowLogError whether to allow the DAG to run even if we
 			   have an error determining the job log files
@@ -92,7 +88,7 @@ class Dag {
     Dag( /* const */ StringList &dagFiles, char *condorLogName,
 		 const int maxJobsSubmitted,
 		 const int maxPreScripts, const int maxPostScripts, 
-		 int allowEvents, const char *dapLogName, bool allowLogError,
+		 const char *dapLogName, bool allowLogError,
 		 bool useDagDir, int maxIdleJobProcs, bool retrySubmitFirst,
 		 bool retryNodeFirst, const char *condorRmExe,
 		 const char *storkRmExe, const CondorID *DAGManJobId,
@@ -241,6 +237,12 @@ class Dag {
         @return true if the node exists, false otherwise
     */
     bool NodeExists( const char *nodeName ) const;
+
+    /** Set the event checking level.
+		@param allowEvents what "bad" events to treat as non-fatal (as
+			   opposed to fatal) errors; see check_events.h for values.
+    */
+	void SetAllowEvents( int allowEvents);
 
     /// Print the list of jobs to stdout (for debugging).
     void PrintJobList() const;

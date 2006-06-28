@@ -92,8 +92,12 @@ class Dagman {
 	bool useDagDir;
 
 		// What "bad" events to treat as non-fatal (as opposed to fatal)
-		// errors; see check_events.h for values.
+		// errors during "normal" running; see check_events.h for values.
 	int allow_events;
+
+		// What "bad" events to treat as non-fatal (as opposed to fatal)
+		// errors during "bootstrap" running; see check_events.h for values.
+	int allow_events_bootstrap;
 
 		// If this is true, nodes for which the job submit fails are retried
 		// before any other ready nodes; otherwise a submit failure puts

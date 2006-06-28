@@ -91,6 +91,11 @@ class CheckEvents {
 
 	~CheckEvents();
 
+	/** Set the event checking level.
+	    @param What "bad" events to allow.
+	*/
+	void SetAllowEvents(int allowEvents) { this->allowEvents = allowEvents; }
+
 	/** Check an event to see if it's consistent with previous events.
 		@param The event to check.
 		@param A MyString to hold an error message (only relevant if

@@ -140,6 +140,11 @@ Dagman::Config()
 			CheckEvents::ALLOW_EXEC_BEFORE_SUBMIT |
 			CheckEvents::ALLOW_DOUBLE_TERMINATE;
 
+	allow_events_bootstrap = CheckEvents::ALLOW_TERM_ABORT |
+			CheckEvents::ALLOW_RUN_AFTER_TERM |
+			CheckEvents::ALLOW_EXEC_BEFORE_SUBMIT |
+			CheckEvents::ALLOW_DOUBLE_TERMINATE;
+
 		// If the old DAGMAN_IGNORE_DUPLICATE_JOB_EXECUTION param is set,
 		// we also allow extra runs.
 		// Note: this parameter is probably only used by CDF, and only
@@ -151,6 +156,7 @@ Dagman::Config()
 
 	if ( allowExtraRuns ) {
 		allow_events |= CheckEvents::ALLOW_RUN_AFTER_TERM;
+		allow_events_bootstrap |= CheckEvents::ALLOW_RUN_AFTER_TERM;
 		debug_printf( DEBUG_NORMAL, "Warning: "
 				"DAGMAN_IGNORE_DUPLICATE_JOB_EXECUTION "
 				"is deprecated -- used DAGMAN_ALLOW_EVENTS instead\n" );
@@ -163,6 +169,16 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "allow_events ("
 				"DAGMAN_IGNORE_DUPLICATE_JOB_EXECUTION, DAGMAN_ALLOW_EVENTS"
 				") setting: %d\n", allow_events );
+
+		// Now get the new DAGMAN_BOOTSTRAP_ALLOW_EVENTS value -- that can
+		// override all of the previous stuff.
+	allow_events_bootstrap = param_integer("DAGMAN_BOOTSTRAP_ALLOW_EVENTS",
+				allow_events_bootstrap);
+
+	debug_printf( DEBUG_NORMAL, "allow_events_bootstrap ("
+				"DAGMAN_IGNORE_DUPLICATE_JOB_EXECUTION, "
+				"DAGMAN_BOOTSTRAP_ALLOW_EVENTS"
+				") setting: %d\n", allow_events_bootstrap );
 
 		// ...end of event checking setup.
 
@@ -539,7 +555,7 @@ int main_init (int argc, char ** const argv) {
 
     dagman.dag = new Dag( dagman.dagFiles, condorLogName, dagman.maxJobs,
 						  dagman.maxPreScripts, dagman.maxPostScripts,
-						  dagman.allow_events, dapLogName, //<-- DaP
+						  dapLogName, //<-- DaP
 						  dagman.allowLogError, dagman.useDagDir,
 						  dagman.maxIdle, dagman.retrySubmitFirst,
 						  dagman.retryNodeFirst, dagman.condorRmExe,
@@ -604,10 +620,12 @@ int main_init (int argc, char ** const argv) {
         }
 
         debug_printf( DEBUG_VERBOSE, "Bootstrapping...\n");
+		dagman.dag->SetAllowEvents( dagman.allow_events_bootstrap );
         if( !dagman.dag->Bootstrap( recovery ) ) {
             dagman.dag->PrintReadyQ( DEBUG_DEBUG_1 );
             debug_error( 1, DEBUG_QUIET, "ERROR while bootstrapping\n");
         }
+		dagman.dag->SetAllowEvents( dagman.allow_events );
     }
 
 	ASSERT( condorLogName || dapLogName );

@@ -68,7 +68,7 @@ static const int NODE_NAME_HASH_SIZE = 997; // prime, allow for big DAG...
 Dag::Dag( /* const */ StringList &dagFiles, char *condorLogName,
 		  const int maxJobsSubmitted,
 		  const int maxPreScripts, const int maxPostScripts,
-		  int allow_events, const char* dapLogName, bool allowLogError,
+		  const char* dapLogName, bool allowLogError,
 		  bool useDagDir, int maxIdleJobProcs, bool retrySubmitFirst,
 		  bool retryNodeFirst, const char *condorRmExe,
 		  const char *storkRmExe, const CondorID *DAGManJobId,
@@ -101,8 +101,8 @@ Dag::Dag( /* const */ StringList &dagFiles, char *condorLogName,
 	_DAGManJobId		  (DAGManJobId),
 	_preRunNodeCount	  (0),
 	_postRunNodeCount	  (0),
-	_checkCondorEvents    (allow_events),
-	_checkStorkEvents     (allow_events),
+	_checkCondorEvents    (),
+	_checkStorkEvents     (),
 	_maxJobsDeferredCount (0),
 	_maxIdleDeferredCount (0),
 	_prohibitMultiJobs	  (prohibitMultiJobs)
@@ -1077,6 +1077,14 @@ Job * Dag::GetJob (int logsource, const CondorID condorID) const {
 					logsource == job->JobType()) return job;
 	}
     return NULL;
+}
+
+//-------------------------------------------------------------------------
+void
+Dag::SetAllowEvents( int allowEvents)
+{
+	_checkCondorEvents.SetAllowEvents( allowEvents );
+	_checkStorkEvents.SetAllowEvents( allowEvents );
 }
 
 //-------------------------------------------------------------------------
