@@ -58,13 +58,13 @@ class HashTable {
   ~HashTable();
 
   int insert(const Index &index, const Value &value);
-  int lookup(const Index &index, Value &value);
-  int lookup(const Index &index, Value* &value);
+  int lookup(const Index &index, Value &value) const;
+  int lookup(const Index &index, Value* &value) const;
   int getNext(Index &index, void *current, Value &value,
-	      void *&next);
+	      void *&next) const;
   int remove(const Index &index);  
-  int getNumElements( ) { return numElems; }
-  int getTableSize( ) { return tableSize; }
+  int getNumElements( ) const { return numElems; }
+  int getTableSize( ) const { return tableSize; }
   int clear();
 
   void startIterations (void);
@@ -327,7 +327,7 @@ int HashTable<Index,Value>::insert(const Index &index,const  Value &value)
 // corresponding value and OK status (0). Otherwise return -1.
 
 template <class Index, class Value>
-int HashTable<Index,Value>::lookup(const Index &index, Value &value)
+int HashTable<Index,Value>::lookup(const Index &index, Value &value) const
 {
   int idx = hashfcn(index, tableSize);
   // do sanity check on return value from hash func
@@ -359,7 +359,7 @@ int HashTable<Index,Value>::lookup(const Index &index, Value &value)
 // _pointer_ reference to the value.  
 
 template <class Index, class Value>
-int HashTable<Index,Value>::lookup(const Index &index, Value* &value )
+int HashTable<Index,Value>::lookup(const Index &index, Value* &value ) const
 {
   int idx = hashfcn(index, tableSize);
   // do sanity check on return value from hash func
@@ -395,7 +395,7 @@ int HashTable<Index,Value>::lookup(const Index &index, Value* &value )
 
 template <class Index, class Value>
 int HashTable<Index,Value>::getNext(Index &index, void *current,
-				    Value &value, void *&next)
+				    Value &value, void *&next) const
 {
   HashBucket<Index, Value> *bucket;
 
