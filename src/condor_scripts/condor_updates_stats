@@ -38,13 +38,14 @@ my %Config =
  HistMin	=> 0,
  HistMax	=> 99999,
  Long		=> 0,
+ SummaryOnly	=> 0,
  UpdateInterval => 0,
  DumpTime	=> 1,
 );
 
 
 my $Program = "condor_updates_stats";
-my $RevisionString = '$Revision: 1.1.4.3 $';
+my $RevisionString = '$Revision: 1.1.4.4 $';
 my %Help =
     (
      Usage => "$Program [options]",
@@ -52,6 +53,8 @@ my %Help =
      {
       "[--long|-l]"
       => "Enable long output <off>",
+      "[--summary|-s]"
+      => "Summary-only mode <off>",
       "[--history=[min][-max]]"
       => "Set history range from min to max",
       "[--[no]time]"
@@ -77,6 +80,10 @@ foreach my $Arg ( @ARGV )
     {
 	$Config{UpdateInterval} = $1;
 	$Config{DumpTime} = 1;
+    }
+    elsif ( $Arg eq "--summary|-s" or $Arg eq "-s" )
+    {
+	$Config{SummaryOnly} = 1;
     }
     elsif ( $Arg eq "--time" )
     {
@@ -111,7 +118,6 @@ foreach my $Arg ( @ARGV )
     }
 }
 $#ARGV = -1;
-print STDERR "(Reading from stdin)\n";
 
 # Just pull from stdin...
 my %AdInfo;
@@ -257,6 +263,9 @@ sub DumpHistory( $$$ )
 	print "   Stats: Total=$Updates{Total}, Seq=$Updates{Seq}, ".
 	    "Lost=$Updates{Lost} ($LostPercent\%)\n";
     }
+
+    # Summary mode: we're done
+    return 1 if ( $Config{SummaryOnly} );
 
     # Dump the "History" info
     if ( exists $Updates{Hist} )
