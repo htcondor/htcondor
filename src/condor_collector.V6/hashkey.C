@@ -211,9 +211,12 @@ makeStartdAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
 		}
 	}
 
+	hk.ip_addr = "";
 	if ( !getIpAddr( "Start", ad, ATTR_STARTD_IP_ADDR,
 					 "STARTD_IP_ADDR", hk.ip_addr ) ) {
-		return false;
+		dprintf (D_FULLDEBUG,
+				 "StartAd: No IP address in classAd from %s\n",
+				 hk.name.GetCStr() );
 	}
 
 	return true;
