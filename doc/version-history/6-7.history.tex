@@ -52,7 +52,6 @@ summary info.
 \item Fixed a bug in Quill which caused it to crash when certain
 long attributes appeared in a job ad.
 
-
 \item The startd would crash after a reconfig if the address of a
 collector had not been resolved since the previous reconfig
 (e.g. because DNS was down during that time).
@@ -71,6 +70,12 @@ or so) by using a hash table instead of linear search to find DAG nodes.
 \item Fixed a bug in \Condor{dagman} that caused an EXECUTABLE\_ERROR
 event from a node job to abort the DAG instead of just marking the
 relevant node as failed.
+
+\item Fixed a bug in \Condor{collector} that caused it to discard
+machine ads that don't have an IP address field (either StartdIpAddr
+or STARTD\_IP\_ADDR).  The \Condor{startd} will always produce a
+StartdIpAddr field, but machine ads published through
+\Condor{advertise} may not.
 
 \end{itemize}
 
