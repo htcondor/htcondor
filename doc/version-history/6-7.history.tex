@@ -56,6 +56,12 @@ long attributes appeared in a job ad.
 collector had not been resolved since the previous reconfig
 (e.g. because DNS was down during that time).
 
+\item Once a Condor daemon failed to lookup the IP address of the
+collector (e.g. because DNS was down), it would fail to contact the
+collector from that time until the next reconfig.  Now, each time Condor
+tries to contact the collector, it generates a fresh DNS query if the
+previous attempt failed.
+
 % Gnats PR 707
 \item When using Condor-C or the -s or -r command-line options to
 \condor{submit}, the job's standard output and error would be placed
