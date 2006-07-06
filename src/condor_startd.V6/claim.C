@@ -684,11 +684,11 @@ Claim::beginActivation( time_t now )
 		} else {
 			universe = CONDOR_UNIVERSE_STANDARD;
 		}
-		c_rip->dprintf( D_ALWAYS, "Default universe \"%s\" (%d) "
+		c_rip->dprintf( D_FULLDEBUG, "Default universe \"%s\" (%d) "
 						"since not in classad\n",
 						CondorUniverseName(universe), universe );
 	} else {
-		c_rip->dprintf( D_ALWAYS, "Got universe \"%s\" (%d) "
+		c_rip->dprintf( D_FULLDEBUG, "Got universe \"%s\" (%d) "
 						"from request classad\n",
 						CondorUniverseName(universe), universe );
 	}
@@ -726,7 +726,7 @@ Claim::saveJobInfo( ClassAd* request_ad )
 			c_proc = 0;
 		}
 			// only print this if the request specified it...
-		c_rip->dprintf( D_ALWAYS, "Remote job ID is %d.%d\n", 
+		c_rip->dprintf( D_FULLDEBUG, "Remote job ID is %d.%d\n", 
 						c_cluster, c_proc );
 	}
 
@@ -765,7 +765,7 @@ void
 Claim::startLeaseTimer()
 {
 	if( c_lease_duration < 0 ) {
-		dprintf( D_ALWAYS, "Warning: starting ClaimLease timer before "
+		dprintf( D_FULLDEBUG, "Warning: starting ClaimLease timer before "
 				 "lease duration set.\n" );
 		c_lease_duration = 1200;
 	}

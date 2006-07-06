@@ -1296,7 +1296,7 @@ int
 match_info( Resource* rip, char* id )
 {
 	int rval = FALSE;
-	rip->dprintf(D_ALWAYS, "match_info called\n");
+	rip->dprintf(D_FULLDEBUG, "match_info called\n");
 
 	switch( rip->state() ) {
 	case claimed_state:

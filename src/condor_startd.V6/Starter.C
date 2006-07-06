@@ -222,7 +222,7 @@ Starter::publish( ClassAd* ad, amask_t mask, StringList* list )
 		if( (lhs = tree->LArg()) ) {
 			lhs->PrintToNewStr( &lhstr );
 		} else {
-			dprintf( D_ALWAYS, 
+			dprintf( D_FULLDEBUG, 
 					 "ERROR parsing Starter classad attribute!\n" );
 			continue;
 		}
@@ -778,10 +778,10 @@ Starter::execOldStarter( void )
 		(void)close(main_sock);
 		(void)close(err_sock);
 
-		dprintf(D_ALWAYS,
+		dprintf(D_FULLDEBUG,
 				"exec_starter( %s, %d, %d ) : pid %d\n",
 				hostname, main_sock, err_sock, pid);
-		dprintf(D_ALWAYS, "execl(%s, \"condor_starter\", %s, 0)\n",
+		dprintf(D_FULLDEBUG, "execl(%s, \"condor_starter\", %s, 0)\n",
 				s_path, hostname);
 	} else {	/* the child */
 

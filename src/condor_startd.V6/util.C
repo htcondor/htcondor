@@ -305,12 +305,12 @@ stream_to_rip( Stream* stream )
 
 	stream->decode();
 	if( ! stream->code(id) ) {
-		dprintf( D_ALWAYS, "Can't read ClaimId\n" );
+		dprintf( D_FULLDEBUG, "Can't read ClaimId\n" );
 		free( id );
 		return NULL;
 	}
 	if( ! stream->end_of_message() ) {
-		dprintf( D_ALWAYS, "Can't read end_of_message\n" );
+		dprintf( D_FULLDEBUG, "Can't read end_of_message\n" );
 		free( id );
 		return NULL;
 	}
