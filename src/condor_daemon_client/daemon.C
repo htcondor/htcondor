@@ -1179,6 +1179,12 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype, bool query_collector)
 				sprintf( buf, "unknown host %s", host );
 				newError( CA_LOCATE_FAILED, buf );
 				if (host) free( host );
+
+					// We assume this is a transient DNS failure.  Therefore,
+					// set _tried_locate = false, so that we keep trying in
+					// future calls to locate().
+				_tried_locate = false;
+
 				return false;
 			}
 			sprintf( buf, "<%s:%d>", inet_ntoa(sin_addr), _port );
@@ -1424,6 +1430,7 @@ Daemon::getCmInfo( const char* subsys )
 		newError( CA_LOCATE_FAILED, buf.Value() );
 		_is_configured = false;
 		if( host ) free( host );
+
 		return false;
 	} 
 
@@ -1493,6 +1500,12 @@ Daemon::getCmInfo( const char* subsys )
 			buf.sprintf( "unknown host %s", host );
 			newError( CA_LOCATE_FAILED, buf.Value() );
 			free( host );
+
+				// We assume this is a transient DNS failure.  Therefore,
+				// set _tried_locate = false, so that we keep trying in
+				// future calls to locate().
+			_tried_locate = false;
+
 			return false;
 		}
 		buf.sprintf( "<%s:%d>", inet_ntoa(sin_addr), _port );
