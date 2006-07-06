@@ -271,7 +271,7 @@ Resource::request_new_proc( void )
 int
 Resource::deactivate_claim( void )
 {
-	dprintf(D_FULLDEBUG, "Called deactivate_claim()\n");
+	dprintf(D_ALWAYS, "Called deactivate_claim()\n");
 	if( state() == claimed_state ) {
 		return r_cur->deactivateClaim( true );
 	} 
@@ -282,7 +282,7 @@ Resource::deactivate_claim( void )
 int
 Resource::deactivate_claim_forcibly( void )
 {
-	dprintf(D_FULLDEBUG, "Called deactivate_claim_forcibly()\n");
+	dprintf(D_ALWAYS, "Called deactivate_claim_forcibly()\n");
 	if( state() == claimed_state ) {
 		return r_cur->deactivateClaim( false );
 	} 
@@ -582,7 +582,7 @@ Resource::starterExited( Claim* cur_claim )
 		leave_preempting_state();
 		break;
 	default:
-		dprintf( D_FULLDEBUG, 
+		dprintf( D_ALWAYS, 
 				 "Warning: starter exited while in unexpected state %s\n",
 				 state_to_string(s) );
 		change_state( owner_state );

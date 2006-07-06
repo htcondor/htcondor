@@ -380,7 +380,7 @@ ResState::eval( void )
 			set_destination( owner_state );
 			return TRUE;
 		} else if( kill_rval < 0 ) {
-			dprintf( D_FULLDEBUG, "WARNING: EVICT_BACKFILL is UNDEFINED, "
+			dprintf( D_ALWAYS, "WARNING: EVICT_BACKFILL is UNDEFINED, "
 					 "staying in Backfill state\n" );
 		}
 
@@ -684,7 +684,7 @@ ResState::set_destination( State new_state )
 			// destination is already set to something
 			// else... otherwise, we'll allow it.
 		if( r_destination != no_state ) {
-			dprintf( D_FULLDEBUG, "Not setting destination state to Matched "
+			dprintf( D_ALWAYS, "Not setting destination state to Matched "
 					 "since destination already set to %s\n",
 					 state_to_string(r_destination) ); 
 			return;
