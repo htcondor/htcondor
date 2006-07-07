@@ -339,6 +339,7 @@ JICShadow::Continue( void )
 bool
 JICShadow::allJobsDone( void )
 {
+
 		// now that all the jobs are gone, we can stop our periodic
 		// shadow updates.
 	if( shadowupdate_tid >= 0 ) {
@@ -375,10 +376,27 @@ JICShadow::allJobsDone( void )
 
 				// Some other kind of error.  Would like to know
 				// for sure whether this really means we are disconnected
-				// from the shadow, but for now, we just assume that
-				// is the case.
-			dprintf(D_ALWAYS,"File transfer failed, assuming disconnect.\n");
-			job_cleanup_disconnected = true;
+				// from the shadow, but for now, force the socket to
+				// disconnect by closing it.
+
+				// Please forgive us these hacks
+				// as we forgive those who hack against us
+			static int timesCalled = 0;
+			timesCalled++;
+			if (timesCalled < 5) {
+					dprintf(D_ALWAYS,"File transfer failed, forcing disconnect.\n");
+
+					if (syscall_sock != NULL) {
+							syscall_sock->close();
+					}
+
+					job_cleanup_disconnected = true;
+					return false;
+			}
+
+				// We tried 5 times and kept failing
+				// now just tell the user we're giving up
+			notifyStarterError("Repeated attempts to transfer output failed for unknown reasons", true,0,0);
 			return false;
 		}
 	}
