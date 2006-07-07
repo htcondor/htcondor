@@ -50,6 +50,8 @@ so, please.... don't use it... okay?
 #	define CONDOR_HAD_GNUC_2
 #elif __GNUC__ == 3
 #	define CONDOR_HAD_GNUC_3
+#elif __GNUC__ == 4
+#       define CONDOR_HAD_GNUC_4
 #else
 #	error "Please fix the definition of CONDOR_HAD_GNUC."
 #endif
