@@ -57,7 +57,7 @@ prereqs   = tar-1.14, m4-1.4.1, flex-2.5.4a, make-3.80, bison-1.25, perl-5.8.5
 # On OSX we must specify the gcc version
 ########################################
 [
-platforms = ppc_macos_10.3, x86_macos_10.4
+platforms = ppc_macos_10.3
 prereqs   = gcc-3.3
 # V6_7 requires gcc-3.3, because the latest gsoap external
 # causes gcc-3.1 to seg fault.  since we're using a newer
