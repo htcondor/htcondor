@@ -990,6 +990,7 @@ int Condor_Auth_Kerberos :: map_kerberos_name(krb5_principal * princ_to_map)
 			dprintf ( D_SECURITY, "KERBEROS: remapping '%s' to '%s'\n", service, user );
 		}
  		setRemoteUser(user);
+		setAuthenticatedName(client);
 		free(user);
 		user = 0;
 		free(service);

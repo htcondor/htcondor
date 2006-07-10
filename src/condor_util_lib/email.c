@@ -137,6 +137,7 @@ email_open( const char *email_addr, const char *subject )
 		free(FinalSubject);
 		if (SmtpServer) free(SmtpServer);
 		free(FinalAddr);
+		return NULL;
 	}
 
 	/* construct the argument vector for the mailer */

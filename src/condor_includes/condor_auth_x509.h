@@ -80,6 +80,8 @@ class Condor_Auth_X509 : public Condor_Auth_Base {
     // RETURNS: TRUE -- success, FALSE -- failure
     //------------------------------------------
 
+    int nameGssToLocal( const char * GssClient );
+
     int isValid() const;
     //------------------------------------------
     // PURPOSE: whether the authenticator is in
@@ -105,8 +107,6 @@ class Condor_Auth_X509 : public Condor_Auth_Base {
     int authenticate_server_gss(CondorError* errstack);
 
     char * get_server_info();
-
-    int nameGssToLocal( char * GssClient );
 
 #ifdef WIN32
 	int ParseMapFile();

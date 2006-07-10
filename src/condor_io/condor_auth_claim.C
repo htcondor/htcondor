@@ -104,6 +104,7 @@ int Condor_Auth_Claim :: authenticate(const char * remoteHost, CondorError* errs
             if( tmpOwner ) {
                 retval = 1;
                 setRemoteUser( tmpOwner );
+                setAuthenticatedName( tmpOwner );
 				free(tmpOwner);
             } else {
                 retval = 0;

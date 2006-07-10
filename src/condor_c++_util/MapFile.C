@@ -41,7 +41,7 @@ MapFile::~MapFile()
 int
 MapFile::ParseField(MyString & line, int offset, MyString & field)
 {
-	ASSERT(offset >= 0 && offset < line.Length());
+	ASSERT(offset >= 0 && offset <= line.Length());
 
 		// We consume the leading white space
 	while (offset < line.Length() &&
@@ -148,10 +148,10 @@ MapFile::ParseCanonicalizationFile(const MyString filename)
 		if (method.IsEmpty() ||
 			principal.IsEmpty() ||
 			canonicalization.IsEmpty()) {
-				dprintf(D_ALWAYS, "ERROR: Error parsing line %d of %s.\n",
+				dprintf(D_ALWAYS, "ERROR: Error parsing line %d of %s.  Skipping to next line.\n",
 						line, filename.GetCStr());
 
-				return line;
+				continue;
 		}
 
 /*
@@ -170,11 +170,11 @@ MapFile::ParseCanonicalizationFile(const MyString filename)
 		if (!canonical_entries[last].regex.compile(principal,
 												   &errptr,
 												   &erroffset)) {
-			dprintf(D_ALWAYS, "ERROR: Error compiling expression '%s' -- %s\n",
+			dprintf(D_ALWAYS, "ERROR: Error compiling expression '%s' -- %s.  Skipping to next line.\n",
 					principal.GetCStr(),
 					errptr);
 
-			return line;
+			continue;
 		}
 	}
 
