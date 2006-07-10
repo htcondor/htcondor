@@ -108,5 +108,9 @@ static const char NiceUserName[] = "nice-user";
 #define THREAD_LOCAL_STORAGE /* Not supported on Unix */
 #endif
 
+/* Max space needed to hold an IP string, as
+ * returned by inet_ntoa().
+ */
+static const size_t IP_STRING_BUF_SIZE = 16;
 
 #endif /* CONDOR_CONSTANTS_H */

@@ -31,8 +31,6 @@
 // retry failed connects for CONNECT_TIMEOUT seconds
 #define CONNECT_TIMEOUT 10
 
-const int _ENDPOINT_BUF_SIZE = 16;
-
 // Some error codes.  These should go to condor_errno.h once it is there.
 const int CEDAR_EWOULDBLOCK = 666;
 
@@ -304,7 +302,7 @@ protected:
 	bool ignore_connect_timeout;	// Used by HA Daemon
 
 	// Buffer to hold the string version of our own IP address. 
-	char _sender_ip_buf[_ENDPOINT_BUF_SIZE];	
+	char _sender_ip_buf[IP_STRING_BUF_SIZE];	
 
 private:
 	int _condor_read(SOCKET fd, char *buf, int sz, int timeout);
@@ -312,7 +310,7 @@ private:
 	int bindWithin(const int low, const int high);
 	///
 	// Buffer to hold the string version of our endpoint's IP address. 
-	char _endpoint_ip_buf[_ENDPOINT_BUF_SIZE];	
+	char _endpoint_ip_buf[IP_STRING_BUF_SIZE];	
 
 	// struct to hold state info for do_connect() method
 	struct connect_state_struct {

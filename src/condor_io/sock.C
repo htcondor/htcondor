@@ -51,7 +51,7 @@ Sock::Sock() : Stream() {
 	ignore_connect_timeout = FALSE;		// Used by the HA Daemon
 	connect_state.host = NULL;
 	memset(&_who, 0, sizeof(struct sockaddr_in));
-	memset(&_endpoint_ip_buf, 0, _ENDPOINT_BUF_SIZE);
+	memset(&_endpoint_ip_buf, 0, IP_STRING_BUF_SIZE);
 }
 
 Sock::Sock(const Sock & orig) : Stream() {
@@ -62,7 +62,7 @@ Sock::Sock(const Sock & orig) : Stream() {
 	_timeout = 0;
 	connect_state.host = NULL;
 	memset( &_who, 0, sizeof( struct sockaddr_in ) );
-	memset(	&_endpoint_ip_buf, 0, _ENDPOINT_BUF_SIZE );
+	memset(	&_endpoint_ip_buf, 0, IP_STRING_BUF_SIZE );
 
 	// now duplicate the underlying network socket
 #ifdef WIN32
@@ -980,7 +980,7 @@ int Sock::close()
     }
 	connect_state.host = NULL;
 	memset(&_who, 0, sizeof( struct sockaddr_in ) );
-	memset(&_endpoint_ip_buf, 0, _ENDPOINT_BUF_SIZE );
+	memset(&_endpoint_ip_buf, 0, IP_STRING_BUF_SIZE );
 	
 	return TRUE;
 }
@@ -1289,7 +1289,7 @@ char *
 Sock::endpoint_ip_str()
 {
 		// We need to recompute this each time because _who might have changed.
-	memset(&_endpoint_ip_buf, 0, _ENDPOINT_BUF_SIZE );
+	memset(&_endpoint_ip_buf, 0, IP_STRING_BUF_SIZE );
 	strcpy( _endpoint_ip_buf, inet_ntoa(_who.sin_addr) );
 	return &(_endpoint_ip_buf[0]);
 }
@@ -1316,7 +1316,7 @@ Sock::sender_ip_str()
 	if(mypoint(&sin) == -1) {
 		return NULL;
 	}
-	memset(&_sender_ip_buf, 0, _ENDPOINT_BUF_SIZE );
+	memset(&_sender_ip_buf, 0, IP_STRING_BUF_SIZE );
 	strcpy( _sender_ip_buf, inet_ntoa(sin.sin_addr) );
 	return &(_sender_ip_buf[0]);
 }
