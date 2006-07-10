@@ -607,10 +607,8 @@ V6_7_20_EXT	-a V6_7_COMMON_EXT \
 		   externals/bundles/drmaa/1.2.1 \
 		   externals/bundles/blahp/1.7.0
 
-# Externals needed for V6_7_21 (same as V6_7_19 (until we merge!))
-# TODO: move this to "-a V6_7_20_EXT" when we merge V6_7_20 -> V6_7
-# --- NOTE ---     V6_7_21_EXT is the same as V6.7.20_EXT
-# plus the DRMAA update and minus the GCB update.
+# Externals needed for V6_7_21
+# (same as V6_7_20, but update DRMAA to 1.3)
 V6_7_21_EXT	-a V6_7_COMMON_EXT \
                    externals/bundles/krb5/1.4.3 \
                    externals/bundles/gahp/1.0.14 \
@@ -623,7 +621,7 @@ V6_7_21_EXT	-a V6_7_COMMON_EXT \
                    externals/bundles/pcre/5.0 \
                    externals/bundles/openssl/0.9.8 \
                    externals/bundles/postgresql/8.0.2 \
-                   externals/bundles/gcb/1.3.1 \
+                   externals/bundles/gcb/1.3.2 \
                    externals/bundles/unicoregahp/1.2.0 \
                    externals/bundles/nordugridgahp/1.1.0 \
                    externals/bundles/linuxlibcheaders \
