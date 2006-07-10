@@ -83,6 +83,11 @@ or STARTD\_IP\_ADDR).  The \Condor{startd} will always produce a
 StartdIpAddr field, but machine ads published through
 \Condor{advertise} may not.
 
+\item When using \MacroNI{BIND\_ALL\_INTERFACES} on a dual-homed
+machine, a bug introduced in 6.7.18 was causing Condor daemons to
+sometimes incorrectly report their IP addresses, which could cause
+jobs to fail to start running.
+
 \end{itemize}
 
 \noindent Known Bugs:
