@@ -32,6 +32,11 @@
 #define WANT_NAMESPACES
 #include "classad_distribution.h"
 #include "condor_uid.h"
+#include "condor_event.h"
+#include "user_log.c++.h"
+#include "condor_email.h"
+#include "condor_arglist.h"
+#include "format_time.h"
 
 	// Simplify my error handling and reporting code
 class FailObj {
@@ -750,4 +755,353 @@ bool remove_job(classad::ClassAd const &ad, int cluster, int proc, char const *r
 
 	set_priv(priv);
 	return success;
+}
+
+bool InitializeUserLog( classad::ClassAd const &job_ad, UserLog *ulog, bool *no_ulog )
+{
+	int cluster, proc;
+	std::string owner;
+	std::string userLogFile;
+	std::string domain;
+	bool use_xml = false;
+
+	ASSERT(ulog);
+	ASSERT(no_ulog);
+
+	userLogFile[0] = '\0';
+	job_ad.EvaluateAttrString( ATTR_ULOG_FILE, userLogFile );
+	if ( userLogFile[0] == '\0' ) {
+		// User doesn't want a log
+		*no_ulog = true;
+		return true;
+	}
+	*no_ulog = false;
+
+	job_ad.EvaluateAttrString(ATTR_OWNER,owner);
+	job_ad.EvaluateAttrInt( ATTR_CLUSTER_ID, cluster );
+	job_ad.EvaluateAttrInt( ATTR_PROC_ID, proc );
+	job_ad.EvaluateAttrString( ATTR_NT_DOMAIN, domain );
+	job_ad.EvaluateAttrBool( ATTR_ULOG_USE_XML, use_xml );
+
+	if(!ulog->initialize(owner.c_str(), domain.c_str(), userLogFile.c_str(), cluster, proc, 0)) {
+		return false;
+	}
+	ulog->setUseXML( use_xml );
+	return true;
+}
+
+bool InitializeTerminateEvent( TerminatedEvent *event, classad::ClassAd const &job_ad )
+{
+	int cluster, proc;
+
+		// This code is copied from gridmanager basejob.C with a small
+		// amount of refactoring.
+		// TODO: put this code in a common place.
+
+	job_ad.EvaluateAttrInt( ATTR_CLUSTER_ID, cluster );
+	job_ad.EvaluateAttrInt( ATTR_PROC_ID, proc );
+
+	dprintf( D_FULLDEBUG, 
+			 "(%d.%d) Writing terminate record to user logfile\n",
+			 cluster, proc );
+
+	struct rusage r;
+	memset( &r, 0, sizeof( struct rusage ) );
+
+#if !defined(WIN32)
+	event->run_local_rusage = r;
+	event->run_remote_rusage = r;
+	event->total_local_rusage = r;
+	event->total_remote_rusage = r;
+#endif /* WIN32 */
+	event->sent_bytes = 0;
+	event->recvd_bytes = 0;
+	event->total_sent_bytes = 0;
+	event->total_recvd_bytes = 0;
+
+	bool exited_by_signal;
+	if( job_ad.EvaluateAttrBool(ATTR_ON_EXIT_BY_SIGNAL, exited_by_signal) ) {
+		int int_val;
+		if( exited_by_signal ) {
+			if( job_ad.EvaluateAttrInt(ATTR_ON_EXIT_SIGNAL, int_val) ) {
+				event->signalNumber = int_val;
+				event->normal = false;
+			} else {
+				dprintf( D_ALWAYS, "(%d.%d) Job ad lacks %s.  "
+						 "Signal code unknown.\n", cluster, proc, 
+						 ATTR_ON_EXIT_SIGNAL);
+				event->normal = false;
+					// TODO What about event->signalNumber?
+			}
+		} else {
+			if( job_ad.EvaluateAttrInt(ATTR_ON_EXIT_CODE, int_val) ) {
+				event->normal = true;
+				event->returnValue = int_val;
+			} else {
+				dprintf( D_ALWAYS, "(%d.%d) Job ad lacks %s.  "
+						 "Return code unknown.\n", cluster, proc, 
+						 ATTR_ON_EXIT_CODE);
+				event->normal = false;
+					// TODO What about event->signalNumber?
+			}
+		}
+	} else {
+		dprintf( D_ALWAYS,
+				 "(%d.%d) Job ad lacks %s.  Final state unknown.\n",
+				 cluster, proc, ATTR_ON_EXIT_BY_SIGNAL);
+		event->normal = false;
+			// TODO What about event->signalNumber?
+	}
+
+	double real_val = 0;
+	if ( job_ad.EvaluateAttrReal( ATTR_JOB_REMOTE_USER_CPU, real_val ) ) {
+		event->run_remote_rusage.ru_utime.tv_sec = (int)real_val;
+		event->total_remote_rusage.ru_utime.tv_sec = (int)real_val;
+	}
+	if ( job_ad.EvaluateAttrReal( ATTR_JOB_REMOTE_SYS_CPU, real_val ) ) {
+		event->run_remote_rusage.ru_stime.tv_sec = (int)real_val;
+		event->total_remote_rusage.ru_stime.tv_sec = (int)real_val;
+	}
+
+	return true;
+}
+
+bool WriteEventToUserLog( ULogEvent const &event, classad::ClassAd const &ad )
+{
+	UserLog ulog;
+	bool no_ulog = false;
+
+	if(!InitializeUserLog(ad,&ulog,&no_ulog)) {
+		dprintf( D_FULLDEBUG,
+				 "(%d.%d) Unable to open user log (event %d)\n",
+				 event.cluster, event.proc, event.eventNumber );
+		return false;
+	}
+	if(no_ulog) {
+		return true;
+	}
+
+	int rc = ulog.writeEvent((ULogEvent *)&event);
+
+	if (!rc) {
+		dprintf( D_FULLDEBUG,
+				 "(%d.%d) Unable to update user log (event %d)\n",
+				 event.cluster, event.proc, event.eventNumber );
+		return false;
+	}
+
+	return true;
+}
+
+bool WriteTerminateEventToUserLog( classad::ClassAd const &ad )
+{
+	JobTerminatedEvent event;
+
+	if(!InitializeTerminateEvent(&event,ad)) {
+		return false;
+	}
+
+	return WriteEventToUserLog( event, ad );
+}
+
+
+
+// The following is copied from gridmanager/basejob.C
+// TODO: put the code into a shared file.
+
+void
+EmailTerminateEvent(ClassAd * job_ad, bool exit_status_known)
+{
+	if ( !job_ad ) {
+		dprintf(D_ALWAYS, 
+				"email_terminate_event called with invalid ClassAd\n");
+		return;
+	}
+
+	int cluster, proc;
+	job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
+	job_ad->LookupInteger( ATTR_PROC_ID, proc );
+
+	int notification = NOTIFY_COMPLETE; // default
+	job_ad->LookupInteger(ATTR_JOB_NOTIFICATION,notification);
+
+	switch( notification ) {
+		case NOTIFY_NEVER:    return;
+		case NOTIFY_ALWAYS:   break;
+		case NOTIFY_COMPLETE: break;
+		case NOTIFY_ERROR:    return;
+		default:
+			dprintf(D_ALWAYS, 
+				"Condor Job %d.%d has unrecognized notification of %d\n",
+				cluster, proc, notification );
+				// When in doubt, better send it anyway...
+			break;
+	}
+
+	char subjectline[50];
+	sprintf( subjectline, "Condor Job %d.%d", cluster, proc );
+	FILE * mailer =  email_user_open( job_ad, subjectline );
+
+	if( ! mailer ) {
+		// Is message redundant?  Check email_user_open and euo's children.
+		dprintf(D_ALWAYS, 
+			"email_terminate_event failed to open a pipe to a mail program.\n");
+		return;
+	}
+
+		// gather all the info out of the job ad which we want to 
+		// put into the email message.
+	char JobName[_POSIX_PATH_MAX];
+	JobName[0] = '\0';
+	job_ad->LookupString( ATTR_JOB_CMD, JobName );
+
+	MyString Args;
+	ArgList::GetArgsStringForDisplay(job_ad,&Args);
+	
+	/*
+	// Not present.  Probably doesn't make sense for Globus
+	int had_core = FALSE;
+	job_ad->LookupBool( ATTR_JOB_CORE_DUMPED, had_core );
+	*/
+
+	int q_date = 0;
+	job_ad->LookupInteger(ATTR_Q_DATE,q_date);
+	
+	float remote_sys_cpu = 0.0;
+	job_ad->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, remote_sys_cpu);
+	
+	float remote_user_cpu = 0.0;
+	job_ad->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, remote_user_cpu);
+	
+	int image_size = 0;
+	job_ad->LookupInteger(ATTR_IMAGE_SIZE, image_size);
+	
+	/*
+	int shadow_bday = 0;
+	job_ad->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadow_bday );
+	*/
+	
+	float previous_runs = 0;
+	job_ad->LookupFloat( ATTR_JOB_REMOTE_WALL_CLOCK, previous_runs );
+	
+	time_t arch_time=0;	/* time_t is 8 bytes some archs and 4 bytes on other
+						   archs, and this means that doing a (time_t*)
+						   cast on & of a 4 byte int makes my life hell.
+						   So we fix it by assigning the time we want to
+						   a real time_t variable, then using ctime()
+						   to convert it to a string */
+	
+	time_t now = time(NULL);
+
+	fprintf( mailer, "Your Condor job %d.%d \n", cluster, proc);
+	if ( JobName[0] ) {
+		fprintf(mailer,"\t%s %s\n",JobName,Args.Value());
+	}
+	if(exit_status_known) {
+		fprintf(mailer, "has ");
+
+		int int_val;
+		if( job_ad->LookupBool(ATTR_ON_EXIT_BY_SIGNAL, int_val) ) {
+			if( int_val ) {
+				if( job_ad->LookupInteger(ATTR_ON_EXIT_SIGNAL, int_val) ) {
+					fprintf(mailer, "exited with the signal %d.\n", int_val);
+				} else {
+					fprintf(mailer, "exited with an unknown signal.\n");
+					dprintf( D_ALWAYS, "(%d.%d) Job ad lacks %s.  "
+						 "Signal code unknown.\n", cluster, proc, 
+						 ATTR_ON_EXIT_SIGNAL);
+				}
+			} else {
+				if( job_ad->LookupInteger(ATTR_ON_EXIT_CODE, int_val) ) {
+					fprintf(mailer, "exited normally with status %d.\n",
+						int_val);
+				} else {
+					fprintf(mailer, "exited normally with unknown status.\n");
+					dprintf( D_ALWAYS, "(%d.%d) Job ad lacks %s.  "
+						 "Return code unknown.\n", cluster, proc, 
+						 ATTR_ON_EXIT_CODE);
+				}
+			}
+		} else {
+			fprintf(mailer,"has exited.\n");
+			dprintf( D_ALWAYS, "(%d.%d) Job ad lacks %s.  ",
+				 cluster, proc, ATTR_ON_EXIT_BY_SIGNAL);
+		}
+	} else {
+		fprintf(mailer,"has exited.\n");
+	}
+
+	/*
+	if( had_core ) {
+		fprintf( mailer, "Core file is: %s\n", getCoreName() );
+	}
+	*/
+
+	arch_time = q_date;
+	fprintf(mailer, "\n\nSubmitted at:        %s", ctime(&arch_time));
+	
+	double real_time = now - q_date;
+	arch_time = now;
+	fprintf(mailer, "Completed at:        %s", ctime(&arch_time));
+	
+	fprintf(mailer, "Real Time:           %s\n", 
+			format_time((int)real_time));
+
+
+	fprintf( mailer, "\n" );
+	
+		// TODO We don't necessarily have this information even if we do
+		//   have the exit status
+	if( exit_status_known ) {
+		fprintf(mailer, "Virtual Image Size:  %d Kilobytes\n\n", image_size);
+	}
+
+	double rutime = remote_user_cpu;
+	double rstime = remote_sys_cpu;
+	double trtime = rutime + rstime;
+	/*
+	double wall_time = now - shadow_bday;
+	fprintf(mailer, "Statistics from last run:\n");
+	fprintf(mailer, "Allocation/Run time:     %s\n",format_time(wall_time) );
+	*/
+		// TODO We don't necessarily have this information even if we do
+		//   have the exit status
+	if( exit_status_known ) {
+		fprintf(mailer, "Remote User CPU Time:    %s\n", format_time((int)rutime) );
+		fprintf(mailer, "Remote System CPU Time:  %s\n", format_time((int)rstime) );
+		fprintf(mailer, "Total Remote CPU Time:   %s\n\n", format_time((int)trtime));
+	}
+
+	/*
+	double total_wall_time = previous_runs + wall_time;
+	fprintf(mailer, "Statistics totaled from all runs:\n");
+	fprintf(mailer, "Allocation/Run time:     %s\n",
+			format_time(total_wall_time) );
+
+	// TODO: Can we/should we get this for Globus jobs.
+		// TODO: deal w/ total bytes <- obsolete? in original code)
+	float network_bytes;
+	network_bytes = bytesSent();
+	fprintf(mailer, "\nNetwork:\n" );
+	fprintf(mailer, "%10s Run Bytes Received By Job\n", 
+			metric_units(network_bytes) );
+	network_bytes = bytesReceived();
+	fprintf(mailer, "%10s Run Bytes Sent By Job\n",
+			metric_units(network_bytes) );
+	*/
+
+	email_close(mailer);
+}
+
+bool EmailTerminateEvent( classad::ClassAd const &ad )
+{
+	ClassAd old_ad;
+	classad::ClassAd ad_copy = ad;
+	if(!new_to_old(ad_copy,old_ad)) {
+		dprintf(D_ALWAYS, "EmailTerminateEvent failed to convert job ClassAd from new to old form\n");
+		return false;
+	}
+
+	EmailTerminateEvent( &old_ad, true );
+	return true;
 }

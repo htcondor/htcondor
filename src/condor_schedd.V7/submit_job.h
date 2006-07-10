@@ -165,4 +165,8 @@ schedd_name and pool_name can be NULL to indicate "local"
 bool remove_job(classad::ClassAd const &ad, int cluster, int proc, char const *reason, const char * schedd_name, const char * pool_name, MyString &error_desc);
 
 
+bool WriteTerminateEventToUserLog( classad::ClassAd const &ad );
+bool EmailTerminateEvent( classad::ClassAd const &ad );
+
+
 #endif /* INCLUDE_SUBMIT_JOB_H*/

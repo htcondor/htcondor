@@ -951,7 +951,7 @@ JobRouter::CheckSubmittedJobStatus(RoutedJob *job) {
 
 	job->SetDestJobAd(ad);
 	if(!update_job_status(job->src_ad,job->dest_ad)) {
-		dprintf(D_ALWAYS,"JobRouter failure (%s): failed to update job status for finished job\n",job->JobDesc().c_str());
+		dprintf(D_ALWAYS,"JobRouter failure (%s): failed to update job status\n",job->JobDesc().c_str());
 	}
 	else if(ClassAdHasDirtyAttributes(&job->src_ad)) {
 		if(!push_dirty_attributes(job->src_ad,NULL,NULL)) {
@@ -1001,7 +1001,11 @@ JobRouter::FinalizeJob(RoutedJob *job) {
 			dprintf(D_ALWAYS,"JobRouter failure (%s): failed to set src job status back to idle\n",job->JobDesc().c_str());
 		}
 	}
+	else if(!WriteTerminateEventToUserLog(job->src_ad)) {
+	}
 	else {
+		EmailTerminateEvent(job->src_ad);
+
 		dprintf(D_ALWAYS,"JobRouter (%s): finalized job\n",job->JobDesc().c_str());
 		job->is_done = true;
 	}
