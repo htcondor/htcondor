@@ -91,7 +91,22 @@ my_ip_string()
 	if( ! ipaddr_initialized ) {
 		init_ipaddr(0);
 	}
-	return inet_ntoa(sin_addr);
+
+		// It is too risky to return whatever inet_ntoa() returns
+		// directly, because the caller may unwittingly corrupt that
+		// value by calling inet_ntoa() again.
+
+	char const *str = inet_ntoa(sin_addr);
+	static char buf[IP_STRING_BUF_SIZE];
+
+	if(!str) {
+		return NULL;
+	}
+
+	ASSERT(strlen(str) < IP_STRING_BUF_SIZE);
+
+	strcpy(buf,str);
+	return buf;
 }
 
 void
