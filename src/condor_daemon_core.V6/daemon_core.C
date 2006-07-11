@@ -7353,13 +7353,7 @@ int DaemonCore::HandleChildAliveCommand(int, Stream* stream)
 							"DaemonCore::HungChildTimeout", this);
 		ASSERT( pidentry->hung_tid != -1 );
 
-		/* allocate a piece of memory here so 64bit architectures don't
-			complain about assigning a non-pointer to a pointer type */
-		/* XXX this memory is leaked if the timer is canceled before it fires.
-			*/
-		pid_t *child_pid_ptr = new pid_t[1];
-		child_pid_ptr[0] = child_pid;
-		Register_DataPtr( child_pid_ptr );
+		Register_DataPtr( &pidentry->pid);
 	}
 
 	pidentry->was_not_responding = FALSE;
@@ -7379,9 +7373,7 @@ int DaemonCore::HungChildTimeout()
 
 	/* get the pid out of the allocated memory it was placed into */
 	hung_child_pid_ptr = (pid_t*)GetDataPtr();
-	hung_child_pid = hung_child_pid_ptr[0];
-	delete [] hung_child_pid_ptr;
-	hung_child_pid_ptr = NULL;
+	hung_child_pid = *hung_child_pid_ptr;
 
 	if ((pidTable->lookup(hung_child_pid, pidentry) < 0)) {
 		// we have no information on this pid, it must have exited
