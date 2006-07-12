@@ -240,7 +240,7 @@ SafeSock::sender_ip_str()
 	if(s.mypoint(&sin) == -1) {
 		return NULL;
 	}
-	memset(&_sender_ip_buf, 0, _ENDPOINT_BUF_SIZE );
+	memset(&_sender_ip_buf, 0, IP_STRING_BUF_SIZE );
 	strcpy( _sender_ip_buf, inet_ntoa(sin.sin_addr) );
 	return &(_sender_ip_buf[0]);
 }
