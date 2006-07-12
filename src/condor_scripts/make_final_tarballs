@@ -245,6 +245,7 @@ $realskel="condor_release";
   "i386_tao1"   => "tao1",
   "i386_centos42" => "centos42",
   "i386_centos43" => "centos43",
+  "x86_64_rhel3"  => "glibc23",
   "ia64_rh72"   => "glibc22",
   "ia64_rhel3"  => "rhel3",
   "ia64_sles81" => "sles81",
