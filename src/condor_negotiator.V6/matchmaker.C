@@ -2079,21 +2079,35 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 		return cached_bestSoFar;
 	}
 
-		// Create a new MatchList cache if desired via config file,
-		// and if this job request if from an autocluster not already
-		// cached.
-	if ( (want_matchlist_caching) && (requestAutoCluster != -1) ) {
-			// create a new MatchList cache.
-		if ( MatchList ) delete MatchList;
+		// Delete our old MatchList, since we know that if we made it here
+		// we no longer are dealing with a job from the same autocluster.
+		// (someday we will store it in case we see another job with
+		// the same autocluster, but we aren't that smart yet...)
+	if ( MatchList ) { 
+		delete MatchList;
 		MatchList = NULL;
-		if ( startdAds.Length() > 0 ) {
-			MatchList = new MatchListType( startdAds.Length() );
-			cachedAutoCluster = requestAutoCluster;
-			if ( cachedName ) free(cachedName);
-			if ( cachedAddr ) free(cachedAddr);
-			cachedName = strdup(scheddName);
-			cachedAddr = strdup(scheddAddr);
+		cachedAutoCluster = -1;
+		if ( cachedName ) {
+			free(cachedName);
+			cachedName = NULL;
 		}
+		if ( cachedAddr ) {
+			free(cachedAddr);
+			cachedAddr = NULL;
+		}
+	}
+
+		// Create a new MatchList cache if desired via config file,
+		// and the job ad contains autocluster info,
+		// and there are machines potentially available to consider.		
+	if ( want_matchlist_caching &&		// desired via config file
+		 requestAutoCluster != -1 &&	// job ad contains autocluster info
+		 startdAds.Length() > 0 )		// machines available
+	{
+		MatchList = new MatchListType( startdAds.Length() );
+		cachedAutoCluster = requestAutoCluster;
+		cachedName = strdup(scheddName);
+		cachedAddr = strdup(scheddAddr);
 	}
 	
 
@@ -2355,10 +2369,13 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 	if ( MatchList ) {
 		MatchList->set_diagnostics(rejForNetwork, rejForNetworkShare, 
 			rejPreemptForPrio, rejPreemptForPolicy, rejPreemptForRank);
-		dprintf(D_FULLDEBUG,"Start of sorting MatchList (len=%d)\n",
-			MatchList->length());
-		MatchList->sort();
-		dprintf(D_FULLDEBUG,"Finished sorting MatchList\n");
+			// only bother sorting if there is more than one entry
+		if ( MatchList->length() > 1 ) {
+			dprintf(D_FULLDEBUG,"Start of sorting MatchList (len=%d)\n",
+				MatchList->length());
+			MatchList->sort();
+			dprintf(D_FULLDEBUG,"Finished sorting MatchList\n");
+		}
 		// compare
 		ClassAd *bestCached = MatchList->pop_candidate();
 		// TODO - do bestCached and bestSoFar refer to the same
@@ -2762,8 +2779,11 @@ int Matchmaker::HashFunc(const MyString &Key, int TableSize) {
 Matchmaker::MatchListType::
 MatchListType(int maxlen)
 {
+	ASSERT(maxlen > 0);
 	AdListArray = new AdListEntry[maxlen];
 	ASSERT(AdListArray);
+	adListMaxLen = maxlen;
+	already_sorted = false;
 	adListLen = 0;
 	adListHead = 0;
 	m_rejForNetwork = 0; 
@@ -2832,7 +2852,8 @@ add_candidate(ClassAd * candidate,
 					PreemptState candidatePreemptState)
 {
 	ASSERT(AdListArray);
-	
+	ASSERT(adListLen < adListMaxLen);  // don't write off end of array!
+
 	AdListArray[adListLen].ad = candidate;
 	AdListArray[adListLen].RankValue = candidateRankValue;
 	AdListArray[adListLen].PreJobRankValue = candidatePreJobRankValue;
@@ -2930,9 +2951,15 @@ sort_compare(const void* elem1, const void* elem2)
 void Matchmaker::MatchListType::
 sort()
 {
+	// Should only be called ONCE.  If we call for a sort more than
+	// once, this code has a bad logic errror, so ASSERT it.
+	ASSERT(already_sorted == false);
+
 	// Note: since we must use static members, sort() is
 	// _NOT_ thread safe!!!
 	qsort(AdListArray,adListLen,sizeof(AdListEntry),sort_compare);
+
+	already_sorted = true;
 }
 
 

@@ -268,8 +268,10 @@ class Matchmaker : public Service
 		private:
 			static int sort_compare(const void*, const void*);
 			AdListEntry* AdListArray;			
-			int adListLen;
+			int adListMaxLen;	// max length of AdListArray
+			int adListLen;		// current length of AdListArray
 			int adListHead;
+			bool already_sorted;
 			// rejection reasons
 			int m_rejForNetwork; 		//   - limited network capacity?
 			int m_rejForNetworkShare;	//   - limited network fair-share?
