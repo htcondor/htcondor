@@ -138,6 +138,9 @@ then
 				while [ $node -ne $_CONDOR_NPROCS ]
 				do
 						$CONDOR_CHIRP fetch $_CONDOR_REMOTE_SPOOL_DIR/$node.key $_CONDOR_SCRATCH_DIR/tmp/$node.key
+						# Now that we've got it, the submit side doesn't need
+						# it anymore
+						$CONDOR_CHIRP remove $_CONDOR_REMOTE_SPOOL_DIR/$node.key 
 						node=`expr $node + 1`
 				done
 				chmod 0700 $_CONDOR_SCRATCH_DIR/tmp/*.key
