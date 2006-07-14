@@ -195,13 +195,17 @@ $realskel="condor_release";
   "alpha_dux40"   => "dux40",
   "alpha_dux51"   => "dux51",
   "sgi_65"        => "irix65",
+  "i386_macosx"   => "MacOSX",
   "ppc_macosx"    => "MacOSX",
   "ppc_macosx_6"  => "MacOSX10.2",
   "ppc_macosx_7"  => "MacOSX10.3",
   "hp_ux102"      => "hpux10.20",
   "hp_ux110"      => "hpux11.00",
   "ppc_aix51"	  => "aix5.1",
-  "ppc_aix52"	  => "aix5.2"
+  "ppc_aix52"	  => "aix5.2",
+  "i386_freebsd4" => "freebsd4",
+  "i386_freebsd5" => "freebsd5",
+  "i386_freebsd6" => "freebsd6"
 );
 
 %archname = (
@@ -227,13 +231,17 @@ $realskel="condor_release";
   "alpha_dux40"   => "Alpha",
   "alpha_dux51"   => "Alpha",
   "sgi_65"        => "SGI",
+  "i386_macosx"   => "x86",
   "ppc_macosx"    => "PPC",
   "ppc_macosx_6"  => "PPC",
   "ppc_macosx_7"  => "PPC",
   "hp_ux102"      => "HPPAR",
   "hp_ux110"      => "HPPAR",
   "ppc_aix51"	  => "aix",
-  "ppc_aix52"	  => "aix"
+  "ppc_aix52"	  => "aix",
+  "i386_freebsd4" => "x86",
+  "i386_freebsd5" => "x86",
+  "i386_freebsd6" => "x86"
 );
 
 
