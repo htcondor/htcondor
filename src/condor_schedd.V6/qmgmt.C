@@ -1726,16 +1726,34 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 	// check for security violations.
 	// first, make certain ATTR_OWNER can only be set to who they really are.
-	if (Q_SOCK && !qmgmt_all_users_trusted && stricmp(attr_name, ATTR_OWNER) == 0) 
+	if (Q_SOCK && stricmp(attr_name, ATTR_OWNER) == 0) 
 	{
-		sprintf(alternate_attrname_buf, "\"%s\"", Q_SOCK->getOwner() );
-		if (strcmp(attr_value, alternate_attrname_buf) != 0) {
-			if ( stricmp(attr_value,"UNDEFINED")==0 ) {
-					// If the user set the owner to be undefined, then
-					// just fill in the value of Owner with the owner name
-					// of the authenticated socket.
+		const char* sock_owner = Q_SOCK->getOwner();
+		if ( sock_owner ) {
+			sprintf(alternate_attrname_buf, "\"%s\"", sock_owner );
+		} else {
+			alternate_attrname_buf[0] = '\0';
+		}
+		if ( stricmp(attr_value,"UNDEFINED")==0 ) {
+				// If the user set the owner to be undefined, then
+				// just fill in the value of Owner with the owner name
+				// of the authenticated socket.
+			if ( sock_owner ) {
 				attr_value  = alternate_attrname_buf;
 			} else {
+				// socket not authenticated and Owner is UNDEFINED.
+#if !defined(WIN32)
+				errno = EACCES;
+#endif
+				dprintf(D_ALWAYS, "ERROR SetAttribute violation: "
+					"Owner is UNDEFINED, but client not authenticated\n");
+				return -1;
+
+			}
+		}
+		if (!qmgmt_all_users_trusted && 
+			(strcmp(attr_value, alternate_attrname_buf) != 0)) 
+		{
 #if !defined(WIN32)
 				errno = EACCES;
 #endif
@@ -1743,7 +1761,6 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 					"setting owner to %s when active owner is %s\n",
 					attr_value, alternate_attrname_buf);
 				return -1;
-			}
 		}
 	}
 
