@@ -1234,7 +1234,6 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status )
 int
 ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status ) 
 {
-
 	int mib[4];
 	struct kinfo_proc *kp, *kprocbuf;
 	size_t bufSize = 0;
@@ -1257,8 +1256,15 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
     mib[2] = KERN_PROC_PID;
     mib[3] = pid;
     if (sysctl(mib, 4, NULL, &bufSize, NULL, 0) < 0) {
-		status = PROCAPI_UNSPECIFIED;
-
+		if (errno == ESRCH) {
+			// No such process
+			status = PROCAPI_NOPID;
+		} else if (errno == EPERM) {
+			// Operation not permitted
+			status = PROCAPI_PERM;
+		} else {
+			status = PROCAPI_UNSPECIFIED;
+		}
 		dprintf( D_FULLDEBUG, 
 			"ProcAPI: sysctl() (pass 1) on pid %d failed with %d(%s)\n",
 			pid, errno, strerror(errno) );
@@ -1272,8 +1278,15 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 	}
 
     if (sysctl(mib, 4, kp, &bufSize, NULL, 0) < 0) {
-		status = PROCAPI_UNSPECIFIED;
-
+		if (errno == ESRCH) {
+			// No such process
+			status = PROCAPI_NOPID;
+		} else if (errno == EPERM) {
+			// Operation not permitted
+			status = PROCAPI_PERM;
+		} else {
+			status = PROCAPI_UNSPECIFIED;
+		}
 		dprintf( D_FULLDEBUG, 
 			"ProcAPI: sysctl() (pass 2) on pid %d failed with %d(%s)\n",
 			pid, errno, strerror(errno) );
@@ -1337,6 +1350,7 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 
 		// clean up
 	mach_port_deallocate(mach_task_self(), task);
+	
 	free(kp);
 
 		// success
@@ -2871,6 +2885,9 @@ ProcAPI::buildPidList() {
 	mib[2] = KERN_PROC_ALL;
 	mib[3] = 0;
 
+		//
+		// Returns back the size of the kinfo_proc struct
+		//
 	if (sysctl(mib, 4, NULL, &bufSize, NULL, 0) < 0) {
 		 //perror("Failure calling sysctl");
 		set_priv( priv );
