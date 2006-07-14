@@ -344,7 +344,7 @@ reinitialize ()
 	}
 
 	want_simple_matching = param_boolean("NEGOTIATOR_SIMPLE_MATCHING",false);
-	want_matchlist_caching = param_boolean("NEGOTIATOR_MATCHLIST_CACHING",false);
+	want_matchlist_caching = param_boolean("NEGOTIATOR_MATCHLIST_CACHING",true);
 	ConsiderPreemption = param_boolean("NEGOTIATOR_CONSIDER_PREEMPTION",true);
 	want_nonblocking_startd_contact = param_boolean("NEGOTIATOR_USE_NONBLOCKING_STARTD_CONTACT",true);
 
