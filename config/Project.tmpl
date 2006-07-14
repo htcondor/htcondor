@@ -475,12 +475,27 @@ VENDOR_C_FLAGS = CFlags -I.. -I../.. -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
 		 $(QUILL_FLAGS) $(GCB_FLAGS)
 
 
-#ifdef IS_C_COMP_MAJOR_GCC_3
+#if defined(IS_C_COMP_MAJOR_GCC_3) || defined(IS_C_COMP_MAJOR_GCC_4)
 GPP_VERS_FLAGS = -Wno-deprecated
 #else
 GPP_VERS_FLAGS =
 #endif
-GPP_SHARED_FLAGS = -fno-implicit-templates $(GPP_VERS_FLAGS)
+
+/**
+ * Special flags needed for OSX using gcc4
+ * We force the platform/arch information to be passed into the compilation
+ * This is because TargetConditionals.h gives an 'unknown compiler' error
+ * Andy - 07.07.06
+ **/
+#if defined(IS_DARWIN) && defined(IS_I386)
+GPP_ARCH_FLAGS = -DTARGET_OS_MAC=1 -DTARGET_CPU_X86=1
+#elif defined(IS_DARWIN) && defined(IS_PPC)
+GPP_ARCH_FLAGS = -DTARGET_OS_MAC=1 -DTARGET_CPU_PPC=1
+#else
+GPP_ARCH_FLAGS =
+#endif
+
+GPP_SHARED_FLAGS = -fno-implicit-templates $(GPP_VERS_FLAGS) $(GPP_ARCH_FLAGS)
 
 STD_C_FLAGS = $(VENDOR_C_FLAGS) $(DEBUG_FLAG) $(CC_PIC_FLAG) PlatformFlags PlatformGccFlags $(CCOMPILER_ID) $(GSOAP_FLAGS) $(PCRE_FLAGS) $(COREDUMPER_FLAGS)
 STD_C_PLUS_FLAGS = $(STD_C_FLAGS) $(GPP_SHARED_FLAGS) PlatformGppFlags
