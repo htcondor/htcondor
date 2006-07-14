@@ -345,22 +345,38 @@ elif test $os = "AIX" ; then
   _cv_kernel_rev_minor=`uname -r`
   _cv_kernel_rev="$_cv_kernel_rev_major.$_cv_kernel_rev_minor"
 
+# --------------------------------------------
+# Darwin
+# --------------------------------------------
 elif test $os = "Darwin" ; then
-  _cv_arch="PPC"
-  _cv_op_sys="Darwin"
-  _cv_opsys="DARWIN"
-  AC_PATH_PROG([SW_VERS],[sw_vers],[no],[$PATH])
-  if test $SW_VERS = "no" ; then   
-    _cv_opsys_vers="OSX_UNKNOWN"
-  else 
-    _cv_osx_vers=`$SW_VERS | $GREP ^ProductVersion | $PERL -pe 's/^ProductVersion\:\s+(\d+)\.(\d+).*$/$1_$2/'`
-    _cv_opsys_vers="OSX_$_cv_osx_vers"
-  fi
-  _cv_sysname="ppc_macosx"
-
-  # now figure out the kernel revision. Under macosx this will have
-  # the form: major.minor.patch
-  _cv_kernel_rev=`uname -r | sed -e 's#^\\([0-9]\\+\\.[0-9]\\+\\.[0-9]\\+\\).*#\\1#'`;
+	##	
+	## Figure out the architecture
+	##
+	if test "$arch" = "i386"; then
+		_cv_arch="I386" 
+		_cv_sysname="i386_macosx"
+	elif test "$arch" = "Power Macintosh"; then
+		_cv_arch="PPC"
+		_cv_sysname="ppc_macosx"
+	else 
+		AC_MSG_WARN([Unrecognised Darwin Architecture])
+		AC_MSG_WARN([You may have trouble building and/or packaging Condor])  
+		_cv_sysname="unknown_macosx"
+	fi
+	_cv_op_sys="Darwin"
+	_cv_opsys="DARWIN"
+	
+	AC_PATH_PROG([SW_VERS],[sw_vers],[no],[$PATH])
+	if test $SW_VERS = "no" ; then   
+    	_cv_opsys_vers="OSX_UNKNOWN"
+	else 
+		_cv_osx_vers=`$SW_VERS | $GREP ^ProductVersion | $PERL -pe 's/^ProductVersion\:\s+(\d+)\.(\d+).*$/$1_$2/'`
+		_cv_opsys_vers="OSX_$_cv_osx_vers"
+	fi
+	
+	# now figure out the kernel revision. Under macosx this will have
+	# the form: major.minor.patch
+	_cv_kernel_rev=`uname -r | sed -e 's#^\\([0-9]\\+\\.[0-9]\\+\\.[0-9]\\+\\).*#\\1#'`;
 
 # --------------------------------------------
 # FreeBSD
@@ -716,6 +732,18 @@ case "$gcc_vers" in
     CompilerMajor="3"
     CompilerMinor="4"
     CompilerPatch="4"
+    ;;
+ "4.0.0" )
+    CompilerKind="GCC"
+    CompilerMajor="4"
+    CompilerMinor="0"
+    CompilerPatch="0"
+    ;;
+ "4.0.1" )
+    CompilerKind="GCC"
+    CompilerMajor="4"
+    CompilerMinor="0"
+    CompilerPatch="1"
     ;;
  * )
    AC_MSG_RESULT([ERROR])
@@ -1653,7 +1681,7 @@ AC_SUBST(globus_flavor,$_cv_globus_flavor)
 
 # CONDOR_EXTERNAL_VERSION([gpt],[3.0])
 
-CONDOR_EXTERNAL_VERSION([gahp],[1.0.14])
+CONDOR_EXTERNAL_VERSION([gahp],[1.0.15])
 
 CONDOR_EXTERNAL_VERSION([gt3gahp],[2.0])
 
