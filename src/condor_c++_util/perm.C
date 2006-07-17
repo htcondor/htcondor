@@ -631,23 +631,59 @@ int perm::execute_access( const char * filename ) {
 // false if otherwise (i.e. FAT, FAT32, CDFS, HPFS, etc) or error.
 bool perm::volume_has_acls( const char *filename )
 {
-	char path_buf[5];
-	char *root_path = path_buf;
+	char *root_path;
 	DWORD foo,fsflags;
-	
-	path_buf[0] = '\0';
-	
-	// This function will not work with UNC paths... yet.
-	if ( !filename || (filename[0]=='\\' && filename[1]=='\\') ) {
-		EXCEPT("UNC pathnames not supported yet");
+
+	if ( !filename || !filename[0] ) {
+		dprintf(D_ALWAYS, "perm::volume_has_acls(): NULL or zero-length input\n");
+		return false;
 	}
-	
+
 	if ( filename[1] == ':' ) {
+		root_path = (char*)malloc(4);
+		if (root_path == NULL) {
+			EXCEPT("Out of memory!");
+		}
 		root_path[0] = filename[0];
 		root_path[1] = ':';
 		root_path[2] = '\\';
 		root_path[3] = '\0';
-	} else {
+	}
+	else if (filename[0] == '\\' && filename[1] == '\\') {
+		// UNC path: strip down to the form: "\\SERVER\SHARE\"
+		char* next_backslash;
+		next_backslash = strchr(&filename[2], '\\');
+		if (!next_backslash) {
+			dprintf(D_ALWAYS,
+			        "perm::volume_had_acls(): incomplete UNC volume spec: %s\n",
+			        filename);
+			return false;
+		}
+		next_backslash = strchr(next_backslash + 1, '\\');
+		if (next_backslash) {
+			// found backslash after share name; use everything up to it (inclusive)
+			int len_to_copy = next_backslash - filename + 1;
+			root_path = (char*)malloc(len_to_copy + 1);
+			if (root_path == NULL) {
+				EXCEPT("Out of memory!");
+			}
+			memcpy(root_path, filename, len_to_copy);
+			root_path[len_to_copy] = '\0';
+		}
+		else {
+			// found no fourth backslash; copy the whole string and tack one on
+			int len_to_copy = strlen(filename);
+			root_path = (char*)malloc(len_to_copy + 2);
+			if (root_path == NULL) {
+				EXCEPT("Out of memory!");
+			}
+			memcpy(root_path, filename, len_to_copy);
+			root_path[len_to_copy] = '\\';
+			root_path[len_to_copy + 1] = '\0';
+		}
+	}
+	else {
+		// use current working volume
 		root_path = NULL;
 	}
 	
@@ -655,17 +691,23 @@ bool perm::volume_has_acls( const char *filename )
 		NULL,0) ) 
 	{
 		dprintf(D_ALWAYS,
-			"perm: GetVolumeInformation on volume %s FAILED err=%d\n",
-			path_buf,
-			GetLastError());
+		        "perm: GetVolumeInformation on volume %s FAILED err=%d\n",
+				root_path ? root_path : "(null)",
+		        GetLastError());
+		if (root_path) {
+			free(root_path);
+		}
 		return false;
+	}
+	if (root_path) {
+		free(root_path);
 	}
 	
 	if ( fsflags & FS_PERSISTENT_ACLS ) 	// note: single & (bit comparison)
 		return true;
 	else {
 		
-		dprintf(D_FULLDEBUG,"perm: volume %s does not have ACLS\n",path_buf);
+		dprintf(D_FULLDEBUG,"perm: file %s on volume with no ACLS\n",filename);
 		return false;
 	}
 }
