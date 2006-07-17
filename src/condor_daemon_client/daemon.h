@@ -641,7 +641,7 @@ protected:
 		   Class used internally to handle non-blocking connects for
 		   startCommand().
 		*/
-	friend class StartCommandConnectCallback;
+	friend struct StartCommandConnectCallback;
 };
 
 // Prototype to get sinful string.
