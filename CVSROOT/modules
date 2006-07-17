@@ -608,7 +608,7 @@ V6_7_20_EXT	-a V6_7_COMMON_EXT \
 		   externals/bundles/blahp/1.7.0
 
 # Externals needed for V6_7_21
-# (same as V6_7_20, but update DRMAA to 1.3)
+# (same as V6_7_20, but update DRMAA to 1.4)
 V6_7_21_EXT	-a V6_7_COMMON_EXT \
                    externals/bundles/krb5/1.4.3 \
                    externals/bundles/gahp/1.0.15 \
@@ -626,7 +626,7 @@ V6_7_21_EXT	-a V6_7_COMMON_EXT \
                    externals/bundles/nordugridgahp/1.1.0 \
                    externals/bundles/linuxlibcheaders \
                    externals/bundles/coredumper \
-                   externals/bundles/drmaa/1.3 \
+                   externals/bundles/drmaa/1.4 \
                    externals/bundles/blahp/1.7.0
 
 # Externals needed for the head of the V6_7-branch
