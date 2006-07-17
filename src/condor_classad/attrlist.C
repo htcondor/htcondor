@@ -1017,6 +1017,38 @@ int AttrList::UpdateExpr(ExprTree* attr)
 }
 #endif
 
+void
+AttrList::ChainCollapse(bool with_deep_copy)
+{
+	ExprTree *tmp;
+
+	if (!chainedAttrs) {
+		// no chained attributes, we're done
+		return;
+	}
+
+	AttrListElem* chained = *chainedAttrs;
+	
+	chainedAttrs = NULL;
+
+	while (chained && (tmp=chained->tree)) {
+		if ( with_deep_copy ) {
+			tmp = tmp->DeepCopy();
+			ASSERT(tmp);
+		}
+			// Move the value from our chained ad into our ad ONLY
+			// if it does not already exist --- so we do a Lookup()
+			// first, and only Insert() if the Lookup fails.
+			// This is because we want attributes in our ad to have
+			// precedent of the chained (cluster) ad when we collapse.
+		if ( !Lookup(tmp->LArg()) ) {
+			Insert(tmp,false);	// no need for Insert() to check for dups
+		}
+		chained = chained->next;
+	}
+}
+
+
 ExprTree* AttrList::NextExpr()
 {
 	// After iterating through all the exprs in this ad,

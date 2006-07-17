@@ -121,6 +121,7 @@ class AttrList : public AttrListAbstract
 	    void ChainToAd( AttrList * );
 		void* unchain( void );
 		void RestoreChain(void *);
+		void ChainCollapse(bool with_deep_copy = true);
 
 		// ctors/dtor
 		AttrList();							// No associated AttrList list
