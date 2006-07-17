@@ -189,6 +189,42 @@ config_fill_ad( ClassAd* ad, const char *prefix )
 }
 
 
+/*
+Walks all found configuration entries looking for the
+"forbidden string".  If said string is found, EXCEPT.
+
+Output is via a giant EXCEPT string because the dprintf
+system probably isn't working yet.
+*/
+const char * FORBIDDEN_CONFIG_VAL = "YOU_MUST_CHANGE_THIS_INVALID_CONDOR_CONFIGURATION_VALUE";
+static void
+validate_entries() {
+	HASHITER it = hash_iter_begin( ConfigTab, TABLESIZE );
+	unsigned int invalid_entries = 0;
+	MyString tmp;
+	MyString output = "The following configuration macros appear to contain default values that must be changed before Condor will run.  These macros are:\n";
+	bool found_problem = false;
+	while( ! hash_iter_done(it) ) {
+		char * val = hash_iter_value(it);
+		if( strstr(val, FORBIDDEN_CONFIG_VAL) ) {
+			char * name = hash_iter_key(it);
+			MyString filename;
+			int line_number;
+			param_get_location(name, filename, line_number);
+			tmp.sprintf("   %s (found on line %d of %s)\n", name, line_number, filename.Value());
+			output += tmp;
+			invalid_entries++;
+		}
+		hash_iter_next(it);
+	}
+	hash_iter_delete(&it);
+	if(invalid_entries > 0) {
+			//TODO: Make EXCEPT const correct
+		EXCEPT((char *)(output.Value()));
+	}
+}
+
+
 void
 config( int wantsQuiet )
 {
@@ -196,6 +232,7 @@ config( int wantsQuiet )
 	setlocale( LC_ALL, "English" );
 #endif
 	real_config( NULL, wantsQuiet );
+	validate_entries();
 }
 
 
