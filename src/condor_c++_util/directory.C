@@ -737,9 +737,9 @@ Directory::rmdirAttempt( const char* path, priv_state priv )
 			 path, log_msg );
 
 #ifdef WIN32
-		rm_buf = "rmdir /s /q \"";
+		rm_buf = "cmd.exe /s /c \"rmdir /s /q \"";
 		rm_buf += path;
-		rm_buf += '"';
+		rm_buf += "\"\"";
 #else
 		rm_buf = "/bin/rm -rf ";
 		rm_buf += path;
@@ -751,7 +751,7 @@ Directory::rmdirAttempt( const char* path, priv_state priv )
 			 rm_buf.Value(), log_msg );
 #elif defined( WIN32 )
 		// we use system here instead of my_system since rmdir is a shell command
-		rval = system( rm_buf.Value() );
+		rval = my_system(rm_buf.Value());
 #else
 		rval = my_spawnl( "/bin/rm", "/bin/rm", "-rf", path, NULL );
 #endif

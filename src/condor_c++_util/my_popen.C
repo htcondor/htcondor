@@ -101,7 +101,7 @@ static child_handle_t remove_child(FILE* fp)
 // Windows versions of my_popen / my_pclose 
 //////////////////////////////////////////////////////////////////////////
 
-static FILE *
+extern "C" FILE *
 my_popen(const char *const_cmd, const char *mode, int want_stderr)
 {
 	BOOL read_mode;
@@ -164,16 +164,16 @@ my_popen(const char *const_cmd, const char *mode, int want_stderr)
 
 	// make call to CreateProcess
 	cmd = strdup(const_cmd);
-	result = CreateProcess(NULL,
-		cmd,	// command line
-		NULL,	// process SA
-		NULL,	// primary thread SA
-		TRUE,	// inherit handles 
-		0,		// creation flags
-		NULL,	// use our environment
-		NULL,	// use our CWD
-		&si,	// STARTUPINFO
-		&pi);	// receive PROCESS_INFORMATION
+	result = CreateProcess(NULL,                   // determine app from cmd line
+	                       cmd,                    // command line
+	                       NULL,                   // process SA
+	                       NULL,                   // primary thread SA
+	                       TRUE,                   // inherit handles 
+	                       CREATE_NEW_CONSOLE,     // creation flags
+	                       NULL,                   // use our environment
+	                       NULL,                   // use our CWD
+	                       &si,                    // STARTUPINFO
+	                       &pi);                   // receive PROCESS_INFORMATION
 	free(cmd);
 	if (result == 0) {
 		CloseHandle(hParentPipe);
@@ -257,6 +257,11 @@ my_pclose(FILE *fp)
 	return result;
 }
 
+extern "C" int
+my_system(const char *cmd)
+{
+	return my_pclose(my_popen(cmd, "w", FALSE));
+}
 
 #else
 
@@ -395,6 +400,25 @@ my_pclose(FILE *fp)
 		/* Now return status from child process */
 	return status;
 }
+#endif // !WIN32
+
+extern "C" int
+my_systemv(char *const args[])
+{
+	return my_pclose(my_popenv(args, "w", FALSE));
+}
+
+int
+my_system(ArgList &args)
+{
+	return my_pclose(my_popen(args, "w", FALSE));
+}
+
+#if !defined(WIN32)
+
+/*
+  my_spawnl() / my_spawnv() implementations (UNIX-only)
+*/
 
 pid_t ChildPid = 0;
 

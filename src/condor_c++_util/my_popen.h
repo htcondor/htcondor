@@ -28,14 +28,25 @@ BEGIN_C_DECLS
 
 FILE *my_popenv( char *const argv[], const char * mode, int want_stderr );
 int my_pclose( FILE *fp );
+
+int my_systemv( char *const argv[] );
+
 int my_spawnl( const char* cmd, ... );
 int my_spawnv( const char* cmd, char *const argv[] );
+
+#if defined(WIN32)
+// on Windows, expose the ability to use a raw command line
+FILE *my_popen( const char *cmd, const char *mode, int want_stderr );
+int my_system( const char *cmd );
+#endif
 
 END_C_DECLS
 
 #if defined(__cplusplus)
+// ArgList versions only available from C++
 #include "condor_arglist.h"
 FILE *my_popen( ArgList &args, const char * mode, int want_stderr );
+int my_system( ArgList &args );
 #endif
 
 #endif
