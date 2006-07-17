@@ -1177,7 +1177,7 @@ param_integer( const char *name, int default_value,
 	ASSERT( name );
 	string = param( name );
 	if( ! string ) {
-		dprintf( D_FULLDEBUG, "%s is undefined, using default value of %d\n",
+		dprintf( D_CONFIG, "%s is undefined, using default value of %d\n",
 				 name, default_value );
 		return default_value;
 	}
@@ -1185,17 +1185,17 @@ param_integer( const char *name, int default_value,
 	fields = sscanf( string, "%d", &result );
 
 	if( fields != 1 ) {
-		dprintf( D_FULLDEBUG, "WARNING: %s not an integer (\"%s\"), using "
+		dprintf( D_CONFIG, "WARNING: %s not an integer (\"%s\"), using "
 				 "default value of %d\n", name, string, default_value );
 		result = default_value;
 	}
 	else if( result < min_value ) {
-		dprintf( D_FULLDEBUG, "WARNING: %s too low (%d), using minimum "
+		dprintf( D_CONFIG, "WARNING: %s too low (%d), using minimum "
 				 "value of %d\n", name, result, min_value );
 		result = min_value;
 	}
 	else if( result > max_value ) {
-		dprintf( D_FULLDEBUG, "WARNING: %s too high (%d), using maximum "
+		dprintf( D_CONFIG, "WARNING: %s too high (%d), using maximum "
 				 "value of %d\n", name, result, max_value );
 		result = max_value;
 	}
@@ -1221,7 +1221,7 @@ param_float( const char *name, float default_value,
 	ASSERT( name );
 	string = param( name );
 	if( ! string ) {
-		dprintf( D_FULLDEBUG, "%s is undefined, using default value of %f\n",
+		dprintf( D_CONFIG, "%s is undefined, using default value of %f\n",
 				 name, default_value );
 		return default_value;
 	}
@@ -1229,17 +1229,17 @@ param_float( const char *name, float default_value,
 	fields = sscanf( string, "%f", &result );
 
 	if( fields != 1 ) {
-		dprintf( D_ALWAYS, "WARNING: %s not an float (\"%s\"), using "
+		dprintf( D_CONFIG, "WARNING: %s not an float (\"%s\"), using "
 				 "default value of %f\n", name, string, default_value );
 		result = default_value;
 	}
 	else if( result < min_value ) {
-		dprintf( D_FULLDEBUG, "WARNING: %s too low (%f), using minimum "
+		dprintf( D_CONFIG, "WARNING: %s too low (%f), using minimum "
 				 "value of %f\n", name, result, min_value );
 		result = min_value;
 	}
 	else if( result > max_value ) {
-		dprintf( D_FULLDEBUG, "WARNING: %s too high (%f), using maximum "
+		dprintf( D_CONFIG, "WARNING: %s too high (%f), using maximum "
 				 "value of %f\n", name, result, max_value );
 		result = max_value;
 	}
@@ -1264,7 +1264,7 @@ param_boolean( const char *name, const bool default_value )
 	ASSERT( name );
 	string = param( name );
 	if( ! string ) {
-		dprintf( D_FULLDEBUG, "%s is undefined, using default value of %s\n",
+		dprintf( D_CONFIG, "%s is undefined, using default value of %s\n",
 				 name, default_value ? "True" : "False" );
 		return default_value;
 	}
@@ -1281,7 +1281,7 @@ param_boolean( const char *name, const bool default_value )
 			result = false;
 			break;
 		default:
-		    dprintf( D_FULLDEBUG, "WARNING: %s not a boolean (\"%s\"), using "
+		    dprintf( D_CONFIG, "WARNING: %s not a boolean (\"%s\"), using "
 					 "default value of %s\n", name, string,
 					 default_value ? "True" : "False" );
 			result = default_value;
