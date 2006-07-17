@@ -971,7 +971,7 @@ int ReliSock::RcvMsg::rcv_packet( SOCKET _sock, int _timeout)
 	header_size = (mode_ != MD_OFF) ? MAX_HEADER_SIZE : NORMAL_HEADER_SIZE;
 
 	if ( condor_read(_sock,hdr,header_size,_timeout) < 0 ) {
-		dprintf(D_ALWAYS,"IO: Failed to read packet header\n");
+		dprintf(D_FULLDEBUG,"IO: EOF reading packet header\n");
 		return FALSE;
 	}
 	end = (int) ((char *)hdr)[0];
