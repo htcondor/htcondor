@@ -1054,10 +1054,13 @@ OwnerCheck2(ClassAd *ad, const char *test_owner)
 
 		// Finally, compare the owner of the ad with the entity trying
 		// to connect to the queue.
+#if defined(WIN32)
+	// WIN32: user names are case-insensitive
+	if (strcasecmp(my_owner, test_owner) != 0) {
+#else
 	if (strcmp(my_owner, test_owner) != 0) {
-#if !defined(WIN32)
-		errno = EACCES;
 #endif
+		errno = EACCES;
 		dprintf( D_FULLDEBUG, "ad owner: %s, queue submit owner: %s\n",
 				my_owner, test_owner );
 		return false;
