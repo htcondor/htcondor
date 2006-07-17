@@ -40,7 +40,7 @@ public:
     int         job_prio;
     int         status;
     int         qdate;
-    char        owner[100];                         /* valid only if D_UPDOWN */
+    char        owner[100];                       
 	int			auto_cluster_id;
 
 	prio_rec() { *owner='\0'; }

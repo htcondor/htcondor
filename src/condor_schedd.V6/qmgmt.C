@@ -3137,7 +3137,6 @@ int get_job_prio(ClassAd *job, bool compute_autoclusters)
 
 	strcpy(PrioRec[N_PrioRecs].owner,owner);
 
-	dprintf(D_UPDOWN,"get_job_prio(): added PrioRec %d - id = %d.%d, owner = %s\n",N_PrioRecs,PrioRec[N_PrioRecs].id.cluster,PrioRec[N_PrioRecs].id.proc,PrioRec[N_PrioRecs].owner);
     N_PrioRecs += 1;
 	if ( N_PrioRecs == MAX_PRIO_REC ) {
 		grow_prio_recs( 2 * N_PrioRecs );
