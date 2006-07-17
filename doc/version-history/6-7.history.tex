@@ -33,11 +33,6 @@ The details of each version are described below.
 \Condor{submit\_dag}.  This allows you to change the directory in which
 \Condor{dagman} writes the \File{dagman.out} file.
 
-% Gnats PR 661
-\item Added the \MacroNI{DAGMAN\_BOOTSTRAP\_ALLOW\_EVENTS} configuration
-macro to accomodate the case where a schedd crash causes a job to be
-re-run after a termination event for that job is written to the log.
-
 \item Added a new \Opt{--summary} (also \Opt{-s}) option to the
 \Condor{update\_stats} tool.  If enabled, this prevents it from
 displaying the entire history for each machine and only displays the
