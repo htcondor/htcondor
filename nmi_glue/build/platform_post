@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: platform_post,v 1.1.4.12 2006-06-26 21:32:09 gquinn Exp $
+# $Id: platform_post,v 1.1.4.13 2006-07-17 16:25:11 pavlo Exp $
 # post script to cleanup platform-specific files on the submit side
 ######################################################################
 
@@ -59,28 +59,32 @@ my $runid = `nmi_gid2runid $ENV{_NMI_GID}`;
 chomp $runid;
 $runid || die "Can't find runid from gid, NOT submitting tests\n";
 
-print "Attempting to submit test job for platform: '$platform' "
-    . "runid: '$runid' ...\n";
+# Skip MacOS 10.4 for now
+my $status;
+unless ($platform =~ /macos_10\.4/) {
+    print "Attempting to submit test job for platform: '$platform' "
+        . "runid: '$runid' ...\n";
 
-# path to the condor_nmi_submit binary we're planning to use
-my $cns = "nmi_tools/condor_nmi_submit";
--f $cns || die "Can't submit tests: $cns does not exist\n";
-if( ! -x $cns ) {
-    chmod(0755, $cns) || die "Can't submit tests: $cns is not executable "
-        . "and chmod() failed: $!\n";
-}
+    # path to the condor_nmi_submit binary we're planning to use
+    my $cns = "nmi_tools/condor_nmi_submit";
+    -f $cns || die "Can't submit tests: $cns does not exist\n";
+    if( ! -x $cns ) {
+        chmod(0755, $cns) || die "Can't submit tests: $cns is not executable "
+            . "and chmod() failed: $!\n";
+    }
 
-my $cmd = "$cns --test --buildid=$runid --platform=$platform " .
-          "--tag=$tag --module=$module $notify_arg $opt_test_args";
+    my $cmd = "$cns --test --buildid=$runid --platform=$platform " .
+              "--tag=$tag --module=$module $notify_arg $opt_test_args";
 
-print "Invoking CNS ($cmd)\n";
-open( CNS, "$cmd|" ) || 
-    die "Can't submit tests: Can't open '$cmd' as a pipe: $!\n";
-while( <CNS> ) {
-    print "CNS: $_";
-}
-close( CNS );
-my $status = $?;
+    print "Invoking CNS ($cmd)\n";
+    open( CNS, "$cmd|" ) || 
+        die "Can't submit tests: Can't open '$cmd' as a pipe: $!\n";
+    while( <CNS> ) {
+        print "CNS: $_";
+    }
+    close( CNS );
+    $status = $?;
+} # UNLESS
 
 if( ! $status ) {
     # exited with status 0, we're happy
