@@ -38,6 +38,14 @@ The details of each version are described below.
 displaying the entire history for each machine and only displays the
 summary info.
 
+\item The default configuration for Condor now requires that
+\Macro{HOSTALLOW\_WRITE} be explicitly set.  Condor will refuse
+to start if the default configuration is used unmodified.
+Existing installations should not need to change anything.  For
+those who desire the earlier default, you can set it to "*", but
+note that this is potentially a security hole allowing anyone to
+submit jobs or machines to your pool.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
