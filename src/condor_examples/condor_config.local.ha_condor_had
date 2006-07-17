@@ -89,8 +89,12 @@ REPLICATION = $(SBIN)/condor_replication
 
 ## the master should start at least these four daemons
 DAEMON_LIST = MASTER, COLLECTOR, NEGOTIATOR, HAD
-## DC_Daemon list should contain at least these four
-DC_DAEMON_LIST = MASTER, COLLECTOR, NEGOTIATOR, HAD
+# The default for DC_DAEMON_LIST is usually correct.
+#DC_DAEMON_LIST = \
+#MASTER, STARTD, SCHEDD, KBDD, COLLECTOR, NEGOTIATOR, EVENTD, \
+#VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, HAWKEYE, CREDD, HAD, \
+#QUILL
+
 
 ## Enables/disables the replication feature of HAD daemon
 ## Default: no

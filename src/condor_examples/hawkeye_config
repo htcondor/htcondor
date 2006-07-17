@@ -417,7 +417,11 @@ DAEMON_LIST			= MASTER, STARTD, COLLECTOR
 
 ##  Which daemons use the Hawkeye DaemonCore library (i.e., not the
 ##  checkpoint server or custom user daemons)?
-#DC_DAEMON_LIST = MASTER, STARTD, SCHEDD, KBDD, COLLECTOR, NEGOTIATOR, EVENTD
+#DC_DAEMON_LIST = \
+#MASTER, STARTD, SCHEDD, KBDD, COLLECTOR, NEGOTIATOR, EVENTD, \
+#VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, HAWKEYE, CREDD, HAD, \
+#QUILL
+
 
 ##  Where are the binaries for these daemons?
 MASTER				= $(SBIN)/hawkeye_master
