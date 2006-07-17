@@ -208,9 +208,13 @@ HOSTALLOW_READ = *
 ##  also be granted READ access.  Granting WRITE access below does
 ##  not also automatically grant READ access; you must change
 ##  HOSTALLOW_READ above as well.
-##  If you leave it as it is, it will be unspecified, and effectively
-##  it will be allowing anyone to write to your pool.
-HOSTALLOW_WRITE = *
+##
+##  You must set this to something else before Condor will run.
+##  This most simple option is:
+##    HOSTALLOW_WRITE = *
+##  but note that this will allow anyone to submit jobs or add
+##  machines to your pool and is serious security risk.
+HOSTALLOW_WRITE = YOU_MUST_CHANGE_THIS_INVALID_CONDOR_CONFIGURATION_VALUE
 #HOSTALLOW_WRITE = *.your.domain, your-friend's-machine.other.domain
 #HOSTDENY_WRITE = bad-machine.your.domain
 
