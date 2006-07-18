@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre.pl,v 1.1.4.14 2006-07-18 17:49:21 bt Exp $
+# $Id: remote_pre.pl,v 1.1.4.15 2006-07-18 17:52:57 bt Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
@@ -228,6 +228,11 @@ print FIX "PERIODIC_EXPR_INTERVAL = 15\n";
 print FIX "ENABLE_SOAP            	= TRUE\n";
 print FIX "ALLOW_SOAP            	= *\n";
 print FIX "QUEUE_ALL_USERS_TRUSTED 	= TRUE\n";
+
+# condor_config.generic now contains a special value
+# for HOSTALLOW_WRITE which causes it to EXCEPT on submit
+# till set to some legal value. Old was most insecure..
+print FIX "HOSTALLOW_WRITE 			= *\n";
 
 if( ($ENV{NMI_PLATFORM} =~ /hpux_11/) )
 {
