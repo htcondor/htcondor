@@ -55,8 +55,9 @@ class CheckEvents {
 			// All bad events are errors.
 		ALLOW_NONE					= 0,
 
-			// No events are errors.
-		ALLOW_ALL					= 1 << 0,
+			// Almost no events are errors (the only thing considered
+			// an error is execution after a terminal event).
+		ALLOW_ALMOST_ALL			= 1 << 0,
 
 			// Spurious aborted event after a terminated event is not
 			// an error.
@@ -69,19 +70,28 @@ class CheckEvents {
 			// "Garbage" (ophan) events are not errors.
 		ALLOW_GARBAGE				= 1 << 3,
 
-			// Execute before submit.
+			// Execute before submit.  (As of 2006-07-17, this also allows
+			// terminated before submit, but that's much more rare.)
 		ALLOW_EXEC_BEFORE_SUBMIT	= 1 << 4,
 
 			// Double terminated event for a single run, sometimes seen
 			// for Globus jobs.
-		ALLOW_DOUBLE_TERMINATE		= 1 << 5
+		ALLOW_DOUBLE_TERMINATE		= 1 << 5,
+
+			// Duplicated events in general (Todd says user log semantics
+			// are "write at least once", so we should be allowing
+			// duplicates).
+		ALLOW_DUPLICATE_EVENTS		= 1 << 6
 	} check_event_allow_t;
 
 		// This is what the checks return.
 	typedef enum {
 		EVENT_OKAY			= 1000,	// Everything is okay.
-		EVENT_BAD_EVENT		= 1001,	// A bad event that we tolerate.
-		EVENT_ERROR			= 1002	// A bad event we don't tolerate (error).
+		EVENT_BAD_EVENT		= 1001,	// A bad event that we tolerate (don't
+									// process this event at higher level).
+		EVENT_ERROR			= 1002,	// A bad event we don't tolerate (error).
+		EVENT_WARNING		= 1003	// Something is wrong, but the event
+									// should still be processed.
 	} check_event_result_t;
 
 	/** Constructor.
@@ -207,22 +217,29 @@ class CheckEvents {
 
 	HashTable<CondorID, JobInfo *>	jobHash;
 
-	inline bool		AllowAll() { return allowEvents & ALLOW_ALL; }
+	inline bool		AllowAlmostAll() { return allowEvents & ALLOW_ALMOST_ALL; }
 
-	inline bool		AllowExtraAborts() { return (allowEvents & ALLOW_ALL) ||
+	inline bool		AllowExtraAborts() { return
+			(allowEvents & ALLOW_ALMOST_ALL) ||
 			(allowEvents & ALLOW_TERM_ABORT); }
 
-	inline bool		AllowExtraRuns() { return (allowEvents & ALLOW_ALL) ||
-			(allowEvents & ALLOW_RUN_AFTER_TERM); }
+	inline bool		AllowExtraRuns() { return
+			allowEvents & ALLOW_RUN_AFTER_TERM; }
 
-	inline bool		AllowGarbage() { return (allowEvents & ALLOW_ALL) ||
+	inline bool		AllowGarbage() { return (allowEvents & ALLOW_ALMOST_ALL) ||
 			(allowEvents & ALLOW_GARBAGE); }
 
-	inline bool		AllowExecSubmit() { return (allowEvents & ALLOW_ALL) ||
+	inline bool		AllowExecSubmit() { return
+			(allowEvents & ALLOW_ALMOST_ALL) ||
 			(allowEvents & ALLOW_EXEC_BEFORE_SUBMIT); }
 
-	inline bool		AllowDoubleTerm() { return (allowEvents & ALLOW_ALL) ||
+	inline bool		AllowDoubleTerm() { return
+			(allowEvents & ALLOW_ALMOST_ALL) ||
 			(allowEvents & ALLOW_DOUBLE_TERMINATE); }
+
+	inline bool		AllowDuplicates() { return
+			(allowEvents & ALLOW_ALMOST_ALL) ||
+			allowEvents & ALLOW_DUPLICATE_EVENTS; }
 
 		// Bit-mapped flag for what "bad" events to allow.
 	int		allowEvents;

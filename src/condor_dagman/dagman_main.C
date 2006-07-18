@@ -138,7 +138,8 @@ Dagman::Config()
 		// jobs!!
 	allow_events = CheckEvents::ALLOW_TERM_ABORT |
 			CheckEvents::ALLOW_EXEC_BEFORE_SUBMIT |
-			CheckEvents::ALLOW_DOUBLE_TERMINATE;
+			CheckEvents::ALLOW_DOUBLE_TERMINATE |
+			CheckEvents::ALLOW_DUPLICATE_EVENTS;
 
 		// If the old DAGMAN_IGNORE_DUPLICATE_JOB_EXECUTION param is set,
 		// we also allow extra runs.

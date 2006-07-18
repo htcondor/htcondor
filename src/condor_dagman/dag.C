@@ -2158,7 +2158,8 @@ Dag::CheckAllJobs()
 		debug_printf( DEBUG_VERBOSE, "Error checking Condor job events: %s\n",
 				jobError.Value() );
 		ASSERT( false );
-	} else if ( result == CheckEvents::EVENT_BAD_EVENT ) {
+	} else if ( result == CheckEvents::EVENT_BAD_EVENT ||
+				result == CheckEvents::EVENT_WARNING ) {
 		debug_printf( DEBUG_VERBOSE, "Warning checking Condor job events: %s\n",
 				jobError.Value() );
 	} else {
@@ -2170,7 +2171,8 @@ Dag::CheckAllJobs()
 		debug_printf( DEBUG_VERBOSE, "Error checking Stork job events: %s\n",
 				jobError.Value() );
 		ASSERT( false );
-	} else if ( result == CheckEvents::EVENT_BAD_EVENT ) {
+	} else if ( result == CheckEvents::EVENT_BAD_EVENT ||
+				result == CheckEvents::EVENT_WARNING ) {
 		debug_printf( DEBUG_VERBOSE, "Warning checking Stork job events: %s\n",
 				jobError.Value() );
 	} else {
@@ -2647,8 +2649,13 @@ Dag::EventSanityCheck( int logsource, const ULogEvent* event,
 	}
 
 	debug_printf( DEBUG_NORMAL, "%s\n", eventError.Value() );
-	debug_printf( DEBUG_NORMAL, "WARNING: bad event here may indicate a "
-				  "serious bug in Condor -- beware!\n" );
+	//debug_printf( DEBUG_NORMAL, "WARNING: bad event here may indicate a "
+				  //"serious bug in Condor -- beware!\n" );
+
+	if( checkResult == CheckEvents::EVENT_WARNING ) {
+		debug_printf( DEBUG_NORMAL, "BAD EVENT is warning only\n");
+		return true;
+	}
 
 	if( checkResult == CheckEvents::EVENT_BAD_EVENT ) {
 		debug_printf( DEBUG_NORMAL, "Continuing with DAG in spite of bad "
