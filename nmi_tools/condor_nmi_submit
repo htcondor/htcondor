@@ -323,7 +323,7 @@ sub parseOptions
            'tag=s'         => $opt_tag,
            'module=s'      => $opt_module,
            'nmiconf=s'     => $opt_nmiconf,
-		   'desc=s'        => $opt_desc,
+           'desc=s'        => $opt_desc,
 # build-specific options
            'nightly'       => $opt_nightly,
            'externals=s'   => $opt_externals,
@@ -331,8 +331,8 @@ sub parseOptions
 # test-specific options
            'buildid=s'     => $opt_buildid,
            'test-src=s'    => $opt_test_src,
-	   'test-timeout=i' => $opt_test_timeout,
-	   'test-args=s'   => $opt_test_args,
+           'test-timeout=i' => $opt_test_timeout,
+           'test-args=s'   => $opt_test_args,
     );
 
     if( defined $opt_help ) {
@@ -436,9 +436,9 @@ sub parseOptions
 
             # Try to catch incomplete workspaces
         my(@condor_req_dirs) = qw( src doc );
-		if( ! defined($opt_externals) ) { push @condor_req_dirs, 'externals'; }
-        foreach my $subdir (@condor_req_dirs) {
-            if( not -d "$opt_workspace/$subdir" ) {
+        if( ! defined($opt_externals) ) { push @condor_req_dirs, 'externals'; }
+            foreach my $subdir (@condor_req_dirs) {
+              if( not -d "$opt_workspace/$subdir" ) {
                 print "ERROR: Workspace $opt_workspace does not not appear to be a Condor workspace (missing $opt_workspace/$subdir)\n";
                 printUsage( 1 );
             }
@@ -447,13 +447,12 @@ sub parseOptions
         $tags{"workspace"} = undef;
     }
 
-	if( defined($src_workspace) && defined($opt_nmi_glue) && -d "$src_workspace/nmi_glue" ) {
-		# If you want to try and fix the race condition, it will
-		# involve somehow not copying the $src_workspace/nmi_glue directory
-		# in generateBuildFetchFiles().
-		print "WARNING: Your workspace ($src_workspace) contains an nmi_glue subdirectory.  You also specified an --nmi-glue directory ($opt_nmi_glue).  At the moment there is a race condition and you could get either directory.  As a workaround, rename %src_workspace/nmi_glue.\n";
-
-	}
+    if( defined($src_workspace) && defined($opt_nmi_glue) && -d "$src_workspace/nmi_glue" ) {
+        # If you want to try and fix the race condition, it will
+        # involve somehow not copying the $src_workspace/nmi_glue directory
+        # in generateBuildFetchFiles().
+        print "WARNING: Your workspace ($src_workspace) contains an nmi_glue subdirectory.  You also specified an --nmi-glue directory ($opt_nmi_glue).  At the moment there is a race condition and you could get either directory.  As a workaround, rename %src_workspace/nmi_glue.\n";
+    }
 
     if( defined($opt_nmi_glue) ) {
         # SCP the glue from different location
@@ -464,7 +463,7 @@ sub parseOptions
     }
 
     if( defined($opt_test_timeout) ) {
-	$test_timeout = $opt_test_timeout;
+        $test_timeout = $opt_test_timeout;
     }
 
     if( defined $opt_nmiconf ) {
@@ -689,12 +688,16 @@ sub createSubmitFiles
     my ( $tag ) = @_;
 
     my $cmdfile = "cmdfile";
-    if( defined $tag ) { $cmdfile .= "-$tag"; }
-	else { $cmdfile .= "-workspace"; }
+    if( defined $tag ) {
+        $cmdfile .= "-$tag";
+    } else {
+        $cmdfile .= "-workspace";
+    }
 
     my $module;
-    if( defined $tag) { $module = $tags{$tag}; }
-
+    if( defined $tag ) {
+        $module = $tags{$tag};
+    }
     my @fetch_files;
     
     # Generate the cmdfile
@@ -777,9 +780,9 @@ sub writeCommonInfo
         $desc = 'unknown';
     }
 
-	if ( defined $opt_desc ) {
-		$desc = $desc . ": $opt_desc";
-	}
+    if ( defined $opt_desc ) {
+        $desc = $desc . ": $opt_desc";
+    }
 
     print $fh "description = $desc\n";
     print $fh "project = condor\n";
@@ -820,7 +823,7 @@ sub writeBuildGlue
         print $fh "platform_post_args = --without-tests\n";
     } elsif( defined($src_workspace) ) {
         print $fh "platform_post_args = --test-args=--workspace='$src_workspace'\n";
-	}
+    }
 }
 
 
@@ -879,30 +882,31 @@ sub generateTestFetchFiles
 
     @fetch_files = generateSharedFetchFiles( $tag );
 
-	if( defined $src_workspace ) {
-		# Workspace build.  Grab out glue from our workspace
-		# (We can't assume it will be copied along with the workspace
-		# since we don't copy the workspace in a test run.)
+    if( defined $src_workspace ) {
+        # Workspace build.  Grab out glue from our workspace
+        # (We can't assume it will be copied along with the workspace
+        # since we don't copy the workspace in a test run.)
         my $glue_file = "test_glue.src";
-		# We rather crudely copy all of nmi_glue when we really
-		# on need nmi_glue/$runtype.  But we want the nmi_glue path
-		# in front of it.
+
+        # We rather crudely copy all of nmi_glue when we really
+        # on need nmi_glue/$runtype.  But we want the nmi_glue path
+        # in front of it.
         makeFetchFileSCP( $glue_file, "$src_workspace/nmi_glue", "recursive" );
         push( @fetch_files, $glue_file );
 
-	} elsif( ( ! defined $opt_nmi_glue) ) {
-		# $opt_nmi_glue is handled in generateSharedFetchFiles().
-		# however, if it's not set, and we're a test job, we need to add a
-		# fetch file to checkout the glue from cvs so we have a working
-		# copy in our userdir as soon as the fetching is done.  we can't
-		# rely on the copy of the glue in the source tarball from the
-		# build output, since we have no way to untar it without glue. ;)
+    } elsif( ( ! defined $opt_nmi_glue) ) {
+        # $opt_nmi_glue is handled in generateSharedFetchFiles().
+        # however, if it's not set, and we're a test job, we need to add a
+        # fetch file to checkout the glue from cvs so we have a working
+        # copy in our userdir as soon as the fetching is done.  we can't
+        # rely on the copy of the glue in the source tarball from the
+        # build output, since we have no way to untar it without glue. ;)
         my $glue_file = "test_glue.src";
         makeFetchFileCVS( $glue_file, "nmi_glue/$runtype", $tag );
         push( @fetch_files, $glue_file );
     }
-	# else: Not workspace build.  Using --nmi_glue 
-	# (handled in generateSharedFetchFiles()).  Nothing to do.
+    # else: Not workspace build.  Using --nmi_glue 
+    # (handled in generateSharedFetchFiles()).  Nothing to do.
     
     # generate the runid input file
     my $runid_file = "input_build_runid.src";
@@ -937,13 +941,13 @@ sub generateBuildFetchFiles
         push( @fetch_files, $srcfile );
     }
     elsif( defined $src_workspace ) {
-		# TODO: There is a race condition if the user also specified
-		# --nmi-glue and this directory ($src_workspace) contains
-		# an nmi_glue directory.  At the moment parseOptions warns
-		# the user, but we don't cope with it.  The solution would
-		# likely be: if $opt_nmi_glue is defined and 
-		# $src_workspace/nmi_glue exists, somehow pass makeFetchFileSCP
-		# a "don't copy this particular subdirectory" option.
+        # TODO: There is a race condition if the user also specified
+        # --nmi-glue and this directory ($src_workspace) contains
+        # an nmi_glue directory.  At the moment parseOptions warns
+        # the user, but we don't cope with it.  The solution would
+        # likely be: if $opt_nmi_glue is defined and 
+        # $src_workspace/nmi_glue exists, somehow pass makeFetchFileSCP
+        # a "don't copy this particular subdirectory" option.
         my $srcfile = "source-workspace.src";
         makeFetchFileSCP( $srcfile, $src_workspace, "recursive" );
         push( @fetch_files, $srcfile );
@@ -1049,16 +1053,16 @@ sub submitRun()
     }
     print "\n";
     open( SUBMIT, "$nmi_submit $cmdfile|" ) || 
-	die "Can't open $nmi_submit as a pipe: $!\n";
+        die "Can't open $nmi_submit as a pipe: $!\n";
     while( <SUBMIT> ) {
-	print;
+        print;
     }
     close( SUBMIT );
     my $status = $? / 256;
     if( $status == 0 ) {
-	print "nmi_submit successful\n";
+        print "nmi_submit successful\n";
     } else {
-	print "ERROR: nmi_submit failed!\n";
+        print "ERROR: nmi_submit failed!\n";
     }
 }
 
@@ -1424,5 +1428,3 @@ sub parseError
     my $err = shift;
     die "ERROR (line $orig_lineno): $err!\n";
 }
-
-
