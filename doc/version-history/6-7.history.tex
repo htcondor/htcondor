@@ -109,6 +109,10 @@ idle state in \Condor{dagman}'s internal count.
 \item Fixed a problem on Windows where daemons would sometimes crash
 when dealing with UNC path names.
 
+\item Fixed a problem where the \Condor{schedd} on Windows would
+incorrectly reject a job if the client prvoided an \Attr{Owner}
+attribute that was correct but differed in case.
+
 \end{itemize}
 
 \noindent Known Bugs:
