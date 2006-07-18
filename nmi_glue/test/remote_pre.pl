@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre.pl,v 1.1.4.13 2006-06-26 21:32:10 gquinn Exp $
+# $Id: remote_pre.pl,v 1.1.4.14 2006-07-18 17:49:21 bt Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
@@ -223,6 +223,11 @@ print FIX "MASTER_DEBUG            = D_COMMAND\n";
 
 # Add a shorter check time for periodic policy issues
 print FIX "PERIODIC_EXPR_INTERVAL = 15\n";
+
+# turn on soap for testing
+print FIX "ENABLE_SOAP            	= TRUE\n";
+print FIX "ALLOW_SOAP            	= *\n";
+print FIX "QUEUE_ALL_USERS_TRUSTED 	= TRUE\n";
 
 if( ($ENV{NMI_PLATFORM} =~ /hpux_11/) )
 {
