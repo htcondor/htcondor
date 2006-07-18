@@ -31,11 +31,11 @@ if not exist ..\src\h\syscall_numbers.h awk -f ..\src\h\awk_prog.include_file ..
 
 REM Build the externals
 call make_win32_externals.bat
-if not errorlevel 0 goto extfail
+if %ERRORLEVEL% NEQ 0 goto extfail
 
 REM Copy any .dll files created by the externals in debug and release
 call copy_external_dlls.bat
-if not errorlevel 0 goto extfail
+if %ERRORLEVEL% NEQ 0 goto extfail
 
 REM Deal with gsoap
 nmake /f gsoap.mak

@@ -35,11 +35,11 @@ if not exist ..\src\h\syscall_numbers.h awk -f ..\src\h\awk_prog.include_file ..
 
 REM Build the externals
 call make_win32_externals.bat
-if not errorlevel 0 goto failure
+if %ERRORLEVEL% NEQ 0 goto failure
 
 REM Copy any .dll files created by the externals in debug and release
 call copy_external_dlls.bat
-if not errorlevel 0 goto failure
+if %ERRORLEVEL% NEQ 0 goto failure
 
 if defined INCLUDE goto :check_sdk
 call VCVARS32.BAT
