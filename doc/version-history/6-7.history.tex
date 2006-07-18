@@ -117,6 +117,10 @@ attribute that was correct but differed in case.
 crash would appear if an execute machine was matched for preemption
 but then not claimed in time by the appropriate \Condor{schedd}.
 
+\item Resolved an issue where the \Condor{startd} was unable to clean
+up jobs' execute directories on Windows when the \Condor{master} was
+started from the command line rather than as a service.
+
 \end{itemize}
 
 \noindent Known Bugs:
