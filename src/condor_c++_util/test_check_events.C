@@ -611,6 +611,9 @@ int main(int argc, char **argv)
 	CheckThisEvent(__LINE__, ce14, &pt14, CheckEvents::EVENT_BAD_EVENT,
 			result);
 
+	CheckThisEvent(__LINE__, ce14, &te14, CheckEvents::EVENT_BAD_EVENT,
+			result);
+
 	//~~~~~~~~~~~~~~~~~~~~~
 
 	se14.cluster = 124;

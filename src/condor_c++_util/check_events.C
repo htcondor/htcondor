@@ -189,7 +189,7 @@ CheckEvents::CheckJobEnd(const MyString &idStr, const JobInfo *info,
 	if ( info->postScriptCount != 0 ) {
 		errorMsg = idStr + " ended, post script "
 				"count != 0 (" + MyString(info->postScriptCount) + ")";
-		result = AllowAlmostAll() ? EVENT_BAD_EVENT : EVENT_ERROR;
+		result = AllowDuplicates() ? EVENT_BAD_EVENT : EVENT_ERROR;
 	}
 }
 
