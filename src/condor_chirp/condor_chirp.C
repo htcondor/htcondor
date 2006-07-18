@@ -260,10 +260,34 @@ int chirp_get_job_attr(int argc, char **argv) {
 	}
 
 	char *p = 0;
-    chirp_client_get_job_attr(client, argv[2], &p);
+    	chirp_client_get_job_attr(client, argv[2], &p);
 	printf("%s\n", p);
 	return 0;
 }
+
+/*
+ * chirp_getattr
+ *   call chirp_setattr to do the real work
+ */
+
+int chirp_set_job_attr(int argc, char **argv) {
+	if (argc != 4) {
+		printf("condor_chirp set_job_attr AttributeName AttributeValue\n");
+		return -1;
+	}
+
+	struct chirp_client *client = 0;
+
+		// First, connect to the submit host
+	client = chirp_client_connect_default();
+	if (!client) {
+		fprintf(stderr, "cannot chirp_connect to shadow\n");
+		return -1;
+	}
+
+    	return chirp_client_set_job_attr(client, argv[2], argv[3]);
+}
+
 int
 main(int argc, char **argv) {
 
@@ -286,6 +310,10 @@ main(int argc, char **argv) {
 
 	if (strcmp("get_job_attr", argv[1]) == 0) {
 		return chirp_get_job_attr(argc, argv);
+	}
+
+	if (strcmp("set_job_attr", argv[1]) == 0) {
+		return chirp_set_job_attr(argc, argv);
 	}
 
 	usage();
