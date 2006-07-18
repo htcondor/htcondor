@@ -98,6 +98,10 @@ default); 16 value now also allows terminate event before submit;
 changed "allow all events" to "allow almost all events"
 (all except "run after terminal event"), so it is more useful.
 
+% Gnats PR 712
+\item \Condor{dagman} and \Condor{submit\_dag} now report
+\Opt{-NoEventChecks} as ignored rather than deprecated.
+
 \end{itemize}
 
 \noindent Known Bugs:
