@@ -361,6 +361,13 @@ sub InstallPersonalCondor
 	{
 		$condordistribution = $control{"condor"};
 		debug( "Install this condor --$condordistribution--\n");
+		if( $condordistribution eq "nightlies" ) {
+			# test if this is really the environment we are in or
+			# switch it to install mode.
+			 if(! -f "../../condor/sbin/condor_master") {
+			 	$condordistribution = "install";
+			 }
+		}
 		if( $condordistribution eq "install" )
 		{
 			# where is the hosting condor_config file? The one assumed to be based
