@@ -524,6 +524,7 @@ bool Dag::ProcessOneEvent (int logsource, ULogEventOutcome outcome,
 			case ULOG_JOB_EVICTED:
 			case ULOG_JOB_SUSPENDED:
 			case ULOG_JOB_HELD:
+			case ULOG_SHADOW_EXCEPTION:
 				ProcessIsIdleEvent(event, job);
 				break;
 
@@ -537,7 +538,6 @@ bool Dag::ProcessOneEvent (int logsource, ULogEventOutcome outcome,
 			case ULOG_IMAGE_SIZE:
 			case ULOG_NODE_EXECUTE:
 			case ULOG_NODE_TERMINATED:
-			case ULOG_SHADOW_EXCEPTION:
 			case ULOG_GENERIC:
 			default:
 				break;
