@@ -434,7 +434,7 @@ void writeSubmitFile(/* const */ SubmitDagOptions &opts)
 	if(opts.bNoEventChecks)
 	{
 		// strArgs += " -NoEventChecks";
-		printf( "Warning: -NoEventChecks is deprecated; please use "
+		printf( "Warning: -NoEventChecks is ignored; please use "
 					"the DAGMAN_ALLOW_EVENTS config parameter instead\n");
 	}
 	if(opts.bAllowLogError)
@@ -608,7 +608,7 @@ int printUsage()
 // <--STORK
     printf("    -notification <value> (Determines how much email you get from Condor.\n");
     printf("        See the condor_submit man page for values.)\n");
-    printf("    -NoEventChecks      (Turns off checks for \"bad\" events)\n"); 
+    printf("    -NoEventChecks      (Now ignored -- use DAGMAN_ALLOW_EVENTS)\n"); 
     printf("    -AllowLogError      (Allows the DAG to attempt execution even if the log\n");
     printf("        reading code finds errors when parsing the submit files)\n"); 
 	printf("    -UseDagDir          (Run DAGs in directories specified in DAG file paths)\n");

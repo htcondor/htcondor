@@ -440,7 +440,7 @@ int main_init (int argc, char ** const argv) {
             dagman.maxPostScripts = atoi( argv[i] );
         } else if( !strcasecmp( "-NoEventChecks", argv[i] ) ) {
 			debug_printf( DEBUG_SILENT, "Warning: -NoEventChecks is "
-						"deprecated; please use the DAGMAN_ALLOW_EVENTS "
+						"ignored; please use the DAGMAN_ALLOW_EVENTS "
 						"config parameter instead\n");
 
         } else if( !strcasecmp( "-AllowLogError", argv[i] ) ) {
