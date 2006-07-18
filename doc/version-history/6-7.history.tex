@@ -91,6 +91,13 @@ machine, a bug introduced in 6.7.18 was causing Condor daemons to
 sometimes incorrectly report their IP addresses, which could cause
 jobs to fail to start running.
 
+\item Made the event checking in \Condor{dagman} less strict: 
+added the new "allow duplicate events" value to the
+\MacroNI{DAGMAN\_ALLOW\_EVENTS} macro (this value is part of the
+default); 16 value now also allows terminate event before submit;
+changed "allow all events" to "allow almost all events"
+(all except "run after terminal event"), so it is more useful.
+
 \end{itemize}
 
 \noindent Known Bugs:

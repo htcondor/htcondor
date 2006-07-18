@@ -5184,23 +5184,30 @@ The \MacroNI{DAGMAN\_ALLOW\_EVENTS} value is a bitwise-OR of the
 following values:
 \begin{description}
 \item 0 = allow no "bad" events
-\item 1 = allow all "bad" events (overrides other bits)
+\item 1 = allow almost all "bad" events (all except "job re-run after
+terminated event")
 \item 2 = allow terminated/aborted event combination
 \item 4 = allow "job re-run after terminated event" bug
 \item 8 = allow garbage/orphan events
-\item 16 = allow execute event before job's submit event
+\item 16 = allow execute or terminate event before job's submit event
 \item 32 = allow two terminated events per job (sometimes seen
 with grid jobs)
+\item 64 = allow duplicated events in general
 \end{description}
 
-The default value is 50 (allow terminated/aborted event combination,
-allow execute event before job's submit event, and allow double terminated
-events).
+The default value is 114 (allow terminated/aborted event combination,
+allow execute and/or terminated event before job's submit event, allow
+double terminated events, and allow general duplicate events).
 
 For example, a value of 6 instructs \Condor{dagman} to allow both
 the terminated/aborted event combination and the "job re-run
 after terminated event" bug.  A value of 0 means that any "bad"
 event will be considered a fatal error.
+
+A value of 5 (1 + 4) will never abort the DAG because of a "bad"
+event -- but you should almost never use this setting, because
+the "job re-run after terminated event" bug breaks the semantics of
+the DAG.
 
 This macro should almost always remain set to the default value!
 
