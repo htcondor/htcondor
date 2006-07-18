@@ -102,6 +102,10 @@ changed "allow all events" to "allow almost all events"
 \item \Condor{dagman} and \Condor{submit\_dag} now report
 \Opt{-NoEventChecks} as ignored rather than deprecated.
 
+\item Fixed a bug in the \Condor{dagman} \Opt{-maxidle} feature:
+a shadow exception event now puts the corresponding job into the
+idle state in \Condor{dagman}'s internal count.
+
 \end{itemize}
 
 \noindent Known Bugs:
