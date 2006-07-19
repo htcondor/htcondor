@@ -1,0 +1,132 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\label{sec:History-6-8}Stable Release Series 6.8}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+This is a stable release series of Condor.
+It is based on the 6.7 development series.
+All new features added or bugs fixed in the 6.7 series are available
+in the 6.8 series.
+The details of each version are described below.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-6-8-0}Version 6.8.0}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+% Gnats PR 710
+\item Added the \Opt{-outfile\_dir} command-line argument to
+\Condor{submit\_dag}.  This allows you to change the directory in which
+\Condor{dagman} writes the \File{dagman.out} file.
+
+\item Added a new \Opt{--summary} (also \Opt{-s}) option to the
+\Condor{update\_stats} tool.  If enabled, this prevents it from
+displaying the entire history for each machine and only displays the
+summary info.
+
+\item The default configuration for Condor now requires that
+\Macro{HOSTALLOW\_WRITE} be explicitly set.  Condor will refuse
+to start if the default configuration is used unmodified.
+Existing installations should not need to change anything.  For
+those who desire the earlier default, you can set it to "*", but
+note that this is potentially a security hole allowing anyone to
+submit jobs or machines to your pool.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a bug in Quill which caused it to crash when certain
+long attributes appeared in a job ad.
+
+\item The startd would crash after a reconfig if the address of a
+collector had not been resolved since the previous reconfig
+(e.g. because DNS was down during that time).
+
+\item Once a Condor daemon failed to lookup the IP address of the
+collector (e.g. because DNS was down), it would fail to contact the
+collector from that time until the next reconfig.  Now, each time Condor
+tries to contact the collector, it generates a fresh DNS query if the
+previous attempt failed.
+
+% Gnats PR 707
+\item When using Condor-C or the -s or -r command-line options to
+\condor{submit}, the job's standard output and error would be placed
+in the job's initial working directory, even if the job ad said to
+place them in a different directory.
+
+% Gnats PRs 501 and 663
+\item Greatly speeded up the parsing of large DAGs (by a factor of 50
+or so) by using a hash table instead of linear search to find DAG nodes.
+
+% Gnats PR 697
+\item Fixed a bug in \Condor{dagman} that caused an EXECUTABLE\_ERROR
+event from a node job to abort the DAG instead of just marking the
+relevant node as failed.
+
+\item Fixed a bug in \Condor{collector} that caused it to discard
+machine ads that don't have an IP address field (either StartdIpAddr
+or STARTD\_IP\_ADDR).  The \Condor{startd} will always produce a
+StartdIpAddr field, but machine ads published through
+\Condor{advertise} may not.
+
+\item When using \MacroNI{BIND\_ALL\_INTERFACES} on a dual-homed
+machine, a bug introduced in 6.7.18 was causing Condor daemons to
+sometimes incorrectly report their IP addresses, which could cause
+jobs to fail to start running.
+
+\item Made the event checking in \Condor{dagman} less strict: 
+added the new "allow duplicate events" value to the
+\MacroNI{DAGMAN\_ALLOW\_EVENTS} macro (this value is part of the
+default); 16 value now also allows terminate event before submit;
+changed "allow all events" to "allow almost all events"
+(all except "run after terminal event"), so it is more useful.
+
+% Gnats PR 712
+\item \Condor{dagman} and \Condor{submit\_dag} now report
+\Opt{-NoEventChecks} as ignored rather than deprecated.
+
+\item Fixed a bug in the \Condor{dagman} \Opt{-maxidle} feature:
+a shadow exception event now puts the corresponding job into the
+idle state in \Condor{dagman}'s internal count.
+
+\item Fixed a problem on Windows where daemons would sometimes crash
+when dealing with UNC path names.
+
+\item Fixed a problem where the \Condor{schedd} on Windows would
+incorrectly reject a job if the client prvoided an \Attr{Owner}
+attribute that was correct but differed in case from the authenticated
+name.
+
+\item Fixed a \Condor{startd} crash introduced in version 6.7.20. This
+crash would appear if an execute machine was matched for preemption
+but then not claimed in time by the appropriate \Condor{schedd}.
+
+\item Resolved an issue where the \Condor{startd} was unable to clean
+up jobs' execute directories on Windows when the \Condor{master} was
+started from the command line rather than as a service.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
