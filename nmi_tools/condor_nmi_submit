@@ -1359,23 +1359,33 @@ sub parseBlock
 
         # append all shared test prereqs in this block to each platform
         if( %block_test_prereqs ) { 
-            $platform_test_prereqs{$platform} .= ", " .
+            if( $platform_test_prereqs{$platform} ) {
+                $platform_test_prereqs{$platform} .= ", ";
+            }
+            $platform_test_prereqs{$platform} .= 
                 join( ', ', sort(keys(%block_test_prereqs)) );
         }
 
         # if this platform also has platform-specific prereqs, append
         # those, too...
         if( $block_platform_prereqs{$platform} ) {
-            $platform_prereqs{$platform} .= ", " .
-                $block_platform_prereqs{$platform};
-            $platform_test_prereqs{$platform} .= ", " .
-                $block_platform_prereqs{$platform};
+            if( $platform_prereqs{$platform} ) {
+                $platform_prereqs{$platform} .= ", ";
+            }
+            $platform_prereqs{$platform} .= $block_platform_prereqs{$platform};
+            if( $platform_test_prereqs{$platform} ) {
+                $platform_test_prereqs{$platform} .= ", ";
+            }
+            $platform_test_prereqs{$platform} .= $block_platform_prereqs{$platform};
         }
 
         # if this platform also has platform-specific test prereqs,
         # append those, too...
         if( $block_platform_test_prereqs{$platform} ) {
-            $platform_test_prereqs{$platform} .= ", " .
+            if( $platform_test_prereqs{$platform} ) {
+                $platform_test_prereqs{$platform} .= ", ";
+            }
+            $platform_test_prereqs{$platform} .=
                 $block_platform_test_prereqs{$platform};
         }
 
