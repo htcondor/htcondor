@@ -607,9 +607,10 @@ V6_7_20_EXT	-a V6_7_COMMON_EXT \
 		   externals/bundles/drmaa/1.2.1 \
 		   externals/bundles/blahp/1.7.0
 
-# Externals needed for V6_7_21
+# Externals needed for V6_8_0
 # (same as V6_7_20, but update DRMAA to 1.4)
-V6_7_21_EXT	-a V6_7_COMMON_EXT \
+# XXX Clean me up!
+V6_8_0_EXT	-a V6_7_COMMON_EXT \
                    externals/bundles/krb5/1.4.3 \
                    externals/bundles/gahp/1.0.15 \
                    externals/bundles/globus/4.0.1 \
@@ -630,7 +631,9 @@ V6_7_21_EXT	-a V6_7_COMMON_EXT \
                    externals/bundles/blahp/1.7.0
 
 # Externals needed for the head of the V6_7-branch
-V6_7_EXT	-a V6_7_21_EXT
+# XXX the end of the V6_7-branch is the 6.8.0 series for now...
+# XXX This needs cleanup
+V6_7_EXT	-a V6_8_0_EXT
 
 # Externals needed for the head of the V6_7-branch on Windows
 V6_7_NT_EXT -a EXT_COMMON \
