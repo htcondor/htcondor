@@ -11,7 +11,7 @@ For example:
 
 \item Support for Kerberos and X.509 authentication.
 
-\item Support for transfering files needed by jobs (for all universes
+\item Support for transferring files needed by jobs (for all universes
 except standard and PVM)
 
 \item Support for MPICH jobs.
@@ -30,48 +30,7 @@ and known bugs of each version are described below in detail.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:New-6-3-4}Version 6.3.4}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\noindent New Features:
-
-\begin{itemize}
-
-\item If a job universe is not specified in a submit description file, 
-\Condor{submit}  will check the config file for \Macro{DEFAULT\_UNIVERSE}
-instead of always choosing the standard universe. 
-
-\item The \Macro{D\_SECONDS} debug flag is deprecated. Seconds are now always
-included in logfiles. 
-
-\item For each daemon listed in \Macro{DAEMON\_LIST}, you can now control the
-environment variables of the daemon with a config file setting of the form
-\Macro{DAEMONNAME\_ENVIRONMENT}, where \MacroNI{DAEMONNAME} is the name of a
-daemon listed in \Macro{DAEMON\_LIST}. For more information, see
-section~\ref{sec:Master-Config-File-Entries}.
-
-\end{itemize}
-
-\noindent Bugs Fixed:
-
-\begin{itemize}
-
-\item Fixed a bug in the new starter where if the submit file set no
-arguments, the job would receive one argument of zero length.
-
-\end{itemize}
-
-\noindent Known Bugs:
-
-\begin{itemize}
-
-\item None.
-
-\end{itemize}
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:New-6-3-3}Version 6.3.3}
+\subsection*{\label{sec:New-6-3-3}Version 6.3.3}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent New Features:
@@ -120,14 +79,14 @@ includes a string describing why the action was taken.
 \Condor{starter} binaries you have installed on your machine.
 Now, you can specify a \Macro{SHADOW\_LIST} and a
 \Macro{STARTER\_LIST}.
-These are treated much like the \Macro{DAEMON\_LIST} setting, they
+These are treated much like the \MacroNI{DAEMON\_LIST} setting, they
 specify a list of attribute names, each of which point to the actual
 binary you want to use.
 On startup, Condor will check these lists, make sure all the binaries
 specified exist, and find out what abilities each program provides.
 This information is used during matchmaking to ensure that a job which
 requires a certain ability (like having a new enough version of Condor
-to support transfering files on Unix) can find a resource that
+to support transferring files on Unix) can find a resource that
 provides that ability.
 
 \item Added new security feature to offer fine-grained control over
@@ -144,8 +103,8 @@ For more information about host-based security in Condor, see
 section~\ref{sec:Host-Security} on page~\pageref{sec:Host-Security}.
 For more information about how to configure the new settings, see the
 same section of the manual.
-In particular, see section~\ref{sec:Config-Val-Security} on
-page~\pageref{sec:Config-Val-Security}. 
+In particular, see section~\ref{sec:Host-Security} on
+page~\pageref{sec:Host-Security}. 
 
 \item Greatly improved the handling of the ``soft kill signal'' you
 can specify for your job.
@@ -167,11 +126,11 @@ instead of requiring \DCPerm{ADMINISTRATOR} access.
 This allows Condor administrators to define a default domain where
 Condor should send email if whatever \Macro{UID\_DOMAIN} is set to
 would yield invalid email addresses.
-For more information, see section~\ref{Param:EmailDomain} on
-page~\pageref{Param:EmailDomain}.
+For more information, see section~\ref{param:EmailDomain} on
+page~\pageref{param:EmailDomain}.
 
 \item
-Added support for RedHat 7.2.
+Added support for Red Hat 7.2.
 
 \item When printing out the UserLog, we now only log a new event for
 ``Image size of job updated'' when the new value is different than the
@@ -204,7 +163,7 @@ This timeout problem has been corrected.
 \item
 Removed use of the bfd libary in the Condor Linux distribution. 
 This will make the dynamic versions of the Condor executables have a
-higher chance of being usable when RedHat upgrades.
+higher chance of being usable when Red Hat upgrades.
 
 \item
 When you specify ``STARTD\_HAS\_BAD\_UTMP = True'' in the config files
@@ -259,7 +218,7 @@ if exception handling is enabled with +eh.
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:New-6-3-2}Version 6.3.2}
+\subsection*{\label{sec:New-6-3-2}Version 6.3.2}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Version 6.3.2 of Condor was only released as a version of
@@ -270,7 +229,7 @@ release a full Condor distribution with the same version number.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:New-6-3-1}Version 6.3.1}
+\subsection*{\label{sec:New-6-3-1}Version 6.3.1}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent New Features:
@@ -352,9 +311,9 @@ control of how many virtual machines to start up on the target platform.
 variables while being processed.
 
 \item Added capability to make default user user priority factor configurable
-with the \Macro{DEFAULT\_PRIORITY\_FACTOR} macro in the config files.
+with the \Macro{DEFAULT\_PRIO\_FACTOR} macro in the config files.
 
-\item Added full support for RedHat 7.1 and the gcc 2.96 compiler. However,
+\item Added full support for Red Hat 7.1 and the gcc 2.96 compiler. However,
 the standard universe binaries must still be statically linked.
 
 \item When jobs are suspended or unsuspended, an event is now written into
@@ -429,7 +388,7 @@ if exception handling is enabled with +eh.
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:New-6-3-0}Version 6.3.0}
+\subsection*{\label{sec:New-6-3-0}Version 6.3.0}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent New Features:

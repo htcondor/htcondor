@@ -3,10 +3,11 @@
 %
 %  For use with latex2html
 %
-%\usepackage{times}
-\input{timesfont.tex}
 \usepackage{html}
-\usepackage{graphics}
+\usepackage{graphicx}
+\usepackage{makeidx}
+\usepackage{upquote}
+
 
 %
 %  Set the size of the margins and text area
@@ -59,10 +60,14 @@
 	%
 	\usepackage[Bjarne]{fncychap}
 }
+
 %
+% Input a file written by our Makefile, which will setup to use Times font
+% and pull in the hyperref package if we are building the PDF version.
+\input{timesfont.tex}
+
 % generate index
 %
-\usepackage{makeidx}
 \makeindex
 
 \begin{document}
@@ -76,9 +81,13 @@
 \tableofcontents
 
 \sloppy
+
+% This turns off the hbox underfull warnings, but
+% does not change the formatting of the text
+% default value is 1000
+\hbadness=10000
+
 \begin{small}
-\subsubsection{Copyright and Disclaimer}
-\label{sec:copyright-and-disclaimer}
 \input{copyright.tex}
 \end{small}
 
@@ -98,35 +107,29 @@
 \input{admin-man/admin.tex}
 
 \chapter{Miscellaneous Concepts}
-\section{\label{classad-reference}
-An Introduction to Condor's ClassAd Mechanism}
-\input{misc/classad.tex}
-\section{\label{ckpt-reference}
-An Introduction to Condor's Checkpointing Mechanism}
-\input{misc/ckpt.tex}
-\section{\label{condor-pm}
-The Condor Perl Module}
-\input{misc/condor.pm.tex}
+\label{misc-concepts}
+\input{misc/misc.tex}
 
-\chapter{Condor-G}
-\label{condor-G}
-\input{condor-g/condor-g.tex}
+% Grid Computing
+\chapter{Grid Computing}
+\label{grid-computing}
+\input{grids/grid-computing.tex}
 
-\chapter{Condor for Microsoft Windows NT 4.0}
-\label{condor-nt}
-\input{admin-man/nt.tex}
-\input{admin-man/install-nt.tex}
+% Platform-specific release notes
+\chapter{Platform-Specific Information}
+\label{platforms}
+\input{platforms/platforms.tex}
 
 \chapter{Frequently Asked Questions (FAQ)}
 \label{sec:FAQ}
 \input{faq.tex}
 
-\chapter{Condor Version History}
+\chapter{Version History and Release Notes}
 \label{Version-History}
 \input{version-history/history.tex}
 
 \chapter{Command Reference Manual (man pages)}
-\label{command-reference}
+\label{sec:command-reference}
 \input{man-pages/man.tex}
 
 %

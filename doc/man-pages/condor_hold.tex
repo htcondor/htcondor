@@ -2,11 +2,15 @@
 {put jobs in the queue into the hold state}
 \Synopsis \SynProg{\Condor{hold}}
 \ToolArgsBase
-\ToolLocate 
-\ToolJobs
 
 \SynProg{\Condor{hold}}
-\ToolArgsBase
+\ToolDebugOption
+\ToolLocate 
+\ToolJobs
+$|$ \OptArg{-constraint}{expression} \Dots 
+
+\SynProg{\Condor{hold}}
+\ToolDebugOption
 \ToolLocate 
 \ToolAll
 
@@ -15,7 +19,8 @@
 
 \Description
 
-\Condor{hold} places one or more jobs from the Condor job queue in hold state.
+\Condor{hold} places jobs from the Condor job queue in
+the hold state.
 If the \Opt{-name} option is specified, the named \Condor{schedd} is targeted
 for processing.  
 Otherwise, the local \Condor{schedd} is targeted.
@@ -24,16 +29,29 @@ described below.
 For any given job, only the owner of the job or one of the queue super users
 (defined by the \MacroNI{QUEUE\_SUPER\_USERS} macro) can place the job on hold.
 
+A job in the hold state remains in the job queue,
+but the job will not run until released with \Condor{release}.
+
+A currently running job that is placed in the hold state by \Condor{hold}
+is sent a hard kill signal.
+For a standard universe job,
+this means that the job is removed from the machine without
+allowing a checkpoint to be produced first.
+
 \begin{Options}
 
 	\ToolArgsBaseDesc
 	\ToolLocateDesc
+	\ToolDebugDesc
         \OptItem{\Arg{cluster}}{Hold all jobs in the specified cluster}
         \OptItem{\Arg{cluster.process}}{Hold the specific job in the cluster}
-        \OptItem{\Arg{user}}{Hold jobs belonging to specified user}
+        \OptItem{\Arg{user}}{Hold all jobs belonging to specified user}
+        \OptItem{\OptArg{-constraint}{expression}} {Hold all jobs which match
+	        the job ClassAd expression constraint (within quotation
+		marks).
+		Note that quotation marks must be escaped with the
+		backslash characters for most shells.  }
         \OptItem{\Arg{-all}}{Hold all the jobs in the queue}
-        \OptItem{\Arg{-constraint constraint}}{Hold
-        jobs matching specified constraint}
 
 \end{Options}
 
@@ -47,6 +65,33 @@ the PVM job cluster on hold.  (In the PVM universe, each PVM job is
 assigned its own cluster number, and each machine class is assigned a
 ``process'' number in the job's cluster.)  Putting a subset of the
 machine classes for a PVM job on hold is not supported.
+
+\Examples
+To place on hold all jobs
+(of the user that issued the \Condor{hold} command)
+that are not currently running:
+\footnotesize
+\begin{verbatim}
+% condor_hold -constraint "JobStatus!=2"
+\end{verbatim}
+\normalsize
+
+Multiple options within the same command cause the union of 
+all jobs that meet either (or both) of the options to be placed in the
+hold state.
+Therefore, the command
+\footnotesize
+\begin{verbatim}
+% condor_hold Mary -constraint "JobStatus!=2"
+\end{verbatim}
+\normalsize
+places all of Mary's queued jobs into the hold state, 
+and the constraint holds all queued jobs not currently running.
+It also sends a hard kill signal to any of Mary's jobs that are
+currently running.
+Note that the jobs specified by the constraint will also be
+Mary's jobs, if it is Mary that issues this
+example \Condor{hold} command.
 
 \ExitStatus
 

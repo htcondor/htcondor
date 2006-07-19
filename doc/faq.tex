@@ -1,3 +1,4 @@
+
 \index{Condor!FAQ|(}
 \index{Condor!Frequently Asked Questions|(}
 \index{FAQ|(}
@@ -6,20 +7,27 @@
 This is where you can find quick answers to some commonly asked
 questions about Condor.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Obtaining \& Installing Condor}
-\index{Condor!downloading|(}
-\index{Condor!distribution|(}
-\index{Condor!getting|(}
-\index{Condor!binaries|(}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\subsection{Where can I download Condor?}
+\index{FAQ!installing Condor}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Where can I download Condor?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Condor!downloading}
+\index{Condor!distribution}
+\index{Condor!getting}
+\index{Condor!binaries}
 
 Condor can be downloaded from
-\Url{http://www.cs.wisc.edu/condor/downloads} (Madison, Wisconsin,
-USA) or \Url{http://www.bo.infn.it/condor-mirror/downloads} (a mirror
+\URL{http://www.cs.wisc.edu/condor/downloads} (Madison, Wisconsin,
+USA) or \URL{http://www.bo.infn.it/condor-mirror/downloads} (a mirror
 site at the Istituto Nazionale di Fisica Nucleare in Bologna, Italy).
 
-\subsection{When I click to download Condor, it sends me back to the downloads page!}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{When I click to download Condor, it sends me back to the downloads page!}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 If you are trying to download Condor through a web proxy, try
 disabling it.
@@ -27,52 +35,274 @@ Our web site uses the ``referring page'' as you navigate through our
 download menus in order to give you the right version of Condor, but
 sometimes proxies block this information from reaching our web site.
 
-\subsection{What platforms do you support?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{What platforms do you support?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 See Section~\ref{sec:Availability}, on
 page~\pageref{sec:Availability}.
+Also, you might want to read the platform-specific information in
+Chapter~\ref{platforms} on page~\pageref{platforms}.
 
-\index{Condor!binaries|)}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{What versions of Red Hat Linux does Condor support?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\subsection{Do you distribute source code?}
-\index{Condor!source code|(}
+See Section~\ref{sec:platform-linux} on
+page~\pageref{sec:platform-linux}. 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Do you distribute source code?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Condor!source code}
 
 At this time we do \Bold{not} distribute source code publicly, but
 instead consider requests on a case-by-case basis.
-If you need the source code, please email us at
+If you need the source code, please e-mail us at
 \Email{condor-admin@cs.wisc.edu} explaining why, and we'll get back to
 you.
 
-\index{Condor!source code|)}
 
-\subsection{What is ``Personal Condor''?}
-\index{Condor!Personal|(}
-\index{Personal Condor|(}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{How do I upgrade the Unix machines in my pool from 6.4.x to 6.6.x?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{upgrade!version 6.4.x to version 6.6.x}
+
+This series of steps explains how to upgrade a pool of machines
+from running Condor version 6.4.x to version 6.6.x.
+Read through the entire set of directions before following
+them.
+
+Briefly, the steps are to download the new version in
+order to replace your current binaries with the new binaries.
+Condor will notice that there are new binaries, since
+it checks for this every few minutes.
+The next time it checks, the new binaries will be used.
+
+\begin{description}
+\item[Step 1:  (Optional) Place test jobs in queue]
+This optional first step safeguards jobs currently in the
+queue when you upgrade.
+By completing this extra step, you will not lose any
+partially completed jobs, even if something goes wrong with
+your upgrade.
+
+Manufacture test jobs that utilize each universe you use in
+your Condor pool.
+Submit each job, and put the job in the hold state, 
+using \Condor{hold}.
+
+\item[Step 2:  Place all jobs on hold]
+Place all jobs into the hold state while replacing binaries.
+
+
+\item[Step 3:  Download Condor 6.6.x]
+To ensure that both new and current binaries are within
+the same volume,
+make a new directory within your current release
+directory where 6.6.x 
+will go. 
+Unix commands will be of the form
+\begin{verbatim}
+  cd <release-dir>
+  mkdir new
+  cd new
+\end{verbatim}
+
+Locate the correct version of the Condor
+binary, and download into this \File{new} directory.
+
+Do \emph{not} install the downloaded version.
+Do uncompress and then untar the downloaded version.
+Further untar the release directory (called \File{release.tar}).
+This will create the directories
+\begin{verbatim}
+      bin
+      etc
+      include
+      sbin
+      libexec
+      lib
+      man
+\end{verbatim}
+From this list of created directories, 
+\File{bin},
+\File{include},
+\File{sbin}, 
+\File{libexec}, and
+\File{lib} will be used to replace current directories. Note that
+older versions of Condor do not have a libexec directory.
+
+\item[Step 4:  Configuration files]
+The downloaded version 6.6.x
+configuration file will have extra, new suggestions
+for configuration macro settings,
+to go with new features in Condor.
+These extra configuration macros
+are not be required in order to run version Condor 6.6.x.
+
+Make a backup copy of the current configuration, to
+safeguard backing out of the upgrade, if something goes wrong.
+
+Work through the new
+example configuration file to see if there
+is anything useful and merge with your site-specific (current)
+configuration file.
+
+Note that starting in Condor 6.6.x, security sessions are turned on by
+default. If you will be retaining some 6.4.x series Condor installations
+in your pool, you must turn security sessions off in your 6.6.x
+configuration files. This can be accomplished by setting
+
+\begin{verbatim}
+SEC_DEFAULT_NEGOTIATION = NEVER
+\end{verbatim}
+
+Also in 6.6.x, the definition of Hawkeye / Startd Cron jobs has
+changed. The old syntax allowed the following
+
+\begin{verbatim}
+HAWKEYE_JOBS =\
+	job1:job1_:/path/to/job1:1h \
+	job2:job2_:/path/to/job2:5m \
+	...
+\end{verbatim}
+
+This is no longer supported, and must be replaced with the following
+
+\begin{verbatim}
+HAWKEYE_JOBS = job1:job1_:/path/to/job1:1h
+HAWKEYE_JOBS = $(HAWKEYE_JOBS) job2:job2_:/path/to/job2:5m
+HAWKEYE_JOBS = $(HAWKEYE_JOBS) ...
+\end{verbatim}
+
+It should also be noted that in 6.6.x, the \Condor{collector} and
+\Condor{negotiator} can be set to run on non-standard ports. This will
+cause older (6.4.x and earlier) Condor installations in that pool to no
+longer function.
+
+
+\item[Step 5:  Replace release directories]
+For each of the directories that is to be replaced,
+move the current one aside, and put the new one in its place.
+The Unix commands to do this will be of the form
+\begin{verbatim}
+  cd <release-dir>
+
+  mv bin bin.v64
+  mv new/bin bin
+
+  mv include include.v64
+  mv new/include include
+
+  mv sbin sbin.v64
+  mv new/sbin sbin
+
+  mv lib lib.v64
+  mv new/lib lib
+\end{verbatim}
+
+Do this series of directory moves at one
+sitting, especially avoiding a long time lag between the moves
+relating to the \File{sbin} directory.
+Condor imposes a delay by design, but it does not idly wait for the
+new binaries to be in place.
+
+\item[Step 6:  Observe propagation of new binaries]
+
+Use \Condor{status} to observe the propagation of the upgrade
+through the pool.
+As the machines notice and use the new binaries, their
+version number will change.
+Complete propagation should occur in five to ten minutes.
+
+The command
+\footnotesize
+\begin{verbatim}
+condor_status -format "%s" Machine -format " %s\n" CondorVersion
+\end{verbatim}
+\normalsize
+gives a single line of information about each machine in the pool,
+containing only the machine name and version of Condor it is
+running.
+
+\item[Step 7:  (Optional) Release test jobs]
+Release the test jobs that were placed into the hold state
+in Step 1.
+If these test jobs complete successfully, then the upgrade is
+successful.
+If these test jobs fail (possibly by leaving the queue before
+finishing), then the upgrade is unsuccessful.
+If unsuccessful, back out of the upgrade by
+replacing the new configuration file with the backup copy and
+moving the Version 6.4.x release directories back to their
+previous location.
+Also send e-mail to \Email{condor-admin@cs.wisc.edu},
+explaining the situation and we'll help you work through it.
+
+\item[Step 8:  Release all jobs]
+Release all jobs in the queue, but running \Condor{release}.
+
+\item[Step 9:  (Optional) Install manual pages]
+
+The \File{man} directory was new with Condor version 6.4.x.
+It contains manual pages.
+Note that installation of manual pages is optional;
+the chapter containing manual pages are in
+section~\ref{sec:command-reference}.
+
+To install the manual pages, move the \File{man} directory
+from \File{<release-dir>/new} to the desired location.
+Add the path name to this directory to the
+\Env{MANPATH}.
+
+\end{description}
+
+%To be written:  what to do about contrib modules when upgrading.
+%
+%do NOT need to upgrade (mostly)
+%checkpoint server (but may need to be reconstructed, depending
+%on where it was installed)
+%pvm
+%condorview server
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{What is Personal Condor?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Condor!Personal}
+\index{Personal Condor}
 
 Personal Condor is a term used to describe a specific style of Condor
 installation suited for individual users who do not have their own
 pool of machines, but want to submit Condor jobs to run elsewhere.
 
 A Personal Condor is essentially a one-machine, self-contained Condor
-pool which can use ``flocking'' to access resources in other Condor
+pool which can use \Term{flocking} to access resources in other Condor
 pools.
 See Section~\ref{sec:Flocking}, on page~\pageref{sec:Flocking} for
 more information on flocking.
 
-\index{Personal Condor|)}
-\index{Condor!Personal|)}
-\index{Condor!downloading|)}
-\index{Condor!distribution|)}
-\index{Condor!getting|)}
 
-\subsection{What do I do now? My installation of Condor does not work.}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{What do I do now? My installation of Condor does not work.}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\index{port usage!FAQ on communication errors}
 What to do to get Condor running properly depends on what sort of
 error occurs. 
 One common error category are communication errors.
 Condor daemon log files report a failure to bind.
+For example:
+
+\footnotesize
+\begin{verbatim}
+(date and time) Failed to bind to command ReliSock
+\end{verbatim}
+\normalsize
+
 Or, the errors in the various log files may be of the form:
 
+\footnotesize
 \begin{verbatim}
 (date and time) Error sending update to collector(s)
 (date and time) Can't send end_of_message
@@ -82,18 +312,22 @@ Or, the errors in the various log files may be of the form:
 
 (date and time) Can't send EOM to the collector
 \end{verbatim}
+\normalsize
 
 This problem can also be observed by running \Condor{status}.
 It will give a message of the form:
+\footnotesize
 \begin{verbatim}
 Error:  Could not fetch ads --- error communication error
 \end{verbatim}
+\normalsize
 
 To solve this problem, understand that
 Condor uses the first network interface it sees on the machine.
 Since machines often have more than one interface,
 this problem usually implies that the wrong network
-interface is being used.
+interface is being used.  It also may be the case that
+the system simply has the wrong IP address configured.
 
 It is incorrect to use the localhost network interface.
 This has IP address 127.0.0.1 on all machines.
@@ -103,6 +337,7 @@ CollectorLog file on the pool's
 your central manager right after it is started.  
 The contents will be of the form:
 
+\footnotesize
 \begin{verbatim}
 5/25 15:39:33 ******************************************************
 5/25 15:39:33 ** condor_collector (CONDOR_COLLECTOR) STARTING UP
@@ -112,6 +347,7 @@ The contents will be of the form:
 5/25 15:39:33 ******************************************************
 5/25 15:39:33 DaemonCore: Command Socket at <128.105.101.15:9618>
 \end{verbatim}
+\normalsize
 
 The last line tells the IP address and port the collector has
 bound to and is listening on.
@@ -125,44 +361,147 @@ sets which network interface Condor should use
 by adding the following parameter to the
 local Condor configuration file:
 
-\begin{verbatim}NETWORK_INTERFACE = machine-ip-address\end{verbatim}
+\begin{verbatim}
+NETWORK_INTERFACE = machine-ip-address
+\end{verbatim}
 
 Where \verb@machine-ip-address@ is the IP address of the interface you wish
 Condor to use.
 
-\section{Setting up Condor}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Why do standard universe jobs never run after an upgrade?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\label{sec:checkpoint-platform-faq}
 
-\subsection{How do I set up a central manager on a machine with multiple
-network interfaces?}
+Standard universe jobs that remain in the job queue across an upgrade
+from any Condor release previous to 6.7.15
+to any Condor release of 6.7.15 or more recent
+cannot run.
+They are missing a required ClassAd attribute
+(\Attr{LastCheckpointPlatform}) added for
+all standard universe jobs as of Condor version 6.7.15.
+This new attribute describes the platform where a job was
+running when it produced a checkpoint.
+The attribute is utilized to identify platforms capable of 
+continuing the job (using the checkpoint).
+
+This attribute becomes necessary due to bugs in some Linux kernels.
+A standard universe job may be continued on some, but not all
+Linux machines.
+And, the \Attr{CkptOpSys} attribute is not specific enough
+to be utilized.
+
+There are two possible solutions for these standard universe jobs that
+cannot run, yet are in the queue:
+
+\begin{enumerate}
+  \item Remove and resubmit the standard universe jobs that
+  remain in the queue across the upgrade. 
+  This includes all standard universe jobs that have flocked in to 
+  the pool.
+  Note that the resubmitted jobs will start over again from the beginning.
+
+  \item For each standard universe job in the queue,
+  modify its job ClassAd such that it can possibly run within the
+  upgraded pool.
+  If the job has already run and produced a checkpoint on a machine
+  before the upgrade, determine the machine that produced the checkpoint
+  using the \Attr{LastRemoteHost} attribute
+  in the job's ClassAd.
+  Then look at that machine's ClassAd (after the upgrade) to
+  determine and extract the value of the \Attr{CheckpointPlatform} attribute.
+  Add this (using \Condor{qedit}) as the value of the 
+  new attribute \Attr{LastCheckpointPlatform} in the job's ClassAd.
+  Note that this operation must also have to be performed on standard
+  universe jobs flocking in to an upgraded pool. 
+  It is recommended that pools that flock between each other upgrade to a
+  post 6.7.15 version of Condor.
+\end{enumerate}
+
+Note that if the upgrade to Condor takes place at the same time
+as a platform change (such as booting an upgraded kernel),
+there is no way to properly set the \Attr{LastCheckpointPlatform} attribute.
+The only option is to remove and resubmit the standard universe jobs.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Setting up Condor}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{How do I set up a central manager on a machine with multiple network interfaces?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Please see section~\ref{sec:Multiple-Interfaces} on 
 page~\pageref{sec:Multiple-Interfaces}.
 
-\subsection{How do I get more than one job to run on my SMP machine?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{How do I get more than one job to run on my SMP machine?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Condor will automatically recognize a SMP machine and advertise each
 CPU of the machine separately.
 For more details, see section~\ref{sec:Configuring-SMP} on
 page~\pageref{sec:Configuring-SMP}.
 
-\subsection{How do I set up my machines so that only certain users's
-jobs will run on them?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{How do I configure a separate policy for the CPUs of an SMP machine?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Restrictions on what jobs will run on a given resource can be easily
-specified in the resource's Requirements statement.
+Please see section~\ref{sec:Configuring-SMP} on
+page~\pageref{sec:Configuring-SMP} for a lengthy discussion on
+this topic.
 
-To specify that a given machine should only run certain users's jobs,
-for example, you could add the following Requirements entry to the
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{How do I set up my machines so that only specific users' jobs will run on them?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{running a job!on only certain machines}
+
+Restrictions on what jobs will run on a given resource are
+enforced by only starting jobs that meet specific constraints,
+and these constraints are specified as part of the configuration.
+
+To specify that a given machine should only run certain users' jobs,
+and always run the jobs regardless of other activity on the machine,
+load average, etc.,
+place the following entry in the
 machine's Condor configuration file:
 
-\begin{verbatim}Requirements = (RemoteUser == "userfoo@baz.edu" || RemoteUser == "userbar@baz.edu" )\end{verbatim}
+\footnotesize
+\begin{verbatim}
+START = ( (RemoteUser == "userfoo@baz.edu") || \
+          (RemoteUser == "userbar@baz.edu") )
+\end{verbatim}
+\normalsize
 
-To configure multiple machines to do so, simply create a common
-configuration file containing this requirement for them to share.
+A more likely scenario is that the machine is restricted to run
+only specific users' jobs, contingent on the machine not having
+other interactive activity and not being heavily loaded.
+The following entries are in the machine's Condor configuration file. 
+Note that extra configuration variables are defined to make 
+the \MacroNI{START} variable easier to read.
 
-\subsection{How do I configure Condor to run my jobs only on machines
-that have the right packages installed?}
-\index{running a job!on only certain machines|(}
+\footnotesize
+\begin{verbatim}
+# Only start jobs if:
+# 1) the job is owned by the allowed users, AND
+# 2) the keyboard has been idle long enough, AND
+# 3) the load average is low enough OR the machine is currently
+#    running a Condor job, and would therefore accept running
+#    a different one
+AllowedUser    = ( (RemoteUser == "userfoo@baz.edu") || \
+                   (RemoteUser == "userbar@baz.edu") )
+KeyboardUnused = (KeyboardIdle > $(StartIdleTime))
+NoOwnerLoad    = ($(CPUIdle) || (State != "Unclaimed" && State != "Owner"))
+START          = $(AllowedUser) && $(KeyboardUnused) && $(NoOwnerLoad)
+\end{verbatim}
+\normalsize
+
+To configure multiple machines to do so, create a common
+configuration file containing this entry for them to share.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{How do I configure Condor to run my jobs only on machines that have the right packages installed?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 This is a two-step process.
 First, you need to tell the machines to report that they have special
@@ -172,12 +511,18 @@ machines that have that software.
 To tell the machines to report the presence of special software, first
 add a parameter to their configuration files like so:
 
-\begin{verbatim}HAS_MY_SOFTWARE = True\end{verbatim}
+\begin{verbatim}
+HAS_MY_SOFTWARE = True
+\end{verbatim}
 
 And then, if there are already STARTD\_EXPRS defined in that file, add
 HAS\_MY\_SOFTWARE to them, or, if not, add the line:
 
-\begin{verbatim}STARTD_EXPRS = HAS_MY_SOFTWARE, $(STARTD_EXPRS)\end{verbatim}
+\footnotesize
+\begin{verbatim}
+STARTD_EXPRS = HAS_MY_SOFTWARE, $(STARTD_EXPRS)
+\end{verbatim}
+\normalsize
 
 \Note For these changes to take effect, each \Condor{startd} you update
 needs to be reconfigured with \Condor{reconfig} -startd.
@@ -185,33 +530,72 @@ needs to be reconfigured with \Condor{reconfig} -startd.
 Next, to tell your jobs to only run on machines that have this
 software, add a requirements statement to their submit files like so:
 
-\begin{verbatim}Requirements = (HAS_MY_SOFTWARE =?= True)\end{verbatim}
+\footnotesize
+\begin{verbatim}
+Requirements = (HAS_MY_SOFTWARE =?= True)
+\end{verbatim}
+\normalsize
 
 \Note Be sure to use =?= instead of == so that if a machine doesn't have
 the HAS\_MY\_SOFTWARE parameter defined, the job's Requirements
 expression will not evaluate to ``undefined'', preventing it from
 running anywhere!
 
-\index{running a job!on only certain machines|)}
 
-\subsection{How do I configure Condor to only run jobs at night?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{How do I configure Condor to only run jobs at night?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{running a job!only at night|}
+\index{running a job!at certain times of day|}
 
 A commonly requested policy for running batch jobs is to only allow
 them to run at night, or at other pre-specified times of the day.
 Condor allows you to configure this policy with the use of the
 \Attr{ClockMin} and \Attr{ClockDay} \Condor{startd} attributes.  
 A complete example of how to use these attributes for this kind of
-policy is discussed in subsection~\ref{sec:Time-Of-Day-Policy} on
-page~\pageref{sec:Time-Of-Day-Policy}, ``A Policy for Only Running
-Jobs at Certain Times of the Day'', inside
-section~\ref{sec:Configuring-Policy} on ``Configuring The Startd
-Policy''
-\index{running a job!only at night|)}
-\index{running a job!at certain times of day|)}
+policy is discussed in subsubsection~\ref{sec:Time of Day Policy} on
+page~\pageref{sec:Time of Day Policy}.
 
 
-\subsection{Why will the \Condor{master} not run when a local
-configuration file is missing?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{How do I configure Condor such that all machines do not produce checkpoints at the same time?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\label{sec:randomchoiceusage}
+\index{checkpoint!periodic}
+\index{\$RANDOM\_CHOICE()}
+\index{RANDOM\_CHOICE() macro!use in configuration}
+If machines are configured to produce checkpoints at fixed intervals,
+a large number of jobs are queued (submitted) at the same time,
+and these jobs start on machines at about the same time,
+then all these jobs will be trying to write out their checkpoints
+at the same time.
+It is likely to cause rather poor performance during this burst of
+writing.
+
+The \MacroU{RANDOM\_CHOICE()} macro can help in this instance.
+Instead of defining \Macro{PERIODIC\_CHECKPOINT} to be a fixed
+interval, each machine is configured to randomly choose 
+one of a set of intervals.
+For example, to set a machine's interval for producing checkpoints
+to within the range of two to three hours, use the following
+configuration:
+\footnotesize
+\begin{verbatim}
+PERIODIC_CHECKPOINT = $(LastCkpt) > ( 2 * $(HOUR) + \
+      $RANDOM_CHOICE(0,10,20,30,40,50,60) * $(MINUTE) )
+\end{verbatim}
+\normalsize
+
+The interval used is set at configuration time.
+Each machine is randomly assigned a different interval 
+(2 hours, 2 hours and 10 minutes, 2 hours and 20 minutes, etc.)
+at which to produce checkpoints.
+Therefore, the various machines will not all attempt to
+produce checkpoints at the same time.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Why will the \Condor{master} not run when a local configuration file is missing?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 If a \Macro{LOCAL\_CONFIG\_FILE} 
 is specified in the global configuration file,
@@ -219,9 +603,11 @@ but the specified file does not exist,
 the \Condor{master} will not start up, and it prints a variation
 of the following example message.
 
+\footnotesize
 \begin{verbatim}
 ERROR: Can't read config file /mnt/condor/hosts/bagel/condor_config.local
 \end{verbatim}
+\normalsize
 
 This is not a bug; it is a feature!
 Condor has always worked this way on purpose.
@@ -244,7 +630,7 @@ log an error message than to start up.
 If the \Condor{master} continued with the local configuration file
 missing, either A) someone could breach security or B) you will have
 potentially important configuration information missing.
-Consider the example where the local configiguration file was on an NFS
+Consider the example where the local configuration file was on an NFS
 partition and the server was down. 
 There would be all sorts of
 really important stuff in the local configuration file,
@@ -252,19 +638,26 @@ and Condor might do bad things if it started without those settings.
 
 If supplied it with an empty file, the \Condor{master} works fine.
 
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Running Condor Jobs}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\subsection{I'm at the University of Wisconsin-Madison Computer
-Science Dept., and I am having problems!}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{I'm at the University of Wisconsin-Madison Computer Science Dept., and I am having problems!}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Please see the web page \Url{http://www.cs.wisc.edu/condor/uwcs}.
+Please see the web page \URL{http://www.cs.wisc.edu/condor/uwcs}.
 As
 it explains, your home directory is in AFS, which by default has
 access control restrictions which can prevent Condor jobs from running
 properly.
 The above URL will explain how to solve the problem.
 
-\subsection{I'm getting a lot of email from Condor.  Can I just delete it all?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{I'm getting a lot of e-mail from Condor.  Can I just delete it all?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Generally you shouldn't ignore \Bold{all} of the mail Condor sends,
 but you can reduce the amount you get by telling Condor that you don't
@@ -272,19 +665,22 @@ want to be notified every time a job successfully completes, only when
 a job experiences an error.
 To do this, include a line in your submit file like the following:
 
-\begin{verbatim}Notification = Error\end{verbatim}
+\begin{verbatim}
+Notification = Error
+\end{verbatim}
 
 See the Notification parameter in the \Condor{q} man page on
 page~\pageref{man-condor-submit-notification} of this manual for more
 information.
 
-\subsection{Why will my vanilla jobs only run on the machine where I
-submitted them from?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Why will my vanilla jobs only run on the machine where I submitted them from?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Check the following:
 \begin {enumerate}
 
-\item{Did you submit the job from a local filesystem that other
+\item{Did you submit the job from a local file system that other
 computers can't access?}
 
 See Section~\ref{sec:Shared-Filesystem-Config-File-Entries}, on
@@ -302,9 +698,11 @@ See Section~\ref{sec:Non-Root}, on page~\pageref{sec:Non-Root}.
 
 \end{enumerate}
 
-\subsection{My job starts but exits right away with signal 9.}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{My job starts but exits right away with signal 9.}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{job!exiting with signal 9 \(Unix\)}
 
-\index{job!exiting!signal 9 \(Unix\)|(}
 
 This can occur when the machine your job is running on is missing a
 shared library required by your program.
@@ -313,18 +711,21 @@ may execute on.
 Another, easier, solution is to try to re-link your program statically
 so it contains all the routines it needs.
 
-\index{job!exiting!signal 9 \(Unix\)|)}
 
-\subsection{Why aren't any or all of my jobs running?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Why aren't any or all of my jobs running?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Problems like the following are often reported to us:
+\index{job!not running, why?}
+\underline{Problems like the following} are often reported to us:
 
+\footnotesize
 \begin{verbatim}
-> I have submitted 100 jobs to my pool, and only 18 appear to be
-> running, but there are plenty of machines available.
-What should I
-> do to investigate the reason why this happens?
+I have submitted 100 jobs to my pool, and only 18 appear to be
+running, but there are plenty of machines available.  What should I
+do to investigate the reason why this happens?
 \end{verbatim}
+\normalsize
 
 Start by following these steps to understand the problem:
 
@@ -353,8 +754,150 @@ Look for messages about priority, "no more machines", or similar.
 
 \end{enumerate}
 
-\subsection{Can I submit my standard universe SPARC Solaris 2.6 jobs
-and have them run on a SPARC Solaris 2.7 machine?}
+\underline{Another problem} shows itself
+with statements within the log file produced by the \Condor{schedd}
+daemon (given by \MacroU{SCHEDD\_LOG})
+that say the following:
+
+\footnotesize
+\begin{verbatim}
+2/3 17:46:53 Swap space estimate reached! No more jobs can be run!
+12/3 17:46:53     Solution: get more swap space, or set RESERVED_SWAP = 0
+12/3 17:46:53     0 jobs matched, 1 jobs idle
+\end{verbatim}
+\normalsize
+
+Condor computes the total swap space on your submit machine.
+It then tries to limit the total number of jobs it
+will spawn based on an estimate of the size of the \Condor{shadow}
+daemon's memory footprint and a configurable amount of swap space
+that should be reserved.
+This is done to avoid the
+situation within a very large pool
+in which all the jobs are submitted from a single host.
+The huge number of \Condor{shadow} processes would
+overwhelm the submit machine,
+it would run out of swap space, and thrash.
+
+Things can go wrong if a machine has a lot of physical memory and
+little or no swap space.
+Condor does not consider the physical memory size,
+so the situation occurs where Condor thinks
+it has no swap space to work with,
+and it will not run the submitted jobs.
+
+To see how much swap space Condor thinks a given machine has, use
+the output of a \Condor{status} command of the following form:
+
+\footnotesize
+\begin{verbatim}
+condor_status -schedd [hostname] -long | grep VirtualMemory
+\end{verbatim}
+\normalsize
+
+If the value listed is 0, then this is what is confusing Condor.
+There are two ways to fix the problem:
+
+\begin{enumerate}
+\item Configure your machine with some real swap space.
+
+\item Disable this check within Condor.
+Define the amount of reserved swap space for the submit machine to 0.
+Set \Macro{RESERVED\_SWAP} to 0 in the configuration file:
+
+\begin{verbatim}
+RESERVED_SWAP = 0
+\end{verbatim}
+
+and then send a \Condor{restart} to the submit machine.
+\end{enumerate}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Why does the \Attr{requirements} expression for the job I submitted\\
+have extra things that I did not put in my submit description file?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{requirements attribute!automatic extensions}
+There are several extensions to the submitted \Attr{requirements}
+that are automatically added by Condor.
+Here is a list:
+\begin{itemize}
+  \item Condor automatically adds \Attr{arch} and \Attr{opsys} if 
+  not specified in the submit description file. It is assumed that
+  the executable needs to execute on the same platform as the machine
+  on which the job is submitted.
+
+  \item Condor automatically adds the expression
+  \Expr{(Memory * 1024 > ImageSize)}.
+  This ensures that the job will run on a machine with at
+  least as much physical memory as the memory footprint of the job.
+
+  \item Condor automatically adds the expression
+  \Expr{(Disk >= DiskUsage)} if not already specified.
+  This ensures that the job will run on a machine with enough disk
+  space for the job's local I/O (if there is any).
+
+  \item A pool administrator may define configuration variables that
+  cause expressions to be added to \Attr{requirements}.
+  These configuration variables are \MacroNI{APPEND\_REQUIREMENTS},
+  \MacroNI{APPEND\_REQ\_VANILLA}, and \MacroNI{APPEND\_REQ\_STANDARD}.
+  These configuration variables give
+  pool administrators the flexibility to set policy for a local pool.
+
+  \item Older versions of Condor needed to add confusing clauses
+  about WINNT and the FileSystemDomain to vanilla universe jobs.
+  This made sure that the jobs ran on a machine where files were
+  accessible.
+  The Windows version supported automatically transferring files
+  with the vanilla job,
+  while the Unix version relied on a shared file system.
+  Since the Unix version of Condor now supports transferring files,
+  these expressions are no longer added to the
+  \Attr{requirements} for a job.
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{When I use \Condor{compile} to produce a job, I get an error that says, "Internal ld was not invoked!". What does this mean?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{condor\_compile@\Condor{compile}}
+
+\Condor{compile} enforces a specific behavior in the compilers and
+linkers that it supports
+(for example \Prog{gcc}, \Prog{g77}, \Prog{cc}, \Prog{CC}, \Prog{ld})
+where a special linker script
+provided by Condor must be invoked during the final linking stages of
+the supplied compiler or linker.
+
+In some rare cases,
+as with \Prog{gcc} compiled with
+the options \Opt{--with-as} or \Opt{--with-ld},
+the enforcement mechanism
+we rely upon to have \Prog{gcc}
+choose our supplied linker script is not honored
+by the compiler.
+When this happens, an executable is produced,
+but the executable is devoid of the
+Condor libraries which both identify it as a Condor executable linked
+for the standard universe and implement the feature sets of remote I/O
+and transparent process checkpointing and migration.
+
+Often, the only fix in order to use the compiler desired,
+is to reconfigure and recompile the compiler itself,
+such that it does not use the errant options mentioned. 
+
+With Condor's standard universe,
+we highly recommend that your source files
+are compiled with the supported compiler for your platform.
+See
+section~\ref{sec:Availability}
+for the list of supported compilers.
+For a Linux platform, the supported compiler
+is the default compiler that came with the distribution.
+It is often found in the directory \File{/usr/bin}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Can I submit my standard universe SPARC Solaris 2.6 jobs and have them run on a SPARC Solaris 2.7 machine?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Solaris26}
 \index{Solaris27}
 
@@ -363,34 +906,146 @@ and SPARC Solaris 2.6 and between SPARC Solaris 2.7 and SPARC Solaris
 2.8, but not between SPARC Solaris 2.6 and SPARC Solaris 2.7.  We may
 implement support for this feature in a future release of Condor.
 
-\subsection{Why do my vanilla jobs keep cycling between suspended and
-unsuspended?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Can I submit my standard universe SPARC Solaris 2.8 jobs and have them run on a SPARC Solaris 2.9 machine?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+No.  Although normal executables are binary compatible, technical details
+of taking checkpoints currently prevents this particular combination.
+Note that this applies to standard universe jobs only.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Why have standard universe jobs in Condor 6.6.x have begun unexpectedly segmentation faulting during a checkpoint after an upgrade of Redhat Enterprise Linux 3 to current update levels?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Redhat has apparently back-ported a 2.6 kernel feature called
+``exec\_shield'' to the current patch levels of the RHEL3 product line. 
+This feature is designed to make buffer overflow attacks incredibly difficult
+to exploit. 
+However, it has the unfortunate side effect of completely breaking all
+user land checkpointing algorithms including the one Condor utilizes.
+The solution is to turn off the kernel feature for each execution of a 
+standard universe job in the Condor system.
+The method employed to do this is with \Expr{USER\_JOB\_WRAPPER} and a shell
+script that looks much like this one:
+
+\begin{verbatim}
+#! /bin/sh
+
+sa="/usr/bin/setarch"
+
+if [ -f $sa ]; then
+    exec $sa i386 ${1+"$@"}
+fi
+
+exec ${1+"$@"}
+\end{verbatim}
+
+Place this shell script into the \Expr{\$(SBIN)} directory of your Condor
+installation with the name of \Prog{fix\_std\_univ} and make sure to 
+\Prog{chmod 755 fix\_std\_univ} it. 
+Then, set \Expr{USER\_JOB\_WRAPPER = \$(SBIN)/fix\_std\_univ} in your
+global config file(or the config files which will affect your Linux install
+of Condor).
+Then do a \Condor{reconfig} of your pool.
+When a standard universe job is run on a machine, if the \Prog{setarch} 
+program is available (under Linux with the ``exec\_shield'' feature), then it
+will run the executable in the i386 personality, which turns off the 
+``exec\_shield'' kernel feature.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Why do my vanilla jobs keep cycling between suspended and unsuspended?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{vanilla jobs!cycling between suspended and unsuspended}
 
-This is a load sampling error that Condor performs when starting a many
-process vanilla job with heavy initial load.
+Condor tries to provide a number, the ``Condor Load Average''
+(reported in the machine ClassAd as \AdAttr{CondorLoadAvg}), which is
+intended to represent the total load average on the system caused by
+any running Condor job(s).
+Unfortunately, it is impossible to get an accurate number for
+this without support from the operating system.
+This is not available.
+So, Condor does the best it can, and it mostly works in most cases.
+However, there are a number of ways this statistic can go wrong.
+
+The old default Condor policy was to suspend if the non-Condor load
+average went over a certain threshold.
+However, because of the problems providing accurate numbers for this
+(described below), some jobs would go into a cycle of getting
+suspended and resumed.
+The default suspend policy now shipped with Condor uses the
+solution explained here.
+
+While there are too many technical details of why
+\AdAttr{CondorLoadAvg} might be wrong for a short answer here, a brief
+explanation is presented.
+When a job has periodic behavior, and the load it places upon
+a machine is changing over time,
+the system load also changes over time.  
+However, Condor thinks that the job's share of the system load
+(what it uses to compute the CondorLoad) is also changing.
+So, when the job was running, and then stops, both the system load and
+the Condor load start falling.
+If it all worked correctly, they'd fall at the exact same rate, and
+\AdAttr{NonCondorLoad} would be constant.
+Unfortunately, \AdAttr{CondorLoadAvg} falls faster, since Condor
+thinks the job's share of the total load is falling, too.
+Therefore, \AdAttr{CondorLoadAvg} falls faster than the system load,
+\AdAttr{NonCondorLoad} goes up, and the old default \AdAttr{SUSPEND}
+expression becomes true.
+
+It appears that Condor should be able to avoid this problem, but for a
+host of reasons, it can not.  
+There is no good way (without help from the operating systems Condor runs on;
+the help does not exist) to get this right.
+The only way to compute these numbers more accurately
+without support from the operating system is to sample everything at
+such a high rate that Condor itself would create a large load average,
+just to try to compute the load average.
+This is Heisenberg's uncertainty principle in action.
+
+A similar sampling error can occur when Condor is starting a job
+within the vanilla universe with many processes and with a
+heavy initial load.
 Condor mistakenly decides that the load on the machine has gotten too
 high while the job is in the initialization phase and kicks the job off
 the machine.
 
-What is needed is a way for Condor to check to see if the load of the machine
-has been high over a certain period of time. There is a startd attribute,
-\AdAttr{CpuBusyTime} that can be used for this purpose. This macro
-returns the time \MacroUNI{CpuBusy}(usually defined in the default
-config file) has been true. \MacroUNI{CpuBusy} is defined in terms of
-non-Condor load.
+To correct this problem, Condor needs to check to see if the load of the
+machine has been high over an interval of time.
+There is an attribute, \AdAttr{CpuBusyTime} that can be used for
+this purpose.
+This macro returns the time \MacroUNI{CpuBusy} (defined in the default
+configuration file) has been true, or 0 if \MacroUNI{CpuBusy} is false.
+\MacroUNI{CpuBusy} is usually defined in terms of non-Condor load.
+These are the default settings:
 
-To take advantage of this macro, you can use it in your \Macro{SUSPEND}\ macro.
+\footnotesize
+\begin{verbatim}
+NonCondorLoadAvg    = (LoadAvg - CondorLoadAvg)
+HighLoad            = 0.5
+CPUBusy             = ($(NonCondorLoadAvg) >= $(HighLoad))
+\end{verbatim}
+\normalsize
+
+To take advantage of \AdAttr{CpuBusyTime}, you can use it in your
+\Macro{SUSPEND}\ expression. 
+
 Here is an example:
+\footnotesize
 \begin{verbatim}
 SUSPEND = (CpuBusyTime > 3 * $(MINUTE)) && ((CurrentTime - JobStart) > 90)
 \end{verbatim}
+\normalsize
 
-The above policy says to only suspend the job if the cpu has been busy
+The above policy says to only suspend the job if the CPU has been busy
 with non-Condor load at least three minutes and it has been at least 90
 seconds since the start of the job.
 
-\subsection{Why might my job be preempted (evicted)?}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Why might my job be preempted (evicted)?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 There are four circumstances under which Condor may evict a job.
 They are controlled by different expressions.
@@ -436,61 +1091,395 @@ see section~\ref{sec:Configuring-Policy}.
 
 Reason number 4 is if Condor is to be shutdown:
 on a machine that is currently running a job.
-Condor evicts the currently running job before proceding
+Condor evicts the currently running job before proceeding
 with the shutdown.
 
-\section{Condor on Windows NT / Windows 2000}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Condor does not stop the Condor jobs running on my Linux machine
+when I use my keyboard and mouse.  Is there a bug?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Linux!keyboard and mouse activity}
 
-\subsection{Will Condor work on a network of mixed Unix and NT machines?}
+There is no bug in Condor.
+Unfortunately,
+recent Linux 2.4.x and all Linux 2.6.x kernels through 
+version 2.6.10
+do not post proper state information,
+such that Condor can detect keyboard and mouse activity.
+Condor version 6.6.8 and later versions of Condor
+implement workarounds to piece together the needed
+state information for PS/2 devices.
+A better fix of the problem utilizes the 
+kernel patch linked to from the directions posted at
+\URL{http://www.cs.wisc.edu/condor/kernel.patch.html}.
+This patch works better for PS/2 devices, and
+may also work for USB devices.
+A future version of Condor will implement better recognition
+of USB devices,
+such that the kernel patch will also definitively work for USB devices.
 
-You can have a Condor pool that consists of both Unix and NT machines.
 
-Your central manager can be either Windows NT or Unix.  For example,
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{What signals get sent to my jobs when Condor needs to preempt or kill them, or when I remove them from the queue?  Can I tell Condor which signals to send?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The answer is dependent on the universe of the jobs.
+
+Under the scheduler universe,
+the signal jobs get upon \Condor{rm} can be set by
+the user in the submit description file with the form of
+\begin{verbatim}
+remove_kill_sig = SIGWHATEVER
+\end{verbatim}
+If this command is not defined, 
+Condor further looks for a command 
+in the submit description file with the form
+\begin{verbatim}
+kill_sig = SIGWHATEVER
+\end{verbatim}
+And, if that command is also not given,
+Condor uses SIGTERM.
+
+For all other universes, the jobs get the value of
+the submit description file command
+\verb@kill_sig@, which is SIGTERM by default.
+
+If a job is killed or evicted, the job is sent a
+\verb@kill_sig@, 
+unless it is on the receiving end of a hard kill,
+in which case it gets SIGKILL.
+
+Under all universes,
+the signal is sent only to the parent PID of the job,
+namely, the first child of the \Condor{starter}.
+If the child itself is forking,
+the child must catch and forward signals as appropriate.
+This in turn depends on the user's desired behavior.
+The exception to this is (again) where the job is receiving
+a hard kill.
+Condor sends the value SIGKILL to all the PIDs in the family.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Why does my Linux job have an enormous ImageSize and
+refuse to run anymore?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{job!image size}
+\index{ImageSize}
+
+Sometimes Linux jobs run, are preempted and can not start again because
+Condor thinks the image size of the job is too big. This is because
+Condor has a problem calculating the image size of a program on Linux
+that uses threads. It is particularly noticeable in the Java universe,
+but it also happens in the vanilla universe. It is not an issue in the
+standard universe, because threaded programs are not allowed.
+
+On Linux, each thread appears to consume as much memory as the entire
+program consumes, so the image size appears to be (number-of-threads *
+image-size-of-program). If your program uses a lot of threads, your
+apparent image size balloons. You can see the image size that Condor
+believes your program has by using the -l option to condor\_q, and
+looking at the ImageSize attribute.
+
+When you submit your job, Condor creates or extends the requirements
+for your job. In particular, it adds a requirement that you job must
+run on a machine with sufficient memory:
+
+\footnotesize
+\begin{verbatim}
+Requirements = ... ((Memory * 1024) >= ImageSize) ...
+\end{verbatim}
+\normalsize
+
+(Note that memory is the execution machine's memory in megabytes while
+ImageSize is in kilobytes). When your application is threaded, the
+image size appears to be much larger than it really is, and you may not
+have a machine with sufficient memory to handle this requirement.
+
+Unfortunately, calculating the correct ImageSize is rather hard to fix
+on Linux, and we do not yet have a good solution. Fortunately, there
+is a workaround while we work on a good solution for a future
+release.
+
+In the Requirements expression above, Condor added \Expr{(Memory * 1024) >=
+ImageSize)} on your behalf. You can prevent Condor from doing this by
+giving it your own expression about memory in your submit file, just
+as:
+
+\begin{verbatim}
+Requirements = Memory > 1024
+\end{verbatim}
+
+You will need to change 1024 to a reasonably good estimate of the actual
+image size of your program, in kilobytes. This expression says that
+your program requires 1 megabyte of memory. If you underestimate the
+memory your application needs, you may have bad performance if you job
+runs on machines that have insufficient memory.
+
+In addition, if you have modified your machine policies to preempt
+jobs when they get big a ImageSize, you will need to change those
+policies.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Why does the time output from \Condor{status} appear
+as [?????] ? }
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{timing information!incorrect}
+\index{clock skew}
+\index{skew in timing information}
+
+Condor collects timing information for a large variety of uses.
+Collection of the data relies on accurate times.
+Being a distributed system, clock skew among machines causes 
+errant timing calculations.
+Values can be reported too large or too small, with the possibility
+of calculating negative timing values.
+
+This problem may be seen by the user when looking at the output
+of \Condor{status}.
+If the \Opt{ActivityTime} field appears
+as [?????],
+then this calculated statistic was negative.
+\Condor{status} recognizes that a negative amount of time will
+be nonsense to report, and instead displays this string. 
+
+The solution to the problem is to synchronize the clocks on
+these machines.
+An administrator can do this using a tool such as \Prog{ntp}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{The user condor's home directory cannot be found.  Why?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{NIS!Condor must be dynamically linked}
+\index{user condor!home directory not found}
+This problem may be observed after installation, when attempting
+to execute
+\footnotesize
+\begin{verbatim}
+~condor/condor/bin/condor_config_val  -tilde
+\end{verbatim}
+\normalsize
+and there is a user named condor.
+The command prints a message such as
+\footnotesize
+\begin{verbatim}
+     Error: Specified -tilde but can't find condor's home directory
+\end{verbatim}
+\normalsize
+
+In this case, the difficulty stems from 
+using NIS,
+because the Condor daemons fail to communicate properly with NIS to get
+account information.
+To fix the problem, a dynamically linked version of Condor must
+be installed.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Condor commands (including \Condor{q}) are really slow. What is going on?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Condor commands!really slow; why?}
+
+Some Condor programs will react slowly if they expect to find a
+\Condor{collector} daemon, yet cannot contact one.
+Notably, \Condor{q} can be very slow.
+The \Condor{schedd} daemon will also be slow,
+and it will log lots of harmless messages complaining.
+If you are not running a \Condor{collector} daemon,
+it is important that the configuration variable
+\Macro{COLLECTOR\_HOST} be set to nothing.
+This is typically done by setting \MacroNI{CONDOR\_HOST} with
+\footnotesize
+\begin{verbatim}
+CONDOR_HOST=
+COLLECTOR_HOST=$(CONDOR_HOST)
+\end{verbatim}
+\normalsize
+or
+\footnotesize
+\begin{verbatim}
+COLLECTOR_HOST=
+\end{verbatim}
+\normalsize
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Where are my missing files?  The command \Expr{when\_to\_transfer\_output = ON\_EXIT\_OR\_EVICT} is in the submit description file.}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{submit commands!when\_to\_transfer\_output}
+\index{file transfer mechanism!missing files}
+\index{transferring files}
+Although it may appear as if files are missing,
+they are not.
+The transfer does take place whenever a job is 
+preempted by another job, vacates the machine, or is killed.
+Look for the files in the directory defined by
+the \MacroNI{SPOOL} configuration variable.
+See
+section~\ref{sec:file-transfer-if-when}, on
+page~\pageref{sec:file-transfer-if-when} for details on the naming
+of the intermediate files.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Condor on Windows}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{FAQ!Condor on Windows machines}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Will Condor work on a network of mixed Unix and Windows machines?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+You can have a Condor pool that consists of both Unix and Windows machines.
+
+Your central manager can be either Windows or Unix.  For example,
 even if you had a pool consisting strictly of Unix machines, you could
-use an NT box for your central manager, and vice versa.
+use a Windows box for your central manager, and vice versa.
 
-You can submit jobs destined to run on Windows NT from either an NT
-machine \Bold{or} a Unix machine.  However, at this point in time you
-cannot submit jobs destined to run on Unix from NT.  We do plan on
-adding this functionality, however.
+Submitted jobs can originate from either a 
+Windows \Bold{or} a Unix machine,
+and be destined to run on Windows
+\Bold{or} a Unix machine.
+Note that there are still restrictions on the supported universes
+for jobs executed on Windows machines.
 
 So, in summary:
 
 \begin{enumerate}
 
-\item{A single Condor pool can consist of both Windows NT and Unix
+\item{A single Condor pool can consist of both Windows and Unix
 machines.}
 
-\item{It does not matter at all if your Central Manager is Unix or NT.}
+\item{It does not matter at all if your Central Manager is Unix or Windows.}
 
-\item{Unix machines can submit jobs to run on other Unix or Windows NT
+\item{Unix machines can submit jobs to run on other Unix or Windows
 machines.}
 
-\item{Windows NT machines can only submit jobs which will run on Windows
-NT machines.}
+\item{Windows NT machines can submit jobs to run on other Windows
+or Unix machines.}
 
 \end{enumerate}
 
-\subsection{When I run \Condor{status} I get a communication error, or the
-Condor daemon log files report a failure to bind.}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{What versions of Windows will Condor run on?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+See Section~\ref{sec:Availability}, on
+page~\pageref{sec:Availability}.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{My Windows program works fine when executed on its own, but it
+does not work when submitted to Condor.}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\underline{First}, make sure that the program really does work
+outside of Condor under Windows,
+that the disk is not full,
+and that the system is not out of user resources.
+
+\underline{As the next consideration},
+know that 
+some Windows programs do not run properly because they are dynamically linked,
+and they cannot find the \File{.dll} files that they depend on.
+Version 6.4.x of Condor sets the \Env{PATH} to be empty when
+running a job.
+To avoid these difficulties, do one of the following
+\begin{enumerate}
+\item statically link the application
+\item wrap the job in a script that sets up the environment
+\item submit the job from a correctly-set environment with the command
+\begin{verbatim}
+getenv = true
+\end{verbatim}
+in the submit description file.
+This will copy your environment into the job's environment.
+\item send the required \File{.dll} files along with the job
+using the submit description file command \Opt{transfer\_input\_files}.
+\end{enumerate}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Why is the \Condor{master} daemon failing to start, giving an error about\\
+   	"In StartServiceCtrlDispatcher, Error number: 1063"?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+In Condor for Windows, the \Condor{master} daemon is started as a service.
+Therefore,
+starting the \Condor{master} daemon as you would on Unix will not work.
+Start Condor on Windows machines using either
+\begin{verbatim}
+	net start condor
+\end{verbatim}
+or start the Condor service from the Service Control Manager located in
+the Windows Control Panel.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Jobs submitted from Windows give an error referring to a credential.}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Jobs submitted from a Windows machine require a stashed password in order
+for Condor to run the jobs as the user submitting the jobs.
+The command which stashes a password for a user is \Condor{store\_cred}.
+See the manual page on
+on page~\pageref{man-condor-store-cred}
+for usage details.
+\index{job!credential error on Windows}
+
+The error message that Condor gives if a user has not stashed a
+password is of the form:
+\footnotesize
+\begin{verbatim}
+ERROR: No credential stored for username@machinename
+
+        Correct this by running:
+	        condor_store_cred add
+\end{verbatim}
+\normalsize
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Jobs submitted from Unix to execute on Windows do not work properly.}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+A difficulty with defaults causes jobs submitted from Unix for execution
+on a Windows platform to remain in the queue, but make no progress.
+For jobs with this problem, log files will contain error messages
+pointing to shadow exceptions.
+
+This difficulty stems from the defaults for whether file transfer
+takes place.
+The workaround for this problem is to place the line
+\begin{verbatim}
+   TRANSFER_FILES  = ALWAYS
+\end{verbatim}
+into the submit description file for jobs submitted from a Unix
+machine for execution on a Windows machine.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{When I run \Condor{status} I get a communication error, or the Condor daemon log files report a failure to bind.}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Condor uses the first network interface it sees on your machine.
 This problem usually means you have an extra, inactive network
-interface (such as a RAS dialup interface) defined before to your
+interface (such as a RAS dial up interface) defined before to your
 regular network interface.
 
 To solve this problem, either change the order of your network
-interfaces in the Control Panel, or explicity set which network
+interfaces in the Control Panel, or explicitly set which network
 interface Condor should use by adding the following parameter to your
-Condor config file:
+Condor configuration file:
 
-\begin{verbatim}NETWORK_INTERFACE = ip-address\end{verbatim}
+\begin{verbatim}
+NETWORK_INTERFACE = ip-address
+\end{verbatim}
 
-Where ``ip-address'' is the IP address of the interface you wish
+Where \verb@ip-address@ is the IP address of the interface you wish
 Condor to use.
 
-\subsection{My job starts but exits right away with status 128.}
-\index{job!exiting!status 128 \(NT\)|(}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{My job starts but exits right away with status 128.}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{job!exiting with status 128 \(NT\)}
 
 This can occur when the machine your job is running on is missing a
 DLL (Dynamically Linked Library) required by your program.
@@ -500,316 +1489,339 @@ the TRANSFER\_INPUT\_FILES list in the job's submit file.
 To find out what DLLs your program depends on, right-click the program
 in Explorer, choose Quickview, and look under ``Import List''.
 
-\index{job!exiting!status 128 \(NT\)|)}
 
-\subsection{Why does the startd crash on CondorNT with the error\\
-"caInsert: Can't insert CpuBusy into target classad."?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{How can I access network files with Condor on Windows?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\index{decimal point!problems with}
-This is a common problem with European installations on Windows.
-The problem is Condor expects all decimal points to be the
-period character (.),
-but the Windows locale defines them as the comma character(,).
-This will be fixed in the next version of Condor for NT,
-however we have users who have fixed the problem by 
-changing the following registry value to a period instead of a comma:
-\verb@HKEY_USERS\.DEFAULT\Control Panel\International\sDecimal@
+Five methods for making access of network files work with Condor
+are given in 
+section~\ref{sec:network-files-solutions}.
 
-\subsection{How can I access network files with Condor on NT?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{What is wrong when \Condor{off} cannot find my host, and \Condor{status} does not give me a complete host name?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Features to allow Condor NT to work well with a network file server are 
-coming very soon.  However, there are a couple of work-arounds which you 
-can do immediately with the current version of Condor NT in order to access 
-a file server.
-
-The heart of the problem is that on the execute machine, Condor creates a 
-"temporary" user which will run the job... and your file server has never 
-heard of this user before.  So the workaround is to either
-
-\begin{itemize}
-\item A: access the file server as a different user via a net use command with a 
-login and password
-\item B: access the file server as guest
-\item C: access the file server with a "NULL" descriptor
-\item D: use the contrib module from the folks at Bristol University
-\end{itemize}
-
-All of these workarounds have disadvantages, but they may be able to hold 
-you until our code to support shared file servers in Condor is officially 
-released.
-
-Here are the three methods in more detail:
-
-METHOD A - access the file server as a different user via a net use command 
-with a login and password
-
-Example: you want to copy a file off of a server before running it....
-
+Given the command
 \begin{verbatim}
-   @echo off
-   net use \\myserver\someshare MYPASSWORD /USER:MYLOGIN
-   copy \\myserver\someshare\my-program.exe
-   my-program.exe
+  condor_off hostname2
+\end{verbatim}
+an error message of the form
+\begin{verbatim}
+  Can't find address for master hostname2.somewhere.edu
+\end{verbatim}
+appears.
+Yet, when looking at the host names with
+\begin{verbatim}
+  condor_status -master
+\end{verbatim}
+the output is of the form 
+\begin{verbatim}
+  hostname1.somewhere.edu
+  hostname2
+  hostname3.somewhere.edu
 \end{verbatim}
 
-The idea here is to simply authenticate to the file server with a different 
-login than the temporary Condor login.  This is easy with the "net use" 
-command as shown above.  Of course, the obvious disadvantage is this user's 
-password is stored and transferred as cleartext.
-
-METHOD B - access the file server as guest
-
-Example: you want to copy a file off of a server before running it as GUEST
-
+To correct this incomplete host name, add an entry to the
+configuration file for
+\Macro{DEFAULT\_DOMAIN\_NAME} 
+that specifies the domain name to be used.
+For the example given, the configuration entry will be
 \begin{verbatim}
-   @echo off
-   net use \\myserver\someshare
-   copy \\myserver\someshare\my-program.exe
-   my-program.exe
+  DEFAULT_DOMAIN_NAME = somewhere.edu
 \end{verbatim}
 
-In this example, you'd contact the server MYSERVER as the Condor temporary 
-user.  However, if you have the GUEST account enabled on MYSERVER, you will 
-be authenticated to the server as user "GUEST".  If your file permissions 
-(ACLs) are setup so that either user GUEST (or group EVERYONE) has access 
-the share "someshare" and the directories/files that live there, you can 
-use this method.  The downside of this method is you need to enable the 
-GUEST account on your file server.   \Warn This should be done *with 
-extreme caution* and only if your file server is well protected behind a 
-firewall that blocks SMB traffic.
+After adding this configuration file entry, use \Condor{restart}
+to restart the Condor daemons and effect the change.
 
-METHOD C - access the file server with a "NULL" descriptor
+%To correct this incomplete host name on Windows 2000 or XP,
+%use the ``Append parent suffixes of the primary DNS suffix''
+%checkbox for the TCP/IP Advanced Properties.
+%Disable and reenable the connection to make the change take
+%effect.
+%
+%To correct this incomplete host name on Windows NT Version 4,
+%set the domain in the TCP/IP Properties dialog box.
+%Restart Condor after making this change.
 
-One more option is to use NULL Security Descriptors.  In this way, you
-can specify which shares are accessible by NULL Descriptor by adding
-them to your registry.  You can then use the batch file wrapper like:
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Does \MacroNI{USER\_JOB\_WRAPPER} work on Windows machines?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+The \Macro{USER\_JOB\_WRAPPER} configuration variable
+does work on Windows machines.
+The wrapper must be either a
+batch script with a file extension of \File{.bat} or \File{.cmd},
+or an
+executable with a file extension of \File{.exe} or \File{.com}.
 
+An example of a batch script sets environment variables:
+\footnotesize
 \begin{verbatim}
-net use z: \\myserver\someshare /USER:""
-z:\my-program.exe
+REM set some environment variables
+set LICENSE_SERVER=192.168.1.202:5012
+set MY_PARAMS=2
+
+REM Run the actual job now
+%*
 \end{verbatim}
+\normalsize
 
-so long as 'someshare' is in the list of allowed NULL session shares.  To
-edit this list, run regedit.exe and navigate to the key:
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\Condor{store\_cred} is failing, and I'm sure I'm typing my password correctly.}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+First, make sure the \Condor{schedd} is running.
+
+Next, check the SchedLog. It will contain more detailed information
+about the failure. Frequently, the error is a result of 
+\verb@PERMISSION DENIED@ errors. You can read more about properly configuring 
+security settings on page~\pageref{sec:Host-Security}.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{My submit machine cannot have more than 120 jobs running concurrently. Why?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{Windows!out of desktop heap}
+Windows is likely to be running out of desktop heap. 
+Confirm this to be the case
+by looking in the log for the \Condor{schedd} daemon
+to see if \Condor{shadow} daemons are immediately
+exiting with status 128.
+If this is the case, increase the desktop heap size.
+Open the registry key:
+
+\footnotesize
 \begin{verbatim}
-HKEY_LOCAL_MACHINE\
-   SYSTEM\
-     CurrentControlSet\
-       Services\
-         LanmanServer\
-           Parameters\
-             NullSessionShares
+HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Session Manager\SubSystems\Window
 \end{verbatim}
+\normalsize
 
-and edit it.  unfortunately it is a binary value, so you'll then need to
-type in the hex ascii codes to spell out your share.  each share is
-separated by a null (0x00) and the last in the list is terminated with
-two nulls.
+The SharedSection value can have three values separated by commas.
+The third value controls the desktop heap size for non-interactive desktops,
+which the Condor service uses.
+The default is 512 (Kbytes).
+60 \Condor{shadow} daemons consume about 256 Kbytes,
+hence 120 shadows can run with the default value.
+To be able to run a maximum of 300 \Condor{shadow} daemons,
+set this value at 1280.
 
-although a little more difficult to set up, this method of sharing is a
-relatively safe way to have one quasi-public share without opening the
-whole guest account.  you can control specifically which shares can be 
-accessed or not via the registry value mentioned above.
+Reboot the system for the changes to take effect.
+For more information,
+see Microsoft Article Q184802.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Grid Computing}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{grid computing!FAQs}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Do I need to have a Condor pool installed to use Condor-G?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+No, you do not.
+Condor-G is only the job management part of Condor.
+It makes perfect sense to install Condor-G on just one machine
+within an organization.
+Note that access to remote resources using a Globus interface
+will be done through that one machine using Condor-G.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{I want to install Globus on my Condor pool, and have external users submit jobs into the pool. Do I need to install Condor-G?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+No, you do not need to install Condor-G.
+You need to install Globus,
+to get the "Condor jobmanager setup package."
+See the Condor-G
+homepage at \URL{http://www.cs.wisc.edu/condor/condorg/}
+for a link to Globus.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{I am the administrator at Physics, and I have a 64-node cluster
+running Condor.
+The administrator at Chemistry is also running Condor on her 64-node cluster.
+We would like to be able to share resources.
+Do I need to install Globus and Condor-G?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+You may, but you do not have a need to.
+Condor has a feature called flocking,
+which lets multiple Condor pools share resources.
+By setting configuration variables, jobs may be executed on
+either cluster.
+Flocking is good (better than Condor-G) because
+all the Condor features continue to work.
+Examples of features are
+checkpointing remote system calls.
+Unfortunately, flocking only works between Condor pools.
+So, access to a resource managed by PBS, for example,
+will still require Globus and Condor-G to submit jobs into the PBS queue.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{What is glidein?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{glidein}
+\index{Condor-G!glidein}
+Glidein provides a way to temporarily add a Globus resource
+to a local Condor pool.
+Condor-G is not required to use glidein.
+Glidein uses Globus resource-management software to run jobs.
+It works by executing the portions of Condor
+software on the Globus resource.
+Then, Condor may execute the user's jobs.
+There are several benefits to working in this way.
+Checkpoints can be made of the jobs running on the Globus resource,
+and remote system calls can be supported.
+Condor can also dynamically schedule jobs across the Grid.
+
+See section~\ref{sec:Glidein} of the manual
+for further information.
 
 
-METHOD D -  access with the contrib module from Bristol
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Submitting Condor jobs through my Globus gatekeeper does not work.  What is wrong?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Globus!gatekeeper errors}
 
-Another option: some hardcore Condor users at Bristol University developed 
-their own module for starting jobs under Condor NT to access file 
-servers.  It involves storing submitting user's passwords on a centralized 
-server.  Below I have included the README from this contrib module, which 
-will soon appear on our website within a week or two.  If you want it 
-before that, let me know, and I could email it to you.
+The Condor configuration file is in a non-standard location,
+and Globus does not know how to locate it, when you see either of the
+following error messages.
 
-Here is the README from the Bristol Condor NT contrib module:
-
+\underline{first error message}
+\footnotesize
 \begin{verbatim}
-README
-Compilation Instructions
-Build the projects in the following order
+% globus-job-run \
+  globus-gate-keeper.example.com/jobmanager-condor /bin/date
 
-CondorCredSvc
-CondorAuthSvc
-Crun
-Carun
-AfsEncrypt
-RegisterService
-DeleteService
-Only the first 3 need to be built in order. This just makes sure that the 
-RPC stubs are correctly rebuilt if required. The last 2 are only helper 
-applications to install/remove the services. All projects are Visual Studio 
-6 projects. The nmakefiles have been exported for each. Only the project 
-for Carun should need to be modified to change the location of the AFS 
-libraries if needed.
+Neither the environment variable CONDOR_CONFIG, /etc/condor/,
+nor ~condor/ contain a condor_config file.  Either set
+CONDOR_CONFIG to point to a valid config file, or put a
+"condor_config" file in /etc/condor or ~condor/ Exiting.
 
-Details
-CondorCredSvc
-CondorCredSvc is a simple RPC service that serves the domain account 
-credentials. It reads the account name and password from the registry of 
-the machine it's running on. At the moment these details are stored in 
-clear text under the key
-
-HKEY_LOCAL_MACHINE\Software\Condor\CredService
-
-The account name and password are held in REG_SZ values "Account" and 
-"Password" respectively. In addition there is an optional REG_SZ value 
-"Port" which holds the clear text port number (e.g. "1234"). If this value 
-is not present the service defaults to using port 3654.
-
-At the moment there is no attempt to encrypt the username/password when it 
-is sent over the wire - but this should be reasonably straightforward to 
-change. This service can sit on any machine so keeping the registry entries 
-secure ought to be fine. Certainly the ACL on the key could be set to only 
-allow administrators and SYSTEM access.
-
-CondorAuthSvc and Crun
-These two programs do the hard work of getting the job authenticated and 
-running in the right place. CondorAuthSvc actually handles the process 
-creation while Crun deals with getting the winstation/desktop/working 
-directory and grabbing the console output from the job so that Condor's 
-output handling mechanisms still work as advertised. Probably the easiest 
-way to see how the two interact is to run through the job creation process:
-
-The first thing to realize is that condor itself only runs Crun.exe. Crun 
-treats its command line parameters as the program to really run. e.g. "Crun 
-\\mymachine\myshare\myjob.exe" actually causes 
-\\mymachine\myshare\myjob.exe to be executed in the context of the domain 
-account served by CondorCredSvc. This is how it works:
-
-When Crun starts up it gets its window station and desktop - these are the 
-ones created by condor. It also gets its current directory - again already 
-created by condor. It then makes sure that SYSTEM has permission to modify 
-the DACL on the window station, desktop and directory. Next it creates a 
-shared memory section and copies its environment variable block into it. 
-Then, so that it can get hold of STDOUT and STDERR from the job it makes 
-two named pipes on the machine it's running on and attaches a thread to 
-each which just prints out anything that comes in on the pipe to the 
-appropriate stream. These pipes currently have a NULL DACL, but only one 
-instance of each is allowed so there shouldn't be any issues involving 
-malicious people putting garbage into them. The shared memory section and 
-both named pipes are tagged with the ID of Crun's process in case we're on 
-a multi-processor machine that might be running more than one job. Crun 
-then makes an RPC call to CondorAuthSvc to actually start the job, passing 
-the names of the window station, desktop, executable to run, current 
-directory, pipes and shared memory section (it only attempts to call 
-CondorAuthSvc on the same machine as it is running on). If the jobs starts 
-successfully it gets the process ID back from the RPC call and then just 
-waits for the new process to finish before closing the pipes and exiting. 
-Technically, it does this by synchronizing on a handle to the process and 
-waiting for it to exit. CondorAuthSvc sets the ACL on the process to allow 
-EVERYONE  to synchronize on it.
-
-[ Technical note: Crun adds "C:\WINNT\SYSTEM32\CMD.EXE /C" to the start of 
-the command line. This is because the process is created with the network 
-context of the caller i.e. LOCALSYSTEM. Prepending cmd.exe gets round any 
-unexpected "Access Denied" errors. ]
-
-If Crun gets a WM_CLOSE (CTRL_CLOSE_EVENT) while the job is running it 
-attempts to stop the job, again with an RPC call to CondorAuthSvc passing 
-the job's process ID.
-
-CondorAuthSvc runs as a service under the LOCALSYSTEM account and does the 
-work of starting the job. By default it listens on port 3655, but this can 
-be changed by setting the optional REG_SZ value "Port" under the registry key
-
-HKEY_LOCAL_MACHINE\Software\Condor\AuthService
-
-(Crun also checks this registry key when attempting to contact 
-CondorAuthSvc.) When it gets the RPC to start a job CondorAuthSvc first 
-connects to the pipes for STDOUT and STDERR to prevent anyone else sending 
-data to them. It also opens the shared memory section with the environment 
-stored by Crun.  It then makes an RPC call to CondorCredSvc (to get the 
-name and password of the domain account) which is most likely running on 
-another system. The location information is stored in the registry under 
-the key
-
-HKEY_LOCAL_MACHINE\Software\Condor\CredService
-
-The name of the machine running CondorCredSvc must be held in the REG_SZ 
-value "Host". This should be the fully qualified domain name of the 
-machine. You can also specify the optional "Port" REG_SZ value in case you 
-are running CondorCredSvc on a different port.
-
-Once the domain account credentials have been received the account is 
-logged on through a call to LogonUser. The DACLs on the window station, 
-desktop and current directory are then modified to allow the domain account 
-access to them and the job is started in that window station and desktop 
-with a call to CreateProcessAsUser. The starting directory is set to the 
-same as sent by Crun, STDOUT and STDERR handles are set to the named pipes 
-and the environment sent by Crun is used. CondorAuthSvc also starts a 
-thread which waits on the new process handle until it terminates to close 
-the named pipes. If the process starts correctly the process ID is returned 
-to Crun.
-
-If Crun requests that the job be stopped (again via RPC), CondorAuthSvc 
-loops over all windows on the window station and desktop specified until it 
-finds the one associated with the required process ID. It then sends that 
-window a WM_CLOSE message, so any termination handling built in to the job 
-should work correctly.
-
-[Security Note: CondorAuthSvc currently makes no attempt to verify the 
-origin of the call starting the job. This is, in principal, a bad thing 
-since if the format of the RPC call is known it could let anyone start a 
-job on the machine in the context of the domain user. If sensible security 
-practices have been followed and the ACLs on sensitive system directories 
-(such as C:\WINNT) do not allow write access to anyone other than trusted 
-users the problem should not be too serious.]
-
-Carun and AFSEncrypt
-Carun and AFSEncrypt are a couple of utilities to allow jobs to access AFS 
-without any special recompliation. AFSEncrypt encrypts an AFS 
-username/password into a file (called .afs.xxx) using a simple XOR 
-algorithm. It's not a particularly secure way to do it, but it's simple and 
-self-inverse. Carun reads this file and gets an AFS token before running 
-whatever job is on its command line as a child process. It waits on the 
-process handle and a 24 hour timer. If the timer expires first it briefly 
-suspends the primary thread of the child process and attempts to get a new 
-AFS token before restarting the job, the idea being that the job should 
-have uninterrupted access to AFS if it runs for more than 25 hours (the 
-default token lifetime). As a security measure, the AFS credentials are 
-cached by Carun in memory and the .afs.xxx file deleted as soon as the 
-username/password have been read for the first time.
-
-Carun needs the machine to be running either the IBM AFS client or the 
-OpenAFS client to work. It also needs the client libraries if you want to 
-rebuild it.
-
-For example, if you wanted to get a list of your AFS tokens under Condor 
-you would run the following:
-
-Crun \\mymachine\myshare\Carun tokens.exe
-
-Running a job
-To run a job using this mechanism specify the following in your job 
-submission (assuming Crun is in C:\CondorAuth):
-
-Executable= c:\CondorAuth\Crun.exe
-Arguments = \\mymachine\myshare\carun.exe 
-\\anothermachine\anothershare\myjob.exe
-Transfer_Input_Files = .afs.xxx
-
-along with your usual settings.
-
-Installation
-A basic installation script for use with the Inno Setup installation 
-package compiler can be found in the Install folder.
+GRAM Job failed because the job failed when the job manager
+attempted to run it (error code 17)
 \end{verbatim}
+\normalsize
 
-\subsection{Does Condor run under Windows 2000?}
+\underline{second error message}
+\footnotesize
+\begin{verbatim}
+% globus-job-run \
+   globus-gate-keeper.example.com/jobmanager-condor /bin/date
 
-Condor does run under Windows 2000 Professional and Server.
+ERROR: Can't find address of local schedd GRAM Job failed
+because the job failed when the job manager attempted to run it
+(error code 17)
+\end{verbatim}
+\normalsize
 
-There will be problems if 
-you have more than 2 Gigabytes of RAM or swap space.
+As described in
+section~\ref{sec:Preparing-to-Install}, 
+Condor searches for its configuration file using the following
+ordering.
+\begin{enumerate}
+\item File specified in \Env{CONDOR\_CONFIG} environment variable
+\item \File{/etc/condor/condor\_config}
+\item \File{\Tilde condor/condor\_config}
+\end{enumerate}
 
-A Personal Condor installation will \emph{not} work.
+Presuming the configuration file is not in a standard location,
+you will need to set the \Env{CONDOR\_CONFIG} environment variable
+\index{environment variables!CONDOR\_CONFIG}
+by hand, or set it in an initialization script.
+One of the following solutions for an initialization may be used.
+\begin{enumerate}
+\item 
+Wherever \Prog{globus-gatekeeper} is launched,
+replace it with a minimal shell script that sets
+\Env{CONDOR\_CONFIG} and then starts \Prog{globus-gatekeeper}.
+Something like the following should work:
 
+\footnotesize
+\begin{verbatim}
+  #! /bin/sh
+  CONDOR_CONFIG=/path/to/condor_config
+  export CONDOR_CONFIG
+  exec /path/to/globus/sbin/globus-gatekeeper "$@"
+\end{verbatim}
+\normalsize
+\item 
+If you are starting \Prog{globus-gatekeeper} using \Prog{inetd},
+\Prog{xinetd}, or a similar program,
+set the environment variable there.
+If you are using \Prog{inetd}, you can use the \Prog{env} program
+to set the environment.
+This example does this;
+the example is shown on multiple lines,
+but it will be all on one line in the \Prog{inetd} configuration. 
+\footnotesize
+\begin{verbatim}
+globus-gatekeeper stream tcp nowait root /usr/bin/env
+env CONDOR_CONFIG=/path/to/condor_config
+/path/to/globus/sbin/globus-gatekeeper
+-co /path/to/globus/etc/globus-gatekeeper.conf
+\end{verbatim}
+\normalsize
+If you're using \Prog{xinetd}, add an env setting
+something like the following:
+\footnotesize
+\begin{verbatim}
+service gsigatekeeper
+{
+    env = CONDOR_CONFIG=/path/to/condor_config
+    cps = 1000 1
+    disable = no
+    instances = UNLIMITED
+    max_load = 300
+    nice = 10
+    protocol = tcp
+    server = /path/to/globus/sbin/globus-gatekeeper
+    server_args = -conf /path/to/globus/etc/globus-gatekeeper.conf
+    socket_type = stream
+    user = root
+    wait = no
+}
+\end{verbatim}
+\normalsize
+
+\end{enumerate}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Troubleshooting}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\subsection{What happens if the central manager crashes?} 
-\index{crashes|(}
-\index{recovery from crashes|(}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{If I see \texttt{PERMISSION DENIED} in my log files,
+what does that mean?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{permission denied}
+
+Most likely, the Condor installation has been misconfigured
+and Condor's access control security functionality is preventing
+daemons and tools from communicating with each other.
+Other symptoms of this problem include Condor tools (such as
+\Condor{status} and \Condor{q}) not producing any output, or commands
+that appear to have no effect (for example, \Condor{off} or
+\Condor{on}). 
+
+The solution is to properly configure the \Macro{HOSTALLOW\_*} and
+\Macro{HOSTDENY\_*} settings (for host/IP based authentication) or to
+configure strong authentication and set \Macro{ALLOW\_*} and
+\Macro{DENY\_*} as appropriate.
+Host-based authentiation is described in
+section~\ref{sec:Host-Security} on page~\pageref{sec:Host-Security}.
+Information about other forms of authentication is provided in 
+section~\ref{sec:Config-Security} on page~\pageref{sec:Config-Security}.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{What happens if the central manager crashes?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{crashes}
+\index{recovery from crashes}
 
 If the central manager crashes, jobs that are already running will
 continue to run unaffected.
@@ -817,11 +1829,42 @@ Queued jobs will remain in the queue unharmed, but can not begin
 running until the central manager is restarted and begins matchmaking
 again.
 Nothing special needs to be done after the central manager is brought
-back online.
+back on line.
 
-\subsection{When I ssh/telnet to a machine to check particulars of how
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Why did the \Condor{schedd} daemon die and restart?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{condor\_schedd daemon!receiving signal 25}
+
+The \Condor{schedd} daemon receives signal 25,
+dies, and is restarted when the
+history file reaches a 2 Gbyte size limit.
+Until a larger history file size or the rotation of the history
+file is supported in Condor,
+try one of these work arounds:
+
+\begin{enumerate}
+\item When the history file becomes large, remove it.
+Note that this causes a loss of the information in the history file,
+but the \Condor{schedd} daemon will not die.
+\item When the history file becomes large, move it.
+\item Stop keeping the history.
+Only \Condor{history} accesses the history file, 
+so this particular functionality will be gone.
+To stop keeping the history, place
+\begin{verbatim}
+HISTORY=
+\end{verbatim}
+in the configuration,
+followed by a \Condor{reconfig} command to recognize the change in
+currently executing daemons.
+\end{enumerate}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{When I ssh/telnet to a machine to check particulars of how
 Condor is doing something, it is always vacating or unclaimed when I
 know a job had been running there!}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Depending on how your policy is set up, Condor will track \emph{any} tty
 on the machine for the purpose of determining if a job is to be vacated
@@ -829,93 +1872,131 @@ or suspended on the machine. It could be the case that after you ssh
 there, Condor notices activity on the tty allocated to your connection
 and then vacates the job.
 
-\index{crashes|)}
-\index{recovery from crashes|)}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{What is wrong? I get no output from \Condor{status}, but the Condor daemons are running.}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\underline{One likely error message} within the collector log of the form
+\footnotesize
+\begin{verbatim}
+DaemonCore: PERMISSION DENIED to host <xxx.xxx.xxx.xxx> for command 0 (UPDATE_STARTD_AD)
+\end{verbatim}
+\normalsize
+indicates a permissions problem.
+The \Condor{startd} daemons do not have write permission to the
+\Condor{collector} daemon.
+This could be because
+you used domain names in your \MacroNI{HOSTALLOW\_WRITE} and/or
+\MacroNI{HOSTDENY\_WRITE} configuration macros,
+but the domain name server (DNS) is not properly configured at your site.
+Without the proper configuration, Condor cannot resolve
+the IP addresses of your machines
+into fully-qualified domain names (an inverse lookup).
+If this is the problem, then the solution takes one of two forms:
+\begin{enumerate}
+\item Fix the DNS so that inverse lookups (trying to get the domain name
+   from an IP address) works for your machines.  You can
+   either fix the DNS itself,
+   or use the \MacroNI{DEFAULT\_DOMAIN\_NAME} setting in your Condor
+         configuration file.
+\item Use numeric IP addresses in the \MacroNI{HOSTALLOW\_WRITE} and/or
+   \MacroNI{HOSTDENY\_WRITE} configuration macros
+   instead of domain names.
+   As an example of this, assume your site has a machine such as
+   foo.your.domain.com, and it has two subnets, with IP addresses
+   129.131.133.10, and 129.131.132.10.
+   If the configuration macro is set as 
+
+\begin{verbatim}
+ HOSTALLOW_WRITE = *.your.domain.com
+\end{verbatim}
+
+   and this does not work, use
+
+\begin{verbatim}
+ HOSTALLOW_WRITE = 192.131.133.*, 192.131.132.*
+\end{verbatim}
+\end{enumerate}
+
+\underline{Alternatively}, this permissions problem
+may be caused by being too restrictive in the setting of
+your \MacroNI{HOSTALLOW\_WRITE} and/or
+\MacroNI{HOSTDENY\_WRITE} configuration macros.
+If it is, then the solution is to change the macros,
+for example from
+\begin{verbatim}
+ HOSTALLOW_WRITE = condor.your.domain.com
+\end{verbatim}
+to
+\begin{verbatim}
+ HOSTALLOW_WRITE = *.your.domain.com
+\end{verbatim}
+or possibly
+\footnotesize
+\begin{verbatim}
+ HOSTALLOW_WRITE = condor.your.domain.com, foo.your.domain.com, \
+ bar.your.domain.com 
+\end{verbatim}
+\normalsize
+
+
+\underline{Another likely error message} within the collector log of the form
+\footnotesize
+\begin{verbatim}
+DaemonCore: PERMISSION DENIED to host <xxx.xxx.xxx.xxx> for command 5 (QUERY_STARTD_ADS)
+\end{verbatim}
+\normalsize
+indicates a similar problem as above, but read permission
+is the problem (as opposed to write permission).
+Use the solutions given above.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Other questions}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\subsection{Is Condor Y2K-compliant?}
-\index{Condor!Y2K|(}
-\index{Y2K|(}
 
-Yes.
-Internally, Condor uses the standard UNIX time representation (the
-number of seconds since 1/1/1970) and is not affected by the Y2K bug.
-In addition, the Condor tools now correctly display the four-digit
-year in their output.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Is there a Condor mailing-list?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Condor!mailing lists}
+\index{mailing lists}
+\index{Condor!new versions, notification of}
+\index{Condor!contact information}
 
-The output of Condor tools from some older versions (pre-6.2) may
-display years incorrectly, but their internal representation is still
-correct and their display bugs do not affect the operation of Condor.
-
-\index{Condor!Y2K|)}
-\index{Y2K|)}
-
-\subsection{Is there a Condor mailing-list?}
-\index{Condor!mailing-list|(}
-\index{Condor!new versions, notification of|(}
-
-Yes.
-We run an extremely low traffic mailing list solely to announce new
+Yes. There are two useful mailing lists.
+First, we run an extremely low traffic mailing list solely to announce new
 versions of Condor.
-To subscribe, email \Email{majordomo@cs.wisc.edu} with a message body
-of:
+Follow the instructions for Condor World at
+\URL{http://www.cs.wisc.edu/condor/mail-lists/}.
+Second, our users can be extremely knowledgeable,
+and they help each other solve problems
+using the Condor Users mailing list.
+Again, follow the instructions for Condor Users at
+\URL{http://www.cs.wisc.edu/condor/mail-lists/}.
 
-\begin{verbatim}subscribe condor-world\end{verbatim}
 
-\index{Condor!mailing list|)}
-\index{Condor!new versions, notification of|)}
 
-\subsection{Do you support Globus?}
-\index{Globus|(}
-
-Yes, we support a variety of interactions with Globus software,
-including running Condor jobs on Globus-managed resources.
-At this time, however, we have not released this software publicly.
-If you are interested in using Condor with Globus, please send email
-to \Email{condor-admin@cs.wisc.edu} and we can provide you with more
-information.
-
-\index{Globus|)}
-
-\subsection{What is the process for upgrading from 6.0 to 6.2?}
-\index{upgrading!6.0 to 6.2}
-
-The usual process for upgrading is to copy the original 6.0 binaries
-to $<$name$>$.old versions and then copy the 6.2 binaries over the 6.0
-binaries. The \Condor{master} will automatically(in about 5 minutes)
-notice that new binaries have been installed and exec them. Please be sure
-to upgrade the config files to match the 6.2 version and pay attention
-to copying over your site's specific policy to the new config file. Some
-macros and their meanings have changed and need to be addressed in the
-upgrade, you may find them in section~\ref{sec:V60-Policy-diffs} of the
-manual.
-
-One special note: You must relink your 6.0 standard universe jobs with
-the 6.2 supplied libraries. Backwards compatibility to 6.0 from 6.2 had
-been intentionally broken because of an evolution of features that the
-standard universe now supports.
-
-\subsection{My question isn't in the FAQ!}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{My question isn't in the FAQ!}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 If you have any questions that are not listed in this FAQ, try looking
 through the rest of the manual.
+Try joining the Condor Users mailing list, where our users
+support each other in finding answers to problems.
+Follow the instructions at
+\URL{http://www.cs.wisc.edu/condor/mail-lists/}.
 If you still can't find an answer, feel free to contact us at
 \Email{condor-admin@cs.wisc.edu}.
 
-Note that Condor's free email support is provided on a best-effort
+Note that Condor's free e-mail support is provided on a best-effort
 basis, and at times we may not be able to provide a timely response.
 If guaranteed support is important to you, please inquire about our
 paid support services.
 
-\subsection{Why isn't there a section 6.6.6 in the manual?}
-
-There is one now... thanks for asking!
 
 
 \index{Condor!FAQ|)}
 \index{Condor!Frequently Asked Questions|)}
 \index{FAQ|)}
 \index{Frequently Asked Questions|)}
-
-

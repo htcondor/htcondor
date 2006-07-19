@@ -2,8 +2,9 @@
 %  Set up version, author and copyright notices
 %
 \newcommand{\AuthorNotice}{Condor Team, University of Wisconsin--Madison}
-\newcommand{\VersionNotice}{Version 6.5.0}
-\newcommand{\CopyrightNotice}{Copyright \copyright\ 1990-2002 Condor Team, Computer Sciences Department, 
+\newcommand{\VersionNotice}{Version 6.7.21}
+\newcommand{\CondorR}{Condor\textsuperscript{\scriptsize{\textregistered}}}
+\newcommand{\CopyrightNotice}{Copyright \copyright\ 1990-2006 Condor Team, Computer Sciences Department, 
   University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
   No use of the Condor Software Program is authorized 
   without the express consent of the Condor Team.  For more information 
@@ -31,7 +32,7 @@
 \newcommand{\Cmd}[2]{\textit{#1}(#2)}           	% Command w/ section number
 \newcommand{\Sinful}[1]{$<$#1$>$}         	% Sinful string
 \newcommand{\SinfulAny}{$<$a.b.c.d:port$>$}        	% Arbitrary Sinful string
-\newcommand{\Url}[1]{\htmladdnormallink{#1}{#1}}	% a URL
+\newcommand{\URL}[1]{\htmladdnormallink{#1}{#1}}	% a URL
 \newcommand{\Email}[1]{\htmladdnormallink{#1}{mailto:#1}}
 \newcommand{\File}[1]{\texttt{#1}}        	    	% File name
 \newcommand{\Bs}{$\mathtt{\backslash}$}         	% Backslash
@@ -57,8 +58,12 @@
 \newcommand{\DCPerm}[1]{\texttt{#1}}		% DC Permission
 \newcommand{\ShortExpr}[1]{\mbox{\texttt{#1}}}		% A pithy config file expression
 \newcommand{\Expr}[1]{\texttt{#1}}		% Config file expression
+
 \newcommand{\MacroNI}[1]{\texttt{#1}}		% Config file macro, NO index
 \newcommand{\Macro}[1]{\texttt{#1} \index{#1 macro@\texttt{#1} macro} \index{configuration macro!\texttt{#1}}}		% Config file macro and index
+\newcommand{\MacroIndex}[1]{\index{#1 macro@\texttt{#1} macro} \index{configuration macro!\texttt{#1}}}		% index only of config file macro
+\newcommand{\MacroB}[1]{\texttt{#1} \index{configuration macro!\texttt{#1}}}		% bracketted Config file macro and index
+
 \newcommand{\MacroUNI}[1]{\texttt{\$(#1)}}	% Config file macro's use, NO index
 \newcommand{\MacroU}[1]{\texttt{\$(#1)}\index{#1 macro@\texttt{#1} macro}\index{configuration macro!\texttt{#1}}}	% Config file macro's use and index
 \newcommand{\AdAttr}[1]{\texttt{#1}}	% ClassAd Attribute name
@@ -71,6 +76,8 @@
 \newcommand{\Warn}{\underline{WARNING}: }       % WARNING:
 \newcommand{\Todo}{\begin{center} \fbox{This section has not yet been written} \end{center}}
 \newcommand{\Syscall}[1]{\texttt{#1()}}		% The name of a syscall
+\newcommand{\Login}[1] {{\tt #1}}       % login name like root or nobody
+\newcommand{\Username}[1]{``\textbf{#1}''}		% A username for an account
 
 % A keyword in a meta-language
 \newcommand{\Keyword}[1] {{\tt #1}}
@@ -81,11 +88,27 @@
 % A program code snippet
 \newcommand{\Code}[1] {{\tt #1}}
 
+% A command that is in a submit description file 
+\newcommand{\SubmitCmd}[1]{\textbf{#1}}		% Submit command
+
 % Make a nice box with a header to point out a tricky feature
 \newcommand{\Notice}[1] {\noindent {\bf Notice: }\\ \fbox{\parbox[t]{\textwidth}{#1}}}
 
 % Release directory entry
 \newcommand{\Release}[1]{\texttt{$<$release\_dir$>$/#1}}
+
+%
+% Talking about SQL entities
+%
+% Name of a Table
+\newcommand{\SQLTable}[1] {\Bold{#1}}
+% Defining a Table
+\newcommand{\SQLTableDef}[2] {\SQLTable{#1} \Bold{(}#2\Bold{)}}
+% Name of a View
+\newcommand{\SQLView}[1] {\Bold{#1}}
+% Defining a View
+\newcommand{\SQLViewDef}[2] {\Keyword{CREATE VIEW} \SQLView{#1} \Keyword{as} #2\Bold{;}}
+
 
 
 %
@@ -98,4 +121,10 @@
 %    e.g., condor_submit == \Condor{submit}
 \newcommand{\Condor}[1]{\Prog{condor\_#1}}
 \newcommand{\condor}[1]{condor\_#1}
+
+%
+%  To help with typing in names of stork commands
+%    e.g., stork_submit == \Stork{submit}
+\newcommand{\Stork}[1]{\Prog{stork\_#1}}
+\newcommand{\stork}[1]{stork\_#1}
 

@@ -1,0 +1,147 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\label{sec:platform-linux}Linux}
+\index{platform-specific information!Linux}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+This section provides information specific to the Linux port of
+Condor.
+Linux is a difficult platform to support.
+It changes very frequently, and Condor has some extremely
+system-dependent code (for example, the checkpointing library).
+
+Condor is sensitive to changes in the following elements of the
+system: 
+\begin{itemize}
+\item The kernel version
+\item The version of the GNU C library (glibc)
+\item the version of GNU C Compiler (GCC) used to build and link
+  Condor jobs (this only matters for Condor's Standard universe which
+  provides checkpointing and remote system calls)
+\end{itemize}
+
+The Condor Team tries to provide support for various releases of the
+distribution of Linux.
+Red Hat is probably the most popular Linux distribution, and it
+provides a common set of versions for the above system components
+at which Condor can aim support.
+Condor will often work with Linux distributions other than Red Hat (for
+example, Debian or SuSE) that have the same versions of the above
+components.
+However, we do not usually test Condor on other Linux distributions
+and we do not provide any guarantees about this.
+
+New releases of Red Hat usually change the versions of some or all of
+the above system-level components.
+A version of Condor that works with one release of Red Hat might not
+work with newer releases.
+The following sections describe the details of Condor's support for
+the currently available versions of Red Hat Linux on x86 architecture
+machines.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:platform-linux-activity}Linux Kernel-specific Information}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{platform-specific information!Linux keyboard and mouse activity}
+\index{Linux!keyboard and mouse activity}
+
+Distributions that rely on the Linux 2.4.x and all Linux 2.6.x kernels
+through version 2.6.10
+do not modify the \Code{atime} of the input device file.
+This leads to difficulty when Condor is run using one of these
+kernels. 
+The problem manifests itself in that Condor cannot properly
+detect keyboard or mouse activity.
+Therefore, using the activity in policy setting cannot
+signal that Condor should stop running a job on a machine.
+
+Condor version 6.6.8 implements a workaround for PS/2 devices.
+A better fix is the Linux 2.6.10 kernel
+patch linked to from the directions posted at
+\URL{http://www.cs.wisc.edu/condor/kernel.patch.html}.
+This patch works better for PS/2 devices, and
+may also work for USB devices.
+A future version of Condor will implement better recognition
+of USB devices,
+such that the kernel patch will also definitively work for USB devices.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:platform-linux-rh6}Red Hat Version 6.x}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{platform-specific information!Red Hat 6.x}
+
+Red Hat version 6.x is an older release of Red Hat, but it is still used
+by a number of sites.
+Since Condor has worked on this platform since it was first released,
+we still provide binaries that support it.
+Red Hat 6.2 uses the 2.2.x Linux kernel series, glibc version 2.1.x,
+and GCC version egcs-1.1.2.
+To run Condor on this platform and be able to use \Condor{compile},
+you should download the Condor \VersionNotice\  binaries listed for use
+with ``Linux 2.0.x and 2.2.x (glibc 2.1)''.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:platform-linux-rh7}Red Hat Version 7.x}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{platform-specific information!Red Hat 7.x}
+
+Red Hat version 7.x is fully supported in Condor \VersionNotice.
+\Condor{compile} works to link user jobs for the Standard universe
+with the versions of GCC and glibc that comes with Red Hat 7.x.
+Both the statically linked and dynamically linked versions of the
+Condor binaries listed for use with ``Linux 2.4.x (glibc 2.2) - Red Hat
+7.1, 7.2, 7.3'' will work with no additional effort.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:platform-linux-rh8}Red Hat Version 8.x}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{platform-specific information!Red Hat 8.x}
+
+Red Hat version 8.x is fully supported in Condor \VersionNotice.
+\Condor{compile} works to link user jobs for the Standard universe
+with the versions of gcc and glibc that come with Red Hat 8.x.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:platform-linux-rh9}Red Hat Version 9.x}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{platform-specific information!Red Hat 9.x}
+
+Red Hat version 9.x is fully supported in Condor \VersionNotice.
+\Condor{compile} works to link user jobs for the Standard universe
+with the versions of gcc and glibc that come with Red Hat 9.x.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:platform-linux-fed}Red Hat Fedora 1, 2, and 3}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{platform-specific information!Red Hat Fedora 1, 2, and 3}
+
+Redhat Fedora Core 1, 2, and 3 now support the checkpointing of statically
+linked executables just like previous revisions of Condor for Red Hat.
+\Condor{compile} works to link user jobs for the Standard universe with
+the versions of gcc that are distributed with Red Hat Fedora Core 1, 2,
+and 3.
+
+However, there are some caveats: A) You must install and use the dynamic
+Red Hat 9.x binaries on the Fedora machine and B) if you wish to do
+run a \Condor{compile}d binary in standalone mode(either initially
+or in resumption mode), then you must prepend the execution of said
+binary with \Bold{setarch i386}. Here is an example: suppose we have a
+Condor-linked binary called \Bold{myapp}, running this application as a
+standalone executable will result in this command: \Bold{setarch i386
+myapp}. The subsequent resumption command will be: 
+\Bold{setarch i386 myapp -\_condor\_restart myapp.ckpt}.
+
+When standard universe executables \Condor{compile}d under any currently
+supported Linux architecture of the same kind (including Fedora 1,
+2, and 3) are running inside Condor, they will automatically execute
+in the i386 execution domain. This means that the \Bold{exec\_shield}
+functionality (if available) will be turned off and the shared segment
+layout will default to Red Hat 9 style. There is no need to do the
+above instructions concerning \Bold{setarch} if the executables are
+being submitted directly into Condor via \Condor{submit}.
+
+
+
+
+

@@ -8,7 +8,9 @@ Configuring Condor for Running Dedicated Jobs}
 \index{dedicated machines}
 
 Beginning with Condor version 6.3.0, users can submit applications to
-Condor which cannot be preempted and which require multiple resources.
+Condor which require multiple resources, and cannot be preempt by
+the machine's user.
+
 Condor's unique solution to this problem involves a combination of
 \index{scheduling!opportunistic}
 \index{opportunistic scheduling}
@@ -38,7 +40,6 @@ Overview of how Condor Manages Dedicated Jobs and Resources}
 
 To support dedicated applications, a Condor administrator must
 configure some resources in the pool to be dedicated resources.
-These are machines which will not preempt jobs.
 These resources are controlled by a dedicated scheduler, a
 single machine within the pool that runs a \Condor{schedd} daemon.
 In general, there is no limit on the number of dedicated schedulers within
@@ -109,12 +110,21 @@ This is accomplished by modifying the following lines within the local
 configuration file for any dedicated resource:
 
 \begin{verbatim}
-DedicatedScheduler = ``DedicatedScheduler@full.host.name''
+DedicatedScheduler = "DedicatedScheduler@full.host.name"
 STARTD_EXPRS = $(STARTD_EXPRS), DedicatedScheduler
 \end{verbatim}
 
 Substitute the real host name of the dedicated scheduler
 machine. 
+
+When running a "Personal Condor", the name of the scheduler includes
+the user name it was started as, so the attribute would look
+like this:
+
+\begin{verbatim}
+DedicatedScheduler = "DedicatedScheduler@username@full.host.name"
+STARTD_EXPRS = $(STARTD_EXPRS), DedicatedScheduler
+\end{verbatim}
 
 All dedicated resources must have policy expressions which allow for
 dedicated jobs to always run and to never be evicted.
@@ -205,7 +215,7 @@ discovered on the machine.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Configure-Dedicated-Opportunistic-Policy}
+\subsubsection{\label{sec:Configure-Dedicated-Ex2}
 Policy Scenario Two: Running Dedicated and Opportunistic Jobs}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -230,13 +240,13 @@ START = True
 \end{verbatim}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Configure-Dedicated-Opportunistic-Policy}
+\subsubsection{\label{sec:Configure-Dedicated-Ex3}
 Policy Scenario Three: Running Dedicated Jobs on Desk-Top Resources}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 A third policy example allows both dedicated and non-dedicated
 jobs.
-It assumes resources that are not
+It assumes resources are not
 configured to prefer or always run dedicated jobs.
 These desk-top machines have a \MacroNI{START} expression that
 takes the machine owner's usage into account for non-dedicated
@@ -262,13 +272,53 @@ to implement this policy.
 SUSPEND    = Scheduler =!= $(DedicatedScheduler) && ($(SUSPEND))
 PREEMPT    = Scheduler =!= $(DedicatedScheduler) && ($(PREEMPT))
 RANK_FACTOR    = 1000000
-RANK   = (Scheduler =?= $(DedicatedScheduler) * $(RANK_FACTOR)) + $(RANK)
+RANK   = (Scheduler =?= $(DedicatedScheduler) * $(RANK_FACTOR)) \
+               + $(RANK)
 START  = (Scheduler =?= $(DedicatedScheduler)) || ($(START))
 \end{verbatim}
 
-\Note For everything to work, you MUST set Macro{RANK\_FACTOR} to be a
+\Note For everything to work, you MUST set \Macro{RANK\_FACTOR} to be a
 larger value than the maximum value your existing rank expression
 could possibly evaluate to.
 \Macro{RANK} is just a floating point value, so there is no harm in
 having a value that is very large. 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Configure-Dedicated-Preemption}
+Preemption with Dedicated Jobs}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The dedicated scheduler can optionally preempt running MPI jobs in
+favor of higher priority MPI jobs in its queue.  Note that this is
+different from preemption in non-MPI universes, and MPI jobs cannot
+be preempted either by a machine's user pressing a key or by other means.
+
+By default, the dedicated scheduler will never preempt running MPI jobs.
+Two configuration file items control dedicated preemption: 
+\Macro{SCHEDD\_PREEMPTION\_REQUIREMENTS} and \Macro{SCHEDD\_PREEMPTION\_RANK}.
+These have no default value, so if either are unset, preemption will
+never occur. \MacroNI{SCHEDD\_PREEMPTION\_REQUIREMENTS} must evaluate to true
+for a machine to be a candidate for this kind of preemption.  If more machines are 
+candidates for preemption than needed to satisfy a higher priority job, the
+preemptible machines are sorted by \MacroNI{SCHEDD\_PREEMPTION\_RANK}, and
+only the highest ranked machines are taken.
+
+Note that preempting one node of a running MPI job requires killing
+the entire job on all of its nodes.  So, when preemption happens, it
+may end up freeing more machines than strictly speaking are needed.
+Also, as condor cannot checkpoint MPI jobs, preempted jobs will be re-run
+from the beginning.  Thus, the administrator should be careful when
+enabling dedicated preemption.  The following example shows how to
+enable dedicated preemption.
+
+\begin{verbatim}
+STARTD_JOB_EXPRS = JobPrio
+SCHEDD_PREEMPTION_REQUIREMENTS = (My.JobPrio < Target.JobPrio)
+SCHEDD_PREEMPTION_RANK = 0.0
+\end{verbatim}
+
+In this case, preemption is enabled by the user job priority. If a set
+of machines is running a job at user priority 5, and the user submits
+a new job at user priority 10, the running job will be preempted for
+the new job.  The old job is put back in the queue, and will start running
+from the beginning when the new job completes.

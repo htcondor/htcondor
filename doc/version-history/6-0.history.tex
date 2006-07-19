@@ -9,7 +9,7 @@ development series (6.1) simultaneously available.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:New-6-0-3}Version 6.0.3}
+\subsection*{\label{sec:New-6-0-3}Version 6.0.3}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{itemize}
@@ -32,7 +32,7 @@ expression.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:New-6-0-2}Version 6.0.2}
+\subsection*{\label{sec:New-6-0-2}Version 6.0.2}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{itemize}
@@ -80,7 +80,7 @@ if the argument list was too long.
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:New-6-0-1}Version 6.0.1}
+\subsection*{\label{sec:New-6-0-1}Version 6.0.1}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{itemize}
@@ -120,8 +120,8 @@ history of your condor job.
 Sparc and Intel). 
 
 \item Condor now works on Linux machines with the GNU C library.  
-This includes machines running RedHat 5.x and Debian 2.0. 
-In addition, there seems to be a bug in RedHat that was causing the
+This includes machines running Red Hat 5.x and Debian 2.0. 
+In addition, there seems to be a bug in Red Hat that was causing the
 output from \Condor{config\_val} to not appear when used in scripts
 (like \Condor{compile}).
 We put in explicit calls to flush the I/O buffers before
@@ -147,7 +147,7 @@ never match jobs with available machines.
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:New-6-0-pl4}Version 6.0 pl4}
+\subsection*{\label{sec:New-6-0-pl4}Version 6.0 pl4}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \Note Back in the bad old days, we used this evil ``patch level''
@@ -205,7 +205,7 @@ For example: \Sinful{123.456.789.123:4567}.
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:New-6-0-pl3}Version 6.0 pl3}
+\subsection*{\label{sec:New-6-0-pl3}Version 6.0 pl3}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{itemize}
@@ -275,7 +275,7 @@ example.
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:New-6-0-pl2}Version 6.0 pl2}
+\subsection*{\label{sec:New-6-0-pl2}Version 6.0 pl2}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{itemize}
@@ -308,7 +308,7 @@ certain rare circumstances.
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:New-6-0-pl1}Version 6.0 pl1}
+\subsection*{\label{sec:New-6-0-pl1}Version 6.0 pl1}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{itemize}
@@ -326,12 +326,12 @@ reliability when submitting jobs across the Internet and using a
 remote Checkpoint Server.
 
 \item Fixed a bug concerning \Macro{MAX\_JOBS\_RUNNING}: The parameter
-\Macro{MAX\_JOBS\_RUNNING} in the config file controls the maximum
+\MacroNI{MAX\_JOBS\_RUNNING} in the config file controls the maximum
 number of simultaneous \Condor{shadow} processes allowed on your
 submission machine.
 The bug was the number of shadow processes could, under certain
 conditions, exceed the number specified by
-\Macro{MAX\_JOBS\_RUNNING}. 
+\MacroNI{MAX\_JOBS\_RUNNING}. 
 
 \item Added new parameter \Macro{JOB\_RENICE\_INCREMENT} that can be
 specified in the config file.
@@ -372,7 +372,7 @@ a site that already had Condor installed.
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:New-6-0-pl0}Version 6.0 pl0}
+\subsection*{\label{sec:New-6-0-pl0}Version 6.0 pl0}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{itemize}

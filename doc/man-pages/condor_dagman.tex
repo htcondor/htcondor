@@ -1,0 +1,147 @@
+\begin{ManPage}{\label{man-condor-dagman}\Condor{dagman}}{3}
+{meta scheduler of the jobs submitted as the nodes of a DAG or DAGs}
+\Synopsis \SynProg{\Condor{dagman}}
+\oOptArg{-debug}{level}
+\oOptArg{-rescue}{filename}
+\oOptArg{-maxidle}{numberOfJobs}
+\oOptArg{-maxjobs}{numberOfJobs}
+\oOptArg{-maxpre}{NumberOfPREscripts}
+\oOptArg{-maxpost}{NumberOfPOSTscripts}
+\oOpt{-noeventchecks}
+\oOpt{-allowlogerror}
+\oOpt{-usedagdir}
+(\OptArg{-condorlog}{filename} \Bar \OptArg{-storklog}{filename})
+\OptArg{-lockfile}{filename}
+\oOpt{-waitfordebug}
+\OptArg{-dag}{dag\_file}
+\oArg{\OptArg{-dag}{dag\_file\_2} \Dots \OptArg{-dag}{dag\_file\_n} }
+
+\index{Condor commands!condor\_dagman}
+\index{condor\_dagman command}
+
+\Description
+\Condor{dagman} is a meta scheduler for the Condor jobs within
+a DAG (directed acyclic graph) (or multiple DAGs).
+In typical usage,
+a submitter of jobs that are organized into a DAG submits the
+DAG using \Condor{submit\_dag}.
+\Condor{submit\_dag} does error checking on aspects of the DAG
+and then submits \Condor{dagman} as a Condor job.
+\Condor{dagman} uses log files to coordinate the further 
+submission of the jobs within the DAG.
+
+As part of \Prog{daemoncore}, the set of command-line arguments
+given in
+section~\ref{sec:DaemonCore-Arguments}
+work for \Condor{dagman}.
+
+Arguments to \Condor{dagman} are either automatically set
+by \Condor{submit\_dag} 
+or they are specified as command-line arguments to \Condor{submit\_dag}
+and passed on to \Condor{dagman}.
+The method by which the arguments are set is
+given in their description below.
+
+\Condor{dagman} can run multiple, independent DAGs.  This is done
+by specifying multiple \OptArg{-dag} arguments.
+Pass multiple
+DAG input files as command-line arguments to \Condor{submit\_dag}.
+
+Debugging output may be obtained by using the
+\OptArg{-debug}{level} option.
+Level values and what they produce is described as
+\begin{itemize}
+  \item level = 0; never produce output, 
+        except for usage info 
+  \item level = 1; very quiet, output severe errors 
+  \item level = 2; normal output, errors and warnings
+  \item level = 3; output errors, as well as all warnings
+  \item level = 4; internal debugging output
+  \item level = 5; internal debugging output; outer loop debugging
+  \item level = 6; internal debugging output; inner loop debugging
+  \item level = 7; internal debugging output; rarely used
+\end{itemize}
+
+
+\begin{Options}
+    \OptItem{\OptArg{-debug}{level}}{An integer level of debugging output.
+       \Arg{level} is an integer, with values of 0-7 inclusive,
+       where 7 is the most verbose output.
+       This command-line option to \Condor{submit\_dag}
+       is passed to \Condor{dagman} or
+       defaults to the value 3, as set by \Condor{submit\_dag}.
+       }
+    \OptItem{\OptArg{-rescue}{filename}}{Sets the file name of
+       the rescue DAG to write in the case of a failure.
+       As passed by \Condor{submit\_dag}, the name of the file
+       will be the name of the DAG input file concatenated with
+       the string \File{.rescue}. }
+    \OptItem{\OptArg{-maxidle}{NumberOfJobs}}{Sets the maximum number of idle
+       jobs allowed before \Condor{dagman} stops submitting more jobs.  Once
+       idle jobs start to run, \Condor{dagman} will resume submitting jobs.
+       \Arg{NumberOfJobs} is a positive integer.
+       This command-line option to \Condor{submit\_dag} is passed to
+       \Condor{dagman}.
+       If not specified, the number of idle jobs is unlimited.  }
+    \OptItem{\OptArg{-maxjobs}{numberOfJobs}}{Sets the maximum number of jobs
+       within the DAG that will be submitted to Condor at one time.
+       \Arg{numberOfJobs} is a positive integer.
+       This command-line option to \Condor{submit\_dag} is passed to
+       \Condor{dagman}.
+       If not specified, the default number of jobs is unlimited.  }
+    \OptItem{\OptArg{-maxpre}{NumberOfPREscripts}}{Sets the maximum number
+       of PRE
+       scripts within the DAG that may be running at one time.
+       \Arg{NumberOfPREScripts} is a positive integer. 
+        This command-line option to \Condor{submit\_dag} is passed to
+        \Condor{dagman}.
+       If not specified,
+       the default number of PRE scripts is unlimited.}
+    \OptItem{\OptArg{-maxpost}{NumberOfPOSTscripts}}{Sets the maximum number of
+       POST scripts within the DAG that may be running at one time.
+       \Arg{NumberOfPOSTScripts} is a positive integer. 
+        This command-line option to \Condor{submit\_dag} is passed to
+        \Condor{dagman}.
+       If not specified,
+       the default number of POST scripts is unlimited.}
+    \OptItem{\Opt{-noeventchecks}}{This argument is no longer used;
+       it is now ignored.  Its functionality is now implemented by
+       the \MacroNI{DAGMAN\_ALLOW\_EVENTS} configuration macro
+       (see section~\ref{param:DAGManAllowEvents}).}
+    \OptItem{\Opt{-allowlogerror}}{This optional argument has 
+       \Condor{dagman} try to run the specified DAG, even in the case
+       of detected errors in the user log specification. }
+    \OptItem{\Opt{-usedagdir}}{This optional argument has causes
+       \Condor{dagman} to run each specified DAG as if the directory
+       containing that DAG file was the current working directory.  This
+       option is most useful when running multiple DAGs in a single
+       \Condor{dagman}.
+       }
+    \OptItem{\OptArg{-storklog}{filename}}{Sets the file name of
+       the Stork log for data placement jobs.  }
+    \OptItem{\OptArg{-condorlog}{filename}}{Sets the file name of
+       the file used in conjunction with the \OptArg{-lockfile}{filename}
+       in determining whether to run in recovery mode.  }
+    \OptItem{\OptArg{-lockfile}{filename}}{Names the file
+       created and used as a lock file.
+       The lock file prevents execution of two of the 
+       same DAG, as defined by a DAG input file.
+       A default lock file ending with the suffix \File{.dag.lock}
+       is passed to \Condor{dagman} by \Condor{submit\_dag}.  }
+    \OptItem{\Opt{-waitfordebug}}{This optional argument causes
+       \Condor{dagman} to wait at startup until someone attaches to
+       the process with a debugger and sets the wait\_for\_debug
+       variable in main\_init() to false.
+       }
+    \OptItem{\OptArg{-dag}{filename}}{\Arg{filename} is the name of the
+       DAG input file that is set as an argument to \Condor{submit\_dag},
+       and passed to \Condor{dagman}.}
+\end{Options}
+
+
+\ExitStatus
+
+\Condor{dagman} will exit with a status value of 0 (zero) upon success,
+and it will exit with the value 1 (one) upon failure.
+
+\end{ManPage}

@@ -1,6 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Ckpt-Server}
-Installing a Checkpoint Server}
+\subsection{\label{sec:Ckpt-Server} Installing a Checkpoint Server}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{installation!checkpoint server}
@@ -48,8 +47,8 @@ retrieved, and it will either have to be restarted from
 the beginning, or the job will wait for the server to come back online.
 This behavior is controlled with the
 \Macro{MAX\_DISCARDED\_RUN\_TIME} parameter in the config file (see
-section~\ref{sec:Checkpoint-Server-Config-File-Entries} on
-page~\pageref{sec:Checkpoint-Server-Config-File-Entries} for details).
+section~\ref{Checkpoint-Server-Config-File-Entries} on
+page~\pageref{Checkpoint-Server-Config-File-Entries} for details).
 This parameter represents the maximum amount of CPU time you are
 willing to discard by starting a job over from scratch if the
 checkpoint server is not responding to requests.
@@ -57,8 +56,8 @@ checkpoint server is not responding to requests.
 \end{enumerate}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Prepare-Ckpt-Server}
-Preparing to Install a Checkpoint Server} 
+\subsubsection{\label{Prepare-Ckpt-Server} Preparing to Install
+a Checkpoint Server} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 The location of checkpoints changes upon the installation
@@ -83,7 +82,7 @@ accomplished by
 configuring submit machines as their queues empty.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Install-Ckpt-Server-Module}
+\subsubsection{\label{Install-Ckpt-Server-Module}
 Installing the Checkpoint Server Module} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -125,7 +124,7 @@ Each is discussed in its own section:
 \end{enumerate}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Configure-Ckpt-Server}
+\subsubsection{\label{Configure-Ckpt-Server}
 Configuring a Checkpoint Server} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -152,7 +151,7 @@ The other optional settings are:
 \item[\Macro{DAEMON\_LIST}] (Described in
 section~\ref{sec:Master-Config-File-Entries}).  
 To have the checkpoint server managed by the \Condor{master}, the
-\Macro{DAEMON\_LIST} entry must have \Expr{MASTER} and \Expr{CKPT\_SERVER}.
+\MacroNI{DAEMON\_LIST} entry must have \Expr{MASTER} and \Expr{CKPT\_SERVER}.
 Add \Expr{STARTD} if you want to allow jobs to run on your checkpoint server.
 Similarly, add \Expr{SCHEDD} if you would like to submit jobs from your
 checkpoint server. 
@@ -165,7 +164,7 @@ section~\ref{sec:Daemon-Logging-Config-File-Entries} on
 page~\pageref{sec:Daemon-Logging-Config-File-Entries}.
 \begin{description}
 
-\item[\Macro{CKPT\_SERVER\_LOG}] The \Macro{CKPT\_SERVER\_LOG} is where the
+\item[\Macro{CKPT\_SERVER\_LOG}] The \MacroNI{CKPT\_SERVER\_LOG} is where the
 checkpoint server log is placed.
 
 \item[\Macro{MAX\_CKPT\_SERVER\_LOG}] Sets the maximum
@@ -180,8 +179,7 @@ Currently, the only debug level supported is \Dflag{ALWAYS}.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Start-Ckpt-Server} 
-Start the Checkpoint Server} 
+\subsubsection{\label{Start-Ckpt-Server} Start the Checkpoint Server} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 To start the newly configured checkpoint server,
@@ -194,7 +192,7 @@ page~\pageref{sec:Host-Security} for full details about IP/host-based
 security in Condor.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Configure-Pool-Ckpt-Server} 
+\subsubsection{\label{Configure-Pool-Ckpt-Server} 
 Configuring your Pool to Use the Checkpoint Server}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -226,7 +224,7 @@ This is described in section~\ref{sec:Reconfigure-Pool} on
 page~\pageref{sec:Reconfigure-Pool}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Configure-Multiple-Ckpt-Server} 
+\subsubsection{\label{Configure-Multiple-Ckpt-Server} 
 Configuring your Pool to Use Multiple Checkpoint Servers}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -261,8 +259,8 @@ TRUE (the default) on these submitting machines.
 When TRUE, this parameter specifies that the checkpoint server
 specified by the machine running the job should be used instead of the
 checkpoint server specified by the submitting machine.
-See section~\ref{sec:Checkpoint-Server-Config-File-Entries} on
-page~\pageref{sec:Checkpoint-Server-Config-File-Entries} for more
+See section~\ref{Checkpoint-Server-Config-File-Entries} on
+page~\pageref{Checkpoint-Server-Config-File-Entries} for more
 details.
 This allows the job to use the checkpoint server closest to the
 machine on which it is running, instead of the server closest to the
@@ -297,7 +295,7 @@ It will not use alternate checkpoint servers.
 This may change in future versions of Condor.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Checkpoint-Server-Domains} 
+\subsubsection{\label{Checkpoint-Server-Domains} 
 Checkpoint Server Domains}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

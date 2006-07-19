@@ -18,13 +18,13 @@ activates the event.
 Currently, this daemon supports \Macro{SHUTDOWN} events, which place machines
 in the owner state during scheduled times.
 The eventd causes machines to vacate jobs in an orderly fashion
-in anticipation of \Macro{SHUTDOWN} events.
+in anticipation of \MacroNI{SHUTDOWN} events.
 Scheduling this improves performance, because the machines
 do not all attempt to checkpoint their jobs at the same time.
 Instead, the eventd schedules checkpoint transfers according to
 bandwidth limits defined in its configuration files.
 
-When a \Macro{SHUTDOWN} event is activated, the eventd contacts all startd
+When a \MacroNI{SHUTDOWN} event is activated, the eventd contacts all startd
 daemons
 that match constraints given in the configuration file,
 and instructs them to shut down.
@@ -37,7 +37,7 @@ The eventd then sends a vacate command to each startd
 that is currently running a job.
 Once the job is vacated, the startd transitions to the
 owner state and remains in this state for the duration of the
-\Macro{SHUTDOWN} event.
+\MacroNI{SHUTDOWN} event.
 
 The \Condor{eventd} must run on a machine with \Macro{STARTD}
 \Macro{ADMINISTRATOR} and \Macro{CONFIG} access to your pool.
@@ -90,14 +90,14 @@ example, \verb@MTWRFSU@ would specify that the event occurs daily,
 \verb@SU@ would specificy that the event occurs only on weekends.
 
 Two options can be specified to change the default behavior of
-\Macro{SHUTDOWN} events.
-If \Macro{\_RUNTIME} is appended to the \Macro{SHUTDOWN} event
+\MacroNI{SHUTDOWN} events.
+If \MacroNI{\_RUNTIME} is appended to the \MacroNI{SHUTDOWN} event
 specification, the startd shutdown configurations will not be
 persistent.  If a machine reboots or a startd is restarted, the startd
 will no longer be ``shutdown'' and may transition out of the owner state.
 This is useful for reboot events, where the startd should leave the
 shutdown state when the machine reboots.
-If \Macro{\_STANDARD} is appended to the \Macro{SHUTDOWN} event
+If \MacroNI{\_STANDARD} is appended to the \MacroNI{SHUTDOWN} event
 specification, the eventd will only consider standard universe jobs.
 It will vacate only standard universe jobs and configure machines to
 run only non-standard universe jobs during the shutdown event.
@@ -110,7 +110,7 @@ The following is an example event daemon configuration:
 \index{event daemon!example configuration}
 \begin{verbatim}
 EVENT_LIST	= TestEvent, TestEvent2
-TestEvent	= SHUTDOWN_RUNTIME MTWRFSU 2:00 1:00 TestEventConstraint
+TestEvent	= SHUTDOWN_RUNTIME W 2:00 1:00 TestEventConstraint
 TestEvent2	= SHUTDOWN MTWRF 14:00 0:30 TestEventConstraint2
 TestEventConstraint		= (Arch == "INTEL")
 TestEventConstraint2	= (True)
@@ -120,20 +120,20 @@ In this example, the \verb@TestEvent@ is a \Macro{SHUTDOWN\_RUNTIME}
 type event, which
 specifies that all machines whose startd ads match the constraint
 \verb@Arch == "INTEL"@ should be shutdown for one hour (or until the
-startd restarts) starting at 2:00 every Wednesday.
-\verb@TestEvent2@ is a \Macro{SHUTDOWN} type event, which specifies
+\Condor{startd} daemon restarts) starting at 2:00 every Wednesday.
+\verb@TestEvent2@ is a \MacroNI{SHUTDOWN} type event, which specifies
 that all machines should be shutdown for 30 minutes starting at
-14:00 every Friday.
+14:00 on weekdays.
 
 The bandwidth limits used in the eventd's schedule are specified in
 the file indicated by the \Macro{EVENTD\_CAPACITY\_INFO} parameter, and
 any network routing information required to implement those limits is
 specified in the file indicated by the \Macro{EVENTD\_ROUTING\_INFO}
 parameter.
-The \Macro{EVENTD\_CAPACITY\_INFO} file has the same
+The \MacroNI{EVENTD\_CAPACITY\_INFO} file has the same
 format as the \Macro{NETWORK\_CAPACITY\_INFO} file, described in
 section~\ref{sec:Bandwidth-Alloc-Capinfo}.
-The \Macro{EVENTD\_ROUTING\_INFO} file has the same
+The \MacroNI{EVENTD\_ROUTING\_INFO} file has the same
 format as the \Macro{NETWORK\_ROUTING\_INFO} file, described in
 section~\ref{sec:Bandwidth-Alloc-Routes}.
 
@@ -141,7 +141,7 @@ Note that the \Macro{DAEMON\_LIST} macro (described in
 section~\ref{sec:Master-Config-File-Entries}) is defined in the
 section of settings you may want to customize.
 If you want the event daemon managed by the \Condor{master}, the
-\Macro{DAEMON\_LIST} entry must contain both 
+\MacroNI{DAEMON\_LIST} entry must contain both 
 \Attr{MASTER} and \Attr{EVENTD}.
 Verify that this macro is set to run the correct daemons on
 this machine.  By default, the list also includes

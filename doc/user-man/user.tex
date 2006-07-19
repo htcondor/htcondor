@@ -15,16 +15,17 @@
 Presenting Condor \VersionNotice! Condor is developed by
 the Condor Team at the University of Wisconsin-Madison (UW-Madison), and
 was first installed as a production system in the UW-Madison Computer
-Sciences department nearly 10 years ago. This Condor pool has since
+Sciences department more than 10 years ago. This Condor pool has since
 served as a major source of computing cycles to UW faculty and students.
 For many, it has revolutionized the role computing plays in their
 research. An increase of one, and sometimes even two, orders of
 magnitude in the computing throughput of a research organization can
 have a profound impact on its size, complexity, and scope. Over the
 years, the Condor Team has established collaborations with scientists
-from around the world and has provided them with access to surplus
-cycles (one of whom has consumed 100 CPU years!). Today, our
-department's pool consists of more than 700 desktop Unix workstations.
+from around the world, and it has provided them with access to surplus
+cycles (one scientist has consumed 100 CPU years!). Today, our
+department's pool consists of more than 700 desktop Unix workstations
+and more than 100 Windows 2000 machines.
 On a typical day, our pool delivers more than 500 CPU days to UW
 researchers. Additional Condor pools have been established over the
 years across our campus and the world. Groups of researchers, engineers,
@@ -34,7 +35,7 @@ will help revolutionize your compute environment as well.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{What does Condor do?}
+\section{Introduction}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
@@ -42,7 +43,7 @@ In a nutshell, Condor is a specialized batch system
 \index{batch system}
 for managing compute-intensive jobs.
 Like most batch systems, Condor provides a
-queueing mechanism, scheduling policy, priority scheme, and resource
+queuing mechanism, scheduling policy, priority scheme, and resource
 classifications.  Users submit their compute jobs to Condor, Condor puts
 the jobs in a queue, runs them, and then informs the user as to the
 result.
@@ -63,7 +64,7 @@ organization is far greater than the compute power of a dedicated
 central resource.
 
 Condor has several unique capabilities at its disposal which are geared 
-towards effectively utilizing non-dedicated resources that are not owned or
+toward effectively utilizing non-dedicated resources that are not owned or
 managed by a centralized resource. These include transparent process
 checkpoint and migration, remote system calls, and ClassAds.
 Read section~\ref{sec:what-is-condor} for a general 
@@ -71,7 +72,8 @@ discussion of these features before reading any further.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Condor Matchmaking with ClassAds}
+\section{Matchmaking with ClassAds}
+\label{sec:matchmaking-with-classads}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Before you learn about how to submit a job, it is important to
@@ -153,6 +155,9 @@ ClassAds about the resources available in your pool.
 Type \Condor{status} and hit enter to see a summary 
 similar to the following:
 \begin{center}
+%\small       too big
+%\tiny        too small
+\footnotesize
 \begin{verbatim}
 Name       Arch     OpSys        State      Activity   LoadAv Mem  ActvtyTime
 
@@ -164,6 +169,7 @@ anthrax.cs INTEL    SOLARIS251   Claimed    Busy       0.285  64    0+00:00:00
 astro.cs.w INTEL    SOLARIS251   Claimed    Busy       0.949  64    0+05:30:00
 aura.cs.wi SUN4u    SOLARIS251   Owner      Idle       1.043  128   0+14:40:15
 \end{verbatim}
+\normalsize
 \Dots 
 \end{center}
 
@@ -203,7 +209,7 @@ add a physical location attribute to your machine ClassAds.
 %
 \begin{center}
 \begin{figure}
-\CondorVerySmall
+\small
 \begin{verbatim}
 MyType = "Machine"
 TargetType = "Job"
@@ -242,7 +248,7 @@ LastHeardFrom = 892191963
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Road-map for running jobs with Condor}
+\section{Road-map for Running Jobs}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{job!preparation}
@@ -285,10 +291,10 @@ The manual page for \Condor{compile} on page~\pageref{man-condor-compile} has de
 
 The vanilla universe provides a way to run jobs that cannot be
 relinked.
-It depends on a shared file system for access to input and output
-files,
-and there is no way to take a checkpoint or migrate a job executed
+There is no way to take a checkpoint or migrate a job executed
 under the vanilla universe.
+For access to input and output files, jobs must either use a shared
+file system, or use Condor's File Transfer mechanism.
 
 Choose a universe under which to run the Condor program,
 and re-link the program if necessary.
@@ -351,8 +357,11 @@ universes for user jobs:
 	\item Vanilla
 	\item PVM
  	\item MPI
-	\item Globus
+	\item Globus or Grid
 	\item Java
+	\item Scheduler
+	\item Local
+ 	\item Parallel
 \end{itemize}
 
 The \AdAttr{Universe} attribute is specified in the submit description file.
@@ -369,16 +378,31 @@ The \Expr{PVM} universe is for programs written to the Parallel Virtual
 Machine interface.  See section~\ref{sec:PVM} for more about PVM and Condor.
 \index{universe!MPI}
 The \Expr{MPI} universe is for programs written to the MPICH interface.
-See section~\ref{sec:MPI} for more about MPI and Condor.
+See section~\ref{sec:MPI} for more about MPI and Condor. The MPI Universe
+has be superseded by the~\Expr{Parallel} universe.
 \index{universe!Globus}
-The Globus universe allows users to submit Globus jobs through the
-Condor interface.  See \Url{http://www.globus.org} for more about Globus.
+\index{universe!Grid}
+The Globus or Grid universe allows users to submit 
+jobs using Condor's interface.
+These jobs are submitted for execution on grid resources.
+For Globus jobs,
+see \URL{http://www.globus.org} for more information.
 \index{universe!Java}
 \index{Java}
 \index{Java Virtual Machine}
 \index{JVM}
 The Java universe allows users to run jobs written for the
 Java Virtual Machine (JVM).
+%\index{universe!Scheduler}
+The \Expr{scheduler} universe allows users to submit lightweight jobs
+to be spawned by the \Condor{schedd} on the submit host itself.
+\index{universe!Parallel}
+The \Expr{Parallel} universe is for programs that require multiple machines
+for one job.
+See section~\ref{sec:Parallel} for more about the Parallel universe
+%\index{universe!Local}
+%The local universe . . .
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:standard-universe}Standard Universe}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -469,36 +493,27 @@ complete it at a later time,
 or it can give up and restart the job \emph{from the beginning} 
 on another machine in the pool.
 
-\Notice{
-Under Unix, jobs submitted as vanilla universe jobs rely on an
-external mechanism for accessing data files,
-such as NFS or AFS.
-The job \emph{must} be able to access the data
-files from any machine on which it could potentially run.
-As an example,
-suppose a job is submitted from blackbird.cs.wisc.edu, and the job requires
-a particular data file called \File{/u/p/s/psilord/data.txt}.
-If the job were to run on cardinal.cs.wisc.edu, the file
-\File{/u/p/s/psilord/data.txt} must be available through either
-NFS or AFS for the job to run correctly.
+Since Condor's remote system call features cannot be used with the
+vanilla universe, access to the job's input and output files becomes a
+concern.
+One option is for Condor to rely on a shared file system, such as NFS
+or AFS. 
+Alternatively, Condor has a mechanism for transferring files on behalf
+of the user.
+In this case, Condor will transfer any files needed by a job to the
+execution site, run the job, and transfer the output back to the
+submitting machine.
 
-Condor deals with this restriction imposed by the vanilla universe by
-using
-the \AdAttr{FileSystemDomain} and \AdAttr{UidDomain} machine
-ClassAd attributes.
-These attributes reflect the reality of the pool's disk
-mounting structure.
-For a large pool spanning multiple
-\AdAttr{UidDomain} and/or \AdAttr{FileSystemDomain}s, the job
-must specify
-its \AdAttr{requirements} to use the correct \AdAttr{UidDomain} and/or
-\AdAttr{FileSystemDomain}s.
+Under Unix, the Condor presumes a shared file system for vanilla jobs. 
+However, if a shared file system is unavailable, a user can enable the
+Condor File Transfer mechanism.
+On Windows platforms, the default is to use the File Transfer
+mechanism.
+For details on running a job with a shared file system, see
+section~\ref{sec:shared-fs} on page~\pageref{sec:shared-fs}.
+For details on using the Condor File Transfer mechanism, see 
+section~\ref{sec:file-transfer} on page~\pageref{sec:file-transfer}.
 
-This mechanism is not required under Windows NT.
-The vanilla universe does \emph{not} require
-a shared file system due to the Condor File Transfer mechanism. Please see
-chapter~\ref{condor-nt} for more details about Condor NT.
-}
 
 %%%%%%%%%%%%
 \subsubsection{PVM Universe}
@@ -525,8 +540,14 @@ Please see section~\ref{sec:MPI} for more details.
 The Globus universe in Condor is intended to provide the standard
 Condor interface to users who wish to start Globus system jobs
 from Condor. Each job queued in the job submission file is translated
-into a Globus RSL string and used as the arguments to the \Prog{globusrun}
-program. The manual page for \Condor{submit}
+into the Globus Resource Specification Language (RSL) and subsequently 
+submitted to Globus via the GRAM
+protocol. You benefit from using the Globus universe because Condor
+maintains your jobs in a queue on your submit machine and can deal
+with a wide variety of common errors you might
+experience. Section~\ref{sec:Condor-G} on page~\pageref{sec:Condor-G}
+has details on using the Globus universe.
+The manual page for \Condor{submit}
 on page~\pageref{man-condor-submit}
 has detailed descriptions of
 the Globus-related attributes.
@@ -542,8 +563,60 @@ with a JVM regardless of its location, owner, or JVM version.  Condor
 will take care of all the details such as finding the JVM binary and
 setting the classpath.
 
+%%%%%%%%%%%%
+\subsubsection{Scheduler Universe}
+%%%%%%%%%%%%
+
+\index{universe!Scheduler}
+
+The \Expr{scheduler} universe allows users to submit lightweight jobs
+to be run immediately alongside the \Condor{schedd} on the submit host
+itself.
+
+\Expr{Scheduler} universe jobs are not matched with a remote machine,
+and will never be preempted.  They do not obey \Expr{requirements}.
+
+Originally intended for meta-schedulers like \Condor{dagman} (hence
+the name ``scheduler''), the \Expr{scheduler} universe can also be
+used to manage jobs of any sort that need to run on the submit host.
+
+However, unlike the \Expr{local} universe, the \Expr{scheduler}
+universe does not use a \Condor{starter} to manage the job, and thus
+offers limited features and policy support.  The \Expr{local} universe
+is a better choice for most jobs which must run on the submit host, as
+it offers a richer set of job-management features, and is more
+consistent with other remote universes like \Expr{vanilla}.
+
+The \Expr{scheduler} universe may be deprecated in the future, in
+favor of the newer \Expr{local} universe.
+
+%%%%%%%%%%%%
+\subsubsection{Parallel Universe}
+%%%%%%%%%%%%
+\index{universe!Parallel}
+The Parallel universe allows parallel programs, such as MPI jobs.
+interface to be used within the opportunistic Condor environment.
+Please see section~\ref{sec:Parallel} for more details.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:local-universe}Local Universe}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{universe!local}
+The local universe allows a Condor job to be submitted and
+executed with different assumptions for the execution conditions
+of the job.
+The job does not wait to be matched with a machine.
+It instead executes right away, on the machine where the job
+is submitted.
+The job will never be preempted.
+The machine requirements are not considered for local universe
+jobs.
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Submitting a Job to Condor}
+\section{Submitting a Job}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{job!submitting}
@@ -717,12 +790,13 @@ will be written into file \File{foo.log}.
 \index{submit description file!examples|)}
 
 %%%%%%%%%%%%%%%%%
-\subsection{About Requirements and Rank}
+\subsection{\label{sec:user-man-req-and-rank}About Requirements and Rank}
 %%%%%%%%%%%%%%%%%
 
 The 
 \AdAttr{requirements} and \AdAttr{rank} commands in the submit description file
 are powerful and flexible. 
+\index{submit commands!requirements}
 \index{requirements attribute}
 \index{rank attribute}
 \index{ClassAd attribute!requirements}
@@ -745,16 +819,14 @@ All of the commands in the submit description file are case insensitive,
 \emph{except} for the ClassAd attribute string values.
 ClassAds attribute names are
 case insensitive, but ClassAd string
-values are always \emph{case sensitive}.
-The correct specification for an architecture is
-\begin{verbatim}
-        requirements = arch == "ALPHA"
-\end{verbatim}
-so an accidental specification of
-\begin{verbatim}
-        requirements = arch == "alpha"
-\end{verbatim}
-will not work due to the incorrect case.
+values are \emph{case preserving}.
+
+Note that the comparison operators
+(\verb@<@, \verb@>@, \verb@<=@, \verb@>=@, and \verb@==@)
+compare strings
+case insensitively.  The special comparison operators 
+\verb@=?=@ and \verb@=!=@
+compare strings case sensitively.
 
 The allowed
 ClassAd attributes are those 
@@ -778,13 +850,14 @@ to your site's installation and policies.
 \subsubsection{\label{user-man-machad}ClassAd Machine Attributes}
 \input{user-man/machad.tex}
 
-\subsubsection{\label{user-man-machad}ClassAd Job Attributes}
+\subsubsection{\label{user-man-jobad}ClassAd Job Attributes}
 \input{user-man/jobad.tex}
 
-\subsubsection{\label{user-man-machad}Rank Expression Examples}
+\subsubsection{\label{rank-examples}Rank Expression Examples}
 
 \index{rank attribute!examples}
 \index{ClassAd attribute!rank examples}
+\index{submit commands!rank}
 When considering the match between a job and a machine, rank is used
 to choose a match from among all machines that satisfy the job's
 requirements and are available to the user, after accounting for
@@ -852,7 +925,7 @@ So, it is wise when writing a \AdAttr{rank} expression to check
 if the expression's evaluation will lead to the expected
 resulting ranking of machines.
 This can be accomplished using the \Condor{status} command with the
-\oArg{-constraint} argument.  This allows the user to see a list of
+\Arg{-constraint} argument.  This allows the user to see a list of
 machines that fit a constraint.
 To see which machines in the pool have \AdAttr{kflops} defined,
 use
@@ -895,6 +968,833 @@ machine \AdStr{friend3.cs.wisc.edu},
 and all three of these machines are ranked higher than others.
 
 %%%%%%%%%%%% 
+\subsection{\label{sec:shared-fs}
+Submitting Jobs Using a Shared File System} 
+%%%%%%%%%%%%
+\index{job!submission using a shared file system}
+\index{shared file system!submission of jobs}
+
+If vanilla, Java, Parallel or MPI
+jobs are submitted without using the File Transfer mechanism, 
+Condor must use a shared file system to access input and output
+files. 
+In this case, the job \emph{must} be able to access the data files
+from any machine on which it could potentially run.
+
+As an example, suppose a job is submitted from blackbird.cs.wisc.edu,
+and the job requires a particular data file called
+\File{/u/p/s/psilord/data.txt}.  If the job were to run on
+cardinal.cs.wisc.edu, the file \File{/u/p/s/psilord/data.txt} must be
+available through either NFS or AFS for the job to run correctly.
+
+Condor allows users to ensure their jobs have access to the right
+shared files by using the \AdAttr{FileSystemDomain} and
+\AdAttr{UidDomain} machine ClassAd attributes.
+These attributes specify which machines have access to the same shared
+file systems.
+All machines that mount the same shared directories in the same
+locations are considered to belong to the same file system domain.
+Similarly, all machines that share the same user information (in
+particular, the same UID, which is important for file systems like
+NFS) are considered part of the same UID domain.
+
+The default configuration for Condor places each machine
+in its own UID domain and file system domain, using the full hostname of the
+machine as the name of the domains.
+So, if a pool \emph{does} have access to a shared file system,
+the pool administrator \emph{must} correctly configure Condor 
+such that all
+the machines mounting the same files have the same
+\AdAttr{FileSystemDomain} configuration.
+Similarly, all machines that share common user information must be
+configured to have the same \AdAttr{UidDomain} configuration.
+
+When a job relies on a shared file system,
+Condor uses the
+\AdAttr{requirements} expression to ensure that the job runs
+on a machine in the
+correct \AdAttr{UidDomain} and \AdAttr{FileSystemDomain}.
+In this case, the default \AdAttr{requirements} expression specifies
+that the job must run on a machine with the same \AdAttr{UidDomain}
+and \AdAttr{FileSystemDomain} as the machine from which the job
+is submitted.
+This default is almost always correct.
+However, in a pool spanning multiple \AdAttr{UidDomain}s and/or
+\AdAttr{FileSystemDomain}s, the user may need to specify a different
+\AdAttr{requirements} expression to have the job run on the correct
+machines.
+
+For example, imagine a pool made up of both desktop workstations and a
+dedicated compute cluster.
+Most of the pool, including the compute cluster, has access to a
+shared file system, but some of the desktop machines do not.
+In this case, the administrators would probably define the
+\AdAttr{FileSystemDomain} to be \File{cs.wisc.edu} for all the machines
+that mounted the shared files, and to the full hostname for each
+machine that did not. An example is \File{jimi.cs.wisc.edu}.
+
+In this example,
+a user wants to submit vanilla universe jobs from her own desktop
+machine (jimi.cs.wisc.edu) which does not mount the shared file system
+(and is therefore in its own file system domain, in its own world).
+But, she wants the jobs to be able to run on more than just her own
+machine (in particular, the compute cluster), so she puts the program
+and input files onto the shared file system.
+When she submits the jobs, she needs to tell Condor to send them to
+machines that have access to that shared data, so she specifies a
+different \AdAttr{requirements} expression than the default:
+\begin{verbatim}
+   Requirements = UidDomain == "cs.wisc.edu" && \
+                  FileSystemDomain == "cs.wisc.edu"
+\end{verbatim}
+
+\Warn If there is \emph{no} shared file system, or the Condor pool
+administrator does not configure the \AdAttr{FileSystemDomain}
+setting correctly (the default is that each machine in a pool is in
+its own file system and UID domain), a user submits a job that cannot
+use remote system calls (for example, a vanilla universe job), and the
+user does not enable Condor's File Transfer mechanism, the job will
+\emph{only} run on the machine from which it was submitted.
+
+
+%%%%%%%%%%%% 
+\subsection{\label{sec:file-transfer}
+Submitting Jobs Without a Shared File System:
+Condor's File Transfer Mechanism} 
+%%%%%%%%%%%%
+
+\index{job!submission without a shared file system}
+\index{shared file system!submission of jobs without one}
+\index{file transfer mechanism}
+\index{transferring files}
+
+Condor works well without a shared file system.
+The Condor file transfer mechanism is utilized by the user
+when the user submits jobs.
+Condor will transfer any files needed by a job from
+the machine where the job was submitted into a
+temporary working directory on the machine where the
+job is to be executed.
+Condor executes the job
+and transfers output back to the submitting machine.
+The user specifies which files to transfer,
+and at what point the output files should be copied back to the
+submitting machine.
+This specification is done within the job's submit description file.
+
+The default behavior of the file transfer mechanism
+varies across the
+different Condor universes, and it differs between UNIX and Windows machines.
+
+%%%%%%%%%%%% 
+\subsubsection{Default Behavior across Condor Universes and Platforms}
+%%%%%%%%%%%%
+
+For jobs submitted under the standard universe,
+the existence of a shared file system is not relevant.
+Access to files (input and output) is handled through Condor's
+remote system call mechanism.
+The executable and checkpoint files are transfered automatically, when
+needed. 
+Therefore, the user does not need to change the submit description
+file if there is no shared file system.
+
+For the vanilla, Java, MPI, and Parallel universes, access to files (including
+the executable) through a shared file system is presumed as a default
+on UNIX machines.
+If there is no shared file system, then Condor's file transfer
+mechanism must be explicitly enabled.
+When submitting a job from a Windows machine,
+Condor presumes the opposite: no access to a shared file system.
+It instead enables the file transfer mechanism by default.
+Submission of a job might need to specify which files to
+transfer, and/or when to transfer the output files back.
+
+For the grid universe,
+jobs are to be executed on remote machines, so there would never
+be a shared file system between machines.
+See section~\ref{sec:Condor-G} for more details.
+
+For the PVM universe,
+file transfer other than the master's executable and files given in
+\SubmitCmd{input},
+\SubmitCmd{output}, and
+\SubmitCmd{error} commands is not supported.
+This is not usually an impediment (shared file system or not), since
+PVM jobs are set up to have the master direct the workers, and I/O
+from the workers is usually passed back to the master via PVM
+messages, not files.
+
+For the scheduler universe,
+Condor is only using the machine from which the job is submitted.
+Therefore, the existence of a shared file system is not relevant.
+
+
+%%%%%%%%%%%% 
+\subsubsection{Specifying If and When to Transfer Files
+\label{sec:file-transfer-if-when}}
+%%%%%%%%%%%%
+
+To enable the file transfer mechanism, two commands are
+placed in the job's submit description file:
+\SubmitCmd{should\_transfer\_files} and \SubmitCmd{when\_to\_transfer\_output}.
+\index{submit commands!should\_transfer\_files}
+\index{submit commands!when\_to\_transfer\_output}
+An example is:
+
+\begin{verbatim}
+  should_transfer_files = YES
+  when_to_transfer_output = ON_EXIT
+\end{verbatim}
+
+The \SubmitCmd{should\_transfer\_files} command specifies
+whether Condor should
+transfer input files from the submit machine to the remote machine
+where the job executes.
+It also specifies whether the output files are transferred 
+back to the submit machine.
+The command takes on one of three possible values:
+\begin{enumerate}
+
+\item \verb@YES@: Condor always transfers both input and output files.
+
+\item \verb@IF_NEEDED@: Condor transfers files if the job is
+matched with (and to be executed on) a machine in a
+different \Attr{FileSystemDomain} than the
+one the submit machine belongs to.
+If the job is matched with a machine in the local \Attr{FileSystemDomain},
+Condor will not transfer files and relies
+on a shared file system.
+
+\item \verb@NO@: Condor's file transfer mechanism is disabled. 
+
+\end{enumerate}
+
+The \SubmitCmd{when\_to\_transfer\_output} command tells Condor when output
+files are to be transferred back to the submit machine after the job
+has executed on a remote machine.
+The command takes on one of two possible values:
+
+\begin{enumerate}
+\item \verb@ON_EXIT@: Condor transfers output files back to the submit
+machine only when the job exits on its own.
+
+\item \verb@ON_EXIT_OR_EVICT@:
+Condor will always do the transfer,
+whether the job completes on its own, is preempted by another job, 
+vacates the machine, or is killed.
+As the job completes on its own, files are transferred back
+to the directory where the job was submitted, as expected.
+For the other cases, \emph{files are transferred back at eviction time}.
+These files are placed in
+the directory defined by the configuration
+variable \MacroNI{SPOOL}, not the directory from which the
+job was submitted.
+The transferred files are named using the
+\Attr{ClusterId} and \Attr{ProcId} job ClassAd attributes. 
+The file name takes the form:
+\begin{verbatim}
+   cluster<X>.proc<Y>.subproc0
+\end{verbatim}
+where \verb@<X>@ is the value of \Attr{ClusterId}, and 
+\verb@<Y>@ is the value of \Attr{ProcId}. 
+As an example, job 735.0 may produce the file
+\begin{verbatim}
+   $(SPOOL)/cluster735.proc0.subproc0
+\end{verbatim}
+
+This is only useful if partial runs of the job are valuable.
+An example of valuable partial runs is when the application
+produces its own checkpoints.
+\end{enumerate}
+
+There is no default value for \SubmitCmd{when\_to\_transfer\_output}.
+If using the file transfer mechanism, 
+this command must be defined.
+If \SubmitCmd{when\_to\_transfer\_output} is specified in the submit
+description file,
+but \SubmitCmd{should\_transfer\_files} is not, Condor assumes a
+value of \verb@YES@ for \SubmitCmd{should\_transfer\_files}.
+
+\Note The combination of:
+\begin{verbatim}
+  should_transfer_files = IF_NEEDED
+  when_to_transfer_output = ON_EXIT_OR_EVICT
+\end{verbatim}
+would produce undefined file access semantics.
+Therefore, this combination is prohibited by \Condor{submit}.
+
+When submitting from a Unix platform,
+the file transfer mechanism is unused by default.
+If neither \SubmitCmd{when\_to\_transfer\_output} or \SubmitCmd{should\_transfer\_files} 
+are defined, Condor assumes
+\verb@should_transfer_files = NO@.
+
+When submitting from a Windows platform,
+Condor does not provide any way to use a shared file
+system for jobs. 
+Therefore, if 
+neither \SubmitCmd{when\_to\_transfer\_output} or \SubmitCmd{should\_transfer\_files}
+are defined, the file
+transfer mechanism is enabled by default with the following values:
+
+\begin{verbatim}
+  should_transfer_files = YES
+  when_to_transfer_output = ON_EXIT
+\end{verbatim}
+
+\Note Prior to Condor version 6.5.2, different attributes were used to
+control when and if files should be transferred.
+Previously, a single attribute was used to control both things, and
+the \verb@IF_NEEDED@ value was not supported.
+This older attribute is still allowed in newer versions of Condor but
+it is now deprecated.
+\SubmitCmd{when\_to\_transfer\_output} and
+\SubmitCmd{should\_transfer\_files} should be used instead.
+However, beware that these settings will not work with Condor versions
+older than 6.5.2. 
+
+
+%%%%%%%%%%%% 
+\subsubsection{Specifying What Files to Transfer}
+%%%%%%%%%%%%
+
+If the file transfer mechanism is enabled,
+Condor will transfer the following files before the job
+is run on a remote machine.
+\begin{enumerate}
+  \item the executable
+  \item the input, as defined with the \SubmitCmd{input} command
+  \item any jar files (for the Java universe)
+\end{enumerate}
+If the job requires any other input files,
+the submit description file should utilize the
+\SubmitCmd{transfer\_input\_files} command.
+This comma-separated list specifies any other files that Condor is to
+transfer to a remote site to set up the execution environment for the
+job before it is run.
+These files are placed in the same temporary working directory
+as the job's executable.
+At this time, directories can not be transferred in this way.
+For example:
+
+\begin{verbatim}
+  transfer_input_files = file1,file2 
+\end{verbatim}
+
+As a default, for jobs other than those submitted to the grid universe,
+any files that are modified or created by the job in the
+temporary directory at the remote site are transferred back
+to the machine from which the job was submitted.
+Most of the time, this is the best option.
+To restrict the files that are transferred,
+specify the exact list of files with  \SubmitCmd{transfer\_output\_files}.
+Delimite these file names with a comma.
+When this list is defined, and any of the files do not exist as the
+job exits, Condor considers this an error, and re-runs the job.
+
+\Warn Do not specify \SubmitCmd{transfer\_output\_files} (for other than
+grid universe jobs) unless there is a
+really good reason -- it is best to let Condor figure things out by
+itself based upon what output the job produces.
+
+For grid universe jobs, files to be transferred 
+(other than standard output and standard error)
+must be specified using \SubmitCmd{transfer\_output\_files}
+in the submit description file. 
+
+%%%%%%%%%%%%
+\subsubsection{File Paths for File Transfer}
+%%%%%%%%%%%%
+
+% Note: it might be nice to get the initialdir entry in
+% the index to refer to something in here.
+
+% Note: a Windows-based example would be good, too.
+
+The file transfer mechanism specifies file names and/or paths on
+both the file system of the submit machine and on the
+file system of the execute machine.
+Care must be taken to know which machine (submit or execute)
+is utilizing the file name and/or path. 
+
+Files in the \SubmitCmd{transfer\_input\_files} command
+are specified as they are accessed on the submit machine.
+The program (as it executes) accesses files as they are
+found on the execute machine.
+
+There are three ways to specify files and paths
+for \SubmitCmd{transfer\_input\_files}:
+\begin{enumerate}
+\item Relative to the submit directory, if the submit command
+\SubmitCmd{initialdir} is not specified.
+\item Relative to the initial directory, if the submit command 
+\SubmitCmd{initialdir} is specified.
+\item Absolute.
+\end{enumerate}
+
+Before executing the program, Condor copies the
+executable, an input file as specified
+by the submit command \SubmitCmd{input},
+along with any input files specified 
+by \SubmitCmd{transfer\_input\_files}.
+All these files are placed into
+a temporary directory (on the execute machine)
+in which the program runs.
+Therefore,
+the executing program must access input files \emph{without} paths.
+Because all transferred files are placed into a single,
+flat directory,
+input files must be uniquely named to
+avoid collision when transferred.
+A collision causes the last file in the list to
+overwrite the earlier one.
+
+If the program creates output files during execution,
+it must create them within the temporary working directory.
+Condor transfers back all files within the temporary
+working directory that have been modified or created.
+To transfer back only a subset of these files,
+the submit command
+\SubmitCmd{transfer\_output\_files}
+is defined.
+Transfer of files that exist,
+but are not within the temporary working directory is not supported.
+Condor's behavior in this instance is undefined.
+
+It is
+okay to create files outside the temporary working directory
+on the file system of the execute machine,
+(in a directory such as \File{/tmp})
+if this directory is guaranteed to exist and be
+accessible on all possible execute machines.
+However,
+transferring such a file back after execution completes
+may not be done.
+
+Here are several examples to illustrate the use of file transfer.
+The program executable is called \Prog{my\_program},
+and it uses three command-line arguments as it executes: 
+two input file names and an output file name.
+The program executable and the submit description file 
+for this job are located in directory
+\File{/scratch/test}. 
+
+The directory tree for all these examples:
+\begin{verbatim}
+/scratch/test (directory)
+      my_program.condor (the submit description file)
+      my_program (the executable)
+      files (directory)
+          logs2 (directory)
+          in1 (file)
+          in2 (file)
+      logs (directory)
+\end{verbatim}
+
+%--------------------------
+\begin{description}
+\item[Example 1]
+
+This simple example explicitly transfers input files.
+These input files to be transferred
+are specified relative to the directory where the job is submitted.
+The single output file, \File{out1}, created when the job is executed
+will be transferred back into the directory
+\File{/scratch/test}, \emph{not} the \File{files} directory. 
+
+\footnotesize
+\begin{verbatim}
+# file name:  my_program.condor
+# Condor submit description file for my_program
+Executable      = my_program
+Universe        = vanilla
+Error           = logs/err.$(cluster)
+Output          = logs/out.$(cluster)
+Log             = logs/log.$(cluster)
+
+should_transfer_files = YES
+when_to_transfer_output = ON_EXIT
+transfer_input_files = files/in1, files/in2
+
+Arguments       = in1 in2 out1
+Queue
+\end{verbatim}
+\normalsize
+
+%--------------------------
+\item[Example 2]
+
+This second example is identical to Example 1,
+except that absolute paths to the input files are specified,
+instead of relative paths to the input files.
+
+\footnotesize
+\begin{verbatim}
+# file name:  my_program.condor
+# Condor submit description file for my_program
+Executable      = my_program
+Universe        = vanilla
+Error           = logs/err.$(cluster)
+Output          = logs/out.$(cluster)
+Log             = logs/log.$(cluster)
+
+should_transfer_files = YES
+when_to_transfer_output = ON_EXIT
+transfer_input_files = /scratch/test/files/in1, /scratch/test/files/in2
+
+Arguments       = in1 in2 out1
+Queue
+\end{verbatim}
+\normalsize
+
+%--------------------------
+\item[Example 3]
+
+This third example illustrates the use of the 
+submit command \SubmitCmd{initialdir}, and its effect
+on the paths used for the various files.
+The expected location of the 
+executable is not affected by the 
+\SubmitCmd{initialdir} command.
+All other files
+(specified by \SubmitCmd{input},
+\SubmitCmd{output},
+\SubmitCmd{transfer\_input\_files},
+as well as files modified or created by the job
+and automatically transferred back)
+are located relative to the specified \SubmitCmd{initialdir}.
+Therefore, the output file, \File{out1},
+will be placed in the \verb@files@ directory.
+Note that the \File{logs2} directory
+exists to make this example work correctly.
+
+\footnotesize
+\begin{verbatim}
+# file name:  my_program.condor
+# Condor submit description file for my_program
+Executable      = my_program
+Universe        = vanilla
+Error           = logs2/err.$(cluster)
+Output          = logs2/out.$(cluster)
+Log             = logs2/log.$(cluster)
+
+initialdir      = files
+
+should_transfer_files = YES
+when_to_transfer_output = ON_EXIT
+transfer_input_files = in1, in2
+
+Arguments       = in1 in2 out1
+Queue
+\end{verbatim}
+\normalsize
+
+%--------------------------
+\item[Example 4 -- Illustrates an Error]
+
+This example illustrates a job that will fail.
+The files specified using the
+\SubmitCmd{transfer\_input\_files} command work
+correctly (see Example 1).
+However,
+relative paths to files in the
+\SubmitCmd{arguments} command
+cause the executing program to fail.
+The file system on the submission side may utilize
+relative paths to files,
+however those files are placed into a single,
+flat, temporary directory on the execute machine.
+
+Note that this specification and submission will cause the
+job to fail and reexecute.
+
+\footnotesize
+\begin{verbatim}
+# file name:  my_program.condor
+# Condor submit description file for my_program
+Executable      = my_program
+Universe        = vanilla
+Error           = logs/err.$(cluster)
+Output          = logs/out.$(cluster)
+Log             = logs/log.$(cluster)
+
+should_transfer_files = YES
+when_to_transfer_output = ON_EXIT
+transfer_input_files = files/in1, files/in2
+
+Arguments       = files/in1 files/in2 files/out1
+Queue
+\end{verbatim}
+\normalsize
+
+This example fails with the following error:
+\footnotesize
+\begin{verbatim}
+err: files/out1: No such file or directory.
+\end{verbatim}
+\normalsize
+
+%--------------------------
+\item[Example 5 -- Illustrates an Error]
+
+As with Example 4,
+this example illustrates a job that will fail.
+The executing program's use of 
+absolute paths cannot work.
+
+\footnotesize
+\begin{verbatim}
+# file name:  my_program.condor
+# Condor submit description file for my_program
+Executable      = my_program
+Universe        = vanilla
+Error           = logs/err.$(cluster)
+Output          = logs/out.$(cluster)
+Log             = logs/log.$(cluster)
+
+should_transfer_files = YES
+when_to_transfer_output = ON_EXIT
+transfer_input_files = /scratch/test/files/in1, /scratch/test/files/in2
+
+Arguments = /scratch/test/files/in1 /scratch/test/files/in2 /scratch/test/files/out1
+Queue
+\end{verbatim}
+\normalsize
+
+The job fails with the following error:
+\footnotesize
+\begin{verbatim}
+err: /scratch/test/files/out1: No such file or directory.
+\end{verbatim}
+\normalsize
+
+% Karen has editted to this point in the file transfer sections.
+
+%--------------------------
+\item[Example 6 -- Illustrates an Error]
+
+This example illustrates a failure case
+where the executing program creates an output file in a directory
+other than within the single, flat, temporary directory that the 
+program executes within.
+The file creation may or may not cause an error,
+depending on the existence and permissions
+of the directories on the remote file system.
+
+Further incorrect usage is seen during
+the attempt to transfer the output file back 
+using the \SubmitCmd{transfer\_output\_files} command.
+The behavior of Condor for this case is undefined.
+
+\footnotesize
+\begin{verbatim}
+# file name:  my_program.condor
+# Condor submit description file for my_program
+Executable      = my_program
+Universe        = vanilla
+Error           = logs/err.$(cluster)
+Output          = logs/out.$(cluster)
+Log             = logs/log.$(cluster)
+
+should_transfer_files = YES
+when_to_transfer_output = ON_EXIT
+transfer_input_files = files/in1, files/in2
+transfer_output_files = /tmp/out1
+
+Arguments       = in1 in2 /tmp/out1
+Queue
+\end{verbatim}
+\normalsize
+
+\end{description}
+
+%%%%%%%%%%%% 
+\subsubsection{Requirements and Rank for File Transfer}
+%%%%%%%%%%%%
+
+\index{submit commands!requirements}
+The \Attr{requirements} expression for a job must depend
+on the \verb@should_transfer_files@ command.
+The job must specify the correct logic to ensure that the job is matched
+with a resource that meets the file transfer needs.
+If no \Attr{requirements} expression is in the submit description file,
+or if the expression specified does not refer to the
+attributes listed below, \Condor{submit} adds an
+appropriate clause to the \Attr{requirements} expression for the job.
+\Condor{submit} appends these clauses with a logical AND, \verb@&&@,
+to ensure that the proper conditions are met.
+Here are the default clauses corresponding to the different values of
+\verb@should_transfer_files@:
+
+\begin{enumerate}
+
+\item 
+\verb@should_transfer_files = YES@ results in the addition of
+the clause \verb@(HasFileTransfer)@.
+  If the job is always going to transfer files, it is required to 
+  match with a machine that has the capability to transfer files.
+  This is a backward compatibility issue, since all versions
+  of Condor since version 6.3.3 support file transfer and have
+  \Attr{HasFileTransfer} defined to \verb@TRUE@.
+
+\item 
+\verb@should_transfer_files = NO@ results in the addition of
+  \verb@(TARGET.FileSystemDomain == MY.FileSystemDomain)@.
+  In addition, Condor automatically adds the
+  \Attr{FileSystemDomain} attribute to the job ad, with whatever
+  string is defined for the \Condor{schedd} to which the job is
+  submitted.
+  If the job is not using the file transfer mechanism, Condor assumes
+  it will need a shared file system, and therefore, a machine in the
+  same \Attr{FileSystemDomain} as the submit machine.
+
+\item \verb@should_transfer_files = IF_NEEDED@ results in the addition of
+\begin{verbatim}
+  (HasFileTransfer || (TARGET.FileSystemDomain == MY.FileSystemDomain))
+\end{verbatim}
+  If Condor will optionally transfer files, it must require
+  that the machine is \emph{either} capable of transferring files
+  \emph{or} in the same file system domain.
+
+\end{enumerate}
+
+To ensure that the job is matched to a machine with enough local disk
+space to hold all the transfered files, Condor automatically adds the
+\Attr{DiskUsage} job attribute.
+This attribute includes the total
+size of the job's executable and all input files to be transferred.
+Condor then adds an additional clause to the \Attr{Requirements}
+expression that states that the remote machine must have at least
+enough available disk space to hold all these files:
+\begin{verbatim}
+  && (Disk >= DiskUsage)
+\end{verbatim}
+
+If \verb@should_transfer_files = IF_NEEDED@ and the job prefers
+to run on a machine in the local file system domain
+over transferring files,
+(but are still willing to allow the job to run remotely and transfer
+\index{submit commands!rank}
+files), the \Attr{rank} expression works well.  Use:
+
+\begin{verbatim}
+rank = (TARGET.FileSystemDomain == MY.FileSystemDomain)
+\end{verbatim}
+
+The \Attr{rank} expression is a floating point number, so if 
+other items are considered in ranking the possible machines this job
+may run on, add the items:
+
+\begin{verbatim}
+rank = kflops + (TARGET.FileSystemDomain == MY.FileSystemDomain)
+\end{verbatim}
+
+The value of \Attr{kflops} can vary widely among machines,
+so this \Attr{rank} expression will likely not do as it intends.
+To place emphasis on the job running in the same file
+system domain,
+but still consider kflops among the machines in the file system domain,
+weight the part of the rank expression that is matching the file system domains.
+For example: 
+
+\begin{verbatim}
+rank = kflops + (10000 * (TARGET.FileSystemDomain == MY.FileSystemDomain))
+\end{verbatim}
+
+%%%%%%%%%%%% 
+\subsubsection{Old Attributes for File Transfer}
+%%%%%%%%%%%%
+
+The \verb@should_transfer_files@ and \verb@when_to_transfer_output@
+commands in the submit description file result in two corresponding string
+attributes in the job ClassAd: \Attr{ShouldTransferFiles} and
+\Attr{WhenToTransferOutput}.
+These attributes are only defined when the job is matched with an
+execute machine running Condor version 6.5.3 or a more recent version.
+So, for backward compatibility, \Condor{submit} also includes the old
+attribute used to control this feature: \Attr{TransferFiles}.
+If you examine a job with the \Opt{-long} option to \Condor{q}, and
+you see \Attr{TransferFiles}, that attribute is only there for
+backward compatibility, and it is ignored if matched with a machine
+running version 6.5.3 or greater.  
+There were problems with this old attribute, since it
+was not flexible enough to handle the new \verb@IF_NEEDED@
+functionality, and it was confusing for users.
+Therefore, \Attr{TransferFiles} is deprecated, and we will no longer
+document its use.
+If your submit file refers to \verb@transfer_files@,
+consider switching it to use the settings described here.
+
+%%%%%%%%%%%% 
+\subsection{Environment Variables}
+%%%%%%%%%%%% 
+
+\index{environment variables}
+\index{execution environment}
+The environment under which a job executes often contains
+information that is potentially useful to the job.
+Condor allows a user to both set and reference environment
+variables for a job or job cluster.
+
+Within a submit description file, the user may define environment
+variables for the job's environment by using the 
+\Opt{environment} command.
+See the \Condor{submit} manual page at
+section~\ref{man-condor-submit} for more details about this command.
+
+The submittor's entire environment can be copied into the job
+ClassAd for the job at job submission.
+The \Opt{getenv} command within the submit description file
+does this.
+See the \Condor{submit} manual page at
+section~\ref{man-condor-submit} for more details about this command.
+
+Commands within the submit description file may reference the
+environment variables of the submitter as a job is submitted.
+Submit description file commands use \verb@$ENV(EnvironmentVariableName)@
+to reference the value of an environment variable.
+Again,
+see the \Condor{submit} manual page at
+section~\ref{man-condor-submit} for more details about this usage.
+
+Condor sets several additional environment variables for each executing
+job that may be useful for the job to reference.
+
+\begin{itemize}
+\item \Env{CONDOR\_SCRATCH\_DIR}
+\index{CONDOR\_SCRATCH\_DIR}
+\index{environment variables!CONDOR\_SCRATCH\_DIR}
+ gives the directory
+where the job may place temporary data files. 
+This directory is unique for
+every job that is run, and it's contents are deleted by Condor
+when the job stops running on a machine, no matter how the job completes.
+
+\item \Env{CONDOR\_VM}
+\index{CONDOR\_VM}
+\index{environment variables!CONDOR\_VM}
+gives the name of the virtual machine (for SMP machines),
+on which the job is run.  This setting is only available in the
+standard universe.
+See 
+section~\ref{sec:Configuring-SMP} for more details about SMP
+machines and their configuration.
+
+\item \Env{X509\_USER\_PROXY}
+\index{X509\_USER\_PROXY}
+\index{environment variables!X509\_USER\_PROXY}
+gives the full path to the X509 user proxy file if one is
+associated with the job.  (Typically a user will specify
+\SubmitCmd{x509userproxy} in the submit file.)
+This setting is currently available in the
+local, java, and vanilla universes.
+
+\end{itemize}
+
+
+
+%%%%%%%%%%%% 
 \subsection{Heterogeneous Submit: Execution on Differing Architectures} 
 %%%%%%%%%%%%
 
@@ -932,7 +1832,7 @@ To list the architecture and operating systems of the machines
 in a pool, run \Condor{status}.
 
 %%%%%%%%%%%% 
-\subsection{Vanilla Universe Example for Execution on Differing Architectures} 
+\subsubsection{Vanilla Universe Example for Execution on Differing Architectures} 
 %%%%%%%%%%%%
 
 A more complex example of a heterogeneous submission
@@ -944,7 +1844,7 @@ then a modification to the submit description file
 will allow Condor to choose an executable after an
 available machine is chosen.
 
-A special-purpose MachineAd substitution macro can be used in
+A special-purpose Machine Ad substitution macro can be used in
 the \AdAttr{executable}, \AdAttr{environment},  and \AdAttr{arguments}
 attributes in the submit description file.
 The macro has the form
@@ -1028,7 +1928,7 @@ executable is missing when it happens to match the
 job with a resource that requires the missing binary.
 
 %%%%%%%%%%%% 
-\subsection{Standard Universe Example for Execution on Differing Architectures} 
+\subsubsection{Standard Universe Example for Execution on Differing Architectures} 
 %%%%%%%%%%%%
 
 Jobs submitted to the standard universe may produce checkpoints.
@@ -1049,13 +1949,14 @@ to the \AdAttr{requirements} expression.
 The additional expression is added
 provided the user does not use
 \AdAttr{CkptArch} in the \AdAttr{requirements} expression.
-Condor will remain backwards compatible for those users who have explicitly
+Condor will remain backward compatible for those users who have explicitly
 specified \AdAttr{CkptRequirements}--implying use of \AdAttr{CkptArch},
 in their \AdAttr{requirements} expression.
 
 The expression added when the attribute \AdAttr{CkptArch} is not specified 
 will default to
 
+\footnotesize
 \begin{verbatim}
   # Added by Condor
   CkptRequirements = ((CkptArch == Arch) || (CkptArch =?= UNDEFINED)) && \
@@ -1063,8 +1964,8 @@ will default to
 
   Requirements = (<user specified policy>) && $(CkptRequirements)
 \end{verbatim}
+\normalsize
 
-% DONE TO HERE
 The behavior of the \AdAttr{CkptRequirements} expressions and its addition to
 \AdAttr{requirements} is as follows.
 The \AdAttr{CkptRequirements} expression guarantees correct operation
@@ -1116,12 +2017,12 @@ The complete submit description file for this example:
 \end{verbatim}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Managing a Condor Job}
+\section{Managing a Job}
 \input{user-man/managing.tex}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{\label{sec:Priorities}Priorities in Condor}
+\section{\label{sec:Priorities}Priorities and Preemption}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Condor has two independent priority controls: \Term{job}
@@ -1139,13 +2040,13 @@ To set a job priority, use the \Condor{prio} command
 --- see the example in section~\ref{sec:job-prio}, or the
 command reference page on page~\pageref{man-condor-prio}.
 Job priorities do not impact user priorities in any fashion.
-Job priorities range from -20 to +20,
-with -20 being the worst and with +20 being the best.
+A job priority can be any integer, and higher values are ``better''.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:user-priority-explained}User priority}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\index{preemption!priority}
 \index{user!priority}
 \index{priority!of a user}
 Machines are allocated to users based upon a user's priority.
@@ -1197,7 +2098,11 @@ The default expression that ships with Condor is configured to only preempt
 lower priority jobs that have run
 for at least one hour. So in the previous example, in the worse case it
 could take up to a maximum of one hour until the higher priority user
-receives his fair share of machines. 
+receives his fair share of machines.
+For a general discussion of
+limiting preemption,
+please see
+section \ref{sec:Disabling Preemption} of the Administrator's manual.
 
 User priorities are keyed on ``username@domain'', for example
 ``johndoe@cs.wisc.edu''. The domain name to use, if any, is configured by
@@ -1208,7 +2113,7 @@ even if the user submits jobs from multiple machines.
 \index{nice job}
 \index{priority!nice job}
 An extra feature is the ability to submit a job as
-a ``nice'' job (see page~\pageref{man-condor-submit-nice}).
+a \Term{nice} job (see page~\pageref{man-condor-submit-nice}).
 Nice jobs artificially boost the user priority 
 by one million just for the nice job.
 This effectively means that nice jobs will only run on
@@ -1218,53 +2123,14 @@ the user priority of any specific Condor user very high.
 If done, for example, with a guest account,
 the guest could only use cycles not wanted by other users of the system.
 
-\subsection{Environment Variables}
-
-\index{environment variables}
-\index{execution environment}
-Condor provides several tidbits of information to your job that
-allow it to make sensible decisions when running in a batch mode.
-These are provided in the form of environment variables that your
-job may read in the manner provided by your language.
-
-\begin{itemize}
-\item \Env{CONDOR\_SCRATCH\_DIR} \index{CONDOR\_SCRATCH\_DIR} - This variable gives the name of a directory
-where your job may place temporary data files.  This directory is unique for
-every job that is run, and is always deleted, no matter how your job completes.
-\item \Env{CONDOR\_VM} \index{CONDOR\_VM} - This variable gives the name of the virtual machine,
-if any, on which your job is run.
-\end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\input{user-man/java.tex}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\input{user-man/pvm.tex}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\input{user-man/mpi.tex}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\input{user-man/glidein.tex}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\input{user-man/dagman.tex}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\input{user-man/logview.tex}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{\label{sec:Vacate-Explained}
-About How Condor Jobs Vacate Machines}
+\subsection{\label{sec:Vacate-Explained}
+Details About How Condor Jobs Vacate Machines}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{vacate}
+\index{preemption!vacate}
 When Condor needs a job to vacate a machine for whatever reason, it
 sends the job an asynchronous signal specified in the \AdAttr{KillSig}
 attribute of the job's ClassAd.
@@ -1293,14 +2159,43 @@ universe.
 The user's code may still checkpoint itself at any time
 by calling one of the following functions exported by the Condor libraries:
 \begin{description}
-\item[\func{ckpt()}] Performs a checkpoint and then returns.
-\item[\func{ckpt\_and\_exit()}] Checkpoints and exits; Condor will then
+\item[\Procedure{ckpt()}] Performs a checkpoint and then returns.
+\item[\Procedure{ckpt\_and\_exit()}] Checkpoints and exits; Condor will then
 restart the process again later, potentially on a different machine.
 \end{description}
 
 For jobs submitted into the vanilla universe, the default value for
 \AdAttr{KillSig} is SIGTERM,
 the usual method to nicely terminate a Unix program.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{user-man/java.tex}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{user-man/pvm.tex}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{user-man/mpi.tex}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{user-man/parallel.tex}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{user-man/dagman.tex}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{user-man/stork.tex}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{user-man/logview.tex}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Special Environment Considerations}
@@ -1368,50 +2263,6 @@ submit description file solves the problem.
         initialdir = /home/johndoe
 \end{verbatim}
 
-\subsection{Using Globus software with Condor}
-\index{universe!Globus}
-\index{Globus!Interaction considerations}
-Use of the Globus project software \Url{http://www.globus.org} with
-Condor affects these issues:
-
-\begin{enumerate}
-\item[GSS Authentication] Is an option only in special versions of Condor,
-available by request only, due to cryptographic software export controls
-and Condor distribution policy.
-Sites running the Condor software distributed with GSS-Authentication can 
-set up their own Certification Authority (CA) by running the 
-\Prog{create\_ca} script. 
-Once the CA is set up, the \Condor{ca} script is used to generate 
-certificates for the Condor daemons (e.g., \Condor{schedd}) and to sign
-user and daemon certificates. Users can generate certificate requests
-and other needed files with the \Condor{cert} program.
-An X.509 certificate directory pointed to by the submit description file 
-variable \Arg{x509CertDir} indicates a client program which can use GSS
-authentication as a possible authentication method. Alternately, the
-environment variables \Env{X509\_CERT\_DIR}, \Env{X509\_USER\_CERT},
-\Env{X509\_USER\_KEY} can be used to override the default filenames and 
-locations.
-\Note the AUTHENTICATION\_METHOD configuration value list must contain 
-the value 'GSS' for GSS authentication to be attempted.
-
-\item[Submitting to the Globus Universe] \index{Globus!Globus universe}
-\index{universe!Globus}
-requires Globus version 1.1, as well as a valid Globus X.509 certificate. 
-The default location for the necessary files is \$HOME/.globus, but they 
-can be overridden by setting the X509\_* variables in your environment 
-or the submit description file.
-\Note AFS issues apply here, so you may have to copy your certificate,
-trusted certificates directory, private key, and proxy to a local
-file system disk.
-
-\item[\Condor{glidein}] \index {Globus!\Condor{glidein}} requires a valid 
-Globus X.509 certificate, and the PATH to the \Prog{globusrun} program 
-must be in your environment.
-\Note to allow a globus resource to join your Condor pool, your 
-administrator must add the host name(s) to the HOSTALLOW\_WRITE and
-HOSTALLOW\_READ configuration values.
-\end{enumerate}
-
 \subsection{Condor Daemons That Do Not Run as root}
 
 \index{Unix daemon!running as root}
@@ -1434,7 +2285,7 @@ since Condor is designed to be run as the Unix user root.
 To see if Condor is
 running as root on a specific machine, enter the command
 \begin{verbatim}
-        condor\_status -master -l <machine-name>
+        condor_status -master -l <machine-name>
 \end{verbatim}
 
 where \verb@machine-name@ is the name of the specified machine.
@@ -1458,7 +2309,7 @@ process, not the \emph{real} owner.  (See the \Cmd{getuid}{2} and
 running under the real UID of root may switch its effective UID.
 (See the \Cmd{seteuid}{2} man page.)
 For security reasons, the daemons
-only set the effective uid to root when absolutely necessary
+only set the effective UID to root when absolutely necessary
 (to perform a privileged operation).
 
 If they are not running with root access, you need to make any/all files
@@ -1469,10 +2320,72 @@ mean using the Unix command \verb@chmod 777@
 on the directory where you submit your Condor job.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Job-Lease}
+Job Leases}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{job!lease}
+
+A job lease specifies how long a given job will attempt to run
+on a remote resource,
+even if that resource loses contact with the submitting machine.
+Similarly, it is the length of time the submitting machine will
+spend trying to reconnect to the (now disconnected) execution host,
+before the submitting machine gives up and tries to claim
+another resource to run the job.
+The goal aims at run only once semantics,
+so that the \Condor{schedd} daemon does not allow the same job
+to run on multiple sites simultaneously.
+
+If the submitting machine is alive,
+it periodically renews the job lease,
+and all is well.
+If the submitting machine is dead,
+or the network goes down, the job lease will no longer be renewed.
+Eventually the lease expires.
+While the lease has not expired,
+the execute host continues to try to run the job,
+in the hope that the submit machine will come back to life
+and reconnect.
+If the job completes, the lease has not expired,yet the 
+submitting machine is still dead,
+the \Condor{starter} daemon will wait for a
+\Condor{shadow} daemon to reconnect, 
+before sending final information on the job,
+and its output files.
+Should the lease expire, the \Condor{startd} daemon
+kills off the \Condor{starter} daemon and user job.
+
+The user must set a value for \Attr{job\_lease\_duration}
+to keep a job running in the case that the submit side no longer
+renews the lease.
+There is a tradeoff in setting the value of \Attr{job\_lease\_duration}. 
+Too small a value,
+and the job might get killed before the submitting machine has a
+chance to recover.
+Forward progress on the job will be lost.
+Too large a value,
+and execute resource will be tied up waiting for the job lease to expire.
+The value 
+should be chosen based on how long is the user willing to tie up
+the execute machines, how quickly submit machines come  back up,
+and how much work would be lost if the lease expires,
+the job is killed, and the job must start over from its beginning.
+
+\Attr{job\_lease\_duration}
+is only valid for vanilla and java universe jobs.
+Chirp I/O and streaming I/O (which uses Chirp I/O) may not
+be used in conjunction with a defined \Attr{job\_lease\_duration}.
+
+A current limitation
+is that jobs with a defined \Attr{job\_lease\_duration} will not
+reconnect if the jobs flock to a remote pool.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Potential Problems}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\subsection{Renaming of argv[0]}
+\subsection{\label{sec:renaming-argv}Renaming of argv[0]}
 
 \index{argv[0]!Condor use of}
 When Condor starts up your job, it renames argv[0] (which usually

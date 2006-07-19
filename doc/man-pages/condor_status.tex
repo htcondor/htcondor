@@ -1,6 +1,7 @@
 \begin{ManPage}{\label{man-condor-status}\Condor{status}}{1}
 {Display status of the Condor pool}
 \Synopsis \SynProg{\Condor{status}}
+\ToolDebugOption
 \oArg{help options}
 \oArg{query options}
 \oArg{display options}
@@ -36,6 +37,7 @@ At any time, only one \Arg{help option}, one \Arg{query option} and one
 options} may be specified.
 
 \begin{Options}
+    \ToolDebugDesc
     \OptItem{\Opt{-help}}{(Help option) Display usage information}
     \OptItem{\Opt{-diagnose}}{(Help option) Print out query ad without 
 		performing query}
@@ -50,10 +52,14 @@ options} may be specified.
     \OptItem{\Opt{-java}}{(Query option) Display only Java-capable resources.}
     \OptItem{\Opt{-master}}{(Query option) Query \Condor{master} ads and display
 		daemon master attributes}
-    \OptItem{\OptArg{-pool}{hostname}}{Query the specified central manager. 
-		(\Condor{status} queries \Macro{COLLECTOR\_HOST} by default)}
+    \OptItem{\OptArg{-pool}{centralmanagerhostname[:portnumber]}}
+    {(Query option) Query the specified central manager using an
+        optional port number. 
+	(\Condor{status} queries \Macro{COLLECTOR\_HOST} by default)}
     \OptItem{\Opt{-schedd}}{(Query option) Query \Condor{schedd} ads and display
 		attributes}
+    \OptItem{\Opt{-negotiator}}{(Query option) Query \Condor{negotiator} ads
+                and display attributes}
     \OptItem{\Opt{-server}}{(Query option) Query \Condor{startd} ads and 
 		display resource attributes}
     \OptItem{\Opt{-startd}}{(Query option) Query \Condor{startd} ads} 
@@ -61,24 +67,66 @@ options} may be specified.
 		resource state information}
     \OptItem{\Opt{-submitters}}{(Query option) Query ads sent by submitters and
 		display important submitter attributes}
-    \OptItem{\Opt{-verbose}}{(Display option) Display entire classads.  Implies
+    \OptItem{\Opt{-cod}}{(Display option) Display only machine ClassAds
+		that have COD claims. Information displayed includes
+		the claim ID, the owner of the claim, and the state
+		of the COD claim.}
+    \OptItem{\Opt{-verbose}}{(Display option) Display entire ClassAds.  Implies
 		that totals will not be displayed.}
-    \OptItem{\Opt{-long}}{(Display option) Display entire classads 
+    \OptItem{\Opt{-long}}{(Display option) Display entire ClassAds 
 		(same as \Opt{-verbose})}
     \OptItem{\Opt{-total}}{(Display option) Display totals only}
+    \OptItem{\Opt{-xml}}{(Display option) Display entire ClassAds,
+                in xml format.  The xml format is fully defined at
+		\URL{http://www.cs.wisc.edu/condor/classad/refman/}.}
+    \OptItem{\Opt{-expert}}{(Display option) Display shortened error messages}
+    \OptItem{\OptArg{-sort}{attr}}{(Display option) Display entries in
+                ascending order based on the value of the named attribute} 
     \OptItem{\OptArg{-constraint}{const}}{(Custom option) Add constraint 
-		expression}
-    \OptItem{\OptArg{-format}{fmt attr}}{(Custom option) Register display 
-		format and attribute name.  The \Arg{fmt} string has the same format as 
-		\texttt{printf(3)}, and \Arg{attr} is the name of the attribute that 
-		should be displayed in the specified format.}
+		expression.  See section~\ref{sec:classadref} for
+		details on writing expressions.}
+	\OptItem{\OptArg{-format}{fmt attr}}{(Custom option) Display attribute
+              	\Arg{attr} in format \Arg{fmt}.
+		To display the attribute the format must contain a single
+		\Code{printf(3)} style conversion specifier.
+		Attributes must be from the resource ClassAd.  If the
+		attribute is not present in a given ClassAd then the
+		format option will be silently skipped.
+		The conversion specifier must match the type of the
+		attribute.   \%s is suitable for strings such as \Attr{Name},
+		\%d for integers such as \Attr{LastHeardFrom},
+		and \%f for floating point numbers such as \Attr{LoadAvg}.
+		An incorrect format
+		will result in undefined behavior.
+		Do not use more than one conversion specifier in a given
+		format.  More than one conversion specifier will result
+		in undefined behavior.  To output multiple attributes
+		repeat the \Opt{-format} option once for each desired
+		attribute.
+		Like \Code{printf(3)} style formats, you can include other
+		text that will be reproduced directly.   You can specify
+		a format without any conversion specifiers, but you must
+		still give an attribute.
+		You can include \Bs n to add specify a line break. }
 \end{Options}
 
 \GenRem
 \begin{itemize}
-	\item The information obtained from \Condor{startds} and \Condor{schedds} 
-	may sometimes appear to be inconsistent.  This is normal since startds and 
-	schedds update the Condor manager at different rates, and since there is a
+	\item The default output from \Condor{status} is formatted to
+	be human readable, not script readable.
+	In an effort to make the output fit within 80 characters,
+	values in some fields might be truncated.
+	Furthermore, the Condor Project can (and does) change the
+	formatting of this default output as we see fit.
+	Therefore, any script that is attempting to parse data from
+	\Condor{status} is strongly encouraged to use the
+	\Opt{-format} option (described above).
+
+	\item The information obtained from \Condor{startd} and \Condor{schedd}
+	daemons
+	may sometimes appear to be inconsistent.  This is normal since
+	\Condor{startd}  and \Condor{schedd} daemons update the Condor
+	manager at different rates, and since there is a
 	delay as information propagates through the network and the system.
 
 	\item Note that the \texttt{ActivityTime} in the \texttt{Idle} state is
@@ -93,9 +141,9 @@ options} may be specified.
 	machines by name.  
 	See the examples below for details.
 
-	\item If you specify hostnames, without domains, Condor will
-	automatically try to resolve those hostnames into fully
-	qualified hostnames for you.
+	\item If you specify host names, without domains, Condor will
+	automatically try to resolve those host names into fully
+	qualified host names for you.
 	This also works when specifying specific nodes of an SMP
 	machine.
 	In this case, everything after the ``@'' sign is treated as a
@@ -129,9 +177,10 @@ options} may be specified.
 \Examples
 
 \underline{Example 1} To view information from all nodes of an SMP
-machine, just use the hostname.
+machine, use only the hostname.
 For example, if you had a 4-CPU machine, named
-``vulture.cs.wisc.edu'', here's what you might see:
+\File{vulture.cs.wisc.edu}, you might see
+\footnotesize
 \begin{verbatim}
 % condor_status vulture
 
@@ -148,12 +197,15 @@ vm4@vulture.c SOLARIS26   INTEL  Claimed    Busy       1.001  128   0+02:21:07
 
                Total        4     0       4         0       0          0
 \end{verbatim}
+\normalsize
+
 
 \underline{Example 2} To view information from a specific nodes of an
 SMP machine, specify the node directly.
-You do this by providing the name of the \Term{virtual machine}.
+You do this by providing the name of the virtual machine.
 This has the form \texttt{vm\#@hostname}.
 For example:
+\footnotesize
 \begin{verbatim}
 % condor_status vm2@vulture
 
@@ -167,6 +219,47 @@ vm2@vulture.c SOLARIS26   INTEL  Claimed    Busy       1.006  128   0+01:16:03
 
                Total        1     0       1         0       0          0
 \end{verbatim}
+\normalsize
+
+\underline{Constraint option examples}
+
+To use the constraint option to see all machines with the \Attr{OpSys}
+of \AdStr{LINUX}, use
+\begin{verbatim}
+% condor_status -constraint OpSys==\"LINUX\"
+\end{verbatim}
+Note that quotation marks must be escaped with the backslash characters
+for most shells.
+
+To see all machines that are currently in the Idle state, use
+\begin{verbatim}
+% condor_status -constraint State==\"Idle\"
+\end{verbatim}
+
+To see all machines that are bench marked to have a MIPS rating
+of more than 750, use
+\begin{verbatim}
+% condor_status -constraint 'Mips>750' 
+\end{verbatim}
+
+\underline{-cod option example}
+
+The \Opt{-cod} option displays the status of COD
+claims within a given Condor pool. 
+
+\footnotesize
+\begin{verbatim}
+Name        ID   ClaimState TimeInState RemoteUser JobId Keyword
+astro.cs.wi COD1 Idle        0+00:00:04 wright
+chopin.cs.w COD1 Running     0+00:02:05 wright     3.0   fractgen
+chopin.cs.w COD2 Suspended   0+00:10:21 wright     4.0   fractgen
+
+               Total  Idle  Running  Suspended  Vacating  Killing
+ INTEL/LINUX       3     1        1          1         0        0
+       Total       3     1        1          1         0        0
+\end{verbatim}
+\normalsize
+
 
 \ExitStatus
 

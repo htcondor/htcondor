@@ -4,11 +4,13 @@
 \ToolArgsBase
 
 \SynProg{\Condor{reconfig}}
+\ToolDebugOption
 \ToolArgsLocate
 \ToolArgsAffect
 \oOptnm{-full}
 
 \SynProg{\Condor{reconfig}}
+\ToolDebugOption
 \ToolWhere
 \ToolArgsAffect
 \oOptnm{-full}
@@ -41,6 +43,15 @@ with no arguments or with the \Opt{-master} argument specifying
 a daemon will cause the reconfiguration of the \Condor{master}
 daemon and all the child processes of the \Condor{master}.
 
+For security purposes (authentication and authorization),
+this command requires an administrator's level of access.
+Note that changes to the \MacroNI{ALLOW\_*} and
+\MacroNI{DENY\_*} configuration variables require the 
+\Opt{-full} option.
+See
+section~\ref{sec:Config-Security} on page~\pageref{sec:Config-Security}
+for further explanation.
+
 \begin{Options}
     \ToolArgsBaseDesc
     \OptItem{\Opt{-full}}{Perform a full reconfiguration.
@@ -49,6 +60,7 @@ daemon and all the child processes of the \Condor{master}.
     cached DNS information in the daemons.
     Use this option only when the DNS information needs to
     be reinitialized.}
+    \ToolDebugDesc
     \ToolArgsLocateDesc
 \end{Options}
 

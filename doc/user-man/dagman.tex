@@ -1,14 +1,16 @@
-\section{\label{sec:DAGMan}Inter-job Dependencies: DAGMan Meta-Scheduler}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\label{sec:DAGMan}DAGMan Applications}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{DAGMan|(}
 \index{directed acyclic graph}
 \index{Directed Acyclic Graph Manager (DAGMan)}
 \index{condor\_submit\_dag}
 \index{job!dependencies}
 
-A directed acyclic graph (DAG) can be used to represent a set of programs
-where the input, output, or execution of one or more programs
-is dependent on one or more other programs.
-The programs are nodes (vertices) in the graph,
+A directed acyclic graph (DAG) can be used to represent a set of jobs
+where the input, output, or execution of one or more jobs
+is dependent on one or more other jobs.
+The jobs are nodes (vertices) in the graph,
 and the edges (arcs) identify the dependencies.
 Condor finds machines for the execution of programs, but it
 does not schedule programs (jobs) based on dependencies.
@@ -17,34 +19,92 @@ jobs.
 DAGMan submits jobs to Condor in an order represented by
 a DAG and processes the results.
 An input file defined prior to submission describes the DAG, and
-a Condor submit description file for each program in the DAG
+a submit description file for each program in the DAG
 is used by Condor.
 
-Each node (program) in the DAG needs its own Condor submit description file.
-As DAGMan submits jobs to Condor, it uses a single Condor log file
+Each node (job) in the DAG specifies
+either a Condor job or a Stork data placement job.
+Each job has a submit description file.
+As DAGMan submits jobs, it monitors the Condor and/or Stork log file(s) to 
 to enforce the ordering required for the DAG.
+
 The DAG itself is defined by the contents of a DAGMan input file.
 DAGMan is responsible for scheduling, recovery, and reporting
 for the set of programs submitted to Condor.
 
 The following sections specify the use of DAGMan.
 
-\subsection{Input File describing the DAG}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:DAGParallel}DAGMan Parallel Universe Support
+and Terminology}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+DAGMan now (as of version 6.7.17, with bug fixes in 6.7.18) allows
+multiple batch system processes per DAG node.  Because of this, we
+are introducing some terminology to clarify the following discussion:
+
+\begin{itemize}
+\item Node: a node is the combination of PRE script (optional), batch
+system job, and POST script (optional).
+\item Job: a batch system job is the result of a single invocation of
+a batch system submit command (e.g., \Condor{submit} or \Stork{submit}).
+\item Job proc: a batch system job proc is an individual batch system
+process within a job (in other words, a single instance of a running
+program).
+\end{itemize}
+
+Prior to version 6.7.17, DAGMan required that each job contain only
+one job proc; now a single job can contain multiple job procs.
+The multiple job procs can result from a parallel universe job,
+or from a non-parallel job that simply queues multiple job procs
+(e.g., has a \Code{Queue n} statement, where n > 1 or has multiple
+\Code{Queue} statements).
+
+There are some limitations on multiple job procs (these may change
+in future versions):
+\begin{itemize}
+\item A job must consist of only a single cluster.
+\item All job procs in a given job must use the same log file.
+\end{itemize}
+
+If a number of job procs are in the same cluster, they will have Condor
+IDs with the same value for the first part of the ID (e.g., 227.0, 227.1,
+227.2).  Having different executables within a given submit file is
+one thing that will cause a single \Condor{submit} to generate multiple
+clusters.
+
+Note that for jobs with multiple job procs, the failure of any job
+proc means that the entire job will be considered failed.  When DAGMan
+sees that a job proc has failed, it will immediately remove any
+other job procs of that job that are still running.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Input File Describing the DAG}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{DAGMan!input file example}
-The input file used by DAGMan specifies four items:
+The input file used by DAGMan specifies seven items:
 \begin{enumerate}
 \item
-A list of the programs in the DAG. This serves to name each program
-and specify each program's Condor submit description file.
+A list of the jobs in the DAG. This serves to name each jobs
+and specify each jobs's Condor submit description file.
+\item
+A list of any data placement jobs in the DAG.
+This serves to name each of these jobs and
+specify each program's Stork submit description file.
 \item
 Processing that takes place before submission of
-any program in the DAG to Condor or after Condor has completed execution
-of any program in the DAG.
+any program in the DAG to Condor or Stork or after Condor or Stork
+has completed execution
+of any program in the DAG (optional).
 \item
 Description of the dependencies in the DAG.
 \item
-Number of times to retry if a node within the DAG fails.
+Number of times to retry if a node within the DAG fails (optional).
+\item
+The definition of macros associated with a node (optional).
+\item
+A node exit value that will abort the entire DAG (optional).
 \end{enumerate}
 
 Comments may be placed in the input file that describes the DAG.
@@ -54,23 +114,27 @@ Comments do not span lines.
 
 An example input file for DAGMan is
 
+\footnotesize
 \begin{verbatim}
-	# Filename: diamond.dag
-	#
-	Job  A  A.condor 
-	Job  B  B.condor 
-	Job  C  C.condor	
-	Job  D  D.condor
-	Script PRE  A top_pre.csh
-	Script PRE  B mid_pre.perl  $JOB
-	Script POST B mid_post.perl $JOB $RETURN
-	Script PRE  C mid_pre.perl  $JOB
-	Script POST C mid_post.perl $JOB $RETURN
-	Script PRE  D bot_pre.csh
-	PARENT A CHILD B C
-	PARENT B C CHILD D
-	Retry  C 3
+    # Filename: diamond.dag
+    #
+    JOB  A  A.condor 
+    JOB  B  B.condor 
+    JOB  C  C.condor	
+    JOB  D  D.condor
+    Script PRE  A top_pre.csh
+    Script PRE  B mid_pre.perl  $JOB
+    Script POST B mid_post.perl $JOB $RETURN
+    Script PRE  C mid_pre.perl  $JOB
+    Script POST C mid_post.perl $JOB $RETURN
+    Script PRE  D bot_pre.csh
+    PARENT A CHILD B C
+    PARENT B C CHILD D
+    Retry  C 3
+    VARS A state="Wisconsin"
+    ABORT-DAG-ON C 10
 \end{verbatim}
+\normalsize
 
 This input file describes the DAG shown in 
 Figure~\ref{fig:dagman-diamond}.
@@ -81,23 +145,33 @@ Figure~\ref{fig:dagman-diamond}.
 \caption{\label{fig:dagman-diamond}Diamond DAG}
 \end{figure}
 
+DAGMan has the ability to manage different types of jobs.  Condor CPU
+jobs are indicated with the \Arg{JOB} keyword.  Stork data placement
+jobs are indicated with the \Arg{DATA} keyword.  All \Arg{JobName}s,
+irrespective of type, must be unique.  Otherwise, the term \Term{Job}
+or \Term{job} will indicate a generic job, of any type.
 
+Each DAG file keyword is described below.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{dagman:JOB}JOB}
 
 \index{DAGMan!Job Entry (names node of DAG)}
 The first section of the input file lists
-all the programs that appear in the DAG.
-Each program is described by a single line called a Job Entry.
-The syntax used for each Job Entry is
+all the jobs that appear in the DAG.
+Each job to be managed by Condor is described by a single line
+called a \Arg{JOB} Entry.
+The syntax used for each \Arg{JOB} Entry is
 
-\Arg{JOB} \Arg{JobName} \Arg{CondorSubmitDescriptionFile} \oArg{DONE}
+\Arg{JOB} \Arg{JobName} \Arg{SubmitDescriptionFileName} \oArg{DONE}
 
-A Job Entry maps a \Arg{JobName} to a Condor submit description file.
+A \Arg{JOB} entry maps a \Arg{JobName} to a Condor submit description file.
 The \Arg{JobName} uniquely identifies nodes within the
-DAGMan input file and within output messages.
+DAGMan input file and in output messages.
 
 The keyword \Arg{JOB} and the \Arg{JobName} are not case sensitive.
 A \Arg{JobName} of \Arg{joba} is equivalent to \Arg{JobA}.
-The \Arg{CondorSubmitDescriptionFile} is case sensitive, since
+The \Arg{SubmitDescriptionFileName} is case sensitive, since
 the UNIX file system is case sensitive.
 The \Arg{JobName} can be any string that contains no white space.
 
@@ -111,28 +185,64 @@ DAGMan generates a Rescue DAG, a DAGMan input file that can be
 used to restart and complete a DAG without re-executing
 completed programs.
 
-The second type of item in a DAGMan input file enumerates
-processing that is done either before a program within
-the DAG is submitted to Condor for execution
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{dagman:DATA}DATA}
+
+The \Arg{DATA} keyword specifies a job to be managed by the Stork data
+placement server.  
+The syntax used for each \Arg{DATA} Entry is
+
+\Arg{DATA} \Arg{JobName} \Arg{SubmitDescriptionFileName} \oArg{DONE}
+
+A \Arg{DATA} Entry maps a \Arg{JobName} to a Stork submit description file.
+In all other respects, the \Arg{DATA} keyword is identical to the
+\Arg{JOB} keyword.
+
+Here is an example of a simple DAG that stages in data using Stork,
+processes the data using Condor, 
+and stages the processed data out using Stork.
+Depending upon the implementation, multiple data jobs to stage in data
+or to stage out data
+may be run in parallel.
+
+\footnotesize
+\begin{verbatim}
+    DATA    STAGE_IN1  stage_in1.stork
+    DATA    STAGE_IN2  stage_in2.stork
+    JOB     PROCESS    process.condor 
+    DATA    STAGE_OUT1 stage_out1.stork
+    DATA    STAGE_OUT2 stage_out2.stork
+    PARENT  STAGE_IN1 STAGE_IN2 CHILD PROCESS
+    PARENT  PROCESS CHILD STAGE_OUT1 STAGE_OUT2
+\end{verbatim}
+\normalsize
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{SCRIPT}
+
+\index{DAGMan!PRE and POST scripts}
+The third type of item in a DAGMan input file enumerates
+processing that is done either before a job within
+the DAG is submitted to Condor or Stork for execution
 or after
-a program within
+a job within
 the DAG completes its execution.
 \index{DAGMan!PRE script}
-Processing done before a program is submitted to Condor is
+Processing done before a job is submitted to Condor or Stork is
 called a \Arg{PRE} script.
-Processing done after a program successfully completes
-its execution under Condor is
+Processing done after a job completes
+its execution under Condor or Stork is
 \index{DAGMan!POST script}
 called a \Arg{POST} script.
-A node in the DAG is comprised of the program together with
+A node in the DAG is comprised of the job together with
 \Arg{PRE} and/or \Arg{POST} scripts.
 The dependencies in the DAG are enforced based on nodes.
 
-Syntax for \Arg{PRE} and \Arg{POST} script lines within the input file
+Syntax for \Arg{PRE} and \Arg{POST} script lines within the input file:
 
 \Arg{SCRIPT} \Arg{PRE} \Arg{JobName} \Arg{ExecutableName} \oArg{arguments}
 
-\Arg{SCRIPT} \Arg{POST}  \Arg{JobName}\Arg{ExecutableName} \oArg{arguments}
+\Arg{SCRIPT} \Arg{POST}  \Arg{JobName} \Arg{ExecutableName} \oArg{arguments}
 
 The \Arg{SCRIPT} keyword identifies the type of line within
 the DAG input file.
@@ -147,7 +257,10 @@ case preserved.
 
 Scripts are optional for each job, and
 any scripts are executed on the machine
-to which the DAG is submitted.
+to which the DAG is submitted (not necessarily
+the machine on which the node's job is run).
+(And note that if a job contains multiple job procs,
+the job itself may be spread across several machines.)
 
 The PRE and POST scripts are commonly used
 when files must be placed into a staging area for the job to use,
@@ -163,26 +276,27 @@ The POST script compresses the output files, writes them out to
 the tape, and then deletes the staged input and output files.
 
 DAGMan takes note of the exit value of the
-scripts as well as the program.
-If the PRE script fails (exit value != 0), then neither the program nor
+scripts as well as the job.
+% See gnats PR 606.
+If the PRE script fails (exit value != 0), then neither the job nor
 the POST script runs, and the node is marked as failed.
 
-If the PRE script succeeds, the program is submitted to Condor. 
-If the program fails and there is no POST script,
+If the PRE script succeeds, the job is submitted to Condor or Stork. 
+If the job fails and there is no POST script,
 the DAG node is marked as failed.
 An exit value not equal to 0 indicates program failure.
 It is therefore important that the program returns the exit
 value 0 to indicate the program did not fail.
 
-If the program fails and there is a POST script,
+If the job fails and there is a POST script,
 node failure is determined by the exit value of the POST script.
 A failing value from the POST script marks the node as failed.
 A succeeding value from the POST script (even with a failed
-program) marks the node as successful.
+job) marks the node as successful.
 Therefore, the POST script may need to consider the return
-value from the program.
+value from the job.
 
-By default, the POST script is run regardless of the program's
+By default, the POST script is run regardless of the job's
 return value.  To prevent POST scripts from running after failed jobs,
 pass the \Arg{-NoPostFail} argument to \Condor{submit\_dag}.
 
@@ -190,29 +304,42 @@ A node not marked as failed at any point is successful.
 
 Two variables are available to ease script writing.
 The \Env{\$JOB} variable evaluates to \Arg{JobName}.
-For POST scripts, the \Env{\$RETURN} variable evaluates to the return value of the program.
-The variables may be
-placed anywhere within the arguments.
+For POST scripts, the \Env{\$RETURN} variable evaluates to the return value of the job.
+Jobs that die from signals are reported with a \Env{\$RETURN} value
+representing the negative signal number.  For example, SIGKILL (signal
+9) is reported as -9.
+Jobs whose batch system submission fails are reported as -1001.
+Jobs which are externally removed from the batch system queue (i.e.,
+by something other than \Condor{dagman}) are reported as -1002.
+The \Env{\$JOB} and \Env{\$RETURN} variables may be
+placed anywhere within the POST script arguments.
 
 As an example, suppose the \Arg{PRE} script expands a compressed file named
 \File{\Arg{JobName}.gz}.
 The \Arg{SCRIPT} entry for jobs A, B, and C are
 
+\footnotesize
 \begin{verbatim}
-	SCRIPT PRE  A  pre.csh $JOB .gz
-	SCRIPT PRE  B  pre.csh $JOB .gz
-	SCRIPT PRE  C  pre.csh $JOB .gz
+    SCRIPT PRE  A  pre.csh $JOB .gz
+    SCRIPT PRE  B  pre.csh $JOB .gz
+    SCRIPT PRE  C  pre.csh $JOB .gz
 \end{verbatim}
+\normalsize
 
 The script \File{pre.csh} may use these arguments
 
 \begin{verbatim}
-	#!/bin/csh
-	gunzip $argv[1]$argv[2]
+    #!/bin/csh
+    gunzip $argv[1]$argv[2]
 \end{verbatim}
 
+% $ % this comment just has a dollar sign so that emacs will not think
+%	  we're inside of a math section and will draw things more nicely
 
-The third type of item in the DAG input file describes the
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{dagman:ParentChild}PARENT..CHILD}
+
+The fourth type of item in the DAG input file describes the
 dependencies within the DAG.
 \index{DAGMan!describing dependencies}
 Nodes are parents and/or children within the DAG.
@@ -244,78 +371,230 @@ produces four dependencies:
 \item{\verb@p2@ to \verb@c2@}
 \end{enumerate}
 
-The fourth type of item in the DAG input file provides a
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{RETRY}
+
+\index{DAGMan!RETRY of failed nodes}
+The fifth type of item in the DAG input file provides a
 way (optional) to retry failed nodes.
 The syntax for retry is
 
-\Arg{Retry} \Arg{JobName} \Arg{NumberOfRetries}
+\Arg{RETRY} \Arg{JobName} \Arg{NumberOfRetries} \oArg{UNLESS-EXIT \textless{value}\textgreater}
 
 where the \Arg{JobName} is the same as the name given in
 a Job Entry line, and \Arg{NumberOfRetries} is an integer,
 the number of times to retry the node after failure.
 The default number of retries for any node is 0,
-the same as not having a retry line in the file.
+the same as not having a retry line in the file. 
+
+In some cases, it is inappropriate to retry for the number of times
+specified. For example, a PRE script may edit the job's submit file to
+indicate what it should do, and if it runs out of possibilities after
+a few retries, then there is no point in continuing to retry the
+node. In this case, you can specify UNLESS-EXIT, and if any of the
+parts of the node (PRE script, job, or POST script) exits with the
+specified value, then the node will be aborted and will not be
+retried.
 
 In the event of retry, all parts of a node within the DAG
 are redone, following the same rules regarding node failure
 as given above.
 The PRE script is executed first,
-followed by submitting the program to Condor upon success of
+followed by submitting the job to Condor or Stork upon success of
 the PRE script.
 Failure of the node is then determined by the return value of
-the program, the existence and return value of a POST script.
+the job, the existence and return value of a POST script.
 
-\subsection{Condor Submit Description File}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{VARS}
+
+\index{DAGMan!VARS (macro for submit file)}
+\index{VARS}
+The sixth type of item in the DAG input file provides a
+method of defining a macro to be placed into the submit description
+file.
+These macros are defined on a per-node basis, using the
+following format.
+
+\Arg{VARS} \Arg{JobName} \Arg{macroname="string"\Dots}
+
+The definition of the macro is available to use within the
+submit description file.  The \verb@macroname@ can be variable
+length and consist of alphanumerics (e.g. a..Z and 0..9) and
+underscores.  The space character delimits the list of macros when
+there is more than one macro defined for each \Arg{JobName}.
+
+Correct syntax requires that the \verb@string@ must be
+enclosed in double quotes.
+To use a double quote inside \verb@string@,
+escape it with the backslash character (\verb@\@).
+To add the backslash character itself, use two backslashes (\verb@\\@).
+
+Note that macronames cannot begin with "queue" (in any combination
+of upper and lower case).
+
+% for version 6.5.3, the VARS are not propagated into rescue DAGs.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{ABORT-DAG-ON}
+
+\index{DAGMan!ABORT-DAG-ON}
+The seventh type of item in the DAG input file provides a way
+to abort the entire DAG if a given node returns a specific exit
+code.  The syntax for ABORT-DAG-ON:
+
+\Arg{ABORT-DAG-ON} \Arg{JobName} \Arg{AbortExitValue}
+
+If the specified node returns the specified abort exit value, the
+DAG is immediately aborted.  The main difference between a node
+failure and a DAG abort is that
+in the case of an abort, the DAG is stopped immediately, including
+removing nodes that are currently running.  In the case of a node
+failure, the DAG will continue to run until no more progress can
+be made because of the DAG dependencies.
+
+An abort of a DAG is based on exit values from
+within a node, 
+where the node can contain
+a PRE script, the job itself, and a POST script.
+If a node has a PRE script and the PRE
+script returns the abort exit value, the DAG is aborted.
+If the node has no POST script, or \Arg{-NoPostFail} was passed to
+\Condor{submit\_dag},
+and the job returns the abort exit value,
+the DAG is aborted.
+If the node has a POST script and \Arg{-NoPostFail} was \emph{not} passed
+to \Condor{submit\_dag},
+the POST script is run,
+and the DAG is aborted if the POST script returns
+the abort exit value.
+
+An abort overrides node retries. 
+If a node returns the abort exit value,
+the DAG is aborted,
+even if the node has retries specified.
+
+The value zero is not allowed as an abort exit value.
+
+When a DAG aborts, it exits with the value that caused the abort.
+This can be used for DAGs within DAGs,
+allowing an inner DAG to cause an abort of an outer DAG.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Submit Description File}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{DAGMan!submit description file with}
-Each node in a DAG may be a unique executable, each with a unique
-Condor submit description file.
-Each program may be submitted to a different universe
-within Condor, for example standard,
-vanilla, or DAGMan.
+Each node in a DAG may have a unique executable, and each may have a unique
+submit description file.
+Each Condor job may be submitted to a different universe,
+for example standard,
+vanilla, or local.
 
-Two limitations exist.
-First, each Condor submit description file must submit only one job.
-There may not be multiple \verb@queue@ lines, or DAGMan will fail.
-The second limitation is that
-the submit description file for all jobs within the DAG
-must specify the same log.
+One key limitation:
+each Condor submit description file must submit only one cluster.
+At the present time DAGMan cannot deal with a submit file producing
+multiple job clusters.
+
+DAGMan no longer requires that all jobs specify the same log file.
+However, if the DAG contains a very large number of jobs, each
+specifying its own log file, performance may suffer.  Therefore,
+if the DAG contains a large number of jobs, it is best to have
+all of the jobs use the same log file.
+Another current limitation is that all
+Stork jobs currently require a separate log file.
 DAGMan enforces the dependencies within a DAG
 using the events recorded in the
-log file produced by job submission to Condor.
+log file(s) produced by job submission to Condor.
 
-Here is an example Condor submit description file to go with the
-diamond-shaped DAG example.
+Here is a simple input file for a 
+modified version of diamond-shaped DAG example.
+
+\begin{verbatim}
+    # Filename: diamond.dag
+    #
+    JOB  A  diamond_job.condor 
+    JOB  B  diamond_job.condor 
+    JOB  C  diamond_job.condor	
+    JOB  D  diamond_job.condor
+    PARENT A CHILD B C
+    PARENT B C CHILD D
+\end{verbatim}
+
+A single Condor submit description file goes with all the nodes
+in this DAG:
 
 \index{DAGMan!example submit description file}
 \begin{verbatim}
-	# Filename: diamond_job.condor
-	#
-	executable   = /path/diamond.exe
-	output       = diamond.out.$(cluster)
-	error        = diamond.err.$(cluster)
-	log          = diamond_condor.log
-	universe     = vanilla
-	notification = NEVER
-	queue
+    # Filename: diamond_job.condor
+    #
+    executable   = /path/diamond.exe
+    output       = diamond.out.$(cluster)
+    error        = diamond.err.$(cluster)
+    log          = diamond_condor.log
+    universe     = vanilla
+    notification = NEVER
+    queue
 \end{verbatim}
 
 This example uses the same Condor submit description file
 for all the jobs in the DAG.
 This implies that each node within the DAG runs the
-same program.
+same job.
 The \MacroU{cluster} macro
-is used to produce unique file names for each program's output.
-Each job is submitted separately, into its own cluster,
+is used to produce unique file names for each job's output.
+Each \Arg{JOB} is submitted separately, into its own cluster,
 so this provides unique names for the output files.
 
 The notification is set to \verb@NEVER@ in this example.
-This tells Condor not to send e-mail about the completion of a program
+This tells Condor not to send e-mail about the completion of a job
 submitted to Condor.
 For DAGs with many nodes, this is recommended
 to reduce or eliminate excessive numbers of e-mails.
 
+A separate example shows an intended use of a \Arg{VARS} entry
+in the DAG.
+It can be used to dramatically reduce the number of submit description
+files needed for a DAG.
+In the case where the submit description file for each node
+varies only in file naming, the use of a substitution macro
+within the submit description file allows the use of 
+a single submit description file.
+Note that the user log file for a job currently cannot be specified
+using a macro passed from the DAG.
+
+The example uses a single submit description file in the DAG input
+file, and uses the \Arg{Vars} entry to name output files.
+
+\footnotesize
+\begin{verbatim}
+    # submit description file called:  theonefile.sub
+    executable   = progX
+    output       = $(outfilename)
+    error        = error.$(outfilename)
+    universe     = standard
+    queue
+\end{verbatim}
+\normalsize
+
+The relevant portion of the DAG input file appears as 
+\begin{verbatim}
+JOB A theonefile.sub
+JOB B theonefile.sub
+JOB C theonefile.sub
+
+VARS A outfilename="A"
+VARS B outfilename="B"
+VARS C outfilename="C"
+\end{verbatim}
+
+For a DAG like this one with thousands of nodes,
+being able to write and maintain a single submit description file 
+and a single, yet more complex, DAG input file is preferable.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{dagman:submitdag}Job Submission}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 A DAG is submitted using the program \Condor{submit\_dag}.
 See the manual
@@ -335,9 +614,8 @@ In order to guarantee recoverability, the DAGMan program itself
 is run as a Condor job.
 As such, it needs a submit description file.
 \Condor{submit\_dag} produces the needed file,
-naming it by appending the \Arg{DAGInputFileName} with
-\File{.condor.sub}.
-This submit description file may be editted if the DAG is
+naming it by appending \File{.condor.sub} to the \Arg{DAGInputFileName}.
+This submit description file may be edited if the DAG is
 submitted with
 
 \begin{verbatim}
@@ -345,7 +623,7 @@ condor_submit_dag -no_submit diamond.dag
 \end{verbatim}
 causing \Condor{submit\_dag} to generate the submit description file,
 but not submit DAGMan to Condor.
-To submit the DAG, once the submit description file is editted,
+To submit the DAG, once the submit description file is edited,
 use
 
 \begin{verbatim}
@@ -353,8 +631,8 @@ condor_submit diamond.dag.condor.sub
 \end{verbatim}
 
 An optional argument to \Condor{submit\_dag}, \Arg{-maxjobs}, 
-is used to specify the maximum number of Condor jobs that DAGMan may
-submit to Condor at one time.
+is used to specify the maximum number of batch jobs that DAGMan may
+submit at one time.
 It is commonly used when 
 there is a limited amount of input file staging capacity.
 As a specific example, consider a case where each job will
@@ -363,13 +641,13 @@ and the jobs will run in a directory with a volume of 100 Mbytes
 of free space.
 Using the argument \Arg{-maxjobs 25} guarantees that a maximum
 of 25 jobs, using a maximum of 100 Mbytes of space,
-will be submitted to Condor at one time.
+will be submitted to Condor and/or Stork at one time.
 
 % -maxscripts has been replaced with -maxpre and -maxpost
 % Similarly, the \Arg{maxscripts} argument is used to specify the
 % maximum number of PRE and POST scripts running at one time.
 While the \Arg{-maxjobs} argument is used to limit the number
-of Condor jobs submitted at one time,
+of batch system jobs submitted at one time,
 it may be desirable to limit the number of scripts running
 at one time.
 The optional \Arg{-maxpre} argument limits the number of PRE
@@ -377,38 +655,49 @@ scripts that may be running at one time,
 while the optional \Arg{-maxpost} argument limits the number of POST
 scripts that may be running at one time.
 
-% DONE TO HERE WITH UPDATES.
+An optional argument to \Condor{submit\_dag}, \Arg{-maxidle}, 
+is used to limit the number of idle jobs within a given DAG.
+When the number of idle node jobs in the DAG reaches the specified
+value, \Condor{dagman} will stop submitting jobs, even if there
+are ready nodes in the DAG.  Once some of the idle jobs start to
+run, \Condor{dagman} will resume submitting jobs.  Note that this
+parameter only limits the number of idle jobs submitted by a
+given \Condor{dagman} -- idle jobs submitted by other sources
+(including other \Condor{dagman} runs) are ignored.
+
+DAGs that submit jobs to Stork using the \Arg{DATA} keyword must also
+specify the Stork user log file, using the \Arg{-storklog} argument.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Job Monitoring}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 After submission, the progress of the DAG can be monitored
-by looking at the common log file,
-observing the e-mail that program submission to Condor causes,
+by looking at the log file(s),
+observing the e-mail that job submission to Condor causes,
 or by using \Condor{q} \Arg{-dag}.
+You can also look at the \File{dagman.out} file.  This file
+contains a large amount of information about the DAGMan run.
+The name of the \File{dagman.out} file is produced by appending
+\File{.dagman.out} to \Arg{DAGInputFileName}; for example, if the
+DAG file is \File{diamond.dag}, the \File{dagman.out} file is
+\File {diamond.dag.dagman.out}.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Job Failure and Job Removal}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\Condor{submit\_dag} attempts to check the DAG input file
-to verify that all the nodes in the DAG
-specify the same log file.
+\Condor{submit\_dag} attempts to check the DAG input file.
 If a problem is detected,
 \Condor{submit\_dag} prints out an error message and aborts.
 
-To omit the check that all nodes use the same log file,
-as may be desired in the case where there are thousands of nodes,
-submit the job with the \Arg{-log} option.
-An example of this submission:
-\begin{verbatim}
-condor_submit_dag -log diamond_condor.log
-\end{verbatim}
-This option tells \Condor{submit\_dag} to omit the verification
-step and use the given file as the log file.
-
 To remove an entire DAG, consisting of DAGMan plus
-any jobs submitted to Condor,
+any jobs submitted to Condor or Stork,
 remove the DAGMan job running under Condor.
 \Condor{q} will list the job number.
 Use the job number to remove the job, for example
 
+\footnotesize
 \begin{verbatim}
 
 % condor_q
@@ -422,9 +711,11 @@ Use the job number to remove the job, for example
 
 % condor_rm 9.0
 \end{verbatim}
+\normalsize
 
-Before the DAGMan job stops running, it uses \Condor{rm}
-to remove any Condor jobs within the DAG that are running.
+Before the DAGMan job stops running, it uses \Condor{rm} and/or
+\Stork{rm} 
+to remove any jobs within the DAG that are running.
 
 In the case where a
 machine is scheduled to go down,
@@ -432,7 +723,9 @@ DAGMan will clean up memory and exit.
 However, it will leave any submitted jobs
 in Condor's queue.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Job Recovery:  The Rescue DAG}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{DAGMan!rescue DAG}
 DAGMan can help with the resubmission of uncompleted
@@ -449,7 +742,7 @@ It additionally contains indication of
 successfully completed nodes using the \Arg{DONE}
 option in the input description file.
 If the DAG is resubmitted using this Rescue DAG input file,
-the nodes marked as completed will not be reexecuted.
+the nodes marked as completed will not be re-executed.
 
 The Rescue DAG is automatically generated by DAGMan when a node
 within the DAG fails.
@@ -463,5 +756,323 @@ of a node are completed,
 then the Rescue DAG file will also contain Retry entries.
 The number of retries will be set to the appropriate remaining
 number of retries. 
+
+Note that for jobs with multiple job procs, the entire job must
+be re-run as a unit.  So if some job procs of a given job failed
+and some succeeded on the first try, when running the rescue DAG
+even the job procs that succeeded will be re-run.
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Visualizing DAGs with \Prog{dot}}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{DAGMan!dot}
+\index{dot}
+\index{DAGMan!visualizing DAGs}
+
+It can be helpful to see a picture of a DAG.
+DAGMan can assist you in visualizing a DAG by creating
+the input files used by the AT\&T Research Labs 
+\Prog{graphviz} package. 
+\Prog{dot} is a program within this package,
+available from \URL{http://www.graphviz.org/},
+and it is used to draw pictures of DAGs. 
+
+DAGMan produces one or more dot files as the result of
+an extra line
+in a DAGMan input file. 
+The line appears as
+%For example, to produce a single dot
+%file that shows the state of your DAG before any jobs are running, add
+%the following line:
+\begin{verbatim}
+    DOT dag.dot
+\end{verbatim}
+
+This creates a file called \File{dag.dot}.
+which contains
+a specification of the DAG before any jobs within the DAG
+are submitted to Condor.
+The \File{dag.dot} file is used to create a visualization
+of the DAG by using this file as input to \Prog{dot}.
+This example creates a Postscript file, with a visualization of the DAG:
+
+\begin{verbatim}
+    dot -Tps dag.dot -o dag.ps
+\end{verbatim}
+
+Within the DAGMan input file,
+the DOT command can take several optional parameters:
+
+\begin{itemize}
+
+\item \Opt{UPDATE}  This will update the dot file every time a
+significant update happens. 
+
+\item \Opt{DONT-UPDATE} Creates a single dot file, when
+the DAGMan begins executing. This is the default if the parameter
+\Opt{UPDATE} is not used.
+
+\item \Opt{OVERWRITE} Overwrites the dot file each time it
+is created. This is the default, unless \Opt{DONT-OVERWRITE}
+is specified.
+
+\item \Opt{DONT-OVERWRITE} Used to create multiple dot files, instead
+of overwriting the single one specified.
+To create file names,
+DAGMan uses the name of the file concatenated a period and an
+integer. For example, the DAGMan input file line
+\begin{verbatim}
+    DOT dag.dot DONT-OVERWRITE
+\end{verbatim}
+causes files
+\File{dag.dot.0},
+\File{dag.dot.1},
+\File{dag.dot.2},
+etc. to be created.
+This option is
+most useful combined with the \Opt{UPDATE} option to
+visualize the history of the DAG after it has finished executing. 
+
+\item \OptArg{INCLUDE}{path-to-filename} Includes the contents
+of a file given by \File{path-to-filename} in the file produced by the
+\Opt{DOT} command.
+The include file contents are always placed after the line of
+the form
+\verb@label=@.
+This may be useful if further editing of the created files would
+be necessary,
+perhaps because you are automatically visualizing the DAG as it
+progresses. 
+
+\end{itemize}
+
+If conflicting parameters are used in a DOT command, the last one
+listed is used.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:DAGsinDAGs}Advanced Usage: A DAG within a DAG}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{DAGMan!DAGs within DAGs}
+
+The organization and dependencies of the jobs within a DAG
+are the keys to its utility.
+There are cases when a DAG is easier to visualize and 
+construct hierarchically,
+as when a node within a DAG is also a DAG.
+Condor DAGMan handles this situation with grace.
+
+Since more than one DAG is being discussed, 
+terminology is introduced to clarify which DAG is which. 
+Reuse the example DAG as given in 
+Figure~\ref{fig:dagman-diamond}.
+Assume that node B of this diamond-shaped DAG
+will itself be a DAG.
+The DAG of node B is called the inner DAG,
+and the diamond-shaped DAG is called the outer DAG.
+
+To make DAGs within DAGs,
+the essential element is getting the name of the submit description
+file for the inner DAG correct within the outer DAG's input
+file.
+
+Work on the inner DAG first.
+The goal is to generate a Condor submit description file for this inner DAG.
+Here is a very simple DAG input file used as an example of the inner DAG.
+\begin{verbatim}
+    # Filename: inner.dag
+    #
+    JOB  X  X.submit
+    JOB  Y  Y.submit
+    JOB  Z  Z.submit
+    PARENT X CHILD Y
+    PARENT Y CHILD Z
+\end{verbatim}
+
+Use \Condor{submit\_dag} to create a submit description file for this
+inner dag:
+\begin{verbatim}
+   condor_submit_dag -no_submit inner.dag
+\end{verbatim}
+The resulting file will be named \File{inner.dag.condor.sub}.
+This file will be needed in the DAG input file of the outer DAG.
+The naming of the file is the name of the DAG input file
+(\File{inner.dag}) with the suffix \File{.condor.sub}.
+
+A simple example of a DAG input file for the outer DAG is
+\begin{verbatim}
+# Filename: diamond.dag
+#
+    JOB  A  A.submit 
+    JOB  B  inner.dag.condor.sub
+    JOB  C  C.submit	
+    JOB  D  D.submit
+    PARENT A CHILD B C
+    PARENT B C CHILD D
+\end{verbatim}
+
+The outer DAG is then submitted as before, with
+\begin{verbatim}
+   condor_submit_dag diamond.dag
+\end{verbatim}
+
+More than one level of nested DAGs is supported.
+
+One item to get right:
+to locate the log files used in ordering the DAG,
+DAGMan either needs a completely flat directory structure
+(\emph{all} files for outer and inner DAGs within the same directory)
+or
+it needs full pathnames to all log files.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:MultipleDAGs}Single Submission of Multiple, Independent DAGs}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{DAGMan!Single submission of multiple, independent DAGs}
+
+A single use of \Condor{submit\_dag} may execute multiple, independent DAGs.
+Each independent DAG has its own DAG input file.
+These DAG input files are command-line arguments to
+\Condor{submit\_dag}
+(see the \Condor{submit\_dag} manual page at ~\ref{man-condor-submit-dag}).
+
+Internally, all of the independent DAGs are combined
+into a single, larger DAG, with no dependencies between
+the original independent DAGs.
+As a result,
+any generated rescue DAG file represents all of the input DAGs
+as a single DAG.
+The file name of this rescue DAG is based on the DAG input file
+listed first within the command-line arguments to
+\Condor{submit\_dag} (unlike a single-DAG rescue DAG file, however,
+the file name will be
+\File{\textless{whatever}\textgreater.dag\_multi.rescue}, as opposed to
+just \File{\textless{whatever}\textgreater.dag.rescue}).
+Other files such
+as \File{dagman.out} and the lock file also have names based on this
+first DAG input file.
+
+The success or failure of the independent DAGs is well defined.
+When multiple, independent DAGs are submitted with a single
+command, the
+success of the composite DAG is defined as the logical AND
+of the success of each independent DAG.
+This implies that failure is defined as the logical OR
+of the failure of any of the independent DAGs.
+
+By default, DAGMan internally renames the nodes to avoid node name collisions.  
+If all node names are unique, 
+the renaming of nodes may be disabled by
+setting the configuration variable \Macro{DAGMAN\_MUNGE\_NODE\_NAMES}
+to \Expr{False} (see ~\ref{param:DAGManMungeNodeNames}).
+% Karen has edited to this point.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:DAGPaths}File Paths in DAGs}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{DAGMan!File Paths in DAGs}
+
+By default, \Condor{dagman} assumes that all relative paths in a
+DAG file and the associated submit files are relative to the current
+working directory when \Condor{submit\_dag} is run.  (Note that 
+relative paths in submit files can be modified by the submit command
+\SubmitCmd{initialdir}; see the \Condor{submit} manual page at
+~\ref{man-condor-submit} for more details.  The rest of this discussion
+ignores \SubmitCmd{initialdir}.)
+
+In most cases, this is what you want.  However, if you are running
+multiple DAGs with a single \Condor{dagman}, and each DAG is in its
+own directory, this will cause problems.  In this case, you
+should use the \Arg{-usedagdir} command-line argument to
+\Condor{submit\_dag} (see the \Condor{submit\_dag} manual page at
+~\ref{man-condor-submit-dag} for more details).
+This tells \Condor{dagman} to run each DAG
+as if \Condor{submit\_dag} had been run in the directory in which
+the relevant DAG file exists.
+
+For example, assume that a directory called \File{parent}
+contains two subdirectories called \File{dag1} and
+\File{dag2}, and that \File{dag1} contains the file \File{one.dag}
+and \File{dag2} contains the file \File{two.dag}.
+Further, assume that each DAG is set up to be run
+from its own directory (i.e, the following command:
+\begin{verbatim}
+cd dag1; condor_submit_dag one.dag
+\end{verbatim}
+will correctly run \File{one.dag}).
+
+The goal is to run the two, independent DAGs located within
+\File{dag1} and \File{dag2} while the current working directory
+is \File{parent}.  To do so, run the following command:
+\begin{verbatim}
+condor_submit_dag -usedagdir dag1/one.dag dag2/two.dag
+\end{verbatim}
+
+Of course, if all paths in your DAG file(s) and the relevant submit
+files are absolute, you don't need the \Arg{-usedagdir} argument;
+however, using absolute paths is NOT generally a good idea.
+
+If you \emph{don't} use \Arg{-usedagdir}, relative paths can still work
+for multiple DAGs, if
+all file paths are given relative to
+the current working directory as \Condor{submit\_dag} is executed.
+However, this means that, if the DAGs are in separate directories, they
+cannot be submitted from their own directories, only from the parent
+directory the paths are set up for.
+
+Note that if you use the \Arg{-usedagdir} argument, and your run
+results in a rescue DAG, the rescue DAG file will be written to
+the current working directory, and should be run from that directory.
+The rescue DAG includes all the path information necessary to
+run each node job in the proper directory.
+
+%I'm not sure whether or not it's a good idea to include the following
+% information any more.  wenger 2005-08-03.
+%For example,
+%assume that a directory called \File{parent}
+%contains two subdirectories called \File{dag1} and
+%\File{dag2}.
+%The goal is to submit the two, independent DAGs located within
+%\File{dag1} and \File{dag2} while the current working directory
+%is \File{parent} with
+%\footnotesize
+%\begin{verbatim}
+%condor_submit_dag dag1/one.dag dag2/two.dag
+%\end{verbatim}
+%\normalsize
+%To make relative paths work in this example,
+%the DAG input file \File{one.dag} will need to give the
+%location of a Condor submit description file for a 
+%node (within dag1) as
+%\begin{verbatim}
+%Job A  dag1/A.submit
+%\end{verbatim}
+%and the submit description file (file \File{A.submit})
+%also needs relative path names such as
+%\footnotesize
+%\begin{verbatim}
+%    # File name: A.submit, in directory dag1
+%    executable = dag1/A.out
+%    output     = dag1/A.output
+%    error      = dag1/A.error
+%    log        = dag1/dag1.log
+%    universe   = vanilla
+%    queue
+%\end{verbatim}
+%\normalsize
+%Note that these paths are relative to the current working directory
+%as \Condor{submit\_dag} is executed.
+%Further note that these relative path names no longer allow the
+%independent DAG to be submitted on its own when
+%the  current working directory is the directory containing
+%the DAG's files (\File{dag1} for this example).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:DAGConfig}Configuration}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Configuration variables relating to DAGMan may be found
+in 
+section~\ref{sec:DAGMan-Config-File-Entries}.
 
 \index{DAGMan|)}

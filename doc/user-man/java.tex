@@ -18,10 +18,12 @@ Compiled Java programs can be submitted to Condor, and Condor
 can execute the programs on any machine in the pool that will run
 the Java Virtual Machine.
 
+
 The \Condor{status} command can be used to see a list of
 machines in the pool for which Condor can use the Java Virtual
 Machine.
 
+\footnotesize
 \begin{verbatim}
 % condor_status -java
 
@@ -32,6 +34,7 @@ doc.cs.wisc.e Sun Microsy 1.2.2  Unclaimed  Idle       0.000   511  0+01:05:04
 dsonokwa.cs.w Sun Microsy 1.2.2  Unclaimed  Idle       0.000   511  0+01:05:04
 ...
 \end{verbatim}
+\normalsize
 
 If there is no output from the
 \Condor{status} command,
@@ -42,6 +45,10 @@ In this case,
 contact your system administrator or see section \ref{sec:java-install}
 for more information on getting Condor to work together
 with Java.
+
+%%%%%
+\subsection{Example Java Program}
+%%%%%
 
 Here is a complete, if simple, example.
 Start with a simple Java program, \File{Hello.java}:
@@ -62,7 +69,9 @@ javac Hello.java
 \end{verbatim}
 
 Submission to Condor requires a submit description file.
-This is a simple one that works:
+If submitting where files are accessible using a
+shared file system,
+this simple submit description file works:
 
 \begin{verbatim}
   ####################
@@ -87,6 +96,31 @@ This is a file name which contains the entry point of the program.
 The name of the main class (not a file name) must
 be specified as the first argument to the program.
 
+If submitting the job where a shared file system is \emph{not}
+accessible,
+the submit description file becomes:
+
+\begin{verbatim}
+  ####################
+  #
+  # Example 1
+  # Execute a single Java class,
+  # not on a shared file system
+  #
+  ####################
+
+  universe       = java
+  executable     = Hello.class
+  arguments      = Hello
+  output         = Hello.output
+  error          = Hello.error
+  should_transfer_files = YES
+  when_to_transfer_output = ON_EXIT
+  queue
+\end{verbatim}
+For more information about using Condor's file transfer mechanisms,
+see section~\ref{sec:file-transfer}.
+
 To submit the job, where the submit description file
 is named \File{Hello.cmd}, 
 execute 
@@ -103,7 +137,7 @@ one option that tells Condor of the additional files adds
 this line to the submit description file:
 
 \begin{verbatim}
-transfer_input_files = Larry.class Curly.class Moe.class
+transfer_input_files = Larry.class,Curly.class,Moe.class
 \end{verbatim}
 
 If the program consists of a large number of class files,
@@ -145,7 +179,7 @@ Each machine with Java capability in a Condor pool
 will execute a benchmark to determine its speed.
 The benchmark is taken when Condor is started on
 the machine, and it uses the SciMark2
-(\Url{http://math.nist.gov/scimark2}) benchmark.
+(\URL{http://math.nist.gov/scimark2}) benchmark.
 The result of the benchmark is held as an attribute
 within the 
 machine ClassAd.
@@ -160,19 +194,33 @@ As an example, to execute only on machines of a minimum speed:
 requirements = (JavaMFlops>4.5)
 \end{verbatim}
 
-By default, Condor moves all input files
-to each execution site before the job runs, and it moves
-all output files back when the job completes.
+Options to the Java VM itself can be set in the 
+submit description file:
+
+\begin{verbatim}
+java_vm_args = -DMyProperty=Value -verbose:gc
+\end{verbatim}
+
+These options are those which go after the java command, but before
+the user's main class.  Do not use this to set the classpath, as
+Condor handles that itself.  Setting these options is useful for
+setting system properties, system assertions and debugging certain
+kinds of problems.
+
+%%%%%
+\subsection{Chirp I/O}
+%%%%%
 
 \index{Chirp}
-If a job has more sophisticated I/O requirements, then
-you may use a facility called Chirp.
-Chirp has two advantages over simple whole-file transfers.
+If a job has more sophisticated I/O requirements that cannot
+be met by Condor's file transfer mechanism,
+then the Chirp facility may provide a solution.
+Chirp has two advantages over simple, whole-file transfers.
 First, it permits the input files to be decided upon at run-time
 rather than submit time, and second,
 it permits partial-file I/O with results than can be seen as the
 program executes.
-However, you must make small changes to the program
+However, small changes to the program are required
 in order to take advantage of Chirp.
 Depending on the style of the program, use either Chirp I/O streams
 or UNIX-like I/O functions.
@@ -211,6 +259,7 @@ public class TestChirp {
             if(line==null) break;
             out.println(line);
          }
+         out.close();
       } catch( IOException e ) {
          System.out.println(e);
       }

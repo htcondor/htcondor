@@ -1,0 +1,684 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\label{sec:platform-windows}Microsoft Windows}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{platform-specific information!Windows|(}
+
+Windows is a strategic platform for Condor,
+and therefore we have been working toward a complete
+port to Windows.
+Our goal is to make Condor every bit as capable on Windows as it is on
+Unix -- or even more capable.
+
+Porting Condor from Unix to Windows is a formidable task,
+because many
+components of Condor must interact closely with the underlying operating
+system.
+Instead of waiting until all components of Condor are running
+and stabilized on Windows,
+we have decided to make a clipped version of Condor for Windows.
+A clipped version is one in which there is no checkpointing
+and there are no remote system calls.
+
+This section contains additional information specific to running
+Condor on Windows.  Eventually this information will be integrated
+into the Condor Manual as a whole, and this section will disappear.
+In order to effectively use Condor, first read the overview
+chapter (section~\ref{sec:overview})
+and the user's manual (section~\ref{sec:usermanual}).
+If you will
+also be administrating or customizing the policy and set up of Condor,
+also read the administrator's manual 
+chapter (section~\ref{sec:Admin-Intro}).
+After reading these chapters,
+review the information in this chapter for
+important information and differences when using and administrating
+Condor on Windows.
+For information on installing Condor for Windows, see
+section~\ref{sec:Windows-Install}.
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{What is missing from Condor \VersionNotice\ for Windows?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Windows!release notes}
+
+In general, this release for Windows works the same as the 
+release of Condor for Unix.
+However, the following items are not supported in this version:
+
+\begin{itemize}
+
+\item The Standard, Globus, and PVM job universes are not yet present.
+This is no transparent process checkpoint/migration, and there are no
+remote system calls.
+
+\item Accessing files via a network share that requires a kerberos ticket
+(such as AFS) is not yet supported.
+
+\item The ability to run the job with the same credentials as the
+submitting user is not yet supported.  Instead, Condor will use a set
+of accounts (one per VM) with minimal access rights to run the job.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{What is included in Condor \VersionNotice\ for Windows?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Except for those items listed above, most everything works
+the same way in Condor as it does in the Unix release.
+This release is based on the Condor \VersionNotice\ source tree, and thus the
+feature set is the same as Condor \VersionNotice\ for Unix.  
+For instance, all of the following work in Condor:
+\begin{itemize}
+
+\item The ability to submit, run, and manage queues of jobs running on a
+cluster of Windows machines.
+
+\item All tools such as \Condor{q}, \Condor{status}, \Condor{userprio},
+are included. Only \Condor{compile} is
+\emph{not} included.
+
+\item The ability to customize job policy using ClassAds.
+The machine ClassAds contain all the information included in the Unix version,
+including current load average, RAM and virtual memory sizes, integer and
+floating-point performance, keyboard/mouse idle time, etc.  Likewise, job
+ClassAds contain a full complement of information, including system
+dependent entries such as dynamic updates of the job's image size and CPU
+usage.
+
+\item Everything necessary to run a Condor central manager on Windows.
+
+\item Security mechanisms.
+
+\item Support for SMP machines.
+
+\item Condor for Windows can run jobs at a lower operating system
+priority level.
+Jobs can be suspended, soft-killed by using a WM\_CLOSE message,
+or hard-killed automatically based upon policy expressions.
+For example, Condor can automatically suspend a job
+whenever keyboard/mouse or non-Condor created CPU activity is detected, and
+continue the job after the the machine has been idle for a specified amount
+of time.
+
+\item Condor correctly manages jobs which create multiple processes.  For
+instance, if a Condor job spawns multiple processes and Condor
+needs to kill the job,
+all processes created by the job will be terminated.
+
+\item In addition to interactive tools, users and administrators can receive
+information from Condor by e-mail (standard SMTP) and/or by log files.
+
+\item Condor includes a friendly GUI installation and set up program,
+which can perform a full install or deinstall of Condor.
+Information specified by the user in the set up program is stored in the
+system registry.  
+The set up program can update a current installation with a
+new release using a minimal amount of effort.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Details on how Condor for Windows starts/stops a job}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+This section provides some details on how Condor starts and stops jobs.
+This discussion is geared for the Condor administrator or advanced user who is
+already familiar with the material in the Administrator's Manual
+and wishes to know detailed information on what Condor does when
+starting and stopping jobs.
+
+When Condor is about to start a job, the \Condor{startd} on the execute
+machine spawns a \Condor{starter} process.  The \Condor{starter} then
+creates:
+\begin{enumerate}
+
+\item a run account on the machine with a login name of
+``condor-reuse-vmX'', where X is the Virtual Machine number of the
+\Condor{starter}.  This account is added to group Users.
+
+\item a new temporary working directory for the job on the execute machine.
+This directory is
+named ``dir\_XXX'', where XXX is the process ID of the \Condor{starter}.
+The directory is created in the \MacroUNI{EXECUTE} directory as
+specified in Condor's configuration file.  Condor then grants write
+permission to this directory for the user account newly created for the
+job.
+
+\item a new, non-visible Window Station and Desktop for the job.
+Permissions are set so that only the
+user account newly created has access rights to this Desktop.  Any windows
+created by this job are not seen by anyone; the job is run in the
+background.  (Note: Setting \Macro{USE\_VISIBLE\_DESKTOP} to True
+will allow the job to access the default desktop instead of a newly created one.)
+
+\end{enumerate}
+
+Next, the \Condor{starter} (called the starter) contacts the \Condor{shadow}
+(called the shadow) process, which is
+running on the submitting machine, and pulls over the job's executable and
+input files.
+These files are placed into the temporary working directory for the job.
+After all files have been received,
+the starter spawns the user's executable as user ``condor-reuse-vmX'', where X is the number of the virtual machine (or 1 on a uniprocessor machine).
+Its current working directory set to the temporary working directory
+(that is, \MacroUNI{EXECUTE}/dir\_XXX, where XXX is the process id of the \Condor{starter} daemon).
+
+While the job is running, the starter closely monitors the CPU
+usage and image size of all processes started by the job.
+Every 20 minutes the starter sends this information,
+along with the total size of all files contained in the job's
+temporary working directory, to the shadow.
+The shadow then
+inserts this information into the job's ClassAd so that policy and
+scheduling expressions can make use of this dynamic information.
+
+If the job exits of its own accord (that is, the job completes),
+the starter
+first terminates any processes started by the job which could still be
+around if the job did not clean up after itself.
+The starter examines the job's temporary working directory for any
+files which have been created or modified and sends these files back
+to the shadow running on the submit machine.
+The shadow
+places these files into the \Opt{initialdir} specified in the
+submit description file; if no \Opt{initialdir} was specified, the files go
+into the directory where the user invoked \Condor{submit}.
+Once all the output files are safely transferred back,
+the job is removed from the queue.
+If, however, the \Condor{startd} forcibly kills the job before all output files
+could be transferred, the job is not removed from the queue but instead
+switches back to the Idle state.  
+
+If the \Condor{startd} decides to vacate a job prematurely,
+the starter sends a WM\_CLOSE message to the job.
+If the job spawned multiple child processes, the WM\_CLOSE message is only
+sent to the parent process (that is, the one started by the starter).
+The
+WM\_CLOSE message is the preferred way to terminate a process on Windows,
+since this method allows the job to cleanup and free any resources it may
+have allocated.
+When the job exits, the starter cleans up any processes left behind.
+At this point, if \Opt{transfer\_files} is set to
+\Arg{ONEXIT} (the default) in the job's submit description file,
+the job switches from states, from Running to Idle,
+and no files are transferred back.
+If \Opt{transfer\_files} is set to \Arg{ALWAYS}, then any files
+in the job's temporary working directory which were changed or modified are
+first sent back to the submitting machine.
+But this time, the shadow places these
+so-called intermediate files into a subdirectory created in the
+\MacroUNI{SPOOL} directory on the submitting machine
+(\MacroUNI{SPOOL} is specified in Condor's configuration file).
+The job is then switched back to the Idle state until Condor finds
+a different machine on which to run.
+When the job is started again,
+Condor places into the job's temporary working directory the executable
+and input files as before,
+\emph{plus} any files stored in the submit machine's \MacroUNI{SPOOL} directory for that job.  
+
+\Note A Windows console process can intercept a WM\_CLOSE message
+via the Win32 SetConsoleCtrlHandler() function if it needs to do special
+cleanup work at vacate time; a WM\_CLOSE message
+generates a CTRL\_CLOSE\_EVENT.  See SetConsoleCtrlHandler() in the Win32
+documentation for more info.
+
+\Note The default handler in Windows for a WM\_CLOSE message is for the
+process to exit.  Of course, the job could be coded to ignore it and not
+exit, but eventually the \Condor{startd} will become impatient and hard-kill
+the job (if that is the policy desired by the administrator).
+
+Finally, after the job has left and any files transferred back,
+the starter
+deletes the temporary working directory, the temporary
+account, the WindowStation and the Desktop before exiting itself.
+If the starter should terminate abnormally, the \Condor{startd}
+attempts the clean up.
+If for some reason the \Condor{startd} should disappear as well
+(that is, if the entire machine was power-cycled hard),
+the \Condor{startd} will clean up when Condor is restarted.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Security Considerations in Condor for Windows}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% WRT the backslash character, extra spaces are added before it
+% as viewed from the html generated.
+%   Karen has tried
+%         \File{C:$\backslash$WINNT}
+%         \File{C:\Bs WINNT}
+% and neither works.
+
+On the execute machine, the user job is run using the access token of an
+account dynamically created by Condor which has bare-bones access rights and
+privileges.  For instance, if your machines are configured so that only
+Administrators have write access to
+%\File{C:\Bs WINNT},
+\verb@C:\WINNT@,
+then certainly no
+Condor job run on that machine would be able to write anything there.
+The only files the job should be able to access on the execute machine
+are files accessible by the Users and Everyone groups, and files in the
+job's temporary working directory.
+
+On the submit machine, Condor impersonates the submitting user, therefore
+the File Transfer mechanism has the same access rights as the submitting
+user.  For example, say only Administrators can write to
+%\File{C:\Bs WINNT}
+\verb@C:\WINNT@
+on the submit machine,
+and a user gives the following to \Condor{submit} :
+\begin{verbatim}
+         executable = mytrojan.exe
+         initialdir = c:\winnt
+         output = explorer.exe
+         queue
+\end{verbatim}
+Unless that user is in group Administrators, Condor will not permit
+\File{explorer.exe} to be overwritten.  
+
+If for some reason the submitting user's account disappears between the time
+\Condor{submit} was run and when the job runs, Condor is not able to check
+and see if the now-defunct submitting user has read/write access to a given
+file.  In this case, Condor will ensure that group ``Everyone'' has read or
+write access to any file the job subsequently tries to read or write.  This
+is in consideration for some network setups, where the user account only
+exists for as long as the user is logged in.
+
+Condor also provides protection to the job queue.  It would be bad if the
+integrity of the job queue is compromised, because a malicious user could
+remove other user's jobs or even change what executable a user's job will
+run.  To guard against this, in Condor's default configuration all connections to the \Condor{schedd} (the
+process which manages the job queue on a given machine) are authenticated
+using Windows' SSPI security layer.  The user is then authenticated
+using the same challenge-response protocol that Windows uses to authenticate
+users to Windows file servers.  Once authenticated, the only users
+allowed to edit job entry in the queue are:
+\begin{enumerate}
+\item the user who originally submitted that job (i.e. Condor allows users
+to remove or edit their own jobs)
+\item users listed in the \File{condor\_config} file parameter
+\MacroNI{QUEUE\_SUPER\_USERS}.  In the default configuration, only the
+``SYSTEM'' (LocalSystem) account is listed here.  
+\end{enumerate}
+\Warn Do not remove ``SYSTEM'' from \MacroNI{QUEUE\_SUPER\_USERS}, or
+Condor itself will not be able to access the job queue when needed.  If the
+LocalSystem account on your machine is compromised, you have all sorts of
+problems!
+
+To protect the actual job queue files themselves, the Condor installation
+program will automatically set permissions on the entire Condor release
+directory so that only Administrators have write access.
+
+Finally, Condor has all the IP/Host-based security mechanisms present
+in the full-blown version of Condor.  See section~\ref{sec:Host-Security}
+starting on page~\pageref{sec:Host-Security} for complete information
+on how to allow/deny access to Condor based upon machine host name or
+IP address.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:network-files-solutions}Network files and Condor}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Condor can work well with a network file server.
+However, an administrator must set the system up after
+choosing one of the following options.
+
+The heart of the difficulty with a network
+file server is that on the execute machine,
+Condor creates a temporary user which will run the job.
+The file server has never heard of this user before.
+Choose one of these methods to make it work:
+
+\begin{itemize}
+\item METHOD A: access the file server as a different user via a net use command
+with a login and password
+\item METHOD B: access the file server as guest
+\item METHOD C: access the file server with a "NULL" descriptor
+\item METHOD D: create and have Condor use a special account 
+\item METHOD E: use the contrib module from the folks at Bristol University
+\end{itemize}
+
+All of these methods have advantages and disadvantages.
+
+Here are the methods in more detail:
+
+METHOD A - access the file server as a different user via a net use command 
+with a login and password
+
+Example: you want to copy a file off of a server before running it....
+
+\footnotesize
+\begin{verbatim}
+   @echo off
+   net use \\myserver\someshare MYPASSWORD /USER:MYLOGIN
+   copy \\myserver\someshare\my-program.exe
+   my-program.exe
+\end{verbatim}
+\normalsize
+
+The idea here is to simply authenticate to the file server with a different 
+login than the temporary Condor login.  This is easy with the "net use" 
+command as shown above.  Of course, the obvious disadvantage is this user's 
+password is stored and transferred as clear text.
+
+METHOD B - access the file server as guest
+
+Example: you want to copy a file off of a server before running it as GUEST
+
+\begin{verbatim}
+   @echo off
+   net use \\myserver\someshare
+   copy \\myserver\someshare\my-program.exe
+   my-program.exe
+\end{verbatim}
+
+In this example, you'd contact the server MYSERVER as the Condor temporary 
+user.  However, if you have the GUEST account enabled on MYSERVER, you will 
+be authenticated to the server as user "GUEST".  If your file permissions 
+(ACLs) are setup so that either user GUEST (or group EVERYONE) has access 
+the share "someshare" and the directories/files that live there, you can 
+use this method.  The downside of this method is you need to enable the 
+GUEST account on your file server.   \Warn This should be done *with 
+extreme caution* and only if your file server is well protected behind a 
+firewall that blocks SMB traffic.
+
+METHOD C - access the file server with a "NULL" descriptor
+
+One more option is to use NULL Security Descriptors.  In this way, you
+can specify which shares are accessible by NULL Descriptor by adding
+them to your registry.  You can then use the batch file wrapper like:
+
+\begin{verbatim}
+net use z: \\myserver\someshare /USER:""
+z:\my-program.exe
+\end{verbatim}
+
+so long as 'someshare' is in the list of allowed NULL session shares.  To
+edit this list, run regedit.exe and navigate to the key:
+
+\begin{verbatim}
+HKEY_LOCAL_MACHINE\
+   SYSTEM\
+     CurrentControlSet\
+       Services\
+         LanmanServer\
+           Parameters\
+             NullSessionShares
+\end{verbatim}
+
+and edit it.  unfortunately it is a binary value, so you'll then need to
+type in the hex ASCII codes to spell out your share.  each share is
+separated by a null (0x00) and the last in the list is terminated with
+two nulls.
+
+although a little more difficult to set up, this method of sharing is a
+relatively safe way to have one quasi-public share without opening the
+whole guest account.  you can control specifically which shares can be 
+accessed or not via the registry value mentioned above.
+
+
+METHOD D -  create and have Condor use a special account
+
+Create a permanent account (called condor-guest in this description)
+under which Condor will run jobs.
+On all Windows machines, and on the file server, create the
+condor-guest account.
+
+On the network file server, give the condor-guest user permissions
+to access files needed to run Condor jobs.
+
+Securely store the password of the condor-guest user in the
+Windows registry using \Condor{store\_cred} on all Windows
+machines.
+
+Tell Condor to use the condor-guest user as the owner of jobs,
+when required.
+Details for this are in 
+section~\ref{sec:RunAsNobody}.
+
+METHOD E -  access with the contrib module from Bristol
+
+Another option: some hardcore Condor users at Bristol University developed 
+their own module for starting jobs under Condor NT to access file 
+servers.  It involves storing submitting user's passwords on a centralized 
+server.  Below I have included the README from this contrib module, which 
+will soon appear on our website within a week or two.  If you want it 
+before that, let me know, and I could e-mail it to you.
+
+Here is the README from the Bristol Condor contrib module:
+
+\begin{verbatim}
+README
+Compilation Instructions
+Build the projects in the following order
+
+CondorCredSvc
+CondorAuthSvc
+Crun
+Carun
+AfsEncrypt
+RegisterService
+DeleteService
+Only the first 3 need to be built in order. This just makes sure that the 
+RPC stubs are correctly rebuilt if required. The last 2 are only helper 
+applications to install/remove the services. All projects are Visual Studio 
+6 projects. The nmakefiles have been exported for each. Only the project 
+for Carun should need to be modified to change the location of the AFS 
+libraries if needed.
+
+Details
+CondorCredSvc
+CondorCredSvc is a simple RPC service that serves the domain account 
+credentials. It reads the account name and password from the registry of 
+the machine it's running on. At the moment these details are stored in 
+clear text under the key
+
+HKEY_LOCAL_MACHINE\Software\Condor\CredService
+
+The account name and password are held in REG_SZ values "Account" and 
+"Password" respectively. In addition there is an optional REG_SZ value 
+"Port" which holds the clear text port number (e.g. "1234"). If this value 
+is not present the service defaults to using port 3654.
+
+At the moment there is no attempt to encrypt the username/password when it 
+is sent over the wire - but this should be reasonably straightforward to 
+change. This service can sit on any machine so keeping the registry entries 
+secure ought to be fine. Certainly the ACL on the key could be set to only 
+allow administrators and SYSTEM access.
+
+CondorAuthSvc and Crun
+These two programs do the hard work of getting the job authenticated and 
+running in the right place. CondorAuthSvc actually handles the process 
+creation while Crun deals with getting the winstation/desktop/working 
+directory and grabbing the console output from the job so that Condor's 
+output handling mechanisms still work as advertised. Probably the easiest 
+way to see how the two interact is to run through the job creation process:
+
+The first thing to realize is that condor itself only runs Crun.exe. Crun 
+treats its command line parameters as the program to really run. e.g. "Crun 
+\\mymachine\myshare\myjob.exe" actually causes 
+\\mymachine\myshare\myjob.exe to be executed in the context of the domain 
+account served by CondorCredSvc. This is how it works:
+
+When Crun starts up it gets its window station and desktop - these are the 
+ones created by condor. It also gets its current directory - again already 
+created by condor. It then makes sure that SYSTEM has permission to modify 
+the DACL on the window station, desktop and directory. Next it creates a 
+shared memory section and copies its environment variable block into it. 
+Then, so that it can get hold of STDOUT and STDERR from the job it makes 
+two named pipes on the machine it's running on and attaches a thread to 
+each which just prints out anything that comes in on the pipe to the 
+appropriate stream. These pipes currently have a NULL DACL, but only one 
+instance of each is allowed so there shouldn't be any issues involving 
+malicious people putting garbage into them. The shared memory section and 
+both named pipes are tagged with the ID of Crun's process in case we're on 
+a multi-processor machine that might be running more than one job. Crun 
+then makes an RPC call to CondorAuthSvc to actually start the job, passing 
+the names of the window station, desktop, executable to run, current 
+directory, pipes and shared memory section (it only attempts to call 
+CondorAuthSvc on the same machine as it is running on). If the jobs starts 
+successfully it gets the process ID back from the RPC call and then just 
+waits for the new process to finish before closing the pipes and exiting. 
+Technically, it does this by synchronizing on a handle to the process and 
+waiting for it to exit. CondorAuthSvc sets the ACL on the process to allow 
+EVERYONE  to synchronize on it.
+
+[ Technical note: Crun adds "C:\WINNT\SYSTEM32\CMD.EXE /C" to the start of 
+the command line. This is because the process is created with the network 
+context of the caller i.e. LOCALSYSTEM. Pre-pending cmd.exe gets round any 
+unexpected "Access Denied" errors. ]
+
+If Crun gets a WM_CLOSE (CTRL_CLOSE_EVENT) while the job is running it 
+attempts to stop the job, again with an RPC call to CondorAuthSvc passing 
+the job's process ID.
+
+CondorAuthSvc runs as a service under the LOCALSYSTEM account and does the 
+work of starting the job. By default it listens on port 3655, but this can 
+be changed by setting the optional REG_SZ value "Port" under the registry key
+
+HKEY_LOCAL_MACHINE\Software\Condor\AuthService
+
+(Crun also checks this registry key when attempting to contact 
+CondorAuthSvc.) When it gets the RPC to start a job CondorAuthSvc first 
+connects to the pipes for STDOUT and STDERR to prevent anyone else sending 
+data to them. It also opens the shared memory section with the environment 
+stored by Crun.  It then makes an RPC call to CondorCredSvc (to get the 
+name and password of the domain account) which is most likely running on 
+another system. The location information is stored in the registry under 
+the key
+
+HKEY_LOCAL_MACHINE\Software\Condor\CredService
+
+The name of the machine running CondorCredSvc must be held in the REG_SZ 
+value "Host". This should be the fully qualified domain name of the 
+machine. You can also specify the optional "Port" REG_SZ value in case you 
+are running CondorCredSvc on a different port.
+
+Once the domain account credentials have been received the account is 
+logged on through a call to LogonUser. The DACLs on the window station, 
+desktop and current directory are then modified to allow the domain account 
+access to them and the job is started in that window station and desktop 
+with a call to CreateProcessAsUser. The starting directory is set to the 
+same as sent by Crun, STDOUT and STDERR handles are set to the named pipes 
+and the environment sent by Crun is used. CondorAuthSvc also starts a 
+thread which waits on the new process handle until it terminates to close 
+the named pipes. If the process starts correctly the process ID is returned 
+to Crun.
+
+If Crun requests that the job be stopped (again via RPC), CondorAuthSvc 
+loops over all windows on the window station and desktop specified until it 
+finds the one associated with the required process ID. It then sends that 
+window a WM_CLOSE message, so any termination handling built in to the job 
+should work correctly.
+
+[Security Note: CondorAuthSvc currently makes no attempt to verify the 
+origin of the call starting the job. This is, in principal, a bad thing 
+since if the format of the RPC call is known it could let anyone start a 
+job on the machine in the context of the domain user. If sensible security 
+practices have been followed and the ACLs on sensitive system directories 
+(such as C:\WINNT) do not allow write access to anyone other than trusted 
+users the problem should not be too serious.]
+
+Carun and AFSEncrypt
+Carun and AFSEncrypt are a couple of utilities to allow jobs to access AFS 
+without any special recompilation. AFSEncrypt encrypts an AFS 
+username/password into a file (called .afs.xxx) using a simple XOR 
+algorithm. It's not a particularly secure way to do it, but it's simple and 
+self-inverse. Carun reads this file and gets an AFS token before running 
+whatever job is on its command line as a child process. It waits on the 
+process handle and a 24 hour timer. If the timer expires first it briefly 
+suspends the primary thread of the child process and attempts to get a new 
+AFS token before restarting the job, the idea being that the job should 
+have uninterrupted access to AFS if it runs for more than 25 hours (the 
+default token lifetime). As a security measure, the AFS credentials are 
+cached by Carun in memory and the .afs.xxx file deleted as soon as the 
+username/password have been read for the first time.
+
+Carun needs the machine to be running either the IBM AFS client or the 
+OpenAFS client to work. It also needs the client libraries if you want to 
+rebuild it.
+
+For example, if you wanted to get a list of your AFS tokens under Condor 
+you would run the following:
+
+Crun \\mymachine\myshare\Carun tokens.exe
+
+Running a job
+To run a job using this mechanism specify the following in your job 
+submission (assuming Crun is in C:\CondorAuth):
+
+Executable= c:\CondorAuth\Crun.exe
+Arguments = \\mymachine\myshare\carun.exe 
+\\anothermachine\anothershare\myjob.exe
+Transfer_Input_Files = .afs.xxx
+
+along with your usual settings.
+
+Installation
+A basic installation script for use with the Inno Setup installation 
+package compiler can be found in the Install folder.
+\end{verbatim}
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Interoperability between Condor for Unix and Condor for Windows}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Unix machines and Windows machines running Condor can happily
+co-exist in the same Condor pool without any problems.
+Jobs submitted on Windows can run on Windows or Unix,
+and jobs submitted on Unix can run on Unix or Windows.
+Without any specification
+(using the \AdAttr{requirements} expression in the submit description file),
+the default behavior will be to 
+require the execute machine to be of the same architecture and operating
+system as the submit machine.
+
+There is absolutely no need to run more than one Condor central manager,
+even if you have both Unix and Windows machines.  The Condor central manager
+itself can run on either Unix or Windows; there is no advantage to choosing
+one over the other.  Here at University of Wisconsin-Madison, for
+instance, we have hundreds of Unix (Solaris, Linux, Irix, etc) and
+Windows machines in our Computer Science Department Condor pool.
+Our central manager is running on Windows.  All is happy.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Some differences between Condor for Unix -vs- Condor for Windows}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{itemize}
+
+\item On Unix, we recommend the creation of a ``\textit{condor}'' account
+when installing Condor.  On Windows, this is not necessary, as Condor is
+designed to run as a system service as user LocalSystem.
+
+\item On Unix, Condor finds the \File{condor\_config} main configuration
+file by looking in \Tilde condor, in /etc, or via an environment variable.
+On NT, the location of \File{condor\_config} file is determined
+via the registry key \File{HKEY\_LOCAL\_MACHINE/Software/Condor}.
+You can override this value by setting an environment variable named
+\Env{CONDOR\_CONFIG}.
+
+\item On Unix, in the VANILLA universe at job vacate time Condor sends the
+job a softkill signal defined in the submit-description file (defaults to
+SIGTERM).  On NT, Condor sends a WM\_CLOSE message to the job at vacate
+time.
+
+\item On Unix, if one of the Condor daemons has a fault, a core file
+will be created in the \MacroUNI{Log} directory.  On Condor NT, a
+``core'' file will also be created, but instead of a memory dump of the
+process it will be a very short ASCII text file which describes what
+fault occurred and where it happened.  This information can be used by
+the Condor developers to fix the problem.
+
+\end{itemize}
+
+\input{platforms/windows-install.tex}
+\index{platform-specific information!Windows|)}

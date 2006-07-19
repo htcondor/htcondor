@@ -2,28 +2,23 @@
 {Query or set a given Condor configuration variable}
 \Synopsis \SynProg{\Condor{config\_val}}
 \oArg{options}
-\Opt{variable}
-\oOpt{variable \Dots}
+\Arg{variable\Dots}
 
 \SynProg{\Condor{config\_val}}
 \oArg{options}
-\OptArg{-set}{string}
-\oOpt{string \Dots}
+\OptArg{-set}{string\Dots}
 
 \SynProg{\Condor{config\_val}}
 \oArg{options}
-\OptArg{-rset}{string}
-\oOpt{string \Dots}
+\OptArg{-rset}{string\Dots}
 
 \SynProg{\Condor{config\_val}}
 \oArg{options}
-\OptArg{-unset}{variable}
-\oOpt{variable \Dots}
+\OptArg{-unset}{variable\Dots}
 
 \SynProg{\Condor{config\_val}}
 \oArg{options}
-\OptArg{-runset}{variable}
-\oOpt{variable \Dots}
+\OptArg{-runset}{variable\Dots}
 
 \SynProg{\Condor{config\_val}}
 \oArg{options}
@@ -33,13 +28,21 @@
 \oArg{options}
 \Opt{-owner}
 
+\SynProg{\Condor{config\_val}}
+\oArg{options}
+\Opt{-config}
+
+\SynProg{\Condor{config\_val}}
+\oArg{options}
+\OptArg{-verbose}{variable\Dots}
+
 \index{Condor commands!condor\_config\_val}
 \index{condor\_config\_val command}
 
 \Description
 
 \Condor{config\_val} can be used to quickly see what the current
-condor configuration is on any given machine.  Given a list of
+Condor configuration is on any given machine.  Given a list of
 variables, \Condor{config\_val} will report what each of these
 variables is currently set to.  If a given variable is not defined,
 \Condor{config\_val} will halt on that variable, and report that it is
@@ -54,13 +57,13 @@ the daemon is restarted.  Runtime settings are lost when the daemon is
 restarted.  In general, modifying a host's configuration with
 \Condor{config\_val}  
 requires the \DCPerm{CONFIG} access level, which is disabled on all
-hosts by default.  See section~\ref{sec:Security-Access-Levels} on
-page~\pageref{sec:Security-Access-Levels} for more details.
-Begining with Condor version 6.3.2, administrators have more
+hosts by default.  See section~\ref{sec:Security-access-levels} on
+page~\pageref{sec:Security-access-levels} for more details.
+Beginning with Condor version 6.3.2, administrators have more
 fine-grained control over which access levels can modify which
 settings.
-See section~\ref{sec:Config-Val-Security} on
-page~\pageref{sec:Config-Val-Security} for more details.
+See section~\ref{sec:Config-Security} on
+page~\pageref{sec:Config-Security} for more details.
 
 \Note The changes will not take effect until you perform a
 \Condor{reconfig}.
@@ -74,33 +77,38 @@ Far better to discover such a problem on a single machine than to
 cause all the Condor daemons in your pool to exit.
 
 \begin{Options}
-	\OptItem{\OptArg{-name}{daemon\_name}}{ Query the specified
-	daemon for its configuration. }
-	\OptItem{\OptArg{-pool}{hostname}}{ Use the given central
-	manager to find daemons. }
+	\OptItem{\OptArg{-name}{machine\_name}}{ Query the specified
+	machine's \Condor{master} daemon for its configuration. }
+	\OptItem{\OptArg{-pool}{centralmanagerhostname[:portnumber]}}
+	   { Use the given central manager and an optional port number
+	   to find daemons. }
 	\OptItem{\OptArg{-address}{\Sinful{ip:port}}}{ Connect to the
 	given ip/port. }
 	\OptItem{\Opt{-master \Bar -schedd \Bar -startd \Bar
 	-collector \Bar -negotiator}}{The daemon to query (if not
 	specified, master is default). }
-	\OptItem{\OptArg{-set}{string}} { Set a persistent
+	\OptItem{\OptArg{-set}{string\Dots}} { Set a persistent
 	config file entry.
 	The string must be a single argument, so you should enclose it
 	in double quotes.
 	The string must be of the form ``variable = value''. }
-	\OptItem{\OptArg{-rset}{string}} { Set a runtime
+	\OptItem{\OptArg{-rset}{string\Dots}} { Set a runtime
 	config file entry.
 	See the description for \Opt{-set} for details about the
 	string to use. } 
-	\OptItem{\OptArg{-unset}{variable}} { Unset a persistent
+	\OptItem{\OptArg{-unset}{variable\Dots}} { Unset a persistent
 	config file variable. }
-	\OptItem{\OptArg{-runset}{variable}} { Unset a runtime
+	\OptItem{\OptArg{-runset}{variable\Dots}} { Unset a runtime
 	config file variable. }
 	\OptItem{\Opt{-tilde}}{ Return the path to the Condor home
 	directory. }
 	\OptItem{\Opt{-owner}}{ Return the owner of the
 	\Condor{config\_val} process. }
-	\OptItem{\Opt{variable \Dots}}{The variables to query. }
+	\OptItem{\Opt{-config}}{ Print the current configuration files
+	in use. }
+	\OptItem{\OptArg{-verbose}{variable\Dots}}{ Returns the configuration
+	file name and line number where a configuration variable is defined.}
+	\OptItem{\Opt{variable\Dots}}{The variables to query. }
 \end{Options}
 
 \ExitStatus

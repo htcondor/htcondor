@@ -38,17 +38,24 @@ job with \Condor{q} \Opt{-long}.
 
 Strings must be specified with quotes (for example, '"String"').
 
-If a job is currently running, modified attributes for that job will
-not take effect until the job restarts.
+If a job is currently running, modified attributes for that job will not 
+take effect until the job restarts.
+For example, attempting to modify 
+\Attr{PeriodicRemove} to affect when a running job will be
+removed from the queue 
+will \emph{not} affect the job, unless the job happens to be 
+evicted from a machine and returns to the queue to be run again later.
+This is also true for other expressions, such as \Attr{PeriodicHold},
+\Attr{PeriodicRelease}, and so forth.
 
 \Condor{qedit} will not allow modification of the following
 attributes to ensure security and correctness: \Attr{Owner},
 \Attr{ClusterId}, \Attr{ProcId}, \Attr{MyType}, \Attr{TargetType}, and
 \Attr{JobStatus}.
 
-Please use \Condor{hold} to place a job ``on hold'' and
-\Condor{release} to release a held job, instead of attempting to
-modify \Attr{JobStatus} directly.
+Please use \Condor{hold} to place a job in the hold state,
+and use \Condor{release} to release a held job,
+instead of attempting to modify \Attr{JobStatus} directly.
 
 \ExitStatus
 

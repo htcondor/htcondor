@@ -1,0 +1,114 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\label{sec:Glidein}Glidein}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{universe!Globus}
+\index{Globus}
+\index{Condor commands!condor\_glidein}
+\index{glidein}
+\index{grid computing!glidein}
+
+Glidein is a mechanism by which one or more Grid resources (remote machines)
+temporarily join a local Condor pool. 
+The program \Condor{glidein} is used to add a machine
+to a Condor pool.
+During the period of time when the added resource is
+part of the local pool, the resource is visible 
+to users of the pool, but, by default, the resource is only available for
+use by the user
+that added the resource to the pool.
+
+After glidein, the user may submit jobs for execution on the
+added resource the same way that all Condor jobs are submitted.
+To force a submitted job to run on the added resource, the
+submit description file could contain a requirement that the job run 
+specifically on the added resource.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\Condor{glidein} Requirements}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The local Condor pool configuration file(s) must 
+give \Macro{HOSTALLOW\_WRITE} permission
+to every resource that will be added using \Condor{glidein}. 
+Wildcards are permitted in this specification.
+For example, you can add every machine at
+cs.wisc.edu by adding *.cs.wisc.edu to the
+\MacroNI{HOSTALLOW\_WRITE} list.
+Recall that you must run \Condor{reconfig} for configuration
+file changes to take effect.
+
+If it is undesirable to modify the security settings on
+your primary Condor pool, you can simply run your own
+personal Condor pool (which may exist entirely on a single
+machine and coexist with other instances of Condor).  The glidein
+resources may then join this personal Condor pool, because
+you can set the security settings however you want.  Using
+flocking, you can still have your jobs run on the combination
+of your personal glidein pool and any other Condor pools to
+which you have access.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{What \Condor{glidein} Does}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\Condor{glidein} first contacts the Globus resource and checks for the
+presence of the necessary configuration files and Condor executables.
+If the executables are not present for the machine architecture,
+operating system version, and Condor version required,
+\Condor{glidein} will attempt an automatic installation.  If you
+need more control over how this works, see page~\pageref{man-condor-glidein}.
+
+When the files are correctly in place,
+Condor daemons are started.
+\Condor{glidein} does this by creating a submit description file for
+\Condor{submit}, which runs the \Condor{master} under the Globus
+universe.
+Once \Condor{master} begins running, it runs \Condor{startd}, which phones
+home to your \Condor{collector} to join your pool.
+The Condor daemons exit gracefully when no jobs run on the daemons for a
+configurable period of time. The default length of time is 20 minutes.
+
+By default, the \Expr{START}
+expression for the \Condor{startd} daemon requires that the username
+of the person running \Condor{glidein} matches the username of the jobs
+submitted through Condor.
+
+Here is an example of how a glidein resource appears, similar to how
+any other machine appears in your Condor pool.  The name just has a
+slightly different form, in order to handle the possibility of
+multiple instances of glidein daemons inhabiting a multi-processor
+machine.
+
+\footnotesize
+\begin{verbatim}
+% condor_status | grep denal
+7591386@denal IRIX65      SGI    Unclaimed  Idle       3.700  24064  0+00:06:35
+\end{verbatim}
+\normalsize
+
+Once the Globus resource has been added to the local Condor
+pool with \Condor{glidein},
+job(s) may be submitted.
+To force a job to run on the Globus resource,
+specify that Globus resource as a machine requirement
+in the submit description file. 
+Here is an example from within the submit description file
+that forces submission to the Globus resource denali.mcs.anl.gov:
+\begin{verbatim}
+      requirements = ( machine == "denali.mcs.anl.gov" ) \
+         && FileSystemDomain != "" \
+         && Arch != "" && OpSys != ""
+\end{verbatim}
+This example requires that the job run only on denali.mcs.anl.gov,
+and it prevents Condor from inserting the filesystem domain,
+architecture, and operating system attributes as requirements
+in the matchmaking process.
+Condor must be told not to use the submission machine's
+attributes in those cases
+where the Globus resource's attributes
+do not match the submission machine's attributes and your job
+really is capable of running on the target machine.  You
+may want to use Condor's file-transfer capabilities in order
+to copy input and output files back and forth between the submission
+and execution machine.

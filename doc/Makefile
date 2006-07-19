@@ -1,12 +1,12 @@
-SUBDIR = v6.3
-SUBVER = V6_3
+SUBDIR = v6.7.21
+SUBVER = V6_7_21
 MANDIR = /p/condor/public/html/manual/$(SUBDIR)
 TARGETDIR = $(MANDIR).new
 all:  ref.dvi
 #all:  man.ps
 
 ref.pdf: clean
-	echo "\usepackage{times}" > timesfont.tex
+	echo "\usepackage{times} \usepackage[latex2html,ps2pdf,bookmarks,bookmarksnumbered,plainpages=false,pdfpagelabels]{hyperref}" > timesfont.tex
 	rm -f fontsize.tex
 	rm -f symbol.tex
 	rm -f figuresizing.tex
@@ -22,7 +22,7 @@ ref.pdf: clean
 	makeindex ref
 	latex ref.tex -interaction=batchmode
 	rm -f ref.ps
-	dvips ref.dvi
+	dvips ref.dvi -o ref.ps
 	rm -f ref.pdf
 	gs -sDEVICE=pdfwrite -sOutputFile=ref.pdf -dNOPAUSE -dBATCH ref.ps
 	rm -f ref.dvi
@@ -49,7 +49,7 @@ ref.dvi: clean
 	latex ref.tex -interaction=batchmode
 
 ref.ps: ref.dvi
-	dvips ref.dvi
+	dvips ref.dvi -o ref.ps
 
 release-ps: ref.ps $(TARGETDIR)
 	cp ref.ps $(TARGETDIR)/ref.ps
@@ -112,26 +112,18 @@ local.html: clean
 
 release-html: ref.html $(TARGETDIR)
 	rm -rf $(MANDIR).old
+	touch $(MANDIR)
 	mv -f $(MANDIR) $(MANDIR).old
 	mv -f $(TARGETDIR) $(MANDIR)
-	/p/condor/public/cgi-bin/manual/human_header_links.$(SUBDIR).pl
 	rm -f ref.html
-
-admin-man/machine-states.eps: admin-man/machine-states.fig
-	rm -f $@
-	fig2dev -L ps -m .6 $< > $@
-
-admin-man/machine-activities.eps: admin-man/machine-activities.fig
-	rm -f $@
-	fig2dev -L ps -m .6 $< > $@
 
 admin-man/pool-arch.eps: admin-man/pool-arch.fig
 	rm -f $@
-	fig2dev -L ps -m .4 $< > $@
+	fig2dev -L eps -m .4 $< > $@
 
 user-man/dagman-diamond.eps: user-man/dagman-diamond.fig
 	rm -f $@
-	fig2dev -L ps -m .6 $< > $@
+	fig2dev -L eps -m .6 $< > $@
 
 figures: admin-man/machine-states.eps admin-man/machine-activities.eps admin-man/pool-arch.eps user-man/dagman-diamond.eps
 
@@ -159,7 +151,8 @@ $(TARGETDIR):
 	mkdir $(TARGETDIR)
 
 clean:
-	rm -rf ref ref.new man user admin *.1 *.dvi *.ps *.html *.log *.aux *.toc *.pdf */*.log *.ind *.idx *.ilg timesfont.tex
+	rm -rf ref ref.new man user admin *.1 *.dvi *.ps *.html *.log *.aux *.toc *.pdf */*.log *.ind *.idx *.ilg timesfont.tex user-man/dagman-diamond.eps admin-man/pool-arch.eps *.out
+	cd makeman; make clean
 
 reallyclean: clean
 	rm -rf $(TARGETDIR)
