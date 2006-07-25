@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -40,7 +40,7 @@ class JICShadow : public JobInfoCommunicator
 {
 public:
 		/// Constructor
-	JICShadow( char* shadow_sinful );
+	JICShadow( char* shadow_name );
 
 		/// Destructor
 	~JICShadow();
@@ -72,6 +72,19 @@ public:
 		/// Total bytes received by this job 
 	float bytesReceived( void );
 
+		/** Since the logic for getting the std filenames out of the
+			job ad and munging them are identical for all 3, just use
+			a helper to avoid duplicating code.  If we're not
+			transfering files, we may need to use an alternate
+			attribute (see comment for initStdFiles() for more
+			details). 
+			@param attr_name The ClassAd attribute name to lookup
+			@param alt_name The alternate attribute name we might need
+			@return a strdup() allocated string for the filename we 
+			        care about, or NULL if it's not in the job ad.
+		*/
+	char* getJobStdFile( const char* attr_name,
+						 const char* alt_name = NULL );
 
 		// // // // // // // // // // // //
 		// Job execution and state changes
@@ -132,7 +145,14 @@ public:
 	bool notifyJobExit( int exit_status, int reason,
 						UserProc* user_proc );
 
-	bool notifyStarterError( const char* err_msg, bool critical );
+		/** Tell the shadow to log an error event in the user log.
+			@param err_msg A desription of the error
+			@param critical True if the shadow should exit
+			@param hold_reason_code If non-zero, put job on hold with this code
+			@param hold_reason_subcode The sub-code to record
+		 */
+	bool notifyStarterError( const char* err_msg, bool critical,
+	                         int hold_reason_code, int hold_reason_subcode);
 
 
 
@@ -316,19 +336,6 @@ private:
 		*/
 	bool initStdFiles( void );
 
-		/** Since the logic for getting the std filenames out of the
-			job ad and munging them are identical for all 3, just use
-			a helper to avoid duplicating code.  If we're not
-			transfering files, we may need to use an alternate
-			attribute (see comment above for initStdFiles() for more
-			details). 
-			@param attr_name The ClassAd attribute name to lookup
-			@param alt_name The alternate attribute name we might need
-			@return a strdup() allocated string for the filename we 
-			        care about, or NULL if it's not in the job ad.
-		*/
-	char* getJobStdFile( const char* attr_name, const char* alt_name );
-
 		/// If the job ad says so, initialize our IO proxy
 	bool initIOProxy( void );
 
@@ -348,6 +355,12 @@ private:
 		*/
 	bool sameFSDomain( void );
 
+		// Are we using file transfer.  Overridden from parent classes version.
+	bool usingFileTransfer( void );
+
+		// The shadow is feeding us a new proxy. Override from parent
+	bool updateX509Proxy(int cmd, ReliSock * s);
+
 		// // // // // // // //
 		// Private Data Members
 		// // // // // // // //
@@ -357,8 +370,8 @@ private:
 		/** The version of the shadow if known; otherwise NULL */
 	CondorVersionInfo* shadow_version;
 
-		/// "sinful string" of our shadow 
-	char* shadow_addr;
+		/// hostname (or whatever the startd gave us) of our shadow 
+	char* m_shadow_name;
 
 	IOProxy io_proxy;
 

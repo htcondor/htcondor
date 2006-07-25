@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -29,7 +29,7 @@
 #include "HashTable.h"
 #include "condor_classad.h"
 #include "classad_collection_types.h"
-#include "ad_printmask.h"
+#include "MyString.h"
 #include "Set.h"
 #include "condor_distribution.h"
 #include "file_transfer.h"
@@ -42,20 +42,22 @@
 
 template class List<char>; 		template class Item<char>;
 template class List<int>; 		template class Item<int>;
-template class List<ClassAd>;
-template class List<Formatter>;
 template class SimpleList<int>; 
 template class SimpleList<float>;
 template class ExtArray<char *>;
+template class ExtArray<int>;
+template class ExtArray<MyString>;
+template class ExtArray<StringSpace::SSStringEnt>;
+template class ExtArray<StringSpace*>;
 template class ExtArray<ProcFamily::a_pid>;
 template class HashTable<int, BaseCollection*>;
-//template class HashBucket<int, BaseCollection*>;
+template class HashBucket<int, BaseCollection*>;
 template class Set<MyString>;
 template class SetElem<MyString>;
 template class Set<int>;
 template class SetElem<int>;
 template class Set<RankedClassAd>;
-//template class SetElem<RankedClassAd>;
+template class SetElem<RankedClassAd>;
 template class HashTable<MyString, int>;
 template class HashBucket<MyString,int>;
 template class HashTable<MyString, MyString>;
@@ -69,7 +71,5 @@ template class HashTable<MyString, group_entry*>;
 template class HashTable<MyString, uid_entry*>;
 template class SimpleList<Daemon*>;
 template class HashTable<Credential_t, Condor_Credential_B*>;
-
-int 	CondorErrno;
-std::string	CondorErrMsg;
-
+template class SimpleList<MyString>;
+template class SimpleListIterator<MyString>;

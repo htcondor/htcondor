@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -23,6 +23,8 @@
 
 #include "condor_common.h"
 #include "extArray.h"
+#include "MyString.h"
+#include "condor_classad.h"
 
 typedef struct {
 	int cluster;
@@ -31,4 +33,5 @@ typedef struct {
 } clusterProcString;
 
 template class ExtArray <clusterProcString *>;
-
+template class HashTable<MyString, ClassAd*>;
+template class HashBucket<MyString, ClassAd*>;

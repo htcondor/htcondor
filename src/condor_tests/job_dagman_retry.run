@@ -1,0 +1,131 @@
+#! /usr/bin/env perl
+use CondorTest;
+
+$cmd = 'job_dagman_retry.dag';
+$testname = 'Condor submit dag - retry test - scheduler U';
+$dagman_args = "-verbose";
+
+#	This test runs a single node which always fails.
+#	We asked for three retries and after the last,
+#	we will(had better see)have a rescue dag. In
+#	that dag we will scrap for three retries having been made.
+
+my $killedchosen = 0;
+
+# truly const variables in perl
+sub IDLE{1};
+sub HELD{5};
+sub RUNNING{2};
+
+my $rescuedag = $cmd . ".rescue";
+my $newrescuedag = $cmd . ".rescue" . ".new";
+
+my %subinfo;
+
+$abnormal = sub 
+{
+	die "Want to see only submit, execute and termination from three failed retries\n";
+};
+
+$aborted = sub 
+{
+	die "Abort event NOT expected\n";
+};
+
+$held = sub 
+{
+	die "Held event NOT expected\n";
+};
+
+$executed = sub
+{
+	print "Good. We need the dag to run\n";
+};
+
+$submitted = sub
+{
+	print "submitted: This test will see submit, executing and successful completion\n";
+};
+
+$success = sub
+{
+	%subinfo = @_;
+	my $joblog = $subinfo{log};
+	print "Joblog is $joblog\n";
+};
+
+$failure = sub
+{
+	%subinfo = @_;
+	my $joblog = $subinfo{log};
+	print "Joblog is $joblog\n";
+
+	print "executed with failure\n";
+	if( -e $rescuedag )
+	{
+		my $line = "";
+		print "Good, a rescue dag was created.......\n";
+		my $result = `./x_read_joblog.exe $joblog RETURNVALUE`;
+		print "Result of Dag is $result\n";
+		print "Checking for retries.....\n";
+		open( RESCUE, "<$rescuedag");
+		open( NEWRESCUE, ">$newrescuedag");
+		# write out a rescue dag where node always failing has 0 inserted for return
+		# value for post script.... Then run rescue dag.
+		while(<RESCUE>)
+		{
+			chomp;
+			$line = $_;
+			if( $line =~ /^#\s+(\d+)\s+of\s+(\d+)/ )
+			{
+				print NEWRESCUE "$line\n";
+				if( $1 == $2 )
+				{
+					print "$1 of $2 retries attempted.... Good\n";
+				}
+				else
+				{
+					die "Failed do do all requested retries... $1 of $2 done\n";
+				}
+			}
+
+			if( $line =~ /(^.*)(\$RETURN)$/ )
+			{
+				print NEWRESCUE "$1 0\n";
+			}
+			else
+			{
+				print NEWRESCUE "$_\n";
+			}
+		}
+		close(RESCUE);
+		close(NEWRESCUE);
+		system("mv $newrescuedag $rescuedag");
+		if( CondorTest::RunDagTest($testname, $rescuedag, 0, $dagman_args) ) {
+			print "$testname: SUCCESS\n";
+			exit(0);
+		} else {
+			die "$testname: CondorTest::RunTest() failed\n";
+		}
+	}
+	else
+	{
+		die "No rescue dag created from fail test $cmd\n";
+	}
+};
+
+CondorTest::RegisterExitedFailure( $testname, $failure);
+CondorTest::RegisterExitedSuccess( $testname, $success);
+CondorTest::RegisterExecute($testname, $executed);
+CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
+CondorTest::RegisterAbort( $testname, $aborted );
+CondorTest::RegisterHold( $testname, $held );
+CondorTest::RegisterSubmit( $testname, $submitted );
+
+if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
+	print "$testname: SUCCESS\n";
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+

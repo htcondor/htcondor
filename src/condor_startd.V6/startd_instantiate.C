@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -29,9 +29,19 @@ class Resource;
 class CpuAttributes;
 class Starter;
 class Claim;
+class VMMachine;
 
 template class ExtArray<bool>;
 template class SimpleList<Claim*>;
 template class SimpleList<Starter*>;
 template class SimpleList<Resource*>;
 template class SimpleList<CpuAttributes*>;
+template class SimpleList<VMMachine*>;
+
+
+#if HAVE_BACKFILL
+class BackfillVM;
+template class ExtArray<BackfillVM*>;
+#endif /* HAVE_BACKFILL */
+
+

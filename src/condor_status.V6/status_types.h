@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -33,6 +33,8 @@ enum ppOption {
     PP_STARTD_RUN,
     PP_STARTD_COD,
 
+	PP_QUILL_NORMAL,
+
 	PP_SCHEDD_NORMAL,
 	PP_SCHEDD_SUBMITTORS,	
 
@@ -40,6 +42,7 @@ enum ppOption {
 	PP_COLLECTOR_NORMAL,
 	PP_CKPT_SRVR_NORMAL,
 	PP_STORAGE_NORMAL,
+	PP_NEGOTIATOR_NORMAL,
 	PP_ANY_NORMAL,
     PP_VERBOSE,
     PP_XML,
@@ -54,6 +57,7 @@ enum Mode {
     MODE_STARTD_AVAIL,
     MODE_STARTD_RUN,
     MODE_STARTD_COD,
+	MODE_QUILL_NORMAL,
 	MODE_SCHEDD_NORMAL,
 	MODE_SCHEDD_SUBMITTORS,
 	MODE_MASTER_NORMAL,
@@ -61,6 +65,7 @@ enum Mode {
 	MODE_CKPT_SRVR_NORMAL,
 	MODE_LICENSE_NORMAL,
 	MODE_STORAGE_NORMAL,
+	MODE_NEGOTIATOR_NORMAL,
 	MODE_ANY_NORMAL
 };
    

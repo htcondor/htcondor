@@ -1,5 +1,9 @@
 #! /usr/bin/env perl
 
+# WARNING! Do not alter or remove the following comment ('Sends results...').
+#   It is used by some GRAM servers to identify the grid monitor and give
+#   it special permissions (don't restrict when it can run, allow it to
+#   stream output, etc).
 # Sends results from the grid_manager_monitor_agent back to a
 # globus-url-copy friendly URL whenever those results are updated.
 # If necessary, starts the grid_manager_monitor_agent (packaged here as
@@ -187,7 +191,7 @@ if(not exists $ENV{GLOBUS_LOCATION}) {
 
 my $username = (getpwuid($>))[0];
 
-my $STATUS_FILE = "$ENV{GLOBUS_LOCATION}/tmp/${GRID_AGENT_NAME}_log.$>";
+my $STATUS_FILE = "$ENV{GLOBUS_LOCATION}/tmp/gram_job_state/${GRID_AGENT_NAME}_log.$>";
 
 # Have encountered situations where LD_LIBRARY_PATH isn't set.
 # This shouldn't happen, but it's been seen.
@@ -301,6 +305,15 @@ sub send_file {
 	if($timeout < $MIN_TIMEOUT) { $timeout = $MIN_TIMEOUT; }
 	my $ret = looping_timeout_system($max_timeouts, $timeout,
 		"$ENV{GLOBUS_LOCATION}/bin/globus-url-copy", $src_url, $dst_url);
+	if($ret != 0) {
+		# We have seen some sites where /etc/grid-security/certificates
+		# is no good, but $GL/share/certificates is. Give the second
+		# location a try before failing
+		$ENV{X509_CERT_DIR} = "$ENV{GLOBUS_LOCATION}/share/certificates";
+		report_info("Retrying globus-url-copy with X509_CERT_DIR=$ENV{X509_CERT_DIR}");
+		$ret = looping_timeout_system($max_timeouts, $timeout,
+			"$ENV{GLOBUS_LOCATION}/bin/globus-url-copy", $src_url, $dst_url);
+	}
 	if($ret == -1) {
 		fatal_error($ERROR_GUC_FAILED,
 			"Failed to execute globus-url-copy $src_url $dst_url "

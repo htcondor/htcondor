@@ -1,0 +1,49 @@
+#!/usr/bin/env perl
+
+use CondorTest;
+
+$cmd = 'job_rsc_true-false_std.cmd';
+$testname = 'remote io true/false Test';
+$line = "";
+$filenm = "/tmp/job_rsc_true-false_std.$$";
+	
+	open(CMD,"<$cmd") || die "Can not open command file: $!\n";
+	open(NEWCMD,">$cmd.new") || die "Can not open new command file: $!\n";
+	while(<CMD>)
+	{
+		chomp();
+		$line = $_;
+		if($line =~ /\s*arguments\s*=.*$/)
+		{
+			print NEWCMD "arguments = $filenm\n";
+		}
+		else
+		{
+			print NEWCMD "$line\n";
+		}
+
+	}
+	close(CMD);
+	close(NEWCMD);
+	system("mv $cmd.new $cmd");
+
+$ExitSuccess = sub 
+{
+	my %info = @_;
+
+	# Pull out requested environment values
+	my $args   = $info{"arguments"};
+	print "Args passed in are $args\n";
+	if(!defined($args)) {
+	}
+};
+
+CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
+
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+    print "$testname: SUCCESS\n";
+    exit(0);
+} else {
+    die "$testname: CondorTest::RunTest() failed\n";
+}
+

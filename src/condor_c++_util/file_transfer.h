@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -23,6 +23,7 @@
 #ifndef _FILE_TRANSFER_H
 #define _FILE_TRANSFER_H
 
+#include "condor_common.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "MyString.h"
 #include "HashTable.h"
@@ -30,6 +31,7 @@
 #include "perm.h"
 #endif
 #include "condor_uid.h"
+#include "condor_ver_info.h"
 
 class FileTransfer;	// forward declatation
 
@@ -80,6 +82,11 @@ class FileTransfer {
 						 ReliSock *sock_to_use = NULL, 
 						 priv_state priv = PRIV_UNKNOWN);
 
+	/** @param Ad contains filename remaps for downloaded files.
+		       If NULL, turns off remaps.
+		@return 1 on success, 0 on failure */
+	int InitDownloadFilenameRemaps(ClassAd *Ad);
+
 	/** @return 1 on success, 0 on failure */
 	int DownloadFiles(bool blocking=true);
 
@@ -102,12 +109,17 @@ class FileTransfer {
 
 	struct FileTransferInfo {
 		FileTransferInfo() : bytes(0), duration(0), type(NoType),
-			success(true), in_progress(false) {}
+		    success(true), in_progress(false), try_again(true), hold_code(0),
+		    hold_subcode(0) {}
 		filesize_t bytes;
 		time_t duration;
 		TransferType type;
 		bool success;
 		bool in_progress;
+		bool try_again;
+		int hold_code;
+		int hold_subcode;
+		MyString error_desc;
 	};
 
 	FileTransferInfo FileTransfer::GetInfo() { return Info; }
@@ -156,6 +168,14 @@ class FileTransfer {
 		*/
 	int	setClientSocketTimeout(int timeout);
 
+	void setTransferFilePermissions( bool value )
+		{ TransferFilePermissions = value; }
+
+	void setPeerVersion( const char *peer_version );
+	void setPeerVersion( const CondorVersionInfo &peer_version );
+
+	priv_state getDesiredPrivState( void ) { return desired_priv_state; };
+
   protected:
 
 	int Download(ReliSock *s, bool blocking);
@@ -166,20 +186,39 @@ class FileTransfer {
 		/** Actually download the files.
 			@return -1 on failure, bytes transferred otherwise
 		*/
-	int DoDownload(ReliSock *s);
+	int DoDownload( filesize_t *total_bytes, ReliSock *s);
 	int DoUpload( filesize_t *total_bytes, ReliSock *s);
 
 	void CommitFiles();
 	void ComputeFilesToSend();
 	float bytesSent, bytesRcvd;
+	StringList* InputFiles;
+
+	// When downloading files, store files matching source_name as the name
+	// specified by target_name.
+	void AddDownloadFilenameRemap(char const *source_name,char const *target_name);
+
+	// Add any number of download remaps, encoded in the form:
+	// "source1 = target1; source2 = target2; ..."
+	// or in other words, the format expected by the util function
+	// filename_remap_find().
+	void AddDownloadFilenameRemaps(char const *remaps);
 
   private:
 
+	bool TransferFilePermissions;
+	bool DelegateX509Credentials;
+	bool PeerDoesTransferAck;
 	char* Iwd;
-	StringList* InputFiles;
 	StringList* OutputFiles;
+	StringList* EncryptInputFiles;
+	StringList* EncryptOutputFiles;
+	StringList* DontEncryptInputFiles;
+	StringList* DontEncryptOutputFiles;
 	StringList* IntermediateFiles;
 	StringList* FilesToSend;
+	StringList* EncryptFiles;
+	StringList* DontEncryptFiles;
 	char* SpooledIntermediateFiles;
 	char* ExecFile;
 	char* UserLogFile;
@@ -212,6 +251,19 @@ class FileTransfer {
 	bool did_init;
 	bool simple_init;
 	ReliSock *simple_sock;
+	MyString download_filename_remaps;
+
+	// Called internally by DoUpload() in order to handle common wrapup tasks.
+	int ExitDoUpload(filesize_t *total_bytes, ReliSock *s, priv_state saved_priv, bool socket_default_crypto, bool upload_success, bool do_upload_ack, bool do_download_ack, bool try_again, int hold_code, int hold_subcode, char const *upload_error_desc,int DoUpload_exit_line);
+
+	// Send acknowledgment of success/failure after downloading files.
+	void SendTransferAck(Stream *s,bool success,bool try_again,int hold_code,int hold_subcode,char const *hold_reason);
+
+	// Receive acknowledgment of success/failure after downloading files.
+	void GetTransferAck(Stream *s,bool &success,bool &try_again,int &hold_code,int &hold_subcode,MyString &error_desc);
+
+	// Report information about completed transfer from child thread.
+	bool WriteStatusToTransferPipe(filesize_t total_bytes);
 };
 
 #endif

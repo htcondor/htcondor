@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -27,10 +27,15 @@
 #include "../condor_daemon_core.V6/condor_lock.h"
 #include "dc_collector.h"
 #include "killfamily.h"
+#include "condor_pidenvid.h"
+#include "env.h"
 
 enum AllGoneT { MASTER_RESTART, MASTER_EXIT, MASTER_RESET };
 enum ReaperT { DEFAULT_R, ALL_R, NO_R };
-enum StopStateT { GRACEFUL, FAST, KILL, NONE };
+enum StopStateT { PEACEFUL, GRACEFUL, FAST, KILL, NONE };
+
+// Max # of controllee's a controller can support
+const int MAX_CONTROLLEES = 5;
 
 class daemon : public Service
 {
@@ -42,9 +47,9 @@ public:
 	char*	log_filename_in_config_file;
 	char*	flag_in_config_file;
 	char*	process_name;
+	char*	watch_name;
 	char*	log_name;
 	int		runs_here;
-	int		on_hold;
 	int		pid;
 	int 	restarts;
 	int		newExec; 
@@ -52,9 +57,7 @@ public:
 	time_t	startTime;		// Time this daemon was started
 	bool	isDC;
 
-	char*   env;			// Environment of daemon, e.g.,
-							// "FOO=bar;CONDOR_CONFIG=/some/path/config"
-							// null if there is none
+	Env     env;			// Environment of daemon.
 
 #if 0
 	char*	port;				 	// for config server
@@ -62,11 +65,15 @@ public:
 #endif
 
 	int		NextStart();
-	int		Start();
+	int		Start( bool never_forward = false );
 	int		RealStart();
 	int		Restart();
-	void	Stop();
-	void	StopFast();
+	void    Hold( bool on_hold, bool never_forward = false );
+	bool	OnHold( void ) { return on_hold; };
+	void	Stop( bool never_forward = false );
+	void	StopFast( bool never_forward = false );
+	int		StopFastTimer();
+	void	StopPeaceful();
 	void	HardKill();
 	void	Exited( int );
 	void	Obituary( int );
@@ -75,8 +82,11 @@ public:
 	void	Kill( int );
 	void	KillFamily( void );
 	void	Reconfig();
-	void	InitProcFam( int pid );
+	void	InitProcFam( int pid, PidEnvID *penvid );
 	void	DeleteProcFam( void );
+
+	int		SetupController( void );
+	int		RegisterControllee( class daemon * );
 
 private:
 
@@ -94,6 +104,8 @@ private:
 	int		stop_fast_tid;
 	int 	hard_kill_tid;
 
+	int		on_hold;
+
 	int		needs_update;
 	StopStateT stop_state;
 
@@ -104,6 +116,17 @@ private:
 
 	CondorLock	*ha_lock;
 	bool	is_ha;
+
+	int		m_backoff_constant;
+	float	m_backoff_factor;
+	int		m_backoff_ceiling;
+	int		m_recover_time;
+
+	char	*controller_name;
+	class daemon  *controller;
+
+	int		num_controllees;
+	class daemon  *controllees[MAX_CONTROLLEES];
 };
 
 
@@ -129,13 +152,16 @@ public:
 	void	CheckForNewExecutable();
 	void	DaemonsOn();
 	void	DaemonsOff( int fast = 0 );
+	void	DaemonsOffPeaceful();
 	void 	StartAllDaemons();
 	void	StopAllDaemons();
 	void	StopFastAllDaemons();
+	void	StopPeacefulAllDaemons();
 	void	ReconfigAllDaemons();
 
 	void	InitMaster();
 	void    RestartMaster();
+	void    RestartMasterPeaceful();
 	void	FinishRestartMaster();
 	void	FinalRestartMaster();
 
@@ -157,6 +183,8 @@ public:
 	void	StartNewExecTimer();
 	void	CancelNewExecTimer();
 
+	int		SetupControllers( );
+
 	int		immediate_restart;
 	int		immediate_restart_master;
 
@@ -164,6 +192,7 @@ public:
 	void	UpdateCollector();
 
 	class daemon*	FindDaemon( daemon_t dt );
+	class daemon*	FindDaemon( const char * );
 
 private:
 	class daemon **daemon_ptr;

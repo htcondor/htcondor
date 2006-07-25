@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -34,12 +34,18 @@
 #include "condor_debug.h"
 #include "condor_distribution.h"
 #include "condor_environ.h"
+#include "soap_core.h"
+#include "setenv.h"
+#include "time_offset.h"
 
 #define _NO_EXTERN_DAEMON_CORE 1	
 #include "condor_daemon_core.h"
 
 #ifdef WIN32
 #include "exphnd.WIN32.h"
+#endif
+#if HAVE_EXT_COREDUMPER
+#include "google/coredumper.h"
 #endif
 
 // Externs to Globals
@@ -57,9 +63,12 @@ extern void main_pre_command_sock_init();
 // Internal protos
 void dc_reconfig( bool is_full );
 void dc_config_auth();       // Configuring GSI (and maybe other) authentication related stuff
+
 // Globals
 int		Foreground = 0;		// run in background by default
-char*	myName;				// set to argv[0]
+static const char*	myName;			// set to basename(argv[0])
+char *_condor_myServiceName;		// name of service on Win32 (argv[0] from SCM)
+static char*	myFullName;		// set to the full path to ourselves
 DaemonCore*	daemonCore;
 static int is_master = 0;
 char*	logDir = NULL;
@@ -70,6 +79,24 @@ static	char*	logAppend = NULL;
 int line_where_service_stopped = 0;
 #endif
 bool	DynamicDirs = false;
+
+// runfor is non-zero if the -r command-line option is specified. 
+// It is specified to tell a daemon to kill itself after runfor minutes.
+// Currently, it is only used for the master, and it is specified for 
+// glide-in jobs that know that they can only run for a certain amount
+// of time. Glide-in will tell the master to kill itself a minute before 
+// it needs to quit, and it will kill the other daemons. 
+// 
+// The master will check this global variable and set an environment
+// variable to inform the children how much time they have left to run. 
+// This will mainly be used by the startd, which will advertise how much
+// time it has left before it exits. This can be used by a job's requirements
+// so that it can decide if it should run at a particular machine or not. 
+int runfor = 0; //allow cmd line option to exit after *runfor* minutes
+
+// This flag tells daemoncore whether to do the authorization initialization.
+// It can be set to false by calling the DC_Skip_Auth_Init() function.
+static bool doAuthInit = true;
 
 
 #ifndef WIN32
@@ -176,19 +203,37 @@ DC_Exit( int status )
 		// address file or the pid file.
 	clean_files();
 
-		// Log a message
-	dprintf(D_ALWAYS,"**** %s (%s_%s) EXITING WITH STATUS %d\n",
-		myName,myDistro->Get(),mySubSystem,status);
-
 		// Now, delete the daemonCore object, since we allocated it. 
 	delete daemonCore;
 	daemonCore = NULL;
 
 		// Free up the memory from the config hash table, too.
 	clear_config();
-	
+
+		// and deallocate the memory from the passwd_cache (uids.C)
+	delete_passwd_cache();
+
+		/*
+		  Log a message.  We want to do this *AFTER* we delete the
+		  daemonCore object and free up other memory, just to make
+		  sure we don't hit an EXCEPT() or anything in there and end
+		  up exiting with something else after we print this.  all the
+		  dprintf() code has already initialized everything it needs
+		  to know from the config file, so it's ok that we already
+		  cleared out our config hashtable, too.  Derek 2004-11-23
+		*/
+	dprintf( D_ALWAYS, "**** %s (%s_%s) EXITING WITH STATUS %d\n",
+			 myName, myDistro->Get(), mySubSystem, status );
+
 		// Finally, exit with the status we were given.
 	exit( status );
+}
+
+
+void
+DC_Skip_Auth_Init()
+{
+	doAuthInit = false;
 }
 
 
@@ -367,6 +412,18 @@ handle_log_append( char* append_str )
 }
 
 
+int
+dc_touch_log_file( Service* )
+{
+	dprintf_touch_log();
+
+	daemonCore->Register_Timer( param_integer( "TOUCH_LOG_INTERVAL", 60 ),
+				(TimerHandler)dc_touch_log_file, "dc_touch_log_file" );
+
+	return TRUE;
+}
+
+
 void
 set_dynamic_dir( char* param_name, const char* append_str )
 {
@@ -399,7 +456,7 @@ set_dynamic_dir( char* param_name, const char* append_str )
 	env_str += "=";
 	env_str += newdir;
 	char *env_cstr = strdup( env_str.Value() );
-	if( putenv(env_cstr) < 0 ) {
+	if( SetEnv(env_cstr) != TRUE ) {
 		fprintf( stderr, "ERROR: Can't add %s to the environment!\n", 
 				 env_cstr );
 		exit( 4 );
@@ -429,11 +486,52 @@ handle_dynamic_dirs()
 		// variable, so that the startd will have a unique name. 
 	sprintf( buf, "_%s_STARTD_NAME=%d", myDistro->Get(), mypid );
 	char* env_str = strdup( buf );
-	if( putenv(env_str) < 0 ) {
+	if( SetEnv(env_str) != TRUE ) {
 		fprintf( stderr, "ERROR: Can't add %s to the environment!\n", 
 				 env_str );
 		exit( 4 );
 	}
+}
+
+#if HAVE_EXT_COREDUMPER
+void
+linux_sig_coredump(int signum)
+{
+		// Just in case we're running as condor or a user.
+	setuid(0);
+	setgid(0);
+	WriteCoreDump("core");
+
+		// It would be idea to actually terminate for the same reason.
+	struct sigaction sa;
+	sa.sa_handler = SIG_DFL;
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = 0;
+	sigaction(signum, &sa, NULL);
+	sigprocmask(SIG_SETMASK, &sa.sa_mask, NULL);
+
+	raise(signum);
+
+	exit(1); // Just in case.
+}
+#endif
+
+void
+install_core_dump_handler()
+{
+#if HAVE_EXT_COREDUMPER
+		// We only need to do this if we're root.
+		if( getuid() == 0) {
+			dprintf(D_FULLDEBUG, "Running as root.  Enabling specialized core dump routines\n");
+			sigset_t fullset;
+			sigfillset( &fullset );
+			install_sig_handler_with_mask(SIGSEGV, &fullset, linux_sig_coredump);
+			install_sig_handler_with_mask(SIGABRT, &fullset, linux_sig_coredump);
+			install_sig_handler_with_mask(SIGILL, &fullset, linux_sig_coredump);
+			install_sig_handler_with_mask(SIGFPE, &fullset, linux_sig_coredump);
+			install_sig_handler_with_mask(SIGBUS, &fullset, linux_sig_coredump);
+		}
+#	endif // of ifdef HAVE_EXT_COREDUMPER
 }
 
 
@@ -455,6 +553,11 @@ drop_core_in_log( void )
 				 "not calling chdir()\n" );
 		return;
 	}
+
+	// in some case we need to hook up our own handler to generate
+	// core files.
+	install_core_dump_handler();
+
 #ifdef WIN32
 	{
 		// give our Win32 exception handler a filename for the core file
@@ -467,9 +570,7 @@ drop_core_in_log( void )
 		// debug symbols
 		char *binpath = param("BIN");
 		if ( binpath ) {
-			sprintf(pseudoCoreFileName,"_NT_SYMBOL_PATH=%s",
-				binpath);
-			putenv( strdup(pseudoCoreFileName) );
+			SetEnv( "_NT_SYMBOL_PATH", binpath );
 			free(binpath);
 		}
 	}
@@ -535,7 +636,31 @@ handle_off_graceful( Service*, int, Stream* )
 	return TRUE;
 }
 
-	
+int
+handle_off_peaceful( Service*, int, Stream* )
+{
+	// Peaceful shutdown is the same as graceful, except
+	// there is no timeout waiting for things to finish.
+
+	daemonCore->SetPeacefulShutdown(true);
+	daemonCore->Send_Signal( daemonCore->getpid(), SIGTERM );
+	return TRUE;
+}
+
+int
+handle_set_peaceful_shutdown( Service*, int, Stream* )
+{
+	// If the master could send peaceful shutdown signals, it would
+	// not be necessary to have a message for turning on the peaceful
+	// shutdown toggle.  Since the master only sends fast and graceful
+	// shutdown signals, condor_off is responsible for first turning
+	// on peaceful shutdown in appropriate daemons.
+
+	daemonCore->SetPeacefulShutdown(true);
+	return TRUE;
+}
+
+
 int
 handle_reconfig( Service*, int cmd, Stream* )
 {
@@ -571,11 +696,25 @@ handle_fetch_log( Service *service, int cmd, Stream *s )
 		result = DC_FETCH_LOG_RESULT_BAD_TYPE;
 		stream->code(result);
 		stream->end_of_message();
+        free(name);
 		return FALSE;
 	}
 
 	char *pname = (char*)malloc (strlen(name) + 5);
-	strcpy (pname, name);
+	char *ext = strchr(name,'.');
+
+	//If there is a dot in the name, it is of the form "<SUBSYS>.<ext>"
+	//Otherwise, it is "<SUBSYS>".  The file extension is used to
+	//handle such things as "StarterLog.vm1" and "StarterLog.cod"
+
+	if(ext) {
+		strncpy(pname, name, ext-name);
+		pname[ext-name] = '\0';
+	}
+	else {
+		strcpy(pname, name);
+	}
+
 	strcat (pname, "_LOG");
 
 	char *filename = param(pname);
@@ -584,15 +723,25 @@ handle_fetch_log( Service *service, int cmd, Stream *s )
 		result = DC_FETCH_LOG_RESULT_NO_NAME;
 		stream->code(result);
 		stream->end_of_message();
+        free(pname);
+        free(name);
 		return FALSE;
 	}
 
-	int fd = open(filename,O_RDONLY);
+	MyString full_filename = filename;
+	if(ext) {
+		full_filename += ext;
+	}
+
+	int fd = open(full_filename.Value(),O_RDONLY);
 	if(fd<0) {
-		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log: can't open file %s\n",filename);
+		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log: can't open file %s\n",full_filename.Value());
 		result = DC_FETCH_LOG_RESULT_CANT_OPEN;
 		stream->code(result);
 		stream->end_of_message();
+        free(filename);
+        free(pname);
+        free(name);
 		return FALSE;
 	}
 
@@ -815,6 +964,8 @@ unix_sigusr2(int)
 	daemonCore->Send_Signal( daemonCore->getpid(), SIGUSR2 );
 }
 
+
+
 #endif /* ! WIN32 */
 
 
@@ -899,18 +1050,9 @@ void
 dc_config_auth()
 {
 #if !defined(SKIP_AUTHENTICATION) && defined(GSI_AUTHENTICATION)
-    int i;
-	char *x509_env = "X509_USER_PROXY=";
 
     // First, if there is X509_USER_PROXY, we clear it.
-    for (i=0;environ[i] != NULL;i++) {
-         if (strncmp(environ[i], x509_env, strlen(x509_env) ) == 0) {
-             for (;environ[i] != NULL;i++) {
-                 environ[i] = environ[i+1];
-			}
-             break;
-         }
-    }
+	UnsetEnv( "X509_USER_PROXY" );
 
     // Next, we param the configuration file for GSI related stuff and 
     // set the corresponding environment variables for it
@@ -920,6 +1062,7 @@ dc_config_auth()
 	char *cert_buf = 0;
 	char *key_buf = 0;
 	char *trustedca_buf = 0;
+	char *mapfile_buf = 0;
 
 	char buffer[(_POSIX_PATH_MAX * 3)];
 	memset(buffer, 0, (_POSIX_PATH_MAX * 3));
@@ -950,61 +1093,56 @@ dc_config_auth()
     cert_buf = param( STR_GSI_DAEMON_CERT );
     key_buf = param( STR_GSI_DAEMON_KEY );
     trustedca_buf = param( STR_GSI_DAEMON_TRUSTED_CA_DIR );
-
+    mapfile_buf = param( STR_GSI_MAPFILE );
 
     if (pbuf) {
 
 		if( !trustedca_buf) {
-       	 sprintf( buffer, "%s=%s%ccertificates", STR_GSI_CERT_DIR, pbuf, 
-					DIR_DELIM_CHAR);
-       	 putenv( strdup( buffer ) );
+			sprintf( buffer, "%s%ccertificates", pbuf, DIR_DELIM_CHAR);
+			SetEnv( STR_GSI_CERT_DIR, buffer );
 		}
 
 		if( !cert_buf ) {
-        	sprintf( buffer, "%s=%s%chostcert.pem", STR_GSI_USER_CERT, pbuf, 
-						DIR_DELIM_CHAR);
-        	putenv( strdup ( buffer ) );
+        	sprintf( buffer, "%s%chostcert.pem", pbuf, DIR_DELIM_CHAR);
+        	SetEnv( STR_GSI_USER_CERT, buffer );
 		}
 	
 		if (!key_buf ) {
-        	sprintf(buffer,"%s=%s%chostkey.pem",STR_GSI_USER_KEY,pbuf, 
-					DIR_DELIM_CHAR);
-        	putenv( strdup ( buffer  ) );
+			sprintf( buffer, "%s%chostkey.pem", pbuf, DIR_DELIM_CHAR);
+        	SetEnv( STR_GSI_USER_KEY, buffer );
+		}
+
+		if (!mapfile_buf ) {
+			sprintf( buffer, "%s%cgrid-mapfile", pbuf, DIR_DELIM_CHAR);
+        	SetEnv( STR_GSI_USER_KEY, buffer );
 		}
 
         free( pbuf );
     }
 
 	if(proxy_buf) { 
-		sprintf( buffer, "%s=%s", STR_GSI_USER_PROXY, proxy_buf);
-		putenv (strdup( buffer ) );
+		SetEnv( STR_GSI_USER_PROXY, proxy_buf );
 		free(proxy_buf);
 	}
 
 	if(cert_buf) { 
-		sprintf( buffer, "%s=%s", STR_GSI_USER_CERT, cert_buf);
-		putenv (strdup( buffer ) );
+		SetEnv( STR_GSI_USER_CERT, cert_buf );
 		free(cert_buf);
 	}
 
 	if(key_buf) { 
-		sprintf( buffer, "%s=%s", STR_GSI_USER_KEY, key_buf);
-		putenv (strdup( buffer ) );
+		SetEnv( STR_GSI_USER_KEY, key_buf );
 		free(key_buf);
 	}
 
 	if(trustedca_buf) { 
-		sprintf( buffer, "%s=%s", STR_GSI_CERT_DIR, trustedca_buf);
-		putenv (strdup( buffer ) );
+		SetEnv( STR_GSI_CERT_DIR, trustedca_buf );
 		free(trustedca_buf);
 	}
 
-
-    pbuf = param( STR_GSI_MAPFILE );
-    if (pbuf) {
-        sprintf( buffer, "%s=%s", STR_GSI_MAPFILE, pbuf);
-        putenv( strdup (buffer) );
-        free(pbuf);
+    if (mapfile_buf) {
+		SetEnv( STR_GSI_MAPFILE, mapfile_buf );
+        free(mapfile_buf);
     }
 #endif
 }
@@ -1038,18 +1176,24 @@ handle_dc_sigterm( Service*, int )
 	}
 #endif
 
-	int timeout = 30 * MINUTE;
-	char* tmp = param( "SHUTDOWN_GRACEFUL_TIMEOUT" );
-	if( tmp ) {
-		timeout = atoi( tmp );
-		free( tmp );
+	if( daemonCore->GetPeacefulShutdown() ) {
+		dprintf( D_FULLDEBUG, 
+				 "Peaceful shutdown in effect.  No timeout enforced.\n");
 	}
-	daemonCore->Register_Timer( timeout, 0, 
-								(TimerHandler)main_shutdown_fast,
-								"main_shutdown_fast" );
-	dprintf( D_FULLDEBUG, 
-			 "Started timer to call main_shutdown_fast in %d seconds\n", 
-			 timeout );
+	else {
+		int timeout = 30 * MINUTE;
+		char* tmp = param( "SHUTDOWN_GRACEFUL_TIMEOUT" );
+		if( tmp ) {
+			timeout = atoi( tmp );
+			free( tmp );
+		}
+		daemonCore->Register_Timer( timeout, 0, 
+									(TimerHandler)main_shutdown_fast,
+									"main_shutdown_fast" );
+		dprintf( D_FULLDEBUG, 
+				 "Started timer to call main_shutdown_fast in %d seconds\n", 
+				 timeout );
+	}
 	main_shutdown_graceful();
 	return TRUE;
 }
@@ -1083,11 +1227,11 @@ int main( int argc, char** argv )
 {
 	char**	ptr;
 	int		command_port = -1;
+	int 	http_port = -1;
 	int		dcargs = 0;		// number of daemon core command-line args found
 	char	*ptmp, *ptmp1;
 	int		i;
 	int		wantsKill = FALSE, wantsQuiet = FALSE;
-	int runfor = 0; //allow cmd line option to exit after *runfor* minutes
 
 
 #ifndef WIN32
@@ -1118,10 +1262,25 @@ int main( int argc, char** argv )
 	install_sig_handler_with_mask(SIGUSR1, &fullset, unix_sigusr1);
 	install_sig_handler_with_mask(SIGUSR2, &fullset, unix_sigusr2);
 	install_sig_handler(SIGPIPE, SIG_IGN );
+
 #endif // of ifndef WIN32
 
+	_condor_myServiceName = argv[0];
 	// set myName to be argv[0] with the path stripped off
-	myName = basename(argv[0]);
+	myName = condor_basename(argv[0]);
+	myFullName = getExecPath();
+	if( ! myFullName ) {
+			// if getExecPath() didn't work, the best we can do is try
+			// saving argv[0] and hope for the best...
+		if( argv[0][0] == '/' ) {
+				// great, it's already a full path
+			myFullName = strdup(argv[0]);
+		} else {
+				// we don't have anything reliable, so forget it.  
+			myFullName = NULL;
+		}
+	}
+
 	myDistro->Init( argc, argv );
 	if ( EnvInit() < 0 ) {
 		exit( 1 );
@@ -1197,7 +1356,7 @@ int main( int argc, char** argv )
 					(char *)malloc( strlen(ptmp) + myDistro->GetLen() + 10 );
 				if ( ptmp1 ) {
 					sprintf(ptmp1,"%s_CONFIG=%s", myDistro->GetUc(), ptmp);
-					putenv(ptmp1);
+					SetEnv(ptmp1);
 				}
 			} else {
 				fprintf( stderr, 
@@ -1241,6 +1400,28 @@ int main( int argc, char** argv )
 						 "argument\n" );
 				exit( 1 );
 			}				  
+			break;
+		case 'h':		// -http <port> : specify port for HTTP and SOAP requests
+			if ( ptr[0][2] && ptr[0][2] == 't' ) {
+					// specify an HTTP port
+				ptr++;
+				if( ptr && *ptr ) {
+					http_port = atoi( *ptr );
+					dcargs += 2;
+				} else {
+					fprintf( stderr, 
+							 "DaemonCore: ERROR: -http needs another argument.\n" );
+					fprintf( stderr, 
+					   "   Please specify the port to use for the HTTP socket.\n" );
+
+					exit( 1 );
+				}
+			} else {
+					// it's not -http, so do NOT consume this arg!!
+					// in fact, we're done w/ DC args, since it's the
+					// first option we didn't recognize.
+				done = true;
+			}
 			break;
 		case 'p':		// use well-known Port for command socket, or
 				        // specify a Pidfile to drop your pid into
@@ -1321,7 +1502,9 @@ int main( int argc, char** argv )
 
     // call dc_config_GSI to set GSI related parameters so that all
     // the daemons will know what to do.
-    dc_config_auth();
+	if ( doAuthInit ) {
+		dc_config_auth();
+	}
 
 		// See if we're supposed to be allowing core files or not
 	check_core_files();
@@ -1442,9 +1625,24 @@ int main( int argc, char** argv )
 	dprintf(D_ALWAYS,"******************************************************\n");
 	dprintf(D_ALWAYS,"** %s (%s_%s) STARTING UP\n",
 			myName,myDistro->GetUc(),mySubSystem);
+	if( myFullName ) {
+		dprintf( D_ALWAYS, "** %s\n", myFullName );
+		free( myFullName );
+		myFullName = NULL;
+	}
 	dprintf(D_ALWAYS,"** %s\n", CondorVersion());
 	dprintf(D_ALWAYS,"** %s\n", CondorPlatform());
-	dprintf(D_ALWAYS,"** PID = %lu\n",daemonCore->getpid());
+	dprintf(D_ALWAYS,"** PID = %lu\n", (unsigned long) daemonCore->getpid());
+	time_t log_last_mod_time = dprintf_last_modification();
+	if ( log_last_mod_time <= 0 ) {
+		dprintf(D_ALWAYS,"** Log last touched time unavailable (%s)\n",
+				strerror(-log_last_mod_time));
+	} else {
+		struct tm *tm = localtime( &log_last_mod_time );
+		dprintf(D_ALWAYS,"** Log last touched %d/%d %02d:%02d:%02d\n",
+				tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min,
+				tm->tm_sec);
+	}
 
 #ifndef WIN32
 		// Want to do this dprintf() here, since we can't do it w/n 
@@ -1459,9 +1657,9 @@ int main( int argc, char** argv )
 
 	dprintf(D_ALWAYS,"******************************************************\n");
 
-	if (global_config_file != "") {
-		dprintf(D_ALWAYS, "Using config file: %s\n", 
-				global_config_file.GetCStr());
+	if (global_config_source != "") {
+		dprintf(D_ALWAYS, "Using config source: %s\n", 
+				global_config_source.GetCStr());
 	} else {
 		const char* env_name = EnvGetName( ENV_CONFIG );
 		char* env = getenv( env_name );
@@ -1471,13 +1669,18 @@ int main( int argc, char** argv )
 					env_name, env );
 		}
 	}
-	if (global_root_config_file != "") {
-		dprintf(D_ALWAYS, "Using root config file: %s\n", 
-				global_root_config_file.GetCStr());
+	if (global_root_config_source != "") {
+		dprintf(D_ALWAYS, "Using root config source: %s\n", 
+				global_root_config_source.GetCStr());
 	}
-	if (local_config_files != "") {
-		dprintf(D_ALWAYS, "Using local config files: %s\n", 
-				local_config_files.GetCStr());
+
+	if (!local_config_sources.isEmpty()) {
+		dprintf(D_ALWAYS, "Using local config sources: \n");
+		local_config_sources.rewind();
+		char *source;
+		while( (source = local_config_sources.next()) != NULL ) {
+			dprintf(D_ALWAYS, "   %s\n", source );
+		}
 	}
 		// chdir() into our log directory so if we drop core, that's
 		// where it goes.  We also do some NT-specific stuff in here.
@@ -1515,7 +1718,7 @@ int main( int argc, char** argv )
 
 		// SETUP COMMAND SOCKET
 	daemonCore->InitCommandSocket( command_port );
-	
+
 		// Install DaemonCore signal handlers common to all daemons.
 	daemonCore->Register_Signal( SIGHUP, "SIGHUP", 
 								 (SignalHandler)handle_dc_sighup,
@@ -1526,10 +1729,11 @@ int main( int argc, char** argv )
 	daemonCore->Register_Signal( SIGTERM, "SIGTERM", 
 								 (SignalHandler)handle_dc_sigterm,
 								 "handle_dc_sigterm()" );
-#ifndef WIN32
+
 	daemonCore->Register_Signal( DC_SERVICEWAITPIDS, "DC_SERVICEWAITPIDS",
 								(SignalHandlercpp)&DaemonCore::HandleDC_SERVICEWAITPIDS,
 								"HandleDC_SERVICEWAITPIDS()",daemonCore,IMMEDIATE_FAMILY);
+#ifndef WIN32
 	daemonCore->Register_Signal( SIGCHLD, "SIGCHLD",
 								 (SignalHandlercpp)&DaemonCore::HandleDC_SIGCHLD,
 								 "HandleDC_SIGCHLD()",daemonCore,IMMEDIATE_FAMILY);
@@ -1555,6 +1759,9 @@ int main( int argc, char** argv )
 	}
 #endif
 
+	daemonCore->Register_Timer( 0,
+				(TimerHandler)dc_touch_log_file, "dc_touch_log_file" );
+
 	daemonCore->Register_Timer( 0, 5 * 60,
 				(TimerHandler)check_session_cache, "check_session_cache" );
 	
@@ -1566,6 +1773,12 @@ int main( int argc, char** argv )
 
 	daemonCore->Register_Timer( 0, cookie_refresh, 
 				(TimerHandler)handle_cookie_refresh, "handle_cookie_refresh");
+ 
+	if( !  strcmp(mySubSystem, "MASTER")
+        || strcmp(mySubSystem, "SCHEDD")
+        || strcmp(mySubSystem, "STARTD")) {
+        daemonCore->monitor_data.EnableMonitoring();
+    }
 
 		// Install DaemonCore command handlers common to all daemons.
 	daemonCore->Register_Command( DC_RECONFIG, "DC_RECONFIG",
@@ -1603,6 +1816,14 @@ int main( int argc, char** argv )
 								  (CommandHandler)handle_off_graceful,
 								  "handle_off_graceful()", 0, ADMINISTRATOR );
 
+	daemonCore->Register_Command( DC_OFF_PEACEFUL, "DC_OFF_PEACEFUL",
+								  (CommandHandler)handle_off_peaceful,
+								  "handle_off_peaceful()", 0, ADMINISTRATOR );
+
+	daemonCore->Register_Command( DC_SET_PEACEFUL_SHUTDOWN, "DC_SET_PEACEFUL_SHUTDOWN",
+								  (CommandHandler)handle_set_peaceful_shutdown,
+								  "handle_set_peaceful_shutdown()", 0, ADMINISTRATOR );
+
 	daemonCore->Register_Command( DC_NOP, "DC_NOP",
 								  (CommandHandler)handle_nop,
 								  "handle_nop()", 0, READ );
@@ -1614,6 +1835,15 @@ int main( int argc, char** argv )
 	daemonCore->Register_Command( DC_INVALIDATE_KEY, "DC_INVALIDATE_KEY",
 								  (CommandHandler)handle_invalidate_key,
 								  "handle_invalidate_key()", 0, ALLOW );
+								  
+		//
+		// The time offset command is used to figure out what
+		// the range of the clock skew is between the daemon code and another
+		// entity calling into us
+		//
+	daemonCore->Register_Command( DC_TIME_OFFSET, "DC_TIME_OFFSET",
+								  (CommandHandler)time_offset_receive_cedar_stub,
+								  "time_offset_cedar_stub", 0, DAEMON );
 
 	// Call daemonCore's ReInit(), which clears the cached DNS info.
 	// It also initializes some stuff, which is why we call it now. 
@@ -1623,11 +1853,33 @@ int main( int argc, char** argv )
 	// periodic timer.  -Derek Wright <wright@cs.wisc.edu> 1/28/99 
 	daemonCore->ReInit();
 
+	// zmiller
+	// look in the env for ENV_PARENT_ID
+	const char* envName = EnvGetName ( ENV_PARENT_ID );
+#ifdef WIN32
+	char value[_POSIX_PATH_MAX];
+	value[0] = '\0';
+	GetEnvironmentVariable( envName, value, sizeof(value) );
+#else
+	char * value = getenv( envName );
+#endif
+	// send it to the SecMan object so it can include it in any
+	// classads it sends.  if this is NULL, it will not include
+	// the attribute.
+	daemonCore->sec_man->set_parent_unique_id(value);
+
+	// now re-set the identity so that any children we spawn will have it
+	// in their environment
+	SetEnv( envName, daemonCore->sec_man->my_unique_id() );
+
 
 		// Initialize the StringLists that contain the attributes we
 		// will allow people to set with condor_config_val from
 		// various kinds of hosts (ADMINISTRATOR, CONFIG, WRITE, etc). 
 	daemonCore->InitSettableAttrsLists();
+
+		// SETUP SOAP SOCKET
+	init_soap(&daemonCore->soap);
 
 	// call the daemon's main_init()
 	main_init( argc, argv );

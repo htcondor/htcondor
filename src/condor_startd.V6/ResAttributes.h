@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -92,6 +92,7 @@ public:
 
 		// Functions to return the value of shared attributes
 	int				num_cpus()	{ return m_num_cpus; };
+	int				num_real_cpus()	{ return m_num_real_cpus; };
 	int				phys_mem()	{ return m_phys_mem; };
 	unsigned long   virt_mem()	{ return m_virt_mem; };
 	unsigned long   disk()		{ return m_disk; };
@@ -119,6 +120,7 @@ private:
 	int				m_clock_min;
 		// Static info
 	int				m_num_cpus;
+	int				m_num_real_cpus;
 	int				m_phys_mem;
 	char*			m_arch;
 	char*			m_opsys;
@@ -126,6 +128,7 @@ private:
 	char*			m_filesystem_domain;
 	char*			m_subnet;
 	int				m_idle_interval; 	// for D_IDLE dprintf messages
+	char*			m_ckptpltfrm;
 };	
 
 

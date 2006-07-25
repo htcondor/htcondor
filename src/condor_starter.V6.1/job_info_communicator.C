@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -47,9 +47,12 @@ JobInfoCommunicator::JobInfoCommunicator()
 	job_output_name = NULL;
 	job_error_name = NULL;
 	job_iwd = NULL;
+	job_remote_iwd = NULL;
 	job_output_ad_file = NULL;
 	job_output_ad_is_stdout = false;
 	requested_exit = false;
+	had_remove = false;
+	had_hold = false;
 	change_iwd = false;
 	user_priv_is_initialized = false;
 }
@@ -77,6 +80,9 @@ JobInfoCommunicator::~JobInfoCommunicator()
 	}
 	if( job_iwd ) {
 		free( job_iwd);
+	}
+	if( job_remote_iwd ) {
+		free( job_remote_iwd );
 	}
 	if( job_output_ad_file ) {
 		free( job_output_ad_file );
@@ -173,6 +179,13 @@ JobInfoCommunicator::jobIWD( void )
 	return (const char*) job_iwd;
 }
 
+const char*
+JobInfoCommunicator::jobRemoteIWD( void )
+{
+	if(!job_remote_iwd) return jobIWD();
+	return (const char*) job_remote_iwd;
+}
+
 
 const char*
 JobInfoCommunicator::origJobName( void )
@@ -229,6 +242,24 @@ JobInfoCommunicator::gotShutdownGraceful( void )
 {
 		// Set our flag so we know we were asked to vacate.
 	requested_exit = true;
+}
+
+
+void
+JobInfoCommunicator::gotRemove( void )
+{
+		// Set our flag so we know we were asked to vacate.
+	requested_exit = true;
+	had_remove = true;
+}
+
+
+void
+JobInfoCommunicator::gotHold( void )
+{
+		// Set our flag so we know we were asked to vacate.
+	requested_exit = true;
+	had_hold = true;
 }
 
 
@@ -307,6 +338,18 @@ JobInfoCommunicator::userPrivInitialized( void )
 	return user_priv_is_initialized;
 }
 
+bool
+JobInfoCommunicator::usingFileTransfer( void )
+{
+	return false;
+}
+
+bool
+JobInfoCommunicator::updateX509Proxy( int cmd, ReliSock *  )
+{
+	return false;
+}
+
 
 bool
 JobInfoCommunicator::initUserPrivNoOwner( void ) 
@@ -329,7 +372,8 @@ JobInfoCommunicator::initUserPrivNoOwner( void )
 	return true;
 }
 
-
+#ifdef WIN32
+#include "my_username.h"
 bool
 JobInfoCommunicator::initUserPrivWindows( void )
 {
@@ -341,25 +385,71 @@ JobInfoCommunicator::initUserPrivWindows( void )
 	// is specifed in the config file, and the account's password
 	// is properly stored in our credential stash.
 
+	char *name = NULL;
+	char *domain = NULL;
 	bool init_priv_succeeded = true;
-	char vm_user[255];
-	
-	int vm_num = Starter->getMyVMNumber();
-	sprintf(vm_user, "VM%d_USER", vm_num);
-	char *run_jobs_as = param(vm_user);
+	bool run_as_owner = param_boolean("STARTER_ALLOW_RUNAS_OWNER",false);
 
-	if (run_jobs_as) {
-		char *domain, *name;
-		getDomainAndName(run_jobs_as, domain, name);
+	if ( run_as_owner ) {
+		if( ! job_ad ) {
+			EXCEPT( "initUserPrivWindows() called with no job ad!" );
+		}
 
+		bool user_wants_runas_owner = false;
+		job_ad->LookupBool(ATTR_JOB_RUNAS_OWNER,user_wants_runas_owner);
+		if ( user_wants_runas_owner ) {
+			job_ad->LookupString(ATTR_OWNER,&name);
+			job_ad->LookupString(ATTR_NT_DOMAIN,&domain);
+		}
+	}
+
+	if ( !name ) {
+		char vm_user[255];
+		int vm_num = Starter->getMyVMNumber();
+
+		if ( vm_num < 1 ) {
+			vm_num = 1;
+		}
+		sprintf(vm_user, "VM%d_USER", vm_num);
+		char *run_jobs_as = param(vm_user);
+		if (run_jobs_as) {		
+			getDomainAndName(run_jobs_as, domain, name);
+				/* 
+				 * name and domain are now just pointers into run_jobs_as
+				 * buffer.  copy these values into their own buffer so we
+				 * deallocate below.
+				 */
+			if ( name ) {
+				name = strdup(name);
+			}
+			if ( domain ) {
+				domain = strdup(domain);
+			}
+			free(run_jobs_as);
+		}
+	}
+
+	if ( name ) {
+		
 		if (!init_user_ids(name, domain)) {
 
 			dprintf(D_ALWAYS, "Could not initialize user_priv as \"%s\\%s\".\n"
 				"\tMake sure this account's password is securely stored "
-				"with condor_store_cred on this machine.\n", domain, name );
+				"with condor_store_cred.\n", domain, name );
 			init_priv_succeeded = false;			
 		} 
-		free(run_jobs_as);		
+
+	} else if ( !can_switch_ids() ) {
+		char *u = my_username();
+		char *d = my_domainname();
+
+		if ( !init_user_ids(u, d) ) {
+			// shouldn't happen - we always can get our own token
+			dprintf(D_ALWAYS, "Could not initialize user_priv with our own token!\n");
+			init_priv_succeeded = false;
+		}
+		free(u);
+		free(d);
 	} else if( ! init_user_ids("nobody", ".") ) {
 		
 		// just init a new nobody user; dynuser handles the rest.
@@ -368,12 +458,16 @@ JobInfoCommunicator::initUserPrivWindows( void )
 		dprintf( D_ALWAYS, "ERROR: Could not initialize user_priv "
 				 "as \"nobody\"\n" );
 		init_priv_succeeded = false;
+	
 	}
+
+	if ( name ) free(name);
+	if ( domain ) free(domain);
 
 	user_priv_is_initialized = init_priv_succeeded;
 	return init_priv_succeeded;
 }
-
+#endif // WIN32
 
 void
 JobInfoCommunicator::checkForStarterDebugging( void )

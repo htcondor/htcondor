@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -23,7 +23,7 @@
 #ifndef JAVA_CONFIG_H
 #define JAVA_CONFIG_H
 
-#include "string_list.h"
+#include "condor_arglist.h"
 
 /*
 Extract the java configuration from the local config files.
@@ -32,6 +32,6 @@ arguments get put in 'args'.  If you have other dirs or jarfiles
 that should be placed in the classpath, provide them in 'extra_classpath'.
 */
 
-int java_config( char *cmd, char *args, StringList *extra_classpath );
+int java_config( char *cmd, ArgList *args, StringList *extra_classpath );
 
 #endif

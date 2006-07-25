@@ -1,0 +1,18 @@
+/* FreeBSD specfic configuration file */
+/* Someday we'll probably need architecture in this too */
+
+#define IS_CLIPPED              YES
+#define HAS_DYNAMIC_USER_JOBS   NO
+#define HAS_OPENSSL             YES
+#define HAS_GLOBUS              YES
+#define HAS_GSI                 YES
+
+#undef WANT_GLOBUS
+#define WANT_GLOBUS		YES
+
+#undef WANT_KERBEROS
+#define WANT_KERBEROS           YES
+
+#undef WANT_PVM
+#define WANT_PVM                YES
+#define PVM_ARCH                FREEBSD

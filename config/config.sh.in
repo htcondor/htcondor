@@ -6,12 +6,10 @@ EXT_INSTALL=$EXT_ROOT/install
 WANT_EXT_GLIBC=@want_ext_glibc@
 EXT_GLIBC_VERSION=@ext_glibc_version@
 
-EXT_KERBEROS_VERSION=@ext_kerberos_version@
+EXT_KERBEROS_VERSION=@ext_krb5_version@
 
 EXT_GLOBUS_VERSION=@ext_globus_version@
 GLOBUS_FLAVOR=@globus_flavor@
-
-EXT_GPT_VERSION=@ext_gpt_version@
 
 EXT_GAHP_VERSION=@ext_gahp_version@
 
@@ -21,5 +19,26 @@ EXT_PVM_VERSION=@ext_pvm_version@
 
 EXT_GT3GAHP_VERSION=@ext_gt3gahp_version@
 
+EXT_GT4GAHP_VERSION=@ext_gt4gahp_version@
+
+EXT_CLASSADS_VERSION=@ext_classads_version@
+
 EXT_SRB_VERSION=@ext_srb_version@
 
+EXT_GSOAP_VERSION=@ext_gsoap_version@
+
+EXT_PCRE_VERSION=@ext_pcre_version@
+
+EXT_POSTGRESQL_VERSION=@ext_postgresql_version@
+
+EXT_UNICOREGAHP_VERSION=@ext_unicoregahp_version@
+
+EXT_NORDUGRIDGAHP_VERSION=@ext_nordugridgahp_version@
+
+EXT_BLAHP_VERSION=@ext_blahp_version@
+
+WANT_COREDUMPER=@want_coredumper@
+EXT_COREDUMPER_VERSION=@ext_coredumper_version@
+
+WANT_EXT_LINUXLIBCHEADERS=@want_ext_linuxlibcheaders@
+EXT_LINUXLIBCHEADERS_VERSION=@ext_linuxlibcheaders_version@

@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -102,7 +102,7 @@ void IOProxyHandler::handle_cookie_request( ReliSock *r, char *line )
 			got_cookie = true;
 		} else {
 			dprintf( D_ALWAYS, "IOProxyHandler: client presented "
-					 "*WRONG* cookie.\n", cookie );
+					 "*WRONG* cookie.\n" );
 			sleep(1);
 		}
 	} else {
@@ -329,7 +329,7 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 		result = REMOTE_CONDOR_get_file_info_new(path,url);
 		if(result==0) {
 			dprintf(D_SYSCALLS,"Filename %s maps to url %s\n",path,url);
-			sprintf(line,"%d",strlen(url));
+			sprintf(line,"%u",(unsigned int)strlen(url));
 			r->put_line_raw(line);
 			r->put_bytes_raw(url,strlen(url));
 		} else {
@@ -347,7 +347,7 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 
 		result = REMOTE_CONDOR_get_job_attr(name,expr);
 		if(result==0) {
-			sprintf(line,"%d",strlen(expr));
+			sprintf(line,"%u",(unsigned int)strlen(expr));
 			r->put_line_raw(line);
 			r->put_bytes_raw(expr,strlen(expr));
 		} else {
@@ -439,6 +439,7 @@ int IOProxyHandler::convert( int result, int unix_errno )
 		case EINTR:
 			return CHIRP_ERROR_TRY_AGAIN;
 		default:
+			dprintf(D_ALWAYS, "Starter ioproxy server got unknown unix errno:%d\n", unix_errno);
 			return CHIRP_ERROR_UNKNOWN;
 	}
 }

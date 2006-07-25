@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -22,8 +22,9 @@
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
-#include "debug.h"
+#include "condor_debug.h"
 #include "condor_getmnt.h"
+#include "condor_netdb.h"
 
 static void init( void );
 static char * remote_part( char *mnt_pt, char *name );
@@ -123,7 +124,7 @@ init( void )
 {
 	int		start = 0;
 
-	if( gethostname(Hostname,sizeof(Hostname)) < 0 ) {
+	if( condor_gethostname(Hostname,sizeof(Hostname)) < 0 ) {
 		dprintf( D_ALWAYS, "gethostname failed in extern_path.c: %s\n",
 				 strerror(errno) );
 		return;

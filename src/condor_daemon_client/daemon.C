@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -38,11 +38,16 @@
 #include "internet.h"
 #include "HashTable.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "dc_collector.h"
+#include "time_offset.h"
+#include "condor_netdb.h"
+#include "daemon_core_sock_adapter.h"
 
 extern char *mySubSystem;
 
 
-void Daemon::common_init() {
+void
+Daemon::common_init() {
 	_type = DT_NONE;
 	_port = -1;
 	_is_local = false;
@@ -70,6 +75,13 @@ void Daemon::common_init() {
 
 Daemon::Daemon( daemon_t type, const char* name, const char* pool ) 
 {
+		// We are no longer allowed to create a "default" collector
+		// since there can be more than one
+		// Use CollectorList::create()
+/*	if ((type == DT_COLLECTOR) && (name == NULL)) {
+		EXCEPT ( "Daemon constructor (type=COLLECTOR, name=NULL) called" );
+		}*/
+
 	common_init();
 	_type = type;
 
@@ -171,6 +183,84 @@ Daemon::Daemon( ClassAd* ad, daemon_t type, const char* pool )
 			 "\"%s\", addr: \"%s\"\n", daemonString(_type), 
 			 _name ? _name : "NULL", _pool ? _pool : "NULL",
 			 _addr ? _addr : "NULL" );
+}
+
+
+Daemon::Daemon( const Daemon &copy )
+{
+		// initialize all data members to NULL, since deepCopy() has
+		// code not to leak anything in case it's overwriting a value
+	common_init();
+	deepCopy( copy );
+}
+
+ 
+Daemon&
+Daemon::operator=(const Daemon &copy)
+{
+		// don't copy ourself!
+	if (&copy != this) {
+		deepCopy( copy );
+	}
+	return *this;
+}
+
+
+void
+Daemon::deepCopy( const Daemon &copy )
+{
+		// NOTE: strnewp(NULL) returns NULL, and doesn't seg fault,
+		// which is exactly what we want everywhere in this method.
+
+	New_name( strnewp(copy._name) );
+	New_hostname( strnewp(copy._hostname) );
+	New_full_hostname( strnewp(copy._full_hostname) );
+	New_addr( strnewp(copy._addr) );
+	New_version( strnewp(copy._version) );
+	New_platform( strnewp(copy._platform) );
+	New_pool( strnewp(copy._pool) );
+
+	if( copy._error ) {
+		newError( copy._error_code, copy._error );
+	} else {
+		if( _error ) { 
+			delete [] _error;
+			_error = NULL;
+		}
+		_error_code = copy._error_code;
+	}
+
+	if( _id_str ) {
+		delete [] _id_str;
+	}
+	_id_str = strnewp( copy._id_str );
+
+	if( _subsys ) {
+		delete [] _subsys;
+	}
+	_subsys = strnewp( copy._subsys );
+
+	if( _subsys ) {
+        delete [] _subsys;
+    }
+    _subsys = strnewp( copy._subsys );
+
+	_port = copy._port;
+	_type = copy._type;
+	_is_local = copy._is_local;
+	_tried_locate = copy._tried_locate;
+	_tried_init_hostname = copy._tried_init_hostname;
+	_tried_init_version = copy._tried_init_version;
+	_is_configured = copy._is_configured;
+
+		/*
+		  there's nothing to copy for _sec_man... it'll already be
+		  instantiated at this point, and the SecMan object is really
+		  static in CEDAR, anyway, so all it's doing is incrementing a
+		  reference count
+		*/
+
+	setCmdStr( copy._cmd_str );
 }
 
 
@@ -354,19 +444,19 @@ Daemon::display( FILE* fp )
 //////////////////////////////////////////////////////////////////////
 
 ReliSock*
-Daemon::reliSock( int sec, CondorError* errstack )
+Daemon::reliSock( int sec, CondorError* errstack, bool non_blocking )
 {
-	if( ! _addr ) {
-		if( ! locate() ) {
-			return NULL;
-		}
+	if( !checkAddr() ) {
+			// this already deals w/ _error for us...
+		return NULL;
 	}
 	ReliSock* reli;
 	reli = new ReliSock();
 	if( sec ) {
 		reli->timeout( sec );
 	}
-	if( reli->connect(_addr, 0) ) {
+	int rc = reli->connect(_addr, 0, non_blocking);
+	if(rc || (non_blocking && rc == CEDAR_EWOULDBLOCK)) {
 		return reli;
 	} else {
 		if (errstack) {
@@ -380,19 +470,19 @@ Daemon::reliSock( int sec, CondorError* errstack )
 
 
 SafeSock*
-Daemon::safeSock( int sec, CondorError* errstack )
+Daemon::safeSock( int sec, CondorError* errstack, bool non_blocking )
 {
-	if( ! _addr ) {
-		if( ! locate() ) {
-			return NULL;
-		}
+	if( !checkAddr() ) {
+			// this already deals w/ _error for us...
+		return NULL;
 	}
 	SafeSock* safe;
 	safe = new SafeSock();
 	if( sec ) {
 		safe->timeout( sec );
 	}
-	if( safe->connect(_addr, 0) ) {
+	int rc = safe->connect(_addr, 0, non_blocking);
+	if(rc || (non_blocking && rc == CEDAR_EWOULDBLOCK)) {
 		return safe;
 	} else {
 		if (errstack) {
@@ -405,62 +495,90 @@ Daemon::safeSock( int sec, CondorError* errstack )
 }
 
 
-Sock*
-Daemon::startCommand( int cmd, Stream::stream_type st, int sec, CondorError* errstack )
+//This struct is used to hold the manditory error stack for calls to
+//SecMan::startCommand(), in case the caller of Daemon::startCommand()
+//did not provide one.
+
+struct StartCommandErrorStackCallback {
+	StartCommandCallbackType *callback_fn;
+	void *misc_data;
+	CondorError errstack;
+
+	StartCommandErrorStackCallback(StartCommandCallbackType *callback_fn, void *misc_data) {
+		this->callback_fn = callback_fn;
+		this->misc_data = misc_data;
+	}
+
+	static void CallbackFn(bool success,Sock *sock,CondorError *errstack,void *misc_data) {
+		// We get here when the caller of startCommand() didn't provide
+		// any error stack.  Therefore, the error stack is ours, and we
+		// should just print it out before calling the final callback.
+
+		if(!success && errstack) {
+			char const *error_msg = errstack->getFullText();
+			if(error_msg && *error_msg) {
+				dprintf(D_ALWAYS, "ERROR: %s\n",error_msg);
+			}
+		}
+
+		// Call the final callback and deallocate ourselves.
+		StartCommandErrorStackCallback *cb = (StartCommandErrorStackCallback *)misc_data;
+		if(cb->callback_fn) {
+			(*cb->callback_fn)(success,sock,NULL,cb->misc_data);
+		}
+		delete cb;
+	}
+};
+
+StartCommandResult
+Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char *version, SecMan *sec_man )
 {
-	Sock* sock;
-	switch( st ) {
-	case Stream::reli_sock:
-		sock = reliSock(sec, errstack);
-		break;
-	case Stream::safe_sock:
-		sock = safeSock(sec, errstack);
-		break;
-	default:
-		EXCEPT( "Unknown stream_type (%d) in Daemon::startCommand",
-				(int)st );
+	// This function may be either blocking or non-blocking, depending
+	// on the flag that is passed in.  All versions of Daemon::startCommand()
+	// ultimately get here.
+
+	// NOTE: if there is a callback function, we _must_ guarantee that it is
+	// eventually called in all code paths.
+
+	StartCommandResult start_command_result = StartCommandFailed;
+	StartCommandErrorStackCallback *cb_errstack = NULL;
+	bool other_side_can_negotiate = true; //default assumption
+
+	ASSERT(sock);
+
+	// If caller wants non-blocking with no callback function,
+	// we _must_ be using UDP.
+	ASSERT(!nonblocking || callback_fn || sock->type() == Stream::safe_sock);
+
+	if(!errstack) {
+		// The caller did not provide their own error stack, so we need
+		// to provide one of our own.
+
+		cb_errstack = new StartCommandErrorStackCallback(callback_fn,misc_data);
+		ASSERT(cb_errstack);
+
+		errstack = &cb_errstack->errstack;
+		misc_data = cb_errstack;
+		if(callback_fn) {
+			// Instead of calling the caller's function directly,
+			// we will call an intermediate function that prints
+			// out the contents of the error stack.
+			callback_fn = &StartCommandErrorStackCallback::CallbackFn;
+		}
 	}
-	if( ! sock ) {
-			// _error will already be set.
-		return NULL;
-	}
 
-
-	if (startCommand ( cmd, sock, sec, errstack )) {
-		return sock;
-	} else {
-		delete sock;
-		return NULL;
-	}
-
-}
-
-
-bool
-Daemon::startCommand( int cmd, Sock* sock, int sec, CondorError *errstack )
-{
-
-	// basic sanity check
-	if( ! sock ) {
-		dprintf ( D_ALWAYS, "startCommand() called with a NULL Sock*, failing.\n" );
-		return false;
-	} else {
-		dprintf ( D_SECURITY, "STARTCOMMAND: starting %i to %s on %s port %i.\n", cmd, sin_to_string(sock->endpoint()), (sock->type() == Stream::safe_sock) ? "UDP" : "TCP", sock->get_port());
-	}
+	dprintf ( D_SECURITY, "STARTCOMMAND: starting %i to %s on %s port %i.\n", cmd, sin_to_string(sock->endpoint()), (sock->type() == Stream::safe_sock) ? "UDP" : "TCP", sock->get_port());
 
 	// set up the timeout
-	if( sec ) {
-		sock->timeout( sec );
+	if( timeout ) {
+		sock->timeout( timeout );
 	}
-
-	// give them the benefit of the doubt
-	bool    other_side_can_negotiate = true;
 
 	// look at the version if it is available.  we must disable
 	// negotiation when talking to pre-6.3.3.
-	if (_version) {
-		dprintf(D_SECURITY, "DAEMON: talking to a %s daemon.\n", _version);
-		CondorVersionInfo vi(_version);
+	if (version) {
+		dprintf(D_SECURITY, "DAEMON: talking to a %s daemon.\n", version);
+		CondorVersionInfo vi(version);
 		if ( !vi.built_since_version(6,3,3) ) {
 			dprintf( D_SECURITY, "DAEMON: "
 					 "security negotiation not possible, disabling.\n" );
@@ -468,28 +586,214 @@ Daemon::startCommand( int cmd, Sock* sock, int sec, CondorError *errstack )
 		}
 	}
 
-	// if they passed in NULL (the default for backwards compatibility),
-	// we'll collect the errors and dump them in the log if there's a
-	// failure.  to collect the errors, we need our own errstack
-	CondorError stack_errstack;
+	start_command_result = sec_man->startCommand(cmd, sock, other_side_can_negotiate, errstack, 0, callback_fn, misc_data, nonblocking);
 
-	// new select which one we will use.  default to ours but pick
-	// the one passed in if it's not NULL.
-	CondorError *errstack_select = &stack_errstack;
-	if ( errstack ) {
-		errstack_select = errstack;
+	if(callback_fn) {
+		// SecMan::startCommand() called the callback function, so we just return here
+		return start_command_result;
+	}
+	else {
+		// There is no callback function.
+
+		if(cb_errstack) {
+			// Print out the error stack.
+			bool success = start_command_result == StartCommandSucceeded;
+			cb_errstack->CallbackFn(success,sock,&cb_errstack->errstack,cb_errstack);
+		}
+
+		return start_command_result;
+	}
+}
+
+struct StartCommandConnectCallback: public Service {
+	int m_cmd;
+	Sock *m_sock;
+	int m_timeout;
+	CondorError *m_errstack;
+	StartCommandCallbackType *m_callback_fn;
+	void *m_misc_data;
+	char *m_version;
+	SecMan m_sec_man;
+
+	StartCommandConnectCallback(int cmd,Sock *sock,int timeout,CondorError *errstack,StartCommandCallbackType *callback_fn,void *misc_data,char *version,SecMan *sec_man):
+	m_sec_man(*sec_man) {
+		m_cmd = cmd;
+		m_sock = sock;
+		m_timeout = timeout;
+		m_errstack = errstack;
+		m_callback_fn = callback_fn;
+		m_misc_data = misc_data;
+		m_version = NULL;
+		if(version) {
+			m_version = strdup(version);
+		}
+	}
+	~StartCommandConnectCallback() {
+		free(m_version);
 	}
 
-	// call startCommand with the selected error stack
-	bool result = _sec_man.startCommand(cmd, sock, other_side_can_negotiate, errstack_select);
+	int CallbackFn( Stream *sock );
+};
 
-	// dump the errors in the log if not being collected
-	if (!result && !errstack) {
-		dprintf( D_ALWAYS, "ERROR: %s\n", errstack_select->getFullText() );
+int
+StartCommandConnectCallback::CallbackFn( Stream *stream )
+{
+	Sock *sock = (Sock *)stream;
+	StartCommandConnectCallback *cb = (StartCommandConnectCallback *)daemonCoreSockAdapter.GetDataPtr();
+	ASSERT(cb);
+
+	daemonCoreSockAdapter.Cancel_Socket( stream );
+
+	if(!sock->is_connected()) {
+		dprintf(D_ALWAYS,"Failed to connect to %s.\n",sock->get_sinful());
+		if(cb->m_errstack) {
+			cb->m_errstack->pushf("CEDAR", CEDAR_ERR_CONNECT_FAILED,
+			                      "Failed to connect to %s",sock->get_sinful());
+		}
+		const bool success = false;
+		ASSERT(cb->m_callback_fn);
+		(*cb->m_callback_fn)(success,sock,cb->m_errstack,cb->m_misc_data);
+		delete cb;
+		return KEEP_STREAM;
 	}
-				
-	return result;
 
+	// Now that we are connected, go ahead with the rest of startCommand().
+	const bool nonblocking = true;
+	Daemon::startCommand (
+		cb->m_cmd,
+		sock,
+		cb->m_timeout,
+		cb->m_errstack,
+		cb->m_callback_fn,
+		cb->m_misc_data,
+		nonblocking,
+		cb->m_version,
+		&cb->m_sec_man);
+	delete cb;
+	return KEEP_STREAM;
+}
+
+StartCommandResult
+Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking )
+{
+	// This function may be either blocking or non-blocking, depending on
+	// the flag that was passed in.
+
+	// If caller wants non-blocking with no callback function,
+	// we _must_ be using UDP.
+	ASSERT(!nonblocking || callback_fn || st == Stream::safe_sock);
+
+	switch( st ) {
+	case Stream::reli_sock:
+		*sock = reliSock(timeout, errstack, nonblocking);
+		break;
+	case Stream::safe_sock:
+		*sock = safeSock(timeout, errstack, nonblocking);
+		break;
+	default:
+		EXCEPT( "Unknown stream_type (%d) in Daemon::startCommand",
+				(int)st );
+	}
+	if( ! *sock ) {
+		return StartCommandFailed;
+	}
+
+	if(nonblocking && (*sock)->is_connect_pending()) {
+		ASSERT(callback_fn);
+
+		StartCommandConnectCallback *cb =
+			new StartCommandConnectCallback(
+				cmd,
+				*sock,
+				timeout,
+				errstack,
+				callback_fn,
+				misc_data,
+				_version,
+				&_sec_man);
+
+		daemonCoreSockAdapter.Register_Socket(
+			*sock,
+			"<StartCommand Socket>",
+			(SocketHandlercpp)&StartCommandConnectCallback::CallbackFn,
+			(*sock)->get_sinful(),
+			cb,
+			ALLOW);
+
+		daemonCoreSockAdapter.Register_DataPtr( cb );
+
+		return StartCommandInProgress;
+	}
+
+	return startCommand (
+						 cmd,
+						 *sock,
+						 timeout,
+						 errstack,
+						 callback_fn,
+						 misc_data,
+						 nonblocking,
+						 _version,
+						 &_sec_man);
+}
+
+Sock*
+Daemon::startCommand( int cmd, Stream::stream_type st, int timeout, CondorError* errstack )
+{
+	// This is a blocking version of startCommand.
+	const bool nonblocking = false;
+	Sock *sock = NULL;
+	StartCommandResult rc = startCommand(cmd,st,&sock,timeout,errstack,NULL,NULL,nonblocking);
+	switch(rc) {
+	case StartCommandSucceeded:
+		return sock;
+	case StartCommandFailed:
+		if(sock) {
+			delete sock;
+		}
+		return false;
+	case StartCommandInProgress:
+	case StartCommandWouldBlock: //impossible!
+		break;
+	}
+	EXCEPT("startCommand(blocking=true) returned an unexpected result: %d\n",rc);
+	return NULL;
+}
+
+StartCommandResult
+Daemon::startCommand_nonblocking( int cmd, Stream::stream_type st, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data )
+{
+	// This is a nonblocking version of startCommand.
+	const int nonblocking = true;
+	Sock *sock = NULL;
+	return startCommand(cmd,st,&sock,timeout,errstack,callback_fn,misc_data,nonblocking);
+}
+
+StartCommandResult
+Daemon::startCommand_nonblocking( int cmd, Sock* sock, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data )
+{
+	// This is the nonblocking version of startCommand().
+	const bool nonblocking = true;
+	return startCommand(cmd,sock,timeout,errstack,callback_fn,misc_data,nonblocking,_version,&_sec_man);
+}
+
+bool
+Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack )
+{
+	// This is a blocking version of startCommand().
+	const bool nonblocking = false;
+	StartCommandResult rc = startCommand(cmd,sock,timeout,errstack,NULL,NULL,nonblocking,_version,&_sec_man);
+	switch(rc) {
+	case StartCommandSucceeded:
+		return true;
+	case StartCommandFailed:
+		return false;
+	case StartCommandInProgress:
+	case StartCommandWouldBlock: //impossible!
+		break;
+	}
+	EXCEPT("startCommand(nonblocking=false) returned an unexpected result: %d\n",rc);
+	return false;
 }
 
 bool
@@ -699,6 +1003,7 @@ bool
 Daemon::locate( void )
 {
 	bool rval;
+	char* tmp = NULL;
 
 		// Make sure we only call locate() once.
 	if( _tried_locate ) {
@@ -734,18 +1039,30 @@ Daemon::locate( void )
 	case DT_MASTER:
 		rval = getDaemonInfo( "MASTER", MASTER_AD );
 		break;
-	case DT_CREDD:
-	  rval = getDaemonInfo( "CREDD", ANY_AD, false );
-	  break;
-	case DT_STORK:
-	  rval = getDaemonInfo( "STORK", ANY_AD, false );
-	  break;
 	case DT_COLLECTOR:
 		rval = getCmInfo( "COLLECTOR" );
 		break;
 	case DT_NEGOTIATOR:
-		rval = getCmInfo( "NEGOTIATOR" );
+		tmp = getCmHostFromConfig( "NEGOTIATOR" );
+		if( tmp ) {
+				// if NEGOTIATOR_HOST (or equiv) is in the config
+				// file, we have to use the old getCmInfo() code to
+				// honor what it says... 
+			rval = getCmInfo( "NEGOTIATOR" );
+			free( tmp );
+			tmp = NULL;
+		} else {
+				// cool, no NEGOTIATOR_HOST, we can treat it just like
+				// any other daemon 
+			rval = getDaemonInfo ( "NEGOTIATOR", NEGOTIATOR_AD );
+		}
 		break;
+	case DT_CREDD:
+	  rval = getDaemonInfo( "CREDD", CREDD_AD );
+	  break;
+	case DT_STORK:
+	  rval = getDaemonInfo( "STORK", ANY_AD, false );
+	  break;
 	case DT_VIEW_COLLECTOR:
 		if( (rval = getCmInfo("CONDOR_VIEW")) ) {
 				// If we found it, we're done.
@@ -754,6 +1071,9 @@ Daemon::locate( void )
 			// If there's nothing CONDOR_VIEW-specific, try just using
 			// "COLLECTOR".
 		rval = getCmInfo( "COLLECTOR" ); 
+		break;
+	case DT_QUILL:
+		rval = getDaemonInfo( "QUILL", SCHEDD_AD );
 		break;
 	default:
 		EXCEPT( "Unknown daemon type (%d) in Daemon::init", (int)_type );
@@ -771,7 +1091,7 @@ Daemon::locate( void )
 		// trim off the domain for _hostname.
 	initHostnameFromFull();
 
-	if( _port < 0 && _addr ) {
+	if( _port <= 0 && _addr ) {
 			// If we have the sinful string and no port, fill it in
 		_port = string_to_port( _addr );
 		dprintf( D_HOSTNAME, "Using port %d based on address \"%s\"\n",
@@ -789,12 +1109,12 @@ Daemon::locate( void )
 
 
 bool
-Daemon::getDaemonInfo( const char* subsys, AdTypes adtype, bool query_collector )
+Daemon::getDaemonInfo( const char* subsys, AdTypes adtype, bool query_collector)
 {
-	char				buf[512], tmpname[512];
-    int                 BUF_LEN = 512; // Change this if you also change buf
-	char				*addr_file, *tmp, *my_name;
-	FILE				*addr_fp;
+	MyString			buf;
+	char				*tmp, *my_name;
+	char				*host = NULL;
+	bool				nameHasPort = false;
 
 	if( _subsys ) {
 		delete [] _subsys;
@@ -810,22 +1130,76 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype, bool query_collector 
 		// If we were not passed a name or an addr, check the
 		// config file for a subsystem_HOST, e.g. SCHEDD_HOST=XXXX
 	if( ! _name ) {
-		sprintf(buf,"%s_HOST",subsys);
-		char *specified_host = param(buf);
+		buf.sprintf( "%s_HOST", subsys );
+		char *specified_host = param( buf.Value() );
 		if ( specified_host ) {
 				// Found an entry.  Use this name.
 			_name = strnewp( specified_host );
 			dprintf( D_HOSTNAME, 
-					 "No name given, but %s defined to \"%s\"\n", buf,
-					 specified_host );
+					 "No name given, but %s defined to \"%s\"\n",
+					 buf.Value(), specified_host );
 			free(specified_host);
 		}
 	}
+	if( _name ) {
+		// See if daemon name containts a port specification
+		_port = getPortFromAddr( _name );
+		if ( _port >= 0 ) {
+			host = getHostFromAddr( _name );
+			if ( host ) {
+				nameHasPort = true;
+			} else {
+				dprintf( D_ALWAYS, "warning: unable to parse hostname from '%s'"
+						" but will attempt to use this daemon name anyhow\n",
+						_name);
+			}
+		}
+	}
 
+		// _name was explicitly specified as host:port, so this information can
+		// be used directly.  Further name resolution is not necessary.
+	if( nameHasPort ) {
+		struct in_addr sin_addr;
+		char buf[128];
+		
+		dprintf( D_HOSTNAME, "Port %d specified in name\n", _port );
+
+		if( is_ipaddr(host, &sin_addr) ) {
+			sprintf( buf, "<%s:%d>", host, _port );
+			New_addr( strnewp(buf) );
+			dprintf( D_HOSTNAME,
+					"Host info \"%s\" is an IP address\n", host );
+		} else {
+				// We were given a hostname, not an address.
+			dprintf( D_HOSTNAME, "Host info \"%s\" is a hostname, "
+					 "finding IP address\n", host );
+			tmp = get_full_hostname( host, &sin_addr );
+			if( ! tmp ) {
+					// With a hostname, this is a fatal Daemon error.
+				sprintf( buf, "unknown host %s", host );
+				newError( CA_LOCATE_FAILED, buf );
+				if (host) free( host );
+
+					// We assume this is a transient DNS failure.  Therefore,
+					// set _tried_locate = false, so that we keep trying in
+					// future calls to locate().
+				_tried_locate = false;
+
+				return false;
+			}
+			sprintf( buf, "<%s:%d>", inet_ntoa(sin_addr), _port );
+			dprintf( D_HOSTNAME, "Found IP address and port %s\n", buf );
+			New_addr( strnewp(buf) );
+			New_full_hostname( tmp );
+		}
+
+		if (host) free( host );
+		_is_local = false;
+		return true;
 
 		// Figure out if we want to find a local daemon or not, and
 		// fill in the various hostname fields.
-	if( _name ) {
+	} else if( _name ) {
 			// We were passed a name, so try to look it up in DNS to
 			// get the full hostname.
 
@@ -850,6 +1224,7 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype, bool query_collector 
 		dprintf( D_HOSTNAME,
 				 "Using \"%s\" for full hostname in Daemon object\n", tmp );
 		New_full_hostname( tmp );
+		tmp = NULL;
 
 			// Now that we got this far and have the correct name, see
 			// if that matches the name for the local daemon.  
@@ -870,9 +1245,11 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype, bool query_collector 
 			}
 			delete [] my_name;
 		}
-	} else {
+	} else if ( _type != DT_NEGOTIATOR ) {
 			// We were passed neither a name nor an address, so use
-			// the local daemon.
+			// the local daemon, unless we're NEGOTIATOR, in which case
+			// we'll still query the collector even if we don't have the 
+            // name
 		_is_local = true;
 		New_name( localName() );
 		New_full_hostname( strnewp(my_full_hostname()) );
@@ -885,47 +1262,12 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype, bool query_collector 
 		// address of the daemon in question.
 
 	if( _is_local ) {
-		sprintf( buf, "%s_ADDRESS_FILE", subsys );
-		addr_file = param( buf );
-		if( addr_file ) {
-			dprintf( D_HOSTNAME, "Finding address for local daemon, "
-					 "%s is \"%s\"\n", buf, addr_file );
-			if( (addr_fp = fopen(addr_file, "r")) ) {
-					// Read out the sinful string.
-				fgets( buf, 100, addr_fp );
-					// chop off the newline
-				chomp( buf );
-				if( is_valid_sinful(buf) ) {
-					dprintf( D_HOSTNAME, "Found valid address \"%s\" in "
-							 "local address file\n", buf );
-					New_addr( strnewp(buf) );
-				}
-					// Let's see if this is new enough to also have a
-					// version string and platform string...
-				if( fgets(buf, 200, addr_fp) ) {
-						// chop off the newline
-					chomp( buf );
-					New_version( strnewp(buf) );
-					dprintf( D_HOSTNAME, "Found version string \"%s\" in "
-							 "local address file\n", buf );
-					if( fgets(buf, 200, addr_fp) ) {
-							// chop off the newline
-						chomp( buf );
-						New_platform( strnewp(buf) );
-						dprintf( D_HOSTNAME, "Found platform string \"%s\" "
-								 "in local address file\n", buf );
-					}
-				}
-				fclose( addr_fp );
-			}
-			free( addr_file );
-		} 
+		readAddressFile( subsys );
 	}
 
 	if ((! _addr) && (!query_collector)) {
-          return false;
-        }
-
+	  return false;
+	}
 
 	if( ! _addr ) {
 			// If we still don't have it (or it wasn't local), query
@@ -934,7 +1276,7 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype, bool query_collector 
 		ClassAd*			scan;
 		ClassAdList			ads;
 
-		if( _type == DT_STARTD ) {
+		if( _type == DT_STARTD && ! strchr(_name, '@') ) { 
 				/*
 				  So long as an SMP startd has only 1 command socket
 				  per startd, we want to take advantage of that and
@@ -944,67 +1286,63 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype, bool query_collector 
 				  host" will vacate all VMs on that host, but only if
 				  condor_vacate can find the address in the first
 				  place.  -Derek Wright 8/19/99 
+
+				  HOWEVER, we only want to query based on ATTR_MACHINE
+				  if the name we were given doesn't include an '@'
+				  sign already.  if it does, the caller/user must know
+				  what they're looking for, and doing the query based
+				  just on ATTR_MACHINE will be wrong.  this is
+				  especially true in the case of glide-in startds
+				  where multiple startds are running on the same
+				  machine all reporting to the same collector.
+				  -Derek Wright 2005-03-09
 				*/
-			sprintf(buf, "%s == \"%s\"", ATTR_MACHINE, _full_hostname ); 
+			buf.sprintf( "%s == \"%s\"", ATTR_MACHINE, _full_hostname ); 
+			query.addANDConstraint( buf.Value() );
+		} else if ( _name ) {
+			buf.sprintf( "%s == \"%s\"", ATTR_NAME, _name ); 
+			query.addANDConstraint( buf.Value() );
 		} else {
-			sprintf(buf, "%s == \"%s\"", ATTR_NAME, _name ); 
+			if ( _type != DT_NEGOTIATOR ) {
+					// If we're not querying for negotiator
+					//    (which there's only one of)
+					// and we don't have the name
+					// then how will we possibly know which 
+					// result to pick??
+				return false;
+			}
 		}
-		query.addANDConstraint(buf);
+
+			// We need to query the collector
+		CollectorList * collectors = CollectorList::create(_pool);
 		CondorError errstack;
-		if (query.fetchAds(ads, _pool, &errstack) != Q_OK) {
+		if (collectors->query (query, ads) != Q_OK) {
+			delete collectors;
 			newError( CA_LOCATE_FAILED, errstack.getFullText() );
 			return false;
 		};
+		delete collectors;
+
 		ads.Open();
 		scan = ads.Next();
 		if(!scan) {
-			dprintf(D_ALWAYS, "Can't find address for %s %s\n", 
-					 daemonString(_type), _name );
-			sprintf( buf, "Can't find address for %s %s", 
-					 daemonString(_type), _name );
-			newError( CA_LOCATE_FAILED, buf );
+			dprintf( D_ALWAYS, "Can't find address for %s %s\n",
+					 daemonString(_type), _name ? _name : "" );
+			buf.sprintf( "Can't find address for %s %s", 
+						 daemonString(_type), _name ? _name : "" );
+			newError( CA_LOCATE_FAILED, buf.Value() );
 			return false; 
 		}
 
 		// construct the IP_ADDR attribute
-		sprintf( tmpname, "%sIpAddr", subsys );
-		if(scan->EvaluateAttrString( tmpname, buf, BUF_LEN ) == FALSE) {
-			dprintf(D_ALWAYS, "Can't find %s in classad for %s %s\n",
-					 tmpname, daemonString(_type), _name );
-			sprintf( buf, "Can't find %s in classad for %s %s",
-					 tmpname, daemonString(_type), _name );
-			newError( CA_LOCATE_FAILED, buf );
+		buf.sprintf( "%sIpAddr", subsys );
+		if( ! initStringFromAd(scan, buf.Value(), &_addr) ) {
 			return false;
 		}
-		New_addr( strnewp(buf) );
-		dprintf( D_HOSTNAME, "Found %s in ClassAd from collector, "
-				 "using address \"%s\"\n", tmpname, buf );
-
-		sprintf( tmpname, ATTR_VERSION );
-		if(scan->EvaluateAttrString( tmpname, buf, BUF_LEN ) == FALSE) {
-			dprintf(D_ALWAYS, "Can't find %s in classad for %s %s\n",
-					 tmpname, daemonString(_type), _name );
-			sprintf( buf, "Can't find %s in classad for %s %s",
-					 tmpname, daemonString(_type), _name );
-			newError( CA_LOCATE_FAILED, buf );
-			return false;
-		}
-		New_version( strnewp(buf) );
-		dprintf( D_HOSTNAME, "Found %s in ClassAd from collector, "
-				 "using version \"%s\"\n", tmpname, buf );
-
-		sprintf( tmpname, ATTR_PLATFORM );
-		if(scan->EvaluateAttrString( tmpname, buf, BUF_LEN ) == FALSE) {
-			dprintf(D_ALWAYS, "Can't find %s in classad for %s %s\n",
-					 tmpname, daemonString(_type), _name );
-			sprintf( buf, "Can't find %s in classad for %s %s",
-					 tmpname, daemonString(_type), _name );
-			newError( CA_LOCATE_FAILED, buf );
-			return false;
-		}
-		New_platform( strnewp(buf) );
-		dprintf( D_HOSTNAME, "Found %s in ClassAd from collector, "
-				 "using platform \"%s\"\n", tmpname, buf );
+			// The version and platfrom aren't critical, so don't
+			// return failure if we can't find them...
+		initStringFromAd( scan, ATTR_VERSION, &_version );
+		initStringFromAd( scan, ATTR_PLATFORM, &_platform );
 	}
 
 		// Now that we have the sinful string, fill in the port. 
@@ -1018,7 +1356,7 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype, bool query_collector 
 bool
 Daemon::getCmInfo( const char* subsys )
 {
-	char buf[128];
+	MyString buf;
 	char* host = NULL;
 	char* tmp;
 	struct in_addr sin_addr;
@@ -1029,9 +1367,13 @@ Daemon::getCmInfo( const char* subsys )
 	_subsys = strnewp( subsys );
 
 	if( _addr && is_valid_sinful(_addr) ) {
-		dprintf( D_HOSTNAME, "Already have address, no info to locate\n" );
-		_is_local = false;
-		return true;
+			// only consider addresses w/ a non-zero port "valid"...
+		_port = string_to_port( _addr );
+		if( _port > 0 ) {
+			dprintf( D_HOSTNAME, "Already have address, no info to locate\n" );
+			_is_local = false;
+			return true;
+		}
 	}
 
 		// For CM daemons, normally, we're going to be local (we're
@@ -1062,61 +1404,64 @@ Daemon::getCmInfo( const char* subsys )
 		_is_local = false;
 	}
 
-	if( ! host ) {
-			// Try the config file for a subsys-specific IP addr 
-		sprintf( buf, "%s_IP_ADDR", subsys );
-		host = param( buf );
-		if( host ) {
-			dprintf( D_HOSTNAME, "%s is set to \"%s\"\n", buf, host );
+
+	if( ! host  || !host[0] ) {
+			// this is just a fancy wrapper for param()...
+		host = getCmHostFromConfig( subsys );
+	}
+
+	if( ! host || !host[0]) {
+			// Final step before giving up: check for an address file.
+		if( readAddressFile(subsys) ) {
+				// if we got the address in the file, we still won't
+				// have a good full hostname, so use the local value.
+				// everything else (port, hostname, etc), will be
+				// initialized and set correctly by our caller based
+				// on the fullname and the address.
+			New_name( strnewp(my_full_hostname()) );
+			New_full_hostname( strnewp(my_full_hostname()) );
+			return true;
 		}
 	}
 
-	if( ! host ) {
-			// Try the config file for a subsys-specific hostname 
-		sprintf( buf, "%s_HOST", subsys );
-		host = param( buf );
-		if( host ) {
-			dprintf( D_HOSTNAME, "%s is set to \"%s\"\n", buf, 
-					 host ); 
-		}
-	}
-
-	if( ! host ) {
-			// Try the generic CM_IP_ADDR setting (subsys-specific
-			// settings should take precedence over this). 
-		host = param( "CM_IP_ADDR" );
-		if( host ) {
-			dprintf( D_HOSTNAME, "%s is set to \"%s\"\n", buf, 
-					 host ); 
-		}
-	}
-
-	if( ! host ) {
-		sprintf( buf, "%s address or hostname not specified in config file",
+	if( ! host || !host[0]) {
+		buf.sprintf("%s address or hostname not specified in config file",
 				 subsys ); 
-		newError( CA_LOCATE_FAILED, buf );
+		newError( CA_LOCATE_FAILED, buf.Value() );
 		_is_configured = false;
 		if( host ) free( host );
+
 		return false;
 	} 
 
-		// Now that we finally know what we're going to use, we should
-		// store that (as is) in _name, so that we can get to it later
-		// if we need it.
-	if( ! _name ) {
-		New_name( strnewp(host) );
-	}
 	dprintf( D_HOSTNAME, "Using name \"%s\" to find daemon\n", host ); 
 
 		// See if it's already got a port specified in it, or if we
 		// should use the default port for this kind of daemon.
 	_port = getPortFromAddr( host );
-	if( ! _port ) {
+	if( _port < 0 ) {
 		_port = getDefaultPort();
 		dprintf( D_HOSTNAME, "Port not specified, using default (%d)\n",
 				 _port ); 
 	} else {
 		dprintf( D_HOSTNAME, "Port %d specified in name\n", _port );
+	}
+	if( _port == 0 && readAddressFile(subsys) ) {
+		dprintf( D_HOSTNAME, "Port 0 specified in name, "
+				 "IP/port found in address file\n" );
+		New_name( strnewp(my_full_hostname()) );
+		New_full_hostname( strnewp(my_full_hostname()) );
+		if( host ) {
+			free( host );
+		}
+		return true;
+	}
+
+		// If we're here, we've got a real port and there's no address
+		// file, so we should store the string we used (as is) in
+		// _name, so that we can get to it later if we need it.
+	if( ! _name ) {
+		New_name( strnewp(host) );
 	}
 
 		// Now that we've got the port, grab the hostname for the rest
@@ -1130,9 +1475,20 @@ Daemon::getCmInfo( const char* subsys )
 	host = tmp;
 	tmp = NULL;
 
+
+
+	if ( !host ) {
+		buf.sprintf( "%s address or hostname not specified in config file",
+				 subsys ); 
+		newError( CA_LOCATE_FAILED, buf.Value() );
+		_is_configured = false;
+		return false;
+	}
+
+
 	if( is_ipaddr(host, &sin_addr) ) {
-		sprintf( buf, "<%s:%d>", host, _port );
-		New_addr( strnewp(buf) );
+		buf.sprintf( "<%s:%d>", host, _port );
+		New_addr( strnewp(buf.Value() ) );
 		dprintf( D_HOSTNAME, "Host info \"%s\" is an IP address\n", host );
 	} else {
 			// We were given a hostname, not an address.
@@ -1141,14 +1497,20 @@ Daemon::getCmInfo( const char* subsys )
 		tmp = get_full_hostname( host, &sin_addr );
 		if( ! tmp ) {
 				// With a hostname, this is a fatal Daemon error.
-			sprintf( buf, "unknown host %s", host );
-			newError( CA_LOCATE_FAILED, buf );
+			buf.sprintf( "unknown host %s", host );
+			newError( CA_LOCATE_FAILED, buf.Value() );
 			free( host );
+
+				// We assume this is a transient DNS failure.  Therefore,
+				// set _tried_locate = false, so that we keep trying in
+				// future calls to locate().
+			_tried_locate = false;
+
 			return false;
 		}
-		sprintf( buf, "<%s:%d>", inet_ntoa(sin_addr), _port );
-		dprintf( D_HOSTNAME, "Found IP address and port %s\n", buf );
-		New_addr( strnewp(buf) );
+		buf.sprintf( "<%s:%d>", inet_ntoa(sin_addr), _port );
+		dprintf( D_HOSTNAME, "Found IP address and port %s\n", buf.Value() );
+		New_addr( strnewp(buf.Value() ) );
 		New_full_hostname( tmp );
 	}
 
@@ -1160,7 +1522,6 @@ Daemon::getCmInfo( const char* subsys )
 	free( host );
 	return true;
 }
-
 
 
 bool
@@ -1199,7 +1560,7 @@ Daemon::initHostname( void )
 	struct sockaddr_in sockaddr;
 	struct hostent* hostp;
 	string_to_sin( _addr, &sockaddr );
-	hostp = gethostbyaddr( (char*)&sockaddr.sin_addr, 
+	hostp = condor_gethostbyaddr( (char*)&sockaddr.sin_addr, 
 						   sizeof(struct in_addr), AF_INET ); 
 	if( ! hostp ) {
 		New_hostname( NULL );
@@ -1352,6 +1713,102 @@ Daemon::localName( void )
 }
 
 
+bool
+Daemon::readAddressFile( const char* subsys )
+{
+	char* addr_file;
+	FILE* addr_fp;
+	MyString param_name;
+	MyString buf;
+	bool rval = false;
+
+	param_name.sprintf( "%s_ADDRESS_FILE", subsys );
+	addr_file = param( param_name.Value() );
+	if( ! addr_file ) {
+		return false;
+	}
+
+	dprintf( D_HOSTNAME, "Finding address for local daemon, "
+			 "%s is \"%s\"\n", param_name.Value(), addr_file );
+
+	if( ! (addr_fp = fopen(addr_file, "r")) ) {
+		dprintf( D_HOSTNAME,
+				 "Failed to open address file %s: %s (errno %d)\n",
+				 addr_file, strerror(errno), errno );
+		free( addr_file );
+		return false;
+	}
+		// now that we've got a FILE*, we should free this so we don't
+		// leak it.
+	free( addr_file );
+	addr_file = NULL;
+
+		// Read out the sinful string.
+	if( ! buf.readLine(addr_fp) ) {
+		dprintf( D_HOSTNAME, "address file contained no data\n" );
+		fclose( addr_fp );
+		return false;
+	}
+	buf.chomp();
+	if( is_valid_sinful(buf.Value()) ) {
+		dprintf( D_HOSTNAME, "Found valid address \"%s\" in "
+				 "local address file\n", buf.Value() );
+		New_addr( strnewp(buf.Value()) );
+		rval = true;
+	}
+
+		// Let's see if this is new enough to also have a
+		// version string and platform string...
+	if( buf.readLine(addr_fp) ) {
+			// chop off the newline
+		buf.chomp();
+		New_version( strnewp(buf.Value()) );
+		dprintf( D_HOSTNAME,
+				 "Found version string \"%s\" in local address file\n",
+				 buf.Value() );
+		if( buf.readLine(addr_fp) ) {
+			buf.chomp();
+			New_platform( strnewp(buf.Value()) );
+			dprintf( D_HOSTNAME,
+					 "Found platform string \"%s\" in local address file\n",
+					 buf.Value() );
+		}
+	}
+	fclose( addr_fp );
+	return rval;
+}
+
+
+bool
+Daemon::initStringFromAd( ClassAd* ad, const char* attrname, char** value )
+{
+	if( ! value ) {
+		EXCEPT( "Daemon::initStringFromAd() called with NULL value!" );
+	}
+	char* tmp = NULL;
+	MyString buf;
+	if( ! ad->LookupString(attrname, &tmp) ) {
+		dprintf( D_ALWAYS, "Can't find %s in classad for %s %s\n",
+				 attrname, daemonString(_type),
+				 _name ? _name : "" );
+		buf.sprintf( "Can't find %s in classad for %s %s",
+					 attrname, daemonString(_type),
+					 _name ? _name : "" );
+		newError( CA_LOCATE_FAILED, buf.Value() );
+		return false;
+	}
+	if( *value ) {
+		delete [] *value;
+	}
+	*value = strnewp(tmp);
+	dprintf( D_HOSTNAME, "Found %s in ClassAd from collector, "
+			 "using \"%s\"\n", attrname, tmp );
+	free( tmp );
+	tmp = NULL;
+	return true;
+}
+
+
 char*
 Daemon::New_full_hostname( char* str )
 {
@@ -1430,12 +1887,38 @@ Daemon::New_pool( char* str )
 bool
 Daemon::checkAddr( void )
 {
+	bool just_tried_locate = false;
 	if( ! _addr ) {
 		locate();
+		just_tried_locate = true;
 	}
 	if( ! _addr ) {
 			// _error will already be set appropriately
 		return false;
+	}
+	if( _port == 0 ) {
+			// if we didn't *just* try locating, we should try again,
+			// in case the address file for the thing we're trying to
+			// talk to has now been written.
+		if( just_tried_locate ) {
+			newError( CA_LOCATE_FAILED,
+					  "port is still 0 after locate(), address invalid" );
+			return false;
+		}
+			// clear out some things that would confuse locate()
+		_tried_locate = false;
+		delete [] _addr;
+		_addr = NULL;
+		if( _is_local ) {
+			delete [] _name;
+			_name = NULL;
+		}
+		locate();
+		if( _port == 0 ) {
+			newError( CA_LOCATE_FAILED,
+					  "port is still 0 after locate(), address invalid" );
+			return false;
+		}
 	}
 	return true;
 }
@@ -1476,4 +1959,150 @@ Daemon::setCmdStr( const char* cmd )
 	if( cmd ) {
 		_cmd_str = strnewp( cmd );
 	}
+}
+
+
+char*
+getCmHostFromConfig( const char * subsys )
+{ 
+	MyString buf;
+	char* host = NULL;
+
+		// Try the config file for a subsys-specific hostname 
+	buf.sprintf( "%s_HOST", subsys );
+	host = param( buf.Value() );
+	if( host ) {
+		if( host[0] ) {
+			dprintf( D_HOSTNAME, "%s is set to \"%s\"\n", buf.Value(), 
+					 host ); 
+			if(host[0] == ':') {
+				dprintf( D_ALWAYS, "Warning: Configuration file sets '%s=%s'.  This does not look like a valid host name with optional port.\n", buf.Value(), host);
+			}
+			return host;
+		} else {
+			free( host );
+		}
+	}
+
+		// Try the config file for a subsys-specific IP addr 
+	buf.sprintf ("%s_IP_ADDR", subsys );
+	host = param( buf.Value() );
+	if( host ) {
+		if( host[0] ) {
+			dprintf( D_HOSTNAME, "%s is set to \"%s\"\n", buf.Value(), host );
+			return host;
+		} else {
+			free( host );
+		}
+	}
+
+		// settings should take precedence over this). 
+	host = param( "CM_IP_ADDR" );
+	if( host ) {
+		if(  host[0] ) {
+			dprintf( D_HOSTNAME, "%s is set to \"%s\"\n", buf.Value(), 
+					 host ); 
+			return host;
+		} else {
+			free( host );
+		}
+	}
+	return NULL;
+}
+
+/**
+ * Contact another daemon and initiate the time offset range 
+ * determination logic. We create a socket connection, pass the
+ * DC_TIME_OFFSET command then pass the Stream to the cedar stub
+ * code for time offset. If this method returns false, then
+ * that means we were not able to coordinate our communications
+ * with the remote daemon
+ * 
+ * @param offset - the reference placeholder for the range
+ * @return true if it was able to contact the other Daemon
+ **/
+bool
+Daemon::getTimeOffset( long &offset )
+{
+		//
+		// Initialize the offset to the default value
+		//
+	offset = TIME_OFFSET_DEFAULT;
+
+		//
+		// First establish a socket to the other daemon
+		//
+	ReliSock reli_sock;
+	reli_sock.timeout( 30 ); // I'm following what everbody else does
+	if( ! reli_sock.connect( this->_addr ) ) {
+		dprintf( D_FULLDEBUG, "Daemon::getTimeOffset() failed to connect "
+		     				  "to remote daemon at '%s'\n",
+		     				  this->_addr );
+		return ( false );
+	}
+		//
+		// Next send our command to prepare for the call out to the
+		// remote daemon
+		//
+	if( ! this->startCommand( DC_TIME_OFFSET, (Sock*)&reli_sock ) ) { 
+		dprintf( D_FULLDEBUG, "Daemon::getTimeOffset() failed to send "
+		     				  "command to remote daemon at '%s'\n", 
+		     				  this->_addr );
+		return ( false );
+	}
+		//
+		// Now that we have established a connection, we'll pass
+		// the ReliSock over to the time offset handling code
+		//
+	return ( time_offset_cedar_stub( (Stream*)&reli_sock, offset ) );
+}
+
+/**
+ * Contact another daemon and initiate the time offset range 
+ * determination logic. We create a socket connection, pass the
+ * DC_TIME_OFFSET command then pass the Stream to the cedar stub
+ * code for time offset. The min/max range value placeholders
+ * are passed in by reference. If this method returns false, then
+ * that means for some reason we could not get the range and the
+ * range values will default to a known value.
+ * 
+ * @param min_range - the minimum range value for the time offset
+ * @param max_range - the maximum range value for the time offset
+ * @return true if it was able to contact the other Daemon
+ **/
+bool
+Daemon::getTimeOffsetRange( long &min_range, long &max_range )
+{
+		//
+		// Initialize the ranges to the default value
+		//
+	min_range = max_range = TIME_OFFSET_DEFAULT;
+
+		//
+		// First establish a socket to the other daemon
+		//
+	ReliSock reli_sock;
+	reli_sock.timeout( 30 ); // I'm following what everbody else does
+	if( ! reli_sock.connect( this->_addr ) ) {
+		dprintf( D_FULLDEBUG, "Daemon::getTimeOffsetRange() failed to connect "
+		     				  "to remote daemon at '%s'\n",
+		     				  this->_addr );
+		return ( false );
+	}
+		//
+		// Next send our command to prepare for the call out to the
+		// remote daemon
+		//
+	if( ! this->startCommand( DC_TIME_OFFSET, (Sock*)&reli_sock ) ) { 
+		dprintf( D_FULLDEBUG, "Daemon::getTimeOffsetRange() failed to send "
+		     				  "command to remote daemon at '%s'\n", 
+		     				  this->_addr );
+		return ( false );
+	}
+		//
+		// Now that we have established a connection, we'll pass
+		// the ReliSock over to the time offset handling code
+		//
+	return ( time_offset_range_cedar_stub( (Stream*)&reli_sock,
+										   min_range, max_range ) );
 }

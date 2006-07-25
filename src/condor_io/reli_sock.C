@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -29,6 +29,7 @@
 #include "condor_rw.h"
 #include "condor_socket_types.h"
 #include "condor_md.h"
+#include "stat_wrapper.h"
 
 #ifdef WIN32
 #include <mswsock.h>	// For TransmitFile()
@@ -36,6 +37,9 @@
 
 #define NORMAL_HEADER_SIZE 5
 #define MAX_HEADER_SIZE MAC_SIZE + NORMAL_HEADER_SIZE
+
+const unsigned int PUT_FILE_EOM_NUM = 666;
+
 /**************************************************************/
 
 /* 
@@ -182,19 +186,27 @@ ReliSock::accept( ReliSock	&c )
 	}
 
 	c._sock = c_sock;
+	c.move_descriptor_up();	// must be called _after_ we initialize c._sock
 	c._state = sock_connect;
 	c.decode();
 
 	int on = 1;
 	c.setsockopt(SOL_SOCKET, SO_KEEPALIVE, (char*)&on, sizeof(on));
 
+
+		/* Set no delay to disable Nagle, since we buffer all our
+		   relisock output and it degrades performance of our
+		   various chatty protocols. -Todd T, 9/05
+		*/
+	c.setsockopt(IPPROTO_TCP, TCP_NODELAY, (char*)&on, sizeof(on));
+
 	if( DebugFlags & D_NETWORK ) {
-		char* src = strdup(	sock_to_string(_sock) );
-		char* dst = strdup( sin_to_string(c.endpoint()) );
-		dprintf( D_NETWORK, "ACCEPT src=%s fd=%d dst=%s\n",
-				 src, c._sock, dst );
-		free( src );
-		free( dst );
+        char* from = strdup( sin_to_string(c.endpoint()) );
+        char* to = strdup(  sock_to_string(_sock) );
+        dprintf( D_NETWORK, "ACCEPT from=%s newfd=%d to=%s\n",
+                 from, c._sock, to );
+        free( from );
+        free( to );
 	}
 	
 	return TRUE;
@@ -434,6 +446,7 @@ ReliSock::get_bytes_nobuffer(char *buffer, int max_length, int receive_size)
         return -1;
 }
 
+
 int
 ReliSock::get_file( filesize_t *size, const char *destination, bool flush_buffers)
 {
@@ -457,8 +470,11 @@ ReliSock::get_file( filesize_t *size, const char *destination, bool flush_buffer
 #endif
 		dprintf(D_ALWAYS, "get_file(): Failed to open file %s, errno = %d.\n",
 				destination, errno);
-		return -1;
-	}
+		return GET_FILE_OPEN_FAILED;
+	} 
+
+	dprintf(D_FULLDEBUG,"get_file(): going to write to filename %s\n",
+		destination);
 
 	result = get_file( size, fd,flush_buffers);
 
@@ -487,33 +503,62 @@ ReliSock::get_file( filesize_t *size, int fd, bool flush_buffers )
 		return -1;
 	}
 
+
 	// Log what's going on
 	dprintf(D_FULLDEBUG,
 			"get_file: Receiving " FILESIZE_T_FORMAT " bytes\n", filesize );
 
-	// Now, read it all in & save it
-	const filesize_t	FILESIZE_ALL = ( (filesize_t) -1 );
-	while ( ( filesize == FILESIZE_ALL ) || ( total < filesize ) ) {
+		/*
+		  the code used to check for filesize == -1 here, but that's
+		  totally wrong.  we're storing the size as an unsigned int,
+		  so we can't check it against a negative value.  furthermore,
+		  ReliSock::put_file() never puts a -1 on the wire for the
+		  size.  that's legacy code from the pseudo_put_file_stream()
+		  RSC in the syscall library.  this code isn't like that.
+		*/
 
-		int		iosize = (int) MIN( (filesize_t) sizeof(buf),
+	// Now, read it all in & save it
+	while( total < filesize ) {
+		int	iosize = (int) MIN( (filesize_t) sizeof(buf),
 									filesize - total );
-		int		nbytes = get_bytes_nobuffer( buf, iosize, 0 );
+		int	nbytes = get_bytes_nobuffer( buf, iosize, 0 );
 		if ( nbytes <= 0 ) {
 			break;
 		}
 
-		int		written = ::write(fd, buf, nbytes );
-		if ( written < nbytes ) {
-			dprintf(D_ALWAYS, "failed to write %d bytes in ReliSock::get_file "
-					"(only wrote %d, errno=%d)\n", nbytes, written, errno);
-			return -1;
+		int rval;
+		int written;
+		for( written=0; written<nbytes; ) {
+			rval = ::write( fd, &buf[written], (nbytes-written) );
+			if( rval < 0 ) {
+				dprintf( D_ALWAYS,
+						 "ReliSock::get_file: write() returned %d: %s "
+						 "(errno=%d)\n", rval, strerror(errno), errno );
+				return -1;
+			} else if( rval == 0 ) {
+					/*
+					  write() shouldn't really return 0 at all.
+					  apparently it can do so if we asked it to write
+					  0 bytes (which we're not going to do) or if the
+					  file is closed (which we're also not going to
+					  do).  so, for now, if we see it, we want to just
+					  break out of this loop.  in the future, we might
+					  do more fancy stuff to handle this case, but
+					  we're probably never going to see this anyway.
+					*/
+				dprintf( D_ALWAYS, "ReliSock::get_file: write() returned 0: "
+						 "wrote %d out of %d bytes (errno=%d %s)\n",
+						 written, nbytes, errno, strerror(errno) );
+				break;
+			} else {
+				written += rval;
+			}
 		}
 		total += written;
 	}
 
 	if ( filesize == 0 ) {
-		get(eom_num);
-		if ( eom_num != 666 ) {
+		if ( !get(eom_num) || eom_num != PUT_FILE_EOM_NUM ) {
 			dprintf(D_ALWAYS,"get_file: Zero-length file check failed!\n");
 			return -1;
 		}			
@@ -526,13 +571,27 @@ ReliSock::get_file( filesize_t *size, int fd, bool flush_buffers )
 	dprintf(D_FULLDEBUG,
 			"get_file: wrote " FILESIZE_T_FORMAT " bytes to file\n", total );
 
-	if ( ( total < filesize ) && ( filesize != FILESIZE_ALL ) ) {
-		dprintf(D_ALWAYS,"get_file(): ERROR: received %d bytes, expected %d!\n",
-			total, filesize);
+	if ( total < filesize ) {
+		dprintf( D_ALWAYS,
+				 "get_file(): ERROR: received " FILESIZE_T_FORMAT " bytes, "
+				 "expected " FILESIZE_T_FORMAT "!\n",
+				 total, filesize);
 		return -1;
 	}
 
 	*size = total;
+	return 0;
+}
+
+int
+ReliSock::put_empty_file( filesize_t *size )
+{
+	*size = 0;
+	if(!put(*size) || !end_of_message()) {
+		dprintf(D_ALWAYS,"ReliSock: put_file: failed to send dummy file size\n");
+		return -1;
+	}
+	put(PUT_FILE_EOM_NUM); //end the zero-length file
 	return 0;
 }
 
@@ -549,8 +608,21 @@ ReliSock::put_file( filesize_t *size, const char *source)
 		dprintf(D_ALWAYS,
 				"ReliSock: put_file: Failed to open file %s, errno = %d.\n",
 				source, errno);
-		return -1;
+			// Give the receiver an empty file so that this message is
+			// complete.  The receiver _must_ detect failure through
+			// some additional communication that is not part of
+			// the put_file() message.
+
+		int rc = put_empty_file( size );
+		if(rc < 0) {
+			return rc;
+		}
+
+		return PUT_FILE_OPEN_FAILED;
 	}
+
+	dprintf(D_FULLDEBUG,"put_file: going to send from filename %s\n",
+		source);
 
 	result = put_file( size, fd);
 
@@ -567,30 +639,17 @@ ReliSock::put_file( filesize_t *size, int fd )
 {
 	filesize_t	filesize;
 	filesize_t	total = 0;
-	unsigned int eom_num = 666;
 
-#if defined HAS_STAT64
-	struct stat64 filestat;
-	if (::fstat64(fd, &filestat) < 0) {
-		dprintf(D_ALWAYS, "ReliSock: put_file: fstat64 failed\n");
+
+	StatWrapper	filestat( fd );
+	if ( filestat.GetStatus() ) {
+		int		staterr = filestat.GetErrno( );
+		dprintf(D_ALWAYS, "ReliSock: put_file: StatBuf failed: %d %s\n",
+				staterr, strerror( staterr ) );
 		return -1;
 	}
-	filesize = filestat.st_size;
-#elif defined HAS__STATI64
-	struct _stati64 filestat;
-	if (::_fstati64(fd, &filestat) < 0) {
-		dprintf(D_ALWAYS, "ReliSock: put_file: fstat failed\n");
-		return -1;
-	}
-	filesize = filestat.st_size;
-#else
-	struct stat filestat;
-	if (::fstat(fd, &filestat) < 0) {
-		dprintf(D_ALWAYS, "ReliSock: put_file: fstat failed\n");
-		return -1;
-	}
-	filesize = filestat.st_size;
-#endif
+	filesize = filestat.GetStatBuf( )->st_size;
+	dprintf( D_FULLDEBUG, "put_file: Found file size %lld\n", filesize );
 
 	// Send the file size to the reciever
 	if ( !put(filesize) || !end_of_message() ) {
@@ -641,27 +700,31 @@ ReliSock::put_file( filesize_t *size, int fd )
 		while (total < filesize &&
 			   (nrd = ::read(fd, buf, sizeof(buf))) > 0) {
 			if ((nbytes = put_bytes_nobuffer(buf, nrd, 0)) < nrd) {
-				dprintf(D_ALWAYS, "ReliSock: put_file: failed to put %d bytes "
-						"(only wrote %d)\n", nrd, nbytes);
+					// put_bytes_nobuffer() does the appropriate
+					// looping for us already, the only way this could
+					// return less than we asked for is if it returned
+					// -1 on failure.
+				ASSERT( nbytes == -1 );
+				dprintf( D_ALWAYS, "ReliSock::put_file: failed to put %d "
+						 "bytes (put_bytes_nobuffer() returned %d)\n",
+						 nrd, nbytes );
 				return -1;
 			}
 			total += nbytes;
 		}
-		dprintf(D_FULLDEBUG,
-				"ReliSock: put_file: done with transfer (errno = %d)\n", errno);
-
 	
 	} // end of if filesize > 0
 
 	if ( filesize == 0 ) {
-		put(eom_num);
+		put(PUT_FILE_EOM_NUM);
 	}
 
 	dprintf(D_FULLDEBUG,
 			"ReliSock: put_file: sent " FILESIZE_T_FORMAT " bytes\n", total);
 
 	if (total < filesize) {
-		dprintf(D_ALWAYS,"ReliSock: put_file: only sent %d bytes out of %d\n",
+		dprintf(D_ALWAYS,"ReliSock: put_file: only sent " FILESIZE_T_FORMAT 
+					" bytes out of " FILESIZE_T_FORMAT "\n",
 			total, filesize);
 		return -1;
 	}
@@ -876,12 +939,10 @@ bool ReliSock::RcvMsg::init_MD(CONDOR_MD_MODE mode, KeyInfo * key)
 
     mode_ = mode;
     delete mdChecker_;
+	mdChecker_ = 0;
 
     if (key) {
         mdChecker_ = new Condor_MD_MAC(key);
-    }
-    else {
-      mdChecker_ = new Condor_MD_MAC();
     }
 
     return true;
@@ -907,16 +968,20 @@ int ReliSock::RcvMsg::rcv_packet( SOCKET _sock, int _timeout)
 	int		len, len_t, header_size;
 	int		tmp_len;
 
-	header_size = mdChecker_ ? MAX_HEADER_SIZE : NORMAL_HEADER_SIZE;
+	header_size = (mode_ != MD_OFF) ? MAX_HEADER_SIZE : NORMAL_HEADER_SIZE;
 
 	if ( condor_read(_sock,hdr,header_size,_timeout) < 0 ) {
-			// condor_read() already does dprintfs into the log
-			// about what went wrong...
+		dprintf(D_FULLDEBUG,"IO: EOF reading packet header\n");
 		return FALSE;
 	}
 	end = (int) ((char *)hdr)[0];
 	memcpy(&len_t,  &hdr[1], 4);
 	len = (int) ntohl(len_t);
+
+	if (end < 0 || end > 10) {
+		dprintf(D_ALWAYS,"IO: Incoming packet header unrecognized\n");
+		return FALSE;
+	}
         
 	if (!(tmp = new Buf)){
 		dprintf(D_ALWAYS, "IO: Out of memory\n");
@@ -927,6 +992,15 @@ int ReliSock::RcvMsg::rcv_packet( SOCKET _sock, int _timeout)
 		dprintf(D_ALWAYS, "IO: Incoming packet is too big\n");
 		return FALSE;
 	}
+	if ((len < 0) || 
+		(len == 0) && (end==0))	// len and end would never BOTH be zero
+	{
+		delete tmp;
+		dprintf(D_ALWAYS, 
+			"IO: Incoming packet improperly sized (len=%d,end=%d)\n",
+			len,end);
+		return FALSE;
+	}
 	if ((tmp_len = tmp->read(_sock, len, _timeout)) != len){
 		delete tmp;
 		dprintf(D_ALWAYS, "IO: Packet read failed: read %d of %d\n",
@@ -935,7 +1009,7 @@ int ReliSock::RcvMsg::rcv_packet( SOCKET _sock, int _timeout)
 	}
 
         // Now, check MD
-        if (mdChecker_) {
+        if (mode_ != MD_OFF) {
             if (!tmp->verifyMD(&hdr[5], mdChecker_)) {
                 delete tmp;
                 dprintf(D_ALWAYS, "IO: Message Digest/MAC verification failed!\n");
@@ -973,14 +1047,14 @@ int ReliSock::SndMsg::snd_packet( int _sock, int end, int _timeout )
 	int		len, header_size;
 	int		ns;
 
-        header_size = mdChecker_ ? MAX_HEADER_SIZE : NORMAL_HEADER_SIZE;
+    header_size = (mode_ != MD_OFF) ? MAX_HEADER_SIZE : NORMAL_HEADER_SIZE;
 	hdr[0] = (char) end;
 	ns = buf.num_used() - header_size;
 	len = (int) htonl(ns);
 
 	memcpy(&hdr[1], &len, 4);
 
-        if (mdChecker_) {
+        if (mode_ != MD_OFF) {
             if (!buf.computeMD(&hdr[5], mdChecker_)) {
                 dprintf(D_ALWAYS, "IO: Failed to compute Message Digest/MAC\n");
                 return FALSE;
@@ -1002,12 +1076,10 @@ bool ReliSock::SndMsg::init_MD(CONDOR_MD_MODE mode, KeyInfo * key)
 
     mode_ = mode;
     delete mdChecker_;
+	mdChecker_ = 0;
 
     if (key) {
         mdChecker_ = new Condor_MD_MAC(key);
-    }
-    else {
-        mdChecker_ = new Condor_MD_MAC();
     }
 
     return true;
@@ -1191,14 +1263,36 @@ ReliSock::prepare_for_nobuffering(stream_coding direction)
 	return ret_val;
 }
 
-int ReliSock::authenticate(KeyInfo *& key, const char* methods, CondorError* errstack)
+int ReliSock::perform_authenticate(bool with_key, KeyInfo *& key, 
+								   const char* methods, CondorError* errstack)
 {
+	int in_encode_mode;
+	int result;
+
     if (!isAuthenticated()) {
         if ( !authob ) {
             authob = new Authentication( this );
         }
         if ( authob ) {
-            return( authob->authenticate( hostAddr, key, methods, errstack ) );
+				// store if we are in encode or decode mode
+			in_encode_mode = is_encode();
+
+				// actually perform the authentication
+			if ( with_key ) {
+				result = authob->authenticate( hostAddr, key, methods, errstack );
+			} else {
+				result = authob->authenticate( hostAddr, methods, errstack );
+			}
+				// restore stream mode (either encode or decode)
+			if ( in_encode_mode && is_decode() ) {
+				encode();
+			} else {
+				if ( !in_encode_mode && is_encode() ) { 
+					decode();
+				}
+			}
+
+			return result;
         }
         return( 0 );  
     }
@@ -1207,22 +1301,18 @@ int ReliSock::authenticate(KeyInfo *& key, const char* methods, CondorError* err
     }
 }
 
+int ReliSock::authenticate(KeyInfo *& key, const char* methods, CondorError* errstack)
+{
+	return perform_authenticate(true,key,methods,errstack);
+}
+
 int 
 ReliSock::authenticate(const char* methods, CondorError* errstack ) 
 {
-    if ( !isAuthenticated() ) {
-        if ( !authob ) {
-            authob = new Authentication( this );
-        }
-        if ( authob ) {
-            return( authob->authenticate( hostAddr, methods, errstack ) );
-        }
-        return 0;
-    }
-    else {
-        return 1;
-    }
+	KeyInfo *key = NULL;
+	return perform_authenticate(false,key,methods,errstack);
 }
+
 
 void
 ReliSock::setOwner( const char *newOwner ) {
@@ -1266,7 +1356,7 @@ const char * ReliSock::getHostAddress() {
 }
 
 int
-ReliSock::isAuthenticated()
+ReliSock::isAuthenticated() const
 {
 	if ( !authob ) {
 		return 0;

@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -63,7 +63,7 @@ UsageMonitor::Request(double units)
 		time_t forward_time = current_time +
 			(int)(((units/max_units)-1)*interval);
 		dprintf(D_FULLDEBUG, "usagemon: request for %.0f forwarded dated by "
-				"%d seconds\n",	forward_time - current_time);
+				"%ld seconds\n",	units, (long)(forward_time - current_time));
 		// add new history record (list is empty!)
 		rec = new UsageRec(units, forward_time);
 		first = last = rec;

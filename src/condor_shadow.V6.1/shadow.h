@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -123,7 +123,8 @@ class UniShadow : public BaseShadow
 			terminated.  This has all the job statistics from the run,
 			and lots of other useful info.
 		*/
-	virtual void emailTerminateEvent( int exitReason );
+	virtual void emailTerminateEvent( int exitReason, 
+					update_style_t kind = US_NORMAL );
 
 		/** Do all work to cleanup before this shadow can exit.  We've
 			only got 1 RemoteResource to kill the starter on.

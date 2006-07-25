@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -36,6 +36,7 @@
 #include "condor_debug.h"
 #include "condor_ckpt_mode.h"
 #include "signals_control.h"
+#include "gtodc.h"
 
 extern int _condor_in_file_stream;
 
@@ -750,9 +751,17 @@ Image::Restore()
 	RestoreAllSegsExceptStack();
 
 		// We have just overwritten our data segment, so the image
-		// we are working with has been overwritten too.  Fortunately,
-		// the only thing that has changed is the file descriptor.
+		// we are working with has been overwritten too.... restore into the
+		// data segment the value of the fd from this stack segment.
 	fd = save_fd;
+
+		// We want the gettimeofday() cache to be reset up in terms of the
+		// submission machine time, so reinitialize the cache to default
+		// and let it lazily refill when gettimeofday() is called again.
+		// Performing this call effectively "forgets" about the checkpointed
+		// information in the cache after resumption. It will be resetup at
+		// the next gettimeofday() call.
+	_condor_gtodc_init(_condor_global_gtodc);
 
 #if defined(PVM_CHECKPOINTING)
 	memcpy(global_user_data, user_data, sizeof(user_data));
@@ -1413,8 +1422,8 @@ SegMap::Read( int fd, ssize_t pos )
 		if( nbytes <= 0 ) {
 			dprintf(D_ALWAYS, "in Segmap::Read(): fd = %d, read_size=%d\n", fd,
 				read_size);
-			dprintf(D_ALWAYS, "core_loc=%x, nbytes=%d\n",
-				core_loc, nbytes);
+			dprintf(D_ALWAYS, "core_loc=%x, nbytes=%d, errno=%d(%s)\n",
+				core_loc, nbytes, errno, strerror(errno));
 			return -1;
 		}
 		bytes_to_go -= nbytes;
@@ -1669,6 +1678,19 @@ Checkpoint( int sig, int code, void *scp )
 					dprintf(D_ALWAYS,
 							"Checkpoint aborted by shadow request.\n");
 
+					// if I'm checkpointing on a vacate when WantCheckpoint
+					// has been specified to false, then simply commit suicide
+					// since I don't want to waste the time of the checkpoint
+					// which could be significant.
+					if (check_sig == SIGTSTP) {
+						dprintf( D_ALWAYS, "Checkpoint during a vacate while "
+											"WantCheckpoint = False, aborting "
+											"the checkpoint and commiting "
+											"Suicide().\n");
+						SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
+						Suicide();
+					}
+
 					// We can't just return here.  We need to cleanup
 					// anything we've done above first.
 
@@ -1824,7 +1846,6 @@ init_image_with_file_descriptor( int fd )
 {
 	MyImage.SetFd( fd );
 }
-
 
 /*
   Effect a restart by reading in an "image" containing checkpointing
@@ -2088,3 +2109,4 @@ void mydprintf(int foo, const char *fmt, ...)
 }
 
 } /* extern "C" */
+

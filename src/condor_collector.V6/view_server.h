@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -31,9 +31,32 @@
 
 //---------------------------------------------------
 
+// Note: This should be kept in sync with condor_state.h,  and with
+// StartdScanFunc() of view_server.C, and with
+// ResConvStr() of condor_tools/stats.C .
+// Also, make sure that you keep VIEW_STATE_MAX pointing at
+// the last "normal" VIEW_STATE
+typedef enum {
+	VIEW_STATE_UNDEFINED = 0,
+	VIEW_STATE_UNCLAIMED = 1,
+	VIEW_STATE_MATCHED = 2,
+	VIEW_STATE_CLAIMED = 3,
+	VIEW_STATE_PREEMPTING = 4,
+	VIEW_STATE_OWNER = 5,
+	VIEW_STATE_SHUTDOWN = 6,
+	VIEW_STATE_DELETE = 7,
+	VIEW_STATE_BACKFILL = 8,
+
+	VIEW_STATE_MAX = VIEW_STATE_BACKFILL,
+	VIEW_STATE_MAX_OFFSET = VIEW_STATE_MAX - 1,
+} ViewStates;
 struct GeneralRecord {
-	float Data[5];
-	GeneralRecord() { Data[0]=Data[1]=Data[2]=Data[3]=Data[4]=0.0; }
+	float Data[VIEW_STATE_MAX];
+	GeneralRecord() {
+		for( int i=0; i<(int)VIEW_STATE_MAX_OFFSET; i++ ) {
+			Data[i] = 0.0;
+		}
+	};
 };
 
 //---------------------------------------------------
@@ -111,7 +134,7 @@ private:
 	static int ReadTime(char* Line);
 	static int ReadTimeAndName(char* Line, MyString& Name);
 	static int ReadTimeChkName(char* Line, const MyString& Name);
-	static int FindFileStartTime(char* Name);
+	static int FindFileStartTime(const char *Name);
 };
 
 

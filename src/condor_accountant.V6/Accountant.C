@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -31,8 +31,11 @@
 #include "condor_config.h"
 #include "condor_state.h"
 #include "condor_attributes.h"
+#include "enum_utils.h"
 #include "classad_log.h"
 #include "string_list.h"
+
+#define MIN_PRIORITY_FACTOR (1.0)
 
 MyString Accountant::AcctRecord="Accountant.";
 MyString Accountant::CustomerRecord="Customer.";
@@ -60,6 +63,8 @@ Accountant::Accountant()
 {
   MinPriority=0.5;
   AcctLog=NULL;
+  DiscountSuspendedResources = false;
+  GroupNamesList = NULL;
 }
 
 //------------------------------------------------------------------
@@ -69,6 +74,7 @@ Accountant::Accountant()
 Accountant::~Accountant()
 {
   if (AcctLog) delete AcctLog;
+  if (GroupNamesList) delete GroupNamesList;
 }
 
 //------------------------------------------------------------------
@@ -86,6 +92,19 @@ void Accountant::Initialize()
   RemoteUserPriorityFactor=10000;
   DefaultPriorityFactor=1;
   HalfLifePeriod=86400;
+
+  // get group names
+  if ( GroupNamesList ) {
+	  delete GroupNamesList;
+	  GroupNamesList = NULL;
+  }
+  char *groups = param("GROUP_NAMES");
+  if ( groups ) {
+		GroupNamesList = new StringList;
+		ASSERT(GroupNamesList);
+		GroupNamesList->initializeFromString(groups);
+		free(groups);
+  }
 
   // get half life period
   
@@ -147,6 +166,9 @@ void Accountant::Initialize()
 	  EXCEPT( "SPOOL not defined!" );
   }
 
+  DiscountSuspendedResources = param_boolean(
+                             "NEGOTIATOR_DISCOUNT_SUSPENDED_RESOURCES",false);
+
   dprintf(D_ACCOUNTANT,"PRIORITY_HALFLIFE=%f\n",HalfLifePeriod);
   dprintf(D_ACCOUNTANT,"NICE_USER_PRIO_FACTOR=%f\n",NiceUserPriorityFactor);
   dprintf(D_ACCOUNTANT,"REMOTE_PRIO_FACTOR=%f\n",RemoteUserPriorityFactor);
@@ -173,7 +195,7 @@ void Accountant::Initialize()
 	  HashKey HK;
 	  char key[_POSIX_PATH_MAX];
 	  ClassAd* ad;
-	  ClassAd *unused;
+	  AttrList *unused;
 	  StringList users;
 	  char *next_user;
 	  MyString user;
@@ -187,8 +209,15 @@ void Accountant::Initialize()
 	  AcctLog->table.startIterations();
 	  while (AcctLog->table.iterate(HK,ad)) {
 		HK.sprint(key);
+			// skip records that are not customer records...
 		if (strncmp(CustomerRecord.Value(),key,CustomerRecord.Length())) continue;
-		users.append( &(key[CustomerRecord.Length()]) );
+			// for now, skip records that are "group" customer records. 
+			// TODO: we should fix the below sanity check code so it understands
+			// fixing up group customer records as well.
+		char *user = &(key[CustomerRecord.Length()]);
+		if (GroupNamesList && GroupNamesList->contains_anycase(user)) continue;
+			// if we made it here, append to our list of users
+		users.append( user );
 	  }
 		// ok, now StringList users has all the users.  for each user,
 		// compare what the customer record claims for usage -vs- actual
@@ -251,12 +280,15 @@ int Accountant::GetResourcesUsed(const MyString& CustomerName)
 
 float Accountant::GetPriority(const MyString& CustomerName) 
 {
+    // Warning!  This function has a side effect of a writing the
+    // PriorityFactor.
   float PriorityFactor=GetPriorityFactor(CustomerName);
   float Priority=MinPriority;
   GetAttributeFloat(CustomerRecord+CustomerName,PriorityAttr,Priority);
   if (Priority<MinPriority) {
     Priority=MinPriority;
-    SetAttributeFloat(CustomerRecord+CustomerName,PriorityAttr,Priority);
+    // Warning!  This read function has a side effect of a write.
+    SetPriority(CustomerName,Priority);// write and dprintf()
   }
   return Priority*PriorityFactor;
 }
@@ -265,18 +297,57 @@ float Accountant::GetPriority(const MyString& CustomerName)
 // Return the priority factor of a customer
 //------------------------------------------------------------------
 
+// Get group priority local helper function.
+static float getGroupPriorityFactor(const MyString& CustomerName) 
+{
+	float priorityFactor = 0.0;	// "error" value
+
+	// Group names contain a '.' character.
+	// To do:  This is a weak test.  Improve the group test by also checking
+	// the GROUP_NAMES config macro value.
+	int pos = CustomerName.FindChar('.');
+	if ( pos == 0 ) return priorityFactor;
+
+	// Group separator character found: Accounting groups
+	MyString GroupName = CustomerName;
+	GroupName.setChar(pos,'\0');
+	MyString groupPrioFactorConfig;
+	groupPrioFactorConfig.sprintf("GROUP_PRIO_FACTOR_%s",
+			GroupName.Value() );
+#define ERR_CONVERT_DEFPRIOFACTOR   (-1.0)
+	float tmpPriorityFactor = param_float(groupPrioFactorConfig.Value(),
+			   ERR_CONVERT_DEFPRIOFACTOR);
+	if (tmpPriorityFactor != ERR_CONVERT_DEFPRIOFACTOR) {
+		priorityFactor = tmpPriorityFactor;
+	}
+	return priorityFactor;
+}
+
 float Accountant::GetPriorityFactor(const MyString& CustomerName) 
 {
   float PriorityFactor=0;
   GetAttributeFloat(CustomerRecord+CustomerName,PriorityFactorAttr,PriorityFactor);
-  if (PriorityFactor<1) {
-    if (strncmp(CustomerName.Value(),NiceUserName,strlen(NiceUserName))==0)
-      PriorityFactor=NiceUserPriorityFactor;
-    else if (AccountantLocalDomain!=GetDomain(CustomerName))
-      PriorityFactor=RemoteUserPriorityFactor;
-    else
-      PriorityFactor=DefaultPriorityFactor;
-    SetAttributeFloat(CustomerRecord+CustomerName,PriorityFactorAttr,PriorityFactor);
+  if (PriorityFactor < MIN_PRIORITY_FACTOR) {
+    PriorityFactor=DefaultPriorityFactor;
+	float groupPriorityFactor = 0.0;
+
+	if (strncmp(CustomerName.Value(),NiceUserName,strlen(NiceUserName))==0) {
+		// Nice user
+		PriorityFactor=NiceUserPriorityFactor;
+    }
+	else if ( (groupPriorityFactor = getGroupPriorityFactor(CustomerName) )
+				!= 0.0) {
+		// Groups user
+		PriorityFactor=groupPriorityFactor;
+	} else if (   ! AccountantLocalDomain.IsEmpty() &&
+           AccountantLocalDomain!=GetDomain(CustomerName) ) {
+		// Remote user
+		PriorityFactor=RemoteUserPriorityFactor;
+	}
+		// if AccountantLocalDomain is empty, all users are considered local
+
+    // Warning!  This read function has a side effect of a write.
+    SetPriorityFactor(CustomerName, PriorityFactor); // write and dprintf()
   }
   return PriorityFactor;
 }
@@ -336,6 +407,11 @@ void Accountant::DeleteRecord(const MyString& CustomerName)
 
 void Accountant::SetPriorityFactor(const MyString& CustomerName, float PriorityFactor) 
 {
+  if ( PriorityFactor < MIN_PRIORITY_FACTOR) {
+      dprintf(D_ALWAYS, "Error: invalid priority factor: %f, using %f\n",
+              PriorityFactor, MIN_PRIORITY_FACTOR);
+      PriorityFactor = MIN_PRIORITY_FACTOR;
+  }
   dprintf(D_ACCOUNTANT,"Accountant::SetPriorityFactor - CustomerName=%s, PriorityFactor=%8.3f\n",CustomerName.Value(),PriorityFactor);
   SetAttributeFloat(CustomerRecord+CustomerName,PriorityFactorAttr,PriorityFactor);
 }
@@ -349,6 +425,38 @@ void Accountant::SetPriority(const MyString& CustomerName, float Priority)
   dprintf(D_ACCOUNTANT,"Accountant::SetPriority - CustomerName=%s, Priority=%8.3f\n",CustomerName.Value(),Priority);
   SetAttributeFloat(CustomerRecord+CustomerName,PriorityAttr,Priority);
 }
+
+//------------------------------------------------------------------
+// Set the accumulated usage of a customer
+//------------------------------------------------------------------
+
+void Accountant::SetAccumUsage(const MyString& CustomerName, float AccumulatedUsage) 
+{
+  dprintf(D_ACCOUNTANT,"Accountant::SetAccumUsage - CustomerName=%s, Usage=%8.3f\n",CustomerName.Value(),AccumulatedUsage);
+  SetAttributeFloat(CustomerRecord+CustomerName,AccumulatedUsageAttr,AccumulatedUsage);
+}
+
+//------------------------------------------------------------------
+// Set the begin usage time of a customer
+//------------------------------------------------------------------
+
+void Accountant::SetBeginTime(const MyString& CustomerName, int BeginTime) 
+{
+  dprintf(D_ACCOUNTANT,"Accountant::SetBeginTime - CustomerName=%s, BeginTime=%8d\n",CustomerName.Value(),BeginTime);
+  SetAttributeInt(CustomerRecord+CustomerName,BeginUsageTimeAttr,BeginTime);
+}
+
+//------------------------------------------------------------------
+// Set the last usage time of a customer
+//------------------------------------------------------------------
+
+void Accountant::SetLastTime(const MyString& CustomerName, int LastTime) 
+{
+  dprintf(D_ACCOUNTANT,"Accountant::SetLastTime - CustomerName=%s, LastTime=%8d\n",CustomerName.Value(),LastTime);
+  SetAttributeInt(CustomerRecord+CustomerName,LastUsageTimeAttr,LastTime);
+}
+
+
 
 //------------------------------------------------------------------
 // Add a match
@@ -382,6 +490,26 @@ void Accountant::AddMatch(const MyString& CustomerName, const MyString& Resource
   int UnchargedTime=0;
   GetAttributeInt(CustomerRecord+CustomerName,UnchargedTimeAttr,UnchargedTime);
 
+	// Determine if we need to update a second customer record w/ the group name.
+  bool update_group_info = false;
+  MyString GroupName;
+  int GroupResourcesUsed=0;
+  int GroupUnchargedTime=0;
+  if ( GroupNamesList ) {
+	  GroupName = CustomerName;
+	  int pos = GroupName.FindChar('.');	// '.' is the group seperater
+	  GroupName.setChar(pos,'\0');
+		// if there is a group seperater character, and if the group name
+		// is a valid one listed in the GroupNamesList, then we want to update
+		// two customer records: one with the full name of the customer (group.user),
+		// and one with just the name of the group (group).
+	  if ( pos != -1 && GroupNamesList->contains_anycase(GroupName.Value()) ) {
+			update_group_info = true;			
+			GetAttributeInt(CustomerRecord+GroupName,ResourcesUsedAttr,GroupResourcesUsed);
+			GetAttributeInt(CustomerRecord+GroupName,UnchargedTimeAttr,GroupUnchargedTime);
+	  }
+  }
+
   AcctLog->BeginTransaction(); 
   
   // Update customer's resource usage count
@@ -390,6 +518,18 @@ void Accountant::AddMatch(const MyString& CustomerName, const MyString& Resource
   // add negative "uncharged" time if match starts after last update
   UnchargedTime-=T-LastUpdateTime;
   SetAttributeInt(CustomerRecord+CustomerName,UnchargedTimeAttr,UnchargedTime);
+
+  // Do everything we just to update the customer's record a second time if
+  // there is a group record to update
+  if ( update_group_info ) {
+	  // Update customer's group resource usage count
+	  GroupResourcesUsed++;
+	  SetAttributeInt(CustomerRecord+GroupName,ResourcesUsedAttr,GroupResourcesUsed);
+	  // add negative "uncharged" time if match starts after last update 
+	  GroupUnchargedTime-=T-LastUpdateTime;
+	  SetAttributeInt(CustomerRecord+GroupName,UnchargedTimeAttr,GroupUnchargedTime);
+  }
+
   // Set reosurce's info: user, and start-time
   SetAttributeString(ResourceRecord+ResourceName,RemoteUserAttr,CustomerName);
   SetAttributeInt(ResourceRecord+ResourceName,StartTimeAttr,T);
@@ -421,6 +561,27 @@ void Accountant::RemoveMatch(const MyString& ResourceName, time_t T)
     int UnchargedTime=0;
     GetAttributeInt(CustomerRecord+CustomerName,UnchargedTimeAttr,UnchargedTime);
 
+	// Determine if we need to update a second customer record w/ the group name.
+	bool update_group_info = false;
+	MyString GroupName;
+	int GroupResourcesUsed=0;
+	int GroupUnchargedTime=0;
+	if ( GroupNamesList ) {
+	  GroupName = CustomerName;
+	  int pos = GroupName.FindChar('.');	// '.' is the group seperater
+	  GroupName.setChar(pos,'\0');
+		// if there is a group seperater character, and if the group name
+		// is a valid one listed in the GroupNamesList, then we want to update
+		// two customer records: one with the full name of the customer (group.user),
+		// and one with just the name of the group (group).
+	  if ( pos != -1 && GroupNamesList->contains_anycase(GroupName.Value()) ) {
+			update_group_info = true;			
+			GetAttributeInt(CustomerRecord+GroupName,ResourcesUsedAttr,GroupResourcesUsed);
+			GetAttributeInt(CustomerRecord+GroupName,UnchargedTimeAttr,GroupUnchargedTime);
+	  }
+	}
+
+
 	AcctLog->BeginTransaction();
     // Update customer's resource usage count
     if (ResourcesUsed>0) ResourcesUsed--;
@@ -429,6 +590,18 @@ void Accountant::RemoveMatch(const MyString& ResourceName, time_t T)
     if (StartTime<LastUpdateTime) StartTime=LastUpdateTime;
     UnchargedTime+=T-StartTime;
     SetAttributeInt(CustomerRecord+CustomerName,UnchargedTimeAttr,UnchargedTime);
+
+	// Do everything we just to update the customer's record a second time if
+	// there is a group record to update
+	if ( update_group_info ) {
+	  // Update customer's group resource usage count
+      if (GroupResourcesUsed>0) GroupResourcesUsed--;
+	  SetAttributeInt(CustomerRecord+GroupName,ResourcesUsedAttr,GroupResourcesUsed);
+	  // update uncharged time
+	  GroupUnchargedTime+=T-StartTime;
+	  SetAttributeInt(CustomerRecord+GroupName,UnchargedTimeAttr,GroupUnchargedTime);
+	}
+
 	DeleteClassAd(ResourceRecord+ResourceName);
 	AcctLog->CommitTransaction();
 
@@ -495,7 +668,7 @@ void Accountant::UpdatePriorities()
 	LastUpdateTime=T;
 	return;
   }
-  float AgingFactor=(float) pow((float)0.5,float(TimePassed)/HalfLifePeriod);
+  float AgingFactor=(float) pow(0.5,float(TimePassed)/HalfLifePeriod);
   LastUpdateTime=T;
   SetAttributeInt(AcctRecord,LastUpdateTimeAttr,LastUpdateTime);
 
@@ -504,7 +677,7 @@ void Accountant::UpdatePriorities()
   HashKey HK;
   char key[_POSIX_PATH_MAX];
   ClassAd* ad;
-  float Priority, OldPrio;
+  float Priority, OldPrio, PriorityFactor;
   int UnchargedTime;
   float AccumulatedUsage;
   float RecentUsage;
@@ -520,6 +693,11 @@ void Accountant::UpdatePriorities()
     if (ad->LookupFloat(PriorityAttr.Value(),Priority)==0) Priority=0;
 	if (Priority<MinPriority) Priority=MinPriority;
     OldPrio=Priority;
+
+    if (ad->LookupFloat(PriorityFactorAttr.Value(),PriorityFactor)==0) {
+	   	PriorityFactor = DefaultPriorityFactor;
+	}
+
     if (ad->LookupInteger(UnchargedTimeAttr.Value(),UnchargedTime)==0) UnchargedTime=0;
     if (ad->LookupFloat(AccumulatedUsageAttr.Value(),AccumulatedUsage)==0) AccumulatedUsage=0;
     if (ad->LookupInteger(BeginUsageTimeAttr.Value(),BeginUsageTime)==0) BeginUsageTime=0;
@@ -535,7 +713,12 @@ void Accountant::UpdatePriorities()
     if (AccumulatedUsage>0 && BeginUsageTime==0) SetAttributeInt(key,BeginUsageTimeAttr,T);
     if (RecentUsage>0) SetAttributeInt(key,LastUsageTimeAttr,T);
     SetAttributeInt(key,UnchargedTimeAttr,0);
-    if (Priority<MinPriority && ResourcesUsed==0 && AccumulatedUsage==0) DeleteClassAd(key);
+
+    if (Priority<MinPriority && ResourcesUsed==0 &&
+		   	AccumulatedUsage==0 && PriorityFactor==DefaultPriorityFactor ) {
+		DeleteClassAd(key);
+	}
+
 	AcctLog->CommitTransaction();
 	
     dprintf(D_ACCOUNTANT,"CustomerName=%s , Old Priority=%5.3f , New Priority=%5.3f , ResourcesUsed=%d\n",key,OldPrio,Priority,ResourcesUsed);
@@ -551,8 +734,8 @@ void Accountant::UpdatePriorities()
   } else if( statbuf.st_size > MaxAcctLogSize ) {
 	  AcctLog->TruncLog();
 	  dprintf( D_ACCOUNTANT, "Accountant::UpdatePriorities - "
-			   "truncating database (prev size=%d)\n", 
-			   statbuf.st_size ); 
+			   "truncating database (prev size=%lu)\n", 
+			   (unsigned long)statbuf.st_size ); 
 		  // Now that we truncated, check the size, and allow it to
 		  // grow to at least double in size before truncating again.
 	  if( stat(LogFileName.Value(),&statbuf) ) {
@@ -597,6 +780,7 @@ void Accountant::CheckMatches(ClassAdList& ResourceList)
       RemoveMatch(ResourceName);
     }
 	else {
+		// Here we need to figure out the CustomerName.
       ad->LookupString(RemoteUserAttr.Value(),key);
       CustomerName=key;
       if (!CheckClaimedOrMatched(ResourceAd, CustomerName)) {
@@ -620,7 +804,7 @@ void Accountant::CheckMatches(ClassAdList& ResourceList)
 // Report the list of Matches for a customer
 //------------------------------------------------------------------
 
-ClassAd* Accountant::ReportState(const MyString& CustomerName, int * NumResources) {
+AttrList* Accountant::ReportState(const MyString& CustomerName, int * NumResources) {
 
   dprintf(D_ACCOUNTANT,"Reporting State for customer %s\n",CustomerName.Value());
 
@@ -630,7 +814,7 @@ ClassAd* Accountant::ReportState(const MyString& CustomerName, int * NumResource
   MyString ResourceName;
   int StartTime;
 
-  ClassAd* ad=new ClassAd();
+  AttrList* ad=new AttrList();
   char tmp[512];
 
   int ResourceNum=1;
@@ -664,7 +848,7 @@ ClassAd* Accountant::ReportState(const MyString& CustomerName, int * NumResource
 // Report the whole list of priorities
 //------------------------------------------------------------------
 
-ClassAd* Accountant::ReportState() {
+AttrList* Accountant::ReportState() {
 
   dprintf(D_ACCOUNTANT,"Reporting State\n");
 
@@ -678,7 +862,7 @@ ClassAd* Accountant::ReportState() {
   int LastUsageTime;
   int ResourcesUsed;
 
-  ClassAd* ad=new ClassAd();
+  AttrList* ad=new AttrList();
   char tmp[512];
   sprintf(tmp, "LastUpdate = %d", LastUpdateTime);
   ad->Insert(tmp);
@@ -689,38 +873,43 @@ ClassAd* Accountant::ReportState() {
     HK.sprint(key);
     if (strncmp(CustomerRecord.Value(),key,CustomerRecord.Length())) continue;
 
+	// The following Insert() calls are passed 'false' to prevent
+	// AttrList from checking for duplicates. This is to enhance
+	// performance, but is admittedly dangerous if we're not certain
+	// that the items we're inserting are unique. Use caution.
+
     CustomerName=key+CustomerRecord.Length();
     sprintf(tmp,"Name%d = \"%s\"",OwnerNum,CustomerName.Value());
-    ad->Insert(tmp);
+    ad->Insert(tmp, false);
 
     sprintf(tmp,"Priority%d = %f",OwnerNum,GetPriority(CustomerName));
-    ad->Insert(tmp);
+    ad->Insert(tmp, false);
 
     if (CustomerAd->LookupInteger(ResourcesUsedAttr.Value(),ResourcesUsed)==0) ResourcesUsed=0;
     sprintf(tmp,"ResourcesUsed%d = %d",OwnerNum,ResourcesUsed);
-    ad->Insert(tmp);
+    ad->Insert(tmp, false);
 
     if (CustomerAd->LookupFloat(AccumulatedUsageAttr.Value(),AccumulatedUsage)==0) AccumulatedUsage=0;
     sprintf(tmp,"AccumulatedUsage%d = %f",OwnerNum,AccumulatedUsage);
-    ad->Insert(tmp);
+    ad->Insert(tmp, false);
 
     if (CustomerAd->LookupInteger(BeginUsageTimeAttr.Value(),BeginUsageTime)==0) BeginUsageTime=0;
     sprintf(tmp,"BeginUsageTime%d = %d",OwnerNum,BeginUsageTime);
-    ad->Insert(tmp);
+    ad->Insert(tmp, false);
 
     if (CustomerAd->LookupInteger(LastUsageTimeAttr.Value(),LastUsageTime)==0) LastUsageTime=0;
     sprintf(tmp,"LastUsageTime%d = %d",OwnerNum,LastUsageTime);
-    ad->Insert(tmp);
+    ad->Insert(tmp, false);
 
     if (CustomerAd->LookupFloat(PriorityFactorAttr.Value(),PriorityFactor)==0) PriorityFactor=0;
     sprintf(tmp,"PriorityFactor%d = %f",OwnerNum,PriorityFactor);
-    ad->Insert(tmp);
+    ad->Insert(tmp, false);
 
     OwnerNum++;
   }
 
   sprintf(tmp,"NumSubmittors = %d", OwnerNum-1);
-  ad->Insert(tmp);
+  ad->Insert(tmp, false);
   return ad;
 }
 
@@ -773,7 +962,17 @@ int Accountant::IsClaimed(ClassAd* ResourceAd, MyString& CustomerName) {
 		return 0;
 	  }
   }
-
+  if(DiscountSuspendedResources) {
+    char RemoteActivity[512];
+    if(!ResourceAd->LookupString(ATTR_ACTIVITY, RemoteActivity)) {
+       dprintf(D_ALWAYS, "Could not lookup remote activity\n");
+       return 0;
+    }
+    if (!stricmp(getClaimStateString(CLAIM_SUSPENDED), RemoteActivity)) { 
+       dprintf(D_ACCOUNTANT, "Machine is claimed but suspended\n");
+       return 0;
+    }
+  }
   CustomerName=RemoteUser;
   return 1;
 
@@ -807,10 +1006,35 @@ int Accountant::CheckClaimedOrMatched(ClassAd* ResourceAd, const MyString& Custo
   }
 
   if (CustomerName!=MyString(RemoteUser)) {
-    dprintf(D_ACCOUNTANT,"Remote user for startd ad: %s does not match customer name\n",RemoteUser);
+    if(DebugFlags & D_ACCOUNTANT) {
+      char *PreemptingUser = NULL;
+      if(ResourceAd->LookupString(ATTR_PREEMPTING_ACCOUNTING_GROUP, &PreemptingUser) ||
+         ResourceAd->LookupString(ATTR_PREEMPTING_USER, &PreemptingUser))
+      {
+		  if(CustomerName == PreemptingUser) {
+			  dprintf(D_ACCOUNTANT,"Remote user for startd ad (%s) does not match customer name, because customer %s is still waiting for %s to retire.\n",RemoteUser,PreemptingUser,RemoteUser);
+			  free(PreemptingUser);
+			  return 0;
+		  }
+		  free(PreemptingUser);
+      }
+    }
+    dprintf(D_ACCOUNTANT,"Remote user for startd ad (%s) does not match customer name\n",RemoteUser);
     return 0;
   }
 
+  if(DiscountSuspendedResources) {
+    char RemoteActivity[512];
+    if(!ResourceAd->LookupString(ATTR_ACTIVITY, RemoteActivity)) {
+        dprintf(D_ALWAYS, "Could not lookup remote activity\n");
+        return 0;
+    }
+    if (!stricmp(getClaimStateString(CLAIM_SUSPENDED), RemoteActivity)) { 
+       dprintf(D_ACCOUNTANT, "Machine claimed by %s but suspended\n", 
+       RemoteUser);
+       return 0;
+    }
+  }
   return 1;
 
 }
@@ -833,7 +1057,8 @@ ClassAd* Accountant::GetClassAd(const MyString& Key)
 bool Accountant::DeleteClassAd(const MyString& Key)
 {
   ClassAd* ad=NULL;
-  if (AcctLog->table.lookup(HashKey(Key.Value()),ad)==-1) return false;
+  if (AcctLog->table.lookup(HashKey(Key.Value()),ad)==-1) 
+	  return false;
 
   LogDestroyClassAd* log=new LogDestroyClassAd(Key.Value());
   AcctLog->AppendLog(log);

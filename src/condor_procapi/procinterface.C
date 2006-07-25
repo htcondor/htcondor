@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -21,6 +21,7 @@
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 #include "condor_common.h"
+#include "condor_pidenvid.h"
 #include "procinterface.h"
 
 
@@ -41,7 +42,9 @@ ClassAd * ProcAd::getProcAd ( pid_t pid ) {
 
   piPTR pi = NULL;
   ClassAd *ad;
-  ProcAPI::getProcInfo ( pid, pi );
+  int status; 
+
+  ProcAPI::getProcInfo ( pid, pi, status );
 
   ad = dumpToAd ( pi );
   delete pi;
@@ -56,7 +59,9 @@ ClassAd * ProcAd::getProcSetAd ( pid_t *pids, int numpids ) {
 
   piPTR pi = NULL;
   ClassAd *ad;
-  ProcAPI::getProcSetInfo( pids, numpids, pi );
+  int status;
+
+  ProcAPI::getProcSetInfo( pids, numpids, pi, status );
 
   ad = dumpToAd ( pi );
   delete pi;
@@ -67,11 +72,13 @@ ClassAd * ProcAd::getProcSetAd ( pid_t *pids, int numpids ) {
   /* getFamilyAd returns a ClassAd containing the sums of the monitored
      values of a 'family' of processes descended from one pid.  By 
      'family', I mean that pid and all children, children's children, etc. */
-ClassAd * ProcAd::getFamilyAd ( pid_t fatherpid ) {
+ClassAd * ProcAd::getFamilyAd ( pid_t fatherpid, PidEnvID *penvid ) {
 
   piPTR pi = NULL;
   ClassAd *ad;
-  ProcAPI::getFamilyInfo( fatherpid, pi );
+  int status;
+
+  ProcAPI::getFamilyInfo( fatherpid, pi, penvid, status );
 
   ad = dumpToAd ( pi );
   delete pi;
@@ -79,24 +86,34 @@ ClassAd * ProcAd::getFamilyAd ( pid_t fatherpid ) {
   return ad;
 }
 
-ClassAd *
-ProcAd::dumpToAd( piPTR pi ) {
+ClassAd * ProcAd::dumpToAd( piPTR pi ) {
 
-	ClassAd *ad = new ClassAd;
+  char line[128];
+  ClassAd *ad = new ClassAd;
 
-	ad->SetMyTypeName( "PROCESS_INFORMATION" );
-	ad->SetTargetTypeName( "ENQUIRING_MINDS_WANT_TO_KNOW" );
+  ad->SetMyTypeName( "PROCESS_INFORMATION" );
+  ad->SetTargetTypeName( "ENQUIRING_MINDS_WANT_TO_KNOW" );
 
-	ad->InsertAttr( "THIS_PID", (int)pi->pid );
-	ad->InsertAttr( "PARENT_PID", (int)pi->ppid );
-	ad->InsertAttr( "IMAGE_SIZE", (int)pi->imgsize );
-	ad->InsertAttr( "RESIDENT_SET_SIZE", (int)pi->rssize );
-	ad->InsertAttr( "MAJOR_PAGE_FAULTS", (int)pi->majfault );
-	ad->InsertAttr( "MINOR_PAGE_FAULTS", (int)pi->minfault );
-	ad->InsertAttr( "USER_TIME", (int)pi->user_time );
-	ad->InsertAttr( "SYSTEM_TIME", (int)pi->sys_time );
-	ad->InsertAttr( "PROCESS_AGE", (int)pi->age );
-	ad->InsertAttr( "PERCENT_CPU_USAGE", (double)pi->cpuusage );
-	
-	return ad;
+  sprintf ( line, "THIS_PID = %d", pi->pid );
+  ad->Insert(line);
+  sprintf ( line, "PARENT_PID = %ld", (long)pi->ppid );
+  ad->Insert(line);
+  sprintf ( line, "IMAGE_SIZE = %ld", (long)pi->imgsize );
+  ad->Insert(line);
+  sprintf ( line, "RESIDENT_SET_SIZE = %ld", (long)pi->rssize );
+  ad->Insert(line);
+  sprintf ( line, "MAJOR_PAGE_FAULTS = %ld", (long)pi->majfault );
+  ad->Insert(line);
+  sprintf ( line, "MINOR_PAGE_FAULTS = %ld", (long)pi->minfault );
+  ad->Insert(line);
+  sprintf ( line, "USER_TIME = %ld", (long)pi->user_time );
+  ad->Insert(line);
+  sprintf ( line, "SYSTEM_TIME = %ld", (long)pi->sys_time );
+  ad->Insert(line);
+  sprintf ( line, "PROCESS_AGE = %ld", (long)pi->age );
+  ad->Insert(line);
+  sprintf ( line, "PERCENT_CPU_USAGE = %6.2f",  pi->cpuusage );
+  ad->Insert(line);
+
+  return ad;
 }

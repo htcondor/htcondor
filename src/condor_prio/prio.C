@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -26,7 +26,6 @@
 #include "condor_common.h"
 #include "condor_config.h"
 #include "condor_attributes.h"
-#include "alloc.h"
 #include "my_hostname.h"
 #include "get_daemon_name.h"
 #include "sig_install.h"
@@ -45,8 +44,6 @@ int		AdjustmentSet;
 int		InvokingUid;		// user id of person ivoking this program
 char	*InvokingUserName;	// user name of person ivoking this program
 
-const int MIN_PRIO = -20;
-const int MAX_PRIO = 20;
 
 	// Prototypes of local interest only
 void usage();
@@ -125,13 +122,6 @@ main( int argc, char *argv[] )
 		exit(1);
 	}
 
-	if( PrioritySet && (NewPriority < MIN_PRIO || NewPriority > MAX_PRIO) ) {
-		fprintf( stderr, 
-			"Invalid priority specified.  Must be between %d and %d.\n", 
-			MIN_PRIO, MAX_PRIO );
-		exit(1);
-	}
-
 		// Open job queue
 	q = ConnectQ(DaemonName);
 	if( !q ) {
@@ -149,10 +139,6 @@ main( int argc, char *argv[] )
 	}
 	DisconnectQ(q);
 
-#if defined(ALLOC_DEBUG)
-	print_alloc_stats();
-#endif
-
 	return 0;
 }
 
@@ -167,10 +153,6 @@ calc_prio( int old_prio )
 
 	if( AdjustmentSet == TRUE && PrioritySet == FALSE ) {
 		answer = old_prio + PrioAdjustment;
-		if( answer > MAX_PRIO )
-			answer = MAX_PRIO;
-		else if( answer < MIN_PRIO )
-			answer = MIN_PRIO;
 	} else {
 		answer = NewPriority;
 	}

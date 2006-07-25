@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -51,13 +51,16 @@ class SimpleList
     bool Append (const ObjType &);
 	bool Prepend (const ObjType &);
     inline bool IsEmpty() const { return (size == 0); }
-	inline int Number(void) { return size; }
-	inline int Length(void) { return Number(); }
+	inline int Number(void) const { return size; }
+	inline int Length(void) const { return Number(); }
+	inline void Clear(void) { size = 0; Rewind(); }
+	
 
     // Scans
     inline void    Rewind() { current = -1; }
     bool    Current(ObjType &) const;
     bool    Next(ObjType &);
+    bool    Next(ObjType *&);
     inline bool    AtEnd() const { return (current >= size-1); }
     void    DeleteCurrent();
 	bool Delete(const ObjType &, bool delete_all = false);
@@ -82,11 +85,11 @@ SimpleList (): maximum_size(1), size(0)
 
 template <class ObjType>
 SimpleList<ObjType>::
-SimpleList (const SimpleList<ObjType> & simlist):
-    maximum_size(simlist.maximum_size), size(simlist.size), current(simlist.current)
+SimpleList (const SimpleList<ObjType> & list):
+    maximum_size(list.maximum_size), size(list.size), current(list.current)
 {
 	items = new ObjType[maximum_size];
-    memcpy (items, simlist.items, sizeof (ObjType *) * maximum_size);
+    memcpy (items, list.items, sizeof (ObjType *) * maximum_size);
 }
 
 template <class ObjType>
@@ -142,6 +145,15 @@ Next (ObjType &item)
 {
     if (current >= size - 1) return false;
     item = items [++current];
+    return true;
+}
+
+template <class ObjType>
+bool SimpleList<ObjType>::
+Next (ObjType *&item)
+{
+    if (current >= size - 1) return false;
+    item = &items[++current];
     return true;
 }
 
@@ -256,6 +268,7 @@ class SimpleListIterator {
   inline void ToBeforeFirst () { _cur = -1; }
   inline void ToAfterLast   () { _cur = -2; }
   bool Next( ObjType& );
+  bool Next( ObjType*& );
   bool Current( ObjType& ) const;
   bool Prev( ObjType& );
   
@@ -273,9 +286,9 @@ class SimpleListIterator {
 
 template <class ObjType> 
 void
-SimpleListIterator<ObjType>::Initialize( const SimpleList<ObjType> & simlist )
+SimpleListIterator<ObjType>::Initialize( const SimpleList<ObjType> & list )
 {
-	_list = & simlist;
+	_list = & list;
 	ToBeforeFirst();
 }
 
@@ -291,6 +304,20 @@ SimpleListIterator<ObjType>::Next( ObjType& obj)
   obj = _list->items[++_cur];
   return true;
 }
+
+template <class ObjType>
+bool
+SimpleListIterator<ObjType>::Next( ObjType*& obj)
+{
+  if (_list == NULL || IsAfterLast()) return false;
+  if (_cur >= _list->size - 1) {
+    ToAfterLast();
+    return false;
+  }
+  obj = &_list->items[++_cur];
+  return true;
+}
+
 		
 template <class ObjType>
 bool

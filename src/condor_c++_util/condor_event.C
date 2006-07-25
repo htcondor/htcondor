@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -65,6 +65,9 @@ const char * ULogEventNumberNames[] = {
 	"ULOG_JOB_DISCONNECTED",        // RSC socket lost
 	"ULOG_JOB_RECONNECTED",         // RSC socket re-established
 	"ULOG_JOB_RECONNECT_FAILED",    // RSC reconnect failure
+	"ULOG_GRID_RESOURCE_UP",		// Grid machine UP 
+	"ULOG_GRID_RESOURCE_DOWN",		// Grid machine Down
+	"ULOG_GRID_SUBMIT",				// Job submitted to grid resource
 };
 
 const char * ULogEventOutcomeNames[] = {
@@ -167,9 +170,20 @@ instantiateEvent (ULogEventNumber event)
 	case ULOG_JOB_RECONNECT_FAILED:
 		return new JobReconnectFailedEvent;
 
-	  default:
-        EXCEPT( "Invalid ULogEventNumber" );
+	case ULOG_GRID_RESOURCE_DOWN:
+		return new GridResourceDownEvent;
 
+	case ULOG_GRID_RESOURCE_UP:
+		return new GridResourceUpEvent;
+
+	case ULOG_GRID_SUBMIT:
+		return new GridSubmitEvent;
+
+	default:
+		dprintf( D_ALWAYS, "Invalid ULogEventNumber: %d\n", event );
+		// Return NULL/0 here instead of EXCEPTing to fix Gnats PR 706.
+		// wenger 2006-06-08.
+		return 0;
 	}
 
     return 0;
@@ -217,6 +231,17 @@ putEvent (FILE *file)
 	}
 	return (writeHeader (file) && writeEvent (file));
 }
+
+
+const char* ULogEvent::
+eventName() const
+{
+	if( eventNumber == (ULogEventNumber)-1 ) {
+		return NULL;
+	}
+	return ULogEventNumberNames[eventNumber];
+}
+
 
 // This function reads in the header of an event from the UserLog and fills
 // the fields of the event object.  It does *not* read the event number.  The 
@@ -359,6 +384,15 @@ toClassAd()
 		break;
 	case ULOG_JOB_RECONNECT_FAILED:
 		myad->SetMyTypeName("JobReconnectFailedEvent");
+		break;
+	case ULOG_GRID_RESOURCE_UP:
+		myad->SetMyTypeName("GridResourceUpEvent");
+		break;
+	case ULOG_GRID_RESOURCE_DOWN:
+		myad->SetMyTypeName("GridResourceDownEvent");
+		break;
+	case ULOG_GRID_SUBMIT:
+		myad->SetMyTypeName("GridSubmitEvent");
 		break;
 	  default:
 		return NULL;
@@ -1066,7 +1100,7 @@ void GenericEvent::
 setInfoText(char const *str)
 {
 	strncpy(info,str,sizeof(info));
-	info[sizeof(info)] = '\0'; //ensure null-termination
+	info[ sizeof(info) - 1 ] = '\0'; //ensure null-termination
 }
 
 // ----- the RemoteErrorEvent class
@@ -1076,11 +1110,24 @@ RemoteErrorEvent::RemoteErrorEvent()
 	execute_host[0] = daemon_name[0] = '\0';
 	eventNumber = ULOG_REMOTE_ERROR;
 	critical_error = true;
+	hold_reason_code = 0;
+	hold_reason_subcode = 0;
 }
 
 RemoteErrorEvent::~RemoteErrorEvent()
 {
 	delete error_str;
+}
+
+void
+RemoteErrorEvent::setHoldReasonCode(int hold_reason_code)
+{
+	this->hold_reason_code = hold_reason_code;
+}
+void
+RemoteErrorEvent::setHoldReasonSubCode(int hold_reason_subcode)
+{
+	this->hold_reason_subcode = hold_reason_subcode;
 }
 
 int
@@ -1115,6 +1162,11 @@ RemoteErrorEvent::writeEvent(FILE *file)
 		if(!next_line) break;
 		*next_line = '\n';
 		line = next_line+1;
+	}
+
+	if (hold_reason_code) {
+		fprintf(file,"\tCode %d Subcode %d\n",
+		        hold_reason_code, hold_reason_subcode);
 	}
 
     return 1;
@@ -1166,6 +1218,13 @@ RemoteErrorEvent::readEvent(FILE *file)
 		l = line;
 		if(l[0] == '\t') l++;
 
+		int code,subcode;
+		if( sscanf(l,"Code %d Subcode %d",&code,&subcode) == 2 ) {
+			hold_reason_code = code;
+			hold_reason_subcode = subcode;
+			continue;
+		}
+
 		if(lines.Length()) lines += "\n";
 		lines += l;
 	}
@@ -1181,16 +1240,20 @@ RemoteErrorEvent::toClassAd()
 	if( !myad ) return NULL;
 
 	if(*daemon_name) {
-		myad->InsertAttr("Daemon",daemon_name);
+		myad->Assign("Daemon",daemon_name);
 	}
 	if(*execute_host) {
-		myad->InsertAttr("ExecuteHost",execute_host);
+		myad->Assign("ExecuteHost",execute_host);
 	}
 	if(error_str) {
-		myad->InsertAttr("ErrorMsg",error_str);
+		myad->Assign("ErrorMsg",error_str);
 	}
 	if(!critical_error) { //default is true
-		myad->InsertAttr("CriticalError",(int)critical_error);
+		myad->Assign("CriticalError",(int)critical_error);
+	}
+	if(hold_reason_code) {
+		myad->Assign(ATTR_HOLD_REASON_CODE, hold_reason_code);
+		myad->Assign(ATTR_HOLD_REASON_SUBCODE, hold_reason_subcode);
 	}
 
 	return myad;
@@ -1200,7 +1263,7 @@ void
 RemoteErrorEvent::initFromClassAd(ClassAd* ad)
 {
 	ULogEvent::initFromClassAd(ad);
-	char buf[ATTRLIST_MAX_EXPRESSION];
+	char *buf;
 	int crit_err = 0;
 
 	if( !ad ) return;
@@ -1211,13 +1274,15 @@ RemoteErrorEvent::initFromClassAd(ClassAd* ad)
 	if( ad->LookupString("ExecuteHost", execute_host, sizeof(execute_host)) ) {
 		execute_host[sizeof(execute_host)-1] = '\0';
 	}
-	if( ad->LookupString("ErrorMsg", buf, sizeof(buf)) ) {
-		buf[sizeof(buf)-1] = '\0';
+	if( ad->LookupString("ErrorMsg", &buf) ) {
 		setErrorText(buf);
+		free(buf);
 	}
 	if( ad->LookupInteger("CriticalError",crit_err) ) {
 		critical_error = (crit_err != 0);
 	}
+	ad->LookupInteger(ATTR_HOLD_REASON_CODE, hold_reason_code);
+	ad->LookupInteger(ATTR_HOLD_REASON_SUBCODE, hold_reason_subcode);
 }
 
 void
@@ -1278,12 +1343,27 @@ writeEvent (FILE *file)
 int ExecuteEvent::
 readEvent (FILE *file)
 {
-	int retval  = fscanf (file, "Job executing on host: %s", executeHost);
-	if (retval != 1)
+	MyString line;
+	if ( ! line.readLine(file) ) 
 	{
-		return 0;
+		return 0; // EOF or error
 	}
-	return 1;
+
+		// 127 is sizeof(executeHost)-1
+	int retval  = sscanf (line.Value(), "Job executing on host: %127[^\n]",
+						  executeHost);
+	if (retval == 1)
+	{
+		return 1;
+	}
+
+	if(strcmp(line.Value(), "Job executing on host: \n") == 0) {
+		// Simply lacks a hostname.  Allow.
+		executeHost[0] = 0;
+		return 1;
+	}
+
+	return 0;
 }
 
 ClassAd* ExecuteEvent::
@@ -3140,18 +3220,24 @@ initFromClassAd(ClassAd* ad)
 // ----- PostScriptTerminatedEvent class
 
 PostScriptTerminatedEvent::
-PostScriptTerminatedEvent()
+PostScriptTerminatedEvent() :
+	dagNodeNameLabel ("DAG Node: "),
+	dagNodeNameAttr ("DAGNodeName")
 {
 	eventNumber = ULOG_POST_SCRIPT_TERMINATED;
 	normal = false;
 	returnValue = -1;
 	signalNumber = -1;
+	dagNodeName = NULL;
 }
 
 
 PostScriptTerminatedEvent::
 ~PostScriptTerminatedEvent()
 {
+	if( dagNodeName ) {
+		delete[] dagNodeName;
+	}
 }
 
 
@@ -3173,6 +3259,14 @@ writeEvent( FILE* file )
             return 0;
         }
     }
+
+    if( dagNodeName ) {
+        if( fprintf( file, "    %s%.8191s\n",
+					 dagNodeNameLabel, dagNodeName ) < 0 ) {
+            return 0;
+        }
+    }
+
     return 1;
 }
 
@@ -3181,6 +3275,15 @@ int PostScriptTerminatedEvent::
 readEvent( FILE* file )
 {
 	int tmp;
+	char buf[8192];
+	buf[0] = '\0';
+
+		// first clear any existing DAG node name
+	if( dagNodeName ) {
+		delete[] dagNodeName;
+	}
+    dagNodeName = NULL;
+	
 	if( fscanf( file, "POST Script terminated.\n\t(%d) ", &tmp ) != 1 ) {
 		return 0;
 	}
@@ -3190,16 +3293,36 @@ readEvent( FILE* file )
 		normal = false;
 	}
     if( normal ) {
-        if( fscanf( file, "Normal termination (return value %d)",
+        if( fscanf( file, "Normal termination (return value %d)\n",
 					&returnValue ) != 1 ) {
             return 0;
 		}
     } else {
-        if( fscanf( file, "Abnormal termination (signal %d)",
+        if( fscanf( file, "Abnormal termination (signal %d)\n",
 					&signalNumber ) != 1 ) {
             return 0;
 		}
     }
+
+	// see if the next line contains an optional DAG node name string,
+	// and, if not, rewind, because that means we slurped in the next
+	// event delimiter looking for it...
+ 
+	fpos_t filep;
+	fgetpos( file, &filep );
+     
+	if( !fgets( buf, 8192, file ) || strcmp( buf, "...\n" ) == 0 ) {
+		fsetpos( file, &filep );
+		return 1;
+	}
+
+	// remove trailing newline
+	buf[ strlen( buf ) - 1 ] = '\0';
+
+		// skip "DAG Node: " label to find start of actual node name
+	int label_len = strlen( dagNodeNameLabel );
+	dagNodeName = strnewp( buf + label_len );
+
     return 1;
 }
 
@@ -3223,6 +3346,13 @@ toClassAd()
 		buf0[511] = 0;
 		if( !myad->Insert(buf0) ) return NULL;
 	}
+	if( dagNodeName && dagNodeName[0] ) {
+		MyString buf1;
+		buf1.sprintf( "%s = \"%s\"", dagNodeNameAttr, dagNodeName );
+		if( !myad->Insert( buf1.Value() ) ) {
+			return NULL;
+		}
+	}
 
 	return myad;
 }
@@ -3241,6 +3371,18 @@ initFromClassAd(ClassAd* ad)
 
 	ad->LookupInteger("ReturnValue", returnValue);
 	ad->LookupInteger("TerminatedBySignal", signalNumber);
+
+	if( dagNodeName ) {
+		delete[] dagNodeName;
+		dagNodeName = NULL;
+	}
+	char* mallocstr = NULL;
+	ad->LookupString( dagNodeNameAttr, &mallocstr );
+	if( mallocstr ) {
+		dagNodeName = strnewp( mallocstr );
+		free( mallocstr );
+		mallocstr = NULL;
+	}
 }
 
 
@@ -3958,3 +4100,309 @@ JobReconnectFailedEvent::initFromClassAd( ClassAd* ad )
 		mallocstr = NULL;
 	}
 }
+
+
+// ----- the GridResourceUp class
+GridResourceUpEvent::
+GridResourceUpEvent()
+{	
+	eventNumber = ULOG_GRID_RESOURCE_UP;
+	resourceName = NULL;
+}
+
+GridResourceUpEvent::
+~GridResourceUpEvent()
+{
+	delete[] resourceName;
+}
+
+int GridResourceUpEvent::
+writeEvent (FILE *file)
+{
+	const char * unknown = "UNKNOWN";
+	const char * resource = unknown;
+
+	int retval = fprintf (file, "Grid Resource Back Up\n");
+	if (retval < 0)
+	{
+		return 0;
+	}
+	
+	if ( resourceName ) resource = resourceName;
+
+	retval = fprintf( file, "    GridResource: %.8191s\n", resource );
+	if( retval < 0 ) {
+		return 0;
+	}
+
+	return (1);
+}
+
+int GridResourceUpEvent::
+readEvent (FILE *file)
+{
+	char s[8192];
+
+	delete[] resourceName;
+	resourceName = NULL;
+	int retval = fscanf (file, "Grid Resource Back Up\n");
+    if (retval != 0)
+    {
+		return 0;
+    }
+	s[0] = '\0';
+	retval = fscanf( file, "    GridResource: %8191[^\n]\n", s );
+	if ( retval != 1 )
+	{
+		return 0;
+	}
+	resourceName = strnewp(s);	
+	return 1;
+}
+
+ClassAd* GridResourceUpEvent::
+toClassAd()
+{
+	ClassAd* myad = ULogEvent::toClassAd();
+	if( !myad ) return NULL;
+	
+	if( resourceName && resourceName[0] ) {
+		MyString buf2;
+		buf2.sprintf("GridResource = \"%s\"",resourceName);
+		if( !myad->Insert(buf2.Value()) ) return NULL;
+	}
+
+	return myad;
+}
+
+void GridResourceUpEvent::
+initFromClassAd(ClassAd* ad)
+{
+	ULogEvent::initFromClassAd(ad);
+
+	if( !ad ) return;
+
+	// this fanagling is to ensure we don't malloc a pointer then delete it
+	char* mallocstr = NULL;
+	ad->LookupString("GridResource", &mallocstr);
+	if( mallocstr ) {
+		resourceName = new char[strlen(mallocstr) + 1];
+		strcpy(resourceName, mallocstr);
+		free(mallocstr);
+	}
+}
+
+
+// ----- the GridResourceDown class
+GridResourceDownEvent::
+GridResourceDownEvent()
+{	
+	eventNumber = ULOG_GRID_RESOURCE_DOWN;
+	resourceName = NULL;
+}
+
+GridResourceDownEvent::
+~GridResourceDownEvent()
+{
+	delete[] resourceName;
+}
+
+int GridResourceDownEvent::
+writeEvent (FILE *file)
+{
+	const char * unknown = "UNKNOWN";
+	const char * resource = unknown;
+
+	int retval = fprintf (file, "Detected Down Grid Resource\n");
+	if (retval < 0)
+	{
+		return 0;
+	}
+	
+	if ( resourceName ) resource = resourceName;
+
+	retval = fprintf( file, "    GridResource: %.8191s\n", resource );
+	if( retval < 0 ) {
+		return 0;
+	}
+
+	return (1);
+}
+
+int GridResourceDownEvent::
+readEvent (FILE *file)
+{
+	char s[8192];
+
+	delete[] resourceName;
+	resourceName = NULL;
+	int retval = fscanf (file, "Detected Down Grid Resource\n");
+    if (retval != 0)
+    {
+		return 0;
+    }
+	s[0] = '\0';
+	retval = fscanf( file, "    GridResource: %8191[^\n]\n", s );
+	if ( retval != 1 )
+	{
+		return 0;
+	}
+	resourceName = strnewp(s);	
+	return 1;
+}
+
+ClassAd* GridResourceDownEvent::
+toClassAd()
+{
+	ClassAd* myad = ULogEvent::toClassAd();
+	if( !myad ) return NULL;
+	
+	if( resourceName && resourceName[0] ) {
+		MyString buf2;
+		buf2.sprintf("GridResource = \"%s\"",resourceName);
+		if( !myad->Insert(buf2.Value()) ) return NULL;
+	}
+
+	return myad;
+}
+
+void GridResourceDownEvent::
+initFromClassAd(ClassAd* ad)
+{
+	ULogEvent::initFromClassAd(ad);
+
+	if( !ad ) return;
+
+	// this fanagling is to ensure we don't malloc a pointer then delete it
+	char* mallocstr = NULL;
+	ad->LookupString("GridResource", &mallocstr);
+	if( mallocstr ) {
+		resourceName = new char[strlen(mallocstr) + 1];
+		strcpy(resourceName, mallocstr);
+		free(mallocstr);
+	}
+}
+
+
+// ----- the GridSubmitEvent class
+GridSubmitEvent::
+GridSubmitEvent()
+{	
+	eventNumber = ULOG_GRID_SUBMIT;
+	resourceName = NULL;
+	jobId = NULL;
+}
+
+GridSubmitEvent::
+~GridSubmitEvent()
+{
+	delete[] resourceName;
+	delete[] jobId;
+}
+
+int GridSubmitEvent::
+writeEvent (FILE *file)
+{
+	const char * unknown = "UNKNOWN";
+	const char * resource = unknown;
+	const char * job = unknown;
+
+	int retval = fprintf (file, "Job submitted to grid resource\n");
+	if (retval < 0)
+	{
+		return 0;
+	}
+	
+	if ( resourceName ) resource = resourceName;
+	if ( jobId ) job = jobId;
+
+	retval = fprintf( file, "    GridResource: %.8191s\n", resource );
+	if( retval < 0 ) {
+		return 0;
+	}
+
+	retval = fprintf( file, "    GridJobId: %.8191s\n", job );
+	if( retval < 0 ) {
+		return 0;
+	}
+
+	return (1);
+}
+
+int GridSubmitEvent::
+readEvent (FILE *file)
+{
+	char s[8192];
+
+	delete[] resourceName;
+	delete[] jobId;
+	resourceName = NULL;
+	jobId = NULL;
+	int retval = fscanf (file, "Job submitted to grid resource\n");
+    if (retval != 0)
+    {
+		return 0;
+    }
+	s[0] = '\0';
+	retval = fscanf( file, "    GridResource: %8191[^\n]\n", s );
+	if ( retval != 1 )
+	{
+		return 0;
+	}
+	resourceName = strnewp(s);
+	retval = fscanf( file, "    GridJobId: %8191[^\n]\n", s );
+	if ( retval != 1 )
+	{
+		return 0;
+	}
+	jobId = strnewp(s);
+
+	return 1;
+}
+
+ClassAd* GridSubmitEvent::
+toClassAd()
+{
+	ClassAd* myad = ULogEvent::toClassAd();
+	if( !myad ) return NULL;
+	
+	if( resourceName && resourceName[0] ) {
+		MyString buf2;
+		buf2.sprintf("GridResource = \"%s\"",resourceName);
+		if( !myad->Insert(buf2.Value()) ) return NULL;
+	}
+	if( jobId && jobId[0] ) {
+		MyString buf3;
+		buf3.sprintf("GridJobId = \"%s\"",jobId);
+		if( !myad->Insert(buf3.Value()) ) return NULL;
+	}
+
+	return myad;
+}
+
+void GridSubmitEvent::
+initFromClassAd(ClassAd* ad)
+{
+	ULogEvent::initFromClassAd(ad);
+
+	if( !ad ) return;
+	
+	// this fanagling is to ensure we don't malloc a pointer then delete it
+	char* mallocstr = NULL;
+	ad->LookupString("GridResource", &mallocstr);
+	if( mallocstr ) {
+		resourceName = new char[strlen(mallocstr) + 1];
+		strcpy(resourceName, mallocstr);
+		free(mallocstr);
+	}
+
+	// this fanagling is to ensure we don't malloc a pointer then delete it
+	mallocstr = NULL;
+	ad->LookupString("GridJobId", &mallocstr);
+	if( mallocstr ) {
+		jobId = new char[strlen(mallocstr) + 1];
+		strcpy(jobId, mallocstr);
+		free(mallocstr);
+	}
+}
+

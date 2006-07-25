@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -26,6 +26,7 @@
 #include "condor_daemon_core.h"
 #include "condor_timer_manager.h"
 #include "condor_lock_file.h"
+#include "condor_netdb.h"
 
 // Check URL static method
 int
@@ -135,7 +136,7 @@ CondorLockFile::BuildLock( const char	*lock_url,
 
 		// Build a temporary file name
 	char	hostname[128];
-	if ( gethostname( hostname, sizeof( hostname ) ) ) {
+	if ( condor_gethostname( hostname, sizeof( hostname ) ) ) {
 		sprintf( hostname, "unknown-%d", rand( ) );
 	}
 	temp_file.sprintf( "%s.%s-%d", lock_file.Value(), hostname, getpid( ) );
@@ -249,8 +250,7 @@ CondorLockFile::GetLock( time_t lock_hold_time )
 	if ( 0 == status ) {				// We won!
 		return 0;
 	} else if ( EEXIST == errno ) {		// Somebody else won the race
-		dprintf( D_FULLDEBUG, "GetLock: Lock held by somebody else\n",
-				 status );
+		dprintf( D_FULLDEBUG, "GetLock: Lock held by somebody else\n" );
 		return 1;
 	} else {							// Some other error occurred
 		dprintf( D_ALWAYS,
@@ -325,8 +325,8 @@ CondorLockFile::SetExpireTime( const char *file, time_t lock_hold_time )
 	}
 	if ( statbuf.st_mtime != expire ) {
 		dprintf( D_ALWAYS,
-				 "UpdateLock: lock file '%s' utime wrong (%d != %d)\n",
-				 file, expire, statbuf.st_mtime );
+				 "UpdateLock: lock file '%s' utime wrong (%ld != %ld)\n",
+				 file, (long) expire, (long) statbuf.st_mtime );
 		return -1;
 	}
 

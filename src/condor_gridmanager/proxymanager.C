@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -25,7 +25,6 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
-#include "basename.h"
 #include "condor_ckpt_name.h"
 #include "condor_config.h"
 #include "classad_hashtable.h"
@@ -41,18 +40,9 @@
 #include "proxymanager.h"
 //#include "myproxy_manager.h"
 #include "gridmanager.h"
+#include "condor_string.h"
 
 #define HASH_TABLE_SIZE			500
-
-template class HashTable<HashKey, Proxy *>;
-template class HashBucket<HashKey, Proxy *>;
-template class HashTable<HashKey, ProxySubject *>;
-template class HashBucket<HashKey, ProxySubject *>;
-template class List<Proxy>;
-template class Item<Proxy>;
-
-
-template class SimpleList<MyProxyEntry*>;
 
 
 //template class HashTable<HashKey, MyProxyManager *>;
@@ -119,6 +109,8 @@ bool InitializeProxyManager( const char *proxy_dir )
 												   (TimerHandler)&CheckProxies,
 												   "CheckProxies", NULL );
 
+	ReconfigProxyManager();
+
 	proxymanager_initialized = true;
 
 	return true;
@@ -156,8 +148,10 @@ void ReconfigProxyManager()
 }*/
 
 // An entity (e.g. GlobusJob, GlobusResource object) should call this
-// function when it wants to use a proxy managed by ProxyManager. proxy_path
-// is the path to the proxy it wants to use. notify_tid is a timer id that
+// function when it wants to use a proxy and have it managed by
+// ProxyManager. job_ad contains attributes related to the proxy to be
+// used. error allows the function to return an error message if proxy
+// acquisition fails. notify_tid is a timer id that
 // will be signalled when something interesting happens with the proxy
 // (it's about to expire or has been refreshed). A Proxy struct will be
 // returned. When the Proxy is no longer needed, ReleaseProxy() should be
@@ -165,10 +159,15 @@ void ReconfigProxyManager()
 // negative number for notify_tid or omit it. Note the the Proxy returned
 // is a shared data-structure and shouldn't be delete'd or modified by
 // the caller.
+// If AcquireProxy() encounters an error, it will store an error message
+// in the error parameter and return NULL. If the job ad doesn't contain
+// any proxy-related attributes, AcquireProxy() will store the empty
+// string in the error parameter and return NULL.
 Proxy *
-AcquireProxy( const char *proxy_path, int notify_tid )
+AcquireProxy( const ClassAd *job_ad, MyString &error, int notify_tid )
 {
 	if ( proxymanager_initialized == false ) {
+		error = "Internal Error: ProxyManager not initialized";
 		return NULL;
 	}
 
@@ -176,82 +175,247 @@ AcquireProxy( const char *proxy_path, int notify_tid )
 	Proxy *proxy = NULL;
 	ProxySubject *proxy_subject = NULL;
 	char *subject_name = NULL;
+	MyString proxy_path;
+	MyString owner;
+	char *param_str = NULL;
 
-	if ( ProxiesByFilename.lookup( HashKey(proxy_path), proxy ) == 0 ) {
+	if ( job_ad->LookupString( ATTR_OWNER, owner ) ) {
+		MyString param_name;
+		param_name.sprintf( "JOB_PROXY_OVERRIDE_FILE_%s", owner.Value() );
+		param_str = param( param_name.Value() );
+	}
+	if ( param_str == NULL ) {
+		param_str = param( "JOB_PROXY_OVERRIDE_FILE" );
+	}
+	if ( param_str ) {
+		proxy_path = param_str;
+		free( param_str );
+	} else if ( job_ad->LookupString( ATTR_X509_USER_PROXY,
+									  proxy_path ) == 0 ) {
+
+		// Special handling for "use best proxy"
+		if ( job_ad->LookupString( ATTR_X509_USER_PROXY_SUBJECT,
+								   proxy_path ) != 0 ) {
+			subject_name = strdup( proxy_path.Value() );
+			if ( SubjectsByName.lookup( HashKey(subject_name),
+										proxy_subject ) != 0 ) {
+				// We don't know about this proxy subject yet,
+				// create a new ProxySubject and fill it out
+				proxy_subject = new ProxySubject;
+				proxy_subject->subject_name = strdup( subject_name );
+
+				// Create a master proxy for our new ProxySubject
+				Proxy *new_master = new Proxy;
+				new_master->id = next_proxy_id++;
+				MyString tmp;
+				tmp.sprintf( "%s/master_proxy.%d", GridmanagerScratchDir,
+							 new_master->id );
+				new_master->proxy_filename = strdup( tmp.Value() );
+				new_master->num_references = 0;
+				new_master->subject = proxy_subject;
+				//SetMasterProxy( new_master, proxy );
+				new_master->expiration_time = -1;
+				new_master->near_expired = true;
+				ProxiesByFilename.insert( HashKey(new_master->proxy_filename),
+										  new_master );
+
+				proxy_subject->master_proxy = new_master;
+
+				SubjectsByName.insert(HashKey(proxy_subject->subject_name),
+									  proxy_subject);
+			}
+			// Now that we have a proxy_subject, return it's master proxy
+			proxy = proxy_subject->master_proxy;
+			proxy->num_references++;
+			if ( notify_tid > 0 &&
+				 proxy->notification_tids.IsMember( notify_tid ) == false ) {
+				proxy->notification_tids.Append( notify_tid );
+			}
+			free( subject_name );
+			return proxy;
+
+		}
+
+		//error.sprintf( "%s is not set in the job ad", ATTR_X509_USER_PROXY );
+		error = "";
+		return NULL;
+	}
+
+	if ( ProxiesByFilename.lookup( HashKey(proxy_path.Value()), proxy ) == 0 ) {
 		// We already know about this proxy,
-		// return the existing Proxy struct
+		// use the existing Proxy struct
 		proxy->num_references++;
 		if ( notify_tid > 0 &&
 			 proxy->notification_tids.IsMember( notify_tid ) == false ) {
 			proxy->notification_tids.Append( notify_tid );
 		}
 		return proxy;
-	}
 
-	// We don't know about this proxy yet,
-	// find the proxy's expiration time and subject name
-	expire_time = x509_proxy_expiration_time( proxy_path );
-	if ( expire_time < 0 ) {
-		dprintf( D_ALWAYS, "Failed to get expiration time of proxy %s\n",
-				 proxy_path );
-		return NULL;
-	}
-	subject_name = x509_proxy_subject_name( proxy_path );
-	if ( subject_name == NULL ) {
-		dprintf( D_ALWAYS, "Failed to get subject of proxy %s\n", proxy_path );
-		return NULL;
-	}
+	} else {
 
-	// Create a Proxy struct for our new proxy and populate it
-	proxy = new Proxy;
-	proxy->proxy_filename = strdup(proxy_path);
-	proxy->num_references = 1;
-	proxy->expiration_time = expire_time;
-	proxy->near_expired = (expire_time - time(NULL)) <= minProxy_time;
-	proxy->id = next_proxy_id++;
-	if ( notify_tid > 0 &&
-		 proxy->notification_tids.IsMember( notify_tid ) == false ) {
-		proxy->notification_tids.Append( notify_tid );
-	}
+		// We don't know about this proxy yet,
+		// find the proxy's expiration time and subject name
+		expire_time = x509_proxy_expiration_time( proxy_path.Value() );
+		if ( expire_time < 0 ) {
+			dprintf( D_ALWAYS, "Failed to get expiration time of proxy %s\n",
+					 proxy_path.Value() );
+			error.sprintf( "Failed to get expiration time of proxy" );
+			return NULL;
+		}
+		subject_name = x509_proxy_identity_name( proxy_path.Value() );
+		if ( subject_name == NULL ) {
+			dprintf( D_ALWAYS, "Failed to get identity of proxy %s\n",
+					 proxy_path.Value() );
+			error.sprintf( "Failed to get identity of proxy" );
+			return NULL;
+		}
 
-	ProxiesByFilename.insert(HashKey(proxy_path), proxy);
+		// Create a Proxy struct for our new proxy and populate it
+		proxy = new Proxy;
+		proxy->proxy_filename = strdup(proxy_path.Value());
+		proxy->num_references = 1;
+		proxy->expiration_time = expire_time;
+		proxy->near_expired = (expire_time - time(NULL)) <= minProxy_time;
+		proxy->id = next_proxy_id++;
+		if ( notify_tid > 0 &&
+			 proxy->notification_tids.IsMember( notify_tid ) == false ) {
+			proxy->notification_tids.Append( notify_tid );
+		}
 
-	if ( SubjectsByName.lookup( HashKey(subject_name), proxy_subject ) != 0 ) {
-		// We don't know about this proxy subject yet,
-		// create a new ProxySubject and fill it out
-		proxy_subject = new ProxySubject;
-		proxy_subject->subject_name = strdup( subject_name );
+		ProxiesByFilename.insert(HashKey(proxy_path.Value()), proxy);
 
-		// Create a master proxy for our new ProxySubject
-		Proxy *new_master = new Proxy;
-		new_master->id = next_proxy_id++;
-		MyString tmp;
-		tmp.sprintf( "%s/master_proxy.%d", GridmanagerScratchDir,
-					 new_master->id );
-		new_master->proxy_filename = strdup( tmp.Value() );
-		new_master->num_references = 0;
-		new_master->subject = proxy_subject;
-		SetMasterProxy( new_master, proxy );
-		ProxiesByFilename.insert( HashKey(new_master->proxy_filename),
-								  new_master );
+		if ( SubjectsByName.lookup( HashKey(subject_name), proxy_subject ) != 0 ) {
+			// We don't know about this proxy subject yet,
+			// create a new ProxySubject and fill it out
+			proxy_subject = new ProxySubject;
+			proxy_subject->subject_name = strdup( subject_name );
 
-		proxy_subject->master_proxy = new_master;
+			// Create a master proxy for our new ProxySubject
+			Proxy *new_master = new Proxy;
+			new_master->id = next_proxy_id++;
+			MyString tmp;
+			tmp.sprintf( "%s/master_proxy.%d", GridmanagerScratchDir,
+						 new_master->id );
+			new_master->proxy_filename = strdup( tmp.Value() );
+			new_master->num_references = 0;
+			new_master->subject = proxy_subject;
+			SetMasterProxy( new_master, proxy );
+			ProxiesByFilename.insert( HashKey(new_master->proxy_filename),
+									  new_master );
 
-		SubjectsByName.insert(HashKey(proxy_subject->subject_name),
-							  proxy_subject);
-	}
+			proxy_subject->master_proxy = new_master;
 
-	proxy_subject->proxies.Append( proxy );
+			SubjectsByName.insert(HashKey(proxy_subject->subject_name),
+								  proxy_subject);
+		}
 
-	proxy->subject = proxy_subject;
+		proxy_subject->proxies.Append( proxy );
 
-	// If the new Proxy is longer-lived than the current master proxy for
-	// this subject, copy it for the new master.
-	if ( proxy->expiration_time > proxy_subject->master_proxy->expiration_time ) {
+		proxy->subject = proxy_subject;
+
+		// If the new Proxy is longer-lived than the current master proxy for
+		// this subject, copy it for the new master.
+		if ( proxy->expiration_time > proxy_subject->master_proxy->expiration_time ) {
 			SetMasterProxy( proxy_subject->master_proxy, proxy );
+		}
+
+		free( subject_name );
 	}
 
-	free( subject_name );
+		// MyProxy crap
+	MyString buff;
+	if ( job_ad->LookupString( ATTR_MYPROXY_HOST_NAME, buff ) ) {
+
+		int cluster;
+		int proc;
+
+		ASSERT( job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster ) );
+		ASSERT( job_ad->LookupInteger( ATTR_PROC_ID, proc ) );
+
+		MyProxyEntry * myProxyEntry =new MyProxyEntry();
+
+		myProxyEntry->last_invoked_time=0;
+		myProxyEntry->get_delegation_pid=FALSE;
+		myProxyEntry->get_delegation_err_fd=-1;
+		myProxyEntry->get_delegation_err_filename=NULL;
+		myProxyEntry->myproxy_server_dn=NULL;
+		myProxyEntry->myproxy_password=NULL;
+		myProxyEntry->myproxy_credential_name=NULL;
+
+		myProxyEntry->myproxy_host=strdup(buff.Value());
+		myProxyEntry->cluster_id = cluster;
+		myProxyEntry->proc_id = proc;
+
+		// Get optional MYPROXY_SERVER_DN attribute
+		if (job_ad->LookupString (ATTR_MYPROXY_SERVER_DN, buff)) {
+			myProxyEntry->myproxy_server_dn=strdup(buff.Value());
+		}
+
+		if (job_ad->LookupString (ATTR_MYPROXY_CRED_NAME, buff)) {
+			myProxyEntry->myproxy_credential_name=strdup(buff.Value());
+		}
+
+		if (job_ad->LookupInteger (ATTR_MYPROXY_REFRESH_THRESHOLD, myProxyEntry->refresh_threshold)) {
+			//myProxyEntry->refresh_threshold=atoi(buff);	// In minutes
+			dprintf (D_FULLDEBUG, "MyProxy Refresh Threshold %d\n",myProxyEntry->refresh_threshold);
+		} else {
+			myProxyEntry->refresh_threshold = 4*60;	// default 4 hrs
+			dprintf (D_FULLDEBUG, "MyProxy Refresh Threshold %d (default)\n",myProxyEntry->refresh_threshold);
+		}
+
+		if (job_ad->LookupInteger (ATTR_MYPROXY_NEW_PROXY_LIFETIME, myProxyEntry->new_proxy_lifetime)) {
+			//myProxyEntry->new_proxy_lifetime=atoi(buff); // In hours
+			dprintf (D_FULLDEBUG, "MyProxy New Proxy Lifetime %d\n",myProxyEntry->new_proxy_lifetime);
+		} else {
+			myProxyEntry->new_proxy_lifetime = 12; // default 12 hrs
+			dprintf (D_FULLDEBUG, "MyProxy New Proxy Lifetime %d (default)\n",myProxyEntry->new_proxy_lifetime);
+		}
+
+		dprintf (D_FULLDEBUG,
+				 "Adding new MyProxy entry for proxy %s : host=%s, cred name=%s\n",
+				 proxy->proxy_filename,
+				 myProxyEntry->myproxy_host,
+				 (myProxyEntry->myproxy_credential_name!=NULL)?(myProxyEntry->myproxy_credential_name):"<default>");
+		proxy->myproxy_entries.Prepend (myProxyEntry); // Add at the top of the list, so it'll be used first
+
+		// See if we already have a MyProxy entry for the given host/credential name
+		/*int found = FALSE;
+		MyProxyEntry * currentMyProxyEntry = NULL;
+		jobProxy->myproxy_entries.Rewind();
+			while (jobProxy->myproxy_entries.Next (currentMyProxyEntry)) {
+			if (strcmp (currentMyProxyEntry->myproxy_host, myProxyEntry->myproxy_host)) {
+				continue;
+			}
+				if (myProxyEntry->myproxy_credential_name == NULL || myProxyEntry->myproxy_credential_name == NULL) {
+				if (myProxyEntry->myproxy_credential_name != NULL || myProxyEntry->myproxy_credential_name != NULL) {
+					// One credential name is NULL, the other is not
+					continue;
+				}
+			} else {
+				if (strcmp (currentMyProxyEntry->myproxy_credential_name, myProxyEntry->myproxy_credential_name))  {
+					// credential names non-null and not-equal
+					continue;
+				}
+			}
+
+			// If we've gotten this far, we've got a match
+			found = TRUE;
+			break;
+		}
+
+		//... If we don't, insert it
+		if (!found) {
+			dprintf (D_FULLDEBUG,
+					 "Adding new MyProxy entry for proxy %s : host=%s, cred name=%s\n",
+					 jobProxy->proxy_filename,
+					 myProxyEntry->myproxy_host,
+					 (myProxyEntry->myproxy_credential_name!=NULL)?(myProxyEntry->myproxy_credential_name):"<default>");
+			jobProxy->myproxy_entries.Append (myProxyEntry);
+		} else {
+			// No need to insert this
+			delete myProxyEntry;
+		}*/
+	}
 
 	return proxy;
 }
@@ -315,6 +479,8 @@ ReleaseProxy( Proxy *proxy, int notify_tid )
 		if ( proxy_subject->proxies.IsEmpty() &&
 			 proxy_subject->master_proxy->num_references <= 0 ) {
 
+			// TODO shouldn't we be deleting the physical file for the
+			//   master proxy, since we created it?
 			ProxiesByFilename.remove( HashKey(proxy_subject->master_proxy->proxy_filename) );
 			free( proxy_subject->master_proxy->proxy_filename );
 			delete proxy_subject->master_proxy;
@@ -404,6 +570,8 @@ int CheckProxies()
 	int now = time(NULL);
 	int next_check = CheckProxies_interval + now;
 	ProxySubject *curr_subject;
+
+	dprintf( D_FULLDEBUG, "Checking proxies\n" );
 
 	SubjectsByName.startIterations();
 
@@ -550,13 +718,13 @@ int RefreshProxyThruMyProxy(Proxy * proxy)
 	if (myProxyEntry->myproxy_server_dn) {
 		sprintf (buff, "MYPROXY_SERVER_DN=%s",
 				 myProxyEntry->myproxy_server_dn);
-		myEnv.Put (buff);
+		myEnv.SetEnv(buff);
 		dprintf (D_FULLDEBUG, "%s\n", buff);
 	}
 
 
 	sprintf (buff,"X509_USER_PROXY=%s", proxy_filename);
-	myEnv.Put (buff);
+	myEnv.SetEnv (buff);
 	dprintf (D_FULLDEBUG, "%s\n", buff);
 
 
@@ -577,24 +745,31 @@ int RefreshProxyThruMyProxy(Proxy * proxy)
 	int myproxy_port = getPortFromAddr (myProxyEntry->myproxy_host);
 
 	// args
-	char args[1000];
-	sprintf(args, "-v -o %s -s %s -d -t %d -S -l %s",
-			proxy_filename,
-			myproxy_host,
-			myProxyEntry->new_proxy_lifetime,
-			username);
+	ArgList args;
+	args.AppendArg(proxy_filename);
+	args.AppendArg("-v");
+	args.AppendArg("-o");
+	args.AppendArg(proxy_filename);
+	args.AppendArg("-s");
+	args.AppendArg(myproxy_host);
+	args.AppendArg("-d");
+	args.AppendArg("-t");
+	args.AppendArg(myProxyEntry->new_proxy_lifetime);
+	args.AppendArg("-S");
+	args.AppendArg("-l");
+	args.AppendArg(username);
 
 
 	// Optional port argument
 	if (myproxy_port) {
-		sprintf (buff, " -p %d ", myproxy_port);
-		strcat (args, buff);
+		args.AppendArg("-p");
+		args.AppendArg(myproxy_port);
 	}
 
 	// Optional credential name argument
 	if (myProxyEntry->myproxy_credential_name) {
-		sprintf (buff, " -k %s ", myProxyEntry->myproxy_credential_name);
-		strcat (args, buff);
+		args.AppendArg("-k");
+		args.AppendArg(myProxyEntry->myproxy_credential_name);
 	}
 
 	free (username);
@@ -622,7 +797,9 @@ int RefreshProxyThruMyProxy(Proxy * proxy)
 	}
 
 
-	dprintf (D_ALWAYS, "Calling %s %s\n", myproxy_get_delegation_pgm, args);
+	MyString args_string;
+	args.GetArgsStringForDisplay(&args_string);
+	dprintf (D_ALWAYS, "Calling %s %s\n", myproxy_get_delegation_pgm, args_string.Value());
 
 	int pid = daemonCore->Create_Process (
 					myproxy_get_delegation_pgm,
@@ -630,7 +807,7 @@ int RefreshProxyThruMyProxy(Proxy * proxy)
 					PRIV_USER_FINAL,
 					myproxyGetDelegationReaperId,
 					FALSE,
-					myEnv.getDelimitedString(),
+					&myEnv,
 					NULL,	// cwd
 					FALSE, // new proc group
 					NULL,  // socket inherit

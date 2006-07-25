@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -91,10 +91,12 @@ stream_file_xfer( int src_fd, int dst_fd, size_t n_bytes )
 			rval = write( dst_fd, buf+bytes_written, bytes_read-bytes_written );
 			if( rval < 0 ) {
 				dprintf( D_ALWAYS, "stream_file_xfer: %d bytes written, "
-						 "%d bytes to go\n", bytes_moved, bytes_to_go );
+						 "%d bytes to go\n", (int)bytes_moved, 
+						 (int)bytes_to_go );
+
 				dprintf( D_ALWAYS, "stream_file_xfer: write returns %d "
 						 "(errno=%d) when attempting to write %d bytes\n",
-						 rval, errno, bytes_read );
+						 rval, errno, (int)bytes_read );
 				return -1;
 			}
 		}
@@ -105,7 +107,7 @@ stream_file_xfer( int src_fd, int dst_fd, size_t n_bytes )
 		if( bytes_to_go == 0 ) {
 			dprintf( D_FULLDEBUG,
 				"\tChild Shadow: STREAM FILE XFER COMPLETE - %d bytes\n",
-				bytes_moved
+				(int)bytes_moved
 			);
 			return bytes_moved;
 		}
@@ -174,7 +176,7 @@ multi_stream_file_xfer( int src_fd, int dst_fd_cnt, int *dst_fd_list,
 		if( bytes_to_go == 0 ) {
 			dprintf( D_FULLDEBUG,
 				"\tChild Shadow: STREAM FILE XFER COMPLETE - %d bytes\n",
-				bytes_moved
+				(int)bytes_moved
 			);
 			return bytes_moved;
 		}
@@ -188,6 +190,7 @@ struct sockaddr_in *sin;
 int             listen_count;
 {
 	int             socket_fd;
+    struct sockaddr_in *tmp;
 	SOCKET_LENGTH_TYPE len;
 	
 	socket_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -196,17 +199,19 @@ int             listen_count;
 		return -1;
 	}
 	
-	if( ! _condor_local_bind(socket_fd) ) {
+	/* FALSE means this is an incoming connection */
+	if( ! _condor_local_bind(FALSE, socket_fd) ) {
 		close( socket_fd );
 		fprintf(stderr, "condor_exec: bind failed\n");
 		return -1;
 	}
 	
 	listen(socket_fd, listen_count);
-	
-	len = sizeof(*sin);
-	getsockname(socket_fd, (struct sockaddr *) sin, &len);
-	sin->sin_addr.s_addr = htonl( my_ip_addr() );
+
+    tmp = getSockAddr(socket_fd);
+    if (tmp) {
+        memcpy(sin, tmp, sizeof(struct sockaddr_in));
+    }
 
 	return socket_fd;
 }

@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -32,15 +32,15 @@ class GridUniverseLogic : public Service
 		~GridUniverseLogic();
 
 		static void JobCountUpdate(const char* owner, const char* domain, 
-				const char* proxy, const char* proxy_path, int cluster, 
+				const char* attr_value, const char* proxy_path, int cluster, 
 				int proc, int num_globus_jobs, int num_globus_unmanaged_jobs);
 
 		static void JobRemoved(const char* owner, const char* domain,
-			   	const char* proxy, const char* proxy_path, int cluster, 
+			   	const char* attr_value, const char* proxy_path, int cluster, 
 				int proc);
 
 		static void JobAdded(const char* owner, const char* domain,
-			   	const char* proxy, const char* proxy_path, int cluster, 
+			   	const char* attr_value, const char* proxy_path, int cluster, 
 				int proc);
 
 		static void reconfig() { signal_all(SIGHUP); }

@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -40,7 +40,7 @@
 extern int errno;
 
 static char* static_master_path = "/unsup/condor/sbin/condor_master";
-static char* config_val_path = "/unsup/condor/bin/condor_config_val master";
+static char* config_val_cmd = "/unsup/condor/bin/condor_config_val master";
 
 int
 main( int argc, char* argv[], char *env[] )
@@ -75,7 +75,7 @@ main( int argc, char* argv[], char *env[] )
 		exit(1);
 	}
 	
-	config_val = popen(config_val_path, "r");
+	config_val = popen(config_val_cmd, "r");
 	if(config_val == NULL) {
 		fprintf( stderr, "warning: Can't popen config_val"
 				 " errno: %d (%s)\n",

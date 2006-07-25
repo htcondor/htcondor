@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -26,7 +26,21 @@
 
 #include "dag.h"
 
-bool parse (char * filename, Dag * dag);
+/**
+ * Set whether we should munge the node names (only applies to multi-DAG
+ * runs).
+ * @param Whether to munge the node names.
+ */
+void parseSetDoNameMunge(bool doit);
+
+/**
+ * Parse a DAG file.
+ * @param The Dag object we'll be adding nodes to.
+ * @param The name of the DAG file.
+ * @param Run DAGs in directories from DAG file paths if true
+ */
+bool parse (Dag *dag, const char * filename, bool useDagDir);
+
 bool isKeyWord( const char *token );
 //void DFSVisit (Job * job);
 #endif

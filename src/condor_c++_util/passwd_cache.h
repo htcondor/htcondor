@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -47,6 +47,10 @@ int compute_user_hash(const MyString &key, int numBuckets);
 typedef HashTable <MyString, uid_entry*> UidHashTable;
 typedef HashTable <MyString, group_entry*> GroupHashTable;
 
+/*
+Don't declare your own instances of this.  Instead see
+the pcache() function declared in condor_includes/condor_uid.h.
+*/
 class passwd_cache {
 
 	public:
@@ -75,13 +79,14 @@ class passwd_cache {
 		 * Returns true on success. */
 		bool get_groups(const char* user, size_t groupsize, gid_t list[]); 
 
-		/* Gets the uid of the given user.
-		 * Returns true on success.  */
+		/// Gets the uid of the given user.
 		bool get_user_uid(const char* user, uid_t &uid);
 
-		/* Gets the gid of the given user.
-		 * Returns true on success.  */
+		/// Gets the gid of the given user.
 		bool get_user_gid(const char* user, gid_t &gid);
+
+		/// Gets the uid and gid of the given user.
+		bool get_user_ids(const char* user, uid_t &uid, gid_t &gid);
 
 		/* gets the username from the uid. 
 		 * Allocates a new string that must be free'd.
@@ -120,6 +125,9 @@ class passwd_cache {
 		 * returns true on success. */
 		bool lookup_uid(const char* user, uid_entry *&uce);
 		bool lookup_group(const char* user, group_entry *&gce);
+
+		/* helper for get_user_* methods that handles shared code */
+		bool lookup_uid_entry( const char* user, uid_entry *&uce );
 
 		/* maximum number of groups allowed for a 
 		 * give user */

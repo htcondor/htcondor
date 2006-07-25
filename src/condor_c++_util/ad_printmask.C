@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -23,18 +23,19 @@
 #include "condor_common.h"
 #include "ad_printmask.h"
 #include "escapes.h"
-
-using namespace std;
+#include "MyString.h"
+#include "condor_string.h"
+#include "printf_format.h"
 
 static char *new_strdup (const char *);
 
-ClassAdPrintMask::
-ClassAdPrintMask ()
+AttrListPrintMask::
+AttrListPrintMask ()
 {
 }
 
-ClassAdPrintMask::
-ClassAdPrintMask (const ClassAdPrintMask &pm)
+AttrListPrintMask::
+AttrListPrintMask (const AttrListPrintMask &pm)
 {
 	copyList (formats, (List<Formatter> &) pm.formats);
 	copyList (attributes, (List<char> &) pm.attributes);
@@ -42,14 +43,14 @@ ClassAdPrintMask (const ClassAdPrintMask &pm)
 }
 
 
-ClassAdPrintMask::
-~ClassAdPrintMask ()
+AttrListPrintMask::
+~AttrListPrintMask ()
 {
 	clearFormats ();
 }
 
 
-void ClassAdPrintMask::
+void AttrListPrintMask::
 registerFormat (char *fmt, const char *attr, char *alternate)
 {
 	Formatter *newFmt = new Formatter;
@@ -62,7 +63,7 @@ registerFormat (char *fmt, const char *attr, char *alternate)
 	alternates.Append(new_strdup(collapse_escapes(alternate)));
 }
 
-void ClassAdPrintMask::
+void AttrListPrintMask::
 registerFormat (IntCustomFmt fmt, const char *attr, char *alternate)
 {
 	Formatter *newFmt = new Formatter;
@@ -76,7 +77,7 @@ registerFormat (IntCustomFmt fmt, const char *attr, char *alternate)
 	alternates.Append(new_strdup(collapse_escapes(alternate)));
 }
 
-void ClassAdPrintMask::
+void AttrListPrintMask::
 registerFormat (FloatCustomFmt fmt, const char *attr, char *alternate)
 {
 	Formatter *newFmt = new Formatter;
@@ -90,7 +91,7 @@ registerFormat (FloatCustomFmt fmt, const char *attr, char *alternate)
 	alternates.Append(new_strdup(collapse_escapes(alternate)));
 }
 
-void ClassAdPrintMask::
+void AttrListPrintMask::
 registerFormat (StringCustomFmt fmt, const char *attr, char *alternate)
 {
 	Formatter *newFmt = new Formatter;
@@ -104,7 +105,7 @@ registerFormat (StringCustomFmt fmt, const char *attr, char *alternate)
 	alternates.Append(new_strdup(collapse_escapes(alternate)));
 }
 
-void ClassAdPrintMask::
+void AttrListPrintMask::
 clearFormats (void)
 {
 	clearList (formats);
@@ -113,10 +114,10 @@ clearFormats (void)
 }
 
 
-int ClassAdPrintMask::
-display (FILE *file, ClassAd *ad)
+int AttrListPrintMask::
+display (FILE *file, AttrList *al)
 {
-	char * temp = display(ad);
+	char * temp = display(al);
 
 	if (temp != NULL) {
 		fputs(temp, file);
@@ -128,169 +129,207 @@ display (FILE *file, ClassAd *ad)
 }
 
 // returns a new char * that is your responsibility to delete.
-char * ClassAdPrintMask::
-display (ClassAd *ad)
+char * AttrListPrintMask::
+display (AttrList *al)
 {
 	Formatter *fmt;
 	char 	*attr, *alt;
-	ExprTree *tree;
-	Value 	result;				// NAC
-	char * 	retval = new char[1024 * 8];
+	ExprTree *tree, *rhs;
+	EvalResult result;
+	MyString  retval("");
 	int		intValue;
 	float 	floatValue;
-	char  	stringValue[1024];
-	string	bool_str;
+	MyString stringValue;
+	char*	bool_str = NULL;
+	char *value_from_classad = NULL;
 
-	int 	tempInt;			// NAC
-	double 	tempReal;			// NAC
-	char 	tempString[1024];	// NAC
-    
-    ClassAdUnParser unparser;
+	struct printf_fmt_info fmt_info;
+	printf_fmt_t fmt_type;
+	const char* tmp_fmt = NULL;
 
 	formats.Rewind();
 	attributes.Rewind();
 	alternates.Rewind();
-
-	retval[0] = '\0'; // Clear the return value;
 
 	// for each item registered in the print mask
 	while ((fmt=formats.Next()) && (attr=attributes.Next()) &&
 				(alt=alternates.Next()))
 	{
 		switch( fmt->fmtKind )
-			{
-			case PRINTF_FMT:
-				// get the expression tree of the attribute
-				if (!(tree = ad->Lookup (attr))){
-					if ( alt ) {
-						sprintf( stringValue, "%s", alt );
-						strcat( retval, stringValue );
+		{
+		  	case PRINTF_FMT:
+					// figure out what kind of format string the
+					// caller is using, and print out the appropriate
+					// value depending on what they want.
+				tmp_fmt = fmt->printfFmt;
+				if( ! parsePrintfFormat(&tmp_fmt, &fmt_info) ) {
+						/*
+						  if parsePrintfFormat() returned 0, it means
+						  there are no conversion strings in the
+						  format string.  some users do this as a hack
+						  for always printing a newline after printing
+						  some attributes that might not be there.
+						  since we don't have a better alternative
+						  yet, we should support this kind of use.
+						  in this case, we should just print out the
+						  format string directly, and not worry about
+						  looking up attributes at all.  however, if
+						  there is an alt string defined, we should
+						  print that, instead. -Derek 2004-10-15
+						*/
+					if( alt && alt[0] ) {
+						retval += alt;
+					} else { 
+						retval += fmt->printfFmt;
 					}
 					continue;
 				}
 
-				// print the result
-				if(ad->EvaluateAttr(attr, result))					// NAC
-				{
-					switch (result.GetType())						// NAC
-					{
-//					case LX_STRING:
-//						sprintf( stringValue, fmt->printfFmt,
-//							collapse_escapes(result.s) );
-					case (result.STRING_VALUE):					    // NAC
-						result.IsStringValue( tempString, 1024 );		// NAC
-						sprintf( stringValue, fmt->printfFmt,   		// NAC
-								 collapse_escapes(tempString) );		// NAC
-						strcat( retval, stringValue );
-						break;
+					// if we got here, there's some % conversion
+					// string, so we'll need to get the expression
+					// tree of the attribute they asked for...
+				if( !(tree = al->Lookup (attr)) ) {
+						// drat, we couldn't find it.  if there's an
+						// alt string, use that, otherwise bail.
+					if ( alt ) {
+						retval += alt;
+					}
+					continue;
+				}
 
-//					case LX_FLOAT:
-//						sprintf( stringValue, fmt->printfFmt, result.f);
-					case (result.REAL_VALUE):						// NAC
-						result.IsRealValue( tempReal );		 			// NAC
-						sprintf( stringValue, fmt->printfFmt, 			// NAC
-								 (float)tempReal );						// NAC
-						strcat( retval, stringValue );
-						break;
-
-//					case LX_INTEGER:
-//						sprintf( stringValue, fmt->printfFmt, result.i);
-					case (result.INTEGER_VALUE):					// NAC
-						result.IsIntegerValue( tempInt );				// NAC
-						sprintf( stringValue, fmt->printfFmt, tempInt );	// NAC
-						strcat( retval, stringValue );				
-						break;
-
-                    case result.UNDEFINED_VALUE:
-                    case result.BOOLEAN_VALUE:
-
-							// if the classad lookup worked, but the
-							// evaluation gave us an undefined result,
-							// (or if it's a bool), we know the
-							// attribute is there.  so, instead of
-							// printing out the evaluated result, just
-							// print out the unevaluated expression.
-                        /*
+					// Now, figure out what kind of value they want,
+					// based on the kind of % conversion in their
+					// format string 
+				fmt_type = fmt_info.type;
+				switch( fmt_type ) {
+				case PFT_STRING:
+					if( al->EvalString( attr, NULL, &value_from_classad ) ) {
+						stringValue.sprintf( fmt->printfFmt,
+											 value_from_classad );
+						retval += stringValue;
+						free( value_from_classad );
+						value_from_classad = NULL;
+					} else {
 						rhs = tree->RArg();
 						if( rhs ) {
 							rhs->PrintToNewStr( &bool_str );
 							if( bool_str ) {
-								sprintf( stringValue, fmt->printfFmt,
-										 bool_str );
-								strcat( retval, stringValue );
+								stringValue.sprintf(fmt->printfFmt, bool_str);
+								retval += stringValue;
 								free( bool_str );
-								break;
+								bool_str = NULL;
+							}
+						} else {
+							if ( alt ) {
+								retval += alt;
 							}
 						}
-                        */
-                        unparser.Unparse( bool_str, tree );
-                        sprintf( stringValue, fmt->printfFmt, bool_str.c_str() );
-                        strcat( retval, stringValue );
-                        break;
-                        
-
-					default:
-						strcat( retval, alt );
-						continue;
 					}
+					break;
+
+				case PFT_INT:
+				case PFT_FLOAT:
+					if( tree->EvalTree (al, NULL, &result) ) {
+						switch( result.type ) {
+						case LX_FLOAT:
+							if( fmt_type == PFT_INT ) {
+								stringValue.sprintf( fmt->printfFmt, 
+													 (int)result.f );
+							} else {
+								stringValue.sprintf( fmt->printfFmt, 
+													 result.f );
+							}
+							retval += stringValue;
+							break;
+
+						case LX_INTEGER:
+							if( fmt_type == PFT_INT ) {
+								stringValue.sprintf( fmt->printfFmt, 
+													 result.i );
+							} else {
+								stringValue.sprintf( fmt->printfFmt, 
+													 (float)result.i );
+							}
+							retval += stringValue;
+							break;
+
+						default:
+								// the thing they want to print
+								// doesn't evaulate to an int or a
+								// float, so just print the alternate
+							if ( alt ) {
+								retval += alt;
+							}
+							break;
+						}
+					} else {
+							// couldn't eval
+						if( alt ) {
+							retval += alt;
+						}
+					}
+					break;
+
+				default:
+					EXCEPT( "Unknown value (%d) from parsePrintfFormat()!",
+							(int)fmt_type );
+					break;
 				}
 				break;
-					
-			case INT_CUSTOM_FMT:
-//				if( ad->EvalInteger( attr, NULL, intValue ) ) {
-				if( ad->EvaluateAttrInt( attr, intValue ) ) {	// NAC
-					strcat( retval, (fmt->df)( intValue , ad ) );
+
+		  	case INT_CUSTOM_FMT:
+				if( al->EvalInteger( attr, NULL, intValue ) ) {
+					retval += (fmt->df)( intValue , al );
 				} else {
-					strcat( retval, alt );
+					retval += alt;
 				}
 				break;
 
 		  	case FLT_CUSTOM_FMT:
-//				if( ad->EvalFloat( attr, NULL, floatValue ) ) {
-				if( ad->EvaluateAttrReal( attr, tempReal ) ) {		//NAC
-					floatValue = (float)tempReal;					//NAC
-					strcat( retval, (fmt->ff)( floatValue , ad ) );
+				if( al->EvalFloat( attr, NULL, floatValue ) ) {
+					retval += (fmt->ff)( floatValue , al );
 				} else {
-					strcat( retval, alt );
+					retval += alt;
 				}
 				break;
 
 		  	case STR_CUSTOM_FMT:
-//				if( ad->EvalString( attr, NULL, stringValue ) ) {
-				if( ad->EvaluateAttrString( attr, stringValue, 1024 ) ) {
-					strcat( retval, (fmt->sf)( stringValue , ad ) );
+				if( al->EvalString( attr, NULL, &value_from_classad ) ) {
+					retval += (fmt->sf)(value_from_classad, al);
+					free(value_from_classad);
 				} else {
-					strcat( retval, alt );
+					retval += alt;
 				}
 				break;
 	
 			default:
-				strcat( retval, alt );
+				retval += alt;
 		}
 	}
 
-	return retval;
+	// Convert return MyString to new char *.
+	return strnewp(retval.Value() );
 }
 
 
-int ClassAdPrintMask::
-display (FILE *file, ClassAdList *ca_list)
+int AttrListPrintMask::
+display (FILE *file, AttrListList *list)
 {
 	int retval = 1;
-	ClassAd *ad;
+	AttrList *al;
 
-	ca_list->Open();
-    while( (ad = (ClassAd *) ca_list->Next()) ) {
-		if( !display (file, ad) ) {
+	list->Open();
+    while( (al = (AttrList *) list->Next()) ) {
+		if( !display (file, al) ) {
 			retval = 0;
 		}
     }
-    ca_list->Close ();
+    list->Close ();
 
 	return retval;
 }
 
-void ClassAdPrintMask::
+void AttrListPrintMask::
 clearList (List<char> &l)
 {
     char *x;
@@ -301,7 +340,7 @@ clearList (List<char> &l)
     }
 }
 
-void ClassAdPrintMask::
+void AttrListPrintMask::
 clearList (List<Formatter> &l)
 {
     Formatter *x;
@@ -313,7 +352,7 @@ clearList (List<Formatter> &l)
     }
 }
 
-void ClassAdPrintMask::
+void AttrListPrintMask::
 copyList (List<Formatter> &to, List<Formatter> &from)
 {
 	Formatter *item, *newItem;
@@ -330,7 +369,7 @@ copyList (List<Formatter> &to, List<Formatter> &from)
 }
 
 
-void ClassAdPrintMask::
+void AttrListPrintMask::
 copyList (List<char> &to, List<char> &from)
 {
 	char *item;

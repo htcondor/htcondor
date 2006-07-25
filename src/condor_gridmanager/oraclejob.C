@@ -1,30 +1,29 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 #include "condor_attributes.h"
 #include "condor_debug.h"
-#include "environ.h"  // for Environ object
 #include "condor_string.h"	// for strnewp and friends
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "basename.h"
@@ -77,27 +76,7 @@ static char *GMStateNames[] = {
 // evalute PeriodicHold expression in job ad.
 #define MAX_SUBMIT_ATTEMPTS	1
 
-#define HASH_TABLE_SIZE			500
-
 #define ATTR_ORACLE_JOB_RUN_PHASE "OracleJobRunPhase"
-
-template class HashTable<HashKey, OracleJob *>;
-template class HashBucket<HashKey, OracleJob *>;
-
-HashTable <HashKey, OracleJob *> JobsByRemoteId( HASH_TABLE_SIZE,
-												 hashFunction );
-
-void
-rehashRemoteJobId( OracleJob *job, const char *old_id,
-				   const char *new_id )
-{
-	if ( old_id ) {
-		JobsByRemoteId.remove(HashKey(old_id));
-	}
-	if ( new_id ) {
-		JobsByRemoteId.insert(HashKey(new_id), job);
-	}
-}
 
 void OracleJobInit()
 {
@@ -120,15 +99,17 @@ void OracleJobReconfig()
 //	}
 }
 
-const char *OracleJobAdConst = "JobUniverse =?= 9 && (JobGridType == \"oracle\") =?= True";
+bool OracleJobAdMatch( const ClassAd *job_ad ) {
+	int universe;
+	MyString resource;
+	if ( job_ad->LookupInteger( ATTR_JOB_UNIVERSE, universe ) &&
+		 universe == CONDOR_UNIVERSE_GRID &&
+		 job_ad->LookupString( ATTR_GRID_RESOURCE, resource ) &&
+		 strncasecmp( resource.Value(), "oracle ", 7 ) == 0 ) {
 
-bool OracleJobAdMustExpand( const ClassAd *jobad )
-{
-	int must_expand = 0;
-
-	jobad->LookupBool(ATTR_JOB_MUST_EXPAND, must_expand);
-
-	return must_expand != 0;
+		return true;
+	}
+	return false;
 }
 
 BaseJob *OracleJobCreate( ClassAd *jobad )
@@ -228,7 +209,7 @@ OracleJob::OracleJob( ClassAd *classad )
 {
 	int bool_val;
 	char buff[4096];
-	char *error_string = NULL;
+	MyString error_string = "";
 
 	remoteJobId = NULL;
 	gmState = GM_INIT;
@@ -247,8 +228,8 @@ OracleJob::OracleJob( ClassAd *classad )
 
 	// In GM_HOLD, we assme HoldReason to be set only if we set it, so make
 	// sure it's unset when we start.
-	if ( ad->LookupString( ATTR_HOLD_REASON, NULL, 0 ) != 0 ) {
-		UpdateJobAd( ATTR_HOLD_REASON, "UNDEFINED" );
+	if ( jobAd->LookupString( ATTR_HOLD_REASON, NULL, 0 ) != 0 ) {
+		jobAd->AssignExpr( ATTR_HOLD_REASON, "Undefined" );
 	}
 
 		// Ensure that OCI has been initialized successfully
@@ -258,16 +239,37 @@ OracleJob::OracleJob( ClassAd *classad )
 	}
 
 	buff[0] = '\0';
-	ad->LookupString( ATTR_GLOBUS_RESOURCE, buff );
+	jobAd->LookupString( ATTR_GRID_RESOURCE, buff );
 	if ( buff[0] != '\0' ) {
-		resourceManagerString = strdup( buff );
+		const char *token;
+		MyString str = buff;
+
+		str.Tokenize();
+
+		token = str.GetNextToken( " ", false );
+		if ( !token || stricmp( token, "oracle" ) ) {
+			error_string.sprintf( "%s not of type oracle",
+								  ATTR_GRID_RESOURCE );
+			goto error_exit;
+		}
+
+		token = str.GetNextToken( " ", false );
+		if ( token && *token ) {
+			resourceManagerString = strdup( token );
+		} else {
+			error_string.sprintf( "%s missing server name",
+								  ATTR_GRID_RESOURCE );
+			goto error_exit;
+		}
+
 	} else {
-		error_string = "GlobusResource is not set in the job ad";
+		error_string.sprintf( "%s is not set in the job ad",
+							  ATTR_GRID_RESOURCE );
 		goto error_exit;
 	}
 
 	bool_val = FALSE;
-	ad->LookupBool( ATTR_ORACLE_JOB_RUN_PHASE, bool_val );
+	jobAd->LookupBool( ATTR_ORACLE_JOB_RUN_PHASE, bool_val );
 	jobRunPhase = bool_val ? true : false;
 
 	{
@@ -288,10 +290,9 @@ OracleJob::OracleJob( ClassAd *classad )
 	ociSession->RegisterJob( this );
 
 	buff[0] = '\0';
-	ad->LookupString( ATTR_GLOBUS_CONTACT_STRING, buff );
-	if ( buff[0] != '\0' && strcmp( buff, NULL_JOB_CONTACT ) != 0 ) {
-		rehashRemoteJobId( this, remoteJobId, buff );
-		remoteJobId = strdup( buff );
+	jobAd->LookupString( ATTR_GRID_JOB_ID, buff );
+	if ( buff[0] != '\0' ) {
+		SetRemoteJobId( strchr( buff, ' ' ) );
 	}
 
 	if ( OCIHandleAlloc( GlobalOciEnvHndl, (dvoid**)&ociErrorHndl,
@@ -304,8 +305,8 @@ OracleJob::OracleJob( ClassAd *classad )
 
  error_exit:
 	gmState = GM_HOLD;
-	if ( error_string ) {
-		UpdateJobAdString( ATTR_HOLD_REASON, error_string );
+	if ( !error_string.IsEmpty() ) {
+		jobAd->Assign( ATTR_HOLD_REASON, error_string.Value() );
 	}
 	return;
 }
@@ -316,7 +317,6 @@ OracleJob::~OracleJob()
 		ociSession->UnregisterJob( this );
 	}
 	if ( remoteJobId ) {
-		rehashRemoteJobId( this, remoteJobId, NULL );
 		free( remoteJobId );
 	}
 	if ( ociErrorHndl ) {
@@ -333,7 +333,7 @@ int OracleJob::doEvaluateState()
 {
 	int old_gm_state;
 	bool reevaluate_state = true;
-	time_t now;	// make sure you set this before every use!!!
+	time_t now = time(NULL);
 
 	bool done;
 	int rc;
@@ -394,12 +394,11 @@ int OracleJob::doEvaluateState()
 			} break;
 		case GM_SUBMIT_1: {
 			if ( numSubmitAttempts >= MAX_SUBMIT_ATTEMPTS ) {
-				UpdateJobAdString( ATTR_HOLD_REASON,
-								   "Attempts to submit failed" );
+				jobAd->Assign( ATTR_HOLD_REASON,
+							   "Attempts to submit failed" );
 				gmState = GM_HOLD;
 				break;
 			}
-			now = time(NULL);
 			// After a submit, wait at least submitInterval before trying
 			// another one.
 			if ( now >= lastSubmitAttempt + submitInterval ) {
@@ -412,10 +411,7 @@ int OracleJob::doEvaluateState()
 				numSubmitAttempts++;
 
 				if ( job_id != NULL ) {
-					rehashRemoteJobId( this, remoteJobId, job_id );
-					remoteJobId = strdup( job_id );
-					UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
-									   job_id );
+					SetRemoteJobId( job_id );
 					gmState = GM_SUBMIT_1_SAVE;
 				} else {
 					dprintf(D_ALWAYS,"(%d.%d) job submit 1 failed!\n",
@@ -463,7 +459,7 @@ int OracleJob::doEvaluateState()
 			} else {
 				if ( jobRunPhase == false ) {
 					jobRunPhase = true;
-					UpdateJobAdBool( ATTR_ORACLE_JOB_RUN_PHASE, TRUE );
+					jobAd->Assign( ATTR_ORACLE_JOB_RUN_PHASE, true );
 				}
 				done = requestScheddUpdate( this );
 				if ( !done ) {
@@ -545,14 +541,7 @@ int OracleJob::doEvaluateState()
 			} else {
 				// Clear the contact string here because it may not get
 				// cleared in GM_CLEAR_REQUEST (it might go to GM_HOLD first).
-				if ( remoteJobId != NULL ) {
-					rehashRemoteJobId( this, remoteJobId, NULL );
-					free( remoteJobId );
-					remoteJobId = NULL;
-					UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
-									   NULL_JOB_CONTACT );
-					requestScheddUpdate( this );
-				}
+				SetRemoteJobId( NULL );
 				gmState = GM_CLEAR_REQUEST;
 			}
 			} break;
@@ -568,12 +557,7 @@ int OracleJob::doEvaluateState()
 			}
 			} break;
 		case GM_FAILED: {
-			rehashRemoteJobId( this, remoteJobId, NULL );
-			free( remoteJobId );
-			remoteJobId = NULL;
-			UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
-							   NULL_JOB_CONTACT );
-			requestScheddUpdate( this );
+			SetRemoteJobId( NULL );
 
 			if ( condorState == REMOVED ) {
 				gmState = GM_DELETE;
@@ -611,7 +595,7 @@ int OracleJob::doEvaluateState()
 			}
 			// Only allow a rematch *if* we are also going to perform a resubmit
 			if ( wantResubmit || doResubmit ) {
-				ad->EvalBool(ATTR_REMATCH_CHECK,NULL,wantRematch);
+				jobAd->EvalBool(ATTR_REMATCH_CHECK,NULL,wantRematch);
 			}
 			if ( wantResubmit ) {
 				wantResubmit = 0;
@@ -626,22 +610,16 @@ int OracleJob::doEvaluateState()
 						procID.cluster, procID.proc );
 			}
 			errorString = "";
-			if ( remoteJobId != NULL ) {
-				rehashRemoteJobId( this, remoteJobId, NULL );
-				free( remoteJobId );
-				remoteJobId = NULL;
-				UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
-								   NULL_JOB_CONTACT );
-			}
+			SetRemoteJobId( NULL );
 			if ( jobRunPhase == true ) {
 				jobRunPhase = false;
-				UpdateJobAdBool( ATTR_ORACLE_JOB_RUN_PHASE, FALSE );
+				jobAd->Assign( ATTR_ORACLE_JOB_RUN_PHASE, false );
 			}
 			JobIdle();
 			if ( submitLogged ) {
 				JobEvicted();
 				if ( !evictLogged ) {
-					WriteEvictEventToUserLog( ad );
+					WriteEvictEventToUserLog( jobAd );
 					evictLogged = true;
 				}
 			}
@@ -653,9 +631,9 @@ int OracleJob::doEvaluateState()
 
 				// Set ad attributes so the schedd finds a new match.
 				int dummy;
-				if ( ad->LookupBool( ATTR_JOB_MATCHED, dummy ) != 0 ) {
-					UpdateJobAdBool( ATTR_JOB_MATCHED, 0 );
-					UpdateJobAdInt( ATTR_CURRENT_HOSTS, 0 );
+				if ( jobAd->LookupBool( ATTR_JOB_MATCHED, dummy ) != 0 ) {
+					jobAd->Assign( ATTR_JOB_MATCHED, false );
+					jobAd->Assign( ATTR_CURRENT_HOSTS, 0 );
 				}
 
 				// If we are rematching, we need to forget about this job
@@ -700,8 +678,8 @@ int OracleJob::doEvaluateState()
 				char holdReason[1024];
 				holdReason[0] = '\0';
 				holdReason[sizeof(holdReason)-1] = '\0';
-				ad->LookupString( ATTR_HOLD_REASON, holdReason,
-								  sizeof(holdReason) - 1 );
+				jobAd->LookupString( ATTR_HOLD_REASON, holdReason,
+									 sizeof(holdReason) - 1 );
 				if ( holdReason[0] == '\0' && errorString != "" ) {
 					strncpy( holdReason, errorString.Value(),
 							 sizeof(holdReason) - 1 );
@@ -739,6 +717,22 @@ BaseResource *OracleJob::GetResource()
 {
 //	return (BaseResource *)myResource;
 	return NULL;
+}
+
+void OracleJob::SetRemoteJobId( const char *job_id )
+{
+	free( remoteJobId );
+	if ( job_id ) {
+		remoteJobId = strdup( job_id );
+	} else {
+		remoteJobId = NULL;
+	}
+
+	MyString full_job_id;
+	if ( job_id ) {
+		full_job_id.sprintf( "oracle %s", job_id );
+	}
+	BaseJob::SetRemoteJobId( full_job_id.Value() );
 }
 
 void OracleJob::UpdateRemoteState( int new_state )
@@ -881,7 +875,7 @@ int OracleJob::doSubmit2()
 		goto doSubmit2_error_exit;
 	}
 
-	ad->LookupString( ATTR_JOB_CMD, &exec_file );
+	jobAd->LookupString( ATTR_JOB_CMD, &exec_file );
 	if ( exec_file == NULL || *exec_file == '\0' ) {
 		dprintf( D_ALWAYS, "No executable defined!\n" );
 		goto doSubmit2_error_exit;

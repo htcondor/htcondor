@@ -1,0 +1,4 @@
+#!/usr/bin/env perl
+
+system("./x_general_client.pl maxpresock open");
+system("./x_general_client.pl maxpresock close");

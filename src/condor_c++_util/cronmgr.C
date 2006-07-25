@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -30,6 +30,7 @@
 #include "simplelist.h"
 #include "condor_cron.h"
 #include "condor_cronmgr.h"
+#include "condor_string.h"
 
 
 // Class to parse the job lists
@@ -111,14 +112,16 @@ bool JobListParser::nextJob( void )
 
 		// Debug info...
 		curJobStart = curJobPointer;
-		dprintf( D_FULLDEBUG, "CronMgr: Trying to find a job in '%s'\n", curJobPointer );
+		dprintf( D_FULLDEBUG, "CronMgr: Trying to find a job in '%s'\n",
+				 curJobPointer );
 
 		// Now, try to parse it...
 
 		// Name: must exist, non-zero length
 		name = nextField( );
 		if (  ( NULL == name ) || ( '\0' == *name )  ){
-			dprintf( D_ALWAYS, "CronMgr: Job parse error: Can't find a name\n" );
+			dprintf( D_ALWAYS,
+					 "CronMgr: Job parse error: Can't find a name\n" );
 			skipJob( );
 			continue;
 		}
@@ -137,7 +140,9 @@ bool JobListParser::nextJob( void )
 			tmp++;
 		}
 		if ( NULL == prefix ) {
-			dprintf( D_ALWAYS, "CronMgr: '%s': parse error: Can't find a prefix\n", name );
+			dprintf( D_ALWAYS,
+					 "CronMgr: '%s': parse error: Can't find a prefix\n",
+					 name );
 			skipJob( );
 			continue;
 		}
@@ -145,7 +150,8 @@ bool JobListParser::nextJob( void )
 		// Path: must exist, non-zero length
 		path = nextField( );
 		if (  ( NULL == path ) || ( '\0' == *path )  ){
-			dprintf( D_ALWAYS, "Cron: '%s': parse error: Can't find a path\n", name );
+			dprintf( D_ALWAYS,
+					 "Cron: '%s': parse error: Can't find a path\n", name );
 			skipJob( );
 			continue;
 		}
@@ -230,14 +236,14 @@ const char *JobListParser::nextField( void )
 				// Whitespace: new job
 				else if ( isspace( next ) ) {
 					*cur = '\0';			// Terminate the string
-					nextJobStart = cur + 2;	// Point at char *after* the separator
+					nextJobStart = cur + 2;	// Point at char *after* separator
 					curJobPointer = NULL;
 					return start;
 				}
 				// Colon: Next field
 				else if ( ':' ==  next ) {
 					*cur = '\0';			// Terminate the string
-					curJobPointer = cur + 2;	// Point at char *after* the separator
+					curJobPointer = cur + 2; // Point at char *after* separator
 					return start;
 				}
 				// If next is not a space or :, badness 10000
@@ -277,20 +283,21 @@ const char *JobListParser::nextField( void )
 }
 
 // Basic constructor
-CondorCronMgr::CondorCronMgr( const char *name )
+CronMgrBase::CronMgrBase( const char *name )
 {
 	dprintf( D_FULLDEBUG, "CronMgr: Constructing '%s'\n", name );
 
 	// Make sure that SetName doesn't try to free Name or ParamBase...
 	Name = NULL;
 	ParamBase = NULL;
+	configValProg = NULL;
 
 	// Set 'em
 	SetName( name, name, "_cron" );
 }
 
 // Basic destructor
-CondorCronMgr::~CondorCronMgr( )
+CronMgrBase::~CronMgrBase( )
 {
 	// Kill all running jobs
 	Cron.DeleteAll( );
@@ -309,16 +316,16 @@ CondorCronMgr::~CondorCronMgr( )
 
 // Handle initialization
 int
-CondorCronMgr::Initialize( void )
+CronMgrBase::Initialize( void )
 {
 	return DoConfig( true );
 }
 
 // Set new name..
 int
-CondorCronMgr::SetName( const char *newName, 
-						const char *newParamBase,
-						const char *newParamExt )
+CronMgrBase::SetName( const char *newName, 
+					  const char *newParamBase,
+					  const char *newParamExt )
 {
 	int		retval = 0;
 
@@ -344,8 +351,8 @@ CondorCronMgr::SetName( const char *newName,
 }
 
 // Set new name..
-int CondorCronMgr::SetParamBase( const char *newParamBase,
-								 const char *newParamExt )
+int CronMgrBase::SetParamBase( const char *newParamBase,
+							   const char *newParamExt )
 {
 	dprintf( D_FULLDEBUG, "CronMgr: Setting parameter base to '%s'\n",
 			 newParamBase );
@@ -380,7 +387,7 @@ int CondorCronMgr::SetParamBase( const char *newParamBase,
 
 // Kill all running jobs
 int
-CondorCronMgr::KillAll( bool force)
+CronMgrBase::KillAll( bool force)
 {
 	// Log our death
 	dprintf( D_FULLDEBUG, "CronMgr: Killing all jobs\n" );
@@ -391,7 +398,7 @@ CondorCronMgr::KillAll( bool force)
 
 // Check: Are we ready to shutdown?
 bool
-CondorCronMgr::IsAllIdle( void )
+CronMgrBase::IsAllIdle( void )
 {
 	int		AliveJobs = Cron.NumAliveJobs( );
 
@@ -401,24 +408,59 @@ CondorCronMgr::IsAllIdle( void )
 
 // Handle Reconfig
 int
-CondorCronMgr::Reconfig( void )
+CronMgrBase::Reconfig( void )
 {
 	return DoConfig( false );
 }
 
 // Handle configuration
 int
-CondorCronMgr::DoConfig( bool initial )
+CronMgrBase::DoConfig( bool initial )
 {
-	char *paramBuf = GetParam( "JOBS" );
+	char *paramBuf;
+
+	// Is the config val program specified?
+	if( configValProg ) {
+		free( (void*) configValProg );
+	}
+	configValProg = GetParam( "CONFIG_VAL" );
+
+	// Clear all marks
+	Cron.ClearAllMarks( );
+
+	// Look for _JOBS first (any job here will be overriden by the
+	// corresponding entry in _JOBLIST
+	paramBuf = GetParam( "JOBS" );
+	if ( paramBuf ) {
+		dprintf( D_ALWAYS,
+				 "Warning: The \"%s_JOBS\" configuration syntax "
+				 "is obsolete and\n",
+				 ParamBase );
+		dprintf( D_ALWAYS,
+				 "         is being replaced by the \"%s_JOBLIST\" syntax.\n",
+				 ParamBase );
+		dprintf( D_ALWAYS,
+				 "         See the Condor manual for more details\n" );
+		ParseOldJobList( paramBuf );
+		free( paramBuf );
+	}
+
+	// Look for _JOBLIST
+	paramBuf = GetParam( "JOBLIST" );
+	if ( paramBuf != NULL ) {
+		ParseJobList( paramBuf );
+		free( paramBuf );
+	}
+
+	// Delete all jobs that didn't get marked
+	Cron.DeleteUnmarked( );
+
+	// And, initialize all jobs (they ignore it if already initialized)
+	Cron.InitializeAll( );
 
 	// Find our environment variable, if it exits..
 	dprintf( D_FULLDEBUG, "CronMgr: Doing config (%s)\n",
 			 initial ? "initial" : "reconfig" );
-	ParseJobList( paramBuf );
-	if( paramBuf ) {
-		free( paramBuf );
-	}
 
 	// Reconfigure all running jobs
 	if ( ! initial ) {
@@ -431,8 +473,8 @@ CondorCronMgr::DoConfig( bool initial )
 
 // Read a parameter
 char *
-CondorCronMgr::GetParam( const char *paramName, 
-						 const char	*paramName2 )
+CronMgrBase::GetParam( const char *paramName, 
+					   const char *paramName2 )
 {
 
 	// Defaults...
@@ -465,13 +507,259 @@ CondorCronMgr::GetParam( const char *paramName,
 
 // Parse the "Job List"
 int
-CondorCronMgr::ParseJobList( const char *jobString )
+CronMgrBase::ParseJobList( const char *jobListString )
 {
 	// Debug
-	dprintf( D_JOB, "CronMgr: Job string is '%s'\n", jobString );
+	dprintf( D_JOB, "CronMgr: Job string is '%s'\n", jobListString );
 
-	// Clear all marks
-	Cron.ClearAllMarks( );
+	// Break it into a string list
+	StringList	jobList( jobListString );
+	jobList.rewind( );
+
+	// Parse out the job names
+	const char *jobName;
+	while( ( jobName = jobList.next()) != NULL ) {
+		dprintf( D_JOB, "CronMgr: Job name is '%s'\n", jobName );
+
+		// Parse out the prefix
+		MyString paramPrefix     = GetParam( jobName, "_PREFIX" );
+		MyString paramExecutable = GetParam( jobName, "_EXECUTABLE" );
+		MyString paramPeriod     = GetParam( jobName, "_PERIOD" );
+		MyString paramMode       = GetParam( jobName, "_MODE" );
+		MyString paramReconfig   = GetParam( jobName, "_RECONFIG" );
+		MyString paramKill       = GetParam( jobName, "_KILL" );
+		MyString paramOptions    = GetParam( jobName, "_OPTIONS" );
+		MyString paramArgs       = GetParam( jobName, "_ARGS" );
+		MyString paramEnv        = GetParam( jobName, "_ENV" );
+		MyString paramCwd        = GetParam( jobName, "_CWD" );
+		bool jobOk = true;
+
+		// Some quick sanity checks
+		if ( paramExecutable.IsEmpty() ) {
+			dprintf( D_ALWAYS, 
+					 "CronMgr: No path found for job '%s'; skipping\n",
+					 jobName );
+			jobOk = false;
+		}
+
+		// Pull out the period
+		unsigned	jobPeriod = 0;
+		if ( paramPeriod.IsEmpty() ) {
+			dprintf( D_ALWAYS,
+					 "CronMgr: No job period found for job '%s': skipping\n",
+					 jobName );
+			jobOk = false;
+		} else {
+			char	modifier;
+			int		num = sscanf( paramPeriod.Value(), "%d%c",
+								  &jobPeriod, &modifier );
+			if ( num < 1 ) {
+				dprintf( D_ALWAYS,
+						 "CronMgr: Invalid job period found "
+						 "for job '%s' (%s): skipping\n",
+						 jobName, paramPeriod.Value() );
+				jobOk = false;
+			} else {
+				// Check the modifier
+				modifier = toupper( modifier );
+				if ( ( 0 == modifier ) || ( 'S' == modifier ) ) {	// Seconds
+					// Do nothing
+				} else if ( 'M' == modifier ) {
+					jobPeriod *= 60;
+				} else if ( 'H' == modifier ) {
+					jobPeriod *= ( 60 * 60 );
+				} else {
+					dprintf( D_ALWAYS,
+							 "CronMgr: Invalid period modifier "
+							 "'%c' for job %s (%s)\n",
+							 modifier, jobName, paramPeriod.Value() );
+					jobOk = false;
+				}
+			}
+		}
+
+		// Options
+		CronJobMode	jobMode = CRON_PERIODIC;
+		bool		jobReconfig = false;
+		bool		jobKillMode = false;
+
+		// Parse the job mode
+		if ( ! paramMode.IsEmpty() ) {
+			if ( ! strcasecmp( paramMode.Value(), "Periodic" ) ) {
+				jobMode =  CRON_PERIODIC;
+			} else if ( ! strcasecmp( paramMode.Value(), "WaitForExit" ) ) {
+				jobMode = CRON_WAIT_FOR_EXIT;
+			} else {
+				dprintf( D_ALWAYS,
+						 "CronMgr: Unknown job mode for '%s'\n",
+						 jobName );
+			}
+		}
+		if ( ! paramReconfig.IsEmpty() ) {
+			if ( ! strcasecmp( paramReconfig.Value(), "True" ) ) {
+				jobReconfig = true;
+			} else {
+				jobReconfig = false;
+			}
+		}
+		if ( ! paramKill.IsEmpty() ) {
+			if ( ! strcasecmp( paramKill.Value(), "True" ) ) {
+				jobKillMode = true;
+			} else {
+				jobKillMode = false;
+			}
+		}
+
+		// Parse the option string
+		if ( ! paramOptions.IsEmpty() ) {
+			StringList	list( paramOptions.Value(), " :," );
+			list.rewind( );
+
+			const char *option;
+			while( ( option = list.next()) != NULL ) {
+
+				// And, parse it
+				if ( !strcasecmp( option, "kill" ) ) {
+					dprintf( D_FULLDEBUG,
+							 "CronMgr: '%s': Kill option ok\n",
+							 jobName );
+					jobKillMode = true;
+				} else if ( !strcasecmp( option, "nokill" ) ) {
+					dprintf( D_FULLDEBUG,
+							 "CronMgr: '%s': NoKill option ok\n",
+							 jobName );
+					jobKillMode = false;
+				} else if ( !strcasecmp( option, "reconfig" ) ) {
+					dprintf( D_FULLDEBUG,
+							 "CronMgr: '%s': Reconfig option ok\n",
+							 jobName );
+					jobReconfig = true;
+				} else if ( !strcasecmp( option, "noreconfig" ) ) {
+					dprintf( D_FULLDEBUG,
+							 "CronMgr: '%s': NoReconfig option ok\n",
+							 jobName );
+					jobReconfig = false;
+				} else if ( !strcasecmp( option, "WaitForExit" ) ) {
+					dprintf( D_FULLDEBUG,
+							 "CronMgr: '%s': WaitForExit option ok\n",
+							 jobName );
+					jobMode = CRON_WAIT_FOR_EXIT;
+				} else {
+					dprintf( D_ALWAYS,
+							 "CronMgr: Job '%s': "
+							 "Ignoring unknown option '%s'\n",
+							 jobName, option );
+				}
+			}
+		}
+
+		// Are there arguments for it?
+		ArgList args;
+		MyString args_errors;
+
+		// Force the first arg to be the "Job Name"..
+		args.AppendArg(jobName);
+
+		if( !args.AppendArgsV1RawOrV2Quoted( paramArgs.Value(),
+											 &args_errors ) ) {
+			dprintf( D_ALWAYS,
+					 "CronMgr: Job '%s': "
+					 "Failed to parse arguments: '%s'\n",
+					 jobName, args_errors.Value());
+			jobOk = false;
+		}
+
+		// Parse the environment.
+		Env envobj;
+		MyString env_error_msg;
+
+		if( !envobj.MergeFromV1RawOrV2Quoted( paramEnv.Value(),
+											  &env_error_msg ) ) {
+			dprintf( D_ALWAYS,
+					 "CronMgr: Job '%s': "
+					 "Failed to parse environment: '%s'\n",
+					 jobName, env_error_msg.Value());
+			jobOk = false;
+		}
+
+
+		// Create the job & add it to the list (if it's new)
+		CronJobBase *job = NULL;
+		if ( jobOk ) {
+			bool add_it = false;
+			job = Cron.FindJob( jobName );
+			if ( NULL == job ) {
+				job = NewJob( jobName );
+				add_it = true;
+
+				// Ok?
+				if ( NULL == job ) {
+					dprintf( D_ALWAYS,
+							 "Cron: Failed to allocate job object for '%s'\n",
+							 jobName );
+				}
+			}
+
+			// Put the job in the list
+			if ( NULL != job ) {
+				if ( add_it ) {
+					if ( Cron.AddJob( jobName, job ) < 0 ) {
+						dprintf( D_ALWAYS,
+								 "CronMgr: Error creating job '%s'\n", 
+								 jobName );
+						delete job;
+						job = NULL;
+					}
+				} else {
+					dprintf( D_FULLDEBUG,
+							 "CronMgr: Not adding duplicate job '%s' (OK)\n",
+							 jobName );
+				}
+			}
+		}
+
+		// Now fill in the job details
+		if ( NULL == job ) {
+			dprintf( D_ALWAYS,
+					 "Cron: Can't create job for '%s'\n",
+					 jobName );
+		} else {
+			job->SetKill( jobKillMode );
+			job->SetReconfig( jobReconfig );
+
+			// And, set it's characteristics
+			job->SetPath( paramExecutable.Value() );
+			job->SetPrefix( paramPrefix.Value() );
+			job->SetArgs( args );
+			job->SetCwd( paramCwd.Value() );
+			job->SetPeriod( jobMode, jobPeriod );
+			job->SetConfigVal( configValProg );
+
+			char **env_array = envobj.getStringArray();
+			job->SetEnv( env_array );
+			deleteStringArray(env_array);
+
+			// Mark the job so that it doesn't get deleted (below)
+			job->Mark( );
+		}
+
+		// Debug info
+		dprintf( D_FULLDEBUG,
+				 "CronMgr: Done processing job '%s'\n", jobName );
+
+		// Job initialization is done by Cron::InitializeAll()
+	}
+
+	// All ok
+	return 0;
+}
+
+// Parse the "Job List": Old format
+int
+CronMgrBase::ParseOldJobList( const char *jobString )
+{
+	// Debug
+	dprintf( D_JOB, "CronMgr: Old job string is '%s'\n", jobString );
 
 	// Walk through the job list
 	JobListParser parser( jobString );
@@ -483,7 +771,7 @@ CondorCronMgr::ParseJobList( const char *jobString )
 		const char *jobName = parser.getName( );
 		if ( NULL == jobName ) {
 			dprintf( D_ALWAYS, 
-					 "CronMgr: skipping invalid job description '%s'"
+					 "CronMgr(old): skipping invalid job description '%s'"
 					 " (No name)\n",
 					 parser.getJobString( ) );
 			continue;
@@ -493,7 +781,7 @@ CondorCronMgr::ParseJobList( const char *jobString )
 		const char *jobPrefix = parser.getPrefix( );
 		if ( NULL == jobPrefix ) {
 			dprintf( D_ALWAYS,
-					 "CronMgr: skipping invalid job description '%s'"
+					 "CronMgr(old): skipping invalid job description '%s'"
 					 " (No prefix)\n",
 					 parser.getJobString( ) );
 			continue;
@@ -504,7 +792,7 @@ CondorCronMgr::ParseJobList( const char *jobString )
 		if ( NULL == jobPath )
 		{
 			dprintf( D_ALWAYS, 
-					 "CronMgr: skipping invalid job description '%s'"
+					 "CronMgr(old): skipping invalid job description '%s'"
 					 " (No path)\n",
 					 parser.getJobString( ) );
 			continue;
@@ -516,7 +804,7 @@ CondorCronMgr::ParseJobList( const char *jobString )
 			char	modifier;
 			if ( sscanf( jobPeriodStr, "%d%c", &jobPeriod, &modifier ) < 1 ) {
 				dprintf( D_ALWAYS,
-						 "CronMgr: skipping invalid job description '%s'"
+						 "CronMgr(old): skipping invalid job description '%s'"
 						 " (Bad Period '%s')\n",
 						 parser.getJobString( ), jobPeriodStr );
 				continue;
@@ -532,7 +820,7 @@ CondorCronMgr::ParseJobList( const char *jobString )
 				jobPeriod *= ( 60 * 60 );
 			} else {
 				dprintf( D_ALWAYS,
-						 "CronMgr: '%s': Invalid period modifier '%c'\n",
+						 "CronMgr(old): '%s': Invalid period modifier '%c'\n",
 						 parser.getJobString( ), modifier );
 				continue;
 			}
@@ -550,32 +838,38 @@ CondorCronMgr::ParseJobList( const char *jobString )
 
 			// And, parse it
 			if ( !strcasecmp( option, "kill" ) ) {
-				dprintf( D_FULLDEBUG, "CronMgr: '%s': Kill option ok\n",
+				dprintf( D_FULLDEBUG,
+						 "CronMgr(old): '%s': Kill option ok\n",
 						 jobName );
 				killMode = true;
 			} else if ( !strcasecmp( option, "nokill" ) ) {
-				dprintf( D_FULLDEBUG, "CronMgr: '%s': NoKill option ok\n",
+				dprintf( D_FULLDEBUG,
+						 "CronMgr(old): '%s': NoKill option ok\n",
 						 jobName );
 				killMode = false;
 			} else if ( !strcasecmp( option, "reconfig" ) ) {
-				dprintf( D_FULLDEBUG, "CronMgr: '%s': Reconfig option ok\n",
+				dprintf( D_FULLDEBUG,
+						 "CronMgr(old): '%s': Reconfig option ok\n",
 						 jobName );
 				reconfig = true;
 			} else if ( !strcasecmp( option, "noreconfig" ) ) {
-				dprintf( D_FULLDEBUG, "CronMgr: '%s': NoReconfig option ok\n",
+				dprintf( D_FULLDEBUG,
+						 "CronMgr(old): '%s': NoReconfig option ok\n",
 						 jobName );
 				reconfig = false;
 			} else if ( !strcasecmp( option, "WaitForExit" ) ) {
-				dprintf( D_FULLDEBUG, "CronMgr: '%s': WaitForExit option ok\n",
+				dprintf( D_FULLDEBUG,
+						 "CronMgr(old): '%s': WaitForExit option ok\n",
 						 jobName );
 				jobMode = CRON_WAIT_FOR_EXIT;
 			} else if ( !strcasecmp( option, "continuous" ) ) {
-				dprintf( D_FULLDEBUG, "CronMgr: '%s': Continuous option ok\n",
+				dprintf( D_FULLDEBUG,
+						 "CronMgr(old): '%s': Continuous option ok\n",
 						 jobName );
 				jobMode = CRON_WAIT_FOR_EXIT;
 				reconfig = true;
 			} else {
-				dprintf( D_ALWAYS, "CronMgr: Job '%s':"
+				dprintf( D_ALWAYS, "CronMgr(old): Job '%s':"
 						 " Ignoring unknown option '%s'\n",
 						 jobName, option );
 			}
@@ -590,19 +884,61 @@ CondorCronMgr::ParseJobList( const char *jobString )
 			if ( jobMode == CRON_WAIT_FOR_EXIT ) {
 				jobPeriod = 1;
 				dprintf( D_ALWAYS, 
-						 "CronMgr: WARNING: Job '%s' period = 0, but this "
+						 "CronMgr(old): "
+						 "WARNING: Job '%s' period = 0, but this "
 						 "can cause busy-loops; resetting to 1.\n",
 						 jobName );
 			} else {
 				dprintf( D_ALWAYS,
-						 "CronMgr: ERROR: Job '%s' not 'WaitForExit', but "
-						 "period = 0; ignoring Job.\n", jobName );
+						 "CronMgr(old): "
+						 "ERROR: Job '%s' not 'WaitForExit', but "
+						 "period = 0; ignoring Job.\n",
+						 jobName );
 				continue; 
 			}
 		}
 
+		// Are there arguments for it?
+		// Force the first arg to be the "Job Name"..
+		char *paramArgs = GetParam( jobName, "_ARGS" );
+
+		// Are there arguments for it?
+		// Force the first arg to be the "Job Name"..
+		ArgList args;
+		MyString args_errors;
+
+		// Force the first arg to be the "Job Name"..
+		args.AppendArg(jobName);
+
+		if(!args.AppendArgsV1RawOrV2Quoted(paramArgs,&args_errors)) {
+			dprintf( D_ALWAYS,
+					 "CronMgr(old): Job '%s': "
+					 "Failed to parse arguments: %s\n",
+					 jobName, args_errors.Value());
+			free(paramArgs);
+			continue;
+		}
+		free(paramArgs);
+
+		// Special environment vars?
+		char *paramEnv       = GetParam( jobName, "_ENV" );
+
+		// Parse the environment.
+		Env envobj;
+		MyString env_error_msg;
+
+		if( !envobj.MergeFromV1RawOrV2Quoted( paramEnv, &env_error_msg ) ) {
+			dprintf( D_ALWAYS,
+					 "CronMgr(old): Job '%s': "
+					 "Failed to parse environment: '%s'\n",
+					 jobName, env_error_msg.Value());
+			free(paramEnv);
+			continue;
+		}
+		free(paramEnv);
+
 		// Create the job & add it to the list (if it's new)
-		CondorCronJob *job = Cron.FindJob( jobName );
+		CronJobBase *job = Cron.FindJob( jobName );
 		if ( NULL == job ) {
 			job = NewJob( jobName );
 			if ( NULL == job ) {
@@ -613,7 +949,7 @@ CondorCronMgr::ParseJobList( const char *jobString )
 
 			// Put the job in the list
 			if ( Cron.AddJob( jobName, job ) < 0 ) {
-				dprintf( D_ALWAYS, "CronMgr: Error creating job '%s'\n", 
+				dprintf( D_ALWAYS, "CronMgr(old): Error creating job '%s'\n", 
 						 jobName );
 			}
 		}
@@ -621,24 +957,6 @@ CondorCronMgr::ParseJobList( const char *jobString )
 		// Set the "Kill" mode
 		job->SetKill( killMode );
 		job->SetReconfig( reconfig );
-
-		// Are there arguments for it?
-		// Force the first arg to be the "Job Name"..
-		char *argBufTmp = GetParam( jobName, "_ARGS" );
-		char *argBuf;
-		if ( NULL == argBufTmp ) {
-			argBuf = strdup( jobName );
-		} else {
-			int		len = strlen( jobName ) + 1 + strlen( argBufTmp ) + 1;
-			argBuf = new char[len];
-			strcpy( argBuf, jobName );
-			strcat( argBuf, " " );
-			strcat( argBuf, argBufTmp );
-			free( argBufTmp );
-		}
-
-		// Special environment vars?
-		char *envBuf = GetParam( jobName, "_ENV" );
 
 		// CWD?
 		char *cwdBuf = GetParam( jobName, "_CWD" );
@@ -650,49 +968,35 @@ CondorCronMgr::ParseJobList( const char *jobString )
 		// And, set it's characteristics
 		job->SetPath( jobPath );
 		job->SetPrefix( jobPrefix );
-		job->SetArgs( argBuf );
-		job->SetEnv( envBuf );
+		job->SetArgs( args );
 		job->SetCwd( cwdBuf );
 		job->SetPeriod( jobMode, jobPeriod );
+		job->SetConfigVal( configValProg );
+
+		char **env_array = envobj.getStringArray();
+		job->SetEnv( env_array );
+		deleteStringArray(env_array);
 
 		// Free up memory from param()
-		if ( argBuf ) {
-			free( argBuf );
-		}
-		if ( envBuf ) {
-			free( envBuf );
-		}
 		if ( cwdBuf ) {
 			free( cwdBuf );
 		}
 
 		// Debug info
-		dprintf( D_FULLDEBUG, "CronMgr: Done processing job '%s'\n", jobName );
+		dprintf( D_FULLDEBUG,
+				 "CronMgr(old): Done processing job '%s'\n", jobName );
 
-		// Finally, have the job finish it's initialization
-		job->Initialize( );
+		// Job initialization is done by Cron::InitializeAll()
 	}
-
-	// Delete all jobs that didn't get marked
-	Cron.DeleteUnmarked( );
 
 	// All ok
 	return 0;
 }
 
-// Create a new job
-CondorCronJob *
-CondorCronMgr::NewJob( const char *name )
-{
-	dprintf( D_FULLDEBUG, "*** Creating a Condor job '%s' ***\n", name );
-	CondorCronJob *job = new CondorCronJob( GetName(), name );
-	return job;
-}
-
 // Parse the next tokenized 'chunk', sorta like strtok()
 // Returns pointer to the next one..
 char *
-CondorCronMgr::NextTok( char *cur, const char *tok )
+CronMgrBase::NextTok( char *cur, const char *tok )
 {
 	// Look for the _next_ occurance
 	char	*tmp = strstr( cur, tok );
@@ -706,13 +1010,3 @@ CondorCronMgr::NextTok( char *cur, const char *tok )
 	// Done
 	return tmp;
 }
-
-// Handles the death of a child (does nothing for now)
-#if 0
-int
-CondorCronMgr::JobDied( CondorCronJob *DeadJob )
-{
-	(void) DeadJob;
-	return 0;
-}
-#endif

@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -73,9 +73,6 @@ VanillaProc::StartJob()
 	char systemshell[_POSIX_PATH_MAX];
 	char tmp[_POSIX_PATH_MAX];
 
-	ClassAdUnParser unp;
-	string treeString;
-
 	const char* jobtmp = Starter->jic->origJobName();
 	int joblen = strlen(jobtmp);
 	if ( joblen > 5 && 
@@ -90,51 +87,38 @@ VanillaProc::StartJob()
 
 		// now change arguments to include name of program cmd.exe 
 		// should run
-
-		// this little piece of code preserves the backwhacking of quotes,
-		// so when it's re-inserted into the JobAd any original backwhacks are still there.
-		ExprTree  *tree;
-        char	  *job_args;
-		char      *argstmp;
-		int		  length;
-
-		job_args = argstmp = NULL;
-		
-		tree = JobAd->Lookup(ATTR_JOB_ARGUMENTS);
-//		if ( tree != NULL && tree->RArg() != NULL ) {
-//			tree->RArg()->PrintToNewStr(&argstmp);
-		if ( tree != NULL ) {
-			unp.Unparse( treeString, tree );
-			argstmp = new char[treeString.length( )+1];
-			strcpy( argstmp, treeString.c_str( ) );
-			job_args = argstmp+1;		// skip first quote
-			length = strlen(job_args);
-			job_args[length-1] = '\0';	// destroy last quote
-		} else {
-			job_args = (char*) malloc(1*sizeof(char));
-			job_args[0] = '\0';
-		}
-		
 		// also pass /Q and /C arguments to cmd.exe, to tell it we do not
 		// want an interactive shell -- just run the command and exit
-		sprintf ( tmp, "%s=\"/Q /C condor_exec.bat %s\"",
-				  ATTR_JOB_ARGUMENTS, job_args );
-		JobAd->InsertOrUpdate(tmp);		
 
-		if ( argstmp != NULL ) {
-			// this is needed if we had to call PrintToNewStr() in classads
-			free(argstmp);
-		} else {
-			// otherwise we just need to free the byte we used to store the empty string
-			free(job_args);
+		ArgList args;
+		MyString arg_errors;
+
+			// Since we are adding to the argument list, we may need to deal
+			// with platform-specific arg syntax in the user's args in order
+			// to successfully merge them with the additional args.
+		args.SetArgV1SyntaxToCurrentPlatform();
+
+		args.AppendArg("/Q");
+		args.AppendArg("/C");
+		args.AppendArg("condor_exec.bat");
+
+		if(!args.AppendArgsFromClassAd(JobAd,&arg_errors) ||
+		   !args.InsertArgsIntoClassAd(JobAd,NULL,&arg_errors)) {
+			dprintf(D_ALWAYS,"ERROR: failed to get args from job ad: %s\n",
+					arg_errors.Value());
+			return FALSE;
 		}
 
 		// finally we must rename file condor_exec to condor_exec.bat
 		rename(CONDOR_EXEC,"condor_exec.bat");
 
-		dprintf(D_FULLDEBUG,
-			"Executable is .bat, so running %s\\cmd.exe %s\n",
-			systemshell,tmp);
+		if(DebugFlags & D_FULLDEBUG) {
+			MyString args_desc;
+			args.GetArgsStringForDisplay(&args_desc);
+			dprintf(D_FULLDEBUG,
+					"Executable is .bat, so running %s\\cmd.exe %s\n",
+					systemshell,args_desc.Value());
+		}
 
 	}	// end of if executable name ends in .bat
 #endif
@@ -143,24 +127,36 @@ VanillaProc::StartJob()
 	if (OsProc::StartJob()) {
 		
 		// success!  create a ProcFamily
-		family = new ProcFamily(JobPid,PRIV_USER);
+		PidEnvID penvid;
+
+		pidenvid_init(&penvid);
+
+		// if there is no information on this pid, that's ok
+		daemonCore->InfoEnvironmentID(&penvid, JobPid);
+
+		family = new ProcFamily(JobPid, &penvid, PRIV_USER);
 		ASSERT(family);
 
 		const char* run_jobs_as = NULL;
 		bool dedicated_account = false;
 
-		run_jobs_as = get_user_loginname();
-
 		// See if we want our family built by login if we're using
 		// specific run accounts. (default is no)
-		dedicated_account = param_boolean("EXECUTE_LOGIN_IS_DEDICATED", false);
+		// If we're local universe, we definitely want this to be NO,
+		// since we're running the job as the user on the submit
+		// machine, and we do NOT want to track the procfamily by the
+		// login!!!  -Derek <wright@cs.wisc.edu> 2004-11-05
+		if( job_universe != CONDOR_UNIVERSE_LOCAL ) {
+			dedicated_account = param_boolean( "EXECUTE_LOGIN_IS_DEDICATED",
+											   false );
+		}
 
 		// we support running the job as other users if the user
 		// is specifed in the config file, and the account's password
 		// is properly stored in our credential stash.
-
 		if (dedicated_account) {
 			// set ProcFamily to find decendants via a common login name
+			run_jobs_as = get_user_loginname();
 			dprintf(D_FULLDEBUG, "Building procfamily by login \"%s\"\n",
 					run_jobs_as);
 			family->setFamilyLogin(run_jobs_as);

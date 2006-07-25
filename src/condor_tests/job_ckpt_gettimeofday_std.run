@@ -1,0 +1,19 @@
+#!/usr/bin/env perl
+
+use CondorTest;
+
+$cmd = 'job_ckpt_gettimeofday_std.cmd';
+$testname = 'Time Test';
+
+@CondorTest::expected_output = ( 'SUCCESS' );
+
+CondorTest::RegisterExitedSuccess( $testname, 
+				   \&CondorTest::DefaultOutputTest );
+
+if( CondorTest::RunTest($testname, $cmd, 1) ) {
+    print "$testname: SUCCESS\n";
+    exit(0);
+} else {
+    die "$testname: CondorTest::RunTest() failed\n";
+}
+

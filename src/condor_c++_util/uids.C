@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -29,13 +29,17 @@
 #include "condor_environ.h"
 #include "condor_distribution.h"
 #include "my_username.h"
-
+#include "daemon.h"
+#include "store_cred.h"
 
 /* See condor_uid.h for description. */
 static char* CondorUserName = NULL;
 static const char* RealUserName = NULL;
 THREAD_LOCAL_STORAGE static priv_state CurrentPrivState = PRIV_UNKNOWN;
 static int SwitchIds = TRUE;
+static int UserIdsInited = FALSE;
+static int OwnerIdsInited = FALSE;
+
 
 /* must be listed in the same order as enum priv_state in condor_uid.h */
 static char *priv_state_name[] = {
@@ -43,7 +47,8 @@ static char *priv_state_name[] = {
 	"PRIV_ROOT",
 	"PRIV_CONDOR",
 	"PRIV_USER",
-	"PRIV_USER_FINAL"
+	"PRIV_USER_FINAL",
+	"PRIV_FILE_OWNER"
 };
 
 
@@ -85,7 +90,7 @@ void
 display_priv_log(void)
 {
 	int i, idx;
-	if (SwitchIds) {
+	if (can_switch_ids()) {
 		dprintf(D_ALWAYS, "running as root; privilege switching in effect\n");
 	} else {
 		dprintf(D_ALWAYS, "running as non-root; no privilege switching\n");
@@ -106,6 +111,24 @@ get_priv()
 	return CurrentPrivState;
 }
 
+
+int
+can_switch_ids( void )
+{
+	static bool HasCheckedIfRoot = false;
+
+	// can't switch users if we're not root/SYSTEM
+	if (!HasCheckedIfRoot) {
+		if (!is_root()) {
+			SwitchIds = FALSE;
+		}
+		HasCheckedIfRoot = true;
+	}
+
+	return SwitchIds;
+}
+
+
 /* End Common Bits */
 
 
@@ -121,6 +144,9 @@ void init_condor_ids() {}
 int set_user_ids(uid_t uid, gid_t gid) { return FALSE; }
 uid_t get_my_uid() { return 999999; }
 gid_t get_my_gid() { return 999999; }
+int set_file_owner_ids( uid_t uid, gid_t gid ) { return FALSE; }
+void uninit_file_owner_ids() {}
+
 
 // Cover our getuid...
 uid_t getuid() { return get_my_uid(); }
@@ -149,6 +175,7 @@ void uninit_user_ids()
 	UserLoginName = NULL;
 	UserDomainName= NULL;
 	CurrUserHandle = NULL;
+	UserIdsInited = false;
 }
 
 HANDLE priv_state_get_handle()
@@ -175,6 +202,9 @@ init_user_ids(const char username[], const char domain[])
 	   	return 0;
    	}
 
+		// we default to true, and only set this to false in the few
+		// cases where this method would return failure.
+	UserIdsInited = true;
 	
 	// see if we already have a user handle for the requested user.
 	// if so, just return 1. 
@@ -203,6 +233,16 @@ init_user_ids(const char username[], const char domain[])
 			if (! CurrUserHandle ) {
 				dprintf(D_FULLDEBUG, "init_user_ids: handle is null!\n");
 			}
+			
+			if (UserLoginName) {
+				free(UserLoginName);
+				UserLoginName = NULL;
+			}
+			if (UserDomainName) {
+				free(UserDomainName);
+				UserDomainName = NULL;
+			}
+			
 			// these are strdup'ed, so we can just stash their pointers
 			UserLoginName = myusr;
 			UserDomainName = mydom;
@@ -212,6 +252,12 @@ init_user_ids(const char username[], const char domain[])
 				   		CurrUserHandle);
 			return 1;
 		}
+	}
+
+	// anything beyond this requires user switching
+	if (!can_switch_ids()) {
+		dprintf(D_ALWAYS, "init_user_ids: failed because user switching is disabled\n");
+		return 0;
 	}
 
 	if ( strcmp(username,"nobody") != 0 ) {
@@ -224,6 +270,8 @@ init_user_ids(const char username[], const char domain[])
 		char dom[255];
 		wchar_t w_fullname[255];
 		wchar_t *w_pw;
+		bool got_password = false;
+		bool got_password_from_credd = false;
 
 		// these should probably be snprintfs
 		swprintf(w_fullname, L"%S@%S", username, domain);
@@ -232,20 +280,15 @@ init_user_ids(const char username[], const char domain[])
 		
 		// make sure we're SYSTEM when we do this
 		w_pw = lsaMan.query(w_fullname);
-
-
-		if ( ! w_pw ) {
-			dprintf(D_ALWAYS, "ERROR: Could not locate credential for user "
-				"'%s@%s'\n", username, domain);
-			return 0;
-		} else {
-			sprintf(pw, "%S", w_pw);
-
+		if ( w_pw ) {
+			// copy password into a char buffer
+			sprintf(pw, "%S", w_pw);			
 			// we don't need the wide char pw anymore, so clean it up
-			ZeroMemory(w_pw, wcslen(w_pw)*sizeof(wchar_t));
+			SecureZeroMemory(w_pw, wcslen(w_pw)*sizeof(wchar_t));
 			delete[](w_pw);
+			w_pw = NULL;
 
-			dprintf(D_FULLDEBUG, "Found credential for user '%s'\n", username);
+			// now that we got a password, see if it is good.
 			retval = LogonUser(
 				user,						// user name
 				dom,						// domain or server - local for now
@@ -255,25 +298,125 @@ init_user_ids(const char username[], const char domain[])
 				LOGON32_PROVIDER_DEFAULT,	// logon provider
 				&CurrUserHandle				// receive tokens handle
 			);
+			
+			if ( !retval ) {
+				dprintf(D_FULLDEBUG,"Locally stored credential for %s@%s is stale\n",
+					user,dom);
+				// Set handle to NULL to make certain we recall LogonUser again below
+				CurrUserHandle = NULL;	
+			} else {
+				got_password = true;	// so we don't bother going to a credd
+			}
+		}
 
-			// clear pw from memory
-			ZeroMemory(pw, 255);
+		// if we don't have the password from our local stash, try to fetch
+		// it from a credd
+
+		char *credd_host = param("CREDD_HOST");
+		if (credd_host && got_password==false) {
+			dprintf(D_FULLDEBUG, "trying to fetch password from credd: %s\n", credd_host);
+			Daemon credd(DT_CREDD);
+			Sock * credd_sock = credd.startCommand(CREDD_GET_PASSWD,Stream::reli_sock,10);
+			if ( credd_sock ) {
+				credd_sock->put((char*)username);	// send user
+				credd_sock->put((char*)domain);		// send domain
+				credd_sock->end_of_message();
+				credd_sock->decode();
+				pw[0] = '\0';
+				int my_stupid_sizeof_int_for_damn_cedar = sizeof(pw);
+				char *my_buffer = pw;
+				if ( credd_sock->code(my_buffer,my_stupid_sizeof_int_for_damn_cedar) && pw[0] ) {
+					got_password = true;
+					got_password_from_credd = true;
+				} else {
+					dprintf(D_FULLDEBUG,
+							"credd (%s) did not have info for %s@%s\n",
+							credd_host, username,domain);
+				}
+				delete credd_sock;
+				credd_sock = NULL;
+			} else {
+				dprintf(D_FULLDEBUG,"Failed to contact credd %s: %s\n",
+					credd_host,credd.error() ? credd.error() : "");
+			}
+		}
+		if (credd_host) free(credd_host);
+
+		if ( ! got_password ) {
+			dprintf(D_ALWAYS, "ERROR: Could not locate valid credential for user "
+				"'%s@%s'\n", username, domain);
+			UserIdsInited = false;
+			return 0;
+		} else {
+			dprintf(D_FULLDEBUG, "Found credential for user '%s'\n", username);
+
+			// If we have not yet called LogonUser, then CurrUserHandle is NULL,
+			// and we need to call it here.
+			if ( CurrUserHandle == NULL ) {
+				retval = LogonUser(
+					user,						// user name
+					dom,						// domain or server - local for now
+					pw,							// password
+					LOGON32_LOGON_INTERACTIVE,	// type of logon operation. 
+												// LOGON_BATCH doesn't seem to work right here.
+					LOGON32_PROVIDER_DEFAULT,	// logon provider
+					&CurrUserHandle				// receive tokens handle
+				);
+			} else {
+				// we already have a good user handle from calling LogonUser to check to
+				// see if our stashed credential was stale or not, so set retval to success
+				retval = 1;	// LogonUser returns nonzero value on success
+			}
 
 			dprintf(D_FULLDEBUG, "LogonUser completed.\n");
 
+			if (UserLoginName) {
+				free(UserLoginName);
+				UserDomainName = NULL;
+			}
+			if (UserDomainName) {
+				free(UserDomainName);
+				UserDomainName = NULL;
+			}
 			UserLoginName = strdup(username);
 			UserDomainName = strdup(domain);
 
 			if ( !retval ) {
 				dprintf(D_ALWAYS, "init_user_ids: LogonUser failed with NT Status %ld\n", 
 					GetLastError());
-				return 0;
+				UserIdsInited = false;
+				retval =  0;	// return of 0 means FAILURE
 			} else {
 				// stash the new token in our cache
 				cached_tokens.storeToken(UserLoginName, UserDomainName,
 					   	CurrUserHandle);
-				return 1;
+
+				// if we got the password from the credd, and the admin wants passwords stashed
+				// locally on this machine, then do it.
+				if ( got_password_from_credd &&
+					 param_boolean("CREDD_CACHE_LOCALLY",false) ) 
+				{
+					MyString my_full_name;
+					my_full_name.sprintf("%s@%s",username,domain);
+					if ( addCredential(my_full_name.Value(),pw) == SUCCESS ) {
+						dprintf(D_FULLDEBUG,
+							"init_user_ids: "
+							"Successfully stashed credential in registry for user %s\n",
+							my_full_name.Value());
+					} else {
+						dprintf(D_FULLDEBUG,
+							"init_user_ids: "
+							"Failed to stash credential in registry for user %s\n",
+							my_full_name.Value());
+					}
+				}
+				retval = 1;	// return of 1 means SUCCESS
 			}
+
+			// clear pw from memory
+			SecureZeroMemory(pw, 255);
+
+			return retval;
 		}
 		
 	} else {
@@ -292,7 +435,16 @@ init_user_ids(const char username[], const char domain[])
 			// This is indicative of a serious problem.
 			EXCEPT("Failed to create a user nobody");
 		}
-	
+		
+		if (UserLoginName) {
+			free(UserLoginName);
+			UserDomainName = NULL;
+		}
+		if (UserDomainName) {
+			free(UserDomainName);
+			UserDomainName = NULL;
+		}
+
 		UserLoginName = strdup( myDynuser->get_accountname() );
 		UserDomainName = strdup( "." );
 
@@ -311,6 +463,13 @@ _set_priv(priv_state s, char file[], int line, int dologging)
 {
 	priv_state PrevPrivState = CurrentPrivState;
 
+	/* NOTE  NOTE   NOTE  NOTE
+	 * This function is called from deep inside dprintf.  To
+	 * avoid potentially nasty recursive situations, ONLY call
+	 * dprintf() from inside of this function if the 
+	 * dologging parameter is non-zero.  
+	 */
+
 	// On NT, PRIV_CONDOR = PRIV_ROOT, but we let it switch so daemoncore's
 	// priv state checking won't get totally confused.
 	if ( ( s == PRIV_CONDOR  || s == PRIV_ROOT ) &&
@@ -325,13 +484,15 @@ _set_priv(priv_state s, char file[], int line, int dologging)
 	}
 
 	if (CurrentPrivState == PRIV_USER_FINAL) {
-		dprintf(D_ALWAYS,
+		if ( dologging ) {
+			dprintf(D_ALWAYS,
 				"warning: attempted switch out of PRIV_USER_FINAL\n");
+		}
 		return PRIV_USER_FINAL;
 	}
 
 	CurrentPrivState = s;
-	if (SwitchIds) {
+	if (can_switch_ids()) {
 		switch (s) {
 		case PRIV_ROOT:
 		case PRIV_CONDOR:
@@ -339,7 +500,11 @@ _set_priv(priv_state s, char file[], int line, int dologging)
 			break;
 		case PRIV_USER:
 		case PRIV_USER_FINAL:
-			dprintf(D_FULLDEBUG, "TokenCache contents: \n%s", cached_tokens.cacheToString().Value());
+			if ( dologging ) {
+				dprintf(D_FULLDEBUG, 
+						"TokenCache contents: \n%s", 
+						cached_tokens.cacheToString().Value());
+			}
 			if ( CurrUserHandle ) {
 				if ( PrevPrivState == PRIV_UNKNOWN ) {
 					// make certain we're back to 'condor' before impersonating
@@ -355,12 +520,16 @@ _set_priv(priv_state s, char file[], int line, int dologging)
 		case PRIV_UNKNOWN:		/* silently ignore */
 			break;
 		default:
-			dprintf( D_ALWAYS, "set_priv: Unknown priv state %d\n", (int)s);
+			if ( dologging ) {
+				dprintf( D_ALWAYS, "set_priv: Unknown priv state %d\n", (int)s);
+			}
 		}
 	}
 
 logandreturn:
-	if (dologging) log_priv(PrevPrivState, CurrentPrivState, file, line);
+	if (dologging) {
+		log_priv(PrevPrivState, CurrentPrivState, file, line);
+	}
 	return PrevPrivState;
 }	
 
@@ -397,9 +566,10 @@ const char* get_condor_username()
 
 	length = strlen(szAccountName) + strlen(szDomainName) + 4;
 	CondorUserName = (char *) malloc(length);
-	if ( CondorUserName ) {
-		sprintf(CondorUserName, "%s/%s",szDomainName,szAccountName);
+	if (CondorUserName == NULL) {
+		EXCEPT("Out of memory. Aborting.");
 	}
+	sprintf(CondorUserName, "%s/%s",szDomainName,szAccountName);
 
 	if ( hProcess )
 		CloseHandle(hProcess);
@@ -443,20 +613,14 @@ clear_passwd_cache() {
 	// no-op on Windows
 }
 
+void
+delete_passwd_cache() {
+	// no-op on Windows
+}
+
 #else  // end of ifdef WIN32, now below starts Unix-specific code
 
 #include <grp.h>
-
-#if defined(HPUX11)
-/* XXX eh, this uid stuff needs to be cleaned up again... */
-#if defined(__cplusplus)
-extern "C" int seteuid(uid_t);
-extern "C" int setegid(gid_t);
-#else
-int seteuid(uid_t);
-int setegid(gid_t);
-#endif
-#endif
 
 #if defined(AIX31) || defined(AIX32)
 #include <sys/types.h>
@@ -474,7 +638,7 @@ int setegid(gid_t);
 #define GET_REAL_GID() getgid()
 #endif
 
-#include "debug.h"
+#include "condor_debug.h"
 #include "passwd_cache.h"
 
 
@@ -488,17 +652,18 @@ int setegid(gid_t);
 
 #define ROOT 0
 
-static uid_t CondorUid, UserUid, MyUid, RealCondorUid;
-static gid_t CondorGid, UserGid, MyGid, RealCondorGid;
+static uid_t CondorUid, UserUid, MyUid, RealCondorUid, OwnerUid;
+static gid_t CondorGid, UserGid, MyGid, RealCondorGid, OwnerGid;
 static int CondorIdsInited = FALSE;
-static int UserIdsInited = FALSE;
 static char* UserName = NULL;
-static passwd_cache pcache;
+static char* OwnerName = NULL;
 
 static int set_condor_euid();
 static int set_condor_egid();
 static int set_user_euid();
 static int set_user_egid();
+static int set_owner_euid();
+static int set_owner_egid();
 static int set_user_ruid();
 static int set_user_rgid();
 static int set_root_euid();
@@ -511,16 +676,30 @@ static int set_condor_rgid();
 /* We don't use EXCEPT here because this file is used in
    condor_syscall_lib.a.  -Jim B. */
 
-void
-_condor_disable_uid_switching()
-{
-	CondorIdsInited = TRUE;
-	SwitchIds = FALSE;
+/* We use the pcache() function to give us our "global" passwd_cache
+   instead of declaring a global, static passwd_cache. We want
+   to avoid declaring the passwd_cache globally, since it's contructor
+   calls param(), which we shouldn't do until the config file has 
+   been parsed. */
+static passwd_cache *pcache_ptr = NULL;
+
+passwd_cache* 
+pcache(void) {
+	if ( pcache_ptr == NULL ) {
+		pcache_ptr = new passwd_cache();
+	}
+	return pcache_ptr;
 }
 
 void
 clear_passwd_cache() {
-	pcache.reset();
+	pcache()->reset();
+}
+
+void
+delete_passwd_cache() {
+	delete pcache_ptr;
+	pcache_ptr = NULL;
 }
 
 void
@@ -544,16 +723,12 @@ init_condor_ids()
 	MyUid = getuid();
 	MyGid = getgid();
 	
-	if( CondorUserName ) {
-		free( CondorUserName );
-	}
-
 		/* if either of the following get_user_*() functions fail,
 		 * the default is MAXINT */
 	RealCondorUid = MAXINT;
 	RealCondorGid = MAXINT;
-	pcache.get_user_uid( myDistro->Get(), RealCondorUid );
-	pcache.get_user_gid( myDistro->Get(), RealCondorGid );
+	pcache()->get_user_uid( myDistro->Get(), RealCondorUid );
+	pcache()->get_user_gid( myDistro->Get(), RealCondorGid );
 
 	const char	*envName = EnvGetName( ENV_UG_IDS ); 
 	if( (env_val = getenv(envName)) ) {
@@ -571,7 +746,11 @@ init_condor_ids()
 			fprintf( stderr, "should be used by %s.\n", myDistro->Get() );
 			exit(1);
 		}
-		result = pcache.get_user_name( envCondorUid, CondorUserName );
+		if( CondorUserName != NULL ) {
+			free( CondorUserName );
+			CondorUserName = NULL;
+		}
+		result = pcache()->get_user_name( envCondorUid, CondorUserName );
 
 		if( ! result ) {
 
@@ -595,7 +774,7 @@ init_condor_ids()
 
 	/* If we're root, set the Condor Uid and Gid to the value
 	   specified in the "CONDOR_IDS" environment variable */
-	if( MyUid == ROOT ) {
+	if( can_switch_ids() ) {
 		const char	*envName = EnvGetName( ENV_UG_IDS ); 
 		if( envCondorUid != MAXINT ) {	
 			/* CONDOR_IDS are set, use what it said */
@@ -606,7 +785,14 @@ init_condor_ids()
 			if( RealCondorUid != MAXINT ) {
 				CondorUid = RealCondorUid;
 				CondorGid = RealCondorGid;
+				if( CondorUserName != NULL ) {
+					free( CondorUserName );
+					CondorUserName = NULL;
+				}
 				CondorUserName = strdup( myDistro->Get() );
+				if (CondorUserName == NULL) {
+					EXCEPT("Out of memory. Aborting.");
+				}
 			} else {
 				fprintf( stderr,
 						 "Can't find \"%s\" in the password file and "
@@ -626,10 +812,17 @@ init_condor_ids()
 		/* Non-root.  Set the CondorUid/Gid to our current uid/gid */
 		CondorUid = MyUid;
 		CondorGid = MyGid;
-		result = pcache.get_user_name( CondorUid, CondorUserName );
+		if( CondorUserName != NULL ) {
+			free( CondorUserName );
+			CondorUserName = NULL;
+		}
+		result = pcache()->get_user_name( CondorUid, CondorUserName );
 		if( !result ) {
 			/* Cannot find an entry in the passwd file for this uid */
 			CondorUserName = strdup("Unknown");
+			if (CondorUserName == NULL) {
+				EXCEPT("Out of memory. Aborting.");
+			}
 		}
 
 		/* If CONDOR_IDS environment variable is set, and set to the same uid
@@ -641,11 +834,6 @@ init_condor_ids()
 			RealCondorUid = MyUid;
 			RealCondorGid = MyGid;
 		}
-
-		/* no need to try to switch ids when running as non-root */
-		/* Can't dprintf() here, see above comment. -Derek 12/21/98 */
-		/* dprintf(D_PRIV, "running as non-root; no privilege switching\n"); */
-		SwitchIds = FALSE;
 	}
 	
 	(void)endpwent();
@@ -692,7 +880,7 @@ set_user_ids_implementation( uid_t uid, gid_t gid, const char *username,
 
 	if ( !username ) {
 
-		if ( !pcache.get_user_name( UserUid, UserName ) ) {
+		if ( !(pcache()->get_user_name( UserUid, UserName )) ) {
 			UserName = NULL;
 		}
 	} else {
@@ -727,8 +915,8 @@ init_nobody_ids( int is_quiet )
 	uid_t nobody_uid = 0;
 	gid_t nobody_gid = 0;
 
-	result = ( 	pcache.get_user_uid("nobody", nobody_uid) &&
-	   			pcache.get_user_gid("nobody", nobody_gid) );
+	result = ( 	(pcache()->get_user_uid("nobody", nobody_uid)) &&
+	   			(pcache()->get_user_gid("nobody", nobody_gid)) );
 
 	if (! result ) {
 
@@ -817,8 +1005,8 @@ init_user_ids_implementation( const char username[], int is_quiet )
 		return init_nobody_ids( is_quiet );
 	}
 
-	if( !pcache.get_user_uid(username, usr_uid) ||
-	 	!pcache.get_user_gid(username, usr_gid) ) {
+	if( !(pcache()->get_user_uid(username, usr_uid)) ||
+	 	!(pcache()->get_user_gid(username, usr_gid)) ) {
 		if( ! is_quiet ) {
 			dprintf( D_ALWAYS, "%s not in passwd file\n", username );
 		}
@@ -866,6 +1054,38 @@ uninit_user_ids()
 }
 
 
+void
+uninit_file_owner_ids() 
+{
+	OwnerIdsInited = FALSE;
+}
+
+
+int
+set_file_owner_ids( uid_t uid, gid_t gid )
+{
+	if( OwnerIdsInited && OwnerUid != uid  ) {
+		dprintf( D_ALWAYS, 
+				 "warning: setting OwnerUid to %d, was %d previosly\n",
+				 (int)uid, (int)OwnerUid );
+	}
+	OwnerUid = uid;
+	OwnerGid = gid;
+	OwnerIdsInited = TRUE;
+
+	// find the user login name for this uid.  note we should not
+	// EXCEPT or log an error if we do not find it; it is OK for the
+	// user not to be in the passwd file...
+	if( OwnerName ) {
+		free( OwnerName );
+	}
+	if ( !(pcache()->get_user_name( OwnerUid, OwnerName )) ) {
+		OwnerName = NULL;
+	}
+	return TRUE;
+}
+
+
 priv_state
 _set_priv(priv_state s, char file[], int line, int dologging)
 {
@@ -887,7 +1107,7 @@ _set_priv(priv_state s, char file[], int line, int dologging)
 		init_condor_ids();
 	}
 
-	if (SwitchIds) {
+	if (can_switch_ids()) {
 		switch (s) {
 		case PRIV_ROOT:
 			set_root_euid();
@@ -901,6 +1121,11 @@ _set_priv(priv_state s, char file[], int line, int dologging)
 			set_root_euid();	/* must be root to switch */
 			set_user_egid();
 			set_user_euid();
+			break;
+		case PRIV_FILE_OWNER:
+			set_root_euid();	/* must be root to switch */
+			set_owner_egid();
+			set_owner_euid();
 			break;
 		case PRIV_USER_FINAL:
 			set_root_euid();	/* must be root to switch */
@@ -974,6 +1199,30 @@ get_user_gid()
 	}
 
 	return UserGid;
+}
+
+
+uid_t
+get_file_owner_uid()
+{
+	if( !OwnerIdsInited ) {
+		dprintf( D_ALWAYS,
+				 "get_file_owner_uid() called when OwnerIds not inited!\n" );
+		return (uid_t)-1;
+	}
+	return OwnerUid;
+}
+
+
+gid_t
+get_file_owner_gid()
+{
+	if( !OwnerIdsInited ) {
+		dprintf( D_ALWAYS,
+				 "get_file_owner_gid() called when OwnerIds not inited!\n" );
+		return (gid_t)-1;
+	}
+	return OwnerGid;
 }
 
 
@@ -1073,7 +1322,7 @@ set_user_egid()
 		
 	if( UserName ) {
 		errno = 0;
-		if(!pcache.init_groups(UserName) ) {
+		if(!(pcache()->init_groups(UserName)) ) {
 			dprintf( D_ALWAYS, 
 					 "set_user_egid - ERROR: initgroups(%s, %d) failed, "
 					 "errno: %s\n", UserName, UserGid, strerror(errno) );
@@ -1113,7 +1362,7 @@ set_user_rgid()
 		
 	if( UserName ) {
 		errno = 0;
-		if( !pcache.init_groups(UserName) ) {
+		if( !(pcache()->init_groups(UserName)) ) {
 			dprintf( D_ALWAYS, 
 					 "set_user_rgid - ERROR: initgroups(%s, %d) failed, "
 					 "errno: %d\n", UserName, UserGid, errno );
@@ -1127,6 +1376,46 @@ int
 set_root_euid()
 {
 	return SET_EFFECTIVE_UID(ROOT);
+}
+
+
+int
+set_owner_euid()
+{
+	if( !OwnerIdsInited ) {
+		dprintf( D_ALWAYS,
+				 "set_user_euid() called when OwnerIds not inited!\n" );
+		return -1;
+	}
+	return SET_EFFECTIVE_UID(OwnerUid);
+}
+
+
+int
+set_owner_egid()
+{
+	if( !OwnerIdsInited ) {
+		dprintf( D_ALWAYS,
+				 "set_owner_egid() called when OwnerIds not inited!\n" );
+		return -1;
+	}
+	
+		// Now, call our caching version of initgroups with the 
+		// right username so the user can access files belonging
+		// to any group (s)he is a member of.  If we did not call
+		// initgroups here, the user could only access files
+		// belonging to his/her default group, and might be left
+		// with access to the groups that root belongs to, which 
+		// is a serious security problem.
+	if( OwnerName ) {
+		errno = 0;
+		if(!(pcache()->init_groups(OwnerName)) ) {
+			dprintf( D_ALWAYS, 
+					 "set_owner_egid - ERROR: initgroups(%s, %d) failed, "
+					 "errno: %s\n", OwnerName, OwnerGid, strerror(errno) );
+		}			
+	}
+	return SET_EFFECTIVE_GID(UserGid);
 }
 
 
@@ -1165,7 +1454,7 @@ get_real_username( void )
 {
 	if( ! RealUserName ) {
 		uid_t my_uid = getuid();
-		if ( !pcache.get_user_name( my_uid, (char*)RealUserName ) ) {
+		if ( !(pcache()->get_user_name( my_uid, (char *&)RealUserName )) ) {
 			char buf[64];
 			sprintf( buf, "uid %d", (int)my_uid );
 			RealUserName = strdup( buf );
@@ -1180,3 +1469,71 @@ get_user_loginname() {
 	return UserName;
 }
 #endif  /* #if defined(WIN32) */
+
+
+const char*
+priv_identifier( priv_state s )
+{
+	static char id[256];
+	int id_sz = 256;	// for use w/ snprintf()
+
+	switch( s ) {
+
+	case PRIV_UNKNOWN:
+		snprintf( id, id_sz, "unknown user" );
+		break;
+
+	case PRIV_FILE_OWNER:
+		if( ! OwnerIdsInited ) {
+			EXCEPT( "Programmer Error: priv_identifier() called for "
+					"PRIV_FILE_OWNER, but owner ids are not initialized" );
+		}
+#ifdef WIN32
+		EXCEPT( "Programmer Error: priv_identifier() called for "
+				"PRIV_FILE_OWNER, on WIN32" );
+#else
+		snprintf( id, id_sz, "file owner '%s' (%d.%d)",
+				  OwnerName ? OwnerName : "unknown", OwnerUid, OwnerGid );
+#endif
+		break;
+
+	case PRIV_USER:
+	case PRIV_USER_FINAL:
+		if( ! UserIdsInited ) {
+			EXCEPT( "Programmer Error: priv_identifier() called for "
+					"%s, but user ids are not initialized",
+					priv_to_string(s) );
+		}
+#ifdef WIN32
+		snprintf( id, id_sz, "%s@%s", UserLoginName, UserDomainName );
+#else
+		snprintf( id, id_sz, "User '%s' (%d.%d)", 
+				  UserName ? UserName : "unknown", UserUid, UserGid );
+#endif
+		break;
+
+#ifdef WIN32
+	case PRIV_ROOT:
+	case PRIV_CONDOR:
+		snprintf( id, id_sz, "SuperUser (system)" );
+		break;
+#else /* UNIX */
+	case PRIV_ROOT:
+		snprintf( id, id_sz, "SuperUser (root)" );
+		break;
+
+	case PRIV_CONDOR:
+		snprintf( id, id_sz, "Condor daemon user '%s' (%d.%d)", 
+				  CondorUserName, CondorUid, CondorGid );
+		break;
+#endif /* WIN32 vs. UNIX */
+
+	default:
+		EXCEPT( "Programmer error: unknown state (%d) in priv_identifier", 
+				(int)s );
+
+	} /* end of switch */
+
+	return (const char*) id;
+}
+

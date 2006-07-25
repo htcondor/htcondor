@@ -3,7 +3,7 @@ all_target($(NAME))
 
 CFLAGS = $(STD_C_FLAGS) -DSYSCALL_DEBUG
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DSYSCALL_DEBUG
-LIB = $(STD_LIBS) $(QMGMT_LIB)
+LIB = $(STD_LIBS)
 
 #if NEEDS_FAKE_GETMNT
 #define FAKE_GETMNT_OBJ getmnt.o
@@ -16,12 +16,8 @@ RC_OBJ = extern_path.o FAKE_GETMNT_OBJ
 OBJ = $(RC_OBJ) ops.o pseudo_ops.o shadow.o shadow_common.o \
 	receivers.o log_events.o job_report.o
 
-c_plus_target($(NAME),$(OBJ),$(LIB))
-release_target($(NAME),sbin,EXECUTABLE_MODE)
-strip_target($(NAME),sbin,EXECUTABLE_MODE)
-static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/sbin)
-pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))
-purecov_c_plus_target($(NAME).pc,$(OBJ),$(LIB))
+public_c_plus_target($(NAME),sbin,$(OBJ),$(LIB))
+
 html:
 
 IMPORT_LINKS = ../../config/import_links

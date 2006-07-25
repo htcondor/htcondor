@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -42,6 +42,7 @@
 #define TIMER_UNSET -1
 
 extern char *ScheddAddr;
+extern DCSchedd *ScheddObj;
 extern char *ScheddJobConstraint;
 extern char *GridmanagerScratchDir;
 extern char *Owner;
@@ -56,6 +57,8 @@ void Reconfig();
 bool requestScheddUpdate( BaseJob *job );
 bool requestScheddVacate( BaseJob *job, action_result_t &result );
 bool requestJobStatus( BaseJob *job, int &job_status );
+bool requestJobStatus( PROC_ID job_id, int tid, int &job_status );
+void requestScheddUpdateNotification( int timer_id );
 
 
 #endif

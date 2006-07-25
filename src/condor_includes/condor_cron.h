@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -29,7 +29,7 @@
 #include "condor_cronjob.h"
 
 // Pre-define the cronjob
-//class CondorCronJob;
+//class CronJobBase;
 
 // Define a simple class to run child tasks periodically.
 class CondorCron : public Service
@@ -39,23 +39,24 @@ class CondorCron : public Service
 	~CondorCron( );
 
 	// Methods to manipulate the job list
+	int InitializeAll( void );
 	int Reconfig( void );
 	int DeleteAll( void );
 	int KillAll( bool force );
 	int NumAliveJobs( void );
 	int AddJob( 
 		const char *	jobName,
-		CondorCronJob	*job
+		CronJobBase	*job
 		);
 	int DeleteJob( 
 		const char *	jobName 
 		);
-	CondorCronJob *FindJob( const char *name );
+	CronJobBase *FindJob( const char *name );
 	void ClearAllMarks( void );
 	void DeleteUnmarked( void );
 
   private:
-	SimpleList<CondorCronJob *>	JobList;
+	SimpleList<CronJobBase *>	JobList;
 
 };
 

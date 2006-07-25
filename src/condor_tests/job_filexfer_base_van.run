@@ -1,0 +1,70 @@
+#! /usr/bin/env perl
+use CondorTest;
+
+$cmd      = 'job_filexfer_base_van.cmd';
+$testname = 'Base file transfer - vanilla U';
+
+# truly const variables in perl
+sub IDLE{1};
+sub HELD{5};
+sub RUNNING{2};
+
+my $alreadydone=0;
+
+$execute = sub {
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+
+	print "Running $cluster\n";
+
+};
+
+$abort = sub {
+	print "Job is gone now, cool.\n";
+};
+
+$hold = sub
+{
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+
+	print "Good. Cluster $cluster is supposed to be held.....\n";
+};
+
+$release = sub
+{
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+
+};
+
+$success = sub
+{
+	print "Base file transfer job!\n";
+};
+
+$timed = sub
+{
+	die "Job should have ended by now. file transfer broken!\n";
+};
+
+system("mkdir -p ../ftjob");
+system("cp x_job_filexfer_testjob.pl ../ftjob");
+system("chmod 775 ../ftjob/x_job_filexfer_testjob.pl");
+
+CondorTest::RegisterExecute($testname, $execute);
+CondorTest::RegisterAbort($testname, $abort);
+CondorTest::RegisterHold($testname, $hold);
+CondorTest::RegisterRelease($testname, $release);
+CondorTest::RegisterExitedSuccess($testname, $success);
+CondorTest::RegisterTimed($testname, $timed, 3600);
+
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+	print "$testname: SUCCESS\n";
+	system("rm -rf ../ftjob");
+	exit(0);
+} else {
+	system("rm -rf ../ftjob");
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+

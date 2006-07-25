@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -32,19 +32,18 @@
 // Disable warnings about multiple template instantiations (done for gcc)
 #pragma warning( disable : 4660 )  
 
-// Disable warnings about truncated debug identifiers
-#pragma warning( disable : 4786 )
-
-#define _STLP_NEW_PLATFORM_SDK
-
 // #define NOGDI
 #define NOSOUND
 
 #define _WIN32_WINNT 0x0500 // ray's stupid kludge to get jobobject stuff to build
 
+// Make sure to define this *before* we include winsock2.h
+#define FD_SETSIZE 1024
+
 // the ordering of the two following header files 
 // is important! Starting with the new SDK, we want 
 // winsock2.h not winsock.h, so we include it first. 
+
 #include <winsock2.h>
 #include <windows.h>
 
@@ -64,6 +63,8 @@
 #include <sys/stat.h>
 typedef unsigned short mode_t;
 typedef DWORD pid_t;
+typedef	unsigned __int16 uint16_t;
+typedef unsigned __int32 uint32_t;
 #define stat _stat
 #define fstat _fstat
 #define MAXPATHLEN 1024
@@ -202,9 +203,9 @@ END_C_DECLS
 /* Some Win32 specifics */
 #if defined(WIN32)
 /* Win32 uses _stati64(); this should be detected by configure */
-# define HAS__STATI64
+# define HAVE__STATI64 1
   /* Win32 has a __int64 type defined; this should be detected by configure */
-#  define HAS___INT64
+#  define HAVE___INT64 1
 #endif
 
 /* Define the PRIx64 macros */

@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -109,6 +109,11 @@ displayTotals (FILE *file, int keyLength)
     	case PP_STARTD_RUN:
 		case PP_STARTD_STATE:
     	case PP_STARTD_COD:
+
+#if WANT_QUILL
+    	case PP_QUILL_NORMAL:
+#endif /* WANT_QUILL */
+
     	case PP_SCHEDD_NORMAL:
     	case PP_SCHEDD_SUBMITTORS:   
     	case PP_CKPT_SRVR_NORMAL:
@@ -174,6 +179,9 @@ StartdNormalTotal()
 	claimed = 0;
 	matched = 0;
 	preempting = 0;
+#if HAVE_BACKFILL
+	backfill = 0;
+#endif /* HAVE_BACKFILL */
 }
 
 
@@ -182,10 +190,7 @@ update (ClassAd *ad)
 {
 	char state[32];
 
-//	if (!ad->LookupString (ATTR_STATE, state)) return 0;
-	if ( !ad->EvaluateAttrString( ATTR_STATE, state, 32 ) ) {	//NAC
-		return 0;												//NAC
-	}															//NAC
+	if (!ad->LookupString (ATTR_STATE, state)) return 0;
 	switch (string_to_state (state))
 	{
 		case owner_state: 		owner++; 		break;
@@ -193,6 +198,9 @@ update (ClassAd *ad)
 		case claimed_state:		claimed++;		break;
 		case matched_state:		matched++;		break;
 		case preempting_state:	preempting++;	break;
+#if HAVE_BACKFILL
+		case backfill_state:	backfill++;		break;
+#endif
 		default: return 0;
 	}
 	machines++;
@@ -203,16 +211,28 @@ update (ClassAd *ad)
 void StartdNormalTotal::
 displayHeader(FILE *file)
 {
+#if HAVE_BACKFILL
+	fprintf (file, "%6.6s %5.5s %7.7s %9.9s %7.7s %10.10s %8.8s\n",
+					"Total", "Owner", "Claimed", "Unclaimed", "Matched",
+					"Preempting", "Backfill");
+#else
 	fprintf (file, "%9.9s %5.5s %7.7s %9.9s %7.7s %10.10s\n", "Machines", 
 					"Owner", "Claimed", "Unclaimed", "Matched", "Preempting");
+#endif /* HAVE_BACKFILL */
 }
 
 
 void StartdNormalTotal::
 displayInfo (FILE *file, int)
 {
+#if HAVE_BACKFILL
+	fprintf ( file, "%6d %5d %7d %9d %7d %10d %8d\n", machines, owner,
+			  claimed, unclaimed, matched, preempting, backfill );
+
+#else 
 	fprintf (file, "%9d %5d %7d %9d %7d %10d\n", machines, owner, claimed,
 					unclaimed, matched, preempting);
+#endif /* HAVE_BACKFILL */
 }
 
 
@@ -238,32 +258,13 @@ update (ClassAd *ad)
 	State s;
 
 	// if ATTR_STATE is not found, abort this ad
-//	if (!ad->LookupString (ATTR_STATE, state)) return 0;
-	if( !ad->EvaluateAttrString( ATTR_STATE, state, 32 ) ) {// NAC
-		return 0;											// NAC
-	}														// NAC
+	if (!ad->LookupString (ATTR_STATE, state)) return 0;
 
 	// for the other attributes, assume zero if absent
-//	if (!ad->LookupInteger(ATTR_MEMORY,attrMem)) { badAd = true; attrMem  = 0;}
-	if( !ad->EvaluateAttrInt( ATTR_MEMORY, attrMem ) ) {	// NAC
-		badAd = true;										// NAC
-		attrMem = 0;										// NAC
-	}														// NAC
-//	if (!ad->LookupInteger(ATTR_DISK,  attrDisk)){ badAd = true; attrDisk = 0;}
-	if( !ad->EvaluateAttrInt( ATTR_DISK, attrDisk ) ) {		// NAC
-		badAd = true;										// NAC
-		attrDisk = 0;										// NAC
-	}														// NAC		
-//	if (!ad->LookupInteger(ATTR_MIPS,  attrMips)){ badAd = true; attrMips = 0;}
-	if( !ad->EvaluateAttrInt( ATTR_MIPS, attrMips ) ) {		// NAC
-		badAd = true;										// NAC
-		attrMips = 0;										// NAC
-	}														// NAC
-//	if (!ad->LookupInteger(ATTR_KFLOPS,attrKflops)){badAd= true;attrKflops = 0;}
-	if( !ad->EvaluateAttrInt( ATTR_KFLOPS, attrKflops ) ) {	// NAC
-		badAd = true;										// NAC
-		attrKflops = 0;										// NAC
-	}														// NAC
+	if (!ad->LookupInteger(ATTR_MEMORY,attrMem)) { badAd = true; attrMem  = 0;}
+	if (!ad->LookupInteger(ATTR_DISK,  attrDisk)){ badAd = true; attrDisk = 0;}
+	if (!ad->LookupInteger(ATTR_MIPS,  attrMips)){ badAd = true; attrMips = 0;}
+	if (!ad->LookupInteger(ATTR_KFLOPS,attrKflops)){badAd= true;attrKflops = 0;}
 
 	s = string_to_state(state);
 	if (s == claimed_state || s == unclaimed_state)
@@ -293,7 +294,7 @@ displayHeader(FILE *file)
 void StartdServerTotal::
 displayInfo (FILE *file, int)
 {
-	fprintf (file, "%9d %5d %7d %11d %11d %11d\n", machines, avail, memory,
+	fprintf (file, "%9d %5d %7ld %11llu %11ld %11ld\n", machines, avail, memory,
 					disk, condor_mips, kflops);
 }
 
@@ -314,25 +315,11 @@ update (ClassAd *ad)
 	int attrMips, attrKflops;
 	float attrLoadAvg;
 	bool badAd = false;
-	double attrLoadAvgD;	// NAC
 
-//	if (!ad->LookupInteger(ATTR_MIPS, attrMips)) { badAd = true; attrMips = 0;}
-	if( !ad->EvaluateAttrInt( ATTR_MIPS, attrMips ) ) {		// NAC
-		badAd = true;										// NAC
-		attrMips = 0;										// NAC
-	}														// NAC
-//	if (!ad->LookupInteger(ATTR_KFLOPS, attrKflops)){badAd=true; attrKflops=0;}
-	if( !ad->EvaluateAttrInt( ATTR_KFLOPS, attrKflops ) ) {	// NAC
-		badAd = true;										// NAC
-		attrKflops = 0;										// NAC
-	}														// NAC
-//	if (!ad->LookupFloat(ATTR_LOAD_AVG,attrLoadAvg)){badAd=true;attrLoadAvg=0;}
-	if( !ad->EvaluateAttrReal( ATTR_LOAD_AVG, attrLoadAvgD ) ) {	// NAC
-		badAd = true;												// NAC
-		attrLoadAvg = 0;											// NAC
-	} else {														// NAC
-		attrLoadAvg = (float)attrLoadAvgD;							// NAC
-	}																// NAC
+	if (!ad->LookupInteger(ATTR_MIPS, attrMips)) { badAd = true; attrMips = 0;}
+	if (!ad->LookupInteger(ATTR_KFLOPS, attrKflops)){badAd=true; attrKflops=0;}
+	if (!ad->LookupFloat(ATTR_LOAD_AVG,attrLoadAvg)){badAd=true;attrLoadAvg=0;}
+
 	condor_mips += attrMips;
 	kflops += attrKflops;
 	loadavg += attrLoadAvg;	
@@ -356,7 +343,7 @@ displayHeader(FILE *file)
 void StartdRunTotal::
 displayInfo (FILE *file, int)
 {
-	fprintf (file, "%9d  %11d  %11d   %-.3f\n", machines, condor_mips, kflops, 
+	fprintf (file, "%9d  %11ld  %11ld   %-.3f\n", machines, condor_mips, kflops, 
 				(machines > 0) ? float(loadavg/machines) : 0);
 }
 
@@ -370,6 +357,9 @@ StartdStateTotal()
 	claimed = 0;
 	preempt = 0;
 	matched = 0;
+#if HAVE_BACKFILL
+	backfill = 0;
+#endif
 }
 
 int StartdStateTotal::
@@ -380,10 +370,7 @@ update( ClassAd *ad )
 
 	machines ++;
 
-//	if( !ad->LookupString( ATTR_STATE , stateStr ) ) return false;
-	if( !ad->EvaluateAttrString( ATTR_STATE, stateStr, 32 ) ) {	// NAC
-		return false;										// NAC
-	}														// NAC
+	if( !ad->LookupString( ATTR_STATE , stateStr ) ) return false;
 	state = string_to_state( stateStr );
 	switch( state ) {
 		case owner_state	:	owner++;		break;
@@ -391,6 +378,9 @@ update( ClassAd *ad )
 		case claimed_state	:	claimed++;		break;
 		case preempting_state:	preempt++;		break;
 		case matched_state	:	matched++;		break;
+#if HAVE_BACKFILL
+		case backfill_state:	backfill++;		break;
+#endif
 		default				:	return false;
 	}
 
@@ -401,16 +391,27 @@ update( ClassAd *ad )
 void StartdStateTotal::
 displayHeader(FILE *file)
 {
+#if HAVE_BACKFILL
+	fprintf (file, "%6.6s %5.5s %9.9s %7.7s %10.10s %7.7s %8.8s\n",
+					"Total", "Owner", "Unclaimed", "Claimed", 
+					"Preempting", "Matched", "Backfill");
+#else
 	fprintf( file, "%10.10s %5.5s %9.9s %7.7s %10.10s %7.7s\n", "Machines", 
 				"Owner", "Unclaimed", "Claimed", "Preempting", "Matched" );
+#endif /* HAVE_BACKFILL */
 }
 
 
 void StartdStateTotal::
 displayInfo( FILE *file, int )
 {
-	fprintf(file,"%10d %5d %9d %7d %10d %7d\n",machines,owner,unclaimed,claimed,
-			preempt,matched);
+#if HAVE_BACKFILL
+	fprintf( file, "%6d %5d %9d %7d %10d %7d %8d\n", machines, owner, 
+			 unclaimed, claimed, preempt, matched, backfill );
+#else
+	fprintf( file, "%10d %5d %9d %7d %10d %7d\n", machines, owner, 
+			 unclaimed, claimed, preempt, matched );
+#endif /* HAVE_BACKFILL */
 }
 
 
@@ -477,6 +478,49 @@ displayInfo( FILE *file, int )
 			 running, suspended, vacating, killing );
 }
 
+QuillNormalTotal::
+QuillNormalTotal()
+{
+	numSqlTotal = 0;
+	numSqlLastBatch = 0;
+}
+
+int QuillNormalTotal::
+update (ClassAd *ad)
+{
+	int attrSqlTotal, attrSqlLastBatch;
+	bool badAd = false;
+
+	if (ad->LookupInteger(ATTR_QUILL_SQL_TOTAL, attrSqlTotal)) {
+		 numSqlTotal += attrSqlTotal;
+	} else {
+		badAd = true;
+	}
+
+	if( ad->LookupInteger(ATTR_QUILL_SQL_LAST_BATCH, 
+						  attrSqlLastBatch) ) {
+		numSqlLastBatch += attrSqlLastBatch;
+	} else {
+		badAd = true;
+	}
+
+	return !badAd;
+}
+
+
+void QuillNormalTotal::
+displayHeader(FILE *file)
+{
+	fprintf (file, "%18s %18s\n", "NumSqlTotal", "NumSqlLastBatch");
+}
+
+
+void QuillNormalTotal::
+displayInfo (FILE *file, int tl)
+{
+	if (tl) fprintf(file,"%18d %18d\n", numSqlTotal, numSqlLastBatch);
+}
+
 
 ScheddNormalTotal::
 ScheddNormalTotal()
@@ -493,20 +537,17 @@ update (ClassAd *ad)
 	int attrRunning, attrIdle, attrHeld;;
 	bool badAd = false;
 
-//	if (ad->LookupInteger(ATTR_TOTAL_RUNNING_JOBS, attrRunning)	) {
-	if( ad->EvaluateAttrInt( ATTR_TOTAL_RUNNING_JOBS, attrRunning ) ) {	// NAC
+	if (ad->LookupInteger(ATTR_TOTAL_RUNNING_JOBS, attrRunning)	) {
 		runningJobs += attrRunning;
 	} else {
 		badAd = true;
 	}
-//	if( ad->LookupInteger(ATTR_TOTAL_IDLE_JOBS, attrIdle) ) {
-	if( ad->EvaluateAttrInt( ATTR_TOTAL_IDLE_JOBS, attrIdle ) ) {	// NAC
+	if( ad->LookupInteger(ATTR_TOTAL_IDLE_JOBS, attrIdle) ) {
 		idleJobs += attrIdle;
 	} else {
 		badAd = true;
 	}
-//	if( ad->LookupInteger(ATTR_TOTAL_HELD_JOBS, attrHeld) ) {
-	if( ad->EvaluateAttrInt( ATTR_TOTAL_HELD_JOBS, attrHeld ) ) {	// NAC
+	if( ad->LookupInteger(ATTR_TOTAL_HELD_JOBS, attrHeld) ) {
 		heldJobs += attrHeld;
 	} else {
 		badAd = true;
@@ -547,20 +588,17 @@ update (ClassAd *ad)
 	int attrRunning=0, attrIdle=0, attrHeld=0;
 	bool badAd = false;
 
-//	if( ad->LookupInteger(ATTR_RUNNING_JOBS, attrRunning) ) {
-	if( ad->EvaluateAttrInt( ATTR_RUNNING_JOBS, attrRunning ) ) {	// NAC
+	if( ad->LookupInteger(ATTR_RUNNING_JOBS, attrRunning) ) {
 		runningJobs += attrRunning;	
 	} else {
 		badAd = true;
 	}
-//	if( ad->LookupInteger(ATTR_IDLE_JOBS, attrIdle) ) {
-	if( ad->EvaluateAttrInt( ATTR_IDLE_JOBS, attrIdle ) ) {	// NAC
+	if( ad->LookupInteger(ATTR_IDLE_JOBS, attrIdle) ) {
 		idleJobs += attrIdle;
 	} else {
 		badAd = true;
 	}
-//	if( ad->LookupInteger(ATTR_HELD_JOBS, attrHeld) ) {
-	if( ad->EvaluateAttrInt( ATTR_HELD_JOBS, attrHeld ) ) {	// NAC
+	if( ad->LookupInteger(ATTR_HELD_JOBS, attrHeld) ) {
 		heldJobs += attrHeld;
 	} else {
 		badAd = true;
@@ -598,11 +636,9 @@ update (ClassAd *ad)
 
 	numServers++;
 
-//	if (!ad->LookupInteger(ATTR_DISK, attrDisk))
-//		return 0;
-	if( !ad->EvaluateAttrInt( ATTR_DISK, attrDisk ) ) {	// NAC
-		return 0;										// NAC
-	}													// NAC
+	if (!ad->LookupInteger(ATTR_DISK, attrDisk))
+		return 0;
+
 	disk += attrDisk;
 
 	return 1;
@@ -611,13 +647,13 @@ update (ClassAd *ad)
 void CkptSrvrNormalTotal::
 displayHeader(FILE *file)
 {
-	fprintf (file, "%8.8s %-9.9s", "Servers", "AvailDisk");
+	fprintf (file, "%8.8s %-11.11s", "Servers", "AvailDisk");
 }
 
 void CkptSrvrNormalTotal::
 displayInfo (FILE *file, int tl)
 {
-	if (tl) fprintf (file, "%8d %9d\n", numServers, disk);
+	if (tl) fprintf (file, "%8d %11llu\n", numServers, disk);
 }
 
 ClassTotal::
@@ -646,6 +682,11 @@ makeTotalObject (ppOption ppo)
 		case PP_STARTD_STATE:		ct = new StartdStateTotal;	break;
 		case PP_STARTD_COD:			ct = new StartdCODTotal;	break;
 		case PP_SCHEDD_NORMAL:		ct = new ScheddNormalTotal; break;
+
+#if WANT_QUILL
+		case PP_QUILL_NORMAL:		ct = new QuillNormalTotal; break;
+#endif /* WANT_QUILL */
+
 		case PP_SCHEDD_SUBMITTORS:	ct = new ScheddSubmittorTotal; break;
 		case PP_CKPT_SRVR_NORMAL:	ct = new CkptSrvrNormalTotal; break;
 
@@ -668,37 +709,34 @@ makeKey (MyString &key, ClassAd *ad, ppOption ppo)
 		case PP_STARTD_RUN:
 		case PP_STARTD_COD:
 		case PP_STARTD_SERVER:
-//			if (!ad->LookupString(ATTR_ARCH, p1) || 
-//				!ad->LookupString(ATTR_OPSYS, p2))
-//					return 0;
-			if( !ad->EvaluateAttrString( ATTR_ARCH, p1, 256 ) ||	// NAC	
-				!ad->EvaluateAttrString( ATTR_OPSYS, p2, 256 ) ) {	// NAC
-				return 0;											// NAC
-			}														// NAC
+			if (!ad->LookupString(ATTR_ARCH, p1) || 
+				!ad->LookupString(ATTR_OPSYS, p2))
+					return 0;
 			sprintf(buf, "%s/%s", p1, p2);
 			key = buf;
 			return 1;
 
 		case PP_STARTD_STATE:
-//			if( !ad->LookupString( ATTR_ACTIVITY , p1 ) )
-//				return 0;
-			if( !ad->EvaluateAttrString( ATTR_ACTIVITY, p1, 256 ) ) {	// NAC
-				return 0;												// NAC
-			}															// NAC
+			if( !ad->LookupString( ATTR_ACTIVITY , p1 ) )
+				return 0;
 			sprintf( buf, "%s", p1 );
 			key = buf;
 			return 1;
 
 		case PP_SCHEDD_SUBMITTORS:
-//			if (!ad->LookupString(ATTR_NAME, p1)) return 0;
-			if( !ad->EvaluateAttrString( ATTR_NAME, p1, 256 ) ) {	// NAC
-				return 0;								// NAC
-			}											// NAC
+			if (!ad->LookupString(ATTR_NAME, p1)) return 0;
 			key = p1;
 			return 1;
 
 		// all ads in the following categories hash to the same key for totals
 		case PP_CKPT_SRVR_NORMAL:
+
+		//here we might want a separate case for QUILL_NORMAL 
+		//but we keep it here for now
+#if WANT_QUILL
+		case PP_QUILL_NORMAL:
+#endif /* WANT_QUILL */
+
 		case PP_SCHEDD_NORMAL:
 			key = " ";
 			return 1;

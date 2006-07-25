@@ -2,14 +2,15 @@
 directory: /local.chopin/nleroy/Hawkeye-Release/modules
 test-directory: /scratch.1/nleroy/Hawkeye-Release-test/modules
 
-target: all
-version: 1.0.rc10
+target: hawkeye
+version: 1.0.rc14
 os: Unix-Any
 +condor_jobhist
 +condor_node
 +condor_pool
 +condor_ckpt
 +df
++du
 +downlist
 +gass_cache
 +gdmphb
@@ -19,24 +20,34 @@ os: Unix-Any
 +open_files
 +pbs_qstat
 +top
++uname
 +uptime
 +vmstat
 +w
 +who
 
+target: condor
+version: 1.0.rc1
+os: Unix-Any
++uname
++uptime
++memory
++open_files
++w
+
 target: condor_jobhist
 os: Unix-Any
-version: 1.0.rc2
+version: 1.0.rc3
 +condor_jobhist
 
 target: condor_node
 os: Unix-Any
-version: 1.0.rc3
+version: 1.0.rc4
 +condor_node
 
 target: condor_pool
 os: Unix-Any
-version: 1.0.rc4
+version: 1.0.rc5
 +condor_pool
 
 target: condor_ckpt
@@ -46,58 +57,68 @@ version: 1.0.rc1
 
 target: cvs_locks
 os: Unix-Any
-version: 1.0.rc3
+version: 1.0.rc4
 +cvs_locks
 
 target: downlist
 os: Unix-Any
-version: 1.0.rc2
+version: 1.0.rc3
 +downlist
 
 target: df
 os: Unix-Any
-version: 1.0.rc3
+version: 1.0.rc4
 +df
+
+target: du
+os: Unix-Any
+version: 1.0.rc1
++du
 
 target: gass_cache
 os: Unix-Any
-version: 1.0.rc2
+version: 1.0.rc3
 +gass_cache
 
 target: gdmphb
 os: Unix-Any
-version: 1.0.rc2
+version: 1.0.rc3
 +gdmphb
 
 target: grid_probe
 os: Unix-Any
-version: 1.0.rc2
+version: 1.0.rc3
 +grid_probe
 
 target: memory
 os: Unix-Any
-version: 1.0.rc2
+version: 1.0.rc3
 +memory
 
 target: network_stats
 os: Unix-Any
-version: 1.0.rc2
+version: 1.0.rc3
 +network_stats
 
 target: open_files
 os: Unix-Any
-version: 1.0.rc2
+version: 1.0.rc3
 +open_files
 
 target: pbs_qstat
 os: Unix-Any
-version: 1.0.rc3
+version: 1.0.rc4
 +pbs_qstat
 
 target: top
 os: Unix-Any
-version: 1.0.rc5
+version: 1.0.rc7
 +top
+
+target: uname
+os: Unix-Any
+version: 1.0.rc1
++uptime
 
 target: uptime
 os: Unix-Any
@@ -106,16 +127,16 @@ version: 1.0.rc2
 
 target: vmstat
 os: Unix-Any
-version: 1.0.rc3
+version: 1.0.rc4
 +vmstat
 
 target: w
 os: Unix-Any
-version: 1.0.rc2
+version: 1.0.rc3
 +w
 
 target: who
 os: Unix-Any
-version: 1.0.rc2
+version: 1.0.rc3
 +who
 

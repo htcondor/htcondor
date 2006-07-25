@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -95,7 +95,7 @@ extern debug_level_t debug_level;
 
 /** The name of the current executable.  basename (argv[0]) from main().
  */
-extern char *        debug_progname;
+extern const char *        debug_progname;
 
 /** Debug wrapper for the printf() function.  Your message will be printed
     only if the debug_level of the program is equal or greater than

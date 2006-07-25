@@ -13,7 +13,9 @@
 
 	<Build_Instructions>
        <Build_Step>mkdir -p INSTALLDIR_GPTMACRO/etc</Build_Step>
+<!-- This file has been removed from the Condor repository.
         <Build_Step>cp $TOP_DIR/condor_examples/condor_config.condor-g INSTALLDIR_GPTMACRO/etc/condor_config</Build_Step>
+-->
 	</Build_Instructions>
 
 	</src_pkg>

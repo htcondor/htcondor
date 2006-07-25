@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -30,6 +30,8 @@
 #include "condor_io.h"
 #include "condor_syscall_mode.h"
 #include "my_hostname.h"
+#include "exit.h"
+#include "condor_arglist.h"
 
 void init_params(void);
 void init_sig_mask();
@@ -38,7 +40,7 @@ void init_shadow_connections();
 void init_logging();
 void usage( char *my_name );
 ReliSock* NewConnection( int id );
-void support_job_wrapper(char *a_out_name,int *argc, char *argv[]);
+void support_job_wrapper(char *a_out_name,ArgList *args);
 
 extern "C" int exception_cleanup(int,int,char*);
 

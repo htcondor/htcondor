@@ -1,0 +1,440 @@
+STORK Technical Reference Manual (June 30 2004)
+================================
+
+Table of Contents
+=================
+
+0. Installation of Stork
+1. Components of Stork
+2. Design / Architecture
+3. Running Stork Server
+4. Client Interface 
+5. Logging Facilities
+
+
+0. Installation of Stork:
+=========================
+
+1) Become root super-user.
+
+2) Create a directory where you want to install Stork
+
+3) It is recommended to create a user named "condor" at this time for running
+stork, the CredD (condor_credd) credential manager daemon, and other Condor
+family tools.
+
+4) Run ./install-me installation script.  See "./install-me --help" for all
+options.  The following ./install-me invocation is recommended
+shell> ./install-me \
+  --install-dir=/path/to/stork/install/dir \
+  --owner=condor
+(this assumes that you've created a user "condor" on your system)
+
+5) Edit etc/stork.config in the install directory to set directories (e.g.
+"globus_bin_dir", "ld_library_path") to the correct location
+
+6) If you require automatic credential refreshment via MyProxy, edit 
+./sbin/myproxy-get-delegation-wrapper.sh
+and set the "$GLOBUS_LOCATION" for where the MyProxy client tools are installed
+
+7) Read this document and doc/documentation.txt in the install directory for
+overview of how to use Stork (and CredD)
+
+
+The condor_master daemon starts the stork and credential daemon (credd).
+Further it monitors these daemons, and will restart either if they exit.  To
+start the master:
+
+5) Set CONDOR_CONFIG environment variable to the <install dir>/etc/condor_config
+6) Run <installation dir>/sbin/condor_master
+	- This should start Stork (and CredD)
+	- Check Stork and CredD logs 
+(<installation dir>/local.<host>/log/StorkLog and CredLog) 
+respectively to make sure there are no errors
+[The condor_master daemon, stork and CredD are all killed via the <installation
+dir>/sbin/condor_master_off command.]
+
+
+External requirements:
+For some data placement protocols, Stork requires external executables and
+dynamic libraries, such as Globus.  The list of external requirements can be
+seen in the included stork configuration file "stork.config".  Unwanted, or
+unavailable protocols should be commented out.
+
+External executable     Location                Function
+======================= =====================   ==========================
+globus-url-copy         globus_bin_dir          gsiftp, http, ftp transfers
+srmCopy                 castor_srm_bin_dir      Castor SRM
+srmcp                   dcache_srm_bin_dir      Dcache, FNAL SRM
+hrm-get.linux           lbnlsrm_bin_dir         LBN SRM         
+msscmd                  msscmd_bin_dir          Unitree
+myproxy-get-delegation  *                       MyProxy credential refreshing
+
+Some of these executable may also require loading specific dynamic libraries.
+Please edit "ld_library_path" directive in etc/stork.config to add all the
+necessary directories.  These directories will be put in the LD_LIBRARY_PATH
+environment variable before invoking executables above.
+
+
+1. Components of the Stork (DaP Scheduler)
+==========================================
+
+1.1. stork_server:
+
+Main component of the Stork (DaP Scheduler). Runs as a persistent condor daemon
+process and performs all management, scheduling, execution, and monitoring of
+data placement activities.
+
+1.2. stork_submit:
+
+Client side tool. Used to submit data placement jobs to the Stork server.
+
+1.3. stork_status:
+
+Client side tool. Used to get status information on submitted data placement
+jobs.
+
+1.4. stork_rm:
+
+Client side tool. Used to remove any submitted data placement job from the
+Stork queue.
+
+2. Design / Architecture:
+=========================
+
+Stork server runs as a persistent Condor daemon process. It consistently
+listens to requests from the clients. The clients send their requests to the
+Stork server over the network using stork_submit command line tool in form of a
+ClassAd (Classified Advertisement).
+
+2.1. DaP Job Types:
+===================
+
+There are five types of DaP jobs/requests currently:
+
+    1) Reserve 
+    2) Release
+    3) Transfer
+    4) Stage
+    5) Remove
+
+2.1.1. Sample DaP Jobs/Requests:
+================================
+
+1)  [
+        dap_type   = "reserve";
+        dest_host  = "db18.cs.wisc.edu";
+        reserve_size = 100 MB;
+        duration   = 2 hours; 
+        reserve_id = 3;
+    ]
+
+2)  [
+        dap_type = "transfer";
+        src_url  = "srb://ghidorac.sdsc.edu/home/kosart.condor/test1.txt";
+        dest_url = "nest://db18.cs.wisc.edu/test8.txt";
+    ]
+
+3)  [
+        dap_type   = release;
+        reserve_id = 3;
+        dest_host  = "db18.cs.wisc.edu";
+    ]
+
+
+
+2.2. Multiple Protocol Support:
+===============================
+
+Since Stork is designed to work on a heterogeneous computing environment,one of
+its goals is to support as many storage systems and file transfer protocols as
+possible.  Currently the following protocols and storage systems are supported
+by Stork:
+	
+	- FTP
+	- HTTP
+	- GridFTP 
+	- NeST (chirp)
+	- SRB
+	- SRM
+	- UniTree
+	- DiskRouter
+
+The protocol to be used is determined by the Stork server according to the URL
+signatures of the files to be transfered.
+
+3.2.1. URLs supported:
+======================
+
+file:/		-> local file
+ftp://		-> FTP
+http://         -> HTTP
+gsiftp://	-> GridFTP
+nest:// 	-> NeST (chirp) protocol
+srb://		-> SRB (Storage Resource Broker) 
+lbnlsrm://	-> LBNL SRM managed server
+jlabsrm://	-> JLAB SRM managed server
+fnalsrm://	-> FNAL SRM managed server
+unitree://      -> UniTree (NCSA's Mass Storage System)
+diskrouter://   -> UW DiskRouter Tool
+
+Another important characteristic of Stork is reliability. It makes sure that
+the  requested transfers are completed successfully even in case of server or
+network failures.
+
+2.3. Storage Space Reservation Mechanism:
+=========================================
+Lets assume that you are using local storage to stage remote files required for
+some local computation. When several such staging operations are taking place
+concurrently, it is possible that parts of all the remote files have been
+staged and the local storage runs out of space. This can be avoided by storage
+space reservation mechanism, which is supported by some storage systems like
+NeST.
+
+
+3) Running Stork server:
+========================
+
+Generally Stork server is started by the condor_master on the default port
+(34048). This is the recommended way, as the master will make sure that Stork
+daemon is alive and restart it if necessary.  If stork is started via
+condor_master, it should be stopped via condor_master_off.]
+
+You can also start the stork server manually. Stork server accepts the
+following parameters (defined by STORK_ARGS) in the Condor configuration file:
+
+stork_server
+          [ -t           ] // output to stdin
+          [ -p           ] // port on which to run Stork Server
+          [ -help        ] // stork help screen
+          [ -Config      ] // stork config file
+          [ -Serverlog   ] // stork server log in ClassAds
+          [ -Xmllog      ] // stork server log in XML format
+          [ -Userlog     ] // stork userlog in XMLformat
+          [ -Clientagent ] // host where client agent is running
+
+eg.
+
+	skywalker(365)% stork_server -t -Serverlog stork.log
+	3/20 20:23:27 ******************************************************
+	3/20 20:23:27 ** stork_server (CONDOR_DATA_MANAGER) STARTING UP
+	3/20 20:23:27 ** $CondorVersion: 6.7.0 Oct  1 2002 PRE-RELEASE-1 $
+	3/20 20:23:27 ** $CondorPlatform: INTEL-LINUX-GLIBC22 $
+	3/20 20:23:27 ** PID = 11153
+	3/20 20:23:27 ******************************************************
+	3/20 20:23:27 DaemonCore: Command Socket at <128.105.165.17:39203>
+	3/20 20:23:27 ======================================================
+	3/20 20:23:27               CONDOR_DATA_MANAGER CONFIGURATION:                 
+	3/20 20:23:27 ======================================================
+	3/20 20:23:27 WORK_DIR       : /scratch/kosart/condor_data_manager
+	3/20 20:23:27 Stork log file : stork.log
+	3/20 20:23:27 Userlog file   : (null)
+	3/20 20:23:27 XML log file   : (null)
+	3/20 20:23:27 ======================================================
+	3/20 20:23:27 Listening to requests from clients..
+
+
+
+4) Client Interface:
+====================
+
+
+4.1. "stork_submit" command:
+============================
+
+It is similar to condor_submit. You just give the host_name on which Stork
+server is running and the name of the submit_file which may contain as many
+requests as you want in the format of ClassAds. And than just call:
+
+stork_submit <host_name> <submit_file>
+           [ -stdin    ] //read the submit file from standard input
+	   [ -lognotes ] //add lognotes to the request
+eg.
+
+	nostos(302)% stork_submit skywalker 4.dap
+	Trying 128.105.165.17..
+	Connected to skywalker..
+	================
+	Sending request:
+	   [
+		dest_url = "gsiftp://beak.cs.wisc.edu/tmp/f002.test"; 
+		src_url = "/tmp/f002.test"; 
+		dap_type = transfer
+	   ]
+	Request accepted by the server and assigned a dap_id: 2
+	================
+	Connection closed.
+
+4.2. "stork_status" command:
+============================
+
+It is similar to condor_status. You just give the host_name on which Stork
+server is running and the dap_id of the request that you want to learn the
+status of. And than just call:
+
+stork_status <host_name> <dap_id>
+
+eg.
+
+	nostos(847)% stork_status skywalker 1
+	Trying 128.105.165.17..
+	connected to skywalker..
+	===============
+	status history:
+	===============
+	dap_id = 1;
+				
+	status = request_completed;
+	timestamp = 'Thu Aug 29 21:31:11 2002 (CDT) -06:00';
+
+	===============
+	connection closed.
+
+4.3. "stork_rm" command:
+============================
+
+It is similar to condor_rm. You just give the host_name on which Stork server
+is running and the dap_id of the request that you want to remove from the Stork
+queue.  And than just call:
+
+stork_rm <host_name> <dap_id>
+
+eg.
+
+	nostos(311)% stork_rm skywalker 2
+	Trying 128.105.165.17..
+	Connected to skywalker..
+	===============
+	DaP job 2 is removed from queue..
+	===============
+	Connection closed.
+
+4.4. Stork client API:
+======================
+[API not available in this release]
+
+There is a shared library (libstork_client_interface.a) so that other
+applications which want to send requests to Stork through API can do that by
+simply linking to this library.
+
+5. Stork Logging facilities:
+============================
+
+Stork utilizes Condor Classad technology for logging. Stork provides three
+different logging formats, one of them being essential to Stork system, and the
+other two optional.
+
+5.1. Essential DaP logging:
+===========================
+
+This is the essential log format used by the Stork server itself to manage & monitor 
+DaP requests.
+
+    [ 
+        dap_id = 1; 
+	status = "request_received"; 
+	dap_type = transfer; 
+	src_url = "file:/p/condor/workspaces/kosart/1.test"; 
+	dest_url = "gsiftp://beak.cs.wisc.edu/tmp/1.test"; 
+	timestamp = 'Thu Mar 20 20:09:03 2003 (CST) -06:00' 
+    ]; 
+
+    [ 
+	dap_id = 1; 
+	status = "processing_request"; 
+	timestamp = 'Thu Mar 20 20:09:05 2003 (CST) -06:00' 
+    ]; 
+
+    [ 
+	dap_id = 1; 
+	status = "request_rescheduled"; 
+	error_code = "GLOBUS error: "; 
+	num_attempts = 1; 
+	timestamp = 'Thu Mar 20 20:09:06 2003 (CST) -06:00' 
+    ]; 
+
+    [ 
+	dap_id = 1; 
+	status = "request_completed"; 
+	timestamp = 'Thu Mar 20 20:09:38 2003 (CST) -06:00' 
+    ]; 
+
+5.2. Optional XML logging:
+==========================
+
+This is an optional logging format for people who prefer XML for parsing log files.
+
+<c>
+    <a n="dap_id"><n>3</n></a>
+    <a n="status"><s>request_received</s></a>
+    <a n="dap_type"><e>transfer</e></a>
+    <a n="src_url"><s>file:/p/condor/workspaces/kosart/1.test</s></a>
+    <a n="dest_url"><s>gsiftp://beak.cs.wisc.edu/tmp/1.test</s></a>
+    <a n="timestamp"><t>Thu Mar 20 21:18:43 2003 (CST) t>-06:00</t</t></a>
+</c>
+
+<c>
+    <a n="dap_id"><n>3</n></a>
+    <a n="status"><s>processing_request</s></a>
+    <a n="dap_type"><e>transfer</e></a>
+    <a n="src_url"><s>file:/p/condor/workspaces/kosart/1.test</s></a>
+    <a n="dest_url"><s>gsiftp://beak.cs.wisc.edu/tmp/1.test</s></a>
+    <a n="timestamp"><t>Thu Mar 20 21:18:45 2003 (CST) t>-06:00</t</t></a>
+</c>
+
+<c>
+    <a n="dap_id"><n>3</n></a>
+    <a n="status"><s>request_completed</s></a>
+    <a n="dap_type"><e>transfer</e></a>
+    <a n="src_url"><s>file:/p/condor/workspaces/kosart/1.test</s></a>
+    <a n="dest_url"><s>gsiftp://beak.cs.wisc.edu/tmp/1.test</s></a>
+    <a n="timestamp"><t>Thu Mar 20 21:19:32 2003 (CST) t>-06:00</t</t></a>
+</c>
+
+5.2. Optional Condor Userlog format:
+====================================
+
+This is especially for interaction with Condor tools, eg. with DAGMan.
+
+<c>
+    <a n="MyType"><s>SubmitEvent</s></a>
+    <a n="EventTime"><t>Wed Feb 19 11:24:29 2003 (CST) t>-06:00</t</t></a>
+    <a n="Cluster"><n>101</n></a>
+    <a n="EventTypeNumber"><n>0</n></a>
+    <a n="LogNotes"><s>DAG Node: B1</s></a>
+</c>
+
+<c>
+    <a n="MyType"><s>ExecuteEvent</s></a>
+    <a n="EventTime"><t>Wed Feb 19 11:24:30 2003 (CST) t>-06:00</t</t></a>
+    <a n="Cluster"><n>101</n></a>
+    <a n="EventTypeNumber"><n>1</n></a>
+    <a n="LogNotes"><s>DAG Node: B1</s></a>
+</c>
+
+<c>
+    <a n="TerminatedNormally"><n>1</n></a>
+    <a n="MyType"><s>JobCompleteEvent</s></a>
+    <a n="EventTime"><t>Wed Feb 19 11:55:53 2003 (CST) t>-06:00</t</t></a>
+    <a n="Cluster"><n>101</n></a>
+    <a n="EventTypeNumber"><n>5</n></a>
+    <a n="ReturnValue"><n>0</n></a>
+    <a n="LogNotes"><s>DAG Node: B1</s></a>
+</c>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

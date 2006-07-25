@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -20,14 +20,10 @@
   * RIGHT.
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-//#define EXPERIMENTAL
 #include "condor_common.h"
 #include "condor_config.h"
 #include "condor_state.h"
 #include "condor_api.h"
-//#include "condor_query.h"	// NAC
-//#include "ad_printmask.h"	// NAC
-//#include "classadList.h"	// NAC
 #include "status_types.h"
 #include "totals.h"
 #include "get_daemon_name.h"
@@ -42,7 +38,7 @@
 #include "condor_distribution.h"
 
 // global variables
-ClassAdPrintMask pm;
+AttrListPrintMask pm;
 char		*DEFAULT= "<default>";
 DCCollector* pool = NULL;
 AdTypes		type 	= (AdTypes) -1;
@@ -62,8 +58,6 @@ ExtArray<ExprTree*> sortLessThanExprs( 4 );
 ExtArray<ExprTree*> sortEqualExprs( 4 );
 bool            javaMode = false;
 
-//ClassAdAnalyzer analyzer;	// NAC
-
 // instantiate templates
 template class ExtArray<ExprTree*>;
 
@@ -73,8 +67,8 @@ void firstPass  (int, char *[]);
 void secondPass (int, char *[]);
 void prettyPrint(ClassAdList &, TrackTotals *);
 int  matchPrefix(const char *, const char *);
-int  lessThanFunc(ClassAd*,ClassAd*,void*);
-int  customLessThanFunc(ClassAd*,ClassAd*,void*);
+int  lessThanFunc(AttrList*,AttrList*,void*);
+int  customLessThanFunc(AttrList*,AttrList*,void*);
 
 extern "C" int SetSyscalls (int) {return 0;}
 extern	void setPPstyle (ppOption, int, char *);
@@ -115,6 +109,12 @@ main (int argc, char *argv[])
 	// can override it
 	switch (type)
 	{
+#if WANT_QUILL 
+	  case QUILL_AD:
+		setPPstyle(PP_QUILL_NORMAL, 0, DEFAULT);
+		break;
+#endif /* WANT_QUILL */
+
 	  case STARTD_AD:
 		setPPstyle(PP_STARTD_NORMAL, 0, DEFAULT);
 		break;
@@ -139,6 +139,10 @@ main (int argc, char *argv[])
 		setPPstyle(PP_STORAGE_NORMAL, 0, DEFAULT);
 		break;
 
+	  case NEGOTIATOR_AD:
+		setPPstyle(PP_NEGOTIATOR_NORMAL, 0, DEFAULT);
+		break;
+
 	  case ANY_AD:
 		setPPstyle(PP_ANY_NORMAL, 0, DEFAULT);
 		break;
@@ -149,12 +153,17 @@ main (int argc, char *argv[])
 
 	// set the constraints implied by the mode
 	switch (mode) {
+#if WANT_QUILL 
+	  case MODE_QUILL_NORMAL:
+#endif /* WANT_QUILL */
+
 	  case MODE_STARTD_NORMAL:
 	  case MODE_MASTER_NORMAL:
 	  case MODE_CKPT_SRVR_NORMAL:
 	  case MODE_SCHEDD_NORMAL: 
 	  case MODE_SCHEDD_SUBMITTORS:
 	  case MODE_COLLECTOR_NORMAL:
+	  case MODE_NEGOTIATOR_NORMAL:
 	  case MODE_STORAGE_NORMAL:
 	  case MODE_ANY_NORMAL:
 		break;
@@ -216,8 +225,6 @@ main (int argc, char *argv[])
 	// if diagnose was requested, just print the query ad
 	if (diagnose) {
 		ClassAd 	queryAd;
-		std::string buffer;		// NAC
-		PrettyPrint pp;			// NAC
 
 		// print diagnostic information about inferred internal state
 		setMode ((Mode) 0, 0, NULL);
@@ -226,9 +233,7 @@ main (int argc, char *argv[])
 		printf ("----------\n");
 
 		q = query->getQueryAd (queryAd);
-//		queryAd.fPrint (stdout);
-		pp.Unparse( buffer, &queryAd );		// NAC
-		cout << buffer << endl; 			// NAC
+		queryAd.fPrint (stdout);
 
 		printf ("----------\n");
 		fprintf (stderr, "Result of making query ad was:  %d\n", q);
@@ -248,9 +253,19 @@ main (int argc, char *argv[])
 		case MODE_STARTD_COD:
 			d = new Daemon( DT_STARTD, direct, addr );
 			break;
+
+#if WANT_QUILL 
+		case MODE_QUILL_NORMAL: 
+			d = new Daemon( DT_QUILL, direct, addr );
+			break;
+#endif /* WANT_QUILL */
+
 		case MODE_SCHEDD_NORMAL: 
 		case MODE_SCHEDD_SUBMITTORS:
 			d = new Daemon( DT_SCHEDD, direct, addr );
+			break;
+		case MODE_NEGOTIATOR_NORMAL:
+			d = new Daemon( DT_NEGOTIATOR, direct, addr );
 			break;
 		case MODE_CKPT_SRVR_NORMAL:
 		case MODE_COLLECTOR_NORMAL:
@@ -273,11 +288,18 @@ main (int argc, char *argv[])
 			}
 		}
 	}
-		//debug NAC
-//	printf("addr = %s\n", addr);
 
-	CondorError errstack;
-	if ((q = query->fetchAds (result, addr, &errstack)) != Q_OK) {
+	CondorError errstack;	
+	if (addr) {
+		q = query->fetchAds (result, addr, &errstack);
+	} else {
+		CollectorList * collectors = CollectorList::create();
+		q = collectors->query (*query, result);
+		delete collectors;
+	}
+		
+
+	if (q != Q_OK) {
 		if (q == Q_COMMUNICATION_ERROR) {
 			fprintf( stderr, "%s\n", errstack.getFullText(true) );
 				// if we're not an expert, we want verbose output
@@ -297,11 +319,11 @@ main (int argc, char *argv[])
 		result.Sort((SortFunctionType) customLessThanFunc );
 	} else {
 		result.Sort ((SortFunctionType)lessThanFunc);
-	}	
+	}
 
 	// output result
 	prettyPrint (result, &totals);
-
+	
 	// be nice ...
 	{
 		int last = sortLessThanExprs.getlast();
@@ -337,9 +359,13 @@ usage ()
 		"\t-master\t\t\tDisplay daemon master attributes\n"
 		"\t-pool <name>\t\tGet information from collector <name>\n"
 		"\t-run\t\t\tSame as -claimed [deprecated]\n"
+#if WANT_QUILL 
+		"\t-quill\t\t\tDisplay attributes of quills\n"
+#endif /* WANT_QUILL */
 		"\t-schedd\t\t\tDisplay attributes of schedds\n"
 		"\t-server\t\t\tDisplay important attributes of resources\n"
 		"\t-startd\t\t\tDisplay resource attributes\n"
+		"\t-negotiator\t\tDisplay negotiator attributes\n"
 		"\t-storage\t\tDisplay network storage resources\n"
 		"\t-any\t\t\tDisplay any resources\n"
 		"\t-state\t\t\tDisplay state of resources\n"
@@ -480,11 +506,19 @@ firstPass (int argc, char *argv[])
 		if (matchPrefix (argv[i], "-schedd")) {
 			setMode (MODE_SCHEDD_NORMAL, i, argv[i]);
 		} else
+#if WANT_QUILL 
+		if (matchPrefix (argv[i], "-quill")) {
+			setMode (MODE_QUILL_NORMAL, i, argv[i]);
+		} else
+#endif /* WANT_QUILL */
 		if (matchPrefix (argv[i], "-license")) {
 			setMode (MODE_LICENSE_NORMAL, i, argv[i]);
 		} else
 		if (matchPrefix (argv[i], "-storage")) {
 			setMode (MODE_STORAGE_NORMAL, i, argv[i]);
+		} else
+		if (matchPrefix (argv[i], "-negotiator")) {
+			setMode (MODE_NEGOTIATOR_NORMAL, i, argv[i]);
 		} else
 		if (matchPrefix (argv[i], "-any")) {
 			setMode (MODE_ANY_NORMAL, i, argv[i]);
@@ -499,18 +533,15 @@ firstPass (int argc, char *argv[])
 			}
 			char	exprString[1024];
 			ExprTree	*sortExpr;
-			ClassAdParser 	parser;	// NAC
 			exprString[0] = '\0';
 			sprintf( exprString, "MY.%s < TARGET.%s", argv[i], argv[i] );
-//			if( Parse( exprString, sortExpr ) ) {
-			if( !parser.ParseExpression( exprString, sortExpr ) ) {	// NAC
+			if( Parse( exprString, sortExpr ) ) {
 				fprintf( stderr, "Error:  Parse error of: %s\n", exprString );
 				exit( 1 );
 			}
 			sortLessThanExprs[sortLessThanExprs.getlast()+1] = sortExpr;
 			sprintf( exprString, "MY.%s == TARGET.%s", argv[i], argv[i] );
-//			if( Parse( exprString, sortExpr ) ) {
-			if( !parser.ParseExpression( exprString, sortExpr ) ) {	// NAC
+			if( Parse( exprString, sortExpr ) ) {
 				fprintf( stderr, "Error:  Parse error of: %s\n", exprString );
 				exit( 1 );
 			}
@@ -612,11 +643,15 @@ secondPass (int argc, char *argv[])
 			switch (mode) {
 			  case MODE_STARTD_NORMAL:
 			  case MODE_STARTD_COD:
+#if WANT_QUILL 
+			  case MODE_QUILL_NORMAL:
+#endif /* WANT_QUILL */
 			  case MODE_SCHEDD_NORMAL:
 			  case MODE_SCHEDD_SUBMITTORS:
 			  case MODE_MASTER_NORMAL:
 			  case MODE_COLLECTOR_NORMAL:
 			  case MODE_CKPT_SRVR_NORMAL:
+  			  case MODE_NEGOTIATOR_NORMAL:
 			  case MODE_STORAGE_NORMAL:
 			  case MODE_ANY_NORMAL:
     		  case MODE_STARTD_AVAIL:
@@ -665,16 +700,14 @@ matchPrefix (const char *s1, const char *s2)
 
 
 int
-lessThanFunc(ClassAd *ad1, ClassAd *ad2, void *)
+lessThanFunc(AttrList *ad1, AttrList *ad2, void *)
 {
 	char 	buf1[128];
 	char	buf2[128];
 	int		val;
 
-//	if( !ad1->LookupString(ATTR_OPSYS, buf1) ||
-//		!ad2->LookupString(ATTR_OPSYS, buf2) ) {
-	if( !ad1->EvaluateAttrString( ATTR_OPSYS, buf1, 128 ) ||	// NAC
-		!ad2->EvaluateAttrString( ATTR_OPSYS, buf2, 128 ) ) {	// NAC
+	if( !ad1->LookupString(ATTR_OPSYS, buf1) ||
+		!ad2->LookupString(ATTR_OPSYS, buf2) ) {
 		buf1[0] = '\0';
 		buf2[0] = '\0';
 	}
@@ -683,10 +716,8 @@ lessThanFunc(ClassAd *ad1, ClassAd *ad2, void *)
 		return (val < 0);
 	} 
 
-//	if( !ad1->LookupString(ATTR_ARCH, buf1) ||
-//		!ad2->LookupString(ATTR_ARCH, buf2) ) {
-	if( !ad1->EvaluateAttrString( ATTR_ARCH, buf1, 128 ) ||	// NAC
-		!ad2->EvaluateAttrString( ATTR_ARCH, buf2, 128 ) ) {	// NAC
+	if( !ad1->LookupString(ATTR_ARCH, buf1) ||
+		!ad2->LookupString(ATTR_ARCH, buf2) ) {
 		buf1[0] = '\0';
 		buf2[0] = '\0';
 	}
@@ -695,10 +726,8 @@ lessThanFunc(ClassAd *ad1, ClassAd *ad2, void *)
 		return (val < 0);
 	} 
 
-//	if( !ad1->LookupString(ATTR_MACHINE, buf1) ||
-//		!ad2->LookupString(ATTR_MACHINE, buf2) ) {
-	if( !ad1->EvaluateAttrString( ATTR_MACHINE, buf1, 128 ) ||	// NAC
-		!ad2->EvaluateAttrString( ATTR_MACHINE, buf2, 128 ) ) {	// NAC
+	if( !ad1->LookupString(ATTR_MACHINE, buf1) ||
+		!ad2->LookupString(ATTR_MACHINE, buf2) ) {
 		buf1[0] = '\0';
 		buf2[0] = '\0';
 	}
@@ -707,72 +736,33 @@ lessThanFunc(ClassAd *ad1, ClassAd *ad2, void *)
 		return (val < 0);
 	} 
 
-//	if (!ad1->LookupString(ATTR_NAME, buf1) ||
-//		!ad2->LookupString(ATTR_NAME, buf2))
-	if( !ad1->EvaluateAttrString( ATTR_NAME, buf1, 128 ) ||	// NAC
-		!ad2->EvaluateAttrString( ATTR_NAME, buf2, 128 ) ) {	// NAC
+	if (!ad1->LookupString(ATTR_NAME, buf1) ||
+		!ad2->LookupString(ATTR_NAME, buf2))
 		return 0;
-	} // NAC
 	return ( strcmp( buf1, buf2 ) < 0 );
 }
 
 int
-customLessThanFunc( ClassAd *ad1, ClassAd *ad2, void *)
+customLessThanFunc( AttrList *ad1, AttrList *ad2, void *)
 {
-
-//	EvalResult 	result;
-	Value 		result;			   // NAC
+	EvalResult 	result;
 	int			last = sortLessThanExprs.getlast();
 
-	ExprTree 	*currentTree;
-//	int 		intValue;
-	bool		boolValue = false;		// NAC
-	
-	MatchClassAd mad;			// NAC
-	mad.ReplaceLeftAd( ad1 );	// NAC
-	mad.ReplaceRightAd( ad2 );	// NAC
-
 	for( int i = 0 ; i <= last ; i++ ) {
-//		sortLessThanExprs[i]->EvalTree( ad1, ad2, &result );
-//		if( result.type == LX_INTEGER ) {
-//			if( result.i ) {
-//				return 1;
-//			} else {
-//				sortEqualExprs[i]->EvalTree( ad1, ad2, &result );
-//				if( result.type != LX_INTEGER || !result.i )
-//					return 0;
-//			}
-//		} else {
-//			return 0;
-//		}
-		currentTree = sortLessThanExprs[i];			// NAC	
-		currentTree->SetParentScope( ad1 );
-		ad1->EvaluateExpr( currentTree, result ); 	//  |	
-		if( result.IsBooleanValue( boolValue ) ) {	// \|/
-			if( boolValue) {	
-				mad.RemoveLeftAd();
-				mad.RemoveRightAd();
+		sortLessThanExprs[i]->EvalTree( ad1, ad2, &result );
+		if( result.type == LX_INTEGER ) {
+			if( result.i ) {
 				return 1;
 			} else {
-				currentTree = sortEqualExprs[i];
-				currentTree->SetParentScope( ad1 );
-				ad1->EvaluateExpr( currentTree, result );
-				if( result.IsBooleanValue( boolValue ) ) {
-					if( !boolValue ) {
-						mad.RemoveLeftAd();
-						mad.RemoveRightAd();
-						return 0;
-					}
-				}
+				sortEqualExprs[i]->EvalTree( ad1, ad2, &result );
+				if( result.type != LX_INTEGER || !result.i )
+					return 0;
 			}
 		} else {
-			mad.RemoveLeftAd();
-			mad.RemoveRightAd();
 			return 0;
 		}
 	}
-	mad.RemoveLeftAd();
-	mad.RemoveRightAd();							// END NAC
+
 	return 0;
 }
 

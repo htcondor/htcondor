@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -26,7 +26,7 @@
 
 int open_file( const char *name );
 
-void
+int
 main( int argc, char *argv[] )
 {
 	char	cmd [512];
@@ -92,10 +92,10 @@ main( int argc, char *argv[] )
 			continue;
 		}
 
-
-
 		cout << "Unknown command\n";
 	}
+
+	return 0;
 }
 
 int

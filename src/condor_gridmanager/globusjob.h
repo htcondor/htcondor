@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -48,9 +48,8 @@ void gramCallbackHandler( void *user_arg, char *job_contact, int state,
 
 void GlobusJobInit();
 void GlobusJobReconfig();
-bool GlobusJobAdMustExpand( const ClassAd *jobad );
 BaseJob *GlobusJobCreate( ClassAd *jobad );
-extern const char *GlobusJobAdConst;
+bool GlobusJobAdMatch( const ClassAd *job_ad );
 
 class GlobusJob : public BaseJob
 {
@@ -70,6 +69,7 @@ class GlobusJob : public BaseJob
 	bool GetCallbacks();
 	void ClearCallbacks();
 	BaseResource *GetResource();
+	void SetRemoteJobId( const char *job_id );
 
 	/* If true, then ATTR_ON_EXIT_BY_SIGNAL, ATTR_ON_EXIT_SIGNAL, and
 	   ATTR_ON_EXIT_CODE are valid.  If false, no exit status is available.
@@ -104,15 +104,12 @@ class GlobusJob : public BaseJob
 		{ maxConnectFailures = count; }
 
 	// New variables
-	bool resourceDown;
-	bool resourceStateKnown;
 	int gmState;
 	int globusState;
 	int globusStateErrorCode;
 	int globusStateBeforeFailure;
 	int callbackGlobusState;
 	int callbackGlobusStateErrorCode;
-	bool resourcePingPending;
 	bool jmUnreachable;
 	bool jmDown;
 	GlobusResource *myResource;
@@ -142,8 +139,8 @@ class GlobusJob : public BaseJob
 	char *gramCallbackContact;
 
 
-	Proxy *myProxy;
-	GahpClient gahp;
+	Proxy *jobProxy;
+	GahpClient *gahp;
 
 	MyString *buildSubmitRSL();
 	MyString *buildRestartRSL();
@@ -175,25 +172,33 @@ class GlobusJob : public BaseJob
 	MyString outputClassadFilename;
 	bool useGridShell;
 
+	int jmShouldBeStoppingTime;
+
  protected:
 	bool callbackRegistered;
 	int connect_failure_counter;
 	bool AllowTransition( int new_state, int old_state );
 
-	bool FailureIsRestartable( int error_code );
+	bool RetryFailureOnce( int error_code );
+	bool RetryFailureAlways( int error_code );
+//	bool FailureIsRestartable( int error_code );
 	bool FailureNeedsCommit( int error_code );
 	bool JmShouldSleep();
 
 private:
 	// Copy constructor not implemented.  Don't call.
 	GlobusJob( GlobusJob& copy );
+
+	bool mergedGridShellOutClassad;
 };
 
 bool WriteGlobusSubmitEventToUserLog( ClassAd *job_ad );
 bool WriteGlobusSubmitFailedEventToUserLog( ClassAd *job_ad,
-											int failure_code );
-bool WriteGlobusResourceUpEventToUserLog( ClassAd *job_ad );
-bool WriteGlobusResourceDownEventToUserLog( ClassAd *job_ad );
+											int failure_code,
+											const char *failure_mesg);
+
+const char *rsl_stringify( const MyString& src );
+const char *rsl_stringify( const char *string );
 
 #endif
 

@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -27,7 +27,7 @@
 
 #include "condor_classad.h"
 // #include "classad_log.h"
-#include "classadList.h"
+
 #include "MyString.h"
 
 // this is the required minimum separation between two priorities for them
@@ -53,6 +53,9 @@ public:
   float GetPriority(const MyString& CustomerName); // get priority for a customer
   void SetPriority(const MyString& CustomerName, float Priority); // set priority for a customer
 
+  void SetAccumUsage(const MyString& CustomerName, float AccumUsage); // set accumulated usage for a customer
+  void SetBeginTime(const MyString& CustomerName, int BeginTime); // set begin usage time for a customer
+  void SetLastTime(const MyString& CustomerName, int LastTime); // set Last usage time for a customer
   float GetPriorityFactor(const MyString& CustomerName); // get priority factor for a customer
 
   void SetPriorityFactor(const MyString& CustomerName, float PriorityFactor);
@@ -66,8 +69,8 @@ public:
   void UpdatePriorities(); // update all the priorities
 
   void CheckMatches(ClassAdList& ResourceList);  // Remove matches that are not claimed
-  ClassAd* ReportState();
-  ClassAd* ReportState(const MyString& CustomerName, int * NumResources = NULL);
+  AttrList* ReportState();
+  AttrList* ReportState(const MyString& CustomerName, int * NumResources = NULL);
                                                 
   void DisplayLog();
   void DisplayMatches();
@@ -93,6 +96,8 @@ private:
   float HalfLifePeriod;     // The time in sec in which the priority is halved by aging
   MyString LogFileName;      // Name of Log file
   int	MaxAcctLogSize;		// Max size of log file
+  bool   DiscountSuspendedResources;
+  StringList *GroupNamesList;
 
   //--------------------------------------------------------
   // Data members
@@ -127,8 +132,8 @@ private:
   //--------------------------------------------------------
 
   static MyString GetResourceName(ClassAd* Resource);
-  static int IsClaimed(ClassAd* ResourceAd, MyString& CustomerName);
-  static int CheckClaimedOrMatched(ClassAd* ResourceAd, const MyString& CustomerName);
+  int IsClaimed(ClassAd* ResourceAd, MyString& CustomerName);
+  int CheckClaimedOrMatched(ClassAd* ResourceAd, const MyString& CustomerName);
   static ClassAd* FindResourceAd(const MyString& ResourceName, ClassAdList& ResourceList);
   static MyString GetDomain(const MyString& CustomerName);
 

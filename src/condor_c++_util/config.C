@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -26,9 +26,10 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_string.h"
-#include "string_list.h"
 #include "extra_param_info.h"
 #include "condor_random_num.h"
+#include "condor_uid.h"
+#include "my_popen.h"
 
 #if defined(__cplusplus)
 extern "C" {
@@ -50,9 +51,9 @@ condor_isalnum(int c)
 		return 0;
 	}
 }
-#define ISIDCHAR(c)		(condor_isalnum(c) || ((c) == '_'))
+#define ISIDCHAR(c)		(condor_isalnum(c) || ((c) == '_') || ((c)=='.') )
 #else
-#define ISIDCHAR(c)		(isalnum(c) || ((c) == '_'))
+#define ISIDCHAR(c)		(isalnum(c) || ((c) == '_') || ((c)=='.') )
 #endif
 
 // $$ expressions may also contain a colon
@@ -63,28 +64,143 @@ condor_isalnum(int c)
 // Magic macro to represent a dollar sign, i.e. $(DOLLAR)="$"
 #define DOLLAR_ID "DOLLAR"
 
-int Read_config( char* config_file, BUCKET** table, 
-				 int table_size, int expand_flag,
-				 ExtraParamTable *extra_info)
+bool 
+is_piped_command(const char* filename)
 {
-  	FILE			*conf_fp;
-	char			*name, *value, *rhs;
-	char			*ptr;
-	char			op;
+	bool retVal = false;
 
-	ConfigLineNo = 0;
-
-	conf_fp = fopen(config_file, "r");
-	if( conf_fp == NULL ) {
-		printf("Can't open file %s\n", config_file);
-		return( -1 );
+	char* pdest = strchr( filename, '|' );
+	if ( pdest != NULL ) {
+		// This is not a filename (still not sure it's a valid command though)
+		retVal = true;
 	}
 
-	for(;;) {
-		name = getline_implementation(conf_fp,128);
-		if( name == NULL ) {
+	return retVal;
+}
+
+
+// Make sure the last character is the '|' char.  For now, that's our only criteria.
+bool 
+is_valid_command(const char* cmdToExecute)
+{
+	bool retVal = false;
+
+	int cmdStrLength = strlen(cmdToExecute);
+	if ( cmdToExecute[cmdStrLength - 1] == '|' ) {
+		retVal = true;
+	}
+
+	return retVal;
+}
+
+
+int
+Read_config( const char* config_source, BUCKET** table, 
+			 int table_size, int expand_flag,
+			 bool check_runtime_security,
+			 ExtraParamTable *extra_info)
+{
+  	FILE*	conf_fp = NULL;
+	char*	name = NULL;
+	char*	value = NULL;
+	char*	rhs = NULL;
+	char*	ptr = NULL;
+	char	op;
+	int		retval = 0;
+	bool	is_pipe_cmd = false;
+	bool	firstRead = true;
+
+	ConfigLineNo = 0;
+   
+	// Determine if the config file name specifies a file to open, or a
+	// pipe to suck on. Process each accordingly
+	if ( is_piped_command(config_source) ) {
+		is_pipe_cmd = true;
+		if ( is_valid_command(config_source) ) {
+			// try to run the cmd specified before the '|' symbol, and
+			// get the configuration from it's output.
+			char *cmdToExecute = strdup( config_source );
+			cmdToExecute[strlen(cmdToExecute)-1] = '\0';
+
+			ArgList argList;
+			MyString args_errors;
+			argList.AppendArgsV1RawOrV2Quoted(cmdToExecute, &args_errors);
+			conf_fp = my_popen(argList, "r", FALSE);
+			if( conf_fp == NULL ) {
+				printf("Can't open cmd %s\n", cmdToExecute);
+				free( cmdToExecute );
+				return -1;
+			}
+			free( cmdToExecute );
+		} else {
+			printf("Specified cmd, %s, not a valid command to execute.  It must have a '|' "
+				   "character at the end.\n", config_source);
+			return( -1 );
+		}
+	} else {
+		is_pipe_cmd = false;
+		conf_fp = fopen(config_source, "r");
+		if( conf_fp == NULL ) {
+			printf("Can't open file %s\n", config_source);
+			return( -1 );
+		}
+	}
+
+	if( check_runtime_security ) {
+#ifndef WIN32
+			// unfortunately, none of this works on windoze... (yet)
+		if ( is_pipe_cmd ) {
+			fprintf( stderr, "Configuration Error File <%s>: runtime config "
+					 "not allowed to come from a pipe command\n",
+					 config_source );
+			retval = -1;
+			goto cleanup;
+		}
+		int fd = fileno(conf_fp);
+		struct stat statbuf;
+		uid_t f_uid;
+		int rval = fstat( fd, &statbuf );
+		if( rval < 0 ) {
+			fprintf( stderr, "Configuration Error File <%s>, fstat() failed: %s (errno: %d)\n",
+					 config_source, strerror(errno), errno );
+			retval = -1;
+			goto cleanup;
+		}
+		f_uid = statbuf.st_uid;
+		if( can_switch_ids() ) {
+				// if we can switch, the file *must* be owned by root
+			if( f_uid != 0 ) {
+				fprintf( stderr, "Configuration Error File <%s>, "
+						 "running as root yet runtime config file owned "
+						 "by uid %d, not 0!\n", config_source, (int)f_uid );
+				retval = -1;
+				goto cleanup;
+			}
+		} else {
+				// if we can't switch, at least ensure we own the file
+			if( f_uid != get_my_uid() ) {
+				fprintf( stderr, "Configuration Error File <%s>, "
+						 "running as uid %d yet runtime config file owned "
+						 "by uid %d!\n", config_source, (int)get_my_uid(),
+						 (int)f_uid );
+				retval = -1;
+				goto cleanup;
+			}
+		}
+#endif /* ! WIN32 */
+	} // if( check_runtime_security )
+
+	while(true) {
+		name = getline_implementation(conf_fp, 128);
+		// If the file is empty the first time through, warn the user.
+		if (name == NULL) {
+			if (firstRead) {
+				dprintf(D_FULLDEBUG, "WARNING: Config source is empty: %s\n",
+						config_source);
+			}
 			break;
 		}
+		firstRead = false;
 		
 		/* Skip over comments */
 		if( *name == '#' || blankline(name) )
@@ -114,8 +230,8 @@ int Read_config( char* config_file, BUCKET** table,
 				continue;
 			} else {
 				// No operator and no square bracket... bail.
-				(void)fclose( conf_fp );
-				return( -1 );
+				retval = -1;
+				goto cleanup;
 			}
 		}
 
@@ -131,8 +247,8 @@ int Read_config( char* config_file, BUCKET** table,
 			}
 
 			if( !*ptr ) {
-				(void)fclose( conf_fp );
-				return( -1 );
+				retval = -1;
+				goto cleanup;
 			}
 
 			op = *ptr++;
@@ -150,8 +266,8 @@ int Read_config( char* config_file, BUCKET** table,
 		/* Expand references to other parameters */
 		name = expand_macro( name, table, table_size );
 		if( name == NULL ) {
-			(void)fclose( conf_fp );
-			return( -1 );
+			retval = -1;
+			goto cleanup;
 		}
 
 		/* Check that "name" is a legal identifier : only
@@ -160,26 +276,26 @@ int Read_config( char* config_file, BUCKET** table,
 		while( *ptr ) {
 			char c = *ptr++;
 			if( !ISIDCHAR(c) ) {
-				(void) fclose( conf_fp );
 				fprintf( stderr,
 		"Configuration Error File <%s>, Line %d: Illegal Identifier: <%s>\n",
-					config_file, ConfigLineNo, name );
-				return( -1 );
+					config_source, ConfigLineNo, name );
+				retval = -1;
+				goto cleanup;
 			}
 		}
 
 		if( expand_flag == EXPAND_IMMEDIATE ) {
 			value = expand_macro( rhs, table, table_size );
 			if( value == NULL ) {
-				(void)fclose( conf_fp );
-				return( -1 );
+				retval = -1;
+				goto cleanup;
 			}
 		} else  {
 			/* expand self references only */
 			value = expand_macro( rhs, table, table_size, name );
 			if( value == NULL ) {
-				(void)fclose( conf_fp );
-				return( -1 ); 
+				retval = -1;
+				goto cleanup;
 			}
 		}  
 
@@ -195,22 +311,37 @@ int Read_config( char* config_file, BUCKET** table,
 			/* Put the value in the Configuration Table */
 			insert( name, value, table, table_size );
 			if (extra_info != NULL) {
-				extra_info->AddFileParam(name, config_file, ConfigLineNo);
+				extra_info->AddFileParam(name, config_source, ConfigLineNo);
 			}
 		} else {
 			fprintf( stderr,
 				"Configuration Error File <%s>, Line %d: Syntax Error\n",
-				config_file, ConfigLineNo );
-			(void)fclose( conf_fp );
-			return -1;
+				config_source, ConfigLineNo );
+			retval = -1;
+			goto cleanup;
 		}
 
 		FREE( name );
+		name = NULL;
 		FREE( value );
+		value = NULL;
 	}
 
-	(void)fclose( conf_fp );
-	return 0;
+ cleanup:
+	if ( conf_fp ) {
+		if ( is_pipe_cmd ) {
+			int exit_code = my_pclose( conf_fp );
+			if ( retval == 0 && exit_code != 0 ) {
+				fprintf( stderr, "Configuration Error File <%s>: "
+						 "command terminated with exit code %d\n",
+						 config_source, exit_code );
+				retval = -1;
+			}
+		} else {
+			fclose( conf_fp );
+		}
+	}
+	return retval;
 }
 
 
@@ -219,7 +350,7 @@ int Read_config( char* config_file, BUCKET** table,
 ** 0 <= value < size 
 */
 int
-config_hash( register char *string, register int size )
+condor_hash( register char *string, register int size )
 {
 	register unsigned int		answer;
 
@@ -248,7 +379,7 @@ insert( const char *name, const char *value, BUCKET **table, int table_size )
 		/* Make sure not already in hash table */
 	strcpy( tmp_name, name );
 	strlwr( tmp_name );
-	loc = config_hash( tmp_name, table_size );
+	loc = condor_hash( tmp_name, table_size );
 	for( ptr=table[loc]; ptr; ptr=ptr->next ) {
 		if( strcmp(tmp_name,ptr->name) == 0 ) {
 			FREE( ptr->value );
@@ -454,6 +585,89 @@ expand_macro( const char *value, BUCKET **table, int table_size, char *self )
 	return( tmp );
 }
 
+// Local helper only.  If iter's current pointer is
+// null, move along to the beginning of the next non-empty 
+// bucket.  If there are no more non-empty buckets, leave
+// it set to null and advance iter's index past the end (to
+// make it clear we're done)
+static void
+hash_iter_scoot_to_next_bucket(HASHITER p)
+{
+	while(p->current == NULL) {
+		(p->index)++;
+		if(p->index >= p->table_size) {
+			// The hash table is empty
+			return;
+		}
+		p->current = p->table[p->index];
+	}
+}
+
+HASHITER 
+hash_iter_begin(BUCKET ** table, int table_size)
+{
+	ASSERT(table != NULL);
+	ASSERT(table_size > 0);
+	hash_iter * p = (hash_iter *)MALLOC(sizeof(hash_iter));
+	p->table = table;
+	p->table_size = table_size;
+	p->index = 0;
+	p->current = p->table[p->index];
+	hash_iter_scoot_to_next_bucket(p);
+	return p;
+}
+
+int
+hash_iter_done(HASHITER iter)
+{
+	ASSERT(iter);
+	ASSERT(iter->table); // Probably trying to use a iter already hash_iter_delete()d
+	return iter->current == NULL;
+}
+
+int 
+hash_iter_next(HASHITER iter)
+{
+	ASSERT(iter);
+	ASSERT(iter->table); // Probably trying to use a iter already hash_iter_delete()d
+	if(hash_iter_done(iter)) {
+		return 0;
+	}
+	iter->current = iter->current->next;
+	hash_iter_scoot_to_next_bucket(iter);
+	return (iter->current) ? 1 : 0;
+}
+
+char * 
+hash_iter_key(HASHITER iter)
+{
+	ASSERT(iter);
+	ASSERT(iter->table); // Probably trying to use a iter already hash_iter_delete()d
+	ASSERT( ! hash_iter_done(iter) );
+	return iter->current->name;
+}
+
+char * 
+hash_iter_value(HASHITER iter)
+{
+	ASSERT(iter);
+	ASSERT(iter->table); // Probably trying to use a iter already hash_iter_delete()d
+	ASSERT( ! hash_iter_done(iter) );
+	return iter->current->value;
+}
+
+void 
+hash_iter_delete(HASHITER * iter)
+{
+	ASSERT(iter);
+	ASSERT(iter[0]);
+	ASSERT(iter[0]->table); // Probably trying to use a iter already hash_iter_delete()d
+	iter[0]->table = NULL;
+	free(*iter);
+	*iter = 0;
+}
+
+
 /*
 ** Same as get_var() below, but finds special references like $ENV().
 */
@@ -567,54 +781,78 @@ tryagain:
 		}
 
 		if( *++value == '(' ) {
-			if ( getdollardollar ) {
+			if( getdollardollar && *value != NULL && value[1] == '[' ) {
+
+				// This is a classad expression to be evaled.  This layer
+				// doesn't need any intelligence, just scan for "])" which
+				// terminates it.  If we get to end of string without finding
+				// the terminating pattern, this $$ match fails, try again.
+
+				char * end_marker = strstr(value, "])");
+				if( end_marker == NULL ) { goto tryagain; }
+
 				left_end = value - 2;
-			} else {
-				left_end = value - 1;
-			}
-			name = ++value;
-			while( *value && *value != ')' ) {
-				char c = *value++;
-				if( getdollardollar ) {
-					if( !ISDDCHAR(c) ) {
-						tvalue = name;
-						goto tryagain;
-					}
+				name = ++value;
+				right = end_marker + 1;
+				break;
+
+			} else { 
+
+				// This might be a "normal" values $(FOO), $$(FOO) or
+				// $$(FOO:Bar) Skim until ")".  We only allow valid characters
+				// inside (basically alpha-numeric. $$ adds ":"); a non-valid
+				// character means this $$ match fails.  End of string before
+				// ")" means this match fails, try again.
+
+				if ( getdollardollar ) {
+					left_end = value - 2;
 				} else {
-					if( !ISIDCHAR(c) ) {
-						tvalue = name;
-						goto tryagain;
+					left_end = value - 1;
+				}
+				name = ++value;
+				while( *value && *value != ')' ) {
+					char c = *value++;
+					if( getdollardollar ) {
+						if( !ISDDCHAR(c) ) {
+							tvalue = name;
+							goto tryagain;
+						}
+					} else {
+						if( !ISIDCHAR(c) ) {
+							tvalue = name;
+							goto tryagain;
+						}
 					}
 				}
-			}
 
-			if( *value == ')' ) {
-				// We pass (value-name) to strncmp since name contains
-				// the entire line starting from the identifier and value
-				// points to the end of the identifier.  Thus, the difference
-				// between these two pointers gives us the length of the
-				// identifier.
-				int namelen = value-name;
-				if( !self || ( namelen == selflen &&
-							   strincmp( name, self, namelen ) == MATCH ) ) {
-						// $(DOLLAR) has special meaning; it is
-						// set to "$" and is _not_ recursively
-						// expanded.  To implement this, we have
-						// get_var() ignore $(DOLLAR) and we then
-						// handle it in expand_macro().
-					if ( !self && strincmp(name,DOLLAR_ID,namelen) == MATCH ) {
+				if( *value == ')' ) {
+					// We pass (value-name) to strncmp since name contains
+					// the entire line starting from the identifier and value
+					// points to the end of the identifier.  Thus, the difference
+					// between these two pointers gives us the length of the
+					// identifier.
+					int namelen = value-name;
+					if( !self || ( namelen == selflen &&
+								   strincmp( name, self, namelen ) == MATCH ) ) {
+							// $(DOLLAR) has special meaning; it is
+							// set to "$" and is _not_ recursively
+							// expanded.  To implement this, we have
+							// get_var() ignore $(DOLLAR) and we then
+							// handle it in expand_macro().
+						if ( !self && strincmp(name,DOLLAR_ID,namelen) == MATCH ) {
+							tvalue = name;
+							goto tryagain;
+						}
+						right = value;
+						break;
+					} else {
 						tvalue = name;
 						goto tryagain;
 					}
-					right = value;
-					break;
 				} else {
 					tvalue = name;
 					goto tryagain;
 				}
-			} else {
-				tvalue = name;
-				goto tryagain;
 			}
 		} else {
 			tvalue = value;
@@ -645,7 +883,7 @@ lookup_macro( const char *name, BUCKET **table, int table_size )
 
 	strcpy( tmp_name, name );
 	strlwr( tmp_name );
-	loc = config_hash( tmp_name, table_size );
+	loc = condor_hash( tmp_name, table_size );
 	for( ptr=table[loc]; ptr; ptr=ptr->next ) {
 		if( !strcmp(tmp_name,ptr->name) ) {
 			return ptr->value;

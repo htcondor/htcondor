@@ -9,9 +9,9 @@ This module requires the "grid_probe" Condor contrib module which
 should be publicly available soon
 
 Default: grid
-options: nokill
 period: 12h
 prefix: grid_
+kill: false
 
 # It's parameters
 

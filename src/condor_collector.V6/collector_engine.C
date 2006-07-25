@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -27,7 +27,7 @@ extern "C" void event_mgr (void);
 //-------------------------------------------------------------
 
 #include "condor_classad.h"
-//#include "condor_parser.h"
+#include "condor_parser.h"
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_network.h"
@@ -51,22 +51,32 @@ ClassAd* CollectorEngine::LONG_GONE	  = (ClassAd *) 0x3;
 ClassAd* CollectorEngine::THRESHOLD	  = (ClassAd *) 0x4;
 
 static void killHashTable (CollectorHashTable &);
+static int killGenericHashTable(CollectorHashTable *);
+static void purgeHashTable (CollectorHashTable &);
 
 int 	engine_clientTimeoutHandler (Service *);
 int 	engine_housekeepingHandler  (Service *);
 char	*strStatus (ClassAd *);
 
 CollectorEngine::CollectorEngine (CollectorStats *stats ) : 
-	StartdAds     (GREATER_TABLE_SIZE, &hashFunction),
-	StartdPrivateAds(GREATER_TABLE_SIZE, &hashFunction),
-	ScheddAds     (GREATER_TABLE_SIZE, &hashFunction),
-	SubmittorAds  (GREATER_TABLE_SIZE, &hashFunction),
-	LicenseAds    (GREATER_TABLE_SIZE, &hashFunction),
-	MasterAds     (GREATER_TABLE_SIZE, &hashFunction),
-	StorageAds       (GREATER_TABLE_SIZE, &hashFunction),
-	CkptServerAds (LESSER_TABLE_SIZE , &hashFunction),
-	GatewayAds    (LESSER_TABLE_SIZE , &hashFunction),
-	CollectorAds  (LESSER_TABLE_SIZE , &hashFunction)
+	StartdAds     (GREATER_TABLE_SIZE, &adNameHashFunction),
+	StartdPrivateAds(GREATER_TABLE_SIZE, &adNameHashFunction),
+
+#if WANT_QUILL
+	QuillAds     (GREATER_TABLE_SIZE, &adNameHashFunction),
+#endif /* WANT_QUILL */
+
+	ScheddAds     (GREATER_TABLE_SIZE, &adNameHashFunction),
+	SubmittorAds  (GREATER_TABLE_SIZE, &adNameHashFunction),
+	LicenseAds    (GREATER_TABLE_SIZE, &adNameHashFunction),
+	MasterAds     (GREATER_TABLE_SIZE, &adNameHashFunction),
+	StorageAds    (GREATER_TABLE_SIZE, &adNameHashFunction),
+	CkptServerAds (LESSER_TABLE_SIZE , &adNameHashFunction),
+	GatewayAds    (LESSER_TABLE_SIZE , &adNameHashFunction),
+	CollectorAds  (LESSER_TABLE_SIZE , &adNameHashFunction),
+	NegotiatorAds (LESSER_TABLE_SIZE , &adNameHashFunction),
+	HadAds        (LESSER_TABLE_SIZE , &adNameHashFunction),
+	GenericAds    (LESSER_TABLE_SIZE , &stringHashFunction)
 {
 	clientTimeout = 20;
 	machineUpdateInterval = 30;
@@ -81,6 +91,10 @@ CollectorEngine::CollectorEngine (CollectorStats *stats ) :
 CollectorEngine::
 ~CollectorEngine ()
 {
+#if WANT_QUILL
+	killHashTable (QuillAds);
+#endif /* WANT_QUILL */
+
 	killHashTable (StartdAds);
 	killHashTable (StartdPrivateAds);
 	killHashTable (ScheddAds);
@@ -90,6 +104,9 @@ CollectorEngine::
 	killHashTable (StorageAds);
 	killHashTable (CkptServerAds);
 	killHashTable (GatewayAds);
+	killHashTable (NegotiatorAds);
+	killHashTable (HadAds);
+	GenericAds.walk(killGenericHashTable);
 }
 
 
@@ -153,6 +170,12 @@ invokeHousekeeper (AdTypes adtype)
 			cleanHashTable (StartdAds, now, makeStartdAdHashKey);
 			break;
 
+#if WANT_QUILL
+		case QUILL_AD: 
+			cleanHashTable (QuillAds, now, makeQuillAdHashKey);
+			break;
+#endif /* WANT_QUILL */
+
 		case SCHEDD_AD:
 			cleanHashTable (ScheddAds, now, makeScheddAdHashKey);
 			break;
@@ -176,6 +199,21 @@ invokeHousekeeper (AdTypes adtype)
 		case STORAGE_AD:
 			cleanHashTable (StorageAds, now, makeStorageAdHashKey);
 			break;
+
+		case NEGOTIATOR_AD:
+			cleanHashTable (NegotiatorAds, now, makeStorageAdHashKey);
+			break;
+
+		case HAD_AD:
+			cleanHashTable (HadAds, now, makeHadAdHashKey);
+			break;			
+
+	        case GENERIC_AD:
+			CollectorHashTable *cht;
+			GenericAds.startIterations();
+			while (GenericAds.iterate(cht)) {
+				cleanHashTable (*cht, now, makeGenericAdHashKey);
+			}
 
 		default:
 			return 0;
@@ -221,6 +259,26 @@ toggleLogging (void)
 	log = !log;
 }
 
+
+int (*CollectorEngine::genericTableScanFunction)(ClassAd *) = NULL;
+
+int CollectorEngine::
+genericTableWalker(CollectorHashTable *cht)
+{
+	ASSERT(genericTableScanFunction != NULL);
+	return cht->walk(genericTableScanFunction);
+}
+
+int CollectorEngine::
+walkGenericTables(int (*scanFunction)(ClassAd *))
+{
+	int ret;
+	genericTableScanFunction = scanFunction;
+	ret = GenericAds.walk(genericTableWalker);
+	genericTableScanFunction = NULL;
+	return ret;
+}
+
 int CollectorEngine::
 walkHashTable (AdTypes adType, int (*scanFunction)(ClassAd *))
 {
@@ -238,6 +296,12 @@ walkHashTable (AdTypes adType, int (*scanFunction)(ClassAd *))
 	  case SCHEDD_AD:
 		table = &ScheddAds;
 		break;
+
+#if WANT_QUILL
+	  case QUILL_AD:
+		table = &QuillAds;
+		break;
+#endif /* WANT_QUILL */
 
 	  case MASTER_AD:
 		table = &MasterAds;
@@ -267,6 +331,14 @@ walkHashTable (AdTypes adType, int (*scanFunction)(ClassAd *))
 		table = &StorageAds;
 		break;
 
+	  case NEGOTIATOR_AD:
+		table = &NegotiatorAds;
+		break;
+
+	  case HAD_AD:
+		table = &HadAds;
+		break;
+
 	  case ANY_AD:
 		return
 			StorageAds.walk(scanFunction) &&
@@ -275,7 +347,15 @@ walkHashTable (AdTypes adType, int (*scanFunction)(ClassAd *))
 			StartdAds.walk(scanFunction) &&
 			ScheddAds.walk(scanFunction) &&
 			MasterAds.walk(scanFunction) &&
-			SubmittorAds.walk(scanFunction);
+			SubmittorAds.walk(scanFunction) &&
+			NegotiatorAds.walk(scanFunction) &&
+#if WANT_QUILL
+			QuillAds.walk(scanFunction) &&
+#endif
+			HadAds.walk(scanFunction) &&
+			walkGenericTables(scanFunction);
+
+
 	  default:
 		dprintf (D_ALWAYS, "Unknown type %d\n", adType);
 		return 0;
@@ -294,6 +374,22 @@ walkHashTable (AdTypes adType, int (*scanFunction)(ClassAd *))
 	}
 
 	return 1;
+}
+
+CollectorHashTable *CollectorEngine::findOrCreateTable(MyString &type)
+{
+	CollectorHashTable *table;
+	if (GenericAds.lookup(type, table) == -1) {
+		dprintf(D_ALWAYS, "creating new table for type %s\n", type.Value());
+		table = new CollectorHashTable(LESSER_TABLE_SIZE , &adNameHashFunction);
+		if (GenericAds.insert(type, table) == -1) {
+			dprintf(D_ALWAYS,  "error adding new generic hash table\n");
+			delete table;
+			return NULL;
+		}
+	}
+
+	return table;
 }
 
 ClassAd *CollectorEngine::
@@ -344,13 +440,22 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 	ClassAd		*retVal;
 	ClassAd		*pvtAd;
 	int		insPvt;
-	HashKey		hk;
+	AdNameHashKey		hk;
 	HashString	hashString;
+	static int repeatStartdAds = -1;		// for debugging
+	ClassAd		*clientAdToRepeat = NULL;
+
+	if (repeatStartdAds == -1) {
+		repeatStartdAds = param_integer("COLLECTOR_REPEAT_STARTD_ADS",0);
+	}
 	
 	// mux on command
 	switch (command)
 	{
 	  case UPDATE_STARTD_AD:
+		if ( repeatStartdAds > 0 ) {
+			clientAdToRepeat = new ClassAd(*clientAd);
+		}
 		if (!makeStartdAdHashKey (hk, clientAd, from))
 		{
 			dprintf (D_ALWAYS, "Could not make hashkey --- ignoring ad\n");
@@ -388,7 +493,50 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 								  "StartdPvt", pvtAd, hk, hashString, insPvt,
 								  from );
 		}
+
+		// create fake duplicates of this ad, each with a different name, if 
+		// we are told to do so.  this feature exists for developer 
+		// scalability testing.
+		if ( repeatStartdAds > 0 && clientAdToRepeat ) {
+			ClassAd *fakeAd;
+			int n;
+			char newname[150],oldname[130];
+			oldname[0] = '\0';
+			clientAdToRepeat->LookupString("Name",oldname,sizeof(oldname));
+			for (n=0;n<repeatStartdAds;n++) {
+				fakeAd = new ClassAd(*clientAdToRepeat);
+				snprintf(newname,sizeof(newname),
+						 "Name=\"fake%d-%s\"",n,oldname);
+				fakeAd->InsertOrUpdate(newname);
+				makeStartdAdHashKey (hk, fakeAd, from);
+				hashString.Build( hk );
+				if (! updateClassAd (StartdAds, "StartdAd     ", "Start",
+							  fakeAd, hk, hashString, insert, from ) )
+				{
+					// don't leak memory if there is some failure
+					delete fakeAd;
+				}
+			}
+			delete clientAdToRepeat;
+			clientAdToRepeat = NULL;
+		}
 		break;
+
+#if WANT_QUILL
+	  case UPDATE_QUILL_AD:
+		if (!makeQuillAdHashKey (hk, clientAd, from))
+		{
+			dprintf (D_ALWAYS, "Could not make hashkey --- ignoring ad\n");
+			insert = -3;
+			retVal = 0;
+			break;
+		}
+		checkMasterStatus (clientAd);
+		hashString.Build( hk );
+		retVal=updateClassAd (QuillAds, "QuillAd     ", "Quill",
+							  clientAd, hk, hashString, insert, from );
+		break;
+#endif /* WANT_QUILL */
 
 	  case UPDATE_SCHEDD_AD:
 		if (!makeScheddAdHashKey (hk, clientAd, from))
@@ -489,6 +637,66 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 							  clientAd, hk, hashString, insert, from );
 		break;
 
+	  case UPDATE_NEGOTIATOR_AD:
+		if (!makeNegotiatorAdHashKey (hk, clientAd, from))
+		{
+			dprintf (D_ALWAYS, "Could not make hashkey --- ignoring ad\n");
+			insert = -3;
+			retVal = 0;
+			break;
+		}
+		hashString.Build( hk );
+			// first, purge all the existing negotiator ads, since we
+			// want to enforce that *ONLY* 1 negotiator is in the
+			// collector any given time.
+		purgeHashTable( NegotiatorAds );
+		retVal=updateClassAd (NegotiatorAds, "NegotiatorAd  ", "Negotiator",
+							  clientAd, hk, hashString, insert, from );
+		break;
+
+	  case UPDATE_HAD_AD:
+		  if (!makeHadAdHashKey (hk, clientAd, from))
+		{
+			dprintf (D_ALWAYS, "Could not make hashkey --- ignoring ad\n");
+			insert = -3;
+			retVal = 0;
+			break;
+		}
+		hashString.Build( hk );
+		retVal=updateClassAd (HadAds, "HadAd  ", "HAD",
+							  clientAd, hk, hashString, insert, from );
+		break;
+	  case UPDATE_AD_GENERIC:
+	  {
+		  const char *type_str = clientAd->GetMyTypeName();
+		  if (type_str == NULL) {
+			  dprintf(D_ALWAYS, "collect: UPDATE_AD_GENERIC: ad has no type\n");
+			  insert = -3;
+			  retVal = 0;
+			  break;
+		  }
+		  MyString type(type_str);
+		  CollectorHashTable *cht = findOrCreateTable(type);
+		  if (cht == NULL) {
+			  dprintf(D_ALWAYS, "collect: findOrCreateTable failed\n");
+			  insert = -3;
+			  retVal = 0;
+			  break;
+		  }
+		  if (!makeGenericAdHashKey (hk, clientAd, from))
+		  {
+			  dprintf(D_ALWAYS, "Could not make haskey --- ignoring ad\n");
+			  insert = -3;
+			  retVal = 0;
+			  break;
+		  }
+		  hashString.Build(hk);
+		  retVal = updateClassAd(*cht, type_str, type_str, clientAd,
+					 hk, hashString, insert, from);
+		  break;
+	  }
+		  
+
 	  case QUERY_STARTD_ADS:
 	  case QUERY_SCHEDD_ADS:
 	  case QUERY_MASTER_ADS:
@@ -497,6 +705,8 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 	  case QUERY_CKPT_SRVR_ADS:
 	  case QUERY_STARTD_PVT_ADS:
 	  case QUERY_COLLECTOR_ADS:
+  	  case QUERY_NEGOTIATOR_ADS:
+  	  case QUERY_HAD_ADS:
 	  case INVALIDATE_STARTD_ADS:
 	  case INVALIDATE_SCHEDD_ADS:
 	  case INVALIDATE_MASTER_ADS:
@@ -504,6 +714,8 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 	  case INVALIDATE_CKPT_SRVR_ADS:
 	  case INVALIDATE_SUBMITTOR_ADS:
 	  case INVALIDATE_COLLECTOR_ADS:
+	  case INVALIDATE_NEGOTIATOR_ADS:
+	  case INVALIDATE_HAD_ADS:
 		// these are not implemented in the engine, but we allow another
 		// daemon to detect that these commands have been given
 	    insert = -2;
@@ -521,7 +733,7 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 }
 
 ClassAd *CollectorEngine::
-lookup (AdTypes adType, HashKey &hk)
+lookup (AdTypes adType, AdNameHashKey &hk)
 {
 	ClassAd *val;
 
@@ -531,6 +743,13 @@ lookup (AdTypes adType, HashKey &hk)
 			if (StartdAds.lookup (hk, val) == -1)
 				return 0;
 			break;
+
+#if WANT_QUILL
+		case QUILL_AD:
+			if (QuillAds.lookup (hk, val) == -1)
+				return 0;
+			break;
+#endif /* WANT_QUILL */
 
 		case SCHEDD_AD:
 			if (ScheddAds.lookup (hk, val) == -1)
@@ -572,6 +791,16 @@ lookup (AdTypes adType, HashKey &hk)
 				return 0;
 			break;
 
+		case NEGOTIATOR_AD:
+			if (NegotiatorAds.lookup (hk, val) == -1)
+				return 0;
+			break;
+
+		case HAD_AD:
+			if (HadAds.lookup (hk, val) == -1)
+				return 0;
+			break;
+
 		default:
 			val = 0;
 	}
@@ -581,12 +810,17 @@ lookup (AdTypes adType, HashKey &hk)
 
 
 int CollectorEngine::
-remove (AdTypes adType, HashKey &hk)
+remove (AdTypes adType, AdNameHashKey &hk)
 {
 	switch (adType)
 	{
 		case STARTD_AD:
 			return !StartdAds.remove (hk);
+
+#if WANT_QUILL
+		case QUILL_AD:
+			return !QuillAds.remove (hk);
+#endif /* WANT_QUILL */
 
 		case SCHEDD_AD:
 			return !ScheddAds.remove (hk);
@@ -612,6 +846,12 @@ remove (AdTypes adType, HashKey &hk)
 		case STORAGE_AD:
 			return !StorageAds.remove (hk);
 
+		case NEGOTIATOR_AD:
+			return !NegotiatorAds.remove (hk);
+
+		case HAD_AD:
+			return !HadAds.remove (hk);
+
 		default:
 			return 0;
 	}
@@ -623,7 +863,7 @@ updateClassAd (CollectorHashTable &hashTable,
 			   const char *adType,
 			   const char *label,
 			   ClassAd *ad, 
-			   HashKey &hk,
+			   AdNameHashKey &hk,
 			   const MyString &hashString,
 			   int  &insert,
 			   const sockaddr_in *from )
@@ -685,8 +925,7 @@ updateClassAd (CollectorHashTable &hashTable,
 			collectorStats->update( label, old_ad, new_ad );
 
 			// Now, finally, store the new ClassAd
-//			old_ad->ExchangeExpressions (new_ad);
-			old_ad = ( ClassAd * )new_ad->Copy( );
+			old_ad->ExchangeExpressions (new_ad);
 			delete new_ad;
 		}
 
@@ -698,7 +937,7 @@ updateClassAd (CollectorHashTable &hashTable,
 void CollectorEngine::
 checkMasterStatus (ClassAd *ad)
 {
-	HashKey 	hk;
+	AdNameHashKey 	hk;
 	ClassAd		*old;
 
 	// make the master ad's hashkey
@@ -750,6 +989,11 @@ housekeeper()
 	dprintf (D_ALWAYS, "\tCleaning StartdPrivateAds ...\n");
 	cleanHashTable (StartdPrivateAds, now, makeStartdAdHashKey);
 
+#if WANT_QUILL
+	dprintf (D_ALWAYS, "\tCleaning QuillAds ...\n");
+	cleanHashTable (QuillAds, now, makeQuillAdHashKey);
+#endif /* WANT_QUILL */
+
 	dprintf (D_ALWAYS, "\tCleaning ScheddAds ...\n");
 	cleanHashTable (ScheddAds, now, makeScheddAdHashKey);
 
@@ -771,8 +1015,18 @@ housekeeper()
 	dprintf (D_ALWAYS, "\tCleaning StorageAds ...\n");
 	cleanHashTable (StorageAds, now, makeStorageAdHashKey);
 
-	// add other ad types here ...
+	dprintf (D_ALWAYS, "\tCleaning NegotiatorAds ...\n");
+	cleanHashTable (NegotiatorAds, now, makeNegotiatorAdHashKey);
 
+	dprintf (D_ALWAYS, "\tCleaning HadAds ...\n");
+	cleanHashTable (HadAds, now, makeHadAdHashKey);
+
+	dprintf (D_ALWAYS, "\tCleaning Generic Ads ...\n");
+	CollectorHashTable *cht;
+	GenericAds.startIterations();
+	while (GenericAds.iterate(cht)) {
+		cleanHashTable (*cht, now, makeGenericAdHashKey);
+	}
 
 	// cron manager
 	event_mgr();
@@ -783,12 +1037,12 @@ housekeeper()
 
 void CollectorEngine::
 cleanHashTable (CollectorHashTable &hashTable, time_t now, 
-				bool (*makeKey) (HashKey &, ClassAd *, sockaddr_in *) )
+				bool (*makeKey) (AdNameHashKey &, ClassAd *, sockaddr_in *) )
 {
 	ClassAd  *ad;
 	int   	 timeStamp;
-	int		 updateInterval;
-	HashKey  hk;
+	int		 max_lifetime;
+	AdNameHashKey  hk;
 	double   timeDiff;
 	MyString	hkString;
 
@@ -807,12 +1061,12 @@ cleanHashTable (CollectorHashTable &hashTable, time_t now,
 		// how long has it been since the last update?
 		timeDiff = difftime( now, timeStamp );
 
-		if( !ad->LookupInteger( ATTR_UPDATE_INTERVAL, updateInterval ) ) {
-			updateInterval = machineUpdateInterval;
+		if( !ad->LookupInteger( ATTR_CLASSAD_LIFETIME, max_lifetime ) ) {
+			max_lifetime = machineUpdateInterval;
 		}
 
 		// check if it has expired
-		if (timeDiff > (double) updateInterval )
+		if ( timeDiff > (double) max_lifetime )
 		{
 			// then remove it from the segregated table
 			(*makeKey) (hk, ad, NULL);
@@ -830,12 +1084,29 @@ cleanHashTable (CollectorHashTable &hashTable, time_t now,
 	}
 }
 
+
+static void
+purgeHashTable( CollectorHashTable &table )
+{
+	ClassAd* ad;
+	AdNameHashKey hk;
+	table.startIterations();
+	while( table.iterate(hk,ad) ) {
+		if( table.remove(hk) == -1 ) {
+			dprintf( D_ALWAYS, "\t\tError while removing ad\n" );
+		}		
+		if( ad > CollectorEngine::THRESHOLD ) {
+			delete ad;
+		}
+	}
+}
+
 int CollectorEngine::
 masterCheck ()
 {
 	ClassAd		*ad;
 	ClassAd		*nextStatus;
-	HashKey		hk;
+	AdNameHashKey		hk;
 	MyString	hkString;
 	MyString	buffer;
 	FILE*		mailer = NULL;
@@ -941,6 +1212,15 @@ killHashTable (CollectorHashTable &table)
 	{
 		if (ad > CollectorEngine::THRESHOLD) delete ad;
 	}
+}
+
+static int
+killGenericHashTable(CollectorHashTable *table)
+{
+	ASSERT(table != NULL);
+	killHashTable(*table);
+	delete table;
+	return 0;
 }
 
 char *

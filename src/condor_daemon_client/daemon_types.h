@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -30,7 +30,7 @@
 enum daemon_t { DT_NONE, DT_ANY,  DT_MASTER, DT_SCHEDD, DT_STARTD,
 				DT_COLLECTOR, DT_NEGOTIATOR, DT_KBDD, 
 				DT_DAGMAN, DT_VIEW_COLLECTOR, DT_CLUSTER,  
-		DT_SHADOW, DT_STARTER, DT_STORK, DT_CREDD,
+				DT_SHADOW, DT_STARTER, DT_CREDD, DT_STORK, DT_QUILL,
 				_dt_threshold_ };
 
 #ifdef __cplusplus

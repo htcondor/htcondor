@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -30,8 +30,6 @@
 
 // retry failed connects for CONNECT_TIMEOUT seconds
 #define CONNECT_TIMEOUT 10
-
-const int _ENDPOINT_BUF_SIZE = 16;
 
 // Some error codes.  These should go to condor_errno.h once it is there.
 const int CEDAR_EWOULDBLOCK = 666;
@@ -84,6 +82,7 @@ public:
 	friend class DaemonCore;
 	friend class Daemon;
 	friend class SecMan;
+	friend class SecManStartCommand;
 
 	/*
 	**	Methods
@@ -137,7 +136,7 @@ public:
 #if defined(WIN32) && defined(_WINSOCK2API_)
 	int assign(LPWSAPROTOCOL_INFO);		// to inherit sockets from other processes
 #endif
-	int bind(int =0);
+	int bind(int, int =0);
     int setsockopt(int, int, const char*, int); 
 
 	/**  Set the size of the operating system buffers (in the IP stack) for
@@ -153,7 +152,7 @@ public:
 
 	static int set_timeout_multiplier(int secs);
 	
-	inline int bind(char *s) { return bind(getportbyserv(s)); }
+	inline int bind(int is_outgoing, char *s) { return bind(is_outgoing, getportbyserv(s)); }
 	int close();
 	/** if any operation takes more than sec seconds, timeout
         call timeout(0) to set blocking mode (default)
@@ -178,11 +177,22 @@ public:
 	/// peer's IP address, integer version (e.g. 2154390801)
 	unsigned int endpoint_ip_int();
 
+    /// my port and IP address in a struct sockaddr_in
+    /// @args: the address is returned via 'sin'
+    /// @ret: 0 if succeed, -1 if failed
+    int mypoint(struct sockaddr_in *sin);
+
+	/// my IP address, string version (e.g. "128.105.101.17")
+	virtual const char* sender_ip_str();
+
 	/// local port number
 	int get_port();
 
 	/// local ip address integer
 	unsigned int get_ip_int();
+
+    /// sinful address in the form of "<a.b.c.d:pppp>"
+    char * Sock::get_sinful();
 
 	/// local file descriptor (fd) of this socket
 	int get_file_desc();
@@ -190,12 +200,16 @@ public:
 	/// is a non-blocking connect outstanding?
 	bool is_connect_pending() { return _state == sock_connect_pending; }
 
+	/// is the socket connected?
+	bool is_connected() { return _state == sock_connect; }
+
     /// 
 	virtual ~Sock();
 
 	/// Copy constructor -- this also dups the underlying socket
 	Sock(const Sock &);
 
+	void doNotEnforceMinimalCONNECT_TIMEOUT() ;		// Used by HA Daemon
 
 //	PRIVATE INTERFACE TO ALL SOCKS
 //
@@ -230,7 +244,7 @@ protected:
     */
 	int do_connect(char *host, int port, bool non_blocking_flag = false);
 
-	bool do_connect_finish();
+	bool do_connect_finish(bool failed=false,bool timed_out=false);
 
 
 	inline SOCKET get_socket (void) { return _sock; }
@@ -255,7 +269,7 @@ protected:
     ///
 	virtual int authenticate(KeyInfo *&ki, const char * auth_methods, CondorError* errstack);
     ///
-	virtual int isAuthenticated();
+	virtual int isAuthenticated() const;
     ///
 	virtual void unAuthenticate();
     ///
@@ -269,6 +283,10 @@ protected:
 
     ///
 	bool test_connection();
+	///
+	time_t connect_timeout_time();
+	///
+	int move_descriptor_up();
 
 	/*
 	**	Data structures
@@ -281,18 +299,24 @@ protected:
 
 	static int timeout_multiplier;
 
+	bool ignore_connect_timeout;	// Used by HA Daemon
+
+	// Buffer to hold the string version of our own IP address. 
+	char _sender_ip_buf[IP_STRING_BUF_SIZE];	
+
 private:
 	int _condor_read(SOCKET fd, char *buf, int sz, int timeout);
 	int _condor_write(SOCKET fd, char *buf, int sz, int timeout);
 	int bindWithin(const int low, const int high);
 	///
 	// Buffer to hold the string version of our endpoint's IP address. 
-	char _endpoint_ip_buf[_ENDPOINT_BUF_SIZE];	
+	char _endpoint_ip_buf[IP_STRING_BUF_SIZE];	
 
 	// struct to hold state info for do_connect() method
 	struct connect_state_struct {
 			int timeout_interval;
 			bool connect_failed, failed_once;
+			bool connect_refused;
 			time_t timeout_time;
 			int	old_timeout_value;
 			bool non_blocking_flag;

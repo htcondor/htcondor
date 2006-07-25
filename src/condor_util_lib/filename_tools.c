@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -174,6 +174,17 @@ int filename_remap_find( const char *input, const char *filename, char *output )
 
 	free(buffer);
 	return 0;
+}
+
+int is_relative_to_cwd( const char *path )
+{
+#if WIN32
+	if(*path == '/' || *path == '\\') return 0;
+	if(('A' <= toupper(*path) && toupper(*path) <= 'Z') && path[1] == ':') return 0;
+#else
+	if(*path == DIR_DELIM_CHAR) return 0;
+#endif
+	return 1;
 }
 
 int filename_split( const char *path, char *dir, char *file )

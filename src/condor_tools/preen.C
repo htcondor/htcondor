@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -36,7 +36,6 @@
 #include "condor_uid.h"
 #include "string_list.h"
 #include "directory.h"
-#include "alloc.h"
 #include "condor_qmgr.h"
 #include "condor_classad.h"
 #include "condor_attributes.h"
@@ -46,6 +45,7 @@
 #include "condor_email.h"
 #include "daemon.h"
 #include "condor_distribution.h"
+#include "basename.h" // for condor_basename 
 
 State get_machine_state();
 
@@ -150,10 +150,6 @@ main( int argc, char *argv[] )
 		// Clean up
 	delete BadFiles;
 
-#if defined(ALLOC_DEBUG)
-	print_alloc_stats( "End of main" );
-#endif
-
 	return 0;
 }
 
@@ -219,12 +215,24 @@ produce_output()
 void
 check_spool_dir()
 {
+    int             history_length;
 	const char  	*f;
+    const char      *history;
 	Directory  		dir(Spool, PRIV_ROOT);
 	StringList 		well_known_list, bad_spool_files;
 	Qmgr_connection *qmgr;
 
+    history = param("HISTORY");
+    history = condor_basename(history);
+    history_length = strlen(history);
+
 	well_known_list.initializeFromString (ValidSpoolFiles);
+		// add some reasonable defaults that we never want to remove
+	well_known_list.append( "job_queue.log" );
+	well_known_list.append( "job_queue.log.tmp" );
+	well_known_list.append( "Accountant.log" );
+	well_known_list.append( "Accountantnew.log" );
+	well_known_list.append( "local_univ_execute" );
 
 	// connect to the Q manager
 	if (!(qmgr = ConnectQ (0))) {
@@ -239,6 +247,24 @@ check_spool_dir()
 			good_file( Spool, f );
 			continue;
 		}
+		if( !strncmp(f,"job_queue.log",13) ) {
+			// Historical job queue log files have names like: job_queue.log.3
+			// In theory, we could clean up any such files that are not
+			// in the range allowed by SCHEDD_MAX_HISTORICAL_LOGS, but
+			// the sequence number keeps increasing each time a new
+			// one is added, so we would have to find out what the latest
+			// sequence number is in order to know what is safe to delete.
+			// Therefore, this issue is ignored.  We rely on the schedd
+			// to clean up after itself.
+			good_file( Spool, f );
+			continue;
+		}
+            // see if it's a rotated history file. 
+        if (   strlen(f) >= history_length 
+            && strncmp(f, history, history_length) == 0) {
+            good_file( Spool, f );
+            continue;
+        }
 
 			// see if it's a legitimate checkpoint
 		if( is_ckpt_file(f) ) {
@@ -265,7 +291,6 @@ check_spool_dir()
 		dprintf( D_ALWAYS, 
 				 "Error disconnecting from job queue, not deleting spool files.\n" );
 	}
-	// print_alloc_stats( "End of check_spool_dir" );
 }
 
 /*
@@ -278,15 +303,12 @@ BOOLEAN
 is_ckpt_file( const char *name )
 {
 
-	// clear_alloc_stats();
-
 	if( strstr(name,"cluster") ) {
 		return is_v3_ckpt( name );
 	} else {
 		return is_v2_ckpt( name );
 	}
 
-	// print_alloc_stats( "End of is_ckpt_file");
 }
 
 
@@ -542,7 +564,7 @@ bad_file( const char *dirpath, const char *name, Directory & dir )
 	}
 
 	if( RmFlag ) {
-		if( dir.Remove_File( pathname ) ) {
+		if( dir.Remove_Full_Path( pathname ) ) {
 			sprintf( buf, "%s - Removed", pathname );
 		} else {
 			sprintf( buf, "%s - Can't Remove", pathname );

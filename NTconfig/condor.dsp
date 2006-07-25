@@ -75,9 +75,5 @@ CFG=condor - Win32 Debug
 
 !ENDIF 
 
-# Begin Source File
-
-SOURCE=..\src\condor_classad.V6\classad.C
-# End Source File
 # End Target
 # End Project

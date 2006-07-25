@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -26,29 +26,12 @@
 
 #include "condor_common.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "gahp_common.h"
 
 #include "classad_hashtable.h"
 #include "globus_utils.h"
 #include "proxymanager.h"
-
-/* Users of GahpArgs should not manipulate the class data members directly.
- * Changing the object should only be done via the member functions.
- * If argc is 0, then the value of argv is undefined. If argc > 0, then
- * argv[0] through argv[argc-1] point to valid null-terminated strings. If
- * a NULL is passed to add_arg(), it will be ignored. argv may be resized
- * or freed by add_arg() and reset(), so users should not copy the pointer
- * and expect it to be valid after these calls.
- */
-		class Gahp_Args {
-			public:
-				Gahp_Args();
-				~Gahp_Args();
-				void reset();
-				void add_arg( char *arg );
-				char **argv;
-				int argc;
-				int argv_size;
-		};
+#include "condor_arglist.h"
 
 
 struct GahpProxyInfo
@@ -57,6 +40,14 @@ struct GahpProxyInfo
 	int cached_expiration;
 	int num_references;
 };
+
+typedef void (* globus_gt4_gram_callback_func_t)(void * user_callback_arg,
+												 const char * job_contact,
+												 const char * state,
+												 const char * fault,
+												 const int exit_code);
+
+typedef void (* unicore_gahp_callback_func_t)(const char *update_ad_string);
 
 static const char *GAHPCLIENT_DEFAULT_SERVER_ID = "DEFAULT";
 static const char *GAHPCLIENT_DEFAULT_SERVER_PATH = "DEFAULT";
@@ -71,6 +62,7 @@ static const int GAHPCLIENT_COMMAND_NOT_SUBMITTED = -102;
 ///
 static const int GAHPCLIENT_COMMAND_TIMED_OUT = -103;
 
+static const int GT4_NO_EXIT_CODE = -1;
 
 void GahpReconfig();
 
@@ -80,10 +72,10 @@ class GahpServer : public Service {
  public:
 	static GahpServer *FindOrCreateGahpServer(const char *id,
 											  const char *path,
-											  const char *args = NULL);
+											  const ArgList *args = NULL);
 	static HashTable <HashKey, GahpServer *> GahpServersById;
 
-	GahpServer(const char *id, const char *path, const char *args = NULL);
+	GahpServer(const char *id, const char *path, const ArgList *args = NULL);
 	~GahpServer();
 
 	bool Startup();
@@ -93,8 +85,9 @@ class GahpServer : public Service {
 	void read_argv(Gahp_Args *g_args) { read_argv(*g_args); }
 	void write_line(const char *command);
 	void write_line(const char *command,int req,const char *args);
-	void Reaper(Service*,int pid,int status);
+	void Reaper(int pid,int status);
 	int pipe_ready();
+	int err_pipe_ready();
 
 	void AddGahpClient( GahpClient *client );
 	void RemoveGahpClient( GahpClient *client );
@@ -136,6 +129,7 @@ class GahpServer : public Service {
 
 	void poll_real_soon();
 
+
 	bool cacheProxyFromFile( GahpProxyInfo *new_proxy );
 	bool uncacheProxy( GahpProxyInfo *gahp_proxy );
 	bool useCachedProxy( GahpProxyInfo *new_proxy, bool force = false );
@@ -164,18 +158,21 @@ class GahpServer : public Service {
 	int m_reaperid;
 	int m_gahp_readfd;
 	int m_gahp_writefd;
+	int m_gahp_errorfd;
+	MyString m_gahp_error_buffer;
 	char m_gahp_version[150];
 	StringList * m_commands_supported;
 	bool use_prefix;
 	unsigned int m_pollInterval;
 	int poll_tid;
 	bool poll_pending;
+
 	int max_pending_requests;
 	int num_pending_requests;
 	GahpProxyInfo *current_proxy;
 	bool skip_next_r;
 	char *binary_path;
-	char *binary_args;
+	ArgList binary_args;
 	char *my_id;
 
 	char *globus_gass_server_url;
@@ -189,9 +186,18 @@ class GahpServer : public Service {
 	globus_gram_client_callback_func_t globus_gt3_gram_callback_func;
 	int globus_gt3_gram_callback_reqid;
 
+	char *globus_gt4_gram_callback_contact;
+	void *globus_gt4_gram_user_callback_arg;
+	globus_gt4_gram_callback_func_t globus_gt4_gram_callback_func;
+	int globus_gt4_gram_callback_reqid;
+
+	unicore_gahp_callback_func_t unicore_gahp_callback_func;
+	int unicore_gahp_callback_reqid;
+
 	GahpProxyInfo *master_proxy;
 	int proxy_check_tid;
 	bool is_initialized;
+	bool can_cache_proxies;
 	HashTable<HashKey,GahpProxyInfo*> *ProxiesByFilename;
 }; // end of class GahpServer
 	
@@ -208,7 +214,7 @@ class GahpClient : public Service {
 			/// Constructor
 		GahpClient(const char *id=GAHPCLIENT_DEFAULT_SERVER_ID,
 				   const char *path=GAHPCLIENT_DEFAULT_SERVER_PATH,
-				   const char *args=NULL);
+				   const ArgList *args=NULL);
 			/// Destructor
 		~GahpClient();
 		
@@ -300,6 +306,8 @@ class GahpClient : public Service {
 		bool isInitialized() { return server->is_initialized; }
 
 		const char *getErrorString();
+
+		const char *getVersion();
 
 		//-----------------------------------------------------------
 		
@@ -416,6 +424,76 @@ class GahpClient : public Service {
 		int
 		gt3_gram_client_job_refresh_credentials(const char *job_contact);
 
+
+
+
+
+		///
+		int
+		gt4_generate_submit_id (char ** submit_id);
+
+
+		int
+		gt4_gram_client_callback_allow(
+			globus_gt4_gram_callback_func_t callback_func,
+			void * user_callback_arg,
+			char ** callback_contact);
+
+		///
+		int 	
+		gt4_gram_client_job_create(
+								   const char * submit_id,
+								   const char * resource_manager_contact,
+								   const char * jobmanager_type,
+								   const char * callback_contact,
+								   const char * rsl,
+								   const char * gass_url,
+								   char ** job_contact);
+
+		int 
+		gt4_gram_client_job_create(const char * resource_manager_contact,
+			const char * description,
+			const char * callback_contact,
+			char ** job_contact);
+
+		///
+		int
+		gt4_gram_client_job_start(const char *job_contact);
+
+		///
+		int 
+		gt4_gram_client_job_destroy(const char * job_contact);
+
+		///
+		int
+		gt4_gram_client_job_status(const char * job_contact,
+			char ** job_status, char ** job_fault, int * exit_code);
+
+		///
+		int
+		gt4_gram_client_job_callback_register(const char * job_contact,
+			const char * callback_contact);
+
+		///
+		int 
+		gt4_gram_client_ping(const char * resource_manager_contact);
+
+		///
+		int
+		gt4_gram_client_delegate_credentials(const char *delegation_service_url,
+											 char ** delegation_uri);
+
+		///
+		int
+		gt4_gram_client_refresh_credentials(const char *delegation_uri);
+
+		///
+		int
+		gt4_set_termination_time(const char *resource_uri,
+								 time_t &new_termination_time);
+
+
+
 		int
 		condor_job_submit(const char *schedd_name, ClassAd *job_ad,
 						  char **job_id);
@@ -448,6 +526,87 @@ class GahpClient : public Service {
 
 		int
 		condor_job_stage_in(const char *schedd_name, ClassAd *job_ad);
+
+		int
+		condor_job_stage_out(const char *schedd_name, PROC_ID job_id);
+
+		int
+		condor_job_refresh_proxy(const char *schedd_name, PROC_ID job_id,
+								 const char *proxy_file);
+
+		int
+		condor_job_update_lease(const char *schedd_name,
+								const SimpleList<PROC_ID> &jobs,
+								const SimpleList<int> &expirations,
+								SimpleList<PROC_ID> &updated );
+
+		int
+		blah_job_submit(ClassAd *job_ad, char **job_id);
+
+		int
+		blah_job_status(const char *job_id, ClassAd **status_ad);
+
+		int
+		blah_job_cancel(const char *job_id);
+
+		int
+		blah_job_refresh_proxy(const char *job_id, const char *proxy_file);
+
+		int
+		nordugrid_submit(const char *hostname, const char *rsl, char *&job_id);
+
+		int
+		nordugrid_status(const char *hostname, const char *job_id,
+						 char *&status);
+
+		int
+		nordugrid_cancel(const char *hostname, const char *job_id);
+
+		int
+		nordugrid_stage_in(const char *hostname, const char *job_id,
+						   StringList &files);
+
+		int
+		nordugrid_stage_out(const char *hostname, const char *job_id,
+							StringList &files);
+
+		int
+		nordugrid_stage_out2(const char *hostname, const char *job_id,
+							 StringList &src_files, StringList &dest_files);
+
+		int
+		nordugrid_exit_info(const char *hostname, const char *job_id,
+							bool &normal_exit, int &exit_code,
+							float &wallclock, float &sys_cpu,
+							float &user_cpu );
+
+		int
+		nordugrid_ping(const char *hostname);
+
+		///
+		int 
+		unicore_job_create(const char * description,
+						   char ** job_contact);
+
+		///
+		int
+		unicore_job_start(const char *job_contact);
+
+		///
+		int 
+		unicore_job_destroy(const char * job_contact);
+
+		///
+		int
+		unicore_job_status(const char * job_contact,
+						   char **job_status);
+
+		///
+		int
+		unicore_job_recover(const char * description);
+
+		int
+		unicore_job_callback(unicore_gahp_callback_func_t callback_func);
 
 #ifdef CONDOR_GLOBUS_HELPER_WANT_DUROC
 	// Not yet ready for prime time...

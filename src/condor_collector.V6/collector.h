@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -69,11 +69,12 @@ public:
 	virtual void Shutdown();         // main_shutdown_graceful
 
 	// command handlers
-	static int receive_query(Service*, int, Stream*);
+	static int receive_query_cedar(Service*, int, Stream*);
+	static AdTypes receive_query_public( int );
 	static int receive_invalidation(Service*, int, Stream*);
 	static int receive_update(Service*, int, Stream*);
 
-	static void process_query(AdTypes, ClassAd&, Stream*);
+	static void process_query_public(AdTypes, ClassAd*, List<ClassAd>*);
 	static ClassAd * process_global_query( const char *constraint, void *arg );
 	static int select_by_match( ClassAd *ad );
 	static void process_invalidation(AdTypes, ClassAd&, Stream*);
@@ -94,6 +95,10 @@ public:
 	static int sendCollectorAd();
 
 	static void send_classad_to_sock( int cmd, Daemon * d, ClassAd* theAd);	
+
+	// A get method to support SOAP
+	static CollectorEngine & getCollector( void ) { return collector; };
+
 protected:
 
 	static CollectorStats collectorStats;
@@ -109,7 +114,7 @@ protected:
 	static ClassAd *query_any_result;
 
 	static ClassAd* __query__;
-	static Stream* __sock__;
+	static List<ClassAd>* __ClassAdResultList__;
 	static int __numAds__;
 	static int __failed__;
 
@@ -126,7 +131,6 @@ protected:
 	static DCCollector* updateCollector;
 	static int UpdateTimerId;
 
-	static MatchClassAd mad;
 	static ForkWork forkQuery;
 
 	static SocketCache* sock_cache;

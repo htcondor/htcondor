@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -68,8 +68,9 @@
 /* for DBL_MAX */
 #include <float.h>
 /* Darwin does not define a SYS_NMLN, but rather calls it __SYS_NAMELEN */
-
+#ifndef CONDOR_FREEBSD
 #define SYS_NMLN  _SYS_NAMELEN
+#endif
 /****************************************
 ** Condor-specific system definitions
 ****************************************/

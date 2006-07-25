@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -28,6 +28,7 @@
 #include "condor_config.h"
 #include "condor_uid.h"
 #include "condor_file_info.h"
+#include "get_port_range.h"
 #include "name_tab.h"
 #include "proto.h"
 #include "condor_io.h"
@@ -123,8 +124,6 @@ extern NameTable ProcStates;
 UserProc::~UserProc()
 {
 	delete [] cmd;
-	delete [] args;
-	delete [] env;
 	delete [] local_dir;
 	delete [] cur_ckpt;
 	if ( core_name ) {
@@ -142,8 +141,14 @@ UserProc::display()
 	dprintf( D_ALWAYS, "User Process %d.%d {\n", cluster, proc );
 
 	dprintf( D_ALWAYS, "  cmd = %s\n", cmd );
-	dprintf( D_ALWAYS, "  args = %s\n", args );
-	dprintf( D_ALWAYS, "  env = %s\n", env );
+
+	MyString args_string;
+	args.GetArgsStringForDisplay(&args_string);
+	dprintf( D_ALWAYS, "  args = %s\n", args_string.Value() );
+
+	MyString env_string;
+	env_obj.getDelimitedStringForDisplay(&env_string);
+	dprintf( D_ALWAYS, "  env = %s\n", env_string.Value() );
 
 	dprintf( D_ALWAYS, "  local_dir = %s\n", local_dir );
 	dprintf( D_ALWAYS, "  cur_ckpt = %s\n", cur_ckpt );
@@ -183,11 +188,11 @@ UserProc::display()
 	display_bool( D_ALWAYS, "  exit_requested", exit_requested );
 	dprintf( D_ALWAYS, "  image_size = %d blocks\n", image_size );
 
-	dprintf( D_ALWAYS, "  user_time = %d\n", user_time );
-	dprintf( D_ALWAYS, "  sys_time = %d\n", sys_time );
+	dprintf( D_ALWAYS, "  user_time = %ld\n", (long)user_time );
+	dprintf( D_ALWAYS, "  sys_time = %ld\n", (long)sys_time );
 
-	dprintf( D_ALWAYS, "  guaranteed_user_time = %d\n", guaranteed_user_time );
-	dprintf( D_ALWAYS, "  guaranteed_sys_time = %d\n", guaranteed_sys_time );
+	dprintf( D_ALWAYS, "  guaranteed_user_time = %ld\n", (long)guaranteed_user_time );
+	dprintf( D_ALWAYS, "  guaranteed_sys_time = %ld\n", (long)guaranteed_sys_time );
 
 	dprintf( D_ALWAYS, "}\n" );
 
@@ -307,7 +312,7 @@ UserProc::transfer_executable( char *src, int &error_code )
 	int		attempts = 0;
 	int tmp_errno;
 
-	dprintf( D_ALWAYS, "Going to try %d %s at getting the inital executable\n",
+	dprintf( D_ALWAYS, "Going to try %d %s at getting the initial executable\n",
 		ExecTransferAttempts, ExecTransferAttempts==1?"attempt":"attempts" );
 
 	do
@@ -344,9 +349,12 @@ UserProc::linked_for_condor()
 		// if env var _CONDOR_NOCHECK=1, then do not do this check.
 		// this allows expert users to submit shell scripts to the
 		// STANDARD universe.
-	char *tmp = env_obj.getenv( EnvGetName( ENV_NOCHECK ) );
-	if ( tmp && *tmp=='1' ) {
+	MyString env_nocheck_var = EnvGetName( ENV_NOCHECK );
+	MyString env_nocheck_val;
+	if(env_obj.GetEnv( env_nocheck_var, env_nocheck_val )) {
+		if(env_nocheck_val.Value()[0] == '1') {
 			return TRUE;
+		}
 	}
 
 	if( sysapi_magic_check(cur_ckpt) < 0 ) {
@@ -424,13 +432,11 @@ UserProc::fetch_ckpt()
 void
 UserProc::execute()
 {
-	int		argc;
-	char	*argv[ 2048 ];
+	ArgList new_args;
+	char    **argv;
 	char	**argp;
 	char	**envp;
 	sigset_t	sigmask;
-	long	arg_max;
-	char	*tmp;
 	char	a_out_name[ _POSIX_PATH_MAX ];
 	char	shortname[ _POSIX_PATH_MAX ];
 	int		user_syscall_fd;
@@ -440,17 +446,10 @@ UserProc::execute()
 	FILE	*cmd_fp;
 	char	buf[128];
 	ReliSock	*new_reli = NULL;
+	extern char **environ;
 
 	pipe_fds[0] = -1;
 	pipe_fds[1] = -1;
-
-		// We will use mkargv() which modifies its arguments in place
-		// so we not use the original copy of the arguments
-	if( (arg_max=sysconf(_SC_ARG_MAX)) == -1 ) {
-		arg_max = _POSIX_ARG_MAX;
-	}
-	tmp = new char [arg_max];
-	strncpy( tmp, args, arg_max );
 
 	sprintf( shortname, "condor_exec.%d.%d", cluster, proc );
 	sprintf( a_out_name, "%s/%s/%s", Execute, local_dir, shortname );
@@ -476,36 +475,40 @@ UserProc::execute()
 		sprintf( buf, "%d", pipe_fds[READ_END] );
 		dprintf( D_ALWAYS, "cmd_fd = %s\n", buf );
 
-		argv[0] = shortname;
-		argv[1] = "-_condor_cmd_fd";
-		argv[2] = buf;
-		mkargv( &argc, &argv[3], tmp );
+		new_args.AppendArg(shortname);
+		new_args.AppendArg("-_condor_cmd_fd");
+		new_args.AppendArg(buf);
 		break;
 
 	  case CONDOR_UNIVERSE_PVM:
 #if 1
 		EXCEPT( "Don't know how to deal with PVM jobs" );
 #else
-		argv[0] = shortname;
-		argv[1] = "-1";
-		argv[2] = in;
-		argv[3] = out;
-		argv[4] = err;
-		mkargv( &argc, &argv[5], tmp );
+		new_args.AppendArg(shortname);
+		new_args.AppendArg("-1");
+		new_args.AppendArg(in);
+		new_args.AppendArg(out);
+		new_args.AppendArg(err);
 #endif
 		break;
 
 	  case CONDOR_UNIVERSE_VANILLA:
-		argv[0] = shortname;
-		mkargv( &argc, &argv[1], tmp );
+		new_args.AppendArg(shortname);
 		break;
 	}
+
+	new_args.AppendArgsFromArgList(args);
+
+		// take care of USER_JOB_WRAPPER
+	support_job_wrapper(a_out_name,&new_args);
+
+	argv = new_args.GetStringArray();
 
 		// Set an environment variable that tells the job where it may put scratch data
 		// even if it moves to a different directory.
 
 		// get the environment vector
-	envp = env_obj.get_vector();
+	envp = env_obj.getStringArray();
 
 		// We may run more than one of these, so each needs its own
 		// remote system call connection to the shadow
@@ -513,9 +516,6 @@ UserProc::execute()
 		new_reli = NewConnection( v_pid );
 		user_syscall_fd = new_reli->get_file_desc();
 	}
-
-		// take care of USER_JOB_WRAPPER
-	support_job_wrapper(a_out_name,&argc,argv);
 
 		// print out arguments to execve
 	dprintf( D_ALWAYS, "Calling execve( \"%s\"", a_out_name );
@@ -609,6 +609,32 @@ UserProc::execute()
 			exit( 4 );
 		}
 
+#if defined( LINUX ) && defined( I386 )
+		// alter the personality of this process to use i386 memory layout
+		// methods and no exec_shield(brk & stack segment randomization).
+		// We must use a syscall() here because the personality() call was
+		// defined in redhat 9 and not earlier, even though the kernel
+		// entry point existed. Even though the personality has been altered
+		// it will not become active in this process space until an exec()
+		// happens. 
+		
+		// update: after kernel 2.6.12.2 revision, exec shield and the 
+		// randomization of the va space were separated, and using PER_LINUX32
+		// now only turns of exec-shield, leaving va randomization on.
+		// The stupid 0x40000 flag is ADDR_NO_RANDOMIZE, which 
+		// isn't yet defined for use outside of the kernel except in very new
+		// linux distributions, but, since we do redhat 9 for our compatibility
+		// build, it has to go here. From my compatibility testing, using this
+		// magic number on kernel pre 2.6.12.2 *appears* to have no detrimental
+		// effects.
+
+		if (syscall(SYS_personality, PER_LINUX32 | 0x40000) == -1) {
+			EXCEPT("Unable to set i386 personality: %d(%s)! "
+					"Memory layout will be uncheckpointable!\n", errno,
+					strerror(errno));
+		}
+#endif
+
 			// Everything's ready, start it up...
 		errno = 0;
 		execve( a_out_name, argv, envp );
@@ -619,7 +645,7 @@ UserProc::execute()
 			// space to start the new process.  We don't try to log
 			// anything, since we have the UID/GID of the job's owner
 			// and cannot write into the log files...
-		exit( EXECFAILED );
+		exit( JOB_EXEC_FAILED );
 	}
 
 		// The parent
@@ -628,7 +654,7 @@ UserProc::execute()
 			// Send the user process its startup environment conditions
 		close( pipe_fds[READ_END] );
 		cmd_fp = fdopen( pipe_fds[WRITE_END], "w" );
-		dprintf( D_ALWAYS, "cmd_fp = 0x%x\n", cmd_fp );
+		dprintf( D_ALWAYS, "cmd_fp = %p\n", cmd_fp );
 
 		if( is_restart() ) {
 #if 1
@@ -647,15 +673,29 @@ UserProc::execute()
 		fclose( cmd_fp );
 	}
 
-	delete [] tmp;
+	deleteStringArray(argv);
+	deleteStringArray(envp);
 	state = EXECUTING;
 
 	if( new_reli ) {
 		delete new_reli;
 	}
 
+	/* No daemoncore, so create a PidEnvID class based off of what
+		ancestor variables this process has which the child should have
+		a superset of. */
+	PidEnvID penvid;
+
+	pidenvid_init(&penvid);
+	if (pidenvid_filter_and_insert(&penvid, environ) == 
+			PIDENVID_OVERSIZED)
+	{
+		EXCEPT("UserProc::execute(): Too many ancestor variables! Programmer "
+				"Error!\n");
+	}
+
 	if ( job_class == CONDOR_UNIVERSE_VANILLA ) {
-		family = new ProcFamily(pid,PRIV_USER);
+		family = new ProcFamily(pid, &penvid, PRIV_USER);
 		family->takesnapshot();
 	}
 }
@@ -717,7 +757,7 @@ UserProc::handle_termination( int exit_st )
 		dprintf( D_FAILURE|D_ALWAYS,
 			"Process %d exited with status %d\n", pid, WEXITSTATUS(exit_status)
 		);
-		if( WEXITSTATUS(exit_status) == EXECFAILED ) {
+		if( WEXITSTATUS(exit_status) == JOB_EXEC_FAILED ) {
 			dprintf( D_FAILURE|D_ALWAYS,
 				"EXEC of user process failed, probably insufficient swap\n"
 			);
@@ -1203,39 +1243,46 @@ UserProc::UserProc( STARTUP_INFO &s ) :
 	cmd = new char [ strlen(s.cmd) + 1 ];
 	strcpy( cmd, s.cmd );
 
-	args = new char [ strlen(s.args) + 1 ];
-	strcpy( args, s.args );
+	// Since we are adding to the argument list, we may need to deal
+	// with platform-specific arg syntax in the user's args in order
+	// to successfully merge them with the additional args.
+	args.SetArgV1SyntaxToCurrentPlatform();
 
-	env = new char [ strlen(s.env) + 1 ];
-	strcpy( env, s.env );
+	MyString args_errors;
+	if(!args.AppendArgsV1or2Raw(s.args_v1or2,&args_errors)) {
+		EXCEPT("ERROR: Failed to parse arguments string: %s\n%s\n",
+			   args_errors.Value(),s.args_v1or2);
+	}
 
-	env_obj.add_string( env );  // set up environment as an object
+		// set up environment as an object
+	MyString env_errors;
+	if(!env_obj.MergeFromV1or2Raw( s.env_v1or2,&env_errors )) {
+		EXCEPT("ERROR: Failed to parse environment string: %s\n%s\n",
+			   env_errors.Value(),s.env_v1or2);
+	}
 
 		// add name of SMP virtual machine (from startd) into environment
-	env_obj.add_string(VirtualMachineName);	
+	env_obj.SetEnv(VirtualMachineName);	
 
 	/* Port regulation for user job */
-	char *low = NULL, *high = NULL;
 	int low_port, high_port;
 
-	if ( (low = param("LOWPORT")) != NULL ) {
-		if ( (high = param("HIGHPORT")) != NULL ) {
-			low_port = atoi(low);
-			high_port = atoi(high);
-			sprintf(buf, "_condor_LOWPORT=%d", low_port);
-			env_obj.add_string(buf);
-			sprintf(buf, "_condor_HIGHPORT=%d", high_port);
-			env_obj.add_string(buf);
-			free(low);
-			free(high);
-		} else {
-			dprintf(D_ALWAYS, "LOWPORT is defined but HIGHPORT is not!\n");
-			dprintf(D_ALWAYS, "LOWPORT will be ignored!\n");
-			free(low);
-		}
+		// assume outgoing port range
+	if (get_port_range(TRUE, &low_port, &high_port) == TRUE) {
+		sprintf(buf, "_condor_LOWPORT=%d", low_port);
+		env_obj.SetEnv(buf);
+		sprintf(buf, "_condor_HIGHPORT=%d", high_port);
+		env_obj.SetEnv(buf);
 	}
 	/* end - Port regulation for user job */
 
+	if( param_boolean("BIND_ALL_INTERFACES", false) ) {
+		sprintf( buf, "_condor_BIND_ALL_INTERFACES=TRUE" );
+	} else {
+		sprintf( buf, "_condor_BIND_ALL_INTERFACES=FALSE" );
+	}
+	env_obj.SetEnv(buf);
+	
 
 		// Generate a directory where process can run and do its checkpointing
 	omask = umask(0);
@@ -1251,7 +1298,7 @@ UserProc::UserProc( STARTUP_INFO &s ) :
 		// the environment so the job knows where it is
 	char scratch_env[_POSIX_PATH_MAX];
 	sprintf(scratch_env,"CONDOR_SCRATCH_DIR=%s/%s",Execute,local_dir);
-	env_obj.add_string(scratch_env);
+	env_obj.SetEnv(scratch_env);
 
 	sprintf( buf, "%s/condor_exec.%d.%d", local_dir, cluster, proc );
 	cur_ckpt = new char [ strlen(buf) + 1 ];

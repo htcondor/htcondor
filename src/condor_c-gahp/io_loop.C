@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -21,204 +21,475 @@
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#include "io_loop.h"
+
 #include "condor_common.h"
+#include "io_loop.h"
 #include "condor_debug.h"
+#include "condor_config.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "schedd_client.h"
-#include "FdBuffer.h"
+#include "PipeBuffer.h"
+#include "globus_utils.h"
 
 
-// Queue for pending commands to schedd
-template class SimpleList<char *>;
-SimpleList <char *> request_out_buffer;
+
+const char * version = "$GahpVersion 2.0.1 Jun 27 2005 Condor\\ GAHP $";
 
 
-int
-io_loop(void * arg, Stream * sock) {
-
-	inter_thread_io_t * inter_thread_io = (inter_thread_io_t *)arg;
-	close (inter_thread_io->request_pipe[0]);
-	close (inter_thread_io->result_pipe[1]);
-
-	bool worker_ready = false;
-
-	dprintf (D_FULLDEBUG,"In io_loop\n");
-
-	int async_mode = 0;
-	int new_results_signaled = 0;
-	StringList result_list;
-
-	int exit_signaled = 0;
-
-	// Set up structures for bufferin' input
-	// This is because we might get an incomplete command (or response from worker thread)
-	// So these puppies will hold on to it, until we get the rest
-	FdBuffer stdin_buffer(STDIN_FILENO);
-    FdBuffer result_buffer(inter_thread_io->result_pipe[0]);
-    FdBuffer request_ack_buffer (inter_thread_io->request_ack_pipe[0]);
+char *mySubSystem = "C_GAHP";	// used by Daemon Core
 
 
-	const char * version = "$GahpVersion 2.0.0 Jan 21 2004 Condor\\ GAHP $";
-	printf ("%s\n", version);
-	fflush(stdout);
+int async_mode = 0;
+int new_results_signaled = 0;
 
-	do {
-		char ** argv;
-		int argc;
+int flush_request_tid = -1;
 
-		FdBuffer * wait_on [] = {
-			&stdin_buffer,
-			&result_buffer,
-			&request_ack_buffer };
+// The list of results ready to be output to IO
+StringList result_list;
 
-		int is_ready[3];
+// pipe buffers
+PipeBuffer stdin_buffer; 
 
-		int select_result =
-			FdBuffer::Select (wait_on, 3, 5, is_ready);
+// Each of these represent a thread that does the
+// actual work of communicating with the SchedD
+//
+// Currently workers[1] handles STAGE_IN requests,
+// workers[0] does everything else
+//
+// This is done so that the GAHP is not tied up
+// while doing file staging. The SchedD also
+// forks a file transfer thread, so it's not tied
+// up either.
+#define NUMBER_WORKERS 2
+Worker workers[NUMBER_WORKERS];
 
-		if (select_result == 0) {
-			continue; // what else are you gonna do?
-		} else if (select_result < 0) {
-			// Error: one of the fd's is broken
-			// Either parent exited or we're in early stages of a thermonuclear meltdown
-			// So exit
+// this appears at the bottom of this file
+extern "C" int display_dprintf_header(FILE *fp);
+
+#ifdef WIN32
+int STDIN_FILENO = fileno(stdin);
+#endif
+
+#if defined(WIN32)
+int forwarding_pipe = -1;
+unsigned __stdcall pipe_forward_thread(void *)
+{
+	const int FORWARD_BUFFER_SIZE = 4096;
+	char buf[FORWARD_BUFFER_SIZE];
+	
+	// just copy everything from stdin to the forwarding pipe
+	while (true) {
+
+		// read from stdin
+		int bytes = read(0, buf, FORWARD_BUFFER_SIZE);
+		if (bytes == -1) {
+			dprintf(D_ALWAYS, "pipe_forward_thread: error reading from stdin\n");
+			daemonCore->Close_Pipe(forwarding_pipe);
 			return 1;
 		}
 
-
-
-		if (is_ready[0]) {
-
-			// Don't make this a while() loop b/c
-			// stdin read is blocking
-			MyString * line = NULL;
-			if ((line = stdin_buffer.GetNextLine()) != NULL) {
-
-				const char * command = line->Value();
-
-				dprintf (D_ALWAYS, "got stdin: %s\n", command);
-
-				if (parse_gahp_command (command, &argv, &argc) &&
-					verify_gahp_command (argv, argc)) {
-
-					// Catch "special commands first
-					if (strcasecmp (argv[0], GAHP_COMMAND_RESULTS) == 0) {
-						// Print number of results
-						MyString rn_buff;
-						rn_buff+=result_list.number();
-						const char * commands [] = {
-							GAHP_RESULT_SUCCESS,
-							rn_buff.Value() };
-							gahp_output_return (commands, 2);
-
-						// Print each result line
-						char * next;
-						result_list.rewind();
-						while ((next = result_list.next()) != NULL) {
-							printf ("%s\n", next);
-							fflush(stdout);
-							result_list.deleteCurrent();
-						}
-
-						new_results_signaled = FALSE;
-					} else if (strcasecmp (argv[0], GAHP_COMMAND_VERSION) == 0) {
-						printf ("S %s\n", version);
-						fflush (stdout);
-					} else if (strcasecmp (argv[0], GAHP_COMMAND_QUIT) == 0) {
-						exit_signaled = TRUE;
-						gahp_output_return_success();
-					} else if (strcasecmp (argv[0], GAHP_COMMAND_ASYNC_MODE_ON) == 0) {
-						async_mode = TRUE;
-						new_results_signaled = FALSE;
-						gahp_output_return_success();
-					} else if (strcasecmp (argv[0], GAHP_COMMAND_ASYNC_MODE_OFF) == 0) {
-						async_mode = FALSE;
-						gahp_output_return_success();
-					} else if (strcasecmp (argv[0], GAHP_COMMAND_QUIT) == 0) {
-						gahp_output_return_success();
-						return 0; // exit
-					} else if (strcasecmp (argv[0], GAHP_COMMAND_COMMANDS) == 0) {
-						const char * commands [] = {
-							GAHP_RESULT_SUCCESS,
-							GAHP_COMMAND_JOB_SUBMIT,
-							GAHP_COMMAND_JOB_REMOVE,
-							GAHP_COMMAND_JOB_STATUS_CONSTRAINED,
-							GAHP_COMMAND_JOB_UPDATE_CONSTRAINED,
-							GAHP_COMMAND_JOB_UPDATE,
-							GAHP_COMMAND_JOB_HOLD,
-							GAHP_COMMAND_JOB_RELEASE,
-							GAHP_COMMAND_JOB_STAGE_IN,
-							GAHP_COMMAND_ASYNC_MODE_ON,
-							GAHP_COMMAND_ASYNC_MODE_OFF,
-							GAHP_COMMAND_RESULTS,
-							GAHP_COMMAND_QUIT,
-							GAHP_COMMAND_VERSION,
-							GAHP_COMMAND_COMMANDS};
-						gahp_output_return (commands, 15);
-					} else {
-						// Pass it on to the worker thread
-						// Actually buffer it, until the worker says it's ready
-						queue_request (command);
-						gahp_output_return_success();
-					}
-				} else {
-					gahp_output_return_error();
-				}
-
-				delete [] argv;
-				delete line;
-			} else {
-				// We read in 0 bytes, but the select on this fd triggered
-				// Therefore the pipe must be closed -> we're done
-				if (stdin_buffer.IsError())
-					return 1;
-			}
-		} // fi FD_ISSET (stdin)
-
-
-		if (is_ready[2]) {
-			// Worker is ready for more requests
-			char dummy;
-			worker_ready=true;
-			read (request_ack_buffer.getFd(), &dummy, 1);	// Swallow the "ready" signal
-		}
-		if(worker_ready) {
-			if (flush_next_request(inter_thread_io->request_pipe[1])) {
-				worker_ready=false;
-			}
+		// close forwarding pipe and exit on EOF
+		if (bytes == 0) {
+			daemonCore->Close_Pipe(forwarding_pipe);
+			return 0;
 		}
 
-		if (is_ready[1]) {
-			MyString * line = NULL;
-			if ((line = result_buffer.GetNextLine()) != NULL) {
-
-				dprintf (D_FULLDEBUG, "Master received:\"%s\"\n", line->Value());
-
-				// Add this to the list
-				result_list.append (line->Value());
-
-				if (async_mode) {
-					if (!new_results_signaled) {
-						printf ("R\n");
-						fflush (stdout);
-					}
-					new_results_signaled = TRUE;	// So that we only do it once
-				}
-
-				delete line;
-			}
-
-			if (result_buffer.IsError()) {
+		// write to the forwarding pipe
+		char* ptr = buf;
+		while (bytes) {
+			int bytes_written = daemonCore->Write_Pipe(forwarding_pipe, ptr, bytes);
+			if (bytes_written == -1) {
+				dprintf(D_ALWAYS, "pipe_forward_thread: error writing to forwarding pipe\n");
+				daemonCore->Close_Pipe(forwarding_pipe);
 				return 1;
 			}
+			ptr += bytes_written;
+			bytes -= bytes_written;
 		}
+	}
 
-	} while (!exit_signaled);
+}
+#endif
 
-	return 0;
+void
+usage( char *name )
+{
+	dprintf( D_ALWAYS,
+		"Usage: condor_gahp -s <schedd name> [-P <pool name>]\n"
+			 );
+	DC_Exit( 1 );
 }
 
+int
+main_init( int argc, char ** const argv )
+{
+
+
+	dprintf(D_FULLDEBUG, "C-GAHP IO thread\n");
+
+	MyString ScheddAddr;
+	MyString ScheddPool;
+
+	// handle specific command line args
+	int i = 1;
+	while ( i < argc ) {
+		if ( argv[i][0] != '-' )
+			usage( argv[0] );
+
+		switch( argv[i][1] ) {
+		case 's':
+			// don't check parent for schedd addr. use this one instead
+			if ( argc <= i + 1 )
+				usage( argv[0] );
+			ScheddAddr = argv[i + 1];
+			i++;
+			break;
+		case 'P':
+			// specify what pool (i.e. collector) to lookup the schedd name
+			if ( argc <= i + 1 )
+				usage( argv[0] );
+			ScheddPool = argv[i + 1];
+			i++;
+			break;
+		default:
+			usage( argv[0] );
+			break;
+		}
+
+		i++;
+	}
+
+	Init();
+	Register();
+	Reconfig();
+
+	int stdin_pipe = -1;
+#if defined(WIN32)
+	// if our parent is not DaemonCore, then our assumption that
+	// the pipe we were passed in via stdin is overlapped-mode
+	// is probably wrong. we therefore create a new pipe with the
+	// read end overlapped and start a "forwarding thread"
+	char* tmp;
+	if ((tmp = daemonCore->InfoCommandSinfulString(daemonCore->getppid())) == NULL) {
+
+		dprintf(D_FULLDEBUG, "parent is not DaemonCore; creating a forwarding thread\n");
+
+		int pipe_ends[2];
+		if (daemonCore->Create_Pipe(pipe_ends, true) == FALSE) {
+			EXCEPT("failed to create forwarding pipe");
+		}
+		forwarding_pipe = pipe_ends[1];
+		HANDLE thread_handle = (HANDLE)_beginthreadex(NULL,                   // default security
+		                                              0,                      // default stack size
+		                                              pipe_forward_thread,    // start function
+		                                              NULL,                   // arg: write end of pipe
+		                                              0,                      // not suspended
+													  NULL);                  // don't care about the ID
+		if (thread_handle == NULL) {
+			EXCEPT("failed to create forwarding thread");
+		}
+		CloseHandle(thread_handle);
+		stdin_pipe = pipe_ends[0];
+	}
+#endif
+
+	if (stdin_pipe == -1) {
+		// create a DaemonCore pipe from our stdin
+		stdin_pipe = daemonCore->Inherit_Pipe(fileno(stdin),
+		                                      false,    // read pipe
+		                                      true,     // registerable
+		                                      false);   // blocking
+	}
+
+	stdin_buffer.setPipeEnd(stdin_pipe);
+
+	(void)daemonCore->Register_Pipe (stdin_buffer.getPipeEnd(),
+					"stdin pipe",
+					(PipeHandler)&stdin_pipe_handler,
+					"stdin_pipe_handler");
+
+	for (i=0; i<NUMBER_WORKERS; i++) {
+
+		workers[i].Init(i);
+
+			// The IO (this) process cannot block, otherwise it's poosible
+			// to create deadlock between these two pipes
+		if (!daemonCore->Create_Pipe (workers[i].request_pipe,
+					      true,	// read end registerable
+					      false,	// write end not registerable
+					      false,	// read end blocking
+					      true	// write end blocking
+					     ) ||
+		    !daemonCore->Create_Pipe (workers[i].result_pipe,
+					      true	// read end registerable
+					     ) )
+		{
+			return -1;
+		}
+
+		workers[i].request_buffer.setPipeEnd(workers[i].request_pipe[1]);
+		workers[i].result_buffer.setPipeEnd(workers[i].result_pipe[0]);
+
+		(void)daemonCore->Register_Pipe (workers[i].result_buffer.getPipeEnd(),
+										 "result pipe",
+										 (PipeHandlercpp)&Worker::result_handler,
+										 "Worker::result_handler",
+										 (Service*)&workers[i]);
+	}
+
+	// Create child process
+	// Register the reaper for the child process
+	int reaper_id =
+		daemonCore->Register_Reaper(
+							"worker_thread_reaper",
+							(ReaperHandler)&worker_thread_reaper,
+							"worker_thread_reaper",
+							NULL);
+
+
+
+	flush_request_tid = 
+		daemonCore->Register_Timer (1,
+									1,
+									(TimerHandler)&flush_pending_requests,
+									"flush_pending_requests",
+									NULL);
+									
+									  
+
+
+	MyString exec_name;
+	char * c_gahp_worker_thread = param("CONDOR_GAHP_WORKER");
+	if (c_gahp_worker_thread) {
+		exec_name = c_gahp_worker_thread;
+		free(c_gahp_worker_thread);
+	}
+	else {
+		char * c_gahp_name = param ("CONDOR_GAHP");
+		ASSERT (c_gahp_name);
+		exec_name.sprintf ("%s_worker_thread", c_gahp_name);
+		free (c_gahp_name);
+	}
+
+	for (i=0; i<NUMBER_WORKERS; i++) {
+		ArgList args;
+
+		args.AppendArg(exec_name.Value());
+		args.AppendArg("-f");
+
+		if (ScheddAddr.Length()) {
+			args.AppendArg("-s");
+			args.AppendArg(ScheddAddr.Value());
+		}
+
+		if (ScheddPool.Length()) {
+			args.AppendArg("-P");
+			args.AppendArg(ScheddPool.Value());
+		}
+
+		MyString args_string;
+		args.GetArgsStringForDisplay(&args_string);
+		dprintf (D_FULLDEBUG, "Staring worker # %d: %s\n", i, args_string.Value());
+
+			// We want IO thread to inherit these ends of pipes
+		int std_fds[3];
+		std_fds[0] = workers[i].request_pipe[0];
+		std_fds[1] = workers[i].result_pipe[1];
+		std_fds[2] = fileno(stderr);
+
+		workers[i].pid = 
+			daemonCore->Create_Process (
+										exec_name.Value(),
+										args,
+										PRIV_UNKNOWN,
+										reaper_id,
+										FALSE,			// no command port
+										NULL,
+										NULL,
+										FALSE,
+										NULL,
+										std_fds);
+
+
+		if (workers[i].pid > 0) {
+			close (workers[i].request_pipe[0]);
+			close (workers[i].result_pipe[1]);
+		}
+	}
+			
+	// Setup dprintf to display pid
+	DebugId = display_dprintf_header;
+
+		// Print out the GAHP version to the screen
+		// now we're ready to roll
+	printf ("%s\n", version);
+	fflush(stdout);
+
+	dprintf (D_FULLDEBUG, "C-GAHP IO initialized\n");
+
+	return TRUE;
+}
+
+
+int
+stdin_pipe_handler(Service*, int pipe) {
+
+	MyString* line;
+	while ((line = stdin_buffer.GetNextLine()) != NULL) {
+
+		const char * command = line->Value();
+
+		dprintf (D_ALWAYS, "got stdin: %s\n", command);
+
+		Gahp_Args args;
+
+		if (parse_gahp_command (command, &args) &&
+			verify_gahp_command (args.argv, args.argc)) {
+
+				// Catch "special commands first
+			if (strcasecmp (args.argv[0], GAHP_COMMAND_RESULTS) == 0) {
+					// Print number of results
+				MyString rn_buff;
+				rn_buff+=result_list.number();
+				const char * commands [] = {
+					GAHP_RESULT_SUCCESS,
+					rn_buff.Value() };
+				gahp_output_return (commands, 2);
+
+					// Print each result line
+				char * next;
+				result_list.rewind();
+				while ((next = result_list.next()) != NULL) {
+					printf ("%s\n", next);
+					fflush(stdout);
+					result_list.deleteCurrent();
+				}
+
+				new_results_signaled = FALSE;
+			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_VERSION) == 0) {
+				printf ("S %s\n", version);
+				fflush (stdout);
+			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_QUIT) == 0) {
+				gahp_output_return_success();
+				DC_Exit(0);
+			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_ASYNC_MODE_ON) == 0) {
+				async_mode = TRUE;
+				new_results_signaled = FALSE;
+				gahp_output_return_success();
+			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_ASYNC_MODE_OFF) == 0) {
+				async_mode = FALSE;
+				gahp_output_return_success();
+			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_QUIT) == 0) {
+				gahp_output_return_success();
+				return 0; // exit
+			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_COMMANDS) == 0) {
+				const char * commands [] = {
+					GAHP_RESULT_SUCCESS,
+					GAHP_COMMAND_JOB_SUBMIT,
+					GAHP_COMMAND_JOB_REMOVE,
+					GAHP_COMMAND_JOB_STATUS_CONSTRAINED,
+					GAHP_COMMAND_JOB_UPDATE_CONSTRAINED,
+					GAHP_COMMAND_JOB_UPDATE,
+					GAHP_COMMAND_JOB_HOLD,
+					GAHP_COMMAND_JOB_RELEASE,
+					GAHP_COMMAND_JOB_STAGE_IN,
+					GAHP_COMMAND_JOB_STAGE_OUT,
+					GAHP_COMMAND_JOB_UPDATE_LEASE,
+					GAHP_COMMAND_JOB_REFRESH_PROXY,
+					GAHP_COMMAND_ASYNC_MODE_ON,
+					GAHP_COMMAND_ASYNC_MODE_OFF,
+					GAHP_COMMAND_RESULTS,
+					GAHP_COMMAND_QUIT,
+					GAHP_COMMAND_VERSION,
+					GAHP_COMMAND_COMMANDS};
+				gahp_output_return (commands, 15);
+			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_REFRESH_PROXY_FROM_FILE) == 0) {
+					// For now, just return success. This will work if
+					// the file is the same as that given to
+					// INITIALIZE_FROM_FILE (since our worker reads from
+					// the file on every use.
+				gahp_output_return_success();
+			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_JOB_STAGE_IN) == 0) {
+				flush_request (1, 	// worker for stage in requests
+							   command);
+				gahp_output_return_success(); 
+			} else {
+				flush_request (0,	// general worker 
+							   command);
+				gahp_output_return_success(); 
+			}
+			
+		} else {
+			gahp_output_return_error();
+		}
+
+		delete line;
+	}
+
+	// check if GetNextLine() returned NULL because of an error or EOF
+	if (stdin_buffer.IsError() || stdin_buffer.IsEOF()) {
+		dprintf (D_ALWAYS, "stdin buffer closed, exiting\n");
+		DC_Exit (1);
+	}
+
+	return TRUE;
+}
+
+int 
+result_pipe_handler(int id) {
+
+	MyString* line;
+	while ((line = workers[id].result_buffer.GetNextLine()) != NULL) {
+
+		dprintf (D_FULLDEBUG, "Received from worker:\"%s\"\n", line->Value());
+
+			// Add this to the list
+		result_list.append (line->Value());
+
+		if (async_mode) {
+			if (!new_results_signaled) {
+				printf ("R\n");
+				fflush (stdout);
+			}
+			new_results_signaled = TRUE;	// So that we only do it once
+		}
+
+		delete line;
+	}
+
+	if (workers[id].result_buffer.IsError() || workers[id].request_buffer.IsEOF()) {
+		DC_Exit(1);
+	}
+
+	return TRUE;
+}
+
+/*
+void
+process_next_request() {
+	if (worker_thread_ready) {
+		if (flush_next_request(request_pipe_out_fd)) {
+			worker_thread_ready = false;
+		}
+	}
+}
+*/
+
+int
+worker_thread_reaper (Service*, int pid, int exit_status) {
+
+	dprintf (D_ALWAYS, "Worker process pid=%d exited with status %d\n", 
+			 pid, 
+			 exit_status);
+
+	// Our child exited (presumably b/c we got a QUIT command),
+	// so should we
+	// If we're in this function there shouldn't be much cleanup to be done,
+	// except the command queue
+
+	DC_Exit(1);
+	return TRUE;
+}
 
 // Check the parameters to make sure the command
 // is syntactically correct
@@ -259,7 +530,7 @@ verify_gahp_command(char ** argv, int argc) {
 
 		return TRUE;
 	} else if ((strcasecmp (argv[0], GAHP_COMMAND_JOB_SUBMIT) == 0) ||
-				(strcasecmp (argv[0], GAHP_COMMAND_JOB_STAGE_IN) == 0)) {
+			   (strcasecmp (argv[0], GAHP_COMMAND_JOB_STAGE_IN) == 0) ) {
 		// Expected: CONDOR_JOB_SUBMIT <req id> <schedd name> <job ad>
 		return verify_number_args (argc, 4) &&
 				verify_request_id (argv[1]) &&
@@ -267,6 +538,37 @@ verify_gahp_command(char ** argv, int argc) {
 				verify_class_ad (argv[3]);
 
 		return TRUE;
+	} else if (strcasecmp (argv[0], GAHP_COMMAND_JOB_STAGE_OUT) == 0) {
+		// Expected: CONDOR_JOB_STAGE_OUT <req id> <schedd name> <job id>
+		return verify_number_args (argc, 4) &&
+				verify_request_id (argv[1]) &&
+				verify_schedd_name (argv[2]) &&
+				verify_job_id (argv[3]);
+
+		return TRUE;
+	} else if (strcasecmp (argv[0], GAHP_COMMAND_JOB_REFRESH_PROXY) == 0) {
+		// Expecting:GAHP_COMMAND_JOB_REFRESH_PROXY <req_id> <schedd_name> <job_id> <proxy file>
+		return verify_number_args (argc, 5) &&
+				verify_request_id (argv[1]) &&
+				verify_schedd_name (argv[2]) &&
+				verify_job_id (argv[3]);
+
+	} else if (strcasecmp (argv[0], GAHP_COMMAND_INITIALIZE_FROM_FILE) == 0) {
+		// Expecting:GAHP_COMMAND_INITIALIZE_FROM_FILE <proxy file>
+		return verify_number_args (argc, 2) &&
+			 x509_proxy_expiration_time (argv[1]) > 0;
+
+	} else if (strcasecmp (argv[0], GAHP_COMMAND_REFRESH_PROXY_FROM_FILE) == 0) {
+		// Expecting:GAHP_COMMAND_REFRESH_PROXY_FROM_FILE <proxy file>
+		return verify_number_args (argc, 2);
+
+	} else if (strcasecmp (argv[0], GAHP_COMMAND_JOB_UPDATE_LEASE) == 0) {
+			// Expecting CONDOR_JOB_UPDATE_LEASE <req id> <schedd name> <num  jobs> <job id> <expiration> <job id> <expiration> ...
+		return (argc >= 4) &&
+			   verify_number (argv[3]) &&
+			   (argc == (atoi (argv[3]) * 2 + 4)) &&
+			   verify_request_id (argv[1]) &&
+			   verify_schedd_name (argv[2]);
 	} else if (strcasecmp (argv[0], GAHP_COMMAND_RESULTS) == 0 ||
 				strcasecmp (argv[0], GAHP_COMMAND_VERSION) == 0 ||
 				strcasecmp (argv[0], GAHP_COMMAND_COMMANDS) == 0 ||
@@ -276,6 +578,7 @@ verify_gahp_command(char ** argv, int argc) {
 	    // These are no-arg commands
 	    return verify_number_args (argc, 1);
 	}
+
 
 	dprintf (D_ALWAYS, "Unknown command\n");
 
@@ -322,6 +625,22 @@ verify_class_ad (const char * s) {
 }
 
 int
+verify_number (const char * s) {
+	if (!s || !(*s))
+		return FALSE;
+	
+	int i=0;
+   
+	do {
+		if (s[i]<'0' || s[i]>'9')
+			return FALSE;
+	} while (s[++i]);
+
+	return TRUE;
+}
+		
+
+int
 verify_job_id (const char * s) {
     int dot_count = 0;
     int ok = TRUE;
@@ -348,83 +667,34 @@ verify_job_id (const char * s) {
 }
 
 
-
-
-int
-parse_gahp_command (const char* raw, char *** _argv, int * _argc) {
-
-	char ** argv = (char**)malloc (10*sizeof(char*)); 	// Max possible number of arguments
-	int argc = 0;
-
-	int beginning = 0;
-
-	int len=strlen(raw);
-
-	char * buff = (char*)malloc(len+1);
-	int buff_len = 0;
-
-	for (int i = 0; i<len; i++) {
-
-		if ( raw[i] == '\\' ) {
-			i++; 			//skip this char
-			if (i<(len-1))
-				buff[buff_len++] = raw[i];
-			continue;
-		}
-
-		/* Check if charcater read was whitespace */
-		if ( raw[i]==' ' || raw[i]=='\t' || raw[i]=='\r' || raw[i] == '\n') {
-
-			/* Handle Transparency: we would only see these chars
-			if they WEREN'T escaped, so treat them as arg separators
-			*/
-			buff[buff_len++] = '\0';
-			argv[argc++] = strdup(buff);
-			buff_len = 0;	// re-set temporary buffer
-
-			beginning = i+1; // next char will be one after whitespace
-		}
-		else {
-			// It's just a regular character, save it
-			buff[buff_len++] = raw[i];
-		}
-	}
-
-	/* Copy the last portion */
-	buff[buff_len++] = '\0';
-	argv[argc++] = strdup (buff);
-
-	*_argv = argv;
-	*_argc = argc;
-
-	free (buff);
-	return TRUE;
-
-
-}
-
 void
-queue_request (const char * request) {
-	request_out_buffer.Append (strdup(request));
+flush_request (int worker_id, const char * request) {
+
+	dprintf (D_FULLDEBUG, "Sending %s to worker %d\n", 
+			 request,
+			 worker_id);
+
+	MyString strRequest = request;
+	strRequest += "\n";
+
+	workers[worker_id].request_buffer.Write(strRequest.Value());
+
+	daemonCore->Reset_Timer (flush_request_tid, 0, 1);
 }
 
-int
-flush_next_request(int fd) {
-	request_out_buffer.Rewind();
-	char * command;
-	if (request_out_buffer.Next(command)) {
-		dprintf (D_FULLDEBUG, "Sending %s to worker\n", command);
-		write (  fd, command, strlen (command));
-		write (  fd, "\n", 1);
 
-		request_out_buffer.DeleteCurrent();
-		free (command);
-		return TRUE;
+int flush_pending_requests() {
+	for (int i=0; i<NUMBER_WORKERS; i++) {
+		workers[i].request_buffer.Write();
+
+		if (workers[i].request_buffer.IsError()) {
+			dprintf (D_ALWAYS, "Worker %d request buffer error, exiting...\n", i);
+			DC_Exit (1);
+		}
 	}
 
-	return FALSE;
+	return TRUE;
 }
-
 void
 gahp_output_return (const char ** results, const int count) {
 	int i=0;
@@ -451,4 +721,64 @@ void
 gahp_output_return_error() {
 	const char* result[] = {GAHP_RESULT_ERROR};
 	gahp_output_return (result, 1);
+}
+
+void Init() {}
+
+void Register() {}
+
+void Reconfig() {}
+
+
+int
+main_config( bool is_full )
+{
+	Reconfig();
+	return TRUE;
+}
+
+int
+main_shutdown_fast()
+{
+
+	return TRUE;	// to satisfy c++
+}
+
+int
+main_shutdown_graceful()
+{
+	daemonCore->Cancel_And_Close_All_Pipes();
+
+	for (int i=0; i<NUMBER_WORKERS; i++) {
+		daemonCore->Send_Signal (SIGKILL, workers[i].pid);
+	}
+
+	return TRUE;	// to satify c++
+}
+
+void
+main_pre_dc_init( int argc, char* argv[] )
+{
+}
+
+void
+main_pre_command_sock_init( )
+{
+}
+
+// This function is called by dprintf - always display our pid in our
+// log entries.
+extern "C"
+int
+display_dprintf_header(FILE *fp)
+{
+	static pid_t mypid = 0;
+
+	if (!mypid) {
+		mypid = daemonCore->getpid();
+	}
+
+	fprintf( fp, "[%ld] ", (long)mypid );
+
+	return TRUE;
 }

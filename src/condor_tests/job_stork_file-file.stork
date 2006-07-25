@@ -1,0 +1,5 @@
+[
+	dap_type = transfer;
+	src_url = "file:/scratch/bt/matlab/biz2/program/emcore2/emcore/results.mat";
+	dest_url = "gsiftp://north/shared/scratch2/wpatters/Latest/Output/5year//emcore2/emcore/results.mat";
+]

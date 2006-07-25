@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -23,6 +23,7 @@
 
 #include "condor_common.h"
 #include "startd.h"
+#include "vm_common.h"
 
 /* XXX fix me */
 #include "../condor_sysapi/sysapi.h"
@@ -38,18 +39,6 @@ command_handler( Service*, int cmd, Stream* stream )
 		return FALSE;
 	}
 	State s = rip->state();
-
-		// RELEASE_CLAIM only makes sense in two states
-	if( cmd == RELEASE_CLAIM ) {
-		if( (s == claimed_state) || (s == matched_state) ) {
-			rip->dprintf( D_ALWAYS, 
-						  "State change: received RELEASE_CLAIM command\n" );
-			return rip->release_claim();
-		} else {
-			rip->log_ignore( cmd, s );
-			return FALSE;
-		}
-	}
 
 		// The rest of these only make sense in claimed state 
 	if( s != claimed_state ) {
@@ -160,7 +149,7 @@ command_vacate_all( Service*, int cmd, Stream* )
 	switch( cmd ) {
 	case VACATE_ALL_CLAIMS:
 		dprintf( D_ALWAYS, "State change: received VACATE_ALL_CLAIMS command\n" );
-		resmgr->walk( &Resource::release_claim );
+		resmgr->walk( &Resource::retire_claim );
 		break;
 	case VACATE_ALL_FAST:
 		dprintf( D_ALWAYS, "State change: received VACATE_ALL_FAST command\n" );
@@ -269,6 +258,65 @@ command_request_claim( Service*, int cmd, Stream* stream )
 	return rval;
 }
 
+int
+command_release_claim( Service*, int cmd, Stream* stream ) 
+{
+	char* id = NULL;
+	Resource* rip;
+
+	if( ! stream->code(id) ) {
+		dprintf( D_ALWAYS, "Can't read ClaimId\n" );
+		if( id ) { 
+			free( id );
+		}
+		refuse( stream );
+		return FALSE;
+	}
+
+	rip = resmgr->get_by_any_id( id );
+	if( !rip ) {
+		dprintf( D_ALWAYS, 
+				 "Warning: can't find resource with ClaimId (%s)\n", id );
+		free( id );
+		refuse( stream );
+		return FALSE;
+	}
+	State s = rip->state();
+
+	//There are two cases: claim id is the current or the preempting claim
+	if( rip->r_pre && rip->r_pre->idMatches(id) ) {
+		// preempting claim is being canceled by schedd
+		rip->dprintf( D_ALWAYS, 
+		              "State change: received RELEASE_CLAIM command from preempting claim\n" );
+		rip->removeClaim(rip->r_pre);
+		free(id);
+		return TRUE;
+	}
+	else if( rip->r_pre_pre && rip->r_pre_pre->idMatches(id) ) {
+		// preempting preempting claim is being canceled by schedd
+		rip->dprintf( D_ALWAYS, 
+		              "State change: received RELEASE_CLAIM command from preempting preempting claim\n" );
+		rip->removeClaim(rip->r_pre_pre);
+		free(id);
+		return TRUE;
+	}
+	else if( rip->r_cur && rip->r_cur->idMatches(id) ) {
+		if( (s == claimed_state) || (s == matched_state) ) {
+			rip->dprintf( D_ALWAYS, 
+						  "State change: received RELEASE_CLAIM command\n" );
+			free(id);
+			return rip->release_claim();
+		} else {
+			rip->log_ignore( cmd, s );
+			free(id);
+			return FALSE;
+		}
+	}
+
+	// This should never happen unless get_by_any_id() changes.
+	EXCEPT("Neither pre nor cur claim matches claim id: %s",id);
+	return FALSE;
+}
 
 int
 command_name_handler( Service*, int cmd, Stream* stream ) 
@@ -299,13 +347,21 @@ command_name_handler( Service*, int cmd, Stream* stream )
 	State s = rip->state();
 	switch( cmd ) {
 	case VACATE_CLAIM:
-		if( (s == claimed_state) || (s == matched_state) ) {
+		switch( s ) {
+		case claimed_state:
+		case matched_state:
+#if HAVE_BACKFILL
+		case backfill_state:
+#endif /* HAVE_BACKFILL */
 			rip->dprintf( D_ALWAYS, 
 						  "State change: received VACATE_CLAIM command\n" );
-			return rip->release_claim();
-		} else {
+			return rip->retire_claim();
+			break;
+
+		default:
 			rip->log_ignore( cmd, s );
 			return FALSE;
+			break;
 		}
 		break;
 	case VACATE_CLAIM_FAST:
@@ -313,6 +369,9 @@ command_name_handler( Service*, int cmd, Stream* stream )
 		case claimed_state:
 		case matched_state:
 		case preempting_state:
+#if HAVE_BACKFILL
+		case backfill_state:
+#endif /* HAVE_BACKFILL */
 			rip->dprintf( D_ALWAYS, 
 						  "State change: received VACATE_CLAIM_FAST command\n" );
 			return rip->kill_claim();
@@ -430,7 +489,6 @@ command_query_ads( Service*, int, Stream* stream)
 	ClassAd queryAd;
 	ClassAd *ad;
 	ClassAdList ads;
-	MatchClassAd mad;
 	int more = 1, num_ads = 0;
    
 	dprintf( D_ALWAYS, "In command_query_ads\n" );
@@ -446,15 +504,10 @@ command_query_ads( Service*, int, Stream* stream)
 	resmgr->makeAdList( &ads );
 	
 		// Now, find the ClassAds that match.
-	mad.ReplaceRightAd( &queryAd );
-	bool match = false;
 	stream->encode();
 	ads.Open();
 	while( (ad = ads.Next()) ) {
-//		if( (*ad) >= queryAd ) {
-		mad.RemoveLeftAd( );
-		mad.ReplaceLeftAd( ad );
-		if( mad.EvaluateAttrBool( "leftMatchesRight", match ) && match ) {
+		if( (*ad) >= queryAd ) {
 			if( !stream->code(more) || !ad->put(*stream) ) {
 				dprintf (D_ALWAYS, 
 						 "Error sending query result to client -- aborting\n");
@@ -474,6 +527,41 @@ command_query_ads( Service*, int, Stream* stream)
 	return TRUE;
 }
 
+int
+command_vm_register( Service*, int, Stream* s )
+{
+	char *raddr = NULL;
+
+	s->decode();
+    	s->timeout(5);
+	if( !s->code(raddr) ) {
+		dprintf( D_ALWAYS, "command_vm_register: Can't read register IP\n");
+		free(raddr);
+		return FALSE;
+	}
+
+	dprintf( D_FULLDEBUG, "command_vm_register() is called with IP(%s).\n", raddr );
+
+	if( !s->end_of_message() ){
+		dprintf( D_ALWAYS, "command_vm_register: Can't read end_of_message\n");
+		free(raddr);
+		return FALSE;
+	}
+
+	int permission = 0;
+
+	if( vmapi_register_cmd_handler(raddr, &permission) == TRUE ) {
+		s->encode();
+		s->code(permission);
+		s->end_of_message();
+	}else{
+		free(raddr);
+		return FALSE;
+	}
+
+	free(raddr);
+	return TRUE;
+}
 
 //////////////////////////////////////////////////////////////////////
 // Protocol helper functions
@@ -482,16 +570,61 @@ command_query_ads( Service*, int, Stream* stream)
 #define ABORT \
 delete req_classad;						\
 if (client_addr) free(client_addr);		\
-if( s == claimed_state ) {				\
-	delete rip->r_pre;					\
-	rip->r_pre = new Claim( rip );		\
-} else {								\
-    if( s != owner_state ) {			\
-        rip->dprintf( D_ALWAYS, "State change: claiming protocol failed\n" ); \
-    }									\
-	rip->change_state( owner_state );	\
-}										\
-return FALSE
+return abort_claim(rip)
+
+int
+abort_claim( Resource* rip )
+{
+	switch( rip->state() ) {
+	case claimed_state:
+		if (rip->r_pre_pre) {
+			rip->removeClaim( rip->r_pre_pre );
+		}
+		else {
+			rip->removeClaim( rip->r_pre );
+		}
+		break;
+
+	case owner_state:
+			// no state change or other logic required
+		break;
+
+#if HAVE_BACKFILL
+	case backfill_state:
+			// For clarity, print this before changing the destination state.
+		rip->dprintf( D_ALWAYS, "Claiming protocol failed\n" );
+		if (rip->destination_state() == matched_state ) { 
+			/*
+			  We got the match notification, so we've already started
+			  evicting the backfill job.  In this case, if we have to
+			  abort the claim, the best we can do is change the
+			  destination so we go back to owner instead of matched.
+			  We still have to wait for the starter to exit. -Derek 
+			*/
+			rip->set_destination_state( owner_state );
+		} else {
+			/*
+			  Otherwise, we were running normally when the claim
+			  request came in we can just let it happily continue.  In
+			  this case, all we've got to do here is delete our
+			  current claim object and generate a new one. -Derek
+			*/
+			rip->removeClaim( rip->r_cur );
+		}
+		return FALSE;
+		break;
+#endif /* HAVE_BACKFILL */
+
+	default:
+		rip->dprintf( D_ALWAYS, "State change: claiming protocol failed\n" );
+		rip->change_state( owner_state );
+		return FALSE;
+		break;
+	}
+	rip->dprintf( D_ALWAYS, "Claiming protocol failed\n" );
+	return FALSE;
+}
+
 
 int
 request_claim( Resource* rip, char* id, Stream* stream )
@@ -504,7 +637,6 @@ request_claim( Resource* rip, char* id, Stream* stream )
 	float oldrank = 0;
 	char *client_addr = NULL;
 	int interval;
-	State s = rip->state();
 
 	if( !rip->r_cur ) {
 		EXCEPT( "request_claim: no current claim object." );
@@ -521,7 +653,12 @@ request_claim( Resource* rip, char* id, Stream* stream )
 		   -Derek Wright 3/11/99 
 		*/
 	if( rip->state() == claimed_state ) {
-		rip->r_pre->cancel_match_timer();
+		if(rip->r_pre_pre) {
+			rip->r_pre_pre->cancel_match_timer();
+		}
+		else {
+			rip->r_pre->cancel_match_timer();
+		}
 	} else {
 		rip->r_cur->cancel_match_timer();
 	}
@@ -547,8 +684,14 @@ request_claim( Resource* rip, char* id, Stream* stream )
 		}
 			// Now, store them into r_cur or r_pre, as appropiate
 		if ( rip->state() == claimed_state ) {
-			rip->r_pre->setaliveint( interval );
-			rip->r_pre->client()->setaddr( client_addr );
+			if(rip->r_pre_pre) {
+				rip->r_pre_pre->setaliveint( interval );
+				rip->r_pre_pre->client()->setaddr( client_addr );
+			}
+			else {
+				rip->r_pre->setaliveint( interval );
+				rip->r_pre->client()->setaddr( client_addr );
+			}
 		} else {
 			rip->r_cur->setaliveint( interval );
 			rip->r_cur->client()->setaddr( client_addr );
@@ -635,6 +778,43 @@ request_claim( Resource* rip, char* id, Stream* stream )
 			refuse( stream );
 			ABORT;
 		}
+		if( rip->r_pre_pre ) {
+			if(!rip->r_pre_pre->idMatches(id)) {
+				rip->dprintf( D_ALWAYS,
+							  "ClaimId from schedd (%s) doesn't match (%s)\n",
+							  id, rip->r_pre_pre->id() );
+				refuse( stream );
+				ABORT;
+			}
+			rip->dprintf(
+					 D_ALWAYS,
+					"Preempting preempting claim has correct ClaimId.\n");
+			if( rank < rip->r_pre->rank() ) {
+				rip->dprintf( D_ALWAYS, 
+							  "Preempting claim doesn't have sufficient "
+							  "rank to replace existing preempting claim; "
+							  "refusing.\n" );
+				refuse( stream );
+				ABORT;
+			}
+
+			if( rank > rip->r_pre->rank() ) {
+				rip->dprintf(D_ALWAYS,
+							 "Replacing existing preempting claim with "
+							 "new preempting claim based on machine rank.\n");
+			}
+			else {
+				rip->dprintf(D_ALWAYS,
+							 "Replacing existing preempting claim with "
+							 "new preempting claim based on user priority.\n");
+			}
+
+			Claim *pre_pre = rip->r_pre_pre;
+			rip->r_pre_pre = NULL;
+			rip->removeClaim(rip->r_pre); // cancel existing preempting claim
+			rip->r_pre = pre_pre;         // replace with new one
+		}
+
 		if( rip->r_pre->idMatches(id) ) {
 			rip->dprintf( D_ALWAYS, 
 						  "Preempting claim has correct ClaimId.\n" );
@@ -652,8 +832,13 @@ request_claim( Resource* rip, char* id, Stream* stream )
 					// need to know into r_pre.
 				rip->r_pre->setRequestStream( stream );
 				rip->r_pre->setad( req_classad );
+				rip->r_pre->loadAccountingInfo();
 				rip->r_pre->setrank( rank );
 				rip->r_pre->setoldrank( rip->r_cur->rank() );
+
+					// Create a new claim id for preempting this preempting
+					// claim (in case of long retirement).
+				rip->r_pre_pre = new Claim( rip );
 
 					// Get rid of the current claim.
 				if( rank > rip->r_cur->rank() ) {
@@ -664,7 +849,13 @@ request_claim( Resource* rip, char* id, Stream* stream )
 					rip->dprintf( D_ALWAYS, 
 					 "State change: preempting claim based on user priority\n" );
 				}
-				rip->release_claim();
+
+				    // Force resource to take note of the preempting claim.
+				    // This results in a reversible transition to the
+				    // retiring activity.  If the preempting claim goes
+				    // away before the current claim retires, the current
+				    // claim can unretire and continue without any disturbance.
+				rip->eval_state();
 
 					// Tell daemon core not to do anything to the stream.
 				return KEEP_STREAM;
@@ -688,36 +879,68 @@ request_claim( Resource* rip, char* id, Stream* stream )
 		}		
 	}	
 
-	if( cmd == OK ) {
-			// We decided to accept the request, save the schedd's
-			// stream, the rank and the classad of this request.
-		rip->r_cur->setRequestStream( stream );
-		rip->r_cur->setad( req_classad );
-		rip->r_cur->setrank( rank );
-		rip->r_cur->setoldrank( oldrank );
-
-			// Call this other function to actually reply to the
-			// schedd and perform the last half of the protocol.  We
-			// use the same function after the preemption has
-			// completed when the startd is finally ready to reply to
-			// the and finish the claiming process.
-		return accept_request_claim( rip );
-	} else {
+	if( cmd != OK ) {
 		refuse( stream );
 		ABORT;
 	}
+
+		// We decided to accept the request, save the schedd's
+		// stream, the rank and the classad of this request.
+	rip->r_cur->setRequestStream( stream );
+	rip->r_cur->setad( req_classad );
+	rip->r_cur->setrank( rank );
+	rip->r_cur->setoldrank( oldrank );
+
+#if HAVE_BACKFILL
+	if( rip->state() == backfill_state ) {
+			// we're currently in Backfill, so we can't just accept
+			// the request immediately, we have to first kill our
+			// backfill job on this resource.  so, we'll set the
+			// destination state to claimed, and allow that to finish
+			// the claiming protocol once the backfill is gone...
+		rip->set_destination_state( claimed_state );
+		return KEEP_STREAM;
+	}
+#endif /* HAVE_BACKFILL */
+
+		// If we're still here, we're ready to accpet the claim now.
+		// Call this other function to actually reply to the schedd
+		// and perform the last half of the protocol.  We use the same
+		// function after the preemption has completed when the startd
+		// is finally ready to reply to the and finish the claiming
+		// process.
+	return accept_request_claim( rip );
 }
 #undef ABORT
 
-#define ABORT 						\
-if( client_addr )					\
-    free( client_addr );			\
-stream->encode();					\
-stream->end_of_message();			\
-rip->r_cur->setRequestStream( NULL );	\
-rip->dprintf( D_ALWAYS, "State change: claiming protocol failed\n" ); \
-rip->change_state( owner_state );	\
-return KEEP_STREAM
+
+int
+abort_accept_claim( Resource* rip, Stream* stream )
+{
+	stream->encode();
+	stream->end_of_message();
+	rip->r_cur->setRequestStream( NULL );
+#if HAVE_BACKFILL
+	if (rip->state() == backfill_state &&
+		rip->destination_state() != owner_state)
+	{
+			/*
+			  If we're still in backfill when this happens, we can't
+			  go directly to owner state.  We've got to just set our
+			  destination and then wait for the starter to exit before
+			  we actually change states...
+			*/
+		rip->dprintf( D_ALWAYS, "Claiming protocol failed\n" );
+		rip->set_destination_state( owner_state );
+		return KEEP_STREAM;
+	}
+#endif /* HAVE_BACKFILL */
+
+	rip->dprintf( D_ALWAYS, "State change: claiming protocol failed\n" );
+	rip->change_state( owner_state );
+	return KEEP_STREAM;
+}
+
 
 int
 accept_request_claim( Resource* rip )
@@ -737,11 +960,11 @@ accept_request_claim( Resource* rip )
 	stream->encode();
 	if( !stream->put( OK ) ) {
 		rip->dprintf( D_ALWAYS, "Can't to send cmd to schedd.\n" );
-		ABORT;
+		return abort_accept_claim( rip, stream );
 	}
 	if( !stream->eom() ) {
 		rip->dprintf( D_ALWAYS, "Can't to send eom to schedd.\n" );
-		ABORT;
+		return abort_accept_claim( rip, stream );
 	}
 
 		// Grab the schedd addr and alive interval if the alive interval is still
@@ -753,13 +976,15 @@ accept_request_claim( Resource* rip )
 		stream->decode();
 		if( ! stream->code(client_addr) ) {
 			rip->dprintf( D_ALWAYS, "Can't receive schedd addr.\n" );
-			ABORT;
+			return abort_accept_claim( rip, stream );
 		} else {
 			rip->dprintf( D_FULLDEBUG, "Schedd addr = %s\n", client_addr );
 		}
 		if( !stream->code(interval) ) {
 			rip->dprintf( D_ALWAYS, "Can't receive alive interval\n" );
-			ABORT;
+			free( client_addr );
+			client_addr = NULL;
+			return abort_accept_claim( rip, stream );
 		} else {
 			rip->dprintf( D_FULLDEBUG, "Alive interval = %d\n", interval );
 		}
@@ -774,9 +999,11 @@ accept_request_claim( Resource* rip )
 
 		// Figure out the hostname of our client.
 	if( ! (tmp = sin_to_hostname(sock->endpoint(), NULL)) ) {
+		char *sinful = sin_to_string(sock->endpoint());
+		char *ip = string_to_ipstr(sinful);
 		rip->dprintf( D_FULLDEBUG,
-					  "Can't find hostname of client machine\n" );
-		rip->r_cur->client()->sethost( sin_to_string(sock->endpoint()) );
+					  "Can't find hostname of client machine %s\n", ip );
+		rip->r_cur->client()->sethost( ip );
 	} else {
 		client_host = strdup( tmp );
 			// Try to make sure we've got a fully-qualified hostname.
@@ -830,7 +1057,7 @@ accept_request_claim( Resource* rip )
 		// to delete the stream we've already deleted.
 	return KEEP_STREAM;
 }
-#undef ABORT
+
 
 
 #define ABORT \
@@ -1025,16 +1252,27 @@ activate_claim( Resource* rip, Stream* stream )
 	time_t now = time( NULL );
 
 		// now that we've gotten this far, we're really going to try
-		// to spawn the starter.  set it in our Claim object. 
+		// to spawn the starter.  set it in our Claim object.  Once
+		// it's there, we no longer control this memory so we should
+		// clear out our pointer to avoid confusion/problems.
 	rip->r_cur->setStarter( tmp_starter );
-		// Grab the job ID, so we've got it...
+	tmp_starter = NULL;
+
+		// update the current rank on this claim
+	float rank = compute_rank( mach_classad, req_classad ); 
+	rip->r_cur->setrank( rank );
+
+		// Grab the job ID, so we've got it.  Once we give the
+		// req_classad to the Claim object, we no longer control it. 
 	rip->r_cur->saveJobInfo( req_classad );
+	req_classad = NULL;
 
 		// Actually spawn the starter
 	if( ! rip->r_cur->spawnStarter(now, shadow_sock) ) {
-			// Error spawning starter!
-		delete( tmp_starter );
-		rip->r_cur->setStarter( NULL );
+			// if Claim::spawnStarter fails, it resets the Claim
+			// object to clear out all the info we just stashed above
+			// with setStarter() and saveJobInfo().  it's safe to just
+			// abort now, and all the state will be happy.
 		ABORT;
 	}
 
@@ -1076,6 +1314,15 @@ match_info( Resource* rip, char* id )
 			rip->update();
 			rip->r_pre->start_match_timer();
 			rval = TRUE;
+		} else if( rip->r_pre_pre && rip->r_pre_pre->idMatches(id) ) {
+				// The ClaimId we got matches the preempting preempting
+				// ClaimId we've been advertising.  Advertise
+				// ourself as unavailable for future claims, update
+				// the CM, and set the timer for this match.
+			rip->r_reqexp->unavail();
+			rip->update();
+			rip->r_pre_pre->start_match_timer();
+			rval = TRUE;
 		} else {
 				// The ClaimId doesn't match any of our ClaimIds.
 				// Should never get here, since we found the rip by
@@ -1083,19 +1330,45 @@ match_info( Resource* rip, char* id )
 			EXCEPT( "Should never get here" );
 		}
 		break;
+
+#if HAVE_BACKFILL
+	case backfill_state:
+#endif /* HAVE_BACKFILL */
 	case unclaimed_state:
 	case owner_state:
 		if( rip->r_cur->idMatches(id) ) {
 			rip->dprintf( D_ALWAYS, "Received match %s\n", id );
 
+			if( rip->destination_state() != no_state ) {
+					// we've already got a destination state.
+					// therefore, we don't want to act on this match
+					// notification, we want to allow our destination
+					// logic to run its course and just return.
+				dprintf( D_ALWAYS, "Got match while destination state "
+						 "set to %s, ignoring\n",
+						 state_to_string(rip->destination_state()) );
+				return TRUE;
+			}
+
 				// Start a timer to prevent staying in matched state
 				// too long. 
 			rip->r_cur->start_match_timer();
 
+			rip->dprintf( D_FAILURE|D_ALWAYS, "State change: "
+						  "match notification protocol successful\n" );
+
+#if HAVE_BACKFILL
+			if( rip->state() == backfill_state ) {
+					// if we're currently in backfill, we can't go
+					// immediately to matched, since we have to kill
+					// our existing backfill client/starter, first.
+				rip->set_destination_state( matched_state );
+				return TRUE;
+			}
+#endif /* HAVE_BACKFILL */
+
 				// Entering matched state sets our reqexp to unavail
 				// and updates CM.
-			rip->dprintf( D_FAILURE|D_ALWAYS, 
-						  "State change: match notification protocol successful\n" );
 			rip->change_state( matched_state );
 			rval = TRUE;
 		} else {
@@ -1120,11 +1393,9 @@ caRequestCODClaim( Stream *s, char* cmd_str, ClassAd* req_ad )
 	Resource* rip;
 	Claim* claim;
 	MyString err_msg;
-	ExprTree *tree;
+	ExprTree *tree, *rhs;
 	ReliSock* rsock = (ReliSock*)s;
 	const char* owner = rsock->getOwner();
-	ClassAdUnParser unp;
-	std::string bufString;
 
 	if( ! authorizedForCOD(owner) ) {
 		err_msg = "User '";
@@ -1146,10 +1417,10 @@ caRequestCODClaim( Stream *s, char* cmd_str, ClassAd* req_ad )
 		requirements_str = strdup( "TRUE" );
 		req_ad->Insert( "Requirements = TRUE" );
 	} else {
-		unp.Unparse( bufString, tree );
-		const char *bufCString = bufString.c_str( );
-		requirements_str = (char *) malloc( strlen( bufCString ) + 1 );
-		strcpy( requirements_str, bufCString );
+		rhs = tree->RArg();
+		if( rhs ) {
+			rhs->PrintToNewStr( &requirements_str );
+		}
 	}
 
 		// Find the right resource for this claim
@@ -1259,27 +1530,29 @@ caRequestClaim( Stream *s, char* cmd_str, ClassAd* req_ad )
 int
 caLocateStarter( Stream *s, char* cmd_str, ClassAd* req_ad )
 {
-	char* global_job_id = NULL;
-	Claim* claim = NULL;
+		char* global_job_id = NULL;
+		char* claimid = NULL;
+		Claim* claim = NULL;
 
-	if( ! req_ad->LookupString(ATTR_GLOBAL_JOB_ID, &global_job_id) ) {
-		dprintf( D_ALWAYS, "Failed to read %s from ClassAd "
-				 "for cmd %s, aborting\n", ATTR_GLOBAL_JOB_ID, cmd_str );
-		MyString err_msg = ATTR_GLOBAL_JOB_ID;
-		err_msg += " not found in request ad";
-		sendErrorReply( s, cmd_str, CA_INVALID_REQUEST, err_msg.Value() );
-		return FALSE;
-	}
-	claim = resmgr->getClaimByGlobalJobId( global_job_id );
+	req_ad->LookupString(ATTR_CLAIM_ID, &claimid);
+	req_ad->LookupString(ATTR_GLOBAL_JOB_ID, &global_job_id);
+	claim = resmgr->getClaimByGlobalJobIdAndId(global_job_id, claimid);
+
 	if( ! claim ) {
-		MyString err_msg = ATTR_GLOBAL_JOB_ID;
+		MyString err_msg = ATTR_CLAIM_ID;
 		err_msg += " (";
+		err_msg += claimid;
+		err_msg += ") and ";
+		err_msg += ATTR_GLOBAL_JOB_ID;
+		err_msg += " ( ";
 		err_msg += global_job_id;
-		err_msg += ") not found";
+		err_msg += " ) not found";
+
 		sendErrorReply( s, cmd_str, CA_FAILURE, err_msg.Value() );
 		free( global_job_id );
 		return FALSE;
 	}
+
 	ClassAd reply;
 	if( ! claim->publishStarterAd(&reply) ) {
 		MyString err_msg = "No starter found for ";

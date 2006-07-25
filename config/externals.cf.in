@@ -1,32 +1,68 @@
+#define HAS_EXTERNALS @has_externals@
 EXT_ROOT = @ext_root@
 EXT_TRIGGER = $(EXT_ROOT)/triggers
 EXT_INSTALL = $(EXT_ROOT)/install
 EXT_CONFIG_SH = @_cv_ext_config_sh@
 
 
-EXT_KERBEROS_VERSION = @ext_kerberos_version@
+EXT_KERBEROS_VERSION = @ext_krb5_version@
 EXT_GLOBUS_VERSION = @ext_globus_version@
-EXT_GLOBUS_DATA_VERSION = @ext_globus_data_version@
-EXT_GPT_VERSION = @ext_gpt_version@
 EXT_GAHP_VERSION = @ext_gahp_version@
 EXT_ZLIB_VERSION = @ext_zlib_version@
 EXT_PVM_VERSION = @ext_pvm_version@
 EXT_MAN_VERSION = man-current
 EXT_GT3GAHP_VERSION = @ext_gt3gahp_version@
+EXT_GT4GAHP_VERSION = @ext_gt4gahp_version@
+EXT_CLASSADS_VERSION = @ext_classads_version@
 EXT_SRB_VERSION = @ext_srb_version@
+EXT_GSOAP_VERSION = @ext_gsoap_version@
+EXT_PCRE_VERSION = @ext_pcre_version@
+EXT_POSTGRESQL_VERSION = @ext_postgresql_version@
+EXT_UNICOREGAHP_VERSION = @ext_unicoregahp_version@
+EXT_NORDUGRIDGAHP_VERSION = @ext_nordugridgahp_version@
+EXT_COREDUMPER_VERSION = @ext_coredumper_version@
+EXT_BLAHP_VERSION = @ext_blahp_version@
+
+#define WANT_EXT_LINUXLIBCHEADERS @want_ext_linuxlibcheaders@
+
+#if HAS_EXTERNALS
+#if WANT_EXT_LINUXLIBCHEADERS 
+EXT_LINUXLIBCHEADERS_VERSION = @ext_linuxlibcheaders_version@
+LINUXLIBCHEADERS_DIR = $(EXT_INSTALL)/$(EXT_LINUXLIBCHEADERS_VERSION)
+LINUXLIBCHEADERS_INC = $(LINUXLIBCHEADERS_DIR)/include
+#endif
+#endif
 
 #define WANT_EXT_GLIBC @want_ext_glibc@
-#if WANT_EXT_GLIBC
+#if HAS_EXTERNALS
+#if WANT_EXT_GLIBC 
 EXT_GLIBC_VERSION = @ext_glibc_version@
 GLIBC_DIR = $(EXT_INSTALL)/$(EXT_GLIBC_VERSION)/lib
 #endif
+#endif
 
+#if HAVE_EXT_DRMAA
+EXT_DRMAA_VERSION = @ext_drmaa_version@
+DRMAA_DIR = $(EXT_INSTALL)/$(EXT_DRMAA_VERSION)
+DRMAA_LIB = $(DRMAA_DIR)/lib
+DRMAA_INC = $(DRMAA_DIR)/include
+#endif 
+
+#if HAS_EXTERNALS
 MAN_DIR = $(EXT_INSTALL)/$(EXT_MAN_VERSION)/man
-
 OPENSSL_DIR = $(EXT_INSTALL)/$(EXT_GLOBUS_VERSION)
 GLOBUS_DIR = $(EXT_INSTALL)/$(EXT_GLOBUS_VERSION)
 GAHP_DIR = $(EXT_INSTALL)/$(EXT_GAHP_VERSION)/bin
-
+KERBEROS_DIR = $(EXT_INSTALL)/$(EXT_KERBEROS_VERSION)
+PVM_DIR = $(EXT_INSTALL)/$(EXT_PVM_VERSION)
+#else
+MAN_DIR =
+OPENSSL_DIR =
+GLOBUS_DIR =
+GAHP_DIR =
+KERBEROS_DIR =
+PVM_DIR =
+#endif
 
 #if WANT_NEST
 NEST_DIR = /p/condor/workspaces/nest
@@ -35,8 +71,7 @@ NEST_INC = $(NEST_DIR)/include
 #endif /* WANT_NEST */
 
 
-KERBEROS_DIR = $(EXT_INSTALL)/$(EXT_KERBEROS_VERSION)
-#if WANT_KERBEROS
+#if WANT_KERBEROS && HAS_EXTERNALS
 KERBEROS_INC = $(KERBEROS_DIR)/include
 /* so long as we're building it ourselves, we know it's krb5, so we
    probably don't need to keep this variable around.  however, for
@@ -47,7 +82,8 @@ KERBEROS_INC = $(KERBEROS_DIR)/include
 #if KERBEROS_K5
 KERBEROS_LIB = $(KERBEROS_DIR)/lib/libkrb5.a \
    $(KERBEROS_DIR)/lib/libk5crypto.a \
-   $(KERBEROS_DIR)/lib/libcom_err.a
+   $(KERBEROS_DIR)/lib/libcom_err.a \
+   $(KERBEROS_DIR)/lib/libkrb5support.a
 #else
 KERBEROS_LIB = $(KERBEROS_DIR)/lib/libkrb5.a \
    $(KERBEROS_DIR)/lib/libcrypto.a \
@@ -59,17 +95,73 @@ KERBEROS_LIB =
 KERBEROS_INC = 
 #endif
 
-
+#if HAS_EXTERNALS
 ZLIB_DIR = $(EXT_INSTALL)/$(EXT_ZLIB_VERSION)
 ZLIB_LIB = $(ZLIB_DIR)/lib
 ZLIB_INC = $(ZLIB_DIR)/include
+#else
+ZLIB_DIR =
+ZLIB_LIB =
+ZLIB_INC =
+#endif
 
+#if HAS_EXTERNALS
+NEW_CLASSADS_DIR = $(EXT_INSTALL)/$(EXT_CLASSADS_VERSION)
+NEW_CLASSADS_LIB = $(NEW_CLASSADS_DIR)/lib
+NEW_CLASSADS_INC = $(NEW_CLASSADS_DIR)/include
+#else
+NEW_CLASSADS_DIR = 
+NEW_CLASSADS_LIB = 
+NEW_CLASSADS_INC = 
+#endif
 
+#if HAS_EXTERNALS
 SRB_DIR = $(EXT_INSTALL)/$(EXT_SRB_VERSION)
 SRB_LIB = $(SRB_DIR)/lib
 SRB_INC = $(SRB_DIR)/include
+#else
+SRB_DIR =
+SRB_LIB =
+SRB_INC =
+#endif
 
+POSTGRESQL_DIR = $(EXT_INSTALL)/$(EXT_POSTGRESQL_VERSION)
+POSTGRESQL_LIB = $(POSTGRESQL_DIR)/lib
+POSTGRESQL_INC = $(POSTGRESQL_DIR)/include
 
 PVM_DIR = $(EXT_INSTALL)/$(EXT_PVM_VERSION)
 
+#if HAVE_EXT_GCB
+EXT_GCB_VERSION = @ext_gcb_version@
+GCB_DIR = $(EXT_INSTALL)/$(EXT_GCB_VERSION)
+GCB_LIB = $(GCB_DIR)/lib/libGCB.a
+GCB_INC = $(GCB_DIR)/include
+GCB_BIN = $(GCB_DIR)/bin
+#endif
+
 GT3GAHP_DIR = $(EXT_INSTALL)/$(EXT_GT3GAHP_VERSION)
+
+GT4GAHP_DIR = $(EXT_INSTALL)/$(EXT_GT4GAHP_VERSION)
+
+GSOAP_DIR = $(EXT_INSTALL)/$(EXT_GSOAP_VERSION)
+SOAPCPP2 = $(GSOAP_DIR)/bin/soapcpp2
+GSOAP_LIB = $(GSOAP_DIR)/lib
+GSOAP_INC = $(GSOAP_DIR)/include
+
+PCRE_DIR = $(EXT_INSTALL)/$(EXT_PCRE_VERSION)
+PCRE_INC = $(PCRE_DIR)/include
+
+UNICOREGAHP_DIR = $(EXT_INSTALL)/$(EXT_UNICOREGAHP_VERSION)
+
+NORDUGRIDGAHP_DIR = $(EXT_INSTALL)/$(EXT_NORDUGRIDGAHP_VERSION)
+
+BLAHP_DIR = $(EXT_INSTALL)/$(EXT_BLAHP_VERSION)
+
+#if HAS_EXTERNALS
+#define WANT_COREDUMPER @want_coredumper@
+#if WANT_COREDUMPER
+COREDUMPER_DIR = $(EXT_INSTALL)/$(EXT_COREDUMPER_VERSION)
+COREDUMPER_LIB = $(COREDUMPER_DIR)/lib
+COREDUMPER_INC = $(COREDUMPER_DIR)/include
+#endif
+#endif

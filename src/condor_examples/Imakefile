@@ -1,34 +1,46 @@
 FILES = README condor.generic condor_config.local.central.manager \
 	condor_config.local.dedicated.resource \
-	condor_config.local.dedicated.submit 
-
-CONTRIB_FILES = $(FILES) condor_config.local.ckpt.server \
+	condor_config.local.dedicated.submit \
+	condor_config.local.ckpt.server \
+	condor_config.local.ha_condor_client \
+	condor_config.local.ha_condor_had \
 	condor_config.local.root.ckpt.server \
 	condor_config.local.view_server \
-	condor_config.local.eventd  \
-	condor_config.local.condor-g
+	lamscript \
+	mp1script
 
 all::
 
 clean::
 
-release:: all
+release:: $(RELEASE_DIR)/etc/examples/README
+
+$(RELEASE_DIR)/etc/examples/README: 
+	/bin/cp -f $(FILES) $(RELEASE_DIR)/etc/examples
+	perl ./customize $(RELEASE_DIR)
 
 stripped:: $(STRIP_DIR)/etc/examples/README
 
 $(STRIP_DIR)/etc/examples/README: 
 	/bin/cp -f $(FILES) $(STRIP_DIR)/etc/examples
-	/bin/cp -f $(CONTRIB_FILES) $(STRIP_CONTRIB)/etc/examples
 	perl ./customize $(STRIP_DIR)
-	perl ./customize $(STRIP_CONTRIB)
 
+#if HAS_STATIC
 static:: $(STATIC_DIR)/etc/examples/README
 
 $(STATIC_DIR)/etc/examples/README:
 	/bin/cp -f $(FILES) $(STATIC_DIR)/etc/examples
-	/bin/cp -f $(CONTRIB_FILES) $(STATIC_CONTRIB)/etc/examples
 	perl ./customize $(STATIC_DIR)
-	perl ./customize $(STATIC_CONTRIB)
+
+static:: $(STATIC_UNSTRIP_DIR)/etc/examples/README
+
+$(STATIC_UNSTRIP_DIR)/etc/examples/README:
+	/bin/cp -f $(FILES) $(STATIC_UNSTRIP_DIR)/etc/examples
+	perl ./customize $(STATIC_UNSTRIP_DIR)
+
+#else  /* ! HAS_STATIC */
+static::
+#endif  /* HAS_STATIC */
 
 html:
 

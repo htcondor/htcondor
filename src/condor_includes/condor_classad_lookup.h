@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -20,6 +20,18 @@
   * RIGHT.
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
+/*
+ * This file has been deprecated, but I'm not removing with "cvs
+ * remove" for the time being.  It was written by Doug Thain for
+ * research relating to his paper titled "Gathering at the Well:
+ * Creating Communities for Grid I/O". It hasn't been used since, and
+ * the fact that this causes ClassAds to need to talk to Daemons is
+ * causing linking problems for libcondorapi.a, so we're just ditching
+ * it.
+ */
+
+#if 0
 
 #ifndef CONDOR_CLASSAD_LOOKUP_H
 #define CONDOR_CLASSAD_LOOKUP_H
@@ -51,4 +63,5 @@ typedef ClassAd * (*ClassAdLookupFunc) ( const char *constraint, void *arg );
 
 void ClassAdLookupRegister( ClassAdLookupFunc func, void *arg );
 
+#endif
 #endif

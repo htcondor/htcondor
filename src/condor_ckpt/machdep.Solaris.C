@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -119,7 +119,7 @@ stack_end_addr()
 #if defined(X86)
 	return 0x8048000; /* -- for x86 */
 #else
-	#if defined(Solaris27) || defined(Solaris28)
+	#if defined(Solaris27) || defined(Solaris28) 
 		return 0xFFBF0000;
 	#elif defined(Solaris29)
 		return 0xFFC00000; /* XXX educated guess */

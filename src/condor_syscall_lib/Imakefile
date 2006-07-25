@@ -1,8 +1,8 @@
-CMNT
-CMNT Define the features used from syscall.tmpl.
-CMNT Unlike libckpt, the syscall library uses
-CMNT all of the features.
-CMNT
+XCOMM
+XCOMM Define the features used from syscall.tmpl.
+XCOMM Unlike libckpt, the syscall library uses
+XCOMM all of the features.
+XCOMM
 
 #if DOES_REMOTE_SYSCALLS
 	REMOTE_SYSCALLS = -DREMOTE_SYSCALLS
@@ -21,11 +21,11 @@ HAS_64BIT_STRUCTS = -DHAS_64BIT_STRUCTS
 
 #if DOES_SAVE_SIGSTATE
 	SAVE_SIGSTATE = -DSAVE_SIGSTATE
-	#if IS_DUX
+#       if IS_DUX
 		SIG_CKPT_OBJS = signals_support.o signals_control.o SIGPROCMASK.o SIGSUSPEND.o SIGACTION.o SIGNAL.o _SIGSUSPEND.o
-	#else
+#       else
 		SIG_CKPT_OBJS = signals_support.o signals_control.o
-	#endif
+#       endif
 #endif
 
 #if WANT_NEST
@@ -89,19 +89,19 @@ EXTRACT = FORK.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o \
 		  MMAP.o SYSCALL.o PIPE.o _SIGACTION.o TRUNCATE.o \
 		  GETCWD.o GETRUSAGE.o \
 		  SYSCONF.o GETLOGIN.o LSEEK64.o \
-		  GETPAGESIZE.o
+		  GETPAGESIZE.o WAITPID.o
 #	elif IS_SUN4X_SOLARIS28
 EXTRACT = FORK.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o \
 		  MMAP.o SYSCALL.o PIPE.o _SIGACTION.o TRUNCATE.o \
 		  GETCWD.o GETRUSAGE.o \
 		  SYSCONF.o GETLOGIN.o LSEEK64.o GETMNTENT.o TSDALLOC.o \
-		  GETPAGESIZE.o
+		  GETPAGESIZE.o WAITPID.o
 #	elif IS_SUN4X_SOLARIS29
 EXTRACT = FORK.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o \
 		  MMAP.o SYSCALL.o PIPE.o _SIGACTION.o TRUNCATE.o \
 		  GETCWD.o GETRUSAGE.o \
 		  SYSCONF.o GETLOGIN.o LSEEK64.o OPENDIR.o \
-		  GETPAGESIZE.o
+		  GETPAGESIZE.o WAITPID.o 
 #	elif IS_IRIX
 EXTRACT = /* don't extract anything */
 #	else
@@ -177,7 +177,8 @@ URL_OBJ = url_condor.o include_urls.o cbstp_url.o file_url.o http_url.o \
 CKPT_OBJ = $(FILE_TABLE_OBJ)\
 	image.o tmp_stack.o machdep.$(DEP_OS).o malloc-user.o \
 	syscall_mode.o fake_hooks.o $(LONGJMP) $(HP_CKPT) \
-	$(SGI_CKPT) $(SIG_CKPT_OBJS) eprintf.o shared_utils.o condor_error.o
+	$(SGI_CKPT) $(SIG_CKPT_OBJS) eprintf.o shared_utils.o condor_error.o \
+	gtodc.o
 #else
 CKPT_OBJ = $(FILE_TABLE_OBJ) syscall_mode.o eprintf.o shared_utils.o condor_error.o
 #endif
@@ -201,7 +202,7 @@ SYSCALL_SUPPORT_OBJ=senders.o receivers.o syscall_mode.o syscall_connect.o remot
 UTIL_OBJ =  $(FLOCK_OBJ) dprintf_common.o except.o update_rusage.o \
 	internet.o $(PLATFORM_UTIL_OBJ) mkargv.o filename_tools.o
 
-CPP_UTIL_OBJ = condor_version.o 
+CPP_UTIL_OBJ = condor_version.o stat_wrapper.o
 
 CONDOR_TYPE_OBJ = sig_num.o proc.o open_flags.o fcntl_cmd.o errno_num.o
 
@@ -221,7 +222,15 @@ IO_OBJ = stream.o sock.o safe_sock.o reli_sock.o buffers.o $(CONDOR_TYPE_OBJ) co
 
 OPENSSL_OBJ = md5_dgst.o md5_one.o rand_lib.o md_rand.o sha1dgst.o cryptlib.o \
 	buffer.o stack.o err.o lhash.o mem.o rand_win.o mem_dbg.o b_print.o \
-	bio_lib.o bss_file.o ex_data.o mem_clr.o
+	bio_lib.o bss_file.o ex_data.o mem_clr.o eng_init.o tb_rand.o \
+	digest.o m_sha1.o rand_unix.o eng_lib.o eng_table.o eng_list.o \
+	tb_digest.o rsa_sign.o rand_egd.o obj_dat.o x_sig.o rsa_lib.o \
+	a_object.o obj_lib.o asn1_lib.o tasn_dec.o x_algor.o tasn_typ.o \
+	rsa_eay.o tb_rsa.o bn_lib.o bn_blind.o bn_ctx.o tasn_enc.o \
+	tasn_new.o tasn_fre.o bn_rand.o bn_gcd.o tasn_utl.o a_type.o \
+	a_bitstr.o a_int.o bn_mod.o bn_mont.o bn_div.o bn_word.o bn_shift.o \
+	bn_add.o bn_asm.o bn_sqr.o bn_exp.o rsa_none.o rsa_pk1.o rsa_oaep.o \
+	rsa_ssl.o a_dup.o bn_recp.o bn_mul.o
 
 #if defined(CONDOR_ENCRYPTION) || defined(CONDOR_MD)
 CONDOR_CRYPT_OBJ = CryptKey.o condor_crypt.o condor_md.o ../condor_util_lib/get_random_num.o \
@@ -233,7 +242,7 @@ CONDOR_CRYPT_OBJ = CryptKey.o condor_crypt.o condor_md.o ../condor_util_lib/get_
 
 SPECIAL_IO_OBJ = authentication.o $(CONDOR_CRYPT_OBJ)
 
-SPECIAL_OBJ = special_stubs.o
+SPECIAL_OBJ = special_stubs.o cedar_no_ckpt_stubs.o
 
 LIB_OBJ = $(EXTRACT) $(STUBS) $(UTIL) $(NAME_TAB) $(XDR_OBJ) $(UTIL_OBJ) \
 	$(CKPT_OBJ) $(UTIL_EXTRACT) $(IOS_STUBS) $(IO_OBJ) $(SPECIAL_IO_OBJ) \
@@ -243,10 +252,16 @@ SIMPLE_OBJ = condor_rt0.o extern_path.o xfer_file.o libcondorc++support.a
 SYSCALL_LIB = libcondorsyscall.a
 
 #if DOES_REMOTE_SYSCALLS
-all_target($(SYSCALL_LIB) $(COMPRESS_LIB) receivers.o $(SIMPLE_OBJ) syscall-list libz.a)
+all_target(tmp_dir $(SYSCALL_LIB) $(COMPRESS_LIB) receivers.o $(SIMPLE_OBJ) syscall-list)
 #else 
-all_target($(SYSCALL_SUPPORT_OBJ) extern_path.o file_stream.o)
+all_target(tmp_dir $(SYSCALL_SUPPORT_OBJ) extern_path.o file_stream.o)
 #endif
+
+TMP_DIR = tmp_dir
+tmp_dir:
+	mkdir tmp_dir; chmod 755 tmp_dir
+clean::
+	/bin/rm -rf tmp_dir
 
 stubs: switches.C senders.C receivers.C
 
@@ -415,10 +430,12 @@ SYSCONF.o :  $(SIMPLE_LIBC)  ToUpper
 uppercase_target($(SIMPLE_LIBC),getpagesize.o,GETPAGESIZE.o,getpagesize,GETPAGESIZE)
 #endif
 
+#if IS_AOLRIS27 || IS_SOLARIS28 || IS_SOLARIS29
+uppercase_target($(SIMPLE_LIBC),waitpid.o,WAITPID.o,waitpid,WAITPID)
+#endif
+
 #if DOES_CHECKPOINTING || DOES_REMOTE_SYSCALLS
-release_copy_target(condor_rt0.o,lib,condor_rt0.o,OBJECT_MODE)
-strip_copy_target(condor_rt0.o,lib,condor_rt0.o,OBJECT_MODE)
-static_copy_target(condor_rt0.o,lib,condor_rt0.o,OBJECT_MODE)
+public_copy_target(condor_rt0.o,lib,condor_rt0.o,OBJECT_MODE)
 #endif
 
 #if IS_LINUX
@@ -434,25 +451,16 @@ libcondorsyscall.a: libtmp.a ToUpper
 #endif
 
 #if DOES_CHECKPOINTING || DOES_REMOTE_SYSCALLS
-release_library(libcondorsyscall.a,lib)
-strip_library(libcondorsyscall.a,lib)
-static_library(libcondorsyscall.a,lib)
-#endif
-
-#if DOES_CHECKPOINTING || DOES_REMOTE_SYSCALLS
-release_library(libz.a,lib)
-strip_library(libz.a,lib)
-static_library(libz.a,lib)
+public_library(libcondorsyscall.a,lib)
+public_library(libcondor_z.a,lib)
 #endif
 
 #if DOES_COMPRESS_CKPT
-release_library($(COMPRESS_LIB),lib)
-strip_library($(COMPRESS_LIB),lib)
-static_library($(COMPRESS_LIB),lib)
+public_library($(COMPRESS_LIB),lib)
 #endif
 
-CMNT If no remote syscalls & no checkpointing support, then no need
-CMNT to release anything into RELEASEDIR/lib, since we only do VANILLA jobs
+XCOMM If no remote syscalls & no checkpointing support, then no need
+XCOMM to release anything into RELEASEDIR/lib, since we only do VANILLA jobs
 #if (!DOES_CHECKPOINTING) && (!DOES_REMOTE_SYSCALLS)
 release:: all
 stripped:: all
@@ -481,7 +489,7 @@ STUB_GEN_PLATFORM = -DDUX4
 STUB_GEN_PLATFORM = -DDUX5
 #endif
 
-STUB_GEN_FLAGS = $(STUB_GEN_PLATFORM) $(DL_EXTRACT) -D$(OS) \
+STUB_GEN_FLAGS = $(STUB_GEN_PLATFORM) $(DL_EXTRACT) -D$(OS) -D$(DIST_FLAG) \
 	$(SAVE_SIGSTATE) $(FILE_TABLE) $(REMOTE_SYSCALLS) $(CLIP) \
 	$(HAS_64BIT_SYSCALLS) $(HAS_64BIT_STRUCTS)
 
@@ -523,7 +531,7 @@ import(../h,syscall_numbers.c)
 import(../condor_util_lib,stub_gen)
 import(../condor_shadow.V6,pseudo_ops.h)
 import(../condor_ckpt,libcondorc++support.a)
-import($(ZLIB_LIB),libz.a)
+all_symlink_target($(ZLIB_LIB)/libz.a,libcondor_z.a)
 
 authentication.o: ../condor_io/authentication.C
 	$(CPlusPlus) $(C_PLUS_FLAGS) -I../condor_io \
@@ -593,25 +601,15 @@ obj_extract($(OPENSSL_MD_LIB),$(OPENSSL_OBJ))
    don't want to have to do any copying or packaging step like "make
    release" or "make public" before we can build the test suite.
 */
-all_symlink_target($(GLIBC_DIR)/libc.a,libc.a)
-all_symlink_target($(GLIBC_DIR)/libnss_files.a,libnss_files.a)
-all_symlink_target($(GLIBC_DIR)/libnss_dns.a,libnss_dns.a)
-all_symlink_target($(GLIBC_DIR)/libresolv.a,libresolv.a)
+all_symlink_target($(GLIBC_DIR)/libc.a,libcondor_c.a)
+all_symlink_target($(GLIBC_DIR)/libnss_files.a,libcondor_nss_files.a)
+all_symlink_target($(GLIBC_DIR)/libnss_dns.a,libcondor_nss_dns.a)
+all_symlink_target($(GLIBC_DIR)/libresolv.a,libcondor_resolv.a)
 
-release_copy_target($(GLIBC_DIR)/libc.a,lib,libc.a,OBJECT_MODE)
-release_copy_target($(GLIBC_DIR)/libnss_files.a,lib,libnss_files.a,OBJECT_MODE)
-release_copy_target($(GLIBC_DIR)/libnss_dns.a,lib,libnss_dns.a,OBJECT_MODE)
-release_copy_target($(GLIBC_DIR)/libresolv.a,lib,libresolv.a,OBJECT_MODE)
-
-static_copy_target($(GLIBC_DIR)/libc.a,lib,libc.a,OBJECT_MODE)
-static_copy_target($(GLIBC_DIR)/libnss_files.a,lib,libnss_files.a,OBJECT_MODE)
-static_copy_target($(GLIBC_DIR)/libnss_dns.a,lib,libnss_dns.a,OBJECT_MODE)
-static_copy_target($(GLIBC_DIR)/libresolv.a,lib,libresolv.a,OBJECT_MODE)
-
-strip_copy_target($(GLIBC_DIR)/libc.a,lib,libc.a,OBJECT_MODE)
-strip_copy_target($(GLIBC_DIR)/libnss_files.a,lib,libnss_files.a,OBJECT_MODE)
-strip_copy_target($(GLIBC_DIR)/libnss_dns.a,lib,libnss_dns.a,OBJECT_MODE)
-strip_copy_target($(GLIBC_DIR)/libresolv.a,lib,libresolv.a,OBJECT_MODE)
+public_copy_target($(GLIBC_DIR)/libc.a,lib,libcondor_c.a,OBJECT_MODE)
+public_copy_target($(GLIBC_DIR)/libnss_files.a,lib,libcondor_nss_files.a,OBJECT_MODE)
+public_copy_target($(GLIBC_DIR)/libnss_dns.a,lib,libcondor_nss_dns.a,OBJECT_MODE)
+public_copy_target($(GLIBC_DIR)/libresolv.a,lib,libcondor_resolv.a,OBJECT_MODE)
 
 #endif /* ! IS_CLIPPED && IS_GLIBC */
 
@@ -635,17 +633,9 @@ all_symlink_target($(GCC_LIBC),libcomp_libgcc.a)
 all_symlink_target($(LIB_GCC_EH),libcomp_libgcc_eh.a)
 all_symlink_target($(LIB_STDCPP),libcomp_libstdc++.a)
 
-release_copy_target(libcomp_libgcc.a,lib,libcomp_libgcc.a,OBJECT_MODE)
-release_copy_target(libcomp_libstdc++.a,lib,libcomp_libstdc++.a,OBJECT_MODE)
-release_copy_target(libcomp_libgcc_eh.a,lib,libcomp_libgcc_eh.a,OBJECT_MODE)
-
-static_copy_target(libcomp_libgcc.a,lib,libcomp_libgcc.a,OBJECT_MODE)
-static_copy_target(libcomp_libstdc++.a,lib,libcomp_libstdc++.a,OBJECT_MODE)
-static_copy_target(libcomp_libgcc_eh.a,lib,libcomp_libgcc_eh.a,OBJECT_MODE)
-
-strip_copy_target(libcomp_libgcc.a,lib,libcomp_libgcc.a,OBJECT_MODE)
-strip_copy_target(libcomp_libstdc++.a,lib,libcomp_libstdc++.a,OBJECT_MODE)
-strip_copy_target(libcomp_libgcc_eh.a,lib,libcomp_libgcc_eh.a,OBJECT_MODE)
+public_copy_target(libcomp_libgcc.a,lib,libcomp_libgcc.a,OBJECT_MODE)
+public_copy_target(libcomp_libstdc++.a,lib,libcomp_libstdc++.a,OBJECT_MODE)
+public_copy_target(libcomp_libgcc_eh.a,lib,libcomp_libgcc_eh.a,OBJECT_MODE)
 
 #endif /* ! IS_CLIPPED && IS_C_COMP_MAJOR_GCC_3 */
 

@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -50,5 +50,26 @@ private:
 };
 
 int hashFunction(const HashKey &, int);
+
+/* AttrKey makes a HashTable key from a char*, with case-insensitive
+ * hashing/comparison. It's suitable for use with ClassAd attribute
+ * names.
+ */
+
+class AttrKey
+{
+public:
+	AttrKey() { key = NULL; }
+	AttrKey(const char *k) { key = strdup(k); }
+	AttrKey(const AttrKey &hk) { key = strdup(hk.key); }
+	~AttrKey() { if (key) free(key); }
+	AttrKey& operator= (const AttrKey& from);
+	const char* value() const { if (key) return key; else return "\0"; };
+    friend bool operator== (const AttrKey &, const AttrKey &);
+private:
+	char *key;
+};
+
+int AttrKeyHashFunction( const AttrKey &, int );
 
 #endif

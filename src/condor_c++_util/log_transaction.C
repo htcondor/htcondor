@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -109,31 +109,42 @@ LogPtrList::NextEntry(LogRecord *prev)
 }
 
 
+Transaction::Transaction()
+{
+	m_EmptyTransaction = true;
+}
+
 void
-Transaction::Commit(int fd, void *data_structure)
+Transaction::Commit(FILE* fp, void *data_structure)
 {
 	LogRecord		*log;
-
+	int fd;
 	for (log = op_log.FirstEntry(); log != 0; 
 		 log = op_log.NextEntry(log)) 
 	{
-		if (fd >= 0) {
-			if (log->Write(fd) < 0) {
+		if (fp != NULL) {
+			if (log->Write(fp) < 0) {
 				EXCEPT("write inside a transaction failed, errno = %d",errno);
 			}
 		}
 		log->Play(data_structure);
 	}
-	if (fd >= 0) {
-		if (fsync(fd) < 0) {
-			EXCEPT("fsync inside a transaction failed, errno = %d",errno);
-		}
+	if (fp != NULL){
+	  if (fflush(fp) !=0){
+	    EXCEPT("fflush inside a transaction failed, errno = %d",errno);
+	  }
+	  fd = fileno(fp);
+	  if (fd >= 0) {
+	    if (fsync(fd) < 0) {
+	      EXCEPT("fsync inside a transaction failed, errno = %d",errno);
+	    }
+	  }
 	}
 }
-
 
 void
 Transaction::AppendLog(LogRecord *log)
 {
 	op_log.NewEntry(log);
+	m_EmptyTransaction = false;
 }

@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -54,10 +54,10 @@ class CollectorEngine : public Service
 	ClassAd *collect (int, ClassAd *, sockaddr_in *, int &, Sock* = NULL);
 
 	// lookup classad in the specified table with the given hashkey
-	ClassAd *lookup (AdTypes, HashKey &);
+	ClassAd *lookup (AdTypes, AdNameHashKey &);
 
 	// remove classad in the specified table with the given hashkey
-	int remove (AdTypes, HashKey &);
+	int remove (AdTypes, AdNameHashKey &);
 
 	// walk specified hash table with the given visit procedure
 	int walkHashTable (AdTypes, int (*)(ClassAd *));
@@ -70,17 +70,31 @@ class CollectorEngine : public Service
 	enum {GREATER_TABLE_SIZE = 1024};
 	CollectorHashTable StartdAds;
 	CollectorHashTable StartdPrivateAds;
+#if WANT_QUILL
+	CollectorHashTable QuillAds;
+#endif /* WANT_QUILL */
 	CollectorHashTable ScheddAds;
 	CollectorHashTable SubmittorAds;
 	CollectorHashTable LicenseAds;
 	CollectorHashTable MasterAds;
 	CollectorHashTable StorageAds;
 
+
 	// the lesser tables
 	enum {LESSER_TABLE_SIZE = 32};
 	CollectorHashTable CkptServerAds;
 	CollectorHashTable GatewayAds;
 	CollectorHashTable CollectorAds;
+	CollectorHashTable NegotiatorAds;
+	CollectorHashTable HadAds;
+
+	// table for "generic" ad types
+	GenericAdHashTable GenericAds;
+
+	// for walking through the generic hash tables
+	static int (*genericTableScanFunction)(ClassAd *);
+	static int genericTableWalker(CollectorHashTable *cht);
+	int walkGenericTables(int (*scanFunction)(ClassAd *));
 
 	// relevant variables from the config file
 	int	clientTimeout; 
@@ -96,10 +110,13 @@ class CollectorEngine : public Service
 	int  housekeeper ();
 	int  housekeeperTimerID;
 	void cleanHashTable (CollectorHashTable &, time_t,
-				bool (*) (HashKey &, ClassAd *,sockaddr_in *));
+				bool (*) (AdNameHashKey &, ClassAd *,sockaddr_in *));
 	ClassAd* updateClassAd(CollectorHashTable&,const char*, const char *,
-						   ClassAd*,HashKey&, const MyString &, int &, 
+						   ClassAd*,AdNameHashKey&, const MyString &, int &, 
 						   const sockaddr_in * );
+
+	// support for dynamically created tables
+	CollectorHashTable *findOrCreateTable(MyString &str);
 
 	// Statistics
 	CollectorStats	*collectorStats;

@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -37,6 +37,8 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "sysapi.h"
+#include "sysapi_externs.h"
+#include "my_popen.h"
 
 /* the cooked version */
 float
@@ -44,7 +46,11 @@ sysapi_load_avg(void)
 {
 	sysapi_internal_reconfig();
 
-	return sysapi_load_avg_raw();
+	if ( _sysapi_getload ) {
+		return sysapi_load_avg_raw();
+	} else {
+		return 0.0;
+	}
 }
 
 #if defined(HPUX)
@@ -99,7 +105,7 @@ static int KernelLookupFailed = 0;
 
 static float kernel_load_avg();
 
-extern float lookup_load_avg_via_uptime();
+float lookup_load_avg_via_uptime();
 
 /*
 ** Where is FSCALE defined on IRIX ?  Apparently nowhere...
@@ -381,10 +387,13 @@ get_k_vars()
 {
 }
 
-#elif defined(Darwin)
+#elif defined(Darwin) || defined(CONDOR_FREEBSD)
 
 #include <sys/resource.h>
 #include <sys/sysctl.h>
+#if defined(CONDOR_FREEBSD)
+#include <vm/vm_param.h>
+#endif
 float
 sysapi_load_avg_raw(void)
 {
@@ -447,7 +456,7 @@ sample_load(void *thr_data)
 {
 	HQUERY hQuery = NULL;
 	HCOUNTER hCounterQueueLength, *hCounterCpuLoad;
-	int nextsample = 0, i;
+	int nextsample = 0, i, exit_status = 0;
 	PDH_STATUS pdhStatus;
 	PDH_FMT_COUNTERVALUE counterval;
 	long queuelen;
@@ -473,6 +482,7 @@ sample_load(void *thr_data)
 	if (pdhStatus != ERROR_SUCCESS) {
 		/* dprintf(D_ALWAYS, "PdhAddCounter returns 0x%x\n", 
 						   (int)pdhStatus); */
+		PdhCloseQuery(hQuery);
 		return 2;
 	}
 	hCounterCpuLoad = malloc(sizeof(HCOUNTER)*ncpus);
@@ -483,6 +493,8 @@ sample_load(void *thr_data)
 		if (pdhStatus != ERROR_SUCCESS) {
 			/* dprintf(D_ALWAYS, "PdhAddCounter returns 0x%x\n", 
 							   (int)pdhStatus); */
+			PdhCloseQuery(hQuery);
+			free(hCounterCpuLoad);
 			return 3;
 		}
 	}
@@ -493,7 +505,8 @@ sample_load(void *thr_data)
 		if (pdhStatus != ERROR_SUCCESS) {
 			/* dprintf(D_ALWAYS, "PdhCollectQueryData returns 0x%x\n", 
 							   (int)pdhStatus); */
-			return 4;
+			exit_status = 4;
+			break;
 		}
 
 		pdhStatus = PdhGetFormattedCounterValue(hCounterQueueLength, 
@@ -502,7 +515,8 @@ sample_load(void *thr_data)
 		if (pdhStatus != ERROR_SUCCESS) {
 			/* dprintf(D_ALWAYS, "PdhGetFormattedCounterValue returns 0x%x\n",
 							   (int)pdhStatus); */
-			return 5;
+			exit_status = 5;
+			break;
 		}
 		queuelen = counterval.longValue;
 		cpuload = 0.0;
@@ -513,7 +527,8 @@ sample_load(void *thr_data)
 			if (pdhStatus != ERROR_SUCCESS) {
 				/* dprintf(D_ALWAYS, "PdhGetFormattedCounterValue returns 0x%x\n",
 								   (int)pdhStatus); */
-				return 6;
+				exit_status = 6;
+				break;
 			}
 			cpuload += counterval.doubleValue/100.0;
 		}
@@ -542,7 +557,12 @@ sample_load(void *thr_data)
 
 	}
 
-	return 0;	/* should never reach this point */
+	// we encountered a problem, so clean up everything and exit.
+	for (i=0; i<ncpus;i++) { PdhRemoveCounter(hCounterCpuLoad[i]); }
+	free(hCounterCpuLoad);
+	PdhCloseQuery(hQuery);
+
+	return exit_status;	
 }
 
 float
@@ -640,6 +660,8 @@ int main()
 
 /* For now, just get this value out of uptime.... */
 
+float lookup_load_avg_via_uptime();
+
 float
 sysapi_load_avg_raw(void)
 {
@@ -731,14 +753,15 @@ lookup_load_avg_via_uptime()
 	 *  next number.  This is the number we want.
 	 */
 	if (uptime_path != NULL) {
-		if ((output_fp = popen(uptime_path, "r")) == NULL) {
+		char *args[2] = {uptime_path, NULL};
+		if ((output_fp = my_popenv(args, "r", FALSE)) == NULL) {
 			return DEFAULT_LOADAVG;
 		}
 		
 		do { 
 			if (fscanf(output_fp, "%s", word) == EOF) {
 				dprintf(D_ALWAYS,"can't get \"average:\" from uptime\n");
-				pclose(output_fp);
+				my_pclose(output_fp);
 				return DEFAULT_LOADAVG;
 			}
 			
@@ -750,7 +773,7 @@ lookup_load_avg_via_uptime()
 				 */
 				if (fscanf(output_fp, "%f", &loadavg) != 1) {
 					dprintf(D_ALWAYS, "can't read loadavg from uptime\n");
-					pclose(output_fp);
+					my_pclose(output_fp);
 					return DEFAULT_LOADAVG;
 				}
 				
@@ -760,7 +783,7 @@ lookup_load_avg_via_uptime()
 				 *  We check if this is the case and use fclose instead.
 				 *  -- Ajitk
 				 */
-				pclose(output_fp);
+				my_pclose(output_fp);
 				return loadavg;
 			}
 		} while (!feof(output_fp)); 
@@ -769,8 +792,9 @@ lookup_load_avg_via_uptime()
 		 *  Reached EOF before getting at load average!  -- Ajitk
 		 */
         
-		pclose(output_fp);
+		my_pclose(output_fp);
 	}
+
 	
 	/* not reached */
 	return DEFAULT_LOADAVG;

@@ -1,0 +1,5 @@
+# Note: this is not a complete submit file -- it's just for testing
+# the multi-log-reader code.
+
+Initialdir=..
+Log=condor_c++_util/test_multi_log.log2

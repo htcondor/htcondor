@@ -1,0 +1,143 @@
+#! /usr/bin/env perl
+use Cwd;
+use CondorTest;
+
+$cmd = 'job_dagman_maxprescripts.dag';
+
+$flowlog = "job_dagman_maxprescripts-srvr-log.log";
+$serversubFile = "job_dagman_maxprescripts-srvr.cmd";
+
+my $pid = $$;
+system("mkdir $pid");
+my $curcwd = getcwd();
+print "current directory is $curcwd\n";
+
+my $socketname = "maxpresock";
+my $newsocketname = $curcwd . "/" . $pid . "/maxpresock";
+
+system("rm -f $flowlog");
+defined(my $pid = fork) or die "Cannot fork: $!";
+unless ($pid)
+{
+    #child runs and ceases to exist
+    exec "./x_general_server.pl $newsocketname $flowlog";
+    die "can not exec dumpcore!\n";
+}
+#main process continues here
+
+
+print "current directory is $newsocketname\n";
+
+# information for creating logging client from template.
+my $checkintemplate = "job_dagman_maxprescripts-checkin.template";
+my $checkin = "job_dagman_maxprescripts-checkin.pl";
+
+@filestochmod = qw/job_dagman_maxprescripts-checkin.pl/;
+
+# now make client script know the correct socket name. Create
+# client from template script.
+{
+	print "Correcting socket name in $name\n";
+	open(FF,"<$checkintemplate") || die "Failed to open $name: $!\n";
+	open(NEWFF,">$checkin") || die "Failed to open $name.new: $!\n";
+	my $line = "";
+	while(<FF>)
+	{
+		chomp($_);
+		$line = $_;
+		if( $line =~ /(^\s*.*)$socketname(.*$)/)
+		{
+			print "Found ---$1$socketname$2---\n";
+			print "replacing with $1$newsocketname$2\n";
+			print NEWFF "$1$newsocketname$2\n";
+		}
+		else
+		{
+			print NEWFF "$line\n";
+		}
+	}
+	close(FF);
+	close(NEWFF);
+}
+
+foreach $name (@filestochmod)
+{
+	system("chmod 755 $name");
+}
+
+$testname = 'Condor submit dag - throttle prescripts test - scheduler U';
+$maxjobs = 4;
+$dagman_args = "-v -MaxPre $maxjobs";
+
+my $killedchosen = 0;
+
+# truly const variables in perl
+sub IDLE{1};
+sub HELD{5};
+sub RUNNING{2};
+
+my $joblog;
+
+$abnormal = sub 
+{
+
+	die "Want to see only submit, execute and successful completion\n";
+};
+
+$aborted = sub 
+{
+	die "Abort event NOT expected\n";
+};
+
+$held = sub 
+{
+	die "Held event NOT expected\n";
+};
+
+$executed = sub
+{
+	print "Good. We need the dag to run\n";
+};
+
+$submitted = sub
+{
+	print "submitted: This test will see submit, executing and successful completion\n";
+	$joblog = "submitdag_maxprescripts.log";
+};
+
+$success = sub
+{
+	print "executed successfully\n";
+	open(FLOW,"./x_dagman_readflowlog.pl $flowlog MAXPRE $maxjobs | ") || die "Can not open flowlog: $!\n";
+	while(<FLOW>)
+	{
+		my $ret;
+		chomp;
+		$ret = $_;
+		print "$ret\n";
+		if( $ret ne "0" )
+		{
+			system("./x_general_client.pl $newsocketname quit");
+			die "MAXPRE of $maxjobs exceeded\n";
+		}
+	}
+	# shutdown the server we started
+	system("./x_general_client.pl $newsocketname quit");
+};
+
+CondorTest::RegisterExitedSuccess( $testname, $success);
+CondorTest::RegisterExecute($testname, $executed);
+CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
+CondorTest::RegisterAbort( $testname, $aborted );
+CondorTest::RegisterHold( $testname, $held );
+CondorTest::RegisterSubmit( $testname, $submitted );
+
+if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
+	print "$testname: SUCCESS\n";
+	exit(0);
+} else {
+	# shutdown the server we started
+	system("./x_general_client.pl $newsocketname quit");
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+

@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -102,12 +102,12 @@ void attempt_access_handler(Service *, int i, Stream *s)
 	case ACCESS_READ:
 		dprintf( D_FULLDEBUG, "Checking file %s for read permission.\n", 
 				 filename );
-		open_result = open( filename, O_RDONLY, 0666 );
+		open_result = open( filename, O_RDONLY | O_LARGEFILE, 0666 );
 		break;
 	case ACCESS_WRITE:
 		dprintf( D_FULLDEBUG, "Checking file %s for write permission.\n",
 				 filename );
-		open_result = open( filename, O_WRONLY, 0666 );
+		open_result = open( filename, O_WRONLY | O_LARGEFILE, 0666 );
 		break;
 	default:
 		dprintf( D_ALWAYS, "ATTEMPT_ACCESS: Unknown access mode.\n" );
@@ -216,13 +216,13 @@ int attempt_access(char *filename, int mode, int uid, int gid,
 		if( return_val )
 		{
 			dprintf(D_FULLDEBUG, 
-					"Schedd says this file '%s' is writeable.\n",
+					"Schedd says this file '%s' is writable.\n",
 					filename);
 		}
 		else
 		{
 			dprintf(D_FULLDEBUG, 
-					"Schedd says this file '%s' is not writeable.\n",
+					"Schedd says this file '%s' is not writable.\n",
 					filename);
 		}
 		break;

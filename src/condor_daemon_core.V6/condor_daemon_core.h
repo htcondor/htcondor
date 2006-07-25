@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -37,6 +37,7 @@
 #include "condor_common.h"
 #include "condor_uid.h"
 #include "condor_io.h"
+#include "dc_service.h"
 #include "condor_timer_manager.h"
 #include "condor_ipverify.h"
 #include "condor_commands.h"
@@ -48,8 +49,18 @@
 #include "list.h"
 #include "extArray.h"
 #include "Queue.h"
+#include "MapFile.h"
 #ifdef WIN32
 #include "ntsysinfo.h"
+#endif
+#include "self_monitor.h"
+#include "stdsoap2.h"
+#include "condor_pidenvid.h"
+#include "condor_arglist.h"
+#include "env.h"
+
+#if defined(WIN32)
+#include "pipe.WIN32.h"
 #endif
 
 #define DEBUG_SETTABLE_ATTR_LISTS 0
@@ -94,6 +105,22 @@ typedef int     (Service::*ReaperHandlercpp)(int pid,int exit_status);
 
 ///
 typedef int		(*ThreadStartFunc)(void *,Stream*);
+
+/// Register with RegisterTimeSkipCallback. Call when clock skips.  First
+//variable is opaque data pointer passed to RegisterTimeSkipCallback.  Second
+//variable is the _rough_ unexpected change in time (negative for backwards).
+typedef void	(*TimeSkipFunc)(void *,int);
+
+/** Does work in thread.  For Create_Thread_With_Data.
+	@see Create_Thread_With_Data
+*/
+
+typedef int	(*DataThreadWorkerFunc)(int data_n1, int data_n2, void * data_vp);
+
+/** Reports to parent when thread finishes.  For Create_Thread_With_Data.
+	@see Create_Thread_With_Data
+*/
+typedef int	(*DataThreadReaperFunc)(int data_n1, int data_n2, void * data_vp, int exit_status);
 //@}
 
 typedef enum { 
@@ -114,6 +141,7 @@ const int DCJOBOPT_NO_ENV_INHERIT   = (1<<2);
 
 #define HAS_DCJOBOPT_SUSPEND_ON_EXEC(mask)  ((mask)&DCJOBOPT_SUSPEND_ON_EXEC)
 #define HAS_DCJOBOPT_NO_ENV_INHERIT(mask)  ((mask)&DCJOBOPT_NO_ENV_INHERIT)
+#define HAS_DCJOBOPT_ENV_INHERIT(mask)  (!(HAS_DCJOBOPT_NO_ENV_INHERIT(mask)))
 
 
 /** helper function for finding available port for both 
@@ -240,6 +268,18 @@ class DaemonCore : public Service
                    the calling process
         @return A pointer into a <b>static buffer</b>, or NULL on error */
     char* InfoCommandSinfulString (int pid = -1);
+
+	/** Returns a pointer to the penvid passed in if successful
+		in determining the environment id for the pid, or NULL if unable
+		to determine.
+        @param pid The pid to ask about.  -1 (Default) means
+                   the calling process
+		@param penvid Address of a structure to be filled in with the 
+			environment id of the pid. Left in undefined state after function
+			call.
+	*/
+	PidEnvID* InfoEnvironmentID(PidEnvID *penvid, int pid = -1);
+
 
     /** Not_Yet_Documented
         @return Not_Yet_Documented
@@ -421,7 +461,7 @@ class DaemonCore : public Service
         @param handler_descrip  Not_Yet_Documented
         @param s                Not_Yet_Documented
         @param perm             Not_Yet_Documented
-        @return Not_Yet_Documented
+        @return -1 if iosock is NULL, -2 is reregister, 0 or above on success
     */
     int Register_Socket (Stream*           iosock,
                          char *            iosock_descrip,
@@ -437,7 +477,7 @@ class DaemonCore : public Service
         @param handler_descrip  Not_Yet_Documented
         @param s                Not_Yet_Documented
         @param perm             Not_Yet_Documented
-        @return Not_Yet_Documented
+        @return -1 if iosock is NULL, -2 is reregister, 0 or above on success
     */
     int Register_Socket (Stream*              iosock,
                          char *               iosock_descrip,
@@ -449,7 +489,7 @@ class DaemonCore : public Service
     /** Not_Yet_Documented
         @param iosock           Not_Yet_Documented
         @param descrip          Not_Yet_Documented
-        @return Not_Yet_Documented
+        @return -1 if iosock is NULL, -2 is reregister, 0 or above on success
     */
     int Register_Command_Socket (Stream*      iosock,
                                  char *       descrip = NULL ) {
@@ -484,16 +524,16 @@ class DaemonCore : public Service
 	 */
 	//@{
     /** Not_Yet_Documented
-        @param pipefd           Not_Yet_Documented
-        @param iosock_descrip   Not_Yet_Documented
+        @param pipe_end            Not_Yet_Documented
+        @param pipe_descrip     Not_Yet_Documented
         @param handler          Not_Yet_Documented
         @param handler_descrip  Not_Yet_Documented
         @param s                Not_Yet_Documented
         @param perm             Not_Yet_Documented
         @return Not_Yet_Documented
     */
-    int Register_Pipe (int		           pipefd,
-                         char *            iosock_descrip,
+    int Register_Pipe (int		           pipe_end,
+                         char *            pipe_descrip,
                          PipeHandler       handler,
                          char *            handler_descrip,
                          Service *         s                = NULL,
@@ -501,42 +541,51 @@ class DaemonCore : public Service
                          DCpermission      perm             = ALLOW);
 
     /** Not_Yet_Documented
-        @param pipefd           Not_Yet_Documented
-        @param iosock_descrip   Not_Yet_Documented
+        @param pipe_end         Not_Yet_Documented
+        @param pipe_descrip     Not_Yet_Documented
         @param handlercpp       Not_Yet_Documented
         @param handler_descrip  Not_Yet_Documented
         @param s                Not_Yet_Documented
         @param perm             Not_Yet_Documented
         @return Not_Yet_Documented
     */
-    int Register_Pipe (int					  pipefd,
-                         char *               iosock_descrip,
+    int Register_Pipe (int					  pipe_end,
+                         char *               pipe_descrip,
                          PipeHandlercpp       handlercpp,
                          char *               handler_descrip,
                          Service*             s,
                          HandlerType          handler_type = HANDLE_READ,    
                          DCpermission         perm = ALLOW);
 
-
     /** Not_Yet_Documented
-        @param pipefd           Not_Yet_Documented
+        @param pipe_end           Not_Yet_Documented
         @return Not_Yet_Documented
     */
-    int Cancel_Pipe ( int pipefd );
+    int Cancel_Pipe ( int pipe_end );
 
-	/// Cancel and close all registed pipes.
+	/// Cancel and close all pipes.
 	int Cancel_And_Close_All_Pipes(void);
 
 	/** Create an anonymous pipe.
 	*/
-	int Create_Pipe( int *pipefds, bool nonblocking_read = false, 
-		bool nonblocking_write = false, unsigned int psize = 0);
+	int Create_Pipe( int *pipe_ends,
+			 bool can_register_read = false, bool can_register_write = false,
+			 bool nonblocking_read = false, bool nonblocking_write = false,
+			 unsigned int psize = 4096);
 
+	/** Make DaemonCore aware of an inherited pipe.
+	*/
+	int Inherit_Pipe( int p, bool write, bool can_register, bool nonblocking, int psize = 4096);
+
+	int Read_Pipe(int pipe_end, void* buffer, int len);
+
+	int Write_Pipe(int pipe_end, const void* buffer, int len);
+					 
 	/** Close an anonymous pipe.  This function will also call 
-	 * Cancel_Pipe() on behalf of the caller if the pipefd had
+	 * Cancel_Pipe() on behalf of the caller if the pipe_end had
 	 * been registed via Register_Pipe().
 	*/
-	int Close_Pipe(int piepfd);
+	int Close_Pipe(int pipe_end);
 
 	//@}
 
@@ -625,7 +674,7 @@ class DaemonCore : public Service
     /** Not_Yet_Documented
         @return Not_Yet_Documented
     */
-    inline pid_t getpid() { return mypid; };
+    inline pid_t getpid() { return this->mypid; };
 
     /** Not_Yet_Documented
         @return Not_Yet_Documented
@@ -670,9 +719,9 @@ class DaemonCore : public Service
                is a relative path name AND cwd is specified, then we
                prepend the result of getcwd() to 'name' and pass 
                that to exec().
-        @param args The list of args, separated by spaces.  The 
+        @param args The list of args as an ArgList object.  The 
                first arg is argv[0], the name you want to appear in 
-               'ps'.  If you don't specify agrs, then 'name' is 
+               'ps'.  If you don't specify args, then 'name' is 
                used as argv[0].
         @param priv The priv state to change into right before
                the exec.  Default = no action.
@@ -684,8 +733,7 @@ class DaemonCore : public Service
 			   socket.  If it is any integer > 1, then it will have a
 			   command socket on a port well-known port 
 			   specified by want_command_port.
-        @param env A colon-separated list of stuff to be put into
-               the environment of the new process
+        @param env Environment values to place in job environment.
         @param cwd Current Working Directory
         @param new_process_group Do you want to make one? Default = FALSE
         @param sock_inherit_list A list of socks to inherit.
@@ -702,21 +750,24 @@ class DaemonCore : public Service
                defined above, and always begin with "DCJOBOPT".  In
                addition, each bit should also define a macro to test a
                mask if a given bit is set ("HAS_DCJOBOPT_...")
+		@param fd_inherit_list An array of fds which you want the child to
+		       inherit. The last element must be 0.
         @return On success, returns the child pid.  On failure, returns FALSE.
     */
     int Create_Process (
         const char  *name,
-        const char  *args,
+        ArgList const &arglist,
         priv_state  priv                 = PRIV_UNKNOWN,
         int         reaper_id            = 1,
         int         want_commanand_port  = TRUE,
-        const char  *env                 = NULL,
+        Env const *env                   = NULL,
         const char  *cwd                 = NULL,
         int         new_process_group    = FALSE,
         Stream      *sock_inherit_list[] = NULL,
         int         std[]                = NULL,
         int         nice_inc             = 0,
-        int         job_opt_mask         = 0
+        int         job_opt_mask         = 0,
+		int			fd_inherit_list[]	 = NULL
         );
 
     //@}
@@ -764,22 +815,6 @@ class DaemonCore : public Service
     KeyCache* getKeyCache();
 	//@}
 
- 	/** @name Environment management.
-	 */
-	//@{
-    /** Put the {key, value} pair into the environment
-        @param key
-        @param value
-        @return Not_Yet_Documented
-    */
-    int SetEnv(const char *key, char *value);
-
-    /** Put env_var into the environment
-        @param env_var Desired string to go into environment;
-        must be of the form 'name=value' 
-    */
-    int SetEnv(char *env_var);
-	//@}
      
 	/** @name Thread management.
 	 */
@@ -882,6 +917,99 @@ class DaemonCore : public Service
 	bool get_cookie( int &len, unsigned char* &data );
 	bool cookie_is_valid( unsigned char* data );
 
+	/** The peaceful shutdown toggle controls whether graceful shutdown
+	   avoids any hard killing.
+	*/
+	bool GetPeacefulShutdown();
+	void SetPeacefulShutdown(bool value);
+
+	/** Called when it looks like the clock jumped unexpectedly.
+
+	data is opaquely passed to the TimeSkipFunc.
+
+	If you register a callback multiple times, it will be called multiple
+	times.  Also, you'll need to call Unregister repeatedly if you want to
+	totally silence it.  You should probably avoid registering the same
+	callback function / data pointer combation multiple times.
+
+	When Unregistering a callback, both fnc and data are considered; it
+	must be an exact match for the Registered pair.
+	*/
+	void RegisterTimeSkipCallback(TimeSkipFunc fnc, void * data);
+	void UnregisterTimeSkipCallback(TimeSkipFunc fnc, void * data);
+
+	/** Disable all daemon core callbacks for duration seconds, except for the
+		processing of SOAP calls.
+		@param seconds The number of seconds to only permit SOAP callbacks
+	*/
+
+	void Only_Allow_Soap(int duration);
+	
+    SelfMonitorData monitor_data;
+
+	MapFile * mapfile;
+  	
+        // A little info on the "soap_ssl_sock"... There once was a
+        // bug known as the "single transaction problem" and it made
+        // the SOAP code very sad because it meant that if anything in
+        // the Schedd changed during a SOAP transaction bad things
+        // could happen. Things were horrible. A raging EXCEPT monster
+        // was roaming the daemons and no one had time to fight
+        // it. Until one day a powerful wizard named Ddot said, "I
+        // will vanquish the EXCEPT monster! I have a plan to kill it
+        // quickly." And everyone was happy, well mostly. For Ddot and
+        // others, mostly a young mage Ttam, knew that to truly
+        // vanquish the EXCEPT monster was not quick work. But
+        // everyone wanted the EXCEPT monster gone and they accepted
+        // Ddot's plan. True to his word, Ddot made quick work of the
+        // EXCEPT monster. To do so he didn't kill the monster but
+        // changed the daemons so that when a SOAP transaction was
+        // running everything else except the daemon's command socket
+        // (incidentally where the SOAP messages came in on) would be
+        // suspended. The plan worked and there was a time of great
+        // joy, nervous joy. But the joy could not last forever. Very
+        // few things do. The day came when Ttam was busily concocting
+        // a spell to secure SOAP communication using SSL. Ttam worked
+        // diligently trying to find the best way to integrate his SSL
+        // work. He knew that all SOAP communications came in on one
+        // port, the initial_command_sock, and he wanted to SOAP SSL
+        // communication to as well. Unfortunately, he was thwarted by
+        // SSL's evil multiple versions. Ttam could simply not create
+        // a simple way to tell if messages sent to daemons were
+        // CEDAR, SOAP or SSL messages. Ttam accepted a partial defeat
+        // and decided to allow SOAP SSL communication to arrive on a
+        // separate port. Ttam was excited, he felt things were
+        // working out well for him. Little did he know that the
+        // powerful spell the wizard Ddot had cast to vanquish the
+        // EXCEPT monster was about to stop him dead in his
+        // tracks. There he was, Ttam, nearly finished with the SOAP
+        // SSL spell. He had tested it with simple single message
+        // tests and it looked good. But, one day Ttam decided to do a
+        // full test of the new spell and discovered that it
+        // failed. While the first message to the SOAP SSL port went
+        // through fine all subsequent ones were ignored. At first
+        // Ttam was very perplexed, but then he remembered Ddot's
+        // magic. Ddot's solution to ignore all communication with a
+        // daemon during a SOAP transaction meant that the SOAP SSL
+        // messages were also ignored. The day had come that Ddot and
+        // Ttam had dreaded. The EXCEPT monster had to be dealt with
+        // properly. Unfortunately, yet again, Ttam was but a mage
+        // lacking the great power needed to vanquish the beast. And,
+        // Ddot had the power, he was one of the few, but he was off
+        // fighting other, more important, monsters in other
+        // lands. So, yet again, the EXCEPT monster was to be dealt
+        // with quickly instead of completely. A new plan was set and
+        // Ttam set out to perform it. A soap_ssl_sock was created
+        // that would hold the special number identifying the SOAP SSL
+        // port, and during a SOAP transaction not only would the
+        // initial_command_sock be allowed to accept messages, but the
+        // soap_ssl_sock would as well. Unfortunately, the
+        // soap_ssl_sock had to be set from the land of soap_core.C
+        // and not daemon_core.C, but that was of little consequence
+        // because Ttam knew that his spell must be undone when Ddot
+        // could return and properly dispatch the EXCEPT monster.
+	int			  	  soap_ssl_sock;
+
   private:      
 
 	ReliSock* dc_rsock;	// tcp command socket
@@ -943,6 +1071,8 @@ class DaemonCore : public Service
                         char *handler_descrip,
                         Service* s, 
                         int is_cpp);
+
+	void CheckForTimeSkip(time_t time_before, time_t okay_delta);
 
 	MyString DaemonCore::GetCommandsInAuthLevel(DCpermission perm);
 
@@ -1007,13 +1137,26 @@ class DaemonCore : public Service
     int               nSock;      // number of socket handlers used
     ExtArray<SockEnt> *sockTable; // socket table; grows dynamically if needed
     int               initial_command_sock;  
+  	struct soap		  soap;
+	time_t			  only_allow_soap;
 
+#if defined(WIN32)
+	typedef PipeEnd* PipeHandle;
+#else
+	typedef int PipeHandle;
+#endif
+	ExtArray<PipeHandle>* pipeHandleTable;
+	int maxPipeHandleIndex;
+	int pipeHandleTableInsert(PipeHandle);
+	void pipeHandleTableRemove(int);
+
+	// this table is for dispatching registered pipes
 	struct PidEntry;  // forward reference
     struct PipeEnt
     {
-        int				pipefd;
-        PipeHandler	   handler;
-        PipeHandlercpp    handlercpp;
+        int				index;		// index into the pipeHandleTable
+        PipeHandler		handler;
+        PipeHandlercpp  handlercpp;
         int             is_cpp;
         DCpermission    perm;
         Service*        service; 
@@ -1021,8 +1164,8 @@ class DaemonCore : public Service
         char*           handler_descrip;
         void*           data_ptr;
 		bool			call_handler;
-		PidEntry*		pentry;
 		HandlerType		handler_type;
+		PidEntry*		pentry;
 		bool			in_handler;
     };
     // void              DumpPipeTable(int, const char* = NULL);
@@ -1056,8 +1199,8 @@ class DaemonCore : public Service
         HANDLE hThread;
         DWORD tid;
         HWND hWnd;
-		HANDLE hPipe;
 		LONG pipeReady;
+		PipeEnd *pipeEnd;
 		LONG deallocate;
 		HANDLE watcherEvent;
 #endif
@@ -1068,7 +1211,12 @@ class DaemonCore : public Service
         int reaper_id;
         int hung_tid;   // Timer to detect hung processes
         int was_not_responding;
+
+		/* the environment variables which allow me the track the pidfamily
+			of this pid (where applicable) */
+		PidEnvID penvid;
     };
+
     typedef HashTable <pid_t, PidEntry *> PidHashTable;
     PidHashTable* pidTable;
     pid_t mypid;
@@ -1118,6 +1266,8 @@ class DaemonCore : public Service
 #ifndef WIN32
     int async_pipe[2];  // 0 for reading, 1 for writing
     volatile int async_sigs_unblocked;
+#endif
+	volatile bool async_pipe_empty;
 
 	// Data memebers for queuing up waitpid() events
 	struct WaitpidEntry_s
@@ -1134,8 +1284,6 @@ class DaemonCore : public Service
 	};
 	typedef struct WaitpidEntry_s WaitpidEntry;
 	Queue<WaitpidEntry> WaitpidQueue;
-
-#endif
 
     Stream *inheritedSocks[MAX_SOCKS_INHERITED+1];
 
@@ -1164,6 +1312,14 @@ class DaemonCore : public Service
 	bool InitSettableAttrsList( const char* subsys, int i );
 	StringList* SettableAttrsLists[LAST_PERM];
 
+	bool peaceful_shutdown;
+
+	struct TimeSkipWatcher {
+		TimeSkipFunc fn;
+		void * data;
+	};
+
+    List<TimeSkipWatcher> m_TimeSkipWatchers;
 };
 
 #ifndef _NO_EXTERN_DAEMON_CORE
@@ -1177,6 +1333,13 @@ class DaemonCore : public Service
 */
 extern void DC_Exit( int status );  
 
+/** Call this function (inside your main_pre_dc_init() function) to
+    bypass the authorization initialization in daemoncore.  This is for
+    programs, such as condor_dagman, that are Condor daemons but should
+    run with the user's credentials.
+*/
+extern void DC_Skip_Auth_Init();
+
 /** The main DaemonCore object.  This pointer will be automatically instatiated
     for you.  A perfect place to use it would be in your main_init, to access
     Daemon Core's wonderful services, like <tt>Register_Signal()</tt> or
@@ -1185,8 +1348,49 @@ extern void DC_Exit( int status );
 extern DaemonCore* daemonCore;
 #endif
 
+
+/**
+	Spawn a thread (process on Unix) to do some work.  "Worker"
+	is the function called in the seperate thread/process.  When
+	it exits, "Reaper" will be called in the parent
+	thread/process.  Both the Worker and Reaper functions will be
+	passed three optional opaque data variables, two integers and
+	a void *.  The Reaper is also optional.
+
+	@param Worker   Called in seperate thread or process.  Passed
+		data_n1, data_n2, and data_vp.  Must be a valid function
+		pointer.
+
+	@param Reaper   Called in parent thread or process after the
+		Worker exists.  Passed data_n1, data_n2, data_vp and the
+		return code of Worker.  Also passed is the "exit status".
+		The exit status if false (0) or true (any non-0 result) based
+		on if the result from Worker is false or true.  If the result
+		is true (non 0), the specific value is undefined beyond "not
+		0".  You do not necessarily get the exact value returned by
+		the worker.  If you don't want this notification, pass in
+		NULL (0).
+
+	@param data_n1   (also data_n2) Opaque values passed to
+		worker and reaper.  Useful place to store a cluster and proc,
+		but this code doesn't look at the values in any way.
+
+	@param data_n2   see data_n1
+
+	@param data_vp   Opaque value passed to Worker and Reaper.
+		For safety this should be in the heap (malloc/new) or a
+		pointer to a static data member.  You cannot assume that this
+		memory space is shared by the parent and child, it may or may
+		not be copied for the child.  If it's heap memory, be sure to
+		release it somewhere in the parent, probably in Reaper.
+
+	@return   TID, thread id, as returned by DaemonCore::Create_Thread.
+*/
+
+int Create_Thread_With_Data(DataThreadWorkerFunc Worker, DataThreadReaperFunc Reaper, 
+	int data_n1 = 0, int data_n2 = 0, void * data_vp = 0);
+
 #define MAX_INHERIT_SOCKS 10
-#define _INHERITBUF_MAXSIZE 500
 
 // Prototype to get sinful string.
 char *global_dc_sinful( void );

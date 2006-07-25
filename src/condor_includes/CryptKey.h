@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -81,11 +81,20 @@ class KeyInfo {
     // REQUIRE: None
     // REQUIRE: None
     //------------------------------------------
+
+	/** Returns a padded key.
+		@param len Minimum length of padded key in bytes.
+		@return A buffer with the padded key that be deallocated via free() 
+				by the caller, or NULL on failure.
+	*/
+	unsigned char * getPaddedKeyData(int len) const;
+
  private:
     void init(unsigned char * keyData, int keyDataLen);
 
     unsigned char * keyData_;
     int             keyDataLen_;
+	int				keyBufferLen_;
     Protocol        protocol_;
     int             duration_;
 };

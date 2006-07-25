@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -40,6 +40,7 @@
 #include "MyString.h"
 #include "basename.h"
 #include "condor_distribution.h"
+#include "dc_collector.h"
 
 // Globals
 
@@ -74,10 +75,14 @@ obtainAdsFromCollector (ClassAdList &startdAds, const char *constraint)
 			return false;		
 	} 
 
-	if ( pool ) 
+	if ( pool ) {
 		result = startdQuery.fetchAds(startdAds,pool);
-	else
-		result = startdQuery.fetchAds(startdAds);
+	}
+	else {
+		CollectorList * collectors = CollectorList::create();
+		result = collectors->query (startdQuery, startdAds);
+		delete collectors;
+	}
 
 	if (result != Q_OK) 
 		return false;
@@ -106,43 +111,35 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 	bool			newBestFound;
 		// to store results of evaluations
 	char			remoteUser[128];
-	char			remoteHost[256];
+	EvalResult		result;
 	float			tmp;
-	MatchClassAd mad;	// NAC
-	Value result;		// NAC
-	bool match;			// NAC
-	bool boolValue;		// NAC
+	
 
-	mad.ReplaceLeftAd( &request );	// NAC
+
+
 	// scan the offer ads
 
 	startdAds.Open ();
 	while ((candidate = startdAds.Next ())) {
 
-			// Add conditional operators to offer Rank expression if needed
-		ExprTree* rankExpr = candidate->Lookup( ATTR_RANK );
-		ExprTree* newRankExpr = NULL;
-		candidate->AddExplicitConditionals( rankExpr, newRankExpr );
-		if( newRankExpr != NULL ) {
-			candidate->Insert( ATTR_RANK, newRankExpr );
-		}
-		
 		// the candidate offer and request must match
-		mad.RemoveRightAd( );
-		mad.ReplaceRightAd( candidate );
-		mad.EvaluateAttr( "symmetricMatch", result );
-		if( result.IsBooleanValue( match ) && match == false ) {
+		if( !( *candidate == request ) ) {
+				// they don't match; continue
+			//printf("DEBUG: MATCH FAILED\n\nCANDIDATE:\n");
+			//candidate->fPrint(stdout);
+			//printf("\nDEBUG: REQUEST:\n");
+			//request.fPrint(stdout);
 			continue;
 		}
 
 		candidatePreemptState = NO_PREEMPTION;
 		// if there is a remote user, consider preemption ....
-		if (candidate->LookupString (ATTR_REMOTE_USER, remoteUser) ) {
+		if (candidate->LookupString (ATTR_ACCOUNTING_GROUP, remoteUser) ||
+			candidate->LookupString (ATTR_REMOTE_USER, remoteUser)) 
+		{
 				// check if we are preempting for rank or priority
-			rankCondStd->SetParentScope( candidate );
-			if( candidate->EvaluateExpr( rankCondStd, result ) &&	// NAC
-				result.IsBooleanValue( boolValue ) && 				// NAC
-				boolValue == true ) {								// NAC
+			if( rankCondStd->EvalTree( candidate, &request, &result ) && 
+					result.type == LX_INTEGER && result.i == TRUE ) {
 					// offer strictly prefers this request to the one
 					// currently being serviced; preempt for rank
 				candidatePreemptState = RANK_PREEMPTION;
@@ -153,20 +150,16 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 				candidatePreemptState = PRIO_PREEMPTION;
 					// (1) we need to make sure that PreemptionReq's hold (i.e.,
 					// if the PreemptionReq expression isn't true, dont preempt)
-				PreemptionReq->SetParentScope( candidate );
-				if( PreemptionReq &&									// NAC
-					candidate->EvaluateExpr( PreemptionReq, result ) &&	// NAC
-					result.IsBooleanValue( boolValue ) &&				// NAC
-					boolValue == true ) {								// NAC
+				if (PreemptionReq && 
+						!(PreemptionReq->EvalTree(candidate,&request,&result) &&
+						result.type == LX_INTEGER && result.i == TRUE) ) {
 					continue;
 				}
 					// (2) we need to make sure that the machine ranks the job
 					// at least as well as the one it is currently running 
 					// (i.e., rankCondPrioPreempt holds)
-				rankCondPrioPreempt->SetParentScope( candidate );
-				if( candidate->EvaluateExpr( rankCondPrioPreempt, result ) &&	// NAC
-					result.IsBooleanValue( boolValue ) &&	// NAC   
-					boolValue == true ) {					// NAC
+				if(!(rankCondPrioPreempt->EvalTree(candidate,&request,&result)&&
+						result.type == LX_INTEGER && result.i == TRUE ) ) {
 						// machine doesn't like this job as much -- find another
 					continue;
 				}
@@ -198,10 +191,11 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 		candidatePreemptRankValue = -(FLT_MAX);
 		if( candidatePreemptState != NO_PREEMPTION ) {
 			// calculate the preemption rank
-			PreemptionRank->SetParentScope( candidate );
-			if( PreemptionRank &&									 	// NAC 
-				( !candidate->EvaluateExpr( PreemptionRank, result ) ||	// NAC
-				  !result.IsRealValue( candidatePreemptRankValue))){	// NAC
+			if( PreemptionRank &&
+			   		PreemptionRank->EvalTree(candidate,&request,&result) &&
+					result.type == LX_FLOAT) {
+				candidatePreemptRankValue = result.f;
+			} else if( PreemptionRank ) {
 				dprintf(D_ALWAYS, "Failed to evaluate PREEMPTION_RANK "
 					"expression to a float.\n");
 			}
@@ -247,8 +241,6 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 	}
 	startdAds.Close ();
 	
-	mad.RemoveLeftAd( );	// NAC
-	mad.RemoveRightAd( );	// NAC
 
 	// this is the best match
 	return bestSoFar;
@@ -361,7 +353,7 @@ make_request_ad(ClassAd & requestAd, const char *rank)
 static void
 fetchSubmittorPrios()
 {
-	ClassAd ad;
+	AttrList	al;
 	char  	attrName[32], attrPrio[32];
   	char  	name[128];
   	float 	priority;
@@ -369,7 +361,7 @@ fetchSubmittorPrios()
 
 		// Minor hack, if we're talking to a remote pool, assume the
 		// negotiator is on the same host as the collector.
-	Daemon	negotiator( DT_NEGOTIATOR, pool, pool );
+	Daemon	negotiator( DT_NEGOTIATOR, NULL, pool );
 
 	Sock* sock;
 
@@ -384,7 +376,7 @@ fetchSubmittorPrios()
 
 	sock->eom();
 	sock->decode();
-	if( !getOldClassAdNoTypes(sock, ad) || !sock->end_of_message() ) {
+	if( !al.initFromStream(*sock) || !sock->end_of_message() ) {
 		fprintf( stderr, 
 				 "Error:  Could not get priorities from negotiator (%s)\n",
 				 negotiator.fullHostname() );
@@ -398,8 +390,8 @@ fetchSubmittorPrios()
     	sprintf( attrName , "Name%d", i );
     	sprintf( attrPrio , "Priority%d", i );
 
-    	if( !ad.LookupString( attrName, name ) || 
-			!ad.LookupFloat( attrPrio, priority ) )
+    	if( !al.LookupString( attrName, name ) || 
+			!al.LookupFloat( attrPrio, priority ) )
             break;
 
 		prioTable[i-1].name = name;
@@ -431,7 +423,7 @@ findSubmittor( char *name )
 }
 
 void
-usage(char *name)
+usage(const char *name)
 {
 	printf("\nUsage: %s [-m] -[n number] [-c c_expr] [-r r_expr] [-p pool] \n", name);
 	printf(" -m: Return entire machine, not virtual machines\n");
@@ -461,8 +453,6 @@ main(int argc, char *argv[])
 	char buffer[1024];
 	HashTable<HashKey, int>	*virtualMachineCounts;
 
-	ClassAdParser parser;	// NAC
-
 	virtualMachineCounts = new HashTable <HashKey, int> (25, hashFunction); 
 	mySubSystem = "INTERACTIVE";
 	myDistro->Init( argc, argv );
@@ -478,21 +468,21 @@ main(int argc, char *argv[])
 			case 'n':	// want specific number of machines
 				if( !(--argc) || !(*(++ptr)) ) {
 					fprintf( stderr, "%s: -n requires another argument\n", 
-							 basename(argv[0]) );
+							 condor_basename(argv[0]) );
 					exit(1);
 				}					
 				NumMachinesWanted = atoi(*ptr);
 				if ( NumMachinesWanted < 1 ) {
 					fprintf( stderr, "%s: -n requires another argument "
 							 "which is an integer greater than 0\n",
-							 basename(argv[0]) );
+							 condor_basename(argv[0]) );
 					exit(1);
 				}
 				break;
 			case 'p':	// pool							
 				if( !(--argc) || !(*(++ptr)) ) {
 					fprintf( stderr, "%s: -p requires another argument\n", 
-							 basename(argv[0]) );
+							 condor_basename(argv[0]) );
 					exit(1);
 				}
 				pool = *ptr;
@@ -500,7 +490,7 @@ main(int argc, char *argv[])
 			case 'c':	// constraint						
 				if( !(--argc) || !(*(++ptr)) ) {
 					fprintf( stderr, "%s: -c requires another argument\n", 
-							 basename(argv[0]) );
+							 condor_basename(argv[0]) );
 					exit(1);
 				}
 				constraint = *ptr;
@@ -508,28 +498,28 @@ main(int argc, char *argv[])
 			case 'r':	// rank
 				if( !(--argc) || !(*(++ptr)) ) {
 					fprintf( stderr, "%s: -r requires another argument\n", 
-							 basename(argv[0]) );
+							 condor_basename(argv[0]) );
 					exit(1);
 				}
 				rank = *ptr;
 				break;
 			default:
-				usage(basename(argv[0]));
+				usage(condor_basename(argv[0]));
 			}		
 		}
 	}
 
 	// initialize some global expressions
 	sprintf (buffer, "MY.%s > MY.%s", ATTR_RANK, ATTR_CURRENT_RANK);
-	parser.ParseExpression( buffer, rankCondStd );	// NAC
+	Parse (buffer, rankCondStd);
 	sprintf (buffer, "MY.%s >= MY.%s", ATTR_RANK, ATTR_CURRENT_RANK);
-	parser.ParseExpression( buffer, rankCondPrioPreempt );	// NAC
+	Parse (buffer, rankCondPrioPreempt);
 
 	// get PreemptionReq expression from config file
 	PreemptionReq = NULL;
 	tmp = param("PREEMPTION_REQUIREMENTS");
 	if( tmp ) {
-		if( !parser.ParseExpression( ( std::string )tmp, PreemptionReq ) ) {	// NAC
+		if( Parse(tmp, PreemptionReq) ) {
 			fprintf(stderr, 
 				"\nERROR: Failed to parse PREEMPTION_REQUIREMENTS.\n");
 			exit(1);
@@ -540,7 +530,7 @@ main(int argc, char *argv[])
 	PreemptionRank = NULL;
 	tmp = param("PREEMPTION_RANK");
 	if( tmp ) {
-		if( !parser.ParseExpression( ( std::string )tmp, PreemptionRank ) ) {// NAC
+		if( Parse(tmp, PreemptionRank) ) {
 			fprintf(stderr, 
 				"\nERROR: Failed to parse PREEMPTION_RANK.\n");
 			exit(1);
@@ -566,7 +556,9 @@ main(int argc, char *argv[])
 	int index;
 	startdAds.Open();
 	while( ( ad = startdAds.Next() ) ) {
-		if( ad->LookupString( ATTR_REMOTE_USER , remoteUser ) ) {
+		if( ad->LookupString( ATTR_ACCOUNTING_GROUP , remoteUser ) ||
+			ad->LookupString( ATTR_REMOTE_USER , remoteUser )) 
+		{
 			if( ( index = findSubmittor( remoteUser ) ) != -1 ) {
 				sprintf( buffer , "%s = %f" , ATTR_REMOTE_USER_PRIO , 
 							prioTable[index].prio );

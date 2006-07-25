@@ -1,0 +1,6 @@
+# Note: this is not a complete submit file -- it's just for testing
+# the multi-log-reader code.
+
+# Note: the following line is commented out to test whether we catch
+# the "missing log file" case.
+Log=test_multi_log.log3.$(process)

@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -164,7 +164,8 @@ ForkWork::KillAll( bool force )
 
 	// If we killed some, log it...
 	if ( num_killed ) {
-		dprintf( D_JOB, "ForkWork %d: Killed %d jobs\n", mypid, workerList.Number() );
+		dprintf( D_JOB, "ForkWork %d: Killed %d jobs\n",
+				 mypid, workerList.Number() );
 	}
 	return 0;
 }
@@ -202,6 +203,9 @@ ForkWork::NewJob( void )
 void
 ForkWork::WorkerDone( int exit_status )
 {
+	dprintf( D_JOB,
+			 "ForkWork: Child %d done, status %d\n",
+			 getpid(), exit_status );
 	exit( exit_status );
 }
 

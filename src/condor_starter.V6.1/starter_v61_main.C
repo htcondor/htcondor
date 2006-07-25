@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -36,6 +36,7 @@
 #include "jic_shadow.h"
 #include "jic_local_config.h"
 #include "jic_local_file.h"
+#include "jic_local_schedd.h"
 
 
 extern "C" int exception_cleanup(int,int,char*);	/* Our function called by EXCEPT */
@@ -83,8 +84,11 @@ printClassAd( void )
 	printf( "%s = \"%s\"\n", ATTR_VERSION, CondorVersion() );
 	printf( "%s = True\n", ATTR_IS_DAEMON_CORE );
 	printf( "%s = True\n", ATTR_HAS_FILE_TRANSFER );
+	printf( "%s = True\n", ATTR_HAS_PER_FILE_ENCRYPTION );
 	printf( "%s = True\n", ATTR_HAS_RECONNECT );
 	printf( "%s = True\n", ATTR_HAS_MPI );
+	printf( "%s = True\n", ATTR_HAS_TDP );
+	printf( "%s = True\n", ATTR_HAS_JOB_DEFERRAL );
 
 		/*
 		  Attributes describing what kinds of Job Info Communicators
@@ -104,14 +108,18 @@ printClassAd( void )
 	if(ad) {
 		int gotone=0;
 		float mflops;
-		char str[ATTRLIST_MAX_EXPRESSION];
+		char *str = 0;
 
-		if(ad->LookupString(ATTR_JAVA_VENDOR,str)) {
+		if(ad->LookupString(ATTR_JAVA_VENDOR,&str)) {
 			printf("%s = \"%s\"\n",ATTR_JAVA_VENDOR,str);
+			free(str);
+			str = 0;
 			gotone++;
 		}
-		if(ad->LookupString(ATTR_JAVA_VERSION,str)) {
+		if(ad->LookupString(ATTR_JAVA_VERSION,&str)) {
 			printf("%s = \"%s\"\n",ATTR_JAVA_VERSION,str);
+			free(str);
+			str = 0;
 			gotone++;
 		}
 		if(ad->LookupFloat(ATTR_JAVA_MFLOPS,mflops)) {
@@ -121,6 +129,34 @@ printClassAd( void )
 		if(gotone>0) printf( "%s = True\n",ATTR_HAS_JAVA);		
 		delete ad;
 	}
+
+#if defined(WIN32)
+		// Advertise our ability to run jobs as the submitting user
+	printf("%s = True\n", ATTR_HAS_WIN_RUN_AS_OWNER);
+
+		// Attempt to perform a NOP on our CREDD_HOST. This will test
+		// our ability to authenticate with DAEMON-level auth, and thus
+		// fetch passwords. If we succeed, advertise the CREDD_HOST.
+	char *credd_host = param("CREDD_HOST");
+	if (credd_host) {
+		Daemon credd(DT_CREDD);
+		if (credd.locate()) {
+			Sock *sock = credd.startCommand(CREDD_NOP, Stream::reli_sock, 20);
+			sock->decode();
+			if (sock && sock->end_of_message()) {
+				printf("%s = \"%s\"\n", ATTR_LOCAL_CREDD, credd_host);
+			}
+		}
+		free(credd_host);
+	}
+
+		// Finally, in order for our startd to actually publish our
+		// ATTR_LOCAL_CREDD, we need to identify the attributes in this
+		// ad that we *don't* want it to publish. Otherwise, it will only
+		// publish stuff starting with "Has" or "Java".
+	printf("%s = \"%s,%s\"\n", ATTR_STARTER_IGNORED_ATTRS,
+		ATTR_VERSION, ATTR_IS_DAEMON_CORE);
+#endif
 }
 
 
@@ -132,7 +168,7 @@ main_pre_dc_init( int argc, char* argv[] )
 {	
 		// figure out what mySubSystem should be based on argv[0], or
 		// if we see "-gridshell" anywhere on the command-line
-	char* base = basename(argv[0]);
+	const char* base = condor_basename(argv[0]);
 	char* tmp;
 	tmp = strrchr(base, '_' );
 	if( tmp && strincmp(tmp, "_gridshell", 10) == MATCH ) {
@@ -276,6 +312,7 @@ parseArgs( int argc, char* argv [] )
 	char* job_stdin = NULL;
 	char* job_stdout = NULL;
 	char* job_stderr = NULL;
+	char* schedd_addr = NULL;
 
 	bool warn_multi_keyword = false;
 	bool warn_multi_input_ad = false;
@@ -301,6 +338,7 @@ parseArgs( int argc, char* argv [] )
 	char _jobstderr[] = "-job-stderr";
 	char _header[] = "-header";
 	char _gridshell[] = "-gridshell";
+	char _schedd_addr[] = "-schedd-addr";
 	char* target = NULL;
 
 	ASSERT( argc >= 2 );
@@ -332,6 +370,15 @@ parseArgs( int argc, char* argv [] )
 				// just skip this one, we already processed this in
 				// main_pre_dc_init()  
 			ASSERT( is_gridshell );
+			continue;
+		}
+
+		if( ! strncmp(opt, _schedd_addr, opt_len) ) { 
+			if( ! arg ) {
+				another( _schedd_addr );
+			}
+			schedd_addr = strdup( arg );
+			tmp++;	// consume the arg so we don't get confused 
 			continue;
 		}
 
@@ -576,7 +623,15 @@ parseArgs( int argc, char* argv [] )
 		// If the user didn't specify it, use -1 for cluster and/or
 		// proc, and the JIC subclasses will know they weren't on the
 		// command-line.
-	if( job_input_ad ) {
+	if( schedd_addr ) {
+		if( ! job_input_ad ) {
+			dprintf( D_ALWAYS, "ERROR: You must specify '%s' with '%s'\n",
+					 _jobinputad, _schedd_addr ); 
+			usage();
+		}
+		jic = new JICLocalSchedd( job_input_ad, schedd_addr,
+								  job_cluster, job_proc, job_subproc );
+	} else if( job_input_ad ) {
 		if( job_keyword ) {
 			jic = new JICLocalFile( job_input_ad, job_keyword, 
 									job_cluster, job_proc, job_subproc );
@@ -611,6 +666,9 @@ parseArgs( int argc, char* argv [] )
         jic->setStderr( job_stderr );		
 		free( job_stderr );
 	}
+	if( schedd_addr ) {
+		free( schedd_addr );
+	}
 	return jic;
 }
 
@@ -622,16 +680,18 @@ main_config( bool is_full )
 	return 0;
 }
 
+
 int
 main_shutdown_fast()
 {
 	if ( Starter->ShutdownFast(0) ) {
-		// ShutdownGraceful says it is already finished, because
-		// there are no jobs to shutdown.  No need to stick around.
-		DC_Exit(0);
+		// ShutdownFast says it is already finished, because there are
+		// no jobs to shutdown.  No need to stick around.
+		Starter->StarterExit(0);
 	}
 	return 0;
 }
+
 
 int
 main_shutdown_graceful()
@@ -639,15 +699,16 @@ main_shutdown_graceful()
 	if ( Starter->ShutdownGraceful(0) ) {
 		// ShutdownGraceful says it is already finished, because
 		// there are no jobs to shutdown.  No need to stick around.
-		DC_Exit(0);
+		Starter->StarterExit(0);
 	}
 	return 0;
 }
 
 extern "C" 
-int exception_cleanup(int,int,char*)
+int exception_cleanup(int,int,char*errmsg)
 {
 	_EXCEPT_Cleanup = NULL;
+	Starter->jic->notifyStarterError(errmsg,true,0,0);
 	Starter->ShutdownFast(0);
 	return 0;
 }

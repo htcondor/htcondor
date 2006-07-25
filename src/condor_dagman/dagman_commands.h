@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -25,21 +25,22 @@
 
 /*
 #include "condor_common.h"
-#include "types.h"
 #include "debug.h"
 #include "script.h"
 */
 
 // pause DAGMan's event-processing so changes can be made safely
-bool PauseDag();
+bool PauseDag(Dagman &dm);
 // resume DAGMan's normal event-processing
-bool ResumeDag();
+bool ResumeDag(Dagman &dm);
 
-bool AddNode( Job::job_type_t type, const char *name, const char* cmd,
+bool AddNode( Dag *dag, Job::job_type_t type, const char *name,
+			  const char* directory,
+			  const char* submitFile,
 			  const char *precmd, const char *postcmd, bool done,
 			  MyString &failReason );
 
-bool IsValidNodeName( const char *name, MyString &whynot );
+bool IsValidNodeName( Dag *dm, const char *name, MyString &whynot );
 bool IsValidSubmitFileName( const char *name, MyString &whynot );
 
 /*

@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -28,6 +28,7 @@
 #include "condor_classad.h"
 #include "user_proc.h"
 #include "local_user_log.h"
+#include "condor_holdcodes.h"
 
 /** 
 	This class is a base class for the various ways a starter can
@@ -92,6 +93,12 @@ public:
 		*/
 	virtual const char* jobErrorFilename( void );	
 
+		/** Return a string containing a copy of the full pathname of
+			the requested file.
+		*/
+	virtual char* getJobStdFile( const char* attr_name,
+								 const char* alt_name = NULL ) = 0;
+
 	virtual bool streamInput();
 	virtual bool streamOutput();
 	virtual bool streamError();
@@ -100,6 +107,12 @@ public:
 		/** Return a pointer to the job's initial working directory. 
 		*/
 	virtual const char* jobIWD( void );
+
+		/** Returns a pointer to the job's remote initial working dir.
+			This is the same as jobIWD() unless the job ad contains
+			REMOTE_IWD.
+		*/
+	virtual const char* jobRemoteIWD( void );
 
 		/** true if the starter is using a different iwd than the one
 			in the job ad, false if not.
@@ -171,6 +184,17 @@ public:
 		 */
 	virtual void gotShutdownGraceful( void );
 
+		/** The starter has been asked to evict for condor_rm
+		 */
+	virtual void gotRemove( void );
+
+		/** The starter has been asked to evict for condor_hold
+		 */
+	virtual void gotHold( void );
+
+	bool hadRemove( void ) { return had_remove; };
+	bool hadHold( void ) { return had_hold; };
+
 		/** Someone is attempting to reconnect to this job.
 		 */
 	virtual int reconnect( ReliSock* s, ClassAd* ad ) = 0;
@@ -193,7 +217,7 @@ public:
 								UserProc* user_proc ) = 0;
 
 
-	virtual bool notifyStarterError( const char* err_msg, bool critical ) = 0;
+	virtual bool notifyStarterError( const char* err_msg, bool critical, int hold_reason_code, int hold_reason_subcode ) = 0;
 
 
 	void setOutputAdFile( const char* path );
@@ -214,6 +238,24 @@ public:
 
 		/// Has user_priv been initialized yet?
 	bool userPrivInitialized( void ); 
+
+		/** Are we currently using file transfer? 
+		    Used elsewhere to determine if we need to potentially
+			rewrite some paths from submit machine paths to
+			execute directory paths.
+
+			The default implementation always returns false.
+			jic_shadow actually comes up with a plausible answer. 
+		*/
+	virtual bool usingFileTransfer( void );
+
+		/* Receive new X509 proxy from the shadow
+			
+			Default implementation always fails.
+
+			jic_shadow knows how to do the right thing.
+		 */
+	virtual bool updateX509Proxy( int cmd, ReliSock * s );
 
 
 protected:
@@ -292,6 +334,8 @@ protected:
 
 	char* job_iwd;
 
+	char* job_remote_iwd;
+
 	char* job_output_ad_file;
 	bool job_output_ad_is_stdout;
 	
@@ -307,6 +351,8 @@ protected:
 
 		/// if true, we were asked to shutdown
 	bool requested_exit;
+	bool had_remove;
+	bool had_hold;
 
 		/** true if we're using a different iwd for the job than what
 			the job ad says.

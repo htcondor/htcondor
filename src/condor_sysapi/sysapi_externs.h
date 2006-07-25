@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -60,9 +60,16 @@ extern int _sysapi_config;
 
 /* needed by ncpus.c */
 extern int _sysapi_ncpus;
+extern int _sysapi_max_ncpus;
 
 /* needed by phys_mem.c */
 extern int _sysapi_memory;
 extern int _sysapi_reserve_memory;
+
+/* needed by ckptpltfrm.c */
+extern char* _sysapi_ckptpltfrm;
+
+/* needed by load_avg.c */
+extern int _sysapi_getload;
 
 #endif /* SYSAPI_EXTERNS_H */

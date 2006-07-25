@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -25,11 +25,18 @@
 
 #include "condor_common.h"
 #include "generic_query.h"
-#include "classadList.h" // NAC
 #include "CondorError.h"
+
+#define MAXOWNERLEN 20
 
 // This is for the getFilterAndProcess function
 typedef bool    (*process_function)(ClassAd *);
+
+/* a list of all types of direct DB query defined here */
+enum CondorQQueryType
+{
+	AVG_TIME_IN_QUEUE
+};
 
 enum
 {
@@ -77,6 +84,7 @@ class CondorQ
 	int add (CondorQFltCategories, float);
 	int addAND (char *);  // custom
 	int addOR (char *);  // custom
+	int addDBConstraint (CondorQIntCategories, int);
 
 	// fetch the job ads from the schedd corresponding to the given classad
 	// which pass the criterion specified by the constraints; default is
@@ -84,13 +92,27 @@ class CondorQ
 	int fetchQueue (ClassAdList &, ClassAd * = 0, CondorError* errstack = 0);
 	int fetchQueueFromHost (ClassAdList &, char * = 0, CondorError* errstack = 0);
 	int fetchQueueFromHostAndProcess ( char *, process_function process_func, CondorError* errstack = 0);
+	
+		// fetch the job ads from database 	
+	int fetchQueueFromDB (ClassAdList &, char * = 0, CondorError* errstack = 0);
+	int fetchQueueFromDBAndProcess ( char *, process_function process_func, CondorError* errstack = 0);
+
+		// return the results from a DB query directly to user
+	void rawDBQuery(char *, CondorQQueryType);
 
   private:
 	GenericQuery query;
 	
 	// default timeout when talking the schedd (via ConnectQ())
 	int connect_timeout;
-
+	
+	int *clusterarray;
+	int *procarray;
+	int clusterprocarraysize;
+	int numclusters;
+	int numprocs;
+	char owner[MAXOWNERLEN];
+	
 	// helper functions
 	int getAndFilterAds( ClassAd &, ClassAdList & );
 	int getFilterAndProcessAds( ClassAd &, process_function );

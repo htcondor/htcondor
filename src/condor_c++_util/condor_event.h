@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -22,18 +22,6 @@
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 #ifndef __CONDOR_EVENT_H__
 #define __CONDOR_EVENT_H__
-
-#if defined(IRIX)
-#   ifdef _NO_ANSIMODE
-#       define _TMP_NO_ANSIMODE
-#   endif
-#   undef _NO_ANSIMODE
-#   include <time.h>
-#   ifdef _TMP_NO_ANSIMODE
-#       define _NO_ANSIMODE
-#       undef _TMP_NO_ANSIMODE
-#   endif
-#endif   /* IRIX */
 
 /* Since this is a Condor API header file, we want to minimize our
    reliance on other Condor files to ease distribution.  -Jim B. */
@@ -86,6 +74,9 @@ enum ULogEventNumber {
 	/** RSC socket lost           */  ULOG_JOB_DISCONNECTED         = 22,
 	/** RSC socket re-established */  ULOG_JOB_RECONNECTED          = 23,
 	/** RSC reconnect failure     */  ULOG_JOB_RECONNECT_FAILED     = 24,
+	/** Grid Resource Up          */  ULOG_GRID_RESOURCE_UP         = 25,
+	/** Grid Resource Down        */  ULOG_GRID_RESOURCE_DOWN       = 26,
+	/** Job Submitted remotely    */  ULOG_GRID_SUBMIT 	    	    = 27,
 };
 
 /// For printing the enum value.  cout << ULogEventNumberNames[eventNumber];
@@ -170,6 +161,9 @@ class ULogEvent {
         @return 0 for failure, 1 for success
     */
     int putEvent (FILE *file);
+
+		// returns a pointer to the current event name char[], or NULL
+	const char* eventName() const;
 
 	/** Return a ClassAd representation of this ULogEvent. This is implemented
 		differently in each of the known (by John Bethencourt as of 6/5/02)
@@ -367,6 +361,9 @@ class RemoteErrorEvent : public ULogEvent
 	bool isCriticalError() {return critical_error;}
 	void setCriticalError(bool f);
 
+	void setHoldReasonCode(int hold_reason_code);
+	void setHoldReasonSubCode(int hold_reason_subcode);
+
  private:
     /// A host string in the form: "<128.105.165.12:32779>".
     char execute_host[128];
@@ -374,6 +371,8 @@ class RemoteErrorEvent : public ULogEvent
 	char daemon_name[128];
 	char *error_str;
 	bool critical_error; //tells shadow to give up
+	int hold_reason_code;
+	int hold_reason_subcode;
 };
 
 
@@ -466,7 +465,13 @@ class ExecuteEvent : public ULogEvent
 	*/
 	virtual void initFromClassAd(ClassAd* ad);
 
-    /// For Condor v6, a host string in the form: "<128.105.165.12:32779>".
+	/** Identifier for the machine the job executed on.
+		For Vanilla, Standard, and other non-Grid Universes, a
+		host string in the form: "<128.105.165.12:32779>".
+		For the Globus GridType a hostname.
+		This may be an empty string for some JobUniverses
+		or GridTyps.
+	*/
     char executeHost[128];
 };
 
@@ -907,6 +912,15 @@ class PostScriptTerminatedEvent : public ULogEvent
 
     /// terminating signal (valid only on abnormal exit)
     int signalNumber;
+
+		// DAG node name
+	char* dagNodeName;
+
+		// text label printed before DAG node name
+	const char* const dagNodeNameLabel;
+
+		// classad attribute name for DAG node name string
+	const char* const dagNodeNameAttr;
 };
 
 
@@ -1483,6 +1497,118 @@ private:
 	char *reason;
 };
 
+
+class GridResourceUpEvent : public ULogEvent
+{
+  public:
+    ///
+    GridResourceUpEvent();
+    ///
+    ~GridResourceUpEvent();
+
+    /** Read the body of the next GridResoruceUp event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *);
+
+    /** Write the body of the next GridResourceUp event.
+        @param file the non-NULL writable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int writeEvent (FILE *);
+
+	/** Return a ClassAd representation of this GridResourceUpEvent.
+		@return NULL for failure, the ClassAd pointer otherwise
+	*/
+	virtual ClassAd* toClassAd();
+
+	/** Initialize from this ClassAd.
+		@param a pointer to the ClassAd to initialize from
+	*/
+	virtual void initFromClassAd(ClassAd* ad);
+
+    /// Name of the remote resource (GridResource attribute)
+    char* resourceName;
+
+};
+
+class GridResourceDownEvent : public ULogEvent
+{
+  public:
+    ///
+    GridResourceDownEvent();
+    ///
+    ~GridResourceDownEvent();
+
+    /** Read the body of the next GridResourceDown event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *);
+
+    /** Write the body of the next GridResourceDown event.
+        @param file the non-NULL writable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int writeEvent (FILE *);
+
+	/** Return a ClassAd representation of this GridResourceDownEvent.
+		@return NULL for failure, the ClassAd pointer otherwise
+	*/
+	virtual ClassAd* toClassAd();
+
+	/** Initialize from this ClassAd.
+		@param a pointer to the ClassAd to initialize from
+	*/
+	virtual void initFromClassAd(ClassAd* ad);
+
+    /// Name of the remote resource (GridResource attribute)
+    char* resourceName;
+
+};
+
+//----------------------------------------------------------------------------
+/** Framework for a GridSubmitEvent object.  Occurs when a Grid Universe
+    job is actually submitted to a grid resource and we have a remote
+    job id for it
+*/
+class GridSubmitEvent : public ULogEvent
+{
+  public:
+    ///
+    GridSubmitEvent();
+    ///
+    ~GridSubmitEvent();
+
+    /** Read the body of the next Submit event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *);
+
+    /** Write the body of the next Submit event.
+        @param file the non-NULL writable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int writeEvent (FILE *);
+
+	/** Return a ClassAd representation of this GridSubmitEvent.
+		@return NULL for failure, the ClassAd pointer otherwise
+	*/
+	virtual ClassAd* toClassAd();
+
+	/** Initialize from this ClassAd.
+		@param a pointer to the ClassAd to initialize from
+	*/
+	virtual void initFromClassAd(ClassAd* ad);
+
+    /// Name of the remote resource (GridResource attribute)
+    char* resourceName;
+
+	/// Job ID on the remote resource (GridJobId attribute)
+    char* jobId;
+};
 
 
 #endif // __CONDOR_EVENT_H__

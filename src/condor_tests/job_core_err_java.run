@@ -1,0 +1,49 @@
+#! /usr/bin/env perl
+use CondorTest;
+
+$cmd = 'job_core_err_java.cmd';
+$testname = 'Condor_submit correctly uses error file - java U';
+
+$success = sub 
+{
+	my %info = @_;
+	my $cluster = $info{"cluster"};
+	my $job     = $info{"job"};
+	die "Job should have failed due to Perl errors! $cluster.$job did not.\n";
+};
+
+$died = sub 
+{
+	my %info = @_;
+	my $expectedsig = $info{"job"}+1;
+	my $gotsig      = $info{"signal"};
+	my $error 		= $info{"error"};
+	print "Good, an error as expected.\n";
+	if(! -f $error )
+	{
+		die "Specified error file -$error- fails to exist\n";
+	}
+	else
+	{
+		print "Error file $error created as expected\n";
+		if( -s $error )
+		{
+			print "Good file not empty!\n";
+		}
+		else
+		{
+			die "File was not expected to be empty!\n";
+		}
+	}
+};
+
+CondorTest::RegisterExitedAbnormal( $testname, $died );
+CondorTest::RegisterExitedSuccess( $testname, $success );
+
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+	print "$testname: SUCCESS\n";
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+

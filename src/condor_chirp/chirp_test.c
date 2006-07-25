@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -31,7 +31,16 @@
 
 char buffer[BUFFER_SIZE];
 char buffer2[BUFFER_SIZE];
+
+#if defined(WIN32)
+#define TEST_WRITE_FILE ".\\chirp test.tmp"
+#define TEST_READ_FILE  ".\\testread"
+#define TEST_DIR		".\\testdir"
+#else
 #define TEST_WRITE_FILE "/tmp/chirp test.tmp"
+#define TEST_READ_FILE  "/etc/hosts"
+#define TEST_DIR		"/tmp/chirpdir"
+#endif
 
 int main( int argc, char *argv[] )
 {
@@ -47,7 +56,7 @@ int main( int argc, char *argv[] )
 		return 1;
 	}
 
-	rfd = chirp_client_open(client,"/etc/hosts","r",0);
+	rfd = chirp_client_open(client,TEST_READ_FILE,"r",0);
 	if(rfd<0) {
 		fprintf(stderr,"couldn't open /etc/hosts: %s\n",strerror(errno));
 		return 1;
@@ -60,10 +69,12 @@ int main( int argc, char *argv[] )
 	}
 
 	total_size = 0;
+
 	while(1) {
 		int pos = chirp_client_lseek(client,rfd,0,1);
 
 		result = chirp_client_read(client,rfd,buffer,BUFFER_SIZE);
+
 		if(result==0) break;
 
 		if(result<0) {
@@ -72,7 +83,6 @@ int main( int argc, char *argv[] )
 		}
 
 		total_size += result;
-
 
 		/*back up and read again, just to verify seek*/
 		chirp_client_lseek(client,rfd,pos,0);
@@ -145,14 +155,14 @@ int main( int argc, char *argv[] )
 		return 1;
 	}
 
-	result = chirp_client_mkdir(client,"/tmp/chirpdir",766);
+	result = chirp_client_mkdir(client,TEST_DIR,766);
 	if(result<0) {
-		fprintf(stderr,"couldn't mkdir /tmp/chirpdir :%s\n",strerror(errno));
+		fprintf(stderr,"couldn't mkdir %s :%s\n", TEST_DIR,strerror(errno));
 	}
 
-	result = chirp_client_rmdir(client,"/tmp/chirpdir");
+	result = chirp_client_rmdir(client,TEST_DIR);
 	if(result<0) {
-		fprintf(stderr,"couldn't rmdir /tmp/chirpdir :%s\n",strerror(errno));
+		fprintf(stderr,"couldn't rmdir %s :%s\n", TEST_DIR, strerror(errno));
 	}
 
 	chirp_client_disconnect(client);

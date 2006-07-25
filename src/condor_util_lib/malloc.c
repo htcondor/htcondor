@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -28,7 +28,7 @@
 
 #ifndef lint
 static char *rcs_store_c =
-	"$Header: /space/home/matt/CVS2GIT/CONDOR_SRC-src/src/condor_util_lib/malloc.c,v 1.5 2004-05-21 21:21:37 roy Exp $";
+	"$Header: /space/home/matt/CVS2GIT/CONDOR_SRC-src/src/condor_util_lib/malloc.c,v 1.6 2006-07-25 18:24:14 wright Exp $";
 #endif
 
 

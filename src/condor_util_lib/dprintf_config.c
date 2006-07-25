@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -29,8 +29,7 @@
 ************************************************************************/
 
 #include "condor_common.h"
-#include "debug.h"
-#include "except.h"
+#include "condor_debug.h"
 #include "condor_string.h"
 
 
@@ -43,11 +42,17 @@ extern char		*DebugFile[D_NUMLEVELS+1];
 extern char		*DebugLock;
 extern char		*_condor_DebugFlagNames[];
 extern int		_condor_dprintf_works;
+extern time_t	DebugLastMod;
 
 extern void		_condor_set_debug_flags( char *strflags );
 extern void		_condor_dprintf_saved_lines( void );
 
 FILE *open_debug_file( int debug_level, char flags[] );
+
+#if HAVE_EXT_GCB
+void	_condor_gcb_dprintf_va( int flags, char* fmt, va_list args );
+extern void Generic_set_log_va(void(*app_log_va)(int level, char *fmt, va_list args));
+#endif
 
 void
 dprintf_config( subsys, logfd )
@@ -116,6 +121,15 @@ int logfd;		/* logfd is the descriptor to use if the log output goes to a tty */
 				EXCEPT("No '%s' parameter specified.", pname);
 			} else if ( DebugFile[debug_level] != NULL ) {
 
+				if (debug_level == 0 && first_time) {
+					struct stat stat_buf;
+					if ( stat( DebugFile[debug_level], &stat_buf ) >= 0 ) {
+						DebugLastMod = stat_buf.st_mtime;
+					} else {
+						DebugLastMod = -errno;
+					}
+				}
+
 				if (debug_level == 0) {
 					(void)sprintf(pname, "TRUNC_%s_LOG_ON_OPEN", subsys);
 				} else {
@@ -178,6 +192,34 @@ int logfd;		/* logfd is the descriptor to use if the log output goes to a tty */
 
 	first_time = 0;
 	_condor_dprintf_works = 1;
+#if HAVE_EXT_GCB
+		/*
+		  this method currently only lives in libGCB.a, so don't even
+		  try to param() or call this function unless we're on a
+		  platform where we're using the GCB external
+		*/
+    if ( param_boolean_int("NET_REMAP_ENABLE", 0) ) {
+        Generic_set_log_va(_condor_gcb_dprintf_va);
+    }
+#endif
 	_condor_dprintf_saved_lines();
 }
 
+
+#if HAVE_EXT_GCB
+void
+_condor_gcb_dprintf_va( int flags, char* fmt, va_list args )
+{
+	char* new_fmt;
+	int len;
+
+	len = strlen(fmt);
+	new_fmt = (char*) malloc( (len + 6) * sizeof(char) );
+	if( ! new_fmt ) {
+		EXCEPT( "_condor_gcb_dprintf_va() out of memory!" );
+	}
+	snprintf( new_fmt, len + 6, "GCB: %s", fmt );
+	_condor_dprintf_va( flags, new_fmt, args );
+	free( new_fmt );
+}
+#endif /* HAVE_EXT_GCB */

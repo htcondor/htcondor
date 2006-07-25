@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -32,9 +32,11 @@
 #	define _BSD
 #endif
 
+#ifndef WIN32
 #include <sys/wait.h>
+#endif
 #include "proc.h"
-#include "debug.h"
+#include "condor_debug.h"
 
 #if defined(AIX31) || defined(AIX32)
 #include <time.h>
@@ -71,16 +73,60 @@ float		fp_secs;
 	return answer;
 }
 
-char *Notifications[] = {
-	"Never", "Always", "Complete", "Error"
+
+static const char* JobStatusNames[] = {
+    "UNEXPANDED",
+    "IDLE",
+    "RUNNING",
+    "REMOVED",
+    "COMPLETED",
+	"HELD",
+    "SUBMISSION_ERR",
 };
 
-char	*Status[] = {
-	"Unexpanded", "Idle", "Running", "Removed", "Completed", "Submission Err"
-};
+
+const char*
+getJobStatusString( int status )
+{
+	if( status<0 || status>=JOB_STATUS_MAX ) {
+		return "UNKNOWN";
+	}
+	return JobStatusNames[status];
+}
 
 
-#ifdef NEW_PROC
+int
+getJobStatusNum( const char* name )
+{
+	if( ! name ) {
+		return -1;
+	}
+	if( stricmp(name,"UNEXPANDED") == MATCH ) {
+		return UNEXPANDED;
+	}
+	if( stricmp(name,"IDLE") == MATCH ) {
+		return IDLE;
+	}
+	if( stricmp(name,"RUNNING") == MATCH ) {
+		return RUNNING;
+	}
+	if( stricmp(name,"REMOVED") == MATCH ) {
+		return REMOVED;
+	}
+	if( stricmp(name,"COMPLETED") == MATCH ) {
+		return COMPLETED;
+	}
+	if( stricmp(name,"HELD") == MATCH ) {
+		return HELD;
+	}
+	if( stricmp(name,"SUBMISSION_ERR") == MATCH ) {
+		return SUBMISSION_ERR;
+	}
+	return -1;
+}
+
+
+#if defined(NEW_PROC) && !defined(WIN32)
 /*
   Functions for building and deleteing a version 3 proc structure.
   ConstructProc returns a proc with all fields except cmd, args, in, out,
@@ -109,8 +155,8 @@ PROC	*proc_template;
 		FREE( proc );
 		return NULL;
 	}
-	proc->args = (char **) MALLOC( sizeof( char *) * n_cmds );
-	if ( proc->args == NULL) {
+	proc->args_v1or2 = (char **) MALLOC( sizeof( char *) * n_cmds );
+	if ( proc->args_v1or2 == NULL) {
 		FREE( proc->cmd );
 		FREE( proc );
 		return NULL;
@@ -118,14 +164,14 @@ PROC	*proc_template;
 	proc->in = (char **) MALLOC( sizeof( char *) * n_cmds );
 	if ( proc->in == NULL) {
 		FREE( proc->cmd );
-		FREE( proc->args );
+		FREE( proc->args_v1or2 );
 		FREE( proc );
 		return NULL;
 	}
 	proc->out = (char **) MALLOC( sizeof( char *) * n_cmds );
 	if ( proc->out == NULL) {
 		FREE( proc->cmd );
-		FREE( proc->args );
+		FREE( proc->args_v1or2 );
 		FREE( proc->in );
 		FREE( proc );
 		return NULL;
@@ -133,7 +179,7 @@ PROC	*proc_template;
 	proc->err = (char **) MALLOC( sizeof( char *) * n_cmds );
 	if ( proc->err == NULL) {
 		FREE( proc->cmd );
-		FREE( proc->args );
+		FREE( proc->args_v1or2 );
 		FREE( proc->in );
 		FREE( proc->out );
 		FREE( proc );
@@ -143,7 +189,7 @@ PROC	*proc_template;
 												  n_cmds );
 	if ( proc->remote_usage == NULL) {
 		FREE( proc->cmd );
-		FREE( proc->args );
+		FREE( proc->args_v1or2 );
 		FREE( proc->in );
 		FREE( proc->out );
 		FREE( proc->err );
@@ -154,7 +200,7 @@ PROC	*proc_template;
 
 	if ( proc->err == NULL) {
 		FREE( proc->cmd );
-		FREE( proc->args );
+		FREE( proc->args_v1or2 );
 		FREE( proc->in );
 		FREE( proc->out );
 		FREE( proc->err );
@@ -170,7 +216,7 @@ DestructProc( proc )
 PROC	*proc;
 {
 	FREE( proc->cmd );
-	FREE( proc->args );
+	FREE( proc->args_v1or2 );
 	FREE( proc->in );
 	FREE( proc->out );
 	FREE( proc->err );

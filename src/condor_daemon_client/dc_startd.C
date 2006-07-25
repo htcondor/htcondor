@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -29,7 +29,6 @@
 #include "command_strings.h"
 #include "daemon.h"
 #include "dc_startd.h"
-
 
 
 DCStartd::DCStartd( const char* name, const char* pool ) 
@@ -191,7 +190,6 @@ DCStartd::activateClaim( ClassAd* job_ad, int starter_version,
 		delete tmp;
 		return CONDOR_ERROR;
 	}
-
 	if( ! job_ad->put(*tmp) ) {
 		MyString err = "DCStartd::activateClaim: ";
 		err += "Failed to send job ClassAd to the startd";
@@ -199,7 +197,6 @@ DCStartd::activateClaim( ClassAd* job_ad, int starter_version,
 		delete tmp;
 		return CONDOR_ERROR;
 	}
-
 	if( ! tmp->end_of_message() ) {
 		MyString err = "DCStartd::activateClaim: ";
 		err += "Failed to send EOM to the startd";
@@ -413,7 +410,9 @@ DCStartd::releaseClaim( VacateType type, ClassAd* reply,
 
 
 bool
-DCStartd::locateStarter( const char* global_job_id, ClassAd* reply,
+DCStartd::locateStarter( const char* global_job_id, 
+						 const char *claim_id,
+						 ClassAd* reply,
 						 int timeout )
 {
 	setCmdStr( "locateStarter" );
@@ -433,6 +432,13 @@ DCStartd::locateStarter( const char* global_job_id, ClassAd* reply,
 	line += global_job_id;
 	line += '"';
 	req.Insert( line.Value() );
+
+	line = ATTR_CLAIM_ID;
+	line += "=\"";
+	line += claim_id;
+	line += '"';
+	req.Insert( line.Value() );
+
 
 	return sendCACmd( &req, reply, false, timeout );
 }

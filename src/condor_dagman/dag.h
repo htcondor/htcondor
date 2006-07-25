@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -33,20 +33,16 @@
 #include "HashTable.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "read_multiple_logs.h"
+#include "check_events.h"
+#include "condor_id.h"
 
-// for DAGMAN_RUN_POST_ON_FAILURE config setting
-extern bool run_post_on_failure;
-
-// the name of the attr we insert in job ads, recording DAGMan's job id
-extern const char* DAGManJobIdAttrName;
-
-// for the Condor job id of the DAGMan job
-extern char* DAGManJobId;
-
+// NOTE: must be kept in sync with Job::job_type_t
 enum Log_source{
   CONDORLOG,
   DAPLOG
 };
+
+class Dagman;
 
 //------------------------------------------------------------------------
 /** A Dag instance stores information about a job dependency graph,
@@ -62,22 +58,48 @@ class Dag {
   public:
   
     /** Create a DAG
-		@param condorLogFiles the list of log files for all of the jobs
-		       in the DAG
+		@param dagFile the DAG file name
+		@param condorLogName the log file name specified by the -Condorlog
+		       command line argument
         @param maxJobsSubmitted the maximum number of jobs to submit to Condor
                at one time
         @param maxPreScripts the maximum number of PRE scripts to spawn at
 		       one time
         @param maxPostScripts the maximum number of POST scripts to spawn at
 		       one time
+		@param dapLogName the name of the Stork (DaP) log file
+		@param allowLogError whether to allow the DAG to run even if we
+			   have an error determining the job log files
+		@param useDagDir run DAGs in directories from DAG file paths
+		       if true
+		@param maxIdleJobProcs the maximum number of idle job procss to
+			   allow at one time (0 means unlimited)
+		@param retrySubmitFirst whether, when a submit fails for a node's
+		       job, to put the node at the head of the ready queue
+		@param retryNodeFirst whether, when a node fails and has retries,
+			   to put the node at the head of the ready queue
+		@param condorRmExe executable to remove Condor jobs
+		@param storkRmExe executable to remove Stork jobs
+		@param DAGManJobId Condor ID of this DAGMan process
+		@param prohibitMultiJobs whether submit files queueing multiple
+			   job procs are prohibited
     */
 
-    Dag( StringList &condorLogFiles, const int maxJobsSubmitted,
+    Dag( /* const */ StringList &dagFiles, char *condorLogName,
+		 const int maxJobsSubmitted,
 		 const int maxPreScripts, const int maxPostScripts, 
-		 const char *dapLogName );
+		 const char *dapLogName, bool allowLogError,
+		 bool useDagDir, int maxIdleJobProcs, bool retrySubmitFirst,
+		 bool retryNodeFirst, const char *condorRmExe,
+		 const char *storkRmExe, const CondorID *DAGManJobId,
+		 bool prohibitMultiJobs);
 
     ///
     ~Dag();
+
+	/** Initialize log files, lock files, etc.
+	*/
+	void InitializeDagFiles( char *lockFileName, bool deleteOldLogs );
 
     /** Prepare DAG for initial run.  Call this function ONLY ONCE.
         @param recovery specifies if this is a recovery
@@ -108,12 +130,88 @@ class Dag {
     /** Force the Dag to process all new events in the condor log file.
         This may cause the state of some jobs to change.
 
+		@param logsource The type of log from which events should be read.
         @param recover Process Log in Recover Mode, from beginning to end
         @return true on success, false on failure
     */
-    //    bool ProcessLogEvents (bool recover = false);
-
     bool ProcessLogEvents (int logsource, bool recovery = false); //<--DAP
+
+	/** Process a single event.  Note that this is called every time
+			we attempt to read the user log, so we may or may not have
+			a valid event here.
+		@param The type of log which is the source of the event.
+		@param The outcome from the attempt to read the user log.
+	    @param The event.
+		@param Whether we're in recovery mode.
+		@param Whether we're done trying to read events (set by this
+			function).
+		@return True if the DAG should continue, false if we should abort.
+	*/
+	bool ProcessOneEvent (int logsource, ULogEventOutcome outcome, const ULogEvent *event,
+			bool recovery, bool &done);
+
+	/** Process an abort or executable error event.
+	    @param The event.
+		@param The job corresponding to this event.
+		@param Whether we're in recovery mode.
+	*/
+	void ProcessAbortEvent(const ULogEvent *event, Job *job,
+			bool recovery);
+
+	/** Process a terminated event.
+	    @param The event.
+		@param The job corresponding to this event.
+		@param Whether we're in recovery mode.
+	*/
+	void ProcessTerminatedEvent(const ULogEvent *event, Job *job,
+			bool recovery);
+
+	/** Remove the batch system job for the given DAG node.
+		@param The node for which to remove the job.
+	*/
+	void RemoveBatchJob(Job *node);
+
+	/** Processing common to all "end-of-job proc" events.
+		@param The node the event is associated with.
+		@param Whether we're in recovery mode.
+		@param Whether the job proc failed
+	*/
+	void ProcessJobProcEnd(Job *node, bool recovery, bool failed);
+
+	/** Process a post script terminated event.
+	    @param The event.
+		@param The job corresponding to this event.
+		@param Whether we're in recovery mode.
+	*/
+	void ProcessPostTermEvent(const ULogEvent *event, Job *job,
+			bool recovery);
+
+	/** Process a submit event.
+	    @param The event.
+		@param The event name.
+		@param The job corresponding to this event.
+		@param The Condor ID corresponding to this event.
+		@param Whether we're in recovery mode.
+	*/
+	void ProcessSubmitEvent(const ULogEvent *event, Job *job, bool recovery);
+
+	/** Process an event indicating that a job is in an idle state.
+	    Note that this method only does processing relating to keeping
+		the count of idle jobs -- any other processing should be done in
+		a different method.
+	    @param The event.
+		@param The job corresponding to this event.
+	*/
+	void ProcessIsIdleEvent(const ULogEvent *event, Job *job);
+
+	/** Process an event that indicates that a job is NOT in an idle state.
+	    Note that this method only does processing relating to keeping
+		the count of idle jobs -- any other processing should be done in
+		a different method.
+	    @param The event.
+		@param The job corresponding to this event.
+	*/
+	void ProcessNotIdleEvent(const ULogEvent *event, Job *job);
 
     /** Get pointer to job with id jobID
         @param the handle of the job in the DAG
@@ -128,10 +226,11 @@ class Dag {
     Job * GetJob (const char * jobName) const;
 
     /** Get pointer to job with condor ID condorID
+		@param logsource The type of log from which events should be read.
         @param condorID the CondorID of the job in the DAG
         @return address of Job object, or NULL if not found
     */
-    Job * GetJob (const CondorID condorID) const;
+    Job * GetJob (int logsource, const CondorID condorID) const;
 
     /** Ask whether a node name exists in the DAG
         @param nodeName the name of the node in the DAG
@@ -139,29 +238,35 @@ class Dag {
     */
     bool NodeExists( const char *nodeName ) const;
 
+    /** Set the event checking level.
+		@param allowEvents what "bad" events to treat as non-fatal (as
+			   opposed to fatal) errors; see check_events.h for values.
+    */
+	void SetAllowEvents( int allowEvents);
+
     /// Print the list of jobs to stdout (for debugging).
     void PrintJobList() const;
     void PrintJobList( Job::status_t status ) const;
 
-    /** @return the total number of jobs in the DAG
+    /** @return the total number of nodes in the DAG
      */
-    inline int NumJobs() const { return _jobs.Number(); }
+    inline int NumNodes() const { return _jobs.Number(); }
 
-    /** @return the number of jobs completed
+    /** @return the number of nodes completed
      */
-    inline int NumJobsDone() const { return _numJobsDone; }
+    inline int NumNodesDone() const { return _numNodesDone; }
 
-    /** @return the number of jobs that failed in the DAG
+    /** @return the number of nodes that failed in the DAG
      */
-    inline int NumJobsFailed() const { return _numJobsFailed; }
+    inline int NumNodesFailed() const { return _numNodesFailed; }
 
-    /** @return the number of jobs currently submitted to Condor
+    /** @return the number of jobs currently submitted to batch system(s)
      */
     inline int NumJobsSubmitted() const { return _numJobsSubmitted; }
 
-    /** @return the number of jobs ready to submit to Condor
+    /** @return the number of nodes ready to submit job to batch system
      */
-    inline int NumJobsReady() const { return _readyQ->Number(); }
+    inline int NumNodesReady() const { return _readyQ->Number(); }
 
     /** @return the number of PRE scripts currently running
      */
@@ -178,13 +283,32 @@ class Dag {
     inline int NumScriptsRunning() const
 		{ return NumPreScriptsRunning() + NumPostScriptsRunning(); }
 
-	inline bool Done() const { return NumJobsDone() == NumJobs(); }
+	/** @return the number of nodes currently in the status
+	 *          Job::STATUS_PRERUN.
+	 */
+	inline int PreRunNodeCount() const
+		{ return _preRunNodeCount; }
+
+	/** @return the number of nodes currently in the status
+	 *          Job::STATUS_POSTRUN.
+	 */
+	inline int PostRunNodeCount() const
+		{ return _postRunNodeCount; }
+
+	/** @return the number of nodes currently in the status
+	 *          Job::STATUS_PRERUN or Job::STATUS_POSTRUN.
+	 */
+	inline int ScriptRunNodeCount() const
+		{ return _preRunNodeCount + _postRunNodeCount; }
+
+	inline bool Done() const { return NumNodesDone() == NumNodes(); }
 
 		/** Submit all ready jobs, provided they are not waiting on a
 			parent job or being throttled.
+			@param the appropriate Dagman object
 			@return number of jobs successfully submitted
 		*/
-    int SubmitReadyJobs();
+    int SubmitReadyJobs(const Dagman &dm);
   
     /** Remove all jobs (using condor_rm) that are currently running.
         All jobs currently marked Job::STATUS_SUBMITTED will be fed
@@ -193,14 +317,25 @@ class Dag {
         condor_rm.  This function <b>is not</b> called when the schedd
         kills Dagman.
     */
-    void RemoveRunningJobs () const;
+    void RemoveRunningJobs ( const Dagman & ) const;
+
+    /** Remove all pre- and post-scripts that are currently running.
+	All currently running scripts will be killed via daemoncore.
+	This function is called when the Dagman Condor job itself is
+	removed by the user via condor_rm.  This function <b>is not</b>
+	called when the schedd kills Dagman.
+    */
+    void RemoveRunningScripts ( ) const;
 
     /** Creates a DAG file based on the DAG in memory, except all
         completed jobs are premarked as DONE.
         @param rescue_file The name of the rescue file to generate
         @param datafile The original DAG config file to read from
+		@param useDagDir run DAGs in directories from DAG file paths 
+			if true
     */
-    void Rescue (const char * rescue_file, const char * datafile) const;
+    void Rescue (const char * rescue_file, const char * datafile,
+    			bool useDagDir) const;
 
 	int PreScriptReaper( const char* nodeName, int status );
 	int PostScriptReaper( const char* nodeName, int status );
@@ -227,70 +362,196 @@ class Dag {
 	void SetDotFileOverwrite(bool overwrite_dot_file) { _overwrite_dot_file = overwrite_dot_file; }
 	bool GetDotFileUpdate(void)                       { return _update_dot_file; }
 	void DumpDotFile(void);
+
+	void CheckAllJobs();
+
+		/** Returns a delimited string listing the node names of all
+			of the given node's parents.
+			@return delimited string of parent node names
+		*/
+	const MyString ParentListString( Job *node, const char delim = ',' ) const;
+
+	int NumIdleJobProcs() const { return _numIdleJobProcs; }
+
+		/** Get the number of Stork (nee DaP) log files.
+			@return The number of Stork log files (can be 0).
+		*/
+	int GetStorkLogCount() const { return _storkLogFiles.number(); }
+
+		/** Print the number of deferrals during the run (caused
+		    by MaxJobs, MaxIdle, MaxPre, or MaxPost).
+			@param level: debug level for output.
+			@param force: whether to force output even if there have
+				been no deferrals.
+		*/
+	void PrintDeferrals( debug_level_t level, bool force ) const;
+
+		// non-exe failure codes for return value integers -- we
+		// represent DAGMan, batch-system, or other external errors
+		// with the integer return-code space *below* -64.  So, 0-255
+		// are normal exe return codes, -1 to -64 represent catching
+		// exe signals 1 to 64, and -1000 and below represent DAGMan,
+		// batch-system, or other external errors
+	const int DAG_ERROR_CONDOR_SUBMIT_FAILED;
+	const int DAG_ERROR_CONDOR_JOB_ABORTED;
+	const int DAG_ERROR_DAGMAN_HELPER_COMMAND_FAILED;
+
+		// The maximum signal we can deal with in the error-reporting
+		// code.
+	const int MAX_SIGNAL;
+
+	bool ProhibitMultiJobs() const { return _prohibitMultiJobs; }
 	
   protected:
 
+	/** Print a numbered list of the DAG files.
+	    @param The list of DAG files being run.
+	*/
+	void PrintDagFiles( /* const */ StringList &dagFiles );
+
+	/** Find all Condor (not DaP) log files associated with this DAG.
+	    @param The list of DAG files being run.
+		@param useDagDir run DAGs in directories from DAG file paths
+		       if true
+	*/
+	void FindLogFiles( /* const */ StringList &dagFiles, bool useDagDir );
+
     /* Prepares to submit job by running its PRE Script if one exists,
        otherwise adds job to _readyQ and calls SubmitReadyJobs()
+	   @param The job to start
+	   @param Whether this is a retry
 	   @return true on success, false on failure
     */
-    bool StartNode( Job *node );
+    bool StartNode( Job *node, bool isRetry );
 
     // add job to termination queue and report termination to all
     // child jobs by removing job ID from each child's waiting queue
     void TerminateJob( Job* job, bool bootstrap = false );
   
-    /*  Get the first appearing job in the termination queue marked SUBMITTED.
-        This function is called by ProcessLogEvents when a SUBMIT log
-        entry is read.  The challenge is to correctly match the condorID
-        found in the SUBMIT log event written by Condor with the Job object
-        (currently with condorID (-1,-1,-1) that was recently submitted
-        with condor_submit.<p>
-
-        @return address of Job object, or NULL if not found
-    */
-    Job * GetSubmittedJob (bool recovery);
-
-	void PrintEvent( debug_level_t level, const char* eventName, Job* job,
-					 CondorID condorID );
+	void PrintEvent( debug_level_t level, const ULogEvent* event,
+					 Job* node );
 
 	void RestartNode( Job *node, bool recovery );
 
 	/* DFS number the jobs in the DAG in order to detect cycle*/
 	void DFSVisit (Job * job);
-	
+
+		/** Check whether we got an exit value that should abort the DAG.
+			@param The job associated with either the PRE script, POST
+				script, or "main" job that just finished.
+			@param The exit value of the relevant script or job.
+			@param The "type" of script or job we're dealing with (PRE
+				script, POST script, or node).
+			@return True iff aborting the DAG (it really should not
+			    return in that case)
+		*/
+	static bool CheckForDagAbort(Job *job, int exitVal, const char *type);
+
+		// takes a userlog event and returns the corresponding node
+	Job* LogEventNodeLookup( int logsource, const ULogEvent* event,
+				bool recovery );
+
+		// check whether a userlog event is sane, or "impossible"
+
+	bool EventSanityCheck( int logsource, const ULogEvent* event,
+						const Job* node, bool* result );
+
+		// compares a submit event's job ID with the one that appeared
+		// earlier in the submit command's stdout (which we stashed in
+		// the Job object)
+
+	bool SanityCheckSubmitEvent( const CondorID condorID, const Job* node,
+								 const bool recovery );
+
+		// The log file name specified by the -Condorlog command line
+		// argument (not used for much anymore).
+	char *		_condorLogName;
+
     // name of consolidated condor log
-	StringList &_condorLogFiles;
+	StringList _condorLogFiles;
 
     // Documentation on ReadUserLog is present in condor_c++_util
-	ReadMultipleUserLogs _condorLog;
+	ReadMultipleUserLogs _condorLogRdr;
 
     //
     bool          _condorLogInitialized;
 
     //-->DAP
+		// The log file name specified by the -Storklog command line
+		// argument.
     const char* _dapLogName;
-    ReadUserLog   _dapLog;
+
+		// The list of all Stork log files (generated from the relevant
+		// submit files).
+	StringList	_storkLogFiles;
+
+		// Object to read events from Stork logs.
+	ReadMultipleUserLogs	_storkLogRdr;
+
+		// Whether the Stork (nee DaP) log(s) have been successfully
+		// initialized.
     bool          _dapLogInitialized;
-    off_t         _dapLogSize;
     //<--DAP
+
+		/** Get the total number of node job user log files we'll be
+			accessing.
+			@return The total number of log files.
+		*/
+	int TotalLogFileCount() { return _condorLogFiles.number() +
+				_storkLogFiles.number(); }
 
     /// List of Job objects
     List<Job>     _jobs;
 
-    // Number of Jobs that are done (completed execution)
-    int _numJobsDone;
-    
-    // Number of Jobs that failed (or their PRE or POST script failed).
-    int _numJobsFailed;
+	HashTable<MyString, Job *>		_nodeNameHash;
 
-    // Number of Jobs currently running (submitted to Condor)
+	HashTable<JobID_t, Job *>		_nodeIDHash;
+
+    // Number of nodes that are done (completed execution)
+    int _numNodesDone;
+    
+    // Number of nodes that failed (job or PRE or POST script failed)
+    int _numNodesFailed;
+
+    // Number of batch system jobs currently submitted
     int _numJobsSubmitted;
 
     /*  Maximum number of jobs to submit at once.  Non-negative.  Zero means
         unlimited
     */
     const int _maxJobsSubmitted;
+
+		// Number of DAG job procs currently idle.
+	int _numIdleJobProcs;
+
+    	// Maximum number of idle job procs to allow (stop submitting if the
+		// number of idle job procs hits this limit).  Non-negative.  Zero
+		// means unlimited.
+    const int _maxIdleJobProcs;
+
+		// Whether to allow the DAG to run even if we have an error
+		// determining the job log files.
+	bool		_allowLogError;
+
+		// If this is true, nodes for which the job submit fails are retried
+		// before any other ready nodes; otherwise a submit failure puts
+		// a node at the back of the ready queue.  (Default is true.)
+	bool		m_retrySubmitFirst;
+
+		// If this is true, nodes for which the node fails (and the node
+		// has retries) are retried before any other ready nodes;
+		// otherwise a node failure puts a node at the back of the ready
+		// queue.  (Default is false.)
+	bool		m_retryNodeFirst;
+
+		// Executable to remove Condor jobs.
+	const char *	_condorRmExe;
+
+		// Executable to remove Stork jobs.
+	const char *	_storkRmExe;
+
+		// Condor ID of this DAGMan process.
+	const CondorID *	_DAGManJobId;
 
 	// queue of jobs ready to be submitted to Condor
 	SimpleList<Job*>* _readyQ;
@@ -301,6 +562,12 @@ class Dag {
 
 	ScriptQ* _preScriptQ;
 	ScriptQ* _postScriptQ;
+
+		// Number of nodes currently in status Job::STATUS_PRERUN.
+	int		_preRunNodeCount;
+
+		// Number of nodes currently in status Job::STATUS_POSTRUN.
+	int		_postRunNodeCount;
 	
 	int DFS_ORDER; 
 
@@ -317,6 +584,40 @@ class Dag {
 	void DumpDotFileNodes(FILE *temp_dot_file);
 	void DumpDotFileArcs(FILE *temp_dot_file);
 	void ChooseDotFileName(MyString &dot_file_name);
+
+		// Separate event checkers for Condor and Stork here because
+		// IDs could collide.
+	CheckEvents	_checkCondorEvents;
+	CheckEvents	_checkStorkEvents;
+
+		// Total count of jobs deferred because of MaxJobs limit (note
+		// that a single job getting deferred multiple times is counted
+		// multiple times).
+	int		_maxJobsDeferredCount;
+
+		// Total count of jobs deferred because of MaxIdle limit (note
+		// that a single job getting deferred multiple times is counted
+		// multiple times).
+	int		_maxIdleDeferredCount;
+
+		// whether or not to prohibit multiple job proc submitsn (e.g.,
+		// node jobs that create more than one job proc)
+	bool		_prohibitMultiJobs;
+
+		// The next time we're allowed to try submitting a job -- 0 means
+		// go ahead and submit right away.
+	time_t		_nextSubmitTime;
+
+		// The delay we use the next time a submit fails -- _nextSubmitTime
+		// becomes the current time plus _nextSubmitDelay (this is in
+		// seconds).
+	int			_nextSubmitDelay;
+
+		// Whether we're in recovery mode.  We only need this here for
+		// the PR 554 fix in PostScriptReaper -- otherwise it gets passed
+		// down thru the call stack.
+	bool		_recovery;
+
 };
 
 #endif /* #ifndef DAG_H */

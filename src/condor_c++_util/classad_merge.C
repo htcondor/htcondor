@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -28,7 +28,7 @@
 void MergeClassAds(ClassAd *merge_into, ClassAd *merge_from, 
 				   bool merge_conflicts)
 {
-/*	merge_from->ResetName();
+	merge_from->ResetName();
 	merge_from->ResetExpr();
 
 	while (1) {
@@ -49,6 +49,6 @@ void MergeClassAds(ClassAd *merge_into, ClassAd *merge_from,
 			}
 		}
 	}
-*/
+
 	return;
 }

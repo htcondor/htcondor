@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -53,8 +53,10 @@
 #define D_MACHINE		(1<<9)
 #define D_FULLDEBUG	 	(1<<10)
 #define D_NFS			(1<<11)
-#define D_UPDOWN        (1<<12)
-#define D_AFS           (1<<13)
+#define D_CONFIG        (1<<12)
+// D_AFS seems to not be used anywhere in Condor. Therefore I decided to recycle
+// this. -- Sonny.
+#define D_NET_REMAP       (1<<13)
 #define D_PREEMPT		(1<<14)
 #define D_PROTOCOL		(1<<15)
 #define D_PRIV			(1<<16)
@@ -69,10 +71,15 @@
 #define D_MATCH			(1<<25)
 #define D_ACCOUNTANT	(1<<26)
 #define D_FAILURE	(1<<27)
-#define D_FDS           (1<<(D_MAXFLAGS-3))
-#define D_SECONDS		(1<<(D_MAXFLAGS-2))
-#define D_NOHEADER		(1<<(D_MAXFLAGS-1))
-#define D_ALL			(~(0) & (~(D_NOHEADER)))
+/* 
+   the rest of these aren't debug levels, but are format-modifying
+   flags to change the appearance of the dprintf line
+*/ 
+#define D_PID           (1<<28)
+#define D_FDS           (1<<29)
+#define D_SECONDS       (1<<30)
+#define D_NOHEADER      (1<<31)
+#define D_ALL           (~(0) & (~(D_NOHEADER)))
 
 #if defined(__cplusplus)
 extern "C" {
@@ -82,14 +89,22 @@ extern int DebugFlags;	/* Bits to look for in dprintf */
 extern int Termlog;		/* Are we logging to a terminal? */
 extern int (*DebugId)(FILE *);		/* set header message */
 
-void dprintf ( int flags, char *fmt, ... );
+void dprintf ( int flags, const char *fmt, ... )
+#ifdef __GNUC__
+__attribute__((__format__(__printf__, 2, 3)))
+#endif
+;
+
 void dprintf_config( char *subsys, int logfd );
-void _condor_dprintf_va ( int flags, char* fmt, va_list args );
+void _condor_dprintf_va ( int flags, const char* fmt, va_list args );
 int _condor_open_lock_file(const char *filename,int flags, mode_t perm);
 void _EXCEPT_ ( char *fmt, ... );
 void Suicide();
 void set_debug_flags( char *strflags );
 void _condor_fd_panic( int line, char *file );
+
+time_t dprintf_last_modification();
+void dprintf_touch_log();
 
 /*
 **	Definition of exception macro
@@ -104,7 +119,7 @@ void _condor_fd_panic( int line, char *file );
 **	Important external variables in libc
 */
 extern DLL_IMPORT_MAGIC int		errno;
-#if !( defined(LINUX) && defined(GLIBC) || defined(Darwin) )
+#if !( defined(LINUX) && defined(GLIBC) || defined(Darwin) || defined(CONDOR_FREEBSD) )
 extern DLL_IMPORT_MAGIC int		sys_nerr;
 extern DLL_IMPORT_MAGIC char		*sys_errlist[];
 #endif

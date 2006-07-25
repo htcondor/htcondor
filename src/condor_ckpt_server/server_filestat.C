@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -462,7 +462,7 @@ int FileStat::Hash(const char* machine_name)
   int             value=0;
   int             count;
 
-  h = gethostbyname((char*)machine_name);
+  h = condor_gethostbyname((char*)machine_name);
   if (h == NULL)
     return(BAD_MACHINE_NAME);
   x = (u_char*) h->h_addr;

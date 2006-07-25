@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -22,19 +22,13 @@
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 #include "condor_common.h"
 #include "condor_api.h"
-//#include "condor_query.h"	// NAC
-//#include "ad_printmask.h"	// NAC
-//#include "classadList.h"	// NAC
 #include "status_types.h"
 #include "totals.h"
 #include "format_time.h"
-//#include "condor_xml_classads.h"
-#include "../condor_classad.V6/xmlSource.h"
-#include "../condor_classad.V6/xmlSink.h"
-
+#include "condor_xml_classads.h"
 
 extern ppOption				ppStyle;
-extern ClassAdPrintMask 	pm;
+extern AttrListPrintMask 	pm;
 extern int					wantOnlyTotals;
 extern bool javaMode;
 
@@ -44,11 +38,17 @@ static int stashed_now = 0;
 
 void printStartdNormal 	(ClassAd *);
 void printScheddNormal 	(ClassAd *);
+
+#if WANT_QUILL
+void printQuillNormal 	(ClassAd *);
+#endif /* WANT_QUILL */
+
 void printScheddSubmittors(ClassAd *);
 void printMasterNormal 	(ClassAd *);
 void printCollectorNormal (ClassAd *);
 void printCkptSrvrNormal(ClassAd *);
 void printStorageNormal(ClassAd *);
+void printNegotiatorNormal (ClassAd *);
 void printAnyNormal(ClassAd *);
 void printServer 		(ClassAd *);
 void printRun    		(ClassAd *);
@@ -58,8 +58,8 @@ void printVerbose   	(ClassAd *);
 void printXML       	(ClassAd *, bool first_ad, bool last_ad);
 void printCustom    	(ClassAd *);
 
-char *formatElapsedTime( int , ClassAd* );
-char *formatRealTime( int , ClassAd * );
+char *formatElapsedTime( int , AttrList* );
+char *formatRealTime( int , AttrList * );
 
 void
 prettyPrint (ClassAdList &adList, TrackTotals *totals)
@@ -94,9 +94,20 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 				printState( ad );
 				break;
 
+#if WANT_QUILL
+			  case PP_QUILL_NORMAL:
+				printQuillNormal (ad);
+				break;
+#endif /* WANT_QUILL */
+
 			  case PP_SCHEDD_NORMAL:
 				printScheddNormal (ad);
 				break;
+
+			  case PP_NEGOTIATOR_NORMAL:
+				printNegotiatorNormal (ad);
+				break;
+
 
 			  case PP_SCHEDD_SUBMITTORS:
 				printScheddSubmittors (ad);
@@ -160,7 +171,7 @@ void
 printStartdNormal (ClassAd *ad)
 {
 	static bool first = true;
-	static ClassAdPrintMask pm; 
+	static AttrListPrintMask pm; 
 	int    now;
 	int	   actvty;
 
@@ -198,10 +209,8 @@ printStartdNormal (ClassAd *ad)
 		}
 
 		pm.display (stdout, ad);
-//		if( ad->LookupInteger( ATTR_ENTERED_CURRENT_ACTIVITY , actvty ) &&
-//			ad->LookupInteger( ATTR_LAST_HEARD_FROM , now ) )
-		if( ad->EvaluateAttrInt( ATTR_ENTERED_CURRENT_ACTIVITY, actvty ) &&
-			ad->EvaluateAttrInt( ATTR_LAST_HEARD_FROM, now ) )
+		if( ad->LookupInteger( ATTR_ENTERED_CURRENT_ACTIVITY , actvty ) &&
+			ad->LookupInteger( ATTR_LAST_HEARD_FROM , now ) )
 		{
 			actvty = now - actvty;
 			printf( "%s\n", format_time( actvty ) );
@@ -218,7 +227,7 @@ void
 printServer (ClassAd *ad)
 {
 	static bool first = true;
-	static ClassAdPrintMask pm; 
+	static AttrListPrintMask pm; 
 
 	if (ad)
 	{
@@ -250,7 +259,7 @@ void
 printState (ClassAd *ad)
 {
 	static bool first = true;
-	static ClassAdPrintMask pm; 
+	static AttrListPrintMask pm; 
 
 	if (ad)
 	{
@@ -292,7 +301,7 @@ void
 printRun (ClassAd *ad)
 {
 	static bool first = true;
-	static ClassAdPrintMask pm; 
+	static AttrListPrintMask pm; 
 
 	char *opsys_attr, *arch_attr;
 	char *opsys_name, *arch_name;
@@ -405,12 +414,42 @@ printCOD (ClassAd *ad)
 	}
 }
 
+#if WANT_QUILL
+void
+printQuillNormal (ClassAd *ad) {
+	static bool first = true;
+	static AttrListPrintMask pm; 
+
+	if (ad)
+	{
+		// print header if necessary
+		if (first)
+		{
+			printf ("\n%-20.20s %-10.10s %-16.16s %-18.18s\n\n",
+				ATTR_NAME, ATTR_MACHINE, ATTR_QUILL_SQL_TOTAL, 
+				ATTR_QUILL_SQL_LAST_BATCH);
+		
+			pm.registerFormat("%-20.20s ", ATTR_NAME, 
+													"[??????????????????] ");
+			pm.registerFormat("%-10.10s ", ATTR_MACHINE, 
+													"[????????] ");
+			pm.registerFormat("%16d ",ATTR_QUILL_SQL_TOTAL,
+													"[??????????????] ");
+			pm.registerFormat("%18d\n",ATTR_QUILL_SQL_LAST_BATCH, 
+													"[???????????]\n");
+			first = false;
+		}
+
+		pm.display (stdout, ad);
+	}
+}
+#endif /* WANT_QUILL */
 
 void
 printScheddNormal (ClassAd *ad)
 {
 	static bool first = true;
-	static ClassAdPrintMask pm; 
+	static AttrListPrintMask pm; 
 
 	if (ad)
 	{
@@ -443,7 +482,7 @@ void
 printScheddSubmittors (ClassAd *ad)
 {
 	static bool first = true;
-	static ClassAdPrintMask pm; 
+	static AttrListPrintMask pm; 
 
 	if (ad)
 	{
@@ -473,7 +512,7 @@ void
 printCollectorNormal(ClassAd *ad)
 {
 	static bool first = true;
-	static ClassAdPrintMask pm; 
+	static AttrListPrintMask pm; 
 
 	if (ad)
 	{
@@ -503,7 +542,7 @@ void
 printMasterNormal(ClassAd *ad)
 {
 	static bool first = true;
-	static ClassAdPrintMask pm;
+	static AttrListPrintMask pm;
 
 	if (ad)
 	{
@@ -523,7 +562,7 @@ void
 printCkptSrvrNormal(ClassAd *ad)
 {
 	static bool first = true;
-	static ClassAdPrintMask pm;
+	static AttrListPrintMask pm;
 
 	if (ad)
 	{
@@ -547,7 +586,7 @@ void
 printStorageNormal(ClassAd *ad)
 {
 	static bool first = true;
-	static ClassAdPrintMask pm;
+	static AttrListPrintMask pm;
 
 	if (ad)
 	{
@@ -566,8 +605,34 @@ printStorageNormal(ClassAd *ad)
 	pm.display (stdout, ad);
 }
 
+void
+printNegotiatorNormal(ClassAd *ad)
+{
+	static bool first = true;
+	static AttrListPrintMask pm;
+
+	if (ad)
+	{
+		// print header if necessary
+		if (first)
+		{
+			printf ("\n%-20.20s %-20.20s\n\n",
+				ATTR_NAME, ATTR_MACHINE);
+		
+			pm.registerFormat("%-20.20s ", ATTR_NAME, 
+													"[??????????????????] ");
+			pm.registerFormat("%-20.20s ", ATTR_MACHINE, 
+													"[??????????????????] ");
+
+			first = false;
+		}
+	}
+
+	pm.display (stdout, ad);
+}
+
 /*
-We can't use the ClassAdPrintMask here, because the AttrList does not actually contain 
+We can't use the AttrListPrintMask here, because the AttrList does not actually contain 
 the MyType and TargetType fields that we want to display.  
 These are actually contained in the ClassAd.
 */
@@ -576,9 +641,8 @@ void
 printAnyNormal(ClassAd *ad)
 {
 	static bool first = true;
-	char name[ATTRLIST_MAX_EXPRESSION];
-//	char *my_type, *target_type;
-	std::string my_type, target_type;
+	char *name;
+	const char *my_type, *target_type;
 
 	if (ad)
 	{
@@ -587,27 +651,20 @@ printAnyNormal(ClassAd *ad)
 			printf ("\n%-20.20s %-20.20s %-30.30s\n\n", ATTR_MY_TYPE, ATTR_TARGET_TYPE, ATTR_NAME );
 			first = false;
 		}
-//		if(!ad->LookupString(ATTR_NAME,name)) {
-		if(!ad->EvaluateAttrString(ATTR_NAME,name,ATTRLIST_MAX_EXPRESSION)) {
+		name = 0;
+		if(!ad->LookupString(ATTR_NAME,&name)) {
+			name = (char *) malloc(strlen("[???]") + 1);
 			strcpy(name,"[???]");
 		}
 
-//		my_type = ad->GetMyTypeName();
-//		if(!my_type[0]) my_type = "None";
+		my_type = ad->GetMyTypeName();
+		if(!my_type[0]) my_type = "None";
 
-		if(!ad->EvaluateAttrString(ATTR_MY_TYPE,my_type)) {	// NAC
-			my_type = "None";						  		// NAC
-		}											  		// NAC
+		target_type = ad->GetTargetTypeName();
+		if(!target_type[0]) target_type = "None";
 
-//		target_type = ad->GetTargetTypeName();
-//		if(!target_type[0]) target_type = "None";
-
-		if(!ad->EvaluateAttrString(ATTR_TARGET_TYPE,target_type)) {	// NAC
-			target_type = "None";					   		  		// NAC
-		}													  		// NAC
-
-		printf("%-20.20s %-20.20s %-30.30s\n",my_type.c_str( ),
-			   target_type.c_str( ),name);
+		printf("%-20.20s %-20.20s %-30.30s\n",my_type,target_type,name);
+		free(name);
 	}
 	pm.display (stdout, ad);
 }
@@ -616,35 +673,28 @@ printAnyNormal(ClassAd *ad)
 void
 printVerbose (ClassAd *ad)
 {
-//	ad->fPrint (stdout);
-	std::string 	buffer;		// NAC
-	PrettyPrint pp;			// NAC
-
-	pp.Unparse( buffer, ad );	// NAC
-	cout << buffer << endl;			// NAC
-
-//	fputc ('\n', stdout);	
+	ad->fPrint (stdout);
+	fputc ('\n', stdout);	
 }
 
 void
 printXML (ClassAd *ad, bool first_ad, bool last_ad)
 {
-	ClassAdXMLUnParser  unparser;
-//	MyString            xml;
-	std::string			xml;
+	ClassAdXMLUnparser  unparser;
+	MyString            xml;
 
-//	if (first_ad) {
-//		unparser.AddXMLFileHeader(xml);
-//	}
+	if (first_ad) {
+		unparser.AddXMLFileHeader(xml);
+	}
 
-	unparser.SetCompactSpacing(false);
-	unparser.Unparse(xml, ad);
+	unparser.SetUseCompactSpacing(false);
+	unparser.Unparse(ad, xml);
 
-//	if (last_ad) {
-//		unparser.AddXMLFileFooter(xml);
-//	}
+	if (last_ad) {
+		unparser.AddXMLFileFooter(xml);
+	}
 
-	printf("%s\n", xml.c_str( ));
+	printf("%s\n", xml.Value());
 	return;
 }
 
@@ -656,21 +706,17 @@ printCustom (ClassAd *ad)
 
 
 char *
-formatElapsedTime( int t , ClassAd *ad )
+formatElapsedTime( int t , AttrList *al )
 {
 	int	now;
 
-//	ad->LookupInteger( ATTR_LAST_HEARD_FROM , now );	
-	ad->EvaluateAttrInt( ATTR_LAST_HEARD_FROM , now );	// NAC
+	al->LookupInteger( ATTR_LAST_HEARD_FROM , now );	
 	t = now - t;
 	return format_time( t );
 }
 
 char *
-formatRealTime( int t , ClassAd * )
+formatRealTime( int t , AttrList * )
 {
 	return format_time( t );
 }
-
-
-

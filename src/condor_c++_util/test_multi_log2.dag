@@ -1,0 +1,10 @@
+# Note: this DAG file is only for testing the multi-log-reader code.
+Job A \
+  test_multi_log.subA
+Job B test_multi_log.subB
+Job C test_multi_log.subC2
+Job D test_multi_log.subD
+
+PARENT A CHILD B C
+PARENT B C CHILD D
+

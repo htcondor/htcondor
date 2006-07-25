@@ -24,11 +24,31 @@
 ############################Copyright-DO-NOT-REMOVE-THIS-LINE##
 
 # We need a recent autoconf for many of the macros and tests we're using
-AC_PREREQ(2.57)
+# NOTE: 2.57 has a bug when testing for functions, which we now hit by
+# testing for mkstemp(), so we need at least 2.59... 
+AC_PREREQ(2.59)
 
 # Initialize autoconf
 AC_INIT
+AC_CONFIG_HEADERS([config.h])
 
+
+AC_MSG_NOTICE([checking for critical tools used by configure]) 
+AC_PROG_AWK
+REQUIRE_PATH_PROG([GREP],[grep])
+REQUIRE_PATH_PROG([CUT],[cut])
+AC_PATH_PROG([WHICH],[which],[no],[$PATH])
+
+# Condor only requires 5.002, but GPT apparently relies on 5.005_03 or
+# greater.  Unfortunately, GPT doesn't have a configure script or
+# anything, it just lets perl die with a require statement.  So, we
+# test for the right version here and fail in an early and obvious way
+# if there's a problem.  Also, we check for this early, so we can use
+# perl in the rest of the tests in here, if we want it. 
+AC_PROG_PERL_VERSION([5.005_03], [],
+   [AC_MSG_ERROR([perl version 5.005_03 or higher is required])])
+
+AC_MSG_NOTICE([verifying build environment ]) 
 
 # first, if we notice we're being run at UW-Madison CS on a
 # CSL-supported machine, and the PATH doesn't include
@@ -37,7 +57,7 @@ AC_INIT
 # versions of everything we need, and it's easier to just tell the
 # user right at the start what they need to do to fix it, instead of
 # having the rest of the tests in here fail...
-my_domain=`echo $ac_hostname | cut -f2- -d.`
+my_domain=`echo $ac_hostname | $CUT -f2- -d.`
 _bad_path_dirs="/s/std/bin /usr/local/bin /usr/bin /bin /usr/ccs/bin"
 _found_bad_dir=no
 _which_bad_dir=""
@@ -77,15 +97,6 @@ if test $my_domain = "cs.wisc.edu" && test -d "/s/std/bin" ; then
   AC_MSG_RESULT([yes])
 fi   
 
-# Condor only requires 5.002, but GPT apparently relies on 5.005_03 or
-# greater.  Unfortunately, GPT doesn't have a configure script or
-# anything, it just lets perl die with a require statement.  So, we
-# test for the right version here and fail in an early and obvious way
-# if there's a problem.  Also, we check for this early, so we can use
-# perl in the rest of the tests in here, if we want it. 
-AC_PROG_PERL_VERSION([5.005_03], [],
-   [AC_MSG_ERROR([perl version 5.005_03 or higher is required])])
-
 
 ############################################################
 # Figure out what platform we're being run on
@@ -121,6 +132,10 @@ _cv_opsys_vers=""
 # packaged filenames should be when we try to release this platform
 _cv_sysname=""
 
+# Sometimes, I need to know the specific kernel revision. This is mostly
+# needed under Linux, but I'll make every OS produce this identification.
+_cv_kernel_rev="XXX"
+
 # Make sure if we get back something that begins with "IRIX" that we
 # strip off anything after it (e.g. "IRIX64", etc).
 os=`uname -s | sed 's/IRIX.*/IRIX/'`
@@ -132,7 +147,7 @@ if test "$os" = "HP-UX"; then
   if test "$osrelease" = "B.10.20" ; then
     _cv_opsys_vers="HPUX10"
     _cv_sysname="hp_ux102"
-  elif test "$osversion" = "B.11.00" ; then
+  elif test "$osrelease" = "B.11.11" ; then
     _cv_opsys_vers="HPUX11"
     _cv_sysname="hp_ux110"
   fi
@@ -160,11 +175,27 @@ elif test $os = "Linux" ; then
     _cv_arch="ALPHA"
   elif test $arch = "ia64" ; then
     _cv_arch="IA64"
+  elif test $arch = "ppc" -o $arch = "ppc64" ; then
+    _cv_arch="CONDOR_PPC"
+  elif test $arch = "x86_64" ; then
+    _cv_arch="X86_64"
   fi
 
   # next, figure out what linux distribution this is
-  if test -f "/etc/redhat-release" ; then 
-    _rh_vers=`cat /etc/redhat-release|perl -ne '/.* (.*) \(.*\)/;print $1;'`
+  if test -f "/etc/tao-release" ; then 
+    _tao_vers=`cat /etc/tao-release|$PERL -ne '/.* (.*) \(.*\)/;print $1;'`
+    case "$_tao_vers" in
+     "1" )
+       _cv_linux_distro="TAO1"
+       ;;
+     * )
+       AC_MSG_WARN([Condor is not yet ported to Tao version $_tao_vers])
+       AC_MSG_WARN([You may have trouble building and/or packaging Condor]) 
+       _cv_linux_distro="TAO_UNKNOWN"
+       ;;
+    esac
+  elif test -f "/etc/redhat-release" ; then 
+    _rh_vers=`cat /etc/redhat-release|$PERL -ne '/.* (.*) \(.*\)/;print $1;'`
     case "$_rh_vers" in
      "7.2" )
        _cv_linux_distro="RH72"
@@ -178,27 +209,51 @@ elif test $os = "Linux" ; then
      "9" )
        _cv_linux_distro="RH9"
        ;;
+	 "3" )
+       _cv_linux_distro="RHEL3"
+       ;;
+	 "4.2" )
+       _cv_linux_distro="CENTOS42"
+       ;;
+	 "4.3" )
+       _cv_linux_distro="CENTOS43"
+       ;;
      * )
        AC_MSG_WARN([Condor is not yet ported to redhat version $_rh_vers])
        AC_MSG_WARN([You may have trouble building and/or packaging Condor]) 
-       _cv_linux_distro="RH-UNKNOWN"
+       _cv_linux_distro="RH_UNKNOWN"
+       ;;
+    esac
+  elif test -f "/etc/yellowdog-release" ; then
+    _yd_vers=`cat /etc/yellowdog-release|$PERL -ne '/.* (.*) \(.*\)/;print $1;'`
+    case "$_yd_vers" in
+     "3.0" )
+       _cv_linux_distro="YD30"
+       ;;
+     * )
+       AC_MSG_WARN([Condor is not yet ported to yellowdog version $_yd_vers])
+       AC_MSG_WARN([You may have trouble building and/or packaging Condor])
+       _cv_linux_distro="YD_UNKNOWN"
        ;;
     esac
   elif test -f "/etc/SuSE-release" ; then
-    _suse_vers=`cat /etc/SuSE-release | grep VERSION | awk '{print $3}'`
+    _suse_vers=`cat /etc/SuSE-release | grep VERSION | $AWK '{print $3}'`
     case "$_suse_vers" in
      "8.1" )
        _cv_linux_distro="SLES81"
        ;;
+     "9" )
+       _cv_linux_distro="SLES9"
+       ;;
      * )
        AC_MSG_WARN([Condor is not yet ported to SuSE version $_suse_vers])
        AC_MSG_WARN([You may have trouble building and/or packaging Condor]) 
-       _cv_linux_distro="SuSE-UNKNOWN"
+       _cv_linux_distro="SuSE_UNKNOWN"
        ;;
     esac
   elif test -f "/etc/debian_version" ; then
     _deb_vers=`cat /etc/debian_version | sed 's/\./_/g'`;
-    _cv_linux_distro="DEBIAN-`echo _deb_vers`"
+    _cv_linux_distro="DEBIAN_`echo _deb_vers`"
     AC_MSG_WARN([Condor is not yet ported to Debian Linux distributions])
     AC_MSG_WARN([You may have trouble building and/or packaging Condor]) 
   else
@@ -208,8 +263,12 @@ elif test $os = "Linux" ; then
   fi
   # this perl 1-liner takes all space-delimited input, sticks it
   # together with '_' marks, and lower-cases the whole thing
-  _cv_sysname="`echo $_cv_arch $_cv_linux_distro | perl -ane 'print lc join('_',@F)'`"
-  _cv_opsys_vers="LINUX-$_cv_linux_distro"
+  _cv_sysname="`echo $_cv_arch $_cv_linux_distro | $PERL -ane 'print lc join('_',@F)'`"
+  _cv_opsys_vers="LINUX_$_cv_linux_distro"
+
+  # now figure out the kernel revision. Under linux this will have
+  # the form: major.minor.patch
+  _cv_kernel_rev=`uname -r | sed -e 's#^\\([0-9]\\+\\.[0-9]\\+\\.[0-9]\\+\\).*#\\1#'`;
 
 elif test $os = "SunOS" ; then
   _cv_op_sys="Solaris"
@@ -233,6 +292,10 @@ elif test $os = "SunOS" ; then
     _cv_sysname="sun4x_59"
   fi
 
+  # now figure out the kernel revision. Under solaris this will have
+  # the form: major.minor
+  _cv_kernel_rev=`uname -r | sed -e 's#^\\([0-9]\\+\\.[0-9]\\+\\).*#\\1#'`;
+
 elif test $os = "IRIX" ; then
   _cv_arch="SGI"
   _cv_op_sys="IRIX"
@@ -248,6 +311,10 @@ elif test $os = "IRIX" ; then
     IsMipsVersion=2
     IsMipsABI=O32
   fi
+
+  # now figure out the kernel revision. Under irix this will have
+  # the form: major.minor
+  _cv_kernel_rev=`uname -r | sed -e 's#^\\([0-9]\\+\\.[0-9]\\+\\).*#\\1#'`;
 
 elif test $os = "AIX" ; then
   # add detection to this when ia64 is needed
@@ -272,22 +339,80 @@ elif test $os = "AIX" ; then
     AC_MSG_WARN([You may have trouble building and/or packaging Condor]) 
   fi
 
-elif test $os = "Darwin" ; then
-  _cv_arch="PPC"
-  _cv_op_sys="Darwin"
-  _cv_opsys="DARWIN"
-  if test "$osrelease" = "6.8" ; then
-    _cv_opsys_vers="DARWIN-6_8"
-    _cv_sysname="ppc_macosx"
-  elif test "$osrelease" = "7.0.0" ; then
-    _cv_opsys_vers="DARWIN-7_0"
-    _cv_sysname="ppc_macosx_7_0"
-  else
-    _cv_opsys_vers="DARWIN-UNKNOWN"
-    AC_MSG_WARN([Unrecognised MacOSX/Darwin version])
-    AC_MSG_WARN([You may have trouble building and/or packaging Condor]) 
-  fi  
+  # now figure out the kernel revision. Under aix this will have
+  # the form: major.minor
+  _cv_kernel_rev_major=`uname -v`
+  _cv_kernel_rev_minor=`uname -r`
+  _cv_kernel_rev="$_cv_kernel_rev_major.$_cv_kernel_rev_minor"
 
+# --------------------------------------------
+# Darwin
+# --------------------------------------------
+elif test $os = "Darwin" ; then
+	##	
+	## Figure out the architecture
+	##
+	if test "$arch" = "i386"; then
+		_cv_arch="I386" 
+		_cv_sysname="i386_macosx"
+	elif test "$arch" = "Power Macintosh"; then
+		_cv_arch="PPC"
+		_cv_sysname="ppc_macosx"
+	else 
+		AC_MSG_WARN([Unrecognised Darwin Architecture])
+		AC_MSG_WARN([You may have trouble building and/or packaging Condor])  
+		_cv_sysname="unknown_macosx"
+	fi
+	_cv_op_sys="Darwin"
+	_cv_opsys="DARWIN"
+	
+	AC_PATH_PROG([SW_VERS],[sw_vers],[no],[$PATH])
+	if test $SW_VERS = "no" ; then   
+    	_cv_opsys_vers="OSX_UNKNOWN"
+	else 
+		_cv_osx_vers=`$SW_VERS | $GREP ^ProductVersion | $PERL -pe 's/^ProductVersion\:\s+(\d+)\.(\d+).*$/$1_$2/'`
+		_cv_opsys_vers="OSX_$_cv_osx_vers"
+	fi
+	
+	# now figure out the kernel revision. Under macosx this will have
+	# the form: major.minor.patch
+	_cv_kernel_rev=`uname -r | sed -e 's#^\\([0-9]\\+\\.[0-9]\\+\\.[0-9]\\+\\).*#\\1#'`;
+
+# --------------------------------------------
+# FreeBSD
+# --------------------------------------------
+elif test $os = "FreeBSD" ; then
+   ##	
+   ## Figure out the architecture
+   ##
+   if test $arch = "i686" -o $arch = "i586" -o $arch = "i486" -o $arch = "i386" ; then
+      _cv_arch="I386"
+   elif test $arch = "alpha" ; then
+      _cv_arch="ALPHA"
+   elif test $arch = "ia64" ; then
+      _cv_arch="IA64"
+   elif test $arch = "ppc" -o $arch = "ppc64" ; then
+      _cv_arch="CONDOR_PPC"
+   elif test $arch = "x86_64" ; then
+      _cv_arch="X86_64"
+   fi
+
+   ##
+   ## Now figure out the OS Version
+   ## Format:  MAJOR.MINOR-TAG
+   ## Example: 6.0-RELEASE
+   ##
+   _cv_opsys_vers=`uname -r | sed -e 's#\([0-9]*\).*#\1#'`
+   _cv_kernel_rev=`uname -r | sed -e 's#[0-9]*\.\([0-9]*\).*#\1#'`
+
+   _cv_op_sys=CONDOR_FREEBSD
+   _cv_opsys=${_cv_op_sys}   
+   _cv_sysname=`echo ${_cv_arch}_freebsd${_cv_opsys_vers} | $PERL -ane 'print lc'`
+
+   ##
+   ## Need to make _cv_opsys_vers like 'FREEBSD#'
+   ##
+   _cv_opsys_vers="FREEBSD${_cv_opsys_vers}"
 
 else
   AC_MSG_ERROR([Condor has not been ported to this platform])
@@ -310,23 +435,28 @@ AC_MSG_CHECKING([system identifying string])
 AC_MSG_RESULT([$_cv_sysname])
 AC_SUBST(_cv_sysname,$_cv_sysname)
 
+AC_MSG_CHECKING([kernel revision])
+AC_MSG_RESULT([$_cv_kernel_rev])
+AC_SUBST(_cv_kernel_rev,$_cv_kernel_rev)
+
+# check out the libc
 if test "$_cv_opsys" = "LINUX" ; then 
   AC_MSG_CHECKING([exact libc version])
   for _libc in "/lib/libc.so.6" "/lib/libc.so.6.1" ; do
     if test -f "$_libc" && test -L "$_libc" ; then 
-      _libc_ver=`echo $_libc|perl -nle '$f=readlink;$f=~/libc-(.*)\.so/;print $1;'`
+      _libc_ver=`echo $_libc|$PERL -nle '$f=readlink;$f=~/libc-(.*)\.so/;print $1;'`
       break;
     elif test -f "$_libc" ; then
       # ugh!  it's not a symlink to a file named with the version, so
       # we try an alternative method.  this is mostly a hack based on
       # crude experimentation.  we run nm on the libc.so, search for
-      # "A" symbols with "GLIBC" in them, and grab the *second to*
+      # "A" symbols with "GLIBC_#.#.#" in them, and grab the *second to*
       # last one we find.  based on testing this method on some
       # versions of glibc where the version was in the filename, this
       # seems to give us the closest match to reality.  it'll
       # certainly work to give us the major + minor number, which is
       # mostly all we care about at this point...
-      _libc_ver=`nm $_libc|grep GLIBC|grep A|tail -2|head -1|awk '{print $3}'|cut -f2 -d_`
+      _libc_ver=`nm $_libc|$PERL -e 'while(<>){if(/.*A GLIBC_(\d)\.(\d)\.(\d)/){$s=$v;$v="$1.$2.$3"}}print "$s\n";'`
       break;
     fi
   done
@@ -336,11 +466,11 @@ if test "$_cv_opsys" = "LINUX" ; then
   fi
   AC_MSG_RESULT([GLIBC $_libc_ver])
   _cv_libc_kind="GLIBC"
-  _cv_libc_major=`echo $_libc_ver | cut -f1 -d.`
-  _cv_libc_minor=`echo $_libc_ver | cut -f2 -d.`
-  _cv_libc_patch=`echo $_libc_ver | cut -f3 -d.`
+  _cv_libc_major=`echo $_libc_ver | $CUT -f1 -d.`
+  _cv_libc_minor=`echo $_libc_ver | $CUT -f2 -d.`
+  _cv_libc_patch=`echo $_libc_ver | $CUT -f3 -d.`
 
-  _cv_libc_full=`echo $_cv_libc_kind $_cv_libc_major $_cv_libc_minor $_cv_libc_patch|perl -ane 'print "#define IS_".join('_',@F)." YES";'`
+  _cv_libc_full=`echo $_cv_libc_kind $_cv_libc_major $_cv_libc_minor $_cv_libc_patch|$PERL -ane 'print "#define IS_".join('_',@F)." YES";'`
   _cv_libc_majmin="#define IS_$_cv_libc_kind$_cv_libc_major$_cv_libc_minor YES"
   _cv_libc_is_kind="#define IS_$_cv_libc_kind YES"
 else
@@ -371,15 +501,18 @@ AC_SUBST(_cv_ext_config_sh,"$_root_dir/config/config.sh")
 # Check for command-line arguments and environment variables
 ############################################################
 
+ac_cv_has_externals=YES
+ac_cv_externals=none
 AC_ARG_WITH(externals,
  AC_HELP_STRING([--with-externals=DIR],
    [Root of directory tree for external programs needed for building Condor (default is to search in ../externals)]),
  [if test $withval = no; then
-    AC_MSG_WARN([You can not use --without-externals or use "no"])
-    AC_MSG_ERROR([--with-externals must define a directory (see --help)])
+    AC_MSG_WARN([By not using --with-externals, most of Condor will not build])
+    ac_cv_has_externals=NO
+  else
+    CONDOR_VERIFY_EXTERNALS_DIR([$withval],
+      [directory specified with --with-externals ($withval) is not valid])
   fi
-  CONDOR_VERIFY_EXTERNALS_DIR([$withval],
-    [directory specified with --with-externals ($withval) is not valid])
  ],
  [
   # nothing specified, try ../externals.  using this as a default
@@ -396,6 +529,7 @@ AC_ARG_WITH(externals,
   fi
  ]
 )
+AC_SUBST(has_externals,$ac_cv_has_externals)
 AC_SUBST(ext_root,$ac_cv_externals)
 
 # Now, try to find condor_analyze binaries.  In any directory we're
@@ -431,7 +565,9 @@ AC_ARG_WITH(condor_analyze,
   fi
  ],
  [
-  CONDOR_VERIFY_ANALYZE_DIR([$ac_cv_externals/install/condor_analyze])
+  if test $ac_cv_has_externals = "YES" ; then
+    CONDOR_VERIFY_ANALYZE_DIR([$ac_cv_externals/install/condor_analyze])
+  fi
   if test $ac_has_condor_analyze = "NO" ; then
     CONDOR_VERIFY_ANALYZE_DIR([/usr/local/condor/analyze])
   fi
@@ -479,6 +615,9 @@ if test $ac_cv_c_compiler_gnu != yes; then
    AC_MSG_ERROR( [GNU CC (gcc) is required] )
 fi   
 
+CHECK_PATH_PROG(gcc,gcc)
+
+
 # Figure out the version of gcc. 
 # This probably seems like a job for a regular expression, not a big
 # case statement.  however, in our experience, there's enough variation
@@ -489,7 +628,7 @@ fi
 # supported gcc version, we might as well catch them here, before they
 # get very far.
 AC_MSG_CHECKING([for exact version of gcc])
-gcc_vers=`gcc -v 2>&1 | tail -1 | perl  -ne '{/.*gcc version\s*(\S*).*/; print "$1\n"}'`
+gcc_vers=`gcc -v 2>&1 |$PERL -ne '{if(/.*gcc version\s*(\S*).*/){ print "$1\n";}}'`
 
 case "$gcc_vers" in
  "egcs-2.91.66" )
@@ -546,6 +685,12 @@ case "$gcc_vers" in
     CompilerMinor="2"
     CompilerPatch="2"
     ;;
+ "3.2.3" )
+    CompilerKind="GCC"
+    CompilerMajor="3"
+    CompilerMinor="2"
+    CompilerPatch="3"
+    ;;
  "3.3" )
     CompilerKind="GCC"
     CompilerMajor="3"
@@ -563,6 +708,42 @@ case "$gcc_vers" in
     CompilerMajor="3"
     CompilerMinor="3"
     CompilerPatch="2"
+    ;;
+ "3.3.3" )
+    CompilerKind="GCC"
+    CompilerMajor="3"
+    CompilerMinor="3"
+    CompilerPatch="3"
+    ;;
+ "3.4.2" )
+    CompilerKind="GCC"
+    CompilerMajor="3"
+    CompilerMinor="4"
+    CompilerPatch="2"
+    ;;
+ "3.4.3" )
+    CompilerKind="GCC"
+    CompilerMajor="3"
+    CompilerMinor="4"
+    CompilerPatch="3"
+    ;;
+ "3.4.4" )
+    CompilerKind="GCC"
+    CompilerMajor="3"
+    CompilerMinor="4"
+    CompilerPatch="4"
+    ;;
+ "4.0.0" )
+    CompilerKind="GCC"
+    CompilerMajor="4"
+    CompilerMinor="0"
+    CompilerPatch="0"
+    ;;
+ "4.0.1" )
+    CompilerKind="GCC"
+    CompilerMajor="4"
+    CompilerMinor="0"
+    CompilerPatch="1"
     ;;
  * )
    AC_MSG_RESULT([ERROR])
@@ -640,12 +821,31 @@ AC_PROG_CXX
 if test $ac_cv_cxx_compiler_gnu != yes; then
    AC_MSG_ERROR( [GNU C++ (g++) is required] )
 fi   
+CHECK_PATH_PROG([g++],[gpp])
+
+
+#########
+# figure out if we're using GNU ld (and therefore, can use --wrap)
+#########
+GET_GCC_VALUE([ld used by gcc],[-print-prog-name=ld],[gcc_ld_prog])
+_gcc_ld_dir=`AS_DIRNAME(["$_cv_gcc_ld_prog"])`
+if test "$_gcc_ld_dir" = "." ; then
+  # gcc doesn't have a full path, find out what we're really using
+  AC_PATH_PROG([LD],[ld],[no],[$PATH])
+else
+  LD=$_cv_gcc_ld_prog
+fi
+
+CHECK_PROG_IS_GNU([$LD],[ld])
+if test $_cv_ld_is_gnu = yes; then
+   AC_DEFINE(HAVE_GNU_LD,1,[are we using the GNU linker])
+fi
+
 
 #########
 # figure out what linker flags put us in static-link mode
 #########
-gcc_ld_prog=`gcc -print-prog-name=ld`
-AC_MSG_NOTICE([checking what gcc flag forces $gcc_ld_prog into static mode])
+AC_MSG_NOTICE([checking what gcc flag forces $_cv_gcc_ld_prog into static mode])
 gcc_static_ld_flag=""
 # determine the flags...
 if test $os = "AIX" ; then
@@ -691,7 +891,64 @@ else
     AC_SUBST([gcc_static_ld_flag],[$gcc_static_ld_flag])
   fi
 fi
-  
+
+#########
+# determine if gcc has -rdynamic
+#########
+AC_MSG_CHECKING([if gcc supports -rdynamic])
+
+echo "int main(void ) { return 0; }" > rdynamic_test.c
+_test_output=`gcc -rdynamic rdynamic_test.c -o rdynamic_test 2>&1`
+_test_status=$?
+if test $_test_status -eq 0 && test "x$_test_output" = "x"; then 
+  gcc_rdynamic_flag="-rdynamic"
+  AC_MSG_RESULT([yes])
+else
+  gcc_rdynamic_flag=""
+  AC_MSG_RESULT([no])
+fi
+rm -f rdynamic_test.c rdynamic_test
+AC_SUBST([gcc_rdynamic_flag],[$gcc_rdynamic_flag])
+
+#########
+# determine if gcc has -fPIC
+#########
+AC_MSG_CHECKING([if gcc supports -fPIC])
+
+echo "int main(void) { return 0; }" > fpic_test.c
+_test_output=`gcc -fPIC fpic_test.c -o fpic_test 2>&1`
+_test_status=$?
+# AIX and HPUX have idiotic problems, so turn them off for now
+if test $_test_status -eq 0 -a "x$_test_output" = "x" -a \( "x$os" != "xAIX" -a "x$os" != "xHP-UX" \); then 
+  cc_pic_flags="-fPIC -DPIC"
+  AC_MSG_RESULT([yes])
+  AC_DEFINE([HAVE_CC_PIC_FLAG], [1], [does gcc support the -fPIC flag])
+else
+  cc_pic_flags=""
+  AC_MSG_RESULT([no])
+fi
+rm -f fpic_test.c fpic_test
+AC_SUBST([cc_pic_flags],[$cc_pic_flags])
+
+#########
+# determine if gcc has -shared
+#########
+AC_MSG_CHECKING([if gcc supports -shared])
+
+echo "int bar(void) { return 0; }" > fpic_test.c
+_test_output=`gcc -shared -fPIC -DPIC fpic_test.c -o libfpic_test.so 2>&1`
+_test_status=$?
+# AIX and HPUX have idiotic problems, so turn them off for now
+if test $_test_status -eq 0 -a "x$_test_output" = "x" -a \( "x$os" != "xAIX" -a "x$os" != "xHP-UX" \); then 
+  AC_MSG_RESULT([yes])
+  cc_shared_flags="-shared"
+  AC_DEFINE([HAVE_CC_SHARED_FLAG], [1], [does gcc support the -shared flag])
+else
+  cc_shared_flags=""
+  AC_MSG_RESULT([no])
+fi
+rm -f fpic_test.c libfpic_test.so
+AC_SUBST([cc_shared_flags],[$cc_shared_flags])
 
 #########################################
 # vendor compilers (for the test suites)
@@ -723,9 +980,11 @@ if test "$os" = "Linux" || test "$os" = "Darwin" ; then
   _cv_has_vendor_f90="NO"
 else
   if test "$os" = "HP-UX" ; then
-    _vendor_cc_PATH="/usr/bin:$PATH"
+    _vendor_cc_PATH="/opt/ansic/bin:/opt/CC/bin:/usr/bin:/bin:$PATH"
+    _vendor_f_PATH="/opt/fortran/bin:/opt/fortran90/bin:/usr/bin:/bin:$PATH"
   else
-    _vendor_cc_PATH="$PATH:/opt/SUNWspro/bin:/usr/ucb"
+    _vendor_cc_PATH="/opt/SUNWspro/bin:/usr/ucb:/usr/bin:/bin:$PATH"
+    _vendor_f_PATH=$_vendor_cc_PATH
   fi
   AC_PATH_PROG([_cv_vendor_cc],[cc],[no],[$_vendor_cc_PATH])
   if test "$_cv_vendor_cc" = "no" ; then
@@ -734,8 +993,7 @@ else
     _cv_has_vendor_cc="YES"
   fi
 
-  AC_PATH_PROGS([_cv_vendor_cplus],[CC cxx],[no],
-                [$PATH:/opt/SUNWspro/bin:/usr/ucb])
+  AC_PATH_PROGS([_cv_vendor_cplus],[CC cxx],[no],[$_vendor_cc_PATH])
   if test "$_cv_vendor_cplus" = "no" ; then
     _cv_has_vendor_cplus="NO"
   else
@@ -744,15 +1002,14 @@ else
       AC_SUBST([_cv_vendor_cplus_name],[$_cv_vendor_cplus_name])
   fi
 
-  AC_PATH_PROG([_cv_vendor_f77],[f77],[no],[$PATH])
+  AC_PATH_PROG([_cv_vendor_f77],[f77],[no],[$_vendor_f_PATH])
   if test "$_cv_vendor_f77" = "no" ; then
     _cv_has_vendor_f77="NO"
   else
     _cv_has_vendor_f77="YES"
   fi
 
-  AC_PATH_PROG([_cv_vendor_f90],[f90],[no],
-               [$PATH:/opt/SUNWspro/bin:/usr/ucb])
+  AC_PATH_PROG([_cv_vendor_f90],[f90],[no],[$_vendor_f_PATH])
   if test "$_cv_vendor_f90" = "no" ; then
     _cv_has_vendor_f90="NO"
   else
@@ -770,12 +1027,13 @@ AC_SUBST([has_vendor_f90],[$_cv_has_vendor_f90])
 # everything else
 #####################
 
-CHECK_PROG_IS_GNU(MAKE, make)
+AC_PATH_PROGS(MAKE,gmake make,no,[$PATH])
+CHECK_PROG_IS_GNU([$MAKE], make)
 if test $_cv_make_is_gnu = no; then
    AC_MSG_ERROR( [GNU make is required] )
 fi
 
-AC_CHECK_PROG(ac_patch,patch,patch,no)
+AC_PATH_PROG(ac_patch,patch,no,[$PATH])
 if test $ac_patch = no; then
     AC_MSG_ERROR( [patch is required] )
 fi
@@ -799,7 +1057,7 @@ _EOF
 +A TEST
  hello world
 _EOF
-  patch < conftest_patch > /dev/null 2>&1
+  $ac_patch < conftest_patch > /dev/null 2>&1
   _patch_status=$?
   if test $_patch_status -eq 0 ; then
     # patch didn't return failure, but it still might not have
@@ -822,28 +1080,29 @@ AC_PROG_LEX
 if test "$LEX" = "no" ; then
     AC_MSG_ERROR( [lex is required] )
 fi
+CHECK_PATH_PROG([$LEX],[lex])
 
 
 # We don't want to do the default AC_PROG_YACC, since it selects
 # "bison -y" if it can find it, and that doesn't work for the yacc
 # input in the Condor build.  So, we just manually check for byacc as
 # our first choice, then regular old yacc...
-AC_CHECK_PROG(ac_byacc,byacc,byacc,no)
-if test $ac_byacc = "byacc"; then
-  YACC=$ac_byacc
-else
-  AC_CHECK_PROG(ac_yacc,yacc,yacc,no)
+AC_PATH_PROG([ac_byacc],[byacc],[no],[$PATH])
+if test $ac_byacc = "no"; then
+  AC_PATH_PROG([ac_yacc],[yacc],[no],[$PATH])
   if test $ac_yacc = no; then
     AC_MSG_ERROR( [byacc or yacc is required] )
   else 
     YACC=$ac_yacc
   fi
+else
+  YACC=$ac_byacc
 fi
 AC_SUBST([YACC],[$YACC])
 
 # ar is used for numerous libraries in Condor, and for extracting
 # objects from the system libc.a for the Condor syscall library.
-AC_CHECK_PROG(ac_ar,ar,ar,no)
+AC_PATH_PROG(ac_ar,ar,no,[$PATH])
 if test $ac_ar = no; then
     AC_MSG_ERROR( [ar is required] )
 fi
@@ -959,7 +1218,11 @@ AC_CACHE_CHECK([for GNU tar],_cv_gnu_tar,
     if test -z "$a" ; then continue ; fi ;
     if ( sh -c "$a --version" 2> /dev/null | grep GNU  2>&1 > /dev/null );
     then
-      _cv_gnu_tar=$a;
+      if test $WHICH != no; then
+        _cv_gnu_tar=`$WHICH $a`;
+      else
+        _cv_gnu_tar="$a";
+      fi
       break;
     fi
   done;
@@ -1028,18 +1291,22 @@ else
 fi  
 
 # gzip is required for packaging up Condor releases. 
-AC_CHECK_PROG(ac_gzip,gzip,gzip,no)
+AC_PATH_PROG(ac_gzip,gzip,no,[$PATH])
 if test $ac_gzip = no; then
     AC_MSG_ERROR( [gzip is required] )
 fi
 
 # m4 is used to build PVM
-AC_CHECK_PROG(ac_m4prog,m4,m4,no)
+AC_PATH_PROG(ac_m4prog,m4,no,[$PATH])
 if test $ac_m4prog = no; then
     AC_MSG_ERROR( [m4 is required] )
 fi
 
-AC_CHECK_PROG(ac_purify,purify,purify,no)
+# true is used in the imake build system, esp. in condor_tests 
+REQUIRE_PATH_PROG([TRUE],[true])
+AC_SUBST(TRUE,$TRUE)
+
+AC_PATH_PROG(ac_purify,purify,no,[$PATH])
 if test "$ac_purify" = "purify"; then
    AC_MSG_CHECKING([purify cache directory ($ac_cv_purecachedir)])
    if test -d $ac_cv_purecachedir && test -w $ac_cv_purecachedir ; then
@@ -1049,6 +1316,26 @@ if test "$ac_purify" = "purify"; then
       AC_MSG_RESULT( created )
    fi
 fi
+
+AC_PATH_PROG(ac_javac,javac,no,[$PATH])
+if test $ac_javac = "no"; then
+  AC_MSG_WARN( [javac not found] )
+  _cv_have_javac="NO"
+else
+  _cv_have_javac="YES"
+fi
+AC_SUBST(HAVE_JAVAC,$_cv_have_javac)
+AC_SUBST(JAVAC,$ac_javac)
+
+AC_PATH_PROG(ac_jar,jar,no,[$PATH])
+if test $ac_jar = "no"; then
+  AC_MSG_WARN( [jar not found] )
+  _cv_have_jar="NO"
+else
+  _cv_have_jar="YES"
+fi
+AC_SUBST(HAVE_JAR,$_cv_have_jar)
+AC_SUBST(JAR,$ac_jar)
 
 
 ############################################################
@@ -1071,72 +1358,150 @@ AC_SUBST([has_pthreads],[$_cv_has_pthreads])
 # checks for header files
 ############################################################
 
-# Check for sys_types.h
-AC_CHECK_HEADER(sys/types.h, _cv_has_sys_types_h="yes", _cv_has_sys_types_h="no")
-if test "$_cv_has_sys_types_h" = "yes" ; then
- AC_SUBST(has_sys_types_h,"YES")
-else
- AC_SUBST(has_sys_types_h,"NO")
-fi
-
-# Check for stdint.h
-AC_CHECK_HEADER(stdint.h, _cv_has_stdint_h="yes", _cv_has_stdint_h="no")
-if test "$_cv_has_stdint_h" = "yes" ; then
- AC_SUBST(has_stdint_h,"YES")
-else
- AC_SUBST(has_stdint_h,"NO")
-fi
-
-# Check for inttypes.h
-AC_CHECK_HEADER(inttypes.h, _cv_has_inttypes_h="yes", _cv_has_inttypes_h="no")
-if test "$_cv_has_inttypes_h" = "yes" ; then
- AC_SUBST(has_inttypes_h,"YES")
-else
- AC_SUBST(has_inttypes_h,"NO")
-fi
+AC_CHECK_HEADERS([sys/types.h])
+AC_CHECK_HEADERS([sys/param.h])
+AC_CHECK_HEADERS([stdint.h])
+AC_CHECK_HEADERS([inttypes.h])
+AC_CHECK_HEADERS([sys/personality.h])
+AC_CHECK_HEADERS([linux/personality.h])
+AC_CHECK_HEADERS([linux/nfsd/const.h])
+AC_CHECK_HEADERS([sys/statfs.h])
+AC_CHECK_HEADERS([sys/statvfs.h])
+AC_CHECK_HEADERS([sys/vfs.h])
+AC_CHECK_HEADERS([sys/mount.h])
+AC_CHECK_HEADERS([ustat.h])
 
 
 ############################################################
 # checks for types
 ############################################################
 
-# Check for int64_t type family
-AC_CHECK_TYPE(int64_t, _cv_has_int64_t="yes", _cv_has_int64_t="no")
-if test "$_cv_has_int64_t" = "yes" ; then
- AC_SUBST(has_int64_t,"YES")
-else
- AC_SUBST(has_int64_t,"NO")
-fi
-
-# Check for long long
-AC_CHECK_TYPE(long long, _cv_has_longlong="yes", _cv_has_longlong="no")
-if test "$_cv_has_longlong" = "yes" ; then
- AC_SUBST(has_longlong,"YES")
-else
- AC_SUBST(has_longlong,"NO")
-fi
-
-# Check for M$ __int64 type
-AC_CHECK_TYPE(__int64, _cv_has___int64="yes", _cv_has___int64="no")
-if test "$_cv_has___int64" = "yes" ; then
- AC_SUBST(has___int64,"YES")
-else
- AC_SUBST(has___int64,"NO")
-fi
+AC_CHECK_TYPES([int64_t])
+AC_CHECK_TYPES([long long])
+AC_CHECK_TYPES([__int64])
 
 # checks for structures
 
 # checks for compiler characteristics
 
+############################################################
 # checks for library functions
+############################################################
 
-# Check for stat64()
-AC_CHECK_FUNC(stat64, _cv_has_stat64="yes", _cv_has_stat64="no")
-if test "$_cv_has_stat64" = "yes" ; then
- AC_SUBST(has_stat64,"YES")
-else
- AC_SUBST(has_stat64,"NO")
-fi
+AC_CHECK_FUNCS([stat64])
+AC_CHECK_FUNC(dlopen, ,AC_CHECK_LIB(dl, dlopen))
+AC_CHECK_FUNC(crypt, ,AC_CHECK_LIB(crypt,crypt))
+
+
+AC_CHECK_FUNCS(statfs statvfs)
+dnl
+dnl file system type member in statfs struct
+dnl
+AC_CHECK_MEMBERS([struct statfs.f_type], ,[
+  AC_CHECK_MEMBERS([struct statfs.f_fstyp], , , [#ifdef HAVE_SYS_PARAM_H
+#include <sys/param.h>
+#endif
+#ifdef HAVE_SYS_VFS_H
+#include <sys/vfs.h>
+#endif
+#ifdef HAVE_SYS_MOUNT_H
+#include <sys/mount.h>
+#endif
+#ifdef HAVE_SYS_STATFS_H
+#include <sys/statfs.h>
+#endif])], [#ifdef HAVE_SYS_PARAM_H
+#include <sys/param.h>
+#endif
+#ifdef HAVE_SYS_VFS_H
+#include <sys/vfs.h>
+#endif
+#ifdef HAVE_SYS_MOUNT_H
+#include <sys/mount.h>
+#endif
+#ifdef HAVE_SYS_STATFS_H
+#include <sys/statfs.h>
+#endif])
+
+AC_CHECK_MEMBERS([struct statfs.f_fstypename], , , [#ifdef HAVE_SYS_PARAM_H
+#include <sys/param.h>
+#endif
+#ifdef HAVE_SYS_VFS_H
+#include <sys/vfs.h>
+#endif
+#ifdef HAVE_SYS_MOUNT_H
+#include <sys/mount.h>
+#endif
+#ifdef HAVE_SYS_STATFS_H
+#include <sys/statfs.h>
+#endif])
+
+AC_CHECK_MEMBERS([struct statvfs.f_fsid], , , [#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_STATVFS_H
+#include <sys/statvfs.h>
+#endif])
+
+AC_CHECK_MEMBERS([struct statvfs.f_basetype], , , [#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_STATVFS_H
+#include <sys/statvfs.h>
+#endif])
+ 
+dnl
+dnl if statfs() takes 2 arguments or 4 (Solaris)
+dnl
+if test "$ac_cv_func_statfs" = yes ; then
+  AC_MSG_CHECKING([number of arguments to statfs()])
+  AC_TRY_COMPILE([#include <unistd.h>
+  #ifdef HAVE_SYS_TYPES_H
+  #include <sys/types.h>
+  #endif
+  #ifdef HAVE_SYS_PARAM_H
+  #include <sys/param.h>
+  #endif
+  #ifdef HAVE_SYS_VFS_H
+  #include <sys/vfs.h>
+  #endif
+  #ifdef HAVE_SYS_MOUNT_H
+  #include <sys/mount.h>
+  #endif
+  #ifdef HAVE_SYS_STATFS_H
+  #include <sys/statfs.h>
+  #endif
+  #ifdef HAVE_USTAT_H
+  #include <ustat.h>
+  #endif], [struct statfs st;
+  statfs(NULL, &st);],[
+    AC_MSG_RESULT([2])
+    AC_DEFINE(STATFS_ARGS, 2, [Number of arguments to statfs()])],[
+    AC_TRY_COMPILE([#include <unistd.h>
+  #ifdef HAVE_SYS_PARAM_H
+  #include <sys/param.h>
+  #endif
+  #ifdef HAVE_SYS_VFS_H
+  #include <sys/vfs.h>
+  #endif
+  #ifdef HAVE_SYS_MOUNT_H
+  #include <sys/mount.h>
+  #endif
+  #ifdef HAVE_SYS_STATFS_H
+  #include <sys/statfs.h>
+  #endif], [struct statfs st;
+  statfs(NULL, &st, sizeof (st), 0);],[
+      AC_MSG_RESULT([4])
+      AC_DEFINE(STATFS_ARGS, 4, [Number of arguments to statfs()])],[
+      AC_MSG_RESULT(unknown)
+      AC_MSG_ERROR([unable to determine number of arguments to statfs()])])])
+fi dnl test "$ac_cv_func_statfs" = yes
+
+# we don't actually want to add -lgen to our link line, but we do want
+# HAVE_LIBGEN defined correctly for our test suite builds... 
+AC_CHECK_FUNC(dirname,,AC_CHECK_LIB(gen,dirname,
+AC_DEFINE(HAVE_LIBGEN,1,[Define to 1 if you have the `gen' library (-lgen)])))
+
+AC_CHECK_FUNCS(mkstemp tmpnam)
 
 # checks for system services
 
@@ -1167,6 +1532,9 @@ case "$os" in
   "Darwin" )
     _cv_has_static=no
     ;;
+  "FreeBSD" )
+    _cv_has_static=no
+    ;;
   "AIX" )
     _cv_has_static=no
     ;;
@@ -1185,62 +1553,125 @@ fi
 ############################################################
 # What versions of what externals do we need
 ############################################################
+if test $ac_cv_has_externals = "YES" ; then
 AC_MSG_NOTICE([determining versions of external packages])
+
+#
+# Figure out if I need to use the linuclibcheaders package to build glibc.
+#
+
+# assume no, unless I discover otherwise.
+llh_use=NO
+
+# if this is a linux machine, determine if I need the linux libc headers to
+# build glibc
+if test "x$os" = "xLinux" ; then
+
+	llh_use=YES
+
+	case "x$_cv_kernel_rev" in
+		"x2.6.3" )
+			CONDOR_EXTERNAL_VERSION([linuxlibcheaders],[2.6.3.0])
+			;;
+		"x2.6.4" )
+			CONDOR_EXTERNAL_VERSION([linuxlibcheaders],[2.6.4.0])
+			;;
+		"x2.6.5" )
+			CONDOR_EXTERNAL_VERSION([linuxlibcheaders],[2.6.5.2])
+			;;
+		"x2.6.6" )
+			CONDOR_EXTERNAL_VERSION([linuxlibcheaders],[2.6.6.0])
+			;;
+		"x2.6.7" )
+			CONDOR_EXTERNAL_VERSION([linuxlibcheaders],[2.6.7.0])
+			;;
+		"x2.6.8" )
+			CONDOR_EXTERNAL_VERSION([linuxlibcheaders],[2.6.8.1])
+			;;
+		"x2.6.9" )
+			CONDOR_EXTERNAL_VERSION([linuxlibcheaders],[2.6.9.1])
+			;;
+		"x2.6.10" )
+			CONDOR_EXTERNAL_VERSION([linuxlibcheaders],[2.6.10.0])
+			;;
+		"x2.6.11" )
+			CONDOR_EXTERNAL_VERSION([linuxlibcheaders],[2.6.11.2])
+			;;
+		"x2.6.12" )
+			CONDOR_EXTERNAL_VERSION([linuxlibcheaders],[2.6.12.0])
+			;;
+		*)
+			llh_use=NO
+			;;
+	esac
+fi
+
+# Tell the build system I want to use this module since it very well might
+# not always be defined or desired to be defined.
+if test "x$llh_use" = "xYES" ; then
+	AC_SUBST([want_ext_linuxlibcheaders],[YES])
+else
+	AC_SUBST([want_ext_linuxlibcheaders],[NO])
+  	AC_SUBST([ext_linuxlibcheaders_version],[UNUSED])
+fi
 
 
 # For now, we hardcode that non-i386 platforms are clipped and don't
 # need an external glibc for anything...
 if test "x$_cv_libc_kind" = "xGLIBC" -a "x$_cv_arch" = "xI386" ; then
-  AC_MSG_CHECKING([glibc])
   _cv_libc_full_vers="$_cv_libc_major.$_cv_libc_minor.$_cv_libc_patch"
   case "$_cv_libc_full_vers" in
   "2.2.4" )
-    _cv_ext_glibc_version="glibc-2.2.2"
+    CONDOR_EXTERNAL_VERSION([glibc],[2.2.2])
     ;;
   "2.2.5" )
-    _cv_ext_glibc_version="glibc-2.2.2"
+    CONDOR_EXTERNAL_VERSION([glibc],[2.2.2])
     ;;
   "2.2.93" )
-    _cv_ext_glibc_version="glibc-2.2.93"
+    CONDOR_EXTERNAL_VERSION([glibc],[2.2.93])
     ;;
   "2.3.2" )
     # the glibc 2.3.2 from redhat's source rpms are very different than the
 	# stock 2.3.2 you can download off of the web.
-    _cv_ext_glibc_version="glibc-2.3.2.27.9.7"
+    CONDOR_EXTERNAL_VERSION([glibc],[2.3.2.27.9.7])
+    ;;
+  "2.3.4" )
+  	# I'm using this here to avoid a full port of Condor to the centos 4 OS.
+	# XXX Also, one must use gcc 3.2.2 instead of as shipped gcc 3.4.4 to 
+	# compile this package.
+    CONDOR_EXTERNAL_VERSION([glibc],[2.3.2.27.9.7])
     ;;
   * )  
+    AC_MSG_CHECKING(glibc)
     AC_MSG_RESULT([ERROR])
     AC_MSG_ERROR([Condor does NOT know what glibc external to use with glibc-$_cv_libc_full_vers])
   esac
-  AC_MSG_RESULT([$_cv_ext_glibc_version])
-  AC_SUBST(ext_glibc_version,$_cv_ext_glibc_version)
   AC_SUBST(want_ext_glibc,YES)
 else
   AC_SUBST(want_ext_glibc,NO)
   AC_SUBST(ext_glibc_version,UNUSED)
 fi
 
-
-AC_MSG_CHECKING([kerberos])
-if test "$os" = "AIX" ; then
-_cv_ext_kerberos_version="krb5-1.3.1"
+# Google's coredumper is Linux specific and only officially supports
+# a few architectures.
+if test "$os" = "Linux" -a "x$_cv_arch" = "xI386" ; then
+    CONDOR_EXTERNAL_VERSION([coredumper],[0.2])
+	AC_SUBST(want_coredumper,YES)
 else
-_cv_ext_kerberos_version="krb5-1.2.5"
+	AC_SUBST(want_coredumper,NO)
 fi
-AC_MSG_RESULT([$_cv_ext_kerberos_version])
-AC_SUBST(ext_kerberos_version,$_cv_ext_kerberos_version)
 
+# build DRMAA on RedHat 8.0, RedHat 9, Sles8-ia64, and MacOS 10.3
+if test x$_cv_linux_distro = "xRH80" -o x$_cv_linux_distro = "xRH9" -o x$_cv_linux_distro = "xSLES81" -o x$_cv_sysname = "xppc_macosx" ; then
+   CONDOR_EXTERNAL_VERSION([drmaa],[1.4])
+fi
 
-AC_MSG_CHECKING([globus])
-_cv_ext_globus_version="globus-2.4.3.vdt.1.1.14"
-_cv_ext_globus_data_version="globus-2.4.3.data"
-AC_MSG_RESULT([$_cv_ext_globus_version])
-AC_SUBST(ext_globus_version,$_cv_ext_globus_version)
-AC_SUBST(ext_globus_data_version,$_cv_ext_globus_data_version)
+CONDOR_EXTERNAL_VERSION([krb5],[1.4.3])
 
+CONDOR_EXTERNAL_VERSION([globus],[4.0.1])
 AC_MSG_CHECKING([globus flavor])
 _cv_globus_flavor=gcc32dbg
-if test "$_cv_arch" = "ALPHA" -o "$_cv_arch" = "IA64" ; then
+if test "$_cv_arch" = "ALPHA" -o "$_cv_arch" = "IA64" -o "$_cv_arch" = "X86_64"; then
   _cv_globus_flavor=gcc64dbg
 elif test "$_cv_arch" = "SGI" -o "$_cv_opsys" = "AIX" ; then
   _cv_globus_flavor=vendorcc32dbg
@@ -1248,41 +1679,109 @@ fi
 AC_MSG_RESULT([$_cv_globus_flavor])
 AC_SUBST(globus_flavor,$_cv_globus_flavor)
 
+# CONDOR_EXTERNAL_VERSION([gpt],[3.0])
 
-AC_MSG_CHECKING([gpt])
-_cv_ext_gpt_version="gpt-3.0"
-AC_MSG_RESULT([$_cv_ext_gpt_version])
-AC_SUBST(ext_gpt_version,$_cv_ext_gpt_version)
+CONDOR_EXTERNAL_VERSION([gahp],[1.0.15])
 
+CONDOR_EXTERNAL_VERSION([gt3gahp],[2.0])
 
-AC_MSG_CHECKING([gahp])
-_cv_ext_gahp_version="gahp-1.0.10"
-AC_MSG_RESULT([$_cv_ext_gahp_version])
-AC_SUBST(ext_gahp_version,$_cv_ext_gahp_version)
+CONDOR_EXTERNAL_VERSION([gt4gahp],[1.4])
 
+CONDOR_EXTERNAL_VERSION([unicoregahp],[1.2.0])
 
-AC_MSG_CHECKING([gt3gahp])
-_cv_ext_gt3gahp_version="gt3gahp-1.0"
-AC_MSG_RESULT([$_cv_ext_gt3gahp_version])
-AC_SUBST(ext_gt3gahp_version,$_cv_ext_gt3gahp_version)
+CONDOR_EXTERNAL_VERSION([nordugridgahp],[1.1.0])
 
+CONDOR_EXTERNAL_VERSION([zlib],[1.1.3])
 
-AC_MSG_CHECKING([zlib])
-_cv_ext_zlib_version="zlib-1.1.3"
-AC_MSG_RESULT([$_cv_ext_zlib_version])
-AC_SUBST(ext_zlib_version,$_cv_ext_zlib_version)
+CONDOR_EXTERNAL_VERSION([pvm],[3.4.2])
 
+CONDOR_EXTERNAL_VERSION([classads],[0.9.8-b3])
 
-AC_MSG_CHECKING([pvm])
-_cv_ext_pvm_version="pvm-3.4.2"
-AC_MSG_RESULT([$_cv_ext_pvm_version])
-AC_SUBST(ext_pvm_version,$_cv_ext_pvm_version)
+CONDOR_EXTERNAL_VERSION([srb],[3.2.1])
 
+CONDOR_EXTERNAL_VERSION([gsoap],[2.7.6c])
 
-AC_MSG_CHECKING([srb])
-_cv_ext_srb_version="srb-3.2.1"
-AC_MSG_RESULT([$_cv_ext_srb_version])
-AC_SUBST(ext_srb_version,$_cv_ext_srb_version)
+CONDOR_EXTERNAL_VERSION([pcre],[5.0])
+
+CONDOR_EXTERNAL_VERSION([postgresql],[8.0.2])
+
+CONDOR_EXTERNAL_VERSION([blahp],[1.7.0])
+
+# temporary hack until we can reliably build BOINC everywhere.  for
+# now, just enable it manually, and pretend we've got it.  since we're
+# not actually linking anything with BOINC in phase 1, we don't *need*
+# the external to enable the BOINC + Backfill code paths.
+AC_DEFINE(HAVE_BACKFILL,1,[are we compiling support for any backfill systems])
+AC_DEFINE(HAVE_BOINC,1,[are we compiling support for backfill with BOINC])
+
+# GCB only matters and works if we have GNU ld...
+if test x$_cv_ld_is_gnu = xyes; then
+  CONDOR_EXTERNAL_VERSION([gcb],[1.3.2])
+fi
+
+else
+# if there's no externals at all, we still need to define these to
+# avoid imake troubles...
+  AC_SUBST([want_ext_linuxlibcheaders],[NO])
+  AC_SUBST([ext_linuxlibcheaders_version],[UNUSED])
+  AC_SUBST(want_ext_glibc,NO)
+  AC_SUBST(ext_glibc_version,UNUSED)
+fi
+# end of if $ac_cv_has_externals = "YES" 
+
+#-----------------------------------------------------------------
+# NOTE: the checks for globus and SSL here must happen *outside*
+# the check for $ac_cv_has_externals, since we want these to be
+# set whether or not we're actually trying to build the externals
+# or not.  for example, the test suite needs to know these things, 
+# even though it's being configured using --without-externals.
+#-----------------------------------------------------------------
+# determine whether we will be using globus on this platform (i.e. determine
+# HAS_GLOBUS). this logic used to be in the individual <platform>.cf
+# files; the variables HAS_GSI and HAS_OPENSSL are still determined there
+AC_MSG_CHECKING([if build uses globus])
+case "$os" in
+  "HP-UX" )
+    _cv_has_globus=no
+    ;;
+  "OSF1" )
+    _cv_has_globus=yes
+    ;;
+  "Linux" )
+    _cv_has_globus=yes
+    ;;
+  "SunOS" )
+    _cv_has_globus=yes
+    ;;
+  "IRIX" )
+    _cv_has_globus=yes
+    ;;
+  "Darwin" )
+    _cv_has_globus=yes
+    ;;
+  "FreeBSD" )
+    _cv_has_globus=yes
+    ;;
+  "AIX" )
+    _cv_has_globus=yes
+    ;;
+  * )
+    AC_MSG_RESULT([error])
+    AC_MSG_ERROR([Unrecognized platform: $os])
+esac
+AC_MSG_RESULT([$_cv_has_globus])
+if test "$_cv_has_globus" = "yes" ; then
+  AC_SUBST(_cv_has_globus,YES)
+else
+  AC_SUBST(_cv_has_globus,NO)
+fi
+
+# currently, if we are using globus (and the openssl
+# within), we define HAVE_OPENSSL_SSL_H (meaning we
+# have ssl.h) to make gsoap happy
+if test "$_cv_has_globus" = "YES" ; then
+  AC_DEFINE(HAVE_OPENSSL_SSL_H,1,[do we have openssl (via globus)])
+fi
 
 
 ############################################################

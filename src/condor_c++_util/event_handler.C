@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -70,7 +70,7 @@ EventHandler::display()
 {
 	dprintf( D_ALWAYS, "EventHandler {\n" );
 
-	dprintf( D_ALWAYS, "\tfunc = 0x%x\n", func );
+	dprintf( D_ALWAYS, "\tfunc = %p\n", func );
 	display_sigset( "\tmask = ", &mask );
 
 	dprintf( D_ALWAYS, "}\n" );
@@ -114,7 +114,7 @@ EventHandler::install()
 		if( sigismember(&mask,signo) ) {
 			// explicit type cast to eliminate type check warning  -- Rajesh
 			// we should move this to be a #define symbol...
-#if (defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))) || defined(AIX) || defined(HPUX11)
+#if (defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))) || defined(AIX) || defined(HPUX11) || defined(CONDOR_FREEBSD) || (defined(Darwin) && defined(CONDOR_HAD_GNUC_4))
 			// bad craziness with the type cast --psilord
 			action.sa_handler = (void (*)(int)) func;
 #else
@@ -128,7 +128,7 @@ EventHandler::install()
 				exit( 1 );
 			}
 			dprintf( D_FULLDEBUG,
-				"\t*FSM* Installed handler 0x%x for signal %s, flags = 0x%x\n",
+				"\t*FSM* Installed handler %p for signal %s, flags = 0x%x\n",
 				action.sa_handler, SigNames.get_name(signo), action.sa_flags
 			);
 		}
@@ -160,7 +160,7 @@ EventHandler::de_install()
 				exit( 1 );
 			}
 			dprintf( D_FULLDEBUG,
-				"\t*FSM* Installed handler 0x%x for signal %s\n",
+				"\t*FSM* Installed handler %p for signal %s\n",
 				o_action[i].sa_handler, SigNames.get_name(signo)
 			);
 		}

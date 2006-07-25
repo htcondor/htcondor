@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -26,6 +26,7 @@
 #include "baseshadow.h"
 #include "shadow.h"
 #include "mpishadow.h"
+#include "parallelshadow.h"
 #include "exit.h"
 #include "condor_debug.h"
 #include "condor_version.h"
@@ -211,6 +212,9 @@ initShadow( ClassAd* ad )
 			 CondorUniverseName(universe), cluster, proc );
 
 	switch ( universe ) {
+	case CONDOR_UNIVERSE_PARALLEL:
+		Shadow = new ParallelShadow();
+		break;
 	case CONDOR_UNIVERSE_VANILLA:
 	case CONDOR_UNIVERSE_JAVA:
 		Shadow = new UniShadow();
@@ -318,6 +322,7 @@ printClassAd( void )
 {
 	printf( "%s = True\n", ATTR_IS_DAEMON_CORE );
 	printf( "%s = True\n", ATTR_HAS_FILE_TRANSFER );
+	printf( "%s = True\n", ATTR_HAS_PER_FILE_ENCRYPTION );
 	printf( "%s = True\n", ATTR_HAS_MPI );
 	printf( "%s = True\n", ATTR_HAS_JAVA );
 	printf( "%s = True\n", ATTR_HAS_RECONNECT );
@@ -340,4 +345,3 @@ void
 main_pre_command_sock_init( )
 {
 }
-

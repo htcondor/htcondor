@@ -1,60 +1,1486 @@
-10/23/04 trunk-post_merge-trunk-stork-0_9_1
-	trunk after merging in trunk-stork-0_9_1-branch as tagged at
-	trunk-stork-0_9_1
+07/24/06 V6_7-merge-2
+  The state of the V6_7-branch for the final merge back to the TRUNK.
 
-10/23/04 trunk-pre_merge-trunk-stork-0_9_1
-	trunk before merging in trunk-stork-0_9_1-branch as tagged at
-	trunk-stork-0_9_1
+07/19/06 V6_8_0
+  The official V6_8_0 release is a copy of BUILD-V6_7-branch-2006-7-19.
+  All platforms built on NMI runid 26185 except windows, which was 26198.
 
-10/20/04 trunk-stork-0_9_1
-	The stork-0.9.1 release.
+07/10/06 V6_7_20-merge-1
+  Merging V6_7_20-branch to V6_7-branch.
 
-10/14/04 trunk-stork-0_9_1-branch
-	For finishing stork-0.9.1 release.
+06/26/06 V6_7-win32_tests-merge-2
+   State of V6_7-win32_tests-branch before merge into V6_7-branch.
+   The first attempt at merging this branch was premature. Some fixes and
+   cleanup have been applied since then.
 
-07/28/04 trunk-pre_merge-stork-gsi-support-branch-2
-   The state of the trunk before merging in stork-gsi-support-branch.
+06/22/06 V6_7_20
+  The official V6_7_20 release is a copy of BUILD-V6_7_20-branch-2006-6-21.
+  All platforms built on NMI runid 25085 except redhat 8, which was 25117.
 
-07/28/04 trunk-pre_merge-stork-gsi-support-branch-merge-1
-   This tag is useless, please ignore.
+06/12/06 V6_7_20-{root,branch}
+  The branch for V6_7_20 off of V6_7-branch.
 
+06/12/06 V6_7_20-{pre,post}_merge-V6_7-mapfile-1
+  The pre and post tags of for the 1st (and only) V6_7-mapfile-branch merge
+  into V6_7_20-branch.
 
-7/28/04 stork-gsi-support-branch-merge-2
-  The state of stork-gsi-support-branch before merging into the trunk
+06/12/06 V6_7-mapfile-merge-1
+  The first (and probably only) merge from V6_7-mapfile-branch
+  into V6_7_20-branch
 
-7/28/04 stork-gsi-support-branch-merge-1
-  The state of stork-gsi-support-branch before merging into the trunk
+06/09/06 V6_7-storkd-rewrite-{root,branch}
+  Rewrite of Stork daemon, from research-quality code to
+  production quality.  As of 06/09/06, this effort is still
+  incomplete.  A longer list of branch general improvements, new
+  features, bug fixes are available at
+  http://www.cs.wisc.edu/condor/developers/wisdom/stork.txt .
 
-7/01/04 stork-release-0_9_0
-   stork-0.9.0 release snapshot of src directory [not config, imake
-   directories].
+06/04/06 V6_7-nick_fs_util-merge-1
+  The first (and probably only) merge from V6_7-nick_fs_util-branch
+  into V6_7-branch
 
-6/09/04 stork-start-staff-maint
-   Snapshot of src/condor_data_manager (Stork) at beginning of Staff 
-   maintenance.  Branched from trunk.
+06/01/06 V6_7-db_logs_nonblocking-4-branch
+  A working branch for the db folks, branched from V6_7-branch-2006-5-16
+  and continuing work previously on V6_7-db_logs_nonblocking-3-branch
 
-5/21/04 trunk-post-merge-t-m-V6_7-b-1-m-1
-   The state of the trunk after mergining in trunk-merge-V6_7-branch-1
-   as tagged at trunk-merge-V6_7-b-1-m-1.
+05/30/06 V6_7_19-merge-1
+  Merging V6_7_19-branch to V6_7-branch.
+
+05/24/06 V6_7-transactions-2-{root,branch}
+  Branch to add support for multiple simultaneous SOAP-initiated 
+  transactions in the schedd.
+  G-d willing, this branch will be merged back into V6_7 in 
+  about a week for the v6.7.20 release.
+  Created from BUILD-V6_7-branch-2006-5-24 tag of V6_7_CODE.
+
+05/23/06 V6_7-mapfile-{root,branch}
+  Branch for the integration of the new user mapping for CEDAR
+  Created from the V6_7-branch.
+
+05/12/06 V6_7_19
+  The official 6.7.19 release. The packages for all platforms came 
+  from NMI build #23300, except solaris 2.8, which came from #23370.   
+  The version string for this release is (date may vary slightly for some 
+  platforms):
+    $CondorVersion: 6.7.19 May  9 2006 $
+
+05/12/06 V6_7-nick_fs_util-{root,branch}
+  Branch for the development of some file system utilities that
+  are very O/S specific; initially just for detection of whether
+  a file / directory is on NFS or not.
+  Created from the BUILD-V6_7-branch-2006-5-12 tag of V6_7_CODE.
+
+05/12/06 V6_7-Technion_ha6-{root,branch}
+  A branch based off V6_7-branch in which further HA development
+  will be done.
+  Created from the BUILD-V6_7-branch-2006-5-12 tag of V6_7_CODE.
+
+05/04/06 V6_7_19-{root,branch}
+  The branch for V6_7_19 off of V6_7-branch.
+
+04/03/06 V6_7-freebsd-2-{root,branch}
+   I am starting over with a fresh branch because I messed up #define's
+   This is following advice from Erik
+   Created from the BUILD-V6_7-branch-2006-3-30 tag of V6_7_CODE.
+
+03/29/06 V6_7-{pre,post}_merge-V6_6-merge-57
+  The pre and post tags of for the 57th V6_6-branch merge into
+  V6_7-branch.  The only  change is the fix to the collector to not
+  crash on certain ads with missing attributes on certain platforms.
+
+03/29/06 V6_6-merge-57
+  The state of the V6_6-branch for a merge into V6_7-branch.  The only
+  change is the fix to the collector to not crash on Collector ads
+  missing the Machine attribute and Storage ads missing the Name
+  attribute.
+
+03/29/06 V6_7-{pre,post}_merge-V6_6-merge-56
+  The pre and post tags of for the 56th V6_6-branch merge into
+  V6_7-branch.  The only  change is the fix to the collector to not
+  crash on ads with invalid Machine and other attributes used in
+  hashkey generation.
+
+03/29/06 V6_6-merge-56
+  The state of the V6_6-branch for a merge into V6_7-branch.  The only
+  change is the fix to the collector to not crash on ads with invalid
+  Machine and other attributes used in hashkey generation.
+
+03/29/06 V6_6_11-merge-1
+  The state of the V6_6_11-branch for a merge into V6_6-branch.  The only
+  change is the fix to the collector to not crash on ads with invalid
+  Machine and other attributes used in hashkey generation.
+
+03/28/06 V6_7_18-merge-1
+  Merging V6_7_18 changes to V6_7-branch.  This includes Dan's fixes for
+  argument string merging when mixing argument syntaxes.
+  This also includes Nick's changes for the soap collector.
+
+03/27/06 V6_7_18
+  The official 6.7.18 release.  The packages for all platforms came
+  from NMI build #20796.  The version string for this release is:
+    $CondorVersion: 6.7.18 Mar 22 2006 $
+
+03/23/06 V6_7-new_classad-merge-1
+   The state of the V6_7-new_classad-branch for a merge into
+   V6_7-new_classads-2-branch
+
+03/23/06 V6_7-new_classad-2-(root,branch}
+   Branch for merging code that builds on Centos with V6_7-new_classad-branch
+   which does not currently build on Centos.
+   Created from the BUILD-V6_7-branch-2006-2-16_2 tag of V6_7_CODE.
+
+03/22/06 V6_7-freebsd-{root,branch}
+   I'm happy to announce that this branch will be used to port Condor
+   to FreeBSD 5.X and 6.X. This branch will update the patches sent in by
+   Yahoo to make real system calls to the OS to get process information
+   instead of scraping /proc, which doesn't exist by default in FreeBSD
+   Created from the BUILD-V6_7-branch-2006-3-21 tag of V6_7_CODE.
+
+03/22/06 V6_7_18-branch
+  The branch for V6_7_18 from V6_7_18-root off of V6_7-branch.
+
+03/22/06 V6_6_11
+   The official 6.6.11 release tag. This lives on V6_6_ALL and
+   V6_6_11_EXT.  NWO Build# 20864
+
+03/21/06 V6_6-merge-55
+  The state of the V6_6-branch for a merge into V6_7-branch.  The only
+  change is the fix to the collector to look at "ClassAdLifetime"
+  instead of UpdateInterval when aging ads.
+
+03/20/06 V6_6-merge-54
+  The state of the V6_6-branch for a merge into V6_7-branch.  Major
+  change is the security fix for condor_config_val -set.  Also
+  included are DaemonList memory fixes, minor memory cleanup in the
+  master, and some fixes to the build/test glue.
+
+03/14/05 V6_7-win32_tests-merge-1
+   State of V6_7-win32_tests-branch before merge into V6_7-branch. Brings
+   automated testing capability to Windows.
+
+03/14/06 V6_7-time_offset-merge-1
+	The state of the V6_7-time_offset-branch for a merge into V6_7-branch
+
+03/14/06 V6_7-win32_tests-merge-1
+   State of V6_7-win32_tests-branch before merge into V6_7-branch. Brings
+   automated testing capability to Windows.
+
+03/03/06 V6_7-time_offset-{root,branch}
+   A new branch to work on my time offset code. I will be making it a
+   command available to all daemons. I will also add in a SOAP interface
+   for getting back the user priorities.
+   Created from the BUILD-V6_7-branch-2006-2-27 tag of V6_7_CODE.
+            
+03/01/06 V6_7-post_merge-V6_7-kerb14-merge-1
+	The state of V6_7-branch AFTER the first merge of the
+	V6_7-kerb14-branch as tagged at V6_7-kerb14-merge-1
+
+03/01/06 V6_7-pre_merge-V6_7-kerb14-merge-1
+	The state of the V6_7-branch before merging V6_7-kerb14-branch
+	into it as tagged at V6_7-kerb14-merge-1
+
+02/27/06 V6_7-dagman_classad-branch
+	Branch for work on adding classad-based workflows to DAGMan.
+	Work is mainly being done by Himani <himani@cs.wisc.edu>.
+	Created from the last known good build of V6_7-branch, which was tagged
+	BUILD-V6_7-branch-2006-2-26.
+
+02/23/06 V6_7_17
+	The official 6.7.17 release.  Packages came from NMI build 19375 with the
+	exception of sun4u_sol_5.9 which came from 19424 because of problems with a
+	build machine. The version string for this release is:
+	  $CondorVersion: 6.7.17 Feb 18 2006 $
+	Note that psilord is providing TeraGrid with a ppc_sles9 build based on
+	6.7.17. This is not an official part of the release and the CondorVersion
+	should specifically note it.
+
+02/17/06 V6_7-amd64_port-branch
+	Branch for Opteron amd64 full port of Condor. 
+	Off V6_7-amd64_port-root.
+
+02/17/06 V6_7-amd64_port-root
+	A tag created at BUILD-V6_7-branch-2006-2-16_2, the last successful 
+	V6_7-branch build from today.
+
+02/17/06 V6_7_17-branch
+	Branch for 6.7.17 release.  Off V6_7-branch.
+
+02/14/06 V6_7-boinc-merge-1
+   The state of the V6_7-boinc-branch for a merge into V6_7-branch.
+
+02/14/06
+	V6_7-post_merge-V6_7-uniq_pid-merge-1
+	The state of V6_7-branch AFTER the first merge of the
+	V6_7-uniq_pid-branch.
+
+02/14/06
+	V6_7-pre_merge-V6_7-uniq_pid-merge-1
+	The state of the V6_7-branch before merging V6_7-uniq_pid-branch
+	into it at tag V6_7-pre_merge-V6_7-uniq_pid-merge-1.
+
+2/14/06 V6_7-uniq_pid-merge-1
+   The state of the V6_7-uniq_pid-branch when merged into the 
+   V6_7-branch.	
+
+02/03/06 V6_7_16
+  The official 6.7.16 release.  The packages for all platforms came
+  from NMI build #18640.  The version strings for this release are:
+    $CondorVersion: 6.7.16 Feb  2 2006 $
+    $CondorVersion: 6.7.16 Feb  3 2006 $
+
+02/02/06 V6_7_16-branch
+  The branch for V6_7_16 from V6_7_16-root off of V6_7-branch.
+
+02/02/06 V6_7_15-merge-1
+  First merge of V6_7_15 back into V6_7 branch.
+
+01/31/06 V6_7_15
+   The official 6.7.15 release.  The packages for all platforms came
+   from NMI build #18195.  The version string for this release is:
+       $CondorVersion: 6.7.15 Jan 26 2006 $
+
+01/30/06 V6_6-merge-53
+  The state of the V6_6-branch for a merge into V6_7-branch. Brings
+  in the ability to run condor_master -f on NT, some file transfer bug
+  fixes, and a check to make sure build tags include externals in the
+  nmi_glue.
+
+01/26/06 V6_7-buffered_jobq-branch
+   This branch will be used by the yahoo folks to use stdio
+   buffered to access the jobq.
+
+01/23/06 V6_7-cron-4-{root,branch}
+   This branch will be used to merge my work from V6_7-cron-3-branch but
+   remove all the ErrorAction attribute code. Created from the
+   V6_7-branch of V6_7_CODE.
+
+01/19/06 V6_7_15-branch
+  Branch for V6_7_15 release.
+
+01/17/06 V6_7-stork_userlog-merge-1
+	State of the V6_7-stork_userlog-branch prior to merging to V6_7-branch.
+
+01/17/06 V6_7-gridftp-merge-1
+   The state of the V6_7-gridftp-branch for a merge into V6_8-branch. This
+   add support in Condor-G for automatically spawning a gridftp server to
+   handle file transfers for gt4 gram grid jobs.
+
+01/17/06 V6_6-merge-52
+  The state of the V6_6-branch for a merge into V6_7-branch.  Uses
+  my_popenv() in favor of regular popen() to avoid unnecessarily
+  invoking the shell.
+
+01/06/06 V6_7-MB-SC2005_Stork_Demo_3-{root,branch}
+   Root & branch tags for the merge branch for the SC2005 / Stork Demo
+   code.  This is a tag off V6_7-branch, and the branch to merge in
+   is V6_7-SC2005_Stork_Demo_3-branch.  This branches V6_7_CODE.
+
+01/03/06 V6_7-cron-3-{root,branch}
+   This is a second attempt to merge my V6_7-starter_local_exp branch
+   into a new branch to get test the CronTab code. Created from the
+   V6_7-branch of V6_7_CODE.
+
+12/21/05 V6_7-jyoon_vm-{root,branch}
+   Created a branch for Jaeyoung Yoon (jyoon@cs.wisc.edu) for him to
+   develop his code to support virtual machines. 
+   Created from the V6_7-branch of V6_7_CODE by Alain Roy. Our hope is
+   to merge this back in mid-January 2005 for Condor 6.7.15, but
+   that's only if the code is good enough. 
+
+12/21/05 V6_7-cron-2-{root,branch}
+   Cleaning up the CronTab code and finalize it after PCRE is working
+   for Windows. I had to merge a new branch because Todd turned on
+   the Windows external after I had made my starter_local_expr branch.
+   Created from the V6_7-branch of V6_7_CODE.
+
+12/20/05 V6_7-boinc-{root,branch}
+   Branch for Derek's efforts to get Condor to run a BOINC client
+   (http://boinc.berkeley.edu) whenever the startd doesn't have any
+   other work to do.  Created from the V6_7-branch of V6_7_CODE after
+   the successful build from BUILD-V6_7-branch-2005-12-20.
+
+12/19/05 V6_7-win32_tests-{root,branch}
+   Branch for bill's efforts to get condor_tests workin on windoze.
+   Created from the V6_7-branch of V6_7_CODE after andy committed
+   fixes to condor_tests from BUILD-V6_7-branch-2005-12-19.
+
+12/19/05 V6_7-eventd_v2-{root,branch}
+   Branch for bill's eventd development efforts.  Created from the
+   V6_7-branch of V6_7_CODE after andy committed fixes to condor_tests
+   from BUILD-V6_7-branch-2005-12-19.
+
+12/19/05 V6_7-new_classads-{root,branch}
+   Branch for using an old-classads compatibility interface on top of
+   the new classad implementation.  This will not be merged back into
+   V6_7 before 6.8.0, but will probably be merged early in the 6.9.x
+   series.  Created from the V6_7-branch of V6_7_CODE after andy
+   committed fixes to condor_tests from BUILD-V6_7-branch-2005-12-19.
+
+12/19/05 V6_7-gridftp-{root,branch}
+   Branch for developing Condor-started gridftp servers for GT4 GRAM jobs. 
+   Branched from successful BUILD-V6_7-branch-2005-12-19 nightly build 
+   tag, for V6_7_CODE module.
+
+12/16/05 V6_7-stork_userlog-{root,branch}
+   Branch for developing per-job Stork user logs, and associated DAGMan
+   compatability.  Branched from successful BUILD-V6_7-branch-2005-12-16
+   nightly build tag, for V6_7_ALL module.
+
+12/15/05 V6_7_14
+   The official 6.7.14 release.  The packages for all platforms came
+   from NMI build #16187.  The version string for this release is one
+   of the following (varies by platform):
+       $CondorVersion: 6.7.14 Dec 13 2005 $
+       $CondorVersion: 6.7.14 Dec 14 2005 $
+
+12/14/05 V6_7_14-merge-1
+   Merging V6_7_14 changes back into V6_7-branch.
+
+12/09/05 V6_7-starter_local_expr-{root,branch}
+   This branch will be used to add policy expressions (OnExit,PeriodicRemove) to
+   the Starter for local universe jobs. I also plan to clean up my CronTab code
+   and finalize it after PCRE is working for Windows.
+
+12/07/05 V6_7-cron-merge-1
+   A branch that adds cron capabilities, job deferral, and time offset
+   This was created by Derek from V6_7-branch on the V6_7_ALL module.
+
+12/02/05 V6_6-merge-51
+   The state of the V6_6-branch for a merge into V6_7-branch.  Bring
+   the minor negotiator fix for ignoring poorly formed schedd ads, the
+   submit_info fix for specifying OSX gcc prereqs, and sonny's change
+   for calling select() with the right # of fds, not a compile-time max.
+
+11/23/05 V6_7-uniq_pid
+   Branched from the successful nightly build (11/21).  This branch is
+   for incorporating uniq process identifier code into Condor,
+   specifically into ProcAPI and KillFamily.  Only code branched.
+
+11/23/05 V6_7-Technion_ha5-{root,branch}
+   A branch based off V6_7-branch in which further HA development
+   will be done.  Both code and docs are branched.
+
+11/21/05 V6_7-Technion_ha4-merge-1
+   The state of the V6_7-Technion_ha4-branch for a merge into V6_7-branch.
+
+11/09/05 V6_7-unicore-3-merge-1
+   The state of the V6_7-unicore-3-branch when merged into the 
+   V6_7-branch.
+
+11/08/05 V6_7_13
+   The official 6.7.13 release.  The packages for all platforms came
+   from NMI build #14344.  The version string for this release is:
+       $CondorVersion: 6.7.13 Nov  7 2005 $
+
+11/06/05 V6_7_13-2-merge-1
+   The state of the V6_7_13-2-branch for the first (and hopefully
+   only) merge into V6_7.  This includes the fixes for the windoze
+   for() loop scoping troubles, and a new GCB external.
+
+11/04/05 V6_7-db_logs_nonblocking-3-branch
+   Another branch for the "quill++" work.  This one comes
+   from V6_7_13-2-root.
+
+11/04/05 V6_7_13-2-branch
+   The real release branch for the 6.7.13 release.  because of the
+   previous failed attempt on V6_7_13-branch, we have to use this
+   somewhat non-conventional name. :(  created from V6_7_13-2-root on
+   the V6_7_CODE module.
+
+11/03/05 V6_6-merge-50
+   The state of the V6_6-branch for a merge into V6_7-branch.  moves
+   todd's new "jobs define their own JOB_START_DELAY" feature from
+   V6_6 into V6_7 (though it conflicts heavily with changes in V6_7,
+   so for now, it's commented out), some minor condor_tests fixes, and
+   nmi_glue changes to use the version of condor_nmi_submit from the
+   build's run directory, not a hard-coded path on grandcentral.
+   This *should* be the final V6_6 -> V6_7 merge before the 6.7.13
+   release (which was previously delayed for a number of reasons).
+
+11/02/05 V6_7_13-merge-1
+   The state of the V6_7_13-branch for a merge into V6_7-branch.  The
+   original V6_7_13-branch was supposed to be abandoned, but folks
+   still checked into it.  so, we're merging these changes back into
+   V6_7 before we make the real 6.7.13 branch (V6_7_13-2-branch). 
+
+10/31/05 V6_7_13-gcb-pre_release-2005-10-31
+   A 6.7.13 pre-release specifically for GCB.  Initially given to
+   Gaurang Mehta <gmehta@ISI.EDU>.  The version string is:
+   $CondorVersion: 6.7.13 Oct 31 2005 PRE-RELEASE-UWCS $
+
+10/14/05 V6_7-cron-branch
+   A branch off of V6_7 for Andy Pavlo's work to add cron-like
+   scheduling to various parts of Condor.  This is initially motivated
+   by efforts to use Condor for INCA, but many of the features will be
+   useful for other sites, too.  Functionality slated for this branch
+   includes: job "deferal" in the starter to spawn a job at a specific
+   time, a Requirements expression for local universe jobs, cron-like
+   scheduling attributes for jobs that turn into a time-to-next-start
+   clause in the requirements expr, etc.  Created from the
+   V6_7-cron-root tag on the V6_7_CODE module.
+
+10/13/05 V6_7_13-branch
+   A branch for the 6.7.13 release, created from V6_7_13-root on the
+   V6_7_ALL module.  Therefore, the "doc" directory is branched, too.
+   This is NOT the release branch for 6.7.13.  See V6_7_13-2-branch.
+
+10/13/05 V6_6-merge-49
+   The state of the V6_6-branch for a merge into V6_7-branch.  fixes
+   some minor condor_tests, nmi_glue, and autoconf stuff.  this is the
+   final V6_6 -> V6_7 merge before the 6.7.13 release.
+
+10/07/05 V6_7-gcb-2-merge-1
+   The state of the V6_7-gcb-2-branch for the first (and final) merge
+   into the V6_7-branch.  This is the first time GCB support will go
+   into the mainline codebase.
+
+10/05/05 V6_6-merge-48
+   The state of the V6_6-branch for a merge into V6_7-branch.  Fixes
+   a bunch of condor_tests stuff, such that we should be close to all
+   green (at least we were on V6_6, a few intermittent failures on AIX
+   notwithstanding), NMI glue, the nmi_glue/submit_info input file for
+   the new/improved condor_nmi_submit.pl script, a fix in CEDAR to
+   deal with badly formed packets not causing an EXCEPT(), and some
+   other minor fixes (e.g. to clarify some dprintfs, a README, etc).
+
+9/28/05 V6_7-SC2005_Stork_Demo_3-{root,branch}
+   New branch based off V6_7-root in which development for the SC2005
+   Stork demo will be done.
+
+9/28/05 V6_7-SC2005_Stork_Demo_2-{root,branch}
+   *Abondoned*
+   New branch based off V6_7-root in which development for the SC2005
+   Stork demo will be done.
+
+09/26/05 V6_7_12-merge-1
+   The state of the V6_7_12-branch for a (probably final) merge into
+   the V6_7-branch.  This pulls all of the changes from both the
+   V6_7_11-branch and V6_7_12-branch that were made for 6.7.12 (two
+   critical bug fixes: one to dagman, and one to daemon_core for
+   win32).  This merge will include everything since V6_7_11-merge-1.
+
+09/26/05 V6_7_12-win32
+   The official 6.7.12 release tag for WIN32.  Unfortunately, we've
+   got seperate tags and packages for the WIN32 and UNIX releases of
+   6.7.12, but the only diff was inside an #ifdef WIN32, and it was
+   easier to just stick with the existing unix tarballs.  The windoze
+   binaries came from NWO build #xxxxx.  The version string for this
+   release is:
+       $CondorVersion: 6.7.12 Sep xx 2005 $
+
+9/26/05 V6_7-SC2005_Stork_Demo-{root,branch}
+   *Abondoned*
+   A branch based off V6_7-root in which development for the SC2005
+   Stork demo will be done.
+
+09/23/05 V6_7_12
+   The official 6.7.12 release.  The packages for all platforms came
+   from NWO build #12042.  The version string for this release is:
+       $CondorVersion: 6.7.12 Sep 24 2005 $
+
+09/23/05 V6_7_11
+   The official 6.7.11 release.  The packages for all platforms came
+   from NWO build #11654.  6.7.11 is known bad and the relesae was
+   pulled before being widely advertised.  The version string for 
+   this release is:
+       $CondorVersion: 6.7.11 Sep 15 2005 $
+
+9/19/05 V6_7-Technion-ha4-{root,branch}
+   A branch based off V6_7_11-root in which further HA development
+   will be done.  Both code and docs are branched.
+
+09/18/05 V6_7_11-merge-1
+   The state of the V6_7_11-branch for a (probably final) merge into
+   the V6_7-branch.  This includes a few last minute fixes for 6.7.11,
+   along with the results from V6_6-merge-47.
+
+09/15/05 V6_6-merge-47
+   The state of the V6_6-branch for a merge into V6_7_11-branch.
+   Mostly for the show-stopper startd bug when it hits errors trying
+   to send signals to a starter managing a suspended job.  A few other
+   goodies came along for the ride and will be in the 6.7.11 release.
+
+9/14/05 V6_7_11-branch
+   A branch for the 6.7.11 release, created from V6_7_11-root on the
+   V6_7_CODE module.  The "doc" directory hasn't yet been branched.
+
+09/11/05 V6_6-merge-46
+   The state of the V6_6-branch for a merge into V6_7-branch.  A few
+   last-minute fixes for irix NWO builds, test cleanup, etc, before
+   the 6.7.11 release.
+
+09/07/05 V6_7-post_merge-V6_6-merge-45
+   The state of the V6_7-branch before after merging in the V6_6-branch
+   as it stood at tag V6_6-merge-45,
+   EXCEPT for the patch to fix the StatInfo object to correctly
+   detect symbolic links on Unix platforms.  This patch needs to
+   be rewritten for v6.7 and will follow in another commit.
+   Specifically, the patch being ommitted from this merge is
+   src/condor_c++_util/directory.C ver 1.11.10.2.12.4.2.24 / Gnats 537.
+
+09/07/05 V6_7-pre_merge-V6_6-merge-45
+   The state of the V6_7-branch before merging in the V6_6-branch
+   as it stood at tag V6_6-merge-45.
+
+09/07/05 V6_6-merge-45
+   The state of the V6_6-branch for a merge into V6_7-branch.  This should be
+   the last V6_6 -> V6_7 merge before the 6.7.11 release.
+
+09/07/05 V6_7-lease-merge-1
+   The state of the V6_7-lease-branch for a merge into V6_7-branch. This
+   should be the end of V6_7-lease-branch.
+
+09/01/05 V6_7-quill-merge-1
+   Abandoning V6_7-quill-branch, merging into V6_7-branch.
+   This is the merge-from tag on V6_7-quill-branch.
+
+08/30/05 V6_7-post_merge-V6_7_10-merge-1
+   The state of the V6_7-branch after merging in the V6_7_10-branch
+   as it stood at tag V6_7_10-merge-1.  Note: V6_7_10-branch is
+   now abandoned.
+
+08/30/05 V6_7-pre_merge-V6_7_10-merge-1
+   The state of the V6_7-branch before merging in the V6_7_10-branch
+   as it stood at tag V6_7_10-merge-1. 
+
+08/18/05 V6_7_10-merge-1
+   Abandoning V6_7_10-branch, merging into the V6_7-branch.
+   This is the merge-from tag on V6_7_10-branch.
+
+08/12/05 V6_7-globus4-merge-1
+   The state of the V6_7-globus4-branch for a merge into V6_7-branch. This
+   branches moves the Globus version we link Condor with from 2.4.3 to
+   4.0.1.
+
+08/11/05 V6_7-cgahp_win-2-branch
+   A branch for work on porting Gridmanager/C-GAHP to Windows. 
+
+08/04/05 V6_7-db_logs_nonblocking-2-branch
+   A branch for the "quill++" work.
+
+08/03/05 V6_7_10
+   The official 6.7.10 release.  The packages for most platforms came
+   from NWO build #9645, except irix-6.5 came from OWO build 1315, and
+   windows was built by hand.  This is almost exactly the same source
+   as BUILD-V6_7_10-branch-2005-8-3, however, there were 3 minor
+   changes to files in NTconfig that were necessary.  Since that
+   didn't touch the source at all, it wasn't worth a whole other
+   build.  The version string for this release is:
+   $CondorVersion: 6.7.10 Aug  3 2005 $
+
+08/02/05 V6_7-workspace_svc-branch
+   The branch for work on dynamic account management using Globus 
+   Workspace Management service into the SchedD/Shadow. Will
+   be needed until we either incorporate the said functionality
+   into a release series or decide we no longer need it.
+
+08/02/05 V6_7-workspace_svc-root
+   The state of V6_7-branch at the time of creation of
+   V6_7-worksapce_cvs-branch
+
+8/02/05 V6_7_10-branch
+   A branch for the 6.7.10 release, created from V6_7_10-root on the
+   V6_7_CODE module.  The "doc" directory hasn't yet been branched.
+
+07/28/05 V6_7-lease-branch
+   A branch for adding the new job lease code. This branch should last
+   a couple month at most. Created from the V6_7-lease-root tag on 
+   V6_7_CODE.
+
+07/28/05 V6_6-merge-44
+   The state of the V6_6-branch for a merge into V6_7-branch. This
+   includes daemoncore and accountant bug fixes.  this should be the
+   last V6_6 -> V6_7 merge before the 6.7.10 release.
+
+07/18/05 V6_7_9-2-merge-1
+   This is the end of the V6_7_9-2-branch, which we are
+   merging into V6_7-branch
+
+07/06/05 V6_7-dag_subdir-branch-merge-1
+   The point on the V6_7-dag_subdir-branch from which we do the first
+   (and only) merge to the V6_7-branch.
+
+06/30/05 V6_7_9-2-branch
+   A new branch for the 6.7.9 release, created from V6_7_9-2-root on
+   the V6_7_CODE module (doc will remain with the V6_7_9-branch).
+   There were too many changes and merges that had to happen, and it
+   was easier (and will be cleaner in the long run) to just make a new
+   release branch than to do everything in the old V6_7_9-branch.
+
+06/29/05 V6_6-merge-43
+   The state of the V6_6-branch for a merge into V6_7-branch. This
+   includes more bug fixes, including the schedd crash on reconfig
+   during a negotiation cycle, static buffers in the negotiator, and a
+   few other minor changes.
+
+06/29/05 V6_7_9-merge-1
+   The state of the V6_7_9-branch before being merged into V6_7 and
+   abandoned.  We'll need a new V6_7_9-2-branch for the real 6.7.9. 
+
+6/27/05 V6_7-dag_subdir-branch
+    A branch for the DAGMan subdirectory support feature (run multiple
+    DAGs in separate directories), created from the V6_7-branch.  
+    Hopefully this branch will only last a few days, but the complexity 
+    of changes for this feature was getting pretty high...
+
+06/27/05 V6_7_9-branch
+   A branch for the 6.7.9 release, created from V6_7_9-root on the
+   V6_7_ALL module.
+
+06/24/05 V6_7-parallel-3-merge-1
+   This is the point from the parallel-3 branch we merge into
+   V6_7-branch
+
+06/24/05 V6_6-merge-42
+   The state of the V6_6-branch for a merge into V6_7-branch. This includes
+   more bug fixes.
+
+06/22/05 V6_7-pre_merge-V6_7-cgahp_win-merge-1
+   The state of V6_7-branch before the merge from V6_7-cgahp_win-branch
+
+06/22/05 V6_7-cgahp_win-merge-1
+   The state of V6_7-cgahp_win-branch before the first merge into V6_7-branch
+
+06/14/05 V6_7-cgahp_win-branch
+   The work on making Condor-C (in particular the C-GAHP) portable to 
+   Windows. Also fixing some bugs noticed by Francesco/G-Lite people.
+   Author: ckireyev
+
+06/14/05 V6_7_8-merge-1
+   The state of the V6_7_8-branch for a merge into V6_7-branch. The only
+   changes are last-minute check-ins for GT4 and workarounds for problems
+   in GT2 and blahp.
+
+06/14/05 V6_6_10
+   The official 6.6.10 release tag. This lives on V6_6_ALL and
+   V6_6_10_EXT. The official release version string for 6.6.10 is
+   $CondorVersion: 6.6.10 Jun 13 2005 $
+   OWO Build# 1169, NWO Build# 7644
+
+06/10/05 V6_7_8
+   The official 6.7.8 release tag, off of the V6_7_8-branch of
+   V6_7_ALL and the trunk of V6_7_8_EXT.  Created from
+   BUILD-V6_7_8-branch-2005-6-9.  Version string in this release:
+   $CondorVersion: 6.7.8 Jun  9 2005 $
+
+06/02/05 V6_6-merge-41
+   The state of the V6_6-branch for a merge into V6_7-branch. This includes
+   a win32 firewall fix, preventing the schedd from panicing when
+   SMTP_SERVER is undefined, and fixing a problem where the schedd would
+   never clean the job queue if it got reconfiged frequently.
+
+06/02/05 V6_7_8-branch
+   A branch for the 6.7.8 release, created from V6_7_8-root on the
+   V6_7_ALL module.
+
+05/18/05 V6_7-globus4-branch
+   A branch to test updating the Globus external to 4.0.0. This will
+   hopefully be a very short-lived branch. Created from the 
+   V6_7-globus4-root tag on V6_7_CODE.
+
+05/17/05 V6_7-gcb-2-branch
+   A new branch off V6_7 for the final (hopefully) GCB integration.
+   This is the branch that's just going to rely on the GNU ld's --wrap
+   functionality to re-map socket calls to Generic_*, instead of
+   changing all the Condor source.  we'll still have to make some
+   fixes, e.g. in my_ip_addr(), but this will be much easier to
+   maintain, and it'll also work with most of the externals, too.
+   Created from the V6_7-gcb-2-root tag on V6_7_CODE..
+
+05/17/05 V6_6-merge-40
+   The state of the V6_6-branch for a merge into V6_7-branch.  This
+   includes some win32 bug fixes to submit, a big memory/resource leak
+   on win32 for the load average computation, a tiny fix to
+   condor_history, and the big prereq cleanup in the NMI glue.
+
+05/09/05 V6_7-jeff-hmm-branch
+   A branch to check in Jeff Freschl's hierarchical matchmaker.
+   created from the V6_7-jeff-hmm-root tag on the entire V6_7_CODE 
+   module
+
+05/03/05 V6_7_7-merge-1
+   The state of the V6_7_7-branch for a merge into V6_7-branch.  The
+   only changes are the last minute bug fixes to dag.C and the
+   check_log_files.C test program in the c++_util_lib.
+
+04/27/05 V6_7_7
+   The official 6.7.7 release tag, off of the V6_7_7-branch of
+   V6_7_CODE and the trunk of V6_7_7_EXT.  Created from
+   BUILD-V6_7_7-branch-2005-4-27-2.  Version string in this release:
+   $CondorVersion: 6.7.7 Apr 27 2005 $
+
+04/26/05 V6_7_7-branch
+   A branch for the 6.7.7 release, created from V6_7_7-root on the
+   V6_7_CODE module. 
+
+04/26/05 V6_6-merge-39
+   The state of the V6_6-branch for a merge into V6_7-branch.  This
+   includes some more win32 bug fixes to leaking memory, dynuser,
+   firewall stuff, etc.  Also included: removed a bogus ASSERT() in
+   DAGMan, some enhancements to condor_tests, NMI glue, the
+   gridmanager_monitor_agent, the 1-time vs. periodic DC timer bug in
+   the schedd, and minor dprintf() fixes in the idle_time code.
+
+04/18/05 V6_7-quill-branch
+   A branch for the initial commit of Quill, created off
+   the V6_7-branch as tagged at V6_7-quill-root.
+
+04/06/05 V6_6-merge-38
+   The state of the V6_6-branch for a merge into V6_7-branch.  This
+   includes a bunch of win32 bug fixes: the execute directory cleanup
+   code, win32 Directory::chown() implementation and dynuser bug
+   fixes.  Also includes some schedd fixes for shutdown behavior and
+   some fixes to some tests in condor_tests.
+
+03/31/05 V6_6-merge-37
+   The state of the V6_6-branch for a merge into V6_7-branch.  This
+   picks up some crucial post-6.6.9 bug fixes that we want in 6.7.7
+   ASAP: the major fix to detecting console activity, the collector no
+   longer segfaults if it gets a classad w/ w a NULL ip/port
+   attribute, and qmgmt no longer crashes the schedd if the FS
+   authenticate code returns a NULL username (due to a failed
+   getpwuid() call, for example).  As usual, it also includes a bunch
+   of changes to condor_tests and fixes in nmi_glue to support windoze
+   builds in the NWO.
+
+03/30/05 V6_7-spool_owner-merge-1
+  The state of the V6_7-spool_owner-branch for the first (and
+  hopefully only) merge back into V6_7-branch.
+
+03/23/05 V6_7-parallel-2-branch
+   A new branch off V6_7 for parallel universe support.  Created from
+   V6_7-parallel-2-root on the entire V6_7_CODE module.  The old
+   V6_7-parallel-branch was created from a point on V6_7 that wasn't
+   stable and has build problems.  That branch will be merged into
+   here and abandoned ASAP.
+
+03/23/05 V6_7-spool_owner-branch
+   A branch off V6_7 for fixing file ownership in the spool directory
+   for job sandboxes.  Created from V6_7-spool_owner-root on the
+   entire V6_7_CODE module.
+
+03/23/05 V6_7-kerb14-branch
+   A branch off V6_7 for adding support for Kerberos 1.4.x.  Created
+   from V6_7-kerb14-root on the entire V6_7_CODE module.
+
+03/18/05 V6_7-parallel-branch
+   A branch for the parallel universe work
+
+03/17/05 V6_7_6-merge-1
+   The state of the V6_7_6-branch for a merge into V6_7-branch.  The
+   only real change is the version of the gt4-gahp we're using, and a
+   fix to the NMI glue to run all the tests every night.  Otherwise,
+   it's just a few last minute (mostly cosmetic) changes from 6.7.6.
+
+03/15/05 V6_6_9
+   The official 6.6.9 release tag. This lives on V6_6_ALL and
+   V6_6_9_EXT. The official release version string for 6.6.9 is
+   $CondorVersion: 6.6.9 Mar 10 2005 $
+
+03/10/05 V6_7_6-branch
+   A release branch for 6.7.6, created off V6_7-branch from the
+   V6_7_6-root tag (after V6_6-merge-36). 
+
+03/10/05 V6_6-merge-36
+   The state of the V6_6-branch for a merge into V6_7-branch. This
+   merge picks up a crucial bugfix in DaemonCore's session clearing
+   code, bug fixes in the passwd_cache code, the bug fixes to tools
+   that freaked out if a startd name had multiple '@' signs, a bug fix
+   to SUBSYS_EXPRS, some minor condor_tests changes.  This is
+   hopefully the final 6.6.9 -> V6_7 merge.
+
+03/07/05 V6_7-Technion_ha3-merge-1
+   The state of the V6_7-Technion_ha3-branch for the first (and
+   probably final) merge back into V6_7-branch.
+
+03/07/05 V6_6-merge-35
+   The state of the V6_6-branch for a merge into V6_7-branch. This
+   merge picks up a crucial bugfix in condor_secman, some fixes to the
+   std univ shadow for better error propagation, some important NMI
+   glue changes, some test fixes, the email hacks for johnbent's data
+   collection, and another fix for windoze locale stuff.
+
+03/06/05 V6_7_4-merge-2
+   The state of the V6_7_4-branch for another merge into the
+   V6_7-branch.  This picks up a bunch of gridmanager changes that
+   todd and jamie made, and a bugfix to condor_config_val -pool.
+   This should be the final V6_7_4 merge, and we're now abandoning
+   the V6_7_4-branch.
+
+02/28/05 V6_7_5
+    The 6.7.5 release tag, which lives on the V6_7_4-branch
+
+02/24/05 V6_7_4-merge-1
+	The state of the V6_7_4-branch for a merge into the
+	V6_7-branch. This merge picks up a number of bug fixes, and
+	patches to make the Windows build work.
+
+02/18/05 V6_7-spooldir-branch
+  Work on revamping SPOOL usage for per-job files.  Notably will allow schedd
+  to run as root when sandboxing jobs via Condor-C, SOAP, or condor_submit -r
+  -s.  Will be merged back into V6_7-branch when basic functionality is
+  working.
+
+02/14/05 V6_7_4
+  The 6.7.4 release tag. Sadly, it came from the V6_7_3-branch, becuase
+  the 6_7_4-branch was not ready for it. 
+
+02/09/05 V6_7_4-branch
+  The path to the 6.7.4 release goes through this branch. It is from 
+  the V6_7-branch, rooted at V6_7_4-root
+
+02/10/05 V6_7_4-post_merge-V6_6-merge-34
+   The state of the V6_7_4-branch after merging in the changes between
+   V6_6-merge-33 and V6_6-merge-34. 
+
+02/10/05 V6_7_4-pre_merge-V6_6-merge-34
+   The state of the V6_7_4-branch before merging in the changes between
+   V6_6-merge-33 and V6_6-merge-34. 
+
+02/10/05 V6_6-merge-34
+   The state of the V6_6-branch for a merge into V6_7_4-branch. This merge
+   picks up two bug fixes and a bunch of tests.
+
+2/3/05 V6_7-condorg_gt4-merge-1
+   The state of the V6_7-condorg_gt4-branch when merged back into
+   V6_7-branch. This represents our initial support for submitting jobs to 
+   Globus web services (GT4) resources.
+
+02/03/05 V6_7-post-merge-V6_7-soap-3-merge-1
+	The state of the V6_7-branch after merging the V6_7-soap-3-branch
+	as tagged V6_7-soap-3-merge-1
+
+02/03/05 V6_7-pre-merge-V6_7-soap-3-merge-1
+	The state of the V6_7-branch before merging the V6_7-soap-3-branch
+	as tagged V6_7-soap-3-merge-1
+
+01/31/05 V6_6_8
+   The official 6.6.8 release tag. This lives on V6_6_ALL and V6_6_7_EXT.
+
+01/31/05 V6_6-merge-33
+   The state of the V6_6-branch for yet another merge into the
+   V6_7-branch.
+
+01/12/05 V6_7-local_univ-merge-1
+   The state of the V6_7-local_univ-branch for the first (and last)
+   merge back into V6_7-branch.
+
+01/06/05 V6_7-Technion_ha3-branch
+   A new branch for Technion's High-Availability (HA) work.  
+   Created off V6_7-branch at V6_7-Technion-ha3-root.
+
+01/05/05 V6_7-negotiator_ad-merge-1
+   The state of the V6_7-negotiator_ad-branch for the first (and
+   probably final) merge back into V6_7-branch.
+
+01/05/05 V6_7-pre_merge-V6_7-negotiator_ad-merge-1
+   The state of the V6_7-branch before merging in the
+   V6_7-negotiator_ad-branch as tagged at V6_7-negotiator_ad-merge-1. 
+
+01/05/05 V6_7-analyze-branch
+   A new branch for nick coleman's classad analysis code.
+   Created off V6_7-branch at V6_7-analyze-root.
+
+01/05/05 V6_6-tests-branch
+   A new branch for adding a bunch of tests to Condor.
+   Created off V6_6-branch at V6_6-tests-root.  
+
+01/04/05 V6_7-post_merge-V6_6-merge-32
+   The state of the V6_7-branch after another merge from V6_6-branch.
+
+01/04/05 V6_6-merge-32
+   The state of the V6_6-branch for yet another merge into the
+   V6_7-branch.  This includes more NWO glue improvements and fixes,
+   more OSX build changes, cleanup in Condor.pm and condor_tests, and
+   a condor_configure fix to give more useful output in some failures.
+
+01/04/05 V6_7-pre_merge-V6_6-merge-32
+   The state of the V6_7-branch before another merge from V6_6-branch.
+
+12/31/04 V6_7-post_merge-V6_6-merge-31
+   The state of the V6_7-branch after another merge from V6_6-branch.
+
+12/31/04 V6_6-merge-31
+   The state of the V6_6-branch for yet another merge into the
+   V6_7-branch.  This includes another fix to the race condition in
+   the port 0 stuff, tons of NWO glue improvements and fixes, and OSX
+   build changes for the NWO (to fix OPSYS, make_final_tarballs, etc). 
+
+12/31/04 V6_7-pre_merge-V6_6-merge-31
+   The state of the V6_7-branch before another merge from V6_6-branch.
+
+12/31/04 V6_7-credd2-branch
+   A branch that has fixes/improvements of the CredD and associated tools
+   and data objects.
+   Created off V6_7-branch at V6_7-credd2-root.
+   Jeff Weber or Carey Kireyev will know when to merge it back in.
+
+12/30/04 V6_7-condorg_nordugrid-branch
+   A branch that has implementation of Condor-G submitting to NorduGrid
+   batch system.
+   Created off 6_7-branch at V6_7-condorg_nordugrid-root. By ckireyev.
+   Should be merged in when the functionality is deemed useful.
+
+12/29/04 V6_7-post_merge-V6_6-merge-30
+   The state of the V6_7-branch after another merge from V6_6-branch.
+
+12/29/04 V6_6-merge-30
+   The state of the V6_6-branch for yet another merge into the
+   V6_7-branch.  This includes the fix to the race condition in port
+   0 stuff, the new (portable) gahp external, and NWO glue fixes. 
+
+12/29/04 V6_7-pre_merge-V6_6-merge-30
+   The state of the V6_7-branch before another merge from V6_6-branch.
+
+12/28/04 V6_7-negotiator_ad-branch
+   A branch that has implementation of Negotiator reporting to the 
+   Collector (and backward-compatibility adjustments it requires).
+   Forked off 6_7-branch at V6_7-negotiator_ad-root. ckireyev.
+
+12/28/04 V6_7-honda-2-branch
+   A new branch for honda-specific changes (mostly parallel universe).
+   The old V6_7-honda-branch will be merged directly into this and
+   abandoned.  This is mostly to grab all the latest V6_7 changes from
+   the V6_7-dedicated-branch (now merged in) along with other fixes. 
+   Created from the V6_7-honda-2-root tag.
+
+12/28/04 V6_7-post_merge-V6_7_3-merge-1
+   The state of the V6_7-branch after merging in the V6_7_3-branch as
+   tagged at V6_7_3-merge-1
+
+12/28/04 V6_7_3-merge-1
+   The state of the V6_7_3-branch for the initial merge into V6_7.
+   This brings with it V6_6-merge-28 and V6_6-merge-29.
+
+12/28/04 V6_7-pre_merge-V6_7_3-merge-1
+   The state of the V6_7-branch before merging in the V6_7_3-branch as
+   tagged at V6_7_3-merge-1
+
+12/28/04 V6_7_3-post_merge-V6_6-merge-29
+   The state of the V6_7_3-branch after a merge from V6_6-branch.
+
+12/28/04 V6_6-merge-29
+   The state of the V6_6-branch for yet another merge into V6_7 (this
+   time into the V6_7_3-branch).  This includes the fixes for core.pid
+   files in the new shadow/starter, a new test in condor_tests, and
+   some fixes to the NWO glue.
+
+12/28/04 V6_7_3-pre_merge-V6_6-merge-29
+   The state of the V6_7_3-branch before a merge from V6_6-branch.
+
+12/24/04 V6_7_3-post_merge-V6_6-merge-28
+   The state of the V6_7_3-branch after a merge from V6_6-branch.
+
+12/24/04 V6_6-merge-28
+   The state of the V6_6-branch for yet another merge into V6_7 (this
+   time into the V6_7_3-branch).  This includes the fixes for
+   COLLECTOR_ADDRESS_FILE and the "port 0" code to allow dynamic
+   collector (and negotiator) ports on 1-machine pools.  it also
+   includes the corresponding fix to the NWO test glue to take
+   advantage of this to avoid port conflicts in the test suite.
+
+12/24/04 V6_7_3-pre_merge-V6_6-merge-28
+   The state of the V6_7_3-branch before a merge from V6_6-branch.
+
+12/23/04 V6_7-post_merge-V6_7-dedicated-merge-1
+   The state of the V6_7-branch after merging in the
+   V6_7-dedicated-branch as tagged at V6_7-dedicated-merge-1
+
+12/23/04 V6_7-dedicated-merge-1
+   The state of the V6_7-dedicated-branch for its merge back into the
+   V6_7-branch.  We'll abandon the V6_7-dedicated-branch after this
+   merge, and continue development in new branches.
+
+12/23/04 V6_7-pre_merge-V6_7-dedicated-merge-1
+   The state of the V6_7-branch before merging in the
+   V6_7-dedicated-branch as tagged at V6_7-dedicated-merge-1
+
+12/23/04 V6_7-condorg_gt4-branch
+   A branch of getting Condor-G to submit to GT4. Created off V6_7-branch 
+at tag "V6_7-condorg_gt4-root" by ckireyev. Should be merged into 6.7 as 
+soon as the damn thing works. As of this writing the latest GT4 release is 
+3.9.4.
+
+12/21/04 V6_7_3-branch
+   Release branch for 6.7.3, off of the V6_7-branch, from V6_7_3-root.
+
+12/21/04 V6_7-post_merge-V6_6-merge-27
+   The state of the V6_7-branch after yet another merge from V6_6-branch.
+
+12/21/04 V6_6-merge-27
+   The state of the V6_6-branch for yet another merge into V6_7.  This
+   just includes the condor-g fix from jamie, and some updates to the
+   NMI build/test glue.
+
+12/21/04 V6_7-pre_merge-V6_6-merge-27
+   The state of the V6_7-branch before yet another merge from V6_6-branch.
+
+12/15/04 V6_7-post_merge-V6_6-merge-26
+   The state of the V6_7-branch after yet another merge from V6_6-branch.
+
+12/15/04 V6_6-merge-26
+   The state of the V6_6-branch for yet another merge into V6_7.  This
+   includes most (maybe all?) of the 6.6.8 bug fixes (at least the
+   ones we're going to have in time for 6.7.3).  in particular, some
+   crucial windoze fixes, the DaemonCore fix for CDF's jobs-run-twice
+   bug (GNATS PR-256), the fix to "condor_store_cred query" to verify
+   the credentials (not just check existance), the fix to submit for
+   consistently supporting "ThisStyle" and "this_style", and a few
+   other misc fixes.
+
+12/15/04 V6_7-pre_merge-V6_6-merge-26
+   The state of the V6_7-branch before yet another merge from V6_6-branch.
+
+12/03/04 V6_7-dedicated-branch
+   Adding preemption support and machine classes to the dedicated 
+   scheduler
+
+11/28/04 V6_7-post_merge-V6_6-merge-25
+   The state of the V6_7-branch after yet another merge from V6_6-branch.
+
+11/28/04 V6_6-merge-25
+   The state of the V6_6-branch for yet another merge into V6_7.  This
+   includes autoconf changes to remove tail/head + to find/use full
+   paths to all tools; some more ProcFamily fixes on windoze; the
+   HIGHPORT/LOWPORT bug w/ SO_KEEPALIVE, the fix to old classad
+   PrintToStr(); moving the DaemonCore dprintf() about exit status to
+   right before exit(); DAG support in CondorTest.pm; console idle
+   time fixes on linux, and a few additions to condor_tests.
+
+11/28/04 V6_7-pre_merge-V6_6-merge-25
+   The state of the V6_7-branch before yet another merge from V6_6-branch.
+
+11/19/04 V6_7-unicore-3-branch
+   A new branch off of V6_7-branch created from the V6_7-unicore-3-root
+   tag. This is the 3rd generation of the V6_7-unicore-branch. The
+   V6_7-branch has new code (from the condor-c branch) that we now want
+   on the unicore branch.
+
+11/19/04 V6_7-unicore-3-post_merge-V6_7-unicore-2-merge-1
+   The state of the V6_7-unicore-3-branch after merging in the
+   V6_7-unicore-2-branch as tagged at V6_7-unicore-2-merge-1.
+      
+11/19/04 V6_7-unicore-3-pre_merge-V6_7-unicore-2-merge-1
+   The state of the V6_7-unicore-3-branch before merging in the
+   V6_7-unicore-2-branch as tagged at V6_7-unicore-2-merge-1.
+
+11/19/04 V6_7-unicore-2-merge-1
+   The state of the V6_7-unicore-2-branch when merged into the
+   V6_7-unicore-3-branch.
+
+11/16/04 V6_7-post-merge-V6_7-condorc-3-m-1
+   After merging V6_7-condorc-3-branch (at V6_7-condorc-merge-1) into
+   V6_7-branch.
+
+11/16/04 V6_7-pre-merge-V6_7-condorc-3-m-1
+   Prior to merging V6_7-condorc-3-branch (at V6_7-condorc-merge-1) into
+   V6_7-branch.
+
+11/10/04 V6_7_3-pre-2004-11-10
+   The state of the V6_7-branch for another snapshot release given to
+   CORE (see condor_support #1168).  This was just a regular
+   V6_7-branch nightly build after the last of the changes from the
+   V6_7-mirror-2-branch were merged back in.  I took the binaries from
+   imola build id 606.  The version string in this release is:
+   $CondorVersion: 6.7.3 Nov 10 2004 PRE-RELEASE-UWCS $
+
+11/09/04 V6_7-post_merge-V6_7-mirror-2-merge-3
+   The state of the V6_7-branch after merging in the
+   V6_7-mirror-2-branch as tagged at V6_7-mirror-2-merge-3
+
+11/09/04 V6_7-mirror-2-merge-3
+   The state of the V6_7-mirror-2-branch for another (probably final)
+   merge into the V6_7-branch.
+
+11/09/04 V6_7-pre_merge-V6_7-mirror-2-merge-3
+   The state of the V6_7-branch before merging in the
+   V6_7-mirror-2-branch as tagged at V6_7-mirror-2-merge-3
+
+11/03/04 V6_7-mirror-2-CORE_snapshot6
+   The state of the V6_7-mirror-2-branch for another snapshot release
+   given to CORE, for RUST condor-support 1161.  Changes include: 1).
+   added new STARTD_CONTACT_TIMEOUT config parameter.  2). Fixed broken
+   $$() macro expansion passed to job environment.  The version string
+   in this release looks like this:
+   $CondorVersion: 6.7.0 Nov 3 2004 MIRROR-2-BRANCH CORE_snapshot6 $
+
+10/28/04 V6_7-local_univ-branch
+   Branch for "local universe" development, which is basically the
+   scheduler universe but with a starter under the schedd.  Created
+   from the V6_7-local_univ-root tag.  Uses same externals as are in
+   the V6_7_2_EXT module.  
+
+10/26/04 V6_7-post_merge-V6_6-merge-24
+   The state of the V6_7-branch after yet another merge from V6_6-branch.
+
+10/26/04 V6_6-merge-24
+   The state of the V6_6-branch for yet another merge into
+   V6_7-branch.  This includes some minor tweaks to the imake system,
+   NMI NWO glue, and a bugfix to condor_history.
+
+10/26/04 V6_7-pre_merge-V6_6-merge-24
+   The state of the V6_7-branch before yet another merge from V6_6-branch.
+
+10/25/04 V6_7-tdp_3-branch
+   Branch for TDP development. Created a new branch to avoid confusion
+   after using V6_7-tdp_2-no_tracing-branch to get initial TDP support
+   into V6_7-branch.  Created from V6_7-tdp_3-root.
+
+10/22/04 V6_7-post_merge-V6_6-merge-23
+   The state of the V6_7-branch before after a merge from V6_6-branch.
+
+10/22/04 V6_6-merge-23
+   The state of the V6_6-branch for yet another merge into
+   V6_7-branch.  This includes all of the new condor_tests directory
+   and imake changes, along with some other minor fixes and
+   enhancements from V6_6_7 and some stuff that'll be in V6_6_8.
+
+10/22/04 V6_7-pre_merge-V6_6-merge-23
+   The state of the V6_7-branch before yet another merge from V6_6-branch.
+
+10/11/04 V6_6_7
+   The official 6.6.7 release tag (at long last!).  this lives on
+   V6_6_ALL and V6_6_7_EXT 
    
-5/21/04 trunk-pre-merge-t-m-V6_7-b-1-m-1
-   The state of the trunk before merging in the trunk-merge-V6_7-branch-1
-   as tagged at trunk-merge-V6_7-b-1-m-1.
+10/06/04 V6_6-krb5_1_3-branch + V6_6-krb5_1_3-root
+   This is a new branch off the end of the V6_6-branch for changes to
+   get Condor to link with and use Kerberos5 version 1.3.x.  The
+   Kerberos API changed between 1.2.x and 1.3.x, and there are a
+   number of security enhancements and portability fixes that are
+   driving us to want to switch to krb5-1.3.x.  So, we've got this
+   branch so that we can isolate the changes, do builds on all our
+   platforms, and heavily test the new kerberos before we merge it
+   back into the stable code-base.
 
-5/20/04 stork-gsi-support-branch
-   A branch created off the trunk for adding GSI/MyPorxy suppport to  Stork
+10/06/04 V6_7_2 
+  A tag for the 6.7.2 release. It lives on the V6_7_2-branch
+
+10/06/04 V6_7-Technion_ha2-root & V6_7-Technion_ha2-branch
+   Second root & branch tags for Technion High Availability work.
+
+10/05/04 V6_7-soap-3-branch
+   The V6_7-soap-3-branch from V6_7-soap-3-root. This branch is a catch-up
+   branch to mainly take advantage of Imake changes. The 
+   V6_7-soap-2-branch will be merged into this.
+
+10/05/04 V6_7-soap-3-root
+   The start of the V6_7-soap-3-branch off of V6_7-branch.
+
+09/24/04 V6_7_2-branch
+   Branch for the 6.7.2 release.  This tag includes all of the
+   V6_7_CODE module, and was created from the V6_7_2-root tag.
+
+09/23/04 V6_7-post_merge-V6_6-merge-22
+   The end of a merge of V6_6-branch into V6_7-branch.
+
+09/23/04 V6_7-pre_merge-V6_6-merge-22
+   The state of the V6_7-branch before yet another merge from V6_6-branch.
+
+09/23/04 V6_6-merge-22
+   The state of the V6_6-branch for yet another merge into
+   V6_7-branch. This merge includes fixes to the Windows build system.
+
+09/21/04 V6_7-post_merge-V6_6-merge-21
+   The end of a merge of V6_6-branch into V6_7-branch.
+
+09/21/04 V6_7-pre_merge-V6_6-merge-21
+   The state of the V6_7-branch before yet another merge from V6_6-branch.
+
+09/21/04 V6_6-merge-21
+   The state of the V6_6-branch for yet another merge into
+   V6_7-branch. This merges includes: Windows XP SP2 fixes.
+
+09/17/04 V6_7-db_logs-branch
+   This branch was created off the V6_7-branch at V6_7-db_logs-root
+   and will be used by Profs. DeWitt and Naughton and their
+   students. Initially, they will work on putting the Condor logs into
+   a database.
+
+09/16/04 V6_6-file_lock_test-branch
+   A branch for testing changes to file locking in the user log code.
+   NOT for release; if the changes work they'll probably make their
+   way into 6.7, but we want to start changing things from a stable
+   point.
+
+09/16/04 V6_6-file_lock_test-root
+   The state of the V6_6-branch for an upcomming V6_6-file_lock_test-branch
+   to test changes to file locking in the user log code.
+
+09/15/04 V6_7-pre_merge-V6_6-cdf-merge-1
+   The state of the V6_7-branch before merging in the V6_6-cdf-branch
+   from V6_6-cdf-root through V6_6-cdf-merge-1
+
+09/15/04 V6_6-cdf-merge-1
+   The state of the V6_6-cdf-branch before it was merged into
+   V6_7-branch and then abandoned.
+
+08/27/04 multiple-collectors-pre-checkin
+   A tag to mark the state of 6.7 branch before ckrieyev's changes to
+   allow multiple collectors were checked in
+
+08/09/04 V6_7-post_merge-V6_6-merge-20
+   The end of a merge of V6_6-branch into V6_7-branch.
+
+08/09/04 V6_6-merge-20
+   The state of the V6_6-branch for yet another merge into
+   V6_7-branch.  This merges includes: mission-critical bug fix to
+   ReliSock::get_file(), the header file purge, Kent's dagman fixes to
+   check log events, and a few other minor things.  This will
+   hopefully be the last merge before the 6.7.1 code freeze.
+
+08/09/04 V6_7-pre_merge-V6_6-merge-20
+   The beginning of a merge of V6_6-branch into V6_7-branch.
+
+08/04/04 V6_7-post_merge-V6_7-tdp_2-no_tracing-merge-1
+   The end of the merge of the V6_7-tdp_2-no_tracing-branch
+
+08/04/04 V6_7-tdp_2-no_tracing-merge-1
+   The state of the V6_7-tdp_2-no_tracing-branch for it's first (and
+   only) merge into the V6_7-branch.  This is the first time the TDP
+   functionality will be merged into the main-line Condor source.
+
+08/04/04 V6_7-pre_merge-V6_7-tdp_2-no_tracing-merge-1
+   The beginning of the merge of the V6_7-tdp_2-no_tracing-branch into
+   the V6_7-branch.
+
+08/02/04 V6_7-post_merge-V6_6-merge-19
+   The end of a merge of V6_6-branch into V6_7-branch.
+
+08/02/04 V6_6-merge-19
+   The state of the V6_6-branch for yet another merge into
+   V6_7-branch.  This merges the fixes to ad_printmask.C for condor_q
+   and condor_status -format bugs regarding boolean attributes. 
+
+08/02/04 V6_7-pre_merge-V6_6-merge-19
+   The beginning of a merge of V6_6-branch into V6_7-branch.
+
+07/27/04 V6_7-condorc-3-branch
+   A new branch off of V6_7-branch created from the V6_7-condorc-3-root
+   tag. This is the 3rd generation of the V6_7-condorc-branch. The
+   V6_7-branch has infn_batch code and links with globus 2.4.*, both of
+   which we now want on the condorc branch.
+
+07/27/04 V6_6_6
+   The official 6.6.6 release tag (at long last!).  this lives on
+   V6_6_ALL and V6_6_6_EXT 
+
+11/11/05 V6_7-condorc-3-merge-1
+   Terminating V6_7-condorc-3-branch, merging into V6_7-branch.
+   This is the merge-from tag on V6_7-condorc-3-branch.
+
+07/27/04 V6_7-condorc-3-post_merge-V6_7-condorc-2-merge-1
+   The end of a merge of V6_7-condorc-2-branch into
+   V6_7-condorc-3-branch.
+
+07/27/04 V6_7-condorc-3-pre_merge-V6_7-condorc-2-merge-1
+   The beginning of a merge of V6_7-condorc-2-branch into
+   V6_7-condorc-3-branch.
+
+07/27/04 V6_7-condorc-2-merge-1
+   The state of the V6_7-condorc-2-branch when merged into
+   V6_7-condorc-3-branch.
+
+05/12/04 V6_7-condorc-merge-1
+   The state of the V6_7-condorc-branch when merged into
+   V6_7-condorc-2-branch.
+
+05/12/04 V6_7-condorc-2-post_merge-V6_7-condorc-merge-1
+   The state of the V6_7-condorc-2-branch after merging in the
+   V6_7-condorc-branch as tagged at V6_7-condorc-merge-1.
+
+05/12/04 V6_7-condorc-2-pre_merge-V6_7-condorc-merge-1
+   The state of the V6_7-condorc-2-branch before merging in the
+   V6_7-condorc-branch as tagged at V6_7-condorc-merge-1.
+
+07/27/04 V6_7-post_merge-V6_6-merge-18
+   The end of a merge of V6_6-branch into V6_7-branch.
+
+07/27/04 V6_6-merge-18
+   The state of the V6_6-branch for yet another merge into
+   V6_7-branch.  This merges the Directory object bug dealing with
+   removing as PRIV_USER, which the schedd does w/ Condor-G.
+
+07/27/04 V6_7-pre_merge-V6_6-merge-18
+   The beginning of a merge of V6_6-branch into V6_7-branch.
+
+07/26/04 V6_7-post_merge-V6_6-merge-17
+   The end of a merge of V6_6-branch into V6_7-branch.
+
+07/26/04 V6_6-merge-17
+   The state of the V6_6-branch for yet another merge into
+   V6_7-branch.  This gets the bug fixes in the startd when it
+   fails to exec() the starter so that it doesn't seg fault.
+
+07/26/04 V6_7-pre_merge-V6_6-merge-17
+   The beginning of a merge of V6_6-branch into V6_7-branch.
+
+07/23/04 V6_7-post_merge-V6_6-merge-16
+   The end of a merge of V6_6-branch into V6_7-branch.
+
+07/23/04 V6_6-merge-16
+   The state of the V6_6-branch for yet another merge into
+   V6_7-branch.  This gets the major bug fixes for the sandbox cleanup
+   code for 6.6.6 that i had to do since merge-15.  a few other minor
+   improvements like the fix to configure to find vendor compilers.
+
+07/23/04 V6_7-pre_merge-V6_6-merge-16
+   The beginning of a merge of V6_6-branch into V6_7-branch.
+
+07/18/04 V6_7-post_merge-V6_6-merge-15
+   The end of the merge of V6_6-branch into V6_7-branch.
+
+07/18/04 V6_6-merge-15
+   The state of the V6_6-branch for yet another merge into
+   V6_7-branch.  This should basically be the last of the 6.6.6
+   release candidate bug fixes, along with some test suite
+   improvements.  Also includes the "nmi_glue" directory in addition
+   to everything in V6_6_CODE.
+
+07/18/04 V6_7-pre_merge-V6_6-merge-15
+   The beginning of the merge of V6_6-branch into V6_7-branch.
+
+07/15/04 V6_7-post_merge-V6_7-infn_batch-merge-1
+   The state of the V6_7-branch just after merging V6_7-infn_batch-branch
+   into it as tagged at V6_7-infn_batch-merge-1.
+
+07/15/04 V6_7-pre_merge-V6_7-infn_batch-merge-1
+   The state of the V6_7-branch just before merging V6_7-infn_batch-branch
+   into it as tagged at V6_7-infn_batch-merge-1.
+
+07/09/04 V6_7-infn_batch-merge-1
+   The state of the V6_7-infn_batch-branch when merged into V6_7-branch 
+   and then abandoned.
+
+06/16/04 V6_7-post_merge-V6_6-merge-14
+	The end of the merge of V6_6-branch into V6_7-branch
+
+06/16/04 V6_7-pre_merge-V6_6-merge-14
+	The beginning of the merge of V6_6-branch into V6_7-branch
+
+06/16/04 V6_6-merge-14
+	The state of the V6_6-branch for yet another exciting merge into 
+V6_7-branch.
+
+06/15/04 V6_7-post_merge-V6_7-credd-merge-1
+	The end of the merge of V6_7-credd-branch into V6_7-branch
+
+06/15/04 V6_7-pre_merge-V6_7-credd-merge-1
+	The begining of the merge of V6_7-credd-branch into V6_7-branch
+
+06/15/04 V6_7-credd-merge-1
+	A new tag for merging V6_7-credd-branch into V6_7-branch
+
+06/03/04 V6_6-post_merge-V6_6-imake-merge-1
+	The state of the V6_6-brach After I had merged in the V6_6-imake-branch
+	at V6_6-imake-merge-1.
+
+06/03/04 V6_6-pre_merge-V6_6-imake-merge-1
+	The state of the V6_6-branch just before I merged V6_6-imake-branch
+	into it for the first time. This redoes the imake system to be more
+	compliant and easier to use.
+
+06/2/04 V6_6-imake-merge-1
+	The state of the V6_6-imake-branch before a merge into the V6_6-branch.
+	Contains the imake fixes to enable functioning on gcc 3.3.
+
+05/27/04 V6_7-soap-2-branch
+   A new branch off of V6_7-branch created from the V6_7-soap-2-root
+   tag.  This is the 2nd generation of the V6_7-soap-branch.  The
+   V6_7-branch now has LoS support and a number of other improvements
+   since the V6_7-soap-root tag.
+
+05/27/04 V6_7-soap-2-post_merge-V6_7-soap
+   The state of the V6_7-soap-2-branch after merging in the 
+   V6_7-soap-branch as tagged at V6_7-soap-merge-1.
+
+05/27/04 V6_7-soap-2-pre_merge-V6_7-soap
+   The state of the V6_7-soap-2-branch before merging in the 
+   V6_7-soap-branch as tagged at V6_7-soap-merge-1.
+
+5/27/04 V6_7-soap-merge-1
+    The state of the V6_7-soap-branch when it was merged into
+    V6_7-soap-2-branch and then abandoned.   
+
+05/26/04 V6_7-credd-branch
+	A new branch for the new Condor daemon - condor_credd. Created from 
+V6_7-credd-root. By ckireyev.
+
+05/25/04 V6_7-infn_batch-branch
+   A new branch off V6_7-branch for collaborative work with INFN to
+   add support for submitting jobs to a local batch system. Created
+   from V6_7-infn_batch-root.
+
+05/25/04 V6_7-gcb-branch
+   A new branch off V6_7 for adding support for GCB (Generic
+   Connection Broker) which will enable Condor to play nicely with
+   firewalls, private nets, etc.  Created from V6_7-gcb-root.  Does
+   *not* include doc.
+
+05/20/04 V6_7-Technion_ha-root & V6_7-Technion_ha-branch
+   The root & branch tags for Technion High Availability work.
+
+05/18/04 V6_7-post_merge-V6_6-merge-13
+   The state of the V6_7-branch after merging in the V6_6-branch as
+   tagged at V6_6-merge-13.
+
+05/18/04 V6_7-pre_merge-V6_6-merge-13
+   The state of the V6_7-branch before merging in the V6_6-branch as
+   tagged at V6_6-merge-13.
+
+05/18/04 V6_6-merge-13
+   The state of the V6_6-branch for yet another merge into
+   V6_7-branch.  fixes getExecPath() on windoze which was breaking the 
+   builds.
+
+05/17/04 V6_6-imake-branch
+	This is a branch made from the V6_6-imake-root tag on the V6_6-branch.
+	I am using it to test my imake build system changes in NMI before I merge
+	it back into V6_6-branch.
+
+05/17/04 V6_6-imake-root
+	The state of the V6_6-branch for an upcomming V6_6-imake-branch to
+	be made where I'm flushing out the bugs in a rewrite of the Imakefile
+	rules.
+
+05/17/04 V6_7-post_merge-V6_6-merge-12
+   The state of the V6_7-branch after merging in the V6_6-branch as
+   tagged at V6_6-merge-12.
+
+05/17/04 V6_7-pre_merge-V6_6-merge-12
+   The state of the V6_7-branch before merging in the V6_6-branch as
+   tagged at V6_6-merge-12.
+
+05/16/04 V6_6-merge-12
+   The state of the V6_6-branch for yet another merge into
+   V6_7-branch.  fixes getExecPath() on OSX which was breaking the
+   builds. 
+
+05/14/04 V6_7-post_merge-V6_6-merge-11
+   The state of the V6_7-branch after merging in the V6_6-branch as
+   tagged at V6_6-merge-11.
+
+05/14/04 V6_7-pre_merge-V6_6-merge-11
+   The state of the V6_7-branch before merging in the V6_6-branch as
+   tagged at V6_6-merge-11.
+
+05/14/04 V6_6-merge-11
+   The state of the V6_6-branch for yet another merge into
+   V6_7-branch.  Lots of random fixes, especially the schedd fix for
+   abortJob() that was causing conflicts for the SOAP-branch.
+
+05/14/04 V6_7-mirror-2-CORE_snapshot4
+   The state of the V6_7-mirror-2-branch for another snapshot release
+   given to CORE. This includes a memory leak fix to the schedd.
+   The version string in this release looks like this:
+   $CondorVersion: 6.7.0 Mar 1 2004 MIRROR-2-BRANCH CORE_snapshot4 $
+
+05/12/04 V6_6_5_NMI
+   This is the tag for NMI_R5 condor. It is identical to Condor 6.6.5, 
+   except it knows how to build the gahp server properly on AIX 5.1
 
 5/12/04 V6_7-merge-1
   The state of the V6_7 branch before merging to the trunk.
   It will be merged to trunk-merge-V6_7-branch-1.
-
-
-
-4/12/04 trunk-merge-V6_7-branch-1
-5/12/04 trunk-merge-V6_7-branch-1
-   A branch created off the trunk for the purpose of merging V6_7
-   branch to the trunk.  We will merge from the V6_6_ROOT tag to 
-   V6_7-merge-1.
 
 05/11/04 V6_7-unicore-2-branch
    A new branch off of V6_7-branch created from the V6_7-unicore-2-root
@@ -63,6 +1489,18 @@
    and parsing to/from new classad native format that we now want on the
    unicore branch.
 
+05/12/04 V6_7-unicore-2-post_merge-V6_7-unicore-merge-1
+   The state of the V6_7-unicore-2-branch after merging in the
+   V6_7-unicore-branch as tagged at V6_7-unicore-merge-1.
+
+05/12/04 V6_7-unicore-2-pre_merge-V6_7-unicore-merge-1
+   The state of the V6_7-unicore-2-branch before merging in the
+   V6_7-unicore-branch as tagged at V6_7-unicore-merge-1.
+
+05/12/04 V6_7-unicore-merge-1
+   The state of the V6_7-unicore-branch when merged into the
+   V6_7-unicore-2-branch.
+
 05/11/04 V6_7-condorc-2-branch
    A new branch off of V6_7-branch created from the V6_7-condorc-2-root
    tag. This is the 2nd generation of the V6_7-condorc2-branch. The
@@ -70,11 +1508,23 @@
    and parsing to/from new classad native format that we now want on the
    condorc branch.
 
-04/29/04 V6_7-soap-2-branch
-   A new branch off of V6_7-branch created from the V6_7-soap-2-root
-   tag.  This is the 2nd generation of the V6_7-soap-branch.  The
-   V6_7-branch now has LoS support and a number of other improvements
-   since the V6_7-soap-root tag.
+05/07/04 V6_7-mirror-2-CORE_snapshot3
+   The state of the V6_7-mirror-2-branch for another snapshot release
+   given to CORE. This includes a fix to the accountant code so that
+   they can specify user priorities before any jobs are run.
+   The version string in this release looks like this:
+   $CondorVersion: 6.7.0 Mar 1 2004 MIRROR-2-BRANCH CORE_snapshot3 $
+
+05/04/04 V6_6_5_WINDOWS
+   The is the 6.6.5 release tag for windoze.  The version string was:
+   "$CondorVersion: 6.6.5 May  4 2004 $"
+
+05/03/04 V6_6_5
+   The is the 6.6.5 release tag for all platforms except windoze.  The
+   version string was: "$CondorVersion: 6.6.5 May  3 2004 $"
+
+04/30/04 V6_6-vdt_globus
+   Changing the globus external to be 2.4.3 + VDT patches from 1.1.14
 
 04/28/04 V6_7_0
   The 6.7.0 release, which lives on the V6_7-branch
@@ -283,18 +1733,6 @@
    ID.  IRIX was built manually due to various evil things.  
    The version string for all platforms (except IRIX and maybe 
    windows) is: "$CondorVersion: 6.6.1 Feb 5 2003 $"
-
-2/10/04 trunk-post-merge-t-m-V6_5-b-1-m-1
-	The state of the trunk after merging in the trunk-merge-V6_5-branch-1
-	as tagged at trunk-merge-V6_5-branch-1-merge-1.
-
-2/10/04 trunk-pre-merge-t-m-V6_5-b-1-m-1
-	The state of the trunk before merging in the trunk-merge-V6_5-branch-1
-	as tagged at trunk-merge-V6_5-branch-1-merge-1.
-
-2/10/04 trunk-merge-V6_5-branch-1-merge-1
-   The state of the trunk-merge-V6_5-branch-1 before merging back to
-   the trunk.
 
 02/02/04 V6_7-mirror-2-CORE_snapshot1
    The state of the V6_7-mirror-2-branch for the first snapshot
@@ -1459,11 +2897,6 @@
         V6_2 branch state (just prior to 6.1.17, so not quite worthy
         of the V6_1_17 tag) for merging into V6_3 branch
 
-9/14/00 trunk-pre-merge-V6_3-post-merge-V6_1_16
-	The state of the trunk before merging in the V6_3-branch where
-	it stood after merging in V6_1_16 from the V6_2-branch.
-	(confused yet?) :) 
-
 9/14/00 V6_3-post-merge-V6_1_16
         The state of the V6_3-branch after merging in the V6_2-branch
         as tagged at V6_1_16.
@@ -1485,14 +2918,6 @@
 8/22/00 V6_1_15
         6.1.15 release tag, which lives on the V6_2-branch.
 
-7/7/00 trunk-pre-merge-V6_1-NewAds-3-branch-merge-1
-	The state of the trunk before merging in the NewAds-3-branch.
-
-7/7/00 V6_1-NewAds-3-branch-merge-1
-	This is the NewAds-3-branch, at the time it was about to be
-	merged into the 6.5 trunk.  This should be the end of the road
-	for the NewAds branches, since now, the trunk will be NewAds. 
-
 7/6/00 V6_3-branch
         The branch for all of Condor version 6.3.X (and, probably,
         6.4.X).  Changes made on the V6_2-branch should always be
@@ -1501,13 +2926,6 @@
         features, Globus universe stuff, Condor-G, Personal Condor
         stuff, etc.  It should *NOT* contain new classads, new schedd,
         etc, etc. 
-
-	Note: when merging V6_3-branch condor_netman directory into
-	the trunk, please make sure CVS takes the V6_3-branch version
-	of the code instead of the trunk version.  Jim Basney added
-	the condor_netman directory to both the V6_3-branch and the
-	trunk (by mistake) on 12/1/00.  The V6_3-branch version is the
-	authoritative one.
 
 7/6/00 V6_2-branch The branch for all of Condor version 6.2.X.  In
         addition, the last few 6.1.X releases (hopefully, just

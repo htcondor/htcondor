@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -24,6 +24,7 @@
 
 #include "condor_common.h"
 #include "mpiresource.h"
+#include "classad_helpers.h"
 
 MpiResource::MpiResource( BaseShadow *shadow ) :
 	RemoteResource( shadow ) 
@@ -33,10 +34,12 @@ MpiResource::MpiResource( BaseShadow *shadow ) :
 
 
 void 
-MpiResource::printExit( FILE *fp ) {
-
-	fprintf ( fp, "%25s    ", machineName ? machineName : "Unknown machine" );
-	RemoteResource::printExit( fp );
+MpiResource::printExit( FILE *fp )
+{
+	MyString line;
+	line.sprintf( "%25s    ", machineName ? machineName : "Unknown machine" );
+	printExitString( jobAd, exit_reason, line );
+	fprintf( fp, "%s\n", line.Value() );
 }
 
 
@@ -147,21 +150,21 @@ MpiResource::beginExecution( void )
 void
 MpiResource::reconnect( void )
 {
-	EXCEPT( "The MpiResource class does not support reconnect" ); 
+	RemoteResource::reconnect();
 }
 
 
 void
 MpiResource::attemptReconnect( void )
 {
-	EXCEPT( "The MpiResource class does not support reconnect" ); 
+	RemoteResource::attemptReconnect();
 }
 
 
 bool
 MpiResource::supportsReconnect( void )
 {
-	return false;
+	return RemoteResource::supportsReconnect();
 }
 
 

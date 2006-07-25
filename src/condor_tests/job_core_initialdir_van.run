@@ -1,0 +1,42 @@
+#! /usr/bin/env perl
+use CondorTest;
+
+$cmd = 'job_core_initialdir_van.cmd';
+$testname = 'condor_submit initialdir works - vanilla U';
+
+
+system("mkdir -p initd_van");
+
+#CondorTest::RegisterExitedSuccess( $testname, \&CondorTest::DefaultOutputTest );
+
+
+$ExitSuccess = sub 
+{
+	my %info = @_;
+
+	my $goal = "";
+	print "Looking for $goal\n";
+#	# Pull out requested environment values
+	my $logs   = $info{"log"};
+	print "Log is $logs\n";
+	my $initialdir = $info{"initialdir"};
+	print "initialdir is $initialdir\n";
+	$goal = "$initialdir" . "/" . "$logs";
+	if( ! -s $goal )
+	{
+		die "Initialdir does not contain user log\n";
+	}
+	# clean up
+	system("rm -rf initd_van");
+};
+
+
+CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
+
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+	print "$testname: SUCCESS\n";
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+

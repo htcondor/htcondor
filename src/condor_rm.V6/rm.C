@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -26,7 +26,6 @@
 #include "condor_debug.h"
 #include "condor_network.h"
 #include "condor_io.h"
-#include "alloc.h"
 #include "get_daemon_name.h"
 #include "internet.h"
 #include "condor_attributes.h"
@@ -43,6 +42,7 @@
 
 
 char	*MyName;
+char 	*actionReason = NULL;
 JobAction mode;
 bool All = false;
 bool had_error = false;
@@ -118,6 +118,14 @@ usage()
 	fprintf( stderr, "  -name schedd_name   Connect to the given schedd\n" );
 	fprintf( stderr, "  -pool hostname      Use the given central manager to find daemons\n" );
 	fprintf( stderr, "  -addr <ip:port>     Connect directly to the given \"sinful string\"\n" );
+	if( mode == JA_REMOVE_JOBS || mode == JA_REMOVE_X_JOBS ) {
+		fprintf( stderr, "  -reason reason      Use the given RemoveReason\n");
+	} else if( mode == JA_RELEASE_JOBS ) {
+		fprintf( stderr, "  -reason reason      Use the given ReleaseReason\n");
+	} else if( mode == JA_HOLD_JOBS ) {
+		fprintf( stderr, "  -reason reason      Use the given HoldReason\n");
+	}
+
 	if( mode == JA_REMOVE_JOBS || mode == JA_REMOVE_X_JOBS ) {
 		fprintf( stderr,
 				     "  -forcex             Force the immediate local removal of jobs in the X state\n"
@@ -257,6 +265,19 @@ main( int argc, char *argv[] )
                              "For example: <123.456.789.123:6789>\n" );
                     exit( 1 );
                 }
+			} else if (match_prefix(arg, "-reason")) {
+				argv++;
+				if( ! *argv ) {
+					fprintf( stderr, 
+							 "%s: -reason requires another argument\n", 
+							 MyName);
+					exit(1);
+				}		
+				actionReason = strdup(*argv);		
+				if( ! actionReason ) {
+					fprintf( stderr, "Out of memory!\n" );
+					exit(1);
+				}
             } else if (match_prefix(arg, "-forcex")) {
 				if( mode == JA_REMOVE_JOBS ) {
 					mode = JA_REMOVE_X_JOBS;
@@ -334,6 +355,26 @@ main( int argc, char *argv[] )
 			old_messages = true;
 		}
 		free( tmp );
+	}
+
+		// Pick the default reason if the user didn't specify one
+	if( actionReason == NULL ) {
+		switch( mode ) {
+		case JA_RELEASE_JOBS:
+			actionReason = "via condor_release";
+			break;
+		case JA_REMOVE_X_JOBS:
+			actionReason = "via condor_rm -forcex";
+			break;
+		case JA_REMOVE_JOBS:
+			actionReason = "via condor_rm";
+			break;
+		case JA_HOLD_JOBS:
+			actionReason = "via condor_hold";
+			break;
+		default:
+			actionReason = NULL;
+		}
 	}
 
 		// We're done parsing args, now make sure we know how to
@@ -424,10 +465,10 @@ doWorkByConstraint( const char* constraint, CondorError * errstack )
 	bool rval = true;
 	switch( mode ) {
 	case JA_RELEASE_JOBS:
-		ad = schedd->releaseJobs( constraint, "via condor_release", errstack );
+		ad = schedd->releaseJobs( constraint, actionReason, errstack );
 		break;
 	case JA_REMOVE_X_JOBS:
-		ad = schedd->removeXJobs( constraint, "via condor_rm -forceX",
+		ad = schedd->removeXJobs( constraint, actionReason,
 								  errstack );
 		break;
 	case JA_VACATE_JOBS:
@@ -437,10 +478,10 @@ doWorkByConstraint( const char* constraint, CondorError * errstack )
 		ad = schedd->vacateJobs( constraint, VACATE_FAST, errstack );
 		break;
 	case JA_REMOVE_JOBS:
-		ad = schedd->removeJobs( constraint, "via condor_rm", errstack );
+		ad = schedd->removeJobs( constraint, actionReason, errstack );
 		break;
 	case JA_HOLD_JOBS:
-		ad = schedd->holdJobs( constraint, "via condor_hold", errstack );
+		ad = schedd->holdJobs( constraint, actionReason, errstack );
 		break;
 	default:
 		EXCEPT( "impossible: unknown mode in doWorkByConstraint" );
@@ -465,10 +506,10 @@ doWorkByList( StringList* ids, CondorError *errstack )
 	ClassAd* rval;
 	switch( mode ) {
 	case JA_RELEASE_JOBS:
-		rval = schedd->releaseJobs( ids, "via condor_release", errstack );
+		rval = schedd->releaseJobs( ids, actionReason, errstack );
 		break;
 	case JA_REMOVE_X_JOBS:
-		rval = schedd->removeXJobs( ids, "via condor_rm -forcex", errstack );
+		rval = schedd->removeXJobs( ids, actionReason, errstack );
 		break;
 	case JA_VACATE_JOBS:
 		rval = schedd->vacateJobs( ids, VACATE_GRACEFUL, errstack );
@@ -477,10 +518,10 @@ doWorkByList( StringList* ids, CondorError *errstack )
 		rval = schedd->vacateJobs( ids, VACATE_FAST, errstack );
 		break;
 	case JA_REMOVE_JOBS:
-		rval = schedd->removeJobs( ids, "via condor_rm", errstack );
+		rval = schedd->removeJobs( ids, actionReason, errstack );
 		break;
 	case JA_HOLD_JOBS:
-		rval = schedd->holdJobs( ids, "via condor_hold", errstack );
+		rval = schedd->holdJobs( ids, actionReason, errstack );
 		break;
 	default:
 		EXCEPT( "impossible: unknown mode in doWorkByList" );
@@ -503,7 +544,7 @@ procArg(const char* arg)
 	int		c, p;								// cluster/proc #
 	char*	tmp;
 
-	char constraint[ATTRLIST_MAX_EXPRESSION];
+	MyString constraint;
 
 	if(isdigit(*arg))
 	// process by cluster/proc #
@@ -519,8 +560,8 @@ procArg(const char* arg)
 		// delete the cluster
 		{
 			CondorError errstack;
-			sprintf( constraint, "%s == %d", ATTR_CLUSTER_ID, c );
-			if( doWorkByConstraint(constraint, &errstack) ) {
+			constraint.sprintf( "%s == %d", ATTR_CLUSTER_ID, c );
+			if( doWorkByConstraint(constraint.Value(), &errstack) ) {
 				fprintf( old_messages ? stderr : stdout, 
 						 "Cluster %d %s.\n", c,
 						 (mode == JA_REMOVE_JOBS) ?
@@ -562,8 +603,8 @@ procArg(const char* arg)
 	// process by user name
 	{
 		CondorError errstack;
-		sprintf( constraint, "%s == \"%s\"", ATTR_OWNER, arg );
-		if( doWorkByConstraint(constraint, &errstack) ) {
+		constraint.sprintf("%s == \"%s\"", ATTR_OWNER, arg );
+		if( doWorkByConstraint(constraint.Value(), &errstack) ) {
 			fprintf( stdout, "User %s's job(s) %s.\n", arg,
 					 (mode == JA_REMOVE_JOBS) ?
 					 "have been marked for removal" :

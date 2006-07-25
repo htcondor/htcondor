@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -38,7 +38,7 @@
 #include <sys/pstat.h>
 #endif
 
-#ifdef Darwin
+#if defined(Darwin) || defined(CONDOR_FREEBSD)
 #include <sys/sysctl.h>
 #endif
 
@@ -85,7 +85,7 @@ sysapi_ncpus_raw(void)
 	FILE        *proc;
 	char 		buf[256];
 	char		*tmp;
-#if defined(I386) || defined(IA64)
+#if defined(I386) || defined(IA64) || defined(X86_64)
 	int             siblings = 0;
 #endif
 	int 		num_cpus = 0;
@@ -139,7 +139,7 @@ bogomips        : 299.01
 
 	// Count how many lines begin with the string "processor".
 	while( fgets( buf, 256, proc) ) {
-#if defined(I386) || defined(IA64)
+#if defined(I386) || defined(IA64) || defined(X86_64)
 	    // For hyperthreads we assume processor will appear before 
 	    // sibling.  If that fails we're screwed.
 	    if( !strincmp(buf, "processor", 9) ) {
@@ -168,6 +168,10 @@ bogomips        : 299.01
 				num_cpus = 1;
 			}
 		}
+#elif defined(CONDOR_PPC)
+                if( !strincmp(buf, "cpu", 3) ) {
+                        num_cpus++;
+                }
 #else
 #error YOU MUST CHECK THE FORMAT OF /proc/cpuinfo TO FIND N-CPUS CORRECTLY
 #endif
@@ -181,10 +185,10 @@ bogomips        : 299.01
 #elif defined(AIX)
 	sysapi_internal_reconfig();
 	return sysconf(_SC_NPROCESSORS_ONLN);
-#elif defined(Darwin)
-	sysapi_internal_reconfig();
+#elif defined(Darwin) || defined(CONDOR_FREEBSD)
 	int mib[2], maxproc;
 	size_t len;
+	sysapi_internal_reconfig();
 	mib[0] = CTL_HW;
 	mib[1] = HW_NCPU;
 	len = sizeof(maxproc);
@@ -199,11 +203,17 @@ bogomips        : 299.01
 int
 sysapi_ncpus(void)
 {	
+	int detected_cpus;
 	sysapi_internal_reconfig();
 	if( _sysapi_ncpus ) {
 		return _sysapi_ncpus;
 	} else {
-		return sysapi_ncpus_raw();
+		detected_cpus = sysapi_ncpus_raw();
+		if(_sysapi_max_ncpus && (detected_cpus > _sysapi_max_ncpus)) {
+			return _sysapi_max_ncpus;
+		} else {
+			return detected_cpus;
+		}
 	}
 }
 

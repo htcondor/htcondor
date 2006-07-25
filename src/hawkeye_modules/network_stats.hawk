@@ -6,9 +6,10 @@ Description:
 Monitors the status of the systems network interfaces
 
 Default: net
-options: kill
 period: 10m
 prefix: net_
+mode: periodic
+kill: true
 
 # It's parameters
 # None

@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -32,6 +32,7 @@
 #include "condor_version.h"
 #include "condor_ver_info.h"
 #include "enum_utils.h"
+#include "condor_holdcodes.h"
 
 
 // these are declared static in baseshadow.h; allocate space here
@@ -42,6 +43,11 @@ BaseShadow* BaseShadow::myshadow_ptr = NULL;
 // this appears at the bottom of this file:
 extern "C" int display_dprintf_header(FILE *fp);
 
+// some helper functions
+int getJobAdExitCode(ClassAd *jad, int &exit_code);
+int getJobAdExitedBySignal(ClassAd *jad, int &exited_by_signal);
+int getJobAdExitSignal(ClassAd *jad, int &exit_signal);
+
 BaseShadow::BaseShadow() {
 	spool = NULL;
 	fsDomain = uidDomain = NULL;
@@ -51,19 +57,13 @@ BaseShadow::BaseShadow() {
 	remove_requested = false;
 	cluster = proc = -1;
 	gjid = NULL;
-	q_update_tid = -1;
 	owner[0] = '\0';
 	iwd[0] = '\0';
 	core_file_name = NULL;
 	scheddAddr = NULL;
+	job_updater = NULL;
 	ASSERT( !myshadow_ptr );	// make cetain we're only instantiated once
 	myshadow_ptr = this;
-	common_job_queue_attrs = NULL;
-	hold_job_queue_attrs = NULL;
-	evict_job_queue_attrs = NULL;
-	remove_job_queue_attrs = NULL;
-	requeue_job_queue_attrs = NULL;
-	terminate_job_queue_attrs = NULL;
 	exception_already_logged = false;
 }
 
@@ -74,17 +74,14 @@ BaseShadow::~BaseShadow() {
 	if (jobAd) FreeJobAd(jobAd);
 	if (gjid) free(gjid); 
 	if (scheddAddr) free(scheddAddr);
-	if( common_job_queue_attrs ) { delete common_job_queue_attrs; }
-	if( hold_job_queue_attrs ) { delete hold_job_queue_attrs; }
-	if( evict_job_queue_attrs ) { delete evict_job_queue_attrs; }
-	if( remove_job_queue_attrs ) { delete remove_job_queue_attrs; }
-	if( requeue_job_queue_attrs ) { delete requeue_job_queue_attrs; }
-	if( terminate_job_queue_attrs ) { delete terminate_job_queue_attrs; }
+	if( job_updater ) delete job_updater;
 }
 
 void
 BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr )
 {
+	int pending = FALSE;
+
 	if( ! job_ad ) {
 		EXCEPT("baseInit() called with NULL job_ad!");
 	}
@@ -106,6 +103,7 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr )
 	if( !jobAd->LookupInteger(ATTR_PROC_ID, proc)) {
 		EXCEPT("Job ad doesn't contain an %s attribute.", ATTR_PROC_ID);
 	}
+
 
 		// Grab the GlobalJobId if we've got it.
 	if( ! jobAd->LookupString(ATTR_GLOBAL_JOB_ID, &gjid) ) {
@@ -148,8 +146,6 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr )
 	
 	config();
 
-	initJobQueueAttrLists();
-
 	initUserLog();
 
 		// Make sure we've got enough swap space to run
@@ -170,26 +166,40 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr )
 	set_user_priv();
 	daemonCore->Register_Priv_State( PRIV_USER );
 
-		// change directory, send mail if failure:
-	if ( cdToIwd() == -1 ) {
-		EXCEPT("Could not cd to initial working directory");
-	}
-
 	dumpClassad( "BaseShadow::baseInit()", this->jobAd, D_JOB );
 
 		// initialize the UserPolicy object
 	shadow_user_policy.init( jobAd, this );
 
-		// finally, clear all the dirty bits on this jobAd, so we only
-		// update the queue with things that have changed after this
-		// point. 
-	jobAd->ClearAllDirtyFlags();
+		// setup an object to keep our job ad updated to the schedd's
+		// permanent job queue.  this clears all the dirty bits on our
+		// copy of the classad, so anything we touch after this will
+		// be updated to the schedd when appropriate.
+	job_updater = new QmgrJobUpdater( jobAd, scheddAddr );
+
+		// change directory; hold on failure
+	if ( cdToIwd() == -1 ) {
+		EXCEPT("Could not cd to initial working directory");
+	}
 
 		// CRUFT
 		// we want this *after* we clear the dirty flags so that if we
 		// change anything, we consider that change dirty so it'll get
 		// updated the next time we connect to the job queue...
 	checkFileTransferCruft();
+
+		// check to see if this invocation of the shadow is just to write
+		// a terminate event and exit since this job had been recorded as
+		// pending termination, but somehow the job didn't leave the queue
+		// and the schedd is trying to restart it again..
+	if( jobAd->LookupInteger(ATTR_TERMINATION_PENDING, pending)) {
+		if (pending == TRUE) {
+			// If the classad of this job "thinks" that this job should be
+			// finished already, let's enact that belief.
+			// This function does not return.
+			this->terminateJob(US_TERMINATE_PENDING);
+		}
+	}
 }
 
 
@@ -262,7 +272,7 @@ BaseShadow::checkFileTransferCruft()
 
 		// also, add it to the list of attributes we want to update,
 		// so we change it in the job queue, too.
-	common_job_queue_attrs->insert( ATTR_TRANSFER_FILES );
+	job_updater->watchAttribute( ATTR_TRANSFER_FILES );
 
 #endif /* ! WIN32 */
 
@@ -339,73 +349,17 @@ void BaseShadow::config()
 }
 
 
-void
-BaseShadow::initJobQueueAttrLists( void )
-{
-	if( hold_job_queue_attrs ) { delete hold_job_queue_attrs; }
-	if( evict_job_queue_attrs ) { delete evict_job_queue_attrs; }
-	if( requeue_job_queue_attrs ) { delete requeue_job_queue_attrs; }
-	if( remove_job_queue_attrs ) { delete remove_job_queue_attrs; }
-	if( terminate_job_queue_attrs ) { delete terminate_job_queue_attrs; }
-	if( common_job_queue_attrs ) { delete common_job_queue_attrs; }
-
-	common_job_queue_attrs = new StringList();
-	common_job_queue_attrs->insert( ATTR_IMAGE_SIZE );
-	common_job_queue_attrs->insert( ATTR_DISK_USAGE );
-	common_job_queue_attrs->insert( ATTR_JOB_REMOTE_SYS_CPU );
-	common_job_queue_attrs->insert( ATTR_JOB_REMOTE_USER_CPU );
-	common_job_queue_attrs->insert( ATTR_TOTAL_SUSPENSIONS );
-	common_job_queue_attrs->insert( ATTR_CUMULATIVE_SUSPENSION_TIME );
-	common_job_queue_attrs->insert( ATTR_LAST_SUSPENSION_TIME );
-	common_job_queue_attrs->insert( ATTR_BYTES_SENT );
-	common_job_queue_attrs->insert( ATTR_BYTES_RECVD );
-	common_job_queue_attrs->insert( ATTR_LAST_JOB_LEASE_RENEWAL );
-
-	hold_job_queue_attrs = new StringList();
-	hold_job_queue_attrs->insert( ATTR_HOLD_REASON );
-
-	evict_job_queue_attrs = new StringList();
-	evict_job_queue_attrs->insert( ATTR_LAST_VACATE_TIME );
-
-	remove_job_queue_attrs = new StringList();
-	remove_job_queue_attrs->insert( ATTR_REMOVE_REASON );
-
-	requeue_job_queue_attrs = new StringList();
-	requeue_job_queue_attrs->insert( ATTR_REQUEUE_REASON );
-
-	terminate_job_queue_attrs = new StringList();
-	terminate_job_queue_attrs->insert( ATTR_EXIT_REASON );
-	terminate_job_queue_attrs->insert( ATTR_JOB_EXIT_STATUS );
-	terminate_job_queue_attrs->insert( ATTR_JOB_CORE_DUMPED );
-	terminate_job_queue_attrs->insert( ATTR_ON_EXIT_BY_SIGNAL );
-	terminate_job_queue_attrs->insert( ATTR_ON_EXIT_SIGNAL );
-	terminate_job_queue_attrs->insert( ATTR_ON_EXIT_CODE );
-	terminate_job_queue_attrs->insert( ATTR_EXCEPTION_HIERARCHY );
-	terminate_job_queue_attrs->insert( ATTR_EXCEPTION_TYPE );
-	terminate_job_queue_attrs->insert( ATTR_EXCEPTION_NAME );
-}
-
-
 int BaseShadow::cdToIwd() {
 	if (chdir(iwd) < 0) {
+		int chdir_errno = errno;
 		dprintf(D_ALWAYS, "\n\nPath does not exist.\n"
 				"He who travels without bounds\n"
 				"Can't locate data.\n\n" );
-		dprintf( D_ALWAYS, "(Can't chdir to %s)\n", iwd);
-		char *buf = new char [strlen(iwd)+20];
-		sprintf(buf, "Can't access \"%s\".", iwd);
-		FILE *mailer = NULL;
-		if ( (mailer=emailUser(buf)) ) {
-			fprintf(mailer,"Your job %d.%d specified an initial working\n",
-				getCluster(),getProc());
-			fprintf(mailer,"directory of %s.\nThis directory currently does\n",
-				iwd);
-			fprintf(mailer,"not exist.  If this directory is on a shared\n"
-				"filesystem, this could be just a temporary problem.  Thus\n"
-				"I will try again later\n");
-			email_close(mailer);
-		}
-		delete buf;
+		MyString hold_reason;
+		hold_reason.sprintf("Cannot access initial working directory %s: %s",
+		                    iwd, strerror(chdir_errno));
+		dprintf( D_ALWAYS, "%s\n",hold_reason.Value());
+		holdJob(hold_reason.Value(),CONDOR_HOLD_CODE_IwdError,chdir_errno);
 		return -1;
 	}
 	return 0;
@@ -470,10 +424,10 @@ BaseShadow::reconnectFailed( const char* reason )
 
 
 void
-BaseShadow::holdJob( const char* reason )
+BaseShadow::holdJob( const char* reason, int hold_reason_code, int hold_reason_subcode )
 {
-	dprintf( D_ALWAYS, "Job %d.%d going into Hold state: %s\n", 
-			 getCluster(), getProc(), reason );
+	dprintf( D_ALWAYS, "Job %d.%d going into Hold state (code %d,%d): %s\n", 
+			 getCluster(), getProc(), hold_reason_code, hold_reason_subcode,reason );
 
 	if( ! jobAd ) {
 		dprintf( D_ALWAYS, "In HoldJob() w/ NULL JobAd!" );
@@ -484,14 +438,9 @@ BaseShadow::holdJob( const char* reason )
 	cleanUp();
 
 		// Put the reason in our job ad.
-	int size = strlen( reason ) + strlen( ATTR_HOLD_REASON ) + 4;
-	char* buf = (char*)malloc( size * sizeof(char) );
-	if( ! buf ) {
-		EXCEPT( "Out of memory!" );
-	}
-	sprintf( buf, "%s=\"%s\"", ATTR_HOLD_REASON, reason );
-	jobAd->Insert( buf );
-	free( buf );
+	jobAd->Assign( ATTR_HOLD_REASON, reason );
+	jobAd->Assign( ATTR_HOLD_REASON_CODE, hold_reason_code );
+	jobAd->Assign( ATTR_HOLD_REASON_SUBCODE, hold_reason_subcode );
 
 		// try to send email (if the user wants it)
 	emailHoldEvent( reason );
@@ -543,156 +492,117 @@ BaseShadow::removeJob( const char* reason )
 	DC_Exit( JOB_SHOULD_REMOVE );
 }
 
-//Move output data from intermediate files to user-specified locations.
-//This happens in "transfer file" mode when the stdout or stderr
-//files specified by the user contain path information.
 void
-BaseShadow::moveOutputFiles( void )
+BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_NORMAL
 {
-    char* orig_output = NULL;
-    char* output = NULL;
-    char* orig_error = NULL;
-    char* error = NULL;
-    char* should_transfer_str = NULL;
-	ShouldTransferFiles_t should_transfer = STF_NO;
-	bool wants_verbose = true;
+	int reason;
+	bool signaled;
+	MyString str;
 
-		// if we're in transfer IF_NEEDED mode, we don't want verbose
-		// dprintfs from moveOutputFile(), since we expect it to fail
-		// if we didn't use file transfer in this run...
-	if( jobAd->LookupString(ATTR_SHOULD_TRANSFER_FILES, 
-							&should_transfer_str) ) { 
-		should_transfer = getShouldTransferFilesNum( should_transfer_str );
-		if( should_transfer == STF_IF_NEEDED ) {
-			wants_verbose = false;
-		}
-		free( should_transfer_str );
-	}
-
-    jobAd->LookupString( ATTR_JOB_OUTPUT, &output );
-    jobAd->LookupString( ATTR_JOB_ERROR, &error );
-    jobAd->LookupString( ATTR_JOB_OUTPUT_ORIG, &orig_output );
-    jobAd->LookupString( ATTR_JOB_ERROR_ORIG, &orig_error );
-
-    //First move stdout data.
-    if( orig_output && output ) {
-		moveOutputFile( output, orig_output, wants_verbose );
-	}
-
-    //Now move stderr data (unless it is the same file as stdout).
-    if( orig_error && error && strcmp(error,output) != 0 ) {
-		moveOutputFile( error, orig_error, wants_verbose );
-	}
-
-	if( output ) { 
-		free( output );
-	}
-	if( orig_output ) { 
-		free( orig_output );
-	}
-	if( error ) { 
-		free( error );
-	}
-	if( orig_error ) { 
-		free( orig_error );
-	}
-}
-
-
-void
-BaseShadow::moveOutputFile( const char* in, const char* out, bool verbose )
-{
-	int in_fd = -1, out_fd = -1;
-
-	in_fd = open(in,O_RDONLY);
-	if( in_fd == -1 ) {
-		if( verbose ) { 
-			dprintf( D_ALWAYS,
-					 "moveOutputFile: failed to read from '%s': %s\n",
-					 in, strerror(errno) );
-		}
-		return;
-	}
-
-	out_fd = open(out,O_WRONLY|O_CREAT|O_TRUNC);
-	if( out_fd == -1 ) {
-		if( verbose ) { 
-			dprintf( D_ALWAYS, "moveOutputFile: failed to write to "
-					 "'%s': %s\n", out, strerror(errno) );
-		}
-		close( in_fd );
-		return;
-	}
-	
-		// Copy the data, rather than just moving the files,
-		// because there are too many subtle problems with just
-		// doing rename().
-
-		// the rest of the errors in here mean we found the files and
-		// are trying to move the data but we still had a problem.  we
-		// want to see these messages even if we were called with
-		// verbose == false
-
-	char buf[100];
-	int n_in,n_out;
-	bool do_removal = true;
-	
-	while( (n_in = read(in_fd,buf,sizeof(buf))) > 0 ) {
-		n_out = write(out_fd,buf,n_in);
-		if( n_out != n_in ) {
-			dprintf( D_ALWAYS, "moveOutputFile: failed to write to "
-					 "'%s': %s\n", out, strerror(errno));
-			do_removal = false;
-		}
-	}
-
-	if( n_in == -1 ) {
-		dprintf( D_ALWAYS, "moveOutputFiles: failed to read '%s': "
-				 "%s\n", in, strerror(errno) );
-		do_removal = false;
-	}
-
-	close( in_fd );
-	close( out_fd );
-
-	if( do_removal && remove(in) == -1 ) {
-		dprintf( D_ALWAYS, "moveOutputFile: failed to remove '%s': "
-				 "%s\n", in, strerror(errno) );
-	}
-}
-
-
-void
-BaseShadow::terminateJob( void )
-{
 	if( ! jobAd ) {
 		dprintf( D_ALWAYS, "In terminateJob() w/ NULL JobAd!" );
 	}
 
-		// cleanup this shadow (kill starters, etc)
-	cleanUp();
-
-	int reason;
-	reason = getExitReason();
-
-	//move intermediate stdout/stderr if necessary
-	moveOutputFiles();
-
-		// email the user
-	emailTerminateEvent( reason );
-
-		// write stuff to user log:
-	logTerminateEvent( reason );
-
-		// update the job ad in the queue with some important final
-		// attributes so we know what happened to the job when using
-		// condor_history...
-	if( !updateJobInQueue(U_TERMINATE) ) {
-			// trouble!  TODO: should we do anything else?
-		dprintf( D_ALWAYS, "Failed to update job queue!\n" );
+	/* The first thing we do is record that we are in a termination pending
+		state. */
+	if (kind == US_NORMAL) {
+		str.sprintf("%s = TRUE", ATTR_TERMINATION_PENDING);
+		jobAd->Insert(str.Value());
 	}
 
-		// does not return.
+	if (kind == US_TERMINATE_PENDING) {
+		// In this case, the job had already completed once and the
+		// status had been saved to the job queue, however, for
+		// some reason, the shadow didn't exit with a good value and
+		// the job had been requeued. When this style of update
+		// is used, it is a shortcut from the very birth of the shadow
+		// to here, and so there will not be a remote resource or
+		// anything like that set up. In this situation, we just
+		// want to write the log event and mail the user and exit
+		// with a good exit code so the schedd removes the job from
+		// the queue. If for some reason the logging fails once again,
+		// the process continues to repeat. 
+		// This means at least once semantics for the termination event
+		// and user email, but at no time should the job actually execute
+		// again.
+
+		int exited_by_signal = FALSE;
+		int exit_signal = 0;
+		int exit_code = 0;
+
+		getJobAdExitedBySignal(jobAd, exited_by_signal);
+		if (exited_by_signal == TRUE) {
+			getJobAdExitSignal(jobAd, exit_signal);
+		} else {
+			getJobAdExitCode(jobAd, exit_code);
+		}
+
+		if (exited_by_signal == TRUE) {
+			reason = JOB_COREDUMPED;
+			str.sprintf("%s = \"%s\"", ATTR_JOB_CORE_FILENAME, core_file_name);
+			jobAd->Insert(str.Value());
+		} else {
+			reason = JOB_EXITED;
+		}
+
+		dprintf( D_ALWAYS, "Job %d.%d terminated: %s %d\n",
+	 		getCluster(), getProc(), 
+	 		exited_by_signal? "killed by signal" : "exited with status",
+	 		exited_by_signal ? exit_signal : exit_code );
+		
+			// write stuff to user log, but get values from jobad
+		logTerminateEvent( reason, kind );
+
+			// email the user, but get values from jobad
+		emailTerminateEvent( reason, kind );
+
+		DC_Exit( reason );
+	}
+
+	// the default path when kind == US_NORMAL
+
+	// cleanup this shadow (kill starters, etc)
+	cleanUp();
+
+	reason = getExitReason();
+	signaled = exitedBySignal();
+
+	/* also store the corefilename into the jobad so we can recover this 
+		during a termination pending scenario. */
+	if( reason == JOB_COREDUMPED ) {
+		str.sprintf("%s = \"%s\"", ATTR_JOB_CORE_FILENAME, getCoreName());
+		jobAd->Insert(str.Value());
+	}
+
+	// update the job ad in the queue with some important final
+	// attributes so we know what happened to the job when using
+	// condor_history...
+	if( !updateJobInQueue(U_TERMINATE) ) {
+		dprintf( D_ALWAYS, 
+			"Failed to perform final update to job queue! "
+			"Forcing job requeue!\n" );
+		DC_Exit(JOB_SHOULD_REQUEUE);
+	}
+
+	// Let's maximize the effectiveness of that queue synchronization and
+	// only record the job as done if the update to the queue was successful.
+	// If any of these next operations fail and the shadow exits with an
+	// exit code which causes the job to get requeued, it will be in the
+	// "terminate pending" state marked by the ATTR_TERMINATION_PENDING
+	// attribute.
+
+	dprintf( D_ALWAYS, "Job %d.%d terminated: %s %d\n",
+	 	getCluster(), getProc(), 
+	 	signaled ? "killed by signal" : "exited with status",
+	 	signaled ? exitSignal() : exitCode() );
+
+	// write stuff to user log:
+	logTerminateEvent( reason );
+
+	// email the user
+	emailTerminateEvent( reason );
+
+	// does not return.
 	DC_Exit( reason );
 }
 
@@ -774,55 +684,16 @@ BaseShadow::requeueJob( const char* reason )
 void
 BaseShadow::emailHoldEvent( const char* reason ) 
 {
-	char subject[256];
-	sprintf( subject, "Condor Job %d.%d put on hold\n", 
-			 getCluster(), getProc() ); 
-	emailActionEvent( "is being put on hold.", reason, subject );
+	Email mailer;
+	mailer.sendHold( jobAd, reason );
 }
 
 
 void
 BaseShadow::emailRemoveEvent( const char* reason ) 
 {
-	char subject[256];
-	sprintf( subject, "Condor Job %d.%d removed\n", 
-			 getCluster(), getProc() ); 
-	emailActionEvent( "is being removed.", reason, subject );
-}
-
-
-void
-BaseShadow::emailActionEvent( const char* action, const char* reason,
-							  const char* subject )
-{
-	FILE* mailer = emailUser( subject );
-	if( ! mailer ) {
-			// nothing to do
-		return;
-	}
-		// Grab a few things out of the job ad we need.
-	char* job_name = NULL;
-	jobAd->LookupString( ATTR_JOB_CMD, &job_name );
-	char* args = NULL;
-	jobAd->LookupString( ATTR_JOB_ARGUMENTS, &args );
-	
-	fprintf( mailer, "Your condor job " );
-		// Only print the args if we have both a name and args.
-		// However, we need to be careful not to leak memory if
-		// there's no job_name.
-	if( job_name ) {
-		fprintf( mailer, "%s ", job_name );
-		if( args ) {
-			fprintf( mailer, "%s ", args );
-		}
-		free( job_name );
-	}
-	if( args ) {
-		free( args );
-	}
-	fprintf( mailer, "\n%s\n\n", action );
-	fprintf( mailer, "%s", reason );
-	email_close(mailer);
+	Email mailer;
+	mailer.sendRemove( jobAd, reason );
 }
 
 
@@ -834,63 +705,6 @@ BaseShadow::emailUser( const char *subjectline )
 		return NULL;
 	}
 	return email_user_open( jobAd, subjectline );
-}
-
-
-FILE*
-BaseShadow::shutDownEmail( int reason ) 
-{
-
-		// everything else we do only makes sense if there is a JobAd, 
-		// so bail out now if there is no JobAd.
-	if ( !jobAd ) {
-		return NULL;
-	}
-
-	// send email if user requested it
-	int notification = NOTIFY_COMPLETE;	// default
-	jobAd->LookupInteger(ATTR_JOB_NOTIFICATION,notification);
-	int send_email = FALSE;
-	switch( notification ) {
-		case NOTIFY_NEVER:
-			break;
-		case NOTIFY_ALWAYS:
-			send_email = TRUE;
-			break;
-		case NOTIFY_COMPLETE:
-			if( (reason == JOB_EXITED) || (reason == JOB_COREDUMPED) ) {
-				send_email = TRUE;
-			}
-			break;
-		case NOTIFY_ERROR:
-				// only send email if the was killed by a signal
-				// and/or core dumped.
-			if( (reason == JOB_COREDUMPED) || 
-				((reason == JOB_EXITED) && (exitedBySignal())) ) {
-                send_email = TRUE;
-			}
-			break;
-		default:
-			dprintf(D_ALWAYS, 
-				"Condor Job %d.%d has unrecognized notification of %d\n",
-				cluster, proc, notification );
-				// When in doubt, better send it anyway...
-			send_email = TRUE;
-			break;
-	}
-
-		// return the mailer 
-	if ( send_email ) {
-		FILE* mailer;
-		char buf[50];
-
-		sprintf( buf, "Condor Job %d.%d", cluster, proc );
-		if ( (mailer=emailUser(buf)) ) {
-			return mailer;
-		}
-	}
-
-	return NULL;
 }
 
 
@@ -918,9 +732,46 @@ void BaseShadow::initUserLog()
 }
 
 
-void
-BaseShadow::logTerminateEvent( int exitReason )
+// returns TRUE if attribute found.
+int getJobAdExitCode(ClassAd *jad, int &exit_code)
 {
+	if( ! jad->LookupInteger(ATTR_ON_EXIT_CODE, exit_code) ) {
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+// returns TRUE if attribute found.
+int getJobAdExitedBySignal(ClassAd *jad, int &exited_by_signal)
+{
+	if( ! jad->LookupInteger(ATTR_ON_EXIT_BY_SIGNAL, exited_by_signal) ) {
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+// returns TRUE if attribute found.
+int getJobAdExitSignal(ClassAd *jad, int &exit_signal)
+{
+	if( ! jad->LookupInteger(ATTR_ON_EXIT_SIGNAL, exit_signal) ) {
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+// kind defaults to US_NORMAL.
+void
+BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
+{
+	struct rusage run_remote_rusage;
+	JobTerminatedEvent event;
+	MyString corefile;
+
+	memset( &run_remote_rusage, 0, sizeof(struct rusage) );
+
 	switch( exitReason ) {
 	case JOB_EXITED:
 	case JOB_COREDUMPED:
@@ -932,12 +783,64 @@ BaseShadow::logTerminateEvent( int exitReason )
 		return;
 	}
 
-	struct rusage run_remote_rusage;
-	memset( &run_remote_rusage, 0, sizeof(struct rusage) );
+	if (kind == US_TERMINATE_PENDING) {
+
+		float float_value;
+		int exited_by_signal = FALSE;
+		int exit_signal = 0;
+		int exit_code = 0;
+
+		getJobAdExitedBySignal(jobAd, exited_by_signal);
+		if (exited_by_signal == TRUE) {
+			getJobAdExitSignal(jobAd, exit_signal);
+			event.normal = false;
+			event.signalNumber = exit_signal;
+		} else {
+			getJobAdExitCode(jobAd, exit_code);
+			event.normal = true;
+			event.returnValue = exit_code;
+		}
+
+		/* grab usage information out of job ad */
+		if( jobAd->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, float_value) ) {
+			run_remote_rusage.ru_stime.tv_sec = (int) float_value;
+		}
+
+		if( jobAd->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, float_value) ) {
+			run_remote_rusage.ru_utime.tv_sec = (int) float_value;
+		}
+
+		event.run_remote_rusage = run_remote_rusage;
+		event.total_remote_rusage = run_remote_rusage;
+	
+		/*
+		  we want to log the events from the perspective of the user
+		  job, so if the shadow *sent* the bytes, then that means the
+		  user job *received* the bytes
+		*/
+		jobAd->LookupFloat(ATTR_BYTES_SENT, event.recvd_bytes);
+		jobAd->LookupFloat(ATTR_BYTES_RECVD, event.sent_bytes);
+
+		event.total_recvd_bytes = event.recvd_bytes;
+		event.total_sent_bytes = event.sent_bytes;
+	
+		if( exited_by_signal == TRUE ) {
+			jobAd->LookupString(ATTR_JOB_CORE_FILENAME, corefile);
+			event.setCoreFile( corefile.Value() );
+		}
+
+		if (!uLog.writeEvent (&event)) {
+			dprintf (D_ALWAYS,"Unable to log "
+				 	"ULOG_JOB_TERMINATED event\n");
+		}
+
+		return;
+	}
+
+	// the default kind == US_NORMAL path
 
 	run_remote_rusage = getRUsage();
 	
-	JobTerminatedEvent event;
 	if( exitedBySignal() ) {
 		event.normal = false;
 		event.signalNumber = exitSignal();
@@ -1078,6 +981,13 @@ BaseShadow::checkSwap( void )
 	} else {
 		reserved_swap = 5 * 1024;
 	}
+
+	if( reserved_swap == 0 ) {
+			// We're not supposed to care about swap space at all, so
+			// none of the rest of the checks matter at all.
+		return;
+	}
+
 	free_swap = sysapi_swap_space();
 
 	dprintf( D_FULLDEBUG, "*** Reserved Swap = %d\n", reserved_swap );
@@ -1121,193 +1031,34 @@ BaseShadow::log_except(char *msg)
 	}
 }
 
+
 bool
 BaseShadow::updateJobAttr( const char *name, const char *expr )
 {
-	bool result;
-
-	dprintf(D_FULLDEBUG,"updateJobAttr: %s = %s\n",name,expr);
-
-	if(ConnectQ(scheddAddr,SHADOW_QMGMT_TIMEOUT)) {
-		if(SetAttribute(cluster,proc,name,expr)<0) {
-			result = FALSE;
-		} else {
-			result = TRUE;
-		}
-		DisconnectQ(NULL);
-	} else {
-		result = FALSE;
-	}
-
-	if(result==FALSE) {
-		dprintf(D_ALWAYS,"updateJobAttr: couldn't update attribute\n");
-	}
-	return result;
+	return job_updater->updateAttr( name, expr );
 }
+
 
 bool
 BaseShadow::updateJobInQueue( update_t type )
 {
-	ExprTree* tree = NULL;
-	bool is_connected = false;
-	bool had_error = false;
-	bool final_update = false;
-	static bool checked_for_history = false;
-	static bool has_history = false;
-	char* name;
-	char buf[128];
-	
-
-	dprintf( D_FULLDEBUG, "Entering BaseShadow::updateJobInQueue\n" );
-
-	if( ! checked_for_history ) {
-		char* history = param( "HISTORY" );
-		if( history ) {
-			has_history = true;
-			free( history );
-		}
-		checked_for_history = true;
-	}
-
-	StringList* job_queue_attrs = NULL;
-	switch( type ) {
-	case U_HOLD:
-		job_queue_attrs = hold_job_queue_attrs;
-		break;
-	case U_REMOVE:
-		job_queue_attrs = remove_job_queue_attrs;
-		final_update = true;
-		break;
-	case U_REQUEUE:
-		job_queue_attrs = requeue_job_queue_attrs;
-		break;
-	case U_TERMINATE:
-		job_queue_attrs = terminate_job_queue_attrs;
-		final_update = true;
-		break;
-	case U_EVICT:
-		job_queue_attrs = evict_job_queue_attrs;
-		break;
-	case U_PERIODIC:
-			// No special attributes needed...
-		break;
-	default:
-		EXCEPT( "BaseShadow::updateJobInQueue: Unknown update type (%d)!" );
-	}
-
-	if( final_update && ! has_history ) {
-			// there's no history file on this machine, and this job
-			// is about to leave the queue.  there's no reason to send
-			// this stuff to the schedd, since it's all about to be
-			// flushed, anyway.
-		dprintf( D_FULLDEBUG, "BaseShadow::updateJobInQueue: job leaving "
-				 "queue and schedd has no history file, aborting update\n" );
-		return true;
-	}
-
 		// insert the bytes sent/recv'ed by this job into our job ad.
 		// we want this from the perspective of the job, so it's
 		// backwards from the perspective of the shadow.  if this
 		// value hasn't changed, it won't show up as dirty and we
 		// won't actually connect to the job queue for it.  we do this
 		// here since we want it for all kinds of updates...
-	sprintf( buf, "%s = %f", ATTR_BYTES_SENT, (prev_run_bytes_sent +
-											   bytesReceived()) );
-	jobAd->Insert( buf );
-	sprintf( buf, "%s = %f", ATTR_BYTES_RECVD, (prev_run_bytes_recvd +
+	MyString buf;
+	buf.sprintf( "%s = %f", ATTR_BYTES_SENT, (prev_run_bytes_sent +
+											  bytesReceived()) );
+	jobAd->Insert( buf.Value() );
+	buf.sprintf( "%s = %f", ATTR_BYTES_RECVD, (prev_run_bytes_recvd +
 											   bytesSent()) );
-	jobAd->Insert( buf );
+	jobAd->Insert( buf.Value() );
 
-//	jobAd->ResetExpr();
-//	while( (tree = jobAd->NextDirtyExpr()) ) {
-	ClassAd::dirtyIterator j;
-	for( j = jobAd->dirtyBegin( ); j != jobAd->dirtyEnd( ); j++ ) {
-//		name = ((Variable*)tree->LArg())->Name();
-		name = new char[j->length( )+1];
-		tree = jobAd->Lookup( name );
-		strcpy( name, j->c_str( ) );
-
-			// If we have the lists of attributes we care about and
-			// this attribute is in one of the lists, actually do the
-			// update into the job queue...  If either of these lists
-			// aren't defined, we're careful here to not dereference a
-			// NULL pointer...
-		if( (common_job_queue_attrs &&
-			 common_job_queue_attrs->contains_anycase(name)) || 
-			(job_queue_attrs &&
-			 job_queue_attrs->contains_anycase(name)) ) {
-
-			if( ! is_connected ) {
-				if( ! ConnectQ(scheddAddr, SHADOW_QMGMT_TIMEOUT) ) {
-					delete name;
-					return false;
-				}
-				is_connected = true;
-			}
-			if( ! updateExprTree( name, tree) ) {
-				had_error = true;
-			}
-		}
-	}
-	delete name;
-	if( is_connected ) {
-		DisconnectQ(NULL);
-	} 
-	if( had_error ) {
-		return false;
-	}
-	jobAd->ClearAllDirtyFlags();
-	return true;
-}
-
-
-bool
-BaseShadow::updateExprTree( char* name, ExprTree* tree )
-{
-	if( ! tree ) {
-		return false;
-	}
-//	ExprTree *rhs = tree->RArg(), *lhs = tree->LArg();
-//	if( ! rhs || ! lhs ) {
-//		return false;
-//	}
-//	char* name = ((Variable*)lhs)->Name();
-	if( ! name ) {
-		return false;
-	}		
-		// This code used to be smart about figuring out what type of
-		// expression this is and calling SetAttributeInt(), 
-		// SetAttributeString(), or whatever it needed.  However, all
-		// these "special" versions of SetAttribute*() just force
-		// everything back down into the flat string representation
-		// and call SetAttribute(), so it was both a waste of effort
-		// here, and made this code needlessly more complex.  
-		// Derek Wright, 3/25/02
-//	char* tmp = NULL;
-	ClassAdUnParser unp;
-	std::string tmpString;
-	unp.Unparse( tmpString, tree );
-//	rhs->PrintToNewStr( &tmp );
-	
-	if( SetAttribute(cluster, proc, name, tmpString.c_str( ) ) < 0 ) {
-		dprintf( D_ALWAYS, 
-				 "updateExprTree: Failed SetAttribute(%s, %s)\n",
-				 name, tmpString.c_str( ) );
-//		free( tmp );
-		return false;
-	}
-	dprintf( D_FULLDEBUG, 
-			 "Updating Job Queue: SetAttribute(%s, %s)\n",
-			 name, tmpString.c_str( ) );
-//	free( tmp );
-	return true;
-}
-
-
-void
-BaseShadow::periodicUpdateQ( void )
-{
-	updateJobInQueue( U_PERIODIC );	
+		// Now that the ad is current, just let our QmgrJobUpdater
+		// object take care of the rest...
+	return job_updater->updateJob( type );
 }
 
 
@@ -1331,26 +1082,7 @@ BaseShadow::getCoreName( void )
 void
 BaseShadow::startQueueUpdateTimer( void )
 {
-	if( q_update_tid >= 0 ) {
-		return;
-	}
-	char* tmp;
-	int q_interval = 0;
-	tmp = param( "SHADOW_QUEUE_UPDATE_INTERVAL" );
-	if( tmp ) {
-		q_interval = atoi( tmp );
-		free( tmp );
-	}
-	if( ! q_interval ) {
-		q_interval = 15 * 60;  // by default, update every 15 minutes 
-	}
-	q_update_tid = daemonCore->
-		Register_Timer( q_interval, q_interval,
-                        (TimerHandlercpp)&BaseShadow::periodicUpdateQ,
-                        "periodicUpdateQ", this );
-    if( q_update_tid < 0 ) {
-        EXCEPT( "Can't register DC timer!" );
-    }
+	job_updater->startUpdateTimer();
 }
 
 
@@ -1429,4 +1161,3 @@ display_dprintf_header(FILE *fp)
 
 	return TRUE;
 }
-

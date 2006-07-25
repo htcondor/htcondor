@@ -12,6 +12,9 @@ PRELINK_CPP_FLAGS = -Ur -u main
 /* specifically ask for the C++ libraries to be statically linked */
 #define PlatformLdFlags -Wl,-berok -Wl,-bstatic -lstdc++ -Wl,-bdynamic -lcfg -lodm -lcrypt -lc -static-libgcc
 
+/* we also need to link test suite jobs with the same mess */
+#define TestPlatformLdFlags PlatformLdFlags
+
 #define IS_V5				YES
 
 #define MALLOC_DEBUG 			NO
@@ -38,6 +41,7 @@ PRELINK_CPP_FLAGS = -Ur -u main
 #define HAS_CP_PRESERVE			YES
 #define NEEDS_SPECIAL_SETJMP		NO
 #define HAS_FLOCK			NO
+#define HAS_GETDIRENTRIES		YES
 #define HAS_GETDTABLESIZE		NO
 #define HAS__UTSSYS			YES
 #define HAS_GETPGRP2			YES

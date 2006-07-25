@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -55,7 +55,7 @@ static int errno_is_temporary( int e )
  * a timeout, and make sure that all data is read or written.
  */
 int
-condor_read( SOCKET fd, char *buf, int sz, int timeout )
+condor_read( SOCKET fd, char *buf, int sz, int timeout, int flags )
 {
 	int nr = 0, nro;
 	unsigned int start_time, cur_time;
@@ -98,7 +98,13 @@ condor_read( SOCKET fd, char *buf, int sz, int timeout )
 			FD_ZERO( &readfds );
 			FD_SET( fd, &readfds );
 
+			if( DebugFlags & D_FULLDEBUG && DebugFlags & D_NETWORK ) {
+				dprintf(D_FULLDEBUG, "condor_read(): nfds=%d\n", nfds);
+			}
 			nfound = select( nfds, &readfds, 0, 0, &timer );
+			if( DebugFlags & D_FULLDEBUG && DebugFlags & D_NETWORK ) {
+				dprintf(D_FULLDEBUG, "condor_read(): nfound=%d\n", nfound);
+			}
 
 			switch(nfound) {
 			case 0:
@@ -116,7 +122,7 @@ condor_read( SOCKET fd, char *buf, int sz, int timeout )
 			}
 		}
 
-		nro = recv(fd, &buf[nr], sz - nr, 0);
+		nro = recv(fd, &buf[nr], sz - nr, flags);
 		if( nro <= 0 ) {
 
 				// If timeout > 0, and we made it here, then
@@ -162,7 +168,7 @@ condor_read( SOCKET fd, char *buf, int sz, int timeout )
 
 
 int
-condor_write( SOCKET fd, char *buf, int sz, int timeout )
+condor_write( SOCKET fd, char *buf, int sz, int timeout, int flags )
 {
 	int nw = 0, nwo = 0;
 	unsigned int start_time = 0, cur_time = 0;
@@ -246,10 +252,28 @@ condor_write( SOCKET fd, char *buf, int sz, int timeout )
 					if( FD_ISSET(fd, &readfds) ) {
 							// see if the socket was closed
 						nro = recv(fd, tmpbuf, 1, MSG_PEEK);
+						if( nro == -1 ) {
+							int the_error;
+#ifdef WIN32
+							the_error = WSAGetLastError();
+#else
+							the_error = errno;
+#endif
+							if(errno_is_temporary( the_error )) {
+								continue;
+							}
+
+							dprintf( D_ALWAYS, "condor_write(): "
+									 "Socket closed when trying "
+									 "to write buffer, fd is %d, "
+									 "errno=%d\n", fd, the_error );
+							return -1;
+						}
+
 						if( ! nro ) {
 							dprintf( D_ALWAYS, "condor_write(): "
 									 "Socket closed when trying "
-									 "to write buffer\n" );
+									 "to write buffer, fd is %d\n", fd );
 							return -1;
 						}
 
@@ -272,7 +296,7 @@ condor_write( SOCKET fd, char *buf, int sz, int timeout )
 			}
 		}
 		
-		nwo = send(fd, &buf[nw], sz - nw, 0);
+		nwo = send(fd, &buf[nw], sz - nw, flags);
 
 		if( nwo <= 0 ) {
 			int the_error;
@@ -288,9 +312,19 @@ condor_write( SOCKET fd, char *buf, int sz, int timeout )
 				continue;
 			}
 
+#ifdef WIN32
+				// alas, apparently there's no version of strerror()
+				// that works on the codes you get back from
+				// WSAGetLastError(), so we need a seperate dprintf()
+				// that doesn't include a %s for error string.
 			dprintf( D_ALWAYS, "condor_write(): send() returned %d, "
 					 "timeout=%d, errno=%d.  Assuming failure.\n",
 					 nwo, timeout, the_error );
+#else
+			dprintf( D_ALWAYS, "condor_write(): send() returned %d, "
+					 "timeout=%d, errno=%d (%s).  Assuming failure.\n",
+					 nwo, timeout, the_error, strerror(the_error) );
+#endif
 			return -1;
 		}
 		

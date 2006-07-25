@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 // AttrList.C
 //
 // Implementation of AttrList classes and AttrListList classes.
@@ -33,6 +33,7 @@
 # include "condor_attrlist.h"
 # include "condor_attributes.h"
 # include "condor_classad.h"
+# include "condor_adtypes.h"
 
 static Registration regi;                   // this is the registration for 
                                             // the AttrList type names. It 
@@ -41,6 +42,7 @@ static Registration regi;                   // this is the registration for
 
 static	SortFunctionType SortSmallerThan;
 static	void* SortInfo;
+static  const char *empty_string = "";
 
 #if defined(USE_XDR)
 extern "C" int xdr_mywrapstring (XDR *, char **);
@@ -55,7 +57,7 @@ FILE *__stderr__ = stderr;
 //
 // AdType Constructor.
 //
-AdType::AdType(char *tempName)
+AdType::AdType(const char *tempName)
 {
     if(tempName == NULL)
     {                                       // if empty.
@@ -138,7 +140,6 @@ ClassAd(FILE* f, char* d, int& i, int &err, int &empty)
 	// SetRankExpr ("Rank = 0");
 	// SetRequirements ("Requirements = TRUE");
 
-	val = new EvalResult;
     tree = Lookup("MyType");
 	if(!tree)
     {
@@ -150,12 +151,14 @@ ClassAd(FILE* f, char* d, int& i, int &err, int &empty)
     }
     else
     {
+        val = new EvalResult;
 		tree->EvalTree(this, val);
 		myType = new AdType(val->s);
 		if(myType == NULL)
 		{
             EXCEPT("Warning : you ran out of space");
 		}
+        delete val;
     }
 
 	if(!(tree = Lookup("TargetType")))
@@ -168,18 +171,16 @@ ClassAd(FILE* f, char* d, int& i, int &err, int &empty)
     }
     else
     {
+        val = new EvalResult;
 		tree->EvalTree(this, val);
 		targetType = new AdType(val->s);
 		if(targetType == NULL)
 		{
             EXCEPT("Warning : you ran out of space");
 		}
-    }
-
-    if(val)
-    {
         delete val;
     }
+
     Delete("MyType");                        // eliminate redundant storage.
     Delete("TargetType");
 }
@@ -199,8 +200,12 @@ ClassAd::ClassAd(char* s, char d) : AttrList(s, d)
         EXCEPT("Warning : you ran out of space -- quitting !");
     }
 
-    Parse("MyType", tree);                   // set myType field by evaluation
-    tree->EvalTree(this, val);               // over itself.
+	// Make a parse tree that contains the variable MyType
+    Parse("MyType", tree);
+	// Evaluate this variable within the classad, to see if it
+	// is defined.
+    tree->EvalTree(this, val);
+	// If it's not defined, we set the type to be blank
     if(!val || val->type!=LX_STRING)
     {
         myType = new AdType();               // undefined type.
@@ -209,6 +214,9 @@ ClassAd::ClassAd(char* s, char d) : AttrList(s, d)
             EXCEPT("Warning : you ran out of space");
 		}
     }
+	// otherwise it was defined, so we'll set the type to be what the
+	// creator of the classad wants. Note that later on, we'll delete
+	// the type from the attribute list. ('Delete("MyType")')
     else
     {
 		myType = new AdType(val->s);
@@ -217,11 +225,20 @@ ClassAd::ClassAd(char* s, char d) : AttrList(s, d)
 				EXCEPT("Warning : you ran out of space");
 		}
     }
-    delete tree;
+	delete tree;
+	// I just added the next two lines: we were leaking memory 
+	// because EvalResult may contain a string result that isn't
+	// properly deleted if we don't call the destructor. Therefore,
+	// I delete and recreate the EvalResult. --alain 23-Sep-2001
+	delete val;
+	val = new EvalResult;
 
-    Parse("TargetType", tree);               // set targetType field by
-                                             // evaluation over itself.
+	// Make a parse tree that contains the variable TargetType
+    Parse("TargetType", tree);
+	// Evaluate this variable within the classad, to see if it
+	// is defined.
     tree->EvalTree(this, val);
+	// If it's not defined, we set the type to be blank
     if(!val || val->type!=LX_STRING)
     {
         targetType = new AdType();           // undefined type.
@@ -230,6 +247,9 @@ ClassAd::ClassAd(char* s, char d) : AttrList(s, d)
 			EXCEPT("Warning : you ran out of space");
 		}
     }
+	// otherwise it was defined, so we'll set the type to be what the
+	// creator of the classad wants. Note that later on, we'll delete
+	// the type from the attribute list. ('Delete("TargetType")')
     else
     {
 		targetType = new AdType(val->s);
@@ -244,7 +264,11 @@ ClassAd::ClassAd(char* s, char d) : AttrList(s, d)
     {
         delete val;
     }
-    Delete("MyType");                        // eliminate redundant storage.
+
+	// These are the deletes referred to above. We delete theses
+	// from the attribute list because we keep them separately, 
+	// apparently because it's convenient that way. 
+    Delete("MyType");
     Delete("TargetType");
 }
 
@@ -287,10 +311,42 @@ ClassAd::~ClassAd()
     }
 }
 
+ClassAd& ClassAd::operator=(const ClassAd& other)
+{
+	if (this != &other) {
+		// First, let the base class do its magic.
+		AttrList::operator=(other);
+
+		// Clean up memory that we're going to be copying over.
+		if (myType != NULL) {
+			delete myType;
+			myType = NULL;
+		}
+		if (targetType != NULL) {
+			delete targetType;
+			targetType = NULL;
+		}
+
+		if (other.myType) {
+			myType = new AdType(other.myType->name);
+			if (myType == NULL) {
+				EXCEPT("Warning : you ran out of meomory");
+			}
+		}
+		if(other.targetType) {
+			targetType = new AdType(other.targetType->name);
+			if (targetType == NULL) {
+				EXCEPT("Warning : you ran out of meomory");
+			}
+		}
+	}
+	return *this;
+}
+
 //
 // This member function of class AttrList sets myType name.
 //
-void ClassAd::SetMyTypeName(char *tempName)
+void ClassAd::SetMyTypeName(const char *tempName)
 {
 	if(!tempName)
 	{
@@ -315,15 +371,33 @@ void ClassAd::SetMyTypeName(char *tempName)
 //
 // This member function of class AttrList returns myType name.
 //
-char *ClassAd::GetMyTypeName()
+const char *ClassAd::GetMyTypeName()
 {
     if(!myType)
     {
-        char *temp = "";                      // undefined type.
-        return temp;
+		return empty_string;
     }
     else
     {
+		// We should just return myType->name here.  Instead, we have
+		// a dreadful hack:  If the ad claims to be a SCHEDD_ADTYPE,
+		// we see if it has a ATTR_NUM_USERS attribute.  If it does not,
+		// then it is really a SUBMITTER_ADTYPE and that is what we 
+		// return.  We massage the name here because in Condor v6.3.x
+		// it is important to distinguish between the two types of
+		// ads (because the negotiator now fetches all ads with the
+		// ANY_AD query).  However, we do not *really* set Submittor
+		// ads to SUBMITTER_ADTYPE.... this should have been done
+		// right from the start in v6.0, but it was not.  And if we
+		// do it now, then there will be lots of backwards compatibility
+		// and flocking problems between v6.3 and older versions.
+		// Sigh.  Yet another hack in order to preserve backwards
+		// compatibility.  The sins of the father... <tannenba 9/14/01>
+		if ( strcmp(SCHEDD_ADTYPE,myType->name) == 0 ) {
+			if ( !Lookup(ATTR_NUM_USERS) ) {
+				return SUBMITTER_ADTYPE;
+			}
+		}
         return myType->name;
     }
 }
@@ -331,7 +405,7 @@ char *ClassAd::GetMyTypeName()
 //
 // This member function of class AttrList sets targetType name.
 //
-void ClassAd::SetTargetTypeName(char *tempName)
+void ClassAd::SetTargetTypeName(const char *tempName)
 {
 	if(!tempName)
 	{
@@ -356,12 +430,11 @@ void ClassAd::SetTargetTypeName(char *tempName)
 //
 // This member function of class AttrList returns targetType name.
 //
-char *ClassAd::GetTargetTypeName()
+const char *ClassAd::GetTargetTypeName()
 {
     if(!targetType)
     {
-        char *temp = "";                      // undefined.
-	return temp;
+        return empty_string;
     }
     else
     {
@@ -498,11 +571,17 @@ int ClassAd::IsAMatch(ClassAd* temp)
     {
         return 0;
     }
-  
-    if((GetMyTypeNumber() != temp->GetTargetTypeNumber()) ||
-       (GetTargetTypeNumber() !=  temp->GetMyTypeNumber()))
-    { 
-        return 0;                            // types don't match.
+
+    if( (GetTargetTypeNumber()==temp->GetMyTypeNumber()) || !stricmp(GetTargetTypeName(),ANY_ADTYPE) ) {
+        /* MY.TargetType matches TARGET.MyType */
+    } else {
+        return 0;
+    }
+
+    if( (GetMyTypeNumber()==temp->GetTargetTypeNumber()) || !stricmp(temp->GetTargetTypeName(),ANY_ADTYPE) ) {
+        /* TARGET.TargetType matches MY.MyType */
+    } else {
+        return 0;
     }
 
     val = new EvalResult;
@@ -569,8 +648,11 @@ bool operator>= (ClassAd &lhs, ClassAd &rhs)
 	ExprTree *tree;
 	EvalResult *val;	
 	
-	if (lhs.GetMyTypeNumber() != rhs.GetTargetTypeNumber())
+	if( (lhs.GetMyTypeNumber()!=rhs.GetTargetTypeNumber()) &&
+	    stricmp(rhs.GetTargetTypeName(),ANY_ADTYPE) )
+	{
 		return false;
+	}
 
 	if ((val = new EvalResult) == NULL)
 	{
@@ -627,6 +709,25 @@ int ClassAd::fPrint(FILE* f)
 	return AttrList::fPrint(f);
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// Append a ClassAd to a string.
+////////////////////////////////////////////////////////////////////////////////
+int ClassAd::sPrint(MyString &output)
+{
+	output += "MyType = \"";
+	if(GetMyTypeName())
+	{
+		output += GetMyTypeName();
+	}
+	output += "\"\nTargetType = \"";
+	if(GetMyTypeName())
+	{
+		output += GetTargetTypeName();
+	}
+	output += "\"\n";
+	
+	return AttrList::sPrint(output);
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // print the whole ClassAd to the given debug level. The expressions
@@ -635,7 +736,7 @@ int ClassAd::fPrint(FILE* f)
 void
 ClassAd::dPrint(int level)
 {
-	char* foo;
+	const char* foo;
 	int flag = D_NOHEADER | level;
 	foo = GetMyTypeName();
 	if( foo ) {
@@ -691,36 +792,60 @@ int ClassAd::put(Stream& s)
     return 1;
 }
 
-int ClassAd::get(Stream& s)
-{
-    char           namebuf[CLASSAD_MAX_ADTYPE];
-	char *name = namebuf;
 
-	// first get all the attributes
-	if ( !AttrList::get(s) ) {
+void
+ClassAd::clear( void )
+{
+		// First, clear out everything in our AttrList
+	AttrList::clear();
+
+		// Now, clear out our Type fields, since those are specific to
+		// ClassAd and aren't handled by AttrList::clear().
+    if( myType ) {
+        delete myType;
+		myType = NULL;
+    }
+    if( targetType ) {
+        delete targetType;
+		targetType = NULL;
+    }
+}
+
+
+int
+ClassAd::initFromStream(Stream& s)
+{
+	char *name  = NULL;
+
+		// First, initialize ourselves from the stream.  This will
+		// delete any existing attributes in the list...
+	if ( !AttrList::initFromStream(s) ) {
 		return 0;
+	}
+
+		// Now, if there's also type info on the wire, read that,
+		// too. 
+    if(!s.code(name)) {
+        return 0;
+    }
+    SetMyTypeName(name);
+	if ( name != NULL ) {
+		free(name);
+		name = NULL;
 	}
 
     if(!s.code(name)) {
         return 0;
     }
-    SetMyTypeName(name);
-
-    if(!s.code(name)) {
-        return 0;
-    }
     SetTargetTypeName(name);
+	if ( name != NULL ) {
+		free(name);
+		name = NULL;
+	}
 
     return 1; 
 }
 
-int ClassAd::code(Stream& s)                                           
-{
-    if(s.is_encode())
-        return put(s);
-    else
-        return get(s);
-}
 
 #if defined(USE_XDR)
 int ClassAd::put (XDR *xdrs)
@@ -818,7 +943,7 @@ ClassAd* ClassAdList::Lookup(const char* name)
 }
 
 void ClassAdList::
-Sort(int(*SmallerThan)(AttrListAbstract*, AttrListAbstract*, void*), void* info)
+Sort(int(*SmallerThan)(AttrList*, AttrList*, void*), void* info)
 {
 /*
 	dprintf(D_ALWAYS,"head=%08x , tail=%08x\n",head,tail);
@@ -843,10 +968,31 @@ Sort(int(*SmallerThan)(AttrListAbstract*, AttrListAbstract*, void*), void* info)
 int ClassAdList::
 SortCompare(const void* v1, const void* v2)
 {
-	AttrListAbstract** a = (AttrListAbstract**)v1;
-	AttrListAbstract** b = (AttrListAbstract**)v2;
+	AttrListAbstract** a1 = (AttrListAbstract**)v1;
+	AttrListAbstract** b1 = (AttrListAbstract**)v2;
+	AttrListAbstract *abstract_ad1 = *a1;
+	AttrListAbstract *abstract_ad2 = *b1;
+	AttrList* a;
+	AttrList* b;
 
+	// Convert AttrListAbstracts to AttrList
+	if ( abstract_ad1->Type() == ATTRLISTENTITY ) {
+		// this represents an AttrList in one AttrListList
+		a = (AttrList *)abstract_ad1;
+	} else {
+		// this represents an AttrList in multiple AttrListLists
+		// thus, it is an AttrListRep not an AttrList
+		a = (AttrList *)((AttrListRep *)abstract_ad1)->GetOrigAttrList();
+	}
 
+	if ( abstract_ad2->Type() == ATTRLISTENTITY ) {
+		// this represents an AttrList in one AttrListList
+		b = (AttrList *)abstract_ad2;
+	} else {
+		// this represents an AttrList in multiple AttrListLists
+		// thus, it is an AttrListRep not an AttrList
+		b = (AttrList *)((AttrListRep *)abstract_ad2)->GetOrigAttrList();
+	}
 	// The user supplied SortSmallerThan() func returns a 1
 	// if a is smaller than b, and that is _all_ we know about
 	// SortSmallerThan().  Some tools implement a SortSmallerThan()
@@ -854,7 +1000,7 @@ SortCompare(const void* v1, const void* v2)
 	// it is chaos.  Just chaos I tell you.  _SO_ we only check for
 	// a "1" if it is smaller than, and do not assume anything else.
 	// qsort() wants a -1 for smaller.
-	if ( SortSmallerThan(*a,*b,SortInfo) == 1 ) {
+	if ( SortSmallerThan(a,b,SortInfo) == 1 ) {
 			// here we know that a is less than b
 		return -1;
 	} else {
@@ -862,7 +1008,7 @@ SortCompare(const void* v1, const void* v2)
 			// we still need to figure out if a is equal to b or not.
 			// Do this by calling the user supplied compare function
 			// again and ask if b is smaller than a.
-		if ( SortSmallerThan(*b,*a,SortInfo) == 1 ) {
+		if ( SortSmallerThan(b,a,SortInfo) == 1 ) {
 				// now we know that a is greater than b
 			return 1;
 		} else {
@@ -926,3 +1072,4 @@ ClassAd* ClassAd::FindNext()
 {
 	return (ClassAd*)next;
 }
+

@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -27,6 +27,7 @@
 #include "constants2.h"
 #include "network2.h"
 #include "internet.h"
+#include "condor_netdb.h"
 #include <string.h>
 
 static char* getserveraddr();
@@ -68,7 +69,8 @@ int ConnectToServer(request_type type)
 		return CKPT_SERVER_SOCKET_ERROR;
     }
 
-	if( ! _condor_local_bind(conn_req_sd) ) {
+	/* TRUE means this is an outgoing connection */
+	if( ! _condor_local_bind(TRUE, conn_req_sd) ) {
 		close( conn_req_sd );
 		dprintf( D_ALWAYS, "ERROR: unable to bind new socket to local interface\n");
 		return CKPT_SERVER_SOCKET_ERROR;
@@ -87,6 +89,16 @@ int ConnectToServer(request_type type)
 			break;
 		case RESTORE_REQ:
 			server_sa.sin_port = htons(CKPT_SVR_RESTORE_REQ_PORT);
+			break;
+		case REPLICATE_REQ:
+			dprintf(D_ALWAYS, "ERROR: REPLICATE_REQ not implemented.");
+			close(conn_req_sd);
+			return CKPT_SERVER_SOCKET_ERROR;
+			break;
+		default:
+			dprintf(D_ALWAYS, "ERROR: ConnectToServer(): Unknown type!\n");
+			close(conn_req_sd);
+			return CKPT_SERVER_SOCKET_ERROR;
 		}
 	if (connect(conn_req_sd, (struct sockaddr*) &server_sa, 
 				sizeof(server_sa)) < 0) {
@@ -420,7 +432,7 @@ static char* getserveraddr()
 
 	if (server_host == NULL) return NULL;
 
-	h = gethostbyname(server_host);
+	h = condor_gethostbyname(server_host);
 	if (h == NULL) {
 		dprintf(D_ALWAYS,
 				"Can't get address for checkpoint server host %s: %s\n",

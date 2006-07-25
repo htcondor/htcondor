@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -40,8 +40,8 @@ display_startup_info( const STARTUP_INFO *s, int flags )
 	dprintf( flags, "\tVirtPid: %d\n", s->virt_pid );
 	dprintf( flags, "\tSoftKillSignal: %d\n", s->soft_kill_sig );
 	dprintf( flags, "\tCmd: \"%s\"\n", s->cmd );
-	dprintf( flags, "\tArgs: \"%s\"\n", s->args );
-	dprintf( flags, "\tEnv: \"%s\"\n", s->env );
+	dprintf( flags, "\tArgs: \"%s\"\n", s->args_v1or2 );
+	dprintf( flags, "\tEnv: \"%s\"\n", s->env_v1or2 );
 	dprintf( flags, "\tIwd: \"%s\"\n", s->iwd );
 	dprintf( flags, "\tCkpt Wanted: %s\n", s->ckpt_wanted ? "TRUE" : "FALSE" );
 	dprintf( flags, "\tIs Restart: %s\n", s->is_restart ? "TRUE" : "FALSE" );
@@ -49,6 +49,6 @@ display_startup_info( const STARTUP_INFO *s, int flags )
 		s->coredump_limit_exists ? "TRUE" : "FALSE"
 	);
 	if( s->coredump_limit_exists ) {
-		dprintf( flags, "\tCoredump Limit %ld\n", s->coredump_limit );
+		dprintf( flags, "\tCoredump Limit %d\n", s->coredump_limit );
 	}
 }

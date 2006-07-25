@@ -1,0 +1,5 @@
+    [
+        dap_type = transfer;
+        src_url = "fnalsrm://rip3.fnal.gov:24128/real/test1"; 
+        dest_url = "file:/tmp/test4"; 
+    ]

@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 //****************************************************************************//
 // astbase.C 				                                      //
 //  	 				                                      //
@@ -31,9 +31,14 @@
 #include "condor_exprtype.h"
 #include "condor_astbase.h"
 #include "condor_debug.h"
+#include "MyString.h"
 
 #define AdvancePtr(ptr)  while(*ptr != '\0') ptr++;
 
+#ifdef USE_STRING_SPACE_IN_CLASSADS
+StringSpace *ExprTree::string_space = NULL;
+int ExprTree::string_space_references = 0;
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 // Tree node constructors.                                                    //
@@ -41,240 +46,220 @@
 
 VariableBase::VariableBase(char* name)
 {
+#ifdef USE_STRING_SPACE_IN_CLASSADS
+	this->stringSpaceIndex = string_space->getCanonical(name, SS_DUP);
+	// I apologize for casting away the const-ness of the char * here
+	// I'm trying to make minimal changes in the code to add string space,
+	// and it is safe. 
+	this->name = (char *) (*string_space)[stringSpaceIndex];
+#else
     this->name = name;
-    this->ref = 0;
+#endif
     this->type = LX_VARIABLE;
-    this->cardinality = 0;
 }
 
 IntegerBase::IntegerBase(int v)
 {
     this->value = v;
-    this->ref   = 0;
     this->type  = LX_INTEGER;
-    this->cardinality = 0;
 }
 
 FloatBase::FloatBase(float v)
 {
     this->value = v;
-    this->ref   = 0;
     this->type  = LX_FLOAT;
-    this->cardinality = 0;
 }
 
 BooleanBase::BooleanBase(int v)
 {
     this->value = v;
-    this->ref   = 0;
     this->type  = LX_BOOL;
-    this->cardinality = 0;
 }
 
 StringBase::StringBase(char* str)
 {
+#ifdef USE_STRING_SPACE_IN_CLASSADS
+	stringSpaceIndex = string_space->getCanonical(str, SS_DUP);
+	// I apologize for casting away the const-ness of the char * here
+	// I'm trying to make minimal changes in the code to add string space,
+	// and it is safe. 
+	value = (char *) (*string_space)[stringSpaceIndex];
+#else
     value = str;
-    this->ref = 0;
+#endif
     this->type  = LX_STRING;
-    this->cardinality = 0;
+}
+
+ISOTimeBase::ISOTimeBase(char* str)
+{
+#ifdef USE_STRING_SPACE_IN_CLASSADS
+	stringSpaceIndex = string_space->getCanonical(str, SS_DUP);
+	// I apologize for casting away the const-ness of the char * here
+	// I'm trying to make minimal changes in the code to add string space,
+	// and it is safe. 
+	time = (char *) (*string_space)[stringSpaceIndex];
+#else
+    time = str;
+#endif
+    this->type  = LX_TIME;
 }
 
 UndefinedBase::UndefinedBase()
 {
-    this->ref = 0;
     this->type  = LX_UNDEFINED;
-    this->cardinality = 0;
 }
 
 ErrorBase::ErrorBase()
 {
-    this->ref = 0;
     this->type  = LX_ERROR;
-    this->cardinality = 0;
 }
 
 AddOpBase::AddOpBase(ExprTree* l, ExprTree* r)
 {
     this->lArg = l;
     this->rArg = r;
-    this->ref  = 0;
     this->type  = LX_ADD;
-    this->cardinality = 2;
 }
 
 SubOpBase::SubOpBase(ExprTree* l, ExprTree* r)
 {
     this->lArg = l;
     this->rArg = r;
-    this->ref  = 0;
     this->type  = LX_SUB;
-    this->cardinality = 2;
 }
 
 MultOpBase::MultOpBase(ExprTree* l, ExprTree* r)
 {
     this->lArg = l;
     this->rArg = r;
-    this->ref  = 0;
     this->type  = LX_MULT;
-    this->cardinality = 2;
 }
 
 DivOpBase::DivOpBase(ExprTree* l, ExprTree* r)
 {
     this->lArg = l;
     this->rArg = r;
-    this->ref  = 0;
     this->type  = LX_DIV;
-    this->cardinality = 2;
 }
 
 MetaEqOpBase::MetaEqOpBase(ExprTree* l, ExprTree* r)
 {
     this->lArg = l;
     this->rArg = r;
-    this->ref  = 0;
     this->type  = LX_META_EQ;
-    this->cardinality = 2;
 }
 
 MetaNeqOpBase::MetaNeqOpBase(ExprTree* l, ExprTree* r)
 {
     this->lArg = l;
     this->rArg = r;
-    this->ref  = 0;
     this->type  = LX_META_NEQ;
-    this->cardinality = 2;
 }
 
 EqOpBase::EqOpBase(ExprTree* l, ExprTree* r)
 {
     this->lArg = l;
     this->rArg = r;
-    this->ref  = 0;
     this->type  = LX_EQ;
-    this->cardinality = 2;
 }
 
 NeqOpBase::NeqOpBase(ExprTree* l, ExprTree* r)
 {
     this->lArg = l;
     this->rArg = r;
-    this->ref  = 0;
     this->type  = LX_NEQ;
-    this->cardinality = 2;
 }
 
 GtOpBase::GtOpBase(ExprTree* l, ExprTree* r)
 {
     this->lArg = l;
     this->rArg = r;
-    this->ref  = 0;
     this->type  = LX_GT;
-    this->cardinality = 2;
 }
 
 GeOpBase::GeOpBase(ExprTree* l, ExprTree* r)
 {
     this->lArg = l;
     this->rArg = r;
-    this->ref  = 0;
     this->type  = LX_GE;
-    this->cardinality = 2;
 }
 
 LtOpBase::LtOpBase(ExprTree* l, ExprTree* r)
 {
     this->lArg = l;
     this->rArg = r;
-    this->ref  = 0;
     this->type  = LX_LT;
-    this->cardinality = 2;
 }
 
 LeOpBase::LeOpBase(ExprTree* l, ExprTree* r)
 {
     this->lArg = l;
     this->rArg = r;
-    this->ref  = 0;
     this->type  = LX_LE;
-    this->cardinality = 2;
 }
 
 AndOpBase::AndOpBase(ExprTree* l, ExprTree* r)
 {
     this->lArg = l;
     this->rArg = r;
-    this->ref  = 0;
     this->type  = LX_AND;
-    this->cardinality = 2;
 }
 
 OrOpBase::OrOpBase(ExprTree* l, ExprTree* r)
 {
     this->lArg = l;
     this->rArg = r;
-    this->ref  = 0;
     this->type  = LX_OR;
-    this->cardinality = 2;
 }
 
 AssignOpBase::AssignOpBase(ExprTree* l, ExprTree* r)
 {
     this->lArg = l;
     this->rArg = r;
-    this->ref  = 0;
     this->type  = LX_ASSIGN;
-    this->cardinality = 2;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// A dummy class used by the delete operator to avoid recursion               //
+// Destructors
 ////////////////////////////////////////////////////////////////////////////////
-class Dummy
+VariableBase::~VariableBase()
 {
-};
+#ifdef USE_STRING_SPACE_IN_CLASSADS
+	string_space->disposeByIndex(stringSpaceIndex);
+#else
+	delete [] name;
+#endif
+}
 
-////////////////////////////////////////////////////////////////////////////////
-// Delete operator member functions                                           //
-////////////////////////////////////////////////////////////////////////////////
-
-void ExprTree::operator delete(void* exprTree)
+StringBase::~StringBase()
 {
-    if(exprTree)
-    {
-	if(((ExprTree*)exprTree)->cardinality > 0)
-	// this is a binary operator, delete the children
-	{
-	    if(((BinaryOpBase*)exprTree)->lArg)
-	    {
-	        delete ((BinaryOpBase*)exprTree)->lArg;
-	    }
-	    if(((BinaryOpBase*)exprTree)->rArg)
-	    {
-	        delete ((BinaryOpBase*)exprTree)->rArg;
-	    }
+#ifdef USE_STRING_SPACE_IN_CLASSADS
+	string_space->disposeByIndex(stringSpaceIndex);
+#else
+	delete [] value;
+#endif
+}
+
+ISOTimeBase::~ISOTimeBase()
+{
+#ifdef USE_STRING_SPACE_IN_CLASSADS
+	string_space->disposeByIndex(stringSpaceIndex);
+#else
+	delete [] time;
+#endif
+}
+
+BinaryOpBase::~BinaryOpBase()
+{
+	if (lArg != NULL) {
+		delete lArg;
 	}
-        if(((ExprTree*)exprTree)->ref > 0)
-        // there are more than one pointer to this expression tree
-        {
- 	    ((ExprTree*)exprTree)->ref--;
-        }
-        else
-        // no more pointer to this expression tree
-        {
-	    	if(((ExprTree*)exprTree)->type == LX_VARIABLE)
-	    	{
-				delete []((VariableBase*)exprTree)->name;
-	    	}
-	    	if(((ExprTree*)exprTree)->type == LX_STRING)
-	    	{
-				delete []((StringBase*)exprTree)->value;
-	    	}
-	    	delete (Dummy*)exprTree;
-        }
-    }
+	if (rArg != NULL) {
+		delete rArg;
+	}
+	return;
 }
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // Comparison operator                                                        //
@@ -325,6 +310,15 @@ int StringBase::operator ==(ExprTree& tree)
     return FALSE;
 }
 
+int ISOTimeBase::operator ==(ExprTree& tree)
+{
+    if(tree.MyType() == LX_TIME)
+    {
+        return !strcmp(this->time, ((ISOTimeBase&)tree).time);
+    }
+    return FALSE;
+}
+
 int BooleanBase::operator ==(ExprTree& tree)
 {
     if(tree.MyType() == LX_BOOL)
@@ -336,11 +330,14 @@ int BooleanBase::operator ==(ExprTree& tree)
 
 int BinaryOpBase::operator ==(ExprTree& tree)
 {
-    if(tree.MyType() == this->MyType())
-    {
-	return (*this->lArg == *((BinaryOpBase&)tree).LArg()) &&
-	       (*this->rArg == *((BinaryOpBase&)tree).RArg());
-    }
+	// HACK!!  No lArg implies user-directed parenthesization
+	if ( this->lArg == NULL || ((BinaryOpBase&)tree).LArg() == NULL ) {
+		return (this->lArg == ((BinaryOpBase&)tree).LArg()) &&
+			   (*this->rArg == *((BinaryOpBase&)tree).RArg());
+	} else if (tree.MyType() == this->MyType()) {
+		return (*this->lArg == *((BinaryOpBase&)tree).LArg()) &&
+			   (*this->rArg == *((BinaryOpBase&)tree).RArg());
+	}
     return FALSE;
 }
 
@@ -484,43 +481,48 @@ int FloatBase::operator <=(ExprTree& tree)
     return FALSE;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// Increment the reference counter of the whole tree                          //
-////////////////////////////////////////////////////////////////////////////////
-ExprTree* ExprTree::Copy()
+// This is used by the various CopyDeep()s to get the variables from the base
+// ExprTree class.
+void ExprTree::CopyBaseExprTree(ExprTree * const recipient) const
 {
-    if(this->cardinality > 0)
-    // binary operator, copy children first
-    {
-		if(((BinaryOpBase*)this)->lArg)
-		{
-			((BinaryOpBase*)this)->lArg->Copy();
-		}
-		if(((BinaryOpBase*)this)->rArg)
-		{
-			((BinaryOpBase*)this)->rArg->Copy();
-		}
-    }
-    this->ref++;
-	return this;
+	recipient->unit         = unit;
+	recipient->type         = type;
+	recipient->evalFlag     = evalFlag;
+	return;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// Increment reference counter                                                //
-////////////////////////////////////////////////////////////////////////////////
-
-ExprTree* BinaryOpBase::Copy()
+void ExprTree::PrintToNewStr(char **str)
 {
-    this->ref++;
-    if(this->lArg)
-    {
-		this->lArg->Copy();
-    }
-    if(this->rArg)
-    {
-		this->rArg->Copy();
-    }
-	return this;
+	int   length;
+	char  *new_str;
+
+	// Before we allocate new space for this string, we determine how
+	// much space is needed.
+	length = CalcPrintToStr();
+	new_str = (char *) malloc(length + 1); // +1 for termination
+	*new_str = 0; // necessary, because PrintToStr begins at end of string
+
+	// Now that we have a correctly sized string, fill it up.
+	PrintToStr(new_str);
+
+	// Sanity check--I've tested this quite thoroughly, so it shouldn't
+	// except. It's a good idea to run test_classads though, should you 
+	// ever change the code. Catch errors before shipping. 
+	if (strlen(new_str) != (size_t) length) {
+		EXCEPT("Bad length calculation in class ads. Expected %d, "
+			   "got %d (\"%s\"",
+			   length, strlen(new_str), new_str);
+	}
+	*str = new_str;
+
+	return;
+}
+
+void ExprTree::PrintToStr(MyString & str) {
+	char * tmp = 0;
+	PrintToNewStr(&tmp);
+	str = tmp;
+	free(tmp);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -558,6 +560,11 @@ void FloatBase::Display()
 void StringBase::Display()
 {
     dprintf (D_NOHEADER | D_ALWAYS, "\"%s\"", value);
+}
+
+void ISOTimeBase::Display()
+{
+    dprintf (D_NOHEADER | D_ALWAYS, "\"%s\"", time);
 }
 
 void BooleanBase::Display()
@@ -1109,8 +1116,92 @@ char * const StringBase::Value()
 	return value;
 }
 
+char * const ISOTimeBase::Value()
+{
+	return time;
+}
+
 int BooleanBase::Value()
 {
 	return value;
 }
 
+FunctionBase::FunctionBase(char *name)
+{
+#ifdef USE_STRING_SPACE_IN_CLASSADS
+	this->stringSpaceIndex = string_space->getCanonical(name, SS_DUP);
+	// I apologize for casting away the const-ness of the char * here
+	// I'm trying to make minimal changes in the code to add string space,
+	// and it is safe. 
+	this->name = (char *) (*string_space)[stringSpaceIndex];
+#else
+    this->name = name;
+#endif
+    this->type = LX_FUNCTION;
+	return;
+}
+
+FunctionBase::~FunctionBase()
+{
+	return;
+}
+
+int
+FunctionBase::operator==(ExprTree& tree)
+{
+	return 0;
+}
+
+void FunctionBase::GetReferences(const AttrList *base_attrlist,
+								 StringList &internal_references,
+								 StringList &external_references) const
+{
+
+	ExprTree *arg;
+
+    // These two lines make me shudder. 
+    // This function is const, but calling Rewind() and Next() 
+    // on the arguments list makes it non-const. In practice, 
+    // though, it's really const: we always rewind before we 
+    // look at the arguments. The problem is that the iterator
+    // is part of the List class itself. In order to maintain
+    // const-ness of this function, I'm going to take the easy
+    // way out and magically turn it mutable, by hiding the 
+    // fact that it should be const. 
+    FunctionBase *mutable_this = (FunctionBase *) this;
+	mutable_this->arguments.Rewind();
+
+	while (mutable_this->arguments.Next(arg)) {
+        arg->GetReferences(base_attrlist, 
+                           internal_references, external_references);
+	}
+
+	return;
+}
+
+void
+FunctionBase::AppendArgument(ExprTree *argument)
+{
+	arguments.Append(argument);
+	return;
+}
+
+void
+FunctionBase::EvaluateArgument(
+	ExprTree *arg,
+	const AttrList *attrlist1, 
+	const AttrList *attrlist2,
+	EvalResult *result) const
+{
+	if ( arg ) {
+		if (attrlist2 == NULL) {
+			// This will let us refer to attributes in a ClassAd, like "MY"
+			arg->EvalTree(attrlist1, result);
+		} else {
+			// This will let us refer to attributes in two ClassAds: like 
+			// "My" and "Target"
+			arg->EvalTree(attrlist1, attrlist2, result);
+		}
+	}
+	return;
+}

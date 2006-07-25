@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -40,12 +40,14 @@ extern "C" {
 int blankline ( char *str );
 char * gen_exec_name ( int cluster, int proc, int subproc );
 
-void lower_case ( register char *str );
-int config_hash ( register char *string, register int size );
+int condor_hash ( register char *string, register int size );
 char * getline ( FILE *fp );
+
+char* getExecPath();
 
 int rotate_file(const char *old_filename, const char *new_filename);
 int copy_file(const char *old_filename, const char *new_filename);
+int hardlink_or_copy_file(const char *old_filename, const char *new_filename);
 
 void schedule_event ( int month, int day, int hour, int minute, int second, void (*func)() );
 void event_mgr ( void );
@@ -55,7 +57,7 @@ void ProcessLogging ( int request, int extraInteger );
 void detach ( void );
 int do_connect ( const char *host, const char *service, u_int port );
 int udp_connect ( char *host, u_int port );
-void dprintf ( int flags, char* fmt, ... );
+void dprintf ( int flags, const char* fmt, ... );
 FILE * debug_lock ( void );
 void debug_unlock ( void );
 void _EXCEPT_ ( char *fmt, ... );
@@ -96,8 +98,9 @@ PROC *ConstructProc( int, PROC *);
 int blankline ();
 char * gen_exec_name ();
 
-void lower_case ();
-int config_hash ();
+char* getExecPath();
+
+int hash ();
 char * getline ();
 
 

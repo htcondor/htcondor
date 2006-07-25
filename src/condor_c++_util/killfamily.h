@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -26,13 +26,15 @@
 #include "extArray.h"
 #include "condor_uid.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_pidenvid.h"
 
 class ProcAPI; 	// forward reference
 
 class ProcFamily : public Service {
 public:
 	
-	ProcFamily( pid_t pid, priv_state priv, int test_only = 0 );
+	ProcFamily( pid_t pid, PidEnvID *penvid, priv_state priv,
+					int test_only = 0 );
 
 	~ProcFamily();
 
@@ -68,8 +70,10 @@ private:
 		INFANTICIDE		// children die first, then parent
 	}; 
 
+	class a_pid;
+
 	void spree(int sig, KILLFAMILY_DIRECTION direction);
-	void safe_kill(pid_t inpid,int sig);
+	void safe_kill(a_pid *pid, int sig);
 
 	int test_only_flag;
 	
@@ -108,6 +112,8 @@ private:
 	long alive_cpu_sys_time;
 
 	unsigned long max_image_size;
+
+	PidEnvID m_penvid;
 
 	char *searchLogin;
 };

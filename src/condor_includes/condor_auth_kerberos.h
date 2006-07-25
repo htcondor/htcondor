@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -108,6 +108,7 @@ class Condor_Auth_Kerberos : public Condor_Auth_Base {
     // RETURNS: TRUE -- if success; FALSE -- if failure
     //------------------------------------------
 
+	void Condor_Auth_Kerberos :: dprintf_krb5_principal ( int deblevel, char *fmt, krb5_principal p );
     
     int authenticate_client_kerberos();
     //------------------------------------------
@@ -130,7 +131,7 @@ class Condor_Auth_Kerberos : public Condor_Auth_Base {
     // RETURNS: TRUE -- success; FALSE -- failure
     //------------------------------------------
     
-    int map_kerberos_name(krb5_ticket * ticket);
+    int map_kerberos_name(krb5_principal * princ);
     int map_domain_name(const char * domain);
     //------------------------------------------
     // PURPOSE: Map kerberos realm to condor uid

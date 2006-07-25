@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -23,10 +23,10 @@
 
 #include "condor_common.h"
 #include "startd.h"
-//#include "classad_merge.h"
-
-// Instantiate the Named Class Ad list
-template class SimpleList<NamedClassAd*>;
+#include "condor_classad_namedlist.h"
+#include "classad_merge.h"
+#include "vm_common.h"
+#include "VMRegister.h"
 
 
 ResMgr::ResMgr()
@@ -37,6 +37,12 @@ ResMgr::ResMgr()
 	poll_tid = -1;
 
 	m_attr = new MachAttributes;
+
+#if HAVE_BACKFILL
+	m_backfill_mgr = NULL;
+	m_backfill_shutdown_pending = false;
+#endif
+
 	id_disp = NULL;
 
 	nresources = 0;
@@ -55,6 +61,13 @@ ResMgr::~ResMgr()
 	if( totals_classad ) delete totals_classad;
 	if( id_disp ) delete id_disp;
 	delete m_attr;
+
+#if HAVE_BACKFILL
+	if( m_backfill_mgr ) {
+		delete m_backfill_mgr;
+	}
+#endif
+
 	if( resources ) {
 		for( i = 0; i < nresources; i++ ) {
 			delete resources[i];
@@ -88,6 +101,8 @@ ResMgr::init_config_classad( void )
 	configInsert( config_classad, "KILL", true );
 	configInsert( config_classad, "WANT_SUSPEND", true );
 	configInsert( config_classad, "WANT_VACATE", true );
+	configInsert( config_classad, "CLAIM_WORKLIFE", false );
+	configInsert( config_classad, ATTR_MAX_JOB_RETIREMENT_TIME, false );
 
 		// Now, bring in things that we might need
 	configInsert( config_classad, "PERIODIC_CHECKPOINT", false );
@@ -99,6 +114,10 @@ ResMgr::init_config_classad( void )
 	configInsert( config_classad, "KILL_VANILLA", false );
 	configInsert( config_classad, "WANT_SUSPEND_VANILLA", false );
 	configInsert( config_classad, "WANT_VACATE_VANILLA", false );
+#if HAVE_BACKFILL
+	configInsert( config_classad, "START_BACKFILL", false );
+	configInsert( config_classad, "EVICT_BACKFILL", false );
+#endif /* HAVE_BACKFILL */
 
 		// Next, try the IS_OWNER expression.  If it's not there, give
 		// them a resonable default, instead of leaving it undefined. 
@@ -131,6 +150,161 @@ ResMgr::init_config_classad( void )
 		// Now, bring in anything the user has said to include
 	config_fill_ad( config_classad );
 }
+
+
+
+#if HAVE_BACKFILL
+
+void
+ResMgr::backfillMgrDone()
+{
+	ASSERT( m_backfill_mgr );
+	dprintf( D_FULLDEBUG, "BackfillMgr now ready to be deleted\n" );
+	delete m_backfill_mgr;
+	m_backfill_mgr = NULL;
+	m_backfill_shutdown_pending = false;
+
+		// We should call backfillConfig() again, since now that the
+		// "old" manager is gone, we might want to allocate a new one
+	backfillConfig();
+}
+
+
+static bool
+verifyBackfillSystem( const char* sys )
+{
+
+#if HAVE_BOINC
+	if( ! stricmp(sys, "BOINC") ) {
+		return true;
+	}
+#endif /* HAVE_BOINC */
+
+	return false;
+}
+
+
+bool
+ResMgr::backfillConfig()
+{
+	if( m_backfill_shutdown_pending ) {
+			/*
+			  we're already in the middle of trying to reconfig the
+			  backfill manager, anyway.  we can only get to this point
+			  if we had 1 backfill system running, then we either
+			  change the system we want or disable backfill entirely,
+			  and while we're waiting for the old system to cleanup,
+			  we get *another* reconfig.  in this case, we do NOT want
+			  to act on the new reconfig until the old reconfig had a
+			  chance to complete.  since we'll call backfillConfig()
+			  from backfillMgrDone(), anyway, there's no harm in just
+			  returning immediately at this point, and plenty of harm
+			  that could come from trying to proceed. ;)
+			*/
+		dprintf( D_ALWAYS, "Got another reconfig while waiting for the old "
+				 "backfill system to finish cleaning up, delaying\n" );
+		return true;
+	}
+
+	if( ! param_boolean("ENABLE_BACKFILL", false) ) {
+		if( m_backfill_mgr ) {
+			dprintf( D_ALWAYS, 
+					 "ENABLE_BACKFILL is false, destroying BackfillMgr\n" );
+			if( m_backfill_mgr->destroy() ) {
+					// nothing else to cleanup now, we can delete it 
+					// immediately...
+				delete m_backfill_mgr;
+				m_backfill_mgr = NULL;
+			} else {
+					// backfill_mgr told us we have to wait, so just
+					// return for now and we'll finish deleting this
+					// in ResMgr::backfillMgrDone(). 
+				dprintf( D_ALWAYS, "BackfillMgr still has cleanup to "
+						 "perform, postponing delete\n" );
+				m_backfill_shutdown_pending = true;
+			}
+		}
+		return false;
+	}
+
+	char* new_system = param( "BACKFILL_SYSTEM" );
+	if( ! new_system ) {
+		dprintf( D_ALWAYS, "ERROR: ENABLE_BACKFILL is TRUE, but "	
+				 "BACKFILL_SYSTEM is undefined!\n" );
+		return false;
+	}
+	if( ! verifyBackfillSystem(new_system) ) {
+		dprintf( D_ALWAYS,
+				 "ERROR: BACKFILL_SYSTEM '%s' not supported, ignoring\n",
+				 new_system );
+		free( new_system );
+		return false;
+	}
+		
+	if( m_backfill_mgr ) {
+		if( ! stricmp(new_system, m_backfill_mgr->backfillSystemName()) ) {
+				// same as before
+			free( new_system );
+				// since it's already here and we're keeping it, tell
+				// it to reconfig (if that matters)
+			m_backfill_mgr->reconfig();
+				// we're done 
+			return true;
+		} else { 
+				// different!
+			dprintf( D_ALWAYS, "BACKFILL_SYSTEM has changed "
+					 "(old: '%s', new: '%s'), re-initializing\n",
+					 m_backfill_mgr->backfillSystemName(), new_system );
+			if( m_backfill_mgr->destroy() ) {
+					// nothing else to cleanup now, we can delete it 
+					// immediately...
+				delete m_backfill_mgr;
+				m_backfill_mgr = NULL;
+			} else {
+					// backfill_mgr told us we have to wait, so just
+					// return for now and we'll finish deleting this
+					// in ResMgr::backfillMgrDone(). 
+				dprintf( D_ALWAYS, "BackfillMgr still has cleanup to "
+						 "perform, postponing delete\n" );
+				m_backfill_shutdown_pending = true;
+				return true;
+			}
+		}
+	}
+
+		// if we got this far, it means we've got a valid system, but
+		// no manager object.  so, depending on the system,
+		// instantiate the right thing.
+#if HAVE_BOINC
+	if( ! stricmp(new_system, "BOINC") ) {
+		m_backfill_mgr = new BOINC_BackfillMgr();
+		if( ! m_backfill_mgr->init() ) {
+			dprintf( D_ALWAYS, "ERROR initializing BOINC_BackfillMgr\n" );
+			delete m_backfill_mgr;
+			m_backfill_mgr = NULL;
+			free( new_system );
+			return false;
+		}
+	}
+#endif /* HAVE_BOINC */
+
+	if( ! m_backfill_mgr ) {
+			// this is impossible, since we've already verified above
+		EXCEPT( "IMPOSSILE: unrecognized BACKFILL_SYSTEM: '%s'",
+				new_system );
+	}
+
+	dprintf( D_ALWAYS, "Created a %s Backfill Manager\n", 
+			 m_backfill_mgr->backfillSystemName() );
+
+	free( new_system );
+
+	return true;
+}
+
+
+
+#endif /* HAVE_BACKFILL */
 
 
 void
@@ -193,6 +367,11 @@ ResMgr::init_resources( void )
 		// Resource objects.  Since it's an array of pointers, this
 		// won't touch the objects at all.
 	delete [] new_cpu_attrs;
+
+#if HAVE_BACKFILL
+	backfillConfig();
+#endif
+
 }
 
 
@@ -206,6 +385,9 @@ ResMgr::reconfig_resources( void )
 	Resource*** sorted_resources;	// Array of arrays of pointers.
 	Resource* rip;
 
+#if HAVE_BACKFILL
+	backfillConfig();
+#endif
 		// See if any new types were defined.  Don't except if there's
 		// any errors, just dprintf().
 	initTypes( 0 );
@@ -391,6 +573,7 @@ ResMgr::initTypes( bool except )
 					 "Can't define %s in the config file, ignoring\n",
 					 buf ); 
 		}
+		free(tmp);
 	}
 
 	if( ! type_strings[0] ) {
@@ -437,6 +620,7 @@ ResMgr::countTypes( int** array_ptr, bool except )
 					 "Can't define %s in the config file, ignoring\n",
 					 buf ); 
 		}
+		free(tmp);
 	}
 
 	for( i=1; i<max_types; i++ ) {
@@ -507,10 +691,10 @@ ResMgr::build_vm( int type, bool except )
 						 currentVMType );
 				dprintf( D_ALWAYS | D_NOHEADER,  "\"%s\" is invalid.\n", attr );
 				dprintf( D_ALWAYS | D_NOHEADER, 
-						 "\tYou must specify a percentage (like \"25%\"), " );
+						 "\tYou must specify a percentage (like \"25%%\"), " );
 				dprintf( D_ALWAYS | D_NOHEADER, "a fraction (like \"1/4\"),\n" );
 				dprintf( D_ALWAYS | D_NOHEADER, 
-						 "\tor list all attributes (like \"c=1, r=25%, s=25%, d=25%\").\n" );
+						 "\tor list all attributes (like \"c=1, r=25%%, s=25%%, d=25%%\").\n" );
 				dprintf( D_ALWAYS | D_NOHEADER, 
 						 "\tSee the manual for details.\n" );
 				if( except ) {
@@ -824,112 +1008,49 @@ ResMgr::resource_sort( ComparisonFunc compar )
 int
 ResMgr::adlist_register( const char *name )
 {
-	NamedClassAd	*cur;
-
-	// Walk through the list
-	extra_ads.Rewind( );
-	while ( extra_ads.Current( cur ) ) {
-		if ( ! strcmp( cur->GetName( ), name ) ) {
-			// Do nothing
-			return 0;
-		}
-		extra_ads.Next( cur );
-	}
-
-	// No match found; insert it into the list
-	dprintf( D_JOB, "Adding '%s' to the Supplimental ClassAd list\n", name );
-	if (  ( cur = new NamedClassAd( name, NULL ) ) != NULL ) {
-		extra_ads.Append( cur );
-		return 0;
-	}
-
-	// new failed; bad
-	return -1;
+	return extra_ads.Register( name );
 }
 
 int
-ResMgr::adlist_replace( const char *name, ClassAd *newAd )
+ResMgr::adlist_replace( const char *name, ClassAd *newAd, bool report_diff )
 {
-	NamedClassAd	*cur;
-
-	// Walk through the list
-	extra_ads.Rewind( );
-	while ( extra_ads.Next( cur ) ) {
-		if ( ! strcmp( cur->GetName( ), name ) ) {	
-			dprintf( D_FULLDEBUG, "Replacing ClassAd for '%s'\n", name );
-			cur->ReplaceAd( newAd );
-			return 0;
-		}
+	if( report_diff ) {
+		StringList ignore_list;
+		MyString ignore = name;
+		ignore += "_LastUpdate";
+		ignore_list.append( ignore.Value() );
+		return extra_ads.Replace( name, newAd, true, &ignore_list );
 	}
-
-	// No match found; insert it into the list
-	if (  ( cur = new NamedClassAd( name, newAd ) ) != NULL ) {
-		dprintf( D_FULLDEBUG,
-				 "Adding '%s' to the 'extra' ClassAd list\n", name );
-		extra_ads.Append( cur );
-		return 0;
-	}
-
-	// new failed; bad
-	delete newAd;		// The caller expects us to always free the memory
-	return -1;
+	return extra_ads.Replace( name, newAd );
 }
 
 int
 ResMgr::adlist_delete( const char *name )
 {
-	NamedClassAd	*cur;
-
-	// Walk through the list
-	extra_ads.Rewind( );
-	while ( extra_ads.Next( cur ) ) {
-		if ( ! strcmp( cur->GetName( ), name ) ) {
-			dprintf( D_FULLDEBUG, "Deleting ClassAd for '%s'\n", name );	
-			extra_ads.DeleteCurrent( );
-			return 0;
-		}
-	}
-
-	// No match found; done
-	return 0;
+	return extra_ads.Delete( name );
 }
 
 int
 ResMgr::adlist_publish( ClassAd *resAd, amask_t mask )
 {
-	NamedClassAd	*cur;
-
 	// Check the mask
 	if (  ( mask & ( A_PUBLIC | A_UPDATE ) ) != ( A_PUBLIC | A_UPDATE )  ) {
 		return 0;
 	}
 
-	// Walk through the list
-	extra_ads.Rewind( );
-	while ( extra_ads.Next( cur ) ) {
-		ClassAd	*ad = cur->GetAd( );
-		if ( NULL != ad ) {
-			dprintf( D_FULLDEBUG,
-					 "Publishing ClassAd for '%s'\n", cur->GetName() );
-//			MergeClassAds( resAd, ad, true );
-			resAd->Update( *ad );
-		}
-	}
-
-	// Done
-	return 0;
+	return extra_ads.Publish( resAd );
 }
 
 
 bool
-ResMgr::hasOppClaim( void )
+ResMgr::needsPolling( void )
 {
 	if( ! resources ) {
 		return false;
 	}
 	int i;
 	for( i = 0; i < nresources; i++ ) {
-		if( resources[i]->hasOppClaim() ) {
+		if( resources[i]->needsPolling() ) {
 			return true;
 		}
 	}
@@ -1001,6 +1122,26 @@ ResMgr::getClaimByGlobalJobId( const char* id )
 		}
 	}
 	return NULL;
+}
+
+Claim *
+ResMgr::getClaimByGlobalJobIdAndId( const char *job_id,
+									const char *claimId)
+{
+	Claim* foo = NULL;
+	if( ! resources ) {
+		return NULL;
+	}
+	int i;
+	for( i = 0; i < nresources; i++ ) {
+		if( (foo = resources[i]->findClaimByGlobalJobId(job_id)) ) {
+			if( foo == resources[i]->findClaimById(claimId) ) {
+				return foo;	
+			}
+		}
+	}
+	return NULL;
+
 }
 
 
@@ -1075,6 +1216,10 @@ ResMgr::get_by_any_id( char* id )
 			resources[i]->r_pre->idMatches(id) ) {
 			return resources[i];
 		}
+		if( resources[i]->r_pre_pre &&
+			resources[i]->r_pre_pre->idMatches(id) ) {
+			return resources[i];
+		}
 	}
 	return NULL;
 }
@@ -1096,6 +1241,20 @@ ResMgr::get_by_name( char* name )
 }
 
 
+Resource*
+ResMgr::get_by_vm_id( int id )
+{
+	if( ! resources ) {
+		return NULL;
+	}
+	int i;
+	for( i = 0; i < nresources; i++ ) {
+		if( resources[i]->r_id == id ) {
+			return resources[i];
+		}
+	}
+	return NULL;
+}
 
 
 State
@@ -1157,18 +1316,12 @@ ResMgr::force_benchmark( void )
 
 
 int
-ResMgr::send_update( int cmd, ClassAd* public_ad, ClassAd* private_ad )
+ResMgr::send_update( int cmd, ClassAd* public_ad, ClassAd* private_ad, bool nonblocking )
 {
 	int num = 0;
 
-	if( Collector ) {
-		if( Collector->sendUpdate(cmd, public_ad, private_ad) ) {
-			num++;
-		} else {
-			dprintf( D_FAILURE|D_ALWAYS,
-					 "Error sending update to the collector %s: %s \n", 
-					 Collector->updateDestination(), Collector->error() );
-		}
+	if( Collectors ) {
+		num = Collectors->sendUpdates (cmd, public_ad, private_ad, nonblocking);
 	}  
 
 		// Increment the resmgr's count of updates.
@@ -1213,13 +1366,31 @@ ResMgr::report_updates( void )
 	if( !num_updates ) {
 		return;
 	}
-	if( Collector ) {
+
+	if( Collectors ) {
+		MyString list;
+		Daemon * collector;
+		Collectors->rewind();
+		while (Collectors->next (collector)) {
+			list += collector->fullHostname();
+			list += " ";
+		}
+
 		dprintf( D_FULLDEBUG,
 				 "Sent %d update(s) to the collector (%s)\n", 
-				 num_updates, Collector->fullHostname() );
+				 num_updates, list.Value());
 	}  
 }
 
+void
+ResMgr::refresh_benchmarks()
+{
+	if( ! resources ) {
+		return;
+	}
+
+	walk( &Resource::refresh_classad, A_TIMEOUT );
+}
 
 void
 ResMgr::compute( amask_t how_much )
@@ -1245,6 +1416,20 @@ ResMgr::compute( amask_t how_much )
 
 	assign_load();
 	assign_keyboard();
+
+	if( vmapi_is_virtual_machine() == TRUE ) {
+		ClassAd* host_classad;
+		vmapi_request_host_classAd();
+		host_classad = vmapi_get_host_classAd();
+		if( host_classad ) {
+			int i;
+			for( i = 0; i < nresources; i++ ) {
+				if( resources[i]->r_classad )
+					MergeClassAds( resources[i]->r_classad, host_classad, true );
+			}
+		}
+
+	}
 
 		// Now that everything has actually been computed, we can
 		// refresh our internal classad with all the current values of
@@ -1388,7 +1573,7 @@ ResMgr::check_polling( void )
 		return;
 	}
 
-	if( hasOppClaim() || m_attr->condor_load() > 0 ) {
+	if( needsPolling() || m_attr->condor_load() > 0 ) {
 		start_poll_timer();
 	} else {
 		cancel_poll_timer();
@@ -1785,29 +1970,4 @@ IdDispenser::insert( int id )
 		EXCEPT( "IdDispenser::insert: %d is already free", id );
 	}
 	free_ids[id] = true;
-}
-
-// Named classAds
-NamedClassAd::NamedClassAd( const char *name, ClassAd *ad )
-{
-	myName = strdup( name );
-	myClassAd = ad;
-}
-
-// Destructor
-NamedClassAd::~NamedClassAd( )
-{
-	free( myName );
-	delete myClassAd;
-}
-
-// Replace existing ad
-void
-NamedClassAd::ReplaceAd( ClassAd *newAd )
-{
-	if ( NULL != myClassAd ) {
-		delete myClassAd;
-		myClassAd = NULL;
-	}
-	myClassAd = newAd;
 }

@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -28,6 +28,7 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "condor_cronmgr.h"
 #include "condor_cron.h"
+#include "condor_string.h"
 
 // Size of the buffer for reading from the child process
 #define STDOUT_READBUF_SIZE	1024
@@ -35,7 +36,7 @@
 #define STDERR_READBUF_SIZE	128
 
 // Cron's Line StdOut Buffer constructor
-CronJobOut::CronJobOut( class CondorCronJob *job ) :
+CronJobOut::CronJobOut( class CronJobBase *job ) :
 		LineBuffer( STDOUT_LINEBUF_SIZE )
 {
 	this->job = job;
@@ -84,16 +85,14 @@ CronJobOut::Output( const char *buf, int len )
 
 // Get size of the queue
 int
-CronJobOut::
-GetQueueSize( void )
+CronJobOut::GetQueueSize( void )
 {
 	return lineq.Length( );
 }
 
 // Flush the queue
 int
-CronJobOut::
-FlushQueue( void )
+CronJobOut::FlushQueue( void )
 {
 	int		size = lineq.Length( );
 	char	*line;
@@ -109,8 +108,7 @@ FlushQueue( void )
 
 // Get next queue element
 char *
-CronJobOut::
-GetLineFromQueue( void )
+CronJobOut::GetLineFromQueue( void )
 {
 	char	*line;
 
@@ -122,7 +120,7 @@ GetLineFromQueue( void )
 }
 
 // Cron's Line StdErr Buffer constructor
-CronJobErr::CronJobErr( class CondorCronJob *job ) :
+CronJobErr::CronJobErr( class CronJobBase *job ) :
 		LineBuffer( 128 )
 {
 	this->job = job;
@@ -139,7 +137,7 @@ CronJobErr::Output( const char *buf, int len )
 }
 
 // CronJob constructor
-CondorCronJob::CondorCronJob( const char *mgrName, const char *jobName )
+CronJobBase::CronJobBase( const char *mgrName, const char *jobName )
 {
 	// Reset *everything*
 	period = UINT_MAX;
@@ -158,7 +156,7 @@ CondorCronJob::CondorCronJob( const char *mgrName, const char *jobName )
 	stdOutBuf = new CronJobOut( this );
 	stdErrBuf = new CronJobErr( this );
 
-# if 0
+# if CRONJOB_PIPEIO_DEBUG
 	TodoBufSize = 20 * 1024;
 	TodoWriteNum = TodoBufWrap = TodoBufOffset = 0;
 	TodoBuffer = (char *) malloc( TodoBufSize );
@@ -170,13 +168,13 @@ CondorCronJob::CondorCronJob( const char *mgrName, const char *jobName )
 	// Register my reaper
 	reaperId = daemonCore->Register_Reaper( 
 		"Cron_Reaper",
-		(ReaperHandlercpp) &CondorCronJob::Reaper,
+		(ReaperHandlercpp) &CronJobBase::Reaper,
 		"Cron Reaper",
 		this );
 }
 
 // CronJob destructor
-CondorCronJob::~CondorCronJob( )
+CronJobBase::~CronJobBase( )
 {
 	dprintf( D_ALWAYS, "Cron: Deleting job '%s' (%s)\n", GetName(),
 			 GetPath() );
@@ -193,15 +191,19 @@ CondorCronJob::~CondorCronJob( )
 
 	// Close FDs
 	CleanAll( );
+
+	// Delete the buffers
+	delete stdOutBuf;
+	delete stdErrBuf;
 }
 
 // Initialize
 int
-CondorCronJob::Initialize( )
+CronJobBase::Initialize( )
 {
-	// Make sure we're not already initialized...
+	// If we're already initialized, do nothing...
 	if ( state != CRON_NOINIT )	{
-		return -1;
+		return 0;
 	}
 
 	// Update our state to idle..
@@ -216,7 +218,7 @@ CondorCronJob::Initialize( )
 
 // Set job characteristics: Name
 int
-CondorCronJob::SetName( const char *newName )
+CronJobBase::SetName( const char *newName )
 {
 	if ( NULL == newName ) {
 		return -1;
@@ -227,7 +229,7 @@ CondorCronJob::SetName( const char *newName )
 
 // Set job characteristics: Prefix
 int
-CondorCronJob::SetPrefix( const char *newPrefix )
+CronJobBase::SetPrefix( const char *newPrefix )
 {
 	if ( NULL == newPrefix ) {
 		return -1;
@@ -238,7 +240,7 @@ CondorCronJob::SetPrefix( const char *newPrefix )
 
 // Set job characteristics: Path
 int
-CondorCronJob::SetPath( const char *newPath )
+CronJobBase::SetPath( const char *newPath )
 {
 	if ( NULL == newPath ) {
 		return -1;
@@ -249,23 +251,41 @@ CondorCronJob::SetPath( const char *newPath )
 
 // Set job characteristics: Command line args
 int
-CondorCronJob::SetArgs( const char *newArgs )
+CronJobBase::SetArgs( ArgList const &new_args )
 {
-	args = newArgs;
+	args.Clear();
+	return AddArgs(new_args);
+}
+
+// Set job characteristics: Path
+int
+CronJobBase::SetConfigVal( const char *newPath )
+{
+	if ( NULL == newPath ) {
+		configValProg = "";
+	} else {
+		configValProg = newPath;
+	}
 	return 0;
 }
 
 // Set job characteristics: Environment
 int
-CondorCronJob::SetEnv( const char *newEnv )
+CronJobBase::SetEnv( char const * const *env_array )
 {
-	env = newEnv;
-	return 0;
+	env.Clear();
+	return !env.MergeFrom(env_array);
+}
+
+int
+CronJobBase::AddEnv( char const * const *env_array )
+{
+	return !env.MergeFrom(env_array);
 }
 
 // Set job characteristics: CWD
 int
-CondorCronJob::SetCwd( const char *newCwd )
+CronJobBase::SetCwd( const char *newCwd )
 {
 	cwd = newCwd;
 	return 0;
@@ -273,7 +293,7 @@ CondorCronJob::SetCwd( const char *newCwd )
 
 // Set job characteristics: Kill option
 int
-CondorCronJob::SetKill( bool kill )
+CronJobBase::SetKill( bool kill )
 {
 	optKill = kill;
 	return 0;
@@ -281,7 +301,7 @@ CondorCronJob::SetKill( bool kill )
 
 // Set job characteristics: Reconfig option
 int
-CondorCronJob::SetReconfig( bool reconfig )
+CronJobBase::SetReconfig( bool reconfig )
 {
 	optReconfig = reconfig;
 	return 0;
@@ -289,7 +309,7 @@ CondorCronJob::SetReconfig( bool reconfig )
 
 // Add to the job's path
 int
-CondorCronJob::AddPath( const char *newPath )
+CronJobBase::AddPath( const char *newPath )
 {
 	if ( path.Length() ) {
 		path += ":";
@@ -300,29 +320,15 @@ CondorCronJob::AddPath( const char *newPath )
 
 // Add to the job's arg list
 int
-CondorCronJob::AddArgs( const char *newArgs )
+CronJobBase::AddArgs( ArgList const &new_args )
 {
-	if ( args.Length() ) {
-		args += " ";
-	}
-	args += newArgs;
-	return 0;
-}
-
-// Add to the job's environment
-int
-CondorCronJob::AddEnv( const char *newEnv )
-{
-	if ( env.Length() ) {
-		env += ";";
-	}
-	env += newEnv;
-	return 0;
+	args.AppendArgsFromArgList(new_args);
+	return 1;
 }
 
 // Set job died handler
 int
-CondorCronJob::SetEventHandler(
+CronJobBase::SetEventHandler(
 	CronEventHandler	NewHandler,
 	Service				*s )
 {
@@ -339,7 +345,7 @@ CondorCronJob::SetEventHandler(
 
 // Set job characteristics
 int
-CondorCronJob::SetPeriod( CronJobMode newMode, unsigned newPeriod )
+CronJobBase::SetPeriod( CronJobMode newMode, unsigned newPeriod )
 {
 	// Verify that the mode seleted is valid
 	if (  ( CRON_WAIT_FOR_EXIT != newMode ) && ( CRON_PERIODIC != newMode )  ) {
@@ -374,7 +380,7 @@ CondorCronJob::SetPeriod( CronJobMode newMode, unsigned newPeriod )
 
 // Reconfigure a running job
 int
-CondorCronJob::Reconfig( void )
+CronJobBase::Reconfig( void )
 {
 	// Only do this to running jobs with the reconfig option set
 	if (  ( ! optReconfig ) || ( CRON_RUNNING != state )  ) {
@@ -406,7 +412,7 @@ CondorCronJob::Reconfig( void )
 
 // Schedule a run?
 int
-CondorCronJob::Schedule( void )
+CronJobBase::Schedule( void )
 {
 	// If we're not initialized yet, do nothing...
 	if ( CRON_NOINIT == state ) {
@@ -436,7 +442,7 @@ CondorCronJob::Schedule( void )
 
 // Schdedule the job to run
 int
-CondorCronJob::RunJob( void )
+CronJobBase::RunJob( void )
 {
 
 	// Make sure that the job is idle!
@@ -466,7 +472,7 @@ CondorCronJob::RunJob( void )
 
 // Handle the kill timer
 int
-CondorCronJob::KillHandler( void )
+CronJobBase::KillHandler( void )
 {
 
 	// Log that we're here
@@ -474,7 +480,8 @@ CondorCronJob::KillHandler( void )
 
 	// If we're idle, we shouldn't be here.
 	if ( CRON_IDLE == state ) {
-		dprintf( D_ALWAYS, "Cron: Job '%'s already idle '%s'!\n", GetName() );
+		dprintf( D_ALWAYS, "Cron: Job '%s' already idle (%s)!\n", 
+			GetName(), GetPath() );
 		return -1;
 	}
 
@@ -484,7 +491,7 @@ CondorCronJob::KillHandler( void )
 
 // Start a job
 int
-CondorCronJob::StartJob( void )
+CronJobBase::StartJob( void )
 {
 	if ( CRON_IDLE != state ) {
 		dprintf( D_ALWAYS, "Cron: Job '%s' not idle!\n", GetName() );
@@ -504,7 +511,7 @@ CondorCronJob::StartJob( void )
 
 // Child reaper
 int
-CondorCronJob::Reaper( int exitPid, int exitStatus )
+CronJobBase::Reaper( int exitPid, int exitStatus )
 {
 	if( WIFSIGNALED(exitStatus) ) {
 		dprintf( D_FULLDEBUG, "Cron: '%s' (pid %d) exit_signal=%d\n",
@@ -596,8 +603,7 @@ CondorCronJob::Reaper( int exitPid, int exitStatus )
 
 // Publisher
 int
-CondorCronJob::
-ProcessOutputQueue( void )
+CronJobBase::ProcessOutputQueue( void )
 {
 	int		status = 0;
 	int		linecount = stdOutBuf->GetQueueSize( );
@@ -635,22 +641,11 @@ ProcessOutputQueue( void )
 	return 0;
 }
 
-// Publisher
-int
-CondorCronJob::
-ProcessOutput( const char *line )
-{
-	(void) line;
-
-	// Do nothing
-	return 0;
-}
-
 // Start a job
 int
-CondorCronJob::
-RunProcess( void )
+CronJobBase::RunProcess( void )
 {
+	ArgList final_args;
 
 	// Create file descriptors
 	if ( OpenFds( ) < 0 ) {
@@ -659,27 +654,18 @@ RunProcess( void )
 		return -1;
 	}
 
-	// Are there arguments to pass it?
-	char *argBuf = NULL;
-	if ( args.Length() ) {
-		int		len = args.Length() + 1 + name.Length() + 1;
-		if ( NULL == ( argBuf = (char *) malloc( len ) )  ) {
-			dprintf( D_ALWAYS, 
-					 "Cron: Couldn't allocate arg buffer %d bytes\n",
-					 len );
-			return -1;
-		}
-		strcpy( argBuf, name.GetCStr() );
-		strcat( argBuf, " " );
-		strcat( argBuf, args.GetCStr() );
+	// Add the name to the argument list, then any specified in the config
+	final_args.AppendArg( name.GetCStr() );
+	if(args.Count()) {
+		final_args.AppendArgsFromArgList(args);
 	}
 
 	// Create the priv state for the process
 	priv_state priv;
-#ifdef WIN32
+# ifdef WIN32
 	// WINDOWS
 	priv = PRIV_CONDOR;
-#else
+# else
 	// UNIX
 	priv = PRIV_USER_FINAL;
 	uid_t uid = get_condor_uid( );
@@ -695,16 +681,16 @@ RunProcess( void )
 		return -1;
 	}
 	set_user_ids( uid, gid );
-#endif
+# endif
 
 	// Create the process, finally..
 	pid = daemonCore->Create_Process(
 		path.GetCStr(),		// Path to executable
-		argBuf,				// argv
+		final_args,			// argv
 		priv,				// Priviledge level
 		reaperId,			// ID Of reaper
 		FALSE,				// Command port?  No
-		env.GetCStr(),		// Env to give to child
+		&env, 		 		// Env to give to child
 		cwd.GetCStr(),		// Starting CWD
 		FALSE,				// New process group?
 		NULL,				// Socket list
@@ -722,9 +708,6 @@ RunProcess( void )
 	// Did it work?
 	if ( pid <= 0 ) {
 		dprintf( D_ALWAYS, "Cron: Error running job '%s'\n", GetName() );
-		if ( NULL != argBuf ) {
-			free( argBuf );
-		}
 		CleanAll( );
 		return -1;
 	}
@@ -742,9 +725,9 @@ RunProcess( void )
 }
 
 // Debugging
-# if 0
+# if CRONJOB_PIPEIO_DEBUG
 void
-CondorCronJob::TodoWrite( void )
+CronJobBase::TodoWrite( void )
 {
 	char	fname[1024];
 	FILE	*fp;
@@ -769,7 +752,7 @@ CondorCronJob::TodoWrite( void )
 // Data is available on Standard Out.  Read it!
 //  Note that we set the pipe to be non-blocking when we created it
 int
-CondorCronJob::StdoutHandler ( int pipe )
+CronJobBase::StdoutHandler ( int pipe )
 {
 	char			buf[STDOUT_READBUF_SIZE];
 	int				bytes;
@@ -779,7 +762,7 @@ CondorCronJob::StdoutHandler ( int pipe )
 	while ( ( ++reads < 10 ) && ( stdOut >= 0 ) ) {
 
 		// Read a block from it
-		bytes = read( stdOut, buf, STDOUT_READBUF_SIZE );
+		bytes = daemonCore->Read_Pipe( stdOut, buf, STDOUT_READBUF_SIZE );
 
 		// Zero means it closed
 		if ( bytes == 0 ) {
@@ -793,7 +776,7 @@ CondorCronJob::StdoutHandler ( int pipe )
 			const char	*bptr = buf;
 
 			// TODO
-#		  if 0
+# 		  if CRONJOB_PIPEIO_DEBUG
 			if ( TodoBuffer ) {
 				char	*OutPtr = TodoBuffer + TodoBufOffset;
 				int		Count = bytes;
@@ -836,13 +819,13 @@ CondorCronJob::StdoutHandler ( int pipe )
 // Data is available on Standard Error.  Read it!
 //  Note that we set the pipe to be non-blocking when we created it
 int
-CondorCronJob::StderrHandler ( int pipe )
+CronJobBase::StderrHandler ( int pipe )
 {
 	char			buf[STDERR_READBUF_SIZE];
 	int				bytes;
 
 	// Read a block from it
-	bytes = read( stdErr, buf, STDERR_READBUF_SIZE );
+	bytes = daemonCore->Read_Pipe( stdErr, buf, STDERR_READBUF_SIZE );
 
 	// Zero means it closed
 	if ( bytes == 0 )
@@ -879,7 +862,7 @@ CondorCronJob::StderrHandler ( int pipe )
 
 // Create the job's file descriptors
 int
-CondorCronJob::OpenFds ( void )
+CronJobBase::OpenFds ( void )
 {
 	int	tmpfds[2];
 
@@ -887,7 +870,12 @@ CondorCronJob::OpenFds ( void )
 	childFds[0] = -1;
 
 	// Pipe to stdout
-	if ( daemonCore->Create_Pipe( tmpfds, true ) < 0 ) {
+	if ( !daemonCore->Create_Pipe( tmpfds,	// pipe ends
+				       true,	// read end registerable
+				       false,	// write end not registerable
+				       true	// read end nonblocking
+				     ) )
+	{
 		dprintf( D_ALWAYS, "Cron: Can't create pipe, errno %d : %s\n",
 				 errno, strerror( errno ) );
 		CleanAll( );
@@ -897,12 +885,17 @@ CondorCronJob::OpenFds ( void )
 	childFds[1] = tmpfds[1];
 	daemonCore->Register_Pipe( stdOut,
 							   "Standard Out",
-							   (PipeHandlercpp) & CondorCronJob::StdoutHandler,
+							   (PipeHandlercpp) & CronJobBase::StdoutHandler,
 							   "Standard Out Handler",
 							   this );
 
 	// Pipe to stderr
-	if ( daemonCore->Create_Pipe( tmpfds, true ) < 0 ) {
+	if ( !daemonCore->Create_Pipe( tmpfds,	// pipe ends	
+				       true,	// read end registerable
+				       false,	// write end not registerable
+				       true	// read end nonblocking
+				    ) )
+	{
 		dprintf( D_ALWAYS, "Cron: Can't create STDERR pipe, errno %d : %s\n",
 				 errno, strerror( errno ) );
 		CleanAll( );
@@ -912,7 +905,7 @@ CondorCronJob::OpenFds ( void )
 	childFds[2] = tmpfds[1];
 	daemonCore->Register_Pipe( stdErr,
 							   "Standard Error",
-							   (PipeHandlercpp) & CondorCronJob::StderrHandler,
+							   (PipeHandlercpp) & CronJobBase::StderrHandler,
 							   "Standard Error Handler",
 							   this );
 
@@ -922,7 +915,7 @@ CondorCronJob::OpenFds ( void )
 
 // Clean up all file descriptors & FILE pointers
 void
-CondorCronJob::CleanAll ( void )
+CronJobBase::CleanAll ( void )
 {
 	CleanFd( &stdOut );
 	CleanFd( &stdErr );
@@ -933,7 +926,7 @@ CondorCronJob::CleanAll ( void )
 
 // Clean up a FILE *
 void
-CondorCronJob::CleanFile ( FILE **file )
+CronJobBase::CleanFile ( FILE **file )
 {
 	if ( NULL != *file ) {
 		fclose( *file );
@@ -943,7 +936,7 @@ CondorCronJob::CleanFile ( FILE **file )
 
 // Clean up a file descriptro
 void
-CondorCronJob::CleanFd ( int *fd )
+CronJobBase::CleanFd ( int *fd )
 {
 	if ( *fd >= 0 ) {
 		daemonCore->Close_Pipe( *fd );
@@ -953,7 +946,7 @@ CondorCronJob::CleanFd ( int *fd )
 
 // Kill a job
 int
-CondorCronJob::KillJob( bool force )
+CronJobBase::KillJob( bool force )
 {
 	// Change our mode
 	mode = CRON_KILL;
@@ -1000,7 +993,7 @@ CondorCronJob::KillJob( bool force )
 
 // Set the job timer
 int
-CondorCronJob::SetTimer( unsigned first, unsigned period )
+CronJobBase::SetTimer( unsigned first, unsigned period )
 {
 	// Reset the timer
 	if ( runTimer >= 0 )
@@ -1023,8 +1016,8 @@ CondorCronJob::SetTimer( unsigned first, unsigned period )
 				 "Cron: Creating timer for job '%s'\n", GetName() );
 		TimerHandlercpp handler =
 			(  ( CRON_WAIT_FOR_EXIT == mode ) ? 
-			   (TimerHandlercpp)& CondorCronJob::StartJob :
-			   (TimerHandlercpp)& CondorCronJob::RunJob );
+			   (TimerHandlercpp)& CronJobBase::StartJob :
+			   (TimerHandlercpp)& CronJobBase::RunJob );
 		runTimer = daemonCore->Register_Timer(
 			first,
 			period,
@@ -1049,7 +1042,7 @@ CondorCronJob::SetTimer( unsigned first, unsigned period )
 
 // Start the kill timer
 int
-CondorCronJob::KillTimer( unsigned seconds )
+CronJobBase::KillTimer( unsigned seconds )
 {
 	// Cancel request?
 	if ( TIMER_NEVER == seconds ) {
@@ -1079,7 +1072,7 @@ CondorCronJob::KillTimer( unsigned seconds )
 		killTimer = daemonCore->Register_Timer(
 			seconds,
 			0,
-			(TimerHandlercpp)& CondorCronJob::KillHandler,
+			(TimerHandlercpp)& CronJobBase::KillHandler,
 			"KillJob",
 			this );
 		if ( killTimer < 0 ) {
@@ -1095,7 +1088,7 @@ CondorCronJob::KillTimer( unsigned seconds )
 
 // Convert state value into string (for printing)
 const char *
-CondorCronJob::StateString( CronJobState state )
+CronJobBase::StateString( CronJobState state )
 {
 	switch( state )
 	{
@@ -1116,7 +1109,7 @@ CondorCronJob::StateString( CronJobState state )
 
 // Same, but uses the job's current state
 const char *
-CondorCronJob::StateString( void )
+CronJobBase::StateString( void )
 {
 	return StateString( state );
 }

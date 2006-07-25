@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -41,6 +41,8 @@ enum CONDOR_MD_MODE {
 const int CLEAR_HEADER     = 0;
 const int MD_IS_ON         = 1;
 const int ENCRYPTION_IS_ON = 2;
+
+const condor_mode_t NULL_FILE_PERMISSIONS = (condor_mode_t)0;
 
 #include "proc.h"
 #include "condor_old_shadow_types.h"
@@ -296,6 +298,8 @@ public:
     ///
 	int code(struct utsname &);
 #endif // !defined(WIN32)
+	///
+	int code(condor_mode_t &);
 
 #if HAS_64BIT_STRUCTS
     ///
@@ -479,6 +483,12 @@ public:
 	/// set a timeout for an underlying socket
 	virtual int timeout(int) = 0;
 
+	/// get timeout time for pending connect operation;
+	virtual time_t connect_timeout_time() = 0;
+
+	/// For stream types that support it, this returns the ip address we are connecting from.
+	virtual char const *sender_ip_str() = 0;
+
 	/** Get this stream's type.
         @return the type of this stream
     */
@@ -495,12 +505,18 @@ public:
         //------------------------------------------
         // Encryption support below
         //------------------------------------------
-        bool set_crypto_key(KeyInfo * key, const char * keyId=0);
+        bool set_crypto_key(bool enable, KeyInfo * key, const char * keyId=0);
         //------------------------------------------
-        // PURPOSE: set sock to use a particular encryptio
-        // REQUIRE: KeyInfo -- a wrapper for keyData, if key == NULL
-        //          encryption is disabled. I don't like this somehow
+        // PURPOSE: set sock to use a particular encryption key
+        // REQUIRE: KeyInfo -- a wrapper for keyData
         // RETURNS: true -- success; false -- failure
+        //------------------------------------------
+
+        void set_crypto_mode(bool enable);
+        //------------------------------------------
+        // PURPOSE: enable or disable encryption
+        // REQUIRE: bool, true -- on; false -- off
+        // RETURNS:
         //------------------------------------------
 
         bool get_encryption() const;
@@ -604,6 +620,7 @@ protected:
 	*/
 
         Condor_Crypt_Base * crypto_;         // The actual crypto
+        bool                crypto_mode_;    // true == enabled, false == disabled.
         CONDOR_MD_MODE      mdMode_;        // MAC mode
         KeyInfo           * mdKey_;
         bool                encrypt_;        // Encryption mode

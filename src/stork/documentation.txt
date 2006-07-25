@@ -1,0 +1,263 @@
+=====
+Using Stork with GSI credentials
+=====
+
+The new version of Stork is now able to run jobs using specified user credentials. This currently only applies to:
+    - Globus gsiftp transfer jobs
+    - GSI credentials
+
+Here's a typical sequence of actions that a user performs to submit in order to run a Data Placement job with user credentials.
+
+0) Stork Server and CredD are started on the stork server machine, typically by
+condor_master.  If started by condor_master, stork and CredD should be stopped
+by condor_master_off.
+1) User creates a GSI proxy with grid-proxy-init
+2) User submits GSI proxy to the CredD on the Stork server machine using:
+    stork_store_cred -file /tmp/x509up_u500 -Name MyCred -s <stork server>
+3) User creates a Stork submit file that contains a line:
+   ...
+   cred_name = "MyCred";
+   ...
+4) User submits the Stork job with:
+   stork_submit <stork server> stork.submit
+5) When it comes time for the Stork server to execute the data placement job,
+    the Stork server will ask the CredD for the user credential.
+
+More details on setting up Stork and Credd are given below.
+
+
+=====
+CredD
+=====
+
+CredD ("credential daemon") is a new Condor daemon that is responsible for storing user credentials such as:
+      - X509 proxies
+      - Kerberos tokens
+      - Passwords
+      etc
+
+User can store/remove credentials on the server using
+stork_store_cred/stork_rm_cred tools. Various other daemons (Stork,
+Gridmanager, StartD) will then be able to request from CredD the specified user
+credentials needed to run a user job, provided they can authenticate with the
+CredD using standard Condor authentication methods (GSI, KERBEROS, FS, etc).
+
+CredD can also be responsible for automatically refreshing credentials when
+they are about to expire. For GSI credentials, for instance, this involves
+sending a request to the specified MyProxy server (the MyProxy server/password)
+is specified at credential submit time with options to stork_store_cred
+
+
+=====
+Setting up Stork and CredD
+=====
+
+The following things should generally be true about both Stork and CredD:
+
+1) Stork and CredD should run on the same machine
+
+2) Stork and CredD should both be started as root. Just like other Condor
+daemons they will generally automatically run as (i.e. set their effective user
+id to) the "condor" user (or the id specified by CONDOR_IDS). See CONDOR_IDS
+parameter http://www.cs.wisc.edu/condor/manual/v6.6/3_3Configuration.html. Both
+daemons can be started by Condor by adding them to the DAEMON_LIST parameter in
+the configuration file.
+
+3) Both Stork and CredD REQUIRE authentication with client tools and between
+themselves. This means at least one authentication method should be enabled in
+Condor configuration (see "Security in Condor" section in the Condor manual.
+http://www.cs.wisc.edu/condor/manual/v6.6/3_7Security_In.html). If it is
+absolutely impossible for you to create a working security configuration (e.g.
+you don't have GSI certificates, Kerberos is not available, different
+filesystems between client and server), use the "CLAIMTOBE" authentication
+method (which basically involves the server trusting the client on whatever
+identity the client claims to posess).
+
+4) Stork and CredD should share the same Condor configuration file
+(CONDOR_CONFIG). This way Stork can automatically determine which port CredD is
+running on.
+
+
+=====
+CredD configuration
+=====
+
+The following new parameters in the Condor configuration file are used by
+CredD, together with their typical values:
+
+MYPROXY_GET_DELEGATION=/path/to/myproxy-get-delegation
+ - the full path to the myproxy-get-delegation executable. This comes as part
+   of the MyProxy installation. It is a client tool that will be used by the
+   CredD to refresh the user proxy once it is about to expire.  NOTE:
+   myproxy-get-deletation usually needs to dynamicall load other Globus
+   libraries. In order to make sure that the correct Globus libaries are found,
+   you might have to have MYPROXY_GET_DELEGATION point at a wrapper script
+   which sets the LD_LIBRARY_PATH and then executes the actual
+   myproxy-get-delegation. I.e. you would have
+
+      MYPROXY_GET_DELEGATION=/path/to/myproxy-get-delegation-wrapper.sh
+
+and myproxy-get-delegation-wrapper.sh would say:
+
+#!/bin/sh
+export GLOBUS_LOCATION=/path/to/my/globus
+export LD_LIBRARY_PATH=$GLOBUS_LOCATION/lib
+exec $GLOBUS_LOCATION/bin/myproxy-get-delegation $@
+
+********************************************************************************
+NOTE: this installation defaults to using
+MYPROXY_GET_DELEGATION=<installation dir>sbin/myproxy-get-delegation-wrapper.sh
+Before installation, GLOBUS_LOCATION must be edited with the installed Globus
+location.
+********************************************************************************
+
+CREDD_DEBUG = D_FULLDEBUG D_SECURITY
+ - the debug level for the cred daemon
+
+CREDD_LOG = $(LOG)/CredLog
+ - the log file for the credd daemon
+   
+CRED_STORE_DIR = $(RELEASE_DIR)/var/cred_store
+- the directory where CredD stores credentials. This directory should be owned
+  by the "condor" (or equivalent). This directory must exist before starting
+  the CredD.
+
+CRED_INDEX_FILE = $(CRED_STORE_DIR)/cred-index
+- the index of all credentials stored in CredD
+
+CREDD_ADDRESS_FILE = $(LOG)/.credd_address
+- the place where CredD stores its hostname/port so that other daemons can find
+  it
+
+CRED_SUPER_USERS = condor@cs.wisc.edu
+- the list of Condor fully-qualified user identities that are allowed to
+  retrieve credentials for ANY user. Generally only entities that can
+  authenticate to the CredD (via standard Condor authentication methods) as the
+  user X can retrieve credentials for user X. Some daemons (like Stork) should
+  however be able to retrieve credentials on behalf of any user. These daemons
+  should be able to authenticate using one of the identities listed in the
+  CRED_SUPER_USERS list. This is similar to QUEUE_SUPER_USERS option to the
+  SchedD.
+
+
+=====
+Stork configuration
+=====
+
+Generally Stork server is started by the condor_master on the default port
+(34048). This is the recommended way, as the master will make sure that Stork
+daemon is alive and restart it if necessary.  If started by condor_master,
+stork_server should be stopped via condor_master_off.
+
+Stork command-line options:
+
+USAGE: stork_server
+          [ -t		      ] // output to stdin
+          [ -p <port>	      ] // port on which to run Stork Server
+          [ -help	      ] // stork help screen
+          [ -Config <file>    ] // stork config file
+          [ -Serverlog <file> ] // stork server log in ClassAds
+          [ -Xmllog <file>    ] // stork server log in XML format
+          [ -Userlog <file>   ] // stork userlog in XMLformat
+          [ -Clientagent <host> ] // host where client agent is running
+
+NOTE: If you're going to specify "-t" and/or "-p" they need to be specified BEFORE all the other parameters.
+
+
+Stork requires two configuration files: the standard Condor configuration file
+pointed to by CONDOR_CONFIG and the stork-specific configuration file called
+stork.config (that should be located in the directory the Stork server is
+started from). (We have a goal of consolidating the two files into one, but at
+the time of this writing they are still separate.)
+
+Here is sample stork configuration file (including the surrounding brackets)
+
+[
+    max_num_jobs = 5; 
+    max_retry = 20;
+    maxdelay_inminutes = 5;
+
+    disk_command = "/p/condor/workspaces/kosart/disk_command-starlight";
+    cred_dir = "/scratch.1/ckireyev/stork/condor_data_manager/cred_dir";
+    globus_bin_dir = "/scratch.1/ckireyev/stork/globus/bin";
+    srb_util_dir = "/unsup/srb-1.1.8/utilities/bin";    
+    fnalsrm_bin_dir = "/scratch/kosart/srm";
+    lbnlsrm_bin_dir = "/unsup/srm-1.1/FNAL/bin";
+    msscmd_bin_dir = "/p/condor/workspaces/kosart/stork_experiments/sdss-srb-unitree-pipeline";
+
+    # This is the DAP Catalog directory
+    # it contains all protocol-specific executables
+    dap_catalog = "/opt/stork/sbin/DaP_Catalog";
+
+    # The working directory for user jobs
+    # In case of failure, this is where output is written
+    log_dir = "/opt/stork/var/";
+
+    # Directory where stork temporarily stores user credentials
+    cred_dir = "/opt/stork/var/cred-dir";
+]
+
+The following Stork-related configuration options need to be defined in the main condor configuration file ($CONDOR_CONFIG):
+
+STORK_DEBUG = D_FULLDEBUG
+ - the debug level for Stork logs
+
+STORK_LOG = $(LOG)/StorkLog
+ - the log file for Stork server
+
+stork_server must be started from a directory with a ./stork.config file, and
+this directory must be writeable by user "condor".
+
+
+=====
+Submitting credentials to the CredD
+=====
+
+stork_store_cred has the following options:
+Usage: stork_store_cred [options] [cmdfile]
+      Valid options:
+      -d        debug output
+
+      -n <host:port> submit to the specified credd (default - local credD)
+        (e.g. "-n myhost.cs.wisc.edu:1234")
+
+      -f <file> specify where credential is stored
+
+      -t <type> specify credential type, this option is required
+       (type is currently restricted to "x509"
+
+      -N <name> specify credential name
+
+      -m [user@]host[:port]     specify MyProxy user/server
+        (e.g. "-m wright@myproxy.cs.wisc.edu:1234")
+
+      -D <DN>   specify myproxy server DN (if not standard)
+        (e.g. "-D '/CN=My/CN=Proxy/O=Host'")
+
+      -v        print version
+
+      -h        print this message
+
+Currently CredD only supports X509 credentials.
+
+You do NOT have to specify the "-s ..." option if the CredD is running on the same machine as the one you're running stork_store_cred from (provided that both executables have CONDOR_CONFIG set in their environments beforehand).
+
+stork_list_cred
+and
+stork_rm_cred
+have similar interfaces. Use "-h" flag for command-line option help.
+
+=====
+Changes to Stork tools
+=====
+
+The first argument to stork tools:
+    stork_submit
+    stork_rm
+    stork_status
+
+should now be of the form '<ip:port>' (with angle brackets), e.g.
+       stork_submit '<123.45.6.789:10000>' stork.submit.file
+
+This assumes that Stork server is started on a known port. Stork server can be started on the specified port using the -p option, e.g.:
+      stork_server -p 10000

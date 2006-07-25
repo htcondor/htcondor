@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -55,8 +55,6 @@
 // Unix specific stuff
 #include "sig_install.h"
 #else
-// Windoze specific stuff
-extern "C" int WINAPI KBShutdown(void);	/* in the Kbdd DLL */
 #include "CondorSystrayNotifier.h"//for the "birdwatcher" (system tray icon)
 extern CondorSystrayNotifier systray_notifier;
 #endif
@@ -76,6 +74,7 @@ class Resource;
 #include "util.h"
 #include "starter_mgr.h"
 #include "cod_mgr.h"
+#include "startd_cronmgr.h"
 
 static const int MAX_STARTERS = 10;
 
@@ -104,7 +103,7 @@ extern	StringList* startd_job_exprs;
 extern	StringList* startd_vm_exprs;
 
 // Hosts
-extern	DCCollector*	Collector;
+extern	CollectorList*	Collectors;
 extern	char*	accountant_host;
 
 // Others
@@ -144,6 +143,8 @@ extern	int		pid_snapshot_interval;
     // How often do we take snapshots of the pid families? 
 
 extern  int main_reaper;
+
+extern StartdCronMgr* Cronmgr;
 
 #endif /* _STARTD_NO_DECLARE_GLOBALS */
 

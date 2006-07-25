@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -26,7 +26,7 @@
 #include "condor_common.h"
 #include "condor_getmnt.h"
 
-char			*strdup(), *malloc();
+/*char			*strdup(), *malloc(); */
 
 /*
  The function getmnt() is Ultrix specific and returns a different
@@ -37,11 +37,11 @@ char			*strdup(), *malloc();
  simulation.
 */
 
-#if defined(ULTRIX42) || defined(ULTRIX43)
+#if defined(ULTRIX42) || defined(ULTRIX43) 
 
 	/* Nothing needed on ULTRIX systems - getmnt() is native*/
 
-#elif defined(OSF1) || defined(Darwin)
+#elif defined(OSF1) || defined(Darwin) || defined(CONDOR_FREEBSD)
 
 	/* BEGIN OSF1 version - use getmntinfo() */
 
@@ -49,6 +49,7 @@ char			*strdup(), *malloc();
 #include <sys/mount.h>
 
 
+int
 getmnt( start, buf, bufsize, mode, path )
 int				*start;
 struct fs_data	buf[];
@@ -60,7 +61,6 @@ char			*path;
 	struct stat	st_buf;
 	int		n_entries;
 	int		i;
-	dev_t	dev;
 
 	if( (n_entries=getmntinfo(&data,MNT_NOWAIT)) < 0 ) {
 		perror( "getmntinfo" );

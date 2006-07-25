@@ -1,0 +1,7 @@
+    [
+        dap_type = transfer;
+        src_url = "file:/tmp/1.test"; 
+        dest_url = "gsiftp://fireplace.cs.wisc.edu/tmp/1.test"; 
+//	alt_protocols = "file-ftp, file-http";
+//	arguments = "-tcp-bs 208896 -bs 1048576 -p 4";
+    ]

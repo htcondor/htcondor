@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -31,6 +31,7 @@
 #include "MyString.h"
 #include "condor_ver_info.h"
 #include "condor_attributes.h"
+#include "exit.h"
 
 // Initialize static data members
 const int GridUniverseLogic::job_added_delay = 3;
@@ -146,7 +147,7 @@ GridUniverseLogic::group_per_subject()
 
 void 
 GridUniverseLogic::JobCountUpdate(const char* owner, const char* domain,
-	   	const char* proxy, const char* attr_name, int cluster, int proc, 
+	   	const char* attr_value, const char* attr_name, int cluster, int proc, 
 		int num_globus_jobs, int num_globus_unmanaged_jobs)
 {
 	// Quick sanity checks - this should never be...
@@ -158,7 +159,7 @@ GridUniverseLogic::JobCountUpdate(const char* owner, const char* domain,
 	// does not know they are in the queue. so tell it some jobs
 	// were added.
 	if ( num_globus_unmanaged_jobs > 0 ) {
-		JobAdded(owner, domain, proxy, attr_name, cluster, proc);
+		JobAdded(owner, domain, attr_value, attr_name, cluster, proc);
 		return;
 	}
 
@@ -166,7 +167,7 @@ GridUniverseLogic::JobCountUpdate(const char* owner, const char* domain,
 	// are any globus jobs at all.  if there are, make certain that there
 	// is a grid manager watching over the jobs and start one if there isn't.
 	if ( num_globus_jobs > 0 ) {
-		StartOrFindGManager(owner, domain, proxy, attr_name, cluster, proc);
+		StartOrFindGManager(owner, domain, attr_value, attr_name, cluster, proc);
 		return;
 	}
 
@@ -177,11 +178,11 @@ GridUniverseLogic::JobCountUpdate(const char* owner, const char* domain,
 
 void 
 GridUniverseLogic::JobAdded(const char* owner, const char* domain,
-	   	const char* proxy, const char* attr_name, int cluster, int proc)
+	   	const char* attr_value, const char* attr_name, int cluster, int proc)
 {
 	gman_node_t* node;
 
-	node = StartOrFindGManager(owner, domain, proxy, attr_name, cluster, proc);
+	node = StartOrFindGManager(owner, domain, attr_value, attr_name, cluster, proc);
 
 	if (!node) {
 		// if we cannot find nor start a gridmanager, there's
@@ -203,11 +204,11 @@ GridUniverseLogic::JobAdded(const char* owner, const char* domain,
 
 void 
 GridUniverseLogic::JobRemoved(const char* owner, const char* domain,
-	   	const char* proxy, const char* attr_name,int cluster, int proc)
+	   	const char* attr_value, const char* attr_name,int cluster, int proc)
 {
 	gman_node_t* node;
 
-	node = StartOrFindGManager(owner, domain, proxy, attr_name, cluster, proc);
+	node = StartOrFindGManager(owner, domain, attr_value, attr_name, cluster, proc);
 
 	if (!node) {
 		// if we cannot find nor start a gridmanager, there's
@@ -322,16 +323,23 @@ GridUniverseLogic::GManagerReaper(Service *,int pid, int exit_status)
 		}
 	}
 
+	MyString owner_safe;
+	if(gman_node) { owner_safe = owner; }
+	else { owner_safe = "Unknown"; }
+	dprintf(D_ALWAYS, "condor_gridmanager (PID %d, owner %s) exited %s %d.\n",
+		pid, owner_safe.Value(), 
+		WIFEXITED(exit_status)?"with return code":"because of signal",
+		WIFEXITED(exit_status)?WEXITSTATUS(exit_status):WTERMSIG(exit_status)
+		);
+
+	if(WIFEXITED(exit_status) && WEXITSTATUS(exit_status) == DPRINTF_ERROR) {
+		dprintf(D_ALWAYS, "The gridmanager may have had a problem writing its log.  Check the permissions of the file specified by GRIDMANAGER_LOG; it usually needs to be writable by the owner of the job.\n");
+	}
+
 	if (!gman_node) {
-		dprintf(D_ALWAYS,
-			"condor_gridmanager exited pid=%d status=%d owner=Unknown\n",
-			pid,exit_status);
 		// nothing more to do, so return
 		return 0;
 	}
-
-	dprintf(D_ALWAYS,"condor_gridmanager exited pid=%d status=%d owner=%s\n",
-			pid,exit_status,owner.Value());
 
 	// Cancel any timers before removing the node!!
 	if (gman_node->add_timer_id != -1) {
@@ -377,14 +385,14 @@ GridUniverseLogic::GManagerReaper(Service *,int pid, int exit_status)
 
 
 GridUniverseLogic::gman_node_t *
-GridUniverseLogic::lookupGmanByOwner(const char* owner, const char* proxy,
+GridUniverseLogic::lookupGmanByOwner(const char* owner, const char* attr_value,
 					int cluster, int proc)
 {
 	gman_node_t* result = NULL;
 	MyString owner_key(owner);
-	if(proxy){
-		MyString proxy_key(proxy);
-		owner_key += proxy_key; 
+	if(attr_value){
+		MyString attr_key(attr_value);
+		owner_key += attr_key;
 	}
 	if (cluster) {
 		char tmp[100];
@@ -406,12 +414,12 @@ GridUniverseLogic::lookupGmanByOwner(const char* owner, const char* proxy,
 
 GridUniverseLogic::gman_node_t *
 GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
-	   	const char* proxy, const char* attr_name, int cluster, int proc)
+	   	const char* attr_value, const char* attr_name, int cluster, int proc)
 {
 	gman_node_t* gman_node;
 	int pid;
 
-	if ( (gman_node=lookupGmanByOwner(owner, proxy, cluster, proc)) ) {
+	if ( (gman_node=lookupGmanByOwner(owner, attr_value, cluster, proc)) ) {
 		// found it
 		return gman_node;
 	}
@@ -443,64 +451,49 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 		return NULL;
 	}
 
-	char *gman_args;
-	gman_args = param("GRIDMANAGER_ARGS");
-	char gman_final_args[_POSIX_ARG_MAX];
-	char proxy_buf[_POSIX_ARG_MAX];
-	if (gman_args) {
-		sprintf(gman_final_args,"condor_gridmanager -f %s",gman_args);
+	ArgList args;
+	MyString error_msg;
+
+	args.AppendArg("condor_gridmanager");
+	args.AppendArg("-f");
+
+	char *gman_args = param("GRIDMANAGER_ARGS");
+
+	if(!args.AppendArgsV1RawOrV2Quoted(gman_args,&error_msg)) {
+		dprintf( D_ALWAYS, "ERROR: failed to parse gridmanager args: %s\n",
+				 error_msg.Value());
 		free(gman_args);
-	} else {
-		sprintf(gman_final_args,"condor_gridmanager -f");
+		return NULL;
 	}
+	free(gman_args);
+
 	if (cluster) {
-		sprintf(proxy_buf, " -j %d.%d", cluster, proc);
-		strcat(gman_final_args, proxy_buf);
+		dprintf( D_ALWAYS, "ERROR - gridman_per_job not supported!\n" );
+		return NULL;
 	}
 	if ( !group_per_subject() ) {
-		// old way -- pass a few more command line args
-		if(proxy && proxy != '\0') {
-			sprintf(proxy_buf, " -x %s", proxy);
-			// Really should be strncat...
-			strcat(gman_final_args, proxy_buf);
-		}
-		if ( owner ) {
-			MyString full_owner_name;
-			full_owner_name.sprintf(" -o %s",owner);
-			if ( domain ) {
-				full_owner_name += "@";
-				full_owner_name += domain;
-			}
-			strcat(gman_final_args,full_owner_name.Value());
-		}
+			// pre-6.5.1 gridmanager: waaaaaay too old!
+		dprintf( D_ALWAYS, "ERROR - gridmanager way too old!\n" );
+		return NULL;
 	} else {
 		// new way - pass a constraint
-		if ( !owner || !proxy ) {
-			dprintf(D_ALWAYS,"ERROR - missing owner or proxy fields\n");
+		if ( !owner ) {
+			dprintf(D_ALWAYS,"ERROR - missing owner field\n");
 			return NULL;
 		}
 		MyString constraint;
 		MyString full_owner_name(owner);
-		const char *owner_or_user;
-		if ( domain && domain[0] ) {
-			owner_or_user = ATTR_USER;
-			full_owner_name += "@";
-			full_owner_name += domain;
-		} else {
-			owner_or_user = ATTR_OWNER;
-		}
 		if ( !attr_name  ) {
-			attr_name = ATTR_X509_USER_PROXY_SUBJECT;
-			constraint.sprintf(" -C (%s=?=\"%s\"&&%s=?=\"%s\"&&%s==%d)",
-				owner_or_user,full_owner_name.Value(),
-				attr_name,proxy,
-				ATTR_JOB_UNIVERSE,CONDOR_UNIVERSE_GLOBUS);
+			constraint.sprintf("(%s=?=\"%s\"&&%s==%d)",
+				ATTR_OWNER,full_owner_name.Value(),
+				ATTR_JOB_UNIVERSE,CONDOR_UNIVERSE_GRID);
 		} else {
-			constraint.sprintf(" -C (%s=?=\"%s\"&&%s=?=\"%s\")",
-				owner_or_user,full_owner_name.Value(),
-				attr_name,proxy);
+			constraint.sprintf("(%s=?=\"%s\"&&%s=?=\"%s\")",
+				ATTR_OWNER,full_owner_name.Value(),
+				attr_name,attr_value);
 		}
-		strcat(gman_final_args,constraint.Value());
+		args.AppendArg("-C");
+		args.AppendArg(constraint.Value());
 	}
 
 	if (!init_user_ids(owner, domain)) {
@@ -574,8 +567,8 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 			failed = true;
 		}
 		set_priv(saved_priv);
-		strcat(gman_final_args," -S ");	// -S = "ScratchDir" argument
-		strcat(gman_final_args,finalpath);
+		args.AppendArg("-S");	// -S = "ScratchDir" argument
+		args.AppendArg(finalpath);
 		delete [] finalpath;
 		if ( failed ) {
 			// we already did dprintf reason to the log...
@@ -584,11 +577,15 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 		}
 	}
 
-	dprintf(D_FULLDEBUG,"Really Execing %s\n",gman_final_args);
+	if(DebugFlags & D_FULLDEBUG) {
+		MyString args_string;
+		args.GetArgsStringForDisplay(&args_string);
+		dprintf(D_FULLDEBUG,"Really Execing %s\n",args_string.Value());
+	}
 
 	pid = daemonCore->Create_Process( 
 		gman_binary,			// Program to exec
-		gman_final_args,		// Command-line args
+		args,					// Command-line args
 		PRIV_USER_FINAL,		// Run as the Owner
 		rid						// Reaper ID
 		);
@@ -620,9 +617,9 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 		strcpy(gman_node->domain,domain);
 	}
 	MyString owner_key(owner);
-	if(proxy){
-		MyString proxy_key(proxy);
-		owner_key += proxy_key;
+	if(attr_value){
+		MyString attr_key(attr_value);
+		owner_key += attr_key;
 	}
 	if (cluster) {
 		char tmp[100];

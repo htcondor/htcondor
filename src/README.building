@@ -1,25 +1,23 @@
 
 This file is intended to describe the steps needed to build Condor version
-6.x from the source code tree.  The Condor build environment is very 
-large and full of specific features for the UW Condor Team.  This document
-will help with the very basics, i.e. just getting Condor to compile.
+6.x from the source code tree.
 
 
 Tools
 -----
 
-We build Condor using GNU gcc and g++ on all of our Unix platforms.  We are
-currently using version 2.95.2 of these compilers on many platforms.  On
-LINUX, such as RedHat Linux, we use the "default" compiler version found in
-/usr/bin/gcc|g++.  So on RedHat 7.2 for instance, we use gcc 2.96.  We
-cannot make any claims about the ability to compile Condor with any other
-compilers or other versions of gcc.  Note: the only exception to this is
-Irix 6.2; for Irix 6.2 we build with GNU gcc/g++ v2.7.2 in order to support
-O32 MIPS ABI.  Building Condor on Unix also uses the utilities awk, lex, and
-yacc, so they need to be available in order to perform a build.
+We build Condor using GNU gcc and g++ on all of our Unix platforms.  
 
-For building Condor on Windows NT/2K/XP, we use Microsoft Visual C++ v6.0 on a
-machine running Windows 2K with the latest service packs.  
+On Linux, such as RedHat Linux, we typically use the "default" compiler
+version found in /usr/bin/gcc|g++.  So on RedHat 7.2 for instance, we
+use gcc 2.96.  We cannot make any claims about the ability to compile
+Condor with any other compilers or other versions of gcc.  Building
+Condor on Unix also uses the utilities awk, lex, yacc, perl, tar, and
+some other typically-found utilities, so they need to be available in
+order to perform a build.
+
+For building Condor on Windows 2K/XP, we use Microsoft Visual C++
+v6.0 on a machine running Windows 2K with the latest service packs.  
 
 For the remainder of this README, follow the instructions before for either
 Unix or Win32.
@@ -55,35 +53,94 @@ binaries.
 BUILDING CONDOR ON WIN32
 ==================================
 
-1) Make certain that you have Microsoft Visual C++ 6.0 installed, and that
-you have the "bin" directory to Visual C++ in your path. For example, by
-default VC++ 6.0 will install into "C:\Program Files\Microsoft Visual
-Studio\VC98\bin".  Make certain this subdirectory is in your path. Also,
-make certain that both "cl.exe" and "rebase.exe" exist in this subdirectory.
-The rebase.exe tool is installed by the VC++ 6.0 installation program when
-you tell it to install the resource developer kit tools (which is installed
-by default, I think).
+1. Make certain that you have Microsoft Visual C++ 6.0 installed,
+	and that you have the "bin" directory to Visual C++ in your path.
+	For example, by default VC++ 6.0 will install into:
+	   C:\Program Files\Microsoft Visual Studio\VC98\bin 
+	So make certain this bin subdirectory is in your path. Also, make
+	certain that both "cl.exe" and "rebase.exe" exist in this
+	subdirectory. The rebase.exe tool is installed by the VC++ 6.0
+	installation program when you tell it to install the resource
+	developer kit tools (which is installed by default, I think).
 
+2. Into a subdirectory, unzip/untar the source files to Condor -  be
+	certain to have the subdirectories created intact!!!!!!  For
+	example, you should find the following subdirectories and likely
+	others as well:
 
-3) Enter the following commands: 
-     cd NTconfig 
-     make.bat
+    + "src" - contains the source code (can be shared across Win32 and Unix)
+    + "config" - contains files to build Condor source on Unix
+    + "NTconfig" - contains files to build Condor source on Win32
+	+ "externals" - contains source files to external packages that
+		Condor requires, such as OpenSSL, gSoap, etc; these external
+		packages will be built as part of the Condor build process.
 
-7) Now from a command prompt in the NTconfig directory, run: 
-     dorelease [path-to-final-release-subdirectory] 
+3. Starting with Condor 6.6.7 and above, you should also have a copy
+	of the Microsoft Platform SDK for Windows XP SP2 installed on your
+	Machine.  You can pick it up from this URL:
+	   http://www.microsoft.com/msdownload/platformsdk/sdkupdate 
+	Note: The SDK is now part of a larger package called Windows® Server
+	2003 SP1 Platform SDK. The link won't work unless you're running a
+	recent version of Internet Explorer (no Firefox, bummer!).
 
-The dorelease script will copy the all the necessary executables and DLL
-files into the specified release subdirectory. It will then strip out the
-debugging information from all the executables (shrinking them to a fraction
-of their former size). It will leave the debug information for the Condor
-daemons inside of *.dbg files -- you can delete these if you do not desire
-to debug the resulting daemons. So for example if you do:
+	+ You must have the SDK directory in your path (by default it's
+	C:\Program Files\Microsoft Platform SDK). Our make.bat file
+	prepares the command line build environment for you. You do not need
+	Windows XP SP2 to build Condor, though 2000 or XP is recommended.
 
-     cd NTconfig
-     dorelease c:\condor\bin
+	+ Look at .\NTConfig\set_env.bat line 28 (the set PATH= statement),
+	and make sure that the right directory name is specified for the
+	Platform SDK.
 
-Then everything needed for Condor will end up in c:\condor\bin. 
+	+ If the SDK directory (\Program Files\Microsoft Platform SDK)
+	contains SetEnv.cmd (and not setenv.bat), then issue a "copy
+	SetEnv.cmd setenv.bat" in the platform SDK subdirectory.  Our build
+	scripts expect to find "setenv.bat".
 
+4. Now you are ready to compile Condor.  You can do this either via
+	the command-line, or via the Microsoft VisualStudio GUI IDE
+	evironment.  If you want to simply build Condor from the
+	command-line, just do the following commands:
+    
+		 cd NTconfig
+		 make
+
+	If you want to do a GUI build, do the following steps instead:
+
+	+ Fire up the Visual Studio with Condor workspace, by issuing:
+     
+		run_msdev.bat
+
+	This batch file will do a bunch of prep-work (building stub files, etc) and then
+	fire up VisualStudio w/ the Condor workspace open.
+	Do not start VisualStudio manually and use File->Open, it will not work!
+
+	+ From inside of Visual C++, choose the menu option "Build/Set
+	Active Configuration...". Select the item at the top of the list,
+	which is "Condor - Win32 Release".
+
+	+ Now press F7 to build Condor.
+
+5. Once you have built a release release of Condor via step 4,
+	either via the command-line make.bat script or via VisualStudio, now
+	from the command prompt, cd back into the NTconfig subdirectory.
+	From a command prompt in the NTconfig directory, run:
+
+    	dorelease <path-to-final-release-subdirectory> 
+
+	The dorelease.bat script will copy the all the necessary executables and
+	DLL files into the specified release subdirectory. It will then
+	strip out the debugging information from all the executables
+	(shrinking them to a fraction of their former size). It will leave
+	the debug information for the Condor daemons inside of *.dbg files
+	-- you can delete these if you do not desire to debug the resulting
+	daemons. So if you do
+
+		cd NTconfig
+		dorelease c:\condor
+
+	then everything needed for Condor will end up in c:\condor\bin. 
+	
 
 Questions relating to Condor can be sent to condor-admin@cs.wisc.edu.
 

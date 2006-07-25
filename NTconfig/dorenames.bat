@@ -9,6 +9,7 @@ move ..\src\condor_mail\condor_email_main.cpp ..\src\condor_mail\main.cpp
 move ..\src\condor_eventd\eventd_main.C ..\src\condor_eventd\main.C
 move ..\src\condor_dagman\dagman_submit.C ..\src\condor_dagman\submit.C
 move ..\src\condor_dagman\dagman_util.C ..\src\condor_dagman\util.C
+move ..\src\condor_had\had_Version.C ..\src\condor_had\Version.C
 exit /B 1
 :happywindows
 echo Making happy for the Windows build...
@@ -20,4 +21,5 @@ move ..\src\condor_mail\main.cpp ..\src\condor_mail\condor_email_main.cpp
 move ..\src\condor_eventd\main.C ..\src\condor_eventd\eventd_main.C
 move ..\src\condor_dagman\submit.C ..\src\condor_dagman\dagman_submit.C
 move ..\src\condor_dagman\util.C ..\src\condor_dagman\dagman_util.C
+move ..\src\condor_had\Version.C ..\src\condor_had\had_Version.C
 exit /B 2

@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -23,10 +23,6 @@
 #ifndef CONDOR_CONSTANTS_H
 #define CONDOR_CONSTANTS_H
 
-#if !defined(__STDC__) && !defined(__cplusplus)
-#define const
-#endif
-
 /*
 	Set up a boolean variable type.  Since this definition could conflict
 	with other reasonable definition of BOOLEAN, i.e. using an enumeration,
@@ -43,13 +39,13 @@ typedef int BOOL_T;
 #define BOOLAN_TYPE_DEFINED
 #endif
 
+#ifndef _CONDOR_NO_TRUE_FALSE
 #if defined(TRUE)
 #	undef TRUE
 #	undef FALSE
 #endif
-
-static const int	TRUE = 1;
-static const int	FALSE = 0;
+enum { FALSE=0, TRUE=1 };
+#endif /* ifndef(_CONDOR_NO_TRUE_FALSE) */
 
 /*
 	Useful constants for turning seconds into larger units of time.  Since
@@ -112,5 +108,9 @@ static const char NiceUserName[] = "nice-user";
 #define THREAD_LOCAL_STORAGE /* Not supported on Unix */
 #endif
 
+/* Max space needed to hold an IP string, as
+ * returned by inet_ntoa().
+ */
+static const size_t IP_STRING_BUF_SIZE = 16;
 
 #endif /* CONDOR_CONSTANTS_H */

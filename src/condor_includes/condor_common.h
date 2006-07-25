@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -23,6 +23,14 @@
 #ifndef CONDOR_COMMON_H
 #define CONDOR_COMMON_H
 
+
+/**********************************************************************
+** autoconf/configure generated configuration header
+*********************************************************************/
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 /**********************************************************************
 ** Special macros and things we always want our header files to have
 *********************************************************************/
@@ -38,15 +46,11 @@
 **********************************************************************/
 #include "condor_constants.h"
 #include "condor_macros.h"
+#include "condor_blkng_full_disk_io.h"
+#include "condor_create_id.h"
 
 #include "cedar_enums.h"
 #include "../condor_sysapi/sysapi.h"
-
-/**********************************************************************
-** System-wide error codes
-**********************************************************************/
-/* include "condor_errno.h" */
-
 
 /**********************************************************************
 ** C++ specific stuff 
@@ -74,5 +78,7 @@
 #ifdef WIN32
 #include "condor_debug.h"
 #endif
+
+
 
 #endif /* CONDOR_COMMON_H */

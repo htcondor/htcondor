@@ -1,7 +1,0 @@
-/** @name Condor DRMAA API
-    <hr>
-    An API to Condor functionality compliant w/ GGF DRMAA 0.9 C-BINDING SPEC
-*/
-//@{
-  //@Include: libCondorDrmaa.h
-//@}

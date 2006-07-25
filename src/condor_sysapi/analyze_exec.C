@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -71,7 +71,6 @@ sysapi_symbol_main_check( char *executable )
 	CondorVersionInfo vinfo;
 
 	version = vinfo.get_version_from_file(executable);
-	
     if (version == NULL)
     {
         dprintf(D_ALWAYS, 
@@ -86,12 +85,14 @@ sysapi_symbol_main_check( char *executable )
         dprintf(D_ALWAYS, 
 			"File '%s' is not a valid standard universe executable\n", 
 			executable);
+		free(version);
         return -1;
     }
 
 	dprintf( D_ALWAYS,  "Executable '%s' is linked with \"%s\" on a \"%s\"\n",
 		executable, version, platform?platform:"(NULL)");
 
+	free(version);
 	free(platform);
 
     return 0;

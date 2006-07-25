@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -82,6 +82,17 @@ struct export;
 #define SIGISMEMBER_IS_BROKEN		1
 
 typedef void* MMAP_T;
+
+/* no seteuid() on HPUX11: we define our own which wraps setreuid() */
+#if defined(HPUX11)
+#if defined(__cplusplus)
+extern "C" int seteuid(uid_t);
+extern "C" int setegid(gid_t);
+#else
+int seteuid(uid_t);
+int setegid(gid_t);
+#endif
+#endif
 
 #endif /* CONDOR_SYS_HPUX_H */
 

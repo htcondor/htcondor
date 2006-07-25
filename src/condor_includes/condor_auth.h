@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -40,6 +40,8 @@ const int CAUTH_NTSSPI                  = 16;
 const int CAUTH_GSI                     = 32;
 const int CAUTH_KERBEROS                = 64;
 const int CAUTH_ANONYMOUS               = 128;
+const int CAUTH_SSL                     = 256;
+const int CAUTH_PASSWORD                = 512;
 
 const char STR_DEFAULT_CONDOR_USER[]    = "condor";    // Default condor user
 const char STR_DEFAULT_CONDOR_SPOOL[]   = "SPOOL";
@@ -132,6 +134,8 @@ class Condor_Auth_Base {
     // RETURNS: mode -- see the enumeration above
     //------------------------------------------
 
+    const char * getAuthenticatedName() const;
+
     const char * getRemoteFQU();
     //------------------------------------------
     // PURPOSE: get the user in fully qualifed form
@@ -182,6 +186,13 @@ class Condor_Auth_Base {
     // RETUNRS: None (this)
     //------------------------------------------
     
+    Condor_Auth_Base& setRemoteDomain(const char * domain);
+    //------------------------------------------
+    // PURPOSE: Set the remote domain
+    // REQUIRE: Name of the remote domain
+    // RETUNRS: None (this)
+    //------------------------------------------
+
  protected:
 
     Condor_Auth_Base& setRemoteHost(const char * hostAddr);
@@ -191,12 +202,7 @@ class Condor_Auth_Base {
     // RETUNRS: None (this)
     //------------------------------------------
 
-    Condor_Auth_Base& setRemoteDomain(const char * domain);
-    //------------------------------------------
-    // PURPOSE: Set the remote domain
-    // REQUIRE: Name of the remote domain
-    // RETUNRS: None (this)
-    //------------------------------------------
+    Condor_Auth_Base& setAuthenticatedName(const char * auth_name);
 
     Condor_Auth_Base& setFullyQualifiedUser(const char * fqu);
 
@@ -227,6 +233,7 @@ class Condor_Auth_Base {
     char *          remoteHost_;     // Remote host
     char *          localDomain_;    // Local user domain
     char *          fqu_;            // Fully qualified
+    char *          authenticatedName_;   // Different for each method
 };
 
 #endif

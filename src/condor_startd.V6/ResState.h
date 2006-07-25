@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -37,6 +37,7 @@ public:
 	int		change( State, Activity );
 	int 	eval( void );
 	void	set_destination( State );
+	int		starterExited( void );
 	State	destination( void ) { return r_destination; };
 
 	void	dprintf( int, char*, ... );
@@ -49,8 +50,11 @@ private:
 	int		stime;		// time we entered the current state
 	int		atime;		// time we entered the current activitiy
 
-	int		enter_action( State, Activity, int, int );
-	int		leave_action( State, Activity, int, int );
+	int		enter_action( State, Activity, bool, bool );
+	int		leave_action( State cur_s, Activity cur_a, 
+						  State new_s, Activity new_a, 
+						  bool statechange );
+
 };
 
 #endif /* _RES_STATE_H */

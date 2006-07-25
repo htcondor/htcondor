@@ -1,259 +1,165 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 #include "condor_common.h"
-#include "condor_ast.h"
-#include "condor_classad_util.h" 
+#include "condor_classad.h"
+#include "condor_classad_util.h"
+#include "MyString.h"
 
-//
-// Given a ClassAd and a ClassAdList, a pointer to the first match in the 
-// list is returned. 
-// If match found, 1 returned. Otherwise, 0 returned.
-//
-int FirstMatch(ClassAd *ad, ClassAdList *adList, ClassAd * &returnAd)
+bool EvalBool(ClassAd *ad, const char *constraint)
 {
-    ClassAd *temp;
-    if(!ad || !adList)
-    {
-        returnAd = NULL;                     // no match.
-        return 0;
-    }
-    adList->Open();
-    for(temp = (ClassAd*)adList->Next(); temp; temp = (ClassAd*)adList->Next())
-    {
-        if(ad->IsAMatch(temp))
-	{                                    // match found.
-	    returnAd = temp;
-	    return 1;
-	}
-    }
-    adList->Close();
-    
-    returnAd = NULL;                         // match not found.
-    return 0;
-}
+	static ExprTree *tree = NULL;
+	static char * saved_constraint = NULL;
+	EvalResult result;
+	bool constraint_changed = true;
 
-//
-// Given a ClassAd and a ClassAdList, a list of pointers to the matches in the
-// list is returned. 
-// If match(es) found, 1 returned. Otherwise, 0 returned.
-//
-int AllMatch(ClassAd *ad, ClassAdList *adList, ClassAdList *&returnList)
-{
-    ClassAd *temp;
-    returnList = NULL;
-    if(!ad || !adList)
-    {
-        returnList = NULL;
-        return 0;                            // no match.
-    }
-    
-    adList->Open();
-    for(temp = (ClassAd*)adList->Next(); temp; temp = (ClassAd*)adList->Next())
-    {
-        if(ad->IsAMatch(temp))
-	{                                    // match found.
-	    if(!returnList)
-	    {
-	        returnList = new ClassAdList;
-		if(!returnList)
-		{
-		    cerr << "Warning : you ran out of space -- quitting !" << endl;
-		    exit(1);
+	if ( saved_constraint ) {
+		if ( strcmp(saved_constraint,constraint) == 0 ) {
+			constraint_changed = false;
 		}
-	    }
-	    returnList->Insert(temp);        // make up the returned list.
 	}
-    }
-    adList->Close();
-    
-    if(returnList)
-    {
-        return 1;                            // match(es) found.
-    }
-    else
-    {
-        return 0;                            // match not found. 
-    }
-}
 
-//
-// Given a constraint, determine whether the first ClassAd is > the second 
-// one, in the sense whether the constraint is evaluated to be TRUE. 
-// The constraint should look just like a "Requirement". Every variable has 
-// a prefix "MY." or "TARGET.". A variable with prefix "MY." is should be 
-// evaluated against the first ClassAd and a variable with prefix "TARGET."
-// should be evaluated against the second ClassAd.
-// If >, return 1;
-// else, return 0. (Note it can be undefined.)  
-//
-int IsGT(ClassAd *ad1, ClassAd *ad2, char *constraint)
-{
-    ExprTree *tree;
-    EvalResult *val;
-
-    char *buffer;
-
-    if(!ad1 || !ad2 || !constraint)
-    {
-        return 0;
-    }
-
-    buffer = new char[strlen(constraint)+1];
-    if(!buffer)
-    {
-        cerr << "Warning : you ran out of memory -- quitting !" << endl;
-	exit(1);
-    }
-    strcpy(buffer, constraint);
-
-    val = new EvalResult;
-    if(val == NULL)
-    {
-        cerr << "Warning : you ran out of memory -- quitting !" << endl;
-        exit(1);
-    }
-
-    if(!Parse(buffer, tree))
-    {                                        // parse the constraint.
-        if(tree->MyType() == LX_ERROR)
-	{
-	    cerr << "Parse error in the input string -- quitting !" << endl;
-	    exit(1);
-	}
-    }
-    else
-    {
-        cerr << "Parse error in the input string -- quitting !" << endl;
-	exit(1);
-    }
-    tree->EvalTree(ad1, ad2, val);           // evaluate the constraint.
-    if(!val || val->type != LX_INTEGER)
-    {
-        delete []buffer;
-        delete tree;
-        delete val;
-        return 0;
-    }
-    else
-    {
-        if(!val->i)
-        {
-	    delete []buffer;
-            delete tree;
-            delete val;
-            return 0; 
-        }
-    }  
-
-    delete []buffer;
-    delete tree;
-    delete val;
-    return 1;   
-}
-
-//
-// Sort a list according to a given constraint in ascending order.
-//
-#if 0
-void SortClassAdList(ClassAdList *adList1, ClassAdList *&adList2, char *constraint)
-{
-    int *mark;                               // mark each entity in the list
-                                             // already selected.
-	int	i;
-    ClassAd *temp, *min;
-
-    if(!adList1 || !adList1->MyLength())
-    {
-        cerr << "Warning : empty list not sorted !" << endl;
-	adList2 = NULL;
-	return;
-    }
-    
-    mark = new int[adList1->MyLength()];
-    if(!mark)
-    {
-        cerr << "Warning : you ran out of space -- quitting !" << endl;
-	exit(1);
-    }
-    
-    adList2 = new ClassAdList;
-    if(!adList2)
-    {
-        cerr << "Warning : you ran out of space -- quitting !" << endl;
-	exit(1);
-    }
-
-    for(i = 0; i < adList1->MyLength(); i++)
-    {
-        mark[i] = 0;                         // initialize as unselected.
-    }
-
-    int j;
-    int index;
-    for(i = 0; i < adList1->MyLength(); i++)
-    {
-        adList1->Open();
-	min = NULL;
-	for(temp = (ClassAd*)adList1->Next(), j = 0; temp; temp = (ClassAd*)adList1->Next(), j++)
-	{
-	    if(mark[j])
-	    {                                // skip if already selected.
-	        continue;
-	    }
-	    else
-	    {
-	        if(!min)
-		{
-		    min = temp; 
-		    index = j;
-		    continue;
+	if ( constraint_changed ) {
+		// constraint has changed, or saved_constraint is NULL
+		if ( saved_constraint ) {
+			free(saved_constraint);
+			saved_constraint = NULL;
 		}
-		else
-		{
-		    if(IsGT(temp, min, constraint))
-		    {
-		        ;
-		    }
-		    else
-		    {
-		        min = temp;          // keep the smaller.
-			index = j;
-		    }
+		if ( tree ) {
+			delete tree;
+			tree = NULL;
 		}
-	    }
+		if (Parse(constraint, tree) != 0) {
+			dprintf(D_ALWAYS,
+				"can't parse constraint: %s\n", constraint);
+			return false;
+		}
+		saved_constraint = strdup(constraint);
 	}
-	mark[index] = 1;                     // mark the selected one.
-	adList2->Insert(min);                // make up the sorted list.
-    }
-    delete []mark;
+
+	// Evaluate constraint with ad in the target scope so that constraints
+	// have the same semantics as the collector queries.  --RR
+	if (!tree->EvalTree(NULL, ad, &result)) {
+		dprintf(D_ALWAYS, "can't evaluate constraint: %s\n", constraint);
+		return false;
+	}
+	if (result.type == LX_INTEGER) {
+		return (bool)result.i;
+	}
+	dprintf(D_ALWAYS, "constraint (%s) does not evaluate to bool\n",
+		constraint);
+	return false;
 }
-#endif
 
+bool
+ClassAdsAreSame( ClassAd* ad1, ClassAd* ad2, StringList* ignored_attrs,
+				 bool verbose )
+{
+	ExprTree *ad1_expr, *ad2_expr;
+	char* attr_name;
+	ad2->ResetExpr();
+	bool found_diff = false;
+	while( (ad2_expr = ad2->NextExpr()) && ! found_diff ) {
+		attr_name = ((Variable*)ad2_expr->LArg())->Name();
+		if( ignored_attrs && ignored_attrs->contains_anycase(attr_name) ) {
+			if( verbose ) {
+				dprintf( D_FULLDEBUG, "ClassAdsAreSame(): skipping \"%s\"\n",
+						 attr_name );
+			}
+			continue;
+		}
+		ad1_expr = ad1->Lookup( attr_name );
+		if( ! ad1_expr ) {
+				// no value for this in ad1, the ad2 value is
+				// certainly different
+			if( verbose ) {
+				dprintf( D_FULLDEBUG, "ClassAdsAreSame(): "
+						 "ad2 contains %s and ad1 does not\n", attr_name );
+			}
+			found_diff = true;
+			break;
+		}
+		if( *ad1_expr == *ad2_expr ) {
+			if( verbose ) {
+				dprintf( D_FULLDEBUG, "ClassAdsAreSame(): value of %s in "
+						 "ad1 matches value in ad2\n", attr_name );
+			}
+		} else {
+			if( verbose ) {
+				dprintf( D_FULLDEBUG, "ClassAdsAreSame(): value of %s in "
+						 "ad1 is different than in ad2\n", attr_name );
+			}
+			found_diff = true;
+			break;
+		}
+	}
+	return ! found_diff;
+}
 
+bool
+InsertIntoAd( ClassAd *ad, char *lhs, char *rhs )
+{
+	return ( InsertIntoAd( ad, (const char*)lhs, (const char*)rhs ) );
+}
 
+bool
+InsertIntoAd( ClassAd *ad, const char *lhs, char *rhs )
+{
+	return ( InsertIntoAd( ad, (const char*)lhs, (const char*)rhs ) );
+}
 
+bool
+InsertIntoAd( ClassAd *ad, const char *lhs, const char *rhs )
+{
+	if ( !lhs || !rhs || !ad ) {
+		return FALSE;
+	}
 
+	MyString tmp(lhs);
+	tmp += " = \"";
+	tmp += rhs;
+	tmp += "\"";
+	ad->Insert( tmp.Value() );
+	
+	return TRUE;
+}
 
+bool
+InsertIntoAd( ClassAd *ad, char *lhs, int rhs )
+{
+	return ( InsertIntoAd( ad, (const char*)lhs, rhs ) );
+}
 
+bool
+InsertIntoAd( ClassAd *ad, const char *lhs, int rhs )
+{
+	if ( !lhs || !ad ) {
+		return FALSE;
+	}
 
+	MyString tmp(lhs);
+	tmp += " = ";
+	tmp += rhs;
+	ad->Insert( tmp.Value() );
 
+	return TRUE;
+}

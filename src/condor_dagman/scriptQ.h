@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -52,6 +52,9 @@ class ScriptQ : public Service {
     // reaper function for PRE & POST script completion
     int ScriptReaper( int pid, int status );
 
+	// the number of script deferrals in this queue
+	int GetScriptDeferredCount() const { return _scriptDeferredCount; };
+
  protected:
 
 	Dag* _dag;
@@ -67,6 +70,11 @@ class ScriptQ : public Service {
 
 	// daemonCore reaper id for PRE/POST script reaper function
 	int _scriptReaperId;
+
+	// Total count of scripts deferred because of MaxPre or MaxPost limit
+	// (note that a single script getting deferred multiple times is counted
+	// multiple times).
+	int _scriptDeferredCount;
 };
 
 #endif	// _SCRIPTQ_H

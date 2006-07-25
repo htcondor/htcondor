@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -221,25 +221,6 @@ int run_tests(void) {
     else{
       printf("test 6 failed!\n");
     }
-    // performing the getMemInfo test//////////////
-    test_success = true;
-
-    printf("Performing test 7\n");
-    for(int i = 0; i < MEM_INFO_NUMTIMES; i++){
-      temp = getMemInfo_test(verbose);
-      
-      if(temp < 0){
-	printf("test 7 failed in trial %d\n", i);
-	success = temp;
-	test_success = false;
-      }
-    }
-    if(test_success){
-      printf("test 7 successfully completed %d trials!\n",MEM_INFO_NUMTIMES );
-    }
-    else{
-      printf("test 7 failed!\n");
-    }
     
     return success;
 	
@@ -261,6 +242,11 @@ void test_monitor ( char * jobname ) {
   int rval;
   piPTR pi = NULL;
   int i;
+  int status;
+  PidEnvID penvid;
+
+  pidenvid_init(&penvid);
+
   printf ( "Here's the interesting test.  This one does a fork()\n");
   printf ( "and then an exec() of the name of the program passed to\n");
   printf ( "it.  In this case, that's %s.\n", jobname );
@@ -279,7 +265,9 @@ void test_monitor ( char * jobname ) {
 
   for(i = 0; i < 9; i++) {
     sleep ( 10  );
-    if ( ProcAPI::getFamilyInfo( child, pi ) < 0 ) {
+    if ( ProcAPI::getFamilyInfo( child, pi, &penvid, status ) 
+								== PROCAPI_FAILURE) 
+	{
       printf ( "Problem getting information.  Exiting.\n");
       exit(1);
     }

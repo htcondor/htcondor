@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -32,10 +32,19 @@
 
 #include "simplelist.h"
 #include "extArray.h"
+#include "condor_classad_namedlist.h"
+
 #include "Resource.h"
 #include "claim.h"
 #include "starter_mgr.h"
-#include "classadList.h"
+
+#if HAVE_BACKFILL
+#include "backfill_mgr.h"
+#if HAVE_BOINC
+#include "boinc_mgr.h"
+#endif /* HAVE_BOINC */
+#endif /* HAVE_BACKFILL */
+
 
 typedef int (Resource::*ResourceMember)();
 typedef float (Resource::*ResourceFloatMember)();
@@ -54,20 +63,6 @@ private:
 	ExtArray<bool> free_ids;
 };
 
-// A name / ClassAd pair to manage together
-class NamedClassAd
-{
-  public:
-	NamedClassAd( const char *name, ClassAd *ad = NULL );
-	~NamedClassAd( void );
-	char *GetName( void ) { return myName; };
-	ClassAd *GetAd( void ) { return myClassAd; };
-	void ReplaceAd( ClassAd *newAd );
-  private:
-	char	*myName;
-	ClassAd	*myClassAd;
-};
-
 class ResMgr : public Service
 {
 public:
@@ -81,17 +76,19 @@ public:
 	void	compute( amask_t );
 	void	publish( ClassAd*, amask_t );
 	void	publishVmAttrs( ClassAd* );
+	void    refresh_benchmarks();
 
 	void	assign_load( void );
 	void	assign_keyboard( void );
 
-	bool 	hasOppClaim( void );
+	bool 	needsPolling( void );
 	bool 	hasAnyClaim( void );
 	bool	is_smp( void ) { return( num_cpus() > 1 ); }
 	int		num_cpus( void ) { return m_attr->num_cpus(); }
+	int		num_real_cpus( void ) { return m_attr->num_real_cpus(); }
 	int		num_vms( void ) { return nresources; }
 
-	int		send_update( int, ClassAd*, ClassAd* );
+	int		send_update( int, ClassAd*, ClassAd*, bool nonblocking );
 	void	final_update( void );
 	
 		// Evaluate the state of all resources.
@@ -132,7 +129,8 @@ public:
 
 	// Manipulate the supplemental Class Ad list
 	int		adlist_register( const char *name );
-	int		adlist_replace( const char *name, ClassAd *ad );
+	int		adlist_replace( const char *name, ClassAd *ad, 
+							bool report_diff = false );
 	int		adlist_delete( const char *name );
 	int		adlist_publish( ClassAd *resAd, amask_t mask );
 
@@ -147,10 +145,14 @@ public:
 	Claim*		getClaimByPid( pid_t );	// Find Claim by pid of starter
 	Claim*		getClaimById( const char* id );	// Find Claim by ClaimId
 	Claim*		getClaimByGlobalJobId( const char* id );
+	Claim*		getClaimByGlobalJobIdAndId( const char *claimId,
+											const char *job_id);
+
 	Resource*	findRipForNewCOD( ClassAd* ad );
 	Resource*	get_by_cur_id(char*);	// Find rip by ClaimId of r_cur
 	Resource*	get_by_any_id(char*);	// Find rip by r_cur or r_pre
 	Resource*	get_by_name(char*);		// Find rip by r_name
+	Resource*	get_by_vm_id(int);		// Find rip by r_id
 	State		state( void );			// Return the machine state
 
 
@@ -174,6 +176,11 @@ public:
 	bool		isShuttingDown() { return is_shutting_down; };
 
 	StarterMgr starter_mgr;
+
+#if HAVE_BACKFILL
+	BackfillMgr* m_backfill_mgr;
+	void backfillMgrDone();
+#endif /* HAVE_BACKFILL */
 
 	time_t	now( void ) { return cur_time; };
 
@@ -205,7 +212,7 @@ private:
 	SimpleList<Resource*>			destroy_list;
 
 	// List of Supplemental ClassAds to publish
-	SimpleList<NamedClassAd*>		extra_ads;
+	NamedClassAdList				extra_ads;
 
 		// Builds a CpuAttributes object to represent the virtual
 		// machine described by the given machine type.
@@ -270,6 +277,11 @@ private:
 		   STARTD_NOCLAIM_SHUTDOWN parameter).
 		*/
 	void check_use( void );
+
+#if HAVE_BACKFILL
+	bool backfillConfig( void );
+	bool m_backfill_shutdown_pending;
+#endif /* HAVE_BACKFILL */
 
 };
 

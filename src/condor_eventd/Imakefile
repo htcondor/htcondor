@@ -8,6 +8,7 @@ LIB = $(DAEMONCORE_LIB) $(NETMAN_LIB) $(STD_LIBS)
 OBJ = eventd.o main.o scheduled_event.o eventd_instantiate.o
 
 template_inst(eventd_instantiate.C,eventd_instantiate.o)
+/* NOTE: since this is contrib, we can't use public_c_plus_target() */
 c_plus_target($(NAME),$(OBJ),$(LIB))
 release_target($(NAME),sbin,EXECUTABLE_MODE)
 strip_target($(NAME),$(STRIP_CONTRIB)/sbin,EXECUTABLE_MODE)

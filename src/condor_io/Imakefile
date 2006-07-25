@@ -8,6 +8,7 @@ LIB = libcedar.a $(STD_LIBS)
 
 #if CONDOR_3DES_ENCRYPTION
 CONDOR_DES_OBJ = condor_crypt_3des.o
+AUTH_PASSWD_OBJ = condor_auth_passwd.o
 #endif
 
 #if CONDOR_BLOWFISH_ENCRYPTION
@@ -15,6 +16,10 @@ CONDOR_BLOWFISH_OBJ = condor_crypt_blowfish.o
 #endif
 
 CONDOR_CRYPT_OBJ = $(CONDOR_DES_OBJ) $(CONDOR_BLOWFISH_OBJ)
+#endif
+
+#if HAS_OPENSSL
+AUTH_SSL_OBJ = condor_auth_ssl.o
 #endif
 
 #if WANT_KERBEROS
@@ -27,15 +32,15 @@ AUTH_X509_OBJ = condor_auth_x509.o
 
 CONDOR_AUTH_OBJ = condor_auth.o condor_auth_claim.o condor_auth_fs.o \
 	          condor_auth_sspi.o condor_auth_anonymous.o         \
-		  $(AUTH_X509_OBJ) $(AUTH_KERB_OBJ) authentication.o
+		  $(AUTH_X509_OBJ) $(AUTH_KERB_OBJ) $(AUTH_PASSWD_OBJ) $(AUTH_SSL_OBJ) authentication.o
 
 CONDOR_TYPE_OBJ = sig_num.o proc.o open_flags.o fcntl_cmd.o errno_num.o
 
 OBJ = stream.o sock.o reli_sock.o safe_sock.o buffers.o sockCache.o \
 		$(CONDOR_AUTH_OBJ) $(CONDOR_TYPE_OBJ) condor_rw.o \
 		SafeMsg.o condor_crypt.o $(CONDOR_CRYPT_OBJ) CryptKey.o \
-		condor_secman.o
-#		autoTest.o manTest.o
+		condor_secman.o cedar_no_ckpt.o 
+/*		autoTest.o manTest.o */
 
 library_target(libcedar.a,$(OBJ))
 
@@ -45,14 +50,36 @@ purecov_c_plus_target(cedar.t.pc,$(OBJ),$(LIB))
 c_plus_target(buftest,buftest.o,$(LIB))
 html_target( ../condor_includes/stream.h ../condor_includes/reli_sock.h ../condor_includes/safe_sock.h ../condor_includes/sock.h )
 
+#if HAVE_EXT_GCB
+/* 
+   it's a little weird to have this happen here, but because of how
+   these imake rules work, they have to live in a subdirectory of src,
+   they can't live in the top-level src/Imakefile itself.  since GCB
+   is pretty closely tied with CEDAR, i figured this was the best
+   place to put this stuff...
+
+   NOTE: because we're copying a static vs. dynamic version here, we
+   can't use the public_copy_target() to do the heavy lifting.
+*/
+public_copy_target($(GCB_BIN)/gcb_broker,libexec,gcb_broker,EXECUTABLE_MODE)
+strip_copy_target($(GCB_BIN)/gcb_broker,libexec,gcb_broker,EXECUTABLE_MODE)
+static_copy_target($(GCB_BIN)/gcb_broker_static,libexec,gcb_broker,EXECUTABLE_MODE)
+
+release_copy_target($(GCB_BIN)/gcb_relay_server,libexec,gcb_relay_server,EXECUTABLE_MODE)
+strip_copy_target($(GCB_BIN)/gcb_relay_server,libexec,gcb_relay_server,EXECUTABLE_MODE)
+static_copy_target($(GCB_BIN)/gcb_relay_server_static,libexec,gcb_relay_server,EXECUTABLE_MODE)
+
+#endif /* HAVE_EXT_GCB */
+
+
 release:: all
 stripped:: all
 static:: all
 
-#  reli_sock_no_auth.o: reli_sock.C
-#  $(CPlusPlus) $(C_PLUS_FLAGS) -DNO_AUTHENTICATION \
-#  -c reli_sock.C -o reli_sock_no_auth.o
+/* reli_sock_no_auth.o: reli_sock.C */
+/* $(CPlusPlus) $(C_PLUS_FLAGS) -DNO_AUTHENTICATION \ */
+/* -c reli_sock.C -o reli_sock_no_auth.o */
 
-#IMPORT_LINKS = ../../config/import_links
-#import(../condor_c++_util,MyString.o)
+/* IMPORT_LINKS = ../../config/import_links */
+/* import(../condor_c++_util,MyString.o) */
 

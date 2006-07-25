@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -140,7 +140,8 @@ class MPIShadow : public BaseShadow
 			terminated.  For MPI jobs, we print out all the hosts
 			where the job ran, and any other useful info.
 		*/
-	virtual void emailTerminateEvent( int exitReason );
+	virtual void emailTerminateEvent( int exitReason, 
+					update_style_t kind = US_NORMAL );
 
 		/** Do all work to cleanup before this shadow can exit.  To
 			cleanup an MPI job, we've got to kill all our starters,

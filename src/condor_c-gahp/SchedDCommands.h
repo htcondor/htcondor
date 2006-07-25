@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -37,7 +37,18 @@
  **/
 
 
+struct job_expiration {
+	int cluster;
+	int proc;
+	unsigned long expiration;
 
+	void copy_from(const job_expiration & r) {
+		cluster = r.cluster;
+		proc = r.proc;
+	    expiration = r.expiration;
+	}
+
+};
 	
  
 class SchedDRequest {
@@ -76,7 +87,19 @@ public:
 	static SchedDRequest * createJobStageInRequest (const int request_id,
 													const ClassAd * classad);
 
-													
+	static SchedDRequest * createJobStageOutRequest (const int request_id,
+													 const int cluster_id,
+													 const int proc_id);
+
+	static SchedDRequest * createRefreshProxyRequest (const int request_id,
+													  const int cluster_id,
+													  const int proc_id,
+													  const char * proxy_file);
+
+	static SchedDRequest * createUpdateLeaseRequest (const int request_id,
+													 const int num_jobs,
+													 job_expiration* & expirations);
+
 	~SchedDRequest() {
 		if (classad)
 			delete classad;
@@ -84,6 +107,11 @@ public:
 			free (constraint);
 		if (reason)
 			free (reason);
+		if (proxy_file)
+			free (proxy_file);
+		if (expirations)
+			delete [] expirations;
+
 	}
 
 	ClassAd * classad;
@@ -94,6 +122,10 @@ public:
 	int request_id;
 
 	char * reason;	// For release, remove, update
+	char * proxy_file;	// For refresh_proxy
+
+	int num_jobs;
+	job_expiration * expirations;
 
 	// Status of the command
 	enum {
@@ -116,6 +148,9 @@ typedef enum {
 		SDC_UPDATE_CONSTRAINED,
 		SDC_UPDATE_JOB,
 		SDC_JOB_STAGE_IN,
+		SDC_JOB_STAGE_OUT,
+		SDC_JOB_REFRESH_PROXY,
+		SDC_UPDATE_LEASE,
 } schedd_command_type;
 	
 	schedd_command_type command;
@@ -127,7 +162,10 @@ protected:
 		cluster_id = -1;
 		proc_id = -1;
 		reason = NULL;
+		proxy_file = NULL;
 		request_id = -1;
+		expirations = NULL;
+		num_jobs =0;
 	}
 
 };

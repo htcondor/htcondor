@@ -41,7 +41,7 @@ RSC=rc.exe
 # PROP Intermediate_Dir "..\Debug"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /Z7 /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /YX /FD /c
-# ADD CPP /nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /I "..\src\condor_daemon_client" /I "..\src\condor_daemon_core.V6" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /Fp"..\Debug\condor_common.pch" /Yu"condor_common.h" /FD /TP /c
+# ADD CPP /nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /Fp"..\Debug\condor_common.pch" /Yu"condor_common.h" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c
 # ADD BASE RSC /l 0x409
 # ADD RSC /l 0x409
 BSC32=bscmake.exe
@@ -63,8 +63,8 @@ LIB32=link.exe -lib
 # PROP Output_Dir "..\Release"
 # PROP Intermediate_Dir "..\Release"
 # PROP Target_Dir ""
-# ADD BASE CPP /nologo /MDd /W3 /GX /Z7 /Od /Ob2 /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /I "..\src\condor_daemon_client" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h" /FD /TP /c
-# ADD CPP /nologo /MT /W3 /GX /Z7 /O1 /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /I "..\src\condor_daemon_client" /I "..\src\condor_daemon_core.V6" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /Fp"..\Release\condor_common.pch" /Yu"condor_common.h" /FD /TP /c
+# ADD BASE CPP /nologo /MDd /W3 /GX /Z7 /Od /Ob2 /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h" /FD /TP /c
+# ADD CPP /nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /Fp"..\Release\condor_common.pch" /Yu"condor_common.h" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c
 # ADD BASE RSC /l 0x409
 # ADD RSC /l 0x409
 BSC32=bscmake.exe
@@ -82,12 +82,35 @@ LIB32=link.exe -lib
 # Name "condor_classad - Win32 Release"
 # Begin Source File
 
-SOURCE=..\src\condor_classad.V6\classad.C
-# SUBTRACT CPP /YX /Yc /Yu
+SOURCE=..\src\condor_classad\ast.C
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_classad.V6\classad.h
+SOURCE=..\src\condor_classad\astbase.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_classad\attrlist.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_classad\buildtable.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_classad\classad.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_classad\classad_list.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_classad\classad_util.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_classad\classifiedjobs.C
 # End Source File
 # Begin Source File
 
@@ -155,11 +178,47 @@ SOURCE=..\src\condor_includes\condor_scanner.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_classad\environment.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_classad\evaluateOperators.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_classad\new_classads.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_classad\operators.C
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_classad\operators.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_classad\parser.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_classad\registration.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_classad\scanner.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_classad\value.C
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_classad\value.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_classad\xml_classads.C
 # End Source File
 # End Target
 # End Project

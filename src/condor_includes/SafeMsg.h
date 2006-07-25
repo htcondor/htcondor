@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -88,6 +88,10 @@ class _condorInMsg
 		// get the current data without incrementing the 'current position'
 		int peek(char &c);
 
+        void set_sec(const char * MD5Keyid,  // MD5 key id
+                const unsigned char * md,  // MD5 key id
+                const char * EncKeyId);
+
         const char * isDataMD5ed();
         const char * isDataEncrypted();
 
@@ -95,9 +99,7 @@ class _condorInMsg
         void resetMD();
 
 		bool consumed();
-#ifdef DEBUG
 		void dumpMsg();
-#endif
 
 	// next line should be uncommented after testing
 	private:
@@ -129,6 +131,7 @@ class _condorInMsg
 
 static const int SAFE_MSG_MAX_PACKET_SIZE = 60000;
 static const int SAFE_MSG_HEADER_SIZE = 25;      
+static const int SAFE_MSG_FRAGMENT_SIZE = 1000;
 
 static const char* const SAFE_MSG_MAGIC = "MaGic6.0";
 
@@ -143,11 +146,12 @@ class _condorPacket
 
 		// get the contents of header
                 // returns 1 if is short message; 0 if not; -1 if checksum failed
-		int getHeader(bool &last,
-				   int &seq,
-		   		   int &len,
-				   _condorMsgID &mID,
-				   void *&dta);
+		int getHeader(int msgsize,
+                bool &last,
+				int &seq,
+		   		int &len,
+				_condorMsgID &mID,
+				void *&dta);
 
         int headerLen();
         // Get the part of the header that is also check summed

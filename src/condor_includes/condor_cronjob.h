@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -27,12 +27,13 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "linebuffer.h"
 #include "Queue.h"
+#include "env.h"
 
 // Cron's StdOut Line Buffer
 class CronJobOut : public LineBuffer
 {
   public:
-	CronJobOut( class CondorCronJob *job );
+	CronJobOut( class CronJobBase *job );
 	virtual ~CronJobOut( void ) {};
 	virtual int Output( const char *buf, int len );
 	int GetQueueSize( void );
@@ -40,18 +41,18 @@ class CronJobOut : public LineBuffer
 	int FlushQueue( void );
   private:
 	Queue<char *>		lineq;
-	class CondorCronJob	*job;
+	class CronJobBase	*job;
 };
 
 // Cron's StdErr Line Buffer
 class CronJobErr : public LineBuffer
 {
   public:
-	CronJobErr( class CondorCronJob *job );
+	CronJobErr( class CronJobBase *job );
 	virtual ~CronJobErr( void ) {};
 	virtual int Output( const char *buf, int len );
   private:
-	class CondorCronJob	*job;
+	class CronJobBase	*job;
 };
 
 // Job's state
@@ -80,15 +81,18 @@ typedef enum {
 } CondorCronEvent;
 
 // Cronjob event
-class CondorCronJob;
-typedef int     (Service::*CronEventHandler)(CondorCronJob*,CondorCronEvent);
+class CronJobBase;
+typedef int     (Service::*CronEventHandler)(CronJobBase*,CondorCronEvent);
+
+// Enable pipe I/O debugging
+#define CRONJOB_PIPEIO_DEBUG	0
 
 // Define a Condor 'Cron' job
-class CondorCronJob : public Service
+class CronJobBase : public Service
 {
   public:
-	CondorCronJob( const char *mgrName, const char *jobName );
-	virtual ~CondorCronJob( );
+	CronJobBase( const char *mgrName, const char *jobName );
+	virtual ~CronJobBase( );
 
 	// Finish initialization
 	virtual int Initialize( void );
@@ -97,8 +101,7 @@ class CondorCronJob : public Service
 	const char *GetName( void ) { return name.GetCStr(); };
 	const char *GetPrefix( void ) { return prefix.GetCStr(); };
 	const char *GetPath( void ) { return path.GetCStr(); };
-	const char *GetArgs( void ) { return args.GetCStr(); };
-	const char *GetEnv( void ) { return env.GetCStr(); };
+	//const char *GetArgs( void ) { return args.GetCStr(); };
 	const char *GetCwd( void ) { return cwd.GetCStr(); };
 	unsigned GetPeriod( void ) { return period; };
 
@@ -116,18 +119,19 @@ class CondorCronJob : public Service
 
 	int Reconfig( void );
 
+	int SetConfigVal( const char *path );
 	int SetName( const char *name );
 	int SetPrefix( const char *prefix );
 	int SetPath( const char *path );	
-	int SetArgs( const char *args );
-	int SetEnv( const char *env );
+	int SetArgs( ArgList const &new_args );
+	int SetEnv( char const * const *env );
+	int AddEnv( char const * const *env );
 	int SetCwd( const char *cwd );
 	int SetPeriod( CronJobMode mode, unsigned period );
 	int SetKill( bool );
 	int SetReconfig( bool );
 	int AddPath( const char *path );	
-	int AddArgs( const char *args );
-	int AddEnv( const char *env );
+	int AddArgs( ArgList const &new_args );
 
 	virtual int KillJob( bool );
 
@@ -136,16 +140,19 @@ class CondorCronJob : public Service
 	bool IsMarked( void ) { return marked; };
 
 	int ProcessOutputQueue( void );
-	virtual int ProcessOutput( const char *line );
+	virtual int ProcessOutput( const char *line ) = 0;
 
 	int SetEventHandler( CronEventHandler handler, Service *s );
+
+  protected:
+	MyString		configValProg;	// Path to _config_val
 
   private:
 	MyString		name;			// Logical name of the job
 	MyString		prefix;			// Publishing prefix
 	MyString		path;			// Path to the executable
-	MyString		args;			// Arguments to pass it
-	MyString		env;			// Environment variables
+	ArgList         args;           // Arguments to pass it
+	Env             env;			// Environment variables
 	MyString		cwd;			// Process's initial CWD
 	unsigned		period;			// The configured period
 	int				runTimer;		// It's DaemonCore "run" timerID
@@ -193,8 +200,8 @@ class CondorCronJob : public Service
 	int SetTimer( unsigned first, unsigned seconds );
 	int KillTimer( unsigned seconds );
 
-	// Debug / TODO
-# if 0
+	// Debugging
+# if CRONJOB_PIPEIO_DEBUG
 	char	*TodoBuffer;
 	int		TodoBufSize;
 	int		TodoBufWrap;

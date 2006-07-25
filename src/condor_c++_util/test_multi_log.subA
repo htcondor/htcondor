@@ -1,0 +1,6 @@
+# Note: this is not a complete submit file -- it's just for testing
+# the multi-log-reader code.
+
+# Note: continuation here causes bug -- see PTS 189.
+Log=\
+  test_multi_log.log1

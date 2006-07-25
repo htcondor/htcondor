@@ -9,6 +9,7 @@ $^W = 1;
 
 # Prototypes
 sub FindStateDirs( );
+sub FindJobTypes( );
 sub ReadJobs( );
 sub RunCheck( );
 sub ParseSeconds( $$ );
@@ -119,7 +120,7 @@ die "GLOBUS_LOCATION=$ENV{GLOBUSLOCATION} is invalid"
     if ( ! -d $ENV{GLOBUS_LOCATION} );
 
 # Set the default ouptut file if none specified
-$Config{OutputFile} = "$ENV{GLOBUS_LOCATION}/tmp/$OutputName"
+$Config{OutputFile} = "$ENV{GLOBUS_LOCATION}/tmp/gram_job_state/$OutputName"
     if ( $Config{OutputFile} eq "" );
 
 # Setup the lock file..
@@ -144,24 +145,12 @@ print "Perl search path set to " . join( ":", @INC ) . "\n"
 use Globus::GRAM::JobDescription;
 
 # The various JobManager derived classes
-my %AvailableJobTypes;
-foreach my $JobType ( qw( condor fork lsf pbs remote ) )
-{
-    my $Module = "Globus::GRAM::JobManager::$JobType";
-    print "Trying $JobType => $Module\n" if ( $Config{Debug} > 2 );
-    eval "require $Module";
-    print "Error = $@\n" if ( $@ && $Config{Debug} > 3 );
-    next if $@;
-    print "Enabling $JobType\n" if ( $Config{Debug} > 2 );
-    import $Module;
-    $AvailableJobTypes{$JobType} = 1;
-}
+my %AvailableJobTypes = FindJobTypes( );
+print "Supported job types = " . join( ", ", sort keys %AvailableJobTypes ) . "\n"
+    if ( $Config{Debug} );
 
 # The Job State definitions
 use Globus::GRAM::JobState;
-
-print "Supported job types = " . join( ", ", keys %AvailableJobTypes ) . "\n"
-    if ( $Config{Debug} );
 
 # Quick bit of feedback...
 if ( $Config{Debug} )
@@ -269,6 +258,46 @@ sub FindStateDirs( )
     return \%Dirs;
 }
 
+# Return a hash of the available job types
+sub FindJobTypes( )
+{
+    my %TryJobTypes = ( condor => 0, fork => 0, lsf => 0, pbs => 0, remote => 0 );
+
+    # Walk through the JobManager directory, and
+    # add an entry for everything we see there...
+    {
+	my $JobManagerDir =
+	    $ENV{GLOBUS_LOCATION} . "/lib/perl/Globus/GRAM/JobManager";
+	if ( opendir( DIR, $JobManagerDir ) )
+	{
+	    foreach my $entry ( readdir( DIR ) )
+	    {
+		if ( $entry =~ /^(\S+).pm$/ )
+		{
+		    $TryJobTypes{$1} = 0;
+		}
+	    }
+	    closedir( DIR );
+	}
+    }
+
+    # Let's check which ones are valid...
+    my %JobTypes;
+    foreach my $JobType ( keys %TryJobTypes )
+    {
+	my $Module = "Globus::GRAM::JobManager::$JobType";
+	print "Trying $JobType => $Module\n" if ( $Config{Debug} > 2 );
+	eval "require $Module";
+	print "Error = $@\n" if ( $@ && $Config{Debug} > 3 );
+	next if $@;
+	print "Enabling $JobType\n" if ( $Config{Debug} > 2 );
+	import $Module;
+	$JobTypes{$JobType} = 1;
+    }
+
+    return %JobTypes;
+}
+
 # Finally, let's walk through the whole list...
 sub ReadJobs( )
 {
@@ -292,6 +321,7 @@ sub ReadJobs( )
 	    next if ( $File =~ /\.lock$/ );
 	    next if ( $File eq "." || $File eq ".." );
 	    next if ( $File =~ /^gram_condor_log/ );
+	    next if ( $File !~ /^job\./ );
 
 	    # And, stuff it in the list
 	    push @StateFiles, $File
@@ -415,6 +445,8 @@ sub ReadJobs( )
 	    my $JobManager = CreateJobManager( \%Job, $JobDescription );
 
 	    # And, get the current state as best we can..
+	    print "Attempting to get state of job (type = $Job{JobManagerType})\n"
+		if ( $Config{Debug} >= 5 );
 	    my $JobState = GetJobState( $JobManager );
 
 	    # Store it..
@@ -485,8 +517,8 @@ sub RunCheck( )
 	    my $Stat = File::stat::stat( $LockFile );
 	    my $LockMtime = @{$Stat}[9];
 
-	    # Ok, let's grab a time 2 minutes in the past..
-	    my $MinTime = time() - 120;
+	    # Ok, let's grab a time 5 minutes in the past..
+	    my $MinTime = time() - 300;
 
 	    # If the file's mtime is recent, assume that $LockPid
 	    # is alive and is the process that modified it.
@@ -733,6 +765,16 @@ sub GetJobState( $ )
     # Get the job's status
     my $JobStatus = $JobManager->poll( );
 
+    # If we get back an Error, return FAILED
+    # TODO: There should be a way to pass the failure code along with
+    #   the FAILED status. We'd want to do it in a way that doesn't break
+    #   compatibility, as recent versions of the jobmanager read the
+    #   status file.
+    if(UNIVERSAL::isa($JobStatus, 'Globus::GRAM::Error')) {
+        # job status 4 is FAILED
+        return 4;
+    }
+
     # Some versions of Globus return a scalar instead of a hash
     if(ref $JobStatus eq '') {
         $JobStatus = { JOB_STATE => $JobStatus };
@@ -750,12 +792,44 @@ sub GetJobState( $ )
 }
 
 # Touch the lock file to indicate that I'm alive & well.
+# Also check that I haven't exceeded my max lifetime and
+# that I still have the lock
 sub Alive( )
 {
     # And, update its mtime..
     my $Now = time( );	
+    # Ignore my max lifetime until I finish a full cycle of polls.
+    # Otherwise, we may never get job statuses.
+#    if ( $Now > $QuitTime )
+#    {
+#	exit 0;
+#    }
     if ( $Now > ( $LastAlive + 5 ) )
     {
+	# Check that I still have the lock.
+	# Check for & read the lock file...
+	if ( open( LOCK, $Config{LockFile} ) )
+	{
+	    my $LockPid;
+	    my $LockTime;
+	    $_ = <LOCK>;
+	    if ( /(\d+) (\d+)/ )
+	    {
+		$LockPid = $1;
+		$LockTime = $2;
+	    }
+	    close( LOCK );
+	    if ( ( $LockPid <= 0 ) || ( $LockTime <= 0 ) )
+	    {
+		warn "Invalid lock file '$Config{LockFile}'";
+	    }
+	    if ( $LockPid > 0 && $LockPid != $$ ) {
+		print "Lock $Config{LockFile} stolen from me, exitting\n"
+		    if ( $Config{Debug} );
+		exit 0;
+	    }
+	}
+
 	print "Touching $Config{LockFile} -> $Now\n" if ( $Config{Debug} > 2 );
 	utime( $Now, $Now, $Config{LockFile} );
 	$LastAlive = $Now;

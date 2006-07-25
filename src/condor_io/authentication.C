@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -30,19 +30,29 @@
 #include "condor_auth_fs.h"
 #include "condor_auth_sspi.h"
 #include "condor_auth_x509.h"
+#include "condor_auth_ssl.h"
 #include "condor_auth_kerberos.h"
+#include "condor_auth_passwd.h"
 #include "condor_secman.h"
 #include "condor_environ.h"
 #include "../condor_daemon_core.V6/condor_ipverify.h"
 #include "CondorError.h"
 
+
+
 #if !defined(SKIP_AUTHENTICATION)
 #   include "condor_debug.h"
 #   include "condor_config.h"
 #   include "string_list.h"
+#include "MapFile.h"
+#include "../condor_daemon_core.V6/condor_daemon_core.h"
 #endif /* !defined(SKIP_AUTHENTICATION) */
 
+
 //----------------------------------------------------------------------
+
+MapFile* Authentication::global_map_file = NULL;
+bool Authentication::global_map_file_load_attempted = false;
 
 Authentication::Authentication( ReliSock *sock )
 {
@@ -53,6 +63,7 @@ Authentication::Authentication( ReliSock *sock )
 	t_mode              = NORMAL;
 	authenticator_      = NULL;
 #endif
+
 }
 
 Authentication::~Authentication()
@@ -69,7 +80,8 @@ Authentication::~Authentication()
 #endif
 }
 
-int Authentication::authenticate( char *hostAddr, KeyInfo *& key, const char* auth_methods, CondorError* errstack)
+int Authentication::authenticate( char *hostAddr, KeyInfo *& key, 
+								  const char* auth_methods, CondorError* errstack)
 {
     int retval = authenticate(hostAddr, auth_methods, errstack);
     
@@ -79,6 +91,10 @@ int Authentication::authenticate( char *hostAddr, KeyInfo *& key, const char* au
         // this will be gone
         mySock->allow_empty_message_flag = FALSE;
         retval = exchangeKey(key);
+		if ( !retval ) {
+			errstack->push("AUTHENTICATE",AUTHENTICATE_ERR_KEYEXCHANGE_FAILED,
+				"Failed to securely exchange session key");
+		}
         mySock->allow_one_empty_message();
     }
 #endif
@@ -135,10 +151,24 @@ Condor_Auth_Base * auth = NULL;
 				break;
 #endif /* GSI_AUTHENTICATION */
 
+#if defined(SSL_AUTHENTICATION)
+            case CAUTH_SSL:
+                auth = new Condor_Auth_SSL(mySock);
+                method_name = strdup("SSL");
+                break;
+#endif /* defined(SSL_AUTHENTICATION) */
+
 #if defined(KERBEROS_AUTHENTICATION) 
 			case CAUTH_KERBEROS:
 				auth = new Condor_Auth_Kerberos(mySock);
 				method_name = strdup("KERBEROS");
+				break;
+#endif
+
+#if defined(CONDOR_3DES_ENCRYPTION)  // 3DES is the prequisite for passwd auth
+			case CAUTH_PASSWORD:
+				auth = new Condor_Auth_Passwd(mySock);
+				method_name = strdup("PASSWORD");
 				break;
 #endif
  
@@ -251,13 +281,181 @@ Condor_Auth_Base * auth = NULL;
 	}
 	dprintf(D_SECURITY, "Authentication was a %s.\n", retval == 1 ? "Success" : "FAILURE" );
 
+	// check to see if CERTIFICATE_MAPFILE was defined.  if so, use it.  if
+	// not, do nothing.  the user and domain have been filled in by the
+	// authentication method itself, so just leave that alone.
+	char * cert_map_file = param("CERTIFICATE_MAPFILE");
+	bool use_mapfile = (cert_map_file != NULL);
+	if (cert_map_file) {
+		free(cert_map_file);
+		cert_map_file = 0;
+	}
+
+	// if successful so far, invoke the security MapFile.  the output of that
+	// is the "canonical user".  if that has an '@' sign, split it up on the
+	// last '@' and set the user and domain.  if there is more than one '@',
+	// the user will contain the leftovers after the split and the domain
+	// always has none.
+	if (retval && use_mapfile) {
+		const char * name_to_map = authenticator_->getAuthenticatedName();
+		if (name_to_map) {
+			dprintf (D_SECURITY, "ZKM: name to map is '%s'\n", name_to_map);
+
+			dprintf (D_SECURITY, "ZKM: pre-map: current user is '%s'\n", authenticator_->getRemoteUser());
+			dprintf (D_SECURITY, "ZKM: pre-map: current domain is '%s'\n", authenticator_->getRemoteDomain());
+			map_authentication_name_to_canonical_name(auth_status, method_used, name_to_map);
+			dprintf (D_SECURITY, "ZKM: post-map: current user is '%s'\n", authenticator_->getRemoteUser());
+			dprintf (D_SECURITY, "ZKM: post-map: current domain is '%s'\n", authenticator_->getRemoteDomain());
+			dprintf (D_SECURITY, "ZKM: post-map: current FQU is '%s'\n", authenticator_->getRemoteFQU());
+
+		} else {
+			dprintf (D_SECURITY, "ZKM: name to map is null, not mapping.\n");
+		}
+	}
+
 	mySock->allow_one_empty_message();
 	return ( retval );
 #endif /* SKIP_AUTHENTICATION */
 }
 
+#if !defined(SKIP_AUTHENTICATION)
+// takes the type (as defined in handshake bitmask, CAUTH_*) and result of authentication,
+// and maps it to the cannonical condor name.
+//
+void Authentication::map_authentication_name_to_canonical_name(int authentication_type, const char* method_string, const char* authentication_name) {
 
-int Authentication::isAuthenticated() 
+	// make sure the mapfile is loaded.  it's a static global variable.
+	if (global_map_file_load_attempted == false) {
+		if (global_map_file) {
+			delete global_map_file;
+			global_map_file = NULL;
+		}
+
+		global_map_file = new MapFile();
+
+		dprintf (D_ALWAYS, "ZKM: Parsing map file.\n");
+        char * credential_mapfile;
+        if (NULL == (credential_mapfile = param("CERTIFICATE_MAPFILE"))) {
+            dprintf(D_SECURITY, "ZKM: No CERTIFICATE_MAPFILE defined\n");
+			delete global_map_file;
+			global_map_file = NULL;
+        } else {
+        	int line;
+        	if (0 != (line = global_map_file->ParseCanonicalizationFile(credential_mapfile))) {
+            	dprintf(D_SECURITY, "ZKM: Error parsing %s at line %d", credential_mapfile, line);
+				delete global_map_file;
+				global_map_file = NULL;
+			}
+			free( credential_mapfile );
+		}
+		global_map_file_load_attempted = true;
+	} else {
+		dprintf (D_ALWAYS, "ZKM: NOT parsing map file.\n");
+	}
+
+	dprintf (D_ALWAYS, "ZKM: attempting to map '%s'\n", authentication_name);
+
+	if (global_map_file) {
+		MyString canonical_user;
+		if (!global_map_file->GetCanonicalization(method_string, authentication_name, canonical_user)) {
+			// returns true on failure?
+
+			// there is a switch for GSI to use the default globus function for this, in
+			// case there is some custom globus mapping add-on, or the admin just wants
+			// to use the grid-mapfile in use by other globus software.
+			//
+			// if they don't opt for globus to map, just fall through to the condor
+			// mapfile.
+			//
+			if ((authentication_type == CAUTH_GSI) && (canonical_user == "GSS_ASSIST_GRIDMAP")) {
+#if defined(GSI_AUTHENTICATION)
+				// hack for now: call a function in the GSI object to map it, just
+				// so the globus code stays in that object and out of this one.
+				//
+				// at the moment, this function has already been invoked during
+				// the authentication itself, so this really isn't necessary and
+				// is in fact inefficient.  when the x509 auth gets clean up though,
+				// this will be the correct place to do this.
+
+				((Condor_Auth_X509*)authenticator_)->nameGssToLocal( authentication_name );
+
+				// that function calls setRemoteUser() and setRemoteDomain().
+				//
+				// this api should actually just return the canonical user,
+				// and we should split it into user and domain in this function,
+				// and not invoke setRemoteFoo() directly in nameGssToLocal().
+#else
+				dprintf(D_ALWAYS, "ZKM: GSI not compiled, but was used?!!");
+#endif
+				return;
+			} else {
+
+				dprintf (D_ALWAYS, "ZKM: found user %s, splitting.\n", canonical_user.Value());
+
+				MyString user;
+				MyString domain;
+
+				// this sets user and domain
+				split_canonical_name( canonical_user, user, domain);
+
+				authenticator_->setRemoteUser( user.Value() );
+				authenticator_->setRemoteDomain( domain.Value() );
+
+				// we're done.
+				return;
+			}
+		} else {
+			dprintf (D_ALWAYS, "ZKM: did not find user %s.\n", canonical_user.Value());
+		}
+	}
+
+	// do some sane 'default' map, which is the method concatenated with a ':'
+	// and the authenticated name.
+	MyString user;
+	user = method_string;
+	user += ':';
+	user += authentication_name;
+
+	dprintf (D_ALWAYS, "ZKM: using default map to %s\n", user.Value());
+	authenticator_->setRemoteUser( user.Value() );
+
+	char* domain = param("UID_DOMAIN");
+	if (domain) {
+		authenticator_->setRemoteDomain( domain );
+		free(domain);
+	}
+
+}
+
+void Authentication::split_canonical_name(MyString can_name, MyString& user, MyString& domain ) {
+
+    char local_user[256];
+ 
+	// local storage so we can modify it.
+	strncpy (local_user, can_name.Value(), 255);
+
+    // split it into user@domain
+    char* tmp = strchr(local_user, '@');
+    if (tmp == NULL) {
+        user = local_user;
+        char * uid_domain = param("UID_DOMAIN");
+        if (uid_domain) {
+            domain = uid_domain;
+            free(uid_domain);
+        } else {
+            dprintf(D_SECURITY, "AUTHENTICATION: UID_DOMAIN not defined.\n");
+        }
+    } else {
+        // tmp is pointing to '@' in local_user[]
+        *tmp = 0;
+        user = local_user;
+        domain = (tmp+1);
+    }
+}
+#endif //SKIP_AUTHENTICATION
+
+
+int Authentication::isAuthenticated() const
 {
 #if defined(SKIP_AUTHENTICATION)
     return 0;
@@ -362,12 +560,21 @@ const char * Authentication::getOwner() const
     // memory.  We can always just return claimToBe, since it'll
     // either be NULL or the string we want, which is the old
     // semantics.  -Derek Wright 3/12/99
+	const char *owner;
     if (authenticator_) {
-        return authenticator_->getRemoteUser();
+        owner = authenticator_->getRemoteUser();
     }
     else {
-        return NULL;
+        owner = NULL;
     }
+
+	// If we're authenticated, we should always have a valid owner
+	if ( isAuthenticated() ) {
+		if ( NULL == owner ) {
+			EXCEPT( "Socket is authenticated, but has no owner!!" );
+		}
+	}
+	return owner;
 #endif  
 }               
 
@@ -529,9 +736,15 @@ int Authentication::exchangeKey(KeyInfo *& key)
             mySock->get_bytes(encryptedKey, inputLen);
             mySock->end_of_message();
 
-            // Now, unwrap it
-            authenticator_->unwrap(encryptedKey,  inputLen, decryptedKey, outputLen);
-            key = new KeyInfo((unsigned char *)decryptedKey, keyLength,(Protocol) protocol,duration);
+            // Now, unwrap it.  
+            if ( authenticator_->unwrap(encryptedKey,  inputLen, decryptedKey, outputLen) ) {
+					// Success
+				key = new KeyInfo((unsigned char *)decryptedKey, keyLength,(Protocol) protocol,duration);
+			} else {
+					// Failure!
+				retval = 0;
+				key = NULL;
+			}
         }
         else {
             key = NULL;
@@ -554,7 +767,11 @@ int Authentication::exchangeKey(KeyInfo *& key)
             protocol  = (int) key->getProtocol();
             duration  = key->getDuration();
 
-            authenticator_->wrap((char *)key->getKeyData(), keyLength, encryptedKey, outputLen);
+            if (!authenticator_->wrap((char *)key->getKeyData(), keyLength, encryptedKey, outputLen))
+			{
+				// failed to wrap key.
+				return 0;
+			}
 
             if (!mySock->code(keyLength) || 
                 !mySock->code(protocol)  ||

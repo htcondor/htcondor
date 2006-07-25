@@ -1,0 +1,84 @@
+							  Stork Release Notes
+
+release-TBD:
+
+*Numerous stability fixes, and memory leak fixes.
+
+*The command line option for all CredD tools to specify a remote CredD
+server has changed, from "-s host:port" to "-n host:port".  This
+change is needed to make CredD tool command line options consistent
+with  Condor tool options.
+
+*The command line option for all CredD tools to enable debugging
+output server has changed, from "-v" to "-d".  This change is needed
+to make CredD tool command line options consistent with  Condor tool
+options.  Further, debugging output was broken, and is now fixed.
+
+0.9.1 2004-10-20:
+
+The Condor Project is pleased to announce the release of version 0.9.1
+of the Stork Data Placement Scheduler,
+http://www.cs.wisc.edu/condor/stork/ .  The primary feature of the
+0.9.1 release is the migration to glibc-2.3, which extends Stork
+binary compatibility to Redhat 9 and Red Hat Enterprise Linux 3.  This
+release also includes several new features, tools, and bug fixes.  See
+the complete Change Log in the release for details.
+
+This release is available for download from:
+http://www.cs.wisc.edu/condor/stork/download/stork-0.9.1-linux-x86-glibc23-dynamic.tar.gz
+
+Note that the 0.9 series of Stork releases are still to be considered
+"Beta".  We strive to ensure that all Stork releases are fully
+functional, and look forward to collaborating with Stork users to
+develop this unique tool into production-quality software.   All
+binaries in the 0.9 series are built with full debugging symbols, and
+are therefore larger than may be expected.  Installations with minimal
+storage resources are free to strip Stork binaries.  However, we
+encourage users to use the full debugging binaries, as this may
+assist with future debugging efforts.
+
+With the 0.9.1 release, support for glibc-2.2/Redhat 7.2 has been
+dropped, because of restricted support.  Use the previous stork-0.9.0
+release on Redhat 7.x platforms.
+
+Known Issues:
+An authentication error may occur between the Stork server daemon
+(stork_server) and Credential Manager Daemon (condor_credd).  When
+this occurs, the Stork server may be unable to obtain a credential
+from the Credential Manager.  In most cases, the default value of
+	max_retry = 5;
+in the delivered etc/stork.config file provides added data transfer
+retries to remedy the authentication problem.  In rare cases, it may
+be necessary to specify the user credential directly in the stork
+submit file, with the line 
+	x509proxy = "/path/to/proxy";
+Stork developers are currently working to remedy this issue.
+
+Feedback, suggestions, problem reports are all welcome to either the
+stork-discuss@cs.wisc.edu email list, or personally to
+Jeff Weber <weber@cs.wisc.edu> .
+
+	Enjoy!
+
+
+Change Log:
+
+Stork:
+*added support for glibc-2.3
+*Changed stem of user log names in default condor_config from "Stork.userlog"
+to "Stork".
+*Added default TOOL_DEBUG settings in default condor_config.
+*Fixed "-Serverlog" command line option specification in README.
+*Fixed post-transfer file size checks for gsiftp://, http://, file://
+transfers, which could cause these transfers to fail.
+*Added stork_q tool.  Removed stork_client_agent tool.
+*added stork_version, condor_version tools
+*Improved API,changed method names dap_ -> stork_, added comments.
+
+CredD credential manager:
+*Changed the interface to accept host:port instead of numeric "sinful
+string" <nnn.nnn.nnn.nnn:nnnn> for server name
+----------------------------------------------------------------------
+
+0.9.0 2004-07-01
+*First public beta release.

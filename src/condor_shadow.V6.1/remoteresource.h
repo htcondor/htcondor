@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -119,12 +119,6 @@ class RemoteResource : public Service {
 			@param debugLevel The dprintf debug level you wish to use 
 		*/
 	virtual void dprintfSelf( int debugLevel);
-
-		/** Print out the ending status of this job.
-			Used to email the user at the end...
-			@param fp A valid file pointer initialized for writing.
-		*/
-	virtual void printExit( FILE *fp );
 
 		/** Each of these remote resources can handle syscalls.  The 
 			claimSock gets registered with daemonCore, and it will
@@ -332,6 +326,17 @@ class RemoteResource : public Service {
 		*/
 	virtual void attemptReconnect( void );
 
+		/** Check if the X509 has been updated, if so upload it to the shadow
+
+			Intended for use as a DaemonCore timer handler (thus, it's public),
+			but should be safe if you really feel like calling it yourself.
+		*/
+	virtual void checkX509Proxy( void );
+
+
+		// Try to send an updated X509 proxy down to the starter
+	bool updateX509Proxy(const char * filename);
+
  protected:
 
 		/** The jobAd for this resource.  Why is this here and not
@@ -395,6 +400,10 @@ private:
 	void requestReconnect( void );
 	int reconnect_attempts;
 	int next_reconnect_tid;
+	int proxy_check_tid;
+
+	MyString proxy_path;
+	time_t last_proxy_timestamp;
 
 		/** For debugging, print out the values of various statistics
 			related to our bookkeeping of suspend/resume activity for
@@ -406,6 +415,11 @@ private:
 		// Making these private PREVENTS copying.
 	RemoteResource( const RemoteResource& );
 	RemoteResource& operator = ( const RemoteResource& );
+
+	int lease_duration;
+
+	bool already_killed_graceful;
+	bool already_killed_fast;
 };
 
 

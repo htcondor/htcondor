@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -30,10 +30,10 @@
 #define ITERATIONS_PER_SECOND 10000000
 
 int load_avg_test(int trials, int interval, int num_children, double warn_ok_ratio) {
-	int		foo = 0;
-	int		foo2 = 0;
-	int		bar = 0;
-	int		bar2 = 0;
+	float		foo = 0;
+	float		foo2 = 0;
+	float		bar = 0;
+	float		bar2 = 0;
 	int		i, j, k;
 	int		unslept;
 	int		pid;

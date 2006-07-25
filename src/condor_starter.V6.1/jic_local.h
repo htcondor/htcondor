@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -81,6 +81,20 @@ public:
 		*/
 	float bytesReceived( void );
 
+		/** Since the logic for getting the std filenames out of the
+			job ad and munging them are identical for all 3, just use
+			a helper to avoid duplicating code.  The only magic we do
+			here is to make sure we've got full paths, and if they're
+			not already, we prepend the job's iwd.
+			@param attr_name ClassAd attribute name to lookup
+			@param alt_name Alternate ClassAd attribute name
+			@return a strdup() allocated string for the filename we 
+			        care about, or NULL if it's not in the job ad or
+					points to /dev/null (or equiv).
+		*/
+	char* getJobStdFile( const char* attr_name,
+						 const char* alt_name = NULL );
+
 
 		// // // // // // // // // // // //
 		// Job execution and state changes
@@ -135,7 +149,7 @@ public:
 	bool notifyJobExit( int exit_status, int reason, 
 						UserProc* user_proc );  
 
-	bool notifyStarterError( const char* err_msg, bool critical );
+	bool notifyStarterError( const char* err_msg, bool critical, int hold_reason_code, int hold_reason_subcode );
 
 		// // // // // // // // // // // //
 		// Misc utilities
@@ -189,18 +203,6 @@ protected:
 		*/
 	void initJobId( void );
 
-		/** Since the logic for getting the std filenames out of the
-			job ad and munging them are identical for all 3, just use
-			a helper to avoid duplicating code.  The only magic we do
-			here is to make sure we've got full paths, and if they're
-			not already, we prepend the job's iwd.
-			@param attr_name ClassAd attribute name to lookup
-			@return a strdup() allocated string for the filename we 
-			        care about, or NULL if it's not in the job ad or
-					points to /dev/null (or equiv).
-		*/
-	char* getJobStdFile( const char* attr_name );
-
 		/** Make sure the JobUniverse attribute in our job ClassAd
 			(regardless of how we got it) is valid for a "local" job. 
 			@param univ The value of the JobUniverse attribute
@@ -208,7 +210,9 @@ protected:
 		*/
 	bool checkUniverse( int univ );
 
-
+		/** Initialize our local UserLog-writing code.
+		 */
+	virtual bool initLocalUserLog( void );
 };
 
 

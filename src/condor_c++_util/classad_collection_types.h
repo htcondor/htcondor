@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -120,34 +120,21 @@ public:
   
   virtual bool CheckClassAd(ClassAd* Ad) {
     ExprTree* tree;
-//    EvalResult result;
-	Value result;
-	ClassAdParser parser;
-	bool boolValue;
-	int intValue;
+    EvalResult result;
 
-//    if (Parse(Constraint.Value(), tree) != 0) {
-	if( !parser.ParseExpression( std::string( Constraint.Value( ) ), tree ) ) {
-		return false;
+    if (Parse(Constraint.Value(), tree) != 0) {
+        return false;
     }
 
-//    if (!tree->EvalTree(NULL, Ad, &result)) {
-	tree->SetParentScope( Ad );
-	if( !Ad->EvaluateExpr( tree, result ) ) {
+    if (!tree->EvalTree(NULL, Ad, &result)) {
         delete tree;
         return false;
     }
 
     delete tree;
-//    if (result.type == LX_INTEGER) {
-//        return (bool)result.i;
-//   }
-	if( result.IsBooleanValue( boolValue ) ) {
-		return boolValue;
-	}
-	else if( result.IsIntegerValue( intValue ) ) {
-		return (bool)intValue;
-	}
+    if (result.type == LX_INTEGER) {
+        return (bool)result.i;
+    }
 
     return false;
   }

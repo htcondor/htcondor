@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -32,50 +32,51 @@
 #include "baseresource.h"
 #include "gahp-client.h"
 
+#define GM_RESOURCE_UNLIMITED	1000000000
 
 class GlobusJob;
 class GlobusResource;
 
-extern HashTable <HashKey, GlobusResource *> ResourcesByName;
-
 class GlobusResource : public BaseResource
 {
- public:
-
-	GlobusResource( const char *resource_name );
+ protected:
+	GlobusResource( const char *resource_name, const char *proxy_subject );
 	~GlobusResource();
 
+ public:
+	bool Init();
 	void Reconfig();
-	void RegisterJob( GlobusJob *job, bool already_submitted );
 	void UnregisterJob( GlobusJob *job );
-	void RequestPing( GlobusJob *job );
-	bool RequestSubmit( GlobusJob *job );
-	void SubmitComplete( GlobusJob *job );
-	void CancelSubmit( GlobusJob *job );
+
+	bool RequestJM( GlobusJob *job );
+	void JMComplete( GlobusJob *job );
+	void JMAlreadyRunning( GlobusJob *job );
+	int GetJMLimit()
+		{ return jmLimit; };
 
 	bool GridJobMonitorActive() { return monitorActive; }
 
-	bool IsEmpty();
-	bool IsDown();
-
-	time_t getLastStatusChangeTime() { return lastStatusChange; }
-
 	static const char *CanonicalName( const char *name );
+	static const char *HashName( const char *resource_name,
+								 const char *proxy_subject );
 
-	static void setProbeInterval( int new_interval )
-		{ probeInterval = new_interval; }
-
-	static void setProbeDelay( int new_delay )
-		{ probeDelay = new_delay; }
+	static GlobusResource *FindOrCreateResource( const char *resource_name,
+												 const char *proxy_subject );
 
 	static void setGahpCallTimeout( int new_timeout )
 		{ gahpCallTimeout = new_timeout; }
 
 	static void setEnableGridMonitor( bool enable )
 		{ enableGridMonitor = enable; }
+	static bool GridMonitorEnabled()
+		{ return enableGridMonitor; }
+
+	// This should be private, but GlobusJob references it directly for now
+	static HashTable <HashKey, GlobusResource *> ResourcesByName;
 
  private:
-	int DoPing();
+	void DoPing( time_t& ping_delay, bool& ping_complete,
+				 bool& ping_succeeded  );
 	int CheckMonitor();
 	void StopMonitor();
 	bool SubmitMonitorJob();
@@ -86,30 +87,21 @@ class GlobusResource : public BaseResource
 	int ReadMonitorLogFile();
 	void AbandonMonitor();
 
-	bool resourceDown;
-	bool firstPingDone;
-	int pingTimerId;
-	time_t lastPing;
-	time_t lastStatusChange;
-	List<GlobusJob> registeredJobs;
-	List<GlobusJob> pingRequesters;
-	// jobs that are currently executing a submit
-	List<GlobusJob> submitsInProgress;
-	// jobs that want to submit but can't due to submitLimit
-	List<GlobusJob> submitsQueued;
-	// jobs allowed to submit under jobLimit
-	List<GlobusJob> submitsAllowed;
-	// jobs that want to submit but can't due to jobLimit
-	List<GlobusJob> submitsWanted;
-	static int probeInterval;
-	static int probeDelay;
-	int submitLimit;		// max number of submit actions
-	int jobLimit;			// max number of submitted jobs
+	bool initialized;
+
+	char *proxySubject;
 	static int gahpCallTimeout;
+
+	// jobs allowed allowed to have a jobmanager running
+	List<GlobusJob> jmsAllowed;
+	// jobs that want a jobmanager but can't due to jmLimit
+	List<GlobusJob> jmsWanted;
+	int jmLimit;		// max number of running jobmanagers
 
 	static bool enableGridMonitor;
 	int checkMonitorTid;
 	bool monitorActive;
+	char *monitorDirectory;
 	char *monitorJobStatusFile;
 	char *monitorLogFile;
 		// These two timers default to the submission time of the

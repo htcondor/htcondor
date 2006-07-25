@@ -3,23 +3,16 @@
 # available from the GNU Autoconf Macro Archive at:
 # http://www.gnu.org/software/ac-archive/htmldoc/check_gnu_make.html
 # This version is more generic in that it checks any given program if
-# it's GNU or not.  However, it's more specific that it assumes the
-# given program is required.  If it doesn't find it, it bails out with
-# a fatal error.  Written by Derek Wright <wright@cs.wisc.edu>
+# it's GNU or not.  Written by Derek Wright <wright@cs.wisc.edu>
 # Arguments:
-#  $1 the variable you want to store the program in (if found) 
-#  $2 is the name of the program to search for
+#  $1 is the PATH of the program to test for
+#  $2 the variable name you want to use to see if it's GNU or not
 # Side effects:
-#  Bails out if the program isn't found.
 #  Sets _cv_<progname>_is_gnu to "yes" or "no" as appropriate
 #######################################################################
 AC_DEFUN( [CHECK_PROG_IS_GNU],
-[AC_CHECK_PROG($1,$2,$2)
- if test "$[$1]" != "$2"; then
-   AC_MSG_ERROR( [$2 is required] )
- fi
- AC_CACHE_CHECK( [if $2 is GNU], [_cv_$2_is_gnu],
- [if ( sh -c "$[$1] --version" 2> /dev/null | grep GNU > /dev/null 2>&1 ) ;
+[AC_CACHE_CHECK( [if $1 is GNU], [_cv_$2_is_gnu],
+ [if ( sh -c "$1 --version" 2> /dev/null | grep GNU > /dev/null 2>&1 ) ;
   then
      _cv_$2_is_gnu=yes
   else
@@ -49,11 +42,11 @@ dnl
 AC_DEFUN([AC_PROG_PERL_VERSION],[dnl
 # Make sure we have perl
 if test -z "$PERL"; then
-  AC_CHECK_PROG(PERL,perl,perl)
+  AC_PATH_PROG(PERL,perl,no,[$PATH])
 fi
 # Check if version of Perl is sufficient
 ac_perl_version="$1"
-if test "x$PERL" != "x"; then
+if test "$PERL" != "no"; then
   AC_MSG_CHECKING(for perl version greater than or equal to $ac_perl_version)
   # NB: It would be nice to log the error if there is one, but we cannot rely
   # on autoconf internals
@@ -69,6 +62,40 @@ else
   AC_MSG_WARN(could not find perl)
 fi
 ])dnl
+
+
+
+
+#######################################################################
+# CONDOR_EXTERNAL_VERSION written by Derek Wright
+# <wright@cs.wisc.edu> to specify the required version for a given
+# external package needed for building Condor.  In addition to setting
+# variables and printing out stuff, this macro checks to make sure
+# that the externals directory tree we've been configured to use
+# contains the given version of the external package.
+# Arguments: 
+#  $1 is the package "name" for the external
+#  $2 is the package "version" of the external
+# Side Effects:
+#  If the given version is found in the externals tree, 
+#  the variable $_cv_ext_<name>_version is set to hold the value, we
+#  print out "checking <name> ... <version>, and we do a variable
+#  substitution in our output files for "ext_<name>_version".
+#######################################################################
+AC_DEFUN([CONDOR_EXTERNAL_VERSION],
+[CONDOR_EXTERNAL_VERSION_($1,$2,m4_toupper($1))])
+
+AC_DEFUN([CONDOR_EXTERNAL_VERSION_],
+[AC_MSG_CHECKING([$1])
+ _err_msg="The requested version of [$1] ([$1]-[$2]) does not exist in $ac_cv_externals"
+ _condor_VERIFY_DIR([$ac_cv_externals/bundles/[$1]],$_err_msg)
+ _condor_VERIFY_DIR([$ac_cv_externals/bundles/[$1]/[$2]],$_err_msg)
+ _condor_VERIFY_FILE([$ac_cv_externals/bundles/[$1]/[$2]/build_[$1]-[$2]],$_err_msg)
+ _cv_ext_$1_version="[$1]-[$2]"
+ AC_MSG_RESULT([$_cv_ext_$1_version])
+ AC_SUBST([ext_$1_version],$_cv_ext_$1_version)
+ AC_DEFINE([HAVE_EXT_$3],[1],[Do we have the $3 external package])
+])
 
 
 #######################################################################
@@ -369,3 +396,47 @@ _TESTEOF
  fi
  rm -f conftest.c conftest1
 ])
+
+
+#######################################################################
+# REQUIRE_PATH_PROG by Derek Wright <wright@cs.wisc.edu> 
+# Performs an AC_PATH_PROG, and then makes sure that we found the
+# program we were looking for.
+#
+# Arguments (just the first two you pass to AC_PATH_PROG)
+#  $1 variable name 
+#  $2 program name
+# Side Effects:
+#  Calls AC_PATH_PROG, which does a bunch of stuff for you.
+#######################################################################
+AC_DEFUN([REQUIRE_PATH_PROG],
+[AC_PATH_PROG([$1],[$2],[no],[$PATH])
+ if test "$[$1]" = "no" ; then
+   AC_MSG_ERROR([$2 is required])
+ fi
+])
+
+
+#######################################################################
+# CHECK_PATH_PROG by Derek Wright <wright@cs.wisc.edu> 
+# Checks for the full path to the requested tool.
+# Assumes you already called AC_PATH_PROG(WHICH,which).
+# We can't use AC_REQUIRE for that assumption, b/c that only works
+# for macros without arguments.
+#
+# Arguments
+#  $1 program name
+#  $2 variable name prefix 
+# Side Effects:
+#  sets $2_path to the full path to $1
+#######################################################################
+AC_DEFUN([CHECK_PATH_PROG],
+[AC_MSG_CHECKING([for full path to $1])
+ if test $WHICH != no; then
+   $2_path=`$WHICH $1`
+   AC_MSG_RESULT($[$2_path])
+ else
+   AC_MSG_RESULT([this platform does not support 'which'])
+ fi
+])
+

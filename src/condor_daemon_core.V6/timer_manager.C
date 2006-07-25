@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -32,6 +32,16 @@ static char* DEFAULT_INDENT = "DaemonCore--> ";
 static	TimerManager*	_t = NULL;
 
 const time_t TIME_T_NEVER	= 0x7fffffff;
+
+	/*	MAX_FIRES_PER_TIMEOUT sets the maximum number of timer handlers
+		we will invoke per call to Timeout().  This limit prevents timers
+		from starving other kinds other DC handlers (i.e. it make certain
+		that we make it back to the Driver() loop occasionally.  The higher
+		the number, the more "timely" timer callbacks will be.  The lower
+		the number, the more responsive non-timer calls (like commands)
+		will be in the face of many timers coming due.
+	*/	
+const int MAX_FIRES_PER_TIMEOUT = 3;
 
 
 TimerManager::TimerManager()
@@ -126,14 +136,18 @@ int TimerManager::NewTimer(Service* s, unsigned deltawhen, Event event, Eventcpp
 	} else {
 		// list is not empty, so keep timer_list ordered from soonest to
 		// farthest (i.e. sorted on "when").
-		if ( new_timer->when <= timer_list->when ) {
+		// Note: when doing the comparisons, we always use "<" instead
+		// of "<=" -- this makes certain we "round-robin" across 
+		// timers that constantly reset themselves to zero.
+		if ( new_timer->when < timer_list->when ) {
 			// make the this new timer first in line
 			new_timer->next = timer_list;
 			timer_list = new_timer;
 		} else {
 			for (timer_ptr = timer_list; timer_ptr != NULL; 
-				 timer_ptr = timer_ptr->next ) {
-				if (new_timer->when <= timer_ptr->when) {
+				 timer_ptr = timer_ptr->next ) 
+			{
+				if (new_timer->when < timer_ptr->when) {
 					break;
 				}
 				trail_ptr = timer_ptr;
@@ -311,18 +325,23 @@ TimerManager::Timeout()
 	Event			handler;
 	Eventcpp		handlercpp;
 	Service*		s; 
-	int				result;
-	time_t			now;
+	int				result, timer_check_cntr;
+	time_t			now, time_sample;
 	int				is_cpp;
 	char*			event_descrip;
 	void*			data_ptr;
+	int				num_fires = 0;	// num of handlers called in this timeout
 
 	if ( in_timeout == TRUE ) {
 		dprintf(D_DAEMONCORE,"DaemonCore Timeout() called and in_timeout is TRUE\n");
-		if ( timer_list == NULL )
+		if ( timer_list == NULL ) {
 			result = 0;
-		else
+		} else {
 			result = (timer_list->when) - time(NULL);
+		}
+		if ( result < 0 ) {
+			result = 0;
+		}
 		return(result);
 	}
 	in_timeout = TRUE;
@@ -334,6 +353,7 @@ TimerManager::Timeout()
 	}
 
 	time(&now);
+	timer_check_cntr = 0;
 
 	DumpTimerList(D_DAEMONCORE | D_FULLDEBUG);
 
@@ -342,8 +362,39 @@ TimerManager::Timeout()
 	// keep the timer_list happily sorted on "when" for us.  We use "now" as a 
 	// variable so that if some of these handler functions run for a long time,
 	// we do not sit in this loop forever.
-	while( timer_list != NULL && (timer_list->when <= now ) ) {
+	// we make certain we do not call more than "max_fires" handlers in a 
+	// single timeout --- this ensures that timers don't starve out the rest
+	// of daemonCore if a timer handler resets itself to 0.
+	while( (timer_list != NULL) && (timer_list->when <= now ) && 
+		   (num_fires++ < MAX_FIRES_PER_TIMEOUT)) 
+	{
 		// DumpTimerList(D_DAEMONCORE | D_FULLDEBUG);
+
+		// In some cases, resuming from a suspend can cause the system
+		// clock to become temporarily skewed, causing crazy things to 
+		// happen with our timers (particularly for sending updates to
+		// the collector). So, to correct for such skews, we routinely
+		// check to make sure that 'now' is not in the future.
+
+		timer_check_cntr++; 
+
+			// since time() is somewhat expensive, we 
+			// only check every 10 times we loop 
+			
+		if ( timer_check_cntr > 10 ) {
+
+			timer_check_cntr = 0;
+
+			time(&time_sample);
+			if (now > time_sample) {
+				dprintf(D_ALWAYS, "DaemonCore: Clock skew detected "
+					"(time=%ld; now=%ld). Resetting TimerManager's "
+					"notion of 'now'\n", (long) time_sample, 
+					(long) now);
+				now = time_sample;
+			}
+		}
+
 		current_id = timer_list->id;
 		period = timer_list->period;
 		handler = timer_list->handler;
@@ -451,8 +502,10 @@ void TimerManager::DumpTimerList(int flag, char* indent)
 		else
 			ptmp = "NULL";
 
-		dprintf(flag, "%sid = %d, when = %d, period = %d, handler_descrip=<%s>\n", indent,
-			 	timer_ptr->id, timer_ptr->when, timer_ptr->period,ptmp);
+		dprintf(flag, 
+			"%sid = %d, when = %ld, period = %d, handler_descrip=<%s>\n", 
+			indent, timer_ptr->id, (long)timer_ptr->when, 
+			timer_ptr->period,ptmp);
 	}
 	dprintf(flag, "\n");
 }
@@ -479,8 +532,9 @@ void TimerManager::Start()
 			dprintf(D_DAEMONCORE,"TimerManager::Start() about to block with no events!\n");
 			rv = select(0,0,0,0,NULL);
 		} else {
-			dprintf(D_DAEMONCORE,"TimerManager::Start() about to block, timeout=%d\n",
-				timer.tv_sec);
+			dprintf(D_DAEMONCORE,
+				"TimerManager::Start() about to block, timeout=%ld\n",
+				(long)timer.tv_sec);
 			rv = select(0,0,0,0, &timer);
 		}		
 	}

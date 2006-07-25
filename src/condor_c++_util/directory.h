@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -28,6 +28,11 @@
 #ifndef WIN32
 #	include <dirent.h>
 #endif
+
+// DON'T include "stat_wrapper.h"; just pre-declare the StatWrapper
+// class below.  This way, we avoid the possible problems of including
+// all of the system includes into places where we don't want them.
+class StatWrapper;	// See comment above
 
 enum si_error_t { SIGood = 0, SINoFile, SIFailure };
 
@@ -57,6 +62,14 @@ public:
 		@see Error()
 	*/
 	StatInfo( const char *dirpath, const char *filename );
+
+	/** Alternate Constructor.  This does the same thing as the other
+  	    constructor, except that a file descriptor is passed instead
+		of a file path.
+		@param fd The file descriptor
+		@see Error()
+	*/
+	StatInfo( int fd );
 
 #ifdef WIN32
 	/** NT's other constructor.  This just stores the given values
@@ -138,7 +151,10 @@ public:
 	/** Get file size.
 		@return size of the file in bytes
 	*/
-	unsigned long GetFileSize() { return file_size; }
+	filesize_t GetFileSize() { return file_size; }
+
+		/// Return the file's permission mode
+	mode_t GetMode();
 
 	/** Determine if the file is the name of a subdirectory,
 		or just a file.  This also returns true for symlinks
@@ -156,7 +172,19 @@ public:
 	/** Determinen if the file is a symbolic link
 		@return true if the file is a symbolic link, false if not
 	*/
-	bool IsSymlink() {return issymlink; }
+	bool IsSymlink() { return issymlink; }
+
+#ifndef WIN32
+	/** Get the owner of the entry.
+		@return the uid of the entry's owner
+	*/
+	uid_t GetOwner( void ) { return owner; };
+
+	/** Get the group owner of the entry.
+		@return the gid of the entry's group id
+	*/
+	gid_t GetGroup( void ) { return group; };
+#endif
 
 private:
 	si_error_t si_error;
@@ -167,17 +195,20 @@ private:
 	time_t access_time;
 	time_t modify_time;
 	time_t create_time;
-	unsigned long file_size;
+#ifndef WIN32
+	uid_t owner;
+	gid_t group;
+#endif
+	bool mode_set;
+	mode_t file_mode;
+	filesize_t file_size;
 	char* dirpath;
 	char* filename;
 	char* fullpath;
-	void do_stat( const char *path );
+	void stat_file( const char *path );
+	void stat_file( int fd );
+	void init( StatWrapper *buf = NULL );
 	char* make_dirpath( const char* dir );
-#ifndef WIN32
-	int unix_do_stat( const char *path, struct stat *buf );
-#else
-	int nt_do_stat( const char *path, struct stat *buf );
-#endif
 };
 
 
@@ -210,8 +241,27 @@ public:
 	*/
 	Directory( const char *dirpath, priv_state priv = PRIV_UNKNOWN);
 
+	/** Alternate Constructor.  Instead of passing in a pathname, 
+		the caller can instantiate by using a StatInfo object (since
+		in many cases, they've already got a copy of that object).
+		This allows them to pass in more info, and to prevent us from
+		re-doing the syscalls and other work to figure out things we'd
+		like to know about the directory.  Otherwise, this constructor
+		is just like the other, in terms of how to use the Directory
+		object once it exists, the handling of priv states, etc.
+		@param info Pointer to the StatInfo object to use for infor.
+		@param priv The priv_state used when accessing the filesystem.
+		@see Next()
+		@see priv_state
+		@see StatInfo
+	*/
+	Directory( StatInfo *info, priv_state priv = PRIV_UNKNOWN);
+
 	/// Destructor<p>
 	~Directory();
+
+	/** Get full path to the directory as instantiated. */
+	const char *GetDirectoryPath( void ) { return curr_dir; }
 
 	/** Fetch information on the next file in the subdirectory and
 		make it the 'current' file.
@@ -231,6 +281,17 @@ public:
 	*/
 	bool Rewind();
 
+	/** Find a entry with a given name.  Iterates through all entries in the
+		directory until a match is found, or the end is reached.  If a match
+		is found, the current entry matches it.  Note that this function
+		rewind()s the directory object, and, by definition, changes the
+		current entry pointer.
+		@return true if a match is found, false if not.
+		@see Next()
+	*/
+
+	bool Find_Named_Entry( const char *name );
+
 	/** Get last access time of current file.  If there is no current
 	    file, return 0.
 		@return time in seconds since 00:00:00 UTC, January 1, 1970 */
@@ -249,6 +310,11 @@ public:
 	/** Get size of current file.  If there is no current file, return 0.
 		@return size of file in bytes */
 	unsigned long GetFileSize() { return curr ? curr->GetFileSize() : 0; };
+
+	/** Get mode of current file.  If there is no current file, return 0.
+		@return permission mode of the current file
+	*/
+	mode_t GetMode() { return curr ? curr->GetMode() : 0; };
 
 	/** Get the size of all the files and all the files in all subdirectories,
 		starting with the directory specified by the constructor.
@@ -271,27 +337,90 @@ public:
 	/** Determine if the current file is a symbolic link.
 		@return true if current file is a symbolic link, false if not
 	*/
-	bool IsSymlink() {return curr ? curr->IsDirectory() : false; }
+	bool IsSymlink() {return curr ? curr->IsSymlink() : false; }
 
 	/** Remove the current file.  If the current file is a subdirectory,
 	    then the subdirectory (and all files beneath it) are removed.
 		@return true on successful removal, otherwise false
 	*/
-	bool Remove_Current_File();
+	bool Remove_Current_File( void );
 
 	/** Remove the specified file.  If the given file is a subdirectory,
 	    then the subdirectory (and all files beneath it) are removed. 
 		@param path The full path to the file to remove
 		@return true on successful removal, otherwise false
 	*/
-	bool Remove_File( const char* path );
+	bool Remove_Full_Path( const char *path );
+
+	/** Remove the specified directory entry.  If the given file is a
+		subdirectory, then the subdirectory (and all files beneath it)
+		are removed. @param path The full path to the file to remove
+		@return true on successful removal, otherwise false */
+	bool Remove_Entry( const char* name );
 
 	/** Remove the all the files and subdirectories in the directory
 		specified by the constructor.  Upon success, the subdirectory
 		will still exist, but will be empty.
 		@return true on successful removal, otherwise false
 	*/
-	bool Remove_Entire_Directory();
+	bool Remove_Entire_Directory( void );
+
+
+#ifndef WIN32
+
+	/** Recursively change ownership of this directory and kids
+
+	Implemented in terms of recursive_chown, see that for most
+	up to date details.
+
+	@see recursive_chown
+
+	Changes ownership of path to the UID dst_uid, and GID dst_gid
+	from the UID src_uid.  The directory and all files and
+	directories within it are changed.  If a file is encountered
+	that is not owned by src_uid or dst_uid, it is considered an
+	error.
+
+	On an error, a message is reported to dprintf(D_ALWAYS) and false
+	is returned.  Otherwise true is returned.
+
+	@param src_uid UID who is allowed to already own the file
+
+	@param dst_uid UID to change the file's ownership to.  (Will
+	silently skip a file already downed by this user)
+
+	@param dst_gid GID to change the file's ownership to.
+
+	@param non_root_okay Should we silently skip chown attempt and
+	report success if this process isn't root?  chown only works if
+	this process has root permissions.  If this process isn't root
+	and non_root_okay is true (the default), this function will
+	silently return true.  If this process isn't root and
+	non_root_okay is false, this function will fail.
+	*/
+	bool Recursive_Chown(uid_t src_uid, uid_t dst_uid, gid_t dst_gid,
+		bool non_root_okay = true);
+
+
+		/** Recursively walk through the directory tree and chmod()
+			any real directories (ignoring symlinks) to the given
+			mode.
+			NOTE: This will call Rewind(), so it is NOT safe to use
+			this during another iteration over the directory.
+			@param mode The file mode you want to set directories to
+		*/
+	bool chmodDirectories( mode_t mode );
+
+#endif /* ! WIN32 */
+
+	/** Recursively walk through the directory tree and change 
+	    the owner of all files and directories to the given 
+	    username.	
+		@param username The username to that will owner.
+		@param domain The domain of the user that will be the owner (on Win32).
+	 */
+	bool Recursive_Chown(const char *username, const char *domain);
+
 
 private:
 	char *curr_dir;
@@ -299,12 +428,39 @@ private:
 	bool want_priv_change;
 	priv_state desired_priv_state;
 	bool do_remove( const char *path, bool is_curr );
+	bool do_remove_dir( const char *path );
+	bool do_remove_file( const char *path );
+	void initialize( priv_state priv );
+	bool rmdirAttempt( const char* path, priv_state priv );
+
 #ifdef WIN32
 	long dirp;
 	struct _finddata_t filedata;
 #else
 	DIR *dirp;
+	priv_state setOwnerPriv( const char* path );
+	uid_t owner_uid;
+	gid_t owner_gid;
+	bool owner_ids_inited;
 #endif
+};
+
+// A handy utility class that deletes the underlying file
+// when the class instance is deleted
+class DeleteFileLater {
+ public:
+	DeleteFileLater (const char * _name) {
+		filename = _name?strdup(_name):NULL;
+	}
+
+	~DeleteFileLater () {
+		if (filename) {
+			unlink(filename);
+			free (filename);
+		}
+	}
+ protected:
+	char * filename;
 };
 
 
@@ -337,6 +493,50 @@ char* dircat( const char* dirpath, const char* filename );
 */
 char* temp_dir_path();
 
+#if ! defined(WIN32)
+/** Recursively change ownership of a file or directory tree
+
+Changes ownership of path to the UID dst_uid, and GID dst_gid
+from the UID src_uid.  If path is a directory, the directory and
+all files and directories within it are also changed.  If a file
+is encountered that is not owned by src_uid or dst_uid, it is
+considered an error.
+
+On an error, a message is reported to dprintf(D_ALWAYS) and false
+is returned.  Otherwise true is returned.
+
+@param path File or directory to chown
+
+@param src_uid UID who is allowed to already own the file
+
+@param dst_uid UID to change the file's ownership to.  (Will
+silently skip a file already downed by this user)
+
+@param dst_gid GID to change the file's ownership to.
+
+@param non_root_okay Should we silently skip chown attempt and
+report success if this process isn't root?  chown only works if
+this process has root permissions.  If this process isn't root
+and non_root_okay is true (the default), this function will
+silently return true.  If this process isn't root and
+non_root_okay is false, this function will fail.
+*/
+bool recursive_chown(const char * path,
+	uid_t src_uid, uid_t dst_uid, gid_t dst_gid, bool
+	non_root_okay = true);
+
+#endif /* ! defined(WIN32) */
+
 
 char * create_temp_file();
+
+/** Actual implementation of the recursive chown function that is called
+    by the Directory::Recursive_Chown() member function. This function 
+	can be called without firing up a whole directory object, if desired.
+	@param path Path to be traversed recursively and chown'd
+	@param username Username to chown to.
+	@param domain Domain of the user to chown to.
+*/
+bool recursive_chown( const char *path, 
+					  const char *username, const char *domain );
 #endif

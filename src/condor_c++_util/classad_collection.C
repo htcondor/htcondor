@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -26,14 +26,13 @@
 
 #include "classad_collection.h"
 
-using namespace std;
 
 //----------------------------------------------------------------------------------
 // Constructor (initialization)
 //----------------------------------------------------------------------------------
 
-OldClassAdCollection::OldClassAdCollection(const char* filename) 
-  : ClassAdLog(filename), Collections(97, HashFunc)
+ClassAdCollection::ClassAdCollection(const char* filename,int max_historical_logs) 
+  : ClassAdLog(filename,max_historical_logs), Collections(97, HashFunc)
 {
   LastCoID=0;
   Collections.insert(LastCoID,new ExplicitCollection("",true));
@@ -54,7 +53,7 @@ OldClassAdCollection::OldClassAdCollection(const char* filename)
 // Constructor (initialization)
 //----------------------------------------------------------------------------------
 
-OldClassAdCollection::OldClassAdCollection() 
+ClassAdCollection::ClassAdCollection() 
   : ClassAdLog(), Collections(97, HashFunc)
 {
   LastCoID=0;
@@ -65,7 +64,7 @@ OldClassAdCollection::OldClassAdCollection()
 // Destructor - frees the memory used by the collections
 //----------------------------------------------------------------------------------
 
-OldClassAdCollection::~OldClassAdCollection() {
+ClassAdCollection::~ClassAdCollection() {
   DeleteCollection(0);
 }
 
@@ -82,7 +81,7 @@ Output: true on success, false otherwise
 */
 //----------------------------------------------------------------------------------
 
-bool OldClassAdCollection::NewClassAd(const char* key, const char* mytype, const char* targettype)
+bool ClassAdCollection::NewClassAd(const char* key, const char* mytype, const char* targettype)
 {
   LogRecord* log=new LogNewClassAd(key,mytype,targettype);
   ClassAdLog::AppendLog(log);
@@ -92,35 +91,26 @@ bool OldClassAdCollection::NewClassAd(const char* key, const char* mytype, const
 
 //----------------------------------------------------------------------------------
 
-bool OldClassAdCollection::NewClassAd(const char* key, ClassAd* ad)
+bool ClassAdCollection::NewClassAd(const char* key, ClassAd* ad)
 {
   LogRecord* log=new LogNewClassAd(key,ad->GetMyTypeName(),ad->GetTargetTypeName());
   ClassAdLog::AppendLog(log);
-  ClassAdUnParser unp;
   ExprTree* expr;
-//  ExprTree* L_expr;
-//  ExprTree* R_expr;
-//  char name[1000];
-//  char *value;
-  string name;
-  string value;
-//  ad->ResetExpr();
-//  while ((expr=ad->NextExpr())!=NULL) {
-  ClassAd::iterator adIter;
-  for( adIter = ad->begin( ); adIter != ad->end( ); adIter++ ) {
-//	strcpy(name,"");
-//	L_expr=expr->LArg();
-//	L_expr->PrintToStr(name);
-//	R_expr=expr->RArg();
-//	value = NULL;
-//  R_expr->PrintToNewStr(&value);
-	  name = adIter->first;
-	  expr = adIter->second;
-	  unp.Unparse( value, expr );
-//    LogRecord* log=new LogSetAttribute(key,name,value);
-	  LogRecord* log = new LogSetAttribute( key, name.c_str(), value.c_str() );
-//	free(value);
-	  ClassAdLog::AppendLog(log);
+  ExprTree* L_expr;
+  ExprTree* R_expr;
+  char name[1000];
+  char *value;
+  ad->ResetExpr();
+  while ((expr=ad->NextExpr())!=NULL) {
+    strcpy(name,"");
+    L_expr=expr->LArg();
+    L_expr->PrintToStr(name);
+    R_expr=expr->RArg();
+	value = NULL;
+    R_expr->PrintToNewStr(&value);
+    LogRecord* log=new LogSetAttribute(key,name,value);
+	free(value);
+    ClassAdLog::AppendLog(log);
   }
   // return AddClassAd(0,key);
   return true;
@@ -135,7 +125,7 @@ Output: true on success, false otherwise
 */
 //----------------------------------------------------------------------------------
 
-bool OldClassAdCollection::DestroyClassAd(const char *key)
+bool ClassAdCollection::DestroyClassAd(const char *key)
 {
   LogRecord* log=new LogDestroyClassAd(key);
   ClassAdLog::AppendLog(log);
@@ -153,7 +143,7 @@ Output: true on success, false otherwise
 */
 //----------------------------------------------------------------------------------
 
-bool OldClassAdCollection::SetAttribute(const char *key, const char *name, const char *value)
+bool ClassAdCollection::SetAttribute(const char *key, const char *name, const char *value)
 {
   LogRecord* log=new LogSetAttribute(key,name,value);
   ClassAdLog::AppendLog(log);
@@ -170,7 +160,7 @@ Output: true on success, false otherwise
 */
 //----------------------------------------------------------------------------------
 
-bool OldClassAdCollection::DeleteAttribute(const char *key, const char *name)
+bool ClassAdCollection::DeleteAttribute(const char *key, const char *name)
 {
   LogRecord* log=new LogDeleteAttribute(key,name);
   ClassAdLog::AppendLog(log);
@@ -192,7 +182,7 @@ Output: the new collectionID
 */
 //----------------------------------------------------------------------------------
 
-int OldClassAdCollection::CreateExplicitCollection(int ParentCoID, const MyString& Rank, bool FullFlag)
+int ClassAdCollection::CreateExplicitCollection(int ParentCoID, const MyString& Rank, bool FullFlag)
 {
   // Lookup the parent
   BaseCollection* Parent;
@@ -228,7 +218,7 @@ Output: the new collectionID
 //----------------------------------------------------------------------------------
 
 #if 0	// Todd: not used
-int OldClassAdCollection::CreateConstraintCollection(int ParentCoID, const MyString& Rank, const MyString& Constraint)
+int ClassAdCollection::CreateConstraintCollection(int ParentCoID, const MyString& Rank, const MyString& Constraint)
 {
   // Lookup the parent
   BaseCollection* Parent;
@@ -255,14 +245,14 @@ int OldClassAdCollection::CreateConstraintCollection(int ParentCoID, const MyStr
 //----------------------------------------------------------------------------------
 
 #if 0	// Todd - not used yet
-int OldClassAdCollection::CreatePartition(int ParentCoID, const MyString& Rank, StringSet& attrList)
+int ClassAdCollection::CreatePartition(int ParentCoID, const MyString& Rank, StringSet& AttrList)
 {
   // Lookup the parent
   BaseCollection* Parent;
   if (Collections.lookup(ParentCoID,Parent)==-1) return -1;
 
   // Initialize and insert to collection table
-  PartitionParent* Coll=new PartitionParent(Rank,attrList);
+  PartitionParent* Coll=new PartitionParent(Rank,AttrList);
   int CoID=LastCoID+1;
   if (Collections.insert(CoID,Coll)==-1) return -1;
   LastCoID=CoID;
@@ -286,16 +276,16 @@ Output: true on success, false otherwise
 */
 //----------------------------------------------------------------------------------
 
-bool OldClassAdCollection::DeleteCollection(int CoID)
+bool ClassAdCollection::DeleteCollection(int CoID)
 {
-  return TraverseTree(CoID,&OldClassAdCollection::RemoveCollection);
+  return TraverseTree(CoID,&ClassAdCollection::RemoveCollection);
 }
 
 //----------------------------------------------------------------------------------
 /// Include Class Ad in a collection (private method)
 //----------------------------------------------------------------------------------
 
-bool OldClassAdCollection::AddClassAd(int CoID, const MyString& OID)
+bool ClassAdCollection::AddClassAd(int CoID, const MyString& OID)
 {
   // Get the ad
   ClassAd* Ad;
@@ -308,7 +298,7 @@ bool OldClassAdCollection::AddClassAd(int CoID, const MyString& OID)
 /// Include Class Ad in a collection (private method)
 //----------------------------------------------------------------------------------
 
-bool OldClassAdCollection::AddClassAd(int CoID, const MyString& OID, ClassAd* Ad)
+bool ClassAdCollection::AddClassAd(int CoID, const MyString& OID, ClassAd* Ad)
 {
   // Get collection pointer
   BaseCollection* Coll;
@@ -345,28 +335,24 @@ bool OldClassAdCollection::AddClassAd(int CoID, const MyString& OID, ClassAd* Ad
 
 //----------------------------------------------------------------------------------
 
-bool OldClassAdCollection::CheckClassAd(BaseCollection* Coll,const MyString& OID, ClassAd* Ad) 
+bool ClassAdCollection::CheckClassAd(BaseCollection* Coll,const MyString& OID, ClassAd* Ad) 
 {
   if (Coll->Type()==PartitionParent_e) {
-	  ClassAdUnParser unp;
     PartitionParent* ParentColl=(PartitionParent*) Coll;
     StringSet Values;
     MyString AttrName;
     MyString AttrValue;
-//    char tmp[1000];
-	string tmp;
+    char tmp[1000];
     ParentColl->Attributes.StartIterations();
 // printf("Checking OID %s\n",OID.Value());
     while (ParentColl->Attributes.Iterate(AttrName)) {
-//      *tmp='\0';
+      *tmp='\0';
       ExprTree* expr=Ad->Lookup(AttrName.Value());
       if (expr) {
-//        expr=expr->RArg();
-//        expr->PrintToStr(tmp);
-		  unp.Unparse( tmp, expr );
+        expr=expr->RArg();
+        expr->PrintToStr(tmp);
       }
-//      AttrValue=tmp;
-	  AttrValue = tmp.c_str( );
+      AttrValue=tmp;
       Values.Add(AttrValue);
     }
 // Values.StartIterations(); while (Values.Iterate(AttrValue)) { printf("Val: AttrValue=%s\n",AttrValue.Value()); }
@@ -403,7 +389,7 @@ bool OldClassAdCollection::CheckClassAd(BaseCollection* Coll,const MyString& OID
 
 //----------------------------------------------------------------------------------
 
-bool OldClassAdCollection::EqualSets(StringSet& S1, StringSet& S2) 
+bool ClassAdCollection::EqualSets(StringSet& S1, StringSet& S2) 
 {
   S1.StartIterations();
   S2.StartIterations();
@@ -420,7 +406,7 @@ bool OldClassAdCollection::EqualSets(StringSet& S1, StringSet& S2)
 /// Remove Class Ad from a collection (private method)
 //----------------------------------------------------------------------------------
 
-bool OldClassAdCollection::RemoveClassAd(int CoID, const MyString& OID)
+bool ClassAdCollection::RemoveClassAd(int CoID, const MyString& OID)
 {
   // Get collection pointer
   BaseCollection* Coll;
@@ -443,7 +429,7 @@ bool OldClassAdCollection::RemoveClassAd(int CoID, const MyString& OID)
 /// Change a class-ad (private method)
 //----------------------------------------------------------------------------------
 
-bool OldClassAdCollection::ChangeClassAd(const MyString& OID)
+bool ClassAdCollection::ChangeClassAd(const MyString& OID)
 {
   RemoveClassAd(0,OID);
   return AddClassAd(0,OID);
@@ -453,7 +439,7 @@ bool OldClassAdCollection::ChangeClassAd(const MyString& OID)
 /// Remove a collection (private method)
 //----------------------------------------------------------------------------------
 
-bool OldClassAdCollection::RemoveCollection(int CoID, BaseCollection* Coll)
+bool ClassAdCollection::RemoveCollection(int CoID, BaseCollection* Coll)
 {
   delete Coll;
   if (Collections.remove(CoID)==-1) return false;
@@ -464,7 +450,7 @@ bool OldClassAdCollection::RemoveCollection(int CoID, BaseCollection* Coll)
 /// Start iterating on cllection IDs
 //----------------------------------------------------------------------------------
 
-void OldClassAdCollection::StartIterateAllCollections()
+void ClassAdCollection::StartIterateAllCollections()
 {
   Collections.startIterations();
 }
@@ -473,7 +459,7 @@ void OldClassAdCollection::StartIterateAllCollections()
 /// Get the next collection ID
 //----------------------------------------------------------------------------------
 
-bool OldClassAdCollection::IterateAllCollections(int& CoID)
+bool ClassAdCollection::IterateAllCollections(int& CoID)
 {
   BaseCollection* Coll;
   if (Collections.iterate(CoID,Coll)) return true;
@@ -484,7 +470,7 @@ bool OldClassAdCollection::IterateAllCollections(int& CoID)
 /// Start iterating on child collections of some parent collection
 //----------------------------------------------------------------------------------
 
-bool OldClassAdCollection::StartIterateChildCollections(int ParentCoID)
+bool ClassAdCollection::StartIterateChildCollections(int ParentCoID)
 {
   // Get collection pointer
   BaseCollection* Coll;
@@ -498,7 +484,7 @@ bool OldClassAdCollection::StartIterateChildCollections(int ParentCoID)
 /// Get the next child collection
 //----------------------------------------------------------------------------------
 
-bool OldClassAdCollection::IterateChildCollections(int ParentCoID, int& CoID)
+bool ClassAdCollection::IterateChildCollections(int ParentCoID, int& CoID)
 {
   // Get collection pointer
   BaseCollection* Coll;
@@ -512,7 +498,7 @@ bool OldClassAdCollection::IterateChildCollections(int ParentCoID, int& CoID)
 /// Start iterating on class ads in a collection
 //----------------------------------------------------------------------------------
 
-bool OldClassAdCollection::StartIterateClassAds(int CoID)
+bool ClassAdCollection::StartIterateClassAds(int CoID)
 {
   // Get collection pointer
   BaseCollection* Coll;
@@ -526,7 +512,7 @@ bool OldClassAdCollection::StartIterateClassAds(int CoID)
 /// Get the next class ad and rank in the collection
 //----------------------------------------------------------------------------------
 
-bool OldClassAdCollection::IterateClassAds(int CoID, RankedClassAd& RankedAd)
+bool ClassAdCollection::IterateClassAds(int CoID, RankedClassAd& RankedAd)
 {
   // Get collection pointer
   BaseCollection* Coll;
@@ -540,14 +526,12 @@ bool OldClassAdCollection::IterateClassAds(int CoID, RankedClassAd& RankedAd)
 /// Calculate a class-ad's rank
 //----------------------------------------------------------------------------------
 
-float OldClassAdCollection::GetClassAdRank(ClassAd* Ad, const MyString& RankExpr)
+float ClassAdCollection::GetClassAdRank(ClassAd* Ad, const MyString& RankExpr)
 {
   if (RankExpr.Length()==0) return 0.0;
   char tmp[200];
   sprintf(tmp,"%s=%s",ATTR_RANK,RankExpr.Value());
-  ClassAdParser parser;
-  ClassAd RankingAd;
-  parser.ParseClassAd( string(tmp), RankingAd );
+  AttrList RankingAd(tmp,'\0');
   float Rank;
   if (!RankingAd.EvalFloat(ATTR_RANK,Ad,Rank)) Rank=0.0;
   return Rank;
@@ -557,7 +541,7 @@ float OldClassAdCollection::GetClassAdRank(ClassAd* Ad, const MyString& RankExpr
 /// Find a collection's type
 //----------------------------------------------------------------------------------
 
-int OldClassAdCollection::GetCollectionType(int CoID)
+int ClassAdCollection::GetCollectionType(int CoID)
 {
   BaseCollection* Coll;
   if (Collections.lookup(CoID,Coll)==-1) return -1;
@@ -568,7 +552,7 @@ int OldClassAdCollection::GetCollectionType(int CoID)
 /// Traverse the collection tree
 //----------------------------------------------------------------------------------
 
-bool OldClassAdCollection::TraverseTree(int CoID, bool (OldClassAdCollection::*Func)(int,BaseCollection*))
+bool ClassAdCollection::TraverseTree(int CoID, bool (ClassAdCollection::*Func)(int,BaseCollection*))
 {
   BaseCollection* CurrNode;
   int ChildCoID;
@@ -584,7 +568,7 @@ bool OldClassAdCollection::TraverseTree(int CoID, bool (OldClassAdCollection::*F
 /// Print out all the collections
 //----------------------------------------------------------------------------------
   
-void OldClassAdCollection::Print()
+void ClassAdCollection::Print()
 {
   int CoID;
   MyString OID;
@@ -610,7 +594,7 @@ void OldClassAdCollection::Print()
 /// Print out a single collection
 //----------------------------------------------------------------------------------
   
-void OldClassAdCollection::Print(int CoID)
+void ClassAdCollection::Print(int CoID)
 {
   MyString OID;
   RankedClassAd RankedAd;

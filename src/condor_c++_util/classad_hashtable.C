@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -60,4 +60,30 @@ int hashFunction(const HashKey &key, int numBuckets)
 	}
 
 	return bkt;
+}
+
+
+AttrKey& AttrKey::operator= (const AttrKey& from)
+{
+	if (this->key)
+		free(this->key);
+	this->key = strdup(from.key);
+	return *this;
+}
+
+bool operator==(const AttrKey &lhs, const AttrKey &rhs)
+{
+	return (strcasecmp(lhs.key, rhs.key) == 0);
+}
+
+int 
+AttrKeyHashFunction (const AttrKey &key, int numBuckets)
+{
+	const char *str = key.value();
+	int i = strlen( str ) - 1, hashVal = 0;
+	while (i >= 0) {
+		hashVal += tolower(str[i]);
+		i--;
+	}
+	return (hashVal % numBuckets);
 }

@@ -56,11 +56,12 @@ CLEAN :
 	-@erase "$(INTDIR)\attrlist.obj"
 	-@erase "$(INTDIR)\buildtable.obj"
 	-@erase "$(INTDIR)\classad.obj"
-	-@erase "$(INTDIR)\classad_lookup.obj"
+	-@erase "$(INTDIR)\classad_list.obj"
 	-@erase "$(INTDIR)\classad_util.obj"
 	-@erase "$(INTDIR)\classifiedjobs.obj"
 	-@erase "$(INTDIR)\environment.obj"
 	-@erase "$(INTDIR)\evaluateOperators.obj"
+	-@erase "$(INTDIR)\new_classads.obj"
 	-@erase "$(INTDIR)\operators.obj"
 	-@erase "$(INTDIR)\parser.obj"
 	-@erase "$(INTDIR)\registration.obj"
@@ -74,7 +75,7 @@ CLEAN :
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
-CPP_PROJ=/nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /I "..\src\condor_daemon_client" /I "..\src\condor_daemon_core.V6" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
+CPP_PROJ=/nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c 
 BSC32=bscmake.exe
 BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_classad.bsc" 
 BSC32_SBRS= \
@@ -87,11 +88,12 @@ LIB32_OBJS= \
 	"$(INTDIR)\attrlist.obj" \
 	"$(INTDIR)\buildtable.obj" \
 	"$(INTDIR)\classad.obj" \
-	"$(INTDIR)\classad_lookup.obj" \
+	"$(INTDIR)\classad_list.obj" \
 	"$(INTDIR)\classad_util.obj" \
 	"$(INTDIR)\classifiedjobs.obj" \
 	"$(INTDIR)\environment.obj" \
 	"$(INTDIR)\evaluateOperators.obj" \
+	"$(INTDIR)\new_classads.obj" \
 	"$(INTDIR)\operators.obj" \
 	"$(INTDIR)\parser.obj" \
 	"$(INTDIR)\registration.obj" \
@@ -134,11 +136,12 @@ CLEAN :
 	-@erase "$(INTDIR)\attrlist.obj"
 	-@erase "$(INTDIR)\buildtable.obj"
 	-@erase "$(INTDIR)\classad.obj"
-	-@erase "$(INTDIR)\classad_lookup.obj"
+	-@erase "$(INTDIR)\classad_list.obj"
 	-@erase "$(INTDIR)\classad_util.obj"
 	-@erase "$(INTDIR)\classifiedjobs.obj"
 	-@erase "$(INTDIR)\environment.obj"
 	-@erase "$(INTDIR)\evaluateOperators.obj"
+	-@erase "$(INTDIR)\new_classads.obj"
 	-@erase "$(INTDIR)\operators.obj"
 	-@erase "$(INTDIR)\parser.obj"
 	-@erase "$(INTDIR)\registration.obj"
@@ -151,7 +154,7 @@ CLEAN :
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
-CPP_PROJ=/nologo /MT /W3 /GX /Z7 /O1 /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /I "..\src\condor_daemon_client" /I "..\src\condor_daemon_core.V6" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
+CPP_PROJ=/nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c 
 BSC32=bscmake.exe
 BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_classad.bsc" 
 BSC32_SBRS= \
@@ -164,11 +167,12 @@ LIB32_OBJS= \
 	"$(INTDIR)\attrlist.obj" \
 	"$(INTDIR)\buildtable.obj" \
 	"$(INTDIR)\classad.obj" \
-	"$(INTDIR)\classad_lookup.obj" \
+	"$(INTDIR)\classad_list.obj" \
 	"$(INTDIR)\classad_util.obj" \
 	"$(INTDIR)\classifiedjobs.obj" \
 	"$(INTDIR)\environment.obj" \
 	"$(INTDIR)\evaluateOperators.obj" \
+	"$(INTDIR)\new_classads.obj" \
 	"$(INTDIR)\operators.obj" \
 	"$(INTDIR)\parser.obj" \
 	"$(INTDIR)\registration.obj" \
@@ -309,9 +313,9 @@ SOURCE=..\src\condor_classad\classad.C
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
-SOURCE=..\src\condor_classad\classad_lookup.C
+SOURCE=..\src\condor_classad\classad_list.C
 
-"$(INTDIR)\classad_lookup.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+"$(INTDIR)\classad_list.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
@@ -336,6 +340,12 @@ SOURCE=..\src\condor_classad\environment.C
 SOURCE=..\src\condor_classad\evaluateOperators.C
 
 "$(INTDIR)\evaluateOperators.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\src\condor_classad\new_classads.C
+
+"$(INTDIR)\new_classads.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 

@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -48,6 +48,7 @@ int command_activate_claim( Service*, int, Stream* );
 */
 int command_request_claim( Service*, int, Stream* );
 int command_match_info( Service*, int, Stream* );
+int command_release_claim( Service*, int, Stream* );
 
 /* 
    These commands all act startd-wide, and therefore, should be handled
@@ -60,6 +61,7 @@ int	command_give_state( Service*, int, Stream* );
 int	command_give_totals_classad( Service*, int, Stream* );
 int command_give_request_ad( Service*, int, Stream* );
 int command_query_ads( Service*, int, Stream* );
+int command_vm_register( Service*, int, Stream* );
 
 /*
    This command handler deals with commands that send a name as part

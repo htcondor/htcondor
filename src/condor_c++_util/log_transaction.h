@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -67,12 +67,15 @@ private:
 
 class Transaction {
 public:
-	void Commit(int fd, void *data_structure);
+	Transaction();
+    void Commit(FILE* fp, void *data_structure);
 	void AppendLog(LogRecord *);
 	LogRecord *FirstEntry() { return op_log.FirstEntry(); }
 	LogRecord *NextEntry(LogRecord *ptr) { return op_log.NextEntry(ptr); }
+	bool EmptyTransaction() { return m_EmptyTransaction; }
 private:
 	LogPtrList op_log;
+	bool m_EmptyTransaction;
 };
 
 #endif

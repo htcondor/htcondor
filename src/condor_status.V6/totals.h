@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -87,6 +87,9 @@ class StartdNormalTotal : public ClassTotal
 		int claimed;
 		int matched;
 		int preempting;
+#if HAVE_BACKFILL
+		int backfill;
+#endif
 };
 
 
@@ -100,8 +103,8 @@ class StartdRunTotal : public ClassTotal
 
 	protected:
 		int machines;
-		int condor_mips;
-		int kflops;
+		long condor_mips;
+		long kflops;
 		float loadavg;
 };
 
@@ -117,10 +120,10 @@ class StartdServerTotal : public ClassTotal
   	protected:
 		int machines;
 		int avail;
-		int memory;
-		int disk;
-		int condor_mips;
-		int kflops;
+		long memory;
+		uint64_t disk;
+		long condor_mips;
+		long kflops;
 };
 
 
@@ -139,6 +142,9 @@ class StartdStateTotal : public ClassTotal
 		int claimed;
 		int preempt;
 		int matched;
+#if HAVE_BACKFILL
+		int backfill;
+#endif
 };
 
 
@@ -161,6 +167,20 @@ protected:
 	int killing;
 };
 
+
+// quill totals
+class QuillNormalTotal : public ClassTotal
+{
+	public:
+		QuillNormalTotal();
+		virtual int update (ClassAd *);
+		virtual void displayHeader(FILE*);
+		virtual void displayInfo(FILE*,int);
+
+	protected:
+		int numSqlTotal;
+		int numSqlLastBatch;
+};
 
 // schedd totals
 class ScheddNormalTotal : public ClassTotal
@@ -204,7 +224,7 @@ class CkptSrvrNormalTotal : public ClassTotal
 
 	protected:
 		int numServers;
-		int disk;
+		uint64_t disk;
 };
 
 int getCODInt( ClassAd* ad, const char* id, const char* attr,

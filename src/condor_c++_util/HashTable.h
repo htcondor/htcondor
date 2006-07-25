@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -25,11 +25,9 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
-
-
+#include "proc.h"	// for PROC_ID
 
 // a generic hash bucket class
-
 
 template <class Index, class Value>
 class HashBucket {
@@ -38,9 +36,6 @@ class HashBucket {
   Value      value;                          // associated value
   HashBucket<Index, Value> *next;            // next node in the hash table
 };
-
-// forward declaration of iterator
-template<class Index, class Value> class HashTableIterator;
 
 // a generic hash table class
 
@@ -54,7 +49,6 @@ typedef enum {
 
 template <class Index, class Value>
 class HashTable {
- friend class HashTableIterator<Index,Value>;
  public:
   HashTable( int tableSize,
 			 int (*hashfcn)( const Index &index, int numBuckets ),
@@ -64,13 +58,13 @@ class HashTable {
   ~HashTable();
 
   int insert(const Index &index, const Value &value);
-  int lookup(const Index &index, Value &value);
-  int lookup(const Index &index, Value* &value);
+  int lookup(const Index &index, Value &value) const;
+  int lookup(const Index &index, Value* &value) const;
   int getNext(Index &index, void *current, Value &value,
-	      void *&next);
+	      void *&next) const;
   int remove(const Index &index);  
-  int getNumElements( ) { return numElems; }
-  int getTableSize( ) { return tableSize; }
+  int getNumElements( ) const { return numElems; }
+  int getTableSize( ) const { return tableSize; }
   int clear();
 
   void startIterations (void);
@@ -108,33 +102,9 @@ class HashTable {
   int endOfFreeList;
 };
 
-
-template <class Index, class Value>
-class HashTableIterator {
-public:
-	HashTableIterator( );
-	~HashTableIterator( );
-
-	void Initialize( const HashTable<Index, Value>& );
-	void ToBeforeFirst( );
-	void ToAfterLast( );
-	bool Next( Index&, Value& );
-	bool Next( Value& );
-	bool Current( Index&, Value& );
-	bool Current( Value& );
-	bool IsBeforeFirst( ) const;
-	bool IsAfterLast( ) const;
-
-private:
-	const HashTable<Index,Value>* hTable;
-	int currentBucket;
-	const HashBucket<Index,Value> *currentItem;
-};
-
-
-
 // Construct hash table. Allocate memory for hash table and
 // initialize its elements.
+
 template <class Index, class Value>
 HashTable<Index,Value>::HashTable( int tableSz,
 								   int (*hashF)( const Index &index,
@@ -143,6 +113,12 @@ HashTable<Index,Value>::HashTable( int tableSz,
 	tableSize(tableSz), hashfcn(hashF)
 {
   int i,j,k;
+
+
+  // You MUST specify a hash function.
+  // Try hashFuncInt (int), hashFuncUInt (uint), hashFuncJobIdStr (string of "cluster.proc"),
+  // or MyStringHash (MyString)
+  ASSERT(hashfcn != 0);
 
   // Do not allow tableSize=0 since that is likely to
   // result in a divide by zero in many hash functions.
@@ -177,11 +153,11 @@ HashTable<Index,Value>::HashTable( int tableSz,
   }
 
   if (!(ht = new HashBucket<Index, Value>* [tableSize])) {
-	  cerr << "Insufficient memory for hash table" << std::endl;
+    cerr << "Insufficient memory for hash table" << endl;
     exit(1);
   }
   if (!(chainsUsed = new int[tableSize])) {
-	  cerr << "Insufficient memory for hash table (chainsUsed array)" << endl;
+    cerr << "Insufficient memory for hash table (chainsUsed array)" << endl;
     exit(1);
   }
   for(i = 0; i < tableSize; i++) {
@@ -351,7 +327,7 @@ int HashTable<Index,Value>::insert(const Index &index,const  Value &value)
 // corresponding value and OK status (0). Otherwise return -1.
 
 template <class Index, class Value>
-int HashTable<Index,Value>::lookup(const Index &index, Value &value)
+int HashTable<Index,Value>::lookup(const Index &index, Value &value) const
 {
   int idx = hashfcn(index, tableSize);
   // do sanity check on return value from hash func
@@ -383,7 +359,7 @@ int HashTable<Index,Value>::lookup(const Index &index, Value &value)
 // _pointer_ reference to the value.  
 
 template <class Index, class Value>
-int HashTable<Index,Value>::lookup(const Index &index, Value* &value )
+int HashTable<Index,Value>::lookup(const Index &index, Value* &value ) const
 {
   int idx = hashfcn(index, tableSize);
   // do sanity check on return value from hash func
@@ -419,7 +395,7 @@ int HashTable<Index,Value>::lookup(const Index &index, Value* &value )
 
 template <class Index, class Value>
 int HashTable<Index,Value>::getNext(Index &index, void *current,
-				    Value &value, void *&next)
+				    Value &value, void *&next) const
 {
   HashBucket<Index, Value> *bucket;
 
@@ -468,22 +444,29 @@ int HashTable<Index,Value>::remove(const Index &index)
   	HashBucket<Index, Value> *bucket = ht[idx];
   	HashBucket<Index, Value> *prevBuc = ht[idx];
 
-  	while(bucket) {
-    	if (bucket->index == index) {
-      		if (bucket == ht[idx]) {
+  	while(bucket) 
+	{
+    	if (bucket->index == index) 
+		{
+      		if (bucket == ht[idx]) 
+			{
 				ht[idx] = bucket->next;
 
 				// if the item being deleted is being iterated, ensure that
 				// next iteration returns the object "after" this one
-				if (bucket == currentItem) {
+				if (bucket == currentItem)
+				{
 					currentItem = 0;
 					currentBucket --;
 				}
-			} else {
+			}
+      		else
+			{
 				prevBuc->next = bucket->next;
 
 				// Again, take care of the iterator
-				if (bucket == currentItem) {
+				if (bucket == currentItem)
+				{
 					currentItem = prevBuc;
 				}
 			}
@@ -566,14 +549,16 @@ int HashTable<Index,Value>::
 iterate (Value &v)
 {
     // try to get next item in chain ...
-    if (currentItem) {
+    if (currentItem)
+    {
         currentItem = currentItem->next;
     
         // ... if successful, return OK
-        if (currentItem) {
+        if (currentItem)
+        {
             v = currentItem->value;
             return 1;
-       	}
+       }
     }
 
 	// try next bucket ...
@@ -591,7 +576,9 @@ iterate (Value &v)
     	currentItem = 0;
 
     	return 0;
-	} else {
+	}
+	else
+	{
 		currentItem = ht[ chainsUsed[currentBucket] ];
 		v = currentItem->value;
 		return 1;
@@ -613,15 +600,17 @@ int HashTable<Index,Value>::
 iterate (Index &index, Value &v)
 {
     // try to get next item in chain ...
-    if (currentItem) {
+    if (currentItem)
+    {
         currentItem = currentItem->next;
     
         // ... if successful, return OK
-        if (currentItem) {
+        if (currentItem)
+        {
             index = currentItem->index;
             v = currentItem->value;
             return 1;
-       	}
+       }
     }
 
 	// try next bucket ...
@@ -640,7 +629,9 @@ iterate (Index &index, Value &v)
     	currentItem = 0;
 
     	return 0;
-	} else {
+	}
+	else
+	{
 		currentItem = ht[ chainsUsed[currentBucket] ];
 		index = currentItem->index;
 		v = currentItem->value;
@@ -704,119 +695,12 @@ int hashFuncInt( const int& n, int numBuckets );
 int hashFuncUInt( const unsigned int& n, int numBuckets );
 
 /// hash function for string versions of job id's ("cluster.proc")
-int hashFuncJobIdStr( const char* & key, int numBuckets );
+int hashFuncJobIdStr( char* const & key, int numBuckets );
 
+/// hash function for PROC_ID versions of job ids (cluster.proc)
+int hashFuncPROC_ID( const PROC_ID &procID, int numBuckets);
 
-template <class Index, class Value>
-HashTableIterator<Index,Value>::HashTableIterator( )
-{
-	hTable = NULL;
-	current = NULL;
-	currentBucket = -1;
-}
+/// hash function for char* string
+int hashFuncChars(char const *key, int numBuckets);
 
-template <class Index, class Value>
-HashTableIterator<Index,Value>::~HashTableIterator( )
-{
-}
-
-template <class Index, class Value>
-void HashTableIterator<Index,Value>::Initialize(const HashTable<Index,Value>&ht)
-{
-	hTable = &ht;
-	currentItem = NULL;
-	currentBucket = -1;
-}
-
-template <class Index, class Value>
-void HashTableIterator<Index,Value>::ToBeforeFirst( )
-{
-	currentItem = NULL;
-	currentBucket = -1;
-}
-
-template <class Index, class Value>
-void HashTableIterator<Index,Value>::ToAfterLast( )
-{
-	currentItem = NULL;
-	currentBucket = hTable ? hTable->chainsUsedLen : -1;
-}
-
-template <class Index, class Value>
-bool HashTableIterator<Index,Value>::Next( Index& i, Value& v )
-{
-	if( !ht ) return false;
-
-    // try to get next item in chain ...
-    if (currentItem) {
-        currentItem = currentItem->next;
-        // ... if successful, return OK
-        if (currentItem) {
-			i = currentItem->index;
-            v = currentItem->value;
-            return 1;
-       	}
-    }
-
-	// try next bucket ...
-	currentBucket ++;
-
-	if (currentBucket == chainsUsedLen) {
-    	// end of hash table ... no more entries
-    	currentItem = 0;
-    	return false;
-	} else {
-		currentItem = hTable->ht[ hTable->chainsUsed[currentBucket] ];
-		if( !currentItem ) {
-			ToAfterLast( );
-			return( false );
-		}
-		i = currentItem->index;
-		v = currentItem->value;
-		return true;
-	}
-}
-
-template <class Index, class Value>
-bool HashTableIterator<Index,Value>::Next( Value& v )
-{
-	Index i;
-	return( Next( i, v ) );
-}
-
-template <class Index, class Value>
-bool HashTableIterator<Index,Value>::Current( Index& i, Value& v )
-{
-	if( hTable && currentBucket >= 0 && currentBucket < ht->chainsUsedLen ) {
-		if( !currentItem ) {
-			ToAfterLast( );
-			return( false );
-		}
-		i = currentItem->index;
-		v = currentItem->value;
-		return( true );
-	}
-	return( false );
-}
-
-template <class Index, class Value>
-bool HashTableIterator<Index,Value>::Current( Value& v )
-{
-	Index i;
-	return( Current( i, v ) );
-}
-
-template <class Index, class Value>
-bool HashTableIterator<Index,Value>::IsBeforeFirst( ) const
-{
-	return( hTable && currentBucket < 0 );
-}
-
-template <class Index, class Value>
-bool HashTableIterator<Index,Value>::IsAfterLast( ) const
-{
-	return( hTable && currentBucket == hTable->chainsUsedLen );
-}
-
-
-#endif
+#endif // HASH_H

@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -86,6 +86,7 @@ extern int  NumRestarts;
 extern int MaxDiscardedRunTime;
 extern char *ExecutingHost;
 extern char *scheddName;
+extern char *LastCkptPlatform;
 
 int		LastCkptSig = 0;
 
@@ -97,7 +98,7 @@ extern "C" {
 int connect_file_stream( int connect_sock );
 ssize_t stream_file_xfer( int src_fd, int dst_fd, size_t n_bytes );
 size_t file_size( int fd );
-int create_tcp_port( u_short *port, int *fd );
+int create_tcp_port( unsigned int *ip, u_short *port, int *fd );
 void get_host_addr( unsigned int *ip_addr );
 void display_ip_addr( unsigned int addr );
 int has_ckpt_file();
@@ -135,6 +136,62 @@ int	 NetworkHorizon = 0;		// how often do we request network bandwidth?
 static Daemon Negotiator(DT_NEGOTIATOR);
 void RequestCkptBandwidth();
 #endif
+
+int
+pseudo_register_ckpt_platform( const char *platform, int len )
+{
+	/* Here we set the platform into a global variable which the
+		shadow will only be placed into the jobad (much later)
+		IFF the checkpoint was actually successful. */
+
+	if (LastCkptPlatform != NULL) {
+		free(LastCkptPlatform);
+	}
+
+	LastCkptPlatform = strdup(platform);
+
+	return 0;
+}
+
+
+/* performing a blocking call to system() */
+int
+pseudo_shell( char *command, int len )
+{
+	int rval;
+	char *tmp;
+	int terrno;
+
+	dprintf( D_SYSCALLS, "\tcommand = \"%s\"\n", command );
+
+	/* This feature of Condor is sort of a security hole, um, maybe
+		a big security hole, so by default, if this is not
+		defined by the condor admin, do NOT run the command. */
+
+	tmp = param("SHADOW_ALLOW_UNSAFE_REMOTE_EXEC");
+	if (tmp == NULL || (tmp[0] != 'T' && tmp[0] != 't')) {
+		dprintf(D_SYSCALLS, 
+			"\tThe CONDOR_shell remote system call is currently disabled.\n");
+		dprintf(D_SYSCALLS, 
+			"\tTo enable it, please use SHADOW_ALLOW_UNSAFE_REMOTE_EXEC.\n");
+		rval = -1;
+		errno = ENOSYS;
+		return rval;
+	}
+
+	rval = -1;
+	errno = ENOSYS;
+
+	if (tmp[0] == 'T' || tmp[0] == 't') {
+		rval = system(command);
+	}
+	
+	terrno = errno;
+	free(tmp);
+	errno = terrno;
+
+	return rval;
+}
 
 /*
 **	getppid normally returns the parents id, right?  Well in
@@ -259,6 +316,7 @@ void
 commit_rusage()
 {
 	struct rusage local_rusage;
+	char buf[1024*10];
 
 	get_local_rusage( &local_rusage );
 
@@ -267,11 +325,20 @@ commit_rusage()
 		log_checkpoint (&local_rusage, &uncommitted_rusage);
 		// update job info to the job queue
 		update_job_status( &local_rusage, &uncommitted_rusage );
+
+		// update the checkpointing signature
 	} else {
 		// no need to update job queue here on a vacate checkpoint, since
 		// we will do it in Wrapup()
 		update_job_rusage( &local_rusage, &uncommitted_rusage );
 	}
+
+	// Also, we should update the job ad to record the
+	// checkpointing signature of the execution machine now
+	// that we know we wrote the checkpoint properly.
+	sprintf(buf, "%s = %s", ATTR_LAST_CHECKPOINT_PLATFORM,
+		LastCkptPlatform);
+	JobAd->Insert(buf);
 }
 
 int
@@ -754,14 +821,14 @@ pseudo_get_file_stream(
 	if (file_fd < 0) return -1;
 
 	*len = file_size( file_fd );
-	dprintf( D_FULLDEBUG, "\tlen = %d\n", *len );
+	dprintf( D_FULLDEBUG, "\tlen = %lu\n", (unsigned long)*len );
 	BytesSent += *len;
 
-	get_host_addr( ip_addr );
-	display_ip_addr( *ip_addr );
+    //get_host_addr( ip_addr );
+	//display_ip_addr( *ip_addr );
 
-	create_tcp_port( port, &connect_sock );
-	dprintf( D_FULLDEBUG, "\tPort = %d\n", *port );
+    create_tcp_port( ip_addr, port, &connect_sock );
+    dprintf( D_NETWORK, "\taddr = %s\n", ipport_to_string(htonl(*ip_addr), htons(*port)));
 		
 #if WANT_NETMAN
 	if (CkptFile || ICkptFile) {
@@ -790,13 +857,13 @@ pseudo_get_file_stream(
 		if( data_sock < 0 ) {
 			exit( 1 );
 		}
-		dprintf( D_FULLDEBUG, "\tShould Send %d bytes of data\n", 
-				 *len );
+		dprintf( D_FULLDEBUG, "\tShould Send %lu bytes of data\n", 
+				 (unsigned long)*len );
 		bytes_sent = stream_file_xfer( file_fd, data_sock, *len );
 		if (bytes_sent != *len) {
 			dprintf(D_ALWAYS,
-					"Failed to transfer %d bytes (only sent %d)\n",
-					*len, bytes_sent);
+					"Failed to transfer %lu bytes (only sent %d)\n",
+					(unsigned long)*len, bytes_sent);
 			exit(1);
 		}
 
@@ -851,7 +918,7 @@ pseudo_put_file_stream(
 
 	dprintf( D_ALWAYS, "\tEntering pseudo_put_file_stream\n" );
 	dprintf( D_ALWAYS, "\tfile = \"%s\"\n", file );
-	dprintf( D_ALWAYS, "\tlen = %d\n", len );
+	dprintf( D_ALWAYS, "\tlen = %u\n", len );
 	dprintf( D_ALWAYS, "\towner = %s\n", p->owner );
 #if WANT_NETMAN
 	if (file_stream_info.active) {
@@ -870,13 +937,17 @@ pseudo_put_file_stream(
 	}
 #endif
 
-	get_host_addr( ip_addr );
-	display_ip_addr( *ip_addr );
+    // ip_addr will be updated down below because I changed create_tcp_port so that
+    // ip address the socket is bound to is determined by that function. Therefore,
+    // we don't need to initialize ip_addr here
+    //get_host_addr( ip_addr );
+	//display_ip_addr( *ip_addr );
 
 		/* open the file */
 	if (CkptFile && UseCkptServer) {
 		SetCkptServerHost(CkptServerHost);
 		do {
+            // ip_addr is set within RequestStore
 			rval = RequestStore(p->owner, scheddName, file, len,
 								(struct in_addr*)ip_addr, port);
 			if (rval) {	/* request denied or network error, try again */
@@ -948,11 +1019,11 @@ pseudo_put_file_stream(
 
 	(void)umask(omask);
 
-	get_host_addr( ip_addr );
-	display_ip_addr( *ip_addr );
+	//get_host_addr( ip_addr );
+	//display_ip_addr( *ip_addr );
 
-	create_tcp_port( port, &connect_sock );
-	dprintf( D_FULLDEBUG, "\tPort = %d\n", *port );
+	create_tcp_port(ip_addr, port, &connect_sock);
+    dprintf(D_NETWORK, "\taddr = %s\n", ipport_to_string(htonl(*ip_addr), htons(*port)));
 	
 #ifdef WANT_NETMAN
 	file_stream_info.active = true;
@@ -1175,6 +1246,8 @@ RequestCkptBandwidth()
 	dprintf(D_ALWAYS, "vm_id = %d\n", vm_id);
  	sprintf(buf, "%s = %d", ATTR_VIRTUAL_MACHINE_ID, vm_id);
  	request.Insert(buf);
+    // Using ip:pid as an identity of the process is not complete because of private
+    // addresses are reusable. TODO (someday)
 	sprintf(buf, "%s = \"%u.%d\"", ATTR_TRANSFER_KEY, my_ip_addr(),
 			file_stream_info.pid);
  	request.Insert(buf);
@@ -1348,7 +1421,7 @@ connect_file_stream( int connect_sock )
 				data_sock, errno);
 		return -1;
 	}
-	dprintf( D_FULLDEBUG, "\tGot data connection at fd %d\n", data_sock );
+	dprintf( D_NETWORK, "\tGot data connection at fd %d\n", data_sock );
 
 	close( connect_sock );
 	return data_sock;
@@ -1384,46 +1457,50 @@ file_size( int fd )
 
 /*
   Create a tcp socket and begin listening for a connection by some
-  other process.  Using "port" and "fd" as output parameters, give back
-  the port number to which the other process should connect, and the
+  other process.  Using "ip", "port", and "fd" as output parameters, give back
+  the address to which the other process should connect, and the
   file descriptor with which this process can refer to the socket.  Return
   0 if everything works OK, and -1 otherwise.  N.B. The port number is
   returned in host byte order.
 */
 int
-create_tcp_port( u_short *port, int *fd )
+create_tcp_port( unsigned int *ip, u_short *port, int *fd )
 {
-	struct sockaddr_in	sin;
-	SOCKET_LENGTH_TYPE	addr_len;
-	
-	addr_len = sizeof(sin);
+    struct sockaddr_in  sin;
+    SOCKET_LENGTH_TYPE  addr_len;
+   
+    addr_len = sizeof(sin);
 
-		/* create a tcp socket */
-	if( (*fd=socket(AF_INET,SOCK_STREAM,0)) < 0 ) {
-		EXCEPT( "socket" );
-	}
-	dprintf( D_FULLDEBUG, "\tconnect_sock = %d\n", *fd );
+        /* create a tcp socket */
+    if( (*fd=socket(AF_INET,SOCK_STREAM,0)) < 0 ) {
+        EXCEPT( "socket" );
+    }
+    dprintf( D_FULLDEBUG, "\tconnect_sock = %d\n", *fd );
 
-		/* bind it to an address */
+        /* bind it to an address */
 
-	if( ! _condor_local_bind(*fd) ) {
-		EXCEPT( "bind" );
-	}
+        /* FALSE means this is an incoming connection */
+    if( ! _condor_local_bind(FALSE, *fd) ) {
+        EXCEPT( "bind" );
+    }
 
-		/* determine which local port number we were assigned to */
-	if( getsockname(*fd,(struct sockaddr *)&sin, &addr_len) < 0 ) {
-		EXCEPT("getsockname");
-	}
-	*port = ntohs( sin.sin_port );
+        /* determine which local port number we were assigned to */
+    struct sockaddr_in *tmp = getSockAddr(*fd);
+    if (tmp == NULL) {
+        EXCEPT("getSockAddr failed");
+    }
+    *ip = ntohl(tmp->sin_addr.s_addr);
+    *port = ntohs(tmp->sin_port);
 
-		/* Get ready to accept a connection */
-	if( listen(*fd,1) < 0 ) {
-		EXCEPT( "listen" );
-	}
-	dprintf( D_FULLDEBUG, "\tListening...\n" );
+        /* Get ready to accept a connection */
+    if( listen(*fd,1) < 0 ) {
+        EXCEPT( "listen" );
+    }
+    dprintf( D_FULLDEBUG, "\tListening...\n" );
 
-	return 0;
+    return 0;
 }
+
 
 /*
   Get the IP address of this host.  The address is in host byte order.
@@ -1453,11 +1530,11 @@ display_ip_addr( unsigned int addr )
 	if( IN_CLASSB(addr) ) {
 		net_part = B_NET(addr);
 		host_part = B_HOST(addr);
-		dprintf( D_ALWAYS, "\t%d.%d.%d.%d\n",
-			HI(B_NET(addr)),
-			LO(B_NET(addr)),
-			HI(B_HOST(addr)),
-			LO(B_HOST(addr))
+		dprintf( D_ALWAYS, "\t%lu.%lu.%lu.%lu\n",
+			(unsigned long) HI(B_NET(addr)),
+			(unsigned long) LO(B_NET(addr)),
+			(unsigned long) HI(B_HOST(addr)),
+			(unsigned long) LO(B_HOST(addr))
 		);
 	} else {
 		dprintf( D_ALWAYS, "\t Weird 0x%x\n", addr );
@@ -1510,8 +1587,8 @@ pseudo_startup_info_request( STARTUP_INFO *s )
 	s->soft_kill_sig = soft_kill;
 
 	s->cmd = Strdup( p->cmd[0] );
-	s->args = Strdup( p->args[0] );
-	s->env = Strdup( p->env );
+	s->args_v1or2 = Strdup( p->args_v1or2[0] );
+	s->env_v1or2 = Strdup( p->env_v1or2 );
 	s->iwd = Strdup( p->iwd );
 
 	if (JobAd->LookupBool(ATTR_WANT_CHECKPOINT, s->ckpt_wanted) == 0) {
@@ -1631,8 +1708,31 @@ do_get_file_info( char *logical_name, char *actual_url, int allow_complex )
 	char	full_path[_POSIX_PATH_MAX];
 	char	remap[_POSIX_PATH_MAX];
 	char	*method;
+	int		want_remote_io;
+	static int		warned_once = FALSE;
 
 	dprintf( D_SYSCALLS, "\tlogical_name = \"%s\"\n", logical_name );
+
+	/* if this attribute is not present, then default to TRUE */
+	if ( ! JobAd->LookupInteger( ATTR_WANT_REMOTE_IO, want_remote_io ) ) {
+		want_remote_io = TRUE;
+	} 
+
+	/* output some debugging info on the first call to this RPC */
+	if (warned_once == FALSE) {
+
+		warned_once = TRUE;
+
+		if (want_remote_io == TRUE) {
+			dprintf( D_SYSCALLS, 
+				"\tshadow process always deciding location of url\n" );
+		} else {
+			dprintf( D_SYSCALLS, 
+				"\tshadow process permanently gives up deciding location of "
+				"url and informs job to default all urls to 'local:' "
+				"(except [i]ckpt).\n");
+		}
+	}
 
 	/* The incoming logical name might be a simple, relative, or complete path */
 	/* We need to examine both the full path and the simple name. */
@@ -1655,6 +1755,9 @@ do_get_file_info( char *logical_name, char *actual_url, int allow_complex )
 		if(strchr(remap,':')) {
 			dprintf(D_SYSCALLS,"\tremap is complete url\n");
 			strcpy(actual_url,remap);
+			if (want_remote_io == FALSE) {
+				return 1;
+			}
 			return 0;
 		} else {
 			dprintf(D_SYSCALLS,"\tremap is simple file\n");
@@ -1680,6 +1783,8 @@ do_get_file_info( char *logical_name, char *actual_url, int allow_complex )
 		method = "remote";
 	} else if( use_special_access(full_path) ) {
 		method = "special";
+	} else if ( want_remote_io == FALSE ) {
+		method = "local";
 	} else if( use_local_access(full_path) ) {
 		method = "local";
 	} else if( access_via_afs(full_path) ) {
@@ -1712,6 +1817,13 @@ do_get_file_info( char *logical_name, char *actual_url, int allow_complex )
 	strcat(actual_url,full_path);
 
 	dprintf(D_SYSCALLS,"\tactual_url: %s\n",actual_url);
+
+	/* This return value will make the caller in the user job never call
+		the shadow ever again to see what to do about a job. Instead the
+		FileTable will assume ALL files are local. */
+	if (want_remote_io == FALSE) {
+		return 1;
+	}
 
 	return 0;
 }

@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -32,6 +32,7 @@
 #include "internet.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "dc_starter.h"
+#include "directory.h"
 
 // for remote syscalls, this is currently in NTreceivers.C.
 extern int do_REMOTE_syscall();
@@ -78,7 +79,13 @@ RemoteResource::RemoteResource( BaseShadow *shad )
 	began_execution = false;
 	supports_reconnect = false;
 	next_reconnect_tid = -1;
+	proxy_check_tid = -1;
+	last_proxy_timestamp = time(0); // We haven't sent the proxy to the starter yet, so anything before "now" means it hasn't changed.
 	reconnect_attempts = 0;
+
+	lease_duration = -1;
+	already_killed_graceful = false;
+	already_killed_fast = false;
 }
 
 
@@ -94,6 +101,10 @@ RemoteResource::~RemoteResource()
 	if ( fs_domain     ) delete [] fs_domain;
 	if ( claim_sock    ) delete claim_sock;
 	if ( jobAd         ) delete jobAd;
+	if( proxy_check_tid != -1) {
+		daemonCore->Cancel_Timer(proxy_check_tid);
+		proxy_check_tid = -1;
+	}
 }
 
 
@@ -185,9 +196,6 @@ RemoteResource::activateClaim( int starterVersion )
 bool
 RemoteResource::killStarter( bool graceful )
 {
-	static bool already_killed_graceful = false;
-	static bool already_killed_fast = false;
-
 	if( (graceful && already_killed_graceful) ||
 		(!graceful && already_killed_fast) ) {
 			// we've already sent this command to the startd.  we can
@@ -257,78 +265,6 @@ RemoteResource::dprintfSelf( int debugLevel )
 		shadow->dprintf( debugLevel, "\texit_code: %d\n", 
 						 exit_value );
 	}
-}
-
-
-void
-RemoteResource::printExit( FILE *fp )
-{
-	char* ename = NULL;
-	int got_exception = jobAd->LookupString(ATTR_EXCEPTION_NAME, &ename); 
-	char* reason_str = NULL;
-	jobAd->LookupString( ATTR_EXIT_REASON, &reason_str );
-
-	switch ( exit_reason ) {
-	case JOB_COREDUMPED:
-	case JOB_EXITED: {
-		if( exited_by_signal ) {
-			if( got_exception ) {
-				fprintf( fp, "died with exception %s\n", ename );
-			} else {
-				if( reason_str ) {
-					fprintf( fp, "%s.\n", reason_str );
-				} else {
-					fprintf( fp, "died on %s.\n", 
-							 daemonCore->GetExceptionString(exit_value) );
-				}
-			}
-		} else {
-#ifndef WIN32
-			if( exit_value == ENOEXEC ) {
-					/* What has happened here is this:  The starter
-					   forked, but the exec failed with ENOEXEC and
-					   called exit(ENOEXEC).  The exit appears normal, 
-					   however, and the status is ENOEXEC - or 8.  If
-					   the user job can exit with a status of 8, we're
-					   hosed.  A better solution should be found. */
-				fprintf( fp, "exited because of an invalid binary.\n" );
-			} else 
-#endif  // of ifndef WIN32
-			{
-				fprintf( fp, "exited normally with status %d.\n", 
-						 exit_value );
-			}
-		}
-		break;
-	}
-	case JOB_KILLED: {
-		fprintf ( fp, "was aborted by the user.\n" );
-		break;
-	}
-	case JOB_NOT_CKPTED: {
-		fprintf ( fp, "was removed by condor, without a checkpoint.\n" );
-		break;
-	}
-	case JOB_NOT_STARTED: {
-		fprintf ( fp, "was never started.\n" );
-		break;
-	}
-	case JOB_SHADOW_USAGE: {
-		fprintf ( fp, "had incorrect arguments to the condor_shadow.\n" );
-		fprintf ( fp, "                                    "
-				  "This is an internal problem...\n" );
-		break;
-	}
-	default: {
-		fprintf ( fp, "has a strange exit reason of %d.\n", exit_reason );
-	}
-	} // switch()
-	if( ename ) {
-		free( ename );
-	}
-	if( reason_str ) {
-		free( reason_str );
-	}		
 }
 
 
@@ -606,10 +542,11 @@ RemoteResource::initStartdInfo( const char *name, const char *pool,
 		*/
 	char *ip = string_to_ipstr( dc_startd->addr() );
 	if( ip ) {
+		dprintf( D_SECURITY, "Granting remote host \"%s\" (%s)  WRITE and DAEMON permission.\n", ip, dc_startd->addr());
 		daemonCore->AddAllowHost( ip, WRITE );
 		daemonCore->AddAllowHost( ip, DAEMON );
 	} else {
-		dprintf( D_ALWAYS, "ERROR: Can't convert \"%s\" to an IP address!\n", 
+		dprintf( D_ALWAYS, "ERROR: Can't convert \"%s\" to an IP address!  Unable to automatically grant WRITE and DAEMON permissions to the machine.\n", 
 				 dc_startd->addr() );
 	}
 }
@@ -649,7 +586,17 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 		tmp = NULL;
 	}
 
-	if( ad->LookupString(ATTR_MACHINE, &tmp) ) {
+	if( ad->LookupString(ATTR_NAME, &tmp) ) {
+		if( machineName ) {
+			if( is_valid_sinful(machineName) ) {
+				delete [] machineName;
+				machineName = strnewp( tmp );
+			}
+		}	
+		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_MACHINE, tmp );
+		free( tmp );
+		tmp = NULL;
+	} else if( ad->LookupString(ATTR_MACHINE, &tmp) ) {
 		if( machineName ) {
 			if( is_valid_sinful(machineName) ) {
 				delete [] machineName;
@@ -689,6 +636,12 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_VERSION, tmp ); 
 		free( tmp );
 		tmp = NULL;
+	}
+
+	if ( starter_version == NULL ) {
+		dprintf( D_ALWAYS, "Can't determine starter version for FileTransfer!\n" );
+	} else {
+		filetrans.setPeerVersion( starter_version );
 	}
 
 	int tmp_int;
@@ -847,8 +800,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 {
 	int int_value;
 	float float_value;
-	char string_value[ATTRLIST_MAX_EXPRESSION];
-	char tmp[ATTRLIST_MAX_EXPRESSION];
+	MyString string_value;
 
 	dprintf( D_FULLDEBUG, "Inside RemoteResource::updateFromStarter()\n" );
 	hadContact();
@@ -861,70 +813,57 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 
 	if( update_ad->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, float_value) ) {
 		remote_rusage.ru_stime.tv_sec = (int) float_value; 
+		jobAd->Assign(ATTR_JOB_REMOTE_SYS_CPU, float_value);
 	}
 			
 	if( update_ad->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, float_value) ) {
 		remote_rusage.ru_utime.tv_sec = (int) float_value; 
+		jobAd->Assign(ATTR_JOB_REMOTE_USER_CPU, float_value);
 	}
 
 	if( update_ad->LookupInteger(ATTR_IMAGE_SIZE, int_value) ) {
 		image_size = int_value;
+		jobAd->Assign(ATTR_IMAGE_SIZE, int_value);
 	}
 			
 	if( update_ad->LookupInteger(ATTR_DISK_USAGE, int_value) ) {
 		disk_usage = int_value;
+		jobAd->Assign(ATTR_DISK_USAGE, int_value);
 	}
 
 	if( update_ad->LookupString(ATTR_EXCEPTION_HIERARCHY,string_value) ) {
-		sprintf(tmp,"%s=\"%s\"",ATTR_EXCEPTION_HIERARCHY,string_value);
-		jobAd->Insert( tmp );
+		jobAd->Assign(ATTR_EXCEPTION_HIERARCHY, string_value.Value());
 	}
 
 	if( update_ad->LookupString(ATTR_EXCEPTION_NAME,string_value) ) {
-		sprintf(tmp,"%s=\"%s\"",ATTR_EXCEPTION_NAME,string_value);
-		jobAd->Insert( tmp );
+		jobAd->Assign(ATTR_EXCEPTION_NAME, string_value.Value());
 	}
 
 	if( update_ad->LookupString(ATTR_EXCEPTION_TYPE,string_value) ) {
-		sprintf(tmp,"%s=\"%s\"",ATTR_EXCEPTION_TYPE,string_value);
-		jobAd->Insert( tmp );
+		jobAd->Assign(ATTR_EXCEPTION_TYPE, string_value.Value());
 	}
 
 	if( update_ad->LookupBool(ATTR_ON_EXIT_BY_SIGNAL, int_value) ) {
-		if( int_value ) {
-			sprintf( tmp, "%s=TRUE", ATTR_ON_EXIT_BY_SIGNAL );
-			exited_by_signal = true;
-		} else {
-			sprintf( tmp, "%s=FALSE", ATTR_ON_EXIT_BY_SIGNAL );
-			exited_by_signal = false;
-		}
-		jobAd->Insert( tmp );
+		exited_by_signal = (bool)int_value;
+		jobAd->Assign(ATTR_ON_EXIT_BY_SIGNAL, (bool)exited_by_signal);
 	}
 
 	if( update_ad->LookupInteger(ATTR_ON_EXIT_SIGNAL, int_value) ) {
-		sprintf( tmp, "%s=%d", ATTR_ON_EXIT_SIGNAL, int_value );
+		jobAd->Assign(ATTR_ON_EXIT_SIGNAL, int_value);
 		exit_value = int_value;
-		jobAd->Insert( tmp );
 	}
 
 	if( update_ad->LookupInteger(ATTR_ON_EXIT_CODE, int_value) ) {
-		sprintf( tmp, "%s=%d", ATTR_ON_EXIT_CODE, int_value );
+		jobAd->Assign(ATTR_ON_EXIT_CODE, int_value);
 		exit_value = int_value;
-		jobAd->Insert( tmp );
 	}
 
 	if( update_ad->LookupString(ATTR_EXIT_REASON,string_value) ) {
-		sprintf( tmp, "%s=\"%s\"", ATTR_EXIT_REASON, string_value );
-		jobAd->Insert( tmp );
+		jobAd->Assign(ATTR_EXIT_REASON, string_value.Value());
 	}
 
 	if( update_ad->LookupBool(ATTR_JOB_CORE_DUMPED, int_value) ) {
-		if( int_value ) {
-			sprintf( tmp, "%s=TRUE", ATTR_JOB_CORE_DUMPED );
-		} else {
-			sprintf( tmp, "%s=FALSE", ATTR_JOB_CORE_DUMPED );
-		}
-		jobAd->Insert( tmp );
+		jobAd->Assign(ATTR_JOB_CORE_DUMPED, (bool)int_value);
 	}
 
 	char* job_state = NULL;
@@ -980,10 +919,12 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 bool
 RemoteResource::recordSuspendEvent( ClassAd* update_ad )
 {
+	char *rt = NULL;
 	bool rval = true;
 		// First, grab the number of pids that were suspended out of
 		// the update ad.
 	int num_pids;
+
 	if( ! update_ad->LookupInteger(ATTR_NUM_PIDS, num_pids) ) {
 		dprintf( D_FULLDEBUG, "update ad from starter does not define %s\n",
 				 ATTR_NUM_PIDS );  
@@ -1015,6 +956,17 @@ RemoteResource::recordSuspendEvent( ClassAd* update_ad )
 		// Log stuff so we can check our sanity
 	printSuspendStats( D_FULLDEBUG );
 
+	/* If we have been asked to record the state of these suspend/resume
+		events in realtime, then update the schedd right now */
+	rt = param( "REAL_TIME_JOB_SUSPEND_UPDATES" );
+	if( rt != NULL ) {
+		if (strcasecmp(rt, "true") == MATCH) {
+			shadow->updateJobInQueue(U_PERIODIC);
+		}
+		free(rt);
+		rt = NULL;
+	}
+	
 	return rval;
 }
 
@@ -1022,6 +974,7 @@ RemoteResource::recordSuspendEvent( ClassAd* update_ad )
 bool
 RemoteResource::recordResumeEvent( ClassAd* update_ad )
 {
+	char *rt = NULL;
 	bool rval = true;
 
 		// First, log this to the UserLog
@@ -1054,6 +1007,17 @@ RemoteResource::recordResumeEvent( ClassAd* update_ad )
 
 		// Log stuff so we can check our sanity
 	printSuspendStats( D_FULLDEBUG );
+
+	/* If we have been asked to record the state of these suspend/resume
+		events in realtime, then update the schedd right now */
+	rt = param( "REAL_TIME_JOB_SUSPEND_UPDATES" );
+	if( rt != NULL ) {
+		if (strcasecmp(rt, "true") == MATCH) {
+			shadow->updateJobInQueue(U_PERIODIC);
+		}
+		free(rt);
+		rt = NULL;
+	}
 
 	return rval;
 }
@@ -1170,6 +1134,16 @@ RemoteResource::beginExecution( void )
 
 	began_execution = true;
 	setResourceState( RR_EXECUTING );
+	
+    if( jobAd->LookupString(ATTR_X509_USER_PROXY, proxy_path) ) {
+		// This job has a proxy.  We need to check it regularlly to
+		// potentially upload a renewed one.
+		const int PROXY_CHECK_INTERVAL = 60; 
+		ASSERT(proxy_check_tid == -1);
+		proxy_check_tid = daemonCore->Register_Timer( 0, PROXY_CHECK_INTERVAL,
+							(TimerHandlercpp)&RemoteResource::checkX509Proxy,
+							"RemoteResource::checkX509Proxy()", this );
+    }
 
 		// Let our shadow know so it can make global decisions (for
 		// example, should it log a JOB_EXECUTE event)
@@ -1213,7 +1187,6 @@ RemoteResource::supportsReconnect( void )
 void
 RemoteResource::reconnect( void )
 {
-	static int lease_duration = -1;
 	const char* gjid = shadow->getGlobalJobId();
 	if( ! gjid ) {
 		EXCEPT( "Shadow in reconnect mode but %s is not in the job ad!",
@@ -1317,8 +1290,12 @@ RemoteResource::locateReconnectStarter( void )
 {
 	dprintf( D_ALWAYS, "Attempting to locate disconnected starter\n" );
 	const char* gjid = shadow->getGlobalJobId();
+	char *claimid = NULL;
+	getClaimId(claimid);
+
+	dprintf( D_FULLDEBUG, "gjid is %s claimid is %s\n", gjid, claimid);
 	ClassAd reply;
-	if( dc_startd->locateStarter(gjid, &reply, 20) ) {
+	if( dc_startd->locateStarter(gjid, claimid, &reply, 20) ) {
 			// it worked, save the results and return success.
 		char* tmp = NULL;
 		if( reply.LookupString(ATTR_STARTER_IP_ADDR, &tmp) ) {
@@ -1533,3 +1510,62 @@ RemoteResource::requestReconnect( void )
 		// wait to service requests on the syscall or command socket
 	return;
 }
+
+
+bool
+RemoteResource::updateX509Proxy(const char * filename)
+{
+	ASSERT(filename);
+	ASSERT(starterAddress);
+
+	DCStarter starter( starterAddress );
+
+	dprintf( D_FULLDEBUG, "Attempting to connect to starter %s to update X509 proxy\n", 
+			 starterAddress );
+
+	DCStarter::X509UpdateStatus ret = DCStarter::XUS_Error;
+	if ( param_boolean( "DELEGATE_JOB_GSI_CREDENTIALS", true ) == false ) {
+		ret = starter.delegateX509Proxy(filename);
+	}
+	if ( ret != DCStarter::XUS_Okay ) {
+		ret = starter.updateX509Proxy(filename);
+	}
+	switch(ret) {
+		case DCStarter::XUS_Error:
+			dprintf( D_FULLDEBUG, "Failed to send updated X509 proxy to starter.\n");
+			return false;
+		case DCStarter::XUS_Okay:
+			dprintf( D_FULLDEBUG, "Successfully sent updated X509 proxy to starter.\n");
+			return true;
+		case DCStarter::XUS_Declined:
+			dprintf( D_FULLDEBUG, "Starter doesn't want updated X509 proxies.\n");
+			daemonCore->Cancel_Timer(proxy_check_tid);
+			return true;
+	}
+	dprintf( D_FULLDEBUG, "Unexpected response %d from starter when "
+		"updating X509 proxy.  Treating as failure.\n", ret);
+	return false;
+}
+
+void 
+RemoteResource::checkX509Proxy( void )
+{
+	if(proxy_path.IsEmpty()) {
+		/* Harmless, but suspicious. */
+		return;
+	}
+	
+	StatInfo si(proxy_path.Value());
+	time_t lastmod = si.GetModifyTime();
+	dprintf(D_FULLDEBUG, "Proxy timestamps: remote estimated %d, local %d (%d difference)\n",
+		last_proxy_timestamp, lastmod, lastmod - last_proxy_timestamp);
+	if(lastmod <= last_proxy_timestamp) {
+		// No change.
+		return;
+	}
+
+	// Proxy file updated.  Time to upload
+	last_proxy_timestamp = lastmod;
+	updateX509Proxy(proxy_path.Value());
+}
+

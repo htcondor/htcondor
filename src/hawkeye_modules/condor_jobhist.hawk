@@ -7,9 +7,10 @@ The ENV, PATH & CONDOR_CONFIG parameters will most likely
 need to be set by hand.
 
 Default: jobs
-options: kill
 period: 1d
 prefix: jobhist_
+kill: true
+mode: periodic
 
 # It's parameters
 parameter: CONDOR = /home/condor

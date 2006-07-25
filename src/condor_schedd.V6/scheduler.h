@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -48,9 +48,14 @@
 #include "autocluster.h"
 #include "shadow_mgr.h"
 #include "enum_utils.h"
+#include "self_draining_queue.h"
+#include "schedd_cronmgr.h"
+#include "condor_classad_namedlist.h"
+#include "env.h"
+//#include "condor_crontab.h"
 
 const 	int			MAX_REJECTED_CLUSTERS = 1024;
-const   int         STARTD_CONTACT_TIMEOUT = 45;
+extern  int         STARTD_CONTACT_TIMEOUT;
 const	int			NEGOTIATOR_CONTACT_TIMEOUT = 30;
 
 extern	DLL_IMPORT_MAGIC char**		environ;
@@ -61,6 +66,7 @@ struct shadow_rec
 {
     int             pid;
     PROC_ID         job_id;
+	int				universe;
     match_rec*	    match;
     int             preempted;
     int             conn_fd;
@@ -72,24 +78,21 @@ struct shadow_rec
 struct OwnerData {
   char* Name;
   char* Domain;
-  char* X509;
   int JobsRunning;
   int JobsIdle;
   int JobsHeld;
   int JobsFlocked;
   int FlockLevel;
   int OldFlockLevel;
-  int GlobusJobs;
-  int GlobusUnmanagedJobs;
   time_t NegotiationTimestamp;
-  OwnerData() { Name=NULL; Domain=NULL; X509=NULL;
-  JobsRunning=JobsIdle=JobsHeld=JobsFlocked=FlockLevel=OldFlockLevel=GlobusJobs=GlobusUnmanagedJobs=0; }
+  OwnerData() { Name=NULL; Domain=NULL;
+  JobsRunning=JobsIdle=JobsHeld=JobsFlocked=FlockLevel=OldFlockLevel=0; }
 };
 
 class match_rec
 {
  public:
-    match_rec(char*, char*, PROC_ID*, ClassAd*, char*, char* pool);
+    match_rec(char*, char*, PROC_ID*, const ClassAd*, char*, char* pool);
 	~match_rec();
     char*    		id;
     char*   		peer;
@@ -120,8 +123,44 @@ class match_rec
 	void	setStatus( int stat );
 };
 
+class UserIdentity {
+	public:
+			// The default constructor is not recommended as it
+			// has no real identity.  It only exists so
+			// we can put UserIdentities in various templates.
+		UserIdentity() : m_username(""), m_domain("") { }
+		UserIdentity(const char * username, const char * domain)
+			: m_username(username), m_domain(domain) { }
+		UserIdentity(const UserIdentity & src)
+			: m_username(src.m_username), m_domain(src.m_domain) { }
+		const UserIdentity & operator=(const UserIdentity & src) {
+			m_username = src.m_username;
+			m_domain = src.m_domain;
+			return *this;
+		}
+		const bool operator==(const UserIdentity & rhs) {
+			return m_username == rhs.m_username && m_domain == rhs.m_domain;
+		}
+		MyString username() const { return m_username; }
+		MyString domain() const { return m_domain; }
+
+			// For use in HashTables
+		static int HashFcn(const UserIdentity & index, int numBuckets);
+	private:
+		MyString m_username;
+		MyString m_domain;
+};
+
+
+struct GridJobCounts {
+	GridJobCounts() : GridJobs(0), UnmanagedGridJobs(0) { }
+	unsigned int GridJobs;
+	unsigned int UnmanagedGridJobs;
+};
+
 enum MrecStatus {
     M_UNCLAIMED,
+	M_CONNECTING,
 	M_STARTD_CONTACT_LIMBO,  // after contacting startd; before recv'ing reply
 	M_CLAIMED,
     M_ACTIVE
@@ -135,6 +174,7 @@ typedef enum {
 	NO_SHADOW_DC_VANILLA,
 	NO_SHADOW_OLD_VANILLA,
 	NO_SHADOW_RECONNECT,
+	NO_SHADOW_MPI,
 } NoShadowFailure_t;
 
 
@@ -142,38 +182,17 @@ typedef enum {
 class ContactStartdArgs
 {
 public:
-	ContactStartdArgs( char* the_claim_id, char* the_owner, char*
-					   the_sinful, PROC_ID the_id, ClassAd* match,
-					   char* the_pool, bool is_dedicated );
+	ContactStartdArgs( char* the_claim_id, char* sinful, bool is_dedicated );
 	~ContactStartdArgs();
 
-	char*		sinful( void )		{ return csa_sinful; };
 	char*		claimId( void )		{ return csa_claim_id; };
-	char*		owner( void )		{ return csa_owner; };
-	char*		pool( void )		{ return csa_pool; };
-	ClassAd*	matchAd( void )		{ return csa_match_ad; };
-	bool		isDedicated( void )	{ return csa_is_dedicated; };
-	int			cluster( void ) 	{ return csa_id.cluster; };
-	int			proc( void )		{ return csa_id.proc; };
+	char*		sinful( void )		{ return csa_sinful; }
+	bool		isDedicated()		{ return csa_is_dedicated; }
 
 private:
 	char *csa_claim_id;
-	char *csa_owner;
 	char *csa_sinful;
-	PROC_ID csa_id;
-	ClassAd *csa_match_ad;
-	char *csa_pool;	
 	bool csa_is_dedicated;
-};
-
-
-// SC2000 This struct holds the state in ContactStartdArgs.  We register
-// a pointer to this state so we can restore it after a non-blocking connect.
-struct contactStartdState {
-    match_rec* mrec;
-    char* claim_id;
-    char* server;
-    ClassAd *jobAd;
 };
 
 
@@ -202,10 +221,11 @@ class Scheduler : public Service
 	int				negotiatorSocketHandler(Stream *);
 	int				delayedNegotiatorHandler(Stream *);
 	int				negotiate(int, Stream *);
-	void			reschedule_negotiator(int, Stream *);
+	int				reschedule_negotiator(int, Stream *);
+	int				reschedule_negotiator_timer() { return reschedule_negotiator(0, NULL); }
 	void			vacate_service(int, Stream *);
 	AutoCluster		autocluster;
-	void			sendReschedule( void );
+	void			sendReschedule( bool checkRecent = true );
 
 	// job managing
 	int				abort_job(int, Stream *);
@@ -213,16 +233,22 @@ class Scheduler : public Service
 	void			send_all_jobs_prioritized(ReliSock*, struct sockaddr_in*);
 	friend	int		count(ClassAd *);
 	friend	void	job_prio(ClassAd *);
-	friend  int		find_idle_sched_universe_jobs(ClassAd *);
+	friend  int		find_idle_local_jobs(ClassAd *);
+	//friend	int		calculateCronSchedule( ClassAd* );
 	void			display_shadow_recs();
 	int				actOnJobs(int, Stream *);
+	int				updateGSICred(int, Stream* s);
 	int				spoolJobFiles(int, Stream *);
-	static int		spoolJobFilesWorkerThread(void *, Stream*);
-	int				spoolJobFilesReaper(int,int);
-	void				PeriodicExprHandler( void );
+	static int		spoolJobFilesWorkerThread(void *, Stream *);
+	static int		transferJobFilesWorkerThread(void *, Stream *);
+	static int		generalJobFilesWorkerThread(void *, Stream *);
+	int				spoolJobFilesReaper(int,int);	
+	int				transferJobFilesReaper(int,int);
+	void			PeriodicExprHandler( void );
 
 	// match managing
-    match_rec*      AddMrec(char*, char*, PROC_ID*, ClassAd*, char*, char*);
+	int 			publish( ClassAd *ad );
+    match_rec*      AddMrec(char*, char*, PROC_ID*, const ClassAd*, char*, char*);
     int         	DelMrec(char*);
     int         	DelMrec(match_rec*);
 	shadow_rec*		FindSrecByPid(int);
@@ -230,10 +256,15 @@ class Scheduler : public Service
 	void			RemoveShadowRecFromMrec(shadow_rec*);
 	int				AlreadyMatched(PROC_ID*);
 	void			StartJobs();
-	void			StartSchedUniverseJobs();
+	void			StartLocalJobs();
 	void			sendAlives();
 	void			RecomputeAliveInterval(int cluster, int proc);
 	void			StartJobHandler();
+	void			addRunnableJob( shadow_rec* );
+	void			spawnShadow( shadow_rec* );
+	void			spawnLocalStarter( shadow_rec* );
+	bool			claimLocalStartd();
+	bool			isStillRunnable( int cluster, int proc, int &status ); 
 	UserLog*		InitializeUserLog( PROC_ID job_id );
 	bool			WriteAbortToUserLog( PROC_ID job_id );
 	bool			WriteHoldToUserLog( PROC_ID job_id );
@@ -241,6 +272,7 @@ class Scheduler : public Service
 	bool			WriteExecuteToUserLog( PROC_ID job_id, const char* sinful = NULL );
 	bool			WriteEvictToUserLog( PROC_ID job_id, bool checkpointed = false );
 	bool			WriteTerminateToUserLog( PROC_ID job_id, int status );
+	bool			WriteRequeueToUserLog( PROC_ID job_id, int status, const char * reason );
 #ifdef WANT_NETMAN
 	void			RequestBandwidth(int cluster, int proc, match_rec *rec);
 #endif
@@ -261,7 +293,7 @@ class Scheduler : public Service
 		*/
 	bool			enqueueStartdContact( ContactStartdArgs* args );
 
-		/** Registered in contactStartd, this function is called when
+		/** Registered in contactStartdConnected, this function is called when
 			the startd replies to our request.  If it replies in the 
 			positive, the mrec->status is set to M_ACTIVE, else the 
 			mrec gets deleted.  The 'sock' is de-registered and deleted
@@ -271,26 +303,47 @@ class Scheduler : public Service
 		*/
 	int             startdContactSockHandler( Stream *sock );
 
+		/** Registered in contactStartd, this function is called when
+			the non-blocking connection is opened.
+			@param sock The sock with the connection to the startd.
+			@return FALSE on denial/problems, KEEP_STREAM on success
+		*/
+	int startdContactConnectHandler( Stream *sock );
+
 		/** Used to enqueue another disconnected job that we need to
 			spawn a shadow to attempt to reconnect to.
 		*/
 	bool			enqueueReconnectJob( PROC_ID job );
 	void			checkReconnectQueue( void );
-	void			makeReconnectRecords( PROC_ID* job, ClassAd* match_ad );
+	void			makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad );
+
+	bool	spawnJobHandler( int cluster, int proc, shadow_rec* srec );
+	bool 	enqueueFinishedJob( int cluster, int proc );
+
 
 		// Useful public info
 	char*			shadowSockSinful( void ) { return MyShadowSockName; };
 	char*			dcSockSinful( void ) { return MySockName; };
 	int				aliveInterval( void ) { return alive_interval; };
 	char*			uidDomain( void ) { return UidDomain; };
+	int				getJobsTotalAds() { return JobsTotalAds; };
+	int				getMaxJobsSubmitted() { return MaxJobsSubmitted; };
 
 		// Used by the DedicatedScheduler class
 	void 			swap_space_exhausted();
 	void			delete_shadow_rec(int);
-	shadow_rec*     add_shadow_rec(int, PROC_ID*, match_rec*, int);
+	void			delete_shadow_rec(shadow_rec*);
+	shadow_rec*     add_shadow_rec( int pid, PROC_ID*, int univ, match_rec*,
+									int fd );
 	shadow_rec*		add_shadow_rec(shadow_rec*);
+	void			add_shadow_rec_pid(shadow_rec*);
 	void			HadException( match_rec* );
 
+		// Used to manipulate the "extra ads" (read:Hawkeye)
+	int adlist_register( const char *name );
+	int adlist_replace( const char *name, ClassAd *newAd );
+	int adlist_delete( const char *name );
+	int adlist_publish( ClassAd *resAd );
 
 		// Used by both the Scheduler and DedicatedScheduler during
 		// negotiation
@@ -298,8 +351,11 @@ class Scheduler : public Service
 	void addActiveShadows( int num ) { CurNumActiveShadows += num; };
 	
 	// info about our central manager
-	DCCollector*	Collector;
-	Daemon*			Negotiator;
+	CollectorList* 	Collectors;
+
+		// ckireyev: we can no longer stash the Negotiator object
+		// since the negotiator host may change on the fly
+	//Daemon*			Negotiator;
 
 		// object to manage our various shadows and their ClassAds
 	ShadowMgr shadow_mgr;
@@ -319,14 +375,24 @@ private:
 	char*			MyShadowSockName;
 	ReliSock*		shadowCommandrsock;
 	SafeSock*		shadowCommandssock;
-	
+
+	// The "Cron" manager (Hawkeye) & it's classads
+	ScheddCronMgr	*CronMgr;
+	NamedClassAdList extra_ads;
+
 	// parameters controling the scheduling and starting shadow
 	int				SchedDInterval;
 	int				SchedDMinInterval;
 	int				QueueCleanInterval;
 	int				PeriodicExprInterval;
+	int             RequestClaimTimeout;
 	int				JobStartDelay;
+	int				JobStartCount;
+	int				JobsThisBurst;
 	int				MaxJobsRunning;
+	char*			StartLocalUniverse; // expression for local jobs
+	char*			StartSchedulerUniverse; // expression for scheduler jobs
+	int				MaxJobsSubmitted;
 	bool			NegotiateAllJobsInCluster;
 	int				JobsStarted; // # of jobs started last negotiating session
 	int				SwapSpace;	 // available at beginning of last session
@@ -343,19 +409,25 @@ private:
 	int				JobsRemoved;
 	int				SchedUniverseJobsIdle;
 	int				SchedUniverseJobsRunning;
+	int				LocalUniverseJobsIdle;
+	int				LocalUniverseJobsRunning;
+	char*			LocalUnivExecuteDir;
 	int				BadCluster;
 	int				BadProc;
 	//int				RejectedClusters[MAX_REJECTED_CLUSTERS];
 	ExtArray<int>   RejectedClusters;
 	int				N_RejectedClusters;
-	ExtArray<OwnerData> Owners;
+	ExtArray<OwnerData> Owners; // May be tracking AccountingGroup instead of owner username/domain
+	HashTable<UserIdentity, GridJobCounts> GridJobOwners;
 	int				N_Owners;
-	time_t			LastTimeout;
+	time_t			NegotiationRequestTime;
 	int				ExitWhenDone;  // Flag set for graceful shutdown
 	Queue<shadow_rec*> RunnableJobQueue;
 	int				StartJobTimer;
 	int				timeoutid;		// daemoncore timer id for timeout()
 	int				startjobsid;	// daemoncore timer id for StartJobs()
+
+	int				shadowReaperId; // daemoncore reaper id for shadows
 
 	int             startJobsDelayBit;  // for delay when starting jobs.
 
@@ -373,6 +445,15 @@ private:
 	SimpleList<PROC_ID> jobsToReconnect;
 	int				checkReconnectQueue_tid;
 
+	SelfDrainingQueue job_is_finished_queue;
+	int jobIsFinishedHandler( ServiceData* job_id );
+
+		// Get the associated GridJobCounts object for a given
+		// user identity.  If necessary, will create a new one for you.
+		// You can read or write the values, but don't go
+		// deleting the pointer!
+	GridJobCounts * GetGridJobCounts(UserIdentity user_identity);
+
 	// useful names
 	char*			CondorAdministrator;
 	char*			Mail;
@@ -380,7 +461,7 @@ private:
 	char*			AccountantName;
     char*			UidDomain;
 
-	bool reschedule_request_pending;
+	time_t last_reschedule_request;
 
 	// connection variables
 	struct sockaddr_in	From;
@@ -392,29 +473,47 @@ private:
 	int				cluster_rejected(int);
 	void   			mark_cluster_rejected(int); 
 	int				count_jobs();
-	int				insert_owner(char*, char*);
+	void   			check_claim_request_timeouts( void );
+	int				insert_owner(char*);
 	void			child_exit(int, int);
+	void			scheduler_univ_job_exit(int pid, int status, shadow_rec * srec);
+	void			scheduler_univ_job_leave_queue(PROC_ID job_id, int status, shadow_rec * srec);
 	void			clean_shadow_recs();
-	void			preempt(int);
-	void			preempt_one_job();
+	void			preempt( int n, bool force_sched_jobs = false );
+	void			attempt_shutdown();
 	static void		refuse( Stream* s );
-	void			tryNextJob( void );
+	void			tryNextJob( int secs = -1 );
+	int				jobThrottle( void );
+	void			initLocalStarterDir( void );
 	void	noShadowForJob( shadow_rec* srec, NoShadowFailure_t why );
+		//
+		// This method will insert the next runtime for a 
+		// job into its requirements
+		//
+	//bool calculateCronSchedule( ClassAd*, bool force = false );
 
 
-		/** We add a match record (AddMrec), then open a ReliSock to the
-			startd.  We push the ClaimId and the jobAd, then register
+		/** We begin the process of opening a non-blocking ReliSock
+			connection to the startd.
+
+			We push the ClaimId and the jobAd, then register
 			the Socket with startdContactSockHandler and put the new mrec
 			into the daemonCore data pointer.  
 			@param args An object that holds all the info we care about 
 			@return false on failure and true on success
 		 */
-	bool	contactStartd( ContactStartdArgs* args );
+	void	contactStartd( ContactStartdArgs* args );
 
 	shadow_rec*		StartJob(match_rec*, PROC_ID*);
-	shadow_rec*		start_std(match_rec*, PROC_ID*);
+	shadow_rec*		start_std(match_rec*, PROC_ID*, int univ);
 	shadow_rec*		start_pvm(match_rec*, PROC_ID*);
 	shadow_rec*		start_sched_universe_job(PROC_ID*);
+	shadow_rec*		start_local_universe_job(PROC_ID*);
+	bool			spawnJobHandlerRaw( shadow_rec* srec, const char* path,
+										ArgList const &args,
+										Env const *env, 
+										const char* name, bool is_dc,
+										bool wants_pipe );
 	void			Relinquish(match_rec*);
 	void			check_zombie(int, PROC_ID*);
 	void			kill_zombie(int, PROC_ID*);
@@ -425,6 +524,8 @@ private:
 #ifdef CARMI_OPS
 	shadow_rec*		find_shadow_by_cluster( PROC_ID * );
 #endif
+
+	void			expand_mpi_procs(StringList *, StringList *);
 
 	HashTable <HashKey, match_rec *> *matches;
 	HashTable <int, shadow_rec *> *shadowsByPid;
@@ -443,26 +544,55 @@ private:
 	int				MaxExceptions;	 // Max shadow excep. before we relinquish
 	bool			ManageBandwidth;
 
+		//
+		// This table is used for scheduling cron jobs
+		// If a ClassAd has an entry in this table then we need
+		// to query the CronTab object to ask it what the next
+		// runtime is for job is
+		//
+	//HashTable<PROC_ID, CronTab*> *cronTabs;
+		//
+		// We also keep a list of job's that do not need a cronTab
+		// This way we can quickly look at this to see if we 
+		// should skip it when trying to figure out cron schedules
+		// Hopefully, a lookup in this table should be faster
+		// then checking to see if a CronTab is needed
+		//
+	//Queue<PROC_ID> *cronTabsExclude;
+
 		// put state into ClassAd return it.  Used for condor_squawk
 	int	dumpState(int, Stream *);
-	int intoAd ( ClassAd *ad, char *lhs, char *rhs );
-	int intoAd ( ClassAd *ad, char *lhs, int rhs );
 
 		// A bit that says wether or not we've sent email to the admin
 		// about a shadow not starting.
 	int sent_shadow_failure_email;
 
+	// some stuff about Quill that should go into the ad
+#if WANT_QUILL
+	int quill_enabled;
+	int quill_is_remotely_queryable;
+	char *quill_name;
+	char *quill_db_name;
+	char *quill_db_ip_addr;
+	char *quill_db_query_password;
+#endif
+
 };
 
 
 // Other prototypes
+int		get_job_prio(ClassAd *ad, bool compute_autoclusters = false);
 extern void set_job_status(int cluster, int proc, int status);
 extern bool claimStartd( match_rec* mrec, ClassAd* job_ad, bool is_dedicated );
+extern bool claimStartdConnected( Sock *sock, match_rec* mrec, ClassAd* job_ad, bool is_dedicated );
 extern bool sendAlive( match_rec* mrec );
 extern void fixReasonAttrs( PROC_ID job_id, JobAction action );
 extern bool moveStrAttr( PROC_ID job_id, const char* old_attr,  
 						 const char* new_attr, bool verbose );
-extern bool abortJob( ClassAd *jobad, int cluster, int proc, const char *reason, bool use_transaction );
+extern bool moveIntAttr( PROC_ID job_id, const char* old_attr,  
+						 const char* new_attr, bool verbose );
+extern bool abortJob( int cluster, int proc, const char *reason, bool use_transaction );
+extern bool abortJobsByConstraint( const char *constraint, const char *reason, bool use_transaction );
 extern bool holdJob( int cluster, int proc, const char* reason = NULL, 
 					 bool use_transaction = false, 
 					 bool notify_shadow = true,  
@@ -472,4 +602,49 @@ extern bool releaseJob( int cluster, int proc, const char* reason = NULL,
 					 bool use_transaction = false, 
 					 bool email_user = false, bool email_admin = false,
 					 bool write_to_user_log = true);
+
+
+/** Hook to call whenever we're going to give a job to a "job
+	handler", be that a shadow, starter (local univ), or gridmanager.
+	it takes the optional shadow record as a void* so this can be
+	seamlessly used for Create_Thread_With_Data().  In fact, we don't
+	need the srec at all for the function itself, but we'll need it as
+	our data pointer in the reaper (so we can actually spawn the right
+	handler), so we ignore it here, but will need it later...
+*/
+int aboutToSpawnJobHandler( int cluster, int proc, void* srec=NULL );
+
+
+/** For use as a reaper with Create_Thread_With_Data(), or to call
+	directly after aboutToSpawnJobHandler() if there's no thread. 
+*/
+int aboutToSpawnJobHandlerDone( int cluster, int proc, void* srec=NULL,
+								int exit_status = 0 );
+
+
+/** A helper function that wraps the call to jobPrepNeedsThread() and
+	invokes aboutToSpawnJobHandler() as appropriate, either in its own
+	thread using Create_Thread_Qith_Wata(), or calling it and then
+	aboutToSpawnJobHandlerDone() directly.
+*/
+void callAboutToSpawnJobHandler( int cluster, int proc, shadow_rec* srec );
+
+
+/** Hook to call whenever a job enters a "finished" state, something
+	it can never get out of (namely, COMPLETED or REMOVED).  Like the
+	aboutToSpawnJobHandler() hook above, this might be expensive, so
+	if jobPrepNeedsThread() returns TRUE for this job, we should call
+	this hook within a seperate thread.  Therefore, it takes the
+	optional void* so it can be used for Create_Thread_With_Data().
+*/
+int jobIsFinished( int cluster, int proc, void* vptr = NULL );
+
+
+/** For use as a reaper with Create_Thread_With_Data(), or to call
+	directly after jobIsFinished() if there's no thread. 
+*/
+int jobIsFinishedDone( int cluster, int proc, void* vptr = NULL,
+					   int exit_status = 0 );
+
+
 #endif /* _CONDOR_SCHED_H_ */

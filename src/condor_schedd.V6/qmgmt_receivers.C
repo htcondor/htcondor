@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -310,6 +310,40 @@ do_Q_request(ReliSock *syscall_sock)
 		return 0;
 	}
 
+	case CONDOR_SetTimerAttribute:
+	  {
+		int cluster_id;
+		int proc_id;
+		char *attr_name=NULL;
+		int duration = 0;
+		int terrno;
+
+		assert( syscall_sock->code(cluster_id) );
+		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
+		assert( syscall_sock->code(proc_id) );
+		dprintf( D_SYSCALLS, "	proc_id = %d\n", proc_id );
+		assert( syscall_sock->code(attr_name) );
+		if (attr_name) dprintf(D_SYSCALLS,"\tattr_name = %s\n",attr_name);
+		assert( syscall_sock->code(duration) );
+		dprintf(D_SYSCALLS,"\tduration = %d\n",duration);
+		assert( syscall_sock->end_of_message() );;
+
+		errno = 0;
+
+		rval = SetTimerAttribute( cluster_id, proc_id, attr_name, duration );
+		terrno = errno;
+		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+
+		syscall_sock->encode();
+		assert( syscall_sock->code(rval) );
+		if( rval < 0 ) {
+			assert( syscall_sock->code(terrno) );
+		}
+		free( (char *)attr_name );
+		assert( syscall_sock->end_of_message() );;
+		return 0;
+	}
+
 	case CONDOR_BeginTransaction:
 	  {
 		int terrno;
@@ -454,9 +488,7 @@ do_Q_request(ReliSock *syscall_sock)
 		int cluster_id;
 		int proc_id;
 		char *attr_name=NULL;
-		// XXX: shouldn't need a fixed size here -- at least keep
-		// it off the stack to avoid overflow attacks
-		char *value = (char *)malloc(ATTRLIST_MAX_EXPRESSION*sizeof(char));
+		char *value = NULL;
 		int terrno;
 
 		assert( syscall_sock->code(cluster_id) );
@@ -467,7 +499,7 @@ do_Q_request(ReliSock *syscall_sock)
 		assert( syscall_sock->end_of_message() );;
 
 		errno = 0;
-		rval = GetAttributeString( cluster_id, proc_id, attr_name, value );
+		rval = GetAttributeStringNew( cluster_id, proc_id, attr_name, &value );
 		terrno = errno;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 
@@ -493,6 +525,7 @@ do_Q_request(ReliSock *syscall_sock)
 		// XXX: shouldn't need a fixed size here -- at least keep
 		// it off the stack to avoid overflow attacks
 		char *value = (char *)malloc(ATTRLIST_MAX_EXPRESSION*sizeof(char));
+
 		int terrno;
 
 		assert( syscall_sock->code(cluster_id) );

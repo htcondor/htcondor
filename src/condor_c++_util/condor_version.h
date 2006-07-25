@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -25,8 +25,8 @@
 extern "C" {
 #endif
 
-char* CondorVersion( void );
-char* CondorPlatform( void );
+const char* CondorVersion( void );
+const char* CondorPlatform( void );
 
 #if defined(__cplusplus)
 }

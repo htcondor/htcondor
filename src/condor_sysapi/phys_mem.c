@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -153,42 +153,21 @@ int
 sysapi_phys_memory_raw(void) 
 {	
 
-	FILE	*proc;
-	double	phys_mem;
-	char	tmp_c[20];
-	char	c;
+	double bytes;
+	double megs;
 
-	sysapi_internal_reconfig();
-	proc=fopen("/proc/meminfo","r");
-	if(!proc) {
-		return -1;
-	}
+	/* in bytes */
+	bytes = 
+		(double)sysconf(_SC_PHYS_PAGES) * (double)sysconf(_SC_PAGESIZE);
 
-	  /*
-	  // The /proc/meminfo looks something like this:
+	/* convert it to Megabytes */
+	megs = bytes / (1024.0*1024.0);
 
-	  //       total:    used:    free:  shared: buffers:  cached:
-	  //Mem:  19578880 19374080   204800  7671808  1191936  8253440
-	  //Swap: 42831872  8368128 34463744
-	  //MemTotal:     19120 kB
-	  //MemFree:        200 kB
-	  //MemShared:     7492 kB
-	  //Buffers:       1164 kB
-	  //Cached:        8060 kB
-	  //SwapTotal:    41828 kB
-	  //SwapFree:     33656 kB
-	  */	  
-	while((c=fgetc(proc))!='\n');
-	fscanf(proc, "%s %lf", tmp_c, &phys_mem);
-	fclose(proc);
-
-	phys_mem /= (1024*1024);
-
-	if (phys_mem > INT_MAX) {
+	if (megs > INT_MAX) {
 		return INT_MAX;
 	}
 
-	return (int)phys_mem;
+	return (int)megs;
 }
 
 #elif defined(WIN32)
@@ -196,10 +175,14 @@ sysapi_phys_memory_raw(void)
 int
 sysapi_phys_memory_raw(void)
 {
-	MEMORYSTATUS status;		
+	MEMORYSTATUSEX statex;		
 	sysapi_internal_reconfig();
-	GlobalMemoryStatus(&status);
-	return (int)( ceil(status.dwTotalPhys/(1024*1024)+.4 ) );
+	
+	statex.dwLength = sizeof(statex);
+	
+	GlobalMemoryStatusEx(&statex);
+	
+	return (int)(statex.ullTotalPhys/(1024*1024));
 }
 
 #elif defined(OSF1)
@@ -224,19 +207,34 @@ sysapi_phys_memory_raw(void)
 	return (int)(s.physmem/(1024*1024));
 }
 
-#elif defined(Darwin)
+// See GNATS 529. This code should now detect >= 2Gigs properly.
+#elif defined(Darwin) || defined(CONDOR_FREEBSD)
 #include <sys/sysctl.h>
 int
 sysapi_phys_memory_raw(void)
 {
+	int megs;
+	uint64_t mem = 0;
+	size_t len = sizeof(mem);
+
 	sysapi_internal_reconfig();
-        int mib[2], physmem;
-        size_t len;   
-        mib[0] = CTL_HW;     
-        mib[1] = HW_PHYSMEM;        
-        len = sizeof(physmem);   
-        sysctl(mib, 2, &physmem, &len, NULL, 0);   
-	return physmem / ( 1024 * 1024);
+
+#ifdef Darwin
+	if (sysctlbyname("hw.memsize", &mem, &len, NULL, 0) < 0) 
+#elif defined(CONDOR_FREEBSD)
+	if (sysctlbyname("hw.physmem", &mem, &len, NULL, 0) < 0) 
+#endif
+	{
+        dprintf(D_ALWAYS, 
+			"sysapi_phys_memory_raw(): sysctlbyname(\"hw.memsize\") "
+			"failed: %d(%s)\n",
+			errno, strerror(errno));
+		return -1;
+	}
+
+	megs = mem / (1024 * 1024);
+
+	return megs;
 }
 #elif defined(AIX)
 int

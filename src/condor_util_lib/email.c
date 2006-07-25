@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -23,10 +23,11 @@
 
 #include "condor_common.h"
 #include "condor_config.h"
-#include "debug.h"
+#include "condor_debug.h"
 #include "condor_uid.h"
 #include "condor_email.h"
 #include "my_hostname.h"
+#include "my_popen.h"
 
 #define EMAIL_SUBJECT_PROLOG "[Condor] "
 
@@ -39,7 +40,7 @@
 
 /* how we actually get the FILE* for our mail program pipe various vastly
 	between NT and unix */
-static FILE *email_open_implementation(char *Mailer,char *final_command);
+static FILE *email_open_implementation(char *Mailer,char *const final_args[]);
 
 #if defined(IRIX)
 extern char **_environ;
@@ -53,15 +54,16 @@ extern char *mySubSystem;
 FILE *
 email_open( const char *email_addr, const char *subject )
 {
-	char *FinalAddr;
 	char *Mailer;
+	char *SmtpServer = NULL;
+	char *FinalSubject;
+	char *FinalAddr;
 	char *temp;
+	int token_boundary;
+	int num_addresses;
+	char **final_args;
+	int arg_index;
 	FILE *mailerstream;
-	char RelayHost[150];
-	const char *FinalSubject = "\0";
-	char final_command[2000];
-
-	RelayHost[0] = '\0';
 
 	if ( (Mailer = param("MAIL")) == NULL ) {
 		dprintf(D_FULLDEBUG,
@@ -69,59 +71,101 @@ email_open( const char *email_addr, const char *subject )
 		return NULL;
 	}
 
+	/* Take care of the subject. */
+	if ( subject ) {
+		int prolog_length = strlen(EMAIL_SUBJECT_PROLOG);
+		int subject_length = strlen(subject);
+		FinalSubject = malloc(prolog_length + subject_length + 1);
+		memcpy(FinalSubject, EMAIL_SUBJECT_PROLOG, prolog_length);
+		memcpy(&FinalSubject[prolog_length], subject, subject_length);
+		FinalSubject[prolog_length + subject_length] = '\0';
+	}
+	else {
+		FinalSubject = strdup(EMAIL_SUBJECT_PROLOG);
+	}
+
 #ifdef WIN32
 	/* On WinNT, we need to be given an SMTP server, and we must pass
-	 * this servername to the Mailer with a -relay option.  So, if there
-	 * is not alrady a -relay option specified, add one.
+	 * this servername to the Mailer with a -relay option.
 	 */
-	if ( strstr(Mailer,"-relay") == NULL ) {
-		if ( (temp=param("SMTP_SERVER")) == NULL ) {
-			dprintf(D_FULLDEBUG,
-				"Trying to email, but SMTP_SERVER not specified in config file\n");
-			free(Mailer);
-			return NULL;
-		}
-		sprintf(RelayHost,"-relay %s",temp);
-		free(temp);
+	if ( (SmtpServer=param("SMTP_SERVER")) == NULL ) {
+		dprintf(D_FULLDEBUG,
+			"Trying to email, but SMTP_SERVER not specified in config file\n");
+		free(Mailer);
+		free(FinalSubject);
+		return NULL;
 	}
 #endif 	
 
-	/* Take care of the subject. */
-	if ( subject ) {
-		FinalSubject = subject;
-	}
-
 	/* Take care of destination email address.  If it is NULL, grab 
 	 * the email of the Condor admin from the config file.
-	 * We strdup this since we modify it (we replace any commas with spaces
-	 * so user can give a list of addresses and we can pass it to the Mailer).
+	 * We strdup this since we modify it (we split it into tokens so that
+	 * each address is a separate argument to the mailer).
 	 */
 	if ( email_addr ) {
 		FinalAddr = strdup(email_addr);
 	} else {
-		if ( (temp = param("CONDOR_ADMIN")) == NULL ) {
+		if ( (FinalAddr = param("CONDOR_ADMIN")) == NULL ) {
 			dprintf(D_FULLDEBUG,
 				"Trying to email, but CONDOR_ADMIN not specified in config file\n");
 			free(Mailer);
+			free(FinalSubject);
+			if (SmtpServer) free(SmtpServer);
 			return NULL;
 		}
-		FinalAddr = strdup(temp);
-		free(temp);
-	}
-	/* now replace commas with spaces */
-	while ( (temp=strchr(FinalAddr,',')) ) {
-		*temp = ' ';
 	}
 
-	/* create the final command to pass to the code that will open the Mailer */
-	sprintf(final_command,"%s -s \"%s%s\" %s %s",
-		Mailer,EMAIL_SUBJECT_PROLOG,FinalSubject,RelayHost,FinalAddr);
-/*	dprintf(D_FULLDEBUG,"Sending email using command %s\n",final_command);*/
+	/* Now tokenize the list of addresses on commas and/or spaces (by replacing
+	 * commas and spaces with nils). We also count the addresses here so we
+	 * know how large to make our argument vector
+	 */
+	token_boundary = TRUE;
+	num_addresses = 0;
+	for (temp = FinalAddr; *temp != '\0'; temp++) {
+		if (*temp == ',' || *temp == ' ') {
+			*temp = '\0';
+			token_boundary = TRUE;
+		}
+		else if (token_boundary) {
+			num_addresses++;
+			token_boundary = FALSE;
+		}
+	}
+	if (num_addresses == 0) {
+		dprintf(D_FULLDEBUG, "Trying to email, but address list is empty\n");
+		free(Mailer);
+		free(FinalSubject);
+		if (SmtpServer) free(SmtpServer);
+		free(FinalAddr);
+		return NULL;
+	}
+
+	/* construct the argument vector for the mailer */
+	final_args = malloc((6 + num_addresses) * sizeof(char*));
+	if (final_args == NULL) {
+		EXCEPT("Out of memory");
+	}
+	arg_index = 0;
+	final_args[arg_index++] = Mailer;
+	final_args[arg_index++] = "-s";
+	final_args[arg_index++] = FinalSubject;
+	if (SmtpServer) {
+		final_args[arg_index++] = "-relay";
+		final_args[arg_index++] = SmtpServer;
+	}
+	temp = FinalAddr;
+	for (;;) {
+		while (*temp == '\0') temp++;
+		final_args[arg_index++] = temp;
+		if (--num_addresses == 0) break;
+		while (*temp != '\0') temp++;
+	}
+	final_args[arg_index] = NULL;
 
 /* NEW CODE */
-	/* open a FILE* so that the mail we get will end up from condor,
+	/* open a FILE* so t_hat the mail we get will end up from condor,
 		and not from root */
-	mailerstream = email_open_implementation(Mailer, final_command);
+	mailerstream = email_open_implementation(Mailer, final_args);
 
 	if ( mailerstream ) {
 		fprintf(mailerstream,"This is an automated email from the Condor "
@@ -130,14 +174,18 @@ email_open( const char *email_addr, const char *subject )
 
 	/* free up everything we strdup-ed and param-ed, and return result */
 	free(Mailer);
+	free(FinalSubject);
+	if (SmtpServer)
+		free(SmtpServer);
 	free(FinalAddr);
+	free(final_args);
 
 	return mailerstream;
 }
 
 #ifdef WIN32
 FILE *
-email_open_implementation(char *Mailer, char *final_command)
+email_open_implementation(char *Mailer, char *const final_args[])
 {
 	priv_state priv;
 	int prev_umask;
@@ -151,47 +199,12 @@ email_open_implementation(char *Mailer, char *final_command)
 		set to something useable for the open operation. -pete 9/11/99
 	*/
 	prev_umask = umask(022);
-	mailerstream = popen(final_command,EMAIL_POPEN_FLAGS);
+	mailerstream = my_popenv(final_args,EMAIL_POPEN_FLAGS,FALSE);
 	umask(prev_umask);
 
 	/* Set priv state back */
 	set_priv(priv);
 
-	if ( mailerstream == NULL ) {
-		/* On NT, the process acting as the service (in this case
-		** the condor_master) fails on popen(), even though we did
-		** an AllocConsole().  Thanks for nothing, Microsoft.  We
-		** work around this by first confirming that the mailer 
-		** program really exists.  If it does, we open a temp file
-		** and return the FILE* to the temp file.  We also stash
-		** away the final_command in a global static, so when we
-		** do an email close, we call system() with "mailer < tmp_file".
-		*/
-		if (access(Mailer,0) != -1 ) {	
-			/* we now know the mailer exists */
-			char * email_tmp_file = NULL;
-
-			/* now make certain there is not another outstanding email_open */
-			if (EMAIL_FINAL_COMMAND) {
-				dprintf(D_ALWAYS,
-					"Cannot have more than one outstanding email_open()");				
-			} else {
-				/* note: result from tempnam has been malloced */
-				email_tmp_file = tempnam("\\tmp","condoremail");
-				if (email_tmp_file) {
-					/* "T" flag to fopen() means short-lived file; delay
-					** flush to disk as long as possible. */
-					mailerstream = fopen(email_tmp_file,"wtT");
-					if ( mailerstream ) {
-						strcat(final_command," < ");
-						strcat(final_command,email_tmp_file);
-						EMAIL_FINAL_COMMAND = strdup(final_command);
-					} 
-					free(email_tmp_file);					
-				}
-			}
-		}
-	}
 	if ( mailerstream == NULL ) {	
 		dprintf(D_ALWAYS,"Failed to access email program \"%s\"\n",
 			Mailer);
@@ -203,7 +216,7 @@ email_open_implementation(char *Mailer, char *final_command)
 #else /* unix */
 
 FILE *
-email_open_implementation(char *Mailer, char *final_command)
+email_open_implementation(char *Mailer, char *const final_args[])
 {
 	FILE *mailerstream;
 	pid_t pid;
@@ -329,12 +342,12 @@ email_open_implementation(char *Mailer, char *final_command)
 		}
 
 		/* invoke the mailer */
-		execl("/bin/sh", "sh", "-c", final_command, NULL);
+		execvp(final_args[0], final_args);
 
 		/* I hope this EXCEPT gets recorded somewhere */
 		EXCEPT("EMAIL PROCESS: Could not exec mailer using '%s' with command "
 			"'%s' because of error: %s.", "/bin/sh", 
-			(final_command==NULL)?"(null)":final_command, strerror(errno));
+			(final_args[0]==NULL)?"(null)":final_args[0], strerror(errno));
 	}
 
 	/* for completeness */
@@ -424,7 +437,7 @@ email_close(FILE *mailer)
 	*/
 #if defined(WIN32)
 	if (EMAIL_FINAL_COMMAND == NULL) {
-		pclose( mailer );
+		my_pclose( mailer );
 	} else {
 		char *email_filename = NULL;
 		/* Should this be a pclose??? -Erik 9/21/00 */ 

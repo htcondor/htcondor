@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -51,7 +51,7 @@ usage( char *name )
 {
 	dprintf( D_ALWAYS, "Usage: %s [-f] [-b] [-t] [-p <port>] [-s <schedd addr>]\n"
 					   "   [-x <x509_user_proxy>] [-j <JobClusterID.JobProcID>]\n",
-		basename( name ) );
+		condor_basename( name ) );
 	DC_Exit( 1 );
 }
 

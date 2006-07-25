@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #ifndef NORDUGRIDJOB_H
 #define NORDUGRIDJOB_H
@@ -29,16 +29,15 @@
 #include "MyString.h"
 #include "classad_hashtable.h"
 
-#include "ftp_lite.h"
-
 #include "basejob.h"
 #include "nordugridresource.h"
+#include "proxymanager.h"
+#include "gahp-client.h"
 
 void NordugridJobInit();
 void NordugridJobReconfig();
-bool NordugridJobAdMustExpand( const ClassAd *jobad );
 BaseJob *NordugridJobCreate( ClassAd *jobad );
-extern const char *NordugridJobAdConst;
+bool NordugridJobAdMatch( const ClassAd *job_ad );
 
 class NordugridResource;
 
@@ -53,14 +52,21 @@ class NordugridJob : public BaseJob
 	void Reconfig();
 	int doEvaluateState();
 	BaseResource *GetResource();
+	void SetRemoteJobId( const char *job_id );
 
 	static int probeInterval;
 	static int submitInterval;
+	static int gahpCallTimeout;
+	static int maxConnectFailures;
 
 	static void setProbeInterval( int new_interval )
 		{ probeInterval = new_interval; }
 	static void setSubmitInterval( int new_interval )
 		{ submitInterval = new_interval; }
+	static void setGahpCallTimeout( int new_timeout )
+		{ gahpCallTimeout = new_timeout; }
+	static void setConnectFailureRetry( int count )
+		{ maxConnectFailures = count; }
 
 	int gmState;
 	time_t lastProbeTime;
@@ -75,27 +81,28 @@ class NordugridJob : public BaseJob
 	char *remoteJobId;
 	int remoteJobState;
 
-	ftp_lite_server *ftp_srvr;
+	Proxy *jobProxy;
 	NordugridResource *myResource;
+	GahpClient *gahp;
 
-		// Used by doStageIn() and doStageOut()
-	StringList *stage_list;
+		// If we're in the middle of a gahp call that requires an RSL,
+		// the RSL is stored here (so that we don't have to reconstruct the
+		// RSL every time we test the call for completion). It should be
+		// freed and reset to NULL once the call completes.
+	MyString *RSL;
+		// Same as for RSL, but used by the file staging calls.
+	StringList *stageList;
+	StringList *stageLocalList;
 
 		// These get set before file stage out, but don't get handed
 		// to JobTerminated() until after file stage out succeeds.
 	int exitCode;
 	bool normalExit;
 
-	int doSubmit( char *&job_id );
-	int doStatus( int &new_remote_state );
-	int doRemove();
-	int doStageIn();
-	int doStageOut();
-	int doExitInfo();
-	int doStageInQuery( bool &need_stage_in );
-	int doList( const char *dir_name, StringList *&dir_list );
-
 	MyString *buildSubmitRSL();
+	StringList *buildStageInList();
+	StringList *buildStageOutList();
+	StringList *buildStageOutLocalList( StringList *stage_list );
 
  protected:
 };

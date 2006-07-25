@@ -1,39 +1,41 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 
 #include "condor_common.h"
 #include "condor_attributes.h"
 #include "condor_debug.h"
-#include "environ.h"  // for Environ object
+#include "env.h"
 #include "condor_string.h"	// for strnewp and friends
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "basename.h"
 #include "condor_ckpt_name.h"
+#include "filename_tools.h"
 
 #include "gridmanager.h"
 #include "gt3job.h"
 #include "condor_config.h"
+#include "globusjob.h" // for rsl_stringify
 
 
 // GridManager job states
@@ -96,7 +98,7 @@ static char *GMStateNames[] = {
 
 #define CHECK_PROXY \
 { \
-	if ( PROXY_NEAR_EXPIRED( myProxy ) && gmState != GM_PROXY_EXPIRED ) { \
+	if ( PROXY_NEAR_EXPIRED( jobProxy ) && gmState != GM_PROXY_EXPIRED ) { \
 		dprintf( D_ALWAYS, "(%d.%d) proxy is about to expire\n", \
 				 procID.cluster, procID.proc ); \
 		gmState = GM_PROXY_EXPIRED; \
@@ -104,60 +106,6 @@ static char *GMStateNames[] = {
 	} \
 }
 
-//////////////////////from gridmanager.C
-#define HASH_TABLE_SIZE			500
-
-static bool WriteGT3SubmitEventToUserLog( ClassAd *job_ad );
-static bool WriteGT3SubmitFailedEventToUserLog( ClassAd *job_ad,
-												int failure_code );
-static bool WriteGT3ResourceUpEventToUserLog( ClassAd *job_ad );
-static bool WriteGT3ResourceDownEventToUserLog( ClassAd *job_ad );
-
-template class HashTable<HashKey, GT3Job *>;
-template class HashBucket<HashKey, GT3Job *>;
-
-// TODO need to get rid of this
-static GahpClient GahpMain;
-
-HashTable <HashKey, GT3Job *> GT3JobsByContact( HASH_TABLE_SIZE,
-												hashFunction );
-
-const char *
-gt3JobId( const char *contact )
-{
-/*
-	static char buff[1024];
-	char *first_end;
-	char *second_begin;
-
-	ASSERT( strlen(contact) < sizeof(buff) );
-
-	first_end = strrchr( contact, ':' );
-	ASSERT( first_end );
-
-	second_begin = strchr( first_end, '/' );
-	ASSERT( second_begin );
-
-	strncpy( buff, contact, first_end - contact );
-	strcpy( buff + ( first_end - contact ), second_begin );
-
-	return buff;
-*/
-	return contact;
-}
-
-static
-void
-rehashJobContact( GT3Job *job, const char *old_contact,
-				  const char *new_contact )
-{
-	if ( old_contact ) {
-		GT3JobsByContact.remove(HashKey(gt3JobId(old_contact)));
-	}
-	if ( new_contact ) {
-		GT3JobsByContact.insert(HashKey(gt3JobId(new_contact)), job);
-	}
-}
 
 void
 gt3GramCallbackHandler( void *user_arg, char *job_contact, int state,
@@ -165,9 +113,13 @@ gt3GramCallbackHandler( void *user_arg, char *job_contact, int state,
 {
 	int rc;
 	GT3Job *this_job;
+	MyString job_id;
+
+	job_id.sprintf( "gt3 %s", job_contact );
 
 	// Find the right job object
-	rc = GT3JobsByContact.lookup( HashKey( gt3JobId(job_contact) ), this_job );
+	rc = BaseJob::JobsByRemoteId.lookup( HashKey( job_id.Value() ),
+										 (BaseJob*&)this_job );
 	if ( rc != 0 || this_job == NULL ) {
 		dprintf( D_ALWAYS, 
 			"gt3GramCallbackHandler: Can't find record for globus job with "
@@ -208,29 +160,24 @@ void GT3JobReconfig()
 	// Tell all the resource objects to deal with their new config values
 	GT3Resource *next_resource;
 
-	GT3ResourcesByName.startIterations();
+	GT3Resource::ResourcesByName.startIterations();
 
-	while ( GT3ResourcesByName.iterate( next_resource ) != 0 ) {
+	while ( GT3Resource::ResourcesByName.iterate( next_resource ) != 0 ) {
 		next_resource->Reconfig();
 	}
 }
 
-const char *GT3JobAdConst = "JobUniverse =?= 9 && (JobGridType == \"gt3\") =?= True";
+bool GT3JobAdMatch( const ClassAd *job_ad ) {
+	int universe;
+	MyString resource;
+	if ( job_ad->LookupInteger( ATTR_JOB_UNIVERSE, universe ) &&
+		 universe == CONDOR_UNIVERSE_GRID &&
+		 job_ad->LookupString( ATTR_GRID_RESOURCE, resource ) &&
+		 strncasecmp( resource.Value(), "gt3 ", 4 ) == 0 ) {
 
-bool GT3JobAdMustExpand( const ClassAd *jobad )
-{
-	int must_expand = 0;
-
-	jobad->LookupBool(ATTR_JOB_MUST_EXPAND, must_expand);
-	if ( !must_expand ) {
-		char resource_name[800];
-		jobad->LookupString(ATTR_GLOBUS_RESOURCE, resource_name);
-		if ( strstr(resource_name,"$$") ) {
-			must_expand = 1;
-		}
+		return true;
 	}
-
-	return must_expand != 0;
+	return false;
 }
 
 BaseJob *GT3JobCreate( ClassAd *jobad )
@@ -239,78 +186,10 @@ BaseJob *GT3JobCreate( ClassAd *jobad )
 }
 ////////////////////////////////////////
 
-static
-const char *rsl_stringify( const MyString& src )
-{
-	int src_len = src.Length();
-	int src_pos = 0;
-	int var_pos1;
-	int var_pos2;
-	int quote_pos;
-	static MyString dst;
-
-	if ( src_len == 0 ) {
-		dst = "''";
-	} else {
-		dst = "";
-	}
-
-	while ( src_pos < src_len ) {
-		var_pos1 = src.find( "$(", src_pos );
-		var_pos2 = var_pos1 == -1 ? -1 : src.find( ")", var_pos1 );
-		quote_pos = src.find( "'", src_pos );
-		if ( var_pos2 == -1 && quote_pos == -1 ) {
-			dst += "'";
-			dst += src.Substr( src_pos, src.Length() - 1 );
-			dst += "'";
-			src_pos = src.Length();
-		} else if ( var_pos2 == -1 ||
-					(quote_pos != -1 && quote_pos < var_pos1 ) ) {
-			if ( src_pos < quote_pos ) {
-				dst += "'";
-				dst += src.Substr( src_pos, quote_pos - 1 );
-				dst += "'#";
-			}
-			dst += '"';
-			while ( src[quote_pos] == '\'' ) {
-				dst += "'";
-				quote_pos++;
-			}
-			dst += '"';
-			if ( quote_pos < src_len ) {
-				dst += '#';
-			}
-			src_pos = quote_pos;
-		} else {
-			if ( src_pos < var_pos1 ) {
-				dst += "'";
-				dst += src.Substr( src_pos, var_pos1 - 1 );
-				dst += "'#";
-			}
-			dst += src.Substr( var_pos1, var_pos2 );
-			if ( var_pos2 + 1 < src_len ) {
-				dst += '#';
-			}
-			src_pos = var_pos2 + 1;
-		}
-	}
-
-	return dst.Value();
-}
-static
-const char *rsl_stringify( const char *string )
-{
-	static MyString src;
-	src = string;
-	return rsl_stringify( src );
-}
-
 int GT3Job::probeInterval = 300;			// default value
 int GT3Job::submitInterval = 300;			// default value
-int GT3Job::restartInterval = 60;			// default value
 int GT3Job::gahpCallTimeout = 300;			// default value
 int GT3Job::maxConnectFailures = 3;			// default value
-int GT3Job::outputWaitGrowthTimeout = 15;	// default value
 
 GT3Job::GT3Job( ClassAd *classad )
 	: BaseJob( classad )
@@ -320,7 +199,8 @@ GT3Job::GT3Job( ClassAd *classad )
 	char buff2[_POSIX_PATH_MAX];
 	char iwd[_POSIX_PATH_MAX];
 	bool job_already_submitted = false;
-	char *error_string = NULL;
+	MyString error_string = "";
+	char *gahp_path = NULL;
 
 	RSL = NULL;
 	callbackRegistered = false;
@@ -335,13 +215,8 @@ GT3Job::GT3Job( ClassAd *classad )
 	globusStateBeforeFailure = 0;
 	callbackGlobusState = 0;
 	callbackGlobusStateErrorCode = 0;
-	restartingJM = false;
-	restartWhen = 0;
 	gmState = GM_INIT;
 	globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED;
-	resourcePingPending = false;
-	jmUnreachable = false;
-	jmDown = false;
 	lastProbeTime = 0;
 	probeNow = false;
 	enteredCurrentGmState = time(NULL);
@@ -349,33 +224,38 @@ GT3Job::GT3Job( ClassAd *classad )
 	lastSubmitAttempt = 0;
 	numSubmitAttempts = 0;
 	submitFailureCode = 0;
-	lastRestartReason = 0;
-	lastRestartAttempt = 0;
-	numRestartAttempts = 0;
-	numRestartAttemptsThisSubmit = 0;
 	jmProxyExpireTime = 0;
 	connect_failure_counter = 0;
-	outputWaitLastGrowth = 0;
-	// HACK!
-	retryStdioSize = true;
 	resourceManagerString = NULL;
 	myResource = NULL;
-	myProxy = NULL;
+	jobProxy = NULL;
 	gassServerUrl = NULL;
 	gramCallbackContact = NULL;
+	gahp = NULL;
 
 	// In GM_HOLD, we assme HoldReason to be set only if we set it, so make
 	// sure it's unset when we start.
-	if ( ad->LookupString( ATTR_HOLD_REASON, NULL, 0 ) != 0 ) {
-		UpdateJobAd( ATTR_HOLD_REASON, "UNDEFINED" );
+	if ( jobAd->LookupString( ATTR_HOLD_REASON, NULL, 0 ) != 0 ) {
+		jobAd->AssignExpr( ATTR_HOLD_REASON, "Undefined" );
 	}
 
-	char *gahp_path = param("GT3_GAHP");
+	jobProxy = AcquireProxy( jobAd, error_string, evaluateStateTid );
+	if ( jobProxy == NULL ) {
+		if ( error_string == "" ) {
+			error_string.sprintf( "%s is not set in the job ad",
+								  ATTR_X509_USER_PROXY );
+		}
+		goto error_exit;
+	}
+
+	gahp_path = param("GT3_GAHP");
 	if ( gahp_path == NULL ) {
 		error_string = "GT3_GAHP not defined";
 		goto error_exit;
 	}
-	gahp = new GahpClient( "GT3", gahp_path );
+	snprintf( buff, sizeof(buff), "GT3/%s",
+			  jobProxy->subject->subject_name );
+	gahp = new GahpClient( buff, gahp_path );
 	free( gahp_path );
 
 	gahp->setNotificationTimerId( evaluateStateTid );
@@ -383,68 +263,60 @@ GT3Job::GT3Job( ClassAd *classad )
 	gahp->setTimeout( gahpCallTimeout );
 
 	buff[0] = '\0';
-	ad->LookupString( ATTR_X509_USER_PROXY, buff );
+	jobAd->LookupString( ATTR_GRID_RESOURCE, buff );
 	if ( buff[0] != '\0' ) {
-		myProxy = AcquireProxy( buff, evaluateStateTid );
-		if ( myProxy == NULL ) {
-			dprintf( D_ALWAYS, "(%d.%d) error acquiring proxy!\n",
-					 procID.cluster, procID.proc );
-		}
-	} else {
-		dprintf( D_ALWAYS, "(%d.%d) %s not set in job ad!\n",
-				 procID.cluster, procID.proc, ATTR_X509_USER_PROXY );
-	}
+		const char *token;
+		MyString str = buff;
 
-	buff[0] = '\0';
-	ad->LookupString( ATTR_GLOBUS_RESOURCE, buff );
-	if ( buff[0] != '\0' ) {
-		resourceManagerString = strdup( buff );
+		str.Tokenize();
+
+		token = str.GetNextToken( " ", false );
+		if ( !token || stricmp( token, "gt3" ) ) {
+			error_string.sprintf( "%S not of type gt3", ATTR_GRID_RESOURCE );
+			goto error_exit;
+		}
+
+		token = str.GetNextToken( " ", false );
+		if ( token && *token ) {
+			resourceManagerString = strdup( token );
+		} else {
+			error_string.sprintf( "%s missing GRAM Service URL",
+								  ATTR_GRID_RESOURCE );
+			goto error_exit;
+		}
+
 	} else {
-		error_string = "GT3Resource is not set in the job ad";
+		error_string.sprintf( "%s is not set in the job ad",
+							  ATTR_GRID_RESOURCE );
 		goto error_exit;
 	}
 
-////////////////from gridmanager.C
-{
-	const char *canonical_name = GT3Resource::CanonicalName( resourceManagerString );
-	int rc;
-	ASSERT(canonical_name);
-	rc = GT3ResourcesByName.lookup( HashKey( canonical_name ),
-								 myResource );
-
-	if ( rc != 0 ) {
-		myResource = new GT3Resource( canonical_name );
-		ASSERT(myResource);
-		GT3ResourcesByName.insert( HashKey( canonical_name ),
-								myResource );
-	} else {
-		ASSERT(myResource);
-	}
-}
-//////////////////////////////////
-
-	resourceDown = false;
-	resourceStateKnown = false;
-//	myResource = resource;
-	// RegisterJob() may call our NotifyResourceUp/Down(), so be careful.
-	myResource->RegisterJob( this, job_already_submitted );
-
 	buff[0] = '\0';
-	ad->LookupString( ATTR_GLOBUS_CONTACT_STRING, buff );
-	if ( buff[0] != '\0' && strcmp( buff, NULL_JOB_CONTACT ) != 0 ) {
-		rehashJobContact( this, jobContact, buff );
-		jobContact = strdup( buff );
+	jobAd->LookupString( ATTR_GRID_JOB_ID, buff );
+	if ( buff[0] != '\0' ) {
+		SetRemoteJobId( strchr( buff, ' ' ) + 1 );
 		job_already_submitted = true;
 	}
 
-	useGridJobMonitor = true;
+	myResource = GT3Resource::FindOrCreateResource( resourceManagerString,
+													jobProxy->subject->subject_name);
+	if ( myResource == NULL ) {
+		error_string = "Failed to initialized GT3Resource object";
+		goto error_exit;
+	}
 
-	ad->LookupInteger( ATTR_GLOBUS_STATUS, globusState );
+	// RegisterJob() may call our NotifyResourceUp/Down(), so be careful.
+	myResource->RegisterJob( this );
+	if ( job_already_submitted ) {
+		myResource->AlreadySubmitted( this );
+	}
+
+	jobAd->LookupInteger( ATTR_GLOBUS_STATUS, globusState );
 
 	globusError = GLOBUS_SUCCESS;
 
 	iwd[0] = '\0';
-	if ( ad->LookupString(ATTR_JOB_IWD, iwd) && *iwd ) {
+	if ( jobAd->LookupString(ATTR_JOB_IWD, iwd) && *iwd ) {
 		int len = strlen(iwd);
 		if ( len > 1 && iwd[len - 1] != '/' ) {
 			strcat( iwd, "/" );
@@ -455,10 +327,10 @@ GT3Job::GT3Job( ClassAd *classad )
 
 	buff[0] = '\0';
 	buff2[0] = '\0';
-	if ( ad->LookupString(ATTR_JOB_OUTPUT, buff) && *buff &&
+	if ( jobAd->LookupString(ATTR_JOB_OUTPUT, buff) && *buff &&
 		 strcmp( buff, NULL_FILE ) ) {
 
-		if ( !ad->LookupBool( ATTR_TRANSFER_OUTPUT, bool_value ) ||
+		if ( !jobAd->LookupBool( ATTR_TRANSFER_OUTPUT, bool_value ) ||
 			 bool_value ) {
 
 			if ( buff[0] != '/' ) {
@@ -469,7 +341,7 @@ GT3Job::GT3Job( ClassAd *classad )
 			localOutput = strdup( buff2 );
 
 			bool_value = 1;
-			ad->LookupBool( ATTR_STREAM_OUTPUT, bool_value );
+			jobAd->LookupBool( ATTR_STREAM_OUTPUT, bool_value );
 			streamOutput = (bool_value != 0);
 			stageOutput = !streamOutput;
 		}
@@ -477,10 +349,10 @@ GT3Job::GT3Job( ClassAd *classad )
 
 	buff[0] = '\0';
 	buff2[0] = '\0';
-	if ( ad->LookupString(ATTR_JOB_ERROR, buff) && *buff &&
+	if ( jobAd->LookupString(ATTR_JOB_ERROR, buff) && *buff &&
 		 strcmp( buff, NULL_FILE ) ) {
 
-		if ( !ad->LookupBool( ATTR_TRANSFER_ERROR, bool_value ) ||
+		if ( !jobAd->LookupBool( ATTR_TRANSFER_ERROR, bool_value ) ||
 			 bool_value ) {
 
 			if ( buff[0] != '/' ) {
@@ -491,7 +363,7 @@ GT3Job::GT3Job( ClassAd *classad )
 			localError = strdup( buff2 );
 
 			bool_value = 1;
-			ad->LookupBool( ATTR_STREAM_ERROR, bool_value );
+			jobAd->LookupBool( ATTR_STREAM_ERROR, bool_value );
 			streamError = (bool_value != 0);
 			stageError = !streamError;
 		}
@@ -500,9 +372,11 @@ GT3Job::GT3Job( ClassAd *classad )
 	return;
 
  error_exit:
+		// We must ensure that the code-path from GM_HOLD doesn't depend
+		// on any initialization that's been skipped.
 	gmState = GM_HOLD;
-	if ( error_string ) {
-		UpdateJobAdString( ATTR_HOLD_REASON, error_string );
+	if ( !error_string.IsEmpty() ) {
+		jobAd->Assign( ATTR_HOLD_REASON, error_string.Value() );
 	}
 	return;
 }
@@ -511,17 +385,11 @@ GT3Job::~GT3Job()
 {
 	if ( myResource ) {
 		myResource->UnregisterJob( this );
-		// Should the GT3Resource be responsible for doing this?...
-		if ( myResource->IsEmpty() ) {
-			GT3ResourcesByName.remove( HashKey( myResource->ResourceName() ) );
-			delete myResource;
-		}
 	}
 	if ( resourceManagerString ) {
 		free( resourceManagerString );
 	}
 	if ( jobContact ) {
-		rehashJobContact( this, jobContact, NULL );
 		free( jobContact );
 	}
 	if ( RSL ) {
@@ -533,8 +401,8 @@ GT3Job::~GT3Job()
 	if ( localError ) {
 		free( localError );
 	}
-	if ( myProxy ) {
-		ReleaseProxy( myProxy, evaluateStateTid );
+	if ( jobProxy ) {
+		ReleaseProxy( jobProxy, evaluateStateTid );
 	}
 	if ( gassServerUrl ) {
 		free( gassServerUrl );
@@ -553,14 +421,29 @@ void GT3Job::Reconfig()
 	gahp->setTimeout( gahpCallTimeout );
 }
 
+void GT3Job::SetRemoteJobId( const char *job_id )
+{
+	free( jobContact );
+	if ( job_id ) {
+		jobContact = strdup( job_id );
+	} else {
+		jobContact = NULL;
+	}
+
+	MyString full_job_id;
+	if ( job_id ) {
+		full_job_id.sprintf( "gt3 %s", job_id );
+	}
+	BaseJob::SetRemoteJobId( full_job_id.Value() );
+}
+
 int GT3Job::doEvaluateState()
 {
-	bool connect_failure_jobmanager = false;
-	bool connect_failure_gatekeeper = false;
+	bool connect_failure = false;
 	int old_gm_state;
 	int old_globus_state;
 	bool reevaluate_state = true;
-	time_t now;	// make sure you set this before every use!!!
+	time_t now = time(NULL);
 
 	bool done;
 	int rc;
@@ -573,14 +456,12 @@ int GT3Job::doEvaluateState()
 			"(%d.%d) doEvaluateState called: gmState %s, globusState %d\n",
 			procID.cluster,procID.proc,GMStateNames[gmState],globusState);
 
-		// We don't include jmDown here because we don't want it to block
-		// connections to the gatekeeper (particularly restarts) and any
-		// state that contacts to the jobmanager should be jumping to
-		// GM_RESTART instead.
-	if ( !resourceStateKnown || resourcePingPending || resourceDown ) {
-		gahp->setMode( GahpClient::results_only );
-	} else {
-		gahp->setMode( GahpClient::normal );
+	if ( gahp ) {
+		if ( !resourceStateKnown || resourcePingPending || resourceDown ) {
+			gahp->setMode( GahpClient::results_only );
+		} else {
+			gahp->setMode( GahpClient::normal );
+		}
 	}
 
 	do {
@@ -596,17 +477,18 @@ int GT3Job::doEvaluateState()
 			// constructor is called while we're connected to the schedd).
 			int err;
 
-			if ( gahp->Initialize( myProxy ) == false ) {
+			if ( gahp->Initialize( jobProxy ) == false ) {
 				dprintf( D_ALWAYS, "(%d.%d) Error initializing GAHP\n",
 						 procID.cluster, procID.proc );
 				
-				UpdateJobAdString( ATTR_HOLD_REASON, "Failed to initialize GAHP" );
+				jobAd->Assign( ATTR_HOLD_REASON, "Failed to initialize GAHP" );
 				gmState = GM_HOLD;
 				break;
 			}
 
-			gahp->setDelegProxy( myProxy );
+			gahp->setDelegProxy( jobProxy );
 
+			GahpClient::mode saved_mode = gahp->getMode();
 			gahp->setMode( GahpClient::blocking );
 
 			err = gahp->gt3_gram_client_callback_allow( gt3GramCallbackHandler,
@@ -616,7 +498,7 @@ int GT3Job::doEvaluateState()
 				dprintf( D_ALWAYS,
 						 "(%d.%d) Error enabling GRAM callback, err=%d\n", 
 						 procID.cluster, procID.proc, err );
-				UpdateJobAdString( ATTR_HOLD_REASON, "Failed to initialize GAHP" );
+				jobAd->Assign( ATTR_HOLD_REASON, "Failed to initialize GAHP" );
 				gmState = GM_HOLD;
 				break;
 			}
@@ -625,12 +507,12 @@ int GT3Job::doEvaluateState()
 			if ( err != GLOBUS_SUCCESS ) {
 				dprintf( D_ALWAYS, "(%d.%d) Error enabling GASS server, err=%d\n",
 						 procID.cluster, procID.proc, err );
-				UpdateJobAdString( ATTR_HOLD_REASON, "Failed to initialize GAHP" );
+				jobAd->Assign( ATTR_HOLD_REASON, "Failed to initialize GAHP" );
 				gmState = GM_HOLD;
 				break;
 			}
 
-			gahp->setMode( GahpClient::normal );
+			gahp->setMode( saved_mode );
 
 			gmState = GM_START;
 			} break;
@@ -639,9 +521,6 @@ int GT3Job::doEvaluateState()
 			// one-time initialization has been taken care of.
 			// If we think there's a running jobmanager
 			// out there, we try to register for callbacks (in GM_REGISTER).
-			// The one way jobs can end up back in this state is if we
-			// attempt a restart of a jobmanager only to be told that the
-			// old jobmanager process is still alive.
 			errorString = "";
 			if ( jobContact == NULL ) {
 				gmState = GM_CLEAR_REQUEST;
@@ -707,7 +586,7 @@ int GT3Job::doEvaluateState()
 			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
 				 rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
 				 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
-				connect_failure_jobmanager = true;
+				connect_failure = true;
 				break;
 			}
 			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_JOB_QUERY_DENIAL ) {
@@ -756,12 +635,11 @@ int GT3Job::doEvaluateState()
 				break;
 			}
 			if ( numSubmitAttempts >= MAX_SUBMIT_ATTEMPTS ) {
-				UpdateJobAdString( ATTR_HOLD_REASON,
-									"Attempts to submit failed" );
+				jobAd->Assign( ATTR_HOLD_REASON,
+							   "Attempts to submit failed" );
 				gmState = GM_HOLD;
 				break;
 			}
-			now = time(NULL);
 			// After a submit, wait at least submitInterval before trying
 			// another one.
 			if ( now >= lastSubmitAttempt + submitInterval ) {
@@ -789,15 +667,11 @@ int GT3Job::doEvaluateState()
 				myResource->SubmitComplete(this);
 				lastSubmitAttempt = time(NULL);
 				numSubmitAttempts++;
-				jmProxyExpireTime = myProxy->expiration_time;
+				jmProxyExpireTime = jobProxy->expiration_time;
 				if ( rc == GLOBUS_SUCCESS ) {
 					callbackRegistered = true;
-					rehashJobContact( this, jobContact, job_contact );
-						// job_contact was strdup()ed for us. Now we take
-						// responsibility for free()ing it.
-					jobContact = job_contact;
-					UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
-									   job_contact );
+					SetRemoteJobId( job_contact );
+					free( job_contact );
 					gmState = GM_SUBMIT_SAVE;
 				} else {
 					// unhandled error
@@ -805,8 +679,8 @@ int GT3Job::doEvaluateState()
 					dprintf(D_ALWAYS,"(%d.%d)    RSL='%s'\n",
 							procID.cluster, procID.proc,RSL->Value());
 					submitFailureCode = globusError = rc;
-					WriteGT3SubmitFailedEventToUserLog( ad,
-														submitFailureCode );
+					WriteGlobusSubmitFailedEventToUserLog( jobAd,
+														   submitFailureCode );
 					gmState = GM_UNSUBMITTED;
 					reevaluate_state = true;
 				}
@@ -848,7 +722,8 @@ int GT3Job::doEvaluateState()
 					// unhandled error
 					LOG_GLOBUS_ERROR( "globus_gram_client_job_start()", rc );
 					globusError = rc;
-					WriteGT3SubmitFailedEventToUserLog( ad, globusError );
+					WriteGlobusSubmitFailedEventToUserLog( jobAd,
+														   globusError );
 					gmState = GM_CANCEL;
 				} else {
 					gmState = GM_SUBMITTED;
@@ -870,11 +745,10 @@ int GT3Job::doEvaluateState()
 					reevaluate_state = true;
 					break;
 				}
-				if ( jmProxyExpireTime < myProxy->expiration_time ) {
+				if ( jmProxyExpireTime < jobProxy->expiration_time ) {
 					gmState = GM_REFRESH_PROXY;
 					break;
 				}
-				now = time(NULL);
 				if ( lastProbeTime < enteredCurrentGmState ) {
 					lastProbeTime = enteredCurrentGmState;
 				}
@@ -913,7 +787,7 @@ rc=0;
 					gmState = GM_CANCEL;
 					break;
 				}
-				jmProxyExpireTime = myProxy->expiration_time;
+				jmProxyExpireTime = jobProxy->expiration_time;
 				gmState = GM_SUBMITTED;
 			}
 			} break;
@@ -972,16 +846,8 @@ rc=0;
 			} else {
 				// Clear the contact string here because it may not get
 				// cleared in GM_CLEAR_REQUEST (it might go to GM_HOLD first).
-				if ( jobContact != NULL ) {
-					rehashJobContact( this, jobContact, NULL );
-					free( jobContact );
-					myResource->CancelSubmit( this );
-					jobContact = NULL;
-					UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
-									   NULL_JOB_CONTACT );
-					requestScheddUpdate( this );
-					jmDown = false;
-				}
+				SetRemoteJobId( NULL );
+				myResource->CancelSubmit( this );
 				gmState = GM_CLEAR_REQUEST;
 			}
 			} break;
@@ -1031,14 +897,8 @@ rc=0;
 				break;
 			}
 
-			rehashJobContact( this, jobContact, NULL );
-			free( jobContact );
 			myResource->CancelSubmit( this );
-			jobContact = NULL;
-			jmDown = false;
-			UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
-							   NULL_JOB_CONTACT );
-			requestScheddUpdate( this );
+			SetRemoteJobId( NULL );
 
 			if ( condorState == REMOVED ) {
 				gmState = GM_DELETE;
@@ -1076,7 +936,7 @@ rc=0;
 			}
 			// Only allow a rematch *if* we are also going to perform a resubmit
 			if ( wantResubmit || doResubmit ) {
-				ad->EvalBool(ATTR_REMATCH_CHECK,NULL,wantRematch);
+				jobAd->EvalBool(ATTR_REMATCH_CHECK,NULL,wantRematch);
 			}
 			if ( wantResubmit ) {
 				wantResubmit = 0;
@@ -1092,30 +952,19 @@ rc=0;
 			}
 			if ( globusState != GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED ) {
 				globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED;
-				UpdateJobAdInt( ATTR_GLOBUS_STATUS, globusState );
+				jobAd->Assign( ATTR_GLOBUS_STATUS, globusState );
 			}
 			globusStateErrorCode = 0;
 			globusError = 0;
-			lastRestartReason = 0;
-			numRestartAttemptsThisSubmit = 0;
 			errorString = "";
 			ClearCallbacks();
-			// HACK!
-			retryStdioSize = true;
-			if ( jobContact != NULL ) {
-				rehashJobContact( this, jobContact, NULL );
-				free( jobContact );
-				myResource->CancelSubmit( this );
-				jobContact = NULL;
-				jmDown = false;
-				UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
-								   NULL_JOB_CONTACT );
-			}
+			SetRemoteJobId( NULL );
+			myResource->CancelSubmit( this );
 			JobIdle();
 			if ( submitLogged ) {
 				JobEvicted();
 				if ( !evictLogged ) {
-					WriteEvictEventToUserLog( ad );
+					WriteEvictEventToUserLog( jobAd );
 					evictLogged = true;
 				}
 			}
@@ -1127,9 +976,9 @@ rc=0;
 
 				// Set ad attributes so the schedd finds a new match.
 				int dummy;
-				if ( ad->LookupBool( ATTR_JOB_MATCHED, dummy ) != 0 ) {
-					UpdateJobAdBool( ATTR_JOB_MATCHED, 0 );
-					UpdateJobAdInt( ATTR_CURRENT_HOSTS, 0 );
+				if ( jobAd->LookupBool( ATTR_JOB_MATCHED, dummy ) != 0 ) {
+					jobAd->Assign( ATTR_JOB_MATCHED, false );
+					jobAd->Assign( ATTR_CURRENT_HOSTS, 0 );
 				}
 
 				// If we are rematching, we need to forget about this job
@@ -1167,7 +1016,7 @@ rc=0;
 			if ( jobContact &&
 				 globusState != GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNKNOWN ) {
 				globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNKNOWN;
-				UpdateJobAdInt( ATTR_GLOBUS_STATUS, globusState );
+				jobAd->Assign( ATTR_GLOBUS_STATUS, globusState );
 				//UpdateGlobusState( GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNKNOWN, 0 );
 			}
 			// If the condor state is already HELD, then someone already
@@ -1179,8 +1028,8 @@ rc=0;
 				char holdReason[1024];
 				holdReason[0] = '\0';
 				holdReason[sizeof(holdReason)-1] = '\0';
-				ad->LookupString( ATTR_HOLD_REASON, holdReason,
-								  sizeof(holdReason) - 1 );
+				jobAd->LookupString( ATTR_HOLD_REASON, holdReason,
+									 sizeof(holdReason) - 1 );
 				if ( holdReason[0] == '\0' && errorString != "" ) {
 					strncpy( holdReason, errorString.Value(),
 							 sizeof(holdReason) - 1 );
@@ -1207,8 +1056,7 @@ rc=0;
 			// The proxy for this job is either expired or about to expire.
 			// If requested, put the job on hold. Otherwise, wait for the
 			// proxy to be refreshed, then resume handling the job.
-			now = time(NULL);
-			if ( myProxy->expiration_time > JM_MIN_PROXY_TIME + now ) {
+			if ( jobProxy->expiration_time > JM_MIN_PROXY_TIME + now ) {
 				gmState = GM_START;
 			} else {
 				// Do nothing. Our proxy is about to expire.
@@ -1236,7 +1084,9 @@ rc=0;
 			enteredCurrentGmState = time(NULL);
 			// If we were waiting for a pending globus call, we're not
 			// anymore so purge it.
-			gahp->purgePendingRequests();
+			if ( gahp ) {
+				gahp->purgePendingRequests();
+			}
 			// If we were calling a globus call that used RSL, we're done
 			// with it now, so free it.
 			if ( RSL ) {
@@ -1248,8 +1098,7 @@ rc=0;
 
 	} while ( reevaluate_state );
 
-	if ( ( connect_failure_jobmanager || connect_failure_gatekeeper ) && 
-		 !resourceDown ) {
+	if ( connect_failure && !resourceDown ) {
 		if ( connect_failure_counter < maxConnectFailures ) {
 				// We are seeing a lot of failures to connect
 				// with Globus 2.2 libraries, often due to GSI not able 
@@ -1265,43 +1114,11 @@ rc=0;
 			dprintf(D_FULLDEBUG,
 				"(%d.%d) Connection failure, requesting a ping of the resource\n",
 				procID.cluster,procID.proc);
-			if ( connect_failure_jobmanager ) {
-				jmUnreachable = true;
-			}
-			resourcePingPending = true;
-			myResource->RequestPing( this );
+			RequestPing();
 		}
 	}
 
 	return TRUE;
-}
-
-void GT3Job::NotifyResourceDown()
-{
-	resourceStateKnown = true;
-	if ( resourceDown == false ) {
-		WriteGT3ResourceDownEventToUserLog( ad );
-	}
-	resourceDown = true;
-	jmUnreachable = false;
-	resourcePingPending = false;
-	// set downtime timestamp?
-	SetEvaluateState();
-}
-
-void GT3Job::NotifyResourceUp()
-{
-	resourceStateKnown = true;
-	if ( resourceDown == true ) {
-		WriteGT3ResourceUpEventToUserLog( ad );
-	}
-	resourceDown = false;
-	if ( jmUnreachable ) {
-		jmDown = true;
-	}
-	jmUnreachable = false;
-	resourcePingPending = false;
-	SetEvaluateState();
 }
 
 bool GT3Job::AllowTransition( int new_state, int old_state )
@@ -1360,8 +1177,8 @@ void GT3Job::UpdateGlobusState( int new_state, int new_error_code )
 					//   certain errors (ones we know are submit-related)?
 				submitFailureCode = new_error_code;
 				if ( !submitFailedLogged ) {
-					WriteGT3SubmitFailedEventToUserLog( ad,
-														submitFailureCode );
+					WriteGlobusSubmitFailedEventToUserLog( jobAd,
+														   submitFailureCode );
 					submitFailedLogged = true;
 				}
 			} else {
@@ -1369,13 +1186,15 @@ void GT3Job::UpdateGlobusState( int new_state, int new_error_code )
 					// the user-log and increment the globus submits count.
 				int num_globus_submits = 0;
 				if ( !submitLogged ) {
-					WriteGT3SubmitEventToUserLog( ad );
+						// The GlobusSubmit event is now deprecated
+					WriteGlobusSubmitEventToUserLog( jobAd );
+					WriteGridSubmitEventToUserLog( jobAd );
 					submitLogged = true;
 				}
-				ad->LookupInteger( ATTR_NUM_GLOBUS_SUBMITS,
-								   num_globus_submits );
+				jobAd->LookupInteger( ATTR_NUM_GLOBUS_SUBMITS,
+									  num_globus_submits );
 				num_globus_submits++;
-				UpdateJobAdInt( ATTR_NUM_GLOBUS_SUBMITS, num_globus_submits );
+				jobAd->Assign( ATTR_NUM_GLOBUS_SUBMITS, num_globus_submits );
 			}
 		}
 		if ( (new_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_ACTIVE ||
@@ -1383,14 +1202,14 @@ void GT3Job::UpdateGlobusState( int new_state, int new_error_code )
 			  new_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_DONE ||
 			  new_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_SUSPENDED)
 			 && !executeLogged ) {
-			WriteExecuteEventToUserLog( ad );
+			WriteExecuteEventToUserLog( jobAd );
 			executeLogged = true;
 		}
 
 		if ( new_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED ) {
 			globusStateBeforeFailure = globusState;
 		} else {
-			UpdateJobAdInt( ATTR_GLOBUS_STATUS, new_state );
+			jobAd->Assign( ATTR_GLOBUS_STATUS, new_state );
 		}
 
 		globusState = new_state;
@@ -1452,14 +1271,14 @@ MyString *GT3Job::buildSubmitRSL()
 	char *attr_value = NULL;
 	char *rsl_suffix = NULL;
 
-	if ( ad->LookupString( ATTR_GLOBUS_RSL, &rsl_suffix ) &&
+	if ( jobAd->LookupString( ATTR_GLOBUS_RSL, &rsl_suffix ) &&
 						   rsl_suffix[0] == '&' ) {
 		*rsl = rsl_suffix;
 		free( rsl_suffix );
 		return rsl;
 	}
 
-	if ( ad->LookupString(ATTR_JOB_IWD, &attr_value) && *attr_value ) {
+	if ( jobAd->LookupString(ATTR_JOB_IWD, &attr_value) && *attr_value ) {
 		iwd = attr_value;
 		int len = strlen(attr_value);
 		if ( len > 1 && attr_value[len - 1] != '/' ) {
@@ -1491,10 +1310,10 @@ MyString *GT3Job::buildSubmitRSL()
 	if ( attr_value == NULL ) {
 			// didn't find any executable in the spool directory,
 			// so use what is explicitly stated in the job ad
-		ad->LookupString( ATTR_JOB_CMD, &attr_value );
+		jobAd->LookupString( ATTR_JOB_CMD, &attr_value );
 	}
 	*rsl += "(executable=";
-	if ( !ad->LookupBool( ATTR_TRANSFER_EXECUTABLE, transfer ) || transfer ) {
+	if ( !jobAd->LookupBool( ATTR_TRANSFER_EXECUTABLE, transfer ) || transfer ) {
 		buff = "$(GRIDMANAGER_GASS_URL)/";
 		if ( attr_value[0] != '/' ) {
 			buff += iwd;
@@ -1507,7 +1326,7 @@ MyString *GT3Job::buildSubmitRSL()
 	free( attr_value );
 	attr_value = NULL;
 
-	if ( ad->LookupString(ATTR_JOB_REMOTE_IWD, &attr_value) && *attr_value ) {
+	if ( jobAd->LookupString(ATTR_JOB_REMOTE_IWD, &attr_value) && *attr_value ) {
 		*rsl += ")(directory=";
 		*rsl += rsl_stringify( attr_value );
 
@@ -1532,19 +1351,47 @@ MyString *GT3Job::buildSubmitRSL()
 		attr_value = NULL;
 	}
 
-	if ( ad->LookupString(ATTR_JOB_ARGUMENTS, &attr_value) && *attr_value ) {
-		*rsl += ")(arguments=";
-		*rsl += attr_value;
-	}
-	if ( attr_value != NULL ) {
-		free( attr_value );
-		attr_value = NULL;
+	{
+		ArgList args;
+		MyString arg_errors;
+		MyString rsl_args;
+		if(!args.AppendArgsFromClassAd(jobAd,&arg_errors)) {
+			dprintf(D_ALWAYS,"(%d.%d) Failed to read job arguments: %s\n",
+					procID.cluster, procID.proc, arg_errors.Value());
+			errorString.sprintf("Failed to read job arguments: %s\n",
+					arg_errors.Value());
+			return NULL;
+		}
+		if(args.Count() != 0) {
+			if(args.InputWasV1()) {
+					// In V1 syntax, the user's input _is_ RSL
+				if(!args.GetArgsStringV1Raw(&rsl_args,&arg_errors)) {
+					dprintf(D_ALWAYS,
+							"(%d.%d) Failed to get job arguments: %s\n",
+							procID.cluster,procID.proc,arg_errors.Value());
+					errorString.sprintf("Failed to get job arguments: %s\n",
+							arg_errors.Value());
+					return NULL;
+				}
+			}
+			else {
+					// In V2 syntax, we convert the ArgList to RSL
+				for(int i=0;i<args.Count();i++) {
+					if(i) {
+						rsl_args += ' ';
+					}
+					rsl_args += rsl_stringify(args.GetArg(i));
+				}
+			}
+			*rsl += ")(arguments=";
+			*rsl += rsl_args;
+		}
 	}
 
-	if ( ad->LookupString(ATTR_JOB_INPUT, &attr_value) && *attr_value &&
+	if ( jobAd->LookupString(ATTR_JOB_INPUT, &attr_value) && *attr_value &&
 		 strcmp( attr_value, NULL_FILE ) ) {
 		*rsl += ")(stdin=";
-		if ( !ad->LookupBool( ATTR_TRANSFER_INPUT, transfer ) || transfer ) {
+		if ( !jobAd->LookupBool( ATTR_TRANSFER_INPUT, transfer ) || transfer ) {
 			buff = "$(GRIDMANAGER_GASS_URL)/";
 			if ( attr_value[0] != '/' ) {
 				buff += iwd;
@@ -1568,7 +1415,7 @@ MyString *GT3Job::buildSubmitRSL()
 		if ( stageOutput ) {
 			*rsl += ")(stdout=$(GLOBUS_CACHED_STDOUT)";
 		} else {
-			if ( ad->LookupString(ATTR_JOB_OUTPUT, &attr_value) &&
+			if ( jobAd->LookupString(ATTR_JOB_OUTPUT, &attr_value) &&
 				 *attr_value && strcmp( attr_value, NULL_FILE ) ) {
 				*rsl += ")(stdout=";
 				*rsl += rsl_stringify( attr_value );
@@ -1588,7 +1435,7 @@ MyString *GT3Job::buildSubmitRSL()
 		if ( stageError ) {
 			*rsl += ")(stderr=$(GLOBUS_CACHED_STDERR)";
 		} else {
-			if ( ad->LookupString(ATTR_JOB_ERROR, &attr_value) &&
+			if ( jobAd->LookupString(ATTR_JOB_ERROR, &attr_value) &&
 				 *attr_value && strcmp( attr_value, NULL_FILE ) ) {
 				*rsl += ")(stderr=";
 				*rsl += rsl_stringify( attr_value );
@@ -1600,7 +1447,7 @@ MyString *GT3Job::buildSubmitRSL()
 		}
 	}
 
-	if ( ad->LookupString(ATTR_TRANSFER_INPUT_FILES, &attr_value) &&
+	if ( jobAd->LookupString(ATTR_TRANSFER_INPUT_FILES, &attr_value) &&
 		 *attr_value ) {
 		StringList filelist( attr_value, "," );
 		if ( !filelist.isEmpty() ) {
@@ -1618,7 +1465,7 @@ MyString *GT3Job::buildSubmitRSL()
 				*rsl += rsl_stringify( buff );
 				*rsl += ' ';
 				buff = riwd;
-				buff += basename( filename );
+				buff += condor_basename( filename );
 				*rsl += rsl_stringify( buff );
 				*rsl += ')';
 			}
@@ -1629,7 +1476,7 @@ MyString *GT3Job::buildSubmitRSL()
 		attr_value = NULL;
 	}
 
-	if ( ( ad->LookupString(ATTR_TRANSFER_OUTPUT_FILES, &attr_value) &&
+	if ( ( jobAd->LookupString(ATTR_TRANSFER_OUTPUT_FILES, &attr_value) &&
 		   *attr_value ) || stageOutput || stageError ) {
 		StringList filelist( attr_value, "," );
 		if ( !filelist.isEmpty() || stageOutput || stageError ) {
@@ -1650,22 +1497,37 @@ MyString *GT3Job::buildSubmitRSL()
 				*rsl += ')';
 			}
 
+			char *remaps = NULL;
+			char new_name[_POSIX_PATH_MAX*3];
+			jobAd->LookupString( ATTR_TRANSFER_OUTPUT_REMAPS, &remaps );
+
 			filelist.rewind();
 			while ( (filename = filelist.next()) != NULL ) {
 				// append file pairs to rsl
 				*rsl += '(';
-				buff = riwd;
-				buff += basename( filename );
-				*rsl += rsl_stringify( buff );
-				*rsl += ' ';
-				buff = "$(GRIDMANAGER_GASS_URL)";
+				buff = "";
 				if ( filename[0] != '/' ) {
-					buff += iwd;
+					buff = riwd;
 				}
 				buff += filename;
 				*rsl += rsl_stringify( buff );
+				*rsl += ' ';
+				buff = "$(GRIDMANAGER_GASS_URL)";
+				if ( remaps && filename_remap_find( remaps,
+												condor_basename( filename ),
+												new_name ) ) {
+					if ( new_name[0] != '/' ) {
+						buff += iwd;
+					}
+					buff += new_name;
+				} else {
+					buff += iwd;
+					buff += condor_basename( filename );
+				}
+				*rsl += rsl_stringify( buff );
 				*rsl += ')';
 			}
+			free( remaps );
 		}
 	}
 	if ( attr_value ) {
@@ -1673,15 +1535,22 @@ MyString *GT3Job::buildSubmitRSL()
 		attr_value = NULL;
 	}
 
-	if ( ad->LookupString(ATTR_JOB_ENVIRONMENT, &attr_value) && *attr_value ) {
-		Environ env_obj;
-		env_obj.add_string(attr_value);
-		char **env_vec = env_obj.get_vector();
+	{
+		Env envobj;
+		MyString env_errors;
+		if(!envobj.MergeFrom(jobAd,&env_errors)) {
+			dprintf(D_ALWAYS,"(%d.%d) Failed to read job environment: %s\n",
+					procID.cluster, procID.proc, env_errors.Value());
+			errorString.sprintf("Failed to read job environment: %s\n",
+					env_errors.Value());
+			return NULL;
+		}
+		char **env_vec = envobj.getStringArray();
 		int i = 0;
 		if ( env_vec[0] ) {
 			*rsl += ")(environment=";
 		}
-		while (env_vec[i]) {
+		for ( i = 0; env_vec[i]; i++ ) {
 			char *equals = strchr(env_vec[i],'=');
 			if ( !equals ) {
 				// this environment entry has no equals sign!?!?
@@ -1691,9 +1560,10 @@ MyString *GT3Job::buildSubmitRSL()
 			buff.sprintf( "(%s %s)", env_vec[i],
 							 rsl_stringify(equals + 1) );
 			*rsl += buff;
-			i++;
 		}
+		deleteStringArray(env_vec);
 	}
+
 	if ( attr_value ) {
 		free( attr_value );
 		attr_value = NULL;
@@ -1702,7 +1572,7 @@ MyString *GT3Job::buildSubmitRSL()
 	buff.sprintf( ")(proxy_timeout=%d", JM_MIN_PROXY_TIME );
 	*rsl += buff;
 
-	buff.sprintf( ")(save_state=yes)(two_phase=%d)"
+	buff.sprintf( ")"
 				  "(remote_io_url=$(GRIDMANAGER_GASS_URL))",
 				  JM_COMMIT_TIMEOUT );
 	*rsl += buff;
@@ -1771,164 +1641,3 @@ void GT3Job::DeleteOutput()
 	umask( old_umask );
 }
 
-static bool
-WriteGT3SubmitEventToUserLog( ClassAd *job_ad )
-{
-	int cluster, proc;
-	int version;
-	char contact[256];
-	UserLog *ulog = InitializeUserLog( job_ad );
-	if ( ulog == NULL ) {
-		// User doesn't want a log
-		return true;
-	}
-
-	job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
-	job_ad->LookupInteger( ATTR_PROC_ID, proc );
-
-	dprintf( D_FULLDEBUG, 
-			 "(%d.%d) Writing globus submit record to user logfile\n",
-			 cluster, proc );
-
-	GlobusSubmitEvent event;
-
-	contact[0] = '\0';
-	job_ad->LookupString( ATTR_GLOBUS_RESOURCE, contact,
-						   sizeof(contact) - 1 );
-	event.rmContact = strnewp(contact);
-
-	contact[0] = '\0';
-	job_ad->LookupString( ATTR_GLOBUS_CONTACT_STRING, contact,
-						   sizeof(contact) - 1 );
-	event.jmContact = strnewp(contact);
-
-	version = 0;
-	job_ad->LookupInteger( ATTR_GLOBUS_GRAM_VERSION, version );
-	event.restartableJM = version >= GRAM_V_1_5;
-
-	int rc = ulog->writeEvent(&event);
-	delete ulog;
-
-	if (!rc) {
-		dprintf( D_ALWAYS,
-				 "(%d.%d) Unable to log ULOG_GLOBUS_SUBMIT event\n",
-				 cluster, proc );
-		return false;
-	}
-
-	return true;
-}
-
-static bool
-WriteGT3SubmitFailedEventToUserLog( ClassAd *job_ad, int failure_code )
-{
-	int cluster, proc;
-	char buf[1024];
-
-	UserLog *ulog = InitializeUserLog( job_ad );
-	if ( ulog == NULL ) {
-		// User doesn't want a log
-		return true;
-	}
-
-	job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
-	job_ad->LookupInteger( ATTR_PROC_ID, proc );
-
-	dprintf( D_FULLDEBUG, 
-			 "(%d.%d) Writing submit-failed record to user logfile\n",
-			 cluster, proc );
-
-	GlobusSubmitFailedEvent event;
-
-	snprintf( buf, 1024, "%d %s", failure_code,
-			  "" );
-	event.reason =  strnewp(buf);
-
-	int rc = ulog->writeEvent(&event);
-	delete ulog;
-
-	if (!rc) {
-		dprintf( D_ALWAYS,
-				 "(%d.%d) Unable to log ULOG_GLOBUS_SUBMIT_FAILED event\n",
-				 cluster, proc);
-		return false;
-	}
-
-	return true;
-}
-
-static bool
-WriteGT3ResourceUpEventToUserLog( ClassAd *job_ad )
-{
-	int cluster, proc;
-	char contact[256];
-	UserLog *ulog = InitializeUserLog( job_ad );
-	if ( ulog == NULL ) {
-		// User doesn't want a log
-		return true;
-	}
-
-	job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
-	job_ad->LookupInteger( ATTR_PROC_ID, proc );
-
-	dprintf( D_FULLDEBUG, 
-			 "(%d.%d) Writing globus up record to user logfile\n",
-			 cluster, proc );
-
-	GlobusResourceUpEvent event;
-
-	contact[0] = '\0';
-	job_ad->LookupString( ATTR_GLOBUS_RESOURCE, contact,
-						   sizeof(contact) - 1 );
-	event.rmContact =  strnewp(contact);
-
-	int rc = ulog->writeEvent(&event);
-	delete ulog;
-
-	if (!rc) {
-		dprintf( D_ALWAYS,
-				 "(%d.%d) Unable to log ULOG_GLOBUS_RESOURCE_UP event\n",
-				 cluster, proc );
-		return false;
-	}
-
-	return true;
-}
-
-static bool
-WriteGT3ResourceDownEventToUserLog( ClassAd *job_ad )
-{
-	int cluster, proc;
-	char contact[256];
-	UserLog *ulog = InitializeUserLog( job_ad );
-	if ( ulog == NULL ) {
-		// User doesn't want a log
-		return true;
-	}
-
-	job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
-	job_ad->LookupInteger( ATTR_PROC_ID, proc );
-
-	dprintf( D_FULLDEBUG, 
-			 "(%d.%d) Writing globus down record to user logfile\n",
-			 cluster, proc );
-
-	GlobusResourceDownEvent event;
-
-	contact[0] = '\0';
-	job_ad->LookupString( ATTR_GLOBUS_RESOURCE, contact,
-						   sizeof(contact) - 1 );
-	event.rmContact =  strnewp(contact);
-
-	int rc = ulog->writeEvent(&event);
-	delete ulog;
-
-	if (!rc) {
-		dprintf( D_ALWAYS,
-				 "(%d.%d) Unable to log ULOG_GLOBUS_RESOURCE_DOWN event\n",
-				 cluster, proc );
-		return false;
-	}
-
-	return true;
-}

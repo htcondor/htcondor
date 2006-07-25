@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -102,6 +102,12 @@ public:
 			pass in the name of the collector you got it from.
 		*/
 	Daemon( ClassAd* ad, daemon_t type, const char* pool );
+
+		/// Copy constructor (implemented via deepCopy())
+	Daemon( const Daemon &copy );
+
+		/// Overloaded assignment operator (implemented via deepCopy())
+	Daemon& operator = ( const Daemon& );
 
 		/// Destructor.
 	virtual ~Daemon();
@@ -250,7 +256,8 @@ public:
 		  @param sec Number of seconds for the timeout on connect().
 		  @return A new ReliSock object connected to the daemon.  
 		  */
-	ReliSock* reliSock( int sec = 0, CondorError* errstack = 0 );
+	ReliSock* reliSock( int sec = 0, CondorError* errstack = 0,
+	                    bool non_blocking = false );
 
 		/**	Create a new SafeSock object, connected to the daemon.
 		  Callers can optionally specify a timeout to use for the
@@ -259,7 +266,8 @@ public:
 		  @param sec Number of seconds for the timeout on connect().
 		  @return A new SafeSock object connected to the daemon.  
 		  */
-	SafeSock* safeSock( int sec = 0, CondorError* errstack = 0 );
+	SafeSock* safeSock( int sec = 0, CondorError* errstack = 0,
+	                    bool non_blocking = false );
 
 public:
 		/** Send the given command to the daemon.  The caller gives
@@ -301,6 +309,7 @@ public:
 		  @param cmd The command you want to send.
 		  @param st The type of the Sock you want to use.
 		  @param sec The timeout you want to use on your Sock.
+		  @param errstack NULL or error stack to dump errors into.
 		  @return NULL on error, or the Sock object to use for the
 		  rest of the command on success.
 		  */
@@ -312,15 +321,101 @@ public:
 		  gives the command they want to send, and a pointer to the
 		  Sock they want us to use to send it over.  This method will
 		  then place that Sock in encode() mode, send the command, and
-		  return true on success, false on failure.
+		  return true on success, false on failure.  See
+		  startCommand_nonblocking for a non-blocking interface.
 		  @param cmd The command you want to send.
 		  @param sock The Sock you want to use.
 		  @param sec The timeout you want to use on your Sock.
-		  @return NULL on error, or the Sock object to use for the
-		  rest of the command on success.
+		  @param errstack NULL or error stack to dump errors into.
+		  @return false on error, true on success.
 		*/
 	bool startCommand( int cmd, Sock* sock,
 			int sec = 0, CondorError* errstack = NULL );
+			
+		/** Start sending the given command to the daemon.  This
+			command claims to be nonblocking, but currently it only
+			uses nonblocking connects; everything else is blocking.
+			The caller gives the command they want to send, and the
+			type of Sock they want to use to send it over.  This
+			method will then allocate a new Sock of the right type,
+			send the command, and callback the specified function with
+			success indicator and a pointer to the sock while it is
+			still in encode() mode. THE CALLBACK FUNCTION (if any) IS
+			RESPONSIBLE FOR DELETING THE SOCK.
+			The caller MUST ensure that sock and errstack do not get
+			deleted before this operation completes.  It is ok if the
+			daemon client object itself gets deleted before then.
+			Note that this function will only work in DaemonCore
+			applications, because it relies on the DaemonCore non-blocking
+			event callbacks.
+			@param cmd The command you want to send.
+			@param st The type of the Sock you want to use.
+			@param sec The timeout you want to use on your Sock.
+			@param errstack NULL or error stack to dump errors into.
+			@param errstack NULL or errstack to dump errors into
+			@param callback_fn NULL or function to call when finished
+			                   If NULL and sock is UDP, will return
+			                   StartCommandWouldBlock if TCP session key
+			                   setup is in progress.
+			@param misc_data any data caller wants passed to callback_fn
+			@return see definition of StartCommandResult enumeration.
+		  */
+	StartCommandResult startCommand_nonblocking( int cmd, Stream::stream_type st, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data );
+
+		/** Start sending the given command to the daemon.  This
+			command claims to be nonblocking, but currently it only
+			uses nonblocking connects; everything else is blocking.
+			The caller gives the command they want to send, and a
+			pointer to the Sock they want us to use to send it over.
+			This method will then place that Sock in encode() mode,
+			send the command, and callback the specified function with
+			true on success, false on failure.
+			The caller MUST ensure that sock and errstack do not get
+			deleted before this operation completes.  It is ok if the
+			daemon client object itself gets deleted before then.
+			Note that this function will only work in DaemonCore
+			applications, because it relies on the DaemonCore non-blocking
+			event callbacks.
+			@param cmd The command you want to send.
+			@param sock The	Sock you want to use.
+			@param timeout The number of seconds you want to use on your Sock.
+			@param errstack NULL or errstack to dump errors into
+			@param callback_fn NULL or function to call when finished
+			                   If NULL and sock is UDP, will return
+							   StartCommandWouldBlock if TCP session key
+							   setup is in progress.
+			@param misc_data any data caller wants passed to callback_fn
+			@return see definition of StartCommandResult enumeration.
+		*/
+	StartCommandResult startCommand_nonblocking( int cmd, Sock* sock, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data );
+
+		/**
+		 * Contact another daemon and initiate the time offset range 
+		 * determination logic. We create a socket connection, pass the
+		 * DC_TIME_OFFSET command then pass the Stream to the cedar stub
+		 * code for time offset. If this method returns false, then
+		 * that means we were not able to coordinate our communications
+		 * with the remote daemon
+		 * 
+		 * @param offset - the reference placeholder for the range
+		 * @return true if it was able to contact the other Daemon
+		 **/
+ 	bool getTimeOffset( long &offset );
+ 	
+		/**
+		 * Contact another daemon and initiate the time offset range 
+		 * determination logic. We create a socket connection, pass the
+		 * DC_TIME_OFFSET command then pass the Stream to the cedar stub
+		 * code for time offset. The min/max range value placeholders
+		 * are passed in by reference. If this method returns false, then
+		 * that means for some reason we could not get the range and the
+		 * range values will default to a known value.
+		 * 
+		 * @param min_range - the minimum range value for the time offset
+		 * @param max_range - the maximum range value for the time offset
+		 * @return true if it was able to contact the other Daemon and get range
+		 **/
+	bool getTimeOffsetRange( long &min_range, long &max_range );
 
 protected:
 	// Data members
@@ -350,9 +445,16 @@ protected:
 		/// Helper methods.
 		// //////////////////////////////////////////////////////////
 
-		/** Initializes the object.
+		/** Initializes the object by setting everything to NULL.
+			Shared by all the different constructors.
 		  */
 	void common_init();
+
+		/**
+		   Make a deep copy of this Daemon, used by copy constructor
+		   and assignment operator.
+		*/
+	void deepCopy( const Daemon& copy );
 
 		/** Helper for regular daemons (schedd, startd, master).
 		  This does all the real work of finding the right address,
@@ -360,8 +462,9 @@ protected:
 		  the appropriate collector if that doesn't work.
 		  @param subsys The subsystem string for this daemon
 		  @param adtype The type of ClassAd we'll query.
+		  @parma query_collector Whether to query collector if all else fails
 		  */
-	bool getDaemonInfo( const char* subsys, AdTypes adtype, bool query_collector=true );
+	bool getDaemonInfo( const char* subsys, AdTypes adtype, bool query_collector = true );
 
 		/** Helper for central manager daemons (collector and
 		  negotiator).  These are a special case since they have
@@ -378,6 +481,7 @@ protected:
 		  @return Whether or not we found the info we want
 		  */
 	bool getCmInfo( const char* subsys );
+
 
 		/** Helper to initialize the hostname if we don't have it
 			already, but we do have an IP address.  Usually, when we
@@ -421,6 +525,31 @@ protected:
 		  allocated and should be deallocated with delete []. 
 		  */
 	char* localName( void );
+
+		/** Code for parsing a locally-written address file to find
+			the IP, port (and version, if available) for our daemon.
+			This is shared in a couple of places, so it now lives in a
+			seperate helper method.
+			@return true if we found the address in the file, false if not
+		*/
+	bool readAddressFile( const char* subsys );
+
+		/** Initialize one of our values from the given ClassAd* and
+			attribute name.  This is shared code when we query the
+			collector to locate a daemon and get the address, version
+			and platform, so i'm putting it in a seperate method.
+			If the attribute wasn't found, it takes care of setting
+			our error string, dprintf()ing, and returns false.
+			Otherwise, it safely stores the value in the string you
+			pass in, which should be one of the data members of the
+			object (e.g. "&_platform").
+			@param ad The ClassAd you want to look up in
+			@param attrname The name of the string attribute in the ad
+			@param value_str Pointer to the place to store the result
+			@return true on success, false on failure (can't find attr)
+		*/
+	bool initStringFromAd( ClassAd* ad, const char* attrname,
+						   char** value_str );
 
 		/* 
 		   These helpers prevent memory leaks.  Whenever we want to
@@ -493,16 +622,37 @@ protected:
 		*/
     bool forceAuthentication( ReliSock* rsock, CondorError* errstack );
 
+		/**
+		   Internal function used by public versions of startCommand().
+		   It may be either blocking or nonblocking, depending on the
+		   nonblocking flag.  This version uses an existing socket.
+		 */
+	static StartCommandResult startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char *version, SecMan *sec_man );
 
- private:
+		/**
+		   Internal function used by public versions of startCommand().
+		   It may be either blocking or nonblocking, depending on the
+		   nonblocking flag.  This version creates a socket of the
+		   specified type and connects it.
+		 */
+	StartCommandResult startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking );
 
-		// I can't be copied (yet)
-	Daemon( const Daemon& );
-	Daemon& operator = ( const Daemon& );
-
+		/**
+		   Class used internally to handle non-blocking connects for
+		   startCommand().
+		*/
+	friend struct StartCommandConnectCallback;
 };
 
 // Prototype to get sinful string.
 char *global_dc_sinful( void );
+
+/** Helper to get the *_HOST or *_IP_ADDR param for the appropriate
+	subsystem.  It just returns whatever param() would.  So, if it's
+	NULL, we failed to find anything.  If it's non-NULL, param()
+	allocated the space you you have to free() the result.
+*/
+char* getCmHostFromConfig( const char * subsys );
+
 
 #endif /* CONDOR_DAEMON_H */

@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -30,7 +30,7 @@
 
 #include "condor_common.h"
 #include "startd.h"
-//#include "classad_merge.h"
+#include "classad_merge.h"
 #include "dynuser.h"
 
 #ifdef WIN32
@@ -86,6 +86,12 @@ Starter::initRunData( void )
 	s_kill_tid = -1;
 	s_port1 = -1;
 	s_port2 = -1;
+	s_reaper_id = -1;
+
+#if HAVE_BOINC
+	s_is_boinc = false;
+#endif /* HAVE_BOINC */
+
 		// Initialize our procInfo structure so we don't use any
 		// values until we've actually computed them.
 	memset( (void*)&s_pinfo, 0, (size_t)sizeof(s_pinfo) );
@@ -116,9 +122,13 @@ bool
 Starter::satisfies( ClassAd* job_ad, ClassAd* mach_ad )
 {
 	int requirements = 0;
-	ClassAd* merged_ad = new ClassAd( *mach_ad );
-//	MergeClassAds( merged_ad, s_ad, true );
-	merged_ad->Update( *s_ad );
+	ClassAd* merged_ad;
+	if( mach_ad ) {
+		merged_ad = new ClassAd( *mach_ad );
+		MergeClassAds( merged_ad, s_ad, true );
+	} else {
+		merged_ad = new ClassAd( *s_ad );
+	}
 	if( ! job_ad->EvalBool(ATTR_REQUIREMENTS, merged_ad, requirements) ) { 
 		requirements = 0;
 	}
@@ -188,46 +198,65 @@ Starter::publish( ClassAd* ad, amask_t mask, StringList* list )
 		return;
 	}
 
-		// Attributes that begin with "Has" go in the ClassAd and
-		// also in the StringList.  Attributes that begin with Java
-		// only go into the ClassAd.
+		// Check for ATTR_STARTER_IGNORED_ATTRS. If defined,
+		// we insert all attributes from the starter ad except those
+		// in the list. If not, we fall back on our old behavior
+		// of only inserting attributes prefixed with "Has" or
+		// "Java". Either way, we only add the "Has" attributes
+		// into the StringList (the StarterAbilityList)
+	char* ignored_attrs = NULL;
+	StringList* ignored_attr_list = NULL;
+	if (s_ad->LookupString(ATTR_STARTER_IGNORED_ATTRS, &ignored_attrs)) {
+		ignored_attr_list = new StringList(ignored_attrs);
+		free(ignored_attrs);
 
-//	ExprTree *tree, *lhs;
-//	ExprTree *tree;
+		// of course, we don't want ATTR_STARTER_IGNORED_ATTRS
+		// in either!
+		ignored_attr_list->append(ATTR_STARTER_IGNORED_ATTRS);
+	}
+
+	ExprTree *tree, *lhs;
 	char *expr_str = NULL, *lhstr = NULL;
-//	s_ad->ResetExpr();
-//	while( (tree = s_ad->NextExpr()) ) {
-	ClassAdUnParser unp;
-	ClassAd::iterator s;
-	std::string expr_string;
-	for( s = s_ad->begin( ); s != s_ad->end( ); s++ ) {
-//		if( (lhs = tree->LArg()) ) {
-//			lhs->PrintToNewStr( &lhstr );
-		lhstr = new char[s->first.length( )+1];
-		if( lhstr ) { 
-			strcpy( lhstr, s->first.c_str( ) );
+	s_ad->ResetExpr();
+	while( (tree = s_ad->NextExpr()) ) {
+		if( (lhs = tree->LArg()) ) {
+			lhs->PrintToNewStr( &lhstr );
 		} else {
 			dprintf( D_ALWAYS, 
 					 "ERROR parsing Starter classad attribute!\n" );
 			continue;
 		}
-//		tree->PrintToNewStr( &expr_str );
-		expr_string = s->first + " = ";
-		unp.Unparse( expr_string, s->second );
-		expr_str = new char[expr_string.length( ) + 1];
-		strcpy( expr_str, expr_string.c_str( ) );
-		if( strincmp(lhstr, "Has", 3) == MATCH ) {
-			ad->Insert( expr_str );
-			if( list ) {
-				list->append( lhstr );
+		tree->PrintToNewStr( &expr_str );
+
+		if (ignored_attr_list) {
+				// insert every attr that's not in the ignored_attr_list
+			if (!ignored_attr_list->contains(lhstr)) {
+				ad->Insert(expr_str);
+				if (strincmp(lhstr, "Has", 3) == MATCH) {
+					list->append(lhstr);
+				}
 			}
-		} else if( strincmp(lhstr, "Java", 4) == MATCH ) {
-			ad->Insert( expr_str );
 		}
+		else {
+				// no list of attrs to ignore - fallback on old behavior
+			if( strincmp(lhstr, "Has", 3) == MATCH ) {
+				ad->Insert( expr_str );
+				if( list ) {
+					list->append( lhstr );
+				}
+			} else if( strincmp(lhstr, "Java", 4) == MATCH ) {
+				ad->Insert( expr_str );
+			}
+		}
+
 		free( expr_str );
 		expr_str = NULL;
 		free( lhstr );
 		lhstr = NULL;
+	}
+
+	if (ignored_attr_list) {
+		delete ignored_attr_list;
 	}
 }
 
@@ -377,7 +406,7 @@ Starter::reallykill( int signo, int type )
 		case EACCES:
 			needs_stat = FALSE;
 			break;
-#if defined(OSF1) || defined(Darwin)
+#if defined(OSF1) || defined(Darwin) || defined(CONDOR_FREEBSD)
 				// dux 4.0 doesn't have ENOLINK for stat().  It does
 				// have ESTALE, which means our binaries live on a
 				// stale NFS mount.  So, we can at least EXCEPT with a
@@ -512,6 +541,10 @@ Starter::spawn( time_t now, Stream* s )
 {
 	if( isCOD() ) {
 		s_pid = execCODStarter();
+#if HAVE_BOINC
+	} else if( isBOINC() ) {
+		s_pid = execBOINCStarter(); 
+#endif /* HAVE_BOINC */
 	} else if( is_dc() ) {
 		s_pid = execDCStarter( s ); 
 	} else {
@@ -522,8 +555,14 @@ Starter::spawn( time_t now, Stream* s )
 	if( s_pid == 0 ) {
 		dprintf( D_ALWAYS, "ERROR: exec_starter returned %d\n", s_pid );
 	} else {
+
+		PidEnvID penvid;
+
+		// if there isn't any ancestor information for this pid, that is ok.
+		daemonCore->InfoEnvironmentID(&penvid, s_pid);
+		
 		s_birthdate = now;
-		s_procfam = new ProcFamily( s_pid, PRIV_ROOT );
+		s_procfam = new ProcFamily( s_pid, &penvid, PRIV_ROOT );
 
 		dprintf( D_PROCFAMILY, 
 				 "Created new ProcFamily w/ pid %d as the parent.\n",
@@ -553,8 +592,9 @@ int
 Starter::execCODStarter( void )
 {
 	int rval;
-	MyString env;
-	char* args = NULL;
+	MyString lock_env;
+	ArgList args;
+	Env env;
 	char* tmp;
 
 	tmp = param( "LOCK" );
@@ -564,13 +604,18 @@ Starter::execCODStarter( void )
 	if( ! tmp ) { 
 		EXCEPT( "LOG not defined!" );
 	}
-	env = "_condor_STARTER_LOCK=";
-	env += tmp;
+	lock_env = "_condor_STARTER_LOCK=";
+	lock_env += tmp;
 	free( tmp );
-	env += DIR_DELIM_CHAR;
-	env += "StarterLock.cod";
+	lock_env += DIR_DELIM_CHAR;
+	lock_env += "StarterLock.cod";
 
-	args = s_claim->makeCODStarterArgs();
+	env.SetEnv(lock_env.Value());
+
+	if(!s_claim->makeCODStarterArgs(args)) {
+		dprintf( D_ALWAYS, "ERROR: failed to create COD starter args.\n");
+		return 0;
+	}
 
 	int* std_fds_p = NULL;
 	int std_fds[3];
@@ -590,7 +635,7 @@ Starter::execCODStarter( void )
 		std_fds_p = std_fds;
 	}
 
-	rval = execDCStarter( args, env.Value(), std_fds_p, NULL );
+	rval = execDCStarter( args, &env, std_fds_p, NULL );
 
 	if( s_claim->hasJobAd() ) {
 			// now that the starter has been spawned, we need to do
@@ -611,27 +656,44 @@ Starter::execCODStarter( void )
 		daemonCore->Close_Pipe( pipe_fds[1] );
 	}
 
-	if( args ) {
-		free( args );
-		args = NULL;
-	}
 	return rval;
 }
+
+
+#if HAVE_BOINC
+int
+Starter::execBOINCStarter( void )
+{
+	ArgList args;
+	args.AppendArg("condor_starter");
+	args.AppendArg("-f");
+	args.AppendArg("-append");
+	args.AppendArg("boinc");
+	args.AppendArg("-job-keyword");
+	args.AppendArg("boinc");
+	return execDCStarter( args, NULL, NULL, NULL );
+}
+#endif /* HAVE_BOINC */
 
 
 int
 Starter::execDCStarter( Stream* s )
 {
-	char args[_POSIX_ARG_MAX];
+	ArgList args;
 
 	char* hostname = s_claim->client()->host();
 	if ( resmgr->is_smp() ) {
 		// Note: the "-a" option is a daemon core option, so it
 		// must come first on the command line.
-		sprintf( args, "condor_starter -f -a %s %s",  
-				 s_claim->rip()->r_id_str, hostname );
+		args.AppendArg("condor_starter");
+		args.AppendArg("-f");
+		args.AppendArg("-a");
+		args.AppendArg(s_claim->rip()->r_id_str);
+		args.AppendArg(hostname);
 	} else {
-		sprintf(args, "condor_starter -f %s", hostname );
+		args.AppendArg("condor_starter");
+		args.AppendArg("-f");
+		args.AppendArg(hostname);
 	}
 	execDCStarter( args, NULL, NULL, s );
 
@@ -640,7 +702,7 @@ Starter::execDCStarter( Stream* s )
 
 
 int
-Starter::execDCStarter( const char* args, const char* env, 
+Starter::execDCStarter( ArgList const &args, Env const *env, 
 						int* std_fds, Stream* s )
 {
 	Stream *sock_inherit_list[] = { s, 0 };
@@ -649,10 +711,22 @@ Starter::execDCStarter( const char* args, const char* env,
 		inherit_list = sock_inherit_list;
 	}
 
-	dprintf( D_FULLDEBUG, "About to Create_Process \"%s\"\n", args );
+	if(DebugFlags & D_FULLDEBUG) {
+		MyString args_string;
+		args.GetArgsStringForDisplay(&args_string);
+		dprintf( D_FULLDEBUG, "About to Create_Process \"%s\"\n",
+				 args_string.Value() );
+	}
+
+	int reaper_id;
+	if( s_reaper_id > 0 ) {
+		reaper_id = s_reaper_id;
+	} else {
+		reaper_id = main_reaper;
+	}
 
 	s_pid = daemonCore->
-		Create_Process( s_path, (char*)args, PRIV_ROOT, main_reaper,
+		Create_Process( s_path, args, PRIV_ROOT, reaper_id,
 						TRUE, env, NULL, TRUE, inherit_list, std_fds );
 	if( s_pid == FALSE ) {
 		dprintf( D_ALWAYS, "ERROR: exec_starter failed!\n");
@@ -802,6 +876,9 @@ Starter::execOldStarter( void )
 bool
 Starter::isCOD()
 {
+	if( ! s_claim ) {
+		return false;
+	}
 	return s_claim->isCOD();
 }
 
@@ -830,6 +907,8 @@ Starter::dprintf( int flags, char* fmt, ... )
 float
 Starter::percentCpuUsage( void )
 {
+	int status;
+
 	time_t now = time(NULL);
 	if( now - s_last_snapshot >= pid_snapshot_interval ) { 
 		recomputePidFamily( now );
@@ -844,25 +923,30 @@ Starter::percentCpuUsage( void )
 		// a temporary.
 	procInfo *pinfoPTR = &s_pinfo;
 	if( (ProcAPI::getProcSetInfo(s_pidfamily, s_family_size,
-								 pinfoPTR) < -1) ) {
+								 pinfoPTR, status) == PROCAPI_FAILURE) ) {
+
 			// If we failed, it might be b/c our pid family has stale
 			// info, so before we give up for real, recompute and try
 			// once more.
+		printPidFamily(D_FULLDEBUG, 
+			"Starter::percentCpuUsage(): Failed trying to get cpu usage "
+			"with this family: ");  
+
 		recomputePidFamily();
 
-		if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_LOAD) ) {
-			printPidFamily(D_FULLDEBUG, "Failed once, now using pids: ");  
-		}
+		printPidFamily(D_FULLDEBUG, 
+			"Starter::percentCpuUsage(): Maybe that family was stale, "
+			"attempting recomputed family: ");  
 
 		if( (ProcAPI::getProcSetInfo( s_pidfamily, s_family_size, 
-									  pinfoPTR) < -1) ) {
-			EXCEPT( "Fatal error getting process info for the starter "
-					"and decendents" ); 
+									  pinfoPTR, status) == PROCAPI_FAILURE) ) {
+			EXCEPT( "Starter::percentCpuUsage(): Fatal error getting process "
+					"info for the starter and decendents" ); 
 		}
 	}
 	if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_LOAD) ) {
-		dprintf( D_FULLDEBUG, "Percent CPU usage for those pids is: %f\n", 
-				 s_pinfo.cpuusage );
+		dprintf( D_FULLDEBUG, "Starter::percentCpuUsage(): Percent CPU usage "
+								"for those pids is: %f\n", s_pinfo.cpuusage );
 	}
 	return s_pinfo.cpuusage;
 }

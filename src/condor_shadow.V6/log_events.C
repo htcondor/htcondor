@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -35,6 +35,8 @@
 #include "condor_classad.h"
 #include "condor_attributes.h"
 #include "condor_io.h"
+#include "condor_config.h"
+#include "condor_qmgr.h"
 
 #if !defined( WCOREDUMP )
 #define  WCOREDUMP(stat)      ((stat)&WCOREFLG)
@@ -47,7 +49,10 @@ extern ClassAd *JobAd;
 
 extern ReliSock *syscall_sock;
 
-static int WroteExecuteEvent = 0;
+/* This used to be static, but now handle_terminate_pending() can modify this
+variable to true so it doesn't get emitted when it isn't supposed to. */
+int WroteExecuteEvent = 0;
+
 extern char* ExecutingHost;
 
 // count of total network bytes previously send and received for this
@@ -227,29 +232,35 @@ log_termination (struct rusage *localr, struct rusage *remoter)
 		// abnormal termination
 		{
 			char coredir[_POSIX_PATH_MAX];
+			char coreFile[_POSIX_PATH_MAX];
 			JobTerminatedEvent event;
-
-#if defined(Solaris) || defined(HPUX)
-			getcwd(coredir,_POSIX_PATH_MAX);
-#else	
-			getwd( coredir );
-#endif
-
 			event.normal = false;
 			event.signalNumber = WTERMSIG(JobStatus);
+
 			if (WCOREDUMP(JobStatus))
 			{
-				char coreFile[_POSIX_PATH_MAX];
-				if (strcmp (Proc->rootdir, "/") == 0)
-				{
-					sprintf( coreFile, "%s/core.%d.%d", coredir, 
-							 Proc->id.cluster, Proc->id.proc );
-				}
-				else
-				{
-					sprintf( coreFile, "%s%s/core.%d.%d", Proc->rootdir,
-							 coredir, Proc->id.cluster, Proc->id.proc );
-				}
+				/* look up the corefile name in the job ad if one exists... */
+				if (!JobAd->LookupString(ATTR_JOB_CORE_FILENAME, coreFile)) {
+					/* if it didn't exist in the job ad, then construct what it
+						should be. */
+
+#if defined(Solaris) || defined(HPUX)
+					getcwd(coredir,_POSIX_PATH_MAX);
+#else	
+					getwd( coredir );
+#endif
+					if (strcmp (Proc->rootdir, "/") == 0)
+					{
+						sprintf( coreFile, "%s/core.%d.%d", coredir, 
+							 	Proc->id.cluster, Proc->id.proc );
+					}
+					else
+					{
+						sprintf( coreFile, "%s%s/core.%d.%d", Proc->rootdir,
+							 	coredir, Proc->id.cluster, Proc->id.proc );
+					}
+				} 
+				
 				event.setCoreFile( coreFile );
 			}
 			event.run_local_rusage = *localr;
@@ -386,6 +397,8 @@ void record_suspension_hack(unsigned int action)
 	int total_suspensions;
 	int last_suspension_time;
 	int cumulative_suspension_time;
+	char *rt = NULL;
+	extern char *schedd;
 
 	if (!JobAd)
 	{
@@ -439,6 +452,41 @@ void record_suspension_hack(unsigned int action)
 		cumulative_suspension_time);
 	dprintf(D_FULLDEBUG, "%s = %d\n", ATTR_CUMULATIVE_SUSPENSION_TIME,
 		cumulative_suspension_time);
+	
+	/* If we've been asked to perform real time updates of the suspension
+		information, then connect to the queue and do it here. */
+	rt = param("REAL_TIME_JOB_SUSPEND_UPDATES");
+	if (rt != NULL)
+	{
+		if (strcasecmp(rt, "true") == MATCH)
+		{
+			dprintf( D_ALWAYS, "Updating suspension info to schedd.\n" );
+			if (!ConnectQ(schedd, SHADOW_QMGMT_TIMEOUT)) {
+				/* Since these attributes aren't updated periodically, if
+					the schedd is busy and a resume event update is lost,
+					the the job will be marked suspended when it really isn't.
+					The new shadow eventually corrects this via a periodic
+					update of various calssad attributes, but I 
+					suspect it won't be corrected in the event of a
+					bad connect here for this shadow. */
+				dprintf( D_ALWAYS, 
+					"Timeout connecting to schedd. Suspension update lost.\n");
+				free(rt);
+				rt = NULL;
+				return;
+			}
+
+        	SetAttributeInt(Proc->id.cluster, Proc->id.proc, 
+	            ATTR_TOTAL_SUSPENSIONS, total_suspensions);
+        	SetAttributeInt(Proc->id.cluster, Proc->id.proc, 
+	            ATTR_CUMULATIVE_SUSPENSION_TIME, cumulative_suspension_time);
+        	SetAttributeInt(Proc->id.cluster, Proc->id.proc, 
+	            ATTR_LAST_SUSPENSION_TIME, last_suspension_time);
+
+			DisconnectQ(NULL);
+		}
+
+		free(rt);
+		rt = NULL;
+	}
 }
-
-

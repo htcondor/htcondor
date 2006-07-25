@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -77,6 +77,8 @@ struct ProxySubject {
     ((p)->expiration_time - time(NULL) <= minProxy_time)
 #define PROXY_IS_EXPIRED( p ) \
     ((p)->expiration_time - time(NULL) <= 180)
+#define PROXY_IS_VALID( p ) \
+    ((p)->expiration_time >= 0)
 
 extern int CheckProxies_interval;
 extern int minProxy_time;
@@ -84,7 +86,8 @@ extern int minProxy_time;
 bool InitializeProxyManager( const char *proxy_dir );
 void ReconfigProxyManager();
 
-Proxy *AcquireProxy( const char *proxy_path, int notify_tid = -1 );
+Proxy *AcquireProxy( const ClassAd *job_ad, MyString &error,
+					 int notify_tid = -1 );
 Proxy *AcquireProxy( Proxy *proxy, int notify_tid = -1 );
 void ReleaseProxy( Proxy *proxy, int notify_tid = -1 );
 void DeleteProxy (Proxy *& proxy);

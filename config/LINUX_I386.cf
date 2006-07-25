@@ -6,11 +6,23 @@
 #define ArchOptimizeFlag -m486
 #endif
 
-#define HAS_GLOBUS	YES
-
 #ifdef IS_GLIBC23
 /*#define NEEDS_64BIT_SYSCALLS            YES*/
 /*#define NEEDS_64BIT_STRUCTS             YES*/
+/*#	define WANT_NEW_CLASSADS          YES*/
+#endif
+
+#if IS_GLIBC23
+#define WANT_NEW_CLASSADS          YES
+#endif
+
+#if IS_GLIBC23 && HAS_GLOBUS && WANT_NEW_CLASSADS
+	/* Currently, Stork only builds on RH9. */
+#	define WANT_STORK                     YES
+#endif
+
+#if WANT_NEW_CLASSADS && HAS_GLOBUS
+#define WANT_BLAHP	YES
 #endif
 
 #define WANT_PVM	YES

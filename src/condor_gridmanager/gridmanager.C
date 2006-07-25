@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -35,6 +35,7 @@
 
 #include "gridmanager.h"
 #include "gahp-client.h"
+#include "gridftpmanager.h"
 
 #include "globusjob.h"
 
@@ -42,12 +43,13 @@
 #include "oraclejob.h"
 #endif
 
-#if defined(NORDUGRID_UNIVERSE)
 #include "nordugridjob.h"
-#endif
-
+#include "unicorejob.h"
 #include "mirrorjob.h"
+#include "condorjob.h"
 #include "gt3job.h"
+#include "gt4job.h"
+#include "infnbatchjob.h"
 
 #define QMGMT_TIMEOUT 15
 
@@ -62,24 +64,11 @@ struct JobType
 	char *Name;
 	void(*InitFunc)();
 	void(*ReconfigFunc)();
-	const char *AdMatchConst;
-	bool(*AdMustExpandFunc)(const ClassAd*);
+	bool(*AdMatchFunc)(const ClassAd*);
 	BaseJob *(*CreateFunc)(ClassAd*);
 };
 
 List<JobType> jobTypes;
-
-// Stole these out of the schedd code
-int procIDHash( const PROC_ID &procID, int numBuckets )
-{
-	//dprintf(D_ALWAYS,"procIDHash: cluster=%d proc=%d numBuck=%d\n",procID.cluster,procID.proc,numBuckets);
-	return ( (procID.cluster+(procID.proc*19)) % numBuckets );
-}
-
-bool operator==( const PROC_ID a, const PROC_ID b)
-{
-	return a.cluster == b.cluster && a.proc == b.proc;
-}
 
 struct VacateRequest {
 	BaseJob *job;
@@ -87,34 +76,34 @@ struct VacateRequest {
 };
 
 HashTable <PROC_ID, VacateRequest> pendingScheddVacates( HASH_TABLE_SIZE,
-														 procIDHash );
+														 hashFuncPROC_ID );
 HashTable <PROC_ID, VacateRequest> completedScheddVacates( HASH_TABLE_SIZE,
-														   procIDHash );
+														   hashFuncPROC_ID );
 
 struct JobStatusRequest {
-	BaseJob *job;
+	PROC_ID job_id;
+	int tid;
 	int job_status;
 };
 
 HashTable <PROC_ID, JobStatusRequest> pendingJobStatus( HASH_TABLE_SIZE,
-														procIDHash );
+														hashFuncPROC_ID );
 HashTable <PROC_ID, JobStatusRequest> completedJobStatus( HASH_TABLE_SIZE,
-														  procIDHash );
+														  hashFuncPROC_ID );
 
-template class HashTable<PROC_ID, BaseJob *>;
-template class HashBucket<PROC_ID, BaseJob *>;
 template class HashTable<PROC_ID, VacateRequest>;
 template class HashBucket<PROC_ID, VacateRequest>;
 template class HashTable<PROC_ID, JobStatusRequest>;
 template class HashBucket<PROC_ID, JobStatusRequest>;
-template class List<BaseJob>;
-template class Item<BaseJob>;
 template class List<JobType>;
 template class Item<JobType>;
 
+SimpleList<int> scheddUpdateNotifications;
+
 HashTable <PROC_ID, BaseJob *> pendingScheddUpdates( HASH_TABLE_SIZE,
-													 procIDHash );
+													 hashFuncPROC_ID );
 bool addJobsSignaled = false;
+bool checkLeasesSignaled = false;
 int contactScheddTid = TIMER_UNSET;
 int contactScheddDelay;
 time_t lastContactSchedd = 0;
@@ -124,10 +113,9 @@ char *ScheddJobConstraint = NULL;
 char *GridmanagerScratchDir = NULL;
 DCSchedd *ScheddObj = NULL;
 
-HashTable <PROC_ID, BaseJob *> JobsByProcID( HASH_TABLE_SIZE,
-											 procIDHash );
-
 bool firstScheddContact = true;
+int scheddFailureCount = 0;
+int maxScheddFailures = 10;	// Years of careful research...
 
 char *Owner = NULL;
 
@@ -137,40 +125,49 @@ int doContactSchedd();
 // handlers
 int ADD_JOBS_signalHandler( int );
 int REMOVE_JOBS_signalHandler( int );
+int CHECK_LEASES_signalHandler( int );
 
 
-bool JobMatchesConstraint( const ClassAd *jobad, const char *constraint )
+static bool jobExternallyManaged(ClassAd * ad)
 {
-	ExprTree *tree;
-	EvalResult *val;
-
-	val = new EvalResult;
-
-	Parse( constraint, tree );
-	if ( tree == NULL ) {
-		dprintf( D_FULLDEBUG,
-				 "Parse() returned a NULL tree on constraint '%s'\n",
-				 constraint );
+	ASSERT(ad);
+	MyString job_managed;
+	if( ! ad->LookupString(ATTR_JOB_MANAGED, job_managed) ) {
 		return false;
 	}
-	tree->EvalTree(jobad, val);           // evaluate the constraint.
-	if(!val || val->type != LX_INTEGER) {
-		delete tree;
-		delete val;
-		dprintf( D_FULLDEBUG, "Constraint '%s' evaluated to wrong type\n",
-				 constraint );
-		return false;
-	} else {
-        if( !val->i ) {
-			delete tree;
-			delete val;
-			return false; 
+	return job_managed == MANAGED_EXTERNAL;
+}
+
+/**
+TODO: Should use the version in qmgmt_common.C.  It's not
+exposed as a remote call.  Perhaps link it in directly? 
+*/
+static int tSetAttributeString(int cluster, int proc, 
+	const char * attr_name, const char * attr_value)
+{
+	MyString tmp;
+	tmp.sprintf("\"%s\"", attr_value);
+	return SetAttribute( cluster, proc, attr_name, tmp.Value());
+}
+
+// Check if a job ad needs $$() expansion performed on it. The initial ad
+// we get is unexpanded, so we need to fetch it a second time if expansion
+// is needed. We look at the (currently unused) MustExpand attribute and
+// the resource name attribute to see if expansion is needed.
+bool MustExpandJobAd( const ClassAd *job_ad ) {
+	bool must_expand = false;
+
+	job_ad->LookupBool(ATTR_JOB_MUST_EXPAND, must_expand);
+	if ( !must_expand ) {
+		MyString resource_name;
+		if ( job_ad->LookupString( ATTR_GRID_RESOURCE, resource_name ) ) {
+			if ( strstr(resource_name.Value(),"$$") ) {
+				must_expand = true;
+			}
 		}
 	}
 
-	delete tree;
-	delete val;
-	return true;
+	return must_expand;
 }
 
 // Job objects should call this function when they have changes that need
@@ -185,10 +182,10 @@ requestScheddUpdate( BaseJob *job )
 
 	// Check if there's anything that actually requires contacting the
 	// schedd. If not, just return true (i.e. update is complete)
-	job->ad->ResetExpr();
+	job->jobAd->ResetExpr();
 	if ( job->deleteFromGridmanager == false &&
 		 job->deleteFromSchedd == false &&
-		 job->ad->NextDirtyExpr() == NULL ) {
+		 job->jobAd->NextDirtyExpr() == NULL ) {
 		return true;
 	}
 
@@ -200,6 +197,16 @@ requestScheddUpdate( BaseJob *job )
 	}
 
 	return false;
+}
+
+void
+requestScheddUpdateNotification( int timer_id )
+{
+	if ( scheddUpdateNotifications.IsMember( timer_id ) == false ) {
+		// A new request; add it to the list
+		scheddUpdateNotifications.Append( timer_id );
+		RequestContactSchedd();
+	}
 }
 
 bool
@@ -227,27 +234,34 @@ requestScheddVacate( BaseJob *job, action_result_t &result )
 }
 
 bool
-requestJobStatus( BaseJob *job, int &job_status )
+requestJobStatus( PROC_ID job_id, int tid, int &job_status )
 {
 	JobStatusRequest hashed_request;
 
 	// Check if this is an old request that's completed
-	if ( completedJobStatus.lookup( job->procID, hashed_request ) == 0 ) {
+	if ( completedJobStatus.lookup( job_id, hashed_request ) == 0 ) {
 		// If the request is done, remove it from the hashtable and return
 		// the job status
-		completedJobStatus.remove( job->procID );
+		completedJobStatus.remove( job_id );
 		job_status = hashed_request.job_status;
 		return true;
 	}
 
-	if ( pendingJobStatus.lookup( job->procID, hashed_request ) != 0 ) {
+	if ( pendingJobStatus.lookup( job_id, hashed_request ) != 0 ) {
 		// A new request; add it to the hash table
-		hashed_request.job = job;
-		pendingJobStatus.insert( job->procID, hashed_request );
+		hashed_request.job_id = job_id;
+		hashed_request.tid = tid;
+		pendingJobStatus.insert( job_id, hashed_request );
 		RequestContactSchedd();
 	}
 
 	return false;
+}
+
+bool
+requestJobStatus( BaseJob *job, int &job_status )
+{
+	return requestJobStatus( job->procID, job->evaluateStateTid, job_status );
 }
 
 void
@@ -313,47 +327,72 @@ Init()
 	new_type->Name = strdup( "Oracle" );
 	new_type->InitFunc = OracleJobInit;
 	new_type->ReconfigFunc = OracleJobReconfig;
-	new_type->AdMatchConst = OracleJobAdConst;
-	new_type->AdMustExpandFunc = OracleJobAdMustExpand;
+	new_type->AdMatchFunc = OracleJobAdMatch;
 	new_type->CreateFunc = OracleJobCreate;
 	jobTypes.Append( new_type );
 #endif
 
-#if defined(NORDUGRID_UNIVERSE)
 	new_type = new JobType;
 	new_type->Name = strdup( "Nordugrid" );
 	new_type->InitFunc = NordugridJobInit;
 	new_type->ReconfigFunc = NordugridJobReconfig;
-	new_type->AdMatchConst = NordugridJobAdConst;
-	new_type->AdMustExpandFunc = NordugridJobAdMustExpand;
+	new_type->AdMatchFunc = NordugridJobAdMatch;
 	new_type->CreateFunc = NordugridJobCreate;
 	jobTypes.Append( new_type );
-#endif
+
+	new_type = new JobType;
+	new_type->Name = strdup( "Unicore" );
+	new_type->InitFunc = UnicoreJobInit;
+	new_type->ReconfigFunc = UnicoreJobReconfig;
+	new_type->AdMatchFunc = UnicoreJobAdMatch;
+	new_type->CreateFunc = UnicoreJobCreate;
+	jobTypes.Append( new_type );
 
 	new_type = new JobType;
 	new_type->Name = strdup( "Mirror" );
 	new_type->InitFunc = MirrorJobInit;
 	new_type->ReconfigFunc = MirrorJobReconfig;
-	new_type->AdMatchConst = MirrorJobAdConst;
-	new_type->AdMustExpandFunc = MirrorJobAdMustExpand;
+	new_type->AdMatchFunc = MirrorJobAdMatch;
 	new_type->CreateFunc = MirrorJobCreate;
+	jobTypes.Append( new_type );
+
+	new_type = new JobType;
+	new_type->Name = strdup( "INFNBatch" );
+	new_type->InitFunc = INFNBatchJobInit;
+	new_type->ReconfigFunc = INFNBatchJobReconfig;
+	new_type->AdMatchFunc = INFNBatchJobAdMatch;
+	new_type->CreateFunc = INFNBatchJobCreate;
+	jobTypes.Append( new_type );
+
+	new_type = new JobType;
+	new_type->Name = strdup( "Condor" );
+	new_type->InitFunc = CondorJobInit;
+	new_type->ReconfigFunc = CondorJobReconfig;
+	new_type->AdMatchFunc = CondorJobAdMatch;
+	new_type->CreateFunc = CondorJobCreate;
 	jobTypes.Append( new_type );
 
 	new_type = new JobType;
 	new_type->Name = strdup( "GT3" );
 	new_type->InitFunc = GT3JobInit;
 	new_type->ReconfigFunc = GT3JobReconfig;
-	new_type->AdMatchConst = GT3JobAdConst;
-	new_type->AdMustExpandFunc = GT3JobAdMustExpand;
+	new_type->AdMatchFunc = GT3JobAdMatch;
 	new_type->CreateFunc = GT3JobCreate;
+	jobTypes.Append( new_type );
+
+	new_type = new JobType;
+	new_type->Name = strdup( "GT4" );
+	new_type->InitFunc = GT4JobInit;
+	new_type->ReconfigFunc = GT4JobReconfig;
+	new_type->AdMatchFunc = GT4JobAdMatch;
+	new_type->CreateFunc = GT4JobCreate;
 	jobTypes.Append( new_type );
 
 	new_type = new JobType;
 	new_type->Name = strdup( "Globus" );
 	new_type->InitFunc = GlobusJobInit;
 	new_type->ReconfigFunc = GlobusJobReconfig;
-	new_type->AdMatchConst = GlobusJobAdConst;
-	new_type->AdMustExpandFunc = GlobusJobAdMustExpand;
+	new_type->AdMatchFunc = GlobusJobAdMatch;
 	new_type->CreateFunc = GlobusJobCreate;
 	jobTypes.Append( new_type );
 
@@ -375,6 +414,14 @@ Register()
 								 (SignalHandler)&REMOVE_JOBS_signalHandler,
 								 "REMOVE_JOBS_signalHandler", NULL, WRITE );
 
+/*
+	daemonCore->Register_Signal( GRIDMAN_CHECK_LEASES, "CheckLeases",
+								 (SignalHandler)&CHECK_LEASES_signalHandler,
+								 "CHECK_LEASES_signalHandler", NULL, WRITE );
+*/
+	daemonCore->Register_Timer( 60, 60, (TimerHandler)&CHECK_LEASES_signalHandler,
+								"CHECK_LEASES_signalHandler", NULL );
+
 	Reconfig();
 }
 
@@ -386,7 +433,10 @@ Reconfig()
 
 	contactScheddDelay = param_integer("GRIDMANAGER_CONTACT_SCHEDD_DELAY", 5);
 
+	ReconfigProxyManager();
 	GahpReconfig();
+	GridftpServer::Reconfig();
+	BaseJob::BaseJobReconfig();
 
 	JobType *job_type;
 	jobTypes.Rewind();
@@ -397,9 +447,9 @@ Reconfig()
 	// Tell all the job objects to deal with their new config values
 	BaseJob *next_job;
 
-	JobsByProcID.startIterations();
+	BaseJob::JobsByProcId.startIterations();
 
-	while ( JobsByProcID.iterate( next_job ) != 0 ) {
+	while ( BaseJob::JobsByProcId.iterate( next_job ) != 0 ) {
 		next_job->Reconfig();
 	}
 }
@@ -427,6 +477,66 @@ REMOVE_JOBS_signalHandler( int signal )
 	return TRUE;
 }
 
+// Call initJobExprs before using any of the expr_*
+// variables.  It is safe to repeatedly call
+// initJobExprs.
+static const char * expr_false = "FALSE";
+static const char * expr_true = "TRUE";
+static const char * expr_undefined = "UNDEFINED";
+	// The job is matched, or in unknown match state.
+	// definately unmatched
+static MyString expr_matched_or_undef;
+	// Job is being managed by an external process
+	// (probably this gridmanager process)
+static MyString expr_managed;
+	// The job is not being managed by an external
+	// process.  The schedd should be managing it.
+	// It may be done.
+static MyString expr_not_managed;
+	// The job is not HELD
+static MyString expr_not_held;
+	// The constraint passed into the gridmanager
+	// to filter all jobs by
+static MyString expr_schedd_job_constraint;
+	// The job is marked as completely done by
+	// the gridmanager.  The gridmanager should
+	// never try to manage the job again
+static MyString expr_completely_done;
+	// Opposite of expr_completely_done
+static MyString expr_not_completely_done;
+
+static void 
+initJobExprs()
+{
+	static bool done = false;
+	if(done) { return; }
+
+	expr_matched_or_undef.sprintf("(%s =!= %s)", ATTR_JOB_MATCHED, expr_false);
+	expr_managed.sprintf("(%s =?= \"%s\")", ATTR_JOB_MANAGED, MANAGED_EXTERNAL);
+	expr_not_managed.sprintf("(%s =!= \"%s\")", ATTR_JOB_MANAGED, MANAGED_EXTERNAL);
+	expr_not_held.sprintf("(%s != %d)", ATTR_JOB_STATUS, HELD);
+	expr_schedd_job_constraint.sprintf("(%s)", ScheddJobConstraint);
+	// The gridmanager never wants to see this job again.
+	// It should be in the process of leaving the queue.
+	expr_completely_done.sprintf("(%s =?= \"%s\")", ATTR_JOB_MANAGED, MANAGED_DONE);
+	expr_not_completely_done.sprintf("(%s =!= \"%s\")", ATTR_JOB_MANAGED, MANAGED_DONE);
+
+	done = true;
+}
+
+int
+CHECK_LEASES_signalHandler( int signal )
+{
+	dprintf(D_FULLDEBUG,"Received CHECK_LEASES signal\n");
+
+	if ( !checkLeasesSignaled ) {
+		RequestContactSchedd();
+		checkLeasesSignaled = true;
+	}
+
+	return TRUE;
+}
+
 int
 doContactSchedd()
 {
@@ -439,11 +549,13 @@ doContactSchedd()
 	bool schedd_deletes_complete = false;
 	bool add_remove_jobs_complete = false;
 	bool commit_transaction = true;
-	List<BaseJob> successful_deletes;
 	int failure_line_num = 0;
 	bool send_reschedule = false;
+	MyString error_str = "";
 
 	dprintf(D_FULLDEBUG,"in doContactSchedd()\n");
+
+	initJobExprs();
 
 	contactScheddTid = TIMER_UNSET;
 
@@ -466,16 +578,17 @@ doContactSchedd()
 		}
 
 		char *tmp = job_ids.print_to_string();
-		dprintf( D_FULLDEBUG, "Calling vacateJobs on %s\n", tmp );
-		free(tmp);
+		if ( tmp ) {
+			dprintf( D_FULLDEBUG, "Calling vacateJobs on %s\n", tmp );
+			free(tmp);
+			tmp = NULL;
+		}
 
 		rval = ScheddObj->vacateJobs( &job_ids, VACATE_FAST, &errstack );
 		if ( rval == NULL ) {
-			dprintf( D_FULLDEBUG, "vacateJobs returned NULL, CondorError: %s\n",
-					 errstack.getFullText() );
-			lastContactSchedd = time(NULL);
-			RequestContactSchedd();
-			return TRUE;
+			error_str.sprintf( "vacateJobs returned NULL, CondorError: %s!",
+							   errstack.getFullText() );
+			goto contact_schedd_failure;
 		} else {
 			pendingScheddVacates.startIterations();
 			while ( pendingScheddVacates.iterate( curr_request ) != 0 ) {
@@ -502,12 +615,44 @@ doContactSchedd()
 
 	schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, false );
 	if ( !schedd ) {
-		dprintf( D_ALWAYS, "Failed to connect to schedd!\n");
-		// Should we be retrying infinitely?
-		lastContactSchedd = time(NULL);
-		RequestContactSchedd();
-		return TRUE;
+		error_str.sprintf( "Failed to connect to schedd!" );
+		goto contact_schedd_failure;
 	}
+
+
+	// CheckLeases
+	/////////////////////////////////////////////////////
+	if ( checkLeasesSignaled ) {
+
+		dprintf( D_FULLDEBUG, "querying for renewed leases\n" );
+
+		// Grab the lease attributes of all the jobs in our global hashtable.
+
+		BaseJob::JobsByProcId.startIterations();
+
+		while ( BaseJob::JobsByProcId.iterate( curr_job ) != 0 ) {
+			int new_expiration;
+
+			rc = GetAttributeInt( curr_job->procID.cluster,
+								  curr_job->procID.proc,
+								  ATTR_TIMER_REMOVE_CHECK,
+								  &new_expiration );
+			if ( rc < 0 ) {
+				if ( errno == ETIMEDOUT ) {
+					failure_line_num = __LINE__;
+					commit_transaction = false;
+					goto contact_schedd_disconnect;
+				} else {
+						// This job doesn't have doesn't have a lease from
+						// the submitter. Skip it.
+					continue;
+				}
+			}
+			curr_job->UpdateJobLeaseReceived( new_expiration );
+		}
+
+		checkLeasesSignaled = false;
+	}	// end of handling check leases
 
 
 	// AddJobs
@@ -539,30 +684,37 @@ doContactSchedd()
 			// "&& Managed =!= TRUE" from the new jobs expression becomes
 			// superfluous (by boolean logic), so we drop it.
 			sprintf( expr_buf,
-					 "(%s) && ((%s =!= FALSE && %s != %d) || %s =?= TRUE)",
-					 ScheddJobConstraint, ATTR_JOB_MATCHED,
-					 ATTR_JOB_STATUS, HELD, ATTR_JOB_MANAGED );
+					 "%s && %s && ((%s && %s) || %s)",
+					 expr_schedd_job_constraint.Value(), 
+					 expr_not_completely_done.Value(),
+					 expr_matched_or_undef.Value(),
+					 expr_not_held.Value(),
+					 expr_managed.Value()
+					 );
 		} else {
 			// Grab new jobs for us to manage
 			sprintf( expr_buf,
-					 "(%s) && %s =!= FALSE && %s =!= TRUE && %s != %d",
-					 ScheddJobConstraint, ATTR_JOB_MATCHED, ATTR_JOB_MANAGED,
-					 ATTR_JOB_STATUS, HELD );
+					 "%s && %s && %s && %s && %s",
+					 expr_schedd_job_constraint.Value(), 
+					 expr_not_completely_done.Value(),
+					 expr_matched_or_undef.Value(),
+					 expr_not_held.Value(),
+					 expr_not_managed.Value()
+					 );
 		}
 		dprintf( D_FULLDEBUG,"Using constraint %s\n",expr_buf);
 		next_ad = GetNextJobByConstraint( expr_buf, 1 );
 		while ( next_ad != NULL ) {
 			PROC_ID procID;
 			BaseJob *old_job;
-			int job_is_managed = 0;		// default to false if not in ClassAd
 			int job_is_matched = 1;		// default to true if not in ClassAd
 
 			next_ad->LookupInteger( ATTR_CLUSTER_ID, procID.cluster );
 			next_ad->LookupInteger( ATTR_PROC_ID, procID.proc );
-			next_ad->LookupBool(ATTR_JOB_MANAGED,job_is_managed);
+			bool job_is_managed = jobExternallyManaged(next_ad);
 			next_ad->LookupBool(ATTR_JOB_MATCHED,job_is_matched);
 
-			if ( JobsByProcID.lookup( procID, old_job ) != 0 ) {
+			if ( BaseJob::JobsByProcId.lookup( procID, old_job ) != 0 ) {
 
 				int rc;
 				JobType *job_type = NULL;
@@ -571,11 +723,33 @@ doContactSchedd()
 				// job had better be either managed or matched! (or both)
 				ASSERT( job_is_managed || job_is_matched );
 
+				if ( MustExpandJobAd( next_ad ) ) {
+					// Get the expanded ClassAd from the schedd, which
+					// has the GridResource filled in with info from
+					// the matched ad.
+					delete next_ad;
+					next_ad = NULL;
+					next_ad = GetJobAd(procID.cluster,procID.proc);
+					if ( next_ad == NULL && errno == ETIMEDOUT ) {
+						failure_line_num = __LINE__;
+						commit_transaction = false;
+						goto contact_schedd_disconnect;
+					}
+					if ( next_ad == NULL ) {
+						// We may get here if it was not possible to expand
+						// one of the $$() expressions.  We don't want to
+						// roll back the transaction and blow away the
+						// hold that the schedd just put on the job, so
+						// simply skip over this ad.
+						dprintf(D_ALWAYS,"Failed to get expanded job ClassAd from Schedd for %d.%d.  errno=%d\n",procID.cluster,procID.proc,errno);
+						goto contact_schedd_next_add_job;
+					}
+				}
+
 				// Search our job types for one that'll handle this job
 				jobTypes.Rewind();
 				while ( jobTypes.Next( job_type ) ) {
-dprintf(D_FULLDEBUG,"***Trying job type %s\n",job_type->Name);
-					if ( JobMatchesConstraint( next_ad, job_type->AdMatchConst ) ) {
+					if ( job_type->AdMatchFunc( next_ad ) ) {
 
 						// Found one!
 						dprintf( D_FULLDEBUG, "Using job type %s for job %d.%d\n",
@@ -585,32 +759,9 @@ dprintf(D_FULLDEBUG,"***Trying job type %s\n",job_type->Name);
 				}
 
 				if ( job_type != NULL ) {
-					if ( job_type->AdMustExpandFunc( next_ad ) ) {
-						// Get the expanded ClassAd from the schedd, which
-						// has the globus resource filled in with info from
-						// the matched ad.
-						delete next_ad;
-						next_ad = NULL;
-						next_ad = GetJobAd(procID.cluster,procID.proc);
-						if ( next_ad == NULL && errno == ETIMEDOUT ) {
-							failure_line_num = __LINE__;
-							commit_transaction = false;
-							goto contact_schedd_disconnect;
-						}
-//						ASSERT(next_ad);
-						if ( next_ad == NULL ) {
-							// We may get here if it was not possible to expand
-							// one of the $$() expressions.  We don't want to
-							// roll back the transaction and blow away the
-							// hold that the schedd just put on the job, so
-							// simply skip over this ad.
-							dprintf(D_ALWAYS,"Failed to get expanded job ClassAd from Schedd for %d.%d.  errno=%d\n",procID.cluster,procID.proc,errno);
-							goto contact_schedd_next_add_job;
-						}
-					}
 					new_job = job_type->CreateFunc( next_ad );
 				} else {
-					dprintf( D_ALWAYS, "No handlers for job %d.%d",
+					dprintf( D_ALWAYS, "No handlers for job %d.%d\n",
 							 procID.cluster, procID.proc );
 					new_job = new BaseJob( next_ad );
 				}
@@ -619,14 +770,13 @@ dprintf(D_FULLDEBUG,"***Trying job type %s\n",job_type->Name);
 				new_job->SetEvaluateState();
 				dprintf(D_ALWAYS,"Found job %d.%d --- inserting\n",
 						new_job->procID.cluster,new_job->procID.proc);
-				JobsByProcID.insert( new_job->procID, new_job );
 				num_ads++;
 
 				if ( !job_is_managed ) {
-					rc = SetAttribute( new_job->procID.cluster,
+					rc = tSetAttributeString( new_job->procID.cluster,
 									   new_job->procID.proc,
 									   ATTR_JOB_MANAGED,
-									   "TRUE" );
+									   MANAGED_EXTERNAL);
 					if ( rc < 0 ) {
 						failure_line_num = __LINE__;
 						commit_transaction = false;
@@ -640,8 +790,8 @@ dprintf(D_FULLDEBUG,"***Trying job type %s\n",job_type->Name);
 				// But also set Managed=true on the schedd so that it won't
 				// keep signalling us about it
 				delete next_ad;
-				rc = SetAttribute( procID.cluster, procID.proc,
-								   ATTR_JOB_MANAGED, "TRUE" );
+				rc = tSetAttributeString( procID.cluster, procID.proc,
+								   ATTR_JOB_MANAGED, MANAGED_EXTERNAL );
 				if ( rc < 0 ) {
 					failure_line_num = __LINE__;
 					commit_transaction = false;
@@ -666,20 +816,21 @@ contact_schedd_next_add_job:
 	// RemoveJobs
 	/////////////////////////////////////////////////////
 
-	// We also want to perform this check. Otherwise, we may overwrite a
+	// We always want to perform this check. Otherwise, we may overwrite a
 	// REMOVED/HELD/COMPLETED status with something else below.
 	{
 		int num_ads = 0;
 
 		dprintf( D_FULLDEBUG, "querying for removed/held jobs\n" );
 
-		// Grab jobs marked as REMOVED or marked as HELD that we haven't
-		// previously indicated that we're done with (by setting JobManaged
-		// to FALSE. If JobManaged is undefined, equate it with false.
-		sprintf( expr_buf, "(%s) && (%s == %d || %s == %d || (%s == %d && %s =?= TRUE))",
-				 ScheddJobConstraint, ATTR_JOB_STATUS, REMOVED,
+		// Grab jobs marked as REMOVED/COMPLETED or marked as HELD that we
+		// haven't previously indicated that we're done with (by setting
+		// JobManaged to "Schedd".
+		sprintf( expr_buf, "(%s) && (%s) && (%s == %d || %s == %d || (%s == %d && %s =?= \"%s\"))",
+				 ScheddJobConstraint, expr_not_completely_done.Value(),
+				 ATTR_JOB_STATUS, REMOVED,
 				 ATTR_JOB_STATUS, COMPLETED, ATTR_JOB_STATUS, HELD,
-				 ATTR_JOB_MANAGED );
+				 ATTR_JOB_MANAGED, MANAGED_EXTERNAL );
 
 		dprintf( D_FULLDEBUG,"Using constraint %s\n",expr_buf);
 		next_ad = GetNextJobByConstraint( expr_buf, 1 );
@@ -692,7 +843,7 @@ contact_schedd_next_add_job:
 			next_ad->LookupInteger( ATTR_PROC_ID, procID.proc );
 			next_ad->LookupInteger( ATTR_JOB_STATUS, curr_status );
 
-			if ( JobsByProcID.lookup( procID, next_job ) == 0 ) {
+			if ( BaseJob::JobsByProcId.lookup( procID, next_job ) == 0 ) {
 				// Should probably skip jobs we already have marked as
 				// held or removed
 
@@ -710,8 +861,12 @@ contact_schedd_next_add_job:
 						 procID.proc );
 				// Log the removal of the job from the queue
 				WriteAbortEventToUserLog( next_ad );
+				// NOENT means the job doesn't exist.  Good enough for us.
 				rc = DestroyProc( procID.cluster, procID.proc );
-				if ( rc < 0 ) {
+				if(rc == DESTROYPROC_ENOENT) {
+					dprintf(D_ALWAYS,"Gridmanager tried to destroy %d.%d twice.\n",procID.cluster,procID.proc);
+				}
+				if ( rc < 0 && rc != DESTROYPROC_ENOENT) {
 					failure_line_num = __LINE__;
 					delete next_ad;
 					commit_transaction = false;
@@ -720,7 +875,7 @@ contact_schedd_next_add_job:
 
 			} else {
 
-				dprintf( D_ALWAYS, "Don't know about held job %d.%d. "
+				dprintf( D_ALWAYS, "Don't know about held/completed job %d.%d. "
 						 "Ignoring it\n",
 						 procID.cluster, procID.proc );
 
@@ -768,8 +923,8 @@ contact_schedd_next_add_job:
 			int rc;
 			int status;
 
-			rc = GetAttributeInt( curr_request.job->procID.cluster,
-								  curr_request.job->procID.proc,
+			rc = GetAttributeInt( curr_request.job_id.cluster,
+								  curr_request.job_id.proc,
 								  ATTR_JOB_STATUS, &status );
 			if ( rc < 0 ) {
 				if ( errno == ETIMEDOUT ) {
@@ -785,12 +940,12 @@ contact_schedd_next_add_job:
 			}
 				// return status
 			dprintf( D_FULLDEBUG, "%d.%d job status: %d\n",
-					 curr_request.job->procID.cluster,
-					 curr_request.job->procID.proc,status);
-			pendingJobStatus.remove( curr_request.job->procID );
+					 curr_request.job_id.cluster,
+					 curr_request.job_id.proc, status );
+			pendingJobStatus.remove( curr_request.job_id );
 			curr_request.job_status = status;
-			curr_request.job->SetEvaluateState();
-			completedJobStatus.insert( curr_request.job->procID,
+			daemonCore->Reset_Timer( curr_request.tid, 0 );
+			completedJobStatus.insert( curr_request.job_id,
 									   curr_request );
 		}
 
@@ -809,8 +964,8 @@ contact_schedd_next_add_job:
 		char attr_value[1024];
 		ExprTree *expr;
 		bool fake_job_in_queue = false;
-		curr_job->ad->ResetExpr();
-		while ( (expr = curr_job->ad->NextDirtyExpr()) != NULL &&
+		curr_job->jobAd->ResetExpr();
+		while ( (expr = curr_job->jobAd->NextDirtyExpr()) != NULL &&
 				fake_job_in_queue == false ) {
 			attr_name[0] = '\0';
 			attr_value[0] = '\0';
@@ -854,6 +1009,13 @@ contact_schedd_next_add_job:
 
 	// Delete existing jobs
 	/////////////////////////////////////////////////////
+	BeginTransaction();
+	if ( errno == ETIMEDOUT ) {
+		failure_line_num = __LINE__;
+		commit_transaction = false;
+		goto contact_schedd_disconnect;
+	}
+
 	pendingScheddUpdates.startIterations();
 
 	while ( pendingScheddUpdates.iterate( curr_job ) != 0 ) {
@@ -861,27 +1023,22 @@ contact_schedd_next_add_job:
 		if ( curr_job->deleteFromSchedd ) {
 			dprintf(D_FULLDEBUG,"Deleting job %d.%d from schedd\n",
 					curr_job->procID.cluster, curr_job->procID.proc);
-			BeginTransaction();
-			if ( errno == ETIMEDOUT ) {
-				failure_line_num = __LINE__;
-				commit_transaction = false;
-				goto contact_schedd_disconnect;
-			}
 			rc = DestroyProc(curr_job->procID.cluster,
 							 curr_job->procID.proc);
-			if ( rc < 0 ) {
+				// NOENT means the job doesn't exist.  Good enough for us.
+			if ( rc < 0 && rc != DESTROYPROC_ENOENT) {
 				failure_line_num = __LINE__;
 				commit_transaction = false;
 				goto contact_schedd_disconnect;
 			}
-			if ( CloseConnection() < 0 ) {
-				failure_line_num = __LINE__;
-				commit_transaction = false;
-				goto contact_schedd_disconnect;
-			}
-			successful_deletes.Append( curr_job );
 		}
 
+	}
+
+	if ( CloseConnection() < 0 ) {
+		failure_line_num = __LINE__;
+		commit_transaction = false;
+		goto contact_schedd_disconnect;
 	}
 
 	schedd_deletes_complete = true;
@@ -894,16 +1051,13 @@ contact_schedd_next_add_job:
 		firstScheddContact = false;
 		addJobsSignaled = false;
 	} else {
-		dprintf( D_ALWAYS, "Schedd connection error during Add/RemoveJobs at line %d! Will retry\n", failure_line_num );
-		RequestContactSchedd();
-		return TRUE;
+		error_str.sprintf( "Schedd connection error during Add/RemoveJobs at line %d!", failure_line_num );
+		goto contact_schedd_failure;
 	}
 
 	if ( schedd_updates_complete == false ) {
-		dprintf( D_ALWAYS, "Schedd connection error during updates at line %d! Will retry\n", failure_line_num );
-		lastContactSchedd = time(NULL);
-		RequestContactSchedd();
-		return TRUE;
+		error_str.sprintf( "Schedd connection error during updates at line %d!", failure_line_num );
+		goto contact_schedd_failure;
 	}
 
 	// Wake up jobs that had schedd updates pending and delete job
@@ -912,7 +1066,7 @@ contact_schedd_next_add_job:
 
 	while ( pendingScheddUpdates.iterate( curr_job ) != 0 ) {
 
-		curr_job->ad->ClearAllDirtyFlags();
+		curr_job->jobAd->ClearAllDirtyFlags();
 
 		if ( curr_job->deleteFromGridmanager ) {
 
@@ -921,11 +1075,10 @@ contact_schedd_next_add_job:
 				// object yet; wait until we successfully delete the job
 				// from the schedd.
 			if ( curr_job->deleteFromSchedd == true &&
-				 successful_deletes.Delete( curr_job ) == false ) {
+				 schedd_deletes_complete == false ) {
 				continue;
 			}
 
-			JobsByProcID.remove( curr_job->procID );
 				// If wantRematch is set, send a reschedule now
 			if ( curr_job->wantRematch ) {
 				send_reschedule = true;
@@ -933,7 +1086,7 @@ contact_schedd_next_add_job:
 			pendingScheddUpdates.remove( curr_job->procID );
 			pendingScheddVacates.remove( curr_job->procID );
 			pendingJobStatus.remove( curr_job->procID );
-			pendingJobStatus.remove( curr_job->procID );
+			completedJobStatus.remove( curr_job->procID );
 			completedScheddVacates.remove( curr_job->procID );
 			delete curr_job;
 
@@ -945,12 +1098,21 @@ contact_schedd_next_add_job:
 
 	}
 
+	// Poke objects that wanted to be notified when a schedd update completed
+	// successfully (possibly minus deletes)
+	int timer_id;
+	scheddUpdateNotifications.Rewind();
+	while ( scheddUpdateNotifications.Next( timer_id ) ) {
+		daemonCore->Reset_Timer( timer_id, 0 );
+	}
+	scheddUpdateNotifications.Clear();
+
 	if ( send_reschedule == true ) {
 		ScheddObj->reschedule();
 	}
 
 	// Check if we have any jobs left to manage. If not, exit.
-	if ( JobsByProcID.getNumElements() == 0 ) {
+	if ( BaseJob::JobsByProcId.getNumElements() == 0 ) {
 		dprintf( D_ALWAYS, "No jobs left, shutting down\n" );
 		daemonCore->Send_Signal( daemonCore->getpid(), SIGTERM );
 	}
@@ -958,11 +1120,27 @@ contact_schedd_next_add_job:
 	lastContactSchedd = time(NULL);
 
 	if ( schedd_deletes_complete == false ) {
-		dprintf( D_ALWAYS, "Schedd connection error! Will retry\n" );
-		RequestContactSchedd();
+		error_str.sprintf( "Problem using DestroyProc to delete jobs!" );
+		goto contact_schedd_failure;
 	}
 
+	scheddFailureCount = 0;
+
 dprintf(D_FULLDEBUG,"leaving doContactSchedd()\n");
+	return TRUE;
+
+ contact_schedd_failure:
+	scheddFailureCount++;
+	if ( error_str == "" ) {
+		error_str = "Failure in doContactSchedd";
+	}
+	if ( scheddFailureCount >= maxScheddFailures ) {
+		dprintf( D_ALWAYS, "%s\n", error_str.Value() );
+		EXCEPT( "Too many failures connecting to schedd!" );
+	}
+	dprintf( D_ALWAYS, "%s Will retry\n", error_str.Value() );
+	lastContactSchedd = time(NULL);
+	RequestContactSchedd();
 	return TRUE;
 }
 

@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -36,9 +36,10 @@ This file can be processed with several purposes in mind.
 #include "syscall_numbers.h"
 #include "condor_syscall_mode.h"
 #include "file_table_interf.h"
-#include "debug.h"
+#include "condor_debug.h"
 #include "../condor_ckpt/signals_control.h"
 #include "../condor_ckpt/file_state.h"
+#include "gtodc.h"
 
 #if defined(DL_EXTRACT)
 #   include <dlfcn.h>   /* for dlopen and dlsym */
@@ -56,9 +57,11 @@ extern unsigned int _condor_numrestarts;  /* in image.C */
 extern "C" {
 
 int GETRUSAGE(...);
+int _WAITPID(...);
 int _libc_FORK(...);
 int SYSCONF(...);
 int SYSCALL(...);
+int _FORK_sys(...);
 void update_rusage( register struct rusage *ru1, register struct rusage *ru2 );
 
 #if defined(LINUX) || defined(IRIX)
@@ -119,6 +122,17 @@ struct condor_kernel_dirent {
 	char            d_name[256]; 
 };
 
+/* This structure isn't needed, per se, but I put it here to record what it is
+	in case it is needed in the future. */
+struct condor_kernel_dirent64
+{
+	uint64_t			d_ino;
+	int64_t				d_off;
+	unsigned short int	d_reclen;
+	unsigned char		d_type;
+	char				d_name[256];
+};
+
 /* This is an annoying little variable that exists in glibc 2.2.4(redhat 7.1),
 	but not in glibc 2.1.3(redhat 6.2). In glibc 2.2.4, it is labeled as a C
 	linker type meaning if no other definition of this variable is found first,
@@ -151,11 +165,38 @@ extern "C" int getdents ( int fd, struct dirent *buf, size_t nbytes )
 	if( LocalSysCalls() || do_local ) {
 		rval = syscall( SYS_getdents, fd , &kbuf , sizeof(kbuf) );
 		if(rval>0) {
-			buf->d_ino = kbuf.d_ino;
-			buf->d_off = kbuf.d_off;
-			buf->d_type = 0;
-			strcpy(buf->d_name,kbuf.d_name);
-			buf->d_reclen = sizeof(*buf) - sizeof(buf->d_name) + strlen(buf->d_name) + 1;
+			/* Woe is me. :( It turns out that if the user
+				application has _LARGEFILE64_SOURCE
+				defined to 1, and _FILE_OFFSET_BITS
+				defined to 64, at least under linux, then the struct dirent
+				member of d_ino and d_off that the
+				APPLICATION code will be using is defined
+				as 8 byte quanitites. However, this code
+				here sees them (at Condor compile time)
+				as 4 byte quantities, since we did not
+				define those #defines (and probably
+				shouldn't) at this level of the code. I
+				know of no way to detect the user's size
+				of d_ino and d_off, mostly since the
+				struct dirent array that is passed in is
+				completely opaque. So, I'm just going
+				to declare that you better not define
+				those two #defines and use getdents()
+				in a user program. Use of getdents64() is
+				fine in either case, though. -psilord */
+
+			buf[0].d_ino = kbuf.d_ino;
+			buf[0].d_off = kbuf.d_off;
+
+			buf[0].d_type = 0;
+			buf[0].d_name[0] = '\0';
+			strcpy(buf[0].d_name,kbuf.d_name);
+
+			/* Carefully compute the reclen to be cognizant of the predefine
+				space allocated to d_name, whether it be one element or 256 */
+			buf[0].d_reclen =
+							(sizeof(struct dirent) - sizeof(buf[0].d_name)) +
+								strlen(buf[0].d_name) - 1;
 
 			/*
 			If I was very clever, I would convert all of the data returned.
@@ -164,10 +205,10 @@ extern "C" int getdents ( int fd, struct dirent *buf, size_t nbytes )
 			*/
 
 			int scm = SetSyscalls(SYS_LOCAL|SYS_UNMAPPED);
-			lseek(fd,buf->d_off,SEEK_SET);
+			lseek(fd,buf[0].d_off,SEEK_SET);
 			SetSyscalls(scm);
 
-			rval = buf->d_reclen;
+			rval = buf[0].d_reclen;
 		}       
 	} else {
 		rval = REMOTE_CONDOR_getdents( fd , buf , nbytes );
@@ -178,10 +219,30 @@ extern "C" int getdents ( int fd, struct dirent *buf, size_t nbytes )
 	return (int  ) rval;
 }
 
+/* getdents, for some unknown reason, requires a special register passing
+	convention. */
 extern "C" int __getdents( int fd, struct dirent *dirp, size_t count ) __attribute__ ((regparm (3), stdcall));
 
 extern "C" int __getdents( int fd, struct dirent *dirp, size_t count ) {
 	return getdents(fd,dirp,count);
+}
+
+/* It looks like I don't have to specifically create a getdents64()
+	switch which does translation like above since the kernel
+	structure and user structure are the same. However, I DO have
+	to futz with the argument passing style of this function like
+	how was done with getdents(). In my inspection of the entire
+	getdents/getdents64() functionality in glibc, I've come to
+	realize that drooling monkeys designed the interface for
+	getdents/getdents64 and the implementation of it was, and is,
+	a crime against all that is rational and good. */
+
+extern "C" int __getdents64( int fd, struct dirent64 *dirp, size_t count ) __attribute__ ((regparm (3), stdcall));
+
+extern "C" int getdents64(int, struct dirent64*, size_t);
+
+extern "C" int __getdents64( int fd, struct dirent64 *dirp, size_t count ) {
+	return getdents64(fd,dirp,count);
 }
 
 #endif /* LINUX */
@@ -1647,6 +1708,289 @@ getrusage( int who, struct rusage *rusage )
 		return -1;
 	}
 }
+
+/* Programs which call gettimeofday() in tight loops trying to calculate
+	timing statistics will really slow down as each gettimeofday()
+	goes across the network to the shadow. So, we're going to
+	implement a cache where the first time gettimeofday() is called
+	it will contact the shadow, but afterwards it'll use a cache. The
+	execution machine time is gotten and the difference from the last
+	execution machine time is added the the submission machine time.
+	This should fix time skew since _instances_ in time are relative
+	to the submission machine, but the passing of time is relative
+	to the execution machine.
+
+	We have to be careful to reinitialize the cache after we resume
+	from a checkpoint to keep eveything as correct as possible. This
+	reinitalization happens elsewhere.
+*/
+
+#undef gettimeofday
+#if defined( SYS_gettimeofday )
+#if defined(LINUX)
+extern "C" int REMOTE_CONDOR_gettimeofday(struct timeval *, struct timezone *);
+int gettimeofday (struct timeval *tp, struct timezone *tzp)
+#else
+extern "C" int REMOTE_CONDOR_gettimeofday(struct timeval *, void *);
+int gettimeofday (struct timeval *tp, void *tzp)
+#endif
+{
+	struct timeval exe_machine_now;
+	struct timeval sub_machine_now;
+
+	int rval, do_local=0;
+	errno = 0;
+
+	sigset_t condor_omask = _condor_signals_disable();
+
+	if( LocalSysCalls() || do_local ) {
+
+		rval = syscall( SYS_gettimeofday, tp , tzp );
+
+	} else {
+
+		/* initialize the in memory cache, if needed */
+		if (_condor_gtodc_is_initialized(_condor_global_gtodc) == FALSE) {
+
+			/* get "now" from the submit machine */
+			rval = -1;
+			rval = REMOTE_CONDOR_gettimeofday( &sub_machine_now, tzp );
+			if (rval != 0) {
+				goto finished;
+			}
+
+			/* get "now" from the execute machine */
+			rval = syscall( SYS_gettimeofday, &exe_machine_now, tzp );
+			if (rval != 0) {
+				goto finished;
+			}
+			
+			_condor_gtodc_set_now(_condor_global_gtodc, &exe_machine_now, 
+							&sub_machine_now);
+
+			_condor_gtodc_set_initialized(_condor_global_gtodc, TRUE);
+
+		}
+
+		/* get "now" on the local machine, the differential of this and
+			when I initially filled the cache will be added to the 
+			submit machine's original "now" and returned to the user. */
+		rval = syscall( SYS_gettimeofday, &exe_machine_now, tzp );
+		if (rval != 0) {
+			goto finished;
+		}
+
+		/* determine how much time has passed since the last gettimeofday()
+			call has happened (in terms of the submit machine), but without 
+			going to the submit machine. */
+		_condor_gtodc_synchronize(_condor_global_gtodc, tp, &exe_machine_now);
+
+	}
+
+	finished:
+	_condor_signals_enable( condor_omask );
+
+	return rval;
+}
+#endif
+
+
+/* This function call performs a true system() call in local mode, and in
+	remote mode calls back to a pseudo call to the shadow, which
+	performs the actual system() invocation.  The reason it is a pseudo call
+	in the shadow is we have to write a process wrapper around the invocation
+	if the system() because it can block indefinitely, and if the job ends up
+	getting killed or must be evicted, the shadow can still have control
+	over the situation on the remote end.
+
+	Obviously, there are serious issues with system(), checkpointing, and
+	hetergeneous submission...
+	like the fact it is probably not idempotent across checkpointins...
+*/
+extern "C" int REMOTE_CONDOR_shell( char *, int );
+static int local_system_posix(const char *command);
+static int remote_system_posix(const char *command, int len);
+static int shell ( const char *command, int len )
+{
+	int rval, do_local=0;
+	errno = 0;
+
+	sigset_t condor_omask = _condor_signals_disable();
+
+	if( LocalSysCalls() || do_local ) {
+		rval = local_system_posix( command );
+	} else {
+		rval = remote_system_posix( (char*)command, len );
+	}
+
+	_condor_signals_enable( condor_omask );
+
+	return rval;
+}
+
+/* here is the actual system() libc entrance call */
+int system( const char *command )
+{
+	/* include space for a terminating nul character on the receiver side */
+	return shell( command, strlen(command) + 1 );
+}
+
+/* this props up the environment string for the job and passes the entire thing
+	to the shadow for execution. */
+static int remote_system_posix(const char *command, int len)
+{
+	extern char **environ;
+	char **ev;
+	int rval;
+	int envsize = 0;
+	char *str;
+
+	/* if this process has an environment, then preserve it when the shadow
+		executes this subprocess by prepending the job's environment before the
+		command the user wanted to execute. XXX This function does not perform
+		any escaping of any environment variables, so things like spaces and
+		other things could be interpreted badly if they are in the environment.
+	*/
+	if (*environ != NULL) {
+
+		/* count up how much environment I need */
+		for (ev = environ; *ev != NULL; ev++) {
+			/* add three for ' ; ' at the end of each env var */
+			envsize += strlen(*ev) + 3;
+		}
+
+		/* add the size of the executing command */
+		envsize += len;
+
+		/* add one for the nul character at the end of it all */
+		envsize += 1;
+	
+		/* get some memory */
+		str = (char*)malloc(sizeof(char*) * envsize);
+		memset(str, 0, envsize);
+		if (str == NULL) {
+			EXCEPT( "remote_system_posix(): Out of memory!");
+		}
+
+		/* append everything together */
+		strcpy(str, *environ);
+		strcat(str, " ; ");
+		for (ev = environ + 1; *ev != NULL; ev++) {
+			strcat(str, *ev);
+			strcat(str, " ; ");
+		}
+
+		/* add the command at the end */
+		strcat(str, command);
+
+		/* execute the entire ball of wax with the remote shell */
+		rval = REMOTE_CONDOR_shell( str, envsize );
+
+		free(str);
+
+		return rval;
+	}
+
+	/* else just do what the user wanted of me */
+	rval = REMOTE_CONDOR_shell( (char*)command, len );
+	return rval;
+}
+
+/* here is the standalone implementation of system() */
+static int local_system_posix(const char *command)
+{
+	pid_t pid;
+	int status = -1;
+	struct sigaction ignore, saveintr, savequit;
+	sigset_t chldmask, savemask;
+	char *argv[4];
+	extern char **environ;
+
+	if (command == NULL) {
+		/* always a command processor under unix */
+		return 1;
+	}
+
+	/* ignore sigint and sigquit. Do this BEFORE the fork() */
+	ignore.sa_handler = SIG_IGN;
+	sigemptyset(&ignore.sa_mask);
+	ignore.sa_flags = 0;
+	if (sigaction(SIGINT, &ignore, &saveintr) < 0) {
+		return -1;
+	}
+	if (sigaction(SIGQUIT, &ignore, &savequit) < 0) {
+		return -1;
+	}
+
+	/* Now block SIGCHLD */
+	sigemptyset(&chldmask);
+	sigaddset(&chldmask, SIGCHLD);
+	if (sigprocmask(SIG_BLOCK, &chldmask, &savemask) < 0) {
+		return -1;
+	}
+
+#if defined(LINUX)
+	if ((pid = SYSCALL(SYS_fork)) < 0) {
+#elif defined(Solaris)
+	if ((pid = _libc_FORK()) < 0) {
+#elif defined(HPUX)
+	if ((pid = _FORK_sys()) < 0) {
+#else
+#error "Please port which 'fork' I need on this platform"
+#endif
+		status = -1;
+	} else if (pid == 0) { 
+		/* child */
+		
+		SetSyscalls(SYS_LOCAL | SYS_UNMAPPED);
+
+		sigaction(SIGINT, &saveintr, NULL);
+		sigaction(SIGQUIT, &savequit, NULL);
+		sigprocmask(SIG_SETMASK, &savemask, NULL);
+
+		argv[0] = "sh";
+		argv[1] = "-c";
+		argv[2] = (char*)command;
+		argv[3] = NULL;
+		syscall(SYS_execve, "/bin/sh", argv, environ);
+
+		_exit(127);
+
+	} else {
+		/* parent */
+#if defined(LINUX) || defined(HPUX)
+		while(SYSCALL(SYS_waitpid, pid, &status, 0) < 0) {
+#elif defined(Solaris)
+		while(_WAITPID(pid, &status, 0) < 0) {
+#else
+#error "Please port which 'waitpid' I need on this platform"
+#endif
+			if (errno != EINTR) {
+				status = -1;
+				break;
+			}
+		}
+	}
+	
+	/* restore previous signal actions and reset signal mask */
+	if (sigaction(SIGINT, &saveintr, NULL) < 0) {
+		return -1;
+	}
+	if (sigaction(SIGQUIT, &savequit, NULL) < 0) {
+		return -1;
+	}
+	if (sigprocmask(SIG_SETMASK, &savemask, NULL) < 0) {
+		return -1;
+	}
+
+	return status;
+}
+
+
+
+
+
+
 
 /*
   This routine which is normally provided in the C library determines

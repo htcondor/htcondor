@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -25,6 +25,7 @@
 #define _UTIL_H_
 
 #include "condor_system.h"   /* for <stdio.h> */
+#include "condor_arglist.h"
 
 #if 0   /* These function are never used! */
 int StringHash(char *str, int numBuckets);
@@ -42,12 +43,13 @@ const int UTIL_MAX_LINE_LENGTH = 1024;
     whitespace into the line buffer. Return the number of characters
     read (excluding \n). Returns -1 on EOF.
 */ 
-extern "C" int util_getline (FILE *fp, char *line, int max);
+int util_getline (FILE *fp, char *line, int max);
 
 /** Execute a command, printing verbose messages and failure warnings.
     @param cmd The command or script to execute
     @return The return status of the command
 */
-extern "C" int util_popen (const char * cmd);
+int util_popen (ArgList &args);
+
 
 #endif /* #ifndef _UTIL_H_ */

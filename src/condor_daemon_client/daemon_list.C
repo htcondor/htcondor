@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -27,7 +27,7 @@
 #include "condor_string.h"
 #include "daemon_list.h"
 #include "dc_collector.h"
-
+#include "internet.h"
 
 DaemonList::DaemonList()
 {
@@ -123,7 +123,224 @@ bool
 DaemonList::AtEnd() { return list.AtEnd(); } 
 
 void
-DaemonList::deleteCurrent() { list.DeleteCurrent(); } 
+DaemonList::deleteCurrent() { this->DeleteCurrent(); }
 
+/*
+  NOTE: SimpleList does NOT delete the Daemon objects themselves,
+  DeleteCurrent() is only going to delete the pointer itself.  Since
+  we're responsible for all this memory (we create the Daemon objects 
+  in DaemonList::init() and DaemonList::buildDaemon()), we have to be
+  responsbile to deallocate it when we're done.  We're already doing
+  this correctly in the DaemonList destructor, and we have to do it
+  here in the DeleteCurrent() interface, too.
+*/
 void
-DaemonList::DeleteCurrent() { list.DeleteCurrent(); } 
+DaemonList::DeleteCurrent() {
+	Daemon* cur = NULL;
+	if( list.Current(cur) && cur ) {
+		delete cur;
+	}
+	list.DeleteCurrent();
+}
+
+
+CollectorList::CollectorList() {
+}
+
+CollectorList::~CollectorList() {
+}
+
+
+CollectorList *
+CollectorList::create( const char * pool )
+{
+	CollectorList * result = new CollectorList();
+	DCCollector * collector = NULL;
+
+	if (pool) {
+			// Eventually we might want to query this collector
+			// for all the other collectors in the pool....
+		result->append (new DCCollector (pool));
+		return result;
+	}
+
+		// Read the new names from config file
+	StringList collector_name_list;
+	char * collector_name_param = NULL;
+	collector_name_param = getCmHostFromConfig( "COLLECTOR" );
+	if( collector_name_param ) {
+		collector_name_list.initializeFromString(collector_name_param);
+	
+			// Create collector objects
+		collector_name_list.rewind();
+		char * collector_name = NULL;
+		while ((collector_name = collector_name_list.next()) != NULL) {
+			collector = new DCCollector (collector_name);
+			result->append (collector);
+		}
+	} else {
+			// Otherwise, just return an empty list
+		dprintf( D_ALWAYS, "ERROR: Unable to find collector info in "
+				 "configuration file!!!\n" );
+	}
+	if( collector_name_param ) {
+		free( collector_name_param );
+	}
+	return result;
+}
+
+
+/***
+ * 
+ * Resort a collector list for locality;
+ * prioritize the collector that is best suited for the negotiator
+ * running on this machine. This minimizes the delay for fetching
+ * ads from the Collector by the Negotiator, which some people
+ * consider more critical.
+ *
+ ***/
+
+int
+CollectorList::resortLocal( const char *preferred_collector )
+{
+		// Find the collector in the list that is best suited for 
+		// this host. This is determined either by
+		// a) preferred_collector passed in
+        // b) the collector that has the same hostname as this negotiator
+	char * tmp_preferred_collector = NULL;
+
+	if ( !preferred_collector ) {
+        // figure out our hostname for plan b) above
+		const char * _hostname = my_full_hostname();
+		if ((!_hostname) || !(*_hostname)) {
+				// Can't get our hostname??? fuck off
+			return -1;
+		}
+
+		tmp_preferred_collector = strdup(_hostname);
+		preferred_collector = preferred_collector; // So we know to free later
+	}
+
+
+		// First, pick out collector(s) that is on this host
+	Daemon *daemon;
+	SimpleList<Daemon*> prefer_list;
+	this->list.Rewind();
+	while ( this->list.Next(daemon) ) {
+		if ( same_host (preferred_collector, daemon->fullHostname()) ) {
+			this->list.DeleteCurrent();
+			prefer_list.Prepend( daemon );
+		}
+	}
+
+		// Walk through the list of preferred collectors,
+		// stuff 'em in the main "list"
+	this->list.Rewind();
+	prefer_list.Rewind();
+	while ( prefer_list.Next(daemon) ) {
+		this->list.Prepend( daemon );
+	}
+	
+	free(tmp_preferred_collector); // Warning, preferred_collector (may have) just became invalid, so do this just before returning.
+	return 0;
+}
+
+
+int
+CollectorList::sendUpdates (int cmd, ClassAd * ad1, ClassAd* ad2, bool nonblocking) {
+	int success_count = 0;
+
+	this->rewind();
+	DCCollector * daemon;
+	while (this->next(daemon)) {
+		dprintf( D_FULLDEBUG, 
+				 "Trying to update collector %s\n", 
+				 daemon->addr() );
+		if( daemon->sendUpdate(cmd, ad1, ad2, nonblocking) ) {
+			success_count++;
+		} 
+	}
+
+	return success_count;
+}
+
+QueryResult
+CollectorList::query(CondorQuery & query, ClassAdList & adList) {
+
+	int total_size = this->number();
+	if (total_size < 1) {
+		return Q_NO_COLLECTOR_HOST;
+	}
+
+	DCCollector * daemon;
+	int i=0;
+	QueryResult result;
+
+	this->rewind();
+	while (this->next(daemon)) {
+		if ( ! daemon->addr() ) {
+			if ( daemon->name() ) {
+				dprintf( D_ALWAYS,
+						 "Can't resolve collector %s; skipping\n",
+						 daemon->name() );
+			} else {
+				dprintf( D_ALWAYS,
+						 "Can't resolve nameless collector; skipping\n" );
+			}
+			continue;
+		}
+		dprintf (D_FULLDEBUG, 
+				 "Trying to query collector %s\n", 
+				 daemon->addr());
+
+		result = 
+			query.fetchAds (adList, daemon->addr());
+		
+		if (result == Q_OK) {
+			return result;
+		}
+		
+			// This collector is bad, it should be moved
+			// to the end of the list
+		DCCollector* copy = new DCCollector( *daemon );
+		this->deleteCurrent();
+		this->append (copy);
+		this->rewind();
+		
+			// Make sure we don't keep rotating through the list
+		if (++i >= total_size) break;
+	}
+			
+
+		// If we've gotten here, there are no good collectors
+	return Q_COMMUNICATION_ERROR;
+}
+
+
+
+bool
+CollectorList::next( DCCollector* & d )
+{
+	return DaemonList::Next( (Daemon*&)d );
+}
+
+
+bool
+CollectorList::Next( DCCollector* & d )
+{
+	return next( d );
+}
+
+
+bool
+CollectorList::next( Daemon* & d )
+{
+	return DaemonList::Next( d );
+}
+
+
+bool
+CollectorList::Next( Daemon* & d )
+{
+	return next( d );
+}

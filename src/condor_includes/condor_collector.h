@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -26,6 +26,7 @@
 
 enum AdTypes
 {
+	QUILL_AD,
 	STARTD_AD,
 	SCHEDD_AD,
 	MASTER_AD,
@@ -38,7 +39,11 @@ enum AdTypes
 	STORAGE_AD,
 	ANY_AD,
 	NUM_AD_TYPES,
-	CLUSTER_AD
+	CLUSTER_AD,
+	NEGOTIATOR_AD,
+	HAD_AD,
+	GENERIC_AD,
+	CREDD_AD
 };
 
 #include "condor_commands.h"   // collector commands

@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -31,20 +31,11 @@
 #include "user_log.c++.h"
 #include "exit.h"
 #include "internet.h"
-#include "../h/shadow.h"
+#include "qmgr_job_updater.h"
+#include "condor_update_style.h"
 
 /* Forward declaration to prevent loops... */
 class RemoteResource;
-
-/// What kind of update to the job queue are we performing?
-typedef enum { 
-	U_PERIODIC,
-	U_TERMINATE,
-	U_HOLD,
-	U_REMOVE,
-	U_REQUEUE,
-	U_EVICT
-} update_t;
 
 /** This is the base class for the various incarnations of the Shadow.<p>
 
@@ -131,18 +122,6 @@ class BaseShadow : public Service
 		*/
 	virtual void config();
 
-		/** This function should be called when the job is ready to 
-			shut down.  It decides wether or not to email the user, 
-			based on the reason and some parameters in the jobAd. 
-			If we should email the user, it opens a mailer file with
-			the subject line "Job Cluster.Proc" and returns the FILE*.
-			@param reason The reason for shutting down this job.
-			@return A mailer file for sending email.  Don't forget
-			to do an email_close() on it!  NULL returned if no email
-			to be sent.
-		 */
-	FILE* shutDownEmail( int reason );
-
 		/** Everyone should be able to shut down.<p>
 			@param reason The reason the job exited (JOB_BLAH_BLAH)
 		 */
@@ -160,7 +139,7 @@ class BaseShadow : public Service
 			universe-specific code before we exit.
 			@param reason String describing why the job is held
 		*/
-	void holdJob( const char* reason );
+	void holdJob( const char* reason, int hold_reason_code, int hold_reason_subcode );
 
 		/** Remove the job from the queue, if requested, notify the
 			user about it, and exit with the appropriate status so
@@ -186,8 +165,11 @@ class BaseShadow : public Service
 			event, update the job queue, etc.<p>
 			This uses the virtual cleanUp() method to take care of any
 			universe-specific code before we exit.
+			The optional style parameter dictates if the job terminated of
+			its own accord or if the shadow had been born with a 
+			previously terminated job classad.
 		*/
-	void terminateJob( void );
+	void terminateJob( update_style_t kind = US_NORMAL );
 
 		/** The job exited but it's not ready to leave the queue.  
 			We still want to log an evict event, possibly email the
@@ -304,11 +286,6 @@ class BaseShadow : public Service
 		/** Connect to the job queue and update one attribute */
 	bool updateJobAttr( const char *name, const char *expr );
 
-		/** Timer handler which just calls updateJobInQueue with the
-			right arguments so we do a periodic update.
-		*/
-	void periodicUpdateQ( void );
-
 		/** Do whatever cleanup (like killing starter(s)) that's
 			required before the shadow can exit.
 		*/
@@ -359,10 +336,15 @@ class BaseShadow : public Service
 			something like $(NODE) into each remoteresource. */
 	ClassAd *jobAd;
 
+	QmgrJobUpdater *job_updater;
+
 		/// Are we trying to remove this job (condor_rm)?
 	bool remove_requested;
 
 	ShadowUserPolicy shadow_user_policy;
+
+	float prev_run_bytes_sent;
+	float prev_run_bytes_recvd;
 
 	void emailHoldEvent( const char* reason );
 
@@ -371,7 +353,7 @@ class BaseShadow : public Service
 	void logRequeueEvent( const char* reason );
 		// virtual void emailRequeueEvent( const char* reason );
 
-	void logTerminateEvent( int exitReason );
+	void logTerminateEvent( int exitReason, update_style_t kind = US_NORMAL );
 
 	void logEvictEvent( int exitReason );
 
@@ -379,21 +361,7 @@ class BaseShadow : public Service
 
 	virtual void logReconnectFailedEvent( const char* reason ) = 0;
 
-	virtual void emailTerminateEvent( int exitReason ) = 0;
-
-		// move output data from intermediate files to user-specified
-		// locations
-	void moveOutputFiles( void );
-
-		// since all the work is identical for the stdout and stderr
-		// files, i put all the code into its own method so it can be
-		// shared between the two...
-	void moveOutputFile( const char* in, const char* out, bool verbose );
-
-		/** Initialize our StringLists for attributes we want to keep
-			updated in the job queue itself
-		*/ 
-	void initJobQueueAttrLists( void );
+	virtual void emailTerminateEvent( int exitReason, update_style_t kind = US_NORMAL ) = 0;
 
  private:
 
@@ -403,26 +371,6 @@ class BaseShadow : public Service
 			not, exit with JOB_NO_MEM.
 		*/
 	void checkSwap( void );
-
-		/** Since the email for most of our events should be so
-			similar, we put the code in a shared method to avoid
-			duplication.
-			@param action String describing the action we're taking
-			@param reason The reason we're taking the action
-			@param subject The subject for the email
-		*/
-	void emailActionEvent( const char* action, const char* reason, 
-						   const char* subject );
-
-		/** Update a specific attribute from our job ad into the
-			queue.  This checks the type of the given ExprTree and
-			calls the appropriate SetAttribute* function to do the
-			work.  This function assumes you're in the middle of a
-			qmgmt operation, i.e., that you've called ConnectQ().
-			@param The ExprTree you want to update in the job queue 
-			@return success or failure to set the attribute
-		 */
-	bool updateExprTree( char* name, ExprTree* tree );
 
 		/** See if the job is a) vanilla, b) unix and c) submitted
 			with a 6.3.1 or earlier condor_submit.  if so, it'll have
@@ -453,24 +401,6 @@ class BaseShadow : public Service
 	char *scheddAddr;
 	bool jobExitedGracefully;
 	char *core_file_name;
-	float prev_run_bytes_sent;
-	float prev_run_bytes_recvd;
-
-	// misc
-	int q_update_tid;
-
-		/// Pointers to lists of attribute names we care about
-
-		/** Attributes that should go in the job queue regardless of
-			what action we're taking with this job. */
-	StringList* common_job_queue_attrs;
-
-		/// Attributes specific to certain kinds of updates
-	StringList* hold_job_queue_attrs;
-	StringList* evict_job_queue_attrs;
-	StringList* remove_job_queue_attrs;
-	StringList* requeue_job_queue_attrs;
-	StringList* terminate_job_queue_attrs;
 
 		// This makes this class un-copy-able:
 	BaseShadow( const BaseShadow& );

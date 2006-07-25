@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -56,13 +56,14 @@
 #define CondorLogOp_DeleteAttribute		104
 #define CondorLogOp_BeginTransaction	105
 #define CondorLogOp_EndTransaction		106
+#define CondorLogOp_LogHistoricalSequenceNumber 107
 
 typedef HashTable <HashKey, ClassAd *> ClassAdHashTable;
 
 class ClassAdLog {
 public:
 	ClassAdLog();
-	ClassAdLog(const char *filename);
+	ClassAdLog(const char *filename,int max_historical_logs=0);
 	~ClassAdLog();
 
 	void AppendLog(LogRecord *log);	// perform a log operation
@@ -79,13 +80,69 @@ public:
 	// return -1 if DeleteAttribute or DestroyClassAd found
 	int LookupInTransaction(const char *key, const char *name, char *&val);
 
+	// insert into the given ad any attributes found in the uncommitted transaction
+	// cache that match the key.  return true if any attributes were
+	// added into the ad, false if not.
+	bool AddAttrsFromTransaction(const char *key, ClassAd &ad);
+
 	ClassAdHashTable table;
+
+	// When the log is truncated (i.e. compacted), old logs
+	// may be saved, up to some limit.  The default is not
+	// to save any history (max = 0).
+	void SetMaxHistoricalLogs(int max);
+	int GetMaxHistoricalLogs();
+
+protected:
+	/** Returns handle to active transaction.  Upon return of this
+		method, any active transaction is forgotten.  It is the caller's
+		responsibility to eventually delete the handle returned.
+		@return Pointer to the transaction state, or NULL if no transaction
+		currently active.
+		@see setActiveTransaction
+	*/
+	Transaction *getActiveTransaction();
+
+	/** Sets the active transaction to the provided handle.  Will fail
+		if there is currently a transaction already active.  Upon successful return,
+		the callers handle will be reset to NULL, as the caller should no 
+		longer touch the handle (including delete it).
+		@param transaction A pointer to a transaction object previously
+		returned by getActiveTransaction().
+		@return True on success, else false.
+		@see getActiveTransaction
+	*/
+	bool setActiveTransaction(Transaction* & transaction);
+
+	int ExamineTransaction(const char *key, const char *name, char *&val, ClassAd* &ad);
+
+
 private:
-	void LogState(int fd);
+	void LogState(FILE* fp);
+	FILE* log_fp;
+
 	char log_filename[_POSIX_PATH_MAX];
-	int log_fd;
 	Transaction *active_transaction;
-	bool EmptyTransaction;
+	int max_historical_logs;
+	unsigned long historical_sequence_number;
+
+	bool SaveHistoricalLogs();
+};
+
+class LogHistoricalSequenceNumber : public LogRecord {
+public:
+	LogHistoricalSequenceNumber(unsigned long historical_sequence_number, time_t timestamp);
+	int Play(void *data_structure);
+
+	unsigned long get_historical_sequence_number() {return historical_sequence_number;}
+	time_t get_timestamp() {return timestamp;}
+
+private:
+	virtual int WriteBody(FILE *fp);
+	virtual int ReadBody(FILE *fp);
+
+	unsigned long historical_sequence_number;
+	time_t timestamp; //time is logged for purely informational purposes
 };
 
 class LogNewClassAd : public LogRecord {
@@ -98,8 +155,8 @@ public:
 	char *get_targettype() { return strdup(targettype); }
 
 private:
-	virtual int WriteBody(int fd);
-	virtual int ReadBody(int fd);
+	virtual int WriteBody(FILE *fp);
+	virtual int ReadBody(FILE* fp);
 
 	char *key;
 	char *mytype;
@@ -115,8 +172,8 @@ public:
 	char *get_key() { return strdup(key); }
 
 private:
-	virtual int WriteBody(int fd) { return write(fd, key, strlen(key)); }
-	virtual int ReadBody(int fd);
+	virtual int WriteBody(FILE* fp) { int r=fwrite(key, sizeof(char), strlen(key), fp); return r < strlen(key) ? -1 : r;}
+	virtual int ReadBody(FILE* fp);
 
 	char *key;
 };
@@ -132,8 +189,8 @@ public:
 	char *get_value() { return strdup(value); }
 
 private:
-	virtual int WriteBody(int fd);
-	virtual int ReadBody(int fd);
+	virtual int WriteBody(FILE* fp);
+	virtual int ReadBody(FILE* fp);
 
 	char *key;
 	char *name;
@@ -149,8 +206,8 @@ public:
 	char *get_name() { return strdup(name); }
 
 private:
-	virtual int WriteBody(int fd);
-	virtual int ReadBody(int fd);
+	virtual int WriteBody(FILE* fp);
+	virtual int ReadBody(FILE* fp);
 
 	char *key;
 	char *name;
@@ -161,8 +218,10 @@ public:
 	LogBeginTransaction() { op_type = CondorLogOp_BeginTransaction; }
 	virtual ~LogBeginTransaction(){};
 private:
-	virtual int WriteBody(int fd) { return 0; }
-	virtual int ReadBody(int fd);
+
+	virtual int WriteBody(FILE* fp) {return 0;}
+	virtual int ReadBody(FILE* fp);
+
 };
 
 class LogEndTransaction : public LogRecord {
@@ -170,9 +229,11 @@ public:
 	LogEndTransaction() { op_type = CondorLogOp_EndTransaction; }
 	virtual ~LogEndTransaction(){};
 private:
-	virtual int WriteBody(int fd) { return 0; }
-	virtual int ReadBody(int fd);
+	virtual int WriteBody(FILE* fp) {return 0;}
+	virtual int ReadBody(FILE* fp);
+
 };
 
-LogRecord *InstantiateLogEntry(int fd, int type);
+LogRecord *InstantiateLogEntry(FILE* fp, int type);
+
 #endif

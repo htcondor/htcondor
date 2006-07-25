@@ -1,40 +1,67 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 
 #include "condor_common.h"
 #include "condor_attributes.h"
 #include "condor_debug.h"
-#include "environ.h"  // for Environ object
+#include "condor_string.h"	// for strnewp and friends
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
-#include "basename.h"
 #include "condor_ckpt_name.h"
+#include "globus_utils.h" // for GRAM_V_1_5
 
 #include "gridmanager.h"
 #include "basejob.h"
 #include "condor_config.h"
 #include "condor_email.h"
 
+#define HASH_TABLE_SIZE			500
+
+
+int BaseJob::periodicPolicyEvalTid = TIMER_UNSET;
+
+HashTable<PROC_ID, BaseJob *> BaseJob::JobsByProcId( HASH_TABLE_SIZE,
+													 hashFuncPROC_ID );
+HashTable<HashKey, BaseJob *> BaseJob::JobsByRemoteId( HASH_TABLE_SIZE,
+													   hashFunction );
+
+void BaseJob::BaseJobReconfig()
+{
+	int tmp_int;
+
+	if ( periodicPolicyEvalTid != TIMER_UNSET ) {
+		daemonCore->Cancel_Timer( periodicPolicyEvalTid );
+		periodicPolicyEvalTid = TIMER_UNSET;
+	}
+
+	tmp_int = param_integer( "PERIODIC_EXPR_INTERVAL", 300 );
+	if ( tmp_int != 0 ) {
+		periodicPolicyEvalTid = daemonCore->Register_Timer( tmp_int, tmp_int,
+							(TimerHandler)&BaseJob::EvalAllPeriodicJobExprs,
+							"EvalAllPeriodicJobExprs", (Service*)NULL );
+	}
+
+}
 
 BaseJob::BaseJob( ClassAd *classad )
 {
@@ -54,12 +81,20 @@ BaseJob::BaseJob( ClassAd *classad )
 	deleteFromGridmanager = false;
 	deleteFromSchedd = false;
 
-	ad = classad;
+	jobAd = classad;
 
-	ad->LookupInteger( ATTR_CLUSTER_ID, procID.cluster );
-	ad->LookupInteger( ATTR_PROC_ID, procID.proc );
+	jobAd->LookupInteger( ATTR_CLUSTER_ID, procID.cluster );
+	jobAd->LookupInteger( ATTR_PROC_ID, procID.proc );
 
-	ad->LookupInteger( ATTR_JOB_STATUS, condorState );
+	JobsByProcId.insert( procID, this );
+
+	MyString remote_id;
+	jobAd->LookupString( ATTR_GRID_JOB_ID, remote_id );
+	if ( !remote_id.IsEmpty() ) {
+		JobsByRemoteId.insert( HashKey( remote_id.Value() ), this );
+	}
+
+	jobAd->LookupInteger( ATTR_JOB_STATUS, condorState );
 
 	evaluateStateTid = daemonCore->Register_Timer( TIMER_NEVER,
 								(TimerHandlercpp)&BaseJob::doEvaluateState,
@@ -68,22 +103,46 @@ BaseJob::BaseJob( ClassAd *classad )
 	wantRematch = 0;
 	doResubmit = 0;		// set if gridmanager wants to resubmit job
 	wantResubmit = 0;	// set if user wants to resubmit job via RESUBMIT_CHECK
-	ad->EvalBool(ATTR_GLOBUS_RESUBMIT_CHECK,NULL,wantResubmit);
+	jobAd->EvalBool(ATTR_GLOBUS_RESUBMIT_CHECK,NULL,wantResubmit);
 
-	ad->ClearAllDirtyFlags();
+	jobAd->ClearAllDirtyFlags();
 
-	periodicPolicyEvalTid = daemonCore->Register_Timer( 30,
-								(TimerHandlercpp)&BaseJob::EvalPeriodicJobExpr,
-								"EvalPeriodicJobExpr", (Service*) this );
+	jobLeaseSentExpiredTid = TIMER_UNSET;
+	jobLeaseReceivedExpiredTid = TIMER_UNSET;
+	SetJobLeaseTimers();
+
+	int tmp_int;
+	if ( jobAd->LookupInteger( ATTR_GRID_RESOURCE_UNAVAILABLE_TIME,
+							   tmp_int ) ) {
+		resourceDown = true;
+	} else {
+		resourceDown = false;
+	}
+	resourceStateKnown = false;
+	resourcePingPending = false;
+	resourcePingComplete = false;
 }
 
 BaseJob::~BaseJob()
 {
-	if ( ad ) {
-		delete ad;
-	}
-	daemonCore->Cancel_Timer( periodicPolicyEvalTid );
 	daemonCore->Cancel_Timer( evaluateStateTid );
+	if ( jobLeaseSentExpiredTid != TIMER_UNSET ) {
+		daemonCore->Cancel_Timer( jobLeaseSentExpiredTid );
+	}
+	if ( jobLeaseReceivedExpiredTid != TIMER_UNSET ) {
+		daemonCore->Cancel_Timer( jobLeaseReceivedExpiredTid );
+	}
+	JobsByProcId.remove( procID );
+
+	MyString remote_id;
+	jobAd->LookupString( ATTR_GRID_JOB_ID, remote_id );
+	if ( !remote_id.IsEmpty() ) {
+		JobsByRemoteId.remove( HashKey( remote_id.Value() ) );
+	}
+
+	if ( jobAd ) {
+		delete jobAd;
+	}
 }
 
 void BaseJob::SetEvaluateState()
@@ -103,43 +162,6 @@ BaseResource *BaseJob::GetResource()
 	return NULL;
 }
 
-void BaseJob::UpdateJobAd( const char *name, const char *value )
-{
-	char buff[1024];
-	sprintf( buff, "%s = %s", name, value );
-	ad->InsertOrUpdate( buff );
-}
-
-void BaseJob::UpdateJobAdInt( const char *name, int value )
-{
-	char buff[16];
-	sprintf( buff, "%d", value );
-	UpdateJobAd( name, buff );
-}
-
-void BaseJob::UpdateJobAdFloat( const char *name, float value )
-{
-	char buff[16];
-	sprintf( buff, "%f", value );
-	UpdateJobAd( name, buff );
-}
-
-void BaseJob::UpdateJobAdBool( const char *name, int value )
-{
-	if ( value ) {
-		UpdateJobAd( name, "TRUE" );
-	} else {
-		UpdateJobAd( name, "FALSE" );
-	}
-}
-
-void BaseJob::UpdateJobAdString( const char *name, const char *value )
-{
-	char buff[1024];
-	sprintf( buff, "\"%s\"", value );
-	UpdateJobAd( name, buff );
-}
-
 void BaseJob::JobSubmitted( const char *remote_host)
 {
 }
@@ -150,13 +172,13 @@ void BaseJob::JobRunning()
 		 condorState != REMOVED ) {
 
 		condorState = RUNNING;
-		UpdateJobAdInt( ATTR_JOB_STATUS, condorState );
-		UpdateJobAdInt( ATTR_ENTERED_CURRENT_STATUS, time(NULL) );
+		jobAd->Assign( ATTR_JOB_STATUS, condorState );
+		jobAd->Assign( ATTR_ENTERED_CURRENT_STATUS, (int)time(NULL) );
 
 		UpdateRuntimeStats();
 
 		if ( writeUserLog && !executeLogged ) {
-			WriteExecuteEventToUserLog( ad );
+			WriteExecuteEventToUserLog( jobAd );
 			executeLogged = true;
 		}
 
@@ -169,11 +191,18 @@ void BaseJob::JobIdle()
 	if ( condorState != IDLE && condorState != HELD &&
 		 condorState != REMOVED ) {
 
+		bool write_evict = (condorState==RUNNING);
+
 		condorState = IDLE;
-		UpdateJobAdInt( ATTR_JOB_STATUS, condorState );
-		UpdateJobAdInt( ATTR_ENTERED_CURRENT_STATUS, time(NULL) );
+		jobAd->Assign( ATTR_JOB_STATUS, condorState );
+		jobAd->Assign( ATTR_ENTERED_CURRENT_STATUS, (int)time(NULL) );
 
 		UpdateRuntimeStats();
+
+		if( write_evict ) {
+			WriteEvictEventToUserLog( jobAd );
+			executeLogged = false;
+		}
 
 		requestScheddUpdate( this );
 	}
@@ -185,9 +214,12 @@ void BaseJob::JobEvicted()
 
 	UpdateRuntimeStats();
 
+		// If we had a lease with the remote resource, we don't now
+	UpdateJobLeaseSent( 0 );
+
 		//  should we be updating job ad values here?
 	if ( writeUserLog && !evictLogged ) {
-		WriteEvictEventToUserLog( ad );
+		WriteEvictEventToUserLog( jobAd );
 		evictLogged = true;
 	}
 }
@@ -206,8 +238,8 @@ void BaseJob::JobCompleted()
 		 condorState != REMOVED ) {
 
 		condorState = COMPLETED;
-		UpdateJobAdInt( ATTR_JOB_STATUS, condorState );
-		UpdateJobAdInt( ATTR_ENTERED_CURRENT_STATUS, time(NULL) );
+		jobAd->Assign( ATTR_JOB_STATUS, condorState );
+		jobAd->Assign( ATTR_ENTERED_CURRENT_STATUS, (int)time(NULL) );
 
 		UpdateRuntimeStats();
 
@@ -218,29 +250,56 @@ void BaseJob::JobCompleted()
 void BaseJob::DoneWithJob()
 {
 	deleteFromGridmanager = true;
-	UpdateJobAdBool( ATTR_JOB_MANAGED, 0 );
 
-	if ( condorState == COMPLETED ) {
-		if ( writeUserLog && !terminateLogged ) {
-			WriteTerminateEventToUserLog( ad );
-			EmailTerminateEvent( ad, exitStatusKnown );
-			terminateLogged = true;
+	switch(condorState) {
+		case COMPLETED:
+		{
+			// I never want to see this job again.
+			jobAd->Assign( ATTR_JOB_MANAGED, MANAGED_DONE );
+			if ( writeUserLog && !terminateLogged ) {
+				WriteTerminateEventToUserLog( jobAd );
+				EmailTerminateEvent( jobAd, exitStatusKnown );
+				terminateLogged = true;
+			}
+			deleteFromSchedd = true;
 		}
-		deleteFromSchedd = true;
-	}
-	if ( condorState == REMOVED ) {
-		if ( writeUserLog && !abortLogged ) {
-			WriteAbortEventToUserLog( ad );
-			abortLogged = true;
+		break;
+
+		case REMOVED:
+		{
+			// I never want to see this job again.
+			jobAd->Assign( ATTR_JOB_MANAGED, MANAGED_DONE );
+			if ( writeUserLog && !abortLogged ) {
+				WriteAbortEventToUserLog( jobAd );
+				abortLogged = true;
+			}
+			deleteFromSchedd = true;
 		}
-		deleteFromSchedd = true;
-	}
-	if ( condorState == HELD ) {
-		if ( writeUserLog && !holdLogged ) {
-			WriteHoldEventToUserLog( ad );
-			holdLogged = true;
+		break;
+
+		case HELD:
+		{
+			jobAd->Assign( ATTR_JOB_MANAGED, MANAGED_SCHEDD );
+			if ( writeUserLog && !holdLogged ) {
+				WriteHoldEventToUserLog( jobAd );
+				holdLogged = true;
+			}
 		}
+		break;
+
+		case IDLE:
+		{
+			jobAd->Assign( ATTR_JOB_MANAGED, MANAGED_SCHEDD );
+		}
+		break;
+
+		default:
+		{
+			EXCEPT("BaseJob::DoneWithJob called with unexpected state %s (%d)\n", getJobStatusString(condorState), condorState);
+		}
+		break;
 	}
+
 	requestScheddUpdate( this );
 }
 
@@ -251,32 +310,32 @@ void BaseJob::JobHeld( const char *hold_reason, int hold_code,
 			// if the job was in REMOVED state, make certain we return
 			// to the removed state when it is released.
 		if ( condorState == REMOVED ) {
-			UpdateJobAdInt( ATTR_JOB_STATUS_ON_RELEASE, REMOVED );
+			jobAd->Assign( ATTR_JOB_STATUS_ON_RELEASE, REMOVED );
 		}
 		condorState = HELD;
-		UpdateJobAdInt( ATTR_JOB_STATUS, condorState );
-		UpdateJobAdInt( ATTR_ENTERED_CURRENT_STATUS, time(NULL) );
+		jobAd->Assign( ATTR_JOB_STATUS, condorState );
+		jobAd->Assign( ATTR_ENTERED_CURRENT_STATUS, (int)time(NULL) );
 
-		UpdateJobAdString( ATTR_HOLD_REASON, hold_reason );
-		UpdateJobAdInt(ATTR_HOLD_REASON_CODE, hold_code);
-		UpdateJobAdInt(ATTR_HOLD_REASON_SUBCODE, hold_sub_code);
+		jobAd->Assign( ATTR_HOLD_REASON, hold_reason );
+		jobAd->Assign(ATTR_HOLD_REASON_CODE, hold_code);
+		jobAd->Assign(ATTR_HOLD_REASON_SUBCODE, hold_sub_code);
 
 		char *release_reason;
-		if ( ad->LookupString( ATTR_RELEASE_REASON, &release_reason ) != 0 ) {
-			UpdateJobAdString( ATTR_LAST_RELEASE_REASON, release_reason );
+		if ( jobAd->LookupString( ATTR_RELEASE_REASON, &release_reason ) != 0 ) {
+			jobAd->Assign( ATTR_LAST_RELEASE_REASON, release_reason );
 			free( release_reason );
 		}
-		UpdateJobAd( ATTR_RELEASE_REASON, "UNDEFINED" );
+		jobAd->AssignExpr( ATTR_RELEASE_REASON, "Undefined" );
 
 		int num_holds;
-		ad->LookupInteger( ATTR_NUM_SYSTEM_HOLDS, num_holds );
+		jobAd->LookupInteger( ATTR_NUM_SYSTEM_HOLDS, num_holds );
 		num_holds++;
-		UpdateJobAdInt( ATTR_NUM_SYSTEM_HOLDS, num_holds );
+		jobAd->Assign( ATTR_NUM_SYSTEM_HOLDS, num_holds );
 
 		UpdateRuntimeStats();
 
 		if ( writeUserLog && !holdLogged ) {
-			WriteHoldEventToUserLog( ad );
+			WriteHoldEventToUserLog( jobAd );
 			holdLogged = true;
 		}
 
@@ -288,10 +347,10 @@ void BaseJob::JobRemoved( const char *remove_reason )
 {
 	if ( condorState != REMOVED ) {
 		condorState = REMOVED;
-		UpdateJobAdInt( ATTR_JOB_STATUS, condorState );
-		UpdateJobAdInt( ATTR_ENTERED_CURRENT_STATUS, time(NULL) );
+		jobAd->Assign( ATTR_JOB_STATUS, condorState );
+		jobAd->Assign( ATTR_ENTERED_CURRENT_STATUS, (int)time(NULL) );
 
-		UpdateJobAdString( ATTR_REMOVE_REASON, remove_reason );
+		jobAd->Assign( ATTR_REMOVE_REASON, remove_reason );
 
 		UpdateRuntimeStats();
 
@@ -307,12 +366,12 @@ void BaseJob::UpdateRuntimeStats()
 
 	// Adjust run time for condor_q
 	int shadowBirthdate = 0;
-	ad->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadowBirthdate );
+	jobAd->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadowBirthdate );
 	if ( condorState == RUNNING && shadowBirthdate == 0 ) {
 
 		// The job has started a new interval of running
 		int current_time = (int)time(NULL);
-		UpdateJobAdInt( ATTR_SHADOW_BIRTHDATE, current_time );
+		jobAd->Assign( ATTR_SHADOW_BIRTHDATE, current_time );
 
 		requestScheddUpdate( this );
 
@@ -321,15 +380,184 @@ void BaseJob::UpdateRuntimeStats()
 		// The job has stopped an interval of running, add the current
 		// interval to the accumulated total run time
 		float accum_time = 0;
-		ad->LookupFloat( ATTR_JOB_REMOTE_WALL_CLOCK, accum_time );
+		jobAd->LookupFloat( ATTR_JOB_REMOTE_WALL_CLOCK, accum_time );
 		accum_time += (float)( time(NULL) - shadowBirthdate );
-		UpdateJobAdFloat( ATTR_JOB_REMOTE_WALL_CLOCK, accum_time );
-		UpdateJobAd( ATTR_JOB_WALL_CLOCK_CKPT, "UNDEFINED" );
-		UpdateJobAdInt( ATTR_SHADOW_BIRTHDATE, 0 );
+		jobAd->Assign( ATTR_JOB_REMOTE_WALL_CLOCK, accum_time );
+		jobAd->Assign( ATTR_JOB_WALL_CLOCK_CKPT,(char *)NULL );
+		jobAd->Assign( ATTR_SHADOW_BIRTHDATE, 0 );
 
 		requestScheddUpdate( this );
 
 	}
+}
+
+void BaseJob::SetRemoteJobId( const char *job_id )
+{
+	MyString old_job_id;
+	MyString new_job_id;
+	jobAd->LookupString( ATTR_GRID_JOB_ID, old_job_id );
+	if ( job_id != NULL && job_id[0] != '\0' ) {
+		new_job_id = job_id;
+	}
+	if ( old_job_id == new_job_id ) {
+		return;
+	}
+	if ( !old_job_id.IsEmpty() ) {
+		JobsByRemoteId.remove( HashKey( old_job_id.Value() ) );
+		jobAd->AssignExpr( ATTR_GRID_JOB_ID, "Undefined" );
+	}
+	if ( !new_job_id.IsEmpty() ) {
+		JobsByRemoteId.insert( HashKey( new_job_id.Value() ), this );
+		jobAd->Assign( ATTR_GRID_JOB_ID, new_job_id.Value() );
+	}
+	requestScheddUpdate( this );
+}
+
+void BaseJob::SetJobLeaseTimers()
+{
+dprintf(D_FULLDEBUG,"(%d.%d) SetJobLeaseTimers()\n",procID.cluster,procID.proc);
+	int expiration_time = -1;
+
+	jobAd->LookupInteger( ATTR_JOB_LEASE_EXPIRATION, expiration_time );
+
+	if ( expiration_time == -1 ) {
+		if ( jobLeaseSentExpiredTid != TIMER_UNSET ) {
+			daemonCore->Cancel_Timer( jobLeaseSentExpiredTid );
+			jobLeaseSentExpiredTid = TIMER_UNSET;
+		}
+	} else {
+		int when = expiration_time - time(NULL);
+		if ( when < 0 ) {
+			when = 0;
+		}
+		if ( jobLeaseSentExpiredTid == TIMER_UNSET ) {
+			jobLeaseSentExpiredTid = daemonCore->Register_Timer(
+								when,
+								(TimerHandlercpp)&BaseJob::JobLeaseSentExpired,
+								"JobLeaseSentExpired", (Service*) this );
+		} else {
+			daemonCore->Reset_Timer( jobLeaseSentExpiredTid, when );
+		}
+	}
+
+	expiration_time = -1;
+
+	jobAd->LookupInteger( ATTR_TIMER_REMOVE_CHECK, expiration_time );
+
+	if ( expiration_time == -1 ) {
+		if ( jobLeaseReceivedExpiredTid != TIMER_UNSET ) {
+			daemonCore->Cancel_Timer( jobLeaseReceivedExpiredTid );
+			jobLeaseReceivedExpiredTid = TIMER_UNSET;
+		}
+	} else {
+		int when = expiration_time - time(NULL);
+		if ( when < 0 ) {
+			when = 0;
+		}
+		if ( jobLeaseReceivedExpiredTid == TIMER_UNSET ) {
+			jobLeaseReceivedExpiredTid = daemonCore->Register_Timer(
+							when,
+							(TimerHandlercpp)&BaseJob::JobLeaseReceivedExpired,
+							"JobLeaseReceivedExpired", (Service*) this );
+		} else {
+			daemonCore->Reset_Timer( jobLeaseReceivedExpiredTid, when );
+		}
+	}
+}
+
+void BaseJob::UpdateJobLeaseSent( int new_expiration_time )
+{
+dprintf(D_FULLDEBUG,"(%d.%d) UpdateJobLeaseSent(%d)\n",procID.cluster,procID.proc,(int)new_expiration_time);
+	int old_expiration_time = TIMER_UNSET;
+
+	jobAd->LookupInteger( ATTR_JOB_LEASE_EXPIRATION,
+						  old_expiration_time );
+
+	if ( new_expiration_time <= 0 ) {
+		new_expiration_time = TIMER_UNSET;
+	}
+
+	if ( new_expiration_time != old_expiration_time ) {
+
+		if ( new_expiration_time == TIMER_UNSET ) {
+			jobAd->AssignExpr( ATTR_JOB_LEASE_EXPIRATION, "Undefined" );
+			jobAd->AssignExpr( ATTR_LAST_JOB_LEASE_RENEWAL_FAILED,
+							   "Undefined" );
+		} else {
+			jobAd->Assign( ATTR_JOB_LEASE_EXPIRATION,
+						   new_expiration_time );
+		}
+
+		requestScheddUpdate( this );
+
+		SetJobLeaseTimers();
+	}
+}
+
+void BaseJob::UpdateJobLeaseReceived( int new_expiration_time )
+{
+	int old_expiration_time = TIMER_UNSET;
+dprintf(D_FULLDEBUG,"(%d.%d) UpdateJobLeaseReceived(%d)\n",procID.cluster,procID.proc,(int)new_expiration_time);
+
+	jobAd->LookupInteger( ATTR_TIMER_REMOVE_CHECK, old_expiration_time );
+
+	if ( new_expiration_time <= 0 ) {
+		new_expiration_time = TIMER_UNSET;
+	}
+
+	if ( new_expiration_time != old_expiration_time ) {
+
+		if ( old_expiration_time == TIMER_UNSET ) {
+			dprintf( D_ALWAYS, "(%d.%d) New lease but no old lease, ignoring!\n",
+					 procID.cluster, procID.proc );
+			return;
+		}
+
+		if ( new_expiration_time < old_expiration_time ) {
+			dprintf( D_ALWAYS, "(%d.%d) New lease expiration (%d) is older than old lease expiration (%d), ignoring!\n",
+					 procID.cluster, procID.proc, new_expiration_time,
+					 old_expiration_time );
+			return;
+		}
+
+		jobAd->Assign( ATTR_TIMER_REMOVE_CHECK, new_expiration_time );
+		jobAd->SetDirtyFlag( ATTR_TIMER_REMOVE_CHECK, false );
+
+		SetJobLeaseTimers();
+	}
+}
+
+int BaseJob::JobLeaseSentExpired()
+{
+dprintf(D_FULLDEBUG,"(%d.%d) BaseJob::JobLeaseSentExpired()\n",procID.cluster,procID.proc);
+	if ( jobLeaseSentExpiredTid != TIMER_UNSET ) {
+		daemonCore->Cancel_Timer( jobLeaseSentExpiredTid );
+		jobLeaseSentExpiredTid = TIMER_UNSET;
+	}
+	SetEvaluateState();
+	return 0;
+}
+
+int BaseJob::JobLeaseReceivedExpired()
+{
+dprintf(D_FULLDEBUG,"(%d.%d) BaseJob::JobLeaseReceivedExpired()\n",procID.cluster,procID.proc);
+	if ( jobLeaseReceivedExpiredTid != TIMER_UNSET ) {
+		daemonCore->Cancel_Timer( jobLeaseReceivedExpiredTid );
+		jobLeaseReceivedExpiredTid = TIMER_UNSET;
+	}
+
+	condorState = REMOVED;
+	jobAd->Assign( ATTR_JOB_STATUS, condorState );
+	jobAd->Assign( ATTR_ENTERED_CURRENT_STATUS, (int)time(NULL) );
+
+	jobAd->Assign( ATTR_REMOVE_REASON, "Job lease expired" );
+
+	UpdateRuntimeStats();
+
+	requestScheddUpdate( this );
+
+	SetEvaluateState();
+	return 0;
 }
 
 void BaseJob::JobAdUpdateFromSchedd( const ClassAd *new_ad )
@@ -352,6 +580,23 @@ void BaseJob::JobAdUpdateFromSchedd( const ClassAd *new_ad )
 
 	new_ad->LookupInteger( ATTR_JOB_STATUS, new_condor_state );
 
+	if ( new_condor_state == condorState ) {
+			// The job state in the sched hasn't changed, so we can ignore
+			// this "update".
+		return;
+	}
+
+	if ( new_condor_state == REMOVED && condorState == HELD ) {
+		int release_status = IDLE;
+		jobAd->LookupInteger( ATTR_JOB_STATUS_ON_RELEASE, release_status );
+		if ( release_status == REMOVED ) {
+				// We already know about this REMOVED state and have
+				// decided to go on hold afterwards, so ignore this
+				// "update".
+			return;
+		}
+	}
+
 	if ( new_condor_state == REMOVED || new_condor_state == HELD ) {
 
 		for ( int i = 0; held_removed_update_attrs[i] != NULL; i++ ) {
@@ -361,17 +606,17 @@ void BaseJob::JobAdUpdateFromSchedd( const ClassAd *new_ad )
 			if ( (expr = new_ad->Lookup( held_removed_update_attrs[i] )) != NULL ) {
 				attr_value[0] = '\0';
 				expr->RArg()->PrintToStr(attr_value);
-				UpdateJobAd( held_removed_update_attrs[i], attr_value );
+				jobAd->AssignExpr( held_removed_update_attrs[i], attr_value );
 			} else {
-				ad->Delete( held_removed_update_attrs[i] );
+				jobAd->Delete( held_removed_update_attrs[i] );
 			}
-			ad->SetDirtyFlag( held_removed_update_attrs[i], false );
+			jobAd->SetDirtyFlag( held_removed_update_attrs[i], false );
 		}
 
 		if ( new_condor_state == HELD && writeUserLog && !holdLogged ) {
 			// TODO should this log event be delayed until gridmanager is
 			//   done dealing with the job?
-			WriteHoldEventToUserLog( ad );
+			WriteHoldEventToUserLog( jobAd );
 			holdLogged = true;
 		}
 
@@ -382,9 +627,9 @@ void BaseJob::JobAdUpdateFromSchedd( const ClassAd *new_ad )
 			// update the schedd with the hold.
 		if ( new_condor_state == REMOVED && condorState == HELD ) {
 			bool dirty;
-			ad->GetDirtyFlag( ATTR_JOB_STATUS, NULL, &dirty );
+			jobAd->GetDirtyFlag( ATTR_JOB_STATUS, NULL, &dirty );
 			if ( dirty ) {
-				UpdateJobAdInt( ATTR_JOB_STATUS_ON_RELEASE, REMOVED );
+				jobAd->Assign( ATTR_JOB_STATUS_ON_RELEASE, REMOVED );
 			}
 		}
 
@@ -402,14 +647,27 @@ void BaseJob::JobAdUpdateFromSchedd( const ClassAd *new_ad )
 
 }
 
+int BaseJob::EvalAllPeriodicJobExprs(Service *ignore)
+{
+	BaseJob *curr_job;
+
+	dprintf( D_FULLDEBUG, "Evaluating periodic job policy expressions.\n" );
+
+	JobsByProcId.startIterations();
+	while ( JobsByProcId.iterate( curr_job ) != 0  ) {
+		curr_job->EvalPeriodicJobExpr();
+	}
+
+	return 0;
+}
+
 int BaseJob::EvalPeriodicJobExpr()
 {
 	float old_run_time;
 	bool old_run_time_dirty;
 	UserPolicy user_policy;
-dprintf(D_FULLDEBUG,"(%d.%d) Evaluating periodic job policy expressions\n",procID.cluster,procID.proc);
 
-	user_policy.Init( ad );
+	user_policy.Init( jobAd );
 
 	UpdateJobTime( &old_run_time, &old_run_time_dirty );
 
@@ -417,28 +675,38 @@ dprintf(D_FULLDEBUG,"(%d.%d) Evaluating periodic job policy expressions\n",procI
 
 	RestoreJobTime( old_run_time, old_run_time_dirty );
 
+	MyString reason = user_policy.FiringReason();
+	if ( reason == "" ) {
+		reason = "Unknown user policy expression";
+	}
+
 	switch( action ) {
 	case UNDEFINED_EVAL:
-		JobHeld( "Undefined job policy expression" );
+		JobHeld( reason.Value() );
 		SetEvaluateState();
 		break;
 	case STAYS_IN_QUEUE:
 			// do nothing
 		break;
 	case REMOVE_FROM_QUEUE:
-		JobRemoved( "Remove job policy expression became true" );
+		JobRemoved( reason.Value() );
 		SetEvaluateState();
 		break;
 	case HOLD_IN_QUEUE:
-		JobHeld( "Hold job policy expression became true" );
+		JobHeld( reason.Value() );
 		SetEvaluateState();
+		break;
+	case RELEASE_FROM_HOLD:
+			// When a job gets held and then released while the gridmanager
+			// is managing it, the gridmanager cleans up and deletes its
+			// local data for the job (canceling the remote submission if
+			// possible), then picks it up as a new job from the schedd.
+			// So ignore release-from-hold and let the schedd deal with it.
 		break;
 	default:
 		EXCEPT( "Unknown action (%d) in BaseJob::EvalPeriodicJobExpr", 
 				action );
 	}
-
-	daemonCore->Reset_Timer( periodicPolicyEvalTid, 30 );
 
 	return 0;
 }
@@ -449,18 +717,18 @@ int BaseJob::EvalOnExitJobExpr()
 	bool old_run_time_dirty;
 	UserPolicy user_policy;
 
-	user_policy.Init( ad );
+	user_policy.Init( jobAd );
 
 	// The user policy code expects an exit value to be set
 	// If the ON_EXIT attributes haven't been set at all, fake
 	// a normal job exit.
 	int dummy;
-	if ( !ad->LookupInteger( ATTR_ON_EXIT_SIGNAL, dummy ) &&
-		 !ad->LookupInteger( ATTR_ON_EXIT_CODE, dummy ) ) {
+	if ( !jobAd->LookupInteger( ATTR_ON_EXIT_SIGNAL, dummy ) &&
+		 !jobAd->LookupInteger( ATTR_ON_EXIT_CODE, dummy ) ) {
 
 		exitStatusKnown = false;
-		UpdateJobAdBool( ATTR_ON_EXIT_BY_SIGNAL, 0 );
-		UpdateJobAdInt( ATTR_ON_EXIT_CODE, 0 );
+		jobAd->Assign( ATTR_ON_EXIT_BY_SIGNAL, false );
+		jobAd->Assign( ATTR_ON_EXIT_CODE, 0 );
 	} else {
 		exitStatusKnown = true;
 	}
@@ -473,14 +741,19 @@ int BaseJob::EvalOnExitJobExpr()
 	RestoreJobTime( old_run_time, old_run_time_dirty );
 
 	if ( action != REMOVE_FROM_QUEUE ) {
-		UpdateJobAdBool( ATTR_ON_EXIT_BY_SIGNAL, 0 );
-		UpdateJobAd( ATTR_ON_EXIT_CODE, "UNDEFINED" );
-		UpdateJobAd( ATTR_ON_EXIT_SIGNAL, "UNDEFINED" );
+		jobAd->Assign( ATTR_ON_EXIT_BY_SIGNAL, false );
+		jobAd->AssignExpr( ATTR_ON_EXIT_CODE, "Undefined" );
+		jobAd->AssignExpr( ATTR_ON_EXIT_SIGNAL, "Undefined" );
+	}
+
+	MyString reason = user_policy.FiringReason();
+	if ( reason == "" ) {
+		reason = "Unknown user policy expression";
 	}
 
 	switch( action ) {
 	case UNDEFINED_EVAL:
-		JobHeld( "Undefined job policy expression" );
+		JobHeld( reason.Value() );
 		break;
 	case STAYS_IN_QUEUE:
 			// clean up job but don't set status to complete
@@ -489,7 +762,7 @@ int BaseJob::EvalOnExitJobExpr()
 		JobCompleted();
 		break;
 	case HOLD_IN_QUEUE:
-		JobHeld( "Hold job policy became true" );
+		JobHeld( reason.Value() );
 		break;
 	default:
 		EXCEPT( "Unknown action (%d) in BaseJob::EvalAtExitJobExpr", 
@@ -509,9 +782,9 @@ BaseJob::UpdateJobTime( float *old_run_time, bool *old_run_time_dirty )
   int shadow_bday = 0;
   time_t now = time(NULL);
 
-  ad->LookupInteger(ATTR_SHADOW_BIRTHDATE,shadow_bday);
-  ad->LookupFloat(ATTR_JOB_REMOTE_WALL_CLOCK,previous_run_time);
-  ad->GetDirtyFlag(ATTR_JOB_REMOTE_WALL_CLOCK,NULL,old_run_time_dirty);
+  jobAd->LookupInteger(ATTR_SHADOW_BIRTHDATE,shadow_bday);
+  jobAd->LookupFloat(ATTR_JOB_REMOTE_WALL_CLOCK,previous_run_time);
+  jobAd->GetDirtyFlag(ATTR_JOB_REMOTE_WALL_CLOCK,NULL,old_run_time_dirty);
 
   if (old_run_time) {
 	  *old_run_time = previous_run_time;
@@ -521,7 +794,7 @@ BaseJob::UpdateJobTime( float *old_run_time, bool *old_run_time_dirty )
 	  total_run_time += (now - shadow_bday);
   }
 
-  UpdateJobAdFloat( ATTR_JOB_REMOTE_WALL_CLOCK, total_run_time );
+  jobAd->Assign( ATTR_JOB_REMOTE_WALL_CLOCK, total_run_time );
 }
 
 /*After evaluating user policy expressions, this is
@@ -530,8 +803,58 @@ BaseJob::UpdateJobTime( float *old_run_time, bool *old_run_time_dirty )
 void
 BaseJob::RestoreJobTime( float old_run_time, bool old_run_time_dirty )
 {
-  UpdateJobAdFloat( ATTR_JOB_REMOTE_WALL_CLOCK, old_run_time );
-  ad->SetDirtyFlag( ATTR_JOB_REMOTE_WALL_CLOCK, old_run_time_dirty );
+  jobAd->Assign( ATTR_JOB_REMOTE_WALL_CLOCK, old_run_time );
+  jobAd->SetDirtyFlag( ATTR_JOB_REMOTE_WALL_CLOCK, old_run_time_dirty );
+}
+
+void BaseJob::RequestPing()
+{
+	BaseResource *resource = this->GetResource();
+	if ( resource != NULL ) {
+		resourcePingPending = true;
+		resourcePingComplete = false;
+		resource->RequestPing( this );
+	} else {
+		dprintf( D_ALWAYS,
+				 "(%d.%d) RequestPing(): GetResource returned NULL\n",
+				 procID.cluster, procID.proc );
+	}
+}
+
+void BaseJob::NotifyResourceDown()
+{
+	resourceStateKnown = true;
+	if ( resourceDown == false ) {
+			// The GlobusResourceDown event is now deprecated
+		WriteGlobusResourceDownEventToUserLog( jobAd );
+		WriteGridResourceDownEventToUserLog( jobAd );
+		jobAd->Assign( ATTR_GRID_RESOURCE_UNAVAILABLE_TIME, (int)time(NULL) );
+		requestScheddUpdate( this );
+	}
+	resourceDown = true;
+	if ( resourcePingPending ) {
+		resourcePingPending = false;
+		resourcePingComplete = true;
+	}
+	SetEvaluateState();
+}
+
+void BaseJob::NotifyResourceUp()
+{
+	resourceStateKnown = true;
+	if ( resourceDown == true ) {
+			// The GlobusResourceUp event is now deprecated
+		WriteGlobusResourceUpEventToUserLog( jobAd );
+		WriteGridResourceUpEventToUserLog( jobAd );
+		jobAd->AssignExpr( ATTR_GRID_RESOURCE_UNAVAILABLE_TIME, "Undefined" );
+		requestScheddUpdate( this );
+	}
+	resourceDown = false;
+	if ( resourcePingPending ) {
+		resourcePingPending = false;
+		resourcePingComplete = true;
+	}
+	SetEvaluateState();
 }
 
 // Initialize a UserLog object for a given job and return a pointer to
@@ -545,7 +868,7 @@ InitializeUserLog( ClassAd *job_ad )
 	int cluster, proc;
 	char userLogFile[_POSIX_PATH_MAX];
 	char domain[_POSIX_PATH_MAX];
-
+	bool use_xml = false;
 
 	userLogFile[0] = '\0';
 	job_ad->LookupString( ATTR_ULOG_FILE, userLogFile );
@@ -557,9 +880,11 @@ InitializeUserLog( ClassAd *job_ad )
 	job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
 	job_ad->LookupInteger( ATTR_PROC_ID, proc );
 	job_ad->LookupString( ATTR_NT_DOMAIN, domain );
+	job_ad->LookupBool( ATTR_ULOG_USE_XML, use_xml );
 
 	UserLog *ULog = new UserLog();
 	ULog->initialize(Owner, domain, userLogFile, cluster, proc, 0);
+	ULog->setUseXML( use_xml );
 	return ULog;
 }
 
@@ -583,13 +908,11 @@ WriteExecuteEventToUserLog( ClassAd *job_ad )
 			 cluster, proc );
 
 	hostname[0] = '\0';
-	job_ad->LookupString( ATTR_GLOBUS_RESOURCE, hostname,
+	job_ad->LookupString( ATTR_GRID_RESOURCE, hostname,
 						  sizeof(hostname) - 1 );
-	int hostname_len = strcspn( hostname, ":/" );
 
 	ExecuteEvent event;
-	strncpy( event.executeHost, hostname, hostname_len );
-	event.executeHost[hostname_len] = '\0';
+	strcpy( event.executeHost, hostname );
 	int rc = ulog->writeEvent(&event);
 	delete ulog;
 
@@ -714,6 +1037,16 @@ WriteTerminateEventToUserLog( ClassAd *job_ad )
 			// TODO What about event.signalNumber?
 	}
 
+	float float_val = 0;
+	if ( job_ad->LookupFloat( ATTR_JOB_REMOTE_USER_CPU, float_val ) ) {
+		event.run_remote_rusage.ru_utime.tv_sec = (int)float_val;
+		event.total_remote_rusage.ru_utime.tv_sec = (int)float_val;
+	}
+	if ( job_ad->LookupFloat( ATTR_JOB_REMOTE_SYS_CPU, float_val ) ) {
+		event.run_remote_rusage.ru_stime.tv_sec = (int)float_val;
+		event.total_remote_rusage.ru_stime.tv_sec = (int)float_val;
+	}
+
 	int rc = ulog->writeEvent(&event);
 	delete ulog;
 
@@ -805,6 +1138,307 @@ WriteHoldEventToUserLog( ClassAd *job_ad )
 	return true;
 }
 
+// The GlobusResourceUpEvent is now deprecated and should be removed at
+// some point in the future (6.9?).
+bool
+WriteGlobusResourceUpEventToUserLog( ClassAd *job_ad )
+{
+	int cluster, proc;
+	MyString contact;
+	UserLog *ulog = InitializeUserLog( job_ad );
+	if ( ulog == NULL ) {
+		// User doesn't want a log
+		return true;
+	}
+
+	job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
+	job_ad->LookupInteger( ATTR_PROC_ID, proc );
+
+	dprintf( D_FULLDEBUG, 
+			 "(%d.%d) Writing globus up record to user logfile\n",
+			 cluster, proc );
+
+	GlobusResourceUpEvent event;
+
+	job_ad->LookupString( ATTR_GRID_RESOURCE, contact );
+	if ( contact.IsEmpty() ) {
+			// Not a Globus job, don't log the event
+		return true;
+	}
+	contact.Tokenize();
+	contact.GetNextToken( " ", false );
+	event.rmContact =  strnewp(contact.GetNextToken( " ", false ));
+
+	int rc = ulog->writeEvent(&event);
+	delete ulog;
+
+	if (!rc) {
+		dprintf( D_ALWAYS,
+				 "(%d.%d) Unable to log ULOG_GLOBUS_RESOURCE_UP event\n",
+				 cluster, proc );
+		return false;
+	}
+
+	return true;
+}
+
+// The GlobusResourceDownEvent is now deprecated and should be removed at
+// some point in the future (6.9?).
+bool
+WriteGlobusResourceDownEventToUserLog( ClassAd *job_ad )
+{
+	int cluster, proc;
+	MyString contact;
+	UserLog *ulog = InitializeUserLog( job_ad );
+	if ( ulog == NULL ) {
+		// User doesn't want a log
+		return true;
+	}
+
+	job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
+	job_ad->LookupInteger( ATTR_PROC_ID, proc );
+
+	dprintf( D_FULLDEBUG, 
+			 "(%d.%d) Writing globus down record to user logfile\n",
+			 cluster, proc );
+
+	GlobusResourceDownEvent event;
+
+	job_ad->LookupString( ATTR_GRID_RESOURCE, contact );
+	if ( contact.IsEmpty() ) {
+			// Not a Globus job, don't log the event
+		return true;
+	}
+	contact.Tokenize();
+	contact.GetNextToken( " ", false );
+	event.rmContact =  strnewp(contact.GetNextToken( " ", false ));
+
+	int rc = ulog->writeEvent(&event);
+	delete ulog;
+
+	if (!rc) {
+		dprintf( D_ALWAYS,
+				 "(%d.%d) Unable to log ULOG_GLOBUS_RESOURCE_DOWN event\n",
+				 cluster, proc );
+		return false;
+	}
+
+	return true;
+}
+
+// The GlobusSubmitEvent is now deprecated and should be removed at
+// some point in the future (6.9?).
+bool
+WriteGlobusSubmitEventToUserLog( ClassAd *job_ad )
+{
+	int cluster, proc;
+	int version;
+	MyString contact;
+	UserLog *ulog = InitializeUserLog( job_ad );
+	if ( ulog == NULL ) {
+		// User doesn't want a log
+		return true;
+	}
+
+	job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
+	job_ad->LookupInteger( ATTR_PROC_ID, proc );
+
+	dprintf( D_FULLDEBUG, 
+			 "(%d.%d) Writing globus submit record to user logfile\n",
+			 cluster, proc );
+
+	GlobusSubmitEvent event;
+
+	job_ad->LookupString( ATTR_GRID_RESOURCE, contact );
+	contact.Tokenize();
+	contact.GetNextToken( " ", false );
+	event.rmContact = strnewp(contact.GetNextToken( " ", false ));
+
+	job_ad->LookupString( ATTR_GRID_JOB_ID, contact );
+	contact.Tokenize();
+	if ( strcasecmp( contact.GetNextToken( " ", false ), "gt2" ) == 0 ) {
+		contact.GetNextToken( " ", false );
+	}
+	event.jmContact = strnewp(contact.GetNextToken( " ", false ));
+
+	version = 0;
+	job_ad->LookupInteger( ATTR_GLOBUS_GRAM_VERSION, version );
+	event.restartableJM = version >= GRAM_V_1_5;
+
+	int rc = ulog->writeEvent(&event);
+	delete ulog;
+
+	if (!rc) {
+		dprintf( D_ALWAYS,
+				 "(%d.%d) Unable to log ULOG_GLOBUS_SUBMIT event\n",
+				 cluster, proc );
+		return false;
+	}
+
+	return true;
+}
+
+bool
+WriteGlobusSubmitFailedEventToUserLog( ClassAd *job_ad, int failure_code,
+									   const char *failure_mesg )
+{
+	int cluster, proc;
+	char buf[1024];
+
+	UserLog *ulog = InitializeUserLog( job_ad );
+	if ( ulog == NULL ) {
+		// User doesn't want a log
+		return true;
+	}
+
+	job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
+	job_ad->LookupInteger( ATTR_PROC_ID, proc );
+
+	dprintf( D_FULLDEBUG, 
+			 "(%d.%d) Writing submit-failed record to user logfile\n",
+			 cluster, proc );
+
+	GlobusSubmitFailedEvent event;
+
+	snprintf( buf, 1024, "%d %s", failure_code,
+			  failure_mesg ? failure_mesg : "");
+	event.reason =  strnewp(buf);
+
+	int rc = ulog->writeEvent(&event);
+	delete ulog;
+
+	if (!rc) {
+		dprintf( D_ALWAYS,
+				 "(%d.%d) Unable to log ULOG_GLOBUS_SUBMIT_FAILED event\n",
+				 cluster, proc);
+		return false;
+	}
+
+	return true;
+}
+
+bool
+WriteGridResourceUpEventToUserLog( ClassAd *job_ad )
+{
+	int cluster, proc;
+	MyString contact;
+	UserLog *ulog = InitializeUserLog( job_ad );
+	if ( ulog == NULL ) {
+		// User doesn't want a log
+		return true;
+	}
+
+	job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
+	job_ad->LookupInteger( ATTR_PROC_ID, proc );
+
+	dprintf( D_FULLDEBUG, 
+			 "(%d.%d) Writing grid resource up record to user logfile\n",
+			 cluster, proc );
+
+	GridResourceUpEvent event;
+
+	job_ad->LookupString( ATTR_GRID_RESOURCE, contact );
+	if ( contact.IsEmpty() ) {
+		dprintf( D_ALWAYS,
+				 "(%d.%d) %s attribute missing in job ad\n",
+				 cluster, proc, ATTR_GRID_RESOURCE );
+	}
+	event.resourceName =  strnewp( contact.Value() );
+
+	int rc = ulog->writeEvent( &event );
+	delete ulog;
+
+	if ( !rc ) {
+		dprintf( D_ALWAYS,
+				 "(%d.%d) Unable to log ULOG_GRID_RESOURCE_UP event\n",
+				 cluster, proc );
+		return false;
+	}
+
+	return true;
+}
+
+bool
+WriteGridResourceDownEventToUserLog( ClassAd *job_ad )
+{
+	int cluster, proc;
+	MyString contact;
+	UserLog *ulog = InitializeUserLog( job_ad );
+	if ( ulog == NULL ) {
+		// User doesn't want a log
+		return true;
+	}
+
+	job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
+	job_ad->LookupInteger( ATTR_PROC_ID, proc );
+
+	dprintf( D_FULLDEBUG, 
+			 "(%d.%d) Writing grid source down record to user logfile\n",
+			 cluster, proc );
+
+	GridResourceDownEvent event;
+
+	job_ad->LookupString( ATTR_GRID_RESOURCE, contact );
+	if ( contact.IsEmpty() ) {
+		dprintf( D_ALWAYS,
+				 "(%d.%d) %s attribute missing in job ad\n",
+				 cluster, proc, ATTR_GRID_RESOURCE );
+	}
+	event.resourceName =  strnewp( contact.Value() );
+
+	int rc = ulog->writeEvent(&event);
+	delete ulog;
+
+	if (!rc) {
+		dprintf( D_ALWAYS,
+				 "(%d.%d) Unable to log ULOG_GRID_RESOURCE_DOWN event\n",
+				 cluster, proc );
+		return false;
+	}
+
+	return true;
+}
+
+bool
+WriteGridSubmitEventToUserLog( ClassAd *job_ad )
+{
+	int cluster, proc;
+	int version;
+	MyString contact;
+	UserLog *ulog = InitializeUserLog( job_ad );
+	if ( ulog == NULL ) {
+		// User doesn't want a log
+		return true;
+	}
+
+	job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
+	job_ad->LookupInteger( ATTR_PROC_ID, proc );
+
+	dprintf( D_FULLDEBUG, 
+			 "(%d.%d) Writing grid submit record to user logfile\n",
+			 cluster, proc );
+
+	GridSubmitEvent event;
+
+	job_ad->LookupString( ATTR_GRID_RESOURCE, contact );
+	event.resourceName = strnewp( contact.Value() );
+
+	job_ad->LookupString( ATTR_GRID_JOB_ID, contact );
+	event.jobId = strnewp( contact.Value() );
+
+	int rc = ulog->writeEvent( &event );
+	delete ulog;
+
+	if ( !rc ) {
+		dprintf( D_ALWAYS,
+				 "(%d.%d) Unable to log ULOG_GRID_SUBMIT event\n",
+				 cluster, proc );
+		return false;
+	}
+
+	return true;
+}
+
 // TODO: This appears three times in the Condor source.  Unify?
 //   (It only is made visible in condor_shadow.jim's prototypes.h.)
 static char *
@@ -835,20 +1469,20 @@ d_format_time( double dsecs )
 }
 
 void
-EmailTerminateEvent(ClassAd * jobAd, bool exit_status_known)
+EmailTerminateEvent(ClassAd * job_ad, bool exit_status_known)
 {
-	if ( !jobAd ) {
+	if ( !job_ad ) {
 		dprintf(D_ALWAYS, 
 				"email_terminate_event called with invalid ClassAd\n");
 		return;
 	}
 
 	int cluster, proc;
-	jobAd->LookupInteger( ATTR_CLUSTER_ID, cluster );
-	jobAd->LookupInteger( ATTR_PROC_ID, proc );
+	job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
+	job_ad->LookupInteger( ATTR_PROC_ID, proc );
 
 	int notification = NOTIFY_COMPLETE; // default
-	jobAd->LookupInteger(ATTR_JOB_NOTIFICATION,notification);
+	job_ad->LookupInteger(ATTR_JOB_NOTIFICATION,notification);
 
 	switch( notification ) {
 		case NOTIFY_NEVER:    return;
@@ -865,7 +1499,7 @@ EmailTerminateEvent(ClassAd * jobAd, bool exit_status_known)
 
 	char subjectline[50];
 	sprintf( subjectline, "Condor Job %d.%d", cluster, proc );
-	FILE * mailer =  email_user_open( jobAd, subjectline );
+	FILE * mailer =  email_user_open( job_ad, subjectline );
 
 	if( ! mailer ) {
 		// Is message redundant?  Check email_user_open and euo's children.
@@ -878,37 +1512,36 @@ EmailTerminateEvent(ClassAd * jobAd, bool exit_status_known)
 		// put into the email message.
 	char JobName[_POSIX_PATH_MAX];
 	JobName[0] = '\0';
-	jobAd->LookupString( ATTR_JOB_CMD, JobName );
+	job_ad->LookupString( ATTR_JOB_CMD, JobName );
 
-	char Args[_POSIX_ARG_MAX];
-	Args[0] = '\0';
-	jobAd->LookupString(ATTR_JOB_ARGUMENTS, Args);
+	MyString Args;
+	ArgList::GetArgsStringForDisplay(job_ad,&Args);
 	
 	/*
 	// Not present.  Probably doesn't make sense for Globus
 	int had_core = FALSE;
-	jobAd->LookupBool( ATTR_JOB_CORE_DUMPED, had_core );
+	job_ad->LookupBool( ATTR_JOB_CORE_DUMPED, had_core );
 	*/
 
 	int q_date = 0;
-	jobAd->LookupInteger(ATTR_Q_DATE,q_date);
+	job_ad->LookupInteger(ATTR_Q_DATE,q_date);
 	
 	float remote_sys_cpu = 0.0;
-	jobAd->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, remote_sys_cpu);
+	job_ad->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, remote_sys_cpu);
 	
 	float remote_user_cpu = 0.0;
-	jobAd->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, remote_user_cpu);
+	job_ad->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, remote_user_cpu);
 	
 	int image_size = 0;
-	jobAd->LookupInteger(ATTR_IMAGE_SIZE, image_size);
+	job_ad->LookupInteger(ATTR_IMAGE_SIZE, image_size);
 	
 	/*
 	int shadow_bday = 0;
-	jobAd->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadow_bday );
+	job_ad->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadow_bday );
 	*/
 	
 	float previous_runs = 0;
-	jobAd->LookupFloat( ATTR_JOB_REMOTE_WALL_CLOCK, previous_runs );
+	job_ad->LookupFloat( ATTR_JOB_REMOTE_WALL_CLOCK, previous_runs );
 	
 	time_t arch_time=0;	/* time_t is 8 bytes some archs and 4 bytes on other
 						   archs, and this means that doing a (time_t*)
@@ -921,15 +1554,15 @@ EmailTerminateEvent(ClassAd * jobAd, bool exit_status_known)
 
 	fprintf( mailer, "Your Condor job %d.%d \n", cluster, proc);
 	if ( JobName[0] ) {
-		fprintf(mailer,"\t%s %s\n",JobName,Args);
+		fprintf(mailer,"\t%s %s\n",JobName,Args.Value());
 	}
 	if(exit_status_known) {
 		fprintf(mailer, "has ");
 
 		int int_val;
-		if( jobAd->LookupBool(ATTR_ON_EXIT_BY_SIGNAL, int_val) ) {
+		if( job_ad->LookupBool(ATTR_ON_EXIT_BY_SIGNAL, int_val) ) {
 			if( int_val ) {
-				if( jobAd->LookupInteger(ATTR_ON_EXIT_SIGNAL, int_val) ) {
+				if( job_ad->LookupInteger(ATTR_ON_EXIT_SIGNAL, int_val) ) {
 					fprintf(mailer, "exited with the signal %d.\n", int_val);
 				} else {
 					fprintf(mailer, "exited with an unknown signal.\n");
@@ -938,7 +1571,7 @@ EmailTerminateEvent(ClassAd * jobAd, bool exit_status_known)
 						 ATTR_ON_EXIT_SIGNAL);
 				}
 			} else {
-				if( jobAd->LookupInteger(ATTR_ON_EXIT_CODE, int_val) ) {
+				if( job_ad->LookupInteger(ATTR_ON_EXIT_CODE, int_val) ) {
 					fprintf(mailer, "exited normally with status %d.\n",
 						int_val);
 				} else {

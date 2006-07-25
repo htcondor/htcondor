@@ -1,0 +1,38 @@
+#!/usr/bin/env perl
+
+use CondorTest;
+
+$cmd = 'job_rsc_fstream_std.cmd';
+$testname = 'Fstream Test';
+
+$input = 'x_data.in';
+$other_out = 'job_rsc_fstream_std.output';
+
+@expected_output = 
+( "To determine success of test, do a diff on $input and", 
+  "$other_out.  There should be no difference." );
+
+$OutputTest = sub
+{
+    my %info = @_;
+
+   CondorTest::CompareText( $info{"output"}, \@expected_output ) ||
+	die "$testname: FAILURE (STDOUT doesn't match expected output)\n";
+
+    system("cmp $input $other_out") == 0 || 
+	die "$testname: FAILURE ($other_output doesn't match $input)\n";
+
+    -z $info{"error"} || 
+	die "$testname: FAILURE (STDERR contains data)\n";
+};
+
+CondorTest::RegisterExitedSuccess( $testname, $OutputTest );
+
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+    print "$testname: SUCCESS\n";
+    exit(0);
+} else {
+    die "$testname: CondorTest::RunTest() failed\n";
+}
+
+

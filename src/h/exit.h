@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -22,10 +22,13 @@
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
  
+#ifndef CONDOR_EXIT_UTILS_H
+#define CONODR_EXIT_UTILS_H
 
 
 /*
 **	Shadow exit statuses which reflect the exit status of the job
+**  Also, routines to create an exit status
 */
 
 /* ok, because of strange exit codes from the util lib and such(which
@@ -89,6 +92,9 @@
 /* The job should be removed */
 #define JOB_SHOULD_REMOVE (13 + EXIT_CODE_OFFSET)
 
+/* The job missed its deferred execution time */
+#define JOB_MISSED_DEFERRAL_TIME (14 + EXIT_CODE_OFFSET)
+
 /*
   WARNING: don't go above 27 with these, or we run out of bits in the
   exit status code
@@ -97,4 +103,11 @@
 /* There is a fatal error with dprintf() */
 #define DPRINTF_ERROR 44
 
+BEGIN_C_DECLS
+int generate_exit_code( int input_code );
 
+int generate_exit_signal( int input_signal );
+
+END_C_DECLS
+
+#endif /*CONDOR_EXIT_UTILS*/

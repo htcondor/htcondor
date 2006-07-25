@@ -1,0 +1,328 @@
+/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
+#include "condor_common.h"
+#include "startd.h"
+#include "VMRegister.h"
+#include "vm_common.h"
+
+VMRegister *vmregister = NULL;
+
+/* Interfaces for class VMRegister */
+VMRegister::VMRegister(char *host_name)
+{
+	vm_usable = 0;
+	host_classad = new ClassAd();
+	m_vm_rg_tid = -1;
+	m_vm_host_daemon = NULL;
+	m_vm_host_name = strdup(host_name);
+
+	startRegisterTimer();
+
+	// First try to send register packet 
+	registerVM();
+}
+
+VMRegister::~VMRegister()
+{
+	vm_usable = 0;
+	cancelRegisterTimer();
+
+	free(m_vm_host_name);
+	m_vm_host_name = NULL;
+	delete(m_vm_host_daemon);
+	m_vm_host_daemon = NULL;
+
+	if( host_classad ) delete host_classad;
+}
+
+static bool 
+_requestVMRegister(char *addr)
+{
+	char *buffer = NULL;
+	Daemon hstartd(DT_STARTD, addr);
+
+	//Using TCP
+	ReliSock ssock;
+
+	ssock.timeout( VM_SOCKET_TIMEOUT );
+	ssock.encode();
+
+	if( !ssock.connect(addr) ) {
+		dprintf( D_FULLDEBUG, "Failed to connect to host startd(%s)\n", addr);
+		return FALSE;
+	}
+
+	if( !hstartd.startCommand(VM_REGISTER, &ssock) ) { 
+		dprintf( D_FULLDEBUG, "Failed to send VM_REGISTER command to host startd(%s)\n", addr);
+		return FALSE;
+	}
+
+	// Send <IP address:port> of virtual machine
+	buffer = strdup(daemonCore->InfoCommandSinfulString());
+	ssock.code(buffer);
+	ssock.eom();
+	free(buffer);
+
+	//Now, read permission information
+	ssock.timeout( VM_SOCKET_TIMEOUT );
+	ssock.decode();
+
+	int permission = 0;
+	ssock.code(permission);
+
+	if( !ssock.eom() ) {
+		dprintf( D_FULLDEBUG, "Failed to receive EOM from host startd(%s)\n", addr );
+		return FALSE;
+	}
+
+	if( permission > 0 ) {
+		// Since now this virtual machine can be used for Condor
+		if( vmregister ) {
+			if( vmregister->vm_usable == 0 ) {
+				vmregister->vm_usable = 1;
+				if( resmgr ) {
+					resmgr->eval_and_update_all();
+				}
+			}
+		}
+	}else {
+		// For now this virtual machine can't be used for Condor
+		if( vmregister ) {
+			if( vmregister->vm_usable == 1 ) {
+				vmregister->vm_usable = 0;
+				if( resmgr ) {
+					resmgr->eval_and_update_all();
+				}
+			}
+		}
+	}
+
+	return TRUE;
+}
+
+void 
+VMRegister::registerVM(void)
+{
+	// find host startd daemon
+	if( !m_vm_host_daemon )
+		m_vm_host_daemon = vmapi_findDaemon( m_vm_host_name, DT_STARTD);
+
+	if( !m_vm_host_daemon ) {
+		dprintf( D_FULLDEBUG, "Can't find host(%s) Startd daemon\n", m_vm_host_name );
+		return;
+	}
+
+	// send register command	
+	if( _requestVMRegister(m_vm_host_daemon->addr()) == FALSE ) {
+		dprintf( D_FULLDEBUG, "Can't send a VM register command and receive the permission\n");
+		delete(m_vm_host_daemon);
+		m_vm_host_daemon = NULL;
+		return;
+	}
+}
+
+void 
+VMRegister::sendEventToHost(int cmd, void *data) 
+{
+	if( !m_vm_host_daemon )
+		return;
+
+	if( !vmapi_sendCommand(m_vm_host_daemon->addr(), cmd, data) ) {
+		dprintf( D_FULLDEBUG, "Can't send a VM event command(%s) to the host machine(%s)\n", getCommandString(cmd), m_vm_host_daemon->addr() );
+		return;
+	}
+}
+
+void
+VMRegister::requestHostClassAds(void)
+{
+	// find host startd daemon
+	if( !m_vm_host_daemon )
+		m_vm_host_daemon = vmapi_findDaemon( m_vm_host_name, DT_STARTD);
+
+	if( !m_vm_host_daemon ) {
+		dprintf( D_FULLDEBUG, "Can't find host(%s) Startd daemon\n", m_vm_host_name );
+		return;
+	}
+
+	ClassAd query_ad;
+	query_ad.SetMyTypeName(QUERY_ADTYPE);
+	query_ad.SetTargetTypeName(STARTD_ADTYPE);
+	MyString req = ATTR_REQUIREMENTS;
+	req += " = True";
+	query_ad.Insert(req.GetCStr());
+
+	char *addr = m_vm_host_daemon->addr();
+	Daemon hstartd(DT_STARTD, addr);
+	ReliSock ssock;
+
+	ssock.timeout( VM_SOCKET_TIMEOUT );
+	ssock.encode();
+
+	if( !ssock.connect(addr) ) {
+		dprintf( D_FULLDEBUG, "Failed to connect to host startd(%s)\n to get host classAd", addr);
+		return;
+	}
+
+	if(!hstartd.startCommand( QUERY_STARTD_ADS, &ssock )) {
+		dprintf( D_FULLDEBUG, "Failed to send QUERY_STARTD_ADS command to host startd(%s)\n", addr);
+		return;
+	}
+
+	if( !query_ad.put(ssock) ) {
+		dprintf(D_FULLDEBUG, "Failed to send query Ad to host startd(%s)\n", addr);
+	}
+
+	if( !ssock.eom() ) {
+		dprintf(D_FULLDEBUG, "Failed to send query EOM to host startd(%s)\n", addr);
+	}
+
+	// Read host classAds
+	ssock.timeout( VM_SOCKET_TIMEOUT );
+	ssock.decode();
+	int more = 1, num_ads = 0;
+	ClassAdList adList;
+	ClassAd *ad;
+
+	while (more) {
+		if( !ssock.code(more) ) {
+			ssock.eom();
+			return;
+		}
+
+		if(more) {
+			ad = new ClassAd;
+			if( !ad->initFromStream(ssock) ) {
+				ssock.eom();
+				delete ad;
+				return;
+			}
+
+			adList.Insert(ad);
+			num_ads++;
+		}
+	}
+
+	ssock.eom();
+
+	dprintf(D_FULLDEBUG, "Got %d classAds from host\n", num_ads);
+
+	// Although we can get more than one classAd from host machine, 
+	// we use only the first one classAd
+	adList.Rewind();
+	ad = adList.Next();
+
+	// Get each Attribute from the classAd
+	// added "HOST_" in front of each Attribute name
+	char *attr_val = NULL;
+	char *attr_name = NULL;
+	ExprTree *expr;
+
+	ad->ResetExpr();
+	while( ( expr = ad->NextExpr() ) != NULL ) {
+		attr_name = ((Variable*)expr->LArg())->Name();
+		attr_val = NULL;
+		expr->RArg()->PrintToNewStr(&attr_val);
+
+		MyString attr;
+		attr += "HOST_";
+		attr += attr_name;
+
+		// Insert or Update an attribute to host_classAd in a VMRegister object
+		host_classad->AssignExpr(attr.GetCStr(), attr_val);
+		delete(attr_val);
+	}
+}
+
+char *
+VMRegister::getHostSinful(void)
+{
+	if( !m_vm_host_daemon )
+		return NULL;
+
+	return m_vm_host_daemon->addr();
+}
+
+void 
+VMRegister::startRegisterTimer(void)
+{
+	if( m_vm_rg_tid >= 0 ) {
+		//Register Timer already started
+		return;
+	}
+
+	m_vm_rg_tid = daemonCore->Register_Timer( vm_register_interval,
+			vm_register_interval,
+			(TimerHandlercpp)&VMRegister::registerVM,
+			"register_vm_to_host", this);
+
+	if( m_vm_rg_tid < 0 ) {
+		EXCEPT("Can't register DaemonCore Timer");
+	}
+
+	dprintf( D_FULLDEBUG, "Started vm register timer.\n");
+}
+
+void 
+VMRegister::cancelRegisterTimer(void)
+{
+	int rval;
+	if( m_vm_rg_tid != -1 ) {
+		rval = daemonCore->Cancel_Timer(m_vm_rg_tid);
+
+		if( rval < 0 ) {
+			dprintf( D_ALWAYS, "Failed to cancel vm register timer (%d): daemonCore error\n", m_vm_rg_tid);
+		}else
+			dprintf( D_FULLDEBUG, "Canceled vm register timer (%d)\n", m_vm_rg_tid);
+	}
+
+	m_vm_rg_tid = -1;
+}
+
+void 
+vmapi_create_vmregister(char *host_name)
+{
+	if( !host_name )
+		return;
+
+	if(vmregister) delete(vmregister);
+
+	vmregister = new VMRegister(host_name);
+}
+
+void 
+vmapi_destroy_vmregister(void)
+{
+	delete(vmregister);
+	vmregister = NULL;
+}
+
+bool
+vmapi_is_virtual_machine(void)
+{
+	if( vmregister )
+		return TRUE;
+	else
+		return FALSE;
+}

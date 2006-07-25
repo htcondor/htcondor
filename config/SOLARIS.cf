@@ -26,7 +26,6 @@
 
 #define	HAS_DYNAMIC_USER_JOBS	YES
 
-#define HAS_GLOBUS 			YES
 #define HAS_GSI				YES
 #define HAS_OPENSSL			YES
 
@@ -46,6 +45,7 @@
 #endif
 #define HAS_FLOCK			NO
 #define HAS_ADJTIME			YES
+#define HAS_GETDIRENTRIES		NO
 #define HAS_GETDTABLESIZE		NO
 #define HAS_GETHOSTNAME			YES
 #define HAS__UTSSYS			NO
@@ -84,9 +84,9 @@
     define this here to specify the flags we want to give to the
     linker when we're building the Condor Daemons under purify.
 */ 
-#define PurifyPlatformLdFlags -ldl -lkstat -lelf -lnsl -lsocket -lresolv
+#define PurifyPlatformLdFlags -lkstat -lelf -lnsl -lsocket -lresolv
 
-#define PlatformLdFlags -ldl -lkstat -lelf -lsocket -lresolv -lnsl -lm -lc \
+#define PlatformLdFlags -lkstat -lelf -lsocket -lresolv -lnsl -lm -lc \
 $(GCC_STATIC_LIBS)
 
 /**************************************************************************

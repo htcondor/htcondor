@@ -1,0 +1,42 @@
+#! /usr/bin/env perl
+use CondorTest;
+
+$cmd      = 'job_core_corefiles_sched.cmd';
+$testname = 'Core files limited by coresize = xxxxx - scheduler U';
+
+
+$execute = sub {
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+
+};
+
+$abort = sub {
+	print "Job aborted, cool.\n";
+	my $corefile = $info{'core'};
+	if( $corefile == undef )
+	{
+		die "Die No Core file\n";
+	}
+	else
+	{
+		print "Corefile is called ---$corefile---\n";
+		print "-now finish test for coresize = limits-\n";
+	}
+};
+
+my $execute = sub
+{
+};
+
+CondorTest::RegisterExitedSuccess($testname, $execute);
+CondorTest::RegisterExecute($testname, $execute);
+CondorTest::RegisterAbort($testname, $abort);
+CondorTest::RegisterExitedAbnormal($testname, $abort);
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+	print "$testname: SUCCESS\n";
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+

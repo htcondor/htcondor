@@ -1,34 +1,32 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 
 #include "condor_common.h"
 #include "condor_attributes.h"
 #include "condor_debug.h"
-#include "environ.h"  // for Environ object
 #include "condor_string.h"	// for strnewp and friends
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
-#include "basename.h"
 #include "condor_ckpt_name.h"
 #include "daemon.h"
 #include "dc_schedd.h"
@@ -113,9 +111,6 @@ static char *GMStateNames[] = {
 
 #define HASH_TABLE_SIZE			500
 
-template class HashTable<HashKey, MirrorJob *>;
-template class HashBucket<HashKey, MirrorJob *>;
-
 HashTable <HashKey, MirrorJob *> MirrorJobsById( HASH_TABLE_SIZE,
 												 hashFunction );
 
@@ -141,15 +136,16 @@ void MirrorJobReconfig()
 	MirrorJob::setLeaseInterval( tmp_int );
 }
 
-const char *MirrorJobAdConst = "JobUniverse =?= 5 && MirrorSchedd =!= Undefined";
+bool MirrorJobAdMatch( const ClassAd *job_ad ) {
+	int universe;
+	MyString schedd;
+	if ( job_ad->LookupInteger( ATTR_JOB_UNIVERSE, universe ) &&
+		 universe == CONDOR_UNIVERSE_VANILLA &&
+		 job_ad->LookupString( ATTR_MIRROR_SCHEDD, schedd ) ) {
 
-bool MirrorJobAdMustExpand( const ClassAd *jobad )
-{
-	int must_expand = 0;
-
-	jobad->LookupBool(ATTR_JOB_MUST_EXPAND, must_expand);
-
-	return must_expand != 0;
+		return true;
+	}
+	return false;
 }
 
 BaseJob *MirrorJobCreate( ClassAd *jobad )
@@ -158,6 +154,7 @@ BaseJob *MirrorJobCreate( ClassAd *jobad )
 }
 
 
+static
 ClassAd *ClassAdDiff( ClassAd *old_ad, ClassAd *new_ad )
 {
 	ClassAd *diff_ad;
@@ -205,6 +202,7 @@ ClassAd *ClassAdDiff( ClassAd *old_ad, ClassAd *new_ad )
 	return diff_ad;
 }
 
+static
 void ClassAdPatch( ClassAd *orig_ad, ClassAd *diff_ad )
 {
 	ExprTree *diff_expr;
@@ -229,9 +227,9 @@ MirrorJob::MirrorJob( ClassAd *classad )
 {
 	int tmp;
 	char buff[4096];
-	char buff2[4096];
-	char *error_string = NULL;
+	MyString error_string = "";
 	char *gahp_path;
+	ArgList args;
 
 	mirrorJobId.cluster = 0;
 	gahpAd = NULL;
@@ -253,6 +251,8 @@ MirrorJob::MirrorJob( ClassAd *classad )
 
 	lastRemoteStatusServerTime = 0;
 
+	gahp = NULL;
+
 	// This is a BaseJob variable. At no time do we want BaseJob mucking
 	// around with job runtime attributes, so set it to false and leave it
 	// that way.
@@ -260,21 +260,22 @@ MirrorJob::MirrorJob( ClassAd *classad )
 
 	// In GM_HOLD, we assume HoldReason to be set only if we set it, so make
 	// sure it's unset when we start.
-	if ( ad->LookupString( ATTR_HOLD_REASON, NULL, 0 ) != 0 ) {
-		UpdateJobAd( ATTR_HOLD_REASON, "UNDEFINED" );
+	if ( jobAd->LookupString( ATTR_HOLD_REASON, NULL, 0 ) != 0 ) {
+		jobAd->AssignExpr( ATTR_HOLD_REASON, "Undefined" );
 	}
 
 	buff[0] = '\0';
-	ad->LookupString( ATTR_MIRROR_SCHEDD, buff );
+	jobAd->LookupString( ATTR_MIRROR_SCHEDD, buff );
 	if ( buff[0] != '\0' ) {
 		mirrorScheddName = strdup( buff );
 	} else {
-		error_string = "MirrorSchedd is not set in the job ad";
+		error_string.sprintf( "%s is not set in the job ad",
+							  ATTR_MIRROR_SCHEDD );
 		goto error_exit;
 	}
 
 	buff[0] = '\0';
-	ad->LookupString( ATTR_MIRROR_JOB_ID, buff );
+	jobAd->LookupString( ATTR_MIRROR_JOB_ID, buff );
 	if ( buff[0] != '\0' ) {
 		SetRemoteJobId( buff );
 	} else {
@@ -282,7 +283,7 @@ MirrorJob::MirrorJob( ClassAd *classad )
 	}
 
 	buff[0] = '\0';
-	ad->LookupString( ATTR_GLOBAL_JOB_ID, buff );
+	jobAd->LookupString( ATTR_GLOBAL_JOB_ID, buff );
 	if ( buff[0] != '\0' ) {
 		char *ptr = strchr( buff, '#' );
 		if ( ptr != NULL ) {
@@ -290,7 +291,8 @@ MirrorJob::MirrorJob( ClassAd *classad )
 		}
 		submitterId = strdup( buff );
 	} else {
-		error_string = "GlobalJobId is not set in the job ad";
+		error_string.sprintf( "%s is not set in the job ad",
+							  ATTR_GLOBAL_JOB_ID );
 		goto error_exit;
 	}
 
@@ -299,14 +301,21 @@ MirrorJob::MirrorJob( ClassAd *classad )
 
 	gahp_path = param("MIRROR_GAHP");
 	if ( gahp_path == NULL ) {
-		error_string = "MIRROR_GAHP not defined";
-		goto error_exit;
+		gahp_path = param( "CONDOR_GAHP" );
+		if ( gahp_path == NULL ) {
+			error_string = "CONDOR_GAHP not defined";
+			goto error_exit;
+		}
 	}
 		// TODO remove mirrorScheddName from the gahp server key if/when
 		//   a gahp server can handle multiple schedds
 	sprintf( buff, "MIRROR/%s", mirrorScheddName );
-	sprintf( buff2, "-f -s %s", mirrorScheddName );
-	gahp = new GahpClient( buff, gahp_path, buff2 );
+
+	args.AppendArg("-f");
+	args.AppendArg("-s");
+	args.AppendArg(mirrorScheddName);
+
+	gahp = new GahpClient( buff, gahp_path, &args );
 	free( gahp_path );
 
 	gahp->setNotificationTimerId( evaluateStateTid );
@@ -314,13 +323,13 @@ MirrorJob::MirrorJob( ClassAd *classad )
 	gahp->setTimeout( gahpCallTimeout );
 
 	tmp = 0;
-	ad->LookupBool( ATTR_MIRROR_ACTIVE, tmp );
+	jobAd->LookupBool( ATTR_MIRROR_ACTIVE, tmp );
 	if ( tmp != 0 ) {
 		mirrorActive = true;
 	}
 
 	tmp = 0;
-	ad->LookupBool( ATTR_MIRROR_RELEASED, tmp );
+	jobAd->LookupBool( ATTR_MIRROR_RELEASED, tmp );
 	if ( tmp != 0 ) {
 		mirrorReleased = true;
 	}
@@ -328,9 +337,11 @@ MirrorJob::MirrorJob( ClassAd *classad )
 	return;
 
  error_exit:
+		// We must ensure that the code-path from GM_HOLD doesn't depend
+		// on any initialization that's been skipped.
 	gmState = GM_HOLD;
-	if ( error_string ) {
-		UpdateJobAdString( ATTR_HOLD_REASON, error_string );
+	if ( !error_string.IsEmpty() ) {
+		jobAd->Assign( ATTR_HOLD_REASON, error_string.Value() );
 	}
 	return;
 }
@@ -372,7 +383,7 @@ int MirrorJob::doEvaluateState()
 	int old_gm_state;
 	int old_remote_state;
 	bool reevaluate_state = true;
-	time_t now;	// make sure you set this before every use!!!
+	time_t now = time(NULL);
 
 	bool done;
 	int rc;
@@ -383,7 +394,9 @@ int MirrorJob::doEvaluateState()
 			"(%d.%d) doEvaluateState called: gmState %s, remoteState %d\n",
 			procID.cluster,procID.proc,GMStateNames[gmState],remoteState);
 
-	gahp->setMode( GahpClient::normal );
+	if ( gahp ) {
+		gahp->setMode( GahpClient::normal );
+	}
 
 	do {
 		reevaluate_state = false;
@@ -400,7 +413,7 @@ int MirrorJob::doEvaluateState()
 				dprintf( D_ALWAYS, "(%d.%d) Error starting GAHP\n",
 						 procID.cluster, procID.proc );
 
-				UpdateJobAdString( ATTR_HOLD_REASON, "Failed to start GAHP" );
+				jobAd->Assign( ATTR_HOLD_REASON, "Failed to start GAHP" );
 				gmState = GM_HOLD;
 				break;
 			}
@@ -447,12 +460,11 @@ int MirrorJob::doEvaluateState()
 				break;
 			}
 			if ( numSubmitAttempts >= MAX_SUBMIT_ATTEMPTS ) {
-				UpdateJobAdString( ATTR_HOLD_REASON,
-									"Attempts to submit failed" );
+				jobAd->Assign( ATTR_HOLD_REASON,
+							   "Attempts to submit failed" );
 				gmState = GM_HOLD;
 				break;
 			}
-			now = time(NULL);
 			// After a submit, wait at least submitInterval before trying
 			// another one.
 			if ( now >= lastSubmitAttempt + submitInterval ) {
@@ -619,7 +631,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) newRemoteStatusAd too long!\n",procID.cluster,procI
 				gmState = GM_CANCEL_1;
 			} else {
 				mirrorActive = true;
-				UpdateJobAdBool( ATTR_MIRROR_ACTIVE, 1 );
+				jobAd->Assign( ATTR_MIRROR_ACTIVE, true );
 				requestScheddUpdate( this );
 				gmState = GM_SUBMITTED_MIRROR_ACTIVE;
 			}
@@ -862,13 +874,13 @@ dprintf(D_FULLDEBUG,"(%d.%d) newRemoteStatusAd too long!\n",procID.cluster,procI
 				}
 			}
 			if ( mirrorActive == true ||
-				 ad->LookupBool( ATTR_MIRROR_ACTIVE, tmp_bool ) == false ) {
-				UpdateJobAdBool( ATTR_MIRROR_ACTIVE, 0 );
+				 jobAd->LookupBool( ATTR_MIRROR_ACTIVE, tmp_bool ) == false ) {
+				jobAd->Assign( ATTR_MIRROR_ACTIVE, false );
 				mirrorActive = false;
 			}
 			if ( mirrorReleased == true ||
-				 ad->LookupBool( ATTR_MIRROR_RELEASED, tmp_bool ) == false ) {
-				UpdateJobAdBool( ATTR_MIRROR_RELEASED, 0 );
+				 jobAd->LookupBool( ATTR_MIRROR_RELEASED, tmp_bool ) == false ) {
+				jobAd->Assign( ATTR_MIRROR_RELEASED, false );
 				mirrorReleased = false;
 			}
 			writeUserLog = false;
@@ -908,7 +920,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) newRemoteStatusAd too long!\n",procID.cluster,procI
 				char holdReason[1024];
 				holdReason[0] = '\0';
 				holdReason[sizeof(holdReason)-1] = '\0';
-				ad->LookupString( ATTR_HOLD_REASON, holdReason,
+				jobAd->LookupString( ATTR_HOLD_REASON, holdReason,
 								  sizeof(holdReason) - 1 );
 				if ( holdReason[0] == '\0' && errorString != "" ) {
 					strncpy( holdReason, errorString.Value(),
@@ -945,7 +957,9 @@ dprintf(D_FULLDEBUG,"(%d.%d) newRemoteStatusAd too long!\n",procID.cluster,procI
 			enteredCurrentGmState = time(NULL);
 			// If we were waiting for a pending gahp call, we're not
 			// anymore so purge it.
-			gahp->purgePendingRequests();
+			if ( gahp ) {
+				gahp->purgePendingRequests();
+			}
 			// If we were calling a gahp func that used gahpAd, we're done
 			// with it now, so free it.
 			if ( gahpAd ) {
@@ -970,7 +984,7 @@ void MirrorJob::SetRemoteJobId( const char *job_id )
 		free( remoteJobIdString );
 		remoteJobIdString = NULL;
 		mirrorJobId.cluster = 0;
-		UpdateJobAd( ATTR_MIRROR_JOB_ID, "UNDEFINED" );
+		jobAd->AssignExpr( ATTR_MIRROR_JOB_ID, "Undefined" );
 	}
 	if ( job_id != NULL ) {
 		MyString id_string;
@@ -979,7 +993,7 @@ void MirrorJob::SetRemoteJobId( const char *job_id )
 						   mirrorJobId.proc );
 		remoteJobIdString = strdup( id_string.Value() );
 		MirrorJobsById.insert( HashKey( remoteJobIdString ), this );
-		UpdateJobAdString( ATTR_MIRROR_JOB_ID, job_id );
+		jobAd->Assign( ATTR_MIRROR_JOB_ID, job_id );
 	}
 	requestScheddUpdate( this );
 }
@@ -1024,7 +1038,7 @@ void MirrorJob::ProcessRemoteAdInactive( ClassAd *remote_ad )
 	remote_ad->LookupInteger( ATTR_JOB_STATUS, tmp_int );
 
 	if ( tmp_int != HELD ) {
-		UpdateJobAdBool( ATTR_MIRROR_RELEASED, 1 );
+		jobAd->Assign( ATTR_MIRROR_RELEASED, true );
 		mirrorReleased = true;
 	}
 	remoteState = tmp_int;
@@ -1032,9 +1046,9 @@ void MirrorJob::ProcessRemoteAdInactive( ClassAd *remote_ad )
 	rc = remote_ad->LookupInteger( ATTR_MIRROR_LEASE_TIME,
 								   tmp_int );
 	if ( rc ) {
-		UpdateJobAdInt( ATTR_MIRROR_REMOTE_LEASE_TIME, tmp_int );
+		jobAd->Assign( ATTR_MIRROR_REMOTE_LEASE_TIME, tmp_int );
 	} else {
-		UpdateJobAd( ATTR_MIRROR_REMOTE_LEASE_TIME, "Undefined" );
+		jobAd->AssignExpr( ATTR_MIRROR_REMOTE_LEASE_TIME, "Undefined" );
 	}
 
 	requestScheddUpdate( this );
@@ -1090,7 +1104,7 @@ void MirrorJob::ProcessRemoteAdActive( ClassAd *remote_ad )
 	remoteState = new_remote_state;
 
 
-	diff_ad = ClassAdDiff( ad, remote_ad );
+	diff_ad = ClassAdDiff( jobAd, remote_ad );
 
 	rc = diff_ad->LookupInteger( ATTR_MIRROR_LEASE_TIME, tmp_int );
 	if ( rc ) {
@@ -1148,7 +1162,7 @@ void MirrorJob::ProcessRemoteAdActive( ClassAd *remote_ad )
 		}
 	}
 
-	ClassAdPatch( ad, diff_ad );
+	ClassAdPatch( jobAd, diff_ad );
 
 	requestScheddUpdate( this );
 
@@ -1169,7 +1183,7 @@ ClassAd *MirrorJob::buildSubmitAd()
 	ClassAd *submit_ad;
 
 		// Base the submit ad on our own job ad
-	submit_ad = new ClassAd( *ad );
+	submit_ad = new ClassAd( *jobAd );
 
 	submit_ad->Delete( ATTR_CLUSTER_ID );
 	submit_ad->Delete( ATTR_PROC_ID );
@@ -1202,73 +1216,30 @@ ClassAd *MirrorJob::buildSubmitAd()
 	submit_ad->Delete( ATTR_GLOBAL_JOB_ID );
 	submit_ad->Delete( ATTR_STAGE_IN_START );
 	submit_ad->Delete( ATTR_STAGE_IN_FINISH );
+	submit_ad->Delete( ATTR_TRANSFER_OUTPUT_REMAPS );
 
-	expr.sprintf( "%s = %d", ATTR_JOB_STATUS, HELD );
-	submit_ad->Insert( expr.Value() );
-
-	expr.sprintf( "%s = \"%s\"", ATTR_HOLD_REASON,
-				  "submitted on hold at user's request" );
-	submit_ad->Insert( expr.Value() );
-
-	expr.sprintf( "%s = %d", ATTR_Q_DATE, now );
-	submit_ad->Insert( expr.Value() );
-
-	expr.sprintf( "%s = 0", ATTR_COMPLETION_DATE );
-	submit_ad->Insert( expr.Value() );
-
-	expr.sprintf ( "%s = 0.0", ATTR_JOB_REMOTE_WALL_CLOCK);
-	submit_ad->Insert( expr.Value() );
-
-	expr.sprintf ( "%s = 0.0", ATTR_JOB_LOCAL_USER_CPU);
-	submit_ad->Insert( expr.Value() );
-
-	expr.sprintf ( "%s = 0.0", ATTR_JOB_LOCAL_SYS_CPU);
-	submit_ad->Insert( expr.Value() );
-
-	expr.sprintf ( "%s = 0.0", ATTR_JOB_REMOTE_USER_CPU);
-	submit_ad->Insert( expr.Value() );
-
-	expr.sprintf ( "%s = 0.0", ATTR_JOB_REMOTE_SYS_CPU);
-	submit_ad->Insert( expr.Value() );
-
-	expr.sprintf ( "%s = 0", ATTR_JOB_EXIT_STATUS);
-	submit_ad->Insert( expr.Value() );
-
-	expr.sprintf ( "%s = 0", ATTR_NUM_CKPTS);
-	submit_ad->Insert( expr.Value() );
-
-	expr.sprintf ( "%s = 0", ATTR_NUM_RESTARTS);
-	submit_ad->Insert( expr.Value() );
-
-	expr.sprintf ( "%s = 0", ATTR_NUM_SYSTEM_HOLDS);
-	submit_ad->Insert( expr.Value() );
-
-	expr.sprintf ( "%s = 0", ATTR_JOB_COMMITTED_TIME);
-	submit_ad->Insert( expr.Value() );
-
-	expr.sprintf ( "%s = 0", ATTR_TOTAL_SUSPENSIONS);
-	submit_ad->Insert( expr.Value() );
-
-	expr.sprintf ( "%s = 0", ATTR_LAST_SUSPENSION_TIME);
-	submit_ad->Insert( expr.Value() );
-
-	expr.sprintf ( "%s = 0", ATTR_CUMULATIVE_SUSPENSION_TIME);
-	submit_ad->Insert( expr.Value() );
-
-	expr.sprintf ( "%s = FALSE", ATTR_ON_EXIT_BY_SIGNAL);
-	submit_ad->Insert( expr.Value() );
-
-	expr.sprintf( "%s = 0", ATTR_CURRENT_HOSTS );
-	submit_ad->Insert( expr.Value() );
-
-	expr.sprintf( "%s = %d", ATTR_ENTERED_CURRENT_STATUS, now );
-	submit_ad->Insert( expr.Value() );
-
-	expr.sprintf( "%s = %d", ATTR_JOB_NOTIFICATION, NOTIFY_NEVER );
-	submit_ad->Insert( expr.Value() );
-
-	expr.sprintf( "%s = True", ATTR_JOB_LEAVE_IN_QUEUE );
-	submit_ad->Insert( expr.Value() );
+	submit_ad->Assign( ATTR_JOB_STATUS, HELD );
+	submit_ad->Assign( ATTR_HOLD_REASON, "submitted on hold at user's request" );
+	submit_ad->Assign( ATTR_Q_DATE, now );
+	submit_ad->Assign( ATTR_COMPLETION_DATE, 0 );
+	submit_ad->Assign( ATTR_JOB_REMOTE_WALL_CLOCK, (float)0.0 );
+	submit_ad->Assign( ATTR_JOB_LOCAL_USER_CPU, (float)0.0 );
+	submit_ad->Assign( ATTR_JOB_LOCAL_SYS_CPU, (float)0.0 );
+	submit_ad->Assign( ATTR_JOB_REMOTE_USER_CPU, (float)0.0 );
+	submit_ad->Assign( ATTR_JOB_REMOTE_SYS_CPU, (float)0.0 );
+	submit_ad->Assign( ATTR_JOB_EXIT_STATUS, 0 );
+	submit_ad->Assign( ATTR_NUM_CKPTS, 0 );
+	submit_ad->Assign( ATTR_NUM_RESTARTS, 0 );
+	submit_ad->Assign( ATTR_NUM_SYSTEM_HOLDS, 0 );
+	submit_ad->Assign( ATTR_JOB_COMMITTED_TIME, 0 );
+	submit_ad->Assign( ATTR_TOTAL_SUSPENSIONS, 0 );
+	submit_ad->Assign( ATTR_LAST_SUSPENSION_TIME, 0 );
+	submit_ad->Assign( ATTR_CUMULATIVE_SUSPENSION_TIME, 0 );
+	submit_ad->Assign( ATTR_ON_EXIT_BY_SIGNAL, false );
+	submit_ad->Assign( ATTR_CURRENT_HOSTS, 0 );
+	submit_ad->Assign( ATTR_ENTERED_CURRENT_STATUS, now );
+	submit_ad->Assign( ATTR_JOB_NOTIFICATION, NOTIFY_NEVER );
+	submit_ad->Assign( ATTR_JOB_LEAVE_IN_QUEUE, true );
 
 	expr.sprintf( "%s = (%s >= %s) =!= True && CurrentTime > %s + %d",
 				  ATTR_PERIODIC_REMOVE_CHECK, ATTR_STAGE_IN_FINISH,
@@ -1285,9 +1256,7 @@ ClassAd *MirrorJob::buildSubmitAd()
 				  ATTR_MIRROR_LEASE_TIME, ATTR_SCHEDD_BIRTHDATE, 15*60 );
 	submit_ad->Insert( expr.Value() );
 
-	expr.sprintf( "%s = \"%s\"", ATTR_MIRROR_SUBMITTER_ID,
-				  submitterId );
-	submit_ad->Insert( expr.Value() );
+	submit_ad->Assign( ATTR_MIRROR_SUBMITTER_ID, submitterId );
 
 		// worry about ATTR_JOB_[OUTPUT|ERROR]_ORIG
 
@@ -1300,7 +1269,7 @@ ClassAd *MirrorJob::buildStageInAd()
 	ClassAd *stage_in_ad;
 
 		// Base the stage in ad on our own job ad
-	stage_in_ad = new ClassAd( *ad );
+	stage_in_ad = new ClassAd( *jobAd );
 
 	stage_in_ad->Assign( ATTR_CLUSTER_ID, mirrorJobId.cluster );
 	stage_in_ad->Assign( ATTR_PROC_ID, mirrorJobId.proc );

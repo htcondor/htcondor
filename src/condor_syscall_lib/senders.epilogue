@@ -234,7 +234,8 @@ REMOTE_CONDOR_get_file(char *remote, char *local, int mode)
 	/* Wrapup */
 	if( write_status >= 0 && read_status >= 0 && close_status >= 0 ) {
 		dprintf( D_ALWAYS,
-			"CONDOR_get_file: transferred %d bytes\n", file_size );
+			"CONDOR_get_file: transferred %lu bytes\n", 
+			(unsigned long)file_size );
 		rval = 0;
 	} else {
 		rval = -1;

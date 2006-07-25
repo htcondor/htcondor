@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -57,7 +57,7 @@ typedef struct {
 	int				prio;				/* Job priority */
 	int				notification;		/* Notification options */
 	int				image_size;			/* Size of the virtual image in K */
-	char			*env;				/* environment */
+	char			*env_v1or2;			/* environment */
 
 		/* Number of commands and per/command items.  Each of these items
 		** is declared as a pointer, but should be allocated as an array
@@ -65,7 +65,7 @@ typedef struct {
 		*/
 	int				n_cmds;				/* Number of executable files */
 	char			**cmd;				/* Names of executable files */
-	char			**args;				/* command line args */
+	char			**args_v1or2;		/* command line args */
 	char			**in;				/* file for stdin */
 	char			**out;				/* file for stdout */
 	char			**err;				/* file for stderr */
@@ -111,8 +111,8 @@ typedef struct {
 	int				notification;		/* Notification options */
 	int				image_size;			/* Size of the virtual image in K */
 	char			*cmd;				/* a.out file */
-	char			*args;				/* command line args */
-	char			*env;				/* environment */
+	char			*args_v1or2;		/* command line args */
+	char			*env_v1or2;			/* environment */
 	char			*in;				/* file for stdin */
 	char			*out;				/* file for stdout */
 	char			*err;				/* file for stderr */
@@ -147,8 +147,8 @@ typedef struct {
 	int				prio;
 	int				notification;		/* Notification options */
 	char			*cmd;
-	char			*args;
-	char			*env;
+	char			*args_v1or2;
+	char			*env_v1or2;
 	char			*in;
 	char			*out;
 	char			*err;
@@ -182,8 +182,8 @@ typedef struct {
 #define	UNLOCK	8
 
 /*
-** Warning!  Keep these consistent with the strings defined below
-** in "JobStatusNames".
+** Warning!  Keep these consistent with the strings defined in the
+** JobStatusNames array defined in condor_util_lib/proc.c
 */
 #define UNEXPANDED	0
 #define IDLE		1
@@ -192,26 +192,21 @@ typedef struct {
 #define COMPLETED	4
 #define	HELD		5
 #define SUBMISSION_ERR	6
+#define JOB_STATUS_MAX  7 /* A placeholder, not a valid status. */
 
-#ifdef INCLUDE_STATUS_NAME_ARRAY
-char    *JobStatusNames[] = {
-    "UNEXPANDED",
-    "IDLE",
-    "RUNNING",
-    "REMOVED",
-    "COMPLETED",
-	"HELD",
-    "SUBMISSION_ERR",
-};
-#else
-extern char *JobStatusNames[];
-#endif
-
+// Put C funtion definitions here
 BEGIN_C_DECLS
 
 PROC_ID getProcByString( const char* str );
+const char* getJobStatusString( int status );
+int getJobStatusNum( const char* name );
 
 END_C_DECLS
+
+// Put C++ definitions here
+#if defined(__cplusplus)
+bool operator==( const PROC_ID a, const PROC_ID b);
+#endif
 
 #define ICKPT -1
 

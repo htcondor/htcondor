@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -26,6 +26,7 @@
 #include "job.h"
 #include "script.h"
 #include "MyString.h"
+#include "read_multiple_logs.h"
 
 template class List<Job>;
 template class List<MyString>;
@@ -38,3 +39,6 @@ template class HashTable<int, Script*>;
 template class Queue<Script*>;
 template class Queue<Job*>;
 template class SimpleList<Job*>;
+CHECK_EVENTS_HASH_INSTANCE;
+template class HashTable<MyString, Job *>;
+template class HashTable<JobID_t, Job *>;

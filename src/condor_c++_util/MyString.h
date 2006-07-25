@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -99,7 +99,8 @@ class MyString
 	const char& operator[](int pos);
 
 	/** Sets the character at the given position to the given value,
-	 *  if the position is within the string. */
+	 *  if the position is within the string.  Setting the character
+	 *  to '\0' truncates the string to end at that position. */
 	void setChar(int pos, char value);
 
 	//@}
@@ -159,6 +160,12 @@ class MyString
 	/** Appends the string version of the given int */
 	MyString& operator+=(int i);
 
+	/** Appends the string version of the given unsigned int */
+	MyString& operator+=(unsigned int ui);
+
+	/** Appends the string version of the given long int */
+	MyString& operator+=(long l);
+
 	/** Appends the string version of the given double */
 	MyString& operator+=(double d);
 
@@ -174,7 +181,8 @@ class MyString
 	//@{ 
 
 	/** Returns a new MyString that is the portion of the string from 
-	 *  pos1 to pos2. The first character in the string is position 0. 
+	 *  pos1 to pos2 (including both pos1 and pos2). 
+	 *  The first character in the string is position 0. 
 	 */
 	MyString Substr(int pos1, int pos2) const;
     
@@ -199,7 +207,9 @@ class MyString
 	int find(const char *pszToFind, int iStartPos = 0) const;
 
 	/** Replaces a substring with another substring. It's okay for the
-     *  new string to be empty, so you end up deleting a substring. */
+     *  new string to be empty, so you end up deleting a substring.
+	 *  Returns true iff it found any instances of the pszToReplace
+	 *  substring. */
 	bool replaceString(const char *pszToReplace, 
 					   const char *pszReplaceWith, 
 					   int iStartFromPos=0);
@@ -233,6 +243,10 @@ class MyString
 		@return True if we removed a newline, false if not
 	*/  
 	bool chomp( void );
+
+	/** Trim leading and trailing whitespace from this string.
+	*/
+	void trim( void );
 
 	//@}
 

@@ -1,0 +1,24 @@
+#! /usr/bin/env perl
+use CondorTest;
+
+$testname = 'Condor ON_EXIT_REMOVE policy test - java U';
+
+my $nostatus = CondorTest::verbose_system("job_core_onexitrem-false_java.pl");
+my $willstatus = CondorTest::verbose_system("job_core_onexitrem-true_java.pl");
+
+if($nostatus != 0)
+{
+	print "ON_EXIT_REMOVE: failed no trigger test\n";
+}
+
+if($willstatus != 0)
+{
+	print "ON_EXIT_REMOVE: failed trigger test\n";
+}
+
+if(($willstatus != 0) || ($nostatus != 0))
+{
+	die "Failed one ON_EXIT_REMOVE test\n";
+}
+
+

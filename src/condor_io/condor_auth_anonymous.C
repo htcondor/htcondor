@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -52,6 +52,7 @@ int Condor_Auth_Anonymous :: authenticate(const char * remoteHost, CondorError* 
     } 
     else { //server side
         setRemoteUser( STR_ANONYMOUS );
+		setAuthenticatedName( STR_ANONYMOUS );
         mySock_->encode();
         retval = 1;
         mySock_->code( retval );

@@ -1,0 +1,46 @@
+#!/usr/bin/env perl
+
+use CondorTest;
+
+$cmd = 'job_rsc_f-direct-write_std.cmd';
+$testname = 'Fortran Direct File I/O Test';
+
+#push( @CondorTest::expected_output,
+#	  "  Will open direct access file for reading" );
+#push( @CondorTest::expected_output, " T T T" );
+
+$OutputTest = sub {
+	my %info = @_;
+
+	$output = $info{"output"};
+	open( OUTPUT, "<$output" ) || die "Can't open $output: $!\n";
+
+	$line = <OUTPUT>;
+	print "Checking Line: $line";
+	if ($line !~ /Will open direct access file for reading/)
+	{
+		close OUTPUT;
+		die "$testname: FAILURE (bad output to STDOUT)\n";
+	}
+
+	$line = <OUTPUT>;
+	print "Checking Line: $line";
+	if ((not $line =~ /T,?\s*T,?\s*T/) && 
+		(not $line =~ /3\s*\*\s*T/))
+	{
+		close OUTPUT;
+		die "$testname: FAILURE (bad output to STDOUT)\n";
+	}
+	close OUTPUT;
+
+};
+
+CondorTest::RegisterExitedSuccess( $testname, $OutputTest );
+
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+	print "$testname: SUCCESS\n";
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+

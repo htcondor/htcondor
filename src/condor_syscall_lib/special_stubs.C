@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -34,6 +34,7 @@
 #include "exit.h"
 #include "shared_utils.h"
 #include "get_port_range.h"
+#include "condor_netdb.h"
 
 extern	ReliSock* syscall_sock;
 
@@ -59,6 +60,24 @@ my_ip_addr()
 	return syscall_sock->get_ip_int();
 }
 
+
+/*
+  We need our own definition of my_ip_string(), which is used by the
+  utilities in internet.c (which in turn are used by CEDAR).  This
+  version, instead of looking in a config file for magic parameters,
+  looks at the existing syscall_sock and grabs the IP address off of
+  there.
+*/
+char*
+my_ip_string()
+{
+	struct in_addr addr;
+	memset( &addr, 0, sizeof(struct in_addr) );
+	addr.s_addr = syscall_sock->get_ip_int();
+	return inet_ntoa( addr );
+}
+
+
 /*
 	In the 6.3 series, REMOTE_syscall had been removed. Well, it turns out
 	that 6.4 was supposed to be backwards compatible with 6.2. :( This means
@@ -78,7 +97,7 @@ void REMOTE_syscall(void) {} ;
   need to do anything complex with priv states, locking, etc.
 */
 void
-_condor_dprintf_va( int flags, char* fmt, va_list args )
+_condor_dprintf_va( int flags, const char* fmt, va_list args )
 {
 	int scm;
 	int no_fd = FALSE;
@@ -114,9 +133,12 @@ _condor_dprintf_va( int flags, char* fmt, va_list args )
 }
 
 
-int get_port_range(int *low_port, int *high_port)
+int get_port_range(int is_outgoing, int *low_port, int *high_port)
 {
 	char *low = NULL, *high = NULL;
+
+	// is_outgoing is ignored here.  all connections are assumed to be outgoing
+	// since cedar should not be opening any listen sockets in the userjob.
 
 	if ( (low = getenv("_condor_LOWPORT")) == NULL ) {
         dprintf(D_NETWORK, "_condor_LOWPORT undefined\n");
@@ -138,6 +160,53 @@ int get_port_range(int *low_port, int *high_port)
 	}
 
 	return TRUE;
+}
+
+
+int
+_condor_bind_all_interfaces( void )
+{
+	char *tmp = NULL;
+	int bind_all = FALSE;
+
+	if( (tmp = getenv("_condor_BIND_ALL_INTERFACES")) == NULL ) {
+        dprintf(D_NETWORK, "_condor_BIND_ALL_INTERFACES undefined\n");
+		return FALSE;
+    }
+	
+	switch( tmp[0] ) {
+	case 'T':
+	case 't':
+	case 'Y':
+	case 'y':
+		bind_all = TRUE;
+		break;
+	default:
+		bind_all = FALSE;
+		break;
+	}
+
+	return bind_all;
+}
+
+
+struct hostent *
+condor_gethostbyname( const char *name )
+{
+	return gethostbyname( name );
+}
+
+struct hostent *
+condor_gethostbyaddr( const char *addr, SOCKET_LENGTH_TYPE len, int type )
+
+{
+	return gethostbyaddr( addr, len, type );
+}
+
+int
+condor_gethostname( char *name, size_t namelen )
+{
+	return gethostname( name, namelen );
 }
 
 

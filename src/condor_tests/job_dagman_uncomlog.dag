@@ -1,0 +1,9 @@
+Job     NODE0         job_dagman_uncomlog1.cmd
+Job     NODE1         job_dagman_uncomlog2.cmd
+Job     NODE2         job_dagman_uncomlog3.cmd
+Job     NODE3         job_dagman_uncomlog4.cmd
+
+Script POST NODE0     ./job_dagman_monitor.pl $RETURN
+Script POST NODE1     ./job_dagman_monitor.pl $RETURN
+Script POST NODE2     ./job_dagman_monitor.pl $RETURN
+Script POST NODE3     ./job_dagman_monitor.pl $RETURN

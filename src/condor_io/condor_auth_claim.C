@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -104,6 +104,7 @@ int Condor_Auth_Claim :: authenticate(const char * remoteHost, CondorError* errs
             if( tmpOwner ) {
                 retval = 1;
                 setRemoteUser( tmpOwner );
+                setAuthenticatedName( tmpOwner );
 				free(tmpOwner);
             } else {
                 retval = 0;

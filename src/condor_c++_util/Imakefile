@@ -1,7 +1,34 @@
-all_target(cplus_lib.a liburl.a libcondorapi.a)
+#if WANT_NEW_CLASSADS
+#define New_classads_includes	-I$(NEW_CLASSADS_INC)
+#define New_classads_obj		credential.o X509credential.o
+#define New_classads_dc_obj		dc_credd.o
+#define New_classads_defines	-DWANT_NEW_CLASSADS
+#define New_classads_lib		-L$(NEW_CLASSADS_LIB) -lclassad_ns
+#else
+#define New_classads_includes
+#define New_classads_obj
+#define New_classads_dc_obj
+#define New_classads_defines
+#define New_classads_lib
+#endif
 
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
-CFLAGS = $(STD_C_FLAGS)
+#if HAVE_CC_SHARED_FLAG
+LIBCONDORAPI = libcondorapi.a libcondorapi.so
+TEST_LIBCONDORAPI = test_libcondorapi test_libcondorapi_shared
+#else
+LIBCONDORAPI = libcondorapi.a
+TEST_LIBCONDORAPI = test_libcondorapi
+#endif
+
+all_target(cplus_lib.a liburl.a $(LIBCONDORAPI) $(TEST_LIBCONDORAPI))
+
+C_PLUS_FLAGS =	\
+		$(STD_C_PLUS_FLAGS) \
+		New_classads_defines \
+		New_classads_includes \
+		$(QUILL_INC)
+
+CFLAGS = $(STD_C_FLAGS) New_classads_includes
 LIB = $(STD_LIBS)
 
 #if !HAS_FLOCK
@@ -9,11 +36,11 @@ FLOCK_OBJ = ../condor_util_lib/flock.o
 #endif 
 
 URL_OBJ = url_condor.o cbstp_url.o file_url.o http_url.o filter_url.o \
-	mailto_url.o cfilter_url.o ftp_url.o include_urls.o mkargv.o
+	mailto_url.o cfilter_url.o ftp_url.o include_urls.o mkargv.o MapFile.o
 
 API_OBJ = generic_query.o condor_query.o condor_q.o ad_printmask.o \
-			condor_event.o user_log.o classadList.o strnewp.o \
-			read_multiple_logs.o CondorError.o
+			condor_event.o user_log.o strnewp.o \
+			read_multiple_logs.o CondorError.o check_events.o tmp_dir.o
 
 #if HAS_OPENSSL
 DH_OBJ = condor_dh.o
@@ -33,6 +60,12 @@ SETEGID_OBJ = ../condor_util_lib/setegid.o
 SETEGID_OBJ = 
 #endif
 
+#if WANT_QUILL
+QUILL_OBJS = jobqueuesnapshot.o historysnapshot.o pgsqldatabase.o sqlquery.o
+#else
+QUILL_OBJS =
+#endif
+
 /* Bring in the old classad library because the user log parsing code
 	(which we form the condor api archive with) now can use xml logging and
 	classad representations of the events.
@@ -40,41 +73,25 @@ SETEGID_OBJ =
 	to remedy the situation. If you're just reading log files, then you don't
 	need that functionality anyway. */
 CLASSAD_OBJ = \
-	../condor_classad.V6/attrrefs.o \
-	../condor_classad.V6/cclassad.o \
-	../condor_classad.V6/classad_deprecated.o \
-	../condor_classad.V6/classad.o \
-	../condor_classad.V6/coll-client-inst.o \
-	../condor_classad.V6/coll-comm-inst.o \
-	../condor_classad.V6/collectionBase.o \
-	../condor_classad.V6/collectionClient.o \
-	../condor_classad.V6/collection.o \
-	../condor_classad.V6/collectionServer.o \
-	../condor_classad.V6/coll-serv-inst.o \
-	../condor_classad.V6/condorUtil.o \
-	../condor_classad.V6/exprList.o \
-	../condor_classad.V6/exprTree.o \
-	../condor_classad.V6/fnCall.o \
-	../condor_classad.V6/indexfile.o \
-	../condor_classad.V6/instantiations.o \
-	../condor_classad.V6/lexer.o \
-	../condor_classad.V6/lexerSource.o \
-	../condor_classad.V6/literals.o \
-	../condor_classad.V6/matchClassad.o \
-	../condor_classad.V6/operators.o \
-	../condor_classad.V6/query.o \
-	../condor_classad.V6/remoteQuery.o \
-	../condor_classad.V6/sink.o \
-	../condor_classad.V6/source.o \
-	../condor_classad.V6/test_xml.o \
-	../condor_classad.V6/transaction.o \
-	../condor_classad.V6/util.o \
-	../condor_classad.V6/value.o \
-	../condor_classad.V6/view.o \
-	../condor_classad.V6/xmlLexer.o \
-	../condor_classad.V6/xmlSink.o \
-	../condor_classad.V6/xmlSource.o
-
+	../condor_classad/ast.o \
+	../condor_classad/astbase.o \
+	../condor_classad/attrlist.o \
+	../condor_classad/buildtable.o \
+	../condor_classad/classad.o \
+	../condor_classad/classad_instantiate.o \
+	../condor_classad/classifiedjobs.o \
+	../condor_classad/environment.o \
+	../condor_classad/evaluateOperators.o \
+	../condor_classad/operators.o \
+	../condor_classad/parser.o \
+	../condor_classad/scanner.o \
+	../condor_classad/value.o \
+	../condor_classad/xml_classads.o \
+	../condor_classad/registration.o \
+	../condor_util_lib/condor_snutils.o \
+	stringSpace.o \
+	string_list.o \
+	MyString.o
 
 /* Construct a libcondorapi.a that includes enough stuff to read and write
 	log files. The libcondorapi_stubs.o object contains stubs for cedar, the
@@ -85,8 +102,10 @@ CONLIBAPI_OBJ = \
 	user_log.o \
 	iso_dates.o \
 	file_lock.o \
+	format_time.o \
 	../condor_util_lib/dprintf_common.o \
 	../condor_util_lib/dprintf.o \
+	../condor_util_lib/basename.o \
 	../condor_util_lib/mkargv.o \
 	../condor_util_lib/except.o \
 	../condor_util_lib/strupr.o \
@@ -102,48 +121,60 @@ CONLIBAPI_OBJ = \
 	my_subsystem.o \
 	distribution.o \
 	my_distribution.o \
-	$(DH_OBJ) \
-	condor_attributes.o \
+	$(CLASSAD_OBJ) \
+	../condor_util_lib/get_random_num.o \
 	c++_util_instantiate.o \
-	../condor_util_lib/condor_snutils.o \
-	stringSpace.o \
-	MyString.o \
 	libcondorapi_stubs.o \
 	$(SETEUID_OBJ) \
-	$(SETEGID_OBJ)
+	$(SETEGID_OBJ) \
+	condor_attributes.o
 
 DAEMON_CLIENT_OBJ = daemon.o daemon_types.o dc_shadow.o dc_startd.o \
-	dc_schedd.o dc_collector.o dc_starter.o daemon_list.o
+	dc_schedd.o dc_collector.o dc_starter.o daemon_list.o \
+	New_classads_dc_obj
 
 OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	alarm.o user_job_policy.o classad_support.o \
-	directory.o my_hostname.o file_lock.o sig_name.o \
-	email.o env.o environ.o classad_collection.o c++_util_instantiate.o \
-	string_list.o condor_event.o $(URL_OBJ) get_daemon_name.o \
+	directory.o stat_wrapper.o my_hostname.o file_lock.o sig_name.o \
+	email.o env.o c++_util_instantiate.o \
+	string_list.o net_string_list.o condor_event.o $(URL_OBJ) \
+	get_daemon_name.o \
 	user_log.o config.o condor_config.o stringSpace.o condor_state.o \
 	$(API_OBJ) $(DAEMON_CLIENT_OBJ) \
 	classad_hashtable.o classad_log.o log_transaction.o log.o \
-	usagemon.o print_wrapped_text.o \
-	classad_helpers.o classad_merge.o \
-	linebuffer.o cron.o cronmgr.o cronjob.o distribution.o \
-	condor_environ.o \
+	classad_collection.o usagemon.o print_wrapped_text.o \
+	classad_helpers.o classad_merge.o classad_namedlist.o \
+	linebuffer.o cron.o cronmgr.o cronjob.o cronjob_classad.o \
+	distribution.o \
+	condor_attributes.o condor_environ.o \
 	get_full_hostname.o format_time.o renice_self.o condor_version.o \
 	limit.o my_subsystem.o killfamily.o access.o get_mysubsystem.o \
 	strnewp.o memory_file.o my_username.o misc_utils.o file_transfer.o \
 	uids.o passwd_cache.o metric_units.o condor_ver_info.o condor_cred_base.o \
 	condor_md.o condor_credential.o \
-	HashTable.o MyString.o \
+	proc_id.o HashTable.o MyString.o \
 	KeyCache.o dc_stub.o which.o iso_dates.o java_config.o \
-	RegExer.o my_distribution.o condor_attributes.o \
-	error_utils.o $(DH_OBJ) \
+	Regex.o my_distribution.o error_utils.o $(DH_OBJ) \
 	translation_utils.o command_strings.o enum_utils.o \
 	condor_parameters.o extra_param_info.o classad_command_util.o \
-	domain_tools.o CondorError.o utc_time.o
+	domain_tools.o CondorError.o utc_time.o status_string.o \
+	time_offset.o condor_crontab.o date_util.o \
+	$(QUILL_OBJS) \
+	New_classads_obj setenv.o condor_id.o build_job_env.o job_lease.o \
+	gahp_common.o \
+	condor_arglist.o store_cred.o \
+	exponential_backoff.o \
+	my_popen.o 
 
-library_target( cplus_lib.a,$(OBJ))
-library_target( liburl.a,$(URL_OBJ))
-library_target( libcondorapi.a,$(CONLIBAPI_OBJ) )
+library_target(cplus_lib.a,$(OBJ))
+library_target(liburl.a,$(URL_OBJ))
+library_target(libcondorapi.a,$(CONLIBAPI_OBJ))
 
+#if HAVE_CC_SHARED_FLAG
+shared_library_target(libcondorapi.so,$(CONLIBAPI_OBJ))
+#endif
+
+c_plus_target(test_mapfile,test_mapfile.o,$(LIB))
 c_plus_target(test_locks,test_locks.o,$(LIB))
 c_plus_target(test_stringSpace,test_stringSpace.o,$(LIB))
 c_plus_target(test_iso_dates,test_iso_dates.o,$(LIB))
@@ -151,16 +182,30 @@ c_plus_target(test_user_job_policy,test_user_job_policy.o,$(LIB))
 c_plus_target(test_classad_support,test_classad_support.o,$(LIB))
 c_plus_target(test_classad_merge,test_classad_merge.o,$(LIB))
 c_plus_target(test_mystring,test_mystring.o,$(LIB))
+c_plus_target(test_condor_arglist,test_condor_arglist.o,$(LIB))
+c_plus_target(test_condor_crontab,test_condor_crontab.o,$(LIB))
+c_plus_target(test_spawn,test_spawn.o,$(LIB))
 
 /* this needs to be built more like a user would use the library, so it */
 /* can't have all of our usual cflags... */
 test_libcondorapi.o: test_libcondorapi.C
 	$(CPlusPlus) -I../h -I../condor_includes -c test_libcondorapi.C
 
-c_plus_target(test_libcondorapi,test_libcondorapi.o,libcondorapi.a)
+c_plus_nowrap_target(test_libcondorapi,test_libcondorapi.o,libcondorapi.a)
+
+#if HAVE_CC_SHARED_FLAG
+c_plus_nowrap_target(test_libcondorapi_shared,test_libcondorapi.o,libcondorapi.so)
+#endif
+
+c_plus_target(test_check_events,test_check_events.o,$(LIB) New_classads_lib)
+c_plus_target(test_multi_log,test_multi_log.o,$(LIB) New_classads_lib)
+c_plus_target(test_log_writer,test_log_writer.o,$(LIB))
+c_plus_target(test_log_reader,test_log_reader.o,$(LIB))
+c_plus_target(test_write_term,test_write_term.o,$(LIB))
 
 c_plus_target(cat_url,cat_url.o,liburl.a)
 c_plus_target(access.t,access.t.o,$(LIB))
+c_plus_target(Queue.t,Queue.t.o,$(LIB))
 c_plus_target(killfamily.t,killfamily.t.o,$(LIB))
 pure_c_plus_target(killfamily.t.pure,killfamily.t.o,$(LIB))
 purecov_c_plus_target(killfamily.t.pc,killfamily.t.o,$(LIB))
@@ -169,55 +214,32 @@ c_plus_target(my_hostname.t,my_hostname.t.o,$(LIB))
 pure_c_plus_target(my_hostname.t.pure,my_hostname.t.o,$(LIB))
 purecov_c_plus_target(my_hostname.t.pc,my_hostname.t.o,$(LIB))
 
-template_inst( c++_util_instantiate.C, c++_util_instantiate.o )
 html_target( documentation )
 
 all-tests: access.t killfamily.t test_locks my_hostname.t
 
-test: test.o user_log.o
-	$(CC) $(CFLAGS) -Wl,-u,_fpdata_size -o test test.o user_log.o $(LIB)
-
 tester: tester.o $(LIB)
 	$(CC) $(CFLAGS) -Wl,-u._fpdata_size -o tester tester.o $(LIB)
-
-foo: foo.o user_log.o
-	$(CC) $(CFLAGS) -Wl,-u,_fpdata_size -o foo foo.o user_log.o $(LIB)
 
 IMPORT_LINKS = ../../config/import_links
 import(../condor_util_lib,mkargv.o)
 import(../condor_daemon_client,$(DAEMON_CLIENT_OBJ))
 
-release_library(libcondorapi.a,lib)
-strip_library(libcondorapi.a,lib)
-static_library(libcondorapi.a,lib)
+public_library(libcondorapi.a,lib)
 
-release_copy_target(user_log.README,include,user_log.README,TEXT_MODE)
-strip_copy_target(user_log.README,include,user_log.README,TEXT_MODE)
-static_copy_target(user_log.README,include,user_log.README,TEXT_MODE)
+#if HAVE_CC_SHARED_FLAG
+public_shared_library(libcondorapi.so,lib)
+#endif
 
-release_copy_target(user_log.c++.h,include,user_log.c++.h,TEXT_MODE)
-strip_copy_target(user_log.c++.h,include,user_log.c++.h,TEXT_MODE)
-static_copy_target(user_log.c++.h,include,user_log.c++.h,TEXT_MODE)
-
-release_copy_target(condor_event.h,include,condor_event.h,TEXT_MODE)
-strip_copy_target(condor_event.h,include,condor_event.h,TEXT_MODE)
-static_copy_target(condor_event.h,include,condor_event.h,TEXT_MODE)
-
-release_copy_target(condor_holdcodes.h,include,condor_holdcodes.h,TEXT_MODE)
-strip_copy_target(condor_holdcodes.h,include,condor_holdcodes.h,TEXT_MODE)
-static_copy_target(condor_holdcodes.h,include,condor_holdcodes.h,TEXT_MODE)
-
-release_copy_target(../h/file_lock.h,include,file_lock.h,TEXT_MODE)
-strip_copy_target(../h/file_lock.h,include,file_lock.h,TEXT_MODE)
-static_copy_target(../h/file_lock.h,include,file_lock.h,TEXT_MODE)
-
-release_copy_target(../condor_includes/condor_constants.h,include,condor_constants.h,TEXT_MODE)
-strip_copy_target(../condor_includes/condor_constants.h,include,condor_constants.h,TEXT_MODE)
-static_copy_target(../condor_includes/condor_constants.h,include,condor_constants.h,TEXT_MODE)
+public_copy_target(user_log.README,include,user_log.README,TEXT_MODE)
+public_copy_target(user_log.c++.h,include,user_log.c++.h,TEXT_MODE)
+public_copy_target(condor_event.h,include,condor_event.h,TEXT_MODE)
+public_copy_target(condor_holdcodes.h,include,condor_holdcodes.h,TEXT_MODE)
+public_copy_target(../h/file_lock.h,include,file_lock.h,TEXT_MODE)
+public_copy_target(../condor_includes/condor_constants.h,include,condor_constants.h,TEXT_MODE)
 
 foo.o: user_log.h
 test.o: user_log.h
 
 condor_version.o: condor_version.C
 	$(CPlusPlus) $(C_PLUS_FLAGS) -c -DPLATFORM=$(PLATFORM) condor_version.C
-

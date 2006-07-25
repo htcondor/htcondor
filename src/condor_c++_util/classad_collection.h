@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -20,8 +20,8 @@
   * RIGHT.
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-#ifndef _OldClassAdCollection_H
-#define _OldClassAdCollection_H
+#ifndef _ClassAdCollection_H
+#define _ClassAdCollection_H
 
 //--------------------------------------------------------------------------
 
@@ -52,7 +52,7 @@ typedef HashTable<int,BaseCollection*> CollectionHashTable;
     @author Adiel Yoaz
 */
 
-class OldClassAdCollection : private ClassAdLog {
+class ClassAdCollection : private ClassAdLog {
 
 public:
 
@@ -66,19 +66,19 @@ public:
       empty repository.
     @return nothing
   */
-  OldClassAdCollection();
+  ClassAdCollection();
 
   /** Constructor (initialization). It reads the log file and initializes
       the class-ads (that are read from the log file) in memory.
     @param filename the name of the log file.
     @return nothing
   */
-  OldClassAdCollection(const char* filename);
+  ClassAdCollection(const char* filename,int max_historical_logs=0);
 
   /** Destructor - frees the memory used by the collections
     @return nothing
   */
-  ~OldClassAdCollection();
+  ~ClassAdCollection();
 
   //@}
   //------------------------------------------------------------------------
@@ -105,6 +105,12 @@ public:
   */
   bool AbortTransaction() { return ClassAdLog::AbortTransaction(); }
 
+  ///
+  Transaction* getActiveTransaction() { return ClassAdLog::getActiveTransaction(); }
+  ///
+  bool setActiveTransaction(Transaction* & transaction) { return ClassAdLog::setActiveTransaction(transaction); }
+
+
   /** Lookup an attribute's value in the current transaction. 
       @param key the key with which the class-ad was inserted into the repository.
       @param name the name of the attribute.
@@ -117,6 +123,9 @@ public:
     @return nothing
   */
   void TruncLog() { ClassAdLog::TruncLog(); }
+
+  void SetMaxHistoricalLogs(int max) { ClassAdLog::SetMaxHistoricalLogs(max); }
+  int GetMaxHistoricalLogs() { return ClassAdLog::GetMaxHistoricalLogs(); }
 
   //@}
   //------------------------------------------------------------------------
@@ -169,6 +178,8 @@ public:
       @return true on success, false otherwise.
   */
   bool LookupClassAd(const char* key, ClassAd*& Ad) { return (table.lookup(HashKey(key), Ad)==0); }
+
+  bool AddAttrsFromTransaction(const char* key, ClassAd & ad) { return (ClassAdLog::AddAttrsFromTransaction(key,ad)); }
   
   //@}
   //------------------------------------------------------------------------
@@ -339,7 +350,7 @@ private:
   bool RemoveCollection(int CoID, BaseCollection* Coll);
 
   ///
-  bool TraverseTree(int CoID, bool (OldClassAdCollection::*Func)(int,BaseCollection*));
+  bool TraverseTree(int CoID, bool (ClassAdCollection::*Func)(int,BaseCollection*));
 
   ///
   static float GetClassAdRank(ClassAd* Ad, const MyString& RankExpr);

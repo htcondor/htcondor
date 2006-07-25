@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -30,6 +30,7 @@
 #include "job_info_communicator.h"
 
 
+
 /** The starter class.  Basically, this class does some initialization
 	stuff and manages a set of UserProc instances, each of which 
 	represent a running job.
@@ -53,6 +54,12 @@ public:
 					   const char* orig_cwd, bool is_gridshell,
 					   int stdin_fd, int stdout_fd, int stderr_fd );
 
+		/** The starter is finally ready to exit, so handle some
+			cleanup code we always need, then call DC_Exit() with the
+			given exit code.
+		*/
+	virtual void StarterExit( int code );
+
 		/** Params for "EXECUTE" and other useful stuff 
 		 */
 	virtual void Config();
@@ -74,7 +81,22 @@ public:
 			by the JobInfoCommunicator.
 		*/
 	virtual bool createTempExecuteDir( void );
-
+	
+		/**
+		 * Before a job is spawned, this method checks whether
+		 * a job has a deferrral time, which means we will need
+		 * to register timer to call jobEnvironmentReady()
+		 * when it is the correct time to run the job
+		 */
+	virtual bool jobWaitUntilExecuteTime( void );
+	
+		/**
+		 * Clean up any the timer that we have might
+		 * have registered to put a job on hold. As of now
+		 * there can only be one job on hold
+		 */
+	virtual bool removeDeferredJobs( void );
+		
 		/** Called by the JobInfoCommunicator whenever the job
 			execution environment is ready so we can actually spawn
 			the job.
@@ -95,6 +117,12 @@ public:
 
 		/** To do */
 	virtual int PeriodicCkpt(int);
+
+		/** Call Remove() on all elements in JobList */
+	virtual int Remove(int);
+
+		/** Call Hold() on all elements in JobList */
+	virtual int Hold(int);
 
 		/** Handles the exiting of user jobs.  If we're shutting down
 			and there are no jobs left alive, we exit ourselves.
@@ -135,7 +163,8 @@ public:
 		*/
 	JobInfoCommunicator* jic;
 
-		/** Returns the VM number we're running on
+		/** Returns the VM number we're running on, or 0 if we're not
+			running as a VM at all.
 		*/
 	int getMyVMNumber( void );
 
@@ -151,11 +180,20 @@ public:
 		/** Command handler for ClassAd-only protocol commands */
 	int classadCommand( int, Stream* );
 
+	int updateX509Proxy( int cmd, Stream* );
 protected:
 	List<UserProc> JobList;
 	List<UserProc> CleanedUpJobList;
 
 private:
+
+		// // // // // // // //
+		// Private Methods
+		// // // // // // // //
+
+		/// Remove the execute/dir_<pid> directory
+	virtual bool removeTempExecuteDir( void );
+
 
 		// // // // // // // //
 		// Private Data Members
@@ -172,6 +210,11 @@ private:
 	int starter_stdin_fd;
 	int starter_stdout_fd;
 	int starter_stderr_fd;
+	
+		//
+		// This is the id of the timer for when a job gets deferred
+		//
+	int deferral_tid;
 
 	UserProc* pre_script;
 	UserProc* post_script;

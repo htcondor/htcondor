@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -55,6 +55,8 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
+#include "condor_uid.h"
+#include "condor_netdb.h"
 
 #if !defined(WIN32)
 #include <sys/types.h>
@@ -68,7 +70,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include "constants2.h"
-#include "debug.h"
+#include "condor_debug.h"
 
 /* P R O T O T Y P E S */
 char *param();
@@ -127,12 +129,28 @@ int I_bind(int                 socket_desc,
   int temp;
   int					on = 1;
   struct linger		linger = {0, 0}; 
+  int bind_return_value = 0;	
+  int bind_port = 0;
+  priv_state old_priv = PRIV_UNKNOWN;
 
   temp = sizeof(struct sockaddr_in);
   setsockopt(socket_desc, SOL_SOCKET, SO_REUSEADDR, (char*)&on, sizeof(on));
   setsockopt(socket_desc, SOL_SOCKET, SO_LINGER,
 			 (char*)&linger, sizeof(linger));
-  if (bind(socket_desc, (struct sockaddr*)addr, temp) < 0)
+
+  bind_port = addr->sin_port;
+  if (bind_port < 1024) {
+    // use root priv for the call to bind to allow privileged ports
+    old_priv = set_root_priv();
+  }
+
+  bind_return_value = bind(socket_desc, (struct sockaddr*)addr, temp);
+
+  if (bind_port < 1024) {
+    set_priv (old_priv);
+  }
+
+  if (bind_return_value < 0)
     {
       fprintf(stderr, "\nERROR:\n");
       fprintf(stderr, "ERROR:\n");
@@ -201,7 +219,7 @@ char* gethostnamebyaddr(struct in_addr* addr)
 {
   struct hostent* h;
 
-  h = gethostbyaddr((char*)addr, sizeof(struct in_addr), AF_INET);
+  h = condor_gethostbyaddr((char*)addr, sizeof(struct in_addr), AF_INET);
   if (h == NULL)
     {
       fprintf(stderr, "\nERROR:\n");

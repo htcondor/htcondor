@@ -1,0 +1,6 @@
+    [
+	stork_server = "skywalker.cs.wisc.edu";
+        dap_type = "transfer";
+        src_url = "nest://db16.cs.wisc.edu/test4.txt"; 
+        dest_url = "nest://db18.cs.wisc.edu/test8.txt"; 
+    ]

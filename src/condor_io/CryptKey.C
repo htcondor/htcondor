@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -23,6 +23,7 @@
 
 #include "condor_common.h"
 #include "CryptKey.h"
+#include "condor_debug.h"
 
 KeyInfo:: KeyInfo()
     : keyData_    (0),
@@ -112,4 +113,43 @@ Protocol KeyInfo :: getProtocol() const
 int KeyInfo :: getDuration() const
 {
     return duration_;
+}
+
+unsigned char * KeyInfo :: getPaddedKeyData(int len) const
+{
+	unsigned char* padded_key_buf = NULL;
+	int i;
+
+		// fail if we have no key to pad!
+	if ( keyDataLen_ < 1  || !keyData_ ) {
+		return NULL;
+	}
+
+		// Allocate new buffer that the caller must free()
+	padded_key_buf = (unsigned char *)malloc(len + 1);
+	ASSERT(padded_key_buf);
+	memset(padded_key_buf, 0, len + 1);
+
+		// If the key is larger than we want, just copy a prefix
+		// and XOR the remainder back to the start of the buffer
+	if(keyDataLen_ > len) {
+		memcpy(padded_key_buf, keyData_, len);
+			// XOR in the rest so two keys longer than the requested length
+			// do not appear equal to the caller.
+		for (i=len; i < keyDataLen_; i++) {
+			padded_key_buf[ i % len ] ^= keyData_[i];
+		}
+		return padded_key_buf;
+	}
+		// copy the key into our new large-sized buffer
+	memcpy(padded_key_buf, keyData_, keyDataLen_);
+
+		// Pad the key by if needed by
+		// simply repeating the key over and over until the 
+		// desired length is obtained.
+	for ( i = keyDataLen_ ; i < len; i++ ) {
+		padded_key_buf[i] = padded_key_buf[ i - keyDataLen_ ];
+	}
+	
+	return padded_key_buf;
 }

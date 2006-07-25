@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -78,6 +78,11 @@ int param_integer(const char *name, int default_value, int min, int max)
 	return default_value;
 }
 
+bool param_boolean( const char *name, const bool default_value )
+{
+	return default_value;
+}
+
 /* stub out the various cedar and daemoncore calls I don't need since noone
 	should be using them with libcondorapi. Notice: This is gross
 	since the header file itself includes partial implementations
@@ -89,8 +94,6 @@ int param_integer(const char *name, int default_value, int min, int max)
 Stream::~Stream(){};
 
 /* stub the entire Stream interface :( */
-	int Stream::get(char *&) { return not_impl(); }
-	int Stream::put(char *) { return not_impl(); }
 	int Stream::code(void *&foo) { return not_impl(); }
 	int Stream::code(char &foo) { return not_impl(); }
 	int Stream::code(unsigned char &foo) { return not_impl(); }
@@ -135,6 +138,8 @@ Stream::~Stream(){};
 	int Stream::code(struct rlimit64 &foo){ return not_impl(); }
 #endif
 void Stream::allow_one_empty_message() { not_impl(); }
+int Stream::put(char *){ return not_impl(); }
+int Stream::get(char *&){ return not_impl(); }
 
 /* stubs for generic query object */
 GenericQuery::GenericQuery(void) {}
@@ -194,4 +199,20 @@ CondorQuery::CondorQuery(AdTypes foo) { not_impl();}
 
 CondorQuery::~CondorQuery() {} 
 
+char*
+my_ip_string() {not_impl(); return 0;}
 
+void ConvertDefaultIPToSocketIP(char const *attr_name,char const *old_expr_string,char **new_expr_string,Stream& s) {
+	not_impl();
+}
+
+void ConvertDefaultIPToSocketIP(char const *attr_name,char **expr_string,Stream& s) {
+	not_impl();
+}
+
+#include "Regex.h"
+
+Regex::Regex() {not_impl();}
+Regex::~Regex() {not_impl();}
+bool Regex::compile(MyString const& a, char const** b, int* c, int d) {not_impl();return false;}
+bool Regex::match(MyString const& a, ExtArray<MyString>* b) {not_impl();return false;}

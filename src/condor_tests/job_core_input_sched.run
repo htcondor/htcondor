@@ -1,0 +1,31 @@
+#! /usr/bin/env perl
+use CondorTest;
+
+$cmd = 'job_core_input_sched.cmd';
+$testname = 'condor_submit input works - scheduler U';
+
+
+@CondorTest::expected_output =
+(
+'first',
+'second',
+'third',
+'fourth',
+);
+
+
+
+$ExitSuccess = sub {
+};
+
+
+CondorTest::RegisterExitedSuccess( $testname, \&CondorTest::DefaultOutputTest );
+#CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
+
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+	print "$testname: SUCCESS\n";
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+

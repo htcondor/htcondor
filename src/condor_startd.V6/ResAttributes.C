@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -39,11 +39,14 @@ MachAttributes::MachAttributes()
 	m_filesystem_domain = NULL;
 	m_subnet = NULL;
 	m_idle_interval = -1;
+	m_ckptpltfrm = NULL;
 
 		// Number of CPUs.  Since this is used heavily by the ResMgr
 		// instantiation and initialization, we need to have a real
 		// value for this as soon as the MachAttributes object exists.
 	m_num_cpus = sysapi_ncpus();
+
+	m_num_real_cpus = sysapi_ncpus_raw();
 
 		// The same is true of physical memory.  If we had an error in
 		// sysapi_phys_memory(), we need to just EXCEPT with a message
@@ -59,6 +62,11 @@ MachAttributes::MachAttributes()
 				 );
 		EXCEPT( "Can't compute physical memory." );
 	}
+
+	dprintf( D_FULLDEBUG, "Memory: Detected %d megs RAM\n", m_phys_mem );
+
+		// identification of the checkpointing platform signature
+	m_ckptpltfrm = strdup(sysapi_ckptpltfrm());
 }
 
 
@@ -69,6 +77,7 @@ MachAttributes::~MachAttributes()
 	if( m_uid_domain ) free( m_uid_domain );
 	if( m_filesystem_domain ) free( m_filesystem_domain );
 	if( m_subnet ) free( m_subnet );
+	if( m_ckptpltfrm ) free( m_ckptpltfrm );
 }
 
 
@@ -131,6 +140,12 @@ MachAttributes::compute( amask_t how_much )
 		} else {
 			m_idle_interval = -1;
 		}
+
+			// checkpoint platform signature
+		if (m_ckptpltfrm) {
+			free(m_ckptpltfrm);
+		}
+		m_ckptpltfrm = strdup(sysapi_ckptpltfrm());
 	}
 
 
@@ -225,6 +240,9 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 
 		sprintf( line, "%s = TRUE", ATTR_HAS_IO_PROXY );
 		cp->Insert(line);
+
+		sprintf( line, "%s = \"%s\"", ATTR_CHECKPOINT_PLATFORM, m_ckptpltfrm );
+		cp->Insert( line );
 	}
 
 	if( IS_UPDATE(how_much) || IS_PUBLIC(how_much) ) {
@@ -233,6 +251,12 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 		cp->Insert( line ); 
 
 		sprintf( line, "%s=%lu", ATTR_TOTAL_DISK, m_disk );
+		cp->Insert( line ); 
+
+		sprintf( line, "%s=%lu", ATTR_TOTAL_CPUS, (unsigned long)m_num_cpus );
+		cp->Insert( line ); 
+
+		sprintf( line, "%s=%lu", ATTR_TOTAL_MEMORY, (unsigned long)m_phys_mem );
 		cp->Insert( line ); 
 
 			// KFLOPS and MIPS are only conditionally computed; thus, only
@@ -317,6 +341,9 @@ MachAttributes::benchmark( Resource* rip, int force )
 	m_last_benchmark = (int)time(NULL);
 
 	if( ! force ) {
+		// Update all ClassAds with this new value for LastBenchmark.
+		resmgr->refresh_benchmarks();
+
 		dprintf( D_ALWAYS, "State change: benchmarks completed\n" );
 		rip->change_state( idle_act );
 	}

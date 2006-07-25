@@ -1,0 +1,17 @@
+#Check if we are in /tmp and display "/tmp" if we are.
+#If /tmp is a symlink to something else, we still want
+#to display "/tmp", so compare inodes, rather than paths.
+
+for inode in `ls -i -d /tmp/.`; do
+  tmp_inode=$inode
+  break
+done
+for inode in `ls -i -d .`; do
+  pwd_inode=$inode
+  break
+done
+if [ "$tmp_inode" = "$pwd_inode" ]; then
+  echo "/tmp"
+else
+  pwd
+fi

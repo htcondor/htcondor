@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -78,7 +78,8 @@ LocalUserLog::init( const char* filename, bool is_xml,
 
 
 bool
-LocalUserLog::initFromJobAd( ClassAd* ad )
+LocalUserLog::initFromJobAd( ClassAd* ad, const char* path_attr,
+							 const char* xml_attr )
 {
     char tmp[_POSIX_PATH_MAX], logfilename[_POSIX_PATH_MAX];
 	int use_xml = FALSE;
@@ -87,9 +88,8 @@ LocalUserLog::initFromJobAd( ClassAd* ad )
 	int proc = jic->jobProc();
 	int subproc = jic->jobSubproc();
 
-    if( ! ad->LookupString(ATTR_STARTER_ULOG_FILE, tmp) ) {
-        dprintf( D_FULLDEBUG, "No %s found in job ClassAd\n",
-				 ATTR_STARTER_ULOG_FILE );
+    if( ! ad->LookupString(path_attr, tmp) ) {
+        dprintf( D_FULLDEBUG, "No %s found in job ClassAd\n", path_attr );
 		return initNoLogging();
 	}
 
@@ -99,7 +99,7 @@ LocalUserLog::initFromJobAd( ClassAd* ad )
 			// being used), we want to just stick it in the local iwd
 			// for the job, instead.
 		if( jic->iwdIsChanged() ) {
-			char* base = basename(tmp);
+			const char* base = condor_basename(tmp);
 			sprintf(logfilename, "%s/%s", iwd, base);
 		} else {			
 			strcpy(logfilename, tmp);
@@ -109,7 +109,7 @@ LocalUserLog::initFromJobAd( ClassAd* ad )
 		sprintf(logfilename, "%s/%s", iwd, tmp);
 	}
 
-	ad->LookupBool( ATTR_STARTER_ULOG_USE_XML, use_xml );
+	ad->LookupBool( xml_attr, use_xml );
 
 	return init( logfilename, (bool)use_xml, cluster, proc, subproc );
 }
@@ -241,7 +241,7 @@ LocalUserLog::logJobExit( ClassAd* ad, int exit_reason )
 		return logEvict( ad, false );
         break;
     default:
-		dprintf( D_ALWAYS, "Job exited with unknown reason (%d)!\n" ); 
+		dprintf( D_ALWAYS, "Job exited with unknown reason (%d)!\n",exit_reason); 
     }
 	return false;
 }

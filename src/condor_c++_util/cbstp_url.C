@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -42,7 +42,8 @@ int condor_bytes_stream_open_ckpt_file( const char *name, int flags,
 		return sock_fd;
 	}
 
-	if( ! _condor_local_bind(sock_fd) ) {
+	/* TRUE means this is an outgoing connection */
+	if( ! _condor_local_bind(TRUE, sock_fd) ) {
 		close( sock_fd );
 		return -1;
 	}

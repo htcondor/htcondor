@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -34,7 +34,7 @@ public:
 	void init();
 	void Result( transferinfo *, bool success_flag, struct in_addr peer,
 				 int xfer_size);
-	void time_out(time_t);
+    void time_out(time_t, char *);
 
 private:
 	time_t	start_time;
@@ -52,7 +52,7 @@ private:
 	char	*subnet;
 	char	pwd[_POSIX_PATH_MAX];
 
-	DCCollector* Collector;
+	CollectorList * Collectors;
 
 	void log_transfer(time_t, transferinfo *, bool success_flag,
 					  struct in_addr peer, int xfer_size);

@@ -1,0 +1,14 @@
+# Data file describing the UNAME module
+ModuleFiles: uname
+
+Description:
+Generates architecture and other O/S information
+
+Default: uname
+period: 30d
+prefix: uname__
+mode: periodic
+kill: true
+
+# It's parameters
+# <NONE>

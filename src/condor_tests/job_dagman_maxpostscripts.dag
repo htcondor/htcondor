@@ -1,0 +1,63 @@
+Job     NODE0         job_dagman_maxpostscripts.cmd
+Job     NODE1         job_dagman_maxpostscripts.cmd
+Job     NODE2         job_dagman_maxpostscripts.cmd
+Job     NODE3         job_dagman_maxpostscripts.cmd
+Job     NODE4         job_dagman_maxpostscripts.cmd
+Job     NODE5         job_dagman_maxpostscripts.cmd
+Job     NODE6         job_dagman_maxpostscripts.cmd
+Job     NODE7         job_dagman_maxpostscripts.cmd
+Job     NODE8         job_dagman_maxpostscripts.cmd
+Job     NODE9         job_dagman_maxpostscripts.cmd
+Job     NODE10         job_dagman_maxpostscripts.cmd
+Job     NODE11         job_dagman_maxpostscripts.cmd
+Job     NODE12         job_dagman_maxpostscripts.cmd
+Job     NODE13         job_dagman_maxpostscripts.cmd
+Job     NODE14         job_dagman_maxpostscripts.cmd
+Job     NODE15         job_dagman_maxpostscripts.cmd
+Job     NODE16         job_dagman_maxpostscripts.cmd
+Job     NODE17         job_dagman_maxpostscripts.cmd
+Job     NODE18         job_dagman_maxpostscripts.cmd
+Job     NODE19         job_dagman_maxpostscripts.cmd
+
+Script POST NODE0     ./job_dagman_maxpostscripts-checkin.pl $RETURN
+Script POST NODE1     ./job_dagman_maxpostscripts-checkin.pl $RETURN
+Script POST NODE2     ./job_dagman_maxpostscripts-checkin.pl $RETURN
+Script POST NODE3     ./job_dagman_maxpostscripts-checkin.pl $RETURN
+Script POST NODE4     ./job_dagman_maxpostscripts-checkin.pl $RETURN
+Script POST NODE5     ./job_dagman_maxpostscripts-checkin.pl $RETURN
+Script POST NODE6     ./job_dagman_maxpostscripts-checkin.pl $RETURN
+Script POST NODE7     ./job_dagman_maxpostscripts-checkin.pl $RETURN
+Script POST NODE8     ./job_dagman_maxpostscripts-checkin.pl $RETURN
+Script POST NODE9     ./job_dagman_maxpostscripts-checkin.pl $RETURN
+Script POST NODE10     ./job_dagman_maxpostscripts-checkin.pl $RETURN
+Script POST NODE11     ./job_dagman_maxpostscripts-checkin.pl $RETURN
+Script POST NODE12     ./job_dagman_maxpostscripts-checkin.pl $RETURN
+Script POST NODE13     ./job_dagman_maxpostscripts-checkin.pl $RETURN
+Script POST NODE14     ./job_dagman_maxpostscripts-checkin.pl $RETURN
+Script POST NODE15     ./job_dagman_maxpostscripts-checkin.pl $RETURN
+Script POST NODE16     ./job_dagman_maxpostscripts-checkin.pl $RETURN
+Script POST NODE17     ./job_dagman_maxpostscripts-checkin.pl $RETURN
+Script POST NODE18     ./job_dagman_maxpostscripts-checkin.pl $RETURN
+Script POST NODE19     ./job_dagman_maxpostscripts-checkin.pl $RETURN
+
+Script PRE NODE0     ./x_dagman_boring_prescript.pl 
+Script PRE NODE1     ./x_dagman_boring_prescript.pl 
+Script PRE NODE2     ./x_dagman_boring_prescript.pl 
+Script PRE NODE3     ./x_dagman_boring_prescript.pl 
+Script PRE NODE4     ./x_dagman_boring_prescript.pl 
+Script PRE NODE5     ./x_dagman_boring_prescript.pl 
+Script PRE NODE6     ./x_dagman_boring_prescript.pl 
+Script PRE NODE7     ./x_dagman_boring_prescript.pl 
+Script PRE NODE8     ./x_dagman_boring_prescript.pl 
+Script PRE NODE9     ./x_dagman_boring_prescript.pl 
+Script PRE NODE10     ./x_dagman_boring_prescript.pl 
+Script PRE NODE11     ./x_dagman_boring_prescript.pl 
+Script PRE NODE12     ./x_dagman_boring_prescript.pl 
+Script PRE NODE13     ./x_dagman_boring_prescript.pl 
+Script PRE NODE14     ./x_dagman_boring_prescript.pl 
+Script PRE NODE15     ./x_dagman_boring_prescript.pl 
+Script PRE NODE16     ./x_dagman_boring_prescript.pl 
+Script PRE NODE17     ./x_dagman_boring_prescript.pl 
+Script PRE NODE18     ./x_dagman_boring_prescript.pl 
+Script PRE NODE19     ./x_dagman_boring_prescript.pl 
+

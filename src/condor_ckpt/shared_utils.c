@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -50,7 +50,7 @@ static int _condor_itoa(int quantity, char *out, int base);
    doesn't call malloc(), etc.
 */
 int
-_condor_vfprintf_va( int fd, char* fmt, va_list args )
+_condor_vfprintf_va( int fd, const char* fmt, va_list args )
 {
 	char out[VFPRINTF_LEN + 1];	/* the output buffer passed to SYS_write */
 	char *i, *o, *p; /* pointers into the fmt, out and %s, if any */
@@ -241,7 +241,7 @@ _condor_vfprintf_va( int fd, char* fmt, va_list args )
 	}
 
 	/* return the number of bytes actually written */
-#ifdef Darwin
+#if defined(Darwin) || defined(CONDOR_FREEBSD)
 #ifndef SYS_write
 #define SYS_write 4
 #endif

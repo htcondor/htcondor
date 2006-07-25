@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -25,7 +25,6 @@
 #include "condor_classad.h"
 #include "condor_io.h"
 #include "condor_debug.h"
-#include "dgram_io_handle.h"
 #include "xferstat2.h"
 #include "xfer_summary.h"
 #include "condor_network.h"
@@ -46,7 +45,7 @@ XferSummary::XferSummary()
 {
 	subnet = 0;
 	log_file = 0;
-	Collector = NULL;
+	Collectors = NULL;
 }
 
 
@@ -55,6 +54,7 @@ XferSummary::~XferSummary()
 {
 	if( log_file ) { fclose(log_file); }
 	if( subnet ) { free(subnet); }
+	if( Collectors ) { delete Collectors; }
 
 }
 
@@ -73,14 +73,15 @@ XferSummary::init()
 	tot_recv_bandwidth = 0;
 	time_recving = 0;
 
-	if( ! Collector ) {
-		Collector = new DCCollector;
+	if( ! Collectors ) {
+		Collectors = CollectorList::create();
 	}
 
 	if( subnet ) { free( subnet ); }
 	subnet = (char *)calc_subnet_name(NULL);
 
-	if( ! getwd( pwd ) ) {
+	/* pwd is an array defined for this class to be of path_max size */
+	if( ! getcwd( pwd, _POSIX_PATH_MAX ) ) {
 		EXCEPT( "Can't get working directory." );
 	}
 }
@@ -121,8 +122,8 @@ XferSummary::Result(transferinfo *tinfo, bool success_flag,
 			time_sending += xfer_len;
 		}
 		dprintf(D_ALWAYS | D_NOHEADER,
-				"transferred %d bytes in %d seconds (%d bytes / sec)\n", 
-				xfer_size, xfer_len, xfer_bandwidth);
+				"transferred %lu bytes in %d seconds (%d bytes / sec)\n", 
+				(unsigned long) xfer_size, xfer_len, xfer_bandwidth);
 	}
 
 	log_transfer(now, tinfo, success_flag, peer, bytes_transferred);
@@ -130,7 +131,7 @@ XferSummary::Result(transferinfo *tinfo, bool success_flag,
 
 
 void
-XferSummary::time_out(time_t now)
+XferSummary::time_out(time_t now, char *hostaddr)
 {
 	ClassAd	   	info;
 	char		line[128], *tmp;
@@ -140,7 +141,7 @@ XferSummary::time_out(time_t now)
 
 	sprintf(line, "%s = \"%s\"", ATTR_NAME, my_full_hostname() );
 	info.Insert(line);
-	sprintf(line, "%s = \"%s\"", ATTR_MACHINE, my_full_hostname() );
+    sprintf(line, "%s = \"%s\"", ATTR_MACHINE, hostaddr );
 	info.Insert(line);
 	sprintf(line, "%s = \"%s\"", ATTR_VERSION, CondorVersion() );
 	info.Insert(line);
@@ -178,11 +179,10 @@ XferSummary::time_out(time_t now)
 	info.Insert(line);
 	
 	// Send to collector
-	if( Collector ) {
-		if( ! Collector->sendUpdate(UPDATE_CKPT_SRVR_AD, &info) ) {
-            dprintf( D_ALWAYS, "Failed to update collector %s: %s\n", 
-					 Collector->updateDestination(), Collector->error() );
-		}
+	if ( Collectors ) {
+        dprintf(D_NETWORK, "Sending CkptServer ClassAd:\n");
+        info.dPrint(D_NETWORK);
+		Collectors->sendUpdates (UPDATE_CKPT_SRVR_AD, &info, NULL, true);
 	}
 
 	init();

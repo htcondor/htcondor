@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -24,32 +24,46 @@
 #include "condor_common.h"
 #include "startd.h"
 #include "mds.h"
-
+#include "condor_environ.h"
+#include "classad_merge.h"
+#include "vm_common.h"
+#include "VMRegister.h"
 
 Resource::Resource( CpuAttributes* cap, int rid )
 {
-	char tmp[256];
+	MyString tmp;
 	char* tmpName;
+
+		// we need this before we instantiate any Claim objects... 
+	r_id = rid;
+	char* name_prefix = param( "STARTD_RESOURCE_PREFIX" );
+	if( name_prefix ) {
+		tmp.sprintf( "%s%d", name_prefix, rid );
+		free( name_prefix );
+	} else { 
+			// for now, default to "vm", this will become "slot" or
+			// "s" or something in 6.9.x
+		tmp.sprintf( "vm%d", rid );
+	}
+	r_id_str = strdup( tmp.Value() );
+	
 	r_classad = NULL;
 	r_state = new ResState( this );
 	r_cur = new Claim( this );
 	r_pre = NULL;
+	r_pre_pre = NULL;
 	r_cod_mgr = new CODMgr( this );
 	r_reqexp = new Reqexp( this );
 	r_load_queue = new LoadQueue( 60 );
 
-	r_id = rid;
-	sprintf( tmp, "vm%d", rid );
-	r_id_str = strdup( tmp );
-	
 	if( Name ) {
 		tmpName = Name;
 	} else {
 		tmpName = my_full_hostname();
 	}
 	if( resmgr->is_smp() ) {
-		sprintf( tmp, "%s@%s", r_id_str, tmpName );
-		r_name = strdup( tmp );
+		tmp.sprintf( "%s@%s", r_id_str, tmpName );
+		r_name = strdup( tmp.Value() );
 	} else {
 		r_name = strdup( tmpName );
 	}
@@ -67,7 +81,7 @@ Resource::Resource( CpuAttributes* cap, int rid )
 		if (log) {
 			MyString avail_stats_ckpt_file(log);
 			free(log);
-			sprintf(tmp, "%c.avail_stats.%d", DIR_DELIM_CHAR, rid);
+			tmp.sprintf( "%c.avail_stats.%d", DIR_DELIM_CHAR, rid);
 			avail_stats_ckpt_file += tmp;
 			r_avail_stats.checkpoint_filename(avail_stats_ckpt_file);
 		}
@@ -107,6 +121,9 @@ Resource::~Resource()
 	if( r_pre ) {
 		delete r_pre;		
 	}
+	if( r_pre_pre ) {
+		delete r_pre_pre;
+	}
 	delete r_cod_mgr;
 	delete r_reqexp;   
 	delete r_attr;		
@@ -117,19 +134,62 @@ Resource::~Resource()
 
 
 int
-Resource::release_claim( void )
+Resource::retire_claim( void )
 {
 	switch( state() ) {
 	case claimed_state:
-		return change_state( preempting_state, vacating_act );
+		// Do not allow backing out of retirement (e.g. if a
+		// preempting claim goes away) because this function is called
+		// for irreversible events such as condor_vacate or PREEMPT.
+		if(r_cur) {
+			r_cur->disallowUnretire();
+			if(resmgr->isShuttingDown() && daemonCore->GetPeacefulShutdown()) {
+				// Admin is shutting things down but does not want any killing,
+				// regardless of MaxJobRetirementTime configuration.
+				r_cur->setRetirePeacefully(true);
+			}
+		}
+		return change_state( retiring_act );
 	case matched_state:
 		return change_state( owner_state );
+#if HAVE_BACKFILL
+	case backfill_state:
+			// we don't want retirement to mean anything special for
+			// backfill jobs... they should be killed immediately 
+		set_destination_state( owner_state );
+		return TRUE;
+#endif /* HAVE_BACKFILL */
 	default:
 			// For good measure, try directly killing the starter if
 			// we're in any other state.  If there's no starter, this
 			// will just return without doing anything.  If there is a
 			// starter, it shouldn't be there.
 		return (int)r_cur->starterKillSoft();
+	}
+	return TRUE;
+}
+
+
+int
+Resource::release_claim( void )
+{
+	switch( state() ) {
+	case claimed_state:
+		return change_state( preempting_state, vacating_act );
+	case preempting_state:
+		if( activity() != killing_act ) {
+			return change_state( preempting_state, vacating_act );
+		}
+		break;
+	case matched_state:
+		return change_state( owner_state );
+#if HAVE_BACKFILL
+	case backfill_state:
+		set_destination_state( owner_state );
+		return TRUE;
+#endif /* HAVE_BACKFILL */
+	default:
+		return (int)r_cur->starterKillHard();
 	}
 	return TRUE;
 }
@@ -147,6 +207,11 @@ Resource::kill_claim( void )
 		return change_state( preempting_state, killing_act );
 	case matched_state:
 		return change_state( owner_state );
+#if HAVE_BACKFILL
+	case backfill_state:
+		set_destination_state( owner_state );
+		return TRUE;
+#endif /* HAVE_BACKFILL */
 	default:
 			// In other states, try direct kill.  See above.
 		return (int)r_cur->starterKillHard();
@@ -233,8 +298,13 @@ Resource::removeClaim( Claim* c )
 		return;
 	}
 	if( c == r_pre ) {
-		delete r_pre;
+		remove_pre();
 		r_pre = new Claim( this );
+		return;
+	}
+	if( c == r_pre_pre ) {
+		delete r_pre_pre;
+		r_pre_pre = new Claim( this );
 		return;
 	}
 
@@ -269,12 +339,42 @@ Resource::shutdownAllClaims( bool graceful )
 	r_cod_mgr->shutdownAllClaims( graceful );
 
 	if( graceful ) {
-		release_claim();
+		retire_claim();
 	} else {
 		kill_claim();
 	}
+
+		// Tell the negotiator not to match any new jobs to this VM, since
+		// they would just be rejected by the startd anyway.
+	r_reqexp->unavail();
+	update();
+
 	return TRUE;
 }
+
+
+bool
+Resource::needsPolling( void )
+{
+	if( hasOppClaim() ) {
+		return true;
+	}
+#if HAVE_BACKFILL
+		/*
+		  if we're backfill-enabled, we want to always do polling if
+		  we're in the backfill state.  if we're busy/killing, we'll
+		  want frequent recompute + eval to make sure we kill backfill
+		  jobs when necessary.  even if we're in Backfill/Idle, we
+		  want to do polling since we should try to spawn the backfill
+		  client quickly after entering Backfill/Idle.
+		*/
+	if( state() == backfill_state ) {
+		return true;
+	}
+#endif /* HAVE_BACKFILL */
+	return false;
+}
+
 
 
 // This one *only* looks at opportunistic claims
@@ -296,6 +396,11 @@ Resource::hasAnyClaim( void )
 	if( r_cod_mgr->hasClaims() ) {
 		return true;
 	}
+#if HAVE_BACKFILL
+	if( state() == backfill_state && activity() != idle_act ) {
+		return true;
+	}
+#endif /* HAVE_BACKFILL */
 	return hasOppClaim();
 }
 
@@ -447,6 +552,13 @@ Resource::starterExited( Claim* cur_claim )
 		return;
 	}
 
+		// let our ResState object know the starter exited, so it can
+		// deal with destination state stuff...  we'll eventually need
+		// to move more of the code from below here into the
+		// destination code in ResState, to keep things simple and in
+		// 1 place...
+	r_state->starterExited();
+
 		// All of the potential paths from here result in a state
 		// change, and all of them are triggered by the starter
 		// exiting, so let folks know that happened.  The logic in
@@ -455,10 +567,16 @@ Resource::starterExited( Claim* cur_claim )
 	dprintf( D_ALWAYS, "State change: starter exited\n" );
 
 	State s = state();
+	Activity a = activity();
 	switch( s ) {
 	case claimed_state:
 		r_cur->client()->setuser( r_cur->client()->owner() );
-		change_state( idle_act );
+		if(a == retiring_act) {
+			change_state(preempting_state);
+		}
+		else {
+			change_state( idle_act );
+		}
 		break;
 	case preempting_state:
 		leave_preempting_state();
@@ -583,6 +701,9 @@ Resource::leave_preempting_state( void )
 	delete r_cur;		
 	r_cur = NULL;
 
+	// NOTE: all exit paths from this function should call remove_pre()
+	// in order to ensure proper cleanup of pre, pre_pre, etc.
+
 	State dest = destination_state();
 	switch( dest ) {
 	case claimed_state:
@@ -590,6 +711,7 @@ Resource::leave_preempting_state( void )
 		if( ! eval_is_owner() ) {
 			r_cur = r_pre;
 			r_pre = NULL;
+			remove_pre(); // do full cleanup of pre stuff
 				// STATE TRANSITION preempting -> claimed
 			accept_request_claim( this );
 			return;
@@ -640,6 +762,7 @@ Resource::leave_preempting_state( void )
 	if( allow_it ) {
 		r_cur = r_pre;
 		r_pre = NULL;
+		remove_pre(); // do full cleanup of pre stuff
 			// STATE TRANSITION preempting -> claimed
 		accept_request_claim( this );
 	} else {
@@ -729,11 +852,21 @@ Resource::do_update( void )
 	ClassAd public_ad;
 
 	this->publish( &public_ad, A_ALL_PUB );
+	if( vmapi_is_usable_for_condor() == FALSE ) {
+		public_ad.InsertOrUpdate( "Start = False" );
+	}
+
+	if( vmapi_is_virtual_machine() == TRUE ) {
+		ClassAd* host_classad;
+		host_classad = vmapi_get_host_classAd();
+		MergeClassAds( &public_ad, host_classad, true);
+	}
+
 	this->publish( &private_ad, A_PRIVATE | A_ALL );
 
 		// Send class ads to collector(s)
 	rval = resmgr->send_update( UPDATE_STARTD_AD, &public_ad,
-								&private_ad ); 
+								&private_ad, true ); 
 	if( rval ) {
 		dprintf( D_FULLDEBUG, "Sent update to %d collector(s)\n", rval ); 
 	} else {
@@ -763,7 +896,7 @@ Resource::final_update( void )
 			 r_name );
 	invalidate_ad.Insert( line );
 
-	resmgr->send_update( INVALIDATE_STARTD_ADS, &invalidate_ad, NULL );
+	resmgr->send_update( INVALIDATE_STARTD_ADS, &invalidate_ad, NULL, false );
 }
 
 
@@ -881,158 +1014,272 @@ Resource::wants_pckpt( void )
 	return want_pckpt;
 }
 
+int
+Resource::hasPreemptingClaim()
+{
+	return (r_pre && r_pre->requestStream());
+}
+
+int
+Resource::mayUnretire()
+{
+	if(r_cur && r_cur->mayUnretire()) {
+		if(!hasPreemptingClaim()) {
+			// preempting claim has gone away
+			return 1;
+		}
+	}
+	return 0;
+}
+
+int
+Resource::preemptWasTrue() const
+{
+	if(r_cur) return r_cur->preemptWasTrue();
+	return 0;
+}
+
+void
+Resource::preemptIsTrue()
+{
+	if(r_cur) r_cur->preemptIsTrue();
+}
+
+bool
+Resource::claimWorklifeExpired()
+{
+	//This function evaulates to true if the claim has been alive
+	//for longer than the CLAIM_WORKLIFE expression dictates.
+
+	if (r_cur) {
+		int ClaimWorklife = 0;
+
+		//look up the maximum retirement time specified by the startd
+		if(!r_classad->LookupElem("CLAIM_WORKLIFE") ||
+		   !r_classad->EvalInteger(
+				  "CLAIM_WORKLIFE",
+		          NULL,
+		          ClaimWorklife)) {
+			ClaimWorklife = -1;
+		}
+
+		int ClaimAge = r_cur->getClaimAge();
+
+		if(ClaimWorklife >= 0) {
+			dprintf(D_FULLDEBUG,"Computing claimWorklifeExpired(); ClaimAge=%d, ClaimWorklife=%d\n",ClaimAge,ClaimWorklife);
+			return (ClaimAge > ClaimWorklife);
+		}
+	}
+	return false;
+}
+
+int
+Resource::retirementExpired()
+{
+	//This function evaulates to true if the job has run longer than
+	//its maximum alloted graceful retirement time.
+
+	int MaxJobRetirementTime = 0;
+	int JobMaxJobRetirementTime = 0;
+	int JobAge = 0;
+
+	if (r_cur && r_cur->isActive() && r_cur->ad()) {
+		//look up the maximum retirement time specified by the startd
+		if(!r_classad->LookupElem(ATTR_MAX_JOB_RETIREMENT_TIME) ||
+		   !r_classad->EvalInteger(
+		          ATTR_MAX_JOB_RETIREMENT_TIME,
+		          r_cur->ad(),
+		          MaxJobRetirementTime)) {
+			MaxJobRetirementTime = 0;
+		}
+		if(r_cur->getRetirePeacefully()) {
+			// Override startd's MaxJobRetirementTime setting.
+			// Make it infinite.
+			MaxJobRetirementTime = INT_MAX;
+		}
+		//look up the maximum retirement time specified by the job
+		if(r_cur->ad()->LookupElem(ATTR_MAX_JOB_RETIREMENT_TIME) &&
+		   r_cur->ad()->EvalInteger(
+		          ATTR_MAX_JOB_RETIREMENT_TIME,
+		          r_classad,
+		          JobMaxJobRetirementTime)) {
+			if(JobMaxJobRetirementTime < MaxJobRetirementTime) {
+				//The job wants _less_ retirement time than the startd offers,
+				//so let it have its way.
+				MaxJobRetirementTime = JobMaxJobRetirementTime;
+			}
+		}
+	}
+
+	if (r_cur && r_cur->isActive()) {
+		JobAge = r_cur->getJobTotalRunTime();
+	}
+	else {
+		//There is no job running, so there is no point in waiting any longer
+		MaxJobRetirementTime = 0;
+	}
+
+	return (JobAge >= MaxJobRetirementTime);
+}
+
+
+// returns -1 on undefined, 0 on false, 1 on true
+int
+Resource::eval_expr( const char* expr_name, bool fatal, bool check_vanilla )
+{
+	int tmp;
+	if( check_vanilla && r_cur->universe() == CONDOR_UNIVERSE_VANILLA ) {
+		MyString tmp_expr_name = expr_name;
+		tmp_expr_name += "_VANILLA";
+		tmp = eval_expr( tmp_expr_name.Value(), false, false );
+		if( tmp >= 0 ) {
+				// found it, just return the value;
+			return tmp;
+		}
+			// otherwise, fall through and try the non-vanilla version
+	}
+	if( (r_classad->EvalBool(expr_name, r_cur->ad(), tmp) ) == 0 ) { 
+		if( fatal ) {
+			EXCEPT( "Can't evaluate %s", expr_name );
+		} else {
+				// anything else for here?
+			return -1;
+		}
+	}
+		// EvalBool returned success, we can just return the value
+	return tmp;
+}
+
 
 int
 Resource::eval_kill()
 {
-	int tmp;
-	if( r_cur->universe() == CONDOR_UNIVERSE_VANILLA ) {
-		if( (r_classad->EvalBool( "KILL_VANILLA",
-									r_cur->ad(), tmp) ) == 0 ) {  
-			if( (r_classad->EvalBool( "KILL",
-										r_cur->ad(),
-										tmp) ) == 0 ) { 
-				EXCEPT("Can't evaluate KILL");
-			}
-		}
-	} else {
-		if( (r_classad->EvalBool( "KILL",
-									r_cur->ad(), 
-									tmp)) == 0 ) { 
-			EXCEPT("Can't evaluate KILL");
-		}	
-	}
-	return tmp;
+		// fatal if undefined, check vanilla
+	return eval_expr( "KILL", true, true );
 }
 
 
 int
 Resource::eval_preempt( void )
 {
-	int tmp;
-	if( r_cur->universe() == CONDOR_UNIVERSE_VANILLA ) {
-		if( (r_classad->EvalBool( "PREEMPT_VANILLA",
-								   r_cur->ad(), 
-								   tmp)) == 0 ) {
-			if( (r_classad->EvalBool( "PREEMPT",
-									   r_cur->ad(), 
-									   tmp)) == 0 ) {
-				EXCEPT("Can't evaluate PREEMPT");
-			}
-		}
-	} else {
-		if( (r_classad->EvalBool( "PREEMPT",
-								   r_cur->ad(), 
-								   tmp)) == 0 ) {
-			EXCEPT("Can't evaluate PREEMPT");
-		}
-	}
-	return tmp;
+		// fatal if undefined, check vanilla
+	return eval_expr( "PREEMPT", true, true );
 }
 
 
 int
 Resource::eval_suspend( void )
 {
-	int tmp;
-	if( r_cur->universe() == CONDOR_UNIVERSE_VANILLA ) {
-		if( (r_classad->EvalBool( "SUSPEND_VANILLA",
-								   r_cur->ad(),
-								   tmp)) == 0 ) {
-			if( (r_classad->EvalBool( "SUSPEND",
-									   r_cur->ad(),
-									   tmp)) == 0 ) {
-				EXCEPT("Can't evaluate SUSPEND");
-			}
-		}
-	} else {
-		if( (r_classad->EvalBool( "SUSPEND",
-								   r_cur->ad(),
-								   tmp)) == 0 ) {
-			EXCEPT("Can't evaluate SUSPEND");
-		}
-	}
-	return tmp;
+		// fatal if undefined, check vanilla
+	return eval_expr( "SUSPEND", true, true );
 }
 
 
 int
 Resource::eval_continue( void )
 {
-	int tmp;
-	if( r_cur->universe() == CONDOR_UNIVERSE_VANILLA ) {
-		if( (r_classad->EvalBool( "CONTINUE_VANILLA",
-								   r_cur->ad(),
-								   tmp)) == 0 ) {
-			if( (r_classad->EvalBool( "CONTINUE",
-									   r_cur->ad(),
-									   tmp)) == 0 ) {
-				EXCEPT("Can't evaluate CONTINUE");
-			}
-		}
-	} else {	
-		if( (r_classad->EvalBool( "CONTINUE",
-								   r_cur->ad(),
-								   tmp)) == 0 ) {
-			EXCEPT("Can't evaluate CONTINUE");
-		}
-	}
-	return tmp;
+		// fatal if undefined, check vanilla
+	return eval_expr( "CONTINUE", true, true );
 }
 
 
 int
 Resource::eval_is_owner( void )
 {
-	int tmp;
-	if( (r_classad->EvalBool( ATTR_IS_OWNER, 
-							  r_cur->ad(),
-							  tmp)) == 0 ) {
-		EXCEPT("Can't evaluate %s", ATTR_IS_OWNER);
-	}
-	return tmp;
+	if( vmapi_is_usable_for_condor() == FALSE )
+		return 1;
+
+	// fatal if undefined, don't check vanilla
+	return eval_expr( ATTR_IS_OWNER, true, false );
 }
 
 
 int
 Resource::eval_start( void )
 {
-	int tmp;
-	if( (r_classad->EvalBool( "START", 
-							  r_cur->ad(),
-							  tmp)) == 0 ) {
-			// Undefined
-		return -1;
-	}
-	return tmp;
+	if( vmapi_is_usable_for_condor() == FALSE )
+		return 0;
+
+	// -1 if undefined, don't check vanilla
+	return eval_expr( "START", false, false );
 }
 
 
 int
 Resource::eval_cpu_busy( void )
 {
-	int tmp = 0;
+	int rval = 0;
 	if( ! r_classad ) {
 			// We don't have our classad yet, so just return that
 			// we're not busy.
 		return 0;
 	}
-	if( (r_classad->EvalBool( ATTR_CPU_BUSY, r_cur->ad(), tmp )) == 0 ) {
+		// not fatal, don't check vanilla
+	rval = eval_expr( ATTR_CPU_BUSY, false, false );
+	if( rval < 0 ) { 
 			// Undefined, try "cpu_busy"
-		if( (r_classad->EvalBool( "CPU_BUSY", r_cur->ad(), 
-								  tmp )) == 0 ) {   
-				// Totally undefined, return false;
-			return 0;
-		}
+		rval = eval_expr( "CPU_BUSY", false, false );
 	}
-	return tmp;
+	if( rval < 0 ) { 
+			// Totally undefined, return false;
+		return 0;
+	}
+	return rval;
 }
+
+
+#if HAVE_BACKFILL
+
+int
+Resource::eval_start_backfill( void )
+{
+	int rval = 0;
+	rval = eval_expr( "START_BACKFILL", false, false );
+	if( rval < 0 ) {
+			// Undefined, return false
+		return 0;
+	}
+	return rval;
+}
+
+
+int
+Resource::eval_evict_backfill( void )
+{
+		// return -1 on undefined (not fatal), don't check vanilla
+	return eval_expr( "EVICT_BACKFILL", false, false );
+}
+
+
+bool
+Resource::start_backfill( void )
+{
+	return resmgr->m_backfill_mgr->start(r_id);
+}
+
+
+bool
+Resource::softkill_backfill( void )
+{
+	return resmgr->m_backfill_mgr->softkill(r_id);
+}
+
+
+bool
+Resource::hardkill_backfill( void )
+{
+	return resmgr->m_backfill_mgr->hardkill(r_id);
+}
+
+
+#endif /* HAVE_BACKFILL */
 
 
 void
 Resource::publish( ClassAd* cap, amask_t mask ) 
 {
 	char line[256];
+	MyString my_line;
 	State s;
 	char* ptr;
 
@@ -1080,7 +1327,8 @@ Resource::publish( ClassAd* cap, amask_t mask )
 		}
 
 			// Include everything from STARTD_EXPRS.
-		config_fill_ad( cap );
+			// And then include everything from VMx_STARTD_EXPRS
+		config_fill_ad( cap, r_id_str );
 
 			// Also, include a VM ID attribute, since it's handy for
 			// defining expressions, and other things.
@@ -1104,13 +1352,6 @@ Resource::publish( ClassAd* cap, amask_t mask )
 					caInsert( cap, r_cur->ad(), ptr );
 				}
 			}
-				// update ImageSize attribute from procInfo (this is
-				// only for the opportunistic job, not COD)
-			if( r_cur && r_cur->isActive() ) {
-				unsigned long imgsize = r_cur->imageSize();
-				sprintf( line, "%s = %lu", ATTR_IMAGE_SIZE, imgsize );
-				cap->Insert( line );
-			}
 		}
 	}
 
@@ -1123,7 +1364,11 @@ Resource::publish( ClassAd* cap, amask_t mask )
 			// in the ClassAd, but for backwards compatibility it is.
 			// When we finally remove all the evil startd private ad
 			// junk this can go away, too.
-		if( r_pre ) {
+		if( r_pre_pre ) {
+			sprintf( line, "%s = \"%s\"", ATTR_CAPABILITY, r_pre_pre->id() );
+			cap->Insert( line );
+		}
+		else if( r_pre ) {
 			sprintf( line, "%s = \"%s\"", ATTR_CAPABILITY, r_pre->id() );
 			cap->Insert( line );
 		} else if( r_cur ) {
@@ -1151,6 +1396,8 @@ Resource::publish( ClassAd* cap, amask_t mask )
 		sprintf( line, "%s=%s", ATTR_CPU_IS_BUSY, 
 				 r_cpu_busy ? "True" : "False" );
 		cap->Insert(line); 
+
+        publishDeathTime( cap );
 	}
 
 		// Put in state info
@@ -1159,9 +1406,25 @@ Resource::publish( ClassAd* cap, amask_t mask )
 		// Put in requirement expression info
 	r_reqexp->publish( cap, mask );
 
+		// Put in max job retirement time expression
+	ptr = param(ATTR_MAX_JOB_RETIREMENT_TIME);
+	if(!ptr) {
+		ptr = strdup("0");
+	} else if ( !*ptr ) {
+		free(ptr);
+		ptr = strdup("0");
+	}
+	my_line.sprintf("%s=%s",ATTR_MAX_JOB_RETIREMENT_TIME,ptr);
+	cap->Insert(my_line.Value());
+
+	free(ptr);
+
 		// Update info from the current Claim object, if it exists.
 	if( r_cur ) {
 		r_cur->publish( cap, mask );
+	}
+	if( r_pre ) {
+		r_pre->publishPreemptingClaim( cap, mask );
 	}
 
 		// Put in availability statistics
@@ -1171,6 +1434,9 @@ Resource::publish( ClassAd* cap, amask_t mask )
 
 	// Publish the supplemental Class Ads
 	resmgr->adlist_publish( cap, mask );
+
+    // Publish the monitoring information
+    daemonCore->monitor_data.ExportData( cap );
 
 	// Build the MDS/LDIF file
 	char	*tmp;
@@ -1189,8 +1455,10 @@ Resource::publish( ClassAd* cap, amask_t mask )
 					dprintf( D_ALWAYS, "Failed to generate MDS file '%s'\n",
 							 fname );
 				}
+				free(fname);
 			}
 		}
+		free(tmp);
 	}
 
 	if( IS_PUBLIC(mask) && IS_SHARED_VM(mask) ) {
@@ -1198,6 +1466,55 @@ Resource::publish( ClassAd* cap, amask_t mask )
 	}
 }
 
+void
+Resource::publishDeathTime( ClassAd* cap )
+{
+    const char *death_time_env_name;
+    char       *death_time_string;
+    bool        have_death_time;
+    int         death_time;
+    int         relative_death_time;
+    MyString    classad_attribute;
+
+	if( ! cap ) {
+		return;
+	}
+
+    have_death_time     = false;
+    death_time_env_name = EnvGetName(ENV_DAEMON_DEATHTIME);
+    death_time_string   = getenv(death_time_env_name);
+
+    // Lookup the death time that we have.
+    if ( death_time_string ) {
+        death_time = atoi( death_time_string );
+        if ( death_time != 0 ) {
+            have_death_time = true;
+        }
+    }
+
+    if ( !have_death_time ) {
+        // If we don't have a death time, we'll leave forever.
+        // Well, we'll live until Unix time runs out. 
+        relative_death_time = INT_MAX;
+    } else {
+        // We're publishing how much time we have to live. 
+        // If we don't have any time left, then we should have died
+        // already, but something is wrong. That's okay, we'll tell people
+        // not to expect anything, by telling them 0.
+        time_t current_time;
+
+        current_time = time(NULL);
+        if (current_time > death_time) {
+            relative_death_time = 0;
+        } else {
+            relative_death_time = death_time - current_time;
+        }
+    }
+
+    classad_attribute.sprintf( "%s=%d", ATTR_TIME_TO_LIVE, relative_death_time );
+    cap->Insert( classad_attribute.Value() );
+    return;
+}
 
 void
 Resource::publishVmAttrs( ClassAd* cap )
@@ -1218,6 +1535,13 @@ Resource::publishVmAttrs( ClassAd* cap )
 	while( (ptr = startd_vm_exprs->next()) ) {
 		caInsert( cap, r_classad, ptr, prefix.Value() );
 	}
+}
+
+
+void
+Resource::refreshVmAttrs( void )
+{
+	resmgr->publishVmAttrs( r_classad );
 }
 
 
@@ -1285,7 +1609,7 @@ float
 Resource::compute_condor_load( void )
 {
 	float cpu_usage, avg, max, load;
-	int numcpus = resmgr->num_cpus();
+	int numcpus = resmgr->num_real_cpus();
 
 	time_t now = resmgr->now();
 	int num_since_last = now - r_last_compute_condor_load;
@@ -1405,6 +1729,10 @@ Resource::remove_pre( void )
 		delete r_pre;
 		r_pre = NULL;
 	}	
+	if( r_pre_pre ) {
+		delete r_pre_pre;
+		r_pre_pre = NULL;
+	}
 }
 
 

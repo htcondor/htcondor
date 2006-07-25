@@ -129,8 +129,8 @@ HOSTALLOW_ADMINISTRATOR = $(CONDOR_HOST)
 
 ##  Negotiator access.  Machines listed here are trusted central
 ##  managers.
-HOSTALLOW_NEGOTIATOR = $(NEGOTIATOR_HOST)
-#HOSTALLOW_NEGOTIATOR_SCHEDD = $(NEGOTIATOR_HOST), $(FLOCK_HOSTS)
+HOSTALLOW_NEGOTIATOR = $(CONDOR_HOST)
+#HOSTALLOW_NEGOTIATOR_SCHEDD = $(CONDOR_HOST), $(FLOCK_HOSTS)
 
 ##--------------------------------------------------------------------
 ##  Network filesystem parameters:
@@ -191,6 +191,15 @@ LOCK		= $(LOG)
 ##  the global config file (not the LOCAL_CONFIG_FILE from above). 
 #DEFAULT_DOMAIN_NAME = your.domain.name
 
+##  If you don't have DNS set up, Condor will normally fail in many
+##  places because it can't resolve hostnames to IP addresses and
+##  vice-versa. If you enable this option, Condor will use
+##  pseudo-hostnames constructed from a machine's IP address and the
+##  DEFAULT_DOMAIN_NAME. Both NO_DNS and DEFAULT_DOMAIN must set in
+##  your top-level config file for this mode of operation to work
+##  properly.
+#NO_DNS = True
+
 ##  Condor can be told whether or not you want the Condor daemons to
 ##  create a core file if something really bad happens.  This just
 ##  sets the resource limit for the size of a core file.  By default,
@@ -212,6 +221,14 @@ LOCK		= $(LOG)
 GLIDEIN_SERVER_NAME = gridftp.cs.wisc.edu
 GLIDEIN_SERVER_DIR = /p/condor/public/binaries/glidein
 
+## This setting tells Condor whether to delegate or copy GSI X509
+## credentials when sending them over the wire between daemons.
+## Delegation can take up to a second, which is very slow when
+## submitting a large number of jobs. Copying exposes the credential
+## to third parties if Condor isn't set to encrypt communications.
+## By default, Condor will delegate rather than copy.
+DELEGATE_JOB_GSI_CREDENTIALS = True
+
 ##--------------------------------------------------------------------
 ##  Settings that control the daemon's debugging output:
 ##--------------------------------------------------------------------
@@ -223,7 +240,7 @@ GLIDEIN_SERVER_DIR = /p/condor/public/binaries/glidein
 ALL_DEBUG               =
 
 MAX_SCHEDD_LOG		= 1000000
-SCHEDD_DEBUG		=
+SCHEDD_DEBUG		= D_COMMAND D_PID
 
 MAX_SHADOW_LOG		= 1000000
 SHADOW_DEBUG		=
@@ -232,6 +249,13 @@ MAX_MASTER_LOG		= 1000000
 MASTER_DEBUG		= D_COMMAND
 ##  When the master starts up, should it truncate it's log file?
 #TRUNC_MASTER_LOG_ON_OPEN        = False
+
+## The daemons touch their log file periodically, even when they have
+## nothing to write. When a daemon starts up, it prints the last time
+## the log file was modified. This lets you estimate when a previous
+## instance of a daemon stopped running. This paramete controls often
+## the daemons touch the file (in seconds).
+TOUCH_LOG_INTERVAL = 60
 
 
 ######################################################################
@@ -251,6 +275,7 @@ SPOOL		= $(LOCAL_DIR)/spool
 BIN		= $(RELEASE_DIR)/bin
 LIB		= $(RELEASE_DIR)/lib
 SBIN		= $(RELEASE_DIR)/sbin
+LIBEXEC		= $(RELEASE_DIR)/libexec
 HISTORY		= $(SPOOL)/history
 
 ##  Log files
@@ -261,11 +286,19 @@ SHADOW_LOG	= $(LOG)/ShadowLog
 ##  Lock files
 SHADOW_LOCK	= $(LOCK)/ShadowLock
 
-##  In most cases, your condor_collector and condor_negotiator are 
-##  going to run on the same machine.  If for some reason, this isn't 
-##  the case, here's where you'd change it:
-COLLECTOR_HOST	= $(CONDOR_HOST)
-NEGOTIATOR_HOST	= $(CONDOR_HOST)
+##  This setting primarily allows you to change the port that the
+##  collector is listening on.  By default, the collector uses port
+##  9618, but you can set the port with a ":port", such as:
+##  COLLECTOR_HOST = $(CONDOR_HOST):1234
+COLLECTOR_HOST  = $(CONDOR_HOST)
+
+## The NEGOTIATOR_HOST parameter has been deprecated.  The port where
+## the negotiator is listening is now dynamically allocated and the IP
+## and port are now obtained from the collector, just like all the
+## other daemons.  However, if your pool contains any machines that
+## are running version 6.7.3 or earlier, you can uncomment this
+## setting to go back to the old fixed-port (9614) for the negotiator.
+#NEGOTIATOR_HOST = $(CONDOR_HOST)
 
 ##  What machine will be the condor_view server for this pool?
 #CONDOR_VIEW_HOST = full.hostname.domain
@@ -530,7 +563,8 @@ PVMGS			= $(SBIN)/condor_pvmgs
 
 ##  What files should condor_preen leave in the spool directory?
 VALID_SPOOL_FILES	= job_queue.log, job_queue.log.tmp, history, \
-                          Accountant.log, Accountantnew.log
+                          Accountant.log, Accountantnew.log, \
+                          local_univ_execute
 
 ##  What files should condor_preen remove from the log directory?
 INVALID_LOG_FILES	= core
@@ -542,7 +576,8 @@ INVALID_LOG_FILES	= core
 ##  Where is the GridManager binary installed?
 
 GRIDMANAGER			= $(SBIN)/condor_gridmanager
-GAHP				= $(SBIN)/gahp_server
+GT2_GAHP			= $(SBIN)/gahp_server
+GRID_MONITOR			= $(SBIN)/grid_monitor.sh
 
 ##--------------------------------------------------------------------
 ##  Settings that control the daemon's debugging output:
@@ -565,6 +600,11 @@ GRIDMANAGER_LOG = /tmp/GridmanagerLog.$(USERNAME)
 ##--------------------------------------------------------------------
 ##  Various other settings that the Condor-G can use.
 ##--------------------------------------------------------------------
+
+## For grid-type gt2 jobs (pre-WS GRAM), limit the number of jobmanager
+## processes the gridmanager will let run on the headnode. Letting too
+## many jobmanagers run causes severe load on the headnode.
+GRIDMANAGER_MAX_JOBMANAGERS_PER_RESOURCE = 10
 
 ## If we're talking to a Globus 2.0 resource, Condor-G will use the new
 ## version of the GRAM protocol. The first option is how often to check the
@@ -601,3 +641,72 @@ GRIDMANAGER_LOG = /tmp/GridmanagerLog.$(USERNAME)
 #
 CRED_MIN_TIME_LEFT              = 120
 
+##
+## The location of the wrapper for invoking
+## Condor GAHP server
+##
+CONDOR_GAHP = $(SBIN)/condor_c-gahp
+
+##
+## The Condor GAHP server has it's own log.  Like the Gridmanager, the
+## GAHP server is run as the User, not a Condor daemon, so all users must 
+## have write permssion to the directory used for the logfile. Our 
+## suggestion is to create a directory called GridLogs in $(LOG) with 
+## UNIX permissions 1777 (just like /tmp )
+## Another option is to use /tmp as the location of the CGAHP log.
+## 
+MAX_C_GAHP_LOG	= 1000000
+
+#C_GAHP_LOG = $(LOG)/GridLogs/CGAHPLog.$(USERNAME)
+C_GAHP_LOG = /tmp/CGAHPLog.$(USERNAME)
+
+##
+## The location of the wrapper for invoking
+## GT3 GAHP server
+##
+GT3_GAHP = $(SBIN)/gt3_gahp
+
+##
+## The location of GT3 files. This should normally be lib/gt3
+##
+GT3_LOCATION = $(LIB)/gt3
+
+##
+## The location of the wrapper for invoking
+## GT4 GAHP server
+##
+GT4_GAHP = $(SBIN)/gt4_gahp
+
+##
+## The location of GT4 files. This should normally be lib/gt4
+##
+GT4_LOCATION = $(LIB)/gt4
+
+##
+## gt4 gram requires a gridftp server to perform file transfers.
+## If GRIDFTP_URL_BASE is set, then Condor assumes there is a gridftp
+## server set up at that URL suitable for its use. Otherwise, Condor
+## will start its own gridftp servers as needed, using the binary
+## pointed at by GRIDFTP_SERVER. GRIDFTP_SERVER_WRAPPER points to a
+## wrapper script needed to properly set the path to the gridmap file.
+##
+#GRIDFTP_URL_BASE = gsiftp://$(FULL_HOSTNAME)
+GRIDFTP_SERVER = $(LIBEXEC)/globus-gridftp-server
+GRIDFTP_SERVER_WRAPPER = $(LIBEXEC)/gridftp_wrapper.sh
+
+##
+## Location of the PBS/LSF gahp and its associated binaries
+##
+GLITE_LOCATION = $(LIB)/glite
+PBS_GAHP = $(GLITE_LOCATION)/bin/batch_gahp
+LSF_GAHP = $(GLITE_LOCATION)/bin/batch_gahp
+
+##
+## The location of the wrapper for invoking the Unicore GAHP server
+##
+UNICORE_GAHP = $(SBIN)/unicore_gahp
+
+##
+## The location of the wrapper for invoking the NorduGrid GAHP server
+##
+NORDUGRID_GAHP = $(SBIN)/nordugrid_gahp

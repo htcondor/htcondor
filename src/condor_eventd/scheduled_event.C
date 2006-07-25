@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -26,7 +26,10 @@
 #include "condor_debug.h"
 #include "condor_query.h"
 #include "condor_config.h"
+#include "dc_collector.h"
 #include "daemon.h"
+#include "daemon_list.h"
+#include "condor_netdb.h"
 
 #include "scheduled_event.h"
 
@@ -614,9 +617,13 @@ ScheduledShutdownEvent::GetStartdList()
 	if (StartdQuery.addANDConstraint(constraint) != Q_OK) {
 		return -1;
 	}
-	if (StartdQuery.fetchAds(*StartdList) != Q_OK) {
+
+	CollectorList * collectors = CollectorList::create();
+	if (collectors->query (StartdQuery, *StartdList) != Q_OK ) {
+		delete collectors;
 		return -1;
 	}
+	delete collectors;
 
 	return 0;
 }
@@ -733,7 +740,7 @@ ScheduledShutdownEvent::UpdateSchedule()
 					ATTR_CKPT_SERVER, startdName);
 			continue;
 		}
-		struct hostent *hp = gethostbyname(ckptServer);
+		struct hostent *hp = condor_gethostbyname(ckptServer);
 		if (!hp) {
 			dprintf(D_ALWAYS, "DNS lookup for %s %s failed!\n",
 					ATTR_CKPT_SERVER, ckptServer);
@@ -1113,9 +1120,12 @@ CleanupShutdownModeConfigs()
 	if (StartdQuery.addANDConstraint(CleanupConstraint) != Q_OK) {
 		return -1;
 	}
-	if (StartdQuery.fetchAds(StartdList) != Q_OK) {
+	CollectorList * collectors = CollectorList::create();
+	if (collectors->query (StartdQuery,StartdList) != Q_OK) { 
+		delete collectors;
 		return -1;
 	}
+	delete collectors;
 
 	StartdList.Open();
 	StringList Machines;

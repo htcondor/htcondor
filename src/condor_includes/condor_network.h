@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -36,6 +36,8 @@
 #define COLLECTOR_UDP_PORT				9618
 #define COLLECTOR_COMM_PORT				9618
 #define COLLECTOR_UDP_COMM_PORT				9618
+#define CREDD_PORT						9620
+#define STORK_PORT						9621
 
 #define CONDOR_VIEW_PORT				COLLECTOR_PORT
 

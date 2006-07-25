@@ -32,12 +32,7 @@ NON_PORTABLE_OBJ = NON_POSIX.o analyze_core.o
 
 OBJ = starter.o $(PORTABLE_OBJ) $(NON_PORTABLE_OBJ) $(REMOTE_SYSCALL_OBJ)
 
-c_plus_target($(NAME),$(OBJ),$(LIB))
-release_target($(NAME),sbin,EXECUTABLE_MODE)
-strip_target($(NAME),sbin,EXECUTABLE_MODE)
-static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/sbin)
-pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))
-purecov_c_plus_target($(NAME).pc,$(OBJ),$(LIB))
+public_c_plus_target($(NAME),sbin,$(OBJ),$(LIB))
 
 html:
 

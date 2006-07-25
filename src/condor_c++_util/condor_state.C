@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -25,10 +25,10 @@
 
 static char* condor_states [] = 
 { "None", "Owner", "Unclaimed", "Matched",  "Claimed", "Preempting",
-  "Shutdown", "Delete" };
+  "Shutdown", "Delete", "Backfill" };
 
 static char* condor_activities [] = 
-{ "None", "Idle", "Busy", "Vacating", "Suspended", "Benchmarking",
+{ "None", "Idle", "Busy", "Retiring", "Vacating", "Suspended", "Benchmarking",
   "Killing" };
 
 State 

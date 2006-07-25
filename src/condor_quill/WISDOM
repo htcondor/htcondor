@@ -1,0 +1,50 @@
+Some wisdom on the JobQueueCollection class: its purpose, inner workings, 
+and some tips on future modifications.
+
+The JobQueueCollection class implements a 'chained bucket' hash table. 
+Chaining is a standard scheme of handling collisions where each bucket of 
+the hash table is actually a linked list; all members of the list hash to 
+the same value.
+
+Each JobQueueCollection object actually contains three separate hash 
+tables.  These are _ppClusterAdBucketList, _ppProcAdBucketList, and 
+_ppHistoryAdBucketList representing hash tables for clusterads, procads, 
+and historyads respectively.  While the first two directly correspond to 
+each job in the queue, the last one captures the ad that is created when 
+the job is taken out of the job queue and inserted into history.  The 
+reason why we capture the historyads in its own hash table will be clear 
+from the next paragraph.
+
+The JobQueueCollection class is used in Quill exclusively during 
+bulkloading.  When Quill first starts up, it determines whether the job 
+queue file can be incrementally read, or whether it has to be processed 
+from the very beginning.  If its the latter, then instead of issuing a SQL 
+statement for each command in the job queue file, it creates an in-memory 
+representation of the job queue and then submits this in-memory 
+representation to the database one job at a time.  In order to maintain 
+the in-memory representation, each operation in the job queue log file is 
+applied to each ad in the two hash tables corresponding to the job queue.  
+These operations range from those applied on individual attributes of the 
+classad to those that operate on the classad level.  Finally, when a 
+delete record for a job ad is encountered in the job queue log file, the 
+historical job ad that is created is captured in the history hash table so 
+that historical information is not lost.  
+
+Apart from the usual hash table methods (insert, remove, find), the 
+JobQueueCollection class also supports methods that iterate through the 
+ads in the various hash tables and create string representations of each 
+ad in a form that can be submitted to the bulk loading utility of the 
+database. These string representations are table-specific in that they 
+conform to the schema of the appropriate table to which its written. 
+As such, the class contains 
+both iteration indices and state variables to store the string  
+representations of various tables used to store the job queue and 
+history.
+
+As an example, jobs are stored in four different table: ClusterAds_Str, 
+ClusterAds_Num, ProcAds_Str, ProcAds_Num.  Corresponding to those four 
+tables are buffer strings ClusterAd_Str_CopyStr, ClusterAd_Num_CopyStr, 
+ProcAd_Str_CopyStr, ProcAd_Num_CopyStr.  Additionally, there are two 
+buffer strings HistoryAd_Hor_SqlStr and HistoryAd_Ver_SqlStr for the two 
+history tables History_Horizontal and History_Vertical.
+

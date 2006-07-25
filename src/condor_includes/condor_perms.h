@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -42,6 +42,7 @@ typedef enum {
   /** The machine owner (vacate) */          OWNER = 6,
   /** Changing config settings remotely */   CONFIG_PERM = 7,
   /** Daemon to daemon communcation     */   DAEMON = 8,
+  /** SOAP interface (http PUT) */			 SOAP_PERM = 9,
   /** Place holder, must be last */          LAST_PERM
 } DCpermission;
 

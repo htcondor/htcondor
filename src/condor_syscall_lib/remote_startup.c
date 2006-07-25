@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -132,6 +132,7 @@
 #include "condor_debug.h"
 #include "condor_error.h"
 #include "condor_version.h"
+#include "../condor_ckpt/gtodc.h"
 
 enum result { NOT_OK = 0, OK = 1, END };
 
@@ -303,7 +304,7 @@ MAIN( int argc, char *argv[], char **envp )
 			  expected.  --RR
 			*/
 		if( (strcmp(arg, "debug_wait") == MATCH) ) {
-			int j = 1;
+			volatile int j = 1;
 			while (j);
 			continue;
 		}
@@ -424,6 +425,9 @@ MAIN( int argc, char *argv[], char **envp )
 		argv[i] = user_argv[i];
 	}
 
+	/* initialize the cache for gettimeofday */
+	_condor_gtodc_init(_condor_global_gtodc);
+
 	/* If a command fd is given, we are doing remote system calls. */
 
 	if( cmd_fd>=0 ) {
@@ -478,6 +482,7 @@ MAIN( int argc, char *argv[], char **envp )
 	}
 
 	InRestart = FALSE;
+
 
 	#if defined(HPUX)
 		exit(_start( argc, argv, envp ));

@@ -1,0 +1,80 @@
+#! /usr/bin/env perl
+use CondorTest;
+
+$cmd = 'job_core_env_java.cmd';
+$testname = 'Environment is preserved - java U';
+
+
+$ExitSuccess = sub {
+	my %info = @_;
+
+	# Pull out requested environment values
+	my $environ   = $info{"environment"};
+	if(!defined($environ)) {
+		die "Can't pull environment from submit file";
+	}
+	# we need the things in the environment line and also the things
+	# found in the unix environment
+	my(%env_user) = ($environ =~ /([^=]+)=([^;]*);/g);
+	my(%env_reqd) = (%ENV, %env_user);
+
+	# some environment entries are changeable and special and must not be matched
+	delete $env_reqd{"_"};
+	delete $env_reqd{"SHLVL"};
+
+
+	# see which actual values were passed along
+	$output = $info{"output"};
+	open(IN, "<$output" ) || die "Can't open $output: $!\n";
+	# change seperator to EOF
+	local $/;
+	my $file = <IN>;
+	close IN;
+	my(%env_found) = ($file =~ /^(.+?)=(.*)$/mg);
+
+	# see if they match
+	foreach my $key (keys %env_reqd) {
+		print "Matching $key...\n";
+		if(not exists $env_found{$key}) {
+			die "Variable $key wasn't passed along";
+		}
+		if($env_found{$key} ne $env_reqd{$key}) {
+			if(length($env_found{$key}) != 1 || length($env_reqd{$key}) != 1) {
+				die "Value for $key was "
+				    . "\"$env_found{$key}\" - should be \"$env_reqd{$key}\"";
+			} else {
+				die "Value for $key was ASCII "
+				    . ord($env_found{$key}) . " - should be ASCII "
+					. ord($env_reqd{$key});
+			}
+		}
+	}
+};
+
+
+# before the test let's throw some weird crap into the environment
+
+CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
+
+#empty local environment and add only a few things that way......
+my $path = $ENV{"PATH"};
+
+$condor_config = $ENV{CONDOR_CONFIG};
+%ENV = ();
+$ENV{CONDOR_CONFIG} = $condor_config;
+$ENV{PATH} = $path;
+$ENV{"weirdchars"} = "	";
+$ENV{UNIVERSE} = "vanilla";
+$ENV{UPREPEND} = "v_";
+$ENV{CONDORPATH} = "/usr/local/condor-build/bin:/usr/local/gcc296:/usr/local/gnu/bin:/usr/local/bin:.:/opt/SUNWspro/bin:/usr/ccs/bin:/usr/ucb:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/ucb";
+$ENV{GSISSHFLAGS} = "--with-tcp-wrappers";
+
+print "join(` `,keys %ENV)";
+
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+	print "$testname: SUCCESS\n";
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+

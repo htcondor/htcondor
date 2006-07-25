@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -230,6 +230,7 @@ lsa_mgr::isStored( const LPWSTR Login ) {
 	pw = query(Login);
 	if ( pw ) {
 		// we found something, but don't leak memory
+		ZeroMemory(pw, wcslen(pw));
 		delete[] pw;
 		return true;
 	} else {
@@ -353,7 +354,7 @@ lsa_mgr::loadDataFromRegistry() {
 			
 		} else {
 			DataBuffer->Buffer = (USHORT*) DataOut.pbData;
-			DataBuffer->Length = DataOut.cbData;
+			DataBuffer->Length = (USHORT) DataOut.cbData;
 		}
 		
 		extractDataString();
@@ -422,7 +423,7 @@ lsa_mgr::storeDataToRegistry( const PLSA_UNICODE_STRING lsaString ) {
     }
 
 	lsaString->Buffer = (USHORT*)DataOut.pbData;
-	lsaString->Length = DataOut.cbData;
+	lsaString->Length = (USHORT)DataOut.cbData;
 
 	dprintf(D_FULLDEBUG, "Attempting to store %d bytes to reg key...\n",
 		 lsaString->Length);

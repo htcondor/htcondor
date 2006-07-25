@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -29,9 +29,9 @@
 #include "dagman_commands.h"
 
 bool
-PauseDag()
+PauseDag(Dagman &dm)
 {
-	if( dagman.paused == true ) {
+	if( dm.paused == true ) {
 			// maybe this should be a warning rather than an error,
 			// but it probably indicates that the caller doesn't know
 			// what the h*** is going on, so I'd rather catch it here
@@ -40,14 +40,14 @@ PauseDag()
 		return false;
 	}
 	debug_printf( DEBUG_NORMAL, "DAGMan event-processing paused...\n" );
-	dagman.paused = true;
+	dm.paused = true;
 	return true;
 }
 
 bool
-ResumeDag()
+ResumeDag(Dagman &dm)
 {
-	if( dagman.paused != true ) {
+	if( dm.paused != true ) {
 		debug_printf( DEBUG_NORMAL, "ERROR: ResumeDag() called on an "
 					  "un-paused DAG\n" );
 		return false;
@@ -58,25 +58,28 @@ ResumeDag()
 		// degree, the dag modification routines) to make sure they
 		// get everything right...
 	debug_printf( DEBUG_NORMAL, "DAGMan event-processing resuming...\n" );
-	dagman.paused = false;
+	dm.paused = false;
 	return true;
 }
 
 bool
-AddNode( Job::job_type_t type, const char *name, const char* cmd,
+AddNode( Dag *dag, Job::job_type_t type, const char *name,
+		 const char* directory,
+		 const char* submitFile,
 		 const char *precmd, const char *postcmd, bool done,
 		 MyString &failReason )
 {
 	MyString why;
-	if( !IsValidNodeName( name, why ) ) {
+	if( !IsValidNodeName( dag, name, why ) ) {
 		failReason = why;
 		return false;
 	}
-	if( !IsValidSubmitFileName( cmd, why ) ) {
+	if( !IsValidSubmitFileName( submitFile, why ) ) {
 		failReason = why;
 		return false;
 	}
-	Job* node = new Job( type, name, cmd );
+	Job* node = new Job( type, name, directory, submitFile,
+				dag->ProhibitMultiJobs() );
 	if( !node ) {
 		dprintf( D_ALWAYS, "ERROR: out of memory!\n" );
 			// we already know we're out of memory, so filling in
@@ -101,8 +104,8 @@ AddNode( Job::job_type_t type, const char *name, const char* cmd,
 	if( done ) {
 		node->SetStatus( Job::STATUS_DONE );
 	}
-	ASSERT( dagman.dag != NULL );
-	if( !dagman.dag->Add( *node ) ) {
+	ASSERT( dag != NULL );
+	if( !dag->Add( *node ) ) {
 		failReason = "unknown failure adding node to DAG";
 		delete node;
 		return false;
@@ -112,7 +115,7 @@ AddNode( Job::job_type_t type, const char *name, const char* cmd,
 }
 
 bool
-IsValidNodeName( const char *name, MyString &whynot )
+IsValidNodeName( Dag *dag, const char *name, MyString &whynot )
 {
 	if( name == NULL ) {
 		whynot = "missing node name";
@@ -126,8 +129,8 @@ IsValidNodeName( const char *name, MyString &whynot )
 		whynot.sprintf( "invalid node name: '%s' is a DAGMan keyword", name );
 		return false;
 	}
-	ASSERT( dagman.dag != NULL );
-	if( dagman.dag->NodeExists( name ) ) {
+	ASSERT( dag != NULL );
+	if( dag->NodeExists( name ) ) {
 		whynot.sprintf( "node name '%s' already exists in DAG", name );
 		return false;
 	}

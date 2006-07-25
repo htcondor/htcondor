@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -29,6 +29,13 @@
 #include "dedicated_scheduler.h"
 #include "grid_universe.h"
 #include "simplelist.h"
+#include "list.h"
+#include "schedd_api.h"
+//#include "condor_crontab.h"
+
+template class HashTable<MyString, JobFile>;
+template class List<FileInfo>;
+template class Item<FileInfo>;
 
 class Shadow;
 
@@ -42,12 +49,15 @@ template class HashTable<PROC_ID, shadow_rec *>;
 template class HashBucket<PROC_ID,shadow_rec *>;
 template class HashTable<PROC_ID, ClassAd *>;
 template class HashBucket<PROC_ID, ClassAd *>;
+//template class HashTable<PROC_ID, CronTab *>;
+//template class HashBucket<PROC_ID, CronTab *>;
+template class HashTable<UserIdentity, GridJobCounts>;
+template class HashBucket<UserIdentity, GridJobCounts>;
 template class Queue<shadow_rec*>;
 template class Queue<ContactStartdArgs*>;
 template class List<shadow_rec*>;
 template class Item<shadow_rec*>;
 template class SimpleList<PROC_ID>;
-template class ExtArray<int>;
 template class ExtArray<MyString*>;
 template class ExtArray<bool>;
 template class ExtArray<PROC_ID>;
@@ -64,18 +74,14 @@ template class ExtArray<MRecArray*>;
 template class ExtArray<ClassAd*>;
 template class HashTable<int,AllocationNode*>;
 template class HashBucket<int,AllocationNode*>;
-template class List<ResTimeNode>;
-template class Item<ResTimeNode>;
 template class List<ClassAd>;
 template class Item<ClassAd>;
-template class Queue<ClassAd*>;
+template class Queue<PROC_ID>;
 // You'd think we'd need to instantiate a HashTable and HashBucket for
 // <HashKey, ClassAd*> here, but those are already instantiated in
 // classad_log.C in the c++_util_lib (not in c++_util_instantiate.C
 // where you'd expect to find it *sigh*)
 
-
-bool operator==(const PROC_ID a, const PROC_ID b)
-{
-	return a.cluster == b.cluster && a.proc == b.proc;
-}
+// schedd_api
+template class HashTable<int, ScheddTransaction*>;
+template class HashTable<PROC_ID, Job*>;

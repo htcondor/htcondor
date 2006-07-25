@@ -15,6 +15,7 @@ STRIP_DIR	=	../strip_dir
 STRIP_CONTRIB	=	../strip_contrib
 STATIC_DIR	=	../static_dir
 STATIC_CONTRIB	=	../static_contrib
+STATIC_UNSTRIP_DIR =	../static_unstrip_dir
 PURE_DIR	=	pure_bin
 
 LIB_DIR =		$(RELEASE_DIR)/lib
@@ -70,7 +71,7 @@ MakeRPMs =
 /*
    These next few lines are not supposed to be pre-processor
    directives, but GNU-make understood directives.  They don't want a
-   # in front of them.  If you're having problems at these lines,
+   hash mark in front of them.  If you're having problems at these lines,
    you're probably not using gmake.  -peter keller 9/8/2000
 */
 ifdef DEBUG_BUILD
@@ -85,8 +86,6 @@ C_LINK = CLinker
 CC_LINK = CPlusLinker
 endif
 
-JAVAC = JavaCompiler
-JAR = JarTool
 
 STATIC	= -static
 STAR	= *
@@ -95,34 +94,24 @@ PLATFORM_LDFLAGS = PlatformLdFlags
 PURIFY_PLATFORM_LDFLAGS = PurifyPlatformLdFlags
 TEST_PLATFORM_LDFLAGS = TestPlatformLdFlags
 
-CMNT ##########
-CMNT Orbacus settings
-CMNT ##########
-#if !defined( PlatformOBLibs )
-#define PlatformOBLibs
+/*
+   Our tests often link with libcondorapi.a, which has calls to dlopen
+   and friends.  However, since we're already including all the
+   autoconf discovered LIBS on the link line for the test suite, we
+   don't have to duplicate any of that here.  the only exceptions are
+   libraries we test for in autoconf that we don't just use the
+   default autoconf behavior and add to LIBS.  for now, that only
+   involves libgen, which is where dirname() lives on some platforms.
+*/
+#if HAVE_LIBGEN
+TEST_PLATFORM_LDFLAGS += -lgen
 #endif
 
-CMNT Libraries needed to link with OB
-OB_LIBS = -lOB -lJTC -lpthread PlatformOBLibs
-
-CMNT Where are all the OB files kept
-OB_ROOT = /unsup/OB
-
-CMNT IDL is an Orbacus tool for creating source files from .idl files
-IDL = $(OB_ROOT)/bin/idl --c-suffix .C -I$(OB_ROOT)/include 
-
-CMNT In general, we need to use a different version of g++ to build the
-CMNT idl-generated source files (gcc 2.95) than we use to build the rest
-CMNT of Condor (egcs 1.1.2)
-IDL_CC = /s/gcc-2.95.2/bin/g++
-
-CMNT Particle Physics Data Grid CORBA IDL dir
-PPDG_IDL_DIR = /p/condor/workspaces/ppdg/ppdg_idl/idl
 
 /*
    These next few lines are not supposed to be pre-processor
    directives, but GNU-make understood directives.  They don't want a
-   # in front of them.  If you're having problems at these lines,
+   hash mark in front of them.  If you're having problems at these lines,
    you're probably not using gmake.  -Derek Wright 6/16/99
 */
 ifdef SMP_NUM_JOBS
@@ -138,11 +127,11 @@ endif
 #define CKPT_LIBC	$(RELEASE_DIR)/lib/libckpt.a
 #define CONDOR_LIBC	$(RELEASE_DIR)/lib/libcondor.a
 
-#define AR_DELETE(libname,objects) ar d libname objects
-#define AR_EXTRACT(libname,objects) ar x libname objects
+#define AR_DELETE(libname,objects)ar d libname objects
+#define AR_EXTRACT(libname,objects)ar x libname objects
 
 #if HAS_AR_S_OPTION
-#define AR_REPLACE(libname,objects) ar vrs libname objects
+#define AR_REPLACE(libname,objects)ar vrs libname objects
 #else
 #define AR_REPLACE(libname,objects) \
 	ar vr libname objects @@\
@@ -151,15 +140,15 @@ endif
 
 
 #if HAS_CP_PRESERVE			/* cp lib w/o changing modify time - don't ranlib */
-#	define COPY_LIBRARY(src,dst) cp -p src dst
-#	define RANLIB_TOUCH(lib)	/bin/true
+#	define COPY_LIBRARY(src,dst)cp -p src dst
+#	define RANLIB_TOUCH(lib)$(TRUE)
 #else
 #	if HAS_RANLIB_TOUCH		/* cp lib changes modify time - ranlib -t */
-#		define COPY_LIBRARY(src,dst) cp src dst
-#		define RANLIB_TOUCH(libname) ranlib -t libname
+#		define COPY_LIBRARY(src,dst)cp src dst
+#		define RANLIB_TOUCH(libname)ranlib -t libname
 #	else						/* dumb cp and ranlib - do it the hard way */
-#		define COPY_LIBRARY(src,dst) cp src dst
-#		define RANLIB_TOUCH(libname) ranlib libname
+#		define COPY_LIBRARY(src,dst)cp src dst
+#		define RANLIB_TOUCH(libname)ranlib libname
 #	endif
 #endif
 
@@ -189,6 +178,7 @@ endif
 
 OS_FLAG = OperatingSystem
 ARCH_FLAG = Architecture
+DIST_FLAG = Distribution
 
 #if !defined( DebugFlag )
 #define DebugFlag -g -Wall
@@ -212,36 +202,102 @@ DEBUG_FLAG = DebugFlag
 #define VendorFTestFlags
 #endif
 
-
 #if WANT_CLASSAD_FUNCTIONS && HAS_DLOPEN
-    #define CLASSAD_FUNCTIONS YES
+#   define CLASSAD_FUNCTIONS YES
+#endif
+
+#if WANT_NEW_CLASSADS
+#	define WANT_CLASSAD_ANALYSIS YES
 #endif
 
 #if WANT_DAGMAN_HELPER && HAS_DAGMAN_HELPER
-    #define DAGMAN_HELPER YES
+#   define DAGMAN_HELPER YES
 #endif 
 
 #if !defined(WANT_ORACLE_UNIVERSE)
-#define WANT_ORACLE_UNIVERSE NO
+#   define WANT_ORACLE_UNIVERSE NO
 #endif
 
-#if !defined(WANT_NORDUGRID_UNIVERSE)
-#define WANT_NORDUGRID_UNIVERSE NO
+
+/**********************************************************************
+A whole bunch of settings related to things included in the Condor
+externals tree.  First, we make sure this particular build has been
+configured to use the externals, and if not, we disable a bunch of
+stuff, even if the rest of the imake configuration things we want it.
+**********************************************************************/
+
+#if ! HAS_EXTERNALS
+
+#ifdef WANT_MAN_PAGES
+#undef WANT_MAN_PAGES
 #endif
+#define WANT_MAN_PAGES	NO
 
-#if WANT_CONDOR_G && HAS_GLOBUS
+#ifdef WANT_PVM
+#undef WANT_PVM
+#endif
+#define WANT_PVM	NO
 
-  #define NEEDS_GSI YES
+#ifdef WANT_CONDOR_G
+#undef WANT_CONDOR_G
+#endif
+#define WANT_CONDOR_G	NO
+
+#ifdef WANT_GSI
+#undef WANT_GSI
+#endif
+#define WANT_GSI	NO
+
+#ifdef WANT_X509
+#undef WANT_X509
+#endif
+#define WANT_X509	NO
+
+#ifdef WANT_KERBEROS
+#undef WANT_KERBEROS
+#endif
+#define WANT_KERBEROS	NO
+
+#ifdef WANT_MD
+#undef WANT_MD
+#endif
+#define WANT_MD		NO
+
+#ifdef WANT_3DES
+#undef WANT_3DES
+#endif
+#define WANT_3DES	NO
+
+#ifdef WANT_BLOWFISH
+#undef WANT_BLOWFISH
+#endif
+#define WANT_BLOWFISH	NO
+
+#ifdef USE_GLOBUS_OPENSSL
+#undef USE_GLOBUS_OPENSSL
+#endif
+#define USE_GLOBUS_OPENSSL	NO
+
+
+#endif /* ! HAS_EXTERNALS */
+
+/****************************************
+ Now that all that is taken care of, we
+ can setup a bunch of make variables
+ depending on what features are enabled
+****************************************/
+
+#if WANT_CONDOR_G
 
   CONDOR_G_FLAGS = -DCONDOR_G
 
 #else
  CONDOR_G_FLAGS =
-#endif /*HasGlobus && WantCondorG */
+#endif /* WantCondorG */
 
 /* GSI Authentication requires globus*/
 #if WANT_GSI && HAS_GSI
-  #define NEEDS_GSI YES
+#  define NEEDS_GSI YES
   GSI_AUTH_FLAGS = -DGSI_AUTHENTICATION
   GSI_AUTH_LIB =
 #else
@@ -258,25 +314,25 @@ DEBUG_FLAG = DebugFlag
 
 /* Encryption */
 #if WANT_3DES && HAS_OPENSSL
-  #define CONDOR_3DES_ENCRYPTION YES
+#  define CONDOR_3DES_ENCRYPTION YES
   3DES_FLAGS = -DCONDOR_3DES_ENCRYPTION
-  #define NEEDS_OPENSSL YES
-  #define WANT_ENCRYPTION YES
+#  define NEEDS_OPENSSL YES
+#  define WANT_ENCRYPTION YES
 #else
   3DES_FLAGS =
 #endif
 
 #if WANT_BLOWFISH && HAS_OPENSSL
-  #define CONDOR_BLOWFISH_ENCRYPTION YES
+#  define CONDOR_BLOWFISH_ENCRYPTION YES
   BLOWFISH_FLAGS = -DCONDOR_BLOWFISH_ENCRYPTION
-  #define NEEDS_OPENSSL YES
-  #define WANT_ENCRYPTION YES
+#  define NEEDS_OPENSSL YES
+#  define WANT_ENCRYPTION YES
 #else
   BLOWFISH_FLAGS =
 #endif
 
 #if WANT_ENCRYPTION
-  #define CONDOR_ENCRYPTION YES
+#  define CONDOR_ENCRYPTION YES
   ENCRYPTION_FLAGS = -DCONDOR_ENCRYPTION $(3DES_FLAGS) $(BLOWFISH_FLAGS)
   ENCRYPTION_LIB =
 #else
@@ -285,8 +341,8 @@ DEBUG_FLAG = DebugFlag
 #endif
 
 #if WANT_MD && HAS_OPENSSL
-  #define NEEDS_OPENSSL YES
-  #define CONDOR_MD YES
+#  define NEEDS_OPENSSL YES
+#  define CONDOR_MD YES
   MD_FLAGS = -DCONDOR_MD
   MD_LIB =
 #else
@@ -301,63 +357,70 @@ manually enable static linking on the link line around these two
 libraries, they end up being dynamically linked in and the resulting
 binaries only run on the machine where they were built.  somehow, it's
 only happening to the globus libraries and only on AIX.  go figure.
+NOTE: we also need the same crap for libpcre.a...
 */
 #if IS_AIX5
-  PRE_GLOBUS_LIBS = -Wl,-bstatic
-  POST_GLOBUS_LIBS = -Wl,-bdynamic
+  PRE_EXT_LIBS = -Wl,-bstatic
+  POST_EXT_LIBS = -Wl,-bdynamic
 #else
-  PRE_GLOBUS_LIBS =
-  POST_GLOBUS_LIBS =
+  PRE_EXT_LIBS =
+  POST_EXT_LIBS =
 #endif
 
 
 #if NEEDS_GSI && HAS_GSI
   /* Make sure that USE_GLOBUS_OPENSSL is set */
-  #define NEEDS_OPENSSL YES
+#  define NEEDS_OPENSSL YES
   GSI_FLAGS = -DCONDOR_GSI $(GSI_AUTH_FLAGS)
-  GSI_LIB   = $(PRE_GLOBUS_LIBS) \
+  GSI_LIB   = \
 	      $(GLOBUS_DIR)/lib/libglobus_gss_assist_$(GlobusFlavor).a \
 	      $(GLOBUS_DIR)/lib/libglobus_gsi_cert_utils_$(GlobusFlavor).a \
-	      $(GLOBUS_DIR)/lib/libglobus_gsi_credential_$(GlobusFlavor).a \
-	      $(GLOBUS_DIR)/lib/libglobus_gsi_proxy_core_$(GlobusFlavor).a \
 	      $(GLOBUS_DIR)/lib/libglobus_proxy_ssl_$(GlobusFlavor).a \
-	      $(GLOBUS_DIR)/lib/libglobus_gsi_callback_$(GlobusFlavor).a \
 	      $(GLOBUS_DIR)/lib/libglobus_gssapi_gsi_$(GlobusFlavor).a \
+	      $(GLOBUS_DIR)/lib/libglobus_gsi_proxy_core_$(GlobusFlavor).a \
+	      $(GLOBUS_DIR)/lib/libglobus_gsi_credential_$(GlobusFlavor).a \
+	      $(GLOBUS_DIR)/lib/libglobus_gsi_callback_$(GlobusFlavor).a \
 	      $(GLOBUS_DIR)/lib/libssl_$(GlobusFlavor).a \
    	      $(GLOBUS_DIR)/lib/libglobus_gsi_sysconfig_$(GlobusFlavor).a \
 	      $(GLOBUS_DIR)/lib/libglobus_openssl_$(GlobusFlavor).a \
 	      $(GLOBUS_DIR)/lib/libglobus_openssl_error_$(GlobusFlavor).a \
 	      $(GLOBUS_DIR)/lib/libglobus_oldgaa_$(GlobusFlavor).a \
+	      $(GLOBUS_DIR)/lib/libglobus_callout_$(GlobusFlavor).a \
 	      $(GLOBUS_DIR)/lib/libglobus_common_$(GlobusFlavor).a \
-	      $(POST_GLOBUS_LIBS)
+	      $(GLOBUS_DIR)/lib/libltdl_$(GlobusFlavor).a
 #else
   GSI_FLAGS =
   GSI_LIB   =
 #endif
 
 #if NEEDS_OPENSSL && HAS_OPENSSL
-  #if USE_GLOBUS_OPENSSL
-    OPENSSL_FLAGS = -I$(OPENSSL_DIR)/include/$(GlobusFlavor)
+
+#  if USE_GLOBUS_OPENSSL
+    OPENSSL_FLAGS = -I$(OPENSSL_DIR)/include/$(GlobusFlavor) -DSSL_AUTHENTICATION
     OPENSSL_LIB = $(PRE_GLOBUS_LIBS) \
 		  $(OPENSSL_DIR)/lib/libssl_$(GlobusFlavor).a \
 		  $(OPENSSL_DIR)/lib/libcrypto_$(GlobusFlavor).a \
 		  $(POST_GLOBUS_LIBS)
     OPENSSL_MD_LIB = $(OPENSSL_DIR)/lib/libcrypto_$(GlobusFlavor).a 
-  #else
-    OPENSSL_FLAGS = -I$(OPENSSL_DIR)/include
+#  else
+    OPENSSL_FLAGS = -I$(OPENSSL_DIR)/include -DSSL_AUTHENTICATION
     OPENSSL_LIB = $(OPENSSL_DIR)/lib/libssl.a $(OPENSSL_DIR)/lib/libcrypto.a
     OPENSSL_MD_LIB = $(OPENSSL_DIR)/lib/libcrypto.a 
-  #endif
+#  endif
 #else
   OPENSSL_FLAGS =
   OPENSSL_LIB =
   OPENSSL_MD_LIB =
 #endif
 
+#if HAS_GLOBUS
+    GSOAP_FLAGS = -DWITH_OPENSSL -DCOMPILE_SOAP_SSL
+#endif
+
 /* Collect all the security-related variables into a single variable */
-SECURITY_FLAGS = $(GSI_FLAGS) $(KERBEROS_FLAG) $(ENCRYPTION_FLAGS) \
+SECURITY_FLAGS = $(KERBEROS_FLAG) $(ENCRYPTION_FLAGS) \
 		 $(MD_FLAGS) $(GSI_FLAGS) $(OPENSSL_FLAGS)
-SECURITY_LIB   = $(GSI_LIB) $(KERBEROS_LIB) $(ENCRYPTION_LIB) \
+SECURITY_LIB   = $(KERBEROS_LIB) $(ENCRYPTION_LIB) \
 		 $(MD_LIB) $(GSI_LIB) $(OPENSSL_LIB)
 
 #if WANT_NETMAN
@@ -368,33 +431,74 @@ NETMAN_LIB =
 NETMAN_FLAGS =
 #endif
 
-VENDOR_C_FLAGS = CFlags -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
-		 -I$(C_PLUS_INCLUDE) -D$(ARCH_FLAG)=$(ARCH_FLAG) \
+#if WANT_COREDUMPER
+COREDUMPER_FLAGS = -I$(COREDUMPER_INC)
+COREDUMPER_LINK_LIB = $(COREDUMPER_LIB)/libcoredumper.a
+#else
+COREDUMPER_FLAGS =
+COREDUMPER_LINK_LIB =
+#endif
+
+/* PCRE is sorta required everywhere at the moment */
+PCRE_FLAGS = -I$(PCRE_INC)
+PCRE_LIB = $(PCRE_DIR)/lib/libpcre.a
+
+#if WANT_QUILL
+QUILL_LIB = $(POSTGRESQL_LIB)/libpq.a
+QUILL_INC = -I$(POSTGRESQL_INC)
+QUILL_FLAGS = -DWANT_QUILL
+#else
+QUILL_LIB =
+QUILL_INC =
+QUILL_FLAGS =
+#endif
+
+
+#if HAVE_EXT_GCB
+#  if ! HAVE_GNU_LD
+#    error GCB ENABLED BUT WE DO NOT HAVE GNU LD
+#  endif
+WRAP_LDFLAGS = -Wl,--wrap,socket -Wl,--wrap,bind -Wl,--wrap,listen -Wl,--wrap,connect -Wl,--wrap,accept -Wl,--wrap,select -Wl,--wrap,recv -Wl,--wrap,read -Wl,--wrap,recvfrom -Wl,--wrap,send -Wl,--wrap,sendto -Wl,--wrap,write -Wl,--wrap,close -Wl,--wrap,dup -Wl,--wrap,dup2 -Wl,--wrap,getsockname -Wl,--wrap,getsockaddr -Wl,--wrap,getsockopt -Wl,--wrap,execv -Wl,--wrap,execve -Wl,--wrap,execl
+GCB_FLAGS = -I$(GCB_INC)
+#endif
+
+
+/********************************************
+ end of externals-specific settings and flags
+********************************************/
+
+VENDOR_C_FLAGS = CFlags -I.. -I../.. -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
+		 -I$(C_PLUS_INCLUDE) -I$(DAEMONCLIENT_INCLUDE) \
+		 $(CONFIGURE_DEFS) -D$(ARCH_FLAG)=$(ARCH_FLAG) \
 		 -D$(OS_FLAG)=$(OS_FLAG) $(SITE_C_FLAGS) $(CONDOR_G_FLAGS) \
-		 $(SECURITY_FLAGS) $(NETMAN_FLAGS) $(SNPRINTF_FLAGS)\
-		 -I$(DAEMONCLIENT_INCLUDE)
+		 $(SECURITY_FLAGS) $(NETMAN_FLAGS) $(SNPRINTF_FLAGS) \
+		 $(QUILL_FLAGS) $(GCB_FLAGS)
 
-/*
-Generally, compile with -fPIC for position-independent code.
-However, leave it as a separate Make variable so that particular
-modules that cannot use it (i.e. checkpointing) can turn it off.
 
-This is commented out by default.
-This will only be activated for special builds done by hand to
-make the SDK.
-*/
-
-/* CC_PIC_FLAG = -fPIC */
-
-#ifdef IS_C_COMP_MAJOR_GCC_3
+#if defined(IS_C_COMP_MAJOR_GCC_3) || defined(IS_C_COMP_MAJOR_GCC_4)
 GPP_VERS_FLAGS = -Wno-deprecated
 #else
 GPP_VERS_FLAGS =
 #endif
-GPP_SHARED_FLAGS = -fno-implicit-templates $(GPP_VERS_FLAGS)
 
-STD_C_FLAGS = $(VENDOR_C_FLAGS) $(DEBUG_FLAG) $(CC_PIC_FLAG) PlatformFlags PlatformGccFlags $(CCOMPILER_ID) $(HEADER_FEATURE_SET) $(FUNC_FEATURE_SET) $(CTYPE_FEATURE_SET) $(AUTOCONF_DEFS)
-STD_C_PLUS_FLAGS = $(STD_C_FLAGS) $(GPP_SHARED_FLAGS) PlatformGppFlags 
+/**
+ * Special flags needed for OSX using gcc4
+ * We force the platform/arch information to be passed into the compilation
+ * This is because TargetConditionals.h gives an 'unknown compiler' error
+ * Andy - 07.07.06
+ **/
+#if defined(IS_DARWIN) && defined(IS_I386)
+GPP_ARCH_FLAGS = -DTARGET_OS_MAC=1 -DTARGET_CPU_X86=1
+#elif defined(IS_DARWIN) && defined(IS_PPC)
+GPP_ARCH_FLAGS = -DTARGET_OS_MAC=1 -DTARGET_CPU_PPC=1
+#else
+GPP_ARCH_FLAGS =
+#endif
+
+GPP_SHARED_FLAGS = -fno-implicit-templates $(GPP_VERS_FLAGS) $(GPP_ARCH_FLAGS)
+
+STD_C_FLAGS = $(VENDOR_C_FLAGS) $(DEBUG_FLAG) $(CC_PIC_FLAG) PlatformFlags PlatformGccFlags $(CCOMPILER_ID) $(GSOAP_FLAGS) $(PCRE_FLAGS) $(COREDUMPER_FLAGS)
+STD_C_PLUS_FLAGS = $(STD_C_FLAGS) $(GPP_SHARED_FLAGS) PlatformGppFlags
 /* We basically want INST_C_PLUS_FLAGS to be equal to STD_C_PLUS_FLAGS,
 	but make sure there isn't -fno-implicit-templates in it
 	since we want any templates which need to be created to be created in 
@@ -411,23 +515,35 @@ TESTSUITE_FLAGS_F77 = -g $(VENDOR_C_FLAGS) VendorFTestFlags PlatformFlags
 
 CKPT_SERV_LIB = ../condor_ckpt_server/ckpt_server_api.a
 QMGMT_LIB = ../condor_schedd.V6/libqmgmt.a
-CLASSAD_LIB = ../condor_classad.V6/libclassad.a
+CLASSAD_LIB = ../condor_classad/libclassad.a
 IO_LIB = ../condor_io/libcedar.a
 CUTIL_LIB = ../condor_util_lib/util_lib.a
 CPLUS_LIB = ../condor_c++_util/cplus_lib.a
 PROCAPI_LIB = ../condor_procapi/libprocapi.a
 SYSAPI_LIB = ../condor_sysapi/libsysapi.a
 ACCT_LIB    = ../condor_accountant.V6/libacct.a
-DAEMONCORE_LIB = ../condor_daemon_core.V6/daemon_core.a
+DAEMONCORE_LIB = ../condor_daemon_core.V6/daemon_core.a $(COREDUMPER_LINK_LIB)
 
-ALL_LDFLAGS = -lm $(LDFLAGS) $(PLATFORM_LDFLAGS) $(SITE_LDFLAGS)
-TEST_LDFLAGS = -lm $(LDFLAGS) $(TEST_PLATFORM_LDFLAGS) $(SITE_LDFLAGS)
-PURIFY_LDFLAGS = -lm $(LDFLAGS) $(PURIFY_PLATFORM_LDFLAGS) $(SITE_LDFLAGS)
+
+/* common ld flags which should be first in the list */
+COM_LDFLAGS_F = $(GCC_RDYNAMIC_FLAG) -lm $(LDFLAGS) $(CONFIGURE_LIBS)
+
+/* common ld flags which should be last in the list */
+COM_LDFLAGS_L = 
+
+/* The various lists of needed ldflags for differing contexts */
+NOWRAP_LDFLAGS = $(COM_LDFLAGS_F) $(PLATFORM_LDFLAGS) $(COM_LDFLAGS_L)
+ALL_LDFLAGS = $(NOWRAP_LDFLAGS) $(WRAP_LDFLAGS)
+TEST_LDFLAGS = $(COM_LDFLAGS_F) $(TEST_PLATFORM_LDFLAGS) $(COM_LDFLAGS_L)
+PURIFY_LDFLAGS = $(COM_LDFLAGS_F) $(PURIFY_PLATFORM_LDFLAGS) $(COM_LDFLAGS_L) $(WRAP_LDFLAGS)
+
 
 STD_LIBS = \
   $(CUTIL_LIB) \
   $(CPLUS_LIB) \
   $(CKPT_SERV_LIB) \
+  $(QMGMT_LIB) \
+  $(ACCT_LIB) \
   $(PROCAPI_LIB) \
   $(SYSAPI_LIB) \
   $(CPLUS_LIB) \
@@ -445,5 +561,8 @@ STD_LIBS = \
   $(IO_LIB) \
   $(CPLUS_LIB) \
   $(CUTIL_LIB) \
-  $(SECURITY_LIB)
-
+  $(PRE_EXT_LIBS) \
+  $(SECURITY_LIB) \
+  $(PCRE_LIB) \
+  $(GCB_LIB) \
+  $(POST_EXT_LIBS)

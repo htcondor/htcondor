@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -278,8 +278,6 @@ CODMgr::activate( Stream* s, ClassAd* req, Claim* claim )
 {
 	MyString err_msg;
 	ClassAd *mach_classad = rip->r_classad;
-	ClassAdUnParser unp;
-	std::string bufString;
 
 	switch( claim->state() ) {
 	case CLAIM_IDLE:
@@ -305,7 +303,7 @@ CODMgr::activate( Stream* s, ClassAd* req, Claim* claim )
 	Starter* tmp_starter;
 	tmp_starter = resmgr->starter_mgr.findStarter( req, mach_classad );
 	if( ! tmp_starter ) {
-		ExprTree *tree;
+		ExprTree *tree, *rhs;
 		char* tmp = NULL;
 		tree = req->Lookup( ATTR_REQUIREMENTS );
 		if( ! tree ) {
@@ -315,11 +313,10 @@ CODMgr::activate( Stream* s, ClassAd* req, Claim* claim )
 			return sendErrorReply( s, "CA_ACTIVATE_CLAIM",
 								   CA_INVALID_REQUEST, err_msg.Value() ); 
 		}
-		unp.Unparse( bufString, tree );
-		const char *bufCString = bufString.c_str( );
-		tmp = (char *) malloc( strlen( bufCString ) + 1 );
-		strcpy( tmp, bufCString );
-
+		rhs = tree->RArg();
+        if( rhs ) {
+            rhs->PrintToNewStr( &tmp );
+        }
 		err_msg = "Cannot find starter that satisfies requirements '";
 		err_msg += tmp;
 		err_msg += "'";
@@ -358,24 +355,27 @@ CODMgr::activate( Stream* s, ClassAd* req, Claim* claim )
 	interactionLogicCODRunning();
 
 		// finally, spawn the starter and COD job itself
+
 	time_t now = time(NULL);
 	claim->setStarter( tmp_starter );	
-	claim->spawnStarter( now );
-	claim->beginActivation( now );
+	int rval = claim->spawnStarter( now );
+	if( rval ) {
+			// only want to do this if it worked...
+		claim->beginActivation( now );
+	}
+
+	MyString line;
+	line.sprintf( "%s = \"%s\"", ATTR_RESULT, 
+				  rval ? getCAResultString(CA_SUCCESS)
+				       : getCAResultString(CA_FAILURE) );
 
 	ClassAd reply;
-
-	MyString line = ATTR_RESULT;
-	line += " = \"";
-	line += getCAResultString( CA_SUCCESS );
-	line += '"';
 	reply.Insert( line.Value() );
 
 		// TODO any other info for the reply?
-
 	sendCAReply( s, "CA_ACTIVATE_CLAIM", &reply );
 
-	return TRUE;
+	return rval;
 }
 
 

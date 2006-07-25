@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -73,6 +73,8 @@
 #	include "condor_sys_bsd.h"
 #elif defined(AIX)
 #	include "condor_sys_aix.h"
+#elif defined(CONDOR_FREEBSD)
+#	include "condor_sys_bsd.h"
 #else
 #   error "condor_system.h: Don't know what Unix this is!"
 #endif
@@ -161,6 +163,7 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include <sys/utsname.h>		
 #include <sys/resource.h>
@@ -173,7 +176,7 @@
 #include <sys/time.h>
 #include <sys/times.h>
 #include <rpc/types.h>
-#if !defined(Darwin)
+#if !defined(Darwin) && !defined(CONDOR_FREEBSD)
 #include <values.h>
 #endif
 #include <math.h>
@@ -199,13 +202,13 @@ typedef fd_set *SELECT_FDSET_PTR;
 /* This stuff here is shared by all archs, *INCLUDING* NiceTry */
 
 /* Pull in some required types */
-#if defined( HAS_SYS_TYPES_H )
+#if defined( HAVE_SYS_TYPES_H )
 # include <sys/types.h>
 #endif
-#if defined( HAS_STDINT_H )
+#if defined( HAVE_STDINT_H )
 # include <stdint.h>
 #endif
-#if defined( HAS_INTTYPES_H )
+#if defined( HAVE_INTTYPES_H )
 # define __STDC_FORMAT_MACROS
 # include <inttypes.h>
 #endif
@@ -231,6 +234,20 @@ typedef fd_set *SELECT_FDSET_PTR;
 #endif
 #if !defined( PRIu64 )
 # define PRIu64 "llu"
+#endif
+
+// Define a 'filesize_t' type and FILESIZE_T_FORMAT printf format string
+#if defined HAVE_INT64_T
+  typedef int64_t filesize_t;
+# define FILESIZE_T_FORMAT "%" PRId64
+
+#elif defined HAVE___INT64_T
+  typedef __int64 filesize_t;
+# define FILESIZE_T_FORMAT "%" PRId64
+
+#else
+  typedef long filesize_t;
+# define FILESIZE_T_FORMAT "%l"
 #endif
 
 #endif /* CONDOR_SYSTEM_H */

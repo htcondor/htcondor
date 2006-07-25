@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -23,12 +23,16 @@
 
 #include "condor_common.h"
 #include "internet.h"
-#include "except.h"
-#include "debug.h"
-#include "dgram_io_handle.h"
+#include "condor_debug.h"
 #include "condor_socket_types.h"
+#include "condor_netdb.h"
 
-
+/*
+ * FYI: This code is used by the old shadow/starter and by the syscall lib
+ * lib linked inside the job. The other daemons use the do_connect in
+ * condor_io/sock.C
+ *
+ */
 unsigned short find_port_num( const char *service_name, 
 							  unsigned short dflt_port );
 char *mk_config_name( const char *service_name );
@@ -67,12 +71,13 @@ do_connect_with_timeout( const char* host, const char* service,
 	}
 
 		/* Now, bind this socket to the right interface. */
-	_condor_local_bind( fd );
+		/* TRUE means this is an outgoing connection */
+	_condor_local_bind( TRUE, fd );
 
     if (host[0]=='<'){ /* dhaval */
     	string_to_sin(host,&sin);
     } else {
-		hostentp = gethostbyname( host );
+		hostentp = condor_gethostbyname( host );
 		if( hostentp == NULL ) {
 		#if defined(vax) && !defined(ultrix)
 			herror( "gethostbyname" );
@@ -116,7 +121,7 @@ udp_connect( char* host, u_short port )
 	struct sockaddr_in	sin;
 	struct hostent		*hostentp;
 
-	hostentp = gethostbyname( host );
+	hostentp = condor_gethostbyname( host );
 	if( hostentp == NULL ) {
 #if defined(vax) && !defined(ultrix)
 		herror( "gethostbyname" );
@@ -132,7 +137,8 @@ udp_connect( char* host, u_short port )
 	}
 
 		/* Now, bind this socket to the right interface. */
-	_condor_local_bind( sock );
+		/* TRUE means this is an outgoing connection */
+	_condor_local_bind( TRUE, sock );
 
 	memset( (char *)&sin,0,sizeof(sin) );
 	memcpy( (char *)&sin.sin_addr, hostentp->h_addr, (unsigned)hostentp->h_length );
@@ -333,7 +339,7 @@ int tcp_accept_timeout(int ConnectionSock, struct sockaddr *sin, int *len,
 #if defined(AIX31) || defined(AIX32)
 	errno = EINTR;  /* Shouldn't have to do this... */
 #endif
-    count = select(FD_SETSIZE, 
+    count = select(ConnectionSock+1, 
 				   (SELECT_FDSET_PTR) &readfds, 
 				   (SELECT_FDSET_PTR) 0, 
 				   (SELECT_FDSET_PTR) 0,

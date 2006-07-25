@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -35,6 +35,8 @@
 **	Scheduler version number
 */
 #define SCHED_VERS			400
+#define HAD_COMMANDS_BASE                  (700)
+#define REPLICATION_COMMANDS_BASE          (800)
 #define CA_AUTH_CMD_BASE	1000
 // beware, QMGMT_CMD is 1111, so we don't want to use 1100...
 #define CA_CMD_BASE			1200
@@ -137,6 +139,41 @@
 #define SPOOL_JOB_FILES		(SCHED_VERS+80)	// spool all job files via filetransfer object
 #define GET_MYPROXY_PASSWORD (SCHED_VERS+81) // gmanager->schedd: Give me MyProxy password
 #define DELETE_USER			(SCHED_VERS+82)		// negotiator  (actually, accountant)
+#define DAEMON_OFF_PEACEFUL  (SCHED_VERS+83)		// specific daemon, subsys follows
+#define DAEMONS_OFF_PEACEFUL (SCHED_VERS+84)
+#define RESTART_PEACEFUL     (SCHED_VERS+85)
+#define TRANSFER_DATA		(SCHED_VERS+86) // send all job files back via filetransfer object
+#define UPDATE_GSI_CRED		(SCHED_VERS+87) // send refreshed gsi proxy file
+#define SPOOL_JOB_FILES_WITH_PERMS	(SCHED_VERS+88)	// spool all job files via filetransfer object (new version with file permissions)
+#define TRANSFER_DATA_WITH_PERMS	(SCHED_VERS+89) // send all job files back via filetransfer object (new version with file permissions)
+#define CHILD_ON            (SCHED_VERS+90) // Turn my child ON (HAD)
+#define CHILD_OFF           (SCHED_VERS+91) // Turn my child OFF (HAD)
+#define CHILD_OFF_FAST      (SCHED_VERS+92) // Turn my child OFF/Fast (HAD)
+#define NEGOTIATE_WITH_SIGATTRS	(SCHED_VERS+93)	// same as NEGOTIATE, but send sig attrs after Owner
+#define SET_ACCUMUSAGE	(SCHED_VERS+94)		// negotiator
+#define SET_BEGINTIME	(SCHED_VERS+95)		// negotiator
+#define SET_LASTTIME	(SCHED_VERS+96)		// negotiator
+#define STORE_POOL_CRED		(SCHED_VERS+97)	// master, store password for daemon-to-daemon shared secret auth (PASSWORD)
+#define VM_REGISTER	(SCHED_VERS+98)		// Virtual Machine
+#define DELEGATE_GSI_CRED_SCHEDD	(SCHED_VERS+99) // delegate refreshed gsi proxy to schedd
+#define DELEGATE_GSI_CRED_STARTER (SCHED_VERS+100) // delegate refreshed gsi proxy to starter
+
+// HAD-related commands
+#define HAD_ALIVE_CMD                   (HAD_COMMANDS_BASE + 0)
+#define HAD_SEND_ID_CMD                 (HAD_COMMANDS_BASE + 1)
+#define HAD_REPL_UPDATE_VERSION         (HAD_COMMANDS_BASE + 2)
+#define HAD_BEFORE_PASSIVE_STATE        (HAD_COMMANDS_BASE + 3)
+#define HAD_AFTER_ELECTION_STATE        (HAD_COMMANDS_BASE + 4)
+#define HAD_AFTER_LEADER_STATE          (HAD_COMMANDS_BASE + 5)
+#define HAD_IN_LEADER_STATE             (HAD_COMMANDS_BASE + 6)
+
+// Replication-related commands
+#define REPLICATION_TRANSFER_FILE          (REPLICATION_COMMANDS_BASE + 0)
+#define REPLICATION_LEADER_VERSION         (REPLICATION_COMMANDS_BASE + 1)
+#define REPLICATION_NEWLY_JOINED_VERSION   (REPLICATION_COMMANDS_BASE + 2)
+#define REPLICATION_GIVING_UP_VERSION      (REPLICATION_COMMANDS_BASE + 3)
+#define REPLICATION_SOLICIT_VERSION        (REPLICATION_COMMANDS_BASE + 4)
+#define REPLICATION_SOLICIT_VERSION_REPLY  (REPLICATION_COMMANDS_BASE + 5)
 
 /*
   The ClassAd-only protocol.  CA_CMD is the base command that's sent
@@ -216,6 +253,21 @@ const int INVALIDATE_STORAGE_ADS = 47;
 
 const int QUERY_ANY_ADS = 48;
 
+const int UPDATE_NEGOTIATOR_AD 	= 49;
+const int QUERY_NEGOTIATOR_ADS	= 50;
+const int INVALIDATE_NEGOTIATOR_ADS = 51;
+
+const int UPDATE_QUILL_AD	= 52;
+const int QUERY_QUILL_ADS	= 53;
+const int INVALIDATE_QUILL_ADS  = 54;
+
+const int UPDATE_HAD_AD = 55;
+const int QUERY_HAD_ADS = 56;
+const int INVALIDATE_HAD_ADS = 57;
+
+const int UPDATE_AD_GENERIC = 58;
+const int INVALIDATE_ADS_GENERIC = 59;
+
 /*
 *** Daemon Core Signals
 */
@@ -227,6 +279,8 @@ const int QUERY_ANY_ADS = 48;
 #define DC_SIGSOFTKILL	102	// vacate w/ checkpoint
 #define DC_SIGHARDKILL	103 // kill w/o checkpoint
 #define DC_SIGPCKPT		104	// periodic checkpoint
+#define DC_SIGREMOVE	105
+#define DC_SIGHOLD		106
 
 /*
 *** Daemon Core Commands and Signals
@@ -247,6 +301,9 @@ const int QUERY_ANY_ADS = 48;
 #define DC_RECONFIG_FULL	(DC_BASE+12)
 #define DC_FETCH_LOG        (DC_BASE+13)
 #define DC_INVALIDATE_KEY   (DC_BASE+14)
+#define DC_OFF_PEACEFUL     (DC_BASE+15)
+#define DC_SET_PEACEFUL_SHUTDOWN (DC_BASE+16)
+#define DC_TIME_OFFSET      (DC_BASE+17)
 
 /*
 *** Log type supported by DC_FETCH_LOG
@@ -300,6 +357,14 @@ const int QUERY_ANY_ADS = 48;
 #define STORK_STATUS (STORK_BASE+2)
 #define STORK_LIST 	 (STORK_BASE+3)
 
+#define CREDD_BASE 81000	
+#define CREDD_STORE_CRED (CREDD_BASE+0)
+#define CREDD_GET_CRED (CREDD_BASE+1)
+#define CREDD_REMOVE_CRED (CREDD_BASE+2)
+#define CREDD_QUERY_CRED (CREDD_BASE+3)
+#define CREDD_GET_PASSWD (CREDD_BASE+99)	// used by the Win32 credd only
+#define CREDD_NOP (CREDD_BASE+100)			// used by the Win32 credd only
+
 /*
 *** Used only in THE TOOL to choose the condor_squawk option.
 */
@@ -309,6 +374,7 @@ const int QUERY_ANY_ADS = 48;
 *** Commands used by the gridmanager daemon
 */
 #define DCGRIDMANAGER_BASE 73000
+#define GRIDMAN_CHECK_LEASES (DCGRIDMANAGER_BASE+0)
 #define GRIDMAN_REMOVE_JOBS SIGUSR1
 #define GRIDMAN_ADD_JOBS SIGUSR2
 
@@ -336,11 +402,5 @@ const int QUERY_ANY_ADS = 48;
 #define CONDOR_TRY_AGAIN	2
 #define CONDOR_ERROR	3
 
-
-#define CREDD_BASE 81000
-#define CREDD_STORE_CRED (CREDD_BASE+0)
-#define CREDD_GET_CRED (CREDD_BASE+1)
-#define CREDD_REMOVE_CRED (CREDD_BASE+2)
-#define CREDD_QUERY_CRED (CREDD_BASE+3)
 
 #endif  /* of ifndef _CONDOR_COMMANDS_H */

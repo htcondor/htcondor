@@ -37,7 +37,7 @@ How to configure condor_negotiator:
 							is reached, the log file is renamed to the log
 							file's name plus ".old" and a new log file is
 							created. Default is 64 kilobytes.
-		NEGOTIATOR_INTERVAL	Period of negotiation cycles. Default is 120
+		NEGOTIATOR_INTERVAL	Period of negotiation cycles. Default is 300
 							seconds.
 		MACHINE_UPDATE_INTERVAL	If a classad's time stamp is older than this
 								value, it's considered stale and no negotiation

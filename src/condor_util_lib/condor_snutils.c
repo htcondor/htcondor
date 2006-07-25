@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -152,7 +152,15 @@ vprintf_length(const char *format, va_list args)
 	null_output = fopen(NULL_FILE, "w");
 
 	if (NULL != null_output) {
+#ifdef va_copy
+        va_list copyargs;
+
+        va_copy(copyargs, args);
+		length = vfprintf(null_output, format, copyargs);
+        va_end(copyargs);
+#else
 		length = vfprintf(null_output, format, args);
+#endif
 		fclose(null_output);
 	} else {
 		length = -1;

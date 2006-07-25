@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -42,7 +42,6 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_config.h"
-#include "except.h"
 #include "exit.h"
 #include "condor_uid.h"
 #include "basename.h"
@@ -81,6 +80,16 @@ extern int _condor_dprintf_works;
 FILE	*DebugFP = 0;
 
 /*
+ * This is last modification time of the main debug file as returned
+ * by stat() before the current process has written anything to the
+ * file. It is set in dprintf_config, which sets it to -errno if that
+ * stat() fails.
+ * DaemonCore uses this as an approximation of when the daemon
+ * was last alive.
+ */
+time_t	DebugLastMod = 0;
+
+/*
 ** These arrays must be D_NUMLEVELS+1 in size since we can have a
 ** debug file for each level plus an additional catch-all debug file
 ** at index 0.
@@ -99,8 +108,11 @@ static	int DebugUnlockBroken = 0;
 #ifdef WIN32
 static CRITICAL_SECTION	*_condor_dprintf_critsec = NULL;
 extern int lock_file(int fd, LOCK_TYPE type, int do_block);
+static int lock_or_mutex_file(int fd, LOCK_TYPE type, int do_block);
 extern int vprintf_length(const char *format, va_list args);
+static HANDLE debug_win32_mutex = NULL;
 #endif
+static int use_kernel_mutex = -1;
 
 extern char *_condor_DebugFlagNames[];
 
@@ -120,7 +132,7 @@ int InDBX = 0;
 /* VARARGS1 */
 
 void
-_condor_dprintf_va( int flags, char* fmt, va_list args )
+_condor_dprintf_va( int flags, const char* fmt, va_list args )
 {
 	struct tm *tm, *localtime();
 	time_t clock;
@@ -132,6 +144,10 @@ _condor_dprintf_va( int flags, char* fmt, va_list args )
 	int	saved_flags;
 	priv_state	priv;
 	int debug_level;
+	int my_pid;
+#ifdef va_copy
+	va_list copyargs;
+#endif
 
 		/* DebugFP should be static initialized to stderr,
 	 	   but stderr is not a constant on all systems. */
@@ -216,6 +232,7 @@ _condor_dprintf_va( int flags, char* fmt, va_list args )
 
 		/* Grab the time info only once, instead of inside the for
 		   loop.  -Derek 9/14 */
+	memset((void*)&clock,0,sizeof(time_t)); // just to stop Purify UMR errors
 	(void)time(  (time_t *)&clock );
 	tm = localtime( (time_t *)&clock );
 
@@ -240,13 +257,28 @@ _condor_dprintf_va( int flags, char* fmt, va_list args )
 						fprintf ( DebugFP, "(fd:%d) ", fileno(DebugFP) );
 					}
 
+					if( (saved_flags|flags) & D_PID ) {
+#ifdef WIN32
+						my_pid = (int) GetCurrentProcessId();
+#else
+						my_pid = (int) getpid();
+#endif
+						fprintf( DebugFP, "(pid:%d) ", my_pid );
+					}
+
 					if( DebugId ) {
 						(*DebugId)( DebugFP );
 					}
 				}
 
-				vfprintf( DebugFP, fmt, args );
 
+#ifdef va_copy
+				va_copy(copyargs, args);
+					vfprintf( DebugFP, fmt, copyargs );
+				va_end(copyargs);
+#else
+				vfprintf( DebugFP, fmt, args );
+#endif
 			}
 
 			/* Close and unlock the log file */
@@ -301,7 +333,7 @@ _condor_open_lock_file(const char *DebugLock,int flags, mode_t perm)
 				   we created it as root, we need to try to
 				   chown() it to condor.
 				*/ 
-			dirpath = dirname( DebugLock );
+			dirpath = condor_dirname( DebugLock );
 			errno = 0;
 			if( mkdir(dirpath, 0777) < 0 ) {
 				if( errno == EACCES ) {
@@ -366,11 +398,25 @@ debug_lock(int debug_level)
 		DebugFP = stderr;
 	}
 
+	if ( use_kernel_mutex == -1 ) {
+#ifdef WIN32
+			// Use a mutex by default on Win32
+		use_kernel_mutex = param_boolean_int("FILE_LOCK_VIA_MUTEX", TRUE);
+#else
+			// Use file locking by default on Unix.  We should 
+			// call param_boolean_int here, but since locking via
+			// a mutex is not yet implemented on Unix, we will force it
+			// to always be FALSE no matter what the config file says.
+		// use_kernel_mutex = param_boolean_int("FILE_LOCK_VIA_MUTEX", FALSE);
+		use_kernel_mutex = FALSE;
+#endif
+	}
+
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
 
 		/* Acquire the lock */
 	if( DebugLock ) {
-		if( LockFd < 0 ) {
+		if( use_kernel_mutex == FALSE && LockFd < 0 ) {
 			LockFd = _condor_open_lock_file(DebugLock,O_CREAT|O_WRONLY,0660);
 			if( LockFd < 0 ) {
 				save_errno = errno;
@@ -381,7 +427,7 @@ debug_lock(int debug_level)
 
 		errno = 0;
 #ifdef WIN32
-		if( lock_file(LockFd,WRITE_LOCK,TRUE) < 0 ) 
+		if( lock_or_mutex_file(LockFd,WRITE_LOCK,TRUE) < 0 ) 
 #else
 		if( flock(LockFd,LOCK_EX) < 0 ) 
 #endif
@@ -400,8 +446,8 @@ debug_lock(int debug_level)
 
 		if( DebugFP == NULL ) {
 			if (debug_level > 0) return NULL;
-#if !defined(WIN32)
 			save_errno = errno;
+#if !defined(WIN32)
 			if( errno == EMFILE ) {
 				_condor_fd_panic( __LINE__, __FILE__ );
 			}
@@ -453,8 +499,9 @@ debug_unlock(int debug_level)
 	if( DebugLock ) {
 			/* Don't forget to unlock the file */
 		errno = 0;
+
 #if defined(WIN32)
-		if ( lock_file(LockFd,UN_LOCK,TRUE) < 0 )
+		if ( lock_or_mutex_file(LockFd,UN_LOCK,TRUE) < 0 )
 #else
 		if( flock(LockFd,LOCK_UN) < 0 ) 
 #endif
@@ -794,6 +841,20 @@ set_debug_flags( char *strflags )
 }
 
 
+time_t
+dprintf_last_modification()
+{
+	return DebugLastMod;
+}
+
+void
+dprintf_touch_log()
+{
+	if ( _condor_dprintf_works ) {
+		utime( DebugFile[0], NULL );
+	}
+}
+
 int
 mkargv( int* argc, char* argv[], char* line )
 {
@@ -809,7 +870,7 @@ _condor_save_dprintf_line( int flags, char* fmt, va_list args )
 	int len;
 
 		/* figure out how much space we need to store the string */
-	len = vprintf_length( fmt, args );
+	len = vprintf_length( fmt, args )+1; /* add 1 for the null terminator */
 	if( len <= 0 ) { 
 		return;
 	}
@@ -874,3 +935,85 @@ _condor_dprintf_saved_lines( void )
 		   to the list so it's not dangling. */
 	saved_list = NULL;
 }
+
+#ifdef WIN32
+static int 
+lock_or_mutex_file(int fd, LOCK_TYPE type, int do_block)
+{
+	int result = -1;
+	char * filename = NULL;
+	int filename_len;
+	char *ptr = NULL;
+	char mutex_name[MAX_PATH];
+
+	if ( use_kernel_mutex == FALSE ) {
+			// use a filesystem lock
+		return lock_file(fd,type,do_block);
+	}
+	
+		// If we made it here, we want to use a kernel mutex.
+		//
+		// We use a kernel mutex by default to fix a major shortcoming
+		// with using Win32 file locking: file locking on Win32 is
+		// non-deterministic.  Thus, we have observed processes
+		// starving to get the lock.  The Win32 mutex object,
+		// on the other hand, is FIFO --- thus starvation is avoided.
+
+		// first, open a handle to the mutex if we haven't already
+	if ( debug_win32_mutex == NULL && DebugLock ) {
+			// Create the mutex name based upon the lock file
+			// specified in the config file.  				
+		char * filename = strdup(DebugLock);
+		filename_len = strlen(filename);
+			// Note: Win32 will not allow backslashes in the name, 
+			// so get rid of em here.
+		ptr = strchr(filename,'\\');
+		while ( ptr ) {
+			*ptr = '/';
+			ptr = strchr(filename,'\\');
+		}
+			// The mutex name is case-sensitive, but the NTFS filesystem
+			// is not.  So to avoid user confusion, strlwr.
+		strlwr(filename);
+			// Now, we pre-append "Global\" to the name so that it
+			// works properly on systems running Terminal Services
+		_snprintf(mutex_name,MAX_PATH,"Global\\%s",filename);
+		free(filename);
+		filename = NULL;
+			// Call CreateMutex - this will create the mutex if it does
+			// not exist, or just open it if it already does.  Note that
+			// the handle to the mutex is automatically closed by the
+			// operating system when the process exits, and the mutex
+			// object is automatically destroyed when there are no more
+			// handles... go win32 kernel!  Thus, although we are not
+			// explicitly closing any handles, nothing is being leaked.
+			// Note: someday, to make BoundsChecker happy, we should
+			// add a dprintf subsystem shutdown routine to nicely
+			// deallocate this stuff instead of relying on the OS.
+		debug_win32_mutex = CreateMutex(0,FALSE,mutex_name);
+	}
+
+		// now, if we have mutex, grab it or release it as needed
+	if ( debug_win32_mutex ) {
+		if ( type == UN_LOCK ) {
+				// release mutex
+			ReleaseMutex(debug_win32_mutex);
+			result = 0;	// 0 means success
+		} else {
+				// grab mutex
+				// block 10 secs if do_block is false, else block forever
+			result = WaitForSingleObject(debug_win32_mutex, 
+				do_block ? INFINITE : 10 * 1000);	// time in milliseconds
+				// consider WAIT_ABANDONED as success so we do not EXCEPT
+			if ( result==WAIT_OBJECT_0 || result==WAIT_ABANDONED ) {
+				result = 0;
+			} else {
+				result = -1;
+			}
+		}
+
+	}
+
+	return result;
+}
+#endif  // of Win32

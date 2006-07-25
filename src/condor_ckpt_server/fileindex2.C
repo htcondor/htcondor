@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -424,6 +424,7 @@ int FileIndex::DeleteFile(struct in_addr machine_IP,
 
 	sprintf(pathname, "%s%s/%s/%s", LOCAL_DRIVE_PREFIX, machine_name, 
 			owner_name, file_name);
+	dprintf(D_ALWAYS, "    Deleting file: %s\n", pathname);
 	if (unlink(pathname)) {
 		retCode = CANNOT_DELETE_FILE;
 	}

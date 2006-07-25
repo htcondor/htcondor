@@ -1,0 +1,1546 @@
+#! /usr/bin/env perl
+use CondorTest;
+use CondorPersonal;
+use Cwd;
+use x_hadutilities;
+
+CondorPersonal::DebugOff();
+Condor::DebugOff();
+
+my $testName     = 'job_replication_basic - ' . 
+				   'Testing HAD and replication functionality';
+my $coreName     = 'job_replication_basic';
+my $testingSystemConfigName      = 'job_replication_basic.cfg';
+my $personalCondorParametersName = 'x_param.replication';
+my $localPostSourceName          = 'job_replication_basic.localpostsrc';
+#my $condorConfigName             = 'condor_config';
+#my $localCondorConfigName        = 'condor_config.local';
+my $topDirectory = getcwd();
+
+#if(@ARGV != 1)
+#{
+#    print STDERR "Wrong number of arguments, usage: $coreName <test number>\n";
+#	exit 1;
+#}
+#my $testNumber = $ARGV[0];
+
+if(! -f "$topDirectory/$testingSystemConfigName")
+{
+	print STDERR "No configuration file: " .
+				 "$topDirectory/$testingSystemConfigName";
+	exit 1;
+}
+
+print "Working directory is $topDirectory\n";
+
+# Operating system environment variables of the test
+my $currentHost = `hostname`;
+chomp($currentHost);
+
+my $currentIp   = &GetMyIpAddress();
+my $pId         = $$;
+# End of operating system environment variables of the test
+
+system("date");
+
+# create the skeleton of testing system
+my $savemeDirectory         = "$topDirectory/$coreName.saveme";
+my $testingSystemDirectory  = "$topDirectory/TestingSystem";
+my $configurationsDirectory = "$testingSystemDirectory/Configurations";
+my $jobsDirectory           = "$testingSystemDirectory/Jobs";
+my $jobsLogsDirectory       = "$jobsDirectory/Logs";
+my $jobsOutputsDirectory    = "$jobsDirectory/Outputs";
+my $logsDirectory           = "$testingSystemDirectory/Logs";
+
+mkdir "$testingSystemDirectory";
+
+#mkdir "$configurationsDirectory";
+mkdir "$jobsDirectory";
+mkdir "$logsDirectory";
+mkdir "$jobsLogsDirectory";
+mkdir "$jobsOutputsDirectory";
+
+# Test definitions from the test configuration file
+my %configurationTable = 
+	&LoadTable("$topDirectory/$testingSystemConfigName", 
+			 	%configurationTable);
+my @enabledCheckers = split(',', $configurationTable{ENABLED_CHECKERS});
+
+my @nonFailingHads  = split(',', $configurationTable{NON_FAILING_HADS}) 
+						if defined($configurationTable{NON_FAILING_HADS});
+#my @suspendableHads = split(',', $configurationTable{SUSPENDABLE_HADS}) 
+#						if defined($configurationTable{SUSPENDABLE_HADS});
+#my @failableHads    = split(',', $configurationTable{FAILABLE_HADS})
+#						if defined($configurationTable{FAILABLE_HADS});
+my $hadsNumber      = $configurationTable{HADS_NUMBER};
+my $hadUsePrimary   = $configurationTable{HAD_USE_PRIMARY};
+# End of test definitions from the test configuration file
+
+# Inner structures for tracing pool status
+my @aliveHads;
+my @aliveReplications;
+my @hadsStatus;
+my $lastNeg;
+my $theNeg;
+# End of inner structures for tracing pool status
+
+# Timers declaration
+my @hadRaiseTimers;
+my @hadFailTimers;
+my $jobsSubmitTimer;
+my $negTimer;
+my $checkersTimer;
+my $startTimer;
+# End of timers declaration
+
+my $time;
+my $iterationNumber   = 1;
+my $submissionsNumber = 0;
+my $failuresNumber    = 0;
+
+# String that collects all the cycle messages and at the end of cycle is
+# appended to the control file
+my $controlString   = "";
+#my $primaryHadIndex;
+
+# Each time we create Condor instance, we update the below arrays
+my @configurationFiles;
+my @collectorPorts;
+
+# Define the randomization seed for the current configuration
+srand($configurationTable{SEED});
+
+&LogControl($logsDirectory, "************************************\n" .
+                            "************************************");
+my $hadList;
+my $replicationList;
+my $collectorList;
+my $comma = '';
+
+foreach my $hadIndex (1 .. $hadsNumber)
+{
+	my $hadPort         = HAD_STARTING_PORT + $hadIndex;
+	my $replicationPort = REPLICATION_STARTING_PORT + $hadIndex;
+	my $collectorPort   = COLLECTOR_STARTING_PORT + $hadIndex;
+	
+	$hadList .= $comma . "<$currentIp:$hadPort>";
+	$replicationList .= $comma . "<$currentIp:$replicationPort>";
+	$collectorList .= $comma . "$currentIp:$collectorPort";
+	$comma = ',';
+}
+
+my $previousCondorConfig = $ENV{CONDOR_CONFIG};
+
+#$ENV{CONDOR_CONFIG} = "$topDirectory/$condorConfigName";
+#&SubstituteLine($ENV{CONDOR_CONFIG},
+#				'LOCAL_CONFIG_FILE', "$topDirectory/$localCondorConfigName");
+&ImplantLine("$topDirectory/$personalCondorParametersName", 
+			 'collector', "$collectorList");
+#&ImplantLine("$topDirectory/$personalCondorParametersName", 'vms', 1);
+#&ImplantLine($ENV{CONDOR_CONFIG}, 'COLLECTOR_HOST', "$collectorList");
+# Configure several Condor instances and start them
+foreach my $hadIndex (1 .. $hadsNumber)
+{
+	# Initialize inner structures to trace daemons behaviour
+	#$suspendableHads[$hadIndex]   = YES;
+	#$failableHads[$hadIndex]      = YES;    
+	$aliveHads[$hadIndex]         = YES;
+	$hadsStatus[$hadIndex]        = RAISED;
+	$aliveReplications[$hadIndex] = YES 
+		if $hadUsePrimary ne 'Not defined';
+
+    $hadRaiseTimers[$hadIndex]   = MAX_INT;
+
+	# Temporary solution for multiple instances creation: creating instances
+	# with different ports numbers
+	#my $localConfigFile = &GetCondorLocalConfigurationFile();
+	my $localPostSourceFile = "$topDirectory/$localPostSourceName";
+	my $hadPort         = HAD_STARTING_PORT + $hadIndex;
+	my $replicationPort = REPLICATION_STARTING_PORT + $hadIndex;
+	my $collectorPort   = COLLECTOR_STARTING_PORT + $hadIndex;
+	my $scheddPort      = SCHEDD_STARTING_PORT + $hadIndex;
+	my $negotiatorPort  = NEGOTIATOR_STARTING_PORT + $hadIndex; 
+	my $startdPort      = STARTD_STARTING_PORT + $hadIndex;
+	
+	&ImplantLine($localPostSourceFile, 'COLLECTOR_ARGS', "-p $collectorPort");
+	&ImplantLine($localPostSourceFile, 'HAD_ARGS', "-p $hadPort");
+	&ImplantLine($localPostSourceFile, 'REPLICATION_ARGS', 
+												   "-p $replicationPort");
+	&ImplantLine($localPostSourceFile, 'NEGOTIATOR_ARGS', "-p $negotiatorPort");
+	&ImplantLine($localPostSourceFile, 'SCHEDD_ARGS', "-p $scheddPort");
+	&ImplantLine($localPostSourceFile, 'STARTD_ARGS', "-p $startdPort");
+	&ImplantLine($localPostSourceFile, 'HAD_LIST', "$hadList");
+	&ImplantLine($localPostSourceFile, 'REPLICATION_LIST', "$replicationList");
+#	&ImplantLine($localPostSourceFile, 'COLLECTOR_HOST', "$collectorList");
+	&ImplantLine($localPostSourceFile, 'MASTER_NAME', "Master$hadIndex");
+	&ImplantLine($localPostSourceFile, 'STARTD_NAME', "Startd$hadIndex");
+#	&ImplantLine($localPostSourceFile, 'HAD_NAME', "HAD \#$hadIndex");
+	&ImplantLine($localPostSourceFile, 'HAD_USE_REPLICATION', 'true');
+	&ImplantLine($localPostSourceFile, 'HAD_CONNECTION_TIMEOUT', '2');
+    &ImplantLine($localPostSourceFile, 'HAD_USE_PRIMARY', 'true');
+    &ImplantLine($localPostSourceFile, 'MAX_HAD_LOG', '6400000');
+    &ImplantLine($localPostSourceFile, 'HAD_DEBUG', 'D_FAILURE');
+    &ImplantLine($localPostSourceFile, 'HAD_LOG', '$(LOG)/HADLog.$(HOSTNAME)');
+    &ImplantLine($localPostSourceFile, 'MASTER_NEGOTIATOR_CONTROLLER',
+                'HAD');
+
+    &ImplantLine($localPostSourceFile, 'DAEMON_LIST',
+        'COLLECTOR, MASTER, NEGOTIATOR, SCHEDD, STARTD, HAD, REPLICATION');
+    &ImplantLine($localPostSourceFile, 'DC_DAEMON_LIST',
+        'MASTER, STARTD, SCHEDD, KBDD, COLLECTOR, NEGOTIATOR, EVENTD, ' .
+        'VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, HAWKEYE, HAD, REPLICATION');
+    &ImplantLine($localPostSourceFile, 'HAD', '$(SBIN)/condor_had');
+	&ImplantLine($localPostSourceFile, 'REPLICATION', 
+				'$(SBIN)/condor_replication');
+	&ImplantLine($localPostSourceFile, 'NEGOTIATOR_STATE_FILE', 
+				'$(SPOOL)/Accountantnew.log');
+	&ImplantLine($localPostSourceFile, 'REPLICATION_INTERVAL', '25');
+	&ImplantLine($localPostSourceFile, 'HAD_ALIVE_TOLERANCE', '150');
+	&ImplantLine($localPostSourceFile, 'MAX_TRANSFER_LIFETIME', '10');
+	&ImplantLine($localPostSourceFile, 'NEWLY_JOINED_WAITING_VERSION_INTERVAL',
+				'5');
+	&ImplantLine($localPostSourceFile, 'HAD_UPDATE_INTERVAL', '300');
+	&ImplantLine($localPostSourceFile, 'REPLICATION_LOG', 
+				'$(LOG)/ReplicationLog');
+	&ImplantLine($localPostSourceFile, 'TRANSFERER_LOG', 
+				'$(LOG)/TransfererLog');
+	&ImplantLine($localPostSourceFile, 'MAX_REPLICATION_LOG', '6400000');
+	&ImplantLine($localPostSourceFile, 'MAX_TRANSFERER_LOG', '6400000');
+	&ImplantLine($localPostSourceFile, 'REPLICATION_DEBUG', 'D_FULLDEBUG');
+	&ImplantLine($localPostSourceFile, 'TRANSFERER_DEBUG', 'D_FULLDEBUG');
+	&ImplantLine($localPostSourceFile, 'TRANSFERER_TIMEOUT_MULTIPLIER', '1');
+	# Generate condor instance: we configure each instance so that no possible
+	# clash can happen between different condor daemons of all the instances
+	my $configurationFileAndCollectorPort =
+	    CondorPersonal::StartCondor(
+			"$topDirectory/$personalCondorParametersName", 
+			"_instance$hadIndex");
+	($configurationFiles[$hadIndex], $collectorPorts[$hadIndex]) =
+		split(/:/, $configurationFileAndCollectorPort);
+	&LogControl($logsDirectory, &FormatTime(time()) . 
+			": instance #$hadIndex ($configurationFiles[$hadIndex]) going up");
+}
+
+#$ENV{CONDOR_CONFIG} = $previousCondorConfig;
+
+$controlString = '';
+
+#&LogControl($logsDirectory, "Suspendable machines : @suspendableHads");
+&LogControl($logsDirectory, "Non-failable machines: @nonFailingHads");
+
+# Condor configuration parameters
+my $hadConnectionTimeout = &CondorConfigVal("$currentIp:$collectorPorts[1]", 
+											'HAD_CONNECTION_TIMEOUT'); 
+chomp($hadConnectionTimeout);
+my $hadCycleInterval     = 2 * (2 * $hadConnectionTimeout * $hadsNumber + 1);
+my $negotiatorTime       = $hadCycleInterval * 3 + 1;
+my $hadUsePrimary        = &CondorConfigVal("$currentIp:$collectorPorts[1]",
+											'HAD_USE_PRIMARY'); 
+#my $condorLogsDirectory =
+#        &CondorConfigVal("$currentIp:$collectorPorts[1]", 'LOG');
+# End of condor configuration parameters
+
+# Wait for some time to let the system stabilize: almost instant daemons
+# creation plus the time for choosing the negotiator in the pool
+&LogControl($logsDirectory, "Waiting " . eval(3 * $hadCycleInterval) .
+                            " seconds to let the system stabilize");
+sleep(3 * $hadCycleInterval);
+
+# Initializing all the timers after the system had stabilized
+
+# Generating necessary files for jobs submission and initializing submission
+# structures
+if($configurationTable{SUBMISSIONS_CHECKED})
+{
+    &GenerateJobs();
+    $jobsSubmitTimer = time() + $configurationTable{JOBS_SUBMISSION_TIME};
+    &LogControl($logsDirectory, &FormatTime(time()) .
+                ": set job submit timer to " . &FormatTime($jobsSubmitTimer));
+}
+
+foreach my $hadIndex (1 .. $hadsNumber)
+{
+	$hadFailTimers[$hadIndex]    =
+		&ReactivateTimer($configurationTable{HAD_FAIL_TIME});
+	$hadRaiseTimers[$hadIndex]   = MAX_INT;
+	$controlString              .= ": set instance #$hadIndex fail timer to " .
+                                    &FormatTime($hadFailTimers[$hadIndex]);
+}
+# Setting the failure time of non failing HADs to infinite value
+foreach my $nonFailingHad (@nonFailingHads)
+{
+    $hadFailTimers[$nonFailingHad] = time() + POSTPONE;
+    $controlString  .= ": changed $nonFailingHad timer to " .
+                        &FormatTime($hadFailTimers[$nonFailingHad]) .
+                        " since it is a non-failing HAD";
+}
+
+$negTimer      = 0;
+$checkersTimer = &ReactivateTimer($configurationTable{CHECKERS_TIME});
+$startTimer    = time();
+$time          = time();
+
+&LogControl($logsDirectory, &FormatTime(time()) . "$controlString");
+
+# While there is still time for the system to run, do the following
+while($time - $startTimer <= $configurationTable{RUN_TIME})
+{
+	# Pre-cycle assignments
+	$controlString = "";
+
+	# Cycle
+    &SubmitJobs();
+
+    last if($configurationTable{SUBMISSIONS_CHECKED} &&
+    	$submissionsNumber >= $configurationTable{BULKS_NUMBER} &&
+        &AreAllJobsFinished() eq YES);
+
+#        &Reconfigure() 
+#			if $configurationTable{RECONFIGURE_LIST};
+	&FailMachines();
+	&RaiseMachines();
+
+	&UpdateState();
+
+	&ApplyCheckers();
+
+	if($controlString)
+	{
+		&LogControl($logsDirectory, $iterationNumber . ": " .
+					&FormatTime($time) . $controlString . "\n");
+		$iterationNumber ++;
+	}
+	# End of cycle
+
+	# Post-cycle assignments
+	$lastNeg = $theNeg if $theNeg && $theNeg ne MORE_THAN_ONE;
+    $time    = time();
+}
+
+# Terminate Condor on each one of the pool machines
+&LogControl($logsDirectory, &FormatTime(time()) . 
+							": start killing Condor daemons");
+&KillAllInstances();
+&LogControl($logsDirectory, &FormatTime(time()) . ": killed everyone");
+
+#exit 1 if (-e "$logsDirectory/Error.log");
+
+&MoveAllToSaveDirectory();
+
+print "$coreName test SUCCESS!\n";
+### End of main ###
+
+### Checkers ###
+
+sub Only1Neg
+{
+	my $time                = time();
+	my $timeStamp           = &FormatTime($time);
+	my $checkerName         = "Only1Neg";
+    my $checker             = "  Checker\t: ";
+    my $success             = "  Success\t: ";
+    my $error               = "    Error\t: ";
+    my $message             = "Iteration\t: $iterationNumber\tTime: " .
+								$timeStamp . "\n" . 
+							  $checker . $checkerName . "\n";
+	# System is not stabilized yet
+    return YES unless ($negTimer <= $time);
+    
+	if(!$theNeg)
+    {
+        $message .= $error . "No negotiator\n";
+        &LogError($logsDirectory, $message);
+
+        return NO;
+    }
+    if($theNeg eq MORE_THAN_ONE)
+    {
+        $message .= $error . "More than one negotiator\n";
+        &LogError($logsDirectory, $message);
+
+        return NO;
+    }
+    $message .= $success . "Exactly one negotiator: $theNeg\n";
+    &LogSuccess($logsDirectory, $message);
+
+    return YES;
+}
+
+sub PrimaryTakesLead
+{
+	my $time                = time();
+	my $timeStamp           = &FormatTime($time);
+    my $checkerName         = "PrimaryTakesLead";
+    my $checker             = "  Checker\t: ";
+    my $success             = "  Success\t: ";
+    my $error               = "    Error\t: ";
+    my $message             = "Iteration\t: $iterationNumber\tTime: " . 
+							  $timeStamp . "\n" . 
+							  $checker . $checkerName . "\n";
+    # No primary HAD was declared in the config file, primary HAD is not
+	# stabilized yet or the whole system is not stabilized
+    return YES if !$hadUsePrimary || 
+				   $hadRaiseTimers[1] > $time ||
+                   $aliveHads[1] eq NO ||
+                   $hadsStatus[1] eq FAILED ||
+				   $negTimer > $time;
+    if(!$theNeg)
+    {
+        $message .= $error . "No negotiator\n";
+        &LogError($logsDirectory, $message);
+
+        return NO;
+    }
+    if($theNeg eq MORE_THAN_ONE)
+    {
+        $message .= $error . "More than one negotiator\n";
+        &LogError($logsDirectory, $message);
+
+        return NO;
+    }
+    if($theNeg ne '1')
+    {
+        $message .= $error . "Negotiator on #$theNeg " . 
+							 "although primary HAD on #1 is up\n";
+        &LogError($logsDirectory, $message);
+
+        return NO;
+    }
+    $message .= $success . "Primary HAD on #1 is up " . 
+						   "and raised its negotiator\n";
+    &LogSuccess($logsDirectory, $message);
+
+    return YES;
+}
+
+sub AlwaysTheSameNeg
+{
+	my $time              = time();
+    my $timeStamp         = &FormatTime($time);
+    my $checkerName       = "AlwaysTheSameNeg";
+    my $checker           = "  Checker\t: ";
+    my $success           = "  Success\t: ";
+    my $error             = "    Error\t: ";
+    my $message           = "Iteration\t: $iterationNumber\tTime: " . 
+							$timeStamp . "\n" . $checker . $checkerName . "\n";
+
+    # System is not stabilized
+    return YES unless ($negTimer <= $time);
+    
+	if(!$theNeg)
+    {
+        $message.= $error . "No negotiator\n";
+        &LogError($logsDirectory, $message);
+
+        return NO;
+    }
+    # No previous negotiator, cannot compare
+    return YES if(!$lastNeg);
+
+    if($theNeg eq MORE_THAN_ONE)
+    {
+        $message .= $error . "More than one negotiator\n";
+        &LogError($logsDirectory, $message);
+
+        return NO;
+    }
+    # Exactly one negotiator
+    if($theNeg eq $lastNeg)
+    {
+        $message .= $success . "Negotiator #$theNeg is the same " . 
+					"as in the previous iteration\n";
+        &LogSuccess($logsDirectory, $message);
+
+        return YES;
+    }
+
+    return YES if($hadsStatus[$theNeg]  eq FAILED || 
+	   			  $hadsStatus[$lastNeg] eq FAILED || 
+	   			  $lastNeg ne '1' && $theNeg ne '1');
+    
+	if($lastNeg ne MORE_THAN_ONE && $theNeg ne '1')
+    {
+        $message .= $error . 
+					"Negotiator #$lastNeg jumped with no reason to #$theNeg\n";
+        &LogError($logsDirectory, $message);
+
+        return NO;
+    }
+
+    return YES;
+}
+
+sub FailureDetection
+{
+    my $time               = time();
+    my $timeStamp          = &FormatTime($time);
+
+    my $checkerName        = "FailureDetection";
+    my $checker            = "  Checker\t: ";
+    my $success            = "  Success\t: ";
+    my $error              = "    Error\t: ";
+    my $message            = "Iteration\t: $iterationNumber\tTime: " .
+							$timeStamp . "\n" . $checker . $checkerName . "\n";
+
+    # No negotiator failure was detected or the system is not stabilized yet
+	return YES
+    if(&AreAllFailed() eq YES || 
+	   $lastNeg && $hadsStatus[$lastNeg] eq FAILED ||
+	   $negTimer > $time);
+    
+	if(!$theNeg)
+    {
+        $message .= $error . "No negotiator was elected after failure\n";
+        &LogError($logsDirectory, $message);
+
+        return NO;
+    }
+}
+
+sub MultipleSend
+{
+	my $time      = time();
+    my $timeStamp = &FormatTime($time);
+
+    my $checkerName = "MultipleSend";
+    my $checker     = "  Checker\t: ";
+    my $success     = "  Success\t: ";
+    my $error       = "    Error\t: ";
+    my $message     = "Iteration\t: $iterationNumber\tTime: $timeStamp\n" .
+                   	  "$checker$checkerName\n";
+    # TBD: checking whether negotiator publishes itself in all the collectors
+    foreach my $collectingHadIndex (1 .. $hadsNumber)
+    {
+        my $collectingHadFailTimer = $hadFailTimers[$collectingHadIndex];
+        
+        next if($collectingHadFailTimer <= $time);
+
+		my $collectorSinfulString =
+			"<$currentIp:$collectorPorts[$collectingHadIndex]>";
+
+        foreach my $publishingHadIndex (1 .. $hadsNumber)
+        {
+            my $publishingHadFailTimer = $hadFailTimers[$publishingHadIndex];
+        
+            next if($publishingHadFailTimer <= $time);
+
+            # checking whether startd publishes its ClassAds 
+			# in all the collectors
+			my $condorLogsDirectory =
+			&CondorConfigVal("$currentIp:$collectorPorts[$publishingHadIndex]",
+			'LOG');
+			my $startdSinfulAddress =
+				&GetAddress("$condorLogsDirectory/\.startd_address");
+            if(!&IsCondorDaemonPublished(
+				'Startd', $startdSinfulAddress, $collectorSinfulString))
+            {
+                $message .= $error .
+					"Startd of $publishingHadIndex is not published " . 
+					"in $collectingHadIndex\n";
+                &LogError($logsDirectory, $message);
+                
+                return NO;
+            }
+            # checking whether schedd publishes its ClassAds 
+			# in all the collectors
+            my $scheddSinfulAddress =
+				&GetAddress("$condorLogsDirectory/\.schedd_address");
+			if(!&IsCondorDaemonPublished(
+				'Schedd', $scheddSinfulAddress, $collectorSinfulString))
+			{
+                $message .= $error . 
+					"Schedd of $publishingHadIndex is not published " .
+					"in $collectingHadIndex\n";
+                &LogError($logsDirectory, $message);
+
+                return NO;
+            }
+            # checking whether master publishes its ClassAds 
+			# in all the collectors
+            my $masterSinfulAddress =
+				&GetAddress("$condorLogsDirectory/\.master_address");
+			if(!&IsCondorDaemonPublished(
+		        'Master', $masterSinfulAddress, $collectorSinfulString)) 
+			{
+                $message .= $error . 
+					"Master of $publishingHadIndex is not published " .
+					"in $collectingHadIndex\n";
+                &LogError($logsDirectory, $message);
+
+                return NO;
+            }
+			# checking whether HAD publishes its ClassAds in all the collectors
+			my $hadPort = HAD_STARTING_PORT + $publishingHadIndex;
+			
+			if(!&IsCondorDaemonPublished('HAD', 
+					"<$currentIp:$hadPort>", $collectorSinfulString))
+			{
+				$message .= $error .
+				            "HAD of $publishingHadIndex is not published " .
+							"in $collectingHadIndex\n";
+				&LogError($logsDirectory, $message);
+
+				return NO;
+			}
+        }
+    }
+    $message .= $success . 
+		"All daemons publish their ClassAds in all existent collectors\n";
+    &LogSuccess($logsDirectory, $message);
+    
+    return YES;
+}
+
+sub TestingSystemConsistency
+{
+	my $time        = time();
+    my $timeStamp   = &FormatTime($time);
+    my $checkerName = "TestingSystemConsistency";
+    my $checker     = "  Checker\t: ";
+    my $success     = "  Success\t: ";
+    my $error       = "    Error\t: ";
+    my $message     = "Iteration\t: $iterationNumber\tTime: $timeStamp\n";
+    my $classAdLifeTime = &CondorConfigVal(
+		"$currentIp:$collectorPorts[$nonFailingHads[0]]", 
+		'CLASSAD_LIFETIME');
+    chomp($classAdLifeTime);
+
+    $message .= $checker . $checkerName . "\n";
+
+	# System is not stabilized yet
+	return YES unless ($negTimer <= $time);
+ #   return YES if($negTimer + $classAdLifeTime > $now);
+
+    my @aliveSchedds;
+	my @aliveStarts;
+	my @aliveCollectors;
+
+    foreach my $aliveHadIndex (1 .. $hadsNumber)
+    {
+		my $scheddPort = SCHEDD_STARTING_PORT + $aliveHadIndex;
+		my $startdPort = STARTD_STARTING_PORT + $aliveHadIndex;
+		my $collectorPort = COLLECTOR_STARTING_PORT + $aliveHadIndex;
+	
+		$aliveSchedds[$aliveHadIndex] = 
+		(&IsDaemonAlive('condor_schedd', $scheddPort)) ? YES : NO;
+   
+   		$aliveStartds[$aliveHadIndex] =
+		(&IsDaemonAlive('condor_startd', $startdPort)) ? YES : NO;
+
+		$aliveCollectors[$aliveHadIndex] =
+		(&IsDaemonAlive('condor_collector', $collectorPort)) ? YES : NO;
+	}
+	# checking schedd daemons
+	if("@aliveHads" ne "@aliveSchedds")
+	{
+    	$message .= $error . "Alive schedds and alive HADs are different: " . 
+    		join(' ', @aliveSchedds) . " vs " . join(' ', @aliveHads) . "\n";
+        &LogError($logsDirectory, $message);
+
+        return NO;
+    }
+    # checking startd daemons
+    if("@aliveHads" ne "@aliveStartds")
+    {
+    	$message .= $error . "Alive startds and alive HADs are different: " . 
+        	join(' ', @aliveStartds) . " vs " . join(' ', @aliveHads) . "\n";
+        &LogError($logsDirectory, $message);
+
+        return NO;
+    }
+
+    # checking collector daemons
+	if("@aliveHads" ne "@aliveCollectors")
+    {
+		$message .= $error . "Alive collectors and alive HADs are different: " .
+			join(' ', @aliveCollectors) . " vs " . join(' ', @aliveHads) . "\n";
+        &LogError($logsDirectory, $message);
+
+        return NO;
+	}
+
+    # checking that the testing system information about HADs is correct
+    foreach my $aliveHadIndex (1 .. $hadsNumber)
+    {
+        next if $aliveHads[$aliveHadIndex] eq NO &&
+                $hadsStatus[$aliveHadIndex] eq FAILED ||
+                $aliveHads[$aliveHadIndex] eq YES &&
+                $hadsStatus[$aliveHadIndex] eq RAISED;
+        $message .= $error . "\#$aliveHadIndex HAD state is $aliveHads[$aliveHadIndex], " .
+                    "whereas testing system's HAD state is $hadsStatus[$aliveHadIndex]\n";
+        &LogError($logsDirectory, $message);
+
+        return NO;
+    }
+
+    $message .= $success . "All traces of testing system match " .
+				"the real processes\n";
+   	&LogSuccess($logsDirectory, $message);
+
+    return YES;
+}
+
+sub AccountantsNotOld
+{
+    my $time                = time();
+    my $timeStamp           = &FormatTime($time);
+    my $checkerName         = "AccountantsNotOld";
+    my $checker             = "  Checker\t: ";
+    my $success             = "  Success\t: ";
+    my $error               = "    Error\t: ";
+    my $message             = "Iteration\t: $iterationNumber\tTime: " . 
+							  $timeStamp . "\n";
+    my $latestModificationTime       = 0;
+    my $earliestModificationTime     = MAX_INT;
+
+	# System is not stabilized yet
+    return YES unless ($negTimer <= $time);
+
+    # The checker returns success value vacuously when the replication features
+	# are not used at all
+    if(!$configurationTable{HAD_USE_REPLICATION})
+	   #!$configurationTable{SUBMISSIONS_CHECKED} ||
+       # $submissionsNumber == 0                   ||
+       # $submissionsNumber == $configurationTable{BULKS_NUMBER})
+    {
+        return YES;
+    }
+
+    $message .= $checker . $checkerName . "\n";
+
+    my $replicationInterval =
+	&CondorConfigVal("$currentIp:$collectorPorts[$nonFailingHads[0]]", 
+					'REPLICATION_INTERVAL');
+    # Miscellaneous delays include waiting in condor queue for matching, time of
+    # 'condor_replication' running after it
+    # has been woken up, waiting in OS processes queue etc.
+    my $miscellaneousDelays       = 10;
+    my $outdateEstimationInterval = 300 + $configurationTable{JOBS_TIME} + 
+										  $miscellaneousDelays;
+    # Calculating last known update times of each replica of accountant
+    # information file
+    # It is enough, since the last known modification time must be always
+    # earlier than the real modification time
+    foreach my $hadIndex (1 .. $hadsNumber)
+    {
+		next if $aliveHads[$hadIndex] eq NO;
+		
+		my $spoolDirectory   =
+			&CondorConfigVal("$currentIp:$collectorPorts[$hadIndex]",
+						 	'SPOOL');
+        my $modificationTime = 
+			&GetModificationTime("$spoolDirectory/Version");
+        # Our estimate for the outdated files (while submitting jobs) is when
+        # they were last time changed
+        # more than 2 * REPLICATION_INTERVAL + JOBS_TIME + <miscellaneous
+        # delays> seconds ago
+        if($outdateEstimationInterval + $modificationTime < $time)
+        {
+            $message .= $error . '#' . $hadIndex . 
+						"\'s accountant information replica " .
+                        "modification time/last known modification time (" .
+                        &FormatTime($modificationTime) .
+                        ") is too outdated as compared to current time (" .
+						$timeStamp . ") with \#submission " .
+                        $submissionsNumber . "  and  overall \#submissions " .
+						$configurationTable{BULKS_NUMBER};
+            &LogError($logsDirectory, $message);
+
+            return NO;
+        }
+    }
+
+    $message .= $success . 
+				"None of accountant information files is too outdated.";
+    &LogSuccess($logsDirectory, $message);
+
+    return YES;
+}
+
+sub AccountantsSynchronization
+{
+    my $time         = time();
+    my $timeStamp    = &FormatTime($time);
+    my $checkerName  = "AccountantsSynchronization";
+    my $checker      = "  Checker\t: ";
+    my $success      = "  Success\t: ";
+    my $error        = "    Error\t: ";
+    my $message      = "Iteration\t: $iterationNumber\tTime: " .
+					   $timeStamp . "\n";
+
+    my $latestModificationTime       = 0;
+    my $earliestModificationTime     = MAX_INT;
+    my $greatestLogicalClockValue    = 0;
+    my $leastLogicalClockValue       = MAX_INT;
+
+    $message .= $checker . $checkerName . "\n";
+
+	# System is not stabilized yet
+    return YES unless ($negTimer <= $time);
+
+    # Calculating modification times of each replica of accountant information
+    # file
+    foreach my $hadIndex (1 .. $hadsNumber)
+    {
+		next if $aliveHads[$hadIndex] eq NO;
+
+		my $spoolDirectory   =
+			&CondorConfigVal("$currentIp:$collectorPorts[$hadIndex]",
+			                 'SPOOL');											
+        my $modificationTime = 
+			&GetModificationTime("$spoolDirectory/Version");
+        my $logicalClockValue = &GetLogicalClock("$spoolDirectory/Version");
+
+        $latestModificationTime    = $modificationTime 
+		if $latestModificationTime < $modificationTime;
+        
+		$earliestModificationTime  = $modificationTime 
+		if $earliestModificationTime > $modificationTime;
+        
+		$greatestLogicalClockValue = $logicalClockValue 
+		if $greatestLogicalClockValue < $logicalClockValue;
+        
+		$leastLogicalClockValue    = $logicalClockValue 
+		if $leastLogicalClockValue > $logicalClockValue;
+    }
+
+    my $replicationInterval =
+	&CondorConfigVal("$currentIp:$collectorPorts[$nonFailingHads[0]]", 
+					'REPLICATION_INTERVAL');
+    my $negotiatorInterval  = 
+	&CondorConfigVal("$currentIp:$collectorPorts[$nonFailingHads[0]]",
+					'NEGOTIATOR_INTERVAL');
+
+    $replicationInterval = 300 if $replicationInterval eq 'Not defined';
+    $negotiatorInterval  = 300 if $negotiatorInterval  eq 'Not defined';
+
+    my $toleranceInterval = $replicationInterval;
+
+    $toleranceInterval = $negotiatorInterval 
+	if $negotiatorInterval > $replicationInterval;
+
+    if($latestModificationTime - $earliestModificationTime > $toleranceInterval)
+    {
+        $message .= "Accountant versions are not synchronized: " . 
+					"the earliest and the latest " .
+                    "(" . &FormatTime($earliestModificationTime) . " and " .
+					&FormatTime($latestModificationTime) .
+                    ") modification times differ by " .
+#                   "more than REPLICATION_INTERVAL ($replicationInterval).";
+                    "more than tolerance interval ($toleranceInterval).";
+        &LogError($logsDirectory, $message);
+
+        return NO;
+    }
+    if($greatestLogicalClockValue - $leastLogicalClockValue > 1)
+    {
+        $message .= "Accountant versions are not synchronized: " .
+					"the greatest and the least " .
+                    "($greatestLogicalClockValue and $leastLogicalClockValue)" .
+					" logical clock values differ by more than 1.";
+        &LogError($logsDirectory, $message);
+
+        return NO;
+    }
+    $message .= $success . "All accountant versions are synchronized.";
+    &LogSuccess($logsDirectory, $message);
+
+    return YES;
+}
+
+sub CorrectAccountantFormat
+{
+    my $time        = time();
+    my $timeStamp   = &FormatTime($time);
+    my $checkerName = "CorrectAccountantFormat";
+    my $checker     = "  Checker\t: ";
+    my $success     = "  Success\t: ";
+    my $error       = "    Error\t: ";
+    my $message     = "Iteration\t: $iterationNumber\tTime: " .
+					  $timeStamp . "\n";
+    $message       .= $checker . $checkerName . "\n";
+
+	# System is not stabilized yet
+    return YES unless ($negTimer <= $time);
+
+    # Passing through all the alive replication daemons and asking each one
+    foreach my $hadIndex (1 .. $hadsNumber)
+    {
+		next if $aliveReplications[$hadIndex] eq NO;
+
+		my $spoolDirectory   =
+            &CondorConfigVal("$currentIp:$collectorPorts[$hadIndex]",
+                             'SPOOL');
+		my $accountantFilePath    = "$spoolDirectory/Accountantnew.log";
+		my $accountantVersionPath = "$spoolDirectory/Version";
+		# Checking accountant information file format
+		open(ACCOUNTANT, "< $accountantFilePath") or die("open: $!");
+		my @accountantContents = <ACCOUNTANT>;
+		close(ACCOUNTANT);
+
+		chomp(@accountantContents);
+
+		foreach my $accountantLine (@accountantContents)
+		{
+    		# The line must start with number of 3 digits length
+    		if("$accountantLine" !~ "^[0-9]{3}")
+    		{
+				$message .= $error .
+							"Line $accountantLine of instance #$hadIndex\'s " .
+							"accountant file does not start with number of " .
+							"3 digits length";
+				&LogError($logsDirectory, $message);
+				return NO;
+			}
+			# If a line contains 'Customer.', it must contain 3 words 
+			# in addition to the first number
+    		if("$accountantLine" =~ 'Customer\.' && 
+			   "$accountantLine" !~ /^\d{3} Customer\.[^\ \t]* [^\ \t]+ [^\ \t]+$/)
+			{
+				$message .= $error .
+						  "Line $accountantLine of instance #$hadIndex\'s " .
+						  "accountant file contains \'Customer.\', but " .
+				          "it is not followed by 3 words";
+				&LogError($logsDirectory, $message);
+				return NO;
+			}
+    		# If a line contains 'Resource', it must contain 3 words in 
+			# addition to the first number or must be followed by a word, ending
+			# with '>'
+    		if("$accountantLine" =~ 'Resource\.' && 
+			   "$accountantLine" !~ /^\d{3} Resource\.[^\ \t]* [^\ \t]+ [^\ \t]+$/ &&
+       		   "$accountantLine" !~ /^\d{3} Resource\.[^\ \t]*>$/)
+			{
+				$message .= $error .
+						  "Line $accountantLine of instance #$hadIndex\'s " .
+						  "accountant file contains \'Resource.\', but " .
+                          "neither it is followed by 3 words, nor by 1 word " .
+                          "ending with \'>\'";
+				&LogError($logsDirectory, $message);
+				return NO;
+			}
+    		# If a line contains 'Accountant', it must contain 2 words in 
+			# addition to the first number or be followed by 'LastUpdateTime'
+    		if("$accountantLine" =~ 'Accountant\.' &&
+       		   "$accountantLine" !~ /^\d{3} Accountant\. [^\ \t]+ [^\ \t]+$/ &&
+       		   "$accountantLine" !~ /^\d{3} Accountant\. LastUpdateTime$/)
+			{
+				$message .= $error .
+						  "Line $accountantLine of instance #$hadIndex\'s " .
+						  "accountant file contains \'Accountant\', but " .
+                          "neither it is followed by 2 words, nor by 1 word " .
+                          "ending with \'LastUpdateTime\'";
+				&LogError($logsDirectory, $message);
+				return NO;
+			}
+		}
+		# Checking version file format
+		open(ACCOUNTANT_VERSION, "< $accountantVersionPath") or die("open: $!");
+		my @accountantVersionContents = <ACCOUNTANT_VERSION>;
+		close(ACCOUNTANT_VERSION);
+
+		chomp(@accountantVersionContents);
+
+		# The accountant version includes 2 components, each one appearing 
+		# on a separate line
+		if(@accountantVersionContents != 2)
+		{
+			$message .= $error .
+					  "Version file of instance #$hadIndex includes " . 
+                      @accountantVersionContents .
+                      " components, whereas it must include only 2";
+			&LogError($logsDirectory, $message);
+			return NO;
+		}
+
+		# Both components must be non-negative
+		if($accountantVersionContents[0] < 0 || 
+		   $accountantVersionContents[1] < 0)
+		{
+			$message .= $error .
+					  "One of the version file components of instance " .
+                      "#$hadIndex is negative";
+			&LogError($logsDirectory, $message);
+			return NO;
+		}
+	}
+    $message .= $success . 
+	"All accountant information files and version files formats are correct.";
+    
+	&LogSuccess($logsDirectory, $message);
+
+    return YES;
+}
+
+sub NoTemporaryFiles
+{
+    my $time             = time();
+    my $timeStamp        = &FormatTime($time);
+    my $checkerName      = "NoTemporaryFiles";
+    my $checker          = "  Checker\t: ";
+    my $success          = "  Success\t: ";
+    my $error            = "    Error\t: ";
+    my $message          = "Iteration\t: $iterationNumber\tTime: ".
+						   $timeStamp . "\n";
+
+    $message            .= $checker . $checkerName . "\n";
+
+	# System is not stabilized yet
+    return YES unless ($negTimer <= $time);
+
+    # Passing through all the alive replication daemons and asking each one
+    foreach my $hadIndex (1 .. $hadsNumber)
+    {
+        next if $aliveReplications[$hadIndex] eq NO;
+		
+		my $spoolDirectory   =
+            &CondorConfigVal("$currentIp:$collectorPorts[$hadIndex]",
+                            'SPOOL');
+        my $versionFileRegEx = $spoolDirectory . '/Version*';
+        my $accountantFileRegEx = $spoolDirectory . '/Accountantnew.log*';
+        my @versionFiles = glob($versionFileRegEx);
+        my @accountantFiles = glob($accountantFileRegEx);
+		my $permittedFilesNumber = ($theNeg eq $hadIndex) ? $hadsNumber : 2;
+
+        if(@versionFiles > $permittedFilesNumber)
+        {
+            $message .= $error . "instance #$hadIndex version files " . 
+						"number exceeds $permittedFilesNumber: " . 
+						"@versionFiles";
+            &LogError($logsDirectory, $message);
+            return NO;        
+		}        
+		if(@accountantFiles > $permittedFilesNumber)
+		{
+			$message .= $error . "instance #$hadIndex accountant files " . 
+						"number exceeds $permittedFilesNumber: " . 
+						"@accountantFiles";
+			&LogError($logsDirectory, $message);
+            return NO;        
+		}    
+	}
+    $message .= $success . 
+				"No temporary files (accounting information/version) found.";    
+	&LogSuccess($logsDirectory, $message);
+    
+	return YES;
+}
+
+### End of checkers ###
+
+### Auxiliary functions ###
+
+sub ReactivateTimer
+{
+    (my $base) = @_;
+
+    return int(time() + $base * (0.5 + rand()) + 0.5);
+}
+
+sub AreAllFailed
+{
+	foreach my $hadIndex (1 .. $hadsNumber)	
+	{
+		return NO if $hadsStatus[$hadIndex] eq RAISED;
+	}
+	return YES;
+}
+
+sub KillAllInstances
+{
+	foreach my $hadIndex (1 .. $hadsNumber)
+	{
+		next if $hadsStatus[$hadIndex] eq FAILED ||
+				$aliveHads[$hadIndex] eq NO;
+    	my @adarray;
+
+    	my $condorLogsDirectory =
+        	&CondorConfigVal("$currentIp:$collectorPorts[$hadIndex]", 'LOG');
+		next if !defined($condorLogsDirectory) || $condorLogsDirectory eq "";
+		
+		my $masterSinfulString =
+        	&GetAddress("$condorLogsDirectory/\.master_address");
+
+    	CondorTest::runCondorTool("condor_off -master -fast -addr \'" .
+                              	  "$masterSinfulString\'", \@adarray, 2);
+	}
+}
+
+sub AreAllJobsFinished
+{
+	my $submittedJobs = $configurationTable{BULKS_NUMBER} * 
+ 						$configurationTable{JOBS_PER_BULK};
+	my @fileNames     = glob("$jobsLogsDirectory/*");
+	my $finishedJobs  = 0;
+
+	foreach my $fileName (@fileNames)
+	{
+		if(-e "$fileName")
+		{
+			open(LOG_FILE, "< $fileName");
+            my @logFileLines = <LOG_FILE>;
+            close(LOG_FILE);
+		
+			my @normalTerminationLines = grep(/Normal termination/,
+											  @logFileLines);
+			$finishedJobs += @normalTerminationLines;
+		}
+	}
+	return YES if $finishedJobs >= $submittedJobs;
+	return NO;
+}
+
+sub IsCondorDaemonPublished
+{
+    my ($daemonName, $daemonSinfulString, $collectorSinfulString) = @_;
+
+	my $command = "condor_status -any -pool " .
+	              "\'$collectorSinfulString\' " .
+				  "-format \"%s\\n\" ";
+	if($daemonName eq 'HAD')
+	{
+		$command .= 'MyAddress';
+	}
+	else
+	{
+		$command .= $daemonName . 'IpAddr';
+	}
+	open(OUTPUT_STREAM, "$command 2>&1 |");
+
+	while(<OUTPUT_STREAM>)
+	{
+		if(grep(/$daemonSinfulString/, $_))
+		{
+			close(OUTPUT_STREAM);
+			
+			return YES;
+		}
+	}
+	close(OUTPUT_STREAM);
+	
+	return NO;
+}
+
+sub SubmitJobs
+{
+	my $time = time();
+	
+	if($jobsSubmitTimer <= $time && 
+	   $configurationTable{SUBMISSIONS_CHECKED} && 
+	   $submissionsNumber < $configurationTable{BULKS_NUMBER})
+	{
+		my $condorLogsDirectory = 
+			&CondorConfigVal("$currentIp:$collectorPorts[$nonFailingHads[0]]",
+			'LOG');
+		# Submit the necessary number of jobs and update the timer
+		my $scheddSinfulString = 
+			&GetAddress("$condorLogsDirectory/\.schedd_address");
+		my @adarray;
+		
+		CondorTest::runCondorTool("condor_submit -n \'$scheddSinfulString\' " .
+								  "$jobsDirectory/Job", \@adarray, 2);
+		$jobsSubmitTimer = $time + $configurationTable{JOBS_SUBMISSION_TIME};
+		$submissionsNumber ++;
+		$controlString .= ": submitted bulk #$submissionsNumber: set job " .
+						  "submit timer to " . &FormatTime($jobsSubmitTimer);
+	}
+}
+
+sub FailMachines
+{
+	my $time = time();
+	
+	foreach my $hadIndex (1 .. $hadsNumber)
+	{
+		next if $aliveHads[$hadIndex] eq NO || 
+				$hadsStatus[$hadIndex] eq FAILED ||
+				$hadFailTimers[$hadIndex] >= $time;
+		
+		my $condorLogsDirectory =
+		&CondorConfigVal("$currentIp:$collectorPorts[$hadIndex]",
+		            'LOG');
+		my $masterSinfulString =
+			&GetAddress("$condorLogsDirectory/\.master_address");
+#		CondorTest::runCondorTool("condor_off -master -fast -addr \'" .
+#								  "$masterSinfulString\'", \@adarray, 2);
+		
+		CondorTest::runCondorTool("condor_off -fast -addr \'" .
+                                  "$masterSinfulString\' -subsystem collector", \@adarray, 2);
+        CondorTest::runCondorTool("condor_off -fast -addr \'" .
+                                  "$masterSinfulString\' -subsystem schedd", \@adarray, 2);
+        CondorTest::runCondorTool("condor_off -fast -addr \'" .
+                                  "$masterSinfulString\' -subsystem startd", \@adarray, 2);
+        CondorTest::runCondorTool("condor_off -fast -addr \'" .
+                                  "$masterSinfulString\' -subsystem replication", \@adarray, 2);
+        CondorTest::runCondorTool("condor_off -fast -addr \'" .
+                                  "$masterSinfulString\' -subsystem had", \@adarray, 2);
+		$hadsStatus[$hadIndex] = FAILED;
+		$controlString .= ": failed instance #$hadIndex";
+		
+		# Reactivate the timers
+		$hadRaiseTimers[$hadIndex] =
+			&ReactivateTimer($configurationTable{HAD_RAISE_TIME});
+		$hadFailTimers[$hadIndex] = MAX_INT;
+		$controlString .= ": set instance #$hadIndex raise " .
+						  "timer to " . &FormatTime($hadRaiseTimers[$hadIndex]);
+		
+		$negTimer = $time + $negotiatorTime;
+		&PostponeTimers();
+		$controlString .= ": postponed all timers: set neg timer to " . 
+						  &FormatTime($negTimer);
+	}
+}
+
+sub PostponeTimers
+{
+	# Increasing the timers by $negotiatorTime in order to let the system
+	# stabilize properly
+	foreach my $hadIndex (1 .. $hadsNumber)
+	{
+		$hadRaiseTimers[$hadIndex] += $negotiatorTime
+		if $hadRaiseTimers[$hadIndex] != MAX_INT;
+	}
+	foreach my $hadIndex (1 .. $hadsNumber)
+	{
+		$hadFailTimers[$hadIndex] += $negotiatorTime
+		if $hadFailTimers[$hadIndex] != MAX_INT;
+	}									 
+}
+
+sub RaiseMachines
+{
+	my $time = time();
+#	my $previousCondorConfig = $ENV{CONDOR_CONFIG};
+
+	foreach my $hadIndex (1 .. $hadsNumber)
+	{
+		next if $aliveHads[$hadIndex] eq YES || 
+				$hadsStatus[$hadIndex] eq RAISED ||
+				$hadRaiseTimers[$hadIndex] >= $time;
+		
+		# Restart condor instance
+		#my $localConfigFile = &GetCondorLocalConfigurationFile();
+		my $localPostSourceFile = "$topDirectory/$localPostSourceName";
+		my $hadPort         = HAD_STARTING_PORT + $hadIndex;
+    	my $replicationPort = REPLICATION_STARTING_PORT + $hadIndex;
+    	my $collectorPort   = COLLECTOR_STARTING_PORT + $hadIndex;
+    	my $scheddPort      = SCHEDD_STARTING_PORT + $hadIndex;
+    	my $negotiatorPort  = NEGOTIATOR_STARTING_PORT + $hadIndex;
+		my $startdPort      = STARTD_STARTING_PORT + $hadIndex;
+
+#		&ImplantLine($localPostSourceFile, 'COLLECTOR_ARGS', 
+#													   "-p $collectorPort");
+#	    &ImplantLine($localPostSourceFile, 'HAD_ARGS', "-p $hadPort");
+#	    &ImplantLine($localPostSourceFile, 'REPLICATION_ARGS', 
+#													   "-p $replicationPort");
+#		&ImplantLine($localPostSourceFile, 'NEGOTIATOR_ARGS', 
+#													   "-p $negotiatorPort");
+#		&ImplantLine($localPostSourceFile, 'SCHEDD_ARGS', "-p $scheddPort");
+#		&ImplantLine($localPostSourceFile, 'STARTD_ARGS', "-p $startdPort");
+#		&ImplantLine($localPostSourceFile, 'HAD_LIST', $hadList);
+#		&ImplantLine($localPostSourceFile, 'REPLICATION_LIST', 
+#														  $replicationList);
+#		&ImplantLine($localPostSourceFile, 'COLLECTOR_HOST', "$collectorList");
+#		&ImplantLine($localPostSourceFile, 'MASTER_NAME', "Master$hadIndex");
+#		&ImplantLine($localPostSourceFile, 'STARTD_NAME', "Startd$hadIndex");
+#		&ImplantLine($localPostSourceFile, 'HAD_NAME', "HAD \#$hadIndex");
+#		&ImplantLine($localPostSourceFile, 'HAD_USE_REPLICATION', 'true');
+#   	&ImplantLine($localPostSourceFile, 'HAD_CONNECTION_TIMEOUT', '2');
+#    	&ImplantLine($localPostSourceFile, 'HAD_USE_PRIMARY', 'true');
+#    	&ImplantLine($localPostSourceFile, 'MAX_HAD_LOG', '6400000');
+#    	&ImplantLine($localPostSourceFile, 'HAD_DEBUG', 'D_FAILURE');
+#    	&ImplantLine($localPostSourceFile, 'HAD_LOG', 
+#					'$(LOG)/HADLog.$(HOSTNAME)');
+#    	&ImplantLine($localPostSourceFile, 'MASTER_NEGOTIATOR_CONTROLLER',
+#                	'HAD');
+#
+#    	&ImplantLine($localPostSourceFile, 'DAEMON_LIST',
+#        	'COLLECTOR, MASTER, NEGOTIATOR, SCHEDD, STARTD, HAD, REPLICATION');
+#    	&ImplantLine($localPostSourceFile, 'DC_DAEMON_LIST',
+#        'MASTER, STARTD, SCHEDD, KBDD, COLLECTOR, NEGOTIATOR, EVENTD, ' .
+#        'VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, HAWKEYE, HAD, REPLICATION');
+#    	&ImplantLine($localPostSourceFile, 'HAD', '$(SBIN)/condor_had');
+#    	&ImplantLine($localPostSourceFile, 'REPLICATION', 
+#                	'$(SBIN)/condor_replication');
+#    	&ImplantLine($localPostSourceFile, 'NEGOTIATOR_STATE_FILE',
+#                	'$(SPOOL)/Accountantnew.log');
+#    	&ImplantLine($localPostSourceFile, 'REPLICATION_INTERVAL', '25');
+#    	&ImplantLine($localPostSourceFile, 'HAD_ALIVE_TOLERANCE', '150');
+#    	&ImplantLine($localPostSourceFile, 'MAX_TRANSFER_LIFETIME', '10');
+#    	&ImplantLine($localPostSourceFile, 
+#					'NEWLY_JOINED_WAITING_VERSION_INTERVAL', '5');
+#	    &ImplantLine($localPostSourceFile, 'HAD_UPDATE_INTERVAL', '300');
+#   		&ImplantLine($localPostSourceFile, 'REPLICATION_LOG',
+#                	'$(LOG)/ReplicationLog');
+#    	&ImplantLine($localPostSourceFile, 'TRANSFERER_LOG',
+#                	'$(LOG)/TransfererLog');
+#    	&ImplantLine($localPostSourceFile, 'MAX_REPLICATION_LOG', '6400000');
+#    	&ImplantLine($localPostSourceFile, 'MAX_TRANSFERER_LOG', '6400000');
+#    	&ImplantLine($localPostSourceFile, 'REPLICATION_DEBUG', 'D_FULLDEBUG');
+#    	&ImplantLine($localPostSourceFile, 'TRANSFERER_DEBUG', 'D_FULLDEBUG');
+#    	&ImplantLine($localPostSourceFile, 'TRANSFERER_TIMEOUT_MULTIPLIER', '1');
+#
+#    	my $configurationFileAndCollectorPort =
+#        	CondorPersonal::StartCondor(
+#				"$topDirectory/$personalCondorParametersName", 
+#				"_instance$hadIndex");
+#    	($configurationFiles[$hadIndex], $collectorPorts[$hadIndex]) =
+#        	split(/:/, $configurationFileAndCollectorPort);
+		my $condorLogsDirectory = "$topDirectory/$pId/" . $pId . "_instance" .
+                                  $hadIndex . "/log";
+        print "$condorLogsDirectory\n";
+        my $masterSinfulString =
+            &GetAddress("$condorLogsDirectory/\.master_address");
+
+        Condor::DebugOn();
+        CondorTest::runCondorTool("condor_on -addr \'" .
+                                  "$masterSinfulString\' -subsystem collector", \@adarray, 2);
+        CondorTest::runCondorTool("condor_on -addr \'" .
+                                  "$masterSinfulString\' -subsystem schedd", \@adarray, 2);
+        CondorTest::runCondorTool("condor_on -addr \'" .
+                                  "$masterSinfulString\' -subsystem startd", \@adarray, 2);
+        CondorTest::runCondorTool("condor_on -addr \'" .
+                                  "$masterSinfulString\' -subsystem had", \@adarray, 2);
+        CondorTest::runCondorTool("condor_on -addr \'" .
+                                  "$masterSinfulString\' -subsystem replication", \@adarray, 2);
+        Condor::DebugOff();
+
+		&LogControl($logsDirectory, &FormatTime($time) .
+                	": instance #$configurationFiles[$hadIndex] going up");
+		
+		# Register the new status
+		$hadsStatus[$hadIndex] = RAISED;
+		$controlString .= ": raised instance #$hadIndex";
+
+		# Reactivate the timers        
+		$hadFailTimers[$hadIndex]  = 
+			&ReactivateTimer($configurationTable{HAD_FAIL_TIME});
+        $hadRaiseTimers[$hadIndex] = MAX_INT;
+		$controlString .= ": set instance #$hadIndex fail timer to " .  
+						  &FormatTime($hadFailTimers[$hadIndex]);
+        
+		# The negotiator timer is reactivated when any had changes its state
+        $negTimer      = $time + $negotiatorTime;
+        &PostponeTimers();
+        $controlString .= ": postponed all timers: set neg timer to " . 
+						  &FormatTime($negTimer);
+	}
+#	$ENV{CONDOR_CONFIG} = $previousCondorConfig;
+}
+
+sub UpdateState
+{
+	my $allHadsFailed = YES;
+	
+	&RecalculateAliveHads();
+	&RecalculateAliveReplications() if $configurationTable{HAD_USE_REPLICATION};
+
+	# Nullifying negotiator timer in the case when all the HADs are down
+	foreach my $hadIndex (1 .. $hadsNumber)
+	{
+		if($hadsStatus[$hadIndex] eq RAISED || $aliveHads[$hadIndex] eq YES)
+		{
+			$allHadsFailed = NO;
+			last;
+		}
+	}
+	$negTimer = MAX_INT if $allHadsFailed eq YES;
+	
+	my @negotiatorsList = &FindNegotiators();
+
+	use Switch;
+
+    switch (@negotiatorsList)
+    {
+            case 0        { $theNeg = ""; }
+            case 1        { $theNeg = $negotiatorsList[0]; }
+            else          { $theNeg = MORE_THAN_ONE; }
+    }
+	$controlString .= ": negs -> #" . join(',', @negotiatorsList) if $theNeg;
+
+	$controlString .= ": alive HADs -> ";
+
+	foreach my $hadIndex (1 .. $hadsNumber)
+	{
+		$controlString .= '#' . $hadIndex . ' ' if $aliveHads[$hadIndex] eq YES;
+	}
+    
+	$controlString .= ": alive replications -> ";
+	
+	foreach my $replicationIndex (1 .. $hadsNumber)
+	{
+		$controlString .= '#' . $replicationIndex . ' ' 
+		if $configurationTable{HAD_USE_REPLICATION} && 
+		   $aliveReplications[$replicationIndex] eq YES;
+	}
+}
+
+sub FindNegotiators
+{
+	my @negotiators;
+	
+	foreach my $hadIndex (1 .. $hadsNumber)
+	{
+		next if $aliveHads[$hadIndex] eq NO;
+		
+		my $negotiatorArguments = 
+			&CondorConfigVal("$currentIp:$collectorPorts[$hadIndex]",
+		                 	 'NEGOTIATOR_ARGS');
+		# Our negotiator arguments match the following pattern '-p <number>'
+		$negotiatorPort = $1 if($negotiatorArguments =~ /-p\ +(\d+)/);
+		push(@negotiators, $hadIndex) 
+		if &IsDaemonAlive('condor_negotiator', $negotiatorPort) eq YES;
+	}
+
+	return @negotiators;
+}
+
+sub RecalculateAliveHads
+{
+	my $time = time();
+	
+#	&LogControl($logsDirectory, &FormatTime($time) . ": recalculating alive " .
+#				"HADs with collector " .
+#				"$currentIp:$collectorPorts[$nonFailingHads[0]]");
+	my $hadList =
+		&CondorConfigVal("$currentIp:$collectorPorts[$nonFailingHads[0]]",
+	                     'HAD_LIST');
+	$_ = $hadList;
+	tr/<>//d;
+	$hadList = $_;
+	
+	my @hadSinfulStrings = split(',', $hadList);
+	
+	foreach my $hadIndex (1 .. $hadsNumber)
+	{
+		my ($ip, $port) = split(':', $hadSinfulStrings[$hadIndex - 1]);
+
+		$aliveHads[$hadIndex] = &IsDaemonAlive('condor_had', $port);
+	}
+}
+
+sub RecalculateAliveReplications
+{
+	my $time = time();
+	
+#	&LogControl($logsDirectory, &FormatTime($time) . ": recalculating alive " .
+#	            "replications with collector " . 
+#				"$currentIp:$collectorPorts[$nonFailingHads[0]]");
+    my $replicationList =
+        &CondorConfigVal("$currentIp:$collectorPorts[$nonFailingHads[0]]",
+                         'REPLICATION_LIST');
+    $_ = $replicationList;
+    tr/<>//d;
+    $replicationList = $_;
+    
+    my @replicationSinfulStrings = split(',', $replicationList);
+    
+    foreach my $replicationIndex (1 .. $hadsNumber)
+    {
+        my ($ip, $port) = 
+			split(':', $replicationSinfulStrings[$replicationIndex - 1]);
+
+        $aliveReplications[$replicationIndex] = 
+			&IsDaemonAlive('condor_replication', $port);
+    }
+}
+
+sub ApplyCheckers
+{
+	my $time = time();
+
+	return if($checkersTimer > $time);
+	
+	my $isFailed = NO;
+
+	foreach my $enabledChecker (@enabledCheckers)
+	{
+		$isFailed = YES if eval("&$enabledChecker()") eq NO;
+		$controlString .= ": test $enabledChecker";
+	}
+	$checkersTimer = &ReactivateTimer($configurationTable{CHECKERS_TIME});
+	$failuresNumber ++ if $isFailed eq YES;
+
+	# We do not want to continue testing, if the tolerance limit is reached
+	if($failuresNumber >= $configurationTable{FAILURES_TOLERANCE})
+	{
+		&KillAllInstances();
+		&MoveAllToSaveDirectory();
+		exit 1;
+	}
+}
+
+sub MoveAllToSaveDirectory
+{
+	# Printing the error messages to the error stream
+	open(ERROR_LOG, "< $logsDirectory/Error.log");
+	while(<ERROR_LOG>)
+	{
+	    print STDERR $_;
+	}
+	close(ERROR_LOG);
+
+	mkdir $savemeDirectory if(! -d $savemeDirectory);
+	`mv $testingSystemDirectory $pId $savemeDirectory`;
+}
+
+sub GenerateJobs
+{
+    #my ($jobsDirectory, %configurationTable) = @_;
+
+#    my $configNumber      = $configurationTable{CONFIG_NUMBER};
+	my $hadsNumber        = $configurationTable{HADS_NUMBER};
+    my $jobsPerBulk       = $configurationTable{JOBS_PER_BULK};
+    my $writeBytesNumber  = $configurationTable{WRITE_BYTES_NUMBER};
+    my $readBytesNumber   = $configurationTable{READ_BYTES_NUMBER};
+    my $jobTime           = $configurationTable{JOBS_TIME};
+
+    # Preparing submission file
+	my $jobSubmissionName = "Job";
+
+    open(JOB_SUBMISSION_FILE, "> $jobsDirectory/$jobSubmissionName") or die("open: $!");
+			
+    print JOB_SUBMISSION_FILE 
+		   "executable   = $jobsDirectory/Job.pl\n" .
+           "Universe     = vanilla\n" .
+           "output       = $jobsOutputsDirectory/$jobSubmissionName.out\n".
+           "Log          = $jobsLogsDirectory/$jobSubmissionName.log\n" .
+           "notification = Never\n" .
+           "queue $jobsPerBulk\n";
+    close(JOB_SUBMISSION_FILE);
+    chmod 0744, "$jobsDirectory/$jobSubmissionName";
+    # Preparing executable file (Perl script)
+    open(JOB_EXECUTABLE, "> $jobsDirectory/Job.pl") or die("open: $!");
+
+    print JOB_EXECUTABLE 
+		'#!/usr/bin/env perl ' . "\n" .
+        "\n" .
+        "open(FILE_TO_WRITE, \"> $jobsDirectory/FileToWrite\");\n\n" .
+        "foreach (1 .. $writeBytesNumber)\n" .
+        "{\n" .
+        "\tprint FILE_TO_WRITE chr(65);\n" .
+        "}\n\n" .
+        "close(FILE_TO_WRITE);\n" .
+        "\n" .
+        "sleep($jobTime);\n" .
+        "\n" .
+        "open(FILE_TO_READ, \"< $jobsDirectory/FileToRead\");\n" .
+        "my \$data = <FILE_TO_READ>;\n" .
+        "close(FILE_TO_READ);\n";
+    
+	close(JOB_EXECUTABLE);
+    chmod 0744, "$jobsDirectory/Job.pl";
+
+    # Preparing a file to read
+    open(FILE_TO_READ, "> $jobsDirectory/FileToRead") or die("open: $!");
+    
+	foreach (1 .. $readBytesNumber)
+    {
+        print FILE_TO_READ chr(65);
+    }
+
+    close(FILE_TO_READ);
+}
+### End of auxiliary functions ###
+
+### End of test ###

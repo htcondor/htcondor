@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -64,9 +64,6 @@ JICLocalConfig::~JICLocalConfig()
 	if( key ) {
 		free( key );
 	}
-	if( job_ad ) {
-		delete job_ad;
-	}  
 }
 
 
@@ -102,8 +99,10 @@ JICLocalConfig::getLocalJobAd( void )
 	getString( 0, ATTR_JOB_INPUT, "input" );
 	getString( 0, ATTR_JOB_OUTPUT, "output" );
 	getString( 0, ATTR_JOB_ERROR, "error" );
-	getString( 0, ATTR_JOB_ARGUMENTS, "arguments" );
-	getString( 0, ATTR_JOB_ENVIRONMENT, "environment" );
+	getString( 0, ATTR_JOB_ARGUMENTS1, "arguments" );
+	getString( 0, ATTR_JOB_ARGUMENTS2, "arguments2" );
+	getString( 0, ATTR_JOB_ENVIRONMENT1, "environment" );
+	getString( 0, ATTR_JOB_ENVIRONMENT2, "environment2" );
 	getString( 0, ATTR_JAR_FILES, "jar_files" );
 	getInt( 0, ATTR_KILL_SIG, "kill_sig" );
 	getBool( 0, ATTR_STARTER_WAIT_FOR_DEBUG, "starter_wait_for_debug" );

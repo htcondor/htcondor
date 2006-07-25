@@ -1,0 +1,56 @@
+#! /usr/bin/env perl
+use CondorTest;
+
+$cmd = 'job_core_niceuser_van.cmd';
+my $datafile = 'job_core_niceuser_van.data';
+$testname = 'condor_submit output works - vanilla U';
+
+my @sdata =
+(
+"1",
+"8",
+"3",
+"10",
+"5",
+"2"
+);
+
+my @vdata =
+(
+"1",
+"2",
+);
+
+my @skiplines = ();
+
+
+my $doonlyonce = "";
+my $count = 6;
+
+
+$ExitSuccess = sub 
+{
+	my %info = @_;
+
+	$count = $count - 1;
+
+	if( $count != 0 )
+	{
+		return(0);
+	}
+
+	CondorTest::CompareText( $datafile, \@vdata, @skiplines );
+};
+
+system("rm -rf job_core_niceuser_van.data");
+system("touch job_core_niceuser_van.data");
+
+CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
+
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+	print "$testname: SUCCESS\n";
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+

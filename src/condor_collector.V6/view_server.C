@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -27,6 +27,7 @@
 #include "condor_attributes.h"
 #include "condor_state.h"
 #include "Set.h"
+#include "directory.h"
 #include "view_server.h"
 
 //-------------------------------------------------------------------
@@ -67,6 +68,15 @@ void ViewServer::Init()
 	if( tmp ) {
 		if( *tmp == 'T' || *tmp == 't' ) KeepHistory=TRUE;
 		free( tmp );
+	}
+
+	// We can't do this check at compile time, but we'll except if
+	// the startd states has changed and we haven't been updated
+	// to match
+	if ( (int)VIEW_STATE_MAX != (int)_machine_max_state ) {
+		EXCEPT( "_max_state=%d (from condor_state.h) doesn't match "
+				" VIEW_STATE_MAX=%d (from view_server.h)",
+				(int)_machine_max_state, (int)VIEW_STATE_MAX );
 	}
 
 	// Initialize collector daemon
@@ -125,7 +135,7 @@ void ViewServer::Init()
 	DataFormat[SubmittorData]="%d\t%s\t:\t%.0f\t%.0f\n";
 	DataFormat[SubmittorGroupsData]="%d\t%s\t:\t%.0f\t%.0f\n";
 	DataFormat[StartdData]="%d\t%s\t:\t%.0f\t%7.3f\t%.0f\n";
-	DataFormat[GroupsData]="%d\t%s\t:\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\n";
+	DataFormat[GroupsData]="%d\t%s\t:\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\n";
 	DataFormat[CkptData]="%d\t%s\t:\t%.3f\t%.3f\t%.3f\t%.3f\n";
 	
 	return;
@@ -137,6 +147,8 @@ void ViewServer::Init()
 
 void ViewServer::Config()
 {
+	MyString history_dir_buf;
+	char const *history_dir;
 	dprintf(D_ALWAYS, "In ViewServer::Config()\n");
 	
 	// Configure Collector daemon
@@ -166,30 +178,35 @@ void ViewServer::Config()
 
 	tmp=param("POOL_HISTORY_DIR");
 	if (!tmp) {
-		tmp=param("SPOOL");
+		tmp=param("LOCAL_DIR");
 		if (!tmp) {
-			EXCEPT("No POOL_HISTORY_DIR or SPOOL directory specified in config file\n");
+			EXCEPT("No POOL_HISTORY_DIR or LOCAL_DIR directory specified in config file\n");
 		}
+		history_dir_buf.sprintf("%s/ViewHist",tmp);
 	}
+	else {
+		history_dir_buf = tmp;
+	}
+	history_dir = history_dir_buf.Value();
+	free(tmp);
 
-	dprintf(D_ALWAYS, "Configuration: SAMPLING_INTERVAL=%d, MAX_STORAGE=%d, MaxFileSize=%d, POOL_HISTORY_DIR=%s\n",HistoryInterval,MaxStorage,MaxFileSize,tmp);
+	dprintf(D_ALWAYS, "Configuration: SAMPLING_INTERVAL=%d, MAX_STORAGE=%d, MaxFileSize=%d, POOL_HISTORY_DIR=%s\n",HistoryInterval,MaxStorage,MaxFileSize,history_dir);
 
-	char Name[200];
+	if(!IsDirectory(history_dir)) {
+		EXCEPT("POOL_HISTORY_DIR (%s) does not exist.\n",history_dir);
+	}
 
 	for (int i=0; i<DataSetCount; i++) {
 		for (int j=0; j<HistoryLevels; j++) {
-			DataSet[i][j].MaxSamples=4*((int) pow(4,j));
+			DataSet[i][j].MaxSamples=4*((int) pow((double)4,(double)j));
 			DataSet[i][j].NumSamples=0;
-			sprintf(Name,"%s/viewhist%d.%d.old",tmp,i,j);
-			DataSet[i][j].OldFileName=Name;
-			DataSet[i][j].OldStartTime=FindFileStartTime(Name);
-			sprintf(Name,"%s/viewhist%d.%d.new",tmp,i,j);
-			DataSet[i][j].NewFileName=Name;
-			DataSet[i][j].NewStartTime=FindFileStartTime(Name);
+			DataSet[i][j].OldFileName.sprintf("%s/viewhist%d.%d.old",history_dir,i,j);
+			DataSet[i][j].OldStartTime=FindFileStartTime(DataSet[i][j].OldFileName.Value());
+			DataSet[i][j].NewFileName.sprintf("%s/viewhist%d.%d.new",history_dir,i,j);
+			DataSet[i][j].NewStartTime=FindFileStartTime(DataSet[i][j].NewFileName.Value());
 		}
 	}
 
-	free(tmp);
 	return;
 }
 
@@ -449,7 +466,7 @@ int ViewServer::SendDataReply(Stream* sock,const MyString& FileName, int FromDat
 // in the file
 //-------------------------------------------------------------------
 
-int ViewServer::FindFileStartTime(char* Name)
+int ViewServer::FindFileStartTime(const char *Name)
 {
 	char Line[200];
 	int T=-1;
@@ -560,7 +577,7 @@ void ViewServer::WriteHistory()
 
 			DataSet[i][j].AccData->startIterations();
 			while(DataSet[i][j].AccData->iterate(Key,GenRec)) {
-				sprintf(OutLine,DataFormat[i].Value(),TimeStamp,Key.Value(),GenRec->Data[0],GenRec->Data[1],GenRec->Data[2],GenRec->Data[3],GenRec->Data[4]);
+				sprintf(OutLine,DataFormat[i].Value(),TimeStamp,Key.Value(),GenRec->Data[0],GenRec->Data[1],GenRec->Data[2],GenRec->Data[3],GenRec->Data[4],GenRec->Data[5],GenRec->Data[6], GenRec->Data[7]);
 				delete GenRec;
 				fputs(OutLine, DataFile);
 			}
@@ -672,24 +689,51 @@ int ViewServer::SubmittorTotalFunc(void)
 
 int ViewServer::StartdScanFunc(ClassAd* ad)
 {
-	char Name[200];
+	char Name[200] = "";
 	char StateDesc[50];
 	float LoadAvg;
-	int KbdIdle, st;
+	int KbdIdle;
 	
 	// Get Data From Class Ad
 
-	if (ad->LookupString(ATTR_NAME,Name)<0) return 1;
-	if (ad->LookupInteger(ATTR_KEYBOARD_IDLE,KbdIdle)<0) KbdIdle=0;
-	if (ad->LookupFloat(ATTR_LOAD_AVG,LoadAvg)<0) LoadAvg=0;
-	if (ad->LookupString(ATTR_STATE,StateDesc)<0) strcpy(StateDesc,"");
-	State StateEnum=string_to_state(StateDesc);
+	if ( !ad->LookupString(ATTR_NAME,Name) ) return 1;
+	if ( !ad->LookupInteger(ATTR_KEYBOARD_IDLE,KbdIdle) ) KbdIdle=0;
+	if ( !ad->LookupFloat(ATTR_LOAD_AVG,LoadAvg) ) LoadAvg=0;
+	if ( !ad->LookupString(ATTR_STATE,StateDesc) ) strcpy(StateDesc,"");
+	State StateEnum=string_to_state( StateDesc );
+
+	// This block should be kept in sync with view_server.h and
+	// condor_state.h.
+	ViewStates st = VIEW_STATE_UNDEFINED;
 	switch(StateEnum) {
-		case owner_state:		st=5; break;
-		case preempting_state:	st=4; break;
-		case claimed_state:		st=3; break;
-		case matched_state:		st=2; break;
-		case unclaimed_state:	st=1; break;
+	case owner_state:
+		st=VIEW_STATE_OWNER;
+		break;
+	case preempting_state:
+		st=VIEW_STATE_PREEMPTING;
+		break;
+	case claimed_state:
+		st=VIEW_STATE_CLAIMED;
+		break;
+	case matched_state:
+		st=VIEW_STATE_MATCHED;
+		break;
+	case unclaimed_state:
+		st=VIEW_STATE_UNCLAIMED;
+		break;
+	case shutdown_state:
+		st=VIEW_STATE_SHUTDOWN;
+		break;
+	case delete_state:
+		st=VIEW_STATE_DELETE;
+		break;
+	case backfill_state:
+		st=VIEW_STATE_BACKFILL;
+		break;
+	default:
+		EXCEPT( "Unknown machine state %d from '%s'",
+				(int)StateEnum, Name );
+		return 0;
 	}
 
 	// Get Group Name
@@ -701,17 +745,30 @@ int ViewServer::StartdScanFunc(ClassAd* ad)
 	GroupName+=tmp;
 
 	// Add to group Totals
+	// NRL: I'm not sure exactly what this block of code does, but
+	// now it at least does it safely.  It's obviously updating
+	// the GroupHash <group name> and "Total" chunks.
 
+	int group_index = (int)st - 1;
+	if( group_index > (int)VIEW_STATE_MAX_OFFSET ) {
+		EXCEPT( "Invalid group_index = %d (max %d)",
+				group_index, (int)VIEW_STATE_MAX_OFFSET );
+	}
 	GeneralRecord* GenRec=GetAccData(GroupHash,"Total");
-	GenRec->Data[st-1]++;
+	ASSERT( GenRec );
+	GenRec->Data[group_index] += 1.0;
+
 	GenRec=GetAccData(GroupHash,GroupName);
-	GenRec->Data[st-1]++;
+	ASSERT( GenRec );
+	GenRec->Data[group_index] += 1.0;
 	
 	// Add to accumulated data
 
 	int NumSamples;
 	for (int j=0; j<HistoryLevels; j++) {
 		GenRec=GetAccData(DataSet[StartdData][j].AccData, Name);
+		ASSERT( GenRec );
+
 		NumSamples=DataSet[StartdData][j].NumSamples;
 		GenRec->Data[0]=(GenRec->Data[0]*NumSamples+KbdIdle)/(NumSamples+1);
 		GenRec->Data[1]=(GenRec->Data[1]*NumSamples+LoadAvg)/(NumSamples+1);
@@ -739,7 +796,7 @@ int ViewServer::StartdTotalFunc(void)
 		for (int j=0; j<HistoryLevels; j++) {
 			AccValue=GetAccData(DataSet[GroupsData][j].AccData, GroupName);
 			NumSamples=DataSet[GroupsData][j].NumSamples;
-			for (int k=0; k<5; k++) {
+			for (int k=0; k<(int)VIEW_STATE_MAX; k++) {
 				AccValue->Data[k]=(AccValue->Data[k]*NumSamples+CurValue->Data[k])/(NumSamples+1);
 			}
 		}
@@ -795,10 +852,24 @@ int ViewServer::CkptScanFunc(ClassAd* ad)
 
 GeneralRecord* ViewServer::GetAccData(AccHash* AccData,const MyString& Key)
 {
-	GeneralRecord* GenRec;
-	if (AccData->lookup(Key,GenRec)==-1) {
+	GeneralRecord* GenRec = NULL;
+	int rval;
+
+	rval = AccData->lookup( Key, GenRec );
+	if ( ( rval < 0 ) || ( GenRec == NULL ) ) {
+		if ( rval >= 0 ) {
+			dprintf( D_ALWAYS,
+					 "Hash %p lookup returned %d, but NULL record!\n",
+					 AccData, rval );
+			EXCEPT( "Bad lookup" );
+		}
 		GenRec=new GeneralRecord;
-		AccData->insert(Key,GenRec);
+		if ( GenRec == NULL ) {
+			EXCEPT( "Failed to allocate a GeneralRecord" );
+		}
+		if ( AccData->insert(Key,GenRec) < 0 ) {
+			EXCEPT( "Insert failed: Key=%s", Key.GetCStr() );
+		}
 	}
 	return GenRec;
 }

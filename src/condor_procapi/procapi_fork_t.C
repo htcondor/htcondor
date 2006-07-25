@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -254,6 +254,8 @@ PID_ENTRY* fork_tree(int depth, int breadth, int tree_breadth_change, bool verbo
 }
 
 void end_tree(PID_ENTRY* pids, int num_pids){
+
+  sleep(10);  /* Ensure all children must be SIGSTOPped before we SIGCONT them */
 
   for(int i = 0; i < num_pids; i++){
     kill(pids[i].pid, SIGCONT);

@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -20,8 +20,6 @@
   * RIGHT.
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-
-#define INCLUDE_STATUS_NAME_ARRAY
 
 #include "condor_common.h"
 #include "condor_classad.h"
@@ -49,10 +47,9 @@
 #include "syscall.aix.h"
 #endif
 
-#include "debug.h"
+#include "condor_debug.h"
 #include "fileno.h"
 #include "exit.h"
-#include "shadow.h"
 
 /* XXX This should not be here */
 #if !defined( WCOREDUMP )
@@ -64,7 +61,7 @@ int	UsePipes;
 char* mySubSystem = "SHADOW";
 
 extern "C" {
-#if (defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))) || defined(HPUX11) || defined(AIX)
+#if (defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))) || defined(HPUX11) || defined(AIX) || defined(CONDOR_FREEBSD) || (defined(Darwin) && defined(CONDOR_HAD_GNUC_4))
 	/* XXX These should really be selected in a better fashion */
 	void reaper(int);
 	void handle_sigusr1(int);
@@ -88,6 +85,8 @@ extern "C" {
 	void send_vacate( char *host, char *capability );
 	void handle_termination( PROC *proc, char *notification,
 				int *jobstatus, char *coredir );
+	void handle_terminate_pending();
+	int terminate_is_pending(void);
 	void get_local_rusage( struct rusage *bsd_rusage );
 	void NotifyUser( char *buf, PROC *proc );
 	FILE	*fdopen(int, const char *);
@@ -142,6 +141,8 @@ int  LastCkptTime = -1;			// time when job last completed a ckpt
 int  NumCkpts = 0;				// count of completed checkpoints
 int  NumRestarts = 0;			// count of attempted checkpoint restarts
 int  CommittedTime = 0;			// run-time committed in checkpoints
+// last known checkpointing signature of a successful checkpoint
+extern char *LastCkptPlatform;
 
 #ifdef WANT_NETMAN
 extern bool ManageBandwidth;	// notify negotiator about network usage?
@@ -553,6 +554,16 @@ main(int argc, char *argv[] )
 	block_signal(SIGCHLD);
 	block_signal(SIGUSR1);      
 
+	/* If the completed job had been committed to the job queue,
+		but for some reason the shadow exited wierdly and the
+		schedd is trying to run it again, then simply write
+		the job termination events and send the email as if the job had
+		just ended. */
+	if (terminate_is_pending() == TRUE) {
+		/* This function will exit()! */
+		handle_terminate_pending();
+	}
+
 	HandleSyscalls();
 
 	Wrapup();
@@ -583,7 +594,54 @@ main(int argc, char *argv[] )
 	exit( ExitReason );
 }
 
+/* If the job had technically ended ad we managed to correctly record that
+	fact via ATTR_TERMINATION_PENDING, then the shadow will call this function
+	which will mimic the termination procedure normally done and send emails
+	and write termination events if applicable */
+void
+handle_terminate_pending()
+{
+	struct rusage local_rusage;
+	char notification[1024*50] = {'\0'};
+	extern int WroteExecuteEvent; // global var found in log_events.C
 
+	dprintf(D_ALWAYS, "handle_terminate_pending() called.\n");
+
+	// This is an evil piece of code and I am embarrased by writing it.
+	// -psilord 05/31/06
+
+	// don't let the termination event function autotrigger an execution event.
+	WroteExecuteEvent  = TRUE;
+	// Restore a bunch of global variables hacked into the jobad.
+	JobAd->LookupInteger(ATTR_WAITPID_STATUS, JobStatus);
+	JobAd->LookupString(ATTR_TERMINATION_REASON, notification);
+	JobAd->LookupInteger(ATTR_TERMINATION_EXITREASON, ExitReason);
+	JobAd->LookupFloat(ATTR_BYTES_SENT, BytesSent);
+	JobAd->LookupFloat(ATTR_BYTES_RECVD, BytesRecvd);
+	// if we got here, then this must be the case.
+	Proc->status = COMPLETED;
+	Proc->completion_date = time(NULL);
+
+	dprintf(D_ALWAYS, "JobStatus = %d\n", JobStatus);
+	dprintf(D_ALWAYS, "notification = \"%s\"\n", notification);
+	dprintf(D_ALWAYS, "ExitReason = %d\n", ExitReason);
+	dprintf(D_ALWAYS, "BytesSent = %f\n", BytesSent);
+	dprintf(D_ALWAYS, "BytesRecvd = %f\n", BytesRecvd);
+
+	memcpy(&(Proc->exit_status[0]),&JobStatus,sizeof((Proc->exit_status[0])));
+	get_local_rusage( &local_rusage );
+
+	log_termination (&local_rusage, &JobRusage);
+
+	if( notification[0] ) {
+		NotifyUser( notification, Proc );
+	}
+
+	/* using the above ExitReason... */
+	dprintf( D_ALWAYS, "********** Shadow Exiting(%d) **********\n",
+		ExitReason );
+	exit(ExitReason);
+}
 
 void
 HandleSyscalls()
@@ -601,7 +659,8 @@ HandleSyscalls()
 
 	dprintf(D_FULLDEBUG, "HandleSyscalls: about to chdir(%s)\n", Proc->iwd);
 	if( chdir(Proc->iwd) < 0 ) {
-		sprintf( ErrBuf,  "Can't access \"%s\"", Proc->iwd );
+		sprintf( ErrBuf,  "Can't chdir() to \"%s\"! [%s(%d)]", Proc->iwd, 
+			strerror(errno), errno );
 		HadErr = TRUE;
 		return;
 	}
@@ -748,21 +807,28 @@ Wrapup( )
 
 	notification[0] = '\0';
 
+	/* This HadErr business isn't well defined. There doesn't seem
+		to be a clean way of representing the event of a
+		pre-job startup initialization failure.  So, instead of trying
+		to propogate the nonexistant JobStatus around to future
+		code paths trying to clean up a mess specified by HadErr,
+		we are simply going to EXCEPT(). HadErr only gets specified
+		when either the std file can't be opened or the shadow
+		cannot chdir() to the initialdir(often because of a
+		permission/existance problem). */
 	if( HadErr ) {
-		Proc->status = COMPLETED;
-		Proc->completion_date = time( (time_t *)0 );
-#if 0
-		dprintf( D_ALWAYS, "MsgBuf = \"%s\"\n", MsgBuf );
-#endif
-		(void)strcpy( notification, ErrBuf );
+		/* dump the specific error if it has been determined */
+		if (ErrBuf[0] != '\0') {
+			EXCEPT("%s", ErrBuf);
+		} else {
+			EXCEPT("Couldn't set up std files or chdir to initialdir--"
+				"probably a permissions error.");
+		}
 	} else {
 		/* all event logging has been moved from handle_termination() to
 		   log_termination()	--RR */
 		handle_termination( Proc, notification, &JobStatus, NULL );
 	}
-
-	if( sock_RSC1 ) {
-	} 
 
 	/* fill in the Proc structure's exit_status with JobStatus, so that when
 	 * we call update_job_status the exit status is written into the job queue,
@@ -775,6 +841,7 @@ Wrapup( )
 	memcpy(&(Proc->exit_status[0]),&JobStatus,sizeof((Proc->exit_status[0])));
 	get_local_rusage( &local_rusage );
 	update_job_status( &local_rusage, &JobRusage );
+
 
 	/* log the event associated with the termination; pass local and remote
 	   rusage for the run.  The total local and remote rusages for the job are
@@ -958,6 +1025,7 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 	float utime = 0.0;
 	float stime = 0.0;
 	int tot_sus=0, cum_sus=0, last_sus=0;
+	char buf[1024*50];
 
 	// If the job completed, and there is no HISTORY file specified,
 	// the don't bother to update the job ClassAd since it is about to be
@@ -1053,6 +1121,7 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 							 ATTR_LAST_VACATE_TIME, time(0) );
 		}
 
+		// if we had checkpointed, then save all of these attributes as well.
 		if (LastCkptTime > LastRestartTime) {
 			SetAttributeInt(Proc->id.cluster, Proc->id.proc,
 							ATTR_LAST_CKPT_TIME, LastCkptTime);
@@ -1086,23 +1155,34 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 				DeleteAttribute(Proc->id.cluster, Proc->id.proc,
 								   ATTR_LAST_CKPT_SERVER);
 			}
+
+			if (LastCkptPlatform) {
+				SetAttributeString(Proc->id.cluster, Proc->id.proc,
+								   ATTR_LAST_CHECKPOINT_PLATFORM, 
+								   LastCkptPlatform);
+			}
 		}
 		// if the job completed, we should include the run-time in
 		// committed time, since it contributed to the completion of
-		// the job
+		// the job. Also, commit the exit code/signal stuff, plus any 
+		// core filenames.
 		if (Proc->status == COMPLETED) {
+			int exit_code, exit_signal, exit_by_signal;
+			int pending;
+
+			// update the time.
 			CommittedTime = 0;
 			GetAttributeInt(Proc->id.cluster, Proc->id.proc,
 							ATTR_JOB_COMMITTED_TIME, &CommittedTime);
 			CommittedTime += Proc->completion_date - LastRestartTime;
 			SetAttributeInt(Proc->id.cluster, Proc->id.proc,
 							ATTR_JOB_COMMITTED_TIME, CommittedTime);
-		}
 
-		// if the job completed, then update the exit code/signal attributes
-		if (Proc->status == COMPLETED)
-		{
-			int exit_code, exit_signal, exit_by_signal;
+			// if there is a core file, update that too.
+			if (JobAd->LookupString(ATTR_JOB_CORE_FILENAME, buf)) {
+				SetAttributeString(Proc->id.cluster, Proc->id.proc,
+			   		ATTR_JOB_CORE_FILENAME, buf);
+			}
 
 			// only new style ads have ATTR_ON_EXIT_BY_SIGNAL, so only
 			// SetAttribute for those types of ads
@@ -1124,12 +1204,50 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 						   			ATTR_ON_EXIT_CODE, exit_code);
 				}
 			}
+
+			// and now, let's try and mark this job as a terminate pending
+			// job. If the job already is, then fine. We'll mark it again.
+			if (JobAd->LookupBool(ATTR_TERMINATION_PENDING, pending)) {
+				SetAttribute(Proc->id.cluster, Proc->id.proc,
+			   			ATTR_TERMINATION_PENDING, pending?"TRUE":"FALSE");
+			} else {
+				// if it isn't in the job ad, then add it to the saved ad in the
+				// schedd.
+				SetAttribute(Proc->id.cluster, Proc->id.proc,
+			   			ATTR_TERMINATION_PENDING, "TRUE");
+			}
+
+			// store the reason why the job is marked completed.
+			if (JobAd->LookupString(ATTR_TERMINATION_REASON, buf)) {
+				SetAttributeString(Proc->id.cluster, Proc->id.proc,
+				   			ATTR_TERMINATION_REASON, buf);
+			}
+
+			// Set up the exit code the shadow was about to exit with to
+			// help support the terminate pending "state".
+			SetAttributeInt(Proc->id.cluster, Proc->id.proc,
+				   			ATTR_TERMINATION_EXITREASON, ExitReason);
+
+			// Put the job status as created by waitpid() into the job ad
+			// itself.  This is to implement the terminate_pending feature. It
+			// is done like this because EVERYWHERE in this codebase we do
+			// stuff like WIFEXITED(JobStatus) and it turns out there are no
+			// user level macros to will one of those status values as returned
+			// by waitpid() into existance. So, we'll put it directly into the
+			// job ad to prevent me having to reimplement a few large functions
+			// which deal with JobStatus directly--as it is sadly a global
+			// variable.
+			SetAttributeInt(Proc->id.cluster, Proc->id.proc,
+				   			ATTR_WAITPID_STATUS, JobStatus);
+
 		}
 	}
+
 
 	if (!DisconnectQ(0)) {
 		EXCEPT("Failed to commit updated job queue status!");
 	}
+
 }
 
 /*
@@ -1275,7 +1393,8 @@ open_std_files( V2_PROC *proc )
 	(void)close( 2 );
 
 	if( (fd=open(proc->in,O_RDONLY,0)) < 0 ) {
-		sprintf( ErrBuf, "Can't open \"%s\"", proc->in );
+		sprintf( ErrBuf, "Can't open std input file \"%s\"! [%s(%d)]", 
+			proc->in, strerror(errno), errno );
 		HadErr = TRUE;
 		return;
 	}
@@ -1284,7 +1403,8 @@ open_std_files( V2_PROC *proc )
 	}
 
 	if( (fd=open(proc->out,O_WRONLY,0)) < 0 ) {
-		sprintf( ErrBuf, "Can't open \"%s\"", proc->out );
+		sprintf( ErrBuf, "Can't open std output file \"%s\"! [%s(%d)]",
+			proc->out, strerror(errno), errno );
 		HadErr = TRUE;
 		return;
 	}
@@ -1295,7 +1415,8 @@ open_std_files( V2_PROC *proc )
 
 
 	if( (fd=open(proc->err,O_WRONLY,0)) < 0 ) {
-		sprintf( ErrBuf, "Can't open \"%s\"", proc->err );
+		sprintf( ErrBuf, "Can't open std error file \"%s\"! [%s(%d)]", 
+			proc->err, strerror(errno), errno );
 		HadErr = TRUE;
 		return;
 	}
@@ -1419,7 +1540,7 @@ open_named_pipe( const char *name, int mode, int target_fd )
 	}
 }
 
-#if (defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))) || defined(HPUX11) || defined(AIX)
+#if (defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))) || defined(HPUX11) || defined(AIX) || defined(CONDOR_FREEBSD) || (defined(Darwin) && defined(CONDOR_HAD_GNUC_4))
 void
 reaper(int unused)
 #else
@@ -1480,7 +1601,7 @@ display_uids()
   the schedd already knows this job should be removed.
   Cleaned up, clarified and simplified on 5/12/00 by Derek Wright
 */
-#if (defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))) || defined(HPUX11) || defined(AIX)
+#if (defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))) || defined(HPUX11) || defined(AIX) || defined(CONDOR_FREEBSD) || (defined(Darwin) && defined(CONDOR_HAD_GNUC_4))
 void
 handle_sigusr1( int unused )
 #else
@@ -1505,7 +1626,7 @@ handle_sigusr1( void )
   startd, to force the job to quickly vacate.
   Cleaned up, clarified and simplified on 5/12/00 by Derek Wright
 */
-#if (defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))) || defined(HPUX11) || defined(AIX)
+#if (defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))) || defined(HPUX11) || defined(AIX) || defined(CONDOR_FREEBSD) || (defined(Darwin) && defined(CONDOR_HAD_GNUC_4))
 void
 handle_sigquit( int unused )
 #else
@@ -1524,7 +1645,7 @@ handle_sigquit( void )
   If we get a SIGTERM (from the schedd, a shutdown, etc), we want to
   try to do a graceful shutdown and allow our job to checkpoint. 
 */
-#if (defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))) || defined(HPUX11)
+#if (defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))) || defined(HPUX11) || defined(CONDOR_FREEBSD) || (defined(Darwin) && defined(CONDOR_HAD_GNUC_4))
 void
 handle_sigterm( int unused )
 #else

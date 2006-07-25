@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -26,11 +26,9 @@
 #ifndef USER_PROC_H
 #define USER_PROC_H
 
-#include "environ.h"
+#include "env.h"
 
 #include "killfamily.h"
-
-#define EXECFAILED 129 // exit status if call to execv() fails
 
 	// Reason user process exited (or didn't execute)
 typedef enum {
@@ -141,9 +139,9 @@ protected:
 	int		proc;
 
 	char	*cmd;
-	char	*args;
+	ArgList args;
 	char	*env;
-	Environ	env_obj;
+	Env     env_obj;
 
 #if 0
 	char	*a_out;			// on submitting machine

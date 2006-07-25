@@ -7,23 +7,10 @@ LIB = $(STD_LIBS)
 
 OBJ = rm.o
 
-c_plus_target($(NAME),$(OBJ),$(LIB))
-release_target($(NAME),bin,EXECUTABLE_MODE)
-strip_target($(NAME),bin,EXECUTABLE_MODE)
-static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/bin)
-pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))
-purecov_c_plus_target($(NAME).pc,$(OBJ),$(LIB))
+public_c_plus_target($(NAME),bin,$(OBJ),$(LIB))
 
-release_link_target($(RELEASE_DIR)/bin/condor_rm,bin,condor_hold)
-strip_link_target($(STRIP_DIR)/bin/condor_rm,bin,condor_hold)
-static_link_target($(STATIC_DIR)/bin/condor_rm,bin,condor_hold)
-
-release_link_target($(RELEASE_DIR)/bin/condor_rm,bin,condor_release)
-strip_link_target($(STRIP_DIR)/bin/condor_rm,bin,condor_release)
-static_link_target($(STATIC_DIR)/bin/condor_rm,bin,condor_release)
-
-release_link_target($(RELEASE_DIR)/bin/condor_rm,bin,condor_vacate_job)
-strip_link_target($(STRIP_DIR)/bin/condor_rm,bin,condor_vacate_job)
-static_link_target($(STATIC_DIR)/bin/condor_rm,bin,condor_vacate_job)
+public_link_target(bin,condor_rm,condor_hold)
+public_link_target(bin,condor_rm,condor_release)
+public_link_target(bin,condor_rm,condor_vacate_job)
 
 html:

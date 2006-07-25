@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -34,7 +34,7 @@ class CondorError {
 		CondorError();
 		~CondorError();
 		CondorError(CondorError&);
-		CondorError& operator==(CondorError&);
+		CondorError& operator=(CondorError&);
 		void push( char* subsys, int code, char* message );
 		void pushf( char* subsys, int code, char* format, ... ); 
 		const char* getFullText( bool want_newline = false );

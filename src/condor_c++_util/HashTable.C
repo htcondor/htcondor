@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -22,6 +22,7 @@
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
+#include "HashTable.h"
 
 int
 hashFuncInt( const int& n, int numBuckets )
@@ -39,9 +40,8 @@ hashFuncUInt( const unsigned int& n, int numBuckets )
 	return n % numBuckets;
 }
 
-
 int
-hashFuncJobIdStr( const char* & key, int numBuckets )
+hashFuncJobIdStr( char* const & key, int numBuckets )
 {
     unsigned int bkt = 0;
 	int i,j,size;
@@ -59,4 +59,19 @@ hashFuncJobIdStr( const char* & key, int numBuckets )
 
     bkt %= numBuckets;
     return bkt;
+}
+
+int 
+hashFuncPROC_ID( const PROC_ID &procID, int numBuckets)
+{
+	return ( (procID.cluster+(procID.proc*19)) % numBuckets );
+}
+
+int hashFuncChars( char const *key, int numBuckets)
+{
+    unsigned int i = 0;
+    if(key) for(;*key;key++) {
+        i += *(unsigned char *)key;
+    }
+    return i % numBuckets;
 }

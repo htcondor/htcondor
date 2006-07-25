@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -169,7 +169,7 @@ bool dynuser::init_user() {
 		if ( reuse_account ) {
 	
 			logappend = param("STARTER_LOG");
-			tmp = strrchr(logappend, '.');
+			tmp = strstr(logappend, ".vm");
 			
 			if ( tmp ) {
 				
@@ -310,7 +310,7 @@ bool dynuser::logon_user(){
 			LOGON32_PROVIDER_DEFAULT,	// Logon provider
 			&logon_token)				// And the token to stuff it in.
 			) {
-				dprintf(D_ALWAYS,"LogonUser(%s, ... ) failed with status %d",
+				dprintf(D_ALWAYS,"LogonUser(%s, ... ) failed with status %d\n",
 					accountname,GetLastError());
 				return false;
 		}		
@@ -439,7 +439,7 @@ void dynuser::createpass() {
 	ASSERT( password != NULL );
 		
 	for ( int i = 0; i < 14; i++ ) {
-		char c = (char) ( rand() % 256 );
+		char c = (char) ( rand() % 128 );
 
 		if ( !isprint( c ) ) { // For sanity.  This leaves many characters 
 							   // to chose from.
@@ -465,12 +465,29 @@ void dynuser::update_t() {
 		}
 	}
 	if ( password && password_t ) {
-		if (!MultiByteToWideChar( CP_ACP, MB_ERR_INVALID_CHARS, 
-					password, -1, password_t, 100)) {
-			dprintf(D_ALWAYS, "DynUser: MultiByteToWideChar() failed "
-					"error=%li\n", GetLastError());
-			EXCEPT("Unexpected failure in dynuser:update_t\n");
-		}
+		/* In some (Asian, maybe other) locales, MBTWC fails a lot. We're
+		 * trying to copy an ascii string to a Unicode string,
+		 * and in some languages, not all the characters that 
+		 * are printable in ascii have mappings to a Unicode 
+		 * equivalent given the standard ANSI codepage. So,
+		 * first we try the default ANSI codepage, then we try 
+		 * the current thread's default ANSI codepage, as set by
+		 * the current locale.
+		 */
+
+		if (MultiByteToWideChar( CP_ACP, MB_ERR_INVALID_CHARS, 
+			password, -1, password_t, 100)) {
+				// success
+				return;
+		} else if (MultiByteToWideChar( CP_THREAD_ACP, MB_ERR_INVALID_CHARS, 
+			password, -1, password_t, 100)) { 
+				// success
+				return;
+		} 
+
+		dprintf(D_ALWAYS, "DynUser: MultiByteToWideChar() failed "
+				"error=%li\n", GetLastError());
+		EXCEPT("Unexpected failure in dynuser:update_t\n");
 	}
 }
 
@@ -570,7 +587,7 @@ void dynuser::createaccount() {
 		dprintf(D_ALWAYS, "Account %s already exists!\n",accountname);
 //		EXCEPT("createaccount: User %s already exists",accountname);
 	} else {
-		dprintf(D_ALWAYS, "Account %s creation failed! (err=%d)",accountname,nerr);
+		dprintf(D_ALWAYS, "Account %s creation failed! (err=%d)\n",accountname,nerr);
 	}
 
 }

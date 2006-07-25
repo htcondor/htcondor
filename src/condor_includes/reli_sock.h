@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -28,29 +28,25 @@
 #include "sock.h"
 #include "condor_adtypes.h"
 #include "condor_io.h"
+#include "condor_system.h"
 #include "../condor_daemon_core.V6/condor_ipverify.h"
+
 
 /*
 **	R E L I A B L E    S O C K
 */
 
+// These functions exchange arbitrary data blocks over a ReliSock.
+// They are for use with the Globus GSI gss-assist library.
+int relisock_gsi_get(void *arg, void **bufp, size_t *sizep);
+int relisock_gsi_put(void *arg,  void *buf, size_t size);
+
 class Authentication;
 class Condor_MD_MAC;
 /** The ReliSock class implements the Sock interface with TCP. */
 
-// Define a 'filesize_t' type and FILESIZE_T_FORMAT printf format string
-#if defined HAS_INT64_T
-  typedef int64_t filesize_t;
-# define FILESIZE_T_FORMAT "%" PRId64
-
-#elif defined HAS___INT64_T
-  typedef __int64 filesize_t;
-# define FILESIZE_T_FORMAT "%" PRId64
-
-#else
-  typedef long filesize_t;
-# define FILESIZE_T_FORMAT "%l"
-#endif
+#define GET_FILE_OPEN_FAILED -2
+#define PUT_FILE_OPEN_FAILED -2
 
 class ReliSock : public Sock {
 	friend class Authentication;
@@ -94,10 +90,10 @@ public:
 
     ///
 	int listen();
-    ///
-	inline int listen(int p) { if (!bind(p)) return FALSE; return listen(); }
-    ///
-	inline int listen(char *s) { if (!bind(s)) return FALSE; return listen(); }
+    /// FALSE means this is an incoming connection
+	inline int listen(int p) { if (!bind(FALSE,p)) return FALSE; return listen(); }
+    /// FALSE means this is an incoming connection
+	inline int listen(char *s) { if (!bind(FALSE,s)) return FALSE; return listen(); }
 
     ///
 	ReliSock *accept();
@@ -119,14 +115,35 @@ public:
     ///
 	int get_bytes_nobuffer(char *buffer, int max_length, int receive_size=1);
 
-    /// returns -1 on failure, 0 for ok
+    /// returns <0 on failure, 0 for ok
+	//  failure codes: GET_FILE_OPEN_FAILED  (errno contains specific error)
+	//                 -1                    (all other errors)
+	int get_file_with_permissions(filesize_t *size, const char *desination,
+								  bool flush_buffers=false);
+    /// returns <0 on failure, 0 for ok
+	//  failure codes: GET_FILE_OPEN_FAILED  (errno contains specific error)
+	//                 -1                    (all other errors)
 	int get_file( filesize_t *size, const char *destination, bool flush_buffers=false);
     /// returns -1 on failure, 0 for ok
 	int get_file( filesize_t *size, int fd, bool flush_buffers=false);
-    /// returns -1 on failure, 0 for ok
+    /// returns <0 on failure, 0 for ok
+	//  See put_file() for the meaning of specific return codes.
+	int put_file_with_permissions( filesize_t *size, const char *source);
+    /// returns <0 on failure, 0 for ok
+	//  failure codes: PUT_FILE_OPEN_FAILED  (errno contains specific error)
+	//                 -1                    (all other errors)
+	// In the case of PUT_FILE_OPEN_FAILED, the caller may assume that
+	// we can continue talking to the receiver, as though a file had
+	// been successfully sent.  In most cases, the next logical thing
+	// to do is to tell the receiver about the failure.
 	int put_file( filesize_t *size, const char *source);
     /// returns -1 on failure, 0 for ok
 	int put_file( filesize_t *size, int fd );
+	/// returns -1 on failure, 0 for ok
+	int get_x509_delegation( filesize_t *size, const char *destination,
+							 bool flush_buffers=false );
+	/// returns -1 on failure, 0 for ok
+	int put_x509_delegation( filesize_t *size, const char *source );
     ///
 	float get_bytes_sent() { return _bytes_sent; }
     ///
@@ -173,7 +190,7 @@ public:
     ///
     const char * getHostAddress();
     ///
-	int isAuthenticated();
+	int isAuthenticated() const;
     ///
 	void unAuthenticate();
 	///
@@ -211,6 +228,14 @@ protected:
 	char * serialize() const;	// save state into buffer
 
 	int prepare_for_nobuffering( stream_coding = stream_unknown);
+	int perform_authenticate( bool with_key, KeyInfo *& key, 
+							  const char* methods, CondorError* errstack );
+
+	// This is used internally to recover sanity on the stream after
+	// failing to open a file in put_file().
+	// returns -1 on failure, 0 for ok
+	int put_empty_file( filesize_t *size );
+
 
 	/*
 	**	Data structures

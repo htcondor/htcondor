@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -70,7 +70,8 @@ struct Translation FileTransferOutputTranslation[] = {
 	{ "ALWAYS", FTO_ON_EXIT_OR_EVICT },
 	{ "ON_EXIT", FTO_ON_EXIT },
 	{ "ONEXIT", FTO_ON_EXIT },
-	{ "NULL", 0 }
+	{ "NONE", FTO_NONE },
+	{ "NULL", FTO_NONE }
 };
 
 
@@ -81,6 +82,18 @@ struct Translation JobActionTranslation[] = {
 	{ "Remove-Force", JA_REMOVE_X_JOBS },
 	{ "Vacate", JA_VACATE_JOBS },
 	{ "Vacate-Fast", JA_VACATE_FAST_JOBS },
+	{ "NULL", 0 }
+};
+
+
+struct Translation CronAutoPublishTranslation[] = {
+	{ "Never", CAP_NEVER },
+	{ "False", CAP_NEVER },
+	{ "Always", CAP_ALWAYS },
+	{ "IfChanged", CAP_IF_CHANGED },
+	{ "If_Changed", CAP_IF_CHANGED },
+	{ "IfDifferent", CAP_IF_CHANGED },
+	{ "If_Different", CAP_IF_CHANGED },
 	{ "NULL", 0 }
 };
 
@@ -169,4 +182,19 @@ getJobActionNum( const char* str )
 {
 	return (JobAction)getNumFromName( str, JobActionTranslation );
 }
+
+
+const char*
+getCronAutoPublishString( CronAutoPublish_t val )
+{
+	return getNameFromNum( (int)val, CronAutoPublishTranslation );
+}
+
+
+CronAutoPublish_t
+getCronAutoPublishNum( const char* str )
+{
+	return (CronAutoPublish_t)getNumFromName(str, CronAutoPublishTranslation);
+}
+
 

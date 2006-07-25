@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -43,6 +43,9 @@ Claim::Claim( Resource* rip, bool is_cod )
 {
 	c_client = new Client;
 	c_id = new ClaimId( is_cod );
+	if( ! is_cod ) {
+		c_id->dropFile( rip->r_id );
+	}
 	c_ad = NULL;
 	c_starter = NULL;
 	c_rank = 0;
@@ -64,6 +67,7 @@ Claim::Claim( Resource* rip, bool is_cod )
 	c_has_job_ad = 0;
 	c_pending_cmd = -1;
 	c_wants_remove = false;
+	c_claim_started = 0;
 		// to make purify happy, we want to initialize this to
 		// something.  however, we immediately set it to UNCLAIMED
 		// (which is what it should really be) by using changeState()
@@ -74,6 +78,9 @@ Claim::Claim( Resource* rip, bool is_cod )
 	c_job_total_suspend_time = 0;
 	c_claim_total_run_time = 0;
 	c_claim_total_suspend_time = 0;
+	c_may_unretire = true;
+	c_retire_peacefully = false;
+	c_preempt_was_true = false;
 }
 
 
@@ -126,27 +133,40 @@ Claim::vacate()
 void
 Claim::publish( ClassAd* ad, amask_t how_much )
 {
-	char line[256];
+	MyString line;
 	char* tmp;
 	char *remoteUser;
 
 	if( IS_PRIVATE(how_much) ) {
+			// None of this belongs in private ads
 		return;
 	}
 
-	sprintf( line, "%s = %f", ATTR_CURRENT_RANK, c_rank );
-	ad->Insert( line );
+		/*
+		  NOTE: currently, we publish all of the following regardless
+		  of the mask (e.g. UPDATE vs. TIMEOUT).  Given the bug with
+		  ImageSize being recomputed but not used due to UPDATE
+		  vs. TIMEOUT confusion when publishing it, I'm inclined to
+		  ignore the performance cost of publishing the same stuff
+		  every timeout.  If, for some crazy reason, this becomes a
+		  problem, we can always seperate these into UPDATE + TIMEOUT
+		  attributes and only publish accordingly...  
+		  Derek <wright@cs.wisc.edu> 2005-08-11
+		*/
+
+	line.sprintf( "%s = %f", ATTR_CURRENT_RANK, c_rank );
+	ad->Insert( line.Value() );
 
 	if( c_client ) {
 		remoteUser = c_client->user();
 		if( remoteUser ) {
-			sprintf( line, "%s=\"%s\"", ATTR_REMOTE_USER, remoteUser );
-			ad->Insert( line );
+			line.sprintf( "%s=\"%s\"", ATTR_REMOTE_USER, remoteUser );
+			ad->Insert( line.Value() );
 		}
 		tmp = c_client->owner();
 		if( tmp ) {
-			sprintf( line, "%s=\"%s\"", ATTR_REMOTE_OWNER, tmp );
-			ad->Insert( line );
+			line.sprintf( "%s=\"%s\"", ATTR_REMOTE_OWNER, tmp );
+			ad->Insert( line.Value() );
 		}
 		tmp = c_client->accountingGroup();
 		if( tmp ) {
@@ -157,40 +177,99 @@ Claim::publish( ClassAd* ad, amask_t how_much )
 				uidDom = strchr(remoteUser,'@');
 			}
 			if ( uidDom ) {
-				sprintf( line, "%s=\"%s%s\"",ATTR_ACCOUNTING_GROUP,tmp,uidDom);
+				line.sprintf("%s=\"%s%s\"",ATTR_ACCOUNTING_GROUP,tmp,uidDom);
 			} else {
-				sprintf( line, "%s=\"%s\"", ATTR_ACCOUNTING_GROUP, tmp );
+				line.sprintf("%s=\"%s\"", ATTR_ACCOUNTING_GROUP, tmp );
 			}
-			ad->Insert( line );
+			ad->Insert( line.Value() );
 		}
 		tmp = c_client->host();
 		if( tmp ) {
-			sprintf( line, "%s=\"%s\"", ATTR_CLIENT_MACHINE, tmp );
-			ad->Insert( line );
+			line.sprintf( "%s=\"%s\"", ATTR_CLIENT_MACHINE, tmp );
+			ad->Insert( line.Value() );
 		}
 	}
 
 	if( (c_cluster > 0) && (c_proc >= 0) ) {
-		sprintf( line, "%s=\"%d.%d\"", ATTR_JOB_ID, c_cluster, c_proc );
-		ad->Insert( line );
+		line.sprintf( "%s=\"%d.%d\"", ATTR_JOB_ID, c_cluster, c_proc );
+		ad->Insert( line.Value() );
 	}
 
 	if( c_global_job_id ) {
-		sprintf( line, "%s=\"%s\"", ATTR_GLOBAL_JOB_ID, c_global_job_id );
-		ad->Insert( line );
+		line.sprintf( "%s=\"%s\"", ATTR_GLOBAL_JOB_ID, c_global_job_id );
+		ad->Insert( line.Value() );
 	}
 
 	if( c_job_start > 0 ) {
-		sprintf(line, "%s=%d", ATTR_JOB_START, c_job_start );
-		ad->Insert( line );
+		line.sprintf( "%s=%d", ATTR_JOB_START, c_job_start );
+		ad->Insert( line.Value() );
 	}
 
 	if( c_last_pckpt > 0 ) {
-		sprintf(line, "%s=%d", ATTR_LAST_PERIODIC_CHECKPOINT, c_last_pckpt );
-		ad->Insert( line );
+		line.sprintf( "%s=%d", ATTR_LAST_PERIODIC_CHECKPOINT, c_last_pckpt );
+		ad->Insert( line.Value() );
+	}
+
+		// update ImageSize attribute from procInfo (this is
+		// only for the opportunistic job, not COD)
+	if( isActive() ) {
+		unsigned long imgsize = imageSize();
+		line.sprintf( "%s = %lu", ATTR_IMAGE_SIZE, imgsize );
+		ad->Insert( line.Value() );
 	}
 
 	publishStateTimes( ad );
+
+}
+
+void
+Claim::publishPreemptingClaim( ClassAd* ad, amask_t how_much )
+{
+	MyString line;
+	char* tmp;
+	char *remoteUser;
+
+	if( IS_PRIVATE(how_much) ) {
+			// None of this belongs in private ads
+		return;
+	}
+
+	if( c_client && c_client->user() ) {
+		line.sprintf( "%s = %f", ATTR_PREEMPTING_RANK, c_rank );
+		ad->Insert( line.Value() );
+
+		remoteUser = c_client->user();
+		if( remoteUser ) {
+			line.sprintf( "%s=\"%s\"", ATTR_PREEMPTING_USER, remoteUser );
+			ad->Insert( line.Value() );
+		}
+		tmp = c_client->owner();
+		if( tmp ) {
+			line.sprintf( "%s=\"%s\"", ATTR_PREEMPTING_OWNER, tmp );
+			ad->Insert( line.Value() );
+		}
+		tmp = c_client->accountingGroup();
+		if( tmp ) {
+			char *uidDom = NULL;
+				// The accountant wants to see ATTR_ACCOUNTING_GROUP 
+				// fully qualified
+			if ( remoteUser ) {
+				uidDom = strchr(remoteUser,'@');
+			}
+			if ( uidDom ) {
+				line.sprintf("%s=\"%s%s\"",ATTR_PREEMPTING_ACCOUNTING_GROUP,tmp,uidDom);
+			} else {
+				line.sprintf("%s=\"%s\"", ATTR_PREEMPTING_ACCOUNTING_GROUP, tmp );
+			}
+			ad->Insert( line.Value() );
+		}
+	}
+	else {
+		ad->Delete(ATTR_PREEMPTING_RANK);
+		ad->Delete(ATTR_PREEMPTING_OWNER);
+		ad->Delete(ATTR_PREEMPTING_USER);
+		ad->Delete(ATTR_PREEMPTING_ACCOUNTING_GROUP);
+	}
 }
 
 
@@ -291,6 +370,17 @@ Claim::publishCOD( ClassAd* ad )
 	}
 }
 
+time_t
+Claim::getJobTotalRunTime()
+{
+	time_t my_job_run = c_job_total_run_time;
+	time_t now;
+	if( c_state == CLAIM_RUNNING ) { 
+		now = time(NULL);
+		my_job_run += now - c_entered_state;
+	}
+	return my_job_run;
+}
 
 void
 Claim::publishStateTimes( ClassAd* ad )
@@ -441,6 +531,28 @@ Claim::match_timed_out()
 	}
 
 	if( rip->r_cur->idMatches( id() ) ) {
+#if HAVE_BACKFILL
+		if( rip->state() == backfill_state ) {
+				/*
+				  If the resource is in the backfill state when the
+				  match timed out, it means that the backfill job is
+				  taking longer to exit than the match timeout, which
+				  should be an extremely rare case.  However, if it
+				  happens, we need to handle it.  Luckily, all we have
+				  to do is change our destination state and return,
+				  since the ResState code will deal with resetting the
+				  claim objects once we hit the owner state...
+				*/
+			dprintf( D_FAILURE|D_ALWAYS, "WARNING: Match timed out "
+					 "while still in the %s state. This might mean "
+					 "your MATCH_TIMEOUT setting (%d) is too small, "
+					 "or that there's a problem with how quickly your "
+					 "backfill jobs can evict themselves.\n", 
+					 state_to_string(rip->state()), match_timeout );
+			rip->set_destination_state( owner_state );
+			return FALSE;
+		}
+#endif /* HAVE_BACKFILL */
 		if( rip->state() != matched_state ) {
 				/* 
 				   This used to be an EXCEPT(), since it really
@@ -456,7 +568,7 @@ Claim::match_timed_out()
 				   of the log file or something.  -Derek 10/9/00
 				*/
 			dprintf( D_FAILURE|D_FULLDEBUG, 
-					 "WARNING: Current match timed out but in %s state.",
+					 "WARNING: Current match timed out but in %s state.\n",
 					 state_to_string(rip->state()) );
 			return FALSE;
 		}
@@ -469,11 +581,19 @@ Claim::match_timed_out()
 		rip->change_state( owner_state );
 	} else {
 			// The match that timed out was the preempting claim.
-		assert( rip->r_pre->idMatches( id() ) );
+		Claim *c = NULL;
+		if( rip->r_pre && rip->r_pre->idMatches( id() ) ) {
+			c = rip->r_pre;
+		}
+		else if( rip->r_pre_pre && rip->r_pre_pre->idMatches( id() ) ) {
+			c = rip->r_pre_pre;
+		}
+		else {
+			EXCEPT("Unexpected timeout of claim id: %s\n",id());
+		}
 			// We need to generate a new preempting claim object,
 			// restore our reqexp, and update the CM. 
-		delete rip->r_pre;
-		rip->r_pre = new Claim( rip );
+		rip->removeClaim( c );
 		rip->r_reqexp->restore();
 		rip->update();
 	}		
@@ -494,10 +614,8 @@ Claim::beginClaim( void )
 	}
 }
 
-
-
 void
-Claim::beginActivation( time_t now )
+Claim::loadAccountingInfo()
 {
 		// Get a bunch of info out of the request ad that is now
 		// relevant, and store it in this Claim object
@@ -527,6 +645,21 @@ Claim::beginActivation( time_t now )
 		free( tmp );
 		tmp = NULL;
 	}
+
+	if(!c_client->owner()) {
+			// Only if Owner has never been initialized, load it now.
+		if(c_ad->LookupString(ATTR_OWNER, &tmp)) {
+			c_client->setowner( tmp );
+			free( tmp );
+			tmp = NULL;
+		}
+	}
+}
+
+void
+Claim::beginActivation( time_t now )
+{
+	loadAccountingInfo();
 
 	c_job_start = (int)now;
 
@@ -776,10 +909,14 @@ Claim::spawnStarter( time_t now, Stream* s )
 			// Big error!
 		dprintf( D_ALWAYS, "ERROR! Claim::spawnStarter() called "
 				 "w/o a Starter object! Returning failure\n" );
-		return 0;
+		return FALSE;
 	}
 
 	rval = c_starter->spawn( now, s );
+	if( ! rval ) {
+		resetClaim();
+		return FALSE;
+	}
 
 	changeState( CLAIM_RUNNING );
 
@@ -792,7 +929,7 @@ Claim::spawnStarter( time_t now, Stream* s )
 		c_starter->set_last_snapshot( (now + 15) -
 									  pid_snapshot_interval );
 	} 
-	return rval;
+	return TRUE;
 }
 
 
@@ -1007,42 +1144,48 @@ Claim::starterKillHard( void )
 }
 
 
-char* 
-Claim::makeCODStarterArgs( void )
+bool
+Claim::makeCODStarterArgs( ArgList &args )
 {
-	MyString args;
-
 		// first deal with everthing that's shared, no matter what.
-	args = "condor_starter -f -append cod ";
-	args += "-header (";
+	args.AppendArg("condor_starter");
+	args.AppendArg("-f");
+	args.AppendArg("-append");
+	args.AppendArg("cod");
+	args.AppendArg("-header");
+
+	MyString cod_id_arg;
+	cod_id_arg += "(";
 	if( resmgr->is_smp() ) {
-		args += c_rip->r_id_str;
-		args += ':';
+		cod_id_arg += c_rip->r_id_str;
+		cod_id_arg += ':';
 	}
-	args += codId();
-	args += ") ";
+	cod_id_arg += codId();
+	cod_id_arg += ")";
+	args.AppendArg(cod_id_arg.Value());
 
 		// if we've got a cluster and proc for the job, append those
 	if( c_cluster >= 0 ) {
-		args += " -job-cluster ";
-		args += c_cluster;
+		args.AppendArg("-job-cluster");
+		args.AppendArg(c_cluster);
 	} 
 	if( c_proc >= 0 ) {
-		args += " -job-proc ";
-		args += c_proc;
+		args.AppendArg("-job-proc");
+		args.AppendArg(c_proc);
 	} 
 
 		// finally, specify how the job should get its ClassAd
 	if( c_cod_keyword ) { 
-		args += " -job-keyword ";
-		args += c_cod_keyword;
+		args.AppendArg("-job-keyword");
+		args.AppendArg(c_cod_keyword);
 	}
 
 	if( c_has_job_ad ) { 
-		args += " -job-input-ad - ";
+		args.AppendArg("-job-input-ad");
+		args.AppendArg("-");
 	}
 
-	return strdup( args.Value() );
+	return true;
 }
 
 
@@ -1285,6 +1428,8 @@ Claim::resetClaim( void )
 	c_has_job_ad = 0;
 	c_job_total_run_time = 0;
 	c_job_total_suspend_time = 0;
+	c_may_unretire = true;
+	c_preempt_was_true = false;
 }
 
 
@@ -1311,6 +1456,9 @@ Claim::changeState( ClaimState s )
 
 		}
 	}
+	if( c_state == CLAIM_UNCLAIMED && c_claim_started == 0 ) {
+		c_claim_started = time(NULL);
+	}
 
 		// now that all the appropriate time values are updated, we
 		// can actually do the deed.
@@ -1324,30 +1472,38 @@ Claim::changeState( ClaimState s )
 	}
 }
 
+time_t
+Claim::getClaimAge()
+{
+	time_t now = time(NULL);
+	if(c_claim_started) {
+		return now - c_claim_started;
+	}
+	return 0;
+}
 
 bool
-Claim::writeJobAd( int fd )
+Claim::writeJobAd( int pipe_end )
 {
-	FILE* fp;
-	int rval;
-	fp = fdopen( fd, "w" );
-	if( ! fp ) { 
-		dprintf( D_ALWAYS, "Failed to open FILE* from fd %d: %s "
-				 "(errno %d)\n", fd, strerror(errno), errno );
-		return false;
+	// pipe_end is a DaemonCore pipe, so we must use
+	// DC::Write_Pipe for writing to it
+	
+	MyString ad_str;
+	c_ad->sPrint(ad_str);
+
+	const char* ptr = ad_str.Value();
+	int len = ad_str.Length();
+	while (len) {
+		int bytes_written = daemonCore->Write_Pipe(pipe_end, ptr, len);
+		if (bytes_written == -1) {
+			dprintf(D_ALWAYS, "writeJobAd: Write_Pipe failed\n");
+			return false;
+		}
+		ptr += bytes_written;
+		len -= bytes_written;
 	}
 
-	rval = c_ad->fPrint( fp );
-
-		// since this is really a DC pipe that we have to close with
-		// Close_Pipe(), we can't call fclose() on it.  so, unless we
-		// call fflush(), we won't get any output. :(
-	if( fflush(fp) < 0 ) {
-		dprintf( D_ALWAYS, "writeJobAd: fflush() failed: %s (errno %d)\n", 
-				 strerror(errno), errno );
-	}  
-
-	return rval;
+	return true;
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -1524,6 +1680,51 @@ ClaimId::~ClaimId()
 bool
 ClaimId::matches( const char* id )
 {
-	return( strcmp(id, c_id) == 0 );
+	// When we send the claim ID, the IP in it may get rewritten, depending
+	// on which interface we use to talk to the collector.  Therefore,
+	// do not compare the IP portion of the claim ID.
+
+	char const *id_after_ip = strchr(id,':');
+	char const *c_id_after_ip = strchr(c_id,':');
+
+	if(!id_after_ip) return false; //caller gave us a bogus claim id
+	ASSERT(c_id_after_ip); //should never happen -- our claim id is bogus
+
+	return( strcmp(id_after_ip, c_id_after_ip) == 0 );
 }
 
+
+void
+ClaimId::dropFile( int vm_id )
+{
+	if( ! param_boolean("STARTD_SHOULD_WRITE_CLAIM_ID_FILE", true) ) {
+		return;
+	}
+	char* filename = startdClaimIdFile( vm_id );  
+	if( ! filename ) {
+		dprintf( D_ALWAYS, "Error getting claim id filename, not writing\n" );
+		return;
+	}
+
+	MyString filename_old = filename;
+	MyString filename_new = filename;
+	free( filename );
+	filename = NULL;
+
+	filename_new += ".new";
+
+	FILE* NEW_FILE = fopen( filename_new.Value(), "w" );
+	if( ! NEW_FILE ) {
+		dprintf( D_ALWAYS,
+				 "ERROR: can't open claim id file: %s: %s (errno: %d)\n",
+				 filename_new.Value(), strerror(errno), errno );
+ 		return;
+	}
+	fprintf( NEW_FILE, "%s\n", c_id );
+	fclose( NEW_FILE );
+	if( rotate_file(filename_new.Value(), filename_old.Value()) < 0 ) {
+		dprintf( D_ALWAYS, "ERROR: failed to move %s into place, removing\n",
+				 filename_new.Value() );
+		unlink( filename_new.Value() );
+	}
+}

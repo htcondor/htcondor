@@ -1,0 +1,6 @@
+    [
+        dap_type = release;
+        reserve_id = 2;
+        dest_host = "db18.cs.wisc.edu"; 
+    ]
+

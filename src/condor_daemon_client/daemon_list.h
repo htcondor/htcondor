@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -24,9 +24,16 @@
 #ifndef _CONDOR_DAEMON_LIST_H
 #define _CONDOR_DAEMON_LIST_H
 
+#include "condor_common.h"
 #include "daemon.h"
 #include "simplelist.h"
+#include "condor_classad.h"
+#include "condor_query.h"
 
+
+class DCCollector;
+class CondorQuery;
+class ClassAdList;
 
 /** Basically, a SimpleList of Daemon objects.  This is slightly
 	more complicated than that, and provides some useful, shared
@@ -42,7 +49,7 @@ class DaemonList {
 public:
 
 	DaemonList();
-	~DaemonList();
+	virtual ~DaemonList();
 
 		/** Initialize the list with Daemons of the given type,
 			specified with the given list of contact info
@@ -74,19 +81,49 @@ public:
 	void deleteCurrent();
 	void DeleteCurrent();
 
-private:
+ protected:
+	SimpleList<Daemon*> list;
+
+
+ private:
 
 		/** Helper which constructs a Daemon object of the given type
 			and contact info.  This is used to initalize the list. 
 		*/
 	Daemon* buildDaemon( daemon_t type, const char* str );
 
-	SimpleList<Daemon*> list;
-
 		// I can't be copied (yet)
 	DaemonList( const DaemonList& );
 	DaemonList& operator = ( const DaemonList& );
 };
+
+
+class CollectorList : public DaemonList {
+ public:
+	CollectorList();
+	virtual ~CollectorList();
+
+		// Create the list of collectors for the pool
+		// based on configruation settings
+	static CollectorList * create(const char * pool = NULL);
+
+		// Resort a collector list for locality (for negotiator)
+	int resortLocal( const char *preferred_collector );
+
+		// Send updates to all the collectors
+		// return - number of successfull updates
+	int sendUpdates (int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking);
+	
+		// Try querying all the collectors until you get a good one
+	QueryResult query (CondorQuery & query, ClassAdList & adList);
+
+    bool next( DCCollector* &);
+    bool Next( DCCollector* &);
+    bool next( Daemon* &);
+    bool Next( Daemon* &);
+
+};
+
 
 
 #endif /* _CONDOR_DAEMON_LIST_H */

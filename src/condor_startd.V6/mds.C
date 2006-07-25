@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -24,6 +24,7 @@
 #include "condor_common.h"
 #include "condor_classad.h"
 #include "mds.h"
+#include "condor_netdb.h"
 
 int MdsGenerate(ClassAd *machine, const char *file )
 {
@@ -41,7 +42,7 @@ int MdsGenerate(ClassAd *machine, const char *file )
 		strncpy( HostBuf, Host, sizeof( HostBuf ) );
 		HostBuf[sizeof( HostBuf ) - 1] = '\0';
 		free( Host );
-	} else if ( gethostname( HostBuf, sizeof(HostBuf ) ) == 0  ) {
+	} else if ( condor_gethostname( HostBuf, sizeof(HostBuf ) ) == 0  ) {
 		// Do nothing
 	} else {
 		strcpy( HostBuf, "unknown" );
@@ -55,37 +56,27 @@ int MdsGenerate(ClassAd *machine, const char *file )
 	fprintf( fp, "objectclass: MdsHost\n" );
 
 	// Prepare to walk through the ClassAd
-//	machine->ResetName();
-//	machine->ResetExpr();
+	machine->ResetName();
+	machine->ResetExpr();
 
 	// Do it
-//	while (1) {
-	ClassAd::iterator m;
-	ClassAdUnParser unp;
-	for( m = machine->begin( ); m != machine->end( ); m++ ) {
+	while (1) {
 		const char		*name;
-//		ExprTree		*expr;
+		ExprTree		*expr;
 
 		// Get the name..
-//		name = machine->NextNameOriginal();
-		name = m->first.c_str( );
-//		expr = machine->NextExpr();
-//		if ( ( NULL == name ) || ( NULL == expr ) ){
-		if ( NULL == name ) {
+		name = machine->NextNameOriginal();
+		expr = machine->NextExpr();
+		if ( ( NULL == name ) || ( NULL == expr ) ){
 			break;
 		}
 
 		// And, find it's value.
-//		ExprTree	*value = expr->RArg();
-		ExprTree 	*value = m->second;
+		ExprTree	*value = expr->RArg();
 
 		if ( NULL != value ) {
 			char		*thestr;
-//			value->PrintToNewStr( &thestr );
-			std::string thestring;
-			unp.Unparse( thestring, m->second );
-			thestr = new char[thestring.length( )+1];
-			strcpy( thestr, thestring.c_str( ) );
+			value->PrintToNewStr( &thestr );
 			if ( thestr != NULL ) {
 				char	*tmp = thestr;
 				int		len = strlen( thestr );

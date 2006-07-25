@@ -1,0 +1,117 @@
+#!/usr/bin/env perl
+
+##/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+##
+## Condor Software Copyright Notice
+## Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+##
+## This source code is covered by the Condor Public License, which can
+## be found in the accompanying LICENSE.TXT file, or online at
+## www.condorproject.org.
+##
+## THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+## AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+## IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+## WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+## FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+## HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+## MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+## ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+## PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+## RIGHT.
+##
+##***************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
+
+use strict;
+use FileHandle;
+use POSIX "strftime";
+
+# Figure out where to store this script's log
+chomp(my $LOG_DIR = `condor_config_val log 2>/dev/null`);
+die "Could not get LOG from condor_config_val -- make sure PATH (currently $ENV{PATH}) includes Condor binaries and LOG is defined\n" unless $LOG_DIR;
+
+# Figure out where it's going to go on the local system
+my $dest = `condor_config_val accountant_log 2>/dev/null`;
+chomp($dest);
+
+&log("Local accountant log = $dest");
+
+# Check the collector and make sure we're not the active negotiator or
+# in the middle of a vote
+my %negotiator_ad = map { s/\"//g; split / = / } `condor_status -negotiator -l 2>/dev/null`;
+if ($?)
+{
+    &log("Failed to query the collector for the negotiator ad.  Bailing out.");
+    exit 1;
+}
+
+my $hostname = `condor_config_val full_hostname 2>/dev/null`;
+chomp(%negotiator_ad);
+$hostname =~ s/\s//g;
+if ($?)
+{
+    &log("Failed to determine our hostname.  Bailing out.");
+    exit 1;
+}
+
+&log("Negotiator hostname = $negotiator_ad{Name}");
+&log("My hostname = $hostname");
+unless ($negotiator_ad{Name})
+{
+    &log("Unable to find a negotiator.  Looks like we're doing a HAD election.");
+    exit;
+}
+elsif ($negotiator_ad{Name} eq $hostname)
+{
+    &log("It looks like I'm the negotiator.  Don't bother with the fetch.");
+    exit;
+}
+else
+{
+    &log("The negotiator is active on another CM.  Mirror the accountant log.");
+}
+
+# Grab the new file
+my $accountant_log = `condor_fetchlog $negotiator_ad{Name} accountant`;
+if ($?)
+{
+    &log("Failed to fetch the accountant log.  Bailing out.");
+    exit 1;
+}
+
+&log("Pulled down " . length($accountant_log) . " bytes");
+
+exit unless $accountant_log;
+exit unless $accountant_log =~ /\S/;
+
+# Write it out, since we know it's not null
+my $fh = new FileHandle ">$dest";
+unless ($fh)
+{
+    &log("Failed to open $dest for writing, bailing out!");
+    exit 1;
+}
+print $fh $accountant_log;
+$fh->close;
+
+# All finished!
+&log("Done");
+
+# Do basic logging
+sub log
+{
+    my ($msg) = @_;
+
+    my $fh = new FileHandle ">>$LOG_DIR/AcctLogMirrorLog";
+    if (defined($fh))
+    {
+        print $fh strftime("%m/%d %H:%M:%S $msg\n", localtime);
+        $fh->close;
+    }
+    else
+    {
+        die strftime("%m/%d %H:%M:%S ", localtime) . "Could not open $LOG_DIR/AcctLogMirrorLog for appending: $!\n";
+    }
+}

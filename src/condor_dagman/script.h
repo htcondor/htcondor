@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -44,17 +44,17 @@ class Script {
 	bool _done;
 
 	int BackgroundRun( int reaperId );
-	inline const char* GetNodeName() { return _nodeName; }
+	const char* GetNodeName();
 
     inline const char* GetCmd() const { return _cmd; }
-    Script( bool post, const char* cmd, const char* noeName );
+    Script( bool post, const char* cmd, const Job* node );
     ~Script();
 
     char * _cmd;
 
   protected:
-		// name of DAG node with which this script is associated
-    const char* _nodeName;
+    // the DAG node with which this script is associated.
+    const Job *_node;
 };
 
 #endif

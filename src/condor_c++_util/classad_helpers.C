@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -29,10 +29,10 @@
 #include "condor_classad.h"
 #include "condor_attributes.h"
 #include "sig_name.h"
+#include "exit.h"
+#include "enum_utils.h"
+#include "condor_adtypes.h"
 
-using namespace std;
-
-extern "C" {
 
 /*
   This method is static to this file and shouldn't be used directly.
@@ -48,21 +48,33 @@ findSignal( ClassAd* ad, const char* attr_name )
 	if( ! ad ) {
 		return -1;
 	}
-	string name;
-	int sigNum;
+	char* name = NULL;
 
-	// First, let's see if we just got it as an int.
-	if( ad->EvaluateAttrInt( attr_name, sigNum ) ) {
-		return sigNum;
+	ExprTree *tree, *rhs;
+	tree = ad->Lookup( attr_name );
+	if(  tree ) {
+		rhs = tree->RArg();
+		if( ! rhs ) {
+				// invalid!
+			return -1;
+		}
+		switch( rhs->MyType() ) {
+		case LX_STRING:
+				// translate the string version to the local number
+				// we'll need to use
+			name = ((String *)rhs)->Value();
+			return signalNumber( name );
+			break;
+		case LX_INTEGER:
+			return ((Integer *)rhs)->Value();
+			break;
+		default:
+			return -1;
+			break;
+		}
 	}
-	
-	// Alright, maybe we get it as a string		
-	if( ad->EvaluateAttrString( attr_name, name ) ) {
-		return( signalNumber( name.c_str() ) );	
-	}
-	
 	return -1;
-}	
+}
 
 
 int
@@ -86,4 +98,229 @@ findHoldKillSig( ClassAd* ad )
 }
 
 
-} // end of extern "C"
+bool
+printExitString( ClassAd* ad, int exit_reason, MyString &str )
+{
+		// first handle a bunch of cases that don't really need any
+		// info from the ClassAd at all.
+
+	switch ( exit_reason ) {
+
+	case JOB_KILLED:
+		str += "was removed by the user";
+		return true;
+		break;
+
+	case JOB_NOT_CKPTED:
+		str += "was evicted by condor, without a checkpoint";
+		return true;
+		break;
+
+	case JOB_NOT_STARTED:
+		str += "was never started";
+		return true;
+		break;
+
+	case JOB_SHADOW_USAGE:
+		str += "had incorrect arguments to the condor_shadow ";
+		str += "(internal error)";
+		return true;
+		break;
+
+	case JOB_COREDUMPED:
+	case JOB_EXITED:
+			// these two need more work...  we handle both below
+		break;
+
+	default:
+		str += "has a strange exit reason code of ";
+		str += exit_reason;
+		return true;
+		break;
+
+	} // switch()
+
+		// if we're here, it's because we hit JOB_EXITED or
+		// JOB_COREDUMPED in the above switch.  now we've got to pull
+		// a bunch of info out of the ClassAd to finish our task...
+
+	int int_value;
+	bool exited_by_signal = false;
+	int exit_value = -1;
+
+		// first grab everything from the ad we must have for this to
+		// work at all...
+	if( ad->LookupBool(ATTR_ON_EXIT_BY_SIGNAL, int_value) ) {
+		if( int_value ) {
+			exited_by_signal = true;
+		} else {
+			exited_by_signal = false;
+		}
+	} else {
+		dprintf( D_ALWAYS, "ERROR in printExitString: %s not found in ad\n",
+				 ATTR_ON_EXIT_BY_SIGNAL );
+		return false;
+	}
+
+	if( exited_by_signal ) {
+		if( ad->LookupInteger(ATTR_ON_EXIT_SIGNAL, int_value) ) {
+			exit_value = int_value;
+		} else {
+			dprintf( D_ALWAYS, "ERROR in printExitString: %s is true but "
+					 "%s not found in ad\n", ATTR_ON_EXIT_BY_SIGNAL,
+					 ATTR_ON_EXIT_SIGNAL);
+			return false;
+		}
+	} else { 
+		if( ad->LookupInteger(ATTR_ON_EXIT_CODE, int_value) ) {
+			exit_value = int_value;
+		} else {
+			dprintf( D_ALWAYS, "ERROR in printExitString: %s is false but "
+					 "%s not found in ad\n", ATTR_ON_EXIT_BY_SIGNAL,
+					 ATTR_ON_EXIT_CODE);
+			return false;
+		}
+	}
+
+		// now we can grab all the optional stuff that might help...
+	char* ename = NULL;
+	int got_exception = ad->LookupString(ATTR_EXCEPTION_NAME, &ename); 
+	char* reason_str = NULL;
+	ad->LookupString( ATTR_EXIT_REASON, &reason_str );
+
+		// finally, construct the right string
+	if( exited_by_signal ) {
+		if( got_exception ) {
+			str += "died with exception ";
+			str += ename;
+		} else {
+			if( reason_str ) {
+				str += reason_str;
+			} else {
+				str += "died on signal ";
+				str += exit_value;
+			}
+		}
+	} else {
+		str += "exited normally with status ";
+		str += exit_value;
+	}
+
+	if( ename ) {
+		free( ename );
+	}
+	if( reason_str ) {
+		free( reason_str );
+	}		
+	return true;
+}
+
+/* Utility function to create a generic job ad. The caller can then fill
+ * in the relevant details.
+ */
+ClassAd *CreateJobAd( const char *owner, int universe, const char *cmd )
+{
+	ClassAd *job_ad = new ClassAd();
+
+	job_ad->SetMyTypeName(JOB_ADTYPE);
+	job_ad->SetTargetTypeName(STARTD_ADTYPE);
+
+	if ( owner ) {
+		job_ad->Assign( ATTR_OWNER, owner );
+	} else {
+		job_ad->AssignExpr( ATTR_OWNER, "Undefined" );
+	}
+	job_ad->Assign( ATTR_JOB_UNIVERSE, universe );
+	job_ad->Assign( ATTR_JOB_CMD, cmd );
+
+	job_ad->Assign( ATTR_Q_DATE, (int)time(NULL) );
+	job_ad->Assign( ATTR_COMPLETION_DATE, 0 );
+
+	job_ad->Assign( ATTR_JOB_REMOTE_WALL_CLOCK, (float)0.0 );
+	job_ad->Assign( ATTR_JOB_LOCAL_USER_CPU, (float)0.0 );
+	job_ad->Assign( ATTR_JOB_LOCAL_SYS_CPU, (float)0.0 );
+	job_ad->Assign( ATTR_JOB_REMOTE_USER_CPU, (float)0.0 );
+	job_ad->Assign( ATTR_JOB_REMOTE_SYS_CPU, (float)0.0 );
+
+		// This is a magic cookie, see how condor_submit sets it
+	job_ad->Assign( ATTR_CORE_SIZE, -1 );
+
+		// Are these ones really necessary?
+	job_ad->Assign( ATTR_JOB_EXIT_STATUS, 0 );
+	job_ad->Assign( ATTR_ON_EXIT_BY_SIGNAL, false );
+
+	job_ad->Assign( ATTR_NUM_CKPTS, 0 );
+	job_ad->Assign( ATTR_NUM_RESTARTS, 0 );
+	job_ad->Assign( ATTR_NUM_SYSTEM_HOLDS, 0 );
+	job_ad->Assign( ATTR_JOB_COMMITTED_TIME, 0 );
+	job_ad->Assign( ATTR_TOTAL_SUSPENSIONS, 0 );
+	job_ad->Assign( ATTR_LAST_SUSPENSION_TIME, 0 );
+	job_ad->Assign( ATTR_CUMULATIVE_SUSPENSION_TIME, 0 );
+
+	job_ad->Assign( ATTR_JOB_ROOT_DIR, "/" );
+
+	job_ad->Assign( ATTR_MIN_HOSTS, 1 );
+	job_ad->Assign( ATTR_MAX_HOSTS, 1 );
+	job_ad->Assign( ATTR_CURRENT_HOSTS, 0 );
+
+	job_ad->Assign( ATTR_WANT_REMOTE_SYSCALLS, false );
+	job_ad->Assign( ATTR_WANT_CHECKPOINT, false );
+	job_ad->Assign( ATTR_WANT_REMOTE_IO, true );
+
+	job_ad->Assign( ATTR_JOB_STATUS, IDLE );
+	job_ad->Assign( ATTR_ENTERED_CURRENT_STATUS, (int)time(NULL) );
+
+	job_ad->Assign( ATTR_JOB_PRIO, 0 );
+	job_ad->Assign( ATTR_NICE_USER, false );
+
+	job_ad->Assign( ATTR_JOB_ENVIRONMENT1, "" );
+
+	job_ad->Assign( ATTR_JOB_NOTIFICATION, NOTIFY_NEVER );
+
+	job_ad->Assign( ATTR_KILL_SIG, "SIGTERM" );
+
+	job_ad->Assign( ATTR_IMAGE_SIZE, 0 );
+
+	job_ad->Assign( ATTR_JOB_IWD, "/tmp" );
+	job_ad->Assign( ATTR_JOB_INPUT, NULL_FILE );
+	job_ad->Assign( ATTR_JOB_OUTPUT, NULL_FILE );
+	job_ad->Assign( ATTR_JOB_ERROR, NULL_FILE );
+
+		// Not sure what to do with these. If stdin/out/err is unset in the
+		// submit file, condor_submit sets In/Out/Err to the NULL_FILE and
+		// these transfer attributes to false. Otherwise, it leaves the
+		// transfer attributes unset (which is treated as true). If we
+		// explicitly set these to false here, our caller needs to reset
+		// them to true if it changes In/Out/Err and wants the default
+		// behavior of transfering them. This will probably be a common
+		// oversite. Leaving them unset should be safe if our caller doesn't
+		// change In/Out/Err.
+	//job_ad->Assign( ATTR_TRANSFER_INPUT, false );
+	//job_ad->Assign( ATTR_TRANSFER_OUTPUT, false );
+	//job_ad->Assign( ATTR_TRANSFER_ERROR, false );
+	//job_ad->Assign( ATTR_TRANSFER_EXECUTABLE, false );
+
+	job_ad->Assign( ATTR_BUFFER_SIZE, 512*1024 );
+	job_ad->Assign( ATTR_BUFFER_BLOCK_SIZE, 32*1024 );
+
+	job_ad->Assign( ATTR_SHOULD_TRANSFER_FILES,
+					getShouldTransferFilesString( STF_YES ) );
+	job_ad->Assign( ATTR_TRANSFER_FILES, "ONEXIT" );
+	job_ad->Assign( ATTR_WHEN_TO_TRANSFER_OUTPUT,
+					getFileTransferOutputString( FTO_ON_EXIT ) );
+
+	job_ad->Assign( ATTR_REQUIREMENTS, true );
+
+	job_ad->Assign( ATTR_PERIODIC_HOLD_CHECK, false );
+	job_ad->Assign( ATTR_PERIODIC_REMOVE_CHECK, false );
+	job_ad->Assign( ATTR_PERIODIC_RELEASE_CHECK, false );
+
+	job_ad->Assign( ATTR_ON_EXIT_HOLD_CHECK, false );
+	job_ad->Assign( ATTR_ON_EXIT_REMOVE_CHECK, true );
+
+	job_ad->Assign( ATTR_JOB_ARGUMENTS1, "" );
+
+	job_ad->Assign( ATTR_JOB_LEAVE_IN_QUEUE, false );
+
+	return job_ad;
+}

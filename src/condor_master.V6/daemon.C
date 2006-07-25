@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -35,11 +35,12 @@
 #include "condor_parameters.h"
 #include "daemon_list.h"
 #include "sig_name.h"
-#include "env.h"
+#include "internet.h"
+#include "strupr.h"
+#include "condor_netdb.h"
 
 
 // these are defined in master.C
-extern int		RestartsPerHour;
 extern int 		MasterLockFD;
 extern FileLock*	MasterLock;
 extern int		master_exit(int);
@@ -50,7 +51,7 @@ extern int		new_bin_delay;
 extern char*	FS_Preen;
 extern			ClassAd* ad;
 extern int		NT_ServiceFlag; // TRUE if running on NT as an NT Service
-extern DCCollector*	Collector;
+extern CollectorList*	Collectors;
 extern DaemonList* secondary_collectors;
 
 extern time_t	GetTimeStamp(char* file);
@@ -75,9 +76,10 @@ int		hourly_housekeeping(void);
 // make sure that the master does not start itself : set runs_here off
 
 extern Daemons 		daemons;
-extern int			ceiling;
-extern float		e_factor;					// exponential factor
-extern int			r_factor;					// recovering factor
+extern int			master_backoff_constant;	// Backoff time constant
+extern int			master_backoff_ceiling;		// Backoff time ceiling
+extern float		master_backoff_factor;		// exponential factor
+extern int			master_recover_time;		// recovering time
 extern int			shutdown_graceful_timeout;
 extern int			shutdown_fast_timeout;
 extern int			Lines;
@@ -116,6 +118,9 @@ daemon::daemon(char *name, bool is_daemon_core, bool is_ha )
 	this->ha_lock = NULL;
 	this->is_ha = is_ha;
 
+	// Default to not on hold (will be set to true if controlled (i.e by HAD))
+	on_hold = FALSE;
+
 	// Handle configuration
 	DoConfig( true );
 
@@ -125,6 +130,7 @@ daemon::daemon(char *name, bool is_daemon_core, bool is_ha )
 
 	// Check the process name (is it me?)
 	process_name = NULL;
+    watch_name = NULL;
 	log_name = NULL;
 	if( strcmp(name, "MASTER") == MATCH ) {
 		runs_here = FALSE;
@@ -133,7 +139,6 @@ daemon::daemon(char *name, bool is_daemon_core, bool is_ha )
 	}
 	runs_on_this_host();
 	pid = 0;
-	on_hold = FALSE;
 	restarts = 0;
 	newExec = FALSE; 
 	timeStamp = 0;
@@ -148,6 +153,7 @@ daemon::daemon(char *name, bool is_daemon_core, bool is_ha )
 	stop_state = NONE;
 	needs_update = FALSE;
 	procfam = NULL;
+	num_controllees = 0;
 
 #if 0
 	port = NULL;
@@ -178,11 +184,11 @@ daemon::runs_on_this_host()
 			}
 		} else {
 			if (this_host_addr_list == 0) {
-				if (gethostname(hostname, sizeof(hostname)) < 0) {
+				if (condor_gethostname(hostname, sizeof(hostname)) < 0) {
 					EXCEPT( "gethostname(0x%x,%d)", hostname, 
 						   sizeof(hostname));
 				}
-				if( (hp=gethostbyname(hostname)) == 0 ) {
+				if( (hp=condor_gethostbyname(hostname)) == 0 ) {
 					EXCEPT( "gethostbyname(%s)", hostname );
 				}
 				for (host_addr_count = 0; hp->h_addr_list[host_addr_count];
@@ -205,7 +211,7 @@ daemon::runs_on_this_host()
 				return FALSE;
 			}
 			runs_here = FALSE;
-			hp = gethostbyname( tmp );
+			hp = condor_gethostbyname( tmp );
 			if (hp == 0) {
 				dprintf(D_ALWAYS, "Master couldn't lookup host %s\n", tmp);
 				return FALSE;
@@ -254,12 +260,12 @@ daemon::Recover()
 int
 daemon::NextStart()
 {
-	int n;
-	n = 9 + (int)ceil(pow(e_factor, restarts));
-	if( n > ceiling || n < 0 ) {
-		n = ceiling;
+	int seconds;
+	seconds = m_backoff_constant + (int)ceil(pow(m_backoff_factor, restarts));
+	if( seconds > m_backoff_ceiling || seconds < 0 ) {
+		seconds = m_backoff_ceiling;
 	}
-	return n;
+	return seconds;
 }
 
 
@@ -267,6 +273,12 @@ int daemon::Restart()
 {
 	int		n;
 
+	if ( controller && ( restarts >= 2 ) ) {
+		dprintf( D_ALWAYS, "Telling %s's controller (%s)\n",
+				 name_in_config_file, controller->name_in_config_file );
+		controller->Stop( );
+		on_hold = true;
+	}
 	if( on_hold ) {
 		return FALSE;
 	}
@@ -310,7 +322,7 @@ void
 daemon::DoStart()
 {
 	start_tid = -1;
-	Start();
+	Start( true );		// Don't forward this on to the controller!
 }
 
 
@@ -325,7 +337,6 @@ daemon::DoConfig( bool init )
 	// Initialize some variables the first time through
 	if ( init ) {
 		flag_in_config_file = NULL;
-		env = NULL;
 	}
 
 	// Check for the _FLAG parameter
@@ -358,43 +369,77 @@ daemon::DoConfig( bool init )
 
 	// get env settings from config file if present
 	sprintf(buf, "%s_ENVIRONMENT", name_in_config_file );
+	char *env_string = param( buf );
+
+	Env env_parser;
+	MyString env_error_msg;
+
+	if(!env_parser.MergeFromV1RawOrV2Quoted(env_string,&env_error_msg)) {
+		EXCEPT("ERROR: Failed to parse %s_ENVIRONMENT in config file: %s\n",
+		       name_in_config_file,
+			   env_error_msg.Value());
+	}
+	free(env_string);
+
+	this->env.Clear();
+	this->env.MergeFrom(env_parser);
+
+	// Check for the _INITIAL_STATE parameter (only at init time)
+	// Default to on_hold = false, set to true of state eq "off"
+	if ( init ) {
+		sprintf(buf, "MASTER_%s_CONTROLLER", name_in_config_file );
+		controller_name = strupr( param( buf ) );
+		controller = NULL;		// Setup later in Daemons::CheckDaemonConfig()
+		on_hold = true;
+		if ( controller_name ) {
+			dprintf( D_FULLDEBUG, "Daemon %s is controlled by %s\n",
+					 name_in_config_file, controller_name );
+		}
+	}
+
+	m_backoff_constant = master_backoff_constant;
+	sprintf(buf, "MASTER_%s_BACKOFF_CONSTANT", name_in_config_file );
 	tmp = param( buf );
-	bool	envModified = false;
-
-	// Previously defind?
-	if ( NULL != env ) {
-		// Has it changed?
-		if ( strcmp( env, tmp ) ) {
-			free( env );
-			env = tmp;
-			envModified = true;
-		} else if ( NULL != tmp ) {
-			// Unchanged, just free up tmp
-			free( tmp );
-		} else {
-			// Do nothing
-		}
-	} else {
-		// Not previously defined; just use tmp whatever it is
-		env = tmp;
-		envModified = true;
+	if( tmp ) {
+		m_backoff_constant = atoi( tmp );
+		free( tmp );
+	} 
+	if( m_backoff_constant <= 0 ) {
+		m_backoff_constant = master_backoff_constant;
 	}
 
-	// Check the new & improved ENV.
-	if ( ( envModified ) && ( NULL != env ) ) {
-		Env envStrParser;
-		// Note: If [name]_ENVIRONMENT is not specified, env will now be null.
-		// Env::Merge(null) will always return true, so the warning will not be
-		// printed in this case.
-		if( !envStrParser.Merge(env) ) {
-			// this is an invalid env string
-			dprintf(D_ALWAYS, "Warning! Configuration file variable "
-					"`%s_ENVIRONMENT' has invalid value `%s'; ignoring.\n",
-					name_in_config_file, env);
-			free( env );
-			env = NULL;
-		}
+	m_backoff_ceiling = 0;
+	sprintf(buf, "MASTER_%s_BACKOFF_CEILING", name_in_config_file );
+	tmp = param( buf );
+	if( tmp ) {
+		m_backoff_ceiling = atoi( tmp );
+		free( tmp );
+	} 
+	if( m_backoff_ceiling <= 0 ) {
+		m_backoff_ceiling = master_backoff_ceiling;
 	}
+
+	m_backoff_factor = 0;
+	sprintf(buf, "MASTER_%s_BACKOFF_FACTOR", name_in_config_file );
+	tmp = param( buf );
+    if( tmp ) {
+        m_backoff_factor = atof( tmp );
+		free( tmp );
+    } 
+	if( m_backoff_factor <= 0.0 ) {
+    	m_backoff_factor = master_backoff_factor;
+    }
+	
+	m_recover_time = 0;
+	sprintf(buf, "MASTER_%s_RECOVER_FACTOR", name_in_config_file );
+	tmp = param( buf );
+    if( tmp ) {
+        m_recover_time = atoi( tmp );
+		free( tmp );
+    } 
+	if( m_recover_time <= 0 ) {
+    	m_recover_time = master_recover_time;
+    }
 
 
 	// Weiru
@@ -414,9 +459,33 @@ daemon::DoConfig( bool init )
 
 }
 
-int
-daemon::Start()
+void
+daemon::Hold( bool hold, bool never_forward )
 {
+	if ( controller && !never_forward ) {
+		dprintf( D_FULLDEBUG, "Forwarding Hold to %s's controller (%s)\n",
+				 name_in_config_file, controller->name_in_config_file );
+		controller->Hold( hold );
+	} else {
+		this->on_hold = hold;
+	}
+}
+
+int
+daemon::Start( bool never_forward )
+{
+	if ( controller ) {
+		if ( !never_forward ) {
+			dprintf( D_FULLDEBUG,
+					 "Forwarding Start to %s's controller (%s)\n",
+					 name_in_config_file, controller->name_in_config_file );
+			return controller->Start( );
+		} else {
+			dprintf( D_FULLDEBUG,
+					 "Handling Start for %s myself\n",
+					 name_in_config_file );
+		}
+	}
 	if( start_tid != -1 ) {
 		daemonCore->Cancel_Timer( start_tid );
 		start_tid = -1;
@@ -451,11 +520,13 @@ daemon::Start()
 // we've acquired the lock
 int daemon::RealStart( )
 {
-	char	*shortname, *tmp;
+	const char	*shortname;
 	int 	command_port = isDC ? TRUE : FALSE;
 	char	buf[512];
+	ArgList args;
 
 	// Copy a couple of checks from Start
+	dprintf( D_FULLDEBUG, "::RealStart; %s on_hold=%d\n", name_in_config_file, on_hold );
 	if( on_hold ) {
 		return FALSE;
 	}
@@ -464,7 +535,7 @@ int daemon::RealStart( )
 		return TRUE;
 	}
 
-	shortname = basename( process_name );
+	shortname = condor_basename( process_name );
 
 	if( access(process_name,X_OK) != 0 ) {
 		dprintf(D_ALWAYS, "%s: Cannot execute\n", process_name );
@@ -481,13 +552,50 @@ int daemon::RealStart( )
 		// in the keytab file, we still need root afterall. :(
 	bool wants_condor_priv = false;
 	if ( strcmp(name_in_config_file,"COLLECTOR") == 0 ) {
+			// **** OLD
 			// If we're spawning a collector, we can get the right
 			// port by asking the global Collector object for it,
 			// since we've already instantiated that with the info for
 			// the local pool's collector.  This also saves the
 			// trouble of instantiating a new DCCollector object,
 			// which duplicates some effort and is less efficient. 
-		command_port = Collector->port();
+			// **** END OLD
+
+			// ckireyev 09/10/04
+			// Now that we have multiple collectors, the way to figure out
+			// the port on this machine, is to go through all of the
+			// collectors until we find the one for THIS machine. Then
+			// get the port from that entry
+
+		if (!Collectors) {
+			Collectors =  CollectorList::create();
+		}
+
+
+		command_port = -1;
+
+		if (Collectors) {
+			char * my_hostname = my_full_hostname();
+			Daemon * daemon;
+			Collectors->rewind();
+			while (Collectors->next (daemon)) {
+				if (same_host (my_hostname, 
+							   daemon->fullHostname())) {
+					command_port = daemon->port();
+					break;
+				}
+			}
+		}
+
+		if (command_port == -1) {
+				// strange....
+			command_port = COLLECTOR_PORT;
+			dprintf (D_ALWAYS, "Collector port not defined, will use default: %d\n", COLLECTOR_PORT);
+		}
+
+		dprintf (D_FULLDEBUG, "Starting Collector on port %d\n", command_port);
+
+
 			// We can't do this b/c of needing to read host certs as root 
 			// wants_condor_priv = true;
 	} else if( stricmp(name_in_config_file,"CONDOR_VIEW") == 0 ||
@@ -496,16 +604,21 @@ int daemon::RealStart( )
 		command_port = d.port();
 			// We can't do this b/c of needing to read host certs as root 
 			// wants_condor_priv = true;
-	} else if( strcmp(name_in_config_file,"NEGOTIATOR") == 0 ) {
-		Daemon d( DT_NEGOTIATOR );
-		command_port = d.port();
+	} 
+	else if( strcmp(name_in_config_file,"NEGOTIATOR") == 0 ) {
+		char* host = getCmHostFromConfig( "NEGOTIATOR" );
+		if( host ) {
+			free (host);
+			Daemon d( DT_NEGOTIATOR );
+			command_port = d.port();
 			// We can't do this b/c of needing to read host certs as root 
 			// wants_condor_priv = true;
+		}
 	}
 
 	priv_state priv_mode = PRIV_ROOT;
 	
-	sprintf(buf,"%s_USERID",name_in_config_file);
+	snprintf(buf, sizeof(buf), "%s_USERID",name_in_config_file);
 	char * username = param( buf );
 	if(username) {
 		// domain is set to NULL since we don't care about the domain
@@ -543,41 +656,56 @@ int daemon::RealStart( )
 #endif /* WIN32 */
 	}
 
-	sprintf( buf, "%s_ARGS", name_in_config_file );
-	tmp = param( buf );
-	if( (strcmp(name_in_config_file,"SCHEDD") == 0) && MasterName ) {
-		if( tmp ) { 
-			sprintf( buf, "%s -f %s -n %s", shortname, tmp,
-					 MasterName ); 
-			free( tmp );
-		} else {
-			sprintf( buf, "%s -f -n %s", shortname, MasterName ); 
-		}
-	} else {
-		if( isDC ) {
-			if( tmp ) { 
-				sprintf( buf, "%s -f %s", shortname, tmp );
-				free( tmp );
-			} else {
-				sprintf( buf, "%s -f", shortname );
-			}
-		} else {
-			if( tmp ) { 
-				sprintf( buf, "%s %s", shortname, tmp );
-				free( tmp );
-			} else {
-				sprintf( buf, "%s", shortname );
-			}
-		}
+	args.AppendArg(shortname);
+	if(isDC) {
+		args.AppendArg("-f");
 	}
+
+	snprintf( buf, sizeof( buf ), "%s_ARGS", name_in_config_file );
+	char *daemon_args = param( buf );
+
+	MyString args_error;
+	if(!args.AppendArgsV1RawOrV2Quoted(daemon_args,&args_error)) {
+		dprintf(D_ALWAYS,"ERROR: failed to parse %s daemon arguments: %s\n",
+				buf,
+				args_error.Value());
+		Restart();
+		free(daemon_args);
+		return 0;
+	}
+
+	free(daemon_args);
+
+	if( (strcmp(name_in_config_file,"SCHEDD") == 0) && MasterName ) {
+		args.AppendArg("-n");
+		args.AppendArg(MasterName);
+	}
+
+    // The below chunk is for HAD support
+
+    // take command port from arguments( buf )
+    // Don't mess with buf or tmp (they are not our variables) -
+    // allocate them again
+    if ( isDC ) {
+		int i;
+		for(i=0;i<args.Count();i++) {
+			char const *cur_arg = args.GetArg(i);
+			if(strcmp( cur_arg, "-p" ) == 0 ) {
+				if(i+1<args.Count()) {
+					char const *port_arg = args.GetArg(i+1);
+					command_port = atoi(port_arg);
+				}
+			}
+		}
+    }
 
 	pid = daemonCore->Create_Process(
 				process_name,	// program to exec
-				buf,			// args
+				args,			// args
 				priv_mode,		// privledge level
 				1,				// which reaper ID to use; use default reaper
 				command_port,	// port to use for command port; TRUE=choose one dynamically
-				env,			// environment
+				&env,			// environment
 				NULL,			// current working directory
 				TRUE);			// new_process_group flag; we want a new group
 
@@ -594,7 +722,7 @@ int daemon::RealStart( )
 
 	// if this is a restart, start recover timer
 	if (restarts > 0) {
-		recover_tid = daemonCore->Register_Timer( r_factor,
+		recover_tid = daemonCore->Register_Timer( m_recover_time,
 						(TimerHandlercpp)&daemon::Recover,
 						"daemon::Recover()", this );
 		dprintf(D_FULLDEBUG, "start recover timer (%d)\n", recover_tid);
@@ -611,7 +739,7 @@ int daemon::RealStart( )
 	}
 	
 		// Make sure we've got the current timestamp for updates, etc.
-	timeStamp = GetTimeStamp(process_name);
+	timeStamp = GetTimeStamp(watch_name);
 
 		// record the time we were started
 	startTime = time(0);
@@ -624,19 +752,39 @@ int daemon::RealStart( )
 		daemons.UpdateCollector();
 	}
 
-		// Create a ProcFamily object for this daemon.
-	InitProcFam( pid );
+	PidEnvID penvid;
+
+	pidenvid_init(&penvid);
+
+	// If there isn't any ancestor information, that is ok.
+	daemonCore->InfoEnvironmentID(&penvid, pid);
+
+	// Create a ProcFamily object for this daemon.
+	InitProcFam( pid, &penvid );
 
 	return pid;	
 }
 
 
 void
-daemon::Stop() 
+daemon::Stop( bool never_forward )
 {
 	if( type == DT_MASTER ) {
 			// Never want to stop master.
 		return;
+	}
+	if ( controller ) {
+		if ( !never_forward ) {
+			dprintf( D_FULLDEBUG,
+					 "Forwarding Stop to %s's controller (%s)\n",
+					 name_in_config_file, controller->name_in_config_file );
+			controller->Stop();
+			return;
+		} else {
+			dprintf( D_FULLDEBUG,
+					 "Handling Stop for %s myself\n",
+					 name_in_config_file );
+		}
 	}
 	if( start_tid != -1 ) {
 			// If we think we need to start this in the future, don't. 
@@ -659,17 +807,73 @@ daemon::Stop()
 
 	stop_fast_tid = 
 		daemonCore->Register_Timer( shutdown_graceful_timeout, 0, 
-									(TimerHandlercpp)&daemon::StopFast,
-									"daemon::StopFast()", this );
+									(TimerHandlercpp)&daemon::StopFastTimer,
+									"daemon::StopFastTimer()", this );
 }
 
 
 void
-daemon::StopFast()
+daemon::StopPeaceful() 
+{
+	// Peaceful shutdown is the same as graceful shutdown, but
+	// we never time out waiting for the process to finish.
+
+	if( type == DT_MASTER ) {
+			// Never want to stop master.
+		return;
+	}
+	if( start_tid != -1 ) {
+			// If we think we need to start this in the future, don't. 
+		dprintf( D_ALWAYS, "Canceling timer to re-start %s\n", 
+				 name_in_config_file );
+		daemonCore->Cancel_Timer( start_tid );
+		start_tid = -1;
+	}
+	if( !pid ) {
+			// We're not running, just return.
+		return;
+	}
+	if( stop_state == PEACEFUL ) {
+			// We've already been here, just return.
+		return;
+	}
+	stop_state = PEACEFUL;
+
+	// Ideally, we would somehow tell the daemon to die peacefully
+	// (only currently applies to startd).  However, we only have
+	// two signals to work with: fast and graceful.  Until a better
+	// mechanism comes along, we depend on the peaceful state
+	// being pre-set in the daemon via a message sent by condor_off.
+
+	Kill( SIGTERM );
+}
+
+int
+daemon::StopFastTimer()
+{
+	StopFast(false);
+	return TRUE;
+}
+
+void
+daemon::StopFast( bool never_forward )
 {
 	if( type == DT_MASTER ) {
 			// Never want to stop master.
 		return;
+	}
+	if ( controller ) {
+		if ( !never_forward ) {
+			dprintf( D_FULLDEBUG,
+					 "Forwarding StopFast to %s's controller (%s)\n",
+					 name_in_config_file, controller->name_in_config_file );
+			controller->StopFast();
+			return;
+		} else {
+			dprintf( D_FULLDEBUG,
+					 "Handling StopFast for %s myself\n",
+					 name_in_config_file );
+		}
 	}
 	if( start_tid != -1 ) {
 			// If we think we need to start this in the future, don't. 
@@ -755,6 +959,24 @@ daemon::Exited( int status )
 		// For HA, release the lock
 	if ( is_ha && ha_lock ) {
 		ha_lock->ReleaseLock( );
+	}
+
+		// Let my controller know what's happenned
+	if ( controller && ( restarts >= 2 ) ) {
+		on_hold = true;
+		if ( stop_state == NONE ) {
+			dprintf( D_ALWAYS, "Telling %s's controller (%s)\n",
+					 name_in_config_file, controller->name_in_config_file );
+			controller->Stop( );
+		}
+	}
+
+		// Kill any controllees I might have
+	for( int num = 0;  num < num_controllees;  num++ ) {
+		dprintf( D_ALWAYS, "Killing %s's controllee (%s)\n",
+				 name_in_config_file,
+				 controllees[num]->name_in_config_file );
+		controllees[num]->StopFast( true );
 	}
 
 		// For good measure, try to clean up any dead/hung children of
@@ -954,12 +1176,12 @@ daemon::Reconfig()
 
 
 void
-daemon::InitProcFam( int pid )
+daemon::InitProcFam( int pid, PidEnvID *penvid )
 {
 		// If there's one there already, kill it.
 	DeleteProcFam();
 
-	procfam = new ProcFamily( pid, PRIV_ROOT );
+	procfam = new ProcFamily( pid, penvid, PRIV_ROOT );
 	if( ! procfam ) {
 		EXCEPT( "Out of memory!" );
 	}
@@ -1020,8 +1242,8 @@ daemon::SetupHighAvailability( void )
 	if ( tmp ) {
 		if ( !isdigit( tmp[0] ) ) {
 			dprintf(D_ALWAYS,
-					"HA time '%s' is not a number; using default %d\n",
-					tmp, lock_hold_time );
+					"HA time '%s' is not a number; using default %ld\n",
+					tmp, (long)lock_hold_time );
 		} else {
 			lock_hold_time = (time_t) atol( tmp );
 		}
@@ -1038,8 +1260,8 @@ daemon::SetupHighAvailability( void )
 	if ( tmp ) {
 		if ( !isdigit( tmp[0] ) ) {
 			dprintf(D_ALWAYS,
-					"HA time '%s' is not a number; using default %d\n",
-					tmp, poll_period );
+					"HA time '%s' is not a number; using default %ld\n",
+					tmp, (long)poll_period );
 		} else {
 			poll_period = (time_t) atol( tmp );
 		}
@@ -1057,8 +1279,9 @@ daemon::SetupHighAvailability( void )
 			dprintf( D_ALWAYS, "Failed to change HA lock parameters\n" );
 		} else {
 			dprintf( D_FULLDEBUG,
-					 "Set HA lock for %s; URL='%s' poll=%ds hold=%ds\n",
-					 name_in_config_file, url, poll_period, lock_hold_time );
+					 "Set HA lock for %s; URL='%s' poll=%lds hold=%lds\n",
+					 name_in_config_file, url, (long)poll_period, 
+					 (long)lock_hold_time );
 		}
 	} else {
 		ha_lock = new CondorLock( url,
@@ -1073,8 +1296,9 @@ daemon::SetupHighAvailability( void )
 			// Log the new lock creation (if successful)
 		if ( ha_lock ) {
 			dprintf( D_FULLDEBUG,
-					 "Created HA lock for %s; URL='%s' poll=%ds hold=%ds\n",
-					 name_in_config_file, url, poll_period, lock_hold_time );
+					 "Created HA lock for %s; URL='%s' poll=%lds hold=%lds\n",
+					 name_in_config_file, url, (long)poll_period, 
+					 (long)lock_hold_time );
 		}
 	}
 	free( url );
@@ -1117,6 +1341,43 @@ daemon::HaLockLost( LockEventSrc src )
 			 "%s: HA poll detected broken lock: emergency stop!!\n",
 			 name_in_config_file );
 	StopFast( );
+	return 0;
+}
+
+
+int
+daemon::SetupController( void )
+{
+	if ( !controller_name ) {
+		return 0;
+	}
+
+	// Find the matching daemon by name
+	controller = daemons.FindDaemon( controller_name );
+	if ( ! controller ) {
+		dprintf( D_ALWAYS,
+				 "%s: Can't find my controller daemon '%s'\n",
+				 name_in_config_file, controller_name );
+		return -1;
+	}
+	if ( controller->RegisterControllee( this ) < 0 ) {
+		dprintf( D_ALWAYS,
+				 "%s: Can't register controller daemon '%s'\n",
+				 name_in_config_file, controller_name );
+		return -1;
+	}
+
+	// Done
+	return 0;
+}
+
+int
+daemon::RegisterControllee( class daemon *controllee )
+{
+	if ( num_controllees >= MAX_CONTROLLEES ) {
+		return -1;
+	}
+	controllees[num_controllees++] = controllee;
 	return 0;
 }
 
@@ -1166,10 +1427,25 @@ Daemons::RegisterDaemon(class daemon *d)
 	no_daemons++;
 }
 
+int
+Daemons::SetupControllers( void )
+{
+	// Find controlling daemons
+	for( int i=0; i < no_daemons; i++ ) {
+		if ( daemon_ptr[i]->SetupController( ) < 0 ) {
+			dprintf( D_ALWAYS,
+					 "SetupControllers: Setup for daemon %s failed\n",
+					 daemon_ptr[i]->daemon_name );
+			return -1;
+		}
+	}
+	return 0;
+}
 
 void
 Daemons::InitParams()
 {
+	char* buf;
 	char* tmp = NULL;
 	for( int i=0; i < no_daemons; i++ ) {
 		if( daemon_ptr[i]->process_name ) {
@@ -1188,6 +1464,31 @@ Daemons::InitParams()
 				// file, we will need to start the new version.
 			daemon_ptr[i]->newExec = TRUE;
 		}
+		if (tmp) {
+			free( tmp );
+			tmp = NULL;
+		}
+		if( daemon_ptr[i]->watch_name ) {
+			tmp = daemon_ptr[i]->watch_name;
+		}
+			
+		int length = strlen(daemon_ptr[i]->name_in_config_file) + 32;
+		buf = (char *)malloc(length);
+		snprintf( buf, length, "%s_WATCH_FILE", 
+				daemon_ptr[i]->name_in_config_file );
+		daemon_ptr[i]->watch_name = param( buf );
+		free(buf);
+		if( !daemon_ptr[i]->watch_name)	{
+			daemon_ptr[i]->watch_name = strdup(daemon_ptr[i]->process_name);
+		} 
+
+		if( tmp && strcmp(daemon_ptr[i]->watch_name, tmp) ) {
+			// tmp is what the old watch_name was 
+			// The path to what we're watching has changed in the 
+			// config file, we will need to start the new version.
+			daemon_ptr[i]->timeStamp = 0;
+		}
+
 		if (tmp) {
 			free( tmp );
 			tmp = NULL;
@@ -1219,6 +1520,18 @@ Daemons::GetIndex(const char* name)
 }
 
 
+class daemon *
+Daemons::FindDaemon( const char *name )
+{
+	int		index = GetIndex( name );
+	if ( index < 0 ) {
+		return NULL;
+	} else {
+		return daemon_ptr[index];
+	}
+}
+
+
 void
 Daemons::CheckForNewExecutable()
 {
@@ -1232,9 +1545,10 @@ Daemons::CheckForNewExecutable()
 			// do here.
 		return;
 	}
-    if( NewExecutable( daemon_ptr[master]->process_name,
+    if( NewExecutable( daemon_ptr[master]->watch_name,
 					   &daemon_ptr[master]->timeStamp ) ) {
-		dprintf( D_ALWAYS,"%s was modified, restarting.\n", 
+		dprintf( D_ALWAYS,"%s was modified, restarting %s.\n", 
+				 daemon_ptr[master]->watch_name, 
 				 daemon_ptr[master]->process_name );
 		daemon_ptr[master]->newExec = TRUE;
 			// Begin the master restart procedure.
@@ -1245,8 +1559,8 @@ Daemons::CheckForNewExecutable()
 
     for( int i=0; i < no_daemons; i++ ) {
 		if( daemon_ptr[i]->runs_here && !daemon_ptr[i]->newExec 
-			&& ! daemon_ptr[i]->on_hold ) {
-			if( NewExecutable( daemon_ptr[i]->process_name,
+			&& ! daemon_ptr[i]->OnHold() ) {
+			if( NewExecutable( daemon_ptr[i]->watch_name,
 							   &daemon_ptr[i]->timeStamp ) ) {
 				found_new = TRUE;
 				daemon_ptr[i]->newExec = TRUE;				
@@ -1261,7 +1575,8 @@ Daemons::CheckForNewExecutable()
 					daemon_ptr[i]->restarts = 0;
 				}
 				if( daemon_ptr[i]->pid ) {
-					dprintf( D_ALWAYS,"%s was modified, killing.\n", 
+					dprintf( D_ALWAYS,"%s was modified, killing %s.\n", 
+							 daemon_ptr[i]->watch_name,
 							 daemon_ptr[i]->process_name );
 					daemon_ptr[i]->Stop();
 				} else {
@@ -1310,6 +1625,17 @@ Daemons::DaemonsOff( int fast )
 	}
 }
 
+void
+Daemons::DaemonsOffPeaceful( )
+{
+		// Maybe someday we'll add code here to edit the config file.
+	StartDaemons = FALSE;
+	GotDaemonsOff = TRUE;
+	all_daemons_gone_action = MASTER_RESET;
+	CancelNewExecTimer();
+	StopPeacefulAllDaemons();
+}
+
 
 void
 Daemons::StartAllDaemons()
@@ -1320,7 +1646,7 @@ Daemons::StartAllDaemons()
 			continue;
 		} 
 		if( ! daemon_ptr[i]->runs_here ) continue;
-		daemon_ptr[i]->on_hold = FALSE;
+		daemon_ptr[i]->Hold( FALSE );
 		daemon_ptr[i]->Start();
 	}
 }
@@ -1359,6 +1685,22 @@ Daemons::StopFastAllDaemons()
 	}	   
 }
 
+void
+Daemons::StopPeacefulAllDaemons()
+{
+	daemons.SetAllReaper();
+	int running = 0;
+	for( int i=0; i < no_daemons; i++ ) {
+		if( daemon_ptr[i]->pid && daemon_ptr[i]->runs_here ) {
+			daemon_ptr[i]->StopPeaceful();
+			running++;
+		}
+	}
+	if( !running ) {
+		AllDaemonsGone();
+	}	   
+}
+
 
 void
 Daemons::ReconfigAllDaemons()
@@ -1378,10 +1720,10 @@ Daemons::InitMaster()
 		// initialize master data structure
 	master = GetIndex("MASTER");
 	if ( master == -1 ) {
-		EXCEPT("InitMaster: MASTER not Specifed");
+		EXCEPT("InitMaster: MASTER not Specified");
 	}
 	daemon_ptr[master]->timeStamp = 
-		GetTimeStamp(daemon_ptr[master]->process_name);
+		GetTimeStamp(daemon_ptr[master]->watch_name);
 	daemon_ptr[master]->startTime = time(0);
 	daemon_ptr[master]->pid = daemonCore->getpid();
 }
@@ -1397,6 +1739,18 @@ Daemons::RestartMaster()
 	all_daemons_gone_action = MASTER_RESTART;
 	StartDaemons = FALSE;
 	StopAllDaemons();
+}
+
+void
+Daemons::RestartMasterPeaceful()
+{
+	immediate_restart_master = immediate_restart;
+	if( NumberOfChildren() == 0 ) {
+		FinishRestartMaster();
+	}
+	all_daemons_gone_action = MASTER_RESTART;
+	StartDaemons = FALSE;
+	StopPeacefulAllDaemons();
 }
 
 // This function is called when all the children have finally exited
@@ -1454,13 +1808,13 @@ Daemons::FinalRestartMaster()
 	sprintf( tmps, "%s=", EnvGetName( ENV_INHERIT ) );
 	putenv( tmps );
 
+#ifdef WIN32
+	dprintf(D_ALWAYS,"Running as NT Service = %d\n", NT_ServiceFlag);
+#endif
 		// Make sure the exec() of the master works.  If it fails,
 		// we'll fall past the execl() call, and hit the exponential
 		// backoff code.
 	while(1) {
-		dprintf( D_ALWAYS, "Doing exec( \"%s\" )\n", 
-				 daemon_ptr[master]->process_name);
-
 		// On Win32, if we are running as an NT service,
 		// we cannot just exec ourselves again.  This is because
 		// the SCM (Service Control Manager) needs to know our PID,
@@ -1470,13 +1824,22 @@ Daemons::FinalRestartMaster()
 		if ( NT_ServiceFlag == TRUE ) {
 #ifdef WIN32
 			char systemshell[MAX_PATH];
+			extern char* _condor_myServiceName; // created by daemonCore
 
 			::GetSystemDirectory(systemshell,MAX_PATH);
 			strcat(systemshell,"\\cmd.exe");
+			MyString command;
+			command.sprintf("net stop %s & net start %s", 
+				_condor_myServiceName, _condor_myServiceName);
+			dprintf( D_ALWAYS, "Doing exec( \"%s /Q /C %s\" )\n", 
+				 systemshell,command.Value());
 			(void)execl(systemshell, "/Q", "/C",
-				"net stop Condor & net start Condor", 0);
+				command.Value(), 0);
 #endif
 		} else {
+			dprintf( D_ALWAYS, "Doing exec( \"%s\" )\n", 
+				 daemon_ptr[master]->process_name);
+
 			if( MasterName ) {
 				(void)execl(daemon_ptr[master]->process_name, 
 							"condor_master", "-f", "-n", MasterName, 0);
@@ -1758,12 +2121,10 @@ Daemons::UpdateCollector()
 	dprintf(D_FULLDEBUG, "enter Daemons::UpdateCollector\n");
 
 	Update(ad);
-    
-	if( !Collector->sendUpdate(UPDATE_MASTER_AD, ad) ) {
-		dprintf( D_ALWAYS, 
-				 "Can't send UPDATE_MASTER_AD to collector %s: %s\n", 
-				 Collector->updateDestination(), Collector->error() );
-		return;
+    daemonCore->monitor_data.ExportData(ad);
+
+	if (Collectors) {
+		Collectors->sendUpdates (UPDATE_MASTER_AD, ad, NULL, true);
 	}
 
 	if (secondary_collectors) {
@@ -1772,7 +2133,7 @@ Daemons::UpdateCollector()
 		DCCollector* col;
 		while( secondary_collectors->next(d) ) {
 			col = (DCCollector*)d;
-			if( ! col->sendUpdate(UPDATE_MASTER_AD, ad) ) {
+			if( ! col->sendUpdate(UPDATE_MASTER_AD, ad, NULL, true) ) {
 				dprintf( D_ALWAYS, "Can't send UPDATE_MASTER_AD to "
 						 "collector %s: %s\n", 
 						 col->updateDestination(), col->error() );

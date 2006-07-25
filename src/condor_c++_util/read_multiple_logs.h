@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -34,6 +34,117 @@
 #include "user_log.c++.h"
 #include "MyString.h"
 #include "string_list.h"
+#include "HashTable.h"
+#include "condor_id.h"
+
+class MultiLogFiles
+{
+public:
+	    /** Gets the userlog files used by a dag
+		    on success, the return value will be ""
+		    on failure, it will be an appropriate error message
+	    */
+    static MyString getJobLogsFromSubmitFiles(const MyString &strDagFileName,
+			const MyString &jobKeyword, const MyString &dirKeyword,
+			StringList &listLogFilenames);
+
+	    /** Gets the log file from a Condor submit file.
+		    on success, the return value will be the log file name
+		    on failure, it will be ""
+		 */
+    static MyString loadLogFileNameFromSubFile(const MyString &strSubFilename,
+			const MyString &directory);
+
+#ifdef WANT_NEW_CLASSADS
+	    /** Gets the log files from a Stork submit file.
+		 * @param The submit file line.
+		 * @param The directory containing the submit file.
+		 * @param Output string list of log file names.
+		 * @return "" if okay, or else an error message.
+		 */
+    static MyString loadLogFileNamesFromStorkSubFile(
+		const MyString &strSubFilename,
+		const MyString &directory,
+		StringList &listLogFilenames);
+#endif
+
+		/** Gets the number of job procs queued by a submit file
+			@param The submit file name
+			@param The submit file directory
+			@param A MyString to receive any error message
+			@return -1 if an error, otherwise the number of job procs
+				queued by the submit file
+		*/
+	static int getQueueCountFromSubmitFile(const MyString &strSubFilename,
+	            const MyString &directory, MyString &errorMsg);
+
+	    /** Deletes the given log files.
+		 */
+	static void DeleteLogs(StringList &logFileNames);
+
+private:
+		/** Reads in the specified file, breaks it into lines, and
+			combines the lines into "logical" lines (joins continued
+			lines).
+			@param The filename
+			@param The StringList to receive the logical lines
+			@return "" if okay, error message otherwise
+		*/
+	static MyString fileNameToLogicalLines(const MyString &filename,
+				StringList &logicalLines);
+
+	    /** Read the entire contents of the given file into a MyString.
+		 * @param The name of the file.
+		 * @return The contents of the file.
+		 */
+    static MyString readFileToString(const MyString &strFilename);
+
+		/**
+		 * Get the given parameter if it is defined in the given submit file
+		 * line.
+		 * @param The submit file line.
+		 * @param The name of the parameter to get.
+		 * @return The parameter value defined in that line, or "" if the
+		 *   parameter is not defined.
+		 */
+	static MyString getParamFromSubmitLine(MyString &submitLine,
+			const char *paramName);
+
+		/**
+		 * Combine input ("physical") lines that end with the given
+		 * continuation character into "logical" lines.
+		 * @param Input string list of "physical" lines.
+		 * @param Continuation character.
+		 * @param Filename (for error messages).
+		 * @param Output string list of "logical" lines.
+		 * @return "" if okay, or else an error message.
+		 */
+	static MyString CombineLines(StringList &listIn, char continuation,
+			const MyString &filename, StringList &listOut);
+
+#ifdef WANT_NEW_CLASSADS
+		/**
+		 * Skip whitespace in a std::string buffer.  This is a helper function
+		 * for loadLogFileNamesFromStorkSubFile().  When the new ClassAds
+		 * parser can skip whitespace on it's own, this function can be
+		 * removed.
+		 * @param buffer name
+		 * @param input/output offset into buffer
+		 * @return void
+		 */
+	static void skip_whitespace(std::string const &s,int &offset);
+
+		/**
+		 * Read a file into a std::string helper function for
+		 * loadLogFileNamesFromStorkSubFile().
+		 * @param Filename to read.
+		 * @param output buffer
+		 * @return "" if okay, or else an error message.
+		 */
+	static MyString readFile(char const *filename,std::string& buf);
+#endif
+
+};
 
 class ReadMultipleUserLogs
 {
@@ -58,37 +169,40 @@ public:
 		 */
 	bool detectLogGrowth();
 
-	    /** Deletes the given log files.
+		/** Returns the number of user logs that have been successfully
+		 	initialized.
 		 */
-	static void DeleteLogs(StringList &logFileNames);
+	int getInitializedLogCount() const;
 
-	    /** Gets the userlog files used by a dag
-		    on success, the return value will be ""
-		    on failure, it will be an appropriate error message
-	    */
-    static MyString getJobLogsFromSubmitFiles(const MyString &strDagFileName,
-			const MyString &jobKeyword, StringList &listLogFilenames);
+protected:
+	friend class CheckEvents;
 
-	    /** Gets the log file from a Condor submit file.
-		    on success, the return value will be the log file name
-		    on failure, it will be ""
-		 */
-    static MyString loadLogFileNameFromSubFile(const MyString &strSubFilename);
+	static int hashFuncJobID(const CondorID &key, int numBuckets);
 
 private:
 	void cleanup();
 
 	struct LogFileEntry
 	{
-		bool isInitialized;
-		MyString strFilename;
-		ReadUserLog readUserLog;
-		ULogEvent *pLastLogEvent;
-		off_t logSize;
+		bool		isInitialized;
+		bool		isValid;
+		bool		haveReadEvent;
+		MyString	strFilename;
+		ReadUserLog	readUserLog;
+		ULogEvent *	pLastLogEvent;
+		off_t		logSize;
 	};
 
-	int iLogFileCount;
-	LogFileEntry *pLogFileEntries;
+	int				iLogFileCount;
+	LogFileEntry *	pLogFileEntries;
+
+	HashTable<CondorID, LogFileEntry *>	logHash;
+
+	// For instantiation in programs that use this class.
+#define MULTI_LOG_HASH_INSTANCE template class \
+		HashTable<CondorID, \
+		ReadMultipleUserLogs::LogFileEntry *>
+
 
 	    /** Goes through the list of logs and tries to initialize (open
 		    the file of) any that aren't initialized yet.
@@ -102,30 +216,29 @@ private:
 		 */
 	static bool LogGrew(LogFileEntry &log);
 
-	    /** Read the entire contents of the given file into a MyString.
+		/**
+		 * Read an event from a log, including checking whether this log
+		 * is actually a duplicate of another log.  Note that if this *is*
+		 * a duplicate log, the method will return ULOG_NO_EVENT, even
+		 * though an event was read.
+		 * @param The log to read from.
+		 * @return The outcome of trying to read an event.
 		 */
-    static MyString readFileToString(const MyString &strFilename);
+	ULogEventOutcome readEventFromLog(LogFileEntry &log);
 
 		/**
-		 * Get the given parameter if it is defined in the given submit file
-		 * line.
-		 * @param The submit file line.
-		 * @param The name of the parameter to get.
-		 * @return The parameter value defined in that line, or "" if the
-		 *   parameter is not defined.
+		 * Determine whether a log object exists that is a logical duplicate
+		 * of the one given (in other words, points to the same log file).
+		 * We're checking this in case we have submit files that point to
+		 * the same log file with different paths -- if submit files have
+		 * the same path to the log file, we already recognize that it's
+		 * a single log.
+		 * @param The event we just read.
+		 * @param The log object from which we read that event.
+		 * @return True iff a duplicate log exists.
 		 */
-	static MyString getParamFromSubmitLine(MyString &submitLine,
-			const char *paramName);
+	bool DuplicateLogExists(ULogEvent *event, LogFileEntry *log);
 
-		/**
-		 * Combine input ("physical") lines that end with the given
-		 * continuation character into "logical" lines.
-		 * @param Input string list of "physical" lines.
-		 * @param Continuation character.
-		 * @param Output string list of "logical" lines.
-		 */
-	static MyString CombineLines(StringList &listIn, char continuation,
-			StringList &listOut);
 };
 
 #endif

@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -30,6 +30,7 @@
 #include "dc_schedd.h"
 #include "proc.h"
 #include "file_transfer.h"
+#include "condor_version.h"
 
 
 // // // // //
@@ -241,28 +242,221 @@ DCSchedd::reschedule()
 }
 
 bool 
-DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError * errstack)
+DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int * numdone /*=0*/)
 {
+	if(numdone) { *numdone = 0; }
+	ExprTree *tree = NULL, *lhs = NULL, *rhs = NULL;
+	char *lhstr, *rhstr;
 	int reply;
 	int i;
 	ReliSock rsock;
+	int JobAdsArrayLen;
+	bool use_new_command = true;
+
+	if ( version() ) {
+		CondorVersionInfo vi( version() );
+		if ( vi.built_since_version(6,7,7) ) {
+			use_new_command = true;
+		} else {
+			use_new_command = false;
+		}
+	}
 
 		// // // // // // // //
 		// On the wire protocol
 		// // // // // // // //
 
-	rsock.timeout(60*60*8);   // years of research... :)
+	rsock.timeout(20);   // years of research... :)
+	if( ! rsock.connect(_addr) ) {
+		dprintf( D_ALWAYS, "DCSchedd::receiveJobSandbox: "
+				 "Failed to connect to schedd (%s)\n", _addr );
+		return false;
+	}
+	if ( use_new_command ) {
+		if( ! startCommand(TRANSFER_DATA_WITH_PERMS, (Sock*)&rsock) ) {
+			dprintf( D_ALWAYS, "DCSchedd::receiveJobSandbox: "
+					 "Failed to send command (TRANSFER_DATA_WITH_PERMS) "
+					 "to the schedd\n" );
+			return false;
+		}
+	} else {
+		if( ! startCommand(TRANSFER_DATA, (Sock*)&rsock) ) {
+			dprintf( D_ALWAYS, "DCSchedd::receiveJobSandbox: "
+					 "Failed to send command (TRANSFER_DATA) "
+					 "to the schedd\n" );
+			return false;
+		}
+	}
+
+		// First, if we're not already authenticated, force that now. 
+	if (!forceAuthentication( &rsock, errstack )) {
+		dprintf( D_ALWAYS, 
+			"DCSchedd::receiveJobSandbox: authentication failure: %s\n",
+			errstack->getFullText() );
+		return false;
+	}
+
+	rsock.encode();
+
+		// Send our version if using the new command
+	if ( use_new_command ) {
+			// Need to use a named variable, else the wrong version of	
+			// code() is called.
+		char *my_version = strdup( CondorVersion() );
+		if ( !rsock.code(my_version) ) {
+			dprintf(D_ALWAYS,"DCSchedd:receiveJobSandbox: "
+					"Can't send version string to the schedd\n");
+			free( my_version );
+			return false;
+		}
+		free( my_version );
+	}
+
+		// Send the constraint
+	char * nc_constraint = (char*) constraint;	// cast away const... sigh.
+	if ( !rsock.code(nc_constraint) ) {
+		dprintf(D_ALWAYS,"DCSchedd:receiveJobSandbox: "
+				"Can't send JobAdsArrayLen to the schedd\n");
+		return false;
+	}
+
+	rsock.eom();
+
+		// Now, read how many jobs matched the constraint.
+	rsock.decode();
+	if ( !rsock.code(JobAdsArrayLen) ) {
+		dprintf(D_ALWAYS,"DCSchedd:receiveJobSandbox: "
+				"Can't receive JobAdsArrayLen from the schedd\n");
+		return false;
+	}
+
+	rsock.eom();
+
+	dprintf(D_FULLDEBUG,"DCSchedd:receiveJobSandbox: "
+		"%d jobs matched my constraint (%s)\n",
+		JobAdsArrayLen, constraint);
+
+		// Now read all the files via the file transfer object
+	for (i=0; i<JobAdsArrayLen; i++) {
+		FileTransfer ftrans;
+		ClassAd job;
+
+			// grab job ClassAd
+		if ( !job.initFromStream(rsock) ) {
+			dprintf(D_ALWAYS,"DCSchedd:receiveJobSandbox: "
+				"Can't receive job ad %d from the schedd\n", i+1);
+			return false;
+		}
+
+		rsock.eom();
+
+			// translate the job ad by replacing the 
+			// saved SUBMIT_ attributes
+		job.ResetExpr();
+		while( (tree = job.NextExpr()) ) {
+			lhstr = NULL;
+			if( (lhs = tree->LArg()) ) { 
+				lhs->PrintToNewStr (&lhstr); 
+			}
+			if ( lhstr && strncasecmp("SUBMIT_",lhstr,7)==0 ) {
+					// this attr name starts with SUBMIT_
+					// compute new lhs (strip off the SUBMIT_)
+				char *new_attr_name = strchr(lhstr,'_');
+				ASSERT(new_attr_name);
+				new_attr_name++;
+					// compute new rhs (just use the same)
+				rhstr = NULL;
+				if( (rhs = tree->RArg()) ) { 
+					rhs->PrintToNewStr (&rhstr); 
+				}
+					// insert attribute
+				if(rhstr) {
+					MyString newattr;
+					newattr += new_attr_name;
+					newattr += "=";
+					newattr += rhstr;
+					job.Insert(newattr.Value());
+					free(rhstr);
+				}
+			}
+			if ( lhstr ) {
+				free(lhstr);
+			}
+		}	// while next expr
+
+		if ( !ftrans.SimpleInit(&job,false,false,&rsock) ) {
+			return false;
+		}
+		// We want files to be copied to their final places, so apply
+		// any filename remaps when downloading.
+		if ( !ftrans.InitDownloadFilenameRemaps(&job) ) {
+			return false;
+		}
+		if ( use_new_command ) {
+			ftrans.setPeerVersion( version() );
+		}
+		if ( !ftrans.DownloadFiles() ) {
+			return false;
+		}
+	}	
+		
+	rsock.eom();
+
+	rsock.encode();
+
+	reply = OK;
+	rsock.code(reply);
+	rsock.eom();
+
+	if(numdone) { *numdone = JobAdsArrayLen; }
+
+	return true;
+}
+
+
+bool 
+DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError * errstack)
+{
+	int reply;
+	int i;
+	ReliSock rsock;
+	bool use_new_command = true;
+
+	if ( version() ) {
+		CondorVersionInfo vi( version() );
+		if ( vi.built_since_version(6,7,7) ) {
+			use_new_command = true;
+		} else {
+			use_new_command = false;
+		}
+	}
+
+		// // // // // // // //
+		// On the wire protocol
+		// // // // // // // //
+
+	rsock.timeout(20);   // years of research... :)
 	if( ! rsock.connect(_addr) ) {
 		dprintf( D_ALWAYS, "DCSchedd::spoolJobFiles: "
 				 "Failed to connect to schedd (%s)\n", _addr );
 		return false;
 	}
-	if( ! startCommand(SPOOL_JOB_FILES, (Sock*)&rsock, 0, errstack) ) {
-		dprintf( D_ALWAYS, "DCSchedd::spoolJobFiles: "
-				 "Failed to send command (SPOOL_JOB_FILES) to the schedd\n" );
-		return false;
+	if ( use_new_command ) {
+		if( ! startCommand(SPOOL_JOB_FILES_WITH_PERMS, (Sock*)&rsock, 0,
+						   errstack) ) {
+			dprintf( D_ALWAYS, "DCSchedd::spoolJobFiles: "
+					 "Failed to send command (SPOOL_JOB_FILES_WITH_PERMS) "
+					 "to the schedd\n" );
+			return false;
+		}
+	} else {
+		if( ! startCommand(SPOOL_JOB_FILES, (Sock*)&rsock, 0, errstack) ) {
+			dprintf( D_ALWAYS, "DCSchedd::spoolJobFiles: "
+					 "Failed to send command (SPOOL_JOB_FILES) "
+					 "to the schedd\n" );
+			return false;
+		}
 	}
-
 
 		// First, if we're not already authenticated, force that now. 
 	if (!forceAuthentication( &rsock, errstack )) {
@@ -271,8 +465,23 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError 
 		return false;
 	}
 
-		// Send the number of jobs
 	rsock.encode();
+
+		// Send our version if using the new command
+	if ( use_new_command ) {
+			// Need to use a named variable, else the wrong version of	
+			// code() is called.
+		char *my_version = strdup( CondorVersion() );
+		if ( !rsock.code(my_version) ) {
+			dprintf(D_ALWAYS,"DCSchedd:spoolJobFiles: "
+					"Can't send version string to the schedd\n");
+			free( my_version );
+			return false;
+		}
+		free( my_version );
+	}
+
+		// Send the number of jobs
 	if ( !rsock.code(JobAdsArrayLen) ) {
 		dprintf(D_ALWAYS,"DCSchedd:spoolJobFiles: "
 				"Can't send JobAdsArrayLen to the schedd\n");
@@ -305,6 +514,9 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError 
 		if ( !ftrans.SimpleInit(JobAdsArray[i], false, false, &rsock) ) {
 			return false;
 		}
+		if ( use_new_command ) {
+			ftrans.setPeerVersion( version() );
+		}
 		if ( !ftrans.UploadFiles(true,false) ) {
 			return false;
 		}
@@ -325,6 +537,145 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError 
 		return false;
 }
 
+bool 
+DCSchedd::updateGSIcredential(const int cluster, const int proc, 
+							  const char* path_to_proxy_file,
+							  CondorError * errstack)
+{
+	int reply;
+	ReliSock rsock;
+
+		// check the parameters
+	if ( cluster < 1 || proc < 0 || !path_to_proxy_file || !errstack ) {
+		dprintf(D_FULLDEBUG,"DCSchedd::updateGSIcredential: bad parameters\n");
+		return false;
+	}
+
+		// connect to the schedd, send the UPDATE_GSI_CRED command
+	rsock.timeout(20);   // years of research... :)
+	if( ! rsock.connect(_addr) ) {
+		dprintf( D_ALWAYS, "DCSchedd::updateGSIcredential: "
+				 "Failed to connect to schedd (%s)\n", _addr );
+		return false;
+	}
+	if( ! startCommand(UPDATE_GSI_CRED, (Sock*)&rsock, 0, errstack) ) {
+		dprintf( D_ALWAYS, "DCSchedd::updateGSIcredential: "
+				 "Failed send command to the schedd: %s\n",
+				 errstack->getFullText());
+		return false;
+	}
+
+
+		// If we're not already authenticated, force that now. 
+	if (!forceAuthentication( &rsock, errstack )) {
+		dprintf( D_ALWAYS, 
+				"DCSchedd:updateGSIcredential authentication failure: %s\n",
+				 errstack->getFullText() );
+		return false;
+	}
+
+		// Send the job id
+	rsock.encode();
+	PROC_ID jobid;
+	jobid.cluster = cluster;
+	jobid.proc = proc;	
+	if ( !rsock.code(jobid) || !rsock.eom() ) {
+		dprintf(D_ALWAYS,"DCSchedd:updateGSIcredential: "
+				"Can't send jobid to the schedd\n");
+		return false;
+	}
+
+		// Send the gsi proxy
+	filesize_t file_size = 0;	// will receive the size of the file
+	if ( rsock.put_file(&file_size,path_to_proxy_file) < 0 ) {
+		dprintf(D_ALWAYS,
+			"DCSchedd:updateGSIcredential "
+			"failed to send proxy file %s (size=%ld)\n",
+			path_to_proxy_file, (long) file_size);
+		return false;
+	}
+		
+		// Fetch the result
+	rsock.decode();
+	reply = 0;
+	rsock.code(reply);
+	rsock.eom();
+
+	if ( reply == 1 ) 
+		return true;
+	else
+		return false;
+}
+
+bool 
+DCSchedd::delegateGSIcredential(const int cluster, const int proc, 
+								const char* path_to_proxy_file,
+								CondorError * errstack)
+{
+	int reply;
+	ReliSock rsock;
+
+		// check the parameters
+	if ( cluster < 1 || proc < 0 || !path_to_proxy_file || !errstack ) {
+		dprintf(D_FULLDEBUG,"DCSchedd::delegateGSIcredential: bad parameters\n");
+		return false;
+	}
+
+		// connect to the schedd, send the DELEGATE_GSI_CRED_SCHEDD command
+	rsock.timeout(20);   // years of research... :)
+	if( ! rsock.connect(_addr) ) {
+		dprintf( D_ALWAYS, "DCSchedd::delegateGSIcredential: "
+				 "Failed to connect to schedd (%s)\n", _addr );
+		return false;
+	}
+	if( ! startCommand(DELEGATE_GSI_CRED_SCHEDD, (Sock*)&rsock, 0, errstack) ) {
+		dprintf( D_ALWAYS, "DCSchedd::delegateGSIcredential: "
+				 "Failed send command to the schedd: %s\n",
+				 errstack->getFullText());
+		return false;
+	}
+
+
+		// If we're not already authenticated, force that now. 
+	if (!forceAuthentication( &rsock, errstack )) {
+		dprintf( D_ALWAYS, 
+				"DCSchedd::delegateGSIcredential authentication failure: %s\n",
+				 errstack->getFullText() );
+		return false;
+	}
+
+		// Send the job id
+	rsock.encode();
+	PROC_ID jobid;
+	jobid.cluster = cluster;
+	jobid.proc = proc;	
+	if ( !rsock.code(jobid) || !rsock.eom() ) {
+		dprintf(D_ALWAYS,"DCSchedd::delegateGSIcredential: "
+				"Can't send jobid to the schedd\n");
+		return false;
+	}
+
+		// Delegate the gsi proxy
+	filesize_t file_size = 0;	// will receive the size of the file
+	if ( rsock.put_x509_delegation(&file_size,path_to_proxy_file) < 0 ) {
+		dprintf(D_ALWAYS,
+			"DCSchedd::delegateGSIcredential "
+			"failed to send proxy file %s (size=%ld)\n",
+			path_to_proxy_file, (long) file_size);
+		return false;
+	}
+		
+		// Fetch the result
+	rsock.decode();
+	reply = 0;
+	rsock.code(reply);
+	rsock.eom();
+
+	if ( reply == 1 ) 
+		return true;
+	else
+		return false;
+}
 
 ClassAd*
 DCSchedd::actOnJobs( JobAction action, const char* action_str, 
@@ -378,15 +729,19 @@ DCSchedd::actOnJobs( JobAction action, const char* action_str,
 		tmp = NULL;
 	} else if( ids ) {
 		char* action_ids = ids->print_to_string();
-		size = strlen(action_ids) + strlen(ATTR_ACTION_IDS) + 7;
-		tmp = (char*) malloc( size*sizeof(char) );
-		if( !tmp ) {
-			EXCEPT( "Out of memory!" );
+		if ( action_ids ) {
+			size = strlen(action_ids) + strlen(ATTR_ACTION_IDS) + 7;
+			tmp = (char*) malloc( size*sizeof(char) );
+			if( !tmp ) {
+				EXCEPT( "Out of memory!" );
+			}
+			sprintf( tmp, "%s = \"%s\"", ATTR_ACTION_IDS, action_ids );
+			cmd_ad.Insert( tmp );
+			free( tmp );
+			tmp = NULL;
+			free(action_ids);
+			action_ids = NULL;
 		}
-		sprintf( tmp, "%s = \"%s\"", ATTR_ACTION_IDS, action_ids );
-		cmd_ad.Insert( tmp );
-		free( tmp );
-		tmp = NULL;
 	} else {
 		EXCEPT( "DCSchedd::actOnJobs called without constraint or ids" );
 	}

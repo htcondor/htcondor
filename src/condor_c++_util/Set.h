@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -36,10 +36,9 @@
 //---------------------------------------------------------------------------
 
 template <class KeyType> class SetElem;
-template <class KeyType> class SetIterator;
 
 template <class KeyType> class Set {
-friend class SetIterator<KeyType>;
+
 public:
 
   Set();                           // Constructor - makes an empty set
@@ -47,7 +46,6 @@ public:
 
   int Count();                     // Returns the number of elements in the set
   int Exist(const KeyType& Key);   // Returns 1 if Key is in the set, 0 otherwise
-  int GetKey(KeyType& Key);   // Returns 1 if Key is in the set, 0 otherwise
   void Add(const KeyType& Key);    // Add Key to the set (in the beginning)
   void Remove(const KeyType& Key); // Remove Key from the set
   void Clear();
@@ -69,25 +67,6 @@ private:
   SetElem<KeyType>* Find(const KeyType& Key);
   void RemoveElem(const SetElem<KeyType>* N);
 
-};
-
-template <class KeyType> 
-class SetIterator {
-public:
-	SetIterator( );
-	~SetIterator( );
-
-	void Initialize( const Set<KeyType>& );
-	bool ToBeforeFirst( );
-	bool IsBeforeFirst( ) const;
-	bool IsAfterLast( ) const;
-	bool Current( KeyType & ) const;
-	bool Next( KeyType & );
-
-private:
-	bool			afterLast;
-	const Set<KeyType> 	*set;
-	const SetElem<KeyType> *cur;
 };
 
 //-------------------------------------------------------
@@ -142,17 +121,6 @@ void Set<KeyType>::Clear() {
 template <class KeyType> 
 int Set<KeyType>::Exist(const KeyType& Key) { 
   return(Find(Key) ? 1 : 0); 
-}
-  
-// 0=Not in set, 1=is in the set
-template <class KeyType> 
-int Set<KeyType>::GetKey(KeyType& Key) { 
-  SetElem<KeyType>* N=Find(Key);
-  if (N) {
-    Key=N->Key;
-    return 1;
-  }
-  return 0; 
 }
   
 // Add to set
@@ -256,82 +224,6 @@ void Set<KeyType>::RemoveElem(const SetElem<KeyType>* N) {
     if (N->Next) N->Next->Prev=N->Prev;
   }
   delete N;
-}
-
-// implementation of iterator
-template <class KeyType> 
-SetIterator<KeyType>::
-SetIterator( ) 
-{
-	set = NULL;
-	cur = NULL;
-	afterLast = true;
-}
-
-template <class KeyType> 
-SetIterator<KeyType>::
-~SetIterator( )
-{
-}
-
-template <class KeyType> 
-void SetIterator<KeyType>::
-Initialize( const Set<KeyType>& s )
-{
-	set = &s;
-	cur = NULL;
-	afterLast = false;
-}
-
-template <class KeyType> 
-bool SetIterator<KeyType>::
-ToBeforeFirst( )
-{
-	if( !set ) return false;
-	cur = NULL;
-	afterLast = false;
-	return( true );
-}
-
-template <class KeyType> 
-bool SetIterator<KeyType>::
-IsBeforeFirst( ) const
-{
-	return( (set!=NULL) && cur==NULL );
-}
-
-template <class KeyType> 
-bool SetIterator<KeyType>::
-IsAfterLast( ) const
-{
-	return( (set!=NULL) && afterLast );
-}
-
-template <class KeyType> 
-bool SetIterator<KeyType>::
-Current( KeyType &k ) const
-{
-	if( (set!=NULL) && cur && !afterLast ) {
-		k = cur->Key;
-		return( true );
-	}
-	return( false );
-}
-
-template <class KeyType> 
-bool SetIterator<KeyType>::
-Next( KeyType &k )
-{
-	if( !set ) return false;
-	cur = ( cur == NULL ) ? set->Head : cur->Next;
-	if( cur ) {
-		k = cur->Key;
-		afterLast = false;
-		return( true );
-	} else {
-		afterLast = true;
-		return( false );
-	}
 }
 
 #endif

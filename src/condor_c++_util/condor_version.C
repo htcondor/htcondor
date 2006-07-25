@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -32,7 +32,8 @@
    Any questions?  See Todd or Derek.  Note: if you mess it up, DaemonCore
    will EXCEPT at startup time.  
 */
-static char* CondorVersionString = "$CondorVersion: 6.9.0 " __DATE__ " TRUNK-PRE-RELEASE $";
+
+static char* CondorVersionString = "$CondorVersion: 6.8.1 " __DATE__ " PRE-RELEASE-UWCS $";
 
 /* 
    This is some wisdom from Cygnus's web page.  If you just try to use
@@ -57,7 +58,7 @@ static char* CondorVersionString = "$CondorVersion: 6.9.0 " __DATE__ " TRUNK-PRE
 */
 
 #if defined(WIN32)
-#define PLATFORM INTEL-WINNT40
+#define PLATFORM INTEL-WINNT50
 #endif
 
 #define xstr(s) str(s)
@@ -68,13 +69,13 @@ static char* CondorPlatformString = "$CondorPlatform: " xstr(PLATFORM) " $";
 
 extern "C" {
 
-char*
+const char*
 CondorVersion( void )
 {
 	return CondorVersionString;
 }
 
-char*
+const char*
 CondorPlatform( void )
 {
 	return CondorPlatformString;

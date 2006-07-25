@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -26,6 +26,7 @@
 #include "baseshadow.h"
 #include "shadow_user_policy.h"
 #include "MyString.h"
+#include "condor_holdcodes.h"
 
 
 ShadowUserPolicy::ShadowUserPolicy() 
@@ -163,52 +164,11 @@ ShadowUserPolicy::RestoreJobTime( float old_run_time )
 void
 ShadowUserPolicy::doAction( int action, bool is_periodic ) 
 {
-	const char* firing_expr = user_policy.FiringExpression();
-//	char* tmp = NULL;
-	const char* tmp;
-//	ExprTree *tree, *rhs = NULL;
-	ExprTree *tree;
-	ClassAdUnParser unp;
-	std::string bufString;
+	MyString reason;
 
-	tree = job_ad->Lookup( firing_expr );
-//	if( tree && (rhs=tree->RArg()) ) {
-	if( tree ) {
-			// cool, we've found the right expression.  let's print it
-			// out to a string so we can use it.
-//		rhs->PrintToNewStr( &tmp );
-		unp.Unparse( bufString, tree );
-		tmp = bufString.c_str( );
-	} else {
-			// this is really strange, we think the firing expr went
-			// off, but now we can't look it up in the job ad.
-		EXCEPT( "ShadowUserPolicy: Can't find %s in job ClassAd\n",
-				firing_expr );
-	}
-
-	int firing_value = user_policy.FiringExpressionValue();
-
-	MyString reason = "The ";
-	reason += firing_expr;
-	reason += " expression '";
-	reason += tmp;
-//	free( tmp );
-
-	reason += "' evaluated to ";
-	switch( firing_value ) {
-	case 0:
-		reason += "FALSE";
-		break;
-	case 1:
-		reason += "TRUE";
-		break;
-	case -1:
-		reason += "UNDEFINED";
-		break;
-	default:
-		EXCEPT( "Unrecognized FiringExpressionValue: %d", 
-				firing_value ); 
-		break;
+	reason = user_policy.FiringReason();
+	if ( reason == "" ) {
+		EXCEPT( "ShadowUserPolicy: Empty FiringReason." );
 	}
 
 	switch( action ) {
@@ -218,7 +178,7 @@ ShadowUserPolicy::doAction( int action, bool is_periodic )
 			   screwed something up and they better deal with it.  We
 			   don't just want the job to leave the queue...
 			*/
-		shadow->holdJob( reason.Value() );
+		shadow->holdJob( reason.Value(), CONDOR_HOLD_CODE_JobPolicyUndefined, 0 );
 		break;
 
 	case REMOVE_FROM_QUEUE:
@@ -238,7 +198,7 @@ ShadowUserPolicy::doAction( int action, bool is_periodic )
 		break;
 
 	case HOLD_IN_QUEUE:
-		shadow->holdJob( reason.Value() );
+		shadow->holdJob( reason.Value(), CONDOR_HOLD_CODE_JobPolicy, 0 );
 		break;
 
 	default:

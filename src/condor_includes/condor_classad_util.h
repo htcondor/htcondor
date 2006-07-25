@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -20,47 +20,25 @@
   * RIGHT.
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-//*****************************************************************************
-//
-// A couple of useful procedures.
-//
-//*****************************************************************************
 
-#ifndef _CLASSAD_UTIL_H
-#define _CLASSAD_UTIL_H
-#include "condor_classad.h"
+#ifndef CONDOR_CLASSAD_UTIL_H
+#define CONDOR_CLASSAD_UTIL_H
 
-//
-// Given a ClassAd and a ClassAdList, a pointer to the first match in the 
-// list is returned. 
-// If match found, 1 returned. Otherwise, 0 returned.
-//
-int FirstMatch(ClassAd *, ClassAdList *, ClassAd *&);
+#include "string_list.h"
+
+bool EvalBool(ClassAd *ad, const char *constraint);
+
+bool ClassAdsAreSame( ClassAd* ad1, ClassAd* ad2, 
+					  StringList* ignored_attrs=NULL, bool verbose=false );
 
 //
-// Given a ClassAd and a ClassAdList, a list of pointers to the matches in the
-// list is returned. 
-// If match(es) found, 1 returned. Otherwise, 0 returned.
+// Convenience methods for inserting info an ad
+// This was moved from the scheduler
 //
-int AllMatch(ClassAd *, ClassAdList *, ClassAdList *&);
-
-//
-// Given a constraint, determine whether the first ClassAd is > the second 
-// one, in the sense whether the constraint is evaluated to be TRUE. 
-// The constraint should look just like a "Requirement". Every variable has 
-// a prefix "MY." or "TARGET.". A variable with prefix "MY." should be 
-// evaluated against the first ClassAd and a variable with prefix "TARGET."
-// should be evaluated against the second ClassAd.
-// If >, return 1;
-// else, return 0. (Note it can be undefined.)  
-//
-int IsGT(ClassAd *, ClassAd *, char *);
-
-//
-// Sort a list according to a given constraint in ascending order.
-//
-#if 0
-void SortClassAdList(ClassAdList *, ClassAdList *&, char *);
-#endif
+bool InsertIntoAd ( ClassAd *ad, const char *lhs, const char *rhs );
+bool InsertIntoAd ( ClassAd *ad, const char *lhs, char *rhs );
+bool InsertIntoAd ( ClassAd *ad, char *lhs, char *rhs );
+bool InsertIntoAd ( ClassAd *ad, const char *lhs, int rhs );
+bool InsertIntoAd ( ClassAd *ad, char *lhs, int rhs );
 
 #endif

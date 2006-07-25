@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -26,21 +26,26 @@
 #ifndef __CONDOR_ADTYPES__
 #define __CONDOR_ADTYPES__
 
-static const char  STARTD_ADTYPE	[] = "Machine";
-static const char  SCHEDD_ADTYPE	[] = "Scheduler";
-static const char  MASTER_ADTYPE	[] = "DaemonMaster";
-static const char  CKPT_SRVR_ADTYPE	[] = "CkptServer";
-static const char  JOB_ADTYPE		[] = "Job";
-static const char  QUERY_ADTYPE		[] = "Query";
-static const char  COLLECTOR_ADTYPE	[] = "Collector";
-static const char  CKPT_FILE_ADTYPE	[] = "CkptFile";
-static const char  USERAUTH_ADTYPE	[] = "Authentication";
-static const char  LICENSE_ADTYPE	[] = "License";
-static const char  STORAGE_ADTYPE	[] = "Storage";
-static const char  ANY_ADTYPE		[] = "Any";
-static const char  SUBMITTER_ADTYPE	[] = "Submitter";
-static const char  COMMAND_ADTYPE	[] = "Command";
-static const char  REPLY_ADTYPE		[] = "Reply";
+#define QUILL_ADTYPE		"Database"
+#define STARTD_ADTYPE		"Machine"
+#define SCHEDD_ADTYPE		"Scheduler"
+#define MASTER_ADTYPE		"DaemonMaster"
+#define CKPT_SRVR_ADTYPE	"CkptServer"
+#define JOB_ADTYPE		"Job"
+#define QUERY_ADTYPE		"Query"
+#define COLLECTOR_ADTYPE	"Collector"
+#define CKPT_FILE_ADTYPE	"CkptFile"
+#define USERAUTH_ADTYPE		"Authentication"
+#define LICENSE_ADTYPE		"License"
+#define STORAGE_ADTYPE		"Storage"
+#define NEGOTIATOR_ADTYPE	"Negotiator"
+#define HAD_ADTYPE		"HAD"
+#define CREDD_ADTYPE		"CredD"
+#define ANY_ADTYPE		"Any"
+#define SUBMITTER_ADTYPE	"Submitter"
+#define COMMAND_ADTYPE		"Command"
+#define REPLY_ADTYPE		"Reply"
 
 #endif
+
 

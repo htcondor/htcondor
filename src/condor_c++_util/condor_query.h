@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -25,7 +25,6 @@
 
 #include "condor_common.h"
 #include "condor_classad.h"
-#include "classadList.h"	// NAC
 #include "list.h"
 #include "simplelist.h"
 #include "condor_collector.h"
@@ -33,6 +32,8 @@
 #include "query_result_type.h"
 #include "generic_query.h"
 #include "CondorError.h"
+#include "daemon.h"
+#include "daemon_list.h"
 
 // Please read the documentation for the API before you use it (RTFM :-)  --RR
 
@@ -129,7 +130,8 @@ class CondorQuery
 	QueryResult addANDConstraint (const char *);		 // custom constraints
 
 	// fetch from collector
-	QueryResult fetchAds (ClassAdList &, const char [] = "", CondorError* errstack = NULL);
+	QueryResult fetchAds (ClassAdList &adList, const char * pool, CondorError* errstack = NULL);
+
 
 	// filter list of ads; arg1 is 'in', arg2 is 'out'
 	QueryResult filterAds (ClassAdList &, ClassAdList &);

@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -27,11 +27,18 @@
 #include "condor_adtypes.h"
 #include "condor_qmgr.h"
 #include "format_time.h"
-#include "condor_classad.h"
 #include "condor_config.h"
 #include "CondorError.h"
+#include "condor_classad_util.h"
 
-using namespace std;
+#if WANT_QUILL
+
+#include "jobqueuesnapshot.h"
+
+static ClassAd* getDBNextJobByConstraint(const char* constraint, JobQueueSnapshot  *jqSnapshot);
+static int execQuery(PGconn *connection, const char* sql, PGresult*& result);
+
+#endif /* WANT_QUILL */
 
 // specify keyword lists; N.B.  The order should follow from the category
 // enumerations in the .h file
@@ -72,6 +79,19 @@ CondorQ ()
 	query.setIntegerKwList ((char **) intKeywords);
 	query.setStringKwList ((char **) strKeywords);
 	query.setFloatKwList ((char **) fltKeywords);
+
+	clusterprocarraysize = 128;
+	clusterarray = (int *) malloc(clusterprocarraysize * sizeof(int));
+	procarray = (int *) malloc(clusterprocarraysize * sizeof(int));
+	int i;
+	for(i=0; i < clusterprocarraysize; i++) { 
+		clusterarray[i] = -1;
+		procarray[i] = -1;
+	}
+	numclusters = 0;
+	numprocs = 0;
+
+	owner[0] = '\0';
 }
 
 
@@ -90,6 +110,44 @@ init()
 
 
 int CondorQ::
+addDBConstraint (CondorQIntCategories cat, int value) 
+{
+	int i;
+
+		// remember the cluster and proc values so that they can be pushed down to DB query
+	switch (cat) {
+	case CQ_CLUSTER_ID:
+		clusterarray[numclusters] = value;
+		numclusters++;
+		if(numclusters == clusterprocarraysize-1) {
+		   clusterarray = (int *) realloc(clusterarray, 
+					clusterprocarraysize * 2);
+		   procarray = (int *) realloc(procarray, 
+					clusterprocarraysize * 2);
+		   for(i=clusterprocarraysize; 
+				i < clusterprocarraysize * 2; i++) {
+		      clusterarray[i] = -1;
+		      procarray[i] = -1;
+		   }
+		   clusterprocarraysize *= 2;
+		} 
+		break;
+	case CQ_PROC_ID:
+		// we want to store the procs at the same index as its 
+		// corresponding cluster so we simply use the numclusters 
+		// value.  numclusters is already incremented above as the 
+		// cluster value appears before proc in the user's 
+		// constraint string, so we store it at numclusters-1
+		procarray[numclusters-1] = value;
+		numprocs++;
+		break;
+	default:
+		break;
+	}
+	return 1;
+}
+
+int CondorQ::
 add (CondorQIntCategories cat, int value)
 {
 	return query.addInteger (cat, value);
@@ -99,6 +157,14 @@ add (CondorQIntCategories cat, int value)
 int CondorQ::
 add (CondorQStrCategories cat, char *value)
 {  
+	switch (cat) {
+	case CQ_OWNER:
+		strncpy(owner, value, MAXOWNERLEN);
+		break;
+	default:
+		break;
+	}
+
 	return query.addString (cat, value);
 }
 
@@ -123,7 +189,7 @@ addAND (char *value)
 }
 
 int CondorQ::
-fetchQueue (ClassAdList &ca_list, ClassAd *ad, CondorError* errstack)
+fetchQueue (ClassAdList &list, ClassAd *ad, CondorError* errstack)
 {
 	Qmgr_connection *qmgr;
 	ClassAd 		filterAd;
@@ -135,10 +201,8 @@ fetchQueue (ClassAdList &ca_list, ClassAd *ad, CondorError* errstack)
 		return result;
 
 	// insert types into the query ad   ###
-//	filterAd.SetMyTypeName ("Query");
-//	filterAd.SetTargetTypeName ("Job");
-	filterAd.InsertAttr( ATTR_MY_TYPE, (string)QUERY_ADTYPE );		// NAC
-	filterAd.InsertAttr( ATTR_TARGET_TYPE, (string)JOB_ADTYPE ); 	// NAC	
+	filterAd.SetMyTypeName ("Query");
+	filterAd.SetTargetTypeName ("Job");
 
 	// connect to the Q manager
 	init();  // needed to get default connect_timeout
@@ -153,24 +217,22 @@ fetchQueue (ClassAdList &ca_list, ClassAd *ad, CondorError* errstack)
 	else
 	{
 		// remote case to handle condor_globalq
-//		if (!ad->LookupString (ATTR_SCHEDD_IP_ADDR, scheddString))
-		if ( !ad->EvaluateAttrString( ATTR_SCHEDD_IP_ADDR, scheddString, 32 ) ) {	// NAC
-			return Q_NO_SCHEDD_IP_ADDR;	
-		}
-		if( !(qmgr = ConnectQ( scheddString, connect_timeout, true, errstack)) ) {
+		if (!ad->LookupString (ATTR_SCHEDD_IP_ADDR, scheddString))
+			return Q_NO_SCHEDD_IP_ADDR;
+
+		if( !(qmgr = ConnectQ( scheddString, connect_timeout, true, errstack)) )
 			return Q_SCHEDD_COMMUNICATION_ERROR;
-		}
 	}
 
 	// get the ads and filter them
-	getAndFilterAds (filterAd, ca_list);
+	getAndFilterAds (filterAd, list);
 
 	DisconnectQ (qmgr);
 	return Q_OK;
 }
 
 int CondorQ::
-fetchQueueFromHost (ClassAdList &ca_list, char *host, CondorError* errstack)
+fetchQueueFromHost (ClassAdList &list, char *host, CondorError* errstack)
 {
 	Qmgr_connection *qmgr;
 	ClassAd 		filterAd;
@@ -181,11 +243,8 @@ fetchQueueFromHost (ClassAdList &ca_list, char *host, CondorError* errstack)
 		return result;
 
 	// insert types into the query ad   ###
-//	filterAd.SetMyTypeName ("Query");
-//	filterAd.SetTargetTypeName ("Job");
-	filterAd.InsertAttr( ATTR_MY_TYPE, (string)QUERY_ADTYPE );		// NAC
-	filterAd.InsertAttr( ATTR_TARGET_TYPE, (string)JOB_ADTYPE ); 	// NAC	
-
+	filterAd.SetMyTypeName ("Query");
+	filterAd.SetTargetTypeName ("Job");
 
 	/*
 	 connect to the Q manager.
@@ -195,22 +254,79 @@ fetchQueueFromHost (ClassAdList &ca_list, char *host, CondorError* errstack)
 	 optimal.  :^).
 	*/
 	init();  // needed to get default connect_timeout
-	if( !(qmgr = ConnectQ( host, connect_timeout, true, errstack)) ) {
+	if( !(qmgr = ConnectQ( host, connect_timeout, true, errstack)) )
 		return Q_SCHEDD_COMMUNICATION_ERROR;
-	}
+
 	// get the ads and filter them
-	result = getAndFilterAds (filterAd, ca_list);
+	result = getAndFilterAds (filterAd, list);
 
 	DisconnectQ (qmgr);
 	return result;
+}
+
+int CondorQ::
+fetchQueueFromDB (ClassAdList &list, char *dbconn, CondorError* errstack)
+{
+#if WANT_QUILL
+	ClassAd 		filterAd;
+	int     		result;
+	JobQueueSnapshot	*jqSnapshot;
+	char 		*constraint;
+	ClassAd        *ad;
+	QuillErrCode   rv;
+
+	jqSnapshot = new JobQueueSnapshot(dbconn);
+
+	rv = jqSnapshot->startIterateAllClassAds(clusterarray,
+						 numclusters,
+						 procarray,
+						 numprocs,
+						 owner,
+						 FALSE);
+
+	if (rv == FAILURE) {
+		delete jqSnapshot;
+		return Q_COMMUNICATION_ERROR;
+	} else if (rv == JOB_QUEUE_EMPTY) {
+		delete jqSnapshot;
+		return Q_OK;
+	}
+
+	// make the query ad
+	if ((result = query.makeQuery (filterAd)) != Q_OK) {
+		delete jqSnapshot;
+		return result;
+	}
+
+	// insert types into the query ad   ###
+	filterAd.SetMyTypeName ("Query");
+	filterAd.SetTargetTypeName ("Job");
+
+	ExprTree *tree;
+	tree = filterAd.Lookup(ATTR_REQUIREMENTS);
+	if (!tree) {
+		delete jqSnapshot;
+	  return Q_INVALID_QUERY;
+	}
+
+	tree->RArg()->PrintToNewStr(&constraint);
+
+	ad = getDBNextJobByConstraint(constraint, jqSnapshot);
+
+	while (ad != (ClassAd *) 0) {
+		list.Insert(ad);
+		ad = getDBNextJobByConstraint(constraint, jqSnapshot);
+	}	
+
+	delete jqSnapshot;
+	free(constraint);
+#endif /* WANT_QUILL */
+	return Q_OK;
 }
 
 int CondorQ::
 fetchQueueFromHostAndProcess ( char *host, process_function process_func, CondorError* errstack )
 {
-		// DEBUG NAC
-//	printf("entered fetchQueueFromHostAndProcess\n");	// NAC
-
 	Qmgr_connection *qmgr;
 	ClassAd 		filterAd;
 	int     		result;
@@ -220,10 +336,8 @@ fetchQueueFromHostAndProcess ( char *host, process_function process_func, Condor
 		return result;
 
 	// insert types into the query ad   ###
-//	filterAd.SetMyTypeName ("Query");
-//	filterAd.SetTargetTypeName ("Job");
-	filterAd.InsertAttr( ATTR_MY_TYPE, (string)QUERY_ADTYPE );		// NAC
-	filterAd.InsertAttr( ATTR_TARGET_TYPE, (string)JOB_ADTYPE ); 	// NAC	
+	filterAd.SetMyTypeName ("Query");
+	filterAd.SetTargetTypeName ("Job");
 
 	/*
 	 connect to the Q manager.
@@ -233,50 +347,154 @@ fetchQueueFromHostAndProcess ( char *host, process_function process_func, Condor
 	 optimal.  :^).
 	*/
 	init();  // needed to get default connect_timeout
-	if( !(qmgr = ConnectQ( host, connect_timeout, true, errstack)) ) {
+	if( !(qmgr = ConnectQ( host, connect_timeout, true, errstack)) )
 		return Q_SCHEDD_COMMUNICATION_ERROR;
-	}
 
 	// get the ads and filter them
 	result = getFilterAndProcessAds (filterAd, process_func);
-	result = Q_OK; // NAC
 
 	DisconnectQ (qmgr);
-
-		// DEBUG NAC
-//	printf("exiting fetchQueueFromHostAndProcess\n");	// NAC
 	return result;
+}
+
+int CondorQ::
+fetchQueueFromDBAndProcess ( char *dbconn, process_function process_func, CondorError* errstack )
+{
+#if WANT_QUILL
+	ClassAd 		filterAd;
+	int     		result;
+	JobQueueSnapshot	*jqSnapshot;
+	char           *constraint;
+	ClassAd        *ad;
+	QuillErrCode             rv;
+
+	ASSERT(process_func);
+
+	jqSnapshot = new JobQueueSnapshot(dbconn);
+
+	rv = jqSnapshot->startIterateAllClassAds(clusterarray,
+						 numclusters,
+						 procarray,
+						 numprocs,
+						 owner,
+						 FALSE);
+
+	if (rv == FAILURE) {
+		delete jqSnapshot;
+		return Q_COMMUNICATION_ERROR;
+	}
+	else if (rv == JOB_QUEUE_EMPTY) {
+		delete jqSnapshot;
+		return Q_OK;
+	}	
+
+	// make the query ad
+	if ((result = query.makeQuery (filterAd)) != Q_OK) {
+		delete jqSnapshot;
+		return result;
+	}
+
+	// insert types into the query ad   ###
+	filterAd.SetMyTypeName ("Query");
+	filterAd.SetTargetTypeName ("Job");
+
+	ExprTree *tree;
+	tree = filterAd.Lookup(ATTR_REQUIREMENTS);
+	if (!tree) {
+		delete jqSnapshot;
+	  return Q_INVALID_QUERY;
+	}
+
+	tree->RArg()->PrintToNewStr(&constraint);
+
+	ad = getDBNextJobByConstraint(constraint, jqSnapshot);
+	
+	while (ad != (ClassAd *) 0) {
+			// Process the data and insert it into the list
+		if ((*process_func) (ad) ) {
+			ad->clear();
+			delete ad;
+		}
+		
+		ad = getDBNextJobByConstraint(constraint, jqSnapshot);
+	}	
+
+	if(ad) {
+		ad->clear();
+		delete ad;
+	}
+	delete jqSnapshot;
+	free(constraint);
+#endif /* WANT_QUILL */
+
+	return Q_OK;
+}
+
+void CondorQ::rawDBQuery(char *dbconn, CondorQQueryType qType) {
+#if WANT_QUILL
+
+	PGconn        *connection;
+	char          *rowvalue;
+	PGresult	  *resultset;
+	int           ntuples;
+	SQLQuery      sqlquery;
+
+	if ((connection = PQconnectdb(dbconn)) == NULL)
+	{
+		fprintf(stderr, "\n-- Failed to connect to the database\n");
+		return;
+	}
+
+	switch (qType) {
+	case AVG_TIME_IN_QUEUE:
+
+		sqlquery.setQuery(QUEUE_AVG_TIME, NULL);
+
+	   	ntuples = execQuery(connection, sqlquery.getQuery(), resultset);
+
+			/* we expect exact one row out of the query */
+		if (ntuples != 1) {
+			fprintf(stderr, "\n-- Failed to execute the query\n");
+			return;
+		}
+		
+		rowvalue = PQgetvalue(resultset, 0, 0);
+		if(strcmp(rowvalue,"") == 0) {
+			printf("\nJob queue is curently empty\n");
+		} else {
+			printf("\nAverage time in queue for uncompleted jobs (in hh:mm:ss)\n");
+			printf("%s\n", rowvalue);		 
+		}
+		
+		break;
+	default:
+		fprintf(stderr, "Error: type of query not supported\n");
+		return;
+		break;
+	}
+
+	if(resultset) {
+		PQclear(resultset);
+	}
+	if(connection) {
+		PQfinish(connection);
+	}
+#endif /* WANT_QUILL */
 }
 
 int CondorQ::
 getFilterAndProcessAds( ClassAd &queryad, process_function process_func )
 {
-		// DEBUG NAC
-//	printf("entered getFilterAndProcessAds\n");	// NAC
-
-//	char		constraint[ATTRLIST_MAX_EXPRESSION]; /* yuk! */ 
-	char		constraint[10240];	// NAC
-	string		constraint_string; 	// NAC
+	char		*constraint;
 	ExprTree	*tree;
 	ClassAd		*ad;
-	ClassAdUnParser	unp;			// NAC
 
-//	constraint[0] = '\0';
 	tree = queryad.Lookup(ATTR_REQUIREMENTS);
-//	if (!tree) {
-//		return Q_INVALID_QUERY;
-//	}
-//	tree->RArg()->PrintToStr(constraint);
-	unp.Unparse( constraint_string, tree );  // NAC
+	if (!tree) {
+		return Q_INVALID_QUERY;
+	}
 
-		// DEBUG NAC
-//	cout << "constraints_string = " << constraint_string << endl;	// NAC
-
-	strncpy( constraint, constraint_string.c_str( ), 10240 ); // NAC
-
-		// DEBUG NAC
-//	cout << "constraint = " << constraint << endl;  // NAC
-
+	tree->RArg()->PrintToNewStr(&constraint);
 
 	if ((ad = GetNextJobByConstraint(constraint, 1)) != NULL) {
 		// Process the data and insert it into the list
@@ -286,18 +504,13 @@ getFilterAndProcessAds( ClassAd &queryad, process_function process_func )
 
 		while((ad = GetNextJobByConstraint(constraint, 0)) != NULL) {
 			// Process the data and insert it into the list
-
-				// DEBUG NAC
-//			cout << "about to call process_func" << endl;
 			if ( ( *process_func )( ad ) ) {
 				delete(ad);
 			}
-//			cout << "done process_func" << endl;
 		}
 	}
 
-		// DEBUG NAC
-//	cout << "done GetNextJobByConstraint" << endl;
+	free(constraint);
 
 	// here GetNextJobByConstraint returned NULL.  check if it was
 	// because of the network or not.  if qmgmt had a problem with
@@ -305,40 +518,32 @@ getFilterAndProcessAds( ClassAd &queryad, process_function process_func )
 	if ( errno == ETIMEDOUT ) {
 		return Q_SCHEDD_COMMUNICATION_ERROR;
 	}
-		// DEBUG NAC
-//	printf("exiting getFilterAndProcessAds\n");	// NAC
 
 	return Q_OK;
 }
 
 
 int CondorQ::
-getAndFilterAds (ClassAd &queryad, ClassAdList &ca_list)
+getAndFilterAds (ClassAd &queryad, ClassAdList &list)
 {
-//	char		constraint[ATTRLIST_MAX_EXPRESSION]; /* yuk! */
-	char		constraint[10240];  // NAC
-	string		constraint_string; 	// NAC
+	char		*constraint;
 	ExprTree	*tree;
 	ClassAd		*ad;
-	ClassAdUnParser	unp;		// NAC
 
-//	constraint[0] = '\0';
-	tree = queryad.Lookup( ATTR_REQUIREMENTS );
-//	if (!tree) {
-//		return Q_INVALID_QUERY;
-//	}
-//	tree->RArg()->PrintToStr(constraint);
-	unp.Unparse( constraint_string, tree );  // NAC
-	strncpy( constraint, constraint_string.c_str( ), 10240 ); // NAC
-	
+	tree = queryad.Lookup(ATTR_REQUIREMENTS);
+	if (!tree) {
+		return Q_INVALID_QUERY;
+	}
+	tree->RArg()->PrintToNewStr(&constraint);
 
 	if ((ad = GetNextJobByConstraint(constraint, 1)) != NULL) {
-		ca_list.Insert(ad);
+		list.Insert(ad);
 		while((ad = GetNextJobByConstraint(constraint, 0)) != NULL) {
-			ca_list.Insert(ad);
+			list.Insert(ad);
 		}
 	}
 
+	free(constraint);
 	// here GetNextJobByConstraint returned NULL.  check if it was
 	// because of the network or not.  if qmgmt had a problem with
 	// the net, then errno is set to ETIMEDOUT, and we should fail.
@@ -354,16 +559,12 @@ int JobSort(ClassAd *job1, ClassAd *job2, void *data)
 {
 	int cluster1=0, cluster2=0, proc1=0, proc2=0;
 
-//	job1->LookupInteger(ATTR_CLUSTER_ID, cluster1);
-//	job2->LookupInteger(ATTR_CLUSTER_ID, cluster2);
-	job1->EvaluateAttrInt( ATTR_CLUSTER_ID, cluster1 );	// NAC
-	job2->EvaluateAttrInt( ATTR_CLUSTER_ID, cluster2 );	// NAC
+	job1->LookupInteger(ATTR_CLUSTER_ID, cluster1);
+	job2->LookupInteger(ATTR_CLUSTER_ID, cluster2);
 	if (cluster1 < cluster2) return 1;
 	if (cluster1 > cluster2) return 0;
-//	job1->LookupInteger(ATTR_PROC_ID, proc1);
-//	job2->LookupInteger(ATTR_PROC_ID, proc2);
-	job1->EvaluateAttrInt( ATTR_PROC_ID, proc1 );	// NAC
-	job2->EvaluateAttrInt( ATTR_PROC_ID, proc2 );	// NAC
+	job1->LookupInteger(ATTR_PROC_ID, proc1);
+	job2->LookupInteger(ATTR_PROC_ID, proc2);
 	if (proc1 < proc2) return 1;
 	else return 0;
 }
@@ -425,3 +626,44 @@ short_print(
 		cmd
 	);
 }
+
+#if WANT_QUILL
+
+ClassAd* getDBNextJobByConstraint(const char* constraint, JobQueueSnapshot	*jqSnapshot)
+{
+	ClassAd *ad;
+	
+	while(jqSnapshot->iterateAllClassAds(ad) != DONE_JOBS_CURSOR) {
+		if ((!constraint || !constraint[0] || EvalBool(ad, constraint))) {
+			return ad;		      
+		}
+		
+		if (ad != (ClassAd *) 0) {
+			ad->clear();
+			delete ad;
+			ad = (ClassAd *) 0;
+		}
+	}
+
+	return (ClassAd *) 0;
+}
+
+/* When the query is successfully executed, result is set and return value
+   is >= 0, otherwise return value is -1
+*/
+static int execQuery(PGconn *connection, const char* sql, PGresult*& result)
+{
+	if ((result = PQexec(connection, sql)) == NULL) {
+		return -1; 
+	}
+	
+	else if (PQresultStatus(result) != PGRES_TUPLES_OK) {
+		PQclear(result);
+		result = NULL;
+		return -1;
+	}
+
+	return PQntuples(result);			
+}
+
+#endif /* WANT_QUILL */

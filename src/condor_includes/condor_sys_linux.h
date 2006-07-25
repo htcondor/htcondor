@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -33,17 +33,6 @@
 # endif
 #endif
 
-/* globus-2.4.3 on Redhat 7 appears to have a bug that does not notice the
- * system has memmove().  It then tries to substitute bcopy(), which leads to
- * compile errors.  See Gnats PR-255.  This bug can be encountered by including
- * string.h.  Inform Globus this system does indeed have memmove()
- */
-#if defined(GLIBC22)
-#	ifndef HAVE_MEMMOVE
-#		define HAVE_MEMMOVE
-#	endif
-#endif /* defined(GLIBC22) */
-
 #if defined(GLIBC23)
 /* the glibc in redhat 9, and the fortran compiler in particular use 
 	the 64 bit interfaces that we have to worry about */
@@ -57,6 +46,13 @@
 
 #include "condor_fix_sys_stat.h"
 #include "condor_fix_unistd.h"
+
+/* Allows use of setgroups() */
+/* It turns out we can't allow this inclusion to fix some other warnings
+	in the source code concerning setgroups() since it messes up some 
+	hand specified prototypes in the standard universe codebase. Once that
+	is investigated and fixed, this can be included properly. */
+/*#include <grp.h>*/
 
 /* Want stdarg.h before stdio.h so we get GNU's va_list defined */
 #include <stdarg.h>
@@ -136,7 +132,7 @@ END_C_DECLS
 #endif
 
 /* swapon and swapoff prototypes */
-#if !defined(IA64)
+#if !defined(IA64) && !defined(CONDOR_PPC)
 /* there is a bug in this header file for ia64 linux, figure out what I need
 	out of here and prototype it manually. */
 #include <linux/swap.h>
@@ -144,6 +140,35 @@ END_C_DECLS
 
 /* include stuff for malloc control */
 #include <malloc.h>
+
+/* to get the sysinfo() function call */
+#include <sys/sysinfo.h>
+
+#if defined( I386 )
+/* For the i386 execution domains for standard
+	universe executables. Under redhat 9 and later there is a
+	sys/personality.h we could include here as well so we can use
+	the personality() function to change execution domains to get
+	good memory map layout behavior. However, before redhat 9 that
+	header file and function call don't exist. The system call
+	itself does exist, however, so we'll just be calling syscall()
+	with the right system call symbol to get the job done on all of the
+	distributions. */
+
+#include <sys/syscall.h>
+
+/* Here is where we find the PER_* constants for the personality system call. */
+#if HAVE_LINUX_PERSONALITY_H
+/* Warning: this defines a lexical replacement for 'personality()'
+	which is not a function call */ 
+#include <linux/personality.h>
+#elif HAVE_SYS_PERSONALITY_H
+/* this defines a true function called 'personality()' which changes the
+	execution domain of the process */
+#include <sys/personality.h>
+#endif
+
+#endif /* IS_I386_LINUX */
 
 /****************************************
 ** Condor-specific system definitions

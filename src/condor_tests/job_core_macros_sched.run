@@ -1,0 +1,81 @@
+#! /usr/bin/env perl
+use CondorTest;
+use Cwd;
+use Sys::Hostname;
+
+$cmd = 'job_core_macros_sched.cmd';
+$testname = 'condor_submit macros - scheduler U';
+
+
+@CondorTest::skipped_output_lines = ( 1, 4, 5, 6 );
+@CondorTest::expected_output =
+(
+'foobar',
+'0',
+);
+
+
+
+$ExitSuccessBase = sub {
+	my %info = @_;
+
+	#$output = $info{"output"};
+
+};
+
+my @lines;
+
+sub load_up_lines
+{
+	open(IN,"<job_core_macros_sched.out") || die "Can not open job_core_macros_sched.out: $!\n";
+	while(<IN>)
+	{
+		chomp;
+		push @lines, $_;
+	}
+};
+
+$success = sub
+{
+    my %args = @_;
+	my $cluster = $args{"cluster"};
+	my $home;
+	my $workdir = getcwd();
+	my $host = hostname;
+	my $random;
+
+	chdir;
+	$home = getcwd;
+	print "My home is $home\n";
+	print "My host is $host\n";
+	chdir($workdir);
+	load_up_lines();
+	foreach my $item ( @lines )
+	{
+		print "ARG -$item-\n";
+	}
+	$random = $lines[5];
+	print "RANDOM is $random\n";
+
+	if( $random < 2 )
+	{
+		die "Random value below range\n";
+	}
+	elsif( $random > 5 )
+	{
+		die "Random value above range\n";
+	}
+};
+
+#CondorTest::RegisterExecute($testname, $execute);
+#CondorTest::RegisterExitedSuccess( $testname, \&CondorTest::DefaultOutputTest );
+CondorTest::RegisterExitedSuccess( $testname, $success );
+
+
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+	print "$testname: SUCCESS\n";
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+

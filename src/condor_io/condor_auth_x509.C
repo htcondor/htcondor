@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -25,12 +25,12 @@
 
 #include "condor_common.h"
 #include "condor_auth_x509.h"
-#include "environ.h"
+#include "authentication.h"
 #include "condor_config.h"
 #include "condor_string.h"
 #include "CondorError.h"
+#include "setenv.h"
 
-extern DLL_IMPORT_MAGIC char **environ;
 const char STR_DAEMON_NAME_FORMAT[]="$$(FULL_HOST_NAME)";
 StringList * getDaemonList(ReliSock * sock);
 
@@ -174,7 +174,7 @@ int Condor_Auth_X509 :: wrap(char*  data_in,
     gss_buffer_t    output_token      = &output_token_desc;
     
     if (!isValid())
-        return GSS_S_FAILURE;	
+        return FALSE;	
     
     input_token->value  = (void *)data_in;
     input_token->length = length_in;
@@ -190,7 +190,8 @@ int Condor_Auth_X509 :: wrap(char*  data_in,
     data_out = (char*)output_token -> value;
     length_out = output_token -> length;
 
-    return major_status;
+	// return TRUE on success
+    return (major_status == GSS_S_COMPLETE);
 }
     
 int Condor_Auth_X509 :: unwrap(char*  data_in, 
@@ -207,7 +208,7 @@ int Condor_Auth_X509 :: unwrap(char*  data_in,
     gss_buffer_t    output_token      = &output_token_desc;
     
     if (!isValid()) {
-        return GSS_S_FAILURE;
+        return FALSE;
     }
     
     input_token -> value = (void *)data_in;
@@ -224,7 +225,8 @@ int Condor_Auth_X509 :: unwrap(char*  data_in,
     data_out = (char*)output_token -> value;
     length_out = output_token -> length;
 
-    return major_status;
+	// return TRUE on success
+    return (major_status == GSS_S_COMPLETE);
 }
 
 int Condor_Auth_X509 :: endTime() const
@@ -267,25 +269,9 @@ void Condor_Auth_X509 :: print_log(OM_uint32 major_status,
 }
 
 void  Condor_Auth_X509 :: erase_env()
- {
-   int i,j;
-   char *temp=NULL,*temp1=NULL;
-
-   for (i=0;environ[i] != NULL;i++)
-     {
-       
-       temp1 = (char*)strdup(environ[i]);
-       if (!temp1)
-	 return;
-       temp = (char*)strtok(temp1,"=");
-       if (temp && !strcmp(temp, "X509_USER_PROXY" ))
-	 break;
-     }
-   for (j = i;environ[j] != NULL;j++)
-     environ[j] = environ[j+1];
-
-   return;
- }
+{
+	UnsetEnv( "X509_USER_PROXY" );
+}
 
 /* these next two functions are the implementation of a globus function that
    does not exist on the windows side.
@@ -395,7 +381,7 @@ int Condor_Auth_X509::ParseMapFile() {
    write address into '*to'.
  
 */
-int Condor_Auth_X509::condor_gss_assist_gridmap(char * from, char ** to) {
+int Condor_Auth_X509::condor_gss_assist_gridmap(const char * from, char ** to) {
 
 	if (GridMap == 0) {
 		ParseMapFile();
@@ -421,7 +407,15 @@ int Condor_Auth_X509::condor_gss_assist_gridmap(char * from, char ** to) {
 }
 #endif
 
-int Condor_Auth_X509::nameGssToLocal(char * GSSClientname) 
+
+// ZKM
+//
+// the following function needs cleanup.  the mapping function should exist in
+// this object, but it should just return the GSSClientname and not do the
+// splitting and setRemoteUser() here.  see authentication.C
+// map_authentication_name_to_canonical_name()
+
+int Condor_Auth_X509::nameGssToLocal(const char * GSSClientname) 
 {
 	//this might need to change with SSLK5 stuff
 	//just extract username from /CN=<username>@<domain,etc>
@@ -434,7 +428,7 @@ int Condor_Auth_X509::nameGssToLocal(char * GSSClientname)
 #ifdef WIN32
 	major_status = condor_gss_assist_gridmap(GSSClientname, &tmp_user);
 #else
-	major_status = globus_gss_assist_gridmap(GSSClientname, &tmp_user);
+	major_status = globus_gss_assist_gridmap((char*)GSSClientname, &tmp_user);
 #endif
 
 	if (tmp_user) {
@@ -450,98 +444,12 @@ int Condor_Auth_X509::nameGssToLocal(char * GSSClientname)
 
 	MyString user;
 	MyString domain;
-	// we found a map, let's check it now
-	// split it into user@domain
-	char* tmp = strchr(local_user, '@');
-	if (tmp == NULL) {
-		user = local_user;
-		char * uid_domain = param("UID_DOMAIN");
-		if (uid_domain) {
-			domain = uid_domain;
-			free(uid_domain);
-		} else {
-			dprintf(D_SECURITY, "GSI: failure: UID_DOMAIN not defined.\n");
-			return 0;
-		}
-	} else {
-		// tmp is pointing to '@'
-		*tmp = 0;
-		user = local_user;
-		domain = (tmp+1);
-	}
+	Authentication::split_canonical_name( local_user, user, domain );
     
 	setRemoteUser  (user.GetCStr());
 	setRemoteDomain(domain.GetCStr());
+	setAuthenticatedName(GSSClientname);
 	return 1;
-}
-
-//cannot make this an AuthSock method, since gss_assist method expects
-//three parms, methods have hidden "this" parm first. Couldn't figure out
-//a way around this, so made AuthSock have a member of type AuthComms
-//to pass in to this method to manage buffer space.  //mju
-int authsock_get(void *arg, void **bufp, size_t *sizep)
-{
-    /* globus code which calls this function expects 0/-1 return vals */
-    
-    ReliSock * sock = (ReliSock*) arg;
-    size_t stat;
-    
-    sock->decode();
-    
-    //read size of data to read
-    stat = sock->code( *((int *)sizep) );
-    
-    *bufp = malloc( *((int *)sizep) );
-    if ( !*bufp ) {
-        dprintf( D_ALWAYS, "malloc failure authsock_get\n" );
-        stat = FALSE;
-    }
-    
-    //if successfully read size and malloced, read data
-    if ( stat ) {
-        sock->code_bytes( *bufp, *((int *)sizep) );
-    }
-    
-    sock->end_of_message();
-    
-    //check to ensure comms were successful
-    if ( stat == FALSE ) {
-        dprintf( D_ALWAYS, "authsock_get (read from socket) failure\n" );
-        return -1;
-    }
-    return 0;
-}
-
-int authsock_put(void *arg,  void *buf, size_t size)
-{
-    //param is just a AS*
-    ReliSock *sock = (ReliSock *) arg;
-    int stat;
-    
-    sock->encode();
-    
-    //send size of data to send
-    stat = sock->code( (int &)size );
-    
-    
-    //if successful, send the data
-    if ( stat ) {
-        if ( !(stat = sock->code_bytes( buf, ((int) size )) ) ) {
-            dprintf( D_ALWAYS, "failure sending data (%d bytes) over sock\n",size);
-        }
-    }
-    else {
-        dprintf( D_ALWAYS, "failure sending size (%d) over sock\n", size );
-    }
-    
-    sock->end_of_message();
-    
-    //ensure data send was successful
-    if ( stat == FALSE) {
-        dprintf( D_ALWAYS, "authsock_put (write to socket) failure\n" );
-        return -1;
-    }
-    return 0;
 }
 
 StringList * getDaemonList(ReliSock * sock)
@@ -726,9 +634,9 @@ int Condor_Auth_X509::authenticate_client_gss(CondorError* errstack)
                                                       GSS_C_MUTUAL_FLAG,
                                                       &ret_flags, 
                                                       &token_status,
-                                                      authsock_get, 
+                                                      relisock_gsi_get, 
                                                       (void *) mySock_,
-                                                      authsock_put, 
+                                                      relisock_gsi_put, 
                                                       (void *) mySock_
                                                       );
     
@@ -844,9 +752,9 @@ int Condor_Auth_X509::authenticate_server_gss(CondorError* errstack)
                                                         /* don't need user_to_user */
                                                         &token_status,
                                                         NULL,     /* don't delegate credential */
-                                                        authsock_get, 
+                                                        relisock_gsi_get, 
                                                         (void *) mySock_,
-                                                        authsock_put, 
+                                                        relisock_gsi_put, 
                                                         (void *) mySock_
                                                         );
     

@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -67,6 +67,7 @@ public:
 	char*	id() {return c_id;};
 	char*	codId() {return c_cod_id;};
 	bool	matches( const char* id );
+	void	dropFile( int vm_id );
 
 private:
     char*   c_id;       // ClaimId string
@@ -116,6 +117,7 @@ public:
 	void alive();	// Process a keep alive for this claim
 
 	void publish( ClassAd*, amask_t );
+	void publishPreemptingClaim( ClassAd* ad, amask_t how_much );
 	void publishCOD( ClassAd* );
 	void publishStateTimes( ClassAd* );
 
@@ -134,6 +136,11 @@ public:
 			attributes that care about the time the job was spawned. 
 		*/
 	void beginActivation( time_t now ); 
+
+		/** Load info used by the accountant into this object from the
+			current classad.
+		 */
+	void loadAccountingInfo();
 
 		/** We're servicing a request to activate a claim and we want
 			to save the request classad into our claim object for
@@ -174,6 +181,11 @@ public:
 	bool		hasJobAd()		{return c_has_job_ad != 0;};
 	int  		pendingCmd()	{return c_pending_cmd;};
 	bool		wantsRemove()	{return c_wants_remove;};
+	time_t      getJobTotalRunTime();
+	time_t      getClaimAge();
+	bool        mayUnretire()   {return c_may_unretire;}
+	bool        getRetirePeacefully() {return c_retire_peacefully;}
+	bool        preemptWasTrue() const {return c_preempt_was_true;}
 
 		// Functions that set the values of data
 	void setrank(float rank)	{c_rank=rank;};
@@ -181,6 +193,9 @@ public:
 	void setad(ClassAd *ad);		// Set our ad to the given pointer
 	void setRequestStream(Stream* stream);	
 	void setaliveint(int alive);
+	void disallowUnretire()     {c_may_unretire=false;}
+	void setRetirePeacefully(bool value) {c_retire_peacefully=value;}
+	void preemptIsTrue() {c_preempt_was_true=true;}
 
 		// starter-related functions
 	int	 spawnStarter( time_t, Stream* = NULL );
@@ -197,7 +212,7 @@ public:
 	bool starterKillPg( int sig );
 	bool starterKillSoft( void );
 	bool starterKillHard( void );
-	char* makeCODStarterArgs( void );
+	bool makeCODStarterArgs( ArgList &args );
 	bool verifyCODAttrs( ClassAd* req );
 	bool publishStarterAd( ClassAd* ad );
 
@@ -240,6 +255,7 @@ private:
 	char*		c_global_job_id;
 	int			c_job_start;
 	int			c_last_pckpt;
+	time_t      c_claim_started;
 	time_t		c_entered_state;
 	time_t		c_job_total_run_time;
 	time_t		c_job_total_suspend_time;
@@ -269,6 +285,9 @@ private:
 	ClaimState	c_last_state;	// the state when a release was requested
 	int			c_pending_cmd;	// the pending command, or -1 if none
 	bool		c_wants_remove;	// are we trying to remove this claim?
+	bool        c_may_unretire;
+	bool        c_retire_peacefully;
+	bool        c_preempt_was_true; //was PREEMPT ever true for this claim?
 
 
 		// Helper methods

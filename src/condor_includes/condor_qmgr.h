@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -24,6 +24,7 @@
 #define _LIBQMGR_H
 
 #include "condor_common.h"
+#include "condor_io.h"
 #include "proc.h"
 #include "../condor_c++_util/CondorError.h"
 class ClassAd;
@@ -34,6 +35,12 @@ typedef struct {
 } Qmgr_connection;
 
 typedef int (*scan_func)(ClassAd *ad);
+
+#define SHADOW_QMGMT_TIMEOUT 300
+
+// QmgmtPeer* getQmgmtConnectionInfo();
+// bool setQmgmtConnectionInfo(QmgmtPeer *peer);
+void unsetQmgmtConnection();
 
 
 #if defined(__cplusplus)
@@ -74,15 +81,21 @@ int NewCluster(void);
 	@return -1 on failure; the new proc id on success
 */
 int NewProc( int cluster_id);
+
+const int DESTROYPROC_SUCCESS_DELAY = 1; // DestoryProc succeeded. The job is still enqueued, but that's okay
+const int DESTROYPROC_SUCCESS = 0; // DestroyProc succeeded
+const int DESTROYPROC_ERROR = -1; // DestroyProc failed in a non-specific way
+const int DESTROYPROC_EACCES = -2; // DestroyProc failed: wrong user or other access problem
+const int DESTROYPROC_ENOENT = -3; // DestroyProc failed: cluster.proc doesn't exist.
 /** Remove job with cluster_id and proc_id from the queue.  This is a
 	low-level mechanism.  Normally, to remove jobs from the queue, set the
 	job status to REMOVED and send a KILL_FRGN_JOB command to the schedd.
-	@return -1 on failure, 0 on success
+	@return: 0 or greater is success.  Specific results are DESTROYPROC_SUCCESS(0) = job removed and DESTROYPROC_SUCCESS_DELAY(1) = job not _yet_ removed, but "done".  Negative numbers indicate failure.  Specific failures are DESTROYPROC_ERROR(-1) = Unknown/non-specific error, DESTROYPROC_EACCESS(-2) = Owner failed, and DESTROYPROC_ENOENT(-3) = Job doesn't exist.
 */
 int DestroyProc(int cluster_id, int proc_id);
 /** Remove a cluster of jobs from the queue.
 */
-int DestroyCluster(int cluster_id);
+int DestroyCluster(int cluster_id, const char *reason = NULL);
 /** For all jobs in the queue for which constraint evaluates to true, set
 	attr = value.  The value should be a valid ClassAd value (strings
 	should be surrounded by quotes).
@@ -137,6 +150,12 @@ int SetAttributeFloat(int cluster, int proc, const char *attr, float value);
 int SetAttributeString(int cluster, int proc, const char *attr,
 					   const char *value);
 
+/** Set LastJobLeaseRenewalReceived = <xact start time> and
+    JobLeaseDurationReceived = dur for the specified cluster/proc.
+	@return -1 on failure; 0 on success
+*/
+int SetTimerAttribute(int cluster, int proc, const char *attr_name, int dur);
+
 /** Set the password to the MyProxy server for specified cluster/proc. The
 	value should be a null-terminated string.
 	@return -1 on failure; 0 on success
@@ -146,6 +165,10 @@ int SetMyProxyPassword (int cluster, int proc, const char * pwd);
 
 int CloseConnection();
 void BeginTransaction();
+void CommitTransaction();
+void AbortTransaction();
+void AbortTransactionAndRecomputeClusters();
+
 
 void AbortTransaction();
 
@@ -222,8 +245,11 @@ int SendSpoolFileBytes(char *filename);
 void WalkJobQueue(scan_func);
 
 void InitQmgmt();
-void InitJobQueue(const char *job_queue_name);
+void InitJobQueue(const char *job_queue_name,int max_historical_logs);
 void CleanJobQueue();
+bool setQSock( ReliSock* rsock );
+void unsetQSock();
+
 
 int rusage_to_float(struct rusage, float *, float *);
 int float_to_rusage(float, float, struct rusage *);
@@ -233,6 +259,8 @@ int float_to_rusage(float, float, struct rusage *);
 #if defined(NEW_PROC)
 int GetProc(int, int, PROC *);
 #endif
+
+bool Reschedule();
 
 #if defined(__cplusplus)
 }

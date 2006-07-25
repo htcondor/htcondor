@@ -9,27 +9,34 @@ CFLAGS = $(STD_C_FLAGS)
 LDFLAGS = -framework IOKit -framework Carbon
 #endif
 
+#if HAVE_BACKFILL
+#if HAVE_BOINC
+BOINC_OBJS = boinc_mgr.o
+#endif /* HAVE_BOINC */
+BACKFILL_OBJS = $(BOINC_OBJS) backfill_mgr.o
+#endif /* HAVE_BACKFILL */
 
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
 LIB= $(DAEMONCORE_LIB) $(STD_LIBS)
 
+soapobjs(startd)
+
 OBJ = LoadQueue.o claim.o Reqexp.o ResAttributes.o ResMgr.o ResState.o \
 	Resource.o Starter.o command.o startd_main.o util.o \
 	startd_cronmgr.o startd_cronjob.o starter_mgr.o mds.o \
-	setsyscalls.o startd_instantiate.o AvailStats.o cod_mgr.o
+	setsyscalls.o startd_instantiate.o AvailStats.o cod_mgr.o \
+	vm_common.o VMManager.o VMRegister.o VMMachine.o \
+	$(BACKFILL_OBJS) $(SOAP_OBJS)
 
 template_inst( startd_instantiate.C, startd_instantiate.o )
 
-c_plus_target($(NAME),$(OBJ),$(LIB))
-release_target($(NAME),sbin,EXECUTABLE_MODE)
-strip_target($(NAME),sbin,EXECUTABLE_MODE)
-static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/sbin)
-pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))
-purecov_c_plus_target($(NAME).pc,$(OBJ),$(LIB))
-quantify_c_plus_target($(NAME).quantify,$(OBJ),$(LIB))
+public_c_plus_target($(NAME),sbin,$(OBJ),$(LIB))
+
 c_plus_target(AvailStats.t,AvailStats.o AvailStats.t.o startd_instantiate.o,$(LIB))
 
 html:
 
 IMPORT_LINKS = ../../config/import_links
 import(../condor_util_lib, setsyscalls.o )
+
+gen_soapfiles(startd,condorStartd)

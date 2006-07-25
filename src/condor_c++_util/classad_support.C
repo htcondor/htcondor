@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -33,13 +33,11 @@ static char *assign = " = ";
 /* if the attr isn't already in the dirty list, place it in there */
 void SetAttrDirty(ClassAd *ad, char *attr)
 {
-	//char dirty[DIRTY_ATTR_SIZE];
+	char dirty[DIRTY_ATTR_SIZE];
 	StringList sl;
 	char *tmp, *tmp2;
-    std::string s;
-    Value v;
 
-	if (!ad->EvaluateAttrString(ATTR_DIRTY_ATTR_LIST, s))
+	if (!ad->LookupString(ATTR_DIRTY_ATTR_LIST, dirty))
 	{
 		/* doesn't exist, so I'll add it */
 		sl.initializeFromString(attr);
@@ -47,7 +45,7 @@ void SetAttrDirty(ClassAd *ad, char *attr)
 	else
 	{
 		/* it does exist, so see if it is in the list and add it if not */
-		sl.initializeFromString(s.data());
+		sl.initializeFromString(dirty);
 		if (sl.contains(attr) == TRUE)
 		{
 			/* already marked dirty, do nothing */
@@ -68,15 +66,14 @@ void SetAttrDirty(ClassAd *ad, char *attr)
 		EXCEPT("Out of memory in SetAttrDirty()");
 	}
 
-	//strcpy(tmp2, ATTR_DIRTY_ATTR_LIST);
-	//strcat(tmp2, assign);
+	strcpy(tmp2, ATTR_DIRTY_ATTR_LIST);
+	strcat(tmp2, assign);
 	strcat(tmp2, "\"");
 	strcat(tmp2, tmp);
 	strcat(tmp2, "\"");
 
-    v.SetStringValue(tmp2);
 	ad->Delete(ATTR_DIRTY_ATTR_LIST);
-	ad->Insert( std::string(ATTR_DIRTY_ATTR_LIST), Literal::MakeLiteral(v));
+	ad->Insert(tmp2);
 
 	free(tmp);
 	free(tmp2);
@@ -86,19 +83,17 @@ void SetAttrDirty(ClassAd *ad, char *attr)
 	dirty list. */
 void SetAttrClean(ClassAd *ad, char *attr)
 {
-	//char dirty[DIRTY_ATTR_SIZE];
+	char dirty[DIRTY_ATTR_SIZE];
 	StringList sl;
 	char *tmp, *tmp2;
-    std::string s;
-    Value v;
 
 	/* no dirty list means this is automatically clean */
-	if ( !ad->EvaluateAttrString(ATTR_DIRTY_ATTR_LIST, s))
+	if (!ad->LookupString(ATTR_DIRTY_ATTR_LIST, dirty))
 	{
 		return;
 	}
 
-	sl.initializeFromString(s.data());
+	sl.initializeFromString(dirty);
 
 	/* the attr isn't dirty, so that means it is already clean */
 	if (sl.contains(attr) == FALSE)
@@ -127,16 +122,14 @@ void SetAttrClean(ClassAd *ad, char *attr)
 		EXCEPT("Out of memory in SetAttrClean()");
 	}
 
-	//strcpy(tmp2, ATTR_DIRTY_ATTR_LIST);
-	//strcat(tmp2, assign);
+	strcpy(tmp2, ATTR_DIRTY_ATTR_LIST);
+	strcat(tmp2, assign);
 	strcat(tmp2, "\"");
 	strcat(tmp2, tmp);
 	strcat(tmp2, "\"");
 
-    v.Clear();
-    v.SetStringValue(tmp2);
 	ad->Delete(ATTR_DIRTY_ATTR_LIST);
-	ad->Insert( std::string(ATTR_DIRTY_ATTR_LIST), Literal::MakeLiteral(v));
+	ad->Insert(tmp2);
 
 	free(tmp);
 	free(tmp2);
@@ -145,17 +138,16 @@ void SetAttrClean(ClassAd *ad, char *attr)
 /* if the chosen attribute is dirty, return true */
 bool IsAttrDirty(ClassAd *ad, char *attr)
 {
-	//char dirty[DIRTY_ATTR_SIZE];
+	char dirty[DIRTY_ATTR_SIZE];
 	StringList sl;
-    std::string v;
-
+	
 	/* no dirty list means this is automatically clean */
-	if (!ad->EvaluateAttrString(ATTR_DIRTY_ATTR_LIST, v))
+	if (!ad->LookupString(ATTR_DIRTY_ATTR_LIST, dirty))
 	{
 		return false;
 	}
 
-	sl.initializeFromString(v.data());
+	sl.initializeFromString(dirty);
 
 	/* the attr isn't dirty, so that means it is already clean */
 	if (sl.contains(attr) == TRUE)
@@ -169,10 +161,10 @@ bool IsAttrDirty(ClassAd *ad, char *attr)
 /* returns true if there are any dirty attributes at all */
 bool AnyAttrDirty(ClassAd *ad)
 {
-	//char dirty[DIRTY_ATTR_SIZE];
+	char dirty[DIRTY_ATTR_SIZE];
 	
 	/* no dirty list means this is automatically clean */
-	if (ad->Lookup(ATTR_DIRTY_ATTR_LIST))
+	if (ad->LookupString(ATTR_DIRTY_ATTR_LIST, dirty))
 	{
 		return true;
 	}
@@ -185,14 +177,13 @@ bool AnyAttrDirty(ClassAd *ad)
 void EmitDirtyAttrList(int mode, ClassAd *ad)
 {
 	StringList sl;
-	//char dirty[DIRTY_ATTR_SIZE];
-    std::string v;
+	char dirty[DIRTY_ATTR_SIZE];
 
 	if (AnyAttrDirty(ad) == true)
 	{
-		if (ad->EvaluateAttrString(ATTR_DIRTY_ATTR_LIST, v)) {
-            dprintf(mode, "%s = %s\n", ATTR_DIRTY_ATTR_LIST, v.data());
-        }
+		ad->LookupString(ATTR_DIRTY_ATTR_LIST, dirty);
+
+		dprintf(mode, "%s = %s\n", ATTR_DIRTY_ATTR_LIST, dirty);
 	}
 	else
 	{

@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -30,7 +30,8 @@
 extern dynuser *myDynuser;
 #endif
 
-ProcFamily::ProcFamily( pid_t pid, priv_state priv, int test_only )
+ProcFamily::ProcFamily( pid_t pid, PidEnvID *penvid, priv_state priv, 
+				int test_only )
 {
 	daddy_pid = pid;
 	old_pids = NULL;
@@ -40,6 +41,9 @@ ProcFamily::ProcFamily( pid_t pid, priv_state priv, int test_only )
 	exited_cpu_user_time = 0;
 	exited_cpu_sys_time = 0;
 	max_image_size = 0;
+
+	/* uses C's structure copy, no dynamic memory in this structure */
+	pidenvid_copy(&m_penvid, penvid);
 
 	searchLogin = NULL;
 
@@ -124,9 +128,12 @@ ProcFamily::get_max_imagesize(unsigned long & max_image )
 }
 
 void
-ProcFamily::safe_kill(pid_t inpid,int sig)
+ProcFamily::safe_kill(a_pid *pid, int sig)
 {
 	priv_state priv;
+	pid_t inpid;
+
+	inpid = pid->pid;
 
 	// make certain we do not kill init or worse!
 	if ( inpid < 2 || daddy_pid < 2 ) {
@@ -156,12 +163,47 @@ ProcFamily::safe_kill(pid_t inpid,int sig)
 	}
 
 	if ( !test_only_flag ) {
+
 #ifdef WIN32
-		if ( daemonCore->Send_Signal(inpid,sig) == FALSE ) {
-			dprintf(D_PROCFAMILY,
-				"ProcFamily::safe_kill: Send_Signal(%d,%d) failed\n",
-				inpid,sig);
+
+		HANDLE pHnd;
+		piPTR pi;
+		int status;
+
+		pi = NULL;
+
+		pHnd = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, inpid);
+
+		if ( pHnd == NULL ) {
+			dprintf(D_ALWAYS, "Procfamily: ERROR: Could not open pid %d "
+				"(err=%d). Maybe it exited already?\n", inpid, GetLastError());
 		}
+
+		if ( ProcAPI::getProcInfo(inpid, pi, status) == PROCAPI_SUCCESS ) {
+		
+			if ( daemonCore->Send_Signal(inpid,sig) == FALSE ) {
+				dprintf(D_PROCFAMILY,
+					"ProcFamily::safe_kill: Send_Signal(%d,%d) failed\n",
+					inpid,sig);
+			}
+
+		} else {
+			
+			// Procapi didn't know anything about this pid, so
+			// we assume it has exited on its own.
+			
+			dprintf(D_PROCFAMILY, "Procfamily: getProcInfo() failed to "
+					"get info for pid %d, so it is presumed dead.\n", inpid);
+		}
+
+		if ( pi ) {
+			delete pi;
+		}
+		
+		if ( pHnd) {
+		   	CloseHandle(pHnd);
+		}
+
 #else
 		if ( kill(inpid,sig) < 0 ) {
 			dprintf(D_PROCFAMILY,
@@ -188,12 +230,12 @@ ProcFamily::spree(int sig,KILLFAMILY_DIRECTION direction)
 			if ( direction == PATRICIDE ) {
 				// PATRICIDE: parents go first
 				for (j=start;j<i;j++) {
-					safe_kill((*old_pids)[j].pid,sig);
+					safe_kill(&(*old_pids)[j], sig);
 				}
 			} else {
 				// INFANTICIDE: kids go first
 				for (j=i-1;j>=start;j--) {
-					safe_kill((*old_pids)[j].pid,sig);
+					safe_kill(&(*old_pids)[j], sig);
 				}
 			}
 			start = i;
@@ -214,6 +256,9 @@ ProcFamily::takesnapshot()
 	bool found_it;
 	int ret_val;
 	pid_t pidfamily[2000];
+	int fam_status;
+	int info_status;
+	int ignore_status;
 
 	new_pids = new ExtArray<a_pid>(10);
 	newpidindex = 0;
@@ -230,22 +275,26 @@ ProcFamily::takesnapshot()
 
 	// grab all pids in the family we can see now
 	if ( searchLogin ) {
-		ret_val = ProcAPI::getPidFamilyByLogin(searchLogin, pidfamily);
+		ret_val = ProcAPI::getPidFamilyByLogin(searchLogin,pidfamily);
 	} else {
-		ret_val = ProcAPI::getPidFamily(daddy_pid,pidfamily);
+		ret_val = ProcAPI::getPidFamily(daddy_pid,&m_penvid,pidfamily,fam_status);
 	}
 
-	if ( ret_val < 0 ) {
-		// daddy_pid must be gone!
+	if ( ret_val == PROCAPI_FAILURE ) {
+		// daddy_pid AND any detectable family must be gone from the set!
 		dprintf( D_PROCFAMILY, 
-				 "ProcFamily::takesnapshot: getPidFamily(%d) failed.\n", 
+				 "ProcFamily::takesnapshot: getPidFamily(%d) failed. "
+				 "Could not find the pid or any family members.\n", 
 				 daddy_pid );
 		pidfamily[0] = 0;
 	}
-		// Don't need to insert daddypid, it's already in there. 
+
+	// Don't need to insert daddypid, it's already in there,
+	// unless the daddy pid is gone, but procapi found a family
+	// for it anyway via the ancestor variables... 
 
 	// see if there are pids we saw earlier which no longer
-	// show up -- they may have been inherited by init
+	// show up -- they may have been inherited by init.
 	if ( old_pids ) {
 
 		// loop thru all old pids
@@ -275,7 +324,15 @@ ProcFamily::takesnapshot()
 					// So, if currpid still exists on the system, and 
 					// the birthdate matches, grab decendants of currpid.
 
-					if ( ProcAPI::getProcInfo(currpid,pinfo) == 0 ) {
+					// If the above call to get the family KNEW that 
+					// the daddy pid was already exited (since it couldn't be
+					// found) but yet it returned something it thought was 
+					// family anyway, check against the old pids but don't 
+					// consider the daddy pid to even be alive.
+
+					if ( ProcAPI::getProcInfo(currpid,pinfo,info_status) 
+							== PROCAPI_SUCCESS ) 
+					{
 						// compare birthdays; allow 2 seconds "slack"
 						birth = (time(NULL) - pinfo->age) - 
 									(*old_pids)[i].birthday;
@@ -287,13 +344,13 @@ ProcFamily::takesnapshot()
 							// if we got the pid family via login name,
 							// we alrady have the decendants.
 							if ( !searchLogin ) {  
-								ProcAPI::getPidFamily(currpid,&(pidfamily[j+1]));
+								ProcAPI::getPidFamily(currpid,&m_penvid,&(pidfamily[j+1]),ignore_status);
 							}
 							// and this pid most certainly did not exit, so
 							// set our flag accordingly.
 							currpid_exited = false;
 						} 
-					} 
+					}  
 
 					// break out of our for loop, since we have hit the end
 					break;
@@ -314,7 +371,9 @@ ProcFamily::takesnapshot()
 			// Thankfully this will go away in the Win32 port once we
 			// start injecting in our DLL into the user job.  -Todd
 			if ( found_it ) {
-				if ( ProcAPI::getProcInfo(currpid,pinfo) == 0 ) {
+				if ( ProcAPI::getProcInfo(currpid,pinfo,ignore_status) 
+						== PROCAPI_SUCCESS ) 
+			{
 					// compare birthdays; allow 2 seconds "slack"
 					birth = (time(NULL) - pinfo->age) - 
 								(*old_pids)[i].birthday;
@@ -349,7 +408,9 @@ ProcFamily::takesnapshot()
 	alive_cpu_user_time = 0;
 	unsigned long curr_image_size = 0;
 	for ( j=0; pidfamily[j]; j++ ) {
-		if ( ProcAPI::getProcInfo(pidfamily[j],pinfo) == 0 ) {
+		if ( ProcAPI::getProcInfo(pidfamily[j],pinfo,ignore_status) 
+				== PROCAPI_SUCCESS ) 
+		{
 			(*new_pids)[newpidindex].pid = pinfo->pid;
 			(*new_pids)[newpidindex].ppid = pinfo->ppid;
 			(*new_pids)[newpidindex].birthday = time(NULL) - pinfo->age;

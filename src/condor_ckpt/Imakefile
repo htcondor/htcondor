@@ -6,11 +6,11 @@
 CC_PIC_FLAG =
 
 
-CMNT
-CMNT Set the following if you want a PVM ready checkpointing library
-CMNT compiled.  This will require that the PVM library be linked into
-CMNT the application.
-CMNT
+XCOMM
+XCOMM Set the following if you want a PVM ready checkpointing library
+XCOMM compiled.  This will require that the PVM library be linked into
+XCOMM the application.
+XCOMM
 
 PVM_CHECKPOINT = -DPVM_CHECKPOINTING
 
@@ -110,7 +110,7 @@ OBJ =	image.o machdep.$(OS).o tmp_stack.o syscall_mode.o \
 	fake_remote_syscall.o fake_hooks.o condor_error.o \
 	$(SAVE_SIGSTATE_OBJ) fake_util_lib.o eprintf.o $(EXTRACT) \
 	$(ASSEMBLER_OBJ) $(CPP_UTIL_OBJ) $(UTIL_OBJ) $(FILE_TABLE_OBJ) \
-	$(COMPRESS_OBJ) shared_utils.o malloc-user.o
+	$(COMPRESS_OBJ) shared_utils.o malloc-user.o gtodc.o
 
 #else /* !DOES_CHECKPOINTING */
 
@@ -144,27 +144,30 @@ OBJ = signals_control.o syscall_mode.o $(SHARED_OBJ)
   CPP_SUPPORT_LIB = libcondorc++support.a
 #endif /* gcc 3.x or not */
 
-all_target(ToUpper $(CPP_SUPPORT_LIB) condor_rt0.o $(OBJ) $(COMPRESS_LIB) $(RELEASE_OBJ))
+all_target(tmp_dir ToUpper $(CPP_SUPPORT_LIB) condor_rt0.o $(OBJ) $(COMPRESS_LIB) $(RELEASE_OBJ))
 release:: all
 stripped:: all
 static:: all
 
 #if NEEDS_CPP_SUPPORT_LIB
 library_target(libcondorc++support.a,$(CPP_SUPPORT_OBJ))
-release_library(libcondorc++support.a,lib)
-strip_library(libcondorc++support.a,lib)
-static_library(libcondorc++support.a,lib)
+public_library(libcondorc++support.a,lib)
 #endif /* NEEDS_CPP_SUPPORT_LIB */
 
 #else /* Not DOES_CHECKPOINTING */
 
-all_target($(OBJ) ToUpper)
+all_target(tmp_dir $(OBJ) ToUpper)
 release:: all
 stripped:: all
 static:: all
 
 #endif /* DOES_CHECKPOINTING or not */ 
 
+TMP_DIR = tmp_dir
+tmp_dir:
+	mkdir tmp_dir; chmod 755 tmp_dir
+clean::
+	/bin/rm -rf tmp_dir
 
 #if IS_HPUX
 SIGNAL.o :  $(SIMPLE_LIBC)  ToUpper
@@ -287,11 +290,11 @@ clean::
 	rm -f $(COMPRESS_LIB) $(COMPRESS_OBJ)
 #endif /* DOES_COMPRESS_CKPT */
 
-CMNT
-CMNT Create a replacement for crt0.o to be linked with condor programs.
-CMNT N.B. This is done differently than other objects in that we start out
-CMNT with a copy of crt0.o, and change the name of "main" to "MAIN".
-CMNT
+XCOMM
+XCOMM Create a replacement for crt0.o to be linked with condor programs.
+XCOMM N.B. This is done differently than other objects in that we start out
+XCOMM with a copy of crt0.o, and change the name of "main" to "MAIN".
+XCOMM
 #if IS_HPUX
 condor_rt0.o: $(CRT_BEGIN) ToUpper
 	./ToUpper $(CRT_BEGIN) tmp1 _start _START 

@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -28,18 +28,18 @@
 #include "condor_cron.h"
 
 // Define a simple class to run child tasks periodically.
-class CondorCronMgr : public Service
+class CronMgrBase : public Service
 {
   public:
-	CondorCronMgr( const char *name );
-	virtual ~CondorCronMgr( );
-	int Initialize( void );
-	int Reconfig( void );
+	CronMgrBase( const char *name );
+	virtual ~CronMgrBase( );
+	virtual int Initialize( void );
+	virtual int Reconfig( void );
 	int KillAll( bool force );
 	bool IsAllIdle( void );
 
   protected:
-	virtual CondorCronJob *NewJob( const char *name );
+	virtual CronJobBase *NewJob( const char *name ) = 0;
 	int SetName( const char *name, 
 				 const char *setParamBase = NULL,
 				 const char *setParamExt = NULL );
@@ -50,10 +50,12 @@ class CondorCronMgr : public Service
 	CondorCron	Cron;
 	const char	*Name;			// Logical name
 	const char	*ParamBase;		// Used for base of calls to param()
+	const char	*configValProg;	// Config val program to run
 
 	// Private member functions
 	int DoConfig( bool initial = false );
 	int ParseJobList( const char *JobListString );
+	int ParseOldJobList( const char *JobListString );
 	char *NextTok( char *cur, const char *tok );
 	char *GetParam( const char *paramName, 
 					const char *paramName2 = NULL );

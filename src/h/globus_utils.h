@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -246,9 +246,27 @@ time_t x509_proxy_expiration_time( const char *proxy_file );
 
 char* x509_proxy_subject_name( const char *proxy_file );
 
+char* x509_proxy_identity_name( const char *proxy_file );
+
 int x509_proxy_seconds_until_expire( const char *proxy_file );
 
+int x509_proxy_try_import( const char *proxy_file );
+
 const char* x509_error_string();
+
+int
+x509_send_delegation( const char *source_file,
+					  int (*recv_data_func)(void *, void **, size_t *), 
+					  void *recv_data_ptr,
+					  int (*send_data_func)(void *, void *, size_t),
+					  void *send_data_ptr );
+
+int
+x509_receive_delegation( const char *destination_file,
+						 int (*recv_data_func)(void *, void **, size_t *), 
+						 void *recv_data_ptr,
+						 int (*send_data_func)(void *, void *, size_t),
+						 void *send_data_ptr );
 
 int have_condor_g();
 

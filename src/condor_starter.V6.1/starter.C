@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -31,8 +31,10 @@
 #include "script_proc.h"
 #include "vanilla_proc.h"
 #include "java_proc.h"
+#include "tool_daemon_proc.h"
 #include "mpi_master_proc.h"
 #include "mpi_comrade_proc.h"
+#include "parallel_proc.h"
 #include "my_hostname.h"
 #include "internet.h"
 #include "condor_string.h"  // for strnewp
@@ -40,10 +42,13 @@
 #include "classad_command_util.h"
 #include "condor_random_num.h"
 #include "../condor_sysapi/sysapi.h"
+#include "build_job_env.h"
+#include "get_port_range.h"
 
 #include "perm.h"
 #include "filename_tools.h"
-
+#include "directory.h"
+#include "exit.h"
 
 extern "C" int get_random_int();
 extern int main_shutdown_fast();
@@ -63,6 +68,7 @@ CStarter::CStarter()
 	starter_stdin_fd = -1;
 	starter_stdout_fd = -1;
 	starter_stderr_fd = -1;
+	deferral_tid = -1;
 }
 
 
@@ -140,6 +146,12 @@ CStarter::Init( JobInfoCommunicator* my_jic, const char* orig_cwd,
 	daemonCore->Register_Signal(DC_SIGPCKPT, "DC_SIGPCKPT",
 		(SignalHandlercpp)&CStarter::PeriodicCkpt, "PeriodicCkpt", this,
 		IMMEDIATE_FAMILY);
+	daemonCore->Register_Signal(DC_SIGREMOVE, "DC_SIGREMOVE",
+		(SignalHandlercpp)&CStarter::Remove, "Remove", this,
+		IMMEDIATE_FAMILY);
+	daemonCore->Register_Signal(DC_SIGHOLD, "DC_SIGHOLD",
+		(SignalHandlercpp)&CStarter::Hold, "Hold", this,
+		IMMEDIATE_FAMILY);
 	daemonCore->Register_Reaper("Reaper", (ReaperHandlercpp)&CStarter::Reaper,
 		"Reaper", this);
 
@@ -157,7 +169,15 @@ CStarter::Init( JobInfoCommunicator* my_jic, const char* orig_cwd,
 		Register_Command( CA_CMD, "CA_CMD",
 						  (CommandHandlercpp)&CStarter::classadCommand,
 						  "CStarter::classadCommand", this, WRITE );
-
+	daemonCore->
+		Register_Command( UPDATE_GSI_CRED, "UPDATE_GSI_CRED",
+						  (CommandHandlercpp)&CStarter::updateX509Proxy,
+						  "CStarter::updateX509Proxy", this, WRITE );
+	daemonCore->
+		Register_Command( DELEGATE_GSI_CRED_STARTER,
+						  "DELEGATE_GSI_CRED_STARTER",
+						  (CommandHandlercpp)&CStarter::updateX509Proxy,
+						  "CStarter::updateX509Proxy", this, WRITE );
 
 	sysapi_set_resource_limits();
 
@@ -175,6 +195,14 @@ CStarter::Init( JobInfoCommunicator* my_jic, const char* orig_cwd,
 		// actually spawn the job.
 	jic->setupJobEnvironment();
 	return true;
+}
+
+
+void
+CStarter::StarterExit( int code )
+{
+	removeTempExecuteDir();
+	DC_Exit( code );
 }
 
 
@@ -208,6 +236,14 @@ CStarter::ShutdownGraceful(int)
 		// tell our JobInfoCommunicator about this so it can take any
 		// necessary actions
 	jic->gotShutdownGraceful();
+	
+		//
+		// Check if there is currently a timer registerd for a 
+		// deferred job. If there is then we need to cancel it
+		//
+	if ( this->deferral_tid != -1 ) {
+		this->removeDeferredJobs();
+	}
 
 	JobList.Rewind();
 	while ((job = JobList.Next()) != NULL) {
@@ -244,6 +280,14 @@ CStarter::ShutdownFast(int)
 	if( jic ) {
 		jic->gotShutdownFast();
 	}
+	
+		//
+		// Check if there is currently a timer registerd for a 
+		// deferred job. If there is then we need to cancel it
+		//
+	if ( this->deferral_tid != -1 ) {
+		this->removeDeferredJobs();
+	}
 
 	JobList.Rewind();
 	while ((job = JobList.Next()) != NULL) {
@@ -260,6 +304,81 @@ CStarter::ShutdownFast(int)
 	if (!jobRunning) {
 		dprintf(D_FULLDEBUG, 
 				"Got ShutdownFast when no jobs running.\n");
+		return 1;
+	}	
+	return 0;
+}
+
+int
+CStarter::Remove( int )
+{
+	bool jobRunning = false;
+	UserProc *job;
+
+	dprintf( D_ALWAYS, "Remove all jobs\n" );
+
+		// tell our JobInfoCommunicator about this so it can take any
+		// necessary actions
+	if( jic ) {
+		jic->gotRemove();
+	}
+
+		//
+		// Check if there is currently a timer registerd for a 
+		// deferred job. If there is then we need to cancel it
+		//
+	if ( this->deferral_tid != -1 ) {
+		this->removeDeferredJobs();
+	}
+
+	JobList.Rewind();
+	while( (job = JobList.Next()) != NULL ) {
+		if( job->Remove() ) {
+			// job is completely shut down, so delete it
+			JobList.DeleteCurrent();
+			delete job;
+		} else {
+			// job shutdown is pending, so just set our flag
+			jobRunning = true;
+		}
+	}
+	ShuttingDown = TRUE;
+	if (!jobRunning) {
+		dprintf( D_FULLDEBUG, "Got Remove when no jobs running\n" );
+		return 1;
+	}	
+	return 0;
+}
+
+
+int
+CStarter::Hold( int )
+{
+	bool jobRunning = false;
+	UserProc *job;
+
+	dprintf( D_ALWAYS, "Hold all jobs\n" );
+
+		// tell our JobInfoCommunicator about this so it can take any
+		// necessary actions
+	if( jic ) {
+		jic->gotHold();
+	}
+
+	JobList.Rewind();
+	while( (job = JobList.Next()) != NULL ) {
+		if( job->Hold() ) {
+			// job is completely shut down, so delete it
+			JobList.DeleteCurrent();
+			delete job;
+		} else {
+			// job shutdown is pending, so just set our flag
+			jobRunning = true;
+		}
+	}
+	ShuttingDown = TRUE;
+	if( !jobRunning ) {
+		dprintf( D_FULLDEBUG, "Got Hold when no jobs running\n" );
 		return 1;
 	}	
 	return 0;
@@ -311,9 +430,9 @@ CStarter::createTempExecuteDir( void )
 		const char * nobody_login = get_user_loginname();
 		ASSERT(nobody_login);
 		dirperm.init(nobody_login);
-		int ret_val = dirperm.set_acls( WorkingDir );
-		if ( ret_val < 0 ) {
-			dprintf(D_ALWAYS,"UNABLE TO SET PERMISSIONS ON EXECUTE DIRECTORY");
+		bool ret_val = dirperm.set_acls( WorkingDir );
+		if ( !ret_val ) {
+			dprintf(D_ALWAYS,"UNABLE TO SET PERMISSIONS ON EXECUTE DIRECTORY\n");
 			set_priv( priv );
 			return false;
 		}
@@ -393,10 +512,263 @@ CStarter::createTempExecuteDir( void )
 	return true;
 }
 
+//
+// After any file transfers are complete, will enter this method
+// to determine whether we need to wait until a certain time
+// before executing the job.
+//
+// Currently the user can specify in their job submission file
+// a UTC timestamp of when the job should be deferred until.
+// The following example would have the Starter attempt
+// to execute the job on Friday 10.14.2005 at 12:00:00
+// 
+// 		DeferralTime = 1129309200
+//
+// The starter will check to see if this DeferralTime is 
+// not in the past, and if it is it can be given a window in seconds
+// to say how far in the past we are willing to run a job
+//
+// There is also an additional time offset parameter that can
+// be stuffed into the job ad by the Shadow to specify the clock
+// difference between itself and this Starter. When this offset
+// is subtracted for our current time, we can ensure that we will
+// execute at the Shadow's proper time, not what we think the current
+// time is. This offset will be in seconds.
+//
+bool
+CStarter::jobWaitUntilExecuteTime( void )
+{
+		//
+		// Return value
+		//
+	bool ret = true;
+		//
+		// If this is set to true, then we'll want to abort the job
+		//
+	bool abort = false;
+	MyString error;
+	
+		//
+		// First check to see if the job is set to be
+		// deferred until a certain time before beginning to
+		// execute 
+		//		
+	ClassAd* jobAd = this->jic->jobClassAd();
+	int deferralTime = 0;
+	int deferralOffset = 0;
+	int deltaT = 0;
+	int deferralWindow = 0;
+	if ( jobAd->Lookup( ATTR_DEFERRAL_TIME ) != NULL ) {
+			//
+		 	// Make sure that the expression evaluated and we 
+		 	// got a positive integer. Otherwise we'll have to kick out
+		 	//
+		if ( ! jobAd->EvalInteger( ATTR_DEFERRAL_TIME, NULL, deferralTime ) ) {
+			error.sprintf( "Invalid deferred execution time for Job %d.%d.",
+							this->jic->jobCluster(),
+							this->jic->jobProc() );
+			abort = true;
+		} else if ( deferralTime <= 0 ) {
+			error.sprintf( "Invalid execution time '%d' for Job %d.%d.",
+							deferralTime,
+							this->jic->jobCluster(),
+							this->jic->jobProc() );
+			abort = true;
+ 
+		} else {
+				//
+				// It was valid, so we need to figure out what the time difference
+				// between the deferral time and our current time is. There
+				// are two scenarios that can occur in this situation:
+				//
+				//  1) The deferral time still hasn't arrived, so we'll need
+				//     to set the trigger to hit us up in the delta time
+				//	2) The deferral time has passed, meaning we're late, and
+				//     the job has missed its window. We will not execute it
+				//		
+			time_t now = time(NULL);
+				//
+				// We can also be passed a offset value
+				// This is from the Shadow who has determined that
+				// our clock is different from theirs
+				// Thus, we will just need to subtract this offset from
+				// our currrent time measurement
+				//
+			if ( jobAd->LookupInteger( ATTR_DEFERRAL_OFFSET, deferralOffset ) ) {
+				dprintf( D_FULLDEBUG, "Job %d.%d deferral time offset by "
+				                      "%d seconds\n", 
+							this->jic->jobCluster(),
+							this->jic->jobProc(),
+							deferralOffset );
+				now -= deferralOffset;
+			}
+				//
+				// Along with an offset we can be given a window range
+				// to say how much leeway we will allow a late job to have
+				// So if the deferralTime is less than the currenTime,
+				// but within this window, we'll still run the job
+				//
+			if ( jobAd->Lookup( ATTR_DEFERRAL_WINDOW ) != NULL &&
+				 jobAd->EvalInteger( ATTR_DEFERRAL_WINDOW, NULL, deferralWindow ) ) {
+				dprintf( D_FULLDEBUG, "Job %d.%d has a deferral time window of "
+				                      "%d seconds\n", 
+							this->jic->jobCluster(),
+							this->jic->jobProc(),
+							deferralWindow );
+			}
+			deltaT = deferralTime - now;
+				//
+				// The time has already passed, check whether it's
+				// within our window. If not then abort
+				//
+			if ( deltaT < 0 ) {
+				if ( abs( deltaT ) > deferralWindow ) {
+					error.sprintf( "Job %d.%d missed its execution time.",
+								this->jic->jobCluster(),
+								this->jic->jobProc() );
+					abort = true;
+
+				} else {
+						//
+						// Be sure to set the deltaT to zero so
+						// that the timer goes right off
+						//
+					dprintf( D_ALWAYS, "Job %d.%d missed its execution time but "
+										"is within the %d seconds window\n",
+								this->jic->jobCluster(),
+								this->jic->jobProc(),
+								deferralWindow );
+					deltaT = 0;
+				}
+			} // if deltaT < 0
+		}	
+	}
+	
+		//
+		// Start the job timer
+		//
+	if ( ! abort ) {
+			//
+			// Quick sanity check
+			// Make sure another timer isn't already registered
+			//
+		ASSERT( this->deferral_tid == -1 );
+		
+			//
+			// Now we will register a callback that will
+			// call the function to actually execute the job
+			// If there wasn't a deferral time then the job will 
+			// be started right away. We store the timer id so that
+			// if a suspend comes in, we can cancel the job from being
+			// executed
+			//
+		this->deferral_tid = daemonCore->Register_Timer(
+										deltaT,
+										0,
+										(TimerHandlercpp)&CStarter::jobEnvironmentReady,
+										"deferred job start",
+										this );
+			//
+			// Make sure our timer callback registered properly
+			//
+		if( this->deferral_tid < 0 ) {
+			EXCEPT( "Can't register Deferred Execution DaemonCore timer" );
+		}
+			//
+			// Our job will start in the future
+			//
+		if ( deltaT > 0 ) { 
+			dprintf( D_FULLDEBUG, "Job %d.%d deferred for %d seconds\n", 
+						this->jic->jobCluster(),
+						this->jic->jobProc(),
+						deltaT );
+			//
+			// Our job will start right away!
+			//
+		} else {
+			dprintf( D_FULLDEBUG, "Job %d.%d set to execute immediately\n",
+						this->jic->jobCluster(),
+						this->jic->jobProc() );
+		}
+		
+		//
+		// Aborting the job!
+		// We are not going to start the job so we'll let the jic know
+		//
+	} else {
+			//
+			// Hack!
+			// I want to send back that the job missed its time
+			// and that the schedd needs to decide what to do with
+			// the job. But the only way to do this is if you
+			// have a UserProc object. So we're going to make
+			// a quick on here and then send back the exit error
+			//
+		if ( ! error.IsEmpty() ) {
+			dprintf( D_ALWAYS, "%s Aborting.\n", error.Value() );
+		}
+		OsProc proc( jobAd );
+		proc.JobCleanup( -1, JOB_MISSED_DEFERRAL_TIME );
+		this->jic->notifyJobExit( -1, JOB_MISSED_DEFERRAL_TIME, &proc );
+		this->jic->allJobsGone();
+		ret = false;
+	}
+	
+	return ( ret );
+}
+
+//
+// removeDeferredJobs()
+//
+// If we need to remove all our jobs, this method can
+// be called to remove any jobs that are currently being
+// deferred. All a deferral means is that there is a timer
+// that has been registered to wakeup when its time to
+// execute the job. So we just need to cancel the timer
+//
+bool
+CStarter::removeDeferredJobs() {
+	bool ret = true;
+	
+	if ( this->deferral_tid == -1 ) {
+		return ( ret );
+	}
+		//
+		// Attempt to cancel the the timer
+		//
+	if ( daemonCore->Cancel_Timer( this->deferral_tid ) >= 0 ) {
+		dprintf( D_FULLDEBUG, "Cancelled time deferred execution for "
+							  "Job %d.%d\n", 
+					this->jic->jobCluster(),
+					this->jic->jobProc() );
+		this->deferral_tid = -1;
+
+	} else {
+			//
+			// We failed to cancel the timer!
+			// This is bad because our job might execute when it shouldn't have
+			//
+		MyString error = "Failed to cancel deferred execution timer for Job ";
+		error += this->jic->jobCluster();
+		error += ".";
+		error += this->jic->jobProc();
+		EXCEPT( (char*)error.Value() );
+		ret = false;
+	}
+	return ( ret );
+}
 
 int
 CStarter::jobEnvironmentReady( void )
 {
+		//
+		// Unset the deferral timer so that we know that no job
+		// is waiting to be spawned
+		//
+	if ( this->deferral_tid != -1 ) {
+		this->deferral_tid = -1;
+	}
+	
 		// first, see if we're going to need any pre and post scripts
 	ClassAd* jobAd = jic->jobClassAd();
 	char* tmp = NULL;
@@ -458,11 +830,15 @@ CStarter::SpawnJob( void )
 	UserProc *job;
 	switch ( jobUniverse )  
 	{
+		case CONDOR_UNIVERSE_LOCAL:
 		case CONDOR_UNIVERSE_VANILLA:
 			job = new VanillaProc( jobAd );
 			break;
 		case CONDOR_UNIVERSE_JAVA:
 			job = new JavaProc( jobAd, WorkingDir );
+			break;
+	    case CONDOR_UNIVERSE_PARALLEL:
+			job = new ParallelProc( jobAd );
 			break;
 		case CONDOR_UNIVERSE_MPI: {
 			int is_master = FALSE;
@@ -486,6 +862,27 @@ CStarter::SpawnJob( void )
 
 	if (job->StartJob()) {
 		JobList.Append(job);
+
+		// Now, see if we also need to start up a ToolDaemon
+		// for this job.
+		char* tool_daemon_name = NULL;
+		jobAd->LookupString( ATTR_TOOL_DAEMON_CMD,
+							 &tool_daemon_name );
+		if( tool_daemon_name ) {
+				// we need to start a tool daemon for this job
+			ToolDaemonProc* tool_daemon_proc;
+			tool_daemon_proc = new ToolDaemonProc( jobAd, job->GetJobPid() );
+
+			if( tool_daemon_proc->StartJob() ) {
+				JobList.Append( tool_daemon_proc );
+				dprintf( D_FULLDEBUG, "ToolDaemonProc added to JobList\n");
+			} else {
+				dprintf( D_ALWAYS, "Failed to start ToolDaemonProc!\n");
+				delete tool_daemon_proc;
+			}
+			free( tool_daemon_name );
+		}
+
 			// let our JobInfoCommunicator know the job was started.
 		jic->allJobsSpawned();
 		return TRUE;
@@ -513,6 +910,14 @@ CStarter::Suspend(int)
 
 		// notify our JobInfoCommunicator that the jobs are suspended
 	jic->Suspend();
+	
+		//
+		// If we have a deferral timer still active, then we need to
+		// cancel it
+		//
+	if ( this->deferral_tid != this->deferral_tid ) {
+		this->removeDeferredJobs();
+	}
 
 	return 0;
 }
@@ -618,7 +1023,7 @@ CStarter::Reaper(int pid, int exit_status)
 
 	if ( ShuttingDown && (all_jobs - handled_jobs == 0) ) {
 		dprintf(D_ALWAYS,"Last process exited, now Starter is exiting\n");
-		DC_Exit(0);
+		StarterExit(0);
 	}
 	return 0;
 }
@@ -715,6 +1120,7 @@ CStarter::publishPostScriptUpdateAd( ClassAd* ad )
 void
 CStarter::PublishToEnv( Env* proc_env )
 {
+	ASSERT(proc_env);
 	if( pre_script ) {
 		pre_script->PublishToEnv( proc_env );
 	}
@@ -732,6 +1138,27 @@ CStarter::PublishToEnv( Env* proc_env )
 		uproc->PublishToEnv( proc_env );
 	}
 
+	ASSERT(jic);
+	ClassAd* jobAd = jic->jobClassAd();
+	if( jobAd ) {
+		// Probing this (file transfer) ourselves is complicated.  The JIC
+		// already does it.  Steal his answer.
+		bool using_file_transfer = jic->usingFileTransfer();
+		StringMap classenv = build_job_env(*jobAd, using_file_transfer);
+		classenv.startIterations();
+		MyString key,value;
+		while(classenv.iterate(key,value)) {
+			MyString dummy;
+			if( ! proc_env->GetEnv(key,dummy) ) {
+				// Only set the variable if it wasn't already
+				// set (let user settings override).
+				proc_env->SetEnv(key.Value(),value.Value());
+			}
+		}
+	} else {
+		dprintf(D_ALWAYS, "Unable to find job ad for job.  Environment may be incorrect\n");
+	}
+
 		// now, stuff the starter knows about, instead of individual
 		// procs under its control
 	MyString base;
@@ -746,36 +1173,31 @@ CStarter::PublishToEnv( Env* proc_env )
 	if( output_ad && !(output_ad[0] == '-' && output_ad[1] == '\0') ) {
 		env_name = base.GetCStr();
 		env_name += "OUTPUT_CLASSAD";
-		proc_env->Put( env_name.GetCStr(), output_ad );
-}
+		proc_env->SetEnv( env_name.GetCStr(), output_ad );
+	}
 	
 		// job scratch space
 	env_name = base.GetCStr();
 	env_name += "SCRATCH_DIR";
-	proc_env->Put( env_name.GetCStr(), GetWorkingDir() );
+	proc_env->SetEnv( env_name.GetCStr(), GetWorkingDir() );
 
-		// port regulation stuff
-	char* low = param( "LOWPORT" );
-	char* high = param( "HIGHPORT" );
-	if( low && high ) {
+		// pass through the pidfamily ancestor env vars this process
+		// currently has to the job.
+
+		// port regulation stuff.  assume the outgoing port range.
+	int low, high;
+	if (get_port_range (TRUE, &low, &high) == TRUE) {
+		MyString tmp_port_number;
+
+		tmp_port_number = high;
 		env_name = base.GetCStr();
 		env_name += "HIGHPORT";
-		proc_env->Put( env_name.GetCStr(), high );
+		proc_env->SetEnv( env_name.GetCStr(), tmp_port_number.GetCStr() );
 
+		tmp_port_number = low;
 		env_name = base.GetCStr();
 		env_name += "LOWPORT";
-		proc_env->Put( env_name.GetCStr(), low );
-
-		free( high );
-		free( low );
-	} else if( low ) {
-		dprintf( D_ALWAYS, "LOWPORT is defined but HIGHPORT is not, "
-				 "ignoring LOWPORT\n" );
-		free( low );
-	} else if( high ) {
-		dprintf( D_ALWAYS, "HIGHPORT is defined but LOWPORT is not, "
-				 "ignoring HIGHPORT\n" );
-		free( high );
+		proc_env->SetEnv( env_name.GetCStr(), tmp_port_number.GetCStr() );
     }
 }
 
@@ -787,7 +1209,8 @@ CStarter::getMyVMNumber( void )
 	char *logappend = param("STARTER_LOG");		
 	char *tmp = NULL;
 		
-	int vm_number = 1; // default to VM1
+	int vm_number = 0; // default to 0, let our caller decide how to
+					   // interpret that.  
 			
 	if ( logappend ) {
 
@@ -799,7 +1222,7 @@ CStarter::getMyVMNumber( void )
 		if ( tmp ) {				
 			if ( sscanf(tmp, ".vm%d", &vm_number) < 1 ) {
 				// if we couldn't parse it, set it to 1.
-				vm_number = 1;
+				vm_number = 0;
 			}
 		} 
 		free(logappend);
@@ -869,4 +1292,41 @@ CStarter::classadCommand( int, Stream* s )
 		return FALSE;
 	}
 	return TRUE;
+}
+
+
+int 
+CStarter::updateX509Proxy( int cmd, Stream* s )
+{
+	ASSERT(s);
+	ReliSock* rsock = (ReliSock*)s;
+	ASSERT(jic);
+	return jic->updateX509Proxy(cmd,rsock) ? TRUE : FALSE;
+}
+
+
+bool
+CStarter::removeTempExecuteDir( void )
+{
+	if( is_gridshell ) {
+			// we didn't make our own directory, so just bail early
+		return true;
+	}
+
+	MyString dir_name = "dir_";
+	dir_name += (int)daemonCore->getpid();
+
+	Directory execute_dir( Execute, PRIV_ROOT );
+	if ( execute_dir.Find_Named_Entry( dir_name.Value() ) ) {
+
+		// since we chdir()'d to the execute directory, we can't
+		// delete it until we get out (at least on WIN32). So lets
+		// just chdir() to EXECUTE so we're sure we can remove it. 
+		chdir(Execute);
+
+		dprintf( D_FULLDEBUG, "Removing %s%c%s\n", Execute,
+				 DIR_DELIM_CHAR, dir_name.Value() );
+		return execute_dir.Remove_Current_File();
+	}
+	return true;
 }

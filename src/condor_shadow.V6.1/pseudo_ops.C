@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -204,7 +204,7 @@ the file from.  For example, joe/data might become buffer:remote:/usr/joe/data
 
 int pseudo_get_file_info_new( const char *logical_name, char *actual_url )
 {
-	char	remap_list[ATTRLIST_MAX_EXPRESSION];
+	MyString remap_list;
 	char	split_dir[_POSIX_PATH_MAX];
 	char	split_file[_POSIX_PATH_MAX];
 	char	full_path[_POSIX_PATH_MAX];
@@ -222,9 +222,9 @@ int pseudo_get_file_info_new( const char *logical_name, char *actual_url )
 	/* Any name comparisons must check the logical name, the simple name, and the full path */
 
 	if(Shadow->getJobAd()->LookupString(ATTR_FILE_REMAPS,remap_list) &&
-	  (filename_remap_find( remap_list, (char*) logical_name, remap ) ||
-	   filename_remap_find( remap_list, split_file, remap ) ||
-	   filename_remap_find( remap_list, full_path, remap ))) {
+	  (filename_remap_find( remap_list.Value(), (char*) logical_name, remap ) ||
+	   filename_remap_find( remap_list.Value(), split_file, remap ) ||
+	   filename_remap_find( remap_list.Value(), full_path, remap ))) {
 
 		dprintf(D_SYSCALLS,"\tremapped to: %s\n",remap);
 
@@ -294,14 +294,17 @@ int pseudo_get_file_info_new( const char *logical_name, char *actual_url )
 
 static void append_buffer_info( char *url, char *method, char *path )
 {
-	char buffer_list[ATTRLIST_MAX_EXPRESSION];
-	char buffer_string[ATTRLIST_MAX_EXPRESSION];
+	MyString buffer_list;
+	char buffer_string[_POSIX_PATH_MAX*3+1];
 	char dir[_POSIX_PATH_MAX];
 	char file[_POSIX_PATH_MAX];
 	int s,bs,ps;
 	int result;
 
 	filename_split(path,dir,file);
+
+	/* Do not buffer special device files, whether local or remote */
+	if(!strncmp(path,"/dev/",5)) return;
 
 	/* Get the default buffer setting */
 	pseudo_get_buffer_info( &s, &bs, &ps );
@@ -310,8 +313,8 @@ static void append_buffer_info( char *url, char *method, char *path )
 	/* These lines have the same syntax as a remap list */
 
 	if(Shadow->getJobAd()->LookupString(ATTR_BUFFER_FILES,buffer_list)) {
-		if( filename_remap_find(buffer_list,path,buffer_string) ||
-		    filename_remap_find(buffer_list,file,buffer_string) ) {
+		if( filename_remap_find(buffer_list.Value(),path,buffer_string) ||
+		    filename_remap_find(buffer_list.Value(),file,buffer_string) ) {
 
 			/* If the file is merely mentioned, turn on the default buffer */
 			strcat(url,"buffer:");
@@ -338,14 +341,13 @@ static int attr_list_has_file( const char *attr, const char *path )
 {
 	char dir[_POSIX_PATH_MAX];
 	char file[_POSIX_PATH_MAX];
-	char str[ATTRLIST_MAX_EXPRESSION];
+	MyString str;
 	StringList *list=0;
 
 	filename_split( path, dir, file );
 
-	str[0] = 0;
 	Shadow->getJobAd()->LookupString(attr,str);
-	list = new StringList(str);
+	list = new StringList(str.Value());
 
 	if( list->contains_withwildcard(path) || list->contains_withwildcard(file) ) {
 		delete list;
@@ -556,16 +558,30 @@ pseudo_ulog( ClassAd *ad )
 	int result = 0;
 	char const *critical_error = NULL;
 	MyString CriticalErrorBuf;
-	ClassAdUnParser unp;
+	bool event_already_logged = false;
+	bool put_job_on_hold = false;
+	char const *hold_reason = NULL;
+	char *hold_reason_buf = NULL;
+	int hold_reason_code = 0;
+	int hold_reason_sub_code = 0;
 
 	if(!event) {
-		std::string add_str;
-		unp.Unparse( add_str, ad );
+		MyString add_str;
+		ad->sPrint(add_str);
 		dprintf(
 		  D_ALWAYS,
 		  "invalid event ClassAd in pseudo_ulog: %s\n",
-		  add_str.c_str( ));
+		  add_str.GetCStr());
 		return -1;
+	}
+
+	if(ad->LookupInteger(ATTR_HOLD_REASON_CODE,hold_reason_code)) {
+		put_job_on_hold = true;
+		ad->LookupInteger(ATTR_HOLD_REASON_SUBCODE,hold_reason_sub_code);
+		ad->LookupString(ATTR_HOLD_REASON,&hold_reason_buf);
+		if(hold_reason_buf) {
+			hold_reason = hold_reason_buf;
+		}
 	}
 
 	if( event->eventNumber == ULOG_REMOTE_ERROR ) {
@@ -587,23 +603,36 @@ pseudo_ulog( ClassAd *ad )
 			  err->getErrorText());
 
 			critical_error = CriticalErrorBuf.GetCStr();
+			if(!hold_reason) {
+				hold_reason = critical_error;
+			}
 
-			//Temporary: the following line causes critical remote errors
+			//Temporary: the following causes critical remote errors
 			//to be logged as ShadowExceptionEvents, rather than
 			//RemoteErrorEvents.  The result is ugly, but guaranteed to
 			//be compatible with other user-log reading tools.
-			EXCEPT((char *)critical_error);
+			BaseShadow::log_except((char *)critical_error);
+			event_already_logged = true;
 		}
 	}
 
-	if( !Shadow->uLog.writeEvent( event ) ) {
-		std::string add_str;
-		unp.Unparse( add_str, ad );
+	if( !event_already_logged && !Shadow->uLog.writeEvent( event ) ) {
+		MyString add_str;
+		ad->sPrint(add_str);
 		dprintf(
 		  D_ALWAYS,
 		  "unable to log event in pseudo_ulog: %s\n",
-		  add_str.c_str( ));
+		  add_str.GetCStr());
 		result = -1;
+	}
+
+	if(put_job_on_hold) {
+		char const *hold_reason = critical_error;
+		if(!hold_reason) {
+			hold_reason = "Job put on hold by remote host.";
+		}
+		Shadow->holdJob(hold_reason,hold_reason_code,hold_reason_sub_code);
+		//should never get here, because holdJob() exits.
 	}
 
 	if( critical_error ) {
@@ -623,13 +652,25 @@ pseudo_get_job_attr( const char *name, char *expr )
 {
 	ClassAd *ad = thisRemoteResource->getJobAd();
 	ExprTree *e = ad->Lookup(name);
-	ClassAdUnParser unp;
-	std::string expr_string;
 	if(e) {
 		expr[0] = 0;
-		unp.Unparse( expr_string, e );
-		strcat( expr, expr_string.c_str( ) );
+		e->RArg()->PrintToStr(expr);
 		dprintf(D_SYSCALLS,"pseudo_get_job_attr(%s) = %s\n",name,expr);
+		return 0;
+	} else {
+		dprintf(D_SYSCALLS,"pseudo_get_job_attr(%s) failed\n",name);
+		return -1;
+	}
+}
+
+int
+pseudo_get_job_attr( const char *name, MyString &expr )
+{
+	ClassAd *ad = thisRemoteResource->getJobAd();
+	ExprTree *e = ad->Lookup(name);
+	if(e) {
+		e->RArg()->PrintToStr(expr);
+		dprintf(D_SYSCALLS,"pseudo_get_job_attr(%s) = %s\n",name,expr.Value());
 		return 0;
 	} else {
 		dprintf(D_SYSCALLS,"pseudo_get_job_attr(%s) failed\n",name);
@@ -642,10 +683,9 @@ pseudo_set_job_attr( const char *name, const char *expr )
 {
 	if(Shadow->updateJobAttr(name,expr)) {
 		dprintf(D_SYSCALLS,"pseudo_set_job_attr(%s,%s) succeeded\n",name,expr);
-		char str[ATTRLIST_MAX_EXPRESSION];
-		sprintf(str,"%s = %s",name,expr);
 		ClassAd *ad = thisRemoteResource->getJobAd();
-		ad->Insert(str);
+		ASSERT(ad);
+		ad->AssignExpr(name,expr);
 		return 0;
 	} else {
 		dprintf(D_SYSCALLS,"pseudo_set_job_attr(%s,%s) failed\n",name,expr);
@@ -656,8 +696,8 @@ pseudo_set_job_attr( const char *name, const char *expr )
 int
 pseudo_constrain( const char *expr )
 {
-	char reqs[ATTRLIST_MAX_EXPRESSION];
-	char newreqs[ATTRLIST_MAX_EXPRESSION];
+	MyString reqs;
+	MyString newreqs;
 
 	dprintf(D_SYSCALLS,"pseudo_constrain(%s)\n",expr);
 	dprintf(D_SYSCALLS,"\tchanging AgentRequirements to %s\n",expr);
@@ -665,13 +705,13 @@ pseudo_constrain( const char *expr )
 	if(pseudo_set_job_attr("AgentRequirements",expr)!=0) return -1;
 	if(pseudo_get_job_attr("Requirements",reqs)!=0) return -1;
 
-	if(strstr(reqs,"AgentRequirements")) {
+	if(strstr(reqs.Value(),"AgentRequirements")) {
 		dprintf(D_SYSCALLS,"\tRequirements already refers to AgentRequirements\n");
 		return 0;
 	} else {
-		sprintf(newreqs,"(%s) && AgentRequirements",reqs);
-		dprintf(D_SYSCALLS,"\tchanging Requirements to %s\n",newreqs);
-		return pseudo_set_job_attr("Requirements",newreqs);
+		newreqs.sprintf("(%s) && AgentRequirements",reqs.Value());
+		dprintf(D_SYSCALLS,"\tchanging Requirements to %s\n",newreqs.Value());
+		return pseudo_set_job_attr("Requirements",newreqs.Value());
 	}
 }
 

@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -63,10 +63,17 @@ int _sysapi_config = 0;
 
 /* needed by ncpus.c */
 int _sysapi_ncpus = 0;
+int _sysapi_max_ncpus = 0;
 
 /* needed by phys_mem.c */
 int _sysapi_memory = 0;
 int _sysapi_reserve_memory = 0;
+
+/* needed by ckptpltfrm.c */
+char *_sysapi_ckptpltfrm = NULL;
+
+/* needed by load_avg.c */
+int _sysapi_getload = 0;
 
 
 BEGIN_C_DECLS
@@ -148,6 +155,17 @@ sysapi_reconfig(void)
 		free( tmp );
 	}
 
+	_sysapi_max_ncpus = 0;
+	tmp = param( "MAX_NUM_CPUS" );
+	if( tmp ) {
+		_sysapi_max_ncpus = atoi( tmp );
+		if(_sysapi_max_ncpus < 0) {
+			_sysapi_max_ncpus = 0;
+		}
+		free( tmp );
+	}
+
+
 	_sysapi_memory = 0;
 	tmp = param( "MEMORY" );
 	if( tmp ) {
@@ -161,6 +179,22 @@ sysapi_reconfig(void)
 		_sysapi_reserve_memory = atoi( tmp );
 		free( tmp );
 	}
+
+	/* _sysapi_ckptpltfrm is either set to NULL, or whatever 
+		CHECKPOINT_PLATFORM says in the config file. If set to NULL,
+		then _sysapi_ckptpltfrm will be properly initialized after the first
+		call to sysapi_ckptpltfrm() */
+	if (_sysapi_ckptpltfrm != NULL) {
+		free(_sysapi_ckptpltfrm);
+		_sysapi_ckptpltfrm = NULL;
+	}
+	tmp = param( "CHECKPOINT_PLATFORM" );
+	if (tmp != NULL) {
+		_sysapi_ckptpltfrm = strdup(tmp);
+		free(tmp);
+	}
+
+	_sysapi_getload = param_boolean_int("SYSAPI_GET_LOADAVG",1);
 
 	/* tell the library I have configured myself */
 	_sysapi_config = TRUE;

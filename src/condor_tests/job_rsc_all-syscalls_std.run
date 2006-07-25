@@ -1,0 +1,17 @@
+#!/usr/bin/env perl
+
+push( @INC, "../condor_scripts" );
+use CondorTest;
+
+$cmd = 'job_rsc_all-syscalls_std.cmd';
+$testname = 'Syscall Test';
+
+CondorTest::RegisterExitedSuccess( $testname, sub { return 1 } );
+
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+    print "$testname: SUCCESS\n";
+    exit(0);
+} else {
+    die "$testname: CondorTest::RunTest() failed\n";
+}
+

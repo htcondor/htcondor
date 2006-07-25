@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -28,6 +28,7 @@ const int AUTHENTICATE_ERR_NOT_BUILT = 1001;
 const int AUTHENTICATE_ERR_HANDSHAKE_FAILED = 1002;
 const int AUTHENTICATE_ERR_OUT_OF_METHODS = 1003;
 const int AUTHENTICATE_ERR_METHOD_FAILED = 1004;
+const int AUTHENTICATE_ERR_KEYEXCHANGE_FAILED = 1005;
 
 const int SECMAN_ERR_INTERNAL = 2001;
 const int SECMAN_ERR_INVALID_POLICY = 2002;
@@ -42,6 +43,7 @@ const int DAEMON_ERR_INTERNAL = 3001;
 
 const int SCHEDD_ERR_JOB_ACTION_FAILED = 4001;
 const int SCHEDD_ERR_SPOOL_FILES_FAILED = 4002;
+const int SCHEDD_ERR_UPDATE_GSI_CRED_FAILED = 4003;
 
 const int GSI_ERR_AQUIRING_SELF_CREDINTIAL_FAILED = 5001;
 const int GSI_ERR_REMOTE_SIDE_FAILED = 5002;

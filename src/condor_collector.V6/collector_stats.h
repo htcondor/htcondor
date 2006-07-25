@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -95,7 +95,7 @@ class StatsHashKey
 	MyString type;
     MyString name;
     MyString ip_addr;
-    friend bool operator== (const HashKey &, const HashKey &);
+    friend bool operator== (const StatsHashKey &, const StatsHashKey &);
 	void getstr( MyString & );
   private:
 };

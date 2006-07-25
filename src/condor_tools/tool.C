@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -50,6 +50,7 @@
 void computeRealAction( void );
 bool resolveNames( DaemonList* daemon_list, StringList* name_list );
 void doCommand( Daemon* d );
+int doCommands(int argc,char *argv[],char *MyName);
 void version();
 void handleAll();
 void doSquawk( char *addr );
@@ -66,11 +67,13 @@ daemon_t dt = DT_NONE;
 daemon_t real_dt = DT_NONE;
 DCCollector* pool = NULL;
 bool fast = false;
+bool peaceful_shutdown = false;
 bool full = false;
 bool all = false;
 char* subsys = NULL;
 int takes_subsys = 0;
 int cmd_set = 0;
+char *subsys_arg = NULL;
 
 
 template class HashBucket<MyString, bool>;
@@ -115,6 +118,7 @@ usage( char *str )
 		fprintf( stderr, "    -graceful\t\tgracefully shutdown daemons %s\n", 
 				 "(the default)" );
 		fprintf( stderr, "    -fast\t\tquickly shutdown daemons\n" );
+		fprintf( stderr, "    -peaceful\t\twait indefinitely for jobs to finish\n" );
 	}
 	if( cmd == VACATE_CLAIM ) {
 		fprintf( stderr, 
@@ -138,6 +142,11 @@ usage( char *str )
 	fprintf( stderr, "  (if no targets are specified, the local host is used)\n" );
 	if( takes_subsys ) {
 		fprintf( stderr, "where [subsystem] can be one of:\n" );
+		fprintf( stderr, 
+			 "    -subsystem <name>\tspecify the target subsystem by name.\n" );
+		fprintf( stderr,
+			"    The following named subsystem options are deprecated, and\n");
+		fprintf( stderr, "    may be discontinued in a future release:\n");
 		if( cmd == DAEMONS_OFF || cmd == DAEMON_OFF ) {
 			fprintf( stderr, "    -master\n" );
 		} else {
@@ -148,6 +157,9 @@ usage( char *str )
 		fprintf( stderr, "    -collector\n" );
 		fprintf( stderr, "    -negotiator\n" );
 		fprintf( stderr, "    -kbdd\n" );
+#if WANT_QUILL
+		fprintf( stderr, "    -quill\n" );
+#endif
 	}
 	fprintf( stderr, "\n" );
 
@@ -239,12 +251,19 @@ cmdToStr( int c )
 		return "Kill-All-Daemons";
 	case DAEMONS_OFF_FAST:
 		return "Kill-All-Daemons-Fast";
+	case DAEMONS_OFF_PEACEFUL:
+		return "Kill-All-Daemons-Peacefully";
 	case DAEMON_OFF:
 	case DC_OFF_GRACEFUL:
 		return "Kill-Daemon";
 	case DAEMON_OFF_FAST:
 	case DC_OFF_FAST:
 		return "Kill-Daemon-Fast";
+	case DAEMON_OFF_PEACEFUL:
+	case DC_OFF_PEACEFUL:
+		return "Kill-Daemon-Peacefully";
+	case DC_SET_PEACEFUL_SHUTDOWN:
+		return "Set-Peaceful-Shutdown";
 	case DAEMONS_ON:
 		return "Spawn-All-Daemons";
 	case DAEMON_ON:
@@ -252,6 +271,8 @@ cmdToStr( int c )
 	case RESTART:
 		if( fast ) {
 			return "Restart-Fast";
+		} else if( peaceful_shutdown ) {
+			return "Restart-Peaceful";
 		} else {
 			return "Restart";
 		}
@@ -303,13 +324,10 @@ subsys_check( char* MyName )
 int
 main( int argc, char *argv[] )
 {
-	char *daemonname, *MyName = argv[0];
+	char *MyName = argv[0];
 	char *cmd_str, **tmp;
 	int size;
-	bool found_one = false;
-	StringList names;
-	StringList addrs;
-	DaemonList daemons;
+	int rc;
 
 #ifndef WIN32
 	// Ignore SIGPIPE so if we cannot connect to a daemon we do not
@@ -401,19 +419,46 @@ main( int argc, char *argv[] )
 		case 'v':
 			version();
 			break;
+#if WANT_QUILL
+		case 'q':
+			subsys_check( MyName );
+			dt = DT_QUILL;
+			break;
+#endif
 		case 'h':
 			usage( MyName );
 			break;
 		case 'p':
-			tmp++;
-			if( tmp && *tmp ) {
-				pool = new DCCollector( *tmp );
-				if( ! pool->addr() ) {
-					fprintf( stderr, "%s: %s\n", MyName, pool->error() );
-					exit( 1 );
+			if((*tmp)[2] == 'e') { // -peaceful
+				peaceful_shutdown = true;
+				fast = false;
+				switch( cmd ) {
+				case DAEMONS_OFF:
+				case DC_OFF_GRACEFUL:
+				case RESTART:
+					break;
+				default:
+					fprintf( stderr, "ERROR: \"-peaceful\" "
+							 "is not valid with %s\n", MyName );
+					usage( NULL );
 				}
-			} else {
-				fprintf( stderr, "ERROR: -pool requires another argument\n" );
+			}
+			else if( (*tmp)[2] == '\0' || (*tmp)[2] == 'o' ) { //-pool
+				tmp++;
+				if( tmp && *tmp ) {
+					pool = new DCCollector( *tmp );
+					if( ! pool->addr() ) {
+						fprintf( stderr, "%s: %s\n", MyName, pool->error() );
+						exit( 1 );
+					}
+				} else {
+					fprintf( stderr, "ERROR: -pool requires another argument\n" );
+					usage( NULL );
+				}
+			}
+			else {
+				fprintf( stderr, "ERROR: \"%s\" "
+						 "is not a valid option\n", (*tmp) );
 				usage( NULL );
 			}
 			break;
@@ -431,6 +476,7 @@ main( int argc, char *argv[] )
 					break;
 				case 'a':
 					fast = true;
+					peaceful_shutdown = false;
 					switch( cmd ) {
 					case DAEMONS_OFF:
 					case DC_OFF_GRACEFUL:
@@ -465,6 +511,7 @@ main( int argc, char *argv[] )
 			break;
 		case 'g':
 			fast = false;
+			peaceful_shutdown = false;
 			break;
 		case 'a':
 			if( (*tmp)[2] ) {
@@ -598,19 +645,37 @@ main( int argc, char *argv[] )
 				case 't':
 					dt = DT_STARTD;
 					break;
+				case 'u': 
+						// We got a "-subsystem", make sure we've got 
+						// something else after it
+					tmp++;
+					if( tmp && *tmp ) {
+						subsys_check( MyName );
+						subsys_arg = *tmp;
+						dt = stringToDaemonType(subsys_arg);
+						if( dt == DT_NONE ) {
+							dt = DT_ANY;
+						}
+					} else {
+						fprintf( stderr, 
+							 "ERROR: -subsystem requires another argument\n" ); 
+						usage( NULL );
+						exit( 1 );
+					}
+					break;
 				default: 
 					fprintf( stderr, 
-							 "ERROR: invalid subsystem argument \"%s\"\n",
-							 *tmp );
+							 "ERROR: unknown parameter: \"%s\"\n",
+							 *tmp );  
 					usage( NULL );
 					break;
 				}
 			} else {
 				fprintf( stderr, 
-						 "ERROR: ambiguous subsystem argument \"%s\"\n",
+						 "ERROR: ambiguous argument \"%s\"\n",
 						 *tmp );
 				fprintf( stderr, 
-						 "Please specify \"-startd\" or \"-schedd\"\n" );
+				"Please specify \"-subsystem\", \"-startd\" or \"-schedd\"\n" );
 				usage( NULL );
 			}
 			break;
@@ -636,8 +701,56 @@ main( int argc, char *argv[] )
 		// that we know the true target daemon type for whatever
 		// command we're using, want the real string to use.
 	if( subsys ) {
-		subsys = (char*)daemonString( dt );
+		if( dt == DT_ANY && subsys_arg ) {
+			subsys = subsys_arg; 
+		} else { 
+			subsys = (char*)daemonString( dt );
+		}
 	}
+
+
+	// If we are sending peaceful daemon shutdown/restart commands to
+	// the master (i.e. we want no timeouts resulting in killing),
+	// then we have to deal here with the fact that the master only
+	// transmits a graceful (not peaceful) signal to its children.  In
+	// anticipation of this, we need to turn on peaceful mode in the
+	// relavent children.
+
+	if( peaceful_shutdown && real_dt == DT_MASTER ) {
+		if( (real_cmd == DAEMONS_OFF) ||
+			(real_cmd == DAEMON_OFF && !strcmp(subsys,"startd")) ||
+			(real_cmd == DC_OFF_GRACEFUL) ||
+			(real_cmd == RESTART)) {
+
+			// Temporarily override globals so we can send a different command.
+			daemon_t orig_real_dt = real_dt;
+			int orig_real_cmd = real_cmd;
+			int orig_cmd = cmd;
+
+			cmd = real_cmd = DC_SET_PEACEFUL_SHUTDOWN;
+
+			// We only care about peacefully shutting down the startd.
+			real_dt = DT_STARTD;
+			rc = doCommands(argc,argv,MyName);
+			if(rc) return rc;
+
+			// Restore globals.
+			real_dt = orig_real_dt;
+			real_cmd = orig_real_cmd;
+			cmd = orig_cmd;
+		}
+	}
+
+	return doCommands(argc,argv,MyName);
+}
+
+int
+doCommands(int argc,char *argv[],char *MyName) {
+	StringList names;
+	StringList addrs;
+	DaemonList daemons;
+	char *daemonname;
+	bool found_one = false;
 
 	if( all ) {
 			// If we were told -all, we can just ignore any other
@@ -661,13 +774,36 @@ main( int argc, char *argv[] )
 	for( argv++; *argv; argv++ ) {
 		switch( (*argv)[0] ) {
 		case '-':
-				// Some command-line arg we already dealt with
-			if( (*argv)[1] == 'p' || 
-				((*argv)[1] == 'c' && (*argv)[2] == 'm') ) {
-					// If it's -pool or -cmd, we want to skip the next
-					// arg, too.
-				argv++;
+				// we've already handled all the args that start with
+				// '-'.  however, some of them have a 2nd arg that
+				// we've also already looked at, so we need to deal
+				// with those again and skip over the arguments to
+				// options we've handled.  this includes:
+				//  -pool XXX    (but not "-peaceful")
+				//  -cmd XXX     (but not "-collector")
+				//  -subsys XXX  (but not "-schedd" or "-startd")
+			switch( (*argv)[1] ) {
+			case 'p':
+				if( (*argv)[2] == '\0' || (*argv)[2] == 'o' ) {
+						// this is -pool, skip the next one.
+					argv++;
+				}
+				break;
+			case 'c':
+				if( (*argv)[2] == 'm' ) {
+						// this is -cmd, skip the next one.
+					argv++;
+				}
+				break;
+			case 's':
+				if( (*argv)[2] == 'u' ) {
+						// this is -subsys, skip the next one.
+					argv++;
+				}
+				break;
 			}
+				// no matter what, we're done with this arg, so we
+				// should move onto the next one...
 			continue;
 		case '<':
 				// This is probably a sinful string, use it
@@ -872,7 +1008,15 @@ resolveNames( DaemonList* daemon_list, StringList* name_list )
 	ClassAdList ads;
 
 	CondorError errstack;
-	if( query.fetchAds(ads, pool_addr, &errstack) != Q_OK ) {
+	QueryResult q_result;
+	if (pool_addr) {
+		q_result = query.fetchAds(ads, pool_addr, &errstack);
+	} else {
+		CollectorList * collectors = CollectorList::create();
+		q_result = collectors->query (query, ads);
+		delete collectors;
+	}
+	if( q_result != Q_OK ) {
 		fprintf( stderr, "%s\n", errstack.getFullText(true) );
 		fprintf( stderr, "ERROR: can't connect to %s\n",
 				 pool ? pool->idStr() : "local collector" );
@@ -921,7 +1065,13 @@ resolveNames( DaemonList* daemon_list, StringList* name_list )
 	while( (name = name_list->next()) ) {
 		ads.Rewind();
 		while( !d && (ad = ads.Next()) ) {
-			if( real_dt == DT_STARTD ) {
+				// we only want to use the special ATTR_MACHINE hack
+				// to locate a startd if the query string we were
+				// given (which we're holding in the variable "name")
+				// does NOT contain an '@' character... if it does, it
+				// means the end user is trying to find a specific
+				// startd (e.g. glide-in, a certain VM, etc).
+			if( real_dt == DT_STARTD && ! strchr(name, '@') ) {
 				host = get_host_part( name );
 				ad->LookupString( ATTR_MACHINE, &tmp );
 				if( ! tmp ) {
@@ -961,7 +1111,7 @@ resolveNames( DaemonList* daemon_list, StringList* name_list )
 				free( tmp );
 				tmp = NULL;
 
-			} else {  // daemon type != DT_STARTD
+			} else {  // daemon type != DT_STARTD or there's an '@'
 					// everything else always uses ATTR_NAME
 				ad->LookupString( ATTR_NAME, &tmp );
 				if( ! tmp ) {
@@ -1105,6 +1255,8 @@ doCommand( Daemon* d )
 			// if -fast is used, we need to send a different command.
 		if( fast ) {
 			my_cmd = DAEMON_OFF_FAST;
+		} else if( peaceful_shutdown ) {
+			my_cmd = DAEMON_OFF_PEACEFUL;
 		}
 		if( !d->startCommand( my_cmd, &sock, 0, &errstack) ) {
 			fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true) );
@@ -1131,10 +1283,18 @@ doCommand( Daemon* d )
 		}
 		break;
 
+	case RESTART:
+		if( peaceful_shutdown ) {
+			my_cmd = RESTART_PEACEFUL;
+		}
+		break;
+
 	case DAEMONS_OFF:
 			// if -fast is used, we need to send a different command.
 		if( fast ) {
 			my_cmd = DAEMONS_OFF_FAST;
+		} else if( peaceful_shutdown ) {
+			my_cmd = DAEMONS_OFF_PEACEFUL;
 		}
 		if( d_type != DT_MASTER ) {
  				// if we're trying to send this to anything other than
@@ -1143,6 +1303,8 @@ doCommand( Daemon* d )
  				// we've got to send a different command. 
 			if( fast ) {
 				my_cmd = DC_OFF_FAST;
+			} else if( peaceful_shutdown ) {
+				my_cmd = DC_OFF_PEACEFUL;
 			} else {
 				my_cmd = DC_OFF_GRACEFUL;
 			}
@@ -1153,6 +1315,8 @@ doCommand( Daemon* d )
 			// if -fast is used, we need to send a different command.
 		if( fast ) {
 			my_cmd = DC_OFF_FAST;
+		} else if( peaceful_shutdown ) {
+			my_cmd = DC_OFF_PEACEFUL;
 		}
 		break;
 
@@ -1194,7 +1358,9 @@ doCommand( Daemon* d )
 					cmdToStr(my_cmd), d->idStr() );
 		} else {
 			printf( "Sent \"%s\" command for \"%s\" to %s\n",
-					cmdToStr(my_cmd), daemonString(dt), d->idStr() );
+					cmdToStr(my_cmd), 
+					subsys_arg ? subsys_arg : daemonString(dt),
+					d->idStr() );
 		}
 	} else if( d_type == DT_STARTD && all ) {
 			// we want to special case printing about this, since

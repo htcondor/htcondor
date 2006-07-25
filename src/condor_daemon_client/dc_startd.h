@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -60,7 +60,6 @@ public:
 		*/
 	bool setClaimId( const char* id );
 
-
 		/** @return the ClaimId string for this startd, NULL if we
 			don't have a value yet.
 		*/
@@ -105,8 +104,10 @@ public:
 	bool releaseClaim( VacateType type, ClassAd* reply,
 					   int timeout = -1 );
 
-	bool locateStarter( const char* global_job_id, ClassAd* reply, 
-					   int timeout = -1 );
+	bool locateStarter( const char* global_job_id, 
+						const char* claim_id,
+						ClassAd* reply, 
+						int timeout = -1 );
 
  private:
 	char* claim_id;

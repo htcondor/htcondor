@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -25,6 +25,7 @@
 #include "job.h"
 #include "condor_string.h"
 #include "condor_debug.h"
+#include "dagman_main.h"
 #include "read_multiple_logs.h"
 
 //---------------------------------------------------------------------------
@@ -57,7 +58,13 @@ const char* Job::_job_type_names[] = {
 
 //---------------------------------------------------------------------------
 Job::~Job() {
+	delete [] _directory;
 	delete [] _cmdFile;
+    // NOTE: we cast this to char* because older MS compilers
+    // (contrary to the ISO C++ spec) won't allow you to delete a
+    // const.  This has apparently been fixed in Visual C++ .NET, but
+    // as of 6/2004 we don't yet use that.  For details, see:
+    // http://support.microsoft.com/support/kb/articles/Q131/3/22.asp
 	delete [] (char*)_jobName;
 	delete [] _logFile;
 	delete varNamesFromDag;
@@ -65,35 +72,52 @@ Job::~Job() {
 }
 
 Job::
-Job( const char* jobName, const char* cmdFile ) :
-	_jobType( TYPE_CONDOR )
-{
-	Init( jobName, cmdFile );
-}
-
-
-Job::
-Job( const job_type_t jobType, const char* jobName, const char* cmdFile ) :
+Job( const job_type_t jobType, const char* jobName, const char *directory,
+			const char* cmdFile, bool prohibitMultiJobs ) :
 	_jobType( jobType )
 {
-	Init( jobName, cmdFile );
+	Init( jobName, directory, cmdFile, prohibitMultiJobs );
 }
 
 
 void Job::
-Init( const char* jobName, const char* cmdFile )
+Init( const char* jobName, const char* directory, const char* cmdFile,
+			bool prohibitMultiJobs )
 {
 	ASSERT( jobName != NULL );
 	ASSERT( cmdFile != NULL );
 
+	debug_printf( DEBUG_DEBUG_1, "Job::Init(%s, %s, %s)\n", jobName,
+				directory, cmdFile );
+
     _scriptPre = NULL;
     _scriptPost = NULL;
     _Status = STATUS_READY;
+	_isIdle = false;
 	countedAsDone = false;
 	_waitingCount = 0;
 
     _jobName = strnewp (jobName);
+	_directory = strnewp (directory);
     _cmdFile = strnewp (cmdFile);
+
+	if ( (_jobType == TYPE_CONDOR) && prohibitMultiJobs ) {
+		MyString	errorMsg;
+		int queueCount = MultiLogFiles::getQueueCountFromSubmitFile(
+					MyString( _cmdFile ), MyString( _directory ),
+					errorMsg );
+		if ( queueCount == -1 ) {
+			debug_printf( DEBUG_NORMAL, "ERROR in "
+						"MultiLogFiles::getQueueCountFromSubmitFile(): %s\n",
+						errorMsg.Value() );
+			main_shutdown_rescue( EXIT_ERROR );
+		} else if ( queueCount != 1 ) {
+			debug_printf( DEBUG_NORMAL, "ERROR: node %s job queues %d "
+						"job procs, but DAGMAN_PROHIBIT_MULTI_JOBS is "
+						"set\n", _jobName, queueCount );
+			main_shutdown_rescue( EXIT_ERROR );
+		}
+	}
 
     // _condorID struct initializes itself
 
@@ -102,9 +126,20 @@ Init( const char* jobName, const char* cmdFile )
 
     retry_max = 0;
     retries = 0;
+    _submitTries = 0;
+    have_retry_abort_val = false;
+    retry_abort_val = 0xdeadbeef;
+    have_abort_dag_val = false;
 	_visited = false;
 
-    MyString logFile = ReadMultipleUserLogs::loadLogFileNameFromSubFile(_cmdFile);
+	_queuedNodeJobProcs = 0;
+
+		// Note: we use "" for the directory here because when this method
+		// is called we should *already* be in the directory from which
+		// this job is to be run.
+    MyString logFile = MultiLogFiles::loadLogFileNameFromSubFile(_cmdFile, "");
+		// Note: _logFile is needed only for POST script events (as of
+		// 2005-06-23).
     _logFile = strnewp (logFile.Value());
 
 	varNamesFromDag = new List<MyString>;
@@ -127,11 +162,22 @@ bool Job::Remove (const queue_t queue, const JobID_t jobID) {
 }  
 
 //---------------------------------------------------------------------------
+bool
+Job::CheckForLogFile() const
+{
+    MyString logFile = MultiLogFiles::loadLogFileNameFromSubFile( _cmdFile,
+				_directory );
+	bool result = (logFile != "");
+	return result;
+}
+
+//---------------------------------------------------------------------------
 void Job::Dump () const {
     dprintf( D_ALWAYS, "---------------------- Job ----------------------\n");
     dprintf( D_ALWAYS, "      Node Name: %s\n", _jobName );
     dprintf( D_ALWAYS, "         NodeID: %d\n", _jobID );
     dprintf( D_ALWAYS, "    Node Status: %s\n", status_t_names[_Status] );
+    dprintf( D_ALWAYS, "Node return val: %d\n", retval );
 	if( _Status == STATUS_ERROR ) {
 		dprintf( D_ALWAYS, "          Error: %s\n",
 				 error_text ? error_text : "unknown" );
@@ -147,12 +193,12 @@ void Job::Dump () const {
 		dprintf( D_ALWAYS, "          Retry: %d\n", retry_max );
 	}
 	if( _CondorID._cluster == -1 ) {
-		dprintf( D_ALWAYS, "%8s Job ID: [not yet submitted]\n",
+		dprintf( D_ALWAYS, " %7s Job ID: [not yet submitted]\n",
 				 JobTypeString() );
 	}
 	else {
-		dprintf( D_ALWAYS, "%7s Job ID: (%d.%d.%d)\n", JobTypeString(),
-				 _CondorID._cluster, _CondorID._proc, _CondorID._subproc );
+		dprintf( D_ALWAYS, " %7s Job ID: (%d)\n", JobTypeString(),
+				 _CondorID._cluster );
 	}
   
     for (int i = 0 ; i < 3 ; i++) {
@@ -411,7 +457,7 @@ Job::AddScript( bool post, const char *cmd, MyString &whynot )
 						post ? "POST" : "PRE", GetPreScriptName() );
 		return false;
 	}
-	Script* script = new Script( post, cmd, _jobName );
+	Script* script = new Script( post, cmd, this );
 	if( !script ) {
 		dprintf( D_ALWAYS, "ERROR: out of memory!\n" );
 			// we already know we're out of memory, so filling in

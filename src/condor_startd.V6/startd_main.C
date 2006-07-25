@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -28,7 +28,9 @@
  */
 #define _STARTD_NO_DECLARE_GLOBALS 1
 #include "startd.h"
-#include "startd_cronmgr.h"
+#include "vm_common.h"
+#include "VMManager.h"
+#include "VMRegister.h"
 
 // Define global variables
 
@@ -53,7 +55,7 @@ StringList *startd_vm_exprs = NULL;
 static StringList *valid_cod_users = NULL; 
 
 // Hosts
-DCCollector*	Collector = NULL;
+CollectorList*	Collectors = NULL;
 char*	accountant_host = NULL;
 
 // Others
@@ -236,9 +238,6 @@ main_init( int, char* argv[] )
 								  (CommandHandler)command_handler,
 								  "command_handler", 0, DAEMON,
 								  D_FULLDEBUG ); 
-	daemonCore->Register_Command( RELEASE_CLAIM, "RELEASE_CLAIM", 
-								  (CommandHandler)command_handler,
-								  "command_handler", 0, DAEMON );
 	daemonCore->Register_Command( DEACTIVATE_CLAIM,
 								  "DEACTIVATE_CLAIM",  
 								  (CommandHandler)command_handler,
@@ -278,6 +277,9 @@ main_init( int, char* argv[] )
 	daemonCore->Register_Command( REQUEST_CLAIM, "REQUEST_CLAIM", 
 								  (CommandHandler)command_request_claim,
 								  "command_request_claim", 0, DAEMON );
+	daemonCore->Register_Command( RELEASE_CLAIM, "RELEASE_CLAIM", 
+								  (CommandHandler)command_release_claim,
+								  "command_release_claim", 0, DAEMON );
 	daemonCore->Register_Command( X_EVENT_NOTIFICATION,
 								  "X_EVENT_NOTIFICATION",
 								  (CommandHandler)command_x_event,
@@ -320,6 +322,15 @@ main_init( int, char* argv[] )
 	daemonCore->Register_Command( CA_CMD, "CA_CMD",
 								  (CommandHandler)command_classad_handler,
 								  "command_classad_handler", 0, WRITE );
+	
+	// Virtual Machine commands
+	if( vmapi_is_host_machine() == TRUE ) {
+		daemonCore->Register_Command( VM_REGISTER,
+				"VM_REGISTER",
+				(CommandHandler)command_vm_register,
+				"command_vm_register", 0, DAEMON,
+				D_FULLDEBUG );
+	}
 
 		//////////////////////////////////////////////////
 		// Reapers 
@@ -392,7 +403,7 @@ int
 init_params( int first_time)
 {
 	char *tmp;
-    DCCollector* new_collector = NULL;
+
 
 	resmgr->init_config_classad();
 
@@ -414,26 +425,41 @@ init_params( int first_time)
 	}
 #endif
 
-	if( Collector ) {
-			// See if we changed collectors.  If so, invalidate our
-			// ads at the old one, and start using the new info.
-		new_collector = new DCCollector;
-		if( strcmp(new_collector->addr(), 
-				   Collector->addr()) != MATCH ) {
-				// The addresses are different, so we must really have
-				// a new collector...
-			resmgr->final_update();
-			delete Collector;
-			Collector = new_collector;
-		} else {
-				// They're the same, just flush the new object.
-			delete new_collector;
-		}
-	} else {
-			// No Collector yet, there's nothing to do except create a
-			// new object.
-		Collector = new DCCollector;
-	}
+    CollectorList* new_collector_list = CollectorList::create();
+
+	if( Collectors ) {
+			// The list of collectors may have changed.
+			// We will accept the new list but first we need to send final
+			// updates to the collectors we're discontinuing
+
+			// - Compile a list of "discontinued" collectors
+			// by removing the ones that are in the new list
+			// from the Collectors list
+		Daemon * old_collector;
+		Daemon * new_collector;
+		Collectors->rewind();
+		while (Collectors->next(old_collector)) {
+
+				// See if this collector is no longer in the new list
+			new_collector_list->rewind();
+			while (new_collector_list->next (new_collector)) {
+				char const *old_addr = old_collector->addr();
+				char const *new_addr = new_collector->addr();
+				if ( old_addr && new_addr && (strcmp (new_addr, old_addr) == MATCH) ) {
+					Collectors->deleteCurrent(); // this collector is still on the new list, don't worry about it
+					break;
+				}
+			} // elihw (new list)
+		} // elihw (old list)
+
+			// Now that we have the list of "discontinued collectors, send final update to them
+		resmgr->final_update();
+		
+			// Now we can delete the old list (we will assign the new list to it)
+		delete Collectors;
+	}	
+    
+	Collectors = new_collector_list;
 
 	tmp = param( "POLLING_INTERVAL" );
 	if( tmp == NULL ) {
@@ -592,6 +618,32 @@ init_params( int first_time)
 		free( tmp );
 	}
 
+	if( vmapi_is_virtual_machine() == TRUE ) {
+		vmapi_destroy_vmregister();
+	}
+	tmp = param( "VMP_HOST_MACHINE" );
+	if( tmp ) {
+		if( vmapi_is_my_machine(tmp) ) {
+			dprintf( D_ALWAYS, "WARNING: VMP_HOST_MACHINE should be the hostname of host machine. In host machine, it doesn't need to be defined\n");
+		} else {
+			vmapi_create_vmregister(tmp);
+		}
+		free(tmp);
+	}
+
+	if( vmapi_is_host_machine() == TRUE ) {
+		vmapi_destroy_vmmanager();
+	}
+	tmp = param( "VMP_VM_LIST" );
+	if( tmp ) {
+		if( vmapi_is_virtual_machine() == TRUE ) {
+			dprintf( D_ALWAYS, "WARNING: both VMP_HOST_MACHINE and VMP_VM_LIST are defined. Assuming this machine is a virtual machine\n");
+		}else {
+			vmapi_create_vmmanager(tmp);
+		}
+		free(tmp);
+	}
+
 	return TRUE;
 }
 
@@ -613,6 +665,17 @@ startd_exit()
 		if ( resmgr->m_attr ) {
 			resmgr->m_attr->final_idle_dprintf();
 		}
+		
+			// clean-up stale claim-id files
+		int i;
+		char* filename;
+		for( i = 0; i <= resmgr->num_vms(); i++ ) { 
+			filename = startdClaimIdFile( i );
+			unlink( filename );
+			free( filename );
+			filename = NULL;
+		}
+
 		delete resmgr;
 		resmgr = NULL;
 	}
@@ -622,9 +685,6 @@ startd_exit()
 #endif
 
 	dprintf( D_ALWAYS, "All resources are free, exiting.\n" );
-#ifdef WIN32
-	KBShutdown();
-#endif
 	DC_Exit(0);
 }
 
@@ -732,11 +792,6 @@ do_cleanup(int,int,char*)
 		resmgr->walk( &Resource::kill_claim );
 		dprintf( D_FAILURE|D_ALWAYS, "startd exiting because of fatal exception.\n" );
 	}
-
-#ifdef WIN32
-	// Detach our keyboard hook
-	KBShutdown();
-#endif
 
 	return TRUE;
 }

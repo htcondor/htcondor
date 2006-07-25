@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -29,19 +29,32 @@
 
 ClassAd * java_detect()
 {
-	char path[ATTRLIST_MAX_EXPRESSION];
-	char args[ATTRLIST_MAX_EXPRESSION];
+	char path[_POSIX_PATH_MAX];
+	ArgList args;
 	char command[_POSIX_ARG_MAX];
+	MyString args_string;
+	MyString args_error;
 
 #ifndef WIN32
 	sigset_t mask;
 #endif
 
-	if(!java_config(path,args,0)) return 0;
+	if(!java_config(path,&args,0)) return 0;
 	int benchmark_time = param_integer("JAVA_BENCHMARK_TIME",0);
 
-	sprintf(command,"%s %s CondorJavaInfo old %d",path,args,benchmark_time);
-	
+	// NOTE: this is not quite right.  If any of the jvm arguments
+	// contain spaces, then V1 syntax cannot handle it, and we
+	// need to pass something more sophisticated to popen that
+	// works under both unix and windows.
+
+	if(!args.GetArgsStringV1Raw(&args_string,&args_error)) {
+		dprintf(D_ALWAYS,"java_detect: failed to produce jvm arguments: %s\n",
+				args_error.Value());
+		return 0;
+	}
+
+	sprintf(command,"%s %s CondorJavaInfo old %d",path,args_string.Value(),benchmark_time);
+
 	/*
 	N.B. Certain version of Java do not set up their own signal
 	masks correctly.  DaemonCore has already blocked off a bunch

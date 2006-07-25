@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -33,7 +33,7 @@
 
 #include "NTsenders.h"
 
-int CurrentSysCall;
+static int CurrentSysCall;
 extern ReliSock *syscall_sock;
 extern CStarter *Starter;
 
@@ -753,7 +753,7 @@ REMOTE_CONDOR_get_file_info_new(char *  logical_name , char *  actual_url)
         return rval;
 }                                                                              
 
-int REMOTE_CONDOR_ulog_printf( char const *str, ... )
+int REMOTE_CONDOR_ulog_error_printf( int hold_reason_code, int hold_reason_subcode, char const *str, ... )
 {
 	MyString buf;
 	va_list args;
@@ -761,21 +761,28 @@ int REMOTE_CONDOR_ulog_printf( char const *str, ... )
 
 	va_start(args,str);
 	buf.vsprintf(str,args);
-	retval = REMOTE_CONDOR_ulog_error( buf.GetCStr() );
+	retval = REMOTE_CONDOR_ulog_error( hold_reason_code, hold_reason_subcode, buf.GetCStr() );
 	va_end(args);
 
 	return retval;
 }
 
 int
-REMOTE_CONDOR_ulog_error( char const *str )
+REMOTE_CONDOR_ulog_error( int hold_reason_code, int hold_reason_subcode, char const *str )
 {
 	RemoteErrorEvent event;
+	ClassAd *ad;
 	//NOTE: "ExecuteHost" info will be inserted by the shadow.
 	event.setDaemonName("starter"); //TODO: where should this come from?
 	event.setErrorText( str );
 	event.setCriticalError( true );
-	return REMOTE_CONDOR_ulog( event.toClassAd() );
+	event.setHoldReasonCode( hold_reason_code );
+	event.setHoldReasonSubCode( hold_reason_subcode );
+	ad = event.toClassAd();
+	ASSERT(ad);
+	int retval = REMOTE_CONDOR_ulog( ad );
+	delete ad;
+	return retval;
 }
 
 int

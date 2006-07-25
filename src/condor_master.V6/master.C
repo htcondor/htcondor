@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -31,7 +31,6 @@
 #include "master.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "condor_collector.h"
-//#include "cctp_msg.h"
 #include "condor_attributes.h"
 #include "condor_network.h"
 #include "condor_adtypes.h"
@@ -42,8 +41,13 @@
 #include "daemon_types.h"
 #include "daemon_list.h"
 #include "strupr.h"
+#include "condor_environ.h"
+#include "store_cred.h"
 
 #ifdef WIN32
+
+#include "windows_firewall.h"
+
 extern void register_service();
 extern void terminate(DWORD);
 #endif
@@ -59,8 +63,9 @@ extern "C"
 
 // local function prototypes
 void	init_params();
-void	init_daemon_list();
+int		init_daemon_list();
 void	init_classad();
+void	init_firewall_exceptions();
 void	lock_or_except(const char * );
 time_t 	GetTimeStamp(char* file);
 int 	NewExecutable(char* file, time_t* tsp);
@@ -74,6 +79,8 @@ int		agent_starter(ReliSock *);
 int		handle_agent_fetch_log(ReliSock *);
 int		admin_command_handler(Service *, int, Stream *);
 int		handle_subsys_command(int, Stream *);
+void	time_skip_handler(void * /*data*/, int delta);
+void	restart_everyone();
 
 extern "C" int	DoCleanup(int,int,char*);
 
@@ -91,14 +98,14 @@ int		check_new_exec_interval;
 int		preen_interval;
 int		new_bin_delay;
 char	*MasterName = NULL;
-DCCollector	*Collector = NULL;
+CollectorList *Collectors = NULL;
 DaemonList* secondary_collectors = NULL;
 
-int		ceiling = 3600;
-float	e_factor = 2.0;								// exponential factor
-int		r_factor = 300;								// recover factor
-char*	config_location;						// config file from server
-int		doConfigFromServer = FALSE; 
+int		master_backoff_constant = 9;
+int		master_backoff_ceiling = 3600;
+float	master_backoff_factor = 2.0;		// exponential factor
+int		master_recover_time = 300;			// recover factor
+
 char	*FS_Preen = NULL;
 int		NT_ServiceFlag = FALSE;		// TRUE if running on NT as an NT Service
 
@@ -120,9 +127,12 @@ char	*default_daemon_list[] = {
 #endif
 	0};
 
+// NOTE: When adding something here, also add it to the various condor_config
+// examples in src/condor_examples
 char	default_dc_daemon_list[] =
 "MASTER, STARTD, SCHEDD, KBDD, COLLECTOR, NEGOTIATOR, EVENTD, "
-"VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, HAWKEYE";
+"VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, HAWKEYE, CREDD, HAD, "
+"QUILL";
 
 // create an object of class daemons.
 class Daemons daemons;
@@ -130,9 +140,40 @@ class Daemons daemons;
 // for daemonCore
 char *mySubSystem = "MASTER";
 
+
+// called at exit to deallocate stuff so that memory checking tools are
+// happy and don't think we leaked any of this...
+static void
+cleanup_memory( void )
+{
+	if ( ad ) {
+		delete ad;
+		ad = NULL;
+	}
+	if ( MasterName ) {
+		delete [] MasterName;
+		MasterName = NULL;
+	}
+	if ( FS_Preen ) {
+		free( FS_Preen );
+		FS_Preen = NULL;
+	}
+	if ( Collectors ) {
+		delete Collectors;
+		Collectors = NULL;
+	}
+	if ( secondary_collectors ) {
+		delete secondary_collectors;
+		secondary_collectors = NULL;
+	}
+}
+
+
 int
 master_exit(int retval)
 {
+	cleanup_memory();
+
 #ifdef WIN32
 	if ( NT_ServiceFlag == TRUE ) {
 		terminate(retval);
@@ -181,6 +222,7 @@ DoCleanup(int,int,char*)
 int
 main_init( int argc, char* argv[] )
 {
+    extern int runfor;
 	char	**ptr;
 
 #ifdef WIN32
@@ -216,18 +258,43 @@ main_init( int argc, char* argv[] )
 		}
 	}
 
+    if (runfor != 0) {
+        // We will construct an environment variable that 
+        // tells the daemon what time it will be shut down. 
+        // We'll give it an absolute time, though runfor is a 
+        // relative time. This means that we don't have to update
+        // the time each time we restart the daemon.
+        time_t      death_time;
+        MyString    runfor_env_source;
+        const char  *env_name;
+        char        *runfor_env;
+        
+        env_name   = EnvGetName(ENV_DAEMON_DEATHTIME);
+        death_time = time(NULL) + (runfor * 60);
+
+        runfor_env_source.sprintf("%s=%d\n", env_name, death_time);
+        runfor_env = strdup(runfor_env_source.Value());
+        putenv(runfor_env);
+        // Note that we don't free runfor_env, because it lives on 
+        // forever in the environment. 
+    }
+
 	daemons.SetDefaultReaper();
 	
 		// Grab all parameters needed by the master.
 	init_params();
 		// param() for DAEMON_LIST and initialize our daemons object.
-	init_daemon_list();
+	if ( init_daemon_list() < 0 ) {
+		EXCEPT( "Daemon list initialization failed" );
+	}
 		// Lookup the paths to all the daemons we now care about.
 	daemons.InitParams();
 		// Initialize our classad;
 	init_classad();  
 		// Initialize the master entry in the daemons data structure.
 	daemons.InitMaster();
+		// open up the windows firewall 
+	init_firewall_exceptions();
 
 		// Register admin commands
 	daemonCore->Register_Command( RECONFIG, "RECONFIG",
@@ -236,10 +303,16 @@ main_init( int argc, char* argv[] )
 	daemonCore->Register_Command( RESTART, "RESTART",
 								  (CommandHandler)admin_command_handler, 
 								  "admin_command_handler", 0, ADMINISTRATOR );
+	daemonCore->Register_Command( RESTART_PEACEFUL, "RESTART_PEACEFUL",
+								  (CommandHandler)admin_command_handler, 
+								  "admin_command_handler", 0, ADMINISTRATOR );
 	daemonCore->Register_Command( DAEMONS_OFF, "DAEMONS_OFF",
 								  (CommandHandler)admin_command_handler, 
 								  "admin_command_handler", 0, ADMINISTRATOR );
 	daemonCore->Register_Command( DAEMONS_OFF_FAST, "DAEMONS_OFF_FAST",
+								  (CommandHandler)admin_command_handler, 
+								  "admin_command_handler", 0, ADMINISTRATOR );
+	daemonCore->Register_Command( DAEMONS_OFF_PEACEFUL, "DAEMONS_OFF_PEACEFUL",
 								  (CommandHandler)admin_command_handler, 
 								  "admin_command_handler", 0, ADMINISTRATOR );
 	daemonCore->Register_Command( DAEMONS_ON, "DAEMONS_ON",
@@ -260,12 +333,30 @@ main_init( int argc, char* argv[] )
 	daemonCore->Register_Command( DAEMON_OFF_FAST, "DAEMON_OFF_FAST",
 								  (CommandHandler)admin_command_handler, 
 								  "admin_command_handler", 0, ADMINISTRATOR );
-
+	daemonCore->Register_Command( DAEMON_OFF_PEACEFUL, "DAEMON_OFF_PEACEFUL",
+								  (CommandHandler)admin_command_handler, 
+								  "admin_command_handler", 0, ADMINISTRATOR );
+	daemonCore->Register_Command( CHILD_ON, "CHILD_ON",
+								  (CommandHandler)admin_command_handler, 
+								  "admin_command_handler", 0, ADMINISTRATOR );
+	daemonCore->Register_Command( CHILD_OFF, "CHILD_OFF",
+								  (CommandHandler)admin_command_handler, 
+								  "admin_command_handler", 0, ADMINISTRATOR );
+	daemonCore->Register_Command( CHILD_OFF_FAST, "CHILD_OFF_FAST",
+								  (CommandHandler)admin_command_handler, 
+								  "admin_command_handler", 0, ADMINISTRATOR );
+	// Command handler for stashing the pool password
+	daemonCore->Register_Command( STORE_POOL_CRED, "STORE_POOL_CRED",
+								(CommandHandler)&store_pool_cred_handler,
+								"store_pool_cred_handler", NULL, CONFIG_PERM,
+								D_FULLDEBUG );
 	/*
 	daemonCore->Register_Command( START_AGENT, "START_AGENT",
 					  (CommandHandler)admin_command_handler, 
 					  "admin_command_handler", 0, ADMINISTRATOR );
 	*/
+
+	daemonCore->RegisterTimeSkipCallback(time_skip_handler,0);
 
 	_EXCEPT_Cleanup = DoCleanup;
 
@@ -301,8 +392,11 @@ admin_command_handler( Service*, int cmd, Stream* stream )
 		daemonCore->Send_Signal( daemonCore->getpid(), SIGHUP );
 		return TRUE;
 	case RESTART:
+		restart_everyone();
+		return TRUE;
+	case RESTART_PEACEFUL:
 		daemons.immediate_restart = TRUE;
-		daemons.RestartMaster();
+		daemons.RestartMasterPeaceful();
 		return TRUE;
 	case DAEMONS_ON:
 		daemons.DaemonsOn();
@@ -312,6 +406,9 @@ admin_command_handler( Service*, int cmd, Stream* stream )
 		return TRUE;
 	case DAEMONS_OFF_FAST:
 		daemons.DaemonsOff( 1 );
+		return TRUE;
+	case DAEMONS_OFF_PEACEFUL:
+		daemons.DaemonsOffPeaceful();
 		return TRUE;
 	case MASTER_OFF:
 		daemonCore->Send_Signal( daemonCore->getpid(), SIGTERM );
@@ -326,6 +423,10 @@ admin_command_handler( Service*, int cmd, Stream* stream )
 	case DAEMON_ON:
 	case DAEMON_OFF:
 	case DAEMON_OFF_FAST:
+	case DAEMON_OFF_PEACEFUL:
+	case CHILD_ON:
+	case CHILD_OFF:
+	case CHILD_OFF_FAST:
 		return handle_subsys_command( cmd, stream );
 
 			// This function is also special, since it needs to read
@@ -417,7 +518,6 @@ handle_subsys_command( int cmd, Stream* stream )
 {
 	char* subsys = NULL;
 	class daemon* daemon;
-	daemon_t dt;
 
 	stream->decode();
 	if( ! stream->code(subsys) ) {
@@ -430,13 +530,8 @@ handle_subsys_command( int cmd, Stream* stream )
 		free( subsys );
 		return FALSE;
 	}
-	if( !(dt = stringToDaemonType(subsys)) ) {
-		dprintf( D_ALWAYS, "Error: got unknown subsystem string \"%s\"\n", 
-				 subsys );
-		free( subsys );
-		return FALSE;
-	}
-	if( !(daemon = daemons.FindDaemon(dt)) ) {
+	subsys = strupr( subsys );
+	if( !(daemon = daemons.FindDaemon(subsys)) ) {
 		dprintf( D_ALWAYS, "Error: Can't find daemon of type \"%s\"\n", 
 				 subsys );
 		free( subsys );
@@ -445,17 +540,33 @@ handle_subsys_command( int cmd, Stream* stream )
 	dprintf( D_COMMAND, "Handling daemon-specific command for \"%s\"\n", 
 			 subsys );
 	free( subsys );
+
 	switch( cmd ) {
 	case DAEMON_ON:
-		daemon->on_hold = FALSE;
+		daemon->Hold( false );
 		return daemon->Start();
 	case DAEMON_OFF:
-		daemon->on_hold = TRUE;
+		daemon->Hold( true );
 		daemon->Stop();
 		return TRUE;
 	case DAEMON_OFF_FAST:
-		daemon->on_hold = TRUE;
+		daemon->Hold( true );
 		daemon->StopFast();
+		return TRUE;
+	case DAEMON_OFF_PEACEFUL:
+		daemon->Hold( true );
+		daemon->StopPeaceful();
+		return TRUE;
+	case CHILD_ON:
+		daemon->Hold( false, true );
+		return daemon->Start( true );
+	case CHILD_OFF:
+		daemon->Hold( true, true );
+		daemon->Stop( true );
+		return TRUE;
+	case CHILD_OFF_FAST:
+		daemon->Hold( true, true );
+		daemon->StopFast( true );
 		return TRUE;
 	default:
 		EXCEPT( "Unknown command (%d) in handle_subsys_command", cmd );
@@ -508,11 +619,11 @@ init_params()
 		free( tmp );
 	}
 
-	if( Collector ) {
-		delete( Collector );
+	if( Collectors ) {
+		delete( Collectors );
 	}
-	Collector = new DCCollector;
-	
+	Collectors = CollectorList::create();
+		
 	StartDaemons = TRUE;
 	tmp = param("START_DAEMONS");
 	if( tmp ) {
@@ -549,34 +660,44 @@ init_params()
 		Lines = 20;
 	}
 
-	ceiling = 0;
-	tmp = param( "MASTER_BACKOFF_CEILING" );
+	master_backoff_constant = 0;
+	tmp = param( "MASTER_BACKOFF_CONSTANT" );
 	if( tmp ) {
-		ceiling = atoi( tmp );
+		master_backoff_constant = atoi( tmp );
 		free( tmp );
 	} 
-	if( !ceiling ) {
-		ceiling = 3600;
+	if( master_backoff_constant <= 0 ) {
+		master_backoff_constant = 9;
 	}
 
-	e_factor = 0;
+	master_backoff_ceiling = 0;
+	tmp = param( "MASTER_BACKOFF_CEILING" );
+	if( tmp ) {
+		master_backoff_ceiling = atoi( tmp );
+		free( tmp );
+	} 
+	if( master_backoff_ceiling <= 0 ) {
+		master_backoff_ceiling = 3600;
+	}
+
+	master_backoff_factor = 0;
 	tmp = param( "MASTER_BACKOFF_FACTOR" );
     if( tmp ) {
-        e_factor = atof( tmp );
+        master_backoff_factor = atof( tmp );
 		free( tmp );
     } 
-	if( !e_factor ) {
-    	e_factor = 2.0;
+	if( master_backoff_factor <= 0.0 ) {
+    	master_backoff_factor = 2.0;
     }
 	
-	r_factor = 0;
+	master_recover_time = 0;
 	tmp = param( "MASTER_RECOVER_FACTOR" );
     if( tmp ) {
-        r_factor = atoi( tmp );
+        master_recover_time = atoi( tmp );
 		free( tmp );
     } 
-	if( !r_factor ) {
-    	r_factor = 300;
+	if( master_recover_time <= 0 ) {
+    	master_recover_time = 300;
     }
 	
 	update_interval = 0;
@@ -677,7 +798,7 @@ init_params()
 }
 
 
-void
+int
 init_daemon_list()
 {
 	char	*daemon_name;
@@ -720,6 +841,28 @@ init_daemon_list()
 		daemon_names.initializeFromString(daemon_list);
 		free( daemon_list );
 
+			/*
+			  Make sure that if COLLECTOR is in the list, put it at
+			  the front...  unfortunately, our List template (what
+			  StringList is defined in terms of) is amazingly broken
+			  with regard to insert() and append().  :( insert()
+			  usually means: insert *before* the current position.
+			  however, if you're at the end, it inserts before the
+			  last valid entry, instead of working like append() as
+			  you'd expect.  OR, if you just called rewind() and
+			  insert() (to insert at the begining, right?) it works
+			  like append() and sticks it at the end!!  ARGH!!!  so,
+			  we've got to call next() after rewind() so we really
+			  insert it at the front of the list.  UGH!  EVIL!!!
+			  Derek Wright <wright@cs.wisc.edu> 2004-12-23
+			*/
+		if( daemon_names.contains("COLLECTOR") ) {
+			daemon_names.deleteCurrent();
+			daemon_names.rewind();
+			daemon_names.next();
+			daemon_names.insert( "COLLECTOR" );
+		}
+
 		daemon_names.rewind();
 		while( (daemon_name = daemon_names.next()) ) {
 			if(daemons.GetIndex(daemon_name) < 0) {
@@ -735,6 +878,8 @@ init_daemon_list()
 			new_daemon = new class daemon(default_daemon_list[i]);
 		}
 	}
+
+	return daemons.SetupControllers( );
 }
 
 
@@ -945,31 +1090,34 @@ NewExecutable(char* file, time_t *tsp)
 int
 run_preen(Service*)
 {
-	int		child_pid, size;
-	char	*preen_args, *tmp, *preen_base;
+	int		child_pid;
+	char *args=NULL;
+	const char	*preen_base;
+	ArgList arglist;
+	MyString error_msg;
 
 	dprintf(D_FULLDEBUG, "Entered run_preen.\n");
 
 	if( FS_Preen == NULL ) {
 		return 0;
 	}
-	preen_base = basename( FS_Preen );
-	if( (tmp = param("PREEN_ARGS")) ) {
-		size = strlen(tmp) + strlen(preen_base) + 2;
-		preen_args = new char[size];
-		sprintf( preen_args, "%s %s", preen_base, tmp );
-		free( tmp );
-	} else {
-		preen_args = strnewp( preen_base );
+	preen_base = condor_basename( FS_Preen );
+	arglist.AppendArg(preen_base);
+
+	args = param("PREEN_ARGS");
+	if(!arglist.AppendArgsV1RawOrV2Quoted(args,&error_msg)) {
+		EXCEPT("ERROR: failed to parse preen args: %s\n",error_msg.Value());
 	}
+	free(args);
+
 	child_pid = daemonCore->Create_Process(
 					FS_Preen,		// program to exec
-					preen_args,		// args
+					arglist,   		// args
 					PRIV_ROOT,		// privledge level
 					1,				// which reaper ID to use; use default reaper
 					FALSE );		// we do _not_ want this process to have a command port; PREEN is not a daemon core process
 	dprintf( D_ALWAYS, "Preen pid is %d\n", child_pid );
-	delete [] preen_args;
+
 	return child_pid;
 }
 
@@ -1064,3 +1212,79 @@ main_pre_command_sock_init()
 
 }
 
+void init_firewall_exceptions() {
+#ifdef WIN32
+
+	bool add_exception;
+	char *master_image_path, *schedd_image_path, *startd_image_path;
+
+	WindowsFirewallHelper wfh;
+	
+	add_exception = param_boolean("ADD_WINDOWS_FIREWALL_EXCEPTION", true);
+
+	if ( add_exception ) {
+
+		// We use getExecPath() here instead of param() since it's
+		// possible the the Windows Service Control Manager
+		// (SCM) points to one location for the master (which
+		// is exec'd), while MASTER points to something else
+		// (and ignored).
+		
+		master_image_path = getExecPath();
+		
+		// We want to add exceptions for the SCHEDD and the STARTD
+		// so that (1) shadows can accept incoming connections on their 
+		// command port and (2) so starters can do the same.
+	
+		schedd_image_path = param("SCHEDD");
+		startd_image_path = param("STARTD");
+
+		if ( master_image_path ) {
+
+			if ( !wfh.addTrusted(master_image_path) ) {
+				dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
+						"windows firewall exception list.\n",
+						master_image_path);
+			}
+
+			if ( (! (daemons.GetIndex("SCHEDD") < 0) ) && schedd_image_path ) {
+				if ( !wfh.addTrusted(schedd_image_path) ) {
+					dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
+						"windows firewall exception list.\n",
+						schedd_image_path);
+				}
+			}
+
+			if ( (! (daemons.GetIndex("STARTD") < 0) ) && startd_image_path ) {
+				if ( !wfh.addTrusted(startd_image_path) ) {
+					dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
+						"windows firewall exception list.\n",
+						startd_image_path);
+				}
+			}
+
+			if ( schedd_image_path ) { free(schedd_image_path); }
+			if ( startd_image_path ) { free(startd_image_path); }
+			free(master_image_path);
+
+		} else {
+			dprintf(D_ALWAYS, 
+					"WARNING: Failed to get condor_master image path.\n"
+					"Condor will not be excepted from the Windows firewall.\n");
+		}
+		
+	}
+#endif
+}
+
+void restart_everyone() {
+		daemons.immediate_restart = TRUE;
+		daemons.RestartMaster();
+}
+
+	// We could care less about our arguments.
+void time_skip_handler(void * /*data*/, int delta)
+{
+	dprintf(D_ALWAYS, "The system clocked jumped %d seconds unexpectedly.  Restarting all daemons\n", delta);
+	restart_everyone();
+}

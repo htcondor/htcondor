@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -35,15 +35,28 @@ for details.
 #include <errno.h>
 #include <string.h>
 #include <stdarg.h>
+#include <ctype.h>
 
-#include <unistd.h>
-#include <sys/errno.h>
-#include <sys/socket.h>
-#include <netdb.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
+/* Sockets */
+#if defined(WIN32)
+	#include <winsock2.h>
+	#include <windows.h>
+	#include <io.h>
+	#include <fcntl.h>
+#else
+	#define SOCKET int
+	#define SOCKET_ERROR   (-1)
+	#define INVALID_SOCKET (-1)
+	#define closesocket close
+	#include <unistd.h>
+	#include <sys/errno.h>
+	#include <sys/socket.h>
+	#include <netdb.h>
+	#include <netinet/in.h>
+	#include <netinet/tcp.h>
+#endif
 
-static int tcp_connect( const char *host, int port );
+static SOCKET tcp_connect( const char *host, int port );
 static void chirp_fatal_request( const char *name );
 static void chirp_fatal_response();
 static int get_result( FILE *s );
@@ -52,9 +65,14 @@ static int simple_command(struct chirp_client *c,char const *fmt,...);
 static void vsprintf_chirp(char *command,char const *fmt,va_list args);
 static char const *read_url_param(char const *url,char *buffer,size_t length);
 
+static int sockets_initialized = 0;
+static int initialize_sockets();
+static int shutdown_sockets();
+
 
 struct chirp_client {
-	FILE *stream;
+	FILE *rstream;
+	FILE *wstream;
 };
 
 /*
@@ -87,7 +105,51 @@ struct chirp_client {
 
 */
 
-struct chirp_client *
+
+static int
+initialize_sockets()
+{
+#if defined(WIN32)
+	int err;
+	WORD wVersionRequested;
+	WSADATA wsaData;
+#endif
+
+	if(sockets_initialized)
+		return 1;
+
+#if defined(WIN32)
+	wVersionRequested = MAKEWORD( 2, 0 );
+	err = WSAStartup( wVersionRequested, &wsaData );
+	if(err)
+		return 0;
+
+	if(LOBYTE(wsaData.wVersion) != 2 || HIBYTE(wsaData.wVersion) != 0) 
+	{
+		WSACleanup();
+		return 0;
+	}
+#endif
+
+	sockets_initialized = 1;
+	return 1;
+}
+
+static int 
+shutdown_sockets()
+{
+	if(!sockets_initialized)
+		return 1;
+
+#if defined(WIN32)
+	WSACleanup();
+#endif
+
+	sockets_initialized = 0;
+	return 1;
+}
+
+DLLEXPORT struct chirp_client * 
 chirp_client_connect_url( const char *url, const char **path_part)
 {
 	struct chirp_client *client;
@@ -161,7 +223,7 @@ chirp_client_connect_url( const char *url, const char **path_part)
 	return client;
 }
 
-struct chirp_client *
+DLLEXPORT struct chirp_client *
 chirp_client_connect_default()
 {
 	FILE *file;
@@ -198,56 +260,87 @@ chirp_client_connect_default()
 	return client;
 }
 
-struct chirp_client *
+DLLEXPORT struct chirp_client *
 chirp_client_connect( const char *host, int port )
 {
 	struct chirp_client *c;
 	int save_errno;
-	int fd;
+	SOCKET fd;
+	int osfh;
 
-	c = malloc(sizeof(*c));
+	c = (struct chirp_client*)malloc(sizeof(*c));
 	if(!c) return 0;
 
 	fd = tcp_connect(host,port);
-	if(fd<0) {
+	if(fd == INVALID_SOCKET) {
 		save_errno = errno;
 		free(c);
 		errno = save_errno;
 		return 0;
 	}
 
-	c->stream = fdopen(fd,"w+");
-	if(!c->stream) {
+
+#if defined(WIN32)
+	// This allows WinNT to get a file handle from a socket
+	// Note: this will not work on win95/98
+	osfh = _open_osfhandle(fd, _O_RDWR | _O_BINARY);
+	if(osfh < 0) {
+	    closesocket(fd);
+	    return 0;
+	}
+#else
+	osfh = fd;
+#endif
+
+
+	c->rstream = fdopen(osfh,"r");
+	if(!c->rstream) {
 		save_errno = errno;
-		close(fd);
+		closesocket(fd);
 		free(c);
 		errno = save_errno;
 		return 0;
 	}
+
+	c->wstream = fdopen(osfh,"w");
+	if(!c->wstream) {
+		save_errno = errno;
+		fclose(c->rstream);
+		closesocket(fd);
+		free(c);
+		errno = save_errno;
+		return 0;
+	}
+
+	setbuf(c->rstream, NULL);
+	setbuf(c->wstream, NULL);
+	//setvbuf( c->rstream, NULL, _IONBF, 0 );
+	//setvbuf( c->rstream, NULL, _IONBF, 0 );
 
 	return c;
 }
 
-void
+DLLEXPORT void
 chirp_client_disconnect( struct chirp_client *c )
 {
-	fclose(c->stream);
+	fclose(c->rstream);
+	fclose(c->wstream);
 	free(c);
 }
 
-int
+DLLEXPORT int
 chirp_client_cookie( struct chirp_client *c, const char *cookie )
 {
 	return simple_command(c,"cookie %s\n",cookie);
 }
 
-int
+DLLEXPORT int
 chirp_client_login( struct chirp_client *c, const char *name, const char *password )
 {
 	return simple_command(c,"login %s %s\n",name,password);
 }
 
-int
+DLLEXPORT int
 chirp_client_lookup( struct chirp_client *c, const char *logical_name, char **url )
 {
 	int result;
@@ -255,9 +348,9 @@ chirp_client_lookup( struct chirp_client *c, const char *logical_name, char **ur
 
 	result = simple_command(c,"lookup %s\n",logical_name);
 	if(result>0) {
-		*url = malloc(result);
+		*url = (char*)malloc(result);
 		if(*url) {
-			actual = fread(*url,1,result,c->stream);
+			actual = fread(*url,1,result,c->rstream);
 			if(actual!=result) chirp_fatal_request("lookup");
 		} else {
 			chirp_fatal_request("lookup");
@@ -267,12 +360,13 @@ chirp_client_lookup( struct chirp_client *c, const char *logical_name, char **ur
 	return result;
 }
 
+DLLEXPORT int 
 chirp_client_constrain( struct chirp_client *c, const char *expr)
 {
 	return simple_command(c,"constrain %s\n",expr);
 }
 
-int
+DLLEXPORT int
 chirp_client_get_job_attr( struct chirp_client *c, const char *name, char **expr )
 {
 	int result;
@@ -280,9 +374,9 @@ chirp_client_get_job_attr( struct chirp_client *c, const char *name, char **expr
 
 	result = simple_command(c,"get_job_attr %s\n",name);
 	if(result>0) {
-		*expr = malloc(result);
+		*expr = (char*)malloc(result);
 		if(*expr) {
-			actual = fread(*expr,1,result,c->stream);
+			actual = fread(*expr,1,result,c->rstream);
 			if(actual!=result) chirp_fatal_request("get_job_attr");
 		} else {
 			chirp_fatal_request("get_job_attr");
@@ -292,25 +386,25 @@ chirp_client_get_job_attr( struct chirp_client *c, const char *name, char **expr
 	return result;
 }
 
-int
+DLLEXPORT int
 chirp_client_set_job_attr( struct chirp_client *c, const char *name, const char *expr )
 {
 	return simple_command(c,"set_job_attr %s %s\n",name,expr);
 }
 
-int
+DLLEXPORT int
 chirp_client_open( struct chirp_client *c, const char *path, const char *flags, int mode )
 {
 	return simple_command(c,"open %s %s %d\n",path,flags,mode);
 }
 
-int
+DLLEXPORT int
 chirp_client_close( struct chirp_client *c, int fd )
 {
 	return simple_command(c,"close %d\n",fd);
 }
 
-int
+DLLEXPORT int
 chirp_client_read( struct chirp_client *c, int fd, void *buffer, int length )
 {
 	int result;
@@ -319,61 +413,61 @@ chirp_client_read( struct chirp_client *c, int fd, void *buffer, int length )
 	result = simple_command(c,"read %d %d\n",fd,length);
 
 	if( result>0 ) {
-		actual = fread(buffer,1,result,c->stream);
+		actual = fread(buffer,1,result,c->rstream);
 		if(actual!=result) chirp_fatal_request("read");
 	}
 
 	return result;
 }
 
-int
+DLLEXPORT int
 chirp_client_write( struct chirp_client *c, int fd, const void *buffer, int length )
 {
 	int actual;
 	int result;
 
-	result = fprintf(c->stream,"write %d %d\n",fd,length);
+	result = fprintf(c->wstream,"write %d %d\n",fd,length);
 	if(result<0) chirp_fatal_request("write");
 
-	result = fflush(c->stream);
+	result = fflush(c->wstream);
 	if(result<0) chirp_fatal_request("write");
 
-	actual = fwrite(buffer,1,length,c->stream);
+	actual = fwrite(buffer,1,length,c->wstream);
 	if(actual!=length) chirp_fatal_request("write");
 
-	return convert_result(get_result(c->stream));
+	return convert_result(get_result(c->rstream));
 }
 
-int
+DLLEXPORT int
 chirp_client_unlink( struct chirp_client *c, const char *path )
 {
 	return simple_command(c,"unlink %s\n",path);
 }
 
-int
+DLLEXPORT int
 chirp_client_rename( struct chirp_client *c, const char *oldpath, const char *newpath )
 {
 	return simple_command(c,"rename %s %s\n",oldpath,newpath);
 }
-int
+DLLEXPORT int
 chirp_client_fsync( struct chirp_client *c, int fd )
 {
 	return simple_command(c,"fsync %d\n",fd);
 }
 
-int
+DLLEXPORT int
 chirp_client_lseek( struct chirp_client *c, int fd, int offset, int whence )
 {
 	return simple_command(c,"lseek %d %d %d\n",fd,offset,whence);
 }
 
-int
+DLLEXPORT int
 chirp_client_mkdir( struct chirp_client *c, char const *name, int mode )
 {
 	return simple_command(c,"mkdir %s %d\n",name,mode);
 }
 
-int
+DLLEXPORT int
 chirp_client_rmdir( struct chirp_client *c, char const *name )
 {
 	return simple_command(c,"rmdir %s\n",name);
@@ -387,6 +481,7 @@ convert_result( int result )
 		return result;
 	} else {
 		switch(result) {
+
 			case CHIRP_ERROR_NOT_AUTHENTICATED:
 			case CHIRP_ERROR_NOT_AUTHORIZED:
 				errno = EACCES;
@@ -440,7 +535,7 @@ get_result( FILE *s )
 	fields = sscanf(line,"%d",&result);
 	if(fields!=1) chirp_fatal_response();
 
-#ifdef CHIRP_DEBUG
+#ifdef DEBUG_CHIRP
 	fprintf(stderr,"chirp received: %s\n",line);
 #endif
 
@@ -461,28 +556,37 @@ void chirp_fatal_response()
 	abort();
 }
 
-static int
+static SOCKET
 tcp_connect( const char *host, int port )
 {
 	struct hostent *h;
 	struct sockaddr_in address;
 	int success;
-	int fd;
+	SOCKET fd;
+
+	if(!initialize_sockets())
+		return INVALID_SOCKET;
 
 	h = gethostbyname(host);
-	if(!h) return -1;
+	if(!h) return INVALID_SOCKET;
 
-	address.sin_port = htons(port);
+	address.sin_port = htons((unsigned short)port);
 	address.sin_family = h->h_addrtype;
 	memcpy(&address.sin_addr.s_addr,h->h_addr_list[0],sizeof(address.sin_addr.s_addr));
 
+#if defined(WIN32)
+	// Create the socket with no overlapped I/0 so we can later associate the socket
+	// with a valid file descripter using _open_osfhandle.
+	fd = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, 0);
+#else
 	fd = socket( AF_INET, SOCK_STREAM, 0 );
-	if(fd<0) return -1;
+#endif
+	if(fd == INVALID_SOCKET) return INVALID_SOCKET;
 
 	success = connect( fd, (struct sockaddr *) &address, sizeof(address) );
-	if(success<0) {
-		close(fd);
-		return -1;
+	if(success == SOCKET_ERROR) {
+		closesocket(fd);
+		return INVALID_SOCKET;
 	}
 
 	return fd;
@@ -560,16 +664,13 @@ simple_command(struct chirp_client *c,char const *fmt,...)
 	fprintf(stderr,"chirp sending: %s",command);
 #endif
 
-	result = fputs(command,c->stream);
-
-
-
+	result = fputs(command,c->wstream);
 	if(result < 0) chirp_fatal_request(fmt);
 
-	result = fflush(c->stream);
-	if(result < 0) chirp_fatal_request(fmt);
+	result = fflush(c->wstream);
+	if(result == EOF) chirp_fatal_request(fmt);
 
-	return convert_result(get_result(c->stream));
+	return convert_result(get_result(c->rstream));
 }
 
 char const *

@@ -1,5 +1,29 @@
 #!/bin/sh
 
+##/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+##
+## Condor Software Copyright Notice
+## Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+##
+## This source code is covered by the Condor Public License, which can
+## be found in the accompanying LICENSE.TXT file, or online at
+## www.condorproject.org.
+##
+## THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+## AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+## IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+## WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+## FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+## HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+## MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+## ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+## PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+## RIGHT.
+##
+##***************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
+
 # This script takes a condor distribution .tar.gz file and 
 # creates an RPM that will be put into the current directory.
 #
@@ -175,7 +199,17 @@ EOF
 
 # Build RPM
 echo "*** Building the RPM..."
-rpmbuild --define "_topdir rpmbuild" -bb condor.spec
+
+# determine if I should use rpm or rpmbuild
+if [ `rpm -bb --help > /dev/null 2>&1` ]; then
+	RPMBUILD_CMD="rpm"
+else
+	RPMBUILD_CMD="rpmbuild"
+fi
+
+echo "$RPMBUILD_CMD --define "_topdir rpmbuild" -bb condor.spec"
+$RPMBUILD_CMD --define "_topdir rpmbuild" -bb condor.spec
+
 if [ $? != 0 ]; then
 	echo "Couldn't build rpm!"
 	exit 7
@@ -185,7 +219,7 @@ arch=`ls -1 rpmbuild/RPMS/ | sed -e 's|\/||'`
 rpm_name=`ls -1 rpmbuild/RPMS/${arch}`
 
 # Place RPM in the resulting directory
-echo "*** Copying the RPM."
+echo "*** Copying the RPM: (arch=$arch, rpm_name=$rpm_name)"
 popd >> /dev/null
 cp ${builddir}/rpmbuild/RPMS/${arch}/${rpm_name} \
    ./${naked_name}-${release}.${arch}.rpm

@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -29,6 +29,8 @@
 #include "condor_classad.h"
 #include "condor_io.h"
 #include "extArray.h"
+#include "daemon_list.h"
+
 
 /** Class to manage the sequence nubmers of individual ClassAds
  * published by the application
@@ -36,15 +38,22 @@
 class DCCollectorAdSeq {
   public:
 	DCCollectorAdSeq( const char *, const char *, const char * );
+	DCCollectorAdSeq( const DCCollectorAdSeq & );
 	~DCCollectorAdSeq( void );
-	bool Match( const char *, const char *, const char * );
-	unsigned GetSequence( void );
+
+	bool Match( const char *, const char *, const char * ) const;
+	unsigned getSequenceAndIncrement( void );
+	unsigned getSequence( void ) const { return sequence; };
+
+	const char *getName( void ) const { return Name; };
+	const char *getMyType( void ) const { return MyType; };
+	const char *getMachine( void ) const { return Machine; };
 
   private:
 	char		*Name;			// "Name" in the ClassAd
 	char		*MyType;		// "MyType" in the ClassAd
 	char		*Machine;		// "Machine" in ClassAd
-	unsigned sequence;		// The sequence number for it.
+	unsigned	sequence;		// The sequence number for it.
 };
 
 /** Class to manage the sequence nubmers of all ClassAds published by
@@ -53,8 +62,17 @@ class DCCollectorAdSeq {
 class DCCollectorAdSeqMan {
   public:
 	DCCollectorAdSeqMan( void );
+	DCCollectorAdSeqMan( const DCCollectorAdSeqMan &copy,
+						 bool copy_array = true );
 	~DCCollectorAdSeqMan( void );
-	unsigned GetSequence( ClassAd *ad );
+
+	unsigned getSequence( const ClassAd *ad );
+	int getNumAds( void ) const { return numAds; };
+
+	// Used for the copy constructor
+  protected:
+	const ExtArray<DCCollectorAdSeq *> & getSeqInfo( void ) const
+		{ return adSeqInfo; };
 
   private:
 	ExtArray<DCCollectorAdSeq *> adSeqInfo;
@@ -77,6 +95,10 @@ public:
 		*/
 	DCCollector( const char* name = NULL, UpdateType type = CONFIG );
 
+		/// Copy constructor (implemented using deepCopy())
+	DCCollector( const DCCollector& );
+	DCCollector& operator = ( const DCCollector& );
+
 		/// Destructor
 	~DCCollector();
 
@@ -91,19 +113,24 @@ public:
 			@param ad ClassAd you want to use for the update
 			file)
 		*/
-	bool sendUpdate( int cmd, ClassAd* ad1, ClassAd* ad2 = NULL );
+	bool sendUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking );
 
 	void reconfig( void );
 
 	const char* updateDestination( void );
 
+
+  protected:
+		// Get the ad sequence manager (for copy constructor)
+	const DCCollectorAdSeqMan &getAdSeqMan( void ) const
+		{ return *adSeqMan; };
+
+
 private:
 
-	void init( void );
+	void init( bool needs_reconfig );
 
-		// I can't be copied (yet)
-	DCCollector( const DCCollector& );
-	DCCollector& operator = ( const DCCollector& );
+	void deepCopy( const DCCollector& copy );
 
 	ReliSock* update_rsock;
 
@@ -111,17 +138,21 @@ private:
 	char* tcp_collector_addr;
 	int tcp_collector_port;
 	bool use_tcp;
+	bool use_nonblocking_update;
 	UpdateType up_type;
 
-	bool sendTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2 );
-	bool sendUDPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2 );
+	class UpdateData *pending_update_list;
+	friend class UpdateData;
 
-	bool finishUpdate( Sock* sock, ClassAd* ad1, ClassAd* ad2 );
+	bool sendTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking );
+	bool sendUDPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking );
+
+	static bool finishUpdate( DCCollector *self, Sock* sock, ClassAd* ad1, ClassAd* ad2 );
 
 	void parseTCPInfo( void );
 	void initDestinationStrings( void );
 
-	bool initiateTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2 );
+	bool initiateTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking );
 
 	char* tcp_update_destination;
 	char* udp_update_destination;
@@ -131,7 +162,7 @@ private:
 
 	// Items to manage the sequence numbers
 	time_t startTime;
-	DCCollectorAdSeqMan adSeqMan;
+	DCCollectorAdSeqMan *adSeqMan;
 };
 
 

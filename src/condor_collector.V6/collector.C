@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -22,8 +22,7 @@
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 #include "condor_common.h"
 #include "condor_classad.h"
-//#include "condor_parser.h"
-#include "sched.h"
+#include "condor_parser.h"
 #include "condor_status.h"
 #include "condor_debug.h"
 #include "condor_config.h"
@@ -34,7 +33,6 @@
 #include "condor_attributes.h"
 #include "condor_parameters.h"
 #include "condor_email.h"
-#include "condor_classad_lookup.h"
 #include "condor_query.h"
 
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
@@ -69,9 +67,9 @@ Sock* CollectorDaemon::view_sock;
 SocketCache* CollectorDaemon::sock_cache;
 
 ClassAd* CollectorDaemon::__query__;
-Stream* CollectorDaemon::__sock__;
 int CollectorDaemon::__numAds__;
 int CollectorDaemon::__failed__;
+List<ClassAd>* CollectorDaemon::__ClassAdResultList__;
 
 TrackTotals* CollectorDaemon::normalTotals;
 int CollectorDaemon::submittorRunningJobs;
@@ -93,8 +91,6 @@ int CollectorDaemon::UpdateTimerId;
 
 ClassAd *CollectorDaemon::query_any_result;
 ClassAd CollectorDaemon::query_any_request;
-
-MatchClassAd CollectorDaemon::mad;
 
 //---------------------------------------------------------
 
@@ -131,25 +127,34 @@ void CollectorDaemon::Init()
 
 	// install command handlers for queries
 	daemonCore->Register_Command(QUERY_STARTD_ADS,"QUERY_STARTD_ADS",
-		(CommandHandler)receive_query,"receive_query",NULL,READ);
+		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
 	daemonCore->Register_Command(QUERY_STARTD_PVT_ADS,"QUERY_STARTD_PVT_ADS",
-		(CommandHandler)receive_query,"receive_query",NULL,NEGOTIATOR);
+		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,NEGOTIATOR);
+#if WANT_QUILL
+	daemonCore->Register_Command(QUERY_QUILL_ADS,"QUERY_QUILL_ADS",
+		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
+#endif /* WANT_QUILL */
+
 	daemonCore->Register_Command(QUERY_SCHEDD_ADS,"QUERY_SCHEDD_ADS",
-		(CommandHandler)receive_query,"receive_query",NULL,READ);
+		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
 	daemonCore->Register_Command(QUERY_MASTER_ADS,"QUERY_MASTER_ADS",
-		(CommandHandler)receive_query,"receive_query",NULL,READ);
+		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
 	daemonCore->Register_Command(QUERY_CKPT_SRVR_ADS,"QUERY_CKPT_SRVR_ADS",
-		(CommandHandler)receive_query,"receive_query",NULL,READ);
+		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
 	daemonCore->Register_Command(QUERY_SUBMITTOR_ADS,"QUERY_SUBMITTOR_ADS",
-		(CommandHandler)receive_query,"receive_query",NULL,READ);
+		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
 	daemonCore->Register_Command(QUERY_LICENSE_ADS,"QUERY_LICENSE_ADS",
-		(CommandHandler)receive_query,"receive_query",NULL,READ);
+		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
 	daemonCore->Register_Command(QUERY_COLLECTOR_ADS,"QUERY_COLLECTOR_ADS",
-		(CommandHandler)receive_query,"receive_query",NULL,ADMINISTRATOR);
+		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,ADMINISTRATOR);
 	daemonCore->Register_Command(QUERY_STORAGE_ADS,"QUERY_STORAGE_ADS",
-		(CommandHandler)receive_query,"receive_query",NULL,READ);
+		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
+	daemonCore->Register_Command(QUERY_NEGOTIATOR_ADS,"QUERY_NEGOTIATOR_ADS",
+		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
+	daemonCore->Register_Command(QUERY_HAD_ADS,"QUERY_HAD_ADS",
+		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
 	daemonCore->Register_Command(QUERY_ANY_ADS,"QUERY_ANY_ADS",
-		(CommandHandler)receive_query,"receive_query",NULL,READ);
+		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
 	
 		// // // // // // // // // // // // // // // // // // // // //
 		// WARNING!!!! If you add other invalidate commands here, you
@@ -160,6 +165,12 @@ void CollectorDaemon::Init()
 	// install command handlers for invalidations
 	daemonCore->Register_Command(INVALIDATE_STARTD_ADS,"INVALIDATE_STARTD_ADS",
 		(CommandHandler)receive_invalidation,"receive_invalidation",NULL,DAEMON);
+
+#if WANT_QUILL
+	daemonCore->Register_Command(INVALIDATE_QUILL_ADS,"INVALIDATE_QUILL_ADS",
+		(CommandHandler)receive_invalidation,"receive_invalidation",NULL,DAEMON);
+#endif /* WANT_QUILL */
+
 	daemonCore->Register_Command(INVALIDATE_SCHEDD_ADS,"INVALIDATE_SCHEDD_ADS",
 		(CommandHandler)receive_invalidation,"receive_invalidation",NULL,DAEMON);
 	daemonCore->Register_Command(INVALIDATE_MASTER_ADS,"INVALIDATE_MASTER_ADS",
@@ -179,6 +190,15 @@ void CollectorDaemon::Init()
 	daemonCore->Register_Command(INVALIDATE_STORAGE_ADS,
 		"INVALIDATE_STORAGE_ADS", (CommandHandler)receive_invalidation,
 		"receive_invalidation",NULL,DAEMON);
+	daemonCore->Register_Command(INVALIDATE_NEGOTIATOR_ADS,
+		"INVALIDATE_NEGOTIATOR_ADS", (CommandHandler)receive_invalidation,
+		"receive_invalidation",NULL,NEGOTIATOR);
+	daemonCore->Register_Command(INVALIDATE_HAD_ADS,
+		"INVALIDATE_HAD_ADS", (CommandHandler)receive_invalidation,
+		"receive_invalidation",NULL,DAEMON);
+	daemonCore->Register_Command(INVALIDATE_ADS_GENERIC,
+		"INVALIDATE_ADS_GENERIC", (CommandHandler)receive_invalidation,
+		"receive_invalidation",NULL,DAEMON);
 
 		// // // // // // // // // // // // // // // // // // // // //
 		// WARNING!!!! If you add other update commands here, you
@@ -187,6 +207,12 @@ void CollectorDaemon::Init()
 		// // // // // // // // // // // // // // // // // // // // //
 
 	// install command handlers for updates
+
+#if WANT_QUILL
+	daemonCore->Register_Command(UPDATE_QUILL_AD,"UPDATE_QUILL_AD",
+		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
+#endif /* WANT_QUILL */
+
 	daemonCore->Register_Command(UPDATE_STARTD_AD,"UPDATE_STARTD_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
 	daemonCore->Register_Command(UPDATE_SCHEDD_AD,"UPDATE_SCHEDD_AD",
@@ -203,24 +229,26 @@ void CollectorDaemon::Init()
 		(CommandHandler)receive_update,"receive_update",NULL,ALLOW);
 	daemonCore->Register_Command(UPDATE_STORAGE_AD,"UPDATE_STORAGE_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
+	daemonCore->Register_Command(UPDATE_NEGOTIATOR_AD,"UPDATE_NEGOTIATOR_AD",
+		(CommandHandler)receive_update,"receive_update",NULL,NEGOTIATOR);
+	daemonCore->Register_Command(UPDATE_HAD_AD,"UPDATE_HAD_AD",
+		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
+	daemonCore->Register_Command(UPDATE_AD_GENERIC, "UPDATE_AD_GENERIC",
+				     (CommandHandler)receive_update,
+				     "receive_update", NULL, DAEMON);
+				     
 
 	// ClassAd evaluations use this function to resolve names
-    // This function existed as part of Condor before we had new ClassAds
-    // It doesn't exist anymore. It's also not used--Doug added it for his
-    // research. We may want something like it in the future, but we don't
-    // need it. So for now, we comment it out.
 	// ClassAdLookupRegister( process_global_query, this );
 
 	forkQuery.Initialize( );
 }
 
-int CollectorDaemon::receive_query(Service* s, int command, Stream* sock)
+int CollectorDaemon::receive_query_cedar(Service* s,
+										 int command,
+										 Stream* sock)
 {
-    struct sockaddr_in *from;
-	AdTypes whichAds;
 	ClassAd ad;
-
-	from = ((Sock*)sock)->endpoint();
 
 	sock->decode();
 	sock->timeout(ClientTimeout);
@@ -230,9 +258,71 @@ int CollectorDaemon::receive_query(Service* s, int command, Stream* sock)
         return FALSE;
     }
 
-    // cancel timeout --- collector engine sets up its own timeout for
-    // collecting further information
-    sock->timeout(0);
+		// here we set up a network timeout of a longer duration
+	sock->timeout(QueryTimeout);
+
+	// Initial query handler
+	AdTypes whichAds = receive_query_public( command );
+
+	// Perform the query
+	List<ClassAd> results;
+	ForkStatus	fork_status = FORK_FAILED;
+	int	   		return_status = 0;
+    if (whichAds != (AdTypes) -1) {
+		fork_status = forkQuery.NewJob( );
+		if ( FORK_PARENT == fork_status ) {
+			return 1;
+		} else {
+			// Child / Fork failed / busy
+			ad.fPrint(stderr);
+			process_query_public (whichAds, &ad, &results);
+		}
+	}
+
+	// send the results via cedar
+	sock->encode();
+	results.Rewind();
+	ClassAd *curr_ad = NULL;
+	int more = 1;
+	
+	while ( (curr_ad=results.Next()) ) 
+    {
+        if (!sock->code(more) || !curr_ad->put(*sock))
+        {
+            dprintf (D_ALWAYS, 
+                    "Error sending query result to client -- aborting\n");
+            return_status = 0;
+			goto END;
+        }
+    }
+
+	// end of query response ...
+	more = 0;
+	if (!sock->code(more))
+	{
+		dprintf (D_ALWAYS, "Error sending EndOfResponse (0) to client\n");
+	}
+
+	// flush the output
+	if (!sock->end_of_message())
+	{
+		dprintf (D_ALWAYS, "Error flushing CEDAR socket\n");
+	}
+	return_status = 1;
+
+
+    // all done; let daemon core will clean up connection
+  END:
+	if ( FORK_CHILD == fork_status ) {
+		forkQuery.WorkerDone( );		// Never returns
+	}
+	return return_status;
+}
+
+AdTypes
+CollectorDaemon::receive_query_public( int command )
+{
+	AdTypes whichAds;
 
     switch (command)
     {
@@ -245,6 +335,13 @@ int CollectorDaemon::receive_query(Service* s, int command, Stream* sock)
 		dprintf (D_ALWAYS, "Got QUERY_SCHEDD_ADS\n");
 		whichAds = SCHEDD_AD;
 		break;
+
+#if WANT_QUILL
+	  case QUERY_QUILL_ADS:
+		dprintf (D_ALWAYS, "Got QUERY_QUILL_ADS\n");
+		whichAds = QUILL_AD;
+		break;
+#endif /* WANT_QUILL */
 		
 	  case QUERY_SUBMITTOR_ADS:
 		dprintf (D_ALWAYS, "Got QUERY_SUBMITTOR_ADS\n");
@@ -281,33 +378,29 @@ int CollectorDaemon::receive_query(Service* s, int command, Stream* sock)
 		whichAds = STORAGE_AD;
 		break;
 
+	  case QUERY_NEGOTIATOR_ADS:
+		dprintf (D_FULLDEBUG,"Got QUERY_NEGOTIATOR_ADS\n");
+		whichAds = NEGOTIATOR_AD;
+		break;
+
+	  case QUERY_HAD_ADS:
+		dprintf (D_FULLDEBUG,"Got QUERY_HAD_ADS\n");
+		whichAds = HAD_AD;
+		break;
+
 	  case QUERY_ANY_ADS:
 		dprintf (D_FULLDEBUG,"Got QUERY_ANY_ADS\n");
 		whichAds = ANY_AD;
 		break;
 
 	  default:
-		dprintf(D_ALWAYS,"Unknown command %d in process_query()\n", command);
+		dprintf(D_ALWAYS,
+				"Unknown command %d in receive_query_public()\n",
+				command);
 		whichAds = (AdTypes) -1;
     }
 
-	// Process the query
-    if (whichAds != (AdTypes) -1) {
-		ForkStatus	status = forkQuery.NewJob( );
-		if ( FORK_FAILED == status || FORK_BUSY == status ) {
-			// Fork failed / busy
-			process_query (whichAds, ad, sock);
-		} else if ( FORK_CHILD == status ) {
-			// Fork ok, worker
-			process_query (whichAds, ad, sock);			
-			forkQuery.WorkerDone( );		// Never returns
-		} else {
-			// Fork ok, parent
-		}
-	}
-
-    // all done; let daemon core will clean up connection
-	return TRUE;
+	return whichAds;
 }
 
 int CollectorDaemon::receive_invalidation(Service* s, int command, Stream* sock)
@@ -343,6 +436,13 @@ int CollectorDaemon::receive_invalidation(Service* s, int command, Stream* sock)
 		dprintf (D_ALWAYS, "Got INVALIDATE_SCHEDD_ADS\n");
 		whichAds = SCHEDD_AD;
 		break;
+
+#if WANT_QUILL
+	  case INVALIDATE_QUILL_ADS:
+		dprintf (D_ALWAYS, "Got INVALIDATE_QUILL_ADS\n");
+		whichAds = QUILL_AD;
+		break;
+#endif /* WANT_QUILL */
 		
 	  case INVALIDATE_SUBMITTOR_ADS:
 		dprintf (D_ALWAYS, "Got INVALIDATE_SUBMITTOR_ADS\n");
@@ -369,9 +469,24 @@ int CollectorDaemon::receive_invalidation(Service* s, int command, Stream* sock)
 		whichAds = COLLECTOR_AD;
 		break;
 
+	  case INVALIDATE_NEGOTIATOR_ADS:
+		dprintf (D_ALWAYS, "Got INVALIDATE_NEGOTIATOR_ADS\n");
+		whichAds = NEGOTIATOR_AD;
+		break;
+
+	  case INVALIDATE_HAD_ADS:
+		dprintf (D_ALWAYS, "Got INVALIDATE_HAD_ADS\n");
+		whichAds = HAD_AD;
+		break;
+
 	  case INVALIDATE_STORAGE_ADS:
 		dprintf (D_ALWAYS, "Got INVALIDATE_STORAGE_ADS\n");
 		whichAds = STORAGE_AD;
+		break;
+
+          case INVALIDATE_ADS_GENERIC:
+		dprintf(D_ALWAYS, "Got INVALIDATE_ADS_GENERIC\n");
+		whichAds = GENERIC_AD;
 		break;
 
 	  default:
@@ -523,6 +638,9 @@ CollectorDaemon::sockCacheHandler( Service*, Stream* sock )
 	}
 
 	switch( cmd ) {
+#if WANT_QUILL
+	case UPDATE_QUILL_AD:
+#endif /* WANT_QUILL */
 	case UPDATE_STARTD_AD:
 	case UPDATE_SCHEDD_AD:
 	case UPDATE_MASTER_AD:
@@ -530,11 +648,17 @@ CollectorDaemon::sockCacheHandler( Service*, Stream* sock )
 	case UPDATE_CKPT_SRVR_AD:
 	case UPDATE_SUBMITTOR_AD:
 	case UPDATE_COLLECTOR_AD:
+	case UPDATE_NEGOTIATOR_AD:
+	case UPDATE_HAD_AD:
 	case UPDATE_LICENSE_AD:
 	case UPDATE_STORAGE_AD:
+	case UPDATE_AD_GENERIC:
 		return receive_update( NULL, cmd, sock );
 		break;
 
+#if WANT_QUILL
+	case INVALIDATE_QUILL_ADS:
+#endif /* WANT_QUILL */
 	case INVALIDATE_STARTD_ADS:
 	case INVALIDATE_SCHEDD_ADS:
 	case INVALIDATE_MASTER_ADS:
@@ -542,6 +666,8 @@ CollectorDaemon::sockCacheHandler( Service*, Stream* sock )
 	case INVALIDATE_CKPT_SRVR_ADS:
 	case INVALIDATE_SUBMITTOR_ADS:
 	case INVALIDATE_COLLECTOR_ADS:
+	case INVALIDATE_NEGOTIATOR_ADS:
+	case INVALIDATE_HAD_ADS:
 	case INVALIDATE_LICENSE_ADS:
 	case INVALIDATE_STORAGE_ADS:
 		return receive_invalidation( NULL, cmd, sock );
@@ -566,20 +692,10 @@ int CollectorDaemon::query_scanFunc (ClassAd *ad)
 
 	if (ad < CollectorEngine::THRESHOLD) return 1;
 
-	bool match;
-	mad.RemoveLeftAd( );
-	mad.RemoveRightAd( );
-	mad.ReplaceLeftAd( ad );
-	mad.ReplaceRightAd( __query__ );
-//    if ((*ad) >= (*__query__))
-	if( mad.EvaluateAttrBool( "leftMatchesRight", match ) && match )
+    if ((*ad) >= (*__query__))
     {
-        if (!__sock__->code(more) || !ad->put(*__sock__))
-        {
-            dprintf (D_ALWAYS, 
-                    "Error sending query result to client -- aborting\n");
-            return 0;
-        }
+		// Found a match --- append to our results list
+		__ClassAdResultList__->Append(ad);
         __numAds__++;
     }
 
@@ -597,14 +713,8 @@ int CollectorDaemon::select_by_match( ClassAd *ad )
 	if(ad<CollectorEngine::THRESHOLD) {
 		return 1;
 	}
-	bool match;
 
-	mad.RemoveLeftAd( );
-	mad.RemoveRightAd( );
-	mad.ReplaceLeftAd( &query_any_request );
-	mad.ReplaceRightAd( ad );
-//	if( query_any_request <= *ad ) {
-	if( mad.EvaluateAttrBool( "rightMatchesLeft", match ) && match ) {
+	if( query_any_request <= *ad ) {
 		query_any_result = ad;
 		return 0;
 	}
@@ -618,6 +728,7 @@ a global query, returning a duplicate of the ad matched.
 On failure, it returns 0.
 */
 
+#if 0
 ClassAd * CollectorDaemon::process_global_query( const char *constraint, void *arg )
 {
 	CondorQuery query(ANY_AD);
@@ -633,39 +744,24 @@ ClassAd * CollectorDaemon::process_global_query( const char *constraint, void *a
 		return 0;
 	}
 }
+#endif
 
-void CollectorDaemon::process_query (AdTypes whichAds, ClassAd &query, Stream *sock)
+void CollectorDaemon::process_query_public (AdTypes whichAds,
+											ClassAd *query,
+											List<ClassAd>* results)
 {
-	int		more;
-
-	// here we set up a network timeout of a longer duration
-	sock->timeout(QueryTimeout);
-
 	// set up for hashtable scan
-	__query__ = &query;
+	__query__ = query;
 	__numAds__ = 0;
-	__sock__ = sock;
-	sock->encode();
+	__ClassAdResultList__ = results;
 
 	if (!collector.walkHashTable (whichAds, query_scanFunc))
 	{
 		dprintf (D_ALWAYS, "Error sending query response\n");
 	}
 
-	// end of query response ...
-	more = 0;
-	if (!sock->code(more))
-	{
-		dprintf (D_ALWAYS, "Error sending EndOfResponse (0) to client\n");
-	}
 
-	// flush the output
-	if (!sock->end_of_message())
-	{
-		dprintf (D_ALWAYS, "Error flushing CEDAR socket\n");
-	}
-
-	dprintf (D_ALWAYS, "(Sent %d ads in response to query)\n", __numAds__);
+	dprintf (D_ALWAYS, "(Sending %d ads in response to query)\n", __numAds__);
 }	
 
 int CollectorDaemon::invalidation_scanFunc (ClassAd *ad)
@@ -676,13 +772,7 @@ int CollectorDaemon::invalidation_scanFunc (ClassAd *ad)
 
 	if (ad < CollectorEngine::THRESHOLD) return 1;
 
-	bool match;
-	mad.RemoveLeftAd( );
-	mad.RemoveRightAd( );
-	mad.ReplaceLeftAd( ad );
-	mad.ReplaceRightAd( __query__ );
-//    if ((*ad) >= (*__query__))
-	if( mad.EvaluateAttrBool( "leftMatchesRight", match ) && match )
+    if ((*ad) >= (*__query__))
     {
 		ad->Insert( buffer );			
         __numAds__++;
@@ -699,7 +789,7 @@ void CollectorDaemon::process_invalidation (AdTypes whichAds, ClassAd &query, St
 	// set up for hashtable scan
 	__query__ = &query;
 	__numAds__ = 0;
-	__sock__ = sock;
+
 	sock->encode();
 	if (!sock->put(0) || !sock->end_of_message()) {
 		dprintf( D_ALWAYS, "Unable to acknowledge invalidation\n" );
@@ -707,7 +797,8 @@ void CollectorDaemon::process_invalidation (AdTypes whichAds, ClassAd &query, St
 	}
 
 	// first set all the "LastHeardFrom" attributes to low values ...
-	collector.walkHashTable (whichAds, invalidation_scanFunc);
+	AdTypes queryAds = (whichAds == GENERIC_AD) ? ANY_AD : whichAds;
+	collector.walkHashTable (queryAds, invalidation_scanFunc);
 
 	// ... then invoke the housekeeper
 	collector.invokeHousekeeper (whichAds);
@@ -997,6 +1088,7 @@ void CollectorDaemon::Config()
     tmp = param ("COLLECTOR_CLASS_HISTORY_SIZE");
     if( tmp ) {
 		int	size = atoi( tmp );
+		free( tmp );
         collectorStats.setClassHistorySize( size );
     } else {
         collectorStats.setClassHistorySize( 1024 );
@@ -1017,6 +1109,7 @@ void CollectorDaemon::Config()
     tmp = param ("COLLECTOR_DAEMON_HISTORY_SIZE");
     if( tmp ) {
 		int	size = atoi( tmp );
+		free( tmp );
         collectorStats.setDaemonHistorySize( size );
     } else {
         collectorStats.setDaemonHistorySize( 128 );
@@ -1025,6 +1118,7 @@ void CollectorDaemon::Config()
     tmp = param ("COLLECTOR_QUERY_WORKERS");
     if( tmp ) {
 		int	num = atoi( tmp );
+		free( tmp );
         forkQuery.setMaxWorkers( num );
     } else {
         forkQuery.setMaxWorkers( 0 );
@@ -1093,9 +1187,11 @@ int CollectorDaemon::sendCollectorAd()
 	collectorStats.publishGlobal( ad );
 
     // Send the ad
-	if( ! updateCollector->sendUpdate(UPDATE_COLLECTOR_AD, ad) ) {
+	char *update_addr = updateCollector->addr();
+	if (!update_addr) update_addr = "(null)";
+	if( ! updateCollector->sendUpdate(UPDATE_COLLECTOR_AD, ad, NULL, false) ) {
 		dprintf( D_ALWAYS, "Can't send UPDATE_COLLECTOR_AD to collector "
-				 "(%s): %s\n", updateCollector->fullHostname(),
+				 "(%s): %s\n", update_addr,
 				 updateCollector->error() );
 		return 0;
     }
@@ -1110,30 +1206,25 @@ void CollectorDaemon::init_classad(int interval)
     ad->SetMyTypeName(COLLECTOR_ADTYPE);
     ad->SetTargetTypeName("");
 
-    char line[100], *tmp;
-    sprintf(line, "%s = \"%s\"", ATTR_MACHINE, my_full_hostname() );
-    ad->Insert(line);
+    char *tmp;
+    ad->Assign(ATTR_MACHINE, my_full_hostname());
 
     tmp = param( "CONDOR_ADMIN" );
     if( tmp ) {
-        sprintf(line, "%s = \"%s\"", ATTR_CONDOR_ADMIN, tmp );
-        ad->Insert(line);
+        ad->Assign( ATTR_CONDOR_ADMIN, tmp );
         free( tmp );
     }
 
     if( CollectorName ) {
-            sprintf(line, "%s = \"%s\"", ATTR_NAME, CollectorName );
+            ad->Assign( ATTR_NAME, CollectorName );
     } else {
-            sprintf(line, "%s = \"%s\"", ATTR_NAME, my_full_hostname() );
+            ad->Assign( ATTR_NAME, my_full_hostname() );
     }
-    ad->Insert(line);
 
-    sprintf(line, "%s = \"%s\"", ATTR_COLLECTOR_IP_ADDR, global_dc_sinful() );
-    ad->Insert(line);
+    ad->Assign( ATTR_COLLECTOR_IP_ADDR, global_dc_sinful() );
 
     if ( interval > 0 ) {
-            sprintf(line,"%s = %d",ATTR_UPDATE_INTERVAL,24*interval);
-            ad->Insert(line);
+            ad->Assign( ATTR_UPDATE_INTERVAL, 24*interval );
     }
 
     // In case COLLECTOR_EXPRS is set, fill in our ClassAd with those
@@ -1250,28 +1341,7 @@ CollectorUniverseStats::setMax( CollectorUniverseStats &ref )
 const char *
 CollectorUniverseStats::getName( int univ )
 {
-	// Insert universe attributes
-	static const char	*names[] =
-	{
-		NULL,
-		"Standard",
-		NULL,
-		NULL,
-		"PVM",
-		"Vanilla",
-		"PVMD",
-		"Scheduler",
-		"MPI",
-		"Globus",
-		"Java",
-		"Parallel"
-	};
-
-	if (  ( univ >= 0 ) && ( univ < CONDOR_UNIVERSE_MAX ) ) {
-		return names[univ];
-	} else {
-		return NULL;
-	}
+	return CondorUniverseNameUcFirst( univ );
 }
 
 int

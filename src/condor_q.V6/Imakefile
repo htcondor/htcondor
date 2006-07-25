@@ -1,43 +1,28 @@
 NAME = condor_q
 all_target($(NAME))
 
-CFLAGS = $(STD_C_FLAGS)
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
-LIB = ../condor_classad_analysis/libanalysis.a $(STD_LIBS) $(QMGMT_LIB)
+#if WANT_CLASSAD_ANALYSIS
+ANALYSIS_FLAGS = -DWANT_CLASSAD_ANALYSIS -I$(NEW_CLASSADS_INC)
+ANALYSIS_LIBS  = ../classad_analysis/libanalysis.a ../classad_analysis/libconversion.a -L$(NEW_CLASSADS_LIB) -lclassad_ns
+#else
+ANALYSIS_FLAGS = 
+ANALYSIS_LIBS  = 
+#endif
 
+LDFLAGS = $(STD_LDFLAGS)
+C_PLUS_FLAGS = $(ANALYSIS_FLAGS) $(STD_C_PLUS_FLAGS) $(QUILL_INC)
+LIB = $(ANALYSIS_LIBS) $(STD_LIBS) $(QUILL_LIB) 
 
 OBJ = queue.o queue_instantiate.o
 
-c_plus_target($(NAME),$(OBJ),$(LIB))
-release_target($(NAME),bin,EXECUTABLE_MODE)
-strip_target($(NAME),bin,EXECUTABLE_MODE)
-static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/bin)
-pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))
-purecov_c_plus_target($(NAME).pc,$(OBJ),$(LIB))
-
-release_link_target($(RELEASE_DIR)/bin/$(NAME),bin,condor_analyze)
-strip_link_target($(STRIP_DIR)/bin/$(NAME),bin,condor_analyze)
-static_link_target($(STATIC_DIR)/bin/$(NAME),bin,condor_analyze)
-
-PUB_DIR = ../../public/analyze
-
-analyze-external:: condor_q
-	cp -f condor_q $(PUB_DIR)/condor_analyze.release
-	chmod 0755 $(PUB_DIR)/condor_analyze.release
-	cp -f condor_q $(PUB_DIR)/condor_analyze.strip
-	$(STRIP) $(PUB_DIR)/condor_analyze.strip
-	chmod 0755 $(PUB_DIR)/condor_analyze.strip
-
-#if HAS_STATIC
-analyze-external:: condor_q.static
-	cp -f condor_q.static $(PUB_DIR)/condor_analyze.static
-	$(STRIP) $(PUB_DIR)/condor_analyze.static
-	chmod 0755 $(PUB_DIR)/condor_analyze.static
-#endif
-
+public_c_plus_target($(NAME),bin,$(OBJ),$(LIB))
 
 html:
 
+/*
+  NOTE: since we're using a different input file depending on where
+  we're copying to, we can't use the unified public_copy_target().
+*/ 
 #if HAS_CONDOR_ANALYZE
 release_copy_target($(CONDOR_ANALYZE_RELEASE),bin,condor_analyze,EXECUTABLE_MODE)
 strip_copy_target($(CONDOR_ANALYZE_STRIP),bin,condor_analyze,EXECUTABLE_MODE)

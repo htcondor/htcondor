@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -27,6 +27,12 @@
  * that specifies level of access, such as READ, WRITE, ADMINISTRATOR,
  * whatever.  Methods specify the level of access for a given IP address,
  * or subnet, or domain name.  
+ *
+ * Most of the access levels form a heirarchy.
+ * DAEMON and ADMINISTRATOR levels imply WRITE level.
+ * WRITE, NEGOTIATOR, and CONFIG levels imply READ level.
+ * Thus, a client that has DAEMON level access will be authorized if
+ * the required access level is READ.
  */
 
 #ifndef _CONDOR_IPVERIFY_H_
@@ -36,6 +42,7 @@
 #include "condor_debug.h"
 #include "HashTable.h"
 #include "string_list.h"
+#include "net_string_list.h"
 #include "MyString.h"
 #include "condor_perms.h"
 
@@ -112,8 +119,8 @@ private:
 	class PermTypeEntry {
 	public:
 		int behavior;
-		StringList* allow_hosts;
-		StringList* deny_hosts;
+		NetStringList* allow_hosts;
+		NetStringList* deny_hosts;
 		UserHash_t* allow_users;
 		UserHash_t* deny_users;
 		PermTypeEntry() {

@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -24,23 +24,28 @@
 #define _STARTD_CRONMGR_H
 
 #include "condor_cronmgr.h"
+#include "enum_utils.h"
 
 // Define a simple class to run child tasks periodically.
-class StartdCronMgr : public CondorCronMgr
+class StartdCronMgr : public CronMgrBase
 {
   public:
 	StartdCronMgr( void );
 	virtual ~StartdCronMgr( void );
+	virtual int Initialize( void );
+	virtual int Reconfig( void );
 	int Shutdown( bool force );
 	bool ShutdownOk( void );
+	CronAutoPublish_t getAutoPublishValue() { return auto_publish; };
 
   protected:
-	virtual CondorCronJob *NewJob( const char *name );
+	virtual CronJobBase *NewJob( const char *name );
 
   private:
 	bool ShuttingDown;
-	void JobEvent( CondorCronJob *job, CondorCronEvent event );
-	
+	void JobEvent( CronJobBase *job, CondorCronEvent event );
+	void ParamAutoPublish( void );
+	CronAutoPublish_t auto_publish;
 };
 
 #endif /* _STARTD_CRONMGR_H */

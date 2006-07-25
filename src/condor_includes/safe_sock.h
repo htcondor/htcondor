@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -65,6 +65,9 @@ public:
     **/
 	virtual int connect(char *s, int port=0, bool do_not_block = false);
 
+	/// my IP address, string version (e.g. "128.105.101.17")
+	virtual const char* sender_ip_str();
+
 	//
 	inline int connect(char *h, char *s) { return connect(h,getportbyserv(s));}
 	void getStat(unsigned long &noMsgs,
@@ -92,7 +95,7 @@ public:
 
 	virtual void         setFullyQualifiedUser(char * u);
 	virtual const char * getFullyQualifiedUser();
-    virtual int          isAuthenticated();
+    virtual int          isAuthenticated() const;
     void                 setAuthenticated(bool authenticated = true);
 
 #ifdef DEBUG

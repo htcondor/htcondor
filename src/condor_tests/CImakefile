@@ -1,0 +1,24 @@
+/***********************************************************************
+ First, include common settings across all compiler-specific Imakefiles
+************************************************************************/
+#include "Imakefile.common"
+#include "Imakefile.common.compiler"
+
+
+/***********************************************************************
+ Now, define make variables that are specific to this compiler
+************************************************************************/
+CC = C_COMPILER
+CFLAGS	= $(BUILD_FLAGS) $(INCLUDE_FLAGS) -g 
+
+
+/***********************************************************************
+  Now, include all the tests that are common to both C and C++
+************************************************************************/
+#include "CImakefile.common"
+
+
+
+
+
+

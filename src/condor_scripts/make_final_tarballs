@@ -1,5 +1,29 @@
 #!/usr/bin/env perl
 
+##/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+##
+## Condor Software Copyright Notice
+## Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+##
+## This source code is covered by the Condor Public License, which can
+## be found in the accompanying LICENSE.TXT file, or online at
+## www.condorproject.org.
+##
+## THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+## AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+## IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+## WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+## FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+## HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+## MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+## ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+## PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+## RIGHT.
+##
+##***************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
+
 # This script performs all steps necessary to take the release.tar
 # files for whatever platforms you want and put them onto the web as
 # the completed binary release with all the right support files, name,
@@ -9,42 +33,45 @@
 # This should be run in the top-level src directory.
 #
 
+use Getopt::Long;
+
 # Autoflush the output
 $| = 1;
 
+use vars qw/ $opt_help $opt_sys $opt_version $opt_libc $opt_tarcmd $opt_cpcmd $opt_target/;
+
+GetOptions ( 'help'              => $opt_help,
+             'sys=s'             => $opt_sys,
+             'version=s'         => $opt_version,
+             'libc=s'            => $opt_libc,
+             'tarcmd=s'          => $opt_tarcmd,
+             'cpcmd=s'           => $opt_cpcmd,
+             'target=s'          => $opt_target);
+
 # Deal with any command-line args we are passed:
-while( $_ = shift( @ARGV ) ) {
-  SWITCH: {	
-    if( /-s.*/ ) {
-	$sys = shift(@ARGV);
-	last SWITCH;
-    }
-    if( /-v.*/ ) {
-	$versarg = shift(@ARGV);
-	last SWITCH;
-    }
-    if( /-l.*/ ) {
-	$libc = shift(@ARGV);
-	last SWITCH;
-    }
-    if( /-tarcmd.*/ ) {
-	$tar_cmd = shift(@ARGV);
-	last SWITCH;
-    }
-    if( /-cpcmd.*/ ) {
-	$cp_cmd = shift(@ARGV);
-	last SWITCH;
-    }
-    if( /-t.*/ ) {
-	# this is short for "-target".  if we get "-tarcmd", we'll
-	# already catch it above, so we can leave this test alone...
-        $target = shift(@ARGV);
-	if( ! -d $target ) {
-	    die "Target directory $target does not exist!\n";
-	}
-        last SWITCH;
-    }
-  }
+
+my ($sys, $versarg, $libc, $tar_cmd, $cp_cmd, $target);
+
+if (defined($opt_help)) {
+    print_usage(); exit 0;
+}
+if (defined($opt_sys)) {
+    $sys = $opt_sys;
+}
+if (defined($opt_version)) {
+    $versarg = $opt_version;
+}
+if (defined($opt_libc)) {
+    $libc = $opt_libc;
+}
+if (defined($opt_tarcmd)) {
+    $tar_cmd = $opt_tarcmd;
+}
+if (defined($opt_cpcmd)) {
+    $cp_cmd = $opt_cpcmd;
+}
+if (defined($opt_target)) {
+    $target = $opt_target;
 }
 
 # Now, grab the version of this release.
@@ -85,11 +112,16 @@ require 5.002;
 ######################################################################
 
 # These are the modules you actually want to build.
-@modules = ( "condor", "ckpt_server", "pvm", "sdk","eventd", "dagman" );
+#@modules = ( "condor", "ckpt_server", "pvm", "sdk","eventd", "dagman" );
 #@modules = ( "smp_startd", "ckpt_server", "pvm", "sdk" );
 #@modules = ( "condor", "ckpt_server", "pvm", "mpi" );
 #@modules = ( "ckpt_server", "pvm" );
-#@modules = ( "condor" );
+
+# in fact, we're through making all these nasty version-specific
+# contrib modules.  all of this stuff is part of the main release now.
+# so, this script can focus on packaging up the main release tarballs. 
+@modules = ( "condor" );
+
 
 # List any special files, other than README, DOC, INSTALL, and
 # LICENSE.TXT (which are included in all releases) that you want in
@@ -133,8 +165,10 @@ $skel="release_skeleton";
 $realskel="condor_release";
 
 %releaselocation = (
+  "dynamic"       => "strip_dir",
   "static"        => "static_dir",
-  "dynamic"       => "strip_dir"
+  "unstripped-static"  => "static_unstrip_dir",
+  "unstripped-dynamic" => "release_dir",
 );
 
 # Convert from AFS @sys names to our names for the tarballs.
@@ -146,17 +180,32 @@ $realskel="condor_release";
   "i386_rh72"     => "linux",
   "i386_rh80"     => "linux",
   "i386_rh9"      => "linux",
+  "i386_tao1"     => "linux",
+  "i386_centos42"   => "linux",
+  "i386_centos43"   => "linux",
   "ia64_rh72"     => "linux",
+  "ia64_rhel3"    => "linux",
+  "i386_rhel3"    => "linux",
   "ia64_sles81"   => "linux",
   "alpha_rh72"    => "linux",
+  "condor_ppc_yd30" => "ydl3",
+  "condor_ppc_sles9" => "linux",
+  "condor_ppc_rhel3" => "linux",
+  "x86_64_rhel3"  => "linux",
   "alpha_dux40"   => "dux40",
   "alpha_dux51"   => "dux51",
   "sgi_65"        => "irix65",
+  "i386_macosx"   => "MacOSX",
   "ppc_macosx"    => "MacOSX",
+  "ppc_macosx_6"  => "MacOSX10.2",
+  "ppc_macosx_7"  => "MacOSX10.3",
   "hp_ux102"      => "hpux10.20",
   "hp_ux110"      => "hpux11.00",
   "ppc_aix51"	  => "aix5.1",
-  "ppc_aix52"	  => "aix5.2"
+  "ppc_aix52"	  => "aix5.2",
+  "i386_freebsd4" => "freebsd4",
+  "i386_freebsd5" => "freebsd5",
+  "i386_freebsd6" => "freebsd6"
 );
 
 %archname = (
@@ -167,17 +216,32 @@ $realskel="condor_release";
   "i386_rh72"     => "x86",
   "i386_rh80"     => "x86",
   "i386_rh9"      => "x86",
+  "i386_tao1"     => "x86",
+  "i386_centos42"   => "x86",
+  "i386_centos43"   => "x86",
   "ia64_rh72"     => "ia64",
+  "ia64_rhel3"    => "ia64",
+  "i386_rhel3"    => "x86",
   "ia64_sles81"   => "ia64",
   "alpha_rh72"    => "Alpha",
+  "condor_ppc_yd30" => "PPC",
+  "condor_ppc_sles9" => "PPC",
+  "condor_ppc_rhel3" => "PPC",
+  "x86_64_rhel3"  => "x86_64",
   "alpha_dux40"   => "Alpha",
   "alpha_dux51"   => "Alpha",
   "sgi_65"        => "SGI",
+  "i386_macosx"   => "x86",
   "ppc_macosx"    => "PPC",
+  "ppc_macosx_6"  => "PPC",
+  "ppc_macosx_7"  => "PPC",
   "hp_ux102"      => "HPPAR",
   "hp_ux110"      => "HPPAR",
   "ppc_aix51"	  => "aix",
-  "ppc_aix52"	  => "aix"
+  "ppc_aix52"	  => "aix",
+  "i386_freebsd4" => "x86",
+  "i386_freebsd5" => "x86",
+  "i386_freebsd6" => "x86"
 );
 
 
@@ -188,8 +252,17 @@ $realskel="condor_release";
   "i386_rh72"   => "glibc22",
   "i386_rh80"   => "redhat80",
   "i386_rh9"    => "glibc23",
+  "i386_tao1"   => "tao1",
+  "i386_centos42" => "centos42",
+  "i386_centos43" => "centos43",
+  "x86_64_rhel3"  => "rhel3",
+  "i386_rhel3"  => "rhel3",
   "ia64_rh72"   => "glibc22",
+  "ia64_rhel3"  => "rhel3",
   "ia64_sles81" => "sles81",
+  "condor_ppc_yd30" => "glibc23",
+  "condor_ppc_sles9" => "sles9",
+  "condor_ppc_rhel3" => "glibc23",
   "alpha_rh72"  => "glibc22",
 );
 
@@ -292,7 +365,8 @@ foreach $module ( @modules ) {
 
     # Now, handle static and/or dynamic versions, whatever exists... 
 
-    foreach $linktype ( "static", "dynamic" ) {
+    foreach $linktype ( "static", "dynamic", "unstripped-dynamic",
+			"unstripped-static" ) {
 	# Make sure the proper tar file exists
 	if( ! (-d $releaselocation{$linktype} && 
 	       -f "$releaselocation{$linktype}/$tarfile") ) {
@@ -303,10 +377,13 @@ foreach $module ( @modules ) {
 	# Figure out what our filenames should look like.
 	$platform="$opsys-$arch";
 	if( $libc ) {
-	    $platform = "$platform-$libc";
+	    $platform .= "-$libc";
 	}
 	if( $linktype =~ /dynamic/ ) {
-	    $platform = "$platform-dynamic";
+	    $platform .= "-dynamic";
+	}
+	if( $linktype =~ /unstripped/ ) {
+	    $platform .= "-unstripped";
 	}
 
 	# Copy the tarfile with the right permissions into the skeleton. 
@@ -351,37 +428,28 @@ foreach $module ( @modules ) {
 	# Make sure there's nothing in the way where we want to put it.
 	unlink( "$targetfile", "$targetfile.Z", "$targetfile.gz" );
 
-	# Compress as appropriate, and move to the final location.
-	if( $platform =~ /.*linux.*/ ) {
-	    print "gzipping $skel/$release-$platform.tar\n";
-	    $out = `gzip $skel/$release-$platform.tar`;
-	    if( ($? >> 8) != 0 ) {
-		die "Can't gzip $skel/$release-$platform.tar: $out";
-	    }
-	    print "Moving $release-$platform.tar.gz into $targetdir ... ";
-	    $out = `mv $skel/$release-$platform.tar.gz $targetdir`;
-	    if( ($? >> 8) != 0 ) {
-		die "Can't mv $skel/$release-$platform.tar.gz $targetdir: $out";
-	    }
-	    print "done.\n";
-	} else {
-	    print "compressing $skel/$release-$platform.tar\n";
-	    $out = `compress $skel/$release-$platform.tar`;
-	    if( ($? >> 8) != 0 ) {
-		die "Can't compress $skel/$release-$platform.tar: $out";
-	    }
-	    print "Moving $release-$platform.tar.Z into $targetdir ... ";
-	    $out = `mv $skel/$release-$platform.tar.Z $targetdir`;
-	    if( ($? >> 8) != 0 ) {
-		die "Can't mv $skel/$release-$platform.tar.Z $targetdir: $out";
-	    }
-	    print "done.\n";
+	# gzip, and move to the final location.  we no longer bother
+	# with trying to use compress on non-linux platforms, since
+	# it's not unreasonable to require gzip in this day and age.
+	# we already check for gzip (but not compress) on our build
+	# machines @ configure time, and some of our platforms don't
+	# put compress in a reasonable location... :(
+	print "gzipping $skel/$release-$platform.tar\n";
+	$out = `gzip $skel/$release-$platform.tar`;
+	if( ($? >> 8) != 0 ) {
+	    die "Can't gzip $skel/$release-$platform.tar: $out";
 	}
+	print "Moving $release-$platform.tar.gz into $targetdir ... ";
+	$out = `mv $skel/$release-$platform.tar.gz $targetdir`;
+	if( ($? >> 8) != 0 ) {
+	    die "Can't mv $skel/$release-$platform.tar.gz $targetdir: $out";
+	}
+	print "done.\n";
     }
 }
 
 sub customize {
-    local( $source, $target, $module, $tarfile ) = @_;
+    my ( $source, $target, $module, $tarfile ) = @_;
     local( $description ) = $module_descriptions{$module};
 
     open( SRC, "<$source" ) || die "\nCan't open $source for reading.\n";
@@ -403,4 +471,23 @@ sub customize {
 }
     
 
+sub print_usage() {
 
+    print <<END_USAGE;
+--help
+This screen
+
+--sys=<System Name>
+
+--version=<Condor Version String>
+
+--libc=<libc name>
+
+--tarcmd=<tar command with args>
+
+--cpcmd=<cp command with args>
+
+--target=<target location>
+
+END_USAGE
+}

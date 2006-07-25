@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -25,22 +25,25 @@
 #include "condor_crypt_3des.h"
 #include "condor_debug.h"
 
-
 Condor_Crypt_3des :: Condor_Crypt_3des(const KeyInfo& key)
 #if !defined(SKIP_AUTHENTICATION)
     : Condor_Crypt_Base(CONDOR_3DES, key)
 {
     KeyInfo k(key);
-    const unsigned char * keyData = k.getKeyData();
-
-    ASSERT(k.getKeyLength() >= 24);
     
+		// triple des requires a key of 8 x 3 = 24 bytes
+		// so pad the key out to at least 24 bytes if needed
+	unsigned char * keyData = k.getPaddedKeyData(24);
+	ASSERT(keyData);
+
     des_set_key((des_cblock *)  keyData    , keySchedule1_);
     des_set_key((des_cblock *) (keyData+8) , keySchedule2_);
     des_set_key((des_cblock *) (keyData+16), keySchedule3_);
 
     // initialize ivsec
     resetState();
+
+	free(keyData);
 }
 #else
 {

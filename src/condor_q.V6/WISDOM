@@ -1,0 +1,101 @@
+
+In here we document the various fail-over conditions and semantics 
+provided by condor_q and condor_history while servicing the job queue and 
+history stored in the job_queue.log and history files respectively or 
+their mirrors in the quill database.  These fail-over semantics guarantee 
+high availability of job data across various daemon or database failures.
+
+We divide the queries into two cases: local and remote
+
+First, condor_q:
+1) Local queries are those that are specified without the -name option.  
+An example:
+	condor_q akini
+This query gets all jobs submitted by user akini.
+
+Local queries read the condor config file for location of the job queue, 
+whether it be the schedd info, database info, etc.
+
+The order of access for local queries is database->quill daemon->schedd.  
+This means that we first try the database if one is specified in the 
+config file.  If, for some reason, the database in inaccessible, we try 
+querying the quill daemon.  The astute reader might wonder how the quill 
+daemon can serve database queries when condor_q cannot.  The answer is 
+that there are times when the database may be made accessible only to the 
+quill daemon in charge of writing to it and not condor_q clients (e.g. the 
+database is behind a firewall).  Such cases are handled by condor_q as it 
+queries the quill daemon.  Thirdly, if the quill daemon is also not able 
+to access the database (e.g. if the machine hosting the database server 
+itself is down), then condor_q tries contacting the schedd for the job 
+queue.  In summary, this scheme provides two levels of fail-over to 
+condor_q.
+
+2) Remote queries are any queries servicing which first requires a 
+query to the collector.  This includes queries that are specified using 
+the -name, -global, or the -submitter option.  
+
+Examples:
+	condor_q -name quill@karadi.cs.wisc.edu 
+	condor_q -global
+	condor_q -submitter akini
+
+In all three cases, condor_q first queries the collector.  In the case of 
+-name, condor_q queries the collector for the SCHEDD_AD with either the 
+NAME or the QUILL_NAME variable equal to the value specified after -name.  
+In the case of the -global option, condor_q gets all the schedd ads from 
+the collector and iterates over each one of them.  Finally, in the case of 
+the -submitter option, condor_q queries the collector for the particular 
+SUBMITTER_AD.  In all three cases, the fail-over behavior is the same as 
+the order of access in the local case: database->quill daemon->schedd
+
+Note that since we query the SCHEDD_AD, if the schedd itself is down, then 
+condor_q will return an "Unable to find schedd" error.  This may not be 
+such a critical issue since if the schedd is down, the job queue data in 
+the database may be stale and, as such, not particularly insightful.
+
+Also note, that in all cases, we first try querying the database if one 
+exists.  As such, the schedd cannot be directly queried unless condor_q 
+fails-over from the database to the quill daemon and both are 
+inaccessible.
+
+Now, condor_history:
+1) Local queries are those that are specified without the -name option.  
+An example:
+	condor_history akini
+This query gets all historical jobs submitted by user akini.
+
+Local queries read the condor config file for location of the history 
+data (database and history file location info)
+
+The order of access for local queries is database->history file  
+This means that we first try the database if one is specified in the 
+config file.  If, for some reason, the database in inaccessible, we try 
+querying the history file.  
+
+2) Remote queries are those that use the -name option
+Example:
+	condor_history -name quill@regular.cs.wisc.edu 2.0
+	condor_history -name akini@regular.cs.wisc.edu 2.0
+
+condor_history first queries the collector for the QUILL_AD with 
+either the NAME or the SCHEDD_NAME variable equal to the value specified 
+after -name.  It then gets the historical data from the database specified 
+in the QUILL_AD.
+
+Remote historical queries differ from remote condor_q queries in the 
+following two respects:
+
+- remote historical data is accessible even if the schedd is down.  This 
+is because we fetch the appropriate QUILL_AD and not the SCHEDD_AD.  As 
+long as the quill daemon is up and sending QUILL_ADs to the collector, 
+condor_history can service historical data stored in the appropriate 
+database.
+
+- there is no fail-over behavior in remote historical queries.  If the 
+database is down, condor_history does not try to query a remote history 
+file.  Getting the quill daemon to service remote historical queries may 
+be supported in a future release.
+
+- Ameet 9/1/2005
+
+

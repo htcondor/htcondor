@@ -1,0 +1,24 @@
+# Change this to the schedd's name ("condor_status -f %s Name") 
+remote_schedd = bt@gamgee.cs.wisc.edu
+remote_pool = gamgee.cs.wisc.edu:38213
+universe = grid 
+grid_type = condor 
+executable = job_condorc_xxx_van.sh
+transfer_input_files=job_condorc_xxx_van.in
+transfer_output_files=outfile1
+output = job_condorc_abc_van.out
+error = job_condorc_abc_van.err
+log = job_condorc_abc_van.log
+should_transfer_files=yes
+when_to_transfer_output=on_exit
+# Bside
++Remote_JobUniverse = 9
++Remote_JobGridType = "condor"
++Remote_requirements = TRUE
++Remote_RemoteSchedd = "bt@gamgee.cs.wisc.edu"
+# Cside
++Remote_RemotePool = "gamgee.cs.wisc.edu:38213"
++Remote_Remote_JobUniverse = 5
++Remote_Remote_requirements = TRUE
+
+queue

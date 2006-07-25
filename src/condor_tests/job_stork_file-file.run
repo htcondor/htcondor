@@ -1,0 +1,196 @@
+#! /usr/bin/env perl
+use CondorTest;
+use CondorPersonal;
+use Cwd;
+
+CondorPersonal::DebugOff();
+Condor::DebugOff();
+
+$testname = 'job_stork_file-file - Simple stork job';
+$corename = "job_stork_file-file";
+$topdir = getcwd();
+
+print "Working Directory is $topdir\n";
+
+# where am I running
+$dummyhost = "gamgee.cs.wisc.edu";
+$currenthost = `hostname`;
+chomp($currenthost);
+
+system("date");
+print "Dummyhost was $dummyhost and really running on $currenthost\n";
+
+$mypid = $$;
+$mysaveme = $corename . ".saveme";
+system("mkdir $mysaveme");
+
+$mysubmitnm = $corename . $mypid . ".cmd";
+$mysubmitnmout = $corename . $mypid . ".cmd.out";
+$mysubmitnmlog = $corename . $mypid . ".log";
+$mysubmitnmout = $corename . $mypid . ".log";
+$mycorenm = $corename . ".cmd";
+$mycorenmout = $corename . ".cmd.out";
+$mycorenmlog = $corename . ".log";
+
+print "Master PID is $mypid\n";
+print "Master PID submit file is $mysubmitnm\n";
+
+my $configloc = CondorPersonal::StartCondor("x_param.storksrvr" ,"local");
+my @local = split /:/, $configloc;
+my $locconfig = shift @local;
+my $locport = shift @local;
+
+print "---local config is $locconfig and local port is $locport---\n";
+
+$ENV{CONDOR_CONFIG} = $locconfig;
+# submit into stork personal condor
+
+my $storkdatafile = "stork_file-file_data" . $mypid;
+system("./x_create_md5data.pl --megs=10 --filenm=$storkdatafile");
+
+if( ! -e "job_stork_file-file.in" )
+{
+	system("date > job_stork_file-file.in");
+}
+
+print "Have generated data and md5 checksum in $storkdatafile\n";
+my $src_url = $topdir . "/$storkdatafile";
+my $dest_url = "/tmp/$storkdatafile";
+
+print "Transfer $src_url to $dest_url\n";
+
+my $storksubmitfile = "job_stork_file-file.stork" . $mypid;
+
+my $line = "";
+open(STORKSTUB,"<job_stork_file-file.stork") || die "Could not open data file 'job_stork_file-file.stork': $?";
+open(NEWSTORKSTUB,">$storksubmitfile") || die "Could not open test stork submit file <$storksubmitfile>: $?";
+while(<STORKSTUB>)
+{
+	chomp();
+	$line = $_;
+	if($line =~ /src_url/)
+	{
+		print NEWSTORKSTUB "src_url = \"file:/$src_url\";\n"
+	}
+	elsif($line =~ /dest_url/)
+	{
+		print NEWSTORKSTUB "dest_url = \"file:/$dest_url\";\n"
+	}
+	else
+	{
+		print NEWSTORKSTUB "$line\n"
+	}
+}
+close(STORKSTUB);
+close(NEWSTORKSTUB);
+
+my $storkcmd = "stork_submit $storksubmitfile";
+my $line = "";
+my $jobid = "";
+open(PULL, "$storkcmd 2>&1 |") || die "ps -eo pid failed: $!\n";
+while(<PULL>)
+{
+	chomp();
+	$line = $_;
+	if($line =~ /assigned\s*id\s*:\s*(\d+)/)
+	{
+		print "<<<$line>>>\n";
+		$jobid = $1;
+	}
+}
+close(PULLL);
+
+if($jobid eq ""){ die "Stork test can not determine jobid!\n"; }
+
+# going to loop for a bit see if we can see stork job completion
+# and then check the md5 of the transmitted file.
+my $timeout = 180;
+my $timecnt = 0;
+my $storkstatuscmd = "stork_status $jobid";
+
+my $jobstatus = "";
+
+while( $timecnt < $timeout )
+{
+	#system("stork_q");
+	system("stork_status $jobid");
+	open(PULL, "$storkstatuscmd 2>&1 |") || die "ps -eo pid failed: $!\n";
+	while(<PULL>)
+	{
+		chomp();
+		$line = $_;
+		if($line =~ /status\s*=\s*"(\w+)"/)
+		{
+			print "<<<$line>>>\n";
+			$jobstatus = $1;
+			last; # done with scanning status
+		}
+	}
+	close(PULLL);
+	if($jobstatus =~ /request_completed/)
+	{
+		print "Good file has transfered, check md5 next\n";
+		last;
+	}
+	$timecnt += 20;
+	sleep(20);
+}
+
+print "Done checking status\n";
+
+my $result = 0;
+
+if($jobstatus ne "request_completed")
+{
+	print "Stork file transfer never completed!\n";
+	$result = 1;
+}
+else
+{
+	$result = system("./x_test_md5data.pl --oldfile=$src_url --newfile=$dest_url");
+	print "Result of crafted Stork job is  $result\n";
+}
+
+system("rm -f $dest_url*");
+
+system("cp -r $mypid $mysaveme");
+system("cp job_stork_file-file.stork* $mysaveme");
+
+if( -e "$mysubmitnm" )
+{
+	system("cp $mysubmitnm $mycorenm");
+}
+
+if( -e "$mysubmitnmout" )
+{
+	system("cp $mysubmitnmout $mycorenmout");
+}
+
+if( -e "$mysubmitnmlog" )
+{
+	system("cp $mysubmitnmlog $mycorenmlog");
+}
+
+my @adarray;
+my $status = 1;
+my $cmd = "condor_off -master";
+$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+if(!$status)
+{
+	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	return(1)
+}
+
+system("date");
+
+if( $result != 0 )
+{
+	# actual test failed but we allowed cleanup
+	print "Stork test failed!\n";
+	exit(1);
+}
+else
+{
+	print "Stork test SUCCESS!\n";
+}
+

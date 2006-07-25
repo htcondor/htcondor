@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -22,105 +22,70 @@
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
-#include "startd_cronjob.h"
+#include "condor_cronjob_classad.h"
 #include "startd.h"
+#include "startd_cronjob.h"
 
-// Interface version number
-#define	INTERFACE_VERSION	"1"
-
-// CronJob constructor
-StartdCronJob::
-StartdCronJob( const char *mgrName, const char *jobName ) :
-		CondorCronJob( mgrName, jobName )
+StartdCronJob::StartdCronJob( const char *mgrName, const char *jobName ) :
+		ClassAdCronJob( mgrName, jobName )
 {
 	// Register it with the Resource Manager
 	resmgr->adlist_register( jobName );
-	OutputAd = NULL;
-	OutputAdCount = 0;
-
-	// Build my interface version environment (but, I need a 'name' to do it)
-	if ( mgrName && (*mgrName) ) {
-		char	*nameUc = strdup( mgrName );
-		char	*namePtr;
-		for( namePtr = nameUc; *namePtr; namePtr++ ) {
-			if ( islower ( *namePtr ) ) {
-				*namePtr = toupper( *namePtr );
-			}
-		}
-		EnvStr = nameUc;
-		EnvStr += "_INTERFACE_VERSION=" INTERFACE_VERSION;
-	}
 }
 
 // StartdCronJob destructor
-StartdCronJob::
-~StartdCronJob( )
+StartdCronJob::~StartdCronJob( )
 {
 	// Delete myself from the resource manager
 	resmgr->adlist_delete( GetName() );
-	if ( NULL != OutputAd ) {
-		delete( OutputAd );
-	}
 }
 
-// StartdCronJob initializer
 int
-StartdCronJob::Initialize( )
+StartdCronJob::Publish( const char *name, ClassAd *ad )
 {
-	AddEnv( EnvStr.GetCStr() );
-
-	// And, run the "main" Initialize function
-	return CondorCronJob::Initialize( );
-}
-
-// Process a line of input
-int
-StartdCronJob::
-ProcessOutput( const char *line )
-{
-	if ( NULL == OutputAd ) {
-		OutputAd = new ClassAd( );
+		// first, update the ad in the ResMgr, so we have the new
+		// values.  we only want to do the (somewhat expensive)
+		// operation of reportind a diff if we care about that.
+	bool report_diff = false;
+	CronAutoPublish_t auto_publish = Cronmgr->getAutoPublishValue();
+	if( auto_publish == CAP_IF_CHANGED ) { 
+		report_diff = true;
 	}
+	int rval = resmgr->adlist_replace( name, ad, report_diff );
 
-	// NULL line means end of list
-	if ( NULL == line ) {
-		// Publish it
-		if ( OutputAdCount != 0 ) {
+		// now, figure out if we need to update the collector based on
+		// the startd_cron_autopublish stuff and if the ad changed...
+	bool wants_update = false;
+	switch( auto_publish ) {
+	case CAP_NEVER:
+		return rval;
+		break;
 
-			// Insert the 'LastUpdate' field
-			const char      *prefix = GetPrefix( );
-			if ( prefix ) {
-				MyString    Update( prefix );
-				Update += "LastUpdate = ";
-				char    tmpBuf [ 20 ];
-				sprintf( tmpBuf, "%ld", (long) time( NULL ) );
-				Update += tmpBuf;
-				const char  *UpdateStr = Update.Value( );
+	case CAP_ALWAYS:
+		wants_update = true;
+		dprintf( D_FULLDEBUG, "StartdCronJob::Publish() updating collector "
+				 "[STARTD_CRON_AUTOPUBLISH=\"Always\"]\n" );
+		break;
 
-				// Add it in
-				if ( ! OutputAd->Insert( UpdateStr ) ) {
-					dprintf( D_ALWAYS, "Can't insert '%s' into '%s' ClassAd\n",
-							 UpdateStr, GetName() );
-					// TodoWrite( );
-				}
-			}
-
-			// Replace the old ClassAd now
-			resmgr->adlist_replace( GetName( ), OutputAd );
-
-			// I've handed it off; forget about it!
-			OutputAd = NULL;
-			OutputAdCount = 0;
-		}
-	} else {
-		// Process this line!
-		if ( ! OutputAd->Insert( line ) ) {
-			dprintf( D_ALWAYS, "Can't insert '%s' into '%s' ClassAd\n",
-					 line, GetName() );
-			// TodoWrite( );
+	case CAP_IF_CHANGED:
+		if( rval == 1 ) {
+			dprintf( D_FULLDEBUG, "StartdCronJob::Publish() has new data, "
+					 "updating collector\n" );
+			wants_update = true;
 		} else {
-			OutputAdCount++;
+			dprintf( D_FULLDEBUG, "StartdCronJob::Publish() has no new data, "
+					 "skipping collector update\n" );
 		}
+		break;
+
+	default:
+		EXCEPT( "PROGRAMMER ERROR: unknown value of auto_publish (%d)", 
+				(int)auto_publish );
+		break;
 	}
-	return OutputAdCount;
+	if( wants_update ) {
+		resmgr->first_eval_and_update_all();
+	}
+	return rval;
 }
+

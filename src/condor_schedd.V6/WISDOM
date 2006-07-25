@@ -57,7 +57,54 @@ for( p=0, p<num_procs, p++ ) {
 }
 EOM
 
+************************************************************
+Job "Bursting" Wisdom
+************************************************************
+Origins and History: [2004-09-15, weber]
+The schedd waits for a job start delay (JOB_START_DELAY or
+JobStartDelay) between starting new jobs (shadows) when there are
+multiple runnable jobs.  Very large sites, such as CDF, can start
+hundreds or thousands of jobs at once, especially upon a system cold
+start.  (see Gnats PR-298.) For these sites, job start delays
+(JOB_START_DELAY or JobStartDelay) of 0 are too small, and delays of 1
+are too large.  Ideally, changing the JobStartDelay from an integral
+to floating point type would appear to solve this problem.  However,
+the daemoncore integral delay design runs deep.  Changing the existing
+design to allow for floating point delay was deemed too extensive
+risky.  Thus, an alternative solution was devised to change the job
+start algorithm from starting 1 job every JobStartDelay, to starting N
+jobs every JobStartDelay [D. Wright].  Over time, users then see the
+average job start delay as the ratio of N over the job start delay.
 
+Design:
+During initial implementation, it was found that inserting a job
+throttling functionality in Scheduler::StartJobHandler() or
+Scheduler::jobThrottle() worked well for the case of starting multiple
+jobs from the runnable job queue in conjunction with a list of
+multiple idle machines.  However, this implementation did not handle
+the case of machines becoming idle at a fairly fast rate.  For this
+case, jobs could be started at effectively the same rate as the
+machine idle rate.
+
+So an new implementation was devised where all job starts are queued
+through Scheduler::StartJobHandler() via the DC timer.  All job start
+delays are calculated via Scheduler::jobThrottle().  From the user
+perspective, jobThrottle() starts  burst of JOB_START_COUNT jobs as
+quickly as possible, then delays for JOB_START_DELAY seconds before
+starting the next job burst.  All job starts should now be queued via
+the DC timer to Scheduler::StartJobHandler() using a delay of
+Scheduler::jobThrottle().
+
+Parameter Values:
+Default values are JOB_START_DELAY=2sec, and JOB_START_COUNT=1 (job).
+These leave the default job start behavior unchanged.  The minimum
+value for JOB_START_COUNT is 1, and is enforced by the config reader.
+You can set lower values for JOB_START_DELAY, but this is not
+advisable.  JOB_START_DELAY=1sec starts running job start delays very
+close to the resolution of the DC timer, so the resulting job bursts
+are difficult to notice.  JOB_START_DELAY=0sec is allowed, but will
+start many jobs at once.  For all but the smallest sites, this will
+likely overload the schedd.
 
 ************************************************************
 Other Wisdom

@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -121,7 +121,7 @@ static char* opsys = NULL;
 static char* uname_opsys = NULL;
 
 #ifdef HPUX
-char* get_hpux_arch( struct utsname* );
+char* get_hpux_arch();
 #endif
 
 #ifdef AIX
@@ -174,20 +174,8 @@ sysapi_translate_arch( char *machine, char *sysname )
 	return( get_aix_arch( &buf ) );
 
 #elif defined(HPUX)
-	/*
-	  On HPUX, to figure out if we're HPPA1 or HPPA2, we have to
-	  lookup what we get back from uname in a file that lists all the
-	  different HP models and what kinds of CPU each one has.  We do
-	  this in a seperate function to keep this function somewhat
-	  readable.   -Derek Wright 7/20/98
-	*/
-	struct utsname buf;	
 
-	if( uname(&buf) < 0 ) {
-		return NULL;
-	}
-
-	return( get_hpux_arch( &buf ) );
+	return( get_hpux_arch( ) );
 #else
 
 		// Get ARCH
@@ -213,6 +201,9 @@ sysapi_translate_arch( char *machine, char *sysname )
 	else if( !strcmp(machine, "ia64") ) {
 		sprintf( tmp, "IA64" );
 	}
+	else if( !strcmp(machine, "x86_64") ) {
+		sprintf( tmp, "X86_64" );
+	}
 	else if( !strncmp( sysname, "IRIX", 4 ) ) {
 		sprintf( tmp, "SGI" );
 	} 
@@ -233,6 +224,15 @@ sysapi_translate_arch( char *machine, char *sysname )
 	} 
 	else if( !strcmp(machine, "Power Macintosh") ) { //LDAP entry
 		sprintf( tmp, "PPC" );
+	} 
+	else if( !strcmp(machine, "ppc") ) {
+		sprintf( tmp, "PPC" );
+	} 
+	else if( !strcmp(machine, "ppc32") ) {
+		sprintf( tmp, "PPC" );
+	} 
+	else if( !strcmp(machine, "ppc64") ) {
+		sprintf( tmp, "PPC64" );
 	} 
 	else {
 			// Unknown, just use what uname gave:
@@ -313,6 +313,9 @@ sysapi_translate_opsys( char *sysname, char *release, char *version )
 		else if( !strcmp(release, "B.11.00") ) {
 			sprintf( tmp, "HPUX11" );
 		} 
+		else if( !strcmp(release, "B.11.11") ) {
+			sprintf( tmp, "HPUX11" );
+		} 
 		else {
 			sprintf( tmp, "HPUX%s", release );
 		}
@@ -331,17 +334,20 @@ sysapi_translate_opsys( char *sysname, char *release, char *version )
 		}
 	} 
 	else if ( !strncmp(sysname, "Darwin", 6) ) {
-		if( !strcmp( release, "6.4" ) ) {
-			sprintf( tmp, "OSX10_2");
-		}
-		else {
-			sprintf( tmp, "OSX");
-		}
+			//  there's no reason to differentiate across versions of
+			//  OSX, since jobs can freely run on any version, etc.
+		sprintf( tmp, "OSX");
 	}
 	else if ( !strncmp(sysname, "AIX", 3) ) {
 		if ( !strcmp(version, "5") ) {
 			sprintf(tmp, "%s%s%s", sysname, version, release);
 		}
+	}
+	else if ( !strncmp(sysname, "FreeBSD", 7) ) {
+			//
+			// Pull the major version # out of the release information
+			//
+		sprintf( tmp, "FREEBSD%c", release[0]);
 	}
 	else {
 			// Unknown, just use what uname gave:
@@ -397,46 +403,15 @@ sysapi_uname_opsys()
 
 #if defined(HPUX)
 char*
-get_hpux_arch( struct utsname *buf )
+get_hpux_arch( )
 {
-	FILE* fp;
-	static char *file = "/opt/langtools/lib/sched.models";
-	char machinfo[4096], line[128];
-	char *model;
-	char cputype[128], cpumodel[128];
-	int len, found_it = FALSE;
-	char *tmparch;
-
-	model = strchr( buf->machine, '/' );
-	model++;
-	len = strlen( model );
-
-	fp = fopen( file, "r" );
-	if( ! fp ) {
-		return NULL;
-	}	
-	while( ! feof(fp) ) {
-		fgets( line, 128, fp );
-		if( !strncmp(line, model, len) ) {
-			found_it = TRUE;
-			break;
-		}
-	}
-	fclose( fp );
-	if( found_it ) {
-  		sscanf( line, "%s\t%s", cpumodel, cputype );
-		if( !strcmp(cputype, "2.0") ) {
-			tmparch = strdup( "HPPA2" );
-		} else {
-			tmparch = strdup( "HPPA1" );
-		}
-		if( !tmparch ) {
-			EXCEPT( "Out of memory!" );
-		}
-	} else {
-		tmparch = strdup("Unknown");
-	}
-	return tmparch;
+	/* As of 3/22/2006, it has been ten years since HP has made
+		a HPPA1 machine.  Just assume that this is a HPPA2 machine,
+		and if it is not the user can force the setting in the 
+		ARCH config file setting
+   	*/
+	
+	return strdup("HPPA2");
 }
 #endif /* HPUX */
 

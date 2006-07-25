@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -89,7 +89,7 @@ int is_valid_network( const char *network, struct in_addr *ip, struct in_addr *m
 
 int is_valid_sinful( const char *sinful );
 
-/* returns the port integer from a given address, or 0 if there is
+/* returns the port integer from a given address, or -1 if there is
    none. */
 int getPortFromAddr( const char* addr );
 
@@ -104,8 +104,18 @@ char* getHostFromAddr( const char* addr );
 char* getAddrFromClaimId( const char* id );
 
 /* Binds the given fd to any port on the correct local interface for
-   this machine.   Returns 1 if successful, 0 on error. */
-int _condor_local_bind( int fd );
+   this machine.   is_outgoing tells it how to param.  Returns 1 if
+   successful, 0 on error. */
+int _condor_local_bind( int is_outgoing, int fd );
+
+int is_priv_net(uint32_t ip);
+int in_same_net(uint32_t ipA, uint32_t ipB);
+char *ipport_to_string(const unsigned int ip, const unsigned short port);
+char *prt_fds(int maxfd, fd_set *fds);
+
+/* Get the address that a socket is bound to */
+// @ret: NULL if failed; non-NULL if succeed
+struct sockaddr_in *getSockAddr(int sockfd);
 
 #if defined(__cplusplus)
 }

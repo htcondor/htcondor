@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -28,6 +28,7 @@
 #include "condor_attributes.h"
 #include "classad_helpers.h"
 #include "sig_name.h"
+#include "stream_handler.h"
 
 extern CStarter *Starter;
 
@@ -48,8 +49,12 @@ UserProc::initialize( void )
 	JobPid = -1;
 	exit_status = -1;
 	requested_exit = false;
+	job_universe = 0;  // we'll fill in a real value if we can...
 	if( JobAd ) {
 		initKillSigs();
+		if( JobAd->LookupInteger( ATTR_JOB_UNIVERSE, job_universe ) < 1 ) {
+			job_universe = 0;
+		}
 	}
 }
 
@@ -73,6 +78,13 @@ UserProc::initKillSigs( void )
 		rm_kill_sig = SIGTERM;
 	}
 
+	sig = findHoldKillSig( JobAd );
+	if( sig >= 0 ) {
+		hold_kill_sig = sig;
+	} else {
+		hold_kill_sig = SIGTERM;
+	}
+
 	const char* tmp = signalName( soft_kill_sig );
 	dprintf( D_FULLDEBUG, "%s KillSignal: %d (%s)\n", 
 			 name ? name : "Main job", soft_kill_sig, 
@@ -81,6 +93,11 @@ UserProc::initKillSigs( void )
 	tmp = signalName( rm_kill_sig );
 	dprintf( D_FULLDEBUG, "%s RmKillSignal: %d (%s)\n", 
 			 name ? name : "Main job", rm_kill_sig, 
+			 tmp ? tmp : "Unknown" );
+
+	tmp = signalName( hold_kill_sig );
+	dprintf( D_FULLDEBUG, "%s HoldKillSignal: %d (%s)\n", 
+			 name ? name : "Main job", hold_kill_sig, 
 			 tmp ? tmp : "Unknown" );
 }
 
@@ -166,11 +183,169 @@ UserProc::PublishToEnv( Env* proc_env )
 		if( WIFSIGNALED(exit_status) ) {
 			env_name = base.GetCStr();
 			env_name += "EXIT_SIGNAL";
-			proc_env->Put( env_name.GetCStr(), WTERMSIG(exit_status) );
+			proc_env->SetEnv( env_name.GetCStr(), WTERMSIG(exit_status) );
 		} else {
 			env_name = base.GetCStr();
 			env_name += "EXIT_CODE";
-			proc_env->Put( env_name.GetCStr(), WEXITSTATUS(exit_status) );
+			proc_env->SetEnv( env_name.GetCStr(), WEXITSTATUS(exit_status) );
 		}
 	}
 }
+
+
+int
+UserProc::openStdFile( std_file_type type, const char* attr, 
+					   bool allow_dash, bool &used_starter_fd,
+					   const char* log_header )
+{
+		// initialize this to -2 to mean "not specified".  if we have
+		// success, we'll have a valid fd (>=0).  if there's an error
+		// opening something, we'll return -1 which our callers
+		// consider a failed open().
+	int fd = -2;
+	const char* filename;
+	bool wants_stream = false;
+	const char* name = NULL;
+	const char* phrase = NULL;
+	bool is_output = true;
+	bool is_null_file = false;
+
+
+		///////////////////////////////////////////////////////
+		// Initialize some settings depending on the type
+		///////////////////////////////////////////////////////
+
+	switch( type ) {
+	case SFT_IN:
+		is_output = false;
+		phrase = "standard input";
+		name = "stdin";
+		break;
+	case SFT_OUT:
+		is_output = true;
+		phrase = "standard output";
+		name = "stdout";
+		break;
+	case SFT_ERR:
+		is_output = true;
+		phrase = "standard error";
+		name = "stderr";
+		break;
+	}
+
+
+		///////////////////////////////////////////////////////
+		// Figure out what we're trying to open, if anything
+		///////////////////////////////////////////////////////
+
+	if( attr ) {
+		filename = Starter->jic->getJobStdFile( attr );
+		wants_stream = Starter->jic->streamStdFile( attr );
+	} else {
+		switch( type ) {
+		case SFT_IN:
+			filename = Starter->jic->jobInputFilename();
+			wants_stream = Starter->jic->streamInput();
+			break;
+		case SFT_OUT:
+			filename = Starter->jic->jobOutputFilename();
+			wants_stream = Starter->jic->streamOutput();
+			break;
+		case SFT_ERR:
+			filename = Starter->jic->jobErrorFilename();
+			wants_stream = Starter->jic->streamError();
+			break;
+		}
+	}
+
+	if( ! filename ) {
+			// If there's nothing specified, we always want to open
+			// the system-appropriate NULL file (/dev/null or NUL).
+			// Otherwise, we can mostly treat this as if the job
+			// defined a real local filename.  For the few cases were
+			// we have to behave differently, record it in a bool. 
+		filename = NULL_FILE;
+		is_null_file = true;
+	}
+
+
+		///////////////////////////////////////////////////////
+		// Deal with special cases
+		///////////////////////////////////////////////////////
+
+		////////////////////////////////////
+		// Use the starter's equivalent fd
+		////////////////////////////////////
+	if( allow_dash && filename[0] == '-' && ! filename[1] ) {
+			// use the starter's fd
+		used_starter_fd = true;
+		switch( type ) {
+		case SFT_IN:
+			fd = Starter->starterStdinFd();
+			dprintf( D_ALWAYS, "%s: using STDIN of %s\n", log_header,
+					 mySubSystem );
+			break;
+		case SFT_OUT:
+			fd = Starter->starterStdoutFd();
+			dprintf( D_ALWAYS, "%s: using STDOUT of %s\n", log_header,
+					 mySubSystem );
+			break;
+		case SFT_ERR:
+			fd = Starter->starterStderrFd();
+			dprintf( D_ALWAYS, "%s: using STDERR of %s\n", log_header,
+					 mySubSystem );
+			break;
+		}
+		return fd;
+	}
+
+		//////////////////////
+		// Use streaming I/O
+		//////////////////////
+	if( wants_stream && ! is_null_file ) {
+		StreamHandler *handler = new StreamHandler;
+		if( !handler->Init(filename, name, is_output) ) {
+			MyString err_msg;
+			err_msg.sprintf( "unable to establish %s stream", phrase );
+			Starter->jic->notifyStarterError( err_msg.Value(), true,
+			    is_output ? CONDOR_HOLD_CODE_UnableToOpenOutputStream :
+			                CONDOR_HOLD_CODE_UnableToOpenInputStream, 0 );
+			return -1;
+		}
+		fd = handler->GetJobPipe();
+		dprintf( D_ALWAYS, "%s: streaming from remote file %s\n",
+				 log_header, filename );
+		return fd;
+	}
+
+
+		///////////////////////////////////////////////////////
+		// The regular case of a local file 
+		///////////////////////////////////////////////////////
+
+	if( is_output ) {
+		fd = open( filename, O_WRONLY|O_CREAT|O_TRUNC, 0666 );
+		if( fd < 0 ) {
+				// if failed, try again without O_TRUNC
+			fd = open( filename, O_WRONLY|O_CREAT, 0666 );
+		}
+	} else {
+		fd = open( filename, O_RDONLY );
+	}
+	if( fd < 0 ) {
+		int open_errno = errno;
+		char const *errno_str = strerror( errno );
+		MyString err_msg;
+		err_msg.sprintf( "Failed to open '%s' as %s: %s (errno %d)",
+						 filename, phrase, errno_str, errno );
+		dprintf( D_ALWAYS, "%s\n", err_msg.Value() );
+		Starter->jic->notifyStarterError( err_msg.Value(), true,
+		  is_output ? CONDOR_HOLD_CODE_UnableToOpenOutput :
+		              CONDOR_HOLD_CODE_UnableToOpenInput, open_errno );
+		return -1;
+	}
+	dprintf( is_null_file ? D_FULLDEBUG : D_ALWAYS,
+			 "%s: %s\n", log_header, filename );
+	return fd;
+}
+

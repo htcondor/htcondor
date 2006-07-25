@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -27,6 +27,7 @@
 
 #include "condor_common.h"
 #include "condor_constants.h"
+#include "condor_debug.h"
 #include "file_lock.h"
 #include <stdio.h>
 
@@ -98,7 +99,8 @@ FileLock::obtain( LOCK_TYPE t )
 		lPosBeforeLock = ftell(fp); 
 	}
 	
-	int		status = lock_file( fd, t, blocking );
+	int		status = 0;
+	status = lock_file( fd, t, blocking );
 	
 	if (fp)
 	{
@@ -108,6 +110,10 @@ FileLock::obtain( LOCK_TYPE t )
 
 	if( status == 0 ) {
 		state = t;
+	}
+	if ( status != 0 ) {
+		dprintf( D_ALWAYS, "FileLock::obtain(%d) failed - errno %d (%s)\n",
+	                t, errno, strerror(errno) );
 	}
 	return status == 0;
 }

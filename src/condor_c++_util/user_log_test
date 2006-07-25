@@ -1,0 +1,152 @@
+#!/usr/bin/env perl
+
+# This is a program to test user log reading and writing.  It runs
+# the test_log_writer and test_log_reader programs.
+
+# Note: add an option to test XML logs, also verbosity.
+
+use POSIX "sys_wait_h";
+
+# Set defaults.
+my $debug = 1;
+
+my $result = 0;
+
+my $trials = 1;
+my $numwriters = 100;
+my $numreaders = 10;
+my $numexec = 100;
+my $logfile = "test.log";
+
+# Process command-line arguments.  Note: it would be really nice to
+# have name-value pairs, but I'm being lazy for now.  wenger 2004-09-24.
+if ($#ARGV == 4) {
+	$trials = shift;
+	$numwriters = shift;
+	$numreaders = shift;
+	$numexec = shift;
+	$logfile = shift;
+} elsif ($#ARGV != -1) {
+	print "Usage: user_log_test [<trials> <writers> <readers> <events> <log file>]\n";
+	exit 1;
+}
+
+for ($trialnum = 0; $trialnum < $trials; $trialnum++) {
+	print "Running trial # $trialnum ($numwriters $numreaders $numexec $logfile)\n" if ($debug >= 1);
+	if (run_trial()) {
+		$result = 1;
+	}
+}
+
+if ($result != 0) {
+	print STDERR "user_log_test FAILED!!\n";
+}
+
+exit $result;
+
+#------------------------------------------------------------------------
+# Subroutines.
+
+#........................................................................
+# Run one trial.
+sub run_trial {
+	my $result = 0;
+
+	# Start out with a fresh log file.
+	unlink $logfile;
+
+	# We're going to wait for all of these processes to finish.  If any
+	# of them exit with a non-zero value, the whole test fails.
+	my @pidlist;
+
+	# Submit the log_writer jobs.
+	for ($count = 0; $count < $numwriters; $count++) {
+		my $pid = submit_job("test_log_writer -logfile $logfile -numexec $numexec -sleep 1");
+		if ($pid != 0) {
+			@pidlist = (@pidlist, $pid);
+		} else {
+			print "Job submit failed!!\n";
+			$result = 1;
+		}
+	}
+
+	# Make sure the log file exists before we try to read it.
+	sleep 1;
+
+	# Submit the log_reader jobs.
+	for ($count = 0; $count < $numreaders; $count++) {
+		my $pid = submit_job("test_log_reader -logfile $logfile -term $numwriters");
+		if ($pid != 0) {
+			@pidlist = (@pidlist, $pid);
+		} else {
+			print "Job submit failed!!\n";
+			$result = 1;
+		}
+	}
+
+	print "DIAG pidlist: @pidlist\n" if ($debug >= 2);
+
+	my $tmpResult = wait_for_all(@pidlist);
+	if ($tmpResult != 0) {
+		$result = 1;
+	}
+
+	if ($result != 0) {
+		print STDERR "trial FAILED!!\n";
+	}
+
+	return $result;
+}
+
+#........................................................................
+# Submit a job and return the PID.
+sub submit_job {
+	my ($job) = @_;
+	print "DIAG job: <$job>\n" if ($debug >= 2);
+
+	if ($pid = fork) {
+		# Parent.
+		return $pid;
+
+	} elsif (defined $pid) {
+		# Child.
+		exec $job;
+		print "Error: exec returned!!\n";
+		exit 1;
+
+	} else {
+		# Error.
+		print "Error in fork!\n";
+		return 0;
+	}
+}
+
+#........................................................................
+# Wait for all of the given processes to finish, checking their exit
+# values.  If any process's exit value is non-zero, this subroutine
+# returns 1, otherwise it returns 0.
+sub wait_for_all {
+	my $result = 0;
+	my @pidlist = @_;
+
+	my $count = 0;
+	while ($#pidlist >= 0) {
+		$pid = shift @pidlist;
+		print "DIAG waiting for pid $pid\n" if ($debug >= 2);
+		if (waitpid($pid, WNOHANG) == $pid) {
+			if ($? != 0) {
+				print "Process $pid exited with non-zero value: $?\n";
+				$result = 1;
+			}
+		} else {
+			push @pidlist, ($pid);
+		}
+
+		# Sleep every so often so we don't waste too much effort...
+		if (++$count % 20 == 0) {
+			sleep 1;
+		}
+	}
+
+	return $result;
+}

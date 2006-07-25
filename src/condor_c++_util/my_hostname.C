@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -28,6 +28,8 @@
 #include "internet.h"
 #include "get_full_hostname.h"
 #include "my_hostname.h"
+#include "condor_attributes.h"
+#include "condor_netdb.h"
 
 static char* hostname = NULL;
 static char* full_hostname = NULL;
@@ -89,7 +91,22 @@ my_ip_string()
 	if( ! ipaddr_initialized ) {
 		init_ipaddr(0);
 	}
-	return inet_ntoa(sin_addr);
+
+		// It is too risky to return whatever inet_ntoa() returns
+		// directly, because the caller may unwittingly corrupt that
+		// value by calling inet_ntoa() again.
+
+	char const *str = inet_ntoa(sin_addr);
+	static char buf[IP_STRING_BUF_SIZE];
+
+	if(!str) {
+		return NULL;
+	}
+
+	ASSERT(strlen(str) < IP_STRING_BUF_SIZE);
+
+	strcpy(buf,str);
+	return buf;
 }
 
 void
@@ -227,7 +244,7 @@ init_hostnames()
 
         // Get our local hostname, and strip off the domain if
         // gethostname returns it.
-    if( gethostname(hostbuf, sizeof(hostbuf)) == 0 ) {
+    if( condor_gethostname(hostbuf, sizeof(hostbuf)) == 0 ) {
         if( hostbuf[0] ) {
             if( (tmp = strchr(hostbuf, '.')) ) {
                     // There's a '.' in the hostname, assume we've got
@@ -257,4 +274,85 @@ init_hostnames()
 		init_full_hostname();
 	}
 	hostnames_initialized = TRUE;
+}
+
+// Returns true if given attribute is used by Condor to advertise the
+// IP address of the sender.  This is used by
+// ConvertMyDefaultIPToMySocketIP().
+
+static bool is_sender_ip_attr(char const *attr_name)
+{
+    if(strcmp(attr_name,ATTR_MY_ADDRESS) == 0) return true;
+    if(strcmp(attr_name,ATTR_TRANSFER_SOCKET) == 0) return true;
+		// We would not have to rewrite the IP in capability strings, but
+		// some schedd/shadow code assumes that the capability contains
+		// a valid contact address.  Therefore, we rewrite the IP in the
+		// capability, and the startd has to ignore differences in the IP
+		// portion of the capability when comparing to capability strings
+		// submitted by the schedd/shadow.
+    if(strcmp(attr_name,ATTR_CAPABILITY) == 0) return true;
+    if(strcmp(attr_name,ATTR_CLAIM_ID) == 0) return true;
+	size_t attr_name_len = strlen(attr_name);
+    if(attr_name_len >= 6 && stricmp(attr_name+attr_name_len-6,"IpAddr") == 0)
+	{
+        return true;
+    }
+    return false;
+}
+
+
+void ConvertDefaultIPToSocketIP(char const *attr_name,char const *old_expr_string,char **new_expr_string,Stream& s)
+{
+	*new_expr_string = NULL;
+
+    if(is_sender_ip_attr(attr_name)) {
+        char const *my_default_ip = my_ip_string();
+        char const *my_sock_ip = s.sender_ip_str();
+        if(!my_default_ip || !my_sock_ip) {
+            return;
+        }
+        if(strcmp(my_default_ip,my_sock_ip) == 0) {
+            return;
+        }
+        if(strcmp(my_sock_ip,"127.0.0.1") == 0) {
+            // We assume this is the loop-back interface, so we must
+			// be talking to another daemon on the same machine as us.
+			// We don't want to replace the default IP with this one,
+			// since nobody outside of this machine will be able to
+			// contact us on that IP.
+            return;
+        }
+
+        char *ref = strstr(old_expr_string,my_default_ip);
+        if(ref) {
+            // Replace the default IP address with the one I am actually using.
+
+			int pos = ref-old_expr_string; // position of the reference
+			int my_default_ip_len = strlen(my_default_ip);
+			int my_sock_ip_len = strlen(my_sock_ip);
+
+			*new_expr_string = (char *)malloc(strlen(old_expr_string) + my_sock_ip_len - my_default_ip_len + 1);
+			ASSERT(*new_expr_string);
+
+			strncpy(*new_expr_string, old_expr_string,pos);
+			strcpy(*new_expr_string+pos, my_sock_ip);
+			strcpy(*new_expr_string+pos+my_sock_ip_len, old_expr_string+pos+my_default_ip_len);
+
+            dprintf(D_NETWORK,"Replaced default IP %s with connection IP %s "
+                    "in outgoing ClassAd attribute %s.\n",
+                    my_default_ip,my_sock_ip,attr_name);
+        }
+    }
+}
+
+void ConvertDefaultIPToSocketIP(char const *attr_name,char **expr_string,Stream& s)
+{
+	char *new_expr_string = NULL;
+	ConvertDefaultIPToSocketIP(attr_name,*expr_string,&new_expr_string,s);
+	if(new_expr_string) {
+		//The expression was updated.  Replace the old expression with
+		//the new one.
+		free(*expr_string);
+		*expr_string = new_expr_string;
+	}
 }

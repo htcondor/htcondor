@@ -3,6 +3,7 @@
 ..\src\condor_birdwatcher\birdwatcher.cpp : \
 	"..\src\condor_birdwatcher\birdwatcher.h"\
 	"..\src\condor_birdwatcher\CondorSystrayCommon.h"\
+	"..\src\condor_birdwatcher\Resource.h"\
 	"..\src\condor_birdwatcher\StdAfx.h"\
 	"..\src\condor_birdwatcher\SystrayManager.h"\
 	"..\src\condor_birdwatcher\WindowsMessageReceiver.h"\
@@ -17,12 +18,14 @@
 	"..\src\condor_birdwatcher\res\ico00002.ico"\
 	"..\src\condor_birdwatcher\res\ico00003.ico"\
 	"..\src\condor_birdwatcher\res\icon1.ico"\
+	"..\src\condor_birdwatcher\Resource.h"\
 	
 
 ..\src\condor_birdwatcher\birdWatcherDlg.cpp : \
 	"..\src\condor_birdwatcher\birdwatcher.h"\
 	"..\src\condor_birdwatcher\birdWatcherDlg.h"\
 	"..\src\condor_birdwatcher\CondorSystrayCommon.h"\
+	"..\src\condor_birdwatcher\Resource.h"\
 	"..\src\condor_birdwatcher\StdAfx.h"\
 	"..\src\condor_birdwatcher\SystrayManager.h"\
 	"..\src\condor_birdwatcher\SystrayMinimize.h"\
@@ -37,6 +40,7 @@
 	"..\src\condor_birdwatcher\birdwatcher.h"\
 	"..\src\condor_birdwatcher\birdWatcherDlg.h"\
 	"..\src\condor_birdwatcher\CondorSystrayCommon.h"\
+	"..\src\condor_birdwatcher\Resource.h"\
 	"..\src\condor_birdwatcher\SystrayManager.h"\
 	"..\src\condor_birdwatcher\SystrayMinimize.h"\
 	"..\src\condor_birdwatcher\WindowsMessageReceiver.h"\

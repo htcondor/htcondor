@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -34,7 +34,6 @@
 
 #include "starter.h"
 #include "fileno.h"
-#include "ckpt_file.h"
 #include "startup.h"
 #include "alarm.h"
 #include "list.h"
@@ -234,9 +233,6 @@ void wait_for_debugger( int do_wait )
 void
 init_shadow_connections()
 {
-	int		scm;
-
-
 	(void) dup2( 1, RSC_SOCK );
 	(void) dup2( 2, CLIENT_LOG );
 	SyscallStream = init_syscall_connection( FALSE);
@@ -362,7 +358,7 @@ get_proc()
 
 	dprintf( D_ALWAYS, "Entering get_proc()\n" );
 
-	if( new_process=get_job_info() ) {
+	if( (new_process=get_job_info()) ) {
 		UProcList.Append( new_process );
 		return SUCCESS;
 	} else {
@@ -433,7 +429,7 @@ req_ckpt_exit_all()
 
 		// Request all the processes to ckpt and then exit
 	UProcList.Rewind();
-	while( proc = UProcList.Next() ) {
+	while( (proc = UProcList.Next()) ) {
 		dprintf( D_ALWAYS, "req_ckpt_exit_all: Proc %d in state %s\n", 
 				 proc->get_id(),	ProcStates.get_name(proc->get_state())
 				 );
@@ -455,7 +451,7 @@ req_exit_all()
 
 		// Request all the processes to exit
 	UProcList.Rewind();
-	while( proc = UProcList.Next() ) {
+	while( (proc = UProcList.Next()) ) {
 		if ( proc->get_class() != CONDOR_UNIVERSE_PVMD ) {
 			dprintf( D_ALWAYS, "req_exit_all: Proc %d in state %s\n", 
 					proc->get_id(),	ProcStates.get_name(proc->get_state())
@@ -480,7 +476,7 @@ terminate_all()
 	// dprintf( D_ALWAYS, "Entering function terminate_all()\n" );
 
 	UProcList.Rewind();
-	while( proc = UProcList.Next() ) {
+	while( (proc = UProcList.Next()) ) {
 		if( proc->is_running() || proc->is_suspended() ) {
 			return DO_WAIT;
 		}
@@ -511,7 +507,7 @@ dispose_all()
 	// dprintf( D_ALWAYS, "Entering dispose_all()\n" );
 
 	UProcList.Rewind();
-	while( proc = UProcList.Next() ) {
+	while( (proc = UProcList.Next()) ) {
 		send_final_status( proc );
 		proc->delete_files();
 		UProcList.DeleteCurrent();
@@ -609,7 +605,7 @@ reaper()
 	);
 
 	UProcList.Rewind();
-	while( proc = UProcList.Next() ) {
+	while( (proc = UProcList.Next()) ) {
 		if( proc->get_pid() == pid ) {
 			break;
 		}
@@ -656,7 +652,7 @@ susp_all()
 	/* determine how many pids the starter suspended */
 	sum = 0;
 	UProcList.Rewind();
-	while( proc = UProcList.Next() ) {
+	while( (proc = UProcList.Next()) ) {
 		if( proc->is_suspended() ) {
 			sum += proc->get_num_pids_suspended();
 		}
@@ -716,7 +712,7 @@ stop_all()
 	// dprintf( D_ALWAYS, "Entering function stop_all()\n" );
 
 	UProcList.Rewind();
-	while( proc = UProcList.Next() ) {
+	while( (proc = UProcList.Next()) ) {
 		if( proc->is_running() && proc->get_class() != CONDOR_UNIVERSE_PVMD ) {
 			proc->suspend();
 			dprintf( D_ALWAYS, "\tRequested user job to suspend\n" );
@@ -724,7 +720,7 @@ stop_all()
 	}
 
 	UProcList.Rewind();
-	while( proc = UProcList.Next() ) {
+	while( (proc = UProcList.Next()) ) {
 		if( proc->is_running() && proc->get_class() == CONDOR_UNIVERSE_PVMD ) {
 			proc->suspend();
 			dprintf( D_ALWAYS, "\tRequested user job to suspend\n" );
@@ -744,7 +740,7 @@ resume_all()
 	// dprintf( D_ALWAYS, "Entering function resume_all()\n" );
 
 	UProcList.Rewind();
-	while( proc = UProcList.Next() ) {
+	while( (proc = UProcList.Next()) ) {
 		if( proc->is_suspended() && proc->get_class() == CONDOR_UNIVERSE_PVMD ) {
 			proc->resume();
 			dprintf( D_ALWAYS, "\tRequested user job to resume\n" );
@@ -752,7 +748,7 @@ resume_all()
 	}
 
 	UProcList.Rewind();
-	while( proc = UProcList.Next() ) {
+	while( (proc = UProcList.Next()) ) {
 		if( proc->is_suspended() && proc->get_class() != CONDOR_UNIVERSE_PVMD ) {
 			proc->resume();
 			dprintf( D_ALWAYS, "\tRequested user job to resume\n" );
@@ -769,7 +765,7 @@ periodic_ckpt_all()
 	UserProc	*proc;
 
 	UProcList.Rewind();
-	while( proc = UProcList.Next() ) {
+	while( (proc = UProcList.Next()) ) {
 		if( proc->ckpt_enabled() ) {
 			proc->request_periodic_ckpt();
 			dprintf( D_ALWAYS, "\tRequested user job to do a periodic checkpoint\n" );
@@ -789,7 +785,7 @@ spawn_all()
 	// dprintf( D_ALWAYS, "Entering function spawn_all()\n" );
 
 	UProcList.Rewind();
-	while( proc = UProcList.Next() ) {
+	while( (proc = UProcList.Next()) ) {
 		if( proc->is_runnable() ) {
 			proc->execute();
 		} else {
@@ -851,7 +847,7 @@ supervise_all()
 	// dprintf( D_ALWAYS, "Entering function supervise_all()\n" );
 
 	UProcList.Rewind();
-	while( proc = UProcList.Next() ) {
+	while( (proc = UProcList.Next()) ) {
 		if( proc->ckpt_enabled() ) {
 			periodic_checkpointing = TRUE;
 			break;
@@ -1063,8 +1059,8 @@ get_job_info()
     // safe to free this memory, because the UserProc class makes
 	// copies of it. --Alain 25-Sep-2001
 	if (s.cmd)  free(s.cmd);
-	if (s.args) free(s.args);
-	if (s.env)  free (s.env);
+	if (s.args_v1or2) free(s.args_v1or2);
+	if (s.env_v1or2)  free (s.env_v1or2);
 	if (s.iwd)  free (s.iwd);
 
 	return u_proc;
@@ -1086,7 +1082,7 @@ cleanup()
 	UserProc	*proc;
 
 	UProcList.Rewind();
-	while( proc = UProcList.Next() ) {
+	while( (proc = UProcList.Next()) ) {
 		if ( proc->get_class() != CONDOR_UNIVERSE_PVMD ) {
 			proc->kill_forcibly();
 			proc->delete_files();
@@ -1095,7 +1091,7 @@ cleanup()
 		}
 	}
 	UProcList.Rewind();
-	while ( proc = UProcList.Next() ) {
+	while ( (proc = UProcList.Next()) ) {
 		if ( proc->get_class() == CONDOR_UNIVERSE_PVMD ) {
 			proc->kill_forcibly();
 			proc->delete_files();
@@ -1203,6 +1199,7 @@ init_environment_info()
 	char		*my_uid_domain;
 	char		*ckpt_server_host;
 	char		*arch, *opsys;
+	const char  *ckptpltfrm;
 
 	my_fs_domain = param( "FILESYSTEM_DOMAIN" );
 	if( my_fs_domain ) {
@@ -1215,6 +1212,10 @@ init_environment_info()
 		REMOTE_CONDOR_register_uid_domain( my_uid_domain );
 		free(my_uid_domain);
 	}
+
+	ckptpltfrm = sysapi_ckptpltfrm();
+	/* don't forget one more for the NULL which needs to go over as well */
+	REMOTE_CONDOR_register_ckpt_platform( ckptpltfrm, strlen(ckptpltfrm) + 1);
 
 #if !defined(CONTRIB)
 	ckpt_server_host = param( "CKPT_SERVER_HOST" );

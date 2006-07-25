@@ -12,6 +12,7 @@ SYSNAME = @_cv_sysname@
 #define OperatingSystem @_cv_op_sys@
 #define Architecture @_cv_arch@
 #define Platform @_cv_arch@-@_cv_opsys_vers@
+#define Distribution @_cv_opsys_vers@
 #define IS_@_cv_arch@_@_cv_opsys_vers@ YES
 #define IS_@_cv_arch@_@_cv_opsys@ YES
 #define IS_@_cv_opsys_vers@ YES
@@ -48,104 +49,19 @@ GCC_LIBC = @gcc_libc@
 CRT_BEGIN = @crt_begin@
 GCC_STATIC_LD_FLAG = @gcc_static_ld_flag@
 GCC_STATIC_LIBS = $(GCC_STATIC_LD_FLAG) -lstdc++ -lgcc
+GCC_RDYNAMIC_FLAG = @gcc_rdynamic_flag@
 
 /* Used for DRMAA */
 #define HAS_PTHREADS @has_pthreads@
 
-/* Compiler header feature set defintions */
-/* For all header files that we use configure do determine the existence of,
-   place a reference to them into HEADER_FEATURE_SET.  For example, if we
-   added a test for the existence of <intttypes.h>, then you'd add
-   @_cv_has_inttypes_h@ (or similar) to HEADER_FEATURE_SET (in addition to
-   what's already there).
-
-   Note: The value of these variables is assumed to be of the form -DHAS_xxx
-   or similar.  Look at the inttype.h logic (in configure.ac) for an example.  */
-HEADER_FEATURE_SET =
-
-/* Here we setup the imake and compiler definitions for sys_types.h */
-#define HAS_SYS_TYPES_H @has_sys_types_h@
-#if HAS_SYS_TYPES_H
- HEADER_FEATURE_SYS_TYPES_H = -DHAS_SYS_TYPES_H
-#else
- HEADER_FEATURE_SYS_TYPES_H =
-#endif
-HEADER_FEATURE_SET += $(HEADER_FEATURE_SYS_TYPES_H)
-
-/* Here we setup the imake and compiler definitions for stdint.h */
-#define HAS_STDINT_H @has_stdint_h@
-#if HAS_STDINT_H
- HEADER_FEATURE_STDINT_H = -DHAS_STDINT_H
-#else
- HEADER_FEATURE_STDINT_H =
-#endif
-HEADER_FEATURE_SET += $(HEADER_FEATURE_STDINT_H)
-
-/* Here we setup the imake and compiler definitions for inttypes.h */
-#define HAS_INTTYPES_H @has_inttypes_h@
-#if HAS_INTTYPES_H
- HEADER_FEATURE_INTTYPES_H = -DHAS_INTTYPES_H
-#else
- HEADER_FEATURE_INTTYPES_H =
-#endif
-HEADER_FEATURE_SET += $(HEADER_FEATURE_INTTYPES_H)
-
-
-/* Compiler type feature set defintions */
-/* For all functions that we use configure do determine the existence of,
-   place a reference to them into CTYPE_FEATURE_SET.  For example, if we
-   added a test for the existence of long long, then you'd add @_cv_has_longlong@
-   (or similar) to CTYPE_FEATURE_SET (in addition to what's already there).
-   Note: The value of these variables is assumed to be of the form -DHAS_xxx
-   or similar.  Look at the long long logic (in configure.ac) for an example.  */
-CTYPE_FEATURE_SET =
-
-/* Here we setup the imake and compiler definitions for int64_t */
-#define HAS_INT64_T @has_int64_t@
-#if HAS_INT64_T
- CTYPE_FEATURE_INT64_T = -DHAS_INT64_T
-#else
- CTYPE_FEATURE_INT64_T =
-#endif
-CTYPE_FEATURE_SET += $(CTYPE_FEATURE_INT64_T)
-
-/* Here we setup the imake and compiler definitions for long long */
-#define HAS_LONGLONG @has_longlong@
-#if HAS_LONGLONG
- CTYPE_FEATURE_LONGLONG = -DHAS_LONGLONG
-#else
- CTYPE_FEATURE_LONGLONG =
-#endif
-CTYPE_FEATURE_SET += $(CTYPE_FEATURE_LONGLONG)
-
-/* Here we setup the imake and compiler definitions for __int64 */
-#define HAS___INT64 @has___int64@
-#if HAS___INT64
- CTYPE_FEATURE___INT64 = -DHAS___INT64
-#else
- CTYPE_FEATURE___INT64 =
-#endif
-CTYPE_FEATURE_SET += $(CTYPE_FEATURE___INT64)
-
-/* Function feature set defintions */
-/* For all functions that we use configure do determine the existence of,
-   place a reference to them into FUNC_FEATURE_SET.  For example, if we
-   added a test for the existence of ioctl(), then you'd add @_cv_has_ioctl@
-   (or similar) to FUNCT_FEATURE_SET (in addition to what's already there).
-   Note: The value of these variables is assumed to be of the form -DHAS_xxx
-   or similar.  Look at the stat64 logic (in configure.ac) for an example.  */
-
-/* Here we setup the imake and compiler definitions for stat64 */
-#define HAS_STAT64 @has_stat64@
-#if HAS_STAT64
- FUNC_FEATURE_STAT64 = -DHAS_STAT64
-#else
- FUNC_FEATURE_STAT64 =
+/* Used for -fPIC */
+#if HAVE_CC_PIC_FLAG
+CC_PIC_FLAGS = @cc_pic_flags@
 #endif
 
-/* Put all of the above features together in one nice place */
-FUNC_FEATURE_SET = $(FUNC_FEATURE_STAT64)
-
+#if HAVE_CC_SHARED_FLAG
+CC_SHARED_FLAGS = @cc_shared_flags@
+#endif
 
 /* Settings related to the vendor compilers used for the test suites */
 
@@ -174,10 +90,19 @@ VENDOR_CPLUS_NAME = @_cv_vendor_cplus_name@
 
 /* Other miscellaneous settings we need */
 
+CONFIGURE_DEFS = @DEFS@
+CONFIGURE_LIBS = @LIBS@
+
 LEX = @LEX@
 LEXLIB = @LEXLIB@
 YACC = @YACC@
 STRIP = @STRIP@
+TRUE = @TRUE@
+#define HAVE_JAVAC @HAVE_JAVAC@
+JAVAC = @JAVAC@
+#define HAVE_JAR @HAVE_JAR@
+JAR = @JAR@
+
 
 TAR_CMD = @TarCmd@
 
@@ -185,9 +110,7 @@ CP_CMD = @CpCmd@
 
 TMP_DIR = @TMPDIR@
 
-#if HAS_PURIFY
 PURE_CACHE_DIR = @pure_cache_dir@
-#endif
 
 #define HAS_CONDOR_ANALYZE @has_condor_analyze@
 CONDOR_ANALYZE_RELEASE = @condor_analyze_release@
@@ -195,5 +118,7 @@ CONDOR_ANALYZE_STATIC = @condor_analyze_static@
 CONDOR_ANALYZE_STRIP = @condor_analyze_strip@
 
 #define HAS_STATIC @_cv_has_static@
+
+#define HAS_GLOBUS @_cv_has_globus@
 
 GlobusFlavor = @globus_flavor@

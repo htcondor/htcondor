@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -45,6 +45,14 @@ class MPIComradeProc : public VanillaProc
 			Then, just call VanillaProc::StartJob() to do the real
 			work. */
     virtual int StartJob();
+
+		/** Add environment variables
+			CONDOR_NPROCS
+			CONDOR_PROCNO
+		  
+			to the environment of each job
+		*/
+	virtual int addEnvVars();
 
 		/** We don't need to do anything special, but because C++ is
 			lame, we need to define this.  MPIMasterProc wants to

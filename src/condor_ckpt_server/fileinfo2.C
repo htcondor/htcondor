@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -167,7 +167,8 @@ void FileInformation::PrintFileInfo()
   if (count != num_files)
     {
 	  dprintf(D_ALWAYS, "WARNING incorrect count for the number of files "
-			  "(count = %d, num = %d)\n", count, num_files);
+			  "(count = %lu, num = %lu)\n", 
+			  (unsigned long) count, (unsigned long) num_files);
     }
 }
 

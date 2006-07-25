@@ -5,11 +5,11 @@ Version: 1.0-rc1
 Description:
 Monitors uses logged on the system (based on the "who" program)
 
-
 Default: who
-options:
 period: 5m
 prefix: who_
+mode: periodic
+kill: true
 
 # It's parameters
 # none

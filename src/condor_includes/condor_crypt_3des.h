@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -23,6 +23,8 @@
 
 #ifndef CONDOR_CRYPTO_3DES_H
 #define CONDOR_CRYPTO_3DES_H
+
+#if defined(CONDOR_3DES_ENCRYPTION)
 
 #include "condor_common.h"
 #include "condor_crypt.h"          // base class
@@ -67,5 +69,7 @@ class Condor_Crypt_3des : public Condor_Crypt_Base {
     int               num_;
 };
 
+
+#endif /* defined(CONDOR_3DES_ENCRYPTION) */
 
 #endif /* CONDOR_CRYPTO_3DES_H */

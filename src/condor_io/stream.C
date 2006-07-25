@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -69,9 +69,9 @@ Stream :: Stream(stream_code c) :
 		// You put _ in the front, I put in the
 		// back, very consistent, isn't it?	
     crypto_(NULL),
+    crypto_mode_(false),
     mdMode_(MD_OFF),
     mdKey_(0),
-    encrypt_(false),
     _code(c), 
     _coding(stream_encode)
 {
@@ -100,6 +100,12 @@ Stream::code( char	&c)
 			return put(c);
 		case stream_decode:
 			return get(c);
+		case stream_unknown:
+			EXCEPT("ERROR: Stream::code(char &c) has unknown direction!");
+			break;
+		default:
+			EXCEPT("ERROR: Stream::code(char &c)'s _coding is illegal!");
+			break;
 	}
 
 	return FALSE;	/* will never get here	*/
@@ -115,6 +121,12 @@ Stream::code( unsigned char	&c)
 			return put(c);
 		case stream_decode:
 			return get(c);
+		case stream_unknown:
+			EXCEPT("ERROR: Stream::code(unsigned char &c) has unknown direction!");
+			break;
+		default:
+			EXCEPT("ERROR: Stream::code(unsigned char &c)'s _coding is illegal!");
+			break;
 	}
 
 	return FALSE;	/* will never get here	*/
@@ -130,6 +142,12 @@ Stream::code( int		&i)
 			return put(i);
 		case stream_decode:
 			return get(i);
+		case stream_unknown:
+			EXCEPT("ERROR: Stream::code(int &i) has unknown direction!");
+			break;
+		default:
+			EXCEPT("ERROR: Stream::code(int &i)'s _coding is illegal!");
+			break;
 	}
 
 	return FALSE;	/* will never get here	*/
@@ -145,6 +163,12 @@ Stream::code( unsigned int		&i)
 			return put(i);
 		case stream_decode:
 			return get(i);
+		case stream_unknown:
+			EXCEPT("ERROR: Stream::code(unsigned int &i) has unknown direction!");
+			break;
+		default:
+			EXCEPT("ERROR: Stream::code(unsigned int &i)'s _coding is illegal!");
+			break;
 	}
 
 	return FALSE;	/* will never get here	*/
@@ -159,6 +183,12 @@ Stream::code( long	&l)
 			return put(l);
 		case stream_decode:
 			return get(l);
+		case stream_unknown:
+			EXCEPT("ERROR: Stream::code(long &l) has unknown direction!");
+			break;
+		default:
+			EXCEPT("ERROR: Stream::code(long &l)'s _coding is illegal!");
+			break;
 	}
 
 	return FALSE;	/* will never get here	*/
@@ -173,6 +203,12 @@ Stream::code( unsigned long	&l)
 			return put(l);
 		case stream_decode:
 			return get(l);
+		case stream_unknown:
+			EXCEPT("ERROR: Stream::code(unsigned long &l) has unknown direction!");
+			break;
+		default:
+			EXCEPT("ERROR: Stream::code(unsigned long &l)'s _coding is illegal!");
+			break;
 	}
 
 	return FALSE;	/* will never get here	*/
@@ -187,6 +223,12 @@ Stream::code( long long	&l)
 			return put(l);
 		case stream_decode:
 			return get(l);
+		case stream_unknown:
+			EXCEPT("ERROR: Stream::code(long long &l) has unknown direction!");
+			break;
+		default:
+			EXCEPT("ERROR: Stream::code(long long &l)'s _coding is illegal!");
+			break;
 	}
 
 	return FALSE;	/* will never get here	*/
@@ -200,6 +242,12 @@ Stream::code( unsigned long long	&l)
 			return put(l);
 		case stream_decode:
 			return get(l);
+		case stream_unknown:
+			EXCEPT("ERROR: Stream::code(unsigned long long &l) has unknown direction!");
+			break;
+		default:
+			EXCEPT("ERROR: Stream::code(unsigned long long &l)'s _coding is illegal!");
+			break;
 	}
 
 	return FALSE;	/* will never get here	*/
@@ -213,6 +261,12 @@ Stream::code( LONGLONG &l)
 			return put(l);
 		case stream_decode:
 			return get(l);
+		case stream_unknown:
+			EXCEPT("ERROR: Stream::code(LONGLONG &l) has unknown direction!");
+			break;
+		default:
+			EXCEPT("ERROR: Stream::code(LONGLONG &l)'s _coding is illegal!");
+			break;
 	}
 
 	return FALSE;	/* will never get here	*/
@@ -226,6 +280,12 @@ Stream::code( ULONGLONG &l)
 			return put(l);
 		case stream_decode:
 			return get(l);
+		case stream_unknown:
+			EXCEPT("ERROR: Stream::code(ULONGLONG &l) has unknown direction!");
+			break;
+		default:
+			EXCEPT("ERROR: Stream::code(ULONGLONG &l)'s _coding is illegal!");
+			break;
 	}
 
 	return FALSE;	/* will never get here	*/
@@ -240,6 +300,12 @@ Stream::code( short	&s)
 			return put(s);
 		case stream_decode:
 			return get(s);
+		case stream_unknown:
+			EXCEPT("ERROR: Stream::code(short &s) has unknown direction!");
+			break;
+		default:
+			EXCEPT("ERROR: Stream::code(short &s)'s _coding is illegal!");
+			break;
 	}
 
 	return FALSE;	/* will never get here	*/
@@ -255,6 +321,12 @@ Stream::code( unsigned short	&s)
 			return put(s);
 		case stream_decode:
 			return get(s);
+		case stream_unknown:
+			EXCEPT("ERROR: Stream::code(unsigned short &s) has unknown direction!");
+			break;
+		default:
+			EXCEPT("ERROR: Stream::code(unsigned short &s)'s _coding is illegal!");
+			break;
 	}
 
 	return FALSE;	/* will never get here	*/
@@ -270,6 +342,12 @@ Stream::code( float	&f)
 			return put(f);
 		case stream_decode:
 			return get(f);
+		case stream_unknown:
+			EXCEPT("ERROR: Stream::code(float &f) has unknown direction!");
+			break;
+		default:
+			EXCEPT("ERROR: Stream::code(float &f)'s _coding is illegal!");
+			break;
 	}
 
 	return FALSE;	/* will never get here	*/
@@ -285,6 +363,12 @@ Stream::code( double	&d)
 			return put(d);
 		case stream_decode:
 			return get(d);
+		case stream_unknown:
+			EXCEPT("ERROR: Stream::code(double &d) has unknown direction!");
+			break;
+		default:
+			EXCEPT("ERROR: Stream::code(double &d)'s _coding is illegal!");
+			break;
 	}
 
 	return FALSE;	/* will never get here	*/
@@ -300,6 +384,12 @@ Stream::code( char	*&s)
 			return put(s);
 		case stream_decode:
 			return get(s);
+		case stream_unknown:
+			EXCEPT("ERROR: Stream::code(char *&s) has unknown direction!");
+			break;
+		default:
+			EXCEPT("ERROR: Stream::code(char *&s)'s _coding is illegal!");
+			break;
 	}
 
 	return FALSE;	/* will never get here	*/
@@ -314,6 +404,12 @@ Stream::code( char	*&s, int		&len)
 			return put(s, len);
 		case stream_decode:
 			return get(s, len);
+		case stream_unknown:
+			EXCEPT("ERROR: Stream::code(char *&s, int &len) has unknown direction!");
+			break;
+		default:
+			EXCEPT("ERROR: Stream::code(char *&s, int &len)'s _coding is illegal!");
+			break;
 	}
 
 	return FALSE;	/* will never get here	*/
@@ -335,10 +431,16 @@ int
 Stream::code_bytes(void *p, int l)
 {
 	switch(_coding) {
-	case stream_encode:
-		return put_bytes((const void *)p, l);
-	case stream_decode:
-		return get_bytes(p, l);
+		case stream_encode:
+			return put_bytes((const void *)p, l);
+		case stream_decode:
+			return get_bytes(p, l);
+		case stream_unknown:
+			EXCEPT("ERROR: Stream::code(void *p, int l) has unknown direction!");
+			break;
+		default:
+			EXCEPT("ERROR: Stream::code(void *p, int l)'s _coding is illegal!");
+			break;
 	}
 
 	return FALSE;	/* will never get here */
@@ -402,8 +504,8 @@ Stream::code(STARTUP_INFO &start)
 	start.soft_kill_sig = (int)temp;
 #endif
 	STREAM_ASSERT(code(start.cmd));
-	STREAM_ASSERT(code(start.args));
-	STREAM_ASSERT(code(start.env));
+	STREAM_ASSERT(code(start.args_v1or2));
+	STREAM_ASSERT(code(start.env_v1or2));
 	STREAM_ASSERT(code(start.iwd));
 	STREAM_ASSERT(code(start.ckpt_wanted));
 	STREAM_ASSERT(code(start.is_restart));
@@ -787,7 +889,40 @@ Stream::code(struct utsname &n)
 	return TRUE;
 }
 
+
 #endif // !defined(WIN32)
+
+
+int
+Stream::code(condor_mode_t &m)
+{
+	mode_t mask = 0, y = 0;
+#if !defined(WIN32)
+	mask |= (S_IRUSR|S_IWUSR|S_IXUSR|
+			 S_IRGRP|S_IWGRP|S_IXGRP|
+			 S_IROTH|S_IWOTH|S_IXOTH);
+
+    if( _coding == stream_encode ) {
+		y = m & mask;
+	}
+#else
+	if( _coding == stream_encode ) {
+		y = NULL_FILE_PERMISSIONS;
+	}
+#endif
+
+ 	STREAM_ASSERT(code(y));
+
+    if( _coding == stream_decode ) {
+#if !defined(WIN32)
+		m = (condor_mode_t)(y & mask);
+#else
+		m = NULL_FILE_PERMISSIONS;
+#endif
+	}
+	
+	return TRUE;
+}
 
 /*
 **	PUT ROUTINES
@@ -851,7 +986,7 @@ Stream::put( int		i)
 		case external: {
 			tmp = htonl(i);
 			pad = (i >= 0) ? 0 : 0xff; // sign extend value
-			for (int s=0; s < INT_SIZE-sizeof(int); s++) {
+			for (int s=0; s < INT_SIZE-(int)sizeof(int); s++) {
 				if (put_bytes(&pad, 1) != 1) return FALSE;
 			}
 			if (put_bytes(&tmp, sizeof(int)) != sizeof(int)) return FALSE;
@@ -884,7 +1019,7 @@ Stream::put( unsigned int		i)
 		case external: {
 			tmp = htonl(i);
 			pad = 0;
-			for (int s=0; s < INT_SIZE-sizeof(int); s++) {
+			for (int s=0; s < INT_SIZE-(int)sizeof(int); s++) {
 				if (put_bytes(&pad, 1) != 1) return FALSE;
 			}
 			if (put_bytes(&tmp, sizeof(int)) != sizeof(int)) return FALSE;
@@ -1005,7 +1140,7 @@ Stream::put( long	l)
 				}
 				if (sizeof(long) < INT_SIZE) {
 					pad = (l >= 0) ? 0 : 0xff; // sign extend value
-					for (int s=0; s < INT_SIZE-sizeof(long); s++) {
+					for (int s=0; s < INT_SIZE-(int)sizeof(long); s++) {
 						if (put_bytes(&pad, 1) != 1) return FALSE;
 					}
 				}
@@ -1042,7 +1177,7 @@ Stream::put( unsigned long	l)
 				}
 				if (sizeof(long) < INT_SIZE) {
 					pad = 0;
-					for (int s=0; s < INT_SIZE-sizeof(long); s++) {
+					for (int s=0; s < INT_SIZE-(int)sizeof(long); s++) {
 						if (put_bytes(&pad, 1) != 1) return FALSE;
 					}
 				}
@@ -1078,7 +1213,7 @@ Stream::put( long long	l)
 				}
 				if (sizeof(long long) < INT_SIZE) {
 					pad = (l >= 0) ? 0 : 0xff; // sign extend value
-					for (int s=0; s < INT_SIZE-sizeof(long long); s++) {
+					for (int s=0; s < INT_SIZE-(int)sizeof(long long); s++) {
 						if (put_bytes(&pad, 1) != 1) return FALSE;
 					}
 				}
@@ -1115,7 +1250,7 @@ Stream::put( long long unsigned	l)
 				}
 				if (sizeof(long long) < INT_SIZE) {
 					pad = 0;
-					for (int s=0; s < INT_SIZE-sizeof(long long); s++) {
+					for (int s=0; s < INT_SIZE-(int)sizeof(long long); s++) {
 						if (put_bytes(&pad, 1) != 1) return FALSE;
 					}
 				}
@@ -1391,7 +1526,10 @@ Stream::get( char	&c)
 		case internal:
 		case external:
 		case ascii:
-			if (get_bytes(&c, 1) != 1) return FALSE;
+			if (get_bytes(&c, 1) != 1) {
+                dprintf(D_NETWORK, "Stream::get(char) failed\n");
+                return FALSE;
+            }
 			break;
 	}
    NETWORK_TRACE("get char " << c << " c(" << ++getcount << ") ");    
@@ -1409,7 +1547,10 @@ Stream::get( unsigned char	&c)
 		case internal:
 		case external:
 		case ascii:
-			if (get_bytes(&c, 1) != 1) return FALSE;
+			if (get_bytes(&c, 1) != 1) {
+                dprintf(D_NETWORK, "Stream::get(uchar) failed\n");
+                return FALSE;
+            }
 			break;
 	}
    NETWORK_TRACE("get char " << c << " c(" << ++getcount << ") ");    
@@ -1426,21 +1567,31 @@ Stream::get( int		&i)
 
 	switch(_code){
 		case internal:
-			if (get_bytes(&i, sizeof(int)) != sizeof(int)) return FALSE;
+			if (get_bytes(&i, sizeof(int)) != sizeof(int)) {
+                dprintf(D_NETWORK, "Stream::get(int) from internal failed\n");
+                return FALSE;
+            }
 			break;
 
 		case external: {
 			if (INT_SIZE > sizeof(int)) { // get overflow bytes
 				if (get_bytes(pad, INT_SIZE-sizeof(int))
 					!= INT_SIZE-sizeof(int)) {
+                    dprintf(D_NETWORK, "Stream::get(int) failed to read padding\n");
 					return FALSE;
 				}
 			}
-			if (get_bytes(&tmp, sizeof(int)) != sizeof(int)) return FALSE;
+			if (get_bytes(&tmp, sizeof(int)) != sizeof(int)) {
+                dprintf(D_NETWORK, "Stream::get(int) failed to read int\n");
+                return FALSE;
+            }
 			i = ntohl(tmp);
 			sign = (i >= 0) ? 0 : 0xff;
-			for (int s=0; s < INT_SIZE-sizeof(int); s++) { // chk 4 overflow
+			for (int s=0; s < INT_SIZE-(int)sizeof(int); s++) { // chk 4 overflow
 				if (pad[s] != sign) {
+                    dprintf(D_NETWORK,
+                            "Stream::get(int) incorrect pad received: %x\n",
+                            pad[s]);
 					return FALSE; // overflow
 				}
 			}
@@ -1466,20 +1617,30 @@ Stream::get( unsigned int	&i)
 
 	switch(_code){
 		case internal:
-			if (get_bytes(&i, sizeof(int)) != sizeof(int)) return FALSE;
+			if (get_bytes(&i, sizeof(int)) != sizeof(int)) {
+                dprintf(D_NETWORK, "Stream::get(uint) from internal failed\n");
+                return FALSE;
+            }
 			break;
 
 		case external: {
 			if (INT_SIZE > sizeof(int)) { // get overflow bytes
 				if (get_bytes(pad, INT_SIZE-sizeof(int))
 					!= INT_SIZE-sizeof(int)) {
+                    dprintf(D_NETWORK, "Stream::get(uint) failed to read padding\n");
 					return FALSE;
 				}
 			}
-			if (get_bytes(&tmp, sizeof(int)) != sizeof(int)) return FALSE;
+			if (get_bytes(&tmp, sizeof(int)) != sizeof(int)) {
+                dprintf(D_NETWORK, "Stream::get(uint) failed to read int\n");
+                return FALSE;
+            }
 			i = ntohl(tmp);
-			for (int s=0; s < INT_SIZE-sizeof(int); s++) { // chk 4 overflow
+			for (int s=0; s < INT_SIZE-(int)sizeof(int); s++) { // chk 4 overflow
 				if (pad[s] != 0) {
+                    dprintf(D_NETWORK,
+                            "Stream::get(uint) incorrect pad received: %x\n",
+                            pad[s]);
 					return FALSE; // overflow
 				}
 			}
@@ -1524,7 +1685,7 @@ Stream::get( long	&l)
 					l = ntohL(l);
 				}
 				sign = (l >= 0) ? 0 : 0xff;
-				for (int s=0; s < INT_SIZE-sizeof(long); s++) { // overflow?
+				for (int s=0; s < INT_SIZE-(int)sizeof(long); s++) { // overflow?
 					if (pad[s] != sign) {
 						return FALSE; // overflow
 					}
@@ -1567,7 +1728,7 @@ Stream::get( unsigned long	&l)
 				if (!hton_is_noop()) { // need to convert to host order
 					l = ntohL(l);
 				}
-				for (int s=0; s < INT_SIZE-sizeof(long); s++) { // overflow?
+				for (int s=0; s < INT_SIZE-(int)sizeof(long); s++) { // overflow?
 					if (pad[s] != 0) {
 						return FALSE; // overflow
 					}
@@ -1610,7 +1771,7 @@ Stream::get( long long	&l)
 					l = ntohLL(l);
 				}
 				sign = (l >= 0) ? 0 : 0xff;
-				for (int s=0; s < INT_SIZE-sizeof(long long); s++) { // overflow?
+				for (int s=0; s < INT_SIZE-(int)sizeof(long long); s++) { // overflow?
 					if (pad[s] != sign) {
 						return FALSE; // overflow
 					}
@@ -1653,7 +1814,7 @@ Stream::get( unsigned long long	&l)
 				if (!hton_is_noop()) { // need to convert to host order
 					l = ntohLL(l);
 				}
-				for (int s=0; s < INT_SIZE-sizeof(long long); s++) { // overflow?
+				for (int s=0; s < INT_SIZE-(int)sizeof(long long); s++) { // overflow?
 					if (pad[s] != 0) {
 						return FALSE; // overflow
 					}
@@ -2034,10 +2195,23 @@ Stream::allow_one_empty_message()
 }
 
 
+void 
+Stream::set_crypto_mode(bool enabled)
+{
+	if (crypto_ && enabled) {
+		crypto_mode_ = true;
+	} else {
+		if (enabled) {
+			dprintf ( D_SECURITY, "NOT enabling crypto - there was no key exchanged.\n");
+		}
+		crypto_mode_ = false;
+	}
+}
+
 bool 
 Stream::get_encryption() const
 {
-    return (crypto_ != 0);
+    return (crypto_mode_);
 }
 
 bool 
@@ -2080,6 +2254,7 @@ Stream::initialize_crypto(KeyInfo * key)
 {
     delete crypto_;
     crypto_ = 0;
+	crypto_mode_ = false;
 
     // Will try to do a throw/catch later on
     if (key) {
@@ -2139,7 +2314,7 @@ const KeyInfo& Stream :: get_md_key() const
 
 
 bool 
-Stream::set_crypto_key(KeyInfo * key, const char * keyId)
+Stream::set_crypto_key(bool enable, KeyInfo * key, const char * keyId)
 {
     bool inited = true;
 #if defined(CONDOR_ENCRYPTION)
@@ -2152,15 +2327,19 @@ Stream::set_crypto_key(KeyInfo * key, const char * keyId)
         if (crypto_) {
             delete crypto_;
             crypto_ = 0;
+			crypto_mode_ = false;
         }
         ASSERT(keyId == 0);
+        ASSERT(enable == false);
         inited = true;
     }
 
     // More check should be done here. what if keyId is NULL?
     if (inited) {
         set_encryption_id(keyId);
+		set_crypto_mode(enable);
     }
+
     /* 
     // Now, if TCP, the first packet need to contain the key for verification purposes
     // This key is encrypted with itself (along with rest of the packet).

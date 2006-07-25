@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -56,14 +56,14 @@ MyString::MyString(int i)
 MyString::MyString(const char* S) 
 {
 	init();
-    *this=S;
+    *this=S; // = operator is overloaded!
 	return;
 };
 
 MyString::MyString(const MyString& S) 
 {
 	init();
-    *this=S;
+    *this=S; // = operator is overloaded!
 	return;
 }
 
@@ -296,6 +296,40 @@ MyString::operator+=( int i )
 
 
 MyString& 
+MyString::operator+=( unsigned int ui )
+{
+	const int bufLen = 64;
+	char tmp[bufLen];
+	::snprintf( tmp, bufLen, "%u", ui );
+	int s_len = strlen( tmp );
+	ASSERT(s_len < bufLen);
+	if( s_len + Len > capacity ) {
+		reserve_at_least( Len + s_len );
+	}
+	strcpy( Data + Len, tmp );
+	Len += s_len;
+	return *this;
+}
+
+
+MyString& 
+MyString::operator+=( long l )
+{
+	const int bufLen = 64;
+	char tmp[bufLen];
+	::snprintf( tmp, bufLen, "%ld", l );
+	int s_len = strlen( tmp );
+	ASSERT(s_len < bufLen);
+	if( s_len + Len > capacity ) {
+		reserve_at_least( Len + s_len );
+	}
+	strcpy( Data + Len, tmp );
+	Len += s_len;
+	return *this;
+}
+
+
+MyString& 
 MyString::operator+=( double d )
 {
 	const int bufLen = 128;
@@ -460,6 +494,7 @@ MyString::replaceString(
 		   Len - iPreviousEnd + 1);
 	delete [] Data;
 	Data = pNewData;
+	capacity = iNewLen;
 	Len = iNewLen;
 	
 	return true;
@@ -566,6 +601,19 @@ MyString::chomp( void )
 	return chomped;
 }
 
+void
+MyString::trim( void )
+{
+	int		begin = 0;
+	while ( isspace(Data[begin]) ) { ++begin; }
+
+	int		end = Length() - 1;
+	while ( isspace(Data[end]) ) { --end; }
+
+	if ( begin != 0 || end != Length() - 1 ) {
+		*this = Substr(begin, end);
+	}
+}
 
 void
 MyString::init()

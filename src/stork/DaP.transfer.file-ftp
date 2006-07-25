@@ -1,0 +1,97 @@
+#!/s/std/bin/perl -w
+#
+# ftpput - performs an FTP "put", retrying in case of failure
+#
+#          usage: ftpput host user password srcdir srcfile destdir destfile 
+#               
+#          2001-01-10 Tevfik Kosar <kosart@cs.wisc.edu>  
+#          2000-08-31 Peter Couvares <pfc@cs.wisc.edu>
+#          2000-11-02 Vladimir Litvine <litvin@hep.caltech.edu>
+#
+
+require 5.0;
+
+use Net::FTP;
+
+# configurable details
+$max_attempts = 10;   # maximum number of re-tries before failing
+$initial_wait = 60;   # initial wait, in seconds (doubles after each try)
+
+#ReqEx ClassAd logfile:
+$ReqExLog = "/local.vulture.3/kosart/Condor_6.5/src/condor_data_manager/files_to_process.log";
+
+# logfile to log bytes transferred
+$logfile = "/tmp/reqex_ftp.log";
+
+# check usage & get arguments
+die "$0: ftpput host user pass srcdir file destdir endfile\n" unless $#ARGV >= 6;
+my ($host, $user, $pass, $srcdir, $file, $destdir, $endfile) = @ARGV;
+
+print "ftpput $host *$srcdir *$file *$destdir *$endfile\n";
+
+# the loop
+$attempt = 1;
+$wait = $initial_wait;
+until( putfile( $host, $user, $srcdir, $file, "$destdir/$endfile" ) ) {
+    exit 1 if $attempt >= $max_attempts;
+    warn "$0: " . timestamp() . ": will retry in $wait seconds...\n";
+    sleep $wait;
+    $wait = $wait * 2;
+}
+
+# log human-readable timestamp, Unix Epoch time, file size, file name
+open( LOG, ">>$logfile" )
+    || die "$0: " . timestamp() . ": error opening $logfile: $!\n";
+print LOG timestamp(), "\t", time(), "\t", -s "$srcdir/$file", "\t", "$srcdir/$file", "\n";
+close( LOG );
+
+exit 0;
+
+# the actual "put" routine
+sub putfile {
+    my ( $host, $user, $srcdir, $file, $destfile) = @_;
+
+    $ftp = Net::FTP->new( $host, Debug => 1 );
+
+    unless( $ftp ) {
+	warn "$0: " . timestamp() . ": error initiating FTP\n";
+	return 0;
+    }
+
+    unless( $ftp->login( $user, $pass ) ) {
+	warn "$0: " . timestamp() . ": error logging into $host as $user\n";
+	$ftp->quit;
+	return 0;
+    }
+
+#    unless( $ftp->cwd( $destdir ) ) {
+#	warn "$0: " . timestamp() . ": error entering directory $destdir\n";
+#	$ftp->quit;
+#        return 0;
+#    }
+
+    $ftp->binary();
+
+    unless( $ftp->put( "$srcdir/$file" , $destfile) ) {
+	warn "$0: " . timestamp() . ": error putting $file in $destfile\n";
+        $ftp->quit;
+        return 0;
+    }
+
+    $ftp->quit;
+
+    open( REQEXLOG, ">>$ReqExLog" )
+	|| die "$0: " . timestamp() . ": error opening $ReqExLog: $!\n";
+    print REQEXLOG "\n    [\n";
+    print REQEXLOG "\tFilename = $file; \n";
+    print REQEXLOG "\tStatus = transfer_to_ftp_completed;\n";
+    print REQEXLOG "    ]\n";
+    close( REQEXLOG );
+    
+    return 1;
+}
+
+sub timestamp {
+    return scalar localtime();
+}
+

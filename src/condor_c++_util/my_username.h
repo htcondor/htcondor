@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -26,7 +26,9 @@
 #ifndef MY_USERNAME_H
 #define MY_USERNAME_H
 
-char *my_username( int uuid = 0 );
+/* Returns malloc()ed memory.  Be sure to free() it.  Return NULL on failure */
+char *my_username( int uuid = -1 );
+/* Returns malloc()ed memory.  Be sure to free() it.  Return NULL on failure */
 char *my_domainname( void );
 
 #ifdef WIN32

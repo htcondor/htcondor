@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -32,6 +32,7 @@
 #include "SchedDCommands.h"
 #include "daemon.h"
 #include "dc_schedd.h"
+#include "gahp_common.h"
 
 //#include "basejob.h"
 
@@ -43,6 +44,7 @@
 #define TIMER_UNSET -1
 
 extern char *ScheddAddr;
+extern char *ScheddPool;
 extern char *ScheddJobConstraint;
 extern char *GridmanagerScratchDir;
 extern char *Owner;
@@ -55,6 +57,8 @@ extern int contactScheddTid;
 
 
 
+extern bool useXMLClassads;
+
 // initialization
 void Init();
 void Register();
@@ -64,20 +68,17 @@ void Reconfig();
 
 void enqueue_result (int req_id, const char ** results, const int argc) ;
 int get_int (const char *, int *);
+int get_ulong (const char *, unsigned long *);
 int get_job_id (const char *, int *, int *);
 int get_class_ad (const char *, ClassAd **);
 int enqueue_command (SchedDRequest *);
 char * escape_string (const char *);
 
 int doContactSchedd();
-int checkRequestPipe ();
+int request_pipe_handler(Service*, int);
 
 int handle_gahp_command(char ** argv, int argc);
-int parse_gahp_command (const char *, char ***, int *);
-int schedd_thread (void * arg, Stream * sock);
-
-int io_loop_reaper (Service*, int pid, int exit_status);
-
+int parse_gahp_command (const char *, Gahp_Args *);
 
 
 #endif

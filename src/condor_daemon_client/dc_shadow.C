@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -32,10 +32,18 @@
 #include "dc_shadow.h"
 #include "internet.h"
 
+
 DCShadow::DCShadow( const char* name ) : Daemon( DT_SHADOW, name, NULL )
 {
 	is_initialized = false;
 	shadow_safesock = NULL;
+
+	if(_addr && !_name) {
+			// We must have been given a sinful string instead of a hostname.
+			// Just use the sinful string in place of a hostname, contrary
+			// to the default behavior in Daemon::Daemon().
+		_name = strnewp(_addr);
+	}
 }
 
 
@@ -50,7 +58,7 @@ DCShadow::~DCShadow( void )
 bool
 DCShadow::initFromClassAd( ClassAd* ad )
 {
-	std::string tmp;
+	char* tmp = NULL;
 
 	if( ! ad ) {
 		dprintf( D_ALWAYS, 
@@ -58,27 +66,32 @@ DCShadow::initFromClassAd( ClassAd* ad )
 		return false;
 	}
 
-	if (!ad->EvaluateAttrString( ATTR_SHADOW_IP_ADDR, tmp )) {
-        // If that's not defined, try ATTR_MY_ADDRESS
-		ad->EvaluateAttrString( ATTR_MY_ADDRESS, tmp );
+	ad->LookupString( ATTR_SHADOW_IP_ADDR, &tmp );
+	if( ! tmp ) {
+			// If that's not defined, try ATTR_MY_ADDRESS
+		ad->LookupString( ATTR_MY_ADDRESS, &tmp );
 	}
-	if( tmp.length() <= 0 ) {
+	if( ! tmp ) {
 		dprintf( D_FULLDEBUG, "ERROR: DCShadow::initFromClassAd(): "
 				 "Can't find shadow address in ad\n" );
 		return false;
 	} else {
-		if( is_valid_sinful(tmp.data()) ) {
-			New_addr( strnewp(tmp.data()) );
+		if( is_valid_sinful(tmp) ) {
+			New_addr( strnewp(tmp) );
 			is_initialized = true;
 		} else {
 			dprintf( D_FULLDEBUG, 
 					 "ERROR: DCShadow::initFromClassAd(): invalid %s in ad (%s)\n", 
-					 ATTR_SHADOW_IP_ADDR, tmp.data() );
+					 ATTR_SHADOW_IP_ADDR, tmp );
 		}
+		free( tmp );
+		tmp = NULL;
 	}
 
-	if( ad->EvaluateAttrString( ATTR_SHADOW_VERSION, tmp)) {
-		New_version( strnewp(tmp.data()) );
+	if( ad->LookupString(ATTR_SHADOW_VERSION, &tmp) ) {
+		New_version( strnewp(tmp) );
+		free( tmp );
+		tmp = NULL;
 	}
 
 	return is_initialized;
@@ -141,7 +154,6 @@ DCShadow::updateJobInfo( ClassAd* ad, bool insure_update )
 		}
 		return false;
 	}
-
 	if( ! ad->put(*tmp) ) {
 		dprintf( D_FULLDEBUG, 
 				 "Failed to send SHADOW_UPDATEINFO ClassAd to shadow\n" );
@@ -151,7 +163,6 @@ DCShadow::updateJobInfo( ClassAd* ad, bool insure_update )
 		}
 		return false;
 	}
-
 	if( ! tmp->end_of_message() ) {
 		dprintf( D_FULLDEBUG, 
 				 "Failed to send SHADOW_UPDATEINFO EOM to shadow\n" );

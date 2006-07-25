@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -73,6 +73,7 @@ ShouldTransferFiles_t getShouldTransferFilesNum( const char* string );
 
 
 typedef enum { 
+	FTO_NONE = 0,
 	FTO_ON_EXIT = 1,
 	FTO_ON_EXIT_OR_EVICT,
 } FileTransferOutput_t;
@@ -94,6 +95,18 @@ typedef enum {
 
 const char* getJobActionString( JobAction action );
 JobAction getJobActionNum( const char* string );
+
+
+// enum for possible CRON_AUTOPUBLISH values
+typedef enum {
+	CAP_ERROR = -1,
+	CAP_NEVER = 0,
+	CAP_ALWAYS,
+	CAP_IF_CHANGED
+} CronAutoPublish_t;
+
+const char* getCronAutoPublishString( CronAutoPublish_t val );
+CronAutoPublish_t getCronAutoPublishNum( const char* string );
 
 
 #endif /* _CONDOR_ENUM_UTILS_H */

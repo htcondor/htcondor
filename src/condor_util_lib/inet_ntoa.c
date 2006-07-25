@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -65,7 +65,7 @@ inet_ntoa( struct in_addr inaddr ) {
 	int i;
 
 	/* clean the ascii buffer out */
-	memcpy(buffer, 0, 
+	memset(buffer, 0, 
 		sizeof(struct in_addr) * 3 + (sizeof(struct in_addr)-1) + 1);
 
 	/* XXX This assumes big endian */

@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -24,9 +24,13 @@
 #include "condor_common.h"
 #include "condor_attributes.h"
 #include "condor_config.h"
+#include "starter.h"
+#include "condor_ver_info.h"
 
 #include "java_proc.h"
 #include "java_config.h"
+
+extern CStarter * Starter;
 
 JavaProc::JavaProc( ClassAd * jobAd, const char *xdir ) : VanillaProc(jobAd)
 {
@@ -45,90 +49,123 @@ JavaProc::~JavaProc()
 
 int JavaProc::StartJob()
 {
-	char tmp[ATTRLIST_MAX_EXPRESSION];
 	
 	char java_cmd[_POSIX_PATH_MAX];
-	char java_args[_POSIX_ARG_MAX];
-	char jarfiles[ATTRLIST_MAX_EXPRESSION];
-	StringList *jarfiles_list=0;
+	char* jarfiles = NULL;
+	ArgList args;
+	MyString arg_buf;
 
-	ExprTree  *tree;
-	char	  *tmp_args;
-	char      *job_args;
-	int		  length;
+	// Since we are adding to the argument list, we may need to deal
+	// with platform-specific arg syntax in the user's args in order
+	// to successfully merge them with the additional java VM args.
+	args.SetArgV1SyntaxToCurrentPlatform();
 
-	ClassAdUnParser unp;
-	unp.SetOldClassAd( true );
-	std::string treeString;
+	// Construct the list of jar files for the command line
+	// If a jar file is transferred locally, use its local name
+	// (in the execute directory)
+	// otherwise use the original name
 
-	if(JobAd->LookupString(ATTR_JAR_FILES,jarfiles)==1) {
-		jarfiles_list = new StringList(jarfiles);
+	StringList jarfiles_orig_list;
+	StringList jarfiles_local_list;
+	StringList* jarfiles_final_list = NULL;
+
+	if( JobAd->LookupString(ATTR_JAR_FILES,&jarfiles) ) {
+		jarfiles_orig_list.initializeFromString( jarfiles );
+		free( jarfiles );
+		jarfiles = NULL;
+
+		char * jarfile_name;
+		const char * base_name;
+		struct stat stat_buff;
+		if( Starter->jic->iwdIsChanged() ) {
+				// If the job's IWD has been changed (because we're
+				// running in the sandbox due to file transfer), we
+				// need to use a local version of the path to the jar
+				// files, not the full paths from the submit machine. 
+			jarfiles_orig_list.rewind();
+			while( (jarfile_name = jarfiles_orig_list.next()) ) {
+					// Construct the local name
+				base_name = condor_basename( jarfile_name );
+				MyString local_name = execute_dir;
+				local_name += DIR_DELIM_CHAR;
+				local_name += base_name; 
+
+				if( stat(local_name.Value(), &stat_buff) == 0 ) {
+						// Jar file exists locally, use local name
+					jarfiles_local_list.append( local_name.Value() );
+				} else {
+						// Use the original name
+					jarfiles_local_list.append (jarfile_name);
+				}
+			} // while(jarfiles_orig_list)
+
+				// jarfiles_local_list is our real copy...
+			jarfiles_final_list = &jarfiles_local_list;
+
+		} else {  // !iwdIsChanged()
+
+				// just use jarfiles_orig_list as our real copy...
+			jarfiles_final_list = &jarfiles_orig_list;
+		}			
 	}
-
-	if(!java_config(java_cmd,java_args,jarfiles_list)) {
-		dprintf(D_FAILURE|D_ALWAYS,"JavaProc: Java is not configured!\n");
-		if(jarfiles_list) delete jarfiles_list;
-		return 0;
-	}
-
-	sprintf(tmp,"%s=\"%s\"",ATTR_JOB_CMD,java_cmd);
-	JobAd->InsertOrUpdate(tmp);
 
 	sprintf(startfile,"%s%cjvm.start",execute_dir,DIR_DELIM_CHAR);
 	sprintf(endfile,"%s%cjvm.end",execute_dir,DIR_DELIM_CHAR);
 
-	// this new code pulls the value out of the classad with the
-	// quote backwhacks still in place, so when we InsertOrUpdate() we
-	// don't lose any of the backwhacks.  -stolley, 8/02
-
-	tree = JobAd->Lookup(ATTR_JOB_ARGUMENTS);
-	if ( tree == NULL ) {
-		dprintf(D_ALWAYS,"JavaProc: %s is not defined!\n",ATTR_JOB_ARGUMENTS);
+	if( !java_config(java_cmd,&args,jarfiles_final_list) ) {
+		dprintf(D_FAILURE|D_ALWAYS,"JavaProc: Java is not configured!\n");
 		return 0;
-//	} else if ( tree->RArg() == NULL ) { 
-		// this shouldn't happen, but to be safe
-//		dprintf(D_ALWAYS,"JavaProc: %s RArg is not defined!\n",ATTR_JOB_ARGUMENTS);
-//		return 0;
 	}
-//	tree->RArg()->PrintToNewStr(&tmp_args);
-	unp.Unparse( treeString, tree );
-	tmp_args = new char[treeString.length( )+1];
-	strcpy( tmp_args, treeString.c_str( ) );
 
-	job_args = tmp_args+1; // skip first quote
-	length = strlen(job_args);
-	job_args[length-1] = '\0'; // destroy last quote
+	JobAd->Assign(ATTR_JOB_CMD, java_cmd);
 
-	/*
-	We really need to be passing these arguments through an
-	argv-like interface to DaemonCore.  However, we don't have
-	one.  Currently, the Windows version interprets and removes
-	quotes in argument strings, but the UNIX version does not.
-	Thus, we need two different strings, depending on the platform.
-	Todd and Colin promise to fix this.  -thain
-	*/
-	
-	sprintf(tmp,
-#ifdef WIN32
-		"%s=\"%s -Dchirp.config=\\\"%s%cchirp.config\\\" CondorJavaWrapper \\\"%s\\\" \\\"%s\\\" %s\"",
-#else
-		"%s=\"%s -Dchirp.config=%s%cchirp.config CondorJavaWrapper %s %s %s\"",
-#endif
+	arg_buf.sprintf("-Dchirp.config=%s%cchirp.config",execute_dir,DIR_DELIM_CHAR);
+	args.AppendArg(arg_buf.Value());
 
-		ATTR_JOB_ARGUMENTS,
-		java_args,
-		execute_dir,
-		DIR_DELIM_CHAR,
-		startfile,
-		endfile,
-		job_args);
+	char *vm_args1 = NULL;
+	char *vm_args2 = NULL;
+	MyString vm_args_error;
+	bool vm_args_success = true;
+	JobAd->LookupString(ATTR_JOB_JAVA_VM_ARGS1, &vm_args1);
+	JobAd->LookupString(ATTR_JOB_JAVA_VM_ARGS2, &vm_args2);
+	if(vm_args2) {
+		vm_args_success = args.AppendArgsV2Raw(vm_args2,&vm_args_error);
+	}
+	else if(vm_args1) {
+		vm_args_success = args.AppendArgsV1Raw(vm_args1,&vm_args_error);
+	}
+	free(vm_args1);
+	free(vm_args2);
+	if(!vm_args_success) {
+		dprintf(D_ALWAYS,"JavaProc: failed to parse VM args: %s\n",
+				vm_args_error.Value());
+		return 0;
+	}
 
-	JobAd->InsertOrUpdate(tmp);
-	
-	free(tmp_args);
+	args.AppendArg("CondorJavaWrapper");
+	args.AppendArg(startfile);
+	args.AppendArg(endfile);
+
+	MyString args_error;
+	if(!args.AppendArgsFromClassAd(JobAd,&args_error)) {
+		dprintf(D_ALWAYS,"JavaProc: failed to read job arguments: %s\n",
+				args_error.Value());
+		return 0;
+	}
+
+	// We are just talking to ourselves, so it is fine to use argument
+	// syntax compatible with this current version of Condor.
+	CondorVersionInfo ver_info;
+	if(!args.InsertArgsIntoClassAd(JobAd,&ver_info,&args_error)) {
+		dprintf(D_ALWAYS,"JavaProc: failed to insert java job arguments: %s\n",
+				args_error.Value());
+		return 0;
+	}
 
 	dprintf(D_ALWAYS,"JavaProc: Cmd=%s\n",java_cmd);
-	dprintf(D_ALWAYS,"JavaProc: Args=%s\n",tmp);
+	MyString args_string;
+	args.GetArgsStringForDisplay(&args_string);
+	dprintf(D_ALWAYS,"JavaProc: Args=%s\n",args_string.Value());
 
 	return VanillaProc::StartJob();
 }
@@ -201,7 +238,7 @@ java_exit_mode_t JavaProc::ClassifyExit( int status )
 	FILE *file;
 	int fields;
 
-	char tmp[ATTRLIST_MAX_EXPRESSION];
+	char tmp[11]; // enough for "abnormal"
 
 	int normal_exit = WIFEXITED(status);
 	int exit_code = WEXITSTATUS(status);
@@ -218,7 +255,7 @@ java_exit_mode_t JavaProc::ClassifyExit( int status )
 			file = fopen(endfile,"r");
 			if(file) {
 				dprintf(D_ALWAYS,"JavaProc: Wrapper left end record %s\n",endfile);
-				fields = fscanf(file,"%s",tmp);
+				fields = fscanf(file,"%10s",tmp); // no more than sizeof(tmp)
 				if(fields!=1) {
 					dprintf(D_FAILURE|D_ALWAYS,"JavaProc: Job called System.exit(%d)\n",exit_code);
 					exit_mode = JAVA_EXIT_NORMAL;
@@ -322,24 +359,19 @@ then throw it into the update ad.
 
 bool JavaProc::PublishUpdateAd( ClassAd* ad )
 {
-	char tmp[ATTRLIST_MAX_EXPRESSION];
-
 	if(ex_hier[0]) {
-		sprintf(tmp,"%s=\"%s\"",ATTR_EXCEPTION_HIERARCHY,ex_hier);
-		ad->InsertOrUpdate(tmp);
-		dprintf(D_ALWAYS,"JavaProc: %s\n",tmp);
+		ad->Assign(ATTR_EXCEPTION_HIERARCHY,ex_hier);
+		dprintf(D_ALWAYS,"JavaProc: %s \"%s\"\n",ATTR_EXCEPTION_HIERARCHY,ex_hier);
 	}
 
 	if(ex_name[0]) {
-		sprintf(tmp,"%s=\"%s\"",ATTR_EXCEPTION_NAME,ex_name);
-		ad->InsertOrUpdate(tmp);
-		dprintf(D_ALWAYS,"JavaProc: %s\n",tmp);
+		ad->Assign(ATTR_EXCEPTION_NAME,ex_name);
+		dprintf(D_ALWAYS,"JavaProc: %s \"%s\"\n", ATTR_EXCEPTION_NAME, ex_name);
 	}
 
 	if(ex_type[0]) {
-		sprintf(tmp,"%s=\"%s\"",ATTR_EXCEPTION_TYPE,ex_type);
-		ad->InsertOrUpdate(tmp);
-		dprintf(D_ALWAYS,"JavaProc: %s\n",tmp);
+		ad->Assign(ATTR_EXCEPTION_TYPE,ex_type);
+		dprintf(D_ALWAYS,"JavaProc: %s \"%s\"\n",ATTR_EXCEPTION_TYPE,ex_type);
 	}
 
 	return VanillaProc::PublishUpdateAd(ad);

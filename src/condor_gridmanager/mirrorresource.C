@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 
 #include "condor_common.h"
@@ -28,11 +28,6 @@
 
 #include "mirrorresource.h"
 #include "gridmanager.h"
-
-template class List<MirrorJob>;
-template class Item<MirrorJob>;
-template class HashTable<HashKey, MirrorResource *>;
-template class HashBucket<HashKey, MirrorResource *>;
 
 #define HASH_TABLE_SIZE			500
 
@@ -63,7 +58,6 @@ MirrorResource::MirrorResource( const char *resource_name )
 	: BaseResource( resource_name )
 {
 	scheddPollTid = TIMER_UNSET;
-	registeredJobs = new List<MirrorJob>;
 	mirrorScheddName = strdup( resource_name );
 	gahp = NULL;
 	scheddUpdateActive = false;
@@ -76,15 +70,20 @@ MirrorResource::MirrorResource( const char *resource_name )
 
 	char *gahp_path = param("MIRROR_GAHP");
 	if ( gahp_path == NULL ) {
-		EXCEPT( "MIRROR_GAHP not defined in condor config file" );
+		gahp_path = param( "CONDOR_GAHP" );
+		if ( gahp_path == NULL ) {
+			EXCEPT( "CONDOR_GAHP not defined in condor config file" );
+		}
 	} else {
 		// TODO remove mirrorScheddName from the gahp server key if/when
 		//   a gahp server can handle multiple schedds
 		MyString buff;
-		MyString buff2;
+		ArgList args;
 		buff.sprintf( "MIRRORRESOURCE/%s", mirrorScheddName );
-		buff2.sprintf( "-f -s %s", mirrorScheddName );
-		gahp = new GahpClient( buff.Value(), gahp_path, buff2.Value() );
+		args.AppendArg("-f");
+		args.AppendArg("-s");
+		args.AppendArg(mirrorScheddName);
+		gahp = new GahpClient( buff.Value(), gahp_path, &args );
 		gahp->setNotificationTimerId( scheddPollTid );
 		gahp->setMode( GahpClient::normal );
 		gahp->setTimeout( MirrorJob::gahpCallTimeout );
@@ -94,11 +93,9 @@ MirrorResource::MirrorResource( const char *resource_name )
 
 MirrorResource::~MirrorResource()
 {
+	ResourcesByName.remove( HashKey( resourceName ) );
 	if ( scheddPollTid != TIMER_UNSET ) {
 		daemonCore->Cancel_Timer( scheddPollTid );
-	}
-	if ( registeredJobs != NULL ) {
-		delete registeredJobs;
 	}
 	if ( gahp != NULL ) {
 		delete gahp;
@@ -108,11 +105,6 @@ MirrorResource::~MirrorResource()
 	}
 }
 
-bool MirrorResource::IsEmpty()
-{
-	return registeredJobs->IsEmpty();
-}
-
 void MirrorResource::Reconfig()
 {
 	BaseResource::Reconfig();
@@ -120,7 +112,7 @@ void MirrorResource::Reconfig()
 
 void MirrorResource::RegisterJob( MirrorJob *job, const char *submitter_id )
 {
-	registeredJobs->Append( job );
+	BaseResource::RegisterJob( job );
 
 	if ( submitter_ids.contains( submitter_id ) == false ) {
 		submitter_ids.append( submitter_id );
@@ -136,19 +128,11 @@ void MirrorResource::RegisterJob( MirrorJob *job, const char *submitter_id )
 	}
 }
 
-void MirrorResource::UnregisterJob( MirrorJob *job )
-{
-	registeredJobs->Delete( job );
-
-		// TODO: if this is last job, arrange to delete
-		//   this object
-}
-
 int MirrorResource::DoScheddPoll()
 {
 	int rc;
 
-	if ( registeredJobs->IsEmpty() && scheddUpdateActive == false &&
+	if ( registeredJobs.IsEmpty() && scheddUpdateActive == false &&
 		 scheddStatusActive == false ) {
 			// No jobs, so nothing to poll/update
 		daemonCore->Reset_Timer( scheddPollTid, scheddPollInterval );

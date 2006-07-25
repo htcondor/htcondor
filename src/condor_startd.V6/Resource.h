@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -40,7 +40,8 @@ public:
 	~Resource();
 
 		// Public methods that can be called from command handlers
-	int		release_claim( void );	// Gracefully kill starter and release claim
+	int		retire_claim( void );	// Gracefully finish job and release claim
+	int		release_claim( void );	// Send softkill to starter; release claim
 	int		kill_claim( void );		// Quickly kill starter and release claim
 	int		got_alive( void );		// You got a keep alive command
 	int 	periodic_checkpoint( void );	// Do a periodic checkpoint
@@ -57,6 +58,7 @@ public:
 
 		// Remove the given claim from this Resource
 	void	removeClaim( Claim* );
+	void	remove_pre( void );	// If r_pre is set, refuse and delete it.
 
 		// Shutdown methods that deal w/ opportunistic *and* COD claims
 	int		shutdownAllClaims( bool graceful );
@@ -72,6 +74,8 @@ public:
 	State		state( void )		{return r_state->state();};
 	Activity	activity( void )	{return r_state->activity();};
 	int		eval_state( void )		{return r_state->eval();};
+		// does this resource need polling frequency for compute/eval?
+	bool	needsPolling( void );
 	bool	hasOppClaim( void );
 	bool	hasAnyClaim( void );
 	bool	isDeactivating( void )	{return r_cur->isDeactivating();};
@@ -84,7 +88,9 @@ public:
 		// Methods for computing and publishing resource attributes 
 	void	compute( amask_t mask);
 	void	publish( ClassAd*, amask_t );
+    void	publishDeathTime( ClassAd* cap );
 	void	publishVmAttrs( ClassAd* );
+	void	refreshVmAttrs( void );
 
 		// Load Average related methods
 	float	condor_load( void ) {return r_attr->condor_load();};
@@ -157,11 +163,27 @@ public:
 	int		eval_start( void );			// returns -1 on undefined
 	int		eval_cpu_busy( void );		// returns FALSE on undefined
 
+#if HAVE_BACKFILL
+	int		eval_start_backfill( void ); 
+	int		eval_evict_backfill( void ); 
+	bool	start_backfill( void );
+	bool	softkill_backfill( void );
+	bool	hardkill_backfill( void );
+#endif /* HAVE_BACKFILL */
+
+	bool    claimWorklifeExpired();
+	int		retirementExpired( void );
+	int		mayUnretire( void );
+	int		hasPreemptingClaim( void );
+	int     preemptWasTrue( void ) const; //PREEMPT was true in current claim
+	void    preemptIsTrue();              //records that PREEMPT was true
+
 		// Data members
 	ResState*		r_state;	// Startd state object, contains state and activity
 	ClassAd*		r_classad;	// Resource classad (contains everything in config file)
 	Claim*			r_cur;		// Info about the current claim
 	Claim*			r_pre;		// Info about the possibly preempting claim
+	Claim*			r_pre_pre;	// Info about the preempting preempting claim
 	CODMgr*			r_cod_mgr;	// Object to manage COD claims
 	Reqexp*			r_reqexp;   // Object for the requirements expression
 	CpuAttributes*	r_attr;		// Attributes of this resource
@@ -178,7 +200,7 @@ private:
 	unsigned	update_sequence;	// Update sequence number
 
 	int		fast_shutdown;	// Flag set if we're in fast shutdown mode.
-	void	remove_pre( void );	// If r_pre is set, refuse and delete it.
+	bool    peaceful_shutdown;
 	int		r_cpu_busy;
 	time_t	r_cpu_busy_start_time;
 	time_t	r_last_compute_condor_load;
@@ -190,6 +212,8 @@ private:
 	float	r_pre_cod_condor_load;
 	void 	startTimerToEndCODLoadHack( void );
 	void	endCODLoadHack( void );
+	int		eval_expr( const char* expr_name, bool fatal, bool check_vanilla );
+
 };
 
 

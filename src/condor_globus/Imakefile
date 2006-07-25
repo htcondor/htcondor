@@ -1,8 +1,6 @@
 all_target(condor_glidein)
 
-release_copy_target(condor_glidein,bin,condor_glidein,EXECUTABLE_MODE)
-strip_copy_target(condor_glidein,bin,condor_glidein,EXECUTABLE_MODE)
-static_copy_target(condor_glidein,bin,condor_glidein,EXECUTABLE_MODE)
+public_copy_target(condor_glidein,bin,condor_glidein,EXECUTABLE_MODE)
 
 html:
 clean:

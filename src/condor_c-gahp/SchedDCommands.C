@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -153,3 +153,58 @@ SchedDRequest * SchedDRequest::createJobStageInRequest (const int request_id,
 	return req;
 
 }
+
+SchedDRequest * SchedDRequest::createJobStageOutRequest (const int request_id,
+														 const int cluster_id,
+														 const int proc_id) {
+
+	SchedDRequest * req = new SchedDRequest;
+	req->cluster_id = cluster_id;
+	req->proc_id = proc_id;
+	req->classad = NULL;
+	req->constraint = NULL;
+	req->reason = NULL;
+
+	req->command = SDC_JOB_STAGE_OUT;
+	req->status = SDCS_NEW;
+	req->request_id = request_id;
+
+	return req;
+
+}
+
+SchedDRequest * SchedDRequest::createRefreshProxyRequest (const int request_id, int cluster_id, int proc_id, const char * proxy_file) {
+	SchedDRequest * req = new SchedDRequest;
+	req->cluster_id = cluster_id;
+	req->proc_id = proc_id;
+	req->classad = NULL;
+	req->constraint = NULL;
+	req->proxy_file = strdup(proxy_file);
+
+	req->command = SDC_JOB_REFRESH_PROXY;
+	req->status = SDCS_NEW;
+	req->request_id = request_id;
+
+	return req;
+}
+
+SchedDRequest * SchedDRequest::createUpdateLeaseRequest ( const int request_id,
+													 const int num_jobs,
+														job_expiration * &expirations) {
+	SchedDRequest * req = new SchedDRequest;
+
+	req->command = SDC_UPDATE_LEASE;
+	req->status = SDCS_NEW;
+	req->request_id = request_id;
+
+	req->num_jobs = num_jobs;
+	
+	req->expirations = new job_expiration [num_jobs];
+	int i;
+	for (i=0; i < num_jobs; i++) {
+		req->expirations[i].copy_from(expirations[i]);
+	}
+
+	return req;
+}	
+														 

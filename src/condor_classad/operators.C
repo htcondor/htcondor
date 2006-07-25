@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "operators.h"
@@ -27,10 +27,11 @@
 static void _doOperation	(OpKind,Value&,Value&,Value&,bool,bool,bool,Value&);
 static void doComparison	(OpKind, Value&, Value&, Value&);
 static void doArithmetic	(OpKind, Value&, Value&, Value&);
+static bool doLogicalShortCircuit (OpKind op, Value &v1, Value &result);
 static void doLogical	 	(OpKind, Value&, Value&, Value&);
 static void doBitwise	 	(OpKind, Value&, Value&, Value&);
 static void doRealArithmetic(OpKind, Value&, Value&, Value&);
-static void compareStrings	(OpKind, Value&, Value&, Value&);
+static void compareStrings	(OpKind, Value&, Value&, Value&, bool case_sensitive);
 static void compareReals	(OpKind, Value&, Value&, Value&);
 static void compareIntegers (OpKind, Value&, Value&, Value&);
 static ValueType coerceToNumber(Value&, Value&);
@@ -88,6 +89,21 @@ operate (OpKind op, Value &op1, Value &op2, Value &result)
 	Value dummy;
 
 	_doOperation (op, op1, op2, dummy, true, true, false, result);
+}
+
+bool 
+operateShortCircuit (OpKind op, Value &op1, Value &result)
+{
+    bool did_short_circuit;
+    if (op == LOGICAL_OR_OP || op == LOGICAL_AND_OP) 
+    {
+        did_short_circuit = doLogicalShortCircuit(op, op1, result);
+    }
+    else
+    {
+        did_short_circuit = false;
+    }
+    return did_short_circuit;
 }
 
 
@@ -209,6 +225,7 @@ static void
 doComparison (OpKind op, Value &v1, Value &v2, Value &result)
 {
 	ValueType vt1, vt2, coerceResult;
+	bool case_sensitive = false;
 
 	// do numerical type promotions --- other types/values are unchanged
 	coerceResult = coerceToNumber (v1, v2);
@@ -231,8 +248,10 @@ doComparison (OpKind op, Value &v1, Value &v2, Value &result)
 			return;
 		}
 
-		// if not the above cases, =?= is just like ==
+		// if not the above cases, =?= is just like ==, but
+		// case-sensitive for strings
 		op = EQUAL_OP;
+		case_sensitive = true;
 	}
 	// perform comparison for =!= ; negation of =?=
 	if (op == META_NOT_EQUAL_OP)
@@ -251,8 +270,10 @@ doComparison (OpKind op, Value &v1, Value &v2, Value &result)
 			return;
 		}
 
-		// if not the above cases, =!= is just like !=
+		// if not the above cases, =!= is just like !=, but
+		// case-sensitive for strings
 		op = NOT_EQUAL_OP;
+		case_sensitive = true;
 	}
 
 	switch (coerceResult)
@@ -267,7 +288,7 @@ doComparison (OpKind op, Value &v1, Value &v2, Value &result)
 				result.setErrorValue();
 				return;
 			}
-			compareStrings (op, v1, v2, result);
+			compareStrings (op, v1, v2, result, case_sensitive);
 			return;
 
 		case INTEGER_VALUE:
@@ -362,6 +383,79 @@ doArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
 	return;
 }
 
+static bool
+doLogicalShortCircuit (OpKind op, Value &v1, Value &result)
+{
+    int       i1;
+    double    r1;
+    ValueType vt1 = v1.getType();
+    bool      did_short_circuit;
+
+    did_short_circuit = false;
+    v1.isIntegerValue (i1);
+    v1.isRealValue (r1);
+
+    if (op == LOGICAL_OR_OP)
+    {
+        // no logic on strings --- a string is equivalent to the ERROR
+        // value. But due to the logic in doLogical, we can't short-circuit
+        // on it, because "somestring" || 3 would evaluate to 1. Stupid
+        // old ClassAds.
+        if (vt1 == STRING_VALUE) 
+        {
+            did_short_circuit = false;
+        }
+        else
+        if ((vt1 == INTEGER_VALUE && i1 != 0) || (vt1 == REAL_VALUE && r1 != 0)) 
+        {
+            result.setIntegerValue(1);
+            did_short_circuit = true;
+        }
+        // We don't short-circuit on error because according to the
+        // stupid semantics of old ClassAds, error || 3 is 1. (See
+        // doLogical.) Ditto for undefined, but that's actually good.
+        else
+        {
+            did_short_circuit = false;
+        }
+    }
+    else
+    if (op == LOGICAL_AND_OP)
+    {
+        // no logic on strings --- a string is equivalent to the ERROR
+        // value. 
+        if (vt1 == STRING_VALUE) 
+        {
+            result.setErrorValue();
+            did_short_circuit = true;
+        }
+        else
+        if ((vt1 == INTEGER_VALUE && i1 == 0) || (vt1==REAL_VALUE && r1 == 0))
+        {
+            result.setIntegerValue(0);
+            did_short_circuit = true;
+        }
+        else
+        if (vt1 == ERROR_VALUE) 
+        {
+            result.setErrorValue();
+            did_short_circuit = true;
+        }
+        else
+        if (vt1 == UNDEFINED_VALUE)
+        {
+            result.setUndefinedValue();
+            did_short_circuit = true;
+        }
+        else
+        {
+            did_short_circuit = false;
+        }
+    }
+
+    // done
+    return did_short_circuit;
+}
 
 static void 
 doLogical (OpKind op, Value &v1, Value &v2, Value &result)
@@ -608,7 +702,7 @@ doRealArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
 
 
 static void 
-compareStrings (OpKind op, Value &v1, Value &v2, Value &result)
+compareStrings (OpKind op, Value &v1, Value &v2, Value &result, bool case_sensitive)
 {
 	char *s1, *s2;
 	int  cmp;
@@ -617,7 +711,11 @@ compareStrings (OpKind op, Value &v1, Value &v2, Value &result)
 	v2.isStringValue (s2);
 
 	result.setIntegerValue (0);
-	cmp = strcmp(s1, s2);
+	if (case_sensitive) {
+		cmp = strcmp(s1, s2);
+	} else {
+		cmp = strcasecmp(s1, s2);
+	}
 	if (cmp < 0)
 	{
 		// s1 < s2

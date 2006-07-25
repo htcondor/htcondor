@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -25,6 +25,7 @@
 #include "internet.h"
 #include "condor_config.h"
 #include "condor_perms.h"
+#include "condor_netdb.h"
 
 // Externs to Globals
 extern char* mySubSystem;	// the subsys ID, such as SCHEDD, STARTD, etc. 
@@ -40,8 +41,8 @@ extern char* mySubSystem;	// the subsys ID, such as SCHEDD, STARTD, etc.
   enums into strings, you need to use PermString() (in the util lib) for
   that.
 */
-const char* IpVerify::perm_names[] = {"READ","WRITE","DAEMON", "ADMINISTRATOR","OWNER","NEGOTIATOR","CONFIG",NULL};
-const int IpVerify::perm_ints[] = {READ,WRITE,DAEMON,ADMINISTRATOR,OWNER,NEGOTIATOR,CONFIG_PERM,-1};  // must end with -1
+const char* IpVerify::perm_names[] = {"READ","WRITE","DAEMON", "ADMINISTRATOR","OWNER","NEGOTIATOR","CONFIG","SOAP",NULL};
+const int IpVerify::perm_ints[] = {READ,WRITE,DAEMON,ADMINISTRATOR,OWNER,NEGOTIATOR,CONFIG_PERM,SOAP_PERM,-1};  // must end with -1
 const char TotallyWild[] = "*";
 
 
@@ -468,7 +469,7 @@ IpVerify::add_host_entry( const char* addr, int mask )
             result = false;
         } else {
             // No wildcards; resolve the name
-			if ( (hostptr=gethostbyname(host)) != NULL) {
+			if ( (hostptr=condor_gethostbyname(host)) != NULL) {
 				if ( hostptr->h_addrtype == AF_INET ) {
 					for (int i=0; hostptr->h_addr_list[i]; i++) {
 						add_hash_entry( (*(struct in_addr *)
@@ -497,14 +498,14 @@ IpVerify::add_host_entry( const char* addr, int mask )
 void
 IpVerify::fill_table(PermTypeEntry * pentry, int mask, char * list, bool allow)
 {
-    StringList * whichHostList = NULL;
+    NetStringList * whichHostList = NULL;
     UserHash_t * whichUserHash = NULL;
     StringList * slist;
 
     assert(pentry);
 
     if (whichHostList == NULL) {
-        whichHostList = new StringList();
+        whichHostList = new NetStringList();
     }
     if (whichUserHash == NULL) {
         whichUserHash = new UserHash_t(1024, compute_host_hash);
@@ -691,6 +692,7 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
         }
 
 		if ( found_match == FALSE ) {
+			mask = 0;
 			// did not find an existing entry, so try subnets
 			unsigned char *cur_byte = (unsigned char *) &sin_addr;
 			for (i=3; i>0; i--) {
@@ -787,11 +789,30 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
 			// do a gethostbyaddr() next time.  if we still do not have a mask
 			// (perhaps because this host doesn't appear in any list), create one
 			// and then add to the table.
+			// But first, check our parent permission levels in the
+			// authorization heirarchy.
+			// DAEMON and ADMINISTRATOR imply WRITE.
+			// WRITE, NEGOTIATOR, and CONFIG_PERM imply READ.
 			if ( mask == 0 ) {
-				if ( PermTypeArray[perm]->behavior == USERVERIFY_ONLY_DENIES ) 
+				if ( PermTypeArray[perm]->behavior == USERVERIFY_ONLY_DENIES ) {
 					mask |= allow_mask(perm);
-				else 
+				} else if ( perm == READ &&
+							( Verify( WRITE, sin,
+									  user ) == USER_AUTH_SUCCESS ||
+							  Verify( NEGOTIATOR, sin,
+									  user ) == USER_AUTH_SUCCESS ||
+							  Verify( CONFIG_PERM, sin,
+									  user ) == USER_AUTH_SUCCESS ) ) {
+					mask |= allow_mask(perm);
+				} else if ( perm == WRITE &&
+							( Verify( ADMINISTRATOR, sin,
+									  user ) == USER_AUTH_SUCCESS ||
+							  Verify( DAEMON, sin,
+									  user ) == USER_AUTH_SUCCESS ) ) {
+					mask |= allow_mask(perm);
+				} else {
 					mask |= deny_mask(perm);
+				}
 			}
 
 			// finally, add the mask we computed into the table with this IP addr
@@ -847,6 +868,11 @@ IpVerify::process_allow_users( void )
 
 // AddAllowHost is now equivalent to adding */host, where host 
 // is actual host name with no wild card!
+//
+// Additions persist across a reconfig.  This is intended
+// for transient permissions (like to automatic permission
+// granted to a remote startd host when a shadow starts up.)
+
 bool
 IpVerify::AddAllowHost( const char* host, DCpermission perm )
 {
@@ -873,7 +899,14 @@ IpVerify::AddAllowHost( const char* host, DCpermission perm )
 			dprintf( D_DAEMONCORE, 
 					 "IpVerify::AddAllowHost: Changing mask, was %d, adding %d)\n",
 					 *mask_p, new_mask );
-			*mask_p = *mask_p | new_mask;
+			new_mask = *mask_p | new_mask;
+			*mask_p = new_mask;
+			if( add_host_entry(addr.Value(), new_mask) ) {
+				dprintf( D_DAEMONCORE, "Added.\n");
+				return true;
+			} else {
+				return false;
+			}
 		} else {
 			dprintf( D_DAEMONCORE, 
 					 "IpVerify::AddAllowHost: Already have %s with %d\n", 

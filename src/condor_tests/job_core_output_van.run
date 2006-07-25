@@ -1,0 +1,37 @@
+#! /usr/bin/env perl
+use CondorTest;
+
+$cmd = 'job_core_output_van.cmd';
+$testname = 'condor_submit output works - vanilla U';
+
+
+@CondorTest::expected_output =
+(
+'first',
+'second',
+'third',
+'fourth',
+);
+
+
+
+$ExitSuccess = sub {
+	my %info = @_;
+
+
+	$output = $info{"output"};
+	open(IN, "<$output" ) || die "Can't open $output: $!\n";
+
+};
+
+
+CondorTest::RegisterExitedSuccess( $testname, \&CondorTest::DefaultOutputTest );
+#CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
+
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+	print "$testname: SUCCESS\n";
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+

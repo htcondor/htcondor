@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -23,7 +23,12 @@
 #include "condor_common.h"
 #include "condor_classad.h"
 #include "condor_attributes.h"
+#include "condor_config.h"
 #include "user_job_policy.h"
+
+const char * PARAM_SYSTEM_PERIODIC_REMOVE = "SYSTEM_PERIODIC_REMOVE";
+const char * PARAM_SYSTEM_PERIODIC_RELEASE = "SYSTEM_PERIODIC_RELEASE";
+const char * PARAM_SYSTEM_PERIODIC_HOLD = "SYSTEM_PERIODIC_HOLD";
 
 /* If a job ad was pre user policy and it was determined to have exited. */
 const char *old_style_exit = "OldStyleExit";
@@ -62,10 +67,10 @@ ClassAd* user_job_policy(ClassAd *jad)
 {
 	ClassAd *result;
 	char buf[4096]; /* old classads needs to go away */
-	bool periodic_hold = 0, periodic_remove = 0, periodic_release = 0;
-	bool on_exit_hold = 0, on_exit_remove = 0;
+	int on_exit_hold = 0, on_exit_remove = 0;
 	int cdate = 0;
 	int adkind;
+	
 	if (jad == NULL)
 	{
 		EXCEPT( "Could not evaluate user policy due to job ad being NULL!\n" );
@@ -80,8 +85,10 @@ ClassAd* user_job_policy(ClassAd *jad)
 	{
 		EXCEPT("Out of memory!"); /* XXX should this be here? */
 	}
-	result->InsertAttr( ATTR_TAKE_ACTION, false );
-	result->InsertAttr( ATTR_USER_POLICY_ERROR, false );
+	sprintf(buf, "%s = FALSE", ATTR_TAKE_ACTION);
+	result->Insert(buf);
+	sprintf(buf, "%s = FALSE", ATTR_USER_POLICY_ERROR);
+	result->Insert(buf);
 
 	/* figure out the ad kind and then do something with it */
 
@@ -92,8 +99,12 @@ ClassAd* user_job_policy(ClassAd *jad)
 		case USER_ERROR_NOT_JOB_AD:
 			dprintf(D_ALWAYS, "user_job_policy(): I have something that "
 					"doesn't appear to be a job ad! Ignoring.\n");
-			result->InsertAttr(ATTR_USER_POLICY_ERROR, true );
-			result->InsertAttr( ATTR_USER_ERROR_REASON, USER_ERROR_NOT_JOB_AD );
+
+			sprintf(buf, "%s = TRUE", ATTR_USER_POLICY_ERROR);
+			result->Insert(buf);
+			sprintf(buf, "%s = %u", ATTR_USER_ERROR_REASON, 
+				USER_ERROR_NOT_JOB_AD);
+			result->Insert(buf);
 
 			return result;
 			break;
@@ -116,30 +127,32 @@ ClassAd* user_job_policy(ClassAd *jad)
 				EmitExpression(D_ALWAYS, ATTR_ON_EXIT_REMOVE_CHECK, oer_expr);
 			}
 
-			result->InsertAttr( ATTR_USER_POLICY_ERROR,true  );
-			result->InsertAttr(ATTR_USER_ERROR_REASON, USER_ERROR_INCONSISTANT );
+			sprintf(buf, "%s = TRUE", ATTR_USER_POLICY_ERROR);
+			result->Insert(buf);
+			sprintf(buf, "%s = %u", ATTR_USER_ERROR_REASON, 
+				USER_ERROR_INCONSISTANT);
+			result->Insert(buf);
 
 			return result;
 			break;
 
 		case KIND_OLDSTYLE:
-			if (jad->EvaluateAttrInt(ATTR_COMPLETION_DATE, cdate)) {
-                if (cdate > 0)
-                    {
-                        result->InsertAttr( ATTR_TAKE_ACTION, true  );
-                        result->InsertAttr(ATTR_USER_POLICY_ACTION, REMOVE_JOB );
-
-                        sprintf(buf, "\"%s\"", old_style_exit);
-                        result->InsertAttr(ATTR_USER_POLICY_FIRING_EXPR, buf );
-                    }
-                return result;
-            }
-            else {
-                return NULL;
-            }
+			jad->LookupInteger(ATTR_COMPLETION_DATE, cdate);
+			if (cdate > 0)
+			{
+				sprintf(buf, "%s = TRUE", ATTR_TAKE_ACTION);
+				result->Insert(buf);
+				sprintf(buf, "%s = %d", ATTR_USER_POLICY_ACTION, REMOVE_JOB);
+				result->Insert(buf);
+				sprintf(buf, "%s = \"%s\"", ATTR_USER_POLICY_FIRING_EXPR, 
+					old_style_exit);
+				result->Insert(buf);
+			}
+			return result;
 			break;
 
 		case KIND_NEWSTYLE:
+		{
 			/*	The user_policy is checked in this
 				order. The first one to succeed is the winner:
 		
@@ -149,40 +162,28 @@ ClassAd* user_job_policy(ClassAd *jad)
 				on_exit_remove
 			*/
 
+			UserPolicy userpolicy;
+			userpolicy.Init(jad);
+			int analyze_result = userpolicy.AnalyzePolicy(PERIODIC_ONLY);
+
 			/* should I perform a periodic hold? */
-			jad->EvaluateAttrBool( ATTR_PERIODIC_HOLD_CHECK, periodic_hold);
-			if (periodic_hold)
+			if(analyze_result == HOLD_IN_QUEUE)
 			{
 				/* make a result classad explaining this and return it */
 
-				result->InsertAttr( ATTR_TAKE_ACTION, true );
-				result->InsertAttr( ATTR_USER_POLICY_ACTION, HOLD_JOB);
-
-				sprintf(buf, "\"%s\"", ATTR_PERIODIC_HOLD_CHECK);
-				result->InsertAttr( ATTR_USER_POLICY_FIRING_EXPR, buf );
+				sprintf(buf, "%s = TRUE", ATTR_TAKE_ACTION);
+				result->Insert(buf);
+				sprintf(buf, "%s = %d", ATTR_USER_POLICY_ACTION, HOLD_JOB);
+				result->Insert(buf);
+				sprintf(buf, "%s = \"%s\"", ATTR_USER_POLICY_FIRING_EXPR, 
+					userpolicy.FiringExpression());
+				result->Insert(buf);
 
 				return result;
 			}
 
 			/* Should I perform a periodic remove? */
-			jad->EvaluateAttrBool( ATTR_PERIODIC_REMOVE_CHECK, periodic_remove);
-			if (periodic_remove)
-			{
-				/* make a result classad explaining this and return it */
-
-				result->InsertAttr(ATTR_TAKE_ACTION, true );
-				result->InsertAttr( ATTR_USER_POLICY_ACTION, REMOVE_JOB );
-
-                sprintf(buf, "\"%s\"", ATTR_PERIODIC_REMOVE_CHECK);
-				result->InsertAttr( ATTR_USER_POLICY_FIRING_EXPR,buf );
-
-				return result;
-			}
-
-			/* Should I perform a periodic release? */
-			jad->EvaluateAttrBool( ATTR_PERIODIC_RELEASE_CHECK,
-								   periodic_release );
-			if (periodic_release == 1)
+			if(analyze_result == REMOVE_FROM_QUEUE)
 			{
 				/* make a result classad explaining this and return it */
 
@@ -191,7 +192,23 @@ ClassAd* user_job_policy(ClassAd *jad)
 				sprintf(buf, "%s = %d", ATTR_USER_POLICY_ACTION, REMOVE_JOB);
 				result->Insert(buf);
 				sprintf(buf, "%s = \"%s\"", ATTR_USER_POLICY_FIRING_EXPR, 
-					ATTR_PERIODIC_RELEASE_CHECK);
+					userpolicy.FiringExpression());
+				result->Insert(buf);
+
+				return result;
+			}
+
+			/* Should I perform a periodic release? */
+			if(analyze_result == RELEASE_FROM_HOLD)
+			{
+				/* make a result classad explaining this and return it */
+
+				sprintf(buf, "%s = TRUE", ATTR_TAKE_ACTION);
+				result->Insert(buf);
+				sprintf(buf, "%s = %d", ATTR_USER_POLICY_ACTION, REMOVE_JOB);
+				result->Insert(buf);
+				sprintf(buf, "%s = \"%s\"", ATTR_USER_POLICY_FIRING_EXPR, 
+					userpolicy.FiringExpression());
 				result->Insert(buf);
 
 				return result;
@@ -211,31 +228,35 @@ ClassAd* user_job_policy(ClassAd *jad)
 			}
 
 			/* Should I hold on exit? */
-			jad->EvaluateAttrBool(ATTR_ON_EXIT_HOLD_CHECK, on_exit_hold);
-			if (on_exit_hold)
+			jad->EvalBool(ATTR_ON_EXIT_HOLD_CHECK, jad, on_exit_hold);
+			if (on_exit_hold == 1)
 			{
 				/* make a result classad explaining this and return it */
 
-				result->InsertAttr(ATTR_TAKE_ACTION, true );
-				result->InsertAttr( ATTR_USER_POLICY_ACTION, HOLD_JOB );
-
-                sprintf(buf, "\"%s\"", ATTR_PERIODIC_REMOVE_CHECK);
-				result->InsertAttr( ATTR_USER_POLICY_FIRING_EXPR,buf );
+				sprintf(buf, "%s = TRUE", ATTR_TAKE_ACTION);
+				result->Insert(buf);
+				sprintf(buf, "%s = %d", ATTR_USER_POLICY_ACTION, HOLD_JOB);
+				result->Insert(buf);
+				sprintf(buf, "%s = \"%s\"", ATTR_USER_POLICY_FIRING_EXPR, 
+					ATTR_ON_EXIT_HOLD_CHECK);
+				result->Insert(buf);
 
 				return result;
 			}
 
 			/* Should I remove on exit? */
-			jad->EvaluateAttrBool(ATTR_ON_EXIT_REMOVE_CHECK, on_exit_remove);
-			if (on_exit_remove)
+			jad->EvalBool(ATTR_ON_EXIT_REMOVE_CHECK, jad, on_exit_remove);
+			if (on_exit_remove == 1)
 			{
 				/* make a result classad explaining this and return it */
 
-				result->InsertAttr(ATTR_TAKE_ACTION, true );
-				result->InsertAttr( ATTR_USER_POLICY_ACTION, REMOVE_JOB );
-
-                sprintf(buf, "\"%s\"", ATTR_ON_EXIT_REMOVE_CHECK);
-				result->InsertAttr( ATTR_USER_POLICY_FIRING_EXPR,buf );
+				sprintf(buf, "%s = TRUE", ATTR_TAKE_ACTION);
+				result->Insert(buf);
+				sprintf(buf, "%s = %d", ATTR_USER_POLICY_ACTION, REMOVE_JOB);
+				result->Insert(buf);
+				sprintf(buf, "%s = \"%s\"", ATTR_USER_POLICY_FIRING_EXPR, 
+					ATTR_ON_EXIT_REMOVE_CHECK);
+				result->Insert(buf);
 
 				return result;
 			}
@@ -244,6 +265,7 @@ ClassAd* user_job_policy(ClassAd *jad)
 			return result;
 
 			break;
+		}
 
 		default:
 			dprintf(D_ALWAYS, "JadKind() returned unknown ad kind\n");
@@ -261,19 +283,15 @@ ClassAd* user_job_policy(ClassAd *jad)
 
 void EmitExpression(unsigned int mode, const char *attr, ExprTree* attr_expr)
 {
-	ClassAdUnParser unp;
-	std::string buf_string;
 	char buf[8192]; /* PrintToStr is dumb, hope this is big enough */
-	
+
 	if (attr_expr == NULL)
 	{
 		dprintf(mode, "%s = UNDEFINED\n", attr);
 	}
 	else
 	{
-		//attr_expr->PrintToStr(buf);
-		unp.Unparse( buf_string, attr_expr );
-		strcpy( buf, buf_string.c_str( ) );
+		attr_expr->PrintToStr(buf);
 		dprintf(mode, "%s = %s\n", attr, buf);
 	}
 }
@@ -293,6 +311,8 @@ void EmitExpression(unsigned int mode, const char *attr, ExprTree* attr_expr)
 /* is this classad oldstyle, newstyle, or even a job ad? */
 int JadKind(ClassAd *suspect)
 {
+	int cdate;
+
 	/* determine if I have a user job ad with the new user policy expressions
 		enabled. */
 	ExprTree *ph_expr = suspect->Lookup(ATTR_PERIODIC_HOLD_CHECK);
@@ -308,10 +328,11 @@ int JadKind(ClassAd *suspect)
 		/* check to see if it has ATTR_COMPLETION_DATE, if so then it is
 			an oldstyle jobad. If not, it isn't a job ad at all. */
 
-		if (!suspect->Lookup(ATTR_COMPLETION_DATE))
+		if (suspect->LookupInteger(ATTR_COMPLETION_DATE, cdate) == 1)
 		{
 			return KIND_OLDSTYLE;
 		}
+
 		return USER_ERROR_NOT_JOB_AD;
 	}
 
@@ -332,6 +353,7 @@ int JadKind(ClassAd *suspect)
 UserPolicy::UserPolicy()
 {
 	m_ad = NULL;
+	m_fire_source = FS_NotYet;
 	m_fire_expr = NULL;
 	m_fire_expr_val = -1;
 }
@@ -353,7 +375,7 @@ void UserPolicy::Init(ClassAd *ad)
 
 void UserPolicy::SetDefaults()
 {
-    Value v;
+	char buf[8192];
 
 	ExprTree *ph_expr = m_ad->Lookup(ATTR_PERIODIC_HOLD_CHECK);
 	ExprTree *pr_expr = m_ad->Lookup(ATTR_PERIODIC_REMOVE_CHECK);
@@ -364,31 +386,36 @@ void UserPolicy::SetDefaults()
 	/* if the default user policy expressions do not exist, then add them
 		here and now with the usual defaults */
 	if (ph_expr == NULL) {
-		m_ad->InsertAttr( ATTR_PERIODIC_HOLD_CHECK, false );
+		sprintf(buf, "%s = FALSE", ATTR_PERIODIC_HOLD_CHECK);
+		m_ad->Insert(buf);
 	}
 
 	if (pr_expr == NULL) {
-		m_ad->InsertAttr( ATTR_PERIODIC_REMOVE_CHECK, false );
+		sprintf(buf, "%s = FALSE", ATTR_PERIODIC_REMOVE_CHECK);
+		m_ad->Insert(buf);
 	}
 
 	if (pl_expr == NULL) {
-		m_ad->InsertAttr( ATTR_PERIODIC_RELEASE_CHECK, false );
+		sprintf(buf, "%s = FALSE", ATTR_PERIODIC_RELEASE_CHECK);
+		m_ad->Insert(buf);
 	}
 
 	if (oeh_expr == NULL) {
-		m_ad->InsertAttr( ATTR_ON_EXIT_HOLD_CHECK, false );
+		sprintf(buf, "%s = FALSE", ATTR_ON_EXIT_HOLD_CHECK);
+		m_ad->Insert(buf);
 	}
 
 	if (oer_expr == NULL) {
-        m_ad->InsertAttr( ATTR_ON_EXIT_REMOVE_CHECK, false );
+		sprintf(buf, "%s = TRUE", ATTR_ON_EXIT_REMOVE_CHECK);
+		m_ad->Insert(buf);
 	}
 }
 
 int
 UserPolicy::AnalyzePolicy( int mode )
 {
-	bool periodic_hold, periodic_remove, periodic_release;
-	bool on_exit_hold, on_exit_remove;
+	int on_exit_hold, on_exit_remove;
+	int timer_remove;
 	int state;
 
 	if (m_ad == NULL)
@@ -412,45 +439,42 @@ UserPolicy::AnalyzePolicy( int mode )
 	/*	The user_policy is checked in this
 			order. The first one to succeed is the winner:
 	
+			ATTR_TIMER_REMOVE_CHECK
 			ATTR_PERIODIC_HOLD_CHECK
 			ATTR_PERIODIC_REMOVE_CHECK
 			ATTR_ON_EXIT_HOLD_CHECK
 			ATTR_ON_EXIT_REMOVE_CHECK
 	*/
 
+	/* Should I perform a remove based on the epoch time? */
+	m_fire_expr = ATTR_TIMER_REMOVE_CHECK;
+	if(!m_ad->LookupInteger(ATTR_TIMER_REMOVE_CHECK, timer_remove)) {
+		timer_remove = -1;
+	}
+	if( timer_remove >= 0 && timer_remove < time(NULL) ) {
+		m_fire_expr_val = 1;
+		return REMOVE_FROM_QUEUE;
+	}
+
+	int retval;
+
 	/* should I perform a periodic hold? */
 	if(state!=HELD) {
-		m_fire_expr = ATTR_PERIODIC_HOLD_CHECK;
-		if( ! m_ad->EvaluateAttrBool(ATTR_PERIODIC_HOLD_CHECK, periodic_hold) ) {
-			return UNDEFINED_EVAL;
-		}
-		if( periodic_hold ) {
-			m_fire_expr_val = 1;
-			return HOLD_IN_QUEUE;
+		if(AnalyzeSinglePeriodicPolicy(ATTR_PERIODIC_HOLD_CHECK, PARAM_SYSTEM_PERIODIC_HOLD, HOLD_IN_QUEUE, retval)) {
+			return retval;
 		}
 	}
 
 	/* Should I perform a periodic release? */
 	if(state==HELD) {
-		m_fire_expr = ATTR_PERIODIC_RELEASE_CHECK;
-		if( !m_ad->EvaluateAttrBool(ATTR_PERIODIC_RELEASE_CHECK,
-								   periodic_release) ) {
-			return UNDEFINED_EVAL;
-		}
-		if( periodic_release ) {
-			m_fire_expr_val = 1;
-			return RELEASE_FROM_HOLD;
+		if(AnalyzeSinglePeriodicPolicy(ATTR_PERIODIC_RELEASE_CHECK, PARAM_SYSTEM_PERIODIC_RELEASE, RELEASE_FROM_HOLD, retval)) {
+			return retval;
 		}
 	}
 
 	/* Should I perform a periodic remove? */
-	m_fire_expr = ATTR_PERIODIC_REMOVE_CHECK;
-	if(!m_ad->EvaluateAttrBool(ATTR_PERIODIC_REMOVE_CHECK, periodic_remove)) {
-		return UNDEFINED_EVAL;
-	}
-	if( periodic_remove ) {
-		m_fire_expr_val = 1;
-		return REMOVE_FROM_QUEUE;
+	if(AnalyzeSinglePeriodicPolicy(ATTR_PERIODIC_REMOVE_CHECK, PARAM_SYSTEM_PERIODIC_REMOVE, REMOVE_FROM_QUEUE, retval)) {
+		return retval;
 	}
 
 	if( mode == PERIODIC_ONLY ) {
@@ -480,27 +504,73 @@ UserPolicy::AnalyzePolicy( int mode )
 
 	/* Should I hold on exit? */
 	m_fire_expr = ATTR_ON_EXIT_HOLD_CHECK;
-	if( ! m_ad->EvaluateAttrBool(ATTR_ON_EXIT_HOLD_CHECK, on_exit_hold) ) {
+	if( ! m_ad->EvalBool(ATTR_ON_EXIT_HOLD_CHECK, m_ad, on_exit_hold) ) {
 		return UNDEFINED_EVAL;
 	}
 	if( on_exit_hold ) {
 		m_fire_expr_val = 1;
+		m_fire_source = FS_JobAttribute;
 		return HOLD_IN_QUEUE;
 	}
 
 	/* Should I remove on exit? */
 	m_fire_expr = ATTR_ON_EXIT_REMOVE_CHECK;
-	if( ! m_ad->EvaluateAttrBool(ATTR_ON_EXIT_REMOVE_CHECK, on_exit_remove) ) {
+	if( ! m_ad->EvalBool(ATTR_ON_EXIT_REMOVE_CHECK, m_ad, on_exit_remove) ) {
 		return UNDEFINED_EVAL;
 	}
 	if( on_exit_remove ) {
 		m_fire_expr_val = 1;
+		m_fire_source = FS_JobAttribute;
 		return REMOVE_FROM_QUEUE;
 	}
 		// If we didn't want to remove it, OnExitRemove was false,
 		// which means we want the job to stay in the queue...
 	m_fire_expr_val = 0;
+	m_fire_source = FS_JobAttribute;
 	return STAYS_IN_QUEUE;
+}
+
+
+bool UserPolicy::AnalyzeSinglePeriodicPolicy(const char * attrname, const char * macroname, int on_true_return, int & retval)
+{
+	ASSERT(attrname);
+
+	// Evaluate the specified expression in the job ad
+	int result;
+	m_fire_expr = attrname;
+	if(!m_ad->EvalBool(attrname, m_ad, result)) {
+		retval = UNDEFINED_EVAL;
+		return true;
+	}
+	if( result ) {
+		m_fire_expr_val = 1;
+		m_fire_source = FS_JobAttribute;
+		retval = on_true_return;
+		return true;
+	}
+	if(macroname) {
+		char * sysexpr = param(macroname);
+		if(sysexpr && sysexpr[0]) {
+			// Just temporarily toss the expression into the job ad
+			const char * ATTR_SCRATCH_EXPRESSION = "UserJobPolicyScratchExpression";
+			m_ad->AssignExpr(ATTR_SCRATCH_EXPRESSION, sysexpr);
+			free(sysexpr);
+			int result_ok = m_ad->EvalBool(ATTR_SCRATCH_EXPRESSION, m_ad, result);
+			m_ad->Delete(ATTR_SCRATCH_EXPRESSION);
+			if(result_ok && result) {
+				m_fire_expr = macroname;
+				m_fire_expr_val = 1;
+				m_fire_source = FS_SystemMacro;
+				retval = on_true_return;
+				return true;
+			}
+		}
+	}
+
+	return false;
+
+	//MyString macroname = "system_";
+	//macroname += attrname;
 }
 
 const char* UserPolicy::FiringExpression(void)
@@ -508,7 +578,77 @@ const char* UserPolicy::FiringExpression(void)
 	return m_fire_expr;
 }
 
+const char* UserPolicy::FiringReason()
+{
+	static MyString reason;
 
+	if ( m_ad == NULL || m_fire_expr == NULL ) {
+		return NULL;
+	}
+
+
+	const char * expr_src;
+	MyString exprString;
+	switch(m_fire_source) {
+		case FS_NotYet:
+			expr_src = "UNKNOWN (never set)";
+			break;
+
+		case FS_JobAttribute:
+		{
+			expr_src = "job attribute";
+			ExprTree *tree, *rhs = NULL;
+			tree = m_ad->Lookup( m_fire_expr );
+
+			// Get a formatted expression string
+			if( tree && (rhs=tree->RArg()) ) {
+				char* exprStringTmp = NULL;
+				rhs->PrintToNewStr( &exprStringTmp );
+				exprString = exprStringTmp;
+				free(exprStringTmp);
+			}
+			break;
+		}
+
+		case FS_SystemMacro:
+		{
+			expr_src = "system macro";
+			char * val = param(m_fire_expr);
+			exprString = val;
+			free(val);
+			break;
+		}
+
+		default:
+			expr_src = "UNKNOWN (bad value)";
+			break;
+	}
+
+	// Format up the reason string
+	reason.sprintf( "The %s %s expression '%s' evaluated to ",
+					expr_src,
+					m_fire_expr,
+					exprString.Value());
+
+	// Get a string for it's value
+	switch( m_fire_expr_val ) {
+	case 0:
+		reason += "FALSE";
+		break;
+	case 1:
+		reason += "TRUE";
+		break;
+	case -1:
+		reason += "UNDEFINED";
+		break;
+	default:
+		EXCEPT( "Unrecognized FiringExpressionValue: %d", 
+				m_fire_expr_val ); 
+		break;
+	}
+
+	return reason.Value();
+}
 
 
 

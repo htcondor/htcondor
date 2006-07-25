@@ -1,0 +1,19 @@
+#!/usr/bin/env perl
+
+use CondorTest;
+
+$cmd = 'job_ckpt_memory-file_std.cmd';
+$testname = 'job_ckpt_memory-file_std test';
+
+@CondorTest::expected_output = ( 'SUCCESS' );
+@CondorTest::skipped_output_lines = ( 1, 2, 3, 4 );
+
+CondorTest::RegisterExitedSuccess( $testname,
+				   \&CondorTest::DefaultOutputTest );
+
+if( CondorTest::RunTest( $testname, $cmd, 1) ) {
+    print "$testname: SUCCESS\n";
+    exit(0);
+} else {
+    die "$testname: CondorTest::RunTest() failed\n";
+}

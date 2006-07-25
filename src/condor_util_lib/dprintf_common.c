@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -54,10 +54,10 @@ int		_condor_dprintf_works = 0;
 char *_condor_DebugFlagNames[] = {
 	"D_ALWAYS", "D_SYSCALLS", "D_CKPT", "D_HOSTNAME", "D_MALLOC", "D_LOAD",
 	"D_EXPR", "D_PROC", "D_JOB", "D_MACHINE", "D_FULLDEBUG", "D_NFS",
-	"D_UPDOWN", "D_AFS", "D_PREEMPT", "D_PROTOCOL",	"D_PRIV",
+	"D_CONFIG", "D_NET_REMAP", "D_PREEMPT", "D_PROTOCOL",	"D_PRIV",
 	"D_SECURITY", "D_DAEMONCORE", "D_COMMAND", "D_BANDWIDTH", "D_NETWORK",
 	"D_KEYBOARD", "D_PROCFAMILY", "D_IDLE", "D_MATCH", "D_ACCOUNTANT",
-	"D_FAILURE", "D_UNDEF28", "D_FDS", "D_SECONDS", "D_NOHEADER",
+	"D_FAILURE", "D_PID", "D_FDS", "D_SECONDS", "D_NOHEADER",
 };
 
 
@@ -74,7 +74,7 @@ char *_condor_DebugFlagNames[] = {
    the messages going to stderr, instead of being dropped.
 */
 void
-dprintf(int flags, char* fmt, ...)
+dprintf(int flags, const char* fmt, ...)
 {
     va_list args;
     va_start( args, fmt );

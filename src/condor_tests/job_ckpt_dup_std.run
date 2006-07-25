@@ -1,0 +1,29 @@
+#!/usr/bin/env perl
+
+use CondorTest;
+
+$cmd = 'job_ckpt_dup_std.cmd';
+$testname = 'Dup Test';
+
+$foo = <<"_EOX";
+OK
+OK
+OK
+OK
+OK
+OK
+OK
+Normal End of Job
+_EOX
+
+@CondorTest::expected_output = split '\n', $foo;
+
+CondorTest::RegisterExitedSuccess( $testname,
+				   \&CondorTest::DefaultOutputTest );
+
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+    print "$testname: SUCCESS\n";
+    exit(0);
+} else {
+    die "$testname: CondorTest::RunTest() failed\n";
+}

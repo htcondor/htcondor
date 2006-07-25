@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -30,6 +30,7 @@
 
 #include "sysapi.h"
 #include "sysapi_externs.h"
+#include "my_popen.h"
 
 /* static function declarations */
 static int reserve_for_afs_cache();
@@ -84,7 +85,7 @@ sysapi_disk_space_raw(const char *filename)
 
 #else
 
-#include "debug.h"
+#include "condor_debug.h"
 
 /* Can't include condor_config.h since it depends on classads which is
    only C++.  -Derek 6/25/98 */
@@ -94,14 +95,6 @@ extern char* param();
 #define FS_PROGRAM "/usr/afsws/bin/fs"
 #define FS_COMMAND "getcacheparms"
 #define FS_OUTPUT_FORMAT "\nAFS using %d of the cache's available %d"
-
-#if defined(__STDC__)
-FILE * my_popen( char * cmd, char * mode );
-int my_pclose( FILE *fp );
-#else
-FILE * my_popen();
-int my_pclose();
-#endif
 
 #endif
 
@@ -117,7 +110,7 @@ reserve_for_afs_cache()
 #else
 	int		answer;
 	FILE	*fp;
-	char	cmd[512];
+	char	*args[] = {FS_PROGRAM, FS_COMMAND, NULL};
 	int		cache_size, cache_in_use;
 	int		do_it;
 
@@ -132,8 +125,7 @@ reserve_for_afs_cache()
 		/* Run an AFS utility program to learn how big the cache is and
 		   how much is in use. */
 	dprintf( D_FULLDEBUG, "Checking AFS cache parameters\n" );
-	sprintf( cmd, "%s %s", FS_PROGRAM, FS_COMMAND );
-	fp = my_popen( cmd, "r" );
+	fp = my_popenv( args, "r", FALSE );
 	fscanf( fp, FS_OUTPUT_FORMAT, &cache_in_use, &cache_size );
 	my_pclose( fp );
 	dprintf( D_FULLDEBUG, "cache_in_use = %d, cache_size = %d\n",
@@ -243,7 +235,7 @@ char *filename;
 }
 #endif /* VAX && ULTRIX */
 
-#if defined(LINUX) || defined(AIX) || defined(HPUX) || defined(OSF1) || defined(Solaris) || defined(IRIX) || defined(Darwin)
+#if defined(LINUX) || defined(AIX) || defined(HPUX) || defined(OSF1) || defined(Solaris) || defined(IRIX) || defined(Darwin) || defined(CONDOR_FREEBSD)
 
 #include <limits.h>
 
@@ -283,7 +275,7 @@ const char *filename;
 #else
 	if(statfs(filename, &statfsbuf) < 0) {
 #endif
-		dprintf(D_ALWAYS, "sysapi_disk_space_raw: statfs(%s,0x%x) failed\n",
+		dprintf(D_ALWAYS, "sysapi_disk_space_raw: statfs(%s,%p) failed\n",
 													filename, &statfsbuf );
 		dprintf(D_ALWAYS, "errno = %d\n", errno );
 		return(0);

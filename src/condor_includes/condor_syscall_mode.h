@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -25,7 +25,7 @@
 
 #if defined( AIX )
 #	include "syscall.aix.h"
-#elif defined(Solaris) || defined(Darwin)
+#elif defined(Solaris) || defined(Darwin) || defined(CONDOR_FREEBSD)
 #	include <sys/syscall.h>
 #elif defined(IRIX)
 #	undef SYSVoffset

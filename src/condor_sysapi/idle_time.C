@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -21,13 +21,21 @@
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#include "condor_common.h"
-#include "condor_config.h"
-#include "condor_debug.h"
-#include "sysapi.h"
-#include "sysapi_externs.h"
-
 #ifdef Darwin
+/*
+  This is REALLY evil, but it works (for now).  Carbon.h defines a
+  bunch of stuff as enums that the regular system header files declare
+  with #define.  If you include all the system headers first and
+  *then* include Carbon.h, this enum crap creates header file parse
+  error madness on TCP_NODELAY (for example).  However, if you include
+  Carbon.h first, it all works, since Carbon.h does its own #define
+  and the system headers check #ifdef before they do their own
+  #define.  Even though it goes against everything else we say about
+  condor_common.h always being included first, for this 1 .C file
+  (since it's the only place we include Carbon.h), for this 1
+  platform, it seems that this is an easy work-around and this file
+  still compiles.  Derek <wright@cs.wisc.edu> 2005-09-11.
+*/
 #include <mach/mach.h>
 #include <IOKit/IOKitLib.h>
 #include <IOKit/hid/IOHIDLib.h>
@@ -35,21 +43,40 @@
 #include <Carbon/Carbon.h>
 #endif
 
+#include "condor_common.h"
+#include "condor_config.h"
+#include "condor_debug.h"
+#include "sysapi.h"
+#include "sysapi_externs.h"
+
 /* define some static functions */
 #if defined(WIN32)
-static BOOL ThreadInteract(HDESK * hdesk, HWINSTA * hwinsta);
-static DWORD WINAPI message_loop_thread(void *);
 static void calc_idle_time_cpp(time_t * m_idle, time_t * m_console_idle);
-extern int WINAPI KBInitialize(void);
-extern int WINAPI KBShutdown(void);
-extern int WINAPI KBQuery(void);
 #else /* Not defined WIN32 */
 #include "string_list.h"
 #ifndef Darwin
+/* This struct hold information about the idle time of the keyboard and mouse */
+typedef struct {
+	unsigned long num_key_intr;
+	unsigned long num_mouse_intr;
+	time_t timepoint;
+} idle_t;
+
 static time_t utmp_pty_idle_time( time_t now );
 static time_t all_pty_idle_time( time_t now );
 static time_t dev_idle_time( char *path, time_t now );
 static void calc_idle_time_cpp(time_t & m_idle, time_t & m_console_idle);
+
+#if defined(LINUX)
+/* used to get the keyboard and mouse idle time from /proc/interrupts as a
+	last resort */
+static time_t km_idle_time(const time_t now);
+static int get_keyboard_info(idle_t *fill_me);
+static int get_mouse_info(idle_t *fill_me);
+static int get_keyboard_mouse_info(idle_t *fill_me);
+static int is_number(const char *str);
+#endif
+
 #endif
 
 /* we must now use the kstat interface to get this information under later
@@ -64,177 +91,61 @@ static time_t solaris_mouse_idle(void);
 
 /* the local function that does the main work */
 
-
 #if defined(WIN32)
-
-// ThreadInteract allows the calling thread to access the visable,
-// interactive desktop in order to set a hook. 
-// Win32
-BOOL ThreadInteract(HDESK * hdesk_input, HWINSTA * hwinsta_input)   
-{      
-	HDESK   hdeskTest;
-	HDESK	hdesk;
-	HWINSTA	hwinsta;
-	
-	*hdesk_input = NULL;
-	*hwinsta_input = NULL;
-
-	// Obtain a handle to WinSta0 - service must be running
-	// in the LocalSystem account or this will fail!!!!!     
-	hwinsta = OpenWindowStation("winsta0", FALSE,
-							  WINSTA_ACCESSCLIPBOARD   |
-							  WINSTA_ACCESSGLOBALATOMS |
-							  WINSTA_CREATEDESKTOP     |
-							  WINSTA_ENUMDESKTOPS      |
-							  WINSTA_ENUMERATE         |
-							  WINSTA_EXITWINDOWS       |
-							  WINSTA_READATTRIBUTES    |
-							  WINSTA_READSCREEN        |
-							  WINSTA_WRITEATTRIBUTES);
-
-	if (hwinsta == NULL)         
-	  return FALSE; 
-
-	// Set the windowstation to be winsta0     
-	if (!SetProcessWindowStation(hwinsta))         
-	  return FALSE;      
-
-	// Get the desktop     
-	hdeskTest = GetThreadDesktop(GetCurrentThreadId());
-	if (hdeskTest == NULL)         
-	  return FALSE;     
-
-	// Get the default desktop on winsta0      
-	hdesk = OpenDesktop("default", 0, FALSE,               
-						DESKTOP_HOOKCONTROL |
-						DESKTOP_READOBJECTS |
-						DESKTOP_SWITCHDESKTOP |
-						DESKTOP_WRITEOBJECTS);   
-
-	if (hdesk == NULL)
-	   return FALSE;   
-
-	// Set the desktop to be "default"   
-	if (!SetThreadDesktop(hdesk))           
-	  return FALSE;   
-
-	*hdesk_input = hdesk;
-	*hwinsta_input = hwinsta;
-
-	return TRUE;
-}
-
-
-// Win32
-static DWORD WINAPI
-message_loop_thread(void *foo)
-{
-	MSG msg;
-	HDESK hdesk;
-	HWINSTA hwinsta;
-
-	// first allow this thread access to the interactive(visable) desktop
-	while ( !ThreadInteract(&hdesk,&hwinsta) ) {
-		// failed to get access to the desktop!!!  Perhaps we are still
-		// at the login screen....
-		dprintf(D_ALWAYS,
-			"Failed to access the interactive desktop; will try later\n");
-		// now sleep for 2 minutes and try again
-		sleep(120);
-	}
-
-	// tell our DLL to hook onto WH_KEYBOARD messages
-	if ( !KBInitialize() ) {
-		dprintf(D_ALWAYS,"ERROR: could not initialize kbdd DLL\n");
-		return 0;
-	}
-
-	while (GetMessage( &msg, NULL, 0, 0 ) ) {
-		TranslateMessage( &msg );
-		DispatchMessage( &msg );	
-	}
-
-	// TODO: not exactly certain what we should do
-	//		when GetMessage returns NULL.  at this
-	//		stage I won't worry about it, because
-	//		it is likely we are about to get killed
-	//		anyhow...
-	//		I guess we should unhook since things could
-	//		get sluggish without a message loop....
-	dprintf(D_ALWAYS,"WARNING: GetMessage() returned NULL\n");
-
-	KBShutdown();	// will unhook WH_KEYBOARD messages
-
-	// Close the windowstation and desktop handles   
-	CloseWindowStation(hwinsta);
-	CloseDesktop(hdesk);
-
-	return 0;
-}
 
 // Win32
 void
 calc_idle_time_cpp( time_t * user_idle, time_t * console_idle)
 {
-	static HANDLE threadHandle = NULL;
-	static DWORD threadID = -1;
-	static POINT previous_pos = { 0, 0 };	// stored position of cursor
-	time_t now = time( 0 );
-
-	if (threadHandle == NULL) {
-
-		// First time calc_idle_time has been called.
-
-		// Start a thread to act as a message pump.  We need this
-		// because down because SetWindowsHookEx forwards messages 
-		// to the same thread which performs the hook.  So, whatever
-		// thread calls SetWindowsHookEx also needs to have a message
-		// pump.
-		threadHandle = CreateThread(NULL, 0, message_loop_thread, 
-									NULL, 0, &threadID);
-		if (threadHandle == NULL) {
-			dprintf(D_ALWAYS, "failed to create message loop thread, errno = %d\n",
-					GetLastError());
-			*user_idle = -1;
-			*console_idle = -1;
-		}		
+	LASTINPUTINFO lii;
+	static POINT previous_pos = { 0, 0 };   // stored position of cursor
+	static DWORD previous_input_tick = 0;
+    time_t now = time( 0 );
+	
+	
+	lii.cbSize = sizeof(LASTINPUTINFO);
+	lii.dwTime = 0;
+	
+	if ( !GetLastInputInfo(&lii) ) {
+		dprintf(D_ALWAYS, "calc_idle_time: GetLastInputInfo()"
+			" failed with err=%d\n", GetLastError());
+	}
+	
+	if ( lii.dwTime != previous_input_tick ) {
+		_sysapi_last_x_event = now;
+		previous_input_tick = lii.dwTime;
 	} else {
-
-		// Not the first time calc_idle_time has been called
-
-		if ( KBQuery() ) {
-			// a keypress was detected
-			_sysapi_last_x_event = now;
+		// no keypress detected, test if mouse moved
+		CURSORINFO cursor_inf;
+		cursor_inf.cbSize = sizeof(CURSORINFO);
+		if ( ! GetCursorInfo(&cursor_inf) ) {
+			dprintf(D_ALWAYS,"GetCursorInfo() failed (err=%li)\n",
+				GetLastError());
 		} else {
-			// no keypress detected, test if mouse moved
-			CURSORINFO cursor_inf;
-			cursor_inf.cbSize = sizeof(CURSORINFO);
-			if ( ! GetCursorInfo(&cursor_inf) ) {
-				dprintf(D_ALWAYS,"GetCursorInfo() failed (err=%li)\n",
-					   	GetLastError());
-			} else {
-				if ( (cursor_inf.ptScreenPos.x != previous_pos.x) || 
-					(cursor_inf.ptScreenPos.y != previous_pos.y) ) {
-						// the mouse has moved!
-						// stash new position
-					previous_pos.x = cursor_inf.ptScreenPos.x; 
-					previous_pos.y = cursor_inf.ptScreenPos.y; 
-					_sysapi_last_x_event = now;
-				}
+			if ( (cursor_inf.ptScreenPos.x != previous_pos.x) || 
+				(cursor_inf.ptScreenPos.y != previous_pos.y) ) {
+				// the mouse has moved!
+				// stash new position
+				previous_pos.x = cursor_inf.ptScreenPos.x; 
+				previous_pos.y = cursor_inf.ptScreenPos.y; 
+				_sysapi_last_x_event = now;
 			}
 		}
-
 	}
-
+	
 	*user_idle = now - _sysapi_last_x_event;
 	*console_idle = *user_idle;
-
+	
 	dprintf( D_IDLE, "Idle Time: user= %d , console= %d seconds\n",
-			 *user_idle, *console_idle );
+		*user_idle, *console_idle );
 	return;
 }
 
 #elif !defined(Darwin) /* !defined(WIN32) -- all UNIX platforms but OS X*/
+
+/* delimiting characters between the numbers in the /proc/interrupts file */
+#define DELIMS " "
+#define BUFFER_SIZE (1024*10)
 
 /* calc_idle_time fills in user_idle and console_idle with the number
  * of seconds since there has been activity detected on any tty or on
@@ -251,6 +162,10 @@ calc_idle_time_cpp( time_t & m_idle, time_t & m_console_idle )
 	time_t tty_idle;
 	time_t now = time( 0 );
 	char* tmp;
+#if defined(LINUX)
+	/* what is the idle time using the /proc/interrupts method? */
+	time_t m_interrupt_idle;
+#endif
 
 		// Find idle time from ptys/ttys.  See if we should trust
 		// utmp.  If so, only stat the devices that utmp says are
@@ -292,6 +207,17 @@ calc_idle_time_cpp( time_t & m_idle, time_t & m_console_idle )
 		m_console_idle = now - _sysapi_last_x_event;
 	}
 
+#if defined(LINUX)
+	/* If we still don't have console idle info, (e.g. atime is not updated
+	   on device files in Linux 2.6 kernel), get keyboard and mouse idle
+	   time via /proc/interrupts.  Update user_idle appropriately too.
+	*/
+	m_interrupt_idle = km_idle_time(now);
+	m_console_idle = MIN(m_interrupt_idle, m_console_idle);
+#endif
+
+	m_idle = MIN(m_console_idle, m_idle);
+
 	if( (DebugFlags & D_IDLE) && (DebugFlags & D_FULLDEBUG) ) {
 		dprintf( D_IDLE, "Idle Time: user= %d , console= %d seconds\n", 
 				 (int)m_idle, (int)m_console_idle );
@@ -308,6 +234,9 @@ static char *AltUtmpName = "/etc/utmp";
 #elif defined(LINUX)
 static char *UtmpName = "/var/run/utmp";
 static char *AltUtmpName = "/var/adm/utmp";
+#elif defined(CONDOR_FREEBSD)
+static char *UtmpName = "/var/run/utmp";
+static char *AltUtmpName = "";
 #elif defined(Solaris28) || defined(Solaris29)
 #include <utmpx.h>
 static char *UtmpName = "/etc/utmpx";
@@ -498,7 +427,7 @@ all_pty_idle_time( time_t now )
 
 #ifdef LINUX
 #include <sys/sysmacros.h>  /* needed for major() below */
-#elif defined( OSF1 ) || defined(Darwin)
+#elif defined( OSF1 ) || defined(Darwin) || defined(CONDOR_FREEBSD)
 #include <sys/types.h>
 #elif defined( HPUX )
 #include <sys/sysmacros.h>
@@ -550,15 +479,18 @@ dev_idle_time( char *path, time_t now )
 	/* ok, just check the device idle time for normal devices using stat() */
 	if (stat(pathname,&buf) < 0) {
 		if( errno != ENOENT ) {
-			dprintf( D_FULLDEBUG, "Error on stat(%s,0x%x), errno = %d(%s)\n",
+			dprintf( D_FULLDEBUG, "Error on stat(%s,%p), errno = %d(%s)\n",
 					 pathname, &buf, errno, strerror(errno) );
 		}
 		buf.st_atime = 0;
 	}
+
+	/* XXX The signedness problem in this comparison is hard to fix properly */
 	if ( null_major_device > -1 && null_major_device == major(buf.st_rdev) ) {
 		// this device is related to /dev/null, it should not count
 		buf.st_atime = 0;
 	}
+
 	answer = now - buf.st_atime;
 	if( buf.st_atime > now ) {
 		answer = 0;
@@ -600,6 +532,266 @@ dev_idle_time( char *path, time_t now )
 
 	return answer;
 }
+
+#if defined(LINUX)
+/* This block of code should only get compiled for linux machines which have
+	/proc/interrupts */
+
+/* Returns true if the string contains only digits (and is not empty) */
+int
+is_number(const char *str)
+{
+	int result = TRUE;
+	int i;
+
+	if (str == NULL)
+	    return FALSE;
+
+	for (i = 0; str[i] != '\0'; i++) {
+		if (!isdigit(str[i])) {
+			result = FALSE;
+			break;
+		}
+	}
+
+	return result;
+}
+
+/* Sets fill_me with info about keyboard idleness */
+int
+get_keyboard_info(idle_t *fill_me)
+{
+	FILE *intr_fs;
+	int result = FALSE;
+	char buf[BUFFER_SIZE], *tok, *tok_loc;
+
+	/* Search /proc/interrupts for either:
+	   1) the first occurrance of "i8042" or 
+	   2) "keyboard".  
+	   Generally, the keyboard will be IRQ 1.
+
+	   The format of /proc/interrupts is:
+	   [Header line]
+	   [IRQ #]:  [# of interrupts at CPU 1] ... [CPU N] [dev type] [dev name]
+	*/
+	
+	if ((intr_fs = fopen("/proc/interrupts", "r")) == NULL) {
+		dprintf(D_ALWAYS, "Failed to open /proc/interrupts\n");
+		return FALSE;
+	}
+
+	fgets(buf, BUFFER_SIZE, intr_fs);  /* Ignore header line */
+	while (!result && (fgets(buf, BUFFER_SIZE, intr_fs) != NULL)) {
+	    if (strstr(buf, "i8042") != NULL || strstr(buf, "keyboard") != NULL){
+
+			if( (DebugFlags & D_IDLE) && (DebugFlags & D_FULLDEBUG) ) {
+				dprintf( D_IDLE, "Keyboard IRQ: %d\n", atoi(buf) );
+			}
+		tok = strtok_r(buf, DELIMS, &tok_loc);  /* Ignore [IRQ #]: */
+		do {
+		    tok = strtok_r(NULL, DELIMS, &tok_loc);
+		    if (is_number(tok)) {
+					/* It is ok if this overflows */
+				fill_me->num_key_intr += strtoul(tok, NULL, 10);
+				if( (DebugFlags & D_IDLE) && (DebugFlags & D_FULLDEBUG) ) {
+					dprintf( D_FULLDEBUG, 
+							 "Add %lu keyboard interrupts.  Total: %lu\n",
+							 strtoul(tok, NULL, 10), fill_me->num_key_intr );
+				}
+		    } else {
+			break;  /* device type column */
+		    }
+		} while (tok != NULL);		
+		result = TRUE;
+	    }
+	}
+
+	fclose(intr_fs);	
+	return result;
+}
+
+/* Sets fill_me with info about the mouse idleness */
+int
+get_mouse_info(idle_t *fill_me)
+{
+	FILE *intr_fs;
+	int result = FALSE, first_i8042 = FALSE;
+	char buf[BUFFER_SIZE], *tok, *tok_loc;
+
+	/* Search /proc/interrupts for:
+	   1) the second occurrance of "i8042", as we assume the first to be 
+		  the keyboard, or
+	   2) "Mouse" or
+	   3) "mouse"
+	   Generally, the mouse will be IRQ 12.
+
+	   The format of /proc/interrupts is:
+	   [Header line]
+	   [IRQ #]:  [# of interrupts at CPU 1] ... [CPU N] [dev type] [dev name]
+	*/
+	if ((intr_fs = fopen("/proc/interrupts", "r")) == NULL) {
+	    dprintf(D_ALWAYS, 
+		    "get_mouse_info(): Failed to open /proc/interrupts\n");
+	    return FALSE;
+	}
+
+	fgets(buf, BUFFER_SIZE, intr_fs);  /* Ignore header line */
+	while (!result && (fgets(buf, BUFFER_SIZE, intr_fs) != NULL)) {
+	    if (strstr(buf, "i8042") && !first_i8042) {
+		first_i8042 = TRUE;
+	    } 
+	    else if ((strstr(buf, "i8042") != NULL && first_i8042) ||
+		     strstr(buf, "Mouse") != NULL || strstr(buf, "mouse") != NULL)  
+		{
+
+			if( (DebugFlags & D_IDLE) && (DebugFlags & D_FULLDEBUG) ) {
+		   		dprintf(D_FULLDEBUG, "Mouse IRQ: %d\n", atoi(buf));
+			}
+		    tok = strtok_r(buf, DELIMS, &tok_loc);  /* Ignore [IRQ #]: */
+		    do {
+			tok = strtok_r(NULL, DELIMS, &tok_loc);
+			if (is_number(tok)) {
+			    /* It is ok if this overflows */
+			    fill_me->num_mouse_intr += strtoul(tok, NULL, 10);
+
+				if( (DebugFlags & D_IDLE) && (DebugFlags & D_FULLDEBUG) ) {
+					dprintf(D_FULLDEBUG, 
+					"Add %lu mouse interrupts.  Total: %lu\n",
+					strtoul(tok, NULL, 10), fill_me->num_mouse_intr);
+				}
+			} else {
+			    break;  /* device type column */
+			}
+		    } while (tok != NULL);		    
+		    result = TRUE;
+
+		}
+	}
+	
+	fclose(intr_fs);
+	return result;
+}
+
+/* Returns true if info about the idleness of the keyboard or mouse (or both)
+   has been obtained. */
+int
+get_keyboard_mouse_info(idle_t *fill_me)
+{
+    int r1, r2;
+
+    r1 = get_keyboard_info(fill_me);
+    r2 = get_mouse_info(fill_me);
+	
+    return r1 || r2; 
+}
+
+/* Calculate # of seconds since there has been activity detected on 
+   the keyboard and/or mouse. 
+
+   In order to determine "activity since", we need to measure from a known
+   point in time.  However, when this function is first called, we lack this.
+   Thus, when first called this function assumes that the keyboard/mouse
+   were active immediately prior, ie. returns 0 (seconds since last activity).
+*/
+time_t
+km_idle_time(const time_t now)
+{
+	/* we want certain debugging messages to only happen rarely since otherwise
+		they fill the logs with useless garbage. */
+	static int timer_initialized = FALSE;
+	static struct timeval msg_delay;
+	static struct timeval msg_now;
+	time_t msg_timeout = 60 * 60; /* 1 hour seems good */
+	static int msg_emit_immediately = TRUE;
+
+	/* initialize the message timer to force certain messages to print out
+		much less frequently */
+	if (timer_initialized == FALSE) {
+		gettimeofday(&msg_delay, NULL);
+		timer_initialized = TRUE;
+	}
+	gettimeofday(&msg_now, NULL);
+
+	/* We need to store information about the state of the keyboard
+	   and mouse the last time we saw activity on either of them.  Thus,
+	   last_km_activity is a static variable that is initialized when
+	   this function is first called.  And "once" is a switch that tells 
+	   us if last_km_activity has been initialized or not.
+	*/
+	static int once = FALSE;
+	static idle_t last_km_activity;
+
+	idle_t current = {0, 0, 0};
+
+	/* Initialize, if necessary.  last_km_activity holds information about
+	   the most recently detected activity on the keyboard or mouse. */
+	if (once == FALSE) {	    
+		last_km_activity.num_key_intr = 0;
+		last_km_activity.num_mouse_intr = 0;
+		last_km_activity.timepoint = now;		
+
+		if (!get_keyboard_mouse_info(&last_km_activity)) {
+
+			/* emit the error on msg delay boundaries */
+			if (msg_emit_immediately == TRUE || 
+				(msg_now.tv_sec - msg_delay.tv_sec) > msg_timeout) 
+			{
+				dprintf(D_ALWAYS,
+					"Unable to calculate keyboard/mouse idle time due to them "
+					"both being USB or not present, assuming infinite "
+					"idle time for these devices.\n");
+
+				msg_delay = msg_now;
+				msg_emit_immediately = FALSE;
+			}
+
+			/* Here we'll try to initialize it again hoping whatever
+			   the problem was was transient and went away.
+			   
+			   What do we return in this case?
+			   Report infinite idle time 'a la' utmp_pty_idle_time */
+			return (time_t)INT_MAX;
+		}	
+		dprintf(D_FULLDEBUG, "Initialized last_km_activity\n");
+		once = TRUE;
+	}
+
+	/* Take current measurement */
+	if (!get_keyboard_mouse_info(&current)) {
+		if ((msg_now.tv_sec - msg_delay.tv_sec) > msg_timeout) {
+			/* This is kind of a rare error, it would mean someone unplugged
+				the keyboard and mouse after Condor has already recognized
+				them. */
+			dprintf(D_ALWAYS,
+				"Condor had been able to determine keybaord and idle times, "
+				"but something has changed about the hardware and Condor is now"
+				"unable to calculate keyboard/mouse idle time due to them "
+				"both being USB or not present, assuming infinite "
+				"idle time for these devices.\n");
+
+			msg_delay = msg_now;
+		}
+		/* Report latest idle time we know about */
+		return now - last_km_activity.timepoint;
+	}
+
+	/* Activity is revealed by higher interrupt sums. In the case of
+	   overflow of an interrupt counter on a single CPU or their sum, I
+	   really only care that at least one interrupt occurred.  Thus, if the
+	   new sum and old sum are different in any way, activity occurred. */
+	if ((current.num_key_intr != last_km_activity.num_key_intr) ||
+	    (current.num_mouse_intr != last_km_activity.num_mouse_intr)) {
+
+		/*  Save info about most recent activity */
+		last_km_activity.num_key_intr = current.num_key_intr;
+		last_km_activity.num_mouse_intr = current.num_mouse_intr;
+		last_km_activity.timepoint = now;
+	}
+
+	return now - last_km_activity.timepoint;
+}
+
+#endif /* defined(LINUX) */
 
 #else /* here's the OS X version of calc_idle_time */
 

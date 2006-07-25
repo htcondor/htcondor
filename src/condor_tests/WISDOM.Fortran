@@ -1,0 +1,6 @@
+Oddities to compiling the Fortran test suite on various platforms.
+
+IRIX62
+------
+Just commit suicide now. We need to install the right versions of the
+vendor and g77 compilers.

@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -26,6 +26,14 @@
 #include "string_list.h"
 #include "condor_distribution.h"
 #include "env.h"
+#include "dagman_multi_dag.h"
+#include "basename.h"
+
+#ifdef WIN32
+const char* dagman_exe = "condor_dagman.exe";
+#else
+const char* dagman_exe = "condor_dagman";
+#endif
 
 struct SubmitDagOptions
 {
@@ -36,14 +44,19 @@ struct SubmitDagOptions
 	MyString strNotification;
 	MyString strJobLog;
 	MyString strStorkLog;
-	MyString strStorkServer;
+	int iMaxIdle;
 	int iMaxJobs;
 	int iMaxPre;
 	int iMaxPost;
-	bool bNoPostFail;
 	MyString strRemoteSchedd;
+	bool bNoEventChecks;
+	bool bAllowLogError;
 	int iDebugLevel;
-	MyString strDagFile;
+	MyString primaryDagFile;
+	StringList	dagFiles;
+	MyString strDagmanPath;
+	bool useDagDir;
+	MyString strDebugDir;
 	
 	// non-command line options
 	MyString strLibLog;
@@ -51,7 +64,7 @@ struct SubmitDagOptions
 	MyString strSchedLog;
 	MyString strSubFile;
 	MyString strRescueFile;
-	MyString strDagmanPath;
+	MyString strLockFile;
 
 	SubmitDagOptions() 
 	{ 
@@ -60,75 +73,101 @@ struct SubmitDagOptions
 		bForce = false;
 		strNotification = "";
 		strJobLog = "";
+		iMaxIdle = 0;
 		iMaxJobs = 0;
 		iMaxPre = 0;
 		iMaxPost = 0;
-		bNoPostFail = false;
 		strRemoteSchedd = "";
+		bNoEventChecks = false;
+		bAllowLogError = false;
 		iDebugLevel = 3;
-		strDagFile = "";
-
-		strLibLog = "";
-		strDebugLog = "";
-		strSchedLog = "";
-		strSubFile = "";
-		strRescueFile = "";
-		strDagmanPath = "";
+		primaryDagFile = "";
+		useDagDir = false;
 	}
 
 };
 
 int printUsage(); // NOTE: printUsage calls exit(1), so it doesnt return
 void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[]);
-void submitDag(SubmitDagOptions &opts);
-bool isWhiteSpace(const char c);
+int submitDag( SubmitDagOptions &opts );
 bool readFileToString(const MyString &strFilename, MyString &strFileData);
 
 int main(int argc, char *argv[])
 {
 	printf("\n");
 
+		// Set up the dprintf stuff to write to stderr, so that Condor
+		// libraries which use it will write to the right place...
+	Termlog = true;
+	dprintf_config("condor_submit_dag", 2); 
+	DebugFlags = D_ALWAYS;
+
 	SubmitDagOptions opts;
 	myDistro->Init( argc, argv );
 	parseCommandLine(opts, argc, argv);
 	
-	if (opts.strDagFile == "")
-	{
-		printf("No dag file specified.\n");
-		printUsage();
+	opts.strLibLog = opts.primaryDagFile + ".lib.out";
+
+	if ( opts.strDebugDir != "" ) {
+		opts.strDebugLog = opts.strDebugDir + DIR_DELIM_STRING +
+					condor_basename( opts.primaryDagFile.Value() );
+	} else {
+		opts.strDebugLog = opts.primaryDagFile;
+	}
+	opts.strDebugLog += ".dagman.out";
+
+	opts.strSchedLog = opts.primaryDagFile + ".dagman.log";
+	opts.strSubFile = opts.primaryDagFile + ".condor.sub";
+
+	MyString	rescueDagBase;
+
+		// If we're running each DAG in its own directory, write any rescue
+		// DAG to the current directory, to avoid confusion (since the
+		// rescue DAG must be run from the current directory).
+	if ( opts.useDagDir ) {
+		char	currentDir[_POSIX_PATH_MAX];
+		if ( !getcwd( currentDir, sizeof(currentDir) ) ) {
+			fprintf( stderr, "ERROR: unable to get cwd: %d, %s\n",
+					errno, strerror(errno) );
+			return 1;
+		}
+		rescueDagBase = currentDir;
+		rescueDagBase += DIR_DELIM_STRING;
+		rescueDagBase += condor_basename(opts.primaryDagFile.Value());
+	} else {
+		rescueDagBase = opts.primaryDagFile;
 	}
 
-	opts.strLibLog = opts.strDagFile + ".lib.out";
-	opts.strDebugLog = opts.strDagFile + ".dagman.out";
-	opts.strSchedLog = opts.strDagFile + ".dagman.log";
-	opts.strSubFile = opts.strDagFile + ".condor.sub";
-	opts.strRescueFile = opts.strDagFile + ".rescue";
+		// If we're running multiple DAGs, put "_multi" in the rescue
+		// DAG name to indicate that the rescue DAG is for *all* of
+		// the DAGs we're running.
+	if ( opts.dagFiles.number() > 1 ) {
+		rescueDagBase += "_multi";
+	}
 
-	submitDag(opts);
-	
-	return 0;
+	opts.strRescueFile = rescueDagBase + ".rescue";
+
+	opts.strLockFile = opts.primaryDagFile + ".lock";
+
+	return submitDag( opts );
 }
 
 // utility fcns for submitDag
 void ensureOutputFilesExist(const SubmitDagOptions &opts);
-void writeSubmitFile(const SubmitDagOptions &opts);
-void getJobLogFilenameFromSubmitFiles(SubmitDagOptions &opts);
-MyString loadLogFileNameFromSubFile(const MyString &strSubFile, const SubmitDagOptions &opts);
+void writeSubmitFile(/* const */ SubmitDagOptions &opts);
 
-void submitDag(SubmitDagOptions &opts)
+int
+submitDag( SubmitDagOptions &opts )
 {
 	if (opts.strDagmanPath == "" ) {
-#ifdef WIN32
-		opts.strDagmanPath = which("condor_dagman.exe");
-#else
-		opts.strDagmanPath = which("condor_dagman");
-#endif
+		opts.strDagmanPath = which( dagman_exe );
 	}
 
 	if (opts.strDagmanPath == "")
 	{
-		printf("Can't find condor_dagman in your path, aborting.\n");
-		exit(2);
+		fprintf( stderr, "ERROR: can't find %s in PATH, aborting.\n",
+				 dagman_exe );
+		return 1;
 	}
 		
 	ensureOutputFilesExist(opts);
@@ -140,11 +179,34 @@ void submitDag(SubmitDagOptions &opts)
 	}
 	else
 	{
-		printf("Checking all your submit files for a consistent log file name.\n");
+		printf("Checking all your submit files for log file names.\n");
 		printf("This might take a while... \n");
-		getJobLogFilenameFromSubmitFiles(opts);
-		if (opts.strJobLog == "")
-			return;
+
+		StringList	condorLogFiles;
+		StringList	storkLogFiles;
+
+		MyString	msg;
+		if ( !GetLogFiles( opts.dagFiles, opts.useDagDir, condorLogFiles,
+					storkLogFiles, msg ) ) {
+			fprintf( stderr, "ERROR: %s\n", msg.Value() );
+			if ( opts.bAllowLogError ) {
+				fprintf( stderr, "Continuing anyhow because of "
+							"-AllowLogError flag (beware!)\n" );
+			} else {
+				fprintf( stderr, "Aborting -- try again with the "
+							"-AllowLogError flag if you *really* think "
+							"this shouldn't be a fatal error\n" );
+				return 1;
+			}
+		}
+
+		condorLogFiles.rewind();
+		storkLogFiles.rewind();
+		if ( condorLogFiles.number() > 0 ) {
+			opts.strJobLog = condorLogFiles.next();
+		} else if ( storkLogFiles.number() > 0 ) {
+			opts.strJobLog = storkLogFiles.next();
+		}
 		printf("Done.\n");
 	}
 
@@ -168,15 +230,14 @@ void submitDag(SubmitDagOptions &opts)
 			   	opts.strStorkLog.Value());
 	}
 
-	if (opts.strStorkServer != "") {
-	printf("Stork server to which DaP jobs will be submitted : %s\n",
-		   	opts.strStorkLog.Value());
-	}
-
 	if (opts.bSubmit)
 	{
 		MyString strCmdLine = "condor_submit " + opts.strRemoteSchedd + " " + opts.strSubFile;
-		system(strCmdLine.Value());
+		int retval = system(strCmdLine.Value());
+		if( retval != 0 ) {
+			fprintf( stderr, "ERROR: condor_submit failed; aborting.\n" );
+			return 1;
+		}
 	}
 	else
 	{
@@ -184,6 +245,8 @@ void submitDag(SubmitDagOptions &opts)
 		printf("\"condor_submit %s\"\n", opts.strSubFile.Value());
 	}
 	printf("-----------------------------------------------------------------------\n");
+
+	return 0;
 }
 
 MyString makeString(int iValue)
@@ -239,57 +302,72 @@ void ensureOutputFilesExist(const SubmitDagOptions &opts)
 	bool bHadError = false;
 	if (fileExists(opts.strSubFile))
 	{
-		printf("ERROR: \"%s\" already exists.\n", opts.strSubFile.Value());
+		fprintf( stderr, "ERROR: \"%s\" already exists.\n",
+				 opts.strSubFile.Value() );
 		bHadError = true;
 	}
 	if (fileExists(opts.strLibLog))
 	{
-		printf("ERROR: \"%s\" already exists.\n", opts.strLibLog.Value());
+		fprintf( stderr, "ERROR: \"%s\" already exists.\n",
+				 opts.strLibLog.Value() );
 		bHadError = true;
 	}
 	if (fileExists(opts.strDebugLog))
 	{
-		printf("ERROR: \"%s\" already exists.\n", opts.strDebugLog.Value());
+		fprintf( stderr, "ERROR: \"%s\" already exists.\n",
+				 opts.strDebugLog.Value() );
 		bHadError = true;
 	}
 	if (fileExists(opts.strSchedLog))
 	{
-		printf("ERROR: \"%s\" already exists.\n", opts.strSchedLog.Value());
+		fprintf( stderr, "ERROR: \"%s\" already exists.\n",
+				 opts.strSchedLog.Value() );
 		bHadError = true;
 	}
 	if (fileExists(opts.strRescueFile))
 	{
-		printf("ERROR: \"%s\" already exists.\n", opts.strRescueFile.Value());
-	    printf("  You may want to resubmit your DAG using that file, instead of ");
-	    printf("\"%s\"\n", opts.strDagFile.Value());
-	    printf("  Look at the Condor manual for details about DAG rescue files.\n");
-	    printf("  Please investigate and either remove \"%s\",\n", opts.strRescueFile.Value());
-	    printf("  or use that as the input to condor_submit_dag.\n");
-
+		fprintf( stderr, "ERROR: \"%s\" already exists.\n",
+				 opts.strRescueFile.Value() );
+	    fprintf( stderr, "  You may want to resubmit your DAG using that "
+				 "file, instead of \"%s\"\n", opts.primaryDagFile.Value());
+	    fprintf( stderr, "  Look at the Condor manual for details about DAG "
+				 "rescue files.\n" );
+	    fprintf( stderr, "  Please investigate and either remove \"%s\",\n",
+				 opts.strRescueFile.Value() );
+	    fprintf( stderr, "  or use it as the input to condor_submit_dag.\n" );
 		bHadError = true;
 	}
 
 	if (bHadError) 
 	{
-	    printf("\nSome file(s) needed by condor_submit_dag already exist.  ");
-	    printf("Either rename them,\nor use the \"-f\" option to force them ");
-	    printf("to be overwritten.\n");
-	    exit(3);
+	    fprintf( stderr, "\nSome file(s) needed by %s already exist.  ",
+				 dagman_exe );
+	    fprintf( stderr, "Either rename them,\nor use the \"-f\" option to "
+				 "force them to be overwritten.\n" );
+	    exit( 1 );
 	}
 }
 
-void writeSubmitFile(const SubmitDagOptions &opts)
+void writeSubmitFile(/* const */ SubmitDagOptions &opts)
 {
 	FILE *pSubFile = fopen(opts.strSubFile.Value(), "w");
 	if (!pSubFile)
 	{
-		printf("ERROR: unable to create submit file %s\n", opts.strSubFile.Value());
-		exit(1);
+		fprintf( stderr, "ERROR: unable to create submit file %s\n",
+				 opts.strSubFile.Value() );
+		exit( 1 );
 	}
 
     fprintf(pSubFile, "# Filename: %s\n", opts.strSubFile.Value());
-    fprintf(pSubFile, "# Generated by condor_submit_dag %s\n", 
-			opts.strDagFile.Value());
+
+    fprintf(pSubFile, "# Generated by condor_submit_dag ");
+	opts.dagFiles.rewind();
+	char *dagFile;
+	while ( (dagFile = opts.dagFiles.next()) != NULL ) {
+    	fprintf(pSubFile, "%s ", dagFile);
+	}
+    fprintf(pSubFile, "\n");
+
     fprintf(pSubFile, "universe\t= scheduler\n");
     fprintf(pSubFile, "executable\t= %s\n", opts.strDagmanPath.Value());
 	fprintf(pSubFile, "getenv\t\t= True\n");
@@ -297,47 +375,95 @@ void writeSubmitFile(const SubmitDagOptions &opts)
     fprintf(pSubFile, "error\t\t= %s\n", opts.strLibLog.Value());
     fprintf(pSubFile, "log\t\t= %s\n", opts.strSchedLog.Value());
     fprintf(pSubFile, "remove_kill_sig\t= SIGUSR1\n" );
+		// ensure DAGMan is automatically requeued by the schedd if it
+		// exits abnormally or is killed (e.g., during a reboot)
+    fprintf(pSubFile, "on_exit_remove\t= ( ExitSignal == 11 || (ExitCode >=0 && ExitCode <= 2))\n" );
+    fprintf(pSubFile, "copy_to_spool\t= False\n" );
 
-	MyString strArgs;
-	strArgs.reserve_at_least(256);
+	ArgList args;
 
-	strArgs = "-f -l . -Debug " + makeString(opts.iDebugLevel) + " -Lockfile " + opts.strDagFile + ".lock";
-    strArgs += " -Condorlog " + opts.strJobLog + " -Dag " + opts.strDagFile;
-    strArgs += " -Rescue " + opts.strRescueFile;
+	args.AppendArg("-f");
+	args.AppendArg("-l");
+	args.AppendArg(".");
+	args.AppendArg("-Debug");
+	args.AppendArg(opts.iDebugLevel);
+	args.AppendArg("-Lockfile");
+	args.AppendArg(opts.strLockFile.Value());
+
+	if ( opts.strJobLog == "" ) {
+			// Condor_dagman can't parse command-line args if we have
+			// an empty value for the log file name.
+		opts.strJobLog = opts.primaryDagFile + ".log";
+	}
+	args.AppendArg("-Condorlog");
+	args.AppendArg(opts.strJobLog.Value());
+	
+	opts.dagFiles.rewind();
+	while ( (dagFile = opts.dagFiles.next()) != NULL ) {
+		args.AppendArg("-Dag");
+		args.AppendArg(dagFile);
+	}
+
+	args.AppendArg("-Rescue");
+	args.AppendArg(opts.strRescueFile.Value());
+    if(opts.iMaxIdle) 
+	{
+		args.AppendArg("-MaxIdle");
+		args.AppendArg(opts.iMaxIdle);
+    }
     if(opts.iMaxJobs) 
 	{
-		strArgs += " -MaxJobs " + makeString(opts.iMaxJobs);
+		args.AppendArg("-MaxJobs");
+		args.AppendArg(opts.iMaxJobs);
     }
     if(opts.iMaxPre) 
 	{
-		strArgs += " -MaxPre " + makeString(opts.iMaxPre);
+		args.AppendArg("-MaxPre");
+		args.AppendArg(opts.iMaxPre);
     }
     if(opts.iMaxPost) 
 	{
-		strArgs += " -MaxPost " + makeString(opts.iMaxPost);
-    }
-    if(opts.bNoPostFail) 
-	{
-		strArgs += " -NoPostFail";
+		args.AppendArg("-MaxPost");
+		args.AppendArg(opts.iMaxPost);
     }
     if(opts.strStorkLog != "") 
 	{
-		strArgs += " -Storklog " + opts.strStorkLog;
+		args.AppendArg("-Storklog");
+		args.AppendArg(opts.strStorkLog.Value());
     }
-    if(opts.strStorkServer != "") 
+	if(opts.bNoEventChecks)
 	{
-		strArgs += " -Storkserver " + opts.strStorkServer;
-    }
+		// strArgs += " -NoEventChecks";
+		printf( "Warning: -NoEventChecks is ignored; please use "
+					"the DAGMAN_ALLOW_EVENTS config parameter instead\n");
+	}
+	if(opts.bAllowLogError)
+	{
+		args.AppendArg("-AllowLogError");
+	}
+	if(opts.useDagDir)
+	{
+		args.AppendArg("-UseDagDir");
+	}
 
-    fprintf(pSubFile, "arguments\t= %s\n", strArgs.Value());
+	MyString arg_str,args_error;
+	if(!args.GetArgsStringV1WackedOrV2Quoted(&arg_str,&args_error)) {
+		fprintf(stderr,"Failed to insert arguments: %s",args_error.Value());
+		exit(1);
+	}
+    fprintf(pSubFile, "arguments\t= %s\n", arg_str.Value());
 
 	Env env;
-	env.Put("_CONDOR_DAGMAN_LOG",opts.strDebugLog.Value());
-	env.Put("_CONDOR_MAX_DAGMAN_LOG=0");
+	env.SetEnv("_CONDOR_DAGMAN_LOG",opts.strDebugLog.Value());
+	env.SetEnv("_CONDOR_MAX_DAGMAN_LOG=0");
 
-	char *env_str = env.getDelimitedString();
-    fprintf(pSubFile, "environment\t=%s\n",env_str);
-	delete[] env_str;
+	MyString env_str;
+	MyString env_errors;
+	if(!env.getDelimitedStringV1RawOrV2Quoted(&env_str,&env_errors)) {
+		fprintf(stderr,"Failed to insert environment: %s",env_errors.Value());
+		exit(1);
+	}
+    fprintf(pSubFile, "environment\t= %s\n",env_str.Value());
 
     if(opts.strNotification != "") 
 	{	
@@ -349,255 +475,147 @@ void writeSubmitFile(const SubmitDagOptions &opts)
 	
 }
 
-void getJobLogFilenameFromSubmitFiles(SubmitDagOptions &opts)
-{
-
-	MyString strDagFile;
-	bool status = readFileToString(opts.strDagFile, strDagFile);
-	if (status == false)
-	{
-		printf("Unable to read dag file %s\n", opts.strDagFile.Value());
-		exit(2);
-	}
-
-	StringList listLines( strDagFile.Value(), "\n");
-	listLines.rewind();
-	const char *psLine;
-	MyString strPreviousLogFilename;
-	while( (psLine = listLines.next()) )
-	{
-		MyString strLine = psLine;
-		
-		// this internal loop is for '/' line continuation
-		while (strLine[strLine.Length()-1] == '\\')
-		{
-			strLine.setChar( strLine.Length()-1, '\0' );
-			psLine = listLines.next();
-			if (psLine)
-				strLine += psLine;
-		}
-
-		if (strLine.Length() <= 3)
-			continue;
-
-		MyString strFirstThree = strLine.Substr(0, 2);
-		if (!stricmp(strFirstThree.Value(), "job"))
-		{
-			int iLastWhitespace = strLine.Length();
-			int iPos;
-			for (iPos = strLine.Length()-1; iPos >= 0; iPos--)
-			{
-				if (strLine[iPos] == '\t' || strLine[iPos] == ' ')
-				{	
-					iLastWhitespace = iPos;
-					break;
-				}
-			}
-
-			MyString strSubFile = strLine.Substr(iLastWhitespace+1, strLine.Length()-1);
-
-			// get the log= value from the sub file
-
-			MyString strLogFilename = loadLogFileNameFromSubFile(strSubFile, opts);
-
-			if (opts.strJobLog == "") {
-				opts.strJobLog = strLogFilename;
-			}
-		}
-	}	
-
-}
-
 void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[])
 {
-	int iArg;
-
-	if (argc <= 1)
-		printUsage();
-
-	for (iArg = 1; iArg < argc; iArg++)
+	for (int iArg = 1; iArg < argc; iArg++)
 	{
 		MyString strArg = argv[iArg];
-		bool bIsLastArg = (iArg == argc-1);
 
 		if (strArg[0] != '-')
 		{
-			if (!bIsLastArg)  // non-hyphen arg (dag file name) must be last 
-			{
-				printUsage();
+				// We assume an argument without a leading hyphen is
+				// a DAG file name.
+			opts.dagFiles.append(strArg.Value());
+			if ( opts.primaryDagFile == "" ) {
+				opts.primaryDagFile = strArg;
 			}
-			opts.strDagFile = strArg;
-			break;
 		}
-
-		if (strArg.find("-no_s") != -1)
+		else if (opts.primaryDagFile != "")
 		{
-			opts.bSubmit = false;
-		}
-		else if (strArg.find("-v") != -1)
-		{
-			opts.bVerbose = true;
-		}
-		else if (strArg.find("-f") != -1)
-		{
-			opts.bForce = true;
-		}
-		else if (strArg.find("-not") != -1)
-		{
-			if (bIsLastArg)
-				printUsage();
-			opts.strNotification = argv[++iArg];
-		}
-		else if (strArg.find("-l") != -1)
-		{
-			if (bIsLastArg)
-				printUsage();
-			opts.strJobLog = argv[++iArg];
-		}
-		else if (strArg.find("-maxj") != -1)
-		{
-			if (bIsLastArg)
-				printUsage();
-			opts.iMaxJobs = atoi(argv[++iArg]);
-		}
-		else if (strArg.find("-MaxPr") != -1)
-		{
-			if (bIsLastArg)
-				printUsage();
-			opts.iMaxPre = atoi(argv[++iArg]);
-		}
-		else if (strArg.find("-MaxPo") != -1)
-		{
-			if (bIsLastArg)
-				printUsage();
-			opts.iMaxPost = atoi(argv[++iArg]);
-		}
-		else if (strArg.find("-NoPo") != -1)
-		{
-			opts.bNoPostFail = true;
-		}
-		else if (strArg.find("-r") != -1)
-		{
-			if (bIsLastArg)
-				printUsage();
-			opts.strRemoteSchedd = argv[++iArg];
-		}
-		else if (strArg.find("-dagman") != -1)
-		{
-			if (bIsLastArg)
-				printUsage();
-			opts.strDagmanPath = argv[++iArg];
-		}
-		else if (strArg.find("-storklog") != -1)
-		{
-			if (bIsLastArg)
-				printUsage();
-			opts.strStorkLog = argv[++iArg];
-		}
-		else if (strArg.find("-storkserver") != -1)
-		{
-			if (bIsLastArg)
-				printUsage();
-			opts.strStorkServer = argv[++iArg];
-		}
-		else if (strArg.find("-d") != -1)
-		{
-			if (bIsLastArg)
-				printUsage();
-			opts.iDebugLevel = atoi(argv[++iArg]);
+				// Disallow hyphen args after DAG file name(s).
+			printf("ERROR: no arguments allowed after DAG file name(s)\n");
+			printUsage();
 		}
 		else
 		{
-			printf("Unknown option %s\n", strArg.Value());
-			printUsage();
+			strArg.lower_case();
+
+			// Note: in checking the argument names here, we only check for
+			// as much of the full name as we need to unambiguously define
+			// the argument.
+			if (strArg.find("-no_s") != -1) // -no_submit
+			{
+				opts.bSubmit = false;
+			}
+			else if (strArg.find("-v") != -1) // -verbose
+			{
+				opts.bVerbose = true;
+			}
+			else if (strArg.find("-f") != -1) // -force
+			{
+				opts.bForce = true;
+			}
+			else if (strArg.find("-not") != -1) // -notification
+			{
+				opts.strNotification = argv[++iArg];
+			}
+			else if (strArg.find("-l") != -1) // -log
+			{
+				opts.strJobLog = argv[++iArg];
+			}
+			else if (strArg.find("-maxi") != -1) // -maxidle
+			{
+				opts.iMaxIdle = atoi(argv[++iArg]);
+			}
+			else if (strArg.find("-maxj") != -1) // -maxjobs
+			{
+				opts.iMaxJobs = atoi(argv[++iArg]);
+			}
+			else if (strArg.find("-maxpr") != -1) // -maxpre
+			{
+				opts.iMaxPre = atoi(argv[++iArg]);
+			}
+			else if (strArg.find("-maxpo") != -1) // -maxpost
+			{
+				opts.iMaxPost = atoi(argv[++iArg]);
+			}
+			else if (strArg.find("-r") != -1) // submit to remote schedd
+			{
+				opts.strRemoteSchedd = MyString("-r ") + argv[++iArg];
+			}
+			else if (strArg.find("-dagman") != -1)
+			{
+				opts.strDagmanPath = argv[++iArg];
+			}
+			else if (strArg.find("-storklog") != -1)
+			{
+				opts.strStorkLog = argv[++iArg];
+			}
+			else if (strArg.find("-d") != -1) // -debug
+			{
+				opts.iDebugLevel = atoi(argv[++iArg]);
+			}
+			else if (strArg.find("-noev") != -1) // -noeventchecks
+			{
+				opts.bNoEventChecks = true;
+			}
+			else if (strArg.find("-allow") != -1) // -allowlogerror
+			{
+				opts.bAllowLogError = true;
+			}
+			else if (strArg.find("-use") != -1) // -usedagdir
+			{
+				opts.useDagDir = true;
+			}
+			else if (strArg.find("-out") != -1) // -outfile_dir
+			{
+				opts.strDebugDir = argv[++iArg];
+			}
+			else
+			{
+				fprintf( stderr, "ERROR: unknown option %s\n", strArg.Value() );
+				printUsage();
+			}
 		}
 	}
+
+	if (opts.primaryDagFile == "")
+	{
+		fprintf( stderr, "ERROR: no dag file specified; aborting.\n" );
+		printUsage();
+	}
 }
+
 // condor_submit_dag diamond.dag
 int printUsage() 
 {
-    printf("Usage: condor_submit_dag [options] filename\n");
-    printf("  where filename is the name of your DAG input file\n");
+    printf("Usage: condor_submit_dag [options] dag_file [dag_file_2 ... dag_file_n]\n");
+    printf("  where dag_file1, etc., is the name of a DAG input file\n");
     printf("  and where [options] is one or more of:\n");
-	printf("    -dagman             (Full path to an alternate condor_dagman executable)\n");
+	printf("    -dagman <path>      (Full path to an alternate condor_dagman executable)\n");
     printf("    -no_submit          (DAG is not submitted to Condor)\n");
     printf("    -verbose            (Verbose error messages from condor_submit_dag)\n");
     printf("    -force              (Overwrite files condor_submit_dag uses if they exist)\n");
-    printf("    -r schedd_name      (Submit to the specified remote schedd)\n");
-    printf("    -maxjobs number     (Maximum number of jobs ever submitted at once)\n");
-    printf("    -MaxPre number      (Maximum number of PRE scripts to run at once)\n");
-    printf("    -MaxPost number     (Maximum number of POST scripts to run at once)\n");
-    printf("    -NoPostFail         (Don't run POST scripts after failed jobs)\n");
-    printf("    -log filename       (Specify the log file shared by all jobs in the DAG)\n");
+    printf("    -r <schedd_name>    (Submit to the specified remote schedd)\n");
+	printf("    -maxidle <number>   (Maximum number of idle nodes to allow)\n");
+    printf("    -maxjobs <number>   (Maximum number of jobs ever submitted at once)\n");
+    printf("    -MaxPre <number>    (Maximum number of PRE scripts to run at once)\n");
+    printf("    -MaxPost <number>   (Maximum number of POST scripts to run at once)\n");
+    printf("    -log <filename>     (Deprecated -- don't use)\n");
 // -->STORK
-    printf("    -storklog filename    (Specify the Stork log file shared by all DaP jobs in the DAG)\n");
-    printf("    -storkserver hostname (Specify the hostname to submit DaP jobs)\n");
+    printf("    -storklog <filename> (Specify the Stork log file shared by all DaP jobs\n");
+    printf("        in the DAG)\n");
 // <--STORK
-    printf("    -notification value (Determines how much email you get from Condor)\n");
-    printf("    -debug number       (Determines how verbosely DAGMan logs its work)\n");
+    printf("    -notification <value> (Determines how much email you get from Condor.\n");
+    printf("        See the condor_submit man page for values.)\n");
+    printf("    -NoEventChecks      (Now ignored -- use DAGMAN_ALLOW_EVENTS)\n"); 
+    printf("    -AllowLogError      (Allows the DAG to attempt execution even if the log\n");
+    printf("        reading code finds errors when parsing the submit files)\n"); 
+	printf("    -UseDagDir          (Run DAGs in directories specified in DAG file paths)\n");
+    printf("    -debug <number>     (Determines how verbosely DAGMan logs its work\n");
     printf("         about the life of the condor_dagman job.  'value' must be\n");
-    printf("         one of \"always\", \"never\", \"error\", or \"complete\".\n");
-    printf("         See the condor_submit man page for details.)\n");
+    printf("         an integer with a value of 0-7 inclusive.)\n");
+    printf("    -outfile_dir <path> (Directory into which to put the dagman.out file,\n");
+	printf("         instead of the default\n");
 	exit(1);
-}
-
-MyString loadLogFileNameFromSubFile(const MyString &strSubFilename, 
-	const SubmitDagOptions &opts)
-{
-	MyString strSubFile;
-	bool status = false;
-
-	status = readFileToString(strSubFilename, strSubFile);
-
-	if ( status == false ) {
-		printf( "\nCan't open command file %s for reading: %s\n"
-			"Either create %s or re-run with the \"-log\" option.\n", 
-			strSubFilename.Value(), strerror(errno), strSubFilename.Value());
-		if( ! opts.bVerbose ) {
-			printf( "Use the \"-verbose\" option for a more verbose error message.\n");
-			exit( 1 );
-		}
-		printf("If all the command files in your DAG don't exist now, consider running\n"
-			"condor_submit_dag with the \"-log filename\" option to specify the log file\n"
-			"shared by all jobs in your DAG.  This avoids this check.\n"
-			"If you do so, you must be sure those files are created when they are needed,\n"
-			"probably by using the PRE and POST directives in your DAG file.\n"
-			"See the DAGMan manual for more details.\n");
-		exit( 1 );		
-	}
-	
-	StringList listLines( strSubFile.Value(), "\r\n");
-	listLines.rewind();
-	const char *psLine;
-	MyString strPreviousLogFilename;
-	while( (psLine = listLines.next()) )
-	{
-		// skip leading whitespace
-		while ( isWhiteSpace(*psLine) ) { psLine++; }
-
-		MyString strLine = psLine;
-		if (!stricmp(strLine.Substr(0, 2).Value(), "log"))
-		{
-			int iEqPos = strLine.FindChar('=',0);
-			if (iEqPos == -1)
-				return "";
-
-			iEqPos++;
-			while (iEqPos < strLine.Length() && isWhiteSpace(strLine[iEqPos]))
-				iEqPos++;
-
-			if (iEqPos >= strLine.Length())
-				return "";
-
-			MyString strToReturn = strLine.Substr(iEqPos, strLine.Length());
-
-			return strToReturn;
-		}
-	}
-	return "";
-}
-
-bool 
-isWhiteSpace(const char c) {
-	return ( c == ' ' || c == '\t' );
 }

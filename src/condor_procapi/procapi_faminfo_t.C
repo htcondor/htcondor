@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -20,6 +20,8 @@
   * RIGHT.
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+#include "condor_common.h"
+#include "condor_pidenvid.h"
 #include "procapi_t.h"
 
 /////////////////////////////test2/////////////////////////////////////////////
@@ -29,6 +31,11 @@ int getFamilyInfo_test(bool verbose) {
   int success = 1;
   piPTR pi = NULL;
   pid_t child;
+  int status;
+
+  PidEnvID penvid;
+
+  pidenvid_init(&penvid);
 
   if(verbose){
   printf ( "\n....................................\n" );
@@ -52,7 +59,7 @@ int getFamilyInfo_test(bool verbose) {
     piPTR pi = NULL;
     piPTR ppi = NULL;
 
-    if(ProcAPI::getFamilyInfo( pid, pi) < 0){
+    if(ProcAPI::getFamilyInfo( pid, pi, &penvid, status) == PROCAPI_FAILURE) {
       printf("Error process %d:\n", pid);
       printf("unable to retrieve process %d information with getFamilyInfo\n", pid);
       success = -1;
@@ -79,7 +86,8 @@ int getFamilyInfo_test(bool verbose) {
     printf("subtree depth%d\n",pids[i].subtree_depth );
     //test the rss
     int rss = 1024 * get_approx_mem(pids[i].subtree_depth, FAMILY_INFO_BREADTH);
-    if(pi->rssize < rss){
+    if(pi->rssize != 0 &&   /* Maybe process done, entirely paged out */
+       pi->rssize < rss){
       printf("Error process %d:\n", pid);
       printf("rssize as returned by getFamilyInfo %d is less than was allocated %d\n", pi->rssize, rss);
       success = -1;
@@ -99,7 +107,7 @@ int getFamilyInfo_test(bool verbose) {
     
 
     // now get the parents info and do some more checks
-    if(ProcAPI::getFamilyInfo(ppid, ppi) < 0){
+    if(ProcAPI::getFamilyInfo(ppid, ppi, &penvid, status) == PROCAPI_FAILURE) {
       printf("Error process %d:\n", pid);
       printf("Unable to retrieve parent process %d information with getFamilyInfo\n", ppid);
       success = -1;

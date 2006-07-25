@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -28,6 +28,7 @@
 #include "condor_classad.h"
 #include "condor_io.h"
 #include "enum_utils.h"
+#include "daemon.h"
 
 
 typedef enum {
@@ -245,6 +246,14 @@ public:
 	bool reschedule();
 
 	bool spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError * errstack);
+
+	bool receiveJobSandbox(const char* constraint, CondorError * errstack, int * numdone = 0);
+
+	bool updateGSIcredential(const int cluster, const int proc, 
+		const char* path_to_proxy_file, CondorError * errstack);
+
+	bool delegateGSIcredential(const int cluster, const int proc, 
+		const char* path_to_proxy_file, CondorError * errstack);
 
 private:
 		/** This method actually does all the brains for all versions

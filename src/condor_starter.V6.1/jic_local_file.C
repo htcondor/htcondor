@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -141,6 +141,10 @@ JICLocalFile::readClassAdFromFile( void )
 		line.chomp();
 		if( line[0] == '#' ) {
 			dprintf( D_JOB, "IGNORING COMMENT: %s\n", line.GetCStr() );
+			continue;
+		}
+		if( ! line[0] ) {
+				// ignore blank lines
 			continue;
 		}
 		if( DebugFlags & D_JOB ) {

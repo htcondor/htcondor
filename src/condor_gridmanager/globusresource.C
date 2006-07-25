@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -25,66 +25,81 @@
 #include "condor_common.h"
 #include "condor_config.h"
 #include "string_list.h"
+#include "directory.h"
 
 #include "globusresource.h"
 #include "gridmanager.h"
 
-#define DEFAULT_MAX_PENDING_SUBMITS_PER_RESOURCE	5
-#define DEFAULT_MAX_SUBMITTED_JOBS_PER_RESOURCE		100
+#define DEFAULT_MAX_JOBMANAGERS_PER_RESOURCE		10
 
 // If the grid_monitor appears hosed, how long do we
 // disable grid_monitoring that site for?
 // (We actually just set the timer for that site to this)
 #define GM_DISABLE_LENGTH (60*60)
 
-template class List<GlobusJob>;
-template class Item<GlobusJob>;
-
-int GlobusResource::probeInterval = 300;	// default value
-int GlobusResource::probeDelay = 15;		// default value
 int GlobusResource::gahpCallTimeout = 300;	// default value
 bool GlobusResource::enableGridMonitor = false;
 
 #define HASH_TABLE_SIZE			500
 
-template class HashTable<HashKey, GlobusResource *>;
-template class HashBucket<HashKey, GlobusResource *>;
+HashTable <HashKey, GlobusResource *>
+    GlobusResource::ResourcesByName( HASH_TABLE_SIZE,
+									 hashFunction );
 
-HashTable <HashKey, GlobusResource *> ResourcesByName( HASH_TABLE_SIZE,
-													   hashFunction );
 static unsigned int g_MonitorUID = 0;
 
-GlobusResource::GlobusResource( const char *resource_name )
+GlobusResource *GlobusResource::FindOrCreateResource( const char *resource_name,
+													  const char *proxy_subject )
+{
+	int rc;
+	GlobusResource *resource = NULL;
+
+	const char *canonical_name = CanonicalName( resource_name );
+	ASSERT(canonical_name);
+
+	const char *hash_name = HashName( canonical_name, proxy_subject );
+	ASSERT(hash_name);
+
+	rc = ResourcesByName.lookup( HashKey( hash_name ), resource );
+	if ( rc != 0 ) {
+		resource = new GlobusResource( canonical_name, proxy_subject );
+		ASSERT(resource);
+		if ( resource->Init() == false ) {
+			delete resource;
+			resource = NULL;
+		} else {
+			ResourcesByName.insert( HashKey( hash_name ), resource );
+		}
+	} else {
+		ASSERT(resource);
+	}
+
+	return resource;
+}
+
+GlobusResource::GlobusResource( const char *resource_name,
+								const char *proxy_subject )
 	: BaseResource( resource_name )
 {
-	resourceDown = false;
-	firstPingDone = false;
-	pingTimerId = daemonCore->Register_Timer( 0,
-								(TimerHandlercpp)&GlobusResource::DoPing,
-								"GlobusResource::DoPing", (Service*)this );
-	lastPing = 0;
-	lastStatusChange = 0;
-	gahp = new GahpClient();
-	gahp->setNotificationTimerId( pingTimerId );
-	gahp->setMode( GahpClient::normal );
-	gahp->setTimeout( gahpCallTimeout );
-	submitLimit = DEFAULT_MAX_PENDING_SUBMITS_PER_RESOURCE;
-	jobLimit = DEFAULT_MAX_SUBMITTED_JOBS_PER_RESOURCE;
+	initialized = false;
+	proxySubject = strdup( proxy_subject );
+
+	jmLimit = DEFAULT_MAX_JOBMANAGERS_PER_RESOURCE;
 
 	checkMonitorTid = TIMER_UNSET;
 	monitorActive = false;
 
-	monitorJobStatusFile = 0;
-	monitorLogFile = 0;
+	monitorDirectory = NULL;
+	monitorJobStatusFile = NULL;
+	monitorLogFile = NULL;
 	logFileTimeoutLastReadTime = 0;
 	initialMonitorStart = true;
-
-	Reconfig();
+	gahp = NULL;
 }
 
 GlobusResource::~GlobusResource()
 {
-	daemonCore->Cancel_Timer( pingTimerId );
+	ResourcesByName.remove( HashKey( HashName( resourceName, proxySubject ) ) );
 	if ( gahp != NULL ) {
 		delete gahp;
 	}
@@ -92,80 +107,52 @@ GlobusResource::~GlobusResource()
 		daemonCore->Cancel_Timer( checkMonitorTid );
 	}
 	CleanupMonitorJob();
+	if ( proxySubject ) {
+		free( proxySubject );
+	}
+}
+
+bool GlobusResource::Init()
+{
+	if ( initialized ) {
+		return true;
+	}
+
+	MyString gahp_name;
+	gahp_name.sprintf( "GT2/%s", proxySubject );
+
+	gahp = new GahpClient( gahp_name.Value() );
+
+	gahp->setNotificationTimerId( pingTimerId );
+	gahp->setMode( GahpClient::normal );
+	gahp->setTimeout( gahpCallTimeout );
+
+	initialized = true;
+
+	Reconfig();
+
+	return true;
 }
 
 void GlobusResource::Reconfig()
 {
-	char *param_value;
-
 	BaseResource::Reconfig();
 
 	gahp->setTimeout( gahpCallTimeout );
 
-	submitLimit = -1;
-	param_value = param( "GRIDMANAGER_MAX_PENDING_SUBMITS_PER_RESOURCE" );
-	if ( param_value == NULL ) {
-		// Check old parameter name
-		param_value = param( "GRIDMANAGER_MAX_PENDING_SUBMITS" );
-	}
-	if ( param_value != NULL ) {
-		char *tmp1;
-		char *tmp2;
-		StringList limits( param_value );
-		limits.rewind();
-		if ( limits.number() > 0 ) {
-			submitLimit = atoi( limits.next() );
-			while ( (tmp1 = limits.next()) && (tmp2 = limits.next()) ) {
-				if ( strcmp( tmp1, resourceName ) == 0 ) {
-					submitLimit = atoi( tmp2 );
-				}
-			}
-		}
-		free( param_value );
-	}
-	if ( submitLimit <= 0 ) {
-		submitLimit = DEFAULT_MAX_PENDING_SUBMITS_PER_RESOURCE;
+	jmLimit = param_integer( "GRIDMANAGER_MAX_JOBMANAGERS_PER_RESOURCE",
+							 DEFAULT_MAX_JOBMANAGERS_PER_RESOURCE );
+	if ( jmLimit == 0 ) {
+		jmLimit = GM_RESOURCE_UNLIMITED;
 	}
 
-	jobLimit = -1;
-	param_value = param( "GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE" );
-	if ( param_value != NULL ) {
-		char *tmp1;
-		char *tmp2;
-		StringList limits( param_value );
-		limits.rewind();
-		if ( limits.number() > 0 ) {
-			jobLimit = atoi( limits.next() );
-			while ( (tmp1 = limits.next()) && (tmp2 = limits.next()) ) {
-				if ( strcmp( tmp1, resourceName ) == 0 ) {
-					jobLimit = atoi( tmp2 );
-				}
-			}
-		}
-		free( param_value );
-	}
-	if ( jobLimit <= 0 ) {
-		jobLimit = DEFAULT_MAX_SUBMITTED_JOBS_PER_RESOURCE;
-	}
-
-	// If the jobLimit was widened, move jobs from Wanted to Allowed and
-	// add them to Queued
-	while ( submitsAllowed.Length() < jobLimit &&
-			submitsWanted.Length() > 0 ) {
-		GlobusJob *wanted_job = submitsWanted.Head();
-		submitsWanted.Delete( wanted_job );
-		submitsAllowed.Append( wanted_job );
-//		submitsQueued.Append( wanted_job );
+	// If the jmLimit was widened, move jobs from Wanted to Allowed and
+	// signal them
+	while ( jmsAllowed.Length() < jmLimit && jmsWanted.Length() > 0 ) {
+		GlobusJob *wanted_job = jmsWanted.Head();
+		jmsWanted.Delete( wanted_job );
+		jmsAllowed.Append( wanted_job );
 		wanted_job->SetEvaluateState();
-	}
-
-	// If the submitLimit was widened, move jobs from Queued to In-Progress
-	while ( submitsInProgress.Length() < submitLimit &&
-			submitsQueued.Length() > 0 ) {
-		GlobusJob *queued_job = submitsQueued.Head();
-		submitsQueued.Delete( queued_job );
-		submitsInProgress.Append( queued_job );
-		queued_job->SetEvaluateState();
 	}
 
 	if ( enableGridMonitor && checkMonitorTid == TIMER_UNSET ) {
@@ -200,247 +187,110 @@ const char *GlobusResource::CanonicalName( const char *name )
 	return canonical.Value();
 }
 
-void GlobusResource::RegisterJob( GlobusJob *job, bool already_submitted )
+const char *GlobusResource::HashName( const char *resource_name,
+									  const char *proxy_subject )
 {
-	registeredJobs.Append( job );
+	static MyString hash_name;
 
-	if ( already_submitted ) {
-		submitsAllowed.Append( job );
-	}
+	hash_name.sprintf( "%s#%s", resource_name, proxy_subject );
 
-	if ( firstPingDone == true ) {
-		if ( resourceDown ) {
-			job->NotifyResourceDown();
-		} else {
-			job->NotifyResourceUp();
-		}
-	}
+	return hash_name.Value();
 }
 
 void GlobusResource::UnregisterJob( GlobusJob *job )
 {
-	CancelSubmit( job );
-	registeredJobs.Delete( job );
-	pingRequesters.Delete( job );
+	JMComplete( job );
+
+	BaseResource::UnregisterJob( job );
+		// This object may be deleted now. Don't do anything below here!
 }
 
-void GlobusResource::RequestPing( GlobusJob *job )
+bool GlobusResource::RequestJM( GlobusJob *job )
 {
-	pingRequesters.Append( job );
-
-	daemonCore->Reset_Timer( pingTimerId, 0 );
-}
-
-bool GlobusResource::RequestSubmit( GlobusJob *job )
-{
-	bool already_allowed = false;
 	GlobusJob *jobptr;
 
-	submitsQueued.Rewind();
-	while ( submitsQueued.Next( jobptr ) ) {
+	jmsWanted.Rewind();
+	while ( jmsWanted.Next( jobptr ) ) {
 		if ( jobptr == job ) {
 			return false;
 		}
 	}
 
-	submitsInProgress.Rewind();
-	while ( submitsInProgress.Next( jobptr ) ) {
+	jmsAllowed.Rewind();
+	while ( jmsAllowed.Next( jobptr ) ) {
 		if ( jobptr == job ) {
 			return true;
 		}
 	}
 
-	submitsWanted.Rewind();
-	while ( submitsWanted.Next( jobptr ) ) {
-		if ( jobptr == job ) {
-			return false;
-		}
+	if ( jmsAllowed.Length() < jmLimit && jmsWanted.Length() > 0 ) {
+		EXCEPT("In GlobusResource for %s, jmsWanted is not empty and jmsAllowed is not full\n",resourceName);
 	}
 
-	submitsAllowed.Rewind();
-	while ( submitsAllowed.Next( jobptr ) ) {
-		if ( jobptr == job ) {
-			already_allowed = true;
-			break;
-		}
-	}
-
-	if ( already_allowed == false ) {
-		if ( submitsAllowed.Length() < jobLimit &&
-			 submitsWanted.Length() > 0 ) {
-			EXCEPT("In GlobusResource for %s, SubmitsWanted is not empty and SubmitsAllowed is not full\n",resourceName);
-		}
-		if ( submitsAllowed.Length() < jobLimit ) {
-			submitsAllowed.Append( job );
-			// proceed to see if submitLimit applies
-		} else {
-			submitsWanted.Append( job );
-			return false;
-		}
-	}
-
-	if ( submitsInProgress.Length() < submitLimit &&
-		 submitsQueued.Length() > 0 ) {
-		EXCEPT("In GlobusResource for %s, SubmitsQueued is not empty and SubmitsToProgress is not full\n",resourceName);
-	}
-	if ( submitsInProgress.Length() < submitLimit ) {
-		submitsInProgress.Append( job );
+	if ( jmsAllowed.Length() < jmLimit ) {
+		jmsAllowed.Append( job );
 		return true;
 	} else {
-		submitsQueued.Append( job );
+		jmsWanted.Append( job );
 		return false;
 	}
 }
 
-void GlobusResource::SubmitComplete( GlobusJob *job )
+void GlobusResource::JMComplete( GlobusJob *job )
 {
-	if ( submitsInProgress.Delete( job ) ) {
-		if ( submitsInProgress.Length() < submitLimit &&
-			 submitsQueued.Length() > 0 ) {
-			GlobusJob *queued_job = submitsQueued.Head();
-			submitsQueued.Delete( queued_job );
-			submitsInProgress.Append( queued_job );
+	if ( jmsAllowed.Delete( job ) ) {
+		if ( jmsAllowed.Length() < jmLimit && jmsWanted.Length() > 0 ) {
+			GlobusJob *queued_job = jmsWanted.Head();
+			jmsWanted.Delete( queued_job );
+			jmsAllowed.Append( queued_job );
 			queued_job->SetEvaluateState();
 		}
 	} else {
-		// We only have to check submitsQueued if the job wasn't in
-		// submitsInProgress.
-		submitsQueued.Delete( job );
+		// We only have to check jmsWanted if the job wasn't in
+		// jmsAllowed.
+		jmsWanted.Delete( job );
 	}
 
 	return;
 }
 
-void GlobusResource::CancelSubmit( GlobusJob *job )
+void GlobusResource::JMAlreadyRunning( GlobusJob *job )
 {
-	if ( submitsAllowed.Delete( job ) ) {
-		if ( submitsAllowed.Length() < jobLimit &&
-			 submitsWanted.Length() > 0 ) {
-			GlobusJob *wanted_job = submitsWanted.Head();
-			submitsWanted.Delete( wanted_job );
-			submitsAllowed.Append( wanted_job );
-//			submitsQueued.Append( wanted_job );
-			wanted_job->SetEvaluateState();
-		}
-	} else {
-		// We only have to check submitsWanted if the job wasn't in
-		// submitsAllowed.
-		submitsWanted.Delete( job );
-	}
-
-	SubmitComplete( job );
-
-	return;
+	jmsAllowed.Append( job );
 }
 
-bool GlobusResource::IsEmpty()
-{
-	return registeredJobs.IsEmpty();
-}
-
-bool GlobusResource::IsDown()
-{
-	return resourceDown;
-}
-
-int GlobusResource::DoPing()
+void GlobusResource::DoPing( time_t& ping_delay, bool& ping_complete,
+							 bool& ping_succeeded )
 {
 	int rc;
-	bool ping_failed = false;
-	GlobusJob *job;
-
-	// Don't perform a ping if we have no requesters and the resource is up
-	if ( pingRequesters.IsEmpty() && resourceDown == false &&
-		 firstPingDone == true ) {
-		daemonCore->Reset_Timer( pingTimerId, TIMER_NEVER );
-		return TRUE;
-	}
-
-	// Don't start a new ping too soon after the previous one. If the
-	// resource is up, the minimum time between pings is probeDelay. If the
-	// resource is down, the minimum time between pings is probeInterval.
-	int delay;
-	if ( resourceDown == false ) {
-		delay = (lastPing + probeDelay) - time(NULL);
-	} else {
-		delay = (lastPing + probeInterval) - time(NULL);
-	}
-	if ( delay > 0 ) {
-		daemonCore->Reset_Timer( pingTimerId, delay );
-		return TRUE;
-	}
-
-	daemonCore->Reset_Timer( pingTimerId, TIMER_NEVER );
 
 	if ( gahp->isInitialized() == false ) {
 		dprintf( D_ALWAYS,"gahp server not up yet, delaying ping\n" );
-		daemonCore->Reset_Timer( pingTimerId, 5 );
-		return TRUE;
+		ping_delay = 5;
+		return;
 	}
 	gahp->setNormalProxy( gahp->getMasterProxy() );
 	if ( PROXY_IS_EXPIRED( gahp->getMasterProxy() ) ) {
 		dprintf( D_ALWAYS,"proxy near expiration or invalid, delaying ping\n" );
-		return TRUE;
+		ping_delay = TIMER_NEVER;
+		return;
 	}
+
+	ping_delay = 0;
 
 	rc = gahp->globus_gram_client_ping( resourceName );
 
 	if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
-		return 0;
-	}
-
-	lastPing = time(NULL);
-
-	if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
-		 rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONNECTION_FAILED ) 
+		ping_complete = false;
+	} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
+				rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONNECTION_FAILED ) 
 	{
-		ping_failed = true;
-	}
-
-	if ( ping_failed == resourceDown && firstPingDone == true ) {
-		// State of resource hasn't changed. Notify ping requesters only.
-		dprintf(D_ALWAYS,"resource %s is still %s\n",resourceName,
-				ping_failed?"down":"up");
-
-		pingRequesters.Rewind();
-		while ( pingRequesters.Next( job ) ) {
-			pingRequesters.DeleteCurrent();
-			if ( resourceDown ) {
-				job->NotifyResourceDown();
-			} else {
-				job->NotifyResourceUp();
-			}
-		}
+		ping_complete = true;
+		ping_succeeded = false;
 	} else {
-		// State of resource has changed. Notify every job.
-		dprintf(D_ALWAYS,"resource %s is now %s\n",resourceName,
-				ping_failed?"down":"up");
-
-		resourceDown = ping_failed;
-		lastStatusChange = lastPing;
-
-		firstPingDone = true;
-
-		registeredJobs.Rewind();
-		while ( registeredJobs.Next( job ) ) {
-			if ( resourceDown ) {
-				job->NotifyResourceDown();
-			} else {
-				job->NotifyResourceUp();
-			}
-		}
-
-		pingRequesters.Rewind();
-		while ( pingRequesters.Next( job ) ) {
-			pingRequesters.DeleteCurrent();
-		}
+		ping_complete = true;
+		ping_succeeded = true;
 	}
-
-	if ( resourceDown ) {
-		daemonCore->Reset_Timer( pingTimerId, probeInterval );
-	}
-
-	return 0;
 }
 
 int
@@ -467,7 +317,7 @@ GlobusResource::CheckMonitor()
 		if ( SubmitMonitorJob() == true ) {
 			// signal all jobs
 			registeredJobs.Rewind();
-			while ( registeredJobs.Next( job ) ) {
+			while ( registeredJobs.Next( (BaseJob*&) job) ) {
 				job->SetEvaluateState();
 			}
 			daemonCore->Reset_Timer( checkMonitorTid, 30 );
@@ -621,7 +471,7 @@ GlobusResource::StopMonitor()
 
 	monitorActive = false;
 	registeredJobs.Rewind();
-	while ( registeredJobs.Next( job ) ) {
+	while ( registeredJobs.Next( (BaseJob*&)job ) ) {
 		job->SetEvaluateState();
 	}
 	StopMonitorJob();
@@ -640,17 +490,29 @@ GlobusResource::StopMonitorJob()
 void
 GlobusResource::CleanupMonitorJob()
 {
+	if ( monitorDirectory ) {
+		MyString tmp_dir;
+
+		tmp_dir.sprintf( "%s.remove", monitorDirectory );
+
+		rename( monitorDirectory, tmp_dir.Value() );
+		free( monitorDirectory );
+		monitorDirectory = NULL;
+
+		Directory tmp( tmp_dir.Value() );
+		tmp.Remove_Entire_Directory();
+
+		rmdir( tmp_dir.Value() );
+	}
 	if(monitorJobStatusFile)
 	{
-		unlink( monitorJobStatusFile );
 		free(monitorJobStatusFile);
-		monitorJobStatusFile = 0;
+		monitorJobStatusFile = NULL;
 	}
 	if(monitorLogFile)
 	{
-		unlink( monitorLogFile );
 		free(monitorLogFile);
-		monitorLogFile = 0;
+		monitorLogFile = NULL;
 	}
 }
 
@@ -658,7 +520,7 @@ bool
 GlobusResource::SubmitMonitorJob()
 {
 	// return true if job submitted, else return false
-	GahpClient tmp_gahp;
+	GahpClient *tmp_gahp = NULL;
 	int now = time(NULL);
 	int rc;
 	char *monitor_executable;
@@ -667,51 +529,47 @@ GlobusResource::SubmitMonitorJob()
 
 	StopMonitorJob();
 	
-	/* Create monitor file names */
-	{
-		g_MonitorUID++;
-		MyString buff;
+	/* Create monitor directory and files */
+	g_MonitorUID++;
+	MyString buff;
 
-		buff.sprintf( "%s/grid-monitor-job-status.%s.%d.%d",
-		              GridmanagerScratchDir,
-		              resourceName, getpid(), g_MonitorUID );
-		monitorJobStatusFile = strdup( buff.Value() );
+	buff.sprintf( "%s/grid-monitor.%s.%d", GridmanagerScratchDir,
+				  resourceName, g_MonitorUID );
+	monitorDirectory = strdup( buff.Value() );
 
-		buff.sprintf( "%s/grid-monitor-log.%s.%d.%u", GridmanagerScratchDir,
-					  resourceName, getpid(), g_MonitorUID );
-		monitorLogFile = strdup( buff.Value() );
-	}
-
-
-	rc = unlink( monitorJobStatusFile );
-	if ( rc < 0 && errno != ENOENT ) {
-		dprintf( D_ALWAYS, "Failed to submit grid_monitor to %s: "
-			"unlink(%s) failed, errno=%d\n",
-			 resourceName, monitorJobStatusFile, errno );
+	if ( mkdir( monitorDirectory, 0700 ) < 0 ) {
+		dprintf( D_ALWAYS, "SubmitMonitorJob: mkdir(%s,0700) failed, "
+				 "errno=%d (%s)\n", monitorDirectory, errno,
+				 strerror( errno ) );
+		free( monitorDirectory );
+		monitorDirectory = NULL;
 		return false;
 	}
+
+	buff.sprintf( "%s/grid-monitor-job-status", monitorDirectory );
+	monitorJobStatusFile = strdup( buff.Value() );
+
+	buff.sprintf( "%s/grid-monitor-log", monitorDirectory );
+	monitorLogFile = strdup( buff.Value() );
+
+
 	rc = creat( monitorJobStatusFile, S_IREAD|S_IWRITE );
 	if ( rc < 0 ) {
 		dprintf( D_ALWAYS, "Failed to submit grid_monitor to %s: "
-			"creat(%s,%d) failed, errno=%d\n",
-			 resourceName, monitorJobStatusFile, S_IREAD|S_IWRITE, errno );
+			"creat(%s,%d) failed, errno=%d (%s)\n",
+			resourceName, monitorJobStatusFile, S_IREAD|S_IWRITE, errno,
+			strerror( errno ) );
 		return false;
 	} else {
 		close( rc );
 	}
 
-	rc = unlink( monitorLogFile );
-	if ( rc < 0 && errno != ENOENT ) {
-		dprintf( D_ALWAYS, "Failed to submit grid_monitor to %s: "
-			"unlink(%s) failed, errno=%d\n",
-			 resourceName, monitorLogFile, errno );
-		return false;
-	}
 	rc = creat( monitorLogFile, S_IREAD|S_IWRITE );
 	if ( rc < 0 ) {
 		dprintf( D_ALWAYS, "Failed to submit grid_monitor to %s: "
-			"creat(%s,%d) failed, errno=%d\n",
-			 resourceName, monitorLogFile, S_IREAD|S_IWRITE, errno );
+			"creat(%s,%d) failed, errno=%d (%s)\n",
+			 resourceName, monitorLogFile, S_IREAD|S_IWRITE, errno,
+			strerror( errno ) );
 		return false;
 	} else {
 		close( rc );
@@ -729,8 +587,6 @@ GlobusResource::SubmitMonitorJob()
 		initialMonitorStart = false;
 	}
 
-	tmp_gahp.setMode( GahpClient::normal );
-
 	monitor_executable = param( "GRID_MONITOR" );
 	if ( monitor_executable == NULL ) {
 		dprintf( D_ALWAYS, "Failed to submit grid_monitor to %s: "
@@ -738,7 +594,20 @@ GlobusResource::SubmitMonitorJob()
 		return false;
 	}
 
-	const char *gassServerUrl = tmp_gahp.getGlobusGassServerUrl();
+	MyString gahp_name;
+	gahp_name.sprintf( "GT2/%s", proxySubject );
+
+	tmp_gahp = new GahpClient( gahp_name.Value() );
+	if ( tmp_gahp->isInitialized() == false ) {
+		delete tmp_gahp;
+		dprintf( D_ALWAYS, "GAHP server not initialized yet, not submitting "
+				 "grid_monitor now\n" );
+		return false;
+	}
+
+	tmp_gahp->setMode( GahpClient::normal );
+
+	const char *gassServerUrl = tmp_gahp->getGlobusGassServerUrl();
 	RSL.sprintf( "&(executable=%s%s)(stdout=%s%s)(arguments='--dest-url=%s%s')",
 				 gassServerUrl, monitor_executable, gassServerUrl,
 				 monitorLogFile, gassServerUrl, monitorJobStatusFile );
@@ -747,18 +616,21 @@ GlobusResource::SubmitMonitorJob()
 
 	contact.sprintf( "%s/jobmanager-fork", resourceName );
 
-	rc = tmp_gahp.globus_gram_client_job_request( contact.Value(), RSL.Value(),
-												  0, NULL, NULL );
+	rc = tmp_gahp->globus_gram_client_job_request( contact.Value(),
+												   RSL.Value(), 0, NULL,
+												   NULL );
 
 	if ( rc != GAHPCLIENT_COMMAND_PENDING ) {
 		dprintf( D_ALWAYS, "Failed to submit grid_monitor to %s: "
 			"globus_gram_client_job_request() returned %d!\n",
 			 resourceName, rc );
+		delete tmp_gahp;
 		return false;
 	}
 
 	dprintf(D_ALWAYS, "Successfully started grid_monitor for %s\n", resourceName);
 	monitorActive = true;
+	delete tmp_gahp;
 	return true;
 }
 
@@ -817,8 +689,12 @@ GlobusResource::ReadMonitorJobStatusFile()
 				if ( status == GLOBUS_GRAM_PROTOCOL_JOB_STATE_DONE ) {
 					status=GLOBUS_GRAM_PROTOCOL_JOB_STATE_STAGE_OUT;
 				}
-				dprintf(D_FULLDEBUG,"Sending callback of %d to %d.%d (%s)\n",status,job->procID.cluster,job->procID.proc, resourceName);
-				job->GramCallback( status, 0 );
+					// Don't flood the GlobusJob objects and the log file
+					// with a long stream of identical job status updates.
+				if ( status != job->globusState ) {
+					dprintf(D_FULLDEBUG,"Sending callback of %d to %d.%d (%s)\n",status,job->procID.cluster,job->procID.proc, resourceName);
+					job->GramCallback( status, 0 );
+				}
 			}
 		}
 	}

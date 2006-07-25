@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -23,11 +23,17 @@
 #ifndef _CONDOR_STATE_H
 #define _CONDOR_STATE_H
 
+// Note: This should be kept in sync with view_server.h and view_server.C and
+// with ResConvStr of condor_tools/stats.C.
+// Also note that if you add a state, you should update
+// _machine_max_state to match
 enum State { no_state=0, owner_state, unclaimed_state, matched_state, 
 			 claimed_state, preempting_state, shutdown_state,
-			 delete_state,  _state_threshold_, _error_state_ }; 
+			 delete_state, backfill_state,
+			 _machine_max_state = backfill_state,
+			 _state_threshold_, _error_state_ }; 
 
-enum Activity { no_act=0, idle_act, busy_act, vacating_act,
+enum Activity { no_act=0, idle_act, busy_act, retiring_act, vacating_act,
 				suspended_act, benchmarking_act, killing_act,
 				_act_threshold_, _error_act_ };
 

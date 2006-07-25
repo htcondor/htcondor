@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -86,8 +86,15 @@ public:
 		/// Send a SIGKILL
 	virtual bool ShutdownFast();
 
+		/// Evict for condor_rm (ATTR_REMOVE_KILL_SIG)
+	virtual bool Remove();
+
+		/// Evict for condor_hold (ATTR_HOLD_KILL_SIG)
+	virtual bool Hold();
+
 		/// rename a core file created by this process
-	bool renameCoreFile( void );
+	void checkCoreFile( void );
+	bool renameCoreFile( const char* old_name, const char* new_name );
 
 protected:
 

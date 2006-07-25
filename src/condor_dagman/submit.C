@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -22,6 +22,9 @@
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
+#include "condor_attributes.h"
+#include "util_lib_proto.h"
+#include "my_popen.h"
 
 //
 // Local DAGMan includes
@@ -31,26 +34,74 @@
 #include "submit.h"
 #include "util.h"
 #include "debug.h"
+#include "tmp_dir.h"
 
-extern char * DAP_SERVER;
+typedef bool (* parse_submit_fnc)( char *buffer, int &jobProcCount,
+			int &cluster );
 
+//-------------------------------------------------------------------------
+/** Parse output from condor_submit, determine the number of job procs
+    and the cluster.
+	@param buffer containing the line to be parsed
+	@param integer to be filled in with the number of job procs generated
+	       by the condor_submit
+	@param integer to be filled in with the cluster ID
+	@return true iff the line was correctly parsed
+*/
 static bool
-submit_try( const char *exe, const char *command, CondorID &condorID )
+parse_condor_submit( char *buffer, int &jobProcCount, int &cluster )
 {
-  MyString  command_output("");
+  if ( 2 != sscanf( buffer, "%d job(s) submitted to cluster %d",
+  			&jobProcCount, &cluster) ) {
+	debug_printf( DEBUG_QUIET, "ERROR: parse_condor_submit failed:\n\t%s\n",
+				buffer );
+    return false;
+  }
+  
+  return true;
+}
 
-  // this is dangerous ... we need to be much more careful about
-  // auditing what we're about to run via popen(), rather than
-  // accepting an arbitary command string...
-  FILE * fp = popen(command, "r");
+//-------------------------------------------------------------------------
+/** Parse output from stork_submit, determine the number of job procs
+    and the cluster.
+	@param buffer containing the line to be parsed
+	@param integer to be filled in with the number of job procs generated
+	       by the stork_submit
+	@param integer to be filled in with the cluster ID
+	@return true iff the line was correctly parsed
+*/
+static bool
+parse_stork_submit( char *buffer, int &jobProcCount, int &cluster )
+{
+  if ( 1 != sscanf( buffer, "Request assigned id: %d", &cluster) ) {
+	debug_printf( DEBUG_QUIET, "ERROR: parse_stork_submit failed:\n\t%s\n",
+				buffer );
+    return false;
+  }
+
+  jobProcCount = 1;
+  return true;
+}
+
+//-------------------------------------------------------------------------
+static bool
+submit_try( ArgList &args, CondorID &condorID, Job::job_type_t type,
+			bool prohibitMultiJobs )
+{
+  MyString cmd; // for debug output
+  args.GetArgsStringForDisplay( &cmd );
+
+  FILE * fp = my_popen( args, "r", TRUE );
   if (fp == NULL) {
-    debug_printf( DEBUG_NORMAL, "%s: popen() in submit_try failed!\n", command);
+    debug_printf( DEBUG_NORMAL, 
+		  "ERROR: my_popen(%s) in submit_try() failed!\n",
+		  cmd.Value() );
     return false;
   }
   
   //----------------------------------------------------------------------
-  // Parse Condor's return message for Condor ID.  This desperately
-  // needs to be replaced by a Condor Submit API.
+  // Parse submit command output for a Condor/Stork job ID.  This
+  // desperately needs to be replaced by Condor/Stork submit APIs.
   //
   // Typical condor_submit output for Condor v6 looks like:
   //
@@ -61,228 +112,242 @@ submit_try( const char *exe, const char *command, CondorID &condorID )
 
   char buffer[UTIL_MAX_LINE_LENGTH];
   buffer[0] = '\0';
-  
-  // Look for the line containing the word "cluster".
-  // If we get an EOF, then something went wrong with condor_submit, so
-  // we return false.  The caller of this function can retry the submit
-  // by repeatedly calling this function.
 
+  	// Configure what we look for in the command output according to
+	// which type of job we have.
+  const char *marker = NULL;
+  parse_submit_fnc parseFnc = NULL;
+
+  if ( type == Job::TYPE_CONDOR ) {
+    marker = "cluster";
+
+	  // Note: we *could* check how many jobs got submitted here, and
+	  // correlate that with how many submit events we see later on.
+	  // I'm not worrying about that for now...  wenger 2006-02-07.
+	  // We also have to check the number of jobs to get an accurate
+	  // count of submitted jobs to report in the dagman.out file.
+
+	  // We should also check whether we got more than one cluster, and
+	  // either deal with it correctly or generate an error message.
+	parseFnc = parse_condor_submit;
+  } else if ( type == Job::TYPE_STORK ) {
+    marker = "assigned id";
+	parseFnc = parse_stork_submit;
+  } else {
+	debug_printf( DEBUG_QUIET, "Illegal job type: %d\n", type );
+	ASSERT(false);
+  }
+  
+  // Look for the line containing the word "cluster" (Condor) or
+  // "assigned id" (Stork).  If we get an EOF, then something went
+  // wrong with the submit, so we return false.  The caller of this
+  // function can retry the submit by repeatedly calling this function.
+
+  MyString  command_output("");
   do {
     if (util_getline(fp, buffer, UTIL_MAX_LINE_LENGTH) == EOF) {
-      pclose(fp);
+      my_pclose(fp);
 	  debug_printf(DEBUG_NORMAL, "failed while reading from pipe.\n");
 	  debug_printf(DEBUG_NORMAL, "Read so far: %s\n", command_output.Value());
       return false;
     }
 	command_output += buffer;
-  } while (strstr(buffer, "cluster") == NULL);
+  } while (strstr(buffer, marker) == NULL);
   
   {
-    int status = pclose(fp);
-    if (status == -1) {
+    int status = my_pclose(fp) & 0xff;
+    if (status != 0) {
 		debug_printf(DEBUG_NORMAL, "Read from pipe: %s\n", 
 					 command_output.Value());
 		debug_printf( DEBUG_QUIET, "ERROR while running \"%s\": "
-					  "pclose() failed!\n", command );
+					  "my_pclose() failed with status %d (errno %d, %s)!\n",
+					  cmd.Value(), status, errno, strerror( errno ) );
 		return false;
     }
   }
 
-  if( 1 != sscanf( buffer, "1 job(s) submitted to cluster %d",
-				   &condorID._cluster) ) {
-	  debug_printf( DEBUG_QUIET, "ERROR: condor_submit failed:\n\t%s\n",
-					buffer );
+  int	jobProcCount;
+  if ( !parseFnc( buffer, jobProcCount, condorID._cluster) ) {
 	  return false;
+  }
+
+  // Stork job specs have only 1 dimension.  The Stork user log forces the proc
+  // and sub-proc ids to "-1", so do the same here for the returned submit id.
+  if ( type == Job::TYPE_STORK ) {
+	  condorID._proc = -1;
+	  condorID._subproc = -1;
+  }
+
+  	// Check for multiple job procs if configured to disallow that.
+  if ( prohibitMultiJobs && (jobProcCount > 1) ) {
+	debug_printf( DEBUG_NORMAL, "Submit generated %d job procs; "
+				"disallowed by DAGMAN_PROHIBIT_MULTI_JOBS setting\n",
+				jobProcCount );
+	main_shutdown_rescue( EXIT_ERROR );
   }
   
   return true;
 }
 
+//-------------------------------------------------------------------------
+// NOTE: this and submit_try should probably be merged into a single
+// method -- submit_batch_job or something like that.  wenger/pfc 2006-04-05.
+static bool
+do_submit( ArgList &args, CondorID &condorID, Job::job_type_t jobType,
+			bool prohibitMultiJobs )
+{
+	MyString cmd; // for debug output
+	args.GetArgsStringForDisplay( &cmd );
+	debug_printf( DEBUG_VERBOSE, "submitting: %s\n", cmd.Value() );
+  
+	bool success = false;
+
+	success = submit_try( args, condorID, jobType, prohibitMultiJobs );
+
+	if( !success ) {
+	    debug_printf( DEBUG_QUIET, "ERROR: submit attempt failed\n" );
+		debug_printf( DEBUG_QUIET, "submit command was: %s\n", cmd.Value() );
+	}
+
+	return success;
+}
 
 //-------------------------------------------------------------------------
 bool
-submit_submit( const char* cmdFile, CondorID& condorID,
-	const char* DAGNodeName, List<MyString>* names, List<MyString>* vals )
+condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
+			   const char* DAGNodeName, MyString DAGParentNodeNames,
+			   List<MyString>* names, List<MyString>* vals,
+			   const char* directory )
 {
-	const char * exe = "condor_submit";
-	MyString prependLines;
-	MyString command;
-	char quote[2] = {commandLineQuoteChar, '\0'};
+	TmpDir		tmpDir;
+	MyString	errMsg;
+	if ( !tmpDir.Cd2TmpDir( directory, errMsg ) ) {
+		debug_printf( DEBUG_QUIET,
+				"Could not change to node directory %s: %s\n",
+				directory, errMsg.Value() );
+		return false;
+	}
 
-	// add arguments to condor_submit to identify the job's name in the
-	// DAG and the DAGMan's job id, and to print the former in the
-	// submit log
+	ArgList args;
 
-	prependLines = MyString(" -a ") + quote +
-		"dag_node_name = " + DAGNodeName + quote +
-		" -a " + quote +
-		"+" + DAGManJobIdAttrName + " = " + DAGManJobId + quote +
-		" -a " + quote +
-		"submit_event_notes = DAG Node: $(dag_node_name)" +
-		quote;
+	// construct arguments to condor_submit to add attributes to the
+	// job classad which identify the job's node name in the DAG, the
+	// node names of its parents in the DAG, and the job ID of DAGMan
+	// itself; then, define submit_event_notes to print the job's node
+	// name inside the submit event in the userlog
 
+	// NOTE: we specify the job ID of DAGMan using only its cluster ID
+	// so that it may be referenced by jobs in their priority
+	// attribute (which needs an int, not a string).  Doing so allows
+	// users to effectively "batch" jobs by DAG so that when they
+	// submit many DAGs to the same schedd, all the ready jobs from
+	// one DAG complete before any jobs from another begin.
+
+	args.AppendArg( dm.condorSubmitExe );
+
+	args.AppendArg( "-a" );
+	MyString nodeName = MyString(ATTR_DAG_NODE_NAME_ALT) + " = " + DAGNodeName;
+	args.AppendArg( nodeName.Value() );
+
+	args.AppendArg( "-a" );
+	MyString dagJobId = MyString( "+" ) + ATTR_DAGMAN_JOB_ID + " = " +
+				dm.DAGManJobId._cluster;
+	args.AppendArg( dagJobId.Value() );
+
+	args.AppendArg( "-a" );
+	MyString submitEventNotes = MyString(
+				"submit_event_notes = DAG Node: " ) + DAGNodeName;
+	args.AppendArg( submitEventNotes.Value() );
+
+	ArgList parentNameArgs;
+	parentNameArgs.AppendArg( "-a" );
+	MyString parentNodeNames = MyString( "+DAGParentNodeNames = " ) +
+	                        "\"" + DAGParentNodeNames + "\"";
+	parentNameArgs.AppendArg( parentNodeNames.Value() );
+
+		// set any VARS specified in the DAG file
 	MyString anotherLine;
 	ListIterator<MyString> nameIter(*names);
 	ListIterator<MyString> valIter(*vals);
 	MyString name, val;
 	while(nameIter.Next(name) && valIter.Next(val)) {
-		anotherLine = MyString(" -a ") + quote +
-			name + " = " + val + quote;
-		prependLines += anotherLine;
+		args.AppendArg( "-a" );
+		MyString var = name + " = " + val;
+		args.AppendArg( var.Value() );
 	}
 
-#ifdef WIN32
-	command = MyString(exe) + " " + prependLines + " " + cmdFile;
-#else
-	// we use 2>&1 to make sure we get both stdout and stderr from command
-	command = MyString(exe) + " " + prependLines + " " + cmdFile + " 2>&1";;
-#endif
-	
-	debug_printf(DEBUG_VERBOSE, "submitting: %s\n", command.Value());
-  
-	bool success = false;
-	const int tries = dagman.max_submit_attempts;
-	int wait = 1;
+		// how big is the command line so far
+	MyString display;
+	args.GetArgsStringForDisplay( &display );
+	int cmdLineSize = display.Length();
 
-	success = submit_try( exe, command.Value(), condorID );
-	for (int i = 1 ; i < tries && !success ; i++) {
-		debug_printf( DEBUG_NORMAL, "condor_submit try %d/%d failed, "
-			"will try again in %d second%s\n", i, tries, wait,
-			wait == 1 ? "" : "s" );
-		sleep( wait );
-		success = submit_try( exe, command.Value(), condorID );
-		wait = wait * 2;
+	parentNameArgs.GetArgsStringForDisplay( &display );
+	int DAGParentNodeNamesLen = display.Length();
+		// how many additional chars must we still add to command line
+	        // NOTE: according to the POSIX spec, the args +
+   	        // environ given to exec() cannot exceed
+   	        // _POSIX_ARG_MAX, so we also need to calculate & add
+   	        // the size of environ** to reserveNeeded
+	int reserveNeeded = strlen( cmdFile );
+	int maxCmdLine = _POSIX_ARG_MAX;
+
+		// if we don't have room for DAGParentNodeNames, leave it unset
+	if( cmdLineSize + reserveNeeded + DAGParentNodeNamesLen > maxCmdLine ) {
+		debug_printf( DEBUG_NORMAL, "WARNING: node %s has too many parents "
+					  "to list in its classad; leaving its DAGParentNodeNames "
+					  "attribute undefined\n", DAGNodeName );
+	} else {
+		args.AppendArgsFromArgList( parentNameArgs );
 	}
-	if (!success && DEBUG_LEVEL(DEBUG_QUIET)) {
-		dprintf( D_ALWAYS, "condor_submit failed after %d tr%s.\n", tries,
-			tries == 1 ? "y" : "ies" );
-		dprintf( D_ALWAYS, "submit command was: %s\n", command.Value() );
-		return false;
+
+	args.AppendArg( cmdFile );
+
+	bool success = do_submit( args, condorID, Job::TYPE_CONDOR,
+				dm.prohibitMultiJobs );
+
+	if ( !tmpDir.Cd2MainDir( errMsg ) ) {
+		debug_printf( DEBUG_QUIET,
+				"Could not change to original directory: %s\n",
+				errMsg.Value() );
+		success = false;
 	}
+
 	return success;
 }
 
 //-------------------------------------------------------------------------
-//-------------------------------------------------------------------------
-//-------------------------------------------------------------------------
-
-//--> DAP
-static bool
-dap_try( const char *exe, const char *command, CondorID &condorID )
-{
-  MyString  command_output("");
-
-  FILE * fp = popen(command, "r");
-  if (fp == NULL) {
-    debug_printf( DEBUG_NORMAL, "%s: popen() in submit_try failed!\n", command);
-    return false;
-  }
-  
-  //----------------------------------------------------------------------
-  // Parse DAP server's return message for dap_id.  This desperately
-  // needs to be replaced by a DAP Submit API.
-  //
-  // Typical stork_submit output looks like:
-
-  //skywalker(6)% stork_submit skywalker 1.dap
-  //connected to skywalker..
-  //sending request:
-  //     [
-  //        dap_type = "transfer";
-  //        src_url = "nest://db16.cs.wisc.edu/test4.txt"; 
-  //        dest_url = "nest://db18.cs.wisc.edu/test8.txt"; 
-  //    ]
-  //request accepted by the server and assigned a dap_id: 1
-  //----------------------------------------------------------------------
-
-  char buffer[UTIL_MAX_LINE_LENGTH];
-  buffer[0] = '\0';
-  
-  // Look for the line containing the word "dap_id".
-  // If we get an EOF, then something went wrong with _submit, so
-  // we return false.  The caller of this function can retry the submit
-  // by repeatedly calling this function.
-
-  do {
-    if (util_getline(fp, buffer, UTIL_MAX_LINE_LENGTH) == EOF) {
-      pclose(fp);
-	  debug_printf(DEBUG_NORMAL, "failed while reading from pipe.\n");
-	  debug_printf(DEBUG_NORMAL, "Read so far: %s\n", command_output.Value());
-      return false;
-    }
-	command_output += buffer;
-
-  } while (strstr(buffer, "dap_id") == NULL);
-
-  {
-    int status = pclose(fp);
-    if (status == -1) {
-		debug_printf(DEBUG_NORMAL, "Read from pipe: %s\n", 
-					 command_output.Value());
-		debug_printf( DEBUG_QUIET, "ERROR while running \"%s\": "
-					  "pclose() failed!\n", command );
-		return false;
-    }
-  }
-
-
-  if (1 == sscanf(buffer, "Request accepted by the server and assigned a dap_id: %d",
-                  & condorID._cluster)) {
-  }
-  
-  return true;
-}
-
-//-------------------------------------------------------------------------
 bool
-dap_submit( const char* cmdFile, CondorID& condorID,
-			   const char* DAGNodeName )
+stork_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
+			   const char* DAGNodeName, const char* directory )
 {
-  char* command;
-  int cmdLen;
-  const char * exe = "stork_submit";
+	TmpDir		tmpDir;
+	MyString	errMsg;
+	if ( !tmpDir.Cd2TmpDir( directory, errMsg ) ) {
+		debug_printf( DEBUG_QUIET,
+				"Could not change to DAG directory %s: %s\n",
+				directory, errMsg.Value() );
+		return false;
+	}
 
-  cmdLen = strlen( exe ) + strlen( cmdFile ) + 512;
-  command = new char[cmdLen];
-  if (command == NULL) {
-	  debug_printf( DEBUG_SILENT, "\nERROR: out of memory (%s:%d)!\n",
-				   __FILE__, __LINE__ );
-	  return false;
-  }
+  ArgList args;
 
-  // we use 2>&1 to make sure we get both stdout and stderr from command
-  sprintf( command, "%s %s %s -lognotes \"DAG Node: %s\" 2>&1", 
-  	   exe, DAP_SERVER, cmdFile, DAGNodeName );
+  args.AppendArg( dm.storkSubmitExe );
+  args.AppendArg( "-lognotes" );
 
+  MyString logNotes = MyString( "DAG Node: " ) + DAGNodeName;
+  args.AppendArg( logNotes.Value() );
 
-  //  dprintf( D_ALWAYS, "submit command is: %s\n", command );
+  args.AppendArg( cmdFile );
 
-  bool success = false;
-  const int tries = dagman.max_submit_attempts;
-  int wait = 1;
-  
-  success = dap_try( exe, command, condorID );
-  for (int i = 1 ; i < tries && !success ; i++) {
-      debug_printf( DEBUG_NORMAL, "stork_submit try %d/%d failed, "
-                     "will try again in %d second%s\n", i, tries, wait,
-					 wait == 1 ? "" : "s" );
-      sleep( wait );
-	  success = dap_try( exe, command, condorID );
-	  wait = wait * 2;
-  }
-  if (!success && DEBUG_LEVEL(DEBUG_QUIET)) {
-    dprintf( D_ALWAYS, "stork_submit failed after %d tr%s.\n", tries,
-			tries == 1 ? "y" : "ies" );
-    dprintf( D_ALWAYS, "submit command was: %s\n", command );
-	delete[] command;
-	return false;
-  }
-  delete [] command;
+  bool success = do_submit( args, condorID, Job::TYPE_STORK,
+  			dm.prohibitMultiJobs );
+
+	if ( !tmpDir.Cd2MainDir( errMsg ) ) {
+		debug_printf( DEBUG_QUIET,
+				"Could not change to original directory: %s\n",
+				errMsg.Value() );
+		success = false;
+	}
+
   return success;
 }
-//<-- DAP
-
-
-
-
-

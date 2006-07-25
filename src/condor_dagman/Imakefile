@@ -1,3 +1,11 @@
+#if WANT_NEW_CLASSADS
+#define New_classads_defines    -DWANT_NEW_CLASSADS
+#define New_classads_lib		-L$(NEW_CLASSADS_LIB) -lclassad_ns
+#else
+#define New_classads_defines
+#define New_classads_lib
+#endif
+
 NAME = condor_dagman
 all_target($(NAME) t_helper condor_submit_dag)
 
@@ -5,39 +13,29 @@ all_target($(NAME) t_helper condor_submit_dag)
 HELPER_FLAGS = -DBUILD_HELPER
 #endif
 
-/* AJR: Somehow, the old flags here prevented us from finding the ClassAd
-        include files. I am not sure why, but this works well.
-        The ClassAd include files are not directly needed by DAGMan, but 
-        get pulled in from something else.
-*/
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -I../condor_daemon_core.V6 \
-	-Wall $(HELPER_FLAGS)
-/*
 C_PLUS_FLAGS = -I. $(STD_C_PLUS_FLAGS) \
-	-I../condor_daemon_core.V6 \
-	-I../condor_includes -I- -Wall $(HELPER_FLAGS)
-*/
-CFLAGS = $(STD_C_FLAGS)
-LIB = $(DAEMONCORE_LIB) $(STD_LIBS)
-TOOL_LIB = $(STD_LIBS)
+	-I../condor_daemon_core.V6 -I.. \
+	New_classads_defines \
+	-Wall $(HELPER_FLAGS)
 
-OBJ = dagman_main.o submit.o dag.o job.o util.o parse.o debug.o types.o \
-	script.o scriptQ.o helper.o dagman_instantiate.o dagman_commands.o
+CFLAGS = $(STD_C_FLAGS) New_classads_defines
+LIB = $(DAEMONCORE_LIB) $(STD_LIBS) New_classads_lib
+TOOL_LIB = $(STD_LIBS) New_classads_lib
 
-c_plus_target($(NAME),$(OBJ),$(LIB))
-release_target($(NAME),bin,EXECUTABLE_MODE)
-strip_target($(NAME),bin,EXECUTABLE_MODE)
-static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/bin)
-purecov_c_plus_target($(NAME).pc,$(OBJ),$(LIB))
-pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))
+soapobjs(dagman)
 
-c_plus_target(condor_submit_dag,condor_submit_dag.o,$(TOOL_LIB))
-release_target(condor_submit_dag,bin,EXECUTABLE_MODE)
-strip_target(condor_submit_dag,bin,EXECUTABLE_MODE)
-static_target(condor_submit_dag,condor_submit_dag.o,$(TOOL_LIB),$(STATIC_DIR)/bin)
+OBJ = dagman_main.o submit.o dag.o job.o util.o parse.o debug.o \
+	script.o scriptQ.o helper.o dagman_instantiate.o dagman_commands.o \
+	dagman_multi_dag.o $(SOAP_OBJS)
+
+public_c_plus_target($(NAME),bin,$(OBJ),$(LIB))
+
+public_c_plus_target(condor_submit_dag,bin,condor_submit_dag.o dagman_multi_dag.o,$(TOOL_LIB))
 
 html_target( documentation )
 
 #if defined(DAGMAN_HELPER)
 c_plus_target(t_helper,t_helper.o helper.o,$(LIB))
 #endif
+
+gen_soapfiles(dagman,condorDagman)

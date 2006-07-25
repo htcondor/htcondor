@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -24,6 +24,7 @@
 #include "condor_common.h"
 #include "condor_constants.h"
 #include "condor_io.h"
+#include "condor_uid.h"
 #include "sock.h"
 #include "condor_network.h"
 #include "internet.h"
@@ -31,6 +32,8 @@
 #include "condor_debug.h"
 #include "condor_socket_types.h"
 #include "get_port_range.h"
+#include "condor_netdb.h"
+#include "daemon_core_sock_adapter.h"
 
 #if !defined(WIN32)
 #define closesocket close
@@ -39,13 +42,16 @@
 // initialize static data members
 int Sock::timeout_multiplier = 0;
 
+DaemonCoreSockAdapterClass daemonCoreSockAdapter;
+
 Sock::Sock() : Stream() {
 	_sock = INVALID_SOCKET;
 	_state = sock_virgin;
 	_timeout = 0;
+	ignore_connect_timeout = FALSE;		// Used by the HA Daemon
 	connect_state.host = NULL;
 	memset(&_who, 0, sizeof(struct sockaddr_in));
-	memset(&_endpoint_ip_buf, 0, _ENDPOINT_BUF_SIZE);
+	memset(&_endpoint_ip_buf, 0, IP_STRING_BUF_SIZE);
 }
 
 Sock::Sock(const Sock & orig) : Stream() {
@@ -56,7 +62,7 @@ Sock::Sock(const Sock & orig) : Stream() {
 	_timeout = 0;
 	connect_state.host = NULL;
 	memset( &_who, 0, sizeof( struct sockaddr_in ) );
-	memset(	&_endpoint_ip_buf, 0, _ENDPOINT_BUF_SIZE );
+	memset(	&_endpoint_ip_buf, 0, IP_STRING_BUF_SIZE );
 
 	// now duplicate the underlying network socket
 #ifdef WIN32
@@ -89,6 +95,7 @@ Sock::Sock(const Sock & orig) : Stream() {
 		EXCEPT("ERROR: dup() failed in Sock copy ctor");
 	}
 #endif
+	ignore_connect_timeout = orig.ignore_connect_timeout;	// Used by HAD
 }
 
 Sock::~Sock()
@@ -263,6 +270,43 @@ int Sock::set_inheritable( int flag )
 }
 #endif	// of WIN32
 
+int Sock::move_descriptor_up()
+{
+	/* This function must be called IMMEDIATELY after a call to
+	 * socket() or accept().  It gives CEDAR an opportunity to 
+	 * move the descriptor if needed on this platform
+	 */
+
+#ifdef Solaris
+	/* On Solaris, the silly stdio library will fail if the underlying
+	 * file descriptor is > 255.  Thus if we have lots of sockets open,
+	 * calls to fopen() will start to fail on Solaris.  In Condor, this 
+	 * usually means dprintf() will EXCEPT.  So to avoid this, we reserve
+	 * sockets between 101 and 255 to be ONLY for files/pipes, and NOT
+	 * for network sockets.  We acheive this by moving the underlying
+	 * descriptor above 255 if it falls into the reserved range. We don't
+	 * bother moving descriptors until they are < 100 --- this prevents us
+	 * from doing anything in the common case that the process has less
+	 * than 100 active descriptors.
+	 */
+	SOCKET new_fd = -1;
+	if ( _sock > 100 && _sock < 256 ) {
+		new_fd = fcntl(_sock, F_DUPFD, 256);
+		if ( new_fd >= 256 ) {
+			::closesocket(_sock);
+			_sock = new_fd;
+		} else {
+			// the fcntl must have failed
+			dprintf(D_NETWORK, "Sock::move_descriptor_up failed: %s\n", 
+								strerror(errno));
+			return FALSE;
+		}
+	}
+#endif
+
+	return TRUE;
+}
+
 int Sock::assign(SOCKET sockd)
 {
 	int		my_type;
@@ -289,7 +333,7 @@ int Sock::assign(SOCKET sockd)
 #ifndef WIN32 /* Unix */
 	errno = 0;
 #endif
-	if ((_sock = socket(AF_INET, my_type, 0)) < 0) {
+	if ((_sock = socket(AF_INET, my_type, 0)) == INVALID_SOCKET) {
 #ifndef WIN32 /* Unix... */
 		if ( errno == EMFILE ) {
 			_condor_fd_panic( __LINE__, __FILE__ ); /* Calls dprintf_exit! */
@@ -297,6 +341,10 @@ int Sock::assign(SOCKET sockd)
 #endif
 		return FALSE;
 	}
+
+	// move the underlying descriptor if we need to on this platform
+	if ( !move_descriptor_up() ) return FALSE;
+
 	// on WinNT, sockets are created as inheritable by default.  we
 	// want to create the socket as non-inheritable by default.  so 
 	// we duplicate the socket as non-inheritable and then close
@@ -320,13 +368,15 @@ int Sock::assign(SOCKET sockd)
 
 int Sock::bindWithin(const int low_port, const int high_port)
 {
+	bool bind_all = (bool)_condor_bind_all_interfaces();
+
 	// Use hash function with pid to get the starting point
     struct timeval curTime;
 #ifndef WIN32
     (void) gettimeofday(&curTime, NULL);
 #else
 	// Win32 does not have gettimeofday, sigh.
-	curTime.tv_usec = ::GetTickCount();
+	curTime.tv_usec = ::GetTickCount() % 1000000;
 #endif
 
 	// int pid = (int) getpid();
@@ -337,17 +387,43 @@ int Sock::bindWithin(const int low_port, const int high_port)
 	int this_trial = start_trial;
 	do {
 		sockaddr_in		sin;
+		priv_state old_priv;
+		int bind_return_val;
 
 		memset(&sin, 0, sizeof(sockaddr_in));
 		sin.sin_family = AF_INET;
-		sin.sin_addr.s_addr = htonl(my_ip_addr());
+		if( bind_all ) {
+			sin.sin_addr.s_addr = INADDR_ANY;
+		} else {
+			sin.sin_addr.s_addr = htonl(my_ip_addr());
+		}
 		sin.sin_port = htons((u_short)this_trial++);
 
-		if ( ::bind(_sock, (sockaddr *)&sin, sizeof(sockaddr_in)) == 0 ) { // success
+#ifndef WIN32
+		if (this_trial <= 1024) {
+			// use root priv for the call to bind to allow privileged ports
+			old_priv = PRIV_UNKNOWN;
+			old_priv = set_root_priv();
+		}
+#endif
+		bind_return_val = ::bind(_sock, (sockaddr *)&sin, sizeof(sockaddr_in));
+#ifndef WIN32
+		if (this_trial <= 1024) {
+			set_priv (old_priv);
+		}
+#endif
+
+		if (  bind_return_val == 0 ) { // success
 			dprintf(D_NETWORK, "Sock::bindWithin - bound to %d...\n", this_trial-1);
 			return TRUE;
 		} else {
-			dprintf(D_NETWORK, "Sock::bindWithin - failed to bind: %s\n", strerror(errno));
+#ifdef WIN32
+			int error = WSAGetLastError();
+			dprintf(D_NETWORK, 
+				"Sock::bindWithin - failed to bind to port %d: WSAError = %d\n", this_trial-1, error );
+#else
+			dprintf(D_NETWORK, "Sock::bindWithin - failed to bind to port %d: %s\n", this_trial-1, strerror(errno));
+#endif
 		}
 
 		if ( this_trial > high_port )
@@ -361,9 +437,11 @@ int Sock::bindWithin(const int low_port, const int high_port)
 }
 
 
-int Sock::bind(int port)
+int Sock::bind(int is_outgoing, int port)
 {
 	sockaddr_in		sin;
+	priv_state old_priv;
+	int bind_return_value;
 
 	// Following lines are added because some functions in condor call
 	// this method without checking the port numbers returned from
@@ -382,28 +460,71 @@ int Sock::bind(int port)
 	// in the config file for security, we will bind this Sock to one of
 	// the port within the range defined by these variables rather than
 	// an arbitrary free port. /* 07/27/2000 - sschang */
+	//
+	// zmiller on 2006-02-09 says:
+	//
+	// however,
+	//
+	// now that we have the ability to bind to privileged ports (below 1024)
+	// for the daemons, we need a separate port range for the client tools
+	// (which do not run as root) to bind to.  if none is specified, we bind
+	// to any non-privileged port.  lots of firewalls still allow arbitrary
+	// ports for outgoing connections, and this will work for that setup.
+	// if the firewall doesn't allow it, the connect will just fail anyways.
+	//
+	// this is why there is an is_outgoing flag passed in.  when this is true,
+	// we know to check OUT_LOWPORT and OUT_HIGHPORT first, and then fall back
+	// to LOWPORT and HIGHPORT.
+	//
+	// likewise, in the interest of consistency, the server side will now
+	// check first for IN_LOWPORT and IN_HIGHPORT, then fallback to
+	// LOWPORT and HIGHPORT, and then to an arbitrary port.
+	//
+	// errors in configuration (like LOWPORT being greater than HIGHPORT)
+	// still return FALSE whenever they are encountered which will cause
+	// condor to attempt to bind to a dynamic port instead. an error is
+	// printed to D_ALWAYS in get_port_range.
+
 	int lowPort, highPort;
-	if ( port == 0 && get_port_range(&lowPort, &highPort) == TRUE ) {
-		if ( bindWithin(lowPort, highPort) == TRUE ) {
-			_state = sock_bound;
-			return TRUE;
-		} else return FALSE;
-	}
-	// end of insertion /* 07/27/2000 - sschang */
+	if ( port == 0 && get_port_range(is_outgoing, &lowPort, &highPort) == TRUE ) {
+			// Bind in a specific port range.
+		if ( bindWithin(lowPort, highPort) != TRUE ) {
+			return FALSE;
+		}
+	} else {
+			// Bind to a dynamic port.
+		memset(&sin, 0, sizeof(sockaddr_in));
+		sin.sin_family = AF_INET;
+		bool bind_all = (bool)_condor_bind_all_interfaces();
+		if( bind_all ) {
+			sin.sin_addr.s_addr = INADDR_ANY;
+		} else {
+			sin.sin_addr.s_addr = htonl(my_ip_addr());
+		}
+		sin.sin_port = htons((u_short)port);
 
-	memset(&sin, 0, sizeof(sockaddr_in));
-	sin.sin_family = AF_INET;
-	sin.sin_addr.s_addr = htonl(my_ip_addr());
-	sin.sin_port = htons((u_short)port);
-
-	if (::bind(_sock, (sockaddr *)&sin, sizeof(sockaddr_in)) < 0) {
-#ifdef WIN32
-		int error = WSAGetLastError();
-		dprintf( D_ALWAYS, "bind failed: WSAError = %d\n", error );
-#else
-		dprintf(D_NETWORK, "bind failed errno = %d\n", errno);
+#ifndef WIN32
+		if(port < 1024) {
+			// use root priv for the call to bind to allow privileged ports
+			old_priv = PRIV_UNKNOWN;
+			old_priv = set_root_priv();
+		}
 #endif
-		return FALSE;
+		bind_return_value = ::bind(_sock, (sockaddr *)&sin, sizeof(sockaddr_in));
+#ifndef WIN32
+		if(port < 1024) {
+			set_priv (old_priv);
+		}
+#endif
+		if ( bind_return_value < 0) {
+	#ifdef WIN32
+			int error = WSAGetLastError();
+			dprintf( D_ALWAYS, "bind failed: WSAError = %d\n", error );
+	#else
+			dprintf(D_NETWORK, "bind failed errno = %d\n", errno);
+	#endif
+			return FALSE;
+		}
 	}
 
 	_state = sock_bound;
@@ -417,6 +538,11 @@ int Sock::bind(int port)
 		int on = 1;
 		setsockopt(SOL_SOCKET, SO_LINGER, (char*)&linger, sizeof(linger));
 		setsockopt(SOL_SOCKET, SO_KEEPALIVE, (char*)&on, sizeof(on));
+               /* Set no delay to disable Nagle, since we buffer all our
+			      relisock output and it degrades performance of our
+			      various chatty protocols. -Todd T, 9/05
+			   */
+		setsockopt(IPPROTO_TCP, TCP_NODELAY, (char*)&on, sizeof(on));
 	}
 
 	return TRUE;
@@ -503,7 +629,8 @@ int Sock::do_connect(
 
 		/* we bind here so that a sock may be	*/
 		/* assigned to the stream if needed		*/
-	if (_state == sock_virgin || _state == sock_assigned) bind();
+		/* TRUE means this is an outgoing connection */
+	if (_state == sock_virgin || _state == sock_assigned) bind( TRUE );
 
 	if (_state != sock_bound) return FALSE;
 
@@ -521,7 +648,7 @@ int Sock::do_connect(
 	}
 	/* if dotted notation fails, try host database	*/
 	else{
-		if ((hostp = gethostbyname(host)) == (hostent *)0) return FALSE;
+		if ((hostp = condor_gethostbyname(host)) == (hostent *)0) return FALSE;
 		memcpy(&_who.sin_addr, hostp->h_addr, hostp->h_length);
 	}
 
@@ -530,14 +657,25 @@ int Sock::do_connect(
 	} else {
 		connect_state.timeout_interval = _timeout;
 	}
+
+	// Used by HAD
+	// if doNotEnforceMinimalCONNECT_TIMEOUT() was previously called
+	// than we don't enforce a minimal amount of CONNECT_TIMEOUT seconds
+	// for connect_state.timeout_interval
+	if(ignore_connect_timeout == TRUE){
+		connect_state.timeout_interval = _timeout;
+	}
+
 	connect_state.timeout_time = time(NULL) + connect_state.timeout_interval;
 	connect_state.connect_failed = false;
 	connect_state.failed_once = false;
+	connect_state.connect_refused = false;
 	connect_state.non_blocking_flag = non_blocking_flag;
 	if ( connect_state.host ) free( connect_state.host );
 	connect_state.host = strdup(host);
 	connect_state.port = port;
 
+	time_t connect_start_time = time(NULL);
 	do {
 		connect_state.connect_failed = false;
 
@@ -559,6 +697,12 @@ int Sock::do_connect(
 
 		if ( non_blocking_flag && !connect_state.connect_failed) {
 			_state = sock_connect_pending;
+			if( DebugFlags & D_NETWORK ) {
+				char* dst = strdup( sin_to_string(&_who) );
+				dprintf(D_NETWORK,"non-blocking CONNECT started fd=%d dst=%s\n",
+				         _sock, dst );
+				free( dst );
+			}
 			return CEDAR_EWOULDBLOCK; 
 		}
 
@@ -600,6 +744,9 @@ int Sock::do_connect(
 			}
 		}
 
+		// Do not keep trying if we have been explicitly refused.
+		if(connect_state.connect_refused) break;
+
 		// we don't want to busyloop on connect, so sleep for a second
 		// before we try again
 		sleep(1);
@@ -607,13 +754,16 @@ int Sock::do_connect(
 	} while (time(NULL) < connect_state.timeout_time);
 
 	dprintf( D_ALWAYS, "Connect failed for %d seconds; returning FALSE\n",
-			 connect_state.timeout_interval );
+			 (int)(time(NULL) - connect_start_time) );
 	return FALSE;
 }
 
-bool Sock::do_connect_finish()
+bool Sock::do_connect_finish(bool failed,bool timed_out)
 {
-	if (test_connection()) {
+		// test_connection() does not reliably report failed connections,
+		// so the "failed" input variable, if set, indicates that
+		// select() has already told us that connect failed.
+	if (!failed && !timed_out && test_connection()) {
 		_state = sock_connect;
 		if( DebugFlags & D_NETWORK ) {
 			char* src = strdup(	sock_to_string(_sock) );
@@ -631,13 +781,13 @@ bool Sock::do_connect_finish()
 	
 	if (!connect_state.failed_once) {
 		dprintf( D_ALWAYS, 
-				 "getpeername failed so connect must have failed\n");
+				 "attempt to connect to %s %s\n",get_sinful(),timed_out ? "timed out" : "failed");
 		connect_state.failed_once = true;
 	}
 
 	if ( connect_state.non_blocking_flag ) {
 
-		if ((time(NULL) < connect_state.timeout_time))
+		if (time(NULL) < connect_state.timeout_time && !connect_state.connect_refused)
 		{
 				// we don't want to busyloop on connect, so sleep for a second
 				// before we try again
@@ -661,6 +811,18 @@ bool Sock::do_connect_finish()
 bool Sock::do_connect_tryit()
 {
 	if (::connect(_sock, (sockaddr *)&_who, sizeof(sockaddr_in)) == 0) {
+		if ( connect_state.non_blocking_flag ) {
+			//Pretend that we haven't connected yet so that there is
+			//only one code path for all non-blocking connects.
+			//Otherwise, blindly calling DaemonCore::Register_Socket()
+			//after initiating a non-blocking connect will fail if
+			//connect() happens to complete immediately.  Why does
+			//that fail?  Because DaemonCore will see that the socket
+			//is in a connected state and will therefore select() on
+			//reads instead of writes.
+
+			return false;
+		}
 		_state = sock_connect;
 		if( DebugFlags & D_NETWORK ) {
 			char* src = strdup(	sock_to_string(_sock) );
@@ -670,20 +832,22 @@ bool Sock::do_connect_tryit()
 			free( src );
 			free( dst );
 		}
-		if ( connect_state.non_blocking_flag ) {
-			timeout(connect_state.old_timeout_value);			
-		}
 		return true;
 	}
 
 #if defined(WIN32)
 	int lasterr = WSAGetLastError();
 	if (lasterr != WSAEINPROGRESS && lasterr != WSAEWOULDBLOCK) {
+		if(lasterr == WSAECONNREFUSED) {
+			connect_state.connect_refused = true;
+		}
 		if (!connect_state.failed_once) {
 			dprintf( D_ALWAYS, "Can't connect to %s:%d, errno = %d\n",
 					 connect_state.host, connect_state.port, lasterr );
-			dprintf( D_ALWAYS, "Will keep trying for %d seconds...\n",
-					 connect_state.timeout_interval );
+			if(!connect_state.connect_refused) {
+				dprintf( D_ALWAYS, "Will keep trying for %d seconds...\n",
+						 connect_state.timeout_interval );
+			}
 			connect_state.failed_once = true;
 		}
 		connect_state.connect_failed = true;
@@ -693,11 +857,16 @@ bool Sock::do_connect_tryit()
 		// errno can only be EINPROGRESS if timeout is > 0.
 		// -Derek, Todd, Pete K. 1/19/01
 	if (errno != EINPROGRESS) {
+		if(errno == ECONNREFUSED) {
+			connect_state.connect_refused = true;
+		}
 		if (!connect_state.failed_once) {
 			dprintf( D_ALWAYS, "Can't connect to %s:%d, errno = %d\n",
 					 connect_state.host, connect_state.port, errno );
-			dprintf( D_ALWAYS, "Will keep trying for %d seconds...\n",
-					 connect_state.timeout_interval );
+			if(!connect_state.connect_refused) {
+				dprintf( D_ALWAYS, "Will keep trying for %d seconds...\n",
+						 connect_state.timeout_interval );
+			}
 			connect_state.failed_once = true;
 		}
 		connect_state.connect_failed = true;
@@ -745,37 +914,51 @@ bool Sock::do_connect_tryit()
 		}
 
 		// finally, bind the socket
-		bind();
+		/* TRUE means this is an outgoing connection */
+		bind( TRUE );
 	}
 #endif /* end of unix code */
 
 	return false;
 }
 
-bool Sock::test_connection()
+time_t Sock::connect_timeout_time()
 {
-	// test the connection -- on OSF1, select returns 1 even if
-	// the connect fails!
-
-	struct sockaddr_in test_addr;
-	memset((char *) &test_addr, 0, sizeof(test_addr));
-	test_addr.sin_family = AF_INET;
-
-	SOCKET_LENGTH_TYPE nbytes;
-	
-	nbytes = sizeof(test_addr);
-	if (getpeername(_sock, (struct sockaddr *) &test_addr, &nbytes) < 0) {
-		sleep(1);	// try once more -- sometimes it fails the first time
-		if (getpeername(_sock, (struct sockaddr *) &test_addr, &nbytes) < 0) {
-			sleep(1);	// try once more -- sometimes it fails the second time
-			if (getpeername(_sock, (struct sockaddr *) &test_addr, &nbytes)<0) {
-				return false;
-			}
-		}
-	}
-	return true;
+	return _state == sock_connect_pending ? connect_state.timeout_time : 0;
 }
 
+// Added for the HA Daemon
+void Sock::doNotEnforceMinimalCONNECT_TIMEOUT()
+{
+	ignore_connect_timeout = TRUE;
+}
+
+bool Sock::test_connection()
+{
+    // Since a better way to check if a nonblocking connection has
+    // succeed or not is to use getsockopt, I changed this routine
+    // that way. --Sonny 7/16/2003
+
+	// Dan 6/4/2006: the following test reports "success" when the
+	// non-blocking connect is still in progress.  Therefore, it
+	// cannot be used as an indication of success.  This is why
+	// we now make use of a failure flag from DaemonCore's select()
+	// handler indicating if there is any additional reason to consider
+	// the connection failed (such as timeout).
+
+    int error;
+    SOCKET_LENGTH_TYPE len = sizeof(error);
+    if (::getsockopt(_sock, SOL_SOCKET, SO_ERROR, (char*)&error, &len) < 0) {
+        dprintf(D_ALWAYS, "Sock::test_connection - getsockopt failed\n");
+        return false;
+    }
+    // return result
+    if (error) {
+        return false;
+    } else {
+        return true;
+    }
+}
 
 int Sock::close()
 {
@@ -786,7 +969,9 @@ int Sock::close()
 						sock_to_string(_sock), _sock );
 	}
 
-	if (::closesocket(_sock) < 0) return FALSE;
+	if ( _sock != INVALID_SOCKET ) {
+		if (::closesocket(_sock) < 0) return FALSE;
+	}
 
 	_sock = INVALID_SOCKET;
 	_state = sock_virgin;
@@ -795,7 +980,7 @@ int Sock::close()
     }
 	connect_state.host = NULL;
 	memset(&_who, 0, sizeof( struct sockaddr_in ) );
-	memset(&_endpoint_ip_buf, 0, _ENDPOINT_BUF_SIZE );
+	memset(&_endpoint_ip_buf, 0, IP_STRING_BUF_SIZE );
 	
 	return TRUE;
 }
@@ -968,7 +1153,7 @@ char * Sock::serializeCryptoInfo(char * buf)
 
         // Initialize crypto info
         KeyInfo k((unsigned char *)kserial, len, (Protocol)protocol);
-        set_crypto_key(&k, 0);
+        set_crypto_key(true, &k, 0);
         free(kserial);
 		ASSERT( *ptmp == '*' );
         // Now, skip over this one
@@ -1104,9 +1289,44 @@ char *
 Sock::endpoint_ip_str()
 {
 		// We need to recompute this each time because _who might have changed.
-	memset(&_endpoint_ip_buf, 0, _ENDPOINT_BUF_SIZE );
+	memset(&_endpoint_ip_buf, 0, IP_STRING_BUF_SIZE );
 	strcpy( _endpoint_ip_buf, inet_ntoa(_who.sin_addr) );
 	return &(_endpoint_ip_buf[0]);
+}
+
+
+// my port and IP address in a struct sockaddr_in
+// @args: the address is returned via 'sin'
+// @ret: 0 if succeed, -1 if failed
+int
+Sock::mypoint( struct sockaddr_in *sin )
+{
+    struct sockaddr_in *tmp = getSockAddr(_sock);
+    if (tmp == NULL) return -1;
+
+    memcpy(sin, tmp, sizeof(struct sockaddr_in));
+    return 0;
+}
+
+const char *
+Sock::sender_ip_str()
+{
+		// We need to recompute this each in case we have reconnected via a different interface
+	struct sockaddr_in sin;
+	if(mypoint(&sin) == -1) {
+		return NULL;
+	}
+	memset(&_sender_ip_buf, 0, IP_STRING_BUF_SIZE );
+	strcpy( _sender_ip_buf, inet_ntoa(sin.sin_addr) );
+	return &(_sender_ip_buf[0]);
+}
+
+char *
+Sock::get_sinful()
+{       
+    struct sockaddr_in *tmp = getSockAddr(_sock);
+    if (tmp == NULL) return NULL;
+    return sin_to_string(tmp);
 }
 
 
@@ -1175,7 +1395,7 @@ static void async_handler( int s )
 		}
 	}
 
-	success = select( table_size, &set, 0, 0, &zero );
+	success = ::select( table_size, &set, 0, 0, &zero );
 
 	if( success>0 ) {
 		for( i=0; i<table_size; i++ ) {
@@ -1354,7 +1574,7 @@ int Sock :: authenticate(const char * methods, CondorError* errstack)
 	return -1;
 }
 
-int Sock :: isAuthenticated()
+int Sock :: isAuthenticated() const
 {
 	return -1;
 }

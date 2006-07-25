@@ -1,3 +1,25 @@
+/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "stream_handler.h"
 #include "NTsenders.h"
@@ -29,7 +51,13 @@ bool StreamHandler::Init( const char *fn, const char *sn, bool io )
 		return false;
 	}
 
-	result = daemonCore->Create_Pipe(pipe_fds,false,!is_output,STREAM_BUFFER_SIZE);
+	// create a DaemonCore pipe
+	result = daemonCore->Create_Pipe(pipe_fds,
+					 is_output,     // registerable for read if it's streamed output
+					 !is_output,    // registerable for write if it's streamed input
+					 false,         // blocking read
+					 false,         // blocking write
+					 STREAM_BUFFER_SIZE);
 	if(result==0) {
 		dprintf(D_ALWAYS,"Couldn't create pipe to stream %s: %s\n",streamname,strerror(errno));
 		REMOTE_CONDOR_close(remote_fd);
@@ -58,7 +86,7 @@ int StreamHandler::Handler( int fd )
 
 	if(is_output) {
 		dprintf(D_SYSCALLS,"StreamHandler: %s: stream ready\n",streamname);
-		result = read(handler_pipe,buffer,STREAM_BUFFER_SIZE);
+		result = daemonCore->Read_Pipe(handler_pipe,buffer,STREAM_BUFFER_SIZE);
 		if(result>0) {
 			dprintf(D_SYSCALLS,"StreamHandler: %s: %d bytes available\n",streamname,result);
 			REMOTE_CONDOR_lseek(remote_fd,offset,SEEK_SET);
@@ -81,7 +109,7 @@ int StreamHandler::Handler( int fd )
 		result = REMOTE_CONDOR_read(remote_fd,buffer,STREAM_BUFFER_SIZE);
 		if(result>0) {
 			dprintf(D_SYSCALLS,"StreamHandler: %s: %d bytes read from %s\n",streamname,result,filename);
-			actual = write(handler_pipe,buffer,result);
+			actual = daemonCore->Write_Pipe(handler_pipe,buffer,result);
 			if(actual>=0) {
 				dprintf(D_SYSCALLS,"StreamHandler: %s: %d bytes consumed by job\n",streamname,actual);
 				offset+=actual;

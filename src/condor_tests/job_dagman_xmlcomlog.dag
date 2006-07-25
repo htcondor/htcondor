@@ -1,0 +1,19 @@
+Job     NODE0         job_dagman_xmlcomlog.cmd
+Job     NODE1         job_dagman_xmlcomlog.cmd
+Job     NODE2         job_dagman_xmlcomlog.cmd
+Job     NODE3         job_dagman_xmlcomlog.cmd
+Job     NODE4         job_dagman_xmlcomlog.cmd
+Job     NODE5         job_dagman_xmlcomlog.cmd
+Job     NODE6         job_dagman_xmlcomlog.cmd
+Job     NODE7         job_dagman_xmlcomlog.cmd
+Job     NODE8         job_dagman_xmlcomlog.cmd
+
+Script POST NODE0     ./job_dagman_monitor.pl $RETURN
+Script POST NODE1     ./job_dagman_monitor.pl $RETURN
+Script POST NODE2     ./job_dagman_monitor.pl $RETURN
+Script POST NODE3     ./job_dagman_monitor.pl $RETURN
+Script POST NODE4     ./job_dagman_monitor.pl $RETURN
+Script POST NODE5     ./job_dagman_monitor.pl $RETURN
+Script POST NODE6     ./job_dagman_monitor.pl $RETURN
+Script POST NODE7     ./job_dagman_monitor.pl $RETURN
+Script POST NODE8     ./job_dagman_monitor.pl $RETURN

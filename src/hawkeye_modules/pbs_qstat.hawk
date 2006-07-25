@@ -6,9 +6,10 @@ Used to monitor the queue of a PBS queue
 You should set the QNAME parameter by hand
 
 Default: pbs
-options: kill
 period: 15m
 prefix: pbs_
+mode: periodic
+kill: true
 
 # It's parameters
 parameter: QSTAT = /usr/pbs/bin/qstat

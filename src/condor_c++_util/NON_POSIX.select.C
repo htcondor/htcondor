@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -238,7 +238,8 @@ Selector::display()
 	}
 	if( timeout_wanted ) {
 		dprintf( D_ALWAYS,
-			"Timeout = %d.%06d seconds\n", timeout.tv_sec, timeout.tv_usec
+			"Timeout = %ld.%06ld seconds\n", (long) timeout.tv_sec, 
+			(long) timeout.tv_usec
 		);
 	} else {
 		dprintf( D_ALWAYS, "Timeout not wanted\n" );

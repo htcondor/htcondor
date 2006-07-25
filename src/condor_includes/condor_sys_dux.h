@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -121,7 +121,7 @@ int _Esigaction(int signum, const struct sigaction  *act, struct sigaction *olda
 
 /* We need to include this _before_ 'db.h' gets included so that we
    get the int64_t types */
-#if defined( HAS_INTTYPES_H )
+#if HAVE_INTTYPES_H
 # define __STDC_FORMAT_MACROS
 # include <inttypes.h>
 #endif
@@ -157,6 +157,9 @@ END_C_DECLS
 
 /* Needed for PIOCPSINFO */
 #include <sys/procfs.h>
+
+/* Needed for various constants */
+#include <float.h>
 
 /****************************************
 ** Condor-specific system definitions

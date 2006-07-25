@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -33,7 +33,7 @@
 
 #define USE_NEW_SCANNER
 
-#include "condor_classad.h"
+#include "condor_attrlist.h"
 
 class Token
 {
@@ -47,7 +47,7 @@ class Token
 			int		intVal;
 			float	floatVal;
 		};
-		//LexemeType	type; 
+		LexemeType	type; 
 		int			length;	// error position in the string for the parser
 #ifdef USE_NEW_SCANNER
 		char        *strVal;

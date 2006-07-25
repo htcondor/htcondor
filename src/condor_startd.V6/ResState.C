@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -62,13 +62,14 @@ ResState::publish( ClassAd* cp, amask_t how_much )
 int
 ResState::change( State new_state, Activity new_act )
 {
-	int statechange = FALSE, actchange = FALSE, now;
+	bool statechange = false, actchange = false;
+	int now;
 
 	if( new_state != r_state ) {
-		statechange = TRUE;
+		statechange = true;
 	}
 	if( new_act != r_act ) {
-		actchange = TRUE;
+		actchange = true;
 	}
 	if( ! (actchange || statechange) ) {
 		return TRUE;   // If we're not changing anything, return
@@ -77,7 +78,7 @@ ResState::change( State new_state, Activity new_act )
 		// leave_action and enter_action return TRUE if they result in
 		// a state or activity change.  In these cases, we want to
 		// abort the current state change.
-	if( leave_action( r_state, r_act, statechange, actchange ) ) {
+	if( leave_action( r_state, r_act, new_state, new_act, statechange ) ) {
 		return TRUE;
 	}
 
@@ -127,6 +128,24 @@ ResState::change( State new_state, Activity new_act )
 		// We want to update the CM on every state or activity change
 	rip->update();   
 
+#if HAVE_BACKFILL
+		/*
+		  in the case of Backfill/Idle, we do *not* want to do the
+		  following check for idleness or retirement, we just want to
+		  let the usual polling interval cover our next eval().  so,
+		  if we're in Backfill, we can immediately return now...
+		*/
+	if( r_state == backfill_state ) {
+		return TRUE;
+	}
+#endif /* HAVE_BACKFILL */
+
+	if( r_act == retiring_act || r_act == idle_act ) {
+		// When we enter retirement or idleness, check right away to
+		// see if we should be preempting instead.
+		this->eval();
+	}
+
 	return TRUE;
 }
 
@@ -144,7 +163,7 @@ ResState::change( State new_state )
 	if( new_state == preempting_state ) {
 			// wants_vacate dprintf's about what it decides and the
 			// implications on state changes...
-		if( rip->wants_vacate() ) {
+		if( !rip->preemptWasTrue() || rip->wants_vacate() ) {
 			return change( new_state, vacating_act );
 		} else {
 			return change( new_state, killing_act );
@@ -159,6 +178,9 @@ int
 ResState::eval( void )
 {
 	int want_suspend;
+#if HAVE_BACKFILL
+	int kill_rval; 
+#endif /* HAVE_BACKFILL */
 
 		// we may need to modify the load average in our internal
 		// policy classad if we're currently running a COD job or have
@@ -166,6 +188,11 @@ ResState::eval( void )
 		// chance to modify the load, if necessary, before we evaluate
 		// anything.  
 	rip->hackLoadForCOD();
+
+		// also, since we might be an SMP where other VMs just changed
+		// their state, we also want to re-publish the shared VM
+		// attributes so that other VMs can see those results.
+	rip->refreshVmAttrs();
 
 	switch( r_state ) {
 
@@ -178,26 +205,73 @@ ResState::eval( void )
 			return 0;
 		}
 		want_suspend = rip->wants_suspend();
-		if( ((r_act == busy_act) && (!want_suspend)) ||
-			(r_act == suspended_act) ) {
+		if( (r_act==busy_act && !want_suspend) ||
+			(r_act==retiring_act && !rip->preemptWasTrue() && !want_suspend) ||
+			(r_act==suspended_act && !rip->preemptWasTrue()) ) {
+
+			//Explanation for the above conditions:
+			//The want_suspend check is there because behavior is
+			//potentially confusing without it.  Derek says:)
+			//The preemptWasTrue check is there to see if we already
+			//had PREEMPT turn TRUE, in which case, we don't need
+			//to keep trying to retire over and over.
+
 			if( rip->eval_preempt() ) {
 				dprintf( D_ALWAYS, "State change: PREEMPT is TRUE\n" );
-				return change( preempting_state ); 
+				// irreversible retirement
+				// STATE TRANSITION #12 or #16
+				rip->preemptIsTrue();
+				return rip->retire_claim();
 			}
 		}
-		if( (r_act == busy_act) && want_suspend ) {
+		if( r_act == retiring_act ) {
+			if( rip->mayUnretire() ) {
+				dprintf( D_ALWAYS, "State change: unretiring because no preempting claim exists\n" );
+				// STATE TRANSITION #13
+				return change( busy_act );
+			}
+			if( rip->retirementExpired() ) {
+				dprintf( D_ALWAYS, "State change: retirement ended/expired\n" );
+				// STATE TRANSITION #18
+				return change( preempting_state );
+			}
+		}
+		if( (r_act == busy_act || r_act == retiring_act) && want_suspend ) {
 			if( rip->eval_suspend() ) {
-				// STATE TRANSITION #12
+				// STATE TRANSITION #14 or #17
 				dprintf( D_ALWAYS, "State change: SUSPEND is TRUE\n" );
 				return change( suspended_act );
 			}
 		}
 		if( r_act == suspended_act ) {
 			if( rip->eval_continue() ) {
-				// STATE TRANSITION #13
+				// STATE TRANSITION #15
 				dprintf( D_ALWAYS, "State change: CONTINUE is TRUE\n" );
-				return change( busy_act );
+				if( rip->mayUnretire() ) {
+					return change( busy_act );
+				}
+				else {
+					// STATE TRANSITION #16
+					return change( retiring_act );
+				}
 			}
+			else if( !rip->mayUnretire() ) {
+				// We are in suspended retirement.  It is possible
+				// for the retirement time to expire in this case,
+				// but only if MaxJobRetirementTime decreases
+				// for some reason.
+				if( rip->retirementExpired() ) {
+					dprintf( D_ALWAYS, "State change: retirement ended/expired during suspension\n" );
+					// STATE TRANSITION #18b
+					return change( preempting_state );
+				}
+			}
+		}
+		if( (r_act == busy_act) && rip->hasPreemptingClaim() ) {
+			dprintf( D_ALWAYS, "State change: retiring due to preempting claim\n" );
+			// reversible retirement (e.g. if preempting claim goes away)
+			// STATE TRANSITION #12
+			return change( retiring_act );
 		}
 		if( (r_act == idle_act) && (rip->eval_start() == 0) ) {
 				// START evaluates to False, so return to the owner
@@ -209,7 +283,11 @@ ResState::eval( void )
 			dprintf( D_ALWAYS, "State change: START is false\n" );
 			return change( preempting_state ); 
 		}
-		if( (r_act == busy_act) && (rip->wants_pckpt()) ) {
+		if( (r_act == idle_act) && rip->claimWorklifeExpired() ) {
+			dprintf( D_ALWAYS, "State change: idle claim shutting down due to CLAIM_WORKLIFE\n" );
+			return change( preempting_state );
+		}
+		if( (r_act == busy_act || r_act == retiring_act) && (rip->wants_pckpt()) ) {
 			rip->periodic_checkpoint();
 		}
 		if( rip->r_reqexp->restore() ) {
@@ -222,7 +300,7 @@ ResState::eval( void )
 		if( r_act == vacating_act ) {
 			if( rip->eval_kill() ) {
 				dprintf( D_ALWAYS, "State change: KILL is TRUE\n" );
-					// STATE TRANSITION #18
+					// STATE TRANSITION #19
 				return change( killing_act );
 			}
 		}
@@ -236,6 +314,16 @@ ResState::eval( void )
 		}
 			// Check to see if we should run benchmarks
 		deal_with_benchmarks( rip );
+
+#if HAVE_BACKFILL
+			// check if we should go into the Backfill state.  only do
+			// so if a) we've got a BackfillMgr object configured and
+			// instantiated, and b) START_BACKFILL evals to TRUE
+		if( resmgr->m_backfill_mgr && rip->eval_start_backfill() > 0 ) {
+			dprintf( D_ALWAYS, "State change: START_BACKFILL is TRUE\n" );
+			return change( backfill_state, idle_act );
+		}
+#endif /* HAVE_BACKFILL */
 
 		if( rip->r_reqexp->restore() ) {
 				// Our reqexp changed states, send an update
@@ -263,6 +351,47 @@ ResState::eval( void )
 			// to claim us).  
 		break;
 
+#if HAVE_BACKFILL
+	case backfill_state:
+		if( ! resmgr->m_backfill_mgr ) { 
+			EXCEPT( "in Backfill state but m_backfill_mgr is NULL!" );
+		}
+		if( r_act == killing_act ) {
+				// maybe we should have a safety-valve timeout here to
+				// prevent ourselves from staying in Backfill/Killing
+				// for too long.  however, for now, there's nothing to
+				// do here...
+			return 0;
+		}
+			// see if we should leave the Backfill state
+		kill_rval = rip->eval_evict_backfill(); 
+		if( kill_rval > 0 ) {
+			dprintf( D_ALWAYS, "State change: EVICT_BACKFILL is TRUE\n" );
+			if( r_act == idle_act ) {
+					// no sense going to killing if we're already
+					// idle, go to owner immediately.
+				return change( owner_state );
+			}
+				// we can change into Backfill/Killing then set our
+				// destination, since set_dest() won't take any
+				// additional action if we're already in killing_act
+			ASSERT( r_act == busy_act );
+			change( backfill_state, killing_act );
+			set_destination( owner_state );
+			return TRUE;
+		} else if( kill_rval < 0 ) {
+			dprintf( D_ALWAYS, "WARNING: EVICT_BACKFILL is UNDEFINED, "
+					 "staying in Backfill state\n" );
+		}
+
+		if( r_act == idle_act ) {
+				// if we're in Backfill/Idle, try to spawn a backfill job
+			rip->start_backfill();
+		}
+
+		break;
+#endif /* HAVE_BACKFILL */
+
 	default:
 		EXCEPT( "eval_state: ERROR: unknown state (%d)",
 				(int)rip->state() );
@@ -281,6 +410,7 @@ act_to_load( Activity act )
 		break;
 	case busy_act:
 	case benchmarking_act:
+	case retiring_act:
 	case vacating_act:
 	case killing_act:
 		return 1;
@@ -293,10 +423,10 @@ act_to_load( Activity act )
 
 
 int
-ResState::leave_action( State s, Activity a, 
-						int statechange, int ) 
+ResState::leave_action( State cur_s, Activity cur_a, State new_s,
+						Activity, bool statechange )
 {
-	switch( s ) {
+	switch( cur_s ) {
 	case preempting_state:
 		if( statechange ) {
 				// If we're leaving the preepting state, we should
@@ -309,12 +439,18 @@ ResState::leave_action( State s, Activity a,
 			rip->init_classad();
 		}
 		break;
+
+#if HAVE_BACKFILL
+	case backfill_state:
+			// at this point, nothing special to do... 
+#endif /* HAVE_BACKFILL */
 	case matched_state:
 	case owner_state:
 	case unclaimed_state:
 		break;
+
 	case claimed_state:
-		if( a == suspended_act ) {
+		if( cur_a == suspended_act ) {
 			if( ! rip->r_cur->resumeClaim() ) {
 					// If there's an error sending kill, it could only
 					// mean the starter has blown up and we didn't
@@ -323,7 +459,22 @@ ResState::leave_action( State s, Activity a,
 				rip->r_cur->starterKillPg( SIGKILL );
 				dprintf( D_ALWAYS,
 						 "State change: Error sending signals to starter\n" );
-				return change( owner_state );
+				if( new_s != owner_state ) {
+						/*
+						  if we're already trying to get into the
+						  owner state (because of an error like this,
+						  either suspending or resuming), we do NOT
+						  want to officially call ResState::change()
+						  again, or we just get into an infinite loop.
+						  instead, just return FALSE (that we didn't
+						  already change the state), and allow the
+						  previous attempt to change into owner_state
+						  to continue...
+						*/
+					return change( owner_state );
+				} else {
+					return FALSE;
+				}
 			}
 		}
 		if( statechange ) {
@@ -340,7 +491,7 @@ ResState::leave_action( State s, Activity a,
 
 int
 ResState::enter_action( State s, Activity a,
-						int statechange, int ) 
+						bool statechange, bool ) 
 {
 #ifdef WIN32
 	if (a == busy_act)
@@ -364,8 +515,7 @@ ResState::enter_action( State s, Activity a,
 		}
 		rip->r_cur = new Claim( rip );
 		if( rip->r_pre ) {
-			delete rip->r_pre;
-			rip->r_pre = NULL;
+			rip->remove_pre();
 		}
 			// See if we should be in owner or unclaimed state
 		if( ! rip->eval_is_owner() ) {
@@ -395,12 +545,65 @@ ResState::enter_action( State s, Activity a,
 		}
 		if( a == busy_act ) {
 			resmgr->start_poll_timer();
+
+			if( rip->hasPreemptingClaim() || !rip->mayUnretire() ) {
+
+				// We have returned to a busy state (e.g. from
+				// suspension) and there is a preempting claim or we
+				// are in irreversible retirement, so retire.
+
+				return change( retiring_act );
+			}
+		}
+		if( a == retiring_act ) {
+			if( ! rip->claimIsActive() ) {
+				// The starter exited by the time we got here.
+				// No need to wait around in retirement.
+				return change( preempting_state );
+			}
 		}
 		break;
 
 	case unclaimed_state:
 		rip->r_reqexp->restore();
 		break;
+
+#if HAVE_BACKFILL
+	case backfill_state:
+			// whenever we're in Backill, we might be available
+		rip->r_reqexp->restore();
+		
+		switch( a ) {
+
+		case killing_act:
+				// TODO notice and handle failure 
+			rip->hardkill_backfill();
+			break;
+
+		case idle_act:
+ 				/*
+				  we want to make sure the ResMgr will do frequent
+				  evaluations now that we're in Backfill/Idle, so we
+				  can spawn the backfill client quickly.  we do NOT
+				  want to just immediately spawn it here, so that we
+				  have a little bit of delay (to prevent pegging the
+				  CPU in case of failure) and so that if there's a
+				  temporary failure to spawn, we don't forget to keep
+				  trying... 
+				*/
+			resmgr->start_poll_timer();
+			break;
+
+		case busy_act:
+				// nothing special to do (yet)
+			break;
+
+		default:
+			EXCEPT( "activity %s not yet supported in backfill state", 
+					activity_to_string(a) ); 
+		}
+		break;
+#endif /* HAVE_BACKFILL */
 
 	case matched_state:
 		rip->r_reqexp->unavail();
@@ -469,13 +672,40 @@ ResState::dprintf( int flags, char* fmt, ... )
 void
 ResState::set_destination( State new_state )
 {
-	r_destination = new_state;
 
-	if( r_destination != delete_state ) {
+	switch( new_state ) {
+	case delete_state:
+	case owner_state:
+			// these 2 are always valid, nothing special to check
+		break;
+
+	case matched_state:
+			// we don't want to set our destination to matched if our
+			// destination is already set to something
+			// else... otherwise, we'll allow it.
+		if( r_destination != no_state ) {
+			dprintf( D_ALWAYS, "Not setting destination state to Matched "
+					 "since destination already set to %s\n",
+					 state_to_string(r_destination) ); 
+			return;
+		}
+		break;
+
+	case claimed_state:
+			// this is only valid if we've got a pending request to
+			// claim that's already been stashed in our Claim object 
+		if( ! rip->r_cur->requestStream() ) {
+			EXCEPT( "set_destination(Claimed) called but there's no "
+					"pending request stream set in our current Claim" );
+		}
+		break;
+
+	default:
 		EXCEPT( "set_destination() doesn't work with %s state yet", 
 				state_to_string(r_destination) );
 	}
 
+	r_destination = new_state;
 	dprintf( D_FULLDEBUG, "Set destination state to %s\n", 
 			 state_to_string(new_state) );
 
@@ -485,7 +715,14 @@ ResState::set_destination( State new_state )
 	case owner_state:
 	case matched_state:
 	case unclaimed_state:
-		change( r_destination );
+		if( r_destination == claimed_state ) {
+				// this is a little weird, but we can't just enter
+				// claimed directly, we have to do all this gnarly
+				// claiming protocol stuff, first...
+			accept_request_claim( rip );
+		} else {
+			change( r_destination );
+		}
 		break;
 	case preempting_state:
 			// Can't do anything else until the starter exits.
@@ -493,9 +730,111 @@ ResState::set_destination( State new_state )
 	case claimed_state:
 		change( preempting_state );
 		break;
+#if HAVE_BACKFILL
+	case backfill_state:
+		if( r_act == idle_act ) {
+				// if we're idle, we can go immediately 
+			if( r_destination == claimed_state ) {
+				accept_request_claim( rip );
+			} else {
+				change( r_destination );
+			}
+		} else {
+				// otherwise, start killing, and we'll finish our
+				// journey when the backfill starter exits
+			change( killing_act );
+		}
+		break;
+#endif /* HAVE_BACKFILL */
+
 	default:
 		EXCEPT( "Unexpected state %s in ResState::set_destination",
 				state_to_string(r_state) );
 	}
 
 }
+
+
+int
+ResState::starterExited( void )
+{
+		// in many cases, the starter exiting is what allows us to go
+		// to our destination...
+	switch( r_destination ) {
+
+	case no_state:
+			// destination not set, nothing to do here...
+		break;
+
+	case delete_state:
+	case owner_state:
+	case matched_state:
+			// for all 3 of these, once the starter is gone, we can
+			// enter the destination directly.
+		dprintf( D_ALWAYS, "State change: starter exited\n" );
+		return change( r_destination );
+		break;
+
+	case claimed_state:
+			// now that a starter is gone, if we've got a pending
+			// request to claim, we can finally accept it.  if that
+			// pending request is gone for some reason, go back to
+			// the Owner state... 
+		dprintf( D_ALWAYS, "State change: starter exited\n" );
+		if( rip->r_cur->requestStream() ) {
+			accept_request_claim( rip );
+			return TRUE;
+		} else {
+			r_destination = no_state;
+			return change( owner_state );
+		}
+		break;
+
+	default:
+		EXCEPT( "Unexpected destination state (%s) in"
+				"ResState::starterExited()\n",
+				state_to_string(r_destination) );
+		break;
+	}
+
+		// if we're here, we didn't have a destination, so do some
+		// other state-related logic now that a starter exited
+
+	switch( r_state ) {
+
+	case claimed_state:
+			// TODO: if we're just claimed when it exits, goto idle_act
+		break;
+
+	case preempting_state:
+			// TODO: eventually, we should have a destination before
+			// we enter preempting, but for now, just allow it...
+		break;
+
+#if HAVE_BACKFILL
+	case backfill_state:
+		if( r_act == idle_act ) {
+			dprintf( D_ALWAYS, "ERROR: ResState::starterExited() called "
+					 "while already in Backfill/Idle\n" );
+			return FALSE;
+		}
+		dprintf( D_ALWAYS, "State change: Backfill starter exited\n" );
+		return change( idle_act );
+		break;
+#endif /* HAVE_BACKFILL */
+
+	default:
+		EXCEPT( "Unexpected current state (%s) in"
+				"ResState::starterExited()\n",
+				state_to_string(r_state) );
+		break;
+	}
+
+		// if we got here, we didn't do any state changes at all,
+		// which is bad
+		// TODO: fail more violently if we get here (only once we're
+		// really using destination for everything we can...)
+	return FALSE;
+}
+
+

@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -22,7 +22,7 @@
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
-#include "debug.h"
+#include "condor_debug.h"
 #include "condor_email.h"
 #include "basename.h"
 #include "condor_config.h"
@@ -80,7 +80,7 @@ email_corefile_tail( FILE* output, const char * subsystem_name )
 		/* Now send it */
 		if ( loc != -1 ) {
 			fprintf(output,"*** Last entry in core file %s\n\n",
-				basename(file));
+				condor_basename(file));
 			
 			(void)fseek( input, loc, 0 );
 
@@ -89,7 +89,7 @@ email_corefile_tail( FILE* output, const char * subsystem_name )
 			}
 
 			fprintf(output,"*** End of file %s\n\n",
-				basename(file));
+				condor_basename(file));
 		}
 
 		(void)fclose(input);
@@ -133,7 +133,7 @@ email_asciifile_tail( FILE* output, const char* file, int lines )
 		if ( first_line ) {
 			first_line = FALSE;
 			fprintf(output,"\n*** Last %d line(s) of file %s:\n",
-				lines,basename(file));
+				lines, condor_basename(file));
 		}
 		/* Now print the line */
 		display_line( loc, input, output );
@@ -142,7 +142,7 @@ email_asciifile_tail( FILE* output, const char* file, int lines )
 
 	/* if we printed any of the file, print a footer */
 	if ( first_line == FALSE ) {
-		fprintf(output,"*** End of file %s\n\n",basename(file));
+		fprintf(output,"*** End of file %s\n\n", condor_basename(file));
 	}
 }
 

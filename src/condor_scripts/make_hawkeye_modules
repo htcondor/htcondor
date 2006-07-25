@@ -1,18 +1,48 @@
 #! /s/std/bin/perl -w
+
+##/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+##
+## Condor Software Copyright Notice
+## Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+##
+## This source code is covered by the Condor Public License, which can
+## be found in the accompanying LICENSE.TXT file, or online at
+## www.condorproject.org.
+##
+## THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+## AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+## IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+## WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+## FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+## HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+## MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+## ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+## PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+## RIGHT.
+##
+##***************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
 use strict;
 
 # Prototypes
 sub main( @ );
+sub List( $@ );
 sub BuildTarball( $@ );
 
 # Command line stuff
 my $Program = "make_hawkeye_modules";
 my %Options =
     (
-     "[-d=dir]"		=> "Specify target directory 'dir'",
-     "[-r]"		=> "Enable release mode",
-     "[-f]"		=> "force",
-     "[-h]"		=> "Dump help",
+     "[-a|--all]"	=> "Generate all targets",
+     "[(-d|--dir)=dir]"	=> "Specify target directory 'dir'",
+     "[--dep]"		=> "List dependencies (implies -n)",
+     "[--dep-full]"	=> "List dependencies with full paths (implies -n)",
+     "[-v|--versions]"	=> "Dump version of file (implies -n)",
+     "[-n|--noexec]"	=> "No execute mode",
+     "[-r|--release]"	=> "Enable release mode",
+     "[-f|--force]"	=> "force",
+     "[-h|--help]"	=> "Dump help",
      "tarball"		=> "Target tarball",
      "[files]"		=> "List of '.hawk' files",
     );
@@ -27,6 +57,7 @@ $#ARGV = -1;
 sub main( @ )
 {
     my @Targets;
+    my $AllTargets = 0;
     my $ModulesFile = "Hawkeye.modules";
     my %KnownTargets;
     my $DefaultDir = ".";
@@ -35,29 +66,72 @@ sub main( @ )
     my $TargetDir = "";
     my $Force = 0;
     my $ReleaseMode = 0;
+    my $DumpVersion = 0;
+    my $DumpList = 0;
+    my $DumpDepend = 0;
+    my $DumpDependFull = 0;
+    my $Exec = 1;
 
     # Process the command line...
     foreach my $Arg ( @_ )
     {
 	# Option?
-	if ( $Arg =~ /^-(.*)/ )
+	if ( $Arg =~ /^(-|--)(\w[\w_\-]*)(?:=(.*))?/ )
 	{
-	    my $Opt = $1;
-	    if ( $Opt =~ /^h/ )
+	    my $Opt = "";
+	    my $LongOpt = "";
+	    my $Value = "";
+	    if ( $1 eq "-" ) {
+		$Opt = $2;
+	    } else {
+		$LongOpt = $2;
+	    }
+	    $Value = $3 if ( defined $3 );
+
+	    if ( ( $Opt eq "h" ) or ( $LongOpt eq "help" ) )
 	    {
 		Help( );
 	    }
-	    elsif ( $Opt =~ /^d=(.*)/ )
+	    elsif (  ( $Opt eq "d"  or  $LongOpt eq "dir"  ) and
+		     ( $Value ne "" )  )
 	    {
-		$TargetDir = $1;
+		$TargetDir = $Value;
 	    }
-	    elsif ( $Opt =~ /^f$/ )
+	    elsif ( $Opt eq "f" or $LongOpt eq "force" )
 	    {
 		$Force = 1;
 	    }
-	    elsif ( $Opt =~ /^r$/ )
+	    elsif ( $Opt eq "a" or $LongOpt eq "all" )
+	    {
+		$AllTargets = 1;
+	    }
+	    elsif ( $Opt eq "r" or $LongOpt eq "release" )
 	    {
 		$ReleaseMode = 1;
+	    }
+	    elsif ( $Opt eq "l" or $LongOpt eq "list" )
+	    {
+		$DumpList = 1;
+		$Exec = 0;
+	    }
+	    elsif ( $Opt eq "v" or $LongOpt eq "version" )
+	    {
+		$DumpVersion = 1;
+		$Exec = 0;
+	    }
+	    elsif ( $LongOpt eq "dep" )
+	    {
+		$DumpDepend = 1;
+		$Exec = 0;
+	    }
+	    elsif ( $LongOpt eq "dep-full" )
+	    {
+		$DumpDependFull = 1;
+		$Exec = 0;
+	    }
+	    elsif ( $Opt eq "n" or $LongOpt eq "noexec" )
+	    {
+		$Exec = 0;
 	    }
 	    else
 	    {
@@ -144,8 +218,15 @@ sub main( @ )
     # Verify that the TarBall specified
     if ( $#Targets < 0 )
     {
-	@Targets = sort keys %KnownTargets;
-	print "Using default list: " . join(" ", @Targets ) . "\n";
+	if ( $AllTargets )
+	{
+	    @Targets = sort keys %KnownTargets;
+	}
+	else
+	{
+	    print STDERR "No targets specfied; use --all to build all\n";
+	    exit 1;
+	}
     }
 
     # Quick checks of the defined targets
@@ -171,6 +252,47 @@ sub main( @ )
 	die "$Target is not a valid target"
 	    if ( ! exists $KnownTargets{$Target} );
     }
+
+    # List
+    if ( $DumpList || $DumpDepend || $DumpDependFull )
+    {
+	foreach my $Target ( @Targets )
+	{
+	    if ( $DumpDepend )
+	    {
+		print "$Target: ";
+	    }
+	    elsif ( $DumpDependFull )
+	    {
+		my $Version = $KnownTargets{$Target}{Version};
+		my $OS = $KnownTargets{$Target}{OS};
+		my $TarBall = $ModulePrefix . $Target . "-" . $Version .
+		    "-".  $OS . ".tar.gz";
+		my $TarBallFull = "$TargetDir/$TarBall";
+		print "$TarBallFull: ";
+	    }
+	    elsif ( $#Targets > 0 )
+	    {
+		print "$Target: ";
+	    }
+	    List( $DumpDepend, @{$KnownTargets{$Target}{HawkFiles}} );
+	}
+    }
+
+    # Version dump
+    if ( $DumpVersion )
+    {
+	foreach my $Target ( @Targets )
+	{
+	    my $Version = $KnownTargets{$Target}{Version};
+
+	    # Do it
+	    print "$Target: " if ( $#Targets > 0 );
+	    print "$Version\n";
+	}
+    }
+
+    exit 0 if ( ! $Exec );
 
     # Ok, now do the work
     print "Target directory = $TargetDir\n";
@@ -200,6 +322,47 @@ sub main( @ )
     exit 0;
 
 } # main()
+# ******************************************************
+
+# ******************************************************
+# List files
+# ******************************************************
+sub List( $@ )
+{
+    my $Depend = shift;
+    my @HawkFiles = @_;
+
+    # Walk through the files..
+    my @AllFiles;
+    foreach my $HawkFile ( @HawkFiles )
+    {
+	die "$HawkFile does not exist" if ( ! -f $HawkFile );
+	push( @AllFiles, $HawkFile ) if ( $Depend );
+
+	open( HAWKFILE, $HawkFile ) || die "Can't read $HawkFile";
+	while( <HAWKFILE> )
+	{
+	    # All we care about is the ModuleFiles line(s)...
+	    if ( /MODULEFILES:\s*(.+)/i )
+	    {
+		my @Files = split( /\s+/, $1 );
+		foreach my $File ( @Files )
+		{
+		    die "$HawkFile line $.: $File does not exist"
+			if ( ! -f $File );
+		}
+		push( @AllFiles, @Files );
+	    }
+	}
+	close( HAWKFILE );
+    }
+
+    # Ok, now just build the tarball...
+    print join( " ", @AllFiles ) . "\n";
+
+    return 0;
+
+} # List ()
 # ******************************************************
 
 # ******************************************************

@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -38,6 +38,7 @@
 
 #include "condor_common.h"
 #include "startd.h"
+#include "my_popen.h"
 
 
 StarterMgr::StarterMgr()
@@ -254,28 +255,12 @@ StarterMgr::makeStarter( const char* path )
 {
 	Starter* new_starter;
 	FILE* fp;
-	MyString cmd;
-
-#ifdef WIN32
-	/* if our path contains spaces, which it often does
-		(e.g. C:\Program Files\Condor\bin) we need to keep
-		windows happy by placing quotes around it. 
-		-stolley 7/2002 
-	*/
-	cmd += "\"";
-	cmd += path;
-	cmd += "\"";
-#else
-	cmd += path;
-#endif
-
-
-	cmd += " -classad";
+	char *args[] = {const_cast<char*>(path), "-classad", NULL};
 	char buf[1024];
 
 		// first, try to execute the given path with a "-classad"
 		// option, and grab the output as a ClassAd
-	fp = popen( cmd.Value(), "r" );
+	fp = my_popenv( args, "r", FALSE );
 
 	if( ! fp ) {
 		dprintf( D_ALWAYS, "Failed to execute %s, ignoring\n", path );
@@ -293,7 +278,7 @@ StarterMgr::makeStarter( const char* path )
 			return NULL;
 		}
 	}
-	pclose( fp );
+	my_pclose( fp );
 	if( ! read_something ) {
 		dprintf( D_ALWAYS, 
 				 "\"%s -classad\" did not produce any output, ignoring\n", 

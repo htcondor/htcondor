@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -35,6 +35,7 @@
 
 #include "condor_common.h"
 #include "ntsysinfo.h"
+#include <psapi.h>
 
 // Initialize static members in the class
 int CSysinfo::reference_count = 0;
@@ -126,12 +127,17 @@ CSysinfo::~CSysinfo()
 	reference_count--;
 	if ( reference_count == 0 ) {
 		FreeLibrary(hNtDll);
-		VirtualFree (memptr, 0, MEM_RELEASE);
+		if ( memptr ) {
+			VirtualFree (memptr, 0, MEM_RELEASE);
+			memptr = NULL;
+		}
 	}
 }
 
 int CSysinfo::GetPIDs (ExtArray<pid_t> & dest)
 {
+#if 0
+	// This code is deprecated in favor of using supported functions below
 	int s=0;
 	pid_t curpid = 0;
 	DWORD *startblock = memptr;
@@ -147,6 +153,42 @@ int CSysinfo::GetPIDs (ExtArray<pid_t> & dest)
 		}
 	}
 	return (s);
+#endif
+	HANDLE hProcessSnap;
+	PROCESSENTRY32 pe32;
+	int s;
+
+	s = 0;
+
+	// Take a snapshot of all processes in the system.
+	hProcessSnap = CreateToolhelp32Snapshot( TH32CS_SNAPPROCESS, 0 );
+	
+	if( hProcessSnap == INVALID_HANDLE_VALUE )
+	{
+		return 0;
+	}
+	
+	// Set the size of the structure before using it.
+	pe32.dwSize = sizeof( PROCESSENTRY32 );
+	
+	// Retrieve information about the first process,
+	// and exit if unsuccessful
+	if( !Process32First( hProcessSnap, &pe32 ) )
+	{
+		CloseHandle( hProcessSnap ); // Must clean up the snapshot object!
+		return 0;
+	}
+	
+	// Now walk the snapshot of processes, and
+	// stick each one in our ExtArray to form our Pid list.
+	do {
+		dest[s++] = pe32.th32ProcessID;
+	} while( Process32Next( hProcessSnap, &pe32 ) );
+
+  // Don't forget to clean up the snapshot object!
+  CloseHandle( hProcessSnap );
+  
+  return s; // return the number of PIDs we got
 }
 
 DWORD CSysinfo::NumThreads (pid_t pid)
@@ -160,8 +202,11 @@ DWORD CSysinfo::NumThreads (pid_t pid)
 		return 0;
 }
 
-BOOL CSysinfo::GetProcessName (pid_t pid, char *dest)
+BOOL CSysinfo::GetProcessName (pid_t pid, char *dest, int sz)
 {
+	// this code is deprecated. It was causing ACCESS_VIOLATIONS
+	// on Windows XP.
+#if 0
 	DWORD *block;
 	Refresh();
 	block = FindBlock (pid);
@@ -171,6 +216,17 @@ BOOL CSysinfo::GetProcessName (pid_t pid, char *dest)
 		return FALSE;
 	}
 	MakeAnsiString ((WORD*)(*(block+15)), dest);
+#endif
+	HANDLE Hnd;
+
+	if( ! (Hnd = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, pid))) {
+		return FALSE;
+	}
+
+	if ( ! GetModuleBaseName(Hnd, NULL, dest, sz) ) {
+		return FALSE;
+	}
+	
 	return TRUE;
 }
 
@@ -186,12 +242,67 @@ DWORD CSysinfo::GetHandleCount (pid_t pid)
 
 DWORD CSysinfo::GetParentPID (pid_t pid)
 {
+#if 0
+	/* this is broken on some versions of XP, so 
+	   it is deprecated. See new implementation below. 
+	 */
 	DWORD *block;
 	Refresh();
 	block = FindBlock (pid);
 	if (!block)
 		return 0;
 	return block[18];
+#endif
+	PROCESSENTRY32 pe32;
+
+	if ( GetProcessEntry(pid, pe32) ) {
+		return pe32.th32ParentProcessID;
+	} else {
+		return 0;
+	}
+}
+
+int
+CSysinfo::GetProcessEntry(pid_t pid, PROCESSENTRY32 &pe32 ) {
+	
+	HANDLE hProcessSnap;
+	int result;
+
+	result = FALSE;
+
+	// Take a snapshot of all processes in the system.
+	hProcessSnap = CreateToolhelp32Snapshot( TH32CS_SNAPPROCESS, 0 );
+	
+	if( hProcessSnap == INVALID_HANDLE_VALUE )
+	{
+		return FALSE;
+	}
+	
+	// Set the size of the structure before using it.
+	pe32.dwSize = sizeof( PROCESSENTRY32 );
+	
+	// Retrieve information about the first process,
+	// and exit if unsuccessful
+	if( !Process32First( hProcessSnap, &pe32 ) )
+	{
+		CloseHandle( hProcessSnap ); // Must clean up the snapshot object!
+		return FALSE;
+	}
+	
+	// Now walk the snapshot of processes, and
+	// when we find our pid, stop.
+	do {
+		if ( pe32.th32ProcessID == pid ) {
+			// Found it! Woohoo!
+			result = TRUE;
+			break;
+		}
+	} while( Process32Next( hProcessSnap, &pe32 ) );
+
+  // Don't forget to clean up the snapshot object!
+  CloseHandle( hProcessSnap );
+  
+  return result;
 }
 
 #if 0
@@ -395,5 +506,76 @@ __inline DWORD* CSysinfo::FindBlock (DWORD pid)
 			startblock = memptr;
 	}
 	return NULL;
+}
+
+// This function is sortof duplicated in ProcAPI::GetProcInfo(),
+// but if all you want to know is some pid's bday, it's much
+// faster to call this function than to iterate over all Pids 
+// in the system and dig through the registry.
+bool
+CSysinfo::GetProcessBirthday(pid_t pid, FILETIME* ft) {
+
+	HANDLE pidHnd;
+	FILETIME crtime, extime, kerntime, usertime;
+	BOOL result;
+
+	ZeroMemory(&crtime, sizeof(FILETIME));
+	ZeroMemory(&extime, sizeof(FILETIME));
+	ZeroMemory(&kerntime, sizeof(FILETIME));
+	ZeroMemory(&usertime, sizeof(FILETIME));
+
+	pidHnd = OpenProcess( PROCESS_QUERY_INFORMATION, 
+			FALSE,
+			pid );
+
+	if ( pidHnd == NULL ) {
+		dprintf(D_ALWAYS, "CSysinfo::GetProcessBirthday() - OpenProcess() "
+			   "failed with err=%d\n", GetLastError());	
+		return false;
+	}
+
+
+	result = GetProcessTimes(pidHnd, &crtime, &extime, &kerntime, &usertime);
+
+	if ( result == 0 ) {
+		dprintf(D_ALWAYS, "CSysinfo::GetProcessBirthday() - GetProcessTimes() "
+			   "failed with err=%d\n", GetLastError());	
+		CloseHandle(pidHnd);
+		return false;
+	}
+
+	ft->dwLowDateTime = crtime.dwLowDateTime;
+	ft->dwHighDateTime = crtime.dwHighDateTime; 
+
+	CloseHandle(pidHnd);
+	return true;
+}
+
+// Return values: 
+// 1 First pid is younger than second pid. 
+//  0 First pid is equal to second pid. 
+// -1 First pid is older than second pid. 
+//
+int
+CSysinfo::ComparePidAge(pid_t pid1, pid_t pid2 ) {
+
+	FILETIME ft1, ft2;
+
+	ZeroMemory(&ft1, sizeof(FILETIME));
+	ZeroMemory(&ft2, sizeof(FILETIME));
+
+	if (! GetProcessBirthday(pid1, &ft1)) {
+		dprintf(D_ALWAYS, "Should never happen: ComparePidAge(%d) failed\n",
+				pid1);
+		return 0;
+	}
+
+	if (! GetProcessBirthday(pid2, &ft2)) {
+		dprintf(D_ALWAYS, "Should never happen: ComparePidAge(%d) failed\n",
+				pid2);
+		return 0;
+	}
+
+	return CompareFileTime(&ft1, &ft2);
 }
 

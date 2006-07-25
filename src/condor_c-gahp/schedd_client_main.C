@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -30,20 +30,22 @@
 
 #include "schedd_client.h"
 #include "io_loop.h"
-
+#include "PipeBuffer.h"
 
 // How often we contact the schedd (secs)
 extern int contact_schedd_interval;
 
-// How often we check results in the pipe (secs)
-extern int check_requests_interval;
 
-
-char *mySubSystem = "C_GAHP";	// used by Daemon Core
+char *mySubSystem = "C_GAHP_WORKER_THREAD";	// used by Daemon Core
 
 char * myUserName = NULL;
 
 extern char * ScheddAddr;
+
+extern int RESULT_OUTBOX;
+extern int REQUEST_INBOX;
+
+extern PipeBuffer request_buffer;
 
 int io_loop_pid = -1;
 
@@ -57,11 +59,11 @@ extern int schedd_loop( void* arg, Stream * s);
 void
 usage( char *name )
 {
-	dprintf( D_ALWAYS,
-		"Usage: condor_gahp -s <schedd name>\n",
-		basename( name ) );
+	dprintf( D_ALWAYS, "Usage: c-gahp_worker_thread -s <schedd> [-P <pool>] -I <fd> -O <fd> \n");
 	DC_Exit( 1 );
 }
+
+int init_pipes();
 
 int
 main_init( int argc, char ** const argv )
@@ -83,6 +85,13 @@ main_init( int argc, char ** const argv )
 			ScheddAddr = strdup( argv[i + 1] );
 			i++;
 			break;
+		case 'P':
+			// specify what pool (i.e. collector) to lookup the schedd name
+			if ( argc <= i + 1 )
+				usage( argv[0] );
+			ScheddPool = strdup( argv[i + 1] );
+			i++;
+			break;
 		default:
 			usage( argv[0] );
 			break;
@@ -96,81 +105,50 @@ main_init( int argc, char ** const argv )
 
 	Init();
 	Register();
+	Reconfig();
 
-	(void)daemonCore->Register_Timer( 1,
-											(TimerHandler)&my_fork,
-											"my_fork", NULL );
+	// inherit the DaemonCore pipes that our parent created
+	REQUEST_INBOX = daemonCore->Inherit_Pipe(fileno(stdin),
+						 false,		// read pipe
+						 true,		// registerable
+						 false);	// blocking
+	RESULT_OUTBOX = daemonCore->Inherit_Pipe(fileno(stdout),
+						 true,		// write pipe
+						 false,		// nonregistrable
+						 false);	// blocking
 
+	request_buffer.setPipeEnd( REQUEST_INBOX );
+
+
+	daemonCore->Register_Timer(0, 
+		  (TimerHandler)&init_pipes,
+		  "init_pipes", NULL );
+
+
+    // Just set up timers....
+    contactScheddTid = daemonCore->Register_Timer( 
+		   contact_schedd_interval,
+		  (TimerHandler)&doContactSchedd,
+		  "doContactSchedD", NULL );
+
+
+	
 	return TRUE;
 }
 
+int 
+init_pipes() {
+	dprintf (D_FULLDEBUG, "PRE Request pipe initialized\n");
 
-int
-my_fork () {
-
-	//
-	// There are two main continuing tasks:
-	// 1) Listen for GAHP commands on stdin and display results to stdout
-	// 2) Collect tasks from #1 and send them to schedd periodically
-	// We're going to fork once in this method using DC::Create_Thread().
-	// This (parent) thread will do #2, while the child will run in a loop doing #1
-	// Both processes will hang around until (hopefully):
-	//		child receives QUIT -> exit()s -> reaper will trigger -> parent DC_Exit()s
-	//	or if parent receives SIGTERM/SIGKILL it terminates the child
-	//
+	(void)daemonCore->Register_Pipe (
+									 request_buffer.getPipeEnd(),
+									 "request pipe",
+									 (PipeHandler)&request_pipe_handler,
+									 "request_pipe_handler");
 
 
-	// Create two pipes that threads will talk via
-	inter_thread_io_t * inter_thread_io = (inter_thread_io_t*)malloc (sizeof (inter_thread_io_t));
-	if (daemonCore->Create_Pipe (inter_thread_io->request_pipe, true) == FALSE ||
-		daemonCore->Create_Pipe (inter_thread_io->result_pipe, true) == FALSE ||
-		daemonCore->Create_Pipe (inter_thread_io->request_ack_pipe, true) == FALSE) {
-		return FALSE;
-	}
-
-	// Register the reaper for the child process
-	int reaper_id =
-		daemonCore->Register_Reaper(
-				"schedDClientIOReaper",
-				(ReaperHandler)io_loop_reaper,
-				"schedDClientIOReaper");
-
-
-	// Fork off to do the io loop
-	inter_thread_io_t * inter_thread_io2 = (inter_thread_io_t *)malloc (sizeof (inter_thread_io_t));
-	memcpy (inter_thread_io2, inter_thread_io, sizeof (inter_thread_io_t));
-	io_loop_pid =
-		daemonCore->Create_Thread ((ThreadStartFunc)&io_loop,
-									(void*)inter_thread_io2,
-									NULL,
-									reaper_id);
-
-	// Close unneeded pipes
-	close (inter_thread_io->request_ack_pipe[0]);
-	close (inter_thread_io->request_pipe[1]);
-	close (inter_thread_io->result_pipe[0]);
-	close (STDIN_FILENO);
-
-	// This (parent) thread will service schedd requests
-	schedd_thread ((void*)inter_thread_io, NULL);	// This should set timers and return immediately
-
-	return TRUE;
-}
-
-int
-io_loop_reaper (Service*, int pid, int exit_status) {
-
-	dprintf (D_ALWAYS, "Child process %d exited\n", pid);
-
-	// Our child exited (presumably b/c we got a QUIT command),
-	// so should we
-	// If we're in this function there shouldn't be much cleanup to be done,
-	// except the command queue
-	if (pid == io_loop_pid) //it better...
-		io_loop_pid = -1;
-
-	DC_Exit(0);
-	return TRUE;
+	dprintf (D_FULLDEBUG, "Request pipe initialized\n");
+	return 0;
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -178,9 +156,8 @@ io_loop_reaper (Service*, int pid, int exit_status) {
 
 void
 Init() {
-	contact_schedd_interval = param_integer ("C_GAHP_CONTACT_SCHEDD_DELAY", 20);
-	check_requests_interval = param_integer ("C_GAHP_CHECK_NEW_REQUESTS_DELAY", 5);
-
+	contact_schedd_interval = 
+		param_integer ("C_GAHP_CONTACT_SCHEDD_DELAY", 20);
 }
 
 void
@@ -190,6 +167,7 @@ Register() {
 void
 Reconfig()
 {
+	useXMLClassads = param_boolean( "GAHP_USE_XML_CLASSADS", false );
 }
 
 
@@ -203,8 +181,10 @@ main_config( bool is_full )
 int
 main_shutdown_fast()
 {
+#ifndef WIN32
 	if (io_loop_pid != -1)
 		kill(io_loop_pid, SIGKILL);
+#endif
 	DC_Exit(0);
 	return TRUE;	// to satisfy c++
 }
@@ -212,8 +192,10 @@ main_shutdown_fast()
 int
 main_shutdown_graceful()
 {
+#ifndef WIN32
 	if (io_loop_pid != -1)
 		kill(io_loop_pid, SIGTERM);
+#endif
 	DC_Exit(0);
 	return TRUE;	// to satify c++
 }

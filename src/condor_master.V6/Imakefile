@@ -5,13 +5,12 @@ CFLAGS = $(STD_C_FLAGS)
 C_PLUS_FLAGS =  $(STD_C_PLUS_FLAGS)
 LIB = $(DAEMONCORE_LIB) $(STD_LIBS)
 
-OBJ = master.o daemon.o
+soapobjs(master)
 
-c_plus_target($(NAME),$(OBJ),$(LIB))
-release_target($(NAME),sbin,EXECUTABLE_MODE)
-strip_target($(NAME),sbin,EXECUTABLE_MODE)
-static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/sbin)
-pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))
-purecov_c_plus_target($(NAME).pc,$(OBJ),$(LIB))
+OBJ = master.o daemon.o $(SOAP_OBJS)
+
+public_c_plus_target($(NAME),sbin,$(OBJ),$(LIB))
 
 html:
+
+gen_soapfiles(master,condorMaster)

@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -20,48 +20,135 @@
   * RIGHT.
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-#ifndef __CLASSAD_PACKAGE_H__
-#define __CLASSAD_PACKAGE_H__
+// classad.h
+//
+// Definition of ClassAd classes and ClassAdList class. They are derived from
+// AttrList class and AttrListList class respectively.
+//
 
-#include "../condor_classad.V6/common.h"
-#include "../condor_classad.V6/exprTree.h"
-#include "../condor_classad.V6/matchClassad.h"
-#include "../condor_classad.V6/sink.h"
-#include "../condor_classad.V6/source.h"
-#include "../condor_classad.V6/xmlSource.h"
-#include "../condor_classad.V6/xmlSink.h"
+#ifndef _CLASSAD_H
+#define _CLASSAD_H
 
-#if defined( COLLECTIONS )
-#include "../condor_classad.V6/collectionServer.h"
-#include "../condor_classad.V6/collectionClient.h"
-#include "../condor_classad.V6/query.h"
-#else
-#include "../condor_classad.V6/noCollections.h"
+#include <fstream.h>
+
+#include "condor_exprtype.h"
+#include "condor_ast.h"
+#include "condor_attrlist.h"
+
+#define		CLASSAD_MAX_ADTYPE			50
+
+//for the shipping functions -- added by Lei Cao
+#include "stream.h"
+
+struct AdType                   // type of a ClassAd.
+{
+    int		number;             // type number, internal thing.
+    char*	name;               // type name.
+    
+    AdType(const char * = NULL);      // constructor.
+    ~AdType();                  // destructor.
+};
+
+
+class ClassAd : public AttrList
+{
+    public :
+
+		ClassAd();								// No associated AttrList list
+//		ClassAd(ProcObj*);						// create from a proc object
+//		ClassAd(const CONTEXT*);				// create from a CONTEXT
+        ClassAd(FILE*,char*,int&,int&,int&);	// Constructor, read from file.
+        ClassAd(char *, char);					// Constructor, from string.
+		ClassAd(const ClassAd&);				// copy constructor
+        virtual ~ClassAd();						// destructor
+
+		ClassAd& operator=(const ClassAd& other);
+
+		// Type operations
+        void		SetMyTypeName(const char *); /// my type name set.
+        const char*	GetMyTypeName();		// my type name returned.
+        void 		SetTargetTypeName(const char *);// target type name set.
+        const char*	GetTargetTypeName();	// target type name returned.
+        int			GetMyTypeNumber();			// my type number returned.
+        int			GetTargetTypeNumber();		// target type number returned.
+
+		// Requirement operations
+#if 0
+		int			SetRequirements(char *);
+		void        SetRequirements(ExprTree *);
+#endif
+		ExprTree	*GetRequirements(void);
+
+		// Ranking operations
+#if 0
+		int 		SetRankExpr(char *);
+		void		SetRankExpr(ExprTree *);
+#endif
+		ExprTree	*GetRankExpr(void);
+
+		// Sequence numbers
+		void		SetSequenceNumber(int);
+		int			GetSequenceNumber(void);
+
+		// Matching operations
+        int			IsAMatch(class ClassAd*);			  // tests symmetric match
+		friend bool operator==(class ClassAd&,class ClassAd&);// same as symmetric match
+		friend bool operator>=(class ClassAd&,class ClassAd&);// lhs satisfies rhs
+		friend bool operator<=(class ClassAd&,class ClassAd&);// rhs satisifes lhs
+
+        // shipping functions
+        int put(Stream& s);
+		int initFromStream(Stream& s);
+
+#if defined(USE_XDR)
+		// xdr shipping
+		int put (XDR *);
+		int get (XDR *);
 #endif
 
-// The following code is only temporary, and should be removed after the
-// rest of condor code starts explicitly using namespaces such as classad::
-// and condor:: and dagman:: in class names and meathods.
-#if defined( WANT_NAMESPACES )
-using namespace classad;
-#endif
+		// misc
+		class ClassAd*	FindNext();
+        virtual int	fPrint(FILE*);				// print the AttrList to a file
+		int         sPrint(MyString &output);   
+		void		dPrint( int );				// dprintf to given dprintf level
+		void		clear( void );				// clear out all attributes
 
-#include "condor_attributes.h"
-#include "condor_adtypes.h"
-#include "condor_io.h"
+		// poor man's update function until ClassAd Update Protocol  --RR
+		 void ExchangeExpressions (class ClassAd *);
 
-BEGIN_NAMESPACE( classad )
+    private :
 
-void printClassAdExpr( ExprTree * );
-void printClassAdValue( Value & );
-ClassAd* getOldClassAd( Stream* );
-bool getOldClassAd( Stream*, ClassAd& );
-bool putOldClassAd( Stream*, ClassAd& );
-bool getOldClassAdNoTypes( Stream *, ClassAd& );  // NAC
-bool putOldClassAdNoTypes( Stream *, ClassAd& );  // NAC
+		AdType*		myType;						// my type field.
+        AdType*		targetType;					// target type field.
+		// (sequence number is stored in attrlist)
+};
 
-static const int ATTRLIST_MAX_EXPRESSION = 10240;
+typedef int (*SortFunctionType)(AttrList*,AttrList*,void*);
 
-END_NAMESPACE
+class ClassAdList : public AttrListList
+{
+  public:
+	ClassAdList() : AttrListList() {}
+
+	ClassAd*	Next() { return (ClassAd*)AttrListList::Next(); }
+	void		Rewind() { AttrListList::Open(); }
+	int			Length() { return AttrListList::MyLength(); }
+	void		Insert(ClassAd* ca) { AttrListList::Insert((AttrList*)ca); }
+	int			Delete(ClassAd* ca){return AttrListList::Delete((AttrList*)ca);}
+	ClassAd*	Lookup(const char* name);
+
+	// User supplied function should define the "<" relation and the list
+	// is sorted in ascending order.  User supplied function should
+	// return a "1" if relationship is less-than, else 0.
+	// NOTE: Sort() is _not_ thread safe!
+	void   Sort(SortFunctionType,void* =NULL);
+
+	// Count ads in list that meet constraint.
+	int         Count( ExprTree *constraint );
+
+  private:
+	void	Sort(SortFunctionType,void*,AttrListAbstract*&);
+	static int SortCompare(const void*, const void*);
+};
 
 #endif

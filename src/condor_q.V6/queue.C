@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -21,16 +21,13 @@
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#define EXPERIMENTAL
-
 #include "condor_common.h"
 #include "condor_config.h"
 #include "condor_accountant.h"
 #include "condor_classad.h"
 #include "condor_debug.h"
-#include "condor_api.h"
-//#include "condor_query.h"
-//#include "condor_q.h"
+#include "condor_query.h"
+#include "condor_q.h"
 #include "condor_io.h"
 #include "condor_string.h"
 #include "condor_attributes.h"
@@ -39,7 +36,7 @@
 #include "get_daemon_name.h"
 #include "MyString.h"
 #include "extArray.h"
-//#include "ad_printmask.h"
+#include "ad_printmask.h"
 #include "internet.h"
 #include "sig_install.h"
 #include "format_time.h"
@@ -48,11 +45,39 @@
 #include "my_hostname.h"
 #include "basename.h"
 #include "metric_units.h"
-#include "condor_classad_analysis.h"
 #include "globus_utils.h"
 #include "error_utils.h"
 #include "print_wrapped_text.h"
 #include "condor_distribution.h"
+#include "string_list.h"
+
+#ifdef WANT_CLASSAD_ANALYSIS
+#include "../classad_analysis/analysis.h"
+#endif
+
+#if WANT_QUILL
+#include "sqlquery.h"
+#endif /* WANT_QUILL */
+
+/* Since this enum can have conditional compilation applied to it, I'm
+	specifying the values for it to keep their actual integral values
+	constant in case someone decides to write this information to disk to
+	pass it to another daemon or something. This enum is used to determine
+	who to talk to when using the -direct option. */
+enum {
+	/* don't know who I should be talking to */
+	DIRECT_UNKNOWN = 0,
+	/* start at the rdbms and fail over like normal */
+	DIRECT_ALL = 1,
+#if WANT_QUILL
+	/* talk directly to the rdbms system */
+	DIRECT_RDBMS = 2,
+	/* talk directly to the quill daemon */
+	DIRECT_QUILLD = 3,
+#endif
+	/* talk directly to the schedd */
+	DIRECT_SCHEDD = 4
+};
 
 extern 	"C" int SetSyscalls(int val){return val;}
 extern  void short_print(int,int,const char*,int,int,int,int,int,const char *);
@@ -66,25 +91,68 @@ static 	void io_display (ClassAd *);
 static 	char * buffer_io_display (ClassAd *);
 static 	void displayJobShort (ClassAd *);
 static 	char * bufferJobShort (ClassAd *);
-static 	void shorten (char *, int);
-static	bool show_queue (char* scheddAddr, char* scheddName, char* scheddMachine);
-static	bool show_queue_buffered (char* scheddAddr, char* scheddName,
-								  char* scheddMachine);
+
+/* if useDB is false, then v1 =scheddAddr, v2=scheddName, v3=scheddMachine, v4 ignored;
+   if useDB is true,  then v1 =quillName,  v2=dbIpAddr,   v3=dbName, v4=dbPassword
+*/
+static	bool show_queue (char* v1, char* v2, char* v3, char* v4, bool useDB);
+static	bool show_queue_buffered (char* v1, char* v2, char* v3, char* v4, bool useDB);
+
+/* a type used to point to one of the above two functions */
+typedef bool (*show_queue_fp)(char* v1, char* v2, char* v3, char* v4, bool useDB);
+
+static bool read_classad_file(const char *filename, ClassAdList &classads);
+
+/* convert the -direct aqrgument prameter into an enum */
+unsigned int process_direct_argument(char *arg);
+
+#if WANT_QUILL
+/* execute a database query directly */ 
+static void exec_db_query(char *quillName, char *dbIpAddr, char *dbName,char *queryPassword);
+
+/* build database connection string */
+static char * getDBConnStr(char *&, char *&, char *&, char *&);
+
+/* get the quill address for the quillName specified */
+static QueryResult getQuillAddrFromCollector(char *quillName, char *&quillAddr);
+
+/* avgqueuetime is used to indicate a request to query average wait time for uncompleted jobs in queue */
+static  bool avgqueuetime = false;
+#endif
+
+/* directDBquery means we will just run a database query and return results directly to user */
+static  bool directDBquery = false;
+
+/* who is it that I should directly ask for the queue, defaults to the normal
+	failover semantics */
+static unsigned int direct = DIRECT_ALL;
 
 static 	int verbose = 0, summarize = 1, global = 0, show_io = 0, dag = 0, show_held = 0;
 static  int use_xml = 0;
 static  bool expert = false;
+
 static 	int malformed, unexpanded, running, idle, held;
+
+static  char *jobads_file = NULL;
+static  char *machineads_file = NULL;
 
 static	CondorQ 	Q;
 static	QueryResult result;
+
+#if WANT_QUILL
+static  QueryResult result2;
+#endif
+
 static	CondorQuery	scheddQuery(SCHEDD_AD);
 static	CondorQuery submittorQuery(SUBMITTOR_AD);
+
 static	ClassAdList	scheddList;
 
-static  ClassAdAnalyzer analyzer;	// NAC
+#ifdef WANT_CLASSAD_ANALYSIS
+static  ClassAdAnalyzer analyzer;
+#endif
 
-static char* format_owner( char*, ClassAd* );
+static char* format_owner( char*, AttrList* );
 
 // clusterProcString is the container where the output strings are
 //    stored.  We need the cluster and proc so that we can sort in an
@@ -122,8 +190,8 @@ static	bool		querySubmittors = false;
 static	char		constraint[4096];
 static	DCCollector* pool = NULL; 
 static	char		scheddAddr[64];	// used by format_remote_host()
-//static	AttrListPrintMask 	mask;
-static	ClassAdPrintMask 	mask;
+static	AttrListPrintMask 	mask;
+static CollectorList * Collectors = NULL;
 
 // for run failure analysis
 static  int			findSubmittor( char * );
@@ -133,6 +201,7 @@ static	void		doRunAnalysis( ClassAd* );
 static	char *		doRunAnalysisToBuffer( ClassAd* );
 struct 	PrioEntry { MyString name; float prio; };
 static 	bool		analyze	= false;
+static  bool        better_analyze = false;
 static	bool		run = false;
 static	bool		goodput = false;
 static	char		*fixSubmittorName( char*, int );
@@ -145,45 +214,139 @@ static  ExtArray<PrioEntry> prioTable;
 #ifndef WIN32
 template class ExtArray<PrioEntry>;
 #endif
+	
+const int SHORT_BUFFER_SIZE = 8192;
+const int LONG_BUFFER_SIZE = 16384;	
+char return_buff[LONG_BUFFER_SIZE];
 
-int buffer_size = 8192;	
-char return_buff[4096];
+char *quillName = NULL;
+char *quillAddr = NULL;
+char *quillMachine = NULL;
+char *dbIpAddr = NULL;
+char *dbName = NULL;
+char *queryPassword = NULL;
+
+static void freeConnectionStrings() {
+	if(quillName) {
+		free(quillName);
+		quillName = NULL;
+	}
+	if(quillAddr) {
+		free(quillAddr);
+		quillAddr = NULL;
+	}
+	if(quillMachine) {
+		free(quillMachine);
+		quillMachine = NULL;
+	}
+	if(dbIpAddr) {
+		free(dbIpAddr);
+		dbIpAddr = NULL;
+	}
+	if(dbName) {
+		free(dbName);
+		dbName = NULL;
+	}
+	if(queryPassword) {
+		free(queryPassword);
+		queryPassword = NULL;
+	}
+}
+
+#if WANT_QUILL
+/* this function for checking whether database can be used for querying in local machine */
+static bool checkDBconfig() {
+	char *tmp;
+
+	if (param_boolean("QUILL_ENABLED", false) == false) {
+		return false;
+	};
+
+	tmp = param("QUILL_NAME");
+	if (!tmp) {
+		return false;
+	}
+	free(tmp);
+
+	tmp = param("QUILL_DB_IP_ADDR");
+	if (!tmp) {
+		return false;
+	}
+	free(tmp);
+
+	tmp = param("QUILL_DB_NAME");
+	if (!tmp) {
+		return false;
+	}
+	free(tmp);
+
+	tmp = param("QUILL_DB_QUERY_PASSWORD");
+	if (!tmp) {
+		return false;
+	}
+	free(tmp);
+
+	return true;
+}
+#endif /* WANT_QUILL */
 
 extern 	"C"	int		Termlog;
 
 int main (int argc, char **argv)
 {
 	ClassAd		*ad;
-	bool		first = true;
+	bool		first;
 	char		scheddName[64];
 	char		scheddMachine[64];
 	char		*tmp;
+	bool        useDB; /* Is there a database to query for a schedd */
+	int         retval;
+	show_queue_fp sqfp;
+
+	Collectors = NULL;
 
 	// load up configuration file
 	myDistro->Init( argc, argv );
 	config();
 
+#if WANT_QUILL
+		/* by default check the configuration for local database */
+	useDB = checkDBconfig();
+#else 
+	useDB = FALSE;
+#endif /* WANT_QUILL */
 
 #if !defined(WIN32)
 	install_sig_handler(SIGPIPE, SIG_IGN );
 #endif
 
-	if ( stricmp(basename(argv[0]),"condor_analyze")==0 ) {
-		analyze = true;
-	}
-
 	// process arguments
 	processCommandLineArguments (argc, argv);
+
+	// Since we are assuming that we want to talk to a DB in the normal
+	// case, this will ensure that we don't try to when loading the job queue
+	// classads from file.
+	if (jobads_file != NULL) {
+		useDB = FALSE;
+	}
+
+	if (Collectors == NULL) {
+		Collectors = CollectorList::create();
+	}
 
 	// check if analysis is required
 	if( analyze ) {
 		setupAnalysis();
 	}
+
 	// if we haven't figured out what to do yet, just display the
 	// local queue 
 	if (!global && !querySchedds && !querySubmittors) {
+
 		Daemon schedd( DT_SCHEDD, 0, 0 );
+
 		if ( schedd.locate() ) {
+
 			sprintf( scheddAddr, "%s", schedd.addr() );
 			if( (tmp = schedd.name()) ) {
 				sprintf( scheddName, "%s", tmp );
@@ -195,49 +358,207 @@ int main (int argc, char **argv)
 			} else {
 				sprintf( scheddMachine, "Unknown" );
 			}
-			if ( verbose ) {
-				exit( !show_queue( scheddAddr, scheddName,
-							scheddMachine ) );
-			} else {
-				exit( !show_queue_buffered( scheddAddr, scheddName,
-							scheddMachine ) );
-			}
-		} else {
-			fprintf( stderr, "Error: %s\n", schedd.error() );
-			if (!expert) {
-				fprintf(stderr, "\n");
-				print_wrapped_text("Extra Info: You probably saw this "
-								   "error because the condor_schedd is "
-								   "not running on the machine you are "
-								   "trying to query.  If the condor_schedd "
-								   "is not running, the Condor system "
-								   "will not be able to find an address "
-								   "and port to connect to and satisfy "
-								   "this request.  Please make sure "
-								   "the Condor daemons are running and "
-								   "try again.\n", stderr );
-				print_wrapped_text("Extra Info: "
-								   "If the condor_schedd is running on the "
-								   "machine you are trying to query and "
-								   "you still see the error, the most "
-								   "likely cause is that you have setup a " 
-								   "personal Condor, you have not "
-								   "defined SCHEDD_NAME in your "
-								   "condor_config file, and something "
-								   "is wrong with your "
-								   "SCHEDD_ADDRESS_FILE setting. "
-								   "You must define either or both of "
-								   "those settings in your config "
-								   "file, or you must use the -name "
-								   "option to condor_q. Please see "
-								   "the Condor manual for details on "
-								   "SCHEDD_NAME and "
-								   "SCHEDD_ADDRESS_FILE.",  stderr );
-				exit( 1 );
-			}
-		}
-  	}
+			
+			if ( directDBquery ) {				
+				/* perform direct DB query if indicated and exit */
+#if WANT_QUILL
 
+					/* check if database is available */
+				if (!useDB) {
+					printf ("\n\n-- Schedd: %s : %s\n", scheddName, scheddAddr);
+					fprintf(stderr, "Database query not supported on schedd: %s\n", scheddName);
+				}
+
+				exec_db_query(NULL, NULL, NULL, NULL);
+				freeConnectionStrings();
+				exit(EXIT_SUCCESS);
+#endif /* WANT_QUILL */
+			} 
+
+			/* .. not a direct db query, so just happily continue ... */
+
+           	// When we use the new analysis code, it can be really
+           	// slow. Slow enough that show_queue_buffered()'s connection
+           	// to the schedd time's out and the user gets nothing
+           	// useful printed out. Therefore, we use show_queue,
+           	// which fetches all of the ads, then analyzes them. 
+			if ( verbose || better_analyze || jobads_file ) {
+				sqfp = show_queue;
+			} else {
+				sqfp = show_queue_buffered;
+			}
+			
+			/* When an installation has database parameters configured, 
+				it means there is quill daemon. If database
+				is not accessible, we fail over to
+				quill daemon, and if quill daemon
+				is not available, we fail over the
+				schedd daemon */
+			switch(direct)
+			{
+				case DIRECT_ALL:
+					/* always try the failover sequence */
+
+					/* FALL THROUGH */
+
+#if WANT_QUILL
+				case DIRECT_RDBMS:
+					if (useDB) {
+
+						/* ask the database for the queue */
+
+						if ( (retval = sqfp( NULL, NULL, NULL, NULL, TRUE) ) ) {
+							/* if the queue was retrieved, then I am done */
+							freeConnectionStrings();
+							exit(retval?EXIT_SUCCESS:EXIT_FAILURE);
+						}
+						
+						fprintf( stderr, 
+							"-- Database not reachable or down.\n");
+
+						if (direct == DIRECT_RDBMS) {
+							fprintf(stderr,
+								"\t- Not failing over due to -direct\n");
+							exit(retval?EXIT_SUCCESS:EXIT_FAILURE);
+						} 
+
+						fprintf(stderr,
+							"\t- Failing over to the quill daemon --\n");
+
+						/* Hmm... couldn't find the database, so try the 
+							quilld */
+					} else {
+						if (direct == DIRECT_RDBMS) {
+							fprintf(stderr, 
+								"-- Direct query to rdbms on behalf of\n"
+								"\tschedd %s(%s) failed.\n"
+								"\t- Schedd doesn't appear to be using "
+								"quill.\n",
+								scheddName, scheddAddr);
+							fprintf(stderr,
+								"\t- Not failing over due to -direct\n");
+							exit(EXIT_FAILURE);
+						}
+					}
+
+					/* FALL THROUGH */
+
+				case DIRECT_QUILLD:
+					if (useDB) {
+
+						Daemon quill( DT_QUILL, 0, 0 );
+						char tmp[8];
+						strcpy(tmp, "Unknown");
+
+						/* query the quill daemon */
+						if ( quill.locate() &&
+					 		( (retval = 
+					 			sqfp( quill.addr(), 
+						  		(quill.name())?
+									(quill.name()):tmp,
+						  		(quill.fullHostname())?
+									(quill.fullHostname()):tmp,
+						  		NULL, FALSE) ) ) )
+						{
+							/* if the queue was retrieved, then I am done */
+							freeConnectionStrings();
+							exit(retval?EXIT_SUCCESS:EXIT_FAILURE);
+						}
+
+						fprintf( stderr,
+							"-- Quill daemon at %s(%s)\n"
+							"\tassociated with schedd %s(%s)\n"
+							"\tis not reachable or can't talk to rdbms.\n",
+							quill.name(), quill.addr(),
+							scheddName, scheddAddr );
+
+						if (direct == DIRECT_QUILLD) {
+							fprintf(stderr,
+								"\t- Not failing over due to -direct\n");
+							exit(retval?EXIT_SUCCESS:EXIT_FAILURE);
+						}
+
+						fprintf(stderr,
+							"\t- Failing over to the schedd %s(%s).\n", 
+							scheddName, scheddAddr);
+
+					} else {
+						if (direct == DIRECT_QUILLD) {
+							fprintf(stderr,
+								"-- Direct query to quilld associated with\n"
+								"\tschedd %s(%s) failed.\n"
+								"\t- Schedd doesn't appear to be using "
+								"quill.\n",
+								scheddName, scheddAddr);
+
+							fprintf(stderr,
+								"\t- Not failing over due to use of -direct\n");
+
+							exit(EXIT_FAILURE);
+						}
+					}
+
+#endif /* WANT_QUILL */
+				case DIRECT_SCHEDD:
+					retval = sqfp(scheddAddr, scheddName, scheddMachine, 
+									NULL, FALSE);
+			
+					/* Hopefully I got the queue from the schedd... */
+					freeConnectionStrings();
+					exit(retval?EXIT_SUCCESS:EXIT_FAILURE);
+					break;
+
+				case DIRECT_UNKNOWN:
+				default:
+					fprintf( stderr,
+						"-- Cannot determine any location for queue "
+						"using option -direct!\n"
+						"\t- This is an internal error and should be "
+						"reported to condor-admin@cs.wisc.edu." );
+					exit(EXIT_FAILURE);
+					break;
+			}
+		} 
+		
+		/* I couldn't find a local schedd, so dump a message about what
+			happened. */
+
+		fprintf( stderr, "Error: %s\n", schedd.error() );
+		if (!expert) {
+			fprintf(stderr, "\n");
+			print_wrapped_text("Extra Info: You probably saw this "
+							   "error because the condor_schedd is "
+							   "not running on the machine you are "
+							   "trying to query.  If the condor_schedd "
+							   "is not running, the Condor system "
+							   "will not be able to find an address "
+							   "and port to connect to and satisfy "
+							   "this request.  Please make sure "
+							   "the Condor daemons are running and "
+							   "try again.\n", stderr );
+			print_wrapped_text("Extra Info: "
+							   "If the condor_schedd is running on the "
+							   "machine you are trying to query and "
+							   "you still see the error, the most "
+							   "likely cause is that you have setup a " 
+							   "personal Condor, you have not "
+							   "defined SCHEDD_NAME in your "
+							   "condor_config file, and something "
+							   "is wrong with your "
+							   "SCHEDD_ADDRESS_FILE setting. "
+							   "You must define either or both of "
+							   "those settings in your config "
+							   "file, or you must use the -name "
+							   "option to condor_q. Please see "
+							   "the Condor manual for details on "
+							   "SCHEDD_NAME and "
+							   "SCHEDD_ADDRESS_FILE.",  stderr );
+		}
+
+		freeConnectionStrings();
+		exit( EXIT_FAILURE );
+	}
+	
 	// if a global queue is required, query the schedds instead of submittors
 	if (global) {
 		querySchedds = true;
@@ -248,17 +569,16 @@ int main (int argc, char **argv)
 		result = scheddQuery.addANDConstraint( constraint );
 		if( result != Q_OK ) {
 			fprintf( stderr, "Error: Couldn't add constraint %s\n", constraint);
+			freeConnectionStrings();
 			exit( 1 );
-		}		
+		}
 	}
 
 	// get the list of ads from the collector
 	if( querySchedds ) { 
-		result = scheddQuery.fetchAds( scheddList, 
-									   pool ? pool->addr() : NULL );
+		result = Collectors->query ( scheddQuery, scheddList );		
 	} else {
-		result = submittorQuery.fetchAds( scheddList,
-										  pool ? pool->addr() : NULL );
+		result = Collectors->query ( submittorQuery, scheddList );
 	}
 
 	switch( result ) {
@@ -268,35 +588,220 @@ int main (int argc, char **argv)
 			// if we're not an expert, we want verbose output
 		printNoCollectorContact( stderr, pool ? pool->name() : NULL,
 								 !expert ); 
+		freeConnectionStrings();
 		exit( 1 );
 	case Q_NO_COLLECTOR_HOST:
-		assert( pool );
+		ASSERT( pool );
 		fprintf( stderr, "Error: Can't contact condor_collector: "
 				 "invalid hostname: %s\n", pool->name() );
+		freeConnectionStrings();
 		exit( 1 );
 	default:
 		fprintf( stderr, "Error fetching ads: %s\n", 
 				 getStrQueryResult(result) );
+		freeConnectionStrings();
 		exit( 1 );
 	}
-	
+
+		/*if(querySchedds && scheddList.MyLength() == 0) {
+		  result = Collectors->query(quillQuery, quillList);
+		}*/
+
+	first = true;
 	// get queue from each ScheddIpAddr in ad
-	scheddList.Open();
+	scheddList.Open();	
 	while ((ad = scheddList.Next()))
 	{
-		// get the address of the schedd
-		if( !ad->EvaluateAttrString( ATTR_SCHEDD_IP_ADDR, scheddAddr, 64 )
-			|| !ad->EvaluateAttrString( ATTR_NAME, scheddName, 64 )
-			|| !ad->EvaluateAttrString( ATTR_MACHINE, scheddMachine, 64 ) ) {
-				continue;
+		/* default to true for remotely queryable */
+#if WANT_QUILL
+		int flag=1;
+#endif
+
+		freeConnectionStrings();
+
+		useDB = FALSE;
+		if ( ! (ad->LookupString(ATTR_SCHEDD_IP_ADDR, scheddAddr)  &&
+				 ad->LookupString(ATTR_NAME, scheddName)		&&
+				 ad->LookupString(ATTR_MACHINE, scheddMachine) ) ) 
+		{
+			/* something is wrong with this schedd/quill ad, try the next one */
+			continue;
 		}
-		
-  		if ( verbose ) {
-  			show_queue( scheddAddr, scheddName, scheddMachine );
-  		} else {
- 			show_queue_buffered( scheddAddr, scheddName, scheddMachine );
+
+#if WANT_QUILL
+			// get the address of the database
+		if (ad->LookupString(ATTR_QUILL_DB_IP_ADDR, &dbIpAddr) &&
+			ad->LookupString(ATTR_QUILL_NAME, &quillName) &&
+			ad->LookupString(ATTR_QUILL_DB_NAME, &dbName) && 
+			ad->LookupString(ATTR_QUILL_DB_QUERY_PASSWORD, &queryPassword) &&
+			(!ad->LookupBool(ATTR_QUILL_IS_REMOTELY_QUERYABLE,flag) || flag)) {
+
+			/* If the quill information is available, try to use it first */
+			useDB = TRUE;
+
+				/* get the quill info for fail-over processing */
+			ASSERT(ad->LookupString(ATTR_MACHINE, &quillMachine));
 		}
+#endif 
+
 		first = false;
+
+			/* check if direct DB query is indicated */
+		if ( directDBquery ) {				
+#if WANT_QUILL
+			if (!useDB) {
+				printf ("\n\n-- Schedd: %s : %s\n", scheddName, scheddAddr);
+				fprintf(stderr, "Database query not supported on schedd: %s\n",
+						scheddName);
+				continue;
+			}
+			
+			exec_db_query(quillName, dbIpAddr, dbName, queryPassword);
+
+			/* done processing the ad, so get the next one */
+			continue;
+
+#endif /* WANT_QUILL */
+		}
+
+        // When we use the new analysis code, it can be really
+        // slow. Slow enough that show_queue_buffered()'s connection
+        // to the schedd time's out and the user gets nothing
+        // useful printed out. Therefore, we use show_queue,
+        // which fetches all of the ads, then analyzes them. 
+		if ( verbose || better_analyze ) {
+			sqfp = show_queue;
+		} else {
+			sqfp = show_queue_buffered;
+		}
+
+		/* When an installation has database parameters configured, it means 
+		   there is quill daemon. If database is not accessible, we fail
+		   over to quill daemon, and if quill daemon is not available, 
+		   we fail over the schedd daemon */			
+		switch(direct)
+		{
+			case DIRECT_ALL:
+				/* FALL THROUGH */
+#if WANT_QUILL
+			case DIRECT_RDBMS:
+				if (useDB) {
+					if (sqfp(quillName, dbIpAddr, dbName, queryPassword, TRUE ))
+					{
+						/* processed correctly, so do the next ad */
+						continue;
+					}
+
+					fprintf( stderr, "-- Database server %s\n"
+							"\tbeing used by the quill daemon %s\n"
+							"\tassociated with schedd %s(%s)\n"
+							"\tis not reachable or down.\n",
+							dbIpAddr, quillName, scheddName, scheddAddr);
+
+					if (direct == DIRECT_RDBMS) {
+						fprintf(stderr, 
+							"\t- Not failing over due to -direct\n");
+						continue;
+					} 
+
+					fprintf(stderr, 
+						"\t- Failing over to the quill daemon at %s--\n", 
+						quillName);
+
+				} else {
+					if (direct == DIRECT_RDBMS) {
+						fprintf(stderr, 
+							"-- Direct query to rdbms on behalf of\n"
+							"\tschedd %s(%s) failed.\n"
+							"\t- Schedd doesn't appear to be using quill.\n",
+							scheddName, scheddAddr);
+						fprintf(stderr,
+							"\t- Not failing over due to -direct\n");
+						continue;
+					}
+				}
+
+				/* FALL THROUGH */
+
+			case DIRECT_QUILLD:
+				if (useDB) {
+					result2 = getQuillAddrFromCollector(quillName, quillAddr);
+
+					/* if quillAddr is NULL, then while the collector's 
+						schedd's ad had a quill name in it, the collector
+						didn't have a quill ad by that name. */
+
+					if((result2 == Q_OK) && quillAddr &&
+			   			sqfp(quillAddr, quillName, quillMachine, NULL, FALSE))
+					{
+						/* processed correctly, so do the next ad */
+						continue;
+					}
+
+					/* NOTE: it is not impossible that quillAddr could be
+						NULL if the quill name is specified in a schedd ad
+						but the collector has no record of such quill ad by
+						that name. So we deal with that mess here in the 
+						debugging output. */
+
+					fprintf( stderr,
+						"-- Quill daemon %s(%s)\n"
+						"\tassociated with schedd %s(%s)\n"
+						"\tis not reachable or can't talk to rdbms.\n",
+						quillName, quillAddr!=NULL?quillAddr:"<\?\?\?>", 
+						scheddName, scheddAddr);
+
+					if (quillAddr == NULL) {
+						fprintf(stderr,
+							"\t- Possible misconfiguration of quill\n"
+							"\tassociated with this schedd since associated\n"
+							"\tquilld ad is missing and was expected to be\n"
+							"\tfound in the collector.\n");
+					}
+
+					if (direct == DIRECT_QUILLD) {
+						fprintf(stderr,
+							"\t- Not failing over due to use of -direct\n");
+						continue;
+					}
+
+					fprintf(stderr,
+						"\t- Failing over to the schedd at %s(%s) --\n",
+						scheddName, scheddAddr);
+
+				} else {
+					if (direct == DIRECT_QUILLD) {
+						fprintf(stderr,
+							"-- Direct query to quilld associated with\n"
+							"\tschedd %s(%s) failed.\n"
+							"\t- Schedd doesn't appear to be using quill.\n",
+							scheddName, scheddAddr);
+						printf("\t- Not failing over due to use of -direct\n");
+						continue;
+					}
+				}
+
+				/* FALL THROUGH */
+
+#endif /* WANT_QUILL */
+
+			case DIRECT_SCHEDD:
+				/* database not configured or could not be reached,
+					query the schedd daemon directly */
+				sqfp(scheddAddr, scheddName, scheddMachine, NULL, FALSE);
+
+				break;
+
+			case DIRECT_UNKNOWN:
+			default:
+				fprintf( stderr,
+					"-- Cannot determine any location for queue "
+					"using option -direct!\n"
+					"\t- This is an internal error and should be "
+					"reported to condor-admin@cs.wisc.edu." );
+				exit(EXIT_FAILURE);
+				break;
+		}
 	}
 
 	// close list
@@ -308,10 +813,13 @@ int main (int argc, char **argv)
 		} else {
 			fprintf(stderr,"Error: Collector has no record of "
 							"schedd/submitter\n");
+
+			freeConnectionStrings();
 			exit(1);
 		}
 	}
 
+	freeConnectionStrings();
 	return 0;
 }
 
@@ -326,14 +834,18 @@ processCommandLineArguments (int argc, char *argv[])
 		if( *argv[i] != '-' ) {
 			// no dash means this arg is a cluster/proc, proc, or owner
 			if( sscanf( argv[i], "%d.%d", &cluster, &proc ) == 2 ) {
-				sprintf( constraint, "((%s == %d) && (%s == %d))", 
-						 ATTR_CLUSTER_ID, cluster, ATTR_PROC_ID, proc );
-				Q.addOR( constraint );
+				sprintf( constraint, "((%s == %d) && (%s == %d))",
+					ATTR_CLUSTER_ID, cluster, ATTR_PROC_ID, proc );
+                                Q.addOR( constraint );
+   
+				Q.addDBConstraint(CQ_CLUSTER_ID, cluster);
+				Q.addDBConstraint(CQ_PROC_ID, proc);
 				summarize = 0;
 			} 
 			else if( sscanf ( argv[i], "%d", &cluster ) == 1 ) {
 				sprintf( constraint, "(%s == %d)", ATTR_CLUSTER_ID, cluster );
 				Q.addOR( constraint );
+   				Q.addDBConstraint(CQ_CLUSTER_ID, cluster);
 				summarize = 0;
 			} 
 			else if( Q.add( CQ_OWNER, argv[i] ) != Q_OK ) {
@@ -388,6 +900,8 @@ processCommandLineArguments (int argc, char *argv[])
 				}
 				exit(1);
 			}
+			Collectors = new CollectorList();
+			Collectors->append (pool);
 		} 
 		else
 		if (match_prefix (arg, "D")) {
@@ -447,12 +961,27 @@ processCommandLineArguments (int argc, char *argv[])
 				exit(1);
 			}
 			sprintf (constraint, "%s == \"%s\"", ATTR_NAME, daemonname);
-			delete [] daemonname;
-
 			scheddQuery.addORConstraint (constraint);
+
+			sprintf (constraint, "%s == \"%s\"", ATTR_QUILL_NAME, daemonname);
+			scheddQuery.addORConstraint (constraint);
+
+			delete [] daemonname;
 			i++;
 			querySchedds = true;
 		} 
+		else
+		if (match_prefix (arg, "direct")) {
+			/* check for one more argument */
+			if (argc <= i+1) {
+				fprintf( stderr, 
+					"Error: Argument -direct requires "
+						"[rdbms | quilld | schedd]\n" );
+				exit(EXIT_FAILURE);
+			}
+			direct = process_direct_argument(argv[i+1]);
+			i++;
+		}
 		else
 		if (match_prefix (arg, "submitter")) {
 
@@ -505,6 +1034,23 @@ processCommandLineArguments (int argc, char *argv[])
 				if( strstr( argv[i] , NiceUserName ) == argv[i] ) {
 					ownerName = argv[i]+strlen(NiceUserName)+1;
 				}
+				// ensure that the group prefix isn't inserted as part
+				// of the job ad constraint.
+				char *groups = param("GROUP_NAMES");
+				if ( groups && ownerName ) {
+					StringList groupList(groups);
+					char *dotptr = strchr(ownerName,'.');
+					if ( dotptr ) {
+						*dotptr = '\0';
+						if ( groupList.contains_anycase(ownerName) ) {
+							// this name starts with a group prefix.
+							// strip it off.
+							ownerName = dotptr + 1;	// add one for the '.'
+						}
+						*dotptr = '.';
+					}
+				}
+				if ( groups ) free(groups);
 				if (Q.add (CQ_OWNER, ownerName) != Q_OK) {
 					fprintf (stderr, "Error:  Argument %d (%s)\n", i, argv[i]);
 					exit (1);
@@ -580,6 +1126,17 @@ processCommandLineArguments (int argc, char *argv[])
 		if (match_prefix( arg , "analyze")) {
 			analyze = true;
 		}
+        else
+        if (match_prefix( arg, "better-analyze")) {
+#ifdef WANT_CLASSAD_ANALYSIS
+            analyze = true;
+            better_analyze = true;
+#else
+            fprintf(stderr, "Sorry, the -better-analyze option is not available "
+                            "on this platform.\n");
+            exit(1);
+#endif
+        }
 		else
 		if (match_prefix( arg, "run")) {
 			Q.add (CQ_STATUS, RUNNING);
@@ -630,6 +1187,31 @@ processCommandLineArguments (int argc, char *argv[])
 		else if (match_prefix(arg, "expert")) {
 			expert = true;
 		}
+        else if (match_prefix(arg, "jobads")) {
+			if (argc <= i+1) {
+				fprintf( stderr, "Error: Argument -jobads require filename\n");
+				exit(1);
+			} else {
+                i++;
+                jobads_file = strdup(argv[i]);
+            }
+        }
+        else if (match_prefix(arg, "machineads")) {
+			if (argc <= i+1) {
+				fprintf( stderr, "Error: Argument -machineads require filename\n");
+				exit(1);
+			} else {
+                i++;
+                machineads_file = strdup(argv[i]);
+            }
+        }
+#if WANT_QUILL
+		else if (match_prefix(arg, "avgqueuetime")) {
+				/* if user want average wait time, we will perform direct DB query */
+			avgqueuetime = true;
+			directDBquery =  true;
+		}
+#endif /* WANT_QUILL */
 		else {
 			fprintf( stderr, "Error: unrecognized argument -%s\n", arg );
 			usage(argv[0]);
@@ -650,14 +1232,12 @@ job_time(float cpu_time,ClassAd *ad)
 	int cur_time = 0;
 	int shadow_bday = 0;
 	float previous_runs = 0;
-	double previous_runsD;		// NAC
 
-	ad->EvaluateAttrInt( ATTR_JOB_STATUS, job_status);			// NAC
-	ad->EvaluateAttrInt( ATTR_SERVER_TIME, cur_time);			// NAC
-	ad->EvaluateAttrInt( ATTR_SHADOW_BIRTHDATE, shadow_bday );	// NAC
+	ad->LookupInteger( ATTR_JOB_STATUS, job_status);
+	ad->LookupInteger( ATTR_SERVER_TIME, cur_time);
+	ad->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadow_bday );
 	if ( current_run == false ) {
-		ad->EvaluateAttrReal( ATTR_JOB_REMOTE_WALL_CLOCK, previous_runsD );
-		previous_runs = (float)previous_runsD;
+		ad->LookupFloat( ATTR_JOB_REMOTE_WALL_CLOCK, previous_runs );
 	}
 
 		// if we have an old schedd, there is no ATTR_SERVER_TIME,
@@ -685,6 +1265,37 @@ job_time(float cpu_time,ClassAd *ad)
 	return total_wall_time;
 }
 
+unsigned int process_direct_argument(char *arg)
+{
+#if WANT_QUILL
+	if (strcasecmp(arg, "rdbms") == MATCH) {
+		return DIRECT_RDBMS;
+	}
+
+	if (strcasecmp(arg, "quilld") == MATCH) {
+		return DIRECT_QUILLD;
+	}
+#endif
+
+	if (strcasecmp(arg, "schedd") == MATCH) {
+		return DIRECT_SCHEDD;
+	}
+
+#if WANT_QUILL
+	fprintf( stderr, 
+		"Error: Argument -direct requires [rdbms | quilld | schedd]\n" );
+#else
+	fprintf( stderr, 
+		"Error: Quill feature set is not available.\n"
+		"Error: Argument -direct may only take 'schedd' as an option.\n" );
+#endif
+
+	exit(EXIT_FAILURE);
+
+	/* Here to make the compiler happy since there is an exit above */
+	return DIRECT_UNKNOWN;
+}
+
 static void
 io_display(ClassAd *ad)
 {
@@ -699,20 +1310,18 @@ buffer_io_display( ClassAd *ad )
 	int buffer_size=0, block_size=0;
 	float wall_clock=-1;
 
-	double read_bytesD, write_bytesD, seek_countD, wall_clockD;
-
 	char owner[256];
 
-	ad->EvaluateAttrInt( ATTR_CLUSTER_ID, cluster );	// NAC
-	ad->EvaluateAttrInt( ATTR_PROC_ID, proc );			// NAC
-	ad->EvaluateAttrString( ATTR_OWNER, owner, 256 );	// NAC
+	ad->EvalInteger(ATTR_CLUSTER_ID,NULL,cluster);
+	ad->EvalInteger(ATTR_PROC_ID,NULL,proc);
+	ad->EvalString(ATTR_OWNER,NULL,owner);
 
-	ad->EvaluateAttrReal( ATTR_FILE_READ_BYTES, read_bytesD );			// NAC
-	ad->EvaluateAttrReal( ATTR_FILE_WRITE_BYTES, write_bytesD );		// NAC
-	ad->EvaluateAttrReal( ATTR_FILE_SEEK_COUNT, seek_countD );			// NAC
-	ad->EvaluateAttrReal( ATTR_JOB_REMOTE_WALL_CLOCK, wall_clockD );	// NAC
-	ad->EvaluateAttrInt( ATTR_BUFFER_SIZE, buffer_size );				// NAC
-	ad->EvaluateAttrInt( ATTR_BUFFER_BLOCK_SIZE, block_size );			// NAC
+	ad->EvalFloat(ATTR_FILE_READ_BYTES,NULL,read_bytes);
+	ad->EvalFloat(ATTR_FILE_WRITE_BYTES,NULL,write_bytes);
+	ad->EvalFloat(ATTR_FILE_SEEK_COUNT,NULL,seek_count);
+	ad->EvalFloat(ATTR_JOB_REMOTE_WALL_CLOCK,NULL,wall_clock);
+	ad->EvalInteger(ATTR_BUFFER_SIZE,NULL,buffer_size);
+	ad->EvalInteger(ATTR_BUFFER_BLOCK_SIZE,NULL,block_size);
 
 	sprintf( return_buff, "%4d.%-3d %-14s", cluster, proc,
 			 format_owner( owner, ad ) );
@@ -750,49 +1359,65 @@ displayJobShort (ClassAd *ad)
 static char *
 bufferJobShort( ClassAd *ad ) {
 	int cluster, proc, date, status, prio, image_size;
-	float utime;
-	double utimeD;
-	int utimeI = -1;
-	char owner[64], cmd[ATTRLIST_MAX_EXPRESSION], args[ATTRLIST_MAX_EXPRESSION];
-	char buffer[ATTRLIST_MAX_EXPRESSION];
-	if (!ad->EvaluateAttrInt( ATTR_CLUSTER_ID,  cluster )			||	// NAC
-		!ad->EvaluateAttrInt( ATTR_PROC_ID,  proc )					||	// NAC
-		!ad->EvaluateAttrInt( ATTR_Q_DATE,  date )					||	// NAC
-		( !ad->EvaluateAttrReal( ATTR_JOB_REMOTE_USER_CPU,  utimeD)  &&
-		  !ad->EvaluateAttrInt( ATTR_JOB_REMOTE_USER_CPU,  utimeI)) ||	// NAC
-		!ad->EvaluateAttrInt( ATTR_JOB_STATUS,  status )			||	// NAC
-		!ad->EvaluateAttrInt( ATTR_JOB_PRIO,  prio )				||	// NAC
-		!ad->EvaluateAttrInt( ATTR_IMAGE_SIZE,  image_size )		||	// NAC
-		!ad->EvaluateAttrString( ATTR_OWNER, owner, 64 )   			||	// NAC
-		!ad->EvaluateAttrString( ATTR_JOB_CMD, cmd, 10240 ) )	   		// NAC
-	{	
+
+	char encoded_status;
+	int last_susp_time;
+	char *tmp = NULL;
+
+	float utime  = 0.0;
+	char owner[64];
+	char *cmd = NULL;
+	MyString buffer;
+
+	if (!ad->EvalInteger (ATTR_CLUSTER_ID, NULL, cluster)		||
+		!ad->EvalInteger (ATTR_PROC_ID, NULL, proc)				||
+		!ad->EvalInteger (ATTR_Q_DATE, NULL, date)				||
+		!ad->EvalFloat   (ATTR_JOB_REMOTE_USER_CPU, NULL, utime)||
+		!ad->EvalInteger (ATTR_JOB_STATUS, NULL, status)		||
+		!ad->EvalInteger (ATTR_JOB_PRIO, NULL, prio)			||
+		!ad->EvalInteger (ATTR_IMAGE_SIZE, NULL, image_size)	||
+		!ad->EvalString  (ATTR_OWNER, NULL, owner)				||
+		!ad->EvalString  (ATTR_JOB_CMD, NULL, &cmd) )
+	{
 		sprintf (return_buff, " --- ???? --- \n");
 		return( return_buff );
 	}
-
-	if( utimeI == -1 ){
-		utime = (float)utimeD;
-	}
-	else {
-		utime = (float)utimeI;
-	}
-
-	int niceUser;
-    if( ad->EvaluateAttrInt( ATTR_NICE_USER, niceUser ) && niceUser ) {	// NAC
-        char tmp[100];
-        strncpy(tmp,NiceUserName,99);
-        strcat(tmp,".");
-        strcat(tmp,owner);
-        strncpy(owner,tmp, 63);
-    }
-
-	shorten (owner, 14);
-	if (ad->EvaluateAttrString ("Args", args, 10240 ) ) {
-		sprintf( buffer, "%s %s", basename(cmd), args );
+	
+	MyString args_string;
+	ArgList::GetArgsStringForDisplay(ad,&args_string);
+	if (!args_string.IsEmpty()) {
+		buffer.sprintf( "%s %s", condor_basename(cmd), args_string.Value() );
 	} else {
-		sprintf( buffer, "%s", basename(cmd) );
+		buffer.sprintf( "%s", condor_basename(cmd) );
 	}
+	free(cmd);
 	utime = job_time(utime,ad);
+
+	encoded_status = encode_status( status );
+
+	/* The suspension of a job is a second class citizen and is not a true
+		status that can exist as a job status ad and is instead
+		inferred, so therefore the processing and display of
+		said suspension is also second class. */
+	tmp = param( "REAL_TIME_JOB_SUSPEND_UPDATES" );
+	if( tmp != NULL ) {
+		if ( strcasecmp(tmp, "true") == MATCH ) {	
+			if (!ad->EvalInteger(ATTR_LAST_SUSPENSION_TIME,NULL,last_susp_time))
+			{
+				last_susp_time = 0;
+			}
+			/* sanity check the last_susp_time against if the job is running
+				or not in case the schedd hasn't synchronized the
+				last suspension time attribute correctly to job running
+				boundaries. */
+			if ( status == RUNNING && last_susp_time != 0 )
+			{
+				encoded_status = 'S';
+			}
+		}
+		free(tmp);
+		tmp = NULL;
+	}
 
 	sprintf( return_buff,
 			 "%4d.%-3d %-14s %-11s %-12s %-2c %-3d %-4.1f %-18.18s\n",
@@ -809,10 +1434,10 @@ bufferJobShort( ClassAd *ad ) {
 				float to an int legally. Apparently, that isn't happening here.
 				-psilord 09/06/01 */
 			 format_time( (int)utime ),
-			 encode_status( status ),
+			 encoded_status,
 			 prio,
 			 (image_size / 1024.0),
-			 buffer );
+			 buffer.Value() );
 
 	return return_buff;
 }
@@ -847,8 +1472,7 @@ short_header (void)
 }
 
 static char *
-//format_remote_host (char *, AttrList *ad)
-format_remote_host (char *, ClassAd *ad)	// NAC
+format_remote_host (char *, AttrList *ad)
 {
 	static char result[MAXHOSTNAMELEN];
 	static char unknownHost [] = "[????????????????]";
@@ -856,7 +1480,7 @@ format_remote_host (char *, ClassAd *ad)	// NAC
 	struct sockaddr_in sin;
 
 	int universe = CONDOR_UNIVERSE_STANDARD;
-	ad->EvaluateAttrInt( ATTR_JOB_UNIVERSE, universe );
+	ad->LookupInteger( ATTR_JOB_UNIVERSE, universe );
 	if (universe == CONDOR_UNIVERSE_SCHEDULER &&
 		string_to_sin(scheddAddr, &sin) == 1) {
 		if( (tmp = sin_to_hostname(&sin, NULL)) ) {
@@ -867,7 +1491,7 @@ format_remote_host (char *, ClassAd *ad)	// NAC
 		}
 	} else if (universe == CONDOR_UNIVERSE_PVM) {
 		int current_hosts;
-		if (ad->EvaluateAttrInt( ATTR_CURRENT_HOSTS, current_hosts )) {
+		if (ad->LookupInteger( ATTR_CURRENT_HOSTS, current_hosts ) == 1) {
 			if (current_hosts == 1) {
 				sprintf(result, "1 host");
 			} else {
@@ -875,17 +1499,14 @@ format_remote_host (char *, ClassAd *ad)	// NAC
 			}
 			return result;
 		}
-	} else if (universe == CONDOR_UNIVERSE_GLOBUS) {
-        string tmp;
-		if (ad->EvaluateAttrString( ATTR_GLOBUS_RESOURCE, tmp)) {
-            strncpy(result, tmp.data(), MAXHOSTNAMELEN);
+	} else if (universe == CONDOR_UNIVERSE_GRID) {
+		if (ad->LookupString(ATTR_GRID_RESOURCE,result) == 1 )
 			return result;
-        }
 		else
 			return unknownHost;
 	}
 
-	if ( ad->EvaluateAttrString( ATTR_REMOTE_HOST, result, MAXHOSTNAMELEN ) ) {
+	if (ad->LookupString(ATTR_REMOTE_HOST, result) == 1) {
 		if( is_valid_sinful(result) && 
 			(string_to_sin(result, &sin) == 1) ) {  
 			if( (tmp = sin_to_hostname(&sin, NULL)) ) {
@@ -895,51 +1516,26 @@ format_remote_host (char *, ClassAd *ad)	// NAC
 			}
 		}
 		return result;
-	} else {
-		int universe = CONDOR_UNIVERSE_STANDARD;
-		ad->EvaluateAttrInt( ATTR_JOB_UNIVERSE, universe );	// NAC
-		if (universe == CONDOR_UNIVERSE_SCHEDULER &&
-			string_to_sin(scheddAddr, &sin) == 1) {
-			if( (tmp = sin_to_hostname(&sin, NULL)) ) {
-				strcpy( result, tmp );
-				return result;
-			} else {
-				return unknownHost;
-			}
-		} else if (universe == CONDOR_UNIVERSE_PVM) {
-			int current_hosts;
-			if ( ad->EvaluateAttrInt( ATTR_CURRENT_HOSTS, current_hosts ) ) {
-				if (current_hosts == 1) {
-					sprintf(result, "1 host");
-				} else {
-					sprintf(result, "%d hosts", current_hosts);
-				}
-				return result;
-			}
-		}
 	}
 	return unknownHost;
 }
 
 static char *
-format_cpu_time ( float utime, ClassAd *ad )	// NAC
+format_cpu_time (float utime, AttrList *ad)
 {
-	return format_time( (int) job_time(utime, ad) );
+	return format_time( (int) job_time(utime,(ClassAd *)ad) );
 }
 
 static char *
-format_goodput ( int job_status, ClassAd *ad )	// NAC
+format_goodput (int job_status, AttrList *ad)
 {
 	static char result[9];
 	int ckpt_time = 0, shadow_bday = 0, last_ckpt = 0;
 	float wall_clock = 0.0;
-	double wall_clockD;
-	ad->EvaluateAttrInt( ATTR_JOB_COMMITTED_TIME, ckpt_time );			// NAC
-	ad->EvaluateAttrInt( ATTR_SHADOW_BIRTHDATE, shadow_bday );			// NAC
-	ad->EvaluateAttrInt( ATTR_LAST_CKPT_TIME, last_ckpt );				// NAC
-	ad->EvaluateAttrReal( ATTR_JOB_REMOTE_WALL_CLOCK, wall_clockD );	// NAC
-	wall_clock = (float)wall_clockD;									// NAC
-	
+	ad->LookupInteger( ATTR_JOB_COMMITTED_TIME, ckpt_time );
+	ad->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadow_bday );
+	ad->LookupInteger( ATTR_LAST_CKPT_TIME, last_ckpt );
+	ad->LookupFloat( ATTR_JOB_REMOTE_WALL_CLOCK, wall_clock );
 	if (job_status == RUNNING && shadow_bday && last_ckpt > shadow_bday) {
 		wall_clock += last_ckpt - shadow_bday;
 	}
@@ -952,24 +1548,19 @@ format_goodput ( int job_status, ClassAd *ad )	// NAC
 }
 
 static char *
-//format_mbps (float bytes_sent, AttrList *ad)
-format_mbps (float bytes_sent, ClassAd *ad)
+format_mbps (float bytes_sent, AttrList *ad)
 {
 	static char result[10];
 	float wall_clock=0.0, bytes_recvd=0.0, total_mbits;
 	int shadow_bday = 0, last_ckpt = 0, job_status = IDLE;
-	double wall_clockD, bytes_recvdD;	// NAC
-	ad->EvaluateAttrReal( ATTR_JOB_REMOTE_WALL_CLOCK, wall_clockD );	// NAC
-	ad->EvaluateAttrInt( ATTR_SHADOW_BIRTHDATE, shadow_bday );			// NAC
-	ad->EvaluateAttrInt( ATTR_LAST_CKPT_TIME, last_ckpt );				// NAC
-	ad->EvaluateAttrInt( ATTR_JOB_STATUS, job_status );					// NAC
-	wall_clock = (float)wall_clockD;									// NAC
-
+	ad->LookupFloat( ATTR_JOB_REMOTE_WALL_CLOCK, wall_clock );
+	ad->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadow_bday );
+	ad->LookupInteger( ATTR_LAST_CKPT_TIME, last_ckpt );
+	ad->LookupInteger( ATTR_JOB_STATUS, job_status );
 	if (job_status == RUNNING && shadow_bday && last_ckpt > shadow_bday) {
 		wall_clock += last_ckpt - shadow_bday;
 	}
-	ad->EvaluateAttrReal( ATTR_BYTES_RECVD, bytes_recvdD );				// NAC
-	bytes_recvd = (float)bytes_recvdD;									// NAC
+	ad->LookupFloat(ATTR_BYTES_RECVD, bytes_recvd);
 	total_mbits = (bytes_sent+bytes_recvd)*8/(1024*1024); // bytes to mbits
 	if (total_mbits <= 0) return " [????]";
 	sprintf(result, " %6.2f", total_mbits/wall_clock);
@@ -977,11 +1568,11 @@ format_mbps (float bytes_sent, ClassAd *ad)
 }
 
 static char *
-format_cpu_util (float utime, ClassAd *ad)
+format_cpu_util (float utime, AttrList *ad)
 {
 	static char result[10];
 	int ckpt_time = 0;
-	ad->EvaluateAttrInt( ATTR_JOB_COMMITTED_TIME, ckpt_time);	// NAC
+	ad->LookupInteger( ATTR_JOB_COMMITTED_TIME, ckpt_time);
 	if (ckpt_time == 0) return " [??????]";
 	float util = (ckpt_time) ? utime/ckpt_time*100.0 : 0.0;
 	if (util > 100.0) util = 100.0;
@@ -991,7 +1582,7 @@ format_cpu_util (float utime, ClassAd *ad)
 }
 
 static char *
-format_owner (char *owner, ClassAd *ad)
+format_owner (char *owner, AttrList *ad)
 {
 	static char result[15] = "";
 
@@ -1008,19 +1599,25 @@ format_owner (char *owner, ClassAd *ad)
 	// >= v6.3 inserts "unknown..." into DAGManJobId when run under a
 	// pre-v6.3 schedd)
 
-	//char dagman_job_id[ATTRLIST_MAX_EXPRESSION];
-	//char dag_node_name[ATTRLIST_MAX_EXPRESSION];
-    string dagman_job_id, dag_node_name;
+	if ( dag ) {
+		if ( ad->Lookup( ATTR_DAGMAN_JOB_ID ) ) {
 
-	if( dag && ad->EvaluateAttrString( ATTR_DAGMAN_JOB_ID, dagman_job_id ) &&
-		(dagman_job_id.find("unknown" ) != 0) &&
-		ad->EvaluateAttrString( ATTR_DAG_NODE_NAME, dag_node_name ) ) {
-		sprintf( result, " |-%-11.11s", dag_node_name.data() );
-		return result;
+				// We have a DAGMan job ID, this means we have a DAG node
+				// -- don't worry about what type the DAGMan job ID is.
+			char *dag_node_name;
+			if ( ad->LookupString( ATTR_DAG_NODE_NAME, &dag_node_name ) ) {
+				sprintf( result, " |-%-11.11s", dag_node_name );
+				free(dag_node_name);
+				return result;
+			} else {
+				fprintf(stderr, "DAG node job with no %s attribute!\n",
+						ATTR_DAG_NODE_NAME);
+			}
+		}
 	}
 
 	int niceUser;
-	if ( ad->EvaluateAttrInt( ATTR_NICE_USER, niceUser ) && niceUser ) {// NAC
+	if (ad->LookupInteger( ATTR_NICE_USER, niceUser) && niceUser ) {
 		char tmp[100];
 		strncpy(tmp,NiceUserName,99);
 		strcat(tmp, ".");
@@ -1033,8 +1630,7 @@ format_owner (char *owner, ClassAd *ad)
 }
 
 static char *
-//format_globusStatus( int globusStatus, AttrList *ad )
-format_globusStatus( int globusStatus, ClassAd *ad )
+format_globusStatus( int globusStatus, AttrList *ad )
 {
 	static char result[64];
 
@@ -1043,34 +1639,113 @@ format_globusStatus( int globusStatus, ClassAd *ad )
 	return result;
 }
 
+// The remote hostname may be in GlobusResource or GridResource.
+// We want this function to be called if at least one is defined,
+// but it will only be called if the one attribute it's registered
+// with is defined. So we register it with an attribute we know will
+// always be present and be a string. We then ignore that attribute
+// and examine GlobusResource and GridResource.
 static char *
-//format_globusHostAndJM( char  *globusResource, AttrList *ad )
-format_globusHostAndJM( char  *globusResource, ClassAd *ad )
+format_globusHostAndJM( char  *ignore_me, AttrList *ad )
 {
 	static char result[64];
 	char	host[80] = "[?????]";
 	char	jm[80] = "fork";
 	char	*tmp;
 	int	p;
+	char *attr_value = NULL;
+	char *resource_name = NULL;
+	bool new_syntax;
+	char *grid_type = NULL;
 
-	if ( globusResource != NULL ) {
-		// copy the hostname
-		p = strcspn( globusResource, ":/" );
-		if ( p > (int) sizeof(host) )
-			p = sizeof(host) - 1;
-		strncpy( host, globusResource, p );
-		host[p] = '\0';
-
-		if ( ( tmp = strstr( globusResource, "jobmanager-" ) ) != NULL ) {
-			tmp += 11; // 11==strlen("jobmanager-")
-
-			// copy the jobmanager name
-			p = strcspn( tmp, ":" );
-			if ( p > (int) sizeof(jm) )
-				p = sizeof(jm) - 1;
-			strncpy( jm, tmp, p );
-			jm[p] = '\0';
+	if ( ad->LookupString( ATTR_GRID_RESOURCE, &attr_value ) ) {
+			// If ATTR_GRID_RESOURCE exists, skip past the initial
+			// '<job type> '.
+		resource_name = strchr( attr_value, ' ' );
+		if ( resource_name ) {
+			*resource_name = '\0';
+			grid_type = strdup( attr_value );
+			resource_name++;
 		}
+		new_syntax = true;
+	} else {
+			// ATTR_GRID_RESOURCE doesn't exist, try ATTR_GLOBUS_RESOURCE
+		ad->LookupString( ATTR_GLOBUS_RESOURCE, &attr_value );
+		resource_name = attr_value;
+		new_syntax = false;
+
+		ad->LookupString( ATTR_JOB_GRID_TYPE, &grid_type );
+	}
+
+	if ( resource_name != NULL ) {
+
+		if ( grid_type == NULL || !stricmp( grid_type, "gt2" ) ||
+			 !stricmp( grid_type, "globus" ) ) {
+
+			// copy the hostname
+			p = strcspn( resource_name, ":/" );
+			if ( p > (int) sizeof(host) )
+				p = sizeof(host) - 1;
+			strncpy( host, resource_name, p );
+			host[p] = '\0';
+
+			if ( ( tmp = strstr( resource_name, "jobmanager-" ) ) != NULL ) {
+				tmp += 11; // 11==strlen("jobmanager-")
+
+				// copy the jobmanager name
+				p = strcspn( tmp, ":" );
+				if ( p > (int) sizeof(jm) )
+					p = sizeof(jm) - 1;
+				strncpy( jm, tmp, p );
+				jm[p] = '\0';
+			}
+
+		} else if ( !stricmp( grid_type, "gt3" ) ) {
+
+			strncpy( host, resource_name, sizeof(host) );
+
+		} else if ( !stricmp( grid_type, "gt4" ) ) {
+
+			strcpy( jm, "Fork" );
+
+			if ( new_syntax ) {
+					// GridResource is of the form '<service url> <jm type>'
+					// Find the space, zero it out, and grab the jm type from
+					// the end (if it's non-empty).
+				tmp = strchr( resource_name, ' ' );
+				if ( tmp ) {
+					*tmp = '\0';
+					if ( tmp[1] != '\0' ) {
+						strcpy( jm, &tmp[1] );
+					}
+				}
+			} else {
+					// No ATTR_GRID_RESOURCE, so the jm type is stored as
+					// a separate attribute.
+				ad->LookupString( ATTR_GLOBUS_JOBMANAGER_TYPE, jm,
+								  sizeof(jm) );
+				jm[sizeof(jm)-1] = '\0';
+			}
+
+				// Pick the hostname out of the URL
+			if ( strncmp( "https://", resource_name, 8 ) == 0 ) {
+				strncpy( host, &resource_name[8], sizeof(host) );
+				host[sizeof(host)-1] = '\0';
+			} else {
+				strncpy( host, resource_name, sizeof(host) );
+				host[sizeof(host)-1] = '\0';
+			}
+			p = strcspn( host, ":/" );
+			host[p] = '\0';
+		}
+	}
+
+	if ( grid_type ) {
+		free( grid_type );
+	}
+
+	if ( attr_value ) {
+		free( attr_value );
 	}
 
 	// done --- pack components into the result string and return
@@ -1079,51 +1754,18 @@ format_globusHostAndJM( char  *globusResource, ClassAd *ad )
 }
 
 
-static void
-shorten (char *buff, int len)
-{
-	if ((unsigned int)strlen (buff) > (unsigned int)len) buff[len] = '\0';
-}
 
 static char *
-format_q_date (int d, ClassAd *)
+format_q_date (int d, AttrList *)
 {
 	return format_date(d);
 }
-
 
 		
 static void
 usage (char *myName)
 {
-	bool just_analyze = false;
-
-	if ( stricmp(basename(myName),"condor_analyze")==0 ) {
-		just_analyze = true;
-	}
-
-	if ( just_analyze ) {
-
-	  printf ("Usage: %s [options]\n\twhere [options] are\n"
-		"\t\t-global\t\t\tGet global queue\n"
-		"\t\t-submitter <submitter>\tGet queue of specific submitter\n"
-		"\t\t-help\t\t\tThis screen\n"
-		"\t\t-name <name>\t\tName of schedd\n"
-		"\t\t-pool <host>\t\tUse host as the central manager to query\n"
-		"\t\t-long\t\t\tVerbose output\n"
-		"\t\t-run\t\t\tGet information about running jobs\n"
-		"\t\t-expert\t\t\tDisplay shorter error messages\n"
-		"\t\trestriction list\n"
-		"\twhere each restriction may be one of\n"
-		"\t\t<cluster>\t\tGet information about specific cluster\n"
-		"\t\t<cluster>.<proc>\tGet information about specific job\n"
-		"\t\t<owner>\t\t\tInformation about jobs owned by <owner>\n"
-		"\t\t-constraint <expr>\tAdd constraint on classads\n",
-			myName);
-
-	} else {
-
-	  printf ("Usage: %s [options]\n\twhere [options] are\n"
+	printf ("Usage: %s [options]\n\twhere [options] are\n"
 		"\t\t-global\t\t\tGet global queue\n"
 		"\t\t-submitter <submitter>\tGet queue of specific submitter\n"
 		"\t\t-help\t\t\tThis screen\n"
@@ -1133,23 +1775,35 @@ usage (char *myName)
 		"\t\t-xml\t\t\tDisplay entire classads, but in XML\n"
 		"\t\t-format <fmt> <attr>\tPrint attribute attr using format fmt\n"
 		"\t\t-analyze\t\tPerform schedulability analysis on jobs\n"
+#ifdef WANT_CLASSAD_ANALYSIS
+        "\t\t-better-analyze\t\tImproved version of -analyze\n"
+#endif
 		"\t\t-run\t\t\tGet information about running jobs\n"
-		"\t\t-hold\t\t\tGet information about jobs placed on hold\n"
+		"\t\t-hold\t\t\tGet information about jobs on hold\n"
 		"\t\t-goodput\t\tDisplay job goodput statistics\n"	
 		"\t\t-cputime\t\tDisplay CPU_TIME instead of RUN_TIME\n"
 		"\t\t-currentrun\t\tDisplay times only for current run\n"
 		"\t\t-io\t\t\tShow information regarding I/O\n"
 		"\t\t-dag\t\t\tSort DAG jobs under their DAGMan\n"
 		"\t\t-expert\t\t\tDisplay shorter error messages\n"
+		"\t\t-constraint <expr>\tAdd constraint on classads\n"
+		"\t\t-jobads <file>\t\tFile of job ads to display\n"
+		"\t\t-machineads <file>\tFile of machine ads for analysis\n"
+#if WANT_QUILL
+		"\t\t-direct <rdbms | quilld | schedd>\n"
+		"\t\t\tPerform a direct query to the rdbms, or to the quilld,\n"
+		"\t\t\tor to the schedd without falling back to the queue\n"
+		"\t\t\tlocation discovery algortihm, even in case of error\n"
+#else
+		"\t\t-direct <schedd>\tPerform a direct query to the schedd\n"
+#endif
+		"\t\t-avgqueuetime\t\tAverage queue time for uncompleted jobs\n"
 		"\t\trestriction list\n"
 		"\twhere each restriction may be one of\n"
 		"\t\t<cluster>\t\tGet information about specific cluster\n"
 		"\t\t<cluster>.<proc>\tGet information about specific job\n"
-		"\t\t<owner>\t\t\tInformation about jobs owned by <owner>\n"
-		"\t\t-constraint <expr>\tAdd constraint on classads\n",
+		"\t\t<owner>\t\t\tInformation about jobs owned by <owner>\n",
 			myName);
-
-	}
 }
 
 int
@@ -1178,12 +1832,41 @@ output_sorter( const void * va, const void * vb ) {
 	return 0;
 }
 
+/* The parameters v1, v2, and v3 will be intepreted immediately on the top 
+   of the function based on the value of useDB. For more details, please 
+   refer to the prototype of this function on the top of this file 
+*/
 static bool
-show_queue_buffered( char* scheddAddr, char* scheddName, char* scheddMachine )
+show_queue_buffered( char* v1, char* v2, char* v3, char* v4, bool useDB )
 {
 	static bool	setup_mask = false;
 	clusterProcString **the_output;
+
+	char *scheddAddr;
+	char *scheddName;
+	char *scheddMachine;
+
+	char *quillName;
+	char *dbIpAddr;
+	char *dbName;
+	char *queryPassword;
+	char *dbconn=NULL;
+	int i;
+
 	output_buffer = new ExtArray<clusterProcString*>;
+
+		/* intepret the parameters accordingly based on whether we are querying database */
+	if (useDB) {
+		quillName = v1;
+		dbIpAddr = v2;
+		dbName = v3;		
+		queryPassword = v4;
+	}
+	else {
+		scheddAddr = v1;
+		scheddName = v2;
+		scheddMachine = v3;		
+	}
 
 	output_buffer->setFiller( (clusterProcString *) NULL );
 
@@ -1240,7 +1923,7 @@ show_queue_buffered( char* scheddAddr, char* scheddName, char* scheddMachine )
 								 ATTR_GLOBUS_STATUS, "[?????]" );
 			mask.registerFormat( (StringCustomFmt)
 								 format_globusHostAndJM,
-								 ATTR_GLOBUS_RESOURCE, "fork    [?????]" );
+								 ATTR_JOB_CMD, "fork    [?????]" );
 			mask.registerFormat( "%-18.18s\n", ATTR_JOB_CMD );
 			setup_mask = true;
 			usingPrintMask = true;
@@ -1263,16 +1946,46 @@ show_queue_buffered( char* scheddAddr, char* scheddName, char* scheddMachine )
 		summarize = false;
 	}
 
-	// fetch queue from schedd and stash it in output_buffer.
 	CondorError errstack;
-	if( Q.fetchQueueFromHostAndProcess( scheddAddr,
-									 process_buffer_line,
-									 &errstack) != Q_OK ) {
-		printf( "\n-- Failed to fetch ads from: %s : %s\n%s\n",
-				scheddAddr, scheddMachine, errstack.getFullText(true) );
-		delete output_buffer;
 
-		return false;
+		/* get the job ads from database if database can be queried */
+	if (useDB) {
+#if WANT_QUILL
+
+		dbconn = getDBConnStr(quillName, dbIpAddr, dbName, queryPassword);
+
+		if( Q.fetchQueueFromDBAndProcess( dbconn,
+											process_buffer_line,
+											&errstack) != Q_OK ) {
+			fprintf( stderr, 
+					"\n-- Failed to fetch ads from db [%s] at database "
+					"server %s\n%s\n",
+					dbName, dbIpAddr, errstack.getFullText(true) );
+
+			delete output_buffer;
+
+			if(dbconn) {
+				free(dbconn);
+			}
+			return false;
+		}
+#endif /* WANT_QUILL */
+	} else {
+			// fetch queue from schedd and stash it in output_buffer.
+		if( Q.fetchQueueFromHostAndProcess( scheddAddr,
+											process_buffer_line,
+											&errstack) != Q_OK ) {
+			fprintf(stderr,
+				"\n-- Failed to fetch ads from: %s : %s\n%s\n",
+				scheddAddr, scheddMachine, errstack.getFullText(true) );
+
+			delete output_buffer;
+
+			if(dbconn) {
+				free(dbconn);
+			}
+			return false;
+		}
 	}
 
 	// If this is a global, don't print anything if this schedd is empty.
@@ -1284,7 +1997,10 @@ show_queue_buffered( char* scheddAddr, char* scheddName, char* scheddMachine )
 			output_sorter);
 
 		if (! customFormat ) {
-			if( querySchedds ) {
+			if (useDB) {
+				printf ("\n\n-- Quill: %s : %s : %s\n", quillName, 
+						dbIpAddr, dbName);
+			} else if( querySchedds ) {
 				printf ("\n\n-- Schedd: %s : %s\n", scheddName, scheddAddr);
 			} else {
 				printf ("\n\n-- Submitter: %s : %s : %s\n", scheddName, 
@@ -1296,7 +2012,7 @@ show_queue_buffered( char* scheddAddr, char* scheddName, char* scheddMachine )
 		}
 
 		if (!output_buffer_empty) {
-			for (int i=0;i<=output_buffer->getlast(); i++) {
+			for (i=0;i<=output_buffer->getlast(); i++) {
 				if ((*output_buffer)[i])
 					printf("%s",((*output_buffer)[i])->string);
 			}
@@ -1313,7 +2029,20 @@ show_queue_buffered( char* scheddAddr, char* scheddName, char* scheddMachine )
            	printf("\n");
 		}
 	}
+
+	if (!output_buffer_empty) {
+		for (i=0;i<=output_buffer->getlast(); i++) {
+			if ((*output_buffer)[i]) {
+				delete[] ((*output_buffer)[i])->string;
+				delete ((*output_buffer)[i]);
+			}
+		}
+	}
 	delete output_buffer;
+
+	if(dbconn) {
+		free(dbconn);
+	}
 	return true;
 }
 
@@ -1329,9 +2058,9 @@ process_buffer_line( ClassAd *job )
 
 	clusterProcString * tempCPS = new clusterProcString;
 	(*output_buffer)[output_buffer->getlast()+1] = tempCPS;
-	job->EvaluateAttrInt( ATTR_CLUSTER_ID, tempCPS->cluster );
-	job->EvaluateAttrInt( ATTR_PROC_ID, tempCPS->proc );
-	job->EvaluateAttrInt( ATTR_JOB_STATUS, status );
+	job->LookupInteger( ATTR_CLUSTER_ID, tempCPS->cluster );
+	job->LookupInteger( ATTR_PROC_ID, tempCPS->proc );
+	job->LookupInteger( ATTR_JOB_STATUS, status );
 
 	switch (status)
 	{
@@ -1346,8 +2075,21 @@ process_buffer_line( ClassAd *job )
 	// it sorts properly against dagman jobs.
 	char *dagman_job_string = NULL;
 	if (!job->LookupString(ATTR_DAGMAN_JOB_ID, &dagman_job_string)) {
-		tempCPS->dagman_cluster_id = tempCPS->cluster;
-		tempCPS->dagman_proc_id    = tempCPS->proc;
+			// we failed to find an DAGManJobId string attribute, 
+			// let's see if we find one that is an integer.
+		int temp_cluster = -1;
+		if (!job->LookupInteger(ATTR_DAGMAN_JOB_ID,temp_cluster)) {
+				// could not job DAGManJobId, so fall back on 
+				// just the regular job id
+			tempCPS->dagman_cluster_id = tempCPS->cluster;
+			tempCPS->dagman_proc_id    = tempCPS->proc;
+		} else {
+				// in this case, we found DAGManJobId set as
+				// an integer, not a string --- this means it is
+				// the cluster id.
+			tempCPS->dagman_cluster_id = temp_cluster;
+			tempCPS->dagman_proc_id    = 0;
+		}
 	} else {
 		// We've gotten a string, probably something like "201.0"
 		// we want to convert it to the numbers 201 and 0. To be safe, we
@@ -1376,7 +2118,7 @@ process_buffer_line( ClassAd *job )
 	}
 
 	if( analyze ) {
-  		tempCPS->string = strnewp( doRunAnalysisToBuffer( job ) );
+		tempCPS->string = strnewp( doRunAnalysisToBuffer( job ) );
 	} else if ( show_io ) {
 		tempCPS->string = strnewp( buffer_io_display( job ) );
 	} else if ( usingPrintMask ) {
@@ -1393,28 +2135,93 @@ process_buffer_line( ClassAd *job )
 	return true;
 }
 
+/* The parameters v1, v2, and v3 will be intepreted immediately on the top 
+   of the function based on the value of useDB. For more details, please 
+   refer to the prototype of this function on the top of this file 
+*/
 static bool
-show_queue( char* scheddAddr, char* scheddName, char* scheddMachine )
+show_queue( char* v1, char* v2, char* v3, char* v4, bool useDB )
 {
+	char *scheddAddr;
+	char *scheddName;
+	char *scheddMachine;
+
+	char *quillName;
+	char *dbIpAddr;
+	char *dbName;
+	char *queryPassword;
+
+	char *dbconn=NULL;
+
 	ClassAdList jobs; 
 	ClassAd		*job;
 	static bool	setup_mask = false;
 
-		// fetch queue from schedd	
-	CondorError errstack;
-	if( Q.fetchQueueFromHost(jobs, scheddAddr, &errstack) != Q_OK ) {
-		printf( "\n-- Failed to fetch ads from: %s : %s\n%s\n",
-				scheddAddr, scheddMachine, errstack.getFullText(true) );
-		return false;
+	/* assume this will be true. And it will be if we aren't using the DB */
+	scheddAddr = v1;
+	scheddName = v2;
+	scheddMachine = v3;		
+
+    if (jobads_file != NULL) {
+		/* get the "q" from the job ads file */
+        if (!read_classad_file(jobads_file, jobs)) {
+            return false;
+        }
+		
+		/* The variable UseDB should be false in this branch since it was set 
+			in main() because jobads_file had a good value. */
+
+    } else {
+		/* else get the job queue either from quill or the schedd. */
+
+		/* interpret the parameters accordingly based on whether
+			we are querying a database */
+		if (useDB) {
+			quillName = v1;
+			dbIpAddr = v2;
+			dbName = v3;		
+			queryPassword = v4;
+		}
+
+		CondorError errstack;
+
+			/* get the job ads from a database if available */
+		if (useDB) {
+#if WANT_QUILL
+
+			dbconn = getDBConnStr(quillName, dbIpAddr, dbName, queryPassword);
+
+				// fetch queue from database
+			if( Q.fetchQueueFromDB(jobs, dbconn, &errstack) != Q_OK ) {
+				fprintf( stderr,
+						"\n-- Failed to fetch ads from: %s : %s\n%s\n",
+						dbIpAddr, dbName, errstack.getFullText(true) );
+				return false;
+			}
+#endif /* WANT_QUILL */
+		} else {
+				// fetch queue from schedd	
+			if( Q.fetchQueueFromHost(jobs, scheddAddr, &errstack) != Q_OK ) {
+				fprintf( stderr,
+					"\n-- Failed to fetch ads from: %s : %s\n%s\n",
+					scheddAddr, scheddMachine, errstack.getFullText(true) );
+				return false;
+			}
+		}
 	}
 
-		// sort jobs by (cluster.proc)
-	jobs.Sort( (SortFunctionType)JobSort );
+		// sort jobs by (cluster.proc) if don't query database
+	if (!useDB) {
+		jobs.Sort( (SortFunctionType)JobSort );
+	}
 
 		// check if job is being analyzed
 	if( analyze ) {
 			// print header
-		if( querySchedds ) {
+		if (useDB) {
+			printf ("\n\n-- Quill: %s : %s : %s\n", quillName, 
+					dbIpAddr, dbName);
+		} else if( querySchedds ) {
 			printf ("\n\n-- Schedd: %s : %s\n", scheddName, scheddAddr);
 		} else {
 			printf ("\n\n-- Submitter: %s : %s : %s\n", scheddName, 
@@ -1434,20 +2241,32 @@ show_queue( char* scheddAddr, char* scheddName, char* scheddMachine )
 	if( jobs.MyLength() != 0 || !global ) {
 			// print header
 		if ( ! customFormat ) {
-			if( querySchedds ) {
+			if (useDB) {
+				printf ("\n\n-- Quill: %s : %s : %s\n", quillName, 
+						dbIpAddr, dbName);
+			} else if( querySchedds ) {
 				printf ("\n\n-- Schedd: %s : %s\n", scheddName, scheddAddr);
 			} else {
 				printf ("\n\n-- Submitter: %s : %s : %s\n", scheddName, 
 					scheddAddr, scheddMachine);	
 			}
 		}
+
+			// collapse all the ad chaining.
+			// we do this to fix issues with duplicate ad attributes
+			// appearing when doing condor_q -l with quill, etc.
+		jobs.Open();
+		while( ( job = jobs.Next() ) ) {
+				// no deep copy for speed; do not delete cluster ad!
+			job->ChainCollapse(false);	
+		}
+		jobs.Close();
 		
 			// initialize counters
 		malformed = 0; idle = 0; running = 0; unexpanded = 0, held = 0;
 		
 		if( verbose || use_xml ) {
-			jobs.PrintClassAdList( );
-			//jobs.fPrintAttrListList( stdout, use_xml ? true : false);
+			jobs.fPrintAttrListList( stdout, use_xml ? true : false);
 		} else if( customFormat ) {
 			summarize = false;
 			mask.display( stdout, &jobs );
@@ -1464,7 +2283,7 @@ show_queue( char* scheddAddr, char* scheddName, char* scheddMachine )
 									 ATTR_GLOBUS_STATUS, "[?????]" );
 				mask.registerFormat( (StringCustomFmt)
 									 format_globusHostAndJM,
-									 ATTR_GLOBUS_RESOURCE, "fork    [?????]" );
+									 ATTR_JOB_CMD, "fork    [?????]" );
 				mask.registerFormat( "%-18.18s\n", ATTR_JOB_CMD );
 				setup_mask = true;
 				usingPrintMask = true;
@@ -1557,6 +2376,9 @@ show_queue( char* scheddAddr, char* scheddName, char* scheddMachine )
 		}
 	}
 
+	if(dbconn) {
+		free(dbconn);
+	}
 	return true;
 }
 
@@ -1572,14 +2394,18 @@ setupAnalysis()
 	char		remoteUser[128];
 	int			index;
 
-	ClassAdParser	parser;	// NAC
-
 	// fetch startd ads
-	rval = query.fetchAds( startdAds , pool ? pool->addr() : NULL );
-	if( rval != Q_OK ) {
-		fprintf( stderr , "Error:  Could not fetch startd ads\n" );
-		exit( 1 );
-	}
+    if (machineads_file != NULL) {
+        if (!read_classad_file(machineads_file, startdAds)) {
+            exit ( 1 );
+        }
+    } else {
+        rval = Collectors->query (query, startdAds);
+        if( rval != Q_OK ) {
+            fprintf( stderr , "Error:  Could not fetch startd ads\n" );
+            exit( 1 );
+        }
+    }
 
 	// fetch submittor prios
 	fetchSubmittorPrios();
@@ -1587,10 +2413,11 @@ setupAnalysis()
 	// populate startd ads with remote user prios
 	startdAds.Open();
 	while( ( ad = startdAds.Next() ) ) {
-		if( ad->EvaluateAttrString( ATTR_REMOTE_USER, remoteUser, 128 ) ) {
+		if( ad->LookupString( ATTR_REMOTE_USER , remoteUser ) ) {
 			if( ( index = findSubmittor( remoteUser ) ) != -1 ) {
-				ad->InsertAttr( ATTR_REMOTE_USER_PRIO, 
-								( double )( prioTable[index].prio ) ); // NAC
+				sprintf( buffer , "%s = %f" , ATTR_REMOTE_USER_PRIO , 
+							prioTable[index].prio );
+				ad->Insert( buffer );
 			}
 		}
 	}
@@ -1598,24 +2425,24 @@ setupAnalysis()
 	
 
 	// setup condition expressions
-	sprintf( buffer, "MY.%s > MY.%s", ATTR_RANK, ATTR_CURRENT_RANK);	// NAC
-	parser.ParseExpression( buffer, stdRankCondition );					// NAC
-	
-	sprintf( buffer, "MY.%s >= MY.%s", ATTR_RANK, ATTR_CURRENT_RANK ); 	// NAC
-	parser.ParseExpression( buffer, preemptRankCondition );				// NAC
+    sprintf( buffer, "MY.%s > MY.%s", ATTR_RANK, ATTR_CURRENT_RANK );
+    Parse( buffer, stdRankCondition );
+
+    sprintf( buffer, "MY.%s >= MY.%s", ATTR_RANK, ATTR_CURRENT_RANK );
+    Parse( buffer, preemptRankCondition );
 
 	sprintf( buffer, "MY.%s > TARGET.%s + %f", ATTR_REMOTE_USER_PRIO, 
 			ATTR_SUBMITTOR_PRIO, PriorityDelta );
-	parser.ParseExpression( buffer, preemptPrioCondition );	// NAC
+	Parse( buffer, preemptPrioCondition ) ;
 
 	// setup preemption requirements expression
 	if( !( preq = param( "PREEMPTION_REQUIREMENTS" ) ) ) {
 		fprintf( stderr, "\nWarning:  No PREEMPTION_REQUIREMENTS expression in"
 					" config file --- assuming FALSE\n\n" );
-		parser.ParseExpression( "FALSE", preemptionReq );	// NAC
+		Parse( "FALSE", preemptionReq );
 	} else {
-		if( !parser.ParseExpression( (string)preq, preemptionReq ) ) {	// NAC
-		fprintf( stderr, "\nError:  Failed parse of "
+		if( Parse( preq , preemptionReq ) ) {
+			fprintf( stderr, "\nError:  Failed parse of "
 				"PREEMPTION_REQUIREMENTS expression: \n\t%s\n", preq );
 			exit( 1 );
 		}
@@ -1628,12 +2455,11 @@ setupAnalysis()
 static void
 fetchSubmittorPrios()
 {
-	ClassAd		ad;	// NAC
+	AttrList	al;
 	char  	attrName[32], attrPrio[32];
   	char  	name[128];
   	float 	priority;
 	int		i = 1;
-	double 	priorityD;
 
 		// Minor hack, if we're talking to a remote pool, assume the
 		// negotiator is on the same host as the collector.
@@ -1643,17 +2469,16 @@ fetchSubmittorPrios()
 	Sock* sock;
 
 	if (!(sock = negotiator.startCommand( GET_PRIORITY, Stream::reli_sock, 0))) {
-		fprintf( stderr, 
-				 "(1) Error:  Could not get priorities from negotiator (%s)\n",
+		fprintf( stderr, "Error: Could not connect to negotiator (%s)\n",
 				 negotiator.fullHostname() );
 		exit( 1 );
 	}
 
 	sock->eom();
 	sock->decode();
-	if( !getOldClassAdNoTypes(sock, ad) || !sock->end_of_message() ) {
+	if( !al.initFromStream(*sock) || !sock->end_of_message() ) {
 		fprintf( stderr, 
-				 "(2) Error:  Could not get priorities from negotiator (%s)\n",
+				 "Error:  Could not get priorities from negotiator (%s)\n",
 				 negotiator.fullHostname() );
 		exit( 1 );
 	}
@@ -1666,11 +2491,9 @@ fetchSubmittorPrios()
     	sprintf( attrName , "Name%d", i );
     	sprintf( attrPrio , "Priority%d", i );
 
-    	if( !ad.EvaluateAttrString( attrName, name, 128 ) || 
-			!ad.EvaluateAttrReal( attrPrio, priorityD ) ) {
+    	if( !al.LookupString( attrName, name ) || 
+			!al.LookupFloat( attrPrio, priority ) )
             break;
-		}
-		priority = (float)priorityD;
 
 		prioTable[i-1].name = name;
 		prioTable[i-1].prio = priority;
@@ -1697,12 +2520,11 @@ doRunAnalysisToBuffer( ClassAd *request )
 	char	buffer[128];
 	int		index;
 	ClassAd	*offer;
-	MatchClassAd mad;		// NAC
-	ClassAd *request_copy;	// NAC
-	Value	result;			// NAC
+	EvalResult	result;
 	int		cluster, proc;
 	int		jobState;
 	int		niceUser;
+	int		universe;
 
 	int 	fReqConstraint 	= 0;
 	int		fOffConstraint 	= 0;
@@ -1712,192 +2534,120 @@ doRunAnalysisToBuffer( ClassAd *request )
 	int		available		= 0;
 	int		totalMachines	= 0;
 
-	bool 	match;			// NAC
-	double	matchD;			// NAC
-	bool 	boolValue; 		// NAC
-	int 	intValue;  		// NAC
-	Value	val;	   		// NAC
+	return_buff[0]='\0';
 
-	char *big_return_buff = new char[16384];
-	big_return_buff[0]='\0';
-
-	ExprTree *rankExpr = request->Lookup( ATTR_RANK );
-	ExprTree *newRankExpr = NULL;
-	request->AddExplicitConditionals( rankExpr, newRankExpr );
-	request->Insert( ATTR_RANK, newRankExpr );
-
-	if( !request->EvaluateAttrString( ATTR_OWNER, owner, 128 ) ) {		// NAC
-		return "Nothing here.\n";										// NAC
-	}																	// NAC
-	if( !request->EvaluateAttrInt( ATTR_NICE_USER, niceUser ) ) {		// NAC
-		niceUser = 0;													// NAC
-	}																	// NAC
+	if( !request->LookupString( ATTR_OWNER , owner ) ) return "Nothing here.\n";
+	if( !request->LookupInteger( ATTR_NICE_USER , niceUser ) ) niceUser = 0;
 
 	if( ( index = findSubmittor( fixSubmittorName( owner, niceUser ) ) ) < 0 ) 
 		return "Nothing here.\n";
 
-	request->InsertAttr( ATTR_SUBMITTOR_PRIO, ( double )( prioTable[index].prio ) ); // NAC
+	sprintf( buffer , "%s = %f" , ATTR_SUBMITTOR_PRIO , prioTable[index].prio );
+	request->Insert( buffer );
 
-	request->EvaluateAttrInt( ATTR_CLUSTER_ID, cluster );
-	request->EvaluateAttrInt( ATTR_PROC_ID, proc );
-	request->EvaluateAttrInt( ATTR_JOB_STATUS, jobState );
-
+	request->LookupInteger( ATTR_CLUSTER_ID, cluster );
+	request->LookupInteger( ATTR_PROC_ID, proc );
+	request->LookupInteger( ATTR_JOB_STATUS, jobState );
 	if( jobState == RUNNING ) {
-		sprintf( big_return_buff,
-			"---\n%03d.%03d:  Job is being serviced\n\n", cluster, 
+		sprintf( return_buff,
+			"---\n%03d.%03d:  Request is being serviced\n\n", cluster, 
 			proc );
-		return big_return_buff;
+		return return_buff;
 	}
 	if( jobState == HELD ) {
-		sprintf( big_return_buff,
-			"---\n%03d.%03d:  Job is held.\n\n", cluster, 
+		sprintf( return_buff,
+			"---\n%03d.%03d:  Request is held.\n\n", cluster, 
 			proc );
-		return big_return_buff;
+		return return_buff;
 	}
 	if( jobState == REMOVED ) {
-		sprintf( big_return_buff,
-			"---\n%03d.%03d:  Job is removed.\n\n", cluster, 
+		sprintf( return_buff,
+			"---\n%03d.%03d:  Request is removed.\n\n", cluster, 
 			proc );
-		return big_return_buff;
+		return return_buff;
 	}
 
-	request_copy = (ClassAd *)request->Copy( );
-	mad.ReplaceLeftAd( request_copy );	// NAC
-
-  	startdAds.Open();
-	while( offer = startdAds.Next( ) ) {
-			// Add conditional operators to offer Rank expression if needed
-		ExprTree* rankExpr = offer->Lookup( ATTR_RANK );
-		ExprTree* newRankExpr = NULL;
-		offer->AddExplicitConditionals( rankExpr, newRankExpr );
-		if( newRankExpr != NULL ) {
-			offer->Insert( ATTR_RANK, newRankExpr );
-		}
-
+	startdAds.Open();
+	while( ( offer = startdAds.Next() ) ) {
 		// 0.  info from machine
 		remoteUser[0] = '\0';
 		totalMachines++;
-		offer->EvaluateAttrString( ATTR_NAME, buffer, 128 );		// NAC
-		if( verbose ) sprintf( big_return_buff, "%-15.15s ", buffer );
+		offer->LookupString( ATTR_NAME , buffer );
+		if( verbose ) sprintf( return_buff, "%-15.15s ", buffer );
 
 		// 1. Request satisfied? 
-		mad.RemoveRightAd( );		// NAC
-		mad.ReplaceRightAd( offer );// NAC
-
-		if( !mad.EvaluateAttr( "rightMatchesLeft", val ) ) {     	// NAC
-              // there was a problem with the match					// NAC
-			if( verbose ) {											// NAC
-				sprintf( big_return_buff,								// NAC 
-						 "%sError in matchmaking\n",				// NAC
-						 big_return_buff );								// NAC
-			}														// NAC
-			continue;												// NAC
-		}															// NAC
-		else if ( ( !val.IsBooleanValue() && !val.IsNumber() )	||	// NAC
-				  ( val.IsBooleanValue( match ) && !match )		||	// NAC
-				  ( val.IsNumber( matchD ) && !matchD ) ) {			// NAC
-
-			if( verbose ) {
-				sprintf( big_return_buff,
-						 "%sFailed job constraint\n",
-						 big_return_buff );
-
-			}
+		if( !( (*offer) >= (*request) ) ) {
+			if( verbose ) sprintf( return_buff,
+				"%sFailed request constraint\n", return_buff );
 			fReqConstraint++;
 			continue;
-		}
+		} 
 
-			// 2. Offer satisfied? 
-		if( !mad.EvaluateAttr( "leftMatchesRight", val ) ) {		// NAC
-                // there was a problem with the match				// NAC
-  			if( verbose ) {											// NAC
-				sprintf( big_return_buff,								// NAC 
-						 "%sError in matchmaking\n",				// NAC
-						 big_return_buff );								// NAC
-			}														// NAC
-			continue;												// NAC
-		}															// NAC
-		else if ( ( !val.IsBooleanValue() && !val.IsNumber() )	||	// NAC
-				  ( val.IsBooleanValue( match ) && !match )		||	// NAC
-				  ( val.IsNumber( matchD ) && !matchD ) ) {			// NAC
-			
-  			if( verbose ) { 
-				strcat( big_return_buff, "Failed machine constraint\n");
-			}  
+		// 2. Offer satisfied? 
+		if( !( (*offer) <= (*request) ) ) {
+			if( verbose ) strcat( return_buff, "Failed offer constraint\n");
 			fOffConstraint++;
 			continue;
 		}	
 
+			
 		// 3. Is there a remote user?
-		if( !offer->EvaluateAttrString( ATTR_REMOTE_USER, remoteUser, 128 ) ) {
-			stdRankCondition->SetParentScope( offer );
-			offer->EvaluateExpr( stdRankCondition, result );		// NAC
-			if( ( result.IsBooleanValue( boolValue ) && boolValue )	// NAC
-				|| ( result.IsNumber( intValue ) && intValue ) ) {	// NAC
-					// both sides satisfied and no remote user
-				if( verbose ) sprintf( big_return_buff, "%sAvailable\n",
-									   big_return_buff );
-				available++;	
+		if( !offer->LookupString( ATTR_REMOTE_USER, remoteUser ) ) {
+			if( stdRankCondition->EvalTree( offer, request, &result ) &&
+					result.type == LX_INTEGER && result.i == TRUE ) {
+				// both sides satisfied and no remote user
+				if( verbose ) sprintf( return_buff, "%sAvailable\n",
+					return_buff );
+				available++;
 				continue;
 			} else {
-					// no remote user, but std rank condition failed
-
+				// no remote user, but std rank condition failed
 				fRankCond++;
 				if( verbose ) {
-					sprintf( big_return_buff,
-							 "%sFailed rank condition: MY.Rank > MY.CurrentRank\n",
-							 big_return_buff);
+					sprintf( return_buff,
+						"%sFailed rank condition: MY.Rank > MY.CurrentRank\n",
+						return_buff);
 				}
 				continue;
 			}
 		}
 
 		// 4. Satisfies preemption priority condition?
-		preemptPrioCondition->SetParentScope( offer );
-		offer->EvaluateExpr( preemptPrioCondition, result );		// NAC
-		if( ( result.IsBooleanValue( boolValue ) && boolValue )		// NAC
-			|| ( result.IsNumber( intValue ) && intValue ) ) {		// NAC
+		if( preemptPrioCondition->EvalTree( offer, request, &result ) &&
+			result.type == LX_INTEGER && result.i == TRUE ) {
 
 			// 5. Satisfies standard rank condition?
-			stdRankCondition->SetParentScope( offer );
-			offer->EvaluateExpr( stdRankCondition, result );		// NAC
-			if( ( result.IsBooleanValue( boolValue ) && boolValue )	// NAC
-				|| ( result.IsNumber( intValue ) && intValue ) ) {	// NAC
-				if( verbose ) {
-					sprintf( big_return_buff, "%sAvailable\n", big_return_buff );
-				}
+			if( stdRankCondition->EvalTree( offer , request , &result ) &&
+				result.type == LX_INTEGER && result.i == TRUE )  
+			{
+				if( verbose )
+					sprintf( return_buff, "%sAvailable\n", return_buff );
 				available++;
 				continue;
 			} else {
-
 				// 6.  Satisfies preemption rank condition?
-				preemptRankCondition->SetParentScope( offer );
-				offer->EvaluateExpr( preemptRankCondition, result );	// NAC
-				if(	( result.IsBooleanValue( boolValue ) && boolValue )	// NAC
-					|| ( result.IsNumber( intValue ) && intValue ) ) {	// NAC
-
+				if( preemptRankCondition->EvalTree( offer, request, &result ) &&
+					result.type == LX_INTEGER && result.i == TRUE )
+				{
 					// 7.  Tripped on PREEMPTION_REQUIREMENTS?
-					preemptionReq->SetParentScope( offer );
-					offer->EvaluateExpr( preemptionReq, result );		// NAC
-					if( ( result.IsBooleanValue( boolValue ) 			// NAC
-						  && !boolValue ) ||							// NAC
-						( result.IsIntegerValue( intValue ) 			// NAC
-						  && intValue == FALSE ) ) { 					// NAC
+					if( preemptionReq->EvalTree( offer , request , &result ) &&
+						result.type == LX_INTEGER && result.i == FALSE ) 
+					{
 						fPreemptReqTest++;
 						if( verbose ) {
-							sprintf( big_return_buff,
+							sprintf( return_buff,
 									"%sCan preempt %s, but failed "
 									"PREEMPTION_REQUIREMENTS test\n",
-									big_return_buff,
+									return_buff,
 									remoteUser);
 						}
 						continue;
 					} else {
 						// not held
 						if( verbose ) {
-							sprintf( big_return_buff,
+							sprintf( return_buff,
 								"%sAvailable (can preempt %s)\n",
-								big_return_buff, remoteUser);
+								return_buff, remoteUser);
 						}
 						available++;
 					}
@@ -1905,6 +2655,8 @@ doRunAnalysisToBuffer( ClassAd *request )
 					// failed 6 and 5, but satisfies 4; so have priority
 					// but not better or equally preferred than current
 					// customer
+					// NOTE: In practice this often indicates some
+					// unknown problem.
 					fRankCond++;
 				}
 			} 
@@ -1912,98 +2664,184 @@ doRunAnalysisToBuffer( ClassAd *request )
 			// failed 4
 			fPreemptPrioCond++;
 			if( verbose ) {
-				sprintf( big_return_buff,
+				sprintf( return_buff,
 					"%sInsufficient priority to preempt %s\n" , 
-					big_return_buff, remoteUser );
+					return_buff, remoteUser );
 			}
 			continue;
 		}
 	}
-	mad.RemoveLeftAd( );	// NAC
-	mad.RemoveRightAd( );	// NAC
 	startdAds.Close();
 
-	sprintf( big_return_buff,
-			 "%s---\n%03d.%03d:  Run analysis summary.  Of %d machines,\n" 
-			 "  %5d are rejected by your job's requirements\n",
-			 big_return_buff, cluster, proc, totalMachines,
-			 fReqConstraint );
-	
-	if( fReqConstraint < totalMachines ) {
-		sprintf( big_return_buff,
-				 "%s  %5d reject your job because of their own requirements\n"
-				 "  %5d match, but are serving users with a better priority in the pool%s\n" 
-				 "  %5d match, but prefer another specific job despite its worse user-priority\n"
-				 "  %5d match, but will not currently preempt their existing job\n"
-				 "  %5d are available to run your job\n",
-				 big_return_buff,
-				 fOffConstraint,
-				 fPreemptPrioCond, niceUser ? "(*)" : "",
-				 fRankCond,
-				 fPreemptReqTest,
-				 available );
-	}
+	sprintf( return_buff, 
+		 "%s---\n%03d.%03d:  Run analysis summary.  Of %d machines,\n"
+		 "  %5d are rejected by your job's requirements\n"
+		 "  %5d reject your job because of their own requirements\n"
+		 "  %5d match but are serving users with a better priority in the pool%s\n"
+		 "  %5d match but reject the job for unknown reasons\n"
+		 "  %5d match but will not currently preempt their existing job\n"
+		 "  %5d are available to run your job\n",
+		return_buff, cluster, proc, totalMachines,
+		fReqConstraint,
+		fOffConstraint,
+		fPreemptPrioCond, niceUser ? "(*)" : "",
+		fRankCond,
+		fPreemptReqTest,
+		available );
 
 	int last_match_time=0, last_rej_match_time=0;
-	request->EvaluateAttrInt(ATTR_LAST_MATCH_TIME, last_match_time);
-	request->EvaluateAttrInt(ATTR_LAST_REJ_MATCH_TIME, last_rej_match_time);
+	request->LookupInteger(ATTR_LAST_MATCH_TIME, last_match_time);
+	request->LookupInteger(ATTR_LAST_REJ_MATCH_TIME, last_rej_match_time);
 	if (last_match_time) {
 		time_t t = (time_t)last_match_time;
-		sprintf( big_return_buff, "%s\tLast successful match: %s",
-				 big_return_buff, ctime(&t) );
+		sprintf( return_buff, "%s\tLast successful match: %s",
+				 return_buff, ctime(&t) );
 	} else if (last_rej_match_time) {
-		strcat( big_return_buff, "\tNo successful match recorded.\n" );
+		strcat( return_buff, "\tNo successful match recorded.\n" );
 	}
 	if (last_rej_match_time > last_match_time) {
 		time_t t = (time_t)last_rej_match_time;
-		sprintf( big_return_buff, "%s\tLast failed match: %s",
-				 big_return_buff, ctime(&t) );
-        string buf;
-		request->EvaluateAttrString( ATTR_LAST_REJ_MATCH_REASON, buf);
-		if (buf.length() > 0) {
-			sprintf( big_return_buff, "%s\tReason for last match failure: %s\n",
-					 big_return_buff, buf.data() );
+		sprintf( return_buff, "%s\tLast failed match: %s",
+				 return_buff, ctime(&t) );
+		buffer[0] = '\0';
+		request->LookupString(ATTR_LAST_REJ_MATCH_REASON, buffer);
+		if (buffer[0]) {
+			sprintf( return_buff, "%s\tReason for last match failure: %s\n",
+					 return_buff, buffer );
 		}
 	}
 
 	if( niceUser ) {
-		sprintf( big_return_buff, 
-				 "%s\n\t(*)  Since this is a \"nice-user\" job, this job "
+		sprintf( return_buff, 
+				 "%s\n\t(*)  Since this is a \"nice-user\" request, this request "
 				 "has a\n\t     very low priority and is unlikely to preempt other "
-				 "jobs.\n", big_return_buff );
+				 "requests.\n", return_buff );
 	}
 			
 
 	if( fReqConstraint == totalMachines ) {
-		strcat( big_return_buff, "\nWARNING:  Be advised:\n");
-		strcat( big_return_buff, "   No machines matched job's requirements\n");
-		strcat( big_return_buff, "\n" ); 	// NAC
+		strcat( return_buff, "\nWARNING:  Be advised:\n");
+		strcat( return_buff, "   No resources matched request's constraints\n");
+#ifdef WANT_CLASSAD_ANALYSIS
+        if (!better_analyze) {
+#endif
+            char reqs[2048];
+            ExprTree *reqExp;
+            sprintf( return_buff, "%s   Check the %s expression below:\n\n" , 
+                     return_buff, ATTR_REQUIREMENTS );
+            if( !(reqExp = request->Lookup( ATTR_REQUIREMENTS) ) ) {
+                sprintf( return_buff, "%s   ERROR:  No %s expression found" ,
+                         return_buff, ATTR_REQUIREMENTS );
+            } else {
+                reqs[0] = '\0';
+                reqExp->PrintToStr( reqs );
+                sprintf( return_buff, "%s%s\n\n", return_buff, reqs );
+            }
+#ifdef WANT_CLASSAD_ANALYSIS
+        }
+#endif
 	}
 
-	string buffer_string = "";			// NAC
-	char ana_buffer[buffer_size];				// NAC
-
-	if( fReqConstraint > 0 ) {
-		analyzer.AnalyzeJobReqToBuffer( request, startdAds, buffer_string );
-			// NAC
-		strncpy( ana_buffer, buffer_string.c_str( ), buffer_size );	// NAC
-		strcat( big_return_buff, ana_buffer );	// NAC
-	}
+#if defined( WANT_CLASSAD_ANALYSIS )
+    if (better_analyze) {
+        std::string buffer_string = "";
+        char ana_buffer[SHORT_BUFFER_SIZE];
+        
+        if( fReqConstraint > 0 ) {
+            analyzer.AnalyzeJobReqToBuffer( request, startdAds, buffer_string );
+            strncpy( ana_buffer, buffer_string.c_str( ), SHORT_BUFFER_SIZE );
+            strcat( return_buff, ana_buffer );
+        }
+    }
+#endif
 
 	if( fOffConstraint == totalMachines ) {
-		sprintf( big_return_buff, "%s\nWARNING:  Be advised:", big_return_buff );
-		sprintf( big_return_buff, "%s   Job %d.%d did not match any "
-			"machine's requirements\n\n", big_return_buff, cluster, proc);
+		sprintf( return_buff, "%s\nWARNING:  Be advised:", return_buff );
+		sprintf( return_buff, "%s   Request %d.%d did not match any "
+			"resource's constraints\n\n", return_buff, cluster, proc);
 	}
 
-	if( fOffConstraint > 0 ) { 			// NAC
-		buffer_string = "";
-		analyzer.AnalyzeJobAttrsToBuffer( request, startdAds, buffer_string );
-		strncpy( ana_buffer, buffer_string.c_str( ), 2048 );			// NAC
-		strcat( big_return_buff, ana_buffer );	// NAC
-	}									// NAC
+#if defined( WANT_CLASSAD_ANALYSIS )
+    if (better_analyze) {
+        std::string buffer_string = "";
+        char ana_buffer[SHORT_BUFFER_SIZE];
+        if( fOffConstraint > 0 ) {
+            buffer_string = "";
+            analyzer.AnalyzeJobAttrsToBuffer( request, startdAds, buffer_string );
+            strncpy( ana_buffer, buffer_string.c_str( ), SHORT_BUFFER_SIZE);
+            strcat( return_buff, ana_buffer );
+        }
+    }
+#endif
 
-	return big_return_buff;
+	/* Attributes to check for grid universe matchmaking */ 
+	const char * ads_to_check[] = { ATTR_GLOBUS_RESOURCE,
+									ATTR_REMOTE_SCHEDD,
+									ATTR_GRID_RESOURCE };
+
+	request->LookupInteger( ATTR_JOB_UNIVERSE, universe );
+	bool uses_matchmaking = false;
+	unsigned int i;
+	switch(universe) {
+			// Known valid
+		case CONDOR_UNIVERSE_STANDARD:
+		case CONDOR_UNIVERSE_JAVA:
+		case CONDOR_UNIVERSE_VANILLA:
+			break;
+
+			// Unknown
+		case CONDOR_UNIVERSE_PVM:
+		case CONDOR_UNIVERSE_PVMD:
+		case CONDOR_UNIVERSE_PARALLEL:
+			break;
+
+			// Maybe
+		case CONDOR_UNIVERSE_GRID:
+			/* We may be able to detect when it's valid.  Check for existance
+			 * of "$$(FOO)" style variables in the classad. */
+			for (i = 0;   
+				     i < sizeof(ads_to_check)/sizeof(ads_to_check[0]);
+					 i++) {
+				char resource[500];
+				resource[0] = '\0';
+				request->LookupString(ads_to_check[i], resource);
+				if ( strstr(resource,"$$") ) {
+					uses_matchmaking = true;
+					break;
+				}  
+			}
+			if (!uses_matchmaking) {
+				sprintf( return_buff, "%s\nWARNING: Analysis is only meaningful for Globus universe jobs using matchmaking.\n", return_buff);
+			}
+			break;
+
+			// Specific known bad
+		case CONDOR_UNIVERSE_MPI:
+			sprintf( return_buff, "%s\nWARNING: Analysis is meaningless for MPI universe jobs.\n", return_buff );
+			break;
+
+			// Specific known bad
+		case CONDOR_UNIVERSE_SCHEDULER:
+			/* Note: May be valid (although requiring a different algorithm)
+			 * starting some time in V6.7. */
+			sprintf( return_buff, "%s\nWARNING: Analysis is meaningless for Scheduler universe jobs.\n", return_buff );
+			break;
+
+			// Unknown
+			/* These _might_ be meaningful, especially if someone adds a 
+			 * universe but fails to update this code. */
+		//case CONDOR_UNIVERSE_PIPE:
+		//case CONDOR_UNIVERSE_LINDA:
+		//case CONDOR_UNIVERSE_MAX:
+		//case CONDOR_UNIVERSE_MIN:
+		default:
+			sprintf( return_buff, "%s\nWARNING: Job universe unknown.  Analysis may not be meaningful.\n", return_buff );
+			break;
+	}
+
+
+	//printf("%s",return_buff);
+	return return_buff;
 }
 
 
@@ -2058,3 +2896,155 @@ fixSubmittorName( char *name, int niceUser )
 
 	return NULL;
 }
+
+static bool read_classad_file(const char *filename, ClassAdList &classads)
+{
+    int is_eof, is_error, is_empty;
+    bool success;
+    ClassAd *classad;
+    FILE *file;
+
+    file = fopen(filename, "r");
+    if (file == NULL) {
+        fprintf(stderr, "Can't open file of job ads: %s\n", filename);
+        success = false;
+    } else {
+        do {
+            classad = new ClassAd(file, "\n", is_eof, is_error, is_empty);
+            if (!is_error && !is_empty) {
+                classads.Insert(classad);
+            }
+        } while (!is_eof && !is_error);
+        if (is_error) {
+            success = false;
+        } else {
+            success = true;
+        }
+    }
+    return success;
+}
+
+#if WANT_QUILL
+
+/* get the quill address for the quillName specified */
+static QueryResult getQuillAddrFromCollector(char *quillName, char *&quillAddr) {
+	QueryResult result = Q_OK;
+	char		constraint[1024];
+	CondorQuery	quillQuery(QUILL_AD);
+	ClassAdList quillList;
+	ClassAd		*ad;
+
+	sprintf (constraint, "%s == \"%s\"", ATTR_NAME, quillName);
+	quillQuery.addORConstraint (constraint);
+
+	result = Collectors->query ( quillQuery, quillList );
+
+	quillList.Open();	
+	while ((ad = quillList.Next())) {
+		ad->LookupString(ATTR_MY_ADDRESS, &quillAddr);
+	}
+	quillList.Close();
+	return result;
+}
+
+
+static char * getDBConnStr(char *&quillName,
+                           char *&databaseIp,
+                           char *&databaseName,
+                           char *&queryPassword) {
+	char            *host, *port, *dbconn, *ptr_colon;
+	char            *tmpquillname, *tmpdatabaseip, *tmpdatabasename, *tmpquerypassword;
+	int             len, tmp1, tmp2, tmp3;
+
+	if((!quillName && !(tmpquillname = param("QUILL_NAME"))) ||
+	   (!databaseIp && !(tmpdatabaseip = param("QUILL_DB_IP_ADDR"))) ||
+	   (!databaseName && !(tmpdatabasename = param("QUILL_DB_NAME"))) ||
+	   (!queryPassword && !(tmpquerypassword = param("QUILL_DB_QUERY_PASSWORD")))) {
+		fprintf( stderr, "Error: Could not find database related parameter\n");
+		fprintf(stderr, "\n");
+		print_wrapped_text("Extra Info: "
+                       "The most likely cause for this error "
+                       "is that you have not defined "
+                       "QUILL_NAME/QUILL_DB_IP_ADDR/"
+                       "QUILL_DB_NAME/QUILL_DB_QUERY_PASSWORD "
+                       "in the condor_config file.  You must "
+						   "define this variable in the config file", stderr);
+
+		exit( 1 );
+	}
+
+	if(!quillName) {
+		quillName = tmpquillname;
+	}
+	if(!databaseIp) {
+		if(tmpdatabaseip[0] != '<') {
+				//2 for the two brackets and 1 for the null terminator
+			databaseIp = (char *) malloc(strlen(tmpdatabaseip)+3);
+			sprintf(databaseIp, "<%s>", tmpdatabaseip);
+			free(tmpdatabaseip);
+		}
+		else {
+			databaseIp = tmpdatabaseip;
+		}
+	}
+
+	if(!databaseName) {
+		databaseName = tmpdatabasename;
+	}
+	if(!queryPassword) {
+		queryPassword = tmpquerypassword;
+	}
+
+	tmp1 = strlen(databaseName);
+	tmp2 = strlen(queryPassword);
+	len = strlen(databaseIp);
+
+		//the 6 is for the string "host= " or "port= "
+		//the rest is a subset of databaseIp so a size of
+		//databaseIp is more than enough
+	host = (char *) malloc((len+6) * sizeof(char));
+	port = (char *) malloc((len+6) * sizeof(char));
+
+		//here we break up the ipaddress:port string and assign the
+		//individual parts to separate string variables host and port
+	ptr_colon = strchr(databaseIp, ':');
+	strcpy(host, "host= ");
+	strncat(host,
+			databaseIp+1,
+			ptr_colon - databaseIp -1);
+	strcpy(port, "port= ");
+	strcat(port, ptr_colon+1);
+	port[strlen(port)-1] = '\0';
+
+		//tmp3 is the size of dbconn - its size is estimated to be
+		//(2 * len) for the host/port part, tmp1 + tmp2 for the
+		//password and dbname part and 1024 as a cautiously
+		//overestimated sized buffer
+	tmp3 = (2 * len) + tmp1 + tmp2 + 1024;
+	dbconn = (char *) malloc(tmp3 * sizeof(char));
+	sprintf(dbconn, "%s %s user=quillreader password=%s dbname=%s",
+			host, port, queryPassword, databaseName);
+
+	free(host);
+	free(port);
+	return dbconn;
+}
+
+static void exec_db_query(char *quillName, char *dbIpAddr, char *dbName, char *queryPassword) {
+	char *dbconn=NULL;
+	
+	dbconn = getDBConnStr(quillName, dbIpAddr, dbName, queryPassword);
+
+	printf ("\n\n-- Quill: %s : %s : %s\n", quillName, 
+			dbIpAddr, dbName);
+
+	if (avgqueuetime) {
+		Q.rawDBQuery(dbconn, AVG_TIME_IN_QUEUE);
+	}
+	if(dbconn) {
+		free(dbconn);
+	}
+
+}
+
+#endif /* WANT_QUILL */

@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -27,7 +27,8 @@
 #include "script.h"
 #include "util.h"
 #include "job.h"
-#include "types.h"
+#include "condor_id.h"
+#include "tmp_dir.h"
 
 #include "HashTable.h"
 #include "env.h"
@@ -36,49 +37,84 @@
 extern DLL_IMPORT_MAGIC char **environ;
 
 //-----------------------------------------------------------------------------
-Script::Script( bool post, const char* cmd, const char* nodeName ) :
+Script::Script( bool post, const char* cmd, const Job* node ) :
     _post         (post),
     _retValScript (-1),
     _retValJob    (-1),
 	_pid		  (0),
 	_done         (FALSE),
-	_nodeName     (nodeName)
+	_node         (node)
 {
 	ASSERT( cmd != NULL );
-	ASSERT( nodeName != NULL );
     _cmd = strnewp (cmd);
-    _nodeName = strnewp( nodeName );
+    return;
 }
 
 //-----------------------------------------------------------------------------
 Script::~Script () {
     delete [] _cmd;
-	delete [] (char*) _nodeName;
+    return;
+}
+
+const char *Script::GetNodeName()
+{
+    return _node->GetJobName();
 }
 
 //-----------------------------------------------------------------------------
 int
 Script::BackgroundRun( int reaperId )
 {
-	// construct command line
+	TmpDir		tmpDir;
+	MyString	errMsg;
+	if ( !tmpDir.Cd2TmpDir( _node->GetDirectory(), errMsg ) ) {
+		debug_printf( DEBUG_QUIET,
+				"Could not change to node directory %s: %s\n",
+				_node->GetDirectory(), errMsg.Value() );
+
+		return 0;
+	}
+
+	// Construct the command line, replacing some tokens with
+    // information about the job.  All of these values would probably
+    // be better inserted into the environment, rather than passed on
+    // the command-line... some should be in the job's env as well...
+
     const char *delimiters = " \t";
     char * token;
-    MyString send;
+	ArgList args;
     char * cmd = strnewp(_cmd);
     for (token = strtok (cmd,  delimiters) ; token != NULL ;
          token = strtok (NULL, delimiters)) {
+		MyString arg;
 		if( !strcasecmp( token, "$JOB" ) ) {
-			send += _nodeName;
-		}
-        else if (!strcasecmp(token, "$RETURN")) send += _retValJob;
-        else                                    send += token;
+			arg += _node->GetJobName();
+		} 
+        else if ( !strcasecmp( token, "$RETRY" ) ) {
+            arg += _node->retries;
+        }
+        else if ( _post && !strcasecmp( token, "$JOBID" ) ) {
+            arg += _node->_CondorID._cluster;
+            arg += '.';
+            arg += _node->_CondorID._proc;
+        }
+        else if (!strcasecmp(token, "$RETURN")) arg += _retValJob;
+        else                                    arg += token;
 
-        send += ' ';
+		args.AppendArg(arg.Value());
     }
 
-	_pid = daemonCore->Create_Process( cmd, (char*) send.Value(),
+	_pid = daemonCore->Create_Process( cmd, args,
 									   PRIV_UNKNOWN, reaperId, FALSE,
 									   NULL, NULL, FALSE, NULL, NULL, 0 );
     delete [] cmd;
+
+	if ( !tmpDir.Cd2MainDir( errMsg ) ) {
+		debug_printf( DEBUG_QUIET,
+				"Could not change to original directory: %s\n",
+				errMsg.Value() );
+		return 0;
+	}
+
 	return _pid;
 }

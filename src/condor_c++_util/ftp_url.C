@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -25,6 +25,7 @@
 #include "url_condor.h"
 #include "internet.h"
 #include "condor_debug.h"
+#include "condor_netdb.h"
 
 /*
 *	A full fledged ftp url looks like:
@@ -95,7 +96,8 @@ int open_ftp( const char *name, int flags, size_t n_bytes )
 		return sock_fd;
 	}
 
-	if( ! _condor_local_bind(sock_fd) ) {
+	/* TRUE means this is an outgoing connection */
+	if( ! _condor_local_bind(TRUE, sock_fd) ) {
 		close( sock_fd );
 		return -1;
 	}
@@ -116,7 +118,7 @@ int open_ftp( const char *name, int flags, size_t n_bytes )
 
 	sin.sin_port = htons(port_num);
 
-	he = gethostbyname( name );
+	he = condor_gethostbyname( name );
 	if ( he ) {
 		sin.sin_family = he->h_addrtype;
 		sin.sin_addr = *((struct in_addr *) he->h_addr_list[0]);

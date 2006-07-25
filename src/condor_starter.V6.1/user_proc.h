@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -88,6 +88,10 @@ public:
 		/** Continue. */
 	virtual void Continue() = 0;
 
+	virtual bool Remove() = 0;
+
+	virtual bool Hold() = 0;
+
 		/** Graceful shutdown, aka soft kill. 
 			@return true if shutdown complete, false if pending */
 	virtual bool ShutdownGraceful() = 0;
@@ -121,6 +125,7 @@ protected:
 
 	ClassAd *JobAd;
 	int JobPid;
+	int job_universe;
 	int exit_status;
 	bool requested_exit;
 
@@ -134,9 +139,18 @@ protected:
 
 	int soft_kill_sig;
 	int rm_kill_sig;
+	int hold_kill_sig;
 
 	UtcTime job_start_time;
 	UtcTime job_exit_time;
+
+	enum std_file_type {
+		SFT_IN, SFT_OUT, SFT_ERR
+	};
+
+	int openStdFile( std_file_type type, const char* attr, 
+					 bool allow_dash, bool &used_starter_fd,
+					 const char* log_header );
 
 private:
 

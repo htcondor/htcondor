@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -20,6 +20,8 @@
   * RIGHT.
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+#include "condor_common.h"
+#include "condor_pidenvid.h"
 #include "procapi_t.h"
 
 /////////////////////////////test1/////////////////////////////////////////////
@@ -28,6 +30,7 @@ int getProcInfo_test(bool verbose) {
 
   int success = 1;
   unsigned long approx_mem;
+  int status;
   
   
   
@@ -54,7 +57,7 @@ int getProcInfo_test(bool verbose) {
     int ppid = pids[i].ppid;
 
     // check some of the data in the structure
-    if(ProcAPI::getProcInfo( pid, pi) < 0){
+    if(ProcAPI::getProcInfo( pid, pi, status) == PROCAPI_FAILURE){
       printf("Error process %d:\n", pid);
       printf("unable to retrieve process %d information with getProcInfo\n", pid);
       success = -1;
@@ -80,7 +83,8 @@ int getProcInfo_test(bool verbose) {
 
     // test the rssize returned in pi against what was alloacted
     int rss = 1024 * get_approx_mem(1,1); //(one node)
-    if(pi->rssize < rss){
+    if(pi->rssize != 0 &&   /* Maybe process done, entirely paged out */
+       pi->rssize < rss){
       printf("Error process %d:\n", pid);
       printf("rssize as returned by getProcInfo %d is less than was allocated %d\n", pi->rssize, rss);
       success = -1;
@@ -106,7 +110,7 @@ int getProcInfo_test(bool verbose) {
     }
     
     // now get the parents info and do some more checks
-    if(ProcAPI::getProcInfo(ppid, ppi) < 0){
+    if(ProcAPI::getProcInfo(ppid, ppi, status) == PROCAPI_FAILURE){
       printf("Error process %d:\n", pid);
       printf("Unable to retrieve parent process %d information with getProcInfo\n", ppid);
       success = -1;

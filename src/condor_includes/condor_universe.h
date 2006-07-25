@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -42,13 +42,15 @@ with the strings in condor_universe.c
 #define CONDOR_UNIVERSE_PVMD      6  /* PVM daemon process */
 #define CONDOR_UNIVERSE_SCHEDULER 7  /* A job run under the schedd */
 #define CONDOR_UNIVERSE_MPI       8  /* Message Passing Interface jobs */
-#define CONDOR_UNIVERSE_GLOBUS    9  /* Jobs managed by condor_gmanager */
+#define CONDOR_UNIVERSE_GRID      9  /* Jobs managed by condor_gmanager */
 #define CONDOR_UNIVERSE_JAVA      10 /* Jobs for the Java Virtual Machine */
 #define CONDOR_UNIVERSE_PARALLEL  11 /* Generalized parallel jobs */
-#define CONDOR_UNIVERSE_MAX       12 /* A placeholder, not a universe. */
+#define CONDOR_UNIVERSE_LOCAL     12 /* Job run locally by the schedd */
+#define CONDOR_UNIVERSE_MAX       13 /* A placeholder, not a universe. */
 
 /* To get the name of a universe, call this function */
 const char *CondorUniverseName( int universe );
+const char *CondorUniverseNameUcFirst( int universe );
 
 /* To get the number of a universe from a string, call this.  Returns
    0 if the given string doesn't correspond to a known universe */

@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -27,13 +27,12 @@
 #include "list.h"
 #include "condor_classad.h"
 #include "condor_attributes.h"
-#include "classadList.h" // NAC
 
 enum FormatKind { PRINTF_FMT, INT_CUSTOM_FMT, FLT_CUSTOM_FMT, STR_CUSTOM_FMT };
 
-typedef char *(*IntCustomFmt)(int,ClassAd*);
-typedef char *(*FloatCustomFmt)(float,ClassAd*);
-typedef char *(*StringCustomFmt)(char*,ClassAd*);
+typedef char *(*IntCustomFmt)(int,AttrList*);
+typedef char *(*FloatCustomFmt)(float,AttrList*);
+typedef char *(*StringCustomFmt)(char*,AttrList*);
 
 struct Formatter
 {
@@ -46,13 +45,13 @@ struct Formatter
 	};
 };
 			
-class ClassAdPrintMask
+class AttrListPrintMask
 {
   public:
 	// ctor/dtor
-	ClassAdPrintMask ();
-	ClassAdPrintMask (const ClassAdPrintMask &);
-	~ClassAdPrintMask ();
+	AttrListPrintMask ();
+	AttrListPrintMask (const AttrListPrintMask &);
+	~AttrListPrintMask ();
 
 	// register a format and an attribute
 	void registerFormat (char *fmt, const char *attr, char*alt="");
@@ -64,9 +63,9 @@ class ClassAdPrintMask
 	void clearFormats (void);
 
 	// display functions
-	int   display (FILE *, ClassAd *);		// output to FILE *
-	int   display (FILE *, ClassAdList *); // output a list -> FILE *
-	char *display ( ClassAd * );			// return a string
+	int   display (FILE *, AttrList *);		// output to FILE *
+	int   display (FILE *, AttrListList *); // output a list -> FILE *
+	char *display ( AttrList * );			// return a string
 
   private:
 	List<Formatter> formats;

@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -26,6 +26,7 @@
 #include "condor_string.h"
 #include "condor_environ.h"
 #include "CondorError.h"
+#include "my_hostname.h"
 
 Condor_Auth_FS :: Condor_Auth_FS(ReliSock * sock, int remote)
     : Condor_Auth_Base    ( sock, CAUTH_FILESYSTEM ),
@@ -98,19 +99,35 @@ int Condor_Auth_FS::authenticate(const char * remoteHost, CondorError* errstack)
         setRemoteUser( NULL );
         
         if ( remote_ ) {
+	        pid_t    mypid = 0;
+#ifdef WIN32
+	        mypid = ::GetCurrentProcessId();
+#else
+	        mypid = ::getpid();
+#endif
+
+			MyString filename;
 			char * rendezvous_dir = param("FS_REMOTE_DIR");
 			if (rendezvous_dir) {
-				new_file = tempnam(rendezvous_dir, "qmgr_");
+				filename = rendezvous_dir;
 				free(rendezvous_dir);
 			} else {
 				// misconfiguration.  complain, and then use /tmp
 				dprintf (D_SECURITY, "AUTHENTICATE_FS: FS_REMOTE was used but no FS_REMOTE_DIR defined!\n");
-            	new_file = tempnam("/tmp", "qmgr_");
+				filename = "/tmp";
 			}
-	    }
-        else {
-            new_file = tempnam("/tmp", "qmgr_");
-        }
+			filename += "/FS_REMOTE_";
+			filename += my_hostname();
+			filename += "_";
+			filename += mypid;
+			filename += "_XXXXXXXXX";
+			new_file = strdup( filename.Value() );
+			dprintf( D_SECURITY, "FS_REMOTE: client template is %s\n", new_file );
+			mktemp(new_file);
+			dprintf( D_SECURITY, "FS_REMOTE: client filename is %s\n", new_file );
+		} else {
+			new_file = tempnam("/tmp", "FS_");
+		}
         //now, send over filename for client to create
         // man page says string returned by tempnam has been malloc()'d
         mySock_->encode();
@@ -134,12 +151,63 @@ int Condor_Auth_FS::authenticate(const char * remoteHost, CondorError* errstack)
 			return fail;
 		}
         mySock_->encode();
-        
-        retval = 0;
+
+        retval = -1;	// assume failure.  i am glass-half-empty man.
         if ( fd > -1 ) {
+			if (remote_) {
+				// now, if this is a remote filesystem, it is likely to be NFS.
+				// before we stat the file, we need to do something that causes the
+				// NFS client to sync to the NFS server.  fsync() does not do this.
+				// in practice, creating a file or directory should force the NFS
+				// client to sync in order to avoid race conditions.
+				MyString filename_template = "/tmp";
+
+				char * rendezvous_dir = param("FS_REMOTE_DIR");
+				if (rendezvous_dir) {
+					filename_template = rendezvous_dir;
+					free(rendezvous_dir);
+				}
+
+				pid_t    mypid = 0;
+#ifdef WIN32
+				mypid = ::GetCurrentProcessId();
+#else
+				mypid = ::getpid();
+#endif
+
+				// construct the template. mkstemp modifies the string you pass
+				// in so we create a dup of it just in case MyString does
+				// anything funny or uses string spaces, etc.
+				filename_template += "/FS_REMOTE_";
+				filename_template += my_hostname();
+				filename_template += "_";
+				filename_template += mypid;
+				filename_template += "_XXXXXX";
+				char* filename_inout = strdup(filename_template.Value());
+
+				dprintf( D_SECURITY, "FS_REMOTE: sync filename is %s\n", filename_inout );
+
+				int sync_fd = mkstemp(filename_inout);
+				if (sync_fd >= 0) {
+					::close(sync_fd);
+					unlink( filename_inout ); /* XXX hope we aren't root */
+				} else {
+					// we could have an else that fails here, but we may as well still
+					// check for the file -- this was just an attempt to make NFS sync.
+					// if the file still isn't there, we'll fail anyways.
+					dprintf( D_ALWAYS, "FS_REMOTE: warning, failed to make temp file %s\n", filename_inout );
+				}
+
+				free (filename_inout);
+
+				// at this point we should have created and deleted a unique file
+				// from the server side, forcing the nfs client to flush everything
+				// and sync with the server.  now, we can finally stat the file.
+			}
+
             //check file to ensure that claimant is owner
             struct stat stat_buf;
-            
+
             if ( lstat( new_file, &stat_buf ) < 0 ) {
                 retval = -1;  
             }
@@ -156,9 +224,17 @@ int Condor_Auth_FS::authenticate(const char * remoteHost, CondorError* errstack)
                 else {
                     //need to lookup username from file and do setOwner()
                     char *tmpOwner = my_username( stat_buf.st_uid );
-                    setRemoteUser( tmpOwner );
-                    free( tmpOwner );
-                    setRemoteDomain( getLocalDomain());
+					if (!tmpOwner) {
+							// this could happen if, for instance,
+							// getpwuid() failed.
+							retval = -1;
+					} else {
+							retval = 0;	// 0 means success here. sigh.
+							setRemoteUser( tmpOwner );
+							setAuthenticatedName( tmpOwner );
+							free( tmpOwner );
+							setRemoteDomain( getLocalDomain() );
+					}
                 }
             }
         } 
@@ -180,7 +256,7 @@ int Condor_Auth_FS::authenticate(const char * remoteHost, CondorError* errstack)
 		// leave new_file allocated until after dprintf below
     }
 
-   	dprintf( D_FULLDEBUG, "AUTHENTICATE_FS: used file %s, status: %d\n", 
+   	dprintf( D_SECURITY, "AUTHENTICATE_FS: used file %s, status: %d\n", 
              (new_file ? new_file : "(null)"), (retval == 0) );
 
 	if ( new_file ) {

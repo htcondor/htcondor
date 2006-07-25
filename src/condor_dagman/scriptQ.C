@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -26,11 +26,11 @@
 #include "script.h"
 #include "util.h"
 #include "job.h"
-#include "types.h"
 
 #include "dag.h"
 
-ScriptQ::ScriptQ( Dag* dag )
+ScriptQ::ScriptQ( Dag* dag ) : 
+	_scriptDeferredCount	(0)
 {
 	_dag = dag;
 	_numScriptsRunning = 0;
@@ -66,7 +66,7 @@ ScriptQ::Run( Script *script )
 		script->_post ? _dag->_maxPostScripts : _dag->_maxPreScripts;
 	// if we have no script limit, or we're under the limit, run now
 	if( maxScripts == 0 || _numScriptsRunning < maxScripts ) {
-		debug_printf( DEBUG_NORMAL, "Running %s script of Job %s...\n",
+		debug_printf( DEBUG_NORMAL, "Running %s script of Node %s...\n",
 					  prefix, script->GetNodeName() );
 		if( int pid = script->BackgroundRun( _scriptReaperId ) ) {
 			_numScriptsRunning++;
@@ -82,9 +82,10 @@ ScriptQ::Run( Script *script )
 	}
 	else {
 			// max scripts already running
-		debug_printf( DEBUG_VERBOSE, "Max %s scripts (%d) already running; "
+		debug_printf( DEBUG_DEBUG_1, "Max %s scripts (%d) already running; "
 					  "deferring %s script of Job %s\n", prefix, maxScripts,
 					  prefix, script->GetNodeName() );
+		_scriptDeferredCount++;
 	}
 	_waitingQueue->enqueue( script );
 	return 0;

@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -45,12 +45,12 @@ extern CStarter *Starter;
 ReliSock *syscall_sock = NULL;
 
 
-JICShadow::JICShadow( char* shadow_sinful ) : JobInfoCommunicator()
+JICShadow::JICShadow( char* shadow_name ) : JobInfoCommunicator()
 {
-	if( ! shadow_sinful ) {
-		EXCEPT( "Trying to instantiate JICShadow with no shadow address!" );
+	if( ! shadow_name ) {
+		EXCEPT( "Trying to instantiate JICShadow with no shadow name!" );
 	}
-	shadow_addr = strdup( shadow_sinful );
+	m_shadow_name = strdup( shadow_name );
 
 	shadow = NULL;
 	shadow_version = NULL;
@@ -72,7 +72,7 @@ JICShadow::JICShadow( char* shadow_sinful ) : JobInfoCommunicator()
 		socks[0]->type() != Stream::reli_sock) 
 	{
 		dprintf(D_ALWAYS, "Failed to inherit remote system call socket.\n");
-		DC_Exit(1);
+		Starter->StarterExit( 1 );
 	}
 	syscall_sock = (ReliSock *)socks[0];
 		/* Set a timeout on remote system calls.  This is needed in
@@ -97,8 +97,8 @@ JICShadow::~JICShadow()
 	if( filetrans ) {
 		delete filetrans;
 	}
-	if( shadow_addr ) {
-		free( shadow_addr );
+	if( m_shadow_name ) {
+		free( m_shadow_name );
 	}
 	if( uid_domain ) {
 		free( uid_domain );
@@ -132,7 +132,7 @@ JICShadow::init( void )
 	if( shadow ) {
 		delete shadow;
 	}
-	shadow = new DCShadow( shadow_addr );
+	shadow = new DCShadow( m_shadow_name );
 	ASSERT( shadow );
 
 		// Now, initalize our version information about the shadow
@@ -339,6 +339,7 @@ JICShadow::Continue( void )
 bool
 JICShadow::allJobsDone( void )
 {
+
 		// now that all the jobs are gone, we can stop our periodic
 		// shadow updates.
 	if( shadowupdate_tid >= 0 ) {
@@ -363,8 +364,39 @@ JICShadow::allJobsDone( void )
 		set_priv(saved_priv);
 
 		if( ! rval ) {
-				// failed to transfer, the shadow is probably gone.
-			job_cleanup_disconnected = true;
+				// Failed to transfer.  See if there is a reason to put
+				// the job on hold.
+			FileTransfer::FileTransferInfo ft_info = filetrans->GetInfo();
+			if(!ft_info.success && !ft_info.try_again) {
+				ASSERT(ft_info.hold_code != 0);
+				notifyStarterError(ft_info.error_desc.Value(), true,
+				                   ft_info.hold_code,ft_info.hold_subcode);
+				return false;
+			}
+
+				// Some other kind of error.  Would like to know
+				// for sure whether this really means we are disconnected
+				// from the shadow, but for now, force the socket to
+				// disconnect by closing it.
+
+				// Please forgive us these hacks
+				// as we forgive those who hack against us
+			static int timesCalled = 0;
+			timesCalled++;
+			if (timesCalled < 5) {
+					dprintf(D_ALWAYS,"File transfer failed, forcing disconnect.\n");
+
+					if (syscall_sock != NULL) {
+							syscall_sock->close();
+					}
+
+					job_cleanup_disconnected = true;
+					return false;
+			}
+
+				// We tried 5 times and kept failing
+				// now just tell the user we're giving up
+			notifyStarterError("Repeated attempts to transfer output failed for unknown reasons", true,0,0);
 			return false;
 		}
 	}
@@ -458,8 +490,22 @@ JICShadow::reconnect( ReliSock* s, ClassAd* ad )
 	delete shadow;
 	shadow = new DCShadow;
 	initShadowInfo( ad );	// this dprintf's D_ALWAYS for us
-	free( shadow_addr );
-	shadow_addr = strdup( shadow->addr() );
+	free( m_shadow_name );
+		/*
+		  normally, it'd be nice to have a hostname here for
+		  dprintf(), etc.  unfortunately, because of how the
+		  information flows, we don't know the real hostname at this
+		  point.  the reconnect command classad only contains the
+		  ip/port (sinful string), not the shadow's hostname.  so, if
+		  we want a hostname here, we'd have to do a reverse DNS
+		  lookup.  someday, we might do that, but admins have
+		  (rightfully) complained about the load Condor puts on DNS
+		  servers, and since we don't *really* need this to be a
+		  hostname anymore (we've already decided what UID/FS domain
+		  to spawn the starter as, so we don't need it for that),
+		  we'll just use the sinful string as the shadow's name...
+		*/
+	m_shadow_name = strdup( shadow->addr() );
 
 		// tell our FileTransfer object to point to the new 
 		// shadow using the transsock and key in the ad from the
@@ -482,6 +528,12 @@ JICShadow::reconnect( ReliSock* s, ClassAd* ad )
 		}
 		if ( value1 ) free(value1);
 		if ( value2 ) free(value2);
+
+		if ( shadow_version == NULL ) {
+			dprintf( D_ALWAYS, "Can't determine shadow version for FileTransfer!\n" );
+		} else {
+			filetrans->setPeerVersion( *shadow_version );
+		}
 	}
 
 		// switch over to the new syscall_sock
@@ -594,11 +646,11 @@ JICShadow::notifyJobExit( int exit_status, int reason, UserProc*
 
 
 bool
-JICShadow::notifyStarterError( const char* err_msg, bool critical )
+JICShadow::notifyStarterError( const char* err_msg, bool critical, int hold_reason_code, int hold_reason_subcode )
 {
 	u_log->logStarterError( err_msg, critical );
 
-	if( REMOTE_CONDOR_ulog_printf(err_msg) < 0 ) {
+	if( REMOTE_CONDOR_ulog_error(hold_reason_code, hold_reason_subcode, err_msg) < 0 ) {
 		dprintf( D_ALWAYS, 
 				 "Failed to send starter error string to Shadow.\n" );
 		return false;
@@ -668,6 +720,18 @@ JICShadow::publishStarterInfo( ClassAd* ad )
 	ad->Insert( tmp );
 	free( tmp );
 
+	int vm = Starter->getMyVMNumber();
+	MyString line = ATTR_NAME;
+	line += "=\"";
+	if( vm ) { 
+		line += "vm";
+		line += vm;
+		line += '@';
+	}
+	line += my_full_hostname();
+	line += '"';
+	ad->Insert( line.Value() );
+
 	tmp_val = daemonCore->InfoCommandSinfulString();
 	size = strlen(tmp_val) + strlen(ATTR_STARTER_IP_ADDR) + 5;
 	tmp = (char*) malloc( size * sizeof(char) );
@@ -675,12 +739,7 @@ JICShadow::publishStarterInfo( ClassAd* ad )
 	ad->Insert( tmp );
 	free( tmp );
 
-	tmp_val = CondorVersion();
-	size = strlen(tmp_val) + strlen(ATTR_VERSION) + 5;
-	tmp = (char*) malloc( size * sizeof(char) );
-	sprintf( tmp, "%s=\"%s\"", ATTR_VERSION, tmp_val );
-	ad->Insert( tmp );
-	free( tmp );
+	ad->Assign( ATTR_VERSION, CondorVersion() );
 
 	tmp_val = param( "ARCH" );
 	size = strlen(tmp_val) + strlen(ATTR_ARCH) + 5;
@@ -866,7 +925,11 @@ JICShadow::initUserPriv( void )
        // first see if we define VMx_USER in the config file
         char *nobody_user;
         char paramer[20];
-        sprintf(paramer, "VM%d_USER", Starter->getMyVMNumber());
+		int vm = Starter->getMyVMNumber();
+		if( ! vm ) {
+			vm = 1;
+		}
+        sprintf( paramer, "VM%d_USER", vm );
         nobody_user = param(paramer);
 
         if ( nobody_user != NULL ) {
@@ -942,6 +1005,8 @@ JICShadow::initJobInfo( void )
 				 "Can't find %s in job ad\n", ATTR_PROC_ID );
 		return false;
 	}
+
+	job_ad->LookupString( ATTR_JOB_REMOTE_IWD, &job_remote_iwd );
 
 		// everything else is related to if we're transfering files or
 		// not. that can get a little complicated, so it all lives in
@@ -1102,6 +1167,12 @@ JICShadow::initStdFiles( void )
 	if( ! job_input_name ) {
 		job_input_name = getJobStdFile( ATTR_JOB_INPUT, NULL );
 	}
+
+	// NOTE: We only need to look at _ORIG values for backwards
+	// compatibility with old submitters (pre 6.7.14).  Modern
+	// submitters do not mess with the filename when streaming
+	// is being used, so there will be no _ORIG attribute.
+
 	if( ! job_output_name ) {
 		job_output_name = getJobStdFile( ATTR_JOB_OUTPUT,
 										 ATTR_JOB_OUTPUT_ORIG );
@@ -1121,9 +1192,8 @@ char*
 JICShadow::getJobStdFile( const char* attr_name, const char* alt_name )
 {
 	char* tmp = NULL;
-	char* filename1 = NULL;
-	char filename[_POSIX_PATH_MAX];
-	filename[0] = '\0';
+	const char* base = NULL;
+	MyString filename;
 
 	if(streamStdFile(attr_name)) {
 		if(!tmp && alt_name) job_ad->LookupString(alt_name,&tmp);
@@ -1138,24 +1208,23 @@ JICShadow::getJobStdFile( const char* attr_name, const char* alt_name )
 	if( !tmp ) {
 		job_ad->LookupString( attr_name, &tmp );
 	}
-	if( tmp ) {
-		if ( !nullFile(tmp) ) {
-			if( wants_file_transfer ) {
-				filename1 = basename( tmp );
-			} else {
-				filename1 = tmp;
-			}
-            if( ! fullpath(filename1) ) {	// prepend full path
-                sprintf( filename, "%s%c", job_iwd, DIR_DELIM_CHAR );
-            } else {
-                filename[0] = '\0';
-            }
-			strcat ( filename, filename1 );
-		}
-		free( tmp );
+	if( !tmp ) {
+		return NULL;
 	}
+	if ( !nullFile(tmp) ) {
+		if( wants_file_transfer ) {
+			base = condor_basename( tmp );
+		} else {
+			base = tmp;
+		}
+		if( ! fullpath(base) ) {	// prepend full path
+			filename.sprintf( "%s%c", job_iwd, DIR_DELIM_CHAR );
+		}
+		filename += base;
+	}
+	free( tmp );
 	if( filename[0] ) { 
-		return strdup( filename );
+		return strdup( filename.Value() );
 	}
 	return NULL;
 }
@@ -1212,7 +1281,12 @@ JICShadow::sameUidDomain( void )
 		return true;
 	}
 	dprintf( D_ALWAYS, "ERROR: the submitting host claims to be in our "
-			 "UidDomain (%s), yet its hostname (%s) does not match\n",
+			 "UidDomain (%s), yet its hostname (%s) does not match.  "
+			 "If the above hostname is actually an IP address, Condor "
+			 "could not perform a reverse DNS lookup to convert the IP "
+			 "back into a name.  To solve this problem, you can either "
+			 "correctly configure DNS to allow the reverse lookup, or you "
+			 "can enable TRUST_UID_DOMAIN in your condor configuration.\n",
 			 uid_domain, shadow->name() );
 
 		// TODO: maybe we should be more harsh in this case than just
@@ -1256,6 +1330,159 @@ JICShadow::sameFSDomain( void )
 
 	free( job_fs_domain );
 	return same_domain;
+}
+
+bool
+JICShadow::usingFileTransfer( void )
+{
+	return wants_file_transfer;
+}
+
+
+static void
+refuse(ReliSock * s)
+{
+	ASSERT(s);
+	s->encode();
+	int i = 0; // == failure;
+	s->code(i); // == failure
+	s->eom();
+}
+
+static bool
+ensureAuthenticated(ReliSock * rsock, CondorError & errstack)
+{
+	if( rsock->isAuthenticated()) {
+		return true;
+	}
+
+	char * p = SecMan::getSecSetting ("SEC_%s_AUTHENTICATION_METHODS", "WRITE");
+	MyString methods;
+	if (p) {
+		methods = p;
+		free (p);
+	} else {
+		methods = SecMan::getDefaultAuthenticationMethods();
+	}
+	return rsock->authenticate(methods.Value(), &errstack);
+}
+
+// Based on Scheduler::updateGSICred
+static bool
+updateX509Proxy(int cmd, ReliSock * rsock, const char * path,
+				const char * local_user)
+{
+	ASSERT(rsock);
+	ASSERT(path);
+	ASSERT(local_user);
+
+	rsock->timeout(10);
+	rsock->decode();
+
+	dprintf(D_FULLDEBUG, "Remote side requests to update X509 proxy at %s\n", path);
+
+	CondorError errstack;
+	if( ! ensureAuthenticated(rsock, errstack) )
+	{
+			// we failed to authenticate, we should bail out now
+			// since we don't know what user is trying to perform
+			// this action.
+			// TODO: it'd be nice to print out what failed, but we
+			// need better error propagation for that...
+		errstack.push( "SCHEDD", SCHEDD_ERR_UPDATE_GSI_CRED_FAILED,
+				"Failure to update X509 proxy - Authentication failed" );
+		dprintf( D_ALWAYS, "updateX509Proxy() aborting: %s\n",
+				 errstack.getFullText() );
+		refuse(rsock);
+		return false;
+	}
+
+	const char * remote_owner = rsock->getOwner();
+	if( ! remote_owner ) {
+		dprintf(D_ALWAYS, "Failure to update X509 proxy: anonymous remote user not permitted\n");
+		refuse(rsock);
+		return false;
+	}
+	// TODO: Confirm that the user has already been filtered for WRITE permission (see qmgmt.C's OwnerCheck if I need to roll my own)
+	if( strcmp(local_user, remote_owner) != MATCH ) {
+		dprintf(D_ALWAYS, "Failure to update X509 proxy: wrong remote user (local: %s, remote: %s\n",
+			local_user, remote_owner);
+		refuse(rsock);
+		return false;
+	}
+	dprintf(D_FULLDEBUG, "updateX509Proxy: remote user of %s is same as local.\n", remote_owner);
+
+	MyString tmp_path(path);
+	tmp_path += ".tmp";
+
+	rsock->decode();
+
+	priv_state old_priv = set_priv(PRIV_USER);
+
+	int reply;
+	filesize_t size = 0;
+	int rc;
+	if ( cmd == UPDATE_GSI_CRED ) {
+		rc = rsock->get_file(&size,tmp_path.Value());
+	} else if ( cmd == DELEGATE_GSI_CRED_STARTER ) {
+		rc = rsock->get_x509_delegation(&size,tmp_path.Value());
+	} else {
+		dprintf( D_ALWAYS, "unknown CEDAR command %d in updateX509Proxy\n",
+				 cmd );
+		rc = -1;
+	}
+	if ( rc < 0 ) {
+			// transfer failed
+		reply = 0; // == failure
+	} else {
+			// transfer worked, now rename the file to final_proxy_path
+		if ( rotate_file(tmp_path.Value(), path) < 0 ) 
+		{
+				// the rename failed!!?!?!
+			dprintf( D_ALWAYS, "updateX509Proxy failed, could not rename file\n");
+			reply = 0; // == failure
+		} else {
+			reply = 1; // == success
+		}
+	}
+	set_priv(old_priv);
+
+		// Send our reply back to the client
+	rsock->encode();
+	rsock->code(reply);
+	rsock->eom();
+
+	if(reply) {
+		dprintf(D_FULLDEBUG, "Attempt to refresh X509 proxy succeeded.\n");
+	} else {
+		dprintf(D_ALWAYS, "Attempt to refresh X509 proxy FAILED.\n");
+	}
+	
+	return reply;
+}
+
+bool
+JICShadow::updateX509Proxy(int cmd, ReliSock * s)
+{
+	if( ! usingFileTransfer() ) {
+		s->encode();
+		int i = 2; // == success, but please don't call any more.
+		s->code(i); // == success, but please don't call any more.
+		s->eom();
+		refuse(s);
+		return false;
+	}
+	MyString local_user;
+	if( ! job_ad->LookupString(ATTR_OWNER, local_user) ) {
+		EXCEPT("My job lacks an owner\n"); 
+	}
+	MyString path;
+	if( ! job_ad->LookupString(ATTR_X509_USER_PROXY, path) ) {
+		dprintf(D_ALWAYS, "Refusing shadow's request to update proxy as this job has no proxy\n");
+		return false;
+	}
+	const char * proxyfilename = condor_basename(path.Value());
+	return ::updateX509Proxy(cmd, s, proxyfilename, local_user.Value());
 }
 
 
@@ -1384,6 +1611,13 @@ JICShadow::beginFileTransfer( void )
 		filetrans->RegisterCallback(
 				  (FileTransferHandler)&JICShadow::transferCompleted,this );
 
+
+		if ( shadow_version == NULL ) {
+			dprintf( D_ALWAYS, "Can't determine shadow version for FileTransfer!\n" );
+		} else {
+			filetrans->setPeerVersion( *shadow_version );
+		}
+
 		if( ! filetrans->DownloadFiles(false) ) { // do not block
 				// Error starting the non-blocking file transfer.  For
 				// now, consider this a fatal error
@@ -1402,13 +1636,23 @@ JICShadow::transferCompleted( FileTransfer *ftrans )
 		// Make certain the file transfer succeeded.  
 		// Until "multi-starter" has meaning, it's ok to EXCEPT here,
 		// since there's nothing else for us to do.
-	if ( ftrans &&  !((ftrans->GetInfo()).success) ) {
-		EXCEPT( "Failed to transfer files" );
+	if ( ftrans ) {
+		FileTransfer::FileTransferInfo ft_info = ftrans->GetInfo();
+		if ( !ft_info.success ) {
+			if(!ft_info.try_again) {
+					// Put the job on hold.
+				ASSERT(ft_info.hold_code != 0);
+				notifyStarterError(ft_info.error_desc.Value(), true,
+				                   ft_info.hold_code,ft_info.hold_subcode);
+			}
+
+			EXCEPT( "Failed to transfer files" );
+		}
 	}
 
 		// Now that we're done transfering files, we can let the
 		// Starter object know the execution environment is ready. 
-	Starter->jobEnvironmentReady();
+	Starter->jobWaitUntilExecuteTime();
 
 	return TRUE;
 }

@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -174,6 +174,7 @@ void test_user_policy_periodic_hold_yes(void)
 	jad->Insert(buf);
 	sprintf(buf, "%s = TRUE", ATTR_ON_EXIT_REMOVE_CHECK);
 	jad->Insert(buf);
+	jad->Assign(ATTR_JOB_STATUS, RUNNING);
 
 	result = user_job_policy(jad);
 
@@ -229,6 +230,7 @@ void test_user_policy_periodic_exit_yes(void)
 	jad->Insert(buf);
 	sprintf(buf, "%s = TRUE", ATTR_ON_EXIT_REMOVE_CHECK);
 	jad->Insert(buf);
+	jad->Assign(ATTR_JOB_STATUS, RUNNING);
 
 	result = user_job_policy(jad);
 
@@ -284,6 +286,7 @@ void test_user_policy_periodic_hold_no(void)
 	jad->Insert(buf);
 	sprintf(buf, "%s = TRUE", ATTR_ON_EXIT_REMOVE_CHECK);
 	jad->Insert(buf);
+	jad->Assign(ATTR_JOB_STATUS, RUNNING);
 
 	result = user_job_policy(jad);
 

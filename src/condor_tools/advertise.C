@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -30,6 +30,9 @@
 #include "daemon.h"
 #include "safe_sock.h"
 #include "condor_distribution.h"
+#include "daemon_list.h"
+#include "dc_collector.h"
+#include "my_hostname.h"
 
 void
 usage( char *cmd )
@@ -57,6 +60,7 @@ int main( int argc, char *argv[] )
 	int command=-1;
 	int i;
 	bool use_tcp = false;
+
 
 	myDistro->Init( argc, argv );
 	config();
@@ -133,35 +137,64 @@ int main( int argc, char *argv[] )
 		return 1;
 	}
 
-	collector = new Daemon( DT_COLLECTOR, pool, 0 );
-		
-	dprintf(D_FULLDEBUG,"locating collector...\n");
-
-	if(!collector->locate()) {
-		fprintf(stderr,"couldn't locate collector: %s\n",collector->error());
-		exit(1);
+	// If there's no "MyAddress", generate one..
+	ExprTree *tree = ad->Lookup( ATTR_MY_ADDRESS );
+	MyString tmp = "";
+	if ( tree ) {
+		tmp = ((MyString *)tree->RArg())->Value();
+	}
+	if ( tmp.Length() == 0 ) {
+		tmp.sprintf( "%s = \"<%s:0>\"", ATTR_MY_ADDRESS, my_ip_string() );
+		ad->Insert( tmp.GetCStr() );
 	}
 
-	dprintf(D_FULLDEBUG,"collector is %s located at %s\n",
-						collector->hostname(),collector->addr());
-	
-	if ( use_tcp ) {
-		sock = collector->startCommand(command,Stream::reli_sock,20);
+	CollectorList * collectors;
+	if ( pool ) {
+		collector = new Daemon( DT_COLLECTOR, pool, 0 );
+		collectors = new CollectorList();
+		collectors->append (collector);
 	} else {
-		sock = collector->startCommand(command,Stream::safe_sock,20);
+		collectors = CollectorList::create();
 	}
 
-	int result = 0;
-	if ( sock ) {
-		result += ad->put( *sock );
-		result += sock->end_of_message();
-	}
-	if ( result != 2 ) {
-		fprintf(stderr,"failed to send classad to %s\n",collector->addr());
-		exit(1);
+	bool had_error = false;
+
+	collectors->rewind();
+	while (collectors->next(collector)) {
+		
+		dprintf(D_FULLDEBUG,"locating collector %s...\n", collector->name());
+
+		if(!collector->locate()) {
+			fprintf(stderr,"couldn't locate collector: %s\n",collector->error());
+			had_error = true;
+			continue;
+		}
+
+		dprintf(D_FULLDEBUG,"collector is %s located at %s\n",
+				collector->hostname(),collector->addr());
+	
+		if ( use_tcp ) {
+			sock = collector->startCommand(command,Stream::reli_sock,20);
+		} else {
+			sock = collector->startCommand(command,Stream::safe_sock,20);
+		}
+
+		int result = 0;
+		if ( sock ) {
+			result += ad->put( *sock );
+			result += sock->end_of_message();
+		}
+		if ( result != 2 ) {
+			fprintf(stderr,"failed to send classad to %s\n",collector->addr());
+			had_error = true;
+			delete sock;
+			continue;
+		}
+
+		delete sock;
 	}
 
-	delete collector;
+	delete collectors;
 
-	return 0;
+	return (had_error)?1:0;
 }

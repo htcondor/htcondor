@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -48,8 +48,8 @@ extern "C" {
 	int REMOTE_CONDOR_rmdir( char *path );
 	int REMOTE_CONDOR_fsync( int fd );
 	int REMOTE_CONDOR_get_file_info_new( char *path, char *url );
-	int REMOTE_CONDOR_ulog_printf( char const *str, ... );
-	int REMOTE_CONDOR_ulog_error( char const *str );
+	int REMOTE_CONDOR_ulog_printf( int hold_reason_code, int hold_reason_subcode, char const *str, ... );
+	int REMOTE_CONDOR_ulog_error( int hold_reason_code, int hold_reason_subcode, char const *str );
 	int REMOTE_CONDOR_ulog( ClassAd *ad );
 	int REMOTE_CONDOR_get_job_attr( char *name, char *expr );
 	int REMOTE_CONDOR_set_job_attr( char *name, char *expr );

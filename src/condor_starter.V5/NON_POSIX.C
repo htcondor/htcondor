@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -85,7 +85,7 @@ physical_file_size( char *name )
 	}
 
 
-#if defined(AIX) || defined(ULTRIX42) || defined(ULTRIX43) || defined(SUNOS41)|| defined(OSF1) || defined(Solaris) || defined(IRIX) || defined(Darwin)
+#if defined(AIX) || defined(ULTRIX42) || defined(ULTRIX43) || defined(SUNOS41)|| defined(OSF1) || defined(Solaris) || defined(IRIX) || defined(Darwin) || defined(CONDOR_FREEBSD)
 
 	   /*  On these systems struct stat member st_blocks is
 	       defined, and appears to be in 512 byte blocks. */
@@ -238,10 +238,12 @@ bsd_rusage( clock_t user, clock_t sys )
 	clock_t_to_timeval( user, bsd_rusage.ru_utime );
 	clock_t_to_timeval( sys, bsd_rusage.ru_stime );
 
-	dprintf( D_ALWAYS, "User time = %d.%06d seconds\n",
-				bsd_rusage.ru_utime.tv_sec, bsd_rusage.ru_utime.tv_usec );
-	dprintf( D_ALWAYS, "System time = %d.%06d seconds\n",
-				bsd_rusage.ru_stime.tv_sec, bsd_rusage.ru_stime.tv_usec );
+	dprintf( D_ALWAYS, "User time = %ld.%06ld seconds\n",
+				(long)bsd_rusage.ru_utime.tv_sec, 
+				(long)bsd_rusage.ru_utime.tv_usec );
+	dprintf( D_ALWAYS, "System time = %ld.%06ld seconds\n",
+				(long)bsd_rusage.ru_stime.tv_sec, 
+				(long)bsd_rusage.ru_stime.tv_usec );
 
 	return (void *)&bsd_rusage;
 }

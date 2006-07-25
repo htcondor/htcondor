@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -99,6 +99,20 @@ int sysapi_magic_check( char* executable );
 /* make sure the given executable is linked with Condor */
 int sysapi_symbol_main_check( char* executable );
 
+/* determine a canonical kernel version */
+const char* sysapi_kernel_version_raw( void );
+const char* sysapi_kernel_version( void );
+
+/* determine a canonical memory model for the kernel */
+const char* sysapi_kernel_memory_model_raw( void );
+const char* sysapi_kernel_memory_model( void );
+
+/* determine a checkpointing signature for a particular platform */
+const char* sysapi_ckptpltfrm_raw( void );
+const char* sysapi_ckptpltfrm( void );
+
 END_C_DECLS
 
 #endif
+
+

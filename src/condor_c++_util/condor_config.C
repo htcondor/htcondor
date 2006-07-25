@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -25,7 +25,7 @@
 
   This file implements config(), the function all daemons call to
   configure themselves.  It takes an optional argument which
-  determines if config should be quiet or verbos on errors.  It
+  determines if config should be quiet or verbose on errors.  It
   defaults to verbose error reporting.
 
   There's also an entry point, config_host() where you pass in a
@@ -33,20 +33,23 @@
   special arguments to condor_config_val used by condor_init to
   bootstrap the installation process.
 
-  When looking for the global config file, config() checks the
+  When looking for the global config source, config() checks the
   "CONDOR_CONFIG" environment variable to find its location.  If that
   doesn't exist, it looks in /etc/condor.  If the condor_config isn't
   there, it tries ~condor/.  If none of the above locations contain a
-  config file, config() prints an error message and exits.
+  config source, config() prints an error message and exits.
 
-  The root config file is found in the same way, except no environment
+  The root config source is found in the same way, except no environment
   variable is checked.  
 
-  In each "global" config file, a list of "local" config files can be
-  specified.  Each file given in the list is read and processed in
-  order.  These lists can be used to specify both platform-specific
-  config files and machine-specific config files, in addition to a
-  single, pool-wide, platform-independent config file.
+  In each "global" config source, a list of "local" config files, or a single
+  cmd whose output is to be piped in as the configuration settings can be
+  specified.  If a cmd is specified, it is processed and its output used
+  as the configuration data.  If a file or list of files is specified, each 
+  file given in the list is read and processed in order.  These lists can 
+  be used to specify both platform-specific config files and machine-specific 
+  config files, in addition to a single, pool-wide, platform-independent
+  config file.
 
 */
 
@@ -66,18 +69,22 @@
 #	include <locale.h>
 #endif
 #include "directory.h"			// for StatInfo
-//#include "condor_scanner.h"		// for MAXVARNAME, etc
+#include "condor_scanner.h"		// for MAXVARNAME, etc
 #include "condor_distribution.h"
 #include "condor_environ.h"
-#include "MyString.h"
+#include "setenv.h"
 #include "HashTable.h"
 #include "extra_param_info.h"
+#include "condor_uid.h"
 
 extern "C" {
 	
 // Function prototypes
 void real_config(char* host, int wantsQuiet);
-int Read_config(char*, BUCKET**, int, int, ExtraParamTable * = NULL);
+int Read_config(const char*, BUCKET**, int, int, bool,
+				ExtraParamTable* = NULL);
+bool is_piped_command(const char* filename);
+bool is_valid_command(const char* cmdToExecute);
 int SetSyscalls(int);
 char* find_global();
 char* find_global_root();
@@ -88,9 +95,10 @@ void check_domain_attributes();
 void init_config();
 void clear_config();
 void reinsert_specials(char*);
-void process_file(char*, char*, char*, int);
+void process_config_source(char*, char*, char*, int);
 void process_locals( char*, char*);
-static int  process_runtime_configs();
+void process_directory( char*, char*);
+static int  process_dynamic_configs();
 void check_params();
 
 // External variables
@@ -104,77 +112,116 @@ BUCKET	*ConfigTab[TABLESIZE];
 static ExtraParamTable *extra_info = NULL;
 static char* tilde = NULL;
 extern DLL_IMPORT_MAGIC char **environ;
-static bool have_config_file = true;
+static bool have_config_source = true;
 
-MyString global_config_file;
-MyString global_root_config_file;
-MyString local_config_files;
+MyString global_config_source;
+MyString global_root_config_source;
+StringList local_config_sources;
+
 
 // Function implementations
 
 void
-config_fill_ad( ClassAd* ad )
+config_fill_ad( ClassAd* ad, const char *prefix )
 {
-	char 			buffer[1024];
-	char 			*tmp;
-	char			*expr;
-	StringList		reqdExprs;
-	ClassAdParser	parser;
-	ExprTree		*exprTree;
-	
+	char 		*tmp;
+	char		*expr;
+	StringList	reqdExprs;
+	MyString 	buffer;
+
 	if( !ad ) return;
-	sprintf (buffer, "%s_EXPRS", mySubSystem);
-	tmp = param (buffer);
+	
+	buffer.sprintf( "%s_EXPRS", mySubSystem );
+	tmp = param( buffer.Value() );
 	if( tmp ) {
 		reqdExprs.initializeFromString (tmp);	
 		free (tmp);
+	}
 
-		reqdExprs.rewind();
-		while ((tmp = reqdExprs.next())) {
-			expr = param(tmp);
-			if (expr == NULL) continue;
-			if( !( exprTree = parser.ParseExpression( expr ) ) ) {
-				EXCEPT( "Error parsing: %s (%s)\n",expr,CondorErrMsg.c_str() );
-			}
-			ad->Insert (tmp, exprTree);
-			free (expr);
-		}	
+	buffer.sprintf( "%s_ATTRS", mySubSystem );
+	tmp = param( buffer.Value() );
+	if( tmp ) {
+		reqdExprs.initializeFromString (tmp);	
+		free (tmp);
 	}
 	
-	sprintf (buffer, "%s_ATTRS", mySubSystem);
-	tmp = param (buffer);
-	if( tmp ) {
-		reqdExprs.initializeFromString (tmp);	
-		free (tmp);
+	if(prefix) {
+		buffer.sprintf( "%s_%s_EXPRS", prefix, mySubSystem );
+		tmp = param( buffer.Value() );
+		if( tmp ) {
+			reqdExprs.initializeFromString (tmp);	
+			free (tmp);
+		}
 
+		buffer.sprintf( "%s_%s_ATTRS", prefix, mySubSystem );
+		tmp = param( buffer.Value() );
+		if( tmp ) {
+			reqdExprs.initializeFromString (tmp);	
+			free (tmp);
+		}
+
+	}
+
+	if( !reqdExprs.isEmpty() ) {
 		reqdExprs.rewind();
 		while ((tmp = reqdExprs.next())) {
-			expr = param(tmp);
-			if (expr == NULL) continue;
-			if( !( exprTree = parser.ParseExpression( expr ) ) ) {
-				EXCEPT( "Error parsing: %s (%s)\n",expr,CondorErrMsg.c_str() );
+			expr = NULL;
+			if(prefix) {
+				buffer.sprintf("%s_%s", prefix, tmp);	
+				expr = param(buffer.Value());
 			}
-			ad->Insert (tmp, exprTree);
-			free (expr);
+			if(!expr) {
+				expr = param(tmp);
+			}
+			if(expr == NULL) continue;
+			buffer.sprintf( "%s = %s", tmp, expr );
+			ad->Insert( buffer.Value() );
+			free( expr );
 		}	
-	}
-	if( !( tmp = param (buffer) ) ) return;
-	reqdExprs.initializeFromString (tmp);	
-	free (tmp);
-
-	reqdExprs.rewind();
-	while ((tmp = reqdExprs.next())) {
-		if( ( expr = param(tmp) ) == NULL ) continue;
-		if( !parser.ParseExpression( expr, exprTree ) ) {
-			EXCEPT( "Error parsing: %s (%s)\n",expr,CondorErrMsg.c_str() );
-		}
-		ad->Insert( tmp, exprTree );
-		free (expr);
 	}
 	
 	/* Insert the version into the ClassAd */
-	ad->InsertAttr(ATTR_VERSION, CondorVersion( ));
-	ad->InsertAttr(ATTR_PLATFORM, CondorPlatform( ));
+	buffer.sprintf( "%s=\"%s\"", ATTR_VERSION, CondorVersion() );
+	ad->Insert( buffer.Value() );
+
+	buffer.sprintf( "%s=\"%s\"", ATTR_PLATFORM, CondorPlatform() );
+	ad->Insert( buffer.Value() );
+}
+
+
+/*
+Walks all found configuration entries looking for the
+"forbidden string".  If said string is found, EXCEPT.
+
+Output is via a giant EXCEPT string because the dprintf
+system probably isn't working yet.
+*/
+const char * FORBIDDEN_CONFIG_VAL = "YOU_MUST_CHANGE_THIS_INVALID_CONDOR_CONFIGURATION_VALUE";
+static void
+validate_entries() {
+	HASHITER it = hash_iter_begin( ConfigTab, TABLESIZE );
+	unsigned int invalid_entries = 0;
+	MyString tmp;
+	MyString output = "The following configuration macros appear to contain default values that must be changed before Condor will run.  These macros are:\n";
+	bool found_problem = false;
+	while( ! hash_iter_done(it) ) {
+		char * val = hash_iter_value(it);
+		if( strstr(val, FORBIDDEN_CONFIG_VAL) ) {
+			char * name = hash_iter_key(it);
+			MyString filename;
+			int line_number;
+			param_get_location(name, filename, line_number);
+			tmp.sprintf("   %s (found on line %d of %s)\n", name, line_number, filename.Value());
+			output += tmp;
+			invalid_entries++;
+		}
+		hash_iter_next(it);
+	}
+	hash_iter_delete(&it);
+	if(invalid_entries > 0) {
+			//TODO: Make EXCEPT const correct
+		EXCEPT((char *)(output.Value()));
+	}
 }
 
 
@@ -185,6 +232,7 @@ config( int wantsQuiet )
 	setlocale( LC_ALL, "English" );
 #endif
 	real_config( NULL, wantsQuiet );
+	validate_entries();
 }
 
 
@@ -196,10 +244,86 @@ config_host( char* host )
 
 
 void
+condor_net_remap_config( bool force_param )
+{
+    char *str = NULL;
+	if( ! force_param && getenv("NET_REMAP_ENABLE") ) {
+			/*
+			  this stuff is already set.  unless the caller is forcing
+			  us to call param() again (e.g. the master is trying to
+			  re-bind() if the GCB broker is down and it's got a list
+			  to try) we should return immediately and leave our
+			  environment alone.  this way, the master can choose what
+			  GCB broker to use for itself and all its children, even
+			  if there's a list and we're using $RANDOM_CHOICE().
+			*/
+		return;
+	}
+		
+		/*
+		  this method is only called if we're enabling a network remap
+		  service.  if we do, we always need to force condor to bind()
+		  to all interfaces (INADDR_ANY).  since we don't want to rely
+		  on users to set this themselves to get GCB working, we'll
+		  set it automatically.  the only harm of setting this is that
+		  we need Condor to automatically handle hostallow stuff for
+		  "localhost", or users need to add localhost to their
+		  hostallow settings as appropriate.  we can't rely on the
+		  later, and the former only works on some platforms.
+		  luckily, the automatic localhost stuff works on all
+		  platforms where GCB works (linux, and we hope, solaris), so
+		  it's safe to turn this on whenever we're using GCB
+		*/
+	insert( "BIND_ALL_INTERFACES", "TRUE", ConfigTab, TABLESIZE );
+	extra_info->AddInternalParam("BIND_ALL_INTERFACES");
+
+    // Env: the type of service
+    SetEnv( "NET_REMAP_ENABLE", "true");
+    str = param("NET_REMAP_SERVICE");
+    if (str) {
+        if (!strcasecmp(str, "GCB")) {
+            SetEnv( "GCB_ENABLE", "true" );
+            free(str);
+            str = NULL;
+            // Env: InAgent
+            if( (str = param("NET_REMAP_INAGENT")) ) {
+                SetEnv( "GCB_INAGENT", str );
+				free( str );
+                str = NULL;
+            }
+            // Env: Routing table
+            if( (str = param("NET_REMAP_ROUTE")) ) {
+                SetEnv( "GCB_ROUTE", str );
+				free( str );
+                str = NULL;
+            }
+        } else if (!strcasecmp(str, "DPF")) {
+            SetEnv( "DPF_ENABLE", "true" );
+            free(str);
+            str = NULL;
+            // Env: InAgent
+            if( (str = param("NET_REMAP_INAGENT")) ) {
+                SetEnv( "DPF_INAGENT", str );
+				free(str);
+				str = NULL;
+            }
+            // Env: Routing table
+            if( (str = param("NET_REMAP_ROUTE")) ) {
+                SetEnv( "DPF_ROUTE", str );
+				free(str);
+				str = NULL;
+            }
+        }
+    }
+}
+
+
+void
 real_config(char* host, int wantsQuiet)
 {
-	char		*config_file, *tmp;
-	int			scm;
+	char* config_source = NULL;
+	char* tmp = NULL;
+	int scm;
 
 	static int first_time = TRUE;
 	if( first_time ) {
@@ -231,49 +355,48 @@ real_config(char* host, int wantsQuiet)
 	}
 
 		// Insert some default values for attributes we want even if
-		// they're not defined in the config files: ARCH and OPSYS.
+		// they're not defined in the config sources: ARCH and OPSYS.
 		// We also want to insert the special "SUBSYSTEM" macro here. 
 		// We do this now since if they are defined in the config
 		// files, these values will get overridden.  However, we want
 		// them defined to begin with so that people can use them in
-		// the global config file to specify the location of
-		// platform-specific config files, etc.  -Derek Wright 6/8/98
-		// Moved all the domain-specific stuff to a seperate function
+		// the global config source to specify the location of
+		// platform-specific config sources, etc.  -Derek Wright 6/8/98
+		// Moved all the domain-specific stuff to a separate function
 		// since we might not know our full hostname yet. -Derek 10/20/98
 	fill_attributes();
 
-		// Try to find the global config file
+		// Try to find the global config source
 
 	char* env = getenv( EnvGetName(ENV_CONFIG) );
 	if( env && stricmp(env, "ONLY_ENV") == MATCH ) {
-			// special case, no config file desired
-		have_config_file = false;
+			// special case, no config source desired
+		have_config_source = false;
 	}
 
-	if( have_config_file && ! (config_file = find_global()) ) {
+	if( have_config_source && ! (config_source = find_global()) ) {
 		if( wantsQuiet ) {
-			fprintf( stderr, "%s error: can't find config file.\n",
+			fprintf( stderr, "%s error: can't find config source.\n",
 					 myDistro->GetCap() ); 
 			exit( 1 );
 		}
 		fprintf(stderr,"\nNeither the environment variable %s_CONFIG,\n",
 				myDistro->GetUc() );
 #	  if defined UNIX
-		fprintf(stderr,"/etc/%s/, nor ~%s/ contain a %s_config file.\n",
+		fprintf(stderr,"/etc/%s/, nor ~%s/ contain a %s_config source.\n",
 				myDistro->Get(), myDistro->Get(), myDistro->Get() );
 #	  elif defined WIN32
-		fprintf(stderr,"nor the registry contains a path to a %s_config "
-				"file.\n", myDistro->Get() );
+		fprintf(stderr,"nor the registry contains a %s_config source.\n", myDistro->Get() );
 #	  else
 #		error "Unknown O/S"
 #	  endif
 		fprintf( stderr,"Either set %s_CONFIG to point to a valid config "
-				"file,\n", myDistro->GetUc() );
+				"source,\n", myDistro->GetUc() );
 #	  if defined UNIX
 		fprintf( stderr,"or put a \"%s_config\" file in /etc/%s or ~%s/\n",
 				 myDistro->Get(), myDistro->Get(), myDistro->Get() );
 #	  elif defined WIN32
-		fprintf( stderr,"or put a \"%s_config\" file in the registry at:\n"
+		fprintf( stderr,"or put a \"%s_config\" source in the registry at:\n"
 				 " HKEY_LOCAL_MACHINE\\Software\\%s\\%s_CONFIG",
 				 myDistro->Get(), myDistro->Get(), myDistro->GetUc() );
 #	  else
@@ -284,17 +407,18 @@ real_config(char* host, int wantsQuiet)
 	}
 
 		// Read in the global file
-	if( have_config_file ) {
-		process_file( config_file, "global config file", NULL, true );
-		global_config_file = config_file;
-		free( config_file );
+	if( have_config_source ) {
+		process_config_source( config_source, "global config source", NULL, true );
+		global_config_source = config_source;
+		free( config_source );
+		config_source = NULL;
 	}
 
 		// Insert entries for "hostname" and "full_hostname".  We do
 		// this here b/c we need these macros defined so that we can
-		// find the local config file if that's defined in terms of
+		// find the local config source if that's defined in terms of
 		// hostname or something.  However, we do this after reading
-		// the global config file so people can put the
+		// the global config source so people can put the
 		// DEFAULT_DOMAIN_NAME parameter somewhere if they need it. 
 		// -Derek Wright <wright@cs.wisc.edu> 5/11/98
 	if( host ) {
@@ -315,14 +439,35 @@ real_config(char* host, int wantsQuiet)
 
 		// Read in the LOCAL_CONFIG_FILE as a string list and process
 		// all the files in the order they are listed.
+	char *dirlist = param("LOCAL_CONFIG_DIR");
+	if(dirlist) {
+		process_directory(dirlist, host);
+	}
 	process_locals( "LOCAL_CONFIG_FILE", host );
+
+	char* newdirlist = param("LOCAL_CONFIG_DIR");
+	if(newdirlist && dirlist) {
+		if(strcmp(dirlist, newdirlist) ) {
+			process_directory(newdirlist, host);
+		}
+	}
+
+	if(dirlist) { free(dirlist); dirlist = NULL; }
+	if(newdirlist) { free(newdirlist); newdirlist = NULL; }
+
+	// The following lines should be placed very carefully. Must be after
+	// global and local config sources being processed but before any
+	// call that may be interposed by GCB
+    if ( param_boolean("NET_REMAP_ENABLE", false) ) {
+        condor_net_remap_config();
+    }
 			
 		// Re-insert the special macros.  We don't want the user to 
 		// override them, since it's not going to work.
 	reinsert_specials( host );
 
 		// Now, insert any macros defined in the environment.  Note we do
-		// this before the root config file!
+		// this before the root config source!
 	for( int i = 0; environ[i]; i++ ) {
 		char magic_prefix[MAX_DISTRIBUTION_NAME + 3];	// case-insensitive
 		strcpy( magic_prefix, "_" );
@@ -375,10 +520,10 @@ real_config(char* host, int wantsQuiet)
 		// override them, since it's not going to work.
 	reinsert_specials( host );
 
-		// Try to find and read the global root config file
-	if( (config_file = find_global_root()) ) {
-		global_root_config_file = config_file;
-		process_file( config_file, "global root config file", host, true );
+		// Try to find and read the global root config source
+	if( (config_source = find_global_root()) ) {
+		global_root_config_source = config_source;
+		process_config_source( config_source, "global root config source", host, true );
 
 			// Re-insert the special macros.  We don't want the user
 			// to override them, since it's not going to work.
@@ -393,11 +538,11 @@ real_config(char* host, int wantsQuiet)
 		// to override them, since it's not going to work.
 	reinsert_specials( host );
 
-	if( process_runtime_configs() == 1 ) {
-			// if we found runtime config files, we process the root
-			// config file again
-		if (config_file) {
-			process_file( config_file, "global root config file", host, true );
+	if( process_dynamic_configs() == 1 ) {
+			// if we found dynamic config sources, we process the root
+			// config source again
+		if (config_source) {
+			process_config_source( config_source, "global root config source", host, true );
 
 				// Re-insert the special macros.  We don't want the user
 				// to override them, since it's not going to work.
@@ -409,10 +554,12 @@ real_config(char* host, int wantsQuiet)
 		}
 	}
 
-	if (config_file) free( config_file );
+	if (config_source) {
+		free( config_source );
+	}
 
 		// Now that we're done reading files, if DEFAULT_DOMAIN_NAME
-		// is set, we need to re-initilize my_full_hostname(). 
+		// is set, we need to re-initialize my_full_hostname(). 
 	if( (tmp = param("DEFAULT_DOMAIN_NAME")) ) {
 		free( tmp );
 		init_full_hostname();
@@ -439,10 +586,10 @@ real_config(char* host, int wantsQuiet)
 
 
 void
-process_file( char* file, char* name, char* host, int required )
+process_config_source( char* file, char* name, char* host, int required )
 {
 	int rval;
-	if( access( file, R_OK ) != 0 ) {
+	if( access( file, R_OK ) != 0 && !is_piped_command(file)) {
 		if( !required) { return; }
 
 		if( !host ) {
@@ -451,7 +598,8 @@ process_file( char* file, char* name, char* host, int required )
 			exit( 1 );
 		} 
 	} else {
-		rval = Read_config( file, ConfigTab, TABLESIZE, EXPAND_LAZY, extra_info );
+		rval = Read_config( file, ConfigTab, TABLESIZE, EXPAND_LAZY, 
+							false, extra_info );
 		if( rval < 0 ) {
 			fprintf( stderr,
 					 "Configuration Error Line %d while reading %s %s\n",
@@ -463,12 +611,13 @@ process_file( char* file, char* name, char* host, int required )
 
 
 // Param for given name, read it in as a string list, and process each
-// config file listed there.
+// config source listed there.  If the value is actually a cmd whose
+// output should be piped, then do *not* treat it as a file list.
 void
 process_locals( char* param_name, char* host )
 {
-	StringList locals;
-	char *file;
+	StringList sources_to_process, sources_done;
+	char *source, *sources_value;
 	char *tmp;
 	int local_required;
 	
@@ -481,21 +630,109 @@ process_locals( char* param_name, char* host )
 		free( tmp );
     }
 
-	file = param( param_name );
-	if( file ) {
-		locals.initializeFromString( file );
-		free( file );
-		locals.rewind();
-		while( (file = locals.next()) ) {
-			process_file( file, "config file", host, local_required );
-			if (local_config_files.Length() > 0) {
-				local_config_files += " ";
-			}
-			local_config_files += file;
+	sources_value = param( param_name );
+	if( sources_value ) {
+		if ( is_piped_command( sources_value ) ) {
+			sources_to_process.insert( sources_value );
+		} else {
+			sources_to_process.initializeFromString( sources_value );
 		}
+		sources_to_process.rewind();
+		while( (source = sources_to_process.next()) ) {
+			process_config_source( source, "config source", host,
+								   local_required );
+			local_config_sources.append( source );
+
+			sources_done.append(source);
+
+			char* new_sources_value = param(param_name);
+			if(new_sources_value) {
+				if(strcmp(sources_value, new_sources_value) ) {
+				// the file we just processed altered the list of sources to
+				// process
+					sources_to_process.clearAll();
+					if ( is_piped_command( new_sources_value ) ) {
+						sources_to_process.insert( new_sources_value );
+					} else {
+						sources_to_process.initializeFromString(new_sources_value);
+					}
+
+					// remove all the ones we've finished from the old list 
+                	sources_done.rewind();
+                	while( (source = sources_done.next()) ) {
+						sources_to_process.remove(source);
+					}
+					sources_to_process.rewind();
+					free(sources_value);
+					sources_value = new_sources_value;
+				} else {
+					free(new_sources_value);
+				}
+			}
+		}
+		free(sources_value);
 	}
 }
 
+int compareFiles(const void *a, const void *b) {
+	 return strcmp(*(char **)a, *(char **)b);
+}
+
+// examine each file in a directory and treat it as a config file
+void
+process_directory( char* dirlist, char* host )
+{
+	StringList locals;
+	Directory *files;
+	char *file, *dirpath;
+	char **paths;
+	char *tmp;
+	int local_required;
+	
+	local_required = true;	
+	tmp = param( "REQUIRE_LOCAL_CONFIG_FILE" );
+	if( tmp ) {
+		if( tmp[0] == 'f' || tmp[0] == 'F' ) {
+			local_required = false;
+		}
+		free( tmp );
+	}
+
+	if(!dirlist) { return; }
+	locals.initializeFromString( dirlist );
+	locals.rewind();
+	while( (dirpath = locals.next()) ) {
+
+		paths = (char **)calloc(65536, sizeof(char *));
+		files = new Directory(dirpath);
+		int i = 0;
+		if(files == NULL) { 
+			fprintf(stderr, "Cannot open %s\n", dirpath);	 
+		} else {
+			while( (file = (char *)files->Next()) && i < 65536) {
+				// don't consider directories
+				// maybe we should squash symlinks here...
+				if(! files->IsDirectory() ) {
+					paths[i] = strdup((char *)files->GetFullPath());
+					i++;
+				}
+			}
+			delete files;
+		}
+		qsort(paths, i, sizeof(char *), compareFiles); 
+		char **pathCopy = paths;
+		while(*pathCopy) {
+			process_config_source( *pathCopy, "config source", host,
+								   local_required );
+
+			local_config_sources.append(*pathCopy);
+
+			free(*pathCopy);
+			pathCopy++;
+		}
+		free(paths);
+	}
+}
 
 // Try to find the "condor" user's home directory
 void
@@ -510,6 +747,36 @@ init_tilde()
 	if( (pw=getpwnam( myDistro->Get() )) ) {
 		tilde = strdup( pw->pw_dir );
 	} 
+# else
+	// On Windows, we'll just look in the registry for TILDE. 
+	HKEY	handle;
+	char regKey[1024];
+
+	sprintf( regKey, "Software\\%s", myDistro->GetCap() );
+
+	if ( RegOpenKeyEx(HKEY_LOCAL_MACHINE, regKey,
+		0, KEY_READ, &handle) == ERROR_SUCCESS ) {
+
+		// got the reg key open; now we just need to see if
+		// we can open the TILDE string value.
+
+		char the_path[_POSIX_PATH_MAX];
+		DWORD valType;
+		DWORD valSize = _POSIX_PATH_MAX - 2;
+
+		the_path[0] = '\0';
+
+		if ( RegQueryValueEx(handle, "TILDE", 0, 
+			&valType, (unsigned char *)the_path, &valSize) == ERROR_SUCCESS ) {
+
+			if ( valType == REG_SZ && the_path[0] ) {
+				// got it! 
+				tilde = strdup(the_path);
+			}
+		}
+		RegCloseKey(handle);
+	} 
+	
 # endif
 }
 
@@ -544,39 +811,48 @@ find_global_root()
 char*
 find_file(const char *env_name, const char *file_name)
 {
-
-	char	*config_file = NULL, *env;
-	int		fd;
+	char* config_source = NULL;
+	char* env = NULL;
+	int fd = 0;
 
 		// If we were given an environment variable name, try that first. 
 	if( env_name && (env = getenv( env_name )) ) {
-		config_file = strdup( env );
-		StatInfo si( config_file );
+		config_source = strdup( env );
+		StatInfo si( config_source );
 		switch( si.Error() ) {
 		case SIGood:
 			if( si.IsDirectory() ) {
 				fprintf( stderr, "File specified in %s environment "
 						 "variable:\n\"%s\" is a directory.  "
 						 "Please specify a file.\n", env_name,
-						 config_file );  
-				free( config_file );
+						 config_source );  
+				free( config_source );
+				config_source = NULL;
 				exit( 1 );
 			}
 				// Otherwise, we're happy
-			return config_file;
+			return config_source;
 			break;
 		case SINoFile:
-			fprintf( stderr, "File specified in %s environment "
-					 "variable:\n\"%s\" does not exist.\n",
-					 env_name, config_file );  
-			free( config_file );
-			exit( 1 );
-			break;
+			// Check to see if it is a pipe command, in which case we're fine.
+			if (!is_piped_command(config_source) ||
+				!is_valid_command(config_source)) {
+
+				fprintf( stderr, "File specified in %s environment "
+						 "variable:\n\"%s\" does not exist.\n",
+						 env_name, config_source );  
+				free( config_source );
+				exit( 1 );
+				break;
+			}
+			// Otherwise, we're happy
+			return config_source;
+
 		case SIFailure:
 			fprintf( stderr, "Cannot stat file specified in %s "
 					 "environment variable:\n\"%s\", errno: %d\n", 
-					 env_name, config_file, si.Errno() );
-			free( config_file );
+					 env_name, config_source, si.Errno() );
+			free( config_source );
 			exit( 1 );
 			break;
 		}
@@ -585,52 +861,52 @@ find_file(const char *env_name, const char *file_name)
 # ifdef UNIX
 	// Only look in /etc/condor, ~condor, and $GLOBUS_LOCATION/etc on Unix.
 
-	if( ! config_file ) {
+	if( ! config_source ) {
 		// try /etc/condor/file_name
 		MyString	str( "/etc/" );
 		str += myDistro->Get();
 		str += "/";
 		str += file_name;
-		config_file = strdup( str.Value() );
-		if( (fd = open( config_file, O_RDONLY )) < 0 ) {
-			free( config_file );
-			config_file = NULL;
+		config_source = strdup( str.Value() );
+		if( (fd = open( config_source, O_RDONLY )) < 0 ) {
+			free( config_source );
+			config_source = NULL;
 		} else {
 			close( fd );
 		}
 	}
-	if( ! config_file && tilde ) {
+	if( ! config_source && tilde ) {
 		// try ~condor/file_name
-		config_file = (char *)malloc( 
+		config_source = (char *)malloc( 
 			(strlen(tilde) + strlen(file_name) + 2) * sizeof(char) ); 
-		config_file[0] = '\0';
-		strcat( config_file, tilde );
-		strcat( config_file, "/" );
-		strcat( config_file, file_name );
-		if( (fd = open( config_file, O_RDONLY)) < 0 ) {
-			free( config_file );
-			config_file = NULL;
+		config_source[0] = '\0';
+		strcat( config_source, tilde );
+		strcat( config_source, "/" );
+		strcat( config_source, file_name );
+		if( (fd = open( config_source, O_RDONLY)) < 0 ) {
+			free( config_source );
+			config_source = NULL;
 		} else {
 			close( fd );
 		}
 	}
     // For Condor-G, also check off of GLOBUS_LOCATION.
-	if( ! config_file ) {
+	if( ! config_source ) {
 		char *globus_location;      
 	
 		if( (globus_location = getenv("GLOBUS_LOCATION")) ) {
 	
-			config_file = (char *)malloc( ( strlen(globus_location) +
+			config_source = (char *)malloc( ( strlen(globus_location) +
                                             strlen("/etc/") +   
                                             strlen(file_name) + 3 ) 
                                           * sizeof(char) );	
-			config_file[0] = '\0';
-			strcat(config_file, globus_location);
-			strcat(config_file, "/etc/");
-			strcat(config_file, file_name); 
-			if( (fd = open( config_file, O_RDONLY)) < 0 ) {
-				free( config_file );
-				config_file = NULL;
+			config_source[0] = '\0';
+			strcat(config_source, globus_location);
+			strcat(config_source, "/etc/");
+			strcat(config_source, file_name); 
+			if( (fd = open( config_source, O_RDONLY)) < 0 ) {
+				free( config_source );
+				config_source = NULL;
 			} else {
 				close( fd );
 			}
@@ -642,7 +918,7 @@ find_file(const char *env_name, const char *file_name)
 	char	regKey[256];
 
 	sprintf( regKey, "Software\\%s", myDistro->GetCap() );
-	if ( !config_file && RegOpenKeyEx(HKEY_LOCAL_MACHINE, regKey,
+	if ( !config_source && RegOpenKeyEx(HKEY_LOCAL_MACHINE, regKey,
 		0, KEY_READ, &handle) == ERROR_SUCCESS ) {
 		// We have found a registry key for Condor, which
 		// means this user has a pulse and has actually run the
@@ -661,21 +937,68 @@ find_file(const char *env_name, const char *file_name)
 			// confirm it is a string value with something there
 			if ( valType == REG_SZ && the_path[0] ) {
 				// got it!  whoohooo!
-				config_file = strdup(the_path);
-				if( (fd = open( config_file, O_RDONLY)) < 0 ) {
-					free( config_file );
-					config_file = NULL;
+				config_source = strdup(the_path);
+
+				if ( strncmp(config_source, "\\\\", 2 ) == 0 ) {
+					// UNC Path, so run a 'net use' on it first.
+					NETRESOURCE nr;
+					nr.dwType = RESOURCETYPE_DISK;
+					nr.lpLocalName = NULL;
+					nr.lpRemoteName = dirname(config_source);
+					nr.lpProvider = NULL;
+					
+					if ( NO_ERROR != WNetAddConnection2(
+										&nr,   /* NetResource */
+										NULL,  /* password (default) */
+										NULL,  /* username (default) */
+										0      /* flags (none) */
+						) ) {
+
+						if ( GetLastError() == ERROR_INVALID_PASSWORD ) {
+							// try again with an empty password
+							WNetAddConnection2(
+										&nr,   /* NetResource */
+										"",    /* password (none) */
+										NULL,  /* username (default) */
+										0      /* flags (none) */
+							);
+						}
+
+						// whether it worked or not, we're gonna continue.
+						// The goal of running the WNetAddConnection2() is 
+						// to make a mapping to the UNC path. For reasons
+						// I don't fully understand, some sites need the 
+						// mapping, and some don't. If it works, great; if 
+						// not, try the open() anyways, and at worst we'll
+						// fail fast and the user can fix their file server.
+					}
+
+					if (nr.lpRemoteName) {
+						free(nr.lpRemoteName);
+					}
+				}
+
+				if( !(is_piped_command(config_source) &&
+					  is_valid_command(config_source)) && 
+					(fd = open( config_source, O_RDONLY)) < 0 ) {
+
+					free( config_source );
+					config_source = NULL;
 				} else {
-					close( fd );
+					if (fd != 0) {
+						close( fd );
+					}
 				}
 			}
 		}
+
+		RegCloseKey(handle);
 	}
 # else
 #	error "Unknown O/S"
 # endif		/* ifdef UNIX / Win32 */
 
-	return config_file;
+	return config_source;
 }
 
 
@@ -684,12 +1007,12 @@ fill_attributes()
 {
 		/* There are a few attributes that specify what platform we're
 		   on that we want to insert values for even if they're not
-		   defined in the config files.  These are ARCH and OPSYS,
+		   defined in the config sources.  These are ARCH and OPSYS,
 		   which we compute with the sysapi_condor_arch() and sysapi_opsys()
 		   functions.  We also insert the subsystem here.  Moved all
 		   the domain stuff to check_domain_attributes() on
 		   10/20.  Also, since this is called before we read in any
-		   config files, there's no reason to check to see if any of
+		   config sources, there's no reason to check to see if any of
 		   these are already defined.  -Derek Wright
 		   Amended -Pete Keller 06/01/99 */
 
@@ -764,15 +1087,17 @@ void
 clear_config()
 {
 	register 	int 	i;
-	register 	BUCKET	*ptr;	
-	register 	BUCKET	*tmp;	
+	register 	BUCKET	*ptr = NULL;
+	register 	BUCKET	*tmp = NULL;
 
 	for( i=0; i<TABLESIZE; i++ ) {
 		ptr = ConfigTab[i];
 		while( ptr ) {
 			tmp = ptr->next;
 			FREE( ptr->value );
+			ptr->value = NULL;
 			FREE( ptr->name );
+			ptr->name = NULL;
 			FREE( ptr );
 			ptr = tmp;
 		}
@@ -782,9 +1107,9 @@ clear_config()
 		delete extra_info;
 		extra_info = new ExtraParamTable();
 	}
-	global_config_file       = "";
-	global_root_config_file  = "";
-	local_config_files         = "";
+	global_config_source       = "";
+	global_root_config_source  = "";
+	local_config_sources.clearAll();
 	return;
 }
 
@@ -796,9 +1121,27 @@ clear_config()
 char *
 param( const char *name )
 {
-	char *val = lookup_macro( name, ConfigTab, TABLESIZE );
+	// prepend the subsystem and a period and check for that first.
 
-	if( val == NULL || val[0] == '\0' ) {
+	MyString subsysparamname = mySubSystem;
+	subsysparamname += ".";
+	subsysparamname += name;
+
+	char *val = lookup_macro( subsysparamname.GetCStr(), ConfigTab, TABLESIZE );
+
+	if( val == NULL ) {
+		// not present, so param for the actual name
+		val = lookup_macro( name, ConfigTab, TABLESIZE );
+
+		// return NULL if not present or set to the empty string
+		if( val == NULL || val[0] == '\0' ) {
+			return( NULL );
+		}
+	} else if (val[0] == '\0' ) {
+		// the subsytem-specific setting was set to the empty string, so we
+		// return NULL without checking for the actual name since presumably
+		// it was set to empty specifically to clear this parameter for this
+		// specific subsystem.
 		return( NULL );
 	}
 
@@ -834,7 +1177,7 @@ param_integer( const char *name, int default_value,
 	ASSERT( name );
 	string = param( name );
 	if( ! string ) {
-		dprintf( D_FULLDEBUG, "%s is undefined, using default value of %d\n",
+		dprintf( D_CONFIG, "%s is undefined, using default value of %d\n",
 				 name, default_value );
 		return default_value;
 	}
@@ -842,18 +1185,62 @@ param_integer( const char *name, int default_value,
 	fields = sscanf( string, "%d", &result );
 
 	if( fields != 1 ) {
-		dprintf( D_FULLDEBUG, "WARNING: %s not an integer (\"%s\"), using "
+		dprintf( D_CONFIG, "WARNING: %s not an integer (\"%s\"), using "
 				 "default value of %d\n", name, string, default_value );
 		result = default_value;
 	}
 	else if( result < min_value ) {
-		dprintf( D_FULLDEBUG, "WARNING: %s too low (%d), using minimum "
+		dprintf( D_CONFIG, "WARNING: %s too low (%d), using minimum "
 				 "value of %d\n", name, result, min_value );
 		result = min_value;
 	}
 	else if( result > max_value ) {
-		dprintf( D_FULLDEBUG, "WARNING: %s too high (%d), using maximum "
+		dprintf( D_CONFIG, "WARNING: %s too high (%d), using maximum "
 				 "value of %d\n", name, result, max_value );
+		result = max_value;
+	}
+	free( string );
+	return result;
+}
+
+/*
+ * Return the [single precision] floating point value associated with the named
+ * parameter.  If the value is not defined or not a valid float, then return
+ * the default_value argument.  The min_value and max_value arguments are
+ * optional and default to FLT_MIN and FLT_MAX.
+ */
+
+float
+param_float( const char *name, float default_value,
+			   float min_value, float max_value )
+{
+	float result;
+	int fields;
+	char *string;
+
+	ASSERT( name );
+	string = param( name );
+	if( ! string ) {
+		dprintf( D_CONFIG, "%s is undefined, using default value of %f\n",
+				 name, default_value );
+		return default_value;
+	}
+
+	fields = sscanf( string, "%f", &result );
+
+	if( fields != 1 ) {
+		dprintf( D_CONFIG, "WARNING: %s not an float (\"%s\"), using "
+				 "default value of %f\n", name, string, default_value );
+		result = default_value;
+	}
+	else if( result < min_value ) {
+		dprintf( D_CONFIG, "WARNING: %s too low (%f), using minimum "
+				 "value of %f\n", name, result, min_value );
+		result = min_value;
+	}
+	else if( result > max_value ) {
+		dprintf( D_CONFIG, "WARNING: %s too high (%f), using maximum "
+				 "value of %f\n", name, result, max_value );
 		result = max_value;
 	}
 	free( string );
@@ -877,7 +1264,7 @@ param_boolean( const char *name, const bool default_value )
 	ASSERT( name );
 	string = param( name );
 	if( ! string ) {
-		dprintf( D_FULLDEBUG, "%s is undefined, using default value of %s\n",
+		dprintf( D_CONFIG, "%s is undefined, using default value of %s\n",
 				 name, default_value ? "True" : "False" );
 		return default_value;
 	}
@@ -894,7 +1281,7 @@ param_boolean( const char *name, const bool default_value )
 			result = false;
 			break;
 		default:
-		    dprintf( D_FULLDEBUG, "WARNING: %s not a boolean (\"%s\"), using "
+		    dprintf( D_CONFIG, "WARNING: %s not a boolean (\"%s\"), using "
 					 "default value of %s\n", name, string,
 					 default_value ? "True" : "False" );
 			result = default_value;
@@ -920,7 +1307,7 @@ macro_expand( const char *str )
 ** If the value is not defined or not a valid, then
 ** return the default_value argument.
 */
-int
+extern "C" int
 param_boolean_int( const char *name, int default_value )
 {
     bool default_bool;
@@ -978,6 +1365,7 @@ reinsert_specials( char* host )
 {
 	static unsigned int reinsert_pid = 0;
 	static unsigned int reinsert_ppid = 0;
+	static bool warned_no_user = false;
 	char buf[40];
 
 	if( tilde ) {
@@ -996,13 +1384,21 @@ reinsert_specials( char* host )
 	extra_info->AddInternalParam("subsystem");
 
 	// Insert login-name for our real uid as "username".  At the time
-	// we're reading in the config file, the priv state code is not
+	// we're reading in the config source, the priv state code is not
 	// initialized, so our euid will always be the same as our ruid.
 	char *myusernm = my_username();
-	insert( "username", myusernm, ConfigTab, TABLESIZE );
-	free(myusernm);
-	extra_info->AddInternalParam("username");
-
+	if( myusernm ) {
+		insert( "username", myusernm, ConfigTab, TABLESIZE );
+		free(myusernm);
+		myusernm = NULL;
+		extra_info->AddInternalParam("username");
+	} else {
+		if( ! warned_no_user ) {
+			dprintf( D_ALWAYS, "ERROR: can't find username of current user! "
+					 "BEWARE: $(USERNAME) will be undefined\n" );
+			warned_no_user = true;
+		}
+	}
 
 	// Insert values for "pid" and "ppid".  Use static values since
 	// this is expensive to re-compute on Windows.
@@ -1067,7 +1463,7 @@ check_params()
 				 "or your model (%s)\n", sysapi_uname_arch() );
 		fprintf( stderr, "was not listed.  You should either explicitly "
 				 "set the ARCH parameter\n" );
-		fprintf( stderr, "in your config file, or install the "
+		fprintf( stderr, "in your config source, or install the "
 				 "sched.models file.\n" );
 		exit( 1 );
 	} else {
@@ -1076,7 +1472,7 @@ check_params()
 #endif
 }
 
-/* Begin code for runtime support for modifying a daemon's config file.
+/* Begin code for runtime support for modifying a daemon's config source.
    See condor_daemon_core.V6/README.config for more details. */
 
 static StringList PersistAdminList;
@@ -1095,102 +1491,152 @@ template class ExtArray<RuntimeConfigItem>;
 
 static ExtArray<RuntimeConfigItem> rArray;
 
-static char toplevel_runtime_config[_POSIX_PATH_MAX] = { '\0' };
+static MyString toplevel_persistent_config;
+
+/*
+  we want these two bools to be global, and only initialized on
+  startup, so that folks can't play tricks and change these
+  dynamically.  for example, if a site enables runtime but not
+  persistent configs, we can't allow someone to set
+  "ENABLE_PERSISTENT_CONFIG" with a condor_config_val -rset.
+  therefore, we only read these once, before we look at any of the
+  dynamic config source, to make sure we're happy.  this means it
+  requires a restart to change any of these, but i think that's a
+  reasonable burden on admins, considering the potential security
+  implications.  -derek 2006-03-17
+*/ 
+static bool enable_runtime;
+static bool enable_persistent;
 
 static void
-set_toplevel_runtime_config()
+init_dynamic_config()
 {
-	if (!toplevel_runtime_config[0]) {
-		char filename_parameter[50], *tmp;
-		sprintf(filename_parameter, "%s_CONFIG", mySubSystem);
-		tmp = param(filename_parameter);
-		if (tmp) {
-			sprintf(toplevel_runtime_config, "%s", tmp);
-			free(tmp);
+	static bool initialized = false;
+
+	if( initialized ) {
+			// already have a value, we're done
+		return;
+	}
+
+	enable_runtime = param_boolean( "ENABLE_RUNTIME_CONFIG", false );
+	enable_persistent = param_boolean( "ENABLE_PERSISTENT_CONFIG", false );
+	initialized = true;
+
+	if( !enable_persistent ) {
+			// we don't want persistent configs, leave the toplevel blank
+		return;
+	}
+
+	char* tmp;
+
+		// if we're using runtime config, try a subsys-specific config
+		// knob for the root location
+	MyString filename_parameter;
+	filename_parameter.sprintf( "%s_CONFIG", mySubSystem );
+	tmp = param( filename_parameter.Value() );
+	if( tmp ) {
+		toplevel_persistent_config = tmp;
+		free( tmp );
+		return;
+	}
+
+	tmp = param( "PERSISTENT_CONFIG_DIR" );
+
+	if( !tmp ) {
+		if( strcmp(mySubSystem,"SUBMIT")==0 || 
+			strcmp(mySubSystem,"TOOL")==0 ||
+			! have_config_source)
+		{
+				/* 
+				   we are just a tool, not a daemon.
+				   or, we were explicitly told we don't have
+				   the usual config sources.
+				   thus it is not imperative that we find what we
+				   were looking for...
+				*/
+			return;
 		} else {
-			tmp = param("LOG");
-			if (!tmp) {
-				if ( strcmp(mySubSystem,"SUBMIT")==0 || 
-					 strcmp(mySubSystem,"TOOL")==0 ||
-					 ! have_config_file )
-				{
-						// we are just a tool, not a daemon.
-						// or, we were explicitly told we don't have
-						// the usual config files.
-						// thus it is not imperative that we find what we
-						// were looking for...
-					toplevel_runtime_config[0] = '\0';
-					return;
-				} else {
-						// we are a daemon.  if we fail, we must exit.
-					dprintf( D_ALWAYS, "%s error: neither %s nor LOG is "
-						 "specified in the configuration file.\n",
-						 myDistro->GetCap(), filename_parameter );
-					exit( 1 );
-				}
-			}
-			sprintf(toplevel_runtime_config, "%s%c.config.%s", tmp,
-					DIR_DELIM_CHAR,	mySubSystem);
-			free(tmp);
+				// we are a daemon.  if we fail, we must exit.
+			fprintf( stderr, "%s error: ENABLE_PERSISTENT_CONFIG is TRUE, "
+					 "but neither %s nor PERSISTENT_CONFIG_DIR is "
+					 "specified in the configuration file\n",
+					 myDistro->GetCap(), filename_parameter.Value() );
+			exit( 1 );
 		}
 	}
+	toplevel_persistent_config.sprintf( "%s%c.config.%s", tmp,
+										DIR_DELIM_CHAR, mySubSystem );
+	free(tmp);
 }
+
 
 /* 
 ** Caller is responsible for allocating admin and config with malloc.
 ** Caller should not free admin and config after the call.
 */
+
+#define ABORT \
+	if(admin) { free(admin); } \
+	if(config) { free(config); } \
+	set_priv(priv); \
+	return -1
+
 int
 set_persistent_config(char *admin, char *config)
 {
-	char tmp_filename[_POSIX_PATH_MAX], filename[_POSIX_PATH_MAX];
-	int fd;
+	int fd, rval;
 	char *tmp;
+	MyString filename;
+	MyString tmp_filename;
+	priv_state priv;
 
-	if (!admin || !admin[0]) {
-		if (admin) free(admin);
-		if (config) free(config);
+	if (!admin || !admin[0] || !enable_persistent) {
+		if (admin)  { free(admin);  }
+		if (config) { free(config); }
 		return -1;
 	}
 
-	// make sure toplevel config filename is set
-	set_toplevel_runtime_config();
+	// make sure top level config source is set
+	init_dynamic_config();
+	if( ! toplevel_persistent_config.Length() ) {
+		EXCEPT( "Impossible: programmer error: toplevel_persistent_config "
+				"is 0-length, but we already initialized, enable_persistent "
+				"is TRUE, and set_persistent_config() has been called" );
+	}
 
+	priv = set_root_priv();
 	if (config && config[0]) {	// (re-)set config
-		// write new config to temporary file
-		sprintf(filename, "%s.%s", toplevel_runtime_config, admin);
-		sprintf(tmp_filename, "%s.tmp", filename);
-		if ((fd = open(tmp_filename, O_WRONLY|O_CREAT|O_TRUNC, 0644)) < 0) {
-			dprintf( D_ALWAYS, "open(%s) returns %d, errno %d in "
-					 "set_persistent_config\n", tmp_filename,
-					 fd, errno );
-			free(admin);
-			free(config);
-			return -1;
+			// write new config to temporary file
+		filename.sprintf( "%s.%s", toplevel_persistent_config.Value(), admin );
+		tmp_filename.sprintf( "%s.tmp", filename.Value() );
+		do {
+			unlink( tmp_filename.Value() );
+			fd = open( tmp_filename.Value(), O_WRONLY|O_CREAT|O_EXCL, 0644 );
+		} while (fd == -1 && errno == EEXIST); 
+		if( fd < 0 ) {
+			dprintf( D_ALWAYS, "open(%s) returned %d '%s' (errno %d) in "
+					 "set_persistent_config()\n", tmp_filename.Value(),
+					 fd, strerror(errno), errno );
+			ABORT;
 		}
 		if (write(fd, config, strlen(config)) != (ssize_t)strlen(config)) {
-			dprintf( D_ALWAYS, "write failed with errno %d in "
-					 "set_persistent_config\n", errno );
-			free(admin);
-			free(config);
-			return -1;
+			dprintf( D_ALWAYS, "write() failed with '%s' (errno %d) in "
+					 "set_persistent_config()\n", strerror(errno), errno );
+			ABORT;
 		}
 		if (close(fd) < 0) {
-			dprintf( D_ALWAYS, "close failed with errno %d in "
-					 "set_persistent_config\n", errno );
-			free(admin);
-			free(config);
-			return -1;
+			dprintf( D_ALWAYS, "close() failed with '%s' (errno %d) in "
+					 "set_persistent_config()\n", strerror(errno), errno );
+			ABORT;
 		}
 		
-		// commit config changes
-		if (rotate_file(tmp_filename, filename) < 0) {
-			dprintf( D_ALWAYS, "rotate_file(%s,%s) failed with errno %d in "
-					 "set_persistent_config\n", tmp_filename, filename,
-					 errno );
-			free(admin);
-			free(config);
-			return -1;
+			// commit config changes
+		if (rotate_file(tmp_filename.Value(), filename.Value()) < 0) {
+			dprintf( D_ALWAYS, "rotate_file(%s,%s) failed with '%s' "
+					 "(errno %d) in set_persistent_config()\n",
+					 tmp_filename.Value(), filename.Value(),
+					 strerror(errno), errno );
+			ABORT;
 		}
 	
 		// update admin list in memory
@@ -1199,6 +1645,7 @@ set_persistent_config(char *admin, char *config)
 		} else {
 			free(admin);
 			free(config);
+			set_priv(priv);
 			return 0;		// if no update is required, then we are done
 		}
 
@@ -1213,90 +1660,85 @@ set_persistent_config(char *admin, char *config)
 	}		
 
 	// update admin list on disk
-	sprintf(tmp_filename, "%s.tmp", toplevel_runtime_config);
-	if ((fd = open(tmp_filename, O_WRONLY|O_CREAT|O_TRUNC, 0644)) < 0) {
-		dprintf( D_ALWAYS, "open(%s) returns %d, errno %d in "
-				 "set_persistent_config\n", tmp_filename,
-				 fd, errno );
-		free(admin);
-		if (config) free(config);
-		return -1;
+	tmp_filename.sprintf( "%s.tmp", toplevel_persistent_config.Value() );
+	do {
+		unlink( tmp_filename.Value() );
+		fd = open( tmp_filename.Value(), O_WRONLY|O_CREAT|O_EXCL, 0644 );
+	} while (fd == -1 && errno == EEXIST); 
+	if( fd < 0 ) {
+		dprintf( D_ALWAYS, "open(%s) returned %d '%s' (errno %d) in "
+				 "set_persistent_config()\n", tmp_filename.Value(),
+				 fd, strerror(errno), errno );
+		ABORT;
 	}
 	const char param[] = "RUNTIME_CONFIG_ADMIN = ";
 	if (write(fd, param, strlen(param)) != (ssize_t)strlen(param)) {
-		dprintf( D_ALWAYS, "write failed with errno %d in "
-				 "set_persistent_config\n", errno );
-		free(admin);
-		if (config) free(config);
-		return -1;
+		dprintf( D_ALWAYS, "write() failed with '%s' (errno %d) in "
+				 "set_persistent_config()\n", strerror(errno), errno );
+		ABORT;
 	}
 	PersistAdminList.rewind();
 	bool first_time = true;
 	while( (tmp = PersistAdminList.next()) ) {
 		if (!first_time) {
 			if (write(fd, ", ", 2) != 2) {
-				dprintf( D_ALWAYS, "write failed with errno %d in "
-						 "set_persistent_config\n", errno );
-				free(admin);
-				if (config) free(config);
-				return -1;
+				dprintf( D_ALWAYS, "write() failed with '%s' (errno %d) in "
+						 "set_persistent_config()\n", strerror(errno), errno );
+				ABORT;
 			}
 		} else {
 			first_time = false;
 		}
 		if (write(fd, tmp, strlen(tmp)) != (ssize_t)strlen(tmp)) {
-			dprintf( D_ALWAYS, "write failed with errno %d in "
-					 "set_persistent_config\n", errno );
-			free(admin);
-			if (config) free(config);
-			return -1;
+			dprintf( D_ALWAYS, "write() failed with '%s' (errno %d) in "
+					 "set_persistent_config()\n", strerror(errno), errno );
+			ABORT;
 		}
 	}
 	if (write(fd, "\n", 1) != 1) {
-		dprintf( D_ALWAYS, "write failed with errno %d in "
-				 "set_persistent_config\n", errno );
-		free(admin);
-		if (config) free(config);
-		return -1;
+		dprintf( D_ALWAYS, "write() failed with '%s' (errno %d) in "
+				 "set_persistent_config()\n", strerror(errno), errno );
+		ABORT;
 	}
 	if (close(fd) < 0) {
-		dprintf( D_ALWAYS, "close failed with errno %d in "
-				 "set_persistent_config\n", errno );
-		free(admin);
-		if (config) free(config);
-		return -1;
+		dprintf( D_ALWAYS, "close() failed with '%s' (errno %d) in "
+				 "set_persistent_config()\n", strerror(errno), errno );
+		ABORT;
 	}
 	
-	if (rotate_file(tmp_filename, toplevel_runtime_config) < 0) {
-		dprintf( D_ALWAYS, "rotate_file(%s,%s) failed with errno %d in "
-				 "set_persistent_config\n", tmp_filename, filename, errno );
-		free(admin);
-		if (config) free(config);
-		return -1;
+	rval = rotate_file( tmp_filename.Value(),
+						toplevel_persistent_config.Value() );
+	if (rval < 0) {
+		dprintf( D_ALWAYS, "rotate_file(%s,%s) failed with '%s' (errno %d) "
+				 "in set_persistent_config()\n", tmp_filename.Value(),
+				 filename.Value(), strerror(errno), errno );
+		ABORT;
 	}
 
 	// if we removed a config, then we should clean up by removing the file(s)
 	if (!config || !config[0]) {
-		sprintf(filename, "%s.%s", toplevel_runtime_config, admin);
-		unlink(filename);
+		filename.sprintf( "%s.%s", toplevel_persistent_config.Value(), admin );
+		unlink( filename.Value() );
 		if (PersistAdminList.number() == 0) {
-			unlink(toplevel_runtime_config);
+			unlink( toplevel_persistent_config.Value() );
 		}
 	}
 
-	free(admin);
-	if (config) free(config);
+	set_priv( priv );
+	free( admin );
+	if (config) { free( config ); }
 	return 0;
 }
+
 
 int
 set_runtime_config(char *admin, char *config)
 {
 	int i;
 
-	if (!admin || !admin[0]) {
-		if (admin) free(admin);
-		if (config) free(config);
+	if (!admin || !admin[0] || !enable_runtime) {
+		if (admin)  { free(admin);  }
+		if (config) { free(config); }
 		return -1;
 	}
 
@@ -1329,34 +1771,27 @@ set_runtime_config(char *admin, char *config)
 	return 0;
 }
 
-/* 
-** returns 1 if runtime configs were processed; 0 if no runtime configs
-** were defined, and -1 on error.  persistent configs are also processed
-** by this function.
-*/
+
 extern "C" {
 
 static int
-process_runtime_configs()
+process_persistent_configs()
 {
-	char filename[_POSIX_PATH_MAX];
-	char *tmp;
-	int i, rval, fd;
+	char *tmp = NULL;
+	int rval;
 	bool processed = false;
 
-	set_toplevel_runtime_config();
-
-	if( access( toplevel_runtime_config, R_OK ) == 0 &&
-		PersistAdminList.number() == 0 ) {
-
+	if( access( toplevel_persistent_config.Value(), R_OK ) == 0 &&
+		PersistAdminList.number() == 0 )
+	{
 		processed = true;
 
-		rval = Read_config( toplevel_runtime_config, ConfigTab,
-							TABLESIZE, EXPAND_LAZY, extra_info );
+		rval = Read_config( toplevel_persistent_config.Value(), ConfigTab,
+							TABLESIZE, EXPAND_LAZY, true, extra_info );
 		if (rval < 0) {
 			dprintf( D_ALWAYS, "Configuration Error Line %d while reading "
-					 "top-level runtime config file: %s\n",
-					 ConfigLineNo, toplevel_runtime_config );
+					 "top-level persistent config source: %s\n",
+					 ConfigLineNo, toplevel_persistent_config.Value() );
 			exit(1);
 		}
 
@@ -1370,39 +1805,66 @@ process_runtime_configs()
 	PersistAdminList.rewind();
 	while ((tmp = PersistAdminList.next())) {
 		processed = true;
-		sprintf(filename, "%s.%s", toplevel_runtime_config, tmp);
-		rval = Read_config( filename, ConfigTab, TABLESIZE,
-							EXPAND_LAZY, extra_info );
+		MyString config_source;
+		config_source.sprintf( "%s.%s", toplevel_persistent_config.Value(),
+							   tmp );
+		rval = Read_config( config_source.Value(), ConfigTab, TABLESIZE,
+							 EXPAND_LAZY, true, extra_info );
 		if (rval < 0) {
 			dprintf( D_ALWAYS, "Configuration Error Line %d "
-					 "while reading runtime config file: %s\n",
-					 ConfigLineNo, filename );
+					 "while reading persistent config source: %s\n",
+					 ConfigLineNo, config_source.Value() );
 			exit(1);
 		}
 	}
+	return (int)processed;
+}
 
-	tmpnam(filename);
+
+static int
+process_runtime_configs()
+{
+	char filename[_POSIX_PATH_MAX];
+	int i, rval, fd;
+	bool processed = false;
+
 	for (i=0; i <= rArray.getlast(); i++) {
 		processed = true;
-		if ((fd = open(filename, O_WRONLY|O_CREAT|O_TRUNC, 0644)) < 0) {
-			dprintf( D_ALWAYS, "open(%s) returns %d, errno %d in "
-					 "process_runtime_configs\n", filename,
-					 fd, errno );
+
+#if HAVE_MKSTEMP && !defined( WIN32 )
+		sprintf( filename, "/tmp/cndrtmpXXXXXX" );
+		fd = mkstemp( filename ); 
+		if (fd < 0) {
+			dprintf( D_ALWAYS, "mkstemp(%s) returned %d, '%s' (errno %d) in "
+					 "process_dynamic_configs()\n", filename, fd,
+					 strerror(errno), errno );
 			exit(1);
 		}
+#else /* ! HAVE_MKSTEMP */
+		// EVIL!  tmpnam() isn't safe!
+		tmpnam( filename );
+		fd = open( filename, O_WRONLY|O_CREAT|O_TRUNC, 0644 );
+		if (fd < 0) {
+			dprintf( D_ALWAYS, "open(%s) returns %d, '%s' (errno %d) in "
+					 "process_dynamic_configs()\n", filename, fd,
+					 strerror(errno), errno );
+			exit(1);
+		}
+#endif /* ! HAVE_MKSTEMP */
+
 		if (write(fd, rArray[i].config, strlen(rArray[i].config))
 			!= (ssize_t)strlen(rArray[i].config)) {
 			dprintf( D_ALWAYS, "write failed with errno %d in "
-					 "process_runtime_configs\n", errno );
+					 "process_dynamic_configs\n", errno );
 			exit(1);
 		}
 		if (close(fd) < 0) {
 			dprintf( D_ALWAYS, "close failed with errno %d in "
-					 "process_runtime_configs\n", errno );
+					 "process_dynamic_configs\n", errno );
 			exit(1);
 		}
 		rval = Read_config( filename, ConfigTab, TABLESIZE,
-							EXPAND_LAZY, extra_info );
+							EXPAND_LAZY, false, extra_info );
 		if (rval < 0) {
 			dprintf( D_ALWAYS, "Configuration Error Line %d "
 					 "while reading %s, runtime config: %s\n",
@@ -1415,6 +1877,36 @@ process_runtime_configs()
 	return (int)processed;
 }
 
+
+/* 
+** returns 1 if dynamic (runtime or persistent) configs were
+** processed; 0 if no dynamic configs were defined, and -1 on error.
+*/
+static int
+process_dynamic_configs()
+{
+	int per_rval = 0;
+	int run_rval = 0;
+
+	init_dynamic_config();
+
+	if( enable_persistent ) {
+		per_rval = process_persistent_configs();
+	}
+
+	if( enable_runtime ) {
+		run_rval = process_runtime_configs();
+	}
+
+	if( per_rval < 0 || run_rval < 0 ) {
+		return -1;
+	}
+	if( per_rval || run_rval ) {
+		return 1;
+	}
+	return 0;
+}
+
 } // end of extern "C" 
 
-/* End code for runtime support for modifying a daemon's config file. */
+/* End code for runtime support for modifying a daemon's config source. */

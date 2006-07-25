@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -125,6 +125,7 @@ enum { PERIODIC_ONLY = 0, PERIODIC_THEN_EXIT };
 /* ok, here is the first set of expressions that should be available
 	in the classad when it is given to Init():
 
+	ATTR_TIMER_REMOVE_CHECK
 	ATTR_PERIODIC_HOLD_CHECK
 	ATTR_PERIODIC_REMOVE_CHECK
 	ATTR_PERIODIC_RELEASE_CHECK
@@ -133,7 +134,7 @@ enum { PERIODIC_ONLY = 0, PERIODIC_THEN_EXIT };
 
 	If any of the above attributes are not present, then they will
 	be assigned defaults and inserted into the classad.
-	The defaults are: False, False, False, True, respectively.
+	The defaults are: False, False, False, False, True, respectively.
 
 	Now, if you are using mode PERIODIC_ONLY in AnalyzePolicy(),
 	then this is all that you need in the classad _plus_ any other
@@ -156,12 +157,14 @@ enum { PERIODIC_ONLY = 0, PERIODIC_THEN_EXIT };
 	and ATTR_ON_EXIT_CODE is not, then AnalyzePolicy() will EXCEPT.
 
 	If PERIODIC_ONLY is used with AnalyzePolicy(), then only 
-	ATTR_PERIODIC_HOLD_CHECK and ATTR_PERIODIC_REMOVE_CHECK will be
+	ATTR_TIMER_REMOVE_CHECK, ATTR_PERIODIC_HOLD_CHECK,
+	ATTR_PERIODIC_REMOVE_CHECK and ATTR_PERIODIC_RELEASE_CHECK will be
 	evaluated(in that order) to determine if anything should happen with
 	the job.
 
 	If PERIODIC_THEN_EXIT is used with AnalyzePolicy(), then
-	ATTR_PERIODIC_HOLD_CHECK, ATTR_PERIODIC_REMOVE_CHECK,
+	ATTR_TIMER_REMOVE, ATTR_PERIODIC_HOLD_CHECK,
+	ATTR_PERIODIC_REMOVE_CHECK, ATTR_PERIODIC_RELEASE_CHECK,
 	ATTR_ON_EXIT_HOLD_CHECK, and ATTR_ON_EXIT_REMOVE_CHECK will be
 	evaluated(in that order) to determine if anything should happen
 	with the job.
@@ -175,8 +178,8 @@ enum { PERIODIC_ONLY = 0, PERIODIC_THEN_EXIT };
 	the job.  You can also call FiringExpressionValue() to find out
 	what the firing expression evaluated to which casued the action.
 
-	If you do a periodic evaluation and neither periodic check
-	expression became true, the action you get is STAYS_IN_QUEUE and
+	If you do a periodic evaluation and none of the periodic check
+	expressions became true, the action you get is STAYS_IN_QUEUE and
 	the FiringExpression() will be NULL.  However, when you do an on
 	exit evaluation, if you get STAYS_IN_QUEUE, that's because an
 	expression fired (ON_EXIT_REMOVE_CHECK) and became false.  In this
@@ -212,6 +215,13 @@ class UserPolicy
 		   return -1. */
         int FiringExpressionValue( void ) { return m_fire_expr_val; };
 	
+		/* This returns a string explaining what expression fired, useful
+		   for a Reason string in the job ad. If no firing expression
+		   occurred, then NULL is returned. The user does NOT free this
+		   memory and it is overwritten when FiringReason() is called
+		   again (for any UserPolicy object). */
+		const char* FiringReason(void);
+
 	private: /* functions */
 		/* This function inserts the four user job policy expressions with 
 			default values into the classad if they are not already present. */
@@ -221,9 +231,33 @@ class UserPolicy
 		UserPolicy(const UserPolicy&);
 		UserPolicy& operator=(const UserPolicy&);
 
+		/*
+		Consider a single periodic_* policy, both in the job ad and the
+		system_peridoic_* version.  If true, we should return retval.  The
+		retval should be on_true_return (if the expression evaluated to true),
+		or UNDEFINED_EVAL if the classad is damaged.  If false, we didn't
+		trigger the policy.  The details on what why will be automatically
+		set.
+
+		attrname - The job attribute to consider.  Should be one of the ATTR_*
+		constants, as it may be stored beyond the lifespan of this function
+		(but not the object).  The corresponding system version is found by
+		simply stuffing "system_" in front of it.
+
+		on_true_return - if the job attribute (or corresponding system one)
+		evaluates to true, return this.
+
+		retval - For output.  If this function returns true, this is the value
+		that AnalyzePolicy should return.  If this function is false, retval is
+		undefined.
+		*/
+		bool AnalyzeSinglePeriodicPolicy(const char * attrname, const char * macroname, int on_true_return, int & retval);
+
 	private: /* variables */
 		ClassAd *m_ad;
 	    int m_fire_expr_val;
+		enum FireSource { FS_NotYet, FS_JobAttribute, FS_SystemMacro };
+		FireSource m_fire_source;
 		const char *m_fire_expr;
 };
 

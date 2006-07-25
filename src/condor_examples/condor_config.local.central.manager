@@ -100,8 +100,15 @@ NEGOTIATOR    = $(SBIN)/condor_negotiator
 ##  Enable history logging in the collector
 #KEEP_POOL_HISTORY = False
 
-##  Set the directory where history files reside
-#POOL_HISTORY_DIR = $(SPOOL)
+##  This is the directory where historical data will be stored.  There
+##  is a limit to the maximum space required for the files created by
+##  the CondorView server (see below).  This directory must be
+##  writable by whatever user the collector is running as
+##  (usually "condor").  Note: This should be a separate directory,
+##  not the same as either the SPOOL or LOG directories you have
+##  already setup for Condor.  There are a few problems putting these
+##  files into either of those directories.
+#POOL_HISTORY_DIR = $(LOCAL_DIR)/ViewHist
 
 ##  The maximum combined size of the history files
 #POOL_HISTORY_MAX_STORAGE = 10000000
@@ -160,6 +167,15 @@ NEGOTIATOR    = $(SBIN)/condor_negotiator
 ## recent Machine ads).  Setting COLLECTOR_CLASS_HISTORY_SIZE = 0 will
 ## disable this feature.
 #COLLECTOR_CLASS_HISTORY_SIZE	= 1024
+
+## Setting COLLECTOR_QUERY_WORKERS to any non-zero value enables
+## the collector to fork off a separate worker process for each
+## query request.  Up to COLLECTOR_QUERY_WORKERS worker processes
+## will be created in this way.  If more than these are already running
+## and another query arrives, the main process will handle this query.
+## Fork workers are available for UNIX systems only, and this setting
+## is ingored in all others (Windows).
+COLLECTOR_QUERY_WORKERS	= 16
 
 
 ##--------------------------------------------------------------------

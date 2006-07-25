@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -29,15 +29,17 @@
 #include "simplelist.h"         /* from condor_c++_util/ directory */
 #include "MyString.h"
 #include "list.h"
+#include "condor_id.h"
 
 //
 // Local DAGMan includes
 //
-#include "types.h"
 #include "debug.h"
 #include "script.h"
 
 #define JOB_ERROR_TEXT_MAXLEN 128
+
+typedef int JobID_t;
 
 /**  The job class represents a job in the DAG and it's state in the Condor
      system.  A job is given a name, a CondorID, and three queues.  The
@@ -69,6 +71,7 @@ class Job {
 
         // possible kinds of job (e.g., Condor, Stork, etc.)
         // NOTE: must be kept in sync with _job_type_strings[]
+        // NOTE: must be kept in sync with enum Log_source
 	typedef enum {
 		TYPE_CONDOR,
 		TYPE_STORK,
@@ -137,17 +140,20 @@ class Job {
     /** Constructor
         @param jobType Type of job in dag file.
         @param jobName Name of job in dag file.  String is deep copied.
+		@param directory Directory to run the node in, "" if current
+		       directory.  String is deep copied.
         @param cmdFile Path to condor cmd file.  String is deep copied.
+		@param prohibitMultiJobs whether submit files queueing multiple
+			   job procs are prohibited.
     */
-    Job( const job_type_t jobType, const char* jobName, const char* cmdFile );
-		// alternate (old) constructor defaults to Condor job type
-    Job( const char* jobName, const char* cmdFile );
+    Job( const job_type_t jobType, const char* jobName,
+				const char* directory, const char* cmdFile,
+				bool prohibitMultiJobs );
   
     ~Job();
 
-	void Init( const char* jobName, const char* cmdFile );
-  
 	inline const char* GetJobName() const { return _jobName; }
+	inline const char* GetDirectory() const { return _directory; }
 	inline const char* GetCmdFile() const { return _cmdFile; }
 	inline const JobID_t GetJobID() const { return _jobID; }
 	inline const int GetRetryMax() const { return retry_max; }
@@ -192,6 +198,12 @@ class Job {
     */
     bool Remove (const queue_t queue, const JobID_t jobID);
 
+	/** Check whether the submit file for this job has a log file
+	    defined.
+		@return true iff the submit file defines a log file
+	*/
+	bool CheckForLogFile() const;
+
     /** Returns true if a queue is empty (has no jobs)
         @param queue Selects which queue to look at
         @return true: queue is empty, false: otherwise
@@ -214,6 +226,16 @@ class Job {
         @return true: status change was successful, false: otherwise
     */
 	bool SetStatus( status_t newStatus );
+
+		/** Get whether this job is idle.
+		    @return true if job is idle, false otherwise.
+		*/
+	bool GetIsIdle() const { return _isIdle; }
+
+		/** Set whether this job is idle.
+		    @param true if job is idle, false otherwise.
+		*/
+	void SetIsIdle(bool isIdle) { _isIdle = isIdle; }
 
 		/** Is the specified node a child of this node?
 			@param child Pointer to the node to check for childhood.
@@ -271,9 +293,24 @@ class Job {
     // number of retries so far
     int retries;
 
+	// Number of submit tries so far.
+	int _submitTries;
+
     // the return code of the job
     int retval;
 	
+    // special return code indicating that a node shouldn't be retried
+    int retry_abort_val; // UNLESS-EXIT
+    // indicates whether retry_abort_val has been set
+    bool have_retry_abort_val;
+
+		// Special return code indicating that the entire DAG should be
+		// aborted.
+	int abort_dag_val;
+
+		// Indicates whether abort_dag_val was set.
+	bool have_abort_dag_val;
+
 	// somewhat kludgey, but this indicates to Dag::TerminateJob()
 	// whether Dag::_numJobsDone has been incremented for this node
 	// yet or not (since that method can now be called more than once
@@ -289,6 +326,7 @@ class Job {
 
 	//The log file for this job -- needed because we're now allowing
 	//each job to have its own log file.
+	// Note: this is needed only for writing a POST script terminated event.
 	char *_logFile;
 
 	// DAG definition files can now pass named variables into job submit files.
@@ -300,7 +338,16 @@ class Job {
 	List<MyString> *varNamesFromDag;
 	List<MyString> *varValsFromDag;
 
+		// Count of the number of job procs currently in the batch system
+		// queue for this node.
+	int _queuedNodeJobProcs;
+
 private:
+
+		// Note: Init moved to private section because calling int more than
+		// once will cause a memory leak.  wenger 2005-06-24.
+	void Init( const char* jobName, const char *directory,
+				const char* cmdFile, bool prohibitMultiJobs );
   
 	bool AddDependency( Job* parent, Job* child );
 
@@ -310,13 +357,17 @@ private:
 		// type of job (e.g., Condor, Stork, etc.)
 	job_type_t _jobType;
 
+		// Directory to cd to before running the job or the PRE and POST
+		// scripts.
+	char * _directory;
+
     // filename of condor submit file
     char * _cmdFile;
   
     // name given to the job by the user
     const char* _jobName;
   
-    /*  Job queue's
+    /*  Job queues
       
         parents -> dependencies coming into the Job
         children -> dependencies going out of the Job
@@ -324,7 +375,7 @@ private:
     */
     SimpleList<JobID_t> _queues[3];
   
-    /*  The ID of this job.  This serves as a primary key for Job's, where each
+    /*  The ID of this job.  This serves as a primary key for Jobs, where each
         Job's ID is unique from all the rest
     */
     JobID_t _jobID;
@@ -337,6 +388,10 @@ private:
 		// the number of my parents that have yet to complete
 		// successfully
 	int _waitingCount;
+
+		// True if the node job has been submitted and is idle.
+	bool _isIdle;
+
 };
 
 /** A wrapper function for Job::Print which allows a NULL job pointer.

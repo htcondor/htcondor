@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -40,6 +40,7 @@
 #include "condor_adtypes.h"
 #include "condor_uid.h"
 #include "grid_universe.h"
+#include "condor_netdb.h"
 
 #if defined(BSD43) || defined(DYNIX)
 #	define WEXITSTATUS(x) ((x).w_retcode)
@@ -60,6 +61,9 @@ char* 		JobHistoryFileName = NULL;
 char*		Name = NULL;
 char*		mySubSystem = "SCHEDD";
 char*		X509Directory = NULL;
+bool        DoHistoryRotation = true;
+filesize_t  MaxHistoryFileSize = 20 * 1024 * 1024; // 20MB
+int         NumberBackupHistoryFiles = 2; // In addition to history file, how many to keep?
 
 // global objects
 Scheduler	scheduler;
@@ -108,7 +112,7 @@ main_init(int argc, char* argv[])
 	if ( tmp ) {
 		if ( (*tmp == 't') || (*tmp == 'T') ) {
 			char	hostname[128];
-			if ( gethostname( hostname, sizeof( hostname ) ) ) {
+			if ( condor_gethostname( hostname, sizeof( hostname ) ) ) {
 				strcpy( hostname, "" );
 			}
 			char		job_queue_backup[_POSIX_PATH_MAX];
@@ -124,7 +128,13 @@ main_init(int argc, char* argv[])
 		}
 		free( tmp );
 	}
-	InitJobQueue(job_queue_name);
+
+	tmp = param( "MAX_JOB_QUEUE_LOG_ROTATIONS" );
+	int max_historical_logs = 1; // save jsut 1 historical job queue log by default
+	if( tmp ) {
+		max_historical_logs = atoi(tmp);
+	}
+	InitJobQueue(job_queue_name,max_historical_logs);
 	mark_jobs_idle();
 
 		// The below must happen _after_ InitJobQueue is called.
@@ -158,6 +168,7 @@ main_shutdown_fast()
 	dedicated_scheduler.shutdown_fast();
 	GridUniverseLogic::shutdown_fast();
 	scheduler.shutdown_fast();
+
 	return 0;
 }
 
@@ -168,6 +179,7 @@ main_shutdown_graceful()
 	dedicated_scheduler.shutdown_graceful();
 	GridUniverseLogic::shutdown_graceful();
 	scheduler.shutdown_graceful();
+
 	return 0;
 }
 

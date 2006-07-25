@@ -1,0 +1,29 @@
+
+Chirp in Condor
+
+Chirp is used by Condor (http://www.cs.wisc.edu/condor/) as an I/O proxy
+protocol.  Proxy support is requested by adding the following line to
+the submit file:
+
++WantIOProxy = true
+
+
+The job starter will then create a file called "chirp.config" in the
+execution directory.  When the program calls chirp_client_connect_default()
+or chirp_client_connect_url("chirp:path"), it will connect and authenticate
+itself with the starter, using the connection information in chirp.config.
+
+Chirp is similar but not the same as the remote system call functionality
+used by programs linked with Condor's Standard Universe libraries
+(see condor_compile).  Chirp is intended for Vanilla and Java Universe
+programs that wish to do explicit remote I/O.  The advantage in the Vanilla
+Universe is that you are not restricted by the limitations of the
+system calls supported in the Standard Universe.  The dissadvantage is
+that you have to explicitly call chirp client functions in place of
+the normal system file operations.
+
+Note that the Condor starter uses a completely different protocol internally
+when it forwards the Chirp I/O requests to the shadow process on the submit
+machine.  The Chirp protocol itself is merely used in communication between
+the job and the Condor starter, which both reside on the execute machine.
+

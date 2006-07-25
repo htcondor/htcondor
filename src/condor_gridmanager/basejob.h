@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #ifndef BASEJOB_H
 #define BASEJOB_H
@@ -29,6 +29,7 @@
 #include "MyString.h"
 #include "user_log.c++.h"
 #include "user_job_policy.h"
+#include "classad_hashtable.h"
 #include "baseresource.h"
 
 class BaseResource;
@@ -39,16 +40,12 @@ class BaseJob
 	BaseJob( ClassAd *ad );
 	virtual ~BaseJob();
 
+	static void BaseJobReconfig();
+
 	virtual void Reconfig() {}
 	void SetEvaluateState();
 	virtual int doEvaluateState();
 	virtual BaseResource *GetResource();
-
-	void UpdateJobAd( const char *name, const char *value );
-	void UpdateJobAdInt( const char *name, int value );
-	void UpdateJobAdFloat( const char *name, float value );
-	void UpdateJobAdBool( const char *name, int value );
-	void UpdateJobAdString( const char *name, const char *value );
 
 	void JobSubmitted( const char *remote_host);
 	void JobRunning();
@@ -61,15 +58,32 @@ class BaseJob
 				  int hold_sub_code = 0 );
 	void JobRemoved( const char *remove_reason );
 
+	virtual void SetRemoteJobId( const char *job_id );
+
+	void UpdateJobLeaseSent( int new_expiration_time );
+	void UpdateJobLeaseReceived( int new_expiration_time );
+
+	void SetJobLeaseTimers();
+	virtual int JobLeaseSentExpired();
+	virtual int JobLeaseReceivedExpired();
+
 	virtual void JobAdUpdateFromSchedd( const ClassAd *new_ad );
 
+	static int EvalAllPeriodicJobExprs(Service *ignore);
 	int EvalPeriodicJobExpr();
 	int EvalOnExitJobExpr();
 
 	void UpdateJobTime( float *old_run_time, bool *old_run_time_dirty );
 	void RestoreJobTime( float old_run_time, bool old_run_time_dirty );
 
-	ClassAd *ad;
+	virtual void RequestPing();
+	virtual void NotifyResourceDown();
+	virtual void NotifyResourceUp();
+
+	static HashTable<PROC_ID, BaseJob *> JobsByProcId;
+	static HashTable<HashKey, BaseJob *> JobsByRemoteId;
+
+	ClassAd *jobAd;
 	PROC_ID procID;
 
 	int condorState;
@@ -94,11 +108,20 @@ class BaseJob
 	int doResubmit;
 	int wantRematch;
 
+	bool resourceDown;
+	bool resourceStateKnown;
+	bool resourcePingPending;
+	bool resourcePingComplete;
+
+	int evaluateStateTid;
+
  protected:
+	static int periodicPolicyEvalTid;
+
 	void UpdateRuntimeStats();
 
-	int periodicPolicyEvalTid;
-	int evaluateStateTid;
+	int jobLeaseSentExpiredTid;
+	int jobLeaseReceivedExpiredTid;
 };
 
 UserLog *InitializeUserLog( ClassAd *job_ad );
@@ -107,6 +130,14 @@ bool WriteAbortEventToUserLog( ClassAd *job_ad );
 bool WriteTerminateEventToUserLog( ClassAd *job_ad );
 bool WriteEvictEventToUserLog( ClassAd *job_ad );
 bool WriteHoldEventToUserLog( ClassAd *job_ad );
-void EmailTerminateEvent( ClassAd * jobAd, bool exit_status_known );
+bool WriteGlobusResourceUpEventToUserLog( ClassAd *job_ad );
+bool WriteGlobusResourceDownEventToUserLog( ClassAd *job_ad );
+bool WriteGlobusSubmitEventToUserLog( ClassAd *job_ad );
+bool WriteGlobusSubmitFailedEventToUserLog( ClassAd *job_ad, int failure_code,
+											const char *failure_mesg = NULL );
+bool WriteGridResourceUpEventToUserLog( ClassAd *job_ad );
+bool WriteGridResourceDownEventToUserLog( ClassAd *job_ad );
+bool WriteGridSubmitEventToUserLog( ClassAd *job_ad );
+void EmailTerminateEvent( ClassAd * job_ad, bool exit_status_known );
 
 #endif // define BASEJOB_H

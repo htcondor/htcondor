@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -27,12 +27,12 @@
 #include "condor_config.h"
 #include "condor_network.h"
 #include "condor_io.h"
+#include "condor_parser.h"
 #include "condor_adtypes.h"
 #include "condor_debug.h"
 #include "internet.h"
 #include "daemon.h"
-
-using namespace std;
+#include "dc_collector.h"
 
 #define XDR_ASSERT(x) {if (!(x)) return Q_COMMUNICATION_ERROR;}
 
@@ -104,6 +104,15 @@ CondorQuery (AdTypes qType)
 		command = QUERY_STARTD_PVT_ADS;
 		break;
 
+#if WANT_QUILL
+	  case QUILL_AD:
+		query.setNumStringCats (0);
+		query.setNumIntegerCats(0);
+		query.setNumFloatCats  (0);
+		command = QUERY_QUILL_ADS;
+		break;
+#endif /* WANT_QUILL */
+
 	  case SCHEDD_AD:
 		query.setNumStringCats (SCHEDD_STRING_THRESHOLD);
 		query.setNumIntegerCats(SCHEDD_INT_THRESHOLD);
@@ -152,19 +161,40 @@ CondorQuery (AdTypes qType)
 		command = QUERY_COLLECTOR_ADS;
 		break;
 
-          case STORAGE_AD:
-                query.setNumStringCats (0);
-                query.setNumIntegerCats(0);
-                query.setNumFloatCats  (0);
-                command = QUERY_STORAGE_ADS;
-                break;
+	  case NEGOTIATOR_AD:
+		query.setNumStringCats (0);
+		query.setNumIntegerCats(0);
+		query.setNumFloatCats  (0);
+		command = QUERY_NEGOTIATOR_ADS;
+		break;
 
-          case ANY_AD:
-                query.setNumStringCats (0);
-                query.setNumIntegerCats(0);
-                query.setNumFloatCats  (0);
-                command = QUERY_ANY_ADS;
-                break;
+	  case HAD_AD:
+		query.setNumStringCats (0);
+		query.setNumIntegerCats(0);
+		query.setNumFloatCats  (0);
+		command = QUERY_HAD_ADS;
+		break;
+
+	  case STORAGE_AD:
+		query.setNumStringCats (0);
+		query.setNumIntegerCats(0);
+		query.setNumFloatCats  (0);
+		command = QUERY_STORAGE_ADS;
+		break;
+
+	  case CREDD_AD:
+		query.setNumStringCats (0);
+		query.setNumIntegerCats(0);
+		query.setNumFloatCats  (0);
+		command = QUERY_ANY_ADS;
+		break;
+
+	  case ANY_AD:
+		query.setNumStringCats (0);
+		query.setNumIntegerCats(0);
+		query.setNumFloatCats  (0);
+		command = QUERY_ANY_ADS;
+		break;
 
 	  default:
 		command = -1;
@@ -269,56 +299,75 @@ QueryResult CondorQuery::
 fetchAds (ClassAdList &adList, const char *poolName, CondorError* errstack)
 {
 	Sock*    sock; 
-	int			more;
+	int                     more;
 	QueryResult result;
 	ClassAd     queryAd, *ad;
 
-	// contact collector
+	if ( !poolName ) {
+		return Q_NO_COLLECTOR_HOST;
+	}
+
+        // contact collector
 	Daemon my_collector( DT_COLLECTOR, poolName, NULL );
 	if( !my_collector.locate() ) {
 			// We were passed a bogus poolName, abort gracefully
 		return Q_NO_COLLECTOR_HOST;
 	}
 
+
 	// make the query ad
 	result = (QueryResult) query.makeQuery (queryAd);
 	if (result != Q_OK) return result;
 
 	// fix types
-	queryAd.InsertAttr( ATTR_MY_TYPE, (string)QUERY_ADTYPE ); // NAC
+	queryAd.SetMyTypeName (QUERY_ADTYPE);
 	switch (queryType) {
+#if WANT_QUILL
+	  case QUILL_AD:
+		queryAd.SetTargetTypeName (QUILL_ADTYPE);
+		break;
+#endif /* WANT_QUILL */
+
 	  case STARTD_AD:
 	  case STARTD_PVT_AD:
-		queryAd.InsertAttr( ATTR_TARGET_TYPE, (string)STARTD_ADTYPE ); // NAC
+		queryAd.SetTargetTypeName (STARTD_ADTYPE);
 		break;
 
 	  case SCHEDD_AD:
 	  case SUBMITTOR_AD:
-		queryAd.InsertAttr( ATTR_TARGET_TYPE, (string)SCHEDD_ADTYPE ); // NAC
+		queryAd.SetTargetTypeName (SCHEDD_ADTYPE);
 		break;
 
 	  case LICENSE_AD:
-		queryAd.InsertAttr( ATTR_TARGET_TYPE, (string)LICENSE_ADTYPE ); // NAC
+		queryAd.SetTargetTypeName (LICENSE_ADTYPE);
 		break;
 
 	  case MASTER_AD:
-		queryAd.InsertAttr( ATTR_TARGET_TYPE, (string)MASTER_ADTYPE ); // NAC
+		queryAd.SetTargetTypeName (MASTER_ADTYPE);
 		break;
 
 	  case CKPT_SRVR_AD:
-		queryAd.InsertAttr( ATTR_TARGET_TYPE, (string)CKPT_SRVR_ADTYPE ); // NAC
+		queryAd.SetTargetTypeName (CKPT_SRVR_ADTYPE);
 		break;
 
 	  case COLLECTOR_AD:
-		queryAd.InsertAttr( ATTR_TARGET_TYPE, (string)COLLECTOR_ADTYPE ); // NAC
+		queryAd.SetTargetTypeName (COLLECTOR_ADTYPE);
+		break;
+
+	  case NEGOTIATOR_AD:
+		queryAd.SetTargetTypeName (NEGOTIATOR_ADTYPE);
 		break;
 
 	  case STORAGE_AD:
-		queryAd.InsertAttr (ATTR_TARGET_TYPE, STORAGE_ADTYPE);
+		queryAd.SetTargetTypeName (STORAGE_ADTYPE);
+		break;
+
+	  case CREDD_AD:
+		queryAd.SetTargetTypeName (CREDD_ADTYPE);
 		break;
 
 	  case ANY_AD:
-		queryAd.InsertAttr ( ATTR_TARGET_TYPE, ANY_ADTYPE);
+		queryAd.SetTargetTypeName (ANY_ADTYPE);
 		break;
 
 	  default:
@@ -332,19 +381,15 @@ fetchAds (ClassAdList &adList, const char *poolName, CondorError* errstack)
 		dprintf( D_HOSTNAME, " --- End of Query ClassAd ---\n" );
 	}
 
-	// contact collector
-	sock = my_collector.startCommand(command, Stream::reli_sock, 0, errstack);
-	if (!sock) {
-        return Q_COMMUNICATION_ERROR;
-    }
+	if (!(sock = my_collector.startCommand(command, Stream::reli_sock, 0, errstack)) ||
+	    !queryAd.put (*sock) || !sock->end_of_message()) {
 
-	sock->encode();
-	if (!putOldClassAd((Stream *)sock, queryAd) ||		// NAC / ZKM
-		!sock->end_of_message()) {						// NAC / ZKM
-		delete sock;
+		if (sock) {
+			delete sock;
+		}
 		return Q_COMMUNICATION_ERROR;
 	}
-
+	
 	// get result
 	sock->decode ();
 	more = 1;
@@ -357,7 +402,7 @@ fetchAds (ClassAdList &adList, const char *poolName, CondorError* errstack)
 		}
 		if (more) {
 			ad = new ClassAd;
-			if ( !getOldClassAd( (Stream *)sock, *ad) ) {	// NAC / ZKM
+			if( !ad->initFromStream(*sock) ) {
 				sock->end_of_message();
 				delete ad;
 				delete sock;
@@ -385,32 +430,36 @@ getQueryAd (ClassAd &queryAd)
 	if (result != Q_OK) return result;
 
 	// fix types
-	queryAd.InsertAttr( ATTR_MY_TYPE, (string)QUERY_ADTYPE ); // NAC
+	queryAd.SetMyTypeName (QUERY_ADTYPE);
 	switch (queryType) {
 	  case STARTD_AD:
 	  case STARTD_PVT_AD:
-		queryAd.InsertAttr( ATTR_TARGET_TYPE, (string)STARTD_ADTYPE ); // NAC
+		queryAd.SetTargetTypeName (STARTD_ADTYPE);
 		break;
 
 	  case SCHEDD_AD:
 	  case SUBMITTOR_AD:
-		queryAd.InsertAttr( ATTR_TARGET_TYPE, (string)SCHEDD_ADTYPE ); // NAC
+		queryAd.SetTargetTypeName (SCHEDD_ADTYPE);
 		break;
 
 	  case LICENSE_AD:
-		queryAd.InsertAttr( ATTR_TARGET_TYPE, (string)LICENSE_ADTYPE ); // NAC
+		queryAd.SetTargetTypeName (LICENSE_ADTYPE);
 		break;
 
 	  case MASTER_AD:
-		queryAd.InsertAttr( ATTR_TARGET_TYPE, (string)MASTER_ADTYPE ); // NAC
+		queryAd.SetTargetTypeName (MASTER_ADTYPE);
 		break;
 
 	  case CKPT_SRVR_AD:
-		queryAd.InsertAttr( ATTR_TARGET_TYPE, (string)CKPT_SRVR_ADTYPE ); // NAC
+		queryAd.SetTargetTypeName (CKPT_SRVR_ADTYPE);
 		break;
 
 	  case COLLECTOR_AD:
-		queryAd.InsertAttr( ATTR_TARGET_TYPE, (string)COLLECTOR_ADTYPE ); // NAC
+		queryAd.SetTargetTypeName (COLLECTOR_ADTYPE);
+		break;
+
+	  case NEGOTIATOR_AD:
+		queryAd.SetTargetTypeName (NEGOTIATOR_ADTYPE);
 		break;
 
 	  default:
@@ -426,28 +475,16 @@ filterAds (ClassAdList &in, ClassAdList &out)
 {
 	ClassAd queryAd, *candidate;
 	QueryResult	result;
-	MatchClassAd mad;  // NAC
-	bool match;
 
 	// make the query ad
 	result = (QueryResult) query.makeQuery (queryAd);
 	if (result != Q_OK) return result;
 
-	mad.ReplaceLeftAd(&queryAd);  // NAC
-
 	in.Open();
 	while( (candidate = (ClassAd *) in.Next()) )
     {
         // if a match occurs
-			//if ((*candidate) >= (queryAd)) out.Insert (candidate);
-		mad.ReplaceRightAd( candidate );	   						// NAC
-		if( !mad.EvaluateAttrBool( "rightMatchesLeft",  match ) ) { // NAC
-                // there was a problem with the match				// NAC
-			return Q_INVALID_QUERY;									// NAC
-		}															// NAC
-		else if ( match ){											// NAC
-			out.Insert( candidate );			   					// NAC
-		}															// NAC
+		if ((*candidate) >= (queryAd)) out.Insert (candidate);
     }
     in.Close ();
     

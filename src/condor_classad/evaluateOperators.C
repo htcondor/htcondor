@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 #include "condor_common.h"
 #include "condor_classad.h"
 #include "operators.h"
@@ -29,48 +29,52 @@ static OpKind LexemeTypeToOpKind( LexemeType );
 static void ValueToEvalResult( Value&, EvalResult& );
 
 int BinaryOpBase::
-_EvalTree( AttrList *myScope, EvalResult *result )
+_EvalTree( const AttrList *myScope, EvalResult *result )
 {
 	return( this->EvalTree( myScope, NULL, result ) );
 }
 
 
 int BinaryOpBase::
-_EvalTree( AttrList *myScope, AttrList *targetScope, EvalResult *result )
+_EvalTree( const AttrList *myScope, const AttrList *targetScope, EvalResult *result )
 {
 	EvalResult 	lArgResult, rArgResult;
 	Value		lValue, rValue, resultValue;
 	OpKind		op;
 
-	// evaluate the left and right children of the expression
-	if( lArg ) lArg->EvalTree( myScope, targetScope, &lArgResult );
-	if( rArg ) rArg->EvalTree( myScope, targetScope, &rArgResult );
-
-	// translate from old types/values to new types/values
-	EvalResultToValue( lArgResult, lValue );
-	EvalResultToValue( rArgResult, rValue );
-
-	// translate from old operation to new operation
+	// translate from the lexer's name for the operation to a reasonable operation name
 	op = LexemeTypeToOpKind( MyType() );
 
-	// convert overloaded subtraction operator to unary minus
-	if( op == SUBTRACTION_OP && lArg == NULL ) {
-		operate( UNARY_MINUS_OP, rValue, resultValue );
-	} else
-	// convert overloaded addition operator to parenthesis operator
-	if( op == ADDITION_OP && lArg == NULL ) {
-		resultValue = rValue;
-	} else
-	if( op == TERNARY_OP ) {
-		// operator was assignment operator
-		resultValue = rValue;
-	} else {
-		// use evaluation function
-		operate( op, lValue, rValue, resultValue );
-	}
+	// evaluate the left side
+	if( lArg ) lArg->EvalTree( myScope, targetScope, &lArgResult );
+    EvalResultToValue( lArgResult, lValue );
+    
+    if (!operateShortCircuit(op, lValue, resultValue)) {
 
-	// translate from new types/values to old types/values
-	ValueToEvalResult( resultValue, (*result) );
+        // Evaluating just the left side was insufficient, so
+        // we now evaluate the right-hand side. 
+        if( rArg ) rArg->EvalTree( myScope, targetScope, &rArgResult );
+        EvalResultToValue( rArgResult, rValue );
+
+        // convert overloaded subtraction operator to unary minus
+        if( op == SUBTRACTION_OP && lArg == NULL ) {
+            operate( UNARY_MINUS_OP, rValue, resultValue );
+        } else
+        // convert overloaded addition operator to parenthesis operator
+        if( op == ADDITION_OP && lArg == NULL ) {
+            resultValue = rValue;
+        } else
+        if( op == TERNARY_OP ) {
+            // operator was assignment operator
+            resultValue = rValue;
+        } else {
+            // use evaluation function
+            operate( op, lValue, rValue, resultValue );
+        }
+    }
+
+    // translate from new types/values to old types/values
+    ValueToEvalResult( resultValue, (*result) );
 
 	// this version of evaluation never fails
 	return TRUE;

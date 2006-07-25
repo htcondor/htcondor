@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -57,17 +57,6 @@ extern GridManager gridmanager;
 
 List<JobUpdateEvent> JobUpdateEventQueue;
 static bool updateScheddTimerSet = false;
-
-// Stole these out of the schedd code
-int procIDHash( const PROC_ID &procID, int numBuckets )
-{
-	return ( (procID.cluster+(procID.proc*19)) % numBuckets );
-}
-
-bool operator==( const PROC_ID a, const PROC_ID b)
-{
-	return a.cluster == b.cluster && a.proc == b.proc;
-}
 
 template class HashTable<HashKey, GlobusJob *>;
 template class HashBucket<HashKey, GlobusJob *>;
@@ -175,7 +164,7 @@ GridManager::GridManager()
 	JobsByContact = new HashTable <HashKey, GlobusJob *>( HASH_TABLE_SIZE,
 														  hashFunction );
 	JobsByProcID = new HashTable <PROC_ID, GlobusJob *>( HASH_TABLE_SIZE,
-														 procIDHash );
+														 hashFuncPROC_ID );
 	DeadMachines = new HashTable <HashKey, char *>( HASH_TABLE_SIZE,
 													hashFunction );
 }
@@ -509,10 +498,10 @@ GridManager::ADD_JOBS_signalHandler( int signal )
 	// in case we're recovering from a shutdown/meltdown.
 	if ( grabAllJobs ) {
 		sprintf( expr_buf, "%s  && %s == %d",
-				owner_buf, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GLOBUS );
+				owner_buf, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GRID );
 	} else {
 		sprintf( expr_buf, "%s  && %s == %d && %s == %d",
-			owner_buf, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GLOBUS,
+			owner_buf, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GRID,
 			ATTR_GLOBUS_STATUS, G_UNSUBMITTED );
 	}
 
@@ -756,7 +745,7 @@ GridManager::REMOVE_JOBS_signalHandler( int signal )
 	}
 
 	sprintf( expr_buf, "%s && %s == %d && %s == %d",
-		owner_buf, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GLOBUS,
+		owner_buf, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GRID,
 		ATTR_JOB_STATUS, REMOVED );
 
 

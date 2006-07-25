@@ -1,0 +1,28 @@
+This public domain software is provided "as is".  See the Chirp License
+for details.
+
+To make contributions or get software updates, go to
+http://www.cs.wisc.edu/condor/chirp.
+
+
+
+To build and install the Chirp C Client library:
+
+make client   (at the top level)
+
+The results are in the "include" and "lib" directories.  You may
+use these from their location in the Chirp source, or you may
+copy/move them elsewhere.
+
+
+To build and install the Java Client library:
+
+make java-client    (at the top level)
+
+Copy/move client/java/Chirp.jar to wherever you keep your Java
+classes, or add this path to your CLASSPATH environment variable.
+
+
+For information on using Chirp in Condor, see doc/Condor.
+For C API documentation, see include/chirp_client.h.
+For Java API documentation, see java/client/ChirpClient.java.

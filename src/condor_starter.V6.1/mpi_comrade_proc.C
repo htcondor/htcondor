@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -24,7 +24,8 @@
 #include "condor_common.h"
 #include "mpi_comrade_proc.h"
 #include "condor_attributes.h"
-
+#include "condor_config.h"
+#include "env.h"
 
 MPIComradeProc::MPIComradeProc( ClassAd * jobAd ) : VanillaProc( jobAd )
 {
@@ -55,12 +56,108 @@ MPIComradeProc::StartJob()
 				 Node ); 
 	}
 
+	if ( ! addEnvVars() ) {
+		dprintf( D_ALWAYS, "ERROR adding environment variable to job");
+		return 0;
+	}
+
     dprintf(D_PROTOCOL, "#11 - Comrade starting up....\n" );
 
         // special args already in ad; simply start it up
     return VanillaProc::StartJob();
 }
 
+
+int
+MPIComradeProc::addEnvVars() 
+{
+   dprintf ( D_FULLDEBUG, "MPIComradeProc::addEnvVars()\n" );
+
+	   // Pull the environment out of the job ad...
+	Env env;
+	MyString env_errors;
+	if ( !env.MergeFrom(JobAd,&env_errors) ) {
+		dprintf( D_ALWAYS, "Failed to read environment from JobAd: %s\n", 
+				 env_errors.Value() );
+		return 0;
+	}
+
+		// Add this node's number to CONDOR_PROCNO
+	char buf[128];
+	sprintf(buf, "%d", Node);
+	env.SetEnv("CONDOR_PROCNO", buf);
+
+
+		// And put the total number of nodes into CONDOR_NPROC
+	int machine_count;
+	if ( JobAd->LookupInteger( ATTR_MAX_HOSTS, machine_count ) !=  1 ) {
+		dprintf( D_ALWAYS, "%s not found in JobAd.  Aborting.\n", 
+				 ATTR_MAX_HOSTS);
+		return 0;
+	}
+
+	sprintf(buf, "%d", machine_count);
+	env.SetEnv("CONDOR_NPROCS", buf);
+
+		// Now stick the condor bin directory in front of the path,
+		// so user scripts can call condor_config_val
+    char *bin = param( "BIN" );
+    if ( !bin ) {
+        dprintf ( D_ALWAYS, "Can't find BIN "
+                  "in config file! Aborting!\n" ); 
+        return 0;
+    }
+
+	MyString path;
+	MyString new_path;
+	char *tmp;
+
+	new_path = bin;
+	new_path += ":";
+
+	if(env.GetEnv("PATH",path)) {
+        // The user gave us a path in env.  Find & alter:
+        dprintf ( D_FULLDEBUG, "$PATH in ad:%s\n", path.Value() );
+
+		new_path += path;
+	}
+	else {
+        // User did not specify any env, or there is no 'PATH'
+        // in env sent along.  We get $PATH and alter it.
+
+        tmp = getenv( "PATH" );
+        if ( tmp ) {
+            dprintf ( D_FULLDEBUG, "No Path in ad, $PATH in env\n" );
+            dprintf ( D_FULLDEBUG, "before: %s\n", tmp );
+			new_path += tmp;
+        }
+        else {   // no PATH in env.  Make one.
+            dprintf ( D_FULLDEBUG, "No Path in ad, no $PATH in env\n" );
+			new_path = bin;
+        }
+    }
+	env.SetEnv("PATH",new_path.Value());
+
+	char *condor_config = getenv( "CONDOR_CONFIG");
+	if (condor_config) {
+		env.SetEnv("CONDOR_CONFIG", condor_config);
+	}
+	
+	if(DebugFlags & D_FULLDEBUG) {
+		MyString env_str;
+		env.getDelimitedStringForDisplay(&env_str);
+		dprintf ( D_FULLDEBUG, "New env: %s\n", env_str.Value() );
+	}
+
+        // now put the env back into the JobAd:
+	if(!env.InsertEnvIntoClassAd(JobAd,&env_errors)) {
+		dprintf( D_ALWAYS, "Unable to update env! Aborting: %s\n",
+				 env_errors.Value());
+		return 0;
+	}
+
+	return 1;
+}
 
 int
 MPIComradeProc::JobCleanup( int pid, int status )

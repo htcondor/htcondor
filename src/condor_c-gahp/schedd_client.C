@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -33,7 +33,10 @@
 #include "daemon.h"
 #include "dc_schedd.h"
 #include "condor_xml_classads.h"
-#include "FdBuffer.h"
+#include "condor_new_classads.h"
+#include "setenv.h"
+#include "globus_utils.h"
+#include "PipeBuffer.h"
 #include "io_loop.h"
 
 #include "schedd_client.h"
@@ -47,119 +50,60 @@
 int contact_schedd_interval = 20;
 
 
-// How often we check results in the pipe (secs)
-int check_requests_interval = 5;
-
-
-// Pointer to a socket open for QMGMT operations
-extern ReliSock* qmgmt_sock;
+// Do we use XML-formatted classads when talking to our invoker
+bool useXMLClassads = false;
 
 // Queue for pending commands to schedd
 template class SimpleList<SchedDRequest*>;
 SimpleList <SchedDRequest*> command_queue;
 
 // Buffer for reading requests from the IO thread
-FdBuffer request_buffer;
+PipeBuffer request_buffer;
+
+
+template class SimpleList <MyString*>;
 
 int RESULT_OUTBOX = -1;
 int REQUEST_INBOX = -1;
-int REQUEST_ACK_OUTBOX = -1;
 
 int checkRequestPipeTid = TIMER_UNSET;
 int contactScheddTid = TIMER_UNSET;
 
 char *ScheddAddr = NULL;
+char *ScheddPool = NULL;
 
 extern char *myUserName;
 
 extern int main_shutdown_graceful();
 
 int
-schedd_thread (void * arg, Stream * sock) {
+request_pipe_handler(Service*, int) {
 
-   	inter_thread_io_t * inter_thread_io = (inter_thread_io_t*)arg;
-	RESULT_OUTBOX = inter_thread_io->result_pipe[1];
-	REQUEST_INBOX = inter_thread_io->request_pipe[0];
-	REQUEST_ACK_OUTBOX = inter_thread_io->request_ack_pipe[1];
+	MyString* next_line;
+	while ((next_line = request_buffer.GetNextLine()) != NULL) {
 
-	request_buffer.setFd( REQUEST_INBOX );
+		dprintf (D_FULLDEBUG, "got work request: %s\n", next_line->Value());
 
-    // Just set up timers....
-    contactScheddTid = daemonCore->Register_Timer( contact_schedd_interval,
-										(TimerHandler)&doContactSchedd,
-										"doContactSchedD", NULL );
-
-	checkRequestPipeTid = daemonCore->Register_Timer( check_requests_interval,
-										(TimerHandler)&checkRequestPipe,
-										"checkRequestPipe", NULL );
-
-
-	write (REQUEST_ACK_OUTBOX, "R", 1); // Signal that we're ready for the first request
-
-	return TRUE;
-}
-
-/**
- * Check whether the IO thread has sent us any new requests
- * If so, read them, parse them and add them to the queue
- */
-int
-checkRequestPipe () {
-
-	dprintf (D_FULLDEBUG, "In checkRequestPipe\n");
-
-	time_t time1 = time (NULL);
-
-	MyString * next_line = NULL;
-
-	FdBuffer * wait_on [] = { &request_buffer };
-	int is_ready = FALSE;
-	int select_result = 0;
-
-	do {
-		if (request_buffer.IsError()) {
-			dprintf (D_ALWAYS, "Request pipe, closed. Exiting...\n");
-			main_shutdown_graceful();
-		}
-
-		select_result =
-			FdBuffer::Select (wait_on, 1, 3, &is_ready);
-
-		if ( (select_result > 0) && (is_ready) && ((next_line = request_buffer.GetNextLine()) != NULL)) {
-			dprintf (D_FULLDEBUG, "got work request: %s\n", next_line->Value());
-
-			char ** argv;
-			int argc;
+		Gahp_Args args;
 
 			// Parse the command...
-			if (!(parse_gahp_command (next_line->Value(), &argv, &argc) && handle_gahp_command (argv, argc))) {
-				dprintf (D_ALWAYS, "error processing %s\n", next_line->Value());
-				write (REQUEST_ACK_OUTBOX, "R", 1); // Signal that we're ready again
-				continue;
-			}
+		if (!(parse_gahp_command (next_line->Value(), &args) &&
+			  handle_gahp_command (args.argv, args.argc))) {
+			dprintf (D_ALWAYS, "ERROR processing %s\n", next_line->Value());
+		}
 
 			// Clean up...
-			delete  next_line;
-			while ((--argc) >= 0)
-				free (argv[argc]);
-			delete [] argv;
+		delete  next_line;
+	}
 
-			write (REQUEST_ACK_OUTBOX, "R", 1); // Signal that we're ready again
-		}
-	} while (select_result > 0); // Keep selecting while there's stuff to read
-
-	time_t time2 = time (NULL);
-
-	// Come back soon....
-	int next_contact_interval = check_requests_interval - (time2 - time1);
-	if (next_contact_interval < 0)
-		next_contact_interval = 1;
-	daemonCore->Reset_Timer ( checkRequestPipeTid, next_contact_interval);
+	// check for an error in GetNextLine
+	if (request_buffer.IsError() || request_buffer.IsEOF()) {
+		dprintf (D_ALWAYS, "Request pipe closed. Exiting...\n");
+	}
 
 	return TRUE;
 }
 
-template class SimpleList <MyString*>;
 
 int
 doContactSchedd()
@@ -176,9 +120,10 @@ doContactSchedd()
 	int error=FALSE;
 	char error_msg[1000];
 	CondorError errstack;
+	bool do_reschedule = false;
 
 	// Try connecting to schedd
-	DCSchedd dc_schedd ( ScheddAddr );
+	DCSchedd dc_schedd ( ScheddAddr, ScheddPool );
 	if (dc_schedd.error() || !dc_schedd.locate()) {
 		sprintf (error_msg, "Error locating schedd %s", ScheddAddr);
 
@@ -201,6 +146,12 @@ doContactSchedd()
 									GAHP_RESULT_FAILURE,
 									NULL,
 									error_msg };
+				enqueue_result (current_command->request_id, result, 3);
+			} else if (current_command->command == SchedDRequest::SDC_UPDATE_LEASE) {
+				const char * result[] = {
+									GAHP_RESULT_FAILURE,
+									error_msg,
+									NULL };
 				enqueue_result (current_command->request_id, result, 3);
 			} else {
 				const char * result[] = {
@@ -273,18 +224,21 @@ doContactSchedd()
 		// Perform the appropriate command on the current batch
 		ClassAd * result_ad= NULL;
 		if (current_command->command == SchedDRequest::SDC_REMOVE_JOB)  {
+			errstack.clear();
 			result_ad=
 				dc_schedd.removeJobs (
 					&id_list,
 					this_reason,
 					&errstack);
 		} else if (current_command->command == SchedDRequest::SDC_HOLD_JOB) {
+			errstack.clear();
 			result_ad=
 				dc_schedd.holdJobs (
 					&id_list,
 					this_reason,
 			 		&errstack);
 		} else if (current_command->command == SchedDRequest::SDC_RELEASE_JOB)  {
+			errstack.clear();
 			result_ad=
 				dc_schedd.releaseJobs (
 					&id_list,
@@ -295,10 +249,14 @@ doContactSchedd()
 		// Analyze the result ad
 		if (!result_ad) {
 			error = TRUE;
-			sprintf (error_msg, "Error connecting to schedd %s", ScheddAddr);
+			sprintf (error_msg, "Error connecting to schedd %s %s: %s",
+					 ScheddAddr, dc_schedd.addr(), errstack.getFullText() );
 		}
 		else {
 			result_ad->dPrint (D_FULLDEBUG);
+			if ( current_command->command == SchedDRequest::SDC_RELEASE_JOB ) {
+				do_reschedule = true;
+			}
 		}
 
 		// Go through the batch again, and create responses for each request
@@ -343,7 +301,6 @@ doContactSchedd()
 							strcpy (error_msg, "Unknown Result");
 					} // hctiws
 
-					delete result_ad;
 				} else {
 					strcpy (error_msg, "Unable to get result");
 				} // fi lookup result for job
@@ -377,13 +334,84 @@ doContactSchedd()
 			// Mark the status
 			current_command->status = SchedDRequest::SDCS_COMPLETED;
 		} // elihw this_batch
+
+		if ( result_ad ) {
+			delete result_ad;
+		}
 	}
 
 	dprintf (D_FULLDEBUG, "Processing JOB_STAGE_IN requests\n");
 	
 
 	// JOB_STAGE_IN
-	SimpleList <SchedDRequest*> this_batch;
+	int MAX_BATCH_SIZE=1; // This should be a config param
+
+	SimpleList <SchedDRequest*> stage_in_batch;
+	do {
+		stage_in_batch.Clear();
+
+		command_queue.Rewind();
+		while (command_queue.Next(current_command)) {
+
+			if (current_command->status != SchedDRequest::SDCS_NEW)
+				continue;
+
+			if (current_command->command != SchedDRequest::SDC_JOB_STAGE_IN)
+				continue;
+
+			dprintf (D_ALWAYS, "Adding %d.%d to STAGE_IN batch\n", 
+					 current_command->cluster_id,
+					 current_command->proc_id);
+
+			stage_in_batch.Append (current_command);
+			if (stage_in_batch.Number() >= MAX_BATCH_SIZE)
+				break;
+		}
+
+		if (stage_in_batch.Number() > 0) {
+			ClassAd ** array = new ClassAd*[stage_in_batch.Number()];
+			i=0;
+			stage_in_batch.Rewind();
+			while (stage_in_batch.Next(current_command)) {
+				array[i++] = current_command->classad;
+			}
+
+			error = FALSE;
+			errstack.clear();
+			if (!dc_schedd.spoolJobFiles( stage_in_batch.Number(),
+										  array,
+										  &errstack )) {
+				error = TRUE;
+				sprintf (error_msg, "Error connecting to schedd %s: %s", ScheddAddr, errstack.getFullText());
+				dprintf (D_ALWAYS, "%s\n", error_msg);
+			}
+			delete [] array;
+  
+			stage_in_batch.Rewind();
+			while (stage_in_batch.Next(current_command)) {
+				current_command->status = SchedDRequest::SDCS_COMPLETED;
+
+				if (error) {
+					const char * result[] = {
+						GAHP_RESULT_FAILURE,
+						error_msg };
+					enqueue_result (current_command->request_id, result, 2);
+
+				} else {
+					const char * result[] = {
+						GAHP_RESULT_SUCCESS,
+						NULL };
+					enqueue_result (current_command->request_id, result, 2);
+				}
+			} // elihw (command_queue)
+		} // fi has STAGE_IN requests
+	} while (stage_in_batch.Number() > 0);
+
+	dprintf (D_FULLDEBUG, "Processing JOB_STAGE_OUT requests\n");
+	
+
+	// JOB_STAGE_OUT
+	SimpleList <SchedDRequest*> stage_out_batch;
 
 	command_queue.Rewind();
 	while (command_queue.Next(current_command)) {
@@ -391,49 +419,116 @@ doContactSchedd()
 		if (current_command->status != SchedDRequest::SDCS_NEW)
 			continue;
 
-		if (current_command->command != SchedDRequest::SDC_JOB_STAGE_IN)
+		if (current_command->command != SchedDRequest::SDC_JOB_STAGE_OUT)
 			continue;
 
 
-		this_batch.Append (current_command);
+		stage_out_batch.Append (current_command);
 	}
 
-	if (this_batch.Number() > 0) {
-	ClassAd ** array = new ClassAd*[this_batch.Number()];
-	i=0;
-	this_batch.Rewind();
-	while (this_batch.Next(current_command)) {
-		array[i++] = current_command->classad;
-	}
+	if (stage_out_batch.Number() > 0) {
+		MyString constraint = "";
+		stage_out_batch.Rewind();
+		int jobsexpected = stage_out_batch.Number();
+		while (stage_out_batch.Next(current_command)) {
+			constraint.sprintf_cat( "(ClusterId==%d&&ProcId==%d)||",
+									current_command->cluster_id,
+									current_command->proc_id );
+		}
+		constraint += "False";
 
-  	error = FALSE;
+		error = FALSE;
+		errstack.clear();
+		int jobssent;
+		if (!dc_schedd.receiveJobSandbox( constraint.Value(),
+										  &errstack, &jobssent )) {
+			error = TRUE;
+			sprintf (error_msg, "Error connecting to schedd %s", ScheddAddr);
+			dprintf (D_ALWAYS, "%s\n", error_msg);
+		}
 
-  	if (!dc_schedd.spoolJobFiles( 1,
-  								  array,
-  								  &errstack )) {
-  		error = TRUE;
-  		sprintf (error_msg, "Error connecting to schedd %s", ScheddAddr);
-  		dprintf (D_ALWAYS, "%s\n", error_msg);
-  	}
+		if(error == FALSE && jobssent != jobsexpected) {
+			error = TRUE;
+			dprintf (D_ALWAYS, "Transfered files for %d jobs but got files for %d jobs. (Schedd %s with contraint %s\n", jobsexpected, jobssent, ScheddAddr, constraint.Value());
+		}
   
-	this_batch.Rewind();
-	while (this_batch.Next(current_command)) {
-		current_command->status = SchedDRequest::SDCS_COMPLETED;
+		stage_out_batch.Rewind();
+		while (stage_out_batch.Next(current_command)) {
+			current_command->status = SchedDRequest::SDCS_COMPLETED;
 
-		if (error) {
-			const char * result[] = {
+			if (error) {
+				const char * result[] = {
 								GAHP_RESULT_FAILURE,
 								error_msg };
+				enqueue_result (current_command->request_id, result, 2);
+
+			} else {
+				const char * result[] = {
+										GAHP_RESULT_SUCCESS,
+										NULL };
+				enqueue_result (current_command->request_id, result, 2);
+			}
+		} // elihw (command_queue)
+	} // fi has STAGE_OUT requests
+
+
+	dprintf (D_FULLDEBUG, "Processing JOB_REFRESH_PROXY requests\n");
+
+	CondorVersionInfo ver_info(dc_schedd.version());
+	bool delegate_credential;
+	if ( ver_info.built_since_version(6,7,19) &&
+		 param_boolean( "DELEGATE_JOB_GSI_CREDENTIALS", true ) ) {
+		delegate_credential = true;
+	} else {
+		delegate_credential = false;
+	}
+
+	// JOB_REFRESH_PROXY
+	command_queue.Rewind();
+	while (command_queue.Next(current_command)) {
+
+		if (current_command->status != SchedDRequest::SDCS_NEW)
+			continue;
+
+		if (current_command->command != SchedDRequest::SDC_JOB_REFRESH_PROXY)
+			continue;
+
+		bool result;
+		errstack.clear();
+		if ( delegate_credential ) {
+			result = dc_schedd.delegateGSIcredential( 
+												current_command->cluster_id,
+												current_command->proc_id,
+												current_command->proxy_file,
+												&errstack );
+		} else {
+			result = dc_schedd.updateGSIcredential( 
+												current_command->cluster_id,
+												current_command->proc_id,
+												current_command->proxy_file,
+												&errstack );
+		}
+
+		current_command->status = SchedDRequest::SDCS_COMPLETED;
+
+		if (result == false) {
+			sprintf (error_msg, "Error refreshing proxy to schedd %s: %s",
+					 ScheddAddr, errstack.getFullText() );
+			dprintf (D_ALWAYS, "%s\n", error_msg);
+
+			const char * result[] = {
+				GAHP_RESULT_FAILURE,
+				error_msg };
 			enqueue_result (current_command->request_id, result, 2);
 
 		} else {
 			const char * result[] = {
-										GAHP_RESULT_SUCCESS,
-										NULL };
+				GAHP_RESULT_SUCCESS,
+				NULL };
 			enqueue_result (current_command->request_id, result, 2);
 		}
-	} // elihw (command_queue)
-	} // fi has STAGE_IN requests
+
+	}
 
 
 	// Now do all the QMGMT transactions
@@ -442,7 +537,7 @@ doContactSchedd()
 	// Try connecting to the queue
 	Qmgr_connection * qmgr_connection;
 	
-	if ((qmgr_connection = ConnectQ(ScheddAddr, QMGMT_TIMEOUT, false )) == NULL) {
+	if ((qmgr_connection = ConnectQ(dc_schedd.addr(), QMGMT_TIMEOUT, false )) == NULL) {
 		error = TRUE;
 		sprintf (error_msg, "Error connecting to schedd %s", ScheddAddr);
 		dprintf (D_ALWAYS, "%s\n", error_msg);
@@ -526,7 +621,9 @@ update_report_result:
 			//CloseConnection();
 			enqueue_result (current_command->request_id, result, 2);
 			current_command->status = SchedDRequest::SDCS_COMPLETED;
-			AbortTransaction();
+			if ( qmgr_connection != NULL ) {
+				AbortTransaction();
+			}
 		} else {
 			const char * result[] = {
 				GAHP_RESULT_SUCCESS,
@@ -537,6 +634,97 @@ update_report_result:
 		} // fi
 
 	} // elihw
+
+	
+	dprintf (D_FULLDEBUG, "Processing UPDATE_LEASE requests\n");
+
+	// UPDATE_LEASE
+	command_queue.Rewind();
+	while (command_queue.Next(current_command)) {
+		
+		error = FALSE;
+
+		if (current_command->status != SchedDRequest::SDCS_NEW)
+			continue;
+
+		if (current_command->command != SchedDRequest::SDC_UPDATE_LEASE)
+			continue;
+
+		MyString success_job_ids="";
+		if (qmgr_connection == NULL) {
+			sprintf (error_msg, "Error connecting to schedd %s", ScheddAddr);
+			error = TRUE;
+		} else {
+			error = FALSE;
+			BeginTransaction();
+		
+			current_command->status = SchedDRequest::SDCS_PENDING;
+
+			int i;
+			for (i=0; i<current_command->num_jobs; i++) {
+			
+				time_t time_now = time(NULL);
+				int duration = 
+					current_command->expirations[i].expiration - time_now;
+
+				dprintf (D_FULLDEBUG, 
+						 "Job %d.%d SetTimerAttribute=%d\n",
+						 current_command->expirations[i].cluster,
+						 current_command->expirations[i].proc,
+						 duration);
+		
+				if (SetTimerAttribute (current_command->expirations[i].cluster,
+									   current_command->expirations[i].proc,
+									   ATTR_TIMER_REMOVE_CHECK,
+									   duration) < 0) {
+
+					dprintf (D_ALWAYS, 
+							 "Unable to SetTimerAttribute(%d, %d), errno=%d\n",
+							 current_command->expirations[i].cluster,
+							 current_command->expirations[i].proc,
+							 errno);
+						 
+				} else {
+						// Append job id to the result line
+					if (success_job_ids.Length() > 0)
+						success_job_ids += ",";
+
+					success_job_ids.sprintf_cat (
+						"%d.%d",
+						current_command->expirations[i].cluster,
+						current_command->expirations[i].proc);
+				}
+			} //rof jobs for request
+		} // fi error
+
+
+update_lease_result:
+		if (error) {
+			const char * result[] = {
+				GAHP_RESULT_FAILURE,
+				error_msg,
+				NULL
+			};
+
+
+			//CloseConnection();
+			enqueue_result (current_command->request_id, result, 3);
+			current_command->status = SchedDRequest::SDCS_COMPLETED;
+			if ( qmgr_connection != NULL ) {
+				AbortTransaction();
+			}
+		} else {
+			const char * result[] = {
+				GAHP_RESULT_SUCCESS,
+				NULL,
+				success_job_ids.Length()?success_job_ids.Value():NULL
+			};
+			enqueue_result (current_command->request_id, result, 3);
+			current_command->status = SchedDRequest::SDCS_COMPLETED;
+			CloseConnection();
+		} // fi
+
+	} // elihw UPDATE_LEASE requests
 
 	dprintf (D_FULLDEBUG, "Processing SUBMIT_JOB requests\n");
 
@@ -553,21 +741,81 @@ update_report_result:
 		int ClusterId = -1;
 		int ProcId = -1;
 
-		if (qmgr_connection == NULL)
+		if (qmgr_connection == NULL) {
+			error = TRUE;
 			goto submit_report_result;
+		}
 
 		BeginTransaction();
 		error = FALSE;
 
-		if ((ClusterId = NewCluster()) == -1) {
+		if ((ClusterId = NewCluster()) >= 0) {
+			ProcId = NewProc (ClusterId);
+		}
+
+		if ( ClusterId < 0 ) {
 			error = TRUE;
 			strcpy (error_msg, "Unable to create a new job cluster");
 			dprintf (D_ALWAYS, "%s\n", error_msg);
-		} else {
-			ProcId = NewProc (ClusterId);
+		} else if ( ProcId < 0 ) {
+			error = TRUE;
+			strcpy (error_msg, "Unable to create a new job proc");
+			dprintf (D_ALWAYS, "%s\n", error_msg);
+		}
+		if ( ClusterId == -2 || ProcId == -2 ) {
+			error = TRUE;
+			strcpy (error_msg, 
+				"Number of submitted jobs would exceed MAX_JOBS_SUBMITTED\n");
+			dprintf (D_ALWAYS, "%s\n", error_msg);
+		}
 
+
+		// Adjust the argument/environment syntax based on the version
+		// of the schedd we are talking to.
+
+		if( error == FALSE) {
+			CondorVersionInfo ver_info(dc_schedd.version());
+			ArgList arglist;
+			MyString arg_error_msg;
+			Env env_obj;
+			MyString env_error_msg;
+
+			if(!arglist.AppendArgsFromClassAd(current_command->classad,&arg_error_msg) ||
+		   !	arglist.InsertArgsIntoClassAd(current_command->classad,&ver_info,&arg_error_msg))
+			{
+				sprintf(error_msg,
+						"ERROR: ClassAd problem in converting arguments to syntax "
+						"for schedd (version=%s): %s\n",
+						dc_schedd.version() ? dc_schedd.version() : "NULL",
+						arg_error_msg.Value());
+				dprintf(D_ALWAYS,"%s\n",error_msg);
+				error = TRUE;
+			}	
+
+			if(!env_obj.MergeFrom(current_command->classad,&env_error_msg) ||
+			   !env_obj.InsertEnvIntoClassAd(current_command->classad,&env_error_msg,NULL,&ver_info))
+			{
+				sprintf(error_msg,
+						"ERROR: Failed to convert environment to target syntax"
+						" for schedd (version %s): %s\n",
+						dc_schedd.version() ? dc_schedd.version() : "NULL",
+						env_error_msg.Value());
+				dprintf(D_ALWAYS,"%s\n",error_msg);
+				error = TRUE;
+			}
+		}
+
+		if ( error == FALSE ) {
 			current_command->classad->Assign(ATTR_CLUSTER_ID, ClusterId);
 			current_command->classad->Assign(ATTR_PROC_ID, ProcId);
+
+			// Special case for the job lease
+			int expire_time;
+			if ( current_command->classad->LookupInteger( ATTR_TIMER_REMOVE_CHECK, expire_time ) ) {
+				SetTimerAttribute( ClusterId, ProcId, ATTR_TIMER_REMOVE_CHECK,
+								   expire_time - time(NULL) );
+				current_command->classad->Delete( ATTR_TIMER_REMOVE_CHECK );
+			}
 
 			// Set all the classad attribute on the remote classad
 			current_command->classad->ResetExpr();
@@ -601,7 +849,7 @@ update_report_result:
 
 				if (error) break;
 			} // elihw classad
-		} // fi NewCluster()
+		} // fi error==FALSE
 
 submit_report_result:
 		char job_id_buff[30];
@@ -613,7 +861,9 @@ submit_report_result:
 								job_id_buff,
 									error_msg };
 			enqueue_result (current_command->request_id, result, 3);
-			AbortTransaction();
+			if ( qmgr_connection != NULL ) {
+				AbortTransaction();
+			}
 			current_command->status = SchedDRequest::SDCS_COMPLETED;
 		} else {
 			const char * result[] = {
@@ -644,14 +894,22 @@ submit_report_result:
 
 			error = FALSE;
 			
-			ClassAdXMLUnparser XMLer;
-			XMLer.SetUseCompactSpacing(true);
-
 			ClassAd * next_ad = GetNextJobByConstraint( current_command->constraint, 1 );
 			while (next_ad != NULL) {
 				MyString * da_buffer = new MyString();	// Use a ptr to avoid excessive copying
-				XMLer.Unparse (next_ad, *da_buffer);
+				if ( useXMLClassads ) {
+					ClassAdXMLUnparser unparser;
+					unparser.SetUseCompactSpacing(true);
+					unparser.Unparse (next_ad, *da_buffer);
+				} else {
+					NewClassAdUnparser unparser;
+					unparser.SetUseCompactSpacing(true);
+					unparser.Unparse (next_ad, *da_buffer);
+				}
 				matching_ads.Append (da_buffer);
+				if ( next_ad ) {
+					FreeJobAd(next_ad);
+				}
 				next_ad = GetNextJobByConstraint( current_command->constraint, 0 );
 			}
 
@@ -695,13 +953,15 @@ submit_report_result:
 	}	//elihw
 
 	
+	if ( qmgr_connection != NULL ) {
+		DisconnectQ (qmgr_connection, FALSE);
+	}
+
+	if ( do_reschedule ) {
+		dc_schedd.reschedule();
+	}
+
 	dprintf (D_FULLDEBUG, "Finishing doContactSchedd()\n");
-
-	
-
-
-	DisconnectQ (qmgr_connection, FALSE);
-	qmgmt_sock = NULL;
 
 	// Clean up the list
 	command_queue.Rewind();
@@ -872,6 +1132,42 @@ handle_gahp_command(char ** argv, int argc) {
 
 		delete classad;
 		return TRUE;
+	}  else if (strcasecmp (argv[0], GAHP_COMMAND_JOB_UPDATE_LEASE) ==0) {
+		int req_id;
+		int num_jobs;
+
+		if (!(argc >= 4 &&
+			get_int (argv[1], &req_id) &&
+			get_int (argv[3], &num_jobs))) {
+
+			dprintf (D_ALWAYS, "Invalid args to %s\n", argv[0]);
+			return FALSE;
+		}
+
+		job_expiration * expirations = new job_expiration[num_jobs];
+		int i;
+		for (i=0; i<num_jobs; i++) {
+			if (!get_job_id(argv[4+i*2], 
+							&(expirations[i].cluster),
+							&(expirations[i].proc))) {
+				delete[] expirations;
+				return FALSE;
+			}
+
+			if (!get_ulong (argv[4+i*2+1], &(expirations[i].expiration))) {
+				delete [] expirations;
+				return FALSE;
+			}
+		}	
+
+		enqueue_command (
+			SchedDRequest::createUpdateLeaseRequest(
+													req_id,
+													num_jobs,
+													expirations));
+
+		delete [] expirations;
+		return TRUE;
 	}  else if (strcasecmp (argv[0], GAHP_COMMAND_JOB_STAGE_IN) ==0) {
 		int req_id;
 		ClassAd * classad;
@@ -891,6 +1187,73 @@ handle_gahp_command(char ** argv, int argc) {
 
 		delete classad;
 		return TRUE;
+	} else if (strcasecmp (argv[0], GAHP_COMMAND_JOB_STAGE_OUT) ==0) {
+		int req_id;
+		int cluster_id, proc_id;
+
+		if (!(argc == 4 &&
+			  get_int (argv[1], &req_id) &&
+			  get_job_id (argv[3], &cluster_id, &proc_id))) {
+
+			dprintf (D_ALWAYS, "Invalid args to %s\n", argv[0]);
+			return FALSE;
+		}
+
+		enqueue_command (
+			SchedDRequest::createJobStageOutRequest(
+				req_id,
+				cluster_id,
+				proc_id));
+
+		return TRUE;
+	} else if (strcasecmp (argv[0], GAHP_COMMAND_JOB_REFRESH_PROXY)==0) {
+		int req_id = 0;
+		int cluster_id, proc_id;
+
+		if (!(argc == 5 &&
+			get_int (argv[1], &req_id) &&
+			get_job_id (argv[3], &cluster_id, &proc_id))) {
+
+			dprintf (D_ALWAYS, "Invalid args to %s\n", argv[0]);
+			return FALSE;
+		}
+
+		enqueue_command (
+			SchedDRequest::createRefreshProxyRequest(
+				req_id,
+				cluster_id,
+				proc_id,
+				argv[4]));
+		return TRUE;
+	} else if (strcasecmp (argv[0], GAHP_COMMAND_INITIALIZE_FROM_FILE)==0) {
+		static bool init_done = false;
+
+		if ( init_done == false ) {
+			SetEnv( "X509_USER_PROXY", argv[1] );
+			UnsetEnv( "X509_USER_CERT" );
+			UnsetEnv( "X509_USER_KEY" );
+			char *subject = x509_proxy_identity_name( argv[1] );
+			char *daemon_subjects = param( "GSI_DAEMON_NAME" );
+			MyString buff;
+			if ( daemon_subjects ) {
+				buff.sprintf( "%s,%s", daemon_subjects, subject );
+			} else {
+				buff.sprintf( "%s", subject );
+			}
+			dprintf( D_ALWAYS, "Setting %s=%s\n", "_condor_GSI_DAEMON_NAME", buff.Value() );
+			SetEnv( "_condor_GSI_DAEMON_NAME", buff.Value() );
+			if ( subject ) {
+				free( subject );
+			}
+			if ( daemon_subjects ) {
+				free( daemon_subjects );
+			}
+			daemonCore->Send_Signal( daemonCore->getpid(), SIGHUP );
+			// TODO set any config values needed
+			// TODO trigger a reconfig
+			init_done = true;
+		}
+		return TRUE;
 	}
 
 	dprintf (D_ALWAYS, "Invalid command %s\n", argv[0]);
@@ -907,6 +1270,11 @@ get_int (const char * blah, int * s) {
 	return TRUE;
 }
 
+int
+get_ulong (const char * blah, unsigned long * s) {
+	*s=(unsigned long)atol(blah);
+	return TRUE;
+}
 
 // String -> "cluster, proc"
 int
@@ -930,9 +1298,18 @@ get_job_id (const char * s, int * cluster_id, int * proc_id) {
 // String (XML) -> classad
 int
 get_class_ad (const char * s, ClassAd ** class_ad) {
-	static ClassAdXMLParser parser;
-    *class_ad = parser.ParseClassAd (s);
-	return TRUE;
+	if ( useXMLClassads ) {
+		ClassAdXMLParser parser;
+		*class_ad = parser.ParseClassAd (s);
+	} else {
+		NewClassAdParser parser;
+		*class_ad = parser.ParseClassAd (s);
+	}
+	if ( *class_ad ) {
+		return TRUE;
+	} else {
+		return FALSE;
+	}
 }
 
 
@@ -965,15 +1342,16 @@ enqueue_result (int req_id, const char ** results, const int argc) {
 		free (escaped);
 	}
 
+	buffer += "\n";
+
 	// Now flush:
-	write (RESULT_OUTBOX, buffer.Value(), buffer.Length());
-	write (RESULT_OUTBOX, "\n", 1);
+	daemonCore->Write_Pipe (RESULT_OUTBOX, buffer.Value(), buffer.Length());
 }
 
 char *
 escape_string (const char * string) {
 	MyString my_string (string);
-	MyString escape_this (" \t\n\r");
+	MyString escape_this (" \t\n\r\\");
 
 	MyString result = my_string.EscapeChars(escape_this, '\\');
 

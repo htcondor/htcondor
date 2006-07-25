@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -34,7 +34,7 @@
 
 #define assert(x) if (!(x)) { errno = ETIMEDOUT; return -1; }
 
-int CurrentSysCall;
+static int CurrentSysCall;
 extern ReliSock *qmgmt_sock;
 int terrno;
 
@@ -239,6 +239,34 @@ SetAttribute( int cluster_id, int proc_id, char *attr_name, char *attr_value )
 		assert( qmgmt_sock->code(proc_id) );
 		assert( qmgmt_sock->code(attr_value) );
 		assert( qmgmt_sock->code(attr_name) );
+		assert( qmgmt_sock->end_of_message() );
+
+		qmgmt_sock->decode();
+		assert( qmgmt_sock->code(rval) );
+		if( rval < 0 ) {
+			assert( qmgmt_sock->code(terrno) );
+			assert( qmgmt_sock->end_of_message() );
+			errno = terrno;
+			return rval;
+		}
+		assert( qmgmt_sock->end_of_message() );
+
+	return rval;
+}
+
+int
+SetTimerAttribute( int cluster_id, int proc_id, char *attr_name, int duration )
+{
+	int	rval;
+
+		CurrentSysCall = CONDOR_SetTimerAttribute;
+
+		qmgmt_sock->encode();
+		assert( qmgmt_sock->code(CurrentSysCall) );
+		assert( qmgmt_sock->code(cluster_id) );
+		assert( qmgmt_sock->code(proc_id) );
+		assert( qmgmt_sock->code(attr_name) );
+		assert( qmgmt_sock->code(duration) );
 		assert( qmgmt_sock->end_of_message() );
 
 		qmgmt_sock->decode();
@@ -556,11 +584,14 @@ GetJobAd( int cluster_id, int proc_id )
 			errno = terrno;
 			return NULL;
 		}
-		ClassAd *ad;                            // NAC
-		if (!(ad = getOldClassAd(qmgmt_sock))){ // NAC
+		ClassAd *ad = new ClassAd;
+
+		if ( !(ad->initFromStream(*qmgmt_sock)) ) {
+			delete ad;
 			errno = ETIMEDOUT;
 			return NULL;
 		}
+
 		assert( qmgmt_sock->end_of_message() );
 
 	return ad;
@@ -587,11 +618,14 @@ GetJobByConstraint( char *constraint )
 			errno = terrno;
 			return NULL;
 		}
-		ClassAd *ad;                           // NAC
-		if(!(ad = getOldClassAd(qmgmt_sock))){ // NAC
+		ClassAd *ad = new ClassAd;
+
+		if ( !(ad->initFromStream(*qmgmt_sock)) ) {
+			delete ad;
 			errno = ETIMEDOUT;
 			return NULL;
 		}
+
 		assert( qmgmt_sock->end_of_message() );
 
 	return ad;
@@ -619,11 +653,14 @@ GetNextJob( int initScan )
 			return NULL;
 		}
 		
-		ClassAd *ad;                            // NAC
-		if (!(ad = getOldClassAd(qmgmt_sock))){ // NAC
+		ClassAd *ad = new ClassAd;
+
+		if ( !(ad->initFromStream(*qmgmt_sock)) ) {
+			delete ad;
 			errno = ETIMEDOUT;
 			return NULL;
 		}
+
 		assert( qmgmt_sock->end_of_message() );
 
 	return ad;
@@ -652,11 +689,14 @@ GetNextJobByConstraint( char *constraint, int initScan )
 			return NULL;
 		}
 
-		ClassAd *ad;                            // NAC
-		if (!(ad = getOldClassAd(qmgmt_sock))){ // NAC
+		ClassAd *ad = new ClassAd;
+
+		if ( ! (ad->initFromStream(*qmgmt_sock)) ) {
+			delete ad;
 			errno = ETIMEDOUT;
 			return NULL;
 		}
+
 		assert( qmgmt_sock->end_of_message() );
 
 	return ad;
