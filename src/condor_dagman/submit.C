@@ -36,7 +36,7 @@
 #include "debug.h"
 #include "tmp_dir.h"
 
-typedef bool (* parse_submit_fnc)( char *buffer, int &jobProcCount,
+typedef bool (* parse_submit_fnc)( const char *buffer, int &jobProcCount,
 			int &cluster );
 
 //-------------------------------------------------------------------------
@@ -49,7 +49,7 @@ typedef bool (* parse_submit_fnc)( char *buffer, int &jobProcCount,
 	@return true iff the line was correctly parsed
 */
 static bool
-parse_condor_submit( char *buffer, int &jobProcCount, int &cluster )
+parse_condor_submit( const char *buffer, int &jobProcCount, int &cluster )
 {
   if ( 2 != sscanf( buffer, "%d job(s) submitted to cluster %d",
   			&jobProcCount, &cluster) ) {
@@ -71,7 +71,7 @@ parse_condor_submit( char *buffer, int &jobProcCount, int &cluster )
 	@return true iff the line was correctly parsed
 */
 static bool
-parse_stork_submit( char *buffer, int &jobProcCount, int &cluster )
+parse_stork_submit( const char *buffer, int &jobProcCount, int &cluster )
 {
   if ( 1 != sscanf( buffer, "Request assigned id: %d", &cluster) ) {
 	debug_printf( DEBUG_QUIET, "ERROR: parse_stork_submit failed:\n\t%s\n",
@@ -138,24 +138,32 @@ submit_try( ArgList &args, CondorID &condorID, Job::job_type_t type,
 	ASSERT(false);
   }
   
-  // Look for the line containing the word "cluster" (Condor) or
-  // "assigned id" (Stork).  If we get an EOF, then something went
-  // wrong with the submit, so we return false.  The caller of this
+  // Take all of the output (both stdout and stderr) from condor_submit
+  // or stork_submit, and echo it to the dagman.out file.  Look for
+  // the line (if any) containing the word "cluster" (Condor) or
+  // "assigned id" (Stork).  If we don't find such a line, something
+  // went wrong with the submit, so we return false.  The caller of this
   // function can retry the submit by repeatedly calling this function.
 
   MyString  command_output("");
-  do {
-    if (util_getline(fp, buffer, UTIL_MAX_LINE_LENGTH) == EOF) {
-      my_pclose(fp);
-	  debug_printf(DEBUG_NORMAL, "failed while reading from pipe.\n");
-	  debug_printf(DEBUG_NORMAL, "Read so far: %s\n", command_output.Value());
-      return false;
-    }
+  MyString keyLine("");
+  while (util_getline(fp, buffer, UTIL_MAX_LINE_LENGTH) != EOF) {
+	debug_printf(DEBUG_NORMAL, "From submit: %s\n", buffer);
 	command_output += buffer;
-  } while (strstr(buffer, marker) == NULL);
-  
+    if (strstr(buffer, marker) != NULL) {
+	  keyLine = buffer;
+	}
+  }
+
   {
     int status = my_pclose(fp) & 0xff;
+
+    if (keyLine == "") {
+      debug_printf(DEBUG_NORMAL, "failed while reading from pipe.\n");
+      debug_printf(DEBUG_NORMAL, "Read so far: %s\n", command_output.Value());
+      return false;
+    }
+
     if (status != 0) {
 		debug_printf(DEBUG_NORMAL, "Read from pipe: %s\n", 
 					 command_output.Value());
@@ -167,7 +175,7 @@ submit_try( ArgList &args, CondorID &condorID, Job::job_type_t type,
   }
 
   int	jobProcCount;
-  if ( !parseFnc( buffer, jobProcCount, condorID._cluster) ) {
+  if ( !parseFnc( keyLine.Value(), jobProcCount, condorID._cluster) ) {
 	  return false;
   }
 
