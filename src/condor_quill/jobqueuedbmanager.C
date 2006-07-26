@@ -1794,25 +1794,34 @@ JobQueueDBManager::processSetAttribute(char* key,
 		if(value == endptr) {
 			sprintf(sql_str_del_in,
 					"DELETE FROM ProcAds_Str WHERE cid = %s AND "
-					"pid = %s AND attr = '%s'; INSERT INTO ProcAds_Str"
+					"pid = %s AND attr = '%s'; "
+					"DELETE FROM ProcAds_Num WHERE cid = %s AND "
+					"pid = %s AND attr = '%s'; "
+					"INSERT INTO ProcAds_Str"
 					"(cid, pid, attr, val) VALUES (%s, %s, '%s', '%s');",
-					cid, pid, name, cid, pid, name, newvalue);
+					cid, pid, name, cid, pid, name, cid, pid, name, newvalue);
 		}
 		
 		else {
 			if(*endptr != '\0') {
 				sprintf(sql_str_del_in,
 						"DELETE FROM ProcAds_Str WHERE cid = %s AND "
-						"pid = %s AND attr = '%s'; INSERT INTO ProcAds_Str"
+						"pid = %s AND attr = '%s'; "
+						"DELETE FROM ProcAds_Num WHERE cid = %s AND "
+						"pid = %s AND attr = '%s'; "
+						"INSERT INTO ProcAds_Str"
 						"(cid, pid, attr, val) VALUES (%s, %s, '%s', '%s');",
-						cid, pid, name, cid, pid, name, newvalue);
+						cid, pid, name, cid, pid, name, cid, pid, name, newvalue);
 			}
 			else {
 				sprintf(sql_str_del_in,
 						"DELETE FROM ProcAds_Num WHERE cid = %s AND "
-						"pid = %s AND attr = '%s'; INSERT INTO ProcAds_Num"
+						"pid = %s AND attr = '%s'; "
+						"DELETE FROM ProcAds_Str WHERE cid = %s AND "
+						"pid = %s AND attr = '%s'; "
+						"INSERT INTO ProcAds_Num"
 						"(cid, pid, attr, val) VALUES (%s, %s, '%s', %s);",
-						cid, pid, name, cid, pid, name, value);
+						cid, pid, name, cid, pid, name, cid, pid, name, value);
 			}
 		}
 		break;    
