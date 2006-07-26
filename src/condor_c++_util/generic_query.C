@@ -249,13 +249,13 @@ makeQuery (ClassAd &ad)
 	int		i, value;
 	char	*item;
 	float   fvalue;
-	char    req [10240];
-	char    buf [1024];
+	MyString req;
 	ExprTree *tree;
 
 	// construct query requirement expression
 	bool firstCategory = true;
-	sprintf (req, "%s = ", ATTR_REQUIREMENTS);
+	req = ATTR_REQUIREMENTS;
+	req += " = ";
 
 	// add string constraints
 	for (i = 0; i < stringThreshold; i++)
@@ -264,17 +264,16 @@ makeQuery (ClassAd &ad)
 		if (!stringConstraints [i].AtEnd ())
 		{
 			bool firstTime = true;
-			strcat (req, firstCategory ? "(" : " && (");
+			req += firstCategory ? "(" : " && (";
 			while ((item = stringConstraints [i].Next ()))
 			{
-				sprintf (buf, "%s(TARGET.%s == \"%s\")", 
+				req.sprintf_cat ("%s(TARGET.%s == \"%s\")", 
 						 firstTime ? " " : " || ", 
 						 stringKeywordList [i], item);
-				strcat (req, buf);
 				firstTime = false;
 				firstCategory = false;
 			}
-			strcat (req, " )");
+			req += " )";
 		}
 	}
 
@@ -285,17 +284,16 @@ makeQuery (ClassAd &ad)
 		if (!integerConstraints [i].AtEnd ())
 		{
 			bool firstTime = true;
-			strcat (req, firstCategory ? "(" : " && (");
+			req += firstCategory ? "(" : " && (";
 			while (integerConstraints [i].Next (value))
 			{
-				sprintf (buf, "%s(TARGET.%s == %d)", 
+				req.sprintf_cat ("%s(TARGET.%s == %d)", 
 						 firstTime ? " " : " || ",
 						 integerKeywordList [i], value);
-				strcat (req, buf);
 				firstTime = false;
 				firstCategory = false;
 			}
-			strcat (req, " )");
+			req += " )";
 		}
 	}
 
@@ -306,17 +304,16 @@ makeQuery (ClassAd &ad)
 		if (!floatConstraints [i].AtEnd ())
 		{
 			bool firstTime = true;
-			strcat (req, firstCategory ? "(" : " && (");
+			req += firstCategory ? "(" : " && (";
 			while (floatConstraints [i].Next (fvalue))
 			{
-				sprintf (buf, "%s(TARGET.%s == %f)", 
+				req.sprintf_cat ("%s(TARGET.%s == %f)", 
 						 firstTime ? " " : " || ",
 						 floatKeywordList [i], fvalue);
-				strcat (req, buf);
 				firstTime = false;
 				firstCategory = false;
 			}
-			strcat (req, " )");
+			req += " )";
 		}
 	}
 
@@ -325,15 +322,14 @@ makeQuery (ClassAd &ad)
 	if (!customANDConstraints.AtEnd ())
 	{
 		bool firstTime = true;
-		strcat (req, firstCategory ? "(" : " && (");
+		req += firstCategory ? "(" : " && (";
 		while ((item = customANDConstraints.Next ()))
 		{
-			sprintf (buf, "%s(%s)", firstTime ? " " : " && ", item);
-			strcat (req, buf);
+			req.sprintf_cat ("%s(%s)", firstTime ? " " : " && ", item);
 			firstTime = false;
 			firstCategory = false;
 		}
-		strcat (req, " )");
+		req += " )";
 	}
 
 	// add custom OR constraints
@@ -341,22 +337,21 @@ makeQuery (ClassAd &ad)
 	if (!customORConstraints.AtEnd ())
 	{
 		bool firstTime = true;
-		strcat (req, firstCategory ? "(" : " && (");
+		req += firstCategory ? "(" : " && (";
 		while ((item = customORConstraints.Next ()))
 		{
-			sprintf (buf, "%s(%s)", firstTime ? " " : " || ", item);
-			strcat (req, buf);
+			req.sprintf_cat ("%s(%s)", firstTime ? " " : " || ", item);
 			firstTime = false;
 			firstCategory = false;
 		}
-		strcat (req, " )");
+		req += " )";
 	}
 
 	// absolutely no constraints at all
-	if (firstCategory) strcat (req, "TRUE");
+	if (firstCategory) { req += "TRUE"; }
 
 	// parse constraints and insert into query ad
-	if (Parse (req, tree) > 0) return Q_PARSE_ERROR;
+	if (Parse (req.Value(), tree) > 0) return Q_PARSE_ERROR;
 	ad.Insert (tree);
 
 	return Q_OK;
