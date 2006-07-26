@@ -56,7 +56,7 @@ CONDOR_VIEW_SRC	-a \
 		src/condor_view_client \
 		src/condor_view_server \
 		src/condor_view_tcl_lib \
-		src/condor_view_util \
+		src/condor_view_util
 
 UTIL		-a \
 		src/condor_c++_util \
