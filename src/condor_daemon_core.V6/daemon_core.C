@@ -6080,8 +6080,9 @@ int DaemonCore::Create_Process(
 											   DEFAULT_MAX_PID_COLLISIONS );
 				if( num_pid_collisions > max_pid_retry ) {
 					dprintf( D_ALWAYS, "Create_Process: ERROR: we've had "
-							 "%d consecutive pid collisions, giving up!\n",
-							 num_pid_collisions );
+							 "%d consecutive pid collisions, giving up! "
+							 "(%d PIDs being tracked internally.)\n",
+							 num_pid_collisions, pidTable->getNumElements() );
 						// if we break out of the switch(), we'll hit
 						// the default failure case, goto the wrapup
 						// code, and just return failure...
@@ -6373,8 +6374,9 @@ DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
 										   DEFAULT_MAX_PID_COLLISIONS );
 			if( num_pid_collisions > max_pid_retry ) {
 				dprintf( D_ALWAYS, "Create_Thread: ERROR: we've had "
-						 "%d consecutive pid collisions, giving up!\n",
-						 num_pid_collisions );
+						 "%d consecutive pid collisions, giving up! "
+						 "(%d PIDs being tracked internally.)\n",
+						 num_pid_collisions, pidTable->getNumElements() );
 				num_pid_collisions = 0;
 				return FALSE;
 			}
