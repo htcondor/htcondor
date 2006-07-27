@@ -34,6 +34,15 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug in Quill where it would cause errors like
+\begin{verbatim}
+duplicate key violates unique constraint "history_vertical_pkey"
+\end{verbatim}
+in the QuillLog and the postgres log file.  These errors would then trigger
+a significant slowdown in the performance of Quill and the database.  This
+would only happpen when a job attribute would change type from a string
+type to a numeric type, or vice versa.
+
 \item When a large number of jobs (roughly 200 or more) are running from a
 single schedd and those jobs are using job leases (the default in 6.8), it is
 possible the schedd to enter a state where it crashes on startup until all of
