@@ -50,6 +50,10 @@ the job leases expire.  This bug is fixed.
 % The bug is more generic; it potentially hit any user of GenericQuery or
 % CondorQuery, but we know of no users encountering the bug in any other cases.
 
+%% This is the change to datathread.C
+\item In those unusual cases where Condor is unable to create a new process,
+it will shut down cleanly, eliminating a small possibility of data corruption.
+
 \end{itemize}
 
 \noindent Known Bugs:
