@@ -54,6 +54,10 @@ the job leases expire.  This bug is fixed.
 \item In those unusual cases where Condor is unable to create a new process,
 it will shut down cleanly, eliminating a small possibility of data corruption.
 
+\item Fixed a bug with the gt4 and nordugrid grid universe job types that
+caused the stdout and stderr of a job to not be transferred correctly if
+the filenames given had absolute paths.
+
 \end{itemize}
 
 \noindent Known Bugs:
