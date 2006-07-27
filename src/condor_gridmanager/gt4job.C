@@ -1599,8 +1599,12 @@ MyString *GT4Job::buildSubmitRSL()
 	MyString riwd_parent="";
 	MyString local_executable = "";
 	MyString remote_executable = "";
+	MyString local_stdout = "";
+	MyString local_stderr = "";
 	bool create_remote_iwd = false;
 	bool transfer_executable = true;
+	bool transfer_stdout = true;
+	bool transfer_stderr = true;
 	MyString buff;
 	char *attr_value = NULL;
 	char *rsl_suffix = NULL;
@@ -1816,10 +1820,10 @@ MyString *GT4Job::buildSubmitRSL()
 	if ( jobAd->LookupString(ATTR_JOB_OUTPUT, &attr_value) && *attr_value &&
 		 strcmp( attr_value, NULL_FILE ) ) {
 
-		bool transfer = true;
-		jobAd->LookupBool( ATTR_TRANSFER_OUTPUT, transfer );
+		bool transfer_stdout = true;
+		jobAd->LookupBool( ATTR_TRANSFER_OUTPUT, transfer_stdout );
 
-		if ( transfer == false ) {
+		if ( transfer_stdout == false ) {
 			if ( attr_value[0] != '/' ) {
 				buff.sprintf( "%s/%s", remote_iwd.Value(), attr_value );
 			} else {
@@ -1830,7 +1834,7 @@ MyString *GT4Job::buildSubmitRSL()
 			buff.sprintf( "%s/%s", remote_iwd.Value(),
 						condor_basename(attr_value) );
 			*rsl += printXMLParam( "stdout", buff.Value() );
-			stage_out_list.append( attr_value );
+			local_stdout = attr_value;
 		}
 	}
 	if ( attr_value != NULL ) {
@@ -1842,10 +1846,10 @@ MyString *GT4Job::buildSubmitRSL()
 	if ( jobAd->LookupString(ATTR_JOB_ERROR, &attr_value) && *attr_value &&
 		 strcmp( attr_value, NULL_FILE ) ) {
 
-		bool transfer = true;
-		jobAd->LookupBool( ATTR_TRANSFER_ERROR, transfer );
+		bool transfer_stderr = true;
+		jobAd->LookupBool( ATTR_TRANSFER_ERROR, transfer_stderr );
 
-		if ( transfer == false ) {
+		if ( transfer_stderr == false ) {
 			if ( attr_value[0] != '/' ) {
 				buff.sprintf( "%s/%s", remote_iwd.Value(), attr_value );
 			} else {
@@ -1856,7 +1860,7 @@ MyString *GT4Job::buildSubmitRSL()
 			buff.sprintf( "%s/%s", remote_iwd.Value(),
 						condor_basename(attr_value) );
 			*rsl += printXMLParam( "stderr", buff.Value() );
-			stage_out_list.append( attr_value );
+			local_stderr = attr_value;
 		}
 	}
 	if ( attr_value != NULL ) {
@@ -1961,7 +1965,7 @@ MyString *GT4Job::buildSubmitRSL()
 
 		// Now add the output staging directives to the job description
 		// All the files we need are in stage_out_list
-	if ( !stage_out_list.isEmpty() ) {
+	if ( !stage_out_list.isEmpty() || transfer_stdout || transfer_stderr ) {
 		char *filename;
 
 		*rsl += "<fileStageOut>";
@@ -1970,6 +1974,48 @@ MyString *GT4Job::buildSubmitRSL()
 		*rsl += "<transferCredentialEndpoint xsi:type=\"ns1:EndpointReferenceType\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:ns1=\"http://schemas.xmlsoap.org/ws/2004/03/addressing\">";
 		*rsl += delegation_epr;
 		*rsl += "</transferCredentialEndpoint>";
+
+		if ( transfer_stdout ) {
+			*rsl += "<transfer>";
+			buff.sprintf ("file://%s%s",
+						  remote_iwd.Value(),
+						  condor_basename( local_stdout.Value() ) );
+			*rsl += printXMLParam ("sourceUrl", 
+								   buff.Value());
+			buff.sprintf( "%s%s%s", local_url_base.Value(),
+						  local_stdout[0] == '/' ? "" : local_iwd.Value(),
+						  local_stdout.Value() );
+			*rsl += printXMLParam ("destinationUrl", 
+								   buff.Value());
+			if ( gridftpServer->UseSelfCred() ) {
+				*rsl += "<rftOptions>";
+				*rsl += printXMLParam( "destinationSubjectName",
+									   jobProxy->subject->subject_name );
+				*rsl += "</rftOptions>";
+			}
+			*rsl += "</transfer>";
+		}
+
+		if ( transfer_stderr ) {
+			*rsl += "<transfer>";
+			buff.sprintf ("file://%s%s",
+						  remote_iwd.Value(),
+						  condor_basename( local_stderr.Value() ) );
+			*rsl += printXMLParam ("sourceUrl", 
+								   buff.Value());
+			buff.sprintf( "%s%s%s", local_url_base.Value(),
+						  local_stderr[0] == '/' ? "" : local_iwd.Value(),
+						  local_stderr.Value() );
+			*rsl += printXMLParam ("destinationUrl", 
+								   buff.Value());
+			if ( gridftpServer->UseSelfCred() ) {
+				*rsl += "<rftOptions>";
+				*rsl += printXMLParam( "destinationSubjectName",
+									   jobProxy->subject->subject_name );
+				*rsl += "</rftOptions>";
+			}
+			*rsl += "</transfer>";
+		}
 
 		char *remaps = NULL;
 		char new_name[_POSIX_PATH_MAX*3];

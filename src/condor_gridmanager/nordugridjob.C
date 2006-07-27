@@ -1109,6 +1109,8 @@ StringList *NordugridJob::buildStageOutLocalList( StringList *stage_list )
 	char *remaps = NULL;
 	char local_name[_POSIX_PATH_MAX*3];
 	char *remote_name;
+	MyString stdout = "";
+	MyString stderr = "";
 	MyString buff;
 	MyString iwd = "/";
 
@@ -1118,14 +1120,22 @@ StringList *NordugridJob::buildStageOutLocalList( StringList *stage_list )
 		}
 	}
 
+	jobAd->LookupString( ATTR_JOB_OUTPUT, stdout );
+	jobAd->LookupString( ATTR_JOB_ERROR, stderr );
+
 	stage_local_list = new StringList;
 
 	jobAd->LookupString( ATTR_TRANSFER_OUTPUT_REMAPS, &remaps );
 
 	stage_list->rewind();
 	while ( (remote_name = stage_list->next()) ) {
-		if( remaps && filename_remap_find( remaps, remote_name,
-										   local_name ) ) {
+		if ( stdout == remote_name || stderr == remote_name ) {
+				// stdout and stderr don't get remapped, and their paths
+				// are evaluated locally
+			strncpy( local_name, remote_name, sizeof(local_name) );
+			local_name[sizeof(local_name)-1] = '\0';
+		} else if( remaps && filename_remap_find( remaps, remote_name,
+												  local_name ) ) {
 				// file is remapped
 		} else {
 			strncpy( local_name, condor_basename( remote_name ),
