@@ -38,9 +38,16 @@ bypass          -d bypass src/condor_bypass
 # included for each branch
 ######################################################################
 
+# Specifies what parts of the nmi_glue directory should be used.
+NMI_GLUE	-a \
+		nmi_glue/lib \
+		nmi_glue/test \
+		nmi_glue/submit \
+		nmi_glue/submit_info
+
 # These probably won't need to change
 CONFIG		-a config
-TOOLS		-a config imake nmi_glue
+TOOLS		-a config imake NMI_GLUE
 DOC		-a doc
 NT_TOOLS	-a NTconfig
 
