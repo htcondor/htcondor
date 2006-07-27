@@ -32,9 +32,15 @@
 	\pagestyle{fancy}
 	\fancyhf{}
 	\renewcommand{\sectionmark}[1]{\markright{\thesection.\ #1}}
+\if@twoside
 	\fancyhead[LE,RO]{\thepage}
 	\fancyhead[RE]{\leftmark}
 	\fancyhead[LO]{\rightmark}
+\else
+	\fancyhead[R]{\thepage}
+	\fancyhead[L]{\rightmark}
+\fi
+
 	\fancyfoot[C]{Condor \VersionNotice, Administrators' Manual}
 	\renewcommand{\headrulewidth}{0.4pt}
 	\renewcommand{\footrulewidth}{0.4pt}
