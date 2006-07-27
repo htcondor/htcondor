@@ -112,6 +112,8 @@ int Create_Thread_With_Data(DataThreadWorkerFunc Worker, DataThreadReaperFunc Re
 	int tid = daemonCore->Create_Thread(Create_Thread_With_Data_Start, 
 		tmp, NULL, reaper);
 
+	ASSERT(tid != 0); // otherwise Create_Thread failed.
+
 	// Passing per-thread data to the reader is not quite so easy.  
 	// Keep a tid->data map.
 	tmp = malloc_Create_Thread_With_Data_Data(data_n1, data_n2, data_vp, 
