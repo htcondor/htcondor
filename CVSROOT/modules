@@ -42,7 +42,7 @@ bypass          -d bypass src/condor_bypass
 NMI_GLUE	-a \
 		nmi_glue/lib \
 		nmi_glue/test \
-		nmi_glue/submit \
+		nmi_glue/build \
 		nmi_glue/submit_info
 
 # These probably won't need to change
