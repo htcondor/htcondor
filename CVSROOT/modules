@@ -191,8 +191,6 @@ V6_COMMON    		-a \
 			src/condor_status.V6 \
 			src/condor_sysapi \
 			src/condor_syscall_lib \
-			src/condor_test_suite_C.V5 \
-			src/condor_test_suite_F.V5 \
 			src/condor_tools \
 			src/condor_userlog \
 			src/condor_util_lib \
@@ -202,12 +200,16 @@ V6_COMMON    		-a \
 V6_2_SRC		-a \
 			V6_COMMON \
 			src/condor_classad \
+			src/condor_test_suite_C.V5 \
+			src/condor_test_suite_F.V5 \
 
 V6_3_SRC		-a \
 			V6_COMMON \
 			src/condor_classad \
 			src/condor_netman \
 			src/condor_chirp \
+			src/condor_test_suite_C.V5 \
+			src/condor_test_suite_F.V5 \
 			src/condor_test_suite_java \
 			src/condor_dcskel \
 			src/condor_daemon_client \
@@ -244,8 +246,30 @@ V6_7_SRC		-a V6_6_SRC \
 			src/condor_schedd.V7 \
 			src/condor_quill
 
-V6_8_SRC		-a V6_7_SRC
-
+# Basically the same as V6_7_SRC, but without condor_test_suite* and
+# condor_netman.
+V6_8_SRC		-a \
+			V6_COMMON \
+			src/.cvsignore \
+			src/aclocal.m4 \
+			src/config.h.in \
+			src/configure.ac \
+			src/classad_analysis \
+			src/condor_c-gahp \
+			src/condor_chirp \
+			src/condor_classad \
+			src/condor_credd \
+			src/condor_daemon_client \
+			src/condor_dcskel \
+			src/condor_drmaa \
+			src/condor_gridmanager \
+			src/condor_had \
+			src/condor_quill \
+			src/condor_schedd.V7 \
+			src/condor_tests \
+			src/deployment_tools \
+			src/hawkeye_modules \
+			src/stork
 
 ######################################################################
 # Modules for the externals tree used by different branches of the
