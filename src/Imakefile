@@ -1,21 +1,5 @@
 #define AllFiles etc include src lib libexec bin sbin man 
 
-#if HAS_FORTRAN
-  TEST_SUITE_F = test_suite_F.V5
-#endif
-
-#if WANT_PVM
-  TEST_SUITE_PVM = test_suite_pvm
-#endif
-
-#if WANT_JAVA
-  TEST_SUITE_JAVA = test_suite_java
-#endif
-
-TEST_SUITE_C = test_suite_C.V5
-
-TEST_SUITE_BASE = test_suite_base
-
 #if NEEDS_KBDD
 #   define KbddProgs kbdd
 #else
@@ -140,10 +124,6 @@ release:: all
 stripped:: all
 static:: all
 libs:: h h_all externals condor_includes makefiles Directories Libraries
-
-ALL_TEST_SUITE = $(TEST_SUITE_C) $(TEST_SUITE_F) $(TEST_SUITE_JAVA) $(TEST_SUITE_BASE)
-
-test_suite: $(ALL_TEST_SUITE)
 
 simple_dir_target(release_dir)
 simple_dir_target(release_dir/bin)
@@ -323,19 +303,6 @@ single_target(condor_accountant.V6,libacct.a)
 single_target(condor_ckpt_server,ckpt_server_api.a)
 
 condor_object_target(tests)
-condor_object_target(test_suite_C.V5)
-condor_object_target(test_suite_base)
-
-
-#if HAS_FORTRAN
-   condor_object_target($(TEST_SUITE_F))
-#endif
-#if WANT_JAVA
-   condor_object_target($(TEST_SUITE_JAVA))
-#endif
-#if WANT_PVM
-/*   condor_object_target($(TEST_SUITE_PVM))*/
-#endif
 
 h_all: h/Makefile h/syscall_numbers.h h/syscall_numbers.o
 
