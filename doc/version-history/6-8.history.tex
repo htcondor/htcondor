@@ -58,6 +58,10 @@ it will shut down cleanly, eliminating a small possibility of data corruption.
 caused the stdout and stderr of a job to not be transferred correctly if
 the filenames given had absolute paths.
 
+% Gnats PR 711
+\item \Condor{dagman} now echos warnings from \condor{submit} and
+stork\_submit to the \File{dagman.out} file.
+
 \end{itemize}
 
 \noindent Known Bugs:
