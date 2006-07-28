@@ -62,6 +62,10 @@ the filenames given had absolute paths.
 \item \Condor{dagman} now echos warnings from \condor{submit} and
 stork\_submit to the \File{dagman.out} file.
 
+\item Fixed a bug introduced in 6.7.20 causing \Condor{ckpt\_server}
+to exit immediately after starting up, unless Condor's security
+negotation was disabled.
+
 \end{itemize}
 
 \noindent Known Bugs:
