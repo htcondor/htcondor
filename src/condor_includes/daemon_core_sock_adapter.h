@@ -93,6 +93,10 @@ class DaemonCoreSockAdapterClass {
 		ASSERT(m_daemonCore);
 		return (m_daemonCore->*m_GetDataPtr_fnptr)();
 	}
+	bool isEnabled()
+	{
+		return m_daemonCore != NULL;
+	}
 };
 
 extern DaemonCoreSockAdapterClass daemonCoreSockAdapter;

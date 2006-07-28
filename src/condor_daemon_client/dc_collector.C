@@ -31,6 +31,7 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "dc_collector.h"
 #include "condor_parameters.h"
+#include "daemon_core_sock_adapter.h"
 
 // Instantiate things
 template class ExtArray<DCCollectorAdSeq *>;
@@ -274,9 +275,10 @@ DCCollector::sendUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking )
 		return true;
 	}
 
-	if(!use_nonblocking_update) {
+	if(!use_nonblocking_update || !daemonCoreSockAdapter.isEnabled()) {
 			// Either caller OR config may turn off nonblocking updates.
 			// In other words, both must be true to enable nonblocking.
+			// Also, must have daemonCoreSockAdapter enabled.
 		nonblocking = false;
 	}
 
