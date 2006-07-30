@@ -3770,16 +3770,44 @@ SetUserLog()
 
 		// Check that the log file isn't on NFS
 		BOOLEAN	nfs = FALSE;
+		BOOLEAN nfs_is_error = FALSE;
+
+		nfs_is_error = param_boolean("USER_LOGS_ON_NFS_IS_ERROR", true);
+		
 		if ( fs_detect_nfs( ulog.Value(), &nfs ) ) {
-			fprintf(stderr,
+			if ( nfs_is_error ) {
+				fprintf(stderr,
+					"\nERROR: Can't determine if log file %s is on NFS.\n"
+				   "\tCondor is configured to only allow log files that "
+				   "it can verify are not on NFS.\n",
+					ulog.Value() );
+
+				DoCleanup(0,0,NULL);
+				exit( 1 );
+			} else{
+				fprintf(stderr,
 					"\nWARNING: Can't determine if log file %s is on NFS\n",
 					ulog.Value() );
+			}
 		}
 		if ( nfs ) {
-			fprintf(stderr,
+			if ( nfs_is_error ) {
+
+				fprintf(stderr,
+					"\nERROR: Log file %s is on NFS.\nThis could cause"
+					" log file corruption. Condor has been configured to"
+					" prohibit log files on NFS.\n",
+					ulog.Value() );
+
+				DoCleanup(0,0,NULL);
+				exit( 1 );
+
+			} else {
+				fprintf(stderr,
 					"\nWARNING: Log file %s is on NFS.\nThis could cause"
 					" log file corruption and is _not_ recommended.\n",
 					ulog.Value() );
+			}
 		}
 
 		check_and_universalize_path(ulog, UserLogFile);
