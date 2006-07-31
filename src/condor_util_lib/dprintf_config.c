@@ -168,7 +168,7 @@ int logfd;		/* logfd is the descriptor to use if the log output goes to a tty */
 					MaxLog[debug_level] = atoi( pval );
 					free(pval);
 				} else {
-					MaxLog[debug_level] = 65536;
+					MaxLog[debug_level] = 1024*1024;
 				}
 
 				if (debug_level == 0) {
