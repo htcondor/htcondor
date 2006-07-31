@@ -60,7 +60,7 @@ Regex::operator = (const Regex & copy)
 		this->options = copy.options;
 
 		if (re) {
-			free(re); re = NULL;
+			pcre_free(re); re = NULL;
 		}
 		re = clone_re(copy.re);
 	}
@@ -72,7 +72,7 @@ Regex::operator = (const Regex & copy)
 Regex::~Regex()
 {
 	if (re) {
-		free(re); re = NULL;
+		pcre_free(re); re = NULL;
 	}
 }
 
