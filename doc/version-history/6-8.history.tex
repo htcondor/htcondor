@@ -66,6 +66,11 @@ stork\_submit to the \File{dagman.out} file.
 to exit immediately after starting up, unless Condor's security
 negotation was disabled.
 
+% This was a bug because the default configuration file and manual
+% both claimed it defaulted to 1MB.
+\item \Macro{MAX\_<SUBSYS>\_LOG} defaults to one megabyte, even if the
+setting is missing from the configuration.  Previously it was 64 kilobytes.
+
 \end{itemize}
 
 \noindent Known Bugs:
