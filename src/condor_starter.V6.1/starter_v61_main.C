@@ -142,9 +142,11 @@ printClassAd( void )
 		Daemon credd(DT_CREDD);
 		if (credd.locate()) {
 			Sock *sock = credd.startCommand(CREDD_NOP, Stream::reli_sock, 20);
-			sock->decode();
-			if (sock && sock->end_of_message()) {
-				printf("%s = \"%s\"\n", ATTR_LOCAL_CREDD, credd_host);
+			if (sock != NULL) {
+				sock->decode();
+				if (sock->end_of_message()) {
+					printf("%s = \"%s\"\n", ATTR_LOCAL_CREDD, credd_host);
+				}
 			}
 		}
 		free(credd_host);
