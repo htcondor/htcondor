@@ -1109,8 +1109,8 @@ StringList *NordugridJob::buildStageOutLocalList( StringList *stage_list )
 	char *remaps = NULL;
 	char local_name[_POSIX_PATH_MAX*3];
 	char *remote_name;
-	MyString stdout = "";
-	MyString stderr = "";
+	MyString stdout_name = "";
+	MyString stderr_name = "";
 	MyString buff;
 	MyString iwd = "/";
 
@@ -1120,8 +1120,8 @@ StringList *NordugridJob::buildStageOutLocalList( StringList *stage_list )
 		}
 	}
 
-	jobAd->LookupString( ATTR_JOB_OUTPUT, stdout );
-	jobAd->LookupString( ATTR_JOB_ERROR, stderr );
+	jobAd->LookupString( ATTR_JOB_OUTPUT, stdout_name );
+	jobAd->LookupString( ATTR_JOB_ERROR, stderr_name );
 
 	stage_local_list = new StringList;
 
@@ -1129,7 +1129,7 @@ StringList *NordugridJob::buildStageOutLocalList( StringList *stage_list )
 
 	stage_list->rewind();
 	while ( (remote_name = stage_list->next()) ) {
-		if ( stdout == remote_name || stderr == remote_name ) {
+		if ( stdout_name == remote_name || stderr_name == remote_name ) {
 				// stdout and stderr don't get remapped, and their paths
 				// are evaluated locally
 			strncpy( local_name, remote_name, sizeof(local_name) );
