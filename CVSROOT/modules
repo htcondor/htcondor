@@ -252,7 +252,7 @@ V6_8_SRC		-a \
 			V6_COMMON \
 			src/.cvsignore \
 			src/aclocal.m4 \
-			src/config.h.in \
+			src/build_init \
 			src/configure.ac \
 			src/classad_analysis \
 			src/condor_c-gahp \
