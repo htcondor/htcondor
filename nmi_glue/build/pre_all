@@ -1,14 +1,14 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: pre_all,v 1.2 2006-07-25 18:15:39 wright Exp $ 
+# $Id: pre_all,v 1.3 2006-07-31 18:59:38 wright Exp $ 
 # Submit-side NMI build system infrastructure to prepare sources for
 # the Condor build
 #
 # We assume the 'common' subdir contains everything we checked out of
 # CVS.  We need to go into that directory, and do a few things:
 # 1) Figure out what version of Condor we're building
-# 2) run autoconf so we have a working configure script
+# 2) build_init so we have a working configure script
 # 3) build the nroff source for the man pages so that the man-current
 #    external package will work
 # 4) Setup the sources as a release-able source tarball
@@ -17,8 +17,8 @@
 ######################################################################
 # NOTE: This script depends on the following bootstrap programs:
 # - GNU tar (so long as it supports --exclude)
-# - GNU autoconf (version 2.59 or greater)
-# - everything require for "make nroff"
+# - GNU autoconf and autoheader (version >= 2.59) [used by build_init]
+# - everything required for "make nroff"
 #    - latex
 #    - latex2html
 #    ...  ;) (could fill this in later)
@@ -31,7 +31,8 @@ $| = 1;
 
 # NOTE: when/if the NMI framework provides a cleaner way to define
 # submit-host prereqs, we should use it.  for now, we have to hard-code
-my $autoconf = "/prereq/autoconf-2.59/bin/autoconf";
+my $autoconf_path = "/prereq/autoconf-2.59/bin";
+$ENV{PATH} = "$autoconf_path:$ENV{PATH}";
 
 my $CommonDir = getcwd();
 my $SrcDir = "$CommonDir/src";
@@ -84,22 +85,23 @@ close( VERS_FILE );
 
 
 ######################################################################
-# Step #2: run autoconf
+# Step #2: run build_init
 ######################################################################
 
-print "Running $autoconf to generate configure script\n";
+my $cmd="./build_init";
+print "Running $cmd to generate configure script\n";
 chdir( "$SrcDir" ) || die "Can't chdir($SrcDir): $!\n";
-system( "$autoconf" );
-$ac_status = $?;
-if( $ac_status ) {
-    die "$autoconf failed with status $ac_status\n";
+system( $cmd );
+$cmd_status = $?;
+if( $cmd_status ) {
+    die "$cmd failed with status $cmd_status\n";
 }
 system( "rm -rf autom4te.cache" );
 $status = $?;
 if( $status ) {
     warn "Can't remove autom4te.cache directory!\n";
 }
-print "Finished running autoconf\n";
+print "Finished generating configure script\n";
 
 
 ######################################################################
