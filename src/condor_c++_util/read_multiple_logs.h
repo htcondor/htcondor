@@ -241,4 +241,12 @@ private:
 
 };
 
+	/** Returns true when any of the log files are
+	  determined to be on an NFS volume or it is indeterminable,
+	  and USER_LOGS_ON_NFS_IS_ERROR is true.
+	 */
+
+bool logFileOnNFS(const char *fileName);
+bool logFilesOnNFS(StringList&);
+
 #endif

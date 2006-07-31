@@ -32,6 +32,7 @@
 #endif
 #include "classad_distribution.h"
 #endif
+#include "fs_util.h"
 
 #define LOG_HASH_SIZE 37 // prime
 
@@ -802,6 +803,7 @@ MultiLogFiles::getJobLogsFromSubmitFiles(const MyString &strDagFileName,
 				} else {
 					strLogFilename = loadLogFileNameFromSubFile(
 						strSubFile, directory);
+					
 				}
 				if (strLogFilename == "") {
 					MyString result = "No 'log =' value found in submit file "
@@ -809,8 +811,13 @@ MultiLogFiles::getJobLogsFromSubmitFiles(const MyString &strDagFileName,
 					dprintf(D_ALWAYS, "MultiLogFiles: %s\n",
 								result.Value());
 					return result;
+				} else if ( logFileOnNFS(strLogFilename.Value())) {
+					MyString result = "Userlog " + strLogFilename +
+						" is on NFS.\n";
+					// no need to dprintf since logFileOnNFS() does.
+					return result;
 				}
-			
+			 
 					// Add the log file we just found to the log file list
 					// (if it's not already in the list -- we don't want
 					// duplicates).
@@ -952,3 +959,62 @@ ReadMultipleUserLogs::hashFuncJobID(const CondorID &key, int numBuckets)
 
 	return result;
 }
+
+bool
+logFilesOnNFS(StringList &listLogFileNames)
+{
+	int fileCount = listLogFileNames.number();
+	listLogFileNames.rewind();
+
+	for (int i = 0; i < fileCount; i++) {
+		char *logFilename = listLogFileNames.next();
+
+		if (logFileOnNFS(logFilename)) {
+			return true;
+		}
+	}
+
+	// if we got here, we finished iterating and nothing was found to be 
+	// on NFS.
+	return false;
+}
+
+bool
+logFileOnNFS(const char *logFilename)
+{
+
+	BOOLEAN nfs_is_error, nfs;
+   
+	nfs_is_error = param_boolean("USER_LOGS_ON_NFS_IS_ERROR", true);
+
+	if ( fs_detect_nfs( logFilename, &nfs ) ) {
+		// can't determine if its on NFS
+
+		dprintf(D_FULLDEBUG, "Can't determine if %s is on NFS or not.\n",
+				logFilename);
+
+		if ( nfs_is_error ) {
+			dprintf(D_ALWAYS, "ERROR: can't determine if %s is on NFS "
+					"or not, and USER_LOGS_ON_NFS_IS_ERROR is true\n",
+					logFilename);
+			return true;
+		}
+
+		if ( nfs ) {
+			if ( nfs_is_error ) {
+				dprintf(D_ALWAYS, "ERROR: %s is on NFS, and "
+				   "USER_LOGS_ON_NFS_IS_ERROR is true.\n",
+					logFilename);
+				return true;
+			} else {
+				dprintf(D_FULLDEBUG, "WARNING: %s is on NFS, but "
+				   "USER_LOGS_ON_NFS_IS_ERROR is false.\n",
+					logFilename);
+			}
+
+		}
+	}
+	return false;
+}
+
+
