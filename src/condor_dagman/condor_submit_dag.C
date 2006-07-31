@@ -25,9 +25,11 @@
 #include "which.h"
 #include "string_list.h"
 #include "condor_distribution.h"
+#include "condor_config.h"
 #include "env.h"
 #include "dagman_multi_dag.h"
 #include "basename.h"
+#include "read_multiple_logs.h"
 
 #ifdef WIN32
 const char* dagman_exe = "condor_dagman.exe";
@@ -101,6 +103,7 @@ int main(int argc, char *argv[])
 	Termlog = true;
 	dprintf_config("condor_submit_dag", 2); 
 	DebugFlags = D_ALWAYS;
+	config();
 
 	SubmitDagOptions opts;
 	myDistro->Init( argc, argv );
@@ -202,6 +205,20 @@ submitDag( SubmitDagOptions &opts )
 
 		condorLogFiles.rewind();
 		storkLogFiles.rewind();
+
+
+		if (logFilesOnNFS(condorLogFiles)) {
+			fprintf( stderr, "Aborting -- "
+					"Condor log files should not be on NFS.\n");
+			return 1;
+		}
+
+		if (logFilesOnNFS(storkLogFiles)) {
+			fprintf( stderr, "Aborting -- "
+					"Stork log files should not be on NFS.\n");
+			return 1;
+		}
+
 		if ( condorLogFiles.number() > 0 ) {
 			opts.strJobLog = condorLogFiles.next();
 		} else if ( storkLogFiles.number() > 0 ) {
