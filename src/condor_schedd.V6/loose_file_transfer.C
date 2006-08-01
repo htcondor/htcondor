@@ -29,7 +29,7 @@
 LooseFileTransfer::LooseFileTransfer()
 {
   FileTransfer();
-};
+}
 
 bool
 LooseFileTransfer::getInputFiles(StringList & inputFileList)
@@ -42,4 +42,4 @@ LooseFileTransfer::getInputFiles(StringList & inputFileList)
   }
 
   return true;
-};
+}

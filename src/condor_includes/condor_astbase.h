@@ -123,7 +123,7 @@ class ExprTree
 		// We no longer initialze sumFlag, because it has been removed. 
 		// It's not used, that's why you couldn't figure out how to initialize
 		// it, Todd.-Alain 26-Sep-2001
-		ExprTree::ExprTree():unit('\0'), evalFlag(FALSE)
+		ExprTree() : unit('\0'), evalFlag(FALSE)
 		{
 #ifdef USE_STRING_SPACE_IN_CLASSADS
 			if (string_space_references == 0) {

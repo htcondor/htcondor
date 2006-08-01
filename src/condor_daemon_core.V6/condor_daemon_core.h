@@ -1074,7 +1074,7 @@ class DaemonCore : public Service
 
 	void CheckForTimeSkip(time_t time_before, time_t okay_delta);
 
-	MyString DaemonCore::GetCommandsInAuthLevel(DCpermission perm);
+	MyString GetCommandsInAuthLevel(DCpermission perm);
 
     struct CommandEnt
     {

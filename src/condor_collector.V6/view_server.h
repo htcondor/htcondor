@@ -122,7 +122,7 @@ private:
 	static int TimeStamp;
 	static AccHash* GroupHash;
 
-	static GeneralRecord* ViewServer::GetAccData(AccHash* AccData,const MyString& Key);
+	static GeneralRecord* GetAccData(AccHash* AccData,const MyString& Key);
 
 	// misc variables
 

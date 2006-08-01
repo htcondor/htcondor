@@ -122,7 +122,7 @@ class FileTransfer {
 		MyString error_desc;
 	};
 
-	FileTransferInfo FileTransfer::GetInfo() { return Info; }
+	FileTransferInfo GetInfo() { return Info; }
 
 	inline bool IsServer() {return user_supplied_key == FALSE;}
 

@@ -134,8 +134,8 @@ protected:
 
 	char * serialize(char *);
 	char * serialize() const;
-	inline bool SafeSock::same(const _condorMsgID msgA,
-	                           const _condorMsgID msgB)
+	inline bool same(const _condorMsgID msgA,
+					 const _condorMsgID msgB)
 	{
 		if(msgA.ip_addr == msgB.ip_addr &&
 		   msgA.pid == msgB.pid &&

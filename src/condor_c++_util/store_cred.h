@@ -62,6 +62,8 @@ const char CONFIG_CREDENTIAL[] = "config";
 
 #define MAX_PASSWORD_LENGTH 255
 
+class Daemon;
+
 void store_pool_cred_handler(void *, int i, Stream *s);
 int store_cred(const char *user, const char* pw, int mode, Daemon *d = NULL, bool force = false);
 int store_cred_service(const char *user, const char *pw, int mode);

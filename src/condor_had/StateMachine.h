@@ -52,6 +52,7 @@ typedef enum {
 }STATES;
 
 class CollectorList;
+class Daemon;
 /*
   class HADStateMachine
 */

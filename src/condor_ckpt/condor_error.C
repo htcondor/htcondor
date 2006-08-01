@@ -92,9 +92,9 @@ static struct kind_info table[] = {
 };
 
 const char *mode_names[] = {
-	{"ON"},
-	{"ONCE"},
-	{"OFF"},
+	"ON",
+	"ONCE",
+	"OFF",
 };
 
 void _condor_warning( condor_warning_kind_t kind, const char *format, ... )

@@ -42,11 +42,11 @@ public:
 		@param versionstring See condor_version.C for format.
 		@param subssytem One of SHADOW, STARTER, TOOL, SCHEDD, COLLECTOR, etc.
 	*/
-	CondorVersionInfo::CondorVersionInfo(const char *versionstring = NULL, 
+	CondorVersionInfo(const char *versionstring = NULL, 
 		const char *subsystem = NULL, const char *platformstring = NULL);
 
 	/// Destructor.
-	CondorVersionInfo::~CondorVersionInfo();
+	~CondorVersionInfo();
 
 	static char *get_version_from_file(const char* filename, 
 							char *ver = NULL, int maxlen = 0);

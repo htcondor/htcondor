@@ -320,7 +320,7 @@ public:
 		starting with the directory specified by the constructor.
 		@return the size of bytes (if we receive an error trying to determine
 		the size of any file, we consider that file to have a size of zero). */
-	unsigned long Directory::GetDirectorySize();
+	unsigned long GetDirectorySize();
 
 	/** Get full path name to the current file.  If there is no current file,
 		return NULL.

@@ -104,6 +104,7 @@ int get_myproxy_password_handler(Service *, int, Stream *sock);
 #endif
 
 #if defined(__cplusplus)
+QmgmtPeer* getQmgmtConnectionInfo();
 bool OwnerCheck(int,int);
 bool OwnerCheck(ClassAd *, const char *);
 bool OwnerCheck2(ClassAd *, const char *);

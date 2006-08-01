@@ -165,7 +165,7 @@ void CondorFileTable::init()
 	length = sysconf(_SC_OPEN_MAX);
 	SetSyscalls(scm);
 
-	pointers = new (CondorFilePointer *)[length];
+	pointers = new CondorFilePointer *[length];
 	if(!pointers) {
 		_condor_error_retry("Out of memory!\n");
 	}

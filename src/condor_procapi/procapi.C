@@ -25,6 +25,7 @@
 #include "procapi.h"
 #include "condor_debug.h"
 
+int hashFunc( const pid_t& pid, int numbuckets );
 HashTable <pid_t, procHashNode *> * ProcAPI::procHash = 
     new HashTable <pid_t, procHashNode *> ( PHBUCKETS, hashFunc );  
 

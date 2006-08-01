@@ -65,7 +65,7 @@ _condor_full_read(int fd, void *ptr, size_t nbytes)
 
 		nleft -= nread;
 			/* On Win32, void* does not default to "byte", so we cast it */
-		(char*) ptr += nread;
+		ptr = ((char *)ptr) + nread;
 	}
 
 	/* return how much was actually read, which could include 0 in an
@@ -98,7 +98,7 @@ _condor_full_write(int fd, const void *ptr, size_t nbytes)
 
 		nleft -= nwritten;
 			/* On Win32, void* does not default to "byte", so we cast it */
-		(char*) ptr   += nwritten;
+		ptr   = ((char*) ptr) + nwritten;
 	}
 	
 	/* return how much was actually written, which could include 0 */

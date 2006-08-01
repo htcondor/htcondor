@@ -144,6 +144,8 @@ bool jobPrepNeedsThread( int cluster, int proc );
 bool jobCleanupNeedsThread( int cluster, int proc );
 bool jobExternallyManaged(ClassAd * ad);
 bool jobManagedDone(ClassAd * ad);
+int  count( ClassAd *job );
+void job_prio(ClassAd *ad);
 
 int	WallClockCkptInterval = 0;
 static bool gridman_per_job = false;

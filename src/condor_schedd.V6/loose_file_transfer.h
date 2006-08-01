@@ -26,7 +26,7 @@
 class LooseFileTransfer : public FileTransfer
 {
 public:
-  LooseFileTransfer::LooseFileTransfer();
+  LooseFileTransfer();
 
   bool getInputFiles(StringList &);
 };

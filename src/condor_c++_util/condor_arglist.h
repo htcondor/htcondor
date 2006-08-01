@@ -238,7 +238,7 @@ class ArgList {
 
 		// Convert V1Raw to V1Wacked string.
 		// In other words, escape double-quotes with backwacks.
-	static void ArgList::V1RawToV1Wacked(MyString const &v1_raw,MyString *result);
+	static void V1RawToV1Wacked(MyString const &v1_raw,MyString *result);
 
 		// Convenience function for appending error messages.
 		// Each new message begins on a new line.
