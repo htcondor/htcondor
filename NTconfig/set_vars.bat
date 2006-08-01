@@ -52,6 +52,10 @@ set CONDOR_INCLUDE=/I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c
 set CONDOR_LIB=Crypt32.lib mpr.lib psapi.lib mswsock.lib netapi32.lib imagehlp.lib advapi32.lib ws2_32.lib user32.lib oleaut32.lib ole32.lib
 set CONDOR_LIBPATH=
 
+REM Tell VC makefiles that we do not wish to use external dependency
+REM (.dep) files.
+set NO_EXTERNAL_DEPS=1
+
 REM ======================================================================
 REM Now set the individual variables specific to each external package.
 REM Some have been defined, but are not in use yet.
