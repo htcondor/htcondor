@@ -811,11 +811,14 @@ MultiLogFiles::getJobLogsFromSubmitFiles(const MyString &strDagFileName,
 					dprintf(D_ALWAYS, "MultiLogFiles: %s\n",
 								result.Value());
 					return result;
+#if 0 // Temporarily disabled NFS checks, until we get things figured
+	// out better.  wenger 2006-08-01.
 				} else if ( logFileOnNFS(strLogFilename.Value())) {
 					MyString result = "Userlog " + strLogFilename +
 						" is on NFS.\n";
 					// no need to dprintf since logFileOnNFS() does.
 					return result;
+#endif
 				}
 			 
 					// Add the log file we just found to the log file list

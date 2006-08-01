@@ -206,7 +206,8 @@ submitDag( SubmitDagOptions &opts )
 		condorLogFiles.rewind();
 		storkLogFiles.rewind();
 
-
+#if 0 // Temporarily disabled NFS checks, until we get things figured
+	// out better.  wenger 2006-08-01.
 		if (logFilesOnNFS(condorLogFiles)) {
 			fprintf( stderr, "Aborting -- "
 					"Condor log files should not be on NFS.\n");
@@ -218,6 +219,7 @@ submitDag( SubmitDagOptions &opts )
 					"Stork log files should not be on NFS.\n");
 			return 1;
 		}
+#endif
 
 		if ( condorLogFiles.number() > 0 ) {
 			opts.strJobLog = condorLogFiles.next();
