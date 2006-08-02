@@ -246,8 +246,8 @@ V6_7_SRC		-a V6_6_SRC \
 			src/condor_schedd.V7 \
 			src/condor_quill
 
-# Basically the same as V6_7_SRC, but without condor_test_suite* and
-# condor_netman.
+# Basically the same as V6_7_SRC, but without condor_test_suite*,
+# condor_netman, and config.h.in.
 V6_8_SRC		-a \
 			V6_COMMON \
 			src/.cvsignore \
@@ -270,6 +270,10 @@ V6_8_SRC		-a \
 			src/deployment_tools \
 			src/hawkeye_modules \
 			src/stork
+
+V6_9_SRC		-a \
+			V6_8_SRC
+
 
 ######################################################################
 # Modules for the externals tree used by different branches of the
@@ -747,6 +751,18 @@ V6_8_EXT	-a V6_8_1_EXT
 
 
 #---------------------------------------------------------------------
+# 6.9.x
+#---------------------------------------------------------------------
+
+# Externals for 6.9.0.  At this point, same as 6.8.1.
+V6_9_0_EXT	-a V6_8_1_EXT
+
+# Externals needed for the head of the V6_9-branch (a.k.a. the TRUNK)
+V6_9_EXT	-a V6_9_0_EXT
+
+
+
+#---------------------------------------------------------------------
 # Misc. trunk-related module definitions
 # NOTE: this is probably dead code and should be removed
 #---------------------------------------------------------------------
@@ -820,12 +836,19 @@ V6_8_CODE	-a TOOLS NT_TOOLS NT_PROGRAMS V6_8_SRC
 V6_8_ALL	-a DOC V6_8_CODE
 V6_8_BUILD	-a V6_8_ALL externals
 
+# Modules needed for the 6.9.x series
+V6_9_UNIX_CODE	-a TOOLS V6_9_SRC
+V6_9_NT_CODE	-a NT_TOOLS NT_PROGRAMS V6_9_SRC
+V6_9_CODE	-a TOOLS NT_TOOLS NT_PROGRAMS V6_9_SRC
+V6_9_ALL	-a DOC V6_9_CODE
+V6_9_BUILD	-a V6_9_ALL externals
+
 # Point these to whatever version is living on the trunk.
-TRUNK_UNIX_CODE	-a V6_8_UNIX_CODE
-TRUNK_NT_CODE	-a V6_8_NT_CODE
-TRUNK_CODE	-a V6_8_CODE
-TRUNK_ALL	-a V6_8_ALL
-TRUNK_BUILD	-a V6_8_BUILD
+TRUNK_UNIX_CODE	-a V6_9_UNIX_CODE
+TRUNK_NT_CODE	-a V6_9_NT_CODE
+TRUNK_CODE	-a V6_9_CODE
+TRUNK_ALL	-a V6_9_ALL
+TRUNK_BUILD	-a V6_9_BUILD
 
 
 ######################################################################
