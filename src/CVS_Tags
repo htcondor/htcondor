@@ -1,3 +1,7 @@
+08/02/06 V6_8-branch
+  A new branch off the TRUNK (woo hoo) for the 6.8.x stable series.
+  Created from the V6_8-root tag.  Includes the doc directory.
+
 07/24/06 V6_7-merge-2
   The state of the V6_7-branch for the final merge back to the TRUNK.
 
