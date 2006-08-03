@@ -969,16 +969,15 @@ SecManStartCommand::startCommand_inner()
 		// we have the session id, now get the session from the cache
 		have_session = m_sec_man.session_cache->lookup(sid.Value(), enc_key);
 
-		// check the expiration.
-		time_t cutoff_time = time(0);
-		if (enc_key->expiration() && enc_key->expiration() <= cutoff_time) {
-			m_sec_man.session_cache->expire(enc_key);
-			have_session = false;
-			enc_key = NULL;
-		}
-
-
-		if (!have_session) {
+		if (have_session) {
+			// check the expiration.
+			time_t cutoff_time = time(0);
+			if (enc_key->expiration() && enc_key->expiration() <= cutoff_time) {
+				m_sec_man.session_cache->expire(enc_key);
+				have_session = false;
+				enc_key = NULL;
+			}
+		} else {
 			// the session is no longer in the cache... might as well
 			// delete this mapping to it.  (we could delete them all, but
 			// it requires iterating through the hash table)
