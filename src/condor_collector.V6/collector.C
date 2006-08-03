@@ -274,7 +274,6 @@ int CollectorDaemon::receive_query_cedar(Service* s,
 			return 1;
 		} else {
 			// Child / Fork failed / busy
-			ad.fPrint(stderr);
 			process_query_public (whichAds, &ad, &results);
 		}
 	}
