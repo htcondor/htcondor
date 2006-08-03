@@ -75,6 +75,13 @@ setting is missing from the configuration.  Previously it was 64 kilobytes.
 \item Fixed a bug related to non-blocking connect that could occasionally
 cause Condor daemons to crash.
 
+% collector.C change: eliminated useless fprintf(stderr).
+\item Fixed a rare bug where an exceptionally large query to the
+\Condor{collector} could cause it to crash.  The most common cause is a single
+schedd restarting and trying to recover a large number of job leases at once.
+More than approximately 250 running jobs on a single schedd would be necessary
+to trigger this bug.
+
 \end{itemize}
 
 \noindent Known Bugs:
