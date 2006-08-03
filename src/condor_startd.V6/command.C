@@ -563,6 +563,116 @@ command_vm_register( Service*, int, Stream* s )
 	return TRUE;
 }
 
+#if !defined(WIN32)
+int
+command_delegate_gsi_cred( Service*, int, Stream* stream )
+{
+	// The shadow is trying to delegate its user proxy, in case
+	// we plan to use glexec to spawn the starter (which we will
+	// if GLEXEC_STARTER is set in config)
+
+	if( stream->type() != Stream::reli_sock ) {
+		dprintf( D_ALWAYS, "request to delegate proxy via UDP denied\n");
+		return FALSE;
+	}
+	ReliSock* sock = (ReliSock*)stream;
+ 
+	//
+	// 1) send OK if we need delegation (GLEXEC_STARTER is set),
+	//    NOT_OK otherwise
+	//
+	if( ! sock->end_of_message() ) {
+		dprintf( D_ALWAYS, "error receiving end of message\n" );
+		return FALSE;
+	}
+	if ( ! param_boolean( "GLEXEC_STARTER", false ) ) {
+		dprintf( D_ALWAYS,
+		         "GLEXEC_STARTER is false, cancelling delegation\n" );
+		if( ! reply( sock, NOT_OK ) ) {
+			dprintf( D_ALWAYS,
+			         "error sending NOT_OK to cancel delegation\n" );
+			return FALSE;
+		}
+		return TRUE;
+	}
+	if( ! reply( sock, OK ) ) {
+		dprintf( D_ALWAYS, "error sending OK to begin delegation\n");
+		return FALSE;
+	}
+
+	//
+	// 2) get claim id and delegated proxy off the wire; send OK
+	//    if all secceeds
+	//
+	sock->decode();			 
+	char* id = NULL;
+        if( ! sock->code(id) ) {
+                dprintf( D_ALWAYS, "error reading claim id\n" );
+                return FALSE;
+        }
+        Resource* rip = resmgr->get_by_cur_id( id );
+        if( !rip ) {
+                dprintf( D_ALWAYS,
+		         "error finding resource with claim id (%s)\n", id );
+                free( id );
+                return FALSE;
+        }
+        free( id );
+
+	// make sure the resource is claimed/idle
+        State s = rip->state();
+	Activity a = rip->activity();
+        if( (s != claimed_state) || (a != idle_act) ) {
+                rip->log_ignore( DELEGATE_GSI_CRED_STARTD, s, a );
+                return FALSE;
+        }
+
+	// create a temporary file to hold the proxy and set it
+	// to mode 600
+	char tmp_str[] = "/tmp/startd_tmp_proxy.XXXXXX";
+	int fd = mkstemp( tmp_str );
+	if( fd == -1 ) {
+		dprintf( D_ALWAYS,
+		         "error creating temp file for proxy: %s (%d)\n",
+		         strerror( errno ), errno );
+		sock->end_of_message();
+		reply( sock, CONDOR_ERROR );
+		return FALSE;
+	}
+	if( fchmod( fd, S_IRUSR | S_IWUSR ) == -1 ) {
+		dprintf( D_ALWAYS,
+		         "error setting permissions on temp file for proxy: %s (%d)\n",
+		         strerror( errno ), errno );
+		sock->end_of_message();
+		reply( sock, CONDOR_ERROR );
+		return FALSE;
+	}
+	close( fd );
+
+	dprintf( D_FULLDEBUG, "writing temporary delegated proxy to: %s\n", tmp_str );
+
+	filesize_t dont_care;
+	if( sock->get_x509_delegation( &dont_care, tmp_str ) == -1 ) {
+		dprintf( D_ALWAYS,
+		         "Error: couldn't get delegated proxy\n");
+		sock->end_of_message();
+		reply( sock, NOT_OK );
+		return FALSE;
+	}
+	
+	// that's it - return success
+	sock->end_of_message();
+	reply( sock, OK );
+
+	// we have the proxy - now stash its location in the Claim's
+	// Client object so we can get at it when we launch the
+	// starter
+	rip->r_cur->client()->setProxyFile( tmp_str );
+
+	return TRUE;
+}
+#endif
+
 //////////////////////////////////////////////////////////////////////
 // Protocol helper functions
 //////////////////////////////////////////////////////////////////////

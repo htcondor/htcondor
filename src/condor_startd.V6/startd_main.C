@@ -291,6 +291,13 @@ main_init( int, char* argv[] )
 	daemonCore->Register_Command( PCKPT_JOB, "PCKPT_JOB", 
 								  (CommandHandler)command_name_handler,
 								  "command_name_handler", 0, DAEMON );
+#if !defined(WIN32)
+	daemonCore->Register_Command( DELEGATE_GSI_CRED_STARTD, "DELEGATE_GSI_CRED_STARTD",
+	                              (CommandHandler)command_delegate_gsi_cred,
+	                              "command_delegate_gsi_cred", 0, DAEMON );
+#endif
+
+
 
 		// OWNER permission commands
 	daemonCore->Register_Command( VACATE_ALL_CLAIMS,

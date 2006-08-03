@@ -194,6 +194,10 @@ private:
 		/// Remove the execute/dir_<pid> directory
 	virtual bool removeTempExecuteDir( void );
 
+#if !defined(WIN32)
+		/// Special cleanup for exiting after being invoked via glexec
+	void cleanupAfterGlexec();
+#endif
 
 		// // // // // // // //
 		// Private Data Members

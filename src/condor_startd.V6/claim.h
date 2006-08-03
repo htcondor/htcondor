@@ -87,12 +87,14 @@ public:
 	char*	accountingGroup() {return c_acctgrp;};
 	char*	host()	{return c_host;};
 	char*	addr() 	{return c_addr;};
+	char*   proxyFile() {return c_proxyfile; };
 
 	void	setuser(const char* user);
 	void	setowner(const char* owner);
 	void	setAccountingGroup(const char* grp);
 	void	setaddr(const char* addr);
 	void	sethost(const char* host);
+	void    setProxyFile(const char* pf);
 
 		// send a message to the client and accountant that the claim
 		// is a being vacated
@@ -103,6 +105,9 @@ private:
 	char	*c_acctgrp; // name of the accounting group, if any
 	char	*c_host;	// hostname of the clientmachine
 	char	*c_addr;	// <ip:port> of the client
+	char	*c_proxyfile;   // file holding delegated proxy
+		                // (used when using GLEXEC_STARTER)
+
 };
 
 

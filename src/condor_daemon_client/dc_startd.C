@@ -443,6 +443,95 @@ DCStartd::locateStarter( const char* global_job_id,
 	return sendCACmd( &req, reply, false, timeout );
 }
 
+int
+DCStartd::delegateX509Proxy( const char* proxy )
+{
+	dprintf( D_FULLDEBUG, "Entering DCStartd::delegateX509Proxy()\n" );
+
+	setCmdStr( "delegateX509Proxy" );
+
+	if( ! claim_id ) {
+		MyString err = "DCStartd::delegateX509Proxy: "
+		                "Called with NULL claim_id";
+		newError( CA_INVALID_REQUEST, err.Value() );
+		return CONDOR_ERROR;
+	}
+
+	//
+	// 1) begin the DELEGATE_GSI_CRED_STARTD command
+	//
+	ReliSock* tmp = (ReliSock*)startCommand( DELEGATE_GSI_CRED_STARTD,
+	                                         Stream::reli_sock,
+	                                         20 ); 
+	if( ! tmp ) {
+		MyString err = "DCStartd::delegateX509Proxy: "
+		               "Failed to send command "
+		               "DELEGATE_GSI_CRED_STARTD "
+		               "to the startd";
+		newError( CA_COMMUNICATION_ERROR, err.Value() );
+		delete tmp;
+		return CONDOR_ERROR;
+	}
+
+	//
+	// 2) get reply from startd - OK means continue, NOT_OK means
+	//    don't bother (the startd doesn't require a delegated
+	//    proxy
+	//
+	tmp->decode();
+	int reply;
+	if( !tmp->code(reply) || !tmp->end_of_message() ) {
+		MyString err = "DCStartd::delegateX509Proxy: "
+		               "Failed to receive reply from startd";
+		newError( CA_COMMUNICATION_ERROR , err.Value() );
+		delete tmp;
+		return CONDOR_ERROR;
+	}
+	if( reply == NOT_OK ) {
+		delete tmp;
+		return NOT_OK;
+	}
+		
+
+	//
+	// 3) send over the claim id and delegate the given proxy
+	//
+	tmp->encode();
+	if( ! tmp->code( claim_id ) ) {
+		MyString err = "DCStartd::delegateX509Proxy: "
+		               "Failed to send ClaimId to the startd";
+		newError( CA_COMMUNICATION_ERROR, err.Value() );
+		delete tmp;
+		return CONDOR_ERROR;
+	}
+	filesize_t dont_care;
+	if( tmp->put_x509_delegation( &dont_care, proxy ) == -1 ) {
+		MyString err = "DCStartd::delegateX509Proxy: "
+		               "Failed to delegate proxy";
+		newError( CA_FAILURE, err.Value() );
+		delete tmp;
+		return CONDOR_ERROR;
+	}
+
+	// command successfully sent; now get the reply
+	tmp->decode();
+	if( !tmp->code(reply) || !tmp->end_of_message()) {
+		MyString err = "DCStartd::delegateX509Proxy: "
+		               "Failed to receive reply from ";
+		err += _addr;
+		newError( CA_COMMUNICATION_ERROR, err.Value() );
+		delete tmp;
+		return CONDOR_ERROR;
+	}
+	delete tmp;
+
+	dprintf( D_FULLDEBUG,
+	         "DCStartd::delegateX509Proxy: successfully sent command, "
+	         "reply is: %d\n",
+	         reply );
+
+	return reply;
+}
 
 bool
 DCStartd::checkClaimId( void )

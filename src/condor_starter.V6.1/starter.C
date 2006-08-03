@@ -50,6 +50,8 @@
 #include "directory.h"
 #include "exit.h"
 
+#include "condor_auth_x509.h"
+
 extern "C" int get_random_int();
 extern int main_shutdown_fast();
 
@@ -202,6 +204,11 @@ void
 CStarter::StarterExit( int code )
 {
 	removeTempExecuteDir();
+#if !defined(WIN32)
+	if( param_boolean( "GLEXEC_STARTER", false ) ) {
+		cleanupAfterGlexec();
+	}
+#endif
 	DC_Exit( code );
 }
 
@@ -1330,3 +1337,26 @@ CStarter::removeTempExecuteDir( void )
 	}
 	return true;
 }
+
+#if !defined(WIN32)
+void
+CStarter::cleanupAfterGlexec()
+{
+#if defined(GSI_AUTHENTICATION) && !defined(SKIP_AUTHENTICATION)
+	// if we were spawned using glexec, then the startd will have
+	// arranged for glexec to provide us a copy of the user's
+	// proxy in case we need to use it for GSI security. we need
+	// to remove it when we're done, since the startd won't be
+	// able to (it's owned by our UID)
+	char* proxy = param( STR_GSI_DAEMON_PROXY );
+	if (proxy != NULL) {
+		// make sure the filename ends in ".starter" before
+		// we go ahead deleting it
+		if( memcmp( proxy + strlen( proxy ) - 8, ".starter", 8 ) == 0 ) {
+			remove( proxy );
+		}
+		free( proxy );
+	}
+#endif
+}
+#endif

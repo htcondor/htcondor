@@ -1517,6 +1517,7 @@ Client::Client()
 	c_acctgrp = NULL;
 	c_addr = NULL;
 	c_host = NULL;
+	c_proxyfile = NULL;
 }
 
 
@@ -1599,6 +1600,18 @@ Client::sethost( const char* host )
 	}
 }
 
+void
+Client::setProxyFile( const char* pf )
+{
+	if( c_proxyfile ) {
+		free( c_proxyfile );
+	}
+	if ( pf ) {
+		c_proxyfile = strdup( pf );
+	} else {
+		c_proxyfile = NULL;
+	}
+}
 
 void
 Client::vacate(char* id)

@@ -129,6 +129,48 @@ RemoteResource::activateClaim( int starterVersion )
 		return false;
 	}
 
+	// as part of the initial hack at glexec integration, we need
+	// to provide the startd with our user proxy before it
+	// executes the starter (since glexec takes the proxy as input
+	// in order to determine the UID and GID to use).
+	char* proxy;
+	if( param_boolean( "GLEXEC_STARTER", false ) &&
+	    (jobAd->LookupString( ATTR_X509_USER_PROXY, &proxy ) == 1) ) {
+		dprintf( D_FULLDEBUG,
+	                 "trying early delegation (for glexec) of proxy: %s\n", proxy );
+		int reply = dc_startd->delegateX509Proxy( proxy );
+		if( reply == OK ) {
+			// early delegation was successful. this means the startd
+			// is going to launch the starter using glexec, so we need
+			// to add the user to our ALLOW_DAEMON list. for now, we'll
+			// just pull the user name from the job ad. if we wanted to be
+			// airtight here, we'd run the proxy subject through our mapfile,
+			// since its possible it could result in a different user
+
+			// TODO: we don't actually need to do the above, since we
+			// already open up ALLOW_DAEMON to */<execute_host> (!?!?)
+			// in initStartdInfo(). that needs to be fixed, in which case
+			// the previous comment will apply and we'll need to open
+			// ALLOW_DAEMON here
+
+			dprintf( D_FULLDEBUG,
+			         "successfully delegated user proxy to the startd\n" );
+		}
+		else if( reply == NOT_OK ) {
+			dprintf( D_FULLDEBUG,
+			         "proxy delegation waived by startd\n" );
+		}
+		else {
+			// delegation did not work. we log a message and just keep
+			// going since it may just be that the startd is old and
+			// doesn't know the DELETGATE_GSI_CRED_STARTD command
+			dprintf( D_FULLDEBUG,
+			         "error delegating credential to startd: %s\n    ",
+			         dc_startd->error() );
+		}
+		free(proxy);
+	}
+
 		// we'll eventually return out of this loop...
 	while( 1 ) {
 		reply = dc_startd->activateClaim( jobAd, starterVersion,

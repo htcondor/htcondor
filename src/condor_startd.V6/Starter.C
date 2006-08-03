@@ -32,6 +32,7 @@
 #include "startd.h"
 #include "classad_merge.h"
 #include "dynuser.h"
+#include "condor_auth_x509.h"
 
 #ifdef WIN32
 extern dynuser *myDynuser;
@@ -585,6 +586,12 @@ Starter::exited()
 
 		// Now, delete any files lying around.
 	cleanup_execute_dir( s_pid );
+
+#if !defined(WIN32)
+	if( param_boolean( "GLEXEC_STARTER", false ) ) {
+		cleanupAfterGlexec();
+	}
+#endif
 }
 
 
@@ -711,13 +718,28 @@ Starter::execDCStarter( ArgList const &args, Env const *env,
 		inherit_list = sock_inherit_list;
 	}
 
-	if(DebugFlags & D_FULLDEBUG) {
-		MyString args_string;
-		args.GetArgsStringForDisplay(&args_string);
-		dprintf( D_FULLDEBUG, "About to Create_Process \"%s\"\n",
-				 args_string.Value() );
-	}
+	const ArgList* final_args = &args;
+	const Env* final_env = env;
+	const char* final_path = s_path;
 
+#if !defined(WIN32)
+	// see if we should be using glexec to spawn the starter.
+	// if we are, the cmd, args, and env to use will be modified
+	ArgList glexec_args;
+	Env glexec_env;
+	if( param_boolean( "GLEXEC_STARTER", false ) ) {
+		if( ! prepareForGlexec( args, env, glexec_args, glexec_env ) ) {
+			// something went wrong; prepareForGlexec will
+			// have already logged it
+			cleanupAfterGlexec();
+			return 0;
+		}
+		final_args = &glexec_args;
+		final_env = &glexec_env;
+		final_path = glexec_args.GetArg(0);
+	}
+#endif
+								   
 	int reaper_id;
 	if( s_reaper_id > 0 ) {
 		reaper_id = s_reaper_id;
@@ -725,9 +747,16 @@ Starter::execDCStarter( ArgList const &args, Env const *env,
 		reaper_id = main_reaper;
 	}
 
+	if(DebugFlags & D_FULLDEBUG) {
+		MyString args_string;
+		final_args->GetArgsStringForDisplay(&args_string);
+		dprintf( D_FULLDEBUG, "About to Create_Process \"%s\"\n",
+				 args_string.Value() );
+	}
+
 	s_pid = daemonCore->
-		Create_Process( s_path, args, PRIV_ROOT, reaper_id,
-						TRUE, env, NULL, TRUE, inherit_list, std_fds );
+		Create_Process( final_path, *final_args, PRIV_ROOT, reaper_id,
+						TRUE, final_env, NULL, TRUE, inherit_list, std_fds );
 	if( s_pid == FALSE ) {
 		dprintf( D_ALWAYS, "ERROR: exec_starter failed!\n");
 		s_pid = 0;
@@ -742,6 +771,14 @@ Starter::execOldStarter( void )
 #if defined(WIN32) /* THIS IS UNIX SPECIFIC */
 	return 0;
 #else
+	if( param_boolean( "GLEXEC_STARTER", false ) ) {
+		// we don't support using glexec to spawn the old starter
+		dprintf( D_ALWAYS,
+			 "error: can't spawn starter %s via glexec\n",
+			 s_path );
+		return 0;
+	}
+
 	char* hostname = s_claim->client()->host();
 	int i;
 	int pid;
@@ -872,7 +909,109 @@ Starter::execOldStarter( void )
 #endif // !defined(WIN32)
 }
 
-		
+#if !defined(WIN32)
+bool
+Starter::prepareForGlexec( const ArgList& orig_args, const Env* orig_env,
+                           ArgList& glexec_args, Env& glexec_env )
+{
+	// if GLEXEC_STARTER is set, use glexec to invoke the
+	// starter (and fail if we can't). this involves:
+	//   - verifying that we have a delegated proxy from
+	//     the user stored, since we need to hand it to
+	//     glexec so it can look up the UID/GID
+	//   - adding the contents of the GLEXEC config param
+	//     to the front of the command line
+	//   - setting up glexec's environment (setting the
+	//     mode, handing off the proxy, etc.)
+
+	// verify that we have a stored proxy
+	if( s_claim->client()->proxyFile() == NULL ) {
+		dprintf( D_ALWAYS,
+		         "cannot use glexec to spawn starter: no proxy "
+		         "(is GLEXEC_STARTER set in the shadow?)\n" );
+		return false;
+	}
+
+	// get the glexec command line prefix from config
+	char* glexec_argstr = param( "GLEXEC" );
+	if ( ! glexec_argstr ) {
+		dprintf( D_ALWAYS,
+		         "cannot use glexec to spawn starter: "
+		         "GLEXEC not given in config\n" );
+		return false;
+	}
+	MyString err;
+	if( ! glexec_args.AppendArgsV1RawOrV2Quoted( glexec_argstr,
+						     &err ) ) {
+		dprintf( D_ALWAYS,
+		         "failed to parse GLEXEC from config: %s\n",
+		         err.Value() );
+		free( glexec_argstr );
+		return 0;
+	}
+	free( glexec_argstr );
+
+	// complete the command line by adding in the original
+	// arguments. we also make sure that the full path to the
+	// starter is given
+	int starter_path_pos = glexec_args.Count();
+	glexec_args.AppendArgsFromArgList( orig_args );
+	glexec_args.RemoveArg( starter_path_pos );
+	glexec_args.InsertArg( s_path, starter_path_pos );
+
+	// set up the environment stuff
+	if( orig_env ) {
+		// first merge in the original
+		glexec_env.MergeFrom( *orig_env );
+	}
+
+	// GLEXEC_MODE - get account from lcmaps
+	glexec_env.SetEnv( "GLEXEC_MODE", "glexec_get_account" );
+
+	// SSL_CLIENT_CERT - cert to use for the mapping
+	FILE* fp = fopen( s_claim->client()->proxyFile(), "r" );
+	if( fp == NULL ) {
+		dprintf( D_ALWAYS,
+		         "cannot use glexec to spawn starter: "
+		         "couldn't open proxy: %s (%d)\n",
+		         strerror(errno), errno );
+		return false;
+	}
+	MyString pem_str;
+	while( pem_str.readLine( fp, true ) );
+	fclose( fp );
+	glexec_env.SetEnv( "SSL_CLIENT_CERT", pem_str.Value() );
+
+#if defined(GSI_AUTHENTICATION) && !defined(SKIP_AUTHENTICATION)
+	// GLEXEC_SOURCE_PROXY -  proxy to provide to the child
+	//                        (file is owned by us)
+	glexec_env.SetEnv( "GLEXEC_SOURCE_PROXY", s_claim->client()->proxyFile() );
+
+	// GLEXEC_TARGET_PROXY - child-owned file to copy its proxy to
+	MyString child_proxy_file = s_claim->client()->proxyFile();
+	child_proxy_file += ".starter";
+	glexec_env.SetEnv( "GLEXEC_TARGET_PROXY", child_proxy_file.Value() );
+
+	// _CONDOR_GSI_DAEMON_CERT - starter's proxy
+	MyString var_name = "_CONDOR_";
+	var_name += STR_GSI_DAEMON_PROXY;
+	glexec_env.SetEnv( var_name.Value(), child_proxy_file.Value() );
+#endif
+
+	return true;
+}
+
+void
+Starter::cleanupAfterGlexec()
+{
+	// remove the copy of the user proxy that we own
+	// (the starter should remove the one glexec created for it)
+	if( s_claim->client()->proxyFile() != NULL ) {
+		remove( s_claim->client()->proxyFile() );
+	}
+}
+#endif // !WIN32
+
 bool
 Starter::isCOD()
 {

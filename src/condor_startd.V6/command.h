@@ -41,6 +41,17 @@ int command_handler( Service*, int, Stream* );
 */
 int command_activate_claim( Service*, int, Stream* );
 
+#if !defined(WIN32)
+/*
+  DELEGATE_GSI_CRED_STARTD is called by the shadow before the claim is
+  activated if it suspects the startd may try to use glexec to spawn
+  the starter (i.e. if GLEXEC_STARTER is set).  This is required since
+  glexec needs the user proxy to determine what user to run the starter
+  as.
+*/
+int command_delegate_gsi_cred( Service*, int, Stream* );
+#endif
+
 /*
   These commands are a special case, since the ClaimId they get might
   be for the preempting match.  Therefore, they must be handled 

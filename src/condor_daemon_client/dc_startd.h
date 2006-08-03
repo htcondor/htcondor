@@ -86,6 +86,20 @@ public:
 	int activateClaim( ClassAd* job_ad, int starter_version, 
 					   ReliSock** claim_sock_ptr );
 
+		/** Before activating a claim, attempt to delegate the user proxy
+			(if there is one). We do this from the shadow if
+			GLEXEC_STARTER is set, since if the startd requires that
+			glexec be used to spawn the starter, then it needs to get
+			the proxy early (since glexec uses it to determine what UID
+			to run the starter under). The normal way of delegating the
+			proxy via file transfer happens when the starter is already
+			running, and thus too late.
+			@param proxy Location of user proxy to delegate
+			@return OK if proxy is delegated, NOT_OK if startd doesn't
+			need it, CONDOR_ERROR on error
+		*/
+	int delegateX509Proxy( const char* proxy );
+
 		// Generic ClassAd-only protocol for managing claims
 
 	bool requestClaim( ClaimType type, const ClassAd* req_ad,
