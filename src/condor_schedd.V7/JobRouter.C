@@ -47,6 +47,10 @@ const char JR_ATTR_ROUTED_FROM_JOB_ID[] = "RoutedFromJobId";
 const char JR_ATTR_ROUTED_TO_JOB_ID[] = "RoutedToJobId";
 const char JR_ATTR_ROUTED_FROM_MANAGER[] = "RoutedFromManager";
 const char JR_ATTR_ROUTED_FROM_ROUTE[] = "RoutedFromRoute";
+const char JR_ATTR_FAILURE_RATE_THRESHOLD[] = "FailureRateThreshold";
+const char JR_ATTR_JOB_FAILURE_TEST[] = "JobFailureTest";
+
+const int THROTTLE_UPDATE_INTERVAL = 600;
 
 JobRouter::JobRouter(Scheduler *scheduler): m_jobs(5000,hashFuncStdString,rejectDuplicateKeys) {
 	m_scheduler = scheduler;
@@ -310,6 +314,10 @@ JobRouter::SetRoutingTable(RoutingTable *new_routes) {
 		if(m_routes->lookup(route->Name(),old_route) == -1) {
 			dprintf(D_ALWAYS,"JobRouter Note: adding new route '%s'\n",route->RouteString().c_str());
 		}
+		else {
+				// preserve state from the old route entry
+			route->CopyState(old_route);
+		}
 	}
 
 	DeallocateRoutingTable(m_routes);
@@ -317,6 +325,7 @@ JobRouter::SetRoutingTable(RoutingTable *new_routes) {
 
 	UpdateRouteStats();
 }
+
 
 void
 JobRouter::DeallocateRoutingTable(RoutingTable *routes) {
@@ -382,6 +391,7 @@ RoutedJob::RoutedJob() {
 	is_claimed = false;
 	is_done = false;
 	is_running = false;
+	is_success = false;
 	submission_time = 0;
 }
 RoutedJob::~RoutedJob() {
@@ -614,7 +624,17 @@ JobRouter::GetCandidateJobs() {
 
 	m_routes->startIterations();
 	while(m_routes->iterate(route)) {
-		dprintf(D_FULLDEBUG,"JobRouter (route=%s): %d/%d jobs (%d/%d idle).\n",route->Name(),route->CurrentRoutedJobs(),route->MaxJobs(),route->CurrentIdleJobs(),route->MaxIdleJobs());
+		dprintf(D_ALWAYS,
+		      "JobRouter (route=%s): %d submitted (max %d), %d idle (max %d), throttle: %s, recent stats: %d started, %d succeeded, %d failed.\n",
+		      route->Name(),
+		      route->CurrentRoutedJobs(),
+		      route->MaxJobs(),
+		      route->CurrentIdleJobs(),
+		      route->MaxIdleJobs(),
+		      route->ThrottleDesc().c_str(),
+			  route->RecentRoutedJobs(),
+		      route->RecentSuccesses(),
+			  route->RecentFailures());
 	}
 
 	if(!AcceptingMoreJobs()) return; //router is full
@@ -758,6 +778,7 @@ JobRouter::GetCandidateJobs() {
 
 		dprintf(D_FULLDEBUG,"JobRouter (%s): found candidate job\n",job->JobDesc().c_str());
 		AddJob(job);
+
     } while (query.Next(key));
 }
 
@@ -790,7 +811,7 @@ JobRouter::ChooseRoute(classad::ClassAd *job_ad,bool *all_routes_full) {
 	ASSERT(choice < matches.size());
 	route = matches[choice];
 
-	route->IncrementCurrentRoutedJobs();
+	route->IncrementRoutedJobs();
 	return route;
 }
 
@@ -812,6 +833,11 @@ JobRouter::UpdateRouteStats() {
 				}
 			}
 		}
+	}
+
+	m_routes->startIterations();
+	while(m_routes->iterate(route)) {
+		route->AdjustFailureThrottles();
 	}
 }
 
@@ -1008,9 +1034,53 @@ JobRouter::FinalizeJob(RoutedJob *job) {
 
 		dprintf(D_ALWAYS,"JobRouter (%s): finalized job\n",job->JobDesc().c_str());
 		job->is_done = true;
+
+		job->is_success = TestJobSuccess(job);
+		if(!job->is_success) {
+			dprintf(D_ALWAYS,"Job Router (%s): %s is true, so job will count as a failure\n",job->JobDesc().c_str(),JR_ATTR_JOB_FAILURE_TEST);
+		}
 	}
 
 	GracefullyRemoveJob(job);
+}
+
+bool
+JobRouter::TestJobSuccess(RoutedJob *job)
+{
+	JobRoute *route = GetRouteByName(job->route_name.c_str());
+	if(!route) {
+			// It doesn't matter what we decide here, because there is no longer
+			// any route associated with this job.
+		return true;
+	}
+	classad::MatchClassAd mad;
+	bool test_result = false;
+
+	mad.ReplaceLeftAd(route->RouteAd());
+	mad.ReplaceRightAd(&job->src_ad);
+
+	classad::ClassAd *upd;
+	classad::ClassAdParser parser;
+	std::string upd_str;
+	upd_str = "[leftJobFailureTest = adcl.ad.";
+	upd_str += JR_ATTR_JOB_FAILURE_TEST;
+	upd_str += " ;]";
+	upd = parser.ParseClassAd(upd_str);
+	ASSERT(upd);
+
+	mad.Update(*upd);
+	delete upd;
+
+	bool rc = mad.EvaluateAttrBool("leftJobFailureTest", test_result);
+	if(!rc) {
+			// UNDEFINED etc. are treated as NOT failure
+		test_result = false;
+	}
+
+	mad.RemoveLeftAd();
+	mad.RemoveRightAd();
+
+	return !test_result;
 }
 
 void
@@ -1058,7 +1128,17 @@ JobRouter::CleanupJob(RoutedJob *job) {
 	if(!job->is_claimed) {
 		dprintf(D_FULLDEBUG,"JobRouter (%s): Cleaned up and removed routed job.\n",job->JobDesc().c_str());
 
-		// Actually, we need to leave this job in the list for a while to
+		JobRoute *route = GetRouteByName(job->route_name.c_str());
+		if(route) {
+			if(job->is_success) {
+				route->IncrementSuccesses();
+			}
+			else {
+				route->IncrementFailures();
+			}
+		}
+
+		// Now, we need to leave this job in the list for a while to
 		// prevent lag in the job collection mirror from causing us to
 		// think this job is an orphan.
 		job->state = RoutedJob::RETIRED;
@@ -1149,9 +1229,105 @@ JobRoute::JobRoute() {
 	m_num_running_jobs = 0;
 	m_max_jobs = 0;
 	m_max_idle_jobs = 0;
+	m_recent_stats_begin_time = time(NULL);
+	m_recent_jobs_failed = 0;
+	m_recent_jobs_succeeded = 0;
+	m_recent_jobs_routed = 0;
+	m_failure_rate_threshold = 0;
+	m_throttle = 0;
 }
 
 JobRoute::~JobRoute() {
+}
+bool JobRoute::AcceptingMoreJobs()
+{
+	if( m_throttle > 0 && m_throttle <= m_recent_jobs_routed) {
+		return false;
+	}
+	if( m_max_idle_jobs >= 0 && m_max_idle_jobs <= CurrentIdleJobs() ) {
+		return false;
+	}
+	return m_num_jobs < m_max_jobs;
+}
+std::string
+JobRoute::ThrottleDesc() {
+	return ThrottleDesc(m_throttle);
+}
+std::string
+JobRoute::ThrottleDesc(double throttle) {
+	std::string desc;
+	if(throttle <= 0) {
+		desc = "none";
+	}
+	else {
+		MyString buf;
+		buf.sprintf("%g jobs/sec",throttle/THROTTLE_UPDATE_INTERVAL);
+		desc = buf.Value();
+	}
+	return desc;
+}
+void
+JobRoute::CopyState(JobRoute *r) {
+		// Only copy state that can't be recreated in some other way.
+		// Would be nice if we didn't have any such state at all,
+		// because job router is supposed to be as stateless as possible,
+		// but there is currently nowhere else to stash the following state.
+
+	m_recent_jobs_routed = r->m_recent_jobs_routed;
+	m_recent_stats_begin_time = r->m_recent_stats_begin_time;
+	m_recent_jobs_failed = r->m_recent_jobs_failed;
+	m_recent_jobs_succeeded = r->m_recent_jobs_succeeded;
+	m_throttle = r->m_throttle;
+}
+
+void
+JobRoute::AdjustFailureThrottles() {
+	time_t now = time(NULL);
+	double delta = now - m_recent_stats_begin_time;
+
+	if(delta < THROTTLE_UPDATE_INTERVAL) {
+		return;
+	}
+
+	double new_throttle = m_throttle;
+	double recent_failure_rate = m_recent_jobs_failed*1.0/delta;
+
+	dprintf(D_FULLDEBUG,"JobRouter (route=%s): checking throttle: recent failure rate %g vs. threshold %g; recent successes %d and failures %d\n",Name(),recent_failure_rate,m_failure_rate_threshold,m_recent_jobs_succeeded,m_recent_jobs_failed);
+
+	if(recent_failure_rate > m_failure_rate_threshold && m_recent_jobs_failed)
+	{
+			//Decelerate.  Failure rate is above threshold.
+		int recent_non_failures = m_num_jobs + m_recent_jobs_succeeded;
+		double failure_ratio = m_recent_jobs_failed/(m_recent_jobs_failed + recent_non_failures);
+
+				//Throttle to aim for max_failure_frequency.
+		new_throttle = THROTTLE_UPDATE_INTERVAL * m_failure_rate_threshold / failure_ratio;
+	}
+	else {
+		if (m_recent_jobs_succeeded) {
+				//Accelerate.
+			new_throttle *= 5;
+		}
+		if( new_throttle > THROTTLE_UPDATE_INTERVAL * m_failure_rate_threshold * 10000 ) {
+				//Things seem to be going fine.  Remove throttle.
+			new_throttle = 0;
+		}
+		if( new_throttle > 0 && new_throttle < 1 && m_recent_jobs_failed == 0) {
+				//At least let 1 job run, or we may never get anywhere.
+			new_throttle = 1;
+		}
+	}
+	if(new_throttle != m_throttle) {
+		dprintf(D_ALWAYS,"JobRouter (route=%s): adjusting throttle from %s to %s.\n",
+				Name(),
+				ThrottleDesc(m_throttle).c_str(),
+				ThrottleDesc(new_throttle).c_str());
+		m_throttle = new_throttle;
+	}
+	m_recent_stats_begin_time = now;
+	m_recent_jobs_routed = 0;
+	m_recent_jobs_failed = 0;
+	m_recent_jobs_succeeded = 0;
 }
 
 bool
@@ -1161,6 +1337,9 @@ JobRoute::DigestRouteAd(bool allow_empty_requirements) {
 	}
 	if( !m_route_ad.EvaluateAttrInt( JR_ATTR_MAX_IDLE_JOBS, m_max_idle_jobs ) ) {
 		m_max_idle_jobs = 50;
+	}
+	if( !m_route_ad.EvaluateAttrReal( JR_ATTR_FAILURE_RATE_THRESHOLD, m_failure_rate_threshold ) ) {
+		m_failure_rate_threshold = 0.03;
 	}
 	if( !m_route_ad.EvaluateAttrString( ATTR_GRID_RESOURCE, m_grid_resource ) ) {
 		dprintf(D_ALWAYS, "JobRouter: Missing or invalid %s in job route.\n",ATTR_GRID_RESOURCE);

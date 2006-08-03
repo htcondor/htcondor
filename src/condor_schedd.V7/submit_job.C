@@ -306,7 +306,6 @@ bool yield_job(bool done, int cluster, int proc, MyString * error_details, const
 		}
 	}
 
-	
 	const char * newsetting = done ? MANAGED_DONE : MANAGED_SCHEDD;
 	if( SetAttributeString(cluster, proc, ATTR_JOB_MANAGED, newsetting) == -1 ) {
 		if(error_details) {
@@ -325,6 +324,10 @@ bool yield_job(bool done, int cluster, int proc, MyString * error_details, const
 				dprintf(D_ALWAYS,"yield_job: failed to remove %d.%d: rc=%d\n",cluster,proc,rc);
 				// Do not treat this as a failure of yield_job().
 			}
+		}
+		else if(status != IDLE && status != COMPLETED) {
+				// Return job to idle state.
+			SetAttributeInt(cluster, proc, ATTR_JOB_STATUS, IDLE);
 		}
 	}
 

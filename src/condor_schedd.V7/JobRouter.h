@@ -150,6 +150,9 @@ class JobRouter: public Service {
 	// Pick a matching route.
 	JobRoute *ChooseRoute(classad::ClassAd *job_ad,bool *all_routes_full);
 
+	// Return true if job exit state indicates that it was a success.
+	bool TestJobSuccess(RoutedJob *job);
+
 	//Produce a default JobRouter name.
 	std::string DaemonIdentityString();
 
@@ -179,7 +182,7 @@ class JobRoute {
 	char const *RouteRequirementsString() {return m_route_requirements_str.c_str();}
 	std::string RouteString(); // returns a string describing the route
 
-	// copy state (e.g. num_jobs) from another route
+	// copy state from another route
 	void CopyState(JobRoute *route);
 
 	bool ParseClassAd(std::string routing_string,unsigned &offset,classad::ClassAd *router_defaults_ad,bool allow_empty_requirements);
@@ -187,22 +190,39 @@ class JobRoute {
 	// ApplyRoutingJobEdits() allows the router to edit the job ad before
 	// resubmitting it.  It does so by having attributes of the following form:
 	//   set_XXX = Value   (assigns XXX = Value in job ad, replace existing)
-	//   copy_XXX = YYY    (copies value of XXX to YYY in job ad)
+	//   copy_XXX = YYY    (copies value of XXX to attribute YYY in job ad)
 	bool ApplyRoutingJobEdits(classad::ClassAd *src_ad);
 
-	bool AcceptingMoreJobs() {return m_num_jobs < m_max_jobs && (m_max_idle_jobs <= 0 || CurrentIdleJobs() < m_max_idle_jobs);}
+	bool AcceptingMoreJobs();
 	void IncrementCurrentRoutedJobs() {m_num_jobs++;}
+	void IncrementRoutedJobs() {IncrementCurrentRoutedJobs(); m_recent_jobs_routed++;}
 	void ResetCurrentRoutedJobs() {m_num_jobs = 0;m_num_running_jobs=0;}
 
 	void IncrementCurrentRunningJobs() {m_num_running_jobs++;}
 	int CurrentRunningJobs() {return m_num_running_jobs;}
 	int CurrentIdleJobs() {return m_num_jobs - m_num_running_jobs;}
+	void IncrementSuccesses() {m_recent_jobs_succeeded++;}
+	void IncrementFailures() {m_recent_jobs_failed++;}
+	int RecentRoutedJobs() {return m_recent_jobs_routed;}
+	int RecentSuccesses() {return m_recent_jobs_succeeded;}
+	int RecentFailures() {return m_recent_jobs_failed;}
+	void AdjustFailureThrottles();
+	double Throttle() {return m_throttle;}
+	std::string ThrottleDesc();
+	std::string ThrottleDesc(double throttle);
 
  private:
-	int m_num_jobs;               // current number of jobs on this route
-	int m_num_running_jobs;       // number of jobs currently running
+	int m_num_jobs;                // current number of jobs on this route
+	int m_num_running_jobs;        // number of jobs currently running
 
-	classad::ClassAd m_route_ad;  // ClassAd describing the route
+	time_t m_recent_stats_begin_time;
+	int m_recent_jobs_routed;
+	int m_recent_jobs_failed;
+	int m_recent_jobs_succeeded;
+	double m_failure_rate_threshold;// failures/sec --> throttling
+	double m_throttle;              // limit new jobs/sec (0 means no throttle)
+
+	classad::ClassAd m_route_ad;   // ClassAd describing the route
 
 	// stuff extracted from the route_ad:
 	std::string m_name;           // name distinguishing this route from others
@@ -245,6 +265,7 @@ class RoutedJob {
 
 	bool is_done;     // true if src job should be marked finished
 	bool is_running;  // true if job status is RUNNING
+	bool is_success;  // true if job finished successfully
 
 	time_t submission_time;
 	time_t retirement_time;
