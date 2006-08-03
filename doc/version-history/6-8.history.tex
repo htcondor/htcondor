@@ -71,6 +71,10 @@ negotation was disabled.
 \item \Macro{MAX\_<SUBSYS>\_LOG} defaults to one megabyte, even if the
 setting is missing from the configuration.  Previously it was 64 kilobytes.
 
+% this is the change to condor_secman.C by zmiller
+\item Fixed a bug related to non-blocking connect that could occasionally
+cause Condor daemons to crash.
+
 \end{itemize}
 
 \noindent Known Bugs:
