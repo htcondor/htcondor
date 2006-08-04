@@ -34,6 +34,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a Quill bug that prevented it from running on Windows.  The
+symptom was errors in the QuillLog like
+\begin{verbatim}
+POLLING RESULT: ERROR
+\end{verbatim}
+
 \item Fixed a bug in Quill where it would cause errors like
 \begin{verbatim}
 duplicate key violates unique constraint "history_vertical_pkey"
