@@ -31,6 +31,7 @@
 #include "daemon.h"
 #include "dc_schedd.h"
 #include "job_lease.h"
+#include "nullfile.h"
 
 #include "gridmanager.h"
 #include "condorjob.h"
@@ -1400,7 +1401,9 @@ ClassAd *CondorJob::buildSubmitAd()
 	submit_ad->LookupString( ATTR_TRANSFER_OUTPUT_REMAPS, output_remaps );
 
 	jobAd->LookupString( ATTR_JOB_OUTPUT, filename );
-	if ( strcmp( filename.Value(), condor_basename( filename.Value() ) ) ) {
+	if ( strcmp( filename.Value(), condor_basename( filename.Value() ) ) &&
+		 !nullFile( filename.Value() ) ) {
+
 		char const *working_name = "_condor_stdout";
 		if ( !output_remaps.IsEmpty() ) output_remaps += ";";
 		output_remaps.sprintf_cat( "%s=%s", working_name, filename.Value() );
@@ -1408,7 +1411,9 @@ ClassAd *CondorJob::buildSubmitAd()
 	}
 
 	jobAd->LookupString( ATTR_JOB_ERROR, filename );
-	if ( strcmp( filename.Value(), condor_basename( filename.Value() ) ) ) {
+	if ( strcmp( filename.Value(), condor_basename( filename.Value() ) ) &&
+		 !nullFile( filename.Value() ) ) {
+
 		char const *working_name = "_condor_stderr";
 		if ( !output_remaps.IsEmpty() ) output_remaps += ";";
 		output_remaps.sprintf_cat( "%s=%s", working_name, filename.Value() );
@@ -1441,6 +1446,15 @@ ClassAd *CondorJob::buildSubmitAd()
 	submit_ad->Insert( expr.Value() );
 
 	submit_ad->Assign( ATTR_SUBMITTER_ID, submitterId );
+
+		// If JOB_PROXY_OVERRIDE_FILE is set in the config file, then
+		// these attributes aren't set in the local job ad, so we need
+		// to set them explicitly.
+	if ( jobProxy ) {
+		submit_ad->Assign( ATTR_X509_USER_PROXY, jobProxy->proxy_filename );
+		submit_ad->Assign( ATTR_X509_USER_PROXY_SUBJECT,
+						   jobProxy->subject->subject_name );
+	}
 
 	bool cleared_environment = false;
 	bool cleared_arguments = false;
