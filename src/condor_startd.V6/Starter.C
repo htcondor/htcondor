@@ -966,7 +966,7 @@ Starter::prepareForGlexec( const ArgList& orig_args, const Env* orig_env,
 	}
 
 	// GLEXEC_MODE - get account from lcmaps
-	glexec_env.SetEnv( "GLEXEC_MODE", "glexec_get_account" );
+	glexec_env.SetEnv( "GLEXEC_MODE", "lcmaps_get_account" );
 
 	// SSL_CLIENT_CERT - cert to use for the mapping
 	FILE* fp = fopen( s_claim->client()->proxyFile(), "r" );
@@ -992,7 +992,7 @@ Starter::prepareForGlexec( const ArgList& orig_args, const Env* orig_env,
 	child_proxy_file += ".starter";
 	glexec_env.SetEnv( "GLEXEC_TARGET_PROXY", child_proxy_file.Value() );
 
-	// _CONDOR_GSI_DAEMON_CERT - starter's proxy
+	// _CONDOR_GSI_DAEMON_PROXY - starter's proxy
 	MyString var_name = "_CONDOR_";
 	var_name += STR_GSI_DAEMON_PROXY;
 	glexec_env.SetEnv( var_name.Value(), child_proxy_file.Value() );
