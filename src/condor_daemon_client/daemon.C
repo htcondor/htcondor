@@ -645,10 +645,10 @@ StartCommandConnectCallback::CallbackFn( Stream *stream )
 	daemonCoreSockAdapter.Cancel_Socket( stream );
 
 	if(!sock->is_connected()) {
-		dprintf(D_ALWAYS,"Failed to connect to %s.\n",sock->get_sinful());
+		dprintf(D_ALWAYS,"Failed to connect to %s.\n",sock->get_sinful_peer());
 		if(cb->m_errstack) {
 			cb->m_errstack->pushf("CEDAR", CEDAR_ERR_CONNECT_FAILED,
-			                      "Failed to connect to %s",sock->get_sinful());
+			                      "Failed to connect to %s",sock->get_sinful_peer());
 		}
 		const bool success = false;
 		ASSERT(cb->m_callback_fn);
@@ -716,7 +716,7 @@ Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, C
 			*sock,
 			"<StartCommand Socket>",
 			(SocketHandlercpp)&StartCommandConnectCallback::CallbackFn,
-			(*sock)->get_sinful(),
+			(*sock)->get_sinful_peer(),
 			cb,
 			ALLOW);
 

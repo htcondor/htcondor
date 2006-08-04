@@ -191,8 +191,11 @@ public:
 	/// local ip address integer
 	unsigned int get_ip_int();
 
-    /// sinful address in the form of "<a.b.c.d:pppp>"
+    /// sinful address of mypoint() in the form of "<a.b.c.d:pppp>"
     char * get_sinful();
+
+	/// sinful address of peer in form of "<a.b.c.d:pppp>"
+	char * get_sinful_peer();
 
 	/// local file descriptor (fd) of this socket
 	int get_file_desc();
@@ -311,6 +314,12 @@ private:
 	///
 	// Buffer to hold the string version of our endpoint's IP address. 
 	char _endpoint_ip_buf[IP_STRING_BUF_SIZE];	
+
+	// Buffer to hold the sinful address of our peer
+	char _sinful_peer_buf[SINFUL_STRING_BUF_SIZE];
+
+	// Buffer to hold the sinful address of ourself
+	char _sinful_self_buf[SINFUL_STRING_BUF_SIZE];
 
 	// struct to hold state info for do_connect() method
 	struct connect_state_struct {

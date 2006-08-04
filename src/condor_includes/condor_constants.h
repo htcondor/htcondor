@@ -113,4 +113,9 @@ static const char NiceUserName[] = "nice-user";
  */
 static const size_t IP_STRING_BUF_SIZE = 16;
 
+/* Max space needed to hold a sinful string, as
+ * returned by sin_to_string()
+ */
+#define SINFUL_STRING_BUF_SIZE 24
+
 #endif /* CONDOR_CONSTANTS_H */

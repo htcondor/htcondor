@@ -470,12 +470,12 @@ public:
 
 		if(!success) {
 			char const *who = "unknown";
-			if(sock) who = sock->get_sinful();
+			if(sock) who = sock->get_sinful_peer();
 			dprintf(D_ALWAYS,"Failed to start non-blocking update to %s.\n",who);
 		}
 		else if(!DCCollector::finishUpdate(ud->dc_collector,sock,ud->ad1,ud->ad2)) {
 			char const *who = "unknown";
-			if(sock) who = sock->get_sinful();
+			if(sock) who = sock->get_sinful_peer();
 			dprintf(D_ALWAYS,"Failed to send non-blocking update to %s.\n",who);
 		}
 

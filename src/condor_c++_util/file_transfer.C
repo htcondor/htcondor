@@ -1545,7 +1545,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 
 		char const *peer_ip_str = "unknown source";
 		if(s->type() == Stream::reli_sock) {
-			peer_ip_str = ((Sock *)s)->get_sinful();
+			peer_ip_str = ((Sock *)s)->get_sinful_peer();
 		}
 
 		error_buf.sprintf("%s failed to receive file(s) from %s",
@@ -1616,7 +1616,7 @@ FileTransfer::GetTransferAck(Stream *s,bool &success,bool &try_again,int &hold_c
 	if(!ad.initFromStream(*s) || !s->end_of_message()) {
 		char const *ip = NULL;
 		if(s->type() == Sock::reli_sock) {
-			ip = ((ReliSock *)s)->get_sinful();
+			ip = ((ReliSock *)s)->get_sinful_peer();
 		}
 		dprintf(D_FULLDEBUG,"Failed to receive download acknowledgment from %s.\n",
 				ip ? ip : "(unknown source)");
@@ -1689,7 +1689,7 @@ FileTransfer::SendTransferAck(Stream *s,bool success,bool try_again,int hold_cod
 	if(!ad.put(*s) || !s->end_of_message()) {
 		char const *ip = NULL;
 		if(s->type() == Sock::reli_sock) {
-			ip = ((ReliSock *)s)->get_sinful();
+			ip = ((ReliSock *)s)->get_sinful_peer();
 		}
 		dprintf(D_ALWAYS,"Failed to send download %s to %s.\n",
 		        success ? "acknowledgment" : "failure report",
@@ -2128,7 +2128,7 @@ FileTransfer::ExitDoUpload(filesize_t *total_bytes, ReliSock *s, priv_state save
 				error_desc_to_send.sprintf("%s at %s failed to send file(s) to %s",
 										   mySubSystem,
 										   s->sender_ip_str(),
-										   s->get_sinful());
+										   s->get_sinful_peer());
 				if(upload_error_desc) {
 					error_desc_to_send.sprintf_cat(": %s",upload_error_desc);
 				}
@@ -2153,7 +2153,7 @@ FileTransfer::ExitDoUpload(filesize_t *total_bytes, ReliSock *s, priv_state save
 	}
 
 	if(rc != 0) {
-		char const *receiver_ip_str = s->get_sinful();
+		char const *receiver_ip_str = s->get_sinful_peer();
 		if(!receiver_ip_str) {
 			receiver_ip_str = "unknown recipient";
 		}

@@ -781,7 +781,7 @@ bool Sock::do_connect_finish(bool failed,bool timed_out)
 	
 	if (!connect_state.failed_once) {
 		dprintf( D_ALWAYS, 
-				 "attempt to connect to %s %s\n",get_sinful(),timed_out ? "timed out" : "failed");
+				 "attempt to connect to %s %s\n",get_sinful_peer(),timed_out ? "timed out" : "failed");
 		connect_state.failed_once = true;
 	}
 
@@ -1326,7 +1326,25 @@ Sock::get_sinful()
 {       
     struct sockaddr_in *tmp = getSockAddr(_sock);
     if (tmp == NULL) return NULL;
-    return sin_to_string(tmp);
+    char const *s = sin_to_string(tmp);
+	if(!s) {
+		return NULL;
+	}
+	ASSERT(strlen(s) < sizeof(_sinful_self_buf));
+	strcpy(_sinful_self_buf,s);
+	return _sinful_self_buf;
+}
+
+char *
+Sock::get_sinful_peer()
+{       
+    char const *s = sin_to_string(&_who);
+	if(!s) {
+		return NULL;
+	}
+	ASSERT(strlen(s) < sizeof(_sinful_peer_buf));
+	strcpy(_sinful_peer_buf,s);
+	return _sinful_peer_buf;
 }
 
 
