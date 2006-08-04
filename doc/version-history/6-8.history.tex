@@ -91,6 +91,10 @@ to trigger this bug.
 \item When using the \Macro{JOB\_PROXY\_OVERRIDE\_FILE} configuration
 parameter, the X509 proxy will now be properly forwarded for Condor-C jobs.
 
+\item Greatly reduced the chance that a Condor-C job in the REMOVED state
+will become HELD due to an expired proxy or failure to talk to the remote
+\Condor{schedd}.
+
 \item Fixed a number of error and debug messages added in 6.7.20 that
 were incorrectly reporting IP and port numbers.  These messages were
 intended to report the peer's address, but they were reporting the
