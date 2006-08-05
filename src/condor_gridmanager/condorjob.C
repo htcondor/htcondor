@@ -31,6 +31,7 @@
 #include "daemon.h"
 #include "dc_schedd.h"
 #include "job_lease.h"
+#include "nullfile.h"
 
 #include "gridmanager.h"
 #include "condorjob.h"
@@ -1402,7 +1403,9 @@ ClassAd *CondorJob::buildSubmitAd()
 	submit_ad->LookupString( ATTR_TRANSFER_OUTPUT_REMAPS, output_remaps );
 
 	jobAd->LookupString( ATTR_JOB_OUTPUT, filename );
-	if ( strcmp( filename.Value(), condor_basename( filename.Value() ) ) ) {
+	if ( strcmp( filename.Value(), condor_basename( filename.Value() ) ) &&
+		 !nullFile( filename.Value() ) ) {
+
 		char const *working_name = "_condor_stdout";
 		if ( !output_remaps.IsEmpty() ) output_remaps += ";";
 		output_remaps.sprintf_cat( "%s=%s", working_name, filename.Value() );
@@ -1410,7 +1413,9 @@ ClassAd *CondorJob::buildSubmitAd()
 	}
 
 	jobAd->LookupString( ATTR_JOB_ERROR, filename );
-	if ( strcmp( filename.Value(), condor_basename( filename.Value() ) ) ) {
+	if ( strcmp( filename.Value(), condor_basename( filename.Value() ) ) &&
+		 !nullFile( filename.Value() ) ) {
+
 		char const *working_name = "_condor_stderr";
 		if ( !output_remaps.IsEmpty() ) output_remaps += ";";
 		output_remaps.sprintf_cat( "%s=%s", working_name, filename.Value() );
