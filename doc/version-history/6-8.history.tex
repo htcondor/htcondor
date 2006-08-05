@@ -109,6 +109,12 @@ authentication mechanism.  The current version of Kerberos is 1.4.3.
 mistakenly not included in previous releases of Condor. This has been
 fixed.
 
+\item Fixed problem on Windows where the \Condor{startd} could fail to
+include some attributes in its ClassAd. This would result in some jobs
+incorrectly not being matched to that machine.  This only happened if
+\Macro{CREDD\_HOST} was defined and Condor daemons on the execute
+machine were unable to authenticate with the \Condor{credd}.
+
 \end{itemize}
 
 \noindent Known Bugs:
