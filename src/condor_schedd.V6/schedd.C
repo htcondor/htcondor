@@ -2220,20 +2220,35 @@ aboutToSpawnJobHandler( int cluster, int proc, void* )
 
 	MyString owner;
 	job_ad->LookupString(ATTR_OWNER, owner);
+
 	MyString nt_domain;
+
 	job_ad->LookupString(ATTR_NT_DOMAIN, nt_domain);
 
+
+
 	if (!recursive_chown(sandbox.Value(), owner.Value(), nt_domain.Value())) {
+
 		dprintf( D_ALWAYS, "(%d.%d) Failed to chown %s from to %d\\%d. "
+
 		         "Job may run into permissions problems when it starts.\n",
+
 		         cluster, proc, sandbox.Value(), nt_domain.Value(), owner.Value() );
+
 	}
 
+
+
 	if (!recursive_chown(sandbox_tmp.Value(), owner.Value(), nt_domain.Value())) {
+
 		dprintf( D_ALWAYS, "(%d.%d) Failed to chown %s from to %d\\%d. "
+
 		         "Job may run into permissions problems when it starts.\n",
+
 		         cluster, proc, sandbox.Value(), nt_domain.Value(), owner.Value() );
+
 	}
+
 
 #endif
 	return 0;
@@ -4206,9 +4221,29 @@ Scheduler::actOnJobs(int, Stream* s)
  			if( i % 10 == 0 ) {
  				daemonCore->ServiceCommandSocket();
  			}
- 			abort_job_myself( jobs[i], action, true, notify );
+ 			abort_job_myself( jobs[i], action, true, notify );		
+#ifdef WIN32
+			/*	This is a small patch so when DAGMan jobs are removed
+				on Win32, jobs submitted by the DAGMan are removed as well.
+				This patch is small and acceptable for the 6.8 stable series,
+				but for v6.9 and beyond we should remove this patch and have things
+				work on Win32 the same way they work on Unix.  However, doing this
+				was deemed to much code churning for a stable series, thus this
+				simpler but temporary patch.  -Todd 8/2006.
+			*/
+			int job_universe = CONDOR_UNIVERSE_MIN;
+			GetAttributeInt(jobs[i].cluster, jobs[i].proc, 
+								ATTR_JOB_UNIVERSE, &job_universe);
+			if ( job_universe == CONDOR_UNIVERSE_SCHEDULER ) {
+				MyString constraint;
+				constraint.sprintf( "%s == %d", ATTR_DAGMAN_JOB_ID,
+					jobs[i].cluster );
+				abortJobsByConstraint(constraint.Value(),
+					"removed because controlling DAGMan was removed",
+					true);
+			}
+#endif
 		}
-
 		break;
 
 	case JA_RELEASE_JOBS:
