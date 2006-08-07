@@ -1866,6 +1866,11 @@ static void test_function_ifthenelse(
 							"E1=isError(BB7):"
 							"BB8=ifThenElse(BB > 5, 4 / 0,\"small\"):"
 							"BB9=ifThenElse(BC > 5, \"big\", 4 / 0):"
+							"BB10=ifThenElse(0.0, \"then\", \"else\"):"
+							"BB11=ifThenElse(1.0, \"then\", \"else\"):"
+							"BB12=ifThenElse(3.7, \"then\", \"else\"):"
+							"BB13=ifThenElse(\"\", \"then\", \"else\"):"
+							"E2=isError(BB13):"
 							"";
 
 	ClassAd  *classad;
@@ -1959,6 +1964,50 @@ static void test_function_ifthenelse(
 			results->AddResult(false);
 		}
 
+		if (classad->EvalString("BB10", NULL, big_string) &&
+				(strcmp(big_string, "else") == 0)) {
+			printf("Passed: Evaluating ifThenElse <0.0 evaluates to false yielding else result>: %s in line %d\n", 
+				   big_string, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating ifThenElse <0.0 evaluates to false yielding else result> %s in line %d\n",
+				   big_string, __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalString("BB11", NULL, big_string) &&
+				(strcmp(big_string, "then") == 0)) {
+			printf("Passed: Evaluating ifThenElse <1.0 evaluates to true yielding then result>: %s in line %d\n", 
+				   big_string, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating ifThenElse <1.0 evaluates to true yielding then result> %s in line %d\n",
+				   big_string, __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalString("BB12", NULL, big_string) &&
+				(strcmp(big_string, "then") == 0)) {
+			printf("Passed: Evaluating ifThenElse <3.7 evaluates to true yielding then result>: %s in line %d\n", 
+				   big_string, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating ifThenElse <3.7 evaluates to true yielding then result> %s in line %d\n",
+				   big_string, __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalBool("E2", NULL, integer) &&
+				(integer == 1)) {
+			printf("Passed: Evaluating ifThenElse expression a string : %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating ifThenElse expression a string) : %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(false);
+		}
+
         delete classad;
 	}
 	return;
@@ -1976,6 +2025,11 @@ static void test_function_stringlists(
 							"O2=stringlistsize(\"A;B;C;D;E\",\";\"):"
 							"O3=isError(stringlistsize(\"A;B;C;D;E\",true)):"
 							"O4=isError(stringlistsize(true,\"A;B;C;D;E\")):"
+							"O5=stringlistsize(\"A B C,D\"):"
+							"O6=stringlistsize(\"A B C,,,,,D\"):"
+							"O7=stringlistsize(\"A B C ; D\",\";\"):"
+							"O8=stringlistsize(\"A B C;D\",\" ; \"):"
+							"O9=stringlistsize(\"A  +B;C$D\",\"$;+\"):"
 
 							"P0=stringlistsum(\"1,2,3\"):"
 							"P1=stringlistsum(\"\"):"
@@ -2090,6 +2144,55 @@ static void test_function_stringlists(
 			results->AddResult(false);
 		}
 
+		if (classad->EvalInteger("O5", NULL, integer) ) {
+			printf("Passed: Evaluating stringlistsize gives: %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating stringlistsize Got error arg 1 not string %d in line %d\n",
+				   integer, __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalInteger("O6", NULL, integer) ) {
+			printf("Passed: Evaluating stringlistsize gives: %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating stringlistsize Got error arg 1 not string %d in line %d\n",
+				   integer, __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalInteger("O7", NULL, integer) ) {
+			printf("Passed: Evaluating stringlistsize gives: %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating stringlistsize Got error arg 1 not string %d in line %d\n",
+				   integer, __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalInteger("O8", NULL, integer) ) {
+			printf("Passed: Evaluating stringlistsize gives: %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating stringlistsize Got error arg 1 not string %d in line %d\n",
+				   integer, __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalInteger("O9", NULL, integer) ) {
+			printf("Passed: Evaluating stringlistsize gives: %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating stringlistsize Got error arg 1 not string %d in line %d\n",
+				   integer, __LINE__);
+			results->AddResult(false);
+		}
 		if (classad->EvalInteger("P0", NULL, integer) && (integer == 6)) {
 			printf("Passed: Evaluating stringlistsum gives: %d in line %d\n", 
 				   integer, __LINE__);
