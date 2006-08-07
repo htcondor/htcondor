@@ -257,10 +257,18 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 	MyString nodeName = MyString(ATTR_DAG_NODE_NAME_ALT) + " = " + DAGNodeName;
 	args.AppendArg( nodeName.Value() );
 
+		// append a line adding the parent DAGMan's cluster ID to the job ad
 	args.AppendArg( "-a" );
 	MyString dagJobId = MyString( "+" ) + ATTR_DAGMAN_JOB_ID + " = " +
 				dm.DAGManJobId._cluster;
 	args.AppendArg( dagJobId.Value() );
+
+		// now we append a line setting the same thing as a submit-file macro
+		// (this is necessary so the user can reference it in the priority)
+	args.AppendArg( "-a" );
+	MyString dagJobIdMacro = MyString( "" ) + ATTR_DAGMAN_JOB_ID + " = " +
+				dm.DAGManJobId._cluster;
+	args.AppendArg( dagJobIdMacro.Value() );
 
 	args.AppendArg( "-a" );
 	MyString submitEventNotes = MyString(
