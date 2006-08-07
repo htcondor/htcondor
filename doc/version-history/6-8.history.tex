@@ -50,6 +50,13 @@ command that allows the DAGMan exit code to be specified separately
 from the node value that causes the abort; also, a DAG can now be
 aborted on a zero exit code from a node.
 
+% I implemented in condor_rm.  Todd is handling condor_schedd implementation.
+\item Added \Macro{ALLOW\_FORCE\_RM} setting.  If this expressions evaluates to
+TRUE then an \Condor{rm} -f attempt is allowed.  If it evaluated to FALSE, the
+attempt is disallowed.  The expression is evaluated in the context of the job
+ad.  If not specified the setting defaults to TRUE, matching the behavior of
+previous Condor releases.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
