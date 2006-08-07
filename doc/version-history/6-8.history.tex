@@ -135,6 +135,10 @@ incorrectly not being matched to that machine.  This only happened if
 \Macro{CREDD\_HOST} was defined and Condor daemons on the execute
 machine were unable to authenticate with the \Condor{credd}.
 
+\item Fixed a \Condor{dagman} bug which had prevented the
+\MacroU{DAGManJobId} attribute from being expanded in job submit files
+(e.g., when used as the value of the \Macro{Priority} command).
+
 \end{itemize}
 
 \noindent Known Bugs:
