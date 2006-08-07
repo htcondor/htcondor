@@ -44,7 +44,11 @@ Windows, rather than being statically linked.
 
 \begin{itemize}
 
-\item None.
+% Gnats PR 610
+\item Added an optional argument to the \Condor{dagman} ABORT-DAG-ON
+command that allows the DAGMan exit code to be specified separately
+from the node value that causes the abort; also, a DAG can now be
+aborted on a zero exit code from a node.
 
 \end{itemize}
 

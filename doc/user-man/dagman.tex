@@ -132,7 +132,7 @@ An example input file for DAGMan is
     PARENT B C CHILD D
     Retry  C 3
     VARS A state="Wisconsin"
-    ABORT-DAG-ON C 10
+    ABORT-DAG-ON C 10 RETURN 1
 \end{verbatim}
 \normalsize
 
@@ -297,8 +297,7 @@ Therefore, the POST script may need to consider the return
 value from the job.
 
 By default, the POST script is run regardless of the job's
-return value.  To prevent POST scripts from running after failed jobs,
-pass the \Arg{-NoPostFail} argument to \Condor{submit\_dag}.
+return value.
 
 A node not marked as failed at any point is successful.
 
@@ -444,6 +443,7 @@ to abort the entire DAG if a given node returns a specific exit
 code.  The syntax for ABORT-DAG-ON:
 
 \Arg{ABORT-DAG-ON} \Arg{JobName} \Arg{AbortExitValue}
+\oArg{RETURN \textless{DAGReturnValue}\textgreater}
 
 If the specified node returns the specified abort exit value, the
 DAG is immediately aborted.  The main difference between a node
@@ -459,12 +459,10 @@ where the node can contain
 a PRE script, the job itself, and a POST script.
 If a node has a PRE script and the PRE
 script returns the abort exit value, the DAG is aborted.
-If the node has no POST script, or \Arg{-NoPostFail} was passed to
-\Condor{submit\_dag},
+If the node has no POST script,
 and the job returns the abort exit value,
 the DAG is aborted.
-If the node has a POST script and \Arg{-NoPostFail} was \emph{not} passed
-to \Condor{submit\_dag},
+If the node has a POST script,
 the POST script is run,
 and the DAG is aborted if the POST script returns
 the abort exit value.
@@ -474,10 +472,11 @@ If a node returns the abort exit value,
 the DAG is aborted,
 even if the node has retries specified.
 
-The value zero is not allowed as an abort exit value.
-
-When a DAG aborts, it exits with the value that caused the abort.
-This can be used for DAGs within DAGs,
+When a DAG aborts, by default it exits with the node return value that
+caused the abort.  This can be changed by specifying the DAG return
+value with the RETURN keyword.
+The DAG abort return value
+can be used for DAGs within DAGs,
 allowing an inner DAG to cause an abort of an outer DAG.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
