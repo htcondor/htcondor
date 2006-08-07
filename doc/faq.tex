@@ -369,6 +369,36 @@ Where \verb@machine-ip-address@ is the IP address of the interface you wish
 Condor to use.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{After an installation of Condor, why do the daemons refuse to 
+	start, placing this message in the log files?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{verbatim}
+ERROR "The following configuration macros appear to contain default values 
+that must be changed before Condor will run.  These macros are:
+hostallow_write 
+(found on line 1853 of /scratch/adesmet/TRUNK/work/src/localdir/condor_config)"
+at line 217 in file condor_config.C
+\end{verbatim}
+
+As of Condor 6.8.0, if 
+Condor sees the bare key word: 
+\Expr{YOU\_MUST\_CHANGE\_THIS\_INVALID\_CONDOR\_CONFIGURATION\_VALUE}
+as the value of a configuration file entry,
+Condor daemons will log the given error message and exit.
+
+By default, an installation of Condor 6.8.0 and later releases
+will have the
+configuration file entry \MacroNI{HOSTALLOW\_WRITE} set to the above sentinel
+value. 
+The Condor administrator must alter this value to be the correct domain
+or IP addresses that the administrator desires.
+The wildcard character (\verb@*@) may be used to define this entry,
+but that allows anyone, from anywhere,
+to submit jobs into your pool.
+A better value will be of the form \Expr{*.domainname.com}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{Why do standard universe jobs never run after an upgrade?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \label{sec:checkpoint-platform-faq}
@@ -1417,12 +1447,12 @@ the Windows Control Panel.
 \subsection*{Jobs submitted from Windows give an error referring to a credential.}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Jobs submitted from a Windows machine require a stashed password in order
-for Condor to run the jobs as the user submitting the jobs.
-The command which stashes a password for a user is \Condor{store\_cred}.
-See the manual page on
-on page~\pageref{man-condor-store-cred}
-for usage details.
+Jobs submitted from a Windows machine require a stashed password in
+order for Condor to perform certain operations on the user's behalf.
+Refer to section \ref{sec:windows-sps} for information about password
+storage on Windows.  The command which stashes a password for a user
+is \Condor{store\_cred}.  See the manual page on on
+page~\pageref{man-condor-store-cred} for usage details.
 \index{job!credential error on Windows}
 
 The error message that Condor gives if a user has not stashed a

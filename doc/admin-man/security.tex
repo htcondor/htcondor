@@ -923,6 +923,7 @@ The values will be
 \begin{verbatim}
     GSI
     KERBEROS
+    PASSWORD
     FS
     FS_REMOTE
     NTSSPI
@@ -1278,6 +1279,83 @@ usually are only accessible by the root user.
 At this time,
 the only supported way to use KERBEROS authentication is to start
 daenons Condor as root.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Password-Authentication} Password Authentication}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The password method provides mutual authentication through the use of
+a shared secret.  This is often a good choice when strong security is
+desired,
+but an existing Kerberos or X.509 infrastructure is not in place.
+Password authentication is available on both Unix and Windows.
+It currently can only be used for daemon-to-daemon authentication.
+The shared secret in this context is referred to as
+the \Term{pool password}.
+
+Before a daemon can use password authentication, the pool password
+must be stored on the daemon's local machine.
+On Unix, the password
+will be placed in a file defined by the configuration variable
+\Macro{SEC\_PASSWORD\_FILE}. This file will be accessible only by the
+UID that Condor is started as.  On Windows, the same secure password
+store that is used for user passwords will be used for the pool
+password (see section \ref{sec:windows-sps}).
+
+Storing the pool password is done via the \Opt{-c} option to
+\Condor{store\_cred}. Running
+\begin{verbatim}
+condor_store_cred -c add
+\end{verbatim}
+will prompt for the pool password and store it on the local machine,
+making it available for daemons to use for authentication. The
+\Condor{master} must be running for this command to work.
+
+In addition, storing the pool password to a given machine requires
+\verb@CONFIG@-level access. For example, if the pool password should
+only be set locally, and only by root, the following would be placed in
+the global configuration file.
+\begin{verbatim}
+ALLOW_CONFIG = root@mydomain/$(IP_ADDRESS)
+\end{verbatim}
+
+It is also possible to set the pool password remotely, but this is
+recommended only if it can be done over an encrypted channel.  This is
+possible on Windows, for example, in an environment where common
+accounts exist across all the machines in the pool. In this case,
+\verb@ALLOW_CONFIG@ can be set to allow the Condor administrator (who
+in this example has an account \Login{condor} common to all machines in
+the pool) to set the password from the central manager as follows.
+\begin{verbatim}
+ALLOW_CONFIG = condor@mydomain/$(CONDOR_HOST)
+\end{verbatim}
+The Condor administrator then executes
+\begin{verbatim}
+condor_store_cred -c -n host.mydomain add
+\end{verbatim}
+from the central manager to store the password to a given machine.
+Since the \Login{condor} account exists on both the central manager and
+\verb@host.mydomain@, the NTSSPI authentication method can be used to
+authenticate and encrypt the connection.  \Condor{store\_cred} will
+warn and prompt for cancellation, if the channel is not encrypted for
+whatever reason (typically because common accounts do not exist or
+Condor's security is misconfigured).
+
+When a daemon is authenticated using a pool password, its security
+principle is \verb|condor_pool@$(UID_DOMAIN)|, where
+\verb@$(UID_DOMAIN)@ is taken from the daemon's configuration.  The
+\verb@ALLOW_DAEMON@ and \verb@ALLOW_NEGOTIATOR@ configuration
+variables for authorization
+should restrict access using this name. For example,
+\begin{verbatim}
+ALLOW_DAEMON = condor_pool@mydomain/*, condor@mydomain/$(IP_ADDRESS)
+ALLOW_NEGOTIATOR = condor_pool@mydomain/$(CONDOR_HOST)
+\end{verbatim}
+This configuration allows remote \verb@DAEMON@-level and
+\verb@NEGOTIATOR@-level access, if the pool password is known.  Local
+daemons authenticated as \verb|condor@mydomain| are also allowed
+access. This is done so local authentication can be done using
+another method such as \verb@FS@.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:FS-Authentication}File System Authentication}

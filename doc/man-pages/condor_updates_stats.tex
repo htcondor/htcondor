@@ -1,8 +1,8 @@
 \begin{ManPage}{\label{man-condor-updates-stats}\Condor{updates\_stats}}{1}
-{Configure or install Condor}
+{Display output from \Condor{status}}
 
 \Synopsis \SynProg{\Condor{updates\_stats}}
-[\verb@--@\textbf{help}] $|$ [\verb@--@\textbf{version}]
+[\verb@--@\textbf{help} $|$ \verb@-@\textbf{h}] $|$ [\verb@--@\textbf{version}]
 
 \SynProg{\Condor{updates\_stats}}
 [\verb@--@\textbf{long} $|$ \verb@-@\textbf{l}]
@@ -10,6 +10,7 @@
 [\verb@--@\textbf{interval=$<$seconds$>$}]
 [\verb@--@\textbf{notime}]
 [\verb@--@\textbf{time}]
+[\verb@--@\textbf{summary} $|$ \verb@-@\textbf{s}]
 
 % 2 hyphens in a row, without any spaces inbetween poses a problem
 % for LaTeX.  Things tried, without success.
@@ -52,43 +53,51 @@ See \Macro{COLLECTOR\_DAEMON\_HISTORY\_SIZE} in
 section~\ref{sec:Collector-Config-File-Entries}.
 
 \begin{Options}
-	\OptItem{\Opt{---long}}
-	{All update statistics are displayed.
-	Without this option, the statistics are condensed.}
-	\OptItem{\Opt{-l}}
-	{Same as \Opt{---long}.
-	All update statistics are displayed.
-	Without this option, the statistics are condensed.}
-	\OptItem{\Opt{---history=$<$min$>$-$<$max$>$}} {Sets the
-	range of update numbers that
-	are printed.  By default, the entire history is displayed.
-	To limit the range, the minimum and/or maximum
-	number may be specified.
-	If a minimum is not specified, values from 0 to the maximum
-	are displayed.
-	If the maximum is not specified, all values after the minimum
-	are displayed.
-	When both minimum and maximum are specified, the range
-	to be displayed includes the endpoints as well as all
-	values in between.
-	If no $=$ sign is given, command-line parsing fails,
-	and usage information is displayed.
-	If an  $=$ sign is given, with no minimum or maximum values,
-	the default of the entire history is displayed.}
-	\OptItem{\Opt{---interval=$<$seconds$>$}} {The assumed update
-	interval, in seconds.
-	Assumed times for the the updates are displayed, making the
-	use of the \Opt{---time} option together with 
-	the \Opt{---interval} option redundant.}
-	\OptItem{\Opt{---notime}} {Do not display assumed times for the
-	the updates.
-	If more than one of the options \Opt{---notime} and \Opt{---time}
-	are provided, the final one within the command line parsed
-	determines the display.  }
-	\OptItem{\Opt{---time}} {Display assumed times for the the updates.
-	If more than one of the options \Opt{---notime} and \Opt{---time}
-	are provided, the final one within the command line parsed
-	determines the display.  }
+  \OptItem{\Opt{---help}}
+    {Display usage information and exit. }
+  \OptItem{\Opt{-h}}
+    {Same as \Opt{---help}.  }
+  \OptItem{\Opt{---version}}
+    {Display CVS version information and exit. }
+  \OptItem{\Opt{---long}}
+    {All update statistics are displayed.
+    Without this option, the statistics are condensed.}
+  \OptItem{\Opt{-l}}
+    {Same as \Opt{---long}.  }
+  \OptItem{\Opt{---history=$<$min$>$-$<$max$>$}} {Sets the
+    range of update numbers that
+    are printed.  By default, the entire history is displayed.
+    To limit the range, the minimum and/or maximum
+    number may be specified.
+    If a minimum is not specified, values from 0 to the maximum
+    are displayed.
+    If the maximum is not specified, all values after the minimum
+    are displayed.
+    When both minimum and maximum are specified, the range
+    to be displayed includes the endpoints as well as all
+    values in between.
+    If no $=$ sign is given, command-line parsing fails,
+    and usage information is displayed.
+    If an  $=$ sign is given, with no minimum or maximum values,
+    the default of the entire history is displayed.}
+  \OptItem{\Opt{---interval=$<$seconds$>$}} {The assumed update
+    interval, in seconds.
+    Assumed times for the the updates are displayed, making the
+    use of the \Opt{---time} option together with 
+    the \Opt{---interval} option redundant.}
+  \OptItem{\Opt{---notime}} {Do not display assumed times for the
+    the updates.
+    If more than one of the options \Opt{---notime} and \Opt{---time}
+    are provided, the final one within the command line parsed
+    determines the display.  }
+  \OptItem{\Opt{---time}} {Display assumed times for the the updates.
+    If more than one of the options \Opt{---notime} and \Opt{---time}
+    are provided, the final one within the command line parsed
+    determines the display.  }
+  \OptItem{\Opt{---summary}} {Display only summary
+    information, not the entire history for each machine.  }
+  \OptItem{\Opt{-s}} 
+    {Same as \Opt{---summary}.  }
 \end{Options}
 
 \ExitStatus

@@ -6,6 +6,22 @@ This is a stable release series of Condor.
 It is based on the 6.7 development series.
 All new features added or bugs fixed in the 6.7 series are available
 in the 6.8 series.
+As usual, only bug fixes (and potentially, ports to new platforms)
+will be provided in future 6.8.x releases.
+New features will be added in the forthcoming 6.9.x development series.
+
+%%%%%%
+% we need a summary of major new features since 6.6.x here.  trying to
+% sort through the 21 different 6.7.x releases and all the new
+% features is a huge amount of noise.  people just want to see a
+% summary of the major new functionality.
+% \Todo
+%%%%%%
+
+The 6.8.x series supports a different set of platforms than 6.6.x.
+Please see the updated table of available platforms in
+section~\ref{sec:Availability} on page~\pageref{sec:Availability}.
+
 The details of each version are described below.
 
 
@@ -136,7 +152,35 @@ machine were unable to authenticate with the \Condor{credd}.
 
 \begin{itemize}
 
-\item None.
+\item The default configuration for Condor now requires that
+\Macro{HOSTALLOW\_WRITE} be explicitly set.  Condor will refuse
+to start if the default configuration is used unmodified.
+Existing installations should not need to change anything.  For
+those who desire the earlier default, you can set it to "*", but
+note that this is potentially a security hole allowing anyone to
+submit jobs or machines to your pool.
+
+\item Most Linux distributions are now supported using dynamically
+  linked binaries built on a RedHat Enterprise Linux 3 machine.
+  Recent security patches to a number of Linux distributions have
+  rendered the binaries built on RedHat 9 machines ineffective.
+  The download pages have been changed to reflect this, but Linux users
+  should be aware of this change.
+  The recommended download for most x86 Linux users is now:
+  \File{condor-6.8.0-linux-x86-rhel3-dynamic.tar.gz}.
+
+\item Some log messages have been clarified or moved to different
+  debugging levels.
+  For example, certain messages that looked like errors were printed
+  to \MacroNI{D\_ALWAYS}, even though nothing was wrong and the system was
+  behaving as expected.
+
+\item The new features and bugs fixed in the rest of this section only
+  refer to changes made since the 6.7.20 release, not the last stable
+  release (6.6.11).
+  For a complete list of changes since 6.6.11, read the 6.7 version
+  history in section~\ref{sec:History-6-7} on
+  page~\pageref{sec:History-6-7}. 
 
 \end{itemize}
 
@@ -144,6 +188,14 @@ machine were unable to authenticate with the \Condor{credd}.
 \noindent New Features:
 
 \begin{itemize}
+
+\item Version 1.4 of the Condor DRMAA libraries are now included 
+  with the Condor release.
+  For more information about DRMAA, see section~\ref{API-DRMAA} on
+  page~\pageref{API-DRMAA}.
+
+\item Version 1.0.15 of the Condor GAHP is now used for Condor-G and
+  Condor-C. 
 
 % Gnats PR 710
 \item Added the \Opt{-outfile\_dir} command-line argument to
@@ -155,19 +207,18 @@ machine were unable to authenticate with the \Condor{credd}.
 displaying the entire history for each machine and only displays the
 summary info.
 
-\item The default configuration for Condor now requires that
-\Macro{HOSTALLOW\_WRITE} be explicitly set.  Condor will refuse
-to start if the default configuration is used unmodified.
-Existing installations should not need to change anything.  For
-those who desire the earlier default, you can set it to "*", but
-note that this is potentially a security hole allowing anyone to
-submit jobs or machines to your pool.
-
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a number of potential static buffer overflows in various
+  Condor daemons and libraries.
+
+\item Fixed some small memory leaks in the \Condor{startd},
+  \Condor{schedd}, and a potential leak that effected all Condor
+  daemons.
 
 \item Fixed a bug in Quill which caused it to crash when certain
 long attributes appeared in a job ad.
@@ -189,7 +240,7 @@ in the job's initial working directory, even if the job ad said to
 place them in a different directory.
 
 % Gnats PRs 501 and 663
-\item Greatly speeded up the parsing of large DAGs (by a factor of 50
+\item Greatly sped up the parsing of large DAGs (by a factor of 50
 or so) by using a hash table instead of linear search to find DAG nodes.
 
 % Gnats PR 697
@@ -227,7 +278,7 @@ idle state in \Condor{dagman}'s internal count.
 when dealing with UNC path names.
 
 \item Fixed a problem where the \Condor{schedd} on Windows would
-incorrectly reject a job if the client prvoided an \Attr{Owner}
+incorrectly reject a job if the client provided an \Attr{Owner}
 attribute that was correct but differed in case from the authenticated
 name.
 
@@ -239,13 +290,56 @@ but then not claimed in time by the appropriate \Condor{schedd}.
 up jobs' execute directories on Windows when the \Condor{master} was
 started from the command line rather than as a service.
 
+\item Added more patches to Condor's DRMAA interface to make it more
+compatible with Sun Grid Engine's DRMAA interface.
+
+\item Removed the unused \MacroNI{D\_UPDOWN} debug level and added the
+  \MacroNI{D\_CONFIG} debug level.
+
+\item Fixed a bug that caused \Condor{q} with the \Opt{-l} or \Opt{-xml}
+arguments to print out duplicate attributes when using Quill.
+
+\item Fixed a bug that prevented Condor-C jobs (universe grid jobs of type condor)
+from submitting correctly if \MacroNI{QUEUE\_ALL\_USERS\_TRUSTED} is set to
+True.
+
+\item Fixed a bug that could cause the \Condor{negotiator} to crash if the
+pool contains several different versions of the \Condor{schedd} and in the
+config file \MacroNI{NEGOTIATOR\_MATCHLIST\_CACHING} is set to True.
+
+\item Changed the default value for config file entry
+\MacroNI{NEGOTIATOR\_MATCHLIST\_CACHING} from False to True.  When set to
+True, this will instruct the negotiator to safely cache data in order to
+improve matchmaking performance.
+
+\item The Condor{master} now recognizes \Condor{quill} as a valid
+  Condor daemon without any manual configuration on the part of site
+  administrators.
+  This simplifies the configuration changes required to enable Quill. 
+
+\item Fixed a rare bug in the \Condor{starter} where if there was a
+  failure transferring job output files back to the submitting host,
+  it could hang indefinitely, and the job appeared as if it was
+  continuing to run.
+
 \end{itemize}
+
 
 \noindent Known Bugs:
 
 \begin{itemize}
 
-\item None.
+\item There are known scalability problems when using Condor's Kerberos
+authentication mechanism in large pools.  If your installation of Condor is
+more than a couple dozen machines, and you need to use Kerberos for Condor
+authentication, we recommend you wait for Condor version 6.8.1 or use Condor
+version 6.7.17 (which does not suffer from these problems).
+
+\item There are known problems with Condor's SSL authentication mechanism.
+While the HTTPS support in Condor (which also uses SSL) works fine for the
+SOAP/Birdbath interface, there are bugs with the SSL support when SSL is
+listed in \MacroNI{SEC\_DEFAULT\_AUTHENTICATION\_METHODS}.  We expect to fix
+these issues for version 6.8.1.
 
 \end{itemize}
 

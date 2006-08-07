@@ -26,11 +26,86 @@ Obtain \Prog{PostgreSQL} from
 \URL{http://www.postgresql.org/ftp/source/}
 
 Installation instructions are detailed in:
-\URL{http://www.postgresql.org/docs/8.0/static/installation.html}
+\URL{http://www.postgresql.org/docs/8.1/static/installation.html}
 
 Configure \Prog{PostgreSQL} after installation:
 
 \begin{enumerate}
+
+\item Configure to accept TCP/IP connections.
+For \Prog{PostgreSQL} version 8,
+use the \Code{listen\_addresses} variable in 
+\File{postgresql.conf} file as a guide.
+For example,
+\Code{listen\_addresses = '*'}
+means listen on any IP interface.
+In \Prog{PostgreSQL} version 7,
+this was accomplished by setting 
+\Code{tcpip\_socket=true} in the \File{postgresql.conf} file.
+
+\item Configure automatic vacuuming.
+For \Prog{PostgreSQL} version 8.1 or later,
+ensure that these variables with these defaults are
+commented in and/or set properly in the 
+\File{postgresql.conf} configuration file:
+\begin{verbatim}
+# Turn on/off automatic vacuuming
+autovacuum = on
+
+# time between autovacuum runs, in secs
+autovacuum_naptime = 60
+
+# min # of tuple updates before vacuum
+autovacuum_vacuum_threshold = 1000
+
+# min # of tuple updates before analyze
+autovacuum_analyze_threshold = 500
+
+# fraction of rel size before vacuum
+autovacuum_vacuum_scale_factor = 0.4 
+
+# fraction of rel size before analyze
+autovacuum_analyze_scale_factor = 0.2
+
+# default vacuum cost delay for 
+   # autovac, -1 means use 
+   # vacuum_cost_delay
+autovacuum_vacuum_cost_delay = -1  
+
+# default vacuum cost limit for 
+   # autovac, -1 means use
+   # vacuum_cost_limit
+autovacuum_vacuum_cost_limit = -1   
+\end{verbatim}
+
+
+\item Configure \Prog{PostgreSQL} to accept TCP/IP connections from 
+specific hosts.
+Modify the \File{pg\_hba.conf} file 
+(which usually resides in the \Prog{PostgreSQL} server's data directory).
+Access is required by the \Condor{quill} daemon,
+as well as the database users
+\Username{quillreader} and \Username{quillwriter}.
+For example, to give
+database users \Username{quillreader} and \Username{quillwriter}
+password-enabled access to all databases on current machine from any
+other machine in the network, add the following:
+
+\begin{tabular}{llllll}
+host&all&quillreader&128.105.0.0&255.255.0.0&password\\
+host&all&quillwriter&128.105.0.0&255.255.0.0&password
+\end{tabular}
+
+Note that in addition to the database specified by
+the configuration variable \MacroNI{QUILL\_DB\_NAME},
+the \Condor{quill} daemon also needs access to the database
+"template1".
+In order to create the database in the first place, 
+the \Condor{quill} daemon needs to connect to the database.
+
+\item Start the \Prog{PostgreSQL} server service. See the URL for the
+installation instructions for the appropriate method to start the service.
+
 \item The \Condor{quill} daemon and client tools connect
 to the database as users \Username{quillreader} and 
 \Username{quillwriter}.
@@ -61,42 +136,8 @@ and be ready to enter the corresponding passwords when prompted.
 \end{verbatim}
 \normalsize
 
-
-\item Configure to accept TCP/IP connections.
-For \Prog{PostgreSQL} version 8,
-use the \Code{listen\_addresses} variable in 
-\File{postgresql.conf} file as a guide.
-For example,
-\Code{listen\_addresses = '*'}
-means listen on any IP interface.
-In \Prog{PostgreSQL} version 7,
-this was accomplished by setting 
-\Code{tcpip\_socket=true} in the \File{postgresql.conf} file.
-
-
-\item Configure \Prog{PostgreSQL} to accept TCP/IP connections from 
-specific hosts.
-Modify the \File{pg\_hba.conf} file 
-(which usually resides in the \Prog{PostgreSQL} server's data directory).
-Access is required by the \Condor{quill} daemon,
-as well as the database users
-\Username{quillreader} and \Username{quillwriter}.
-For example, to give
-database users \Username{quillreader} and \Username{quillwriter}
-password-enabled access to all databases on current machine from any
-other machine in the network, add the following:
-
-\begin{tabular}{llllll}
-host&all&quillreader&128.105.0.0&255.255.0.0&password\\
-host&all&quillwriter&128.105.0.0&255.255.0.0&password
-\end{tabular}
-
-Note that in addition to the database specified by
-the configuration variable \MacroNI{QUILL\_DB\_NAME},
-the \Condor{quill} daemon also needs access to the database
-"template1".
-In order to create the database in the first place, 
-the \Condor{quill} daemon needs to connect to the database.
+In the case of \Prog{PostgreSQL} 8.1 or later, answer ``no'' to the question
+about the ability for role creation.
 
 \item The \Condor{quill} daemon needs read and write access
 to the database.
@@ -115,24 +156,14 @@ daemon logs an error and exits.
 \end{enumerate}
 
 
-Condor must also be configured to use Quill.
+After \Prog{PostgreSQL} is configured and running, Condor must also be
+configured to use Quill since by default Quill is configured to be off.
 
 \begin{description}
-\item Add \Expr{QUILL} to the variable \MacroNI{DAEMON\_LIST}.
 \item Add the file \File{.quillwritepassword} to the 
   \MacroNI{VALID\_SPOOL\_FILES} variable, since \Condor{preen} must
   be told not to delete this file.
-\item Tell Condor where Quill resides, as well as specify Quill's
-  start-up arguments:
-\begin{verbatim}
-QUILL = $(SBIN)/condor_quill
-QUILL_ARGS = -f
-\end{verbatim}
-\item Identify Quill's log file:
-\begin{verbatim}
-QUILL_LOG = $(LOG)/QuillLog
-\end{verbatim}
-\item Set up all other configuration variables that are specific
+\item Set up configuration variables that are specific
   to the installation.
 \footnotesize
 \begin{verbatim}
@@ -281,7 +312,7 @@ for all non-completed jobs.
 \begin{verbatim}
 	condor_q -avgqueuetime 
 \end{verbatim}
-The averate queue time is defined as the average of
+The average queue time is defined as the average of
 \Expr{(currenttime - jobsubmissiontime)} over all jobs which are neither
 completed \Expr{(JobStatus == 4)} or removed \Expr{(JobStatus == 3)}.
 

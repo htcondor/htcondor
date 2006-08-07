@@ -49,16 +49,15 @@ However, the following items are not supported in this version:
 
 \begin{itemize}
 
-\item The Standard, Globus, and PVM job universes are not yet present.
-This is no transparent process checkpoint/migration, and there are no
-remote system calls.
+\item The Standard and PVM job universes are not present.  This means
+transparent process checkpoint/migration and remote system calls are
+not supported.
+
+\item For Grid universe jobs, the only supported grid type is
+``condor''.
 
 \item Accessing files via a network share that requires a kerberos ticket
 (such as AFS) is not yet supported.
-
-\item The ability to run the job with the same credentials as the
-submitting user is not yet supported.  Instead, Condor will use a set
-of accounts (one per VM) with minimal access rights to run the job.
 
 \end{itemize}
 
@@ -120,6 +119,109 @@ new release using a minimal amount of effort.
 
 \end{itemize}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:windows-sps}Secure Password Storage}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+In order for Condor to operate properly, it must at times be able to
+act on behalf of users who submit jobs.  In particular, this is
+required on submit machines so that Condor can access a job's input
+files, create and access the job's output files, and write to the
+job's log file from within the appropriate security context.  It may
+also be desirable for Condor to execute the job itself under the
+security context of its submitting user (see
+\ref{sec:windows-run-as-owner} for details on running jobs as the
+submitting user on Windows).
+
+On UNIX systems, arbitrarily changing what user Condor performs its
+actions as is easily done when Condor is started with root privileges.
+On Windows, however, performing an action as a particular user
+requires knowledge of that user's password, even when running at the
+maximum privilege level.
+
+Condor on Windows supports the notion of ``user privilege switching''
+through the use of a secure password store.  Users can provide Condor
+with their passwords using the \Condor{store\_cred} tool.  Passwords
+managed by Condor are encrypted and stored in a secure location in the
+Windows registry.  When Condor needs to perform an action as a
+particular user, it can then use the securely stored password to do
+so.
+
+The secure password store can be managed by the \Condor{schedd}.  This
+is Condor's default behavior, and is usually a good approach in
+environments where the user's password is only ever needed on the
+submit host (i.e., when users are are not allowed to
+submit jobs that run under the security context of the submitting
+user).
+
+In environments where users can submit Condor jobs that run using
+their Windows accounts, it is necessary to configure a centralized
+\Condor{credd} to manage the secure password store.  This makes a
+user's password available, via an encrypted connection to the
+\Condor{credd}, to any execute machine that may need to execute a job
+under the user's Windows account.
+
+The \File{condor\_config.local.credd} example file, included in the
+\File{etc} subdirectory of the Condor distribution, demonstrates how
+to configure a Condor pool to use the \Condor{credd} for password
+managment.
+
+The following configuration macros are needed for all hosts that share
+a \Condor{credd} for password management.  These will typically be
+placed in the global Condor configuration file.
+\begin{itemize}
+\item \Macro{CREDD\_HOST} - This is the name of the machine that runs
+      the \Condor{credd}.
+\item \Macro{CREDD\_CACHE\_LOCALLY} - This affects Condor's behavior
+      when a daemon does a ``password fetch'' operation to the
+      \Condor{credd}. If \MacroNI{CREDD\_CACHE\_LOCALLY} is True, the
+      first successful fetch of a user's password will result in the
+      password being stashed in a local secure password
+      store. Subsequent uses of that user's password will not require
+      communication with the \Condor{credd}.  If not set, the default
+      value is False.
+\end{itemize}
+
+Careful attention must be given to the \Condor{credd}'s security
+configuration.  All communication with the \Condor{credd} should be
+strongly authenticated and encrypted.  The
+\File{condor\_config.local.credd} file configures the \Condor{credd}
+to only accept ``password store'' requests from users authenticated
+using the NTSSPI authentication method.  Password fetch requests must
+come from Condor daemons authenticated using a shared secret via the
+PASSWORD authentication method.  Both types of traffic are required to
+be encrypted.  Please refer to section \ref{sec:Config-Security} for
+details on configuring security in Condor.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:windows-run-as-owner}Executing Jobs as the Submitting User}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+By default, Condor executes jobs on Windows using a dedicated ``run
+account'' that has minimal access rights and privileges.  As an
+alternative, Condor can be configured to run a user's jobs using their
+own account if the job owner wishes. This may be useful if the job
+needs to access files on a network share, or access other resources
+that aren't available to a low-privilege run account. To enable this
+feature, the following steps must be taken.
+
+\begin{itemize}
+\item Execute machines must have access to users' passwords so they
+      may log into a user's account before running jobs on their
+      behalf.  This can be accomplished through the use of a central
+      \Condor{credd}. Please refer to section \ref{sec:windows-sps}
+      for more information on password storage and the \Condor{credd}.
+\item The boolean configuration parameter
+      \Macro{STARTER\_ALLOW\_RUNAS\_OWNER} must be set to True on all
+      execute machines.
+\end{itemize}
+
+A user that then wants a job to run using their own account can simply
+use the \SubmitCmd{run\_as\_owner} command in the job's submit file as
+follows:
+\begin{verbatim}
+run_as_owner = true
+\end{verbatim}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Details on how Condor for Windows starts/stops a job}
@@ -138,7 +240,9 @@ creates:
 
 \item a run account on the machine with a login name of
 ``condor-reuse-vmX'', where X is the Virtual Machine number of the
-\Condor{starter}.  This account is added to group Users.
+\Condor{starter}.  This account is added to group Users.  This step is
+skipped if the job is to be run using the submitting user's account
+(see section \ref{sec:windows-run-as-owner}).
 
 \item a new temporary working directory for the job on the execute machine.
 This directory is
@@ -149,23 +253,22 @@ permission to this directory for the user account newly created for the
 job.
 
 \item a new, non-visible Window Station and Desktop for the job.
-Permissions are set so that only the
-user account newly created has access rights to this Desktop.  Any windows
-created by this job are not seen by anyone; the job is run in the
-background.  (Note: Setting \Macro{USE\_VISIBLE\_DESKTOP} to True
-will allow the job to access the default desktop instead of a newly created one.)
+Permissions are set so that only the account that will run the job has
+access rights to this Desktop.  Any windows created by this job are
+not seen by anyone; the job is run in the background.  (Note: Setting
+\Macro{USE\_VISIBLE\_DESKTOP} to True will allow the job to access the
+default desktop instead of a newly created one.)
 
 \end{enumerate}
 
-Next, the \Condor{starter} (called the starter) contacts the \Condor{shadow}
-(called the shadow) process, which is
-running on the submitting machine, and pulls over the job's executable and
-input files.
-These files are placed into the temporary working directory for the job.
-After all files have been received,
-the starter spawns the user's executable as user ``condor-reuse-vmX'', where X is the number of the virtual machine (or 1 on a uniprocessor machine).
-Its current working directory set to the temporary working directory
-(that is, \MacroUNI{EXECUTE}/dir\_XXX, where XXX is the process id of the \Condor{starter} daemon).
+Next, the \Condor{starter} (called the starter) contacts the
+\Condor{shadow} (called the shadow) process, which is running on the
+submitting machine, and pulls over the job's executable and input
+files.  These files are placed into the temporary working directory
+for the job.  After all files have been received, the starter spawns
+the user's executable.  Its current working directory set to the
+temporary working directory (that is, \MacroUNI{EXECUTE}/dir\_XXX,
+where XXX is the process id of the \Condor{starter} daemon).
 
 While the job is running, the starter closely monitors the CPU
 usage and image size of all processes started by the job.
@@ -231,15 +334,14 @@ process to exit.  Of course, the job could be coded to ignore it and not
 exit, but eventually the \Condor{startd} will become impatient and hard-kill
 the job (if that is the policy desired by the administrator).
 
-Finally, after the job has left and any files transferred back,
-the starter
-deletes the temporary working directory, the temporary
-account, the WindowStation and the Desktop before exiting itself.
-If the starter should terminate abnormally, the \Condor{startd}
-attempts the clean up.
-If for some reason the \Condor{startd} should disappear as well
-(that is, if the entire machine was power-cycled hard),
-the \Condor{startd} will clean up when Condor is restarted.
+Finally, after the job has left and any files transferred back, the
+starter deletes the temporary working directory, the temporary account
+(if one was created), the WindowStation, and the Desktop before
+exiting.  If the starter should terminate abnormally, the
+\Condor{startd} attempts the clean up.  If for some reason the
+\Condor{startd} should disappear as well (that is, if the entire
+machine was power-cycled hard), the \Condor{startd} will clean up when
+Condor is restarted.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Security Considerations in Condor for Windows}
@@ -252,17 +354,20 @@ the \Condor{startd} will clean up when Condor is restarted.
 %         \File{C:\Bs WINNT}
 % and neither works.
 
-On the execute machine, the user job is run using the access token of an
-account dynamically created by Condor which has bare-bones access rights and
-privileges.  For instance, if your machines are configured so that only
-Administrators have write access to
+On the execute machine (by default), the user job is run using the
+access token of an account dynamically created by Condor which has
+bare-bones access rights and privileges.  For instance, if your
+machines are configured so that only Administrators have write access
+to
 %\File{C:\Bs WINNT},
-\verb@C:\WINNT@,
-then certainly no
-Condor job run on that machine would be able to write anything there.
-The only files the job should be able to access on the execute machine
-are files accessible by the Users and Everyone groups, and files in the
-job's temporary working directory.
+\verb@C:\WINNT@, then certainly no Condor job run on that machine
+would be able to write anything there.  The only files the job should
+be able to access on the execute machine are files accessible by the
+Users and Everyone groups, and files in the job's temporary working
+directory.  Of course, if the job is configured to run using the
+account of the submitting user (as described in section
+\ref{sec:windows-run-as-owner}), it will be able to do anything that
+the user is able to do on the execute machine it runs on.
 
 On the submit machine, Condor impersonates the submitting user, therefore
 the File Transfer mechanism has the same access rights as the submitting
@@ -324,14 +429,19 @@ IP address.
 \subsection{\label{sec:network-files-solutions}Network files and Condor}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Condor can work well with a network file server.
-However, an administrator must set the system up after
-choosing one of the following options.
+Condor can work well with a network file server.  The recommended
+approach to having jobs access files on network shares is to configure
+jobs to run using the security context of the submitting user (see
+section \ref{sec:windows-run-as-owner}).  If this is done, the job
+will be able to access resources on the network in the same way as the
+user can when logged in interactively.
 
-The heart of the difficulty with a network
-file server is that on the execute machine,
-Condor creates a temporary user which will run the job.
-The file server has never heard of this user before.
+In some environments, running jobs as their submitting users is not a
+feasible option.  This section outlines some possible
+alternatives. The heart of the difficulty in this case is that on the
+execute machine, Condor creates a temporary user that will run the
+job.  The file server has never heard of this user before.
+
 Choose one of these methods to make it work:
 
 \begin{itemize}
