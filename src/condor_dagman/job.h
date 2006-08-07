@@ -311,6 +311,12 @@ class Job {
 		// Indicates whether abort_dag_val was set.
 	bool have_abort_dag_val;
 
+		// The exit code that this DAG will return on abort.
+	int abort_dag_return_val;
+
+		// Indicates whether abort_dag_return_val was set.
+	bool have_abort_dag_return_val;
+
 	// somewhat kludgey, but this indicates to Dag::TerminateJob()
 	// whether Dag::_numJobsDone has been incremented for this node
 	// yet or not (since that method can now be called more than once

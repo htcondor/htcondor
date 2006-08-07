@@ -439,13 +439,12 @@ class Dag {
 		/** Check whether we got an exit value that should abort the DAG.
 			@param The job associated with either the PRE script, POST
 				script, or "main" job that just finished.
-			@param The exit value of the relevant script or job.
 			@param The "type" of script or job we're dealing with (PRE
 				script, POST script, or node).
 			@return True iff aborting the DAG (it really should not
 			    return in that case)
 		*/
-	static bool CheckForDagAbort(Job *job, int exitVal, const char *type);
+	static bool CheckForDagAbort(Job *job, const char *type);
 
 		// takes a userlog event and returns the corresponding node
 	Job* LogEventNodeLookup( int logsource, const ULogEvent* event,

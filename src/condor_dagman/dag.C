@@ -664,14 +664,6 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 				}
 			}
 
-			if( job->_scriptPost == NULL ) {
-				bool abort = CheckForDagAbort(job, job->retval, "node");
-				// if dag abort happened, we never return here!
-				if( abort ) {
-					return;
-				}
-			}
-
 		} else {
 			// job succeeded
 			ASSERT( termEvent->returnValue == 0 );
@@ -689,6 +681,14 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 							"Node %s job proc (%d.%d) completed "
 							"successfully.\n", job->GetJobName(),
 							termEvent->cluster, termEvent->proc );
+		}
+
+		if( job->_scriptPost == NULL ) {
+			bool abort = CheckForDagAbort(job, "job");
+			// if dag abort happened, we never return here!
+			if( abort ) {
+				return;
+			}
 		}
 
 		ProcessJobProcEnd( job, recovery, failed );
@@ -846,11 +846,6 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 							"POST script %s", errBuf );
 
 				job->retval = termEvent->returnValue;
-				bool abort = CheckForDagAbort(job, job->retval, "node");
-				// if dag abort happened, we never return here!
-				if( abort ) {
-					return;
-				}
 
 			} else {
 					// Abnormal termination -- POST script killed by signal
@@ -916,6 +911,12 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 						"completed successfully.\n" );
 			job->retval = 0;
 			TerminateJob( job, recovery );
+		}
+
+		bool abort = CheckForDagAbort(job, "POST script");
+		// if dag abort happened, we never return here!
+		if( abort ) {
+			return;
 		}
 
 		PrintReadyQ( DEBUG_DEBUG_4 );
@@ -1452,12 +1453,6 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 					"PRE Script failed with status %d",
 					WEXITSTATUS(status) );
             job->retval = WEXITSTATUS( status );
-
-			bool abort = CheckForDagAbort(job, job->retval, "node");
-			// if dag abort happened, we never return here!
-			if( abort ) {
-				return true;
-			}
 		}
 
         job->_Status = Job::STATUS_ERROR;
@@ -1481,11 +1476,18 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 	else {
 		debug_printf( DEBUG_QUIET, "PRE Script of Node %s completed "
 					  "successfully.\n", job->GetJobName() );
-		job->retval = 0; // for safetey on retries
+		job->retval = 0; // for safety on retries
 		job->_Status = Job::STATUS_READY;
 		_preRunNodeCount--;
 		_readyQ->Append( job );
 	}
+
+	bool abort = CheckForDagAbort(job, "PRE script");
+	// if dag abort happened, we never return here!
+	if( abort ) {
+		return true;
+	}
+
 	return true;
 }
 
@@ -1998,13 +2000,17 @@ Dag::isCycle ()
 }
 
 bool
-Dag::CheckForDagAbort(Job *job, int exitVal, const char *type)
+Dag::CheckForDagAbort(Job *job, const char *type)
 {
 	if ( job->have_abort_dag_val &&
-				exitVal == job->abort_dag_val ) {
+				job->retval == job->abort_dag_val ) {
 		debug_printf( DEBUG_QUIET, "Aborting DAG because we got "
 				"the ABORT exit value from a %s\n", type);
-		main_shutdown_rescue( exitVal );
+		if ( job->have_abort_dag_return_val ) {
+			main_shutdown_rescue( job->abort_dag_return_val );
+		} else {
+			main_shutdown_rescue( job->retval );
+		}
 		return true;
 	}
 

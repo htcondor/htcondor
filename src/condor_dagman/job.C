@@ -130,6 +130,7 @@ Init( const char* jobName, const char* directory, const char* cmdFile,
     have_retry_abort_val = false;
     retry_abort_val = 0xdeadbeef;
     have_abort_dag_val = false;
+    have_abort_dag_return_val = false;
 	_visited = false;
 
 	_queuedNodeJobProcs = 0;

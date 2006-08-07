@@ -678,7 +678,8 @@ parse_retry(
 //-----------------------------------------------------------------------------
 // 
 // Function: parse_abort
-// Purpose:  Parse a line of the format "ABORT-DAG-ON jobname exit_value"
+// Purpose:  Parse a line of the format
+// "ABORT-DAG-ON jobname node_exit_value [RETURN dag_return_value]"
 // 
 //-----------------------------------------------------------------------------
 static bool 
@@ -687,8 +688,9 @@ parse_abort(
 	const char *filename, 
 	int  lineNumber)
 {
-	const char *example = "ABORT-DAG-ON JobName 3";
+	const char *example = "ABORT-DAG-ON JobName 3 [RETURN 1]";
 	
+		// Job name.
 	const char *jobName = strtok( NULL, DELIMITERS );
 	const char *jobNameOrig = jobName; // for error output
 	if( jobName == NULL ) {
@@ -710,10 +712,11 @@ parse_abort(
 		return false;
 	}
 	
+		// Node abort value.
 	char *abortValStr = strtok( NULL, DELIMITERS );
 	if( abortValStr == NULL ) {
 		debug_printf( DEBUG_QUIET, 
-					  "%s (line %d): Missing abort-on value\n",
+					  "%s (line %d): Missing ABORT-ON node value\n",
 					  filename, lineNumber );
 		exampleSyntax( example );
 		return false;
@@ -724,21 +727,58 @@ parse_abort(
 	abortVal = (int)strtol( abortValStr, &tmp, 10 );
 	if( tmp == abortValStr ) {
 		debug_printf( DEBUG_QUIET,
-					  "%s (line %d): Invalid abort-on value \"%s\"\n",
+					  "%s (line %d): Invalid ABORT-ON node value \"%s\"\n",
 					  filename, lineNumber, abortValStr );
 		exampleSyntax( example );
 		return false;
-	} else {
-		if ( abortVal == 0 ) {
-			debug_printf( DEBUG_QUIET,
-					  	"%s (line %d): Abort-on value of 0 not allowed\n",
-					  	filename, lineNumber, abortValStr );
+	}
+
+		// RETURN keyword.
+	bool haveReturnVal = false;
+	int returnVal;
+	const char *nextWord = strtok( NULL, DELIMITERS );
+	if ( nextWord != NULL ) {
+		if ( strcasecmp ( nextWord, "RETURN" ) != 0 ) {
+			debug_printf( DEBUG_NORMAL,
+						"%s (line %d) Invalid ABORT-ON option: %s\n",
+						filename, lineNumber, nextWord);
 			exampleSyntax( example );
 			return false;
+		} else {
+
+				// DAG return value.
+			haveReturnVal = true;
+			nextWord = strtok( NULL, DELIMITERS );
+			if ( nextWord == NULL ) {
+				debug_printf( DEBUG_NORMAL,
+							"%s (line %d) Missing parameter for ABORT-ON\n",
+							filename, lineNumber);
+				exampleSyntax( example );
+				return false;
+			}
+
+			returnVal = strtol(nextWord, &tmp, 10);
+			if ( tmp == nextWord ) {
+				debug_printf( DEBUG_NORMAL,
+							"%s (line %d) Bad parameter for ABORT_ON: %s\n",
+							filename, lineNumber, nextWord);
+				exampleSyntax( example );
+				return false;
+			} else if ( (returnVal < 0) || (returnVal > 255) ) {
+				debug_printf( DEBUG_NORMAL,
+							"%s (line %d) Bad return value for ABORT_ON "
+							"(must be between 0 and 255): %s\n",
+							filename, lineNumber, nextWord);
+				return false;
+			}
 		}
-		job->abort_dag_val = abortVal;
-		job->have_abort_dag_val = true;
 	}
+
+	job->abort_dag_val = abortVal;
+	job->have_abort_dag_val = true;
+
+	job->abort_dag_return_val = returnVal;
+	job->have_abort_dag_return_val = haveReturnVal;
 
 	return true;
 }
