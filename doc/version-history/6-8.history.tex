@@ -57,6 +57,18 @@ attempt is disallowed.  The expression is evaluated in the context of the job
 ad.  If not specified the setting defaults to TRUE, matching the behavior of
 previous Condor releases.
 
+% Gnats PR 664
+\item \Condor{dagman} will now reject DAGs for which any of the node
+job user log files are on NFS (because of the unreliability of NFS
+file locking, this can cause DAGs to fail).  This feature can be
+turned off by setting the DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR configuration
+macro to \Expr{False} (the default is \Expr{True}).
+
+\item \Condor{submit} can now be configured to reject jobs for which
+the log file is on NFS (to do this, set the LOG\_ON\_NFS\_IS\_ERROR
+configuration macro to \Expr{True}).  The default is that \condor{submit}
+will simply issue a warning if a log file is on NFS.
+
 \end{itemize}
 
 \noindent Bugs Fixed:

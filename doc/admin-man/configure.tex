@@ -4228,6 +4228,14 @@ as:
   override attributes defined in the config file with
   \MacroNI{SUBMIT\_EXPRS}. 
 
+\item[\Macro{LOG\_ON\_NFS\_IS\_ERROR}] \label{param:LogOnNfsIsError}
+A boolean value that controls whether \condor{submit} prohibits
+job submit files with user log files on NFS.  If
+\Macro{LOG\_ON\_NFS\_IS\_ERROR} is set to \Expr{true}, such
+submit files will be rejected.  If \Macro{LOG\_ON\_NFS\_IS\_ERROR}
+is set to \Expr{false}, submitting such a file will result in a
+warning, but the job will be submitted.  If undefined,
+\Macro{LOG\_ON\_NFS\_IS\_ERROR} defaults to \Expr{False}.
 
 \end{description}
 
@@ -5248,9 +5256,23 @@ If undefined, \Condor{dagman} looks for \Stork{rm} in the PATH.
 \label{param:DAGManProhibitMultiJobs}
 A boolean value that controls whether \Condor{dagman} prohibits
 node job submit files that queue multiple job procs (other than 
-parallel universe).  If the DAG references such a submit file, the
+parallel universe).  If a DAG references such a submit file, the
 DAG will abort during the initialization process.  If undefined,
 \Macro{DAGMAN\_PROHIBIT\_MULTI\_JOBS} defaults to \Expr{False}.
+
+\item[\Macro{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR}]
+\label{param:DAGManLogOnNfsIsError}
+A boolean value that controls whether \Condor{dagman} prohibits
+node job submit files with user log files on NFS.  If a DAG
+references such a submit file and \Macro{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR}
+is \Expr{True}, the DAG will abort during the initialization process. 
+If \Macro{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR} is \Expr{False}, a warning
+will be issued but the DAG will still be submitted.  It is \emph{strongly}
+recommended that \Macro{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR}
+remain set to the default value, because running a DAG with node job
+log files on NFS will often cause errors.
+If undefined, \Macro{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR} defaults to
+\Expr{True}.
 
 \end{description}
 
