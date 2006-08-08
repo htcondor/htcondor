@@ -1016,7 +1016,12 @@ Dag::ProcessNotIdleEvent(const ULogEvent *event, Job *job) {
 		_numIdleJobProcs--;
 	}
 
-	// Do some consistency checks here?
+		// Do some consistency checks here.
+	if ( _numIdleJobProcs < 0 ) {
+        debug_printf( DEBUG_NORMAL,
+					"WARNING: DAGMan thinks there are %d idle job procs!\n",
+					_numIdleJobProcs );
+	}
 
 	debug_printf( DEBUG_VERBOSE, "Number of idle job procs: %d\n",
 				_numIdleJobProcs);
@@ -1137,6 +1142,10 @@ Dag::FindLogFiles( /* const */ StringList &dagFiles, bool useDagDir )
 		while( (logfile = _condorLogFiles.next()) ) {
 			debug_printf( DEBUG_VERBOSE, "  %s (Condor)\n", logfile );
 		}
+	}
+
+	if ( LogFileNfsError( _condorLogFiles, _storkLogFiles ) ) {
+		DC_Exit( 1 );
 	}
 
 	if ( _storkLogFiles.number() > 0 ) {

@@ -3769,30 +3769,14 @@ SetUserLog()
 		}
 
 		// Check that the log file isn't on NFS
+		BOOLEAN nfs_is_error = param_boolean("LOG_ON_NFS_IS_ERROR", false);
 		BOOLEAN	nfs = FALSE;
-#if 0 // Temporarily put NFS checks back to warning only, until we get
-	// things figured out better.  wenger 2006-08-01.
-		BOOLEAN nfs_is_error = FALSE;
 
-		nfs_is_error = param_boolean("USER_LOGS_ON_NFS_IS_ERROR", true);
-		
-		if ( fs_detect_nfs( ulog.Value(), &nfs ) ) {
-			if ( nfs_is_error ) {
-				fprintf(stderr,
-					"\nERROR: Can't determine if log file %s is on NFS.\n"
-				   "\tCondor is configured to only allow log files that "
-				   "it can verify are not on NFS.\n",
-					ulog.Value() );
-
-				DoCleanup(0,0,NULL);
-				exit( 1 );
-			} else{
-				fprintf(stderr,
-					"\nWARNING: Can't determine if log file %s is on NFS\n",
-					ulog.Value() );
-			}
-		}
-		if ( nfs ) {
+		if ( fs_detect_nfs( ulog.Value(), &nfs ) != 0 ) {
+			fprintf(stderr,
+				"\nWARNING: Can't determine whether log file %s is on NFS\n",
+				ulog.Value() );
+		} else if ( nfs ) {
 			if ( nfs_is_error ) {
 
 				fprintf(stderr,
@@ -3811,19 +3795,6 @@ SetUserLog()
 					ulog.Value() );
 			}
 		}
-#else
-		if ( fs_detect_nfs( ulog.Value(), &nfs ) ) {
-			fprintf(stderr,
-					"\nWARNING: Can't determine if log file %s is on NFS\n",
-					ulog.Value() );
-		}
-		if ( nfs ) {
-			fprintf(stderr,
-					"\nWARNING: Log file %s is on NFS.\nThis could cause"
-					" log file corruption and is _not_ recommended.\n",
-					ulog.Value() );
-		}
-#endif
 
 		check_and_universalize_path(ulog, UserLogFile);
 		(void) sprintf(buffer, "%s = \"%s\"", ATTR_ULOG_FILE, ulog.Value());

@@ -35,6 +35,7 @@
 #endif
 
 #include "condor_constants.h"
+#include "basename.h"
 #include "fs_util.h"
 
 #if ( defined HAVE_STATVFS ) && ( defined HAVE_STRUCT_STATVFS_F_BASETYPE )
