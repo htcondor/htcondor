@@ -113,7 +113,7 @@ CondorUniverseNumber( const char* univ )
 		return CONDOR_UNIVERSE_JAVA;
 	}
 	if( stricmp(univ,"parallel") == MATCH ) {
-		return CONDOR_UNIVERSE_MPI;
+		return CONDOR_UNIVERSE_PARALLEL;
 	}
 	if( stricmp(univ,"local") == MATCH ) {
 		return CONDOR_UNIVERSE_LOCAL;
