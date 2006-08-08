@@ -1,3 +1,7 @@
+08/08/06 V6_9-cream-{root,branch}
+  A new branch off V6_9 (the trunk) to add support in Condor-G for
+  submitting jobs to EGEE's CREAM service.
+
 08/02/06 V6_8-branch
   A new branch off the TRUNK (woo hoo) for the 6.8.x stable series.
   Created from the V6_8-root tag.  Includes the doc directory.
