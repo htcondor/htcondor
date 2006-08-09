@@ -141,6 +141,19 @@ were incorrectly reporting IP and port numbers.  These messages were
 intended to report the peer's address, but they were reporting the
 local address of the network socket instead.
 
+\item Fixed a bug introduced in 6.7.20 which could cause Condor daemons to
+die with the message ``PANIC -- OUT OF FILE DESCRIPTORS''.  The conditions
+causing this were related to failed attempts to send updated status
+to the collector, with both non-blocking updates and security negotiation
+enabled (the defaults).
+
+\item Under some conditions, when making TCP connections, Condor was
+still trying to connect for the full duration of the operation timeout
+(often 10 or 20 seconds), even if the connection attempt was refused
+(e.g. because the port being accessed is not accepting connections).
+Now, the connect operation finishes immediately after the first such
+failure, allowing the Condor process to continue with other tasks.
+
 \item Fixed the problems relating to credential cache problems in the Kerberos
 authentication mechanism.  The current version of Kerberos is 1.4.3.
 
