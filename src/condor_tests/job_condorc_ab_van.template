@@ -11,6 +11,7 @@ error = job_condorc_ab_van.err
 log = job_condorc_ab_van.log
 should_transfer_files=yes
 when_to_transfer_output=on_exit
+notification = never
 +Remote_JobUniverse = 5
 +Remote_requirements = TRUE
 queue

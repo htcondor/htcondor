@@ -11,6 +11,7 @@ error = job_condorc_abc_van.err
 log = job_condorc_abc_van.log
 should_transfer_files=yes
 when_to_transfer_output=on_exit
+notification = never
 # Bside
 +Remote_JobUniverse = 9
 +Remote_JobGridType = "condor"
