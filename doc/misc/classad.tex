@@ -162,7 +162,7 @@ ReturnType FunctionName(ParameterType parameter1, ParameterType parameter2, ...)
 Optional parameters are given within square brackets.
 
 \begin{description}
-  \item[\Expr{AnyType IfThenElse(AnyType IfExpr,AnyType ThenExpr, AnyType ElseExpr)}]
+  \item[\Expr{AnyType ifThenElse(AnyType IfExpr,AnyType ThenExpr, AnyType ElseExpr)}]
     A conditional expression is described by \Expr{IfExpr}.
     The following defines return values, when \Expr{IfExpr}
     evaluates to
@@ -411,16 +411,16 @@ A string within the list is ended (delimited) by one or more
 characters within the delimiter string.
 
 \begin{description}
-  \item[\Expr{Integer stringlistsize(String list \Lbr\ , String delimiter \Rbr)}]
+  \item[\Expr{Integer stringListSize(String list \Lbr\ , String delimiter \Rbr)}]
     Returns the number of elements in the string \Expr{list},
     as delimited by the optional \Expr{delimiter} string.
     Returns \Expr{ERROR} if either argument is not a string.
 
     This function returns \Expr{ERROR} if other than 1 or 2 arguments are given.
 
-  \item[\Expr{Integer stringlistsum(String list \Lbr\ , String delimiter \Rbr)} \\
+  \item[\Expr{Integer stringListSum(String list \Lbr\ , String delimiter \Rbr)} \\
   OR
-  \Expr{Real stringlistsum(String list \Lbr\ , String delimiter \Rbr)}]
+  \Expr{Real stringListSum(String list \Lbr\ , String delimiter \Rbr)}]
     Sums and returns the sum of all items in the string \Expr{list},
     as delimited by the optional \Expr{delimiter} string.
     If all items in the list are integers, the return value is also
@@ -431,7 +431,7 @@ characters within the delimiter string.
     the return value is \Expr{ERROR}.
 
 
-  \item[\Expr{Real stringlistave(String list \Lbr\ , String delimiter \Rbr)}]
+  \item[\Expr{Real stringListAve(String list \Lbr\ , String delimiter \Rbr)}]
     Sums and returns the real-valued average of all items in the 
     string \Expr{list},
     as delimited by the optional \Expr{delimiter} string.
@@ -439,9 +439,9 @@ characters within the delimiter string.
     the return value is \Expr{ERROR}.
     A list with 0 items (the empty list) returns the value 0.0.
 
-  \item[\Expr{Integer stringlistmin(String list \Lbr\ , String delimiter \Rbr)} \\
+  \item[\Expr{Integer stringListMin(String list \Lbr\ , String delimiter \Rbr)} \\
   OR
-  \Expr{Real stringlistmin(String list \Lbr\ , String delimiter \Rbr)}]
+  \Expr{Real stringListMin(String list \Lbr\ , String delimiter \Rbr)}]
     Finds and returns the minimum value from all items in the
     string \Expr{list},
     as delimited by the optional \Expr{delimiter} string.
@@ -453,9 +453,9 @@ characters within the delimiter string.
     the return value is \Expr{ERROR}.
     A list with 0 items (the empty list) returns the value \Expr{UNDEFINED}.
 
-  \item[\Expr{Integer stringlistmax(String list \Lbr\ , String delimiter \Rbr)} \\
+  \item[\Expr{Integer stringListMax(String list \Lbr\ , String delimiter \Rbr)} \\
   OR
-  \Expr{Real stringlistmax(String list \Lbr\ , String delimiter \Rbr)}]
+  \Expr{Real stringListMax(String list \Lbr\ , String delimiter \Rbr)}]
     Finds and returns the maximum value from all items in the
     string \Expr{list},
     as delimited by the optional \Expr{delimiter} string.
@@ -467,7 +467,7 @@ characters within the delimiter string.
     the return value is \Expr{ERROR}.
     A list with 0 items (the empty list) returns the value \Expr{UNDEFINED}.
 
-  \item[\Expr{Boolean stringlistmember(String x, String list \Lbr\ , String delimiter \Rbr)}]
+  \item[\Expr{Boolean stringListMember(String x, String list \Lbr\ , String delimiter \Rbr)}]
     Returns \Expr{TRUE} if item \Expr{x} is in the string \Expr{list},
     as delimited by the optional \Expr{delimiter} string.
     Returns \Expr{FALSE} if item \Expr{x} is not in the string \Expr{list}.
@@ -475,7 +475,7 @@ characters within the delimiter string.
     The return value is \Expr{ERROR}, if any of the arguments
     are not strings.
 
-  \item[\Expr{Boolean stringlistimember(String x, String list \Lbr\ , String delimiter \Rbr)}]
+  \item[\Expr{Boolean stringListIMember(String x, String list \Lbr\ , String delimiter \Rbr)}]
     Same as \Expr{stringlistmember()}, but comparison is done
     with \Expr{stricmp()}, so letter case is not relevant.
 
@@ -514,7 +514,7 @@ Inclusion of characters other than these as options are ignored.
     If any argument is not a string, or if \Expr{pattern} does not describe
     a valid regular expression, returns \Expr{ERROR}.
 
-  \item[\Expr{Boolean stringlist\_regexpMember(String pattern, String list \Lbr\ , String delimiter \Rbr\ \Lbr\ , String options \Rbr)}]
+  \item[\Expr{Boolean stringListRegexpMember(String pattern, String list \Lbr\ , String delimiter \Rbr\ \Lbr\ , String options \Rbr)}]
     Returns \Expr{TRUE} if any of the strings within the
     \Expr{list} is a regular expression as described by \Expr{pattern}.
     Returns \Expr{FALSE} otherwise.
