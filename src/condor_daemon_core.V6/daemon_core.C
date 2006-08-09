@@ -2023,6 +2023,45 @@ void DaemonCore::Driver()
 	char asyncpipe_buf[10];
 #endif
 
+	if ( ! Termlog )
+	{
+		dprintf( D_FULLDEBUG, "Testing stdout & stderr\n" );
+		{
+			char	buf[1024];
+			memset(buf, 0, sizeof(buf) );
+			bool	do_out = true, do_err = true;
+			bool	do_fd1 = true, do_fd2 = true;
+			for ( int i=0;  i<16*1024;  i++ )
+			{
+				if ( do_out && fwrite( buf, sizeof(buf), 1, stdout ) != 1 )
+				{
+					dprintf( D_ALWAYS, "Failed to write to stdout: %s\n",
+							 strerror( errno ) );
+					do_out = false;
+				}
+				if ( do_err && fwrite( buf, sizeof(buf), 1, stderr ) != 1 )
+				{
+					dprintf( D_ALWAYS, "Failed to write to stderr: %s\n",
+							 strerror( errno ) );
+					do_err = false;
+				}
+				if ( do_fd1 && write( 1, buf, sizeof(buf) ) != sizeof(buf) )
+				{
+					dprintf( D_ALWAYS, "Failed to write to fd 1: %s\n",
+							 strerror( errno ) );
+					do_fd1 = false;
+				}
+				if ( do_fd2 && write( 2, buf, sizeof(buf) ) != sizeof(buf) )
+				{
+					dprintf( D_ALWAYS, "Failed to write to fd 2: %s\n",
+							 strerror( errno ) );
+					do_fd2 = false;
+				}
+			}
+		}
+		dprintf( D_FULLDEBUG, "Done with stdout & stderr tests\n" );
+	}
+
 	for(;;)
 	{
 		// call signal handlers for any pending signals
@@ -5853,7 +5892,7 @@ int DaemonCore::Create_Process(
 
 			// Re-open 'em to point at /dev/null as place holders
 			if ( num_closed ) {
-				int	fd_null = open( NULL_FILE, 0 );
+				int	fd_null = open( NULL_FILE, O_RDWR );
 				if ( fd_null < 0 ) {
 					dprintf( D_ALWAYS, "Unable to open %s: %s\n", NULL_FILE,
 							 strerror(errno) );

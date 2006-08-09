@@ -1565,9 +1565,10 @@ int main( int argc, char** argv )
 			// parent
 			exit(0);
 		}
+
 		// and close stdin, out, err if we are the MASTER.  
 		if ( is_master ) {
-			int	fd_null = open( NULL_FILE, 0 );
+			int	fd_null = open( NULL_FILE, O_RDWR );
 			if ( fd_null < 0 ) {
 				fprintf( stderr, "Unable to open %s: %s\n", NULL_FILE, strerror(errno) );
 				dprintf( D_ALWAYS, "Unable to open %s: %s\n", NULL_FILE, strerror(errno) );
@@ -1585,13 +1586,12 @@ int main( int argc, char** argv )
 			if ( fd_null > 2 ) {
 				close( fd );
 			}
-
 		}
 		// and detach from the controlling tty
 		detach();
+
 #endif	// of else of ifdef WIN32
 	}	// if if !Foreground
-
 
 		// Now that we've potentially forked, we have our real pid, so
 		// we can instantiate a daemon core and it'll have the right
