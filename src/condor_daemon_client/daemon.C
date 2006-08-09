@@ -712,7 +712,9 @@ Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, C
 				_version,
 				&_sec_man);
 
-		daemonCoreSockAdapter.Register_Socket(
+		ASSERT(cb);
+
+		int reg_rc = daemonCoreSockAdapter.Register_Socket(
 			*sock,
 			"<StartCommand Socket>",
 			(SocketHandlercpp)&StartCommandConnectCallback::CallbackFn,
@@ -720,7 +722,25 @@ Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, C
 			cb,
 			ALLOW);
 
-		daemonCoreSockAdapter.Register_DataPtr( cb );
+		if(reg_rc < 0) {
+			MyString msg;
+			msg.sprintf("Failed to register socket for non-blocking "
+			            "connection to %s.  "
+			            "Register_Socket returned %d.",
+			            (*sock)->get_sinful_peer(),reg_rc);
+
+			if(errstack) {
+				errstack->pushf("CEDAR", CEDAR_ERR_CONNECT_FAILED,
+				                "%s", msg.Value());
+			}
+			else {
+				dprintf(D_ALWAYS,"%s\n",msg.Value());
+			}
+			delete cb;
+			return StartCommandFailed;
+		}
+
+		ASSERT(daemonCoreSockAdapter.Register_DataPtr( cb ));
 
 		return StartCommandInProgress;
 	}

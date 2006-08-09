@@ -1178,18 +1178,14 @@ SecManStartCommand::startCommand_inner()
 		if (!tcp_auth_sock->connect(buf,0,m_nonblocking)) {
 			dprintf ( D_SECURITY, "SECMAN: couldn't connect via TCP to %s, failing...\n", buf);
 			m_errstack->pushf("SECMAN", SECMAN_ERR_CONNECT_FAILED,
-					"TCP connection to %s failed\n", buf);
+					"TCP auth connection to %s failed\n", buf);
 			delete tcp_auth_sock;
 			return StartCommandFailed;
 		}
 
 		if(m_nonblocking && tcp_auth_sock->is_connect_pending()) {
 
-			// Do not allow ourselves to be deleted until after
-			// ConnectCallbackFn is called.
-			IncRefCount();
-
-			daemonCoreSockAdapter.Register_Socket(
+			int reg_rc = daemonCoreSockAdapter.Register_Socket(
 				tcp_auth_sock,
 				"<StartCommand TCP Auth Socket>",
 				(SocketHandlercpp)&SecManStartCommand::TCPAuthConnected,
@@ -1197,7 +1193,25 @@ SecManStartCommand::startCommand_inner()
 				this,
 				ALLOW);
 
-			daemonCoreSockAdapter.Register_DataPtr( this );
+			if(reg_rc < 0) {
+				MyString msg;
+				msg.sprintf("TCP auth connection to %s failed because "
+				            "Register_Socket returned %d",
+				            m_sock->get_sinful_peer(),
+				            reg_rc);
+				dprintf(D_SECURITY, "SECMAN: %s\n", msg.Value());
+				m_errstack->pushf("SECMAN", SECMAN_ERR_CONNECT_FAILED,
+				                  "%s\n", msg.Value());
+
+				delete tcp_auth_sock;
+				return StartCommandFailed;
+			}
+
+			ASSERT(daemonCoreSockAdapter.Register_DataPtr( this ));
+
+			// Do not allow ourselves to be deleted until after
+			// ConnectCallbackFn is called.
+			IncRefCount();
 
 				// Make note that this operation to do the TCP
 				// auth operation is in progress, so others

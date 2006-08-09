@@ -5259,23 +5259,31 @@ claimStartd( match_rec* mrec, ClassAd* job_ad, bool is_dedicated )
 		return false;
 	}
 
-	mrec->setStatus( M_CONNECTING );
-
 	char to_startd[256];
 	sprintf ( to_startd, "to startd %s", mrec->peer );
 
+	int reg_rc;
 	if( is_dedicated ) {
-		daemonCore->
+		reg_rc = daemonCore->
 			Register_Socket( sock, "<Startd Contact Socket>",
 			  (SocketHandlercpp)&DedicatedScheduler::startdContactConnectHandler,
 			  to_startd, &dedicated_scheduler, ALLOW );
 	} else {
-		daemonCore->
+		reg_rc = daemonCore->
 			Register_Socket( sock, "<Startd Contact Socket>",
 			  (SocketHandlercpp)&Scheduler::startdContactConnectHandler,
 			  to_startd, &scheduler, ALLOW );
 	}
-	daemonCore->Register_DataPtr( strdup(mrec->id) );
+	if(reg_rc < 0) {
+		dprintf( D_ALWAYS,
+		         "Failed to register socket to contact startd at %s.  "
+		         "Register_Socket returned %d.\n",
+		         mrec->peer,reg_rc);
+		return false;
+	}
+	ASSERT(daemonCore->Register_DataPtr( strdup(mrec->id) ));
+
+	mrec->setStatus( M_CONNECTING );
 
 	return true;
 }
