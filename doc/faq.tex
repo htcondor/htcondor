@@ -1981,6 +1981,24 @@ is the problem (as opposed to write permission).
 Use the solutions given above.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Why does Condor leave mail processes around?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+On FreeBSD and Mac OSX, if a system's outgoing mail configuration is
+not set properly, Condor inadvertently leaves paused and zombie mail
+processes when it tries to send notification emails. The only solution to 
+is to make sure that Condor runs on a host where it can send outgoing mail.
+
+You can preform a simple test to determine whether you can send email:
+
+\begin{verbatim}
+$ uname -a | mail -v your@emailaddress.com
+\end{verbatim}
+
+It should be noted that this problem does not seem to manifest
+itself on non-BSD platforms, such as Linux.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Other questions}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
