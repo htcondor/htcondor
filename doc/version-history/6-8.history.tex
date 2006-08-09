@@ -161,6 +161,14 @@ machine were unable to authenticate with the \Condor{credd}.
 \item Fixed a bug in \Condor{submit} that caused parallel universe jobs
 submitted via Condor-C to become mpi universe jobs.
 
+\item Fixed a bug which could cause Condor daemons to hang if they try
+to write to the standard error stream (stderr) on some platforms.  In
+general, this should never happen, but can due to third party
+libraries (beyond our control) trying to write error or other messages.
+Additonally, each daemon now runs a small test at startup to verify
+that stderr and stdout work as expected -- if not, the daemon will
+hang at startup rather than randomly.
+
 \end{itemize}
 
 \noindent Known Bugs:
