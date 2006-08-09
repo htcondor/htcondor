@@ -1,0 +1,77 @@
+#! /usr/bin/env perl
+use CondorTest;
+use Condor;
+use Cwd;
+
+
+Condor::DebugOn();
+
+$topdir = getcwd();
+
+$testname = 'Condor soap test ';
+
+@adarray;
+@bdarray;
+$status = 1;
+
+$status = CondorTest::verbose_system("tar -zxf x_soap_job_tests.tar.gz");
+
+if($status != 0)
+{
+	print "SOAP_JOB_TESTS: failed to untar tests\n";
+}
+
+chdir("soaptests");
+$wherenow = getcwd();
+
+print "CURRENTLY in <<<$wherenow>>>\n";
+
+my $pathcmd = `echo $topdir\/soaptests\/lib\/*.jar | tr ' ' ':'`;
+chomp($pathcmd);
+print "pathcmd so far: $pathcmd\n";
+my $cpath = $ENV{CLASSPATH} = "$topdir/soaptests:$topdir/soaptests/condor:.:$topdir/soaptests/birdbath:$pathcmd";
+print "CLASSPATH=$cpath\n";
+
+
+my $cmd = "condor_status -schedd -l | grep MyAddress";
+$status = CondorTest::runCondorTool($cmd,\@adarray,200);
+
+foreach $name (@bdarray) {
+	print "$name\n";
+	$myaddress = $name;
+}
+
+system("which java");
+my $cmd = "condor_status -schedd -constraint \"HasSOAPInterface=?=TRUE\" -l | grep MyAddress";
+$status = CondorTest::runCondorTool($cmd,\@adarray,800);
+
+if($status != 1)
+{
+	print "SOAP_JOB_TESTS: failed to find <MyAddress>, status for rrunCondorTool is <$status>\n";
+	my $cmd = "condor_status -schedd -l ";
+	$status = CondorTest::runCondorTool($cmd,\@adarray,200);
+	foreach $name (@adarray) {
+		print "$name\n";
+		$myaddress = $name;
+	}
+	die "$testname: failed\n";
+}
+
+foreach $name (@adarray) {
+	print "$name\n";
+	$myaddress = $name;
+}
+
+$myaddress =~ /^.*\"<(.*)>\".*$/;
+print "Take this: $1\n";
+
+system("which java");
+$cmd = "java -classpath $cpath -DSCHEDD_ENDPOINT=http://$1 ScheddTestSuite";
+$status = CondorTest::verbose_system($cmd);
+
+if($status != 0) {
+	die "$testname: failed\n";
+} esle {
+	print "$testname: SUCCESS\n";
+	exit(0);
+}
