@@ -4229,13 +4229,13 @@ as:
   \MacroNI{SUBMIT\_EXPRS}. 
 
 \item[\Macro{LOG\_ON\_NFS\_IS\_ERROR}] \label{param:LogOnNfsIsError}
-A boolean value that controls whether \condor{submit} prohibits
+A boolean value that controls whether \Condor{submit} prohibits
 job submit files with user log files on NFS.  If
-\Macro{LOG\_ON\_NFS\_IS\_ERROR} is set to \Expr{true}, such
-submit files will be rejected.  If \Macro{LOG\_ON\_NFS\_IS\_ERROR}
-is set to \Expr{false}, submitting such a file will result in a
-warning, but the job will be submitted.  If undefined,
-\Macro{LOG\_ON\_NFS\_IS\_ERROR} defaults to \Expr{False}.
+\MacroNI{LOG\_ON\_NFS\_IS\_ERROR} is set to \Expr{True}, such
+submit files will be rejected.  If \MacroNI{LOG\_ON\_NFS\_IS\_ERROR}
+is set to \Expr{False}, submitting such a file results in a
+warning, but the job will be submitted.  If not defined,
+\MacroNI{LOG\_ON\_NFS\_IS\_ERROR} defaults to \Expr{False}.
 
 \end{description}
 
