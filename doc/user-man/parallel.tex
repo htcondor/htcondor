@@ -3,11 +3,11 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Parallel|(}
 
-Condor's Parallel universe is a mechanism to support a wide variety of
-parallel programming environments, including most implementations of
-MPI.  This universe also supports jobs which need to be co-scheduled,
-that is, jobs where more than one process must be running at the same
-time to be correct.  It supersedes the older MPI universe, which
+Condor's Parallel universe supports a wide variety of parallel
+programming environments, including most implementations of MPI.  It
+also supports jobs which need to be co-scheduled, that is, jobs where
+more than one process must be running at the same time, on different
+machines, to be correct.  It supersedes the older MPI universe, which
 eventually will be removed.
 
 
@@ -31,7 +31,7 @@ configured.  Section~\ref{sec:Config-Dedicated-Jobs} of
 Administrator's Manual describes the necessary configuration and
 provides detailed examples.
 
-To simplify the dedicated scheduling of resources, a single machine
+To simplify the scheduling of dedicated resources, a single machine
 becomes the scheduler of dedicated resources.  This leads to a further
 restriction that jobs submitted to execute under the parallel universe
 must be submitted from the machine running as the dedicated scheduler.
@@ -138,15 +138,15 @@ support.  The Condor parallel universe works somewhat like a SIMD
 (Single Instruction, Multiple Data) machine -- there is one named
 executable which is run on all the machines in parallel, but this one
 machine may have different inputs and outputs.  If different
-executables are needed to run on different nodes, the submit file
+executables need to run on different nodes, the submit file
 should contain a script, which knows which node it is running on, and
-forks an appropriate executable.
+runs the appropriate executable.
 
 Most MPI implementations require two system-wide prerequisites.
 First, the ability to run a command on a remote machine without being
 prompted for a password.  Usually, ssh is used for this, but the
 specific command used is configurable.  Second, an ASCII file with the
-list of machines that can be ssh'd to, as per above.
+list of machines that can be ssh'd to.
 
 So, to run MPI application in the parallel universe, we run a script
 on each node we submit to.  This script generates ssh keys, to enable

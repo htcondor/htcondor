@@ -1,0 +1,93 @@
+\begin{ManPage}{\label{man-condor-chirp}\Condor{chirp}}{1}
+{Access files on the submit machine from a running user job on the execute machine.  Also, access job classad attributes from a running user job.}
+\Synopsis
+\SynProg{\Condor{chirp}}
+\oOpt{-help} 
+
+\SynProg{\Condor{chirp}}
+{fetch remote\_file local\_file}
+
+\SynProg{\Condor{chirp}}
+{put \oOpt{-mode mode} \oOpt{-perm perm} local\_file remote\_file}
+
+\SynProg{\Condor{chirp}}
+{remove remote\_file}
+
+\SynProg{\Condor{chirp}}
+{get\_job\_attr job\_attribute}
+
+\SynProg{\Condor{chirp}}
+{set\_job\_attr job\_attribute value}
+
+\Description 
+\Condor{chirp} when run from a user job on an execute machine, access
+files or job classad attributes on the submit machine.  Files can be
+read, written or removed.  Job attributes can be read, and most
+attributes can be updated.  If the input file name for put is a dash,
+\Condor{chirp} uses standard input as the source.  If the output file
+name for fetch is a dash, \Condor{chirp} writes to standard output
+instead of a local file.
+
+\index{Condor commands!condor\_chirp}
+\index{condor\_chirp command}
+
+Jobs that use \Condor{chirp} must have the attribute
++WantIOProxy=true set in the job ad. \Condor{chirp} only works in the
+Vanilla, MPI, Parallel and Java Universes.
+
+\begin{Options}
+  \OptItem{\Opt{-help}}{Display usage information and exit.}
+  \OptItem{fetch remoteFile localFile}{Copy the remoteFile from the submit machine to the execute machine.}
+  \OptItem{remove remoteFile}{Remove the remote file from the submit machine.}
+  \OptItem{put \Opt{-mode mode} -\Opt{perm perm} localFile remoteFile}{Copy the localFile from the execute machine to the submit machine.  Perm is the unix permission to open the file with.}
+\end{Options}
+
+Mode is \begin{itemize}
+\item w - open for writing
+\item a - force all writes to append
+\item t - truncate before use
+\item c - create if it doesn't exist
+\item x - fail if 'c' is given and the file already exists
+\end{itemize}
+
+
+
+\Examples
+
+To copy a file from the submit machine to the execute machine while the 
+user job is running, run
+
+\footnotesize
+\begin{verbatim}
+% condor_chirp fetch remotefile localfile
+\end{verbatim}
+\normalsize
+
+To print to standard output the value of the Requirements expression from 
+within a running job, run
+
+\footnotesize
+\begin{verbatim}
+% condor_chirp get_job_attr Requirements
+\end{verbatim}
+\normalsize
+
+Note that the remote (e.g. submit) directory path is relative to the
+submit directory, and the local (e.g. execute) directory is relative to the
+current directory of the running program.
+
+To append the word foo to a file on the submit machine, run
+
+\footnotesize
+\begin{verbatim}
+% echo foo | condor_chirp put -mode wat - RemoteFile
+\end{verbatim}
+\normalsize
+
+
+\ExitStatus
+
+\Condor{chirp} will exit with a status value of 0 (zero) upon success,
+and it will exit with the value 1 (one) upon failure.
+
+\end{ManPage}
