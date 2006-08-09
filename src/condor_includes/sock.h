@@ -201,7 +201,7 @@ public:
 	int get_file_desc();
 
 	/// is a non-blocking connect outstanding?
-	bool is_connect_pending() { return _state == sock_connect_pending; }
+	bool is_connect_pending() { return _state == sock_connect_pending || _state == sock_connect_pending_retry; }
 
 	/// is the socket connected?
 	bool is_connected() { return _state == sock_connect; }
@@ -226,7 +226,7 @@ protected:
 
 	enum sock_state { sock_virgin, sock_assigned, sock_bound, sock_connect,
 						sock_writemsg, sock_readmsg, sock_special, 
-						sock_connect_pending };
+						sock_connect_pending, sock_connect_pending_retry };
 
 
 	/*
@@ -243,12 +243,17 @@ protected:
         @param port the port to connect to, ignored if host contains a port
 		@param non_blocking_flag if set to true, do not block
 		@return FALSE on failure, TRUE if connected, CEDAR_EWOULDBLOCK if
-			non_blocking_flag is set to true and connection was not immediate.
+			non_blocking_flag is set to true.  In current implementation,
+		    will never return TRUE if non_blocking_flag was set, even
+			if the connect operation succeeds immediately without blocking.
+			When returning CEDAR_EWOULDBLOCK, Sock::is_connect_pending()
+			will also be true.  In this case, the caller is expected
+			to ensure that do_connect_finish() is called when the
+			connect operation succeeds/fails or when connect_timeout_time()
+			is reached.  For DaemonCore applications, this is handled
+			by passing the socket to DaemonCore's Register_Socket() function.
     */
 	int do_connect(char *host, int port, bool non_blocking_flag = false);
-
-	bool do_connect_finish(bool failed=false,bool timed_out=false);
-
 
 	inline SOCKET get_socket (void) { return _sock; }
 	char * serialize(char *);
@@ -323,17 +328,66 @@ private:
 
 	// struct to hold state info for do_connect() method
 	struct connect_state_struct {
-			int timeout_interval;
+			int retry_timeout_interval;   // amount of time to keep retrying
 			bool connect_failed, failed_once;
 			bool connect_refused;
-			time_t timeout_time;
+			time_t first_try_start_time;
+			time_t this_try_timeout_time; // timestamp of connect timeout
+			time_t retry_timeout_time;    // timestamp when to give up retrying
+			time_t retry_wait_timeout_time; // when to try connecting again
 			int	old_timeout_value;
 			bool non_blocking_flag;
 			char *host;
 			int port;
+			char *connect_failure_reason;
 	} connect_state;
 
+	/**
+	   This function is called by do_connect() to manage the whole process
+	   of connecting the socket, including retries if necessary.  This is
+	   also expected to be called by whoever manages the application's
+	   select loop (e.g. DaemonCore) for non-blocking connections.
+	   @return same as do_connect()
+	 **/
+	int do_connect_finish();
+
+	/**
+		@return
+		   false
+		     connect_state.connect_failed = true   # connection failed
+		     connect_state.connect_failed = false  # connection pending
+		   true                                    # connection has been made
+
+		   In addition, if connect fails and connect_state.connect_refused
+		   is true, this indicates that retry attempts are futile.
+	**/
 	bool do_connect_tryit();
+
+	/**
+	   @param reason Descriptive message indicating what went wrong with
+	                 the connection attempt.
+	 **/
+	void setConnectFailureReason(char const *reason);
+
+	/**
+	   @param error The errno that was encountered when attempting to connect
+	   @param syscall The system call that failed (e.g. "connect" or "select")
+	 **/
+	void setConnectFailureErrno(int error,char const *syscall);
+
+	/**
+	   This function logs a failed connection attempt, using the failure
+	   description previously set by setConnectFailureReason or
+	   setConnectFailureErrno.
+	   @param timed_out True if we failed due to timeout.
+	**/
+	void reportConnectionFailure(bool timed_out);
+
+	/**
+	   This function puts the socket back in a state suitable for another
+	   connection attempt.
+	 **/
+	void cancel_connect();
 
 };
 

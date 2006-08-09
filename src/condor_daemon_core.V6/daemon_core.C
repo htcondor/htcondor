@@ -2320,9 +2320,9 @@ void DaemonCore::Driver()
 							// set or the connection attempt has timed out.
 							// Only call handler if CEDAR confirms the
 							// connect algorithm has completed.
-							bool failed = FD_ISSET((*sockTable)[i].sockd, &exceptfds);
+
 							if ( ((Sock *)(*sockTable)[i].iosock)->
-											do_connect_finish(failed,connect_timed_out) )
+							      do_connect_finish() != CEDAR_EWOULDBLOCK)
 							{
 								(*sockTable)[i].call_handler = true;
 							}
