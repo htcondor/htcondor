@@ -184,7 +184,7 @@ Dag::~Dag() {
 
 //-------------------------------------------------------------------------
 void
-Dag::InitializeDagFiles( char *lockFileName, bool deleteOldLogs )
+Dag::InitializeDagFiles( const char *lockFileName, bool deleteOldLogs )
 {
 		// if there is an older version of the log files,
 		// we need to delete these.
@@ -217,7 +217,7 @@ Dag::InitializeDagFiles( char *lockFileName, bool deleteOldLogs )
 
 	if ( _condorLogName != NULL ) touch (_condorLogName);  //<-- DAP
 	}
-	touch (lockFileName);
+	util_create_lock_file(lockFileName);
 }
 
 //-------------------------------------------------------------------------

@@ -34,6 +34,7 @@
 #include "condor_environ.h"
 #include "dagman_main.h"
 #include "dagman_commands.h"
+#include "util.h"
 
 void ExitSuccess();
 
@@ -224,6 +225,10 @@ Dagman::Config()
 		storkRmExe = strdup( "stork_rm" );
 		ASSERT( storkRmExe );
 	}
+
+	abortDuplicates = param_boolean( "DAGMAN_ABORT_DUPLICATES", false );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_ABORT_DUPLICATES setting: %d\n",
+				abortDuplicates );
 
 	return true;
 }
@@ -601,6 +606,18 @@ int main_init (int argc, char ** const argv) {
         if (recovery) {
             debug_printf( DEBUG_VERBOSE, "Lock file %s detected, \n",
                            lockFileName);
+			if (dagman.abortDuplicates) {
+				if (util_check_lock_file(lockFileName) == 1) {
+        			debug_printf( DEBUG_QUIET, "Aborting because it "
+							"looks like another instance of DAGMan is "
+							"currently running on this DAG; if that is "
+							"not the case, delete the lock file (%s) "
+							"and re-submit the DAG.\n", lockFileName );
+    				dagman.CleanUp();
+					DC_Exit( EXIT_ERROR );
+					// We should never get to here!
+				}
+			}
         } else {
 			dagman.dag->InitializeDagFiles( lockFileName,
  											dagman.deleteOldLogs );

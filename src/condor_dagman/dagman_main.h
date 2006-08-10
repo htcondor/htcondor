@@ -116,9 +116,14 @@ class Dagman {
 		// instances of the same DAG and think they're ours
 	bool deleteOldLogs;
 
-		// whether or not to prohibit multiple job proc submitsn (e.g.,
+		// whether or not to prohibit multiple job proc submits (e.g.,
 		// node jobs that create more than one job proc)
 	bool prohibitMultiJobs;
+
+		// Whether to abort duplicates DAGMans (if multiple DAGMans are
+		// run on the same DAG at the same time on the same machine,
+		// all but the first will be aborted).
+	bool abortDuplicates;
 
 		// the Condor job id of the DAGMan job
 	CondorID DAGManJobId;

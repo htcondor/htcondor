@@ -23,6 +23,7 @@
 
 #include "condor_common.h"   /* for <ctype.h>, <assert.h> */
 #include "condor_debug.h"
+#include "condor_daemon_core.h"
 #include "debug.h"
 #include "util.h"
 #include "util_lib_proto.h"
@@ -62,4 +63,66 @@ int util_popen (ArgList &args) {
 		}
     }
     return r;
+}
+
+//-----------------------------------------------------------------------------
+
+int util_create_lock_file(const char *lockFileName) {
+	int result = 0;
+
+	FILE *fp = fopen(lockFileName, "w");
+	if (fp == NULL) {
+		debug_printf( DEBUG_QUIET,
+				"Could not open lock file %s for writing.\n",
+                                          lockFileName);
+		result = -1;
+	} else {
+		fprintf(fp, "%d\n", daemonCore->getpid());
+		fclose(fp);
+	}
+
+	return result;
+}
+
+//-----------------------------------------------------------------------------
+
+int util_check_lock_file(const char *lockFileName) {
+	int result = 0;
+
+	FILE *fp = fopen(lockFileName, "r");
+	if (fp == NULL) {
+		debug_printf( DEBUG_QUIET,
+				"Could not open lock file %s for reading.\n",
+                                          lockFileName);
+		result = -1;
+	} else {
+		char linebuf[128];
+		if (util_getline(fp, linebuf, sizeof(linebuf)) == EOF) {
+			debug_printf( DEBUG_QUIET, "No PID in lock file %s.\n",
+					lockFileName);
+			result = -1;
+		} else {
+			char *tmp;
+			pid_t pid = (pid_t)strtol(linebuf, &tmp, 10);
+			if (tmp == linebuf) {
+				debug_printf( DEBUG_QUIET,
+						"Invalid PID in lock file: %s.\n", linebuf);
+				result = -1;
+			} else {
+				if (daemonCore->Is_Pid_Alive(pid)) {
+					debug_printf( DEBUG_NORMAL,
+							"Duplicate DAGMan PID %d is alive; this DAGMan "
+							"should abort.\n", pid);
+					result = 1;
+				} else {
+					debug_printf( DEBUG_NORMAL,
+							"Duplicate DAGMan PID %d is no longer alive; "
+							"this DAGMan should continue.\n", pid);
+				}
+			}
+		}
+		fclose(fp);
+	}
+
+	return result;
 }
