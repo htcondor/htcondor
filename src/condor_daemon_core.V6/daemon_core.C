@@ -2023,9 +2023,9 @@ void DaemonCore::Driver()
 	char asyncpipe_buf[10];
 #endif
 
-	if ( ! Termlog )
+	if ( param_boolean( "ENABLE_STDOUT_TESTING", false ) )
 	{
-		dprintf( D_FULLDEBUG, "Testing stdout & stderr\n" );
+		dprintf( D_ALWAYS, "Testing stdout & stderr\n" );
 		{
 			char	buf[1024];
 			memset(buf, 0, sizeof(buf) );
@@ -2059,7 +2059,7 @@ void DaemonCore::Driver()
 				}
 			}
 		}
-		dprintf( D_FULLDEBUG, "Done with stdout & stderr tests\n" );
+		dprintf( D_ALWAYS, "Done with stdout & stderr tests\n" );
 	}
 
 	for(;;)
