@@ -294,7 +294,7 @@ main (int argc, char *argv[])
 		q = query->fetchAds (result, addr, &errstack);
 	} else {
 		CollectorList * collectors = CollectorList::create();
-		q = collectors->query (*query, result);
+		q = collectors->query (*query, result, &errstack);
 		delete collectors;
 	}
 		

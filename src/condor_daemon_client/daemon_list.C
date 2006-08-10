@@ -265,7 +265,7 @@ CollectorList::sendUpdates (int cmd, ClassAd * ad1, ClassAd* ad2, bool nonblocki
 }
 
 QueryResult
-CollectorList::query(CondorQuery & query, ClassAdList & adList) {
+CollectorList::query(CondorQuery & query, ClassAdList & adList, CondorError *errstack) {
 
 	int total_size = this->number();
 	if (total_size < 1) {
@@ -275,6 +275,8 @@ CollectorList::query(CondorQuery & query, ClassAdList & adList) {
 	DCCollector * daemon;
 	int i=0;
 	QueryResult result;
+
+	bool problems_resolving = false;
 
 	this->rewind();
 	while (this->next(daemon)) {
@@ -287,6 +289,7 @@ CollectorList::query(CondorQuery & query, ClassAdList & adList) {
 				dprintf( D_ALWAYS,
 						 "Can't resolve nameless collector; skipping\n" );
 			}
+			problems_resolving = true;
 			continue;
 		}
 		dprintf (D_FULLDEBUG, 
@@ -294,7 +297,7 @@ CollectorList::query(CondorQuery & query, ClassAdList & adList) {
 				 daemon->addr());
 
 		result = 
-			query.fetchAds (adList, daemon->addr());
+			query.fetchAds (adList, daemon->addr(), errstack);
 		
 		if (result == Q_OK) {
 			return result;
@@ -311,6 +314,13 @@ CollectorList::query(CondorQuery & query, ClassAdList & adList) {
 		if (++i >= total_size) break;
 	}
 			
+	// only push an error if the error stack exists and is currently empty
+	if(problems_resolving && errstack && !errstack->code(0)) {
+		MyString errmsg;
+		char* tmplist = getCmHostFromConfig( "COLLECTOR" );
+		errmsg.sprintf ("Unable to resolve COLLECTOR_HOST (%s).",tmplist?tmplist:"(null)");
+		errstack->push("CONDOR_STATUS",1,(char*)errmsg.Value());
+	}
 
 		// If we've gotten here, there are no good collectors
 	return Q_COMMUNICATION_ERROR;
