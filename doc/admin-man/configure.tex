@@ -5061,7 +5061,7 @@ before servicing other requests (such as a \Condor{rm}).
 The legal range of values is 1 to 1000.
 If defined with a value less than 1, the  value 1 will be used.
 If defined with a value greater than 1000, the value 1000 will be used.
-If undefined, it defaults to 5.
+If not defined, it defaults to 5.
 
 \item[\Macro{DAGMAN\_MAX\_SUBMIT\_ATTEMPTS}]
 \label{param:DAGManMaxSubmitAttempts}
@@ -5075,7 +5075,7 @@ If defined with a value less than 1, the  value 1 will be used.
 If defined with a value greater than 16, the value 16 will be used.
 Note that a value of 16 would result in \Condor{dagman} trying for
 approximately 36 hours before giving up.
-If left undefined,
+If not defined,
 it defaults to 6 (approximately two minutes before giving up).
 
 \item[\Macro{DAGMAN\_SUBMIT\_DELAY}]
@@ -5094,7 +5094,7 @@ A boolean value that when \Expr{True}
 causes \Condor{dagman} to check for cycles in the DAG before
 submitting DAG node jobs,
 in addition to its run time cycle detection.
-If undefined, it defaults to \Expr{False}.
+If not defined, it defaults to \Expr{False}.
 
 \item[\Macro{DAGMAN\_RETRY\_SUBMIT\_FIRST}]
 \label{param:DAGManRetrySubmitFirst}
@@ -5106,7 +5106,7 @@ that it will be submitted again before any other jobs are submitted
 (this has been the behavior of \Condor{dagman} up to this point).
 If this value is set to \Expr{False}, when a job submit fails, the job
 is placed at the tail of the queue of ready jobs.
-If undefined, it defaults to \Expr{True}.
+If not defined, it defaults to \Expr{True}.
 
 \item[\Macro{DAGMAN\_RETRY\_NODE\_FIRST}]
 \label{param:DAGManRetryNodeFirst}
@@ -5118,7 +5118,7 @@ placed at the head of the queue of ready nodes, so that it will be
 tried again before any other jobs are submitted.  If this value is
 set to \Expr{False}, when a node with retries fails, the node
 is placed at the tail of the queue of ready nodes (this has been the
-behavior of \Condor{dagman} up to this point).  If undefined, it
+behavior of \Condor{dagman} up to this point).  If not defined, it
 defaults to \Expr{False}.
 
 \item[\Macro{DAGMAN\_MAX\_JOBS\_IDLE}]
@@ -5147,17 +5147,21 @@ A boolean value that controls whether \Condor{dagman} automatically
 renames nodes when running multiple DAGs (the renaming is done to
 avoid possible name conflicts).  If this value is set to \Expr{True},
 all node names have the "DAG number" prepended to them.  For example,
-the first DAG specified on the condor\_submit\_dag command line is
+the first DAG specified on the \Condor{submit\_dag} command line is
 considered DAG number 0, the second is DAG number 1, etc.  So if
 DAG number 2 has a node B, that node will internally be renamed
 to "2.B".
-If undefined, \Macro{DAGMAN\_MUNGE\_NODE\_NAMES} defaults to \Expr{True}.
+If not defined, \MacroNI{DAGMAN\_MUNGE\_NODE\_NAMES} defaults to \Expr{True}.
 
 % \item[\Macro{STORK\_SERVER}]
 % \label{param:StorkServer}
 
 \item[\Macro{DAGMAN\_IGNORE\_DUPLICATE\_JOB\_EXECUTION}]
 \label{param:DAGManIgnoreDuplicateJobExecution}
+This macro is no longer used. The improved functionality
+of the \MacroNI{DAGMAN\_ALLOW\_EVENTS} macro eliminates the
+need for this variable.
+
 A boolean value that controls
 whether \Condor{dagman} aborts or continues with a DAG
 in the rare case that Condor erroneously executes
@@ -5184,9 +5188,6 @@ The logged messages within \File{*.dagman.out} files
 in the case of that a node job runs twice
 contain the string
 "EVENT ERROR."
-
-This macro is now deprecated (because of the improved functionality
-of the \MacroNI{DAGMAN\_ALLOW\_EVENTS} macro).
 
 \item[\Macro{DAGMAN\_ALLOW\_EVENTS}]
 \label{param:DAGManAllowEvents}
@@ -5235,43 +5236,43 @@ is described in section~\ref{param:SubsysDebug} as
 \item[\Macro{DAGMAN\_CONDOR\_SUBMIT\_EXE}]
 \label{param:DAGManCondorSubmitExe}
 The executable that \Condor{dagman} will use to submit Condor jobs.
-If undefined, \Condor{dagman} looks for \Condor{submit} in the PATH.
+If not defined, \Condor{dagman} looks for \Condor{submit} in the PATH.
 
 \item[\Macro{DAGMAN\_STORK\_SUBMIT\_EXE}]
 \label{param:DAGManStorkSubmitExe}
 The executable that \Condor{dagman} will use to submit Stork jobs.
-If undefined, \Condor{dagman} looks for \Stork{submit} in the PATH.
+If not defined, \Condor{dagman} looks for \Stork{submit} in the PATH.
 
 \item[\Macro{DAGMAN\_CONDOR\_RM\_EXE}]
 \label{param:DAGManCondorRmExe}
 The executable that \Condor{dagman} will use to remove Condor jobs.
-If undefined, \Condor{dagman} looks for \Condor{rm} in the PATH.
+If not defined, \Condor{dagman} looks for \Condor{rm} in the PATH.
 
 \item[\Macro{DAGMAN\_STORK\_RM\_EXE}]
 \label{param:DAGManStorkRmExe}
 The executable that \Condor{dagman} will use to remove Stork jobs.
-If undefined, \Condor{dagman} looks for \Stork{rm} in the PATH.
+If not defined, \Condor{dagman} looks for \Stork{rm} in the PATH.
 
 \item[\Macro{DAGMAN\_PROHIBIT\_MULTI\_JOBS}]
 \label{param:DAGManProhibitMultiJobs}
 A boolean value that controls whether \Condor{dagman} prohibits
 node job submit files that queue multiple job procs (other than 
 parallel universe).  If a DAG references such a submit file, the
-DAG will abort during the initialization process.  If undefined,
-\Macro{DAGMAN\_PROHIBIT\_MULTI\_JOBS} defaults to \Expr{False}.
+DAG will abort during the initialization process.  If not defined,
+\MacroNI{DAGMAN\_PROHIBIT\_MULTI\_JOBS} defaults to \Expr{False}.
 
 \item[\Macro{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR}]
 \label{param:DAGManLogOnNfsIsError}
 A boolean value that controls whether \Condor{dagman} prohibits
 node job submit files with user log files on NFS.  If a DAG
-references such a submit file and \Macro{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR}
+references such a submit file and \MacroNI{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR}
 is \Expr{True}, the DAG will abort during the initialization process. 
-If \Macro{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR} is \Expr{False}, a warning
+If \MacroNI{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR} is \Expr{False}, a warning
 will be issued but the DAG will still be submitted.  It is \emph{strongly}
-recommended that \Macro{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR}
+recommended that \MacroNI{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR}
 remain set to the default value, because running a DAG with node job
 log files on NFS will often cause errors.
-If undefined, \Macro{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR} defaults to
+If not defined, \MacroNI{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR} defaults to
 \Expr{True}.
 
 \item[\Macro{DAGMAN\_ABORT\_DUPLICATES}]
@@ -5280,14 +5281,14 @@ A boolean value that controls whether to attempt to abort duplicate
 instances of \Condor{dagman} running the same DAG on the same
 machine.  When \Condor{dagman} starts up, if no DAG lock file exists,
 \Condor{dagman} creates the lock file and writes its PID into it.  If
-the lock file does exist, and \Macro{DAGMAN\_ABORT\_DUPLICATES} is
+the lock file does exist, and \MacroNI{DAGMAN\_ABORT\_DUPLICATES} is
 set to \Expr{True}, \Condor{dagman} checks whether a process with the
 given PID exists, and if so, it assumes that there is already another
 instance of \Condor{dagman} running on the same DAG.  Note that this
-test is not foolproof: it's possible that, if \Condor{dagman} crashes,
-the same PID gets re-used by another process before \Condor{dagman}
-gets re-run on that DAG.  This should be quite rare, however.
-If undefined, \Macro{DAGMAN\_ABORT\_DUPLICATES} defaults to
+test is not foolproof: it is possible that, if \Condor{dagman} crashes,
+the same PID gets reused by another process before \Condor{dagman}
+gets rerun on that DAG.  This should be quite rare, however.
+If not defined, \MacroNI{DAGMAN\_ABORT\_DUPLICATES} defaults to
 \Expr{False}.
 
 \end{description}
