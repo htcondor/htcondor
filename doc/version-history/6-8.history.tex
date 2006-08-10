@@ -69,6 +69,11 @@ the log file is on NFS (to do this, set the LOG\_ON\_NFS\_IS\_ERROR
 configuration macro to \Expr{True}).  The default is that \condor{submit}
 will simply issue a warning if a log file is on NFS.
 
+\item Added the DAGMAN\_ABORT\_DUPLICATES config macro, which causes
+\Condor{dagman} to attempt to detect at startup whether another
+\Condor{dagman} is already running on the same DAG; if so, the second
+\Condor{dagman} will abort itself.
+
 \end{itemize}
 
 \noindent Bugs Fixed:

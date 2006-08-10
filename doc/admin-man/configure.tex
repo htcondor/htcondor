@@ -5274,6 +5274,22 @@ log files on NFS will often cause errors.
 If undefined, \Macro{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR} defaults to
 \Expr{True}.
 
+\item[\Macro{DAGMAN\_ABORT\_DUPLICATES}]
+\label{param:DAGManAbortDuplicates}
+A boolean value that controls whether to attempt to abort duplicate
+instances of \Condor{dagman} running the same DAG on the same
+machine.  When \Condor{dagman} starts up, if no DAG lock file exists,
+\Condor{dagman} creates the lock file and writes its PID into it.  If
+the lock file does exist, and \Macro{DAGMAN\_ABORT\_DUPLICATES} is
+set to \Expr{True}, \Condor{dagman} checks whether a process with the
+given PID exists, and if so, it assumes that there is already another
+instance of \Condor{dagman} running on the same DAG.  Note that this
+test is not foolproof: it's possible that, if \Condor{dagman} crashes,
+the same PID gets re-used by another process before \Condor{dagman}
+gets re-run on that DAG.  This should be quite rare, however.
+If undefined, \Macro{DAGMAN\_ABORT\_DUPLICATES} defaults to
+\Expr{False}.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
