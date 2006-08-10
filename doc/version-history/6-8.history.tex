@@ -187,9 +187,6 @@ submitted via Condor-C to become mpi universe jobs.
 to write to the standard error stream (stderr) on some platforms.  In
 general, this should never happen, but can due to third party
 libraries (beyond our control) trying to write error or other messages.
-Additonally, each daemon now runs a small test at startup to verify
-that stderr and stdout work as expected -- if not, the daemon will
-hang at startup rather than randomly.
 
 \end{itemize}
 
