@@ -5869,7 +5869,13 @@ int DaemonCore::Create_Process(
 		} else {
 			MyString msg = "Just closed standard file fd(s): ";
 
-                // if we don't want to re-map these, close 'em.
+                // If we don't want to re-map these, close 'em.
+
+				// NRL 2006-08-10: Why do we do this?  See the comment
+				// in daemon_core_main.C before the block of code that
+				// closes std in/out/err in main() -- currently, about
+				// line 1570.
+
 			    // However, make sure that its not in the inherit list first
 			int	num_closed = 0;
 			int	closed_fds[3];

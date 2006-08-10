@@ -1566,7 +1566,38 @@ int main( int argc, char** argv )
 			exit(0);
 		}
 
-		// and close stdin, out, err if we are the MASTER.  
+		// And close stdin, out, err if we are the MASTER.
+
+		// NRL 2006-08-10: Here's what and why we're doing this.....
+		//
+		// In days of yore, we'd simply close FDs 0,1,2 and be done
+		// with it.  Unfortunately, some 3rd party tools were writing
+		// directly to these FDs.  Now, you might not that that this
+		// would be a problem, right?  Unfortunately, once you close
+		// an FD (say, 1 or 2), then next open() or socket() call can
+		// / will now return 1 (or 2).  So, when libfoo.a thinks it
+		// fprintf()ing an error message to fd 2 (the FD behind
+		// stderr), it's actually sending that message over a socket
+		// to a process that has no idea how to handle it.
+		//
+		// So, here's what we do.  We open /dev/null, and then use
+		// dup2() to copy this "safe" fd to these decriptors.  Note
+		// that if you don't open it with O_RDWR, you can cause writes
+		// to the FD to return errors.
+		//
+		// Finally, we only do this in the master.  Why?  Because
+		// Create_Process() has similar logic, so when the master
+		// starts, say, condor_startd, the Create_Process() logic
+		// takes over and does The Right Thing(tm).
+		//
+		// Regarding the std in/out/err streams (the FILE *s, not the
+		// FDs), we leave those open.  Otherwise, if libfoo.a tries to
+		// fwrite to stderr, it would get back an error from fprintf()
+		// (or fwrite(), etc.).  If it checks this, it might Do
+		// Something Bad(tm) like abort() -- who knows.  In any case,
+		// it seems safest to just leave them open but attached to
+		// /dev/null.
+
 		if ( is_master ) {
 			int	fd_null = open( NULL_FILE, O_RDWR );
 			if ( fd_null < 0 ) {
