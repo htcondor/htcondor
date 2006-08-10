@@ -453,7 +453,14 @@ int Condor_Auth_SSL::authenticate(const char * remoteHost, CondorError* errstack
         }
         setup_crypto( session_key, AUTH_SSL_SESSION_KEY_LEN );
     }
-    dprintf(D_SECURITY,"SSL authentication succeeded.\n");
+
+    char subjectname[1024];
+    X509 *peer = SSL_get_peer_certificate(ssl);
+    X509_NAME_oneline(X509_get_subject_name(peer), subjectname, 1024);
+    setAuthenticatedName( subjectname );
+    setRemoteUser( "ssl" );
+
+    dprintf(D_SECURITY,"SSL authentication succeeded to %s\n", subjectname);
 		//free(key);
 	SSL_CTX_free(ctx);
 	SSL_free(ssl);
