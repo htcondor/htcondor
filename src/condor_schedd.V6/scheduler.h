@@ -436,7 +436,6 @@ private:
 		// Here we enqueue calls to 'contactStartd' when we can't just 
 		// call it any more.  See contactStartd and the call to it...
 	Queue<ContactStartdArgs*> startdContactQueue;
-	int             MAX_STARTD_CONTACTS;
 	int				checkContactQueue_tid;	// DC Timer ID to check queue
 
 		// If we we need to reconnect to disconnected starters, we

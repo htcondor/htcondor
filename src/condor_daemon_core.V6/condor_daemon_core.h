@@ -513,6 +513,28 @@ class DaemonCore : public Service
 	int Cancel_And_Close_All_Sockets(void);
 
 
+	/**
+	   @return Number of currently registered sockets.
+	 */
+	int RegisteredSocketCount();
+
+	/** This function is specifically tailored for testing if it is
+		ok to register a new socket (e.g. for non-blocking connect).
+	   @param fd Recently opened file descriptor, helpful, but
+	             not required for determining if we are in danger.
+	   @param msg Optional string into which this function writes
+	              a human readable description of why it was decided
+	              that there are too many open sockets.
+	   @return true of in danger of running out of file descriptors
+	 */
+	bool TooManyRegisteredSockets(int fd=-1,MyString *msg=NULL);
+
+	/**
+	   @return Maximum number of persistent file descriptors that
+	           we should ever attempt having open at the same time.
+	 */
+	int FileDescriptorSafetyLimit();
+
     /** Not_Yet_Documented
         @param insock           Not_Yet_Documented
         @return Not_Yet_Documented
@@ -1139,6 +1161,11 @@ class DaemonCore : public Service
     int               initial_command_sock;  
   	struct soap		  soap;
 	time_t			  only_allow_soap;
+
+		// number of file descriptors in use past which we should start
+		// avoiding the creation of new persistent sockets.  Do not use
+		// this value directly.  Call FileDescriptorSafetyLimit().
+	int file_descriptor_safety_limit;
 
 #if defined(WIN32)
 	typedef PipeEnd* PipeHandle;

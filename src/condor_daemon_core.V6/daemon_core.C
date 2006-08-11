@@ -45,6 +45,8 @@ static const int ERRNO_PID_COLLISION = 666667;
 static const int DEFAULT_MAX_PID_COLLISIONS = 9;
 static const char* DEFAULT_INDENT = "DaemonCore--> ";
 static const int MAX_TIME_SKIP = (60*20); //20 minutes
+static const int MIN_FILE_DESCRIPTOR_SAFETY_LIMIT = 20;
+static const int MIN_REGISTERED_SOCKET_SAFETY_LIMIT = 15;
 
 
 #include "authentication.h"
@@ -346,6 +348,8 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 #ifdef COMPILE_SOAP_SSL
 	mapfile =  NULL;
 #endif
+
+	file_descriptor_safety_limit = 0; // 0 indicates: needs to be computed
 }
 
 // DaemonCore destructor. Delete the all the various handler tables, plus
@@ -505,6 +509,91 @@ int	DaemonCore::Register_Signal(int sig, char *sig_descrip,
 {
 	return( Register_Signal(sig, sig_descrip, NULL, handlercpp,
 							handler_descrip, s, perm, TRUE) );
+}
+
+int DaemonCore::RegisteredSocketCount()
+{
+	return nSock;
+}
+
+int DaemonCore::FileDescriptorSafetyLimit()
+{
+	if( file_descriptor_safety_limit == 0 ) {
+#if defined(WIN32)
+			// on Windows NT, it appears you can open up zillions of sockets
+		int file_descriptor_max = 2000;
+#else
+		int file_descriptor_max = getdtablesize();
+#endif
+		// Set the danger level at 80% of the max
+		file_descriptor_safety_limit = file_descriptor_max - file_descriptor_max/5;
+		if( file_descriptor_safety_limit < MIN_FILE_DESCRIPTOR_SAFETY_LIMIT ) {
+				// There is no point trying to live within this limit,
+				// because it is too small.  It is better to try and fail
+				// in this case than to trust this limit.
+			file_descriptor_safety_limit = MIN_FILE_DESCRIPTOR_SAFETY_LIMIT;
+		}
+
+		int p = param_integer( "NETWORK_MAX_PENDING_CONNECTS", 0 );
+		if( p!=0 ) {
+			file_descriptor_safety_limit = p;
+		}
+
+		dprintf(D_FULLDEBUG,"File descriptor limits: max %d, safe %d\n",
+				file_descriptor_max,
+				file_descriptor_safety_limit);
+	}
+
+	return file_descriptor_safety_limit;
+}
+
+bool DaemonCore::TooManyRegisteredSockets(int fd,MyString *msg)
+{
+	int registered_socket_count = RegisteredSocketCount();
+	int fds_used = registered_socket_count;
+	int safety_limit = FileDescriptorSafetyLimit();
+
+	if( safety_limit < 0 ) {
+			// No limit.
+		return false;
+	}
+
+	if( fd > fds_used ) {
+			// Assume fds are allocated always lowest number first
+		fds_used = fd;
+	}
+	if( fds_used > file_descriptor_safety_limit ) {
+		if( registered_socket_count < MIN_REGISTERED_SOCKET_SAFETY_LIMIT ) {
+			// We don't have very many sockets registered, but
+			// we seem to be running out of file descriptors.
+			// Perhaps there is a file descriptor leak or
+			// perhaps the safety limit is insanely low.
+			// Either way, it is better to try and fail than
+			// to risk getting into a stalemate.
+
+			if (msg) {
+					// If caller didn't ask for error messages, then don't
+					// make noise in the log either, because caller is
+					// just testing the waters.
+				dprintf(D_NETWORK|D_FULLDEBUG,
+						"Ignoring file descriptor safety limit (%d), because "
+						"only %d sockets are registered (fd is %d)\n",
+						file_descriptor_safety_limit,
+						registered_socket_count,
+						fd );
+			}
+			return false;
+		}
+		if(msg) {
+			msg->sprintf( "file descriptor safety level exceeded: "
+			              " limit %d, "
+			              " registered socket count %d, "
+			              " fd %d",
+			              safety_limit, registered_socket_count, fd );
+		}
+		return true;
+	}
+	return false;
 }
 
 int	DaemonCore::Register_Socket(Stream* iosock, char* iosock_descrip,
@@ -981,6 +1070,32 @@ int DaemonCore::Register_Socket(Stream *iosock, char* iosock_descrip,
 			dprintf(D_ALWAYS, "DaemonCore: Attempt to register socket twice\n");
 
 			return -2;
+		}
+	}
+
+		// Check that we are within the file descriptor safety limit
+		// We currently only do this for non-blocking connection attempts because
+		// in most other places, the code does not check the return value
+		// from Register_Socket().  Plus, it really does not make sense to 
+		// enforce a limit for other cases --- if the socket already exists,
+		// DaemonCore should be able to manage it for you.
+
+	if( iosock->type() == Stream::reli_sock &&
+	    ((ReliSock *)iosock)->is_connect_pending() )
+	{
+		MyString overload_msg;
+		bool overload_danger =
+			TooManyRegisteredSockets( ((Sock *)iosock)->get_file_desc(),
+			                              &overload_msg);
+
+		if( overload_danger )
+		{
+			dprintf(D_ALWAYS,
+				"Aborting registration of socket %s %s: %s\n",
+				iosock_descrip ? iosock_descrip : "",
+				handler_descrip ? handler_descrip : ((Sock *)iosock)->get_sinful_peer(),
+				overload_msg.Value() );
+			return -3;
 		}
 	}
 
@@ -1941,6 +2056,8 @@ DaemonCore::ReInit()
 		}
 	}
 #endif // COMPILE_SOAP_SSL
+
+	file_descriptor_safety_limit = 0; // 0 indicates: needs to be computed
 
 	return TRUE;
 }

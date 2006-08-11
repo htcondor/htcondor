@@ -346,18 +346,7 @@ Scheduler::Scheduler() :
 
 	startJobsDelayBit = FALSE;
 	num_reg_contacts = 0;
-#ifndef WIN32
-	MAX_STARTD_CONTACTS = getdtablesize() - 20;  // save 20 fds...
-		// Just in case getdtablesize() returns <= 20, we've got to
-		// let the schedd try at least 1 connection at a time.
-		// Derek, Todd, Pete K. 1/19/01
-	if( MAX_STARTD_CONTACTS < 1 ) {
-		MAX_STARTD_CONTACTS = 1;
-	}
-#else
-	// on Windows NT, it appears you can open up zillions of sockets
-	MAX_STARTD_CONTACTS = 2000;
-#endif
+
 	checkContactQueue_tid = -1;
 	checkReconnectQueue_tid = -1;
 
@@ -5564,9 +5553,10 @@ Scheduler::checkContactQueue()
 	checkContactQueue_tid = -1;
 
 		// Contact startds as long as (a) there are still entries in our
-		// queue, and (b) we have not exceeded MAX_STARTD_CONTACTS, which
-		// ensures we do not run ourselves out of socket descriptors.
-	while( (num_reg_contacts < MAX_STARTD_CONTACTS) &&
+		// queue, (b) there are not too many registered sockets in
+		// daemonCore, which ensures we do not run ourselves out
+		// of socket descriptors.
+	while( !daemonCore->TooManyRegisteredSockets() &&
 		   (!startdContactQueue.IsEmpty()) ) {
 			// there's a pending registration in the queue:
 
@@ -10811,7 +10801,6 @@ Scheduler::publish( ClassAd *ad ) {
 	InsertIntoAd ( ad, "NegotiationRequestTime", NegotiationRequestTime  );
 	InsertIntoAd ( ad, "ExitWhenDone", ExitWhenDone );
 	InsertIntoAd ( ad, "StartJobTimer", StartJobTimer );
-	InsertIntoAd ( ad, "MAX_STARTD_CONTACTS", MAX_STARTD_CONTACTS );
 	InsertIntoAd ( ad, "CondorAdministrator", CondorAdministrator );
 	InsertIntoAd ( ad, "AccountantName", AccountantName );
 	InsertIntoAd ( ad, "UidDomain", UidDomain );
