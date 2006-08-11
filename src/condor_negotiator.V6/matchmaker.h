@@ -119,7 +119,8 @@ class Matchmaker : public Service
 		   int send_ad_to_schedd, const CondorVersionInfo & scheddVersion,
 		   bool ignore_schedd_limit, time_t startTime);
 
-		int negotiateWithGroup ( ClassAdList& startdAds, 
+		int negotiateWithGroup ( int untrimmed_num_startds,
+			ClassAdList& startdAds, 
 			ClassAdList& startdPvtAds, ClassAdList& scheddAds, 
 			int groupQuota=INT_MAX, const char* groupAccountingName=NULL);
 

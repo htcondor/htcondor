@@ -835,8 +835,13 @@ negotiationTime ()
 		// should send email here
 		return FALSE;
 	}
+
+	// Save this for future use.
+	// This _must_ come before trimming the startd ads.
+	int untrimmed_num_startds = startdAds.MyLength();
+
     // Get number of available VMs in any state.
-    int numDynGroupVms = startdAds.MyLength();
+    int numDynGroupVms = untrimmed_num_startds;
 
 	// Register a lookup function that passes through the list of all ads.
 	// ClassAdLookupRegister( lookup_global, &allAds );
@@ -1003,9 +1008,9 @@ negotiationTime ()
 			}
 			dprintf(D_ALWAYS,"Group %s - negotiating\n",
 				groupArray[i].groupName);
-			negotiateWithGroup( startdAds, 
+			negotiateWithGroup( untrimmed_num_startds, startdAds, 
 				startdPvtAds, groupArray[i].submitterAds, 
-				groupArray[i].maxAllowed, groupArray[i].groupName);
+				groupArray[i].maxAllowed, groupArray[i].groupName );
 		}
 
 			// if GROUP_AUTOREGROUP is set to true, then for any submitter
@@ -1041,7 +1046,7 @@ negotiationTime ()
 	} // if (groups)
 	
 		// negotiate w/ all users who do not belong to a group.
-	negotiateWithGroup(startdAds, startdPvtAds, scheddAds);
+	negotiateWithGroup(untrimmed_num_startds, startdAds, startdPvtAds, scheddAds);
 	
 	// ----- Done with the negotiation cycle
 	dprintf( D_ALWAYS, "---------- Finished Negotiation Cycle ----------\n" );
@@ -1066,7 +1071,8 @@ Matchmaker::SimpleGroupEntry::
 }
 
 int Matchmaker::
-negotiateWithGroup ( ClassAdList& startdAds, ClassAdList& startdPvtAds, 
+negotiateWithGroup ( int untrimmed_num_startds, ClassAdList& startdAds,
+					 ClassAdList& startdPvtAds, 
 					 ClassAdList& scheddAds, 
 					 int groupQuota, const char* groupAccountingName)
 {
@@ -1119,7 +1125,7 @@ negotiateWithGroup ( ClassAdList& startdAds, ClassAdList& startdPvtAds,
 		hit_network_prio_limit = FALSE;
 		calculateNormalizationFactor( scheddAds, maxPrioValue, normalFactor,
 									  maxAbsPrioValue, normalAbsFactor);
-		numStartdAds = startdAds.MyLength();
+		numStartdAds = untrimmed_num_startds;
 			// If operating on a group with a quota, consider the size of 
 			// the "pie" to be limited to the groupQuota, so each user in 
 			// the group gets a reasonable sized slice.
