@@ -27,6 +27,7 @@
 #include "NTsenders.h"
 #include "../condor_chirp/chirp_protocol.h"
 
+#include "condor_event.h"
 #include <errno.h>
 
 static int sscanf_chirp( char const *input,char const *fmt,... );
@@ -393,6 +394,21 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 		}
 		r->put_line_raw(line);
 		
+	} else if(sscanf_chirp(line,"ulog %s", name)==1) {
+
+		GenericEvent event;
+		ClassAd *ad;
+
+		// setInfoText truncates name to 128 bytes
+		event.setInfoText( name );
+
+		ad = event.toClassAd();
+		ASSERT(ad);
+
+		result = REMOTE_CONDOR_ulog( ad );
+		sprintf(line, "%d", convert(result,errno));
+		r->put_line_raw(line);
+
 	} else if(strncmp(line,"version",7)==0) {
 	    sprintf(line,"%d",CHIRP_VERSION);
 	    r->put_line_raw(line);

@@ -473,6 +473,12 @@ chirp_client_rmdir( struct chirp_client *c, char const *name )
 	return simple_command(c,"rmdir %s\n",name);
 }
 
+DLLEXPORT int
+chirp_client_ulog( struct chirp_client *c, char const *message )
+{
+	return simple_command(c,"ulog %s\n",message);
+}
+
 
 static int
 convert_result( int result )

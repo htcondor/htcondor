@@ -201,6 +201,10 @@ DLLEXPORT int chirp_client_rmdir( struct chirp_client *c, char const *name );
   Removes an empty directory.
 */
 
+DLLEXPORT int chirp_client_ulog( struct chirp_client *c, char const *message );
+/*chirp_client_ulog()
+  logs a generic string to the user log
+*/
 #ifdef __cplusplus
 }
 #endif

@@ -167,6 +167,8 @@ void usage() {
 	printf("condor_chirp put    local_file remote_file\n");
 	printf("condor_chirp remove remote_file\n");
 	printf("condor_chirp get_job_attr job_attribute\n");
+	printf("condor_chirp set_job_attr job_attribute attribute_value\n");
+	printf("condor_chirp ulog text\n");
 }
 
 /*
@@ -285,7 +287,30 @@ int chirp_set_job_attr(int argc, char **argv) {
 		return -1;
 	}
 
-    	return chirp_client_set_job_attr(client, argv[2], argv[3]);
+    return chirp_client_set_job_attr(client, argv[2], argv[3]);
+}
+
+/*
+ * chirp_ulog
+ *   
+ */
+
+int chirp_ulog(int argc, char **argv) {
+	if (argc != 3) {
+		printf("condor_chirp ulog message\n");
+		return -1;
+	}
+
+	struct chirp_client *client = 0;
+
+		// First, connect to the submit host
+	client = chirp_client_connect_default();
+	if (!client) {
+		fprintf(stderr, "cannot chirp_connect to shadow\n");
+		return -1;
+	}
+
+    return chirp_client_ulog(client, argv[2]);
 }
 
 int
@@ -314,6 +339,10 @@ main(int argc, char **argv) {
 
 	if (strcmp("set_job_attr", argv[1]) == 0) {
 		return chirp_set_job_attr(argc, argv);
+	}
+
+	if (strcmp("ulog", argv[1]) == 0) {
+		return chirp_ulog(argc, argv);
 	}
 
 	usage();

@@ -423,7 +423,7 @@ class GenericEvent : public ULogEvent
 	char const *getInfoText() {return info;}
 
     /// A string with unspecified format.
-    char info[128];
+    char info[1024];
 };
 
 //----------------------------------------------------------------------------
