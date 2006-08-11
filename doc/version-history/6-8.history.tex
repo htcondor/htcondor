@@ -190,6 +190,12 @@ libraries (beyond our control) trying to write error or other messages.
 
 \item Fixed \Condor{status} to report error messages.
 
+\item Fixed a problem with \MacroNI{NEGOTIATOR\_CONSIDER\_PREEMPTION}=True
+in which the fraction of the pool already being claimed by a user was
+calculated using the wrong total number of startds.  This could cause
+some startds to remain unclaimed, even when there were jobs available
+to run on them.
+
 \end{itemize}
 
 \noindent Known Bugs:
