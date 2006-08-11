@@ -917,6 +917,15 @@ File System Configuration File Entries''.
   on the system, and instead will always report the system load average
   to be 0.0.  Defaults to True.
 
+\item[\Macro{NETWORK\_MAX\_PENDING\_CONNECTS}] \label{param:NetworkMaxPendingConnects}
+  This specifies a limit to the maximum number of simultaneous network
+  connection attempts.  This is primarily relevant to \Condor{schedd},
+  which may try to connect to large numbers of startds when claiming
+  them.  The negotiator may also connect to large numbers of startds
+  when initiating security sessions used for sending MATCH messages.  On
+  Unix, the default for this parameter is eighty percent of the process file
+  descriptor limit.  On windows, the default is 1600.
+
 \end{description}
 
 % Default value check end here: PKK 8 Jan 2004

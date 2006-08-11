@@ -74,6 +74,16 @@ will simply issue a warning if a log file is on NFS.
 \Condor{dagman} is already running on the same DAG; if so, the second
 \Condor{dagman} will abort itself.
 
+\item There is now a configuration paramater
+\MacroNI{NETWORK\_MAX\_PENDING\_CONNECTS} that may be used to limit the
+maximum number of simultaneous network connection attempts.  This is
+primarily relevant to \Condor{schedd}, which may try to connect to
+large numbers of startds when claiming them.  The negotiator may also
+connect to large numbers of startds when initiating security sessions
+used for sending MATCH messages.  On Unix, the default is to allow up to
+eighty percent of the process file descriptor limit.  On windows, the
+default is 1600.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
