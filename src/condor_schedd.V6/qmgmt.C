@@ -1897,7 +1897,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			}
 
 			// round it.  note we always round UP!!  
-			ivalue = ((ivalue / base ) + 1) * base;  // +1 means round up
+			ivalue = ((ivalue + base - 1) / base) * base;
 
 			// make it a string, courtesty MyString conversion.
 			temp_buf = ivalue;
