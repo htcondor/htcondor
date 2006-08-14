@@ -514,6 +514,12 @@ Inclusion of characters other than these as options are ignored.
     If any argument is not a string, or if \Expr{pattern} does not describe
     a valid regular expression, returns \Expr{ERROR}.
 
+  \item[\Expr{String regexps(String pattern, String target, String substitute, \Lbr\ String options \Rbr)}]
+ 	The regexp pattern is applied to target.  If the pattern matches,
+	the string substitute is returned, with backslash expansion performed.
+    Options are the same as above.  If any of the arguments are not strings
+	it returns \Expr{ERROR}.
+
   \item[\Expr{Boolean stringListRegexpMember(String pattern, String list \Lbr\ , String delimiter \Rbr\ \Lbr\ , String options \Rbr)}]
     Returns \Expr{TRUE} if any of the strings within the
     \Expr{list} is a regular expression as described by \Expr{pattern}.
@@ -525,6 +531,7 @@ Inclusion of characters other than these as options are ignored.
     A default value for a delimiter is " ,".
 
 \end{description}
+
 
 \begin{description}
   \item[\Expr{Integer time()}]
@@ -818,7 +825,7 @@ UpdateSequenceNumber = 1
 
 % condor_advertise UPDATE_AD_GENERIC ad
 
-% condor_status -any -constraint 'FauxType=="DBMS" && regexp("random*", Name, "i")'
+% condor_status -any -constraint 'FauxType=="DBMS" && regexp("random.*", Name, "i")'
 
 MyType               TargetType           Name                          
 
