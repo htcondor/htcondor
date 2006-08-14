@@ -36,6 +36,7 @@ extern const char * ATTR_ACTION_RESULT;
 extern const char * ATTR_ACTION_RESULT_TYPE;
 extern const char * ATTR_ACTIVITY;
 extern const char * ATTR_ALLOW_NOTIFICATION_CC;
+extern const char * ATTR_ALL_REMOTE_HOSTS;
 extern const char * ATTR_APPEND_FILES;
 extern const char * ATTR_ARCH;
 extern const char * ATTR_AVAIL_BANDWIDTH_TO_SUBMIT_MACHINE;

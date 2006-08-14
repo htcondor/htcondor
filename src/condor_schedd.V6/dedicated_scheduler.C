@@ -2434,6 +2434,8 @@ DedicatedScheduler::addReconnectAttributes(AllocationNode *allocation)
 {
 		// foreach proc in this cluster...
 
+		StringList allRemoteHosts;
+
 		for( int p=0; p<allocation->num_procs; p++ ) {
 
 			StringList claims;
@@ -2452,6 +2454,9 @@ DedicatedScheduler::addReconnectAttributes(AllocationNode *allocation)
 				remoteHosts.append(hosts);
 				free(hosts);
 			}
+
+			allRemoteHosts.create_union(remoteHosts, false);
+
 			char *claims_str = claims.print_to_string();
 			if ( claims_str ) {
 				SetAttributeString(allocation->cluster, p, "ClaimIds", claims_str);
@@ -2466,6 +2471,13 @@ DedicatedScheduler::addReconnectAttributes(AllocationNode *allocation)
 				hosts_str = NULL;
 			}
 		}
+
+		char *all_hosts_str = allRemoteHosts.print_to_string();
+
+		for (int pNo = 0; pNo < allocation->num_procs; pNo++) {
+				SetAttributeString(allocation->cluster, pNo, ATTR_ALL_REMOTE_HOSTS, all_hosts_str);
+		}
+		free(all_hosts_str);
 }
 
 char *
