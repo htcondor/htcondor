@@ -702,36 +702,36 @@ matchPrefix (const char *s1, const char *s2)
 int
 lessThanFunc(AttrList *ad1, AttrList *ad2, void *)
 {
-	char 	buf1[128];
-	char	buf2[128];
-	int		val;
+	MyString  buf1;
+	MyString  buf2;
+	int       val;
 
 	if( !ad1->LookupString(ATTR_OPSYS, buf1) ||
 		!ad2->LookupString(ATTR_OPSYS, buf2) ) {
-		buf1[0] = '\0';
-		buf2[0] = '\0';
+		buf1 = "";
+		buf2 = "";
 	}
-	val = strcmp( buf1, buf2 );
+	val = strcmp( buf1.Value(), buf2.Value() );
 	if( val ) { 
 		return (val < 0);
 	} 
 
 	if( !ad1->LookupString(ATTR_ARCH, buf1) ||
 		!ad2->LookupString(ATTR_ARCH, buf2) ) {
-		buf1[0] = '\0';
-		buf2[0] = '\0';
+		buf1 = "";
+		buf2 = "";
 	}
-	val = strcmp( buf1, buf2 );
+	val = strcmp( buf1.Value(), buf2.Value() );
 	if( val ) { 
 		return (val < 0);
 	} 
 
 	if( !ad1->LookupString(ATTR_MACHINE, buf1) ||
 		!ad2->LookupString(ATTR_MACHINE, buf2) ) {
-		buf1[0] = '\0';
-		buf2[0] = '\0';
+		buf1 = "";
+		buf2 = "";
 	}
-	val = strcmp( buf1, buf2 );
+	val = strcmp( buf1.Value(), buf2.Value() );
 	if( val ) { 
 		return (val < 0);
 	} 
@@ -739,7 +739,7 @@ lessThanFunc(AttrList *ad1, AttrList *ad2, void *)
 	if (!ad1->LookupString(ATTR_NAME, buf1) ||
 		!ad2->LookupString(ATTR_NAME, buf2))
 		return 0;
-	return ( strcmp( buf1, buf2 ) < 0 );
+	return ( strcmp( buf1.Value(), buf2.Value() ) < 0 );
 }
 
 int
