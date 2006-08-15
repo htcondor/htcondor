@@ -130,11 +130,14 @@ class ParallelShadow : public BaseShadow
 
 	virtual void logDisconnectedEvent( const char* reason );
 
+	virtual bool updateJobAttr(const char*, const char*);
+
  protected:
 
 	virtual void logReconnectedEvent( void );
 
 	virtual void logReconnectFailedEvent( const char* reason );
+
 
  private:
 

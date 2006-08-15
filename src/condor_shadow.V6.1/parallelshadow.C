@@ -35,6 +35,8 @@
 #include "condor_config.h"
 #include "condor_ckpt_name.h"
 
+RemoteResource *parallelMasterResource = NULL;
+
 ParallelShadow::ParallelShadow() {
     nextResourceToStart = 0;
 	numNodes = 0;
@@ -78,6 +80,7 @@ ParallelShadow::init( ClassAd* job_ad, const char* schedd_addr )
 
         // make first remote resource the "master".  Put it first in list.
     MpiResource *rr = new MpiResource( this );
+	parallelMasterResource = rr;
 
     ClassAd *temp = new ClassAd( *(getJobAd() ) );
 
@@ -964,3 +967,10 @@ ParallelShadow::logReconnectFailedEvent( const char* reason )
 	}
 		//EXCEPT( "impossible: MPIShadow doesn't support reconnect" );
 }
+
+bool
+ParallelShadow::updateJobAttr( const char *name, const char *expr )
+{
+	return job_updater->updateAttr( name, expr, true );
+}
+

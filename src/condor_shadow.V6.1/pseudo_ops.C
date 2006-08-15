@@ -36,6 +36,7 @@
 extern ReliSock *syscall_sock;
 extern BaseShadow *Shadow;
 extern RemoteResource *thisRemoteResource;
+extern RemoteResource *parallelMasterResource;
 
 static void append_buffer_info( char *url, char *method, char *path );
 static int use_append( char *method, char *path );
@@ -650,7 +651,13 @@ pseudo_ulog( ClassAd *ad )
 int
 pseudo_get_job_attr( const char *name, char *expr )
 {
-	ClassAd *ad = thisRemoteResource->getJobAd();
+	RemoteResource *remote;
+	if (parallelMasterResource == NULL) {
+		remote = thisRemoteResource;
+	} else {
+		remote = parallelMasterResource;
+	}
+	ClassAd *ad = remote->getJobAd();
 	ExprTree *e = ad->Lookup(name);
 	if(e) {
 		expr[0] = 0;
@@ -666,7 +673,14 @@ pseudo_get_job_attr( const char *name, char *expr )
 int
 pseudo_get_job_attr( const char *name, MyString &expr )
 {
-	ClassAd *ad = thisRemoteResource->getJobAd();
+	RemoteResource *remote;
+	if (parallelMasterResource == NULL) {
+		remote = thisRemoteResource;
+	} else {
+		remote = parallelMasterResource;
+	}
+	ClassAd *ad = remote->getJobAd();
+
 	ExprTree *e = ad->Lookup(name);
 	if(e) {
 		e->RArg()->PrintToStr(expr);
@@ -681,9 +695,15 @@ pseudo_get_job_attr( const char *name, MyString &expr )
 int
 pseudo_set_job_attr( const char *name, const char *expr )
 {
+	RemoteResource *remote;
+	if (parallelMasterResource == NULL) {
+		remote = thisRemoteResource;
+	} else {
+		remote = parallelMasterResource;
+	}
 	if(Shadow->updateJobAttr(name,expr)) {
 		dprintf(D_SYSCALLS,"pseudo_set_job_attr(%s,%s) succeeded\n",name,expr);
-		ClassAd *ad = thisRemoteResource->getJobAd();
+		ClassAd *ad = remote->getJobAd();
 		ASSERT(ad);
 		ad->AssignExpr(name,expr);
 		return 0;

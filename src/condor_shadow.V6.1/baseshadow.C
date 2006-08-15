@@ -1035,7 +1035,7 @@ BaseShadow::log_except(char *msg)
 bool
 BaseShadow::updateJobAttr( const char *name, const char *expr )
 {
-	return job_updater->updateAttr( name, expr );
+	return job_updater->updateAttr( name, expr, false );
 }
 
 

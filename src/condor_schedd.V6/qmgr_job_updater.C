@@ -173,7 +173,7 @@ QmgrJobUpdater::startUpdateTimer( void )
   modify it to be less potentially harmful for schedd scalability.
 */
 bool
-QmgrJobUpdater::updateAttr( const char *name, const char *expr )
+QmgrJobUpdater::updateAttr( const char *name, const char *expr, bool updateMaster )
 {
 	bool result;
 	MyString err_msg;
@@ -181,8 +181,16 @@ QmgrJobUpdater::updateAttr( const char *name, const char *expr )
 	dprintf( D_FULLDEBUG, "QmgrJobUpdater::updateAttr: %s = %s\n",
 			 name, expr );
 
+	int p = proc;
+
+	// For parallel universe jobs, we want all the sets and gets
+	// to go to proc 0, so it can be used as a blackboard by all
+	// procs in the cluster.
+	if (updateMaster) {
+		p = 0;
+	}
 	if( ConnectQ(schedd_addr,SHADOW_QMGMT_TIMEOUT) ) {
-		if( SetAttribute(cluster,proc,name,expr) < 0 ) {
+		if( SetAttribute(cluster,p,name,expr) < 0 ) {
 			err_msg = "SetAttribute() failed";
 			result = FALSE;
 		} else {

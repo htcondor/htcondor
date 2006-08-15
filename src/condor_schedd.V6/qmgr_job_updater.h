@@ -68,7 +68,7 @@ public:
 			the schedd can be held hostage by user-jobs that call this
 			syscall repeatedly.  :(
 		*/
-	bool updateAttr( const char *name, const char *expr );
+	bool updateAttr( const char *name, const char *expr, bool updateMaster );
 
 		/** Add the given attribute to our list of attributes we
 			should watch for changes and update.  The type specifies
