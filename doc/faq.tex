@@ -1984,19 +1984,25 @@ Use the solutions given above.
 \subsection*{Why does Condor leave mail processes around?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-On FreeBSD and Mac OSX, if a system's outgoing mail configuration is
-not set properly, Condor inadvertently leaves paused and zombie mail
-processes when it tries to send notification emails. The only solution to 
-is to make sure that Condor runs on a host where it can send outgoing mail.
+Under FreeBSD and Mac OSX operating systems,
+misconfiguration of of a system's outgoing mail causes
+Condor to inadvertently leave paused and zombie mail
+processes around when Condor attempts to send notification e-mail.
+The solution to this problem is
+to correct the mailer configuration.
 
-You can preform a simple test to determine whether you can send email:
+Execute the following command as the user under which Condor
+daemons run to determine whether outgoing e-mail works.
 
 \begin{verbatim}
 $ uname -a | mail -v your@emailaddress.com
 \end{verbatim}
 
-It should be noted that this problem does not seem to manifest
-itself on non-BSD platforms, such as Linux.
+If no e-mail arrives, then outgoing e-mail does not work
+correctly.
+
+Note that this problem does not manifest itself
+on non-BSD Unix platforms, such as Linux.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Other questions}
