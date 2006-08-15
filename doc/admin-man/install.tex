@@ -89,7 +89,7 @@ The decisions answer the questions:
 \item Where should the machine-specific directories for Condor go?
 \item Where should the parts of the Condor system be installed? 
 	\begin{itemize}
-	\item Config files
+	\item Configuration files
 	\item Release directory
 		\begin{itemize}
 		\item user binaries
@@ -102,12 +102,6 @@ The decisions answer the questions:
 \item Am I using AFS?
 \item Do I have enough disk space for Condor?
 \end{enumerate}
-
-If you feel you already know the answers to these questions, you can
-skip to the Installation Procedure section below,
-section~\ref{sec:install-procedure} on
-page~\pageref{sec:install-procedure}.
-If you are unsure about any of them, read on.
 
 \begin{description}
 
@@ -140,18 +134,22 @@ A pool with about 1000 machines will require approximately
 
 A faster CPU will improve the time to do matchmaking. 
 
-\item[2. What machines should be allowed to submit jobs?]
+\item[2. Which machines should be allowed to submit jobs?]
 
 Condor can restrict the machines allowed to submit jobs.  Alternatively, 
 it can allow any machine the network allows to connect to a submit machine
-to submit jobs.  If the condor pool is behind a firewall, and all machines
+to submit jobs.  If the Condor pool is behind a firewall, and all machines
 inside the firewall are trusted, the \Macro{HOSTALLOW\_WRITE} configuration
-entry can be set to *.  Otherwise, it should be set to the set of machines
-permitted to submit jobs to this pool.  Condor tries to be secure by default,
-so out of the box, the configuration file ships with an invalid entry for this
-parameter.  This invalid value allows no machine to connect and submit
-jobs, so after configuration, you must change this entry.  Look for the
-entry named YOU\_MUST\_CHANGE\_THIS\_INVALID\_CONDOR\_CONFIGURATION\_VALUE.
+entry can be set to *.  Otherwise, it should be set to reflect
+the set of machines permitted to submit jobs to this pool.
+Condor tries to be secure by default,
+so out of the box, the configuration file ships with an invalid definition
+for this configuration variable.
+This invalid value allows no machine to connect and submit
+jobs, so after installation, change this entry.
+Look for the
+entry defined with the value
+\Expr{YOU\_MUST\_CHANGE\_THIS\_INVALID\_CONDOR\_CONFIGURATION\_VALUE}.
 
 \item[3. Will Condor run as root or not?]
 
@@ -531,14 +529,14 @@ to more than 50 Mbytes (dynamically linked Irix on an SGI).
 %\end{center}
 
 In addition, you will need a lot of disk space in the local directory
-of any machines that are submitting jobs to Condor.  See question 5
+of any machines that are submitting jobs to Condor.  See question 6
 above for details on this.
 
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:new-install-procedure}
-Newer Installation Procedure}
+Newer Unix Installation Procedure}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{installation!with \Condor{configure}}
@@ -552,39 +550,61 @@ Use this or a more recent version of Perl.
 After download, all the files are in a compressed, tar format.
 They need to be untarred, as
 \begin{verbatim}
-        tar xzf completename.tar.gz
+  tar xzf completename.tar.gz
 \end{verbatim}
-\Condor{configure} works on the uncompressed, untarred files.
+After untarring, the directory will have the Perl script
+\Condor{configure}, as well as a second tar file called
+\File{release.tar}.
+\Condor{configure} works on \File{release.tar}.
 
-\Condor{configure} is completely command-line driven, it is not interactive.
-Several command-line options are always needed with \Condor{configure}.
---install=path-to-release.tar specifies the path to the condor release 
-tarball. --install-dir=directory specifies the path to the install directory.
---local-dir=dir specifies the path to the local directory.
+\Condor{configure} is completely command-line driven; it is not interactive.
+Several command-line arguments are always needed with \Condor{configure}.
+The argument
+\begin{verbatim}
+  --install=/path/to/release.tar
+\end{verbatim}
+specifies the path to the Condor release tarball. 
+The argument
+\begin{verbatim}
+--install-dir=directory
+\end{verbatim}
+specifies the path to the install directory.
+The argument
+\begin{verbatim}
+--local-dir=directory
+\end{verbatim}
+specifies the path to the local directory.
 
-The --type option specifies one or more of manager, submit or execute, in
-a comma separated list.  So, if a machine is both a submit and execute
-machine, --type=manager,execute should be on the \Condor{configure} 
-command line.
+The \Opt{--type} option to \Condor{configure}
+specifies one or more of the roles that a machine may take on
+within the Condor pool: central manager, submit or execute.
+These options are given in a comma separated list.
+So, if a machine is both a submit and execute
+machine, 
+the proper command-line option is
+\begin{verbatim}
+--type=manager,execute
+\end{verbatim}
 
-First, configure condor on the central manager machine.  If condor
+Configure Condor on the central manager machine first.  If Condor
 will run as root in this pool (Item 3 above), run \Condor{configure} 
 as root, and it will install and set the file permissions correctly.  
 On the central manager machine, run \Condor{configure} as follows.
-Example of running \Condor{configure} for a central manager
 \begin{verbatim}
 % condor_configure --install=r.tar --install-dir=~condor \
 	--local-dir=/scratch/condor --type=manager
 \end{verbatim}
 
 The central manager can also be a submit point or and execute machine, but
-this is only recommended for very small pools.  If this is the case, type
-can then be manager,execute or manager,submit  or manager,submit,execute.
+this is only recommended for very small pools.
+If this is the case, the \Opt{--type} option changes to
+\Expr{manager,execute} or \Expr{manager,submit}  or 
+\Expr{manager,submit,execute}.
 
-After the central manager is installed, the execute and submit machine
+After the central manager is installed, the execute and submit machines
 should then be configured.  Decisions about whether to run Condor as root
 should be consistent throughout the pool. For each machine in the pool,
-simply run
+run
 
 \begin{verbatim}
 % condor_configure --install=r.tar --install-dir=~condor \
@@ -596,11 +616,11 @@ section~\ref{man-condor-configure} on
 page~\pageref{man-condor-configure} for details.
 
 Please skip to section~\ref{installed-now-what} for final instructions
-on configuring and starting condor.
+on configuring and starting Condor.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:install-procedure}
-Older Installation Procedure}
+Older Unix Installation Procedure}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 IF YOU HAVE DECIDED TO CREATE A condor USER AND GROUP, DO
