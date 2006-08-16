@@ -34,7 +34,9 @@ Requirements = TARGET.Owner=="smith" || LoadAvg<=0.3 && KeyboardIdle>15*60
 \end{figure}
 
 ClassAd expressions look very much like expressions in C, and are composed
-of literals and attribute references composed with operators.  The difference
+of literals and attribute references composed with operators 
+and functions.
+The difference
 between ClassAd expressions and C expressions arise from the fact that ClassAd
 expressions operate in a much more dynamic environment.  For example, an
 expression from a machine's ClassAd may refer to an attribute in a job's 
@@ -60,8 +62,9 @@ most operators are strict with respect to \texttt{UNDEFINED}.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{ClassAd!expression syntax}
 ClassAd expressions are formed by composing literals, attribute references and 
-other sub-expressions with operators. 
+other sub-expressions with operators and functions. 
 \subsubsection{Literals}
+\label{ClassAd:literals}
 Literals in the ClassAd language may be of integer, real, string, undefined or 
 error types.  The syntax of these literals is as follows:
 \begin{description}
@@ -129,6 +132,427 @@ The operator with the highest precedence is the unary minus operator.  The
 only operators which are unfamiliar are the \verb+=?=+ and \verb+=!=+
 operators, which are discussed in Section~\ref{ClassAd:evaluation-meta}.
 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Predefined Functions}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{ClassAd!expression functions}
+Any ClassAd expression may utilize predefined functions.
+Function names are case insensitive.
+Parameters to functions 
+and a return value from a function 
+may be typed (as given) or not.
+Nested or recursive function calls are allowed.
+
+Here are descriptions of each of these predefined functions.
+The possible types are the same as itemized in 
+in Section~\ref{ClassAd:literals}.
+Where the type may be any of these literal types, it is
+called out as \verb@AnyType@.
+Where the type is \verb@Integer@, but only returns
+the value 1 or 0 (implying \Expr{True} or \Expr{False}),
+it is called out as \verb@Boolean@.
+The format of each function is given as
+
+\footnotesize
+\begin{verbatim}
+ReturnType FunctionName(ParameterType parameter1, ParameterType parameter2, ...)
+\end{verbatim}
+\normalsize
+Optional parameters are given within square brackets.
+
+\begin{description}
+  \item[\Expr{AnyType ifThenElse(AnyType IfExpr,AnyType ThenExpr, AnyType ElseExpr)}]
+    A conditional expression is described by \Expr{IfExpr}.
+    The following defines return values, when \Expr{IfExpr}
+    evaluates to
+    \begin{itemize}
+    \item{\Expr{True}. Evaluate and return the value as given
+      by \Expr{ThenExpr}.}
+    \item{\Expr{False}. Evaluate and return the value as given
+      by \Expr{ElseExpr}.}
+    \item{\Expr{UNDEFINED}. Return the value \Expr{UNDEFINED}.}
+    \item{\Expr{ERROR}. Return the value \Expr{ERROR}.}
+    \item{\Expr{0.0}. Evaluate, and return the value as given
+      by \Expr{ElseExpr}.}
+    \item{non-\Expr{0.0} Real values. Evaluate, and return the value as given
+      by \Expr{ThenExpr}.}
+    \end{itemize}
+    Where \Expr{IfExpr} evaluates to give a value of type \Expr{String},
+    the function returns the value \Expr{ERROR}.
+    The implementation uses lazy evaluation, so expressions
+    are only evaluated as defined.
+
+    This function returns \Expr{ERROR} if other than exactly 3
+    arguments are given.
+
+
+  \item[\Expr{Boolean isUndefined(AnyType Expr)}]
+    Returns \Expr{True}, if \Expr{Expr} evaluates to \Expr{UNDEFINED}.
+    Returns \Expr{False} in all other cases.
+
+    This function returns \Expr{ERROR} if other than exactly 1
+    argument is given.
+
+  \item[\Expr{Boolean isError(AnyType Expr)}]
+    Returns \Expr{True}, if \Expr{Expr} evaluates to \Expr{ERROR}.
+    Returns \Expr{False} in all other cases.
+
+    This function returns \Expr{ERROR} if other than exactly 1
+    argument is given.
+
+  \item[\Expr{Boolean isString(AnyType Expr)}]
+    Returns \Expr{True}, if the evaluation of \Expr{Expr}
+    gives a value of type \Expr{String}.
+    Returns \Expr{False} in all other cases.
+
+    This function returns \Expr{ERROR} if other than exactly 1
+    argument is given.
+
+  \item[\Expr{Boolean isInteger(AnyType Expr)}]
+    Returns \Expr{True}, if the evaluation of \Expr{Expr}
+    gives a value of type \Expr{Integer}.
+    Returns \Expr{False} in all other cases.
+
+    This function returns \Expr{ERROR} if other than exactly 1
+    argument is given.
+
+  \item[\Expr{Boolean isReal(AnyType Expr)}]
+    Returns \Expr{True}, if the evaluation of \Expr{Expr}
+    gives a value of type \Expr{Real}.
+    Returns \Expr{False} in all other cases.
+
+    This function returns \Expr{ERROR} if other than exactly 1
+    argument is given.
+
+  \item[\Expr{Boolean isBoolean(AnyType Expr)}]
+    Returns \Expr{True}, if the evaluation of \Expr{Expr}
+    gives the integer value 0 or 1.
+    Returns \Expr{False} in all other cases.
+
+    This function returns \Expr{ERROR} if other than exactly 1
+    argument is given.
+
+  \item[\Expr{Integer int(AnyType Expr)}]
+    Returns the integer value as defined by \Expr{Expr}.
+    Where the type of the evaluated \Expr{Expr} is \Expr{Real},
+    the value is truncated (round towards zero) to an integer.
+    Where the type of the evaluated \Expr{Expr} is \Expr{String},
+    the string is converted to an integer using a C-like
+    \Procedure{atoi} function. When this result is not an integer,
+    \Expr{ERROR} is returned.
+    Where the evaluated \Expr{Expr} is \Expr{ERROR} or \Expr{UNDEFINED},
+    \Expr{ERROR} is returned.
+
+    This function returns \Expr{ERROR} if other than exactly 1
+    argument is given.
+
+  \item[\Expr{Real real(AnyType Expr)}]
+    Returns the real value as defined by \Expr{Expr}.
+    Where the type of the evaluated \Expr{Expr} is \Expr{Integer},
+    the return value is the converted integer.
+    Where the type of the evaluated \Expr{Expr} is \Expr{String},
+    the string is converted to a real value using a C-like
+    \Procedure{atof} function. When this result is not a real,
+    \Expr{ERROR} is returned.
+    Where the evaluated \Expr{Expr} is \Expr{ERROR} or \Expr{UNDEFINED},
+    \Expr{ERROR} is returned.
+
+    This function returns \Expr{ERROR} if other than exactly 1
+    argument is given.
+
+  \item[\Expr{String string(AnyType Expr)}]
+    Returns the string that results from the evaluation of \Expr{Expr}.
+    Converts a non-string value to a string.
+    Where the evaluated \Expr{Expr} is \Expr{ERROR} or \Expr{UNDEFINED},
+    \Expr{ERROR} is returned.
+
+    This function returns \Expr{ERROR} if other than exactly 1
+    argument is given.
+
+  \item[\Expr{Integer floor(AnyType Expr)}]
+    Returns the integer that results from the evaluation of \Expr{Expr},
+    where the type of the evaluated \Expr{Expr} is \Expr{Integer}.
+    Where the type of the evaluated \Expr{Expr} is \emph{not} \Expr{Integer},
+    function \Expr{real(Expr)} is called.
+    Its return value is then used to return the largest magnitude
+    integer that is not larger than the returned value. 
+    Where \Expr{real(Expr)} returns \Expr{ERROR} or \Expr{UNDEFINED},
+    \Expr{ERROR} is returned.
+
+    This function returns \Expr{ERROR} if other than exactly 1
+    argument is given.
+
+  \item[\Expr{Integer ceiling(AnyType Expr)}]
+    Returns the integer that results from the evaluation of \Expr{Expr},
+    where the type of the evaluated \Expr{Expr} is \Expr{Integer}.
+    Where the type of the evaluated \Expr{Expr} is \emph{not} \Expr{Integer},
+    function \Expr{real(Expr)} is called.
+    Its return value is then used to return the smallest magnitude
+    integer that is not less than the returned value. 
+    Where \Expr{real(Expr)} returns \Expr{ERROR} or \Expr{UNDEFINED},
+    \Expr{ERROR} is returned.
+
+    This function returns \Expr{ERROR} if other than exactly 1
+    argument is given.
+
+  \item[\Expr{Integer round(AnyType Expr)}]
+    Returns the integer that results from the evaluation of \Expr{Expr},
+    where the type of the evaluated \Expr{Expr} is \Expr{Integer}.
+    Where the type of the evaluated \Expr{Expr} is \emph{not} \Expr{Integer},
+    function \Expr{real(Expr)} is called.
+    Its return value is then used to return the 
+    integer that results from a round-to-nearest rounding method. 
+    The nearest integer value to the return value is returned,
+    except in the case of the value at the exact midpoint between
+    two integer values.  
+    In this case, the even valued integer is returned.
+    Where \Expr{real(Expr)} returns \Expr{ERROR} or \Expr{UNDEFINED},
+    or the integer value does not fit into 32 bits,
+    \Expr{ERROR} is returned.
+
+    This function returns \Expr{ERROR} if other than exactly 1
+    argument is given.
+
+  \item[\Expr{Integer random(\Lbr\ AnyType Expr \Rbr)}]
+    Where the optional argument \Expr{Expr} evaluates to type \Expr{Integer}
+    or type \Expr{Real}
+    (and called \Expr{x}),
+    the return value is the integer or real \Expr{r} randomly chosen
+    from the interval \Expr{0 <= r < x}.
+    With no argument, the return value is chosen with \Expr{random(1.0)}.
+    Returns \Expr{ERROR} in all other cases.
+
+    This function returns \Expr{ERROR} if greater than 1
+    argument is given.
+
+  \item[\Expr{String strcat(AnyType Expr1 \Lbr\ , AnyType Expr2 \Dots \Rbr)}]
+    Returns the string which is the concatenation of all arguments, where all arguments are 
+    converted to type \Expr{String} by function \Expr{string(Expr)}.
+    Returns \Expr{ERROR} if any argument evaluates to \Expr{UNDEFINED} or \Expr{ERROR}.
+
+  \item[\Expr{String substr(String s, Integer offset \Lbr\ , Integer length  \Rbr)}]
+    Returns the substring of \Expr{s}, from the position indicated by \Expr{offset},
+    with (optional) \Expr{length} characters.
+    The first character within \Expr{s} is at offset 0.
+    If the optional \Expr{length} argument is not present, the substring extends to the
+    end of the string.
+    If \Expr{offset} is negative, the value \Expr{(length - offset)} is used for the offset.
+    If \Expr{length} is negative, an initial substring is computed, from the offset
+    to the end of the string.
+    Then, the absolute value of \Expr{length} characters are deleted from the
+    right end of the initial substring.
+    Further, where characters of this resulting substring lie outside the original
+    string, the part that lies within the original string is returned.
+    If the substring lies completely outside of the original string, the null string
+    is returned.
+
+    This function returns \Expr{ERROR} if greater than 3 or less than 2
+    arguments are given.
+    
+  \item[\Expr{Integer strcmp(AnyType Expr1, AnyType Expr2)}]
+    Both arguments are converted to type \Expr{String} by function \Expr{string(Expr)}.
+    The return value is an integer that will be
+    \begin{itemize}
+      \item{less than 0},
+      if \Expr{Expr1} is lexicographically less than \Expr{Expr2}
+      \item{equal to 0},
+      if \Expr{Expr1} is lexicographically equal to \Expr{Expr2}
+      \item{greater than 0},
+      if \Expr{Expr1} is lexicographically greater than \Expr{Expr2}
+    \end{itemize}
+    Case is significant in the comparison.
+    Where either argument evaluates to \Expr{ERROR} or \Expr{UNDEFINED},
+    \Expr{ERROR} is returned.
+
+    This function returns \Expr{ERROR} if other than 2 arguments are given.
+
+  \item[\Expr{Integer stricmp(AnyType Expr1, AnyType Expr2)}]
+    This function is the same as \Expr{strcmp}, except that letter case is
+    \emph{not} significant.
+
+  \item[\Expr{String toUpper(AnyType Expr)}]
+    The single argument is converted to type \Expr{String} by function \Expr{string(Expr)}.
+    The return value is this string, with all lower case letters converted to
+    upper case.
+    If the argument evaluates to \Expr{ERROR} or \Expr{UNDEFINED},
+    \Expr{ERROR} is returned.
+
+    This function returns \Expr{ERROR} if greater than 1
+    argument is given.
+
+  \item[\Expr{String toLower(AnyType Expr)}]
+    The single argument is converted to type \Expr{String} by function \Expr{string(Expr)}.
+    The return value is this string, with all upper case letters converted to
+    lower case.
+    If the argument evaluates to \Expr{ERROR} or \Expr{UNDEFINED},
+    \Expr{ERROR} is returned.
+
+    This function returns \Expr{ERROR} if other than exactly 1
+    argument is given.
+
+  \item[\Expr{Integer size(AnyType Expr)}]
+    Returns the number of characters in the string, after calling function
+    \Expr{string(Expr)}.
+    If the argument evaluates to \Expr{ERROR} or \Expr{UNDEFINED},
+    \Expr{ERROR} is returned.
+
+    This function returns \Expr{ERROR} if other than exactly 1
+    argument is given.
+
+\end{description}
+
+For the following functions, a delimiter is represented by a string.
+Each character within the delimiter string
+delimits individual strings within a list of strings 
+that is given by a single string.
+The default delimiter contains the comma and space characters.
+A string within the list is ended (delimited) by one or more
+characters within the delimiter string.
+
+\begin{description}
+  \item[\Expr{Integer stringListSize(String list \Lbr\ , String delimiter \Rbr)}]
+    Returns the number of elements in the string \Expr{list},
+    as delimited by the optional \Expr{delimiter} string.
+    Returns \Expr{ERROR} if either argument is not a string.
+
+    This function returns \Expr{ERROR} if other than 1 or 2 arguments are given.
+
+  \item[\Expr{Integer stringListSum(String list \Lbr\ , String delimiter \Rbr)} \\
+  OR
+  \Expr{Real stringListSum(String list \Lbr\ , String delimiter \Rbr)}]
+    Sums and returns the sum of all items in the string \Expr{list},
+    as delimited by the optional \Expr{delimiter} string.
+    If all items in the list are integers, the return value is also
+    an integer.
+    If any item in the list is a real value (noninteger),
+    the return value is a real.
+    If any item does not represent an integer or real value,
+    the return value is \Expr{ERROR}.
+
+
+  \item[\Expr{Real stringListAve(String list \Lbr\ , String delimiter \Rbr)}]
+    Sums and returns the real-valued average of all items in the 
+    string \Expr{list},
+    as delimited by the optional \Expr{delimiter} string.
+    If any item does not represent an integer or real value,
+    the return value is \Expr{ERROR}.
+    A list with 0 items (the empty list) returns the value 0.0.
+
+  \item[\Expr{Integer stringListMin(String list \Lbr\ , String delimiter \Rbr)} \\
+  OR
+  \Expr{Real stringListMin(String list \Lbr\ , String delimiter \Rbr)}]
+    Finds and returns the minimum value from all items in the
+    string \Expr{list},
+    as delimited by the optional \Expr{delimiter} string.
+    If all items in the list are integers, the return value is also
+    an integer.
+    If any item in the list is a real value (noninteger),
+    the return value is a real.
+    If any item does not represent an integer or real value,
+    the return value is \Expr{ERROR}.
+    A list with 0 items (the empty list) returns the value \Expr{UNDEFINED}.
+
+  \item[\Expr{Integer stringListMax(String list \Lbr\ , String delimiter \Rbr)} \\
+  OR
+  \Expr{Real stringListMax(String list \Lbr\ , String delimiter \Rbr)}]
+    Finds and returns the maximum value from all items in the
+    string \Expr{list},
+    as delimited by the optional \Expr{delimiter} string.
+    If all items in the list are integers, the return value is also
+    an integer.
+    If any item in the list is a real value (noninteger),
+    the return value is a real.
+    If any item does not represent an integer or real value,
+    the return value is \Expr{ERROR}.
+    A list with 0 items (the empty list) returns the value \Expr{UNDEFINED}.
+
+  \item[\Expr{Boolean stringListMember(String x, String list \Lbr\ , String delimiter \Rbr)}]
+    Returns \Expr{TRUE} if item \Expr{x} is in the string \Expr{list},
+    as delimited by the optional \Expr{delimiter} string.
+    Returns \Expr{FALSE} if item \Expr{x} is not in the string \Expr{list}.
+    Comparison is done with \Expr{strcmp()}.
+    The return value is \Expr{ERROR}, if any of the arguments
+    are not strings.
+
+  \item[\Expr{Boolean stringListIMember(String x, String list \Lbr\ , String delimiter \Rbr)}]
+    Same as \Expr{stringlistmember()}, but comparison is done
+    with \Expr{stricmp()}, so letter case is not relevant.
+
+\end{description}
+
+The following two functions utilize regular expressions as defined
+and supported by the PCRE library.
+See \URL{http://www.pcre.org} for complete documentation of
+regular expressions.
+
+The \Expr{options} argument to these functions is a string of 
+special characters that modify the use of the regular expressions.
+Inclusion of characters other than these as options are ignored.
+\begin{description}
+  \item[\Expr{I} or \Expr{i}]
+    Ignore letter case.
+  \item[\Expr{M} or \Expr{m}]
+    Modifies the interpretation of the carat (\verb@^@) and dollar sign
+    (\verb@$@) characters.
+    The carat character matches the start of a string, as well as
+    after each newline character.
+    The dollar sign character matches before a newline character.
+  \item[\Expr{S} or \Expr{s}]
+    The period matches any character, including the newline character. 
+  \item[\Expr{X} or \Expr{x}]
+    Ignore both white space and comments within the pattern.
+    A comment is defined by starting with the pound sign (\verb@#@)
+    character, and continuing until the newline character.
+\end{description}
+
+\begin{description}
+  \item[\Expr{Boolean regexp(String pattern, String target \Lbr\ , String options \Rbr)}]
+    Returns \Expr{TRUE} if the string \Expr{target} is 
+    a regular expression as described by \Expr{pattern}.
+    Returns \Expr{FALSE} otherwise.
+    If any argument is not a string, or if \Expr{pattern} does not describe
+    a valid regular expression, returns \Expr{ERROR}.
+
+  \item[\Expr{String regexps(String pattern, String target, String substitute, \Lbr\ String options \Rbr)}]
+ 	The regexp pattern is applied to target.  If the pattern matches,
+	the string substitute is returned, with backslash expansion performed.
+    Options are the same as above.  If any of the arguments are not strings
+	it returns \Expr{ERROR}.
+
+  \item[\Expr{Boolean stringListRegexpMember(String pattern, String list \Lbr\ , String delimiter \Rbr\ \Lbr\ , String options \Rbr)}]
+    Returns \Expr{TRUE} if any of the strings within the
+    \Expr{list} is a regular expression as described by \Expr{pattern}.
+    Returns \Expr{FALSE} otherwise.
+    If any argument is not a string, or if \Expr{pattern} does not describe
+    a valid regular expression, returns \Expr{ERROR}.
+    To include the fourth (optional) argument \Expr{options}, a third argument
+    of \Expr{delimiter} is required.
+    A default value for a delimiter is " ,".
+
+\end{description}
+
+
+\begin{description}
+  \item[\Expr{Integer time()}]
+    Returns the current coordinated universal time, which is the same
+    as the ClassAd attribute \Attr{CurrentTime}.
+    This is the time, in seconds, since midnight of January 1, 1970.
+
+
+  \item[\Expr{String interval(Integer seconds)}]
+    Uses \Expr{seconds} to return a string of the form
+    \Expr{days+hh:mm:ss}.
+    This represents an interval of time.
+    Leading values that are zero are omitted from the string.
+    For example, \Expr{seconds} of 67 becomes "1:07".
+    A second example, \Expr{seconds} of 
+    1472523 = 17*24*60*60 + 1*60*60 + 2*60 + 3, results in the
+    string "17+1:02:03".
+
+\end{description}
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Evaluation Semantics}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -155,7 +579,7 @@ error values evaluate to themselves.
 \index{TARGET., ClassAd scope resolution prefix}
 \index{MY., ClassAd scope resolution prefix}
 Since the expression evaluation is being carried out in the context of two
-ClassAds, there is a potential for namespace ambiguities.  The following
+ClassAds, there is a potential for name space ambiguities.  The following
 rules define the semantics of attribute references made by ad $A$ that is being 
 evaluated in a context with another ad $B$:
 \begin{enumerate}
@@ -381,6 +805,35 @@ beatrice.c INTEL    SOLARIS251   Claimed    Busy       1.000  128   0+01:30:02
 \end{verbatim}
 \normalsize
 
-The similar flexibility exists in querying job queues in the Condor system.
+Here is an example that utilizes a regular expression
+ClassAd function to list specific information.
+A file contains ClassAd information.
+\Condor{advertise} is used to inject this information,
+and \Condor{status} constrains the search with an expression
+that contains a ClassAd function.
+
+\footnotesize
+\begin{verbatim}
+% cat ad
+MyType = "Generic"
+FauxType = "DBMS"
+Name = "random-test"
+Machine = "f05.cs.wisc.edu"
+MyAddress = "<128.105.149.105:34000>"
+DaemonStartTime = 1153192799
+UpdateSequenceNumber = 1
+
+% condor_advertise UPDATE_AD_GENERIC ad
+
+% condor_status -any -constraint 'FauxType=="DBMS" && regexp("random.*", Name, "i")'
+
+MyType               TargetType           Name                          
+
+Generic              None                 random-test                   
+
+\end{verbatim}
+\normalsize
+
+Similar flexibility exists in querying job queues in the Condor system.
 
 \index{ClassAd|)}

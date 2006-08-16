@@ -4,7 +4,11 @@
   \newpage
   \latex
     {
+	  \if@twoside
       \fancyhead[LE,RO]{\thepage} \fancyhead[RE,LO]{#1 (#2)}    % only on latex
+	  \else
+      \fancyhead[R]{\thepage} \fancyhead[L]{#1 (#2)}    % only on latex
+      \fi
       \fancyfoot[C]{Condor \VersionNotice, Command Reference}
     }
   \section*{#1} #3

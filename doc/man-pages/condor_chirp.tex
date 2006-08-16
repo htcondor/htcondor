@@ -1,0 +1,116 @@
+\begin{ManPage}{\label{man-condor-chirp}\Condor{chirp}}{1}
+{Access files or job ClassAd from an executing job}
+\Synopsis
+\SynProg{\Condor{chirp}}
+\oOpt{-help} 
+
+\SynProg{\Condor{chirp}}
+\Opt{fetch} \Arg{RemoteFileName} \Arg{LocalFileName}
+
+\SynProg{\Condor{chirp}}
+\Opt{put} \oOptArg{-mode}{mode} \oOptArg{-perm}{UnixPerm} \Arg{LocalFileName} \Arg{RemoteFileName}
+
+\SynProg{\Condor{chirp}}
+\Opt{remove} \Arg{RemoteFileName}
+
+\SynProg{\Condor{chirp}}
+\Opt{get\_job\_attr} \Arg{JobAttributeName}
+
+\SynProg{\Condor{chirp}}
+\Opt{set\_job\_attr} \Arg{JobAttributeName} \Arg{AttributeValue}
+
+\Description 
+\index{Condor commands!condor\_chirp}
+\index{condor\_chirp command}
+\Condor{chirp} is run run from a user job while executing.
+It accesses files or job ClassAd attributes on the submit machine.
+Files can be read, written or removed.
+Job attributes can be read, and most attributes can be updated.
+
+A description using of the terms \Term{local} and \Term{remote}
+are given from the point of view of the executing program.
+
+If the input file name for \Opt{put} is a dash,
+\Condor{chirp} uses standard input as the source.
+If the output file name for \Opt{fetch} is a dash,
+\Condor{chirp} writes to standard output instead of a local file.
+
+Jobs that use \Condor{chirp} must have the attribute
+\Attr{WantIOProxy} set to \Expr{True} in the job ad.
+To do this, place
+\begin{verbatim}
++WantIOProxy = true
+\end{verbatim}
+in the submit description file for the job.
+
+\Condor{chirp} only works for jobs run in the
+vanilla, mpi, parallel and java universes.
+
+The optional \OptArg{-mode}{mode} argument
+is one or more of the following characters describing the
+\Arg{RemoteFileName} file.
+  \begin{itemize}
+    \item{w:  open for writing}
+    \item{a:  force all writes to append}
+    \item{t:  truncate before use}
+    \item{c:  create the file, if it does not exist}
+    \item{x:  fail if 'c' is given, and the file already exists}
+  \end{itemize}
+
+The optional \OptArg{-perm}{UnixPerm} argument
+describes the file access permissions in a Unix format
+(for example, 660).
+
+\begin{Options}
+  \OptItem{\Opt{-help}}{Display usage information and exit.}
+  \OptItem{fetch}{Copy the \Arg{RemoteFileName} from the submit machine
+    to the execute machine.}
+  \OptItem{remove}{Remove the \Arg{RemoteFileName} file from the 
+    submit machine.}
+  \OptItem{put}{Copy the \Arg{LocalFileName} from the execute machine
+    to the submit machine.  Perm is the unix permission to open the file with.}
+  \OptItem{get\_job\_attr}{Prints the named job ClassAd attribute to
+    standard output.}
+  \OptItem{set\_job\_attr}{Sets the named job ClassAd attribute with
+    the given attribute value.}
+\end{Options}
+
+\Examples
+
+To copy a file from the submit machine to the execute machine while the 
+user job is running, run
+
+\footnotesize
+\begin{verbatim}
+% condor_chirp fetch remotefile localfile
+\end{verbatim}
+\normalsize
+
+To print to standard output the value of the \Attr{Requirements}
+expression from within a running job, run
+
+\footnotesize
+\begin{verbatim}
+% condor_chirp get_job_attr Requirements
+\end{verbatim}
+\normalsize
+
+Note that the remote (submit-side) directory path is relative to the
+submit directory, and the local (execute-side) directory is relative to the
+current directory of the running program.
+
+To append the word "foo" to a file on the submit machine, run
+
+\footnotesize
+\begin{verbatim}
+% echo foo | condor_chirp put -mode wat - RemoteFile
+\end{verbatim}
+\normalsize
+
+
+\ExitStatus
+
+\Condor{chirp} will exit with a status value of 0 (zero) upon success,
+and it will exit with the value 1 (one) upon failure.
+
+\end{ManPage}

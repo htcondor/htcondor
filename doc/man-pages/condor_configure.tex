@@ -5,7 +5,7 @@
 [\verb@--@\textbf{help}]
 
 \SynProg{\Condor{configure}}
-[\verb@--@\textbf{install}]
+[\verb@--@\textbf{install[=$<$path/to/release.tar$>$] }]
 [\verb@--@\textbf{install-dir=$<$path$>$}]
 [\verb@--@\textbf{local-dir=$<$path$>$}]
 [\verb@--@\textbf{make-personal-condor}]
@@ -47,8 +47,8 @@
 \Description 
 
 \Condor{configure} is a Perl script that installs and/or configures
-Condor.
-It will run with Perl 5 or more recent versions.
+Condor on Unix machines.
+It will run with Perl 5.003 or more recent versions.
 
 \Condor{configure} is designed to be run more than one time
 where required.
@@ -72,8 +72,10 @@ help screen being printed.
 	\OptItem{\Opt{---help}} {Print help screen and exit}
 
 	\OptItem{\Opt{---install}} {Perform installation, assuming that
-	the current working directory contains the \File{release.tar}
-	file.  Without further options, the configuration is that of
+	the current working directory contains the \File{release.tar} file.
+	Where a directory path is supplied,
+	it specifies that directory containing the \File{release.tar} file.
+	Without further options, the configuration is that of
 	a Personal Condor, a complete one-machine pool.
 	If used as an 
 	upgrade within an existing installation directory, existing 

@@ -322,3 +322,25 @@ of machines is running a job at user priority 5, and the user submits
 a new job at user priority 10, the running job will be preempted for
 the new job.  The old job is put back in the queue, and will start running
 from the beginning when the new job completes.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Configure-Dedicated-Groups}
+Grouping dedicated nodes into parallel scheduling groups}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+In some parallel environments, machines are divided into groups, and
+jobs should not cross groups of machines -- that is, all the nodes of a parallel
+job should be allocated to machines in the same group.  The most common
+example is a pool of machine using infiniband switches.  Each switch
+might connect 16 machines, and a pool might have 160 machines on 10 switches.
+If the infiniband switches are not routed to each other, each job must run 
+on machines connected to the same switch.  The dedicated scheduler's 
+parallel scheduling groups features supports this operation.
+
+Each startd must define which group it belongs to by setting the 
+\Macro{PARALLEL\_SCHEDULING\_GROUP} property in its config file, and 
+advertising it in it's classad.  The value of this property is simply a
+string, which should be the same for all startds in a given group.  Then,
+parallel jobs which want to be scheduled by group, declare this in their 
+submit file by setting +WantParallelSchedulingGroups=True.
+

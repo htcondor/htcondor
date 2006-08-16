@@ -1,16 +1,29 @@
 \begin{ManPage}{\label{man-condor-store-cred}\Condor{store\_cred}}{1}
-{securely stash user's password - for Win32 only}
+{securely stash user's password}
 \Synopsis
 \SynProg{\Condor{store\_cred}}
 \oOpt{-help}
 
 \SynProg{\Condor{store\_cred}}
-\Optnm{add} \oOptArg{-p}{password}
+\Lbr
+\Opt{-c} \verb@|@ \OptArg{-u}{username}
+\Rbr 
+\oOptArg{-p}{password}
+\oOptArg{-n}{machinename}
+\Optnm{add}
 
 \SynProg{\Condor{store\_cred}}
+\Lbr
+\Opt{-c} \verb@|@ \OptArg{-u}{username}
+\Rbr 
+\oOptArg{-n}{machinename}
 \Optnm{delete}
 
 \SynProg{\Condor{store\_cred}}
+\Lbr
+\Opt{-c} \verb@|@ \OptArg{-u}{username}
+\Rbr 
+\oOptArg{-n}{machinename}
 \Optnm{query}
 
 \index{Condor commands!condor\_store\_cred}
@@ -18,18 +31,25 @@
 
 \Description 
 
-\Condor{store\_cred} stores the password of a user/domain pair securely
-in the Windows registry.  Using this stored password, Condor is able to
-run jobs with the user ID of the submitting user when running scheduler
-universe jobs and DAGMan. In addition, Condor uses this password to
+On a Windows machine, \Condor{store\_cred} stores the password
+of a user/domain pair securely in the Windows registry.
+Using this stored password, Condor is able to
+run jobs with the user ID of the submitting user.
+In addition, Condor uses this password to
 acquire the submitting user's credentials when writing output or log
 files. The password is stored in the same manner as the system does when
 setting or changing account passwords.
-
 When \Condor{store\_cred} is invoked, it contacts the \Condor{schedd}
 daemon to carry out the requested operations on behalf of the user.
 This is necessary since registry keys are accessible only by the Windows
 SYSTEM account, not by administrators or other users.
+
+On a Unix machine, \Condor{store\_cred} is used to manage
+the pool password,
+placed in a file specified by the \MacroNI{SEC\_PASSWORD\_FILE}
+configuration variable, and for use in password authentication
+among Condor daemons.
+
 
 The password is stashed in a persistent manner; it is maintained
 across system reboots.
@@ -42,15 +62,23 @@ across system reboots.
 	is already have a password stashed, the old password will be
 	overwritten by the new password.}
 
-	\OptItem{\Opt{delete}}{Delete the current user's
-	stashed password, if it exists.}
+	\OptItem{\Opt{delete}}{Delete the current password,
+	if it exists.}
 
-	\OptItem{\Opt{query}}{Report whether the current user's password 
+	\OptItem{\Opt{query}}{Report whether the password 
 	is stored or not.}
 
 	\OptItem{\Opt{-help}}{Displays a brief summary of command options.}
 
-	\OptItem{\Opt{-p} password}{Stores given password rather than prompting.}
+	\OptItem{\Opt{-p} password}{Stores given password,
+	rather than prompting.}
+
+	\OptItem{\Opt{-c}}{Apply the option to the pool password.}
+
+	\OptItem{\Opt{-n} machinename}{Apply the command on the
+	given machine.}
+
+	\OptItem{\Opt{-u} username}{Specify the user name.}
 
 \end{Options}
 

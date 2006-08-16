@@ -864,8 +864,8 @@ File System Configuration File Entries''.
   behavior at startup.  For Unix operating systems, this behavior can
   be inherited from the parent shell, or specified in a shell script
   that starts Condor.
-  If this parameter is set and TRUE, the limit is increased to
-  the maximum.  If it is set to FALSE, the limit is set at 0
+  If this parameter is set and \Expr{True}, the limit is increased to
+  the maximum.  If it is set to \Expr{False}, the limit is set at 0
   (which means that no core files are created).  Core files
   greatly help the Condor developers debug any problems you might be
   having.  By using the parameter, you do not have to worry about
@@ -917,6 +917,15 @@ File System Configuration File Entries''.
   on the system, and instead will always report the system load average
   to be 0.0.  Defaults to True.
 
+\item[\Macro{NETWORK\_MAX\_PENDING\_CONNECTS}] \label{param:NetworkMaxPendingConnects}
+  This specifies a limit to the maximum number of simultaneous network
+  connection attempts.  This is primarily relevant to \Condor{schedd},
+  which may try to connect to large numbers of startds when claiming
+  them.  The negotiator may also connect to large numbers of startds
+  when initiating security sessions used for sending MATCH messages.  On
+  Unix, the default for this parameter is eighty percent of the process file
+  descriptor limit.  On windows, the default is 1600.
+
 \end{description}
 
 % Default value check end here: PKK 8 Jan 2004
@@ -960,10 +969,10 @@ of the subsystem corresponding to the daemon.
 
 \item[\Macro{TRUNC\_<SUBSYS>\_LOG\_ON\_OPEN}]
   \label{param:TruncSubsysLogOnOpen}  If this macro is defined and set
-  to TRUE, the affected log will be truncated and started from an
+  to \Expr{True}, the affected log will be truncated and started from an
   empty file with each invocation of the program.  Otherwise, new
   invocations of the program will append to the previous log
-  file.  By default this setting is FALSE for all daemons. 
+  file.  By default this setting is \Expr{False} for all daemons. 
 
 \item[\MacroB{<SUBSYS>\_LOCK}] \label{param:SubsysLock} 
 \index{SUBSYS\_LOCK macro@\texttt{<SUBSYS>\_LOCK} macro}
@@ -1249,11 +1258,11 @@ server, shadow, and starter, none of which use DaemonCore yet).
   Because of the potential security implications of this feature, by
   default, Condor daemons will not honor these requests.
   To use this functionality, Condor administrators must specifically
-  enable it by setting \MacroNI{ENABLE\_RUNTIME\_CONFIG} to TRUE, and
+  enable it by setting \MacroNI{ENABLE\_RUNTIME\_CONFIG} to \Expr{True}, and
   specify what configuration variables can be changed using the
   \MacroNI{SETTABLE\_ATTRS\Dots} family of configuration options
   (described below).
-  Defaults to FALSE.
+  Defaults to \Expr{False}.
 
 \item[\Macro{ENABLE\_PERSISTENT\_CONFIG}]
   \label{param:EnablePersistentConfig}
@@ -1264,14 +1273,14 @@ server, shadow, and starter, none of which use DaemonCore yet).
   Because of the potential security implications of this feature, by
   default, Condor daemons will not honor these requests.
   To use this functionality, Condor administrators must specifically
-  enable it by setting \MacroNI{ENABLE\_PERSISTENT\_CONFIG} to TRUE,
+  enable it by setting \MacroNI{ENABLE\_PERSISTENT\_CONFIG} to \Expr{True},
   creating a directory where the Condor daemons will hold these
   dynamically-generated persistent configuration files (declared using
   \MacroNI{PERSISTENT\_CONFIG\_DIR}, described below) and specify what
   configuration variables can be changed using the
   \MacroNI{SETTABLE\_ATTRS\Dots} family of configuration options
   (described below).
-  Defaults to FALSE.
+  Defaults to \Expr{False}.
 
 \item[\Macro{PERSISTENT\_CONFIG\_DIR}]
   \label{param:PersistentConfigDir}
@@ -1445,7 +1454,7 @@ section~\ref{sec:Networking} on page~\pageref{sec:Networking}.
   interface found, or the IP address specified with
   \MacroNI{NETWORK\_INTERFACE} (described below).
   Starting with version 6.7.13, \MacroNI{BIND\_ALL\_INTERFACES} can be
-  set to \verb@TRUE@ to cause Condor to bind to all interfaces on the
+  set to \Expr{True} to cause Condor to bind to all interfaces on the
   machine.
   However, currently Condor is still only able to advertise a single
   IP address, even if it is listening on multiple interfaces.  By
@@ -1464,7 +1473,7 @@ section~\ref{sec:Networking} on page~\pageref{sec:Networking}.
   To bind to a specific network interface other than the
   first one, this \MacroNI{NETWORK\_INTERFACE} should be set to 
   the IP address to use.
-  When \MacroNI{BIND\_ALL\_INTERFACES} is set to \verb@TRUE@, this
+  When \MacroNI{BIND\_ALL\_INTERFACES} is set to \Expr{True}, this
   setting simply controls what IP address a given Condor host will
   advertise.
   More information about configuring Condor on machines with multiple
@@ -1564,7 +1573,7 @@ section~\ref{sec:Networking} on page~\pageref{sec:Networking}.
 \item[\Macro{UPDATE\_COLLECTOR\_WITH\_TCP}]
   \label{param:UpdateCollectorWithTcp}
   If your site needs to use TCP connections to send ClassAd updates to
-  your collector (which it almost certainly does NOT), set to TRUE
+  your collector (which it almost certainly does NOT), set to \Expr{True}
   to enable this feature.
   Please read section~\ref{sec:tcp-collector-update} on ``Using TCP to
   Send Collector Updates'' on page~\pageref{sec:tcp-collector-update}
@@ -1576,7 +1585,7 @@ section~\ref{sec:Networking} on page~\pageref{sec:Networking}.
   \Macro{COLLECTOR\_SOCKET\_CACHE\_SIZE} at the central manager, so
   that the collector will accept TCP connections for updates, and will
   keep them open for reuse.
-  Defaults to FALSE.
+  Defaults to \Expr{False}.
   % PKK
   % Described in default config file: YES
   % Defined in the default config file: NO
@@ -1622,14 +1631,14 @@ section~\ref{sec:GCB} on page~\pageref{sec:GCB}.
 \begin{description}
 
 \item[\Macro{NET\_REMAP\_ENABLE}] 
-  If defined to \verb@TRUE@, this setting will enable a network
+  If defined to \Expr{True}, this setting will enable a network
   remapping service for Condor.
   The service to use is controlled by \MacroNI{NET\_REMAP\_SERVICE},
   described below.
-  This boolean value defaults to \verb@FALSE@.
+  This boolean value defaults to \Expr{False}.
 
 \item[\Macro{NET\_REMAP\_SERVICE}] If \MacroNI{NET\_REMAP\_ENABLE} is
-  defined to \verb@TRUE@, this setting controls what network remapping
+  defined to \Expr{True}, this setting controls what network remapping
   service should be used.
   Currently, the only value supported is \verb@GCB@.
   The default is undefined.
@@ -1832,15 +1841,15 @@ section~\ref{sec:shared-fs}.
 
   
   % no longer used, and gone from the sample config file as of 5/30/03.
-  %\item[\Macro{HAS\_AFS}] \label{param:HasAfs} Set this macro to TRUE if
+  %\item[\Macro{HAS\_AFS}] \label{param:HasAfs} Set this macro to \Expr{True} if
   %  all the machines you plan on adding in your pool can all access a
-  %  common set of AFS fileservers.  Otherwise, set it to FALSE.
+  %  common set of AFS fileservers.  Otherwise, set it to \Expr{False}.
   
 \item[\Macro{RESERVE\_AFS\_CACHE}] \label{param:ReserveAfsCache} If
   your machine is running AFS and the AFS cache lives on the same
   partition as the other Condor directories, and you want Condor to
   reserve the space that your AFS cache is configured to use, set this
-  macro to TRUE.  It defaults to FALSE.
+  macro to \Expr{True}.  It defaults to \Expr{False}.
   
 \item[\Macro{USE\_NFS}] \label{param:UseNfs} This macro influences
   how Condor jobs running in the standard universe access their
@@ -1855,7 +1864,7 @@ section~\ref{sec:shared-fs}.
   over the network a second time back to the NFS file server. Thus,
   all of the program's I/O is being sent over the network twice.
   
-  If this macro to TRUE, then Condor will attempt to
+  If this macro to \Expr{True}, then Condor will attempt to
   read/write files without redirecting I/O back to the submitting
   machine if both the submitting machine and the machine running the job
   are both accessing the same NFS servers (\emph{if} they are both in the
@@ -1868,7 +1877,7 @@ section~\ref{sec:shared-fs}.
   scheme offers very little real performance gain.  There are also
   some (fairly rare) situations where this scheme can break down.
   
-  Setting \MacroUNI{USE\_NFS} to FALSE is always safe.  It may result
+  Setting \MacroUNI{USE\_NFS} to \Expr{False} is always safe.  It may result
   in slightly more network traffic, but Condor jobs are most often heavy
   on CPU and light on I/O.  It also ensures that a remote
   standard universe Condor job will always use Condor's remote system
@@ -1877,7 +1886,7 @@ section~\ref{sec:shared-fs}.
   the job.
   
   Some gritty details for folks who want to know: If the you set
-  \MacroUNI{USE\_NFS} to TRUE, and the \MacroUNI{FILESYSTEM\_DOMAIN} of
+  \MacroUNI{USE\_NFS} to \Expr{True}, and the \MacroUNI{FILESYSTEM\_DOMAIN} of
   both the submitting machine and the remote machine about to execute
   the job match, and the \MacroUNI{FILESYSTEM\_DOMAIN} claimed by the
   submit machine is indeed found to be a subset of what an inverse
@@ -1894,9 +1903,9 @@ section~\ref{sec:shared-fs}.
   \MacroUNI{UID\_DOMAIN}.
 
 \item[\Macro{IGNORE\_NFS\_LOCK\_ERRORS}] \label{param:IgnoreNFSLockErrors}
-  When set to TRUE, all errors related to file locking errors from
+  When set to \Expr{True}, all errors related to file locking errors from
   NFS are ignored.
-  Defaults to FALSE, not ignoring errors.
+  Defaults to \Expr{False}, not ignoring errors.
   
 \item[\Macro{USE\_AFS}] \label{param:UseAfs} If your machines have AFS,
   this
@@ -1909,7 +1918,7 @@ section~\ref{sec:shared-fs}.
   
   One important difference between \MacroUNI{USE\_NFS} and
   \MacroUNI{USE\_AFS} is the AFS cache.  With \MacroUNI{USE\_AFS} set to
-  TRUE, the remote Condor job executing on some machine will start
+  \Expr{True}, the remote Condor job executing on some machine will start
   modifying the AFS cache, possibly evicting the machine owner's
   files from the cache to make room for its own.  Generally speaking,
   since we try to minimize the impact of having a Condor job run on a
@@ -1921,9 +1930,9 @@ section~\ref{sec:shared-fs}.
   scheme offers very little real performance gain.  There are also
   some (fairly rare) situations where this scheme can break down.
   
-  Setting \MacroUNI{USE\_AFS} to FALSE is always safe.  It may result
+  Setting \MacroUNI{USE\_AFS} to \Expr{False} is always safe.  It may result
   in slightly more network traffic, but Condor jobs are usually heavy
-  on CPU and light on I/O.  FALSE ensures that a remote
+  on CPU and light on I/O.  \Expr{False} ensures that a remote
   standard universe Condor job will always see the exact same
   file system that the user on sees on the machine where he/she
   submitted the job.  Plus, it will ensure that the machine where the
@@ -1961,11 +1970,11 @@ checkpoint server host (see below).
   hostname of a checkpoint server.
 
 \item[\Macro{STARTER\_CHOOSES\_CKPT\_SERVER}]
-  \label{param:StarterChoosesCkptServer} If this parameter is TRUE 
+  \label{param:StarterChoosesCkptServer} If this parameter is \Expr{True} 
   or undefined on
   the submit machine, the checkpoint server specified by
   \MacroUNI{CKPT\_SERVER\_HOST} on the execute machine is used.  If it is
-  FALSE on the submit machine, the checkpoint server
+  \Expr{False} on the submit machine, the checkpoint server
   specified by \MacroUNI{CKPT\_SERVER\_HOST} on the submit machine is
   used.
   
@@ -1989,7 +1998,7 @@ checkpoint server host (see below).
   the job has accumulated more than this many seconds of CPU usage.
   Otherwise, the job is started from scratch.  Defaults to 3600 (1
   hour). This setting is only used if \MacroUNI{USE\_CKPT\_SERVER} is
-  TRUE.
+  \Expr{True}.
 
 \end{description}
 
@@ -2118,14 +2127,14 @@ These macros control the \Condor{master}.
   the administrator know that the daemon died, the cause of
   death (which signal or exit status it exited with), and
   (optionally) the last few entries from that daemon's log file.  If
-  you want obituaries, set this macro to TRUE.
+  you want obituaries, set this macro to \Expr{True}.
 
 \item[\Macro{OBITUARY\_LOG\_LENGTH}] \label{param:ObituaryLogLength}
   This macro controls how many lines
   of the log file are part of obituaries.
 
 \item[\Macro{START\_MASTER}] \label{param:StartMaster} If this setting
-  is defined and set to FALSE when the \Condor{master} starts up, the first
+  is defined and set to \Expr{False} when the \Condor{master} starts up, the first
   thing it will do is exit.  This appears strange, but perhaps you
   do not want Condor to run on certain machines in your pool, yet
   the boot scripts for your entire pool are handled by a centralized
@@ -2592,7 +2601,7 @@ Configuring The Startd Policy.
   checks access time of the devices associated with active logins.
   Unfortunately, on some systems, \File{utmp} is unreliable, and the
   \Condor{startd} might miss keyboard activity by doing this.  So, if your
-  \File{utmp} is unreliable, set this macro to TRUE and the
+  \File{utmp} is unreliable, set this macro to \Expr{True} and the
   \Condor{startd} will check the access time on all tty and pty devices.
   
 \item[\Macro{CONSOLE\_DEVICES}] \label{param:ConsoleDevices} This
@@ -2709,7 +2718,7 @@ Configuring The Startd Policy.
 
 \item[\Macro{COUNT\_HYPERTHREAD\_CPUS}] \label{param:CountHyperthreadCpus}
   This macro controls how Condor sees hyperthreaded
-  processors. When set to TRUE (the default), it includes virtual CPUs in
+  processors. When set to \Expr{True} (the default), it includes virtual CPUs in
   the default value of \MacroNI{NUM\_CPUS}. On dedicated cluster nodes, 
   counting virtual CPUs can sometimes improve total throughput at the expense 
   of individual job speed. However, counting them on desktop workstations can
@@ -2742,10 +2751,10 @@ Configuring The Startd Policy.
 \item[\Macro{RUNBENCHMARKS}] \label{param:RunBenchmarks}
   Specifies when to run benchmarks.
   When the machine is in the Unclaimed state and this expression
-  evaluates to TRUE, benchmarks will be run.
-  If RunBenchmarks is specified and set to anything other than FALSE,
+  evaluates to \Expr{True}, benchmarks will be run.
+  If RunBenchmarks is specified and set to anything other than \Expr{False},
   additional benchmarks will be run when the \Condor{startd} initially starts.
-  To disable startup benchmarks, set \MacroNI{RunBenchmarks} to FALSE,
+  To disable startup benchmarks, set \MacroNI{RunBenchmarks} to \Expr{False},
   or comment it out of the configuration file.
 
 \end{description}
@@ -3691,7 +3700,7 @@ These macros control the \Condor{schedd}.
   this way are entered into the job queue owned by the Unix user
   nobody.
   This macro determines whether this is allowed.
-  It defaults to FALSE.
+  It defaults to \Expr{False}.
 
 
 \item[\Macro{QUEUE\_ALL\_USERS\_TRUSTED}]. \label{param:QueueAllUsersTrusted}
@@ -3932,17 +3941,17 @@ Defaults to 900 (15 minutes).
 \item[\Macro{COMPRESS\_PERIODIC\_CKPT}]
   \label{param:CompressPeriodicCkpt} This boolean macro specifies
   whether the shadow should instruct applications to compress periodic
-  checkpoints (when possible).  The default is FALSE.
+  checkpoints (when possible).  The default is \Expr{False}.
 
 \item[\Macro{COMPRESS\_VACATE\_CKPT}]
   \label{param:CompressVacateCkpt} This boolean macro specifies
   whether the shadow should instruct applications to compress vacate
-  checkpoints (when possible).  The default is FALSE.
+  checkpoints (when possible).  The default is \Expr{False}.
 
 \item[\Macro{PERIODIC\_MEMORY\_SYNC}] \label{param:PeriodicMemorySync}
   This boolean macro specifies whether the shadow should instruct
   applications to commit dirty memory pages to swap space during a
-  periodic checkpoint.  The default is FALSE.  This potentially
+  periodic checkpoint.  The default is \Expr{False}.  This potentially
   reduces the number of dirty memory pages at vacate time, thereby
   reducing swapping activity on the remote machine.
 
@@ -4039,7 +4048,7 @@ These settings affect the \Condor{starter}.
   \label{param:StarterLocalLogging} This macro determines whether the
   starter should do local logging to its own log file, or send debug
   information back to the \Condor{shadow} where it will end up in the
-  ShadowLog.  It defaults to TRUE.
+  ShadowLog.  It defaults to \Expr{True}.
 
 \item[\Macro{STARTER\_DEBUG}] \label{param:StarterDebug} This setting
   (and other settings related to debug logging in the starter) is
@@ -4228,6 +4237,14 @@ as:
   override attributes defined in the config file with
   \MacroNI{SUBMIT\_EXPRS}. 
 
+\item[\Macro{LOG\_ON\_NFS\_IS\_ERROR}] \label{param:LogOnNfsIsError}
+A boolean value that controls whether \Condor{submit} prohibits
+job submit files with user log files on NFS.  If
+\MacroNI{LOG\_ON\_NFS\_IS\_ERROR} is set to \Expr{True}, such
+submit files will be rejected.  If \MacroNI{LOG\_ON\_NFS\_IS\_ERROR}
+is set to \Expr{False}, submitting such a file results in a
+warning, but the job will be submitted.  If not defined,
+\MacroNI{LOG\_ON\_NFS\_IS\_ERROR} defaults to \Expr{False}.
 
 \end{description}
 
@@ -4377,7 +4394,7 @@ These macros affect the \Condor{collector}.
 \item[\Macro{KEEP\_POOL\_HISTORY}] \label{param:KeepPoolHistory}
   This boolean macro is used to decide if the collector will write
   out statistical information about the pool to history files. The default
-  is FALSE. The location, size and frequency of history logging is controlled
+  is \Expr{False}. The location, size and frequency of history logging is controlled
   by the other macros.
 
 \item[\Macro{POOL\_HISTORY\_DIR}] \label{param:PoolHistoryDir}
@@ -4596,7 +4613,7 @@ These macros affect the \Condor{negotiator}.
 \item[\Macro{PREEMPTION\_REQUIREMENTS}]
   \label{param:PreemptionRequirements} When considering user priorities, the negotiator will not preempt
   a job running on a given machine unless the
-  \MacroNI{PREEMPTION\_REQUIREMENTS} expression evaluates to TRUE and the
+  \MacroNI{PREEMPTION\_REQUIREMENTS} expression evaluates to \Expr{True} and the
   owner of the idle job has a better priority than the owner of the
   running job. 
   The \MacroNI{PREEMPTION\_REQUIREMENTS} expression is evaluated within the
@@ -4605,7 +4622,7 @@ These macros affect the \Condor{negotiator}.
   and the \verb@TARGET@ scope prefix refers to the ClassAd of the idle
   (candidate) job.  
   If not explicitly set in the Condor configuration file, the default value
-  for this expression is TRUE.
+  for this expression is \Expr{True}.
   Note that this setting does not
   influence other potential causes of preemption, such as startd
   \MacroNI{RANK}, or \MacroNI{PREEMPT} expressions.  See
@@ -5053,7 +5070,7 @@ before servicing other requests (such as a \Condor{rm}).
 The legal range of values is 1 to 1000.
 If defined with a value less than 1, the  value 1 will be used.
 If defined with a value greater than 1000, the value 1000 will be used.
-If undefined, it defaults to 5.
+If not defined, it defaults to 5.
 
 \item[\Macro{DAGMAN\_MAX\_SUBMIT\_ATTEMPTS}]
 \label{param:DAGManMaxSubmitAttempts}
@@ -5067,7 +5084,7 @@ If defined with a value less than 1, the  value 1 will be used.
 If defined with a value greater than 16, the value 16 will be used.
 Note that a value of 16 would result in \Condor{dagman} trying for
 approximately 36 hours before giving up.
-If left undefined,
+If not defined,
 it defaults to 6 (approximately two minutes before giving up).
 
 \item[\Macro{DAGMAN\_SUBMIT\_DELAY}]
@@ -5086,7 +5103,7 @@ A boolean value that when \Expr{True}
 causes \Condor{dagman} to check for cycles in the DAG before
 submitting DAG node jobs,
 in addition to its run time cycle detection.
-If undefined, it defaults to \Expr{False}.
+If not defined, it defaults to \Expr{False}.
 
 \item[\Macro{DAGMAN\_RETRY\_SUBMIT\_FIRST}]
 \label{param:DAGManRetrySubmitFirst}
@@ -5098,7 +5115,7 @@ that it will be submitted again before any other jobs are submitted
 (this has been the behavior of \Condor{dagman} up to this point).
 If this value is set to \Expr{False}, when a job submit fails, the job
 is placed at the tail of the queue of ready jobs.
-If undefined, it defaults to \Expr{True}.
+If not defined, it defaults to \Expr{True}.
 
 \item[\Macro{DAGMAN\_RETRY\_NODE\_FIRST}]
 \label{param:DAGManRetryNodeFirst}
@@ -5110,7 +5127,7 @@ placed at the head of the queue of ready nodes, so that it will be
 tried again before any other jobs are submitted.  If this value is
 set to \Expr{False}, when a node with retries fails, the node
 is placed at the tail of the queue of ready nodes (this has been the
-behavior of \Condor{dagman} up to this point).  If undefined, it
+behavior of \Condor{dagman} up to this point).  If not defined, it
 defaults to \Expr{False}.
 
 \item[\Macro{DAGMAN\_MAX\_JOBS\_IDLE}]
@@ -5139,17 +5156,21 @@ A boolean value that controls whether \Condor{dagman} automatically
 renames nodes when running multiple DAGs (the renaming is done to
 avoid possible name conflicts).  If this value is set to \Expr{True},
 all node names have the "DAG number" prepended to them.  For example,
-the first DAG specified on the condor\_submit\_dag command line is
+the first DAG specified on the \Condor{submit\_dag} command line is
 considered DAG number 0, the second is DAG number 1, etc.  So if
 DAG number 2 has a node B, that node will internally be renamed
 to "2.B".
-If undefined, \Macro{DAGMAN\_MUNGE\_NODE\_NAMES} defaults to \Expr{True}.
+If not defined, \MacroNI{DAGMAN\_MUNGE\_NODE\_NAMES} defaults to \Expr{True}.
 
 % \item[\Macro{STORK\_SERVER}]
 % \label{param:StorkServer}
 
 \item[\Macro{DAGMAN\_IGNORE\_DUPLICATE\_JOB\_EXECUTION}]
 \label{param:DAGManIgnoreDuplicateJobExecution}
+This macro is no longer used. The improved functionality
+of the \MacroNI{DAGMAN\_ALLOW\_EVENTS} macro eliminates the
+need for this variable.
+
 A boolean value that controls
 whether \Condor{dagman} aborts or continues with a DAG
 in the rare case that Condor erroneously executes
@@ -5176,9 +5197,6 @@ The logged messages within \File{*.dagman.out} files
 in the case of that a node job runs twice
 contain the string
 "EVENT ERROR."
-
-This macro is now deprecated (because of the improved functionality
-of the \MacroNI{DAGMAN\_ALLOW\_EVENTS} macro).
 
 \item[\Macro{DAGMAN\_ALLOW\_EVENTS}]
 \label{param:DAGManAllowEvents}
@@ -5227,30 +5245,60 @@ is described in section~\ref{param:SubsysDebug} as
 \item[\Macro{DAGMAN\_CONDOR\_SUBMIT\_EXE}]
 \label{param:DAGManCondorSubmitExe}
 The executable that \Condor{dagman} will use to submit Condor jobs.
-If undefined, \Condor{dagman} looks for \Condor{submit} in the PATH.
+If not defined, \Condor{dagman} looks for \Condor{submit} in the PATH.
 
 \item[\Macro{DAGMAN\_STORK\_SUBMIT\_EXE}]
 \label{param:DAGManStorkSubmitExe}
 The executable that \Condor{dagman} will use to submit Stork jobs.
-If undefined, \Condor{dagman} looks for \Stork{submit} in the PATH.
+If not defined, \Condor{dagman} looks for \Stork{submit} in the PATH.
 
 \item[\Macro{DAGMAN\_CONDOR\_RM\_EXE}]
 \label{param:DAGManCondorRmExe}
 The executable that \Condor{dagman} will use to remove Condor jobs.
-If undefined, \Condor{dagman} looks for \Condor{rm} in the PATH.
+If not defined, \Condor{dagman} looks for \Condor{rm} in the PATH.
 
 \item[\Macro{DAGMAN\_STORK\_RM\_EXE}]
 \label{param:DAGManStorkRmExe}
 The executable that \Condor{dagman} will use to remove Stork jobs.
-If undefined, \Condor{dagman} looks for \Stork{rm} in the PATH.
+If not defined, \Condor{dagman} looks for \Stork{rm} in the PATH.
 
 \item[\Macro{DAGMAN\_PROHIBIT\_MULTI\_JOBS}]
 \label{param:DAGManProhibitMultiJobs}
 A boolean value that controls whether \Condor{dagman} prohibits
 node job submit files that queue multiple job procs (other than 
-parallel universe).  If the DAG references such a submit file, the
-DAG will abort during the initialization process.  If undefined,
-\Macro{DAGMAN\_PROHIBIT\_MULTI\_JOBS} defaults to \Expr{False}.
+parallel universe).  If a DAG references such a submit file, the
+DAG will abort during the initialization process.  If not defined,
+\MacroNI{DAGMAN\_PROHIBIT\_MULTI\_JOBS} defaults to \Expr{False}.
+
+\item[\Macro{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR}]
+\label{param:DAGManLogOnNfsIsError}
+A boolean value that controls whether \Condor{dagman} prohibits
+node job submit files with user log files on NFS.  If a DAG
+references such a submit file and \MacroNI{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR}
+is \Expr{True}, the DAG will abort during the initialization process. 
+If \MacroNI{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR} is \Expr{False}, a warning
+will be issued but the DAG will still be submitted.  It is \emph{strongly}
+recommended that \MacroNI{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR}
+remain set to the default value, because running a DAG with node job
+log files on NFS will often cause errors.
+If not defined, \MacroNI{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR} defaults to
+\Expr{True}.
+
+\item[\Macro{DAGMAN\_ABORT\_DUPLICATES}]
+\label{param:DAGManAbortDuplicates}
+A boolean value that controls whether to attempt to abort duplicate
+instances of \Condor{dagman} running the same DAG on the same
+machine.  When \Condor{dagman} starts up, if no DAG lock file exists,
+\Condor{dagman} creates the lock file and writes its PID into it.  If
+the lock file does exist, and \MacroNI{DAGMAN\_ABORT\_DUPLICATES} is
+set to \Expr{True}, \Condor{dagman} checks whether a process with the
+given PID exists, and if so, it assumes that there is already another
+instance of \Condor{dagman} running on the same DAG.  Note that this
+test is not foolproof: it is possible that, if \Condor{dagman} crashes,
+the same PID gets reused by another process before \Condor{dagman}
+gets rerun on that DAG.  This should be quite rare, however.
+If not defined, \MacroNI{DAGMAN\_ABORT\_DUPLICATES} defaults to
+\Expr{False}.
 
 \end{description}
 

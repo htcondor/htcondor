@@ -15,5 +15,26 @@ using the \SubmitCmd{grid} universe and the
 grid_resource = lsf
 \end{verbatim}
 
-Details on where LSF is installed on the local system are
-given in the file \$(GLITE\_LOCATION)/etc/batch\_gahp.config.
+The lsf grid type requires two variables to be set in the Condor
+configuration file.
+\Macro{LSF\_GAHP} is the path to the LSF GAHP server binary that should be
+used to submit PBS jobs.
+\Macro{GLITE\_LOCATION} is the path to the directory containing the GAHP's
+configuration file and auxillary binaries.
+In the Condor distribution, these files are located in \$(LIB)/glite.
+The LSF GAHP's configuration file should be located in
+\$(GLITE\_LOCATION)/etc/batch\_gahp.config. The LSF GAHP's auxillary binaries
+should be located in the directory \$(GLITE\_LOCATION)/bin.
+
+\begin{verbatim}
+GLITE_LOCATION = $(LIB)/glite
+LSF_GAHP       = $(GLITE_LOCATION)/bin/batch_gahp
+\end{verbatim}
+
+The LSF GAHP's configuration file contains two variables that have to be
+modified to tell GAHP where to find LSF on the local system.
+\Macro{lsf\_binpath} is the directory that contains the LSF binaries.
+\Macro{lsf\_confpath} is the location of the LSF configuration file.
+
+%Details on where LSF is installed on the local system are
+%given in the file \$(GLITE\_LOCATION)/etc/batch\_gahp.config.

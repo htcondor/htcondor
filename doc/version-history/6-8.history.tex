@@ -6,7 +6,217 @@ This is a stable release series of Condor.
 It is based on the 6.7 development series.
 All new features added or bugs fixed in the 6.7 series are available
 in the 6.8 series.
+As usual, only bug fixes (and potentially, ports to new platforms)
+will be provided in future 6.8.x releases.
+New features will be added in the forthcoming 6.9.x development series.
+
+%%%%%%
+% we need a summary of major new features since 6.6.x here.  trying to
+% sort through the 21 different 6.7.x releases and all the new
+% features is a huge amount of noise.  people just want to see a
+% summary of the major new functionality.
+% \Todo
+%%%%%%
+
+The 6.8.x series supports a different set of platforms than 6.6.x.
+Please see the updated table of available platforms in
+section~\ref{sec:Availability} on page~\pageref{sec:Availability}.
+
 The details of each version are described below.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-6-8-1}Version 6.8.1}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item The PCRE (Perl Compatible Regular Expressions) library used by
+Condor is now dynamically linked and shipped as a DLL with Condor for
+Windows, rather than being statically linked.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+% Gnats PR 610
+\item Added an optional argument to the \Condor{dagman} ABORT-DAG-ON
+command that allows the DAGMan exit code to be specified separately
+from the node value that causes the abort; also, a DAG can now be
+aborted on a zero exit code from a node.
+
+% I implemented in condor_rm.  Todd is handling condor_schedd implementation.
+\item Added \Macro{ALLOW\_FORCE\_RM} setting.  If this expressions evaluates to
+TRUE then an \Condor{rm} -f attempt is allowed.  If it evaluated to FALSE, the
+attempt is disallowed.  The expression is evaluated in the context of the job
+ad.  If not specified the setting defaults to TRUE, matching the behavior of
+previous Condor releases.
+
+% Gnats PR 664
+\item \Condor{dagman} will now reject DAGs for which any of the node
+job user log files are on NFS (because of the unreliability of NFS
+file locking, this can cause DAGs to fail).  This feature can be
+turned off by setting the DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR configuration
+macro to \Expr{False} (the default is \Expr{True}).
+
+\item \Condor{submit} can now be configured to reject jobs for which
+the log file is on NFS (to do this, set the LOG\_ON\_NFS\_IS\_ERROR
+configuration macro to \Expr{True}).  The default is that \condor{submit}
+will simply issue a warning if a log file is on NFS.
+
+\item Added the DAGMAN\_ABORT\_DUPLICATES config macro, which causes
+\Condor{dagman} to attempt to detect at startup whether another
+\Condor{dagman} is already running on the same DAG; if so, the second
+\Condor{dagman} will abort itself.
+
+\item There is now a configuration paramater
+\MacroNI{NETWORK\_MAX\_PENDING\_CONNECTS} that may be used to limit the
+maximum number of simultaneous network connection attempts.  This is
+primarily relevant to \Condor{schedd}, which may try to connect to
+large numbers of startds when claiming them.  The negotiator may also
+connect to large numbers of startds when initiating security sessions
+used for sending MATCH messages.  On Unix, the default is to allow up to
+eighty percent of the process file descriptor limit.  On windows, the
+default is 1600.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a Quill bug that prevented it from running on Windows.  The
+symptom was errors in the QuillLog like
+\begin{verbatim}
+POLLING RESULT: ERROR
+\end{verbatim}
+
+\item Fixed a bug in Quill where it would cause errors like
+\begin{verbatim}
+duplicate key violates unique constraint "history_vertical_pkey"
+\end{verbatim}
+in the QuillLog and the postgres log file.  These errors would then trigger
+a significant slowdown in the performance of Quill and the database.  This
+would only happpen when a job attribute would change type from a string
+type to a numeric type, or vice versa.
+
+\item When a large number of jobs (roughly 200 or more) are running from a
+single schedd and those jobs are using job leases (the default in 6.8), it is
+possible the schedd to enter a state where it crashes on startup until all of
+the job leases expire.  This bug is fixed.
+% The bug is more generic; it potentially hit any user of GenericQuery or
+% CondorQuery, but we know of no users encountering the bug in any other cases.
+
+%% This is the change to datathread.C
+\item In those unusual cases where Condor is unable to create a new process,
+it will shut down cleanly, eliminating a small possibility of data corruption.
+
+\item Fixed a bug with the gt4 and nordugrid grid universe job types that
+caused the stdout and stderr of a job to not be transferred correctly if
+the filenames given had absolute paths.
+
+% Gnats PR 711
+\item \Condor{dagman} now echos warnings from \condor{submit} and
+stork\_submit to the \File{dagman.out} file.
+
+\item Fixed a bug introduced in 6.7.20 causing \Condor{ckpt\_server}
+to exit immediately after starting up, unless Condor's security
+negotation was disabled.
+
+% This was a bug because the default configuration file and manual
+% both claimed it defaulted to 1MB.
+\item \Macro{MAX\_<SUBSYS>\_LOG} defaults to one megabyte, even if the
+setting is missing from the configuration.  Previously it was 64 kilobytes.
+
+% this is the change to condor_secman.C by zmiller
+\item Fixed a bug related to non-blocking connect that could occasionally
+cause Condor daemons to crash.
+
+% collector.C change: eliminated useless fprintf(stderr).
+\item Fixed a rare bug where an exceptionally large query to the
+\Condor{collector} could cause it to crash.  The most common cause is a single
+schedd restarting and trying to recover a large number of job leases at once.
+More than approximately 250 running jobs on a single schedd would be necessary
+to trigger this bug.
+
+\item When using the \Macro{JOB\_PROXY\_OVERRIDE\_FILE} configuration
+parameter, the X509 proxy will now be properly forwarded for Condor-C jobs.
+
+\item Greatly reduced the chance that a Condor-C job in the REMOVED state
+will become HELD due to an expired proxy or failure to talk to the remote
+\Condor{schedd}.
+
+\item Fixed a number of error and debug messages added in 6.7.20 that
+were incorrectly reporting IP and port numbers.  These messages were
+intended to report the peer's address, but they were reporting the
+local address of the network socket instead.
+
+\item Fixed a bug introduced in 6.7.20 which could cause Condor daemons to
+die with the message ``PANIC -- OUT OF FILE DESCRIPTORS''.  The conditions
+causing this were related to failed attempts to send updated status
+to the collector, with both non-blocking updates and security negotiation
+enabled (the defaults).
+
+\item Under some conditions, when making TCP connections, Condor was
+still trying to connect for the full duration of the operation timeout
+(often 10 or 20 seconds), even if the connection attempt was refused
+(e.g. because the port being accessed is not accepting connections).
+Now, the connect operation finishes immediately after the first such
+failure, allowing the Condor process to continue with other tasks.
+
+\item Fixed the problems relating to credential cache problems in the Kerberos
+authentication mechanism.  The current version of Kerberos is 1.4.3.
+
+% changes to condor_auth_ssl.C by zmiller
+\item Fixed the bug in the SSL authentication mechanism that caused the
+\Condor{schedd} to crash when submitting a job.
+
+\item Some of the binaries required to use Condor-C on Windows were
+mistakenly not included in previous releases of Condor. This has been
+fixed.
+
+\item Fixed problem on Windows where the \Condor{startd} could fail to
+include some attributes in its ClassAd. This would result in some jobs
+incorrectly not being matched to that machine.  This only happened if
+\Macro{CREDD\_HOST} was defined and Condor daemons on the execute
+machine were unable to authenticate with the \Condor{credd}.
+
+\item Fixed a \Condor{dagman} bug which had prevented the
+\MacroU{DAGManJobId} attribute from being expanded in job submit files
+(e.g., when used as the value of the \Macro{Priority} command).
+
+\item Fixed a bug in \Condor{submit} that caused parallel universe jobs
+submitted via Condor-C to become mpi universe jobs.
+
+\item Fixed a bug which could cause Condor daemons to hang if they try
+to write to the standard error stream (stderr) on some platforms.  In
+general, this should never happen, but can due to third party
+libraries (beyond our control) trying to write error or other messages.
+
+\item Fixed \Condor{status} to report error messages.
+
+\item Fixed a problem with \MacroNI{NEGOTIATOR\_CONSIDER\_PREEMPTION}=False
+in which the fraction of the pool already being claimed by a user was
+calculated using the wrong total number of startds.  This could cause
+some startds to remain unclaimed, even when there were jobs available
+to run on them.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -17,7 +227,35 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item The default configuration for Condor now requires that
+\Macro{HOSTALLOW\_WRITE} be explicitly set.  Condor will refuse
+to start if the default configuration is used unmodified.
+Existing installations should not need to change anything.  For
+those who desire the earlier default, you can set it to "*", but
+note that this is potentially a security hole allowing anyone to
+submit jobs or machines to your pool.
+
+\item Most Linux distributions are now supported using dynamically
+  linked binaries built on a RedHat Enterprise Linux 3 machine.
+  Recent security patches to a number of Linux distributions have
+  rendered the binaries built on RedHat 9 machines ineffective.
+  The download pages have been changed to reflect this, but Linux users
+  should be aware of this change.
+  The recommended download for most x86 Linux users is now:
+  \File{condor-6.8.0-linux-x86-rhel3-dynamic.tar.gz}.
+
+\item Some log messages have been clarified or moved to different
+  debugging levels.
+  For example, certain messages that looked like errors were printed
+  to \MacroNI{D\_ALWAYS}, even though nothing was wrong and the system was
+  behaving as expected.
+
+\item The new features and bugs fixed in the rest of this section only
+  refer to changes made since the 6.7.20 release, not the last stable
+  release (6.6.11).
+  For a complete list of changes since 6.6.11, read the 6.7 version
+  history in section~\ref{sec:History-6-7} on
+  page~\pageref{sec:History-6-7}. 
 
 \end{itemize}
 
@@ -25,6 +263,14 @@ The details of each version are described below.
 \noindent New Features:
 
 \begin{itemize}
+
+\item Version 1.4 of the Condor DRMAA libraries are now included 
+  with the Condor release.
+  For more information about DRMAA, see section~\ref{API-DRMAA} on
+  page~\pageref{API-DRMAA}.
+
+\item Version 1.0.15 of the Condor GAHP is now used for Condor-G and
+  Condor-C. 
 
 % Gnats PR 710
 \item Added the \Opt{-outfile\_dir} command-line argument to
@@ -36,19 +282,18 @@ The details of each version are described below.
 displaying the entire history for each machine and only displays the
 summary info.
 
-\item The default configuration for Condor now requires that
-\Macro{HOSTALLOW\_WRITE} be explicitly set.  Condor will refuse
-to start if the default configuration is used unmodified.
-Existing installations should not need to change anything.  For
-those who desire the earlier default, you can set it to "*", but
-note that this is potentially a security hole allowing anyone to
-submit jobs or machines to your pool.
-
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a number of potential static buffer overflows in various
+  Condor daemons and libraries.
+
+\item Fixed some small memory leaks in the \Condor{startd},
+  \Condor{schedd}, and a potential leak that effected all Condor
+  daemons.
 
 \item Fixed a bug in Quill which caused it to crash when certain
 long attributes appeared in a job ad.
@@ -70,7 +315,7 @@ in the job's initial working directory, even if the job ad said to
 place them in a different directory.
 
 % Gnats PRs 501 and 663
-\item Greatly speeded up the parsing of large DAGs (by a factor of 50
+\item Greatly sped up the parsing of large DAGs (by a factor of 50
 or so) by using a hash table instead of linear search to find DAG nodes.
 
 % Gnats PR 697
@@ -108,7 +353,7 @@ idle state in \Condor{dagman}'s internal count.
 when dealing with UNC path names.
 
 \item Fixed a problem where the \Condor{schedd} on Windows would
-incorrectly reject a job if the client prvoided an \Attr{Owner}
+incorrectly reject a job if the client provided an \Attr{Owner}
 attribute that was correct but differed in case from the authenticated
 name.
 
@@ -120,13 +365,56 @@ but then not claimed in time by the appropriate \Condor{schedd}.
 up jobs' execute directories on Windows when the \Condor{master} was
 started from the command line rather than as a service.
 
+\item Added more patches to Condor's DRMAA interface to make it more
+compatible with Sun Grid Engine's DRMAA interface.
+
+\item Removed the unused \MacroNI{D\_UPDOWN} debug level and added the
+  \MacroNI{D\_CONFIG} debug level.
+
+\item Fixed a bug that caused \Condor{q} with the \Opt{-l} or \Opt{-xml}
+arguments to print out duplicate attributes when using Quill.
+
+\item Fixed a bug that prevented Condor-C jobs (universe grid jobs of type condor)
+from submitting correctly if \MacroNI{QUEUE\_ALL\_USERS\_TRUSTED} is set to
+True.
+
+\item Fixed a bug that could cause the \Condor{negotiator} to crash if the
+pool contains several different versions of the \Condor{schedd} and in the
+config file \MacroNI{NEGOTIATOR\_MATCHLIST\_CACHING} is set to True.
+
+\item Changed the default value for config file entry
+\MacroNI{NEGOTIATOR\_MATCHLIST\_CACHING} from False to True.  When set to
+True, this will instruct the negotiator to safely cache data in order to
+improve matchmaking performance.
+
+\item The Condor{master} now recognizes \Condor{quill} as a valid
+  Condor daemon without any manual configuration on the part of site
+  administrators.
+  This simplifies the configuration changes required to enable Quill. 
+
+\item Fixed a rare bug in the \Condor{starter} where if there was a
+  failure transferring job output files back to the submitting host,
+  it could hang indefinitely, and the job appeared as if it was
+  continuing to run.
+
 \end{itemize}
+
 
 \noindent Known Bugs:
 
 \begin{itemize}
 
-\item None.
+\item There are known scalability problems when using Condor's Kerberos
+authentication mechanism in large pools.  If your installation of Condor is
+more than a couple dozen machines, and you need to use Kerberos for Condor
+authentication, we recommend you wait for Condor version 6.8.1 or use Condor
+version 6.7.17 (which does not suffer from these problems).
+
+\item There are known problems with Condor's SSL authentication mechanism.
+While the HTTPS support in Condor (which also uses SSL) works fine for the
+SOAP/Birdbath interface, there are bugs with the SSL support when SSL is
+listed in \MacroNI{SEC\_DEFAULT\_AUTHENTICATION\_METHODS}.  We expect to fix
+these issues for version 6.8.1.
 
 \end{itemize}
 
