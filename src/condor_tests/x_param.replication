@@ -17,5 +17,3 @@ condordomain = cs.wisc.edu
 collector=192.168.0.5:64101,192.168.0.5:64102,192.168.0.5:64103
 vms=1
 localpostsrc=job_replication_basic.localpostsrc
-#encryption = 3DES,BLOWFISH
-#authentication = GSI

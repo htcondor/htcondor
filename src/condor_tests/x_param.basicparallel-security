@@ -15,5 +15,3 @@ condortemplate = x_condor_config_template
 condordaemons = master,schedd,collector,negotiator,startd
 condordomain = cs.wisc.edu
 vms	= 8
-#encryption = 3DES,BLOWFISH
-#authentication = GSI
