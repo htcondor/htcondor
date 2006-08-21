@@ -1,3 +1,7 @@
+08/21/06 V6_9-eventd_v2-{root,branch}
+  A new branch to merge v6_7 branch for the eventd developement
+  into the trunk code base prior to merging it to the trunk.
+
 08/08/06 V6_9-cream-{root,branch}
   A new branch off V6_9 (the trunk) to add support in Condor-G for
   submitting jobs to EGEE's CREAM service.
