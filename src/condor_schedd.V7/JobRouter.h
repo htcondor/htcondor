@@ -211,6 +211,9 @@ class JobRoute {
 	std::string ThrottleDesc();
 	std::string ThrottleDesc(double throttle);
 
+	bool EvalUseSharedX509UserProxy(RoutedJob *job);
+	bool EvalSharedX509UserProxy(RoutedJob *job,std::string &proxy_file);
+
  private:
 	int m_num_jobs;                // current number of jobs on this route
 	int m_num_running_jobs;        // number of jobs currently running
@@ -247,6 +250,8 @@ class RoutedJob {
 	PROC_ID dest_proc_id;
 	classad::ClassAd src_ad;
 	classad::ClassAd dest_ad;
+	std::string proxy_file_copy;
+	bool proxy_file_copy_chowned;
 
 	enum ManagementStateEnum {
 		UNCLAIMED,     // job is not yet officially ours to manage
@@ -280,6 +285,10 @@ class RoutedJob {
 	bool SetSrcJobAd(char const *key,classad::ClassAd *ad,classad::ClassAdCollection *ad_collection);
 	void SetDestJobAd(classad::ClassAd const *ad);
 	bool IsRunning() {return is_running;}
+
+	bool PrepareSharedX509UserProxy(JobRoute *route);
+	bool CleanupSharedX509UserProxy(JobRoute *route);
+
 };
 
 #endif

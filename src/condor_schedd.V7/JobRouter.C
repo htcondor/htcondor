@@ -35,6 +35,7 @@
 #include "VanillaToGrid.h"
 #include "submit_job.h"
 #include "schedd_v7_utils.h"
+#include "util_lib_proto.h"
 
 template class HashTable<std::string,RoutedJob *>;
 template HashTable<std::string,JobRoute *>;
@@ -45,10 +46,15 @@ const char JR_ATTR_MAX_JOBS[] = "MaxJobs";
 const char JR_ATTR_MAX_IDLE_JOBS[] = "MaxIdleJobs";
 const char JR_ATTR_ROUTED_FROM_JOB_ID[] = "RoutedFromJobId";
 const char JR_ATTR_ROUTED_TO_JOB_ID[] = "RoutedToJobId";
-const char JR_ATTR_ROUTED_FROM_MANAGER[] = "RoutedFromManager";
-const char JR_ATTR_ROUTED_FROM_ROUTE[] = "RoutedFromRoute";
+const char JR_ATTR_ROUTED_BY[] = "RoutedBy";
+const char JR_ATTR_ROUTE_NAME[] = "RouteName";
+//NOTE: if we ever want to insert the route name in the src job ad,
+//call it somethin different, such as "DestRouteName".  This makes
+//it possible to have jobs get routed multiple times.
 const char JR_ATTR_FAILURE_RATE_THRESHOLD[] = "FailureRateThreshold";
 const char JR_ATTR_JOB_FAILURE_TEST[] = "JobFailureTest";
+const char JR_ATTR_USE_SHARED_X509_USER_PROXY[] = "UseSharedX509UserProxy";
+const char JR_ATTR_SHARED_X509_USER_PROXY[] = "SharedX509UserProxy";
 
 const int THROTTLE_UPDATE_INTERVAL = 600;
 
@@ -393,6 +399,7 @@ RoutedJob::RoutedJob() {
 	is_running = false;
 	is_success = false;
 	submission_time = 0;
+	proxy_file_copy_chowned = false;
 }
 RoutedJob::~RoutedJob() {
 }
@@ -479,7 +486,7 @@ JobRouter::AdoptOrphans() {
 	// Find all jobs submitted by a JobRouter with same name as me.
 	// Maybe some of them were from a previous life and are now orphans.
 	dest_jobs += "other.ProcId >= 0 && other.";
-	dest_jobs += JR_ATTR_ROUTED_FROM_MANAGER;
+	dest_jobs += JR_ATTR_ROUTED_BY;
 	dest_jobs += " == \"";
 	dest_jobs += m_job_router_name;
 	dest_jobs += "\"";
@@ -508,7 +515,7 @@ JobRouter::AdoptOrphans() {
 		ASSERT(dest_ad);
 
 		if(!dest_ad->EvaluateAttrString(JR_ATTR_ROUTED_FROM_JOB_ID, src_key) ||
-		   !dest_ad->EvaluateAttrString(JR_ATTR_ROUTED_FROM_ROUTE, route_name))
+		   !dest_ad->EvaluateAttrString(JR_ATTR_ROUTE_NAME, route_name))
 		{
 			// Not expected.  Dest job doesn't have routing information.
 			dprintf(D_ALWAYS,"JobRouter failure (dest=%s): no routing information found in routed job!\n",dest_key.c_str());
@@ -771,11 +778,6 @@ JobRouter::GetCandidateJobs() {
 		dprintf(D_FULLDEBUG,"JobRouter DEBUG (%s): combined = %s\n",job->JobDesc().c_str(),ClassAdToString(&job->src_ad).c_str());
 		*/
 
-		// from now on, any updates to src_ad should be propogated back
-		// to the originating schedd.
-		job->src_ad.ClearAllDirtyFlags();
-		job->src_ad.EnableDirtyTracking();
-
 		dprintf(D_FULLDEBUG,"JobRouter (%s): found candidate job\n",job->JobDesc().c_str());
 		AddJob(job);
 
@@ -901,12 +903,32 @@ JobRouter::SubmitJob(RoutedJob *job) {
 	// Record the src job id in the new job's ad, so we can recover
 	// in case of a crash or restart.
 	job->dest_ad.InsertAttr(JR_ATTR_ROUTED_FROM_JOB_ID,job->src_key.c_str());
-	job->dest_ad.InsertAttr(JR_ATTR_ROUTED_FROM_MANAGER,JobRouterName().c_str());
-	job->dest_ad.InsertAttr(JR_ATTR_ROUTED_FROM_ROUTE,route->Name());
+	job->dest_ad.InsertAttr(JR_ATTR_ROUTED_BY,JobRouterName().c_str());
+	job->dest_ad.InsertAttr(JR_ATTR_ROUTE_NAME,route->Name());
+
+	// In case this attribute was in the src job from a previous run,
+	// get rid of it.
+	job->dest_ad.Delete(JR_ATTR_ROUTED_TO_JOB_ID);
+
+	if(!job->PrepareSharedX509UserProxy(route)) {
+		GracefullyRemoveJob(job);
+		return;
+	}
 
 	int dest_cluster_id = -1;
 	int dest_proc_id = -1;
-	if(!submit_job(job->dest_ad,NULL,NULL,&dest_cluster_id,&dest_proc_id)) {
+	bool rc;
+	rc = submit_job(job->dest_ad,NULL,NULL,&dest_cluster_id,&dest_proc_id);
+
+		// Now that the job is submitted, we can clean up any temporary
+		// x509 proxy files, because these will have been copied into
+		// the job's sandbox.
+	if(!job->CleanupSharedX509UserProxy(route)) {
+		GracefullyRemoveJob(job);
+		return;
+	}
+
+	if(!rc) {
 		dprintf(D_ALWAYS,"JobRouter failure (%s): failed to submit job\n",job->JobDesc().c_str());
 		GracefullyRemoveJob(job);
 		return;
@@ -926,6 +948,115 @@ JobRouter::SubmitJob(RoutedJob *job) {
 	job->state = RoutedJob::SUBMITTED;
 	job->submission_time = time(NULL);
 }
+
+bool
+RoutedJob::PrepareSharedX509UserProxy(JobRoute *route)
+{
+	if(!route->EvalUseSharedX509UserProxy(this)) {
+		return true;
+	}
+
+	std::string src_proxy_file;
+	if(!route->EvalSharedX509UserProxy(this,src_proxy_file)) {
+		dprintf(D_ALWAYS,
+				"JobRouter failure (%s): %s is true, but %s is invalid!\n",
+				JobDesc().c_str(),
+				JR_ATTR_USE_SHARED_X509_USER_PROXY,
+				JR_ATTR_SHARED_X509_USER_PROXY);
+		return false;
+	}
+
+	proxy_file_copy = src_proxy_file;
+	proxy_file_copy += ".";
+	proxy_file_copy += src_key;
+	proxy_file_copy_chowned = false;
+
+		// This file better be owned by our effective uid (e.g. condor).
+		// Rather than switching to root priv and forcing this to succeed,
+		// it is better to make admin chown it to condor, so they are
+		// reminding that access to this file is being managed by
+		// condor now.
+	if( copy_file(src_proxy_file.c_str(),proxy_file_copy.c_str()) != 0 ) {
+		dprintf(D_ALWAYS,
+				"JobRouter failure (%s): failed to copy %s to %s.\n",
+				JobDesc().c_str(),
+				src_proxy_file.c_str(),
+				proxy_file_copy.c_str());
+		return false;
+	}
+
+		// Now chown() the proxy file to the user
+#if !defined(WIN32)
+	std::string owner;
+	src_ad.EvaluateAttrString(ATTR_OWNER,owner);
+
+	uid_t dst_uid;
+	gid_t dst_gid;
+	passwd_cache* p_cache = pcache();
+	if( ! p_cache->get_user_ids(owner.c_str(), dst_uid, dst_gid) ) {
+		dprintf( D_ALWAYS,
+				 "JobRouter failure (%s): Failed to find UID and GID for "
+				 "user %s. Cannot chown %s to user.\n",
+				 JobDesc().c_str(),owner.c_str(), proxy_file_copy.c_str() );
+		CleanupSharedX509UserProxy(route);
+		return false;
+	}
+
+	if( getuid() != dst_uid ) {
+		priv_state old_priv = set_root_priv();
+
+		int chown_rc = chown(proxy_file_copy.c_str(),dst_uid,dst_gid);
+		int chown_errno = errno;
+
+		set_priv(old_priv);
+
+		if(chown_rc != 0) {
+			dprintf( D_ALWAYS,
+					 "JobRouter failure (%s): Failed to change "
+					 "ownership of %s for user %s: %s\n",
+					 JobDesc().c_str(),proxy_file_copy.c_str(),
+					 owner.c_str(),strerror(chown_errno));
+			CleanupSharedX509UserProxy(route);
+			return false;
+		}
+
+		proxy_file_copy_chowned = true;
+	}
+#endif
+
+	dest_ad.InsertAttr(ATTR_X509_USER_PROXY,proxy_file_copy.c_str());
+
+	return true;
+}
+
+bool
+RoutedJob::CleanupSharedX509UserProxy(JobRoute *route)
+{
+	if(proxy_file_copy.size()) {
+		priv_state old_priv;
+		if(proxy_file_copy_chowned) {
+			old_priv = set_root_priv();
+		}
+
+		int remove_rc = remove(proxy_file_copy.c_str());
+
+		if(proxy_file_copy_chowned) {
+			set_priv(old_priv);
+		}
+
+		if(remove_rc != 0) {
+			dprintf( D_ALWAYS,
+					 "JobRouter failure (%s): Failed to remove %s\n",
+					 JobDesc().c_str(),proxy_file_copy.c_str());
+			return false;
+		}
+		proxy_file_copy = "";
+		proxy_file_copy_chowned = false;
+	}
+	return true;
+}
+
+
 
 static bool ClassAdHasDirtyAttributes(classad::ClassAd *ad) {
 	return ad->dirtyBegin() != ad->dirtyEnd();
@@ -1083,6 +1214,67 @@ JobRouter::TestJobSuccess(RoutedJob *job)
 	return !test_result;
 }
 
+bool
+JobRoute::EvalUseSharedX509UserProxy(RoutedJob *job)
+{
+	classad::MatchClassAd mad;
+	bool test_result = false;
+
+	mad.ReplaceLeftAd(RouteAd());
+	mad.ReplaceRightAd(&job->src_ad);
+
+	classad::ClassAd *upd;
+	classad::ClassAdParser parser;
+	std::string upd_str;
+	upd_str = "[leftTest = adcl.ad.";
+	upd_str += JR_ATTR_USE_SHARED_X509_USER_PROXY;
+	upd_str += " ;]";
+	upd = parser.ParseClassAd(upd_str);
+	ASSERT(upd);
+
+	mad.Update(*upd);
+	delete upd;
+
+	bool rc = mad.EvaluateAttrBool("leftTest", test_result);
+	if(!rc) {
+			// UNDEFINED etc. are treated as FALSE
+		test_result = false;
+	}
+
+	mad.RemoveLeftAd();
+	mad.RemoveRightAd();
+
+	return test_result;
+}
+
+bool
+JobRoute::EvalSharedX509UserProxy(RoutedJob *job,std::string &proxy_file)
+{
+	classad::MatchClassAd mad;
+
+	mad.ReplaceLeftAd(RouteAd());
+	mad.ReplaceRightAd(&job->src_ad);
+
+	classad::ClassAd *upd;
+	classad::ClassAdParser parser;
+	std::string upd_str;
+	upd_str = "[leftValue = adcl.ad.";
+	upd_str += JR_ATTR_SHARED_X509_USER_PROXY;
+	upd_str += " ;]";
+	upd = parser.ParseClassAd(upd_str);
+	ASSERT(upd);
+
+	mad.Update(*upd);
+	delete upd;
+
+	bool rc = mad.EvaluateAttrString("leftValue", proxy_file);
+
+	mad.RemoveLeftAd();
+	mad.RemoveRightAd();
+
+	return rc;
+}
+
 void
 JobRouter::CleanupJob(RoutedJob *job) {
 	if(job->state != RoutedJob::CLEANUP) return;
@@ -1194,7 +1386,7 @@ JobRouter::CleanupRetiredJob(RoutedJob *job) {
 	}
 	else if(dest_ad) {
 		std::string manager;
-		dest_ad->EvaluateAttrString(JR_ATTR_ROUTED_FROM_MANAGER,manager);
+		dest_ad->EvaluateAttrString(JR_ATTR_ROUTED_BY,manager);
 
 		if(manager != m_job_router_name) {
 			// Our mirror of the schedd's job collection shows this
@@ -1462,6 +1654,7 @@ RoutedJob::SetSrcJobAd(char const *key,classad::ClassAd *ad,classad::ClassAdColl
 	}
 	// From here on, keep track of any changes to src_ad, so we can push
 	// changes back to the schedd.
+	src_ad.ClearAllDirtyFlags();
 	src_ad.EnableDirtyTracking();
 	return true;
 }
