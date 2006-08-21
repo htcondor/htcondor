@@ -65,7 +65,6 @@ package CondorPersonal;
 #	ports			Select dynamic or normal ports		dynamic						$portchanges	
 #   vms				sets NUM_CPUS NUM_VMS				none
 #   universe		parallel configuration of schedd	none						$personal_universe
-#	encryption		turns on encryption					none						comma list
 #
 #   Notes added 12/14/05 bt
 #
@@ -718,12 +717,6 @@ sub TunePersonalCondor
 		print NEW "UPDATE_INTERVAL = 5\n";
 		print NEW "NEGOTIATOR_INTERVAL = 5\n";
 		print NEW "CONDOR_JOB_POLL_INTERVAL = 5\n";
-
-		print NEW "# Condor-C things\n";
-		print NEW "CONDOR_GAHP = \$(SBIN)/condor_c-gahp\n";
-		print NEW "C_GAHP_LOG = \$(LOG)/CondorCgahp.\$(USERNAME)\n";
-		print NEW "GRIDMANAGER_LOG = \$(LOG)/GridManager.\$(USERNAME)\n";
-		print NEW "C_GAHP_WORKER_THREAD_LOG = \$(LOG)/CondorCgahpWThread.\$(USERNAME)\n";
 	}
 	elsif( $portchanges eq "standard" )
 	{
@@ -745,12 +738,6 @@ sub TunePersonalCondor
 		print NEW "UPDATE_INTERVAL = 5\n";
 		print NEW "NEGOTIATOR_INTERVAL = 5\n";
 		print NEW "CONDOR_JOB_POLL_INTERVAL = 5\n";
-
-		print NEW "# Condor-C things\n";
-		print NEW "CONDOR_GAHP = \$(SBIN)/condor_c-gahp\n";
-		print NEW "C_GAHP_LOG = \$(LOG)/CondorCgahp.\$(USERNAME)\n";
-		print NEW "GRIDMANAGER_LOG = \$(LOG)/GridManager.\$(USERNAME)\n";
-		print NEW "C_GAHP_WORKER_THREAD_LOG = \$(LOG)/CondorCgahpWThread.\$(USERNAME)\n";
 	}
 	else
 	{
@@ -769,36 +756,9 @@ sub TunePersonalCondor
 		$gendatafile = $gendatafile . "_" . $myvms . "VMs";
 	}
 
-	if( exists $control{"encryption"} )
-	{
-		my $myencryptions = $control{"encryption"};
-		debug( "Encryption wanted! methods = $myencryptions\n");
-		print NEW "SEC_DEFAULT_ENCRYPTION = REQUIRED\n";
-		print NEW "SEC_DEFAULT_CRYPTO_METHODS = $myencryptions\n";
-		$gendatafile = $gendatafile . "_" . $myencryptions;
-	}
-
-	if( exists $control{"authentication"} )
-	{
-		my $myauthentication = $control{"authentication"};
-		if($myauthentication eq "GSI")
-		{
-			debug( "Setting up authentication");
-			print NEW "SEC_DEFAULT_AUTHENTICATION = REQUIRED\n";
-			print NEW "SEC_DEFAULT_AUTHENTICATION_METHODS = $myauthentication\n";
-			print NEW "GSI_DAEMON_DIRECTORY = /etc/grid-security\n";
-			print NEW "#Subjecct must be in slash form and associate with condor entry in grid-mapfile\n";
-			print NEW "GSI_DAEMON_NAME = /C=US/ST=Wisconsin/L=Madison/O=University of Wisconsin -- Madison/O=Computer Sciences Department/OU=Condor Project/CN=nmi-test-5.cs.wisc.edu/Email=bgietzel\@cs.wisc.edu\n";
-			$gendatafile = $gendatafile . "_" . $myauthenication;
-		}
-		else
-		{
-			debug( "Do not understand requested authentication");
-		}
-	}
-
 	if($personal_local_post_src ne "")
 	{
+		print "Adding to local config file from $personal_local_post_src\n";
 		open(POST,"<$personal_local_post_src")  || die "Can not do local config additions: $! <<$personal_local_post_src>>\n";
 		while(<POST>)
 		{
