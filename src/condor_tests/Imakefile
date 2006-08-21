@@ -501,10 +501,12 @@ RUN(job_core_priority_sched)
 TESTCLASS(job_core_priority_sched,core)
 TESTCLASS(job_core_priority_sched,quick)
 
+/* Needs work. still has a problem
 DESC(job_core_priority_van,"Vanilla: Verify respect for job priority")
 RUN(job_core_priority_van)
 TESTCLASS(job_core_priority_van,core)
 TESTCLASS(job_core_priority_van,quick)
+*/
 
 DESC(job_core_queue_sched,"Scheduler: Verify the  queue command")
 RUN(job_core_queue_sched)
