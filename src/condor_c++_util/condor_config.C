@@ -76,6 +76,7 @@
 #include "HashTable.h"
 #include "extra_param_info.h"
 #include "condor_uid.h"
+#include "condor_mkstemp.h"
 
 extern "C" {
 	
@@ -1824,33 +1825,26 @@ process_persistent_configs()
 static int
 process_runtime_configs()
 {
-	char filename[_POSIX_PATH_MAX];
 	int i, rval, fd;
 	bool processed = false;
 
 	for (i=0; i <= rArray.getlast(); i++) {
 		processed = true;
 
-#if HAVE_MKSTEMP && !defined( WIN32 )
-		sprintf( filename, "/tmp/cndrtmpXXXXXX" );
-		fd = mkstemp( filename ); 
+		char* tmp_dir = temp_dir_path();
+		ASSERT(tmp_dir);
+		MyString tmp_file_tmpl = tmp_dir;
+		free(tmp_dir);
+		tmp_file_tmpl += "/cndrtmpXXXXXX";
+
+		char* tmp_file = strdup(tmp_file_tmpl.Value());
+		fd = condor_mkstemp( tmp_file ); 
 		if (fd < 0) {
-			dprintf( D_ALWAYS, "mkstemp(%s) returned %d, '%s' (errno %d) in "
-					 "process_dynamic_configs()\n", filename, fd,
-					 strerror(errno), errno );
+			dprintf( D_ALWAYS, "condor_mkstemp(%s) returned %d, '%s' (errno %d) in "
+				 "process_dynamic_configs()\n", tmp_file, fd,
+				 strerror(errno), errno );
 			exit(1);
 		}
-#else /* ! HAVE_MKSTEMP */
-		// EVIL!  tmpnam() isn't safe!
-		tmpnam( filename );
-		fd = open( filename, O_WRONLY|O_CREAT|O_TRUNC, 0644 );
-		if (fd < 0) {
-			dprintf( D_ALWAYS, "open(%s) returns %d, '%s' (errno %d) in "
-					 "process_dynamic_configs()\n", filename, fd,
-					 strerror(errno), errno );
-			exit(1);
-		}
-#endif /* ! HAVE_MKSTEMP */
 
 		if (write(fd, rArray[i].config, strlen(rArray[i].config))
 			!= (ssize_t)strlen(rArray[i].config)) {
@@ -1863,15 +1857,16 @@ process_runtime_configs()
 					 "process_dynamic_configs\n", errno );
 			exit(1);
 		}
-		rval = Read_config( filename, ConfigTab, TABLESIZE,
+		rval = Read_config( tmp_file, ConfigTab, TABLESIZE,
 							EXPAND_LAZY, false, extra_info );
 		if (rval < 0) {
 			dprintf( D_ALWAYS, "Configuration Error Line %d "
 					 "while reading %s, runtime config: %s\n",
-					 ConfigLineNo, filename, rArray[i].admin );
+					 ConfigLineNo, tmp_file, rArray[i].admin );
 			exit(1);
 		}
-		unlink(filename);
+		unlink(tmp_file);
+		free(tmp_file);
 	}
 
 	return (int)processed;

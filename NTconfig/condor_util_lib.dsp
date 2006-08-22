@@ -120,6 +120,10 @@ SOURCE=..\src\condor_util_lib\condor_full_io.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_util_lib\condor_mkstemp.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_util_lib\condor_netdb.c
 # End Source File
 # Begin Source File

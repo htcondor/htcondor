@@ -43,6 +43,7 @@ CLEAN :
 	-@erase "$(INTDIR)\condor_common_c.pch"
 	-@erase "$(INTDIR)\condor_create_id.obj"
 	-@erase "$(INTDIR)\condor_full_io.obj"
+	-@erase "$(INTDIR)\condor_mkstemp.obj"
 	-@erase "$(INTDIR)\condor_netdb.obj"
 	-@erase "$(INTDIR)\condor_perms.obj"
 	-@erase "$(INTDIR)\condor_pidenvid.obj"
@@ -172,7 +173,8 @@ LIB32_OBJS= \
 	"$(INTDIR)\setsyscalls.obj" \
 	"$(INTDIR)\signames.obj" \
 	"$(INTDIR)\strcmp_until.obj" \
-	"$(INTDIR)\win32_posix.obj"
+	"$(INTDIR)\win32_posix.obj" \
+	"$(INTDIR)\condor_mkstemp.obj"
 
 "..\src\condor_util_lib\condor_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -197,6 +199,7 @@ CLEAN :
 	-@erase "$(INTDIR)\condor_common_c.pch"
 	-@erase "$(INTDIR)\condor_create_id.obj"
 	-@erase "$(INTDIR)\condor_full_io.obj"
+	-@erase "$(INTDIR)\condor_mkstemp.obj"
 	-@erase "$(INTDIR)\condor_netdb.obj"
 	-@erase "$(INTDIR)\condor_perms.obj"
 	-@erase "$(INTDIR)\condor_pidenvid.obj"
@@ -325,7 +328,8 @@ LIB32_OBJS= \
 	"$(INTDIR)\setsyscalls.obj" \
 	"$(INTDIR)\signames.obj" \
 	"$(INTDIR)\strcmp_until.obj" \
-	"$(INTDIR)\win32_posix.obj"
+	"$(INTDIR)\win32_posix.obj" \
+	"$(INTDIR)\condor_mkstemp.obj"
 
 "..\src\condor_util_lib\condor_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -408,6 +412,12 @@ SOURCE=..\src\condor_util_lib\condor_create_id.c
 SOURCE=..\src\condor_util_lib\condor_full_io.c
 
 "$(INTDIR)\condor_full_io.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common_c.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\src\condor_util_lib\condor_mkstemp.c
+
+"$(INTDIR)\condor_mkstemp.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common_c.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 

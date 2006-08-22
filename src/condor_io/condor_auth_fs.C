@@ -27,6 +27,7 @@
 #include "condor_environ.h"
 #include "CondorError.h"
 #include "my_hostname.h"
+#include "condor_mkstemp.h"
 
 Condor_Auth_FS :: Condor_Auth_FS(ReliSock * sock, int remote)
     : Condor_Auth_Base    ( sock, CAUTH_FILESYSTEM ),
@@ -187,7 +188,7 @@ int Condor_Auth_FS::authenticate(const char * remoteHost, CondorError* errstack)
 
 				dprintf( D_SECURITY, "FS_REMOTE: sync filename is %s\n", filename_inout );
 
-				int sync_fd = mkstemp(filename_inout);
+				int sync_fd = condor_mkstemp(filename_inout);
 				if (sync_fd >= 0) {
 					::close(sync_fd);
 					unlink( filename_inout ); /* XXX hope we aren't root */

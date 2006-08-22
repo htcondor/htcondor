@@ -1250,11 +1250,16 @@ temp_dir_path()
 #ifndef WIN32
 		prefix = strdup("/tmp");
 #else
-			// try to get the temp dir, otherwise just use the root directory
-		prefix = getenv("TEMP");
-		if ( prefix ) {
-			prefix = strdup(prefix);
+			// try to get the temp dir, then try SPOOL,
+			// then use the root directory
+		char buf[_POSIX_PATH_MAX];
+		int len;
+		if ((len = GetTempPath(_POSIX_PATH_MAX, buf)) <= _POSIX_PATH_MAX) {
+			buf[len - 1] = '\0';
+			prefix = strdup(buf);
 		} else {
+			dprintf(D_ALWAYS, "GetTempPath: buffer of size %d too small\n", _POSIX_PATH_MAX);
+
 			prefix = param("SPOOL");
 			if (!prefix) {
 				prefix = strdup("\\");

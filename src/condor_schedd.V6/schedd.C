@@ -76,6 +76,7 @@
 //#include "condor_crontab.h"
 #include "condor_netdb.h"
 #include "fs_util.h"
+#include "condor_mkstemp.h"
 
 
 #define DEFAULT_SHADOW_SIZE 125
@@ -2422,7 +2423,7 @@ jobIsFinished( int cluster, int proc, void* )
 			filename_template.sprintf( "%s/.condor_nfs_sync_XXXXXX",
 									   iwd.Value() );
 			sync_filename = strdup( filename_template.Value() );
-			sync_fd = mkstemp( sync_filename );
+			sync_fd = condor_mkstemp( sync_filename );
 			if ( sync_fd >= 0 ) {
 				close( sync_fd );
 				unlink( sync_filename );
