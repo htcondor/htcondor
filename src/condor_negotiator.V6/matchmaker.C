@@ -2423,26 +2423,42 @@ public:
 	static void startCommandCallback(bool success,Sock *sock,CondorError *errstack,void *misc_data)
 	{
 		NotifyStartdOfMatchHandler *self = (NotifyStartdOfMatchHandler *)misc_data;
-		ASSERT(sock);
 		ASSERT(misc_data);
+
+		if(!success) {
+			dprintf (D_ALWAYS,"      Failed to initiate socket to send MATCH_INFO to %s\n",
+					 self->m_startdName.Value());
+		}
+		else {
+			self->WriteMatchInfo(sock);
+		}
+		if(sock) {
+			delete sock;
+		}
+		delete self;
+	}
+
+	bool WriteMatchInfo(Sock *sock)
+	{
+		ASSERT(sock);
 
 		// pass the startd MATCH_INFO and capability string
 		dprintf (D_FULLDEBUG, "      Sending MATCH_INFO/capability to %s\n",
-		         self->m_startdName.Value());
+		         m_startdName.Value());
 		dprintf (D_FULLDEBUG, "      (Capability is \"%s\" )\n",
-		         self->m_capability.Value());
+		         m_capability.Value());
 
-		if ( !sock->put ((char *)self->m_capability.Value()) || !sock->end_of_message())
+		if ( !sock->put ((char *)m_capability.Value()) || !sock->end_of_message())
 		{
 			dprintf (D_ALWAYS,
 			        "      Could not send MATCH_INFO/capability to %s\n",
-			        self->m_startdName.Value() );
+			        m_startdName.Value() );
 			dprintf (D_FULLDEBUG,
 			        "      (Capability is \"%s\")\n",
-			        self->m_capability.Value() );
+			        m_capability.Value() );
+			return false;
 		}
-		delete sock;
-		delete self;
+		return true;
 	}
 
 	bool startCommand()
@@ -2451,7 +2467,18 @@ public:
 					m_startdName.Value(), m_startdAddr.Value()); 
 
 		if(!m_nonblocking) {
-			bool result =  m_startd.startCommand(MATCH_INFO,Sock::safe_sock,m_timeout);
+			Sock *sock =  m_startd.startCommand(MATCH_INFO,Sock::safe_sock,m_timeout);
+			bool result = false;
+			if(!sock) {
+				dprintf (D_ALWAYS,"      Failed to initiate socket (blocking mode) to send MATCH_INFO to %s\n",
+						 m_startdName.Value());
+			}
+			else {
+				result = WriteMatchInfo(sock);
+			}
+			if(sock) {
+				delete sock;
+			}
 			delete this;
 			return result;
 		}
