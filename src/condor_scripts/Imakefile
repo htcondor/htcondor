@@ -50,7 +50,7 @@ $(STATIC_UNSTRIP_DIR)/dir/file: src			@@\
 static:: $(STATIC_DIR)/dir/file	$(STATIC_UNSTRIP_DIR)/dir/file	@@\
 XCOMM End translation of func(static_version_target)
 #else  /* ! HAS_STATIC */
-#define static_copy_target(src,dir,file,mode)	@@\
+#define static_version_target(src,dir,file,mode)	@@\
 XCOMM Begin translation of func(static_version_target) @@\
 static::					@@\
 XCOMM End translation of func(static_version_target)
