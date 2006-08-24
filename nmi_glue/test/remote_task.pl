@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_task.pl,v 1.2 2006-07-25 18:15:45 wright Exp $
+# $Id: remote_task.pl,v 1.2.2.1 2006-08-24 17:09:20 bt Exp $
 # run a test in the Condor testsuite
 # return val is the status of the test
 # 0 = built and passed
@@ -15,6 +15,8 @@
 ###### meaning, so you can NOT just call die().  you MUST       ######
 ###### use the special c_die() method so we return 3!!!!        ######
 ######################################################################
+
+use File::Copy;
 
 if( ! defined $ENV{_NMI_TASKNAME} ) {
     die "_NMI_TASKNAME not in environment, can't test anything!\n";
@@ -173,12 +175,14 @@ unsafe_copy( "$testname.cmd.out", $resultdir  );
 
 # try to tarup a 'saveme' subdirectory for this test, which may
 # contain test debug info etc.
-system( "tar zcf $testname.saveme.tar.gz $testname.saveme/" );
-if( $? >> 8 ) {
-	print "No $testname.saveme subdir exists, fine.\n";
-} else {
-	print "Created $testname.saveme.tar.gz.\n";
-	safe_copy( "$testname.saveme.tar.gz", $resultdir  );
+if(-d "$testname.saveme") {
+	system( "tar zcf $testname.saveme.tar.gz $testname.saveme/" );
+	if( $? >> 8 ) {
+		print "Tar failed to save test dir $testname.saveme\n";
+	} else {
+		print "Created $testname.saveme.tar.gz.\n";
+		safe_copy( "$testname.saveme.tar.gz", $resultdir  );
+	}
 }
 
 
@@ -218,7 +222,7 @@ exit $teststatus;
 
 sub safe_copy {
     my( $src, $dest ) = @_;
-	system("cp $src $dest");
+	copy($src, $dest);
 	if( $? >> 8 ) {
 		$copy_failure = 1;
 		print "Can't copy $src to $dest: $!\n";
@@ -229,7 +233,7 @@ sub safe_copy {
 
 sub unsafe_copy {
     my( $src, $dest ) = @_;
-	system("cp $src $dest");
+	copy($src, $dest);
 	if( $? >> 8 ) {
 		print "   Optional file $src not copied into $dest: $!\n";
     } else {
