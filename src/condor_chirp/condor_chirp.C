@@ -43,7 +43,7 @@ chirp_client_connect_starter()
     int port;
     int result;
 
-	sprintf(path,"%s%c%s",getenv("_CONDOR_SCRATCH_DIR"),DIR_DELIM_CHAR,"chirp.config");
+	snprintf(path, _POSIX_PATH_MAX, "%s%c%s",getenv("_CONDOR_SCRATCH_DIR"),DIR_DELIM_CHAR,"chirp.config");
     file = fopen(path,"r");
     if(!file) { 
 		fprintf(stderr, "Can't open chirp.config file\n");
