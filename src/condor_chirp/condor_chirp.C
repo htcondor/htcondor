@@ -30,12 +30,54 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+struct chirp_client *
+chirp_client_connect_starter()
+{
+    FILE *file;
+    int fields;
+    int save_errno;
+    struct chirp_client *client;
+    char host[_POSIX_PATH_MAX];
+    char cookie[_POSIX_PATH_MAX];
+	char path[_POSIX_PATH_MAX];
+    int port;
+    int result;
+
+	sprintf(path,"%s%c%s",getenv("_CONDOR_SCRATCH_DIR"),DIR_DELIM_CHAR,"chirp.config");
+    file = fopen(path,"r");
+    if(!file) { 
+		fprintf(stderr, "Can't open chirp.config file\n");
+		return 0;
+	}
+
+    fields = fscanf(file,"%s %d %s",host,&port,cookie);
+    fclose(file);
+
+    if(fields!=3) {
+        errno = EINVAL;
+        return 0;
+    }
+
+    client = chirp_client_connect(host,port);
+    if(!client) return 0;
+
+    result = chirp_client_cookie(client,cookie);
+    if(result!=0) {
+        save_errno = errno;
+        chirp_client_disconnect(client);
+        errno = save_errno;
+        return 0;
+    }
+
+    return client;
+}
+
 int
 chirp_get_one_file(char *remote, char *local) {
 	struct chirp_client *client = 0;
 
 		// First, connect to the submit host
-	client = chirp_client_connect_default();
+	client = chirp_client_connect_starter();
 	if (!client) {
 		fprintf(stderr, "cannot chirp_connect to shadow\n");
 		return -1;
@@ -98,7 +140,7 @@ chirp_put_one_file(char *local, char *remote, char *mode, int perm) {
 
 		// We connect each time, so that we don't have thousands
 		// of idle connections hanging around the master
-	client = chirp_client_connect_default();
+	client = chirp_client_connect_starter();
 	if (!client) {
 		fprintf(stderr, "Can't connect to chirp server\n");
 		exit(-1);
@@ -232,7 +274,7 @@ int chirp_remove(int argc, char **argv) {
 	struct chirp_client *client = 0;
 
 		// First, connect to the submit host
-	client = chirp_client_connect_default();
+	client = chirp_client_connect_starter();
 	if (!client) {
 		fprintf(stderr, "cannot chirp_connect to shadow\n");
 		return -1;
@@ -255,7 +297,7 @@ int chirp_get_job_attr(int argc, char **argv) {
 	struct chirp_client *client = 0;
 
 		// First, connect to the submit host
-	client = chirp_client_connect_default();
+	client = chirp_client_connect_starter();
 	if (!client) {
 		fprintf(stderr, "cannot chirp_connect to shadow\n");
 		return -1;
@@ -281,7 +323,7 @@ int chirp_set_job_attr(int argc, char **argv) {
 	struct chirp_client *client = 0;
 
 		// First, connect to the submit host
-	client = chirp_client_connect_default();
+	client = chirp_client_connect_starter();
 	if (!client) {
 		fprintf(stderr, "cannot chirp_connect to shadow\n");
 		return -1;
@@ -304,7 +346,7 @@ int chirp_ulog(int argc, char **argv) {
 	struct chirp_client *client = 0;
 
 		// First, connect to the submit host
-	client = chirp_client_connect_default();
+	client = chirp_client_connect_starter();
 	if (!client) {
 		fprintf(stderr, "cannot chirp_connect to shadow\n");
 		return -1;
