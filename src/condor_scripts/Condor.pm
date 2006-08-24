@@ -306,13 +306,13 @@ sub TestSubmitDagman
 sub Vacate
 {
     my $machine = shift || croak "missing machine argument";
-    return runCommand( "$CONDOR_VACATE $machine" );
+    return runCommand( "$CONDOR_VACATE $machine > condor_vacate.out 2>&1" );
 }
 
 sub Reschedule
 {
     my $machine = shift;
-    return runCommand( "$CONDOR_RESCHD $machine" );
+    return runCommand( "$CONDOR_RESCHD $machine > condor_resched.out 2>&1" );
 }
 
 # runs a command string, returning 0 if anything went wrong or 1 upon success
@@ -336,6 +336,7 @@ sub runCommand
 			#debug("Calling error callback!!!!!! at @ $WantErrorCallback\n");
 			&$WantErrorCallback( %info )
 		}
+		DumpFailedCommand($command_string);
         return 0;
     }
 
@@ -351,10 +352,32 @@ sub runCommand
 			#debug("Calling error callback!!!!!! at @ $WantErrorCallback\n");
 			&$WantErrorCallback( %info )
 		}
+		DumpFailedCommand($command_string);
         return 0;
     }
 
     return 1;
+}
+
+sub DumpFailedCommand
+{
+    my $cmd = shift @_;
+    my $output = "";
+    print "ERROR: $cmd failed.\n";
+	# was command one that saved error and output to a file?
+    if($cmd=~ /(.*)\s+>\s+(.*)\s+2>&1/) {
+        $output = $2;
+		if(!open( MACH, "<$output" )) {
+			warn "$cmd did not have an output file to add\n";
+		} else {
+    		print "ERROR: Output follows:\n";
+    		while(<MACH>) {
+        		print "ERROR: $_";
+    		}
+    		close(MACH);
+    		print "ERROR: Output done:\n";
+		}
+    }
 }
 
 sub RegisterSubmit
@@ -769,7 +792,7 @@ sub Monitor
 
 		if(! defined $ShadowCallback)
 		{
-    		runCommand( "$CONDOR_RM $1" );
+    		runCommand( "$CONDOR_RM $1 > condor_rm.out 2>&1" );
 			die "Unexpected Shadow Exception. Job Removed!!\n";
 		}
 
