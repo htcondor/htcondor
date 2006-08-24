@@ -42,8 +42,8 @@ Condor_Auth_FS :: ~Condor_Auth_FS()
 int Condor_Auth_FS::authenticate(const char * remoteHost, CondorError* errstack)
 {
     char *new_file = NULL;
-    int fd = -1;
-    int retval = -1;
+    int client_result = -1;
+    int server_result = -1;
 	int fail = -1 == 0;
     
     if ( mySock_->isClient() ) {
@@ -55,41 +55,46 @@ int Condor_Auth_FS::authenticate(const char * remoteHost, CondorError* errstack)
 		}
         if ( new_file ) {
 			/* XXX hope we aren't root when we do this test */
-            fd = open(new_file, O_RDONLY | O_CREAT | O_TRUNC, 0666);
-			if (fd >= 0) {
-            	::close(fd);
+            client_result = mkdir(new_file, 0700);
+			if (client_result == -1) {
+				MyString errmsg;
+				errmsg = "mkdir(\"";
+				errmsg += new_file;
+				errmsg += "\", 0700): ";
+				errmsg += strerror(errno);
+				errstack->push("FS", errno, errmsg.Value());
 			}
         }
         if (!mySock_->end_of_message()) { 
 			dprintf(D_SECURITY, "Protocol failure at %s, %d!\n",
 				__FUNCTION__, __LINE__);
         	if ( new_file ) {
-            	unlink( new_file ); /* XXX hope we aren't root */
+            	rmdir( new_file ); /* XXX hope we aren't root */
             	free( new_file );
         	}
 			return fail; 
 		}
         mySock_->encode();
-        //send over fd as a success/failure indicator (-1 == failure)
-        if (!mySock_->code( fd ) || 
+        //send over result as a success/failure indicator (-1 == failure)
+        if (!mySock_->code( client_result ) || 
         	!mySock_->end_of_message()) 
 		{
 			dprintf(D_SECURITY, "Protocol failure at %s, %d!\n",
 				__FUNCTION__, __LINE__);
         	if ( new_file ) {
-            	unlink( new_file ); /* XXX hope we aren't root */
+            	rmdir( new_file ); /* XXX hope we aren't root */
             	free( new_file );
         	}
 			return fail; 
 		}
         mySock_->decode();
-        if (!mySock_->code( retval ) || 
+        if (!mySock_->code( server_result ) || 
        		!mySock_->end_of_message()) 
 		{ 
 			dprintf(D_SECURITY, "Protocol failure at %s, %d!\n",
 				__FUNCTION__, __LINE__);
         	if ( new_file ) {
-            	unlink( new_file ); /* XXX hope we aren't root */
+            	rmdir( new_file ); /* XXX hope we aren't root */
             	free( new_file );
         	}
 			return fail; 
@@ -143,7 +148,7 @@ int Condor_Auth_FS::authenticate(const char * remoteHost, CondorError* errstack)
 			return fail;
 		}
         mySock_->decode();
-        if (!mySock_->code( fd ) ||
+        if (!mySock_->code( client_result ) ||
         	!mySock_->end_of_message())
 		{
 			dprintf(D_SECURITY, "Protocol failure at %s, %d!\n",
@@ -153,8 +158,8 @@ int Condor_Auth_FS::authenticate(const char * remoteHost, CondorError* errstack)
 		}
         mySock_->encode();
 
-        retval = -1;	// assume failure.  i am glass-half-empty man.
-        if ( fd > -1 ) {
+        server_result = -1;	// assume failure.  i am glass-half-empty man.
+        if ( client_result != -1 ) {
 			if (remote_) {
 				// now, if this is a remote filesystem, it is likely to be NFS.
 				// before we stat the file, we need to do something that causes the
@@ -210,17 +215,22 @@ int Condor_Auth_FS::authenticate(const char * remoteHost, CondorError* errstack)
             struct stat stat_buf;
 
             if ( lstat( new_file, &stat_buf ) < 0 ) {
-                retval = -1;  
+                server_result = -1;  
             }
             else {
                 // Authentication should fail if a) owner match fails, or b) the
                 // file is either a hard or soft link (no links allowed because they
                 // could spoof the owner match).  -Todd 3/98
+				// also, it must now be a directory instead of a file, due to hardlink
+				// trickery where you could in fact create a hard link (with count 1!)
+				// as another user with the supplied filename.  however, normal users
+				// cannot create hardlinks to directories, only root.  -Zach 8/06
                 if ( 
-                    (stat_buf.st_nlink > 1) ||	 // check for hard link
-                    (S_ISLNK(stat_buf.st_mode)) ) 
+                    (stat_buf.st_nlink != 2) ||	   // check for hard link
+                    (S_ISLNK(stat_buf.st_mode)) || // check for soft link
+                    (!S_ISDIR(stat_buf.st_mode)) )  // check for non-directory
                     {
-                        retval = -1;
+                        server_result = -1;
                     } 
                 else {
                     //need to lookup username from file and do setOwner()
@@ -228,9 +238,9 @@ int Condor_Auth_FS::authenticate(const char * remoteHost, CondorError* errstack)
 					if (!tmpOwner) {
 							// this could happen if, for instance,
 							// getpwuid() failed.
-							retval = -1;
+							server_result = -1;
 					} else {
-							retval = 0;	// 0 means success here. sigh.
+							server_result = 0;	// 0 means success here. sigh.
 							setRemoteUser( tmpOwner );
 							setAuthenticatedName( tmpOwner );
 							free( tmpOwner );
@@ -240,13 +250,13 @@ int Condor_Auth_FS::authenticate(const char * remoteHost, CondorError* errstack)
             }
         } 
         else {
-            retval = -1;
+            server_result = -1;
             dprintf(D_ALWAYS,
                     "invalid state in authenticate_filesystem (file %s)\n",
                     new_file ? new_file : "(null)" );
         }
         
-        if (!mySock_->code( retval ) || 
+        if (!mySock_->code( server_result ) || 
         	!mySock_->end_of_message())
 		{
 			dprintf(D_SECURITY, "Protocol failure at %s, %d!\n",
@@ -257,18 +267,18 @@ int Condor_Auth_FS::authenticate(const char * remoteHost, CondorError* errstack)
 		// leave new_file allocated until after dprintf below
     }
 
-   	dprintf( D_SECURITY, "AUTHENTICATE_FS: used file %s, status: %d\n", 
-             (new_file ? new_file : "(null)"), (retval == 0) );
+   	dprintf( D_SECURITY, "AUTHENTICATE_FS: used dir %s, status: %d\n", 
+             (new_file ? new_file : "(null)"), (server_result == 0) );
 
 	if ( new_file ) {
    		// client responsible for deleting the file
-		if (mySock_->isClient()) {
-			unlink( new_file ); /* XXX hope we aren't root */
+		if (mySock_->isClient() && client_result != -1) {
+			rmdir( new_file ); /* XXX hope we aren't root */
 		}
 		free( new_file );
 	}
 
-    return( retval == 0 );
+    return( server_result == 0 );
 }
 
 int Condor_Auth_FS :: isValid() const
