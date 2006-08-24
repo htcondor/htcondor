@@ -1,12 +1,13 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre.pl,v 1.2 2006-07-25 18:15:42 wright Exp $
+# $Id: remote_pre.pl,v 1.2.2.1 2006-08-24 17:06:28 bt Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
 use Cwd;
 use Env; 
+use File::Copy;
 
 my $BaseDir = $ENV{BASE_DIR} || die "BASE_DIR not in environment!\n";
 my $SrcDir = $ENV{SRC_DIR} || die "SRC_DIR not in environment!\n";
@@ -93,6 +94,12 @@ if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
 	# we use condor configure under unix
 	my $configure = "$BaseDir/$version/condor_configure";
 
+	if( ! -d "$BaseDir/results" ) {
+		# If there's no results, and we can't even make the directory, we
+		# might as well die, since there's nothing worth saving...
+		mkdir( "$BaseDir/results", 0777 ) || die "Can't mkdir($BaseDir/results): $!\n";
+	}
+
 	mkdir( "$BaseDir/local", 0777 ) || die "Can't mkdir $BaseDir/local: $!\n";
 	mkdir( "$BaseDir/condor", 0777 ) || die "Can't mkdir $BaseDir/condor: $!\n";
 
@@ -171,7 +178,7 @@ print "Modifying local config file\n";
 
 rename( "$BaseDir/local/condor_config.local",
 	"$BaseDir/local/condor_config.local.orig" )
-    || die "Can't rename condor_config.local: $!\n";
+    	|| die "Can't rename $BaseDir/local/condor_config.local: $!\n";
 
 # make sure ports for Personal Condor are valid, we'll use address
 # files and port = 0 for dynamic ports...
@@ -274,6 +281,9 @@ print "PERSONAL CONDOR installed!\n";
 ######################################################################
 
 if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
+	# save the configure.cf command for platform refernces to defines(bt)
+	safe_copy("config/configure.cf","$BaseDir/results/configure.cf");
+
 	chdir( "$SrcDir" ) || die "Can't chdir($SrcDir): $!\n";
 	mkdir( "$SrcDir/release_dir", 0777 );  # don't die, it might already exist...
 	-d "$SrcDir/release_dir" || die "$SrcDir/release_dir does not exist!\n";
@@ -340,7 +350,7 @@ sleep 30;
 
 sub safe_copy {
     my( $src, $dest ) = @_;
-	system("cp $src $dest");
+	copy($src, $dest);
 	if( $? >> 8 ) {
 		print "Can't copy $src to $dest: $!\n";
 		return 0;
@@ -349,3 +359,4 @@ sub safe_copy {
 		return 1;
     }
 }
+
