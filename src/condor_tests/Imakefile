@@ -84,7 +84,6 @@ DESC(job_had_basic," Basic High Availability Daemon Test")
 RUN(job_had_basic)
 TESTCLASS(job_had_basic,core)
 TESTCLASS(job_had_basic,quick)
-TESTCLASS(job_had_basic,btdebug)
 #endif
 
 #if !defined(IS_PPC_AIX)
@@ -92,7 +91,6 @@ DESC(lib_procapi_pidtracking-snapshot,"Fast Termination Child Cleanup Test")
 RUN(lib_procapi_pidtracking-snapshot)
 TESTCLASS(lib_procapi_pidtracking-snapshot,core)
 TESTCLASS(lib_procapi_pidtracking-snapshot,quick)
-TESTCLASS(lib_procapi_pidtracking-snapshot,btdebug)
 #endif
 
 DESC(cmd_q_shows-hold,"Condor_q shows hold")
@@ -134,7 +132,6 @@ DESC(lib_procapi_pidtracking-byenv,"Slow Termination Child Cleanup Test")
 RUN(lib_procapi_pidtracking-byenv)
 TESTCLASS(lib_procapi_pidtracking-byenv,core)
 TESTCLASS(lib_procapi_pidtracking-byenv,quick)
-TESTCLASS(lib_procapi_pidtracking-byenv,btdebug)
 #endif
 
 #if 0
@@ -151,8 +148,58 @@ DESC(job_schedd_job-tracking_van,"Scheduler: test for schedd loosing track of jo
 RUN(job_schedd_job-tracking_van)
 TESTCLASS(job_schedd_job-tracking_van,core)
 TESTCLASS(job_schedd_job-tracking_van,quick)
-TESTCLASS(job_schedd_job-tracking_van,btdebug)
 #endif /* 0 -- test disabled */
+
+/*
+Gnats bugs 723 726
+*/
+#if !defined( IS_ALPHA_DUX5) && !defined( IS_PPC_OSX_10_3 )
+DESC(job_core_err_java,"Java Universe: basic error test")
+RUN(job_core_err_java)
+TESTCLASS(job_core_err_java,core)
+TESTCLASS(job_core_err_java,quick)
+
+DESC(job_core_output_java,"Java Universe: basic output test")
+RUN(job_core_output_java)
+TESTCLASS(job_core_output_java,core)
+TESTCLASS(job_core_output_java,quick)
+TESTCLASS(job_core_output_java,btdebug)
+
+DESC(job_core_hold_java,"Java Universe: basic output test")
+RUN(job_core_hold_java)
+TESTCLASS(job_core_hold_java,core)
+TESTCLASS(job_core_hold_java,quick)
+
+DESC(job_core_initialdir_java,"Java Universe: basic output test")
+RUN(job_core_initialdir_java)
+TESTCLASS(job_core_initialdir_java,core)
+TESTCLASS(job_core_initialdir_java,quick)
+TESTCLASS(job_core_initialdir_java,btdebug)
+
+DESC(job_core_input_java,"Java Universe: basic output test")
+RUN(job_core_input_java)
+TESTCLASS(job_core_input_java,core)
+TESTCLASS(job_core_input_java,quick)
+TESTCLASS(job_core_input_java,btdebug)
+
+DESC(job_core_plus_java,"Java Universe: basic output test")
+RUN(job_core_plus_java)
+TESTCLASS(job_core_plus_java,core)
+TESTCLASS(job_core_plus_java,quick)
+TESTCLASS(job_core_plus_java,btdebug)
+#endif
+
+/*
+Gnats bugs 723 and 724
+*/
+#if !defined( IS_CONDOR_PPC_LINUX_YD30 ) && !defined( IS_ALPHA_DUX5)
+DESC(soap_job_tests,"Soap: currently 10 different interface tests")
+RUN(soap_job_tests)
+TESTCLASS(soap_job_tests,core)
+TESTCLASS(soap_job_tests,quick)
+TESTCLASS(soap_job_tests,btdebug)
+#endif
+
 
 DESC(job_filexfer_streamout_van,"Vanilla: test for streaming of output when both stream_output is true and false")
 RUN(job_filexfer_streamout_van)
@@ -179,13 +226,11 @@ DESC(job_condorc_ab_van,"Condor-C AB test")
 RUN(job_condorc_ab_van)
 TESTCLASS(job_condorc_ab_van,condorc)
 TESTCLASS(job_condorc_ab_van,quick)
-TESTCLASS(job_condorc_ab_van,btdebug)
 
 DESC(job_condorc_abc_van,"Condor-C ABC test")
 RUN(job_condorc_abc_van)
 TESTCLASS(job_condorc_abc_van,condorc)
 TESTCLASS(job_condorc_abc_van,quick)
-TESTCLASS(job_condorc_abc_van,btdebug)
 #endif
 
 DESC(job_core_killsignal_sched,"Scheduler: Verify the specified input file is used")
@@ -308,7 +353,6 @@ DESC(job_core_perhold_van,"Vanilla: verify true and false triggers for periodic 
 RUN(job_core_perhold_van)
 TESTCLASS(job_core_perhold_van,core)
 TESTCLASS(job_core_perhold_van,quick)
-TESTCLASS(job_core_perhold_van,btdebug)
 
 DESC(job_core_onexithold_van,"Vanilla: Verify true and false triggers of on_exit_hold")
 RUN(job_core_onexithold_van)
@@ -501,11 +545,12 @@ RUN(job_core_priority_sched)
 TESTCLASS(job_core_priority_sched,core)
 TESTCLASS(job_core_priority_sched,quick)
 
-/* Needs work. still has a problem
+/*
 DESC(job_core_priority_van,"Vanilla: Verify respect for job priority")
 RUN(job_core_priority_van)
 TESTCLASS(job_core_priority_van,core)
 TESTCLASS(job_core_priority_van,quick)
+TESTCLASS(job_core_priority_van,btdebug)
 */
 
 DESC(job_core_queue_sched,"Scheduler: Verify the  queue command")
