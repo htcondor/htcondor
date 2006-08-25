@@ -452,15 +452,19 @@ void Server::Execute()
 		}
 		BlockSignals();
 		if (num_sds_ready < 0)
-			if (errno != EINTR) {
+			if (errno == ECHILD) {
+				// Note: we shouldn't really get an ECHILD here, but
+				// we did (see condor-admin 14075).
+				dprintf(D_ALWAYS, "WARNING: got ECHILD from select()\n");
+			} else if (errno != EINTR) {
 				dprintf(D_ALWAYS, 
-						"ERROR: cannot select from request ports, errno = %d\n", 
-						errno);
+						"ERROR: cannot select from request ports, errno = "
+						"%d (%s)\n", errno, strerror(errno));
 				exit(SELECT_ERROR);
 			}
 		current_time = time(NULL);
 		if (((unsigned int) current_time - (unsigned int) last_reclaim_time) 
-			>= reclaim_interval) {
+				>= (unsigned int) reclaim_interval) {
 			transfers.Reclaim(current_time);
 			last_reclaim_time = current_time;
 			if (replication_level)
@@ -469,7 +473,7 @@ void Server::Execute()
 			xfer_summary.time_out(current_time, canon_name);
 		}
 		if (((unsigned int) current_time - (unsigned int) last_clean_time)
-			>= clean_interval) {
+				>= (unsigned int) clean_interval) {
 			if (CkptClassAds) {
 				Log("Cleaning ClassAd log...");
 				CkptClassAds->TruncLog();
@@ -2053,6 +2057,11 @@ void Server::ChildComplete()
 		}
 		transfers.Delete(child_pid, success_flag, peer_addr, xfer_size);
     }
+	
+	if (child_pid < 0) {
+		dprintf(D_ALWAYS, "ERROR from waitpid(): %d (%s)\n", errno,
+					strerror(errno));
+	}
 }
 
 
@@ -2136,42 +2145,52 @@ void InstallSigHandlers()
 
 void SigAlarmHandler(int)
 {
+  int saveErrno = errno;
   rt_alarm.Expired();
+  errno = saveErrno;
 }
 
 
 void SigChildHandler(int)
 {
+  int saveErrno = errno;
   BlockSignals();
   server.ChildComplete();
   UnblockSignals();
+  errno = saveErrno;
 }
 
 
 void SigUser1Handler(int)
 {
+  int saveErrno = errno;
   BlockSignals();
   cout << "SIGUSR1 trapped; this handler is incomplete" << endl << endl;
   server.ServerDump();
   UnblockSignals();
+  errno = saveErrno;
 }
 
 
 void SigTermHandler(int)
 {
+  int saveErrno = errno;
   BlockSignals();
   cout << "SIGTERM trapped; Shutting down" << endl << endl;
   server.NoMore();
   UnblockSignals();
+  errno = saveErrno;
 }
 
 
 void SigHupHandler(int)
 {
+  int saveErrno = errno;
   BlockSignals();
   dprintf(D_ALWAYS, "SIGHUP trapped; Re-initializing\n");
   server.Init();
   UnblockSignals();
+  errno = saveErrno;
 }
 
 
