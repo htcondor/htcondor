@@ -1082,7 +1082,7 @@ StoreData (const char * file_name, const void * data, const int data_size) {
   priv_state priv = set_root_priv();
   dprintf (D_FULLDEBUG, "in StoreData(), euid=%d\n", geteuid());
 
-  int fd = open (file_name, O_WRONLY | O_CREAT | O_TRUNC );
+  int fd = open (file_name, O_WRONLY | O_CREAT | O_TRUNC, 0600 );
   if (fd == -1) {
     dprintf (D_ALWAYS, "Unable to store in %s\n", file_name);
     set_priv(priv);
