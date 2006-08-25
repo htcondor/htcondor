@@ -209,6 +209,10 @@ to run on them.
 \item Fixed \Condor{updates\_stats} to report it's version number
 correctly.
 
+% Condor-admin 14075
+\item Fixed a bug that caused the \Term{checkpoint server} to restart
+because of (ostensibly) getting an unexpected errno from select().
+
 \end{itemize}
 
 \noindent Known Bugs:
