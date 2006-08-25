@@ -321,7 +321,8 @@ Job::AddParent( Job* parent, MyString &whynot )
 		if( !Add( Q_WAITING, parent->GetJobID() ) ) {
             // this node's dependency queues are now out of sync and
             // thus the DAG state is FUBAR, so we should bail...
-			ASSERT( false );
+			EXCEPT( "Failed to add parent %s to job %s",
+						parent->GetJobName(), GetJobName() );
 			return false;
 		}
 		_waitingCount++;
@@ -563,7 +564,10 @@ Job::RemoveDependency( queue_t queue, JobID_t job, MyString &whynot )
     while( _queues[queue].Next( candidate ) ) {
         if( candidate == job ) {
             _queues[queue].DeleteCurrent();
-			ASSERT( _queues[queue].IsMember( job ) == false );
+			if ( _queues[queue].IsMember( job ) ) {
+				EXCEPT( "Job %d still in queue %d after deletion!!",
+							job, queue );
+			}
 			whynot = "n/a";
 			return true;
         }

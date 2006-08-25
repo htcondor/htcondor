@@ -296,7 +296,9 @@ Dag::AddDependency( Job* parent, Job* child )
 			// up with asymetric dependencies
 		if( !parent->RemoveChild( child ) ) {
 				// the DAG state is FUBAR, so we should bail...
-			ASSERT( false );
+			EXCEPT( "Fatal error attempting to add dependency between "
+						"%s (parent) and %s (child)",
+						parent->GetJobName(), child->GetJobName() );
 		}
 		return false;
 	}
@@ -311,7 +313,12 @@ Job * Dag::GetJob (const JobID_t jobID) const {
 		job = NULL;
 	}
 
-	if ( job ) ASSERT( jobID == job->GetJobID() );
+	if ( job ) {
+		if ( jobID != job->GetJobID() ) {
+			EXCEPT( "Searched for node ID %d; got %d!!", jobID,
+						job->GetJobID() );
+		}
+	}
 
 	return job;
 }
@@ -726,7 +733,8 @@ Dag::RemoveBatchJob(Job *node) {
 		break;
 
 	default:
-		ASSERT( false );
+		EXCEPT( "Illegal job (%d) type for node %s", node->JobType(),
+					node->GetJobName() );
 		break;
 	}
 	
@@ -1039,7 +1047,12 @@ Job * Dag::GetJob (const char * jobName) const {
 		job = NULL;
 	}
 
-	if ( job ) ASSERT( strcmp( jobName, job->GetJobName() ) == 0 );
+	if ( job ) {
+		if ( strcmp( jobName, job->GetJobName() ) != 0 ) {
+			EXCEPT( "Searched for node %s; got %s!!", jobName,
+						job->GetJobName() );
+		}
+	}
 
 	return job;
 }
@@ -1059,7 +1072,12 @@ Dag::NodeExists( const char* nodeName ) const
     return false;
   }
 
-  if ( job ) ASSERT( strcmp( nodeName, job->GetJobName() ) == 0 );
+	if ( job ) {
+		if ( strcmp( nodeName, job->GetJobName() ) != 0 ) {
+			EXCEPT( "Searched for node %s; got %s!!", nodeName,
+						job->GetJobName() );
+		}
+	}
 
   return job != NULL;
 }
@@ -1162,7 +1180,9 @@ bool
 Dag::StartNode( Job *node, bool isRetry )
 {
     ASSERT( node != NULL );
-	ASSERT( node->CanSubmit() );
+	if ( !node->CanSubmit() ) {
+		EXCEPT( "Node %s not ready to submit!", node->GetJobName() );
+	}
 
 	// if a PRE script exists and hasn't already been run, run that
 	// first -- the PRE script's reaper function will submit the
@@ -1235,6 +1255,13 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 	_readyQ->Next( job );
 	_readyQ->DeleteCurrent();
 	ASSERT( job != NULL );
+
+		// Mainly printing this so we have some idea what the heck
+		// happened if we blow the following assert (see Gnats PR
+		// 734/condor-admin 13872).
+	debug_printf( DEBUG_VERBOSE, "Got node %s from the ready queue\n",
+				  job->GetJobName() );
+
 	ASSERT( job->GetStatus() == Job::STATUS_READY );
 
 	if( job->NumParents() > 0 && dm.submit_delay == 0 &&
@@ -1439,7 +1466,9 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 	ASSERT( nodeName != NULL );
 	Job* job = GetJob( nodeName );
 	ASSERT( job != NULL );
-	ASSERT( job->GetStatus() == Job::STATUS_PRERUN );
+	if ( job->GetStatus() != Job::STATUS_PRERUN ) {
+		EXCEPT( "Error: node %s is not in PRERUN state", job->GetJobName() );
+	}
 
 	if( WIFSIGNALED( status ) || WEXITSTATUS( status ) != 0 ) {
 		// if script returned failure or was killed by a signal
@@ -1509,7 +1538,9 @@ Dag::PostScriptReaper( const char* nodeName, int status )
 	ASSERT( nodeName != NULL );
 	Job* job = GetJob( nodeName );
 	ASSERT( job != NULL );
-	ASSERT( job->GetStatus() == Job::STATUS_POSTRUN );
+	if ( job->GetStatus() != Job::STATUS_POSTRUN ) {
+		EXCEPT( "Node %s is not in POSTRUN state", job->GetJobName() );
+	}
 
 	PostScriptTerminatedEvent e;
 	
@@ -1675,7 +1706,9 @@ void Dag::RemoveRunningScripts ( ) const {
 
 		// if node is running a PRE script, hard kill it
         if( job->GetStatus() == Job::STATUS_PRERUN ) {
-			ASSERT( job->_scriptPre );
+			if ( !job->_scriptPre ) {
+				EXCEPT( "Node %s has no PRE script!", job->GetJobName() );
+			}
 			if ( job->_scriptPre->_pid != 0 ) {
 				debug_printf( DEBUG_DEBUG_1, "Killing PRE script %d\n",
 							job->_scriptPre->_pid );
@@ -1688,7 +1721,9 @@ void Dag::RemoveRunningScripts ( ) const {
         }
 		// if node is running a POST script, hard kill it
         else if( job->GetStatus() == Job::STATUS_POSTRUN ) {
-			ASSERT( job->_scriptPost );
+			if ( !job->_scriptPost ) {
+				EXCEPT( "Node %s has no POST script!", job->GetJobName() );
+			}
 			if ( job->_scriptPost->_pid != 0 ) {
 				debug_printf( DEBUG_DEBUG_1, "Killing POST script %d\n",
 							job->_scriptPost->_pid );
@@ -1860,7 +1895,9 @@ Dag::TerminateJob( Job* job, bool recovery )
     ASSERT( job != NULL );
 
 	job->TerminateSuccess();
-    ASSERT( job->GetStatus() == Job::STATUS_DONE );
+	if ( job->GetStatus() != Job::STATUS_DONE ) {
+		EXCEPT( "Node %s is not in DONE state", job->GetJobName() );
+	}
 
     //
     // Report termination to all child jobs by removing parent's ID from
@@ -1909,7 +1946,9 @@ void
 Dag::RestartNode( Job *node, bool recovery )
 {
     ASSERT( node != NULL );
-    ASSERT( node->_Status == Job::STATUS_ERROR );
+	if ( node->_Status != Job::STATUS_ERROR ) {
+		EXCEPT( "Node %s is not in ERROR state", node->GetJobName() );
+	}
     if( node->have_retry_abort_val && node->retval == node->retry_abort_val ) {
         debug_printf( DEBUG_NORMAL, "Aborting further retries of node %s "
                       "(last attempt returned %d)\n",

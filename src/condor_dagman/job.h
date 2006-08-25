@@ -355,8 +355,6 @@ private:
 	void Init( const char* jobName, const char *directory,
 				const char* cmdFile, bool prohibitMultiJobs );
   
-	bool AddDependency( Job* parent, Job* child );
-
         // strings for job_type_t (e.g., "Condor, "Stork", etc.)
     static const char* _job_type_names[];
 
