@@ -93,7 +93,7 @@ void CondorError::deep_copy(CondorError& copy) {
 	}
 }
 
-void CondorError::push( char* the_subsys, int the_code, const char* the_message ) {
+void CondorError::push( const char* the_subsys, int the_code, const char* the_message ) {
 	CondorError* tmp = new CondorError();
 	tmp->_subsys = strdup(the_subsys);
 	tmp->_code = the_code;
@@ -102,7 +102,7 @@ void CondorError::push( char* the_subsys, int the_code, const char* the_message 
 	_next = tmp;
 }
 
-void CondorError::pushf( char* the_subsys, int the_code, char* the_format, ... ) {
+void CondorError::pushf( const char* the_subsys, int the_code, const char* the_format, ... ) {
 	CondorError* tmp = new CondorError();
 	tmp->_subsys = strdup(the_subsys);
 	tmp->_code = the_code;

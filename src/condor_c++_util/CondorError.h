@@ -35,8 +35,8 @@ class CondorError {
 		~CondorError();
 		CondorError(CondorError&);
 		CondorError& operator=(CondorError&);
-		void push( char* subsys, int code, const char* message );
-		void pushf( char* subsys, int code, char* format, ... ); 
+		void push( const char* subsys, int code, const char* message );
+		void pushf( const char* subsys, int code, const char* format, ... ); 
 		const char* getFullText( bool want_newline = false );
 		char* subsys(int level = 0);
 		int   code(int level = 0);
