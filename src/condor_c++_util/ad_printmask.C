@@ -155,6 +155,11 @@ display (AttrList *al)
 	while ((fmt=formats.Next()) && (attr=attributes.Next()) &&
 				(alt=alternates.Next()))
 	{
+			// If we decide that the "attr" requested is actually
+			// an expression, we need to remember that, as 1.
+			// it needs to be deleted, and 2. there is some
+			// special handling for the string case.
+		bool attr_is_expr = false;
 		switch( fmt->fmtKind )
 		{
 		  	case PRINTF_FMT:
@@ -189,12 +194,21 @@ display (AttrList *al)
 					// string, so we'll need to get the expression
 					// tree of the attribute they asked for...
 				if( !(tree = al->Lookup (attr)) ) {
-						// drat, we couldn't find it.  if there's an
-						// alt string, use that, otherwise bail.
-					if ( alt ) {
-						retval += alt;
+						// drat, we couldn't find it. Maybe it's an
+						// expression?
+					tree = NULL;
+					if( Parse(attr, tree) != 0 ) {
+						delete tree;
+
+							// drat, still no luck.  if there's an
+							// alt string, use that, otherwise bail.
+						if ( alt ) {
+							retval += alt;
+						}
+						continue;
 					}
-					continue;
+					ASSERT(tree);
+					attr_is_expr = true;
 				}
 
 					// Now, figure out what kind of value they want,
@@ -203,7 +217,18 @@ display (AttrList *al)
 				fmt_type = fmt_info.type;
 				switch( fmt_type ) {
 				case PFT_STRING:
-					if( al->EvalString( attr, NULL, &value_from_classad ) ) {
+					if( attr_is_expr ) {
+						if( tree->EvalTree (al, NULL, &result) ) {
+							if( result.type == LX_STRING && result.s ) {
+								retval.sprintf_cat(fmt->printfFmt, result.s);
+							}
+						} else {
+							// couldn't eval
+							if( alt ) {
+								retval += alt;
+							}
+						}
+					} else if( al->EvalString( attr, NULL, &value_from_classad ) ) {
 						stringValue.sprintf( fmt->printfFmt,
 											 value_from_classad );
 						retval += stringValue;
@@ -275,6 +300,7 @@ display (AttrList *al)
 							(int)fmt_type );
 					break;
 				}
+				if(attr_is_expr) { delete tree; tree = NULL; }
 				break;
 
 		  	case INT_CUSTOM_FMT:
