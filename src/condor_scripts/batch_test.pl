@@ -212,8 +212,16 @@ foreach $compiler (@compilers)
         # kill ourselves with SIGALARM if we run for more than 18 hours
         alarm $test_timeout;
 
+		if( ! -f $test_program ) {
+			print STDERR "Test does not exist<$test_program>!!!\n";
+		}
+		if( ! -x $test_program ) {
+			print STDERR "Test is not executable<$test_program>!!!\n";
+		}
+
         # exec the test itself
-	exec( "perl $test_program > $test_program.out 2>&1" );
+	exec( "perl $test_program > $test_program.out 2>&1" ) ||
+		print STDERR "could not exec $test_program!!!!!!<error:$!>\n";
     }
 
     # wait for each test to finish and print outcome
