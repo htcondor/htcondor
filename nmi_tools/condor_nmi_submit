@@ -76,7 +76,7 @@ use NmiConf;
 use vars qw/ $opt_build $opt_test
     $opt_help $opt_notify $opt_platforms $opt_nmi_glue 
     $opt_workspace
-    $opt_tag $opt_module $opt_nmiconf $opt_desc
+    $opt_tag $opt_module $opt_nmiconf $opt_desc $opt_append
     $opt_nightly $opt_externals $opt_without_tests
     $opt_buildid $opt_test_src $opt_test_timeout $opt_test_args
     $opt_input_platform
@@ -325,6 +325,7 @@ sub parseOptions
            'module=s'      => $opt_module,
            'nmiconf=s'     => $opt_nmiconf,
            'desc=s'        => $opt_desc,
+           'append=s'      => $opt_append,
 # build-specific options
            'nightly'       => $opt_nightly,
            'externals=s'   => $opt_externals,
@@ -505,6 +506,7 @@ Where [options] can be any of:
 --nmiconf=string   <full path to the NMI config file to use if needed
                     (defaults to /usr/local/nmi/etc/nmi.conf)>
 --desc=string      <arbitrary text for a human readable description of the job>
+--append=string    <arbitrary text to be appended to the NMI submit file>
 
 Where [build-options] can be any of:
 --nightly          <Default for builds: pulls the nightly tags file from 
@@ -809,6 +811,9 @@ sub writeCommonInfo
     if( defined $tag ) {
         print $fh "tag = $tag\n";
         print $fh "module = $module\n";
+    }
+    if ( defined $opt_append ) {
+        print $fh "$opt_append\n";
     }
 
     print $fh "platforms = " . join(', ', @platforms) . "\n";
