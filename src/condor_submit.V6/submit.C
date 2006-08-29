@@ -1905,7 +1905,7 @@ SetTransferFiles()
 			InsertJobExprString(ATTR_JOB_OUTPUT, working_name,false);
 
 			if(!output_remaps.IsEmpty()) output_remaps += ";";
-			output_remaps.sprintf_cat("%s=%s",working_name,MyString(output).EscapeChars(";=",'\\').Value());
+			output_remaps.sprintf_cat("%s=%s",working_name,MyString(output).EscapeChars(";=\\",'\\').Value());
 		}
 
 		if(*error && condor_basename(error) != error && 
@@ -1926,7 +1926,7 @@ SetTransferFiles()
 			InsertJobExprString(ATTR_JOB_ERROR, working_name,false);
 
 			if(!output_remaps.IsEmpty()) output_remaps += ";";
-			output_remaps.sprintf_cat("%s=%s",working_name,MyString(error).EscapeChars(";=",'\\').Value());
+			output_remaps.sprintf_cat("%s=%s",working_name,MyString(error).EscapeChars(";=\\",'\\').Value());
 		}
 	}
 
