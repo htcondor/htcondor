@@ -3825,7 +3825,7 @@ static void RotateHistory(void)
 
     current_time = time(NULL);
     local_time = localtime(&current_time);
-    iso_time = time_to_iso8601(*local_time, ISO8601_ExtendedFormat, 
+    iso_time = time_to_iso8601(*local_time, ISO8601_BasicFormat, 
                                ISO8601_DateAndTime, false);
 
     // First, select a name for the rotated history file
