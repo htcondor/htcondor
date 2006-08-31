@@ -84,7 +84,7 @@ StatWrapper::DoStat( const char *path )
 #	define LSTAT_FUNC _lstati64
 
 #else
-	name = "stat;
+	name = "stat";
 #	define STAT_FUNC stat
 #	define LSTAT_FUNC lstat
 #endif
