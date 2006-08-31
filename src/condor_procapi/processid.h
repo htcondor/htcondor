@@ -62,12 +62,13 @@ class ProcessId{
 		// Functions
  public:
 		/*
-		  Constructs a ProcessId from a file where a ProcessId was
-		  previously written.  The previous ProcessId must have been
-		  written by the same machine during the same boot or the
-		  behavior is undefined and probably bad.  The status
-		  parameter is an out argument that contains 0 on successful
-		  instantion and -1 of failure.  Note: Failure still requires
+		  Constructs a ProcessId from a file where a ProcessId
+		  was previously written.  The previous ProcessId must
+		  have been written by the same machine during the
+		  same boot or the behavior is undefined and probably
+		  bad.  The status parameter is an out argument that
+		  contains SUCCESS on successful instantion and
+		  FAILURE on failure.  Note: Failure still requires
 		  that dynamically allocated ProcessIds are deleted.
 		*/
 	ProcessId(FILE* fp, int& status);
@@ -83,13 +84,13 @@ class ProcessId{
 	/*
 	  Writes this process id and confirmation to the given file
 	  pointer.
-	  Returns 0 on success and -1 on failure.
+	  Returns SUCCESS on success and FAILURE on failure.
 	*/
 	int write(FILE* fp) const;
 	
 	/*
 	  Writes only the confirmation of this processId.
-	  Returns 0 on sucess and -1 on failure
+	  Returns SUCCESS on sucess and FAILURE on failure
 	*/
 	int writeConfirmationOnly(FILE* fp) const;
 
@@ -189,9 +190,9 @@ class ProcessId{
 	int confirm(long confirm_time, long ctl_time);
 
 		/*
-		   Determines whether the given process id represents the same
-		   process.  Returns DIFFERENT, SAME, UNCERTAIN, or -1 on
-		   error.
+		   Determines whether the given process id represents
+		   the same process.  Returns DIFFERENT, SAME,
+		   UNCERTAIN, or FAILURE on error.
  
 		   Programmers Note: Assumes that this instance is a stored id
 		   that we are comparing against a recently queried process
