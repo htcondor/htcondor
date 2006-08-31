@@ -72,24 +72,36 @@ StatWrapper::DoStat( const char *path )
 {
 	int lstat_rc;
 	int lstat_errno;
+
 #if HAVE_STAT64
 	name = "stat64";
-	lstat_rc = ::lstat64( path, &lstat_buf );
-	lstat_errno = errno;
-	status = ::stat64( path, &stat_buf );
+#	define STAT_FUNC stat64
+#	define LSTAT_FUNC lstat64
+
 #elif HAVE__STATI64
 	name = "_stati64";
-	lstat_rc = ::_lstati64( path, &lstat_buf );
-	lstat_errno = errno
-	status = ::_stati64( path, &stat_buf );
+#	define STAT_FUNC _stati64
+#	define LSTAT_FUNC _lstati64
+
 #else
-	name = "stat";	
-	lstat_rc = ::lstat( path, &lstat_buf );
-	lstat_errno = errno;
-	status = ::stat( path, &stat_buf );
+	name = "stat;
+#	define STAT_FUNC stat
+#	define LSTAT_FUNC lstat
 #endif
 
+	status = ::STAT_FUNC( path, &stat_buf );
 	stat_errno = errno;
+#if !defined(WIN32)
+	lstat_rc = ::LSTAT_FUNC( path, &lstat_buf );
+	lstat_errno = errno;
+#else
+	// Windows doesn't have lstat, so just copy the stat_buf
+	// into lstat_buf
+	lstat_rc = 0;
+	lstat_errno = 0;
+	lstat_buf = stat_buf;
+#endif
+
 	if ( status == 0 && lstat_rc != 0 ) {
 		status = lstat_rc;
 		stat_errno = lstat_errno;
