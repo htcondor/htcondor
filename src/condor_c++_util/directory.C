@@ -245,6 +245,7 @@ StatInfo::init( StatWrapper *statbuf )
 	{
 		// the do_stat succeeded
 		const StatStructType *sb = statbuf->GetStatBuf( );
+		const StatStructType *lsb = statbuf->GetLstatBuf( );
 
 		si_error = SIGood;
 		access_time = sb->st_atime;
@@ -258,7 +259,7 @@ StatInfo::init( StatWrapper *statbuf )
 		// On Unix, if any execute bit is set (user, group, other), we
 		// consider it to be executable.
 		isexecutable = ((sb->st_mode & (S_IXUSR|S_IXGRP|S_IXOTH)) != 0 );
-		issymlink = S_ISLNK(sb->st_mode);
+		issymlink = S_ISLNK(lsb->st_mode);
 		owner = sb->st_uid;
 		group = sb->st_gid;
 # else

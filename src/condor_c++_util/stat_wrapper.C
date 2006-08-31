@@ -30,6 +30,7 @@
 #if defined( HPUX )
 extern "C" {
 	extern int stat64(const char *path, struct stat64 *buf);
+	extern int lstat64(const char *path, struct stat64 *buf);
 	extern int fstat64(int fildes, struct stat64 *buf);
 }
 #endif
@@ -69,18 +70,30 @@ StatWrapper::Retry( void )
 int
 StatWrapper::DoStat( const char *path )
 {
+	int lstat_rc;
+	int lstat_errno;
 #if HAVE_STAT64
 	name = "stat64";
-	status = ::stat64( path, &buf );
+	lstat_rc = ::lstat64( path, &lstat_buf );
+	lstat_errno = errno;
+	status = ::stat64( path, &stat_buf );
 #elif HAVE__STATI64
 	name = "_stati64";
-	status = ::_stati64( path, &buf );
+	lstat_rc = ::_lstati64( path, &lstat_buf );
+	lstat_errno = errno
+	status = ::_stati64( path, &stat_buf );
 #else
 	name = "stat";	
-	status = ::stat( path, &buf );
+	lstat_rc = ::lstat( path, &lstat_buf );
+	lstat_errno = errno;
+	status = ::stat( path, &stat_buf );
 #endif
 
 	stat_errno = errno;
+	if ( status == 0 && lstat_rc != 0 ) {
+		status = lstat_rc;
+		stat_errno = lstat_errno;
+	}
 	return status;
 }
 
@@ -89,15 +102,16 @@ StatWrapper::DoStat( int fd )
 {
 #if HAVE_STAT64
 	name = "fstat64";
-	status = ::fstat64( fd, &buf );
+	status = ::fstat64( fd, &stat_buf );
 #elif HAVE__STATI64
 	name = "_fstati64";
-	status = ::_fstati64( fd, &buf );
+	status = ::_fstati64( fd, &stat_buf );
 #else
 	name = "fstat";
-	status = ::fstat( fd, &buf );
+	status = ::fstat( fd, &stat_buf );
 #endif
 
 	stat_errno = errno;
+	lstat_buf = stat_buf;
 	return status;
 }
