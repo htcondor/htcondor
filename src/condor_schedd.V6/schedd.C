@@ -5269,6 +5269,7 @@ claimStartd( match_rec* mrec, ClassAd* job_ad, bool is_dedicated )
 		         "Failed to register socket to contact startd at %s.  "
 		         "Register_Socket returned %d.\n",
 		         mrec->peer,reg_rc);
+		delete sock;
 		return false;
 	}
 	ASSERT(daemonCore->Register_DataPtr( strdup(mrec->id) ));
