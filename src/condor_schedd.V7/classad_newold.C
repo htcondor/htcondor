@@ -38,6 +38,7 @@ bool new_to_old(classad::ClassAd & src, ClassAd & dst)
 	NewClassAdParser newtoold;
 	ClassAd * newad = newtoold.ParseClassAd(s_newadout.c_str());
 	if( ! newad ) {
+		dprintf(D_ALWAYS,"Failed to convert the following new classad to old ClassAd form: %s\n",s_newadout.c_str());
 		return false;
 	}
 	dst = *newad;
