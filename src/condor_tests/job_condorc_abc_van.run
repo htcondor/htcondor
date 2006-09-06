@@ -150,7 +150,7 @@ $status = CondorTest::runCondorTool($cmd,\@adarray,2);
 if(!$status)
 {
 	print "Test failure due to Condor Tool Failure<$cmd>\n";
-	return(1)
+	exit(1)
 }
 
 $ENV{CONDOR_CONFIG} = $remconfig;
@@ -160,7 +160,7 @@ $status = CondorTest::runCondorTool($cmd,\@adarray,2);
 if(!$status)
 {
 	print "Test failure due to Condor Tool Failure<$cmd>\n";
-	return(1)
+	exit(1)
 }
 
 $ENV{CONDOR_CONFIG} = $midconfig;
@@ -170,7 +170,7 @@ $status = CondorTest::runCondorTool($cmd,\@adarray,2);
 if(!$status)
 {
 	print "Test failure due to Condor Tool Failure<$cmd>\n";
-	return(1)
+	exit(1)
 }
 system("date");
 
