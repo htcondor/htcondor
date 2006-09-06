@@ -1486,11 +1486,12 @@ JobRoute::AdjustFailureThrottles() {
 
 	dprintf(D_FULLDEBUG,"JobRouter (route=%s): checking throttle: recent failure rate %g vs. threshold %g; recent successes %d and failures %d\n",Name(),recent_failure_rate,m_failure_rate_threshold,m_recent_jobs_succeeded,m_recent_jobs_failed);
 
-	if(recent_failure_rate > m_failure_rate_threshold && m_recent_jobs_failed)
+	if( (recent_failure_rate > m_failure_rate_threshold)
+	    && m_recent_jobs_failed )
 	{
 			//Decelerate.  Failure rate is above threshold.
 		int recent_non_failures = m_num_jobs + m_recent_jobs_succeeded;
-		double failure_ratio = m_recent_jobs_failed/(m_recent_jobs_failed + recent_non_failures);
+		double failure_ratio = (double)m_recent_jobs_failed/((double)m_recent_jobs_failed + recent_non_failures);
 
 				//Throttle to aim for max_failure_frequency.
 		new_throttle = THROTTLE_UPDATE_INTERVAL * m_failure_rate_threshold / failure_ratio;
