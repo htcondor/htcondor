@@ -290,12 +290,15 @@ int Sock::move_descriptor_up()
 	 * sockets between 101 and 255 to be ONLY for files/pipes, and NOT
 	 * for network sockets.  We acheive this by moving the underlying
 	 * descriptor above 255 if it falls into the reserved range. We don't
-	 * bother moving descriptors until they are < 100 --- this prevents us
+	 * bother moving descriptors until they are > 100 --- this prevents us
 	 * from doing anything in the common case that the process has less
-	 * than 100 active descriptors.
+	 * than 100 active descriptors.  We also do not do anything if the
+	 * file descriptor table is too small; the application should limit
+	 * network socket usage to some sensible percentage of the file
+	 * descriptor limit anyway.
 	 */
 	SOCKET new_fd = -1;
-	if ( _sock > 100 && _sock < 256 ) {
+	if ( _sock > 100 && _sock < 256 && getdtablesize() > 256 ) {
 		new_fd = fcntl(_sock, F_DUPFD, 256);
 		if ( new_fd >= 256 ) {
 			::closesocket(_sock);
@@ -348,7 +351,11 @@ int Sock::assign(SOCKET sockd)
 	}
 
 	// move the underlying descriptor if we need to on this platform
-	if ( !move_descriptor_up() ) return FALSE;
+	if ( !move_descriptor_up() ) {
+		::closesocket(_sock);
+		_sock = INVALID_SOCKET;
+		return FALSE;
+	}
 
 	// on WinNT, sockets are created as inheritable by default.  we
 	// want to create the socket as non-inheritable by default.  so 
@@ -356,7 +363,11 @@ int Sock::assign(SOCKET sockd)
 	// the default inheritable socket.  Note on Win95, it is the opposite:
 	// i.e. on Win95 sockets are created non-inheritable by default.
 	// note: on UNIX, set_inheritable just always return TRUE.
-	if ( !set_inheritable(FALSE) ) return FALSE;
+	if ( !set_inheritable(FALSE) ) {
+		::closesocket(_sock);
+		_sock = INVALID_SOCKET;
+		return FALSE;
+	}
 	
 	_state = sock_assigned;
 
