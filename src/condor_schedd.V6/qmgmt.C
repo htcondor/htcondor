@@ -3369,18 +3369,23 @@ void FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad,
 		// so if we bail out early anywhere, we say we failed.
 	jobid.proc = -1;	
 	
-		// First, try to find a job in the same cluster
+		// Just try to find a job in the same cluster if we don't have the
+		// startd ad.
+		// If we do have the startd ad (my_match_ad), then we don't want
+		// to restrict ourselves to just one specific cluster.
 	N_PrioRecs = 0;
-	ad = GetNextJobByCluster(jobid.cluster, 1);	// init a new scan
-	while ( ad ) {
-			// If job ad and resource ad match, put into prio rec array.
-			// If we do not have a resource ad, it is because this pool
-			// has an old negotiator -- so put it in prio rec array anyway.
-		if ( (my_match_ad && (*ad == ((ClassAd &)(*my_match_ad)))) || (my_match_ad == NULL) ) 
-		{
-			get_job_prio(ad);
-		} 
-		ad = GetNextJobByCluster(jobid.cluster, 0);
+	if ( !my_match_ad ) {
+		ad = GetNextJobByCluster(jobid.cluster, 1);	// init a new scan
+		while ( ad ) {
+				// If job ad and resource ad match, put into prio rec array.
+				// If we do not have a resource ad, it is because this pool
+				// has an old negotiator -- so put it in prio rec array anyway.
+			if ( (my_match_ad && (*ad == ((ClassAd &)(*my_match_ad)))) || (my_match_ad == NULL) ) 
+			{
+				get_job_prio(ad);
+			} 
+			ad = GetNextJobByCluster(jobid.cluster, 0);
+		}
 	}
 
 	if(N_PrioRecs == 0 && my_match_ad)
