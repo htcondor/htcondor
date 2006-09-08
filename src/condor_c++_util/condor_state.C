@@ -32,7 +32,7 @@ static char* condor_activities [] =
   "Killing" };
 
 State 
-string_to_state(char* state_string) 
+string_to_state(const char* state_string) 
 {
 	int i;
 	for( i=0; i<_state_threshold_; i++ ) {
@@ -56,7 +56,7 @@ state_to_string( State state )
 
 
 Activity
-string_to_activity( char* act_string ) 
+string_to_activity( const char* act_string ) 
 {
 	int i;
 	for( i=0; i<_act_threshold_; i++ ) {
