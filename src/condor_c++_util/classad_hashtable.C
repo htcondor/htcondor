@@ -30,6 +30,11 @@ void HashKey::sprint(char *s)
 	strcpy(s, key);
 }
 
+void HashKey::sprint(MyString &s)
+{
+	s.sprintf("%s", key);
+}
+
 HashKey& HashKey::operator= (const HashKey& from)
 {
 	if (this->key)

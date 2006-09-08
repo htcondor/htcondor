@@ -29,6 +29,7 @@
 */
 
 #include "HashTable.h"
+#include "MyString.h"
 
 #include "condor_fix_assert.h"
 
@@ -39,7 +40,8 @@ public:
 	HashKey(const char *k) { key = strdup(k); }
 	HashKey(const HashKey &hk) { key = strdup(hk.key); }
 	~HashKey() { if (key) free(key); }
-	void sprint(char *);
+	void sprint(char *s);
+	void sprint(MyString &s);
 	HashKey& operator= (const HashKey& from);
 	const char* value() { if (key) return key; else return "\0"; };
 	friend ostream& operator<< (ostream &out, const HashKey &); 
