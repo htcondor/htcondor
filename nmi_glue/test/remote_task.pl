@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_task.pl,v 1.2.2.1 2006-08-24 17:09:20 bt Exp $
+# $Id: remote_task.pl,v 1.2.2.2 2006-09-11 19:14:56 wright Exp $
 # run a test in the Condor testsuite
 # return val is the status of the test
 # 0 = built and passed
@@ -45,13 +45,13 @@ if( ! $testname ) {
 }
 print "testname is $testname\n";
 if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
-	if( $compiler ) {
-    	print "compiler is $compiler\n";
-    	$targetdir = "$SrcDir/$testdir/$compiler";
-	} else {
-    	$compiler = ".";
-    	$targetdir = "$SrcDir/$testdir";
-	}
+    if( $compiler ) {
+        print "compiler is $compiler\n";
+        $targetdir = "$SrcDir/$testdir/$compiler";
+    } else {
+        $compiler = ".";
+        $targetdir = "$SrcDir/$testdir";
+    }
 } else {
     $compiler = ".";
     $targetdir = "$SrcDir/$testdir";
@@ -65,20 +65,20 @@ if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
 chdir( "$targetdir" ) || c_die("Can't chdir($targetdir): $!\n");
 
 if( !($ENV{NMI_PLATFORM} =~ /winnt/)) {
-	print "Attempting to build test in: $targetdir\n";
-	print "Invoking \"make $testname\"\n";
-	open( TESTBUILD, "make $testname 2>&1 |" ) || 
-    	c_die("Can't run make $testname\n");
-	while( <TESTBUILD> ) {
-    	print $_;
-	}
-	close( TESTBUILD );
-	$buildstatus = $?;
-	print "BUILD TEST for $testname returned $buildstatus\n";
-	if( $buildstatus != 0 ) {
-    	print "Build failed for $testname\n";
-    	exit 2;
-	}
+    print "Attempting to build test in: $targetdir\n";
+    print "Invoking \"make $testname\"\n";
+    open( TESTBUILD, "make $testname 2>&1 |" ) || 
+        c_die("Can't run make $testname\n");
+    while( <TESTBUILD> ) {
+        print $_;
+    }
+    close( TESTBUILD );
+    $buildstatus = $?;
+    print "BUILD TEST for $testname returned $buildstatus\n";
+    if( $buildstatus != 0 ) {
+        print "Build failed for $testname\n";
+        exit 2;
+    }
 }
 
 
@@ -90,28 +90,28 @@ print "RUNNING $testinfo\n";
 chdir("$SrcDir/$testdir") || c_die("Can't chdir($SrcDir/$testdir): $!\n");
 
 if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
-	system( "make batch_test.pl" );
-	if( $? >> 8 ) {
-    	c_die("Can't build batch_test.pl\n");
-	}
-	system( "make CondorTest.pm" );
-	if( $? >> 8 ) {
-    	c_die("Can't build CondorTest.pm\n");
-	}
-	system( "make Condor.pm" );
-	if( $? >> 8 ) {
-    	c_die("Can't build Condor.pm\n");
-	}
-	system( "make CondorPersonal.pm" );
-	if( $? >> 8 ) {
-    	c_die("Can't build CondorPersonal.pm\n");
-	}
+    system( "make batch_test.pl" );
+    if( $? >> 8 ) {
+        c_die("Can't build batch_test.pl\n");
+    }
+    system( "make CondorTest.pm" );
+    if( $? >> 8 ) {
+        c_die("Can't build CondorTest.pm\n");
+    }
+    system( "make Condor.pm" );
+    if( $? >> 8 ) {
+        c_die("Can't build Condor.pm\n");
+    }
+    system( "make CondorPersonal.pm" );
+    if( $? >> 8 ) {
+        c_die("Can't build CondorPersonal.pm\n");
+    }
 } else {
-	my $scriptdir = $SrcDir . "/condor_scripts";
-	safe_copy("$scriptdir/batch_test.pl", "batch_test.pl");
-	safe_copy("$scriptdir/Condor.pm", "Condor.pm");
-	safe_copy("$scriptdir/CondorTest.pm", "CondorTest.pm");
-	safe_copy("$scriptdir/CondorPersonal.pm", "CondorPersonal.pm");
+    my $scriptdir = $SrcDir . "/condor_scripts";
+    safe_copy("$scriptdir/batch_test.pl", "batch_test.pl");
+    safe_copy("$scriptdir/Condor.pm", "Condor.pm");
+    safe_copy("$scriptdir/CondorTest.pm", "CondorTest.pm");
+    safe_copy("$scriptdir/CondorPersonal.pm", "CondorPersonal.pm");
 }
 print "About to run batch_test.pl\n";
 
