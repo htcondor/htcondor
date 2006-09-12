@@ -1,11 +1,12 @@
-$Id: README.building,v 1.8.2.1 2006-09-11 23:38:56 wright Exp $
+$Id: README.building,v 1.8.2.2 2006-09-12 00:00:09 wright Exp $
 
 This file is intended to describe the steps needed to build Condor version
 6.8.x from the source code tree.
 
 
+==================================
 Tools
------
+==================================
 
 For building Condor on Windows 2K/XP, we use Microsoft Visual C++
 v6.0 on a machine running Windows 2K with the latest service packs.  
@@ -26,7 +27,7 @@ Building Condor on Unix also requires the following utilities:
 - GNU tar (1.13 or higher)
 - gzip
 - perl (5.005_03 or greater)
-- patch (must support unified diffs, GNU patch is prefered)
+- patch (must support unified diffs, GNU patch is preferred)
 - strip (can be either GNU or the vendor's version)
 - lex
 - yacc (or bison)
@@ -35,6 +36,42 @@ All of these tools need to be available in order to perform a build.
 
 For the remainder of this README, follow the instructions before for either
 Unix or Win32.
+
+
+==================================
+External software packages
+==================================
+
+On both UNIX and Windows, the Condor build depends on some external
+software packages (Globus, zlib, etc).  These external dependencies
+are now included with the Condor source in an "externals" directory.
+The Condor build system takes care of building these software
+dependencies and configuring itself to use them, but it is important
+to understand that this step is taking place.
+
+The specific versions of each external software package used for a
+given version of Condor are listed in the src/configure.ac file
+(search for instances of the "CONDOR_EXTERNAL_VERSION" macro), and
+depend on what platform you are building on.  Generally, these
+versions do not change frequently when new versions of Condor are
+released.  When they do change, the new version of the external
+software package is listed in the Condor release notes.
+
+Some of these external software packages are quite large, and building
+them all can take a considerable amount of time (a few hours, even on
+a fast computer with plenty of RAM).  It is possible to save the
+"externals" directory tree on a given platform and re-use the
+pre-built libraries with another build of the Condor source.  You can
+re-use a pre-built externals tree by specifying
+"--with-externals=/full/path/to/externals/tree" as an argument to the
+"configure" step in the Condor build process (see below).
+
+Keep in mind that the externals tree involves platform-specific,
+compiled output (library files) and can NOT be shared across build
+platforms.  If you are building Condor for different platforms, you
+can not share a single copy of the externals tree, you must have a
+separate copy for each target platform.
+
 
 ==================================
 BUILDING CONDOR ON UNIX
@@ -117,7 +154,7 @@ BUILDING CONDOR ON WIN32
 
 4. Now you are ready to compile Condor.  You can do this either via
 	the command-line, or via the Microsoft VisualStudio GUI IDE
-	evironment.  If you want to simply build Condor from the
+	environment.  If you want to simply build Condor from the
 	command-line, just do the following commands:
     
 		 cd NTconfig
