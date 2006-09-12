@@ -1217,7 +1217,6 @@ sub cleanPlatformData
     my $platform = shift;
 
     my( $item, %prereqs, %t_prereqs );
-    my( @pre_order, %t_pre_order );
     
     foreach $item ( split(/[, \t]+/, $platform_prereqs{$platform}) ) {
         $prereqs{$item}=1;
