@@ -50,6 +50,8 @@
 #                       for use when submitting test runs
 # "testargs"            defines the value of remote_declare_args to
 #                       use when submitting test runs
+# "x_test_platforms"    other platforms that should be tested for this
+#                       platform (cross-platform testing)
 # (other than platforms, all of the above directives also support a
 # platform-specific version where you append "_<platform>" to the
 # attribute name, e.g. "prereqs_x86_rh_9", or "testargs_x86_rh_9")
@@ -152,6 +154,7 @@ my $global_test_prereqs;
 my $global_testargs;
 my %platform_prereqs;
 my %platform_test_prereqs;
+my %platform_x_test_platforms;
 my %platform_testargs;
 
 # Global variable for better error messages when parsing submit_info
@@ -671,6 +674,7 @@ sub clearGlobalSubmitInfo
     undef $global_testargs;
     undef %platform_prereqs;
     undef %platform_test_prereqs;
+    undef %platform_x_test_platforms;
     undef %platform_testargs;
     undef %platforms;
     undef @platforms;
@@ -698,6 +702,10 @@ sub printSubmitInfo
     print "Platform-specific testing prereqs:\n";
     foreach $key (sort keys %platform_test_prereqs ) {
         print "  $key: $platform_test_prereqs{$key}\n";
+    }
+    print "Cross-Platform testing:\n";
+    foreach $key (sort keys %platform_x_test_platforms) {
+        print "  $key: should also test on $platform_x_test_platforms{$key}\n";
     }
     print "----- End of data parsed from submit_info -----\n";
 }
@@ -1234,34 +1242,41 @@ sub cleanPlatformData
 {
     my $platform = shift;
 
-    my( $item, %prereqs, %t_prereqs );
-    
+    my( $item, %prereqs, %t_prereqs, %x_test_platforms );
+
     foreach $item ( split(/[, \t]+/, $platform_prereqs{$platform}) ) {
         $prereqs{$item}=1;
     }
     foreach $item ( split(/[, \t]+/, $platform_test_prereqs{$platform}) ) {
         $t_prereqs{$item}=1;
     }
+    foreach $item ( split(/[, \t]+/, $platform_x_test_platforms{$platform}) ) {
+        $x_test_platforms{$item}=1;
+    }
     if( $platform =~ /global/i ) {
         if( $platform_prereqs{$platform} ) {
-            $global_prereqs = join(', ', sort(keys(%prereqs))); 
+            $global_prereqs = join(', ', sort(keys(%prereqs)));
             delete( $platform_prereqs{$platform} );
         }
         if( $platform_test_prereqs{$platform} ) {
-            $global_test_prereqs = join(', ', sort(keys(%t_prereqs))); 
+            $global_test_prereqs = join(', ', sort(keys(%t_prereqs)));
             delete( $platform_test_prereqs{$platform} );
         }
-        if( $platform_testargs{$platform} ) { 
+        if( $platform_testargs{$platform} ) {
             $global_testargs = $platform_testargs{$platform};
             delete( $platform_testargs{$platform} );
         }
     } else {
         if( $platform_prereqs{$platform} ) {
-            $platform_prereqs{$platform} = join(', ', sort(keys(%prereqs))); 
+            $platform_prereqs{$platform} = join(', ', sort(keys(%prereqs)));
         }
         if( $platform_test_prereqs{$platform} ) {
-            $platform_test_prereqs{$platform} = 
-                join(', ', sort(keys(%t_prereqs))); 
+            $platform_test_prereqs{$platform} =
+                join(', ', sort(keys(%t_prereqs)));
+        }
+        if( $platform_x_test_platforms{$platform} ) {
+            $platform_x_test_platforms{$platform} =
+                join(', ', sort(keys(%x_test_platforms)));
         }
     }
 }
@@ -1287,11 +1302,12 @@ sub parseBlock
     my %block_platforms;
     my %block_prereqs;
     my %block_test_prereqs;
+    my %block_testargs;
+    my %block_x_test_platforms;
 
     # these are hashes to map platform -> prereqs
     my %block_platform_prereqs;
     my %block_platform_test_prereqs;
-    my %block_testargs;
 
     # flag to help check for sanity
     my $in_block = 1;
@@ -1347,6 +1363,20 @@ sub parseBlock
                 $block_testargs{$platform} .= " ";
             }
             $block_testargs{$platform} .= $val;
+        }
+        elsif( $line =~ /^x_test_platforms(_(\S+))?\s*=\s*(.*)/i ) {
+            $platform = $2;
+            $val = $3;
+            if( ! $platform ) {
+                $platform = "block";
+            } elsif( ! $block_platforms{$platform} ) {
+                parseError( "x_test_platforms_$platform defined but "
+                            . "$platform not declared in this block" );
+            }
+            if( $block_x_test_platforms{$platform} ) {
+                $block_x_test_platforms{$platform} .= " ";
+            }
+            $block_x_test_platforms{$platform} .= $val;
         }
         else {
             parseError( "unrecognized: '$line'" );
@@ -1412,12 +1442,28 @@ sub parseBlock
         }
 
         # if this platform defined testargs, over-write those.
-        # otherwise if, there was a global testarg defined for this
+        # otherwise if there was a global testarg defined for this
         # block, use that...
         if( $block_testargs{$platform} ) {
             $platform_testargs{$platform} = $block_testargs{$platform};
         } elsif( $block_testargs{"block"} ) {
             $platform_testargs{$platform} = $block_testargs{"block"};
+        }
+
+        # if this platform defined x_test_platforms, append those.
+        # otherwise, if there was a global x_test_platforms defined
+        # for this block, use that...
+        my $append = '';
+        if( $block_x_test_platforms{$platform} ) {
+            $append = $block_x_test_platforms{$platform};
+        } elsif( $block_x_test_platforms{"block"} ) {
+            $append = $block_x_test_platforms{'block'};
+        }
+        if( $append ) {
+            if( $platform_x_test_platforms{$platform} ) {
+                $platform_x_test_platforms{$platform} .= ", ";
+            }
+            $platform_x_test_platforms{$platform} .= $append;
         }
     }
 }
