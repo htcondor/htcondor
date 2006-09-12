@@ -22,6 +22,7 @@
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
+#include "condor_config.h"
 #include "CondorError.h"
 
 #if !defined(SKIP_AUTHENTICATION)
@@ -40,89 +41,167 @@ Condor_Auth_Claim :: ~Condor_Auth_Claim()
 int Condor_Auth_Claim :: authenticate(const char * remoteHost, CondorError* errstack)
 {
 
-    const char * pszFunction = "Condor_Auth_Claim :: authenticate";
+	const char * pszFunction = "Condor_Auth_Claim :: authenticate";
 
 	int retval = 0;
-    char *tmpOwner = NULL;
 	int fail = 0;
-    
-    if ( mySock_->isClient() ) {
-        mySock_->encode();
-        if( (tmpOwner = my_username()) ) {
-            //send 1 and then username
-            retval = 1;
-            if (!mySock_->code( retval ) || 
-            	!mySock_->code( tmpOwner ))
-			{ 
+
+	if ( mySock_->isClient() ) {
+
+		MyString myUser;
+		bool error_getting_name = false;
+
+		// get our user name in condor priv
+		// (which is what we want to use for daemons. for
+		//  tools and daemons not started as root, this will
+		//  just give us the username that we were invoked
+		//  as, which is also what we want)
+		priv_state priv = set_condor_priv();
+		char* tmpOwner = my_username();
+		set_priv(priv);
+		if ( !tmpOwner ) {
+			//send 0
+			if (!mySock_->code( retval )) { 
 				dprintf(D_SECURITY, "Protocol failure at %s, %d!\n", 
 					pszFunction, __LINE__);
-				free(tmpOwner);
 				return fail; 
 			}
-            setRemoteUser( tmpOwner );
-            free( tmpOwner );
-            if (!mySock_->end_of_message()) { 
+			error_getting_name = true;
+		}
+		else {
+			myUser = tmpOwner;
+			free(tmpOwner);
+
+			// check SEC_CLAIMTOBE_INCLUDE_DOMAIN. this knob exists (and defaults
+			// to false) to provide backwards compatibility. it will be removed
+			// completely in the development (6.9) series
+			if (param_boolean("SEC_CLAIMTOBE_INCLUDE_DOMAIN", false)) {
+				char* tmpDomain = param("UID_DOMAIN");
+				if ( !tmpDomain ) {
+					//send 0
+					if (!mySock_->code( retval )) { 
+						dprintf(D_SECURITY, "Protocol failure at %s, %d!\n", 
+							pszFunction, __LINE__);
+						return fail; 
+					}
+					error_getting_name = true;
+				}
+				else {
+					myUser += "@";
+					myUser += tmpDomain;
+					free(tmpDomain);
+				}
+			}
+		}
+
+		if (!error_getting_name) {
+
+			//send 1 and then our username
+			mySock_->encode();
+			retval = 1;
+			char* tmpUser = strdup(myUser.Value());
+			ASSERT(tmpUser);
+			if (!mySock_->code( retval ) || 
+			    !mySock_->code( tmpUser ))
+			{
+				free(tmpUser);
+				dprintf(D_SECURITY, "Protocol failure at %s, %d!\n", 
+					pszFunction, __LINE__);
+				return fail; 
+			}
+			//setRemoteUser(tmpUser); // <-- IS THIS NEEDED????
+			free(tmpUser);
+			if (!mySock_->end_of_message()) { 
 				dprintf(D_SECURITY, "Protocol failure at %s, %d!\n", 
 					pszFunction, __LINE__);
 				return fail;
 			}
-            mySock_->decode();
-            if (!mySock_->code( retval )) {
+			mySock_->decode();
+			if (!mySock_->code( retval )) {
 				dprintf(D_SECURITY, "Protocol failure at %s, %d!\n", 
 					pszFunction, __LINE__);
 				return fail; 
 			}
-        } else {
-            //send 0
-            if (!mySock_->code( retval )) { 
-				dprintf(D_SECURITY, "Protocol failure at %s, %d!\n", 
-					pszFunction, __LINE__);
-				return fail; 
-			}
-        }
-    } else { //server side
-        mySock_->decode();
-        if (!mySock_->code( retval )) { 
+		}
+
+	} else { //server side
+
+		mySock_->decode();
+		if (!mySock_->code( retval )) { 
 			dprintf(D_SECURITY, "Protocol failure at %s, %d!\n", 
 				pszFunction, __LINE__);
 			return fail; 
 		}
-        //if 1, receive owner and send back ok
-        if( retval == 1 ) {
-            if (!mySock_->code( tmpOwner ) ||
-            	!mySock_->end_of_message())
+
+		//if 1, receive user and send back ok
+		if( retval == 1 ) {
+
+			char* tmpUser = NULL;
+			if (!mySock_->code( tmpUser ) ||
+			    !mySock_->end_of_message())
 			{
 				dprintf(D_SECURITY, "Protocol failure at %s, %d!\n", 
 					pszFunction, __LINE__);
-				if (tmpOwner != NULL)
+				if (tmpUser != NULL)
 				{
-					free(tmpOwner);
+					free(tmpUser);
 				}
 				return fail;
 			}
-            mySock_->encode();
-            if( tmpOwner ) {
-                retval = 1;
-                setRemoteUser( tmpOwner );
-                setAuthenticatedName( tmpOwner );
-				free(tmpOwner);
-            } else {
-                retval = 0;
-            }
-            if (!mySock_->code( retval )) { 
+
+			if( tmpUser ) {
+
+				MyString myUser = tmpUser;
+
+				// check SEC_CLAIMTOBE_INCLUDE_DOMAIN. this knob exists (and defaults
+				// to false) to provide backwards compatibility. it will be removed
+				// completely in the development (6.9) series
+				if (param_boolean("SEC_CLAIMTOBE_INCLUDE_DOMAIN", false)) {
+					// look for an '@' char in the name we received.
+					// if present (newer clients), set the domain using
+					// the given component. if not present (older clients),
+					// use UID_DOMAIN from our config
+					char* tmpDomain = NULL;
+					char* at = strchr(tmpUser, '@');
+					if ( at ) {
+						*at = '\0';
+						if (*(at + 1) != '\0') {
+							tmpDomain = strdup(at + 1);
+						}
+					}
+					if (!tmpDomain) {
+						tmpDomain = param("UID_DOMAIN");
+					}
+					ASSERT(tmpDomain);
+					setRemoteDomain(tmpDomain);
+					myUser.sprintf("%s@%s", tmpUser, tmpDomain);
+					free(tmpDomain);
+				}
+				setRemoteUser(tmpUser);
+				setAuthenticatedName(myUser.Value());
+				free(tmpUser);
+				retval = 1;
+			} else {
+				// tmpUser is NULL; failure
+				retval = 0;
+			}
+
+			mySock_->encode();
+			if (!mySock_->code( retval )) { 
 				dprintf(D_SECURITY, "Protocol failure at %s, %d!\n", 
 					pszFunction, __LINE__);
 				return fail;
 			}
-        }
-    }
+		}
+	}
     
-    if (!mySock_->end_of_message()) { 
+	if (!mySock_->end_of_message()) { 
 		dprintf(D_SECURITY, "Protocol failure at %s, %d!\n", 
 			pszFunction, __LINE__);
 		return fail; 
 	}
-    return retval;
+
+	return retval;
 }
 
 int Condor_Auth_Claim :: isValid() const
