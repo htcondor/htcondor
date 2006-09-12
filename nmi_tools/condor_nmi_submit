@@ -74,7 +74,7 @@ use NmiConf;
 # variables we'll be using for from Getopt::Long.  keep these in the
 # same order as the call to GetOptions() to help notice discrepancies
 use vars qw/ $opt_build $opt_test
-    $opt_help $opt_notify $opt_platforms $opt_nmi_glue 
+    $opt_help $opt_debug $opt_notify $opt_platforms $opt_nmi_glue 
     $opt_workspace
     $opt_tag $opt_module $opt_nmiconf $opt_desc $opt_append
     $opt_nightly $opt_externals $opt_without_tests
@@ -241,7 +241,11 @@ sub initialize
             "Directory for NMI binaries ($nmi_bin) doesn't exist\n" .
             "Please set your NMI_BIN environment variable correctly\n";
     }
-    $nmi_submit = "${nmi_bin}/nmi_submit";
+    if( $opt_debug ) {
+        $nmi_submit = "/bin/cat";
+    } else {
+        $nmi_submit = "${nmi_bin}/nmi_submit";
+    }
 
     $condor_bin = $ENV{'CONDOR_BIN'} || $default_condor_bin;
     if( ! -d $condor_bin ) { 
@@ -317,6 +321,7 @@ sub parseOptions
            'test'          => $opt_test,
 # global options
            'help'          => $opt_help,
+           'debug'         => $opt_debug,
            'notify=s'      => $opt_notify,
            'platforms=s'   => $opt_platforms,
            'nmi-glue=s'    => $opt_nmi_glue,
@@ -497,6 +502,7 @@ condor_nmi_submit.pl --test  [options] [test-options]
 
 Where [options] can be any of:
 --help             <This screen>
+--debug            <Print out the generated submit files, don't submit them>
 --notify=string    <Comma-seprated list of users to notify with results>
 --platforms=string <Comma-sperated list of platforms to run tests on>
 --tag=string       <Condor source code tag to be fetched from cvs>
@@ -1073,14 +1079,21 @@ sub submitRun()
         print "unknown source";
     }
     print "\n";
+
     open( SUBMIT, "$nmi_submit $cmdfile|" ) || 
         die "Can't open $nmi_submit as a pipe: $!\n";
+
+    $opt_debug && print "---------- Start of nmi_submit input ----------\n";
+
     while( <SUBMIT> ) {
         print;
     }
     close( SUBMIT );
     my $status = $? / 256;
-    if( $status == 0 ) {
+
+    if ($opt_debug) { 
+        print "---------- End of nmi_submit input ----------\n";
+    } elsif ($status == 0) {
         print "nmi_submit successful\n";
     } else {
         print "ERROR: nmi_submit failed!\n";
@@ -1122,8 +1135,9 @@ sub run
 sub myExit
 {
     my $exit_code = shift;
-
-    if( defined $workspace && -d $workspace ) {
+    if ($opt_debug) {
+        print "Temporary directory $workspace not removed\n";
+    } elsif (defined $workspace && -d $workspace) {
         chdir($init_cwd);
         run("rm -rf $workspace", 0);
     }
