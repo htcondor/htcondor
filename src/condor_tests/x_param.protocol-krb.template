@@ -1,0 +1,12 @@
+universe = vanilla
+type = jobs
+
+ports = dynamic
+condor = nightlies
+condorconfig = condor_config
+condorlocal = condor_config.local
+secprepostsrc = x_secneg_ANY
+localpostsrc = x_seckrb_configpostsrc
+condortemplate = x_condor_config_template
+condordaemons = master,schedd,collector,startd,negotiator
+vms	= 1
