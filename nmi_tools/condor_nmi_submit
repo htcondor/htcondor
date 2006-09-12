@@ -613,6 +613,7 @@ sub getSubmitInfo
 
     # parse the submit_info file
     parseSubmitInfo( $submit_info_path );
+    printSubmitInfo() if $opt_debug;
 
     if( %opt_platforms ) {
         @platforms = sort keys %opt_platforms;
@@ -679,6 +680,8 @@ sub clearGlobalSubmitInfo
 sub printSubmitInfo
 {
     my $key;
+
+    print "----- Start of data parsed from submit_info -----\n";
     print "Platforms: " . join(', ',sort(keys(%platforms))) . "\n";
     print "Global testargs: $global_testargs\n";
     print "Global prereqs: $global_prereqs\n";
@@ -696,6 +699,7 @@ sub printSubmitInfo
     foreach $key (sort keys %platform_test_prereqs ) {
         print "  $key: $platform_test_prereqs{$key}\n";
     }
+    print "----- End of data parsed from submit_info -----\n";
 }
 
 
@@ -1083,7 +1087,7 @@ sub submitRun()
     open( SUBMIT, "$nmi_submit $cmdfile|" ) || 
         die "Can't open $nmi_submit as a pipe: $!\n";
 
-    $opt_debug && print "---------- Start of nmi_submit input ----------\n";
+    $opt_debug && print "----- Start of nmi_submit input -----\n";
 
     while( <SUBMIT> ) {
         print;
@@ -1092,7 +1096,7 @@ sub submitRun()
     my $status = $? / 256;
 
     if ($opt_debug) { 
-        print "---------- End of nmi_submit input ----------\n";
+        print "----- End of nmi_submit input -----\n";
     } elsif ($status == 0) {
         print "nmi_submit successful\n";
     } else {
