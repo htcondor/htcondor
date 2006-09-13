@@ -1,16 +1,17 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: platform_post,v 1.2 2006-07-25 18:15:39 wright Exp $
+# $Id: platform_post,v 1.2.2.1 2006-09-13 00:43:34 wright Exp $
 # post script to cleanup platform-specific files on the submit side
 ######################################################################
 
 use POSIX;
 use Getopt::Long;
-use vars qw/ $opt_without_tests $opt_test_args /;
+use vars qw/ $opt_without_tests $opt_test_args $opt_submit_xtests /;
 GetOptions(
             'without-tests' => $opt_without_tests,
             'test-args=s' => $opt_test_args,
+            'submit-xtests!' => $opt_submit_xtests,
 );
 
 # we just want to chmod everything in the local directory (the
@@ -50,6 +51,7 @@ my $notify_arg = '';
 if( $notify ) {
     $notify_arg = "--notify=$notify";
 }
+my $xtests_arg = $opt_submit_xtests == 1 ? '--submit-xtests' : '--nosubmit-xtests';
 
 $tag || die "No tag to use, NOT submitting tests\n";
 $module || die "No module to use, NOT submitting tests\n";
@@ -74,7 +76,7 @@ unless ($platform =~ /macos_10\.4/) {
     }
 
     my $cmd = "$cns --test --buildid=$runid --platform=$platform " .
-              "--tag=$tag --module=$module $notify_arg $opt_test_args";
+       "--tag=$tag --module=$module $notify_arg $opt_test_args $xtests_arg";
 
     print "Invoking CNS ($cmd)\n";
     open( CNS, "$cmd|" ) || 
