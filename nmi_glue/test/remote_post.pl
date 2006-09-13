@@ -1,9 +1,11 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_post.pl,v 1.2.2.1 2006-09-12 17:00:26 wright Exp $
+# $Id: remote_post.pl,v 1.2.2.2 2006-09-13 17:05:14 wright Exp $
 # post script for Condor testsuite runs
 ######################################################################
+
+use File::Copy;
 
 my $BaseDir = $ENV{BASE_DIR} || die "BASE_DIR not in environment!\n";
 my $SrcDir = $ENV{SRC_DIR} || die "SRC_DIR not in environment!\n";
