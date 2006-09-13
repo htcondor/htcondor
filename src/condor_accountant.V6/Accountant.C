@@ -193,12 +193,12 @@ void Accountant::Initialize()
   // records for a user and what the user record says jives
   if ( first_time ) {
 	  HashKey HK;
-	  MyString key;
+	  char key[_POSIX_PATH_MAX];
 	  ClassAd* ad;
 	  AttrList *unused;
 	  StringList users;
+	  char *next_user;
 	  MyString user;
-	  char* tmp;
 	  int resources_used, resources_used_really;
 	  int total_overestimated_resources = 0;
 	  int total_overestimated_users = 0;
@@ -210,26 +210,22 @@ void Accountant::Initialize()
 	  while (AcctLog->table.iterate(HK,ad)) {
 		HK.sprint(key);
 			// skip records that are not customer records...
-		if (CustomerRecord != key) {
-			continue;
-		}
+		if (strncmp(CustomerRecord.Value(),key,CustomerRecord.Length())) continue;
 			// for now, skip records that are "group" customer records. 
 			// TODO: we should fix the below sanity check code so it understands
 			// fixing up group customer records as well.
-		user = key.Substr( CustomerRecord.Length(), key.Length() );
-		if (GroupNamesList && GroupNamesList->contains_anycase(user.Value())) {
-			continue;
-		}
+		char *user = &(key[CustomerRecord.Length()]);
+		if (GroupNamesList && GroupNamesList->contains_anycase(user)) continue;
 			// if we made it here, append to our list of users
-		users.append( user.Value() );
+		users.append( user );
 	  }
 		// ok, now StringList users has all the users.  for each user,
 		// compare what the customer record claims for usage -vs- actual
 		// number of resources
 	  users.rewind();
-	  while( (tmp=users.next()) ) 
+	  while( (next_user=users.next()) ) 
 	  {
-		  user = tmp;
+		  user = next_user;
 		  resources_used = GetResourcesUsed(user);
 
 		  /* It appears here that only the second variable is of interest to
@@ -239,12 +235,12 @@ void Accountant::Initialize()
 		  delete unused;
 
 		  if ( resources_used == resources_used_really ) {
-			dprintf( D_ACCOUNTANT,"Customer %s using %d resources\n",
-					 user.Value(), resources_used );
+			dprintf(D_ACCOUNTANT,"Customer %s using %d resources\n",next_user,
+				  resources_used);
 		  } else {
 			dprintf(D_ALWAYS,
 				"FIXING - Customer %s using %d resources, but only found %d\n",
-				user.Value(), resources_used, resources_used_really);
+				next_user,resources_used,resources_used_really);
 			SetAttributeInt(CustomerRecord+user,ResourcesUsedAttr,resources_used_really);
 			if ( resources_used > resources_used_really ) {
 				total_overestimated_resources += 
@@ -365,18 +361,16 @@ void Accountant::ResetAllUsage()
   dprintf(D_ACCOUNTANT,"Accountant::ResetAllUsage\n");
   time_t T=time(0);
   HashKey HK;
-  MyString key;
+  char key[_POSIX_PATH_MAX];
   ClassAd* ad;
 
   AcctLog->table.startIterations();
   while (AcctLog->table.iterate(HK,ad)) {
     HK.sprint(key);
-    if (CustomerRecord != key) {
-		continue;
-    }
+    if (strncmp(CustomerRecord.Value(),key,CustomerRecord.Length())) continue;
 	AcctLog->BeginTransaction();
-    SetAttributeFloat( key.Value(), AccumulatedUsageAttr, 0 );
-    SetAttributeInt( key.Value(), BeginUsageTimeAttr, T );
+    SetAttributeFloat(key,AccumulatedUsageAttr,0);
+    SetAttributeInt(key,BeginUsageTimeAttr,T);
 	AcctLog->CommitTransaction();
   }
   return;
@@ -626,13 +620,12 @@ void Accountant::RemoveMatch(const MyString& ResourceName, time_t T)
 void Accountant::DisplayLog()
 {
   HashKey HK;
-  MyString key;
+  char key[_POSIX_PATH_MAX];
   ClassAd* ad;
   AcctLog->table.startIterations();
   while (AcctLog->table.iterate(HK,ad)) {
     HK.sprint(key);
-    printf( "------------------------------------------------\nkey = %s\n",
-			key.Value() );
+    printf("------------------------------------------------\nkey = %s\n",key);
     ad->fPrint(stdout);
   }
 }
@@ -644,18 +637,16 @@ void Accountant::DisplayLog()
 void Accountant::DisplayMatches()
 {
   HashKey HK;
-  MyString key;
+  char key[_POSIX_PATH_MAX];
   ClassAd* ad;
   MyString ResourceName;
   AcctLog->table.startIterations();
   while (AcctLog->table.iterate(HK,ad)) {
     HK.sprint(key);
-    if (ResourceRecord != key) {
-		continue;
-    }
-    ResourceName = key.Substr(ResourceRecord.Length(), key.Length());
-    ad->LookupString(RemoteUserAttr.Value(), key);
-    printf("Customer=%s , Resource=%s\n", key.Value(), ResourceName.Value());
+    if (strncmp(ResourceRecord.Value(),key,ResourceRecord.Length())) continue;
+    ResourceName=key+ResourceRecord.Length();
+    ad->LookupString(RemoteUserAttr.Value(),key);
+    printf("Customer=%s , Resource=%s\n",key,ResourceName.Value());
   }
 }
 
@@ -684,7 +675,7 @@ void Accountant::UpdatePriorities()
   dprintf(D_ACCOUNTANT,"(ACCOUNTANT) Updating priorities - AgingFactor=%8.3f , TimePassed=%d\n",AgingFactor,TimePassed);
 
   HashKey HK;
-  MyString key;
+  char key[_POSIX_PATH_MAX];
   ClassAd* ad;
   float Priority, OldPrio, PriorityFactor;
   int UnchargedTime;
@@ -696,9 +687,8 @@ void Accountant::UpdatePriorities()
   AcctLog->table.startIterations();
   while (AcctLog->table.iterate(HK,ad)) {
     HK.sprint(key);
-    if (CustomerRecord != key) {
-      continue;
-    }
+    if (strncmp(CustomerRecord.Value(),key,CustomerRecord.Length())) continue;
+
     // lookup values in the ad
     if (ad->LookupFloat(PriorityAttr.Value(),Priority)==0) Priority=0;
 	if (Priority<MinPriority) Priority=MinPriority;
@@ -718,24 +708,20 @@ void Accountant::UpdatePriorities()
     AccumulatedUsage+=ResourcesUsed*TimePassed+UnchargedTime;
 
 	AcctLog->BeginTransaction();
-    SetAttributeFloat(key.Value(), PriorityAttr, Priority);
-    SetAttributeFloat(key.Value(), AccumulatedUsageAttr, AccumulatedUsage);
-    if (AccumulatedUsage > 0 && BeginUsageTime == 0) {
-      SetAttributeInt(key.Value(), BeginUsageTimeAttr, T);
-    }
-    if (RecentUsage > 0) {
-      SetAttributeInt(key.Value(), LastUsageTimeAttr, T);
-    }
-    SetAttributeInt(key.Value(), UnchargedTimeAttr, 0);
+    SetAttributeFloat(key,PriorityAttr,Priority);
+    SetAttributeFloat(key,AccumulatedUsageAttr,AccumulatedUsage);
+    if (AccumulatedUsage>0 && BeginUsageTime==0) SetAttributeInt(key,BeginUsageTimeAttr,T);
+    if (RecentUsage>0) SetAttributeInt(key,LastUsageTimeAttr,T);
+    SetAttributeInt(key,UnchargedTimeAttr,0);
 
     if (Priority<MinPriority && ResourcesUsed==0 &&
 		   	AccumulatedUsage==0 && PriorityFactor==DefaultPriorityFactor ) {
-		DeleteClassAd(key.Value());
+		DeleteClassAd(key);
 	}
 
 	AcctLog->CommitTransaction();
 	
-    dprintf(D_ACCOUNTANT,"CustomerName=%s , Old Priority=%5.3f , New Priority=%5.3f , ResourcesUsed=%d\n",key.Value(),OldPrio,Priority,ResourcesUsed);
+    dprintf(D_ACCOUNTANT,"CustomerName=%s , Old Priority=%5.3f , New Priority=%5.3f , ResourcesUsed=%d\n",key,OldPrio,Priority,ResourcesUsed);
     dprintf(D_ACCOUNTANT,"RecentUsage=%8.3f, UnchargedTime=%d, AccumulatedUsage=%5.3f, BeginUsageTime=%d\n",RecentUsage,UnchargedTime,AccumulatedUsage,BeginUsageTime);
 
   }
@@ -777,7 +763,7 @@ void Accountant::CheckMatches(ClassAdList& ResourceList)
 
   ClassAd* ResourceAd;
   HashKey HK;
-  MyString key;
+  char key[_POSIX_PATH_MAX];
   ClassAd* ad;
   MyString ResourceName;
   MyString CustomerName;
@@ -786,18 +772,17 @@ void Accountant::CheckMatches(ClassAdList& ResourceList)
   AcctLog->table.startIterations();
   while (AcctLog->table.iterate(HK,ad)) {
     HK.sprint(key);
-    if (ResourceRecord != key) {
-	  continue;
-	}
-    ResourceName = key.Substr(ResourceRecord.Length(), key.Length());
-    ResourceAd = FindResourceAd(ResourceName, ResourceList);
+    if (strncmp(ResourceRecord.Value(),key,ResourceRecord.Length())) continue;
+    ResourceName=key+ResourceRecord.Length();
+    ResourceAd=FindResourceAd(ResourceName, ResourceList);
     if (!ResourceAd) {
       dprintf(D_ACCOUNTANT,"Resource %s class-ad wasn't found in the resource list.\n",ResourceName.Value());
       RemoveMatch(ResourceName);
     }
 	else {
 		// Here we need to figure out the CustomerName.
-      ad->LookupString(RemoteUserAttr.Value(),CustomerName);
+      ad->LookupString(RemoteUserAttr.Value(),key);
+      CustomerName=key;
       if (!CheckClaimedOrMatched(ResourceAd, CustomerName)) {
         dprintf(D_ACCOUNTANT,"Resource %s was not claimed by %s - removing match\n",ResourceName.Value(),CustomerName.Value());
         RemoveMatch(ResourceName);
@@ -824,31 +809,30 @@ AttrList* Accountant::ReportState(const MyString& CustomerName, int * NumResourc
   dprintf(D_ACCOUNTANT,"Reporting State for customer %s\n",CustomerName.Value());
 
   HashKey HK;
-  MyString key;
+  char key[200];
   ClassAd* ResourceAd;
   MyString ResourceName;
   int StartTime;
 
   AttrList* ad=new AttrList();
-  MyString tmp;
+  char tmp[512];
 
   int ResourceNum=1;
   AcctLog->table.startIterations();
   while (AcctLog->table.iterate(HK,ResourceAd)) {
     HK.sprint(key);
-    if (ResourceRecord != key) {
-		continue;
-    }
-    if (ResourceAd->LookupString(RemoteUserAttr.Value(),tmp)==0) continue;
-    if (CustomerName != tmp) continue;
+    if (strncmp(ResourceRecord.Value(),key,ResourceRecord.Length())) continue;
 
-    ResourceName = key.Substr(ResourceRecord.Length(), key.Length());
-    tmp.sprintf("Name%d = \"%s\"", ResourceNum, ResourceName.Value());
-    ad->Insert(tmp.Value());
+    if (ResourceAd->LookupString(RemoteUserAttr.Value(),tmp)==0) continue;
+    if (CustomerName!=MyString(tmp)) continue;
+
+    ResourceName=key+ResourceRecord.Length();
+    sprintf(tmp,"Name%d = \"%s\"",ResourceNum,ResourceName.Value());
+    ad->Insert(tmp);
 
     if (ResourceAd->LookupInteger(StartTimeAttr.Value(),StartTime)==0) StartTime=0;
-    tmp.sprintf("StartTime%d = %d", ResourceNum, StartTime);
-    ad->Insert(tmp.Value());
+    sprintf(tmp,"StartTime%d = %d",ResourceNum,StartTime);
+    ad->Insert(tmp);
 
     ResourceNum++;
   }
@@ -869,7 +853,7 @@ AttrList* Accountant::ReportState() {
   dprintf(D_ACCOUNTANT,"Reporting State\n");
 
   HashKey HK;
-  MyString key;
+  char key[200];
   ClassAd* CustomerAd;
   MyString CustomerName;
   float PriorityFactor;
@@ -877,53 +861,55 @@ AttrList* Accountant::ReportState() {
   int BeginUsageTime;
   int LastUsageTime;
   int ResourcesUsed;
-  MyString tmp;
 
   AttrList* ad=new AttrList();
-  ad->Assign( ATTR_LAST_UPDATE, LastUpdateTime );
+  char tmp[512];
+  sprintf(tmp, "LastUpdate = %d", LastUpdateTime);
+  ad->Insert(tmp);
 
   int OwnerNum=1;
   AcctLog->table.startIterations();
   while (AcctLog->table.iterate(HK,CustomerAd)) {
     HK.sprint(key);
-    if (CustomerRecord != key) {
-		continue;
-    }
+    if (strncmp(CustomerRecord.Value(),key,CustomerRecord.Length())) continue;
+
 	// The following Insert() calls are passed 'false' to prevent
 	// AttrList from checking for duplicates. This is to enhance
 	// performance, but is admittedly dangerous if we're not certain
 	// that the items we're inserting are unique. Use caution.
-    CustomerName = key.Substr(CustomerRecord.Length(), key.Length());
-    tmp.sprintf("Name%d = \"%s\"", OwnerNum, CustomerName.Value());
-    ad->Insert(tmp.Value(), false);
 
-    tmp.sprintf("Priority%d = %f", OwnerNum, GetPriority(CustomerName));
-    ad->Insert(tmp.Value(), false);
+    CustomerName=key+CustomerRecord.Length();
+    sprintf(tmp,"Name%d = \"%s\"",OwnerNum,CustomerName.Value());
+    ad->Insert(tmp, false);
+
+    sprintf(tmp,"Priority%d = %f",OwnerNum,GetPriority(CustomerName));
+    ad->Insert(tmp, false);
 
     if (CustomerAd->LookupInteger(ResourcesUsedAttr.Value(),ResourcesUsed)==0) ResourcesUsed=0;
-    tmp.sprintf("ResourcesUsed%d = %d", OwnerNum, ResourcesUsed);
-    ad->Insert(tmp.Value(), false);
+    sprintf(tmp,"ResourcesUsed%d = %d",OwnerNum,ResourcesUsed);
+    ad->Insert(tmp, false);
 
     if (CustomerAd->LookupFloat(AccumulatedUsageAttr.Value(),AccumulatedUsage)==0) AccumulatedUsage=0;
-    tmp.sprintf("AccumulatedUsage%d = %f", OwnerNum, AccumulatedUsage);
-    ad->Insert(tmp.Value(), false);
+    sprintf(tmp,"AccumulatedUsage%d = %f",OwnerNum,AccumulatedUsage);
+    ad->Insert(tmp, false);
 
     if (CustomerAd->LookupInteger(BeginUsageTimeAttr.Value(),BeginUsageTime)==0) BeginUsageTime=0;
-    tmp.sprintf("BeginUsageTime%d = %d", OwnerNum, BeginUsageTime);
-    ad->Insert(tmp.Value(), false);
+    sprintf(tmp,"BeginUsageTime%d = %d",OwnerNum,BeginUsageTime);
+    ad->Insert(tmp, false);
 
     if (CustomerAd->LookupInteger(LastUsageTimeAttr.Value(),LastUsageTime)==0) LastUsageTime=0;
-    tmp.sprintf("LastUsageTime%d = %d", OwnerNum, LastUsageTime);
-    ad->Insert(tmp.Value(), false);
+    sprintf(tmp,"LastUsageTime%d = %d",OwnerNum,LastUsageTime);
+    ad->Insert(tmp, false);
 
     if (CustomerAd->LookupFloat(PriorityFactorAttr.Value(),PriorityFactor)==0) PriorityFactor=0;
-    tmp.sprintf("PriorityFactor%d = %f", OwnerNum, PriorityFactor);
-    ad->Insert(tmp.Value(), false);
+    sprintf(tmp,"PriorityFactor%d = %f",OwnerNum,PriorityFactor);
+    ad->Insert(tmp, false);
 
     OwnerNum++;
   }
 
-  ad->Assign( "NumSubmittors", OwnerNum-1 );
+  sprintf(tmp,"NumSubmittors = %d", OwnerNum-1);
+  ad->Insert(tmp, false);
   return ad;
 }
 
@@ -933,8 +919,8 @@ AttrList* Accountant::ReportState() {
 
 MyString Accountant::GetResourceName(ClassAd* ResourceAd) 
 {
-  MyString startdName;
-  MyString startdAddr;
+  char startdName[64];
+  char startdAddr[64];
   
   if (!ResourceAd->LookupString (ATTR_NAME, startdName)) {
     //This should never happen, because unnamed startd ads are rejected.
@@ -947,10 +933,11 @@ MyString Accountant::GetResourceName(ClassAd* ResourceAd)
     //This may happen for grid site ClassAds.
     //Actually, the collector now inserts an IP address if none is provided,
     //but it is more robust to not assume that behavior here.
-	dprintf(D_FULLDEBUG,"in Account::GetResourceName - no IP address for %s (no problem if this is a grid site ClassAd).\n",startdName.Value());
-  } else { 
-    Name+=startdAddr;
+    startdAddr[0] = '\0';
+	dprintf(D_FULLDEBUG,"in Account::GetResourceName - no IP address for %s (no problem if this is a grid site ClassAd).\n",startdName);
   }
+  Name+=startdAddr;
+  
   return Name;
 }
 
@@ -960,36 +947,35 @@ MyString Accountant::GetResourceName(ClassAd* ResourceAd)
 //------------------------------------------------------------------
 
 int Accountant::IsClaimed(ClassAd* ResourceAd, MyString& CustomerName) {
-  MyString state;
+  char state[16];
   if (!ResourceAd->LookupString(ATTR_STATE, state)) {
     dprintf (D_ALWAYS, "Could not lookup state --- assuming not claimed\n");
     return 0;
   }
 
-  if (string_to_state(state.Value()) != claimed_state) {
-    return 0;
-  }
+  if (string_to_state(state)!=claimed_state) return 0;
   
-  MyString RemoteUser;
+  char RemoteUser[512];
   if (!ResourceAd->LookupString(ATTR_ACCOUNTING_GROUP, RemoteUser)) {
-    if (!ResourceAd->LookupString(ATTR_REMOTE_USER, RemoteUser)) {	// TODDCORE
-      dprintf (D_ALWAYS, "Could not lookup remote user --- assuming not claimed\n");
-      return 0;
-    }
+	  if (!ResourceAd->LookupString(ATTR_REMOTE_USER, RemoteUser)) {	// TODDCORE
+		dprintf (D_ALWAYS, "Could not lookup remote user --- assuming not claimed\n");
+		return 0;
+	  }
   }
-  if (DiscountSuspendedResources) {
-    MyString RemoteActivity;
+  if(DiscountSuspendedResources) {
+    char RemoteActivity[512];
     if(!ResourceAd->LookupString(ATTR_ACTIVITY, RemoteActivity)) {
        dprintf(D_ALWAYS, "Could not lookup remote activity\n");
        return 0;
     }
-    if (!stricmp(getClaimStateString(CLAIM_SUSPENDED), RemoteActivity.Value())) { 
+    if (!stricmp(getClaimStateString(CLAIM_SUSPENDED), RemoteActivity)) { 
        dprintf(D_ACCOUNTANT, "Machine is claimed but suspended\n");
        return 0;
     }
   }
   CustomerName=RemoteUser;
   return 1;
+
 }
 
 //------------------------------------------------------------------
@@ -999,23 +985,19 @@ int Accountant::IsClaimed(ClassAd* ResourceAd, MyString& CustomerName) {
 //------------------------------------------------------------------
 
 int Accountant::CheckClaimedOrMatched(ClassAd* ResourceAd, const MyString& CustomerName) {
-  MyString state;
+  char state[16];
   if (!ResourceAd->LookupString(ATTR_STATE, state)) {
     dprintf (D_ALWAYS, "Could not lookup state --- assuming not claimed\n");
     return 0;
   }
-  State res_state = string_to_state(state.Value());
 
-  if (res_state == matched_state) {
-    return 1;
-  }
-  if (res_state != claimed_state) {
-    dprintf( D_ACCOUNTANT, "State was %s - not claimed or matched\n",
-			 state.Value() );
+  if (string_to_state(state)==matched_state) return 1;
+  if (string_to_state(state)!=claimed_state) {
+    dprintf(D_ACCOUNTANT,"State was %s - not claimed or matched\n",state);
     return 0;
   }
 
-  MyString RemoteUser;
+  char RemoteUser[512];
   if (!ResourceAd->LookupString(ATTR_ACCOUNTING_GROUP, RemoteUser)) {
 	  if (!ResourceAd->LookupString(ATTR_REMOTE_USER, RemoteUser)) {	// TODDCORE
 		dprintf (D_ALWAYS, "Could not lookup remote user --- assuming not claimed\n");
@@ -1023,37 +1005,38 @@ int Accountant::CheckClaimedOrMatched(ClassAd* ResourceAd, const MyString& Custo
 	  }
   }
 
-  if (CustomerName != RemoteUser) {
-    if (DebugFlags & D_ACCOUNTANT) {
-      MyString PreemptingUser;
-      if (ResourceAd->LookupString(ATTR_PREEMPTING_ACCOUNTING_GROUP, PreemptingUser) ||
-         ResourceAd->LookupString(ATTR_PREEMPTING_USER, PreemptingUser))
+  if (CustomerName!=MyString(RemoteUser)) {
+    if(DebugFlags & D_ACCOUNTANT) {
+      char *PreemptingUser = NULL;
+      if(ResourceAd->LookupString(ATTR_PREEMPTING_ACCOUNTING_GROUP, &PreemptingUser) ||
+         ResourceAd->LookupString(ATTR_PREEMPTING_USER, &PreemptingUser))
       {
-		  if (CustomerName == PreemptingUser) {
-			  dprintf(D_ACCOUNTANT,"Remote user for startd ad (%s) does not match customer name, because customer %s is still waiting for %s to retire.\n",RemoteUser.Value(), PreemptingUser.Value(), RemoteUser.Value());
+		  if(CustomerName == PreemptingUser) {
+			  dprintf(D_ACCOUNTANT,"Remote user for startd ad (%s) does not match customer name, because customer %s is still waiting for %s to retire.\n",RemoteUser,PreemptingUser,RemoteUser);
+			  free(PreemptingUser);
 			  return 0;
 		  }
+		  free(PreemptingUser);
       }
     }
-    dprintf( D_ACCOUNTANT,
-			 "Remote user for startd ad (%s) does not match customer name\n",
-			 RemoteUser.Value() );
+    dprintf(D_ACCOUNTANT,"Remote user for startd ad (%s) does not match customer name\n",RemoteUser);
     return 0;
   }
 
   if(DiscountSuspendedResources) {
-    MyString RemoteActivity;
+    char RemoteActivity[512];
     if(!ResourceAd->LookupString(ATTR_ACTIVITY, RemoteActivity)) {
         dprintf(D_ALWAYS, "Could not lookup remote activity\n");
         return 0;
     }
-    if (!stricmp(getClaimStateString(CLAIM_SUSPENDED), RemoteActivity.Value())) {
-       dprintf( D_ACCOUNTANT, "Machine claimed by %s but suspended\n",
-				RemoteUser.Value() );
+    if (!stricmp(getClaimStateString(CLAIM_SUSPENDED), RemoteActivity)) { 
+       dprintf(D_ACCOUNTANT, "Machine claimed by %s but suspended\n", 
+       RemoteUser);
        return 0;
     }
   }
   return 1;
+
 }
 
 //------------------------------------------------------------------
@@ -1092,9 +1075,9 @@ void Accountant::SetAttributeInt(const MyString& Key, const MyString& AttrName, 
     LogNewClassAd* log=new LogNewClassAd(Key.Value(),"*","*");
     AcctLog->AppendLog(log);
   }
-  MyString value;
-  value.sprintf("%d", AttrValue);
-  LogSetAttribute* log=new LogSetAttribute(Key.Value(),AttrName.Value(),value.Value());
+  char value[_POSIX_PATH_MAX];
+  sprintf(value,"%d",AttrValue);
+  LogSetAttribute* log=new LogSetAttribute(Key.Value(),AttrName.Value(),value);
   AcctLog->AppendLog(log);
 }
   
@@ -1109,9 +1092,9 @@ void Accountant::SetAttributeFloat(const MyString& Key, const MyString& AttrName
     AcctLog->AppendLog(log);
   }
   
-  MyString value;
-  value.sprintf("%f", AttrValue);
-  LogSetAttribute* log=new LogSetAttribute(Key.Value(),AttrName.Value(),value.Value());
+  char value[_POSIX_PATH_MAX];
+  sprintf(value,"%f",AttrValue);
+  LogSetAttribute* log=new LogSetAttribute(Key.Value(),AttrName.Value(),value);
   AcctLog->AppendLog(log);
 }
 
@@ -1126,9 +1109,9 @@ void Accountant::SetAttributeString(const MyString& Key, const MyString& AttrNam
     AcctLog->AppendLog(log);
   }
   
-  MyString value;
-  value.sprintf("\"%s\"", AttrValue.Value());
-  LogSetAttribute* log=new LogSetAttribute(Key.Value(),AttrName.Value(),value.Value());
+  char value[_POSIX_PATH_MAX];
+  sprintf(value,"\"%s\"",AttrValue.Value());
+  LogSetAttribute* log=new LogSetAttribute(Key.Value(),AttrName.Value(),value);
   AcctLog->AppendLog(log);
 }
 
@@ -1163,10 +1146,11 @@ bool Accountant::GetAttributeFloat(const MyString& Key, const MyString& AttrName
 bool Accountant::GetAttributeString(const MyString& Key, const MyString& AttrName, MyString& AttrValue)
 {
   ClassAd* ad;
-  if (AcctLog->table.lookup(HashKey(Key.Value()),ad) == -1) {
-    return false;
-  }
-  return ad->LookupString(AttrName.Value(), AttrValue);
+  if (AcctLog->table.lookup(HashKey(Key.Value()),ad)==-1) return false;
+  char tmp[_POSIX_PATH_MAX];
+  if (ad->LookupString(AttrName.Value(),tmp)==0) return false;
+  AttrValue=tmp;
+  return true;
 }
 
 //------------------------------------------------------------------
