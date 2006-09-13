@@ -6,6 +6,14 @@ $testname = 'Condor submit to test security negotiations';
 
 my $killedchosen = 0;
 
+my %securityoptions =
+(
+"NEVER" => "1",
+"OPTIONAL" => "1",
+"PREFERRED" => "1",
+"REQUIRED" => "1",
+);
+
 # truly const variables in perl
 sub IDLE{1};
 sub HELD{5};
@@ -17,7 +25,8 @@ my $cluster;
 
 my $piddir = $ARGV[0];
 my $subdir = $ARGV[1];
-my $expectedres = $ARGV[2];
+my $expectedres = "";
+$expectedres = $ARGV[2];
 
 print "Handed args from main test loop.....<<<<<<<<<<<<<<<<<<<<<<$piddir/$subdir/$expectedres>>>>>>>>>>>>>>\n";
 $abnormal = sub {
@@ -92,11 +101,12 @@ $success = sub
 	my $cluster = $info{"cluster"};
 
 	print "Good completion!!!\n";
-	my $stat = PersonalSearchLog( $piddir, $subdir, "KEYPRINTF", "SchedLog");
-	if( $stat == 0 ) {
-		print "Good completion!!!\n";
+	my $found = PersonalPolicySearchLog( $piddir, $subdir, "Encryption", "SchedLog");
+	print "PersonalPolicySearchLog found $found\n";
+	if( $found eq $expectedres ) {
+		print "Good completion!!! found $found\n";
 	} else {
-		die "Expected match for KEYPRINTF and could not find it in SchedLog\n";
+		die "Expected <<$expectedres>> but found <<$found>>\n";
 	}
 
 };
@@ -120,6 +130,32 @@ sub PersonalSearchLog
 	return(1);
 }
 
+sub PersonalPolicySearchLog 
+{
+	my $pid = shift;
+	my $personal = shift;
+	my $policyitem = shift;
+	my $logname = shift;
+
+	my $logloc = $pid . "/" . $pid . $personal . "/log/" . $logname;
+	print "Search this log <$logloc> for <$policyitem>\n";
+	open(LOG,"<$logloc") || die "Can not open logfile<$logloc>: $!\n";
+	while(<LOG>) {
+		if( $_ =~ /^.*Security Policy.*$/) {
+			while(<LOG>) {
+				if( $_ =~ /^\s*$policyitem\s*=\s*\"(\w+)\"\s*$/ ) {
+					#print "FOUND IT! $1\n";
+					if(!defined $securityoptions{$1}){
+						print "Returning <<$1>>\n";
+						return($1);
+					}
+				}
+			}
+		}
+	}
+	return("bad");
+}
+
 CondorTest::RegisterExecute($testname, $executed);
 CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
 CondorTest::RegisterExitedSuccess( $testname, $success );
@@ -128,9 +164,18 @@ CondorTest::RegisterHold( $testname, $held );
 CondorTest::RegisterSubmit( $testname, $submitted );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	print "$testname: SUCCESS\n";
-	exit(0);
+	if( $expectedres eq "fail" ) {
+		die "$testname: Test FAILED: ran but was supposed to fail\n";
+	} else {
+		print "$testname: SUCCESS\n";
+		exit(0);
+	}
 } else {
-	die "$testname: CondorTest::RunTest() failed\n";
+	if( $expectedres eq "fail" ) {
+		print "$testname: SUCCESS (failures were expected!)\n";
+		exit(0);
+	} else {
+		die "$testname: CondorTest::RunTest() failed\n";
+	}
 }
 
