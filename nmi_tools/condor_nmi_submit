@@ -79,6 +79,7 @@ use vars qw/ $opt_build $opt_test
     $opt_help $opt_debug $opt_notify $opt_platforms $opt_nmi_glue 
     $opt_workspace
     $opt_tag $opt_module $opt_nmiconf $opt_desc $opt_append
+    $opt_submit_xtests
     $opt_nightly $opt_externals $opt_without_tests
     $opt_buildid $opt_test_src $opt_test_timeout $opt_test_args
     $opt_input_platform
@@ -334,6 +335,7 @@ sub parseOptions
            'nmiconf=s'     => $opt_nmiconf,
            'desc=s'        => $opt_desc,
            'append=s'      => $opt_append,
+           'submit-xtests!' => $opt_submit_xtests,
 # build-specific options
            'nightly'       => $opt_nightly,
            'externals=s'   => $opt_externals,
@@ -434,6 +436,13 @@ sub parseOptions
         }
     }
 
+    if( defined($opt_without_tests) ) {
+        if( defined($opt_submit_xtests) && $opt_submit_xtests == 1) {
+          print "ERROR: You cannot use --without-tests and --submit-xtests\n";
+          printUsage( 1 );
+        }
+    }
+
     if( defined $opt_workspace ) {
         if( defined $opt_nightly ) {
                 # Notably, the %tags list can have a list of tags
@@ -516,6 +525,8 @@ Where [options] can be any of:
                     (defaults to /usr/local/nmi/etc/nmi.conf)>
 --desc=string      <arbitrary text for a human readable description of the job>
 --append=string    <arbitrary text to be appended to the NMI submit file>
+--submit-xtests    <should this run submit the cross-platform tests defined
+                    in the submit_info file?>
 
 Where [build-options] can be any of:
 --nightly          <Default for builds: pulls the nightly tags file from 
@@ -841,6 +852,7 @@ sub writeCommonInfo
 sub writeBuildGlue
 {
     my ( $fh, $tag, $module ) = @_;
+    my $post_args = '';
     # tag and module may be null (if $src_workspace is defined)
 
     # define the glue scripts we want
@@ -850,10 +862,23 @@ sub writeBuildGlue
     print $fh "remote_task = nmi_glue/build/remote_task\n";
     print $fh "remote_post = nmi_glue/build/remote_post\n";
     print $fh "platform_post = nmi_glue/build/platform_post\n";
+
     if( defined($opt_without_tests) ) {
-        print $fh "platform_post_args = --without-tests\n";
-    } elsif( defined($src_workspace) ) {
-        print $fh "platform_post_args = --test-args=--workspace='$src_workspace'\n";
+        $post_args = '--without-tests';
+    } else {
+        # If a build is submitted using --submit-xtests, all we have
+        # to do is propagate it to platform_post via arguments...
+        if( defined($opt_submit_xtests) && $opt_submit_xtests == 1) {
+            $post_args = "--submit-xtests";
+        } else {
+            $post_args = "--nosubmit-xtests";
+        }
+        if( defined($src_workspace) ) {
+            $post_args .= " --test-args=--workspace='$src_workspace'";
+        }
+    }
+    if( $post_args ) {
+        print $fh "platform_post_args = $post_args\n";
     }
 }
 
