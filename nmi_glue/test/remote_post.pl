@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_post.pl,v 1.2.2.2 2006-09-13 17:05:14 wright Exp $
+# $Id: remote_post.pl,v 1.2.2.3 2006-09-14 00:55:43 wright Exp $
 # post script for Condor testsuite runs
 ######################################################################
 
@@ -72,7 +72,6 @@ if( ! -f "tasklist.nmi" || -z "tasklist.nmi" ) {
     exit $exit_status;
 }
 
-$results = "results.tar.gz";
 chdir("$BaseDir") || die "Can't chdir($BaseDir): $!\n";
 
 my $etc_dir = "$BaseDir/results/etc";
@@ -178,7 +177,9 @@ while( <TASKFILE> ) {
 # final tar and exit
 #----------------------------------------
 
+$results = "results.tar.gz";
 print "Tarring up all results\n";
+chdir("$BaseDir") || die "Can't chdir($BaseDir): $!\n";
 system( "tar zcf $BaseDir/$results results" );
 if( $? >> 8 ) {
     print "Can't tar zcf $BaseDir/$results results\n";
