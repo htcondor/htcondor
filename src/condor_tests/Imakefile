@@ -93,6 +93,30 @@ TESTCLASS(lib_procapi_pidtracking-snapshot,core)
 TESTCLASS(lib_procapi_pidtracking-snapshot,quick)
 #endif
 
+DESC(lib_auth_protocol-fs,"FS authentication test")
+RUN(lib_auth_protocol-fs)
+TESTCLASS(lib_auth_protocol-fs,core)
+TESTCLASS(lib_auth_protocol-fs,quick)
+TESTCLASS(lib_auth_protocol-fs,btdebug)
+
+DESC(lib_auth_protocol-ctb,"CTB authentication test")
+RUN(lib_auth_protocol-ctb)
+TESTCLASS(lib_auth_protocol-ctb,core)
+TESTCLASS(lib_auth_protocol-ctb,quick)
+TESTCLASS(lib_auth_protocol-ctb,btdebug)
+
+DESC(lib_auth_protocol-ssl,"SSL authentication test")
+RUN(lib_auth_protocol-ssl)
+TESTCLASS(lib_auth_protocol-ssl,core)
+TESTCLASS(lib_auth_protocol-ssl,quick)
+TESTCLASS(lib_auth_protocol-ssl,btdebug)
+
+DESC(lib_auth_protocol-negot,"16 way negotiation test")
+RUN(lib_auth_protocol-negot)
+TESTCLASS(lib_auth_protocol-negot,core)
+TESTCLASS(lib_auth_protocol-negot,quick)
+TESTCLASS(lib_auth_protocol-negot,btdebug)
+
 DESC(cmd_q_shows-hold,"Condor_q shows hold")
 RUN(cmd_q_shows-hold)
 TESTCLASS(cmd_q_shows-hold,core)
