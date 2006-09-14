@@ -732,6 +732,8 @@ sub runCondorTool
 	my $cmd = shift;
 	my $arrayref = shift;
 	my $multiplier = shift;
+	my $force = "";
+	$force = shift;
 	my $count = 0;
 	my $catch = "runCTool$$";
 	while( !$done)
@@ -780,6 +782,19 @@ sub runCondorTool
 				push @{$arrayref}, $value;
 			}
 			$done = 1;
+			# There are times like the security tests when we want
+			# to see the stderr even when the command works.
+			if( $force ne "" ) {
+				if( !open( MACH, "<$catch" )) { 
+					warn "Can't look at command output <$catch>:$!\n";
+				} else {
+    				while(<MACH>) {
+						chomp $_;
+						push @{$arrayref}, $_;
+    				}
+    				close(MACH);
+				}
+			}
 			my $current_time = time;
 			$delta_time = $current_time - $start_time;
 			Condor::debug("runCondorTool: its been $delta_time since call\n");
