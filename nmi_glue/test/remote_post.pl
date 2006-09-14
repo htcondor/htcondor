@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_post.pl,v 1.2.2.3 2006-09-14 00:55:43 wright Exp $
+# $Id: remote_post.pl,v 1.2.2.4 2006-09-14 16:08:06 wright Exp $
 # post script for Condor testsuite runs
 ######################################################################
 
@@ -9,6 +9,7 @@ use File::Copy;
 
 my $BaseDir = $ENV{BASE_DIR} || die "BASE_DIR not in environment!\n";
 my $SrcDir = $ENV{SRC_DIR} || die "SRC_DIR not in environment!\n";
+my $testdir = "condor_tests";
 my $exit_status = 0;
 
 # This is debugging output for the sake of the NWO infrastructure.
