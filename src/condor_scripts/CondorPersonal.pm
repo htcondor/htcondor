@@ -55,6 +55,7 @@ package CondorPersonal;
 #	condortemplate	Core config file					condor_config_template		$personal_template
 #	condorlocalsrc	Name for condor local config src 								$personal_local_src
 #   localpostsrc    New end of local config file                                    $personal_local_post_src
+#   secprepostsrc	New security settings 											$personal_sec_prepost_src
 #	condordaemon	daemon list to start				contents of config template $personal_daemons
 #	condorconfig	Name for condor config file			condor_config				$personal_config
 #	condordomain	Name for domain						cs.wisc.edu					$condordomain
@@ -112,6 +113,7 @@ BEGIN
 	$personal_local = "condor_config.local";
 	$personal_local_src = "";
 	$personal_local_post_src = "";
+	$personal_sec_prepost_src = "";
 	$personal_universe = "";
 	$portchanges = "dynamic";
 	$DEBUG = 0;
@@ -131,15 +133,22 @@ BEGIN
 
 sub StartCondor
 {
+	my $mpid = "";
+	my $arraysz = scalar(@_);
 	my $paramfile = shift || die "Missing parameter file!\n";
+	$version = shift || die "Missing parameter version!\n";
 	my $config_and_port = "";
 
-	$version = shift || die "Missing parameter version!\n";
+	if($arraysz == 2) {
+		$mpid = $pid; # assign process id
+	} else {
+		$mpid = shift; # assign process id
+	}
 
 	system("mkdir -p $topleveldir");
-	$topleveldir = $topleveldir . "/" . $pid;
+	$topleveldir = $topleveldir . "/" . $mpid;
 	system("mkdir -p $topleveldir");
-	$topleveldir = $topleveldir . "/" . $pid . $version;
+	$topleveldir = $topleveldir . "/" . $mpid . $version;
 	system("mkdir -p $topleveldir");
 
 	$personal_config_file = $topleveldir ."/condor_config";
@@ -152,7 +161,7 @@ sub StartCondor
 		return("Failed to do needed Condor Install\n");
 	}
 
-	CondorPersonal::TunePersonalCondor($localdir);
+	CondorPersonal::TunePersonalCondor($localdir, $mpid);
 
 	$collector_port = CondorPersonal::StartPersonalCondor();
 
@@ -195,6 +204,7 @@ sub Reset
 	$personal_local = "condor_config.local";
 	$personal_local_src = "";
 	$personal_local_post_src = "";
+	$personal_sec_prepost_src = "";
 	$personal_universe = "";
 
 	$topleveldir = getcwd();
@@ -519,7 +529,14 @@ sub TunePersonalCondor
 	chomp($myhost);
 	my @domainparts = split /\./, $myhost;
 	my $condorhost = "";
+	my $mpid = "";
 	my $localdir = shift;
+
+	if(scalar( @_ ) == 1) {
+		$mpid = $pid; # assign process id
+	} else {
+		$mpid = shift; # assign process id
+	}
 
 	debug( "TunePersonalCondor setting LOCAL_DIR to $localdir\n");
 	#print "domain parts follow:";
@@ -584,6 +601,12 @@ sub TunePersonalCondor
 	if( exists $control{"condorlocalsrc"} )
 	{
 		$personal_local_src = $control{"condorlocalsrc"};
+	}
+
+	# was a special local config file post src called out?
+	if( exists $control{"secprepostsrc"} )
+	{
+		$personal_sec_prepost_src = $control{"secprepostsrc"};
 	}
 
 	# was a special local config file post src called out?
@@ -689,7 +712,7 @@ sub TunePersonalCondor
 	{
 		# set up dedicated scheduler
 		print "************************ Adding Dedicated Scheduler $personal_universe Universe ***************************\n";
-		print NEW "DedicatedScheduler = \"DedicatedScheduler\@schedd$pid$version\@$condorhost\"\n";
+		print NEW "DedicatedScheduler = \"DedicatedScheduler\@schedd$mpid$version\@$condorhost\"\n";
 		print NEW "STARTD_EXPRS = \$(STARTD_EXPRS), DedicatedScheduler\n";
 		print NEW "SCHEDD_DEBUG = D_FULLDEBUG\n";
 	}
@@ -707,7 +730,7 @@ sub TunePersonalCondor
 			print NEW "COLLECTOR_HOST = \$(CONDOR_HOST):0\n";
 		}
 
-		print NEW "SCHEDD_NAME = schedd$pid$version\n";
+		print NEW "SCHEDD_NAME = schedd$mpid$version\n";
 		print NEW "NEGOTIATOR_HOST = \$(CONDOR_HOST):0\n";
 		print NEW "COLLECTOR_ADDRESS_FILE = \$(LOG)/.collector_address\n";
 		print NEW "NEGOTIATOR_ADDRESS_FILE = \$(LOG)/.negotiator_address\n";
@@ -755,6 +778,18 @@ sub TunePersonalCondor
 		print NEW "NUM_VIRTUAL_MACHINES = $myvms\n";
 		$gendatafile = $gendatafile . "_" . $myvms . "VMs";
 	}
+
+	if($personal_sec_prepost_src ne "")
+	{
+		print "Adding to local config file from $personal_sec_prepost_src\n";
+		open(SECURITY,"<$personal_sec_prepost_src")  || die "Can not do local config additions: $! <<$personal_sec_prepost_src>>\n";
+		while(<SECURITY>)
+		{
+			print NEW "$_";
+		}
+		close(SECURITY);
+	}
+
 
 	if($personal_local_post_src ne "")
 	{
