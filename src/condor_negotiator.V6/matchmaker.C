@@ -2058,6 +2058,8 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 	if ( MatchList &&
 		 cachedAutoCluster != -1 &&
 		 cachedAutoCluster == requestAutoCluster &&
+		 cachedPrio == preemptPrio &&
+		 cachedOnlyForStartdRank == only_for_startdrank &&
 		 strcmp(cachedName,scheddName)==0 &&
 		 strcmp(cachedAddr,scheddAddr)==0 )
 	{
@@ -2112,6 +2114,8 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 	{
 		MatchList = new MatchListType( startdAds.Length() );
 		cachedAutoCluster = requestAutoCluster;
+		cachedPrio = preemptPrio;
+		cachedOnlyForStartdRank = only_for_startdrank;
 		cachedName = strdup(scheddName);
 		cachedAddr = strdup(scheddAddr);
 	}

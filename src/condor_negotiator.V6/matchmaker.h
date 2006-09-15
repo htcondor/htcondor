@@ -285,6 +285,8 @@ class Matchmaker : public Service
 		int cachedAutoCluster;
 		char* cachedName;
 		char* cachedAddr;
+		double cachedPrio;
+		bool cachedOnlyForStartdRank;
 
 		//
 		class SimpleGroupEntry
