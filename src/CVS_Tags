@@ -1,3 +1,7 @@
+09/18/06 V6_8_1
+  The official V6_8_1 release is a copy of BUILD-V6_7-branch-2006-9-17.
+  All platforms built on NMI runid 31207 except windows, which was built
+  on Greg Q's laptop.
 
 08/09/06 V6_8-oracle-{root,branch}
   The branch for an oracle version of Quill. Created from V6_8-branch-2006-8-9.
