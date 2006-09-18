@@ -111,6 +111,14 @@ TESTCLASS(lib_auth_protocol-ssl,core)
 TESTCLASS(lib_auth_protocol-ssl,quick)
 TESTCLASS(lib_auth_protocol-ssl,btdebug)
 
+/*
+DESC(lib_auth_protocol-gsi,"GSI authentication test")
+RUN(lib_auth_protocol-gsi)
+TESTCLASS(lib_auth_protocol-gsi,core)
+TESTCLASS(lib_auth_protocol-gsi,quick)
+TESTCLASS(lib_auth_protocol-gsi,btdebug)
+*/
+
 DESC(lib_auth_protocol-negot,"16 way negotiation test")
 RUN(lib_auth_protocol-negot)
 TESTCLASS(lib_auth_protocol-negot,core)
