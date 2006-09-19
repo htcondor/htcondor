@@ -49,7 +49,14 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+% Gnats PR 751
+\item Added the ProcessId class (which more uniquely identifies a
+process than just a PID does) to the \Condor{dagman} "abort duplicate
+runs" feature.  This makes it less likely that a given instance of
+\Condor{dagman} will mistakenly conclude that another instance of
+\Condor{dagman} is already running on the same DAG.  Also fixed an
+unrelated bug in the "abort duplicate runs" feature that could cause
+a \Condor{dagman} to not abort itself when it should.
 
 \end{itemize}
 
