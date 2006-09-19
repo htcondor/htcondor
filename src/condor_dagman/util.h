@@ -55,7 +55,7 @@ int util_popen (ArgList &args);
 	@param lockFileName: the name of the lock file to create
 	@return: 0 if successful, -1 if not
 */
-int util_create_lock_file(const char *lockFileName);
+int util_create_lock_file(const char *lockFileName, bool abortDuplicates);
 
 /** Check the given lock file and see whether the PID given in it
 	does, in fact, exist.

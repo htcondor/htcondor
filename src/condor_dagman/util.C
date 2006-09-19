@@ -29,6 +29,8 @@
 #include "util_lib_proto.h"
 #include "condor_arglist.h"
 #include "my_popen.h"
+#include "../condor_procapi/processid.h"
+#include "../condor_procapi/procapi.h"
 
 //------------------------------------------------------------------------
 int util_getline(FILE *fp, char *line, int max) {
@@ -67,18 +69,98 @@ int util_popen (ArgList &args) {
 
 //-----------------------------------------------------------------------------
 
-int util_create_lock_file(const char *lockFileName) {
+int util_create_lock_file(const char *lockFileName, bool abortDuplicates) {
 	int result = 0;
 
-	FILE *fp = fopen(lockFileName, "w");
-	if (fp == NULL) {
+	FILE *fp = fopen( lockFileName, "w" );
+	if ( fp == NULL ) {
 		debug_printf( DEBUG_QUIET,
-				"Could not open lock file %s for writing.\n",
-                                          lockFileName);
+					"ERROR: could not open lock file %s for writing.\n",
+					lockFileName);
 		result = -1;
-	} else {
-		fprintf(fp, "%d\n", daemonCore->getpid());
-		fclose(fp);
+	}
+
+		//
+		// Create the ProcessId object.
+		//
+	ProcessId *procId = NULL;
+	if ( result == 0 && abortDuplicates ) {
+		int status;
+		if ( ProcAPI::createProcessId( daemonCore->getpid(), procId,
+					status ) != PROCAPI_SUCCESS ) {
+			debug_printf( DEBUG_QUIET, "ERROR: ProcAPI::createProcessId() "
+						"failed; %d\n", status );
+			result = -1;
+		}
+	}
+
+		//
+		// Write out the ProcessId object.
+		//
+	if ( result == 0 && abortDuplicates ) {
+		if ( procId->write( fp ) != ProcessId::SUCCESS ) {
+			debug_printf( DEBUG_QUIET, "ERROR: ProcessId::write() failed\n");
+			result = -1;
+		}
+	}
+
+		//
+		// Sleep to ensure uniqueness of the ProcessId object.
+		//
+	if ( result == 0 && abortDuplicates ) {
+		const int maxSleepTime = 60; // seconds; arbitrarily chosen
+		int sleepTime = procId->computeWaitTime();
+
+		if ( sleepTime > maxSleepTime ) {
+			debug_printf( DEBUG_NORMAL, "WARNING: ProcessId computed sleep "
+						"time (%d) exceeds maximum (%d); skipping sleep/"
+						"confirm step\n", sleepTime, maxSleepTime );
+		} else {
+			debug_printf( DEBUG_NORMAL, "Sleeping for %d seconds to "
+						"ensure ProcessId uniqueness\n", sleepTime );
+
+#if defined(WIN32)
+			sleep( sleepTime );
+#else
+			while( (sleepTime = sleep( sleepTime ) ) != 0 );
+#endif
+
+				//
+				// Confirm the ProcessId object's uniqueness.
+				//
+			int status;
+			if ( ProcAPI::confirmProcessId( *procId, status ) !=
+						PROCAPI_SUCCESS ) {
+				debug_printf( DEBUG_QUIET, "WARNING: ProcAPI::"
+							"confirmProcessId() failed; %d\n", status );
+			} else {
+				if ( !procId->isConfirmed() ) {
+					debug_printf( DEBUG_QUIET, "WARNING: ProcessId not "
+								"confirmed unique\n" );
+				} else {
+
+						//
+						// Write out the confirmation.
+						//
+					if ( procId->writeConfirmationOnly( fp ) !=
+								ProcessId::SUCCESS ) {
+						debug_printf( DEBUG_QUIET, "ERROR: ProcessId::"
+									"writeConfirmationOnly() failed\n");
+						result = -1;
+					}
+				}
+			}
+		}
+	}
+
+	delete procId;
+
+	if ( fp != NULL ) {
+		if ( fclose( fp ) != 0 ) {
+			debug_printf( DEBUG_QUIET, "ERROR: closing lock "
+						"file failed with errno %d (%s)\n", errno,
+						strerror( errno ) );
+		}
 	}
 
 	return result;
@@ -89,39 +171,68 @@ int util_create_lock_file(const char *lockFileName) {
 int util_check_lock_file(const char *lockFileName) {
 	int result = 0;
 
-	FILE *fp = fopen(lockFileName, "r");
-	if (fp == NULL) {
+	FILE *fp = fopen( lockFileName, "r" );
+	if ( fp == NULL ) {
 		debug_printf( DEBUG_QUIET,
-				"Could not open lock file %s for reading.\n",
-                                          lockFileName);
+					"ERROR: could not open lock file %s for reading.\n",
+					lockFileName );
 		result = -1;
-	} else {
-		char linebuf[128];
-		if (util_getline(fp, linebuf, sizeof(linebuf)) == EOF) {
-			debug_printf( DEBUG_QUIET, "No PID in lock file %s.\n",
-					lockFileName);
+	}
+
+	ProcessId *procId = NULL;
+	if ( result != -1 ) {
+		int status;
+		procId = new ProcessId( fp, status );
+		if ( status != ProcessId::SUCCESS ) {
+			debug_printf( DEBUG_QUIET, "ERROR: unable to create ProcessId "
+						"object from lock file %s\n", lockFileName );
+			result = -1;
+		}
+	}
+
+	if ( result != -1 ) {
+		int status;
+		int aliveResult = ProcAPI::isAlive( *procId, status );
+		if ( aliveResult != PROCAPI_SUCCESS ) {
+			debug_printf( DEBUG_QUIET, "ERROR: failed to determine "
+						"whether DAGMan that wrote lock file is alive\n" );
 			result = -1;
 		} else {
-			char *tmp;
-			pid_t pid = (pid_t)strtol(linebuf, &tmp, 10);
-			if (tmp == linebuf) {
-				debug_printf( DEBUG_QUIET,
-						"Invalid PID in lock file: %s.\n", linebuf);
-				result = -1;
+
+			if ( status == PROCAPI_ALIVE ) {
+				debug_printf( DEBUG_NORMAL,
+						"Duplicate DAGMan PID %d is alive; this DAGMan "
+						"should abort.\n", procId->getPid() );
+				result = 1;
+
+			} else if ( status == PROCAPI_DEAD ) {
+				debug_printf( DEBUG_NORMAL,
+						"Duplicate DAGMan PID %d is no longer alive; "
+						"this DAGMan should continue.\n",
+						procId->getPid() );
+				result = 0;
+
+			} else if ( status == PROCAPI_UNCERTAIN ) {
+				debug_printf( DEBUG_NORMAL,
+						"Duplicate DAGMan PID %d may be alive; this "
+						"DAGMan should abort.\n", procId->getPid() );
+				result = 1;
+
 			} else {
-				if (daemonCore->Is_Pid_Alive(pid)) {
-					debug_printf( DEBUG_NORMAL,
-							"Duplicate DAGMan PID %d is alive; this DAGMan "
-							"should abort.\n", pid);
-					result = 1;
-				} else {
-					debug_printf( DEBUG_NORMAL,
-							"Duplicate DAGMan PID %d is no longer alive; "
-							"this DAGMan should continue.\n", pid);
-				}
+				EXCEPT( "Illegal ProcAPI::isAlive() status value: %d",
+							status );
 			}
 		}
-		fclose(fp);
+	}
+
+	delete procId;
+
+	if ( fp != NULL ) {
+		if ( fclose( fp ) != 0 ) {
+			debug_printf( DEBUG_QUIET, "ERROR: closing lock "
+						"file failed with errno %d (%s)\n", errno,
+						strerror( errno ) );
+		}
 	}
 
 	return result;

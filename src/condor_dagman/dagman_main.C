@@ -623,6 +623,12 @@ int main_init (int argc, char ** const argv) {
  											dagman.deleteOldLogs );
         }
 
+			//
+			// If this DAGMan continues, it should overwrite the lock
+			// file if it exists.
+			//
+		util_create_lock_file(lockFileName, dagman.abortDuplicates);
+
         debug_printf( DEBUG_VERBOSE, "Bootstrapping...\n");
         if( !dagman.dag->Bootstrap( recovery ) ) {
             dagman.dag->PrintReadyQ( DEBUG_DEBUG_1 );

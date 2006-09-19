@@ -217,7 +217,6 @@ Dag::InitializeDagFiles( const char *lockFileName, bool deleteOldLogs )
 
 	if ( _condorLogName != NULL ) touch (_condorLogName);  //<-- DAP
 	}
-	util_create_lock_file(lockFileName);
 }
 
 //-------------------------------------------------------------------------
