@@ -53,7 +53,6 @@ $executed = sub
 	%info = @_;
 	$cluster = $info{"cluster"};
 
-	print "Good. for on_exit_hold cluster $cluster must run first\n";
 	my @adarray;
 	my $status = 1;
 	my $cmd = "condor_q -debug";
@@ -80,7 +79,23 @@ $submitted = sub
 
 	print "submitted: \n";
 	{
-		print "good job $job expected submitted.\n";
+		print "Check authenticated user....\n";
+	}
+	my @adarray;
+	my $status = 1;
+	my $cmd = "condor_q -l $cluster";
+	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+	if(!$status) {
+		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		exit(1);
+	} else {
+		foreach $line (@adarray) {
+			if( $line =~ /^Owner\s*=\s*(.*)\s*.*/ ) {
+				print "Owner is $1\n";
+			} elsif ( $line =~ /^User\s*=\s*(.*)\s*.*/ ) {
+				print "User is $1\n";
+			}
+		}
 	}
 };
 
