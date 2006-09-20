@@ -1,3 +1,9 @@
+09/20/06 V6_9-eventd_v2-2-{root,branch}
+  A second branch since the first branch franked but seemd to
+  have issues running jobs. I thought I had worked from a good
+  build tag before. This branch is off a good build/test 
+  BUILD-V6_9-trunk-2006-9-16.
+
 08/21/06 V6_9-eventd_v2-{root,branch}
   A new branch to merge v6_7 branch for the eventd developement
   into the trunk code base prior to merging it to the trunk.
