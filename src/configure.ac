@@ -1685,8 +1685,6 @@ fi
 AC_MSG_RESULT([$_cv_globus_flavor])
 AC_SUBST(globus_flavor,$_cv_globus_flavor)
 
-# CONDOR_EXTERNAL_VERSION([gpt],[3.0])
-
 CONDOR_EXTERNAL_VERSION([gahp],[1.0.15])
 
 CONDOR_EXTERNAL_VERSION([gt3gahp],[2.0])
