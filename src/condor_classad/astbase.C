@@ -1143,6 +1143,16 @@ FunctionBase::FunctionBase(char *name)
 
 FunctionBase::~FunctionBase()
 {
+	ExprTree *arg = NULL;
+
+	arguments.Rewind();
+	while(arguments.Next(arg)) {
+		if(arg) {
+			delete arg;
+			arg = NULL;
+		}
+	}
+
 	return;
 }
 
