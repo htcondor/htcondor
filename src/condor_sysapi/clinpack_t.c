@@ -156,7 +156,7 @@ int kflops_test(int test_blocksize,
 	if (((double)num_warnings/(double)num_tests) > max_sd_variation_ratio) {
 		dprintf(D_ALWAYS,
 				"SysAPI: ERROR! Failing because %d raw KFLOPS tests failed > %d (%2.2f%%).\n",
-				num_warnings, max_sd_variation_ratio*test_blocksize,
+				num_warnings, (int)(max_sd_variation_ratio*test_blocksize),
 				max_sd_variation_ratio*100.0);
 		return_val = return_val | 1;
 	}
@@ -216,7 +216,7 @@ int kflops_test(int test_blocksize,
 		dprintf(D_ALWAYS,
 				"SysAPI: ERROR! Failing because %d cooked KFLOPS tests failed > %d (%2.2f%%).\n",
 				num_warnings, 
-				max_sd_variation_ratio*test_blocksize, max_sd_variation_ratio*100.0);
+				(int)(max_sd_variation_ratio*test_blocksize), max_sd_variation_ratio*100.0);
 		return_val = return_val | 1;
 	}
 	return return_val;

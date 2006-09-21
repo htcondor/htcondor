@@ -223,11 +223,13 @@ const char *xml_stringify( const char *string )
 	return dst.Value();
 }
 
+/* Not currently used
 static
 const char *xml_stringify( const MyString& src )
 {
 	return xml_stringify( src.Value() );
 }
+*/
 
 int Gt4JobStateToInt( const char *status ) {
 	if ( status == NULL ) {

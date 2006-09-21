@@ -89,7 +89,7 @@ int load_avg_test(int trials, int interval, int num_children, double warn_ok_rat
 	}
 	
 	if (((double)num_warnings/(double)num_tests) > warn_ok_ratio) {
-			dprintf(D_ALWAYS, "SysAPI: ERROR! Warning tolerance exceeded (%2f\% warnings > %2f\% tolerance) .\n", ((double)num_warnings/(double)num_tests)*100, warn_ok_ratio*100);
+			dprintf(D_ALWAYS, "SysAPI: ERROR! Warning tolerance exceeded (%2f%% warnings > %2f%% tolerance) .\n", ((double)num_warnings/(double)num_tests)*100, warn_ok_ratio*100);
 			return_val = return_val || 1;
 	}
 

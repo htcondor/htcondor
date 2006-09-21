@@ -33,6 +33,7 @@
 #     include "globus_gsi_system_config.h"
 #     include "globus_gsi_system_config_constants.h"
 #     include "gssapi.h"
+#     include "globus_gss_assist.h"
 #     include "globus_gsi_proxy.h"
 #endif
 
@@ -175,7 +176,7 @@ x509_proxy_subject_name( const char *proxy_file )
 	globus_gsi_cred_handle_t         handle       = NULL;
 	globus_gsi_cred_handle_attrs_t   handle_attrs = NULL;
 	char *subject_name = NULL;
-	int must_free_proxy_file = FALSE;
+	char *my_proxy_file = NULL;
 
 	if ( activate_globus_gsi() != 0 ) {
 		return NULL;
@@ -193,11 +194,11 @@ x509_proxy_subject_name( const char *proxy_file )
 
 	/* Check for proxy file */
 	if (proxy_file == NULL) {
-		proxy_file = get_x509_proxy_filename();
-		if (proxy_file == NULL) {
+		my_proxy_file = get_x509_proxy_filename();
+		if (my_proxy_file == NULL) {
 			goto cleanup;
 		}
-		must_free_proxy_file = TRUE;
+		proxy_file = my_proxy_file;
 	}
 
 	// We should have a proxy file, now, try to read it
@@ -212,8 +213,8 @@ x509_proxy_subject_name( const char *proxy_file )
 	}
 
  cleanup:
-	if (must_free_proxy_file) {
-		free(proxy_file);
+	if (my_proxy_file) {
+		free(my_proxy_file);
 	}
 
 	if (handle_attrs) {
@@ -251,7 +252,7 @@ x509_proxy_identity_name( const char *proxy_file )
 	globus_gsi_cred_handle_t         handle       = NULL;
 	globus_gsi_cred_handle_attrs_t   handle_attrs = NULL;
 	char *subject_name = NULL;
-	int must_free_proxy_file = FALSE;
+	char *my_proxy_file = NULL;
 
 	if ( activate_globus_gsi() != 0 ) {
 		return NULL;
@@ -269,11 +270,11 @@ x509_proxy_identity_name( const char *proxy_file )
 
 	/* Check for proxy file */
 	if (proxy_file == NULL) {
-		proxy_file = get_x509_proxy_filename();
-		if (proxy_file == NULL) {
+		my_proxy_file = get_x509_proxy_filename();
+		if (my_proxy_file == NULL) {
 			goto cleanup;
 		}
-		must_free_proxy_file = TRUE;
+		proxy_file = my_proxy_file;
 	}
 
 	// We should have a proxy file, now, try to read it
@@ -288,8 +289,8 @@ x509_proxy_identity_name( const char *proxy_file )
 	}
 
  cleanup:
-	if (must_free_proxy_file) {
-		free(proxy_file);
+	if (my_proxy_file) {
+		free(my_proxy_file);
 	}
 
 	if (handle_attrs) {
@@ -319,7 +320,7 @@ x509_proxy_expiration_time( const char *proxy_file )
     globus_gsi_cred_handle_attrs_t   handle_attrs = NULL;
 	time_t expiration_time = -1;
 	time_t time_left;
-	int must_free_proxy_file = FALSE;
+	char *my_proxy_file = NULL;
 
 	if ( activate_globus_gsi() != 0 ) {
 		return -1;
@@ -337,12 +338,12 @@ x509_proxy_expiration_time( const char *proxy_file )
 
     /* Check for proxy file */
     if (proxy_file == NULL) {
-        proxy_file = get_x509_proxy_filename();
-        if (proxy_file == NULL) {
+        my_proxy_file = get_x509_proxy_filename();
+        if (my_proxy_file == NULL) {
             goto cleanup;
         }
-		must_free_proxy_file = TRUE;
-    }
+		proxy_file = my_proxy_file;
+	}
 
     // We should have a proxy file, now, try to read it
     if (globus_gsi_cred_read_proxy(handle, proxy_file)) {
@@ -358,8 +359,8 @@ x509_proxy_expiration_time( const char *proxy_file )
 	expiration_time = time(NULL) + time_left;
 
  cleanup:
-    if (must_free_proxy_file) {
-        free(proxy_file);
+    if (my_proxy_file) {
+        free(my_proxy_file);
     }
 
     if (handle_attrs) {
@@ -427,7 +428,7 @@ x509_proxy_try_import( const char *proxy_file )
 	gss_buffer_desc import_buf;
 	gss_cred_id_t cred_handle;
 	char buf_value[4096];
-	int must_free_proxy_file = FALSE;
+	char *my_proxy_file = NULL;
 
 	if ( activate_globus_gsi() != 0 ) {
 		return -1;
@@ -435,11 +436,11 @@ x509_proxy_try_import( const char *proxy_file )
 
 	/* Check for proxy file */
 	if (proxy_file == NULL) {
-		proxy_file = get_x509_proxy_filename();
-		if (proxy_file == NULL) {
+		my_proxy_file = get_x509_proxy_filename();
+		if (my_proxy_file == NULL) {
 			goto cleanup;
 		}
-		must_free_proxy_file = TRUE;
+		proxy_file = my_proxy_file;
 	}
 
 	snprintf( buf_value, sizeof(buf_value), "X509_USER_PROXY=%s", proxy_file);
@@ -468,8 +469,8 @@ x509_proxy_try_import( const char *proxy_file )
 	gss_release_cred( &min_stat, &cred_handle );
 
  cleanup:
-    if (must_free_proxy_file) {
-        free(proxy_file);
+    if (my_proxy_file) {
+        free(my_proxy_file);
     }
 
 	return 0;

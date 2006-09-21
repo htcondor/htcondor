@@ -1403,7 +1403,6 @@ bool
 WriteGridSubmitEventToUserLog( ClassAd *job_ad )
 {
 	int cluster, proc;
-	int version;
 	MyString contact;
 	UserLog *ulog = InitializeUserLog( job_ad );
 	if ( ulog == NULL ) {

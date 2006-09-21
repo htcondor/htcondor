@@ -687,8 +687,6 @@ CollectorDaemon::sockCacheHandler( Service*, Stream* sock )
 
 int CollectorDaemon::query_scanFunc (ClassAd *ad)
 {
-    int more = 1;
-
 	if (ad < CollectorEngine::THRESHOLD) return 1;
 
     if ((*ad) >= (*__query__))

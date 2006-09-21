@@ -138,7 +138,7 @@ int idle_time_test(int trials, int interval, int tolerance, double warn_ok_ratio
 	if (((double)num_warnings/(double)num_tests) >= warn_ok_ratio) {
 			// It is very common for the system idle time to decrease - this probably 
 			// shouldn't cause failure. Console time, maybe...
-			dprintf(D_ALWAYS, "SysAPI: ERROR! Warning tolerance exceeded (%2f\% warnings > %2f\% "
+			dprintf(D_ALWAYS, "SysAPI: ERROR! Warning tolerance exceeded (%2f%% warnings > %2f%% "
 							"tolerance) .\n", ((double)num_warnings/(double)num_tests)*100, 
 							warn_ok_ratio*100);
 			return_val = return_val || 1;

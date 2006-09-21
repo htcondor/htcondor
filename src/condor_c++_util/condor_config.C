@@ -204,7 +204,6 @@ validate_entries() {
 	unsigned int invalid_entries = 0;
 	MyString tmp;
 	MyString output = "The following configuration macros appear to contain default values that must be changed before Condor will run.  These macros are:\n";
-	bool found_problem = false;
 	while( ! hash_iter_done(it) ) {
 		char * val = hash_iter_value(it);
 		if( strstr(val, FORBIDDEN_CONFIG_VAL) ) {

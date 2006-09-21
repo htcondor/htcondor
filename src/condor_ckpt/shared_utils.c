@@ -53,7 +53,8 @@ int
 _condor_vfprintf_va( int fd, const char* fmt, va_list args )
 {
 	char out[VFPRINTF_LEN + 1];	/* the output buffer passed to SYS_write */
-	char *i, *o, *p; /* pointers into the fmt, out and %s, if any */
+	const char *i;	/* pointer into the fmt */
+	char *o, *p;	/* pointers into the out and %s, if any */
 	int c = 0;		/* number of output characters from conversion of fmt */
 	double f;		/* any float-like quantity from va_list */
 	int d;			/* any int-like quantity from va_list */

@@ -135,7 +135,6 @@ void
 EventHandler::de_install()
 {
 	NameTableIterator next_sig( SigNames );
-	struct sigaction action;
 	int		signo;
 	int		i;
 

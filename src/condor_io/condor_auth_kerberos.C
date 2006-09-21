@@ -503,7 +503,6 @@ int Condor_Auth_Kerberos :: authenticate_client_kerberos()
     krb5_error_code        code;
     krb5_flags             flags;
     krb5_data              request;
-    krb5_error           * error = NULL;
     int                    reply, rc = FALSE;
     
     request.data = 0;
@@ -619,7 +618,7 @@ int Condor_Auth_Kerberos :: authenticate_server_kerberos()
     krb5_data         request, reply;
     priv_state        priv;
     krb5_keytab       keytab = 0;
-    int               time, message, rc = FALSE;
+    int               message, rc = FALSE;
     krb5_ticket *     ticket = NULL;
 
     request.data = 0;
@@ -875,7 +874,6 @@ int Condor_Auth_Kerberos :: map_kerberos_name(krb5_principal * princ_to_map)
 {
     krb5_error_code code;
     char *          client = NULL;
-    int             rc = FALSE;
 
     //------------------------------------------
     // Decode the client name
@@ -952,9 +950,6 @@ int Condor_Auth_Kerberos :: map_kerberos_name(krb5_principal * princ_to_map)
 
 int Condor_Auth_Kerberos :: map_domain_name(const char * domain)
 {
-    int rc = TRUE;
-    int code;
-    const char * localDomain;
     if (RealmMap == 0) {
         init_realm_mapping();
         // it's okay if it returns false
@@ -1223,11 +1218,11 @@ int Condor_Auth_Kerberos :: forward_tgt_creds(krb5_creds      * cred,
 int Condor_Auth_Kerberos :: receive_tgt_creds(krb5_ticket * ticket)
 {
     krb5_error_code  code;
-    krb5_ccache      ccache;
-    krb5_principal   client;
-    krb5_data        request;
-    krb5_creds **    creds;
-    char             defaultCCName[MAXPATHLEN+1];
+	//krb5_ccache      ccache;
+    //krb5_principal   client;
+    //krb5_data        request;
+    //krb5_creds **    creds;
+    //char             defaultCCName[MAXPATHLEN+1];
     int              message;
     // First find out who we are talking to.
     // In case of host or condor, we do not need to receive credential
@@ -1334,7 +1329,7 @@ int Condor_Auth_Kerberos :: receive_tgt_creds(krb5_ticket * ticket)
     
     return 0;  // Everything is fine
   
- error:
+// error:
     dprintf(D_ALWAYS, "KERBEROS: %s\n", error_message(code));
     //if (ccache) {
     //  krb5_cc_destroy(krb_context_, ccache);
@@ -1413,7 +1408,7 @@ void Condor_Auth_Kerberos :: setRemoteAddress()
     return;
 
  error:
-    dprintf( D_ALWAYS, "KERBEROS: Unable to obtain remote address: ",
+    dprintf( D_ALWAYS, "KERBEROS: Unable to obtain remote address: %s\n",
 			 error_message(code) );
 }
 

@@ -154,15 +154,15 @@ typedef struct {
 } COMMAND;
 
 COMMAND CmdTable[] = {
-	IWD,			"iwd",
-	FD,				"fd",
-	CKPT,			"ckpt",
-	RESTART,		"restart",
-	MIGRATE_TO,		"migrate_to",
-	MIGRATE_FROM,	"migrate_from",
-	EXIT,			"exit",
-	END_MARKER,		"end",
-	NO_COMMAND,		"",
+	{ IWD,			"iwd" },
+	{ FD,			"fd" },
+	{ CKPT,			"ckpt" },
+	{ RESTART,		"restart" },
+	{ MIGRATE_TO,	"migrate_to" },
+	{ MIGRATE_FROM,	"migrate_from" },
+	{ EXIT,			"exit" },
+	{ END_MARKER,	"end" },
+	{ NO_COMMAND,	"" },
 };
 
 void _condor_interp_cmd_stream( int fd );

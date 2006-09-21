@@ -481,8 +481,9 @@ REMOVE_JOBS_signalHandler( int signal )
 // variables.  It is safe to repeatedly call
 // initJobExprs.
 static const char * expr_false = "FALSE";
-static const char * expr_true = "TRUE";
-static const char * expr_undefined = "UNDEFINED";
+// Not currently used
+//static const char * expr_true = "TRUE";
+//static const char * expr_undefined = "UNDEFINED";
 	// The job is matched, or in unknown match state.
 	// definately unmatched
 static MyString expr_matched_or_undef;
