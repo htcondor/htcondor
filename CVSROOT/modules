@@ -748,8 +748,11 @@ V6_8_0_EXT	-a V6_8_COMMON_EXT \
 V6_8_1_EXT	-a V6_8_COMMON_EXT \
                    externals/bundles/globus/4.0.2
 
+# Externals needed for V6_8_2 (same as 6.8.1)
+V6_8_2_EXT	-a V6_8_1_EXT
+
 # Externals needed for the head of the V6_8-branch
-V6_8_EXT	-a V6_8_1_EXT
+V6_8_EXT	-a V6_8_2_EXT
 
 
 #---------------------------------------------------------------------
