@@ -58,6 +58,10 @@ runs" feature.  This makes it less likely that a given instance of
 unrelated bug in the "abort duplicate runs" feature that could cause
 a \Condor{dagman} to not abort itself when it should.
 
+\item Condor daemons leaked memory (consuming more and more over time)
+when parsing ClassAds that use functions with arguments
+(e.g. IfThenElse(A,B,C)).
+
 \end{itemize}
 
 \noindent Known Bugs:
