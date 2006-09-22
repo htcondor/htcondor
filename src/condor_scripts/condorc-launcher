@@ -482,7 +482,7 @@ EOF
 	# Turn the cluster number into a fully-qualified condor job id.
 	$cluster .= ".0";
 
-#	unlink $cmd_file, $submit_out, $setup_script;
+	unlink $cmd_file, $submit_out, $setup_script;
 
 	return $cluster;
 }
