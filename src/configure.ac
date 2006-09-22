@@ -1674,7 +1674,7 @@ fi
 
 CONDOR_EXTERNAL_VERSION([krb5],[1.4.3])
 
-CONDOR_EXTERNAL_VERSION([globus],[4.0.2])
+CONDOR_EXTERNAL_VERSION([globus],[4.0.3])
 AC_MSG_CHECKING([globus flavor])
 _cv_globus_flavor=gcc32dbg
 if test "$_cv_arch" = "ALPHA" -o "$_cv_arch" = "IA64" -o "$_cv_arch" = "X86_64"; then
