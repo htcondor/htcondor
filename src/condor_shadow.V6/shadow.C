@@ -1320,8 +1320,13 @@ start_job( char *cluster_id, char *proc_id )
 	JobAd->LookupFloat(ATTR_BYTES_RECVD, TotalBytesRecvd);
 	JobAd->LookupFloat(ATTR_RSC_BYTES_SENT, RSCBytesSent);
 	JobAd->LookupFloat(ATTR_RSC_BYTES_RECVD, RSCBytesRecvd);
-	JobAd->LookupInteger(ATTR_NUM_CKPTS, NumCkpts);
 	JobAd->LookupInteger(ATTR_NUM_RESTARTS, NumRestarts);
+	// by default, we round ATTR_NUM_CKPTS, so fetch the raw value
+	// here (if available) for us to increment later.
+	if ( !JobAd->LookupInteger(ATTR_NUM_CKPTS_RAW, NumCkpts)  ) {
+		JobAd->LookupInteger(ATTR_NUM_CKPTS, NumCkpts);
+	}
+
 
 #define TESTING
 #if !defined(HPUX) && !defined(TESTING)

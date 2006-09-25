@@ -312,6 +312,7 @@ extern const char * ATTR_NOTIFY_JOB_SCHEDULER;
 extern const char * ATTR_NT_DOMAIN;
 extern const char * ATTR_NUM_COD_CLAIMS;
 extern const char * ATTR_NUM_CKPTS;
+extern const char * ATTR_NUM_CKPTS_RAW;
 extern const char * ATTR_NUM_GLOBUS_SUBMITS;
 extern const char * ATTR_NUM_MATCHES;
 extern const char * ATTR_NUM_HOPS_TO_SUBMIT_MACHINE;

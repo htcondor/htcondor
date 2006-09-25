@@ -372,6 +372,7 @@ const char *ATTR_NOTIFY_JOB_SCHEDULER     = "NotifyJobScheduler";
 const char *ATTR_NT_DOMAIN				 = "NTDomain";
 const char *ATTR_NUM_COD_CLAIMS			 = "NumCODClaims";
 const char *ATTR_NUM_CKPTS				 = "NumCkpts";
+const char *ATTR_NUM_CKPTS_RAW			 = "NumCkpts_RAW";
 const char *ATTR_NUM_GLOBUS_SUBMITS		 = "NumGlobusSubmits";
 const char *ATTR_NUM_MATCHES				 = "NumJobMatches";
 const char *ATTR_NUM_HOPS_TO_SUBMIT_MACHINE= "NumHopsToSubmitMachine";

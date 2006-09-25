@@ -9332,6 +9332,17 @@ Scheduler::Init()
 	} else {
 		free(tmp);
 	}
+	// round ATTR_NUM_CKPTS because our default expressions
+	// in the startd for ATTR_IS_VALID_CHECKPOINT_PLATFORM references
+	// it (thus by default it is significant), and further references it
+	// essentially as a bool.  so by default, lets round it.
+	tmpstr.sprintf("SCHEDD_ROUND_ATTR_%s",ATTR_NUM_CKPTS);
+	tmp = param(tmpstr.Value());
+	if ( !tmp ) {
+		config_insert(tmpstr.Value(),"4");	// round up to next 10000
+	} else {
+		free(tmp);
+	}
 
 
 	if( Spool ) free( Spool );
