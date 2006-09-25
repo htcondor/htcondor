@@ -62,6 +62,10 @@ a \Condor{dagman} to not abort itself when it should.
 when parsing ClassAds that use functions with arguments
 (e.g. IfThenElse(A,B,C)).
 
+\item Fixed a bug in the \condor{starter} which caused it to look in the
+wrong place for the job's executable if \Attr{TransferExecutable} was set
+to \Expr{True} in the job ad.
+
 \end{itemize}
 
 \noindent Known Bugs:
