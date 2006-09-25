@@ -231,7 +231,6 @@ void *
 bsd_rusage( clock_t user, clock_t sys )
 {
 	static struct rusage bsd_rusage;
-	int		sec, usec;
 
 	memset( &bsd_rusage, '\0', sizeof(bsd_rusage) );
 

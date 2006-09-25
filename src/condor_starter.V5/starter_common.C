@@ -70,7 +70,6 @@ initial_bookeeping( int argc, char *argv[] )
 	char*	submitHost = NULL;
 	int		usageError = FALSE;
 	char**	ptr;
-	char*	tmp;
 
 	(void) SetSyscalls( SYS_LOCAL | SYS_MAPPED );
 
@@ -208,7 +207,7 @@ NewConnection( int id )
 	int 	portno;
 	int		syscall_number = CONDOR_new_connection;
 	ReliSock* reli = new ReliSock();
-	char 	addr[128], *tmp;
+	char 	addr[128];
 	memset( addr, '\0', 128 );
 
 	SyscallStream->encode();

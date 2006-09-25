@@ -835,8 +835,13 @@ negotiationTime ()
 		// should send email here
 		return FALSE;
 	}
+
+	// Save this for future use.
+	// This _must_ come before trimming the startd ads.
+	int untrimmed_num_startds = startdAds.MyLength();
+
     // Get number of available VMs in any state.
-    int numDynGroupVms = startdAds.MyLength();
+    int numDynGroupVms = untrimmed_num_startds;
 
 	// Register a lookup function that passes through the list of all ads.
 	// ClassAdLookupRegister( lookup_global, &allAds );
@@ -1003,9 +1008,9 @@ negotiationTime ()
 			}
 			dprintf(D_ALWAYS,"Group %s - negotiating\n",
 				groupArray[i].groupName);
-			negotiateWithGroup( startdAds, 
+			negotiateWithGroup( untrimmed_num_startds, startdAds, 
 				startdPvtAds, groupArray[i].submitterAds, 
-				groupArray[i].maxAllowed, groupArray[i].groupName);
+				groupArray[i].maxAllowed, groupArray[i].groupName );
 		}
 
 			// if GROUP_AUTOREGROUP is set to true, then for any submitter
@@ -1041,7 +1046,7 @@ negotiationTime ()
 	} // if (groups)
 	
 		// negotiate w/ all users who do not belong to a group.
-	negotiateWithGroup(startdAds, startdPvtAds, scheddAds);
+	negotiateWithGroup(untrimmed_num_startds, startdAds, startdPvtAds, scheddAds);
 	
 	// ----- Done with the negotiation cycle
 	dprintf( D_ALWAYS, "---------- Finished Negotiation Cycle ----------\n" );
@@ -1066,7 +1071,8 @@ Matchmaker::SimpleGroupEntry::
 }
 
 int Matchmaker::
-negotiateWithGroup ( ClassAdList& startdAds, ClassAdList& startdPvtAds, 
+negotiateWithGroup ( int untrimmed_num_startds, ClassAdList& startdAds,
+					 ClassAdList& startdPvtAds, 
 					 ClassAdList& scheddAds, 
 					 int groupQuota, const char* groupAccountingName)
 {
@@ -1119,7 +1125,7 @@ negotiateWithGroup ( ClassAdList& startdAds, ClassAdList& startdPvtAds,
 		hit_network_prio_limit = FALSE;
 		calculateNormalizationFactor( scheddAds, maxPrioValue, normalFactor,
 									  maxAbsPrioValue, normalAbsFactor);
-		numStartdAds = startdAds.MyLength();
+		numStartdAds = untrimmed_num_startds;
 			// If operating on a group with a quota, consider the size of 
 			// the "pie" to be limited to the groupQuota, so each user in 
 			// the group gets a reasonable sized slice.
@@ -2052,6 +2058,8 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 	if ( MatchList &&
 		 cachedAutoCluster != -1 &&
 		 cachedAutoCluster == requestAutoCluster &&
+		 cachedPrio == preemptPrio &&
+		 cachedOnlyForStartdRank == only_for_startdrank &&
 		 strcmp(cachedName,scheddName)==0 &&
 		 strcmp(cachedAddr,scheddAddr)==0 )
 	{
@@ -2106,6 +2114,8 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 	{
 		MatchList = new MatchListType( startdAds.Length() );
 		cachedAutoCluster = requestAutoCluster;
+		cachedPrio = preemptPrio;
+		cachedOnlyForStartdRank = only_for_startdrank;
 		cachedName = strdup(scheddName);
 		cachedAddr = strdup(scheddAddr);
 	}
@@ -2417,26 +2427,42 @@ public:
 	static void startCommandCallback(bool success,Sock *sock,CondorError *errstack,void *misc_data)
 	{
 		NotifyStartdOfMatchHandler *self = (NotifyStartdOfMatchHandler *)misc_data;
-		ASSERT(sock);
 		ASSERT(misc_data);
+
+		if(!success) {
+			dprintf (D_ALWAYS,"      Failed to initiate socket to send MATCH_INFO to %s\n",
+					 self->m_startdName.Value());
+		}
+		else {
+			self->WriteMatchInfo(sock);
+		}
+		if(sock) {
+			delete sock;
+		}
+		delete self;
+	}
+
+	bool WriteMatchInfo(Sock *sock)
+	{
+		ASSERT(sock);
 
 		// pass the startd MATCH_INFO and capability string
 		dprintf (D_FULLDEBUG, "      Sending MATCH_INFO/capability to %s\n",
-		         self->m_startdName.Value());
+		         m_startdName.Value());
 		dprintf (D_FULLDEBUG, "      (Capability is \"%s\" )\n",
-		         self->m_capability.Value());
+		         m_capability.Value());
 
-		if ( !sock->put ((char *)self->m_capability.Value()) || !sock->end_of_message())
+		if ( !sock->put ((char *)m_capability.Value()) || !sock->end_of_message())
 		{
 			dprintf (D_ALWAYS,
 			        "      Could not send MATCH_INFO/capability to %s\n",
-			        self->m_startdName.Value() );
+			        m_startdName.Value() );
 			dprintf (D_FULLDEBUG,
 			        "      (Capability is \"%s\")\n",
-			        self->m_capability.Value() );
+			        m_capability.Value() );
+			return false;
 		}
-		delete sock;
-		delete self;
+		return true;
 	}
 
 	bool startCommand()
@@ -2445,7 +2471,18 @@ public:
 					m_startdName.Value(), m_startdAddr.Value()); 
 
 		if(!m_nonblocking) {
-			bool result =  m_startd.startCommand(MATCH_INFO,Sock::safe_sock,m_timeout);
+			Sock *sock =  m_startd.startCommand(MATCH_INFO,Sock::safe_sock,m_timeout);
+			bool result = false;
+			if(!sock) {
+				dprintf (D_ALWAYS,"      Failed to initiate socket (blocking mode) to send MATCH_INFO to %s\n",
+						 m_startdName.Value());
+			}
+			else {
+				result = WriteMatchInfo(sock);
+			}
+			if(sock) {
+				delete sock;
+			}
 			delete this;
 			return result;
 		}

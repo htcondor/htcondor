@@ -353,7 +353,6 @@ init_params()
 int
 get_proc()
 {
-	int	answer;
 	UserProc *new_process;
 
 	dprintf( D_ALWAYS, "Entering get_proc()\n" );
@@ -525,7 +524,7 @@ dispose_all()
 void
 send_final_status( UserProc *proc )
 {
-	int			image_size;
+	//int			image_size;
 	void		*status;
 	void		*rusage;
 	int			id;
@@ -839,8 +838,6 @@ supervise_all()
 {
 	UserProc	*proc;
 	int			periodic_checkpointing = FALSE;
-	int			bufid;
-	int			src, tag;
 	static Transition	*tr = 0;
 
 
@@ -986,8 +983,8 @@ asynch_wait()
 int
 update_cpu()
 {
-	UserProc	*proc;
-	void		*rusage;
+	//UserProc	*proc;
+	//void		*rusage;
 
 /* looks to me like this is not getting called anymore, and CONDOR_send_rusage
    is now used by the new condor 5.6 periodic checkpointing mechanism */
@@ -1013,7 +1010,6 @@ UserProc *
 get_job_info()
 {
 	UserProc		*u_proc;
-	int				cmd = CONDOR_startup_info_request;
 	STARTUP_INFO	s;
 /*
 	int wait_for_debugger = 1;
@@ -1194,7 +1190,6 @@ needed_fd( int fd )
 void
 init_environment_info()
 {
-	char		*my_cell;
 	char 		*my_fs_domain;
 	char		*my_uid_domain;
 	char		*ckpt_server_host;

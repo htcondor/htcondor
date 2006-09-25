@@ -48,7 +48,7 @@ Condor_Auth_SSL :: ~Condor_Auth_SSL()
 int Condor_Auth_SSL::authenticate(const char * remoteHost, CondorError* errstack)
 {
     long err;
-    char buffer[AUTH_SSL_BUF_SIZE];
+    char *buffer;
     char err_buf[500];
     int ssl_status = AUTH_SSL_A_OK;
     int server_status = AUTH_SSL_A_OK;
@@ -75,6 +75,9 @@ int Condor_Auth_SSL::authenticate(const char * remoteHost, CondorError* errstack
         condor_gethostbyaddr(he->h_addr, sizeof he->h_addr, AF_INET), NULL);
     dprintf(D_SECURITY,"Got hostname for peer: '%s'\n", peerHostName);
     */
+
+	// allocate a large buffer for comminications
+	buffer = (char*) malloc( AUTH_SSL_BUF_SIZE );
     
     if( mySock_->isClient() ) {
         if( init_OpenSSL( ) != AUTH_SSL_A_OK ) {
@@ -97,6 +100,7 @@ int Condor_Auth_SSL::authenticate(const char * remoteHost, CondorError* errstack
         server_status = client_share_status( client_status );
         if( server_status != AUTH_SSL_A_OK || client_status != AUTH_SSL_A_OK ) {
             ouch( "SSL Authentication fails, terminating\n" );
+			free(buffer);
             return fail;
         }
 
@@ -179,6 +183,7 @@ int Condor_Auth_SSL::authenticate(const char * remoteHost, CondorError* errstack
             if( client_status == AUTH_SSL_QUITTING
                 || server_status == AUTH_SSL_QUITTING ) {
                 ouch( "SSL Authentication failed\n" );
+				free(buffer);
                 return fail;
             }
         }
@@ -199,6 +204,7 @@ int Condor_Auth_SSL::authenticate(const char * remoteHost, CondorError* errstack
         if( client_status == AUTH_SSL_QUITTING
             || server_status == AUTH_SSL_QUITTING ) {
             ouch( "SSL Authentication failed\n" );
+			free(buffer);
             return fail;
         }
 
@@ -258,6 +264,7 @@ int Condor_Auth_SSL::authenticate(const char * remoteHost, CondorError* errstack
         if( server_status == AUTH_SSL_QUITTING
             || client_status == AUTH_SSL_QUITTING ) {
             ouch( "SSL Authentication failed at session key exchange.\n" );
+			free(buffer);
             return fail;
         }
         //dprintf(D_SECURITY, "Got session key: '%s'.\n", session_key);
@@ -285,6 +292,7 @@ int Condor_Auth_SSL::authenticate(const char * remoteHost, CondorError* errstack
         if( client_status != AUTH_SSL_A_OK
             || server_status != AUTH_SSL_A_OK ) {
             ouch( "SSL Authentication fails, terminating\n" );
+			free(buffer);
             return fail;
         }
   
@@ -364,6 +372,7 @@ int Condor_Auth_SSL::authenticate(const char * remoteHost, CondorError* errstack
             if( client_status == AUTH_SSL_QUITTING
                 || server_status == AUTH_SSL_QUITTING ) {
                 ouch( "SSL Authentication failed\n" );
+				free(buffer);
                 return fail;
             }
         }
@@ -383,6 +392,7 @@ int Condor_Auth_SSL::authenticate(const char * remoteHost, CondorError* errstack
         if( server_status == AUTH_SSL_QUITTING
             || client_status == AUTH_SSL_QUITTING ) {
             ouch( "SSL Authentication failed\n" );
+			free(buffer);
             return fail;
         }
         if(!RAND_bytes(session_key, AUTH_SSL_SESSION_KEY_LEN)) {
@@ -449,16 +459,25 @@ int Condor_Auth_SSL::authenticate(const char * remoteHost, CondorError* errstack
         if( server_status == AUTH_SSL_QUITTING
             || client_status == AUTH_SSL_QUITTING ) {
             ouch( "SSL Authentication failed at key exchange.\n" );
+			free(buffer);
             return fail;
         }
         setup_crypto( session_key, AUTH_SSL_SESSION_KEY_LEN );
     }
-    dprintf(D_SECURITY,"SSL authentication succeeded.\n");
+
+    char subjectname[1024];
+    X509 *peer = SSL_get_peer_certificate(ssl);
+    X509_NAME_oneline(X509_get_subject_name(peer), subjectname, 1024);
+    setAuthenticatedName( subjectname );
+    setRemoteUser( "ssl" );
+
+    dprintf(D_SECURITY,"SSL authentication succeeded to %s\n", subjectname);
 		//free(key);
 	SSL_CTX_free(ctx);
 	SSL_free(ssl);
 		//BIO_free(conn_in); // Thanks, valgrind.
 		//BIO_free(conn_out);
+	free(buffer);
     return success;
 }
 

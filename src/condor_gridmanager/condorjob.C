@@ -424,6 +424,8 @@ int CondorJob::doEvaluateState()
 				}
 			} else if ( condorState == COMPLETED ) {
 				gmState = GM_DONE_COMMIT;
+			} else if ( condorState == REMOVED ) {
+				gmState = GM_CANCEL;
 			} else {
 				gmState = GM_RECOVER_POLL;
 			}

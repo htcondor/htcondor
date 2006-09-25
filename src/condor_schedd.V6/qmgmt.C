@@ -1897,7 +1897,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			}
 
 			// round it.  note we always round UP!!  
-			ivalue = ((ivalue / base ) + 1) * base;  // +1 means round up
+			ivalue = ((ivalue + base - 1) / base) * base;
 
 			// make it a string, courtesty MyString conversion.
 			temp_buf = ivalue;
@@ -3369,18 +3369,23 @@ void FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad,
 		// so if we bail out early anywhere, we say we failed.
 	jobid.proc = -1;	
 	
-		// First, try to find a job in the same cluster
+		// Just try to find a job in the same cluster if we don't have the
+		// startd ad.
+		// If we do have the startd ad (my_match_ad), then we don't want
+		// to restrict ourselves to just one specific cluster.
 	N_PrioRecs = 0;
-	ad = GetNextJobByCluster(jobid.cluster, 1);	// init a new scan
-	while ( ad ) {
-			// If job ad and resource ad match, put into prio rec array.
-			// If we do not have a resource ad, it is because this pool
-			// has an old negotiator -- so put it in prio rec array anyway.
-		if ( (my_match_ad && (*ad == ((ClassAd &)(*my_match_ad)))) || (my_match_ad == NULL) ) 
-		{
-			get_job_prio(ad);
-		} 
-		ad = GetNextJobByCluster(jobid.cluster, 0);
+	if ( !my_match_ad ) {
+		ad = GetNextJobByCluster(jobid.cluster, 1);	// init a new scan
+		while ( ad ) {
+				// If job ad and resource ad match, put into prio rec array.
+				// If we do not have a resource ad, it is because this pool
+				// has an old negotiator -- so put it in prio rec array anyway.
+			if ( (my_match_ad && (*ad == ((ClassAd &)(*my_match_ad)))) || (my_match_ad == NULL) ) 
+			{
+				get_job_prio(ad);
+			} 
+			ad = GetNextJobByCluster(jobid.cluster, 0);
+		}
 	}
 
 	if(N_PrioRecs == 0 && my_match_ad)
@@ -3825,7 +3830,7 @@ static void RotateHistory(void)
 
     current_time = time(NULL);
     local_time = localtime(&current_time);
-    iso_time = time_to_iso8601(*local_time, ISO8601_ExtendedFormat, 
+    iso_time = time_to_iso8601(*local_time, ISO8601_BasicFormat, 
                                ISO8601_DateAndTime, false);
 
     // First, select a name for the rotated history file

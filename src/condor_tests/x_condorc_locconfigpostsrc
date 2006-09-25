@@ -1,0 +1,5 @@
+# Condor-C things
+CONDOR_GAHP = $(SBIN)/condor_c-gahp
+C_GAHP_LOG = $(LOG)/CondorCgahp.$(USERNAME)
+GRIDMANAGER_LOG = $(LOG)/GridManager.$(USERNAME)
+C_GAHP_WORKER_THREAD_LOG = $(LOG)/CondorCgahpWThread.$(USERNAME)

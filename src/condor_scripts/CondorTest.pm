@@ -522,10 +522,12 @@ sub IsFileEmpty
 
 sub verbose_system 
 {
-	my @args = @_;
-	my $rc = 0xffff & system @args;
+	my $args = shift @_;
+	my $catch = "vsystem$$";
+	$args = $args . " 2>" . $catch;
+	my $rc = 0xffff & system $args;
 
-	printf "system(%s) returned %#04x: ", @args, $rc;
+	printf "system(%s) returned %#04x: ", $args, $rc;
 
 	if ($rc == 0) 
 	{
@@ -535,13 +537,11 @@ sub verbose_system
 	elsif ($rc == 0xff00) 
 	{
 		print "command failed: $!\n";
-		return $rc;
 	}
 	elsif (($rc & 0xff) == 0) 
 	{
 		$rc >>= 8;
 		print "ran with non-zero exit status $rc\n";
-		return $rc;
 	}
 	else 
 	{
@@ -550,10 +550,20 @@ sub verbose_system
 		{
 			$rc &= ~0x80;
 			print "coredump from ";
-			return $rc;
 		}
 		print "signal $rc\n"
 	}
+
+	if( !open( MACH, "<$catch" )) { 
+		warn "Can't look at command  output <$catch>:$!\n";
+	} else {
+    	while(<MACH>) {
+        	print "ERROR: $_";
+    	}
+    	close(MACH);
+	}
+
+	return $rc;
 }
 
 sub MergeOutputFiles
@@ -722,12 +732,15 @@ sub runCondorTool
 	my $cmd = shift;
 	my $arrayref = shift;
 	my $multiplier = shift;
+	my $force = "";
+	$force = shift;
 	my $count = 0;
+	my $catch = "runCTool$$";
 	while( !$done)
 	{
 		my @tmparray;
 		Condor::debug( "Try command <$cmd>\n");
-		open(PULL, "$cmd 2>&1 |");
+		open(PULL, "$cmd 2>$catch |");
 		while(<PULL>)
 		{
 			chomp $_;
@@ -751,6 +764,14 @@ sub runCondorTool
 			else
 			{
 				print "runCondorTool: $cmd timestamp $start_time failed!\n";
+				if( !open( MACH, "<$catch" )) { 
+					warn "Can't look at command output <$catch>:$!\n";
+				} else {
+    				while(<MACH>) {
+        				print "ERROR: $_";
+    				}
+    				close(MACH);
+				}
 				return(0);
 			}
 		}
@@ -761,6 +782,19 @@ sub runCondorTool
 				push @{$arrayref}, $value;
 			}
 			$done = 1;
+			# There are times like the security tests when we want
+			# to see the stderr even when the command works.
+			if( $force ne "" ) {
+				if( !open( MACH, "<$catch" )) { 
+					warn "Can't look at command output <$catch>:$!\n";
+				} else {
+    				while(<MACH>) {
+						chomp $_;
+						push @{$arrayref}, $_;
+    				}
+    				close(MACH);
+				}
+			}
 			my $current_time = time;
 			$delta_time = $current_time - $start_time;
 			Condor::debug("runCondorTool: its been $delta_time since call\n");

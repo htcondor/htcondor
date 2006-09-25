@@ -46,7 +46,7 @@ $execute = sub
 	if(!$status)
 	{
 		print "Test failure due to Condor Tool Failure<$cmd>\n";
-		return(1)
+		exit(1)
 	}
 	foreach $line (@adarray)
 	{
@@ -71,7 +71,8 @@ $execute = sub
 			$foundcount += 1;
 		}
 	}
-	die "Missed some attributes" unless $foundcount == 4;
+	print "Expect to see 4 attributes {foo,bar,last and done}\n";
+	die "Missed some attributes: saw $foundcount of 4" unless $foundcount == 4;
 };
 
 CondorTest::RegisterExecute($testname, $execute);

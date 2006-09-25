@@ -114,7 +114,14 @@ FileOpErrCode
 ClassAdLogParser::openFile(bool ex) {
 	if (ex == false) { // Standard File I/O Operations
 			// open a job_queue.log file
+
+			// The job_queue.log has cr/nls at the end on windows
+			// so open in text mode only there
+#ifdef WIN32
+		log_fd = open(job_queue_name, O_RDONLY | O_TEXT);
+#else
 		log_fd = open(job_queue_name, O_RDONLY);
+#endif
 		
 		if (log_fd < 0) {
 			dprintf(D_ALWAYS, "[QUILL] Unable to open the job_queue.log file!\n");

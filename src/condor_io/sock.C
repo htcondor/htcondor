@@ -50,6 +50,7 @@ Sock::Sock() : Stream() {
 	_timeout = 0;
 	ignore_connect_timeout = FALSE;		// Used by the HA Daemon
 	connect_state.host = NULL;
+	connect_state.connect_failure_reason = NULL;
 	memset(&_who, 0, sizeof(struct sockaddr_in));
 	memset(&_endpoint_ip_buf, 0, IP_STRING_BUF_SIZE);
 }
@@ -61,6 +62,7 @@ Sock::Sock(const Sock & orig) : Stream() {
 	_state = sock_virgin;
 	_timeout = 0;
 	connect_state.host = NULL;
+	connect_state.connect_failure_reason = NULL;
 	memset( &_who, 0, sizeof( struct sockaddr_in ) );
 	memset(	&_endpoint_ip_buf, 0, IP_STRING_BUF_SIZE );
 
@@ -101,6 +103,9 @@ Sock::Sock(const Sock & orig) : Stream() {
 Sock::~Sock()
 {
 	if ( connect_state.host ) free(connect_state.host);
+	if ( connect_state.connect_failure_reason) {
+		free(connect_state.connect_failure_reason);
+	}
 }
 
 #if defined(WIN32)
@@ -285,12 +290,15 @@ int Sock::move_descriptor_up()
 	 * sockets between 101 and 255 to be ONLY for files/pipes, and NOT
 	 * for network sockets.  We acheive this by moving the underlying
 	 * descriptor above 255 if it falls into the reserved range. We don't
-	 * bother moving descriptors until they are < 100 --- this prevents us
+	 * bother moving descriptors until they are > 100 --- this prevents us
 	 * from doing anything in the common case that the process has less
-	 * than 100 active descriptors.
+	 * than 100 active descriptors.  We also do not do anything if the
+	 * file descriptor table is too small; the application should limit
+	 * network socket usage to some sensible percentage of the file
+	 * descriptor limit anyway.
 	 */
 	SOCKET new_fd = -1;
-	if ( _sock > 100 && _sock < 256 ) {
+	if ( _sock > 100 && _sock < 256 && getdtablesize() > 256 ) {
 		new_fd = fcntl(_sock, F_DUPFD, 256);
 		if ( new_fd >= 256 ) {
 			::closesocket(_sock);
@@ -343,7 +351,11 @@ int Sock::assign(SOCKET sockd)
 	}
 
 	// move the underlying descriptor if we need to on this platform
-	if ( !move_descriptor_up() ) return FALSE;
+	if ( !move_descriptor_up() ) {
+		::closesocket(_sock);
+		_sock = INVALID_SOCKET;
+		return FALSE;
+	}
 
 	// on WinNT, sockets are created as inheritable by default.  we
 	// want to create the socket as non-inheritable by default.  so 
@@ -351,7 +363,11 @@ int Sock::assign(SOCKET sockd)
 	// the default inheritable socket.  Note on Win95, it is the opposite:
 	// i.e. on Win95 sockets are created non-inheritable by default.
 	// note: on UNIX, set_inheritable just always return TRUE.
-	if ( !set_inheritable(FALSE) ) return FALSE;
+	if ( !set_inheritable(FALSE) ) {
+		::closesocket(_sock);
+		_sock = INVALID_SOCKET;
+		return FALSE;
+	}
 	
 	_state = sock_assigned;
 
@@ -653,20 +669,32 @@ int Sock::do_connect(
 	}
 
 	if (_timeout < CONNECT_TIMEOUT) {
-		connect_state.timeout_interval = CONNECT_TIMEOUT;
+			// NOTE: if _timeout == 0 (no connect() timeout), we still
+			// have a non-zero retry timeout, so we will not keep
+			// retrying indefinitely
+		connect_state.retry_timeout_interval = CONNECT_TIMEOUT;
 	} else {
-		connect_state.timeout_interval = _timeout;
+		connect_state.retry_timeout_interval = _timeout;
 	}
 
 	// Used by HAD
 	// if doNotEnforceMinimalCONNECT_TIMEOUT() was previously called
 	// than we don't enforce a minimal amount of CONNECT_TIMEOUT seconds
-	// for connect_state.timeout_interval
+	// for connect_state.retry_timeout_interval
 	if(ignore_connect_timeout == TRUE){
-		connect_state.timeout_interval = _timeout;
+		connect_state.retry_timeout_interval = _timeout;
 	}
 
-	connect_state.timeout_time = time(NULL) + connect_state.timeout_interval;
+	connect_state.first_try_start_time = time(NULL);
+	connect_state.retry_timeout_time = time(NULL) + connect_state.retry_timeout_interval;
+	connect_state.this_try_timeout_time = time(NULL)+_timeout;
+	if(_timeout == 0) {
+			// Do not timeout on calls to connect()
+			// For non-blocking connect, do not timeout waiting for
+			// connection to complete (e.g. DaemonCore select() loop
+			// will not time out on this attempt).
+		connect_state.this_try_timeout_time = 0;
+	}
 	connect_state.connect_failed = false;
 	connect_state.failed_once = false;
 	connect_state.connect_refused = false;
@@ -674,163 +702,324 @@ int Sock::do_connect(
 	if ( connect_state.host ) free( connect_state.host );
 	connect_state.host = strdup(host);
 	connect_state.port = port;
+	connect_state.old_timeout_value = _timeout;
+	setConnectFailureReason(NULL);
 
-	time_t connect_start_time = time(NULL);
-	do {
-		connect_state.connect_failed = false;
+	return do_connect_finish();
+}
 
-			// If non-blocking, we must be certain the code in the timeout()
-			// method which sets up the socket to be non-blocking with the 
-			// OS has happened.  So call timeout() now, and save the old
-			// value so we can set it back.
-		if ( non_blocking_flag ) {
-			connect_state.old_timeout_value = timeout(1);
-			if ( connect_state.old_timeout_value < 0 ) {
-				// failed to set socket to non-blocking
-				return FALSE;
-			}
+int
+Sock::do_connect_finish()
+{
+		// NOTE: in all cases where we exit this function with
+		// CEDAR_EWOULDBLOCK, we _must_ be in a state for which
+		// is_connect_pending() is true.  In all other cases,
+		// is_connect_pending() must be false when we return.
+
+	while (1) {
+			// There are three possible states we may be in at this point:
+			// sock_bound                 - attempt to connect
+			// sock_connect_pending       - connect attempt has finished
+			//                              see if it succeeded or not
+			// sock_connect_pending_retry - done waiting; now try again
+
+		if( _state == sock_connect_pending_retry ) {
+			_state = sock_bound;
 		}
 
-		if ( do_connect_tryit() ) {
-			return TRUE;
-		}
-
-		if ( non_blocking_flag && !connect_state.connect_failed) {
-			_state = sock_connect_pending;
-			if( DebugFlags & D_NETWORK ) {
-				char* dst = strdup( sin_to_string(&_who) );
-				dprintf(D_NETWORK,"non-blocking CONNECT started fd=%d dst=%s\n",
-				         _sock, dst );
-				free( dst );
+		if( _state == sock_bound ) {
+			if ( do_connect_tryit() ) {
+				_state = sock_connect;
+				return TRUE;
 			}
-			return CEDAR_EWOULDBLOCK; 
+
+			if( !connect_state.connect_failed ) {
+				_state = sock_connect_pending;
+			}
+
+			if ( connect_state.non_blocking_flag &&
+			     _state == sock_connect_pending )
+			{
+					// We expect to be called back later (e.g. by DaemonCore)
+					// when the connection attempt succeeds/fails/times out
+
+				if( DebugFlags & D_NETWORK ) {
+					dprintf( D_NETWORK,
+					         "non-blocking CONNECT started fd=%d dst=%s\n",
+					         _sock, get_sinful_peer() );
+				}
+				return CEDAR_EWOULDBLOCK; 
+			}
 		}
 
 			// Note, if timeout is 0, do_connect_tryit() is either
 			// going to block until connect succeeds, or it will fail
-			// miserably, i.e., errno will *NOT* be E_INPROGRESS
+			// miserably and we will no longer be in
+			// sock_connect_pending state.  In all other cases, we check
+			// the status of the pending connection attempt using
+			// select() below.
 
-		if (_timeout > 0 && !connect_state.connect_failed) {
+		while ( _state == sock_connect_pending ) {
 			struct timeval	timer;
 			fd_set			writefds;
+			fd_set			exceptfds;
 			int				nfds=0, nfound;
-			timer.tv_sec = _timeout;
+			int				timeleft = connect_state.this_try_timeout_time - time(NULL);
+			if( connect_state.non_blocking_flag ) {
+				timeleft = 0;
+			}
+			else if( timeleft < 0 ) {
+				timeleft = 0;
+			}
+			else if( timeleft > _timeout ) {
+					// clock must have shifted
+				timeleft = _timeout;
+			}
+			timer.tv_sec = timeleft;
 			timer.tv_usec = 0;
 #if !defined(WIN32) // nfds is ignored on WIN32
 			nfds = _sock + 1;
 #endif
 			FD_ZERO( &writefds );
 			FD_SET( _sock, &writefds );
+			FD_ZERO( &exceptfds );
+			FD_SET( _sock, &exceptfds );
 
-			nfound = ::select( nfds, 0, &writefds, &writefds, &timer );
+			nfound = ::select( nfds, 0, &writefds, &exceptfds, &timer );
 
-				// select() might return 1 or 2, depending on the
-				// platform and if select() is implemented in such a
-				// way that if our socket is set in *both* the write
-				// and the execpt sets (does select ever do that?  we
-				// don't know...) -Derek, Todd and Pete K. 1/19/01
-			if( nfound > 0 ) {
-				if ( do_connect_finish() ) {
-					return TRUE;
+			if( nfound == 0 ) {
+				if( !connect_state.non_blocking_flag ) {
+					cancel_connect();
 				}
-			} else {
-				if (!connect_state.failed_once) {
-					dprintf( D_ALWAYS, "select returns %d, connect failed\n",
-							 nfound );
-					dprintf( D_ALWAYS, "Will keep trying for %d seconds...\n",
-							 connect_state.timeout_interval );
-					connect_state.failed_once = true;
-				}	
+				break; // select timed out
+			}
+			if( nfound < 0 ) {
+#if !defined(WIN32)
+				if(errno == EINTR) {
+					continue; // select() was interrupted by a signal
+				}
+#endif
+#if defined(WIN32)
+				setConnectFailureErrno(WSAGetLastError(),"select");
+#else
+				setConnectFailureErrno(errno,"select");
+#endif
+				connect_state.connect_failed = true;
+				connect_state.connect_refused = true; // better give up
+				cancel_connect();
+				break;
+			}
+
+				// Always call test_connection() first, because that
+				// is the preferred way to test for errors, since it
+				// reports an errno.
+
+			if( !test_connection() ) {
+					// failure reason is set by test_connection()
+				_state = sock_bound;
+				connect_state.connect_failed = true;
+				cancel_connect();
+				break; // done with select() loop
+			}
+			else if( FD_ISSET(_sock,&exceptfds) ) {
+					// In some cases, test_connection() lies, so we
+					// have to rely on select() to detect the problem.
+				_state = sock_bound;
+				connect_state.connect_failed = true;
+				setConnectFailureReason("select() detected failure");
+				cancel_connect();
+				break; // done with select() loop
+			}
+			else {
+				_state = sock_connect;
+				if( DebugFlags & D_NETWORK ) {
+					dprintf( D_NETWORK, "CONNECT src=%s fd=%d dst=%s\n",
+							 get_sinful(), _sock, get_sinful_peer() );
+				}
+				if ( connect_state.old_timeout_value != _timeout ) {
+						// Restore old timeout
+					timeout(connect_state.old_timeout_value);			
+				}
+				return true;
 			}
 		}
 
-		// Do not keep trying if we have been explicitly refused.
-		if(connect_state.connect_refused) break;
+		bool timed_out = connect_state.retry_timeout_time &&
+		                 time(NULL) >= connect_state.retry_timeout_time;
 
-		// we don't want to busyloop on connect, so sleep for a second
-		// before we try again
+		if( timed_out || connect_state.connect_refused) {
+			if(_state != sock_bound) {
+				cancel_connect();
+			}
+				// Always report failure, since this was the final attempt
+			reportConnectionFailure(timed_out);
+			return FALSE;
+		}
+
+		if( connect_state.connect_failed ) {
+				// Report first failed attempt.
+			if(!connect_state.failed_once) {
+				connect_state.failed_once = true;
+
+				reportConnectionFailure(timed_out);
+			}
+		}
+
+		if( connect_state.non_blocking_flag ) {
+				// To prevent a retry busy loop, set a retry timeout
+				// of one second and return.  We will be called again
+				// when this timeout expires (e.g. by DaemonCore)
+			_state = sock_connect_pending_retry;
+			connect_state.retry_wait_timeout_time = time(NULL)+1;
+
+			if( DebugFlags & D_NETWORK ) {
+				dprintf(D_NETWORK,
+				        "non-blocking CONNECT  waiting for next "
+				        "attempt fd=%d dst=%s\n",
+				         _sock, get_sinful_peer() );
+			}
+
+			return CEDAR_EWOULDBLOCK;
+		}
+
+			// prevent busy loop in blocking-connect retries
 		sleep(1);
+	}
 
-	} while (time(NULL) < connect_state.timeout_time);
-
-	dprintf( D_ALWAYS, "Connect failed for %d seconds; returning FALSE\n",
-			 (int)(time(NULL) - connect_start_time) );
+		// We _never_ get here
+	EXCEPT("Impossible: Sock::do_connect_finish() broke out of while(1)");
 	return FALSE;
 }
 
-bool Sock::do_connect_finish(bool failed,bool timed_out)
+
+void
+Sock::setConnectFailureReason(char const *reason)
 {
-		// test_connection() does not reliably report failed connections,
-		// so the "failed" input variable, if set, indicates that
-		// select() has already told us that connect failed.
-	if (!failed && !timed_out && test_connection()) {
-		_state = sock_connect;
-		if( DebugFlags & D_NETWORK ) {
-			char* src = strdup(	sock_to_string(_sock) );
-			char* dst = strdup( sin_to_string(&_who) );
-			dprintf( D_NETWORK, "CONNECT src=%s fd=%d dst=%s\n",
-					 src, _sock, dst );
-			free( src );
-			free( dst );
-		}
-		if ( connect_state.non_blocking_flag ) {
-			timeout(connect_state.old_timeout_value);			
-		}
-		return true;
+	if(connect_state.connect_failure_reason) {
+		free(connect_state.connect_failure_reason);
+		connect_state.connect_failure_reason = NULL;
 	}
-	
-	if (!connect_state.failed_once) {
-		dprintf( D_ALWAYS, 
-				 "attempt to connect to %s %s\n",get_sinful(),timed_out ? "timed out" : "failed");
-		connect_state.failed_once = true;
+	if(reason) {
+		connect_state.connect_failure_reason = strdup(reason);
 	}
+}
 
-	if ( connect_state.non_blocking_flag ) {
-
-		if (time(NULL) < connect_state.timeout_time && !connect_state.connect_refused)
-		{
-				// we don't want to busyloop on connect, so sleep for a second
-				// before we try again
-			sleep(1);
-			if ( do_connect_tryit() )
-				return true;
-		} else {
-			// we've tried to connect until timeout_time without success.
-			// so we need to giveup.  to do this in non-blocking mode, 
-			// we must return true so our caller knows we are finished.  the
-			// caller will know we failed to connect because we're setting
-			// the sock _state apropriately.
-			_state = sock_bound;	// just bound, *not* sock_connect.
-			return true;
-		}
+void
+Sock::reportConnectionFailure(bool timed_out)
+{
+	char const *reason = connect_state.connect_failure_reason;
+	char timeout_reason_buf[100];
+	if((!reason || !*reason) && timed_out) {
+		sprintf(timeout_reason_buf,
+		        "timed out after %d seconds",
+		        connect_state.retry_timeout_interval);
+		reason = timeout_reason_buf;
+	}
+	if(!reason) {
+		reason = "";
 	}
 
-	return false;
+	char will_keep_trying[100];
+	will_keep_trying[0] = '\0';
+	if(!connect_state.connect_refused && !timed_out) {
+		snprintf(will_keep_trying, sizeof(will_keep_trying),
+		        "  Will keep trying for %ld total seconds (%ld to go).\n",
+		        (long)connect_state.retry_timeout_interval,
+				(long)(connect_state.retry_timeout_time - time(NULL)));
+	}
+
+	char const *hostname = connect_state.host;
+	if(!hostname) {
+		hostname = "";
+	}
+	if(hostname[0] == '<') {
+			// Suppress hostname if it is just a sinful string, because
+			// the sinful address is explicitly printed as well.
+		hostname = "";
+	}
+	dprintf( D_ALWAYS, 
+	         "attempt to connect to %s%s%s failed%s%s.%s\n",
+	         hostname,
+			 hostname[0] ? " " : "",
+	         get_sinful_peer(),
+			 reason[0] ? ": " : "",
+	         reason,
+	         will_keep_trying);
+}
+
+void
+Sock::setConnectFailureErrno(int error,char const *syscall)
+{
+#if defined(WIN32)
+	char errmsg[150];
+	char const *errdesc = "";
+	if(error == WSAECONNREFUSED) {
+		connect_state.connect_refused = true;
+		errdesc = " connection refused";
+	}
+	snprintf( errmsg, sizeof(errmsg), "%.15s errno = %d%.30s",
+	         syscall,
+	         error,
+	         errdesc );
+	setConnectFailureReason( errmsg );
+#else
+	char errmsg[150];
+	if(error == ECONNREFUSED) {
+		connect_state.connect_refused = true;
+	}
+	snprintf( errmsg, sizeof(errmsg), "%.80s (%.15s errno = %d)",
+	         strerror(error),
+	         syscall,
+	         error );
+	setConnectFailureReason( errmsg );
+#endif
 }
 
 bool Sock::do_connect_tryit()
 {
+		// See this function in the class definition for important notes
+		// about the return states of this function.
+
+	connect_state.connect_failed = false;
+	connect_state.connect_refused = false;
+
+		// If non-blocking, we must be certain the code in the
+		// timeout() method which sets up the socket to be
+		// non-blocking with the OS has happened, even if _timeout is
+		// 0.  The timeout value we specify in this case is
+		// irrelevant, as long as it is non-zero, because the
+		// real timeout is enforced by connect_timeout_time(),
+		// which is called by whoever is in charge of calling
+		// connect_finish() (e.g. DaemonCore).
+
+	if ( connect_state.non_blocking_flag ) {
+		if ( timeout(1) < 0 ) {
+				// failed to set socket to non-blocking
+			connect_state.connect_refused = true; // better give up
+			setConnectFailureReason("Failed to set timeout.");
+			return false;
+		}
+	}
+
+
 	if (::connect(_sock, (sockaddr *)&_who, sizeof(sockaddr_in)) == 0) {
 		if ( connect_state.non_blocking_flag ) {
-			//Pretend that we haven't connected yet so that there is
-			//only one code path for all non-blocking connects.
-			//Otherwise, blindly calling DaemonCore::Register_Socket()
-			//after initiating a non-blocking connect will fail if
-			//connect() happens to complete immediately.  Why does
-			//that fail?  Because DaemonCore will see that the socket
-			//is in a connected state and will therefore select() on
-			//reads instead of writes.
+			// Pretend that we haven't connected yet so that there is
+			// only one code path for all non-blocking connects.
+			// Otherwise, blindly calling DaemonCore::Register_Socket()
+			// after initiating a non-blocking connect will fail if
+			// connect() happens to complete immediately.  Why does
+			// that fail?  Because DaemonCore will see that the socket
+			// is in a connected state and will therefore select() on
+			// reads instead of writes.
 
 			return false;
 		}
+
 		_state = sock_connect;
 		if( DebugFlags & D_NETWORK ) {
-			char* src = strdup(	sock_to_string(_sock) );
-			char* dst = strdup( sin_to_string(&_who) );
 			dprintf( D_NETWORK, "CONNECT src=%s fd=%d dst=%s\n",
-					 src, _sock, dst );
-			free( src );
-			free( dst );
+					 get_sinful(), _sock, get_sinful_peer() );
 		}
 		return true;
 	}
@@ -838,39 +1027,35 @@ bool Sock::do_connect_tryit()
 #if defined(WIN32)
 	int lasterr = WSAGetLastError();
 	if (lasterr != WSAEINPROGRESS && lasterr != WSAEWOULDBLOCK) {
-		if(lasterr == WSAECONNREFUSED) {
-			connect_state.connect_refused = true;
-		}
-		if (!connect_state.failed_once) {
-			dprintf( D_ALWAYS, "Can't connect to %s:%d, errno = %d\n",
-					 connect_state.host, connect_state.port, lasterr );
-			if(!connect_state.connect_refused) {
-				dprintf( D_ALWAYS, "Will keep trying for %d seconds...\n",
-						 connect_state.timeout_interval );
-			}
-			connect_state.failed_once = true;
-		}
 		connect_state.connect_failed = true;
+		setConnectFailureErrno(lasterr,"connect");
+
+		cancel_connect();
 	}
 #else
 
 		// errno can only be EINPROGRESS if timeout is > 0.
 		// -Derek, Todd, Pete K. 1/19/01
 	if (errno != EINPROGRESS) {
-		if(errno == ECONNREFUSED) {
-			connect_state.connect_refused = true;
-		}
-		if (!connect_state.failed_once) {
-			dprintf( D_ALWAYS, "Can't connect to %s:%d, errno = %d\n",
-					 connect_state.host, connect_state.port, errno );
-			if(!connect_state.connect_refused) {
-				dprintf( D_ALWAYS, "Will keep trying for %d seconds...\n",
-						 connect_state.timeout_interval );
-			}
-			connect_state.failed_once = true;
-		}
 		connect_state.connect_failed = true;
+		setConnectFailureErrno(errno,"connect");
 
+			// Force close and re-creation of underlying socket.
+			// See cancel_connect() for details on why.
+
+		cancel_connect();
+	}
+#endif /* end of unix code */
+
+	return false;
+}
+
+void
+Sock::cancel_connect()
+{
+#if defined(WIN32)
+	_state = sock_bound;
+#else
 		// Here we need to close the underlying socket and re-create
 		// it.  Why?  Because v2.2.14 of the Linux Kernel, which is 
 		// used in RedHat 4.2, has a bug which will cause the machine
@@ -882,49 +1067,62 @@ bool Sock::do_connect_tryit()
 		// socket after a failed connect.  -Todd 8/00
 		
 		// stash away the descriptor so we can compare later..
-		int old_sock = _sock;
+	int old_sock = _sock;
 
 		// now close the underlying socket.  do not call Sock::close()
 		// here, because we do not want all the CEDAR socket state
 		// (like the _who data member) cleared.
-		::closesocket(_sock);
-		_sock = INVALID_SOCKET;
-		_state = sock_virgin;
+	::closesocket(_sock);
+	_sock = INVALID_SOCKET;
+	_state = sock_virgin;
 		
 		// now create a new socket
-		if (assign() == FALSE) {
-			dprintf(D_ALWAYS,
-				"assign() failed after a failed connect!\n");
-			return false;
-		}
+	if (assign() == FALSE) {
+		dprintf(D_ALWAYS,
+			"assign() failed after a failed connect!\n");
+		connect_state.connect_refused = true; // better give up
+		return;
+	}
 
 		// make certain our descriptor number has not changed,
 		// because parts of Condor may have stashed the old
 		// socket descriptor into data structures.  So if it has
 		// changed, use dup2() to set it the same as before.
-		if ( _sock != old_sock ) {
-			if ( dup2(_sock,old_sock) < 0 ) {
-				dprintf(D_ALWAYS,
-					"dup2 failed after a failed connect! errno=%d\n", 
-					errno);
-				return false;
-			}
-			::closesocket(_sock);
-			_sock = old_sock;
+	if ( _sock != old_sock ) {
+		if ( dup2(_sock,old_sock) < 0 ) {
+			dprintf(D_ALWAYS,
+				"dup2 failed after a failed connect! errno=%d\n", 
+				errno);
+			connect_state.connect_refused = true; // better give up
+			return;
 		}
-
-		// finally, bind the socket
-		/* TRUE means this is an outgoing connection */
-		bind( TRUE );
+		::closesocket(_sock);
+		_sock = old_sock;
 	}
-#endif /* end of unix code */
 
-	return false;
+	// finally, bind the socket
+	/* TRUE means this is an outgoing connection */
+	if( !bind( TRUE ) ) {
+		connect_state.connect_refused = true; // better give up
+	}
+#endif
+	if ( connect_state.old_timeout_value != _timeout ) {
+			// Restore old timeout
+		timeout(connect_state.old_timeout_value);			
+	}
 }
 
 time_t Sock::connect_timeout_time()
 {
-	return _state == sock_connect_pending ? connect_state.timeout_time : 0;
+		// This is called by DaemonCore or whoever is in charge of
+		// calling connect_retry() when the connection attempt times
+		// out or is ready to retry.
+
+	if( _state == sock_connect_pending_retry ) {
+		return connect_state.retry_wait_timeout_time;
+	}
+		// we are not waiting to retry, so return the connect() timeout time
+	return connect_state.this_try_timeout_time;
 }
 
 // Added for the HA Daemon
@@ -939,21 +1137,22 @@ bool Sock::test_connection()
     // succeed or not is to use getsockopt, I changed this routine
     // that way. --Sonny 7/16/2003
 
-	// Dan 6/4/2006: the following test reports "success" when the
-	// non-blocking connect is still in progress.  Therefore, it
-	// cannot be used as an indication of success.  This is why
-	// we now make use of a failure flag from DaemonCore's select()
-	// handler indicating if there is any additional reason to consider
-	// the connection failed (such as timeout).
-
-    int error;
+	int error;
     SOCKET_LENGTH_TYPE len = sizeof(error);
     if (::getsockopt(_sock, SOL_SOCKET, SO_ERROR, (char*)&error, &len) < 0) {
+		connect_state.connect_failed = true;
+#if defined(WIN32)
+		setConnectFailureErrno(WSAGetLastError(),"getsockopt");
+#else
+		setConnectFailureErrno(errno,"getsockopt");
+#endif
         dprintf(D_ALWAYS, "Sock::test_connection - getsockopt failed\n");
         return false;
     }
     // return result
     if (error) {
+		connect_state.connect_failed = true;
+		setConnectFailureErrno(error,"connect");
         return false;
     } else {
         return true;
@@ -1326,7 +1525,25 @@ Sock::get_sinful()
 {       
     struct sockaddr_in *tmp = getSockAddr(_sock);
     if (tmp == NULL) return NULL;
-    return sin_to_string(tmp);
+    char const *s = sin_to_string(tmp);
+	if(!s) {
+		return NULL;
+	}
+	ASSERT(strlen(s) < sizeof(_sinful_self_buf));
+	strcpy(_sinful_self_buf,s);
+	return _sinful_self_buf;
+}
+
+char *
+Sock::get_sinful_peer()
+{       
+    char const *s = sin_to_string(&_who);
+	if(!s) {
+		return NULL;
+	}
+	ASSERT(strlen(s) < sizeof(_sinful_peer_buf));
+	strcpy(_sinful_peer_buf,s);
+	return _sinful_peer_buf;
 }
 
 

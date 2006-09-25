@@ -47,7 +47,7 @@ int virt_memory_test(int	test_blocksize,
 	dprintf(D_ALWAYS, "        I will test sysapi_swap_space (and sysapi_swap_space_raw) in "
 					"blocks of %d tests, and take the standard\n", test_blocksize);
 	dprintf(D_ALWAYS, "        deviation of those test blocks. If the standard deviation is "
-					"above %d%% of the average,\n", max_sd_varation_ratio);
+					"above %2f%% of the average,\n", max_sd_varation_ratio);
 	dprintf(D_ALWAYS, "        the swap space reported are erratic and the test block is "
 					"considered a failure\n");
 	dprintf(D_ALWAYS, "        I will run %d test blocks, and if more than %f%% of those blocks "
@@ -114,7 +114,7 @@ int virt_memory_test(int	test_blocksize,
 	if (((double)num_warnings/(double)num_tests) > max_sd_varation_ratio) {
 			dprintf(D_ALWAYS, "SysAPI: ERROR! Failing because %d of the raw testblocks failed, "
 							"which is more than %d (%2.2f%%).\n", num_warnings,
-							max_sd_varation_ratio*test_blocksize, max_sd_varation_ratio*100);
+							(int)(max_sd_varation_ratio*test_blocksize), max_sd_varation_ratio*100);
 			return_val = return_val | 1;
 	}
 	dprintf(D_ALWAYS, "\n\n");
@@ -175,7 +175,7 @@ int virt_memory_test(int	test_blocksize,
 	if (((double)num_warnings/(double)num_tests) > max_sd_varation_ratio) {
 			dprintf(D_ALWAYS, "SysAPI: ERROR! Failing because %d of the cooked testblocks failed, "
 							"which is more than %d (%2.2f%%).\n", num_warnings, 
-							max_sd_varation_ratio*test_blocksize, max_sd_varation_ratio*100);
+							(int)(max_sd_varation_ratio*test_blocksize), max_sd_varation_ratio*100);
 			return_val = return_val | 1;
 	}
 	return return_val;

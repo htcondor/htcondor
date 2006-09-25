@@ -44,6 +44,7 @@ SelfMonitorData::SelfMonitorData()
     image_size       = 0;
     rs_size          = 0;
     age              = -1;
+	registered_socket_count = 0;
     return;
 }
 
@@ -96,7 +97,10 @@ void SelfMonitorData::CollectData(void)
     }
 
     // Collect CEDAR's monitoring data
-    // This is yet to be done
+
+	registered_socket_count = daemonCore->RegisteredSocketCount();
+
+    // Collecting more info is yet to be done
     return;
 }
 
@@ -113,6 +117,7 @@ bool SelfMonitorData::ExportData(ClassAd *ad)
         ad->Assign("MonitorSelfImageSize",       (float) image_size);
         ad->Assign("MonitorSelfResidentSetSize", (int)   rs_size);
         ad->Assign("MonitorSelfAge",             (int)   age);
+		ad->Assign("MonitorSelfRegisteredSocketCount", (int) registered_socket_count);
 
         success = true;
     }

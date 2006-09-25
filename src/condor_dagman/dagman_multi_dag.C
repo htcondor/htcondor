@@ -22,6 +22,7 @@
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
+#include "condor_config.h"
 #include "read_multiple_logs.h"
 #include "basename.h"
 #include "tmp_dir.h"
@@ -96,4 +97,29 @@ GetLogFiles(/* const */ StringList &dagFiles, bool useDagDir,
 	}
 
 	return result;
+}
+
+//-------------------------------------------------------------------------
+bool
+LogFileNfsError(/* const */ StringList &condorLogFiles,
+			/* const */ StringList &storkLogFiles)
+{
+	condorLogFiles.rewind();
+	storkLogFiles.rewind();
+
+	bool nfsIsError = param_boolean( "DAGMAN_LOG_ON_NFS_IS_ERROR", true );
+
+	if (MultiLogFiles::logFilesOnNFS(condorLogFiles, nfsIsError)) {
+		fprintf( stderr, "Aborting -- "
+				"Condor log files should not be on NFS.\n");
+		return true;
+	}
+
+	if (MultiLogFiles::logFilesOnNFS(storkLogFiles, nfsIsError)) {
+		fprintf( stderr, "Aborting -- "
+				"Stork log files should not be on NFS.\n");
+		return true;
+	}
+
+	return false;
 }

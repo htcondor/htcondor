@@ -2,10 +2,79 @@ all_target(condor_install condor_init condor_compile ld condor_configure)
 
 CFLAGS = $(STD_C_FLAGS)
 
+
+/*
+** Target is released by version filtering
+*/
+#ifndef release_version_target
+#define release_version_target(src,dir,dest,mode)	@@\
+XCOMM Begin translation of func(release_version_target) @@\
+release:: $(RELEASE_DIR)/dir/dest		@@\
+							@@\
+$(RELEASE_DIR)/dir/dest: src			@@\
+	/bin/rm -f $(RELEASE_DIR)/dir/dest	@@\
+	./condor_version_filt src $(RELEASE_DIR)/dir/dest	@@\
+	chmod mode $(RELEASE_DIR)/dir/dest	@@\
+XCOMM End translation of func(release_version_target)
+#endif /* release_version_target */
+
+/* 
+** Stripped target is released by version filtering
+*/
+#ifndef strip_version_target
+#define strip_version_target(src,dir,file,mode)	@@\
+XCOMM Begin translation of func(strip_version_target) @@\
+$(STRIP_DIR)/dir/file: src			@@\
+	/bin/rm -f $(STRIP_DIR)/dir/file		@@\
+	./condor_version_filt src $(STRIP_DIR)/dir/file	@@\
+	chmod mode $(STRIP_DIR)/dir/file		@@\
+stripped:: $(STRIP_DIR)/dir/file		@@\
+XCOMM End translation of func(strip_version_target)
+#endif /* strip_version_target */
+
+/* 
+** Static target is released by version filtering
+*/
+#ifndef static_version_target
+#if HAS_STATIC
+#define static_version_target(src,dir,file,mode)	@@\
+XCOMM Begin translation of func(static_version_target) @@\
+$(STATIC_DIR)/dir/file: src			@@\
+	/bin/rm -f $(STATIC_DIR)/dir/file	@@\
+	./condor_version_filt src > $(STATIC_DIR)/dir/file	@@\
+	chmod mode $(STATIC_DIR)/dir/file	@@\
+$(STATIC_UNSTRIP_DIR)/dir/file: src			@@\
+	/bin/rm -f $(STATIC_UNSTRIP_DIR)/dir/file	@@\
+	./condor_version_filt src $(STATIC_UNSTRIP_DIR)/dir/file	@@\
+	chmod mode $(STATIC_UNSTRIP_DIR)/dir/file	@@\
+static:: $(STATIC_DIR)/dir/file	$(STATIC_UNSTRIP_DIR)/dir/file	@@\
+XCOMM End translation of func(static_version_target)
+#else  /* ! HAS_STATIC */
+#define static_version_target(src,dir,file,mode)	@@\
+XCOMM Begin translation of func(static_version_target) @@\
+static::					@@\
+XCOMM End translation of func(static_version_target)
+#endif  /* HAS_STATIC */
+#endif /* static_version_target */
+
+/*
+** Target is released by running through a version filter
+*/
+#ifndef public_version_target
+#define public_version_target(src,dir,dest,mode)	@@\
+XCOMM Begin translation of func(public_version_target) @@\
+release_version_target(src,dir,dest,mode) @@\
+strip_version_target(src,dir,dest,mode) @@\
+static_version_target(src,dir,dest,mode) @@\
+XCOMM End translation of func(public_version_target)
+#endif /* public_version_target */
+
+
+
 public_copy_target(condor_install,sbin,condor_install,EXECUTABLE_MODE)
 public_copy_target(condor_configure,sbin,condor_configure,EXECUTABLE_MODE)
 public_copy_target(condor_init,sbin,condor_init,EXECUTABLE_MODE)
-public_copy_target(condor_updates_stats,sbin,condor_updates_stats,EXECUTABLE_MODE)
+public_version_target(condor_updates_stats,sbin,condor_updates_stats,EXECUTABLE_MODE)
 public_copy_target(condor_ssh,libexec,condor_ssh,EXECUTABLE_MODE)
 public_copy_target(sshd.sh,libexec,sshd.sh,EXECUTABLE_MODE)
 

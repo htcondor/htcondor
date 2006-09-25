@@ -30,6 +30,14 @@ extern "C" {
 #endif
 
 /* Prototypes */
+
+/** Determine whether the given path is on NFS (note that if path points
+	to a non-existant file, this function will test path's parent directory).
+	@param path: the file path to test
+	@param is_nfs: will be set to true on return if the file is on NFS
+	@return: 0 if the test was successful, -1 otherwise (if the function
+		returns -1, the value of is_nfs is invalid)
+*/
 int
 fs_detect_nfs(
 	const char		*path,

@@ -115,7 +115,7 @@ class CollectorList : public DaemonList {
 	int sendUpdates (int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking);
 	
 		// Try querying all the collectors until you get a good one
-	QueryResult query (CondorQuery & query, ClassAdList & adList);
+	QueryResult query (CondorQuery & query, ClassAdList & adList, CondorError *errstack = 0);
 
     bool next( DCCollector* &);
     bool Next( DCCollector* &);

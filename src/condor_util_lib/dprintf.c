@@ -54,7 +54,7 @@ void preserve_log_file(int debug_level);
 void _condor_dprintf_exit( int error_code, const char* msg );
 void _condor_set_debug_flags( char *strflags );
 int _condor_mkargv( int* argc, char* argv[], char* line );
-static void _condor_save_dprintf_line( int flags, char* fmt, va_list args );
+static void _condor_save_dprintf_line( int flags, const char* fmt, va_list args );
 void _condor_dprintf_saved_lines( void );
 struct saved_dprintf {
 	int level;
@@ -863,7 +863,7 @@ mkargv( int* argc, char* argv[], char* line )
 
 
 static void
-_condor_save_dprintf_line( int flags, char* fmt, va_list args )
+_condor_save_dprintf_line( int flags, const char* fmt, va_list args )
 {
 	char* buf;
 	struct saved_dprintf* new_node;

@@ -70,6 +70,8 @@ public:
     unsigned long rs_size;
     // How long this program has been alive, in seconds (from ProcAPI)
     long          age;
+	// How many sockets are registered in daemonCore
+	int           registered_socket_count;
 
 private:
     int           _timer_id;

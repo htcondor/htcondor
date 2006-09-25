@@ -60,7 +60,7 @@ $held = sub {
 		if(!$status)
 		{
 			print "Test failure due to Condor Tool Failure<$cmd>\n";
-			return(1)
+			exit(1)
 		}
 		my @nadarray;
 		$status = 1;
@@ -69,7 +69,7 @@ $held = sub {
 		if(!$status)
 		{
 			print "Test failure due to Condor Tool Failure<$cmd>\n";
-			return(1)
+			exit(1)
 		}
 	}
 	elsif( $job eq 1 )

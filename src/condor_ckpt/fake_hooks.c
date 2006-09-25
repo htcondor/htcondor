@@ -23,6 +23,6 @@
 
  
 
-user_restore_pre() { }
+int user_restore_pre(char *a, int b) {return 0;}
 
-user_restore_post() { }
+int user_restore_post(char *a, int b) {return 0;}

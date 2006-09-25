@@ -1581,6 +1581,7 @@ ENABLE_GRID_MONITOR = TRUE
 ## Condor GAHP server
 ##
 CONDOR_GAHP = $(SBIN)/condor_c-gahp
+CONDOR_GAHP_WORKER = $(SBIN)/condor_c-gahp_worker_thread
 
 ##
 ## The Condor GAHP server has it's own log.  Like the Gridmanager, the

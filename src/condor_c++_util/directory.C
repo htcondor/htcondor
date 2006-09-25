@@ -245,6 +245,7 @@ StatInfo::init( StatWrapper *statbuf )
 	{
 		// the do_stat succeeded
 		const StatStructType *sb = statbuf->GetStatBuf( );
+		const StatStructType *lsb = statbuf->GetLstatBuf( );
 
 		si_error = SIGood;
 		access_time = sb->st_atime;
@@ -258,7 +259,7 @@ StatInfo::init( StatWrapper *statbuf )
 		// On Unix, if any execute bit is set (user, group, other), we
 		// consider it to be executable.
 		isexecutable = ((sb->st_mode & (S_IXUSR|S_IXGRP|S_IXOTH)) != 0 );
-		issymlink = S_ISLNK(sb->st_mode);
+		issymlink = S_ISLNK(lsb->st_mode);
 		owner = sb->st_uid;
 		group = sb->st_gid;
 # else
@@ -1250,11 +1251,16 @@ temp_dir_path()
 #ifndef WIN32
 		prefix = strdup("/tmp");
 #else
-			// try to get the temp dir, otherwise just use the root directory
-		prefix = getenv("TEMP");
-		if ( prefix ) {
-			prefix = strdup(prefix);
+			// try to get the temp dir, then try SPOOL,
+			// then use the root directory
+		char buf[_POSIX_PATH_MAX];
+		int len;
+		if ((len = GetTempPath(_POSIX_PATH_MAX, buf)) <= _POSIX_PATH_MAX) {
+			buf[len - 1] = '\0';
+			prefix = strdup(buf);
 		} else {
+			dprintf(D_ALWAYS, "GetTempPath: buffer of size %d too small\n", _POSIX_PATH_MAX);
+
 			prefix = param("SPOOL");
 			if (!prefix) {
 				prefix = strdup("\\");

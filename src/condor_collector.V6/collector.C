@@ -274,7 +274,6 @@ int CollectorDaemon::receive_query_cedar(Service* s,
 			return 1;
 		} else {
 			// Child / Fork failed / busy
-			ad.fPrint(stderr);
 			process_query_public (whichAds, &ad, &results);
 		}
 	}
@@ -688,8 +687,6 @@ CollectorDaemon::sockCacheHandler( Service*, Stream* sock )
 
 int CollectorDaemon::query_scanFunc (ClassAd *ad)
 {
-    int more = 1;
-
 	if (ad < CollectorEngine::THRESHOLD) return 1;
 
     if ((*ad) >= (*__query__))

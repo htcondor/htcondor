@@ -58,73 +58,6 @@ job_core_matchlist_van.run
 job_core_onexithold_van.run
 
 ==============================================================================================
-job_core_args_java.run*
-	Description: 
-	Method: 
-	Expects:
-
-lib_procapi_pidtracking-snapshot.run*
-	Description: Run a job which forks children which fork children
-		and check for proper clean up of jobs. This version relies on the
-		job running long enough for the starter to get a "snapshot".
-	Method: Child processes( 2 generations ) are created and documented
-		by pids. After the job completes, the test looks for all of those
-		processes being properly cleaned up. These child processes run
-		forever if not cleaned up. An all inclusive PS is processed
-		for processes still running. The job waits around 60 seconds to
-		allow a snapshot to be captured.
-	Expects: The list of processes are all cleaned up.
-
-lib_procapi_pidtracking-byenv.run*
-	Description: Run a job which forks children which fork children
-		and check for proper clean up of jobs. This version relies on 
-		environment tracking of child processes".
-	Method: Child processes( 2 generations ) are created and documented
-		by pids. After the job completes, the test looks for all of those
-		processes being properly cleaned up. These child processes run
-		forever if not cleaned up. An all inclusive PS is processed
-		for processes still running. The job waits around 0 seconds to
-		check for removal of child processes prior to a "snapshot".
-	Expects: The list of processes are all cleaned up.
-
-job_schedd_job-tracking.run*
-	Description: Set loose a flock of jobs and make sure all get 
-		accounted for.
-	Method: We queue up 400 jobs and count them as they complete 
-		with a timer running from when the last of the 400 has
-		been submitted.
-	Expects: 400 jobs should complete successfully.
-
-job_core_basic_par.run*
-	Description: Fundemental test oof the parallel universe.
-	Method: A personal condor is set up to support a paralllel universe job
-		on a preset number of machines(currently 4) and a simple sleep job
-		is used.
-	Expects: The job is expected to complete.
-
-job_core_basic-security_par.run*
-	Description: Fundemental test oof the parallel universe.
-	Method: A personal condor is set up to support a paralllel universe job
-		on a preset number of machines(currently 4) and a simple sleep job
-		is used. this variation of "job_core_basic_par.run" has encryption
-		enabled in the personal condor for the test.
-	Expects: The job is expected to complete.
-
-job_core_condorc_ab_van.run*
-	Description: This test verifies a basic condor-c job
-		can be submitted to A and run on B and complete.
-	Method: Two condor pools are set up with dynamic address and
-		predefined locations to read the port. Then the one configured
-		as the A sends the job off to the B side.
-	Expects:  job completion on the A side
-
-job_core_condorc_abc_van.run*
-	Description: This test verifies a basic condor-c job
-		can be submitted to A through B run on C and complete.
-	Method: Three condor pools are set up with dynamic addresses and
-		predefined locations to read the port. Then the one configured
-		as the A sends the job off to the B side which send to C.
-	Expects:  job completion on the A side
 
 cmd_q_shows-hold.run*
 	Description: We want to verify we can place a job on hold and
@@ -135,63 +68,26 @@ cmd_q_shows-hold.run*
 	Expects: Hold to work, release to work and that it finds correct
 		output when it parses the results of condor_q -hold.
 
-lib_chirpio_van.run*
-	Description: A program linked into the chirp library is run to
-		test a series of system calls.
-	Method: The chirp library is used to write and read a file with
-		particular data written to verifiable positions.
-	Expects: to find things where left behind.....
+job_condorc_ab_van.run*
+	Description: This test verifies a basic condor-c job
+		can be submitted to A and run on B and complete.
+	Method: Two condor pools are set up with dynamic address and
+		predefined locations to read the port. Then the one configured
+		as the A sends the job off to the B side.
+	Expects:  job completion on the A side
 
-lib_userlog.run*
-	Description: Our userlog library is being tested in a read/write sequence.
-	Method: A program linked to our userlog library write a predefined series
-		of userlog events. Then a job is run which reads this logfile.
-	Expects: Compares the result of the user log read to match a predefined
-		output stored in the test.
+job_condorc_abc_van.run*
+	Description: This test verifies a basic condor-c job
+		can be submitted to A through B run on C and complete.
+	Method: Three condor pools are set up with dynamic addresses and
+		predefined locations to read the port. Then the one configured
+		as the A sends the job off to the B side which send to C.
+	Expects:  job completion on the A side
 
-job_core_matchlist_van.run*
-	Description: Vanilla test that match_list_length is storing and rotating matches
-	Method:  a simple job runs and completes but is left in the queue to run again
-		via on_exit_remove. Each run checks that the current LastMatchName0 matches
-		the MATCH_name in the current ad and if LastMatchName1 exists, it matches
-		the last(stored) LastMatchName0.
-	Expects: Expects an abort because we limit the job to 5 runs.
-
-job_core_copytospool_van.run*
-	Description: Vanilla test that spooled executable is same via md5 checksum of both files.
-	Method:  Job is submitted on hold and original and spooled executable are matched
-		via md5 checcksums. Submit event is the trigger to check.
-	Expects: Submit event and then an abort event after we remove held job.
-
-job_core_getenv_van.run*
-	Description: Vanilla job which tests getenv both on and off.
-	Method:  We queue up two jobs with the same program and tell
-		them via args wether the three seeded envrionmnet variables
-		seeded by the test file are expected or not. If they are not expected and show up
-		it fails and if they are expected and fail to show it fails.
-	Expects: Both jobs are expected to pass.
-
-job_core_niceuser_van.run*
-	Description: Vanilla test for nice_user being honored.
-	Method: We queue up two jobs which expect the output file to be moved to
-		them for adding to. If job which write 2 is correctly delayed 
-		by nice user, then the data should be there from both jobs. Unsure about
-		jobs in a big pool with resources for both jobs. The test will probably
-		fail as the jobs running at the same time will last run wipe the output
-		file as it is not designed for both to run at once. Maybe I should use my generic
-		server and client and a shared data file? Or perhaps I should scrap the log file?
-	Expects: Jobs to not run at the same timee.
-
-job_filexfer_streamout_van.run*
-job_filexfer_streamerr_van.run*
-	Description: Vanilla test for streaming of error.
-	Method: A job is fired which is supposed to stream. A job is run which
-			determines if we are testing stdout or stderr. It currently writes
-			out 100 lines to whichever place and then sleeps 5 minutes. The
-			test allows currently 1 minute after the execute state for the
-			file to show up knowing that the job is still running. It has a 2
-			minute timeout currently. After one minute we look for the file.
-	Expects: Master scripts expects file to be found.
+job_core_args_java.run*
+	Description: 
+	Method: 
+	Expects:
 
 job_core_args_sched.run*
 	Description: Scheduler: Did specify args from submit file reach the job?
@@ -209,7 +105,21 @@ job_core_args_van.run*
 		the list output to std out by the job.
 	Expects: job to run well and all args to match up.
 	Questions: What if perl test module does not in itself cathc all the args
-		up front? Weakness..... Inherited test.
+
+job_core_basic_par.run*
+	Description: Fundemental test oof the parallel universe.
+	Method: A personal condor is set up to support a paralllel universe job
+		on a preset number of machines(currently 4) and a simple sleep job
+		is used.
+	Expects: The job is expected to complete.
+
+job_core_basic-security_par.run*
+	Description: Fundemental test oof the parallel universe.
+	Method: A personal condor is set up to support a paralllel universe job
+		on a preset number of machines(currently 4) and a simple sleep job
+		is used. this variation of "job_core_basic_par.run" has encryption
+		enabled in the personal condor for the test.
+	Expects: The job is expected to complete.
 
 job_core_bigenv_sched.run*
 	Description: 
@@ -233,6 +143,14 @@ job_core_compressfiles_std.run*
 		same. The input file iz zipped up and the output file is unzip....
 		both files are checked to see they match.
 	Expects: input file contents = output file contents.
+
+job_core_copytospool_van.run*
+	Description: Vanilla test that spooled executable is same via md5 checksum of both files.
+	Method:  Job is submitted on hold and original and spooled executable are matched
+		via md5 checcksums. Submit event is the trigger to check.
+	Expects: Submit event and then an abort event after we remove held job.
+
+		up front? Weakness..... Inherited test.
 
 job_core_coredump_std.run*
 	Description: 
@@ -314,6 +232,14 @@ job_core_err_van.run*
 		with the name specified in the submit file.
 	Expects: failed job with a non-zero error file
 
+job_core_getenv_van.run*
+	Description: Vanilla job which tests getenv both on and off.
+	Method:  We queue up two jobs with the same program and tell
+		them via args wether the three seeded envrionmnet variables
+		seeded by the test file are expected or not. If they are not expected and show up
+		it fails and if they are expected and fail to show it fails.
+	Expects: Both jobs are expected to pass.
+
 job_core_hold_java.run*
 	Description: 
 	Method: 
@@ -352,14 +278,6 @@ job_core_holdrelease_van.run*
 		and when we see the hold event we issue a condor_release and when we see the release
 		event we do a condor_rm.
 	Expects: Events Hold/Release/Abort are what is expected.
-
-job_core_remote-initialdir_van.run*
-	Description: Verify we can set remote-initialdir correctly.
-	Method: job does a ls to determine the inode for the current
-		directory and for /tmp. If they match /tmp is placed in
-		.out file for test. If not, some other directory is placed
-		in the .out file.
-	Expects: /tmp in the .out file.
 
 job_core_initialdir_java.run*
 	Description: 
@@ -454,6 +372,30 @@ job_core_macros_sched.run*
 		a few are looked for in an array we load up from the output file.
 		Could be more robust in time and with more understanding.
 	Expects: successful completions.
+
+job_core_matchlist_van.run*
+	Description: Vanilla test that match_list_length is storing and rotating matches
+	Method:  a simple job runs and completes but is left in the queue to run again
+		via on_exit_remove. Each run checks that the current LastMatchName0 matches
+		the MATCH_name in the current ad and if LastMatchName1 exists, it matches
+		the last(stored) LastMatchName0.
+	Expects: Expects an abort because we limit the job to 5 runs.
+
+job_core_max-running_local.run
+	Description:
+	Method:
+	Expects:
+
+job_core_niceuser_van.run*
+	Description: Vanilla test for nice_user being honored.
+	Method: We queue up two jobs which expect the output file to be moved to
+		them for adding to. If job which write 2 is correctly delayed 
+		by nice user, then the data should be there from both jobs. Unsure about
+		jobs in a big pool with resources for both jobs. The test will probably
+		fail as the jobs running at the same time will last run wipe the output
+		file as it is not designed for both to run at once. Maybe I should use my generic
+		server and client and a shared data file? Or perhaps I should scrap the log file?
+	Expects: Jobs to not run at the same timee.
 
 job_core_niceuser_van.run*
 	Description: Check that nice_user is honored.
@@ -611,6 +553,14 @@ job_core_queue_sched.run*
 	Description: Verify queue command.
 	Method: fires up a server and each job says hello to server and then they are tallied.
 	Expects: 40 hellos in server log.
+
+job_core_remote-initialdir_van.run*
+	Description: Verify we can set remote-initialdir correctly.
+	Method: job does a ls to determine the inode for the current
+		directory and for /tmp. If they match /tmp is placed in
+		.out file for test. If not, some other directory is placed
+		in the .out file.
+	Expects: /tmp in the .out file.
 
 job_core_rmkillsig_sched.run*
 	Description:  Verify signal used by condor_rm by trapping it and sending to output file
@@ -781,6 +731,17 @@ job_filexfer_sandbox-empty_van.run*
 	Expects: Successful execution of the job and then expects sandbox 
 		to vanish before its eyes.
 
+job_filexfer_streamout_van.run*
+job_filexfer_streamerr_van.run*
+	Description: Vanilla test for streaming of error.
+	Method: A job is fired which is supposed to stream. A job is run which
+			determines if we are testing stdout or stderr. It currently writes
+			out 100 lines to whichever place and then sleeps 5 minutes. The
+			test allows currently 1 minute after the execute state for the
+			file to show up knowing that the job is still running. It has a 2
+			minute timeout currently. After one minute we look for the file.
+	Expects: Master scripts expects file to be found.
+
 job_filexfer_trans-excut-true_van.run*
 	Description: Vanilla: explicitely set transfer_executable... test complains
 	Method: Explicitely set transfer_executable to true and specify an input file.
@@ -813,6 +774,57 @@ job_filexfer_withvacate-nofiles_van.run*
 		so for now we fail this test!
 	Expects: files to not come back
 
+job_had_basic.run
+	Description:
+	Method:
+	Expects:
+
+job_schedd_job-tracking.run*
+	Description: Set loose a flock of jobs and make sure all get 
+		accounted for.
+	Method: We queue up 400 jobs and count them as they complete 
+		with a timer running from when the last of the 400 has
+		been submitted.
+	Expects: 400 jobs should complete successfully.
+
+lib_chirpio_van.run*
+	Description: A program linked into the chirp library is run to
+		test a series of system calls.
+	Method: The chirp library is used to write and read a file with
+		particular data written to verifiable positions.
+	Expects: to find things where left behind.....
+
+lib_procapi_pidtracking-snapshot.run*
+	Description: Run a job which forks children which fork children
+		and check for proper clean up of jobs. This version relies on the
+		job running long enough for the starter to get a "snapshot".
+	Method: Child processes( 2 generations ) are created and documented
+		by pids. After the job completes, the test looks for all of those
+		processes being properly cleaned up. These child processes run
+		forever if not cleaned up. An all inclusive PS is processed
+		for processes still running. The job waits around 60 seconds to
+		allow a snapshot to be captured.
+	Expects: The list of processes are all cleaned up.
+
+lib_procapi_pidtracking-byenv.run*
+	Description: Run a job which forks children which fork children
+		and check for proper clean up of jobs. This version relies on 
+		environment tracking of child processes".
+	Method: Child processes( 2 generations ) are created and documented
+		by pids. After the job completes, the test looks for all of those
+		processes being properly cleaned up. These child processes run
+		forever if not cleaned up. An all inclusive PS is processed
+		for processes still running. The job waits around 0 seconds to
+		check for removal of child processes prior to a "snapshot".
+	Expects: The list of processes are all cleaned up.
+
+lib_userlog.run*
+	Description: Our userlog library is being tested in a read/write sequence.
+	Method: A program linked to our userlog library write a predefined series
+		of userlog events. Then a job is run which reads this logfile.
+	Expects: Compares the result of the user log read to match a predefined
+		output stored in the test.
+
 perf_busy_lynn_100_100_500_sched.run
 	Description:  Generated test which does a load test in the scheduler 
 		universe which begins with 100 cpu loading jobs and runs another
@@ -833,6 +845,11 @@ perf_xfer_deb_10_10_30_van.run
 		10 per iteration and stops after doing 30 jobs.
 	Method: Generated tests checked in as sample
 	Expects: 0 for success 1 for failure
+
+soap_job_tests.run
+	Description:
+	Method:
+	Expects:
 
 job_rsc_all-syscalls_std.run*
 job_rsc_f-direct-write_std.run*

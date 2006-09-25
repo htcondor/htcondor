@@ -23,7 +23,7 @@ $execute = sub {
 	if(!$status)
 	{
 		print "Test failure due to Condor Tool Failure<$cmd>\n";
-		return(1)
+		exit(1)
 	}
 
 };
@@ -48,7 +48,7 @@ $hold = sub
 	if(!$status)
 	{
 		print "Test failure due to Condor Tool Failure<$cmd>\n";
-		return(1)
+		exit(1)
 	}
 	foreach my $line (@adarray)
 	{
@@ -76,7 +76,7 @@ $hold = sub
 		if(!$status)
 		{
 			print "Test failure due to Condor Tool Failure<$cmd>\n";
-			return(1)
+			exit(1)
 		}
 	}
 	else
@@ -100,7 +100,7 @@ $release = sub
 	if(!$status)
 	{
 		print "Test failure due to Condor Tool Failure<$cmd>\n";
-		return(1)
+		exit(1)
 	}
 };
 

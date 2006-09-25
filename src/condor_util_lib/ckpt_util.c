@@ -191,7 +191,6 @@ int             listen_count;
 {
 	int             socket_fd;
     struct sockaddr_in *tmp;
-	SOCKET_LENGTH_TYPE len;
 	
 	socket_fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (socket_fd < 0) {

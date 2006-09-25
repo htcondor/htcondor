@@ -969,16 +969,15 @@ SecManStartCommand::startCommand_inner()
 		// we have the session id, now get the session from the cache
 		have_session = m_sec_man.session_cache->lookup(sid.Value(), enc_key);
 
-		// check the expiration.
-		time_t cutoff_time = time(0);
-		if (enc_key->expiration() && enc_key->expiration() <= cutoff_time) {
-			m_sec_man.session_cache->expire(enc_key);
-			have_session = false;
-			enc_key = NULL;
-		}
-
-
-		if (!have_session) {
+		if (have_session) {
+			// check the expiration.
+			time_t cutoff_time = time(0);
+			if (enc_key->expiration() && enc_key->expiration() <= cutoff_time) {
+				m_sec_man.session_cache->expire(enc_key);
+				have_session = false;
+				enc_key = NULL;
+			}
+		} else {
 			// the session is no longer in the cache... might as well
 			// delete this mapping to it.  (we could delete them all, but
 			// it requires iterating through the hash table)
@@ -1179,26 +1178,40 @@ SecManStartCommand::startCommand_inner()
 		if (!tcp_auth_sock->connect(buf,0,m_nonblocking)) {
 			dprintf ( D_SECURITY, "SECMAN: couldn't connect via TCP to %s, failing...\n", buf);
 			m_errstack->pushf("SECMAN", SECMAN_ERR_CONNECT_FAILED,
-					"TCP connection to %s failed\n", buf);
+					"TCP auth connection to %s failed\n", buf);
 			delete tcp_auth_sock;
 			return StartCommandFailed;
 		}
 
 		if(m_nonblocking && tcp_auth_sock->is_connect_pending()) {
 
-			// Do not allow ourselves to be deleted until after
-			// ConnectCallbackFn is called.
-			IncRefCount();
-
-			daemonCoreSockAdapter.Register_Socket(
+			int reg_rc = daemonCoreSockAdapter.Register_Socket(
 				tcp_auth_sock,
 				"<StartCommand TCP Auth Socket>",
 				(SocketHandlercpp)&SecManStartCommand::TCPAuthConnected,
-				tcp_auth_sock->get_sinful(),
+				tcp_auth_sock->get_sinful_peer(),
 				this,
 				ALLOW);
 
-			daemonCoreSockAdapter.Register_DataPtr( this );
+			if(reg_rc < 0) {
+				MyString msg;
+				msg.sprintf("TCP auth connection to %s failed because "
+				            "Register_Socket returned %d",
+				            m_sock->get_sinful_peer(),
+				            reg_rc);
+				dprintf(D_SECURITY, "SECMAN: %s\n", msg.Value());
+				m_errstack->pushf("SECMAN", SECMAN_ERR_CONNECT_FAILED,
+				                  "%s\n", msg.Value());
+
+				delete tcp_auth_sock;
+				return StartCommandFailed;
+			}
+
+			ASSERT(daemonCoreSockAdapter.Register_DataPtr( this ));
+
+			// Do not allow ourselves to be deleted until after
+			// ConnectCallbackFn is called.
+			IncRefCount();
 
 				// Make note that this operation to do the TCP
 				// auth operation is in progress, so others
@@ -1812,7 +1825,7 @@ SecManStartCommand::TCPAuthConnected( Stream *stream )
 	daemonCoreSockAdapter.Cancel_Socket( stream );
 
 	if(DebugFlags & D_FULLDEBUG) {
-		dprintf(D_SECURITY,"Non-blocking connection for TCP authentication to %s finished (connected=%d)\n",sock->get_sinful(),sock->is_connected());
+		dprintf(D_SECURITY,"Non-blocking connection for TCP authentication to %s finished (connected=%d)\n",sock->get_sinful_peer(),sock->is_connected());
 	}
 
 	bool auth_succeeded = false;
@@ -1832,7 +1845,7 @@ SecManStartCommand::TCPAuthConnected( Stream *stream )
 				"SECMAN: caller did not want a callback, "
 				"so aborting startCommand(%d) to %s\n",
 				 m_cmd,
-				 m_sock->get_sinful());
+				 m_sock->get_sinful_peer());
 		}
 
 		// The original caller should have left one remaining
@@ -1855,7 +1868,7 @@ SecManStartCommand::TCPAuthConnected( Stream *stream )
 			sc->m_errstack->pushf("SECMAN", SECMAN_ERR_NO_SESSION,
 			                      "Was waiting for TCP auth session to %s, "
 			                      "but it failed.",
-			                      sc->m_sock->get_sinful());
+			                      sc->m_sock->get_sinful_peer());
 		}
 		sc->ResumeAfterTCPAuth(auth_succeeded);
 
@@ -1906,7 +1919,7 @@ SecManStartCommand::ResumeAfterTCPAuth(bool auth_succeeded)
 
 	if(DebugFlags & D_FULLDEBUG) {
 		dprintf(D_SECURITY,"SECMAN: done waiting for TCP auth to %s\n",
-		        m_sock->get_sinful());
+		        m_sock->get_sinful_peer());
 	}
 
 	if(auth_succeeded) {
@@ -1927,7 +1940,7 @@ SecManStartCommand::ResumeAfterTCPAuth(bool auth_succeeded)
 				"SECMAN: caller did not want a callback, "
 				"so aborting startCommand(%d) to %s\n",
 				 m_cmd,
-				 m_sock->get_sinful());
+				 m_sock->get_sinful_peer());
 		}
 
 		// The original caller should have left one remaining
@@ -1956,10 +1969,10 @@ SecManStartCommand::TCPAuthConnected_inner( Sock *tcp_auth_sock, bool *auth_succ
 
 	if(!tcp_auth_sock->is_connected()) {
 		dprintf(D_SECURITY,"SECMAN: failed in non-blocking TCP connect to %s",
-				tcp_auth_sock->get_sinful());
+				tcp_auth_sock->get_sinful_peer());
 		m_errstack->pushf("SECMAN", SECMAN_ERR_CONNECT_FAILED,
 		                "TCP connection to %s failed\n",
-		                tcp_auth_sock->get_sinful());
+		                tcp_auth_sock->get_sinful_peer());
 
 		delete tcp_auth_sock;
 		return StartCommandFailed;
@@ -2003,10 +2016,10 @@ SecManStartCommand::TCPAuthConnected_inner( Sock *tcp_auth_sock, bool *auth_succ
 
 	if (auth_result != StartCommandSucceeded) {
 		dprintf ( D_SECURITY,"SECMAN: unable to start session to %s via TCP, "
-		          "failing.",m_sock->get_sinful());
+		          "failing.",m_sock->get_sinful_peer());
 		m_errstack->pushf("SECMAN", SECMAN_ERR_NO_SESSION,
 		                 "Failed to start a session to %s with TCP",
-		                 m_sock->get_sinful());
+		                 m_sock->get_sinful_peer());
 		return StartCommandFailed;
 	}
 	if (DebugFlags & D_FULLDEBUG) {

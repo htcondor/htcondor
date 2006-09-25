@@ -6,7 +6,7 @@ $testname = 'condor_submit initialdir works - java U';
 
 
 system("mkdir -p initd");
-system("cp CondorEcho.class initd");
+system("cp x_java_CondorEcho.class initd");
 
 #CondorTest::RegisterExitedSuccess( $testname, \&CondorTest::DefaultOutputTest );
 

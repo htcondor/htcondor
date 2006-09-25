@@ -781,7 +781,7 @@ tryagain:
 		}
 
 		if( *++value == '(' ) {
-			if( getdollardollar && *value != NULL && value[1] == '[' ) {
+			if( getdollardollar && *value != '\0' && value[1] == '[' ) {
 
 				// This is a classad expression to be evaled.  This layer
 				// doesn't need any intelligence, just scan for "])" which

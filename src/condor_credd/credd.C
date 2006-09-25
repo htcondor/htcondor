@@ -44,7 +44,7 @@
 #include <unistd.h>
 #include "globus_utils.h"
 #include "condor_string.h"
-
+#include "condor_mkstemp.h"
 
 #define MAX_CRED_DATA_SIZE 100000
 #define DEF_CRED_CHECK_INTERVAL		60	/* seconds */
@@ -189,7 +189,7 @@ store_cred_handler(Service * service, int i, Stream *stream) {
   
   // Write data to a file
   temp_file_name = dircat (cred_store_dir, "credXXXXXX");
-  mkstemp (temp_file_name);
+  condor_mkstemp (temp_file_name);
   cred_wrapper->SetStorageName (temp_file_name);
   
   init_user_id_from_FQN (user);
@@ -1082,7 +1082,7 @@ StoreData (const char * file_name, const void * data, const int data_size) {
   priv_state priv = set_root_priv();
   dprintf (D_FULLDEBUG, "in StoreData(), euid=%d\n", geteuid());
 
-  int fd = open (file_name, O_WRONLY | O_CREAT | O_TRUNC );
+  int fd = open (file_name, O_WRONLY | O_CREAT | O_TRUNC, 0600 );
   if (fd == -1) {
     dprintf (D_ALWAYS, "Unable to store in %s\n", file_name);
     set_priv(priv);

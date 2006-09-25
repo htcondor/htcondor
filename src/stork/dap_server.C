@@ -766,7 +766,7 @@ void process_request(classad::ClassAd *currentAd)
 				return;
 			}
 			priv_state old_priv = set_user_priv();
-			int fd = open (cred_file_name, O_WRONLY | O_CREAT );
+			int fd = open (cred_file_name, O_WRONLY | O_CREAT, 0600 );
 			if (fd > -1) {
 				if ( fchmod (fd, S_IRUSR | S_IWUSR) < 0 ) {
 					dprintf( D_ALWAYS,

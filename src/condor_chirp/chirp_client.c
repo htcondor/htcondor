@@ -67,7 +67,7 @@ static char const *read_url_param(char const *url,char *buffer,size_t length);
 
 static int sockets_initialized = 0;
 static int initialize_sockets();
-static int shutdown_sockets();
+//static int shutdown_sockets();
 
 
 struct chirp_client {
@@ -135,6 +135,8 @@ initialize_sockets()
 	return 1;
 }
 
+/* This function doesn't seem to be used anywhere. */
+#if 0
 static int 
 shutdown_sockets()
 {
@@ -148,6 +150,7 @@ shutdown_sockets()
 	sockets_initialized = 0;
 	return 1;
 }
+#endif
 
 DLLEXPORT struct chirp_client * 
 chirp_client_connect_url( const char *url, const char **path_part)

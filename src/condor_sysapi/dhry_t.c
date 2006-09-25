@@ -92,13 +92,13 @@ int mips_test(int test_blocksize,
 	dprintf(D_ALWAYS, 
 		"\tdeviation of those test blocks. If the standard\n");
 	dprintf(D_ALWAYS, 
-		"\tdeviation is above %d%% of the average,\n", max_sd_variation_ratio);
+		"\tdeviation is above %2f%% of the average,\n", max_sd_variation_ratio);
 	dprintf(D_ALWAYS, 
 		"\tthe mips reported are erratic and the test block\n");
 	dprintf(D_ALWAYS, 
 		"\tis considered a failure.\n");
 	dprintf(D_ALWAYS, 
-		"\tI will run %d test blocks, and if more than %d%% of those blocks\n",
+		"\tI will run %d test blocks, and if more than %2f%% of those blocks\n",
 		ratio_failed_test_blocks_ok*100);
 	dprintf(D_ALWAYS, 
 		"\tfail, this entire test fails.\n");
@@ -157,7 +157,7 @@ int mips_test(int test_blocksize,
 	if (((double)num_warnings/(double)num_tests) > max_sd_variation_ratio) {
 		dprintf(D_ALWAYS,
 				"SysAPI: ERROR! Failing because %d raw MIPS tests failed > %d (%2.2f%%).\n",
-				num_warnings, max_sd_variation_ratio*test_blocksize, max_sd_variation_ratio*100);
+				num_warnings, (int)(max_sd_variation_ratio*test_blocksize), max_sd_variation_ratio*100);
 		return_val = return_val | 1;
 	}
 	
@@ -212,7 +212,7 @@ int mips_test(int test_blocksize,
 	if (((double)num_warnings/(double)num_tests) > max_sd_variation_ratio) {
 			dprintf(D_ALWAYS,
 					"SysAPI: ERROR! Failing because %d cooked MIPS tests failed > %d (%2.2f%%).\n",
-					num_warnings, max_sd_variation_ratio*test_blocksize, max_sd_variation_ratio*100);
+					num_warnings, (int)(max_sd_variation_ratio*test_blocksize), max_sd_variation_ratio*100);
 			return_val = return_val | 1;
 	}
 	return return_val;

@@ -46,12 +46,14 @@ public:
 	const char *GetStatFn( void ) { return name; };
 	int GetStatus( void ) { return status; };
 	int GetErrno( void ) { return stat_errno; };
-	const StatStructType *GetStatBuf( void ) { return &buf; };
+	const StatStructType *GetStatBuf( void ) { return &stat_buf; };
+	const StatStructType *GetLstatBuf( void ) { return &lstat_buf; };
 
 private:
 	int DoStat( const char *path );
 	int DoStat( int fd );
-	StatStructType	buf;
+	StatStructType	stat_buf;
+	StatStructType	lstat_buf;
 	const char *name;
 	int status;
 	int stat_errno;

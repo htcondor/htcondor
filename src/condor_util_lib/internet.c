@@ -109,7 +109,7 @@ string_to_sin( const char *addr, struct sockaddr_in *sin )
 char *
 sin_to_string(const struct sockaddr_in *sin)
 {
-	static  char    buf[24];
+	static  char    buf[SINFUL_STRING_BUF_SIZE];
 
 	buf[0] = '\0';
 	if (!sin) return buf;

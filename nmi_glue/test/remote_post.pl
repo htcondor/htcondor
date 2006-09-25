@@ -1,11 +1,15 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_post.pl,v 1.2 2006-07-25 18:15:42 wright Exp $
+# $Id: remote_post.pl,v 1.3 2006-09-25 21:14:02 zmiller Exp $
 # post script for Condor testsuite runs
 ######################################################################
 
+use File::Copy;
+
 my $BaseDir = $ENV{BASE_DIR} || die "BASE_DIR not in environment!\n";
+my $SrcDir = $ENV{SRC_DIR} || die "SRC_DIR not in environment!\n";
+my $testdir = "condor_tests";
 my $exit_status = 0;
 
 # This is debugging output for the sake of the NWO infrastructure.
@@ -59,9 +63,8 @@ if( -f "$pid_file" ) {
 }
     
 
-
 ######################################################################
-# tar up test results
+# save and tar up test results
 ######################################################################
 
 if( ! -f "tasklist.nmi" || -z "tasklist.nmi" ) {
@@ -70,7 +73,6 @@ if( ! -f "tasklist.nmi" || -z "tasklist.nmi" ) {
     exit $exit_status;
 }
 
-$results = "results.tar.gz";
 chdir("$BaseDir") || die "Can't chdir($BaseDir): $!\n";
 
 my $etc_dir = "$BaseDir/results/etc";
@@ -82,12 +84,10 @@ if( ! -d "$BaseDir/results" ) {
     mkdir( "$BaseDir/results", 0777 ) || die "Can't mkdir($BaseDir/results): $!\n";
 }
 
-system( "cp tasklist.nmi $BaseDir/results/" );
-if( $? ) {
-    print "Can't copy tasklist.nmi to $BaseDir/results\n";
-    $exit_status = 1;
-}
 
+#----------------------------------------
+# debugging info from the personal condor
+#----------------------------------------
 
 if( ! -d $etc_dir ) {
     if( ! mkdir( "$etc_dir", 0777 ) ) {
@@ -122,13 +122,92 @@ if( -d $log_dir ) {
         print "Can't copy $BaseDir/local/log/* to $log_dir\n";
         $exit_status = 1;
     }
-    print "Tarring up all results\n";
-    system( "tar zcf $BaseDir/$results results" );
-    if( $? >> 8 ) {
-        print "Can't tar zcf $BaseDir/$results results\n";
-        $exit_status = 1;
+}
+ 
+
+#----------------------------------------
+# save output from tests
+#----------------------------------------
+
+system( "cp tasklist.nmi $BaseDir/results/" );
+if( $? ) {
+    print "Can't copy tasklist.nmi to $BaseDir/results\n";
+    $exit_status = 1;
+}
+
+open (TASKFILE, "tasklist.nmi") || die "Can't tasklist.nmi: $!\n";
+while( <TASKFILE> ) {
+    chomp;
+    my ($testname, $compiler) = split(/\./);
+    if( $compiler eq "." ) {
+        $resultdir = "$BaseDir/results/base";
+    } else {
+        $resultdir = "$BaseDir/results/$compiler";
+    }
+    if( ! -d "$resultdir" ) {
+        mkdir( "$resultdir", 0777 ) || die "Can't mkdir($resultdir): $!\n";
+    }
+    chdir( "$SrcDir/$testdir/$compiler" ) ||
+      die "Can't chdir($SrcDir/$testdir/$compiler): $!\n";
+
+    # first copy the files that MUST be there.
+    copy_file( "$testname.run.out", $resultdir, true );
+
+    # these files are all optional.  if they exist, we'll save 'em, if
+    # they do not, we don't worry about it.
+    copy_file( "$testname.out*", $resultdir, false );
+    copy_file( "$testname.err*", $resultdir, false );
+    copy_file( "$testname.log", $resultdir, false );
+    copy_file( "$testname.cmd.out", $resultdir, false );
+
+    # if it exists, tarup the 'saveme' subdirectory for this test, which
+    # may contain test debug info etc.
+    if( -d "$testname.saveme" ) {
+        system( "tar zcf $testname.saveme.tar.gz $testname.saveme/" );
+        if( $? >> 8 ) {
+            print "Tar failed to save test dir $testname.saveme\n";
+        } else {
+            print "Created $testname.saveme.tar.gz.\n";
+            copy_file( "$testname.saveme.tar.gz", $resultdir, true );
+        }
     }
 }
 
+
+#----------------------------------------
+# final tar and exit
+#----------------------------------------
+
+$results = "results.tar.gz";
+print "Tarring up all results\n";
+chdir("$BaseDir") || die "Can't chdir($BaseDir): $!\n";
+system( "tar zcf $BaseDir/$results results" );
+if( $? >> 8 ) {
+    print "Can't tar zcf $BaseDir/$results results\n";
+    $exit_status = 1;
+}
+
 exit $exit_status;
+
+
+######################################################################
+# helper methods
+######################################################################
+
+sub copy_file {
+    my( $src, $dest, $required ) = @_;
+    my $had_error = false;
+    copy($src, $dest);
+    if( $? >> 8 ) {
+        if( $required ) {
+            print "ERROR: Can't copy $src to $dest: $!\n";
+        } else {
+            print "Optional file $src not copied into $dest: $!\n";
+        }
+        $had_error = true;
+    } else {
+        print "Copied $src to $dest\n";
+    }
+    return $had_error;
+}
 

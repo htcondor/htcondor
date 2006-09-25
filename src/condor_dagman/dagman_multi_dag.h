@@ -42,4 +42,15 @@ bool GetLogFiles(/* const */ StringList &dagFiles, bool useDagDir,
 			StringList &condorLogFiles, StringList &storkLogFiles,
 			MyString &errMsg);
 
+/** Determine whether any log files are on NFS, and this is configured
+	to be an error.
+	@param condorLogFiles: a list of the Condor log files
+	@param storkLogFiles: a list of the Stork log files
+	@return true iff a log file is on NFS, and this is configured to be
+		a fatal error (as opposed to a warning)
+*/
+bool LogFileNfsError(/* const */ StringList &condorLogFiles,
+			/* const */ StringList &storkLogFiles);
+
+
 #endif /* #ifndef DAGMAN_MULTI_DAG_H */

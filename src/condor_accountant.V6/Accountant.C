@@ -919,8 +919,8 @@ AttrList* Accountant::ReportState() {
 
 MyString Accountant::GetResourceName(ClassAd* ResourceAd) 
 {
-  char startdName[64];
-  char startdAddr[64];
+  MyString startdName;
+  MyString startdAddr;
   
   if (!ResourceAd->LookupString (ATTR_NAME, startdName)) {
     //This should never happen, because unnamed startd ads are rejected.
@@ -933,8 +933,7 @@ MyString Accountant::GetResourceName(ClassAd* ResourceAd)
     //This may happen for grid site ClassAds.
     //Actually, the collector now inserts an IP address if none is provided,
     //but it is more robust to not assume that behavior here.
-    startdAddr[0] = '\0';
-	dprintf(D_FULLDEBUG,"in Account::GetResourceName - no IP address for %s (no problem if this is a grid site ClassAd).\n",startdName);
+	dprintf(D_FULLDEBUG, "in Account::GetResourceName - no IP address for %s (no problem if this is a grid site ClassAd).\n", startdName.Value());
   }
   Name+=startdAddr;
   

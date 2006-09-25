@@ -1,0 +1,153 @@
+#! /usr/bin/env perl
+use CondorTest;
+use CondorPersonal;
+
+CondorPersonal::DebugOff();
+Condor::DebugOff();
+
+$param_template = "x_param.protocol-negot.template";
+$testname = 'lib_auth_protocol-negot - Security Protocol Negotiation Test';
+$corename = "lib_auth_protocol-negot";
+$mytestnegotiation = "x_secneg_clR_dmnR_secprepostsrc";
+$mytestnegotiation_result = "yes";
+$mytestnegotiation_pat = "secprepostsrc";
+$mybaseparamname = "x_param.protocol-negot";
+$datafile = "lib_auth_protocol-negot.data";
+
+
+my $numberoftests = 16;
+my $numberoferrors = 0;
+
+# where am I running
+$dummyhost = "gamgee.cs.wisc.edu";
+$currenthost = `hostname`;
+chomp($currenthost);
+
+system("date");
+print "Dummyhost was $dummyhost and really running on $currenthost\n";
+
+$pid = $$;
+$mypid = $pid;
+$myvariation = 1;
+$mysaveme = $corename . ".saveme";
+system("mkdir $mysaveme");
+
+open(DF,"<$datafile") || die "Can not open negotiation data file!: $!\n";
+my $line;
+while(<DF>) {
+	chomp;
+	#$mypid = $myvariation . "_" . $pid;
+	$mypid = $pid;
+	$label = "protocol" . "_" . $myvariation;
+	#if($myvariation == 2) {
+		#exit(0);
+	#}
+	$myvariation = $myvariation + 1;
+	print "Condor for this run in $mypid\n";
+	system("date");
+	$line = $_;
+	if($line =~ /^(x_secneg.*_secprepostsrc)\s(.*)$/ ) {
+		print "Negotiation is $1 and Expected result $2\n";
+		$mytestnegotiation = $1;
+		$mytestnegotiation_result = $2;
+	}
+
+	#print "$line\n";
+	$myparamname = $mybaseparamname . $mypid;
+	$mysubmitnm = $corename . $mypid . ".cmd";
+	$mysubmitnmout = $corename . $mypid . ".cmd.out";
+	$mysubmitnmlog = $corename . $mypid . ".log";
+	$mysubmitnmout = $corename . $mypid . ".log";
+	$mycorenm = $corename . ".cmd";
+	$mycorenmout = $corename . ".cmd.out";
+	$mycorenmlog = $corename . ".log";
+
+	print "Master PID is $mypid\n";
+	print "Master PID submit file is $mysubmitnm\n";
+
+	# Edit submit file to submit to scheduler at securitypool (side b) schedd.
+	my $line;
+	open(CSUB,">$myparamname") || die "Can't open new submit file $myparamname: $!\n";
+	open(TPLATE,"<$param_template") || die "Can't open param template $param_template: $!\n";
+	while(<TPLATE>)
+	{
+		chomp($_);
+		$line = $_;
+		if( $line =~ /^\s*secprepostsrc\s*=\s*.*$/ )
+		{
+			print "Setting up for $mytestnegotiation\n";
+			print CSUB "secprepostsrc = $mytestnegotiation\n";
+		}
+		else
+		{
+			#print "template: $line\n";
+			print CSUB "$line\n";
+		}
+	}
+	close(TPLATE);
+	close(CSUB);
+	#my $configsec = CondorPersonal::DebugOn();
+	my $configsec = CondorPersonal::StartCondor($myparamname ,$label, $mypid);
+	my @securitypool = split /:/, $configsec;
+	my $secconfig = shift @securitypool;
+	my $secport = shift @securitypool;
+
+	print "---security config is $secconfig and securitypool port is $secport---\n";
+	
+
+	$ENV{CONDOR_CONFIG} = $secconfig;
+	# submit into local schedd (side a)
+
+	my $result = system("./lib_auth_protocol-negot.pl $mypid $label $mytestnegotiation_result");
+	print "Result of crafted lib_auth_protocol-negot job is  $result\n";
+
+	if($result != 0) {
+		$mynumberoferrors = $mynumberoferrors + 1;
+		print "ERRORS detected: $mynumberoferrors of $mynumberoftests failed\n";
+	}
+
+	system("cp -r $mypid $mysaveme");
+	system("cp *$corename* $mysaveme");
+	
+	if( -e "$mysubmitnm" )
+	{
+		system("cp $mysubmitnm $mycorenm");
+	}
+
+	if( -e "$mysubmitnmout" )
+	{
+		system("cp $mysubmitnmout $mycorenmout");
+	}
+
+	if( -e "$mysubmitnmlog" )
+	{
+		system("cp $mysubmitnmlog $mycorenmlog");
+	}
+
+	my @adarray;
+	my $status = 1;
+	my $cmd = "condor_off -master";
+	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+	if(!$status)
+	{
+		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		exit(1)
+	}
+
+	if(!$status)
+	{
+		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		exit(1)
+	}
+}
+
+system("date");
+
+if( $mynumberoferrors != 0 )
+{
+	# actual test failed but we allowed cleanup
+	print "$mynumberoferrors of $mynumberoftests FAILED!\n";
+	exit(1);
+}
+
+exit(0);

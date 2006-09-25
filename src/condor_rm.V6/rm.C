@@ -61,6 +61,7 @@ void handleConstraints( void );
 ClassAd* doWorkByList( StringList* ids, CondorError * errstack );
 void printOldMessages( ClassAd* result_ad, StringList* ids );
 void printNewMessages( ClassAd* result_ad, StringList* ids );
+bool mayUserForceRm( );
 
 bool has_constraint;
 
@@ -405,6 +406,18 @@ main( int argc, char *argv[] )
 		exit( 1 );
 	}
 
+		// Special case for condor_rm -forcex: a configuration
+		// setting can disable this functionality.  The real
+		// validation is done in the schedd, but we can catch
+		// the most common cases here and give a useful error
+		// message.
+	if(mode == JA_REMOVE_X_JOBS) {
+		if( mayUserForceRm() == false) {
+			fprintf( stderr, "Remove aborted. condor_rm -forcex has been disabled by the administrator.\n" );
+			exit( 1 );
+		}
+	}
+
 		// Process the args so we do the work.
 	if( All ) {
 		handleAll();
@@ -639,6 +652,34 @@ addConstraint( const char *constraint )
 	has_constraint = true;
 }
 
+bool
+mayUserForceRm( )
+{
+	const char * PARAM_ALLOW_FORCE_RM = "ALLOW_FORCE_RM";
+	char* tmp = param( PARAM_ALLOW_FORCE_RM );
+	if( tmp == NULL) {
+		// Not present.  Assume TRUE (old behavior).
+		return true;
+	}
+
+	ClassAd tmpAd;
+	const char * TESTNAME = "test";
+	if(tmpAd.AssignExpr(TESTNAME, tmp) == FALSE) {
+		// Error parsing, most likely.  Warn and assume TRUE.
+		fprintf(stderr, "The configuration setting %s may be invalid.  Treating as TRUE.\n", PARAM_ALLOW_FORCE_RM);
+		return true;
+	}
+
+	int is_okay = 0;
+	if(tmpAd.EvalBool(TESTNAME, 0, is_okay)) {
+		return is_okay;
+	} else {
+		// Something went wrong.  May be undefined because
+		// we need a job classad.  Assume TRUE.
+		return true;
+	}
+}
+
 
 void
 handleAll()
@@ -793,6 +834,9 @@ printNewMessages( ClassAd* result_ad, StringList* ids )
 		free( msg );
 	}
 }
+
+
+
 
 /************************************
 	The following are dummy stubs for the DaemonCore class to allow

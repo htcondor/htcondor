@@ -80,7 +80,7 @@ int ncpus_test(int trials, double warn_ok_ratio)
 	dprintf(D_ALWAYS, "SysAPI: sysapi_ncpus -> %d\n", bar);
 
 	if (((double)num_warnings/(double)num_tests) > warn_ok_ratio) {
-			dprintf(D_ALWAYS, "SysAPI: ERROR! Warning warn_ok_ratio exceeded (%2f\% warnings > %2f\% warn_ok_ratio) .\n", ((double)num_warnings/(double)num_tests)*100, warn_ok_ratio*100);
+			dprintf(D_ALWAYS, "SysAPI: ERROR! Warning warn_ok_ratio exceeded (%2f%% warnings > %2f%% warn_ok_ratio) .\n", ((double)num_warnings/(double)num_tests)*100, warn_ok_ratio*100);
 			return_val = return_val | 1;
 	}
 	return return_val;

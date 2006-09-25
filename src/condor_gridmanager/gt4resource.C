@@ -396,15 +396,27 @@ dprintf(D_FULLDEBUG,"      %s\n",delegation_uri);
 				activeDelegationCmd = NULL;
 					// we are assuming responsibility to free this
 				next_deleg->deleg_uri = delegation_uri;
-				next_deleg->proxy_expire = next_deleg->proxy->expiration_time;
+					// In the delgation service, the delegated proxy's
+					// expiration is pegged to the resource's lifetime.
+					// Right now, the gahp sets that to 12 hours. At some
+					// point, it should be changed to let it default to
+					// the full life of the proxy or allow the invoker
+					// to set it as part of the resource creation.
+				//next_deleg->proxy_expire = next_deleg->proxy->expiration_time;
+				next_deleg->proxy_expire = now + 12*60*60;
 				next_deleg->lifetime = now + 12*60*60;
 				next_deleg->error_message = "";
 				signal_jobs = true;
 			}
 		}
 
+			// At the moment, the gahp always delegates a credential with
+			// a lifetime no longer than 12 hours. So don't try refreshing
+			// a delegated proxy with an expiration greater than 11 hours
+			// from now.
 		if ( next_deleg->deleg_uri &&
 			 next_deleg->proxy_expire < next_deleg->proxy->expiration_time &&
+			 next_deleg->proxy_expire < 11*60*60 &&
 			 now >= next_deleg->last_proxy_refresh + PROXY_REFRESH_INTERVAL ) {
 dprintf(D_FULLDEBUG,"    refreshing %s\n",next_deleg->deleg_uri);
 			int rc;
@@ -425,6 +437,9 @@ dprintf(D_FULLDEBUG,"    refreshing %s\n",next_deleg->deleg_uri);
 dprintf(D_FULLDEBUG,"      done\n");
 				activeDelegationCmd = NULL;
 				next_deleg->proxy_expire = next_deleg->proxy->expiration_time;
+				if ( next_deleg->proxy_expire > now + 12*60*60 ) {
+					next_deleg->proxy_expire = now + 12*60*60;
+				}
 					// ??? do we want to signal jobs in this case?
 				signal_jobs = true;
 			}

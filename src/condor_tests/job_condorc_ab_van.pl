@@ -27,7 +27,7 @@ $held = sub {
 	my $cluster = $info{"cluster"};
 
 	print "Held event not expected.....\n";
-	return(1);
+	exit(1);
 };
 
 $executed = sub
@@ -59,7 +59,7 @@ $release = sub
 	if(!$status)
 	{
 		print "Test failure due to Condor Tool Failure<$cmd>\n";
-		return(1)
+		exit(1)
 	}
 };
 

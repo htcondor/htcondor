@@ -46,12 +46,19 @@ $success = sub
 	{
 		my @adarray;
 		my $status = 1;
+		my $cmd = "condor_rm $cluster";
+		$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+		if(!$status)
+		{
+			print "Test failure due to Condor Tool Failure<$cmd>\n";
+			exit(1)
+		}
 		my $cmd = "condor_rm -forcex $cluster";
 		$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 		if(!$status)
 		{
 			print "Test failure due to Condor Tool Failure<$cmd>\n";
-			return(1)
+			exit(1)
 		}
 	}
 

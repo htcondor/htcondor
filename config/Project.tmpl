@@ -181,10 +181,10 @@ ARCH_FLAG = Architecture
 DIST_FLAG = Distribution
 
 #if !defined( DebugFlag )
-#define DebugFlag -g -Wall
+#define DebugFlag
 #endif
 
-DEBUG_FLAG = DebugFlag
+DEBUG_FLAG = DebugFlag $(COMP_DEBUG_FLAGS)
 
 #if !defined( PlatformFlags ) 
 #define PlatformFlags
@@ -475,6 +475,8 @@ VENDOR_C_FLAGS = CFlags -I.. -I../.. -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
 		 $(QUILL_FLAGS) $(GCB_FLAGS)
 
 
+/* This flag is a bad idea since when this stuff eventually goes truly obselete
+	we'll have to fix it anyway. */
 #if defined(IS_C_COMP_MAJOR_GCC_3) || defined(IS_C_COMP_MAJOR_GCC_4)
 GPP_VERS_FLAGS = -Wno-deprecated
 #else
@@ -497,12 +499,21 @@ GPP_ARCH_FLAGS =
 
 GPP_SHARED_FLAGS = -fno-implicit-templates $(GPP_VERS_FLAGS) $(GPP_ARCH_FLAGS)
 
-STD_C_FLAGS = $(VENDOR_C_FLAGS) $(DEBUG_FLAG) $(CC_PIC_FLAG) PlatformFlags PlatformGccFlags $(CCOMPILER_ID) $(GSOAP_FLAGS) $(PCRE_FLAGS) $(COREDUMPER_FLAGS)
-STD_C_PLUS_FLAGS = $(STD_C_FLAGS) $(GPP_SHARED_FLAGS) PlatformGppFlags
+/* Flags shared between C and C++ compilers */
+SHARED_COMPILER_FLAGS = $(VENDOR_C_FLAGS) $(DEBUG_FLAG) $(CC_PIC_FLAG) PlatformFlags $(CCOMPILER_ID) $(GSOAP_FLAGS) $(PCRE_FLAGS) $(COREDUMPER_FLAGS)
+
+/* We use separate flag definitions for the C compiler and the C++ compiler.
+	These are the flags actually passed to the respective compilers. 
+	Don't forget to mix in flags specific to one compiler or the other. */
+STD_C_FLAGS = $(SHARED_COMPILER_FLAGS) $(GCC_DEBUG_FLAGS) PlatformGccFlags
+STD_C_PLUS_FLAGS = $(SHARED_COMPILER_FLAGS) $(GPP_DEBUG_FLAGS) $(GPP_SHARED_FLAGS) PlatformGppFlags 
+
 /* We basically want INST_C_PLUS_FLAGS to be equal to STD_C_PLUS_FLAGS,
 	but make sure there isn't -fno-implicit-templates in it
 	since we want any templates which need to be created to be created in 
 	template instantiation files. */
+/* XXX Uh, the comment doesn't match this code (and I think it should--psilord)
+	figure out why. */
 INST_C_PLUS_FLAGS = $(STD_C_FLAGS) $(GPP_VERS_FLAGS) PlatformGppFlags
 
 TESTSUITE_FLAGS_GCC =  $(STD_C_FLAGS)

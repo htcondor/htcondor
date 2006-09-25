@@ -284,6 +284,11 @@ sub submit_schedd_job
 
 	debug_print(2, "Submitting schedd to $group->{sitegatekeeper} with $group->{proxyfile}");
 
+	if ( system(  "grid-proxy-info -exists -file $group->{proxyfile} >/dev/null 2>&1" ) != 0 ) {
+		debug_print(2, "Proxy $group->{proxyfile} is invalid, not submitting schedd job");
+		return undef;
+	}
+
 	# Use the daemon_unique_name we found in the job ad to use as a
 	# schedd name. All jobs with the same uniquename go to the same
 	# dynamically-started schedd.
@@ -477,7 +482,7 @@ EOF
 	# Turn the cluster number into a fully-qualified condor job id.
 	$cluster .= ".0";
 
-#	unlink $cmd_file, $submit_out, $setup_script;
+	unlink $cmd_file, $submit_out, $setup_script;
 
 	return $cluster;
 }

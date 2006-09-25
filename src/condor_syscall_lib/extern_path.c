@@ -25,6 +25,7 @@
 #include "condor_debug.h"
 #include "condor_getmnt.h"
 #include "condor_netdb.h"
+#include "util_lib_proto.h"
 
 static void init( void );
 static char * remote_part( char *mnt_pt, char *name );

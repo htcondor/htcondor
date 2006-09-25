@@ -698,7 +698,6 @@ update_report_result:
 		} // fi error
 
 
-update_lease_result:
 		if (error) {
 			const char * result[] = {
 				GAHP_RESULT_FAILURE,

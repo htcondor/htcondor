@@ -55,6 +55,7 @@ package CondorPersonal;
 #	condortemplate	Core config file					condor_config_template		$personal_template
 #	condorlocalsrc	Name for condor local config src 								$personal_local_src
 #   localpostsrc    New end of local config file                                    $personal_local_post_src
+#   secprepostsrc	New security settings 											$personal_sec_prepost_src
 #	condordaemon	daemon list to start				contents of config template $personal_daemons
 #	condorconfig	Name for condor config file			condor_config				$personal_config
 #	condordomain	Name for domain						cs.wisc.edu					$condordomain
@@ -65,7 +66,6 @@ package CondorPersonal;
 #	ports			Select dynamic or normal ports		dynamic						$portchanges	
 #   vms				sets NUM_CPUS NUM_VMS				none
 #   universe		parallel configuration of schedd	none						$personal_universe
-#	encryption		turns on encryption					none						comma list
 #
 #   Notes added 12/14/05 bt
 #
@@ -113,6 +113,7 @@ BEGIN
 	$personal_local = "condor_config.local";
 	$personal_local_src = "";
 	$personal_local_post_src = "";
+	$personal_sec_prepost_src = "";
 	$personal_universe = "";
 	$portchanges = "dynamic";
 	$DEBUG = 0;
@@ -132,15 +133,22 @@ BEGIN
 
 sub StartCondor
 {
+	my $mpid = "";
+	my $arraysz = scalar(@_);
 	my $paramfile = shift || die "Missing parameter file!\n";
+	$version = shift || die "Missing parameter version!\n";
 	my $config_and_port = "";
 
-	$version = shift || die "Missing parameter version!\n";
+	if($arraysz == 2) {
+		$mpid = $pid; # assign process id
+	} else {
+		$mpid = shift; # assign process id
+	}
 
 	system("mkdir -p $topleveldir");
-	$topleveldir = $topleveldir . "/" . $pid;
+	$topleveldir = $topleveldir . "/" . $mpid;
 	system("mkdir -p $topleveldir");
-	$topleveldir = $topleveldir . "/" . $pid . $version;
+	$topleveldir = $topleveldir . "/" . $mpid . $version;
 	system("mkdir -p $topleveldir");
 
 	$personal_config_file = $topleveldir ."/condor_config";
@@ -153,7 +161,7 @@ sub StartCondor
 		return("Failed to do needed Condor Install\n");
 	}
 
-	CondorPersonal::TunePersonalCondor($localdir);
+	CondorPersonal::TunePersonalCondor($localdir, $mpid);
 
 	$collector_port = CondorPersonal::StartPersonalCondor();
 
@@ -196,6 +204,7 @@ sub Reset
 	$personal_local = "condor_config.local";
 	$personal_local_src = "";
 	$personal_local_post_src = "";
+	$personal_sec_prepost_src = "";
 	$personal_universe = "";
 
 	$topleveldir = getcwd();
@@ -520,7 +529,14 @@ sub TunePersonalCondor
 	chomp($myhost);
 	my @domainparts = split /\./, $myhost;
 	my $condorhost = "";
+	my $mpid = "";
 	my $localdir = shift;
+
+	if(scalar( @_ ) == 1) {
+		$mpid = $pid; # assign process id
+	} else {
+		$mpid = shift; # assign process id
+	}
 
 	debug( "TunePersonalCondor setting LOCAL_DIR to $localdir\n");
 	#print "domain parts follow:";
@@ -585,6 +601,12 @@ sub TunePersonalCondor
 	if( exists $control{"condorlocalsrc"} )
 	{
 		$personal_local_src = $control{"condorlocalsrc"};
+	}
+
+	# was a special local config file post src called out?
+	if( exists $control{"secprepostsrc"} )
+	{
+		$personal_sec_prepost_src = $control{"secprepostsrc"};
 	}
 
 	# was a special local config file post src called out?
@@ -690,7 +712,7 @@ sub TunePersonalCondor
 	{
 		# set up dedicated scheduler
 		print "************************ Adding Dedicated Scheduler $personal_universe Universe ***************************\n";
-		print NEW "DedicatedScheduler = \"DedicatedScheduler\@schedd$pid$version\@$condorhost\"\n";
+		print NEW "DedicatedScheduler = \"DedicatedScheduler\@schedd$mpid$version\@$condorhost\"\n";
 		print NEW "STARTD_EXPRS = \$(STARTD_EXPRS), DedicatedScheduler\n";
 		print NEW "SCHEDD_DEBUG = D_FULLDEBUG\n";
 	}
@@ -708,7 +730,7 @@ sub TunePersonalCondor
 			print NEW "COLLECTOR_HOST = \$(CONDOR_HOST):0\n";
 		}
 
-		print NEW "SCHEDD_NAME = schedd$pid$version\n";
+		print NEW "SCHEDD_NAME = schedd$mpid$version\n";
 		print NEW "NEGOTIATOR_HOST = \$(CONDOR_HOST):0\n";
 		print NEW "COLLECTOR_ADDRESS_FILE = \$(LOG)/.collector_address\n";
 		print NEW "NEGOTIATOR_ADDRESS_FILE = \$(LOG)/.negotiator_address\n";
@@ -718,12 +740,6 @@ sub TunePersonalCondor
 		print NEW "UPDATE_INTERVAL = 5\n";
 		print NEW "NEGOTIATOR_INTERVAL = 5\n";
 		print NEW "CONDOR_JOB_POLL_INTERVAL = 5\n";
-
-		print NEW "# Condor-C things\n";
-		print NEW "CONDOR_GAHP = \$(SBIN)/condor_c-gahp\n";
-		print NEW "C_GAHP_LOG = \$(LOG)/CondorCgahp.\$(USERNAME)\n";
-		print NEW "GRIDMANAGER_LOG = \$(LOG)/GridManager.\$(USERNAME)\n";
-		print NEW "C_GAHP_WORKER_THREAD_LOG = \$(LOG)/CondorCgahpWThread.\$(USERNAME)\n";
 	}
 	elsif( $portchanges eq "standard" )
 	{
@@ -745,12 +761,6 @@ sub TunePersonalCondor
 		print NEW "UPDATE_INTERVAL = 5\n";
 		print NEW "NEGOTIATOR_INTERVAL = 5\n";
 		print NEW "CONDOR_JOB_POLL_INTERVAL = 5\n";
-
-		print NEW "# Condor-C things\n";
-		print NEW "CONDOR_GAHP = \$(SBIN)/condor_c-gahp\n";
-		print NEW "C_GAHP_LOG = \$(LOG)/CondorCgahp.\$(USERNAME)\n";
-		print NEW "GRIDMANAGER_LOG = \$(LOG)/GridManager.\$(USERNAME)\n";
-		print NEW "C_GAHP_WORKER_THREAD_LOG = \$(LOG)/CondorCgahpWThread.\$(USERNAME)\n";
 	}
 	else
 	{
@@ -769,36 +779,21 @@ sub TunePersonalCondor
 		$gendatafile = $gendatafile . "_" . $myvms . "VMs";
 	}
 
-	if( exists $control{"encryption"} )
+	if($personal_sec_prepost_src ne "")
 	{
-		my $myencryptions = $control{"encryption"};
-		debug( "Encryption wanted! methods = $myencryptions\n");
-		print NEW "SEC_DEFAULT_ENCRYPTION = REQUIRED\n";
-		print NEW "SEC_DEFAULT_CRYPTO_METHODS = $myencryptions\n";
-		$gendatafile = $gendatafile . "_" . $myencryptions;
+		print "Adding to local config file from $personal_sec_prepost_src\n";
+		open(SECURITY,"<$personal_sec_prepost_src")  || die "Can not do local config additions: $! <<$personal_sec_prepost_src>>\n";
+		while(<SECURITY>)
+		{
+			print NEW "$_";
+		}
+		close(SECURITY);
 	}
 
-	if( exists $control{"authentication"} )
-	{
-		my $myauthentication = $control{"authentication"};
-		if($myauthentication eq "GSI")
-		{
-			debug( "Setting up authentication");
-			print NEW "SEC_DEFAULT_AUTHENTICATION = REQUIRED\n";
-			print NEW "SEC_DEFAULT_AUTHENTICATION_METHODS = $myauthentication\n";
-			print NEW "GSI_DAEMON_DIRECTORY = /etc/grid-security\n";
-			print NEW "#Subjecct must be in slash form and associate with condor entry in grid-mapfile\n";
-			print NEW "GSI_DAEMON_NAME = /C=US/ST=Wisconsin/L=Madison/O=University of Wisconsin -- Madison/O=Computer Sciences Department/OU=Condor Project/CN=nmi-test-5.cs.wisc.edu/Email=bgietzel\@cs.wisc.edu\n";
-			$gendatafile = $gendatafile . "_" . $myauthenication;
-		}
-		else
-		{
-			debug( "Do not understand requested authentication");
-		}
-	}
 
 	if($personal_local_post_src ne "")
 	{
+		print "Adding to local config file from $personal_local_post_src\n";
 		open(POST,"<$personal_local_post_src")  || die "Can not do local config additions: $! <<$personal_local_post_src>>\n";
 		while(<POST>)
 		{

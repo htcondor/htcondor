@@ -315,6 +315,10 @@ int Condor_Auth_Kerberos :: init_daemon()
 
 	char*           ccnam = NULL;
 
+	// needed for extracting service name
+	char * tmpsname = 0;
+	MyString sname;
+
     memset(creds_, 0, sizeof(krb5_creds));
     memset(l_increds, 0, sizeof(krb5_creds));
     memset(l_outcreds, 0, sizeof(krb5_creds));
@@ -327,8 +331,7 @@ int Condor_Auth_Kerberos :: init_daemon()
 	// in krb5-1.2 and earlier this was done with krb5_get_in_tkt_keytab()
 	//
 	// in krb5-1.3 and
-	// later this is done with krb5_get_init_creds_keytab.  then you
-	// put the creds in the cache and call krb5_get_credentials().
+	// later this should be done with krb5_get_init_creds_keytab
 
 	// select a server principal
     daemonPrincipal = param(STR_KERBEROS_SERVER_PRINCIPAL);
@@ -359,7 +362,6 @@ int Condor_Auth_Kerberos :: init_daemon()
 	free(daemonPrincipal);
 	daemonPrincipal = 0;
 
-
    
 	dprintf_krb5_principal( D_SECURITY, "init_daemon: client principal is '%s'\n", krb_principal_);
 
@@ -376,88 +378,29 @@ int Condor_Auth_Kerberos :: init_daemon()
 		goto error;
 	}
 
-
-	//------------------------------------------
-	// find the default credential cache
-	//------------------------------------------
-	ccnam = strdup(krb5_cc_default_name(krb_context_));
-	dprintf( D_FULLDEBUG, "init_daemon: krb5_cc_resolve(%s)\n", ccnam);
-	code = krb5_cc_resolve(krb_context_, ccnam, &ccache);
-	free(ccnam);
-
+	// get the service name out of the member variable server_
+	tmpsname = 0;
+	code = krb5_unparse_name(krb_context_, server_, &tmpsname);
 	if (code) {
 		goto error;
 	}
 
-	dprintf_krb5_principal( D_FULLDEBUG, "init_daemon: krb5_cc_initialize(%s)\n", krb_principal_);
-	if((code = krb5_cc_initialize(krb_context_, ccache, krb_principal_))) {
-		goto error;
-	}
+	// copy it into a mystring for stack cleanup purposes
+	sname = tmpsname;
+	free (tmpsname);
 
-    dprintf(D_SECURITY, "init_daemon: Trying to get tgt credential\n");
-    priv = set_root_priv();   // Get the old privilige
-	code = krb5_get_init_creds_keytab(krb_context_, l_increds, krb_principal_, keytab, 0, 0, 0);
-    set_priv(priv);
+	dprintf(D_SECURITY, "init_daemon: Trying to get tgt credential for service %s\n", sname.Value());
+
+	priv = set_root_priv();   // Get the old privilige
+	code = krb5_get_init_creds_keytab(krb_context_, creds_, krb_principal_, keytab, 0, (char*)sname.Value(), 0);
+	set_priv(priv);
 	if(code) {
 		goto error;
 	}
 
-	if ((DebugFlags & D_SECURITY) && (DebugFlags & D_FULLDEBUG)) {
-		dprintf_krb5_principal( D_SECURITY, "init_daemon: gic_kt l_increds->client is '%s'\n", l_increds->client );
-		dprintf_krb5_principal( D_SECURITY, "init_daemon: gic_kt l_increds->server is '%s'\n", l_increds->server );
-		dprintf( D_FULLDEBUG, "init_daemon: now calling krb5_cc_store_cred()\n");
-	}
+	dprintf_krb5_principal( D_SECURITY, "init_daemon: gic_kt creds_->client is '%s'\n", creds_->client );
+	dprintf_krb5_principal( D_SECURITY, "init_daemon: gic_kt creds_->server is '%s'\n", creds_->server );
 
-	if((code = krb5_cc_store_cred(krb_context_, ccache, l_increds))) {
-		krb5_free_cred_contents(krb_context_, l_increds);
-		krb5_free_creds(krb_context_, l_increds);
-		goto error;
-	}
-
-
-	//------------------------------------------
-	// Get principal info
-	//------------------------------------------
-	krb5_principal tmp_princ;
-	if ((code = krb5_cc_get_principal(krb_context_, ccache, &tmp_princ))) {
-		goto error;
-	}
- 	dprintf_krb5_principal( D_FULLDEBUG, "init_daemon: krb5_cc_get_principal is '%s'\n", tmp_princ );
-	krb5_free_principal(krb_context_, tmp_princ);
-
-    //------------------------------------------
-    // Copy the request information into in increds
-    //------------------------------------------
-	krb5_free_cred_contents(krb_context_, l_increds);
-	//krb5_free_creds(krb_context_, l_increds);
-    memset(l_increds, 0, sizeof(krb5_creds));
-
-	dprintf( D_FULLDEBUG, "init_daemon: now calling krb5_get_credentials()\n");
-
-    krb5_copy_principal(krb_context_, krb_principal_, &(l_increds->client));
-    krb5_copy_principal(krb_context_, server_, &(l_increds->server));
- 	dprintf_krb5_principal( D_FULLDEBUG, "init_daemon: post l_increds->client is '%s'\n", l_increds->client );
-	dprintf_krb5_principal( D_FULLDEBUG, "init_daemon: post l_increds->server is '%s'\n", l_increds->server );
-
-	code = krb5_get_credentials(krb_context_, 0, ccache, l_increds, &creds_);
-
-	dprintf_krb5_principal( D_FULLDEBUG, "init_daemon: post l_outcreds->client is '%s'\n", creds_->client );
-	dprintf_krb5_principal( D_FULLDEBUG, "init_daemon: post l_outcreds->server is '%s'\n", creds_->server );
-
-    if (code) {
-
-//    if (code = krb5_get_in_tkt_with_keytab(krb_context_,
-//                                           0,
-//                                           NULL,      //adderss
-//                                           NULL,
-//                                           NULL,
-//                                           keytab,
-//                                           0,
-//                                           creds_,
-//                                           0)) {
-        goto error;
-    }
-    
     dprintf(D_SECURITY, "Success..........................\n");
     
     rc = TRUE;
@@ -560,7 +503,6 @@ int Condor_Auth_Kerberos :: authenticate_client_kerberos()
     krb5_error_code        code;
     krb5_flags             flags;
     krb5_data              request;
-    krb5_error           * error = NULL;
     int                    reply, rc = FALSE;
     
     request.data = 0;
@@ -676,7 +618,7 @@ int Condor_Auth_Kerberos :: authenticate_server_kerberos()
     krb5_data         request, reply;
     priv_state        priv;
     krb5_keytab       keytab = 0;
-    int               time, message, rc = FALSE;
+    int               message, rc = FALSE;
     krb5_ticket *     ticket = NULL;
 
     request.data = 0;
@@ -932,7 +874,6 @@ int Condor_Auth_Kerberos :: map_kerberos_name(krb5_principal * princ_to_map)
 {
     krb5_error_code code;
     char *          client = NULL;
-    int             rc = FALSE;
 
     //------------------------------------------
     // Decode the client name
@@ -1009,9 +950,6 @@ int Condor_Auth_Kerberos :: map_kerberos_name(krb5_principal * princ_to_map)
 
 int Condor_Auth_Kerberos :: map_domain_name(const char * domain)
 {
-    int rc = TRUE;
-    int code;
-    const char * localDomain;
     if (RealmMap == 0) {
         init_realm_mapping();
         // it's okay if it returns false
@@ -1280,11 +1218,11 @@ int Condor_Auth_Kerberos :: forward_tgt_creds(krb5_creds      * cred,
 int Condor_Auth_Kerberos :: receive_tgt_creds(krb5_ticket * ticket)
 {
     krb5_error_code  code;
-    krb5_ccache      ccache;
-    krb5_principal   client;
-    krb5_data        request;
-    krb5_creds **    creds;
-    char             defaultCCName[MAXPATHLEN+1];
+	//krb5_ccache      ccache;
+    //krb5_principal   client;
+    //krb5_data        request;
+    //krb5_creds **    creds;
+    //char             defaultCCName[MAXPATHLEN+1];
     int              message;
     // First find out who we are talking to.
     // In case of host or condor, we do not need to receive credential
@@ -1391,7 +1329,7 @@ int Condor_Auth_Kerberos :: receive_tgt_creds(krb5_ticket * ticket)
     
     return 0;  // Everything is fine
   
- error:
+// error:
     dprintf(D_ALWAYS, "KERBEROS: %s\n", error_message(code));
     //if (ccache) {
     //  krb5_cc_destroy(krb_context_, ccache);
@@ -1470,7 +1408,7 @@ void Condor_Auth_Kerberos :: setRemoteAddress()
     return;
 
  error:
-    dprintf( D_ALWAYS, "KERBEROS: Unable to obtain remote address: ",
+    dprintf( D_ALWAYS, "KERBEROS: Unable to obtain remote address: %s\n",
 			 error_message(code) );
 }
 

@@ -76,6 +76,7 @@
 //#include "condor_crontab.h"
 #include "condor_netdb.h"
 #include "fs_util.h"
+#include "condor_mkstemp.h"
 
 
 #define DEFAULT_SHADOW_SIZE 125
@@ -346,18 +347,7 @@ Scheduler::Scheduler() :
 
 	startJobsDelayBit = FALSE;
 	num_reg_contacts = 0;
-#ifndef WIN32
-	MAX_STARTD_CONTACTS = getdtablesize() - 20;  // save 20 fds...
-		// Just in case getdtablesize() returns <= 20, we've got to
-		// let the schedd try at least 1 connection at a time.
-		// Derek, Todd, Pete K. 1/19/01
-	if( MAX_STARTD_CONTACTS < 1 ) {
-		MAX_STARTD_CONTACTS = 1;
-	}
-#else
-	// on Windows NT, it appears you can open up zillions of sockets
-	MAX_STARTD_CONTACTS = 2000;
-#endif
+
 	checkContactQueue_tid = -1;
 	checkReconnectQueue_tid = -1;
 
@@ -2220,20 +2210,35 @@ aboutToSpawnJobHandler( int cluster, int proc, void* )
 
 	MyString owner;
 	job_ad->LookupString(ATTR_OWNER, owner);
+
 	MyString nt_domain;
+
 	job_ad->LookupString(ATTR_NT_DOMAIN, nt_domain);
 
+
+
 	if (!recursive_chown(sandbox.Value(), owner.Value(), nt_domain.Value())) {
+
 		dprintf( D_ALWAYS, "(%d.%d) Failed to chown %s from to %d\\%d. "
+
 		         "Job may run into permissions problems when it starts.\n",
+
 		         cluster, proc, sandbox.Value(), nt_domain.Value(), owner.Value() );
+
 	}
 
+
+
 	if (!recursive_chown(sandbox_tmp.Value(), owner.Value(), nt_domain.Value())) {
+
 		dprintf( D_ALWAYS, "(%d.%d) Failed to chown %s from to %d\\%d. "
+
 		         "Job may run into permissions problems when it starts.\n",
+
 		         cluster, proc, sandbox.Value(), nt_domain.Value(), owner.Value() );
+
 	}
+
 
 #endif
 	return 0;
@@ -2418,7 +2423,7 @@ jobIsFinished( int cluster, int proc, void* )
 			filename_template.sprintf( "%s/.condor_nfs_sync_XXXXXX",
 									   iwd.Value() );
 			sync_filename = strdup( filename_template.Value() );
-			sync_fd = mkstemp( sync_filename );
+			sync_fd = condor_mkstemp( sync_filename );
 			if ( sync_fd >= 0 ) {
 				close( sync_fd );
 				unlink( sync_filename );
@@ -4206,9 +4211,29 @@ Scheduler::actOnJobs(int, Stream* s)
  			if( i % 10 == 0 ) {
  				daemonCore->ServiceCommandSocket();
  			}
- 			abort_job_myself( jobs[i], action, true, notify );
+ 			abort_job_myself( jobs[i], action, true, notify );		
+#ifdef WIN32
+			/*	This is a small patch so when DAGMan jobs are removed
+				on Win32, jobs submitted by the DAGMan are removed as well.
+				This patch is small and acceptable for the 6.8 stable series,
+				but for v6.9 and beyond we should remove this patch and have things
+				work on Win32 the same way they work on Unix.  However, doing this
+				was deemed to much code churning for a stable series, thus this
+				simpler but temporary patch.  -Todd 8/2006.
+			*/
+			int job_universe = CONDOR_UNIVERSE_MIN;
+			GetAttributeInt(jobs[i].cluster, jobs[i].proc, 
+								ATTR_JOB_UNIVERSE, &job_universe);
+			if ( job_universe == CONDOR_UNIVERSE_SCHEDULER ) {
+				MyString constraint;
+				constraint.sprintf( "%s == %d", ATTR_DAGMAN_JOB_ID,
+					jobs[i].cluster );
+				abortJobsByConstraint(constraint.Value(),
+					"removed because controlling DAGMan was removed",
+					true);
+			}
+#endif
 		}
-
 		break;
 
 	case JA_RELEASE_JOBS:
@@ -5224,23 +5249,32 @@ claimStartd( match_rec* mrec, ClassAd* job_ad, bool is_dedicated )
 		return false;
 	}
 
-	mrec->setStatus( M_CONNECTING );
-
 	char to_startd[256];
 	sprintf ( to_startd, "to startd %s", mrec->peer );
 
+	int reg_rc;
 	if( is_dedicated ) {
-		daemonCore->
+		reg_rc = daemonCore->
 			Register_Socket( sock, "<Startd Contact Socket>",
 			  (SocketHandlercpp)&DedicatedScheduler::startdContactConnectHandler,
 			  to_startd, &dedicated_scheduler, ALLOW );
 	} else {
-		daemonCore->
+		reg_rc = daemonCore->
 			Register_Socket( sock, "<Startd Contact Socket>",
 			  (SocketHandlercpp)&Scheduler::startdContactConnectHandler,
 			  to_startd, &scheduler, ALLOW );
 	}
-	daemonCore->Register_DataPtr( strdup(mrec->id) );
+	if(reg_rc < 0) {
+		dprintf( D_ALWAYS,
+		         "Failed to register socket to contact startd at %s.  "
+		         "Register_Socket returned %d.\n",
+		         mrec->peer,reg_rc);
+		delete sock;
+		return false;
+	}
+	ASSERT(daemonCore->Register_DataPtr( strdup(mrec->id) ));
+
+	mrec->setStatus( M_CONNECTING );
 
 	return true;
 }
@@ -5521,9 +5555,10 @@ Scheduler::checkContactQueue()
 	checkContactQueue_tid = -1;
 
 		// Contact startds as long as (a) there are still entries in our
-		// queue, and (b) we have not exceeded MAX_STARTD_CONTACTS, which
-		// ensures we do not run ourselves out of socket descriptors.
-	while( (num_reg_contacts < MAX_STARTD_CONTACTS) &&
+		// queue, (b) there are not too many registered sockets in
+		// daemonCore, which ensures we do not run ourselves out
+		// of socket descriptors.
+	while( !daemonCore->TooManyRegisteredSockets() &&
 		   (!startdContactQueue.IsEmpty()) ) {
 			// there's a pending registration in the queue:
 
@@ -10768,7 +10803,6 @@ Scheduler::publish( ClassAd *ad ) {
 	InsertIntoAd ( ad, "NegotiationRequestTime", NegotiationRequestTime  );
 	InsertIntoAd ( ad, "ExitWhenDone", ExitWhenDone );
 	InsertIntoAd ( ad, "StartJobTimer", StartJobTimer );
-	InsertIntoAd ( ad, "MAX_STARTD_CONTACTS", MAX_STARTD_CONTACTS );
 	InsertIntoAd ( ad, "CondorAdministrator", CondorAdministrator );
 	InsertIntoAd ( ad, "AccountantName", AccountantName );
 	InsertIntoAd ( ad, "UidDomain", UidDomain );

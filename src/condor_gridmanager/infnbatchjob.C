@@ -99,7 +99,6 @@ void INFNBatchJobInit()
 void INFNBatchJobReconfig()
 {
 	int tmp_int;
-	char *tmp_char = NULL;
 
 	tmp_int = param_integer( "INFN_JOB_POLL_INTERVAL", 5 * 60 );
 	INFNBatchJob::setPollInterval( tmp_int );
@@ -765,7 +764,6 @@ BaseResource *INFNBatchJob::GetResource()
 
 ClassAd *INFNBatchJob::buildSubmitAd()
 {
-	int now = time(NULL);
 	MyString expr;
 	ClassAd *submit_ad;
 	ExprTree *next_expr;

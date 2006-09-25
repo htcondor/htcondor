@@ -32,6 +32,7 @@
 #include "condor_ckpt_name.h"
 #include "filename_tools.h"
 #include "job_lease.h"
+#include "directory.h"
 
 #include "gridmanager.h"
 #include "gt4job.h"
@@ -222,11 +223,13 @@ const char *xml_stringify( const char *string )
 	return dst.Value();
 }
 
+/* Not currently used
 static
 const char *xml_stringify( const MyString& src )
 {
 	return xml_stringify( src.Value() );
 }
+*/
 
 int Gt4JobStateToInt( const char *status ) {
 	if ( status == NULL ) {
@@ -1884,6 +1887,10 @@ MyString *GT4Job::buildSubmitRSL()
 		// First upload an emtpy dummy directory
 		// This will be the job's sandbox directory
 		if ( create_remote_iwd ) {
+			if ( getDummyJobScratchDir() == NULL ) {
+				errorString = "Failed to create empty stage-in directory";
+				return NULL;
+			}
 			if ( riwd_parent != "" ) {
 				*rsl += "<transfer>";
 				buff.sprintf( "%s%s/", local_url_base.Value(),
@@ -2198,31 +2205,82 @@ GT4Job::printXMLParam (const char * name, const char * value) {
 // gridmanger scratch dir. NOT thread-safe.
 const char*
 GT4Job::getDummyJobScratchDir() {
+	const int dir_mode = 0500;
+	const char *return_val = NULL;
 	static MyString dirname;
+
+	if ( dirname != "" ) {
+		return dirname.Value();
+	}
+
+	char *prefix = temp_dir_path();
+	ASSERT( prefix );
 #ifndef WIN32 
-	dirname.sprintf ("%s%cempty_dir_u%d", // <scratch>/empty_dir_u<uid>
-					 GridmanagerScratchDir, 
+	dirname.sprintf ("%s%ccondor_g_empty_dir_u%d", // <scratch>/condorg_empty_dir_u<uid>
+					 prefix,
 					 DIR_DELIM_CHAR,
 					 geteuid());
 #else // Windows
 	char *user = my_username();
-	dirname.sprintf ("%s%cempty_dir_u%s", // <scratch>\empty_dir_u<username>
-					 GridmanagerScratchDir, 
+	dirname.sprintf ("%s%ccondor_g_empty_dir_u%s", // <scratch>\empty_dir_u<username>
+					 prefix, 
 					 DIR_DELIM_CHAR,
 					 user);
 	free(user);
 	user = NULL;
 #endif
+	free( prefix );
 	
-	struct stat stat_buff;
-	if ( stat(dirname.Value(), &stat_buff) < 0 ) {
-		int rc;
-		if ( (rc = mkdir (dirname.Value(), 0700)) < 0 ) {
-			dprintf (D_ALWAYS, "Unable to create scratch directory %s, rc=%d\n", 
-					 dirname.Value(), rc);
-			return NULL;
+	StatInfo *dir_stat = new StatInfo( dirname.Value() );
+
+	if ( dir_stat->Error() == SINoFile ) {
+		delete dir_stat;
+		dir_stat = NULL;
+		if ( mkdir (dirname.Value(), dir_mode) < 0 ) {
+			dprintf (D_ALWAYS, "Unable to create scratch directory %s, errno=%d (%s)\n", 
+					 dirname.Value(), errno, strerror(errno));
+			goto error_exit;
 		}
+		dir_stat = new StatInfo( dirname.Value() );
 	}
 
-	return dirname.Value();
+	if ( dir_stat->Error() != SIGood ) {
+		dprintf( D_ALWAYS, "Unable to stat scratch directory %s, errno=%d (%s)\n",
+				 dirname.Value(), dir_stat->Errno(),
+				 strerror( dir_stat->Errno() ) );
+		goto error_exit;
+	}
+	if ( dir_stat->IsSymlink() ) {
+		dprintf( D_ALWAYS, "Scratch directory %s is a symlink\n",
+				 dirname.Value() );
+		goto error_exit;
+	}
+	if ( !dir_stat->IsDirectory() ) {
+		dprintf( D_ALWAYS, "Scratch directory %s isn't a directory\n",
+				 dirname.Value() );
+		goto error_exit;
+	}
+#ifndef WIN32 
+	if ( dir_stat->GetOwner() != get_my_uid() ) {
+		dprintf( D_ALWAYS, "Scratch directory %s not owned by user\n",
+				 dirname.Value() );
+		goto error_exit;
+	}
+#endif
+	if ( dir_stat->GetMode() & 0777 != dir_mode ) {
+		dprintf( D_ALWAYS, "Scratch directory %s has wrong permissions 0%o\n",
+				 dirname.Value(), dir_stat->GetMode() & 0777 );
+		goto error_exit;
+	}
+
+	return_val = dirname.Value();
+
+ error_exit:
+	if ( dir_stat ) {
+		delete dir_stat;
+	}
+	if ( return_val == NULL ) {
+		dirname = "";
+	}
+	return return_val;
 }

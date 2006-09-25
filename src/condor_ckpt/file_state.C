@@ -736,7 +736,7 @@ int CondorFileTable::close( int fd )
 	}
 
 	CondorFilePointer *p = pointers[fd];
-	CondorFileInfo *i = p->info;
+	//CondorFileInfo *i = p->info;
 	CondorFile *f = p->file;
 
 	// If this is the last use of the file, flush, close, and delete.

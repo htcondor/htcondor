@@ -189,7 +189,7 @@ foreach $compiler (@compilers)
 	$ENV{PATH} = $ENV{PATH} . ":" . $compilerdir;
 
     # fork a child to run each test program
-    print "submitting $compiler tests";
+    print "submitting $compiler tests ";
     foreach $test_program (@{$test_suite{"$compiler"}})
     {
         print ".";
@@ -212,8 +212,16 @@ foreach $compiler (@compilers)
         # kill ourselves with SIGALARM if we run for more than 18 hours
         alarm $test_timeout;
 
+		if( ! -f $test_program ) {
+			print "Test does not exist<$test_program>!!!\n";
+		}
+		if( ! -x $test_program ) {
+			print "Test is not executable<$test_program>!!!\n";
+		}
+
         # exec the test itself
-	exec( "perl $test_program > $test_program.out 2>&1" );
+	exec( "perl $test_program > $test_program.out 2>&1" ) ||
+		print "could not exec $test_program!!!!!!<error:$!>\n";
     }
 
     # wait for each test to finish and print outcome

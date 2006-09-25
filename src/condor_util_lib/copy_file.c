@@ -30,7 +30,7 @@ copy_file(const char *old_filename, const char *new_filename)
 #if defined(WIN32)
    		// overwrite destination path
    BOOL retval;
-   retval = CopyFile(old_filename, new_filename, TRUE);
+   retval = CopyFile(old_filename, new_filename, FALSE);
 
    if (retval == 0) {
    		// failure

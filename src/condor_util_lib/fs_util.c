@@ -35,6 +35,7 @@
 #endif
 
 #include "condor_constants.h"
+#include "basename.h"
 #include "fs_util.h"
 
 #if ( defined HAVE_STATVFS ) && ( defined HAVE_STRUCT_STATVFS_F_BASETYPE )
@@ -89,7 +90,16 @@ detect_nfs_statvfs( const char *path, BOOLEAN *is_nfs )
 	struct statvfs	buf;
 
 	status = statvfs( path, &buf );
+	if ( ( status < 0 ) && ( errno == ENOENT )) {
+			// file doesn't exist yet, so check parent directory.
+			char *dirname;
+			dirname = condor_dirname(path);
+			status = statvfs( dirname, &buf );
+			free(dirname);
+	}
+
 	if ( status < 0 ) {
+
 #    ifndef FS_UTIL_TEST
 		dprintf( D_ALWAYS, "statvfs() failed: %d/%s\n",
 				 errno, strerror( errno ) );
@@ -122,6 +132,22 @@ detect_nfs_statfs( const char *path, BOOLEAN *is_nfs )
 # else
 #  error "Unknown statfs() implemenation"
 # endif
+
+	if ( ( status < 0 ) && ( errno == ENOENT )) {
+			// file doesn't exist yet, so check parent directory.
+			char *dirname;
+			dirname = condor_dirname(path);
+			printf("checking %s instead...\n", dirname);
+# if (STATFS_ARGS == 2)
+			status = statfs( dirname, &buf );
+# elif (STATFS_ARGS == 4)
+			status = statfs( dirname, &buf, sizeof(buf), 0 );
+# else
+#  error "Unknown statfs() implemenation"
+# endif
+			free(dirname);
+	}
+
 	if ( status < 0 ) {
 #	  if (!defined FS_UTIL_TEST )
 		dprintf( D_ALWAYS, "statfs() failed: %d/%s\n",
@@ -206,3 +232,4 @@ main( int argc, const char *argv[] )
 	return 0;
 }
 #endif
+

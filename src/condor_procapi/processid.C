@@ -410,7 +410,7 @@ ProcessId::writeConfirmationOnly(FILE* fp) const
 	}
 		// its an error otherwise
 	else{
-		dprintf(D_ALWAYS, "ERROR: Attempted to write a confirmation for a process id that was not confirmed");
+		dprintf(D_PROCFAMILY, "ERROR: Attempted to write a confirmation for a process id that was not confirmed");
 		return FAILURE;
 	}
 
@@ -527,7 +527,7 @@ ProcessId::extractConfirmation( FILE* fp,
 		// 2. Check for errors
 
 	if( nr_extracted == EOF || nr_extracted == 0 ){
-		dprintf(D_ALWAYS, 
+		dprintf(D_PROCFAMILY, 
 				"ERROR: Failed to match any entries in "
 				"ProcessId::extractConfirmation(char*, int&)\n");
 		return FAILURE;

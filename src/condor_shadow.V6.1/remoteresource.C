@@ -1316,11 +1316,15 @@ RemoteResource::attemptReconnect( void )
 		// if if this attempt fails, we need to remember we tried
 	reconnect_attempts++;
 
-	if( ! starterAddress ) {
-		if( ! locateReconnectStarter() ) {
-			return;
-		}
+	
+		// ask the startd if the starter is still alive, and if so,
+		// where it is located.  note we must ask the startd, even
+		// if we think we already know the address of the starter, since
+		// the startd would know if the starter process went away or not.
+	if( ! locateReconnectStarter() ) {
+		return;
 	}
+	
 		// if we got here, we already know the starter's address, so
 		// we can go on to directly request a reconnect... 
 	requestReconnect(); 

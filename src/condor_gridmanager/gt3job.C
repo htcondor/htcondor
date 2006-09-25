@@ -448,7 +448,6 @@ int GT3Job::doEvaluateState()
 	bool done;
 	int rc;
 	int status;
-	int error;
 
 	daemonCore->Reset_Timer( evaluateStateTid, TIMER_NEVER );
 

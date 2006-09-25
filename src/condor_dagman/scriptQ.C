@@ -109,7 +109,10 @@ ScriptQ::ScriptReaper( int pid, int status )
 	_scriptPidTable->remove( pid );
 	_numScriptsRunning--;
 
-	ASSERT( pid == script->_pid );
+	if ( pid != script->_pid ) {
+		EXCEPT( "Reaper pid (%d) does not match expected script pid (%d)!",
+					pid, script->_pid );
+	}
 	script->_done = TRUE;
 
 	// call appropriate DAG reaper

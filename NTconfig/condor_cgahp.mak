@@ -35,11 +35,11 @@ OutDir=.\..\Debug
 
 !IF "$(RECURSE)" == "0" 
 
-ALL : "$(OUTDIR)\condor_cgahp.exe"
+ALL : "$(OUTDIR)\condor_c-gahp.exe"
 
 !ELSE 
 
-ALL : "condor_util_lib - Win32 Debug" "condor_sysapi - Win32 Debug" "condor_procapi - Win32 Debug" "condor_io - Win32 Debug" "condor_daemon_core - Win32 Debug" "condor_cpp_util - Win32 Debug" "condor_classad - Win32 Debug" "$(OUTDIR)\condor_cgahp.exe"
+ALL : "condor_util_lib - Win32 Debug" "condor_sysapi - Win32 Debug" "condor_procapi - Win32 Debug" "condor_io - Win32 Debug" "condor_daemon_core - Win32 Debug" "condor_cpp_util - Win32 Debug" "condor_classad - Win32 Debug" "$(OUTDIR)\condor_c-gahp.exe"
 
 !ENDIF 
 
@@ -56,9 +56,9 @@ CLEAN :
 	-@erase "$(INTDIR)\soap_cgahpStub.obj"
 	-@erase "$(INTDIR)\vc60.idb"
 	-@erase "$(INTDIR)\vc60.pdb"
-	-@erase "$(OUTDIR)\condor_cgahp.exe"
-	-@erase "$(OUTDIR)\condor_cgahp.ilk"
-	-@erase "$(OUTDIR)\condor_cgahp.pdb"
+	-@erase "$(OUTDIR)\condor_c-gahp.exe"
+	-@erase "$(OUTDIR)\condor_c-gahp.ilk"
+	-@erase "$(OUTDIR)\condor_c-gahp.pdb"
 
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
@@ -102,7 +102,7 @@ BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_cgahp.bsc"
 BSC32_SBRS= \
 	
 LINK32=link.exe
-LINK32_FLAGS=../Debug/condor_common.obj ..\Debug\condor_common_c.obj $(CONDOR_LIB) $(CONDOR_LIBPATH) $(CONDOR_GSOAP_LIB) $(CONDOR_GSOAP_LIBPATH) $(CONDOR_KERB_LIB) $(CONDOR_KERB_LIBPATH) $(CONDOR_GLOBUS_LIBPATH) $(CONDOR_GLOBUS_LIB) $(CONDOR_PCRE_LIB) $(CONDOR_PCRE_LIBPATH) $(CONDOR_OPENSSL_LIB) $(CONDOR_POSTGRESQL_LIB) $(CONDOR_OPENSSL_LIBPATH) $(CONDOR_POSTGRESQL_LIBPATH) /nologo /subsystem:console /incremental:yes /pdb:"$(OUTDIR)\condor_cgahp.pdb" /debug /machine:I386 /out:"$(OUTDIR)\condor_cgahp.exe" /pdbtype:sept 
+LINK32_FLAGS=../Debug/condor_common.obj ..\Debug\condor_common_c.obj $(CONDOR_LIB) $(CONDOR_LIBPATH) $(CONDOR_GSOAP_LIB) $(CONDOR_GSOAP_LIBPATH) $(CONDOR_KERB_LIB) $(CONDOR_KERB_LIBPATH) $(CONDOR_GLOBUS_LIBPATH) $(CONDOR_GLOBUS_LIB) $(CONDOR_PCRE_LIB) $(CONDOR_PCRE_LIBPATH) $(CONDOR_OPENSSL_LIB) $(CONDOR_POSTGRESQL_LIB) $(CONDOR_OPENSSL_LIBPATH) $(CONDOR_POSTGRESQL_LIBPATH) /nologo /subsystem:console /incremental:yes /pdb:"$(OUTDIR)\condor_c-gahp.pdb" /debug /machine:I386 /out:"$(OUTDIR)\condor_c-gahp.exe" /pdbtype:sept 
 LINK32_OBJS= \
 	"$(INTDIR)\cgahp_common.obj" \
 	"$(INTDIR)\io_loop.obj" \
@@ -118,7 +118,7 @@ LINK32_OBJS= \
 	"$(OUTDIR)\condor_sysapi.lib" \
 	"..\src\condor_util_lib\condor_util.lib"
 
-"$(OUTDIR)\condor_cgahp.exe" : "$(OUTDIR)" $(DEF_FILE) $(LINK32_OBJS)
+"$(OUTDIR)\condor_c-gahp.exe" : "$(OUTDIR)" $(DEF_FILE) $(LINK32_OBJS)
     $(LINK32) @<<
   $(LINK32_FLAGS) $(LINK32_OBJS)
 <<
@@ -133,11 +133,11 @@ OutDir=.\../Release
 
 !IF "$(RECURSE)" == "0" 
 
-ALL : "$(OUTDIR)\condor_cgahp.exe"
+ALL : "$(OUTDIR)\condor_c-gahp.exe"
 
 !ELSE 
 
-ALL : "condor_util_lib - Win32 Release" "condor_sysapi - Win32 Release" "condor_procapi - Win32 Release" "condor_io - Win32 Release" "condor_daemon_core - Win32 Release" "condor_cpp_util - Win32 Release" "condor_classad - Win32 Release" "$(OUTDIR)\condor_cgahp.exe"
+ALL : "condor_util_lib - Win32 Release" "condor_sysapi - Win32 Release" "condor_procapi - Win32 Release" "condor_io - Win32 Release" "condor_daemon_core - Win32 Release" "condor_cpp_util - Win32 Release" "condor_classad - Win32 Release" "$(OUTDIR)\condor_c-gahp.exe"
 
 !ENDIF 
 
@@ -153,8 +153,8 @@ CLEAN :
 	-@erase "$(INTDIR)\soap_cgahpServer.obj"
 	-@erase "$(INTDIR)\soap_cgahpStub.obj"
 	-@erase "$(INTDIR)\vc60.idb"
-	-@erase "$(OUTDIR)\condor_cgahp.exe"
-	-@erase "$(OUTDIR)\condor_cgahp.map"
+	-@erase "$(OUTDIR)\condor_c-gahp.exe"
+	-@erase "$(OUTDIR)\condor_c-gahp.map"
 
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
@@ -198,7 +198,7 @@ BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_cgahp.bsc"
 BSC32_SBRS= \
 	
 LINK32=link.exe
-LINK32_FLAGS=../Release/condor_common.obj ..\Release\condor_common_c.obj $(CONDOR_LIB) $(CONDOR_LIBPATH) $(CONDOR_GSOAP_LIB) $(CONDOR_GSOAP_LIBPATH) $(CONDOR_KERB_LIB) $(CONDOR_KERB_LIBPATH) $(CONDOR_GLOBUS_LIBPATH) $(CONDOR_GLOBUS_LIB) $(CONDOR_PCRE_LIB) $(CONDOR_PCRE_LIBPATH) $(CONDOR_OPENSSL_LIB) $(CONDOR_POSTGRESQL_LIB) $(CONDOR_OPENSSL_LIBPATH) $(CONDOR_POSTGRESQL_LIBPATH) /nologo /subsystem:console /pdb:none /map:"$(INTDIR)\condor_cgahp.map" /debug /machine:I386 /out:"$(OUTDIR)\condor_cgahp.exe" 
+LINK32_FLAGS=../Release/condor_common.obj ..\Release\condor_common_c.obj $(CONDOR_LIB) $(CONDOR_LIBPATH) $(CONDOR_GSOAP_LIB) $(CONDOR_GSOAP_LIBPATH) $(CONDOR_KERB_LIB) $(CONDOR_KERB_LIBPATH) $(CONDOR_GLOBUS_LIBPATH) $(CONDOR_GLOBUS_LIB) $(CONDOR_PCRE_LIB) $(CONDOR_PCRE_LIBPATH) $(CONDOR_OPENSSL_LIB) $(CONDOR_POSTGRESQL_LIB) $(CONDOR_OPENSSL_LIBPATH) $(CONDOR_POSTGRESQL_LIBPATH) /nologo /subsystem:console /pdb:none /map:"$(INTDIR)\condor_c-gahp.map" /debug /machine:I386 /out:"$(OUTDIR)\condor_c-gahp.exe" 
 LINK32_OBJS= \
 	"$(INTDIR)\cgahp_common.obj" \
 	"$(INTDIR)\io_loop.obj" \
@@ -214,7 +214,7 @@ LINK32_OBJS= \
 	"$(OUTDIR)\condor_sysapi.lib" \
 	"..\src\condor_util_lib\condor_util.lib"
 
-"$(OUTDIR)\condor_cgahp.exe" : "$(OUTDIR)" $(DEF_FILE) $(LINK32_OBJS)
+"$(OUTDIR)\condor_c-gahp.exe" : "$(OUTDIR)" $(DEF_FILE) $(LINK32_OBJS)
     $(LINK32) @<<
   $(LINK32_FLAGS) $(LINK32_OBJS)
 <<

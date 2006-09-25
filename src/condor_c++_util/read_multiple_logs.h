@@ -82,6 +82,25 @@ public:
 		 */
 	static void DeleteLogs(StringList &logFileNames);
 
+		/** Determines whether the given set of log files have any
+			members that are on NFS.
+			@param The list of log files
+			@param Whether having a log file on NFS is a fatal error (as
+				opposed to a warning)
+			@return true iff at least one log file is on NFS and nfsIsError
+				is true
+		*/
+	static bool logFilesOnNFS(StringList&, bool nfsIsError);
+
+		/** Determines whether the given log file is on NFS.
+			@param The log file name
+			@param Whether having a log file on NFS is a fatal error (as
+				opposed to a warning)
+			@return true iff at least the log file is on NFS and nfsIsError
+				is true
+		*/
+	static bool logFileOnNFS(const char *fileName, bool nfsIsError);
+
 private:
 		/** Reads in the specified file, breaks it into lines, and
 			combines the lines into "logical" lines (joins continued
@@ -245,8 +264,5 @@ private:
 	  determined to be on an NFS volume or it is indeterminable,
 	  and USER_LOGS_ON_NFS_IS_ERROR is true.
 	 */
-
-bool logFileOnNFS(const char *fileName);
-bool logFilesOnNFS(StringList&);
 
 #endif
