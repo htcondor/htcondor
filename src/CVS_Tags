@@ -1,3 +1,7 @@
+09/25/06 V6_8-merge-1
+  The state of the V6_8-branch for its first merge back to the trunk,
+  which is currently the 6.9 development branch.
+
 09/18/06 V6_8_1
   The official V6_8_1 release is a copy of BUILD-V6_7-branch-2006-9-17.
   All platforms built on NMI runid 31207 except windows, which was built
