@@ -1,3 +1,11 @@
+09/25/06 trunk-pre_merge-V6_8-merge-1
+  the state of the trunk before merging in the V6_8-branch as tagged
+  at V6_8-merge-1
+
+09/25/06 trunk-post_merge-V6_8-merge-1
+  the state of the trunk after merging in the V6_8-branch as tagged
+  at V6_8-merge-1
+
 09/20/06 V6_9-eventd_v2-2-{root,branch}
   A second branch since the first branch franked but seemd to
   have issues running jobs. I thought I had worked from a good
