@@ -902,22 +902,96 @@ else
 fi
 
 #########
-# determine if gcc has -rdynamic
+# determine if gcc has a collection of particular warning flags we desire.
 #########
-AC_MSG_CHECKING([if gcc supports -rdynamic])
 
-echo "int main(void ) { return 0; }" > rdynamic_test.c
-_test_output=`gcc -rdynamic rdynamic_test.c -o rdynamic_test 2>&1`
-_test_status=$?
-if test $_test_status -eq 0 && test "x$_test_output" = "x"; then 
-  gcc_rdynamic_flag="-rdynamic"
-  AC_MSG_RESULT([yes])
-else
-  gcc_rdynamic_flag=""
-  AC_MSG_RESULT([no])
-fi
-rm -f rdynamic_test.c rdynamic_test
-AC_SUBST([gcc_rdynamic_flag],[$gcc_rdynamic_flag])
+#
+# These options are shared between gcc and g++
+#
+
+# The standard warnings
+C_CXX_OPTION(gcc, -Wall, comp_option_Wall, [])
+
+# Extra options in later compilers, -W and -Wextra are the same
+C_CXX_OPTION(gcc, -W, comp_option_W, [])
+C_CXX_OPTION(gcc, -Wextra, comp_option_Wextra, [])
+
+# Don't use == to compare floats
+C_CXX_OPTION(gcc, -Wfloat-equal, comp_option_Wfloat_equal, [])
+
+# Warn if there is a shadow declaration, like a local with the same name as
+# a global
+C_CXX_OPTION(gcc, -Wshadow, comp_option_Wshadow, [])
+
+# Warn if code can't be executed.
+#
+# Note: Code blocks marked by this warning flag should be carefully checked
+# since they may be able to be executed in ways the compiler doesn't see, like
+# via setjmp, or other methods.
+C_CXX_OPTION(gcc, -Wunreachable-code, comp_option_Wunreachable_code, [])
+
+# Warn if non-comment after endif labels
+C_CXX_OPTION(gcc, -Wendif-labels, comp_option_Wendif_labels, [])
+
+# Warn on arithmatic with void*, cause you don't know the size...
+C_CXX_OPTION(gcc, -Wpointer-arith, comp_option_Wpointer_arith, [])
+
+# Warn if a prototype causes a type conversion thqt is different from what would
+# happen to the same argument in the absence of a prototype.
+C_CXX_OPTION(gcc, -Wconversion, comp_option_Wconversion, [])
+
+# Warn whenever a type qualifier (like const) is cast away.
+C_CXX_OPTION(gcc, -Wcast-qual, comp_option_Wcast_qual, [])
+
+# Warn whenever a pointer is cast such that the required alignment of the target
+# is increased.
+C_CXX_OPTION(gcc, -Wcast-align, comp_option_Wcast_align, [])
+
+# Warn whenever a static object on the heap is larger than 256 bytes.
+# This causes ICE when using gcc 2.96 on x6 rh7.2, and various staff are
+# in disagreement about the validity of it, so we'll leave it commented out
+# for now. Please ensure to add back in the @comp_option_Wvolatile_register_var@
+# back into COMP_DEBUG_FLAGS if you want to enable it again.
+#C_CXX_OPTION(gcc, -Wlarger-than-92160, comp_option_Wlarger_than_92160, [])
+
+# Warn if a register variable is declared volatile. The optimizer doesn't
+# inhibit all transformations of register variables when they are declared
+# volatile, so an error could be introduced.
+C_CXX_OPTION(gcc, -Wvolatile-register-var, comp_option_Wvolatile_register_var, [])
+
+# Warn if writing to a const char* string constant (which lives in read-only
+# memory space).
+#
+# Commented out since it is a bit spurious in its errors. It makes an
+# assumption that we've been careful about using const everywhere when
+# declaring write-only strings. Since I'm not confident we've been doing
+# that, I took it out. Make sure to add the @comp_option_Wwrite_strings@ 
+# variable back into COMP_DEBUG_FLAGS if you want to enable it again.
+#C_CXX_OPTION(gcc, -Wwrite-strings, comp_option_Wwrite_strings, [])
+
+####
+# These are C only and treated differently in configure.cf.in
+####
+# Warn if an extern declaration is encountered in a C function.
+C_CXX_OPTION(gcc, -Wnested-externs, comp_option_Wnested_externs, [])
+
+# Warn if a function is declared or defined without argument types
+C_CXX_OPTION(gcc, -Wstrict-prototypes, comp_option_Wstrict_prototypes, [])
+
+# Warn if a global function is defined without a previous protoype declaration
+C_CXX_OPTION(gcc, -Wmissing-prototypes, comp_option_Wmissing_prototypes, [])
+
+#########
+# See if the wonderful stack protection feature is available
+#########
+# Put guards around arrays on the stack, and check them on function exit.
+C_CXX_OPTION(gcc, -fstack-protector, comp_option_fstack_protector, [])
+
+#########
+# determine if gcc has -rdynamic to keep backtrace symbols for debugging
+# stripped executables.
+#########
+C_CXX_OPTION(gcc, -rdynamic, gcc_rdynamic_flag, [])
 
 #########
 # determine if gcc has -fPIC

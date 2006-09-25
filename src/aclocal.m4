@@ -292,12 +292,47 @@ AC_DEFUN([GET_GCC_VALUE],
   fi
  ])
  if test $[_cv_[$3]] = "no"; then
-   AC_MSG_ERROR([Can not find $1: gcc $2 failed!])
+   AC_MSG_RESULT([no])
  else
+   AC_MSG_RESULT([yes])
    AC_SUBST($3,$[_cv_[$3]])
  fi
 ])
 
+#######################################################################
+# C_CXX_OPTION by Peter Keller <psilord@cs.wisc.edu>
+# We need to see whether or not a particular flag is available for a
+# compiler (which should be either a C or C++ compiler).
+#  $1 the compiler path to check
+#  $2 the warning option to check
+#  $3 the variable name (used for storing in cache with "_cv_"
+#     prepended to the front, and for substitution in the output)
+#  $4 any optional flags which should be passed to gcc to test the flag in
+#     question to test the first flag
+#######################################################################
+AC_DEFUN([C_CXX_OPTION],
+[AC_CACHE_CHECK( [if $1 supports $2], [_cv_$3],
+cat > conf_flag.c << EOF
+#include <stdio.h>
+#include <stdlib.h>
+int main(void)
+{
+	return 0;
+}
+EOF
+ [[_cv_$3]=`$1 $2 $4 conf_flag.c -c -o conf_flag.o > /dev/null 2>&1`
+  _comp_status=$?
+  if test $_comp_status -ne 0; then
+    [_cv_$3]="no";
+  else
+    [_cv_$3]="yes";
+  fi
+ ])
+ if test $[_cv_$3] = "yes"; then
+   AC_SUBST($3,$2)
+ fi
+  rm -f conf_flag.c conf_flag.o
+])
 
 #######################################################################
 # CONDOR_TRY_CP_RECURSIVE_SYMLINK_FLAG by <wright@cs.wisc.edu> 
