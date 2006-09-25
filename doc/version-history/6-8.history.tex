@@ -46,7 +46,11 @@ bug that can cause duplicate UUIDs to be generated for WS GRAM jobs.
 
 \begin{itemize}
 
-\item None.
+\item Because by default the \Condor{startd} references the job
+ad attribute \AdAttr{NumCkpts}, Condor's default configuration
+will now round-up the value of NumCkpts in order to improve 
+matchmaking performance.  See entry on \Macro{SCHEDD\_ROUND\_ATTR}
+in section~\ref{param:ScheddRoundAttr}.
 
 \end{itemize}
 
@@ -56,7 +60,7 @@ bug that can cause duplicate UUIDs to be generated for WS GRAM jobs.
 
 % Gnats PR 751
 \item Added the ProcessId class (which more uniquely identifies a
-process than just a PID does) to the \Condor{dagman} "abort duplicate
+process than just a PID does) to the \Condor{dagman} ``abort duplicate
 runs" feature.  This makes it less likely that a given instance of
 \Condor{dagman} will mistakenly conclude that another instance of
 \Condor{dagman} is already running on the same DAG.  Also fixed an
@@ -71,6 +75,7 @@ when parsing ClassAds that use functions with arguments
 \item Fixed a bug in the \condor{starter} which caused it to look in the
 wrong place for the job's executable if \Attr{TransferExecutable} was set
 to \Expr{True} in the job ad.
+
 
 \end{itemize}
 
