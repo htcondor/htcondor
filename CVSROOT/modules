@@ -764,7 +764,7 @@ V6_8_EXT	-a V6_8_2_EXT
 #---------------------------------------------------------------------
 
 # Externals for 6.9.0.  At this point, same as 6.8.1.
-V6_9_0_EXT	-a V6_8_1_EXT
+V6_9_0_EXT	-a V6_8_2_EXT
 
 # Externals needed for the head of the V6_9-branch (a.k.a. the TRUNK)
 V6_9_EXT	-a V6_9_0_EXT
