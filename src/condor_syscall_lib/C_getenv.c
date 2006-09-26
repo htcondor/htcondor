@@ -23,7 +23,7 @@
 extern char	**environ;
 
 char *
-_getenv( name )
+__getenv( name )
 char	*name;
 {
 	char	**envp;
@@ -39,6 +39,14 @@ char	*name;
 	return (char *)0;
 }
 
+
+char *
+_getenv( name )
+char	*name;
+{
+	return __getenv(name);
+}
+
 char *
 getenv( name )
 char	*name;
@@ -46,4 +54,7 @@ char	*name;
 	return _getenv(name);
 }
 
+
 sigset(){}
+
+

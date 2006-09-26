@@ -40,10 +40,15 @@
 #endif
 
 #if defined (LINUX) && !defined(SYS_sigsetmask)
+
 /* SYS_sigsetmask is undefined in glibc header files, however it is a valid
 	system call in linux kernels so to write portable(stop laughing) code
-	we want it to be defined in both cases */
+	we want it to be defined in both cases. It turns out that while this exists
+	in i386 kernel, it simply doesn't in x86_86 kernels. */
+#if defined(I386)
 #define SYS_sigsetmask __NR_ssetmask
+#endif
+
 #endif
 
 #if defined (LINUX)

@@ -88,7 +88,20 @@ BOOL StackGrowsDown()
 */
 int JmpBufSP_Index()
 {
+
+/* look in /usr/include/bits/setjmp.h */
+
+#if defined(I386)
+
+	/* In a 32-bit x86 jmp_buf layout, this is the stack index variable */
 	return 4;
+
+#elif defined(X86_64)
+
+	/* In a 64-bit x86_64 jmp_buf layout, this is the stack index variable */
+	return 6;
+
+#endif
 }
 
 /*

@@ -38,7 +38,7 @@ const int MAGIC = 0xfeafea;
 const int COMPRESS_MAGIC = 0xfeafeb;
 const int SEG_INCR = 25;
 const int  MAX_SEGS = 200;
-const int ALT_HEAP_SIZE = 10*1024*1024;	// 10MB
+const int ALT_HEAP_SIZE = 20*1024*1024;	// 20MB
 const int RESERVED_HEAP = 1024*1024*1024; // 1GB
 
 class Header {

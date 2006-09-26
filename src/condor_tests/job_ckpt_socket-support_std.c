@@ -25,8 +25,6 @@ Get and display the first few lines of a url.
 Do it several times.
 */
 
-#if defined(HPUX)
-/*#include "condor_common.h"*/
 #include <stdio.h>
 #include <sys/socket.h>
 #include <sys/errno.h>
@@ -35,17 +33,6 @@ Do it several times.
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
-#else
-#include "condor_common.h"
-/*#include <stdio.h>*/
-/*#include <sys/socket.h>*/
-/*#include <sys/errno.h>*/
-/*#include <arpa/inet.h>*/
-/*#include <netdb.h>*/
-/*#include <unistd.h>*/
-/*#include <stdlib.h>*/
-/*#include <string.h>*/
-#endif
 
 extern int errno;
 
@@ -166,7 +153,7 @@ int open_tcp( char *server, int port )
 
 	host = gethostbyname( server );
 	if(!host) {
-		printf("FAILURE: gethostbyname failed: %s\n", strerror(errno));
+		printf("FAILURE: gethostbyname failed: h_errno = %d\n", h_errno);
 		exit(EXIT_FAILURE);
 	}
 

@@ -193,7 +193,7 @@ public:
 	int	fcntl( int fd, int cmd, int arg );
 
 	/** See comments for fcntl. */
-	int	ioctl( int fd, int cmd, int arg );
+	int	ioctl( int fd, int cmd, long arg );
 
 	/** This poll() will only work on certain kinds of files.
 	    An error is caused if you poll on an unsupported kind. */

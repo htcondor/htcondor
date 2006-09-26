@@ -112,7 +112,7 @@
 #undef writev
 #undef __writev
 BEGIN_C_DECLS
-#if !defined(IA64)
+#if !defined(IA64) && !defined(X86_64)
 int readv(int, const struct iovec *, size_t);
 int __readv(int, const struct iovec *, size_t);
 int writev(int, const struct iovec *, size_t);

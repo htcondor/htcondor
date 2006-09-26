@@ -107,7 +107,7 @@ int CondorFileBasic::close()
 	return rval;
 }
 
-int CondorFileBasic::ioctl( int cmd, int arg )
+int CondorFileBasic::ioctl( int cmd, long arg )
 {
 	int scm, result;
 

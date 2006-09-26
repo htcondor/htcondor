@@ -61,30 +61,32 @@ main() {
   fprintf( stdout, "F_GETFD gives: %d\t(should be 0)\n", rval);
 
   rval = fcntl(fd, F_GETFL);
-  fprintf( stdout, "F_GETFL gives: %d\n", rval);
+  /* print a one of O_NONBLOCK is set, and it shouldn't be at this point */
+  fprintf( stdout, "F_GETFL gives: %d\t(should be 0)\n", rval&O_NONBLOCK?1:0);
 
   rval = fcntl(fd, F_SETFL, O_NONBLOCK);
   
   rval = fcntl(fd, F_GETFL);
-  fprintf( stdout, "F_GETFL gives: %d\n", rval);
+  /* print a one of O_NONBLOCK is set, and it should be at this point */
+  fprintf( stdout, "F_GETFL gives: %d\t(should be 1)\n", rval&O_NONBLOCK?1:0);
 
   arg = 5;
   rval = fcntl(fd, F_DUPFD, arg);
-  fprintf( stdout, "F_DUPFD returs: %d with arg = %d\n", rval, arg);
+  fprintf( stdout, "F_DUPFD returns: %d with arg = %d\n", rval, arg);
 
 #ifdef TESTFLOCKS
 
   rval = fcntl(fd, F_GETLK, lockarg);
-  fprintf( stdout, "F_GETLK returs: %d with errno: %d\n", rval, errno);
+  fprintf( stdout, "F_GETLK returns: %d with errno: %d\n", rval, errno);
   printflock(lockarg);
 
   lockarg->l_type=LOCK_UN;
   rval = fcntl(fd, F_SETLK, lockarg);
-  fprintf( stdout, "F_SETLK returs: %d with errno: %d\n", rval, errno);
+  fprintf( stdout, "F_SETLK returns: %d with errno: %d\n", rval, errno);
   printflock(lockarg);
 
   rval = fcntl(fd, F_SETLKW, lockarg);
-  fprintf( stdout, "F_SETLKW returs: %d with errno: %d\n", rval, errno);
+  fprintf( stdout, "F_SETLKW returns: %d with errno: %d\n", rval, errno);
   printflock(lockarg);
 
 #endif

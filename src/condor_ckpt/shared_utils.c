@@ -31,7 +31,7 @@
 #include "condor_sys.h"		/* For SYS_write */
 #include "shared_utils.h"
 
-static int _condor_itoa(int quantity, char *out, int base);
+static int _condor_itoa(long quantity, char *out, int base);
 
 /* the length of the output buffer */
 #define VFPRINTF_LEN 384
@@ -57,7 +57,7 @@ _condor_vfprintf_va( int fd, const char* fmt, va_list args )
 	char *o, *p;	/* pointers into the out and %s, if any */
 	int c = 0;		/* number of output characters from conversion of fmt */
 	double f;		/* any float-like quantity from va_list */
-	int d;			/* any int-like quantity from va_list */
+	long d;			/* any int-like quantity from va_list */
 	int index;		/* index usage in for loops */
 #if 0
 		/* neither of these are used, i wonder why they're here */
@@ -186,7 +186,7 @@ _condor_vfprintf_va( int fd, const char* fmt, va_list args )
 				break;
 			case 'p':
 			case 'x':
-				d = va_arg(args, int);
+				d = va_arg(args, unsigned long);
 				_condor_itoa(d, x64, HEXADECIMAL);
 				p = x64;
 				while(*p != '\0' && c < VFPRINTF_LEN)
@@ -258,12 +258,12 @@ _condor_vfprintf_va( int fd, const char* fmt, va_list args )
    hex or octal, the signedness is ignored.
 */
 int
-_condor_itoa(int quantity, char *out, int base)
+_condor_itoa(long quantity, char *out, int base)
 {
 	int i;
-	unsigned int mask;
+	unsigned long mask;
 	unsigned char byte;
-	unsigned int hexquant;
+	unsigned long hexquant;
 	unsigned int octquant;
 	int numchars, maxchars;
 	char *p, *q;
@@ -302,20 +302,21 @@ _condor_itoa(int quantity, char *out, int base)
 
 	
 	switch( base ) {
-	case HEXADECIMAL:
+	case HEXADECIMAL:	/* This always assumes a long argument */
 		numchars = 0;
-		hexquant = (unsigned int)quantity;
+		hexquant = (unsigned long)quantity;
 		
-		mask = 0xff000000;
+		mask = 0xffUL << ((sizeof(unsigned long) - 1) * 8);
 		
 			/* put the number into the out array, including leading zeros */
-		for( i=0; i<sizeof(int); i++ ) {
-			byte = (mask & hexquant) >> (sizeof(int)-i-1)*8;
+		for( i=0; i<sizeof(unsigned long); i++ ) {
+			byte = (unsigned char)
+					((mask & hexquant) >> (sizeof(unsigned long)-i-1)*8);
 			out[i*2] = basemap[(byte&0xf0)>>4];
 			out[i*2+1] = basemap[byte&0x0f];
 			mask >>= 8;
 		}
-		out[8] = 0;
+		out[sizeof(unsigned long)*2] = 0;
 		
 			/* are there any leading zeros? */
 		p = out;
@@ -323,9 +324,9 @@ _condor_itoa(int quantity, char *out, int base)
 		
 			/* no leading zeros */
 		if( p == out ) {
-			return 8;
+			return sizeof(unsigned long);
 		}		
-		numchars = 8 - (p - out);
+		numchars = sizeof(unsigned long) - (p - out);
 		
 			/* strip out the leading zeros */
 		q = out;
@@ -337,7 +338,7 @@ _condor_itoa(int quantity, char *out, int base)
 		return numchars;
 		break;
 		
-	case OCTAL:
+	case OCTAL:		/* This needs fixing to assume long arguments */
 		octquant = (unsigned int)quantity;
 		mask = 0xc0000000;
 		byte = (mask & octquant) >> 30;
@@ -373,7 +374,7 @@ _condor_itoa(int quantity, char *out, int base)
 		return numchars;
 		break;
 
-	case DECIMAL:
+	case DECIMAL:		/* Needs fixing to assume long arguments. */
 		sum = 1;
 		numchars = 0;
 		

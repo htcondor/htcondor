@@ -204,7 +204,7 @@ int CondorFileAgent::fcntl( int cmd, int arg )
 	return local_copy->fcntl(cmd,arg);
 }
 
-int CondorFileAgent::ioctl( int cmd, int arg )
+int CondorFileAgent::ioctl( int cmd, long arg )
 {
 	return local_copy->ioctl(cmd,arg);
 }

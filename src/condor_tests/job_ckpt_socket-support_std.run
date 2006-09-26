@@ -23,7 +23,7 @@ $OutputTest = sub
 
 CondorTest::RegisterExitedSuccess( $testname, $OutputTest );
 
-if( CondorTest::RunTest($testname, $cmd, 1) ) {
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
     print "$testname: SUCCESS\n";
     exit(0);
 } else {

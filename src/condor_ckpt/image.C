@@ -290,7 +290,7 @@ SegMap::MSync()
 	for (int i = 0; i < len; i += pagesize) {
 		if (msync((char *)core_loc+i, pagesize, MS_SYNC) < 0) {
 			dprintf( D_ALWAYS, "msync(%x, %d) failed with errno = %d\n",
-					 core_loc+i, pagesize, errno );
+					 (unsigned long)core_loc+i, pagesize, errno );
 		}
 	}
 }
@@ -509,13 +509,13 @@ Image::Save()
 	data_start = data_start_addr();
 	data_end = data_end_addr();
 	dprintf(D_CKPT, "Adding a DATA segment: start[0x%x], end [0x%x]\n",
-		data_start, data_end);
+		(unsigned long)data_start, (unsigned long)data_end);
 	AddSegment( "DATA", data_start, data_end, 0 );
 
 		// Set up stack segment
 	find_stack_location( stack_start, stack_end );
 	dprintf(D_CKPT, "Adding a STACK segment: start[0x%x], end [0x%x]\n",
-		stack_start, stack_end);
+		(unsigned long)stack_start, (unsigned long)stack_end);
 	AddSegment( "STACK", stack_start, stack_end, 0 );
 
 #else
@@ -659,7 +659,12 @@ Image::AddSegment( const char *name, RAW_ADDR start, RAW_ADDR end, int prot )
 		dprintf( D_ALWAYS, "Don't know how to grow segment map yet!\n" );
 		Suicide();
 	}
-	dprintf(D_CKPT, "Image::AddSegment: name=[%s], start=[0x%x], end=[0x%x], len=[0x%x], prot=[0x%x]\n", name, start, end, len, prot);
+
+	dprintf(D_CKPT, 
+		"Image::AddSegment: name=[%s], start=[%p], end=[%p], len=[0x%x], "
+		"prot=[0x%x]\n", 
+		name, (void*)start, (void*)end, (unsigned long)len, prot);
+
 	head.IncrSegs();
 	map[idx].Init( name, start, len, prot );
 }
@@ -883,7 +888,7 @@ void
 RestoreStack()
 {
 
-#if defined(ALPHA)			
+#if defined(ALPHA) 
 	unsigned int nbytes;		// 32 bit unsigned
 #else
 	unsigned long nbytes;		// 32 bit unsigned
@@ -1271,7 +1276,7 @@ SegMap::Read( int fd, ssize_t pos )
 		}
 		cur_brk = (char *)sbrk(0);
 		dprintf(D_ALWAYS, 
-			"Found a DATA block, increasing heap from 0x%x to 0x%x\n", 
+			"Found a DATA block, increasing heap from 0x%p to 0x%p\n", 
 			orig_brk, cur_brk);
 	}
 
@@ -1376,7 +1381,7 @@ SegMap::Read( int fd, ssize_t pos )
 	ptr = (char *)saved_core_loc;
 
 	dprintf(D_ALWAYS, 
-		"About to overwrite 0x%x bytes starting at 0x%x(%s)\n", 
+		"About to overwrite %p bytes starting at 0x%x(%s)\n", 
 			bytes_to_go, ptr, name);
 
 #if defined(COMPRESS_CKPT)
@@ -1500,7 +1505,7 @@ SegMap::Write( int fd, ssize_t pos )
 		if ( nbytes < 0 ) {
 			dprintf( D_ALWAYS, "in SegMap::Write(): fd = %d, write_size=%d\n",
 					 fd, bytes_to_go );
-			dprintf( D_ALWAYS, "errno=%d, core_loc=%x\n", errno, ptr );
+			dprintf( D_ALWAYS, "errno=%d, core_loc=%p\n", errno, ptr );
 			return -1;
 		}
 		if (condor_slow_ckpt) sleep(1);

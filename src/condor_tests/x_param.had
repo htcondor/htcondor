@@ -14,6 +14,6 @@ condortemplate = x_condor_config_template
 condordaemons = master,schedd,collector,negotiator,startd,had
 #condordomain = cs.wisc.edu
 condordomain = cs.technion.ac.il
-collector=128.105.165.17:54101,128.105.165.17:54102,128.105.165.17:54103
+collector=128.105.185.17:54101,128.105.185.17:54102,128.105.185.17:54103
 vms=1
 localpostsrc=job_had_basic.localpostsrc

@@ -71,7 +71,7 @@ public:
 	virtual int write( int offset, char *data, int length )=0;
 
 	virtual int fcntl( int cmd, int arg )=0;
-	virtual int ioctl( int cmd, int arg )=0;
+	virtual int ioctl( int cmd, long arg )=0;
 	virtual int ftruncate( size_t length )=0; 
 	virtual int fsync()=0;
 	virtual int flush()=0;

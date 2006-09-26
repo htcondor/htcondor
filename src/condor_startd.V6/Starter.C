@@ -748,6 +748,7 @@ Starter::execOldStarter( void )
 	int n_fds = getdtablesize();
 	int main_sock = s_port1;
 	int err_sock = s_port2;
+	int tmp_errno;
 
 #if defined(Solaris)
 	sigset_t set;
@@ -850,19 +851,29 @@ Starter::execOldStarter( void )
 		 */
 		set_root_priv();
 		if( resmgr->is_smp() ) {
-			(void)execl( s_path, "condor_starter", hostname, 
+			execl( s_path, "condor_starter", hostname, 
 						 daemonCore->InfoCommandSinfulString(), 
 						 "-a", s_claim->rip()->r_id_str, 0 );
+			tmp_errno = errno;
+				// If we got this far, there was an error in execl().
+			dprintf( D_ALWAYS, 
+			  "ERROR: execl(%s, condor_starter, %s, %s, -a, %s, 0) "
+			  	"errno: %d(%s)\n",
+			  s_path, daemonCore->InfoCommandSinfulString(), hostname,
+			  s_claim->rip()->r_id_str==NULL?"(NIL)":s_claim->rip()->r_id_str, 
+				 tmp_errno, strerror(tmp_errno) );
 		} else {			
-			(void)execl( s_path, "condor_starter", hostname, 
+			execl( s_path, "condor_starter", hostname, 
 						 daemonCore->InfoCommandSinfulString(), 0 );
+			tmp_errno = errno;
+				// If we got this far, there was an error in execl().
+			dprintf( D_ALWAYS, 
+				 "ERROR: execl(%s, condor_starter, %s, %s, 0) "
+				 "errno: %d (%s)\n", 
+				 s_path, daemonCore->InfoCommandSinfulString(), hostname,
+				 tmp_errno, strerror(tmp_errno) );
 
 		}
-			// If we got this far, there was an error in execl().
-		dprintf( D_ALWAYS, 
-				 "ERROR: execl(%s, condor_starter, %s, %s, 0) errno: %d\n", 
-				 s_path, daemonCore->InfoCommandSinfulString(), hostname,
-				 errno );
 		exit( 4 );
 	}
 	if ( pid < 0 ) {

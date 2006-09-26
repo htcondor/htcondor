@@ -609,7 +609,7 @@ UserProc::execute()
 			exit( 4 );
 		}
 
-#if defined( LINUX ) && defined( I386 )
+#if defined( LINUX ) && (defined(I386) || defined(X86_64))
 		// alter the personality of this process to use i386 memory layout
 		// methods and no exec_shield(brk & stack segment randomization).
 		// We must use a syscall() here because the personality() call was
@@ -628,8 +628,14 @@ UserProc::execute()
 		// magic number on kernel pre 2.6.12.2 *appears* to have no detrimental
 		// effects.
 
+#if defined(I386)
 		if (syscall(SYS_personality, PER_LINUX32 | 0x40000) == -1) {
-			EXCEPT("Unable to set i386 personality: %d(%s)! "
+#elif defined(X86_64)
+		if (syscall(SYS_personality, 0x40000) == -1) {
+#else
+#error "Please determine the right syscall to disable va randomization!"
+#endif
+			EXCEPT("Unable to set personality: %d(%s)! "
 					"Memory layout will be uncheckpointable!\n", errno,
 					strerror(errno));
 		}

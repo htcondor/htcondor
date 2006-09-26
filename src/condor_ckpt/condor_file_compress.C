@@ -435,7 +435,7 @@ int CondorFileCompress::fcntl( int cmd, int arg )
 	return original->fcntl(cmd,arg);
 }
 
-int CondorFileCompress::ioctl( int cmd, int arg )
+int CondorFileCompress::ioctl( int cmd, long arg )
 {
 	return original->ioctl(cmd,arg);
 }

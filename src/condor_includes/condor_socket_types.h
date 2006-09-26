@@ -119,15 +119,31 @@ _all_ the calls and put them in one standard place.
 	#define SOCKET_ADDR_CONST_CONNECT const
 	#define SOCKET_ADDR_CONST_BIND const
 	#define SOCKET_ADDR_CONST_ACCEPT
-	#define SOCKET_SENDRECV_TYPE int
-	#define SOCKET_RECVFROM_TYPE int
-	#define SOCKET_SENDRECV_LENGTH_TYPE SOCKET_LENGTH_TYPE
+
+#	if defined(X86_64)
+		#define SOCKET_SENDRECV_TYPE ssize_t
+		#define SOCKET_RECVFROM_TYPE ssize_t
+#	else
+		/* I386 */
+		#define SOCKET_SENDRECV_TYPE int
+		#define SOCKET_RECVFROM_TYPE int
+#	endif
+
+#	if defined(I386)
+		#define SOCKET_SENDRECV_LENGTH_TYPE SOCKET_LENGTH_TYPE
+#	else
+		#define SOCKET_SENDRECV_LENGTH_TYPE unsigned long
+#	endif
+
+
 	#define SOCKET_FLAGS_TYPE int
+
 	#if defined(GLIBC22) || defined(GLIBC23)
 		#define SOCKET_COUNT_TYPE int
 	#else
 		#define SOCKET_COUNT_TYPE unsigned int
 	#endif
+
 #elif defined(LINUX) && !defined(GLIBC)
 	#define SOCKET_DATA_TYPE void*
 	#define SOCKET_LENGTH_TYPE int
