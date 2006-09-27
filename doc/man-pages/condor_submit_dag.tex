@@ -115,5 +115,34 @@ Condor User Manual
 \Condor{submit\_dag} will exit with a status value of 0 (zero) upon success,
 and it will exit with the value 1 (one) upon failure.
 
+\Examples
+
+To run a single DAG:
+\begin{verbatim}
+% condor_submit_dag diamond.dag
+\end{verbatim}
+
+To run a DAG when it has already been run and the output files exist:
+\begin{verbatim}
+% condor_submit_dag -force diamond.dag
+\end{verbatim}
+
+To run a DAG, limiting the number of idle node jobs in the DAG to a
+maximum of five:
+\begin{verbatim}
+% condor_submit_dag -maxidle 5 diamond.dag
+\end{verbatim}
+
+To run a DAG, limiting the number of concurrent PRE scripts to 10
+and the number of concurrent POST scripts to five:
+\begin{verbatim}
+% condor_submit_dag -maxpre 10 -maxpost 5 diamond.dag
+\end{verbatim}
+
+To run two DAGs, each of which is set up to run in its own directory:
+\begin{verbatim}
+% condor_submit_dag -usedagdir dag1/diamond1.dag dag2/diamond2.dag
+\end{verbatim}
+
 \end{ManPage}
 

@@ -1,5 +1,5 @@
 \begin{ManPage}{\label{man-stork-rm-cred}\Stork{rm\_cred}}{1}
-{cause the \Condor{credd} daemon to remove a credential}
+{cause the \Stork{credd} daemon to remove a credential}
 \Synopsis \SynProg{\Stork{rm\_cred}}
 \ToolArgsBase
 
@@ -15,17 +15,17 @@
 
 \Description 
 
-\Stork{rm\_cred} removes a credential from the \Condor{credd} daemon.
+\Stork{rm\_cred} removes a credential from the \Stork{credd} daemon.
 
 \begin{Options}
   \ToolArgsBaseDesc
   \OptItem{\Opt{-debug}}{Show extra debugging information.}
   \OptItem{\OptArg{-n}{hostname:portnumber}}
-    {Identify the \Condor{credd} daemon
+    {Identify the \Stork{credd} daemon
     by host name and port number.}
   \OptItem{\OptArg{-N}{credential-name}}{The unique name of
     the credential to be removed.  When not specified,
-    the \Condor{credd} daemon uses the string "DEFAULT" as the unique name.}
+    the \Stork{credd} daemon uses the string "DEFAULT" as the unique name.}
 \end{Options}
 
 \ExitStatus

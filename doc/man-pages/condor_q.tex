@@ -242,15 +242,19 @@ to only analyze one job at a time.
   \OptItem{\Opt{-xml}}{Display job ads  in xml format.
     The xml format is fully defined at
     \URL{http://www.cs.wisc.edu/condor/classad/refman/}.}
-  \OptItem{\OptArg{-format}{fmt attr}}{Display attribute \Arg{attr}
+  \OptItem{\OptArg{-format}{fmt attr}}{Display attribute or expression \Arg{attr}
     in format \Arg{fmt}.
-    To display the attribute the format must contain a single
+    To display the attribute or expression the format must contain a single
     \Code{printf(3)} style conversion specifier.
-    Attributes must be from the job ClassAd.  If the
-    attribute is not present in a given ClassAd,
+    Attributes must be from the job ClassAd.
+	Expressions are ClassAd expressions and may 
+	refer to attributes in the job ClassAd.
+	If the
+    attribute is not present in a given ClassAd and cannot
+	be parsed as an expression,
     then the format option will be silently skipped.
     The conversion specifier must match the type of the
-    attribute.
+    attribute or expression.
     \%s is suitable for strings such as \Attr{Owner},
     \%d for integers such as \Attr{ClusterId},
     and \%f for floating point numbers such as
@@ -278,13 +282,16 @@ to only analyze one job at a time.
     queue, considering all jobs not completed (those that do not have
     \Expr{JobStatus == 4} or \Expr{JobStatus == 3}.  }
   \OptItem{\OptArg{-jobads}{file}}{Display jobs from a list of
-    ClassAds from a file instead of the real ads from the
-    schedd. This is mostly useful for debugging purposes. The ads
-    look as if you used \Condor{q} \Opt{-l} and stripped out the header.}
+    ClassAds from a file, instead of the real ClassAds from the
+    \Condor{schedd} daemon.
+    This is most useful for debugging purposes.
+    The ClassAds appear as if
+    \Condor{q} \Opt{-l} is used with the header stripped out.}
   \OptItem{\OptArg{-machineads}{file}}{When doing analysis, use the
     machine ads from the file instead of the ones from the
-    collector. This is mostly useful for debugging purposes. The
-    ads look as if you used \Condor{status} \Opt{-l}.}
+    \Condor{collector} daemon. 
+    This is most useful for debugging purposes. 
+    The ClassAds appear as if \Condor{status} \Opt{-l} is used.}
   \OptItem{\OptArg{-direct}{rdbms \Bar quilld \Bar schedd}}{When the
     use of Quill is enabled, this option allows a direct query to either
     the rdbms, the \Condor{quill} daemon, or the \Condor{schedd}

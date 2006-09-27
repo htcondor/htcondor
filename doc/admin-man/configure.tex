@@ -1212,21 +1212,21 @@ This macro
 Log files may optionally be specified per debug level as follows:
 \begin{description}
 
-\item[\MacroB{<SUBSYS>\_LEVEL\_LOG}] \label{param:SubsysLevelLog}
-\index{SUBSYS\_LEVEL\_LOG macro@\texttt{<SUBSYS>\_LEVEL\_LOG} macro}
+\item[\MacroB{<SUBSYS>\_<LEVEL>\_LOG}] \label{param:SubsysLevelLog}
+\index{SUBSYS\_LEVEL\_LOG macro@\texttt{<SUBSYS>\_<LEVEL>\_LOG} macro}
   This is
   the name of a log file for messages at a specific debug level for a
   specific subsystem.  If the debug level is included in
   \MacroUNI{<SUBSYS>\_DEBUG}, then all messages of this debug level will be
   written both to the \MacroUNI{<SUBSYS>\_LOG} file and the
-  \MacroUNI{<SUBSYS>\_LEVEL\_LOG} file.  For example,
+  \MacroUNI{<SUBSYS>\_<LEVEL>\_LOG} file.  For example,
   \MacroUNI{SHADOW\_SYSCALLS\_LOG} specifies a log file for all remote
   system call debug messages.
 
-\item[\Macro{MAX\_<SUBSYS>\_LEVEL\_LOG}] \label{param:MaxSubsysLevelLog}
+\item[\Macro{MAX\_<SUBSYS>\_<LEVEL>\_LOG}] \label{param:MaxSubsysLevelLog}
   Similar to \Macro{MAX\_<SUBSYS>\_LOG}.
 
-\item[\Macro{TRUNC\_<SUBSYS>\_LEVEL\_LOG\_ON\_OPEN}]
+\item[\Macro{TRUNC\_<SUBSYS>\_<LEVEL>\_LOG\_ON\_OPEN}]
   \label{param:TruncSubsysLevelLogOnOpen} Similar to
   \Macro{TRUNC\_<SUBSYS>\_LOG\_ON\_OPEN}.
 
@@ -2190,8 +2190,8 @@ These macros control the \Condor{master}.
   units of seconds, and defaults to 9 seconds.
 
   \MacroUNI{MASTER\_<name>\_BACKOFF\_CONSTANT} is the daemon-specific
-  form of \Macro{MASTER\_BACKOFF\_CONSTANT}; if this daemon-specic
-  macro isn't defined for a specific daemon, the non-daemon-specific
+  form of \MacroNI{MASTER\_BACKOFF\_CONSTANT}; if this daemon-specific
+  macro is not defined for a specific daemon, the non-daemon-specific
   value will used.
 
 \item[\Macro{MASTER\_BACKOFF\_FACTOR} and
@@ -2205,8 +2205,8 @@ These macros control the \Condor{master}.
   daemon again.  It defaults to 2 seconds.
 
   \MacroUNI{MASTER\_<name>\_BACKOFF\_FACTOR} is the daemon-specific
-  form of \Macro{MASTER\_BACKOFF\_FACTOR}; if this daemon-specic
-  macro isn't defined for a specific daemon, the non-daemon-specific
+  form of \MacroNI{MASTER\_BACKOFF\_FACTOR}; if this daemon-specific
+  macro is not defined for a specific daemon, the non-daemon-specific
   value will used.
 
 \item[\Macro{MASTER\_BACKOFF\_CEILING} and
@@ -2222,8 +2222,8 @@ These macros control the \Condor{master}.
   seconds and defaults to 3600 (1 hour).
 
   \MacroUNI{MASTER\_<name>\_BACKOFF\_CEILING} is the daemon-specific
-  form of \Macro{MASTER\_BACKOFF\_CEILING}; if this daemon-specic
-  macro isn't defined for a specific daemon, the non-daemon-specific
+  form of \MacroNI{MASTER\_BACKOFF\_CEILING}; if this daemon-specific
+  macro is not defined for a specific daemon, the non-daemon-specific
   value will used.
 
 \item[\Macro{MASTER\_RECOVER\_FACTOR} and
@@ -2237,14 +2237,14 @@ These macros control the \Condor{master}.
   terms of seconds and defaults to 300 (5 minutes).
 
   \MacroUNI{MASTER\_<name>\_RECOVER\_FACTOR} is the daemon-specific
-  form of \Macro{MASTER\_RECOVER\_FACTOR}; if this daemon-specic
-  macro isn't defined for a specific daemon, the non-daemon-specific
+  form of \MacroNI{MASTER\_RECOVER\_FACTOR}; if this daemon-specific
+  macro is not defined for a specific daemon, the non-daemon-specific
   value will used.
 
 \end{description}
 
 When a daemon crashes, \Condor{master} will restart the daemon after a
-delay (``back off'').
+delay (a back off).
 The length of this delay is based on how many times it has been
 restarted, and gets larger after each crashes. 
 The equation for calculating this backoff time is
@@ -4809,6 +4809,21 @@ group users.
 
 % \end{description}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Credd-Config-File-Entries}\condor{credd}
+Configuration File Macros}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+ 
+\begin{description}
+
+\item[\Macro{CREDD\_HOST}]
+\label{param:CreddHost} Description here.
+
+\item[\Macro{CREDD\_CACHE\_LOCALLY}]
+\label{param:CreddCacheLocally} Description here.
+\end{description}
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Gridmanager-Config-File-Entries}\condor{gridmanager}
 Configuration File Entries}
@@ -5242,6 +5257,10 @@ This macro should almost always remain set to the default value!
 \item[\Macro{DAGMAN\_DEBUG}] \label{param:DAGManDebug} This macro
 is described in section~\ref{param:SubsysDebug} as
 \MacroNI{<SUBSYS>\_DEBUG}.
+
+\item[\Macro{MAX\_DAGMAN\_LOG}] \label{Param:MaxDAGManLog} This macro
+is described in section~\ref{param:SubsysDebug} as
+\MacroNI{MAX\_<SUBSYS>\_LOG}.
 
 \item[\Macro{DAGMAN\_CONDOR\_SUBMIT\_EXE}]
 \label{param:DAGManCondorSubmitExe}
@@ -5946,48 +5965,6 @@ refresh proxy certificates.  By default, this macro is undefined.
 % \end{description}
 % 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Credd-Config-File-Entries}\condor{credd}
-Configuration File Macros}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
- 
-\begin{description}
-
-\item[\Macro{CRED\_SUPER\_USERS}]
-\label{param:CreddSuperUsers}   Access to a stored credential is
-restricted to the user who submitted the credential, and any user
-names specified in this macro.  The format is a space or comma
-separated list of user names which are valid on the \Condor{credd}
-host.
-The default value of this macro is \Expr{root} on Unix systems, and
-\Expr{Administrator} on Windows systems.
-
-\item[\Macro{CRED\_STORE\_DIR}]
-\label{param:CredStoreDir}   Directory for storing credentials.  This
-directory must exist prior to starting \Condor{credd}.  It is highly
-recommended to restrict access permissions to \emph{only} the
-directory owner.
-The default value is
-\Expr{\$(SPOOL\_DIR)/cred}.
-
-\item[\Macro{CRED\_INDEX\_FILE}]
-\label{param:CredIndexFile}   Index file path of saved credentials.
-This file will be automatically created if it does not exist.
-The default value is
-\Expr{\$(CRED\_STORE\_DIR)/cred-index}.
-
-\item[\Macro{DEFAULT\_CRED\_EXPIRE\_THRESHOLD}]
-\label{param:DefaultCredExpireThreshold}  \Condor{credd} will attempt
-to refresh credentials when their remaining lifespan is less than this
-value.
-Units = seconds.  Default value = 3600 seconds (1 hour).
-
-\item[\Macro{CRED\_CHECK\_INTERVAL}]
-\label{param:CredCheckInterval} \Condor{credd} periodically checks
-remaining lifespan of stored credentials, at this interval.
-Units = seconds.  Default value = 60 seconds (1 minute).
-
-\end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Stork-Config-File-Entries}Stork Configuration
@@ -6027,6 +6004,40 @@ The full path to the directory containing Stork modules.
 The default value when not defined is 
 as defined by \MacroUNI{LIBEXEC}.  It is a fatal error for
 both \MacroNI{STORK\_MODULE\_DIR} and \MacroNI{LIBEXEC} to be undefined.
+
+\item[\Macro{CRED\_SUPER\_USERS}]
+\label{param:CreddSuperUsers}   Access to a stored credential is
+restricted to the user who submitted the credential, and any user
+names specified in this macro.  The format is a space or comma
+separated list of user names which are valid on the \Stork{credd}
+host.
+The default value of this macro is \Expr{root} on Unix systems, and
+\Expr{Administrator} on Windows systems.
+
+\item[\Macro{CRED\_STORE\_DIR}]
+\label{param:CredStoreDir}   Directory for storing credentials.  This
+directory must exist prior to starting \Stork{credd}.  It is highly
+recommended to restrict access permissions to \emph{only} the
+directory owner.
+The default value is
+\Expr{\$(SPOOL\_DIR)/cred}.
+
+\item[\Macro{CRED\_INDEX\_FILE}]
+\label{param:CredIndexFile}   Index file path of saved credentials.
+This file will be automatically created if it does not exist.
+The default value is
+\Expr{\$(CRED\_STORE\_DIR)/cred-index}.
+
+\item[\Macro{DEFAULT\_CRED\_EXPIRE\_THRESHOLD}]
+\label{param:DefaultCredExpireThreshold}  \Stork{credd} will attempt
+to refresh credentials when their remaining lifespan is less than this
+value.
+Units = seconds.  Default value = 3600 seconds (1 hour).
+
+\item[\Macro{CRED\_CHECK\_INTERVAL}]
+\label{param:CredCheckInterval} \Stork{credd} periodically checks
+remaining lifespan of stored credentials, at this interval.
+Units = seconds.  Default value = 60 seconds (1 minute).
 
 \end{description}
 

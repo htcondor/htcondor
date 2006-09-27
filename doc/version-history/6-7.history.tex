@@ -891,9 +891,11 @@ containing the spool directory became full and the schedd restarted
 several times due to failures writing to job\_queue.log.  The problem
 no longer exists in 6.7.18, but for users who cannot upgrade
 immediately, the workaround to prevent the bug from ever happening is
-to add the following line to your config file:
+to add the following line to the configuration file:
 
-\Macro{MAX\_JOB\_QUEUE\_LOG\_ROTATIONS} = 0
+\begin{verbatim}
+MAX_JOB_QUEUE_LOG_ROTATIONS = 0
+\end{verbatim}
 
 \item Fixed a bug that could have caused corruption of the job queue
 log file in very rare circumstances involving a full disk.  This
@@ -1330,7 +1332,9 @@ failures writing to job\_queue.log.  The problem no longer exists in
 to prevent the bug from ever happening is to add the following line to
 your config file:
 
-\Macro{MAX\_JOB\_QUEUE\_LOG\_ROTATIONS} = 0
+\begin{verbatim}
+MAX_JOB_QUEUE_LOG_ROTATIONS = 0
+\end{verbatim}
 
 \end{itemize}
 
@@ -1370,7 +1374,7 @@ Condor will not be able to verify the authenticity of the
 submit-host's uid domain.  In this case, if you enable
 \Macro{TRUST\_UID\_DOMAIN}, everything will function as normal, minus
 the verification of the domain; if you do not enable
-\Macro{TRUST\_UID\_DOMAIN}, the starter will treat the job as being
+\MacroNI{TRUST\_UID\_DOMAIN}, the starter will treat the job as being
 from a different uid domain, regardless of what uid domain the job
 advertises.
 
@@ -1487,7 +1491,7 @@ configuration setting--in most cases making it unnecessary.
 \item Due to kernel bugs between the Linux 2.4.x and 2.6.x kernels,
 Condor now implements "checkpointing signatures" which allow more fine
 grained and automatic control over whether or not a particular machine
-is willing to resume a previously created checkpoint. This functionality
+is willing to resume a job using a previously created checkpoint. This functionality
 is homogenized across all platforms which provide the standard universe
 feature set.
 
@@ -2987,7 +2991,7 @@ was changed in such a way that Condor-G jobs submitted by a newer
   completed.
 
   \item Fixed a bug in handling the job's environment for GT4 jobs. Condor
-  incorrectly used ``<name>=<value>'' for each variable's name.
+  incorrectly used \verb@<name>=<value>@ for each variable's name.
 
   \item Improved hold reason in certain cases when a GT4 job goes on hold.
 
@@ -3049,7 +3053,7 @@ to fail an assertion if PRE or POST scripts are throttled with the
         in the event of a resumption from an earlier checkpoint. The
         invocation of this call by the shadow on behalf of the user
         job is controlled by a configuration file parameter called
-        \Attr{SHADOW\_ALLOW\_UNSAFE\_REMOTE\_EXEC} and is off by default.
+        \Macro{SHADOW\_ALLOW\_UNSAFE\_REMOTE\_EXEC} and is off by default.
         The full environment of the user job is preserved during the
         invocation of \Syscall(system) and this might cause problems in 
         heterogeneous submission contexts of the user is not careful.

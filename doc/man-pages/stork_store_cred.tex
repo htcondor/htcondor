@@ -1,5 +1,5 @@
 \begin{ManPage}{\label{man-stork-store-cred}\Stork{store\_cred}}{1}
-{store a credential on the \Condor{credd} daemon for use by Stork}
+{store a credential on the \Stork{credd} daemon for use by Stork}
 \Synopsis \SynProg{\Stork{store\_cred}}
 \ToolArgsBase
 
@@ -20,7 +20,7 @@
 
 \Description 
 
-\Stork{store\_cred} stores a credential to a \Condor{credd}
+\Stork{store\_cred} stores a credential to a \Stork{credd}
 daemon.
 
 The required \Opt{-t} option identifies that the credential
@@ -29,13 +29,13 @@ is an X.509 certificate.
 \begin{Options}
   \ToolArgsBaseDesc
   \OptItem{\Opt{-debug}}{Show extra debugging information.}
-  \OptItem{\OptArg{-n}{hostname:portnumber}}{Identify the \Condor{credd} daemon
+  \OptItem{\OptArg{-n}{hostname:portnumber}}{Identify the \Stork{credd} daemon
     by host name and port number.}
   \OptItem{\OptArg{-f}{filename}}{A full path and file name where the
     credential is stored.}
   \OptItem{\OptArg{-N}{credential-name}}{A unique name used by
-    the \Condor{credd} daemon to identify the credential.
-    When not specified, the \Condor{credd} daemon uses the string
+    the \Stork{credd} daemon to identify the credential.
+    When not specified, the \Stork{credd} daemon uses the string
     "DEFAULT" as the unique name.}
   \OptItem{\OptArg{-m}{\Lbr user@\Rbr hostname\Lbr :portnumber\Rbr}}
     {An identification of the \Prog{MyProxy} server. }

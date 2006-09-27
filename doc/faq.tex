@@ -1648,77 +1648,61 @@ see Microsoft Article Q184802.
 \index{grid computing!FAQs}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{Do I need to have a Condor pool installed to use Condor-G?}
+\subsection*{What must be installed to access grid resources?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-No, you do not.
-Condor-G is only the job management part of Condor.
-It makes perfect sense to install Condor-G on just one machine
-within an organization.
-Note that access to remote resources using a Globus interface
-will be done through that one machine using Condor-G.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{I want to install Globus on my Condor pool, and have external users submit jobs into the pool. Do I need to install Condor-G?}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-No, you do not need to install Condor-G.
-You need to install Globus,
-to get the "Condor jobmanager setup package."
-See the Condor-G
-homepage at \URL{http://www.cs.wisc.edu/condor/condorg/}
-for a link to Globus.
+A single machine with Condor installed such that jobs may
+be submitted is the minimum software necessary.
+If matchmaking or glidein is desired,
+then a single machine must not only be running Condor
+such that jobs may be submitted,
+but also fill the role of a central manager.
+A Personal Condor installation may satisfy both.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{I am the administrator at Physics, and I have a 64-node cluster
 running Condor.
 The administrator at Chemistry is also running Condor on her 64-node cluster.
 We would like to be able to share resources.
-Do I need to install Globus and Condor-G?}
+How do we do this?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-You may, but you do not have a need to.
-Condor has a feature called flocking,
-which lets multiple Condor pools share resources.
-By setting configuration variables, jobs may be executed on
-either cluster.
-Flocking is good (better than Condor-G) because
-all the Condor features continue to work.
-Examples of features are
-checkpointing remote system calls.
-Unfortunately, flocking only works between Condor pools.
-So, access to a resource managed by PBS, for example,
-will still require Globus and Condor-G to submit jobs into the PBS queue.
+Condor's flocking feature
+allows multiple Condor pools to share resources.
+By setting configuration variables within each pool,
+jobs may be executed on either cluster.
+See the manual section on flocking, section~\ref{sec:Flocking},
+for details.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{What is glidein?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{glidein}
-\index{Condor-G!glidein}
-Glidein provides a way to temporarily add a Globus resource
+Glidein provides a way to temporarily add a resource
 to a local Condor pool.
-Condor-G is not required to use glidein.
-Glidein uses Globus resource-management software to run jobs.
-It works by executing the portions of Condor
-software on the Globus resource.
+Glidein uses Globus resource-management software to run jobs
+on the resource.
+Those jobs are initially portions of Condor
+software, such that Condor is running on the resource,
+configured to be part of the local pool.
 Then, Condor may execute the user's jobs.
 There are several benefits to working in this way.
-Checkpoints can be made of the jobs running on the Globus resource,
-and remote system calls can be supported.
-Condor can also dynamically schedule jobs across the Grid.
+Standard universe jobs may be submitted to run on the resource.
+Condor can also dynamically schedule jobs across the grid.
 
-See section~\ref{sec:Glidein} of the manual
+See the section on Glidein, section~\ref{sec:Glidein} of the manual
 for further information.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{Submitting Condor jobs through my Globus gatekeeper does not work.  What is wrong?}
+\subsection*{Using my Globus gatekeeper to submit jobs to the Condor pool
+does not work.  What is wrong?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Globus!gatekeeper errors}
 
 The Condor configuration file is in a non-standard location,
-and Globus does not know how to locate it, when you see either of the
-following error messages.
+and the Globus software does not know how to locate it,
+when you see either of the following error messages.
 
 \underline{first error message}
 \footnotesize
@@ -1753,9 +1737,10 @@ section~\ref{sec:Preparing-to-Install},
 Condor searches for its configuration file using the following
 ordering.
 \begin{enumerate}
-\item File specified in \Env{CONDOR\_CONFIG} environment variable
+\item File specified in the \Env{CONDOR\_CONFIG} environment variable
 \item \File{/etc/condor/condor\_config}
 \item \File{\Tilde condor/condor\_config}
+\item \File{\MacroUNI{GLOBUS\_LOCATION}/etc/condor\_config}
 \end{enumerate}
 
 Presuming the configuration file is not in a standard location,
