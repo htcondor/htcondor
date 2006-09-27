@@ -58,6 +58,11 @@ in section~\ref{param:ScheddRoundAttr}.
 
 \begin{itemize}
 
+\item Fixed bug where if the filesystem was full the debugging log
+files (e.g. SchedLog) would silently lose messages.  Now,
+if the disk the log file is on is full, the Condor daemons will 
+exit.
+
 % Gnats PR 751
 \item Added the ProcessId class (which more uniquely identifies a
 process than just a PID does) to the \Condor{dagman} ``abort duplicate
