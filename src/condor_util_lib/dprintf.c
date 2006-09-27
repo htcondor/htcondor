@@ -242,6 +242,8 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 		if ((debug_level == 0) ||
 			(DebugFile[debug_level] && (flags&(1<<(debug_level-1))))) {
 
+			int result;
+
 				/* Open and lock the log file */
 			(void)debug_lock(debug_level);
 
@@ -274,11 +276,15 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 
 #ifdef va_copy
 				va_copy(copyargs, args);
-					vfprintf( DebugFP, fmt, copyargs );
+				result = vfprintf( DebugFP, fmt, copyargs );
 				va_end(copyargs);
 #else
-				vfprintf( DebugFP, fmt, args );
+				result = vfprintf( DebugFP, fmt, args );
 #endif
+				/* printf returns < 0 on error */
+				if (result < 0) {
+					_condor_dprintf_exit(errno, "Error writing debug log\n");	
+				}
 			}
 
 			/* Close and unlock the log file */
@@ -487,6 +493,7 @@ debug_unlock(int debug_level)
 	priv_state priv;
 	char msg_buf[_POSIX_PATH_MAX];
 	int flock_errno = 0;
+	int result = 0;
 
 	if( DebugUnlockBroken ) {
 		return;
@@ -494,7 +501,12 @@ debug_unlock(int debug_level)
 
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
 
-	if (DebugFP) (void)fflush( DebugFP );
+	if (DebugFP) {
+		result = fflush( DebugFP );
+		if (result < 0) {
+				_condor_dprintf_exit(errno, "Can't fflush debug log file\n");
+		}
+	}
 
 	if( DebugLock ) {
 			/* Don't forget to unlock the file */
@@ -515,7 +527,12 @@ debug_unlock(int debug_level)
 	}
 
 	if( DebugFile[debug_level] ) {
-		if (DebugFP) (void)fclose( DebugFP );
+		if (DebugFP) {
+			int result = fclose( DebugFP );
+			if (result < 0) {
+				_condor_dprintf_exit(errno, "Can't fclose debug log file\n");
+			}
+		}
 		DebugFP = NULL;
 	}
 
