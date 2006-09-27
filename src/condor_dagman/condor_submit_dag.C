@@ -298,7 +298,6 @@ void ensureOutputFilesExist(const SubmitDagOptions &opts)
 	if (opts.bForce)
 	{
 		unlink(opts.strSubFile.Value());
-		unlink(opts.strDebugLog.Value());
 		unlink(opts.strSchedLog.Value());
 		unlink(opts.strLibLog.Value());
 		unlink(opts.strRescueFile.Value());
@@ -315,12 +314,6 @@ void ensureOutputFilesExist(const SubmitDagOptions &opts)
 	{
 		fprintf( stderr, "ERROR: \"%s\" already exists.\n",
 				 opts.strLibLog.Value() );
-		bHadError = true;
-	}
-	if (fileExists(opts.strDebugLog))
-	{
-		fprintf( stderr, "ERROR: \"%s\" already exists.\n",
-				 opts.strDebugLog.Value() );
 		bHadError = true;
 	}
 	if (fileExists(opts.strSchedLog))
