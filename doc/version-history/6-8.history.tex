@@ -97,6 +97,10 @@ to \Expr{True} in the job ad.
 \item \Condor{history} no longer crashes if \Attr{HISTORY} isn't defined
 in the Condor configuration file.
 
+\item Fixed an unintentional change to the value of \Opt{-Condorlog}
+in a \condor{dagman} submit file: it is once again the log file of
+the first node job.
+
 \end{itemize}
 
 \noindent Known Bugs:
