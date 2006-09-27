@@ -225,11 +225,11 @@ private:
   Each "item" holds a pointer to a single object in the list.
 */
 template <class ObjType>
-Item<ObjType>::Item( ObjType *obj )
+Item<ObjType>::Item( ObjType *o )
 {
 	this->next = this;
 	this->prev = this;
-	this->obj = obj;
+	this->obj = o;
 	// cout << "Constructed Item" << endl;
 }
 
