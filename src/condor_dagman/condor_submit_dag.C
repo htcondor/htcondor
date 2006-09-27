@@ -207,6 +207,9 @@ submitDag( SubmitDagOptions &opts )
 			return 1;
 		}
 
+		condorLogFiles.rewind();
+		storkLogFiles.rewind();
+
 		if ( condorLogFiles.number() > 0 ) {
 			opts.strJobLog = condorLogFiles.next();
 		} else if ( storkLogFiles.number() > 0 ) {
