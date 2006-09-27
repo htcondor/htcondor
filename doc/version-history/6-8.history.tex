@@ -61,6 +61,10 @@ universe.
 
 \begin{itemize}
 
+\item Fixed bug in the \Condor{master} daemon where it would only
+kill its immediately children on an abnormal exit.  It now tries to kill
+all descendant processes in this case.
+
 \item Fixed bug where if the filesystem was full the debugging log
 files (e.g. SchedLog) would silently lose messages.  Now,
 if the disk the log file is on is full, the Condor daemons will 
