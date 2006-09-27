@@ -198,16 +198,18 @@ DoCleanup(int,int,char*)
 
 	// This function gets called as the last thing by EXCEPT().
 	// At this point, the MASTER presumably has had an unrecoverable error
-	// and is about to die.  We'll attempt to gracefully shutdown our
-	// kiddies before we fade away.  Use a static flag to prevent
-	// infinite recursion in the case that there is another EXCEPT.
+	// and is about to die.  We'll attempt to forcibly shutdown our
+	// kiddies, and all their offspring before we fade away.  
+	// Use a static flag to prevent infinite recursion in the case 
+	// that there is another EXCEPT.
+
+	// Once here, we are never returning to daemon core, so reapers, timers
+	// etc. will never fire again, so we need to get everything we need
+	// to do done now.
 
 	if ( already_excepted == FALSE ) {
 		already_excepted = TRUE;
-		main_shutdown_graceful();  // this will exit if successful,
-								   // but will return before all
-								   // daemons have exited... what can
-								   // we do?!
+		daemons.HardKillAllDaemons();
 	}
 
 	if ( NT_ServiceFlag == FALSE ) {

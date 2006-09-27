@@ -156,6 +156,7 @@ public:
 	void 	StartAllDaemons();
 	void	StopAllDaemons();
 	void	StopFastAllDaemons();
+	void	HardKillAllDaemons();
 	void	StopPeacefulAllDaemons();
 	void	ReconfigAllDaemons();
 
