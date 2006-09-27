@@ -686,6 +686,11 @@ If the \File{dagman.out} file grows too big, you can limit its size
 with the \MacroNI{MAX\_DAGMAN\_LOG} configuration macro (see
 section~\ref{sec:DAGMan-Config-File-Entries}).
 
+If you have some kind of problem in your DAGMan run, please save
+the corresponding \File{dagman.out} file -- it is the most important
+debugging tool for DAGMan.  As of version 6.8.2, the \File{dagman.out}
+is appended to, rather than overwritten, with each new DAGMan run.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Job Failure and Job Removal}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

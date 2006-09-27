@@ -55,6 +55,12 @@ in section~\ref{param:ScheddRoundAttr}.
 \item Enhanced the RHEL3 x86\_64 port of Condor to include the standard
 universe.
 
+% Gnats PR 757
+\item \Condor{submit\_dag} \Opt{-f} no longer deletes the
+\File{dagman.out} file.  \Condor{submit\_dag} without the \Opt{-f}
+option will now submit a DAGMan run even if the \File{dagman.out}
+file exists (the file will be appended to).
+
 \end{itemize}
 
 \noindent Bugs Fixed:

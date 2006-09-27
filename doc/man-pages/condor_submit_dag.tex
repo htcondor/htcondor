@@ -42,7 +42,8 @@ description.
   \OptItem{\Opt{-verbose}}{Cause \Condor{submit\_dag}
      to give verbose error messages.}
   \OptItem{\Opt{-force}}{Require \Condor{submit\_dag} to overwrite
-     the files that it produces, if the files already exist.}
+     the files that it produces, if the files already exist.  Note that
+     \File{dagman.out} will be appended to, not overwritten.}
   \OptItem{\OptArg{-maxidle}{NumberOfJobs}}{Sets the maximum number of idle
      jobs allowed before \Condor{dagman} stops submitting more jobs.  Once
      idle jobs start to run, \Condor{dagman} will resume submitting jobs.
