@@ -75,35 +75,35 @@ typedef int gid_t;
 HANDLE priv_state_get_handle();
 #endif
 
-const char *get_user_loginname(); 
+const char *get_user_loginname(void); 
 int can_switch_ids( void );
-void clear_passwd_cache();
-void delete_passwd_cache();
-void init_condor_ids();
-void uninit_user_ids();
-void uninit_file_owner_ids();
+void clear_passwd_cache(void);
+void delete_passwd_cache(void);
+void init_condor_ids(void);
+void uninit_user_ids(void);
+void uninit_file_owner_ids(void);
 int set_file_owner_ids( uid_t uid, gid_t gid );
 int init_user_ids(const char username[], const char domain[]);
 int init_user_ids_quiet(const char username[]);
 int set_user_ids(uid_t uid, gid_t gid);
 int set_user_ids_quiet(uid_t uid, gid_t gid);
 priv_state _set_priv(priv_state s, char file[], int line, int dologging);
-uid_t get_my_uid();
-gid_t get_my_gid();
-priv_state get_priv();
+uid_t get_my_uid(void);
+gid_t get_my_gid(void);
+priv_state get_priv(void);
 const char* priv_to_string( priv_state s );
 const char* priv_identifier( priv_state s );
 
 
 #if !defined(WIN32)
-uid_t get_condor_uid();
-gid_t get_condor_gid();
-uid_t get_user_uid();
-gid_t get_user_gid();
-uid_t get_file_owner_uid();
-gid_t get_file_owner_gid();
-uid_t get_real_condor_uid();
-gid_t get_real_condor_gid();
+uid_t get_condor_uid(void);
+gid_t get_condor_gid(void);
+uid_t get_user_uid(void);
+gid_t get_user_gid(void);
+uid_t get_file_owner_uid(void);
+gid_t get_file_owner_gid(void);
+uid_t get_real_condor_uid(void);
+gid_t get_real_condor_gid(void);
 #else
 uid_t getuid(); /* getuid stub for WINNT */
 #endif
@@ -111,9 +111,9 @@ uid_t getuid(); /* getuid stub for WINNT */
 
 int is_root( void );
 
-const char* get_real_username();
-const char* get_condor_username();
-void display_priv_log();
+const char* get_real_username(void);
+const char* get_condor_username(void);
+void display_priv_log(void);
 
 #if defined(__cplusplus)
 }
@@ -121,7 +121,7 @@ void display_priv_log();
 
 #if defined(__cplusplus) && !defined( WIN32 )
 #include "passwd_cache.h"
-extern passwd_cache* pcache();
+extern passwd_cache* pcache(void);
 #endif
 
 #endif /* _UID_H */

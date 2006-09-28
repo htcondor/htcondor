@@ -159,7 +159,7 @@ extern "C" {
 
 BEGIN_C_DECLS
 
-	char * get_tilde();
+	char * get_tilde(void);
 	char * param ( const char *name );
 	/** Insert a value into a hash table.
 
