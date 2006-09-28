@@ -928,7 +928,10 @@ C_CXX_OPTION(gcc, -Wshadow, comp_option_Wshadow, [])
 # Note: Code blocks marked by this warning flag should be carefully checked
 # since they may be able to be executed in ways the compiler doesn't see, like
 # via setjmp, or other methods.
-C_CXX_OPTION(gcc, -Wunreachable-code, comp_option_Wunreachable_code, [])
+# XXX This warning looks like it gives far too many false positive, so it
+# is getting commented out. If you'd like to renable this warning flag, please
+# make sure to add @comp_option_Wunreachable_code@ to COMP_DEBUG_FLAGS
+#C_CXX_OPTION(gcc, -Wunreachable-code, comp_option_Wunreachable_code, [])
 
 # Warn if non-comment after endif labels
 C_CXX_OPTION(gcc, -Wendif-labels, comp_option_Wendif_labels, [])
