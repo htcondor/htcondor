@@ -923,8 +923,9 @@ Starter::prepareForGlexec( const ArgList& orig_args, const Env* orig_env,
 	//     the user stored, since we need to hand it to
 	//     glexec so it can look up the UID/GID
 	//   - invoking 'glexec whoami' to find out the target username
-	//   - creating a directory /tmp/condor.<username> for the copied
-	//     proxy to go into, as well as the StarterLog and execute dir
+	//   - creating a directory /tmp/condor.<startd_pid>.<username> for 
+	//     the copied proxy to go into, as well as the StarterLog and
+	//     execute dir
 	//   - adding the contents of the GLEXEC config param
 	//     to the front of the command line
 	//   - setting up glexec's environment (setting the
@@ -974,11 +975,13 @@ Starter::prepareForGlexec( const ArgList& orig_args, const Env* orig_env,
 
 	// cons up a command line for popen.  we want to run this:
 	// /bin/sh -c 'WHOAMI=`whoami`;cd <user_dir>;umask 077;
-	//    mkdir -p condor.$WHOAMI;cd condor.$WHOAMI;
+	//    mkdir -p condor.<startd_pid>.$WHOAMI;
+	//    cd condor.<startd_pid>.$WHOAMI;
 	//    mkdir -p execute;mkdir -p log;
 	//    echo $WHOAMI
 	//
-	// (where <user_dir> is the glexec_user_dir param'ed above)
+	// (where <user_dir> is the glexec_user_dir param'ed above,
+	//  and <startd_pid> is our pid)
 
 	// parse the glexec args for invoking whoami.  do not free them yet,
 	// except on an error, as we use them again below.
@@ -995,12 +998,24 @@ Starter::prepareForGlexec( const ArgList& orig_args, const Env* orig_env,
 
 	// add the rest of the args for the whoami / mkdir mojo
 	MyString glexec_whoami_arg;
-	glexec_whoami_args.AppendArg("/bin/sh");
+	char* shell_path = param("SH");
+	if (shell_path) {
+			// glexec refuses to follow symlinks, so we offer
+			// the "SH" knob as a workaround
+		glexec_whoami_args.AppendArg(shell_path);
+		free(shell_path);
+	}
+	else {
+		glexec_whoami_args.AppendArg("/bin/sh");
+	}
 	glexec_whoami_args.AppendArg("-c");
+	int my_pid = getpid();
 	glexec_whoami_arg = "WHOAMI=`whoami`;cd ";
 	glexec_whoami_arg += glexec_user_dir.Value();
-	glexec_whoami_arg += ";umask 077;mkdir -p condor.$WHOAMI;"
-		"cd condor.$WHOAMI;mkdir -p execute;mkdir -p log;echo $WHOAMI";
+	glexec_whoami_arg += ";umask 077;";
+	glexec_whoami_arg.sprintf_cat("mkdir -p condor.%d.$WHOAMI;", my_pid);
+	glexec_whoami_arg.sprintf_cat("cd condor.%d.$WHOAMI;", my_pid);
+	glexec_whoami_arg += "mkdir -p execute;mkdir -p log;echo $WHOAMI";
 	glexec_whoami_args.AppendArg( glexec_whoami_arg.Value() );
 
 	// debug info.  this display format totally screws up the quoting, but
@@ -1031,9 +1046,8 @@ Starter::prepareForGlexec( const ArgList& orig_args, const Env* orig_env,
 	dprintf (D_ALWAYS, "GLEXEC: got '%s' from my_popen.\n",
 			glexec_username.Value());
 
-	// now update glexec_user_dir to include the condor.<username> dir
-	glexec_user_dir += "/condor.";
-	glexec_user_dir += glexec_username.Value();
+	// update glexec_user_dir to include the condor.<startd_pid>.<username> dir
+	glexec_user_dir.sprintf_cat("/condor.%d.%s", my_pid, glexec_username.Value());
 	dprintf (D_ALWAYS, "GLEXEC: userdir is '%s'\n",
 			glexec_user_dir.Value());
 

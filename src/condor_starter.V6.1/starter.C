@@ -1358,5 +1358,12 @@ CStarter::cleanupAfterGlexec()
 		free( proxy );
 	}
 #endif
+	// now we blow away the directory that the startd set up for us
+	// using glexec. this directory will be the parent directory of
+	// EXECUTE. we first "cd /", so that our working directory
+	// is not in the directory we're trying to delete
+	chdir( "/" );
+	Directory d( Execute );
+	d.Remove_Entry( ".." );
 }
 #endif
