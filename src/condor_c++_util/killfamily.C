@@ -255,12 +255,13 @@ ProcFamily::takesnapshot()
 	bool currpid_exited;
 	bool found_it;
 	int ret_val;
-	pid_t pidfamily[2000];
 	int fam_status;
 	int info_status;
 	int ignore_status;
 
-	new_pids = new ExtArray<a_pid>(10);
+	ExtArray<pid_t> pidfamily;
+
+	new_pids = new ExtArray<a_pid>;
 	newpidindex = 0;
 
 	// On some systems, we can only see process we own, so we must be either
@@ -337,15 +338,26 @@ ProcFamily::takesnapshot()
 						birth = (time(NULL) - pinfo->age) - 
 									(*old_pids)[i].birthday;
 						if ( -2 < birth && birth < 2 ) {
+
 							// birthdays match up; add currpid
 							// to our list and also get currpid's decendants
 							pidfamily[j] = currpid;
-							pidfamily[j+1] = 0;
+							j++;
+
 							// if we got the pid family via login name,
 							// we alrady have the decendants.
-							if ( !searchLogin ) {  
-								ProcAPI::getPidFamily(currpid,&m_penvid,&(pidfamily[j+1]),ignore_status);
+							if ( !searchLogin ) {
+								ExtArray<pid_t> detached_family;
+								ProcAPI::getPidFamily(currpid,&m_penvid,detached_family,ignore_status);
+								for (int i = 0; detached_family[i] != 0; i++) {
+									if (detached_family[i] != currpid) {
+										pidfamily[j] = detached_family[i];
+										j++;
+									}
+								}
 							}
+							pidfamily[j] = 0;
+
 							// and this pid most certainly did not exit, so
 							// set our flag accordingly.
 							currpid_exited = false;

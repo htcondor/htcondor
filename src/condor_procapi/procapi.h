@@ -468,7 +468,7 @@ class ProcAPI {
       @param pidFamily An array for holding pids in the family
       @return A -1 is returned on failure, otherwise the number of pids in the array.
   */
-  static int getPidFamily( pid_t pid, PidEnvID *penvid, pid_t *pidFamily,
+  static int getPidFamily( pid_t pid, PidEnvID *penvid, ExtArray<pid_t>& pidFamily,
   			int &status );
 
   /* returns all pids owned by a specific user.
@@ -477,7 +477,7 @@ class ProcAPI {
 	 @param searchLogin A string specifying the owner who's pids we want
 	 @return A -1 is returned on failure, otherwise the number of pids in the array.
   */
-  static int getPidFamilyByLogin( const char *searchLogin, pid_t *pidFamily );
+  static int getPidFamilyByLogin( const char *searchLogin, ExtArray<pid_t>& pidFamily );
 
 	  /*	
 		Creates a ProcessId from the given pid.

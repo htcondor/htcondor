@@ -50,7 +50,7 @@ int getPidFamily_test(bool verbose) {
 
   PID_ENTRY* pids = fork_tree(PID_FAMILY_DEPTH, PID_FAMILY_BREADTH, 0, verbose);
      
-  pid_t *pidf = new pid_t[512];
+  ExtArray<pid_t> pidf;
   ProcAPI::getPidFamily( pids[0].pid, &penvid, pidf, status );
   
   if(verbose){
@@ -100,7 +100,6 @@ int getPidFamily_test(bool verbose) {
     }
   }
  
-  delete [] pidf;
   if(verbose){
     printf ( "\n" );  
   }

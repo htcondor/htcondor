@@ -2323,7 +2323,7 @@ ProcAPI::getFamilyInfo ( pid_t daddypid, piPTR& pi, PidEnvID *penvid,
 }
 
 int
-ProcAPI::getPidFamily( pid_t daddypid, PidEnvID *penvid, pid_t *pidFamily, 
+ProcAPI::getPidFamily( pid_t daddypid, PidEnvID *penvid, ExtArray<pid_t>& pidFamily, 
 	int &status ) 
 {
 
@@ -2335,13 +2335,6 @@ ProcAPI::getPidFamily( pid_t daddypid, PidEnvID *penvid, pid_t *pidFamily,
 	}
 
 	DWORD dwStatus;  // return status of fn. calls
-
-	if ( pidFamily == NULL ) {
-		dprintf( D_ALWAYS, 
-				 "ProcAPI::getPidFamily: no space allocated for pidFamily\n" );
-		status = PROCAPI_UNSPECIFIED;
-        return PROCAPI_FAILURE;
-	}
 
         // '2' is the 'system' , '230' is 'process'  
         // I hope these numbers don't change over time... 
@@ -2560,22 +2553,11 @@ ProcAPI::multiInfo( pid_t *pidlist, int numpids, piPTR &pi ) {
      with a 0 for a pid at its end.  A -1 is returned on failure, 0 otherwise.
 */
 int
-ProcAPI::getPidFamily( pid_t pid, PidEnvID *penvid, pid_t *pidFamily, 
+ProcAPI::getPidFamily( pid_t pid, PidEnvID *penvid, ExtArray<pid_t>& pidFamily, 
 	int &status )
 {
 	int fam_status;
 	int rval;
-
-  // I'm going to do this in a somewhat ugly hacked way....get all the info
-  // instead of just pids...but it's a lot quicker to write.
-
-	if( pidFamily == NULL ) {
-		dprintf( D_ALWAYS, 
-				 "ProcAPI::getPidFamily: no space allocated for pidFamily\n" );
-
-		status = PROCAPI_UNSPECIFIED;
-		return PROCAPI_FAILURE;
-	}
 
 #ifndef HPUX
 	buildPidList();
@@ -2626,9 +2608,7 @@ ProcAPI::getPidFamily( pid_t pid, PidEnvID *penvid, pid_t *pidFamily,
 
 	piPTR current = procFamily;  // get descendents and elder pid.
 	int i=0;
-		// we'll only return the first 511.  No self-respecting job
-		// should have  more.  :-)  
-	while( (current != NULL) && (i<511) ) {
+	while( (current != NULL) ) {
 		pidFamily[i] = current->pid;
 		i++;
 		current = current->next;
@@ -3671,13 +3651,12 @@ DWORD ProcAPI::GetSystemPerfData ( LPTSTR pValue )
 #endif // WIN32
 
 int
-ProcAPI::getPidFamilyByLogin( const char *searchLogin, pid_t *pidFamily )
+ProcAPI::getPidFamilyByLogin( const char *searchLogin, ExtArray<pid_t>& pidFamily )
 {
 #ifndef WIN32
 
 	// first, get the Login's uid, since that's what's stored in
 	// the ProcInfo structure.
-	ASSERT(pidFamily);
 	ASSERT(searchLogin);
 	struct passwd *pwd = getpwnam(searchLogin);
 	uid_t searchUid = pwd->pw_uid;
@@ -3729,7 +3708,6 @@ ProcAPI::getPidFamilyByLogin( const char *searchLogin, pid_t *pidFamily )
 
 	closeFamilyHandles();
 
-	ASSERT(pidFamily);
 	ASSERT(searchLogin);
 
 	// get a list of all pids on the system
