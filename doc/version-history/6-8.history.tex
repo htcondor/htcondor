@@ -40,6 +40,11 @@ It also includes fixes for Globus Bugzilla 4689
 (\URL{http://bugzilla.globus.org/bugzilla/show\_bug.cgi?id=4689}) and a 
 bug that can cause duplicate UUIDs to be generated for WS GRAM jobs.
 
+\item The \Condor{schedd} no longer forks seperate processes to chown job
+directories in the spool.  Previously on Unix-like system this would create a
+new process before a job started running and after it finished running.   Some
+sites with very busy \Condor{schedd}s were encountering scaling problems.
+
 \end{itemize}
 
 \noindent New Features:
