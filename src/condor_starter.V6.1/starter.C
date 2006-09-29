@@ -1363,7 +1363,11 @@ CStarter::cleanupAfterGlexec()
 	// EXECUTE. we first "cd /", so that our working directory
 	// is not in the directory we're trying to delete
 	chdir( "/" );
-	Directory d( Execute );
-	d.Remove_Entry( ".." );
+	char* glexec_dir_path = condor_dirname( Execute );
+	ASSERT( glexec_dir_path );
+	Directory glexec_dir( glexec_dir_path );
+	glexec_dir.Remove_Entire_Directory();
+	rmdir( glexec_dir_path );
+	free( glexec_dir_path );
 }
 #endif
