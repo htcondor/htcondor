@@ -923,8 +923,8 @@ Starter::prepareForGlexec( const ArgList& orig_args, const Env* orig_env,
 	//     the user stored, since we need to hand it to
 	//     glexec so it can look up the UID/GID
 	//   - invoking 'glexec whoami' to find out the target username
-	//   - creating a directory /tmp/condor.<startd_pid>.<username> for 
-	//     the copied proxy to go into, as well as the StarterLog and
+	//   - creating a directory /tmp/condor.<startd_pid>.<vm>.<username>
+	//     for the copied proxy to go into, as well as the StarterLog and
 	//     execute dir
 	//   - adding the contents of the GLEXEC config param
 	//     to the front of the command line
@@ -975,13 +975,13 @@ Starter::prepareForGlexec( const ArgList& orig_args, const Env* orig_env,
 
 	// cons up a command line for popen.  we want to run this:
 	// /bin/sh -c 'WHOAMI=`whoami`;cd <user_dir>;umask 077;
-	//    mkdir -p condor.<startd_pid>.$WHOAMI;
-	//    cd condor.<startd_pid>.$WHOAMI;
+	//    mkdir -p condor.<startd_pid>.<vm>.$WHOAMI;
+	//    cd condor.<startd_pid>.<vm>.$WHOAMI;
 	//    mkdir -p execute;mkdir -p log;
 	//    echo $WHOAMI
 	//
 	// (where <user_dir> is the glexec_user_dir param'ed above,
-	//  and <startd_pid> is our pid)
+	//  <startd_pid> is our pid, and <vm> is the vm id)
 
 	// parse the glexec args for invoking whoami.  do not free them yet,
 	// except on an error, as we use them again below.
@@ -1013,8 +1013,10 @@ Starter::prepareForGlexec( const ArgList& orig_args, const Env* orig_env,
 	glexec_whoami_arg = "WHOAMI=`whoami`;cd ";
 	glexec_whoami_arg += glexec_user_dir.Value();
 	glexec_whoami_arg += ";umask 077;";
-	glexec_whoami_arg.sprintf_cat("mkdir -p condor.%d.$WHOAMI;", my_pid);
-	glexec_whoami_arg.sprintf_cat("cd condor.%d.$WHOAMI;", my_pid);
+	glexec_whoami_arg.sprintf_cat("mkdir -p condor.%d.%s.$WHOAMI;",
+	                              my_pid, s_claim->rip()->r_id_str);
+	glexec_whoami_arg.sprintf_cat("cd condor.%d.%s.$WHOAMI;",
+	                              my_pid, s_claim->rip()->r_id_str);
 	glexec_whoami_arg += "mkdir -p execute;mkdir -p log;echo $WHOAMI";
 	glexec_whoami_args.AppendArg( glexec_whoami_arg.Value() );
 
@@ -1046,8 +1048,10 @@ Starter::prepareForGlexec( const ArgList& orig_args, const Env* orig_env,
 	dprintf (D_ALWAYS, "GLEXEC: got '%s' from my_popen.\n",
 			glexec_username.Value());
 
-	// update glexec_user_dir to include the condor.<startd_pid>.<username> dir
-	glexec_user_dir.sprintf_cat("/condor.%d.%s", my_pid, glexec_username.Value());
+	// update glexec_user_dir to include condor.<startd_pid>.<vm>.<username>
+	glexec_user_dir.sprintf_cat("/condor.%d.%s.%s", my_pid,
+	                            s_claim->rip()->r_id_str,
+	                            glexec_username.Value());
 	dprintf (D_ALWAYS, "GLEXEC: userdir is '%s'\n",
 			glexec_user_dir.Value());
 
