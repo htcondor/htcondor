@@ -1850,37 +1850,22 @@ jobPrepNeedsThread( int cluster, int proc )
 	// is NOT thread safe!!
 	return false;
 #endif 
-		/*
-		  make sure we can switch uids.  if not, we're not going to be
-		  able to chown() the sandbox, nor switch to a dynamic user,
-		  so there's no sense forking.
 
-		  WARNING: if we ever add anything to the job prep code
-		  (aboutToSpawnJobHandler()) that doesn't require root/admin
-		  privledges, we need to change this!
-		*/
-	if( ! can_switch_ids() ) {
-		return false;
-	}
+	/*
+	The only reason we might need a thread is to chown the sandbox.  However,
+	currently jobIsSandboxed claims every vanilla-esque job is sandboxed.  So
+	on heavily loaded machines, we're forking before and after every job.  This
+	is creating a backlog of PIDs whose reapers callbacks need to be called and
+	eventually causes too many PID collisions.  This has been hitting LIGO.  So
+	for now, never do it in another thread.  Hopefully by cutting the number of
+	fork()s for a single process from 3 (prep, shadow, cleanup) to 1, big
+	sites pushing the limits will get a little breathing room.
 
-		// then, see if the job has a sandbox at all (either
-		// explicitly or b/c of ON_EXIT_OR_EVICT)  
-
-	ClassAd * job_ad = GetJobAd( cluster, proc );
-	if( ! job_ad ) {
-			// job is already gone, guess we don't need a thread. ;)
-		return false;
-	}
-	if( ! jobIsSandboxed(job_ad) ) {
-		FreeJobAd( job_ad );
-		return false;
-	}
-	bool rval = false;
-	if( ! sandboxHasRightOwner(cluster, proc, job_ad) ) {
-		rval = true;
-	}
-	FreeJobAd( job_ad );
-	return rval;
+	The chowning will still happen; that code path is always called.  It's just
+	always called in the main thread, not in a new one.
+	*/
+	
+	return false;
 }
 
 
@@ -1893,35 +1878,11 @@ jobCleanupNeedsThread( int cluster, int proc )
 	// since much of what we do in here is NOT thread safe.
 	return false;
 #endif
-		/*
-		  make sure we can switch uids.  if not, we're not going to be
-		  able to chown() the sandbox, so there's no sense forking.
 
-		  WARNING: if we ever add anything to the job cleanup code
-		  (jobIsFinished()) that doesn't require root/admin
-		  privledges, we need to change this!
-		*/
-	if( ! can_switch_ids() ) {
-		return false;
-	}
-
-		// the cleanup case is different from the start-up case, since
-		// we don't want to test the "HasRightOwner" stuff at all.  we
-		// always want the cleanup code to chown() back to condor,
-		// either so the schedd can read the files out for a
-		// condor_transfer_data, or so that it can successfully blow
-		// away the spool directories as PRIV_CONDOR.
-	ClassAd * job_ad = GetJobAd( cluster, proc );
-	if( ! job_ad ) {
-			// job is already gone, guess we don't need a thread. ;)
-		return false;
-	}
-	bool rval = false;
-	if( jobIsSandboxed(job_ad) ) {
-		rval = true;
-	}
-	FreeJobAd(job_ad);
-	return rval;
+	/*
+	See jobPrepNeedsThread for why we don't ever use threads.
+	*/
+	return false;
 }
 
 
