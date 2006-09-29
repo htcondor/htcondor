@@ -26,3 +26,4 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 
 template class HashTable<pid_t, procHashNode *>;
+template class ExtArray<pid_t>;
