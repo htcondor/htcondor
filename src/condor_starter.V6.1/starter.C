@@ -206,7 +206,7 @@ CStarter::StarterExit( int code )
 	removeTempExecuteDir();
 #if !defined(WIN32)
 	if( param_boolean( "GLEXEC_STARTER", false ) ) {
-		cleanupAfterGlexec();
+		exitAfterGlexec( code );
 	}
 #endif
 	DC_Exit( code );
@@ -1340,24 +1340,8 @@ CStarter::removeTempExecuteDir( void )
 
 #if !defined(WIN32)
 void
-CStarter::cleanupAfterGlexec()
+CStarter::exitAfterGlexec( int code )
 {
-#if defined(GSI_AUTHENTICATION) && !defined(SKIP_AUTHENTICATION)
-	// if we were spawned using glexec, then the startd will have
-	// arranged for glexec to provide us a copy of the user's
-	// proxy in case we need to use it for GSI security. we need
-	// to remove it when we're done, since the startd won't be
-	// able to (it's owned by our UID)
-	char* proxy = param( STR_GSI_DAEMON_PROXY );
-	if (proxy != NULL) {
-		// make sure the filename ends in ".starter" before
-		// we go ahead deleting it
-		if( memcmp( proxy + strlen( proxy ) - 8, ".starter", 8 ) == 0 ) {
-			remove( proxy );
-		}
-		free( proxy );
-	}
-#endif
 	// now we blow away the directory that the startd set up for us
 	// using glexec. this directory will be the parent directory of
 	// EXECUTE. we first "cd /", so that our working directory
@@ -1369,5 +1353,8 @@ CStarter::cleanupAfterGlexec()
 	glexec_dir.Remove_Entire_Directory();
 	rmdir( glexec_dir_path );
 	free( glexec_dir_path );
+
+	// all done
+	exit( code );
 }
 #endif

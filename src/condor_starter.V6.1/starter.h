@@ -196,7 +196,7 @@ private:
 
 #if !defined(WIN32)
 		/// Special cleanup for exiting after being invoked via glexec
-	void cleanupAfterGlexec();
+	void exitAfterGlexec( int code );
 #endif
 
 		// // // // // // // //
