@@ -99,6 +99,12 @@ TESTCLASS(lib_auth_protocol-fs,core)
 TESTCLASS(lib_auth_protocol-fs,quick)
 TESTCLASS(lib_auth_protocol-fs,btdebug)
 
+DESC(lib_auth_protocol-pw,"PW authentication test")
+RUN(lib_auth_protocol-pw)
+TESTCLASS(lib_auth_protocol-pw,core)
+TESTCLASS(lib_auth_protocol-pw,quick)
+TESTCLASS(lib_auth_protocol-pw,btdebug)
+
 DESC(lib_auth_protocol-ctb,"CTB authentication test")
 RUN(lib_auth_protocol-ctb)
 TESTCLASS(lib_auth_protocol-ctb,core)
@@ -188,8 +194,8 @@ TESTCLASS(job_schedd_job-tracking_van,quick)
 
 /*
 Gnats bugs 723 726
-*/
 #if !defined( IS_ALPHA_DUX5) && !defined( IS_PPC_OSX_10_3 )
+*/
 DESC(job_core_err_java,"Java Universe: basic error test")
 RUN(job_core_err_java)
 TESTCLASS(job_core_err_java,core)
@@ -223,7 +229,7 @@ RUN(job_core_plus_java)
 TESTCLASS(job_core_plus_java,core)
 TESTCLASS(job_core_plus_java,quick)
 TESTCLASS(job_core_plus_java,btdebug)
-#endif
+/*#endif*/
 
 /*
 Gnats bugs 723 and 724
