@@ -27,6 +27,9 @@
 #include "network2.h"
 #include "gen_lib.h"
 
+#include <iostream>
+#include <iomanip>
+using namespace std;
 
 FileInformation::FileInformation()
 {

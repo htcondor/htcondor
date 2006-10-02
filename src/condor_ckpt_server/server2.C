@@ -42,6 +42,9 @@
 #include "classad_collection.h"
 #include "daemon.h"
 
+#include <iostream>
+using namespace std;
+
 XferSummary	xfer_summary;
 
 Server server;

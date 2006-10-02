@@ -49,6 +49,8 @@
 	#include "ReplicaStateMachine.h"
 #endif // USE_REPLICATION
 
+#include <iostream>
+using namespace std;
 
 extern "C" int SetSyscalls(int val){return val;}
 extern char* myName;

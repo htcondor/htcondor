@@ -24,7 +24,7 @@
 // File: Helper.cpp
 // Author: Francesco Giacomini, INFN <Francesco.Giacomini@cnaf.infn.it>
 
-// $Id: helper.C,v 1.4 2006-07-25 18:18:40 wright Exp $
+// $Id: helper.C,v 1.4.2.1 2006-10-02 15:16:38 gthain Exp $
 
 #include "condor_common.h"
 #include "helper.h"
@@ -34,6 +34,7 @@
 #include <sstream>
 #include <cstdlib>		// for system()
 #include <string.h>		// for strlen()
+#include <iostream>
 //#include "condor_debug.h"
 #include "condor_config.h"
 

@@ -153,11 +153,11 @@ HashTable<Index,Value>::HashTable( int tableSz,
   }
 
   if (!(ht = new HashBucket<Index, Value>* [tableSize])) {
-    cerr << "Insufficient memory for hash table" << endl;
+    fprintf(stderr, "Insufficient memory for hash table\n");
     exit(1);
   }
   if (!(chainsUsed = new int[tableSize])) {
-    cerr << "Insufficient memory for hash table (chainsUsed array)" << endl;
+    fprintf(stderr, "Insufficient memory for hash table (chainsUsed array)\n");
     exit(1);
   }
   for(i = 0; i < tableSize; i++) {
@@ -205,11 +205,11 @@ void HashTable<Index,Value>::copy_deep( const HashTable<Index,Value>& copy ) {
   tableSize = copy.tableSize;
 
   if (!(ht = new HashBucket<Index, Value>* [tableSize])) {
-    cerr << "Insufficient memory for hash table" << endl;
+    fprintf(stderr, "Insufficient memory for hash table");
     exit(1);
   }
   if (!(chainsUsed = new int[tableSize])) {
-    cerr << "Insufficient memory for hash table (chainsUsed array)" << endl;
+    fprintf(stderr, "Insufficient memory for hash table (chainsUsed array)");
     exit(1);
   }
   for(int i = 0; i < tableSize; i++) {
@@ -296,7 +296,7 @@ int HashTable<Index,Value>::insert(const Index &index,const  Value &value)
   // just go ahead and insert another one...
 
   if (!(bucket = new HashBucket<Index, Value>)) {
-    cerr << "Insufficient memory" << endl;
+    fprintf(stderr, "Insufficient memory\n");
     return -1;
   }
 

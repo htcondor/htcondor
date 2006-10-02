@@ -54,7 +54,7 @@
 #include "ntsysinfo.h"
 #endif
 #include "self_monitor.h"
-#include "stdsoap2.h"
+//#include "stdsoap2.h"
 #include "condor_pidenvid.h"
 #include "condor_arglist.h"
 #include "env.h"
@@ -1159,7 +1159,7 @@ class DaemonCore : public Service
     int               nSock;      // number of socket handlers used
     ExtArray<SockEnt> *sockTable; // socket table; grows dynamically if needed
     int               initial_command_sock;  
-  	struct soap		  soap;
+  	struct soap		  *soap;
 	time_t			  only_allow_soap;
 
 		// number of file descriptors in use past which we should start

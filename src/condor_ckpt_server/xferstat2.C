@@ -52,6 +52,8 @@
 #include "xferstat2.h"
 #include "xfer_summary.h"
 
+#include <iostream>
+using namespace std;
 
 /* Class TransferState ********************************************************
 *                                                                             *

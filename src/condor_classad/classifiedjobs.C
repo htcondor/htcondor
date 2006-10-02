@@ -29,6 +29,8 @@
 #include "condor_classad.h"
 #include "condor_classifiedjobs.h"
 
+#include <fstream.h>
+
 Class::Class(ExprTree* classDef)
 {
     definition = classDef;

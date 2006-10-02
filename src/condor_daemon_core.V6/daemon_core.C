@@ -28,6 +28,8 @@
 // //////////////////////////////////////////////////////////////////////
 
 #include "condor_common.h"
+#include "stdsoap2.h"
+
 #if HAVE_EXT_GCB
 extern "C" {
 void Generic_stop_logging();
@@ -350,6 +352,8 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 #endif
 
 	file_descriptor_safety_limit = 0; // 0 indicates: needs to be computed
+
+	soap = new struct soap;
 }
 
 // DaemonCore destructor. Delete the all the various handler tables, plus
@@ -462,6 +466,7 @@ DaemonCore::~DaemonCore()
 		free(_cookie_data_old);
 	}
 
+	delete soap;
 #ifdef WIN32
 	 DeleteCriticalSection(&Big_fat_mutex);
 #endif
@@ -3102,7 +3107,7 @@ int DaemonCore::HandleReq(int socki)
 			sin_to_string(((Sock*)stream)->endpoint()) );
 
 
-		cursoap = soap_copy(&soap);
+		cursoap = soap_copy(soap);
 		ASSERT(cursoap);
 
 			// Mimic a gsoap soap_accept as follows:
@@ -3111,10 +3116,10 @@ int DaemonCore::HandleReq(int socki)
 			//   3. increase size of send and receive buffers
 			//   4. set SO_KEEPALIVE [done automatically by CEDAR accept()]
 		cursoap->socket = ((Sock*)stream)->get_file_desc();
-		cursoap->recvfd = soap.socket;
-		cursoap->sendfd = soap.socket;
+		cursoap->recvfd = soap->socket;
+		cursoap->sendfd = soap->socket;
 		if ( cursoap->recv_timeout > 0 ) {
-			stream->timeout(soap.recv_timeout);
+			stream->timeout(soap->recv_timeout);
 		} else {
 			stream->timeout(20);
 		}

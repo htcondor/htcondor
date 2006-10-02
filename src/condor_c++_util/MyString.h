@@ -20,14 +20,14 @@
   * RIGHT.
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-#include <string.h>
-#include <iostream>
+
 #include <stdarg.h>
 #include "simplelist.h"
 
 #ifndef _MyString_H_
 #define _MyString_H_
 
+#include <iosfwd>
 
 /** The MyString class is a C++ representation of a string. It was
  * written before we could reliably use the standard string class.
@@ -292,10 +292,10 @@ class MyString
 	/**@name I/O */
 	//@{ 
 	/** Output a string to a stream */
-	friend ostream& operator<<(ostream& os, const MyString& S);
+	friend std::ostream& operator<<(std::ostream& os, const MyString& S);
 
 	/** Input a string from a stream */
-	friend istream& operator>>(istream& is, MyString& S);
+	friend std::istream& operator>>(std::istream& is, MyString& S);
 	//@}
   
 	/** Safely read from the given file until we've hit a newline or

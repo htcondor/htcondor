@@ -57,9 +57,7 @@
 **********************************************************************/
 #if defined(__cplusplus)
 
-#include <iostream.h>
-#include <iomanip.h>
-#include <fstream.h>
+#include <iosfwd>
 
 #endif /* __cplusplus */
 
