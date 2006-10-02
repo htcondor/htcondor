@@ -136,6 +136,10 @@ parsePrintfFormat( const char **fmt_p, struct printf_fmt_info *info )
 	while( **fmt_p && **fmt_p != '%' ) {
 		(*fmt_p)++;
 	}
+		/* end of string */
+	if( ! **fmt_p) {
+		return FALSE;
+	}
 		/* now skip the '%' itself */
 	(*fmt_p)++;
 	if( ! **fmt_p ) {
