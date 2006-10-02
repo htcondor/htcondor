@@ -27,7 +27,6 @@ print "Dummyhost was $dummyhost and really running on $currenthost\n";
 $pid = $$;
 $mypid = $pid;
 $mytopdir = getcwd();
-#$mypwfile = $mytopdir . "/" . $pid . "/x_auth_poolpasswd";
 $mypwfile = $mytopdir . "/x_auth_poolpasswd";
 $myvariation = 1;
 $mysaveme = $corename . ".saveme";
@@ -111,11 +110,6 @@ if( -e "$mysubmitnmlog" )
 	system("cp $mysubmitnmlog $mycorenmlog");
 }
 
-if(!$status)
-{
-	print "Test failure due to Condor Tool Failure<$cmd>\n";
-}
-
 # At this point we have a pool which is doing FS or PASSWORD authenticating
 # which let us store a pool password. Now we remove FS as an option forcing
 # only PASSWORD authenticating daemon to daemon and restart....
@@ -123,6 +117,7 @@ if(!$status)
 # Turn off condor
 
 my @adarray;
+my $status = 1;
 $status = 1;
 my $cmd = "condor_off -master";
 $status = CondorTest::runCondorTool($cmd,\@adarray,2);
@@ -132,11 +127,4 @@ if(!$status)
 	exit(1)
 }
 
-exit(1);
-
-$status = CondorTest::runCondorTool($cmd,\@edarray,2);
-if(!$status)
-{
-	print "Test failure due to Condor Tool Failure<$cmd>\n";
-	exit(1)
-}
+exit(0);
