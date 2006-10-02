@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre.pl,v 1.2.2.1 2006-08-24 17:06:28 bt Exp $
+# $Id: remote_pre.pl,v 1.2.2.2 2006-10-02 21:20:24 bt Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
@@ -240,6 +240,10 @@ print FIX "QUEUE_ALL_USERS_TRUSTED 	= TRUE\n";
 # for HOSTALLOW_WRITE which causes it to EXCEPT on submit
 # till set to some legal value. Old was most insecure..
 print FIX "HOSTALLOW_WRITE 			= *\n";
+
+# Allow a default heap size for java(addresses issues on x86_rhas_3)
+# May address some of the other machines with Java turned off also
+print FIX "JAVA_MAXHEAP_ARGUMENT = ";
 
 if( ($ENV{NMI_PLATFORM} =~ /hpux_11/) )
 {
