@@ -26,4 +26,14 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 
 template class HashTable<pid_t, procHashNode *>;
+
+// Unfortunately, instantiating this everywhere breaks some platforms
+// because pid_t is the same as int, we already instantiate
+// ExtAtrray<int> elsewhere, and multiply defined symbols
+// result. Leaving it out, on the other hand, breaks Solaris 9. All
+// this seems to be dependent on compiler versions, and also whether
+// pid_t is a preprocessor macro or typedef. The following hack exists
+// for lack of a better way to resolve this. :(
+#if defined(Solaris29)
 template class ExtArray<pid_t>;
+#endif
