@@ -649,12 +649,35 @@ command_delegate_gsi_cred( Service*, int, Stream* stream )
 	}
 	close( fd );
 
-	dprintf( D_FULLDEBUG, "writing temporary delegated proxy to: %s\n", tmp_str );
+	dprintf( D_FULLDEBUG, "writing temporary proxy to: %s\n", tmp_str );
 
+	// sender decides whether to use delegation or simply copy
+	int use_delegation;
+	if( ! sock->code(use_delegation) ) {
+		dprintf( D_ALWAYS, "error reading delegation request\n" );
+		return FALSE;
+	}
+
+	int rv;
 	filesize_t dont_care;
-	if( sock->get_x509_delegation( &dont_care, tmp_str ) == -1 ) {
+	if( use_delegation ) {
+		rv = sock->get_x509_delegation( &dont_care, tmp_str );
+	}
+	else {
+		dprintf( D_FULLDEBUG,
+		         "DELEGATE_JOB_GSI_CREDENTIALS is False; using direct copy\n");
+		if( ! sock->get_encryption() ) {
+			dprintf( D_ALWAYS,
+			         "cannot copy: encryption not enabled on channel\n" );
+			sock->end_of_message();
+			reply( sock, CONDOR_ERROR );
+			return FALSE;
+		}
+		rv = sock->get_file( &dont_care, tmp_str );
+	}
+	if( rv == -1 ) {
 		dprintf( D_ALWAYS,
-		         "Error: couldn't get delegated proxy\n");
+		         "Error: couldn't get proxy\n");
 		sock->end_of_message();
 		reply( sock, NOT_OK );
 		return FALSE;

@@ -494,18 +494,36 @@ DCStartd::delegateX509Proxy( const char* proxy )
 		
 
 	//
-	// 3) send over the claim id and delegate the given proxy
+	// 3) send over the claim id and delegate (or copy) the given proxy
 	//
 	tmp->encode();
-	if( ! tmp->code( claim_id ) ) {
+	int use_delegation =
+		param_boolean( "DELEGATE_JOB_GSI_CREDENTIALS", true ) ? 1 : 0;
+	if( !tmp->code( claim_id ) || !tmp->code( use_delegation ) ) {
 		MyString err = "DCStartd::delegateX509Proxy: "
-		               "Failed to send ClaimId to the startd";
+		               "Failed to send command parameters to the startd";
 		newError( CA_COMMUNICATION_ERROR, err.Value() );
 		delete tmp;
 		return CONDOR_ERROR;
 	}
+	int rv;
 	filesize_t dont_care;
-	if( tmp->put_x509_delegation( &dont_care, proxy ) == -1 ) {
+	if( use_delegation ) {
+		rv = tmp->put_x509_delegation( &dont_care, proxy );
+	}
+	else {
+		dprintf( D_FULLDEBUG,
+		         "DELEGATE_JOB_GSI_CREDENTIALS is False; using direct copy\n");
+		if( ! tmp->get_encryption() ) {
+			MyString err = "DCStartd::delegateX509Proxy: "
+		               "Cannot copy: channel does not have encryption enabled";
+			newError( CA_COMMUNICATION_ERROR, err.Value() );
+			delete tmp;
+			return CONDOR_ERROR;
+		}
+		rv = tmp->put_file( &dont_care, proxy );
+	}
+	if( rv == -1 ) {
 		MyString err = "DCStartd::delegateX509Proxy: "
 		               "Failed to delegate proxy";
 		newError( CA_FAILURE, err.Value() );
