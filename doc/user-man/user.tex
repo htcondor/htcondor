@@ -357,7 +357,7 @@ universes for user jobs:
 	\item Vanilla
 	\item PVM
  	\item MPI
-	\item Globus or Grid
+	\item Grid
 	\item Java
 	\item Scheduler
 	\item Local
@@ -379,14 +379,11 @@ Machine interface.  See section~\ref{sec:PVM} for more about PVM and Condor.
 \index{universe!MPI}
 The \Expr{MPI} universe is for programs written to the MPICH interface.
 See section~\ref{sec:MPI} for more about MPI and Condor. The MPI Universe
-has be superseded by the~\Expr{Parallel} universe.
-\index{universe!Globus}
+has been superseded by the~\Expr{Parallel} universe.
 \index{universe!Grid}
-The Globus or Grid universe allows users to submit 
+The Grid universe allows users to submit 
 jobs using Condor's interface.
 These jobs are submitted for execution on grid resources.
-For Globus jobs,
-see \URL{http://www.globus.org} for more information.
 \index{universe!Java}
 \index{Java}
 \index{Java Virtual Machine}
@@ -533,24 +530,19 @@ interface to be used within the opportunistic Condor environment.
 Please see section~\ref{sec:MPI} for more details.
 
 %%%%%%%%%%%%
-\subsubsection{Globus Universe}
+\subsubsection{Grid Universe}
 %%%%%%%%%%%%
 
-\index{universe!Globus}
-The Globus universe in Condor is intended to provide the standard
-Condor interface to users who wish to start Globus system jobs
-from Condor. Each job queued in the job submission file is translated
-into the Globus Resource Specification Language (RSL) and subsequently 
-submitted to Globus via the GRAM
-protocol. You benefit from using the Globus universe because Condor
-maintains your jobs in a queue on your submit machine and can deal
-with a wide variety of common errors you might
-experience. Section~\ref{sec:Condor-G} on page~\pageref{sec:Condor-G}
-has details on using the Globus universe.
+\index{universe!Grid}
+The Grid universe in Condor is intended to provide the standard
+Condor interface to users who wish to start jobs
+intended for remote management systems.
+Section~\ref{sec:GridUniverse} on page~\pageref{sec:GridUniverse}
+has details on using the Grid universe.
 The manual page for \Condor{submit}
 on page~\pageref{man-condor-submit}
 has detailed descriptions of
-the Globus-related attributes.
+the grid-related attributes.
 
 %%%%%%%%%%%%
 \subsubsection{Java Universe}

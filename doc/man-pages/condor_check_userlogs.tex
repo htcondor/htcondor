@@ -11,9 +11,12 @@
 \Description
 
 \Condor{check\_userlogs} is a program for checking a user log or
-set of users logs for errors.  (Errors include things such as an
-execute or terminated event without a corresponding submit event,
-multiple terminated events for the same job, etc.)
+set of users logs for errors.  
+Output includes an indication that no errors were found
+within a log file,
+or a list of errors such as an
+execute or terminate event without a corresponding submit event,
+or multiple terminated events for the same job.
 
 \Condor{check\_userlogs} is especially useful for debugging
 \Condor{dagman} problems.  If \Condor{dagman} reports an error

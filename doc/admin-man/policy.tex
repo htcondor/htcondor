@@ -1919,6 +1919,10 @@ an existing claim; therefore the \Condor{schedd} daemon is forced to go back to
 the \Condor{negotiator} to request a new match, if there is still
 more work to do.
 
+Also be aware that in all versions of Condor prior to 6.8.1, it is
+not advisable to set \Macro{NEGOTIATOR\_CONSIDER\_PREEMPTION} to False,
+because of a bug that can lead to some machines never being
+matched to jobs.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Job-Suspension}Job Suspension}

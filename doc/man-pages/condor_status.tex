@@ -86,14 +86,19 @@ options} may be specified.
 		expression.  See section~\ref{sec:classadref} for
 		details on writing expressions.}
 	\OptItem{\OptArg{-format}{fmt attr}}{(Custom option) Display attribute
+	            or expression
               	\Arg{attr} in format \Arg{fmt}.
-		To display the attribute the format must contain a single
+		To display the attribute or expression the format must contain a single
 		\Code{printf(3)} style conversion specifier.
-		Attributes must be from the resource ClassAd.  If the
-		attribute is not present in a given ClassAd then the
+		Attributes must be from the resource ClassAd.
+		Expressions are ClassAd expressions and may
+		refer to attributes in the resource ClassAd.
+		If the
+		attribute is not present in a given ClassAd and cannot 
+		be parsed as an expression then the
 		format option will be silently skipped.
 		The conversion specifier must match the type of the
-		attribute.   \%s is suitable for strings such as \Attr{Name},
+		attribute or expression.   \%s is suitable for strings such as \Attr{Name},
 		\%d for integers such as \Attr{LastHeardFrom},
 		and \%f for floating point numbers such as \Attr{LoadAvg}.
 		An incorrect format

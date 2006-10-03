@@ -76,6 +76,11 @@
 %
 \makeindex
 
+% This turns off the hbox underfull warnings, but
+% does not change the formatting of the text
+% default value is 1000
+\hbadness=10000
+
 \begin{document}
 
 \title{Condor\textsuperscript{\small{\textregistered}} \VersionNotice\ Manual}
@@ -87,11 +92,6 @@
 \tableofcontents
 
 \sloppy
-
-% This turns off the hbox underfull warnings, but
-% does not change the formatting of the text
-% default value is 1000
-\hbadness=10000
 
 \begin{small}
 \input{copyright.tex}

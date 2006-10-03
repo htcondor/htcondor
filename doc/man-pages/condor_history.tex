@@ -71,11 +71,13 @@ for details on converting history files to the new format.
   \OptItem{\OptArg{-format}{formatSpec}{AttributeName}}{Display jobs
     with a custom format. See \Condor{q} man page for details.}
   \OptItem{\Opt{-l}}{Display job ads in long format.}
-  \OptItem{\OptArg{-completedsince}{postgrestimestamp}}{Display only job
-      ads that were in the Completed job state on or after the date and
-      time given by the \Arg{postgrestimestamp}. 
-      The \Arg{postgrestimestamp} follows the syntax as given for
-      \Prog{postgres} version 8.0.}
+  \OptItem{\OptArg{-completedsince}{postgrestimestamp}}{When Quill
+    is enabled, display only job
+    ads that were in the Completed job state on or after the date and
+    time given by the \Arg{postgrestimestamp}. 
+    The \Arg{postgrestimestamp} follows the syntax as given for
+    \Prog{PostgreSQL} version 8.0. The behavior of this option
+    is undefined when Quill is \emph{not} enabled. }
 \end{Options}
 
 \Examples
