@@ -428,8 +428,8 @@ Starter::reallykill( int signo, int type )
 			break;
 #endif
 		default:
-			EXCEPT( "stat(%s) failed with unexpected errno (%d)", 
-					s_path, errno );
+			EXCEPT( "stat(%s) failed with unexpected errno %d (%s)", 
+					s_path, errno, strerror( errno ) );
 		}
 	}
 #endif	// if !defined(WIN32)
