@@ -4400,6 +4400,7 @@ Scheduler::negotiate(int command, Stream* s)
 	ClassAd* my_match_ad;
 	ClassAd* ad;
 	char buffer[1024];
+	bool cant_spawn_shadow = false;
 
 
 	dprintf( D_FULLDEBUG, "\n" );
@@ -4673,6 +4674,51 @@ Scheduler::negotiate(int command, Stream* s)
 		job_universe = 0;
 		ad->LookupInteger(ATTR_JOB_UNIVERSE,job_universe);
 
+			// Figure out if this request would result in another shadow
+			// process if matched.
+			// If Grid, the answer is no.
+			// If PVM, perhaps yes or no.
+			// Otherwise, always yes.
+		shadow_num_increment = 1;
+		if(job_universe == CONDOR_UNIVERSE_GRID) {
+			shadow_num_increment = 0;
+		}
+		if( job_universe == CONDOR_UNIVERSE_PVM ) {
+			PROC_ID temp_id;
+
+				// For PVM jobs, the shadow record is keyed based
+				// upon cluster number only - so set proc to 0.
+			temp_id.cluster = id.cluster;
+			temp_id.proc = 0;
+
+			if ( find_shadow_rec(&temp_id) != NULL ) {
+					// A shadow already exists for this PVM job, so
+					// if we get a match we will not get a new shadow.
+				shadow_num_increment = 0;
+			}
+		}					
+
+			// Next, make sure we could start another
+			// shadow without violating some limit.
+		if ( shadow_num_increment ) {
+			if ( cant_spawn_shadow ) {
+					// We can't start another shadow.
+					// Continue on to the next job.
+				continue;
+			}
+			if( ! canSpawnShadow(JobsStarted, jobs) ) {
+					// We can't start another shadow.
+					// Continue on to the next job.
+					// Once canSpawnShadow() returns false, save the result
+					// and don't call it again for the rest of this
+					// negotiation cycle. Otherwise, it will spam the log
+					// with the same message for every shadow-based job
+					// left in PrioRec.
+				cant_spawn_shadow = true;
+				continue;
+			}
+		}
+
 		for (host_cnt = cur_hosts; host_cnt < max_hosts;) {
 
 			/* Wait for manager to request job info */
@@ -4726,28 +4772,6 @@ Scheduler::negotiate(int command, Stream* s)
 					break;
 				case SEND_JOB_INFO: {
 						// The Negotiator wants us to send it a job. 
-						// First, make sure we could start another
-						// shadow without violating some limit.
-					if ( service_this_universe( job_universe,ad ) ) {
-						if( ! canSpawnShadow(JobsStarted, jobs) ) {
-								// We can't start another shadow.  Tell
-								// the negotiator we're done.
-							if( !s->snd_int(NO_MORE_JOBS,TRUE) ) {
-									// We failed to talk to the CM, so
-									// close the connection.
-								dprintf( D_ALWAYS, 
-										 "Can't send NO_MORE_JOBS to mgr\n" ); 
-								return( !(KEEP_STREAM) );
-							} else {
-									// Communication worked, keep the
-									// connection stashed for later.
-								return KEEP_STREAM;
-							}
-						}
-					}	// end of if service_this_universe()
-
-						// If we got this far, we can spawn another
-						// shadow, so keep going w/ our regular work. 
 
 					/* Send a job description */
 					s->encode();
@@ -4755,30 +4779,6 @@ Scheduler::negotiate(int command, Stream* s)
 						dprintf( D_ALWAYS, "Can't send JOB_INFO to mgr\n" );
 						return (!(KEEP_STREAM));
 					}
-
-					// Figure out if this request would result in another 
-					// shadow process if matched.  If non-PVM, the answer
-					// is always yes.  If PVM, perhaps yes or no.  If
-					// Globus, then no.
-					shadow_num_increment = 1;
-					if(job_universe == CONDOR_UNIVERSE_GRID) {
-						shadow_num_increment = 0;
-					}
-					if( job_universe == CONDOR_UNIVERSE_PVM ) {
-						PROC_ID temp_id;
-
-						// For PVM jobs, the shadow record is keyed based
-						// upon cluster number only - so set proc to 0.
-						temp_id.cluster = id.cluster;
-						temp_id.proc = 0;
-
-						if ( find_shadow_rec(&temp_id) != NULL ) {
-							// A shadow already exists for this PVM job, so
-							// if we get a match we will not get a new shadow.
-							shadow_num_increment = 0;
-						}
-
-					}					
 
 					// request match diagnostics
 					sprintf (buffer, "%s = True", ATTR_WANT_MATCH_DIAGNOSTICS);
