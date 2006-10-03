@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre.pl,v 1.2.2.2 2006-10-02 21:20:24 bt Exp $
+# $Id: remote_pre.pl,v 1.2.2.3 2006-10-03 14:41:42 bt Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
@@ -243,7 +243,7 @@ print FIX "HOSTALLOW_WRITE 			= *\n";
 
 # Allow a default heap size for java(addresses issues on x86_rhas_3)
 # May address some of the other machines with Java turned off also
-print FIX "JAVA_MAXHEAP_ARGUMENT = ";
+print FIX "JAVA_MAXHEAP_ARGUMENT = \n";
 
 if( ($ENV{NMI_PLATFORM} =~ /hpux_11/) )
 {
