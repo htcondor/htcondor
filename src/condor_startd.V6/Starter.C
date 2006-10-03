@@ -753,7 +753,8 @@ Starter::execOldStarter( void )
 #if defined(Solaris)
 	sigset_t set;
 	if( sigprocmask(SIG_SETMASK,0,&set)  == -1 ) {
-		EXCEPT("Error in reading procmask, errno = %d\n", errno);
+		EXCEPT("Error in reading procmask, errno = %d (%s)", errno,
+			   strerror(errno));
 	}
 	for (i=0; i < MAXSIG; i++) {
 		block_signal(i);
@@ -763,7 +764,8 @@ Starter::execOldStarter( void )
 #endif
 
 	if( (pid = fork()) < 0 ) {
-		EXCEPT( "fork" );
+		EXCEPT( "Failed to fork starter, errno = %d (%s)", errno,
+				strerror( errno ) );
 	}
 
 	if (pid) {	/* The parent */
@@ -771,8 +773,10 @@ Starter::execOldStarter( void )
 		  (void)sigblock(omask);
 		  */
 #if defined(Solaris)
-		if ( sigprocmask(SIG_SETMASK, &set, 0)  == -1 )
-			{EXCEPT("Error in setting procmask, errno = %d\n", errno);}
+		if ( sigprocmask(SIG_SETMASK, &set, 0)  == -1 ) {
+			EXCEPT("Error in setting procmask, errno = %d (%s)", errno,
+				   strerror(errno));
+		}
 #else
 		(void)sigsetmask(omask);
 #endif
@@ -818,24 +822,25 @@ Starter::execOldStarter( void )
 			 */
 		if( setsid() < 0 ) {
 			dprintf( D_ALWAYS, 
-					 "setsid() failed in child, errno: %d\n", errno );
+					 "setsid() failed in child, errno: %d (%s)\n", errno,
+					 strerror( errno ) );
 			exit( 4 );
 		}
 
 			// Now, dup the special socks to their well-known fds.
 		if( dup2(main_sock,0) < 0 ) {
-			dprintf( D_ALWAYS, "dup2(%d,0) failed in child, errno: %d\n",
-					 main_sock, errno ); 
+			dprintf( D_ALWAYS, "dup2(%d,0) failed in child, errno: %d (%s)\n",
+					 main_sock, errno, strerror( errno ) ); 
 			exit( 4 );
 		}
 		if( dup2(main_sock,1) < 0 ) {
-			dprintf( D_ALWAYS, "dup2(%d,1) failed in child, errno: %d\n",
-					 main_sock, errno );
+			dprintf( D_ALWAYS, "dup2(%d,1) failed in child, errno: %d (%s)\n",
+					 main_sock, errno, strerror( errno ) );
 			exit( 4 );
 		}
 		if( dup2(err_sock,2) < 0 ) {
-			dprintf( D_ALWAYS, "dup2(%d,2) failed in child, errno: %d\n",
-					 err_sock, errno );
+			dprintf( D_ALWAYS, "dup2(%d,2) failed in child, errno: %d (%s)\n",
+					 err_sock, errno, strerror( errno ) );
 			exit( 4 );
 		}
 
