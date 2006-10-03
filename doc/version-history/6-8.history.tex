@@ -81,6 +81,10 @@ files (e.g. SchedLog) would silently lose messages.  Now,
 if the disk the log file is on is full, the Condor daemons will 
 exit.
 
+\item Fixed a bug in the \Condor{schedd} that caused it to stop
+negotiating for grid universe jobs if it decided it couldn't spawn
+any new shadow processes.
+
 % Gnats PR 751
 \item Added the ProcessId class (which more uniquely identifies a
 process than just a PID does) to the \Condor{dagman} ``abort duplicate
