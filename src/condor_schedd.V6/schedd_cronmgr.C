@@ -82,7 +82,7 @@ ScheddCronMgr::NewJob( const char *jobname )
 
 // Notified when a job dies
 void
-ScheddCronMgr::JobEvent( CronJobBase *Job, CondorCronEvent Event )
+ScheddCronMgr::JobEvent( CronJobBase *Job, CondorCronEvent  /* Event */ )
 {
 	(void) Job;
 

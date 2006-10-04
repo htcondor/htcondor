@@ -1248,7 +1248,7 @@ handle_q(Service *, int, Stream *sock)
 
 int GetMyProxyPassword (int, int, char **);
 
-int get_myproxy_password_handler(Service * service, int i, Stream *socket) {
+int get_myproxy_password_handler(Service * /*service*/, int /*i*/, Stream *socket) {
 
 	//	For debugging
 //	DebugFP = stderr;
@@ -1303,7 +1303,7 @@ int get_myproxy_password_handler(Service * service, int i, Stream *socket) {
 
 
 int
-InitializeConnection( const char *owner, const char *domain )
+InitializeConnection( const char *  /*owner*/, const char *  /*domain*/ )
 {
 		/*
 		  This function used to call init_user_ids(), but we don't
@@ -3051,7 +3051,7 @@ PrintQ()
 // Returns cur_hosts so that another function in the scheduler can
 // update JobsRunning and keep the scheduler and queue manager
 // seperate. 
-int get_job_prio(ClassAd *job, bool compute_autoclusters)
+int get_job_prio(ClassAd *job, bool  /*compute_autoclusters*/)
 {
     int job_prio;
     int job_status;
@@ -3226,9 +3226,9 @@ int mark_idle(ClassAd *job)
 	} else if ( status == REMOVED ) {
 		// a globus job with a non-null contact string should be left alone
 		if ( universe == CONDOR_UNIVERSE_GRID ) {
-			char job_id[20];
-			if ( job->LookupString( ATTR_GRID_JOB_ID, job_id,
-									sizeof(job_id) ) )
+			char grid_job_id[20];
+			if ( job->LookupString( ATTR_GRID_JOB_ID, grid_job_id,
+									sizeof(grid_job_id) ) )
 			{
 				// looks like the job's remote job id is still valid,
 				// so there is still a job submitted remotely somewhere.

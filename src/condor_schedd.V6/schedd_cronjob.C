@@ -43,7 +43,7 @@ ScheddCronJob::~ScheddCronJob( )
 }
 
 int
-ScheddCronJob::Publish( const char *name, ClassAd *ad )
+ScheddCronJob::Publish( const char *a_name, ClassAd *ad )
 {
-	return scheduler.adlist_replace( name, ad );
+	return scheduler.adlist_replace( a_name, ad );
 }
