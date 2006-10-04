@@ -273,6 +273,11 @@ email_open_implementation(char *Mailer, char *const final_args[])
 		gid_t condor_gid;
 		int i;
 
+		/* Disable any EXCEPT_Cleanup code installed by the parent process.
+		   Otherwise, for example, in the master, any call to EXCEPT in
+		   the following code will cause us to kill the master's children. */
+		_EXCEPT_Cleanup = NULL;
+
 		/* XXX This must be the FIRST thing in this block of code. For some
 			reason, at least on IRIX65, this forked process
 			will not be able to open the shadow lock file,
