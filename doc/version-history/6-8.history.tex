@@ -113,6 +113,11 @@ the first node job.
 \item Fixed a bug in \Condor{q} that would cause "condor\_q -hold" or
 "condor\_q -run" to exit with an error on some platforms.
 
+\item Fixed a bug under unix in which a misconfiguration of
+\MacroNI{MAIL} would cause \Condor{master} to restart all of its child
+daemons whenever it tried (and failed) to send email to the
+administrator.
+
 \end{itemize}
 
 \noindent Known Bugs:
