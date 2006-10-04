@@ -193,8 +193,8 @@ TESTCLASS(job_schedd_job-tracking_van,quick)
 
 /*
 Gnats bugs 723 726
-#if !defined( IS_ALPHA_DUX5) && !defined( IS_PPC_OSX_10_3 )
 */
+#if !defined( IS_PPC_OSX_10_3 )
 DESC(job_core_err_java,"Java Universe: basic error test")
 RUN(job_core_err_java)
 TESTCLASS(job_core_err_java,core)
@@ -223,12 +223,18 @@ TESTCLASS(job_core_input_java,core)
 TESTCLASS(job_core_input_java,quick)
 TESTCLASS(job_core_input_java,btdebug)
 
+/*
+** This test is simply submit and getting things in the job ads
+** and fails unpredictably and duplicates the other "plus" tests.
+***************************************************************
 DESC(job_core_plus_java,"Java Universe: basic output test")
 RUN(job_core_plus_java)
 TESTCLASS(job_core_plus_java,core)
 TESTCLASS(job_core_plus_java,quick)
 TESTCLASS(job_core_plus_java,btdebug)
-/*#endif*/
+***************************************************************
+*/
+#endif
 
 /*
 Gnats bugs 723 and 724
