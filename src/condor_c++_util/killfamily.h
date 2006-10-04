@@ -26,6 +26,7 @@
 #include "extArray.h"
 #include "condor_uid.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "../condor_procapi/procapi.h"
 #include "condor_pidenvid.h"
 
 class ProcAPI; 	// forward reference
@@ -92,7 +93,7 @@ private:
 			// the parent's pid
 			pid_t ppid;
 			// the epoch time when process was born
-			long birthday;
+			birthday_t birthday;
 			// the amount of user cpu time used in seconds
 			long cpu_user_time;
 			// the amount of system cpu time used in seconds
