@@ -62,6 +62,7 @@
 #define O_TRUNC _O_TRUNC
 #include <sys/stat.h>
 typedef unsigned short mode_t;
+typedef int socklen_t;
 typedef DWORD pid_t;
 typedef	unsigned __int16 uint16_t;
 typedef unsigned __int32 uint32_t;
