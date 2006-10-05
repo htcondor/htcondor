@@ -128,6 +128,13 @@ administrator.
 easier.  For example, when timing out on a read or write operation, the
 peer's address is now included in the error message.
 
+\item An invalid value for \MacroNI{UPDATE\_INTERVAL} now causes
+\Condor{startd} to abort.  Previously, it would continue running,
+but some invalid values (e.g. 0) could cause it to stop sending
+periodic ClassAd updates to the collector, even after being
+reconfigured with a valid value.  Only a complete restart of
+\Condor{startd} was sufficient to get it out of this state.
+
 \end{itemize}
 
 \noindent Known Bugs:
