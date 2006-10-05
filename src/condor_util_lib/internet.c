@@ -140,6 +140,36 @@ sock_to_string(SOCKET sockd)
 	return ( sin_to_string( &addr ) );
 }
 
+/*
+ Puts socket peer's sinful address in buf.  Returns this value or the
+ specified unknown value if address could not be determined (default
+ "unknown source").
+*/
+char const *
+sock_peer_to_string( SOCKET fd, char *buf, size_t buflen, char const *unknown )
+{
+	char const *sinful = sock_to_string( fd );
+
+	struct sockaddr_in who;
+	socklen_t addr_len;
+
+	addr_len = sizeof(who);
+	memset(buf,0,buflen);
+	if( getpeername(fd, (struct sockaddr *)&who, &addr_len) == 0) {
+		if( who.sin_family == AF_INET ) {
+			char const *sinful = sin_to_string( &who );
+			if( sinful ) {
+				strncpy(buf, sinful, buflen );
+				if(buflen) {
+					buf[buflen-1] = '\0'; /* ensure null termination */
+				}
+				return buf;
+			}
+		}
+	}
+	return unknown;
+}
+
 char *
 sin_to_hostname( const struct sockaddr_in *from, char ***aliases)
 {

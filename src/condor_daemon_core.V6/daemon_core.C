@@ -3163,8 +3163,12 @@ int DaemonCore::HandleReq(int socki)
 	// a timeout of 20 seconds on their socket.
 	// stream->timeout(old_timeout);
 	if(!result) {
+		char const *ip = stream->endpoint_ip_str();
+		if(!ip) {
+			ip = "unknown address";
+		}
 		dprintf(D_ALWAYS,
-			"DaemonCore: Can't receive command request (perhaps a timeout?)\n");
+			"DaemonCore: Can't receive command request from %s (perhaps a timeout?)\n", ip);
 		if ( insock != stream )	{   // delete stream only if we did an accept
 			delete stream;
 		} else {
@@ -7849,7 +7853,7 @@ bool
 DaemonCore::CheckConfigAttrSecurity( const char* attr, Sock* sock )
 {
 	char *name, *tmp;
-	char* ip_str;
+	const char* ip_str;
 	int i;
 
 	if( ! (name = strdup(attr)) ) {
