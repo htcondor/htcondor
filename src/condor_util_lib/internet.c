@@ -140,11 +140,6 @@ sock_to_string(SOCKET sockd)
 	return ( sin_to_string( &addr ) );
 }
 
-/*
- Puts socket peer's sinful address in buf.  Returns this value or the
- specified unknown value if address could not be determined (default
- "unknown source").
-*/
 char const *
 sock_peer_to_string( SOCKET fd, char *buf, size_t buflen, char const *unknown )
 {

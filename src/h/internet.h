@@ -69,8 +69,8 @@ char *sock_to_string(SOCKET sockd);
 
 /*
  Puts socket peer's sinful address in buf.  Returns this value or the
- specified unknown value if address could not be determined (default
- "unknown source").  Buffer should be at least SINFUL_STRING_BUF_SIZE,
+ specified unknown value if address could not be determined.
+ Buffer should be at least SINFUL_STRING_BUF_SIZE,
  but if it is less, the value will be truncated if necessary.
 */
 char const *
