@@ -28,10 +28,11 @@
 <$Property "HOSTALLOWREAD" VALUE="*">
 <$Property "HOSTALLOWWRITE" VALUE="your.domain.com, *.cs.wisc.edu">
 <$Property "HOSTALLOWADMINISTRATOR" VALUE="$(FULL_HOSTNAME)">
+<$Property "STARTSERVICE" VALUE="Y">
 <$Property "AA" VALUE="N">
 <$Property "AB" VALUE="N">
 
-<$AbortIf Condition=^not VersionNT OR (VersionNT < 500)^ Message=^Condor for Windows can only be installed on Windows 2000, XP or greater.^>
+<$AbortIf Condition=^not VersionNT OR (VersionNT < 500)^ Message=^Condor for Windows can only be installed on Windows 2000 or greater.^>
 
 
 <$FileFind File="JAVA.EXE" Property="JVMLOCATION" Depth="3" Path="[ProgramFilesFolder]" Default="JAVA.EXE">
@@ -113,6 +114,15 @@
 	<$DialogEntry Property="HOSTALLOWADMINISTRATOR" LabelWidth=140 Label="Hosts with Administrator access:" ToolTip="Turn Condor on/off, modify job queue." Width=160 Blank="N">
 <$/Dialog>
 
+<$Dialog "Condor Service" Description="Choose whether to start Condor after installation." Dialog="StartService" INSERT="HostPermissionSettings">
+   	<$DialogEntry Property="AA" LabelWidth="250" Label="Start the Condor service after installation?" Control="Text">
+   	#data 'RadioButton_STARTSERVICE'
+	         'Y'	'Yes'	''	''
+	         'N'	'No'	''	''
+	#data
+	<$DialogEntry Property="STARTSERVICE" Label="" Control="RB">
+<$/Dialog>
+
 ;--- Create INSTALLDIR ------------------------------------------------------
 <$DirectoryTree Key="INSTALLDIR" Dir="c:\condor" CHANGE="\" PrimaryFolder="Y">
 
@@ -161,8 +171,9 @@
 <$Registry HKEY="LOCAL_MACHINE" KEY="software\Condor"  VALUE="[INSTALLDIR_NTS]\condor_config" MsiFormatted="VALUE" Name="CONDOR_CONFIG" Access="AdminOnly">
 
 <$ExeCa EXE=^[INSTALLDIR]set_perms.exe^ Args=^^ WorkDir="INSTALLDIR"   Condition="<$CONDITION_EXCEPT_UNINSTALL>" Seq="InstallServices-">
+
 ;--- Install the Condor Service ----------------------------------------
-<$Component "Condor" Create="Y" Directory_="[INSTALLDIR]bin">
+<$Component "Condor" Create="Y" Directory_="[INSTALLDIR]bin" Condition=^STARTSERVICE = "Y"^>
    ;--- The service EXE MUST be the keypath of the component ----------------
    <$Files "<$ImageRootDirectory>\bin\condor_master.exe" KeyFile="*">
 
@@ -175,10 +186,24 @@
 			     Start="AUTO"
    >
 #)
-;--- start/stop service -------------------------------------------------
    <$ServiceControl Name="Condor" AtInstall="stop start" AtUninstall="stop delete">
-
 <$/Component>
+<$Component "CondorUnstarted" Create="Y" Directory_="[INSTALLDIR]bin" Condition=^STARTSERVICE <> "Y"^>
+   ;--- The service EXE MUST be the keypath of the component ----------------
+   <$Files "<$ImageRootDirectory>\bin\condor_master.exe" KeyFile="*">
+
+#(
+   <$ServiceInstall
+                  Name="Condor"
+           DisplayName="Condor"
+           Description="Condor Master Daemon"
+               Process="OWN"
+			     Start="AUTO"
+   >
+#)
+   <$ServiceControl Name="Condor" AtInstall="" AtUninstall="stop delete">
+<$/Component>
+
 
 
 ;--- Set Config file parameters ---------------------------------------------
