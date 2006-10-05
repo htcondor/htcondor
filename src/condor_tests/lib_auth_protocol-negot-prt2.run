@@ -98,7 +98,7 @@ while(<DF>) {
 	$ENV{CONDOR_CONFIG} = $secconfig;
 	# submit into local schedd (side a)
 
-	my $result = system("./lib_auth_protocol-negot.pl $mypid $label $mytestnegotiation_result");
+	my $result = system("./lib_auth_protocol-negot-prt2.pl $mypid $label $mytestnegotiation_result");
 	print "Result of crafted lib_auth_protocol-negot job is  $result\n";
 
 	if($result != 0) {
