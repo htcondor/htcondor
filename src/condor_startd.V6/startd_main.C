@@ -474,6 +474,9 @@ init_params( int first_time)
 		update_interval = 300;
 	} else {
 		update_interval = atoi( tmp );
+		if(update_interval<=0) {
+			EXCEPT("Invalid value for UPDATE_INTERVAL: %s\n",tmp);
+		}
 		free( tmp );
 	}
 
