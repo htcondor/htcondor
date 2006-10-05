@@ -24,6 +24,8 @@
 #include "condor_common.h"
 #include "procapi.h"
 #include "condor_debug.h"
+#include "my_hostname.h"
+#include "condor_email.h"
 
 int hashFunc( const pid_t& pid, int numbuckets );
 HashTable <pid_t, procHashNode *> * ProcAPI::procHash = 
@@ -167,6 +169,9 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status )
 	pi->birthday = procRaw.creation_time;
 	pi->owner = procRaw.owner;
 
+	// pi now takes ownership of the cmdline memory away from ProcRaw
+	pi->cmdline = procRaw.cmdline;
+	procRaw.cmdline = NULL;
 
     /* here we've got to do some sampling ourself.  If the pid is not in
        the hashtable, put it there using cpu_time / age as %cpu.
@@ -199,6 +204,7 @@ ProcAPI::getProcInfoRaw(pid_t pid, procInfoRaw& procRaw, int& status){
 #ifndef DUX4
 	struct prusage pru;   // prusage doesn't exist in OSF/1
 #endif
+	int str_len;
 
 	int fd;
 
@@ -266,6 +272,15 @@ ProcAPI::getProcInfoRaw(pid_t pid, procInfoRaw& procRaw, int& status){
 	procRaw.pid     = pri.pr_pid;
 	procRaw.ppid    = pri.pr_ppid;
 	procRaw.creation_time = pri.pr_start.tv_sec;
+
+	// grab out the comand with arguments
+	str_len = strlen(pri.pr_fname) + strlen(pri.pr_psargs) + 2; // space, nul
+	procRaw.cmdline = (char*)malloc(sizeof(char) * str_len);
+	if (procRaw.cmdline == NULL) {
+		EXCEPT("ProcAPI::getProcInfoRaw() Out of memory!");
+	}
+	sprintf(procRaw.cmdline, "%s %s", pri.pr_fname, pri.pr_psargs);
+
 
 	// get the owner of the file in /proc, which 
 	// should be the process owner uid.
@@ -360,6 +375,7 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status )
 		return PROCAPI_FAILURE;
 	}
 
+
 		/* clean up and convert raw data */
 
 		// compute the age
@@ -383,6 +399,10 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status )
 	pi->rssize	= procRaw.rssize;  // already in k!
 	pi->user_time= procRaw.user_time_1;
 	pi->sys_time = procRaw.sys_time_1;
+
+	// pi now takes ownership of the cmdline memory away from ProcRaw
+	pi->cmdline = procRaw.cmdline;
+	procRaw.cmdline = NULL;
 	
   /* Now we do that sampling hashtable thing to convert page faults
      into page faults per second */
@@ -536,6 +556,8 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 	procRaw.sys_time_1 = prusage.pr_stime.tv_sec;
 	procRaw.sys_time_2 = prusage.pr_stime.tv_nsec;
 
+	procRaw.cmdline = strdup("Not Implemented");
+
 		// reset our privledges
 	set_priv( priv );
 
@@ -680,6 +702,10 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status )
 		*/
 	fillProcInfoEnv(pi);
 
+	// pi now takes ownership of the cmdline memory away from ProcRaw
+	pi->cmdline = procRaw.cmdline;
+	procRaw.cmdline = NULL;
+
 		// success
 	return PROCAPI_SUCCESS;
 }
@@ -706,6 +732,8 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 
 	char path[64];
 	FILE *fp;
+	int fd;
+	char buffer[128]; /* careful use and no buffer overflow */
 	
 	int number_of_attempts;
 	long i;
@@ -713,6 +741,7 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 	char c;
 	char s[256];
 	int num_attempts = 5;
+	int num_read;
 
 		// assume success
 	status = PROCAPI_OK;
@@ -832,10 +861,47 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 		// close the file
 	fclose( fp );
 
+	// grab out the cmdline, max of 127 characters.
+	num_read = 0;
+	buffer[num_read] = '\0';
+	sprintf( path, "/proc/%d/cmdline", pid );
+	fd = open(path, O_RDONLY);
+	if (fd >= 0) {
+
+
+		/* read one less than the actual size of the buffer, leaving room for
+			a nul termination character at the 128'th entry if that much was
+			actually read. We simply truncate any arguments longer than 127
+			characters. */
+		num_read = full_read(fd, buffer, 127);
+		close(fd);
+
+		/* if I read something, make sure a nul termination is available. */
+		if (num_read >= 0) {
+			buffer[num_read] = '\0';
+
+			/* The format of the cmdline is nul terminated
+				strings packed into an array, so
+				start at the beginning, and walk to
+				the end, changing the nul markers
+				into spaces. Beware the true end nul
+				isn't changed.
+			*/
+			for(c = 0; c < num_read - 2; c++) {
+				if (buffer[c] == '\0') {
+					buffer[c] = ' ';
+				}
+			}
+		}
+		procRaw.cmdline = strdup(buffer);
+	} else {
+		procRaw.cmdline = strdup("Cmdline Not Available");
+	}
+
 		// only one value for times
 	procRaw.user_time_2 = 0;
 	procRaw.sys_time_2 = 0;
-	
+
 		// relower our privledges
 	set_priv( priv );
 
@@ -1089,6 +1155,10 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status )
 	pi->ppid	= procRaw.ppid;
 	pi->owner 	= procRaw.owner;
 
+	// pi now takes ownership of the cmdline memory away from ProcRaw
+	pi->cmdline = procRaw.cmdline;
+	procRaw.cmdline = NULL;
+
 		/* Now that darned sampling thing, so that page faults gets
 		   converted to page faults per second */
 
@@ -1174,6 +1244,8 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 	procRaw.ppid	= buf.pst_ppid;
 	procRaw.owner  	= buf.pst_uid;
 
+	procRaw.cmdline = strdup("Not Implemented");
+
 		// relower our permissions
 	set_priv( priv );
 
@@ -1222,6 +1294,10 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status )
 	pi->pid = procRaw.pid;
 	pi->ppid = procRaw.ppid;
 	pi->owner = procRaw.owner;
+
+	// pi now takes ownership of the cmdline memory away from ProcRaw
+	pi->cmdline = procRaw.cmdline;
+	procRaw.cmdline = NULL;
 	
 		// convert the number of page faults into a rate
 	do_usage_sampling(pi, cpu_time, procRaw.majfault, procRaw.minfault);
@@ -1355,6 +1431,8 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 	procRaw.ppid = kp->kp_eproc.e_ppid;
 	procRaw.owner = kp->kp_eproc.e_pcred.p_ruid; 
 
+	procRaw.cmdline = strdup("Not Implemented");
+
 		// We don't know the page faults
 	procRaw.majfault = 0;
 	procRaw.minfault = 0;
@@ -1426,6 +1504,10 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status )
 	pi->user_time = procRaw.user_time_1;
 	pi->sys_time = procRaw.sys_time_1;
 	pi->age = secsSinceEpoch() - pi->creation_time;
+
+	// pi now takes ownership of the cmdline memory away from ProcRaw
+	pi->cmdline = procRaw.cmdline;
+	procRaw.cmdline = NULL;
 
 	double ustime = pi->user_time + pi->sys_time;
 	do_usage_sampling( pi, ustime, procRaw.majfault, procRaw.minfault );
@@ -1564,6 +1646,9 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 	procRaw.pid = pid;
 #endif
 	free(kp);
+
+	procRaw.cmdline = strdup("Not Implemented");
+
 	return PROCAPI_SUCCESS;
 }
 #elif defined(WIN32)
@@ -1615,6 +1700,10 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status )
     pi->ppid      = procRaw.ppid;
 	pi->minfault  = 0;   // not supported by NT; all faults lumped into major.
 	pi->birthday  = procRaw.creation_time;
+
+	// pi now takes ownership of the cmdline memory away from ProcRaw
+	pi->cmdline = procRaw.cmdline;
+	procRaw.cmdline = NULL;
 	
 		// convert fault numbers into fault rate
 	do_usage_sampling ( pi, cpu_time, procRaw.majfault, procRaw.minfault, 
@@ -1636,6 +1725,7 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status )
    sample_time		: data block time scale since epoch
    object_frequency	: number of data block time scales in a second
    cpu_time			: data block time scale
+   cmdline          : command line of the process
 */
 
 int
@@ -1781,6 +1871,8 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 	procRaw.creation_time = elt.QuadPart;
 	procRaw.cpu_time	=  pt.QuadPart;
 
+	procRaw.cmdline = strdup("Not Implemented");
+
 		// success
     return PROCAPI_SUCCESS;
 }
@@ -1829,6 +1921,10 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status )
 	pi->creation_time = procRaw.creation_time;
 	pi->birthday = procRaw.creation_time;
 	pi->owner = procRaw.owner;
+
+	// pi now takes ownership of the cmdline memory away from ProcRaw
+	pi->cmdline = procRaw.cmdline;
+	procRaw.cmdline = NULL;
 
 		// success
 	return PROCAPI_SUCCESS;
@@ -1903,6 +1999,8 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 			procRaw.ppid = pent.pi_ppid;
 			procRaw.creation_time = pent.pi_start;
 			procRaw.owner = pent.pi_uid;
+
+			procRaw.cmdline = strdup("Not Implemented");
 
 			// All done
 			return PROCAPI_SUCCESS;
@@ -2748,6 +2846,7 @@ void
 ProcAPI::initpi ( piPTR& pi ) {
 	if( pi == NULL ) {
 		pi = new procInfo;
+		pi->cmdline = NULL;
 	}
 	pi->imgsize  = 0;
 	pi->rssize   = 0;
@@ -2761,6 +2860,10 @@ ProcAPI::initpi ( piPTR& pi ) {
 	pi->ppid     = -1;
 	pi->next     = NULL;
 	pi->owner    = 0;
+	if (pi->cmdline != NULL) {
+		free(pi->cmdline);
+		pi->cmdline = NULL;
+	}
 
 	pidenvid_init(&pi->penvid);
 }
@@ -3229,7 +3332,7 @@ ProcAPI::buildFamily( pid_t daddypid, PidEnvID *penvid, int &status ) {
 			status = PROCAPI_FAMILY_SOME;
 
 			dprintf(D_FULLDEBUG, 
-				"ProcAPI::buildFamily() Parent pid %u is gone. "
+				"ProcAPI::buildFamily() Parent pid %d is gone. "
 				"Found descendant %u via ancestor environment "
 				"tracking and assigning as new \"parent\".\n", 
 				daddypid, current->pid);
@@ -4151,3 +4254,273 @@ ProcAPI::closeFamilyHandles()
 #endif // of Win32
 	return;
 }
+
+
+/* Get the birthdate of the current process */
+time_t
+ProcAPI::getCurrentProcessBirthdate(void)
+{
+	pid_t me;
+	piPTR pi = NULL;
+	time_t birthdate;
+	int status;
+
+	me = ::getpid();
+
+	initpi(pi);
+
+	/* If this fails, it is indicative of a serious programmer
+		mistake and we should except. */
+	if (getProcInfo(me, pi, status) != PROCAPI_SUCCESS) {
+		EXCEPT("Unable to get my own birthdate?!?");
+	}
+
+	birthdate = pi->creation_time;
+
+	delete(pi);
+	pi = NULL;
+
+	return birthdate;
+}
+
+
+/* Kill all detectable orphaned children from previous runs of the Condor
+	daemons on this machine. We ONLY try to kill an orphan if the
+	pid has the PidEnvID information available. What we do is find
+	the oldest ancestor, which most likely means the condor_master,
+	and see if it is properly alive. If not, we kill that pid and
+	it's family as determined by getPidFamily(). NOTE: if you
+	end up in this code debugging why this function is killing
+	seemingly correct process families with masters that are alive,
+	then look to a heavily loaded machine. It is a little suspect if
+	the birthdates of the ancestor and forked pid in the environment
+	tracking variables are actually near enough the real birthdates
+	of said processes, and you should probably get that more correct.
+
+	NOTE: One thing to remember is that this code will kill ANY orphaned
+	process it finds. This means if a user's personal Condor had orphaned
+	some processes, a root installation of Condor will find and kill those
+	orphans. This feature always crosses privledge boundaries when possible.
+*/
+void
+ProcAPI::killOrphans(void)
+{
+	FILE *fp;
+	PidEnvID penvid;
+	piPTR cur = NULL;
+	piPTR process = NULL;
+	piPTR ancestor = NULL;
+	piPTR dead = NULL;
+	int status;
+	pid_t pid;
+	time_t bdate;
+	ExtArray<Orphan> all_pids;
+	ExtArray<pid_t> condemned;
+	int i, j;
+	PidEnvID ancestor_penvid;
+	int loc;
+	MyString msg;
+	int cleaned_process = FALSE;
+	/* These next two are used for the email to ensure we only record a pid
+		once into the email. */
+	HashTable<pid_t, int> pid_cache(37, hashFuncInt);
+	int present;
+
+	dprintf(D_PROCFAMILY, "Entered ProcAPI::killOrphans()\n");
+
+	msg += 
+		"Hello,\n"
+		"Reported by condor_master process with pid of ";
+	msg += getpid();
+	msg += ".\n\n";
+	msg += 
+		"On startup the following processes were identified as having been\n"
+		"started by a previous instance of Condor.  That instance of Condor\n"
+		"is no longer running, so these orphaned processes were sent SIGKILL.\n"
+		"The following processes were killed.  Command lines are limited to\n"
+		"127 characters.\n\n";
+	msg += "PID   Command Line\n\n";
+
+	pidenvid_init(&penvid);
+
+	/* get a list of procs */
+#ifndef HPUX
+	buildPidList();
+#endif
+	buildProcInfoList();
+
+	/* make a copy of the pids I need, since I need to call reentrantly
+		back into procapi and it'll mangle allProcInfos out from under me. */
+	for(i = 0, cur = allProcInfos; cur != NULL; cur = cur->next, i++) {
+		all_pids[i].pid = cur->pid;
+		all_pids[i].cmdline = strdup(cur->cmdline);
+	}
+
+	deallocPidList();
+	deallocAllProcInfos();
+
+	/* now process all of the pids I got in the snapshot of the system */
+	for(i = 0; i < all_pids.getlast(); i++) {
+		dprintf(D_PROCFAMILY, 
+			"ProcAPI::killOrphans(): Checking pid %lu\n", all_pids[i].pid);
+
+		/* skip this pid if getting the process was problematic, not there, 
+			etc */
+		if (ProcAPI::getProcInfo(all_pids[i].pid, process, status) == 
+				PROCAPI_FAILURE)
+		{
+			continue;
+		}
+
+		/* skip this pid if this pid doesn't have the correct PidEnvId 
+			information, it can't possibly (ha!) be a Condor process, well
+			at least one that hadn't modified its environment variables. */
+		if (pidenvid_empty(&process->penvid) == TRUE) {
+			continue;
+		}
+
+		dprintf(D_PROCFAMILY, "ProcAPI::killOrphans(): Scrutinizing pid "
+			"%d (%s)\n",
+			all_pids[i].pid, all_pids[i].cmdline);
+
+		/* find the oldest ancestor of the pid */
+		pidenvid_find_oldest_ancestor(&process->penvid, &pid, &bdate, &loc);
+
+		/* is the oldest ancestor pid alive? */
+		if (ProcAPI::getProcInfo(pid, ancestor, status) == PROCAPI_SUCCESS) {
+			
+			/* does it have the correct birthdate? */
+
+			/* Note, this slop is here since there is a delay between when
+				a process is born, and when we record the time of it in its
+				environment variable. If you're looking to see why this
+				function might be killing processes unexpectedly, then here
+				is where you look... try to get the recording of the birth
+				time as close as you can to the actual birth time. */
+			if (fabs(ancestor->creation_time - bdate) < 2.01) {
+
+				/* then skip this pid since it has an alive and correct
+					ancestor. */
+
+				dprintf(D_PROCFAMILY, "ProcAPI::killOrphans(): Skipping pid "
+					"%d (%s) due to living master at "
+					"%d (%s)\n",
+					all_pids[i].pid, all_pids[i].cmdline, pid, 
+					ancestor->cmdline);
+
+				continue;
+			}
+		}
+
+		dprintf(D_PROCFAMILY, "ProcAPI::killOrphans(): Condemned the orphan "
+			"pid and family of %d (%s)!\n",
+			all_pids[i].pid, all_pids[i].cmdline);
+
+		/* At this point it has been discovered that there is no viable 
+			oldest ancestor for this pid in terms of a Condor pool, so we 
+			kill this pid and its family. Its family is reconstructed via
+			the parentage and penvid information of the original ancestor. */
+
+		/* HOWEVER! We need to reconstruct what the PidEnvID of the oldest
+			ancestor would have looked like. Luckily, this will have exactly
+			ONE environment tracking variable in it, and we already have 
+			enough to reconstruct a penvid given the ancestor's information. */
+		pidenvid_init(&ancestor_penvid);
+		pidenvid_copy_env(&ancestor_penvid, 0, &process->penvid, loc);
+
+		/* make the family for the all_pids[i] I discovered to be killable, 
+			the penvid structure is set up like the oldest
+			ancestor (probably the condor_master process)
+			had been. This ensures that the pid tracking
+			env variables are used to their fullest extent. */
+		if (ProcAPI::getPidFamily(all_pids[i].pid, &ancestor_penvid, 
+				condemned, status) == PROCAPI_SUCCESS) 
+		{
+
+			/* now go about hard killing the processes.
+				There is a big race condition here
+				that from the time I discovered what the
+				family is to killing them, pids could
+				have changed, so I'd be killing what I
+				don't expect, probably as root. I love
+				UNIX with all my heart. */
+			for (j = 0; condemned[j] != 0; j++) {
+
+				/* a teeny sanity check */
+				if (condemned[j] == getpid()) {
+					dprintf(D_ALWAYS, 
+						"ProcAPI::killOrphans(): WARNING: Failed sanity check, "
+						"I am not condemned.\n");
+					continue;
+				}
+				
+				/* check for the pid right before I kill it. This is mostly
+					here so I can get a full procInfo structure so I can report
+					the name of the thing I'm killing. If getPidFamily() didn't
+					have such a brain dead interface, returning the pids only
+					instead of the full pid structure, then this would be 
+					simpler. */
+				if (ProcAPI::getProcInfo(condemned[j], dead, status) ==
+					PROCAPI_FAILURE)
+				{
+					/* not found, eh, race conditions, can't live with them,
+						can live without them. */
+					continue;
+				}
+
+				dprintf(D_ALWAYS, "ProcAPI::killOrphans(): "
+					"Killing condemned pid: %d (%s)\n", condemned[j], 
+					dead->cmdline);
+				
+				/* This signifies I actually did work so the mail code can
+					decide to send a message. */
+				cleaned_process = TRUE;
+
+				kill(condemned[j], SIGKILL);
+
+				/* see if I've already mentioned this pid in the msg, if so, 
+					don't mention it again. This is a side effect of
+					the snapshots I have in the data structures in
+					this function. */
+				if (pid_cache.lookup(condemned[j], present) != 0) {
+					/* not in the table, so mark it in the email */
+					msg += condemned[j];
+					msg += " ";
+					msg += dead->cmdline;
+					msg += "\n";
+
+					/* mark it in the table so I don't repeat it. */
+					pid_cache.insert(condemned[j], TRUE);
+				}	
+			}
+		}
+	}
+
+	/* clean up my mess */
+	delete process;
+	delete ancestor;
+	delete dead;
+
+	/* remove the orphans array cmdline memory */
+	for (i = 0; i < all_pids.getlast(); i++) {
+		free(all_pids[i].cmdline);
+		all_pids[i].cmdline = NULL;
+	}
+
+	/* send the email to the administrative email box */
+	if (cleaned_process == TRUE) {
+		/* NULL address means use the condor administrator email found in the
+			config files. */
+		fp = email_open(NULL, "Condor Master Killed Orphaned Process");
+		fprintf(fp, "%s", msg.Value());
+		email_close(fp);
+	}
+
+	dprintf(D_PROCFAMILY, "Leaving ProcAPI::killOrphans()\n");
+}
+
+
+
+
+
+

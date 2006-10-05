@@ -26,6 +26,8 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 
 template class HashTable<pid_t, procHashNode *>;
+template class ExtArray<Orphan>;
+template class HashTable<pid_t, int>;
 
 // Unfortunately, instantiating this everywhere breaks some platforms
 // because pid_t is the same as int, we already instantiate

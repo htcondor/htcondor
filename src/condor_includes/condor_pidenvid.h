@@ -49,6 +49,13 @@
 			pid numbers. */ \
 		((sizeof(pid_t) * 2) + (sizeof(pid_t) / 2) + 1) + \
 \
+		/* the separator character */ \
+		1 + \
+\
+		/* space to represent the full possible ascii digits of a \
+			time_t which is the birthdate of the forker pid */ \
+		((sizeof(time_t) * 2) + (sizeof(time_t) / 2)) + \
+\
 		/* equal sign */ \
 		1 + \
 \
@@ -61,14 +68,16 @@
 		1 + \
 \
 		/* space to represent the full possible ascii digits of a \
-			time_t */ \
+			time_t which is a near birthdate time of the child */ \
 		((sizeof(time_t) * 2) + (sizeof(time_t) / 2)) + \
 \
 		/* the separator character */ \
 		1 + \
 \
 		/* space to represent the full possible ascii digits of a \
-			uint */ \
+			uint which is a random number to decrease the statistical \
+			probability of a resuse of a pid in the same second being marked \
+			as a child during a family search. */ \
 		((sizeof(unsigned int) * 2) + (sizeof(unsigned int) / 2)) + \
 \
 		/* the null character (which is already accounted for above) */ \
@@ -115,6 +124,10 @@ typedef struct PidEnvIDEntry_s {
 
 typedef struct PidEnvID_s
 {
+	/* If no environment variables have been inserted into this structure,
+		then it is empty. */
+	int empty;
+
 	/* the initializaer function will set this field to PIDENVID_MAX */
 	int num;
 	PidEnvIDEntry ancestors[PIDENVID_MAX];
@@ -133,11 +146,12 @@ int pidenvid_filter_and_insert(PidEnvID *penvid, char **env);
 
 /* create an envid string */
 int pidenvid_format_to_envid(char *dest, int size, 
-	pid_t forker_pid, pid_t forked_pid, time_t t, unsigned int mii);
+	pid_t forker_pid, time_t ft, pid_t forked_pid, time_t t, unsigned int mii);
 
 /* expand an envid string into the component pieces */
 int pidenvid_format_from_envid(char *src, 
-		pid_t *forker_pid, pid_t *forked_pid, time_t *t, unsigned int *mii);
+		pid_t *forker_pid, time_t *ft, pid_t *forked_pid, time_t *t, 
+		unsigned int *mii);
 
 /* insert a specific environment variable into the penvid */
 int pidenvid_append(PidEnvID *penvid, char *line);
@@ -145,16 +159,26 @@ int pidenvid_append(PidEnvID *penvid, char *line);
 /* wrapper around pidenvid_format_to_envid() and pidenvid_append() to combine
 	those two into one easy to use function */
 int pidenvid_append_direct(PidEnvID *penvid,
-	pid_t forker_pid, pid_t forked_pid, time_t t, unsigned int mii);
+	pid_t forker_pid, time_t ft, pid_t forked_pid, time_t t, unsigned int mii);
 
 /* check to see the left PidEnvID matches (is a subset of) the right PidEnvID */
 int pidenvid_match(PidEnvID *left, PidEnvID *right);
 
-/* copy the from into the to */
+/* copy the entire penvid from into the to */
 void pidenvid_copy(PidEnvID *to, PidEnvID *from);
+
+/* copy just the env var specified at the index from into the to */
+void pidenvid_copy_env(PidEnvID *to, int idxto, PidEnvID *from, int idxfrom);
 
 /* dump out the structure to the debugging logs */
 void pidenvid_dump(PidEnvID *penvid, unsigned int dlvl);
+
+/* does the pidenvid structure contain any ancestor variables? */
+int pidenvid_empty(PidEnvID *penvid);
+
+/* Find the root pid and birthdate */
+void pidenvid_find_oldest_ancestor(PidEnvID *penvid, pid_t *pid, time_t *bdate,
+	int *loc);
 
 END_C_DECLS
 

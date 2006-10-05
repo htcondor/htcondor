@@ -43,6 +43,7 @@
 #include "strupr.h"
 #include "condor_environ.h"
 #include "store_cred.h"
+#include "../condor_procapi/procapi.h"
 
 #ifdef WIN32
 
@@ -224,6 +225,7 @@ DoCleanup(int,int,char*)
 int
 main_init( int argc, char* argv[] )
 {
+	int 	orphan_cv;
     extern int runfor;
 	char	**ptr;
 
@@ -369,6 +371,14 @@ main_init( int argc, char* argv[] )
 		setsid();
 	}
 #endif
+
+	/* before we start anything up, let's try and kill any orphaned children
+		that we can discover. The default is true since we want this behaviour
+		silently to exist from now on. */
+	orphan_cv = param_boolean("KILL_ORPHANS_ON_STARTUP", TRUE);
+	if (orphan_cv == TRUE) {
+		ProcAPI::killOrphans();
+	}
 
 	if( StartDaemons ) {
 		daemons.StartAllDaemons();

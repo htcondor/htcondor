@@ -82,6 +82,7 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "../condor_io/condor_rw.h"
 #include "httpget.h"
 #include "daemon_core_sock_adapter.h"
+#include "../condor_procapi/procapi.h"
 
 // Make this the last include to fix assert problems on Win32 -- see
 // the comments about assert at the end of condor_debug.h to understand
@@ -5851,7 +5852,8 @@ int DaemonCore::Create_Process(
 
 		// create the new ancestor entry for the child's environment
 		if (pidenvid_format_to_envid(envid, PIDENVID_ENVID_SIZE, 
-				forker_pid, pid, time_of_fork, mii) == PIDENVID_BAD_FORMAT) 
+				forker_pid, ProcAPI::getCurrentProcessBirthdate(),
+				pid, time_of_fork, mii) == PIDENVID_BAD_FORMAT) 
 		{
 			dprintf ( D_ALWAYS, "Create_Process: Failed to create envid "
 				  	"\"%s\" due to bad format. !\n", envid );
@@ -6362,7 +6364,8 @@ int DaemonCore::Create_Process(
 				PIDENVID_MAX );
 	}
 	if (pidenvid_append_direct(&pidtmp->penvid, 
-			forker_pid, newpid, time_of_fork, mii) == PIDENVID_OVERSIZED)
+			forker_pid, ProcAPI::getCurrentProcessBirthdate(), 
+			newpid, time_of_fork, mii) == PIDENVID_OVERSIZED)
 	{
 		EXCEPT( "Create_Process: Cannot add child pid to PidEnvID table "
 				"because there aren't enough entries. PIDENVID_MAX is "

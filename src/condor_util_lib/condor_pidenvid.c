@@ -32,6 +32,9 @@ void pidenvid_init(PidEnvID *penvid)
 {
 	int i;
 
+	/* initially, there is nothing in a penvid */
+	penvid->empty = TRUE;
+
 	/* all of these structures in Condor will be of this size */
 	penvid->num = PIDENVID_MAX;
 
@@ -64,6 +67,7 @@ int pidenvid_filter_and_insert(PidEnvID *penvid, char **env)
 
 			strcpy(penvid->ancestors[i].envid, *curr);
 			penvid->ancestors[i].active = TRUE;
+			penvid->empty = FALSE;
 
 			i++;
 		}
@@ -91,6 +95,7 @@ int pidenvid_append(PidEnvID *penvid, char *line)
 
 			strcpy(penvid->ancestors[i].envid, line);
 			penvid->ancestors[i].active = TRUE;
+			penvid->empty = FALSE;
 
 			return PIDENVID_OK;
 		}
@@ -102,7 +107,7 @@ int pidenvid_append(PidEnvID *penvid, char *line)
 /* given a left and right hand side, put it into the buffer specified
 	and ensure it fits correctly */
 int pidenvid_format_to_envid(char *dest, int size, 
-	pid_t forker_pid, pid_t forked_pid, time_t t, unsigned int mii)
+	pid_t forker_pid, time_t ft, pid_t forked_pid, time_t t, unsigned int mii)
 {
 	if (size > PIDENVID_ENVID_SIZE) {
 		return PIDENVID_OVERSIZED;
@@ -110,29 +115,66 @@ int pidenvid_format_to_envid(char *dest, int size,
 
 	/* Here is the representation which will end up in an environment 
 		somewhere */
-	sprintf(dest, "%s%d=%d%s%lu%s%u", 
-		PIDENVID_PREFIX, forker_pid, 
+	sprintf(dest, "%s%d%s%lu=%d%s%lu%s%u", 
+		PIDENVID_PREFIX, forker_pid, PIDENVID_SEP, ft,
 		forked_pid, PIDENVID_SEP, t, PIDENVID_SEP, mii);
 
 	return PIDENVID_OK;
 }
 
 /* given a pidenvid entry, convert it back to numbers */
-int pidenvid_format_from_envid(char *src, pid_t *forker_pid, 
+int pidenvid_format_from_envid(char *src, pid_t *forker_pid, time_t *ft,
 		pid_t *forked_pid, time_t *t, unsigned int *mii)
 {
 	int rval;
 
 	/* rip out the values I care about and into the arguments */
 	rval = sscanf(src, 
-		PIDENVID_PREFIX "%d=%d" PIDENVID_SEP "%lu" PIDENVID_SEP "%u", 
-		forker_pid, forked_pid, t, mii);
+		/* the prefix string */
+		PIDENVID_PREFIX 
 
-	/* There are 4 things I'm taking out of the string, make sure I get them */
-	if (rval == 4) {
+		/* the parent pid */
+		"%d" 
+
+		/* a separater character */
+		PIDENVID_SEP 
+
+		/* the parent birth day */
+		"%lu"
+		
+		/* an equals sign */
+		"="
+
+		/* The child's pid */
+		"%d" 
+
+		/* a separator character */
+		PIDENVID_SEP 
+
+		/* the child (approximate) birth time */
+		"%lu"
+
+		/* A separator character */
+		PIDENVID_SEP 
+		
+		/* the random number */
+		"%u", 
+
+		forker_pid, ft, forked_pid, t, mii);
+
+	/* There are 5 things I'm taking out of the string, make sure I get them */
+	if (rval == 5) {
 		return PIDENVID_OK;
 	}
 
+	/* One reason why we might fail here is because over time, 
+		this format string has changed and there could
+		be two different versions of Condor on the same
+		machine with the takesnapshot code seeing each other's
+		processes. Unfortunately, no version information is kept
+		inside of the environment variables. Maybe in the future
+		I'll add something, but I don't think this'll have to
+		change again for a very long time. */
 	return PIDENVID_BAD_FORMAT;
 
 }
@@ -188,13 +230,13 @@ int pidenvid_match(PidEnvID *left, PidEnvID *right)
 /* combine the function calls of pidenvid_format_to_envid() and 
 	pidenvid_append() into one easy to use insertion function */
 int pidenvid_append_direct(PidEnvID *penvid,
-	pid_t forker_pid, pid_t forked_pid, time_t t, unsigned int mii)
+	pid_t forker_pid, time_t ft, pid_t forked_pid, time_t t, unsigned int mii)
 {
 	int rval;
 	char buf[PIDENVID_ENVID_SIZE];
 
 	rval = pidenvid_format_to_envid(buf, PIDENVID_ENVID_SIZE, 
-				forker_pid, forked_pid, t, mii);
+				forker_pid, ft, forked_pid, t, mii);
 
 	if (rval == PIDENVID_OVERSIZED) {
 		return rval;
@@ -214,6 +256,8 @@ void pidenvid_copy(PidEnvID *to, PidEnvID *from)
 
 	pidenvid_init(to);
 
+	to->empty = from->empty;
+
 	to->num = from->num;
 
 	for (i = 0; i < from->num; i++) {
@@ -224,12 +268,26 @@ void pidenvid_copy(PidEnvID *to, PidEnvID *from)
 	}
 }
 
+/* Be aware that this function can break the guarantee that there are only
+	contiguous TRUE entries starting at index 0 if the ancestor penvid.
+	So if you use this function make sure when you're done it is left in 
+	a valid format. */
+void pidenvid_copy_env(PidEnvID *to, int idxto, PidEnvID *from, int idxfrom)
+{
+	to->ancestors[idxto].active = from->ancestors[idxfrom].active;
+	if (from->ancestors[idxto].active == TRUE) {
+		strcpy(to->ancestors[idxto].envid, from->ancestors[idxfrom].envid);
+	}
+}
+
 /* emit the structure to the logs at the debug level specified */
 void pidenvid_dump(PidEnvID *penvid, unsigned int dlvl)
 {
 	int i;
 
 	dprintf(dlvl, "PidEnvID: There are %d entries total.\n", penvid->num);
+	dprintf(dlvl, "The PidEnvID structure %s empty.\n", 
+		penvid->empty==TRUE?"is":"is not");
 
 	for (i = 0; i < penvid->num; i++) {
 		/* only print out true ones */
@@ -240,6 +298,94 @@ void pidenvid_dump(PidEnvID *penvid, unsigned int dlvl)
 		}
 	}
 }
+
+
+int pidenvid_empty(PidEnvID *penvid)
+{
+	return penvid->empty == TRUE ? TRUE : FALSE;
+}
+
+/* search the ancestor variables until I find the oldest ancestor. This
+	function will set pid to 0 if the PidEnvID is empty. While it
+	always appears that the oldest ancestor is at index 0 in the
+	PidEnvID given manual inspection, the ordering is undefined and
+	probably OS dependant, so we do a little algorithm to find the
+	oldest ancestor. This algorithm assumes that the ancestor chain
+	is not broken in the environment, and this should be the state
+	of affairs at all times. The loc variable is the location in the pidenv
+	index array that one can use to copy an environment string to another
+	penvid. */
+void pidenvid_find_oldest_ancestor(PidEnvID *penvid, pid_t *pid, time_t *bdate,
+	int *loc)
+{
+	int done = FALSE;
+	pid_t forker_pid;
+	time_t ft;
+	pid_t forked_pid;
+	time_t t;
+	unsigned int mii;
+
+	pid_t ancestor;
+	time_t bd;
+	int location;
+	int i;
+
+	if (penvid->empty == TRUE) {
+		/* nothing to find, return pid 0, which nothing can ever be */
+		*pid = 0;
+		return;
+	}
+
+	/* pick the first one out of the environment and start with that */
+	pidenvid_format_from_envid(penvid->ancestors[0].envid, 
+		&ancestor, &bd, &forked_pid, &t, &mii);
+
+	/* every time I find the ancestor on the right hand side, set the ancestor
+		to the pid that forked it. */
+
+	start_over:
+	while (done == FALSE) {
+		/* search for the ancestor on the rhs */
+		for (i = 0; i < PIDENVID_MAX; i++) {
+			if (penvid->ancestors[i].active == FALSE) {
+				/* I'm at the end, so this means I didn't find the acenstor
+					on the RHS. Think recursion base case... */
+				break;
+			}
+
+			pidenvid_format_from_envid(penvid->ancestors[i].envid, 
+				&forker_pid, &ft, &forked_pid, &t, &mii);
+			
+			/* if I find the ancestor on the rhs, it means that it also
+				has an ancestor, so keep track of the new ancestor's
+				information and restart the search for an older one. */
+			if (ancestor == forked_pid) {
+				location = i;
+				ancestor = forker_pid;
+				bd = ft;
+
+				/* found an older ancestor, so start over the search with it */
+				goto start_over;
+			}
+		}
+
+		/* if I searched the whole of the PidEnvID and did not find 
+			the ancestor on the RHS, then whatever ancestor is currently
+			set to is the oldest ancestor. */
+		done = TRUE;
+	}
+
+	/* the pid of the oldest ancestor */
+	*pid = ancestor;
+	/* The birthdate of the oldest ancestor */
+	*bdate = bd;
+	/* the location in this penvid of the environment variable which is the
+		ancestor */
+	*loc = location;
+}
+
+
+
 
 
 
