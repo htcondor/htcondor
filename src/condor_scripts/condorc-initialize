@@ -27,6 +27,19 @@ BEGIN { $^W = 1 }
 use strict;
 use FindBin;
 
+my $DEBUG_LEVEL;
+my $LOG_DIR;
+
+chomp( $DEBUG_LEVEL = int ( `condor_config_val GLITE_CONDORC_DEBUG_LEVEL` ) );
+if ( $? != 0 ) {
+	$DEBUG_LEVEL = 10;
+}
+
+chomp( $LOG_DIR = `condor_config_val GLITE_CONDORC_LOG_DIR` );
+if ( $? != 0 || ! -d $LOG_DIR ) {
+	$LOG_DIR = "/tmp";
+}
+
 exit main();
 
 sub main {
@@ -95,8 +108,8 @@ sub submit {
 	print OUT <<END;
 executable=$fullpath
 universe=scheduler
-output=/tmp/$executable.$>.$$.out
-error=/tmp/$executable.$>.$$.err
+output=/$LOG_DIR/$executable.$>.$$.out
+error=/$LOG_DIR/$executable.$>.$$.err
 getenv=true
 #environment=PATH=$ENV{PATH};CONDOR_CONFIG=$ENV{CONDOR_CONFIG};GLITE_HOST_CERT=$ENV{GLITE_HOST_CERT};GLITE_HOST_KEY=$ENV{GLITE_HOST_KEY};LD_LIBRARY_PATH=$ENV{LD_LIBRARY_PATH}
 notification=never
