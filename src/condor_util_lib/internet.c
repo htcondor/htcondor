@@ -151,7 +151,7 @@ sock_peer_to_string( SOCKET fd, char *buf, size_t buflen, char const *unknown )
 	char const *sinful = sock_to_string( fd );
 
 	struct sockaddr_in who;
-	socklen_t addr_len;
+	SOCKET_LENGTH_TYPE addr_len;
 
 	addr_len = sizeof(who);
 	memset(buf,0,buflen);
