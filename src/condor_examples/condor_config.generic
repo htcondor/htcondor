@@ -967,6 +967,7 @@ PREEN_ARGS			= -m -r
 
 ##  Should the master find and hard kill processes that it thinks are
 ##  orphans from a previous instantiation of Condor on the machine?
+##  Currently, this feature is only implemented for Linux platforms.
 ##  The default value for this config file variable is TRUE.
 #KILL_ORPHANS_ON_STARTUP    = True
 
