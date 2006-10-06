@@ -8,6 +8,10 @@
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
 
+10/6/06 V6_8_2-root and V6_8_2-branch
+   A branch for the 6.8.2 doc series of the manual, created from
+   V6_8_2-root on the V6_8-branch of doc.
+
 10/3/06 V6_8-merge-2
    The state of the doc directory in the V6_8-branch for a merge
    into the trunk (V6_9-branch).
