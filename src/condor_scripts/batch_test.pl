@@ -33,6 +33,12 @@
 #	of test and sub test directories(during use only) in.
 # make sure tests are called testname.run for skip and run files
 # can use multiple command line options now
+# Oct 06 : bt Make default mode with no args to be to search for compilers
+#	and run .run files within BUT skip either test.saveme directories from
+#	a previous local run AND pid specific subdirectories used to generate
+#	personal condors for tests. Also "." will be added with a list
+#	of tests based on current enabled test listed in "list_quick".
+#
 
 #require 5.0;
 use FileHandle;
@@ -102,6 +108,10 @@ if( ! @compilers ) {
     @compilers = grep -d, readdir( TEST_DIR );
     # filter out . and ..
     @compilers = grep !/^\.\.?$/, @compilers;
+	# if the tests have run before we have pid labeled directories and 
+	# test.saveme directories which should be ignored.
+	@compilers = grep !/^.*saveme.*$/, @compilers;
+	@compilers = grep !/^\d+$/, @compilers;
     # get rid of CVS entry for testing - won't hurt to leave it in.
     @compilers = grep !/CVS/, @compilers;
     closedir TEST_DIR;
@@ -149,6 +159,19 @@ if( @testlist ) {
 	die "error: no test programs found for $compiler\n" 
 	    unless @{$test_suite{"$compiler"}};
     }
+	# by default look at the current blessed tests in the top
+	# level of the condor_tests directory and run these.
+	my $moretests = "";
+	my @toptests;
+	open(QUICK,"<list_quick")|| die "Can't open list_quick\n";
+	while(<QUICK>) {
+		chomp();
+		$moretests = $_ . ".run";
+		push @toptests,$moretests;
+	}
+	close(QUICK);
+	@{$test_suite{"."}} = @toptests;
+	push @compilers, ".";
 }
 
 
@@ -183,7 +206,9 @@ foreach $compiler (@compilers)
     if ($isXML){
       system ("mkdir -p $ResultDir/$compiler");
     } 
-    chdir $compiler || die "error switching to directory $compiler: $!\n";
+	if($compiler ne "\.") {
+    	chdir $compiler || die "error switching to directory $compiler: $!\n";
+	}
 	my $compilerdir = getcwd();
 	# add in compiler dir to the current path
 	$ENV{PATH} = $ENV{PATH} . ":" . $compilerdir;
@@ -287,7 +312,9 @@ foreach $compiler (@compilers)
     } # end while
 
     print "\n";
-    chdir ".." || die "error switching to directory ..: $!\n";
+	if($compiler ne "\.") {
+    	chdir ".." || die "error switching to directory ..: $!\n";
+	}
 	# remove compiler directory from path
 	CleanFromPath("$compilerdir");
 } # end foreach compiler dir
