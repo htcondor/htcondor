@@ -140,6 +140,10 @@ periodic ClassAd updates to the \Condor{collector}, even after being
 reconfigured with a valid value.  Only a complete restart of
 the \Condor{startd} daemon was sufficient to get it out of this state.
 
+\item Fixed a bug that caused X.509 limited proxies to be delegated as 
+impersonation (i.e. non-limited) proxies. Any authentication attempted
+with the resulting proxies would fail.
+
 \end{itemize}
 
 \noindent Known Bugs:
