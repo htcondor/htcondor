@@ -33,6 +33,14 @@ hashFuncInt( const int& n, int numBuckets )
 	return n % numBuckets;
 }
 
+int
+hashFuncLong( const long& n, int numBuckets )
+{
+	if( n < 0 ) {
+		return (0 - n) % numBuckets;
+	}
+	return n % numBuckets;
+}
 
 int
 hashFuncUInt( const unsigned int& n, int numBuckets )
