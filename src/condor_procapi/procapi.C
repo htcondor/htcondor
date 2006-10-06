@@ -4283,7 +4283,7 @@ ProcAPI::getCurrentProcessBirthdate(void)
 	return birthdate;
 }
 
-
+#if !defined(WIN32)
 /* Kill all detectable orphaned children from previous runs of the Condor
 	daemons on this machine. We ONLY try to kill an orphan if the
 	pid has the PidEnvID information available. What we do is find
@@ -4518,7 +4518,7 @@ ProcAPI::killOrphans(void)
 
 	dprintf(D_PROCFAMILY, "Leaving ProcAPI::killOrphans()\n");
 }
-
+#endif // !WIN32
 
 
 

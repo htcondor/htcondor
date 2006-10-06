@@ -302,6 +302,7 @@ struct procInfo {
 
 };
 
+#if !defined(WIN32)
 /* A helper data structure for the killOrphans() function. This holds a
 	view of a potential orphaned process. */
 typedef struct Orphan_s
@@ -310,6 +311,7 @@ typedef struct Orphan_s
 	/* This is allocated memory. */
 	char *cmdline;
 } Orphan;
+#endif
 
 
 /// piPTR is typedef'ed as a pointer to a procInfo structure.
@@ -620,8 +622,10 @@ class ProcAPI {
   */
   static time_t getCurrentProcessBirthdate(void);
 
+#if !defined(WIN32)
   /** Kill any orphaned children able to be discovered as such */
   static void killOrphans(void);
+#endif
 
  private:
 
