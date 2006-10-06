@@ -2179,12 +2179,14 @@ These macros control the \Condor{master}.
   outright.  It is defined in seconds and defaults to 300 (5 minutes).
 
 \item[\Macro{KILL\_ORPHANS\_ON\_STARTUP}]
-  \label{param:KillOrphansOnStartup} This macro
-   determines if the master process should try to locate and hard
-   kill orphaned processes from other instantiations of Condor. An
-   administrative email is sent detailing the pids (along with their
-   command lines) which had been killed. This entry is defined with a
-   boolean value and defaults to TRUE.
+  \label{param:KillOrphansOnStartup} This boolean variable,
+  when \Expr{True},
+  causes the \Condor{master} to try to locate and hard
+  kill orphaned processes from other instantiations of Condor. An
+  administrative e-mail is sent detailing the PIDs (along with their
+  command lines) which have been killed.
+  The default value is \Expr{True}.
+  Implemented only on Linux platforms.
 
 \item[\Macro{MASTER\_BACKOFF\_CONSTANT} and
   \Macro{MASTER\_<name>\_BACKOFF\_CONSTANT}]
