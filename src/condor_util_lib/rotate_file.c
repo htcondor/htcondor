@@ -23,6 +23,7 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
+#include "util_lib_proto.h"
 
 int
 rotate_file(const char *old_filename, const char *new_filename)

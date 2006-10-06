@@ -26,6 +26,8 @@
 
 #include <ctype.h>
 
+#include "util_lib_proto.h"
+
 /*
 **	Get rid of trailing spaces (and newlines and tabs )
 **	as well as beginning ones.  This routine just truncates the line in

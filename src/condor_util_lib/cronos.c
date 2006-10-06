@@ -81,7 +81,7 @@
 #define CSECOND	4
 #define N_ELEM	5
 
-typedef void (*FUNC_P)();
+typedef void (*FUNC_P)(void);
 
 /*
 ** Events are to occur at times which match a pattern.  Patterns are
@@ -102,7 +102,7 @@ static int	now[N_ELEM];
 
 
 void schedule_event( int , int , int , int , int , FUNC_P );
-void event_mgr();
+void event_mgr( void );
 static int event_due( int pattern[], int prev[], int now[] );
 static int before( int t1[], int t2[] );
 static int next_rightmost( int pattern[], int i );
@@ -126,7 +126,7 @@ schedule_event( int month, int day, int hour, int minute, int second,
 
 /* Exported function */
 void
-event_mgr()
+event_mgr( void )
 {
 
 	if( !did_startup ) {

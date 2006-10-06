@@ -26,6 +26,8 @@
 
 #include <ctype.h>
 
+#include "util_lib_proto.h"
+
 /*
 ** Return true iff the given string is a blank line.
 */

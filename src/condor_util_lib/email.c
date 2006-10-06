@@ -403,7 +403,7 @@ void
 email_close(FILE *mailer)
 {
 	char *temp;
-	int prev_umask;
+	mode_t prev_umask;
 	priv_state priv;
 
 	if ( mailer == NULL ) {

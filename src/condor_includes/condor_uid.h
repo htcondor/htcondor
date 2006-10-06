@@ -105,7 +105,7 @@ gid_t get_file_owner_gid(void);
 uid_t get_real_condor_uid(void);
 gid_t get_real_condor_gid(void);
 #else
-uid_t getuid(); /* getuid stub for WINNT */
+uid_t getuid( void ); /* getuid stub for WINNT */
 #endif
 
 

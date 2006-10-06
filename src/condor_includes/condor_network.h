@@ -48,7 +48,7 @@ extern "C" {
 #endif
 
 #if defined( __STDC__) || defined(__cplusplus)
-int do_connect ( const char *host, const char *service, unsigned int port );
+int do_connect ( const char *host, const char *service, u_short port );
 int tcp_accept_timeout( int ConnectionSock, struct sockaddr *sin, 
 						int *len, int timeout );
 #else

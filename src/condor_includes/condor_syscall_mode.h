@@ -56,10 +56,10 @@ extern "C" {
 #endif
 
 int SetSyscalls( int mode );
-int GetSyscallMode();
-BOOL LocalSysCalls();
-BOOL RemoteSysCalls();
-BOOL MappingFileDescriptors();
+int GetSyscallMode( void );
+BOOL LocalSysCalls( void );
+BOOL RemoteSysCalls( void );
+BOOL MappingFileDescriptors( void );
 
 #if defined(OSF1) || defined(HPUX) || defined(IRIX) || defined(Solaris)
 	int syscall( int, ... );

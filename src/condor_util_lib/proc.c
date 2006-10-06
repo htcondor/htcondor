@@ -42,6 +42,7 @@
 #include <time.h>
 #endif
 
+#include "util_lib_proto.h"
 
 int		DontDisplayTime;
 

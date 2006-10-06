@@ -24,6 +24,7 @@
 /* prototype in condor_includes/basename.h */
 
 #include "condor_common.h"
+#include "basename.h"
 
 /*
   A basename() function that is happy on both Unix and NT.
