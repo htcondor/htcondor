@@ -23,6 +23,7 @@
 
 #include "condor_common.h"
 #include "procapi.h"
+#include "procapi_internal.h"
 #include "condor_debug.h"
 #include "my_hostname.h"
 #include "condor_email.h"

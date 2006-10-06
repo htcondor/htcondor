@@ -20,28 +20,27 @@
   * RIGHT.
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-#include "condor_common.h"
-#include "HashTable.h"
-#include "procapi.h"
-#include "procapi_internal.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#ifndef PROCAPI_INTERNAL_H
+#define PROCAPI_INTERNAL_H
 
-template class HashTable<pid_t, procHashNode *>;
-template class ExtArray<Orphan>;
+/* This file is the dumping ground for strange headers that should ONLY pollute
+	the procapi source files, not everything that included the procapi.h
+	interface header file. Eventually, more things will migrate into here.
+	
+	An example of something tht could cause this to happen is in Linux, where
+	user land header files will have an enum of some symbols but the 
+	kernel header files--which the procapi code often uses, would #define
+	them. If things get included in just the right way, the #defines will 
+	override the symbols in the enum leading to an unparsable mess. */
 
-// This really holds a pid_t, but typedef isn't a new type, and pid_t can
-// change between platforms, so we'll typecast the pid_t into a long before
-// putting it into here.
-template class HashTable<long, int>;
+#if (!defined(HPUX) && !defined(Darwin) && !defined(CONDOR_FREEBSD))	 // neither of these are in hpux.
 
-// Unfortunately, instantiating this everywhere breaks some platforms
-// because pid_t is the same as int, we already instantiate
-// ExtAtrray<int> elsewhere, and multiply defined symbols
-// result. Leaving it out, on the other hand, breaks Solaris, where
-// pid_t is a long. All this seems to be dependent on compiler
-// versions, and also whether pid_t is a preprocessor macro or
-// typedef. The following hack exists for lack of a better way to
-// resolve this. :(
-#if defined(Solaris)
-template class ExtArray<pid_t>;
+#if defined(Solaris26) || defined(Solaris27) || defined(Solaris28) || defined(Solaris29)
+#include <procfs.h>		// /proc stuff for Solaris 2.6, 2.7, 2.8, 2.9
+#else
+#include <sys/procfs.h>	// /proc stuff for everything else and
 #endif
+
+#endif /* ! HPUX && Darwin && CONDOR_FREEBSD */
+
+#endif // PROCAPI_INTERNAL_H
