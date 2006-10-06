@@ -995,6 +995,10 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
 		ouch( "Error creating new SSL context.\n");
 		goto setup_server_ctx_err;
 	}
+
+	// disable SSLv2.  it has vulnerabilities.
+	SSL_CTX_set_options( ctx, SSL_OP_NO_SSLv2 );
+
     if( SSL_CTX_load_verify_locations( ctx, cafile, cadir ) != 1 ) {
         ouch( "Error loading CA file and/or directory\n" );
 		goto setup_server_ctx_err;
