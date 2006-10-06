@@ -658,16 +658,29 @@ x509_send_delegation( const char *source_file,
 		error_line = __LINE__;
 		goto cleanup;
 	}
-	if ( cert_type == GLOBUS_GSI_CERT_UTILS_TYPE_CA ) {
+	switch ( cert_type ) {
+	case GLOBUS_GSI_CERT_UTILS_TYPE_CA:
 		rc = -1;
 		error_line = __LINE__;
 		goto cleanup;
-	} else if ( cert_type == GLOBUS_GSI_CERT_UTILS_TYPE_EEC ) {
+	case GLOBUS_GSI_CERT_UTILS_TYPE_EEC:
+	case GLOBUS_GSI_CERT_UTILS_TYPE_GSI_3_INDEPENDENT_PROXY:
+	case GLOBUS_GSI_CERT_UTILS_TYPE_GSI_3_RESTRICTED_PROXY:
 		cert_type = GLOBUS_GSI_CERT_UTILS_TYPE_GSI_3_IMPERSONATION_PROXY;
-	} else if ( GLOBUS_GSI_CERT_UTILS_IS_GSI_2_PROXY( cert_type ) ) {
-		cert_type = GLOBUS_GSI_CERT_UTILS_TYPE_GSI_2_PROXY;
-	} else if ( GLOBUS_GSI_CERT_UTILS_IS_RFC_PROXY( cert_type ) ) {
+		break;
+	case GLOBUS_GSI_CERT_UTILS_TYPE_RFC_INDEPENDENT_PROXY:
+	case GLOBUS_GSI_CERT_UTILS_TYPE_RFC_RESTRICTED_PROXY:
 		cert_type = GLOBUS_GSI_CERT_UTILS_TYPE_RFC_IMPERSONATION_PROXY;
+		break;
+	case GLOBUS_GSI_CERT_UTILS_TYPE_GSI_3_IMPERSONATION_PROXY:
+	case GLOBUS_GSI_CERT_UTILS_TYPE_GSI_3_LIMITED_PROXY:
+	case GLOBUS_GSI_CERT_UTILS_TYPE_GSI_2_PROXY:
+	case GLOBUS_GSI_CERT_UTILS_TYPE_GSI_2_LIMITED_PROXY:
+	case GLOBUS_GSI_CERT_UTILS_TYPE_RFC_IMPERSONATION_PROXY:
+	case GLOBUS_GSI_CERT_UTILS_TYPE_RFC_LIMITED_PROXY:
+	default:
+			// Use the same certificate type
+		break;
 	}
 	result = globus_gsi_proxy_handle_set_type( new_proxy, cert_type);
 	if ( result != GLOBUS_SUCCESS ) {
