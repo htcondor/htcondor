@@ -33,6 +33,8 @@
 	them. If things get included in just the right way, the #defines will 
 	override the symbols in the enum leading to an unparsable mess. */
 
+/* All of the following is unix-only */
+#ifndef WIN32
 #if (!defined(HPUX) && !defined(Darwin) && !defined(CONDOR_FREEBSD))	 // neither of these are in hpux.
 
 #if defined(Solaris26) || defined(Solaris27) || defined(Solaris28) || defined(Solaris29)
@@ -43,4 +45,5 @@
 
 #endif /* ! HPUX && Darwin && CONDOR_FREEBSD */
 
+#endif /* ifndef WIN32 */
 #endif // PROCAPI_INTERNAL_H
