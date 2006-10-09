@@ -51,7 +51,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Fixed a bug in the \condor{gridmanager} dealing with grid-type gt4
+grid universe jobs. If the job's standard output or error wasn't specified
+in the job ad, the \condor{gridmanager} would create an improper GRAM
+RSL string.
 
 \end{itemize}
 
