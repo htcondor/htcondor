@@ -1820,10 +1820,13 @@ MyString *GT4Job::buildSubmitRSL()
 	}
 
 		// standard output
+		// If we don't find a real filename for Output, then we don't
+		// want to try transferring it.
+	transfer_stdout = false;
 	if ( jobAd->LookupString(ATTR_JOB_OUTPUT, &attr_value) && *attr_value &&
 		 strcmp( attr_value, NULL_FILE ) ) {
 
-		bool transfer_stdout = true;
+		transfer_stdout = true;
 		jobAd->LookupBool( ATTR_TRANSFER_OUTPUT, transfer_stdout );
 
 		if ( transfer_stdout == false ) {
@@ -1846,10 +1849,13 @@ MyString *GT4Job::buildSubmitRSL()
 	}
 
 		// standard error
+		// If we don't find a real filename for Error, then we don't
+		// want to try transferring it.
+	transfer_stderr = false;
 	if ( jobAd->LookupString(ATTR_JOB_ERROR, &attr_value) && *attr_value &&
 		 strcmp( attr_value, NULL_FILE ) ) {
 
-		bool transfer_stderr = true;
+		transfer_stderr = true;
 		jobAd->LookupBool( ATTR_TRANSFER_ERROR, transfer_stderr );
 
 		if ( transfer_stderr == false ) {
