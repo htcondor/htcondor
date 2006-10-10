@@ -1,3 +1,11 @@
+10/10/06 V6_8-{pre,post}_merge-V6_8_2-merge-1
+  The state of the V6_8-branch before and after merging in the
+  V6_8_2-branch as tagged at V6_8_2-merge-1
+
+10/10/06 V6_8_2-merge-1
+  The state of the V6_8_2-branch before merging back to V6_8-branch.
+  This is likely the only merge from there, but you never know.
+
 10/05/06 V6_8_2-{root,branch}
   The branch for V6_8_2 off of V6_8-branch.
 

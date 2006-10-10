@@ -23,6 +23,7 @@
 
 #include "condor_common.h"
 #include "procapi.h"
+#include "procapi_internal.h"
 #include "condor_debug.h"
 #include "my_hostname.h"
 #include "condor_email.h"
@@ -4321,9 +4322,7 @@ ProcAPI::killOrphans(void)
 	int loc;
 	MyString msg;
 	int cleaned_process = FALSE;
-	/* These next two are used for the email to ensure we only record a pid
-		once into the email. */
-	HashTable<pid_t, int> pid_cache(37, hashFuncInt);
+	HashTable<long, int> pid_cache(37, hashFuncLong);
 	int present;
 
 	dprintf(D_PROCFAMILY, "Entered ProcAPI::killOrphans()\n");
@@ -4476,13 +4475,32 @@ ProcAPI::killOrphans(void)
 					decide to send a message. */
 				cleaned_process = TRUE;
 
+				/* So why don't I check the return value here? Cause I don't
+					care if I had permissions to send it or not, the process
+					didn't exist, and it is impossible for an invalid signal
+					to be specified snice I'm using the POSIX one. */
 				kill(condemned[j], SIGKILL);
 
 				/* see if I've already mentioned this pid in the msg, if so, 
 					don't mention it again. This is a side effect of
 					the snapshots I have in the data structures in
-					this function. */
-				if (pid_cache.lookup(condemned[j], present) != 0) {
+					this function. 
+
+					The long_pid_t variable is a hideous hack because C++ 
+					is evil. Basically, since we currently
+					explicitly instantiate templates, sometimes we'll get
+					an int, or a long, or whatever for the instantiation.
+					However, there might have been other instantiations of
+					this hash table type in other daemons, so we'll get a
+					duplicately defined error. Also, the hash function can only
+					take an int, so on platforms where pid_t isn't an int, the
+					linker signals a mismatch. 
+
+					So, to "fix" this garbage, I've typecasted the pid_t into
+					a long and instantiated the hash table based on that. This
+					will make it consistant for all platforms.
+				*/
+				if (pid_cache.lookup((long)condemned[j], present) != 0) {
 					/* not in the table, so mark it in the email */
 					msg += condemned[j];
 					msg += " ";
@@ -4490,7 +4508,7 @@ ProcAPI::killOrphans(void)
 					msg += "\n";
 
 					/* mark it in the table so I don't repeat it. */
-					pid_cache.insert(condemned[j], TRUE);
+					pid_cache.insert((long)condemned[j], TRUE);
 				}	
 			}
 		}

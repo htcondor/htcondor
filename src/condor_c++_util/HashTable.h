@@ -691,6 +691,9 @@ void HashTable<Index,Value>::dump()
 /// basic hash function for an unpredictable integer key
 int hashFuncInt( const int& n, int numBuckets );
 
+/// basic hash function for an unpredictable integer key
+int hashFuncLong( const long& n, int numBuckets );
+
 /// basic hash function for an unpredictable unsigned integer key
 int hashFuncUInt( const unsigned int& n, int numBuckets );
 

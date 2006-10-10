@@ -23,6 +23,7 @@
 #include "condor_common.h"
 #include "condor_pidenvid.h"
 #include "procinterface.h"
+#include "procapi_internal.h"
 
 
 ProcAd::ProcAd() {
