@@ -271,38 +271,11 @@ struct procInfo {
   // the owner of this process
   uid_t owner;
 
-  // the command line of this process
-  char *cmdline;
-
   // Any ancestor process identification environment variables.
   // This is always initialzed to something, but might not be filled
   // in due to complexities with the OS.
   PidEnvID penvid;
-
-  procInfo() {
-	this->cmdline = NULL; 
-  };
-
-  ~procInfo() {
-	if (this->cmdline != NULL) {
-		free(this->cmdline);
-		this->cmdline = NULL;
-	}
-  };
-
 };
-
-#if !defined(WIN32)
-/* A helper data structure for the killOrphans() function. This holds a
-	view of a potential orphaned process. */
-typedef struct Orphan_s
-{
-	pid_t pid;
-	/* This is allocated memory. */
-	char *cmdline;
-} Orphan;
-#endif
-
 
 /// piPTR is typedef'ed as a pointer to a procInfo structure.
 typedef struct procInfo * piPTR;
@@ -314,7 +287,6 @@ typedef struct procInfo * piPTR;
   are determined by the OS.
 */
 typedef struct procInfoRaw{
-	public:
 	unsigned long imgsize;
 	unsigned long rssize;
 	long minfault;
@@ -322,7 +294,6 @@ typedef struct procInfoRaw{
 	pid_t pid;
 	pid_t ppid;
 	uid_t owner;
-	char *cmdline;
 	
 		// Times are different on Windows
 #ifndef WIN32
@@ -351,17 +322,7 @@ typedef struct procInfoRaw{
 #ifdef LINUX
 	  unsigned long proc_flags;
 #endif //LINUX
-
-	procInfoRaw() {
-		this->cmdline = NULL; 
-	};
-	~procInfoRaw() {
-		if (this->cmdline != NULL) {
-			free(this->cmdline);
-			this->cmdline = NULL;
-		}
-	};
-} procInfoRaw;
+}procInfoRaw;
 
 /* The pidlist struct is used for getting all the pids on a machine
    at once.  It is used by getpidlist() */
@@ -606,17 +567,6 @@ class ProcAPI {
   static void test_monitor ( char * jobname );
 #endif  // of WANT_STANDALONE_DEBUG
 
-  /**
-  	Get the birthdate of getpid().
-	@return the birthdate of the current process.
-  */
-  static time_t getCurrentProcessBirthdate(void);
-
-#if !defined(WIN32)
-  /** Kill any orphaned children able to be discovered as such */
-  static void killOrphans(void);
-#endif
-
  private:
 
   /** Default constructor.  It's private so that no one really
@@ -689,7 +639,6 @@ class ProcAPI {
 								 , double now
 #endif
 								 );
-
 
 #ifndef WIN32
   static int buildPidList();                      // just what it says

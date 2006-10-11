@@ -43,7 +43,6 @@
 #include "strupr.h"
 #include "condor_environ.h"
 #include "store_cred.h"
-#include "../condor_procapi/procapi.h"
 
 #ifdef WIN32
 
@@ -368,16 +367,6 @@ main_init( int argc, char* argv[] )
 			// If we're not connected to a terminal, start our own
 			// process group.
 		setsid();
-	}
-#endif
-
-#if !defined(WIN32)
-	/* before we start anything up, let's try and kill any orphaned children
-		that we can discover. The default is true since we want this behaviour
-		silently to exist from now on. */
-	int orphan_cv = param_boolean("KILL_ORPHANS_ON_STARTUP", TRUE);
-	if (orphan_cv == TRUE) {
-		ProcAPI::killOrphans();
 	}
 #endif
 
