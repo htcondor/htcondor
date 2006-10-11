@@ -1,7 +1,14 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{\label{sec:MPI}MPI Applications}
+\subsection{\label{sec:MPI}Outdated Documentation of the MPI Universe}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{MPI|(}
+
+The following sections on implementing MPI applications utilizing
+the MPI universe are superseded by the sections describing
+MPI applications utilizing the parallel universe.
+These sections are included in the manual as reference,
+until the time when the MPI universe is no longer supported within Condor.
+
+\index{MPI universe|(}
 MPI stands for Message Passing Interface.
 It provides an environment under which parallel programs
 may synchronize, 
@@ -30,7 +37,7 @@ The Parallel universe~\ref{sec:Parallel} is now the preferred
 way to run MPI jobs. 
 Support for the MPI universe will be removed from Condor at a future date.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:MPI-setup}MPI Details of Set Up}
+\subsubsection{\label{sec:MPI-setup}MPI Details of Set Up}
 
 Administratively, Condor must be configured such that resources
 (machines) running MPI jobs are dedicated.
@@ -56,7 +63,7 @@ must be
 submitted from the machine running as the dedicated scheduler.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:MPI-submit}MPI Job Submission}
+\subsubsection{\label{sec:MPI-submit}MPI Job Submission}
 
 Once the programs are written and compiled, and Condor resources
 are correctly configured, jobs may be submitted.
@@ -273,4 +280,4 @@ This is because the scheduler tries to match jobs to machine in
 submit file order.  If the requirements are not mutually exclusive,
 it can happen that the scheduler may unable to schedule the job, even
 if all needed resources are available.
-\index{MPI|)}
+\index{MPI universe|)}
