@@ -52,14 +52,6 @@ sites with very busy \Condor{schedd} daemons were encountering scaling problems.
 
 \begin{itemize}
 
-\item The \Condor{master} now detects  and hard kills orphaned processes
-from other
-instantiations of Condor. An administrative e-mail
-is sent which describes which PIDs were killed, along with their command
-line. See the entry on \Macro{KILL\_ORPHANS\_ON\_STARTUP} in 
-section~\ref{param:KillOrphansOnStartup}.
-This feature is implemented for Linux platforms.
-
 \item Because, by default, the \Condor{startd} daemon references the job
 ClassAd attribute \AdAttr{NumCkpts}, Condor's default configuration
 will now round up the value of \AdAttr{NumCkpts}, in order to improve 
