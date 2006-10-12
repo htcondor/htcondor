@@ -63,6 +63,7 @@ int pidenvid_filter_and_insert(PidEnvID *penvid, char **env)
 			}
 
 			strncpy(penvid->ancestors[i].envid, *curr, PIDENVID_ENVID_SIZE);
+			penvid->ancestors[i].envid[PIDENVID_ENVID_SIZE-1] = '\0';
 			penvid->ancestors[i].active = TRUE;
 
 			i++;
@@ -90,6 +91,7 @@ int pidenvid_append(PidEnvID *penvid, char *line)
 			}
 
 			strncpy(penvid->ancestors[i].envid, line, PIDENVID_ENVID_SIZE);
+			penvid->ancestors[i].envid[PIDENVID_ENVID_SIZE-1] = '\0';
 			penvid->ancestors[i].active = TRUE;
 
 			return PIDENVID_OK;
@@ -221,6 +223,7 @@ void pidenvid_copy(PidEnvID *to, PidEnvID *from)
 		to->ancestors[i].active = from->ancestors[i].active;
 		if (from->ancestors[i].active == TRUE) {
 			strncpy(to->ancestors[i].envid, from->ancestors[i].envid, PIDENVID_ENVID_SIZE);
+			to->ancestors[i].envid[PIDENVID_ENVID_SIZE-1] = '\0';
 		}
 	}
 }
