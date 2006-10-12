@@ -23,6 +23,15 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item \Condor{chirp} command now supports writing messages to the userlog.
+
+\item \Condor{chirp} getattr and putattr now send all classad getattr and putattr
+commands to the proc 0 classad, which allows multiple proc parallel jobs to
+use proc 0 as a scratchpad.
+
+\item Parallel jobs now suport an AllRemoteHosts attribute, which lists all the
+hosts across all procs in a cluster.
+
 \item The DAGMAN\_ABORT\_DUPLICATES config macro (which causes
 \Condor{dagman} to abort itself if it detects another \Condor{dagman}
 running on the same DAG) now defaults to \Expr{True} instead of
