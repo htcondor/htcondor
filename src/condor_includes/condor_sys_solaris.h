@@ -44,9 +44,9 @@
    for whatever reason, are not defined on Solaris. */
 BEGIN_C_DECLS
 int gethostname( char *, int );
-long gethostid();
-int getpagesize();
-int getdtablesize();
+long gethostid(void);
+int getpagesize(void);
+int getdtablesize(void);
 int getpriority( int, id_t );
 int setpriority( int, id_t, int );
 int utimes( const char*, const struct timeval* );
