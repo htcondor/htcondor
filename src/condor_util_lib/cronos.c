@@ -97,8 +97,8 @@ typedef struct {
 static EVENT	Schedule[128];
 static int	N_Events = 0;
 static int	did_startup = 0;
-static int	prev[N_ELEM];
-static int	now[N_ELEM];
+static int	prev_time[N_ELEM];
+static int	now_time[N_ELEM];
 
 
 void schedule_event( int , int , int , int , int , FUNC_P );
@@ -130,13 +130,13 @@ event_mgr( void )
 {
 
 	if( !did_startup ) {
-		get_moment( prev );
+		get_moment( prev_time );
 		did_startup = 1;
 		return;
 	}
-	get_moment( now );
-	check_schedule( prev, now );
-	memcpy( prev,now, sizeof(now) ); /* ..dhaval 9/25 */
+	get_moment( now_time );
+	check_schedule( prev_time, now_time );
+	memcpy( prev_time,now_time, sizeof(now_time) ); /* ..dhaval 9/25 */
 }
 
 
@@ -245,10 +245,10 @@ static void
 get_moment( int cur[] )
 {
 	struct tm	*tm;
-	time_t	clock;
+	time_t	curr_time;
 
-	(void)time( &clock );
-	tm = localtime( &clock );
+	(void)time( &curr_time );
+	tm = localtime( &curr_time );
 	cur[CMONTH] = tm->tm_mon + 1;
 	cur[CDAY] = tm->tm_mday;
 	cur[CHOUR] = tm->tm_hour;
