@@ -31,7 +31,7 @@
 #include "file_lock.h"
 #include <stdio.h>
 
-extern "C" int lock_file( int fd, LOCK_TYPE type, BOOLEAN do_block );
+extern "C" int lock_file( int fd, LOCK_TYPE type, bool do_block );
 
 FileLock::FileLock( int f, FILE *fp ) : fd(f), fp(fp)
 {
@@ -64,7 +64,7 @@ FileLock::display()
 	}
 }
 
-BOOLEAN
+bool
 FileLock::is_blocking()
 {
 	return blocking;
@@ -77,12 +77,12 @@ FileLock::get_state()
 }
 
 void
-FileLock::set_blocking( BOOLEAN val )
+FileLock::set_blocking( bool val )
 {
 	blocking = val;
 }
 
-BOOLEAN
+bool
 FileLock::obtain( LOCK_TYPE t )
 {
 // lock_file uses lseeks in order to lock the first 4 bytes of the file on NT
@@ -118,7 +118,7 @@ FileLock::obtain( LOCK_TYPE t )
 	return status == 0;
 }
 
-BOOLEAN
+bool
 FileLock::release()
 {
 	return obtain( UN_LOCK );
