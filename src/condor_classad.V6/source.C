@@ -957,7 +957,10 @@ parsePrimaryExpression(ExprTree *&tree)
 			{
 				lexer.ConsumeToken();
 				parseExpression(treeL);
-				if( !treeL ) return( false );
+				if( !treeL ) {
+					tree = NULL;
+					return( false );
+				}
 
 				if( ( tt = lexer.ConsumeToken() ) != Lexer::LEX_CLOSE_PAREN ) {
 					CondorErrno = ERR_PARSE_ERROR;
@@ -1175,6 +1178,7 @@ parseClassAd( ClassAd &ad , bool full )
 		}
 
 		// parse the expression
+		tree = NULL;
 		parseExpression( tree );
 		if( tree == NULL ) {
 			return false;
