@@ -585,7 +585,7 @@ static char **findHistoryFiles(int *numHistoryFiles)
         if ((*numHistoryFiles) > 2) {
             // Sort the backup files so that they are in the proper 
             // order. The current history file is already in the right place.
-            qsort(historyFiles, sizeof(char*), (*numHistoryFiles)-1, compareHistoryFilenames);
+            qsort(historyFiles, (*numHistoryFiles)-1, sizeof(char*), compareHistoryFilenames);
         }
         
         free(historyDir);

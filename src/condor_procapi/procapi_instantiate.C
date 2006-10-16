@@ -27,12 +27,6 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 
 template class HashTable<pid_t, procHashNode *>;
-template class ExtArray<Orphan>;
-
-// This really holds a pid_t, but typedef isn't a new type, and pid_t can
-// change between platforms, so we'll typecast the pid_t into a long before
-// putting it into here.
-template class HashTable<long, int>;
 
 // Unfortunately, instantiating this everywhere breaks some platforms
 // because pid_t is the same as int, we already instantiate

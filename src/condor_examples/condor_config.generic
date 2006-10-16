@@ -965,12 +965,6 @@ PREEN_ARGS			= -m -r
 ##  daemons to quickly shutdown before you just kill them outright?
 #SHUTDOWN_FAST_TIMEOUT		= 120
 
-##  Should the master find and hard kill processes that it thinks are
-##  orphans from a previous instantiation of Condor on the machine?
-##  Currently, this feature is only implemented for Linux platforms.
-##  The default value for this config file variable is TRUE.
-#KILL_ORPHANS_ON_STARTUP    = True
-
 ######
 ##  Exponential backoff settings:
 ######
@@ -989,6 +983,7 @@ PREEN_ARGS			= -m -r
 ##  it "recovered".  Once a daemon has recovered, we reset the number
 ##  of restarts so the exponential backoff stuff goes back to normal. 
 #MASTER_RECOVER_FACTOR		= 300
+
 
 ##--------------------------------------------------------------------
 ##  condor_startd
