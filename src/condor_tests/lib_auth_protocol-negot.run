@@ -15,7 +15,7 @@ $mybaseparamname = "x_param.protocol-negot";
 $datafile = "lib_auth_protocol-negot.data";
 
 
-my $numberoftests = 16;
+my $numberoftests = 8;
 my $numberoferrors = 0;
 
 # where am I running
@@ -146,7 +146,7 @@ system("date");
 if( $mynumberoferrors != 0 )
 {
 	# actual test failed but we allowed cleanup
-	print "$mynumberoferrors of $mynumberoftests FAILED!\n";
+	print "$mynumberoferrors of $numberoftests FAILED!\n";
 	exit(1);
 }
 
