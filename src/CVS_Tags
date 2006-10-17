@@ -1,13 +1,9 @@
-10/16/06 V6_8-{pre,post}_merge-V6_8_2-merge-2
-  The state of the V6_8-branch before and after merging in the
-  V6_8_2-branch as tagged at V6_8_2-merge-2
+10/17/06 V6_8-merge-2
+  The state of the V6_8-branch for another merge back to the trunk.
+  This includes everything from the 6.8.2 release and the amd64 port.
 
 10/16/06 V6_8_2-merge-2
   The state of the V6_8_2-branch before merging back to V6_8-branch.
-
-10/10/06 V6_8-{pre,post}_merge-V6_8_2-merge-1
-  The state of the V6_8-branch before and after merging in the
-  V6_8_2-branch as tagged at V6_8_2-merge-1
 
 10/10/06 V6_8_2-merge-1
   The state of the V6_8_2-branch before merging back to V6_8-branch.
@@ -54,10 +50,6 @@
 
 06/12/06 V6_7_20-{root,branch}
   The branch for V6_7_20 off of V6_7-branch.
-
-06/12/06 V6_7_20-{pre,post}_merge-V6_7-mapfile-1
-  The pre and post tags of for the 1st (and only) V6_7-mapfile-branch merge
-  into V6_7_20-branch.
 
 06/12/06 V6_7-mapfile-merge-1
   The first (and probably only) merge from V6_7-mapfile-branch
@@ -118,22 +110,11 @@
    This is following advice from Erik
    Created from the BUILD-V6_7-branch-2006-3-30 tag of V6_7_CODE.
 
-03/29/06 V6_7-{pre,post}_merge-V6_6-merge-57
-  The pre and post tags of for the 57th V6_6-branch merge into
-  V6_7-branch.  The only  change is the fix to the collector to not
-  crash on certain ads with missing attributes on certain platforms.
-
 03/29/06 V6_6-merge-57
   The state of the V6_6-branch for a merge into V6_7-branch.  The only
   change is the fix to the collector to not crash on Collector ads
   missing the Machine attribute and Storage ads missing the Name
   attribute.
-
-03/29/06 V6_7-{pre,post}_merge-V6_6-merge-56
-  The pre and post tags of for the 56th V6_6-branch merge into
-  V6_7-branch.  The only  change is the fix to the collector to not
-  crash on ads with invalid Machine and other attributes used in
-  hashkey generation.
 
 03/29/06 V6_6-merge-56
   The state of the V6_6-branch for a merge into V6_7-branch.  The only
