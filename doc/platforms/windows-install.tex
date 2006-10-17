@@ -545,17 +545,19 @@ Type is Automatic.  The service should log on as System Account, but
 \Bold{do not enable} "Allow Service to Interact with Desktop".  The
 program that is run is \Condor{master.exe}.
 
-For your convenience, we have included a file called \File{install.exe} in 
-the bin directory that will install a service.  It is typically called in the
-following way:
+The Condor service can be installed and removed using the
+\File{sc.exe} tool, which is included in Windows XP and Windows 2003
+Server. The tool is also available as part of the Windows 2000
+Resource Kit.
+
+Installation can be done as follows:
 \begin{verbatim}
-install Condor Condor c:\condor\bin\condor_master.exe
+sc create Condor binpath= c:\condor\bin\condor_master.exe
 \end{verbatim}
 
-If you wish to remove the service, we have provided a file called
-\File{remove.exe}.  To use it, call it in the following way:
+To remove the service, use:
 \begin{verbatim}
-remove Condor
+sc delete Condor
 \end{verbatim}
 
 \item [The Registry]

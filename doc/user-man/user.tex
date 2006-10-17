@@ -364,37 +364,37 @@ universes for user jobs:
  	\item Parallel
 \end{itemize}
 
-The \AdAttr{Universe} attribute is specified in the submit description file.
-If a universe is not specified, the default is \Expr{standard}.
+The \AdAttr{universe} attribute is specified in the submit description file.
+If a universe is not specified, the default is standard.
 
 \index{universe!standard}
-The \Expr{standard} universe provides migration and reliability, but has some
+The standard universe provides migration and reliability, but has some
 restrictions on the programs that can be run. 
 \index{universe!vanilla}
-The \Expr{vanilla} universe provides fewer services, but has very few
+The vanilla universe provides fewer services, but has very few
 restrictions.
 \index{universe!PVM}
-The \Expr{PVM} universe is for programs written to the Parallel Virtual
+The PVM universe is for programs written to the Parallel Virtual
 Machine interface.  See section~\ref{sec:PVM} for more about PVM and Condor.
 \index{universe!MPI}
-The \Expr{MPI} universe is for programs written to the MPICH interface.
+The MPI universe is for programs written to the MPICH interface.
 See section~\ref{sec:MPI} for more about MPI and Condor. The MPI Universe
-has been superseded by the~\Expr{Parallel} universe.
+has been superseded by the parallel universe.
 \index{universe!Grid}
-The Grid universe allows users to submit 
+The grid universe allows users to submit 
 jobs using Condor's interface.
 These jobs are submitted for execution on grid resources.
 \index{universe!Java}
 \index{Java}
 \index{Java Virtual Machine}
 \index{JVM}
-The Java universe allows users to run jobs written for the
+The java universe allows users to run jobs written for the
 Java Virtual Machine (JVM).
 %\index{universe!Scheduler}
-The \Expr{scheduler} universe allows users to submit lightweight jobs
-to be spawned by the \Condor{schedd} on the submit host itself.
+The scheduler universe allows users to submit lightweight jobs
+to be spawned by the \Condor{schedd} daemon on the submit host itself.
 \index{universe!Parallel}
-The \Expr{Parallel} universe is for programs that require multiple machines
+The parallel universe is for programs that require multiple machines
 for one job.
 See section~\ref{sec:Parallel} for more about the Parallel universe
 %\index{universe!Local}
@@ -522,14 +522,6 @@ interface to be used within the opportunistic Condor environment.
 Please see section~\ref{sec:PVM} for more details.
 
 %%%%%%%%%%%%
-\subsubsection{MPI Universe}
-%%%%%%%%%%%%
-\index{universe!MPI}
-The MPI universe allows programs written to the MPICH
-interface to be used within the opportunistic Condor environment.
-Please see section~\ref{sec:MPI} for more details.
-
-%%%%%%%%%%%%
 \subsubsection{Grid Universe}
 %%%%%%%%%%%%
 
@@ -586,7 +578,7 @@ favor of the newer \Expr{local} universe.
 \subsubsection{Parallel Universe}
 %%%%%%%%%%%%
 \index{universe!Parallel}
-The Parallel universe allows parallel programs, such as MPI jobs.
+The parallel universe allows parallel programs, such as MPI jobs.
 interface to be used within the opportunistic Condor environment.
 Please see section~\ref{sec:Parallel} for more details.
 
@@ -966,7 +958,7 @@ Submitting Jobs Using a Shared File System}
 \index{job!submission using a shared file system}
 \index{shared file system!submission of jobs}
 
-If vanilla, Java, Parallel or MPI
+If vanilla, java, parallel (or MPI) universe
 jobs are submitted without using the File Transfer mechanism, 
 Condor must use a shared file system to access input and output
 files. 
@@ -1091,7 +1083,7 @@ needed.
 Therefore, the user does not need to change the submit description
 file if there is no shared file system.
 
-For the vanilla, Java, MPI, and Parallel universes, access to files (including
+For the vanilla, java, MPI, and parallel universes, access to files (including
 the executable) through a shared file system is presumed as a default
 on UNIX machines.
 If there is no shared file system, then Condor's file transfer
@@ -1754,9 +1746,9 @@ Condor sets several additional environment variables for each executing
 job that may be useful for the job to reference.
 
 \begin{itemize}
-\item \Env{CONDOR\_SCRATCH\_DIR}
-\index{CONDOR\_SCRATCH\_DIR}
-\index{environment variables!CONDOR\_SCRATCH\_DIR}
+\item \Env{\_CONDOR\_SCRATCH\_DIR}
+\index{\_CONDOR\_SCRATCH\_DIR}
+\index{environment variables!\_CONDOR\_SCRATCH\_DIR}
  gives the directory
 where the job may place temporary data files. 
 This directory is unique for
@@ -2166,10 +2158,6 @@ the usual method to nicely terminate a Unix program.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \input{user-man/pvm.tex}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\input{user-man/mpi.tex}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

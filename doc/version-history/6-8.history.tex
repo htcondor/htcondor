@@ -25,6 +25,50 @@ section~\ref{sec:Availability} on page~\pageref{sec:Availability}.
 The details of each version are described below.
 
 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-6-8-3}Version 6.8.3}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a bug in the \condor{gridmanager} dealing with grid-type gt4
+grid universe jobs. If the job's standard output or error wasn't specified
+in the job ad, the \condor{gridmanager} would create an improper GRAM
+RSL string.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-6-8-2}Version 6.8.2}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -33,17 +77,18 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Condor now uses Globus 4.0.3 for GSI, GRAM, and Gridftp support.
+\item Condor now uses Globus 4.0.3 for GSI, GRAM, and GridFTP support.
 This includes a patch for the OpenSSL vulnerability detailed in 
 CVE-2006-4339 and \URL{http://www.openssl.org/news/secadv\_20060905.txt}.
 It also includes fixes for Globus Bugzilla 4689 
 (\URL{http://bugzilla.globus.org/bugzilla/show\_bug.cgi?id=4689}) and a 
 bug that can cause duplicate UUIDs to be generated for WS GRAM jobs.
 
-\item The \Condor{schedd} no longer forks seperate processes to chown job
-directories in the spool.  Previously on Unix-like system this would create a
+\item The \Condor{schedd} daemon no longer forks separate processes to 
+change ownership of job directories in the spool.
+Previously on Unix-like systems, this would create a
 new process before a job started running and after it finished running.   Some
-sites with very busy \Condor{schedd}s were encountering scaling problems.
+sites with very busy \Condor{schedd} daemons were encountering scaling problems.
 
 \end{itemize}
 
@@ -51,10 +96,10 @@ sites with very busy \Condor{schedd}s were encountering scaling problems.
 
 \begin{itemize}
 
-\item Because by default the \Condor{startd} references the job
-ad attribute \AdAttr{NumCkpts}, Condor's default configuration
-will now round-up the value of NumCkpts in order to improve 
-matchmaking performance.  See entry on \Macro{SCHEDD\_ROUND\_ATTR}
+\item Because, by default, the \Condor{startd} daemon references the job
+ClassAd attribute \AdAttr{NumCkpts}, Condor's default configuration
+will now round up the value of \AdAttr{NumCkpts}, in order to improve 
+matchmaking performance.  See the entry on \Macro{SCHEDD\_ROUND\_ATTR}
 in section~\ref{param:ScheddRoundAttr}.
 
 \item Enhanced the RHEL3 x86\_64 port of Condor to include the standard
@@ -64,7 +109,11 @@ universe.
 \item \Condor{submit\_dag} \Opt{-f} no longer deletes the
 \File{dagman.out} file.  \Condor{submit\_dag} without the \Opt{-f}
 option will now submit a DAGMan run even if the \File{dagman.out}
-file exists (the file will be appended to).
+file exists.  In this case, the file will be appended to.
+
+\item Added a property to the Windows installer program to determine
+whether the Condor service will be started after installation. The
+property name is STARTSERVICE, and the default value is ``Y''.
 
 \end{itemize}
 
@@ -72,42 +121,79 @@ file exists (the file will be appended to).
 
 \begin{itemize}
 
-\item Fixed bug in the \Condor{master} daemon where it would only
-kill its immediately children on an abnormal exit.  It now tries to kill
-all descendant processes in this case.
+\item A bug caused the \Condor{master} daemon to kill
+only immediate children within the process tree,
+upon an abnormal exit of the \Condor{master} daemon. 
+The \Condor{master} daemon now kills all descendant processes.
 
-\item Fixed bug where if the filesystem was full the debugging log
-files (e.g. SchedLog) would silently lose messages.  Now,
-if the disk the log file is on is full, the Condor daemons will 
+\item Fixed a bug where if the file system was full, the debugging log
+files (for example \File{SchedLog}) would silently lose messages.  Now,
+if the disk is full, the Condor daemons will 
 exit.
+
+\item Fixed a bug in the \Condor{schedd} daemon that caused it to stop
+negotiating for grid universe jobs in the case that it decided
+it could not spawn any new \Condor{shadow} processes.
 
 % Gnats PR 751
 \item Added the ProcessId class (which more uniquely identifies a
-process than just a PID does) to the \Condor{dagman} ``abort duplicate
-runs" feature.  This makes it less likely that a given instance of
+process than a PID does) to the \Condor{dagman} abort duplicate
+runs feature.  This makes it less likely that a given instance of
 \Condor{dagman} will mistakenly conclude that another instance of
 \Condor{dagman} is already running on the same DAG.  Also fixed an
-unrelated bug in the "abort duplicate runs" feature that could cause
+unrelated bug in the abort duplicate runs feature that could cause
 a \Condor{dagman} to not abort itself when it should.
 
-\item Condor daemons leaked memory (consuming more and more over time)
-when parsing ClassAds that use functions with arguments
-(e.g. IfThenElse(A,B,C)).
+\item Condor daemons leaked memory (consuming more and more memory over time)
+when parsing ClassAds that use functions with arguments.
 
 % Gnats PR 743
-\item Fixed a bug in the \condor{starter} which caused it to look in the
-wrong place for the job's executable if \Attr{TransferExecutable} was set
-to \Expr{True} in the job ad.
+\item Fixed a bug in the \Condor{starter} daemon,
+which caused it to look in the
+wrong place for the job's executable, if \Attr{TransferExecutable} was set
+to \Expr{True} in the job ClassAd.
 
-\item \Condor{history} no longer crashes if \Attr{HISTORY} isn't defined
+\item \Condor{history} no longer crashes if \Attr{HISTORY} is not defined
 in the Condor configuration file.
 
 \item Fixed an unintentional change to the value of \Opt{-Condorlog}
-in a \condor{dagman} submit file: it is once again the log file of
+in a \Condor{dagman} submit description file: it is once again the log file of
 the first node job.
 
-\item Fixed a bug in \Condor{q} that would cause "condor\_q -hold" or
-"condor\_q -run" to exit with an error on some platforms.
+\item Fixed a bug in \Condor{q} that would cause \Condor{q} \Opt{-hold} or
+\Condor{q} \Opt{-run} to exit with an error on some platforms.
+
+\item Fixed a bug on Unix platforms, in which a misconfiguration of
+\MacroNI{MAIL} would cause the \Condor{master} daemon to restart
+all of its child
+daemons whenever it tried (and failed) to send e-mail to the
+administrator.
+
+\item Network related error messages have been improved to make debugging
+easier.  For example, when timing out on a read or write operation, the
+peer's address is now included in the error message.
+
+\item An invalid value for \MacroNI{UPDATE\_INTERVAL} now causes
+the \Condor{startd} daemon to abort.  Previously, it would continue running,
+but some invalid values (for example, 0) could cause it to stop sending
+periodic ClassAd updates to the \Condor{collector}, even after being
+reconfigured with a valid value.  Only a complete restart of
+the \Condor{startd} daemon was sufficient to get it out of this state.
+
+\item Fixed a bug that caused X.509 limited proxies to be delegated as 
+impersonation (i.e. non-limited) proxies. Any authentication attempted
+with the resulting proxies would fail.
+
+\item Fixed a couple bugs that would cause Condor to lose track of
+some Condor-related processes and subsequently fail to clean up (kill)
+these processes.
+
+\item Fixed a bug that would cause \Condor{history} to crash when
+dealing with rotated history files. Note that history file rotation is
+turned on by default. (See
+Section~\ref{sec:Condor-wide-Config-File-Entries} for descriptions of
+\Macro{ENABLE\_HISTORY\_ROTATION} and
+\Macro{MAX\_HISTORY\_ROTATIONS}.)
 
 \end{itemize}
 
@@ -129,7 +215,7 @@ the first node job.
 
 \item Version 6.8.1 fixes important bugs, some of which have
 security implications.  All users are encouraged to upgrade, and full
-disclosure of the vulnerabilites will be given at the end of October 2006.
+disclosure of the vulnerabilities will be given at the end of October 2006.
 
 \item Condor is now linked against GSI from Globus 4.0.2. This includes
 a patch for Globus Security Advisories 2006-01 
@@ -389,7 +475,7 @@ permissions.
 12-hour proxies for grid-type gt4 jobs and then not refresh them.
 
 \item Fixed a bug in the \Condor{gridmanager} that caused a directory
-needed for staging-in of grid-tpye gt4 job files to be removed when
+needed for staging-in of grid-type gt4 job files to be removed when
 the \Condor{Gridmanager} exited, causing the stage-in to fail.
 
 % Condor-admin 14075
@@ -420,7 +506,7 @@ default. Correct behavior can be enabled by setting the
 would cause very low-priority jobs (like jobs submitted with
 \MacroNI{nice\_user=True}) to not match even if resources were available.
 
-\item Fixed a buffer overflow that could crash the \Condor{negotiatior}.
+\item Fixed a buffer overflow that could crash the \Condor{negotiator}.
 
 \item \MacroNI{SCHEDD\_ROUND\_ATTR\_<xxxx>} preserves the value being
 rounded up when it is a multiple of the power of 10 specified for
