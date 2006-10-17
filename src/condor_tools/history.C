@@ -328,7 +328,8 @@ main(int argc, char* argv[])
 	        printf( "-- Database at %s not reachable\n", dbIpAddr);
 		if(!remotequill) {
 		  char *tmp = param("HISTORY");
-		  printf( "--Failing over to the history file at %s instead --\n",tmp);
+		  printf( "--Failing over to the history file at %s instead --\n",
+				  tmp ? tmp : "(null)" );
 		  if(!tmp) {
 			free(tmp);
 		  }
@@ -534,6 +535,17 @@ static char **findHistoryFiles(int *numHistoryFiles)
     char *historyDir;
 
     BaseJobHistoryFileName = param("HISTORY");
+	if ( BaseJobHistoryFileName == NULL ) {
+		fprintf( stderr, "Error: No history file is defined\n");
+		fprintf(stderr, "\n");
+		print_wrapped_text("Extra Info: " 
+						   "The variable HISTORY is not defined in "
+						   "your config file. If you want Condor to "
+						   "keep a history of past jobs, you must "
+						   "define HISTORY in your config file", stderr );
+
+		exit( 1 );    
+	}
     historyDir = condor_dirname(BaseJobHistoryFileName);
 
     *numHistoryFiles = 0;
@@ -573,7 +585,7 @@ static char **findHistoryFiles(int *numHistoryFiles)
         if ((*numHistoryFiles) > 2) {
             // Sort the backup files so that they are in the proper 
             // order. The current history file is already in the right place.
-            qsort(historyFiles, sizeof(char*), (*numHistoryFiles)-1, compareHistoryFilenames);
+            qsort(historyFiles, (*numHistoryFiles)-1, sizeof(char*), compareHistoryFilenames);
         }
         
         free(historyDir);

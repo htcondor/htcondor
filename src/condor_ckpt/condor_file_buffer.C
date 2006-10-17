@@ -370,7 +370,7 @@ int CondorFileBuffer::fcntl( int cmd, int arg )
 	return original->fcntl(cmd,arg);
 }
 
-int CondorFileBuffer::ioctl( int cmd, int arg )
+int CondorFileBuffer::ioctl( int cmd, long arg )
 {
 	return original->ioctl(cmd,arg);
 }

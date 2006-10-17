@@ -26,6 +26,7 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_config.h"
+#include "get_port_range.h"
 
 int get_port_range(int is_outgoing, int *low_port, int *high_port)
 {

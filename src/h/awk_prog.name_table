@@ -5,6 +5,7 @@ BEGIN {
 	printf "\n"
 	printf "\n"
 	printf "#include <stdio.h>\n"
+	printf "#include \"condor_sys.h\"\n"
 	printf "\n"
 	printf "typedef struct {\n"
 	printf "\tint	number;\n"
@@ -19,8 +20,7 @@ BEGIN {
 END {
 	printf "};\n\n"
 	printf "char *\n"
-	printf "_condor_syscall_name( n )\n"
-	printf "int n;\n"
+	printf "_condor_syscall_name( int n )\n"
 	printf "{\n"
 	printf "\tstatic char error[512];\n"
 	printf "\tint\t\ti;\n"

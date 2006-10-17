@@ -534,7 +534,21 @@ int SafeSock::peek(char &c)
  */
 int SafeSock::handle_incoming_packet()
 {
-	SOCKET_SENDRECV_LENGTH_TYPE fromlen = sizeof(struct sockaddr_in);
+
+#if defined(Solaris27) || defined(Solaris28) || defined(Solaris29)
+	/* SOCKET_ALTERNATE_LENGTH_TYPE is void on this platform, and
+		since noone knows what that void* is supposed to point to
+		in recvfrom, I'm going to predict the "fromlen" variable
+		the recvfrom uses is a size_t sized quantity since
+		size_t is how you count bytes right?  Stupid Solaris. */
+	size_t len = sizeof(struct sockaddr_in);
+#else
+	SOCKET_ALTERNATE_LENGTH_TYPE len = sizeof(struct sockaddr_in);
+#endif
+
+	SOCKET_ALTERNATE_LENGTH_TYPE *fromlen = 
+		(SOCKET_ALTERNATE_LENGTH_TYPE *)&len;
+
 	bool last;
 	int seqNo, length;
 	_condorMsgID mID;
@@ -545,7 +559,7 @@ int SafeSock::handle_incoming_packet()
 	time_t curTime;
 
 	received = recvfrom(_sock, _shortMsg.dataGram, SAFE_MSG_MAX_PACKET_SIZE,
-	                    0, (struct sockaddr *)&_who, &fromlen );
+	                    0, (struct sockaddr *)&_who, fromlen );
 	if(received < 0) {
 		dprintf(D_NETWORK, "recvfrom failed: errno = %d\n", errno);
 		return FALSE;

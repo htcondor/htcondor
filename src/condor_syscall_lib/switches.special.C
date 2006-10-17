@@ -347,13 +347,12 @@ void __pure_virtual()
 
 /*
 Send and recv are special cases of sendfrom and recvto.
-On some platforms (OSF1), send and recv are defined or otherwise
+On some platforms (OSF1, LINUX X86_64), send and recv are defined or otherwise
 mucked with, so instead of trapping them, convert them into
 sendto and recvfrom.
 */
 
 #if defined(OSF1)
-
 int send( int fd, const void *data, int length, int flags )
 {
 	return sendto(fd,data,length,flags,0,0);
@@ -373,8 +372,40 @@ int __recv( int fd, void *data, int length, int flags )
 {
 	return recv(fd,data,length,flags);
 }
-
 #endif
+
+#if defined(LINUX) && defined(X86_64)
+ssize_t send( int fd, const void *data, long unsigned int length, int flags )
+{
+	return sendto(fd,data,length,flags,0,0);
+}
+
+ssize_t __send( int fd, const void *data, long unsigned int length, int flags )
+{
+	return send(fd,data,length,flags);
+}
+
+ssize_t __libc_send( int fd, const void *data, long unsigned int length, int flags )
+{
+	return send(fd,data,length,flags);
+}
+
+ssize_t recv( int fd, void *data, long unsigned int length, int flags )
+{
+	return recvfrom(fd,data,length,flags,0,0);
+}
+
+ssize_t __recv( int fd, void *data, long unsigned int length, int flags )
+{
+	return recv(fd,data,length,flags);
+}
+
+ssize_t __libc_recv( int fd, void *data, long unsigned int length, int flags )
+{
+	return recv(fd,data,length,flags);
+}
+#endif
+
 
 /*
 On all UNIXes, creat() is a system call, but has the same semantics
@@ -879,7 +910,13 @@ int __lxstat64(int version, const char *path, struct stat64 *buf)
 
 
 #if defined(LINUX)
+#if defined(I386)
 	#include "linux_kernel_stat.h"
+#else
+	/* for X86_64, it seems that the kernel stat structure and the user stat
+		structure are identical */
+	#define kernel_stat /*struct*/ stat
+#endif
 #elif defined(IRIX)
 	#define kernel_stat /*struct*/ stat
 #endif /* LINUX */
@@ -906,6 +943,7 @@ _condor_k_stat_convert( int version, const struct kernel_stat *source,
 		/* Now, handle the different versions we might be passed */
 	switch( version ) {
 #if defined(LINUX)
+#if defined(I386)
 	case _STAT_VER_LINUX_OLD:
 			/*
 			  This is the old version, which is identical to the
@@ -913,13 +951,16 @@ _condor_k_stat_convert( int version, const struct kernel_stat *source,
 			  care about, so we're done.
 			*/
 		break;
+#endif
 	case _STAT_VER_LINUX:
 			/* 
 			  This is the new version, that has some extra fields we
 			  need to 0-out.
 			*/
+#if defined(I386)
 		target->__pad1 = 0;
 		target->__pad2 = 0;
+#endif
 		#if !defined(GLIBC23)
 		target->__unused1 = 0;
 		target->__unused2 = 0;
@@ -976,6 +1017,7 @@ _condor_k_stat_convert64( int version, const struct kernel_stat *source,
 		/* Now, handle the different versions we might be passed */
 	switch( version ) {
 #if defined(LINUX)
+#if defined(I386)
 	case _STAT_VER_LINUX_OLD:
 			/*
 			  This is the old version, which is identical to the
@@ -983,13 +1025,16 @@ _condor_k_stat_convert64( int version, const struct kernel_stat *source,
 			  care about, so we're done.
 			*/
 		break;
+#endif
 	case _STAT_VER_LINUX:
 			/* 
 			  This is the new version, that has some extra fields we
 			  need to 0-out.
 			*/
+#if defined(I386)
 		target->__pad1 = 0;
 		target->__pad2 = 0;
+#endif
 		#if !defined(GLIBC23)
 		/* glibc23 uses these fields */
 		target->__unused1 = 0;
@@ -1057,6 +1102,7 @@ _condor_s_stat_convert( int version, const struct stat *source,
 		/* Now, handle the different versions we might be passed */
 	switch( version ) {
 #if defined(LINUX)
+#if defined(I386)
 	case _STAT_VER_LINUX_OLD:
 			/*
 			  This is the old version, which is identical to the
@@ -1064,20 +1110,26 @@ _condor_s_stat_convert( int version, const struct stat *source,
 			  care about, so we're done.
 			*/
 		break;
+#endif
 	case _STAT_VER_LINUX:
 			/* 
 			  This is the new version, that has some extra fields we
 			  need to 0-out.
 			*/
+
+#if defined(I386)
 		target->__pad1 = 0;
 		target->__pad2 = 0;
+#endif
 		#if !defined(GLIBC23)
 		target->__unused1 = 0;
 		target->__unused2 = 0;
 		target->__unused3 = 0;
 		#endif
+#if defined(I386)
 		target->__unused4 = 0;
 		target->__unused5 = 0;
+#endif
 		break;
 #elif defined(IRIX)
 	case _STAT_VER:
@@ -1122,6 +1174,7 @@ _condor_s_stat_convert64( int version, const struct stat *source,
 
 		/* Now, handle the different versions we might be passed */
 	switch( version ) {
+#if defined(I386)
 	case _STAT_VER_LINUX_OLD:
 			/*
 			  This is the old version, which is identical to the
@@ -1129,13 +1182,16 @@ _condor_s_stat_convert64( int version, const struct stat *source,
 			  care about, so we're done.
 			*/
 		break;
+#endif
 	case _STAT_VER_LINUX:
 			/* 
 			  This is the new version, that has some extra fields we
 			  need to 0-out.
 			*/
+#if defined(I386)
 		target->__pad1 = 0;
 		target->__pad2 = 0;
+#endif
 		#if !defined(GLIBC23)
 		/* glibc23 uses these fields */
 		target->__unused1 = 0;
@@ -1958,8 +2014,10 @@ static int local_system_posix(const char *command)
 
 	} else {
 		/* parent */
-#if defined(LINUX) || defined(HPUX)
+#if (defined(LINUX) && defined(I386)) || defined(HPUX)
 		while(SYSCALL(SYS_waitpid, pid, &status, 0) < 0) {
+#elif defined(LINUX) && defined(X86_64)
+		while(SYSCALL(SYS_wait4, pid, &status, 0) < 0) {
 #elif defined(Solaris)
 		while(_WAITPID(pid, &status, 0) < 0) {
 #else

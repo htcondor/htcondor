@@ -153,7 +153,7 @@ main_init(int argc, char* argv[])
 } 
 
 int
-main_config( bool is_full )
+main_config( bool /*is_full*/ )
 {
 	GridUniverseLogic::reconfig();
 	scheduler.reconfig();
@@ -185,7 +185,7 @@ main_shutdown_graceful()
 
 
 void
-main_pre_dc_init( int argc, char* argv[] )
+main_pre_dc_init( int /*argc*/, char* /*argv*/[] )
 {
 }
 

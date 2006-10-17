@@ -736,6 +736,9 @@ sub runCondorTool
 	$force = shift;
 	my $count = 0;
 	my $catch = "runCTool$$";
+
+	system("date");
+
 	while( !$done)
 	{
 		my @tmparray;
@@ -803,6 +806,18 @@ sub runCondorTool
 	Condor::debug( "runCondorTool: $cmd worked!\n");
 
 	return(1);
+}
+
+#
+# Cygwin's perl chomp does not remove cntrl-m but this one will
+# and linux and windows can share the same code.
+#
+
+sub fullchomp
+{
+	my $args = shift;
+	$args =~ s/\s+$//;
+	return($args);
 }
 
 1;

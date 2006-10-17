@@ -103,7 +103,7 @@ class Variable : public VariableBase
 {
 	public :
   
-		Variable(char*name) : VariableBase(name) {}
+		Variable(char*a_name) : VariableBase(a_name) {}
 		virtual int         CalcPrintToStr(void);
 		virtual void        PrintToStr(char*);
 		virtual ExprTree*     DeepCopy(void) const;
@@ -391,7 +391,7 @@ class AssignOp: public AssignOpBase
 class Function: public FunctionBase
 {
     public:
-	Function(char*name) : FunctionBase(name) {}
+	Function(char*a_name) : FunctionBase(a_name) {}
 	virtual int         CalcPrintToStr(void);
     virtual void        PrintToStr(char*);
 	virtual ExprTree    *DeepCopy(void) const;

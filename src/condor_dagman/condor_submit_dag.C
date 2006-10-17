@@ -207,6 +207,9 @@ submitDag( SubmitDagOptions &opts )
 			return 1;
 		}
 
+		condorLogFiles.rewind();
+		storkLogFiles.rewind();
+
 		if ( condorLogFiles.number() > 0 ) {
 			opts.strJobLog = condorLogFiles.next();
 		} else if ( storkLogFiles.number() > 0 ) {
@@ -298,7 +301,6 @@ void ensureOutputFilesExist(const SubmitDagOptions &opts)
 	if (opts.bForce)
 	{
 		unlink(opts.strSubFile.Value());
-		unlink(opts.strDebugLog.Value());
 		unlink(opts.strSchedLog.Value());
 		unlink(opts.strLibLog.Value());
 		unlink(opts.strRescueFile.Value());
@@ -315,12 +317,6 @@ void ensureOutputFilesExist(const SubmitDagOptions &opts)
 	{
 		fprintf( stderr, "ERROR: \"%s\" already exists.\n",
 				 opts.strLibLog.Value() );
-		bHadError = true;
-	}
-	if (fileExists(opts.strDebugLog))
-	{
-		fprintf( stderr, "ERROR: \"%s\" already exists.\n",
-				 opts.strDebugLog.Value() );
 		bHadError = true;
 	}
 	if (fileExists(opts.strSchedLog))

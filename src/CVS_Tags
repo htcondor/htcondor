@@ -1,7 +1,21 @@
+10/17/06 V6_8-merge-2
+  The state of the V6_8-branch for another merge back to the trunk.
+  This includes everything from the 6.8.2 release and the amd64 port.
+
+10/16/06 V6_8_2-merge-2
+  The state of the V6_8_2-branch before merging back to V6_8-branch.
+
 10/12/06 V6_9-envaware-{root,branch}
   A branch to add in virtual memory (and possible proc table) 
   awareness to Condor daemons.  The branch is off of 
   BUILD-V6_9-trunk-2006-9-25.
+
+10/10/06 V6_8_2-merge-1
+  The state of the V6_8_2-branch before merging back to V6_8-branch.
+  This is likely the only merge from there, but you never know.
+
+10/05/06 V6_8_2-{root,branch}
+  The branch for V6_8_2 off of V6_8-branch.
 
 09/25/06 trunk-pre_merge-V6_8-merge-1
   the state of the trunk before merging in the V6_8-branch as tagged
@@ -16,6 +30,14 @@
   have issues running jobs. I thought I had worked from a good
   build tag before. This branch is off a good build/test 
   BUILD-V6_9-trunk-2006-9-16.
+
+09/25/06 V6_7-amd64_port-merge-1
+	The state of the V6_7-amd64_port-branch b efore a merge into
+	V6_8-branch.
+
+09/25/06 V6_8-merge-1
+  The state of the V6_8-branch for its first merge back to the trunk,
+  which is currently the 6.9 development branch.
 
 09/18/06 V6_8_1
   The official V6_8_1 release is a copy of BUILD-V6_7-branch-2006-9-17.
@@ -59,10 +81,6 @@
 
 06/12/06 V6_7_20-{root,branch}
   The branch for V6_7_20 off of V6_7-branch.
-
-06/12/06 V6_7_20-{pre,post}_merge-V6_7-mapfile-1
-  The pre and post tags of for the 1st (and only) V6_7-mapfile-branch merge
-  into V6_7_20-branch.
 
 06/12/06 V6_7-mapfile-merge-1
   The first (and probably only) merge from V6_7-mapfile-branch
@@ -123,22 +141,11 @@
    This is following advice from Erik
    Created from the BUILD-V6_7-branch-2006-3-30 tag of V6_7_CODE.
 
-03/29/06 V6_7-{pre,post}_merge-V6_6-merge-57
-  The pre and post tags of for the 57th V6_6-branch merge into
-  V6_7-branch.  The only  change is the fix to the collector to not
-  crash on certain ads with missing attributes on certain platforms.
-
 03/29/06 V6_6-merge-57
   The state of the V6_6-branch for a merge into V6_7-branch.  The only
   change is the fix to the collector to not crash on Collector ads
   missing the Machine attribute and Storage ads missing the Name
   attribute.
-
-03/29/06 V6_7-{pre,post}_merge-V6_6-merge-56
-  The pre and post tags of for the 56th V6_6-branch merge into
-  V6_7-branch.  The only  change is the fix to the collector to not
-  crash on ads with invalid Machine and other attributes used in
-  hashkey generation.
 
 03/29/06 V6_6-merge-56
   The state of the V6_6-branch for a merge into V6_7-branch.  The only

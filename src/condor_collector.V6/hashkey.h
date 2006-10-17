@@ -24,7 +24,6 @@
 #define __COLLHASH_H__
 
 #include "condor_common.h"
-#include <iostream.h>
 #include <stdio.h>
 #include <string.h>
 #ifndef WIN32
@@ -42,7 +41,7 @@ class AdNameHashKey
     MyString ip_addr;
 
 	void   sprint (MyString &);
-	friend ostream& operator<< (ostream &out, const AdNameHashKey &); 
+	friend std::ostream& operator<< (std::ostream &out, const AdNameHashKey &); 
     friend bool operator== (const AdNameHashKey &, const AdNameHashKey &);
 
 };

@@ -48,13 +48,13 @@ class DaemonCoreSockAdapterClass {
 		Register_Socket_fnptr Register_Socket,
 		Cancel_Socket_fnptr Cancel_Socket,
 		Register_DataPtr_fnptr Register_DataPtr,
-		GetDataPtr_fnptr GetDataPtr)
+		GetDataPtr_fnptr GetDataPtrFun)
 	{
 		m_daemonCore = daemonCore;
 		m_Register_Socket_fnptr = Register_Socket;
 		m_Cancel_Socket_fnptr = Cancel_Socket;
 		m_Register_DataPtr_fnptr = Register_DataPtr;
-		m_GetDataPtr_fnptr = GetDataPtr;
+		m_GetDataPtr_fnptr = GetDataPtrFun;
 	}
 
 		// These functions all have the same interface as the corresponding

@@ -30,7 +30,7 @@
 
 BEGIN_C_DECLS
 
-const char* get_mySubSystem();
+const char* get_mySubSystem(void);
 
 END_C_DECLS
 

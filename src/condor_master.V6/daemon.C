@@ -1703,6 +1703,22 @@ Daemons::StopPeacefulAllDaemons()
 
 
 void
+Daemons::HardKillAllDaemons()
+{
+	daemons.SetAllReaper();
+	int running = 0;
+	for( int i=0; i < no_daemons; i++ ) {
+		if( daemon_ptr[i]->pid && daemon_ptr[i]->runs_here ) {
+			daemon_ptr[i]->HardKill();
+			running++;
+		}
+	}
+	if( !running ) {
+		AllDaemonsGone();
+	}	   
+}
+
+void
 Daemons::ReconfigAllDaemons()
 {
 	dprintf( D_ALWAYS, "Reconfiguring all running daemons.\n" );

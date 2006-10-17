@@ -30,7 +30,7 @@
 extern dynuser *myDynuser;
 #endif
 
-ProcFamily::ProcFamily( pid_t pid, PidEnvID *penvid, priv_state priv, 
+ProcFamily::ProcFamily( pid_t pid, PidEnvID *penvid, priv_state priv,
 				int test_only )
 {
 	daddy_pid = pid;
@@ -52,7 +52,7 @@ ProcFamily::ProcFamily( pid_t pid, PidEnvID *penvid, priv_state priv,
 	mypriv = PRIV_ROOT;
 #endif
 
-	dprintf( D_PROCFAMILY, 
+	dprintf( D_PROCFAMILY,
 			 "Created new ProcFamily w/ pid %d as parent\n", daddy_pid );
 }
 
@@ -66,14 +66,14 @@ ProcFamily::~ProcFamily()
 		free(searchLogin);
 	}
 	dprintf( D_PROCFAMILY,
-			 "Deleted ProcFamily w/ pid %d as parent\n", daddy_pid ); 
+			 "Deleted ProcFamily w/ pid %d as parent\n", daddy_pid );
 }
 
 void
 ProcFamily::setFamilyLogin( const char *login )
 {
 	if ( login ) {
-		if ( searchLogin ) 
+		if ( searchLogin )
 			free(searchLogin);
 		searchLogin = strdup(login);
 	}
@@ -113,7 +113,7 @@ ProcFamily::softkill( int sig )
 	spree(sig, INFANTICIDE);
 }
 
-void 
+void
 ProcFamily::get_cpu_usage(long & sys_time, long & user_time)
 {
 	takesnapshot();
@@ -121,7 +121,7 @@ ProcFamily::get_cpu_usage(long & sys_time, long & user_time)
 	user_time = exited_cpu_user_time + alive_cpu_user_time;
 }
 
-void 
+void
 ProcFamily::get_max_imagesize(unsigned long & max_image )
 {
 	max_image = max_image_size;
@@ -145,7 +145,7 @@ ProcFamily::safe_kill(a_pid *pid, int sig)
 				"ProcFamily::safe_kill: attempt to kill pid %d!\n",inpid);
 			dprintf(D_PROCFAMILY,
 				"ProcFamily::safe_kill: attempt to kill pid %d!\n",inpid);
-		
+
 			}
 		return;
 	}
@@ -180,7 +180,7 @@ ProcFamily::safe_kill(a_pid *pid, int sig)
 		}
 
 		if ( ProcAPI::getProcInfo(inpid, pi, status) == PROCAPI_SUCCESS ) {
-		
+
 			if ( daemonCore->Send_Signal(inpid,sig) == FALSE ) {
 				dprintf(D_PROCFAMILY,
 					"ProcFamily::safe_kill: Send_Signal(%d,%d) failed\n",
@@ -188,10 +188,10 @@ ProcFamily::safe_kill(a_pid *pid, int sig)
 			}
 
 		} else {
-			
+
 			// Procapi didn't know anything about this pid, so
 			// we assume it has exited on its own.
-			
+
 			dprintf(D_PROCFAMILY, "Procfamily: getProcInfo() failed to "
 					"get info for pid %d, so it is presumed dead.\n", inpid);
 		}
@@ -199,7 +199,7 @@ ProcFamily::safe_kill(a_pid *pid, int sig)
 		if ( pi ) {
 			delete pi;
 		}
-		
+
 		if ( pHnd) {
 		   	CloseHandle(pHnd);
 		}
@@ -250,22 +250,22 @@ ProcFamily::takesnapshot()
 	struct procInfo *pinfo = NULL;
 	int i,j,newpidindex;
 	pid_t currpid;
-	long birth;
 	priv_state priv;
 	bool currpid_exited;
 	bool found_it;
 	int ret_val;
-	pid_t pidfamily[2000];
 	int fam_status;
 	int info_status;
 	int ignore_status;
 
-	new_pids = new ExtArray<a_pid>(10);
+	ExtArray<pid_t> pidfamily;
+
+	new_pids = new ExtArray<a_pid>;
 	newpidindex = 0;
 
 	// On some systems, we can only see process we own, so we must be either
 	// the user or root. However, being the user in this function causes many,
-	// many priv state changes from user to root and back again since 
+	// many priv state changes from user to root and back again since
 	// getProcInfo changes to root(and back again) to look at the pid. This
 	// smashes the NIS master with too many calls and the load on it
 	// skyrockets so, we are root here. The real way to solve this problem is
@@ -282,16 +282,16 @@ ProcFamily::takesnapshot()
 
 	if ( ret_val == PROCAPI_FAILURE ) {
 		// daddy_pid AND any detectable family must be gone from the set!
-		dprintf( D_PROCFAMILY, 
+		dprintf( D_PROCFAMILY,
 				 "ProcFamily::takesnapshot: getPidFamily(%d) failed. "
-				 "Could not find the pid or any family members.\n", 
+				 "Could not find the pid or any family members.\n",
 				 daddy_pid );
 		pidfamily[0] = 0;
 	}
 
 	// Don't need to insert daddypid, it's already in there,
 	// unless the daddy pid is gone, but procapi found a family
-	// for it anyway via the ancestor variables... 
+	// for it anyway via the ancestor variables...
 
 	// see if there are pids we saw earlier which no longer
 	// show up -- they may have been inherited by init.
@@ -317,40 +317,49 @@ ProcFamily::takesnapshot()
 					break;
 				}
 				if( pidfamily[j] == 0 ) {
-					
+
 					// currpid does not exist in our new pidfamily list !
 					found_it = false;
 
-					// So, if currpid still exists on the system, and 
+					// So, if currpid still exists on the system, and
 					// the birthdate matches, grab decendants of currpid.
 
-					// If the above call to get the family KNEW that 
+					// If the above call to get the family KNEW that
 					// the daddy pid was already exited (since it couldn't be
-					// found) but yet it returned something it thought was 
-					// family anyway, check against the old pids but don't 
+					// found) but yet it returned something it thought was
+					// family anyway, check against the old pids but don't
 					// consider the daddy pid to even be alive.
 
-					if ( ProcAPI::getProcInfo(currpid,pinfo,info_status) 
-							== PROCAPI_SUCCESS ) 
+					if ( ProcAPI::getProcInfo(currpid,pinfo,info_status)
+							== PROCAPI_SUCCESS )
 					{
-						// compare birthdays; allow 2 seconds "slack"
-						birth = (time(NULL) - pinfo->age) - 
-									(*old_pids)[i].birthday;
-						if ( -2 < birth && birth < 2 ) {
+						// compare birthdays
+						if ( pinfo->birthday == (*old_pids)[i].birthday ) {
+
 							// birthdays match up; add currpid
 							// to our list and also get currpid's decendants
 							pidfamily[j] = currpid;
-							pidfamily[j+1] = 0;
+							j++;
+
 							// if we got the pid family via login name,
 							// we alrady have the decendants.
-							if ( !searchLogin ) {  
-								ProcAPI::getPidFamily(currpid,&m_penvid,&(pidfamily[j+1]),ignore_status);
+							if ( !searchLogin ) {
+								ExtArray<pid_t> detached_family;
+								ProcAPI::getPidFamily(currpid,&m_penvid,detached_family,ignore_status);
+								for (int i = 0; detached_family[i] != 0; i++) {
+									if (detached_family[i] != currpid) {
+										pidfamily[j] = detached_family[i];
+										j++;
+									}
+								}
 							}
+							pidfamily[j] = 0;
+
 							// and this pid most certainly did not exit, so
 							// set our flag accordingly.
 							currpid_exited = false;
-						} 
-					}  
+						}
+					}
 
 					// break out of our for loop, since we have hit the end
 					break;
@@ -359,31 +368,28 @@ ProcFamily::takesnapshot()
 
 #ifdef WIN32
 			// On Unix, pids get re-used so infrequently that we can make
-			// the assumption that a pid will not get re-used in the 
+			// the assumption that a pid will not get re-used in the
 			// relatively short period of time between snapshots.  However,
 			// Windows NT reuses pids very very quickly (sigh).  Thus,
-			// for Win32 we need to incurr the additional overhead of 
+			// for Win32 we need to incurr the additional overhead of
 			// comparing birthdates even on pids in the new list which we
 			// found in our old list.  This is needed so we can set
 			// the currpid_exited correctly to the best we of our knowledge,
 			// even if inbetween snapshots the pid exited and got reused as
-			// a child pid of some process in our family.  Whew.  
+			// a child pid of some process in our family.  Whew.
 			// Thankfully this will go away in the Win32 port once we
 			// start injecting in our DLL into the user job.  -Todd
 			if ( found_it ) {
-				if ( ProcAPI::getProcInfo(currpid,pinfo,ignore_status) 
-						== PROCAPI_SUCCESS ) 
+				if ( ProcAPI::getProcInfo(currpid,pinfo,ignore_status)
+						== PROCAPI_SUCCESS )
 			{
-					// compare birthdays; allow 2 seconds "slack"
-					birth = (time(NULL) - pinfo->age) - 
-								(*old_pids)[i].birthday;
-					if ( -2 < birth && birth < 2 ) {
+					if ( pinfo->birthday != (*old_pids)[i].birthday ) {
 						// birthdays match up, thus since last snapshot
 						// this pid most certainly did not exit, so
 						// set our flag accordingly.
-						currpid_exited = false;
-					} 
-				} 
+						currpid_exited = true;
+					}
+				}
 			}
 #endif	// of ifdef WIN32
 
@@ -408,12 +414,12 @@ ProcFamily::takesnapshot()
 	alive_cpu_user_time = 0;
 	unsigned long curr_image_size = 0;
 	for ( j=0; pidfamily[j]; j++ ) {
-		if ( ProcAPI::getProcInfo(pidfamily[j],pinfo,ignore_status) 
-				== PROCAPI_SUCCESS ) 
+		if ( ProcAPI::getProcInfo(pidfamily[j],pinfo,ignore_status)
+				== PROCAPI_SUCCESS )
 		{
 			(*new_pids)[newpidindex].pid = pinfo->pid;
 			(*new_pids)[newpidindex].ppid = pinfo->ppid;
-			(*new_pids)[newpidindex].birthday = time(NULL) - pinfo->age;
+			(*new_pids)[newpidindex].birthday = pinfo->birthday;
 			(*new_pids)[newpidindex].cpu_sys_time = pinfo->sys_time;
 			(*new_pids)[newpidindex].cpu_user_time = pinfo->user_time;
 			alive_cpu_sys_time += pinfo->sys_time;
@@ -423,7 +429,7 @@ ProcFamily::takesnapshot()
 			// what it says.... this means we get all the bytes mapped
 			// into the process image, incl all the DLLs.  This means
 			// a little program returns at least 15+ megs.  The ProcInfo
-			// rssize is much closer to what the TaskManager reports, 
+			// rssize is much closer to what the TaskManager reports,
 			// which makes more sense for now.
 			curr_image_size += pinfo->rssize;
 #else
@@ -468,7 +474,7 @@ ProcFamily::currentfamily( pid_t* & ptr  )
 	int i;
 
 	if( family_size <= 0 ) {
-		dprintf( D_ALWAYS, 
+		dprintf( D_ALWAYS,
 				 "ProcFamily::currentfamily: ERROR: family_size is 0\n" );
 		ptr = NULL;
 		return 0;
@@ -495,7 +501,7 @@ ProcFamily::display()
 	}
 	dprintf( D_PROCFAMILY | D_NOHEADER, "\n" );
 
-	dprintf( D_PROCFAMILY, 
+	dprintf( D_PROCFAMILY,
 		"ProcFamily: alive_cpu_user = %ld, exited_cpu = %ld, max_image = %luk\n",
 		alive_cpu_user_time, exited_cpu_user_time, max_image_size);
 }

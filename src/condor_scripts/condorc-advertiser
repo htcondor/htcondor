@@ -28,7 +28,18 @@ use strict;
 
 	# Seconds between updates.
 my $SLEEP_TIME = 30;
-my $DEBUG_LEVEL = 10;
+my $DEBUG_LEVEL;
+my $LOG_DIR;
+
+chomp( $DEBUG_LEVEL = int ( `condor_config_val GLITE_CONDORC_DEBUG_LEVEL` ) );
+if ( $? != 0 ) {
+	$DEBUG_LEVEL = 10;
+}
+
+chomp( $LOG_DIR = `condor_config_val GLITE_CONDORC_LOG_DIR` );
+if ( $? != 0 || ! -d $LOG_DIR ) {
+	$LOG_DIR = "/tmp";
+}
 
 exit main();
 
@@ -52,7 +63,7 @@ sub main {
 sub get_machine_ads {
 	local *IN;
 	if( ! open(IN, 'condor_status -const CONDORC_WANTJOB==TRUE -schedd -l |') ) {
-		print STDERR "unable to open condor_status\n";
+		debug_print( 1, "unable to open condor_status\n" );
 		return;
 	}
 	local $/ = "\n\n";
@@ -112,12 +123,12 @@ sub rewrite_machine_ads {
 sub publish_machine_ads {
 	my (@ads) = @_;
 	local *OUT;
-	my $tempfile = "/tmp/condorcad.tmp.$$.$>";
+	my $tempfile = "/$LOG_DIR/condorcad.tmp.$$.$>";
 	foreach my $ad (@ads) {
 		my(%ad) = %{$ad};
 
 		if( ! open OUT, ">$tempfile" ) {
-			print STDERR "Publish failed, unable to write to $tempfile.\n";
+			debug_print( 1, "Publish failed, unable to write to $tempfile.\n" );
 			return;
 		}
 
@@ -135,7 +146,7 @@ sub publish_machine_ads {
 		my $ret = system("condor_advertise", "UPDATE_STARTD_AD", $tempfile);
 		debug_print(1,"Advertising $name\n");
 		if($ret != 0) {
-			print STDERR "condor_advertise failed!\n";
+			debug_print( 1, "condor_advertise failed!\n" );
 		}
 		unlink($tempfile);
 	}
@@ -144,7 +155,13 @@ sub publish_machine_ads {
 sub debug_print {
 	my($level) = shift;
 	if($level > $DEBUG_LEVEL) { return; }
-	print scalar localtime;
+	print tersedate();
 	print " ";
 	print @_;
+}
+
+sub tersedate {
+	 my ($sec,$min,$hour,$mday,$mon,$year) = localtime(time);
+	 return sprintf "%04d-%02d-%02d %02d:%02d:%02d",
+	 	$year + 1900, $mon + 1, $mday, $hour, $min, $sec;
 }

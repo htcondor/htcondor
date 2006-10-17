@@ -45,16 +45,6 @@
 #include <sys/types.h>     // various types needed.
 #include <time.h>          // use of time() for process age. 
 
-#if (!defined(HPUX) && !defined(Darwin) && !defined(CONDOR_FREEBSD))     // neither of these are in hpux.
-
-#if defined(Solaris26) || defined(Solaris27) || defined(Solaris28) || defined(Solaris29)
-#include <procfs.h>        // /proc stuff for Solaris 2.6, 2.7, 2.8, 2.9
-#else
-#include <sys/procfs.h>    // /proc stuff for everything else and
-#endif
-
-#endif /* ! HPUX && Darwin && CONDOR_FREEBSD */
-
 #ifdef HPUX                // hpux has to be different, of course.
 #include <sys/param.h>     // used in pstat().
 #include <sys/pstat.h>
@@ -188,6 +178,16 @@ enum {
 	PROCAPI_UNCERTAIN
 };
 
+/** This type serves to hold an opaque value representing a process's time
+    of creation. It is platform-dependent since it holds whatever value the
+    kernel gives us AS IS, so we can avoid rounding effects when using these
+    values in comparisons to see if two processes share a birthday.
+*/
+#if defined(WIN32)
+typedef __int64 birthday_t;
+#else
+typedef long birthday_t;
+#endif
 
 /** This is the structure that is returned from the getProcInfo() 
     member of ProcAPI.  It is returned all at once so that multiple
@@ -258,6 +258,13 @@ struct procInfo {
   /// The time of birth of this pid
   long creation_time;
 
+  /// The time of birth in system-specific units (e.g. Linux returns
+  /// this in seconds since boot time) This is useful since
+  /// (hopefully) it is not subject to wobble caused by converting it
+  /// to different units and thus can be used for accurate process
+  /// birthday comparisons.
+  birthday_t birthday;
+
   /// pointer to next procInfo, if one exists.
   struct procInfo *next;
 
@@ -303,17 +310,12 @@ typedef struct procInfoRaw{
 
 // Windows does it different
 #ifdef WIN32 
-	double user_time_1;
-	double user_time_2;
-	double sys_time_1;
-	double sys_time_2;
-
-	
-	double creation_time;
-	double sample_time;
-
-	double object_frequency;
-	double cpu_time;
+	__int64 user_time;
+	__int64 sys_time;
+	__int64 creation_time;
+	__int64 sample_time;
+	__int64 object_frequency;
+	__int64 cpu_time;
 #endif //WIN32
 
 // special process flags for Linux
@@ -468,7 +470,7 @@ class ProcAPI {
       @param pidFamily An array for holding pids in the family
       @return A -1 is returned on failure, otherwise the number of pids in the array.
   */
-  static int getPidFamily( pid_t pid, PidEnvID *penvid, pid_t *pidFamily,
+  static int getPidFamily( pid_t pid, PidEnvID *penvid, ExtArray<pid_t>& pidFamily,
   			int &status );
 
   /* returns all pids owned by a specific user.
@@ -477,7 +479,7 @@ class ProcAPI {
 	 @param searchLogin A string specifying the owner who's pids we want
 	 @return A -1 is returned on failure, otherwise the number of pids in the array.
   */
-  static int getPidFamilyByLogin( const char *searchLogin, pid_t *pidFamily );
+  static int getPidFamilyByLogin( const char *searchLogin, ExtArray<pid_t>& pidFamily );
 
 	  /*	
 		Creates a ProcessId from the given pid.

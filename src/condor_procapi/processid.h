@@ -37,13 +37,13 @@ class ProcessId{
 	enum { DIFFERENT, SAME, UNCERTAIN, FAILURE, SUCCESS };
  private:
 		// constant
-	const static char* SIGNATURE_FORMAT;
-	const static int NR_OF_SIGNATURE_ENTRIES;
-	const static int MIN_NR_OF_SIGNATURE_ENTRIES;  // minimum number of entries to compose a signature
-	const static char* CONFIRMATION_FORMAT;
-	const static int NR_OF_CONFIRM_ENTRIES;
-	const static int UNDEF;
-	const static int MAX_INIT_PID;
+	static const char* SIGNATURE_FORMAT;
+	static const int NR_OF_SIGNATURE_ENTRIES;
+	static const int MIN_NR_OF_SIGNATURE_ENTRIES;  // minimum number of entries to compose a signature
+	static const char* CONFIRMATION_FORMAT;
+	static const int NR_OF_CONFIRM_ENTRIES;
+	static const int UNDEF;
+	static const int MAX_INIT_PID;
 
 		// non-constant
 	pid_t pid;

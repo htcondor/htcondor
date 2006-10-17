@@ -1910,7 +1910,7 @@ int main( int argc, char** argv )
 	daemonCore->InitSettableAttrsLists();
 
 		// SETUP SOAP SOCKET
-	init_soap(&daemonCore->soap);
+	init_soap(daemonCore->soap);
 
 	// call the daemon's main_init()
 	main_init( argc, argv );

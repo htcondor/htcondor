@@ -74,7 +74,7 @@ int CondorFileAppend::fcntl( int cmd, int arg )
 	return original->fcntl(cmd,arg);
 }
 
-int CondorFileAppend::ioctl( int cmd, int arg )
+int CondorFileAppend::ioctl( int cmd, long arg )
 {
 	return original->ioctl(cmd,arg);
 }

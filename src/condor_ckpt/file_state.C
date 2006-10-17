@@ -1027,7 +1027,7 @@ along to the individual access method, which will decide
 if it can be supported.
 */
 
-int CondorFileTable::ioctl( int fd, int cmd, int arg )
+int CondorFileTable::ioctl( int fd, int cmd, long arg )
 {
 	if( resume(fd)<0 ) return -1;
 	return pointers[fd]->file->ioctl(cmd,arg);

@@ -30,8 +30,6 @@
 #ifndef _SMPL_LIST_H_
 #define _SMPL_LIST_H_
 
-#include <iostream>
-
 template <class ObjType> class SimpleListIterator;
 
 template <class ObjType>

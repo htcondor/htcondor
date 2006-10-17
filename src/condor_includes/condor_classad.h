@@ -29,8 +29,6 @@
 #ifndef _CLASSAD_H
 #define _CLASSAD_H
 
-#include <fstream.h>
-
 #include "condor_exprtype.h"
 #include "condor_ast.h"
 #include "condor_attrlist.h"

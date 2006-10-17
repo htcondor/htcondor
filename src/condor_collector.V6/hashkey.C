@@ -31,6 +31,9 @@
 #include <netinet/in.h>
 #endif
 
+#include <iostream>
+using namespace std;
+
 extern "C" char * sin_to_string(struct sockaddr_in *);
 
 template class HashTable<AdNameHashKey, ClassAd *>;

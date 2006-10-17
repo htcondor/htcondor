@@ -6,11 +6,3 @@ x_secneg_clO_dmnN_secprepostsrc NO
 x_secneg_clO_dmnO_secprepostsrc NO
 x_secneg_clO_dmnP_secprepostsrc	YES
 x_secneg_clO_dmnR_secprepostsrc	YES
-x_secneg_clP_dmnN_secprepostsrc NO
-x_secneg_clP_dmnO_secprepostsrc	YES
-x_secneg_clP_dmnP_secprepostsrc	YES
-x_secneg_clP_dmnR_secprepostsrc	YES
-x_secneg_clR_dmnN_secprepostsrc fail
-x_secneg_clR_dmnO_secprepostsrc	YES
-x_secneg_clR_dmnP_secprepostsrc	YES
-x_secneg_clR_dmnR_secprepostsrc	YES

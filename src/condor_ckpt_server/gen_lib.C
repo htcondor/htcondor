@@ -25,6 +25,10 @@
 #include "constants2.h"
 
 
+#include <iostream>
+#include <iomanip>
+using namespace std;
+
 void MakeLongLine(char ch1,
                   char ch2)
 {

@@ -193,8 +193,8 @@ public:
 	bool        preemptWasTrue() const {return c_preempt_was_true;}
 
 		// Functions that set the values of data
-	void setrank(float rank)	{c_rank=rank;};
-	void setoldrank(float rank) {c_oldrank=rank;};
+	void setrank(float therank)	{c_rank=therank;};
+	void setoldrank(float therank) {c_oldrank=therank;};
 	void setad(ClassAd *ad);		// Set our ad to the given pointer
 	void setRequestStream(Stream* stream);	
 	void setaliveint(int alive);

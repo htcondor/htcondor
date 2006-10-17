@@ -66,7 +66,18 @@ my $DYNAMIC_SCHEDD_NAMES = 1;
 
 
 # Debug level. 0 is basically silent.
-my $DEBUG = 10;
+my $DEBUG_LEVEL;
+my $LOG_DIR;
+
+chomp( $DEBUG_LEVEL = int ( `condor_config_val GLITE_CONDORC_DEBUG_LEVEL` ) );
+if ( $? != 0 ) {
+	$DEBUG_LEVEL = 10;
+}
+
+chomp( $LOG_DIR = `condor_config_val GLITE_CONDORC_LOG_DIR` );
+if ( $? != 0 || ! -d $LOG_DIR ) {
+	$LOG_DIR = "/tmp";
+}
 
 
 # initialize variables that will be used throughput our run
@@ -81,7 +92,7 @@ if(not defined $config_condor_admin) {
 }
 $config_mail = "/usr/bin/mail";
 
-debug_print(4, "Startup: Scanning queue for existing schedds");
+debug_print(4, "Startup: Scanning queue for existing schedds\n");
 # scan the queue for any schedd jobs already submitted
 # format: <Cluster>.<Proc> <x509proxy> <uniquename> <sitename> <sitegatekeeper> <job status>
 open( CQ, 'condor_q -const "DynamicScheddJob=?=True" -format "%d." ClusterId -format "%d\t" ProcId -format "%s\t" X509UserProxy -format "%s\t" daemon_unique_name -format "%s\t" SiteName -format "%s\t" GlobusResource -format "%d" JobStatus -format "\n" ClusterId |' ) || die( "Can't run condor_q" );
@@ -97,7 +108,7 @@ while ( <CQ> ) {
 		my $key = "${line[3]}#${line[2]}";
 
 		if ( defined $job_groups{$key} ) {
-			debug_print(5, "Two schedd jobs for same site,subject!");
+			debug_print(5, "Two schedd jobs for same site,subject!\n");
 		} else {
 			$job_groups{$key} = {
 				'uniquename'    => "${line[2]}",
@@ -115,7 +126,7 @@ while ( <CQ> ) {
 close( CQ );
 
 while ( 1 ) { # or until no user jobs left <-- Is this still true?  I think not.
-	debug_print(3, "###########################");
+	debug_print(3, "###########################\n");
 
 	# check queue for user jobs
 	##########################################
@@ -123,7 +134,7 @@ while ( 1 ) { # or until no user jobs left <-- Is this still true?  I think not.
 		${$group}{'numjobs'} = 0;
 	}
 
-	debug_print(4, "Scanning for grid jobs");
+	debug_print(4, "Scanning for grid jobs\n");
 	# Need to catch SIGCHLD to know if command failed
 	open( CQ, q[condor_q -const 'JobUniverse==9&&JobGridType=?="condor"' -format "%s\t" daemon_unique_name -format "%s\t" x509userproxy -format "%s\t" SiteName -format "%s" SiteGatekeeper -format "\n" ClusterId |] ) || die( "Can't run condor_q" );
 
@@ -131,7 +142,7 @@ while ( 1 ) { # or until no user jobs left <-- Is this still true?  I think not.
 
 		chomp;
 		next if /^$/;
-		debug_print(4, "    Found one ($_)");
+		debug_print(4, "    Found one ($_)\n");
 
 		@line = split( /\t/ );
 
@@ -186,7 +197,7 @@ while ( 1 ) { # or until no user jobs left <-- Is this still true?  I think not.
 				${$job_groups{$key}}{'scheddstatus'} = $line[3];
 				${$job_groups{$key}}{'scheddjobid'} = $line[0];
 			} else {
-				print "Unknown schedd job for group $key\n";
+				debug_print( 1, "Unknown schedd job for group $key\n" );
 			}
 		}
 
@@ -196,17 +207,17 @@ while ( 1 ) { # or until no user jobs left <-- Is this still true?  I think not.
 
 	# submit schedds as needed
 	##########################################
-	debug_print(3, "Submit schedds as needed");
+	debug_print(3, "Submit schedds as needed\n");
 	foreach $group ( values %job_groups ) {
 
 		my $key = "${$group}{sitename}#${$group}{uniquename}";
 
 		if ( ${$group}{'numjobs'} > 0 ) {
 			if ( !defined( ${$group}{'scheddjobid'} ) ) {
-				debug_print(1, "    group $key has no schedd, starting one");
+				debug_print(1, "    group $key has no schedd, starting one\n");
 				${$group}{'scheddjobid'} = submit_schedd_job( $group );
 			} else {
-				debug_print(4, "    Group $key already has a schedd");
+				debug_print(4, "    Group $key already has a schedd\n");
 			}
 			if ( defined( ${$group}{'scheddjobid'} ) ) {
 				${$group}{'scheddsubmitted'} = 1;
@@ -217,29 +228,29 @@ while ( 1 ) { # or until no user jobs left <-- Is this still true?  I think not.
 
 	# do upkeep on all our schedd jobs
 	##########################################
-	debug_print(5, "Upkeep");
+	debug_print(5, "Upkeep\n");
 	foreach $group ( values %job_groups ) {
 
 		my $key = "${$group}{sitename}#${$group}{uniquename}";
 		my $line = join( ",", values( %{$group} ) );
-		debug_print(5, "    $line");
+		debug_print(5, "    $line\n");
 
 		if ( ${$group}{'numjobs'} == 0 ) {
-			debug_print(5, "        Appears healthy but unused");
+			debug_print(5, "        Appears healthy but unused\n");
 			# condor_rm?
 		} elsif ( ${$group}{'scheddstatus'} == 5 ) {
-			debug_print(5, "        Is held.  Removing.");
+			debug_print(5, "        Is held.  Removing.\n");
 			system( "condor_rm ${$group}{'scheddjobid'}" );
 			my $reason;
 			chomp( $reason = `condor_q ${$group}{'scheddjobid'} -format "%d " HoldReasonCode -format "%d\n" HoldReasonSubCode` );
 			if ( $reason == "2 131" ) {
-				debug_print(5,"        Proxy expiring, force removing.");
+				debug_print(5,"        Proxy expiring, force removing.\n");
 				system( "condor_rm -f ${$group}{'scheddjobid'}" );
 			}
 		} elsif ( ${$group}{'scheddstatus'} == 3 ) {
-			debug_print(5, "        Is removed. Ignoring.");
+			debug_print(5, "        Is removed. Ignoring.\n");
 		} else {
-			debug_print(5, "        Appears healthy and used");
+			debug_print(5, "        Appears healthy and used\n");
 #			advertise_schedd( $group );
 			# check for held
 			# update proxy?
@@ -257,13 +268,13 @@ while ( 1 ) { # or until no user jobs left <-- Is this still true?  I think not.
 sub submit_schedd_job
 {
 	my( $group ) = @_;
-	my $cmd_file = "/tmp/condorc-launcher-submit.$$";
-	my $submit_out = "/tmp/condorc-launcher-submit-out.$$";
+	my $cmd_file = "/$LOG_DIR/condorc-launcher-submit.$$";
+	my $submit_out = "/$LOG_DIR/condorc-launcher-submit-out.$$";
 	my $cluster;
 	my $env;
-	my $setup_script = "/tmp/condorc-launcher-starter.$$";
+	my $setup_script = "/$LOG_DIR/condorc-launcher-starter.$$";
 	my $mapfile = "condorc-launcher-mapfile.$$";
-	my $mapfile_path = "/tmp/$mapfile";
+	my $mapfile_path = "/$LOG_DIR/$mapfile";
 	my $schedd_name;
 	my $exec;
 	my $args;
@@ -282,10 +293,10 @@ sub submit_schedd_job
 
 	chomp( $my_username = `/usr/bin/whoami` );
 
-	debug_print(2, "Submitting schedd to $group->{sitegatekeeper} with $group->{proxyfile}");
+	debug_print(2, "Submitting schedd to $group->{sitegatekeeper} with $group->{proxyfile}\n");
 
 	if ( system(  "grid-proxy-info -exists -file $group->{proxyfile} >/dev/null 2>&1" ) != 0 ) {
-		debug_print(2, "Proxy $group->{proxyfile} is invalid, not submitting schedd job");
+		debug_print(2, "Proxy $group->{proxyfile} is invalid, not submitting schedd job\n");
 		return undef;
 	}
 
@@ -430,9 +441,9 @@ grid_type = globus
 executable = $exec
 arguments = $args
 environment = $env
-output = /tmp/condorc-launcher.out.\$(cluster).\$(process)
-error = /tmp/condorc-launcher.err.\$(cluster).\$(process)
-log = /tmp/condorc-launcher.log.\$(cluster).\$(process)
+output = /$LOG_DIR/condorc-launcher.out.\$(cluster).\$(process)
+error = /$LOG_DIR/condorc-launcher.err.\$(cluster).\$(process)
+log = /$LOG_DIR/condorc-launcher.log.\$(cluster).\$(process)
 globusscheduler = ${$group}{'sitegatekeeper'}
 x509userproxy = ${$group}{'proxyfile'}
 should_transfer_files=YES
@@ -452,13 +463,13 @@ EOF
 	my $submit_exitcode;
 	$submit_exitcode = system( "condor_submit -s $cmd_file >$submit_out 2>&1" );
 	if ($submit_exitcode != 0) {
-		print STDERR "Error running condor_submit";
+		debug_print( 1, "Error running condor_submit" );
 		return undef;
 	}
 
     # snarf the cluster id from condor_submit's output
 	unless( open( SUBMIT, "<$submit_out" ) ) {
-		print STDERR "error opening \"$submit_out\": $!\n";
+		debug_print( 1, "error opening \"$submit_out\": $!\n" );
 		return undef;
 	}
 	while( <SUBMIT> ) {
@@ -471,7 +482,7 @@ EOF
 
 	# if for some reason we didn't find the cluster id 
 	unless( $cluster ) {
-		print STDERR "error: couldn't find cluster id in condor_submit output\n";
+		debug_print( 1, "error: couldn't find cluster id in condor_submit output\n" );
 		return undef;
 	}
 
@@ -490,7 +501,7 @@ EOF
 sub advertise_schedd
 {
 	my( $group ) = @_;
-	my $ad_file = "/tmp/ad_file.$$";
+	my $ad_file = "/$LOG_DIR/ad_file.$$";
 
 	open( AD, ">$ad_file" ) || die "Failed to open file $ad_file";
 
@@ -501,22 +512,21 @@ EOF
 
 	$rc = system( "condor_advertise UPDATE_STARTD_AD $ad_file" );
 	if ( $rc != 0 ) {
-		print "condor_advertise exitted with $rc\n";
+		debug_print( 1, "condor_advertise exitted with $rc\n" );
 	}
 }
 
 
 sub debug_print {
 	my $level = shift;
-	if($level > $DEBUG) { return; }
-	print STDERR tersedate();
-	print STDERR " ($$) ";
-	print STDERR @_;
-	print STDERR "\n";
+	if($level > $DEBUG_LEVEL) { return; }
+	print tersedate();
+	print " ";
+	print @_;
 }
 
 sub tersedate {
-	 ($sec,$min,$hour,$mday,$mon,$year) = localtime(time);
-	 return sprintf "%04d-%02d-%02d %02d:%02d:%02d",
+	my ($sec,$min,$hour,$mday,$mon,$year) = localtime(time);
+	return sprintf "%04d-%02d-%02d %02d:%02d:%02d",
 	 	$year + 1900, $mon + 1, $mday, $hour, $min, $sec;
 }

@@ -43,7 +43,7 @@ char * gen_exec_name ( int cluster, int proc, int subproc );
 int condor_hash ( register char *string, register int size );
 char * getline ( FILE *fp );
 
-char* getExecPath();
+char* getExecPath( void );
 
 int rotate_file(const char *old_filename, const char *new_filename);
 
@@ -52,14 +52,14 @@ int copy_file(const char *old_filename, const char *new_filename);
 
 int hardlink_or_copy_file(const char *old_filename, const char *new_filename);
 
-void schedule_event ( int month, int day, int hour, int minute, int second, void (*func)() );
+void schedule_event ( int month, int day, int hour, int minute, int second, void (*func)(void) );
 void event_mgr ( void );
 void StartRecording ( void );
 void CompleteRecording ( long numberOfBytes );
 void ProcessLogging ( int request, int extraInteger );
 void detach ( void );
-int do_connect ( const char *host, const char *service, u_int port );
-int udp_connect ( char *host, u_int port );
+int do_connect ( const char *host, const char *service, u_short port );
+int udp_connect ( char *host, u_short port );
 void dprintf ( int flags, const char* fmt, ... );
 FILE * debug_lock ( void );
 void debug_unlock ( void );

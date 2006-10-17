@@ -23,6 +23,7 @@
 
 #include "condor_common.h"
 #include "procapi.h"
+#include "procapi_internal.h"
 #include "condor_debug.h"
 
 int hashFunc( const pid_t& pid, int numbuckets );
@@ -164,6 +165,7 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status )
 	pi->pid     = procRaw.pid;
 	pi->ppid    = procRaw.ppid;
 	pi->creation_time = procRaw.creation_time;
+	pi->birthday = procRaw.creation_time;
 	pi->owner = procRaw.owner;
 
 
@@ -377,6 +379,7 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status )
 	pi->ppid	= procRaw.ppid;
 	pi->owner = procRaw.owner;
 	pi->creation_time = procRaw.creation_time;
+	pi->birthday    = procRaw.creation_time;
 	pi->imgsize	= procRaw.imgsize;    // already in k!
 	pi->rssize	= procRaw.rssize;  // already in k!
 	pi->user_time= procRaw.user_time_1;
@@ -620,9 +623,15 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status )
 	pi->sys_time    = procRaw.sys_time_1  / HZ;
 	double cpu_time = (procRaw.user_time_1 + procRaw.sys_time_1) / (double)HZ;
 
+		// use the raw value (which is in jiffies since boot time)
+		// as the birthday, which is useful for comparing whether
+		// two processes with the same  PID are in fact the same
+		// process
+	pi->birthday = procRaw.creation_time;
+
 		// convert the creation time from jiffies since boot
 		// to epoch time
-	
+
 		// 1. ensure we have a "good" boottime
 	if( checkBootTime(procRaw.sample_time) == PROCAPI_FAILURE ){
 		status = PROCAPI_UNSPECIFIED;
@@ -1076,6 +1085,7 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status )
 	pi->user_time	= procRaw.user_time_1;
 	pi->sys_time	= procRaw.sys_time_1;
 	pi->creation_time = procRaw.creation_time;
+	pi->birthday    = procRaw.creation_time;
 	pi->pid		= procRaw.pid;
 	pi->ppid	= procRaw.ppid;
 	pi->owner 	= procRaw.owner;
@@ -1209,6 +1219,7 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status )
 	pi->user_time = procRaw.user_time_1;
 	pi->sys_time = procRaw.sys_time_1;
 	pi->creation_time = procRaw.creation_time;
+	pi->birthday = procRaw.creation_time;
 	pi->pid = procRaw.pid;
 	pi->ppid = procRaw.ppid;
 	pi->owner = procRaw.owner;
@@ -1411,6 +1422,7 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status )
 	pi->ppid = procRaw.ppid;
 	pi->owner = procRaw.owner;
 	pi->creation_time = procRaw.creation_time;
+	pi->birthday = procRaw.creation_time;
 	pi->pid = procRaw.pid;
 	pi->user_time = procRaw.user_time_1;
 	pi->sys_time = procRaw.sys_time_1;
@@ -1582,13 +1594,18 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status )
 	pi->imgsize   = procRaw.imgsize / 1024;
     pi->rssize    = procRaw.rssize / 1024;
 
+
 		// convert the time fields from the object time scale
 		// to seconds
-	pi->user_time 		= (long) (procRaw.user_time_1 / procRaw.object_frequency);
-    pi->sys_time  		= (long) (procRaw.sys_time_1 / procRaw.object_frequency);
-	pi->creation_time 	= (long) (procRaw.creation_time / procRaw.object_frequency);
-	double cpu_time = procRaw.cpu_time / procRaw.object_frequency;
-	double now_secs = procRaw.sample_time / procRaw.object_frequency;
+	pi->user_time 		= (long) (procRaw.user_time / procRaw.object_frequency);
+    pi->sys_time  		= (long) (procRaw.sys_time / procRaw.object_frequency);
+
+		// Windows gives us birthday in 100ns ticks since 01/01/1601
+		// (11644473600 seconds before 01/01/1970)
+	const __int64 EPOCH_SHIFT = 11644473600;
+	pi->creation_time 	= (long) (procRaw.creation_time / procRaw.object_frequency - EPOCH_SHIFT);
+	double cpu_time = (double)procRaw.cpu_time / procRaw.object_frequency;
+	double now_secs = (double)procRaw.sample_time / procRaw.object_frequency;
 
 		// calculate the age
 	double age_wrong_scale = procRaw.sample_time - (procRaw.creation_time);
@@ -1598,6 +1615,7 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status )
 	pi->pid       = procRaw.pid;
     pi->ppid      = procRaw.ppid;
 	pi->minfault  = 0;   // not supported by NT; all faults lumped into major.
+	pi->birthday  = procRaw.creation_time;
 	
 		// convert fault numbers into fault rate
 	do_usage_sampling ( pi, cpu_time, procRaw.majfault, procRaw.minfault, 
@@ -1707,13 +1725,10 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
     long instanceNum;
     DWORD ctrblk;
 
-    double sampleObjectTime;
-    double objectFrequency;
-
     pThisObject = firstObject (pDataBlock);
   
-    sampleObjectTime = LI_to_double ( pThisObject->PerfTime );
-    objectFrequency  = LI_to_double ( pThisObject->PerfFreq );
+    procRaw.sample_time = pThisObject->PerfTime.QuadPart;
+    procRaw.object_frequency  = pThisObject->PerfFreq.QuadPart;
 
     if( !offsets ) {      // If we haven't yet gotten the offsets, grab 'em.
         grabOffsets( pThisObject );
@@ -1759,17 +1774,13 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 
 	procRaw.majfault  = (long) *((long*)(ctrblk + offsets->faults  ));
 	procRaw.minfault  = 0;  // not supported by NT; all faults lumped into major.
-	procRaw.user_time_1 = LI_to_double(ut);
-	procRaw.user_time_2 = 0;
-    procRaw.sys_time_1  = LI_to_double(st);
-	procRaw.sys_time_2 = 0;
+	procRaw.user_time = ut.QuadPart;
+    procRaw.sys_time  = st.QuadPart;
 
-	procRaw.creation_time = LI_to_double( elt );
-	procRaw.cpu_time	=  LI_to_double( pt );
-
-		// set the sample time and object frequency
-	procRaw.sample_time = sampleObjectTime;
-	procRaw.object_frequency = objectFrequency;
+	// I do not understand why someting called "elapsed time" actually returns
+	// creation time ?!?!
+	procRaw.creation_time = elt.QuadPart;
+	procRaw.cpu_time	=  pt.QuadPart;
 
 		// success
     return PROCAPI_SUCCESS;
@@ -1817,6 +1828,7 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status )
 	pi->pid = procRaw.pid;
 	pi->ppid = procRaw.ppid;
 	pi->creation_time = procRaw.creation_time;
+	pi->birthday = procRaw.creation_time;
 	pi->owner = procRaw.owner;
 
 		// success
@@ -2323,7 +2335,7 @@ ProcAPI::getFamilyInfo ( pid_t daddypid, piPTR& pi, PidEnvID *penvid,
 }
 
 int
-ProcAPI::getPidFamily( pid_t daddypid, PidEnvID *penvid, pid_t *pidFamily, 
+ProcAPI::getPidFamily( pid_t daddypid, PidEnvID *penvid, ExtArray<pid_t>& pidFamily, 
 	int &status ) 
 {
 
@@ -2335,13 +2347,6 @@ ProcAPI::getPidFamily( pid_t daddypid, PidEnvID *penvid, pid_t *pidFamily,
 	}
 
 	DWORD dwStatus;  // return status of fn. calls
-
-	if ( pidFamily == NULL ) {
-		dprintf( D_ALWAYS, 
-				 "ProcAPI::getPidFamily: no space allocated for pidFamily\n" );
-		status = PROCAPI_UNSPECIFIED;
-        return PROCAPI_FAILURE;
-	}
 
         // '2' is the 'system' , '230' is 'process'  
         // I hope these numbers don't change over time... 
@@ -2560,22 +2565,11 @@ ProcAPI::multiInfo( pid_t *pidlist, int numpids, piPTR &pi ) {
      with a 0 for a pid at its end.  A -1 is returned on failure, 0 otherwise.
 */
 int
-ProcAPI::getPidFamily( pid_t pid, PidEnvID *penvid, pid_t *pidFamily, 
+ProcAPI::getPidFamily( pid_t pid, PidEnvID *penvid, ExtArray<pid_t>& pidFamily, 
 	int &status )
 {
 	int fam_status;
 	int rval;
-
-  // I'm going to do this in a somewhat ugly hacked way....get all the info
-  // instead of just pids...but it's a lot quicker to write.
-
-	if( pidFamily == NULL ) {
-		dprintf( D_ALWAYS, 
-				 "ProcAPI::getPidFamily: no space allocated for pidFamily\n" );
-
-		status = PROCAPI_UNSPECIFIED;
-		return PROCAPI_FAILURE;
-	}
 
 #ifndef HPUX
 	buildPidList();
@@ -2626,9 +2620,7 @@ ProcAPI::getPidFamily( pid_t pid, PidEnvID *penvid, pid_t *pidFamily,
 
 	piPTR current = procFamily;  // get descendents and elder pid.
 	int i=0;
-		// we'll only return the first 511.  No self-respecting job
-		// should have  more.  :-)  
-	while( (current != NULL) && (i<511) ) {
+	while( (current != NULL) ) {
 		pidFamily[i] = current->pid;
 		i++;
 		current = current->next;
@@ -3401,8 +3393,8 @@ ProcAPI::printProcInfo(FILE* fp, piPTR pi){
 	fprintf( fp, "process image, rss, in k: %lu, %lu\n", pi->imgsize, pi->rssize );
 	fprintf( fp, "minor & major page faults: %lu, %lu\n", pi->minfault, 
 			pi->majfault ); 
-	fprintf( fp, "Times:  user, system, age: %ld %ld %ld\n", 
-			pi->user_time, pi->sys_time, pi->age );
+	fprintf( fp, "Times:  user, system, creation, age: %ld %ld %ld %ld\n", 
+			pi->user_time, pi->sys_time, pi->creation_time, pi->age );
 	fprintf( fp, "percent cpu usage of this process: %5.2f\n", pi->cpuusage);
 	fprintf( fp, "pid is %d, ppid is %d\n", pi->pid, pi->ppid);
 	fprintf( fp, "\n" );
@@ -3671,13 +3663,12 @@ DWORD ProcAPI::GetSystemPerfData ( LPTSTR pValue )
 #endif // WIN32
 
 int
-ProcAPI::getPidFamilyByLogin( const char *searchLogin, pid_t *pidFamily )
+ProcAPI::getPidFamilyByLogin( const char *searchLogin, ExtArray<pid_t>& pidFamily )
 {
 #ifndef WIN32
 
 	// first, get the Login's uid, since that's what's stored in
 	// the ProcInfo structure.
-	ASSERT(pidFamily);
 	ASSERT(searchLogin);
 	struct passwd *pwd = getpwnam(searchLogin);
 	uid_t searchUid = pwd->pw_uid;
@@ -3729,7 +3720,6 @@ ProcAPI::getPidFamilyByLogin( const char *searchLogin, pid_t *pidFamily )
 
 	closeFamilyHandles();
 
-	ASSERT(pidFamily);
 	ASSERT(searchLogin);
 
 	// get a list of all pids on the system

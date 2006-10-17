@@ -257,6 +257,6 @@ void display_state()
 			printf("\t");
 		}
 		sigaction( i, NULL, &oact );
-		printf("%x\n",(unsigned int)oact.sa_handler);
+		printf("%p\n",oact.sa_handler);
 	}
 }

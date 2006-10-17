@@ -67,6 +67,15 @@ char * hostname_to_string (const char * hostname, const int default_port );
 
 char *sock_to_string(SOCKET sockd);
 
+/*
+ Puts socket peer's sinful address in buf.  Returns this value or the
+ specified unknown value if address could not be determined.
+ Buffer should be at least SINFUL_STRING_BUF_SIZE,
+ but if it is less, the value will be truncated if necessary.
+*/
+char const *
+sock_peer_to_string( SOCKET fd, char *buf, size_t buflen, char const *unknown);
+
 /* Return the real hostname of a machine given a sin; return NULL if it cannot
  * be found or error.  Also return aliases. */
 char *sin_to_hostname(const struct sockaddr_in *sin, char ***aliases);

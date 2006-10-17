@@ -39,8 +39,8 @@
 #include <stdio.h>
 
 #include "proc.h"
-
-char	*param();
+#include "condor_ckpt_name.h"
+#include "util_lib_proto.h"
 
 char *
 gen_ckpt_name( directory, cluster, proc, subproc )

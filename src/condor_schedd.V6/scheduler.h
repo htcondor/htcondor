@@ -129,8 +129,8 @@ class UserIdentity {
 			// has no real identity.  It only exists so
 			// we can put UserIdentities in various templates.
 		UserIdentity() : m_username(""), m_domain("") { }
-		UserIdentity(const char * username, const char * domain)
-			: m_username(username), m_domain(domain) { }
+		UserIdentity(const char * user, const char * domainname)
+			: m_username(user), m_domain(domainname) { }
 		UserIdentity(const UserIdentity & src)
 			: m_username(src.m_username), m_domain(src.m_domain) { }
 		const UserIdentity & operator=(const UserIdentity & src) {

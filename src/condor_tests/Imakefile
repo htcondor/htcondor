@@ -106,12 +106,18 @@ TESTCLASS(lib_auth_protocol-ctb,quick)
 TESTCLASS(lib_auth_protocol-ctb,btdebug)
 
 /* GNATS 764 - SSL missing on Dux 5.1 and HPUX 11 machines */
-#if !defined( IS_ALPHA_LINUX) && !defined( IS_HPUX11 )
+#if !defined( IS_ALPHA_DUX5) && !defined( IS_HPUX11 )
 DESC(lib_auth_protocol-ssl,"SSL authentication test")
 RUN(lib_auth_protocol-ssl)
 TESTCLASS(lib_auth_protocol-ssl,core)
 TESTCLASS(lib_auth_protocol-ssl,quick)
 TESTCLASS(lib_auth_protocol-ssl,btdebug)
+
+DESC(lib_auth_protocol-pw,"PW authentication test")
+RUN(lib_auth_protocol-pw)
+TESTCLASS(lib_auth_protocol-pw,core)
+TESTCLASS(lib_auth_protocol-pw,quick)
+TESTCLASS(lib_auth_protocol-pw,btdebug)
 
 DESC(lib_auth_protocol-gsi,"GSI authentication test")
 RUN(lib_auth_protocol-gsi)
@@ -120,11 +126,19 @@ TESTCLASS(lib_auth_protocol-gsi,quick)
 TESTCLASS(lib_auth_protocol-gsi,btdebug)
 #endif
 
-DESC(lib_auth_protocol-negot,"16 way negotiation test")
+DESC(lib_auth_protocol-negot,"16 way negotiation test - frist 8")
 RUN(lib_auth_protocol-negot)
 TESTCLASS(lib_auth_protocol-negot,core)
 TESTCLASS(lib_auth_protocol-negot,quick)
 TESTCLASS(lib_auth_protocol-negot,btdebug)
+
+DESC(lib_auth_protocol-negot-prt2,"16 way negotiation test - last 8")
+RUN(lib_auth_protocol-negot-prt2)
+TESTCLASS(lib_auth_protocol-negot-prt2,core)
+TESTCLASS(lib_auth_protocol-negot-prt2,quick)
+TESTCLASS(lib_auth_protocol-negot-prt2,btdebug)
+
+/* Turned off on Free BSD port GNATS 766 */
 
 DESC(cmd_q_shows-hold,"Condor_q shows hold")
 RUN(cmd_q_shows-hold)
@@ -186,7 +200,7 @@ TESTCLASS(job_schedd_job-tracking_van,quick)
 /*
 Gnats bugs 723 726
 */
-#if !defined( IS_ALPHA_DUX5) && !defined( IS_PPC_OSX_10_3 )
+#if !defined( IS_PPC_OSX_10_3 )
 DESC(job_core_err_java,"Java Universe: basic error test")
 RUN(job_core_err_java)
 TESTCLASS(job_core_err_java,core)
@@ -215,11 +229,17 @@ TESTCLASS(job_core_input_java,core)
 TESTCLASS(job_core_input_java,quick)
 TESTCLASS(job_core_input_java,btdebug)
 
+/*
+** This test is simply submit and getting things in the job ads
+** and fails unpredictably and duplicates the other "plus" tests.
+***************************************************************
 DESC(job_core_plus_java,"Java Universe: basic output test")
 RUN(job_core_plus_java)
 TESTCLASS(job_core_plus_java,core)
 TESTCLASS(job_core_plus_java,quick)
 TESTCLASS(job_core_plus_java,btdebug)
+***************************************************************
+*/
 #endif
 
 /*

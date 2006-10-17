@@ -320,12 +320,18 @@ int main(void)
 	return 0;
 }
 EOF
- [[_cv_$3]=`$1 $2 $4 conf_flag.c -c -o conf_flag.o > /dev/null 2>&1`
+ # Stupid compilers sometimes say "Invalid option" or "unrecognized option",
+ # but they always seem to say "option" in there.... Also sometimes an
+ # executable is produced, other times not. So we'll assume that if the word
+ # "option" shows up at all in the stderr of the compiler, it is unrecognized.
+ [[_cv_$3]=`$1 $2 $4 conf_flag.c -c -o conf_flag.o 2>&1 | grep "option" > /dev/null 2>&1`
   _comp_status=$?
-  if test $_comp_status -ne 0; then
-    [_cv_$3]="no";
-  else
+  # the test seems inverted because the failure of grep to find the 
+  # sentinel value means gcc accepted it
+  if test $_comp_status -eq 1; then
     [_cv_$3]="yes";
+  else
+    [_cv_$3]="no";
   fi
  ])
  if test $[_cv_$3] = "yes"; then

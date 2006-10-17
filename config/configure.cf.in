@@ -52,7 +52,7 @@ GCC_STATIC_LIBS = $(GCC_STATIC_LD_FLAG) -lstdc++ -lgcc
 GCC_RDYNAMIC_FLAG = @gcc_rdynamic_flag@
 
 /* Debugging flags common to C and C++ */
-COMP_DEBUG_FLAGS = -g @comp_option_Wall@ @comp_option_W@ @comp_option_Wextra@ @comp_option_Wfloat_equal@ @comp_option_Wshadow@ @comp_option_Wunreachable_code@ @comp_option_Wendif_labels@ @comp_option_Wpointer_arith@ @comp_option_Wconversion@ @comp_option_Wcast_qual@ @comp_option_Wcast_align@ @comp_option_Wvolatile_register_var@ @comp_option_fstack_protector@
+COMP_DEBUG_FLAGS = -g @comp_option_Wall@ @comp_option_W@ @comp_option_Wextra@ @comp_option_Wfloat_equal@ @comp_option_Wshadow@ @comp_option_Wendif_labels@ @comp_option_Wpointer_arith@ @comp_option_Wconversion@ @comp_option_Wcast_qual@ @comp_option_Wcast_align@ @comp_option_Wvolatile_register_var@ @comp_option_fstack_protector@
 
 /* C specific debugging flags */
 GCC_DEBUG_FLAGS = @comp_option_Wnested_externs@ @comp_option_Wstrict_prototypes@ @comp_option_Wmissing_prototypes@ 

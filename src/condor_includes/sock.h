@@ -172,7 +172,7 @@ public:
 	int endpoint_port();
 
 	/// peer's IP address, string verison (e.g. "128.105.101.17")
-	char* endpoint_ip_str();
+	const char* endpoint_ip_str();
 
 	/// peer's IP address, integer version (e.g. 2154390801)
 	unsigned int endpoint_ip_int();

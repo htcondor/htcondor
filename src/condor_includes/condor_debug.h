@@ -99,12 +99,12 @@ void dprintf_config( char *subsys, int logfd );
 void _condor_dprintf_va ( int flags, const char* fmt, va_list args );
 int _condor_open_lock_file(const char *filename,int flags, mode_t perm);
 void _EXCEPT_ ( char *fmt, ... );
-void Suicide();
+void Suicide(void);
 void set_debug_flags( char *strflags );
 void _condor_fd_panic( int line, char *file );
 
-time_t dprintf_last_modification();
-void dprintf_touch_log();
+time_t dprintf_last_modification(void);
+void dprintf_touch_log(void);
 
 /*
 **	Definition of exception macro

@@ -928,7 +928,10 @@ C_CXX_OPTION(gcc, -Wshadow, comp_option_Wshadow, [])
 # Note: Code blocks marked by this warning flag should be carefully checked
 # since they may be able to be executed in ways the compiler doesn't see, like
 # via setjmp, or other methods.
-C_CXX_OPTION(gcc, -Wunreachable-code, comp_option_Wunreachable_code, [])
+# XXX This warning looks like it gives far too many false positive, so it
+# is getting commented out. If you'd like to renable this warning flag, please
+# make sure to add @comp_option_Wunreachable_code@ to COMP_DEBUG_FLAGS
+#C_CXX_OPTION(gcc, -Wunreachable-code, comp_option_Wunreachable_code, [])
 
 # Warn if non-comment after endif labels
 C_CXX_OPTION(gcc, -Wendif-labels, comp_option_Wendif_labels, [])
@@ -1699,9 +1702,10 @@ else
 fi
 
 
-# For now, we hardcode that non-i386 platforms are clipped and don't
+# For now, we hardcode that non-i386/X86_64 platforms are clipped and don't
 # need an external glibc for anything...
-if test "x$_cv_libc_kind" = "xGLIBC" -a "x$_cv_arch" = "xI386" ; then
+if test "x$_cv_libc_kind" = "xGLIBC" -a \( "x$_cv_arch" = "xI386" -o "x$_cv_arch" = "xX86_64" \); then
+
   _cv_libc_full_vers="$_cv_libc_major.$_cv_libc_minor.$_cv_libc_patch"
   case "$_cv_libc_full_vers" in
   "2.2.4" )
@@ -1716,6 +1720,7 @@ if test "x$_cv_libc_kind" = "xGLIBC" -a "x$_cv_arch" = "xI386" ; then
   "2.3.2" )
     # the glibc 2.3.2 from redhat's source rpms are very different than the
 	# stock 2.3.2 you can download off of the web.
+	# This external is used both for x86 and x86_64
     CONDOR_EXTERNAL_VERSION([glibc],[2.3.2.27.9.7])
     ;;
   "2.3.4" )

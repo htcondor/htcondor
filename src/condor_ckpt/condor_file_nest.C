@@ -135,7 +135,7 @@ int CondorFileNest::fcntl( int cmd, int arg )
 	return -1;
 }
 
-int CondorFileNest::ioctl( int cmd, int arg )
+int CondorFileNest::ioctl( int cmd, long arg )
 {
 	errno = EINVAL;
 	return -1;

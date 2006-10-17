@@ -1593,12 +1593,8 @@ JICShadow::beginFileTransfer( void )
 		// if requested in the jobad, transfer files over.  
 	if( wants_file_transfer ) {
 		// Only rename the executable if it is transferred.
-		int xferExec;
-		if( job_ad->LookupBool(ATTR_TRANSFER_EXECUTABLE,xferExec)!=1 ) {
-			xferExec = 1;
-		} else {
-			xferExec = 0;
-		}
+		int xferExec = 1;
+		job_ad->LookupBool(ATTR_TRANSFER_EXECUTABLE,xferExec);
 
 		if( xferExec ) {
 			sprintf( tmp, "%s=\"%s\"", ATTR_JOB_CMD,CONDOR_EXEC );

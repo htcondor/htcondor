@@ -62,7 +62,8 @@ int pidenvid_filter_and_insert(PidEnvID *penvid, char **env)
 				return PIDENVID_OVERSIZED;
 			}
 
-			strcpy(penvid->ancestors[i].envid, *curr);
+			strncpy(penvid->ancestors[i].envid, *curr, PIDENVID_ENVID_SIZE);
+			penvid->ancestors[i].envid[PIDENVID_ENVID_SIZE-1] = '\0';
 			penvid->ancestors[i].active = TRUE;
 
 			i++;
@@ -89,7 +90,8 @@ int pidenvid_append(PidEnvID *penvid, char *line)
 				return PIDENVID_OVERSIZED;
 			}
 
-			strcpy(penvid->ancestors[i].envid, line);
+			strncpy(penvid->ancestors[i].envid, line, PIDENVID_ENVID_SIZE);
+			penvid->ancestors[i].envid[PIDENVID_ENVID_SIZE-1] = '\0';
 			penvid->ancestors[i].active = TRUE;
 
 			return PIDENVID_OK;
@@ -168,7 +170,8 @@ int pidenvid_match(PidEnvID *left, PidEnvID *right)
 			}
 			
 			/* this must be an active entry, so check it */
-			if (strcmp(left->ancestors[l].envid, right->ancestors[r].envid) == 0) {
+			if (strncmp(left->ancestors[l].envid, right->ancestors[r].envid,
+						PIDENVID_ENVID_SIZE) == 0) {
 				count++;
 			}
 		}
@@ -219,7 +222,8 @@ void pidenvid_copy(PidEnvID *to, PidEnvID *from)
 	for (i = 0; i < from->num; i++) {
 		to->ancestors[i].active = from->ancestors[i].active;
 		if (from->ancestors[i].active == TRUE) {
-			strcpy(to->ancestors[i].envid, from->ancestors[i].envid);
+			strncpy(to->ancestors[i].envid, from->ancestors[i].envid, PIDENVID_ENVID_SIZE);
+			to->ancestors[i].envid[PIDENVID_ENVID_SIZE-1] = '\0';
 		}
 	}
 }

@@ -26,6 +26,9 @@
 #include "fileindex2.h"
 #include "gen_lib.h" 
 
+#include <iostream>
+using namespace std;
+
 FileIndex::FileIndex()
 {
   int index;

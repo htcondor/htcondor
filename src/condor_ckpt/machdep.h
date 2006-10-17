@@ -63,7 +63,13 @@
 #elif defined(LINUX)
 
 	extern "C" int brk( void *);
+
+#	if defined(I386)
 	extern "C" void *sbrk( int );
+#	elif defined(X86_86)
+	extern "C" void *sbrk( long int );
+#	endif 
+
 	typedef void (*SIG_HANDLER)( int );
 #	define SETJMP setjmp
 #	define LONGJMP longjmp

@@ -1,0 +1,130 @@
+#! /usr/bin/env perl
+use CondorTest;
+use CondorPersonal;
+use Cwd;
+
+CondorPersonal::DebugOff();
+Condor::DebugOff();
+
+$myparamname = "x_param.protocol-pw";
+$postsrc_template = "x_secpw_configpostsrc.template";
+$postsrc = "x_secpw_configpostsrc";
+
+$testname = 'lib_auth_protocol-pw - Security Protocol PASSWORD Authentication Test';
+$corename = "lib_auth_protocol-pw";
+$mytestnegotiation_result = "yes";
+$mycmdfile = "lib_auth_protocol-pw.cmd";
+
+
+# where am I running
+$dummyhost = "gamgee.cs.wisc.edu";
+$currenthost = `hostname`;
+chomp($currenthost);
+
+system("date");
+print "Dummyhost was $dummyhost and really running on $currenthost\n";
+
+$pid = $$;
+$mypid = $pid;
+$mytopdir = getcwd();
+$mypwfile = $mytopdir . "/x_auth_poolpasswd";
+$myvariation = 1;
+$mysaveme = $corename . ".saveme";
+system("mkdir $mysaveme");
+
+#print "$line\n";
+$mysubmitnm = $corename . $mypid . ".cmd";
+$mysubmitnmout = $corename . $mypid . ".cmd.out";
+$mysubmitnmlog = $corename . $mypid . ".log";
+$mysubmitnmout = $corename . $mypid . ".log";
+$mycorenm = $corename . ".cmd";
+$mycorenmout = $corename . ".cmd.out";
+$mycorenmlog = $corename . ".log";
+
+print "Master PID is $mypid\n";
+print "Master PID submit file is $mysubmitnm\n";
+
+# Edit submit file to submit to scheduler at securitypool (side b) schedd.
+my $line;
+open(CSUB,">$postsrc") || die "Can't open new submit file $myparamname: $!\n";
+open(TPLATE,"<$postsrc_template") || die "Can't open param template $postsrc_template: $!\n";
+while(<TPLATE>)
+{
+	chomp($_);
+	$line = $_;
+	if( $line =~ /^\s*SEC_PASSWORD_FILE\s*=\s*.*$/ )
+	{
+		print CSUB "SEC_PASSWORD_FILE = $mypwfile\n";
+	}
+	else
+	{
+		print CSUB "$line\n";
+	}
+}
+close(TPLATE);
+close(CSUB);
+
+#my $configsec = CondorPersonal::DebugOn();
+my $configsec = CondorPersonal::StartCondor($myparamname ,"protocol", $mypid);
+my @securitypool = split /:/, $configsec;
+my $secconfig = shift @securitypool;
+my $secport = shift @securitypool;
+
+print "---security config is $secconfig and securitypool port is $secport---\n";
+
+
+$ENV{CONDOR_CONFIG} = $secconfig;
+
+# we pre- seeded the password file.....
+
+#my @pwarray;
+#my $status = 1;
+#my $passwd = "foobar2";
+#my $cmd = "condor_store_cred -c -password $passwd add";
+#$status = CondorTest::runCondorTool($cmd,\@pwarray,2);
+#if(!$status)
+#{
+	#print "Test failure due to Condor Tool Failure<$cmd>\n";
+#}
+
+# submit into local schedd (side a)
+
+my $result = system("./x_lib_auth_protocol.pl $mypid \"protocol\" $mytestnegotiation_result $mycmdfile");
+print "Result of crafted lib_auth_protocol job is  $result\n";
+
+system("cp -r $mypid $mysaveme");
+system("cp *$corename* $mysaveme");
+
+if( -e "$mysubmitnm" )
+{
+	system("cp $mysubmitnm $mycorenm");
+}
+
+if( -e "$mysubmitnmout" )
+{
+	system("cp $mysubmitnmout $mycorenmout");
+}
+
+if( -e "$mysubmitnmlog" )
+{
+	system("cp $mysubmitnmlog $mycorenmlog");
+}
+
+# At this point we have a pool which is doing FS or PASSWORD authenticating
+# which let us store a pool password. Now we remove FS as an option forcing
+# only PASSWORD authenticating daemon to daemon and restart....
+
+# Turn off condor
+
+my @adarray;
+my $status = 1;
+$status = 1;
+my $cmd = "condor_off -master";
+$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+if(!$status)
+{
+	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	exit(1)
+}
+
+exit(0);

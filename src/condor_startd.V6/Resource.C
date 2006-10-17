@@ -1140,6 +1140,10 @@ Resource::eval_expr( const char* expr_name, bool fatal, bool check_vanilla )
 	}
 	if( (r_classad->EvalBool(expr_name, r_cur->ad(), tmp) ) == 0 ) { 
 		if( fatal ) {
+			dprintf(D_ALWAYS, "Can't evaluate %s in the context of following ads\n", expr_name );
+			r_classad->dPrint(D_ALWAYS);
+			dprintf(D_ALWAYS, "=============================\n");
+			r_cur->ad()->dPrint(D_ALWAYS);
 			EXCEPT( "Can't evaluate %s", expr_name );
 		} else {
 				// anything else for here?

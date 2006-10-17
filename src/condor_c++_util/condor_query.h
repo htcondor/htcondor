@@ -24,6 +24,7 @@
 #define __CONDOR_QUERY_H__
 
 #include "condor_common.h"
+#include <iosfwd>
 #include "condor_classad.h"
 #include "list.h"
 #include "simplelist.h"
@@ -140,7 +141,7 @@ class CondorQuery
 	QueryResult getQueryAd (ClassAd &);
 
 	// overloaded operators
-	friend ostream &operator<< (ostream &, CondorQuery &); 	// display
+	friend std::ostream &operator<< (std::ostream &, CondorQuery &); 	// display
 	CondorQuery    &operator=  (CondorQuery &);				// assignment
 
   private:

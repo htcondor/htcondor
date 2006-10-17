@@ -1484,7 +1484,7 @@ Sock::endpoint_ip_int()
 }
 
 
-char *
+const char *
 Sock::endpoint_ip_str()
 {
 		// We need to recompute this each time because _who might have changed.

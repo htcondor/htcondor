@@ -110,7 +110,7 @@ int CondorFileRemote::fcntl( int cmd, int arg )
 	}
 }
 
-int CondorFileRemote::ioctl( int cmd, int arg )
+int CondorFileRemote::ioctl( int cmd, long arg )
 {
 	_condor_warning(CONDOR_WARNING_KIND_UNSUP,"ioctl(%d,%d,...) is not supported for remote files.",fd,cmd);
 	errno = EINVAL;

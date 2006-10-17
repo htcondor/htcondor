@@ -3,7 +3,15 @@
 /* XXX Not really the right thing to do here... */
 #define	ArchOptimizeFlag
 
-#define IS_CLIPPED YES
+/* All syscalls are 64 bits for this paltform, they can just take 32 bit
+arguments. XXX figure out how I'm going to model this parameter... */
+/*#define NEEDS_64BIT_SYSCALLS            YES*/
+
+/* due to thaineryconcerning void* and int, don't compile this in for now... */
+#undef DOES_COMPRESS_CKPT
+#define DOES_COMPRESS_CKPT	NO
+
+#define IS_CLIPPED NO
 
 /* These are turned off because globus 2.4.3 and gpt 3.0 don't compile on 
 	the opteron. gpt 3.2 will compile, though. It looks like gt4 will

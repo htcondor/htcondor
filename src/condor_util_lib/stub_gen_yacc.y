@@ -428,7 +428,7 @@ param
 		{ $3->is_map_name_two = TRUE; $$ = $3; }
 	| ELLIPSIS
 		{
-		$$ = mk_param_node("int","lastarg",0,0,0,0,0,0,0,1);
+		$$ = mk_param_node("long","lastarg",0,0,0,0,0,0,0,1);
 		IsVararg = TRUE;
 		}
 	;
@@ -1597,13 +1597,14 @@ output_switch( struct node *n )
 	printf( "\terrno = 0;\n\n" );
 
 	/* Notice this: The vararg generator only does enough to
-	   generate a third arg of size int.  */
+	   generate a third arg of size long.  Unfortunately, we're assuming
+	   that the size of a long can always contain a pointer. */
 
 	if( n->is_vararg ) {
-		printf("\tint lastarg;\n");
+		printf("\tlong lastarg;\n");
 		printf("\tva_list args;\n");
 		printf("\tva_start(args,%s);\n",n->param_list->next->next->id);
-		printf("\tlastarg = va_arg(args,int);\n");
+		printf("\tlastarg = va_arg(args,long);\n");
 		printf("\tva_end(args);\n");
 		printf("\n");
 	}

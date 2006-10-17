@@ -23,6 +23,7 @@
 
 #include "condor_common.h"
 
+
 /*
 ** free_fs_blocks: reports the number of kbytes free for the filesystem where
 ** given filename resides.

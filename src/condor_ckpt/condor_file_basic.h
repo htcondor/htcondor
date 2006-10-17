@@ -41,7 +41,7 @@ public:
 	virtual int open( const char *url, int flags, int mode );
 	virtual int close();
 
-	virtual int ioctl( int cmd, int arg );
+	virtual int ioctl( int cmd, long arg );
 	virtual int fcntl( int cmd, int arg );
 
 	virtual int ftruncate( size_t s );
