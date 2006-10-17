@@ -1562,7 +1562,7 @@ and the type of grid system is one of \SubmitCmd{gt2}, \SubmitCmd{gt3},
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\emph{COMMANDS FOR JAVA, SCHEDULER, and PVM UNIVERSES}
+\emph{COMMANDS FOR PARALLEL, JAVA, SCHEDULER, and PVM UNIVERSES}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{description} 
 
@@ -1621,7 +1621,8 @@ If the job is started with fewer than \Arg{max} machines, the job
 will be notified via a usual PvmHostAdd notification as additional
 hosts come on line.
 
-For the MPI universe, a single value (\Arg{max}) is required.
+For the parallel (and therefore, the mpi) universe,
+a single value (\Arg{max}) is required.
 It is neither a maximum or minimum, but 
 the number of machines to be dedicated toward running the job.
 

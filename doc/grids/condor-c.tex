@@ -300,6 +300,24 @@ remote machine.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Condor-C-CrossPlatform}
+Condor-C Jobs Between Differing Platforms}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Condor-C jobs given to a remote machine running Windows
+must specify the Windows domain of the remote machine.
+This is accomplished by defining a ClassAd attribute for the job.
+Where the Windows domain is different at the submit machine
+from the remote machine, the submit description file 
+defines the Windows domain of the remote machine with
+\begin{verbatim}
+  +remote_NTDomain = "DomainAtRemoteMachine"
+\end{verbatim}
+
+A Windows machine not part of a domain
+defines the Windows domain as the machine name.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %\subsubsection{\label{sec:Condor-C-Hops}Multiple Hops for Condor-C Jobs}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
@@ -318,9 +336,6 @@ The following is a list of known limitations with Condor-C:
   \Expr{CLAIMTOBE}, such as \Expr{GSI} and \Expr{KERBEROS}, are 
   untested, and may not yet work.}
 
-  \item{Platforms that run a Windows operating system
-are not yet supported as either a submit or remote execute
-machine.}
 \end{enumerate}
 
 \index{Condor-C|)}

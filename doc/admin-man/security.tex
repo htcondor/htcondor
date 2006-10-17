@@ -1302,6 +1302,17 @@ UID that Condor is started as.  On Windows, the same secure password
 store that is used for user passwords will be used for the pool
 password (see section \ref{sec:windows-sps}).
 
+It is important to note that the pool password, as a widely
+distributed secret, is only as safe as the ``weakest link'' in terms
+of the machines on which it is stored. If a malicious user were to
+discover the pool password, they could act as a trusted component of
+Condor. Attack possibilities include things as bad as telling Condor
+to execute arbitrary code on behalf of any user on any execute
+machine. When considering password authentication, it is important to
+ensure that all machines that will store the pool password (and all
+users that have \Login{root} or \Login{Administrator} access on those
+machines) are trusted.
+
 Storing the pool password is done via the \Opt{-c} option to
 \Condor{store\_cred}. Running
 \begin{verbatim}

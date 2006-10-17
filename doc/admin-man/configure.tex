@@ -2178,14 +2178,6 @@ These macros control the \Condor{master}.
   fast shutdown procedure before the \Condor{master} kills them
   outright.  It is defined in seconds and defaults to 300 (5 minutes).
 
-\item[\Macro{KILL\_ORPHANS\_ON\_STARTUP}]
-  \label{param:KillOrphansOnStartup} This macro
-   determines if the master process should try to locate and hard
-   kill orphaned processes from other instantiations of Condor. An
-   administrative email is sent detailing the pids (along with their
-   command lines) which had been killed. This entry is defined with a
-   boolean value and defaults to TRUE.
-
 \item[\Macro{MASTER\_BACKOFF\_CONSTANT} and
   \Macro{MASTER\_<name>\_BACKOFF\_CONSTANT}]
   \label{param:MasterBackoffConstant}
@@ -2248,7 +2240,6 @@ These macros control the \Condor{master}.
   form of \MacroNI{MASTER\_RECOVER\_FACTOR}; if this daemon-specific
   macro is not defined for a specific daemon, the non-daemon-specific
   value will used.
-
 
 \end{description}
 
