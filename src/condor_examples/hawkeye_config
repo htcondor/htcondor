@@ -65,6 +65,11 @@ LOCAL_DIR		= $(HAWKEYE)
 ##  Where is the machine-specific local config file for each host?
 #LOCAL_CONFIG_FILE	= $(LOCAL_DIR)/etc/hawkeye_config.local
 
+## If the local config file is not present, is it an error?
+## WARNING: This is a potential security issue. 
+## If not specificed, te default is True
+#REQUIRE_LOCAL_CONFIG_FILE = TRUE
+
 ##--------------------------------------------------------------------
 ##  Mail parameters:
 ##--------------------------------------------------------------------
@@ -80,16 +85,21 @@ MAIL			= /usr/bin/mail
 ##  Network domain parameters:
 ##--------------------------------------------------------------------
 ##  Internet domain of machines sharing a common UID space.  If your
-##  machines don't share a common UID space, use the second entry
-##  which specifies that each machine has its own UID space.
-UID_DOMAIN		= cs.wisc.edu
-#UID_DOMAIN		= $(FULL_HOSTNAME)
+##  machines don't share a common UID space, set it to 
+##  UID_DOMAIN = $(FULL_HOSTNAME)
+##  to specify that each machine has its own UID space.
+UID_DOMAIN		= your.domain
 
 ##  Internet domain of machines sharing a common file system.
-##  If your machines don't use a network file system, use the second
-##  entry which specifies that each machine has its own file system. 
-FILESYSTEM_DOMAIN	= cs.wisc.edu
-#FILESYSTEM_DOMAIN	= $(FULL_HOSTNAME)
+##  If your machines don't use a network file system, set it to
+##  FILESYSTEM_DOMAIN = $(FULL_HOSTNAME)
+##  to specify that each machine has its own file system. 
+FILESYSTEM_DOMAIN	= your.domain
+
+##  This macro is used to specify a short description of your pool. 
+##  It should be about 20 characters long. For example, the name of 
+##  the UW-Madison Computer Science Condor Pool is ``UW-Madison CS''.
+COLLECTOR_NAME 		= My Pool
 
 
 ######################################################################
@@ -107,6 +117,12 @@ FILESYSTEM_DOMAIN	= cs.wisc.edu
 ##  (it is generally safe to leave these untouched) 
 ######################################################################
 ######################################################################
+
+##
+##  The user/group ID <uid>.<gid> of the "Condor" user. 
+##  (this can also be specified in the environment)
+##  Note: the CONDOR_IDS setting is ignored on Win32 platforms
+#HAWKEYE_IDS=x.x
 
 ##--------------------------------------------------------------------
 ##  Host/IP access levels
@@ -154,9 +170,13 @@ HOSTALLOW_READ = *
 ##  also be granted READ access.  Granting WRITE access below does
 ##  not also automatically grant READ access; you must change
 ##  HOSTALLOW_READ above as well.
-##  If you leave it as it is, it will be unspecified, and effectively
-##  it will be allowing anyone to write to your pool.
-HOSTALLOW_WRITE = *
+##
+##  You must set this to something else before Condor will run.
+##  This most simple option is:
+##    HOSTALLOW_WRITE = *
+##  but note that this will allow anyone to submit jobs or add
+##  machines to your pool and is serious security risk.
+HOSTALLOW_WRITE = YOU_MUST_CHANGE_THIS_INVALID_CONDOR_CONFIGURATION_VALUE
 #HOSTALLOW_WRITE = *.your.domain, your-friend's-machine.other.domain
 #HOSTDENY_WRITE = bad-machine.your.domain
 
@@ -195,6 +215,25 @@ HOSTALLOW_READ_STARTD     = $(HOSTALLOW_READ), $(FLOCK_FROM)
 ##  default values for any of these settings.  If they are not
 ##  defined, no attributes can be set with hawkeye_config_val.
 
+## Do you want to allow condor_config_val -rset to work at all?
+## This feature is disabled by default, so to enable, you must
+## uncomment the following setting and change the value to "True". 
+## Note: changing this requires a restart not just a reconfig.
+#ENABLE_RUNTIME_CONFIG = False
+
+## Do you want to allow condor_config_val -set to work at all?
+## This feature is disabled by default, so to enable, you must
+## uncomment the following setting and change the value to "True". 
+## Note: changing this requires a restart not just a reconfig.
+#ENABLE_PERSISTENT_CONFIG = False
+
+## Directory where daemons should write persistent config files (used
+## to support condor_config_val -set).  This directory should *ONLY*
+## be writable by root (or the user the Condor daemons are running as
+## if non-root).  There is no default, administrators must define this.
+## Note: changing this requires a restart not just a reconfig.
+#PERSISTENT_CONFIG_DIR = /full/path/to/root-only/local/directory
+
 ##  Attributes that can be set by hosts with "CONFIG" permission (as
 ##  defined with HOSTALLOW_CONFIG and HOSTDENY_CONFIG above).
 ##  The commented-out value here was the default behavior of Hawkeye
@@ -222,6 +261,7 @@ HOSTALLOW_READ_STARTD     = $(HOSTALLOW_READ), $(FLOCK_FROM)
 ##  changed in the hawkeye_startd's configuration by hosts with OWNER
 ##  permission, you would use:
 #STARTD_SETTABLE_ATTRS_OWNER = your_custom_attribute_name
+
 
 ##--------------------------------------------------------------------
 ##  Network filesystem parameters:
@@ -261,6 +301,15 @@ LOCK		= $(LOG)
 ##  the global config file (not the LOCAL_CONFIG_FILE from above). 
 #DEFAULT_DOMAIN_NAME = your.domain.name
 
+##  If you don't have DNS set up, Condor will normally fail in many
+##  places because it can't resolve hostnames to IP addresses and
+##  vice-versa. If you enable this option, Condor will use
+##  pseudo-hostnames constructed from a machine's IP address and the
+##  DEFAULT_DOMAIN_NAME. Both NO_DNS and DEFAULT_DOMAIN must set in
+##  your top-level config file for this mode of operation to work
+##  properly.
+#NO_DNS = True
+
 ##  Hawkeye can be told whether or not you want the Hawkeye daemons to
 ##  create a core file if something really bad happens.  This just
 ##  sets the resource limit for the size of a core file.  By default,
@@ -276,21 +325,46 @@ LOCK		= $(LOG)
 ##--------------------------------------------------------------------
 ##  Settings that control the daemon's debugging output:
 ##--------------------------------------------------------------------
+
+##
+## The flags given in ALL_DEBUG are shared between all daemons.
+##
+
+ALL_DEBUG               =
+
 MAX_COLLECTOR_LOG	= 1000000
-COLLECTOR_DEBUG		= 
+COLLECTOR_DEBUG		=
+
+MAX_KBDD_LOG		= 1000000
+KBDD_DEBUG		=
+
+MAX_NEGOTIATOR_LOG	= 1000000
+NEGOTIATOR_DEBUG	= D_MATCH
+MAX_NEGOTIATOR_MATCH_LOG = 1000000
+
+MAX_SCHEDD_LOG		= 1000000
+SCHEDD_DEBUG		= D_COMMAND D_PID
+
+MAX_SHADOW_LOG		= 1000000
+SHADOW_DEBUG		=
 
 MAX_STARTD_LOG		= 1000000
-STARTD_DEBUG		= D_COMMAND D_FULLDEBUG D_JOB D_DAEMONCORE
-STARTD_DEBUG		= D_COMMAND D_FULLDEBUG D_JOB
+STARTD_DEBUG		= D_COMMAND D_JOB
 
 MAX_STARTER_LOG		= 1000000
 STARTER_DEBUG		= D_NODATE
 
 MAX_MASTER_LOG		= 1000000
-MASTER_DEBUG		= 
+MASTER_DEBUG		= D_COMMAND
 ##  When the master starts up, should it truncate it's log file?
 #TRUNC_MASTER_LOG_ON_OPEN        = False
 
+## The daemons touch their log file periodically, even when they have
+## nothing to write. When a daemon starts up, it prints the last time
+## the log file was modified. This lets you estimate when a previous
+## instance of a daemon stopped running. This paramete controls often
+## the daemons touch the file (in seconds).
+TOUCH_LOG_INTERVAL = 60
 
 ######################################################################
 ######################################################################
@@ -356,9 +430,9 @@ SPOOL		= $(LOCAL_DIR)/spool
 EXECUTE		= $(LOCAL_DIR)/execute
 BIN		= $(RELEASE_DIR)/bin
 LIB		= $(RELEASE_DIR)/lib
+INCLUDE		= $(RELEASE_DIR)/include
 SBIN		= $(RELEASE_DIR)/sbin
 LIBEXEC		= $(RELEASE_DIR)/libexec
-HISTORY		= $(SPOOL)/history
 
 ##  Log files
 COLLECTOR_LOG	= $(LOG)/CollectorLog
@@ -366,10 +440,11 @@ MASTER_LOG	= $(LOG)/MasterLog
 STARTD_LOG	= $(LOG)/StartLog
 
 
-##  In most cases, your hawkeye_collector and hawkeye_negotiator are 
-##  going to run on the same machine.  If for some reason, this isn't 
-##  the case, here's where you'd change it:
-COLLECTOR_HOST	= $(HAWKEYE_HOST)
+##  This setting primarily allows you to change the port that the
+##  collector is listening on.  By default, the collector uses port
+##  9618, but you can set the port with a ":port", such as:
+##  COLLECTOR_HOST = $(CONDOR_HOST):1234
+COLLECTOR_HOST  = $(CONDOR_HOST)
 
 ##  How long are you willing to let daemons try their graceful
 ##  shutdown methods before they do a hard shutdown? (30 minutes)
@@ -403,6 +478,31 @@ RESERVED_DISK		= 5
 ##  user@UID_DOMAIN won't work.
 #EMAIL_DOMAIN = $(FULL_HOSTNAME)
 
+##  If your site needs to use TCP updates to the collector, instead of
+##  UDP, you can enable this feature.  HOWEVER, WE DO NOT RECOMMEND
+##  THIS FOR MOST SITES!  In general, the only sites that might want
+##  this feature are pools made up of machines connected via a
+##  wide-area network where UDP packets are frequently or always
+##  dropped.  If you enable this feature, you *MUST* turn on the
+##  COLLECTOR_SOCKET_CACHE_SIZE setting at your collector, and each
+##  entry in the socket cache uses another file descriptor.  If not
+##  defined, this feature is disabled by default.
+#UPDATE_COLLECTOR_WITH_TCP = True
+
+## HIGHPORT and LOWPORT let you set the range of ports that Condor
+## will use. This may be useful if you are behind a firewall. By
+## default, Condor uses port 9618 for the collector, 9614 for the
+## negotiator, and system-assigned (apparently random) ports for
+## everything else. HIGHPORT and LOWPORT only affect these
+## system-assigned ports, but will restrict them to the range you
+## specify here. If you want to change the well-known ports for the
+## collector or negotiator, see COLLECTOR_HOST or NEGOTIATOR_HOST.
+## Note that both LOWPORT and HIGHPORT must be at least 1024 if you
+## are not starting your daemons as root.  You may also specify
+## different port ranges for incoming and outgoing connections by
+## using IN_HIGHPORT/IN_LOWPORT and OUT_HIGHPORT/OUT_LOWPORT.
+#HIGHPORT = 9700 
+#LOWPORT = 9600
 
 ######################################################################
 ##  Daemon-specific settings:
@@ -415,8 +515,9 @@ RESERVED_DISK		= 5
 ##  Daemons you want the master to keep running for you:
 DAEMON_LIST			= MASTER, STARTD, COLLECTOR
 
-##  Which daemons use the Hawkeye DaemonCore library (i.e., not the
+##  Which daemons use the Condor DaemonCore library (i.e., not the
 ##  checkpoint server or custom user daemons)?
+##  Note: Daemons in this list cannot use a static command port.
 #DC_DAEMON_LIST = \
 #MASTER, STARTD, SCHEDD, KBDD, COLLECTOR, NEGOTIATOR, EVENTD, \
 #VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, HAWKEYE, CREDD, HAD, \
@@ -488,7 +589,11 @@ MASTER_ADDRESS_FILE = $(LOG)/.master_address
 ##  hawkeye_startd
 ##--------------------------------------------------------------------
 ##  Where are the various hawkeye_starter binaries installed?
-STARTER_LIST		=
+STARTER_LIST = STARTER, STARTER_PVM, STARTER_STANDARD
+STARTER			= $(SBIN)/condor_starter
+STARTER_PVM		= $(SBIN)/condor_starter.pvm
+STARTER_STANDARD	= $(SBIN)/condor_starter.std
+STARTER_LOCAL		= $(SBIN)/condor_starter
 
 ##  When the startd starts up, it can place it's address (IP and port)
 ##  into a file.  This way, tools running on the local machine don't
@@ -585,10 +690,8 @@ NUM_CPUS = 1
 ##  advertises as available.
 #RESERVED_MEMORY = 0
 
-
-##--------------------------------------------------------------------
-##  Hawkeye module parameters:
-##--------------------------------------------------------------------
-MODULES = $(HAWKEYE)/modules
-STARTD_CRON_NAME = Hawkeye
-HAWKEYE_JOBS =
+### Local Variables: ***
+### mode:shell-script ***
+### comment-column:0 ***
+### comment-start: "# "  ***
+### End: ***
