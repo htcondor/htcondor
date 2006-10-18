@@ -113,6 +113,7 @@ extern char* Spool;
 extern char * Name;
 static char * NameInEnv = NULL;
 extern char * JobHistoryFileName;
+extern char * PerJobHistoryDir;
 extern char * mySubSystem;
 
 extern bool        DoHistoryRotation; 
@@ -9422,6 +9423,24 @@ Scheduler::Init()
     } else {
         dprintf(D_ALWAYS, "WARNING: History file rotation is disabled and it "
                 "may grownq very large.\n");
+    }
+
+    if (PerJobHistoryDir != NULL) free(PerJobHistoryDir);
+    if ((PerJobHistoryDir = param("PER_JOB_HISTORY_DIR")) != NULL) {
+        StatInfo si(PerJobHistoryDir);
+        if (!si.IsDirectory()) {
+            dprintf(D_ALWAYS | D_FAILURE,
+                    "invalid PER_JOB_HISTORY_DIR (%s): must point to a "
+                    "valid directory; disabling per-job history output\n",
+                    PerJobHistoryDir);
+            free(PerJobHistoryDir);
+            PerJobHistoryDir = NULL;
+        }
+        else {
+            dprintf(D_ALWAYS,
+                    "Logging per-job history files to: %s\n",
+                    PerJobHistoryDir);
+        }
     }
 
 	 tmp = param( "SCHEDD_INTERVAL" );

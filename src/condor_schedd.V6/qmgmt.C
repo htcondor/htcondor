@@ -59,6 +59,7 @@ extern char* JobHistoryFileName;
 extern bool        DoHistoryRotation;
 extern filesize_t  MaxHistoryFileSize;
 extern int         NumberBackupHistoryFiles;
+extern char*       PerJobHistoryDir;
 extern Scheduler scheduler;
 extern DedicatedScheduler dedicated_scheduler;
 extern void Scanner(char*&, Token&);	// in classad library
@@ -106,6 +107,8 @@ static int MaybeDeleteOneHistoryBackup(void);
 static bool IsHistoryFilename(const char *filename, time_t *backup_time);
 static void RotateHistory(void);
 static int findHistoryOffset(FILE *LogFile);
+
+static void WritePerJobHistoryFile(ClassAd*);
 
 // Create a hash table which, given a cluster id, tells how
 // many procs are in the cluster
@@ -1479,8 +1482,11 @@ int DestroyProc(int cluster_id, int proc_id)
 		return DESTROYPROC_SUCCESS;
 	}
 
-    // Append to history file
-    AppendHistory(ad);
+	// Append to history file
+	AppendHistory(ad);
+
+	// Write a per-job history file (if PER_JOB_HISTORY_DIR param is set)
+	WritePerJobHistoryFile(ad);
 
 //	log = new LogDestroyClassAd(key);
 //	JobQueue->AppendLog(log);
@@ -1564,7 +1570,10 @@ int DestroyCluster(int cluster_id, const char* reason)
 				}
 
 				// Apend to history file
-                AppendHistory(ad);
+				AppendHistory(ad);
+
+				// Write a per-job history file (if PER_JOB_HISTORY_DIR param is set)
+				WritePerJobHistoryFile(ad);
 
 //				log = new LogDestroyClassAd(key);
 //				JobQueue->AppendLog(log);
@@ -3917,6 +3926,51 @@ static int findHistoryOffset(FILE *LogFile)
 	
     fseek(LogFile, 0, SEEK_END);
     return offset;
+}
+
+static void WritePerJobHistoryFile(ClassAd* ad)
+{
+	if (PerJobHistoryDir == NULL) {
+		return;
+	}
+
+	// construct the name (use cluster.proc)
+	int cluster, proc;
+	if (!ad->LookupInteger(ATTR_CLUSTER_ID, cluster)) {
+		dprintf(D_ALWAYS | D_FAILURE,
+		        "not writing per-job history file: no cluster id in ad\n");
+		return;
+	}
+	if (!ad->LookupInteger(ATTR_PROC_ID, proc)) {
+		dprintf(D_ALWAYS | D_FAILURE,
+		        "not writing per-job history file: no proc id in ad\n");
+		return;
+	}
+	MyString file_name;
+	file_name.sprintf("%s/history.%d.%d", PerJobHistoryDir, cluster, proc);
+
+	// write out the file
+	int fd = open(file_name.Value(), O_WRONLY | O_CREAT | O_EXCL, 0644);
+	if (fd == -1) {
+		dprintf(D_ALWAYS | D_FAILURE,
+		        "error %d (%s) opening per-job history file for job %d.%d\n",
+		        errno, strerror(errno), cluster, proc);
+		return;
+	}
+	FILE* fp = fdopen(fd, "w");
+	if (fp == NULL) {
+		dprintf(D_ALWAYS | D_FAILURE,
+		        "error %d (%s) opening file stream for per-job history for job %d.%d\n",
+		        errno, strerror(errno), cluster, proc);
+		close(fd);
+		return;
+	}
+	if (!ad->fPrint(fp)) {
+		dprintf(D_ALWAYS | D_FAILURE,
+		        "error writing per-job history file for job %d.%d\n",
+		        cluster, proc);
+	}
+	fclose(fp);
 }
 
 void

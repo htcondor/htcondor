@@ -58,6 +58,7 @@ extern  int     clear_autocluster_id( ClassAd *job );
 // global variables to control the daemon's running and logging
 char*		Spool = NULL;							// spool directory
 char* 		JobHistoryFileName = NULL;
+char*		PerJobHistoryDir = NULL;
 char*		Name = NULL;
 char*		mySubSystem = "SCHEDD";
 char*		X509Directory = NULL;
