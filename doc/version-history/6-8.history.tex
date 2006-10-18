@@ -60,6 +60,11 @@ RSL string, causing the job to fail.
 delegate the wrong credential when refreshing the credentials for a
 grid-type gt4 grid universe job.
 
+\item The \condor{gridmanager} could get into a state where it would no
+longer start up Globus jobmanagers for grid-type gt2 grid universe jobs
+if previous requests failed due to connection errors. This bug has been
+fixed.
+
 \end{itemize}
 
 \noindent Known Bugs:
