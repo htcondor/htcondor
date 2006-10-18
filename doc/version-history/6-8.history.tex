@@ -56,6 +56,10 @@ grid universe jobs. If the job's standard output or error wasn't specified
 in the job ad, the \condor{gridmanager} would create an improper GRAM
 RSL string, causing the job to fail.
 
+\item Fixed a bug in the \condor{gridmanager} that could cause it to
+delegate the wrong credential when refreshing the credentials for a
+grid-type gt4 grid universe job.
+
 \end{itemize}
 
 \noindent Known Bugs:
