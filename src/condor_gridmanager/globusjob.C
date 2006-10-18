@@ -1190,6 +1190,9 @@ int GlobusJob::doEvaluateState()
 				// Once RequestSubmit() is called at least once, you must
 				// SubmitComplete() or CancelSubmit() once you're done with
 				// the request call
+				// Also, if you call SubmitComplete() but don't have a
+				// running jobmanager (due to a failure), you must call
+				// JMComplete() as well.
 				if ( myResource->RequestSubmit(this) == false ||
 					 myResource->RequestJM(this) == false ) {
 					break;
@@ -1216,6 +1219,7 @@ int GlobusJob::doEvaluateState()
 				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONNECTION_FAILED ||
 					 //rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
 					 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
+					myResource->JMComplete( this );
 					connect_failure_gatekeeper = true;
 					break;
 				}
@@ -1230,6 +1234,7 @@ int GlobusJob::doEvaluateState()
 					// Previously this supported GRAM 1.0
 					dprintf(D_ALWAYS, "(%d.%d) Unexpected remote response.  GRAM %s is now required.\n", procID.cluster, procID.proc, MIN_SUPPORTED_GRAM_V_STRING);
 					errorString.sprintf("Unexpected remote response.  Remote server must speak GRAM %s", MIN_SUPPORTED_GRAM_V_STRING);
+					myResource->JMComplete( this );
 					gmState = GM_HOLD;
 				} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_WAITING_FOR_COMMIT ) {
 					if ( jmVersion == GRAM_V_UNKNOWN ) {
@@ -1248,6 +1253,7 @@ int GlobusJob::doEvaluateState()
 					// Talk to Alan about it.
 					dprintf(D_ALWAYS, "(%d.%d) Unexpected remote response.  GRAM %s is now required.\n", procID.cluster, procID.proc, MIN_SUPPORTED_GRAM_V_STRING);
 					errorString.sprintf("Unexpected remote response.  Remote server must speak GRAM %s", MIN_SUPPORTED_GRAM_V_STRING);
+					myResource->JMComplete( this );
 					gmState = GM_HOLD;
 				} else {
 					// unhandled error
@@ -1668,6 +1674,9 @@ int GlobusJob::doEvaluateState()
 				// Once RequestSubmit() is called at least once, you must
 				// call SubmitComplete() or CancelSubmit() once you're done
 				// with the request call
+				// Also, if you call SubmitComplete() but don't have a
+				// running jobmanager (due to a failure), you must call
+				// JMComplete() as well.
 				if ( myResource->RequestSubmit(this) == false ||
 					 myResource->RequestJM(this) == false ) {
 					break;
@@ -1689,6 +1698,7 @@ int GlobusJob::doEvaluateState()
 				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONNECTION_FAILED ||
 					 //rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
 					 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
+					myResource->JMComplete( this );
 					connect_failure_gatekeeper = true;
 					break;
 				}
@@ -1712,6 +1722,7 @@ int GlobusJob::doEvaluateState()
 						// to receive the commit within 5 minutes.  
 						// Don't understand why?  
 						// Ask Todd T <tannenba@cs.wisc.edu>
+					myResource->JMComplete( this );
 					gmState = GM_CLEAR_REQUEST;
 					doResubmit = 1;
 					break;
@@ -1724,6 +1735,7 @@ int GlobusJob::doEvaluateState()
 					// jobmanager to clean up but died before we could
 					// remove the job from the queue. So let's just remove
 					// it now.
+					myResource->JMComplete( this );
 					gmState = GM_DELETE;
 					break;
 				}
@@ -1743,6 +1755,7 @@ int GlobusJob::doEvaluateState()
 							dprintf( D_ALWAYS, "(%d.%d) Found old jobmanager "
 									 "still alive when it should be stopped\n",
 									 procID.cluster, procID.proc );
+							myResource->JMComplete( this );
 							globusError = rc;
 							gmState = GM_CLEAR_REQUEST;
 							break;
@@ -1755,6 +1768,7 @@ int GlobusJob::doEvaluateState()
 									 "still alive, will wait %d seconds for "
 									 "it to stop.\n", procID.cluster,
 									 procID.proc, delay );
+							myResource->JMComplete( this );
 							daemonCore->Reset_Timer( evaluateStateTid, delay );
 							break;
 						}
@@ -1770,6 +1784,7 @@ int GlobusJob::doEvaluateState()
 				}
 				jmShouldBeStoppingTime = 0;
 				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_UNDEFINED_EXE ) {
+					myResource->JMComplete( this );
 					gmState = GM_CLEAR_REQUEST;
 				} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_WAITING_FOR_COMMIT ) {
 					jmProxyExpireTime = jobProxy->expiration_time;
@@ -1786,6 +1801,7 @@ int GlobusJob::doEvaluateState()
 				} else {
 					// unhandled error
 					LOG_GLOBUS_ERROR( "globus_gram_client_job_request()", rc );
+					myResource->JMComplete( this );
 					globusError = rc;
 					gmState = GM_CLEAR_REQUEST;
 				}
