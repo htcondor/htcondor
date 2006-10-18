@@ -30,7 +30,7 @@ $| = 1;
 sub Main( );
 sub PromptUser( $$ );
 sub CreateDir( $ );
-sub DoConfig( $$ );
+sub DoConfig( $$$ );
 sub DoPrefs( $ );
 sub Lookup( $$ );
 
@@ -39,6 +39,8 @@ my $Usage = "$0 tarball TargetDir";
 my $TargetDir = "/home/hawkeye";
 my $TarBall = "";
 my $DataDir = ".";
+my $HostallowWriteLine = 0;
+my $HostallowWriteValue = "";
 
 # Check command line..
 $TarBall = shift( @ARGV ) if ( $#ARGV >= 0 );
@@ -119,12 +121,12 @@ sub Main( )
     # Build up the new config...
     my $ConfigIn = "$TargetDir/install/hawkeye_config.example";
     my $ConfigOut = "$TargetDir/etc/hawkeye_config";
-    DoConfig( $ConfigIn, $ConfigOut );
+    DoConfig( $ConfigIn, $ConfigOut, $MyHostname );
 
     # Build up the new config...
     my $LocalIn = "$TargetDir/install/hawkeye_config.local.example";
     my $LocalOut = "$TargetDir/etc/hawkeye_config.local";
-    DoConfig( $LocalIn, $LocalOut );
+    DoConfig( $LocalIn, $LocalOut, $MyHostname );
 
     # Fix up the ClassAd viewer 'prefs'
     my $Prefs = "$TargetDir/condor/classadView/prefs";
@@ -202,6 +204,10 @@ sub Main( )
 	print "You should set HAWKEYE_CONFIG=$ConfigOut\n"
 	    if (  ( ! exists $ENV{HAWKEYE_CONFIG} ) ||
 		  ( $ENV{HAWKEYE_CONFIG} ne $ConfigOut )  );
+	print "You should review the setting of the HOSTALLOW_WRITE" .
+	    " parameter of your configuration\n".
+	    " $ConfigOut line $HostallowWriteLine\n" .
+	    " Current value is \"$HostallowWriteValue\"\n";
     }
 }
 
@@ -209,10 +215,11 @@ sub Main( )
 # ###############################################
 # Build a custom config file for the user
 # ###############################################
-sub DoConfig( $$ )
+sub DoConfig( $$$ )
 {
     my $ConfigIn = shift;
     my $ConfigOut = shift;
+    my $Hostname = shift;
 
     # Should we overwrite an existing config?
     if ( -f $ConfigOut )
@@ -253,6 +260,17 @@ sub DoConfig( $$ )
 	elsif ( /^DAEMON_LIST\s+=/ )
 	{
 	    print OUT "DAEMON_LIST = $Daemons{List}\n";
+	    next;
+	}
+
+	# HOSTALLOW_WRITE
+	elsif ( /^HOSTALLOW_WRITE\s+=/ )
+	{
+	    my $Domain = $Hostname;
+	    $Domain =~ s/^[^\.]*/\*/;
+	    print OUT "HOSTALLOW_WRITE = $Domain\n";
+	    $HostallowWriteLine = $.;
+	    $HostallowWriteValue = $Domain;
 	    next;
 	}
 
