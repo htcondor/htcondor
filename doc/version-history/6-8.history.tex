@@ -65,6 +65,10 @@ longer start up Globus jobmanagers for grid-type gt2 grid universe jobs
 if previous requests failed due to connection errors. This bug has been
 fixed.
 
+\item The \Condor{c-gahp} now properly exits when the pipe to its parent
+goes away. Before, it would fill its log with large amounts of useless
+messages before exiting several minutes later.
+
 \end{itemize}
 
 \noindent Known Bugs:
