@@ -1134,7 +1134,7 @@ void
 GahpClient::setDelegProxy( Proxy *proxy )
 {
 	ASSERT(server->can_cache_proxies);
-	if ( deleg_proxy != NULL && proxy != deleg_proxy->proxy ) {
+	if ( deleg_proxy != NULL && proxy == deleg_proxy->proxy ) {
 		return;
 	}
 	if ( deleg_proxy != NULL ) {
