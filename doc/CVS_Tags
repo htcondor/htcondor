@@ -8,6 +8,10 @@
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
 
+10/18/06 V6_9_0-root and V6_9_0-branch
+   A branch for the 6.9.0 manual, created from
+   V6_9_0-root on the trunk for doc.
+
 10/17/06 trunk-pre-merge-V6_8-merge-3
         trunk-post-merge-V6_8-merge-3
    The state of the doc directory in the trunk before and after
