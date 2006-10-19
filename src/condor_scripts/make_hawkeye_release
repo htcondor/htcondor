@@ -100,6 +100,15 @@ die "$Temp exists" if ( -d $Temp );
 die "No '$Modules' dir!" if ( ! -d $Modules );
 die "'$Modules' is empty!" if ( ! -f "$Modules/df" );
 
+my $ReleaseTarball;
+{
+    my $TarBall = sprintf( "Hawkeye-%s-%s-%s-%s.tar.gz",
+			   $HawkeyeVersion, $HawkeyeOs,
+			   $HawkeyeCpu, $HawkeyeLib );
+    $ReleaseTarball = "$ReleaseDir/$TarBall";
+}
+die "$ReleaseTarball exists!" if ( -f $ReleaseTarball );
+
 # Make the hawkeye release dir
 print "Creating the Hawkeye directory..\n";
 die "Can't make hawkeye!" if ( system( "./condor_scripts/make_hawkeye" ) );
@@ -189,15 +198,11 @@ do { print "\n-- TestMode -> $Temp; done --\n"; exit; } if ( $TestMode == 2 );
 
 # Now, make the release tarball...
 {
-    my $TarBall = sprintf( "Hawkeye-%s-%s-%s-%s.tar.gz",
-			   $HawkeyeVersion, $HawkeyeOs,
-			   $HawkeyeCpu, $HawkeyeLib );
-    my $TarBallPath = "$ReleaseDir/$TarBall";
-    print "\nCreating release tarball '$TarBallPath'...  ";
-    system( "tar --gzip -C $Temp -cf $TarBallPath ." );
+    print "\nCreating release tarball '$ReleaseTarball'...  ";
+    system( "tar --gzip -C $Temp -cf $ReleaseTarball ." );
     print "Done\n";
-    system( "ls -l $TarBallPath" );
-    system( "tar --gzip -tvf $TarBallPath" );
+    system( "ls -l $ReleaseTarball" );
+    system( "tar --gzip -tvf $ReleaseTarball" );
 }
 
 # Clean up the temp dir
