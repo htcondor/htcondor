@@ -2,6 +2,9 @@
   The start of the 5th development branch for quill++. Started from
   BUILD-V6_9-trunk-2006-10-18
 
+10/18/06 V6_9_0-{root,branch}
+  The branch for 6.9.0 off HEAD from BUILD-V6_9-trunk-2006-10-18.
+
 10/17/06 V6_8-merge-2
   The state of the V6_8-branch for another merge back to the trunk.
   This includes everything from the 6.8.2 release and the amd64 port.
