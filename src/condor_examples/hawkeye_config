@@ -119,9 +119,9 @@ COLLECTOR_NAME 		= My Pool
 ######################################################################
 
 ##
-##  The user/group ID <uid>.<gid> of the "Condor" user. 
+##  The user/group ID <uid>.<gid> of the "Hawkeye" user. 
 ##  (this can also be specified in the environment)
-##  Note: the CONDOR_IDS setting is ignored on Win32 platforms
+##  Note: the HAWKEYE_IDS setting is ignored on Win32 platforms
 #HAWKEYE_IDS=x.x
 
 ##--------------------------------------------------------------------
@@ -171,12 +171,12 @@ HOSTALLOW_READ = *
 ##  not also automatically grant READ access; you must change
 ##  HOSTALLOW_READ above as well.
 ##
-##  You must set this to something else before Condor will run.
+##  You must set this to something else before Hawkeye will run.
 ##  This most simple option is:
 ##    HOSTALLOW_WRITE = *
 ##  but note that this will allow anyone to submit jobs or add
 ##  machines to your pool and is serious security risk.
-HOSTALLOW_WRITE = YOU_MUST_CHANGE_THIS_INVALID_CONDOR_CONFIGURATION_VALUE
+HOSTALLOW_WRITE = YOU_MUST_CHANGE_THIS_INVALID_HAWKEYE_CONFIGURATION_VALUE
 #HOSTALLOW_WRITE = *.your.domain, your-friend's-machine.other.domain
 #HOSTDENY_WRITE = bad-machine.your.domain
 
@@ -207,21 +207,21 @@ HOSTALLOW_READ_STARTD     = $(HOSTALLOW_READ)
 ##  default values for any of these settings.  If they are not
 ##  defined, no attributes can be set with hawkeye_config_val.
 
-## Do you want to allow condor_config_val -rset to work at all?
+## Do you want to allow hawkeye_config_val -rset to work at all?
 ## This feature is disabled by default, so to enable, you must
 ## uncomment the following setting and change the value to "True". 
 ## Note: changing this requires a restart not just a reconfig.
 #ENABLE_RUNTIME_CONFIG = False
 
-## Do you want to allow condor_config_val -set to work at all?
+## Do you want to allow hawkeye_config_val -set to work at all?
 ## This feature is disabled by default, so to enable, you must
 ## uncomment the following setting and change the value to "True". 
 ## Note: changing this requires a restart not just a reconfig.
 #ENABLE_PERSISTENT_CONFIG = False
 
 ## Directory where daemons should write persistent config files (used
-## to support condor_config_val -set).  This directory should *ONLY*
-## be writable by root (or the user the Condor daemons are running as
+## to support hawkeye_config_val -set).  This directory should *ONLY*
+## be writable by root (or the user the Hawkeye daemons are running as
 ## if non-root).  There is no default, administrators must define this.
 ## Note: changing this requires a restart not just a reconfig.
 #PERSISTENT_CONFIG_DIR = /full/path/to/root-only/local/directory
@@ -293,9 +293,9 @@ LOCK		= $(LOG)
 ##  the global config file (not the LOCAL_CONFIG_FILE from above). 
 #DEFAULT_DOMAIN_NAME = your.domain.name
 
-##  If you don't have DNS set up, Condor will normally fail in many
+##  If you don't have DNS set up, Hawkeye will normally fail in many
 ##  places because it can't resolve hostnames to IP addresses and
-##  vice-versa. If you enable this option, Condor will use
+##  vice-versa. If you enable this option, Hawkeye will use
 ##  pseudo-hostnames constructed from a machine's IP address and the
 ##  DEFAULT_DOMAIN_NAME. Both NO_DNS and DEFAULT_DOMAIN must set in
 ##  your top-level config file for this mode of operation to work
@@ -435,8 +435,8 @@ STARTD_LOG	= $(LOG)/StartLog
 ##  This setting primarily allows you to change the port that the
 ##  collector is listening on.  By default, the collector uses port
 ##  9618, but you can set the port with a ":port", such as:
-##  COLLECTOR_HOST = $(CONDOR_HOST):1234
-COLLECTOR_HOST  = $(CONDOR_HOST)
+##  COLLECTOR_HOST = $(HAWKEYE_HOST):1234
+COLLECTOR_HOST  = $(HAWKEYE_HOST)
 
 ##  How long are you willing to let daemons try their graceful
 ##  shutdown methods before they do a hard shutdown? (30 minutes)
@@ -481,9 +481,9 @@ RESERVED_DISK		= 5
 ##  defined, this feature is disabled by default.
 #UPDATE_COLLECTOR_WITH_TCP = True
 
-## HIGHPORT and LOWPORT let you set the range of ports that Condor
+## HIGHPORT and LOWPORT let you set the range of ports that Hawkeye
 ## will use. This may be useful if you are behind a firewall. By
-## default, Condor uses port 9618 for the collector, 9614 for the
+## default, Hawkeye uses port 9618 for the collector, 9614 for the
 ## negotiator, and system-assigned (apparently random) ports for
 ## everything else. HIGHPORT and LOWPORT only affect these
 ## system-assigned ports, but will restrict them to the range you
@@ -507,12 +507,12 @@ RESERVED_DISK		= 5
 ##  Daemons you want the master to keep running for you:
 DAEMON_LIST			= MASTER, STARTD, COLLECTOR
 
-##  Which daemons use the Condor DaemonCore library (i.e., not the
+##  Which daemons use the Hawkeye DaemonCore library (i.e., not the
 ##  checkpoint server or custom user daemons)?
 ##  Note: Daemons in this list cannot use a static command port.
 #DC_DAEMON_LIST = \
 #MASTER, STARTD, SCHEDD, KBDD, COLLECTOR, NEGOTIATOR, EVENTD, \
-#VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, HAWKEYE, CREDD, HAD, \
+#VIEW_SERVER, HAWKEYE_VIEW, VIEW_COLLECTOR, HAWKEYE, CREDD, HAD, \
 #QUILL
 
 
@@ -582,10 +582,10 @@ MASTER_ADDRESS_FILE = $(LOG)/.master_address
 ##--------------------------------------------------------------------
 ##  Where are the various hawkeye_starter binaries installed?
 STARTER_LIST = STARTER, STARTER_PVM, STARTER_STANDARD
-STARTER			= $(SBIN)/condor_starter
-STARTER_PVM		= $(SBIN)/condor_starter.pvm
-STARTER_STANDARD	= $(SBIN)/condor_starter.std
-STARTER_LOCAL		= $(SBIN)/condor_starter
+STARTER			= $(SBIN)/hawkeye_starter
+STARTER_PVM		= $(SBIN)/hawkeye_starter.pvm
+STARTER_STANDARD	= $(SBIN)/hawkeye_starter.std
+STARTER_LOCAL		= $(SBIN)/hawkeye_starter
 
 ##  When the startd starts up, it can place it's address (IP and port)
 ##  into a file.  This way, tools running on the local machine don't
