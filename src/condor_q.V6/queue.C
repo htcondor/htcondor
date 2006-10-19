@@ -2257,8 +2257,8 @@ show_queue( char* v1, char* v2, char* v3, char* v4, bool useDB )
 			// appearing when doing condor_q -l with quill, etc.
 		jobs.Open();
 		while( ( job = jobs.Next() ) ) {
-				// no deep copy for speed; do not delete cluster ad!
-			job->ChainCollapse(false);	
+				// Deep copy; do not delete cluster ad!
+			job->ChainCollapse(true);	
 		}
 		jobs.Close();
 		
