@@ -111,7 +111,7 @@ sub main( )
     # Guess what distribution this is..
     if ( exists $ENV{CONDOR_DISTRIBUTION} )
     {
-	$Distribution = $1;
+	$Distribution = $ENV{CONDOR_DISTRIBUTION};
     }
     elsif ( exists $ENV{HAWKEYE_CONFIG} )
     {
@@ -160,20 +160,8 @@ sub CommandLine( @ )
     foreach my $Arg ( @_ )
     {
 
-	# Speicify config file
-	if ( $Arg =~ /--config=(.+)/ )
-	{
-	    die "Config file '$1' does not exist" if ( ! -f $1 );
-	    my $File = $1;
-	    if ( ! $File =~ /^\// )
-	    {
-		$File = $ENV{PWD} . "/$File";
-	    }
-	    $Config{ConfigFile}{Base} = $File;
-	}
-
 	# Config file to update
-	elsif ( $Arg =~ /^--update=(.+)/ )
+	if ( $Arg =~ /^--update=(.+)/ )
 	{
 	    $Config{ConfigFile}{Updated} = $1;
 	}
@@ -217,7 +205,13 @@ sub CommandLine( @ )
 	# Must be a file
 	else
 	{
-	    Usage( undef );
+	    die "Config file '$1' does not exist" if ( ! -f $Arg );
+	    my $File = $Arg;
+	    if ( ! $File =~ /^\// )
+	    {
+		$File = $ENV{PWD} . "/$File";
+	    }
+	    $Config{ConfigFile}{Base} = $File;
 	}
     }
 
@@ -281,7 +275,7 @@ sub ReadConfigFiles( )
 
     # If we don't know what daemon cron name variable we're looking for
     # try to guess...
-    if ( $Config{CronNameVar} eq "" )
+    if ( !defined $Config{CronNameVar} or $Config{CronNameVar} eq "" )
     {
 	foreach my $Daemon ( "startd", "schedd" )
 	{

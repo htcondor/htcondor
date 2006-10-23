@@ -394,7 +394,11 @@ sub FindConfig( $$$$ )
     my $BaseFile = "";
 
     # Check the config env variable...
-    if ( ( $UserSpecified eq "" ) && ( exists $ENV{$ConfigEnvVar} ) )
+    if ( $UserSpecified ne "" )
+    {
+	$BaseFile = $UserSpecified;
+    }
+    elsif ( exists $ENV{$ConfigEnvVar} )
     {
 	warn "$ENV{$ConfigEnvVar} (from ENV) does not exist!"
 	    if ( ! -f $ENV{$ConfigEnvVar} );
