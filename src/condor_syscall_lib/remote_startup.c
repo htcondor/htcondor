@@ -806,7 +806,7 @@ open_std_files()
 			}
 			new_fd = open(logical_name[fd],flags,0);
 			if(new_fd<0) {
-				_condor_error_retry("Couldn't open standard file '%s'", logical_name );
+				_condor_error_retry("Couldn't open standard file '%s'", logical_name[fd] );
 			}
 			if(new_fd!=fd) {
 				dup2(fd,new_fd);
