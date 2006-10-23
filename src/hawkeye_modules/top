@@ -382,7 +382,6 @@ sub Configure( )
     {
 	print STDERR "Ignoring top config time '$CfgInterval'\n";
     }
-    print "Interval: $CfgInterval -> $Config{TopInterval}\n"; exit 0;
 
     # Examine the field names that we got at startup
     foreach my $Key ( keys %TopFields )
