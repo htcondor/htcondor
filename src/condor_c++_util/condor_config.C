@@ -482,7 +482,7 @@ real_config(char* host, int wantsQuiet)
 
 		char *varname = strdup( environ[i] );
 		if( !varname ) {
-			EXCEPT( "Out of memory in %s:%s\n", __FILE__, __LINE__ );
+			EXCEPT( "Out of memory in %s:%d\n", __FILE__, __LINE__ );
 		}
 
 		// isolate variable name by finding & nulling the '='
