@@ -438,7 +438,7 @@ ResMgr::reconfig_resources( void )
 	
 		// Now, for each type, sort our resources by state.
 	for( t=0; t<max_types; t++ ) {
-		assert( cur_type_index[t] == type_nums[t] );
+		ASSERT( cur_type_index[t] == type_nums[t] );
 		qsort( sorted_resources[t], type_nums[t], 
 			   sizeof(Resource*), &claimedRankCmp );
 	}

@@ -122,7 +122,7 @@ Claim::~Claim()
 void
 Claim::vacate() 
 {
-	assert( c_id );
+	ASSERT( c_id );
 		// warn the client of this claim that it's being vacated
 	if( c_client && c_client->addr() ) {
 		c_client->vacate( c_id->id() );
