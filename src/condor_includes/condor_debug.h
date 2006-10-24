@@ -89,16 +89,27 @@ extern int DebugFlags;	/* Bits to look for in dprintf */
 extern int Termlog;		/* Are we logging to a terminal? */
 extern int (*DebugId)(FILE *);		/* set header message */
 
-void dprintf ( int flags, const char *fmt, ... )
 #ifdef __GNUC__
-__attribute__((__format__(__printf__, 2, 3)))
+#ifndef CHECK_PRINTF_FORMAT
+/*
+Check printf-style format arguments at compile type.
+gcc specific.  Put CHECK_PRINTF_FORMAT(1,2) after a functions'
+declaration, before the ";"
+a - Argument position of the char * format.
+b - Argument position of the "..."
+*/
+#define CHECK_PRINTF_FORMAT(a,b) __attribute__((__format__(__printf__, a, b)))
 #endif
-;
+#else
+#define CHECK_PRINTF_FORMAT(a,b)
+#endif
+
+void dprintf ( int flags, const char *fmt, ... ) CHECK_PRINTF_FORMAT(2,3);
 
 void dprintf_config( char *subsys, int logfd );
 void _condor_dprintf_va ( int flags, const char* fmt, va_list args );
 int _condor_open_lock_file(const char *filename,int flags, mode_t perm);
-void _EXCEPT_ ( char *fmt, ... );
+void _EXCEPT_ ( char *fmt, ... ) CHECK_PRINTF_FORMAT(1,2);
 void Suicide(void);
 void set_debug_flags( char *strflags );
 void _condor_fd_panic( int line, char *file );
@@ -128,7 +139,7 @@ extern int	_EXCEPT_Line;			/* Line number of the exception    */
 extern char	*_EXCEPT_File;			/* File name of the exception      */
 extern int	_EXCEPT_Errno;			/* errno from most recent system call */
 extern int (*_EXCEPT_Cleanup)(int,int,char*);	/* Function to call to clean up (or NULL) */
-extern void _EXCEPT_(char*, ...);
+extern void _EXCEPT_(char*, ...) CHECK_PRINTF_FORMAT(1,2);
 
 #if defined(__cplusplus)
 }

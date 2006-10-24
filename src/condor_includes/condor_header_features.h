@@ -37,4 +37,20 @@
 #define DLL_IMPORT_MAGIC  /* a no-op on Unix */
 #endif
 
+#ifdef __GNUC__
+/*
+Check printf-style format arguments at compile type.
+gcc specific.  Put CHECK_PRINTF_FORMAT(1,2) after a functions'
+declaration, before the ";"
+a - Argument position of the char * format.
+b - Argument position of the "..."
+Note that for non-static member functions, you need to add
+one to account for the "this" pointer which is passed on
+the stack.
+*/
+#define CHECK_PRINTF_FORMAT(a,b) __attribute__((__format__(__printf__, a, b)))
+#else
+#define CHECK_PRINTF_FORMAT(a,b)
+#endif
+
 #endif /* CONDOR_SYS_FEATURES_H */

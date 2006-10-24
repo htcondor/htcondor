@@ -29,6 +29,7 @@
 #include "condor_getmnt.h"
 #include "condor_types.h"
 #include "condor_ckpt_name.h"
+#include "condor_header_features.h"
 
 #if defined(__cplusplus)
 extern "C" {
@@ -60,10 +61,10 @@ void ProcessLogging ( int request, int extraInteger );
 void detach ( void );
 int do_connect ( const char *host, const char *service, u_short port );
 int udp_connect ( char *host, u_short port );
-void dprintf ( int flags, const char* fmt, ... );
+void dprintf ( int flags, const char* fmt, ... ) CHECK_PRINTF_FORMAT(2,3);
 FILE * debug_lock ( void );
 void debug_unlock ( void );
-void _EXCEPT_ ( char *fmt, ... );
+void _EXCEPT_ ( char *fmt, ... ) CHECK_PRINTF_FORMAT(1,2);
 int flock ( int fd, int op );
 int getdtablesize ( void );
 

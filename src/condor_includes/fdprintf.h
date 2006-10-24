@@ -23,10 +23,12 @@
 #ifndef __FDPRINTF__
 #define __FDPRINTF__
 
+#include "condor_common.h"
+
 #ifdef __cplusplus 
 	extern "C" 
 #endif
 
-int fdprintf (int, const char *, ...);
+int fdprintf (int, const char *, ...) CHECK_PRINTF_FORMAT(2,3);
 
 #endif
