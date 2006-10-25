@@ -51,6 +51,9 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug in \condor{run} that caused it to abort on non-fatal
+warnings from \condor{submit} and print incorrect error messages.
+
 \item Fixed a bug in the \condor{gridmanager} dealing with grid-type gt4
 grid universe jobs. If the job's standard output or error wasn't specified
 in the job ad, the \condor{gridmanager} would create an improper GRAM
