@@ -149,16 +149,16 @@ open(SUBMIT, "condor_submit .condor_submit.$$ 2>&1 |") ||
 while(<SUBMIT>) {
     if (/^1 job\(s\) submitted to cluster (\d+)./) {
 	($cluster) = $1;
-    } elsif (/WARNING/) {
-	&abort("Condor does not have write permission to this directory.\n");
+    } elsif (/WARNING.*Invalid log file/ ||
+	     /WARNING.*is not writable by condor/) {
+	print STDERR $_;
+	&abort("Failed to submit Condor job.\n");
     } else {
 	$submit_errors .= $_;
     }
 }
-close(SUBMIT) || 
-    &abort("Failed to run condor_submit.  Please check your path.\n");
 
-if (!defined($cluster)) {
+if (!close(SUBMIT) || !defined($cluster)) {
     print STDERR $submit_errors;
     &abort("Failed to submit Condor job.\n");
 }
