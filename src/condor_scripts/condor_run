@@ -62,8 +62,10 @@ chomp $pwd;
 
 # check arguments
 if (!defined($ARGV[0]) || $ARGV[0] eq "-h" || $ARGV[0] eq "-help") {
-    print "usage: $0 \"shell-cmd\"\n";
+    print "usage: $0 [-u <universe>] \"shell-cmd\"\n";
     print "\twhere shell-cmd is any Unix shell statement.\n";
+    print "\t-u lets you set the universe to which the job is submitted.\n";
+    print "\t   The default is vanilla.\n";
     print "\tEnvironment variables CONDOR_ARCH, CONDOR_OPSYS, and\n";
     print "\tCONDOR_REQUIREMENTS may specify remote machine's Arch,\n";
     print "\tOpSys, and any additional requirements.\n";
