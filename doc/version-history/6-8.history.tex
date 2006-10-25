@@ -43,7 +43,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Added \MacroNI{JOB\_INHERITS\_STARTER\_ENVIRONMENT}.  When set
+to true, this causes jobs to inherit all environment variables from
+\Condor{starter}.  This is useful for glidein jobs that need to access
+environment variables from the batch system running the glidein daemons.
+The default for this configuration setting is false, so existing behavior
+is unchanged.  This feature does not apply to standard and pvm universe
+jobs.
 
 \end{itemize}
 

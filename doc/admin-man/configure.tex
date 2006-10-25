@@ -4116,6 +4116,17 @@ Defaults to 1200 (20 minutes).
   If the same environment variable is assigned by this macro and by the user
   in the submit file, the user's setting takes precedence.
 
+\item[\Macro{JOB\_INHERITS\_STARTER\_ENVIRONMENT}]
+\label{param:JobInheritsStarterEnvironment} When set to true, this
+causes jobs to inherit all environment variables from
+\Condor{starter}.  This is useful for glidein jobs that need to
+access environment variables from the batch system running the glidein
+daemons.  If the user job or \Macro{STARTER\_JOB\_ENVIRONMENT} defines
+an environment variable that also happens to be in \Condor{starter}'s
+environment, the the former overrides the latter in the job's
+environment.  The default for this configuration setting is false.
+This feature does not apply to standard and pvm universe jobs.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
