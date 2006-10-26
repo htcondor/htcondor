@@ -671,7 +671,7 @@ sub install($) {
 	die "Unable to create local config file: $local_config_file!\n";
     $global_config{LOCAL_CONFIG_FILE}="$local_config_file";
 
-    make_personal_condor();
+    # make_personal_condor();
     # Don't assume the CONDOR_HOST will be defined (e.g. Condor-G)
     #$local_config{CONDOR_HOST}=$host;
 
