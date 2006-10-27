@@ -29,7 +29,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Condor_configure used to always make a personal Condor with --install
+even when --type called for only "execute" or "submit" types. Default is still
+to start the following daemons: Master, Collector, Negotiator, Schedd, Startd.
+Condor_configure now respects the --type flag.
 
 \end{itemize}
 
