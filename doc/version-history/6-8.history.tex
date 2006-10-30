@@ -82,6 +82,11 @@ messages before exiting several minutes later.
 the standard universe might generate an incorrect warning in the 
 \Condor{shadow}'s log.
 
+\item The \condor{gridmanager} now recovers properly when a proxy refresh
+fails for a gt2 grid universe job in stage-out state. Before, the job
+would become held with a hold reason of ``Globus error 3: an I/O operation
+failed''.
+
 \item A number of fixes to minor typos and misformatting in Condor's log files.
 
 \end{itemize}
