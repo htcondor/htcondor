@@ -637,6 +637,7 @@ GlobusJob::GlobusJob( ClassAd *classad )
 	numRestartAttempts = 0;
 	numRestartAttemptsThisSubmit = 0;
 	jmProxyExpireTime = 0;
+	proxyRefreshRefused = false;
 	connect_failure_counter = 0;
 	outputWaitLastGrowth = 0;
 	// HACK!
@@ -1363,7 +1364,10 @@ int GlobusJob::doEvaluateState()
 					reevaluate_state = true;
 					break;
 				}
-				if ( jmProxyExpireTime < jobProxy->expiration_time ) {
+					// The jobmanager doesn't accept proxy refresh commands
+					// once it hits stage-out state
+				if ( jmProxyExpireTime < jobProxy->expiration_time &&
+					 globusState != GLOBUS_GRAM_PROTOCOL_JOB_STATE_STAGE_OUT ) {
 					gmState = GM_REFRESH_PROXY;
 					break;
 				}
@@ -1397,6 +1401,28 @@ int GlobusJob::doEvaluateState()
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
+				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_NO_RESOURCES &&
+					 !proxyRefreshRefused ) {
+						// The jobmanager is probably in stage-out state
+						// and refusing proxy refresh commands. Do a poll
+						// now and see. If the jobmanager isn't in
+						// stage-out, then we'll end up back in this state.
+						// If we get the same error, then try a restart
+						// of the jobmanager.
+
+						// This is caused by a bug in the gram client code.
+						// After sending the 'renew' command and receiving
+						// the response from the jobmanager, it tries to
+						// perform a delegation without looking to the
+						// jobmanager's response to see if the jobmanager
+						// is refusing to accept it. When the delegation
+						// fails (due to the jobmanager closing the
+						// connection), the client returns this error.
+					proxyRefreshRefused = true;
+					gmState = GM_PROBE_JOBMANAGER;
+					break;
+				}
+				proxyRefreshRefused = false;
 				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
 					 //rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
 					 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
