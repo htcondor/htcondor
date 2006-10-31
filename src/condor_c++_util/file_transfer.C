@@ -812,15 +812,22 @@ FileTransfer::ComputeFilesToSend()
 		const char *f;
 		while( (f=dir.Next()) ) {
 			// don't send back condor_exec.exe
-			if ( file_strcmp(f,CONDOR_EXEC)==MATCH )
+			if ( file_strcmp(f,CONDOR_EXEC)==MATCH ) {
+				dprintf( D_FULLDEBUG, "Skipping %s\n", f );
 				continue;
-			if ( file_strcmp(f,"condor_exec.bat")==MATCH )
+			}
+			if ( file_strcmp(f,"condor_exec.bat")==MATCH ) {
+				dprintf( D_FULLDEBUG, "Skipping %s\n", f );
 				continue;
+			}
 
 			// for now, skip all subdirectory names until we add
 			// subdirectory support into FileTransfer.
-			if ( dir.IsDirectory() )
+			if ( dir.IsDirectory() ) {
+				dprintf( D_FULLDEBUG, "Skipping dir %s\n",
+						 f, dir.GetModifyTime(), last_download_time );
 				continue;
+			}
 							
 			// if this file is has been modified since last download,
 			// add it to the list of files to transfer.
@@ -836,6 +843,10 @@ FileTransfer::ComputeFilesToSend()
 						 "Sending previously changed file %s, mod=%ld, dow=%ld\n",	
 						 f, dir.GetModifyTime(), last_download_time );
 				send_it = true;
+			} else {
+				dprintf( D_FULLDEBUG,
+						 "Skipping unchanged file %s, mod=%ld, dow=%ld\n",	
+						 f, dir.GetModifyTime(), last_download_time );
 			}
 			if(send_it) {
 				if (!IntermediateFiles) {
