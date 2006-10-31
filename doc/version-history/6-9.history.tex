@@ -29,10 +29,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Condor_configure used to always make a personal Condor with --install
-even when --type called for only "execute" or "submit" types. Default is still
-to start the following daemons: Master, Collector, Negotiator, Schedd, Startd.
-Condor_configure now respects the --type flag.
+\item \Condor{configure} used to always make a personal Condor with
+\Opt{--install} even when \Opt{--type} called for only "execute" or
+"submit" types.  Now, \Condor{configure} honors the \Opt{--type}
+argument, even when using \Opt{--install}.
+If \Opt{--type} is not specified, the default is to still install a
+full personal Condor with the following daemons: Master, Collector,
+Negotiator, Schedd, Startd. 
 
 \end{itemize}
 
