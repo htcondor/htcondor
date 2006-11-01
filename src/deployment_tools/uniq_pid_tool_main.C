@@ -28,26 +28,26 @@
 //constant static variables
 //***
 // command variables
-const static char* PID_FILE_OPT = "--file";
-const static char* BLOCK_OPT = "--block";
-const static char* NO_BLOCK_OPT = "--noblock";
-const static char* PRECISION_OPT = "--precision";
+static const char* PID_FILE_OPT = "--file";
+static const char* BLOCK_OPT = "--block";
+static const char* NO_BLOCK_OPT = "--noblock";
+static const char* PRECISION_OPT = "--precision";
 
 // defaults
-const static char* DEFAULT_PID_FILE = "pid.file";
+static const char* DEFAULT_PID_FILE = "pid.file";
 
 // midwife static variables
-const static char* MIDWIFE_CMD = "uniq_pid_midwife";
-const static char* MIDWIFE_USAGE = "uniq_pid_midwife [--noblock] [--file file] [--precision seconds] <program> [program_args]\n";
+static const char* MIDWIFE_CMD = "uniq_pid_midwife";
+static const char* MIDWIFE_USAGE = "uniq_pid_midwife [--noblock] [--file file] [--precision seconds] <program> [program_args]\n";
 
 // undertaker static variables
-const static char* UNDERTAKER_CMD = "uniq_pid_undertaker";
-const static char* UNDERTAKER_USAGE = "uniq_pid_undertaker [--block] [--file pidfile] [--precision seconds]\n";
+static const char* UNDERTAKER_CMD = "uniq_pid_undertaker";
+// static const char* UNDERTAKER_USAGE = "uniq_pid_undertaker [--block] [--file pidfile] [--precision seconds]\n";
 
-const static int UNDERTAKER_FAILURE = -1;
-const static int PROCESS_DEAD = 0;
-const static int PROCESS_ALIVE = 1;
-const static int PROCESS_UNCERTAIN = 2;
+static const int UNDERTAKER_FAILURE = -1;
+static const int PROCESS_DEAD = 0;
+static const int PROCESS_ALIVE = 1;
+static const int PROCESS_UNCERTAIN = 2;
 
 //***
 // Private Helper Function Declarations
@@ -225,7 +225,7 @@ midwife_main(int argc, char* argv[],
   file for use by an undertaker.
 */
 pid_t 
-midwife_executable(int argc, char* argv[], 
+midwife_executable(int  /* argc */, char* argv[], 
 				   const char* pidfile, int* precision_range)
 {
   
@@ -373,7 +373,7 @@ createPidFile(const char* pidfile)
   the process dies.
 */
 int 
-undertaker_main( int argc, char* argv[], 
+undertaker_main( int  /* argc */ , char ** /* argv */, 
 				 const char* pidfile, bool blockflag)
 {
 
@@ -408,15 +408,15 @@ undertaker_main( int argc, char* argv[],
 		// Switch on the result
 	if( aliveVal == PROCAPI_ALIVE ){
 			// attempt to generate a confirmation
-		int status;
-		int retVal = ProcAPI::confirmProcessId(procId, status);
+		int dummy_status;
+		int retVal = ProcAPI::confirmProcessId(procId, dummy_status);
 
 			// only optional don't fail if we can't
 		if( retVal == PROCAPI_SUCCESS ){
 				// append it to pid file
-			FILE* fp = fopen(pidfile, "a");
-			if( fp != NULL ){
-				procId.writeConfirmationOnly(fp);
+			FILE* pid_fp = fopen(pidfile, "a");
+			if( pid_fp != NULL ){
+				procId.writeConfirmationOnly(pid_fp);
 			}
 		}
 		
