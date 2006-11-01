@@ -2141,6 +2141,8 @@ void DaemonCore::Driver()
 		sigdelset(&fullset, SIGBUS);     // so we get a core right away
 		sigdelset(&fullset, SIGFPE);     // so we get a core right away
 		sigdelset(&fullset, SIGTRAP);    // so gdb works when it uses SIGTRAP
+		sigdelset(&fullset, SIGPROF);    // so gprof works
+
 	sigemptyset( &emptyset );
 	char asyncpipe_buf[10];
 #endif
