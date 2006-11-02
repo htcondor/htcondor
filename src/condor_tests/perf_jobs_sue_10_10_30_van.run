@@ -57,7 +57,7 @@ sub ReadLastStats
 	open(DATAOUT,"<$datafile") || die "Can not open existing data file: $!\n";
 	while(<DATAOUT>)
 	{
-		chomp;
+		CondorTest::fullchomp($_);
 		$line = $_;
 		if( $line =~ /^\s*Scaling\((\d+)\)\s+Duration\((\d+)\)\s+UnitTime\((\d*\.*\d*)\).*/ )
 		{

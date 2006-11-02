@@ -42,7 +42,7 @@ foreach $name (@filestoedit)
 	my $line = "";
 	while(<FF>)
 	{
-		chomp($_);
+		CondorTest::fullchomp($_);
 		$line = $_;
 		if( $line =~ /(^\s*.*)$socketname(.*$)/)
 		{
@@ -123,7 +123,7 @@ $success = sub
 		while(<FLOW>)
 		{
 			my $ret;
-			chomp;
+			CondorTest::fullchomp($_);
 			$ret = $_;
 			push @results, $ret;
 			print "processing result $ret\n";

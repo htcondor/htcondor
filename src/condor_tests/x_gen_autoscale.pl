@@ -1,4 +1,5 @@
 #!/usr/bin/env perl
+use CondorTest;
 
 use Getopt::Long;
 use Cwd;
@@ -167,7 +168,7 @@ if( !defined $condorhost )
 	if( ! exists $params{"collector"} )
 	{
 		my $tmp = `/bin/hostname`;
-		chomp($tmp);
+		CondorTest::fullchomp($tmp);
 		print "Guessing pool to be run on $tmp\n";
 		$condorhost = $tmp;
 		#die "Where is the collector to be? Can not generate condor_config!\n";
@@ -348,7 +349,7 @@ sub gen_autoscale_cmd
 	open(CMDFILE,"<$cmdtemplate") || die "Cmdfile not around: $!\n";
 	while(<CMDFILE>)
 	{
-		chomp();
+		CondorTest::fullchomp($_);
 		$line = $_;
 		if( $line =~ /^\s*universe\s*=\s*.*$/ )
 		{
@@ -401,7 +402,7 @@ sub gen_autoscale_run
 
 	while(<RUNFILE>)
 	{
-		chomp();
+		CondorTest::fullchomp($_);
 		$line = $_;
 		if( $line =~ /startjobs\s*=/ )
 		{
@@ -479,7 +480,7 @@ sub parse_cmdfile()
 		# skip comments
 		next if( /^\s*\#/ );
 		# remove trailing newline
-		chomp();
+		CondorTest::fullchomp($_);
 
 		#print "Examining $_\n";
 

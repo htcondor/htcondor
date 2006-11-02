@@ -11,7 +11,7 @@ $filenm = "/tmp/job_rsc_true-false_std.$$";
 	open(NEWCMD,">$cmd.new") || die "Can not open new command file: $!\n";
 	while(<CMD>)
 	{
-		chomp();
+		CondorTest::fullchomp();
 		$line = $_;
 		if($line =~ /\s*arguments\s*=.*$/)
 		{

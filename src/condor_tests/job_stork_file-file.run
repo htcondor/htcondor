@@ -15,7 +15,7 @@ print "Working Directory is $topdir\n";
 # where am I running
 $dummyhost = "gamgee.cs.wisc.edu";
 $currenthost = `hostname`;
-chomp($currenthost);
+CondorTest::fullchomp($currenthost);
 
 system("date");
 print "Dummyhost was $dummyhost and really running on $currenthost\n";
@@ -66,7 +66,7 @@ open(STORKSTUB,"<job_stork_file-file.stork") || die "Could not open data file 'j
 open(NEWSTORKSTUB,">$storksubmitfile") || die "Could not open test stork submit file <$storksubmitfile>: $?";
 while(<STORKSTUB>)
 {
-	chomp();
+	CondorTest::fullchomp();
 	$line = $_;
 	if($line =~ /src_url/)
 	{
@@ -90,7 +90,7 @@ my $jobid = "";
 open(PULL, "$storkcmd 2>&1 |") || die "ps -eo pid failed: $!\n";
 while(<PULL>)
 {
-	chomp();
+	CondorTest::fullchomp();
 	$line = $_;
 	if($line =~ /assigned\s*id\s*:\s*(\d+)/)
 	{
@@ -117,7 +117,7 @@ while( $timecnt < $timeout )
 	open(PULL, "$storkstatuscmd 2>&1 |") || die "ps -eo pid failed: $!\n";
 	while(<PULL>)
 	{
-		chomp();
+		CondorTest::fullchomp();
 		$line = $_;
 		if($line =~ /status\s*=\s*"(\w+)"/)
 		{

@@ -29,7 +29,7 @@ $aborted = sub {
 	open( FILE, "<$outfile" ) || die "error opening $file: $!\n";
 	while(<FILE>)
 	{
-		chomp;
+		CondorTest::fullchomp($_);
 		print "Found $_\n";
 		if($_ eq $killsig)
 		{
@@ -38,7 +38,7 @@ $aborted = sub {
 		}
 		else
 		{
-			die "Needed to see $killsig as killing signal\n";
+			die "Needed to see <<<<$killsig>>>> as killing signal saw <<$_>>\n";
 		}
 	}
 };

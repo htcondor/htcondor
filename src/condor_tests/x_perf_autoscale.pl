@@ -22,11 +22,12 @@ my $percentmoretime = 0;
 print "Doing $percentmore percent more jobs this run\n";
 sleep 3;
 
+my $line = "";
 open(DATAOUT,"<$datafile") || print "Can not open existing data file: $!\n";
 open(NEWDATAOUT,">$datafile.new") || die "Can not open new data file: $!\n";
 while(<DATAOUT>)
 {
-	chomp;
+	CondorTest::fullchomp($_);
 	print NEWDATAOUT "$_\n";
 }
 close(DATAOUT);
@@ -39,7 +40,7 @@ open(QUEUECMD,"<$cmd") || die "Can't open cmd file $!\n";
 open(NEWCMD,">$cmd.new") || die "Can not open new command file: $!\n";
 while(<QUEUECMD>)
 {
-	chomp;
+	CondorTest::fullchomp($_);
 	$line = $_;
 	if( $line =~ /^\s*queue\s*.*$/ )
 	{

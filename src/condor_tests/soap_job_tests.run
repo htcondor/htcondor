@@ -27,7 +27,7 @@ $wherenow = getcwd();
 print "CURRENTLY in <<<$wherenow>>>\n";
 
 my $pathcmd = `echo $topdir\/soaptests\/lib\/*.jar | tr ' ' ':'`;
-chomp($pathcmd);
+CondorTest::fullchomp($pathcmd);
 print "pathcmd so far: $pathcmd\n";
 my $cpath = $ENV{CLASSPATH} = "$topdir/soaptests:$topdir/soaptests/condor:.:$topdir/soaptests/birdbath:$pathcmd";
 print "CLASSPATH=$cpath\n";

@@ -12,7 +12,7 @@ $corename = "job_condorc_abc_van";
 # where are we running
 $dummyhost = "gamgee.cs.wisc.edu";
 $currenthost = `hostname`;
-chomp($currenthost);
+CondorTest::fullchomp($currenthost);
 print "Running on $currenthost\n";
 
 $mypid = $$;
@@ -53,7 +53,7 @@ open(CSUB,">$mysubmitnm") || die "Can't open new submit file $mysubmitnm: $!\n";
 open(TPLATE,"<$cmd_template") || die "Can't open submit file template $cmd_template: $!\n";
 while(<TPLATE>)
 {
-	chomp($_);
+	CondorTest::fullchomp($_);
 	$line = $_;
 	if( $line =~ /^\s*remote_pool\s*=\s*($dummyhost):\s*(\d+)\s*$/ )
 	{

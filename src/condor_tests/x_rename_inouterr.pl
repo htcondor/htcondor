@@ -1,4 +1,5 @@
 #!/usr/bin/env perl
+use CondorTest;
 
 use strict;
 
@@ -8,7 +9,7 @@ print LOG "Started at $start\n";
 open(TESTS,"ls *.cmd | ");
 while(<TESTS>)
 {
-	chomp;
+	CondorTest::fullchomp($_);
 	my $now = localtime;
 	my $filebase = "";
 	my $currentfile = $_;
@@ -30,7 +31,7 @@ while(<TESTS>)
 	my $line = "";
 	while(<FIXIT>)
 	{
-		chomp;
+		CondorTest::fullchomp($_);
 		$line = $_;
 		print "Current line: ----$line----\n";
 		if( $line =~ /^\s*error\s*=\s*.*$/ )

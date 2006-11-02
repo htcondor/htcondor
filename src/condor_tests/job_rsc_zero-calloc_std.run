@@ -15,7 +15,7 @@ sub OutputTest
     while( <OUTPUT> )
     {
 	$line = $_;
-	chomp $line;
+	CondorTest::fullchomp $line;
     }
     close OUTPUT;
 

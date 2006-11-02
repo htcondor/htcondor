@@ -29,7 +29,7 @@ $aborted = sub {
 	open( FILE, "<$outfile" ) || die "error opening $file: $!\n";
 	while(<FILE>)
 	{
-		chomp;
+		CondorTest::fullchomp($_);
 		print "Found $_\n";
 		if($_ eq $killsig)
 		{

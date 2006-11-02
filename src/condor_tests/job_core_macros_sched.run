@@ -30,7 +30,7 @@ sub load_up_lines
 	open(IN,"<job_core_macros_sched.out") || die "Can not open job_core_macros_sched.out: $!\n";
 	while(<IN>)
 	{
-		chomp;
+		CondorTest::fullchomp($_);
 		push @lines, $_;
 	}
 };

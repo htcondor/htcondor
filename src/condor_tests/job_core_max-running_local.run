@@ -51,7 +51,7 @@ $successCallback = sub {
 	my @output = <FILE>;
 	close(FILE);
 	my $reportTime = "@output";
-	chomp($reportTime);
+	CondorTest::fullchomp($reportTime);
 	
 	print "JOB:         $cluster.$job\n".
 		  "OUTFILE:     $outfile\n".
