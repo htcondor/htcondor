@@ -94,6 +94,11 @@ failed to contact \Condor{startd} to release the claim, the schedd would
 periodically try releasing the claim indefinitely, possibly resulting in
 a lengthy communication delay each time.
 
+\item Under Windows, condor daemons such as \Condor{schedd} were sometimes
+limiting their use of pending connect operations more than they should
+have.  This would result in the message, ``file descriptor safety level
+exceeded''.
+
 \end{itemize}
 
 \noindent Known Bugs:
