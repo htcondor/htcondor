@@ -563,10 +563,16 @@ bool DaemonCore::TooManyRegisteredSockets(int fd,MyString *msg)
 		return false;
 	}
 
+		// The following heuristic is only appropriate on systems where
+		// file descriptor numbers are allocated using the lowest
+		// available number.
+#if !defined(WIN32)
 	if( fd > fds_used ) {
 			// Assume fds are allocated always lowest number first
 		fds_used = fd;
 	}
+#endif
+
 	if( fds_used > file_descriptor_safety_limit ) {
 		if( registered_socket_count < MIN_REGISTERED_SOCKET_SAFETY_LIMIT ) {
 			// We don't have very many sockets registered, but
