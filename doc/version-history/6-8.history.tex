@@ -89,6 +89,11 @@ failed''.
 
 \item A number of fixes to minor typos and misformatting in Condor's log files.
 
+\item When \MacroNI{REQUEST\_CLAIM\_TIMEOUT} was reached and \Condor{schedd}
+failed to contact \Condor{startd} to release the claim, the schedd would
+periodically try releasing the claim indefinitely, possibly resulting in
+a lengthy communication delay each time.
+
 \end{itemize}
 
 \noindent Known Bugs:
