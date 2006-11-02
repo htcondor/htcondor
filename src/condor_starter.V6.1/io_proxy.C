@@ -55,7 +55,7 @@ In response, fork a new IOProxyHandler child to deal with the stream.
 Returns KEEP_STREAM if the stream is still valid, ~KEEP_STREAM otherwise.
 */
 
-int IOProxy::connect_callback( Stream *stream )
+int IOProxy::connect_callback( Stream * /*stream*/ )
 {
 	ReliSock *client = new ReliSock;
 	bool accept_client = false;

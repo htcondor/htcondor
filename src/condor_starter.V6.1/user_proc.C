@@ -205,7 +205,7 @@ UserProc::openStdFile( std_file_type type, const char* attr,
 	int fd = -2;
 	const char* filename;
 	bool wants_stream = false;
-	const char* name = NULL;
+	const char* stream_name = NULL;
 	const char* phrase = NULL;
 	bool is_output = true;
 	bool is_null_file = false;
@@ -219,17 +219,17 @@ UserProc::openStdFile( std_file_type type, const char* attr,
 	case SFT_IN:
 		is_output = false;
 		phrase = "standard input";
-		name = "stdin";
+		stream_name = "stdin";
 		break;
 	case SFT_OUT:
 		is_output = true;
 		phrase = "standard output";
-		name = "stdout";
+		stream_name = "stdout";
 		break;
 	case SFT_ERR:
 		is_output = true;
 		phrase = "standard error";
-		name = "stderr";
+		stream_name = "stderr";
 		break;
 	}
 
@@ -304,7 +304,7 @@ UserProc::openStdFile( std_file_type type, const char* attr,
 		//////////////////////
 	if( wants_stream && ! is_null_file ) {
 		StreamHandler *handler = new StreamHandler;
-		if( !handler->Init(filename, name, is_output) ) {
+		if( !handler->Init(filename, stream_name, is_output) ) {
 			MyString err_msg;
 			err_msg.sprintf( "unable to establish %s stream", phrase );
 			Starter->jic->notifyStarterError( err_msg.Value(), true,

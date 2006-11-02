@@ -64,7 +64,7 @@ int udp_connect ( char *host, u_short port );
 void dprintf ( int flags, const char* fmt, ... ) CHECK_PRINTF_FORMAT(2,3);
 FILE * debug_lock ( void );
 void debug_unlock ( void );
-void _EXCEPT_ ( char *fmt, ... ) CHECK_PRINTF_FORMAT(1,2);
+void _EXCEPT_ ( const char *fmt, ... ) CHECK_PRINTF_FORMAT(1,2);
 int flock ( int fd, int op );
 int getdtablesize ( void );
 

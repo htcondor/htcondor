@@ -192,7 +192,7 @@ JICLocal::allJobsGone( void )
 
 
 int
-JICLocal::reconnect( ReliSock* s, ClassAd* ad )
+JICLocal::reconnect( ReliSock* s, ClassAd* /*ad*/ )
 {
 		// Someday this might mean something, for now it doesn't.
 	sendErrorReply( s, getCommandString(CA_RECONNECT_JOB), CA_FAILURE, 
@@ -213,7 +213,7 @@ JICLocal::notifyJobPreSpawn( void )
 
 
 bool
-JICLocal::notifyJobExit( int exit_status, int reason, UserProc*
+JICLocal::notifyJobExit( int /*exit_status*/, int reason, UserProc*
 						  user_proc )
 {
 	ClassAd ad;
@@ -235,7 +235,7 @@ JICLocal::notifyJobExit( int exit_status, int reason, UserProc*
 
 
 bool
-JICLocal::notifyStarterError( const char* err_msg, bool critical, int hold_reason_code, int hold_reason_subcode )
+JICLocal::notifyStarterError( const char* err_msg, bool critical, int /*hold_reason_code*/, int /*hold_reason_subcode*/ )
 {
 	u_log->logStarterError( err_msg, critical );
 	return true;
@@ -243,7 +243,7 @@ JICLocal::notifyStarterError( const char* err_msg, bool critical, int hold_reaso
 
 
 void
-JICLocal::addToOutputFiles( const char* filename )
+JICLocal::addToOutputFiles( const char* /*filename*/ )
 {
 		// there's no file transfer, so if something needs to get back
 		// to the user, it's already going to be in the job's iwd...

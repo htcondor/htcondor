@@ -44,9 +44,9 @@ extern "C" {
 #endif
 
 /* Convert a string of the form "<xx.xx.xx.xx:pppp>" to a sockaddr_in  TCP */
-int string_to_sin(const char *addr, struct sockaddr_in *sin);
+int string_to_sin(const char *addr, struct sockaddr_in *s_in);
 
-char *sin_to_string(const struct sockaddr_in *sin);
+char *sin_to_string(const struct sockaddr_in *s_in);
 
 /* Extract the port from a string of the form "<xx.xx.xx.xx:pppp>" */
 int string_to_port( const char* addr );
@@ -78,7 +78,7 @@ sock_peer_to_string( SOCKET fd, char *buf, size_t buflen, char const *unknown);
 
 /* Return the real hostname of a machine given a sin; return NULL if it cannot
  * be found or error.  Also return aliases. */
-char *sin_to_hostname(const struct sockaddr_in *sin, char ***aliases);
+char *sin_to_hostname(const struct sockaddr_in *s_in, char ***aliases);
 
 void
 display_from( struct sockaddr_in *from );
