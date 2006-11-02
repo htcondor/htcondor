@@ -540,7 +540,15 @@ Scheduler::check_claim_request_timeouts()
 				                 RequestClaimTimeout - time(NULL);
 				if(time_left < 0) {
 					dprintf(D_ALWAYS,"timed out requesting claim from %s\n",rec->peer);
-					send_vacate(rec, RELEASE_CLAIM);
+						// We could just do send_vacate() here and
+						// wait for the startd contact socket to call
+						// us back when the connection closes.
+						// However, this means that if send_vacate()
+						// fails (e.g. times out setting up security
+						// session), we keep calling it over and over,
+						// timing out each time, without ever
+						// removing the match.
+					DelMrec(rec);
 				}
 			}
 		}
