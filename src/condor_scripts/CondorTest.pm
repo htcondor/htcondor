@@ -458,21 +458,21 @@ sub CompareText
     my @skiplines = @_;
     my $linenum = 0;
 
-#	print "DEBUG opening file $file to compare to array of expected results\n";
+	Condor::debug("DEBUG opening file $file to compare to array of expected results\n");
     open( FILE, "<$file" ) || die "error opening $file: $!\n";
     
     while( <FILE> )
     {
-	chomp; s/\012//; s/\015//;
+	fullchomp($_);
 	$line = $_;
 	$linenum++;
 
-#	print "DEBUG: linenum $linenum\n";
-#	print "DEBUG: \$line: $line\n";
-#	print "DEBUG: \$\$aref[0] = $$aref[0]\n";
+	Condor::debug("DEBUG: linenum $linenum\n");
+	Condor::debug("DEBUG: \$line: $line\n");
+	Condor::debug("DEBUG: \$\$aref[0] = $$aref[0]\n");
 
-#	print "DEBUG: skiplines = \"@skiplines\"\n";
-#	print "DEBUG: grep returns ", grep( /^$linenum$/, @skiplines ), "\n";
+	Condor::debug("DEBUG: skiplines = \"@skiplines\"\n");
+	Condor::debug("DEBUG: grep returns ", grep( /^$linenum$/, @skiplines ), "\n");
 
 	next if grep /^$linenum$/, @skiplines;
 
@@ -481,9 +481,9 @@ sub CompareText
 	{
 	    die "$file contains more text than expected\n";
 	}
-	chomp $expectline;
+	fullchomp($expectline);
 
-#	print "DEBUG: \$expectline: $expectline\n";
+	Condor::debug("DEBUG: \$expectline: $expectline\n");
 
 	# if they match, go on
 	next if $expectline eq $line;
@@ -510,7 +510,7 @@ sub CompareText
 	croak "invalid skipline argument ($num)" if $num < 1;
     }
     
-#    print "DEBUG: CompareText successful\n";
+	Condor::debug("DEBUG: CompareText successful\n");
     return 1;
 }
 
@@ -617,7 +617,7 @@ sub ParseMachineAds
     #Condor::debug( "reading machine ads from $machine...\n" );
     while( <PULL> )
     {
-	chomp;
+	fullchomp($_);
 #	Condor::debug("Raw AD is $_\n");
 	$line++;
 
@@ -643,7 +643,7 @@ sub ParseMachineAds
 
 	    # compress whitespace and remove trailing newline for readability
 	    $value =~ s/\s+/ /g;
-	    chomp $value;
+	    fullchomp($value);
 
 	
 		# Do proper environment substitution
@@ -746,7 +746,7 @@ sub runCondorTool
 		open(PULL, "$cmd 2>$catch |");
 		while(<PULL>)
 		{
-			chomp $_;
+			fullchomp($_);
 			Condor::debug( "Process: $_\n");
 			push @tmparray, $_; # push @{$arrayref}, $_;
 			$count += 1;
@@ -780,6 +780,7 @@ sub runCondorTool
 		}
 		else
 		{
+			$line = "";
 			foreach $value (@tmparray)
 			{
 				push @{$arrayref}, $value;
@@ -792,8 +793,9 @@ sub runCondorTool
 					warn "Can't look at command output <$catch>:$!\n";
 				} else {
     				while(<MACH>) {
-						chomp $_;
-						push @{$arrayref}, $_;
+						fullchomp($_);
+						$line = $_;
+						push @{$arrayref}, $line;
     				}
     				close(MACH);
 				}
@@ -810,14 +812,19 @@ sub runCondorTool
 
 #
 # Cygwin's perl chomp does not remove cntrl-m but this one will
-# and linux and windows can share the same code.
+# and linux and windows can share the same code. The real chomp
+# totals the number or changes but I currently return the modified
+# array. bt 10/06
 #
 
 sub fullchomp
 {
-	my $args = shift;
-	$args =~ s/\s+$//;
-	return($args);
+	push (@_,$_) if( scalar(@_) == 0);
+	foreach my $arg (@_) {
+		$arg =~ s/\012+$//;
+		$arg =~ s/\015+$//;
+	}
+	return(0);
 }
 
 1;

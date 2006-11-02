@@ -237,7 +237,7 @@ sub ParsePersonalCondorParams
     #debug( "reading submit file...\n" );
     while( <SUBMIT_FILE> )
     {
-	chomp;
+	CondorTest::fullchomp($_);
 	$line++;
 
 	# skip comments & blank lines
@@ -262,8 +262,7 @@ sub ParsePersonalCondorParams
 
 	    # compress whitespace and remove trailing newline for readability
 	    $value =~ s/\s+/ /g;
-	    chomp $value;
-
+		CondorTest::fullchomp($value);
 	
 		# Do proper environment substitution
 	    if( $value =~ /(.*)\$ENV\((.*)\)(.*)/ )
@@ -307,7 +306,7 @@ sub WhichCondorConfig
 	open(CONFIG, "condor_config_val -config -master 2>&1 |") || die "condor_config_val: $!\n";
 	while(<CONFIG>)
 	{
-		chomp();
+		CondorTest::fullchomp($_);
 		$line = $_;
 		debug ("--$line--\n");
 
@@ -384,7 +383,7 @@ sub InstallPersonalCondor
 			open(CONFIG,"condor_config_val -config | ") || die "Can not find config file: $!\n";
 			while(<CONFIG>)
 			{
-				chomp;
+				CondorTest::fullchomp($_);
 				$configline = $_;
 				push @configfiles, $configline;
 			}
@@ -444,7 +443,7 @@ sub InstallPersonalCondor
 			open(CONFIG,"condor_config_val -config | ") || die "Can not find config file: $!\n";
 			while(<CONFIG>)
 			{
-				chomp;
+				CondorTest::fullchomp($_);
 				$configline = $_;
 				push @configfiles, $configline;
 			}
@@ -526,7 +525,7 @@ sub TunePersonalCondor
 {
 	my %control = %personal_condor_params;
 	my $myhost = `hostname`;
-	chomp($myhost);
+	CondorTest::fullchomp($myhost);
 	my @domainparts = split /\./, $myhost;
 	my $condorhost = "";
 	my $mpid = "";
@@ -638,8 +637,8 @@ sub TunePersonalCondor
 	open(NEW,">$topleveldir/$personal_config") || die "Can not open new config file: $!\n";
 	while(<TEMPLATE>)
 	{
+		CondorTest::fullchomp($_);
 		$line = $_;
-		chomp($line);
 		if( $line =~ /^RELEASE_DIR\s*=.*/ )
 		{
 			#debug( "-----------$line-----------\n");
@@ -686,7 +685,7 @@ sub TunePersonalCondor
 		open(LOCSRC,"<$personal_local_src") || die "Can not open local config template: $!\n";
 		while(<LOCSRC>)
 		{
-			chomp;
+			CondorTest::fullchomp($_);
 			$line = $_;
 			print NEW "$line\n";
 		}
@@ -889,7 +888,7 @@ sub FindCollectorPort
 {
 	my $collector_address_file = `condor_config_val collector_address_file`;
 	my $line;
-	chomp($collector_address_file);
+	CondorTest::fullchomp($collector_address_file);
 
 	debug( "Looking for collector port in file ---$collector_address_file---\n");
 
@@ -908,7 +907,7 @@ sub FindCollectorPort
 	open(COLLECTORADDR,"<$collector_address_file")  || die "Can not open collector address file: $!\n";
 	while(<COLLECTORADDR>)
 	{
-		chomp($_);
+		CondorTest::fullchomp($_);
 		$line = $_;
 		if( $line =~ /^\s*<(\d+\.\d+\.\d+\.\d+):(\d+)>\s*$/ )
 		{
