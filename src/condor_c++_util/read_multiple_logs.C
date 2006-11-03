@@ -412,10 +412,17 @@ MultiLogFiles::readFileToString(const MyString &strFilename)
 
 	fseek(pFile, 0, SEEK_SET);
 	char *psBuf = new char[iLength+1];
+		/*  We now clear the buffer to ensure there will be a NULL at the
+			end of our buffer after the fread().  Why no just do
+				psBuf[iLength] = 0  ?
+			Because on Win32, iLength may not point to the end of 
+			the buffer because \r\n are converted into \n because
+			the file is opened in text mode.  
+		*/
+	memset(psBuf,0,iLength+1);
 	fread(psBuf, 1, iLength, pFile);
 	fclose(pFile);
 
-	psBuf[iLength] = 0;
 	strToReturn = psBuf;
 	delete [] psBuf;
 
