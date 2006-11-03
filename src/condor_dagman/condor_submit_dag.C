@@ -92,7 +92,6 @@ struct SubmitDagOptions
 int printUsage(); // NOTE: printUsage calls exit(1), so it doesnt return
 void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[]);
 int submitDag( SubmitDagOptions &opts );
-bool readFileToString(const MyString &strFilename, MyString &strFileData);
 
 int main(int argc, char *argv[])
 {
@@ -270,29 +269,6 @@ bool fileExists(const MyString &strFile)
 	if (fd == -1)
 		return false;
 	close(fd);
-	return true;
-}
-
-bool readFileToString(const MyString &strFilename, MyString &strFileData)
-{
-	FILE *pFile = fopen(strFilename.Value(), "r");
-	if (!pFile)
-	{
-		return false;
-	}
-
-	fseek(pFile, 0, SEEK_END);
-	int iLength = ftell(pFile);
-
-	strFileData.reserve_at_least(iLength+1);
-	fseek(pFile, 0, SEEK_SET);
-	char *psBuf = new char[iLength+1];
-	fread(psBuf, 1, iLength, pFile);
-	psBuf[iLength] = 0;
-	strFileData = psBuf;
-	delete [] psBuf;
-
-	fclose(pFile);
 	return true;
 }
 
