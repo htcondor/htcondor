@@ -125,6 +125,12 @@ ClassAdLog::ClassAdLog(const char *filename,int max_historical_logs) : table(102
 		delete active_transaction;
 		active_transaction = NULL;
 	}
+	if(!count) {
+		log_rec = new LogHistoricalSequenceNumber( historical_sequence_number, time(NULL) );
+		if (log_rec->Write(log_fp) < 0) {
+			EXCEPT("write to %s failed, errno = %d", log_filename, errno);
+		}
+	}
 	TruncLog();
 }
 
