@@ -445,6 +445,27 @@ JobQueueDBManager::maintain()
 	totalSqlProcessed += lastBatchSqlProcessed;
 
 	fst = caLogParser->closeFile();
+
+	if (ret_st == SUCCESS) {
+		time_t clock;
+		char           *sql_str;
+		
+		(void)time(  (time_t *)&clock );
+		
+			/* update the last report time in jobqueuepollinginfo */
+		sql_str = (char *) malloc(MAX_FIXED_SQL_STR_LENGTH * sizeof(char));
+		memset(sql_str, 0, MAX_FIXED_SQL_STR_LENGTH);
+		sprintf(sql_str, 
+				"UPDATE JobQueuePollingInfo SET last_poll_time = %ld",
+				clock);
+		
+		connectDB(NOT_IN_XACT);
+		jqDatabase->execCommand(sql_str);
+		disconnectDB(NOT_IN_XACT);
+		if(sql_str)
+			free(sql_str);
+	}
+
 	return ret_st;
 }
 
@@ -2375,6 +2396,38 @@ JobQueueDBManager::checkSchema()
 
 	if (ret_st == SUCCESS && num_result == SCHEMA_VERSION_COUNT) {
 		dprintf(D_ALWAYS, "Schema Version Check OK!\n");
+		int major, minor, back_to_major, back_to_minor;
+		major = atoi(jqDatabase->getValue(0,0));
+		minor = atoi(jqDatabase->getValue(0,1));
+		back_to_major = atoi(jqDatabase->getValue(0,2));
+		back_to_minor = atoi(jqDatabase->getValue(0,3));
+		if ((major == 1 ) && (minor == 0) && (back_to_major == 1) && 
+			(back_to_minor == 0)) {
+				// we need to upgrade the schema to add a last_poll_time
+				// column into the jobqueuepollinginfo table
+			strcpy(sql_str, SCHEMA_CREATE_JOBQUEUEPOLLINGINFO_UPDATE1);
+			ret_st == jqDatabase->execCommand(sql_str);
+			if(ret_st == FAILURE) {
+				disconnectDB(NOT_IN_XACT);
+				return FAILURE;
+			}
+
+				// and also update the minor in schema version			
+			if (jqDatabase->beginTransaction() == FAILURE) {			
+				return FAILURE;			   				 
+			}
+			
+			strcpy(sql_str, SCHEMA_VERSION_TABLE_UPDATE);
+			ret_st = jqDatabase->execCommand(sql_str);
+			if(ret_st == FAILURE) {
+				disconnectDB(ABORT_XACT);
+				return FAILURE;
+			}
+			if (jqDatabase->commitTransaction() == FAILURE) {
+				disconnectDB(ABORT_XACT);
+				return FAILURE;						
+			}
+		}
 		// this would be a good place to check if the version matchedup
 		// instead of just seeing if we got something back
 	} else {
