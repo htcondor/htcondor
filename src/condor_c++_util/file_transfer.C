@@ -274,7 +274,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 		}
 	}
 
-	if ( (IsServer() || (IsClient() && simple_init))&& 
+	if ( ((IsServer() && !simple_init) || (IsClient() && simple_init)) && 
 		 (Ad->LookupString(ATTR_JOB_CMD, buf) == 1) ) 
 	{
 		// stash the executable name for comparison later, so

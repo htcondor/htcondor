@@ -86,13 +86,13 @@ char* getStoredCredential(const char *username, const char *domain)
 	// make sure the file owner matches our real uid
 	struct stat st;
 	if (fstat(fileno(fp), &st) == -1) {
-		dprintf(D_ALWAYS, "fstat failed on POOL_PASSWORD_FILE (%s), %s (errno: %d)\n",
+		dprintf(D_ALWAYS, "fstat failed on SEC_PASSWORD_FILE (%s), %s (errno: %d)\n",
 			filename, strerror(errno), errno);
 		fclose(fp);
 		return NULL;
 	}
 	if (st.st_uid != get_my_uid()) {
-		dprintf(D_ALWAYS, "error: POOL_PASSWORD_FILE must be owned by Condor's real uid\n");
+		dprintf(D_ALWAYS, "error: SEC_PASSWORD_FILE must be owned by Condor's real uid\n");
 		fclose(fp);
 		return NULL;
 	}
