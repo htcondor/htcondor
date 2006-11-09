@@ -109,6 +109,11 @@ Quill to crash.  In practice, this was only a problem under Windows,
 because of the likelihood of the log compaction operation failing
 during the schedd's initial startup.
 
+\item Fixed a problem on Windows where, when submitting a job with a
+sandbox (for example, using the \Opt{-s} or \Opt{-r} option to
+\Condor{submit}), an erroneous file permissions check in the
+\Condor{schedd} would result in a failed submission.
+
 \end{itemize}
 
 \noindent Known Bugs:
