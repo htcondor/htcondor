@@ -156,6 +156,15 @@ Prober::probe(ClassAdLogEntry *curCALogEntry,
 		return PROBE_ERROR;
 	}
 
+	if ( caLogParser.getCurCALogEntry()->op_type !=
+		 CondorLogOp_LogHistoricalSequenceNumber )
+	{
+		EXCEPT("ERROR: quill prober expects first classad log entry to be "
+				"type %d, but sees %d instead.",
+				CondorLogOp_LogHistoricalSequenceNumber,
+				caLogParser.getCurCALogEntry()->op_type);
+	}
+
 	dprintf(D_ALWAYS, "first log entry: %s %s %s\n", 
 			((ClassAdLogEntry *)caLogParser.getCurCALogEntry())->key,
 			((ClassAdLogEntry *)caLogParser.getCurCALogEntry())->name,
