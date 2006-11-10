@@ -102,12 +102,13 @@ exceeded''.
 \item \Condor{fetchlog} no longer allows or documents the -dagman option.
 The option's appearance was an error.  The option never worked.
 
-\item When starting up for the first time, \Condor{schedd} ensures
-that the initial job queue log file contains a sequence number,
-because in the case where this wasn't being inserted, this was causing
-Quill to crash.  In practice, this was only a problem under Windows,
-because of the likelihood of the log compaction operation failing
-during the schedd's initial startup.
+\item \Condor{schedd} ensures that the initial job queue log file
+contains a sequence number for use by Quill.  This fixes a case in
+which no sequence number was inserted, because the initial rotation of
+this (empty) file failed.  Quill also now reports exactly what the
+problem is if it reads a job queue log in this state, rather than
+simply crashing.  This problem has so far only been observed under
+Windows.
 
 \item Fixed a problem on Windows where, when submitting a job with a
 sandbox (for example, using the \Opt{-s} or \Opt{-r} option to
