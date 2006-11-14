@@ -411,7 +411,7 @@ TimerManager::Timeout()
 		did_reset = current_id;
 
 		// Log a message before calling handler
-		dprintf(D_DAEMONCORE,"DaemonCore: Calling handler for Timer %d (%s)\n",
+		dprintf(D_COMMAND,"Calling Timer handler %d (%s)\n",
 			current_id, event_descrip);
 
 		// Now we call the registered handler.  If we were told that the handler
@@ -423,6 +423,9 @@ TimerManager::Timeout()
 		} else {
 			(*handler)(s);				// typedef int (*Event)(Service*,int)
 		}
+
+		dprintf(D_COMMAND,"Return from Timer handler %d (%s)\n",
+			current_id, event_descrip);
 
 		// Make sure we didn't leak our priv state
 		daemonCore->CheckPrivState();

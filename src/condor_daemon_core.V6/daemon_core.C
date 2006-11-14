@@ -2542,8 +2542,7 @@ void DaemonCore::Driver()
 
 						// log a message
 						int pipe_end = (*pipeTable)[i].index + PIPE_INDEX_OFFSET;
-						dprintf(D_DAEMONCORE,
-									"Calling Handler <%s> for Pipe end=%d <%s>\n",
+						dprintf(D_COMMAND,"Calling pipe Handler <%s> for Pipe end=%d <%s>\n",
 									(*pipeTable)[i].handler_descrip,
 									pipe_end,
 									(*pipeTable)[i].pipe_descrip);
@@ -2563,6 +2562,11 @@ void DaemonCore::Driver()
 							// no handler registered
 							EXCEPT("No pipe handler callback");
 						}
+
+						dprintf(D_COMMAND,"Return from  pipe Handler <%s> for Pipe end=%d <%s>\n",
+									(*pipeTable)[i].handler_descrip,
+									pipe_end,
+									(*pipeTable)[i].pipe_descrip);
 
 						(*pipeTable)[i].in_handler = false;
 
@@ -2659,18 +2663,22 @@ void DaemonCore::Driver()
 									"Calling Handler <%s> for Socket <%s>\n",
 									(*sockTable)[i].handler_descrip,
 									(*sockTable)[i].iosock_descrip);
+							dprintf(D_COMMAND, "Calling Handler <%s>\n", (*sockTable)[i].handler_descrip);
 						}
 
 						// Update curr_dataptr for GetDataPtr()
 						curr_dataptr = &( (*sockTable)[i].data_ptr);
 						recheck_status = true;
-						if ( (*sockTable)[i].handler )
+						if ( (*sockTable)[i].handler ) {
 							// a C handler
 							result = (*( (*sockTable)[i].handler))( (*sockTable)[i].service, (*sockTable)[i].iosock);
-						else
-						if ( (*sockTable)[i].handlercpp )
+							dprintf(D_COMMAND, "Return from Handler <%s>\n", (*sockTable)[i].handler_descrip);
+						} else 
+						if ( (*sockTable)[i].handlercpp ) {
 							// a C++ handler
 							result = ((*sockTable)[i].service->*( (*sockTable)[i].handlercpp))((*sockTable)[i].iosock);
+							dprintf(D_COMMAND, "Return from Handler <%s>\n", (*sockTable)[i].handler_descrip);
+						}
 						else
 							// no handler registered, so this is a command
 							// socket.  call the DaemonCore handler which
@@ -3864,6 +3872,7 @@ int DaemonCore::HandleReq(int socki)
 		// call the handler function; first curr_dataptr for GetDataPtr()
 		curr_dataptr = &(comTable[index].data_ptr);
 
+		dprintf(D_COMMAND, "Calling HandleReq <%s> (%d)\n", comTable[index].handler_descrip, inServiceCommandSocket_flag);
 		if ( comTable[index].is_cpp ) {
 			// the handler is c++ and belongs to a 'Service' class
 			if ( comTable[index].handlercpp )
@@ -3873,6 +3882,7 @@ int DaemonCore::HandleReq(int socki)
 			if ( comTable[index].handler )
 				result = (*(comTable[index].handler))(comTable[index].service,req,stream);
 		}
+		dprintf(D_COMMAND, "Return from HandleReq <%s>\n", comTable[index].handler_descrip);
 
 		// clear curr_dataptr
 		curr_dataptr = NULL;
