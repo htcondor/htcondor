@@ -1,3 +1,9 @@
+
+11/14/06 V6_8-oracle-3-{root,branch}
+  The 3nd branch for an oracle version of Quill. Created from 
+  BUILD-V6_8-branch-2006-11-14. Condor-C is broken at that build tag,
+  but we don't need Condor-C for Quill so I'm ignoring it. 
+
 10/30/06 V6_8-oracle-2-{root,branch}
   The 2nd branch for an oracle version of Quill. Created from 
   BUILD-V6_8-branch-2006-10-30
