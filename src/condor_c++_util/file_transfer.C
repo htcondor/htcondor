@@ -274,6 +274,52 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 		}
 	}
 
+	// there are a few places below where we need the value of the SPOOL
+	// knob if we're the server. we param for it once here, and free it
+	// at the end of this function
+	//
+	char* Spool = NULL;
+	if ( IsServer() ) {
+		Spool = param("SPOOL");
+	}
+
+	// if we're the server, initialize the SpoolSpace and TmpSpoolSpace
+	// member variables (and create the directories if not there already)
+	//
+	int Cluster = 0;
+	int Proc = 0;
+	Ad->LookupInteger(ATTR_CLUSTER_ID, Cluster);
+	Ad->LookupInteger(ATTR_PROC_ID, Proc);
+	if ( IsServer() && Spool ) {
+
+		SpoolSpace = strdup( gen_ckpt_name(Spool,Cluster,Proc,0) );
+		TmpSpoolSpace = (char*)malloc( strlen(SpoolSpace) + 10 );
+		sprintf(TmpSpoolSpace,"%s.tmp",SpoolSpace);
+
+		priv_state saved_priv = PRIV_UNKNOWN;
+		if( want_priv_change ) {
+			saved_priv = set_priv( desired_priv_state );
+		}
+		if( (mkdir(SpoolSpace,0777) < 0) ) {
+			if( errno != EEXIST ) {
+				dprintf( D_ALWAYS, "FileTransfer::Init(): "
+				         "mkdir(%s) failed, %s (errno: %d)\n",
+				         SpoolSpace, strerror(errno), errno );
+			}
+		}
+		if( (mkdir(TmpSpoolSpace,0777) < 0) ) {
+			if( errno != EEXIST ) {
+				dprintf( D_ALWAYS, "FileTransfer::Init(): "
+				         "mkdir(%s) failed, %s (errno: %d)\n",
+				         TmpSpoolSpace, strerror(errno), errno );
+			}
+		}
+		if( want_priv_change ) {
+			ASSERT( saved_priv != PRIV_UNKNOWN );
+			set_priv( saved_priv );
+		}
+	}
+
 	if ( ((IsServer() && !simple_init) || (IsClient() && simple_init)) && 
 		 (Ad->LookupString(ATTR_JOB_CMD, buf) == 1) ) 
 	{
@@ -285,51 +331,11 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 		// Only check the spool directory if we're the server.
 		// Note: This will break Condor-C jobs if the executable is ever
 		//   spooled the old-fashioned way (which doesn't happen currently).
-		if ( IsServer() ) {
-			char *source;
-			char *Spool;
-			int Cluster = 0;
-			int Proc = 0;
-
-			Ad->LookupInteger(ATTR_CLUSTER_ID, Cluster);
-			Ad->LookupInteger(ATTR_PROC_ID, Proc);
-			Spool = param("SPOOL");
-			if ( Spool ) {
-
-				SpoolSpace = strdup( gen_ckpt_name(Spool,Cluster,Proc,0) );
-				TmpSpoolSpace = (char*)malloc( strlen(SpoolSpace) + 10 );
-				sprintf(TmpSpoolSpace,"%s.tmp",SpoolSpace);
-
-				priv_state saved_priv = PRIV_UNKNOWN;
-				if( want_priv_change ) {
-					saved_priv = set_priv( desired_priv_state );
-				}
-
-				if( (mkdir(SpoolSpace,0777) < 0) ) {
-					if( errno != EEXIST ) {
-						dprintf( D_ALWAYS, "FileTransfer::Init(): "
-								 "mkdir(%s) failed, %s (errno: %d)\n",
-								 SpoolSpace, strerror(errno), errno );
-					}
-				}
-				if( (mkdir(TmpSpoolSpace,0777) < 0) ) {
-					if( errno != EEXIST ) {
-						dprintf( D_ALWAYS, "FileTransfer::Init(): "
-								 "mkdir(%s) failed, %s (errno: %d)\n",
-								 TmpSpoolSpace, strerror(errno), errno );
-					}
-				}
-				source = gen_ckpt_name(Spool,Cluster,ICKPT,0);
-				free(Spool);
-				Spool = NULL;
-				if ( access(source,F_OK | X_OK) >= 0 ) {
-					// we can access an executable in the spool dir
-					ExecFile = strdup(source);
-				}
-				if( want_priv_change ) {
-					ASSERT( saved_priv != PRIV_UNKNOWN );
-					set_priv( saved_priv );
-				}
+		if ( IsServer() && Spool ) {
+			char *source = gen_ckpt_name(Spool,Cluster,ICKPT,0);
+			if ( access(source,F_OK | X_OK) >= 0 ) {
+				// we can access an executable in the spool dir
+				ExecFile = strdup(source);
 			}
 		}
 
@@ -458,14 +464,12 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 
 	bool spooling_output = false;
 	{
-		char *Spool = param("SPOOL");
-		if(Spool) {
+		if (Spool) {
 			if(!strncmp(Iwd,Spool,strlen(Spool))) {
 				// We are in the spool directory.
 				// Wish there was a better way to find this out!
 				spooling_output = true;
 			}
-			free(Spool);
 		}
 	}
 
@@ -476,6 +480,10 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	int spool_completion_time = 0;
 	Ad->LookupInteger(ATTR_STAGE_IN_FINISH,spool_completion_time);
 	last_download_time = spool_completion_time;
+
+	if ( Spool ) {
+		free(Spool);
+	}
 
 	did_init = true;
 	return 1;
