@@ -4380,12 +4380,33 @@ These macros affect the \Condor{collector}.
 
 \item[\Macro{COLLECTOR\_SOCKET\_BUFSIZE}] 
   \label{param:CollectorSocketBufsize} This specifies the buffer size, in
-  bytes, reserved for \Condor{collector} network sockets.  The default is
-  1024000, or a one megabyte buffer.  This is a healthy size, even for a large
+  bytes, reserved for \Condor{collector} network UDP sockets.  The default is
+  10240000, or a ten megabyte buffer.  This is a healthy size, even for a large
   pool.  The larger this value, the less likely the \Condor{collector} will
   have stale information about the pool due to dropping update packets.  If
   your pool is small or your central manager has very little RAM, considering
   setting this parameter to a lower value (perhaps 256000 or 128000).
+
+\Note For some Linux distributions, it may be neccessary to configure
+a larger value than the default; this parameter is
+/proc/sys/net/core/rmem\_max .  You can see the values that the
+\Condor{collector} actually used by enabling D\_FULLDEBUG for the
+collector and looking at the log line that looks like this:
+
+Reset OS socket buffer size to 2048k (UDP), 255k (TCP).
+
+\item[\Macro{COLLECTOR\_TCP\_SOCKET\_BUFSIZE}]
+
+  \label{param:CollectorTcpSocketBufsize} This specifies the TCP buffer
+  size, in  bytes, reserved for \Condor{collector} network sockets.  The
+  default is 131072, or a 128 kilobyte buffer.  This is a healthy size, even
+  for a large pool.  The larger this value, the less likely the
+  \Condor{collector} will have stale information about the pool due to
+  dropping update packets.  If your pool is small or your central
+  manager has very little RAM, considering setting this parameter to a
+  lower value (perhaps 65536 or 32768).
+
+\Note See the note for \Macro{COLLECTOR\_SOCKET\_BUFSIZE}.
 
 \item[\Macro{COLLECTOR\_SOCKET\_CACHE\_SIZE}] 
   \label{param:CollectorSocketCacheSize} 
