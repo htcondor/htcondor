@@ -570,7 +570,6 @@ int Sock::set_os_buffers(int desired_size, bool set_write_buf)
 	int previous_size = 0;
 	int attempt_size = 0;
 	int command;
-	int ret_val;
 	SOCKET_LENGTH_TYPE temp;
 
 	if (_state == sock_virgin) assign();
@@ -593,27 +592,27 @@ int Sock::set_os_buffers(int desired_size, bool set_write_buf)
 		We want to set the socket buffer size to be as close
 		to the desired size as possible.  Unfortunatly, there is no
 		contant defined which states the maximum size possible.  So
-		we keep raising it up 2k at a time until (a) we got up to the
+		we keep raising it up 1k at a time until (a) we got up to the
 		desired value, or (b) it is not increasing anymore.  We ignore
-		errors (-1) values from setsockopt since on some platforms this 
-		could signal a value which is to low...
+		the return value from setsockopt since on some platforms this 
+		could signal a value which is too low...
 	*/
 	 
 	do {
-		attempt_size += 2000;
+		attempt_size += 1024;
 		if ( attempt_size > desired_size ) {
 			attempt_size = desired_size;
 		}
-		ret_val = setsockopt(SOL_SOCKET,command,
-			(char*)&attempt_size,sizeof(int));
-		if ( ret_val < 0 )
-			continue;
+		(void) setsockopt( SOL_SOCKET, command,
+						   (char*)&attempt_size, sizeof(int) );
+
 		previous_size = current_size;
 		temp = sizeof(int);
-		::getsockopt(_sock,SOL_SOCKET,command,
-			(char*)&current_size,&temp);
-	} while ( ((ret_val < 0) || (previous_size < current_size))
-				&& (attempt_size < desired_size) );
+		::getsockopt( _sock, SOL_SOCKET, command,
+ 					  (char*)&current_size, &temp );
+
+	} while ( ( previous_size < current_size ) &&
+			  ( attempt_size < desired_size  ) );
 
 	return current_size;
 }
