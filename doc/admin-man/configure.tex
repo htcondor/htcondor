@@ -240,6 +240,25 @@ See section~\ref{sec:randomchoiceusage} on
 page~\pageref{sec:randomchoiceusage}
 for an actual use of this specialized macro.
 
+\index{\$RANDOM\_INTEGER()!in configuration}
+The \Macro{RANDOM\_INTEGER()} macro is similar to the \Macro{RANDOM\_CHOICE()}
+macro, and is used to provide a random integer within a configuration file.
+These references are of the form:
+\begin{verbatim}
+  $RANDOM_INTEGER(min,max[,step])
+\end{verbatim}
+This allows a random integer within the range (between min and max,
+inclusive) at configuration time.  The step parameter, if specified,
+controls the ``step'' size of the random value, and defaults to 1.
+For example, if an even integer between 0-8 (inclusive) should be randomly
+chosen, the macro usage is
+\begin{verbatim}
+  $RANDOM_INTEGER(0,8,2)
+\end{verbatim}
+% See section~\ref{sec:randomintegerusage} on
+% page~\pageref{sec:randomintegerusage}
+% for an actual use of this specialized macro.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Other-Syntax}Comments and Line Continuations}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
