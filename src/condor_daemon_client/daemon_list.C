@@ -319,7 +319,7 @@ CollectorList::query(CondorQuery & query, ClassAdList & adList, CondorError *err
 		MyString errmsg;
 		char* tmplist = getCmHostFromConfig( "COLLECTOR" );
 		errmsg.sprintf ("Unable to resolve COLLECTOR_HOST (%s).",tmplist?tmplist:"(null)");
-		errstack->push("CONDOR_STATUS",1,(char*)errmsg.Value());
+		errstack->push("CONDOR_STATUS",1,errmsg.Value());
 	}
 
 		// If we've gotten here, there are no good collectors

@@ -33,8 +33,7 @@ int condor_bytes_stream_open_ckpt_file( const char *name, int flags,
 	int		sock_fd;
 	int		status;
 
-	// cast discards const	
-	string_to_sin((char *) name, &sin);
+	string_to_sin(name, &sin);
 	sock_fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (sock_fd < 0) {
 		fprintf(stderr, "socket() failed, errno = %d\n", errno);

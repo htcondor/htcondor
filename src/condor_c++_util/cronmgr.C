@@ -304,10 +304,10 @@ CronMgrBase::~CronMgrBase( )
 
 	// Free up name, etc. buffers
 	if ( NULL != Name ) {
-		free( (char *) Name );
+		free( Name );
 	}
 	if ( NULL != ParamBase ) {
-		free( (void *) ParamBase );
+		free( ParamBase );
 	}
 
 	// Log our death
@@ -359,7 +359,7 @@ int CronMgrBase::SetParamBase( const char *newParamBase,
 
 	// Free the old one..
 	if ( NULL != ParamBase ) {
-		free( (void *) ParamBase );
+		free( ParamBase );
 	}
 
 	// Default?
@@ -421,7 +421,7 @@ CronMgrBase::DoConfig( bool initial )
 
 	// Is the config val program specified?
 	if( configValProg ) {
-		free( (void*) configValProg );
+		free( configValProg );
 	}
 	configValProg = GetParam( "CONFIG_VAL" );
 

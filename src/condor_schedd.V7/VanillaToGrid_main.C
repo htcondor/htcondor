@@ -219,7 +219,7 @@ int grid2vanilla(int argc, char **argv)
 int main(int argc, char **argv) 
 {
 	config(); // Initialize param.
-	char * progname = basename(argv[0]);
+	const char * progname = condor_basename(argv[0]);
 	if(progname[0] == 'v') {
 		return vanilla2grid(argc,argv);
 	} else if(progname[0] == 'g') {

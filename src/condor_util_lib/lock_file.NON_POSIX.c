@@ -66,10 +66,7 @@
 #if CONDOR_USE_FLOCK
 
 int
-lock_file( fd, type, do_block )
-int fd;
-LOCK_TYPE type;
-int do_block;
+lock_file( int fd, LOCK_TYPE type, int do_block )
 {
 	int	op;
 

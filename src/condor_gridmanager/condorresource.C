@@ -281,7 +281,6 @@ int CondorResource::DoScheddPoll()
 
 		if ( rc == 0 ) {
 			for ( int i = 0; i < num_status_ads; i++ ) {
-				int rc;
 				int cluster, proc;
 				MyString job_id_string;
 				CondorJob *job;

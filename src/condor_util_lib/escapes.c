@@ -24,6 +24,8 @@
 
 #include <string.h>
 
+#include "escapes.h"
+
 static int getHexDigitValue( int );
 
 char *collapse_escapes( char *str )

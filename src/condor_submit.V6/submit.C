@@ -569,7 +569,6 @@ main( int argc, char *argv[] )
 	char	**ptr;
 	char	*cmd_file = NULL;
 	int dag_pause = 0;
-	int i;
 
 	setbuf( stdout, NULL );
 
@@ -870,7 +869,7 @@ main( int argc, char *argv[] )
 	}
 
 	// Deallocate some memory just to keep Purify happy
-	for (i=0;i<JobAdsArrayLen;i++) {
+	for (int i=0;i<JobAdsArrayLen;i++) {
 		delete JobAdsArray[i];
 	}
 
@@ -3923,7 +3922,7 @@ SetForcedAttributes()
 	while( ( forcedAttributes.iterate( name, value ) ) )
 	{
 		// expand the value; and insert it into the job ad
-		exValue = expand_macro( (char*)value.Value(), ProcVars, PROCVARSIZE );
+		exValue = expand_macro( value.Value(), ProcVars, PROCVARSIZE );
 		if( !exValue )
 		{
 			fprintf( stderr, "\nWarning: Unable to expand macros in \"%s\"."
@@ -5066,9 +5065,9 @@ queue(int num)
 bool
 findClause( const char* buffer, const char* attr_name )
 {
-	char* ptr;
+	const char* ptr;
 	int len = strlen( attr_name );
-	for( ptr = (char*)buffer; *ptr; ptr++ ) {
+	for( ptr = buffer; *ptr; ptr++ ) {
 		if( strincmp(attr_name,ptr,len) == MATCH ) {
 			return true;
 		}

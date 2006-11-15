@@ -105,8 +105,8 @@ int condor_open_filter( const char *name, int flags, size_t n_bytes )
 				}
 			}
 
-			// cast discards const
-			mkargv(&argc, argv, (char *) name);
+			char *name_cpy = strdup( name );
+			mkargv(&argc, argv, name_cpy);
 			execv(argv[0], argv);
 			fprintf(stderr, "execv(%s) failed!!!!\n", argv[0]);
 			exit(-1);

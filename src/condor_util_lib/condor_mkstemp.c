@@ -23,6 +23,7 @@
 
 #include "condor_common.h"
 #include "condor_random_num.h"
+#include "condor_mkstemp.h"
 
 #if !HAVE_MKSTEMP
 
@@ -108,7 +109,7 @@ int mkstemp(char *template)
 int condor_mkstemp(char *template)
 {
 #if !defined(WIN32)
-	int savedUmask = umask(S_IRWXG|S_IRWXO);
+	mode_t savedUmask = umask(S_IRWXG|S_IRWXO);
 	int fd = mkstemp(template);
 	umask(savedUmask);
 #else

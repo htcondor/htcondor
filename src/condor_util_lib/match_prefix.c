@@ -21,13 +21,14 @@
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 #include "condor_common.h"
+#include "match_prefix.h"
 
 int
 match_prefix(const char *s1, const char *s2)
 {
-	int	s1l = strlen(s1);
-	int s2l = strlen(s2);
-	int min = (s1l < s2l) ? s1l : s2l;
+	size_t	s1l = strlen(s1);
+	size_t	s2l = strlen(s2);
+	size_t min = (s1l < s2l) ? s1l : s2l;
 
 	// return true if the strings match (i.e., strcmp() returns 0)
 	if (strncmp(s1, s2, min) == 0)

@@ -73,7 +73,7 @@ char *GlobusJobStatusName( int status )
 }
 
 const char *
-x509_error_string()
+x509_error_string( void )
 {
 	return _globus_error_message;
 }
@@ -94,7 +94,7 @@ set_error_string( const char *message )
  */
 static
 int
-activate_globus_gsi()
+activate_globus_gsi( void )
 {
 #if !defined(CONDOR_GSI)
 	set_error_string( "This version of Condor doesn't support X509 credentials!" );
@@ -141,7 +141,7 @@ activate_globus_gsi()
  * string returned must be freed with free().
  */
 char *
-get_x509_proxy_filename()
+get_x509_proxy_filename( void )
 {
 	char *proxy_file = NULL;
 #if defined(CONDOR_GSI)
@@ -423,8 +423,8 @@ x509_proxy_try_import( const char *proxy_file )
 	return -1;
 
 #else
-	int rc;
-	int min_stat;
+	unsigned int rc;
+	unsigned int min_stat;
 	gss_buffer_desc import_buf;
 	gss_cred_id_t cred_handle;
 	char buf_value[4096];

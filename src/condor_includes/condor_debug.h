@@ -129,8 +129,8 @@ void dprintf_touch_log(void);
 /*
 **	Important external variables in libc
 */
-extern DLL_IMPORT_MAGIC int		errno;
 #if !( defined(LINUX) && defined(GLIBC) || defined(Darwin) || defined(CONDOR_FREEBSD) )
+extern DLL_IMPORT_MAGIC int		errno;
 extern DLL_IMPORT_MAGIC int		sys_nerr;
 extern DLL_IMPORT_MAGIC char		*sys_errlist[];
 #endif

@@ -2872,7 +2872,7 @@ int DaemonCore::HandleReq(int socki)
 
 
 		// get the info, if there is any
-		char * cleartext_info = (char*)((SafeSock*)stream)->isIncomingDataMD5ed();
+		const char * cleartext_info = ((SafeSock*)stream)->isIncomingDataMD5ed();
 		char * sess_id = NULL;
 		char * return_address_ss = NULL;
 
@@ -2962,7 +2962,7 @@ int DaemonCore::HandleReq(int socki)
 
 
 		// get the info, if there is any
-		cleartext_info = (char*)((SafeSock*)stream)->isIncomingDataEncrypted();
+		cleartext_info = ((SafeSock*)stream)->isIncomingDataEncrypted();
 		sess_id = NULL;
 		return_address_ss = NULL;
 
@@ -5949,7 +5949,6 @@ int DaemonCore::Create_Process(
 				char *nametmp = (char *) malloc( namelen );
 				if ( NULL == nametmp ) {
 					dprintf( D_ALWAYS, "malloc(%d) failed!\n", namelen );
-					free( (void *) origname );
 					exit(ENOMEM);
 				}
 

@@ -57,6 +57,7 @@ HashTable <HashKey, ProxySubject *> SubjectsByName( 50, hashFunction );
 
 static bool proxymanager_initialized = false;
 static int CheckProxies_tid = TIMER_UNSET;
+static char *masterProxyDirectory = NULL;
 
 int CheckProxies_interval = 600;		// default value
 int minProxy_time = 3 * 60;				// default value
@@ -108,6 +109,8 @@ bool InitializeProxyManager( const char *proxy_dir )
 	CheckProxies_tid = daemonCore->Register_Timer( 1, CheckProxies_interval,
 												   (TimerHandler)&CheckProxies,
 												   "CheckProxies", NULL );
+
+	masterProxyDirectory = strdup( proxy_dir );
 
 	ReconfigProxyManager();
 
@@ -208,7 +211,7 @@ AcquireProxy( const ClassAd *job_ad, MyString &error, int notify_tid )
 				Proxy *new_master = new Proxy;
 				new_master->id = next_proxy_id++;
 				MyString tmp;
-				tmp.sprintf( "%s/master_proxy.%d", GridmanagerScratchDir,
+				tmp.sprintf( "%s/master_proxy.%d", masterProxyDirectory,
 							 new_master->id );
 				new_master->proxy_filename = strdup( tmp.Value() );
 				new_master->num_references = 0;
@@ -294,7 +297,7 @@ AcquireProxy( const ClassAd *job_ad, MyString &error, int notify_tid )
 			Proxy *new_master = new Proxy;
 			new_master->id = next_proxy_id++;
 			MyString tmp;
-			tmp.sprintf( "%s/master_proxy.%d", GridmanagerScratchDir,
+			tmp.sprintf( "%s/master_proxy.%d", masterProxyDirectory,
 						 new_master->id );
 			new_master->proxy_filename = strdup( tmp.Value() );
 			new_master->num_references = 0;

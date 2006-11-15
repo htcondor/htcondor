@@ -154,7 +154,7 @@ int pidenvid_match(PidEnvID *left, PidEnvID *right);
 void pidenvid_copy(PidEnvID *to, PidEnvID *from);
 
 /* dump out the structure to the debugging logs */
-void pidenvid_dump(PidEnvID *penvid, unsigned int dlvl);
+void pidenvid_dump(PidEnvID *penvid, int dlvl);
 
 END_C_DECLS
 

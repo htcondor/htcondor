@@ -29,7 +29,7 @@
 #ifdef LINT
 /* VARARGS */
 _EXCEPT_(foo)
-char	*foo;
+const char	*foo;
 { printf( foo ); }
 #else /* LINT */
 

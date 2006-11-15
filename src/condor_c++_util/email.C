@@ -497,7 +497,7 @@ Email::shouldSend( ClassAd* ad, int exit_reason, bool is_error )
 		return false;
 	}
 
-	int cluster = 0, proc = 0;
+	int ad_cluster = 0, ad_proc = 0;
 	int exit_by_signal = FALSE;
 
 	// send email if user requested it
@@ -528,11 +528,11 @@ Email::shouldSend( ClassAd* ad, int exit_reason, bool is_error )
 			}
 			break;
 		default:
-			ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
-			ad->LookupInteger( ATTR_PROC_ID, proc );
+			ad->LookupInteger( ATTR_CLUSTER_ID, ad_cluster );
+			ad->LookupInteger( ATTR_PROC_ID, ad_proc );
 			dprintf( D_ALWAYS,  "Condor Job %d.%d has "
 					 "unrecognized notification of %d\n",
-					 cluster, proc, notification );
+					 ad_cluster, ad_proc, notification );
 				// When in doubt, better send it anyway...
 			return true;
 			break;

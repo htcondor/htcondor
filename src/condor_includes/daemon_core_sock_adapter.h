@@ -45,16 +45,16 @@ class DaemonCoreSockAdapterClass {
 
 	void EnableDaemonCore(
 		DaemonCore *daemonCore,
-		Register_Socket_fnptr Register_Socket,
-		Cancel_Socket_fnptr Cancel_Socket,
-		Register_DataPtr_fnptr Register_DataPtr,
-		GetDataPtr_fnptr GetDataPtrFun)
+		Register_Socket_fnptr Register_Socket_fptr,
+		Cancel_Socket_fnptr Cancel_Socket_fptr,
+		Register_DataPtr_fnptr Register_DataPtr_fptr,
+		GetDataPtr_fnptr GetDataPtrFun_fptr)
 	{
 		m_daemonCore = daemonCore;
-		m_Register_Socket_fnptr = Register_Socket;
-		m_Cancel_Socket_fnptr = Cancel_Socket;
-		m_Register_DataPtr_fnptr = Register_DataPtr;
-		m_GetDataPtr_fnptr = GetDataPtrFun;
+		m_Register_Socket_fnptr = Register_Socket_fptr;
+		m_Cancel_Socket_fnptr = Cancel_Socket_fptr;
+		m_Register_DataPtr_fnptr = Register_DataPtr_fptr;
+		m_GetDataPtr_fnptr = GetDataPtrFun_fptr;
 	}
 
 		// These functions all have the same interface as the corresponding

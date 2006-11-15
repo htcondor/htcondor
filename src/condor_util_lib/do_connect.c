@@ -27,6 +27,7 @@
 #include "condor_socket_types.h"
 #include "condor_netdb.h"
 #include "util_lib_proto.h"
+#include "condor_network.h"
 
 /*
  * FYI: This code is used by the old shadow/starter and by the syscall lib

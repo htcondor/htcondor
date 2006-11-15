@@ -134,7 +134,7 @@ addFloat (const int cat, float value)
 }
 
 int GenericQuery::
-addString (const int cat, char *value)
+addString (const int cat, const char *value)
 {
     char *x;
 
@@ -150,7 +150,7 @@ addString (const int cat, char *value)
 }
 
 int GenericQuery::
-addCustomOR (char *value)
+addCustomOR (const char *value)
 {
     char *x = new_strdup (value);
 	if (!x) return Q_MEMORY_ERROR;
@@ -159,7 +159,7 @@ addCustomOR (char *value)
 }
 
 int GenericQuery::
-addCustomAND (char *value)
+addCustomAND (const char *value)
 {
     char *x = new_strdup (value);
 	if (!x) return Q_MEMORY_ERROR;

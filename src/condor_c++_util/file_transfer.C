@@ -901,7 +901,7 @@ FileTransfer::RemoveInputFiles(const char *sandbox_path)
 	// Make a new list that only contains file basenames.
 	FilesToSend->rewind();
 	while ( (f=FilesToSend->next()) ) {
-		do_not_remove.append( basename(f) );
+		do_not_remove.append( condor_basename(f) );
 	}
 
 	// Now, remove all files in the sandbox_path EXCEPT
@@ -2022,7 +2022,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 		} else {
 			// this file is _not_ the job executable
 			is_the_executable = false;
-			basefilename = basename(filename);
+			basefilename = (char *)condor_basename(filename);
 		}
 
 		if( !s->code(basefilename) ) {

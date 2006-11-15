@@ -717,7 +717,6 @@ doContactSchedd()
 
 			if ( BaseJob::JobsByProcId.lookup( procID, old_job ) != 0 ) {
 
-				int rc;
 				JobType *job_type = NULL;
 				BaseJob *new_job = NULL;
 
@@ -921,7 +920,6 @@ contact_schedd_next_add_job:
 		pendingJobStatus.startIterations();
 		while ( pendingJobStatus.iterate( curr_request ) != 0 ) {
 
-			int rc;
 			int status;
 
 			rc = GetAttributeInt( curr_request.job_id.cluster,

@@ -238,7 +238,7 @@ typedef enum
 
 char *GlobusJobStatusName( int status );
 
-char *get_x509_proxy_filename();
+char *get_x509_proxy_filename( void );
 
 int check_x509_proxy( const char *proxy_file );
 
@@ -252,7 +252,7 @@ int x509_proxy_seconds_until_expire( const char *proxy_file );
 
 int x509_proxy_try_import( const char *proxy_file );
 
-const char* x509_error_string();
+const char* x509_error_string( void );
 
 int
 x509_send_delegation( const char *source_file,
@@ -268,7 +268,7 @@ x509_receive_delegation( const char *destination_file,
 						 int (*send_data_func)(void *, void *, size_t),
 						 void *send_data_ptr );
 
-int have_condor_g();
+int have_condor_g( void );
 
 void parse_resource_manager_string( const char *string, char **host,
 									char **port, char **service,

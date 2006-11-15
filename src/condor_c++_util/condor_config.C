@@ -219,8 +219,7 @@ validate_entries() {
 	}
 	hash_iter_delete(&it);
 	if(invalid_entries > 0) {
-			//TODO: Make EXCEPT const correct
-		EXCEPT((char *)(output.Value()));
+		EXCEPT(output.Value());
 	}
 }
 
@@ -684,7 +683,7 @@ process_directory( char* dirlist, char* host )
 {
 	StringList locals;
 	Directory *files;
-	char *file, *dirpath;
+	const char *file, *dirpath;
 	char **paths;
 	char *tmp;
 	int local_required;
@@ -709,7 +708,7 @@ process_directory( char* dirlist, char* host )
 		if(files == NULL) { 
 			fprintf(stderr, "Cannot open %s\n", dirpath);	 
 		} else {
-			while( (file = (char *)files->Next()) && i < 65536) {
+			while( (file = files->Next()) && i < 65536) {
 				// don't consider directories
 				// maybe we should squash symlinks here...
 				if(! files->IsDirectory() ) {

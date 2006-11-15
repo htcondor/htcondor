@@ -43,10 +43,10 @@ class GenericQuery
 	
 	// add constraints
 	int addInteger (const int, int);
-	int addString (const int, char *);
+	int addString (const int, const char *);
 	int addFloat (const int, float);
-	int addCustomOR (char *);
-	int addCustomAND( char * );
+	int addCustomOR (const char *);
+	int addCustomAND( const char * );
 
 	// clear constraints
 	int clearInteger (const int);

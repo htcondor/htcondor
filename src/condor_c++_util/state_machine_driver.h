@@ -55,7 +55,7 @@ class StateMachine;
 class Transition {
 public:
 	void display();
-	void dot_print(FILE *, char *);
+	void dot_print(FILE *, const char *);
 
 	int				from;
 	int				event;

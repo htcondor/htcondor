@@ -63,6 +63,7 @@
 #define _CONDOR_NO_TRUE_FALSE 1
 #include "condor_common.h" 
 #include "condor_debug.h" 
+#include "util_lib_proto.h"
 
 
 /*
@@ -73,7 +74,7 @@
 
 #if defined( LINUX )
 char*
-linux_getExecPath()
+linux_getExecPath( void )
 {
 	int rval;
 	char* full_path;

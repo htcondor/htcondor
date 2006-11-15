@@ -235,7 +235,7 @@ Transition::display()
 
 
 void
-Transition::dot_print(FILE *file, char *color)
+Transition::dot_print(FILE *file, const char *color)
 {
 	if (to != 0) {
 		fprintf(file, "\t%s -> %s [label = \"%s(%s)\", color = \"%s\"];\n",
@@ -286,12 +286,12 @@ void
 StateMachine::dot_print(FILE *file)
 {
 	int		i;
-	char	*color;
+	const char	*color;
 
 	fprintf(file, "digraph FSA {\n");
 
 	for( i=0; i<n_transitions; i++ ) {
-		color = (char *)(is_asynch_event(TransitionTab[i].event) ? "red" : "blue");
+		color = (is_asynch_event(TransitionTab[i].event) ? "red" : "blue");
 		TransitionTab[i].dot_print(file, color);
 	}
 	fprintf(file, "}\n");

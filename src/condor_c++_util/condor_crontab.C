@@ -669,7 +669,7 @@ CronTab::expandParameter( int attribute_idx, int min, int max )
 		//
 	MyString error;
 	if ( ! CronTab::validateParameter(	attribute_idx,
-										(char*)param->Value(),
+										param->Value(),
 										error ) ) {
 		dprintf( D_ALWAYS, "%s", error.Value() );
 			//

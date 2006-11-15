@@ -229,7 +229,7 @@ void pidenvid_copy(PidEnvID *to, PidEnvID *from)
 }
 
 /* emit the structure to the logs at the debug level specified */
-void pidenvid_dump(PidEnvID *penvid, unsigned int dlvl)
+void pidenvid_dump(PidEnvID *penvid, int dlvl)
 {
 	int i;
 

@@ -22,6 +22,7 @@
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
+#include "fdprintf.h"
 
 int fdprintf (int fd, const char *fmt, ...) 
 {
