@@ -51,6 +51,23 @@ The default for this configuration setting is false, so existing behavior
 is unchanged.  This feature does not apply to standard and pvm universe
 jobs.
 
+\item Changed the default UDP recieve buffer for the
+\Condor{collector} from 1M to 10M.  This value can be configured with
+the (existing) COLLECTOR\_SOCKET\_BUFSIZE parameter.
+
+\Note For some Linux distributions, it may be neccessary to configure
+a larger value than the default; this parameter is
+/proc/sys/net/core/rmem\_max .  You can see the values that the
+\Condor{collector} actually used by enabling D\_FULLDEBUG for the
+collector and looking at the log line that looks like this:
+
+Reset OS socket buffer size to 2048k (UDP), 255k (TCP).
+
+\item Added a new configuration parameter to control the size of the
+TCP send buffers for the \Condor{collector}.  This parameter used to
+be the same as COLLECTOR\_SOCKET\_BUFSIZE.  The new parameter is
+COLLECTOR\_TCP\_SOCKET\_BUFSIZE, and defaults to 128K.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
