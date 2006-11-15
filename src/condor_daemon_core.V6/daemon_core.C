@@ -6856,26 +6856,23 @@ DaemonCore::InitCommandSocket( int command_port )
 		// drops on the floor.
 	if( strcmp(mySubSystem,"COLLECTOR") == 0 ) {
 		int desired_size;
-		char *tmp;
-
-		if( (tmp=param("COLLECTOR_SOCKET_BUFSIZE")) ) {
-			desired_size = atoi(tmp);
-			free(tmp);
-		} else {
-				// default to 1 meg of buffers.  Gulp!
-			desired_size = 1024000;
-		}
 
 			// set the UDP (ssock) read size to be large, so we do not
 			// drop incoming updates.
-		int final_size = dc_ssock->set_os_buffers( desired_size );
+		desired_size = param_integer( "COLLECTOR_SOCKET_BUFSIZE",
+									  10000 * 1024, 1024 );
+		int final_udp = dc_ssock->set_os_buffers( desired_size );
+
 
 			// and also set the outgoing TCP write size to be large so the
 			// collector is not blocked on the network when answering queries
-		dc_rsock->set_os_buffers( desired_size, true );
+		desired_size = param_integer("COLLECTOR_TCP_SOCKET_BUFSIZE",
+									 128 * 1024, 1024 );
+		int final_tcp = dc_rsock->set_os_buffers( desired_size, true );
 
-		dprintf( D_FULLDEBUG,"Reset OS socket buffer size to %dk\n",
-				 final_size / 1024 );
+		dprintf( D_FULLDEBUG,
+				 "Reset OS socket buffer size to %dk (UDP), %dk (TCP).\n",
+				 final_udp / 1024, final_tcp / 1024 );
 	}
 
 #ifdef WANT_NETMAN
