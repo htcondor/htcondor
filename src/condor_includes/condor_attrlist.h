@@ -196,12 +196,12 @@ class AttrList : public AttrListAbstract
         bool        LookupBool(const char *, bool &) const;
 
 		// evaluate values in classads
-		int         EvalString (const char *, class AttrList *, char *);
-        int         EvalString (const char *, class AttrList *, char **value);
-        int         EvalString (const char *, class AttrList *, MyString & value);
-		int         EvalInteger (const char *, class AttrList *, int &);
-		int         EvalFloat (const char *, class AttrList *, float &);
-		int         EvalBool  (const char *, class AttrList *, int &);
+		int         EvalString (const char *, const class AttrList *, char *) const;
+        int         EvalString (const char *, const class AttrList *, char **value) const;
+        int         EvalString (const char *, const class AttrList *, MyString & value) const;
+		int         EvalInteger (const char *, const class AttrList *, int &) const;
+		int         EvalFloat (const char *, const class AttrList *, float &) const;
+		int         EvalBool  (const char *, const class AttrList *, int &) const;
 
 		int			IsInList(AttrListList*);	// am I in this AttrList list?
 

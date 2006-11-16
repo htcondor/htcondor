@@ -1400,7 +1400,7 @@ bool AttrList::LookupBool (const char *name, bool &value) const
 }   
 
 
-int AttrList::EvalString (const char *name, AttrList *target, char *value)
+int AttrList::EvalString (const char *name, const AttrList *target, char *value) const
 {
 	ExprTree *tree;
 	EvalResult val;
@@ -1431,7 +1431,7 @@ int AttrList::EvalString (const char *name, AttrList *target, char *value)
 
 // Unlike the other lame version of this function call, we ensure that
 // we allocate the value, to ensure that we have sufficient space.
-int AttrList::EvalString (const char *name, AttrList *target, char **value)
+int AttrList::EvalString (const char *name, const AttrList *target, char **value) const
 {
 	ExprTree *tree;
 	EvalResult val;
@@ -1470,7 +1470,7 @@ int AttrList::EvalString (const char *name, AttrList *target, char **value)
 	return 0;
 }
 
-int AttrList::EvalString (const char *name, AttrList *target, MyString & value)
+int AttrList::EvalString (const char *name, const AttrList *target, MyString & value) const
 {
 	char * pvalue = NULL;
 	int ret = EvalString(name, target, &pvalue);
@@ -1480,7 +1480,7 @@ int AttrList::EvalString (const char *name, AttrList *target, MyString & value)
 	return ret;
 }
 
-int AttrList::EvalInteger (const char *name, AttrList *target, int &value) 
+int AttrList::EvalInteger (const char *name, const AttrList *target, int &value) const
 {
     ExprTree *tree;
     EvalResult val;   
@@ -1509,7 +1509,7 @@ int AttrList::EvalInteger (const char *name, AttrList *target, int &value)
     return 0;
 }
 
-int AttrList::EvalFloat (const char *name, AttrList *target, float &value) 
+int AttrList::EvalFloat (const char *name, const AttrList *target, float &value) const
 {
     ExprTree *tree;
     EvalResult val;   
@@ -1546,7 +1546,7 @@ int AttrList::EvalFloat (const char *name, AttrList *target, float &value)
     return 0;
 }
 
-int AttrList::EvalBool (const char *name, AttrList *target, int &value) 
+int AttrList::EvalBool (const char *name, const AttrList *target, int &value) const
 {
     ExprTree *tree;
     EvalResult val;   
