@@ -54,7 +54,6 @@
 #include "env.h"
 //#include "condor_crontab.h"
 
-const 	int			MAX_REJECTED_CLUSTERS = 1024;
 extern  int         STARTD_CONTACT_TIMEOUT;
 const	int			NEGOTIATOR_CONTACT_TIMEOUT = 30;
 
@@ -103,6 +102,8 @@ class match_rec
 		// if match is currently active, cluster and proc of the
 		// running job associated with this match; otherwise,
 		// cluster==origcluster and proc==-1
+		// NOTE: use SetMrecJobID() to change cluster and proc,
+		// because this updates the index of matches by job id.
     int     		cluster;
     int     		proc;
 
@@ -251,6 +252,9 @@ class Scheduler : public Service
     match_rec*      AddMrec(char*, char*, PROC_ID*, const ClassAd*, char*, char*);
     int         	DelMrec(char*);
     int         	DelMrec(match_rec*);
+	match_rec*      FindMrecByJobID(PROC_ID);
+	void            SetMrecJobID(match_rec *rec, int cluster, int proc);
+	void            SetMrecJobID(match_rec *match, PROC_ID job_id);
 	shadow_rec*		FindSrecByPid(int);
 	shadow_rec*		FindSrecByProcID(PROC_ID);
 	void			RemoveShadowRecFromMrec(shadow_rec*);
@@ -349,6 +353,9 @@ class Scheduler : public Service
 		// negotiation
 	bool canSpawnShadow( int started_jobs, int total_jobs );  
 	void addActiveShadows( int num ) { CurNumActiveShadows += num; };
+
+	int				shadow_prio_recs_consistent();
+	void			mail_problem_message();
 	
 	// info about our central manager
 	CollectorList* 	Collectors;
@@ -414,9 +421,6 @@ private:
 	char*			LocalUnivExecuteDir;
 	int				BadCluster;
 	int				BadProc;
-	//int				RejectedClusters[MAX_REJECTED_CLUSTERS];
-	ExtArray<int>   RejectedClusters;
-	int				N_RejectedClusters;
 	ExtArray<OwnerData> Owners; // May be tracking AccountingGroup instead of owner username/domain
 	HashTable<UserIdentity, GridJobCounts> GridJobOwners;
 	int				N_Owners;
@@ -467,10 +471,6 @@ private:
 	int					Len; 
 
 	// utility functions
-	int				shadow_prio_recs_consistent();
-	void			mail_problem_message();
-	int				cluster_rejected(int);
-	void   			mark_cluster_rejected(int); 
 	int				count_jobs();
 	void   			check_claim_request_timeouts( void );
 	int				insert_owner(char*);
@@ -527,6 +527,7 @@ private:
 	void			expand_mpi_procs(StringList *, StringList *);
 
 	HashTable <HashKey, match_rec *> *matches;
+	HashTable <PROC_ID, match_rec *> *matchesByJobID;
 	HashTable <int, shadow_rec *> *shadowsByPid;
 	HashTable <PROC_ID, shadow_rec *> *shadowsByProcID;
 	HashTable <int, ExtArray<PROC_ID> *> *spoolJobFileWorkers;

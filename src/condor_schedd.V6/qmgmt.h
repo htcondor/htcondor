@@ -97,6 +97,8 @@ bool isQueueSuperUser( const char* user );
 bool OwnerCheck( ClassAd *ad, const char *test_owner );
 bool OwnerCheck2( ClassAd *ad, const char *test_owner );
 bool Reschedule();
+bool BuildPrioRecArray(bool no_match_found=false);
+void ClearPrioRecArray();
 
 int get_myproxy_password_handler(Service *, int, Stream *sock);
 #if defined(__cplusplus)

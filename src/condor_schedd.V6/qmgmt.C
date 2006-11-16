@@ -52,6 +52,7 @@
 #include "iso_dates.h"
 #include "condor_scanner.h"	// for Token, etc.
 #include "condor_string.h" // for strnewp, etc.
+#include "utc_time.h"
 
 extern char *Spool;
 extern char *Name;
@@ -93,6 +94,12 @@ static time_t xact_start_time = 0;	// time at which the current transaction was 
 
 class Service;
 
+bool        PrioRecArrayIsDirty = true;
+UtcTime     PrioRecArrayTimestamp;
+double      PrioRecArrayLastBuildDuration = 0;
+// spend at most this fraction of the time rebuilding the PrioRecArray
+const double PrioRecRebuildMaxTimeSlice = 0.05;
+const double PrioRecRebuildMaxTimeSliceWhenNoMatchFound = 0.1;
 prio_rec	PrioRecArray[INITIAL_MAX_PRIO_REC];
 prio_rec	* PrioRec = &PrioRecArray[0];
 int			N_PrioRecs = 0;
@@ -1927,6 +1934,23 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		}
 	}
 
+	if( !PrioRecArrayIsDirty ) {
+		if( stricmp(attr_name, ATTR_JOB_PRIO) == 0 ) {
+			PrioRecArrayIsDirty = true;
+		}
+		if( stricmp(attr_name, ATTR_JOB_STATUS) == 0 ) {
+			if( atoi(attr_value) == IDLE ) {
+				PrioRecArrayIsDirty = true;
+			}
+		}
+		if(PrioRecArrayIsDirty) {
+			dprintf(D_FULLDEBUG,
+					"Prioritized runnable job list will be rebuilt, because "
+					"ClassAd attribute %s=%s changed\n",
+					attr_name,attr_value);
+		}
+	}
+
 //	log = new LogSetAttribute(key, attr_name, attr_value);
 //	JobQueue->AppendLog(log);
 	JobQueue->SetAttribute(key, attr_name, attr_value);
@@ -3060,7 +3084,7 @@ PrintQ()
 // Returns cur_hosts so that another function in the scheduler can
 // update JobsRunning and keep the scheduler and queue manager
 // seperate. 
-int get_job_prio(ClassAd *job, bool  /*compute_autoclusters*/)
+int get_job_prio(ClassAd *job)
 {
     int job_prio;
     int job_status;
@@ -3318,6 +3342,91 @@ void mark_jobs_idle()
     WalkJobQueue( mark_idle );
 }
 
+void ClearPrioRecArray() {
+		// force a rebuild of PrioRecArray the next time we need it
+	PrioRecArrayIsDirty = true;
+	N_PrioRecs = 0;
+}
+
+static void DoBuildPrioRecArray() {
+	scheduler.autocluster.mark();
+
+	N_PrioRecs = 0;
+	WalkJobQueue( get_job_prio );
+
+		// N_PrioRecs might be 0, if we have no jobs to run at the
+		// moment.  If so, we don't want to call qsort(), since that's
+		// bad.  We can still try to find the owner in the Owners
+		// array, since that's not that expensive, and we need it for
+		// all the flocking logic at the end of this function.
+		// Discovered by Derek Wright and insure-- on 2/28/01
+	if( N_PrioRecs ) {
+		qsort( (char *)PrioRec, N_PrioRecs, sizeof(PrioRec[0]),
+			   (int(*)(const void*, const void*))prio_compar );
+	}
+
+	scheduler.autocluster.sweep();
+
+	if( !scheduler.shadow_prio_recs_consistent() ) {
+		scheduler.mail_problem_message();
+	}
+}
+
+/*
+ * Build an array of runnable jobs sorted by priority.  If there are
+ * a lot of jobs in the queue, this can expensive, so avoid building
+ * the array too often.
+ * Arguments:
+ *   no_match_found - caller can't find a runnable job matching
+ *                    the requirements of an available startd, so
+ *                    consider rebuilding the list sooner
+ * Returns:
+ *   true if the array was rebuilt; false otherwise
+ */
+bool BuildPrioRecArray(bool no_match_found /*default false*/) {
+	if( !PrioRecArrayIsDirty ) {
+		dprintf(D_FULLDEBUG,
+				"Reusing prioritized runnable job list because nothing has "
+				"changed.\n");
+		return false;
+	}
+
+	UtcTime now;
+	now.getTime();
+	double age = now.difference(&PrioRecArrayTimestamp);
+
+	double time_slice;
+	if( no_match_found ) {
+		time_slice = PrioRecRebuildMaxTimeSliceWhenNoMatchFound;
+	}
+	else {
+		time_slice = PrioRecRebuildMaxTimeSlice;
+	}
+
+	if( age == 0 ||
+		PrioRecArrayLastBuildDuration/age > time_slice ) {
+
+		dprintf(D_FULLDEBUG,
+				"Reusing prioritized runnable job list to save time.\n");
+
+		return false;
+	}
+
+	PrioRecArrayIsDirty = false;
+	PrioRecArrayTimestamp = now;
+
+	DoBuildPrioRecArray();
+
+	now.getTime();
+	PrioRecArrayLastBuildDuration = now.difference(&PrioRecArrayTimestamp);
+
+	dprintf(D_ALWAYS,"Rebuilt prioritized runnable job list in %.3fs.%s\n",
+			PrioRecArrayLastBuildDuration,
+			no_match_found ? "  (Expedited rebuild because no match was found)" : "");
+
+	return true;
+}
+
 /*
  * Find the job with the highest priority that matches with my_match_ad (which
  * is a startd ad).  We first try to find a match within the same cluster.  If
@@ -3329,15 +3438,10 @@ void mark_jobs_idle()
 void FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad, 
 					 char * user)
 {
-	char				constraintbuf[_POSIX_PATH_MAX];
-	char				*constraint = constraintbuf;
 	ClassAd				*ad;
-	char				*the_at_sign;
-	static char			nice_user_prefix[50];	// static since no need to recompute
-	static int			nice_user_prefix_len = 0;
 
 		// First, see if jobid points to a runnable job.  If it does,
-		// there's no need to build up a PrioRec array, since we
+		// there's no need to iterate through PrioRec array, since we
 		// requested matches in priority order in the first place.
 		// And, we'd like to start the job we used to get the match if
 		// possible, just to keep things simple.
@@ -3359,7 +3463,12 @@ void FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad,
 				{
 					ad->LookupInteger(ATTR_CLUSTER_ID, jobid.cluster);
 					ad->LookupInteger(ATTR_PROC_ID, jobid.proc);
-					break;
+					if( scheduler.AlreadyMatched(&jobid) ) {
+						jobid.proc = -1;
+					}
+					else {
+						break;
+					}
 				}
 			}
 			ad = GetNextJob(0);
@@ -3367,92 +3476,104 @@ void FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad,
 		return;
 	}
 
-
-	if ( nice_user_prefix_len == 0 ) {
-		strcpy(nice_user_prefix,NiceUserName);
-		strcat(nice_user_prefix,".");
-		nice_user_prefix_len = strlen(nice_user_prefix);
-	}
-
 		// indicate failure by setting proc to -1.  do this now
 		// so if we bail out early anywhere, we say we failed.
 	jobid.proc = -1;	
-	
-		// Just try to find a job in the same cluster if we don't have the
-		// startd ad.
-		// If we do have the startd ad (my_match_ad), then we don't want
-		// to restrict ourselves to just one specific cluster.
-	N_PrioRecs = 0;
-	if ( !my_match_ad ) {
-		ad = GetNextJobByCluster(jobid.cluster, 1);	// init a new scan
-		while ( ad ) {
-				// If job ad and resource ad match, put into prio rec array.
-				// If we do not have a resource ad, it is because this pool
-				// has an old negotiator -- so put it in prio rec array anyway.
-			if ( (my_match_ad && (*ad == ((ClassAd &)(*my_match_ad)))) || (my_match_ad == NULL) ) 
-			{
-				get_job_prio(ad);
-			} 
-			ad = GetNextJobByCluster(jobid.cluster, 0);
-		}
+
+	ASSERT(my_match_ad);
+
+	HashTable<int,int> autocluster_rejected(N_PrioRecs,hashFuncInt,rejectDuplicateKeys);
+	MyString owner = user;
+	int at_sign_pos;
+	int i;
+
+		// We have been passed user, which is owner@uid.  We want just
+		// owner, place a NULL at the '@'.
+
+	at_sign_pos = owner.FindChar('@');
+	if ( at_sign_pos >= 0 ) {
+		owner.setChar(at_sign_pos,'\0');
 	}
 
-	if(N_PrioRecs == 0 && my_match_ad)
-	// no more jobs in this cluster can run on this resource.
-	// so if we have a my_match_ad, look for any job in any cluster in 
-	// the queue with the same owner.
-	{
-		
-		// Form a constraint.  We have been passed user, which is
-		// owner@uid.  We want just owner, place a NULL at the '@'.
-		if ( (the_at_sign = strchr(user,'@')) ) {
-			*the_at_sign = '\0';
-		}	
-		
-		// Now, deal with nice-user jobs.  If this user name has the
-		// nice-user prefix, strip it, and add it to our constraint.
-		// Otherwise, ad NiceUser == False to our constraint.
-		if ( strncmp(user,nice_user_prefix,nice_user_prefix_len) == 0 ) {
-			sprintf(constraint, "(%s == TRUE) && ", ATTR_NICE_USER);
-			constraint += strlen(constraintbuf);
-			user += nice_user_prefix_len;
-		} else {
-			sprintf(constraint, "(%s == FALSE) && ", ATTR_NICE_USER);
-			constraint += strlen(constraintbuf);
-		}
+	bool rebuilt_prio_rec_array = BuildPrioRecArray();
 
-		sprintf(constraint, "((%s =?= \"%s\") || (%s =?= UNDEFINED && %s =?= \"%s\"))", 
-			ATTR_ACCOUNTING_GROUP,user,ATTR_ACCOUNTING_GROUP,ATTR_OWNER,user);  // TODDCORE
+		// Iterate through the most recently constructed list of
+		// jobs, nicely pre-sorted in priority order.
 
-			// OK, we're finished building the constraint now, so set
-			// the constraint pointer to the head of the string.
-		constraint = constraintbuf;
-		
-		// Put the '@' back if we changed it
-		if ( the_at_sign ) {
-			*the_at_sign = '@';
-		}	
-
-		ad = GetNextJobByConstraint(constraint, 1);	// init a new scan
-		while ( ad ) {
-			// If job ad and resource ad match, put into prio rec array.
-			if ( (my_match_ad && (*ad == ((ClassAd &)(*my_match_ad)))) ) 
-			{
-				get_job_prio(ad);
+	do {
+		for (i=0; i < N_PrioRecs; i++) {
+			if ( strcmp(PrioRec[i].owner,owner.Value()) != 0 ) {
+				continue;
 			}
-			ad = GetNextJobByConstraint(constraint, 0);
+
+			ad = GetJobAd( PrioRec[i].id.cluster, PrioRec[i].id.proc );
+			if (!ad) {
+					// This ad must have been deleted since we last built
+					// runnable job list.
+				continue;
+			}	
+
+			int junk; // don't care about the value
+			if ( autocluster_rejected.lookup( PrioRec[i].auto_cluster_id, junk ) == 0 ) {
+					// We have already failed to match a job from this same
+					// autocluster with this machine.  Skip it.
+				continue;
+			}
+
+			if ( ! (*ad == (ClassAd &)(*my_match_ad)) )
+				{
+						// Job and machine do not match.
+					autocluster_rejected.insert( PrioRec[i].auto_cluster_id, 1 );
+				}
+			else {
+				if(!Runnable(&PrioRec[i].id) || scheduler.AlreadyMatched(&PrioRec[i].id)) {
+						// This job's status must have changed since the
+						// time it was added to the runnable job list.
+						// Prevent this job from being considered in any
+						// future iterations through the list.
+					PrioRec[i].owner[0] = '\0';
+				}
+				else {
+
+						// Make sure that the startd ranks this job >= the
+						// rank of the job that initially claimed it.
+						// We stashed that rank in the startd ad when
+						// the match was created.
+						// (As of 6.9.0, the startd does not reject reuse
+						// of the claim with lower RANK, but future versions
+						// very well may.)
+
+					float current_startd_rank;
+					if( my_match_ad &&
+						my_match_ad->LookupFloat(ATTR_CURRENT_RANK, current_startd_rank) )
+					{
+						float new_startd_rank = 0;
+						if( my_match_ad->EvalFloat(ATTR_RANK, ad, new_startd_rank) )
+						{
+							if( new_startd_rank < current_startd_rank ) {
+								continue;
+							}
+						}
+					}
+
+					jobid = PrioRec[i].id; // success!
+					return;
+				}
+			}
 		}
 
-	}
+		if(rebuilt_prio_rec_array) {
+				// We found nothing, and we had a freshly built job list.
+				// Give up.
+			break;
+		}
+			// Try to force a rebuild of the job list, since we
+			// are about to throw away a match.
+		rebuilt_prio_rec_array = BuildPrioRecArray(true /*no match found*/);
 
-	if(N_PrioRecs == 0)
+	} while( rebuilt_prio_rec_array );
+
 	// no more jobs to run anywhere.  nothing more to do.  failure.
-	{
-		return;
-	}
-
-
-	FindPrioJob(jobid);
 }
 
 int Runnable(ClassAd *job)

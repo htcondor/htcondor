@@ -44,6 +44,7 @@ template class HashBucket<int,int>;
 template class HashTable<int, shadow_rec *>;
 template class HashBucket<int,shadow_rec *>;
 template class HashTable<HashKey, match_rec *>;
+template class HashTable<PROC_ID, match_rec *>;
 template class HashBucket<HashKey,match_rec *>;
 template class HashTable<PROC_ID, shadow_rec *>;
 template class HashBucket<PROC_ID,shadow_rec *>;

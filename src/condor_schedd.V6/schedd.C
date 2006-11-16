@@ -103,7 +103,6 @@ extern "C"
 	int prio_compar(prio_rec*, prio_rec*);
 }
 
-extern int get_job_prio(ClassAd *ad);
 extern void	FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad, 
 					 char * user);
 extern int Runnable(PROC_ID*);
@@ -147,7 +146,6 @@ bool jobCleanupNeedsThread( int cluster, int proc );
 bool jobExternallyManaged(ClassAd * ad);
 bool jobManagedDone(ClassAd * ad);
 int  count( ClassAd *job );
-void job_prio(ClassAd *ad);
 
 int	WallClockCkptInterval = 0;
 static bool gridman_per_job = false;
@@ -308,7 +306,6 @@ Scheduler::Scheduler() :
 
 	ShadowSizeEstimate = 0;
 
-	N_RejectedClusters = 0;
 	N_Owners = 0;
 	NegotiationRequestTime = 0;
 
@@ -322,6 +319,7 @@ Scheduler::Scheduler() :
 	aliveid = -1;
 	ExitWhenDone = FALSE;
 	matches = NULL;
+	matchesByJobID = NULL;
 	shadowsByPid = NULL;
 	spoolJobFileWorkers = NULL;
 
@@ -358,8 +356,6 @@ Scheduler::Scheduler() :
 
 	sent_shadow_failure_email = FALSE;
 	ManageBandwidth = false;
-	RejectedClusters.setFiller(0);
-	RejectedClusters.resize(MAX_REJECTED_CLUSTERS);
 	_gridlogic = NULL;
 
 	CronMgr = NULL;
@@ -412,6 +408,9 @@ Scheduler::~Scheduler()
 			delete rec;
 		}
 		delete matches;
+	}
+	if (matchesByJobID) {
+		delete matchesByJobID;
 	}
 	if (shadowsByPid) {
 		shadowsByPid->startIterations();
@@ -4571,34 +4570,17 @@ Scheduler::negotiate(int command, Stream* s)
 		if ( autocluster.config(sig_attrs_from_cm) ) {
 			// clear out auto cluster id attributes
 			WalkJobQueue( (int(*)(ClassAd *))clear_autocluster_id );
+			ClearPrioRecArray(); // must rebuild PrioRecArray
 		}
 		free(sig_attrs_from_cm);
 		sig_attrs_from_cm = NULL;
 	}
 
-	autocluster.mark();
-	N_PrioRecs = 0;
-
-	WalkJobQueue( (int(*)(ClassAd *))job_prio );
-
-	if( !shadow_prio_recs_consistent() ) {
-		mail_problem_message();
-	}
-
-		// N_PrioRecs might be 0, if we have no jobs to run at the
-		// moment.  If so, we don't want to call qsort(), since that's
-		// bad.  We can still try to find the owner in the Owners
-		// array, since that's not that expensive, and we need it for
-		// all the flocking logic at the end of this function.
-		// Discovered by Derek Wright and insure-- on 2/28/01
-	if( N_PrioRecs ) {
-		qsort( (char *)PrioRec, N_PrioRecs, sizeof(PrioRec[0]),
-			   (int(*)(const void*, const void*))prio_compar );
-	}
+	bool prio_rec_array_is_stale = !BuildPrioRecArray();
 	jobs = N_PrioRecs;
-	autocluster.sweep();
 
-	N_RejectedClusters = 0;
+	HashTable<int,int> autocluster_rejected(N_PrioRecs,hashFuncInt,rejectDuplicateKeys);
+
 	JobsStarted = 0;
 
 	// find owner in the Owners array
@@ -4646,11 +4628,15 @@ Scheduler::negotiate(int command, Stream* s)
 		serviced_other_commands += daemonCore->ServiceCommandSocket();
 
 		id = PrioRec[i].id;
-		if( cluster_rejected(PrioRec[i].auto_cluster_id) ) {
+
+		int junk; // don't care about the value
+		if ( autocluster_rejected.lookup( PrioRec[i].auto_cluster_id, junk ) == 0 ) {
+				// We have already failed to match a job from this same
+				// autocluster with this machine.  Skip it.
 			continue;
 		}
 
-		if ( serviced_other_commands ) {
+		if ( serviced_other_commands || prio_rec_array_is_stale ) {
 			// we have run some other schedd command, like condor_rm or condor_q,
 			// while negotiating.  check and make certain the job is still
 			// runnable, since things may have changed since we built the 
@@ -4763,7 +4749,7 @@ Scheduler::negotiate(int command, Stream* s)
 				 case REJECTED:
 						// Always negotiate for all PVM job classes! 
 					if ( job_universe != CONDOR_UNIVERSE_PVM && !NegotiateAllJobsInCluster ) {
-						mark_cluster_rejected( cur_cluster );
+						autocluster_rejected.insert( cur_cluster, 1 );
 					}
 					host_cnt = max_hosts + 1;
 					JobsRejected++;
@@ -6074,8 +6060,7 @@ Scheduler::StartJobs()
 			// If we're reusing a match to start another job, then cluster
 			// and proc may have changed, so we keep them up-to-date here.
 			// This is important for Scheduler::AlreadyMatched().
-		rec->cluster = id.cluster;
-		rec->proc = id.proc;
+		SetMrecJobID(rec,id);
 			// Now that the shadow has spawned, consider this match "ACTIVE"
 		rec->setStatus( M_ACTIVE );
 	}
@@ -8140,32 +8125,6 @@ mark_job_stopped(PROC_ID* job_id)
 
 
 
-void
-Scheduler::mark_cluster_rejected(int cluster)
-{
-	int		i;
-
-	for( i=0; i<N_RejectedClusters; i++ ) {
-		if( RejectedClusters[i] == cluster ) {
-			return;
-		}
-	}
-	RejectedClusters[ N_RejectedClusters++ ] = cluster;
-}
-
-int
-Scheduler::cluster_rejected(int cluster)
-{
-	int		i;
-
-	for( i=0; i<N_RejectedClusters; i++ ) {
-		if( RejectedClusters[i] == cluster ) {
-			return 1;
-		}
-	}
-	return 0;
-}
-
 /*
  * Ask daemonCore to check to see if a given process is still alive
  */
@@ -9566,6 +9525,10 @@ Scheduler::Init()
 	if (matches == NULL) {
 	matches = new HashTable <HashKey, match_rec *> ((int)(MaxJobsRunning*1.2),
 													hashFunction);
+	matchesByJobID =
+		new HashTable<PROC_ID, match_rec *>((int)(MaxJobsRunning*1.2),
+											hashFuncPROC_ID,
+											rejectDuplicateKeys);
 	shadowsByPid = new HashTable <int, shadow_rec *>((int)(MaxJobsRunning*1.2),
 													  pidHash);
 	shadowsByProcID =
@@ -10400,6 +10363,7 @@ Scheduler::AddMrec(char* id, char* peer, PROC_ID* jobId, const ClassAd* my_match
 		delete rec;
 		return NULL;
 	}
+	ASSERT( matchesByJobID->insert( *jobId, rec ) == 0 );
 	numMatches++;
 
 		/*
@@ -10419,6 +10383,21 @@ Scheduler::AddMrec(char* id, char* peer, PROC_ID* jobId, const ClassAd* my_match
 		dprintf( D_ALWAYS, "ERROR: Can't convert \"%s\" to an IP address!\n", 
 				 peer );
 	}
+
+		// Update CurrentRank in the startd ad.  Why?  Because when we
+		// reuse this match for a different job (in
+		// FindRunnableJob()), we make sure it has a rank >= the
+		// startd CurrentRank, in order to avoid potential
+		// rejection by the startd.
+
+	ClassAd *job_ad = GetJobAd(jobId->cluster,jobId->proc);
+	if( job_ad ) {
+		float new_startd_rank = 0;
+		if( rec->my_match_ad->EvalFloat(ATTR_RANK, job_ad, new_startd_rank) ) {
+			rec->my_match_ad->Assign(ATTR_CURRENT_RANK, new_startd_rank);
+		}
+	}
+
 	return rec;
 }
 
@@ -10446,6 +10425,12 @@ Scheduler::DelMrec(char* id)
 			 rec->peer, rec->cluster, rec->proc ); 
 	dprintf( D_FULLDEBUG, "ClaimId of deleted match: %s\n", rec->id );
 	matches->remove(key);
+
+	PROC_ID jobId;
+	jobId.cluster = rec->cluster;
+	jobId.proc = rec->proc;
+	matchesByJobID->remove(jobId);
+
 		// Remove this match from the associated shadowRec.
 	if (rec->shadowRec)
 		rec->shadowRec->match = NULL;
@@ -10583,6 +10568,42 @@ Scheduler::Relinquish(match_rec* mrec)
 	}
 }
 
+match_rec *
+Scheduler::FindMrecByJobID(PROC_ID job_id) {
+	match_rec *match = NULL;
+	if( matchesByJobID->lookup( job_id, match ) < 0) {
+		return NULL;
+	}
+	return match;
+}
+
+void
+Scheduler::SetMrecJobID(match_rec *match, PROC_ID job_id) {
+	PROC_ID old_job_id;
+	old_job_id.cluster = match->cluster;
+	old_job_id.proc = match->proc;
+
+	if( old_job_id.cluster == job_id.cluster && old_job_id.proc == job_id.proc ) {
+		return; // no change
+	}
+
+	matchesByJobID->remove(old_job_id);
+
+	match->cluster = job_id.cluster;
+	match->proc = job_id.proc;
+	if( match->proc != -1 ) {
+		ASSERT( matchesByJobID->insert(job_id, match) == 0 );
+	}
+}
+
+void
+Scheduler::SetMrecJobID(match_rec *match, int cluster, int proc) {
+	PROC_ID job_id;
+	job_id.cluster = cluster;
+	job_id.proc = proc;
+	SetMrecJobID( match, job_id );
+}
+
 void
 Scheduler::RemoveShadowRecFromMrec( shadow_rec* shadow )
 {
@@ -10594,8 +10615,7 @@ Scheduler::RemoveShadowRecFromMrec( shadow_rec* shadow )
 		if(rec->shadowRec == shadow) {
 			rec->shadowRec = NULL;
 				// re-associate match with the original job cluster
-			rec->cluster = rec->origcluster; 
-			rec->proc = -1;
+			SetMrecJobID(rec,rec->origcluster,-1);
 			found = true;
 		}
 	}
@@ -10613,7 +10633,6 @@ int
 Scheduler::AlreadyMatched(PROC_ID* id)
 {
 	int universe;
-	match_rec *rec;
 
 	if (GetAttributeInt(id->cluster, id->proc,
 						ATTR_JOB_UNIVERSE, &universe) < 0) {
@@ -10627,11 +10646,8 @@ Scheduler::AlreadyMatched(PROC_ID* id)
 		 (universe == CONDOR_UNIVERSE_PARALLEL) )
 		return FALSE;
 
-	matches->startIterations();
-	while (matches->iterate(rec) == 1) {
-		if(rec->cluster == id->cluster && rec->proc == id->proc) {
-			return TRUE;
-		}
+	if( FindMrecByJobID(*id) ) {
+		return TRUE;
 	}
 	return FALSE;
 }
@@ -10731,14 +10747,6 @@ Scheduler::sendAlives()
 		// same thing so we keep all of those claims alive, too.
 	dedicated_scheduler.sendAlives();
 }
-
-
-void
-job_prio(ClassAd *ad)
-{
-	scheduler.JobsRunning += get_job_prio(ad,true);
-}
-
 
 void
 Scheduler::HadException( match_rec* mrec ) 
