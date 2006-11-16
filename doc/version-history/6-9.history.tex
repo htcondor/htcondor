@@ -21,6 +21,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Improved the scalability of the algorithm used by 
+the \Condor{schedd} daemon to find runnable jobs.
+This makes a noticeable difference in \Condor{schedd} daemon performance,
+when there are on the order of thousands of jobs in the queue.
+
 \item the \Dflag{COMMAND} debugging level has been enhanced to
 log many more messages. 
 
