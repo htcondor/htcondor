@@ -198,66 +198,6 @@ The \Condor{master} uses this configuration variable,
 and the prefix of \MacroNI{MASTER.} causes this configuration
 to be specific to the \Condor{master} daemon.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Config-File-Special}Special Configuration
-  File Macros} 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\index{configuration file!\$ENV definition}
-\index{\$ENV!in configuration file}
-References to the Condor process's environment are allowed in the
-configuration files.
-Environment references are of the form:
-\begin{verbatim}
-  $ENV(environment_variable_name)
-\end{verbatim}
-For example, 
-\begin{verbatim}
-  A = $ENV(HOME)
-\end{verbatim}
-binds \MacroNI{A} to the value of the HOME environment variable.
-Environment references are not currently used in standard Condor
-configurations.
-However, they can sometimes be useful in custom configurations.
-
-\index{\$RANDOM\_CHOICE()!in configuration}
-This same syntax is used in the \Macro{RANDOM\_CHOICE()} macro to
-allow a random choice of a parameter
-within a configuration file.
-These references are of the form:
-\begin{verbatim}
-  $RANDOM_CHOICE(list of parameters)
-\end{verbatim}
-This allows a random choice within the parameter list to be made
-at configuration time.  Of the list of parameters, one is
-chosen when encountered during configuration.  For example,
-if one of the integers 0-8 (inclusive) should be randomly
-chosen, the macro usage is
-\begin{verbatim}
-  $RANDOM_CHOICE(0,1,2,3,4,5,6,7,8)
-\end{verbatim}
-See section~\ref{sec:randomchoiceusage} on
-page~\pageref{sec:randomchoiceusage}
-for an actual use of this specialized macro.
-
-\index{\$RANDOM\_INTEGER()!in configuration}
-The \Macro{RANDOM\_INTEGER()} macro is similar to the \Macro{RANDOM\_CHOICE()}
-macro, and is used to provide a random integer within a configuration file.
-These references are of the form:
-\begin{verbatim}
-  $RANDOM_INTEGER(min,max[,step])
-\end{verbatim}
-This allows a random integer within the range (between min and max,
-inclusive) at configuration time.  The step parameter, if specified,
-controls the ``step'' size of the random value, and defaults to 1.
-For example, if an even integer between 0-8 (inclusive) should be randomly
-chosen, the macro usage is
-\begin{verbatim}
-  $RANDOM_INTEGER(0,8,2)
-\end{verbatim}
-% See section~\ref{sec:randomintegerusage} on
-% page~\pageref{sec:randomintegerusage}
-% for an actual use of this specialized macro.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Other-Syntax}Comments and Line Continuations}
@@ -421,6 +361,65 @@ correct values, we recommend that you do not overwrite them.
 Only do so if you know what you are doing.
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Config-File-Special}The Special Configuration Macros
+\$ENV(), \$RANDOM\_CHOICE(), and  \$RANDOM\_INTEGER()} 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{configuration file!\$ENV definition}
+\index{\$ENV!in configuration file}
+References to the Condor process's environment are allowed in the
+configuration files.
+Environment references use the \Macro{ENV} macro and are of the form:
+\begin{verbatim}
+  $ENV(environment_variable_name)
+\end{verbatim}
+For example, 
+\begin{verbatim}
+  A = $ENV(HOME)
+\end{verbatim}
+binds \MacroNI{A} to the value of the HOME environment variable.
+Environment references are not currently used in standard Condor
+configurations.
+However, they can sometimes be useful in custom configurations.
+
+\index{\$RANDOM\_CHOICE()!in configuration}
+This same syntax is used in the \Macro{RANDOM\_CHOICE()} macro to
+allow a random choice of a parameter
+within a configuration file.
+These references are of the form:
+\begin{verbatim}
+  $RANDOM_CHOICE(list of parameters)
+\end{verbatim}
+This allows a random choice within the parameter list to be made
+at configuration time.  Of the list of parameters, one is
+chosen when encountered during configuration.  For example,
+if one of the integers 0-8 (inclusive) should be randomly
+chosen, the macro usage is
+\begin{verbatim}
+  $RANDOM_CHOICE(0,1,2,3,4,5,6,7,8)
+\end{verbatim}
+
+\index{\$RANDOM\_INTEGER()!in configuration}
+The \Macro{RANDOM\_INTEGER()} macro is similar to the \MacroNI{RANDOM\_CHOICE()}
+macro, and is used to select a random integer within a configuration file.
+References are of the form:
+\begin{verbatim}
+  $RANDOM_INTEGER(min, max [, step])
+\end{verbatim}
+A random integer within the range \verb@min@ and \verb@max@, inclusive,
+is selected at configuration time.
+The optional \verb@step@ parameter
+controls the stride within the range, and it defaults to the value 1.
+For example, to randomly chose an even integer in the range 0-8 (inclusive),
+the macro usage is
+\begin{verbatim}
+  $RANDOM_INTEGER(0, 8, 2)
+\end{verbatim}
+
+See section~\ref{sec:randomintegerusage} on
+page~\pageref{sec:randomintegerusage}
+for an actual use of this specialized macro.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Condor-wide-Config-File-Entries}Condor-wide Configuration File Entries} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
