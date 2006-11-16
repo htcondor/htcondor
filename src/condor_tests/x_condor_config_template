@@ -1312,9 +1312,6 @@ JAVA_EXTRA_ARGUMENTS =
 ##--------------------------------------------------------------------
 ##  Where is the GridManager binary installed?
 
-GRIDMANAGER			= $(SBIN)/condor_gridmanager
-GAHP				= $(SBIN)/gahp_server
-
 ##--------------------------------------------------------------------
 ##  Settings that control the daemon's debugging output:
 ##--------------------------------------------------------------------

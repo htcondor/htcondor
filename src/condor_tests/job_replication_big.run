@@ -216,7 +216,7 @@ foreach my $hadIndex (1 .. $hadsNumber)
 			"$topDirectory/$personalCondorParametersName", 
 			"_instance$hadIndex");
 	($configurationFiles[$hadIndex], $collectorPorts[$hadIndex]) =
-		split(/:/, $configurationFileAndCollectorPort);
+		split(/\+/, $configurationFileAndCollectorPort);
 	&LogControl($logsDirectory, &FormatTime(time()) . 
 			": instance #$hadIndex ($configurationFiles[$hadIndex]) going up");
 }
@@ -1283,7 +1283,7 @@ sub RaiseMachines
 #				"$topDirectory/$personalCondorParametersName", 
 #				"_instance$hadIndex");
 #    	($configurationFiles[$hadIndex], $collectorPorts[$hadIndex]) =
-#        	split(/:/, $configurationFileAndCollectorPort);
+#        	split(/\+/, $configurationFileAndCollectorPort);
 		my $condorLogsDirectory = "$topDirectory/$pId/" . $pId . "_instance" .
 								  $hadIndex . "/log";
 		print "$condorLogsDirectory\n";

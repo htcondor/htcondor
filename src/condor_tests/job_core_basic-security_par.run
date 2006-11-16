@@ -36,7 +36,7 @@ print "Master PID submit file is $mysubmitnm\n";
 # my $configrem = CondorPersonal::DebugOn();
 # get a remote scheduler running (side b)
 my $configrem = CondorPersonal::StartCondor("x_param.basicparallel-security" ,"parallel");
-my @parallel = split /:/, $configrem;
+my @parallel = split /\+/, $configrem;
 my $parallelconfig = shift @parallel;
 my $parallelport = shift @parallel;
 

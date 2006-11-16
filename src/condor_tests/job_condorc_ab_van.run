@@ -13,6 +13,7 @@ $corename = "job_condorc_ab_van";
 $dummyhost = "gamgee.cs.wisc.edu";
 $currenthost = `hostname`;
 CondorTest::fullchomp($currenthost);
+CondorPersonal::DebugOn();
 
 system("date");
 print "Dummyhost was $dummyhost and really running on $currenthost\n";
@@ -35,7 +36,7 @@ print "Master PID submit file is $mysubmitnm\n";
 # my $configrem = CondorPersonal::DebugOn();
 # get a remote scheduler running (side b)
 my $configrem = CondorPersonal::StartCondor("x_param.condorcremote" ,"remote");
-my @remote = split /:/, $configrem;
+my @remote = split /\+/, $configrem;
 my $remconfig = shift @remote;
 my $remport = shift @remote;
 
@@ -82,7 +83,7 @@ sleep 10;
 
 # get a local scheduler running (side a)
 my $configloc = CondorPersonal::StartCondor("x_param.condorclocal" ,"local");
-my @local = split /:/, $configloc;
+my @local = split /\+/, $configloc;
 my $locconfig = shift @local;
 my $locport = shift @local;
 

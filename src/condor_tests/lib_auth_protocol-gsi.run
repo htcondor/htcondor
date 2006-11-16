@@ -131,7 +131,7 @@ close(CONFIGTPLATE);
 
 #my $configsec = CondorPersonal::DebugOn();
 my $configsec = CondorPersonal::StartCondor($myparamname ,"protocol", $mypid);
-my @securitypool = split /:/, $configsec;
+my @securitypool = split /\+/, $configsec;
 my $secconfig = shift @securitypool;
 my $secport = shift @securitypool;
 

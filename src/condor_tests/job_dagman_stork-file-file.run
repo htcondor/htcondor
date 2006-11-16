@@ -36,7 +36,7 @@ print "Master PID is $mypid\n";
 print "Master PID submit file is $mysubmitnm\n";
 
 my $configloc = CondorPersonal::StartCondor("x_param.storksrvr" ,"local");
-my @local = split /:/, $configloc;
+my @local = split /\+/, $configloc;
 my $locconfig = shift @local;
 my $locport = shift @local;
 
