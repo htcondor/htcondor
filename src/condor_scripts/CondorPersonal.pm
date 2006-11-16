@@ -96,10 +96,12 @@ use FileHandle;
 use POSIX "sys_wait_h";
 use Socket;
 use Sys::Hostname;
+use CondorTest;
 
 my $topleveldir = getcwd();
 my $home = $topleveldir;
 my $localdir;
+my $condorlocaldir;
 my $pid = $$;
 my $version = ""; # remote, middle, ....... for naming schedd "schedd . pid . version"
 
@@ -138,6 +140,7 @@ sub StartCondor
 	my $paramfile = shift || die "Missing parameter file!\n";
 	$version = shift || die "Missing parameter version!\n";
 	my $config_and_port = "";
+	my $winpath = "";
 
 	if($arraysz == 2) {
 		$mpid = $pid; # assign process id
@@ -161,12 +164,28 @@ sub StartCondor
 		return("Failed to do needed Condor Install\n");
 	}
 
-	CondorPersonal::TunePersonalCondor($localdir, $mpid);
+	if( $ENV{NMI_PLATFORM} =~ /win/ ){
+		$winpath = `cygpath -w $localdir`;
+		CondorTest::fullchomp($winpath);
+		$condorlocaldir = $winpath;
+		CondorPersonal::TunePersonalCondor($condorlocaldir, $mpid);
+	} else {
+		CondorPersonal::TunePersonalCondor($localdir, $mpid);
+	}
 
 	$collector_port = CondorPersonal::StartPersonalCondor();
 
 	debug( "collector port is $collector_port\n");
-	$config_and_port = $personal_config_file . ":" . $collector_port;
+
+	if( $ENV{NMI_PLATFORM} =~ /win/ ){
+		$winpath = `cygpath -w $personal_config_file`;
+		CondorTest::fullchomp($winpath);
+		print "Windows conversion of personal config file to $winpath!!\n";
+		$config_and_port = $winpath . "+" . $collector_port ;
+	} else {
+		$config_and_port = $personal_config_file . "+" . $collector_port ;
+	}
+
 	debug( "StartCondor config_and_port is --$config_and_port--\n");
 	CondorPersonal::Reset();
 	debug( "StartCondor config_and_port is --$config_and_port--\n");
@@ -628,6 +647,13 @@ sub TunePersonalCondor
 
 	#filter fig file storing entries we set so we can test
 	#for completeness when we are done
+	my $mytoppath = "";
+	if( $ENV{NMI_PLATFORM} =~ /win/ ){
+		$mytoppath = `cygpath -w $topleveldir`;
+		CondorTest::fullchomp($mytoppath);
+	} else {
+		$mytoppath =  $topleveldir;
+	}
 
 	my $line;
 	#system("ls;pwd");
@@ -648,14 +674,14 @@ sub TunePersonalCondor
 		elsif( $line =~ /^LOCAL_DIR\s*=.*/ )
 		{
 			#debug( "-----------$line-----------\n");
-			$personal_config_changes{"LOCAL_DIR"} = "LOCAL_DIR = $topleveldir\n";
-			print NEW "LOCAL_DIR = $topleveldir\n";
+			$personal_config_changes{"LOCAL_DIR"} = "LOCAL_DIR = $mytoppath\n";
+			print NEW "LOCAL_DIR = $mytoppath\n";
 		}
 		elsif( $line =~ /^LOCAL_CONFIG_FILE\s*=.*/ )
 		{
 			#debug( "-----------$line-----------\n");
-			$personal_config_changes{"LOCAL_DIR"} = "LOCAL_DIR = $topleveldir\n";
-			print NEW "LOCAL_CONFIG_FILE = $topleveldir/$personal_local\n";
+			$personal_config_changes{"LOCAL_DIR"} = "LOCAL_DIR = $mytoppath\n";
+			print NEW "LOCAL_CONFIG_FILE = $mytoppath/$personal_local\n";
 		}
 		else
 		{
@@ -814,17 +840,28 @@ sub TunePersonalCondor
 sub StartPersonalCondor
 {
 	my %control = %personal_condor_params;
-	my $personalmaster = "$localdir/sbin/condor_master";
+	my $personalmaster = "";
 
 	my $configfile = $control{"condorconfig"};
 	my $fullconfig = "$topleveldir/$configfile";
 	my $oldpath = $ENV{PATH};
-	my $newpath = "$localdir/sbin:$localdir/bin:" . "$oldpath";
+	my $newpath = $localdir . "sbin:" . $localdir . "bin:" . "$oldpath";
+	my $figpath = "";
 	$ENV{PATH} = $newpath;
 
 	debug( "Using this path: --$newpath--\n");
 
 	#debug( "Want $configfile for config file\n");
+
+	if( $ENV{NMI_PLATFORM} =~ /win/ ){
+		$figpath = `cygpath -w $fullconfig`;
+		CondorTest::fullchomp($figpath);
+		$fullconfig = $figpath;
+		# note: on windows all binaaries in bin!
+		$personalmaster = $localdir . "bin/condor_master -f &";
+	} else {
+		$personalmaster = $localdir . "sbin/condor_master";
+	}
 
 	#set up to use the existing generated configfile
 	$ENV{CONDOR_CONFIG} = $fullconfig;
@@ -841,13 +878,13 @@ sub StartPersonalCondor
 		# probably not running with this config so treat it like a start case
 		#die "Should be set with a new config file but LOST!\n";
 		debug( "start up the personal condor!--$personalmaster--\n");
-		system("$personalmaster");
+		system($personalmaster);
 		system("condor_config_val -v log");
 	}
 	elsif( $condorstate eq "matched not running" )
 	{
 		debug( "start up the personal condor!--$personalmaster--\n");
-		system("$personalmaster");
+		system($personalmaster);
 		system("condor_config_val -v log");
 	}
 	elsif( $condorstate eq "matched running" )
@@ -855,7 +892,7 @@ sub StartPersonalCondor
 		debug( "restart the personal condor!\n");
 		system("condor_off -master");
 		sleep 5;
-		system("$personalmaster");
+		system($personalmaster);
 	}
 	else
 	{
