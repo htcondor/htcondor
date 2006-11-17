@@ -74,6 +74,12 @@ COLLECTOR\_TCP\_SOCKET\_BUFSIZE, and defaults to 128K.
 
 \begin{itemize}
 
+\item Fixed a bug in the \condor{gridmanager} that caused the following
+configuration files parameters to be ignored for grid-type condor and
+nordugrid jobs: \MacroNI{GRIDMANAGER\_RESOURCE\_PROBE\_INTERVAL},
+\MacroNI{GRIDMANAGER\_MAX\_PENDING\_SUBMITS\_PER\_RESOURCE}, and
+\MacroNI{GRIDMANAGER\_MAX\_SUBMITTED\_JOBS\_PER\_RESOURCE}.
+
 \item Fixed a bug in \condor{run} that caused it to abort on non-fatal
 warnings from \condor{submit} and print incorrect error messages.
 
