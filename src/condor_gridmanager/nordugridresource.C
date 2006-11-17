@@ -59,6 +59,7 @@ NordugridResource *NordugridResource::FindOrCreateResource( const char * resourc
 	if ( rc != 0 ) {
 		resource = new NordugridResource( resource_name, proxy_subject );
 		ASSERT(resource);
+		resource->Reconfig();
 		ResourcesByName.insert( HashKey( HashName( resource_name,
 												   proxy_subject ) ),
 								resource );

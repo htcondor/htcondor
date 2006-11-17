@@ -121,6 +121,15 @@ void CondorJobReconfig()
 
 	tmp_int = param_integer("GRIDMANAGER_CONNECT_FAILURE_RETRY_COUNT",3);
 	CondorJob::setConnectFailureRetry( tmp_int );
+
+	// Tell all the resource objects to deal with their new config values
+	CondorResource *next_resource;
+
+	CondorResource::ResourcesByName.startIterations();
+
+	while ( CondorResource::ResourcesByName.iterate( next_resource ) != 0 ) {
+		next_resource->Reconfig();
+	}
 }
 
 bool CondorJobAdMatch( const ClassAd *job_ad ) {

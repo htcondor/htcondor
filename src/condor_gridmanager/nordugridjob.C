@@ -138,6 +138,15 @@ void NordugridJobReconfig()
 
 	tmp_int = param_integer( "GRIDMANAGER_JOB_PROBE_INTERVAL", 5 * 60 );
 	NordugridJob::setProbeInterval( tmp_int );
+
+	// Tell all the resource objects to deal with their new config values
+	NordugridResource *next_resource;
+
+	NordugridResource::ResourcesByName.startIterations();
+
+	while ( NordugridResource::ResourcesByName.iterate( next_resource ) != 0 ) {
+		next_resource->Reconfig();
+	}
 }
 
 bool NordugridJobAdMatch( const ClassAd *job_ad ) {

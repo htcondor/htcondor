@@ -66,6 +66,7 @@ CondorResource *CondorResource::FindOrCreateResource( const char * resource_name
 		resource = new CondorResource( resource_name, pool_name,
 									   proxy_subject );
 		ASSERT(resource);
+		resource->Reconfig();
 		ResourcesByName.insert( HashKey( HashName( resource_name,
 												   pool_name,
 												   proxy_subject ) ),
