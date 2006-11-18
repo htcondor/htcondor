@@ -77,6 +77,7 @@
 #include "extra_param_info.h"
 #include "condor_uid.h"
 #include "condor_mkstemp.h"
+#include "basename.h"
 
 extern "C" {
 	
@@ -943,7 +944,7 @@ find_file(const char *env_name, const char *file_name)
 					NETRESOURCE nr;
 					nr.dwType = RESOURCETYPE_DISK;
 					nr.lpLocalName = NULL;
-					nr.lpRemoteName = dirname(config_source);
+					nr.lpRemoteName = condor_dirname(config_source);
 					nr.lpProvider = NULL;
 					
 					if ( NO_ERROR != WNetAddConnection2(
