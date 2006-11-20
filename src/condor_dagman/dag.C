@@ -184,7 +184,7 @@ Dag::~Dag() {
 
 //-------------------------------------------------------------------------
 void
-Dag::InitializeDagFiles( const char *lockFileName, bool deleteOldLogs )
+Dag::InitializeDagFiles( bool deleteOldLogs )
 {
 		// if there is an older version of the log files,
 		// we need to delete these.
@@ -509,13 +509,13 @@ bool Dag::ProcessOneEvent (int logsource, ULogEventOutcome outcome,
 			case ULOG_JOB_ABORTED:
 				ProcessAbortEvent(event, job, recovery);
 					// Make sure we don't count finished jobs as idle.
-				ProcessNotIdleEvent(event, job);
+				ProcessNotIdleEvent(job);
 				break;
               
 			case ULOG_JOB_TERMINATED:
 				ProcessTerminatedEvent(event, job, recovery);
 					// Make sure we don't count finished jobs as idle.
-				ProcessNotIdleEvent(event, job);
+				ProcessNotIdleEvent(job);
 				break;
 
 			case ULOG_POST_SCRIPT_TERMINATED:
@@ -523,19 +523,19 @@ bool Dag::ProcessOneEvent (int logsource, ULogEventOutcome outcome,
 				break;
 
 			case ULOG_SUBMIT:
-				ProcessSubmitEvent(event, job, recovery);
-				ProcessIsIdleEvent(event, job);
+				ProcessSubmitEvent(job, recovery);
+				ProcessIsIdleEvent(job);
 				break;
 
 			case ULOG_JOB_EVICTED:
 			case ULOG_JOB_SUSPENDED:
 			case ULOG_JOB_HELD:
 			case ULOG_SHADOW_EXCEPTION:
-				ProcessIsIdleEvent(event, job);
+				ProcessIsIdleEvent(job);
 				break;
 
 			case ULOG_EXECUTE:
-				ProcessNotIdleEvent(event, job);
+				ProcessNotIdleEvent(job);
 				break;
 
 			case ULOG_JOB_UNSUSPENDED:
@@ -932,7 +932,7 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 
 //---------------------------------------------------------------------------
 void
-Dag::ProcessSubmitEvent(const ULogEvent *event, Job *job, bool recovery) {
+Dag::ProcessSubmitEvent(Job *job, bool recovery) {
 
 	if ( !job ) {
 		return;
@@ -993,7 +993,7 @@ Dag::ProcessSubmitEvent(const ULogEvent *event, Job *job, bool recovery) {
 
 //---------------------------------------------------------------------------
 void
-Dag::ProcessIsIdleEvent(const ULogEvent *event, Job *job) {
+Dag::ProcessIsIdleEvent(Job *job) {
 
 	if ( !job ) {
 		return;
@@ -1012,7 +1012,7 @@ Dag::ProcessIsIdleEvent(const ULogEvent *event, Job *job) {
 
 //---------------------------------------------------------------------------
 void
-Dag::ProcessNotIdleEvent(const ULogEvent *event, Job *job) {
+Dag::ProcessNotIdleEvent(Job *job) {
 
 	if ( !job ) {
 		return;
@@ -1328,7 +1328,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 	continue;  // while( numSubmitsThisCycle < max_submits_per_interval )
       }
       debug_printf( DEBUG_VERBOSE,
-		    "  using new submit file (%s) from helper\n",
+		    "  using new submit file (%s) from helper for node %s\n",
 		    cmd_file.Value(), job->GetJobName() );
       free( helper );
       helper = NULL;

@@ -236,7 +236,7 @@ Dagman::Config()
 
 // NOTE: this is only called on reconfig, not at startup
 int
-main_config( bool is_full )
+main_config( bool )
 {
 	dagman.Config();
 	return 0;
@@ -619,8 +619,7 @@ int main_init (int argc, char ** const argv) {
 				}
 			}
         } else {
-			dagman.dag->InitializeDagFiles( lockFileName,
- 											dagman.deleteOldLogs );
+			dagman.dag->InitializeDagFiles( dagman.deleteOldLogs );
         }
 
 			//
@@ -794,7 +793,7 @@ void condor_event_timer () {
 
 
 void
-main_pre_dc_init( int argc, char* argv[] )
+main_pre_dc_init( int, char** )
 {
 	DC_Skip_Auth_Init();
 

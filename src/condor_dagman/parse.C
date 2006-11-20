@@ -540,9 +540,9 @@ parse_parent(
 	while ((jobName = strtok (NULL, DELIMITERS)) != NULL) {
 		const char *jobNameOrig = jobName; // for error output
 		MyString tmpJobName = munge_job_name(jobName);
-		const char *jobName = tmpJobName.Value();
+		const char *jobName2 = tmpJobName.Value();
 
-		Job * job = dag->GetJob(jobName);
+		Job * job = dag->GetJob(jobName2);
 		if (job == NULL) {
 			debug_printf( DEBUG_QUIET, 
 						  "%s (line %d): Unknown Job %s\n",

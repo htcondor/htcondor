@@ -29,12 +29,12 @@
 
 //-----------------------------------------------------------------------------
 
-CheckEvents::CheckEvents(int allowEvents) :
+CheckEvents::CheckEvents(int allowEventsSetting) :
 		jobHash(JOB_HASH_SIZE, ReadMultipleUserLogs::hashFuncJobID,
 			rejectDuplicateKeys),
 		noSubmitId(-1, 0, 0)
 {
-	this->allowEvents = allowEvents;
+	allowEvents = allowEventsSetting;
 }
 
 //-----------------------------------------------------------------------------

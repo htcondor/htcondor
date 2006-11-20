@@ -99,7 +99,7 @@ class Dag {
 
 	/** Initialize log files, lock files, etc.
 	*/
-	void InitializeDagFiles( const char *lockFileName, bool deleteOldLogs );
+	void InitializeDagFiles( bool deleteOldLogs );
 
     /** Prepare DAG for initial run.  Call this function ONLY ONCE.
         @param recovery specifies if this is a recovery
@@ -188,30 +188,26 @@ class Dag {
 
 	/** Process a submit event.
 	    @param The event.
-		@param The event name.
 		@param The job corresponding to this event.
-		@param The Condor ID corresponding to this event.
 		@param Whether we're in recovery mode.
 	*/
-	void ProcessSubmitEvent(const ULogEvent *event, Job *job, bool recovery);
+	void ProcessSubmitEvent(Job *job, bool recovery);
 
 	/** Process an event indicating that a job is in an idle state.
 	    Note that this method only does processing relating to keeping
 		the count of idle jobs -- any other processing should be done in
 		a different method.
-	    @param The event.
 		@param The job corresponding to this event.
 	*/
-	void ProcessIsIdleEvent(const ULogEvent *event, Job *job);
+	void ProcessIsIdleEvent(Job *job);
 
 	/** Process an event that indicates that a job is NOT in an idle state.
 	    Note that this method only does processing relating to keeping
 		the count of idle jobs -- any other processing should be done in
 		a different method.
-	    @param The event.
 		@param The job corresponding to this event.
 	*/
-	void ProcessNotIdleEvent(const ULogEvent *event, Job *job);
+	void ProcessNotIdleEvent(Job *job);
 
     /** Get pointer to job with id jobID
         @param the handle of the job in the DAG
