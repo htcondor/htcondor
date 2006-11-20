@@ -338,9 +338,11 @@ on machines connected to the same switch.  The dedicated scheduler's
 parallel scheduling groups features supports this operation.
 
 Each startd must define which group it belongs to by setting the 
-\Macro{PARALLEL\_SCHEDULING\_GROUP} property in its config file, and 
-advertising it in it's classad.  The value of this property is simply a
-string, which should be the same for all startds in a given group.  Then,
-parallel jobs which want to be scheduled by group, declare this in their 
+\Macro{ParallelSchedulingGroup} property in the config file, and 
+advertising it into the machine classad.  The value of this property is simply a
+string, which should be the same for all startds in a given group.  The property
+must be advertised in the startd job ad by appending \Macro{ParallelSchedulingGroup}
+into the \Macro{STARTD\_EXPRS} configuration variable.
+Then, parallel jobs which want to be scheduled by group, declare this in their 
 submit file by setting +WantParallelSchedulingGroups=True.
 
