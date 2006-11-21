@@ -483,6 +483,9 @@ public:
 	/// set a timeout for an underlying socket
 	virtual int timeout(int) = 0;
 
+	/// get number of bytes currently available to read, -1 on failure
+	virtual int bytes_available_to_read() = 0;
+
 	/// get timeout time for pending connect operation;
 	virtual time_t connect_timeout_time() = 0;
 

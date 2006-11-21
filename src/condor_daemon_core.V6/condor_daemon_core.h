@@ -1042,6 +1042,9 @@ class DaemonCore : public Service
 
     int HandleSigCommand(int command, Stream* stream);
     int HandleReq(int socki);
+	int HandleReq(Stream *insock);
+	int HandleReqSocketTimerHandler();
+	int HandleReqSocketHandler(Stream *stream);
     int HandleSig(int command, int sig);
 
     int HandleProcessExitCommand(int command, Stream* stream);

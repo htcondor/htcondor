@@ -2798,15 +2798,78 @@ int DaemonCore::ServiceCommandSocket()
 	return commands_served;
 }
 
+
+int DaemonCore::HandleReqSocketTimerHandler()
+{
+	Stream *stream = NULL;
+
+	/*  We have been waiting for an incoming connection to have something
+		to read.  If this timer handler fired, we are sick of waiting.
+		So cancel the socket registration and close the incoming socket.
+	*/
+
+		// get the socket stream we've been waiting for.
+	stream = (Stream*) GetDataPtr();
+	ASSERT(stream);
+	ASSERT( stream->type() == Stream::reli_sock );
+
+		// cancel its registration
+	Cancel_Socket(stream);
+		
+		// and blow it away
+	dprintf(D_ALWAYS,"Closing socket from %s - no data received\n",
+			sin_to_string(((Sock*)stream)->endpoint()));
+	delete stream;
+
+	return TRUE;
+}
+
+
+int DaemonCore::HandleReqSocketHandler(Stream *stream)
+{
+	int* timeout_tid = NULL;
+
+	/*  We have been waiting for an incoming connection to have something
+		to read.  If this timer handler fired, our wait is over.
+		So cancel the timer we set to test
+		for a timeout, and handle the request.
+		Note we should NOT cancel the socket registration in this handler -
+		when we return, the daemoncore driver will cancel the registration
+		if we return any value other than KEEP_STREAM.
+	*/
+
+	timeout_tid = (int *) GetDataPtr();
+	ASSERT(timeout_tid);
+
+	Cancel_Timer(*timeout_tid);
+	delete timeout_tid;	// was allocated in HandleReq() with new
+
+	// now call HandleReq to actually do the work of servicing this request.
+	// we must return the same value that HandleReq() returns, so the upper levels
+	// know if we want KEEP_SOCKET, etc.
+
+	return HandleReq(stream);
+}
+
+
 int DaemonCore::HandleReq(int socki)
 {
+	Stream *insock;
+	
+	insock = (*sockTable)[socki].iosock;
+
+	return HandleReq(insock);
+}
+
+int DaemonCore::HandleReq(Stream *insock)
+{
 	Stream				*stream = NULL;
-	Stream				*insock;
+
 	int					is_tcp;
 	int                 req;
 	int					index, j;
 	int					reqFound = FALSE;
-	int					result;
+	int					result = FALSE;
 	int					old_timeout;
     int                 perm         = USER_AUTH_FAILURE;
     char                user[256];
@@ -2818,8 +2881,7 @@ int DaemonCore::HandleReq(int socki)
 	bool is_http_post = false;	// must initialize to false
 	bool is_http_get = false;   // must initialize to false
 
-
-	insock = (*sockTable)[socki].iosock;
+	ASSERT(insock);
 
 	switch ( insock->type() ) {
 		case Stream::reli_sock :
@@ -2830,9 +2892,7 @@ int DaemonCore::HandleReq(int socki)
 			break;
 		default:
 			// unrecognized Stream sock
-			dprintf(D_ALWAYS,
-						"DaemonCore: HandleReq(): unrecognized Stream sock\n");
-			return FALSE;
+			EXCEPT("DaemonCore: HandleReq(): unrecognized Stream sock");
 	}
 
 	CondorError errstack;
@@ -2849,6 +2909,49 @@ int DaemonCore::HandleReq(int socki)
 				dprintf(D_ALWAYS, "DaemonCore: accept() failed!");
 				// return KEEP_STEAM cuz insock is a listen socket
 				return KEEP_STREAM;
+			}
+				// we have just accepted a socket.  if there is nothing available yet
+				// to read on this socket, we don't want to block here, so instead
+				// register it.  Also set a timer just in case nothing ever arrives, so 
+				// we can reclaim our socket.  
+				// NOTE: don't register if we got here via ServiceCommandSocket() to 
+				// prevent stack overflow!!
+			if ( ((ReliSock *)stream)->bytes_available_to_read() < 4 &&
+				 inServiceCommandSocket_flag == FALSE ) 
+			{
+					// set a timer for 20 seconds, in case nothing ever arrives...
+				int tid = daemonCore->Register_Timer(
+									20,		// years of careful research.... ;)
+									(Eventcpp)HandleReqSocketTimerHandler,
+									"DaemonCore::HandleReqSocketTimerHandler",
+									this);
+					// stash the socket with the timer 
+				daemonCore->Register_DataPtr((void*)stream);
+					// now register the socket itself.  note we needed to set the
+					// timer first because we want to register the timer id with 
+					// the socket handler, and Register_DataPtr only effects the
+					// most recent event handler registered.
+				int tmp_result = daemonCore->Register_Socket(stream,
+								"Incoming command",
+								(SocketHandlercpp)HandleReqSocketHandler,
+								"DaemonCore::HandleReqSocketHandler",
+								this);
+				if ( tmp_result >= 0 )  {	
+						// on socket register success
+					int* stashed_tid = new int;
+					*stashed_tid = tid;
+						// register the timer id with the sock, so we can cancel it.
+					daemonCore->Register_DataPtr((void*)stashed_tid);
+						// return -- we'll come back when there is something to read
+						// use KEEP_STREAM so the socket we just registered isn't closed.
+					return KEEP_STREAM;		
+				} else {
+						// on socket register failure
+						// just cancel the timeout and fall-thru (i.e. service
+						// the request synchronously with a 1 second timeout
+						// reading the command int).
+					daemonCore->Cancel_Timer(tid);
+				}
 			}
 		}
 		// if the not a listen socket, then just assign stream to insock
@@ -3070,7 +3173,7 @@ int DaemonCore::HandleReq(int socki)
 	memset(tmpbuf,0,sizeof(tmpbuf));
 	if ( is_tcp && (insock != stream) ) {
 		int nro = condor_read(((Sock*)stream)->get_file_desc(),
-			tmpbuf, sizeof(tmpbuf) - 1, 10, MSG_PEEK);
+			tmpbuf, sizeof(tmpbuf) - 1, 1, MSG_PEEK);
 	}
 	if ( strstr(tmpbuf,"GET") ) {
 		if ( param_boolean("ENABLE_WEB_SERVER",false) ) {
@@ -3142,12 +3245,13 @@ int DaemonCore::HandleReq(int socki)
 		free(cursoap);
 		dprintf(D_ALWAYS, "Completed servicing HTTP request\n");
 
-		((Sock*)stream)->_sock = INVALID_SOCKET; // so CEDAR won't close it again
-		delete stream;	// clean up CEDAR socket
-		CheckPrivState();	// Make sure we didn't leak our priv state
-		curr_dataptr = NULL; // Clear curr_dataptr
-			// Return KEEP_STEAM cuz we wanna keep our listen socket open
-		return KEEP_STREAM;
+			// gsoap already closed the socket.  so set the socket in
+			// the underlying CEDAR object to INVALID_SOCKET, so
+			// CEDAR won't close it again when we delete the object.
+		((Sock*)stream)->_sock = INVALID_SOCKET; 
+
+		result = TRUE;
+		goto finalize;
 	}
 
 	if (only_allow_soap) {
@@ -3164,12 +3268,13 @@ int DaemonCore::HandleReq(int socki)
 		return KEEP_STREAM;
 	}
 
-	// read in the command from the stream with a timeout value of 20 seconds
-	old_timeout = stream->timeout(20);
+	// read in the command from the stream with a timeout value of just 1 second,
+	// since we know there is already some data waiting for us.
+	old_timeout = stream->timeout(1);
 	result = stream->code(req);
-	// For now, lets keep the timeout, so all command handlers are called with
+	// For now, lets set a 20 second timeout, so all command handlers are called with
 	// a timeout of 20 seconds on their socket.
-	// stream->timeout(old_timeout);
+	stream->timeout(20);
 	if(!result) {
 		char const *ip = stream->endpoint_ip_str();
 		if(!ip) {
@@ -3177,14 +3282,8 @@ int DaemonCore::HandleReq(int socki)
 		}
 		dprintf(D_ALWAYS,
 			"DaemonCore: Can't receive command request from %s (perhaps a timeout?)\n", ip);
-		if ( insock != stream )	{   // delete stream only if we did an accept
-			delete stream;
-		} else {
-			stream->set_crypto_key(false, NULL);
-			stream->set_MD_mode(MD_OFF, NULL);
-			stream->end_of_message();
-		}
-		return KEEP_STREAM;
+		result = FALSE;
+		goto finalize;
 	}
 
 	if (req == DC_AUTHENTICATE) {
@@ -3425,10 +3524,10 @@ int DaemonCore::HandleReq(int socki)
 							free (rkey);
 						} else {
 							memset (rbuf, 0, 24);
-							dprintf ( D_SECURITY, "DC_AUTHENTICATE: unable to generate key - no crypto available!\n");
-							result = FALSE;
+							dprintf ( D_SECURITY, "DC_AUTHENTICATE: unable to generate key - no crypto available!\n");							
 							free( crypto_method );
 							crypto_method = NULL;
+							result = FALSE;
 							goto finalize;
 						}
 

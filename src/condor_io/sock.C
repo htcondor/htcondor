@@ -403,7 +403,6 @@ int Sock::bindWithin(const int low_port, const int high_port)
 	int this_trial = start_trial;
 	do {
 		sockaddr_in		sin;
-		priv_state old_priv;
 		int bind_return_val;
 
 		memset(&sin, 0, sizeof(sockaddr_in));
@@ -416,6 +415,7 @@ int Sock::bindWithin(const int low_port, const int high_port)
 		sin.sin_port = htons((u_short)this_trial++);
 
 #ifndef WIN32
+		priv_state old_priv;
 		if (this_trial <= 1024) {
 			// use root priv for the call to bind to allow privileged ports
 			old_priv = PRIV_UNKNOWN;
@@ -456,7 +456,6 @@ int Sock::bindWithin(const int low_port, const int high_port)
 int Sock::bind(int is_outgoing, int port)
 {
 	sockaddr_in		sin;
-	priv_state old_priv;
 	int bind_return_value;
 
 	// Following lines are added because some functions in condor call
@@ -520,6 +519,7 @@ int Sock::bind(int is_outgoing, int port)
 		sin.sin_port = htons((u_short)port);
 
 #ifndef WIN32
+		priv_state old_priv;
 		if(port < 1024) {
 			// use root priv for the call to bind to allow privileged ports
 			old_priv = PRIV_UNKNOWN;
@@ -1194,6 +1194,50 @@ Sock::set_timeout_multiplier(int secs)
    int old_val = timeout_multiplier;
    timeout_multiplier = secs;
    return old_val;
+}
+
+int
+Sock::bytes_available_to_read()
+{
+	/*	Does this platform have FIONREAD? 
+		I think every platform support this, at least for network sockets.
+		So for now, just fail the build if it looks bad.
+		If the build does ever happen to fail here,
+		we should improve this code to use autoconf to detect if FIONREAD 
+		is available, and if it is not, implement this method by doing a non-blocking
+		MSG_PEEK recv() call.  
+	*/
+#ifndef FIONREAD
+#error FIONREAD is not defined!  Fix me by seeing code comment.
+#endif
+
+		/* if stream not assigned to a sock, do it now	*/
+	if (_state == sock_virgin) assign();
+	if ( (_state != sock_assigned) &&  
+				(_state != sock_connect) &&
+				(_state != sock_bound) )  {
+		return -1;
+	}
+
+		/* sigh.  on win32, FIONREAD wants an ulong*, and on Unix an int*. */
+#ifdef WIN32
+	unsigned long num_bytes;
+#else
+	int num_bytes;
+#endif
+
+	if (ioctlsocket(_sock, FIONREAD, &num_bytes) < 0) {
+			return -1;
+	}
+
+		/* Make certain our cast is safe to do */
+	if ( num_bytes > INT_MAX ) {
+		return -1;
+	}
+	
+	int ret_val = (int) num_bytes;	// explicit cast to prevent warnings
+
+	return ret_val;
 }
 
 /* NOTE: on timeout() we return the previous timeout value, or a -1 on an error.
