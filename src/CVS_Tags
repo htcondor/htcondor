@@ -1,4 +1,8 @@
 
+11/21/06 V6_8-Technion_ha1-{root,branch}
+  The 6.8 branch for for Technion's latest HAD fixes. Created from 
+  BUILD-V6_8-branch-2006-11-18.
+
 11/14/06 V6_8-oracle-3-{root,branch}
   The 3nd branch for an oracle version of Quill. Created from 
   BUILD-V6_8-branch-2006-11-14. Condor-C is broken at that build tag,
