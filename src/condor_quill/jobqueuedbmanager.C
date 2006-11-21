@@ -2406,7 +2406,7 @@ JobQueueDBManager::checkSchema()
 				// we need to upgrade the schema to add a last_poll_time
 				// column into the jobqueuepollinginfo table
 			strcpy(sql_str, SCHEMA_CREATE_JOBQUEUEPOLLINGINFO_UPDATE1);
-			ret_st == jqDatabase->execCommand(sql_str);
+			ret_st = jqDatabase->execCommand(sql_str);
 			if(ret_st == FAILURE) {
 				disconnectDB(NOT_IN_XACT);
 				return FAILURE;
