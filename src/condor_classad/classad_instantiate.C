@@ -24,6 +24,7 @@
 #include "condor_classad.h"
 #include "ad_printmask.h"
 #include "ListCache.h"
+#include "YourString.h"
 
 template class List<Formatter>;
 template class Item<Formatter>;
@@ -35,3 +36,4 @@ template class ListIterator<ListCacheEntry<ClassAd> >;
 template class List<ExprTree>;
 template class Item<ExprTree>;
 template class ListIterator<ExprTree>;
+template class HashTable<YourString, AttrListElem *>;

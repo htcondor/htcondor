@@ -40,6 +40,9 @@
 
 #define		ATTRLIST_MAX_EXPRESSION		10240
 
+template <class Key, class Value> class HashTable; // forward declaration
+class YourString;
+
 enum							// various AttrLists
 {
     ATTRLISTENTITY,
@@ -74,6 +77,12 @@ class AttrListElem
 	    bool			dirty;	// has this element been changed?
 		char*			name;	// the name of the tree
         class AttrListElem*	next;	// next element in the list
+};
+
+// An abstract pair returned by unchain.
+struct ChainedPair {
+	AttrListElem *exprList;
+	HashTable<YourString, AttrListElem *> *exprHash;
 };
 
 class AttrListAbstract
@@ -119,8 +128,8 @@ class AttrList : public AttrListAbstract
 {
     public :
 	    void ChainToAd( AttrList * );
-		void* unchain( void );
-		void RestoreChain(void *);
+		ChainedPair unchain( void );
+		void RestoreChain(const ChainedPair &p);
 		void ChainCollapse(bool with_deep_copy = true);
 
 		// ctors/dtor
@@ -252,6 +261,10 @@ class AttrList : public AttrListAbstract
 		AttrListElem*	ptrName;		// used by NextName and NextDirtyName
 		bool			ptrNameInChain;		// used by NextName and NextDirtyName
 		int				seq;			// sequence number
+
+		HashTable<YourString, AttrListElem *> *hash;
+		HashTable<YourString, AttrListElem *> *chained_hash;
+
 private:
 	bool inside_insert;
 };

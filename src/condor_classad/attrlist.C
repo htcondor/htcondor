@@ -34,13 +34,31 @@
 #include "condor_xml_classads.h"
 #include "condor_string.h" // for strnewp()
 #include "my_hostname.h"
+#include "HashTable.h"
+#include "YourString.h"
 
 extern void evalFromEnvironment (const char *, EvalResult *);
 
 // ugly, ugly hack.  remove for v6.1.9 -Todd
 extern char* mySubSystem;
 
-////////////////////////////////////////////////////////////////////////////////
+// Chris Torek's world famous hashing function
+// Modified to be case-insensitive
+static int torekHash(const YourString &s, int length) {
+	unsigned hash = 0;
+
+	const char *p = s.s;
+	while (*p) {
+		hash = 33 * hash + tolower(*p);
+		p++;
+	}
+
+	return (abs(hash) % length);
+}
+
+static const int hash_size = 79; // prime research
+
+///////////////////////////////////////////////////////////////////////////////
 // AttrListElem constructor.
 ////////////////////////////////////////////////////////////////////////////////
 AttrListElem::AttrListElem(ExprTree* expr)
@@ -71,9 +89,9 @@ AttrListElem::AttrListElem(AttrListElem& oldNode)
 // AttrListAbstract is a purely virtual class, there is no need for a user to
 // declare a AttrListAbstract instance.
 ////////////////////////////////////////////////////////////////////////////////
-AttrListAbstract::AttrListAbstract(int type)
+AttrListAbstract::AttrListAbstract(int atype)
 {
-    this->type = type;
+    this->type = atype;
     this->inList = NULL;
     this->next = NULL;
     this->prev = NULL;
@@ -82,12 +100,12 @@ AttrListAbstract::AttrListAbstract(int type)
 ////////////////////////////////////////////////////////////////////////////////
 // AttrListRep constructor.
 ////////////////////////////////////////////////////////////////////////////////
-AttrListRep::AttrListRep(AttrList* attrList, AttrListList* attrListList)
+AttrListRep::AttrListRep(AttrList* aList, AttrListList* attrListList)
 : AttrListAbstract(ATTRLISTREP)
 {
-    this->attrList = attrList;
+    this->attrList = aList;
     this->inList = attrListList;
-    this->nextRep = (AttrListRep *)attrList->next;
+    this->nextRep = (AttrListRep *)aList->next;
     attrList->inList = NULL;
     attrList->next = this;
 }
@@ -99,6 +117,8 @@ AttrList::AttrList() : AttrListAbstract(ATTRLISTENTITY)
 {
 	seq = 0;
     exprList = NULL;
+	hash = new HashTable<YourString, AttrListElem *>(hash_size, torekHash);
+	chained_hash = NULL;
 	inside_insert = false;
 	chainedAttrs = NULL;
     tail = NULL;
@@ -113,11 +133,13 @@ AttrList::AttrList() : AttrListAbstract(ATTRLISTENTITY)
 // AttrList class constructor. The parameter indicates that this AttrList has
 // an AttrListList associated with it.
 ////////////////////////////////////////////////////////////////////////////////
-AttrList::AttrList(AttrListList* associatedList) :
+AttrList::AttrList(AttrListList* assocList) :
 		  AttrListAbstract(ATTRLISTENTITY)
 {
 	seq = 0;
     exprList = NULL;
+	hash = new HashTable<YourString, AttrListElem *>(hash_size, torekHash);
+	chained_hash = NULL;
 	inside_insert = false;
 	chainedAttrs = NULL;
     tail = NULL;
@@ -125,14 +147,14 @@ AttrList::AttrList(AttrListList* associatedList) :
     ptrName = NULL;
     ptrExprInChain = false;
     ptrNameInChain = false;
-    this->associatedList = associatedList;
+    this->associatedList = assocList;
     if(associatedList)
     {
         if(!associatedList->associatedAttrLists)
         {
-      	    associatedList->associatedAttrLists = new AttrListList;
+      	    assocList->associatedAttrLists = new AttrListList;
         }
-        associatedList->associatedAttrLists->Insert(this);
+        assocList->associatedAttrLists->Insert(this);
     }
 }
 
@@ -155,8 +177,10 @@ AttrList(FILE *file, char *delimitor, int &isEOF, int &error, int &empty)
 
 	seq 			= 0;
     exprList 		= NULL;
+	hash = new HashTable<YourString, AttrListElem *>(hash_size, torekHash);
 	inside_insert = false;
 	chainedAttrs = NULL;
+	chained_hash = NULL;
     associatedList 	= NULL;
     tail 			= NULL;
     ptrExpr 		= NULL;
@@ -229,6 +253,8 @@ AttrList::AttrList(char *AttrList, char delimitor) : AttrListAbstract(ATTRLISTEN
 
 	seq = 0;
     exprList = NULL;
+	hash = new HashTable<YourString, AttrListElem *>(hash_size, torekHash);
+	chained_hash = NULL;
 	inside_insert = false;
 	chainedAttrs = NULL;
     associatedList = NULL;
@@ -339,6 +365,7 @@ AttrList::AttrList(ProcObj* procObj) : AttrListAbstract(ATTRLISTENTITY)
 
 	seq = 0;
 	exprList = NULL;
+	hash = new HashTable<YourString, AttrListElem *>(hash_size, torekHash);
 	inside_insert = false;
 	chainedAttrs = NULL;
 	associatedList = NULL;
@@ -591,6 +618,8 @@ AttrList::AttrList(CONTEXT* context) : AttrListAbstract(ATTRLISTENTITY)
     ptrExprInChain = false;
     ptrNameInChain = false;
 	exprList = NULL;
+	hash = new HashTable<YourString, AttrListElem *>(hash_size, torekHash);
+	chained_hash = NULL;
 	inside_insert = false;
 	chainedAttrs = NULL;
 
@@ -678,14 +707,19 @@ AttrList::AttrList(AttrList &old) : AttrListAbstract(ATTRLISTENTITY)
     AttrListElem* tmpOld;	// working variable
     AttrListElem* tmpThis;	// working variable
 
+	this->hash = new HashTable<YourString, AttrListElem *>(hash_size,torekHash);
     if(old.exprList) {
 		// copy all the AttrList elements. 
 		// As of 14-Sep-2001, we now copy the trees, not just the pointers
 		// to the trees. This happens in the copy constructor for AttrListElem
 		this->exprList = new AttrListElem(*old.exprList);
+		hash->insert(((Variable *)this->exprList->tree->LArg())->Name(),
+				this->exprList);
 		tmpThis = this->exprList;
         for(tmpOld = old.exprList->next; tmpOld; tmpOld = tmpOld->next) {
 			tmpThis->next = new AttrListElem(*tmpOld);
+			hash->insert(((Variable *)tmpThis->next->tree->LArg())->Name(),
+				tmpThis->next);
 			tmpThis = tmpThis->next;
         }
 		tmpThis->next = NULL;
@@ -695,7 +729,9 @@ AttrList::AttrList(AttrList &old) : AttrListAbstract(ATTRLISTENTITY)
         this->exprList = NULL;
         this->tail = NULL;
     }
+
 	this->chainedAttrs = old.chainedAttrs;
+	chained_hash = old.chained_hash;
 	this->inside_insert = false;
     this->ptrExpr = NULL;
     this->ptrName = NULL;
@@ -731,6 +767,8 @@ AttrList& AttrList::operator=(const AttrList& other)
 		// First delete our old stuff.
 		clear();
 
+		this->hash = new HashTable<YourString, AttrListElem *>(hash_size, torekHash);
+
 		if(associatedList) {
 			associatedList->associatedAttrLists->Delete(this);
 		}
@@ -742,9 +780,13 @@ AttrList& AttrList::operator=(const AttrList& other)
 		if(other.exprList) {
 			this->exprList = new AttrListElem(*other.exprList);
 			tmpThis = this->exprList;
+			hash->insert(((Variable *)tmpThis->next->tree->LArg())->Name(),
+				tmpThis->next);
 			for(tmpOther = other.exprList->next; tmpOther; tmpOther = tmpOther->next) {
 				tmpThis->next = new AttrListElem(*tmpOther);
 				tmpThis = tmpThis->next;
+				hash->insert(((Variable *)tmpThis->next->tree->LArg())->Name(),
+					tmpThis->next);
 			}
 			tmpThis->next = NULL;
 			this->tail = tmpThis;
@@ -753,7 +795,9 @@ AttrList& AttrList::operator=(const AttrList& other)
 			this->exprList = NULL;
 			this->tail = NULL;
 		}
+
 		this->chainedAttrs = other.chainedAttrs;
+		this->chained_hash = other.chained_hash;
 		this->inside_insert = false;
 		this->ptrExpr = NULL;
 		this->ptrName = NULL;
@@ -822,6 +866,8 @@ int AttrList::Insert(ExprTree* expr, bool check_for_dups)
 
 	inside_insert = false;
 
+	hash->insert(((Variable *)newNode->tree->LArg())->Name(),
+				newNode);
     return TRUE;
 }
 
@@ -833,7 +879,7 @@ int AttrList::Insert(ExprTree* expr, bool check_for_dups)
 #if 0
 int AttrList::InsertOrUpdate(char* attr)
 {
-	ExprTree*	tree;
+	ExprTree	tree;
 
 	if(Parse(attr, tree) != 0)
 	{
@@ -861,6 +907,7 @@ int AttrList::Delete(const char* name)
     AttrListElem*	cur = exprList;
 	int found = FALSE;
 
+	hash->remove(name);
     while(cur)
     {
 		if(!strcasecmp(name, cur->name))
@@ -914,10 +961,7 @@ int AttrList::Delete(const char* name)
 			if(!strcasecmp(name, cur->name))
 			// expression to be deleted is found
 			{
-				char buf[400];
-
-				sprintf(buf,"%s=UNDEFINED",name);
-				Insert(buf);
+				AssignExpr(name, 0);	// 0 means "UNDEFINED"
 				found = TRUE;
 				break;
 			}
@@ -1030,6 +1074,10 @@ AttrList::ChainCollapse(bool with_deep_copy)
 	AttrListElem* chained = *chainedAttrs;
 	
 	chainedAttrs = NULL;
+	if (chained_hash) {
+		delete chained_hash;
+		chained_hash = NULL;
+	}
 
 	while (chained && (tmp=chained->tree)) {
 			// Move the value from our chained ad into our ad ONLY
@@ -1159,59 +1207,38 @@ ExprTree* AttrList::Lookup(char* name) const
 
 ExprTree* AttrList::Lookup(const char* name) const
 {
-    AttrListElem*	tmpNode;
-    char*	 		tmpChar;	// variable name
+    AttrListElem*	tmpNode = 0;
 
-    for(tmpNode = exprList; tmpNode; tmpNode = tmpNode->next)
-    {
-		tmpChar = ((Variable*)tmpNode->tree->LArg())->Name();
-        if(!strcasecmp(tmpChar, name))
-        {
-            return(tmpNode->tree);
-        }
-    }
-
-	// did not find it; check in our chained ad
-	if ( chainedAttrs && !inside_insert ) {
-		for(tmpNode = *chainedAttrs; tmpNode; tmpNode = tmpNode->next)
-		{
-			tmpChar = ((Variable*)tmpNode->tree->LArg())->Name();
-			if(!strcasecmp(tmpChar, name))
-			{
-				return(tmpNode->tree);
-			}
-		}
+	hash->lookup(name, tmpNode);
+	if (tmpNode) {
+		return tmpNode->tree;
 	}
 
+	tmpNode = NULL;
+
+	if (chained_hash) {
+		chained_hash->lookup(name, tmpNode);
+	}
+
+	if (tmpNode) {
+		return tmpNode->tree;
+	}
     return NULL;
 }
 
 AttrListElem *AttrList::LookupElem(const char *name) const
 {
-    AttrListElem  *currentElem, *theElem;
-    char          *nodeName;
+	AttrListElem  *theElem = 0;
 
 	theElem = NULL;
-    for (currentElem = exprList; currentElem; currentElem = currentElem->next){
-		nodeName = ((Variable*)currentElem->tree->LArg())->Name();
-        if(!strcasecmp(nodeName, name)) {
-            theElem = currentElem;
-			break;
-        }
-    }
+	hash->lookup(name, theElem);
 
-	// did not find it; check in our chained ad
-	if (theElem == NULL && chainedAttrs && !inside_insert ) {
-		for (currentElem = *chainedAttrs; 
-			 currentElem; 
-			 currentElem = currentElem->next) {
+	if (theElem) {
+		return theElem;
+	}
 
-			nodeName = ((Variable*)currentElem->tree->LArg())->Name();
-			if(!strcasecmp(nodeName, name)){
-				theElem = currentElem;
-				break;
-			}
-		}
+	if (chained_hash) {
+		chained_hash->lookup(name, theElem);
 	}
 
     return theElem;
@@ -2295,6 +2322,7 @@ AttrList::clear( void )
 		// First, unchain ourselves, if we're a chained classad
 	unchain();
 
+	delete hash;
 		// Now, delete all the attributes in our list
     AttrListElem* tmp;
     for(tmp = exprList; tmp; tmp = exprList) {
@@ -2302,6 +2330,12 @@ AttrList::clear( void )
         delete tmp;
     }
 	exprList = NULL;
+
+	if (chained_hash) {
+		delete chained_hash;
+	}
+	chained_hash = NULL;
+	hash = NULL;
 	tail = NULL;
 }
 
@@ -2386,6 +2420,7 @@ AttrList::initFromStream(Stream& s)
 
 	// First, clear our ad so we start with a fresh ClassAd
 	clear();
+	this->hash = new HashTable<YourString, AttrListElem *>(hash_size, torekHash);
 
 	// Now, read our new set of attributes off the given stream 
     s.decode();
@@ -2509,20 +2544,25 @@ void AttrList::ChainToAd(AttrList *ad)
 	}
 
 	chainedAttrs = &( ad->exprList );
+	chained_hash = ad->hash;
 }
 
 
-void*
+ChainedPair
 AttrList::unchain( void )
 {
-	void* old_value = (void*) chainedAttrs;
+	ChainedPair p;
+	p.exprList = *chainedAttrs;
+	p.exprHash = chained_hash;
 	chainedAttrs = NULL;
-	return old_value;
+	chained_hash = NULL;
+	return p;
 }
 
-void AttrList::RestoreChain(void* old_value)
+void AttrList::RestoreChain(const ChainedPair &p)
 {
-	chainedAttrs = (AttrListElem**) old_value;
+	this->exprList = p.exprList;
+	this->chained_hash = p.exprHash;
 }
 
 int AttrList::

@@ -915,6 +915,7 @@ ExchangeExpressions (ClassAd *ad)
     AttrListElem *tmp1;
     AttrListList *tmp2;
     int           tmp3;
+	HashTable<YourString,AttrListElem *> *tmpHash;
 
     // exchange variables which maintain the attribute list
     // see condor_attrlist.h  --RR
@@ -923,6 +924,7 @@ ExchangeExpressions (ClassAd *ad)
 
     SWAP(associatedList, ad->associatedList, tmp2); // this is AttrListList*
     SWAP(exprList, ad->exprList, tmp1);             // these are AttrListElem*
+	SWAP(hash, ad->hash, tmpHash);
     SWAP(tail, ad->tail, tmp1);
     SWAP(ptrExpr, ad->ptrExpr, tmp1);
     SWAP(ptrName, ad->ptrName, tmp1);

@@ -548,7 +548,6 @@ ClassAdLog::LogState(FILE *fp)
 	char		key[_POSIX_PATH_MAX];
 	char		*attr_name = NULL;
 	char		*attr_val;
-	void*		chain;
 
 	// This must always be the first entry in the log.
 	log = new LogHistoricalSequenceNumber( historical_sequence_number, time(NULL) );
@@ -568,7 +567,7 @@ ClassAdLog::LogState(FILE *fp)
 		delete log;
 			// Unchain the ad -- we just want to write out this ads exprs,
 			// not all the exprs in the chained ad as well.
-		chain = ad->unchain();
+		ChainedPair chain = ad->unchain();
 		ad->ResetName();
 		attr_name = ad->NextName();
 		while (attr_name) {
