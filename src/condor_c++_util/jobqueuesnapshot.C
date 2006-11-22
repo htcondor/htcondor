@@ -80,6 +80,11 @@ JobQueueSnapshot::startIterateAllClassAds(int *clusterarray,
 		return FAILURE;
 	}
 
+	if(jqDB->execCommand("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE") == FAILURE) {
+		printf("Error while setting xact isolation level to serializable\n");
+		return FAILURE;
+	}
+
 	st = jqDB->getJobQueueDB(clusterarray, 
 				 numclusters,
 				 procarray, 
