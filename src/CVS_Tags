@@ -1,3 +1,7 @@
+11/22/06 V6_9-GCB_optimization-{root,branch}
+  The 6.9 branch for GCB connection optimization work. Needed
+  because it relies on a GCB that isn't part of the externals.
+  Created from the TRUNK.
 
 11/21/06 V6_8-Technion_ha1-{root,branch}
   The 6.8 branch for for Technion's latest HAD fixes. Created from 
