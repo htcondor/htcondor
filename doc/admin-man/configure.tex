@@ -5320,6 +5320,23 @@ gets rerun on that DAG.  This should be quite rare, however.
 If not defined, \MacroNI{DAGMAN\_ABORT\_DUPLICATES} defaults to
 \Expr{True}.
 
+\item[\Macro{DAGMAN\_SUBMIT\_DEPTH\_FIRST}]
+\label{param:DAGManSubmitDepthFirst}
+A boolean value that controls whether to submit ready DAG node jobs
+in (more-or-less) depth first order, as opposed to breadth-first order.
+Setting \MacroNI{DAGMAN\_SUBMIT\_DEPTH\_FIRST} to \Expr{True} does
+\emph{not} override dependencies defined in the DAG.  Rather, it
+causes newly-ready nodes to be added to the head, rather than the tail,
+of the ready node list.  If there are no PRE scripts in the DAG, this
+will cause the ready nodes to be submitted depth-first.  If there
+are PRE scripts, the order will not be strictly depth-first, but it
+will tend to favor depth rather than breadth in executing the DAG.
+If you set \MacroNI{DAGMAN\_SUBMIT\_DEPTH\_FIRST} to \Expr{True},
+you may also want to set \MacroNI{DAGMAN\_RETRY\_SUBMIT\_FIRST} and
+\Macro{DAGMAN\_RETRY\_NODE\_FIRST} to \Expr{True}.
+If not defined, \MacroNI{DAGMAN\_SUBMIT\_DEPTH\_FIRST} defaults to
+\Expr{false}.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

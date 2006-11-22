@@ -29,6 +29,12 @@ when there are on the order of thousands of jobs in the queue.
 \item the \Dflag{COMMAND} debugging level has been enhanced to
 log many more messages. 
 
+% Gnats PR 774
+\item Added the DAGMAN\_SUBMIT\_DEPTH\_FIRST configuration macro which
+causes \Condor{dagman} to submit ready nodes in more-or-less depth-first
+order if set to \Expr{True}.  (The default behavior is to submit
+the ready nodes in breadth-first order.)
+
 \end{itemize}
 
 \noindent Bugs Fixed:
