@@ -72,7 +72,7 @@ Dag::Dag( /* const */ StringList &dagFiles, char *condorLogName,
 		  bool useDagDir, int maxIdleJobProcs, bool retrySubmitFirst,
 		  bool retryNodeFirst, const char *condorRmExe,
 		  const char *storkRmExe, const CondorID *DAGManJobId,
-		  bool prohibitMultiJobs) :
+		  bool prohibitMultiJobs, bool submitDepthFirst) :
     _maxPreScripts        (maxPreScripts),
     _maxPostScripts       (maxPostScripts),
 	DAG_ERROR_CONDOR_SUBMIT_FAILED (-1001),
@@ -105,7 +105,8 @@ Dag::Dag( /* const */ StringList &dagFiles, char *condorLogName,
 	_checkStorkEvents     (),
 	_maxJobsDeferredCount (0),
 	_maxIdleDeferredCount (0),
-	_prohibitMultiJobs	  (prohibitMultiJobs)
+	_prohibitMultiJobs	  (prohibitMultiJobs),
+	_submitDepthFirst	  (submitDepthFirst)
 {
 	ASSERT( dagFiles.number() >= 1 );
 
@@ -1197,7 +1198,11 @@ Dag::StartNode( Job *node, bool isRetry )
 	if ( isRetry && m_retryNodeFirst ) {
 		_readyQ->Prepend( node );
 	} else {
-		_readyQ->Append( node );
+		if ( _submitDepthFirst ) {
+			_readyQ->Prepend( node );
+		} else {
+			_readyQ->Append( node );
+		}
 	}
 	return TRUE;
 }
@@ -1516,7 +1521,11 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 		job->retval = 0; // for safety on retries
 		job->_Status = Job::STATUS_READY;
 		_preRunNodeCount--;
-		_readyQ->Append( job );
+		if ( _submitDepthFirst ) {
+			_readyQ->Prepend( job );
+		} else {
+			_readyQ->Append( job );
+		}
 	}
 
 	bool abort = CheckForDagAbort(job, "PRE script");

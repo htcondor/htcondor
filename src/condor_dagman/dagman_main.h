@@ -125,6 +125,10 @@ class Dagman {
 		// all but the first will be aborted).
 	bool abortDuplicates;
 
+		// Whether to submit ready nodes in depth-first order (as opposed
+		// to breadth-first).
+	bool submitDepthFirst;
+
 		// the Condor job id of the DAGMan job
 	CondorID DAGManJobId;
 

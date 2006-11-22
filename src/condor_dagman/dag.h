@@ -83,6 +83,8 @@ class Dag {
 		@param DAGManJobId Condor ID of this DAGMan process
 		@param prohibitMultiJobs whether submit files queueing multiple
 			   job procs are prohibited
+		@param submitDepthFirst whether ready nodes should be submitted
+			   in depth-first (as opposed to breadth-first) order
     */
 
     Dag( /* const */ StringList &dagFiles, char *condorLogName,
@@ -92,7 +94,7 @@ class Dag {
 		 bool useDagDir, int maxIdleJobProcs, bool retrySubmitFirst,
 		 bool retryNodeFirst, const char *condorRmExe,
 		 const char *storkRmExe, const CondorID *DAGManJobId,
-		 bool prohibitMultiJobs);
+		 bool prohibitMultiJobs, bool submitDepthFirst );
 
     ///
     ~Dag();
@@ -602,6 +604,10 @@ class Dag {
 		// whether or not to prohibit multiple job proc submitsn (e.g.,
 		// node jobs that create more than one job proc)
 	bool		_prohibitMultiJobs;
+
+		// Whether to submit ready nodes in depth-first order (as opposed
+		// to breadth-first order).
+	bool		_submitDepthFirst;
 
 		// The next time we're allowed to try submitting a job -- 0 means
 		// go ahead and submit right away.

@@ -198,6 +198,10 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_PROHIBIT_MULTI_JOBS setting: %d\n",
 				prohibitMultiJobs );
 
+	submitDepthFirst = param_boolean( "DAGMAN_SUBMIT_DEPTH_FIRST", false );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_SUBMIT_DEPTH_FIRST setting: %d\n",
+				submitDepthFirst );
+
 	free( condorSubmitExe );
 	condorSubmitExe = param( "DAGMAN_CONDOR_SUBMIT_EXE" );
 	if( !condorSubmitExe ) {
@@ -550,7 +554,7 @@ int main_init (int argc, char ** const argv) {
 						  dagman.maxIdle, dagman.retrySubmitFirst,
 						  dagman.retryNodeFirst, dagman.condorRmExe,
 						  dagman.storkRmExe, &dagman.DAGManJobId,
-						  dagman.prohibitMultiJobs );
+						  dagman.prohibitMultiJobs, dagman.submitDepthFirst );
 
     if( dagman.dag == NULL ) {
         EXCEPT( "ERROR: out of memory!\n");
