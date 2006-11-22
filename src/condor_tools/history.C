@@ -337,7 +337,7 @@ main(int argc, char* argv[])
 	  	}
 	  }
 		  // query history table
-	  if (st == HISTORY_EMPTY) {
+	  if (historySnapshot->isHistoryEmpty()) {
 		  printf("No historical jobs in the database match your query\n");
 	  }
 	  historySnapshot->release();

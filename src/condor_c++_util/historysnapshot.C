@@ -33,6 +33,7 @@ HistorySnapshot::HistorySnapshot(const char* dbcon_str)
 	jqDB = new PGSQLDatabase(dbcon_str);
 	curAd = NULL;
 	curClusterId_hor = curProcId_hor = curClusterId_ver = curProcId_ver = -1;
+	isHistoryEmptyFlag = false;
 }
 
 //! destructor
@@ -51,31 +52,50 @@ HistorySnapshot::sendQuery(SQLQuery *queryhor,
 {
   QuillErrCode st;
   
-  historyads_hor_num = 0;
-  historyads_ver_num = 0;
-
   st = jqDB->connectDB();
   
   if(st == FAILURE) {
     return FAILURE;
   }
 
-  st = jqDB->queryHistoryDB(queryhor, 
-							queryver, 
-							longformat, 
-							historyads_hor_num, 
-							historyads_ver_num); 
-  if (st == HISTORY_EMPTY) {// There is no live jobs
-    return HISTORY_EMPTY;
+  if(jqDB->beginTransaction() == FAILURE) {
+	  printf("Error while querying the database: unable to start new transaction");
+	  return FAILURE;
   }
 
-  if (st == FAILURE_QUERY_HISTORYADS_HOR ||
-	  st == FAILURE_QUERY_HISTORYADS_VER) { // Got some error 
-    printf("Error while querying the database: %s\n", jqDB->getDBError());
-    return FAILURE;
+  st = jqDB->openCursorsHistory(queryhor, 
+								queryver, 
+								longformat);
+  
+  if (st != SUCCESS) {
+	  printf("Error while opening the history cursors: %s\n", jqDB->getDBError());
+	  return FAILURE;
   }
   
-  return(printResults(queryhor, queryver, longformat));
+  st = printResults(queryhor, 
+					queryver, 
+					longformat);
+  
+  if (st != SUCCESS) {
+	  printf("Error while querying the history cursors: %s\n", jqDB->getDBError());
+	  return FAILURE;
+  }
+  
+  st = jqDB->closeCursorsHistory(queryhor,
+								 queryver,
+								 longformat);
+  
+  if (st != SUCCESS) {
+    printf("Error while closing the history cursors: %s\n", jqDB->getDBError());
+    return FAILURE;
+  }
+
+  if(jqDB->commitTransaction() == FAILURE) {
+	  printf("Error while querying the database: unable to commit transaction");
+	  return FAILURE;
+  }
+
+  return SUCCESS;
 }
 
 QuillErrCode
@@ -83,6 +103,7 @@ HistorySnapshot::printResults(SQLQuery *queryhor,
 							  SQLQuery *queryver, 
 							  bool longformat) {
   AttrList *ad = 0;
+  QuillErrCode st = SUCCESS;
 
   // initialize index variables
   cur_historyads_hor_index = 0;  	
@@ -92,38 +113,72 @@ HistorySnapshot::printResults(SQLQuery *queryhor,
 	  short_header();
   }
 
-  while(getNextAd_Hor(ad) != DONE_HISTORY_CURSOR) {    
+  while(1) {
+	  st = getNextAd_Hor(ad, queryhor);
+
+	  if(st != SUCCESS) 
+		  break;
+	  
 	  if (longformat) { 
-		  getNextAd_Ver(ad);
+		  st = getNextAd_Ver(ad, queryver);
+
+		  // in the case of vertical, we dont want to quit if we run
+		  // out of tuples because 1) we want to display whats in the ad
+		  // and 2) the horizontal cursor will correctly determine when
+		  // to stop - this is because in all cases, we only pull out those
+          // tuples from vertical which join with a horizontal tuple
+		  if(st != SUCCESS && st != DONE_HISTORY_VER_CURSOR) 
+			  break;
 		  ad->fPrint(stdout); printf("\n"); 
 	  } 
 	  else {
 		  displayJobShort(ad);
 	  }
   }
+
   if(ad != NULL) {
 	  delete ad;
+	  ad = NULL;
   }
+
+  if(st == FAILURE_QUERY_HISTORYADS_HOR || st == FAILURE_QUERY_HISTORYADS_VER)
+	  return st;
+
   return SUCCESS;
 }
 
 QuillErrCode
-HistorySnapshot::getNextAd_Hor(AttrList*& ad)
+HistorySnapshot::getNextAd_Hor(AttrList*& ad, SQLQuery *queryhor)
 {
-	const char	*cid, *pid, *attr, *val;
+	QuillErrCode st;
+	char *cid, *pid, *attr, *val;
 	char *expr;
 	int i;
+	
+	st = jqDB->getHistoryHorValue(queryhor, 
+								  cur_historyads_hor_index, 0, &cid); // cid
 
-	if(cur_historyads_hor_index >= historyads_hor_num) {
-	  return DONE_HISTORY_CURSOR;
+		
+		// we only check the return value, st,  for the first call to 
+		// getHistoryHorValue, in this case, for getting cid out. 
+		// subsequent calls would be accessing cached values anyway
+	
+		// the HISTORY_EMPTY case is special for getNextAd_Hor
+	if(st == DONE_HISTORY_HOR_CURSOR && cur_historyads_hor_index == 0)
+		isHistoryEmptyFlag = true;
+
+	if(st == DONE_HISTORY_HOR_CURSOR || st == FAILURE_QUERY_HISTORYADS_HOR) {
+		return st;
 	}
+
+	jqDB->getHistoryHorValue(queryhor, 
+							 cur_historyads_hor_index, 1, &pid); // pid
+
 	if (ad != NULL) {
 		delete ad;
+		ad = NULL;
 	}
 	ad = new AttrList();
-
-	cid = jqDB->getHistoryHorValue(cur_historyads_hor_index, 0); // cid
-	pid = jqDB->getHistoryHorValue(cur_historyads_hor_index, 1); // pid
 
 	curClusterId_hor = atoi((char *)cid);
 	curProcId_hor = atoi((char *) pid);
@@ -146,8 +201,8 @@ HistorySnapshot::getNextAd_Hor(AttrList*& ad)
 
 		//starting from 2 as 0 and 1 are cid and pid respectively
 	for(i=2; i < numfields; i++) {
-	  attr = jqDB->getHistoryHorFieldName(i); // attr
-	  val = jqDB->getHistoryHorValue(cur_historyads_hor_index, i); // val
+	  attr = (char *) jqDB->getHistoryHorFieldName(i); // attr
+	  jqDB->getHistoryHorValue(queryhor, cur_historyads_hor_index, i, &val); // val
 	  
 	  expr = (char*)malloc(strlen(attr) + strlen(val) + 4);
 	  sprintf(expr, "%s = %s", attr, val);
@@ -156,6 +211,7 @@ HistorySnapshot::getNextAd_Hor(AttrList*& ad)
 	  free(expr);
 	}
 
+		// increment water
 	cur_historyads_hor_index++;
 
 	return SUCCESS;
@@ -166,24 +222,38 @@ HistorySnapshot::getNextAd_Hor(AttrList*& ad)
 /*
 */
 QuillErrCode
-HistorySnapshot::getNextAd_Ver(AttrList*& ad)
+HistorySnapshot::getNextAd_Ver(AttrList*& ad, SQLQuery *queryver)
 {
-	const char	*cid, *pid, *attr, *val;
+	char	*cid, *pid, *attr, *val;
+	QuillErrCode st = SUCCESS;
 
-	if(cur_historyads_ver_index >= historyads_ver_num) {
-	   return DONE_HISTORY_CURSOR;
+	st = jqDB->getHistoryVerValue(queryver, 
+								  cur_historyads_ver_index, 0, &cid); // cid
+
+		// we only check the return value for the first call, 
+		// in this case for getting cid
+	if(st == DONE_HISTORY_VER_CURSOR || st == FAILURE_QUERY_HISTORYADS_VER) {
+		return st;
 	}
 
-	cid = jqDB->getHistoryVerValue(cur_historyads_ver_index, 0); // cid
-	pid = jqDB->getHistoryVerValue(cur_historyads_ver_index, 1); // cid
+	jqDB->getHistoryVerValue(queryver, 
+							 cur_historyads_ver_index, 1, &pid); // pid
 
 	curClusterId_ver = atoi((char *)cid);
 	curProcId_ver = atoi((char *) pid);
 
 	// for HistoryAds table
-	while(cur_historyads_ver_index < historyads_ver_num) {
-		cid = jqDB->getHistoryVerValue(cur_historyads_ver_index, 0); // cid
-		pid = jqDB->getHistoryVerValue(cur_historyads_ver_index, 1); // pid
+	while(1) {
+		st = jqDB->getHistoryVerValue(queryver, 
+									  cur_historyads_ver_index, 0, &cid);// cid
+		
+			// we only check the return value for the first call, 
+			// in this case for getting cid
+		if(st == DONE_HISTORY_VER_CURSOR  || st == FAILURE_QUERY_HISTORYADS_VER)
+			break;
+
+		st = jqDB->getHistoryVerValue(queryver, 
+									  cur_historyads_ver_index, 1, &pid); // pid
 
 		if (cid == NULL  
 		   || curClusterId_ver != atoi(cid) 
@@ -191,19 +261,21 @@ HistorySnapshot::getNextAd_Ver(AttrList*& ad)
 			break;
 		}
 
-		attr = jqDB->getHistoryVerValue(cur_historyads_ver_index, 2); // attr
-		val = jqDB->getHistoryVerValue(cur_historyads_ver_index, 3); // val
+		jqDB->getHistoryVerValue(queryver, 
+								 cur_historyads_ver_index, 2, &attr); // attr
+		jqDB->getHistoryVerValue(queryver, 
+								 cur_historyads_ver_index, 3, &val); // val
 
 		cur_historyads_ver_index++;
 
+			// add the attribute,value pair to the classad
 		char* expr = (char*)malloc(strlen(attr) + strlen(val) + 4);
 		sprintf(expr, "%s = %s", attr, val);
-		// add an attribute with a value into ClassAd
 		ad->Insert(expr);
 		free(expr);
 	};
-
-	return SUCCESS;
+	
+	return st;
 }
 
 //! release snapshot

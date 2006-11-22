@@ -143,7 +143,7 @@ PGSQLDatabase::beginTransaction()
 
 	if (PQstatus(connection) == CONNECTION_OK)
 	{
-		result = PQexec(connection, "BEGIN");
+		result = PQexec(connection, "BEGIN;");
 
 		if(result) {
 			PQclear(result);		
@@ -506,44 +506,127 @@ PGSQLDatabase::getJobQueueDB(int *clusterarray, int numclusters, int *procarray,
 /*! get the historical information
  *
  *	\return
- *		HISTORY_EMPTY: There is no Job in history
- *		SUCCESS: history is not empty and query succeeded
+ *		SUCCESS: declare cursor succeeded 
  *		FAILURE_QUERY_*: query failed
  */
 QuillErrCode
-PGSQLDatabase::queryHistoryDB(SQLQuery *queryhor, 
-			      SQLQuery *queryver, 
-			      bool longformat, 
-			      int& historyads_hor_num, 
-			      int& historyads_ver_num)
+PGSQLDatabase::openCursorsHistory(SQLQuery *queryhor, 
+								  SQLQuery *queryver,
+								  bool longformat)
+
 {  
-	QuillErrCode st;
-	if ((st = execQuery(queryhor->getQuery(), historyHorRes, historyads_hor_num)) == FAILURE) {
+	QuillErrCode st = SUCCESS;
+
+	if ((st = execCommand(queryhor->getDeclareCursorStmt())) == FAILURE) {
+		printf("error while opening history_horizontal cursor\n");
 		return FAILURE_QUERY_HISTORYADS_HOR;
 	}
-	if (longformat && (st = execQuery(queryver->getQuery(), historyVerRes, historyads_ver_num)) == FAILURE) {
+	if (longformat && 
+		(st = execCommand(queryver->getDeclareCursorStmt())) == FAILURE) {
+		printf("error while opening history_vertical cursor\n");
 		return FAILURE_QUERY_HISTORYADS_VER;
 	}
-  
-	if (historyads_hor_num == 0) {
-		return HISTORY_EMPTY;
+
+		// initialize watermarks
+	historyHorNumRowsFetched = 0;
+	historyVerNumRowsFetched = 0;
+
+		// initialize current read positions
+	historyHorFirstRowIndex = 0;
+	historyVerFirstRowIndex = 0;
+
+	return SUCCESS;
+}
+
+QuillErrCode
+PGSQLDatabase::closeCursorsHistory(SQLQuery *queryhor, 
+								   SQLQuery *queryver,
+								   bool longformat)
+
+{  
+	QuillErrCode st;
+	if ((st = execCommand(queryhor->getCloseCursorStmt())) == FAILURE) {
+		return FAILURE_QUERY_HISTORYADS_HOR;
 	}
-	
+	if (longformat 
+		&& (st = execCommand(queryver->getCloseCursorStmt())) == FAILURE) {
+		return FAILURE_QUERY_HISTORYADS_VER;
+	}
+
 	return SUCCESS;
 }
 
 //! get a value retrieved from History_Horizontal table
-const char*
-PGSQLDatabase::getHistoryHorValue(int row, int col)
+QuillErrCode
+PGSQLDatabase::getHistoryHorValue(SQLQuery *queryhor, 
+								  int row, int col, char **value)
 {
-	return PQgetvalue(historyHorRes, row, col);
+	QuillErrCode st;
+	
+	if(row < historyHorFirstRowIndex) {
+		dprintf(D_ALWAYS, "ERROR: Trying to access history_horizontal\n"); 
+		dprintf(D_ALWAYS, "before the start of the current range.\n");
+		dprintf(D_ALWAYS, "Backwards iteration is currently not supported\n");
+		return FAILURE_QUERY_HISTORYADS_HOR;
+	}
+
+	else if(row >= historyHorFirstRowIndex + historyHorNumRowsFetched) {
+			// fetch more rows into historyHorRes
+		if(historyHorRes != NULL) {
+			PQclear(historyHorRes);
+			historyHorRes = NULL;
+		}
+		historyHorFirstRowIndex += historyHorNumRowsFetched;
+
+		if ((st = execQuery(queryhor->getFetchCursorStmt(), 
+							historyHorRes, 
+							historyHorNumRowsFetched)) == FAILURE) {
+			return FAILURE_QUERY_HISTORYADS_HOR;
+		}
+		if(historyHorNumRowsFetched == 0) {
+			return DONE_HISTORY_HOR_CURSOR;
+		}
+	}
+
+	*value = PQgetvalue(historyHorRes, row - historyHorFirstRowIndex, col);
+	return SUCCESS;
 }
 
 //! get a value retrieved from History_Vertical table
-const char*
-PGSQLDatabase::getHistoryVerValue(int row, int col)
+QuillErrCode
+PGSQLDatabase::getHistoryVerValue(SQLQuery *queryver, 
+								  int row, int col, char **value)
 {
-	return PQgetvalue(historyVerRes, row, col);
+	QuillErrCode st;
+
+	if(row < historyVerFirstRowIndex) {
+		dprintf(D_ALWAYS, "ERROR: Trying to access history_vertical\n"); 
+		dprintf(D_ALWAYS, "before the start of the current range.\n");
+		dprintf(D_ALWAYS, "Backwards iteration is currently not supported\n");
+		return FAILURE_QUERY_HISTORYADS_VER;
+	}
+
+	else if(row >= historyVerFirstRowIndex + historyVerNumRowsFetched) {
+			// fetch more rows into historyVerRes
+		if(historyVerRes != NULL) {
+			PQclear(historyVerRes);
+			historyVerRes = NULL;
+		}
+		historyVerFirstRowIndex += historyVerNumRowsFetched;
+
+		if((st = execQuery(queryver->getFetchCursorStmt(), 
+						   historyVerRes, 
+						   historyVerNumRowsFetched)) == FAILURE) {
+			return FAILURE_QUERY_HISTORYADS_VER;
+		}
+		if(historyVerNumRowsFetched == 0) {
+			return DONE_HISTORY_VER_CURSOR;
+		}
+	
+	}
+	*value = PQgetvalue(historyVerRes, row - historyVerFirstRowIndex, col);
+
+	return SUCCESS;
 }
 
 //! get a value retrieved from ProcAds_Str table

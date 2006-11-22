@@ -44,15 +44,17 @@ public:
 	PGSQLDatabase(const char* connect);
 	~PGSQLDatabase();
 
+		// connection handling routines
 	QuillErrCode         connectDB();
 	QuillErrCode		 connectDB(const char* connect);
 	QuillErrCode		 disconnectDB();
 
-		// General DB processing methods
+		// transaction handling routines
 	QuillErrCode		 beginTransaction();
 	QuillErrCode 		 commitTransaction();
 	QuillErrCode 		 rollbackTransaction();
 
+		// query and command handling routines
 	QuillErrCode 	 	 execCommand(const char* sql, 
 									 int &num_result,
 									 int &db_err_code);
@@ -66,48 +68,80 @@ public:
 	QuillErrCode 	 	 execQuery(const char* sql, 
 								   PGresult*& result,
 								   int &num_result);
-	const char*	         getValue(int row, int col);
-	const char*          getHistoryHorFieldName(int col);
-	const int            getHistoryHorNumFields();
-	QuillErrCode		 releaseHistoryResults();		
 
-	char*		         getDBError();
-
+		// copy command handling routines
 	QuillErrCode		 sendBulkData(char* data);
 	QuillErrCode		 sendBulkDataEnd();
 
-	QuillErrCode		 queryHistoryDB(SQLQuery *, SQLQuery *, 
-										bool, int&, int&);
-	QuillErrCode         releaseJobQueueResults();
+		// result set accessors 
+	const char*	         getValue(int row, int col);
+	const char*	         getJobQueueProcAds_StrValue(int row, 
+													 int col);
+	const char*	         getJobQueueProcAds_NumValue(int row, 
+													 int col);
+	const char*	         getJobQueueClusterAds_StrValue(int row, 
+														int col);
+	const char*	         getJobQueueClusterAds_NumValue(int row, 
+														int col);
 
+		// the history based accessors automatically fetch next n results 
+		// using the cursor when an out-of-range tuple is accessed
+	QuillErrCode         getHistoryHorValue(SQLQuery *queryhor, 
+											int row, 
+											int col, 
+											char **value);
+	QuillErrCode         getHistoryVerValue(SQLQuery *queryver, 
+											int row, 
+											int col, 
+											char **value);
+
+		// history schema metadata routines
+	const int            getHistoryHorNumFields();
+	const char*          getHistoryHorFieldName(int col);
+
+		// cursor declaration and reclamation routines
+	QuillErrCode		 openCursorsHistory(SQLQuery *, 
+											SQLQuery *, 
+											bool);
+	
+	QuillErrCode		 closeCursorsHistory(SQLQuery *, 
+											 SQLQuery *, 
+											 bool);
+	
+		// result set dallocation routines
 	QuillErrCode         releaseQueryResult();
+	QuillErrCode         releaseJobQueueResults();
+	QuillErrCode		 releaseHistoryResults();		
 
-
+		// high level job queue fetching code - the corresponding 
+		// functionality for history is now done inside getHistoryHorValue 
+		// and getHistoryVerValue
 	QuillErrCode		 getJobQueueDB(int *, int, int *, int, char *, bool, 
 									   int&, int&, int&, int&);
-	const char*	         getJobQueueProcAds_StrValue(int row, int col);
-	const char*	         getJobQueueProcAds_NumValue(int row, int col);
-	const char*	         getJobQueueClusterAds_StrValue(int row, int col);
-	const char*	         getJobQueueClusterAds_NumValue(int row, int col);
-	const char*          getHistoryHorValue(int row, int col);
-	const char*          getHistoryVerValue(int row, int col);
 
+
+		// get the error string 
+	char*		         getDBError();
+
+		// for printing useful warning messages 
 	int                  getDatabaseVersion();
 
 private:
 	PGconn		         *connection;		//!< connection object
-	PGresult	         *queryRes; 	//!< result for general query
+	PGresult	         *queryRes; 	    //!< result for general query
 
-		// only for history tables retrieval
+		// history relevant members
 	PGresult             *historyHorRes;
 	PGresult             *historyVerRes;
-
-		// only for job queue tables retrieval
+	int                  historyHorFirstRowIndex;
+	int                  historyVerFirstRowIndex;
+	int                  historyHorNumRowsFetched;
+	int                  historyVerNumRowsFetched;
+		// job queue relevant members 
 	PGresult	         *procAdsStrRes;	//!< result for ProcAds_Str table
 	PGresult	         *procAdsNumRes;	//!< result for ProcAds_Num table
 	PGresult	         *clusterAdsStrRes;//!< result for ClusterAds_Str table
 	PGresult	         *clusterAdsNumRes;//!< result for ClusterAds_num table
 };
 
-#endif /* _PGSQLDATABSE_H_ */
-
+#endif /* _PGSQLDATABASE_H_ */

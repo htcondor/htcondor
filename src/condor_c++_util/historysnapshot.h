@@ -42,21 +42,23 @@ public:
 	//! destructor
 	~HistorySnapshot();
 
+	//! high level method
 	QuillErrCode sendQuery(SQLQuery *, SQLQuery *, bool);
-	
+
+	//! used to determine whether result set is empty
+	bool isHistoryEmpty() { return isHistoryEmptyFlag; }
+
 	//! release snapshot
 	QuillErrCode release();
 	
 private:
-	// 
-	// helper functions
-	//
 
-	int job_num;
+	bool isHistoryEmptyFlag;
+
+		// pointer into current row of the result set - used to 
+		// support the getNextAd_* methods below
 	int cur_historyads_hor_index;
 	int cur_historyads_ver_index;
-	int	historyads_hor_num;
-	int     historyads_ver_num;
 
 	int	curClusterId_hor;  //!< current Cluster Id
 	int	curProcId_hor;	   //!< current Proc Id
@@ -66,9 +68,11 @@ private:
 	ClassAd		*curAd;	//!< current Job Ad
 	JobQueueDatabase	*jqDB;	//!< Job Queue Database object
 
-	QuillErrCode getNextAd_Ver(AttrList *&ad);
-	QuillErrCode getNextAd_Hor(AttrList *&ad);
-	QuillErrCode printResults(SQLQuery *, SQLQuery *, bool);
+	QuillErrCode getNextAd_Ver(AttrList *&ad, SQLQuery *queryhor);
+	QuillErrCode getNextAd_Hor(AttrList *&ad, SQLQuery *queryver);
+	QuillErrCode printResults(SQLQuery *queryhor, 
+							  SQLQuery *queryver, 
+							  bool longformat);
 };
 
 #endif
