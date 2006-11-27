@@ -2552,7 +2552,7 @@ ChainedPair
 AttrList::unchain( void )
 {
 	ChainedPair p;
-	p.exprList = *chainedAttrs;
+	p.exprList = (AttrListElem *)chainedAttrs;
 	p.exprHash = chained_hash;
 	chainedAttrs = NULL;
 	chained_hash = NULL;
