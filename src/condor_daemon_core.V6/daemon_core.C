@@ -2922,7 +2922,7 @@ int DaemonCore::HandleReq(Stream *insock)
 					// set a timer for 20 seconds, in case nothing ever arrives...
 				int tid = daemonCore->Register_Timer(
 									20,		// years of careful research.... ;)
-									(Eventcpp)HandleReqSocketTimerHandler,
+									(Eventcpp) &DaemonCore::HandleReqSocketTimerHandler,
 									"DaemonCore::HandleReqSocketTimerHandler",
 									this);
 					// stash the socket with the timer 
@@ -2933,7 +2933,7 @@ int DaemonCore::HandleReq(Stream *insock)
 					// most recent event handler registered.
 				int tmp_result = daemonCore->Register_Socket(stream,
 								"Incoming command",
-								(SocketHandlercpp)HandleReqSocketHandler,
+								(SocketHandlercpp) &DaemonCore::HandleReqSocketHandler,
 								"DaemonCore::HandleReqSocketHandler",
 								this);
 				if ( tmp_result >= 0 )  {	
