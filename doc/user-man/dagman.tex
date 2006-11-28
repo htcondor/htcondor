@@ -2,10 +2,10 @@
 \section{\label{sec:DAGMan}DAGMan Applications}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{DAGMan|(}
-\index{directed acyclic graph}
+\index{directed acyclic graph (DAG)}
 \index{Directed Acyclic Graph Manager (DAGMan)}
 \index{condor\_submit\_dag}
-\index{job!dependencies}
+\index{job!dependencies within}
 
 A directed acyclic graph (DAG) can be used to represent a set of jobs
 where the input, output, or execution of one or more jobs
@@ -13,30 +13,24 @@ is dependent on one or more other jobs.
 The jobs are nodes (vertices) in the graph,
 and the edges (arcs) identify the dependencies.
 Condor finds machines for the execution of programs, but it
-does not schedule programs (jobs) based on dependencies.
-The Directed Acyclic Graph Manager (DAGMan) is a meta-scheduler for Condor
-jobs. 
-DAGMan submits jobs to Condor in an order represented by
+does not schedule programs based on dependencies.
+The Directed Acyclic Graph Manager (DAGMan) is a meta-scheduler for 
+the execution of programs. 
+DAGMan submits the programs to Condor in an order represented by
 a DAG and processes the results.
-An input file defined prior to submission describes the DAG, and
-a submit description file for each program in the DAG
-is used by Condor.
+A DAG input file describes the DAG, and
+further submit description file(s) are used by DAGMan
+when submitting programs to run under Condor.
 
-Each node (job) in the DAG specifies
-either a Condor job or a Stork data placement job.
-Each job has a submit description file.
-As DAGMan submits jobs, it monitors the Condor and/or Stork log file(s) to 
-to enforce the ordering required for the DAG.
-
-The DAG itself is defined by the contents of a DAGMan input file.
-DAGMan is responsible for scheduling, recovery, and reporting
-for the set of programs submitted to Condor.
-
-The following sections specify the use of DAGMan.
+DAGMan is itself executed as a scheduler universe job
+within Condor.
+As DAGMan submits programs, it monitors log file(s) to 
+to enforce the ordering required within the DAG.
+DAGMan is also responsible for scheduling, recovery, and reporting
+on the set of programs submitted to Condor.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:DAGParallel}DAGMan Parallel Universe Support
-and Terminology}
+\subsection{\label{sec:DAGTerminology}DAGMan Terminology}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 DAGMan now (as of version 6.7.17, with bug fixes in 6.7.18) allows

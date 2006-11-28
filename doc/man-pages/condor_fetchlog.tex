@@ -1,5 +1,5 @@
 \begin{ManPage}{\label{man-condor-fetchlog}\Condor{fetchlog}}{1}
-{Retrieve a log file that is located on another computer}
+{Retrieve a daemon's log file that is located on another computer}
 
 \Synopsis 
 \SynProg{\Condor{fetchlog}}
@@ -18,11 +18,11 @@
 
 \Condor{fetchlog} contacts Condor running on the machine specified by
 \Arg{machine-name}, and asks it to return a log file from that
-machine.  The log file is determined by combining the log file name
-for the specified subsystem (e.g. STARTER) with the optional extension
-(e.g. ``.vm2'').  This simplifies the retrieval of log file by
-bypassing the need to log on to the machine in order to get the log
-file.
+machine.  Which log file is determined from
+the \Arg{subsystem[.extension]} argument.
+The log file is printed to standard output.
+This command eliminates the need to remotely log in to a
+machine in order to retrieve a daemon's log file.
 
 For security purposes of authentication and authorization, 
 this command requires an administrator's level of access.
@@ -30,28 +30,29 @@ See section~\ref{sec:Config-Security}
 on page~\pageref{sec:Config-Security} for more details about Condor's
 security mechanisms.
 
-The \Arg{subsystem[.extension]} argument identifies the log file to retrieve.
-It is defined by the \Arg{subsystem}\_LOG entry
-given in the configuration file.  
-For instance, the collector's log file is specified in the
-configuration file as \MacroNI{COLLECTOR\_LOG}.
-Therefore, to read the collector's log file, \MacroNI{COLLECTOR}
-should be specified.  
-The optional extension is appended to this file name
-(e.g. ``STARTER.vm1'' becomes ``StarterLog.vm1''). The complete list of log files that can be specified is:
+The \Arg{subsystem[.extension]} argument is utilized to construct
+the log file's name.
+Without an optional \Arg{.extension},
+the value of the configuration variable named \Arg{subsystem}\_LOG 
+defines the log file's name.
+When specified, the \Arg{.extension} is appended to this value.
 
-\begin{verbatim}
-  MASTER
-  COLLECTOR
-  NEGOTIATOR
-  NEGOTIATOR_MATCH
-  SCHEDD
-  SHADOW
-  STARTD
-  STARTER
-  KBDD
-\end{verbatim}
+Acceptable strings for the argument \Arg{subsystem} are as given as
+possible values of the predefined configuration
+variable \MacroUNI{SUBSYSTEM}.
+See the definition in
+section~\ref{sec:Condor-Subsystem-Names}.
 
+A value for the optional \Arg{.extension} argument may be one of
+the three strings:
+\begin{enumerate}
+\item{\File{.old}}
+\item{\File{.vm<X>}}
+\item{\File{.vm<X>.old}}
+\end{enumerate}
+Within these strings, \verb@<X>@ is substituted with the number of the virtual
+machine.
+ 
 \begin{Options}
     \ToolArgsBaseDesc
     \OptItem{\OptArg{-pool}{centralmanagerhostname[:portnumber]}}

@@ -1218,6 +1218,13 @@ to point to the new copy of the configuration,
 so the new version of Condor will use the new configuration
 when restarted.
 
+When upgrading from an earlier version of Condor to a version of 6.8,
+note that the configuration settings must be modified for security reasons. 
+Specifically, the \Macro{HOSTALLOW\_WRITE} configuration variable
+must be explicitly changed,
+or no jobs may be submitted,
+and error messages will be issued by Condor tools.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \input{admin-man/dynamic-deployment.tex}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

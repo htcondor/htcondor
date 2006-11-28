@@ -35,7 +35,6 @@ configure itself by calling a library routine which parses the
 various configuration files that might be used including pool-wide,
 platform-specific, machine-specific, and root-owned configuration files.
 
-
 The order in which attributes are defined is important, since later
 definitions will override existing definitions.
 This is particularly important if configuration files are broken up
@@ -231,6 +230,42 @@ configuration variable \MacroNI{FOO}:
 \end{verbatim}
 It is a poor idea to use this functionality, as it is likely to
 stop working in future Condor releases.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Program-Defined-Macros}Executing a Program to Produce Configuration Macros}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Instead of reading from a file,
+Condor may run a program to obtain configuration macros.
+The vertical bar character (\Bar) as the last character defining
+a file name provides the syntax necessary to tell 
+Condor to run a program.
+This syntax may only be used in the definition of
+the \Env{CONDOR\_CONFIG} environment variable,
+the \Macro{LOCAL\_CONFIG\_FILE} configuration variable,
+or the \Macro{LOCAL\_ROOT\_CONFIG\_FILE} configuration variable.
+
+The command line for the program 
+is formed by the characters preceding the vertical bar character.
+The standard output of the program is parsed as a configuration 
+file would be.
+
+An example:
+\begin{verbatim}
+LOCAL\_CONFIG\_FILE = /bin/make_the_config|
+\end{verbatim}
+
+Program \Prog{/bin/make\_the\_config} is executed, and its output
+is the set of configuration macros.
+
+Note that either a program is executed to generate the
+configuration macros or the configuration is read from 
+one or more files.
+The syntax uses space characters to separate command line elements,
+if an executed program produces the configuration macros.
+Space characters would otherwise separate the list of files.
+This syntax does not permit distinguishing one from the other,
+so only one may be specified.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Pre-Defined-Macros}Pre-Defined Macros}
@@ -601,13 +636,14 @@ File System Configuration File Entries''.
   \MacroNI{EXECUTE} is not defined.  Normally, \MacroUNI{EXECUTE} is
   defined in terms of \MacroUNI{LOCAL\_DIR}.
   
-\item[\Macro{LOCAL\_CONFIG\_FILE}] \label{param:LocalConfigFile} The
+\item[\Macro{LOCAL\_CONFIG\_FILE}] \label{param:LocalConfigFile}
+  Identifies the
   location of the local, machine-specific configuration
   file for each machine
-  in your pool.  The two most common options would be putting this
+  in the pool.  The two most common choices would be putting this
   file in the \MacroUNI{LOCAL\_DIR}, or putting all
-  local configuration files for your pool in a shared directory, each one
-  named by hostname.  For example,
+  local configuration files for the pool in a shared directory, each one
+  named by host name.  For example,
   \begin{verbatim}
     LOCAL_CONFIG_FILE = $(LOCAL_DIR)/condor_config.local
   \end{verbatim}
@@ -615,53 +651,66 @@ File System Configuration File Entries''.
   \begin{verbatim}
     LOCAL_CONFIG_FILE = $(release_dir)/etc/$(hostname).local
   \end{verbatim}
-  or, not using your release directory
+  or, not using the release directory
   \begin{verbatim}
     LOCAL_CONFIG_FILE = /full/path/to/configs/$(hostname).local
   \end{verbatim}
   
-  Beginning with Condor version 6.0.1, the
-  \MacroUNI{LOCAL\_CONFIG\_FILE} is treated as a list of files, not a
-  single file.  You can use either a comma or space separated list of
-  files as its value.  This allows you to specify multiple files as
-  the local configuration file and each one will be processed in the
+  The value of \MacroUNI{LOCAL\_CONFIG\_FILE} is treated as a list of files,
+  not a
+  single file.  The items in the list are delimited by either commas
+  or space characters.
+  This allows the specification of multiple files as
+  the local configuration file, each one processed in the
   order given (with parameters set in later files overriding values
-  from previous files).  This allows you to use one global
-  configuration file for multiple platforms in your pool, define a
-  platform-specific configuration file for each platform, and use a
+  from previous files).  This allows the use of one global
+  configuration file for multiple platforms in the pool, defines a
+  platform-specific configuration file for each platform, and uses a
   local configuration file for each machine. 
-  If the list is changed in one of the included files, the new list
+  If the list of files is changed in one of the later read files, the new list
   replaces the old list, but any files that have already been processed
-  remain processed and are removed from the new list if they are present
+  remain processed, and are removed from the new list if they are present
   to prevent cycles.
-  If \Macro{LOCAL\_CONFIG\_FILE} is not defined, no local configuration
+  See section~\ref{sec:Program-Defined-Macros} on 
+  page~\pageref{sec:Program-Defined-Macros} for directions on
+  using a program to generate the configuration macros that would
+  otherwise reside in one or more files as described here.
+  If \MacroNI{LOCAL\_CONFIG\_FILE} is not defined, no local configuration
   files are processed.  For more information on this, see
   section~\ref{sec:Multiple-Platforms} about Configuring Condor for
   Multiple Platforms on page~\pageref{sec:Multiple-Platforms}.
 
 \item[\Macro{REQUIRE\_LOCAL\_CONFIG\_FILE}] \label{param:RequireLocalConfigFile}
-  Beginning in Condor 6.5.5, it is permissible for the files listed as the
-  local config file to be missing. This is most useful for sites that have 
-  large numbers of machines in the pool, and a local config file that uses
-  the hostname builtin macro - instead of having an empty file for every host
-  in the pool, some files can simply be omitted. The default setting is True,
-  and Condor will exit with an error if the file listed as the local config 
-  file cannot be read, unless \MacroNI{REQUIRE\_LOCAL\_CONFIG\_FILE} is set 
-  to False 
+  Beginning in Condor 6.5.5, it is permissible for files listed 
+  in \MacroNI{LOCAL\_CONFIG\_FILE}
+  to be missing. This is most useful for sites that have 
+  large numbers of machines in the pool, and a local configuration file
+  that uses
+  the \MacroUNI{HOSTNAME} macro in its definition.
+  Instead of having an empty file for every host
+  in the pool, files can simply be omitted.
+  The default value is \Expr{True},
+  causing Condor to exit with an error, if a file listed as the local 
+  configuration file cannot be read.
+  A value of \Expr{False} allows local configuration files to be missing.
 
 \item[\Macro{LOCAL\_CONFIG\_DIR}] \label{param:LocalConfigDir} 
   Beginning in Condor 6.7.18, a directory may be used as a container for 
   local configuration files. 
   The files found in the directory are sorted into lexigraphical order, and 
   then each file is treated as though it was listed in 
-  \MacroUNI{LOCAL\_CONFIG\_FILE}. 
-  \MacroUNI{LOCAL\_CONFIG\_DIR} is processed before any files listed in 
-  \MacroUNI{LOCAL\_CONFIG\_FILE}, and is checked again after processing
-  the \MacroUNI{LOCAL\_CONFIG\_FILE} list. 
+  \MacroNI{LOCAL\_CONFIG\_FILE}. 
+  \MacroNI{LOCAL\_CONFIG\_DIR} is processed before any files listed in 
+  \MacroNI{LOCAL\_CONFIG\_FILE}, and is checked again after processing
+  the \MacroNI{LOCAL\_CONFIG\_FILE} list. 
   It is a list of directories, and each directory is processed in the order
   it appears in the list. 
   The process is not recursive, so any directories found inside the directory
   being processed are ignored. 
+
+\item[\Macro{LOCAL\_ROOT\_CONFIG\_FILE}] \label{param:LocalRootConfigFile} 
+  A comma or space separated list of path and file names specifying
+  the local, root configuration files.
 
 \item[\Macro{CONDOR\_IDS}] \label{param:CondorIds}
   The User ID (UID) and Group ID (GID) pair that the Condor daemons
@@ -949,7 +998,7 @@ File System Configuration File Entries''.
 % Default value check end here: PKK 8 Jan 2004
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Daemon-Logging-Config-File-Entries}Daemon Logging Config File Entries} 
+\subsection{\label{sec:Daemon-Logging-Config-File-Entries}Daemon Logging Configuration File Entries} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration!daemon logging configuration variables}
@@ -1251,7 +1300,7 @@ Log files may optionally be specified per debug level as follows:
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:DaemonCore-Config-File-Entries}DaemonCore Config File Entries} 
+\subsection{\label{sec:DaemonCore-Config-File-Entries}DaemonCore Configuration File Entries} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration!DaemonCore configuration variables}
@@ -2775,6 +2824,10 @@ Configuring The Startd Policy.
   To disable startup benchmarks, set \MacroNI{RunBenchmarks} to \Expr{False},
   or comment it out of the configuration file.
 
+\item[\Macro{DedicatedScheduler}] \label{param:DedicatedScheduler}
+  A string that identifies the dedicated scheduler.
+  See section~\ref{sec:Configure-Dedicated-Resource}
+  on page~\pageref{sec:Configure-Dedicated-Resource} for details.
 \end{description}
 
 These macros control if the \Condor{startd} daemon should perform
@@ -3925,6 +3978,14 @@ These macros control the \Condor{schedd}.
   and it represents a machine's preference for running a job.
   This configuration variable has no default;
   when not defined, preemption will never be considered.
+
+\item[\Macro{ParallelSchedulingGroup}]
+  \label{param:ParallelSchedulingGroup}
+  For parallel jobs which must be assigned within a group
+  of machines (and not cross group boundaries),
+  this configuration variable identifies members of a group. 
+  Each machine within a group sets this configuration variable with 
+  a string that identifies the group.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -4866,11 +4927,17 @@ Configuration File Macros}
  
 \begin{description}
 
-\item[\Macro{CREDD\_HOST}]
-\label{param:CreddHost} Description here.
+\item[\Macro{CREDD\_HOST}]\label{param:CreddHost}
+The host name of the machine running the \Condor{credd} daemon.
 
-\item[\Macro{CREDD\_CACHE\_LOCALLY}]
-\label{param:CreddCacheLocally} Description here.
+\item[\Macro{CREDD\_CACHE\_LOCALLY}]\label{param:CreddCacheLocally}
+A boolean value that defaults to \Expr{False}.
+When \Expr{True}, the first successful password fetch operation to the
+\Condor{credd} daemon causes the password to be stashed in a local, 
+secure password store.
+Subsequent uses of that password do not require
+communication with the \Condor{credd} daemon.
+
 \end{description}
 
 
@@ -5491,6 +5558,10 @@ The default value is 20 seconds.
 Scalability issues with a large pool would be the only basis
 for a change from the default value.
 
+\item[\Macro{SEC\_PASSWORD\_FILE}]
+\label{param:SecPasswordFile} For Unix machines, the path and file name
+of  the file containing the pool password for password authentication.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -5870,8 +5941,9 @@ quill-for-schedd_name@machinename.fully.qualified.address
 \end{description}
 
 
+% commented out by Karen in Nov 06
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\input{admin-man/root-config.tex}
+%\input{admin-man/root-config.tex}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 

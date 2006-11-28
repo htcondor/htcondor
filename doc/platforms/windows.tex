@@ -53,8 +53,8 @@ However, the following items are not supported in this version:
 transparent process checkpoint/migration and remote system calls are
 not supported.
 
-\item For Grid universe jobs, the only supported grid type is
-``condor''.
+\item For \SubmitCmd{grid} universe jobs, the only supported grid type is
+\SubmitCmd{condor}.
 
 \item Accessing files via a network share that requires a kerberos ticket
 (such as AFS) is not yet supported.
@@ -133,30 +133,31 @@ security context of its submitting user (see
 \ref{sec:windows-run-as-owner} for details on running jobs as the
 submitting user on Windows).
 
-On UNIX systems, arbitrarily changing what user Condor performs its
+On Unix systems, arbitrarily changing what user Condor performs its
 actions as is easily done when Condor is started with root privileges.
 On Windows, however, performing an action as a particular user
 requires knowledge of that user's password, even when running at the
 maximum privilege level.
 
-Condor on Windows supports the notion of ``user privilege switching''
+Condor on Windows supports the notion of \Term{user privilege switching}
 through the use of a secure password store.  Users can provide Condor
 with their passwords using the \Condor{store\_cred} tool.  Passwords
-managed by Condor are encrypted and stored in a secure location in the
+managed by Condor are encrypted and stored at a secure location within the
 Windows registry.  When Condor needs to perform an action as a
 particular user, it can then use the securely stored password to do
 so.
 
 The secure password store can be managed by the \Condor{schedd}.  This
 is Condor's default behavior, and is usually a good approach in
-environments where the user's password is only ever needed on the
-submit host (i.e., when users are are not allowed to
+environments where the user's password is only needed on the
+submit machine.
+This occurs when users are are not allowed to
 submit jobs that run under the security context of the submitting
-user).
+user.
 
 In environments where users can submit Condor jobs that run using
 their Windows accounts, it is necessary to configure a centralized
-\Condor{credd} to manage the secure password store.  This makes a
+\Condor{credd} daemon to manage the secure password store.  This makes a
 user's password available, via an encrypted connection to the
 \Condor{credd}, to any execute machine that may need to execute a job
 under the user's Windows account.
@@ -167,29 +168,30 @@ to configure a Condor pool to use the \Condor{credd} for password
 managment.
 
 The following configuration macros are needed for all hosts that share
-a \Condor{credd} for password management.  These will typically be
+a \Condor{credd} daemon for password management.  These will typically be
 placed in the global Condor configuration file.
 \begin{itemize}
 \item \Macro{CREDD\_HOST} - This is the name of the machine that runs
       the \Condor{credd}.
 \item \Macro{CREDD\_CACHE\_LOCALLY} - This affects Condor's behavior
-      when a daemon does a ``password fetch'' operation to the
+      when a daemon does a password fetch operation to the
       \Condor{credd}. If \MacroNI{CREDD\_CACHE\_LOCALLY} is True, the
       first successful fetch of a user's password will result in the
       password being stashed in a local secure password
       store. Subsequent uses of that user's password will not require
-      communication with the \Condor{credd}.  If not set, the default
+      communication with the \Condor{credd}.  If not defined, the default
       value is False.
 \end{itemize}
 
-Careful attention must be given to the \Condor{credd}'s security
-configuration.  All communication with the \Condor{credd} should be
+Careful attention must be given to the \Condor{credd} daemon's security
+configuration.  All communication with the \Condor{credd} daemon should be
 strongly authenticated and encrypted.  The
 \File{condor\_config.local.credd} file configures the \Condor{credd}
-to only accept ``password store'' requests from users authenticated
+daemon
+to only accept password store requests from users authenticated
 using the NTSSPI authentication method.  Password fetch requests must
 come from Condor daemons authenticated using a shared secret via the
-PASSWORD authentication method.  Both types of traffic are required to
+password authentication method.  Both types of traffic are required to
 be encrypted.  Please refer to section \ref{sec:Config-Security} for
 details on configuring security in Condor.
 

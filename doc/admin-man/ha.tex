@@ -430,10 +430,10 @@ HOSTALLOW_NEGOTIATOR = $(COLLECTOR_HOST)
 HAD = $(SBIN)/condor_had
 REPLICATION = $(SBIN)/condor_replication
 
-## the master should start at least these four daemons
-DAEMON_LIST = MASTER, COLLECTOR, NEGOTIATOR, HAD
-## DC_Daemon list should contain at least these four
-DC_DAEMON_LIST = MASTER, COLLECTOR, NEGOTIATOR, HAD
+## the master should start at least these five daemons
+DAEMON_LIST = MASTER, COLLECTOR, NEGOTIATOR, HAD, REPLICATION
+## DC_Daemon list should contain at least these five
+DC_DAEMON_LIST = MASTER, COLLECTOR, NEGOTIATOR, HAD, REPLICATION
 
 ## Enables/disables the replication feature of HAD daemon
 ## Default: no

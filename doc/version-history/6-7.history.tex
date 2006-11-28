@@ -86,7 +86,7 @@ in a DAG define a log file.
 parameters.
 If a configuration filename (such the environment variable CONDOR\_CONFIG
 or the configuration parameter LOCAL\_CONFIG\_FILE) ends with a vertical
-bar (``|''), it is executed and its standard output is parsed
+bar (``\Bar''), it is executed and its standard output is parsed
 for configuration parameters. If LOCAL\_CONFIG\_FILE is used in this way,
 then it can only contain a single item, and spaces in the value will be
 interpreted as part of the command to be executed.
@@ -522,7 +522,7 @@ page~\pageref{param:ScheddRoundAttr}.
 \item The password authentication method now works on all
 platforms. It was previously only available on Windows. UNIX platforms
 will store the pool password in the file defined by the configuration
-parameter \Macro{POOL\_PASSWORD\_FILE}. This file will be owned by the
+parameter \Macro{SEC\_PASSWORD\_FILE}. This file will be owned by the
 real UID that Condor runs as and will only be accessible by that user.
 
 \item A new tool, \Condor{userlog\_job\_counter}, has been added.
