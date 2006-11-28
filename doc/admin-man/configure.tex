@@ -5969,123 +5969,123 @@ refresh proxy certificates.  By default, this macro is undefined.
 
 \end{description}
 
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% \subsection{\label{sec:API-Config-File-Entries}
-% Configuration File Macros affecting APIs}
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% 
-% \begin{description}
-% 
-% \item[\Macro{ENABLE\_SOAP}]
-%   \label{param:EnableSoap}
-%   A boolean value that defaults to \Expr{False}.
-%   When \Expr{True}, Condor daemons will respond to HTTP PUT commands
-%   as if they were SOAP calls. When \Expr{False},
-%   all HTTP PUT commands are denied.
-% 
-% \item[\Macro{ENABLE\_WEB\_SERVER}]
-%   \label{param:EnableWebServer}
-%   A boolean value that defaults to \Expr{False}.
-%   When \Expr{True}, Condor daemons will respond to HTTP GET commands,
-%   and send the static files sitting in the subdirectory defined
-%   by the configuration variable \MacroNI{WEB\_ROOT\_DIR}.
-%   In addition, web commands are considered a READ command,
-%   so the client will be checked by host-based security.
-% 
-% \item[\MacroB{<SUBSYS>\_ENABLE\_SOAP\_SSL}]
-%   \label{param:SubsysEnableSoapSSL}
-%   \index{SUBSYS\_ENABLE\_SOAP\_SSL macro@\texttt{<SUBSYS>\_ENABLE\_SOAP\_SSL} macro}
-%   A boolean value that defaults to \Expr{False}.
-%   When \Expr{True}, enables SOAP over SSL for the specified
-%   \MacroNI{<SUBSYS>}.
-%   Any specific \MacroNI{<SUBSYS>\_ENABLE\_SOAP\_SSL} setting overrides
-%   the value of \MacroNI{ENABLE\_SOAP\_SSL}.
-% 
-%   The macro is named by substituting \MacroNI{<SUBSYS>}
-%   with the appropriate subsystem string as defined in
-%   section~\ref{sec:Condor-Subsystem-Names}.
-% 
-% \item[\Macro{ENABLE\_SOAP\_SSL}]
-%   \label{param:EnableSoapSSL}
-%   A boolean value that defaults to \Expr{False}.
-%   When \Expr{True}, enables SOAP over SSL for all daemons.
-% 
-% \item[\MacroB{<SUBSYS>\_SOAP\_SSL\_PORT}]
-%   \label{param:SubsysSoapSSLPort}
-%   \index{SUBSYS\_SOAP\_SSL\_PORT macro@\texttt{<SUBSYS>\_SOAP\_SSL\_PORT} macro}
-%   A required port number on which SOAP over SSL messages are
-%   accepted, when SOAP over SSL is enabled.
-%   The \MacroNI{<SUBSYS>} must be specified, because multiple daemons
-%   running on a single machine may not share a port.
-%   There is no default value.
-% 
-%   The macro is named by substituting \MacroNI{<SUBSYS>}
-%   with the appropriate subsystem string as defined in
-%   section~\ref{sec:Condor-Subsystem-Names}.
-% 
-% \item[\MacroB{<SUBSYS>\_SOAP\_SSL\_SERVER\_KEYFILE}]
-%   \label{param:SubsysSoapSSLServerKeyfile}
-%   \index{SUBSYS\_SOAP\_SSL\_SERVER\_KEYFILE macro@\texttt{<SUBSYS>\_SOAP\_SSL\_SERVER\_KEYFILE} macro}
-%   A required complete path and file name to specify the daemon's
-%   identity, as used in authentication when SOAP over SSL is enabled.
-%   The file is to be  an OpenSSL PEM file containing a certificate
-%   and private key.
-%   There is no default value.
-% 
-%   The macro is named by substituting \MacroNI{<SUBSYS>}
-%   with the appropriate subsystem string as defined in
-%   section~\ref{sec:Condor-Subsystem-Names}.
-% 
-% \item[\MacroB{<SUBSYS>\_SOAP\_SSL\_SERVER\_KEYFILE\_PASSWORD}]
-%   \label{param:SubsysSoapSSLServerKeyfilePassword}
-%   \index{SUBSYS\_SOAP\_SSL\_SERVER\_KEYFILE\_PASSWORD macro@\texttt{<SUBSYS>\_SOAP\_SSL\_SERVER\_KEYFILE\_PASSWORD} macro}
-%   An optional complete path and file name to specify
-%   a password for unlocking the daemon's private key.
-%   There is no default value.
-% 
-%   The macro is named by substituting \MacroNI{<SUBSYS>}
-%   with the appropriate subsystem string as defined in
-%   section~\ref{sec:Condor-Subsystem-Names}.
-% 
-% \item[\MacroB{<SUBSYS>\_SOAP\_SSL\_CA\_FILE}]
-%   \label{param:SubsysSoapSSLCaFile}
-%   \index{SUBSYS\_SOAP\_SSL\_CA\_FILE macro@\texttt{<SUBSYS>\_SOAP\_SSL\_CA\_FILE} macro}
-%   A required complete path and file name to specify 
-%   a file containing certificates of trusted Certificate Authorities (CAs).
-%   Only clients who present a certificate signed by a trusted
-%   CA will be authenticated.
-%   There is no default value.
-% 
-%   The macro is named by substituting \MacroNI{<SUBSYS>}
-%   with the appropriate subsystem string as defined in
-%   section~\ref{sec:Condor-Subsystem-Names}.
-% 
-% \item[\MacroB{<SUBSYS>\_SOAP\_SSL\_CA\_DIR}]
-%   \label{param:SubsysSoapSSLCaDir}
-%   \index{SUBSYS\_SOAP\_SSL\_CA\_DIR macro@\texttt{<SUBSYS>\_SOAP\_SSL\_CA\_DIR} macro}
-%   A required complete path to a directory
-%   containing certificates of trusted Certificate Authorities (CAs).
-%   Only clients who present a certificate signed by a trusted
-%   CA will be authenticated.
-%   There is no default value.
-% 
-%   The macro is named by substituting \MacroNI{<SUBSYS>}
-%   with the appropriate subsystem string as defined in
-%   section~\ref{sec:Condor-Subsystem-Names}.
-% 
-% \item[\MacroB{<SUBSYS>\_SOAP\_SSL\_DH\_FILE}]
-%   \label{param:SubsysSoapSSLDhFile}
-%   \index{SUBSYS\_SOAP\_SSL\_DH\_FILE macro@\texttt{<SUBSYS>\_SOAP\_SSL\_DH\_FILE} macro}
-%   An optional complete path and file name to a DH file
-%   containing keys for a DH key exchange.
-%   There is no default value.
-% 
-%   The macro is named by substituting \MacroNI{<SUBSYS>}
-%   with the appropriate subsystem string as defined in
-%   section~\ref{sec:Condor-Subsystem-Names}.
-% 
-% \end{description}
-% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:API-Config-File-Entries}
+Configuration File Macros Affecting APIs}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{description}
+
+\item[\Macro{ENABLE\_SOAP}]
+  \label{param:EnableSoap}
+  A boolean value that defaults to \Expr{False}.
+  When \Expr{True}, Condor daemons will respond to HTTP PUT commands
+  as if they were SOAP calls. When \Expr{False},
+  all HTTP PUT commands are denied.
+
+\item[\Macro{ENABLE\_WEB\_SERVER}]
+  \label{param:EnableWebServer}
+  A boolean value that defaults to \Expr{False}.
+  When \Expr{True}, Condor daemons will respond to HTTP GET commands,
+  and send the static files sitting in the subdirectory defined
+  by the configuration variable \MacroNI{WEB\_ROOT\_DIR}.
+  In addition, web commands are considered a READ command,
+  so the client will be checked by host-based security.
+
+\item[\MacroB{<SUBSYS>\_ENABLE\_SOAP\_SSL}]
+  \label{param:SubsysEnableSoapSSL}
+  \index{SUBSYS\_ENABLE\_SOAP\_SSL macro@\texttt{<SUBSYS>\_ENABLE\_SOAP\_SSL} macro}
+  A boolean value that defaults to \Expr{False}.
+  When \Expr{True}, enables SOAP over SSL for the specified
+  \MacroNI{<SUBSYS>}.
+  Any specific \MacroNI{<SUBSYS>\_ENABLE\_SOAP\_SSL} setting overrides
+  the value of \MacroNI{ENABLE\_SOAP\_SSL}.
+
+  The macro is named by substituting \MacroNI{<SUBSYS>}
+  with the appropriate subsystem string as defined in
+  section~\ref{sec:Condor-Subsystem-Names}.
+
+\item[\Macro{ENABLE\_SOAP\_SSL}]
+  \label{param:EnableSoapSSL}
+  A boolean value that defaults to \Expr{False}.
+  When \Expr{True}, enables SOAP over SSL for all daemons.
+
+\item[\MacroB{<SUBSYS>\_SOAP\_SSL\_PORT}]
+  \label{param:SubsysSoapSSLPort}
+  \index{SUBSYS\_SOAP\_SSL\_PORT macro@\texttt{<SUBSYS>\_SOAP\_SSL\_PORT} macro}
+  A required port number on which SOAP over SSL messages are
+  accepted, when SOAP over SSL is enabled.
+  The \MacroNI{<SUBSYS>} must be specified, because multiple daemons
+  running on a single machine may not share a port.
+  There is no default value.
+
+  The macro is named by substituting \MacroNI{<SUBSYS>}
+  with the appropriate subsystem string as defined in
+  section~\ref{sec:Condor-Subsystem-Names}.
+
+\item[\MacroB{<SUBSYS>\_SOAP\_SSL\_SERVER\_KEYFILE}]
+  \label{param:SubsysSoapSSLServerKeyfile}
+  \index{SUBSYS\_SOAP\_SSL\_SERVER\_KEYFILE macro@\texttt{<SUBSYS>\_SOAP\_SSL\_SERVER\_KEYFILE} macro}
+  A required complete path and file name to specify the daemon's
+  identity, as used in authentication when SOAP over SSL is enabled.
+  The file is to be  an OpenSSL PEM file containing a certificate
+  and private key.
+  There is no default value.
+
+  The macro is named by substituting \MacroNI{<SUBSYS>}
+  with the appropriate subsystem string as defined in
+  section~\ref{sec:Condor-Subsystem-Names}.
+
+\item[\MacroB{<SUBSYS>\_SOAP\_SSL\_SERVER\_KEYFILE\_PASSWORD}]
+  \label{param:SubsysSoapSSLServerKeyfilePassword}
+  \index{SUBSYS\_SOAP\_SSL\_SERVER\_KEYFILE\_PASSWORD macro@\texttt{<SUBSYS>\_SOAP\_SSL\_SERVER\_KEYFILE\_PASSWORD} macro}
+  An optional complete path and file name to specify
+  a password for unlocking the daemon's private key.
+  There is no default value.
+
+  The macro is named by substituting \MacroNI{<SUBSYS>}
+  with the appropriate subsystem string as defined in
+  section~\ref{sec:Condor-Subsystem-Names}.
+
+\item[\MacroB{<SUBSYS>\_SOAP\_SSL\_CA\_FILE}]
+  \label{param:SubsysSoapSSLCaFile}
+  \index{SUBSYS\_SOAP\_SSL\_CA\_FILE macro@\texttt{<SUBSYS>\_SOAP\_SSL\_CA\_FILE} macro}
+  A required complete path and file name to specify 
+  a file containing certificates of trusted Certificate Authorities (CAs).
+  Only clients who present a certificate signed by a trusted
+  CA will be authenticated.
+  There is no default value.
+
+  The macro is named by substituting \MacroNI{<SUBSYS>}
+  with the appropriate subsystem string as defined in
+  section~\ref{sec:Condor-Subsystem-Names}.
+
+\item[\MacroB{<SUBSYS>\_SOAP\_SSL\_CA\_DIR}]
+  \label{param:SubsysSoapSSLCaDir}
+  \index{SUBSYS\_SOAP\_SSL\_CA\_DIR macro@\texttt{<SUBSYS>\_SOAP\_SSL\_CA\_DIR} macro}
+  A required complete path to a directory
+  containing certificates of trusted Certificate Authorities (CAs).
+  Only clients who present a certificate signed by a trusted
+  CA will be authenticated.
+  There is no default value.
+
+  The macro is named by substituting \MacroNI{<SUBSYS>}
+  with the appropriate subsystem string as defined in
+  section~\ref{sec:Condor-Subsystem-Names}.
+
+\item[\MacroB{<SUBSYS>\_SOAP\_SSL\_DH\_FILE}]
+  \label{param:SubsysSoapSSLDhFile}
+  \index{SUBSYS\_SOAP\_SSL\_DH\_FILE macro@\texttt{<SUBSYS>\_SOAP\_SSL\_DH\_FILE} macro}
+  An optional complete path and file name to a DH file
+  containing keys for a DH key exchange.
+  There is no default value.
+
+  The macro is named by substituting \MacroNI{<SUBSYS>}
+  with the appropriate subsystem string as defined in
+  section~\ref{sec:Condor-Subsystem-Names}.
+
+\end{description}
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
