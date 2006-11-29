@@ -31,15 +31,23 @@
 #include <stdio.h>
 
 
+#ifdef __cplusplus
+extern "C"  {
+#define SAFE_OPEN_DEFAULT_MODE = 0644
+#else
+#define SAFE_OPEN_DEFAULT_MODE
+#endif
+
+
 /** @name Replacement functions for open.  These functions differ from the 
  standard C library open() in the following ways:
  <UL>
   <LI> file creation is always done safely and the semantics are determined by
     which of the 4 functions is used; also, a direct wrapper function is provided
 	to make a reasonable default selection amongst the 4 functions.
-  <LI> passing O_CREAT and O_EXCL to the condor_create* functions is optional
+  <LI> passing O_CREAT and O_EXCL to the safe_create* functions is optional
     (should not normally be passed)
-  <LI> passing O_CREAT and O_EXCL to the condor_open_no_create is an error.
+  <LI> passing O_CREAT and O_EXCL to the safe_open_no_create is an error.
   <LI> file creation permissions have a default of 0644.  umask still applies.
     (should not pass unless something else is needed)
  </UL>
@@ -48,19 +56,19 @@
 //@{
 
 	/// Typically you can call this as a direct wrapper for open().
-int open_safely_wrapper(const char *fn, int flags, mode_t mode = 0644);
+int safe_open_wrapper(const char *fn, int flags, mode_t mode SAFE_OPEN_DEFAULT_MODE);
 
 	/// Create file, error if exists, don't follow sym link.
-int open_create_fail_if_exists(const char *fn, int flags, mode_t mode = 0644);
+int safe_create_fail_if_exists(const char *fn, int flags, mode_t mode SAFE_OPEN_DEFAULT_MODE);
 
 	/// Create file, replace file if exists.  Use this instead of 
-int open_create_replace_if_exists(const char *fn, int flags, mode_t mode = 0644);
+int safe_create_replace_if_exists(const char *fn, int flags, mode_t mode SAFE_OPEN_DEFAULT_MODE);
 
 	/// Create file if it doesn't exist, keep inode if it does.  
-int open_create_keep_if_exists(const char *fn, int flags, mode_t mode = 0644);
+int safe_create_keep_if_exists(const char *fn, int flags, mode_t mode SAFE_OPEN_DEFAULT_MODE);
 
 	/// Open existing file.  
-int open_no_create(const char *fn, int flags);
+int safe_open_no_create(const char *fn, int flags);
 
 //@}
 
@@ -78,20 +86,26 @@ int open_no_create(const char *fn, int flags);
 //@{
 
 	/// Typically you can call this as a direct wrapper for fopen().
-FILE* fopen_safely_wrapper(const char *fn, const char *flags, mode_t mode = 0644);
+FILE* safe_fopen_wrapper(const char *fn, const char *flags, mode_t mode SAFE_OPEN_DEFAULT_MODE);
 
 	/// Create file, fail if it exists, don't follow symlink.
-FILE* fopen_create_fail_if_exists(const char *fn, const char* flags, mode_t mode = 0644);
+FILE* safe_fcreate_fail_if_exists(const char *fn, const char* flags, mode_t mode SAFE_OPEN_DEFAULT_MODE);
 
 	/// Create file, replace file if exists.
-FILE* fopen_create_replace_if_exists(const char *fn, const char* flags, mode_t mode = 0644);
+FILE* safe_fcreate_replace_if_exists(const char *fn, const char* flags, mode_t mode SAFE_OPEN_DEFAULT_MODE);
 
 	/// Create file if it doesn't exist, keep inode if it does.
-FILE* fopen_create_keep_if_exists(const char *fn, const char* flags, mode_t mode = 0644);
+FILE* safe_fcreate_keep_if_exists(const char *fn, const char* flags, mode_t mode SAFE_OPEN_DEFAULT_MODE);
 
 	/// Open existing file; fail if file does not exist.
-FILE* fopen_no_create(const char* fn, const char* flags);
+FILE* safe_fopen_no_create(const char* fn, const char* flags);
 
 //@}
+
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

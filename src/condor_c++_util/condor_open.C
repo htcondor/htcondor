@@ -31,15 +31,15 @@
  1) file creation is always done safely.  basically, the idea is to always 
     use the O_EXCL flag when creating a file to prevent many types of 
 	common security attacks.
- 2) passing O_CREAT and O_EXCL to the condor_create* functions is optional
+ 2) passing O_CREAT and O_EXCL to the safe_create* functions is optional
     (should not normally be passed)
- 3) passing O_CREAT and O_EXCL to the condor_open_no_create is an error.
+ 3) passing O_CREAT and O_EXCL to the safe_open_no_create is an error.
  4) file creation permissions have a default of 0644.  umask still applies.
     (should not pass unless something else is needed)
  5) all other flags are passed to open
 ***********/
 
-int open_safely_wrapper(const char *fn, int flags, mode_t mode)
+int safe_open_wrapper(const char *fn, int flags, mode_t mode)
 {
 
 	if ( flags & O_CREAT ) {
@@ -47,7 +47,7 @@ int open_safely_wrapper(const char *fn, int flags, mode_t mode)
 			// O_CREAT specified, pick function based on other flags
 			
 		if ( flags & O_EXCL ) {
-			return open_create_fail_if_exists(fn,flags,mode);
+			return safe_create_fail_if_exists(fn, flags, mode);
 		}
 
 		if ( flags & O_TRUNC ) {
@@ -60,22 +60,22 @@ int open_safely_wrapper(const char *fn, int flags, mode_t mode)
 			// we create the file ourselves and therefore know
 			// it will be created with O_EXCL and with a reasonable
 			// default mode.
-			return open_create_replace_if_exists(fn,flags,mode);
+			return safe_create_replace_if_exists(fn, flags, mode);
 		}
 
-		return open_create_keep_if_exists(fn,flags,mode);
+		return safe_create_keep_if_exists(fn, flags, mode);
 
 	} else {
 		
 			// O_CREAT not specified
-		return open_no_create(fn,flags);
+		return safe_open_no_create(fn,flags);
 	
 	}
 
 }
 
 // create file, error if exists, don't follow sym link
-int open_create_fail_if_exists(const char *fn, int flags, mode_t mode)
+int safe_create_fail_if_exists(const char *fn, int flags, mode_t mode)
 {
     int f = open(fn, flags | O_CREAT | O_EXCL, mode);
 
@@ -84,7 +84,7 @@ int open_create_fail_if_exists(const char *fn, int flags, mode_t mode)
 
 
 // create file, replace file if exists
-int open_create_replace_if_exists(const char *fn, int flags, mode_t mode)
+int safe_create_replace_if_exists(const char *fn, int flags, mode_t mode)
 {
     int r = unlink(fn);
 
@@ -101,16 +101,11 @@ int open_create_replace_if_exists(const char *fn, int flags, mode_t mode)
 
 
 // create file if it doesn't exist, keep inode if it does
-int open_create_keep_if_exists(const char *fn, int flags, mode_t mode)
+int safe_create_keep_if_exists(const char *fn, int flags, mode_t mode)
 {
     int noCreateFlags = flags & ~O_CREAT & ~O_EXCL;
 
     int f = open (fn, noCreateFlags, mode);
-
-	// TODO: perhaps it would be a good idea to do the following:
-	//   if the open succeeds, confirm that the mode on the pre-existing
-	//   file is the same (or more restrictive) as the mode parameter
-	//   passed to us in this function....
 
     if (f == -1 && errno == ENOENT)  {
         f = open(fn, flags | O_CREAT | O_EXCL, mode);
@@ -121,7 +116,7 @@ int open_create_keep_if_exists(const char *fn, int flags, mode_t mode)
 
 
 // open existing file
-int open_no_create(const char *fn, int flags)
+int safe_open_no_create(const char *fn, int flags)
 {
     // fail if O_CREAT or O_EXCL are included.
     if (flags & (O_CREAT | O_EXCL))  {
@@ -138,8 +133,8 @@ int open_no_create(const char *fn, int flags)
 //
 // Internal helper function declarations
 //
-static int stdio_mode_to_open_flag(const char* flags, int& mode, bool createFile = true);
-static FILE* condor_fdopen(int fd, const char* flags);
+static int stdio_mode_to_open_flag(const char* flags, int* mode, int createFile);
+static FILE* safe_fdopen(int fd, const char* flags);
 
 
 /*********************
@@ -151,7 +146,7 @@ static FILE* condor_fdopen(int fd, const char* flags);
  4) in the case of "a", the file is opened with O_APPEND
 *********************/
 
-FILE* fopen_safely_wrapper(const char *fn, const char *flags, mode_t mode)
+FILE* safe_fopen_wrapper(const char *fn, const char *flags, mode_t mode)
 {
 	int r, open_flags;
 
@@ -160,9 +155,9 @@ FILE* fopen_safely_wrapper(const char *fn, const char *flags, mode_t mode)
 	}
 
 	if ( flags[0] == 'r' ) {
-		r = stdio_mode_to_open_flag(flags, open_flags, false);
+		r = stdio_mode_to_open_flag(flags, &open_flags, 0);
 	} else {
-		r = stdio_mode_to_open_flag(flags, open_flags, true);
+		r = stdio_mode_to_open_flag(flags, &open_flags, 1);
 		open_flags |= O_CREAT;
 	}
 
@@ -170,90 +165,90 @@ FILE* fopen_safely_wrapper(const char *fn, const char *flags, mode_t mode)
 		return NULL;
 	}
 
-	int f = open_safely_wrapper(fn, open_flags, mode);
+	int f = safe_open_wrapper(fn, open_flags, mode);
 
-	return condor_fdopen(f, flags);
+	return safe_fdopen(f, flags);
 
 }
 
 // create file, fail if it exists, don't follow symlink
-FILE* fopen_create_fail_if_exists(const char *fn, const char* flags, mode_t mode)
+FILE* safe_fcreate_fail_if_exists(const char *fn, const char* flags, mode_t mode)
 {
     int open_flags;
-    int r = stdio_mode_to_open_flag(flags, open_flags);
+    int r = stdio_mode_to_open_flag(flags, &open_flags, 1);
 
     if (r != 0)  {
 		return NULL;
     }
 
-    int f = open_create_fail_if_exists(fn, open_flags, mode);
+    int f = safe_create_fail_if_exists(fn, open_flags, mode);
 
-    return condor_fdopen(f, flags);
+    return safe_fdopen(f, flags);
 }
 
 
 // create file, replace file if exists
-FILE* fopen_create_replace_if_exists(const char *fn, const char* flags, mode_t mode)
+FILE* safe_fcreate_replace_if_exists(const char *fn, const char* flags, mode_t mode)
 {
     int open_flags;
-    int r = stdio_mode_to_open_flag(flags, open_flags);
+    int r = stdio_mode_to_open_flag(flags, &open_flags, 1);
 
     if (r != 0)  {
 		return NULL;
     }
 
-    int f = open_create_replace_if_exists(fn, open_flags, mode);
+    int f = safe_create_replace_if_exists(fn, open_flags, mode);
 
-    return condor_fdopen(f, flags);
+    return safe_fdopen(f, flags);
 }
 
 
 // create file if it doesn't exist, keep inode if it does
-FILE* fopen_create_keep_if_exists(const char *fn, const char* flags, mode_t mode)
+FILE* safe_fcreate_keep_if_exists(const char *fn, const char* flags, mode_t mode)
 {
     int open_flags;
-    int r = stdio_mode_to_open_flag(flags, open_flags);
+    int r = stdio_mode_to_open_flag(flags, &open_flags, 1);
 
     if (r != 0)  {
 		return NULL;
     }
 
-    int f = open_create_keep_if_exists(fn, open_flags, mode);
+    int f = safe_create_keep_if_exists(fn, open_flags, mode);
 
-    return condor_fdopen(f, flags);
+    return safe_fdopen(f, flags);
 }
 
 
 // open existing file
-FILE* fopen_no_create(const char* fn, const char* flags)
+FILE* safe_fopen_no_create(const char* fn, const char* flags)
 {
     int open_flags;
-    int r = stdio_mode_to_open_flag(flags, open_flags, false);
+    int r = stdio_mode_to_open_flag(flags, &open_flags, 0);
 
     if (r != 0)  {
 		return NULL;
     }
 
-    int f = open_no_create(fn, open_flags);
+    int f = safe_open_no_create(fn, open_flags);
 
-    return condor_fdopen(f, flags);
+    return safe_fdopen(f, flags);
 }
 
 
 //
-// Helper functions for us in condor_fcreate* and condor_fopen functions
+// Helper functions for us in safe_fcreate* and safe_fopen functions
 //
 
 // create the flags needed by open from mode string passed to fopen
 // fail if the create_file is true and mode is "r" or "rb", or if the
 // mode does not start with one of the 15 valid modes:
 //   r rb r+ r+b rb+  w wb w+ w+b wb+  a ab a+ a+b ab+
-int stdio_mode_to_open_flag(const char* flags, int& mode, bool create_file)
+int stdio_mode_to_open_flag(const char* flags, int* mode, int create_file)
 {
-    bool        plus_flag = false;
+    int         plus_flag = 0;
     char        mode_char;
 
-    mode = 0;
+    *mode = 0;
 
 	if ( !flags ) {
 		errno = EINVAL;
@@ -281,29 +276,57 @@ int stdio_mode_to_open_flag(const char* flags, int& mode, bool create_file)
     }
 
     if (plus_flag)  {
-		mode |= O_RDWR;
+		*mode |= O_RDWR;
     }  else if (mode_char == 'r')  {
-		mode |= O_RDONLY;
+		*mode |= O_RDONLY;
     }  else   {	// mode_char == 'w' or 'a'
-		mode |= O_WRONLY;
+		*mode |= O_WRONLY;
     }
 
     if (mode_char == 'a')  {
-		mode |= O_APPEND;
+		*mode |= O_APPEND;
     }  else if (mode_char == 'w')  {
-		mode |= O_TRUNC;
+		*mode |= O_TRUNC;
     }
 
-#ifdef O_BINARY
-	if ( strchr(flags,'b') ) {
-		mode |= O_BINARY;
+    // deal with windows extra flags: btSRTD
+
+#ifdef WIN32
+#ifdef _O_BINARY
+	if (strchr(flags,'b'))  {
+		*mode |= _O_BINARY;
 	}
 #endif
 
-#ifdef O_TEXT
-	if ( strchr(flags,'t') ) {
-		mode |= O_TEXT;
+#ifdef _O_TEXT
+	if (strchr(flags,'t'))  {
+		*mode |= _O_TEXT;
 	}
+#endif
+
+#ifdef _O_SEQUENTIAL
+	if (strchr(flags, 'S'))  {
+		*mode |= _O_SEQUENTIAL;
+	}
+#endif
+
+#ifdef _O_RANDOM
+	if (strchr(flags, 'R'))  {
+		*mode |= _O_RANDOM;
+	}
+#endif
+
+#ifdef _O_SHORT_LIVED
+	if (strchr(flags, 'T'))  {
+		*mode |= _O_SHORT_LIVED;
+	}
+#endif
+
+#ifdef _O_TEMPORARY
+	if (strchr(flags, 'D'))  {
+		*mode |= _O_TEMPORARY;
+	}
+#endif
 #endif
 
     return 0;
@@ -312,7 +335,7 @@ int stdio_mode_to_open_flag(const char* flags, int& mode, bool create_file)
 
 // turn the file descriptor into a FILE*.  return null if fd == -1.
 // close the file descriptor if the fdopen fails.
-FILE* condor_fdopen(int fd, const char* flags)
+FILE* safe_fdopen(int fd, const char* flags)
 {
     if (fd == -1)  {
 		return NULL;
