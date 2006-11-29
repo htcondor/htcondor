@@ -150,6 +150,11 @@ operator.  This patch should also fix any other cases where Condor
 daemons crashed due to the use of the unary minus operator in ClassAd
 expressions.
 
+\item Stork now writes a terminated event to the user log when it removes
+a transfer job from its queue because of failures to invoke a transfer
+module. Without this event, DAGMan would not notice that these jobs had
+left the queue.
+
 \end{itemize}
 
 \noindent Known Bugs:
