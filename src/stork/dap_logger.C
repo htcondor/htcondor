@@ -524,7 +524,8 @@ user_log_terminated(	const classad::ClassAd *ad,
 		return false;
 	}
 
-	if (termination_type == "job_retry_limit") {
+	if (termination_type == "job_retry_limit" ||
+		termination_type == "server_error") {
 		// Stork removed the job before it could exit.  exit_status has no
 		// useful information.
 		event.normal = false;

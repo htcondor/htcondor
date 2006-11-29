@@ -875,6 +875,8 @@ void process_request(classad::ClassAd *currentAd)
 				currentAd->InsertAttr("generic_event",
 						"server error: job removed");
 				user_log(currentAd, ULOG_GENERIC);
+				currentAd->InsertAttr("termination_type", "server_error");
+				user_log(currentAd, ULOG_JOB_TERMINATED);
 				write_dap_log(historyfilename, "\"request_removed\"", 
 					  "dap_id", dap_id, "error_code", "\"REMOVED!\"");
 				remove_job( dap_id);
@@ -891,6 +893,8 @@ void process_request(classad::ClassAd *currentAd)
 					currentAd->InsertAttr("generic_event",
 							"server error: job removed");
 					user_log(currentAd, ULOG_GENERIC);
+					currentAd->InsertAttr("termination_type", "server_error");
+					user_log(currentAd, ULOG_JOB_TERMINATED);
 					write_dap_log(historyfilename, "\"request_removed\"", 
 						  "dap_id", dap_id, "error_code", "\"REMOVED!\"");
 					remove_job( dap_id);
@@ -941,6 +945,8 @@ void process_request(classad::ClassAd *currentAd)
 					currentAd->InsertAttr("generic_event",
 							"server error: job removed");
 					user_log(currentAd, ULOG_GENERIC);
+					currentAd->InsertAttr("termination_type", "server_error");
+					user_log(currentAd, ULOG_JOB_TERMINATED);
 					write_dap_log(historyfilename, "\"request_removed\"", 
 						  "dap_id", dap_id, "error_code", "\"REMOVED!\"");
 					remove_job( dap_id);
