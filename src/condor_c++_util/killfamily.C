@@ -345,19 +345,28 @@ ProcFamily::takesnapshot()
 							// we alrady have the decendants.
 							if ( !searchLogin ) {
 								ExtArray<pid_t> detached_family;
-								ProcAPI::getPidFamily(currpid,&m_penvid,detached_family,ignore_status);
-								for (int i = 0; detached_family[i] != 0; i++) {
-									if (detached_family[i] != currpid) {
-										pidfamily[j] = detached_family[i];
-										j++;
+								detached_family[0] = 0;
+								if (ProcAPI::getPidFamily(currpid,&m_penvid,detached_family,ignore_status) != PROCAPI_FAILURE) {
+									for (int i = 0; detached_family[i] != 0; i++) {
+										if (detached_family[i] != currpid) {
+											pidfamily[j] = detached_family[i];
+											j++;
+										}
 									}
+										// If we found the family, this pid
+										// is still here.
+									currpid_exited = false;
+								} else {
+										// If we failed to get the pid family,
+										// the pid is most likely gone.
+									currpid_exited = true;
 								}
+							} else {
+								// and this pid most certainly did not exit,
+							    // so set our flag accordingly.
+								currpid_exited = false;
 							}
 							pidfamily[j] = 0;
-
-							// and this pid most certainly did not exit, so
-							// set our flag accordingly.
-							currpid_exited = false;
 						}
 					}
 
