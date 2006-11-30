@@ -60,8 +60,8 @@ finishes.
 operating systems to which the user doesn't have login access.  For example:
 
 \begin{verbatim}
-$ setenv CONDOR_ARCH "SGI"
-$ setenv CONDOR_OPSYS "IRIX65"
+$ setenv CONDOR_ARCH "SUN4u"
+$ setenv CONDOR_OPSYS "SOLARIS28"
 $ condor_run "f77 -O -o myprog myprog.f"
 $ condor_run "make"
 $ condor_run "condor_compile cc -o myprog.condor myprog.c"

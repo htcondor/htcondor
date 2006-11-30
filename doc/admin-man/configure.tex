@@ -2099,7 +2099,7 @@ These macros control the \Condor{master}.
   will be different from your regular pool, since it will include
   entries for the \Condor{collector} and \Condor{negotiator}.  
   
-  \Note On machines running Digital Unix or IRIX, your
+  \Note On machines running Digital Unix, your
   \MacroUNI{DAEMON\_LIST} will also include KBDD, for the
   \Condor{kbdd}, which is a special daemon that runs to monitor
   keyboard and mouse activity on the console.  It is only with this
@@ -2691,7 +2691,7 @@ Configuring The Startd Policy.
   need to put it in (you will be glad you did), or change this
   macro to point to the right device. 
   
-  Unfortunately, there are no such devices on Digital Unix or IRIX
+  Unfortunately, there are no such devices on Digital Unix
   (don't be fooled by \File{/dev/keyboard0}; the kernel does not
   update the access times on these devices), so this macro is not
   useful in these cases, and we must use the \Condor{kbdd} to get this

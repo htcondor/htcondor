@@ -48,13 +48,12 @@ platform-specific configuration files may be specified by using the
 \Macro{ARCH} and \Macro{OPSYS} parameters, as are defined
 automatically by Condor.
 For example, for Intel Linux
-machines, Sparc Solaris 2.6 machines, and SGIs running IRIX 6.x,
+machines, and Sparc Solaris 2.6 machines,
 the files ought to be named:
 
 \begin{verbatim}
   condor_config.INTEL.LINUX
   condor_config.SUN4x.SOLARIS26
-  condor_config.SGI.IRIX6
 \end{verbatim}
 
 Then, assuming these three files are in the directory defined by the
@@ -121,7 +120,7 @@ The configuration variables that are truly platform-specific are:
 \item[\Macro{DAEMON\_LIST}] Which daemons the \Condor{master} should
   start up.  The reason this setting is platform-specific is
   to distinguish the \Condor{kbdd}.
-  On Alphas running Digital Unix and SGIs running IRIX, it is needed,
+  On Alphas running Digital Unix, it is needed,
   and it is not needed on other platforms.
   See section~\ref{sec:Master-Config-File-Entries} on
   for details.
@@ -154,7 +153,7 @@ For example, if an installed mail program understands the
 \Opt{-s} option in \File{/usr/local/bin/mail} on all platforms,
 the \MacroNI{MAIL} macro may be set to that in the global configuration
 file, and not define it anywhere else.
-For a pool with only Digital Unix and IRIX machines,
+For a pool with only Digital Unix,
 the \MacroNI{DAEMON\_LIST} will be the same for each, so there is no
 reason not to put that in the global configuration file.
 

@@ -733,7 +733,7 @@ and/or object code to program \Prog{mathematica} is not available.
 The submit description file for Example 3 queues 150
 \index{running multiple programs}
 runs of program \Prog{foo} which has been compiled and linked for
-Silicon Graphics workstations running IRIX 6.5. 
+Sun workstations running Solaris 8.
 This job requires Condor to run the program on machines which have
 greater than 32 megabytes of physical memory, and expresses a
 preference to run the program on machines with more than 64 megabytes,
@@ -760,7 +760,7 @@ will be written into file \File{foo.log}.
   ####################                                                    
 
   Executable     = foo                                                    
-  Requirements   = Memory >= 32 && OpSys == "IRIX65" && Arch =="SGI"     
+  Requirements   = Memory >= 32 && OpSys == "SOLARIS28" && Arch =="SUN4u"     
   Rank		 = Memory >= 64
   Image_Size     = 28 Meg                                                 
 
@@ -1843,7 +1843,7 @@ from the machine where the job will be executed.
 
 An example of the heterogeneous job submission
 has executables available for three platforms:
-LINUX Intel, Solaris26 Intel, and Irix 6.5 SGI machines.
+LINUX Intel, Solaris26 Intel, and Solaris 8 Sun.
 This example uses \Prog{povray}
 to render images using a popular free rendering engine.
 
@@ -1854,7 +1854,7 @@ machine attributes that describe a platform.
 The executables named \begin{verbatim}
   povray.LINUX.INTEL
   povray.SOLARIS26.INTEL
-  povray.IRIX65.SGI
+  povray.SOLARIS28.SUN4u
 \end{verbatim}
 will work correctly for the macro
 \begin{verbatim}
@@ -1881,7 +1881,7 @@ A submit description file that queues three jobs for this example:
 
   Requirements = (Arch == "INTEL" && OpSys == "LINUX") || \
                  (Arch == "INTEL" && OpSys =="SOLARIS26") || \
-                 (Arch == "SGI" && OpSys == "IRIX65")
+                 (Arch == "SUN4u" && OpSys == "SOLARIS28")
 
   Arguments    = +W1024 +H768 +Iimage1.pov
   Queue 
@@ -1989,7 +1989,7 @@ The complete submit description file for this example:
   # checkpointed jobs will restart on the correct platform types.
   Requirements = ( (Arch == "INTEL" && OpSys == "LINUX") || \
                  (Arch == "INTEL" && OpSys =="SOLARIS26") || \
-                 (Arch == "SGI" && OpSys == "IRIX65") )
+                 (Arch == "SUN4u" && OpSys == "SOLARIS28") )
 
   Arguments    = +W1024 +H768 +Iimage1.pov
   Queue 
