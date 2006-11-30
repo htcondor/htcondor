@@ -2833,9 +2833,6 @@ int DaemonCore::HandleReqSocketHandler(Stream *stream)
 		to read.  If this timer handler fired, our wait is over.
 		So cancel the timer we set to test
 		for a timeout, and handle the request.
-		Note we should NOT cancel the socket registration in this handler -
-		when we return, the daemoncore driver will cancel the registration
-		if we return any value other than KEEP_STREAM.
 	*/
 
 	timeout_tid = (int *) GetDataPtr();
@@ -2844,11 +2841,23 @@ int DaemonCore::HandleReqSocketHandler(Stream *stream)
 	Cancel_Timer(*timeout_tid);
 	delete timeout_tid;	// was allocated in HandleReq() with new
 
-	// now call HandleReq to actually do the work of servicing this request.
-	// we must return the same value that HandleReq() returns, so the upper levels
-	// know if we want KEEP_SOCKET, etc.
+	// now cancel the socket callback registration that got us here.
+	// we need to cancel before we call HandleReq(), because the command
+	// handler invoked by HandleReq() may also decide to register this socket,
+	// and we don't want it registered twice.
+	Cancel_Socket(stream);
 
-	return HandleReq(stream);
+	// now call HandleReq to actually do the work of servicing this request.
+	int ret_val =  HandleReq(stream);
+
+	// if the handler doesn't want to keep the socket, delete it here.
+	if ( ret_val != KEEP_STREAM ) {
+		delete stream;
+	}
+
+	// always tell the driver to leave the stream alone, since we already
+	// deleted it above if it needed to go away.
+	return KEEP_STREAM;
 }
 
 
@@ -3171,7 +3180,7 @@ int DaemonCore::HandleReq(Stream *insock)
 		// with a more foolproof method.
 	char tmpbuf[5];
 	memset(tmpbuf,0,sizeof(tmpbuf));
-	if ( is_tcp && (insock != stream) ) {
+	if ( is_tcp ) {
 		int nro = condor_read(((Sock*)stream)->get_file_desc(),
 			tmpbuf, sizeof(tmpbuf) - 1, 1, MSG_PEEK);
 	}
@@ -3257,9 +3266,7 @@ int DaemonCore::HandleReq(Stream *insock)
 	if (only_allow_soap) {
 		dprintf(D_ALWAYS,
 			"Received CEDAR command during SOAP transaction... queueing\n");
-		if ( stream != insock ) {
-				// we did an accept, so we know this is TCP
-
+		if ( is_tcp ) {
 			dprintf(D_DAEMONCORE,
 					"stream fd being queued: %d\n",
 					((Sock *) stream)->get_file_desc());
