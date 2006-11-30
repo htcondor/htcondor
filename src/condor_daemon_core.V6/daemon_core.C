@@ -859,7 +859,7 @@ PidEnvID* DaemonCore::InfoEnvironmentID(PidEnvID *penvid, int pid)
 			PIDENVID_OVERSIZED)
 		{
 			EXCEPT( "DaemonCore::InfoEnvironmentID: Programmer error. "
-				"Tried to overstuff a PidEntryID array.\n" );
+				"Tried to overstuff a PidEntryID array." );
 		}
 
 	} else {
@@ -1125,7 +1125,7 @@ int DaemonCore::Register_Socket(Stream *iosock, char* iosock_descrip,
 			(*sockTable)[i].is_connect_pending = false;
 			break;
 		default:
-			EXCEPT("Adding CEDAR socket of unknown type\n");
+			EXCEPT("Adding CEDAR socket of unknown type");
 			break;
 	}
 	(*sockTable)[i].handler = handler;
@@ -1424,7 +1424,7 @@ int DaemonCore::Register_Pipe(int pipe_end, char* pipe_descrip,
 
 	// Make certain that entry i is empty.
 	if ( (*pipeTable)[i].index != -1 ) {
-        EXCEPT("Pipe table fubar!  nPipe = %d\n", nPipe );
+        EXCEPT("Pipe table fubar!  nPipe = %d", nPipe );
 	}
 
 	// Verify that this piepfd has not already been registered
@@ -1685,7 +1685,7 @@ DaemonCore::Read_Pipe(int pipe_end, void* buffer, int len)
 	int index = pipe_end - PIPE_INDEX_OFFSET;
 	if (index < 0) {
 		dprintf(D_ALWAYS, "Read_Pipe: invalid pipe_end: %d\n", pipe_end);
-		EXCEPT("Read_Pipe\n");
+		EXCEPT("Read_Pipe");
 	}
 
 #if defined(WIN32)
@@ -1708,7 +1708,7 @@ DaemonCore::Write_Pipe(int pipe_end, const void* buffer, int len)
 	int index = pipe_end - PIPE_INDEX_OFFSET;
 	if (index < 0) {
 		dprintf(D_ALWAYS, "Write_Pipe: invalid pipe_end: %d\n", pipe_end);
-		EXCEPT("Write_Pipe: invalid pipe end\n");
+		EXCEPT("Write_Pipe: invalid pipe end");
 	}
 
 #if defined(WIN32)
@@ -2407,7 +2407,7 @@ void DaemonCore::Driver()
 			if(tmpErrno != EINTR)
 			// not just interrupted by a signal...
 			{
-				EXCEPT("DaemonCore: select() returned an unexpected error: %d (%s)\n",tmpErrno,strerror(tmpErrno));
+				EXCEPT("DaemonCore: select() returned an unexpected error: %d (%s)",tmpErrno,strerror(tmpErrno));
 			}
 		}
 #else
@@ -6464,7 +6464,7 @@ int DaemonCore::Create_Process(
 		PIDENVID_OK)
 	{
 		EXCEPT( "Create_Process: More ancestor environment IDs found than "
-				"PIDENVID_MAX which is currently %d. Programmer Error.\n", 
+				"PIDENVID_MAX which is currently %d. Programmer Error.",
 				PIDENVID_MAX );
 	}
 	if (pidenvid_append_direct(&pidtmp->penvid, 
@@ -6472,7 +6472,7 @@ int DaemonCore::Create_Process(
 	{
 		EXCEPT( "Create_Process: Cannot add child pid to PidEnvID table "
 				"because there aren't enough entries. PIDENVID_MAX is "
-				"currently %d! Programmer Error.\n", PIDENVID_MAX );
+				"currently %d! Programmer Error.", PIDENVID_MAX );
 	}
 
 	/* add it to the pid table */
@@ -6826,7 +6826,7 @@ DaemonCore::Inherit( void )
 		ptmp=strtok(NULL," ");
 		while ( ptmp && (*ptmp != '0') ) {
 			if (numInheritedSocks >= MAX_SOCKS_INHERITED) {
-				EXCEPT("MAX_SOCKS_INHERITED reached.\n");
+				EXCEPT("MAX_SOCKS_INHERITED reached.");
 			}
 			switch ( *ptmp ) {
 				case '1' :
@@ -6929,7 +6929,7 @@ DaemonCore::InitCommandSocket( int command_port )
 									   (char*)&on, sizeof(on))) ||
 				(!dc_ssock->setsockopt(SOL_SOCKET, SO_REUSEADDR,
 									   (char*)&on, sizeof(on))) ) {
-				EXCEPT( "setsockopt() SO_REUSEADDR failed\n" );
+				EXCEPT( "setsockopt() SO_REUSEADDR failed" );
 			}
 
 			/* Set no delay to disable Nagle, since we buffer all our 
