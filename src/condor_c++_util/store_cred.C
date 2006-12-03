@@ -119,9 +119,14 @@ char* getStoredCredential(const char *username, const char *domain)
 int store_cred_service(const char *user, const char *pw, int mode)
 {
 	char *at = strchr(user, '@');
-	if ((at == NULL) || (at == user) ||
-	    (memcmp(user, POOL_PASSWORD_USERNAME, at - user) != 0)) {
-		dprintf(D_FULLDEBUG, "store_cred: only pool password is supported on UNIX\n");
+	if ((at == NULL) || (at == user)) {
+		dprintf(D_ALWAYS, "store_cred: malformed user name\n");
+		return FAILURE;
+	}
+	if ((at - user != strlen(POOL_PASSWORD_USERNAME)) ||
+	    (memcmp(user, POOL_PASSWORD_USERNAME, at - user) != 0)))
+	{
+		dprintf(D_ALWAYS, "store_cred: only pool password is supported on UNIX\n");
 		return FAILURE;
 	}
 
@@ -401,7 +406,10 @@ void store_cred_handler(void *, int i, Stream *s)
 		}
 		else {
 				// we don't allow updates to the pool password through this interface
-			if ((mode != QUERY_MODE) && (memcmp(user, POOL_PASSWORD_USERNAME, tmp - user) == 0)) {
+			if ((mode != QUERY_MODE) &&
+			    (tmp - user == strlen(POOL_PASSWORD_USERNAME)) &&
+			    (memcmp(user, POOL_PASSWORD_USERNAME, tmp - user) == 0))
+			{
 				dprintf(D_ALWAYS, "ERROR: attempt to set pool password via STORE_CRED! (must use STORE_POOL_CRED)\n");
 				answer = FAILURE;
 			} else {
@@ -635,7 +643,10 @@ store_cred(const char* user, const char* pw, int mode, Daemon* d, bool force) {
 			dprintf(D_ALWAYS, "store_cred: user not in user@domain format\n");
 			return FAILURE;
 		}
-		if ((mode == ADD_MODE) && (memcmp(POOL_PASSWORD_USERNAME, user, tmp - user) == 0)) {
+		if ((mode == ADD_MODE) &&
+		    (tmp - user == strlen(POOL_PASSWORD_USERNAME)) &&
+		    (memcmp(POOL_PASSWORD_USERNAME, user, tmp - user) == 0))
+		{
 			cmd = STORE_POOL_CRED;
 			user = tmp + 1;	// we only need to send the domain name for STORE_POOL_CRED
 		}
