@@ -1755,9 +1755,10 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			}
 		}
 		if (!qmgmt_all_users_trusted && 
-			(strcmp(attr_value, alternate_attrname_buf) != 0)) 
-		{
-#if !defined(WIN32)
+#if defined(WIN32)
+			(stricmp(attr_value, alternate_attrname_buf) != 0)) {
+#else
+			(strcmp(attr_value, alternate_attrname_buf) != 0)) {
 				errno = EACCES;
 #endif
 				dprintf(D_ALWAYS, "SetAttribute security violation: "
