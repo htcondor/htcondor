@@ -124,7 +124,7 @@ int store_cred_service(const char *user, const char *pw, int mode)
 		return FAILURE;
 	}
 	if ((at - user != strlen(POOL_PASSWORD_USERNAME)) ||
-	    (memcmp(user, POOL_PASSWORD_USERNAME, at - user) != 0)))
+	    (memcmp(user, POOL_PASSWORD_USERNAME, at - user) != 0))
 	{
 		dprintf(D_ALWAYS, "store_cred: only pool password is supported on UNIX\n");
 		return FAILURE;
