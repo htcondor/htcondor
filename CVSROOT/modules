@@ -771,8 +771,9 @@ V6_8_EXT	-a V6_8_3_EXT
 # Externals for 6.9.0.  At this point, same as 6.8.2.
 V6_9_0_EXT	-a V6_8_2_EXT
 
-# Externals for 6.9.1.  At this point, same as 6.9.0
-V6_9_1_EXT	-a V6_9_0_EXT
+# Externals for 6.9.1.  (Same as 6.9.0, but update DRMAA to 1.5)
+V6_9_1_EXT	-a V6_9_0_EXT \
+                   externals/bundles/drmaa/1.5
 
 # Externals needed for the head of the V6_9-branch (a.k.a. the TRUNK)
 V6_9_EXT	-a V6_9_1_EXT
