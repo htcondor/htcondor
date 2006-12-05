@@ -758,8 +758,11 @@ V6_8_2_EXT	-a V6_8_COMMON_EXT \
 # Externals needed for V6_8_3 (same as 6.8.2)
 V6_8_3_EXT	-a V6_8_2_EXT
 
+# Externals needed for V6_8_4 (same as 6.8.3)
+V6_8_4_EXT	-a V6_8_3_EXT
+
 # Externals needed for the head of the V6_8-branch
-V6_8_EXT	-a V6_8_3_EXT
+V6_8_EXT	-a V6_8_4_EXT
 
 
 #---------------------------------------------------------------------
