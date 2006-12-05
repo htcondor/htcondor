@@ -161,6 +161,11 @@ a transfer job from its queue because of failures to invoke a transfer
 module. Without this event, DAGMan would not notice that these jobs had
 left the queue.
 
+\item Fixed a problem where the \Condor{schedd} on Windows would
+incorrectly reject a job if the client provided an \Attr{Owner}
+attribute that was correct but differed in case from the authenticated
+name. This bug was thought to have been fixed in Condor 6.8.0.
+
 \end{itemize}
 
 \noindent Known Bugs:
