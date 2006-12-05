@@ -166,6 +166,11 @@ incorrectly reject a job if the client provided an \Attr{Owner}
 attribute that was correct but differed in case from the authenticated
 name. This bug was thought to have been fixed in Condor 6.8.0.
 
+\item Fixed problems with \Condor{store\_cred} behaving strangely when
+storing or removing a user name that is some initial substring of
+``condor\_pool''. Specifying such a username would be incorrectly
+interpreted as equivalent to specifying the \Opt{-c} option.
+
 \end{itemize}
 
 \noindent Known Bugs:
