@@ -894,6 +894,7 @@ JobQueueDBManager::buildAndWriteJobQueue()
 
 		//construct the in memory job queue and history
 	if (buildJobQueue(jobQueue) == FAILURE) {
+		delete jobQueue;
 		return FAILURE;
 	}
 
@@ -908,6 +909,7 @@ JobQueueDBManager::buildAndWriteJobQueue()
 		// For history tables, send INSERT to DBMS - all part of
 		// bulk loading
 	if (loadJobQueue(jobQueue) == FAILURE) {
+		delete jobQueue;
 		return FAILURE;
 	}
 
