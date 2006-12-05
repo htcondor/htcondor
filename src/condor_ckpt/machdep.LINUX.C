@@ -203,7 +203,7 @@ int num_segments()
 	scm=SetSyscalls(SYS_LOCAL | SYS_UNMAPPED);
 
 	sprintf(proc, "/proc/%d/maps", syscall(SYS_getpid));
-	pfs=fopen(proc, "r");
+	pfs=safe_fopen_wrapper(proc, "r");
 	if(!pfs) {
 		SetSyscalls(scm);
 		return -1;

@@ -68,7 +68,7 @@ REMOTE_CONDOR_send_a_file(char *local, char *remote, mode_t mode)
 	CurrentSysCall = CONDOR_send_a_file;
 
 		/* Do the local open */
-	if( (loc_fd = open(local,O_RDONLY)) < 0 ) {
+	if( (loc_fd = safe_open_wrapper(local,O_RDONLY)) < 0 ) {
 		rval = -1;
 		_condor_signals_enable( omask );
 		SetSyscalls( scm );
@@ -171,7 +171,7 @@ REMOTE_CONDOR_get_file(char *remote, char *local, int mode)
 	CurrentSysCall = CONDOR_get_file;
 
 		/* Open local file for writing */
-	loc_fd = open( local, O_WRONLY|O_CREAT|O_TRUNC, mode );
+	loc_fd = safe_open_wrapper( local, O_WRONLY|O_CREAT|O_TRUNC, mode );
 	if( loc_fd < 0 ) {
 		rval = -1;
 		_condor_signals_enable( omask );

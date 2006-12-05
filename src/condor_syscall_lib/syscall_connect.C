@@ -26,6 +26,7 @@
 #include "condor_debug.h"
 #include "condor_io.h"
 #include "condor_syscall_mode.h"
+#include "condor_open.h"
 
 extern "C" {
 
@@ -87,7 +88,7 @@ open_named_pipe( const char *name, int access_mode, int target_fd )
 {
 	int		fd;
 
-	if( (fd=open(name,access_mode)) < 0 ) {
+	if( (fd=safe_open_wrapper(name,access_mode)) < 0 ) {
 		assert( fd >= 0 );
 	}
 

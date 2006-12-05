@@ -287,7 +287,7 @@ MAIN( int argc, char *argv[], char **envp )
 				_condor_error_fatal("Error in command line syntax");
 			} else {
 				i++;
-				cmd_fd = open( argv[i], O_RDONLY );
+				cmd_fd = safe_open_wrapper( argv[i], O_RDONLY );
 				if( cmd_fd < 0 ) {
 					_condor_error_fatal("Can't read cmd file %s", argv[i] );
 				}
@@ -689,9 +689,9 @@ open_ckpt_file( const char *name, int flags, size_t n_bytes )
 {
 	if( !do_remote_syscalls ) {
 		if( flags & O_WRONLY ) {
-			return open( name, O_CREAT | O_TRUNC | O_WRONLY, 0664 );
+			return safe_open_wrapper( name, O_CREAT | O_TRUNC | O_WRONLY, 0664 );
 		} else {
-			return open( name, O_RDONLY );
+			return safe_open_wrapper( name, O_RDONLY );
 		}
 	} else {
 		return open_file_stream( name, flags, &n_bytes );
@@ -804,7 +804,7 @@ open_std_files()
 			} else {
 				flags = O_WRONLY;
 			}
-			new_fd = open(logical_name[fd],flags,0);
+			new_fd = safe_open_wrapper(logical_name[fd],flags,0);
 			if(new_fd<0) {
 				_condor_error_retry("Couldn't open standard file '%s'", logical_name[fd] );
 			}
