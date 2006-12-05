@@ -98,7 +98,7 @@ class Server
     void Init();
     void Execute();
     void ChildComplete();
-    void NoMore();
+    void NoMore(char *reason);
     void ServerDump();
     void Log(int         request,
 	     const char* event);
@@ -125,6 +125,7 @@ void SigChildHandler(int);
 void SigUser1Handler(int);
 
 
+void SigQuitHandler(int);
 void SigTermHandler(int);
 void SigHupHandler(int);
 

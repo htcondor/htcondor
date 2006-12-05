@@ -2068,10 +2068,11 @@ void Server::ChildComplete()
 }
 
 
-void Server::NoMore()
+void Server::NoMore(char *reason)
 {
   more = 0;
-  dprintf(D_ALWAYS, "SIGTERM trapped; shutting down checkpoint server\n");
+  dprintf(D_ALWAYS, "%s: shutting down checkpoint server\n", 
+  	reason==NULL?"(null)":reason);
 }
 
 
@@ -2118,6 +2119,13 @@ void InstallSigHandlers()
 	sig_info.sa_flags = 0;
 	if (sigaction(SIGTERM, &sig_info, NULL) < 0) {
 		dprintf(D_ALWAYS, "ERROR: cannot install SIGTERM signal handler\n");
+		exit(SIGNAL_HANDLER_ERROR);
+    }
+	sig_info.sa_handler = (SIG_HANDLER) SigQuitHandler;
+	sigemptyset(&sig_info.sa_mask);
+	sig_info.sa_flags = 0;
+	if (sigaction(SIGQUIT, &sig_info, NULL) < 0) {
+		dprintf(D_ALWAYS, "ERROR: cannot install SIGQUIT signal handler\n");
 		exit(SIGNAL_HANDLER_ERROR);
     }
 	sig_info.sa_handler = (SIG_HANDLER) SigHupHandler;
@@ -2180,7 +2188,17 @@ void SigTermHandler(int)
   int saveErrno = errno;
   BlockSignals();
   cout << "SIGTERM trapped; Shutting down" << endl << endl;
-  server.NoMore();
+  server.NoMore("SIGTERM trapped");
+  UnblockSignals();
+  errno = saveErrno;
+}
+
+void SigQuitHandler(int)
+{
+  int saveErrno = errno;
+  BlockSignals();
+  cout << "SIGQUIT trapped; Shutting down" << endl << endl;
+  server.NoMore("SIGQUIT trapped");
   UnblockSignals();
   errno = saveErrno;
 }
