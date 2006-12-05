@@ -1489,7 +1489,7 @@ JICShadow::updateX509Proxy(int cmd, ReliSock * s)
 bool
 JICShadow::publishUpdateAd( ClassAd* ad )
 {
-	unsigned int execsz = 0;
+	filesize_t execsz = 0;
 	char buf[200];
 
 	// if there is a filetrans object, then let's send the current
