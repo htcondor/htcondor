@@ -74,6 +74,9 @@ COLLECTOR\_TCP\_SOCKET\_BUFSIZE, and defaults to 128K.
 
 \begin{itemize}
 
+\item Fixed a bug where the \Condor{ckpt\_server} would segfault when
+turned off with \Condor{off} \Opt{-fast}.
+
 \item Fixed a bug in the \Condor{startd} where it could die with
   SIGABRT when a \Condor{starter} exited under certain rare
   circumstances.
