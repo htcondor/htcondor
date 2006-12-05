@@ -5902,44 +5902,72 @@ management and interface to its representation of the job queue.
   to be passed to the \Condor{quill} daemon upon its invocation.
 
 \item[\Macro{QUILL\_LOG}] \label{param:QuillLog}
-  Path to the log file.
+  Path to the Quill daemon's log file.
 
 \item[\Macro{QUILL\_ENABLED}] \label{param:QuillEnabled}
   A boolean variable that defaults to \Expr{False}.
   When \Expr{True}, Quill functionality is enabled.
-  When \Expr{False}, the Quill server writes a message to its log and exits.
+  When \Expr{False}, the Quill daemon writes a message to its log and exits.
   The \Condor{q} and \Condor{history} tools then do not use Quill.
 
-\item[\Macro{QUILL\_<NAME>}] \label{param:QuillName}
+\item[\Macro{QUILL\_NAME}] \label{param:QuillName}
   A string that uniquely identifies an instance of the \Condor{quill}
-  server.  It also must be unique from the name of any \Condor{schedd}
-  daemon. So each quill must have a name that uniquely identifies itself
-  from every other quill daemon and schedd daemon in the pool.  
-  A convenient name to choose is of the form
+  daemon, as there be more than \Condor{quill} daemon per pool.
+  The string must not be the same as for any \Condor{schedd} daemon.
+  A convenient definition to choose is of the form
 \footnotesize
 \begin{verbatim}
 quill-for-schedd_name@machinename.fully.qualified.address
 \end{verbatim}
 \normalsize
 
-\item[\Macro{QUILL\_DB\_<NAME>}] \label{param:QuillDBName}
-Defines a string that uniquely identifies the database created.
+\item[\Macro{QUILL\_DB\_NAME}] \label{param:QuillDBName}
+  A string that identifies a database within a database server.
 
 \item[\Macro{QUILL\_DB\_IP\_ADDR}] \label{param:QuillDBIPAddr}
+  An IP address of the database server.
 
 \item[\Macro{QUILL\_POLLING\_PERIOD}] \label{param:QuillPollingPeriod}
+  The frequency, in number of seconds, at which the Quill daemon
+  polls the file \File{job\_queue.log} for updates.
+  New information in the log file is sent to the database.
+  The default value is 10.
 
 \item[\Macro{QUILL\_HISTORY\_CLEANING\_INTERVAL}] 
   \label{param:QuillHistoryCleaningInterval}
+  The interval, in hours, between scans of the database to identify and
+  delete jobs that are beyond their \MacroNI{QUILL\_HISTORY\_DURATION}
+  time. The default value is 24.
 
 \item[\Macro{QUILL\_HISTORY\_DURATION}] \label{param:QuillHistoryDuration}
+  The number of days after entry into the database that a job will
+  remain in the database.
+  After \MacroNI{QUILL\_HISTORY\_DURATION} days, the job is deleted.
+
+\item[\Macro{QUILL\_MANAGE\_VACUUM}]
+  \label{param:QuillManageVacuum}
+  A boolean value that defaults to \Expr{False}.
+  When \Expr{True}, Quill takes on the maintenance task of vacuuming
+  the database. As of \Prog{PostgreSQL} version 8.1, the database
+  can perform this task automatically; therefore having Quill vacuum
+  is not necessary.
+  A value of \Expr{True} causes warnings to be written to the log file.
 
 \item[\Macro{QUILL\_IS\_REMOTELY\_QUERYABLE}]
   \label{param:QuillIsRemotelyQueryable}
+  A boolean value that defaults to \Expr{True}.
+  When \Expr{False}, the remote database tables may not be remotely
+  queryable.
 
 \item[\Macro{QUILL\_DB\_QUERY\_PASSWORD}] \label{param:QuillDBQueryPassword}
+  Defines the password string needed by \Condor{q} to gain read
+  access for remotely querying the Quill database.
 
 \item[\Macro{QUILL\_ADDRESS\_FILE}] \label{param:QuillAddressFile}
+  When defined, it specifies the path and file name of a local file
+  containing the IP address and port number of the Quill daemon.
+  By using the file, tools executed on the local machine do not need
+  to query the central manager in order to find the Quill daemon.
 \end{description}
 
 
