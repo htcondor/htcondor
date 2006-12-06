@@ -88,7 +88,7 @@ public:
 	*/
 	StatInfo( const char* dirpath, const char* filename, time_t
 			  time_access,  time_t time_create, time_t time_modify,
-			  unsigned long fsize, bool is_dir, bool is_symlink );  
+			  filesize_t fsize, bool is_dir, bool is_symlink );  
 #endif
 
 	/// Destructor<p>
@@ -309,7 +309,7 @@ public:
 
 	/** Get size of current file.  If there is no current file, return 0.
 		@return size of file in bytes */
-	unsigned long GetFileSize() { return curr ? curr->GetFileSize() : 0; };
+	filesize_t GetFileSize() { return curr ? curr->GetFileSize() : 0; };
 
 	/** Get mode of current file.  If there is no current file, return 0.
 		@return permission mode of the current file
@@ -320,7 +320,7 @@ public:
 		starting with the directory specified by the constructor.
 		@return the size of bytes (if we receive an error trying to determine
 		the size of any file, we consider that file to have a size of zero). */
-	unsigned long GetDirectorySize();
+	filesize_t GetDirectorySize();
 
 	/** Get full path name to the current file.  If there is no current file,
 		return NULL.
