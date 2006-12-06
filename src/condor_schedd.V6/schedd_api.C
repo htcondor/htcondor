@@ -164,7 +164,7 @@ FileInfo::~FileInfo()
 }
 
 int
-FileInfo::initialize(const char *name, filesize_t size)
+FileInfo::initialize(const char *name, unsigned long size)
 {
 	this->size = size;
 	this->name = strdup(name);
@@ -212,7 +212,7 @@ Job::get_spool_list(List<FileInfo> &file_list,
 
 int
 Job::declare_file(const MyString &name,
-                  filesize_t size,
+                  int size,
 				  CondorError &errstack)
 {
 	JobFile *ignored;

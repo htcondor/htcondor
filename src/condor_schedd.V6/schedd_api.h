@@ -49,9 +49,9 @@ class JobFile
 		/// The file's name.
 	MyString name;
 		/// The file's size, in bytes.
-	filesize_t size;
+	int size;
 		/// The current offset in the file.
-	filesize_t currentOffset;
+	int currentOffset;
 };
 
 /**
@@ -76,12 +76,12 @@ class FileInfo
 		   @param name The name of the file.
 		   @param size The number of bytes in the file.
 		 */
-	int initialize(const char *name, filesize_t size);
+	int initialize(const char *name, unsigned long size);
 
 		/// The file's name.
 	char *name;
 		/// The size, in bytes, of the file.
-	filesize_t size;
+	unsigned long size;
 };
 
 /**
@@ -129,7 +129,7 @@ class Job
 		   @param size The file's size, in bytes.
 		 */
 	int declare_file(const MyString &name,
-					 filesize_t size,
+					 int size,
 					 CondorError &errstack);
 
 		/**

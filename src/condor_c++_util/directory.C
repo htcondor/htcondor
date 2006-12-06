@@ -105,7 +105,7 @@ StatInfo::StatInfo( int fd )
 #ifdef WIN32
 StatInfo::StatInfo( const char* dirpath, const char* filename, 
 					time_t time_access, time_t time_create, 
-					time_t time_modify, filesize_t fsize,
+					time_t time_modify, unsigned long fsize,
 					bool is_dir, bool is_symlink )
 {
 	this->dirpath = strnewp( dirpath );
@@ -378,11 +378,11 @@ Directory::~Directory()
 #endif
 }
 
-filesize_t
+unsigned long
 Directory::GetDirectorySize()
 {
 	const char* thefile = NULL;
-	filesize_t dir_size = 0;
+	unsigned long dir_size = 0;
 
 	Set_Access_Priv();
 
