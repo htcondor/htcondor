@@ -752,6 +752,12 @@ AttrList::~AttrList()
 {
 		// Delete all of the attributes in this list
 	clear();
+	
+		// Free memory associated with the hash table
+	if ( hash ) {
+		delete hash;
+		hash = NULL;
+	}
 
 		// If we're part of an AttrListList (a.k.a. ClassAdList),
 		// delete ourselves out of there, too.
@@ -767,7 +773,10 @@ AttrList& AttrList::operator=(const AttrList& other)
 		// First delete our old stuff.
 		clear();
 
-		this->hash = new HashTable<YourString, AttrListElem *>(hash_size, torekHash);
+		if ( !this->hash ) {
+			// should not happen, but just in case...
+			this->hash = new HashTable<YourString, AttrListElem *>(hash_size, torekHash);
+		}
 
 		if(associatedList) {
 			associatedList->associatedAttrLists->Delete(this);
