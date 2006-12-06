@@ -1074,10 +1074,7 @@ AttrList::ChainCollapse(bool with_deep_copy)
 	AttrListElem* chained = *chainedAttrs;
 	
 	chainedAttrs = NULL;
-	if (chained_hash) {
-		delete chained_hash;
-		chained_hash = NULL;
-	}
+	chained_hash = NULL;	// do not delete chained_hash here!
 
 	while (chained && (tmp=chained->tree)) {
 			// Move the value from our chained ad into our ad ONLY
@@ -1207,37 +1204,36 @@ ExprTree* AttrList::Lookup(char* name) const
 
 ExprTree* AttrList::Lookup(const char* name) const
 {
-    AttrListElem*	tmpNode = 0;
+    AttrListElem*	tmpNode = NULL;
+
+	ASSERT(hash);
 
 	hash->lookup(name, tmpNode);
 	if (tmpNode) {
 		return tmpNode->tree;
 	}
 
-	tmpNode = NULL;
-
-	if (chained_hash) {
+	if (chained_hash && !inside_insert) {
 		chained_hash->lookup(name, tmpNode);
+		if (tmpNode) {
+			return tmpNode->tree;
+		}
 	}
 
-	if (tmpNode) {
-		return tmpNode->tree;
-	}
     return NULL;
 }
 
 AttrListElem *AttrList::LookupElem(const char *name) const
 {
-	AttrListElem  *theElem = 0;
+	AttrListElem  *theElem = NULL;
 
-	theElem = NULL;
 	hash->lookup(name, theElem);
 
 	if (theElem) {
 		return theElem;
 	}
 
-	if (chained_hash) {
+	if (chained_hash && !inside_insert) {
 		chained_hash->lookup(name, theElem);
 	}
 
@@ -2322,7 +2318,14 @@ AttrList::clear( void )
 		// First, unchain ourselves, if we're a chained classad
 	unchain();
 
-	delete hash;
+		// Clear out hashtable of attributes. Note we cannot
+		// delete the hash table here - we can do that safely
+		// only in ~AttrList() [the dtor] since many other
+		// methods assume it is never NULL.
+	if ( hash ) {
+		hash->clear();
+	}
+
 		// Now, delete all the attributes in our list
     AttrListElem* tmp;
     for(tmp = exprList; tmp; tmp = exprList) {
@@ -2331,11 +2334,7 @@ AttrList::clear( void )
     }
 	exprList = NULL;
 
-	if (chained_hash) {
-		delete chained_hash;
-	}
-	chained_hash = NULL;
-	hash = NULL;
+	chained_hash = NULL;	// do not delete chained_hash here!
 	tail = NULL;
 }
 
@@ -2420,7 +2419,10 @@ AttrList::initFromStream(Stream& s)
 
 	// First, clear our ad so we start with a fresh ClassAd
 	clear();
-	this->hash = new HashTable<YourString, AttrListElem *>(hash_size, torekHash);
+	if ( !hash ) {
+		// is hash ever NULL? don't think so, but just in case.
+		this->hash = new HashTable<YourString, AttrListElem *>(hash_size, torekHash);
+	}
 
 	// Now, read our new set of attributes off the given stream 
     s.decode();
@@ -2552,7 +2554,7 @@ ChainedPair
 AttrList::unchain( void )
 {
 	ChainedPair p;
-	p.exprList = (AttrListElem *)chainedAttrs;
+	p.exprList = chainedAttrs;
 	p.exprHash = chained_hash;
 	chainedAttrs = NULL;
 	chained_hash = NULL;
@@ -2561,7 +2563,7 @@ AttrList::unchain( void )
 
 void AttrList::RestoreChain(const ChainedPair &p)
 {
-	this->exprList = p.exprList;
+	this->chainedAttrs = p.exprList;
 	this->chained_hash = p.exprHash;
 }
 
