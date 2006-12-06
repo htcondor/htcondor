@@ -77,6 +77,12 @@ struct download_info {
 	FileTransfer *myobj;
 };
 
+// Hash function for FileCatalogHashTable
+static int compute_filename_hash(const MyString &key, int numBuckets) 
+{
+	return ( key.Hash() % numBuckets );
+}
+
 // Hash function for pid table.
 static int compute_transkey_hash(const MyString &key, int numBuckets) 
 {
@@ -114,6 +120,7 @@ FileTransfer::FileTransfer()
 	TmpSpoolSpace = NULL;
 	user_supplied_key = FALSE;
 	upload_changed_files = false;
+	last_download_catalog = NULL;
 	last_download_time = 0;
 	ActiveTransferTid = -1;
 	TransferStart = 0;
@@ -159,6 +166,16 @@ FileTransfer::~FileTransfer()
 	if (IntermediateFiles) delete IntermediateFiles;
 	if (SpooledIntermediateFiles) delete SpooledIntermediateFiles;
 	// Note: do _not_ delete FileToSend!  It points to OutputFile or Intermediate.
+	if (last_download_catalog) {
+		// iterate through and delete entries
+		CatalogEntry *entry_pointer;
+		last_download_catalog->startIterations();
+		while(last_download_catalog->iterate(entry_pointer)) {
+			delete entry_pointer;
+		}
+		last_download_catalog->clear();
+		delete last_download_catalog;
+	}
 	if (TransSock) free(TransSock);
 	if (TransKey) {
 		// remove our key from the hash table
@@ -480,6 +497,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	int spool_completion_time = 0;
 	Ad->LookupInteger(ATTR_STAGE_IN_FINISH,spool_completion_time);
 	last_download_time = spool_completion_time;
+	BuildFileCatalog();
 
 	if ( Spool ) {
 		free(Spool);
@@ -658,11 +676,17 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv )
 					// dont send UserLog file to the starter
 				continue;
 			}				
-			if ( last_download_time > 0 &&
-				 spool_space.GetModifyTime() <= last_download_time ) 
+			time_t mod_time;
+			filesize_t filesize;
+			if ( LookupInFileCatalog(current_file, &mod_time, &filesize) )
 			{
 					// Make certain file isn't just an input file
-				continue;
+				if( (spool_space.GetModifyTime()==mod_time) &&
+					(spool_space.GetFileSize()==filesize) )
+				{
+
+					continue;
+				}
 			}
 			if ( print_comma ) {
 				filelist += ",";
@@ -778,6 +802,7 @@ FileTransfer::DownloadFiles(bool blocking)
 	// in the thread reaper.
 	if ( !simple_init && blocking && ret_value == 1 && upload_changed_files ) {
 		time(&last_download_time);
+		BuildFileCatalog();
 		// Now sleep for 1 second.  If we did not do this, then jobs
 		// which run real quickly (i.e. less than a second) would not
 		// have their output files uploaded.  The real reason we must
@@ -798,7 +823,7 @@ FileTransfer::ComputeFilesToSend()
 	FilesToSend = NULL;
 	EncryptFiles = NULL;
 	DontEncryptFiles = NULL;
-	
+
 	if ( upload_changed_files && last_download_time > 0 ) {
 		// Here we will upload only files in the Iwd which have changed
 		// since we downloaded last.  We only do this if 
@@ -812,7 +837,7 @@ FileTransfer::ComputeFilesToSend()
 		if ( m_final_transfer_flag && SpooledIntermediateFiles ) {
 			final_files_to_send.initializeFromString(SpooledIntermediateFiles);
 		}
-	
+
 			// if desired_priv_state is PRIV_UNKNOWN, the Directory
 			// object treats that just like we do: don't switch... 
 		Directory dir( Iwd, desired_priv_state );
@@ -827,23 +852,55 @@ FileTransfer::ComputeFilesToSend()
 
 			// for now, skip all subdirectory names until we add
 			// subdirectory support into FileTransfer.
-			if ( dir.IsDirectory() )
+			if ( dir.IsDirectory() ) {
+				dprintf( D_FULLDEBUG, "Skipping dir %s\n", f);
 				continue;
-							
+			}
+
 			// if this file is has been modified since last download,
 			// add it to the list of files to transfer.
 			bool send_it = false;
-			if ( dir.GetModifyTime() > last_download_time ) {
+
+			// look up the file name in the catalog.  if it does not exist, it
+			// is a new file, and is always transfered back.  if it the
+			// filename does already exist in the catalog, then the
+			// modification date and filesize parameters are filled in.
+			// if either has changed, transfer the file.
+
+			filesize_t filesize;
+			time_t modification_time;
+			if( !LookupInFileCatalog(f, &modification_time, &filesize) ) {
+				// file was not found.  send it.
 				dprintf( D_FULLDEBUG, 
-						 "Sending changed file %s, mod=%ld, dow=%ld\n",	
-						 f, dir.GetModifyTime(), last_download_time );
+						 "Sending new file %s, time==%ld, size==%ld\n",	
+						 f, dir.GetModifyTime(), dir.GetFileSize() );
+				send_it = true;
+			}
+			else if( (filesize != dir.GetFileSize()) ||
+					 (modification_time != dir.GetModifyTime()) ) {
+
+				// file has changed in size or modification time.  this
+				// doesn't catch the case where the file was modified
+				// without changing size and is then back-dated.  use md5
+				// or something if that's truly needed, and compare the
+				// checksums.
+				dprintf( D_FULLDEBUG, 
+					 "Sending changed file %s, t: %ld, %ld, "
+					 "s: " FILESIZE_T_FORMAT ", " FILESIZE_T_FORMAT "\n",
+					 f, dir.GetModifyTime(), modification_time,
+					 dir.GetFileSize(), filesize );
 				send_it = true;
 			}
 			else if(final_files_to_send.file_contains(f)) {
 				dprintf( D_FULLDEBUG, 
-						 "Sending previously changed file %s, mod=%ld, dow=%ld\n",	
-						 f, dir.GetModifyTime(), last_download_time );
+						 "Sending previously changed file %s\n", f);
 				send_it = true;
+			}
+			else {
+				dprintf( D_FULLDEBUG,
+					 "Not sending file %s, t: %ld==%ld, s: %lld==%lld\n",
+					 f, dir.GetModifyTime(), modification_time,
+					 dir.GetFileSize(), filesize );
 			}
 			if(send_it) {
 				if (!IntermediateFiles) {
@@ -1221,6 +1278,7 @@ FileTransfer::Reaper(Service *, int pid, int exit_status)
 	// in the thread reaper.
 	if ( transobject->Info.success && transobject->upload_changed_files &&
 		 transobject->IsClient() && transobject->Info.type == DownloadFilesType ) {
+		transobject->BuildFileCatalog(transobject->Iwd, &(transobject->last_download_catalog));
 		time(&(transobject->last_download_time));
 		// Now sleep for 1 second.  If we did not do this, then jobs
 		// which run real quickly (i.e. less than a second) would not
@@ -2307,4 +2365,90 @@ FileTransfer::setPeerVersion( const CondorVersionInfo &peer_version )
 	}
 }
 
+
+// will take a filename and look it up in our internal catalog.  returns
+// true if found and false if not.  also updates the parameters mod_time
+// and filesize if they are not null.
+bool FileTransfer::LookupInFileCatalog(const char *fname, time_t *mod_time, filesize_t *filesize) {
+	CatalogEntry *entry = 0;
+	MyString fn = fname;
+	if (last_download_catalog->lookup(fn, entry) == 0) {
+		// hashtable return code zero means found (!?!)
+
+		// update if passed in
+		if (mod_time) {
+			*mod_time = entry->modification_time;
+		}
+
+		// update if passed in
+		if (filesize) {
+			*filesize = entry->filesize;
+		}
+
+		// we return true, as in 'yes, we found it'
+		return true;
+	} else {
+		// not found
+		return false;
+	}
+}
+
+
+// normally, we want to build our catalog (last_download_catalog) on the Iwd
+// that we already have.  but to support all modes of operation, we can also
+// accept a different directory, and a different catalog to put them into.
+//
+// we take a pointer to this catalog pointer so we can correctly delete and
+// recreate it with new. (i prefer this over pass by reference because it is
+// explicit from the call site.)  by default, we simply set this pointer to
+// our own *last_download_catalog.
+//
+bool FileTransfer::BuildFileCatalog(const char* iwd, FileCatalogHashTable **catalog) {
+
+	if (!iwd) {
+		// by default, use the one in this intantiation
+		iwd = Iwd;
+	}
+
+	if (!catalog) {
+		// by default, use the one in this intantiation
+		catalog = &last_download_catalog;
+	}
+
+	if (*catalog) {
+		// iterate through catalog and free memory of CatalogEntry s.
+		CatalogEntry *entry_pointer;
+
+		(*catalog)->startIterations();
+		while((*catalog)->iterate(entry_pointer)) {
+			free(entry_pointer);
+		}
+		(*catalog)->clear();
+		delete catalog;
+	}
+
+	// years of careful research shows that 19 is a prime number close to 20
+	(*catalog) = new FileCatalogHashTable(19, compute_filename_hash);
+
+	// now, iterate the directory and put the relavant info into the catalog.
+	// this currently excludes directories, and only stores the modification
+	// time and filesize.  if you were to add md5 sums, signatures, etc., that
+	// would go here.
+	//
+	// also note this information is not sufficient to notice a byte changing
+	// in a file and the file being backdated, since neither modification time
+	// nor filesize change in that case.
+	Directory file_iterator(iwd);
+	const char * f = NULL;
+	while( f = file_iterator.Next() ) {
+		if (!file_iterator.IsDirectory()) {
+			CatalogEntry *tmpentry = 0;
+			tmpentry = new CatalogEntry;
+			tmpentry->modification_time = file_iterator.GetModifyTime();
+			tmpentry->filesize = file_iterator.GetFileSize();
+			MyString fn = f;
+			(*catalog)->insert(fn, tmpentry);
+		}
+	}
+}
 
