@@ -127,6 +127,8 @@ public:
   void SetMaxHistoricalLogs(int max) { ClassAdLog::SetMaxHistoricalLogs(max); }
   int GetMaxHistoricalLogs() { return ClassAdLog::GetMaxHistoricalLogs(); }
 
+  time_t GetOrigLogBirthdate() { return ClassAdLog::GetOrigLogBirthdate(); }
+
   //@}
   //------------------------------------------------------------------------
   /**@name Method to control the class-ads in the repository

@@ -670,6 +670,13 @@ SetMaxHistoricalLogs(int max_historical_logs)
 	JobQueue->SetMaxHistoricalLogs(max_historical_logs);
 }
 
+time_t
+GetOriginalJobQueueBirthdate()
+{
+	return JobQueue->GetOrigLogBirthdate();
+}
+
+
 void
 InitJobQueue(const char *job_queue_name,int max_historical_logs)
 {

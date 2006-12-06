@@ -738,6 +738,9 @@ Scheduler::count_jobs()
 		ad->Insert(tmp);
 	}
 
+	sprintf(tmp, "%s = %d", ATTR_JOB_QUEUE_BIRTHDATE,
+			 GetOriginalJobQueueBirthdate());
+	ad->Insert (tmp);
 
         // Tell negotiator to send us the startd ad
 	sprintf(tmp, "%s = True", ATTR_WANT_RESOURCE_AD );

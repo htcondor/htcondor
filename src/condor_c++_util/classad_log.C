@@ -67,6 +67,7 @@ ClassAdLog::ClassAdLog(const char *filename,int max_historical_logs) : table(102
 
 	this->max_historical_logs = max_historical_logs;
 	historical_sequence_number = 1;
+	m_original_log_birthdate = time(NULL);
 
 	int log_fd = open(log_filename, O_RDWR | O_CREAT, 0600);
 	if (log_fd < 0) {
@@ -110,6 +111,7 @@ ClassAdLog::ClassAdLog(const char *filename,int max_historical_logs) : table(102
 				dprintf(D_ALWAYS, "Warning: Encountered historical sequence number after first log entry (entry number = %ld)\n",count);
 			}
 			historical_sequence_number = ((LogHistoricalSequenceNumber *)log_rec)->get_historical_sequence_number();
+			m_original_log_birthdate = ((LogHistoricalSequenceNumber *)log_rec)->get_timestamp();
 			delete log_rec;
 			break;
 		default:
@@ -126,7 +128,7 @@ ClassAdLog::ClassAdLog(const char *filename,int max_historical_logs) : table(102
 		active_transaction = NULL;
 	}
 	if(!count) {
-		log_rec = new LogHistoricalSequenceNumber( historical_sequence_number, time(NULL) );
+		log_rec = new LogHistoricalSequenceNumber( historical_sequence_number, m_original_log_birthdate );
 		if (log_rec->Write(log_fp) < 0) {
 			EXCEPT("write to %s failed, errno = %d", log_filename, errno);
 		}
@@ -557,7 +559,7 @@ ClassAdLog::LogState(FILE *fp)
 	void*		chain;
 
 	// This must always be the first entry in the log.
-	log = new LogHistoricalSequenceNumber( historical_sequence_number, time(NULL) );
+	log = new LogHistoricalSequenceNumber( historical_sequence_number, m_original_log_birthdate );
 	if (log->Write(fp) < 0) {
 		EXCEPT("write to %s failed, errno = %d", log_filename, errno);
 	}
