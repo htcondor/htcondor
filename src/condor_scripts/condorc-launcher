@@ -95,7 +95,7 @@ $config_mail = "/usr/bin/mail";
 debug_print(4, "Startup: Scanning queue for existing schedds\n");
 # scan the queue for any schedd jobs already submitted
 # format: <Cluster>.<Proc> <x509proxy> <uniquename> <sitename> <sitegatekeeper> <job status>
-open( CQ, 'condor_q -const "DynamicScheddJob=?=True" -format "%d." ClusterId -format "%d\t" ProcId -format "%s\t" X509UserProxy -format "%s\t" daemon_unique_name -format "%s\t" SiteName -format "%s\t" GlobusResource -format "%d" JobStatus -format "\n" ClusterId |' ) || die( "Can't run condor_q" );
+open( CQ, 'condor_q -const "DynamicScheddJob=?=True" -format "%d." ClusterId -format "%d\t" ProcId -format "%s\t" X509UserProxy -format "%s\t" daemon_unique_name -format "%s\t" SiteName -format "%s\t" GridResource -format "%d" JobStatus -format "\n" ClusterId |' ) || die( "Can't run condor_q" );
 
 while ( <CQ> ) {
 
@@ -110,6 +110,9 @@ while ( <CQ> ) {
 		if ( defined $job_groups{$key} ) {
 			debug_print(5, "Two schedd jobs for same site,subject!\n");
 		} else {
+			# Remove 'gt2 ' from the beginning of GridResource
+			$line[4] =~ s/gt2 //;
+
 			$job_groups{$key} = {
 				'uniquename'    => "${line[2]}",
 				'proxyfile'       => "${line[1]}",
@@ -437,14 +440,13 @@ EOF
 	print CMD <<EOF;
 # run a schedd on the remote resource
 universe = grid
-grid_type = globus
+grid_resource = gt2 ${$group}{'sitegatekeeper'}
 executable = $exec
 arguments = $args
 environment = $env
 output = /$LOG_DIR/condorc-launcher.out.\$(cluster).\$(process)
 error = /$LOG_DIR/condorc-launcher.err.\$(cluster).\$(process)
 log = /$LOG_DIR/condorc-launcher.log.\$(cluster).\$(process)
-globusscheduler = ${$group}{'sitegatekeeper'}
 x509userproxy = ${$group}{'proxyfile'}
 should_transfer_files=YES
 when_to_transfer_output=ON_EXIT
