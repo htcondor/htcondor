@@ -893,6 +893,7 @@ sub condor_submit {
 	if($line =~ /.*submitted to cluster ([0-9]+).*/) {
 	    $line =~ s/.*submitted to cluster ([0-9]+).*/\1/;
 	    $job_id = $line;
+	    chomp( $job_id );
 	}
     }
     close(CONDOR_SUBMIT_FH);
