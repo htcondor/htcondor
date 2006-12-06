@@ -81,7 +81,7 @@ class AttrListElem
 
 // An abstract pair returned by unchain.
 struct ChainedPair {
-	AttrListElem *exprList;
+	AttrListElem **exprList;
 	HashTable<YourString, AttrListElem *> *exprHash;
 };
 
