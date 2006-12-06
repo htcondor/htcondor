@@ -325,6 +325,10 @@ Warning:  No PREEMPTION_REQUIREMENTS expression in config file --- assuming FALS
 \end{verbatim}
 \normalsize
 %%%%%%%%%%%%%%%%%%%
+%%%%%%% NOTE: If you're considering reenabling this, 
+%%%%%%% You'll need to make a new one as IRIX is no longer
+%%%%%%% supported.  You could probably just delete the IRIX6
+%%%%%%% line and redo the totals.
 %condor_status -total lists the Arch/OS combinations in our pool:
 %
 %                     Machines Owner Claimed Unclaimed Matched Preempting
@@ -342,7 +346,7 @@ Warning:  No PREEMPTION_REQUIREMENTS expression in config file --- assuming FALS
 %
 %So, one example of a platform that does not exist would be:
 %
-% requirements = Arch == "INTEL" && OpSys == "IRIX6"
+% requirements = Arch == "INTEL" && OpSys == "SOLARIS251"
 %
 %%%%%%%%%%%%%%%%%%%
 

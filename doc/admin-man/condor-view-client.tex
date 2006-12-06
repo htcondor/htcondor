@@ -2,18 +2,15 @@
 \subsection{\label{sec:CondorView-Client-Install}
 Installing the CondorView Client Contrib Module} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{CondorView!Client}
 
-% We refer to the make_stats program often in this section; make a
-% macro for it.
-\newcommand{\MakeStats}{\Prog{make\_stats}}
-
-The CondorView Client Contrib module is used to automatically generate
+The CondorView Client contrib module is used to automatically generate
 World Wide Web pages to display usage statistics of a Condor
 pool.
 Included in the module is a shell script which invokes the \Condor{stats}
-command to retrieve pool usage statistics from the CondorView server and
+command to retrieve pool usage statistics from the CondorView server, and
 generate HTML pages from the results.  
-Also included is a Java applet which graphically visualizes Condor 
+Also included is a Java applet, which graphically visualizes Condor 
 usage information.  
 Users can interact with the applet to customize the visualization and to
 zoom in to a specific time frame.
@@ -31,10 +28,10 @@ Condor View.
 \end{figure}
 
 After unpacking and installing the CondorView Client, a script named
-\MakeStats\ can be invoked to create HTML pages displaying Condor usage
+\Prog{make\_stats} can be invoked to create HTML pages displaying Condor usage
 for the past hour, day, week, or month.  
 By using the Unix \Prog{cron} facility to periodically execute
-\MakeStats, Condor pool usage statistics can be kept up to date
+\Prog{make\_stats}, Condor pool usage statistics can be kept up to date
 automatically.  
 This simple model allows the CondorView Client to be easily installed;
 no Web server CGI interface is needed.
@@ -45,7 +42,7 @@ Step-by-Step Installation of the CondorView Client}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{installation!CondorView Client}
-\index{CondorView Client!installation}
+\index{CondorView!Client installation}
 \begin{enumerate}
 
 \item Make certain that the CondorView Server is configured.
@@ -54,58 +51,62 @@ describes configuration of the server.
 The server logs information on disk in order to provide a persistent,
 historical database of pool statistics.
 The CondorView Client makes queries over the network to this
-database.  The \Condor{collector} included with version 6.2.x and 6.1.x
-Condor includes this database support.
+database.
+% commented out by Karen for 6.8.2
+%The \Condor{collector} included with version 6.2.x and 6.1.x
+%Condor includes this database support.
+The \Condor{collector} includes this database support.
 To activate the persistent database logging, add the following entries to
 the configuration file on the central manager: 
 \begin{verbatim}
     POOL_HISTORY_DIR = /full/path/to/directory/to/store/historical/data 
     KEEP_POOL_HISTORY = True 
 \end{verbatim}
-For full details on these and other \condor{collector} configuration file
-entries, see section~\ref{sec:Collector-Config-File-Entries} on
-page~\pageref{sec:Collector-Config-File-Entries}.
 
 \item Create a directory where CondorView is to place the HTML files.  
 This directory should be one published by a web server, so that HTML
 files which exist in this directory can be accessed using a web browser.  
 This directory is referred to as the \File{VIEWDIR} directory.
 
-\item Unpack or untar the CondorView Client Contrib module into the
+\item Download the 6.1.8 \Prog{view\_client} contrib module.
+
+\item Unpack or untar this contrib module into the
 directory \File{VIEWDIR}.
 This creates several files and subdirectories.
 
-\item Edit the \MakeStats script.  At the beginning of the file
+\item Edit the \Prog{make\_stats} script.  At the beginning of the file
 are six parameters to customize.
 The parameters are
 
         \begin{description}
 
-	\item[\Macro{ORGNAME}] A brief name that identifies an
+	\item[\MacroNI{ORGNAME}] A brief name that identifies an
 	organization. An example is ``Univ of Wisconsin''.  Do not
 	use any slashes in the name or other special regular-expression
-	characters. Avoid characters \Bs \^\ \$.
+	characters. Avoid the characters \Bs \^\  and \$.
 
-	\item[\Macro{CONDORADMIN}] The e-mail
+	\item[\MacroNI{CONDORADMIN}] The e-mail
 	address of the Condor administrator at your site.  
 	This e-mail address will appear at the bottom of the web pages.
 
-	\item[\Macro{VIEWDIR}] The full pathname
+	\item[\MacroNI{VIEWDIR}] The full path name
 	(\emph{not} a relative path) to the \File{VIEWDIR} directory set
 	by installation step 2.  
-	It is the directory that contains the \MakeStats\ script.
+	It is the directory that contains the \Prog{make\_stats} script.
 
-	\item[\Macro{STATSDIR}]  The full pathname of the
+	\item[\MacroNI{STATSDIR}]  The full path name of the
 	directory which contains the \Condor{stats} binary.
 	The \Condor{stats} program is included in the \Release{bin}
-	directory with Condor version 6.1 and above; for Condor version
-	6.0x, the \Condor{stats} program can be found in the CondorView
-	Server Contrib module.
-	The value for \MacroNI{STATSDIR} is added to the \Macro{PATH}
-	parameter by default; see below.  
+	directory. 
+	%commented out by Karen for 6.8.2
+	%with Condor version 6.1 and above; for Condor version
+	%6.0x, the \Condor{stats} program can be found in the CondorView
+	%Server Contrib module.
+	The value for \MacroNI{STATSDIR} is added to the \MacroNI{PATH}
+	parameter by default.  
 
-	\item[\Macro{PATH}] A list of subdirectories,
-	separated by colons, where the \MakeStats\ script can find
+	\item[\MacroNI{PATH}] A list of subdirectories,
+	separated by colons, where the \Prog{make\_stats} script can find
 	the \Prog{awk}, \Prog{bc}, \Prog{sed}, \Prog{date}, and \Condor{stats}
 	programs.  
 	If \Prog{perl} is installed, the path should also
@@ -117,44 +118,43 @@ The parameters are
 
         \end{description}
 
-\item To create all of the initial HTML files, type
+\item To create all of the initial HTML files, run
 \begin{verbatim}
         ./make_stats setup  
 \end{verbatim}
 Open the file \File{index.html} to verify that things look good.
 
-\index{Condor\_View!use of\Prog{crontab} program}
+\index{CondorView!use of \Prog{crontab} program}
 \index{crontab program}
 
-\item Add the \MakeStats\ program to \Prog{cron}.  
-Running \MakeStats\ in step 5 created a \File{cronentries} file.
+\item Add the \Prog{make\_stats} program to \Prog{cron}.  
+Running \Prog{make\_stats} in step 6 created a \File{cronentries} file.
 This \File{cronentries} file is ready to be processed by the Unix
 \Prog{crontab} command.
 The \Prog{crontab} manual page contains details about
 the \Prog{crontab} command and the \Prog{cron} daemon.
 Look at the
 \File{cronentries} file; by default, it will run 
-\Prog{\MakeStats\ hour} every 15 minutes, 
-\Prog{\MakeStats\ day} once an hour, 
-\Prog{\MakeStats\ week} twice per day, and 
-\Prog{\MakeStats\ month} once per day.
+\Prog{make\_stats} \Arg{hour} every 15 minutes, 
+\Prog{make\_stats} \Arg{day} once an hour, 
+\Prog{make\_stats} \Arg{week} twice per day, and 
+\Prog{make\_stats} \Arg{month} once per day.
 These are reasonable defaults.  
-You can add these commands to cron on any
-system that can access the \MacroUNI{VIEWDIR} and
-\MacroUNI{STATSDIR} directories,
+Add these commands to cron on any
+system that can access the \MacroNI{VIEWDIR} and
+\MacroNI{STATSDIR} directories,
 even on a system that does not have Condor installed.
-The commands do not need to run as user root; in
-fact, they should probably not run as root.  These commands can run
-as any user that has read/write access to the \File{VIEWDIR}.
+The commands do not need to run as root user;
+in fact, they should probably not run as root.  These commands can run
+as any user that has read/write access to the \File{VIEWDIR} directory.
 To add these
-commands to cron, enter : 
+commands to cron, run
 \begin{verbatim} 
-        crontab cronentries
+  crontab cronentries
 \end{verbatim}
 
-\item Point the web browser at the \File{VIEWDIR} directory,
-and to complete the installation.
+\item Point the web browser at the \File{VIEWDIR} directory
+to complete the installation.
 
 \end{enumerate}
 
-\index{CondorView!installation|)}

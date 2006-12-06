@@ -1,6 +1,7 @@
 \begin{ManPage}{\label{man-condor-run}\Condor{run}}{1}
 {Submit a shell command-line as a Condor job.}
 \Synopsis \SynProg{\Condor{run}}
+\oOptArg{-u}{universe}
 \Arg{``shell-cmd''}
 
 \index{Condor commands!condor\_run}
@@ -59,8 +60,8 @@ finishes.
 operating systems to which the user doesn't have login access.  For example:
 
 \begin{verbatim}
-$ setenv CONDOR_ARCH "SGI"
-$ setenv CONDOR_OPSYS "IRIX65"
+$ setenv CONDOR_ARCH "SUN4u"
+$ setenv CONDOR_OPSYS "SOLARIS28"
 $ condor_run "f77 -O -o myprog myprog.f"
 $ condor_run "make"
 $ condor_run "condor_compile cc -o myprog.condor myprog.c"
@@ -126,6 +127,13 @@ script or explicitly call perl from the command line:
 \begin{verbatim}
 $ perl [path-to-condor]/bin/condor_run "shell-cmd"
 \end{verbatim}
+
+\begin{Options}
+
+\OptItem{\OptArg{-u}{universe}}{Submit the job in the specified
+universe. The default is `vanilla'. `scheduler' and `local' also work.}
+
+\end{Options}
 
 \ExitStatus
 

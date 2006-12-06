@@ -103,8 +103,12 @@ description.
      is most useful when running multiple DAGs in a single \Condor{dagman}.
      }
   \OptItem{\OptArg{-outfile\_dir}{directory}}{
-     Specifies the directory in which the \File{dagman.out} file will
-     be written.  The default is the directory of the "primary" DAG file.
+     Specifies the directory in which the \File{.dagman.out} file will
+     be written.  The \Argnm{directory} may be specified relative to
+     the current working directory as \Condor{submit\_dag} is executed,
+     or specified with an absolute path.
+     Without this option, the \File{.dagman.out} file is placed in the
+     same directory as the first DAG input file listed on the command line.
      }
   \end{Options}
 

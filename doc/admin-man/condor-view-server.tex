@@ -3,19 +3,19 @@
 Configuring The CondorView Server}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\index{CondorView!Server}
 The CondorView server is an alternate use of the
 \Condor{collector}
-\index{CondorView}
 that logs information on disk, providing a 
 persistent, historical database of pool state.
 This includes machine state, as well as the state of jobs submitted by
 users.
 Historical information logging can be turned on or off, so you can
 install the CondorView collector without using up disk space for
-historical information if you don't want it.
+historical information if you do not want it.
 
 The CondorView collector is a \Condor{collector} that has been specially 
-configured \emph{and running on a different machine from the main
+configured \emph{and is running on a different machine from the main
 \Condor{collector}}.
 Unfortunately, installing the CondorView collector on a separate host
 generates more network traffic (from all the duplicate updates that
@@ -30,7 +30,7 @@ CondorView server and to configure your pool to send updates to it.
 Configuring a Machine to be a CondorView Server} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\index{CondorView!installation|(}
+\index{CondorView!configuration}
 
 To configure the CondorView collector, you have to add a few settings
 to the \emph{local} configuration file of the chosen machine (a
@@ -130,7 +130,4 @@ Once this setting is in place, you can finally restart the
 Once the CondorView server is running, you can finally send a
 \Condor{reconfig} to your main \Condor{collector} for the change to
 take effect so it will begin forwarding updates.
-
-
-
 

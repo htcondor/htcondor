@@ -191,9 +191,9 @@ Descriptions of these and other configuration variables are in
 section~\ref{sec:Quill-Config-File-Entries}.
 Here are further brief details:
 
-\begin{itemize}
+\begin{description}
 
-\item \Macro{QUILL\_DB\_NAME} and \Macro{QUILL\_DB\_IP\_ADDR}\\
+\item[\Macro{QUILL\_DB\_NAME} and \Macro{QUILL\_DB\_IP\_ADDR}]
 These two variables are used to determine the location of the database
 server that this Quill would talk to, and the name of the database that
 it creates.  More than one Quill server can talk to the same database
@@ -205,33 +205,35 @@ server, then the \MacroNI{QUILL\_DB\_NAME} variable for all of them should
 be unique.  Otherwise, there would be record overwriting and corruption
 of job queue information.
 
-\item \Macro{QUILL\_NAME}\\
+\item[\Macro{QUILL\_NAME}]
 Each quill daemon in the pool has to be uniquely named.
 
-\item \Macro{QUILL\_POLLING\_PERIOD}\\
+\item[\Macro{QUILL\_POLLING\_PERIOD}]
 This controls the frequency with which Quill polls the
 \File{job\_queue.log} file.  By default, it is 10 seconds.  Since Quill
 works by periodically sniffing the log file for updates and then sending
 those updates to the database, this variable controls the trade off between
-the currency of query results and Quill's load on the system--usually
-negligible.
+the currency of query results and Quill's load on the system, which
+is usually negligible.
 
-\item \Macro{QUILL\_HISTORY\_CLEANING\_INTERVAL} and 
-		\Macro{QUILL\_HISTORY\_DURATION}\\
+\item[\Macro{QUILL\_HISTORY\_CLEANING\_INTERVAL} and 
+		\Macro{QUILL\_HISTORY\_DURATION}]
 These two variables control the deletion of historical jobs from the
-database.  \MacroNI{QUILL\_HISTORY\_DURATION} is the number of days
-after completion (more precisely, the number of days since the history ad got 
-into the history database - those two might be different if a job is completed 
-but stays in the queue for a while) that a given job will stay in the database.  
-So all jobs beyond \MacroNI{QUILL\_HISTORY\_DURATION} will be deleted.  Now,
-scanning the entire database for old jobs can get pretty expensive,
-so the other variable \MacroNI{QUILL\_HISTORY\_CLEANING\_INTERVAL}
+database. 
+\MacroNI{QUILL\_HISTORY\_DURATION} is the number of days
+after completion that a given job will stay in the database.  
+A more precise definition is the number of days since the history ad got 
+into the history database; those two might be different,
+if a job is completed but stays in the queue for a while.
+All jobs beyond \MacroNI{QUILL\_HISTORY\_DURATION} will be deleted.
+As scanning the entire database for old jobs can be expensive,
+the other variable \MacroNI{QUILL\_HISTORY\_CLEANING\_INTERVAL}
 is the number of hours between two successive scans.  By default,
 \MacroNI{QUILL\_HISTORY\_DURATION} is set to 180 days and
 \MacroNI{QUILL\_HISTORY\_CLEANING\_INTERVAL} is set to 24 hours.
 
-\item \Macro{QUILL\_MANAGE\_VACUUM}\\
-Set to FALSE by default, this variable determines whether Quill is to 
+\item[\Macro{QUILL\_MANAGE\_VACUUM}]
+Set to \Expr{False} by default, this variable determines whether Quill is to 
 perform vacuuming tasks on its tables or not. Vacuuming is a maintenance 
 task that needs to be performed on tables in \Prog{PostgreSQL}. The 
 frequency with which a table is vacuumed typically depends on the number 
@@ -239,42 +241,45 @@ of updates (inserts/deletes) performed on the table. Fortunately, with
 \Prog{PostgreSQL} version 8.1, vacuuming tasks can be configured to be 
 performed automatically by the database server. We recommend that users 
 upgrade to 8.1 and use the integrated vacuuming facilities of the database 
-server instead of having Quill do them. If the user does prefer having 
+server, instead of having Quill do them. If the user does prefer having 
 Quill perform those vacuuming tasks, it can be achieved by setting this 
-variable to TRUE. However it cannot be overstated that Quill's vacuuming 
+variable to Expr{True}. However, it cannot be overstated that Quill's vacuuming 
 policy is quite rudimentary as compared to the integrated facilities 
-of the database server and, under high update workloads, can prove to 
+of the database server, and under high update workloads, can prove to 
 be a bottleneck on the Quill daemon. As such, setting this variable to 
-TRUE results in some warning messages in the log file regarding this 
+Expr{True} results in some warning messages in the log file regarding this 
 issue.
 
-\item \Macro{QUILL\_IS\_REMOTELY\_QUERYABLE}\\
+\item[\Macro{QUILL\_IS\_REMOTELY\_QUERYABLE}]
 Thanks to 
 \Prog{PostgreSQL},
 one can now remotely query both the job queue and the
 history tables. This variable controls whether this remote querying 
-feature should be enabled.  By default it is TRUE.  Note that even if 
-this is FALSE, one can still query the job queue in the remote schedd
+feature should be enabled.  By default it is \Expr{True}.  Note that even if 
+this is \Expr{False}, one can still query the job queue 
+at the remote \Condor{schedd} daemon.
 This variable only controls whether the database tables are remotely queryable.
 
-\item \Macro{QUILL\_DB\_QUERY\_PASSWORD}\\
-In order for the query tools to connect to a database, it needs to provide
-the password that is assigned to database user \Username{quillreader}. 
+\item[\Macro{QUILL\_DB\_QUERY\_PASSWORD}]
+In order for the query tools to connect to a database, they need to provide
+the password that is assigned to the database user \Username{quillreader}. 
 This variable is then advertised by the \Condor{quill} daemon
 to the \Condor{collector}.  
 This facility enables remote querying: remote \Condor{q} query tools first 
-ask the \Condor{collector} for the password associated with a particular Quill database 
-and then query that database.  Users who do not have access to the collector 
-cannot view the password and as such cannot query the database.  Again, this 
-password just provides 'read' access to the database.
+ask the \Condor{collector} for
+the password associated with a particular Quill database, 
+and then query that database.  Users who do not have access to the 
+\Condor{collector} 
+cannot view the password, and as such cannot query the database.  Again, this 
+password only provides read access to the database.
 
-\item \Macro{QUILL\_ADDRESS\_FILE}\\
-When Quill starts up, it can place it's address (IP and port)
+\item[\Macro{QUILL\_ADDRESS\_FILE}]
+When Quill starts up, it can place its address (IP and port)
 into a file.  This way, tools running on the local machine do not
 need to query the central manager to find Quill.  This 
 feature can be turned off by commenting out the variable.
 
-\end{itemize}
+\end{description}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

@@ -590,10 +590,9 @@ page~\pageref{sec:Time of Day Policy}.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{How do I configure Condor such that all machines do not produce checkpoints at the same time?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\label{sec:randomchoiceusage}
+\label{sec:randomintegerusage}
 \index{checkpoint!periodic}
-\index{\$RANDOM\_CHOICE()}
-\index{RANDOM\_CHOICE() macro!use in configuration}
+\index{\$RANDOM\_INTEGER()!in configuration}
 If machines are configured to produce checkpoints at fixed intervals,
 a large number of jobs are queued (submitted) at the same time,
 and these jobs start on machines at about the same time,
@@ -602,7 +601,7 @@ at the same time.
 It is likely to cause rather poor performance during this burst of
 writing.
 
-The \MacroU{RANDOM\_CHOICE()} macro can help in this instance.
+The \Macro{RANDOM\_INTEGER()} macro can help in this instance.
 Instead of defining \Macro{PERIODIC\_CHECKPOINT} to be a fixed
 interval, each machine is configured to randomly choose 
 one of a set of intervals.
@@ -612,7 +611,7 @@ configuration:
 \footnotesize
 \begin{verbatim}
 PERIODIC_CHECKPOINT = $(LastCkpt) > ( 2 * $(HOUR) + \
-      $RANDOM_CHOICE(0,10,20,30,40,50,60) * $(MINUTE) )
+      $RANDOM_INTEGER(0,60,10) * $(MINUTE) )
 \end{verbatim}
 \normalsize
 

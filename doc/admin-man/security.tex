@@ -213,8 +213,15 @@ both with and without root access.
    effectively enforced by Condor, the \Condor{startd} should be
    started as \Login{root}.
 
+% Note: the "process information on MacOS X" case is kinda a bug.
+% An existing interface was made root only because it gave away too
+% much information.  However Apple is working on a new, safe and
+% available to all users interface.  At which point this example
+% won't be true and a new example will be needed. The old example
+% used to be "load information on IRIX", but we no longer support
+% IRIX.
    In addition, some system information cannot be obtained without
-   \Login{root} access on some platforms (such as load average on IRIX).  As a
+   \Login{root} access on some platforms (such as process information on MacOS X).  As a
    result, when running without \Login{root} access, the \Condor{startd} must
    call other programs (for example, \Prog{uptime}) to get this
    information.  This is much less efficient than getting the
@@ -259,7 +266,7 @@ both with and without root access.
     There is no need to have either of these daemons running as \Login{root}.
 
 \item[\Condor{kbdd}] On platforms that need the \Condor{kbdd} (Digital
-    Unix and IRIX) the \Condor{kbdd} must run as \Login{root}.  If it is
+    Unix) the \Condor{kbdd} must run as \Login{root}.  If it is
     started as any other user, it will not work.  You might consider
     installing this program as a setuid root binary if you cannot run
     the \Condor{master} as \Login{root}.  Without the \Condor{kbdd}, the

@@ -384,16 +384,15 @@ has been superseded by the parallel universe.
 The grid universe allows users to submit 
 jobs using Condor's interface.
 These jobs are submitted for execution on grid resources.
-\index{universe!Java}
+\index{universe!java}
 \index{Java}
 \index{Java Virtual Machine}
 \index{JVM}
 The java universe allows users to run jobs written for the
 Java Virtual Machine (JVM).
-%\index{universe!Scheduler}
 The scheduler universe allows users to submit lightweight jobs
 to be spawned by the \Condor{schedd} daemon on the submit host itself.
-\index{universe!Parallel}
+\index{universe!parallel}
 The parallel universe is for programs that require multiple machines
 for one job.
 See section~\ref{sec:Parallel} for more about the Parallel universe
@@ -551,35 +550,36 @@ setting the classpath.
 \subsubsection{Scheduler Universe}
 %%%%%%%%%%%%
 
-\index{universe!Scheduler}
+\index{universe!scheduler}
+\index{scheduler universe}
 
-The \Expr{scheduler} universe allows users to submit lightweight jobs
-to be run immediately alongside the \Condor{schedd} on the submit host
+The scheduler universe allows users to submit lightweight jobs
+to be run immediately, alongside the \Condor{schedd} daemon on the submit host
 itself.
+Scheduler universe jobs are not matched with a remote machine,
+and will never be preempted.  They do not obey the
+machine's \MacroNI{requirements} expression.
 
-\Expr{Scheduler} universe jobs are not matched with a remote machine,
-and will never be preempted.  They do not obey \Expr{requirements}.
+Originally intended for meta-schedulers such as \Condor{dagman},
+the scheduler universe can also be
+used to manage jobs of any sort that must run on the submit host.
 
-Originally intended for meta-schedulers like \Condor{dagman} (hence
-the name ``scheduler''), the \Expr{scheduler} universe can also be
-used to manage jobs of any sort that need to run on the submit host.
-
-However, unlike the \Expr{local} universe, the \Expr{scheduler}
-universe does not use a \Condor{starter} to manage the job, and thus
-offers limited features and policy support.  The \Expr{local} universe
+However, unlike the local universe, the scheduler
+universe does not use a \Condor{starter} daemon to manage the job, and thus
+offers limited features and policy support.  The local universe
 is a better choice for most jobs which must run on the submit host, as
-it offers a richer set of job-management features, and is more
-consistent with other remote universes like \Expr{vanilla}.
-
-The \Expr{scheduler} universe may be deprecated in the future, in
-favor of the newer \Expr{local} universe.
+it offers a richer set of job management features, and is more
+consistent with other universes such as the vanilla universe.
+The scheduler universe may be retired in the future, in
+favor of the newer local universe.
 
 %%%%%%%%%%%%
 \subsubsection{Parallel Universe}
 %%%%%%%%%%%%
-\index{universe!Parallel}
-The parallel universe allows parallel programs, such as MPI jobs.
-interface to be used within the opportunistic Condor environment.
+\index{universe!parallel}
+\index{parallel universe}
+The parallel universe allows parallel programs, such as MPI jobs,
+to be run within the opportunistic Condor environment.
 Please see section~\ref{sec:Parallel} for more details.
 
 
@@ -588,6 +588,7 @@ Please see section~\ref{sec:Parallel} for more details.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{universe!local}
+\index{local universe}
 The local universe allows a Condor job to be submitted and
 executed with different assumptions for the execution conditions
 of the job.
@@ -732,7 +733,7 @@ and/or object code to program \Prog{mathematica} is not available.
 The submit description file for Example 3 queues 150
 \index{running multiple programs}
 runs of program \Prog{foo} which has been compiled and linked for
-Silicon Graphics workstations running IRIX 6.5. 
+Sun workstations running Solaris 8.
 This job requires Condor to run the program on machines which have
 greater than 32 megabytes of physical memory, and expresses a
 preference to run the program on machines with more than 64 megabytes,
@@ -759,7 +760,7 @@ will be written into file \File{foo.log}.
   ####################                                                    
 
   Executable     = foo                                                    
-  Requirements   = Memory >= 32 && OpSys == "IRIX65" && Arch =="SGI"     
+  Requirements   = Memory >= 32 && OpSys == "SOLARIS28" && Arch =="SUN4u"     
   Rank		 = Memory >= 64
   Image_Size     = 28 Meg                                                 
 
@@ -1842,7 +1843,7 @@ from the machine where the job will be executed.
 
 An example of the heterogeneous job submission
 has executables available for three platforms:
-LINUX Intel, Solaris26 Intel, and Irix 6.5 SGI machines.
+LINUX Intel, Solaris26 Intel, and Solaris 8 Sun.
 This example uses \Prog{povray}
 to render images using a popular free rendering engine.
 
@@ -1853,7 +1854,7 @@ machine attributes that describe a platform.
 The executables named \begin{verbatim}
   povray.LINUX.INTEL
   povray.SOLARIS26.INTEL
-  povray.IRIX65.SGI
+  povray.SOLARIS28.SUN4u
 \end{verbatim}
 will work correctly for the macro
 \begin{verbatim}
@@ -1880,7 +1881,7 @@ A submit description file that queues three jobs for this example:
 
   Requirements = (Arch == "INTEL" && OpSys == "LINUX") || \
                  (Arch == "INTEL" && OpSys =="SOLARIS26") || \
-                 (Arch == "SGI" && OpSys == "IRIX65")
+                 (Arch == "SUN4u" && OpSys == "SOLARIS28")
 
   Arguments    = +W1024 +H768 +Iimage1.pov
   Queue 
@@ -1988,7 +1989,7 @@ The complete submit description file for this example:
   # checkpointed jobs will restart on the correct platform types.
   Requirements = ( (Arch == "INTEL" && OpSys == "LINUX") || \
                  (Arch == "INTEL" && OpSys =="SOLARIS26") || \
-                 (Arch == "SGI" && OpSys == "IRIX65") )
+                 (Arch == "SUN4u" && OpSys == "SOLARIS28") )
 
   Arguments    = +W1024 +H768 +Iimage1.pov
   Queue 

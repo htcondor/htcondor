@@ -43,7 +43,30 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Added \MacroNI{JOB\_INHERITS\_STARTER\_ENVIRONMENT}.  When set
+to true, this causes jobs to inherit all environment variables from
+\Condor{starter}.  This is useful for glidein jobs that need to access
+environment variables from the batch system running the glidein daemons.
+The default for this configuration setting is false, so existing behavior
+is unchanged.  This feature does not apply to standard and pvm universe
+jobs.
+
+\item Changed the default UDP recieve buffer for the
+\Condor{collector} from 1M to 10M.  This value can be configured with
+the (existing) COLLECTOR\_SOCKET\_BUFSIZE parameter.
+
+\Note For some Linux distributions, it may be neccessary to configure
+a larger value than the default; this parameter is
+/proc/sys/net/core/rmem\_max .  You can see the values that the
+\Condor{collector} actually used by enabling D\_FULLDEBUG for the
+collector and looking at the log line that looks like this:
+
+Reset OS socket buffer size to 2048k (UDP), 255k (TCP).
+
+\item Added a new configuration parameter to control the size of the
+TCP send buffers for the \Condor{collector}.  This parameter used to
+be the same as COLLECTOR\_SOCKET\_BUFSIZE.  The new parameter is
+COLLECTOR\_TCP\_SOCKET\_BUFSIZE, and defaults to 128K.
 
 \end{itemize}
 
@@ -51,10 +74,102 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug in the \Condor{startd} where it could die with
+  SIGABRT when a \Condor{starter} exited under certain rare
+  circumstances.
+  The bug seems to have been most likely to appear on x86\_64 Linux
+  machines, but could potentially affect all platforms.
+
+\item Fixed a problem with \condor{history} when running with quill enabled
+which caused it to allocate an unbounded amount of memory.
+
+\item Fixed a problem with \condor{q} when running with quill which caused
+it to silently truncate the printing of the job queue.
+
+\item Fixed a bug in the \condor{gridmanager} that caused the following
+configuration files parameters to be ignored for grid-type condor and
+nordugrid jobs: \MacroNI{GRIDMANAGER\_RESOURCE\_PROBE\_INTERVAL},
+\MacroNI{GRIDMANAGER\_MAX\_PENDING\_SUBMITS\_PER\_RESOURCE}, and
+\MacroNI{GRIDMANAGER\_MAX\_SUBMITTED\_JOBS\_PER\_RESOURCE}.
+
+\item Fixed a bug in \condor{run} that caused it to abort on non-fatal
+warnings from \condor{submit} and print incorrect error messages.
+
 \item Fixed a bug in the \condor{gridmanager} dealing with grid-type gt4
 grid universe jobs. If the job's standard output or error wasn't specified
 in the job ad, the \condor{gridmanager} would create an improper GRAM
-RSL string.
+RSL string, causing the job to fail.
+
+\item Fixed a bug in the \condor{gridmanager} that could cause it to
+delegate the wrong credential when refreshing the credentials for a
+grid-type gt4 grid universe job.
+
+\item The \condor{gridmanager} could get into a state where it would no
+longer start up Globus jobmanagers for grid-type gt2 grid universe jobs
+if previous requests failed due to connection errors. This bug has been
+fixed.
+
+\item The \Condor{c-gahp} now properly exits when the pipe to its parent
+goes away. Before, it would fill its log with large amounts of useless
+messages before exiting several minutes later.
+
+\item Fixed a bug where a problem opening standard input, output, or error
+the standard universe might generate an incorrect warning in the 
+\Condor{shadow}'s log.
+
+\item The \condor{gridmanager} now recovers properly when a proxy refresh
+fails for a gt2 grid universe job in stage-out state. Before, the job
+would become held with a hold reason of ``Globus error 3: an I/O operation
+failed''.
+
+\item A number of fixes to minor typos and misformatting in Condor's log files.
+
+\item When \MacroNI{REQUEST\_CLAIM\_TIMEOUT} was reached and \Condor{schedd}
+failed to contact \Condor{startd} to release the claim, the schedd would
+periodically try releasing the claim indefinitely, possibly resulting in
+a lengthy communication delay each time.
+
+\item Under Windows, condor daemons such as \Condor{schedd} were sometimes
+limiting their use of pending connect operations more than they should
+have.  This would result in the message, ``file descriptor safety level
+exceeded''.
+
+\item \Condor{fetchlog} no longer allows or documents the -dagman option.
+The option's appearance was an error.  The option never worked.
+
+\item \Condor{schedd} ensures that the initial job queue log file
+contains a sequence number for use by Quill.  This fixes a case in
+which no sequence number was inserted, because the initial rotation of
+this (empty) file failed.  Quill also now reports exactly what the
+problem is if it reads a job queue log in this state, rather than
+simply crashing.  This problem has so far only been observed under
+Windows.
+
+\item Fixed a problem on Windows where, when submitting a job with a
+sandbox (for example, using the \Opt{-s} or \Opt{-r} option to
+\Condor{submit}), an erroneous file permissions check in the
+\Condor{schedd} would result in a failed submission.
+
+\item \Condor{startd} would crash shortly after startup if the
+\MacroNI{RANK} expression contained any use of the unary minus
+operator.  This patch should also fix any other cases where Condor
+daemons crashed due to the use of the unary minus operator in ClassAd
+expressions.
+
+\item Stork now writes a terminated event to the user log when it removes
+a transfer job from its queue because of failures to invoke a transfer
+module. Without this event, DAGMan would not notice that these jobs had
+left the queue.
+
+\item Fixed a problem where the \Condor{schedd} on Windows would
+incorrectly reject a job if the client provided an \Attr{Owner}
+attribute that was correct but differed in case from the authenticated
+name. This bug was thought to have been fixed in Condor 6.8.0.
+
+\item Fixed problems with \Condor{store\_cred} behaving strangely when
+storing or removing a user name that is some initial substring of
+``condor\_pool''. Specifying such a username would be incorrectly
+interpreted as equivalent to specifying the \Opt{-c} option.
 
 \end{itemize}
 

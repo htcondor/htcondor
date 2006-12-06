@@ -70,7 +70,11 @@ Negotiator, Schedd, Startd.
 
 \begin{itemize}
 
-\item None.
+\item The 6.9.0 release contains all of the bug fixes and enhancements
+  from the 6.8.x series up to and including version 6.8.2.
+
+% and a few \condor{gridmanager} bug fixes from 6.8.3.  *sigh* we need
+% a real solution to this problem (like pointing to issue node ids) ;)
 
 \end{itemize}
 
@@ -79,16 +83,30 @@ Negotiator, Schedd, Startd.
 
 \begin{itemize}
 
+
+\item Preliminary support for using \Prog{glexec} on execute machines
+has been added.  This feature causes the \Condor{startd} to spawn the
+\Condor{starter} as the user that \Prog{glexec} determines based on
+the user's GSI credential.
+
+\item A ``per-job history files'' feature has been added to the
+\Condor{schedd}. When enabled, this will cause the \Condor{schedd} to
+write out a copy of each job's ClassAd when it leaves the job
+queue. The directory to place these files in is determined by the
+parameter \Macro{PER\_JOB\_HISTORY\_DIR}. It is the resposibilty of
+whatever external entity (e.g. an accounting or monitoring system) is
+using these files to remove them as it completes its processing.
+
 \item \Condor{chirp} command now supports writing messages to the userlog.
 
-\item \Condor{chirp} getattr and putattr now send all classad getattr and putattr
-commands to the proc 0 classad, which allows multiple proc parallel jobs to
-use proc 0 as a scratchpad.
+\item \Condor{chirp} getattr and putattr now send all classad getattr
+and putattr commands to the proc 0 classad, which allows multiple proc
+parallel jobs to use proc 0 as a scratchpad.
 
-\item Parallel jobs now suport an AllRemoteHosts attribute, which lists all the
-hosts across all procs in a cluster.
+\item Parallel jobs now suport an \Attr{AllRemoteHosts} attribute,
+which lists all the hosts across all procs in a cluster.
 
-\item The DAGMAN\_ABORT\_DUPLICATES config macro (which causes
+\item The \Macro{DAGMAN\_ABORT\_DUPLICATES} config macro (which causes
 \Condor{dagman} to abort itself if it detects another \Condor{dagman}
 running on the same DAG) now defaults to \Expr{True} instead of
 \Expr{False}.

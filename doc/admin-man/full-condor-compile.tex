@@ -60,32 +60,12 @@ On these platforms, issue the following commands (as root), where
         chmod 755 /[ld-path]/ld
 \end{verbatim}
 
-On IRIX, things are more complicated in that there are multiple
-\Prog{ld} binaries that need to be moved, and symbolic links need to
-be made in order to convince the linker to work, since it looks at the
-name of it's own binary in order to figure out what to do.
-\begin{verbatim}
-        mv /usr/lib/ld /usr/lib/ld.real
-        mv /usr/lib/uld /usr/lib/uld.real
-        cp /usr/local/condor/lib/ld /usr/lib/ld
-        ln /usr/lib/ld /usr/lib/uld
-        chown root /usr/lib/ld /usr/lib/uld
-        chmod 755 /usr/lib/ld /usr/lib/uld
-        mkdir /usr/lib/condor
-        chown root /usr/lib/condor
-        chmod 755 /usr/lib/condor
-        ln -s /usr/lib/uld.real /usr/lib/condor/uld
-        ln -s /usr/lib/uld.real /usr/lib/condor/old_ld
-\end{verbatim}
-
 If you remove Condor from your system latter on, linking will continue
 to work, since the condor linker will always default to compiling
 normal binaries and simply call the real ld.  In the interest of
 simplicity, it is recommended that you reverse the above changes by
 moving your ld.real linker back to it's former position as ld,
-overwriting the condor linker.  On IRIX, you need to do this for both
-linkers, and you will probably want to remove the symbolic links as
-well.
+overwriting the condor linker.
 
 \Note If you ever upgrade your operating system after performing a
 full installation of \Condor{compile}, you will probably have to re-do
