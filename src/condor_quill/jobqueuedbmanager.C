@@ -894,6 +894,7 @@ JobQueueDBManager::buildAndWriteJobQueue()
 
 		//construct the in memory job queue and history
 	if (buildJobQueue(jobQueue) == FAILURE) {
+		delete jobQueue;
 		return FAILURE;
 	}
 
@@ -908,6 +909,7 @@ JobQueueDBManager::buildAndWriteJobQueue()
 		// For history tables, send INSERT to DBMS - all part of
 		// bulk loading
 	if (loadJobQueue(jobQueue) == FAILURE) {
+		delete jobQueue;
 		return FAILURE;
 	}
 
@@ -967,10 +969,6 @@ JobQueueDBManager::addOldJobQueueRecords() {
 		EXCEPT("No SPOOL variable found in config file\n");
 	}
   
-	jqfile = (char *) malloc(_POSIX_PATH_MAX * sizeof(char));
-	jqfileroot = (char *) malloc(_POSIX_PATH_MAX * sizeof(char));
-	sprintf(jqfileroot, "%s/job_queue.log", spool);
-
 		//for the first old job queue file, we need to read past the last offset 
 		//for successive files, we'll read from the beginning
 	parser.setNextOffset(((ClassAdLogEntry *)caLogParser->getCurCALogEntry())->next_offset);
@@ -982,6 +980,10 @@ JobQueueDBManager::addOldJobQueueRecords() {
 		return FAILURE; 
 	}
 
+	jqfile = (char *) malloc(_POSIX_PATH_MAX * sizeof(char));
+	jqfileroot = (char *) malloc(_POSIX_PATH_MAX * sizeof(char));
+	sprintf(jqfileroot, "%s/job_queue.log", spool);
+
 	for(long int i=lastseqnum; i < curprobedseqnum; i++) {
 			//dont clean up state of job queue tables if this is the first file in the list
 			//as we will start processing it from somewhere in the middle in which case we
@@ -991,7 +993,7 @@ JobQueueDBManager::addOldJobQueueRecords() {
 			
 			if(st == FAILURE) {
 				displayDBErrorMsg("addOldJobQueueRecords unable to clean up job queue tables --- ERROR");
-				return FAILURE; 
+				break; 
 			}
 		}
 		sprintf(jqfile, "%s.%ld", jqfileroot, i);
@@ -1323,45 +1325,43 @@ JobQueueDBManager::processLogEntry(int op_type, bool exec_later, ClassAdLogParse
 	case CondorLogOp_LogHistoricalSequenceNumber: 
 		break;
 	case CondorLogOp_NewClassAd:
-		if (parser->getNewClassAdBody(key, mytype, targettype) == FAILURE) {
-			return FAILURE; 
+		st = parser->getNewClassAdBody(key, mytype, targettype);
+		if (st == FAILURE) {
+			break;
 		}
-		st = processNewClassAd(key, mytype, targettype, exec_later);
-			
+		st = processNewClassAd(key, mytype, targettype, exec_later);			
 		break;
 	case CondorLogOp_DestroyClassAd:
-		if (parser->getDestroyClassAdBody(key) == FAILURE) {
-			return FAILURE;
+		st = parser->getDestroyClassAdBody(key);
+		if (st == FAILURE) {
+			break;
 		}		
-		st = processDestroyClassAd(key, exec_later);
-			
+		st = processDestroyClassAd(key, exec_later);			
 		break;
 	case CondorLogOp_SetAttribute:
-		if (parser->getSetAttributeBody(key, name, value) == FAILURE) {
-			return FAILURE;
+		st = parser->getSetAttributeBody(key, name, value);
+		if (st == FAILURE) {
+			break;
 		}
-		st = processSetAttribute(key, name, value, exec_later);
-			
+		st = processSetAttribute(key, name, value, exec_later);			
 		break;
 	case CondorLogOp_DeleteAttribute:
-		if (parser->getDeleteAttributeBody(key, name) == FAILURE) {
-			return FAILURE;
+		st = parser->getDeleteAttributeBody(key, name);
+		if (st == FAILURE) {
+			break;
 		}
-		st = processDeleteAttribute(key, name, exec_later);
-		
+		st = processDeleteAttribute(key, name, exec_later);		
 		break;
 	case CondorLogOp_BeginTransaction:
 		st = processBeginTransaction(exec_later);
-
 		break;
 	case CondorLogOp_EndTransaction:
 		st = processEndTransaction(exec_later);
-
 		break;
 	default:
 		dprintf(D_ALWAYS, "[QUILL] Unsupported Job Queue Command [%d]\n", 
 				op_type);
-		return FAILURE;
+		st = FAILURE;
 		break;
 	}
 
