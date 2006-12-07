@@ -2321,6 +2321,8 @@ JobQueueDBManager::checkSchema()
 
 		// execute DB schema check!
 	ret_st = jqDatabase->execQuery(sql_str, num_result);
+		// free the query result since its no longer needed
+	jqDatabase->releaseQueryResult();
 
 	if (ret_st == SUCCESS && num_result == SCHEMA_SYS_TABLE_NUM) {
 		dprintf(D_ALWAYS, "Schema Check OK!\n");
@@ -2387,20 +2389,36 @@ JobQueueDBManager::checkSchema()
 		return FAILURE;
 	}
 
-	jqDatabase->releaseQueryResult();
-
 	strcpy(sql_str, SCHEMA_VERSION_STR); 
 		// SCHEMA_VERSION_STR is defined in quill_dbschema_def.h
 
 	ret_st = jqDatabase->execQuery(sql_str, num_result);
 
 	if (ret_st == SUCCESS && num_result == SCHEMA_VERSION_COUNT) {
-		dprintf(D_ALWAYS, "Schema Version Check OK!\n");
+		const char *tmp_ptr1, *tmp_ptr2, *tmp_ptr3, *tmp_ptr4;
+
 		int major, minor, back_to_major, back_to_minor;
-		major = atoi(jqDatabase->getValue(0,0));
-		minor = atoi(jqDatabase->getValue(0,1));
-		back_to_major = atoi(jqDatabase->getValue(0,2));
-		back_to_minor = atoi(jqDatabase->getValue(0,3));
+		
+		tmp_ptr1 = jqDatabase->getValue(0,0);
+		tmp_ptr2 = jqDatabase->getValue(0,1);
+		tmp_ptr3 = jqDatabase->getValue(0,2);
+		tmp_ptr4 = jqDatabase->getValue(0,3);
+
+		if  (!tmp_ptr1 || !tmp_ptr2 || !tmp_ptr3 || !tmp_ptr4) {
+			jqDatabase->releaseQueryResult();
+			return FAILURE;
+		}
+		
+		major = atoi(tmp_ptr1);		
+		minor = atoi(tmp_ptr2);
+		back_to_major = atoi(tmp_ptr3);
+		back_to_minor = atoi(tmp_ptr4);
+		
+		dprintf(D_ALWAYS, "Schema Version Check OK!\n");
+
+			// free the query result because we dont need it anymore
+		jqDatabase->releaseQueryResult();
+
 		if ((major == 1 ) && (minor == 0) && (back_to_major == 1) && 
 			(back_to_minor == 0)) {
 				// we need to upgrade the schema to add a last_poll_time
@@ -2431,6 +2449,9 @@ JobQueueDBManager::checkSchema()
 		// this would be a good place to check if the version matchedup
 		// instead of just seeing if we got something back
 	} else {
+		// if for some reason its not freed above already
+		jqDatabase->releaseQueryResult();
+
 		// create a schema version table. this is cut and paste from
 		// above, so revamp this once it's working
 		if (jqDatabase->beginTransaction() == FAILURE) {			
@@ -2448,10 +2469,8 @@ JobQueueDBManager::checkSchema()
 			disconnectDB(ABORT_XACT);
 			return FAILURE;			   				 
 		}
-
 	}
 	disconnectDB(NOT_IN_XACT);
-	jqDatabase->releaseQueryResult();
 	return SUCCESS;
 }
 
