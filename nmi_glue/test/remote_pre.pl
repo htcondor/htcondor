@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre.pl,v 1.2.2.3 2006-10-03 14:41:42 bt Exp $
+# $Id: remote_pre.pl,v 1.2.2.4 2006-12-07 20:48:00 bt Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
@@ -258,13 +258,15 @@ if( ($ENV{NMI_PLATFORM} =~ /hpux_11/) )
 if( ($ENV{NMI_PLATFORM} =~ /winnt/) ) {
 	my $mypath = $ENV{PATH};
 	print FIX "USER_JOB_WRAPPER = $Win32BaseDir/condor/bin/exe_switch.bat\n";
+	print FIX "CONDOR_HOST = \$(IP_ADDRESS)\n";
+	print FIX "NEGOTIATOR_INTERVAL = 20\n";
 	print FIX "START = TRUE\n";
 	print FIX "PREEMPT = FALSE\n";
 	print FIX "SUSPEND = FALSE\n";
 	print FIX "KILL = FALSE\n";
+	print FIX "WANT_SUSPEND = FALSE\n";
+    print FIX "WANT_VACATE = FALSE\n";
 	print FIX "COLLECTOR_NAME = Personal Condor for Tests\n";
-	print FIX "CONDOR_HOST = 127.0.0.1\n";
-	print FIX "NETWORK_INTERFACE = 127.0.0.1\n";
 	print FIX "ALL_DEBUG = D_FULLDEBUG\n";
 	# insure path from framework is injected into the new pool
 	print FIX "environment=\"PATH=\'$mypath\'\"\n";
