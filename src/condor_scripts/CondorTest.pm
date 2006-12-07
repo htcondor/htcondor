@@ -209,10 +209,23 @@ sub DefaultOutputTest
 
     Condor::debug( "\$info{'output'} = $info{'output'}\n" );
 
-    CompareText( $info{'output'}, \@expected_output, @skipped_output_lines )
+	my $output = "";
+	my $error = "";
+	my $initialdir = $info{'initialdir'};
+	if($initialdir ne "") {
+		Condor::debug( "Testing with initialdir = $initialdir\n" );
+		$output = $initialdir . "/" . $info{'output'};
+		$error = $initialdir . "/" . $info{'error'};
+		Condor::debug( "$output is now being tested.....\n" );
+	} else {
+		$output = $info{'output'};
+		$error = $info{'error'};
+	}
+
+    CompareText( $output, \@expected_output, @skipped_output_lines )
 	|| die "$handle: FAILURE (STDOUT doesn't match expected output)\n";
 
-    IsFileEmpty( $info{'error'} ) || 
+    IsFileEmpty( $error ) || 
 	die "$handle: FAILURE (STDERR contains data)\n";
 }
 
@@ -523,6 +536,8 @@ sub IsFileEmpty
 sub verbose_system 
 {
 	my $args = shift @_;
+
+
 	my $catch = "vsystem$$";
 	$args = $args . " 2>" . $catch;
 	my $rc = 0xffff & system $args;
