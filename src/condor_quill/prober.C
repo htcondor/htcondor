@@ -49,7 +49,7 @@ Prober::~Prober()
 // Accessors
 //**************************************************************************
 void
-Prober::setJobQueueName(char* jqn)
+Prober::setJobQueueName(const char* jqn)
 {
 	if(!jqn) {
 		EXCEPT("Expecting jqn to be not null here\n");

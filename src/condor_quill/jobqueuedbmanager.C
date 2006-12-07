@@ -347,8 +347,8 @@ JobQueueDBManager::config(bool reconfig)
 void
 JobQueueDBManager::setJobQueueFileName(const char* jqName)
 {
-	prober->setJobQueueName((char*)jqName);
-	caLogParser->setJobQueueName((char*)jqName);
+	prober->setJobQueueName(jqName);
+	caLogParser->setJobQueueName(jqName);
 }
 
 //! get the parser
@@ -1147,17 +1147,17 @@ JobQueueDBManager::processLogEntry(int op_type, JobQueueCollection* jobQueue)
 			break;
 		}
 		job_id_type = getProcClusterIds(key, cid, pid);
-		ClassAd* ad = new ClassAd();
-		ad->SetMyTypeName("Job");
-		ad->SetTargetTypeName("Machine");
+		ClassAd* new_ad = new ClassAd();
+		new_ad->SetMyTypeName("Job");
+		new_ad->SetTargetTypeName("Machine");
 
 		switch(job_id_type) {
 		case IS_CLUSTER_ID:
-			jobQueue->insertClusterAd(cid, ad);
+			jobQueue->insertClusterAd(cid, new_ad);
 			break;
 
 		case IS_PROC_ID:
-			jobQueue->insertProcAd(cid, pid, ad);
+			jobQueue->insertProcAd(cid, pid, new_ad);
 			break;
 
 		default:
@@ -1181,20 +1181,20 @@ JobQueueDBManager::processLogEntry(int op_type, JobQueueCollection* jobQueue)
 			break;
 
 		case IS_PROC_ID: {
-			ClassAd *clusterad = jobQueue->find(cid);
-			ClassAd *procad = jobQueue->find(cid,pid);
-			if(!clusterad || !procad) {
+			ClassAd *cluster_ad = jobQueue->find(cid);
+			ClassAd *proc_ad = jobQueue->find(cid,pid);
+			if(!cluster_ad || !proc_ad) {
 			    dprintf(D_ALWAYS, 
 						"[QUILL] Destroy ClassAd --- Cannot find clusterad "
 						"or procad in memory job queue");
 				st = FAILURE; 
 				break;
 			}
-			ClassAd *clusterad_new = new ClassAd(*clusterad);
-			ClassAd *historyad = new ClassAd(*procad);
+			ClassAd *cluster_ad_new = new ClassAd(*cluster_ad);
+			ClassAd *history_ad = new ClassAd(*proc_ad);
 
-			historyad->ChainToAd(clusterad_new);
-			jobQueue->insertHistoryAd(cid,pid,historyad);
+			history_ad->ChainToAd(cluster_ad_new);
+			jobQueue->insertHistoryAd(cid,pid,history_ad);
 			jobQueue->removeProcAd(cid, pid);
 			
 			break;
@@ -1217,9 +1217,9 @@ JobQueueDBManager::processLogEntry(int op_type, JobQueueCollection* jobQueue)
 
 		switch(job_id_type) {
 		case IS_CLUSTER_ID: {
-			ClassAd* ad = jobQueue->findClusterAd(cid);
-			if (ad != NULL) {
-				ad->Assign(name, newvalue);
+			ClassAd* cluster_ad = jobQueue->findClusterAd(cid);
+			if (cluster_ad != NULL) {
+				cluster_ad->Assign(name, newvalue);
 			}
 			else {
 				dprintf(D_ALWAYS, 
@@ -1229,9 +1229,9 @@ JobQueueDBManager::processLogEntry(int op_type, JobQueueCollection* jobQueue)
 			break;
 		}
 		case IS_PROC_ID: {
-			ClassAd* ad = jobQueue->findProcAd(cid, pid);
-			if (ad != NULL) {
-				ad->Assign(name, newvalue);
+			ClassAd* proc_ad = jobQueue->findProcAd(cid, pid);
+			if (proc_ad != NULL) {
+				proc_ad->Assign(name, newvalue);
 			}
 			else {
 				dprintf(D_ALWAYS, 
@@ -1257,13 +1257,13 @@ JobQueueDBManager::processLogEntry(int op_type, JobQueueCollection* jobQueue)
 
 		switch(job_id_type) {
 		case IS_CLUSTER_ID: {
-			ClassAd* ad = jobQueue->findClusterAd(cid);
-			ad->Delete(name);
+			ClassAd* cluster_ad = jobQueue->findClusterAd(cid);
+			cluster_ad->Delete(name);
 			break;
 		}
 		case IS_PROC_ID: {
-			ClassAd* ad = jobQueue->findProcAd(cid, pid);
-			ad->Delete(name);
+			ClassAd* proc_ad = jobQueue->findProcAd(cid, pid);
+			proc_ad->Delete(name);
 			break;
 		}
 		default:
@@ -1398,7 +1398,7 @@ JobQueueDBManager::getProcClusterIds(const char* key, char* cid, char* pid)
 {
 	int key_len, i;
 	long iCid;
-	char*	pid_in_key;
+	const char*	pid_in_key;
 
 	if (key == NULL) { 
 		return IS_UNKNOWN_ID;
@@ -1423,7 +1423,7 @@ JobQueueDBManager::getProcClusterIds(const char* key, char* cid, char* pid)
 	sprintf(cid,"%ld", iCid);
 
 		//i+1 since i is the '.' character
-	pid_in_key = (char*)(key + (i + 1));
+	pid_in_key = (const char*)(key + (i + 1));
 	strcpy(pid, pid_in_key);
 
 	if (atol(pid) == -1) { // Cluster ID

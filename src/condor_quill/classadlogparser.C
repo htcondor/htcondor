@@ -155,7 +155,7 @@ ClassAdLogParser::closeFile(bool ex) {
 
 
 void
-ClassAdLogParser::setJobQueueName(char* jqn)
+ClassAdLogParser::setJobQueueName(const char* jqn)
 {
 	strcpy(job_queue_name, jqn);
 }

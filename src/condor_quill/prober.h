@@ -53,7 +53,7 @@ public:
 		//
 		// accessors
 		//
-	void			setJobQueueName(char* jqn);
+	void			setJobQueueName(const char* jqn);
 	char*			getJobQueueName();
 	void			setLastModifiedTime(time_t t);
 	time_t			getLastModifiedTime();
