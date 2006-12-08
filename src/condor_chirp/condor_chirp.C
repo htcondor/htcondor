@@ -25,7 +25,7 @@
  */
 
 
-#include <condor_common.h>
+#include "condor_common.h"
 #include "chirp_client.h"
 #include <stdio.h>
 #include <stdlib.h>
