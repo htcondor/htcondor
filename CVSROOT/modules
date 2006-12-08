@@ -755,8 +755,10 @@ V6_8_2_EXT	-a V6_8_COMMON_EXT \
                    externals/bundles/globus/4.0.3 \
                    externals/bundles/gt4gahp/1.5
 
-# Externals needed for V6_8_3 (same as 6.8.2)
-V6_8_3_EXT	-a V6_8_2_EXT
+# Externals needed for V6_8_3 (update gt4 gahp to 1.6)
+V6_8_3_EXT	-a V6_8_COMMON_EXT \
+                   externals/bundles/globus/4.0.3 \
+                   externals/bundles/gt4gahp/1.6
 
 # Externals needed for V6_8_4 (same as 6.8.3)
 V6_8_4_EXT	-a V6_8_3_EXT
