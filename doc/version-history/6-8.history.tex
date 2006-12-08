@@ -177,6 +177,24 @@ interpreted as equivalent to specifying the \Opt{-c} option.
 \item Fixed a problem with \Condor{glidein} spewing lots of text to
 the screen when checking the status of a job it submitted.
 
+\item A new version of the GT4 GAHP is included, with the following changes:
+
+  \begin{itemize}
+
+  \item New axis.jar from Globus that fixes a thread safety bug that
+  can cause lockups in subscriptions for WS notifications. See Globus
+  Bugzilla 4858
+  (\URL{http://bugzilla.globus.org/bugzilla/show\_bug.cgi?id=4858}).
+
+  \item Fixed bugs that caused memory related to destroyed jobs to not
+  be reclaimed in both client and server.
+
+  \item Removed redundant usage of Secure Message, Secure Conversation,
+  and Transport Security when talking to a WS GRAM service. Now, just
+  Transport Security is used.
+
+  \end{itemize}
+
 \item Fixed memory leaks in \Condor{quill}.
 
 \end{itemize}
