@@ -1,11 +1,10 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Ckpt-Server} Installing a Checkpoint Server}
+\section{\label{sec:Ckpt-Server} The Checkpoint Server}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{installation!checkpoint server}
-\index{contrib module!checkpoint server}
 \index{checkpoint server!installation|(}
-The Checkpoint Server maintains a repository for checkpoint files.
+A Checkpoint Server maintains a repository for checkpoint files.
 Using checkpoint servers reduces the disk requirements of submitting
 machines in the pool, since the submitting machines no longer need to
 store checkpoint files locally.
@@ -56,7 +55,7 @@ checkpoint server is not responding to requests.
 \end{enumerate}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{Prepare-Ckpt-Server} Preparing to Install
+\subsection{\label{Prepare-Ckpt-Server} Preparing to Install
 a Checkpoint Server} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -82,25 +81,16 @@ accomplished by
 configuring submit machines as their queues empty.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{Install-Ckpt-Server-Module}
+\subsection{\label{Install-Ckpt-Server-Module}
 Installing the Checkpoint Server Module} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-To install a checkpoint server, download the appropriate binary
-contrib module for the platform(s) on which your server will run.
-Uncompress and untar the file to result in a directory that
-contains a \File{README}, \File{ckpt\_server.tar}, and so on.
-The file \File{ckpt\_server.tar} acts much like the \File{release.tar} file
-from a main release.
-This archive contains the files:
+Files relevant to a checkpoint server are
 \begin{verbatim}
         sbin/condor_ckpt_server
         sbin/condor_cleanckpts
         etc/examples/condor_config.local.ckpt.server
 \end{verbatim}
-These new files are not found in the main release, so you can
-safely untar the archive directly into your existing release
-directory. 
 \File{\condor{ckpt\_server}} is the checkpoint server binary.
 \File{\condor{cleanckpts}} is a script that can be periodically run to
 remove stale checkpoint files from your server.  
@@ -114,19 +104,17 @@ stale files.
 The example configuration file give with the module
 is described below.
 
-After unpacking the module, there are three steps
-to complete.
-Each is discussed in its own section:
+There are three steps necessary towards running a checkpoint server:
 \begin{enumerate}
 \item Configure the checkpoint server.
 \item Start the checkpoint server.
 \item Configure your pool to use the checkpoint server.
 \end{enumerate}
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{Configure-Ckpt-Server}
-Configuring a Checkpoint Server} 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{description}
+
+\item[Configure the Checkpoint Server]
 
 \index{checkpoint server!configuration of}
 Place settings in the local configuration file of
@@ -178,9 +166,7 @@ Currently, the only debug level supported is \Dflag{ALWAYS}.
 
 \end{description}
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{Start-Ckpt-Server} Start the Checkpoint Server} 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\item[Start the Checkpoint Server]
 
 To start the newly configured checkpoint server,
 restart Condor on that host to enable
@@ -191,10 +177,7 @@ See section~\ref{sec:Host-Security} on
 page~\pageref{sec:Host-Security} for full details about IP/host-based
 security in Condor.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{Configure-Pool-Ckpt-Server} 
-Configuring your Pool to Use the Checkpoint Server}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\item[Configure the Pool to Use the Checkpoint Server]
 
 After the checkpoint server is running, you
 change a few settings in your configuration files to let your pool know
@@ -223,8 +206,10 @@ effect.
 This is described in section~\ref{sec:Reconfigure-Pool} on
 page~\pageref{sec:Reconfigure-Pool}.
 
+\end{description}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{Configure-Multiple-Ckpt-Server} 
+\subsection{\label{Configure-Multiple-Ckpt-Server} 
 Configuring your Pool to Use Multiple Checkpoint Servers}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -295,7 +280,7 @@ It will not use alternate checkpoint servers.
 This may change in future versions of Condor.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{Checkpoint-Server-Domains} 
+\subsection{\label{Checkpoint-Server-Domains} 
 Checkpoint Server Domains}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
