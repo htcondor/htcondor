@@ -1299,7 +1299,7 @@ create_temp_file() {
 	do {
 		sprintf (filename, "%s/tmp.%d.%d", temp_dir, mypid, timestamp++);
 	} while ((--retry_count > 0) && 
-			 ((fd=open (filename, O_EXCL | O_CREAT, S_IREAD | S_IWRITE)) == -1));
+			 ((fd=safe_open_wrapper(filename, O_EXCL | O_CREAT, S_IREAD | S_IWRITE)) == -1));
 
 	if (fd == -1) {
 		return NULL;

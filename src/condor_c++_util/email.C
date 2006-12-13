@@ -245,7 +245,7 @@ Email::sendAction( ClassAd* ad, const char* reason,
 		EXCEPT( "Email::sendAction() called with NULL ad!" );
 	}
 
-	if( ! open(ad, -1, action) ) {
+	if( ! open_stream(ad, -1, action) ) {
 			// nothing to do
 		return;
 	}
@@ -268,7 +268,7 @@ Email::sendError( ClassAd* ad, const char* err_summary,
 
 
 FILE*
-Email::open( ClassAd* ad, int exit_reason, const char* subject )
+Email::open_stream( ClassAd* ad, int exit_reason, const char* subject )
 {
 	if( ! shouldSend(ad, exit_reason) ) {
 			// nothing to do
@@ -468,7 +468,7 @@ Email::send( void )
 void
 Email::sendExit( ClassAd* ad, int exit_reason )
 {
-	open( ad, exit_reason );
+	open_stream( ad, exit_reason );
 	writeExit( ad, exit_reason );
     writeCustom( ad );
 	send();
@@ -482,7 +482,7 @@ Email::sendExitWithBytes( ClassAd* ad, int exit_reason,
 						  float run_sent, float run_recv,
 						  float tot_sent, float tot_recv )
 {
-	open( ad, exit_reason );
+	open_stream( ad, exit_reason );
 	writeExit( ad, exit_reason );
 	writeBytes( run_sent, run_recv, tot_sent, tot_recv );
     writeCustom( ad );

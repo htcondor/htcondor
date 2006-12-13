@@ -149,7 +149,7 @@ vprintf_length(const char *format, va_list args)
 	int   length;
 	FILE  *null_output;
 
-	null_output = fopen(NULL_FILE, "w");
+	null_output = safe_fopen_wrapper(NULL_FILE, "w", 0644);
 
 	if (NULL != null_output) {
 #ifdef va_copy

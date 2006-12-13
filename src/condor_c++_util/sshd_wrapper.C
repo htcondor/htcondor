@@ -127,7 +127,7 @@ SshdWrapper::getPubKeyFromFile()
 	char *buf = (char *) malloc(length + 2);
 
 		// Now read the file in in one swoop
-	FILE *f = fopen(pubKeyFile, "r");
+	FILE *f = safe_fopen_wrapper(pubKeyFile, "r");
 
 	if (f == NULL) {
 		dprintf(D_ALWAYS, "can't open %s errno is %d\n", pubKeyFile, errno);
@@ -160,7 +160,7 @@ SshdWrapper::getPubKeyFromFile()
 bool
 SshdWrapper::setPubKeyToFile(const char *keystring)
 {
-	FILE *f = fopen(pubKeyFile, "w");
+	FILE *f = safe_fopen_wrapper(pubKeyFile, "w");
 	if (f == NULL) {
 		dprintf(D_ALWAYS, "can't open %s errno is %d\n", pubKeyFile, errno);
 		return false;

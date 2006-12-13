@@ -122,7 +122,7 @@ bool IOProxy::init( const char *config_file )
 		goto failure;
 	}
 
-	fd = open(config_file,O_CREAT|O_TRUNC|O_WRONLY,0700);
+	fd = safe_open_wrapper(config_file,O_CREAT|O_TRUNC|O_WRONLY,0700);
 	if(fd<0) {
 		dprintf(D_ALWAYS,"IOProxy: couldn't write to %s: %s\n",config_file,strerror(errno));
 		goto failure;

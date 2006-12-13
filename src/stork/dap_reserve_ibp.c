@@ -56,7 +56,7 @@ int allocate_space_on_depot(char *dest_host, char *output_filename)
     return DAP_ERROR;
   }
   
-  fout = fopen(output_filename, "w");
+  fout = safe_fopen_wrapper(output_filename, "w");
   if (fout == NULL){
     fprintf(stderr,"Could not open %s for writing..\n", output_filename);
     return DAP_ERROR;

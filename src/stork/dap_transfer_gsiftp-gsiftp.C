@@ -148,7 +148,7 @@ int main(int argc, char *argv[])
     mypid = getpid();
     sprintf(fname, "out.%d", mypid);
 
-    f = fopen(fname, "w");
+    f = safe_fopen_wrapper(fname, "w");
     fprintf(f, "Globus error: %s", error_str);
 
     fclose(f);  

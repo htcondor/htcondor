@@ -108,7 +108,7 @@ int Buf::flush(
 	rewind();
 
 /* DEBUG SESSION
-	if ((dbg_fd = open("trace.snd", O_WRONLY|O_APPEND|O_CREAT, 0700)) < 0){
+	if ((dbg_fd = safe_open_wrapper("trace.snd", O_WRONLY|O_APPEND|O_CREAT, 0700)) < 0){
 		dprintf(D_ALWAYS, "IO: Error opening trace file\n");
 		exit(1);
 	}
@@ -150,7 +150,7 @@ int Buf::read(
 	_dta_sz += nr;
 
 /* DEBUG SESSION
-	if ((dbg_fd = open("trace.rcv", O_WRONLY|O_APPEND|O_CREAT, 0700)) < 0){
+	if ((dbg_fd = safe_open_wrapper("trace.rcv", O_WRONLY|O_APPEND|O_CREAT, 0700)) < 0){
 		dprintf(D_ALWAYS, "IO: Error opening trace file\n");
 		exit(1);
 	}

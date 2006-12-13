@@ -103,7 +103,7 @@ int main(int argc, char **argv)
   
 
   //open the submit file
-  adfile = fopen(fname,"r");
+  adfile = safe_fopen_wrapper(fname,"r");
   if (adfile == NULL) {
     fprintf(stderr, "Cannot open file:%s\n",fname);
     exit(1);

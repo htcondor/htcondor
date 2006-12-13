@@ -285,7 +285,7 @@ int Sock::move_descriptor_up()
 #ifdef Solaris
 	/* On Solaris, the silly stdio library will fail if the underlying
 	 * file descriptor is > 255.  Thus if we have lots of sockets open,
-	 * calls to fopen() will start to fail on Solaris.  In Condor, this 
+	 * calls to safe_fopen_wrapper() will start to fail on Solaris.  In Condor, this 
 	 * usually means dprintf() will EXCEPT.  So to avoid this, we reserve
 	 * sockets between 101 and 255 to be ONLY for files/pipes, and NOT
 	 * for network sockets.  We acheive this by moving the underlying

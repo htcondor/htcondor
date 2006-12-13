@@ -74,7 +74,7 @@ char* getStoredCredential(const char *username, const char *domain)
 
 	// open the pool password file with root priv
 	priv_state priv = set_root_priv();
-	FILE* fp = fopen(filename, "r");
+	FILE* fp = safe_fopen_wrapper(filename, "r");
 	set_priv(priv);
 	free(filename);
 	if (fp == NULL) {
@@ -153,7 +153,7 @@ int store_cred_service(const char *user, const char *pw, int mode)
 			break;
 		}
 		priv_state priv = set_root_priv();
-		int fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+		int fd = safe_open_wrapper(filename, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
 		set_priv(priv);
 		if (fd == -1) {
 			dprintf(D_ALWAYS, "store_cred_service: open failed on %s\n", filename);

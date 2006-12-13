@@ -21,6 +21,7 @@
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
+#include "condor_common.h"
 #include "condor_dh.h"
 #include "condor_debug.h"
 #include "condor_config.h"
@@ -162,7 +163,7 @@ int Condor_Diffie_Hellman :: initialize()
 
     FILE * fp = 0;
     if ( dh_config ) {
-        if ( (fp = fopen(dh_config, "r")) == NULL) {
+        if ( (fp = safe_open_wrapper(dh_config, "r")) == NULL) {
             dprintf(D_ALWAYS, "Unable to open condor_dh_config file %s\n", dh_config);
             goto error;
         }

@@ -293,7 +293,7 @@ int Condor_Auth_X509::ParseMapFile() {
 		return FALSE;
 	}
 
-	if ( !(fd = fopen(  filename, "r" ) ) ) {
+	if ( !(fd = safe_fopen_wrapper(  filename, "r" ) ) ) {
 		dprintf( D_ALWAYS, "GSI: unable to open map file %s, errno %d\n", 
 			filename, errno );
 		free(filename);

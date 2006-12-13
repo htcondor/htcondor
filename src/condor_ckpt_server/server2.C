@@ -1098,7 +1098,7 @@ void Server::Replicate()
 						__LINE__);
 				exit(CONNECT_ERROR);
 			}
-			if ((fd = open(pathname, O_RDONLY)) < 0) {
+			if ((fd = safe_open_wrapper(pathname, O_RDONLY)) < 0) {
 				dprintf(D_ALWAYS, "ERROR: Can't open file '%s'\n", pathname);
 				exit(CHILDTERM_CANNOT_OPEN_CHKPT_FILE);
 			}
@@ -1530,9 +1530,9 @@ void Server::ReceiveCheckpointFile(int         data_conn_sd,
 	Log(log_msg);
 	
 #if 1
-	file_fd = open(pathname, O_WRONLY|O_CREAT|O_TRUNC,0664);
+	file_fd = safe_open_wrapper(pathname, O_WRONLY|O_CREAT|O_TRUNC,0664);
 #else
-	file_fd = open("/dev/null", O_WRONLY, 0);
+	file_fd = safe_open_wrapper("/dev/null", O_WRONLY, 0);
 #endif
 
 	if (file_fd < 0) {
@@ -1578,7 +1578,7 @@ void Server::ReceiveCheckpointFile(int         data_conn_sd,
 	// is read by the parent.  The peer address is very important for
 	// logging purposes.
 	sprintf(peer_info_filename, "/tmp/condor_ckpt_server.%d", getpid());
-	peer_info_fd = open(peer_info_filename, O_WRONLY|O_CREAT|O_TRUNC, 0664);
+	peer_info_fd = safe_open_wrapper(peer_info_filename, O_WRONLY|O_CREAT|O_TRUNC, 0664);
 	if (peer_info_fd >= 0) {
 		write(peer_info_fd, (char *)&(chkpt_addr.sin_addr),
 			  sizeof(struct in_addr));
@@ -1811,7 +1811,7 @@ void Server::TransmitCheckpointFile(int         data_conn_sd,
 	sprintf(log_msg, "Transmitting checkpoint file: %s", pathname);
 	Log(log_msg);
 
-	file_fd = open(pathname, O_RDONLY);
+	file_fd = safe_open_wrapper(pathname, O_RDONLY);
 	if (file_fd < 0) {
 		dprintf(D_ALWAYS, "ERROR: Can't open file '%s'\n", pathname);
 		exit(CHILDTERM_CANNOT_OPEN_CHKPT_FILE);
@@ -1851,7 +1851,7 @@ void Server::TransmitCheckpointFile(int         data_conn_sd,
 	// Write peer address to a temporary file which is read by the
 	// parent.  The peer address is very important for logging purposes.
 	sprintf(peer_info_filename, "/tmp/condor_ckpt_server.%d", getpid());
-	peer_info_fd = open(peer_info_filename, O_WRONLY|O_CREAT|O_TRUNC, 0664);
+	peer_info_fd = safe_open_wrapper(peer_info_filename, O_WRONLY|O_CREAT|O_TRUNC, 0664);
 	if (peer_info_fd >= 0) {
 		write(peer_info_fd, (char *)&(chkpt_addr.sin_addr),
 			  sizeof(struct in_addr));
@@ -2051,7 +2051,7 @@ void Server::ChildComplete()
 			}
 		// Try to read the info file for this child to get the peer address.
 		sprintf(peer_info_filename, "/tmp/condor_ckpt_server.%d", child_pid);
-		peer_info_fd = open(peer_info_filename, O_RDONLY);
+		peer_info_fd = safe_open_wrapper(peer_info_filename, O_RDONLY);
 		if (peer_info_fd >= 0) {
 			read(peer_info_fd, (char *)&peer_addr, sizeof(struct in_addr));
 			read(peer_info_fd, (char *)&xfer_size, sizeof(xfer_size));

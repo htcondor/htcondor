@@ -781,7 +781,7 @@ int RefreshProxyThruMyProxy(Proxy * proxy)
 	// Create temporary file to store myproxy-get-delegation's stderr
 	myProxyEntry->get_delegation_err_filename = create_temp_file();
 	chmod (myProxyEntry->get_delegation_err_filename, 0600);
-	myProxyEntry->get_delegation_err_fd = open (myProxyEntry->get_delegation_err_filename,O_RDWR);
+	myProxyEntry->get_delegation_err_fd = safe_open_wrapper(myProxyEntry->get_delegation_err_filename,O_RDWR);
 	if (myProxyEntry->get_delegation_err_fd == -1) {
 		dprintf (D_ALWAYS, "Error opening file %s\n",
 				 myProxyEntry->get_delegation_err_filename);
@@ -886,7 +886,7 @@ int MyProxyGetDelegationReaper(Service *, int exitPid, int exitStatus)
 
 		char buff[500];
 		buff[0]='\0';
-		int fd = open (matched_entry->get_delegation_err_filename, O_RDONLY);
+		int fd = safe_open_wrapper(matched_entry->get_delegation_err_filename, O_RDONLY);
 		if (fd != -1) {
 			int bytes_read = read (fd, buff, 499);
 			close (fd);

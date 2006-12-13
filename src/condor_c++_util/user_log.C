@@ -136,9 +136,9 @@ initialize( const char *file, int c, int p, int s )
 	
 #ifndef WIN32
 	// Unix
-	if( (fd = open( path, O_CREAT | O_WRONLY, 0664 )) < 0 ) {
+	if( (fd = safe_open_wrapper( path, O_CREAT | O_WRONLY, 0664 )) < 0 ) {
 		dprintf( D_ALWAYS, "UserLog::initialize: "
-				 "open(\"%s\") failed - errno %d (%s)\n", path, errno,
+				 "safe_open_wrapper(\"%s\") failed - errno %d (%s)\n", path, errno,
 				 strerror(errno) );
 		return FALSE;
 	}
@@ -153,9 +153,9 @@ initialize( const char *file, int c, int p, int s )
 	}
 #else
 	// Windows (Visual C++)
-	if( (fp = fopen(path,"a+tc")) == NULL ) {
+	if( (fp = safe_fopen_wrapper(path,"a+tc")) == NULL ) {
 		dprintf( D_ALWAYS, "UserLog::initialize: "
-				 "fopen(\"%s\") failed - errno %d (%s)\n", path, errno, 
+				 "safe_fopen_wrapper(\"%s\") failed - errno %d (%s)\n", path, errno, 
 				 strerror(errno) );
 		return FALSE;
 	}
@@ -446,7 +446,7 @@ initialize (const char *filename)
 	//  
 	// NOTE: we tried changing this to O_READONLY once and things
 	// stopped working right, so don't try it again, smarty-pants!
-	if( (_fd = open( filename, O_RDWR, 0 )) == -1 ) {
+	if( (_fd = safe_open_wrapper( filename, O_RDWR, 0 )) == -1 ) {
 		return FALSE;
 	}
 	if ((_fp = fdopen (_fd, "r")) == NULL) {

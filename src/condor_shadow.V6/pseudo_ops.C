@@ -473,14 +473,14 @@ pseudo_get_file( const char *name )
 
 		/* Open the remote file and return status from the open */
 	errno = 0;
-	fd = open( name, O_RDONLY, 0 );
+	fd = safe_open_wrapper( name, O_RDONLY, 0 );
 	dprintf(D_SYSCALLS, "\topen(%s,O_RDONLY,0) = %d, errno = %d\n",
 														name, fd, errno );
 	if( fd < 0 ) {
 		return -1;
 	}
 
-		/* Send the status from open() so client knows we are going ahead */
+		/* Send the status from safe_open_wrapper() so client knows we are going ahead */
 	syscall_sock->encode();
 	assert( syscall_sock->code(fd) );
 
@@ -2375,7 +2375,7 @@ simp_log( const char *msg )
 		}
 		close( fd );
 
-		fp = fopen( name, "a" );
+		fp = safe_fopen_wrapper( name, "a" );
 		if( fp == NULL ) {
 			EXCEPT( "Can't open \"%s\" for appending\n", name );
 		}

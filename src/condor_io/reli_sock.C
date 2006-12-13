@@ -455,7 +455,7 @@ ReliSock::get_file( filesize_t *size, const char *destination, bool flush_buffer
 
 	// Open the file
 	errno = 0;
-	fd = ::open( destination,
+	fd = ::safe_open_wrapper( destination,
 				 O_WRONLY | O_CREAT | O_TRUNC |
 				 _O_BINARY | _O_SEQUENTIAL | O_LARGEFILE,
 				 0600 );
@@ -602,7 +602,7 @@ ReliSock::put_file( filesize_t *size, const char *source)
 	int result;
 
 	// Open the file, handle failure
-	fd = ::open(source, O_RDONLY | O_LARGEFILE | _O_BINARY | _O_SEQUENTIAL, 0);
+	fd = safe_open_wrapper(source, O_RDONLY | O_LARGEFILE | _O_BINARY | _O_SEQUENTIAL, 0);
 	if ( fd < 0 )
 	{
 		dprintf(D_ALWAYS,

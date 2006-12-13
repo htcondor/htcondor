@@ -69,7 +69,7 @@ ClassAdLog::ClassAdLog(const char *filename,int max_historical_logs) : table(102
 	historical_sequence_number = 1;
 	m_original_log_birthdate = time(NULL);
 
-	int log_fd = open(log_filename, O_RDWR | O_CREAT, 0600);
+	int log_fd = safe_open_wrapper(log_filename, O_RDWR | O_CREAT, 0600);
 	if (log_fd < 0) {
 		EXCEPT("failed to open log %s, errno = %d", log_filename, errno);
 	}
@@ -244,9 +244,9 @@ ClassAdLog::TruncLog()
 	}
 
 	sprintf(tmp_log_filename, "%s.tmp", log_filename);
-	new_log_fd = open(tmp_log_filename, O_RDWR | O_CREAT, 0600);
+	new_log_fd = safe_open_wrapper(tmp_log_filename, O_RDWR | O_CREAT, 0600);
 	if (new_log_fd < 0) {
-		dprintf(D_ALWAYS, "failed to truncate log: open(%s) returns %d\n",
+		dprintf(D_ALWAYS, "failed to truncate log: safe_open_wrapper(%s) returns %d\n",
 				tmp_log_filename, new_log_fd);
 		return;
 	}
@@ -271,7 +271,7 @@ ClassAdLog::TruncLog()
 		// Beat a hasty retreat into the past.
 		historical_sequence_number--;
 
-		int log_fd = open(log_filename, O_RDWR, 0600);
+		int log_fd = safe_open_wrapper(log_filename, O_RDWR, 0600);
 		if (log_fd < 0) {
 			EXCEPT("failed to reopen log %s, errno = %d after failing to rotate log.",log_filename,errno);
 		}
@@ -283,10 +283,10 @@ ClassAdLog::TruncLog()
 
 		return;
 	}
-	int log_fd = open(log_filename, O_RDWR | O_APPEND, 0600);
+	int log_fd = safe_open_wrapper(log_filename, O_RDWR | O_APPEND, 0600);
 	if (log_fd < 0) {
 		dprintf(D_ALWAYS, "failed to open log in append mode: "
-			"open(%s) returns %d\n", log_filename, log_fd);
+			"safe_open_wrapper(%s) returns %d\n", log_filename, log_fd);
 		return;
 	}
 	log_fp = fdopen(log_fd, "a+");

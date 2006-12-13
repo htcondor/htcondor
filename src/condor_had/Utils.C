@@ -1,3 +1,4 @@
+#define _CONDOR_ALLOW_OPEN 1  // for fstream interface which defines open
 #include "condor_common.h"
 #include "Utils.h"
 //#include "HadCommands.h"

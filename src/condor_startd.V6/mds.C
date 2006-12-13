@@ -29,7 +29,7 @@
 int MdsGenerate(ClassAd *machine, const char *file )
 {
 	// Open the file
-	FILE	*fp = fopen( file, "w" );
+	FILE	*fp = safe_fopen_wrapper( file, "w" );
 	if ( NULL == fp ) {
 		return -1;
 	}

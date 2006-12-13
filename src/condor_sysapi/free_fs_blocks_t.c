@@ -113,7 +113,7 @@ int free_fs_blocks_test(int trials, double tolerance, double warn_ok_ratio) {
 		megs = (write_size / 1024) - (gigs * 1024); /* left over megs*/
 		kilo = write_size % KILO; /* left over kilo */
 		
-		if ( (stream = fopen(filename, "w")) == NULL) {
+		if ( (stream = safe_fopen_wrapper(filename, "w")) == NULL) {
 			dprintf(D_ALWAYS, "Can't open %s\n", filename);
 			unlink( filename );
 			exit(EXIT_FAILURE);

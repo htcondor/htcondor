@@ -114,7 +114,7 @@ int transfer_from_file_to_capability(char *src_file, char *dest_url,
   long src_filesize;
   
   //open the input file for reading
-  in_fd = open(src_file, O_RDONLY);
+  in_fd = safe_open_wrapper(src_file, O_RDONLY);
   if (in_fd < 0){
     fprintf(stdout,"Error in opening file : %s\n",src_file);
     return DAP_ERROR;
@@ -152,7 +152,7 @@ int transfer_from_file_to_capability(char *src_file, char *dest_url,
     
     //write the read capability to a file for future reference
     sprintf(tempstr, "%s.readCap",src_file);
-    fcap = fopen(tempstr, "w");
+    fcap = safe_fopen_wrapper(tempstr, "w");
     fprintf (fcap, "%s", ls_caps->readCap);
     fclose(fcap);
 
@@ -201,7 +201,7 @@ int transfer_from_capability_to_file(char *src_url, char *dest_file,
   struct ibp_timer ls_timeout;
 
   //open the output file for writing
-  out_fd = open(dest_file, O_CREAT | O_RDWR, 00777);
+  out_fd = safe_open_wrapper(dest_file, O_CREAT | O_RDWR, 00777);
   if (out_fd < 0){
     fprintf(stdout,"Error in opening file : %s\n",dest_file);
     return DAP_ERROR;

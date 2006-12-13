@@ -349,7 +349,7 @@ do_REMOTE_syscall()
 
 		errno = 0;
 		if ( access_ok ) {
-			rval = open( path , flags , lastarg);
+			rval = safe_open_wrapper( path , flags , lastarg);
 		} else {
 			rval = -1;
 			errno = EACCES;

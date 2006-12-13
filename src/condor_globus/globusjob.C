@@ -520,7 +520,7 @@ bool GlobusJob::callback( int state = 0, int error = 0 )
 
 		// Force the streamed stdout/err to disk
 		if ( localOutput != NULL ) {
-			fd = open( localOutput, O_WRONLY );
+			fd = safe_open_wrapper( localOutput, O_WRONLY );
 			if ( fd < 0 ) {
 				dprintf( D_ALWAYS,
 					"open failed for job %d.%d's output file %s (errno=%d)\n",
@@ -539,7 +539,7 @@ bool GlobusJob::callback( int state = 0, int error = 0 )
 		}
 
 		if ( localError != NULL ) {
-			fd = open( localError, O_WRONLY );
+			fd = safe_open_wrapper( localError, O_WRONLY );
 			if ( fd < 0 ) {
 				dprintf( D_ALWAYS,
 					"open failed for job %d.%d's error file %s (errno=%d)\n",

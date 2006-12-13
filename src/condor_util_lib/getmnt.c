@@ -190,7 +190,7 @@ char			*path;
 		exit( 1 );
 	} */
 
-	if( (tab=fopen("/etc/mnttab","r")) == NULL ) {
+	if( (tab=safe_fopen_wrapper("/etc/mnttab","r")) == NULL ) {
 		perror( "setmntent" );
 		exit( 1 );
 	} 

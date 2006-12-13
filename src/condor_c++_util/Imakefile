@@ -127,6 +127,7 @@ CONLIBAPI_OBJ = \
 	libcondorapi_stubs.o \
 	$(SETEUID_OBJ) \
 	$(SETEGID_OBJ) \
+	condor_open.o \
 	condor_attributes.o
 
 DAEMON_CLIENT_OBJ = daemon.o daemon_types.o dc_shadow.o dc_startd.o \

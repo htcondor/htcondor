@@ -282,8 +282,8 @@ utmp_pty_idle_time( time_t now )
 	FILE *fp;
 	struct UTMP_KIND utmp_info;
 
-	if ((fp=fopen(UtmpName,"r")) == NULL) {
-		if ((fp=fopen(AltUtmpName,"r")) == NULL) {
+	if ((fp=safe_fopen_wrapper(UtmpName,"r")) == NULL) {
+		if ((fp=safe_fopen_wrapper(AltUtmpName,"r")) == NULL) {
 			EXCEPT("fopen of \"%s\"", UtmpName);
 		}
 	}
@@ -575,7 +575,7 @@ get_keyboard_info(idle_t *fill_me)
 	   [IRQ #]:  [# of interrupts at CPU 1] ... [CPU N] [dev type] [dev name]
 	*/
 	
-	if ((intr_fs = fopen("/proc/interrupts", "r")) == NULL) {
+	if ((intr_fs = safe_fopen_wrapper("/proc/interrupts", "r")) == NULL) {
 		dprintf(D_ALWAYS, "Failed to open /proc/interrupts\n");
 		return FALSE;
 	}
@@ -629,7 +629,7 @@ get_mouse_info(idle_t *fill_me)
 	   [Header line]
 	   [IRQ #]:  [# of interrupts at CPU 1] ... [CPU N] [dev type] [dev name]
 	*/
-	if ((intr_fs = fopen("/proc/interrupts", "r")) == NULL) {
+	if ((intr_fs = safe_fopen_wrapper("/proc/interrupts", "r")) == NULL) {
 	    dprintf(D_ALWAYS, 
 		    "get_mouse_info(): Failed to open /proc/interrupts\n");
 	    return FALSE;

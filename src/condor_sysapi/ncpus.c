@@ -91,7 +91,7 @@ sysapi_ncpus_raw(void)
 	int 		num_cpus = 0;
 
 	sysapi_internal_reconfig();
-	proc = fopen( "/proc/cpuinfo", "r" );
+	proc = safe_fopen_wrapper( "/proc/cpuinfo", "r" );
 	if( !proc ) {
 		return 1;
 	}

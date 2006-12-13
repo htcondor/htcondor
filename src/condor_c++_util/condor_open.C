@@ -21,6 +21,16 @@
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
+	/* Before including condor_common.h, we must set definitions so that
+	 * open() and fopen() calls are not redefined to be an error.  This
+	 * should be the only file in Condor that is allowed to call open() or
+	 * fopen() directly.  
+	 * Note: since we are making pre-proccesor calls before including 
+	 * condor_common.h, on Win32 we must tell the build system to avoid
+	 * using pre-compiled headers for this file.
+	 */
+#define _CONDOR_ALLOW_OPEN 1
+#define _CONDOR_ALLOW_FOPEN 1
 #include "condor_common.h"
 #include "condor_open.h"
 
@@ -50,6 +60,7 @@ int safe_open_wrapper(const char *fn, int flags, mode_t mode)
 			return safe_create_fail_if_exists(fn, flags, mode);
 		}
 
+#if 0    // FOR V6.8 COMMENT OUT THIS BLOCK - PUT IT BACK FOR V6.9
 		if ( flags & O_TRUNC ) {
 			// Strictly speaking semantic-wise, O_TRUNC should
 			// not replace the file -- it should just clear out
@@ -62,6 +73,7 @@ int safe_open_wrapper(const char *fn, int flags, mode_t mode)
 			// default mode.
 			return safe_create_replace_if_exists(fn, flags, mode);
 		}
+#endif
 
 		return safe_create_keep_if_exists(fn, flags, mode);
 
