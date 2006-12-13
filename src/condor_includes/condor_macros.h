@@ -37,22 +37,22 @@
 	 * src/condor_c++_util/condor_open.[hC] 
 	 */
 #ifndef _CONDOR_ALLOW_OPEN
-   #include "..\condor_c++_util\condor_open.h"
+   #include "../condor_c++_util/condor_open.h"
    #ifdef open
    #  undef open
    #endif
    #ifdef __GNUC__
-   #   pragma GCC poison (Calls_to_open_must_use___safe_open_wrapper___instead)
+   #   pragma GCC poison Calls_to_open_must_use___safe_open_wrapper___instead
    #endif
    #define open (Calls_to_open_must_use___safe_open_wrapper___instead)   
 #endif
 #ifndef _CONDOR_ALLOW_FOPEN
-   #include "..\condor_c++_util\condor_open.h"
+   #include "../condor_c++_util/condor_open.h"
    #ifdef fopen
    #  undef fopen
    #endif
    #ifdef __GNUC__
-   #   pragma GCC poison (Calls_to_fopen_must_use___safe_fopen_wrapper___instead)
+   #   pragma GCC poison Calls_to_fopen_must_use___safe_fopen_wrapper___instead
    #endif
    #define fopen (Calls_to_fopen_must_use___safe_fopen_wrapper___instead)   
 #endif 
