@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre.pl,v 1.2.2.4 2006-12-07 20:48:00 bt Exp $
+# $Id: remote_pre.pl,v 1.2.2.5 2006-12-14 19:51:39 bt Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
@@ -194,6 +194,7 @@ while( <ORIG> ) {
     print FIX "NEGOTIATOR_HOST = \n";
     print FIX "COLLECTOR_ADDRESS_FILE = \$(LOG)/.collector_address\n";
     print FIX "NEGOTIATOR_ADDRESS_FILE = \$(LOG)/.negotiator_address\n";
+    print FIX "SCHEDD_ADDRESS_FILE = \$(LOG)/.scheduler_address\n";
   } else {
     print FIX;
   }
@@ -351,8 +352,20 @@ print PIDFILE "$master_pid";
 close PIDFILE;   
 
 # Give the master time to start before jobs are submitted.
-print "Sleeping for 30 seconds to give the master time to start.\n";
-sleep 30;
+$scheddadr = `$BaseDir/condor/bin/condor_config_val SCHEDD_ADDRESS_FILE`;
+if(!$scheddadr =~/Not defined/) {
+	# Where is the schedd address file? wait for it to exist
+	$havescheddaddr = "no";
+	while($havescheddaddr ne "yes") { 
+		print "Looking for $scheddadr\n";
+		if( -f $scheddadr ) {
+			print "Found it!!!! \n";
+			$havescheddaddr = "yes";
+		} else {
+			sleep 10;
+		}
+	}
+}
 
 sub safe_copy {
     my( $src, $dest ) = @_;
