@@ -757,7 +757,9 @@ class DaemonCore : public Service
 			   specified by want_command_port.
         @param env Environment values to place in job environment.
         @param cwd Current Working Directory
-        @param new_process_group Do you want to make one? Default = FALSE
+        @param new_process_group Do you want to make one? Default = FALSE.
+               This will be forced to FALSE on unix if USE_PROCESS_GROUPS
+               is set to false in the config file.
         @param sock_inherit_list A list of socks to inherit.
         @param std An array of three file descriptors to map
                to stdin, stdout, stderr respectively.  If this array

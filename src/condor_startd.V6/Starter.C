@@ -859,12 +859,16 @@ Starter::execOldStarter( void )
 			 * up, it just sends signals to the startd and schedd and
 			 * they, in turn, do whatever quick cleaning needs to be 
 			 * done. 
+			 * Don't create a new process group if the config file says
+			 * not to.
 			 */
-		if( setsid() < 0 ) {
-			dprintf( D_ALWAYS, 
-					 "setsid() failed in child, errno: %d (%s)\n", errno,
-					 strerror( errno ) );
-			exit( 4 );
+		if ( param_boolean( "USE_PROCESS_GROUPS", true ) ) {
+			if ( setsid() < 0 ) {
+				dprintf( D_ALWAYS, 
+						 "setsid() failed in child, errno: %d (%s)\n", errno,
+						 strerror( errno ) );
+				exit( 4 );
+			}
 		}
 
 			// Now, dup the special socks to their well-known fds.

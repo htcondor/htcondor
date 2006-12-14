@@ -5913,7 +5913,8 @@ int DaemonCore::Create_Process(
 		}
 
 		//create a new process group if we are supposed to
-		if( new_process_group == TRUE )
+		if( new_process_group == TRUE &&
+			param_boolean( "USE_PROCESS_GROUPS", true ))
 		{
 			// Set sid is the POSIX way of creating a new proc group
 			if( setsid() == -1 )

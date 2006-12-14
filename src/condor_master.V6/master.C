@@ -363,9 +363,9 @@ main_init( int argc, char* argv[] )
 	_EXCEPT_Cleanup = DoCleanup;
 
 #if !defined(WIN32)
-	if( !Termlog ) {
+	if( !Termlog && param_boolean( "USE_PROCESS_GROUPS", true ) ) {
 			// If we're not connected to a terminal, start our own
-			// process group.
+			// process group, unless the config file says not to.
 		setsid();
 	}
 #endif
