@@ -245,7 +245,7 @@ TESTCLASS(job_core_plus_java,btdebug)
 /*
 Gnats bugs 723 and 724
 */
-#if !defined( IS_CONDOR_PPC_LINUX_YD30 ) && !defined( IS_ALPHA_DUX5) && !defined( IS_I386_LINUX_RHEL3 )
+#if !defined( IS_CONDOR_PPC_LINUX_YD30 ) && !defined( IS_I386_LINUX_RHEL3 )
 DESC(soap_job_tests,"Soap: currently 10 different interface tests")
 RUN(soap_job_tests)
 TESTCLASS(soap_job_tests,core)
@@ -626,6 +626,12 @@ DESC(job_core_max-running_local,"Local: Max job running limit")
 RUN(job_core_max-running_local)
 TESTCLASS(job_core_max-running_local,core)
 TESTCLASS(job_core_max-running_local,quick)
+
+DESC(job_schedd_restart-holdjobs-ok,"Held queue ok after schedd restart")
+RUN(job_schedd_restart-holdjobs-ok)
+TESTCLASS(job_schedd_restart-holdjobs-ok,core)
+TESTCLASS(job_schedd_restart-holdjobs-ok,quick)
+TESTCLASS(job_schedd_restart-holdjobs-ok,btdebug)
 
 /* File Transfer Tests */
 
