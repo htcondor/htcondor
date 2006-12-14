@@ -110,6 +110,11 @@ test_append_prereqs = java-1.3.1_02
 ]
 
 [
+platforms = ppc64_sles_9
+test_append_prereqs = java-1.4.2
+]
+
+[
 platforms = x86_freebsd_6
 test_append_prereqs = java-1.4.2
 ]
