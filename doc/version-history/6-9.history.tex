@@ -38,6 +38,12 @@ causes \Condor{dagman} to submit ready nodes in more-or-less depth-first
 order if set to \Expr{True}.  (The default behavior is to submit
 the ready nodes in breadth-first order.)
 
+\item Added configuration parameter \Macro{USE\_PROCESS\_GROUPS}. If it's
+set to False, then Condor daemons on unix machines will not create new 
+sessions or process groups. This is intended for use with Glidein, as
+we've had reports that some batch systems can't properly track jobs that
+create new process groups. The default value is True.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
