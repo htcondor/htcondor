@@ -44,91 +44,18 @@ $submitted = sub
 		}
 		close(BEFORE);
 
-		# Now turn off the scheduler
-		print "Turning off the scheduler\n";
-		my @bdarray;
-		$status = 1;
-		$cmd = "condor_off -schedd";
-		$status = CondorTest::runCondorTool($cmd,\@bdarray,2);
+		$status = CondorTest::changeDaemonState( "schedd", "off", 30 );
 		if(!$status)
 		{
-			print "Test failure due to Condor Tool Failure<$cmd>\n";
+			print "Test failure: could not turn scheduler off!\n";
 			exit(1)
 		}
 
-		print "Verify scheduler off\n";
-		# verify schedd is off
-		$doneyet = "no";
-		$stillrunning = "yes";
-		while($doneyet eq "no") {
-			my @cdarray;
-			print "Looking for no scheduler running\n";
-			$status = 1;
-			$cmd = "condor_status -schedd";
-			$stillrunning = "no";
-			$status = CondorTest::runCondorTool($cmd,\@cdarray,2);
-			if(!$status)
-			{
-				print "Test failure due to Condor Tool Failure<$cmd>\n";
-				exit(1)
-			}
-			foreach my $line (@cdarray)
-			{
-				print "<<$line>>\n";
-				if( $line =~ /.*Total.*/ ) {
-					# hmmmm not done yet... scheduler still responding
-					print "Schedd still running\n";
-					$stillrunning = "yes";
-				}
-			}
-			if($stillrunning eq "no") {
-				print "Must be done\n";
-				$doneyet = "yes";
-			}
-		}
-
-		# Now turn on the scheduler
-		print "Turning on the scheduler\n";
-		my @ddarray;
-		$status = 1;
-		$cmd = "condor_on -schedd";
-		$status = CondorTest::runCondorTool($cmd,\@ddarray,2);
+		$status = CondorTest::changeDaemonState( "schedd", "on", 30 );
 		if(!$status)
 		{
-			print "Test failure due to Condor Tool Failure<$cmd>\n";
+			print "Test failure: could not turn scheduler on!\n";
 			exit(1)
-		}
-
-		print "Verify scheduler on\n";
-		# verify schedd is on
-		$doneyet = "no";
-		my $runningyet = "no";
-		while($doneyet eq "no") {
-			my @edarray;
-			print "Looking for scheduler running\n";
-			$status = 1;
-			$cmd = "condor_status -schedd";
-			$runningyet = "no";
-			$status = CondorTest::runCondorTool($cmd,\@edarray,2);
-			if(!$status)
-			{
-				print "Test failure due to Condor Tool Failure<$cmd>\n";
-				exit(1)
-			}
-			foreach my $line (@edarray)
-			{
-				print "<<$line>>\n";
-				if( $line =~ /.*Total.*/ ) {
-					# hmmmm done .. scheduler responding
-					print "Schedd running now\n";
-					$runningyet = "yes";
-				}
-			}
-
-			if($runningyet eq "yes") {
-				print "Must be done\n";
-				$doneyet = "yes";
-			}
 		}
 
 		print "Collecting queue details on $cluster\n";
