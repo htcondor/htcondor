@@ -842,4 +842,86 @@ sub fullchomp
 	return(0);
 }
 
+sub changeDaemonState
+{
+	my $timeout = 0;
+	my $daemon = shift;
+	my $state = shift;
+	$timeout = shift;
+	my $counter = 0;
+	my $cmd = "";
+	my $timeout_increment = 5;
+	my $foundTotal = "no";
+	my $status;
+	my @cmdarray1, @cmdarray2;
+
+	print "Checking for $daemon being $state\n";
+	if($state eq "off") {
+		$cmd = "condor_off -$daemon";
+	} elsif($state eq "on") {
+		$cmd = "condor_on -$daemon";
+	} else {
+		die "Bad state given in changeScheddState<$state>\n";
+	}
+
+	$status = runCondorTool($cmd,\@cmdarray1,2);
+	if(!$status)
+	{
+		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		exit(1);
+	}
+
+	$cmd = "condor_status -$daemon";
+	while($counter < $timeout ) {
+		$foundTotal = "no";
+		@cmdarray2 = {};
+		print "about to run $cmd\n";
+		$status = CondorTest::runCondorTool($cmd,\@cmdarray2,2);
+		if(!$status)
+		{
+			print "Test failure due to Condor Tool Failure<$cmd>\n";
+			exit(1)
+		}
+
+		foreach my $line (@cmdarray2)
+		{
+			print "<<$line>>\n";
+			if($daemon eq "schedd") {
+				if( $line =~ /.*Total.*/ ) {
+					# hmmmm  scheduler responding
+					print "Schedd running\n";
+					$foundTotal = "yes";
+				}
+			} elsif($daemon eq "startd") {
+				if( $line =~ /.*Backfill.*/ ) {
+					# hmmmm  Startd responding
+					print "Startd running\n";
+					$foundTotal = "yes";
+				}
+			}
+		}
+
+		if( $state eq "on" ) {
+			if($foundTotal eq "yes") {
+				# is running again
+				return(1);
+			} else {
+				sleep($timeout_increment);
+				$counter = $counter + $timeout_increment;
+			}
+		} elsif( $state eq "off" ) {
+			if($foundTotal eq "no") {
+				#is stopped
+				return(1);
+			} else {
+				sleep($timeout_increment);
+				$counter = $counter + $timeout_increment;
+			}
+		}
+
+	}
+	print "Timeout watching for $daemon state change to <<$state>>\n";
+	return(0);
+}
+
 1;
