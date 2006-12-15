@@ -633,6 +633,12 @@ TESTCLASS(job_schedd_restart-holdjobs-ok,core)
 TESTCLASS(job_schedd_restart-holdjobs-ok,quick)
 TESTCLASS(job_schedd_restart-holdjobs-ok,btdebug)
 
+DESC(job_schedd_restart-runningjobs-ok,"Running queue ok after schedd restart")
+RUN(job_schedd_restart-runningjobs-ok)
+TESTCLASS(job_schedd_restart-runningjobs-ok,core)
+TESTCLASS(job_schedd_restart-runningjobs-ok,quick)
+TESTCLASS(job_schedd_restart-runningjobs-ok,btdebug)
+
 /* File Transfer Tests */
 
 DESC(job_filexfer_base-input1_van,"Vanilla: Tests input file does not make it with filetransfer off")
