@@ -52,8 +52,7 @@
 #include "xferstat2.h"
 #include "xfer_summary.h"
 
-#include <iostream>
-using namespace std;
+#include "condor_fix_iostream.h"
 
 /* Class TransferState ********************************************************
 *                                                                             *

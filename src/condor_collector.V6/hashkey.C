@@ -31,8 +31,7 @@
 #include <netinet/in.h>
 #endif
 
-#include <iostream>
-using namespace std;
+#include "condor_fix_iostream.h"
 
 extern "C" char * sin_to_string(struct sockaddr_in *);
 

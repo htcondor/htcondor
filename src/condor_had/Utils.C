@@ -1,4 +1,3 @@
-#define _CONDOR_ALLOW_OPEN 1  // for fstream interface which defines open
 #include "condor_common.h"
 #include "Utils.h"
 //#include "HadCommands.h"
@@ -15,8 +14,7 @@
 #endif
 #include "condor_netdb.h"
 
-#include <fstream>
-using namespace std;
+#include "condor_fix_fstream.h"
 
 // for MD5 blocks computation
 #define FILE_CHUNK_SIZE               (100)

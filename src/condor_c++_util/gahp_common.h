@@ -20,12 +20,6 @@
   * RIGHT.
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-//#include "condor_common.h"
-//#include <string.h>
-//#include <iostream>
-//#include <stdarg.h>
-//#include "simplelist.h"
-
 #ifndef GAHP_COMMON_H
 #define GAHP_COMMON_H
 

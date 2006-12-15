@@ -244,7 +244,7 @@ sysapi_load_avg_raw(void)
 	// Kernel Version 2.0.0:
 	// 0.03 0.03 0.09 2/42 15582
 
-    proc=safe_fopen_wrapper("/proc/loadavg","r");
+    proc=safe_fopen_wrapper("/proc/loadavg","r",0644);
     if(!proc)
 	return -1;
 

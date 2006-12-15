@@ -261,7 +261,7 @@ int
 daemon::NextStart()
 {
 	int seconds;
-	seconds = m_backoff_constant + (int)ceil(pow(m_backoff_factor, restarts));
+	seconds = m_backoff_constant + (int)ceil(::pow(m_backoff_factor, restarts));
 	if( seconds > m_backoff_ceiling || seconds < 0 ) {
 		seconds = m_backoff_ceiling;
 	}

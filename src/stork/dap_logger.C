@@ -103,7 +103,7 @@ void write_dap_log(char *logfilename, char *status, char *param1, char *value1, 
   FILE *flog;
 
   //write the classad to classad file
-  if ((flog = safe_fopen_wrapper((logfilename,"a+")) == NULL){
+  if ((flog = safe_fopen_wrapper(logfilename,"a+")) == NULL){
     dprintf(D_ALWAYS,
 	    "cannot open logfile :%s...\n",logfilename);
     exit(1);
@@ -150,7 +150,7 @@ void write_classad_log(char *logfilename, char *status, classad::ClassAd *classa
   printf("*3*\n");
 
   //write the classad to classad file
-  if ((flog = safe_fopen_wrapper((logfilename,"a+")) == NULL){
+  if ((flog = safe_fopen_wrapper(logfilename,"a+")) == NULL){
     dprintf(D_ALWAYS,
 	    "cannot open logfile :%s...\n",logfilename);
     exit(1);
@@ -253,7 +253,7 @@ void write_xml_log(char *logfilename, classad::ClassAd *classad, const char *sta
   xmlunparser.Unparse(adbuffer, classad);
   
   //write the classad to classad file
-  if ((flog = safe_fopen_wrapper((logfilename,"a+")) == NULL){
+  if ((flog = safe_fopen_wrapper(logfilename,"a+")) == NULL){
     dprintf(D_ALWAYS,
 	    "cannot open logfile :%s...\n",logfilename);
     exit(1);
@@ -411,7 +411,7 @@ write_xml_user_log(
   xmlunparser.Unparse(adbuffer, classad);
   
   //write the classad to classad file
-  if ((flog = safe_fopen_wrapper((logfilename,"a+")) == NULL){
+  if ((flog = safe_fopen_wrapper(logfilename,"a+")) == NULL){
     dprintf(D_ALWAYS,
 	    "cannot open user logfile :%s...\n",logfilename);
 	if (classad) delete classad;

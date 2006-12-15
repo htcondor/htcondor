@@ -418,7 +418,7 @@ pseudo_send_a_file( const char *path, mode_t mode )
 	omask = umask( 022 );
 
 		/* Open the file for writing, send back status from the open */
-	if( (fd=open(path,O_WRONLY|O_CREAT|O_TRUNC,mode)) < 0 ) {
+	if( (fd=safe_open_wrapper(path,O_WRONLY|O_CREAT|O_TRUNC,mode)) < 0 ) {
 		(void)umask(omask);
 		return -1;
 	}
@@ -814,7 +814,7 @@ pseudo_get_file_stream(
 		priv = set_condor_priv();
 	}
 
-	file_fd=open(file,O_RDONLY);
+	file_fd=safe_open_wrapper(file,O_RDONLY);
 
 	if (CkptFile || ICkptFile) set_priv(priv); // restore user privileges
 
@@ -1011,7 +1011,7 @@ pseudo_put_file_stream(
 		// effects us, the shadow.  -Derek Wright 6/11/98
 	omask = umask( 022 );
 
-	if( (file_fd=open(file,O_WRONLY|O_CREAT|O_TRUNC,0664)) < 0 ) {
+	if( (file_fd=safe_open_wrapper(file,O_WRONLY|O_CREAT|O_TRUNC,0664)) < 0 ) {
 		if (CkptFile || ICkptFile) set_priv(priv);	// restore user privileges
 		(void)umask(omask);
 		return -1;
@@ -2370,7 +2370,7 @@ simp_log( const char *msg )
 	omask = umask( 022 );
 
 	if( !fp ) {
-		if( (fd=open(name,O_WRONLY|O_CREAT,0666)) < 0 ) {
+		if( (fd=safe_open_wrapper(name,O_WRONLY|O_CREAT,0666)) < 0 ) {
 			EXCEPT( name );
 		}
 		close( fd );

@@ -1386,54 +1386,6 @@ DoCleanup()
 }
 
 
-void
-open_std_files( V2_PROC *proc )
-{
-	int		fd;
-
-	dprintf( D_FULLDEBUG, "Entered open_std_files()\n" );
-
-	(void)close( 0 );
-	(void)close( 1 );
-	(void)close( 2 );
-
-	if( (fd=open(proc->in,O_RDONLY,0)) < 0 ) {
-		sprintf( ErrBuf, "Can't open std input file \"%s\"! [%s(%d)]", 
-			proc->in, strerror(errno), errno );
-		HadErr = TRUE;
-		return;
-	}
-	if( fd != 0 ) {
-		EXCEPT( "open returns %d, expected 0", fd );
-	}
-
-	if( (fd=open(proc->out,O_WRONLY,0)) < 0 ) {
-		sprintf( ErrBuf, "Can't open std output file \"%s\"! [%s(%d)]",
-			proc->out, strerror(errno), errno );
-		HadErr = TRUE;
-		return;
-	}
-	if( fd != 1 ) {
-		dprintf( D_ALWAYS, "Can't open \"%s\"\n", proc->err );
-		EXCEPT( "open returns %d, expected 1", fd );
-	}
-
-
-	if( (fd=open(proc->err,O_WRONLY,0)) < 0 ) {
-		sprintf( ErrBuf, "Can't open std error file \"%s\"! [%s(%d)]", 
-			proc->err, strerror(errno), errno );
-		HadErr = TRUE;
-		return;
-	}
-	if( fd != 2 ) {
-		EXCEPT( "open returns %d, expected 2", fd );
-	}
-
-	dprintf( D_ALWAYS, "Opened \"%s\", \"%s\", and \"%s\"\n",
-					proc->in, proc->out, proc->err );
-}
-
-
 /*
   Connect to the startd on the remote host and forcibly vacate our
   claim. 
@@ -1535,7 +1487,7 @@ open_named_pipe( const char *name, int mode, int target_fd )
 {
 	int		fd;
 
-	if( (fd=open(name,mode)) < 0 ) {
+	if( (fd=safe_open_wrapper(name,mode)) < 0 ) {
 		EXCEPT( "Can't open named pipe %s", name );
 	}
 

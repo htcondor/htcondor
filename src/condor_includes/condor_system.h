@@ -86,6 +86,7 @@
 #include "condor_fix_access.h"
 #include "condor_file_lock.h"
 #include "condor_fix_assert.h"
+#include "condor_fix_iomanip.h"
 
 
 /**********************************************************************
@@ -200,6 +201,7 @@ typedef fd_set *SELECT_FDSET_PTR;
 
 
 /* This stuff here is shared by all archs, *INCLUDING* NiceTry */
+
 
 /* Pull in some required types */
 #if defined( HAVE_SYS_TYPES_H )

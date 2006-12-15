@@ -1,4 +1,3 @@
-#define _CONDOR_ALLOW_OPEN 1   // for fstream interface which defines open
 #include "condor_common.h"
 // for 'daemonCore'
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
@@ -11,8 +10,7 @@
 
 #include "Version.h"
 #include "FilesOperations.h"
-#include <fstream>
-using namespace std;
+#include "condor_fix_fstream.h"
 
 time_t Version::m_lastModifiedTime = -1;
 

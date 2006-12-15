@@ -31,11 +31,27 @@
 #define MAX(a,b) ((a)>(b)?(a):(b))
 #endif
 
+	/* Don't prevent calls to open() or fopen() in the ckpt or 
+	 * remote syscalls code.
+	 */
+#if defined(IN_CKPT_LIB) || defined(REMOTE_SYSCALLS)
+#	if !defined(_CONDOR_ALLOW_OPEN_AND_FOPEN)
+#		define _CONDOR_ALLOW_OPEN_AND_FOPEN 1
+#	endif
+#endif
 
 	/* For security purposes, do not allow open() or fopen().
 	 * Folks should use the wrapper functions in 
 	 * src/condor_c++_util/condor_open.[hC] 
 	 */
+#ifdef _CONDOR_ALLOW_OPEN_AND_FOPEN
+#  ifndef _CONDOR_ALLOW_OPEN
+#     define _CONDOR_ALLOW_OPEN 1
+#  endif
+#  ifndef _CONDOR_ALLOW_FOPEN
+#     define _CONDOR_ALLOW_FOPEN 1
+#  endif
+#endif
 #ifndef _CONDOR_ALLOW_OPEN
    #include "../condor_c++_util/condor_open.h"
    #ifdef open

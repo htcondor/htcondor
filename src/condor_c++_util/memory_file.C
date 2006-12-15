@@ -21,14 +21,14 @@
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
+
 /* the below is defined in test suite programs that use these files. */
 #ifndef NO_CONDOR_COMMON
 #include "condor_common.h"
 #endif
 
 #include "memory_file.h"
-#include <iostream>
-using namespace std;
+#include "condor_fix_iostream.h"
 
 static const int DEFAULT_BUFFER_SIZE=1024;
 static const int COMPARE_BUFFER_SIZE=10000;   
@@ -57,7 +57,7 @@ int memory_file::compare( char *filename )
 	off_t position=0, chunksize=0;
 	char cbuffer[COMPARE_BUFFER_SIZE];
 
-	int fd = ::open(filename,O_RDONLY);
+	int fd = safe_open_wrapper(filename,O_RDONLY);
 	if( fd==-1 ) {
 		cerr << "Couldn't open " << filename << endl;
 		return 100;

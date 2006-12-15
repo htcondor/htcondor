@@ -60,7 +60,7 @@ copy_file(const char *old_filename, const char *new_filename)
 	}
 	fs.st_mode &= S_IRWXU | S_IRWXG | S_IRWXO;
 
-	in_fd = safe_open_wrapper( old_filename, O_RDONLY );
+	in_fd = safe_open_wrapper( old_filename, O_RDONLY, 0644 );
 	if ( in_fd < 0 ) {
 		dprintf( D_ALWAYS, "safe_open_wrapper(%s, O_RDONLY) failed with errno %d\n",
 				 old_filename, errno );

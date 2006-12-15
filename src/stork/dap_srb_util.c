@@ -230,7 +230,7 @@ const char * srbResource(void)
 	}
 	strcpy(file, home);
 	strcat(file, SRBENV);
-	fp = safe_fopen_wrapper((file, "r");
+	fp = safe_fopen_wrapper(file, "r", 0644);
 	if (! fp) {
 #ifdef _DEBUG
 		fprintf(stderr, "open %s for read: %s\n", file, strerror(errno) );

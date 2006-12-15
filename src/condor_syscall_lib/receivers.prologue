@@ -1,3 +1,4 @@
+#define _CONDOR_ALLOW_OPEN 1
 #include "condor_common.h"
 #include "condor_nfs.h"
 #include "condor_classad.h"

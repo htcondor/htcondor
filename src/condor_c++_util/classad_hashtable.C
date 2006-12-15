@@ -24,8 +24,6 @@
 #include "condor_common.h"
 
 #include "classad_hashtable.h"
-#include <iostream>
-using namespace std;
 
 void HashKey::sprint(char *s)
 {
@@ -50,11 +48,6 @@ bool operator==(const HashKey &lhs, const HashKey &rhs)
 	return (strcmp(lhs.key, rhs.key) == 0);
 }
 
-ostream &operator<<(ostream &out, const HashKey &hk)
-{
-	out << "Hashkey: " << hk.key << endl;
-	return out;
-}
 
 int hashFunction(const HashKey &key, int numBuckets)
 {

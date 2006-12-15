@@ -682,7 +682,7 @@ _condor_fd_panic( int line, char* file )
 		(void)close( i );
 	}
 	if( DebugFile[0] ) {
-		DebugFP = safe_fopen_wrapper(DebugFile[0], "a");
+		DebugFP = safe_fopen_wrapper(DebugFile[0], "a", 0644);
 	}
 
 	if( DebugFP == NULL ) {

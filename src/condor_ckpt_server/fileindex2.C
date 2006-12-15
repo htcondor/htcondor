@@ -26,8 +26,7 @@
 #include "fileindex2.h"
 #include "gen_lib.h" 
 
-#include <iostream>
-using namespace std;
+#include "condor_fix_iostream.h"
 
 FileIndex::FileIndex()
 {
