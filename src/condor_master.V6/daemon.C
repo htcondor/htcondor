@@ -1019,7 +1019,11 @@ daemon::Obituary( int status )
 	// Just return if process was killed with SIGKILL.  This means the
 	// admin did it, and thus no need to send email informing the
 	// admin about something they did...
-	if ( (WIFSIGNALED(status)) && (WTERMSIG(status) == SIGKILL) ) {
+
+	// Unless, that is, the master killed it because it was unresponsive
+	// Then, send the obit...
+	if ( (WIFSIGNALED(status)) && (WTERMSIG(status) == SIGKILL) 
+		&& !was_not_responding) {
 		return;
 	}
 #endif
