@@ -30,7 +30,8 @@
 #ifndef WANT_NAMESPACES
 #define WANT_NAMESPACES
 #endif
-#include "condor_fix_classad_distribution.h"
+#include "condor_fix_iostream.h"
+#include "classad_distribution.h"
 #endif
 #include "fs_util.h"
 
