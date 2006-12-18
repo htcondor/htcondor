@@ -244,8 +244,9 @@ TESTCLASS(job_core_plus_java,btdebug)
 
 /*
 Gnats bugs 723 and 724
+Gnats bug 790 for john memory failings
 */
-#if !defined( IS_CONDOR_PPC_LINUX_YD30 ) && !defined( IS_I386_LINUX_RHEL3 )
+#if !defined( IS_CONDOR_PPC_LINUX_YD30 ) && !defined( IS_I386_LINUX_RHEL3 ) && !defined( IS_ALPHA_DUX5 )
 DESC(soap_job_tests,"Soap: currently 10 different interface tests")
 RUN(soap_job_tests)
 TESTCLASS(soap_job_tests,core)
