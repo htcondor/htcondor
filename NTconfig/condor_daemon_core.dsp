@@ -199,7 +199,7 @@ SOURCE="$(EXT_INSTALL)\$(EXT_GSOAP_VERSION)\src\stdsoap2.cpp"
 
 !IF  "$(CFG)" == "condor_daemon_core - Win32 Debug"
 
-# ADD CPP /Yu
+# SUBTRACT CPP /YX /Yc /Yu
 
 !ELSEIF  "$(CFG)" == "condor_daemon_core - Win32 Release"
 
