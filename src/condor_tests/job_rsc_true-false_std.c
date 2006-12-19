@@ -21,6 +21,8 @@
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
+#define _CONDOR_ALLOW_FOPEN 1
+
 #if defined(HPUX)
 /*#include "condor_common.h"*/
 #include <sys/stat.h>

@@ -21,6 +21,7 @@
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
+#define _CONDOR_ALLOW_OPEN 1   // because this is used in the test suite
 
 /* the below is defined in test suite programs that use these files. */
 #ifndef NO_CONDOR_COMMON
@@ -57,7 +58,7 @@ int memory_file::compare( char *filename )
 	off_t position=0, chunksize=0;
 	char cbuffer[COMPARE_BUFFER_SIZE];
 
-	int fd = safe_open_wrapper(filename,O_RDONLY);
+	int fd = open(filename,O_RDONLY);
 	if( fd==-1 ) {
 		cerr << "Couldn't open " << filename << endl;
 		return 100;
