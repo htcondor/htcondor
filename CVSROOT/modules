@@ -930,6 +930,10 @@ V6_7_TT_CODE		-a TOOLS NT_TOOLS NT_PROGRAMS V6_7_TT_SRC
 V6_7_TT_ALL		-a DOC V6_7_TT_CODE
 V6_7_TT_BUILD	-a V6_7_TT_ALL externals
 
+V6_9_QUILL_CODE	-a V6_9_CODE \
+			src/condor_tt \
+			src/condor_dbmsd
+
 
 ######################################################################
 # Miscellaneous module definitions
