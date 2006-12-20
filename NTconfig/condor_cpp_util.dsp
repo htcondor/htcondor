@@ -261,15 +261,7 @@ SOURCE="..\src\condor_c++_util\condor_md.C"
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\condor_open.C"
-
-!IF  "$(CFG)" == "condor_cpp_util - Win32 Debug"
-
 # SUBTRACT CPP /YX /Yc /Yu
-
-!ELSEIF  "$(CFG)" == "condor_cpp_util - Win32 Release"
-
-!ENDIF 
-
 # End Source File
 # Begin Source File
 

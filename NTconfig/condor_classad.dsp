@@ -111,15 +111,7 @@ SOURCE=..\src\condor_classad\classad_util.C
 # Begin Source File
 
 SOURCE=..\src\condor_classad\classifiedjobs.C
-
-!IF  "$(CFG)" == "condor_classad - Win32 Debug"
-
 # SUBTRACT CPP /YX /Yc /Yu
-
-!ELSEIF  "$(CFG)" == "condor_classad - Win32 Release"
-
-!ENDIF 
-
 # End Source File
 # Begin Source File
 
