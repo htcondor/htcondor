@@ -206,6 +206,12 @@ the screen when checking the status of a job it submitted.
 \item Fixed bug that might have caused the \Condor{startd} problems
 launching the \Condor{starter} for the standard universe on 64-bit systems.
 
+\item Improved Condor's file transfer.  If you request that Condor
+automatically transfer back your output, it now detects changes better.
+Previously, it would only transfer back files that had a timestamp newer
+than the spool date.  Now, it will transfer back any file that has changed
+in date (including being dated in the past) or changed in size.
+
 \end{itemize}
 
 \noindent Known Bugs:
