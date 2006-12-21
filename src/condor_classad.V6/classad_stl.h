@@ -48,7 +48,7 @@
   #define classad_hash_map std::hash_map 
   #define classad_slist    std::slist
 #elif defined(__GNUC__)
-  #if (__GNUC__ == 3 && __GNUC_MINOR__ > 0)
+  #if ((__GNUC__ == 3 && __GNUC_MINOR__ > 0) || (__GNUC__ > 3))
     #define classad_hash_map __gnu_cxx::hash_map 
     #define classad_slist    __gnu_cxx::slist
   #else
