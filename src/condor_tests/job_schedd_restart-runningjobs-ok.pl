@@ -14,15 +14,15 @@ sub RUNNING{2};
 
 my $alreadydone=0;
 
-my $submithandled = "no";
+my $count = 0;
 $executed = sub
 {
 	my %args = @_;
 	my $cluster = $args{"cluster"};
 	my $doneyet = "no";
 
-	if($submithandled eq "no") {
-		$submithandled = "yes";
+	$count = $count + 1;
+	if($count == 10) {
 
 		print "submitted\n";
 		print "Collecting queue details on $cluster\n";
