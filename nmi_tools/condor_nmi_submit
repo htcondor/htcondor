@@ -91,7 +91,7 @@ use vars qw/ $opt_build $opt_test
 ######################################################################
 
 # Location of the nightly build tag file
-my $tag_file_url = "http://www.cs.wisc.edu/condor/nwo-build-tags";
+my $tag_file = "/space/cvs/nwo-build-tags";
 
 # CVSROOT to use for checking out from CVS
 my $CVSROOT = "/space/cvs/CONDOR_SRC";
@@ -568,16 +568,6 @@ sub getTags
 
 sub getNightlyTags
 {
-    my $tag_file = basename($tag_file_url);
-
-    # just to be paranoid (in case anyone re-reorganizes this code
-    # again *sigh*), cd into our workspace before we attempt to do
-    # this, so we're sure we're using the right build tag file.
-    chdir($workspace) || die "Can't chdir($workspace): $!\n";
-
-    print "Fetching $tag_file ... \n";
-    run( "wget --tries=1 $tag_file_url" );
-
     open(TAGS, $tag_file) || 
         die "Can't read nightly tag file $tag_file: $!\n";
     while (<TAGS>) {
