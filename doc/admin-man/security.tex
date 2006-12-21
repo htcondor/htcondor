@@ -134,15 +134,14 @@ Commands in Condor are executed over TCP/IP network connections.
 While network communication enables Condor to manage
 resources that are distributed across an organization (or beyond),
 it also brings in security challenges.
-How can Condor ensure that commands are really being sent by trustworthy users?
-What if jobs are operating on sensitive data that should not be seen by outsiders?
-How can a job know its data has not been tampered with?
+Condor must have ways of ensuring that commands are being sent
+by trustworthy users.
+Jobs are operating on sensitive data must be allowed to be
+encrypted such that the data is not seen by outsiders.
+Jobs may need assurance that data has not been tampered with.
 These issues
-can be addressed with Condor's \emph{authentication},
-\emph{encryption}, and \emph{integrity} features. But before we
-discuss any of these features, we'll look into the process by which
-Condor decides which (if any) of these features will be used for a
-given command invocation.
+can be addressed with Condor's authentication,
+encryption, and integrity features.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Security-Negotiation}Security Negotiation}
@@ -150,64 +149,88 @@ given command invocation.
 
 Because of the wide range of environments and security demands necessary,
 Condor must be flexible.
-
-The issue of allowing flexible configuration of security options is
-complicated by the fact that Condor components that wish to interact
-may be configured to use different security options. This should not
-preclude the interaction from taking place. Pretend Frida, an
-aggressive cycle-scavenger, runs a variety of Condor tools from her
-workstation.  She would prefer not to use authentication as part of
-her interactions with Condor (because she thinks it's a waste of
-CPU). A \Condor{schedd} that she submits jobs to, however, refuses to
-accept any job unless it can be sure of the submitter's identity, and
-thus wishes to force authentication. Given the \Condor{schedd}'s
-policy, Frida would rather her jobs run even if she does have to
-authenticate first, so job submission should be allowed to commence
-(with authentication turned on, of course).
-
+Configuration provides this flexibility.
 The process by which Condor determines the security settings that will
-be used when a connection is established is called \emph{security
-negotiation}. Negotiation's primary purpose is to determine what
-\emph{features} (authentication, encryption, and integrity) will be
-enabled for a connection. In addition, since Condor supports multiple
-technologies for authentication and encryption, negotiation will also
-decide which technologies are compatible between the client and
-daemon sides of the connection.
+be used when a connection is established is called
+\Term{security negotiation}.
+Security negotiation's primary purpose is to determine which
+of the features of authentication, encryption, and integrity checking
+will be enabled for a connection.
+In addition, since Condor supports multiple
+technologies for authentication and encryption,
+security negotiation also
+determines which technologies is chosen for the connection.
 
-%When a daemon receives a request, it uses the client's security
-%configuration information together with its own configuration settings
-%to decide upon the security settings. The daemon replies to the client
-%with a set of reconciled policies that controls the communication,
-%including authentication, encryption, and integrity algorithms.  For
-%instance, if the client insists upon using GSI authentication, while
-%the daemon considers it optional, then GSI authentication will be
-%used.
+%The issue of allowing flexible configuration of security options is
+%complicated by the fact that Condor components that wish to interact
+%may be configured to use different security options. This should not
+%preclude the interaction from taking place. Pretend Frida, an
+%aggressive cycle-scavenger, runs a variety of Condor tools from her
+%workstation.  She would prefer not to use authentication as part of
+%her interactions with Condor (because she thinks it's a waste of
+%CPU). A \Condor{schedd} that she submits jobs to, however, refuses to
+%accept any job unless it can be sure of the submitter's identity, and
+%thus wishes to force authentication. Given the \Condor{schedd}'s
+%policy, Frida would rather her jobs run even if she does have to
+%authenticate first, so job submission should be allowed to commence
+%(with authentication turned on, of course).
 
 Security negotiation is a completely separate process from
 matchmaking, and should not be confused with any specific function of
-the \Condor{negotiator}.
-
-The security policy used during negotiation is determined by a set of
-configuration macros. These macros belong to two classes: those that
-affect negotiation of security features, and those that affect the
-negotiation of methods within a specific feature. The following
-sections discuss these settings in detail.
+the \Condor{negotiator} daemon.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:security-negotiation-features}
-               Negotiation of Security Features}
+\subsubsection{\label{sec:security-negotiation-features}Configuration}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-The macros that determine what features will be used during
+The macro names that determine what features will be used during
 client-daemon communication follow the pattern:
 \begin{verbatim}
     SEC_<context>_<feature>
 \end{verbatim}
 
-Ignoring the \verb@<context>@ component for now, the \verb@<feature>@
-component determines which security feature's policy is being
-set. Continuing Frida's example, she wants to avoid using
-authentication if possible and sets:
+The \verb@<feature>@
+portion of the macro name determines which security feature's
+policy is being set.
+\verb@<feature>@ may be any one of
+\begin{verbatim}
+    AUTHENTICATION
+    ENCRYPTION
+    INTEGRITY
+    NEGOTIATION
+\end{verbatim}
+
+The \verb@<context>@ component of the security policy macros can be
+used to craft a fine-grained security policy based on the type of
+communication taking place.
+\verb@<context>@ may be any one of
+\begin{verbatim}
+    CLIENT
+    READ
+    WRITE
+    ADMINISTRATOR
+    CONFIG
+    OWNER
+    DAEMON
+    NEGOTIATOR
+    DEFAULT
+\end{verbatim}
+
+These configuration macros may be set to any of the following
+values:
+\begin{verbatim}
+    REQUIRED
+    PREFERRED
+    OPTIONAL
+    NEVER 
+\end{verbatim}
+
+Security negotiation resolves various client-daemon combinations
+of desired security features in order to set a policy.
+
+As an example, consider Frida the scientist.
+Frida wants to avoid authentication when possible.
+She sets
 \begin{verbatim}
     SEC_DEFAULT_AUTHENTICATION = OPTIONAL
 \end{verbatim}
@@ -221,20 +244,17 @@ When Frida submits her jobs, Condor's security negotiation will
 determine that authentication will be used and allows the command to
 continue.
 
-The security feature policy macros can be set to any of the following
-values:
-\begin{verbatim}
-    REQUIRED
-    PREFERRED
-    OPTIONAL
-    NEVER 
-\end{verbatim}
-
 Table~\ref{table:Security-Negotiation} shows how security negotiation
 resolves various client-daemon combinations of security feature policy
-settings. It is clear from this table that Frida's (client) setting of
+settings.
+Within the table, Yes means the feature will be
+used during communication.
+No means it will not.
+Fail means that the policy settings are incompatible and the communication
+cannot continue.
+Frida's (client) setting of
 \verb@OPTIONAL@ along with the \Condor{schedd}'s (daemon) setting of
-\verb@REQUIRED@ result in authentication being enabled for their
+\verb@REQUIRED@ results in authentication being enabled for their
 communications.
 
 \begin{table}[tb]
@@ -256,28 +276,17 @@ communications.
   \hline
   \multicolumn{6}{|l|}{\footnotesize{
       *These combinations will result in failure for the
-       NEGOTIATE feature}} \\
+       NEGOTIATION feature}} \\
   \hline
 \end{tabular}
-\caption{This shows how negotiation determines whether a given security
-         feature will be used. ``Yes'' means the feature will be
-	 used during communication, while ``No'' means it will not. ``Fail''
-         means that the policy settings are incompatible and the communication
-	 cannot continue.}
+\caption{How negotiation resolves whether a given security
+         feature will be used. }
 \end{table}
 
-Security feature policy macros exist for the following values of
-\verb@<feature>@:
-\begin{verbatim}
-    AUTHENTICATION
-    ENCRYPTION
-    INTEGRITY
-    NEGOTIATION
-\end{verbatim}
 
 It is important to note that these features are not completely
 independent of each other. In particular, no other security features
-are possible unless verb@NEGOTIATION@ is used. In addition, neither
+are possible unless \verb@NEGOTIATION@ is used. In addition, neither
 \verb@ENCRYPTION@ or \verb@INTEGRITY@ may be used on a connection
 unless \verb@AUTHENTICATION@ is enabled (since authentication is
 needed to provide a secure key exchange).
@@ -288,23 +297,6 @@ needed to provide a secure key exchange).
 %whether negotiation will be used is much less flexible. Table X is
 %annotated to show cases where the \verb@NEGOTIATION@ policy fails to
 %reach a ``correct' result.
-
-The \verb@<context>@ component of the security policy macros can be
-used to craft a fine-grained security policy based on the type of
-communication taking place.
-
-The full list of possible values for the \verb@<context>@ component is:
-\begin{verbatim}
-    CLIENT
-    READ
-    WRITE
-    ADMINISTRATOR
-    CONFIG
-    OWNER
-    DAEMON
-    NEGOTIATOR
-    DEFAULT
-\end{verbatim}
 
 Setting \verb@SEC_CLIENT_<feature>@ will determine the policy for all
 outgoing commands. Policy for incoming commands (i.e for the daemon
@@ -326,8 +318,8 @@ WRITE, etc.) are present. This makes it possible to set a baseline
 policy with a single macro setting.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:security-negotiation-methods}
-               Negotiation of Security Methods}
+\subsubsection{\label{sec:security-negotiation-methods}Configuration for the
+Negotiation of Security Methods}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Deciding what security features will be enabled for a connection is
