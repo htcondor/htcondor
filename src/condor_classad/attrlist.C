@@ -789,13 +789,13 @@ AttrList& AttrList::operator=(const AttrList& other)
 		if(other.exprList) {
 			this->exprList = new AttrListElem(*other.exprList);
 			tmpThis = this->exprList;
-			hash->insert(((Variable *)tmpThis->next->tree->LArg())->Name(),
-				tmpThis->next);
+			hash->insert(((Variable *)tmpThis->tree->LArg())->Name(),
+				tmpThis);
 			for(tmpOther = other.exprList->next; tmpOther; tmpOther = tmpOther->next) {
 				tmpThis->next = new AttrListElem(*tmpOther);
 				tmpThis = tmpThis->next;
-				hash->insert(((Variable *)tmpThis->next->tree->LArg())->Name(),
-					tmpThis->next);
+				hash->insert(((Variable *)tmpThis->tree->LArg())->Name(),
+					tmpThis);
 			}
 			tmpThis->next = NULL;
 			this->tail = tmpThis;
