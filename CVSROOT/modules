@@ -902,6 +902,15 @@ TRUNK_BUILD	-a V6_9_BUILD
 # NOTE: most of this is cruft and should probably be pruned some day
 ######################################################################
 
+# The V6_9-privsep-branch added the condor_procd and condor_transferd
+# directories
+V6_9_PRIVSEP_SRC       -a V6_9_SRC src/condor_procd src/condor_transferd
+V6_9_PRIVSEP_UNIX_CODE -a TOOLS V6_9_PRIVSEP_SRC
+V6_9_PRIVSEP_NT_CODE   -a NT_TOOLS NT_PROGRAMS V6_9_PRIVSEP_SRC
+V6_9_PRIVSEP_CODE      -a TOOLS NT_TOOLS NT_PROGRAMS V6_9_PRIVSEP_SRC
+V6_9_PRIVSEP_ALL       -a DOC V6_9_PRIVSEP_CODE
+V6_9_PRIVSEP_BUILD     -a V6_9_PRIVSEP_ALL externals
+
 # The V6_7-mirror-branch has condor_c-gahp, so we need to use
 # different modules for it
 V6_7_MIRROR_UNIX_CODE	-a TOOLS V6_7_MIRROR_SRC
