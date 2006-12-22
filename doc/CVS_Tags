@@ -8,6 +8,37 @@
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
 
+12/22/06 trunk-pre-merge-V6_9_0-merge-2
+         trunk-post-merge-V6_9_0-merge-2
+   The state of the doc directory in the trunk (HEAD) before and after
+   merging changes from the V6_9_0-branch as tagged V6_9_0-merge-2.
+
+12/22/06 V6_9_0-merge-2
+   The state of the doc directory in the V6_9_0-branch for a merge
+   into the trunk (HEAD).
+
+12/22/06 V6_9_0-pre-merge-V6_8-merge-5
+        V6_9_0-post-merge-V6_8-merge-5
+   The state of the doc directory in the V6_8-branch before and after
+   merging changes from the V6_8-branch as tagged V6_8-merge-5.
+
+12/22/06 V6_8-merge-5
+   The state of the doc directory in the V6_8-branch for a merge
+   into the trunk (into V6_9_0-branch).
+
+12/22/06 V6_8-pre-merge-V6_8_3-merge-1
+         V6_8-post-merge-V6_8_3-merge-1
+   The state of the doc directory in V6_8-branch before and after
+   merging changes from the V6_8_3-branch as tagged V6_8_3-merge-1.
+
+12/22/06 V6_8_3-merge-1
+   The state of the doc directory in the V6_8_3-branch for a merge
+   into V6_8-branch.
+
+12/6/06 V6_8_3-root and V6_8_3-branch
+   A branch for the 6.8.3 doc series of the manual, created from
+   V6_8_3-root on the V6_8-branch of doc.
+
 12/6/06 trunk-pre-merge-V6_9_0-merge-1
         trunk-post-merge-V6_9_0-merge-1
    The state of the doc directory in the trunk (HEAD) before and after
@@ -21,6 +52,10 @@
         V6_9_0-post-merge-V6_8-merge-4
    The state of the doc directory in the V6_8-branch before and after
    merging changes from the V6_8-branch as tagged V6_8-merge-4.
+
+12/5/06 V6_8-merge-4
+   The state of the doc directory in the V6_8-branch for a merge
+   into the trunk (into V6_9_0-branch).
 
 11/28/06 V6_8-pre-merge-V6_8_2-merge-2
         V6_8-post-merge-V6_8_2-merge-2
