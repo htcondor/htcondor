@@ -4,557 +4,366 @@
 \index{security! in Condor|(}
 
 Security in Condor is a broad issue, with many aspects to consider.
-Because Condor's main purpose is to allow users to run
-arbitrary code on large numbers of computers,
-it is important to try to
-limit who can access a Condor pool and what privileges they have when
-using the pool.
-This section covers these topics. 
+Because Condor's main purpose is to allow users to run arbitrary code
+on large numbers of computers, it is important to try to limit who can
+access a Condor pool and what privileges they have when using the
+pool.  This section covers these topics.
 
-It is important to understand what kinds of resource attacks 
-Condor can prevent, and which attacks it cannot prevent.
-Condor will not prevent security breaches
-of users
-that can elevate their privilege to the root or
-administrator account.
-Condor does not run user jobs in sandboxes
-(standard universe jobs are a partial exception to this),
-so it cannot prevent
-malicious actions by user jobs.
-An example might be a job that launches distributed denial of service
-attacks.
+There is a distinction between the
+kinds of resource attacks Condor can prevent,
+and the kids of attacks Condor cannot prevent.
+Condor cannot
+prevent security breaches of users that can elevate their privilege to
+the root or administrator account.
+Condor does not run user jobs in
+sandboxes (standard universe jobs are a partial exception to this),
+so Condor cannot prevent malicious actions by user jobs.
+An example of a malicious job is
+one that launches a distributed denial of service attack.
 Condor assumes that users are trustworthy.
-Condor can
-prevent unauthorized access to the Condor pool,
-to help you ensure that only trusted users have access to the pool.
-In addition,
-Condor provides encryption and integrity checking,
-to ensure that data
-(both Condor's data and user jobs' data)
-has not been examined or tampered with. 
+Condor can prevent unauthorized access to the Condor pool,
+to help ensure that only trusted users have access to the pool.
+In addition, Condor provides encryption and
+integrity checking, to ensure that data (both Condor's data and user
+jobs' data) has not been examined or tampered with.
 
-Broadly speaking, there are a few important aspects to security in
-Condor: 
+Broadly speaking, aspects of security in
+Condor may be categorized and described: 
 
 \begin{description}
 
-\item[Users] Because privilege or capability in an operating system
-is based on a process owner,
-which process owner (or user) a job or Condor daemon is run
-as is critical.
-%What user is used to run the Condor daemons? What user is
-%used to run jobs? 
-The Condor system 
-prefers that Condor daemons are run as the user \Login{root},
-while other common operations are to be owned by
-a separate user.
-This is usually the
-\Login{condor} user, but any user can be chosen. This topic is discussed
-in more detail in Section~\ref{sec:uids}. 
+\item[Authentication] 
+A proper identification of a user is accomplished by the
+process of authentication.
+It attempts to distinguish between real users and impostors.
+By default, Condor's authentication uses the user id (UID)
+to determine identity,
+but Condor can use a variety of authentication mechanisms,
+including the stronger  authentication methods Kerberos and GSI.
 
-\item[Authentication] When someone submits a job to Condor, how do you
-know who it is? The process by which is determine who a user is, is
-called authentication. By default, Condor's authentication simply uses
-the user id (or uid) to determine who a user is, but Condor can use a
-variety of authentication mechanisms including Kerberos and GSI to
-perform authentication more securely. 
+\item[Authorization] Authorization specifies who is allowed
+to do what.
+Some users are allowed to submit jobs,
+while other users are allowed Condor administration privileges.
+Condor provides authorization on either a per-user or on
+a per-machine basis.
 
-\item[Authorization] Once you have authenticated a user and you know
-who it is, what are they allowed to do? Some users are allowed to
-submit jobs, while other users are allowed Condor administration
-privileges. Condor provides facilities for deciding what different
-users are authorized to do. 
+\item[Privacy] Condor may encrypt data sent across the network, which
+(normally) prevents others from viewing the data.
+With persistence and sufficient computing power,
+decryption is possible. 
+Condor can encrypt the data sent for internal communication, 
+as well as user data, such as files and executables.
+Encryption operates on network
+transmissions: unencrypted data is stored on disk.
 
-\item[Privacy] Condor can encrypt data sent across the network, which
-can normally prevent other people from your data. (If someone is
-persistent enough and has sufficient computing power, they could
-decrypt it, but this is unlikely.) Condor can encrypt either the data
-that it sends for internal communication, or user data, such as files
-and executables. Note that the encryption is used for network
-transmissions: data is still stored on disk unencrypted.
-
-\item[Integrity] Condor can send additional cryptographic data that
-can be used to verify that network data transmissions have not been
-tampered with. This can be used to prevent so-called ``man-in-the
-middle'' attacks in which an attacker changes the data being sent
-across the network without either side being aware of the
-modifications. Note that the integrity information is only for network
+\item[Integrity] 
+The  \Term{man-in-the-middle} attack tampers with data
+without the awareness of either side of the communication.
+Condor's integrity check sends additional cryptographic data
+to verify that network data transmissions have not been
+tampered with.
+Note that the integrity information is only for network
 transmissions: data stored on disk does not have this integrity
 information. 
 
-\end{description}
-
-The following subsections describe these topics in more detail. 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:uids}User Accounts in Condor}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\index{UIDs in Condor|(}
-
-On a Unix system,
-UIDs (User IDentification numbers) form part of an operating system's
-tools for maintaining access control.
-Each executing program has a UID,
-a unique identifier of a user executing the program.
-This is also called the real UID.
-\index{UID!real}
-A common situation has one user executing the program owned
-by another user.
-Many system commands work this way, with a user (corresponding
-to a person) executing a program belonging to (owned by) \Login{root}.
-Since the program may require privileges that \Login{root} has which
-the user does not have, a special bit in the program's
-protection specification (a setuid bit) allows the program
-to run with the UID of the program's owner, instead of the
-user that executes the program.
-This UID of the program's owner is called an effective UID.
-\index{UID!effective}
-
-%GID (group identification)
-Condor works most smoothly when its daemons run as \Login{root}.
-The daemons then have the ability to switch their 
-effective UIDs at will.
-When the daemons run as \Login{root},
-they normally leave their effective UID and GID (Group IDentification)
-to be those of user and group \Login{condor}.
-This allows access to the log files without
-changing the ownership of the log files.
-It also allows access to these files when
-the user \Login{condor}'s home directory resides on an NFS server.
-\Login{root} can not normally access NFS files.
-
-If there is no \Login{condor} user and group on the system, an
-administrator can specify which UID and GID the Condor daemons should
-use when they do not need root privileges in two ways:
-either with the \Env{CONDOR\_IDS} environment variable or the
-\Macro{CONDOR\_IDS} configuration file setting.
-In either case, the value should be the UID integer, followed by a
-period, followed by the GID integer.
-For example, if a Condor administrator does not want to create a
-\Login{condor} user, and instead wants their Condor daemons to run as
-the \Login{daemon} user (a common non-root user for system daemons to
-execute as), the \Login{daemon} user's UID was 2, and group
-\Login{daemon} had a GID of 2, the corresponding setting in the Condor
-configuration file would be \Expr{CONDOR\_IDS = 2.2}.
-
-On a machine where a job is submitted,
-the \Condor{schedd} daemon
-changes its effective UID to \Login{root}
-such that it has the capability to start up a \Condor{shadow} daemon
-for the job.
-Before a \Condor{shadow} daemon is created,
-the \Condor{schedd} daemon
-switches back to \Login{root},
-so that it can start up the \Condor{shadow} daemon with the (real) UID
-of the user who submitted the job.
-Since the \Condor{shadow} runs as the owner of the job,
-all remote system calls are performed under the owner's UID
-and GID.
-This ensures that as the job executes,
-it can access only files that its owner could access if the job
-were running locally, without Condor.
-
-On the machine where the job executes, the 
-job runs either as the submitting user or as user \Login{nobody},
-to help ensure that the job cannot access local resources or do harm.  
-If the \Macro{UID\_DOMAIN} matches,
-and the user exists as the same UID in password files
-on both the submitting machine and on the execute machine,
-the job will run as the submitting user.
-If the user does not exist in the execute machine's
-password file and \Macro{SOFT\_UID\_DOMAIN} is True,
-then the job will run under the submitting user's UID anyway (as
-defined in the submitting machine's password file).
-If \MacroNI{SOFT\_UID\_DOMAIN} is False,
-and \MacroNI{UID\_DOMAIN} matches,
-and the user is not in the execute machine's password file,
-then the job execution attempt will be aborted.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Non-Root}Running Condor as Non-Root}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-While we strongly recommend starting up the Condor daemons as \Login{root},
-we understand that it is not always possible to do so.
-The main problems
-appear when one Condor installation is shared by many users on a
-single machine, or if machines are set up to only execute
-Condor jobs.  With a submit-only installation for a
-single user, there is no need for (or benefit from) running as
-\Login{root}.
-
-What follows are the effects on the various parts of Condor of running
-both with and without root access.
-
-\begin{description}
-
-\item[\Condor{startd}] If you're setting up a machine to run Condor
-   jobs and don't start the \Condor{startd} as \Login{root}, you're basically
-   relying on the goodwill of your Condor users to agree to the policy
-   you configure the \Condor{startd} to enforce as far as starting, suspending,
-   vacating and killing Condor jobs under certain conditions.  If you
-   run as \Login{root}, however, you can enforce these policies regardless of
-   malicious users.  By running as \Login{root}, the Condor daemons run with a
-   different UID than the Condor job that gets started (since the
-   user's job is started as either the UID of the user who submitted
-   it, or as user \Login{nobody}, depending on the \Macro{UID\_DOMAIN}
-   settings).  Therefore, the Condor job cannot do anything to the
-   Condor daemons.  If you don't start the daemons as \Login{root}, all
-   processes started by Condor, including the end user's job, run with
-   the same UID (since you can't switch UIDs unless you're \Login{root}).
-   Therefore, a user's job could just kill the \Condor{startd} and
-   \Condor{starter} as soon as it starts up and by doing so, avoid
-   getting suspended or vacated when a user comes back to the machine.
-   This is nice for the user, since they get unlimited access to the
-   machine, but awful for the machine owner or administrator.  If you
-   trust the users submitting jobs to Condor, this might not be a
-   concern.  To ensure, however, that the policy you choose is
-   effectively enforced by Condor, the \Condor{startd} should be
-   started as \Login{root}.
-
-% Note: the "process information on MacOS X" case is kinda a bug.
-% An existing interface was made root only because it gave away too
-% much information.  However Apple is working on a new, safe and
-% available to all users interface.  At which point this example
-% won't be true and a new example will be needed. The old example
-% used to be "load information on IRIX", but we no longer support
-% IRIX.
-   In addition, some system information cannot be obtained without
-   \Login{root} access on some platforms (such as process information on MacOS X).  As a
-   result, when running without \Login{root} access, the \Condor{startd} must
-   call other programs (for example, \Prog{uptime}) to get this
-   information.  This is much less efficient than getting the
-   information directly from the kernel (which is what we do if we're
-   running as \Login{root}).  On Linux and Solaris, we can get this
-   information directly without root access, so this is not a concern
-   on those platforms.
-
-   If you cannot have all of Condor running as \Login{root}, at least consider
-   whether you can install the \Condor{startd} as setuid root.  That
-   would solve both of these problems.  If you cannot do that, you
-   could also install it as a setgid sys or kmem program (depending on
-   whatever group has read access to \File{/dev/kmem} on your system),
-   and that would at least solve the system information problem.
-
-\item[\Condor{schedd}] The biggest problem running the \Condor{schedd}
-    without root access is that the \Condor{shadow} processes which it
-    spawns are stuck with the same UID the \Condor{schedd} has.  This
-    means that users submitting their jobs must go out of their way
-    to grant write access to user or group \Login{condor} (or whoever the
-    \Condor{schedd} is running as) for any files or directories their jobs
-    write or create.  Similarly, read access must be granted to their
-    input files.
-
-    Consider installing \Condor{submit} as a setgid condor
-    program so that at least the \File{stdout}, \File{stderr} and
-    \File{UserLog} files get created with the right permissions.  If
-    \Condor{submit} is a setgid program, it will automatically set
-    it's umask to 002, and create group-writable files.  This
-    way, the simple case of a job that only writes to \File{stdout}
-    and \File{stderr} will work.  If users have programs that open
-    their own files, they will need to know and set the proper permissions
-    on the directories they submit from.
-
-\item[\Condor{master}] The \Condor{master} is what spawns the
-    \Condor{startd} and \Condor{schedd}. To have both running
-    as \Login{root}, have the \Condor{master} run as \Login{root}.
-    This happens
-    automatically if you start the master from your boot scripts.
-
-\item[\Condor{negotiator} and \Condor{collector}]
-    There is no need to have either of these daemons running as \Login{root}.
-
-\item[\Condor{kbdd}] On platforms that need the \Condor{kbdd} (Digital
-    Unix) the \Condor{kbdd} must run as \Login{root}.  If it is
-    started as any other user, it will not work.  You might consider
-    installing this program as a setuid root binary if you cannot run
-    the \Condor{master} as \Login{root}.  Without the \Condor{kbdd}, the
-    startd has no way to monitor mouse activity at all, and the only
-    keyboard activity it will notice is activity on ttys (such as
-    xterms, remote logins, etc).
+\item[Users] Because authorization or capability in an operating system is
+based on a process owner, which process owner (or user) a job or
+Condor daemon is run as is critical.
+The Condor system prefers that Condor daemons are run as the user
+\Login{root}, while other common operations are to be owned by a
+separate user.  This is usually the \Login{condor} user, but any user
+can be chosen.
+See Section~\ref{sec:uids} for more detail.
 
 \end{description}
 
-If you do choose to run Condor as non-root, then you may choose almost any
-user you like. A common choice is to use the \Login{condor} user; this
-simplifies the setup because Condor will look for its configuration
-files in the \Login{condor} user's directory. If you do not
-select the \Login{condor}
-user, then you will need to ensure that the configuration is set
-properly so that Condor can find its configuration files. 
-
-If users will be submitting jobs as a user different than the user
-Condor is running as (perhaps you are running as the \Login{condor} user and
-users are submitting as themselves), then users have to be careful to
-only have file permissions properly set up to be accessible by the
-user Condor is using. In practice, this means creating world-writable
-directories for output from Condor jobs.  This creates a potential
-security risk, in that any user on the machine where the job is
-submitted can alter the data, remove it, or do other undesirable
-things.  It is only acceptable in an environment where users can trust
-other users.
-
-Normally, users without root access who wish to use Condor on their
-machines create a \File{condor} home directory somewhere within their
-own accounts and start up the daemons (to run with the UID of the
-user).  As in the case where the daemons run as user \Login{condor}, there is
-no ability to switch UIDs or GIDs.  The daemons run as the UID and GID
-of the user who started them.  On a machine where jobs are submitted,
-the \Condor{shadow} daemons all run as this same user. But if other
-users are using Condor on the machine in this environment, the
-\Condor{shadow} daemons for these other users' jobs execute with the
-UID of the user who started the daemons.  This is a security risk,
-since the Condor job of the other user has access to all the files and
-directories of the user who started the daemons.  Some installations
-have this level of trust, but others do not.  Where this level of
-trust does not exist, it is best to set up a \Login{condor} account and group,
-or to have each user start up their own Personal Condor submit
-installation.
-
-When a machine is an execution site for a Condor job, the Condor job
-executes with the UID of the user who started the \Condor{startd}
-daemon.  This is also potentially a security risk, which is why we do
-not recommend starting up the execution site daemons as a regular
-user.  Use either \Login{root} or a user
-(such as the user \Login{condor}) that exists
-only to run Condor jobs.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:RunAsNobody}Running Jobs as the Nobody User}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{user nobody!potential security risk with jobs}
-\index{UID!potential risk running jobs as user nobody}
-\index{security!running jobs as user nobody}
-
-Under Unix, Condor runs jobs either as the user that submitted the jobs,
-or as the user called \Login{nobody}.
-Condor uses user \Login{nobody} if the value of the \MacroNI{UID\_DOMAIN}
-configuration variable of the
-submitting and executing machines are different.
-
-When Condor cleans up after a executing a vanilla universe job,
-it does the best that it can by
-deleting all of the processes started by the job.
-Unfortunately, it is possible to fool Condor,
-and leave processes behind after Condor has cleaned up.
-If the job is running as user \Login{nobody},
-it is possible for it to leave a lurker process lying in wait
-for the next job run as \Login{nobody}.
-The lurker process may prey maliciously on the next \Login{nobody} user job,
-wreaking havoc.
-
-Condor could prevent this problem by simply killing all processes run by
-the \Login{nobody} user, but this would annoy many system administrators.
-The \Login{nobody} user is often used for non-Condor system processes.
-
-Condor provides a two-part solution to this difficulty.
-First, create user accounts specifically for Condor to use instead
-of user \Login{nobody}.
-These can be low-privilege accounts,
-as the \Login{nobody} user is.
-Create one of these accounts for each
-virtual machine per computer,
-so that distinct users can be used for concurrent processes.
-This prevents malicious behavior between
-processes running on distinct virtual machines.
-Section ~\ref{sec:Configuring-SMP} details virtual machines.
-For a sample machine with two virtual machines,
-create two users that are intended only to be used by Condor.
-As an example, call them \Login{nobody1} and \Login{nobody2}.
-Tell Condor about these users
-with the \Macro{VMx\_USER} configuration variables,
-where x is replaced with the
-virtual machine number. In this example:
-
-\begin{verbatim}
-   VM1_USER = nobody1
-   VM2_USER = nobody2
-\end{verbatim}
-
-Reconfigure Condor, so that Condor will make use of these users
-instead of the \Login{nobody} user.
-One more change is required to prevent lurker processes:
-tell Condor that these accounts are intended only to be used by Condor,
-so Condor can kill all the processes belonging to these users upon
-job completion.
-The configuration variable \Macro{EXECUTE\_LOGIN\_IS\_DEDICATED}
-is introduced and set to \ShortExpr{True} for this purpose.
-
-\begin{verbatim}
-   EXECUTE_LOGIN_IS_DEDICATED = TRUE
-\end{verbatim}
-
-Notes:
-\begin{enumerate}
-
-\item{
-If \MacroNI{UID\_DOMAIN} is not set in the configuration, do not
-set \MacroNI{EXECUTE\_LOGIN\_IS\_DEDICATED}.
-In this case, lurker processes are not a concern,
-and other processes that a user may have running would be killed
-improperly.
-}
-
-\item{
-This only applies to vanilla universe and Java universe jobs.
-Standard universe jobs are not a concern,
-because they are not allowed to create new processes.
-}
-
-\item{
-On Windows, \MacroNI{VMx\_USER} will only work if the credential
-of the specified user is stored on the execute machine
-using \Condor{store\_cred}.
-See the \Condor{store\_cred}
-manual page (in section~\ref{man-condor-store-cred})
-for details of this command.
-}
-\end{enumerate}
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:DirOfJob}Working Directories for Jobs}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{cwd!of jobs}
-\index{current working directory}
-
-Every executing process has a notion of its current working directory.
-This is the directory that acts as the base for all file system
-access. 
-There are two current working directories for any Condor job:
-one where the job is submitted and a
-second where the job executes.
-When a user submits a job,
-the submit-side current working directory is
-the same as for the user when the \Condor{submit} command
-is issued.
-The \SubmitCmd{initialdir} submit command may change this,
-thereby allowing different jobs to have different working
-directories.
-This is useful when submitting large numbers of jobs.
-This submit-side current working directory remains unchanged for the
-entire life of a job. 
-The submit-side current working directory is also 
-the working directory of the \Condor{shadow} daemon.
-This is particularly relevant for standard universe jobs,
-since file system
-access for the job goes through the \Condor{shadow} daemon, and
-therefore all accesses behave as if they were executing without
-Condor.
-
-There is also an execute-side current working directory.
-For standard universe jobs,
-it is set to the
-\File{execute} subdirectory of Condor's home directory.
-This directory is world-writable, since a Condor job usually runs as user
-\Login{nobody}.
-Normally, standard universe jobs would never access this directory,
-since all I/O system calls are passed back to the
-\Condor{shadow} daemon on the submit machine.
-In the event, however,
-that a job crashes and creates a core dump file, the execute-side
-current working directory needs to be accessible by the job
-so that it can write the core file.
-The core file is moved back to the submit machine,
-and the \Condor{shadow} daemon is informed.
-The \Condor{shadow} daemon
-sends e-mail to the job owner announcing the core file, and provides a
-pointer to where
-the core file resides in the submit-side current working directory.
-
-\index{UIDs in Condor|)}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Config-Security}Basic Security Configuration}
+\subsection{\label{sec:Config-Security}Condor's Security Model}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Condor provides support for strong authentication, encryption,
-integrity assurance, as well as authorization.
-Condor, however, does not turn on these
-features by default for two reasons.
-First, setting up strong
-authentication and authorization require extra support outside of
-Condor, such as GSI certificates or a Kerberos Key Distribution Center
-(KDC). Second, past versions of Condor did not support strong security,
-so the default configuration of Condor works correctly when
-interoperating with new or old installations of Condor.
+At the heart of Condor's security model is the notion that 
+the execution of individual commands are subject to access
+checks. 
+For example, the job submission command (\Condor{submit}) can be restricted
+in such a way that only a certain set of users are allowed to use it.
+A user outside of this authorized list of users would be prevented from
+submitting jobs for execution in Condor.
 
-The default security configuration in Condor is host-based security,
-and is described in Section~\ref{sec:Host-Security}. 
-This form of security limits access to Condor based on IP addresses.
+A possible solution, but one that does not scale well,
+maintains a list of authorized users for 
+every individual operation that Condor supports.
+Instead, Condor commands are
+categorized into groups called \Term{access levels},
+based on the type of operation performed.
+The user of a specific commands must be authorized at
+an access level.
 For example,
-Condor can be configured to allow job submissions from everyone in the
-example.com domain,
-but administrator commands can only be run from
-the machine command.example.com.
-But because host-based security does not distinguish users,
-anyone that has access to the machine
-command.example.com may execute administrator commands.
+the \Condor{status} command requires the \DCPerm{READ} access level.
+Actions that accomplish management tasks,
+such as shutting down or restarting of a daemon
+require an \DCPerm{ADMINISTRATOR} access level.
+See
+Section~\ref{sec:Security-Authorization}
+for a full list of Condor's access levels and their meanings.
 
-Condor is also susceptible to attacks that can impersonate IP addresses.
-Although host-based security is limited,
-it is acceptable for many small installations,
-particularly if machines are on private networks.
-The remainder of this section discusses user-based security.
+There are two sides to any communication or command invocation in Condor.
+One side is identified as the \Term{client},
+and the other side is identified as the \Term{daemon}.
+The client is the party that initiates the command,
+and the daemon is the party that processes the command and responds.
+In some cases it is easy to distinguish the
+client from the daemon, while in other cases it is not as easy.
+Condor tools such as \Condor{submit} and \Condor{config\_val} are client tools.
+They send commands to daemons and act as clients in all their communications.
+For example, the \Condor{submit} command communicates
+with the \Condor{schedd}.
+Behind the scenes, Condor daemons also communicate with each other;
+in this case the daemon initiating the command plays the role of the client.
+For instance,
+the \Condor{negotiator} daemon acts as a client when contacting the
+\Condor{schedd} daemon to initiate matchmaking.
+Once a match has been found,
+the \Condor{schedd} daemon acts as a client and contacts the
+\Condor{startd} daemon.
+
+All the basic ideas of Condor's security model
+are implemented using configuration.
+Commands in Condor are executed over TCP/IP network connections.
+While network communication enables Condor to manage
+resources that are distributed across an organization (or beyond),
+it also brings in security challenges.
+Condor must have ways of ensuring that commands are being sent
+by trustworthy users.
+Jobs are operating on sensitive data must be allowed to be
+encrypted such that the data is not seen by outsiders.
+Jobs may need assurance that data has not been tampered with.
+These issues
+can be addressed with Condor's authentication,
+encryption, and integrity features.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:client-vs-daemon}Client Versus Daemon
-Security Configuration}
+\subsection{\label{sec:Security-Negotiation}Security Negotiation}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-The security configuration can be broken into two parts:
-the client and the daemon.
-The client is the party that initiates communication,
-while the daemon is the party that responds.
-In some cases it is easy
-to distinguish the client from the daemon, while in other cases it is 
-not as easy. 
+Because of the wide range of environments and security demands necessary,
+Condor must be flexible.
+Configuration provides this flexibility.
+The process by which Condor determines the security settings that will
+be used when a connection is established is called
+\Term{security negotiation}.
+Security negotiation's primary purpose is to determine which
+of the features of authentication, encryption, and integrity checking
+will be enabled for a connection.
+In addition, since Condor supports multiple
+technologies for authentication and encryption,
+security negotiation also
+determines which technologies is chosen for the connection.
 
-Condor tools such as \Condor{submit} and \Condor{config\_val} are
-client tools.
-They communicate with daemons.
-The \Condor{submit} command communicates with the \Condor{schedd}.
-The \Condor{config\_val} command may communicate with any Condor daemon.
+%The issue of allowing flexible configuration of security options is
+%complicated by the fact that Condor components that wish to interact
+%may be configured to use different security options. This should not
+%preclude the interaction from taking place. Pretend Frida, an
+%aggressive cycle-scavenger, runs a variety of Condor tools from her
+%workstation.  She would prefer not to use authentication as part of
+%her interactions with Condor (because she thinks it's a waste of
+%CPU). A \Condor{schedd} that she submits jobs to, however, refuses to
+%accept any job unless it can be sure of the submitter's identity, and
+%thus wishes to force authentication. Given the \Condor{schedd}'s
+%policy, Frida would rather her jobs run even if she does have to
+%authenticate first, so job submission should be allowed to commence
+%(with authentication turned on, of course).
 
-Behind the scenes, Condor daemons also communicate with each other.
-For instance, the \Condor{negotiator} daemon will act as a client,
-contacting the \Condor{schedd} daemon to initiate matchmaking.
-When a match has been found,
-the \Condor{schedd} daemon will act as a client and
-contact the \Condor{startd} daemon. 
+Security negotiation is a completely separate process from
+matchmaking, and should not be confused with any specific function of
+the \Condor{negotiator} daemon.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:security-negotiation} Security Negotiation}
+\subsubsection{\label{sec:security-negotiation-features}Configuration}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{security!negotiation}
 
-When a daemon receives a request, it uses the client's security
-configuration information together with its own configuration settings
-to decide upon the security aspects of the communication.
-This is a negotiation between the client and the daemon.
-The daemon replies to the client with a set of reconciled policies that
-controls the communication, including authentication, encryption, and
-integrity algorithms.
-For instance, if the client insists upon using
-GSI authentication,
-while the daemon considers it optional,
-then GSI authentication will be used. 
-Note that this process is called security negotiation.
-Although it has a similar name to the negotiation provided
-by the \Condor{negotiator} daemon,
-the two are completely independent processes.
+The macro names that determine what features will be used during
+client-daemon communication follow the pattern:
+\begin{verbatim}
+    SEC_<context>_<feature>
+\end{verbatim}
 
-If the daemon determines that authentication is required,
-then the client must follow the chosen authentication protocol.
-After the required authentication,
-the client can send its request to the daemon.
-The daemon identifies the access level required for the specific request,
-and it checks the configuration settings to
-determine if the client has the required access level.
-If the client has the required access level,
-permission is granted, and the request is serviced.
+The \verb@<feature>@
+portion of the macro name determines which security feature's
+policy is being set.
+\verb@<feature>@ may be any one of
+\begin{verbatim}
+    AUTHENTICATION
+    ENCRYPTION
+    INTEGRITY
+    NEGOTIATION
+\end{verbatim}
 
+The \verb@<context>@ component of the security policy macros can be
+used to craft a fine-grained security policy based on the type of
+communication taking place.
+\verb@<context>@ may be any one of
+\begin{verbatim}
+    CLIENT
+    READ
+    WRITE
+    ADMINISTRATOR
+    CONFIG
+    OWNER
+    DAEMON
+    NEGOTIATOR
+    DEFAULT
+\end{verbatim}
+
+These configuration macros may be set to any of the following
+values:
+\begin{verbatim}
+    REQUIRED
+    PREFERRED
+    OPTIONAL
+    NEVER 
+\end{verbatim}
+
+Security negotiation resolves various client-daemon combinations
+of desired security features in order to set a policy.
+
+As an example, consider Frida the scientist.
+Frida wants to avoid authentication when possible.
+She sets
+\begin{verbatim}
+    SEC_DEFAULT_AUTHENTICATION = OPTIONAL
+\end{verbatim}
+The \Condor{schedd} that she would like to submit to, however, is
+operated by a security-conscious system administrator who dutifully
+sets:
+\begin{verbatim}
+    SEC_DEFAULT_AUTHENTICATION = REQUIRED
+\end{verbatim}
+When Frida submits her jobs, Condor's security negotiation will
+determine that authentication will be used and allows the command to
+continue.
+
+Table~\ref{table:Security-Negotiation} shows how security negotiation
+resolves various client-daemon combinations of security feature policy
+settings.
+Within the table, Yes means the feature will be
+used during communication.
+No means it will not.
+Fail means that the policy settings are incompatible and the communication
+cannot continue.
+Frida's (client) setting of
+\verb@OPTIONAL@ along with the \Condor{schedd}'s (daemon) setting of
+\verb@REQUIRED@ results in authentication being enabled for their
+communications.
+
+\begin{table}[tb]
+\centering
+\label{table:Security-Negotiation}
+\begin{tabular}{|c|c|c|c|c|c|}
+  \hline
+  \multicolumn{2}{|c|}{\hfill} & \multicolumn{4}{c|}{Daemon Setting} \\
+  \cline{3-6}
+  \multicolumn{2}{|c|}{\hfill} & NEVER & OPTIONAL & PREFERRED & REQUIRED \\
+  \hline
+  \hfill & NEVER & No & No & No & Fail \\
+  \cline{2-6}
+  Client & OPTIONAL & No & No & Yes* & Yes* \\
+  \cline{2-6}
+  Setting & PREFERRED & No* & Yes & Yes & Yes \\
+  \cline{2-6}
+  \hfill & REQUIRED & Fail & Yes & Yes & Yes \\
+  \hline
+  \multicolumn{6}{|l|}{\footnotesize{
+      *These combinations will result in failure for the
+       NEGOTIATION feature}} \\
+  \hline
+\end{tabular}
+\caption{How negotiation resolves whether a given security
+         feature will be used. }
+\end{table}
+
+
+It is important to note that these features are not completely
+independent of each other. In particular, no other security features
+are possible unless \verb@NEGOTIATION@ is used. In addition, neither
+\verb@ENCRYPTION@ or \verb@INTEGRITY@ may be used on a connection
+unless \verb@AUTHENTICATION@ is enabled (since authentication is
+needed to provide a secure key exchange).
+
+%It may seems strange that \verb@NEGOTIATION@ is part of the above
+%list. How can Condor components negotiate regarding whether or not
+%they'll negotiate? The answer is that the protocol for determining
+%whether negotiation will be used is much less flexible. Table X is
+%annotated to show cases where the \verb@NEGOTIATION@ policy fails to
+%reach a ``correct' result.
+
+Setting \verb@SEC_CLIENT_<feature>@ will determine the policy for all
+outgoing commands. Policy for incoming commands (i.e for the daemon
+side) takes a more fine-grained approach that allows different
+settings depending on the access level of the command being
+received. For example, it may be desirable to have all administrative
+actions (\DCPerm{ADMINISTRATOR}=level commands) require authentication
+but not be so strict regarding inquiries on pool status
+(\DCPerm{READ}-level commands). Such a policy could include the
+settings:
+\begin{verbatim}
+SEC_ADMINISTRATOR_AUTHENTICATION = REQUIRED
+SEC_READ_AUTHENTICATION = OPTIONAL
+\end{verbatim}
+
+Finally, the \verb@DEFAULT@ value for \verb@<context>@ will be checked
+by Condor if none of the specific policy settings (CLIENT, READ,
+WRITE, etc.) are present. This makes it possible to set a baseline
+policy with a single macro setting.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:security-negotiation-methods}Configuration for the
+Negotiation of Security Methods}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Deciding what security features will be enabled for a connection is
+just one part of security negotiation. Given a specific feature,
+Condor can support a variety of \emph{methods}, or technologies, for
+enabling that feature. Currently, authentication and encryption both
+support multiple methods.
+
+Since multiple protocols are available for the authentication and
+encryption features of Condor, communicating daemons must have a way
+to decide what protocol to use. This is decided as part of security
+negotiation.
+
+Configuration macros that determine the policy used for negotiating
+methods to use for authentication and encryption, respectively, are of
+the forms:
+\begin{verbatim}
+SEC_<context>_AUTHENTICATION_METHODS
+SEC_<context>_CRYPTO_METHODS
+\end{verbatim}
+
+The \verb@<context>@ part has the same meaning as it does for the
+feature policy macros discussed above, allowing policy to be tailored
+depending on the type of communication.
+
+These macros can be set to a comma- or space-delimited list of
+possible methods to use. See the individual sections on authentication
+(\ref{sec:Security-Authentication}) and encryption
+(\ref{sec:Security-Encryption}) for all possible names.
+
+For example, a client may be configured with:
+\begin{verbatim}
+SEC_CLIENT_AUTHENTICATION_METHODS = FS, GSI
+\end{verbatim}
+and a daemon the client is trying to contact with:
+\begin{verbatim}
+SEC_DEFAULT_AUTHENTICATION_METHODS = GSI
+\end{verbatim}
+
+Negotiation will determine that GSI authentication is the only
+compatible choice. If there are multiple compatible authentication
+methods, negotiation will determine the list of acceptable methods and
+they will be tried in order until one succeeds. The next section will
+discuss authentication in more detail.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Security-access-levels}Access Level Descriptions}
@@ -631,143 +440,6 @@ by Condor.
    that it has been matched to a \Condor{schedd} with jobs to run.
 
 \end{description}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Security-NamesValues} Security Macro Names and Values}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-There are a large number of security configuration macros. Fortunately
-you can usually deal with a small subset. In addition, most
-configuration macros follow the pattern
-\begin{verbatim}
-    SEC_<access-level>_<type>
-\end{verbatim}
-where the \verb@<access-level>@ is one of of the access levels defined above: 
-\begin{verbatim}
-    DEFAULT
-    READ
-    WRITE
-    ADMINISTRATOR
-    CONFIG
-    OWNER
-    NEGOTIATOR
-    CLIENT
-\end{verbatim}
-% commented out June 04, as it has not been implemented
-%   DAEMON
-
-Note that both \MacroNI{CLIENT} and \MacroNI{DEFAULT} 
-from this list are not actually access levels.
-The \MacroNI{CLIENT} is used to define the client's requirements
-and preferences in a secure communication.
-The \MacroNI{DEFAULT} is used to define all levels of access
-for a specific configuration variable when individual levels
-are not specified. 
-This can sometimes be used in place of using any of
-the other access levels,
-if it is okay for all of them to be the same. 
-Note that if \MacroNI{DEFAULT} is used in combination with another
-access level, then \MacroNI{DEFAULT} will apply in all cases, except
-for that access level. 
-
-The \verb@<type>@ is one of
-\begin{verbatim}
-    AUTHENTICATION
-    ENCRYPTION
-    INTEGRITY
-    NEGOTIATION
-\end{verbatim}
-Two examples of the complete macro names are
-\MacroNI{SEC\_ADMINISTRATOR\_AUTHENTICATION}
-and
-\MacroNI{SEC\_DEFAULT\_INTEGRITY}.
-
-Each configuration variable would be defined with one
-of four predefined values.
-The values are
-\begin{verbatim}
-    REQUIRED
-    PREFERRED
-    OPTIONAL
-    NEVER 
-\end{verbatim}
-For example, a line in a daemon's configuration file
-that requires all interactions to be encrypted is
-\begin{verbatim}
-    SEC_DEFAULT_ENCRYPTION = REQUIRED
-\end{verbatim}
-A second example from a configuration file specifies that all
-requests (from a client) that would require a \MacroNI{WRITE}
-access level be authenticated is
-\begin{verbatim}
-    SEC_WRITE_AUTHENTICATION = REQUIRED
-\end{verbatim}
-
-A daemon uses both the client's security configuration
-together with its own configuration to choose the security
-aspects of the communication
-for authentication, encryption, or integrity check.
-The following table defines whether or not (Yes or No) a
-communication aspect will be used, or if the setting cannot
-work (Fail) due to a mismatch in the configuration.
-
-\begin{verbatim}
-    client     daemon       Yes/No/Fail
-
-    REQUIRED   REQUIRED       Yes
-    REQUIRED   PREFERRED      Yes
-    REQUIRED   OPTIONAL       Yes
-    REQUIRED   NEVER          Fail
-
-    PREFERRED  REQUIRED       Yes
-    PREFERRED  PREFERRED      Yes
-    PREFERRED  OPTIONAL       Yes
-    PREFERRED  NEVER          No
-
-    OPTIONAL   REQUIRED       Yes
-    OPTIONAL   PREFERRED      Yes
-    OPTIONAL   OPTIONAL       No
-    OPTIONAL   NEVER          No
-
-    NEVER      REQUIRED       Fail
-    NEVER      PREFERRED      No
-    NEVER      OPTIONAL       No
-    NEVER      NEVER          No
-\end{verbatim}
-
-Here are three examples.
-
-Example 1: A user submits a job with \Condor{submit}, and this
-client's configuration has
-\begin{verbatim}
-SEC_CLIENT_AUTHENTICATION = OPTIONAL 
-\end{verbatim}
-The \Condor{schedd} daemon
-has configuration 
-\begin{verbatim}
-SEC_WRITE_AUTHENTICATION = REQUIRED
-\end{verbatim}
-Authentication will be required in order to submit the job. 
-
-Example 2: Where the configuration only contains
-\begin{verbatim}
-SEC_DEFAULT_AUTHENTICATION = REQUIRED
-\end{verbatim}
-authentication will
-be required for all communications. 
-
-Example 3: If a user executes \Condor{status} on a machine
-where the configuration specifies
-\begin{verbatim}
-SEC_DEFAULT_AUTHENTICATION = NEVER
-\end{verbatim}
-and the \Condor{collector}'s configuration specifies
-\begin{verbatim}
-SEC_READ_AUTHENTICATION = REQUIRED
-\end{verbatim}
-then \Condor{status} will be
-unable to access the information from the \Condor{collector} daemon.
-
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1177,7 +849,7 @@ Condor will also need a way to map an X.509 distinguished
 name to a Condor user id.
 This is done in an administrator-maintained file called an X.509 map file,
 mapping from X509 Distinguished Name (DN) to Condor user id.
-It is similar to a Globus gridmap file except that it is only used for
+It is similar to a Globus grid map file except that it is only used for
 mapping to a user id, not for authorization. 
 Information about authorization can be found in
 Section~\ref{sec:Security-Authorization}. 
@@ -1285,7 +957,7 @@ Kerberos authentication requires access to various files that
 usually are only accessible by the root user.
 At this time,
 the only supported way to use KERBEROS authentication is to start
-daenons Condor as root.
+daemons Condor as root.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Password-Authentication} Password Authentication}
@@ -1308,17 +980,6 @@ will be placed in a file defined by the configuration variable
 UID that Condor is started as.  On Windows, the same secure password
 store that is used for user passwords will be used for the pool
 password (see section \ref{sec:windows-sps}).
-
-It is important to note that the pool password, as a widely
-distributed secret, is only as safe as the ``weakest link'' in terms
-of the machines on which it is stored. If a malicious user were to
-discover the pool password, they could act as a trusted component of
-Condor. Attack possibilities include things as bad as telling Condor
-to execute arbitrary code on behalf of any user on any execute
-machine. When considering password authentication, it is important to
-ensure that all machines that will store the pool password (and all
-users that have \Login{root} or \Login{Administrator} access on those
-machines) are trusted.
 
 Storing the pool password is done via the \Opt{-c} option to
 \Condor{store\_cred}. Running
@@ -1942,7 +1603,7 @@ which methods are acceptable.
 \index{security!sessions}
 \index{sessions}
 
-To set up and configure secure communcations in Condor,
+To set up and configure secure communications in Condor,
 authentication, encryption, and integrity checks can be used.  
 However, these come at a cost: performing strong authentication can
 take a significant amount of time, and  generating the cryptographic
@@ -2158,7 +1819,7 @@ Condor can be registered with:
    the \File{condor\_config.root} configuration file.
    Therefore, one should exercise extreme caution before
    granting this level of host-wide access.
-   Because of the implications caused by DCPerm{CONFIG} privileges,
+   Because of the implications caused by \DCPerm{CONFIG} privileges,
    it is disabled by default for all hosts.
 
 \end{description}
@@ -2587,5 +2248,377 @@ Condor w/ Firewalls, Private Networks, and NATs}
 This topic is now addressed in more detail in
 section~\ref{sec:Networking}, which explains network communication in
 Condor.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:uids}User Accounts in Condor}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{UIDs in Condor|(}
+
+On a Unix system,
+UIDs (User IDentification numbers) form part of an operating system's
+tools for maintaining access control.
+Each executing program has a UID,
+a unique identifier of a user executing the program.
+This is also called the real UID.
+\index{UID!real}
+A common situation has one user executing the program owned
+by another user.
+Many system commands work this way, with a user (corresponding
+to a person) executing a program belonging to (owned by) \Login{root}.
+Since the program may require privileges that \Login{root} has which
+the user does not have, a special bit in the program's
+protection specification (a setuid bit) allows the program
+to run with the UID of the program's owner, instead of the
+user that executes the program.
+This UID of the program's owner is called an effective UID.
+\index{UID!effective}
+
+%GID (group identification)
+Condor works most smoothly when its daemons run as \Login{root}.
+The daemons then have the ability to switch their 
+effective UIDs at will.
+When the daemons run as \Login{root},
+they normally leave their effective UID and GID (Group IDentification)
+to be those of user and group \Login{condor}.
+This allows access to the log files without
+changing the ownership of the log files.
+It also allows access to these files when
+the user \Login{condor}'s home directory resides on an NFS server.
+\Login{root} can not normally access NFS files.
+
+If there is no \Login{condor} user and group on the system, an
+administrator can specify which UID and GID the Condor daemons should
+use when they do not need root privileges in two ways:
+either with the \Env{CONDOR\_IDS} environment variable or the
+\Macro{CONDOR\_IDS} configuration file setting.
+In either case, the value should be the UID integer, followed by a
+period, followed by the GID integer.
+For example, if a Condor administrator does not want to create a
+\Login{condor} user, and instead wants their Condor daemons to run as
+the \Login{daemon} user (a common non-root user for system daemons to
+execute as), the \Login{daemon} user's UID was 2, and group
+\Login{daemon} had a GID of 2, the corresponding setting in the Condor
+configuration file would be \Expr{CONDOR\_IDS = 2.2}.
+
+On a machine where a job is submitted,
+the \Condor{schedd} daemon
+changes its effective UID to \Login{root}
+such that it has the capability to start up a \Condor{shadow} daemon
+for the job.
+Before a \Condor{shadow} daemon is created,
+the \Condor{schedd} daemon
+switches back to \Login{root},
+so that it can start up the \Condor{shadow} daemon with the (real) UID
+of the user who submitted the job.
+Since the \Condor{shadow} runs as the owner of the job,
+all remote system calls are performed under the owner's UID
+and GID.
+This ensures that as the job executes,
+it can access only files that its owner could access if the job
+were running locally, without Condor.
+
+On the machine where the job executes, the 
+job runs either as the submitting user or as user \Login{nobody},
+to help ensure that the job cannot access local resources or do harm.  
+If the \Macro{UID\_DOMAIN} matches,
+and the user exists as the same UID in password files
+on both the submitting machine and on the execute machine,
+the job will run as the submitting user.
+If the user does not exist in the execute machine's
+password file and \Macro{SOFT\_UID\_DOMAIN} is True,
+then the job will run under the submitting user's UID anyway (as
+defined in the submitting machine's password file).
+If \MacroNI{SOFT\_UID\_DOMAIN} is False,
+and \MacroNI{UID\_DOMAIN} matches,
+and the user is not in the execute machine's password file,
+then the job execution attempt will be aborted.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Non-Root}Running Condor as Non-Root}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+While we strongly recommend starting up the Condor daemons as \Login{root},
+we understand that it is not always possible to do so.
+The main problems
+appear when one Condor installation is shared by many users on a
+single machine, or if machines are set up to only execute
+Condor jobs.  With a submit-only installation for a
+single user, there is no need for (or benefit from) running as
+\Login{root}.
+
+What follows are the effects on the various parts of Condor of running
+both with and without root access.
+
+\begin{description}
+
+\item[\Condor{startd}] If you're setting up a machine to run Condor
+   jobs and don't start the \Condor{startd} as \Login{root}, you're basically
+   relying on the goodwill of your Condor users to agree to the policy
+   you configure the \Condor{startd} to enforce as far as starting, suspending,
+   vacating and killing Condor jobs under certain conditions.  If you
+   run as \Login{root}, however, you can enforce these policies regardless of
+   malicious users.  By running as \Login{root}, the Condor daemons run with a
+   different UID than the Condor job that gets started (since the
+   user's job is started as either the UID of the user who submitted
+   it, or as user \Login{nobody}, depending on the \Macro{UID\_DOMAIN}
+   settings).  Therefore, the Condor job cannot do anything to the
+   Condor daemons.  If you don't start the daemons as \Login{root}, all
+   processes started by Condor, including the end user's job, run with
+   the same UID (since you can't switch UIDs unless you're \Login{root}).
+   Therefore, a user's job could just kill the \Condor{startd} and
+   \Condor{starter} as soon as it starts up and by doing so, avoid
+   getting suspended or vacated when a user comes back to the machine.
+   This is nice for the user, since they get unlimited access to the
+   machine, but awful for the machine owner or administrator.  If you
+   trust the users submitting jobs to Condor, this might not be a
+   concern.  To ensure, however, that the policy you choose is
+   effectively enforced by Condor, the \Condor{startd} should be
+   started as \Login{root}.
+
+   In addition, some system information cannot be obtained without
+   \Login{root} access on some platforms (such as load average on IRIX).  As a
+   result, when running without \Login{root} access, the \Condor{startd} must
+   call other programs (for example, \Prog{uptime}) to get this
+   information.  This is much less efficient than getting the
+   information directly from the kernel (which is what we do if we're
+   running as \Login{root}).  On Linux and Solaris, we can get this
+   information directly without root access, so this is not a concern
+   on those platforms.
+
+   If you cannot have all of Condor running as \Login{root}, at least consider
+   whether you can install the \Condor{startd} as setuid root.  That
+   would solve both of these problems.  If you cannot do that, you
+   could also install it as a setgid sys or kmem program (depending on
+   whatever group has read access to \File{/dev/kmem} on your system),
+   and that would at least solve the system information problem.
+
+\item[\Condor{schedd}] The biggest problem running the \Condor{schedd}
+    without root access is that the \Condor{shadow} processes which it
+    spawns are stuck with the same UID the \Condor{schedd} has.  This
+    means that users submitting their jobs must go out of their way
+    to grant write access to user or group \Login{condor} (or whoever the
+    \Condor{schedd} is running as) for any files or directories their jobs
+    write or create.  Similarly, read access must be granted to their
+    input files.
+
+    Consider installing \Condor{submit} as a setgid condor
+    program so that at least the \File{stdout}, \File{stderr} and
+    \File{UserLog} files get created with the right permissions.  If
+    \Condor{submit} is a setgid program, it will automatically set
+    it's umask to 002, and create group-writable files.  This
+    way, the simple case of a job that only writes to \File{stdout}
+    and \File{stderr} will work.  If users have programs that open
+    their own files, they will need to know and set the proper permissions
+    on the directories they submit from.
+
+\item[\Condor{master}] The \Condor{master} is what spawns the
+    \Condor{startd} and \Condor{schedd}. To have both running
+    as \Login{root}, have the \Condor{master} run as \Login{root}.
+    This happens
+    automatically if you start the master from your boot scripts.
+
+\item[\Condor{negotiator} and \Condor{collector}]
+    There is no need to have either of these daemons running as \Login{root}.
+
+\item[\Condor{kbdd}] On platforms that need the \Condor{kbdd} (Digital
+    Unix and IRIX) the \Condor{kbdd} must run as \Login{root}.  If it is
+    started as any other user, it will not work.  You might consider
+    installing this program as a setuid root binary if you cannot run
+    the \Condor{master} as \Login{root}.  Without the \Condor{kbdd}, the
+    startd has no way to monitor mouse activity at all, and the only
+    keyboard activity it will notice is activity on ttys (such as
+    xterms, remote logins, etc).
+
+\end{description}
+
+If you do choose to run Condor as non-root, then you may choose almost any
+user you like. A common choice is to use the \Login{condor} user; this
+simplifies the setup because Condor will look for its configuration
+files in the \Login{condor} user's directory. If you do not
+select the \Login{condor}
+user, then you will need to ensure that the configuration is set
+properly so that Condor can find its configuration files. 
+
+If users will be submitting jobs as a user different than the user
+Condor is running as (perhaps you are running as the \Login{condor} user and
+users are submitting as themselves), then users have to be careful to
+only have file permissions properly set up to be accessible by the
+user Condor is using. In practice, this means creating world-writable
+directories for output from Condor jobs.  This creates a potential
+security risk, in that any user on the machine where the job is
+submitted can alter the data, remove it, or do other undesirable
+things.  It is only acceptable in an environment where users can trust
+other users.
+
+Normally, users without root access who wish to use Condor on their
+machines create a \File{condor} home directory somewhere within their
+own accounts and start up the daemons (to run with the UID of the
+user).  As in the case where the daemons run as user \Login{condor}, there is
+no ability to switch UIDs or GIDs.  The daemons run as the UID and GID
+of the user who started them.  On a machine where jobs are submitted,
+the \Condor{shadow} daemons all run as this same user. But if other
+users are using Condor on the machine in this environment, the
+\Condor{shadow} daemons for these other users' jobs execute with the
+UID of the user who started the daemons.  This is a security risk,
+since the Condor job of the other user has access to all the files and
+directories of the user who started the daemons.  Some installations
+have this level of trust, but others do not.  Where this level of
+trust does not exist, it is best to set up a \Login{condor} account and group,
+or to have each user start up their own Personal Condor submit
+installation.
+
+When a machine is an execution site for a Condor job, the Condor job
+executes with the UID of the user who started the \Condor{startd}
+daemon.  This is also potentially a security risk, which is why we do
+not recommend starting up the execution site daemons as a regular
+user.  Use either \Login{root} or a user
+(such as the user \Login{condor}) that exists
+only to run Condor jobs.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:RunAsNobody}Running Jobs as the Nobody User}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{user nobody!potential security risk with jobs}
+\index{UID!potential risk running jobs as user nobody}
+\index{security!running jobs as user nobody}
+
+Under Unix, Condor runs jobs either as the user that submitted the jobs,
+or as the user called \Login{nobody}.
+Condor uses user \Login{nobody} if the value of the \MacroNI{UID\_DOMAIN}
+configuration variable of the
+submitting and executing machines are different.
+
+When Condor cleans up after a executing a vanilla universe job,
+it does the best that it can by
+deleting all of the processes started by the job.
+Unfortunately, it is possible to fool Condor,
+and leave processes behind after Condor has cleaned up.
+If the job is running as user \Login{nobody},
+it is possible for it to leave a lurker process lying in wait
+for the next job run as \Login{nobody}.
+The lurker process may prey maliciously on the next \Login{nobody} user job,
+wreaking havoc.
+
+Condor could prevent this problem by simply killing all processes run by
+the \Login{nobody} user, but this would annoy many system administrators.
+The \Login{nobody} user is often used for non-Condor system processes.
+
+Condor provides a two-part solution to this difficulty.
+First, create user accounts specifically for Condor to use instead
+of user \Login{nobody}.
+These can be low-privilege accounts,
+as the \Login{nobody} user is.
+Create one of these accounts for each
+virtual machine per computer,
+so that distinct users can be used for concurrent processes.
+This prevents malicious behavior between
+processes running on distinct virtual machines.
+Section ~\ref{sec:Configuring-SMP} details virtual machines.
+For a sample machine with two virtual machines,
+create two users that are intended only to be used by Condor.
+As an example, call them \Login{nobody1} and \Login{nobody2}.
+Tell Condor about these users
+with the \Macro{VMx\_USER} configuration variables,
+where x is replaced with the
+virtual machine number. In this example:
+
+\begin{verbatim}
+   VM1_USER = nobody1
+   VM2_USER = nobody2
+\end{verbatim}
+
+Reconfigure Condor, so that Condor will make use of these users
+instead of the \Login{nobody} user.
+One more change is required to prevent lurker processes:
+tell Condor that these accounts are intended only to be used by Condor,
+so Condor can kill all the processes belonging to these users upon
+job completion.
+The configuration variable \Macro{EXECUTE\_LOGIN\_IS\_DEDICATED}
+is introduced and set to \ShortExpr{True} for this purpose.
+
+\begin{verbatim}
+   EXECUTE_LOGIN_IS_DEDICATED = TRUE
+\end{verbatim}
+
+Notes:
+\begin{enumerate}
+
+\item{
+If \MacroNI{UID\_DOMAIN} is not set in the configuration, do not
+set \MacroNI{EXECUTE\_LOGIN\_IS\_DEDICATED}.
+In this case, lurker processes are not a concern,
+and other processes that a user may have running would be killed
+improperly.
+}
+
+\item{
+This only applies to vanilla universe and Java universe jobs.
+Standard universe jobs are not a concern,
+because they are not allowed to create new processes.
+}
+
+\item{
+On Windows, \MacroNI{VMx\_USER} will only work if the credential
+of the specified user is stored on the execute machine
+using \Condor{store\_cred}.
+See the \Condor{store\_cred}
+manual page (in section~\ref{man-condor-store-cred})
+for details of this command.
+}
+\end{enumerate}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:DirOfJob}Working Directories for Jobs}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{cwd!of jobs}
+\index{current working directory}
+
+Every executing process has a notion of its current working directory.
+This is the directory that acts as the base for all file system
+access. 
+There are two current working directories for any Condor job:
+one where the job is submitted and a
+second where the job executes.
+When a user submits a job,
+the submit-side current working directory is
+the same as for the user when the \Condor{submit} command
+is issued.
+The \SubmitCmd{initialdir} submit command may change this,
+thereby allowing different jobs to have different working
+directories.
+This is useful when submitting large numbers of jobs.
+This submit-side current working directory remains unchanged for the
+entire life of a job. 
+The submit-side current working directory is also 
+the working directory of the \Condor{shadow} daemon.
+This is particularly relevant for standard universe jobs,
+since file system
+access for the job goes through the \Condor{shadow} daemon, and
+therefore all accesses behave as if they were executing without
+Condor.
+
+There is also an execute-side current working directory.
+For standard universe jobs,
+it is set to the
+\File{execute} subdirectory of Condor's home directory.
+This directory is world-writable, since a Condor job usually runs as user
+\Login{nobody}.
+Normally, standard universe jobs would never access this directory,
+since all I/O system calls are passed back to the
+\Condor{shadow} daemon on the submit machine.
+In the event, however,
+that a job crashes and creates a core dump file, the execute-side
+current working directory needs to be accessible by the job
+so that it can write the core file.
+The core file is moved back to the submit machine,
+and the \Condor{shadow} daemon is informed.
+The \Condor{shadow} daemon
+sends e-mail to the job owner announcing the core file, and provides a
+pointer to where
+the core file resides in the submit-side current working directory.
+
+\index{UIDs in Condor|)}
 
 \index{security! in Condor|)}

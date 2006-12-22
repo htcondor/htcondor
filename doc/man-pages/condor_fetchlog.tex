@@ -7,7 +7,8 @@
 
 \SynProg{\Condor{fetchlog}}
 \oOptArg{-pool}{centralmanagerhostname[:portnumber]}
-\ToolArgsAffect
+\oOptnm{-master $|$ -startd $|$ -schedd $|$ -collector $|$ -negotiator
+        $|$ -kbdd}
 \Arg{machine-name}
 \Arg{subsystem[.extension]}
 
@@ -58,7 +59,11 @@ machine.
     \OptItem{\OptArg{-pool}{centralmanagerhostname[:portnumber]}}
     {Specify a pool by giving the central manager's host name
     and an optional port number}
-    \ToolArgsAffectDesc
+    \OptItem{\Opt{-master}}{Send the command to the \Condor{master} daemon (default)}
+    \OptItem{\Opt{-startd}}{Send the command to the \Condor{startd} daemon}
+    \OptItem{\Opt{-schedd}}{Send the command to the \Condor{schedd} daemon}
+    \OptItem{\Opt{-collector}}{Send the command to the \Condor{collector} daemon}
+    \OptItem{\Opt{-kbdd}}{Send the command to the \Condor{kbdd} daemon}
 \end{Options}
 
 \Examples

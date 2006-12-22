@@ -27,6 +27,46 @@ The details of each version are described below.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-6-8-4}Version 6.8.4}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-6-8-3}Version 6.8.3}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -68,11 +108,20 @@ TCP send buffers for the \Condor{collector}.  This parameter used to
 be the same as COLLECTOR\_SOCKET\_BUFSIZE.  The new parameter is
 COLLECTOR\_TCP\_SOCKET\_BUFSIZE, and defaults to 128K.
 
+\item Added a clipped port for SuSE Enterprise Linux Server 9 running on the 
+PowerPC architecture.
+
+\item The \Condor{schedd} now maintains a birthdate for the job queue. 
+Nothing in Condor currently uses this feature, but future versions of \Condor{quill} may require it. 
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a bug where the \Condor{ckpt\_server} would segfault when
+turned off with \Condor{off} \Opt{-fast}.
 
 \item Fixed a bug in the \Condor{startd} where it could die with
   SIGABRT when a \Condor{starter} exited under certain rare
@@ -170,6 +219,38 @@ name. This bug was thought to have been fixed in Condor 6.8.0.
 storing or removing a user name that is some initial substring of
 ``condor\_pool''. Specifying such a username would be incorrectly
 interpreted as equivalent to specifying the \Opt{-c} option.
+
+\item Fixed a problem with \Condor{glidein} spewing lots of text to
+the screen when checking the status of a job it submitted.
+
+\item A new version of the GT4 GAHP is included, with the following changes:
+
+  \begin{itemize}
+
+  \item New axis.jar from Globus that fixes a thread safety bug that
+  can cause lockups in subscriptions for WS notifications. See Globus
+  Bugzilla 4858
+  (\URL{http://bugzilla.globus.org/bugzilla/show\_bug.cgi?id=4858}).
+
+  \item Fixed bugs that caused memory related to destroyed jobs to not
+  be reclaimed in both client and server.
+
+  \item Removed redundant usage of Secure Message, Secure Conversation,
+  and Transport Security when talking to a WS GRAM service. Now, just
+  Transport Security is used.
+
+  \end{itemize}
+
+\item Fixed memory leaks in \Condor{quill}.
+
+\item Fixed bug that might have caused the \Condor{startd} problems
+launching the \Condor{starter} for the standard universe on 64-bit systems.
+
+\item Improved Condor's file transfer.  If you request that Condor
+automatically transfer back your output, it now detects changes better.
+Previously, it would only transfer back files that had a timestamp newer
+than the spool date.  Now, it will transfer back any file that has changed
+in date (including being dated in the past) or changed in size.
 
 \end{itemize}
 

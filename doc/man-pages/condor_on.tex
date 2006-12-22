@@ -22,10 +22,12 @@ This command assumes that the \Condor{master} is already
 running on the machine.
 If this is not the case, \Condor{on} will
 fail complaining that it cannot find the address of the master.
-The command \Condor{on} with no arguments will
+The command \Condor{on} with no arguments or with
+ the \OptArg{-subsystem}{master} option will
 tell the \Condor{master} to start up the Condor daemons specified
-in the configuration variable \Attr{DAEMON\_LIST}.
-If a daemon is specified as an argument,
+in the configuration variable \MacroNI{DAEMON\_LIST}.
+If a daemon other than the \Condor{master} is specified
+with the \Opt{-subsystem} option,
 \Condor{on} starts up only that daemon.
 
 This command cannot be used to start up the \Condor{master} daemon.
@@ -48,7 +50,7 @@ and it will exit with the value 1 (one) upon failure.
 
 \Examples
 To begin running all daemons (other than \Condor{master}) given
-in the configuration variable \Attr{DAEMON\_LIST}
+in the configuration variable \MacroNI{DAEMON\_LIST}
 on the local host:
 \begin{verbatim}
 % condor_on
@@ -56,7 +58,7 @@ on the local host:
 
 To start up only the \Condor{negotiator} on two named machines:
 \begin{verbatim}
-% condor_on  robin cardinal -negotiator
+% condor_on  robin cardinal -subsystem negotiator
 \end{verbatim}
 
 To start up only a daemon within a pool of machines
@@ -69,7 +71,7 @@ on the single machine named \Opt{cae17} within the
 pool of machines that has \Opt{condor.cae.wisc.edu} as
 its central manager:
 \begin{verbatim}
-% condor_on -pool condor.cae.wisc.edu -name cae17 -schedd
+% condor_on -pool condor.cae.wisc.edu -name cae17 -subsystem schedd
 \end{verbatim}
 
 \end{ManPage}

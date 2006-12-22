@@ -46,8 +46,8 @@ $|$ \OptArg{-name}{scheddname} \Rbr $|$ \oOptArg{-addr}{"\SinfulAny"}
 
 %% Which daemons you wish to affect. XXX maybe split up nicer...
 \newcommand{\ToolArgsAffect}{
-\oOptnm{-master $|$ -startd $|$ -schedd $|$ -collector $|$ -negotiator 
-	$|$ -kbdd}
+\oOptArgnm{-subsystem}{master $|$ startd $|$ schedd $|$ collector $|$ negotiator
+	$|$ kbdd $|$ quill}
 }
 
 %% This is the common set of arguments
@@ -100,11 +100,9 @@ $|$ \OptArg{-name}{scheddname} \Rbr $|$ \oOptArg{-addr}{"\SinfulAny"}
 
 %% Descriptions of Affected Daemons
 \newcommand{\ToolArgsAffectDesc}{
-\OptItem{\Opt{-master}}{Send the command to the \Condor{master} daemon (default)}
-\OptItem{\Opt{-startd}}{Send the command to the \Condor{startd} daemon}
-\OptItem{\Opt{-schedd}}{Send the command to the \Condor{schedd} daemon}
-\OptItem{\Opt{-collector}}{Send the command to the \Condor{collector} daemon}
-\OptItem{\Opt{-kbdd}}{Send the command to the \Condor{kbdd} daemon}
+\OptItem{\OptArg{-subsystem}{master $|$ startd $|$ schedd $|$ collector $|$ negotiator $|$ kbdd $|$ quill}}
+{Send the command to the named daemon. Without this option,
+the command is sent to the \Condor{master} daemon.}
 }
 
 %% -debug option description
