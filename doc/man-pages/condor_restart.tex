@@ -25,21 +25,21 @@ killed, and then started anew.
 
 If, for example, the \Condor{master} needs to be restarted again with
 a fresh state, this is the command that should be used to do so.
-If the DAEMON\_LIST variable in the configuration file has
+If the \MacroNI{DAEMON\_LIST} variable in the configuration file has
 been changed, this command is used to restart the \Condor{master}
 in order to see this change.
 The \Condor{reconfigure} command cannot be used in the case where the
-\Attr{DAEMON\_LIST} expression changes.
+\MacroNI{DAEMON\_LIST} expression changes.
 
 The command
-\Condor{restart} with no arguments or the command
-\Condor{restart -master}
+\Condor{restart} with no arguments or with the 
+\OptArg{-subsystem}{master} option
 will safely shut down all running jobs and all submitted
 jobs from the machine(s) being restarted, then shut down
 all the child daemons of the \Condor{master},
 and then restart the \Condor{master}.
 This, in turn, will allow the \Condor{master} to start up
-other daemons as specified in the \Attr{DAEMON\_LIST} configuration
+other daemons as specified in the \MacroNI{DAEMON\_LIST} configuration
 file entry.
 
 For security purposes (authentication and authorization),
@@ -67,7 +67,7 @@ on the local host:
 
 To restart only the \Condor{startd} on a named machine:
 \begin{verbatim}
-% condor_restart -name bluejay -startd
+% condor_restart -name bluejay -subsystem startd
 \end{verbatim}
 
 To restart a machine within a pool

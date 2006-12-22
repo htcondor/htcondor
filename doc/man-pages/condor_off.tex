@@ -31,9 +31,10 @@ The \Condor{master} can then handle both local and remote
 requests to restart the other Condor daemons if need be.  To restart
 Condor running on a machine, see the \Condor{on} command.
 
-The command \Condor{off -master} will shut down
+With the \OptArg{-subsystem}{master} option, \Condor{off} will shut down
 all daemons including the \Condor{master}.
-The command \Condor{off -otherdaemon} will shut down
+Specification using the \Opt{-subsystem} option
+will shut down
 only the specified daemon.
 
 For security purposes (authentication and authorization),
@@ -66,7 +67,7 @@ local host:
 
 To shut down only the \Condor{collector} on three named machines:
 \begin{verbatim}
-% condor_off  cinnamon cloves vanilla -collector
+% condor_off  cinnamon cloves vanilla -subsystem collector
 \end{verbatim}
 
 To shut down daemons within a pool of machines other than the
