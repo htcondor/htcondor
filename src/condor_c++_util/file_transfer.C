@@ -1634,7 +1634,9 @@ FileTransfer::GetTransferAck(Stream *s,bool &success,bool &try_again,int &hold_c
 	}
 	int result = -1;
 	if(!ad.LookupInteger(ATTR_RESULT,result)) {
-		dprintf(D_ALWAYS,"Download acknowledgment missing %s\n",ATTR_RESULT);
+		MyString ad_str;
+		ad.sPrint(ad_str);
+		dprintf(D_ALWAYS,"Download acknowledgment missing attribute: %s.  Full classad: [\n%s]\n",ATTR_RESULT,ad_str.Value());
 		success = false;
 		try_again = false;
 		hold_code = CONDOR_HOLD_CODE_InvalidTransferAck;
