@@ -44,6 +44,12 @@ sessions or process groups. This is intended for use with Glidein, as
 we've had reports that some batch systems can't properly track jobs that
 create new process groups. The default value is True.
 
+\item The default value for the submit file attribute
+\Attr{copy\_to\_spool} has been changed to \Expr{False}, because copying
+the executable to the spool directory for each job (or job cluster) is almost
+never actually desired.  Previously, the default was \Expr{True} in all
+cases except for the grid universe and remote submissions.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
