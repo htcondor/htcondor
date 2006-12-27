@@ -61,6 +61,17 @@ If \Opt{--type} is not specified, the default is to still install a
 full personal Condor with the following daemons: Master, Collector,
 Negotiator, Schedd, Startd. 
 
+\item While removing, putting on hold, or vacating a large number of
+jobs, it was possible for \Condor{schedd} and \Condor{shadow} to
+temporarily deadlock with each other.  This has been solved under unix,
+but not yet under windows.
+
+\item It was possible for \Condor{schedd} to block until timing out
+when trying to release a claim to a startd that could not be reached
+through the network (e.g. the machine hosting the startd was turned
+off).  The connection from the schedd to the startd in this case is
+now created in a non-blocking way.
+
 \end{itemize}
 
 \noindent Known Bugs:
