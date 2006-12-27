@@ -79,6 +79,7 @@
 #include "condor_mkstemp.h"
 
 
+
 #define DEFAULT_SHADOW_SIZE 125
 #define DEFAULT_JOB_START_COUNT 1
 
@@ -154,6 +155,7 @@ int STARTD_CONTACT_TIMEOUT = 45;
 #ifdef CARMI_OPS
 struct shadow_rec *find_shadow_by_cluster( PROC_ID * );
 #endif
+
 
 int UserIdentity::HashFcn(const UserIdentity & index, int numBuckets)
 {
@@ -1544,16 +1546,8 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 				EXCEPT( "unknown action (%d %s) in abort_job_myself()",
 						action, getJobActionString(action) );
 			}
-			if( ! daemonCore->Send_Signal(srec->pid,handler_sig) ) {
-				dprintf( D_ALWAYS,
-						 "Error in sending %s to pid %d errno=%d (%s)\n",
-						 handler_sig_str, srec->pid, errno, strerror(errno) );
-			} else {
-				dprintf( D_FULLDEBUG, "Sent %s to Job Handler Pid %d\n",
-						 handler_sig_str, srec->pid );
-				srec->preempted = TRUE;
-			}
 
+			scheduler.sendSignalToShadow(srec->pid,handler_sig,job_id);
 
 		} else if( job_universe != CONDOR_UNIVERSE_SCHEDULER ) {
             
@@ -1594,15 +1588,8 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 				EXCEPT( "unknown action (%d %s) in abort_job_myself()",
 						action, getJobActionString(action) );
 			}
-			if( ! daemonCore->Send_Signal(srec->pid,shadow_sig) ) {
-				dprintf( D_ALWAYS,
-						 "Error in sending %s to pid %d errno=%d (%s)\n",
-						 shadow_sig_str, srec->pid, errno, strerror(errno) );
-			} else {
-				dprintf( D_FULLDEBUG, "Sent %s to Shadow Pid %d\n",
-						 shadow_sig_str, srec->pid );
-				srec->preempted = TRUE;
-			}
+
+			scheduler.sendSignalToShadow(srec->pid,shadow_sig,job_id);
             
         } else {  // Scheduler universe job
             
@@ -1673,10 +1660,8 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 					 srec->pid, owner );
 			priv_state priv = set_user_priv();
 
-			if( daemonCore->Send_Signal(srec->pid, kill_sig) ) {
-				// successfully sent signal
-				srec->preempted = TRUE;
-			}
+			scheduler.sendSignalToShadow(srec->pid,kill_sig,job_id);
+
 			set_priv(priv);
 		}
 
@@ -8212,19 +8197,19 @@ Scheduler::preempt( int n, bool force_sched_jobs )
 
 			switch( rec->universe ) {
 			case CONDOR_UNIVERSE_PVM:
-				daemonCore->Send_Signal( rec->pid, SIGTERM );
-				dprintf( D_ALWAYS, "Sent SIGTERM to shadow for PVM job "
+				dprintf( D_ALWAYS, "Sending SIGTERM to shadow for PVM job "
 						 "%d.%d (pid: %d)\n", cluster, proc, rec->pid );
+				sendSignalToShadow(rec->pid,SIGTERM,rec->job_id);
 				break;
 
 			case CONDOR_UNIVERSE_LOCAL:
 				if( ! preempt_sched ) {
 					continue;
 				}
-				daemonCore->Send_Signal( rec->pid, DC_SIGSOFTKILL );
-				dprintf( D_ALWAYS, "Sent DC_SIGSOFTKILL to handler for "
+				dprintf( D_ALWAYS, "Sending DC_SIGSOFTKILL to handler for "
 						 "local universe job %d.%d (pid: %d)\n", 
 						 cluster, proc, rec->pid );
+				sendSignalToShadow(rec->pid,DC_SIGSOFTKILL,rec->job_id);
 				break;
 
 			case CONDOR_UNIVERSE_SCHEDULER:
@@ -8238,10 +8223,10 @@ Scheduler::preempt( int n, bool force_sched_jobs )
 					kill_sig = SIGTERM;
 				}
 				FreeJobAd( job_ad );
-				daemonCore->Send_Signal( rec->pid, kill_sig );
-				dprintf( D_ALWAYS, "Sent %s to scheduler universe job "
+				dprintf( D_ALWAYS, "Sending %s to scheduler universe job "
 						 "%d.%d (pid: %d)\n", signalName(kill_sig), 
 						 cluster, proc, rec->pid );
+				sendSignalToShadow(rec->pid,kill_sig,rec->job_id);
 				break;
 
 			default:
@@ -8264,10 +8249,8 @@ Scheduler::preempt( int n, bool force_sched_jobs )
 				}
 			}
 
-				// if we're here, we really preempted it, so mark it
-				// as preempted, and decrement n so we let this count
-				// towards our goal.
-			rec->preempted = TRUE;
+				// if we're here, we really preempted it, so
+				// decrement n so we let this count towards our goal.
 			n--;
 		}
 	}
@@ -8288,48 +8271,17 @@ Scheduler::preempt( int n, bool force_sched_jobs )
 	}
 }
 
-
 void
 send_vacate(match_rec* match,int cmd)
 {
-    SafeSock	sock;
+	classy_counted_ptr<DCStartd> startd = new DCStartd( match->peer );
+	classy_counted_ptr<DCStringMsg> msg = new DCStringMsg( cmd, match->id );
+
+	msg->setSuccessDebugLevel(D_ALWAYS);
 
 	dprintf( D_FULLDEBUG, "Called send_vacate( %s, %d )\n", match->peer, cmd );
 
-	sock.timeout(STARTD_CONTACT_TIMEOUT);
-	if (!sock.connect(match->peer,START_PORT)) {
-		dprintf( D_FAILURE|D_ALWAYS,"Can't connect to startd at %s\n",match->peer);
-		return;
-	}
- 
-	DCStartd d( match->peer );
-	d.startCommand(cmd, &sock);
-
-	sock.encode();
-
-	if( !sock.put(match->id) ) {
-		dprintf( D_ALWAYS, "Can't initialize sock to %s\n", match->peer);
-		return;
-	}
-
-	if( !sock.eom() ) {
-		dprintf( D_ALWAYS, "Can't send EOM to %s\n", match->peer);
-		return;
-	}
-
-	switch(cmd) {
-		case CKPT_FRGN_JOB:
-			dprintf( D_ALWAYS, "Sent CKPT_FRGN_JOB to startd on %s\n", match->peer);
-			break;
-		case KILL_FRGN_JOB:
-			dprintf( D_ALWAYS, "Sent KILL_FRGN_JOB to startd on %s\n", match->peer);
-			break;
-		case RELEASE_CLAIM:
-			dprintf( D_ALWAYS, "Sent RELEASE_CLAIM to startd on %s\n", match->peer);
-			break;
-		default:
-			dprintf( D_ALWAYS, "Send %i to startd on %s\n", cmd, match->peer);
-	}
+	startd->sendMsg( msg, Stream::safe_sock, STARTD_CONTACT_TIMEOUT );
 }
 
 void
@@ -10152,8 +10104,9 @@ Scheduler::shutdown_fast()
 		} else {
 			sig = SIGKILL;
 		}
-		daemonCore->Send_Signal( rec->pid, sig );
-		rec->preempted = TRUE;
+			// Call the blocking form of Send_Signal, rather than
+			// sendSignalToShadow().
+		daemonCore->Send_Signal(rec->pid,sig);
 	}
 
 	// Shut down the cron logic
@@ -12106,3 +12059,35 @@ Scheduler::claimLocalStartd()
 //	
 //	return ( valid );
 //}
+
+class DCShadowKillMsg: public DCSignalMsg {
+public:
+	DCShadowKillMsg(pid_t pid, int sig, PROC_ID proc):
+		DCSignalMsg(pid,sig)
+	{
+		m_proc = proc;
+	}
+
+	virtual MessageClosureEnum messageSent(
+				DCMessenger *messenger, Sock *sock )
+	{
+		shadow_rec *srec = scheduler.FindSrecByProcID( m_proc );
+		if( srec && srec->pid == thePid() ) {
+			srec->preempted = TRUE;
+		}
+		return DCSignalMsg::messageSent(messenger,sock);
+	}
+
+private:
+	PROC_ID m_proc;
+};
+
+void
+Scheduler::sendSignalToShadow(pid_t pid,int sig,PROC_ID proc)
+{
+	classy_counted_ptr<DCShadowKillMsg> msg = new DCShadowKillMsg(pid,sig,proc);
+	daemonCore->Send_Signal_nonblocking(msg);
+
+		// When this operation completes, the handler in DCShadowKillMsg
+		// will take care of setting shadow_rec->preempted = TRUE.
+}

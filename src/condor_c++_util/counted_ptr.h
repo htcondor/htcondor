@@ -83,6 +83,16 @@
  *       counted_ptr<MyString> pauto = p_ms; // NOT ALLOWED (implicit conversion)
  *       counted_ptr<MyString> pauto(p_ms);	// ALLOWED (explicit conversion)
  * 
+ * d) Do not create new instances of counted_ptr for the same
+ *    underlying object except by reference to an existing instance of
+ *    counted_ptr.  A common case where you might be tempted to do so is
+ *    when you need to create a counted_ptr that refers to "this" and
+ *    somewhere else in the code, there is already a counted_ptr refering
+ *    to this object, but you don't have convenient access to it.  One
+ *    option is to use classy_counted_ptr, which requires some minor
+ *    modifications to your class, but which otherwise provides an identical
+ *    interface to counted_ptr.
+ *
  * Find problems?  Talk to Todd.  Or just fix em.  :)
  * - Todd Tannenbaum <tannenba@cs.wisc.edu>, Nov 2005
  */

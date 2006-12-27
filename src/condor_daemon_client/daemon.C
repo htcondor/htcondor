@@ -186,7 +186,7 @@ Daemon::Daemon( ClassAd* ad, daemon_t type, const char* pool )
 }
 
 
-Daemon::Daemon( const Daemon &copy )
+Daemon::Daemon( const Daemon &copy ): ClassyCountedPtr()
 {
 		// initialize all data members to NULL, since deepCopy() has
 		// code not to leak anything in case it's overwriting a value
@@ -2125,4 +2125,18 @@ Daemon::getTimeOffsetRange( long &min_range, long &max_range )
 		//
 	return ( time_offset_range_cedar_stub( (Stream*)&reli_sock,
 										   min_range, max_range ) );
+}
+
+void Daemon::sendMsg( classy_counted_ptr<DCMsg> msg, Stream::stream_type st, int timeout, bool blocking )
+{
+		// DCMessenger is garbage collected via ClassyCountedPtr.
+		// Ditto for the daemon and message objects.
+	DCMessenger *messenger = new DCMessenger(this);
+
+	if(blocking) {
+		messenger->sendBlockingMsg( msg, st, blocking );
+	}
+	else {
+		messenger->startCommand( msg, st, timeout );
+	}
 }

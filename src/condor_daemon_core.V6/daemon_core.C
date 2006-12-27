@@ -221,7 +221,9 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 		(DaemonCoreSockAdapterClass::Register_Socket_fnptr)&DaemonCore::Register_Socket,
 		&DaemonCore::Cancel_Socket,
 		&DaemonCore::Register_DataPtr,
-		&DaemonCore::GetDataPtr);
+		&DaemonCore::GetDataPtr,
+		(DaemonCoreSockAdapterClass::Register_Timer_fnptr)&DaemonCore::Register_Timer,
+		&DaemonCore::TooManyRegisteredSockets);
 
 	if ( PidSize == 0 )
 		PidSize = DEFAULT_PIDBUCKETS;
@@ -601,8 +603,8 @@ bool DaemonCore::TooManyRegisteredSockets(int fd,MyString *msg)
 	return false;
 }
 
-int	DaemonCore::Register_Socket(Stream* iosock, char* iosock_descrip,
-				SocketHandler handler, char* handler_descrip,
+int	DaemonCore::Register_Socket(Stream* iosock, const char* iosock_descrip,
+				SocketHandler handler, const char* handler_descrip,
 				Service* s, DCpermission perm)
 {
 	return( Register_Socket(iosock, iosock_descrip, handler,
@@ -610,8 +612,8 @@ int	DaemonCore::Register_Socket(Stream* iosock, char* iosock_descrip,
 							perm, FALSE) );
 }
 
-int	DaemonCore::Register_Socket(Stream* iosock, char* iosock_descrip,
-				SocketHandlercpp handlercpp, char* handler_descrip,
+int	DaemonCore::Register_Socket(Stream* iosock, const char* iosock_descrip,
+				SocketHandlercpp handlercpp, const char* handler_descrip,
 				Service* s, DCpermission perm)
 {
 	return( Register_Socket(iosock, iosock_descrip, NULL, handlercpp,
@@ -1024,9 +1026,9 @@ int DaemonCore::Cancel_Signal( int sig )
 	return TRUE;
 }
 
-int DaemonCore::Register_Socket(Stream *iosock, char* iosock_descrip,
+int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 				SocketHandler handler, SocketHandlercpp handlercpp,
-				char *handler_descrip, Service* s, DCpermission perm,
+				const char *handler_descrip, Service* s, DCpermission perm,
 				int is_cpp)
 {
     int     i;
@@ -4025,8 +4027,95 @@ int DaemonCore::HandleSig(int command,int sig)
 	return TRUE;
 }
 
-int DaemonCore::Send_Signal(pid_t pid, int sig)
+bool DCSignalMsg::codeMsg( DCMessenger *, Sock *sock )
 {
+	if( !sock->code( m_signal ) ) {
+		sockFailed( sock );
+		return false;
+	}
+	return true;
+}
+
+void DCSignalMsg::reportFailure( DCMessenger * )
+{
+	dprintf(D_ALWAYS,
+			"Send_Signal: ERROR sending signal %d (%s) to pid %d (%s)\n",
+			theSignal(),signalName(),thePid(),
+			daemonCore->Is_Pid_Alive(thePid()) ? "still alive" : "no longer exists");
+}
+
+void DCSignalMsg::reportSuccess( DCMessenger * )
+{
+	dprintf(D_DAEMONCORE,
+			"Send_Signal: sent signal %d (%s) to pid %d\n",
+			theSignal(),signalName(),thePid());
+}
+
+char const *DCSignalMsg::signalName()
+{
+	switch(theSignal()) {
+	case SIGUSR1:
+		return "SIGUSR1";
+	case SIGUSR2:
+		return "SIGUSR2";
+	case SIGTERM:
+		return "SIGTERM";
+	case SIGSTOP:
+		return "SIGSTOP";
+	case SIGCONT:
+		return "SIGCONT";
+	case SIGQUIT:
+		return "SIGQUIT";
+	case SIGKILL:
+		return "SIGKILL";
+	}
+
+		// If it is not a system-defined signal, it must be a DC signal.
+
+	char const *name = getCommandString(theSignal());
+	if(!name) {
+			// Always return something, because this goes straight to sprintf.
+		return "";
+	}
+	return name;
+}
+
+bool DaemonCore::Send_Signal(pid_t pid, int sig)
+{
+	classy_counted_ptr<DCSignalMsg> msg = new DCSignalMsg(pid,sig);
+	Send_Signal(msg, false);
+
+	// Since we ran with nonblocking=false, the success status is now available
+
+	return msg->deliveryStatus() == DCMsg::DELIVERY_SUCCEEDED;
+}
+
+void DaemonCore::Send_Signal_nonblocking(classy_counted_ptr<DCSignalMsg> msg) {
+	Send_Signal( msg, true );
+
+		// We need to make sure the callback hooks are called if this
+		// message was handled through some means other than delivery
+		// through DCMessenger.
+
+	if( !msg->messengerDelivery() ) {
+		switch( msg->deliveryStatus() ) {
+		case DCMsg::DELIVERY_SUCCEEDED:
+			msg->messageSent( NULL, NULL );
+			break;
+		case DCMsg::DELIVERY_FAILED:
+			msg->messageSendFailed( NULL );
+			break;
+		case DCMsg::DELIVERY_PENDING:
+			EXCEPT("Unexpected pending status for fake message delivery.\n");
+			break;
+		}
+	}
+}
+
+void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocking)
+{
+	pid_t pid = msg->thePid();
+	int sig = msg->theSignal();
 	PidEntry * pidinfo;
 	int same_thread, is_local;
 	char *destination;
@@ -4058,42 +4147,68 @@ int DaemonCore::Send_Signal(pid_t pid, int sig)
 	// handle the "special" action signals which are really just telling
 	// DaemonCore to do something.
 	switch (sig) {
-		case SIGTERM:
-			if ( pid != mypid ) {
-					/*
-					   If the pid you're shutting down is a DaemonCore
-					   process (including ourself) Shutdown_Graceful()
-					   just turns around and sends some kind of
-					   SIGTERM.  This would result in an infinite
-					   loop.  So, instead of using the special
-					   shutdown method, we just fall through and
-					   actually send a real DC SIGTERM to ourselves.
-					   We want to do this here, since on UNIX there's
-					   more to it than just raising the signal, we
-					   also want to write to the async pipe to make
-					   sure select() wakes up, etc, etc.
-					   -Derek Wright <wright@cs.wisc.edu> 5/17/02
-					*/
-				if ( target_has_dcpm == FALSE ) { // I think Derek forgot this
-					return Shutdown_Graceful(pid); // -stolley 6/18/2002
-				}
-			}
-			break;
 		case SIGKILL:
-			return Shutdown_Fast(pid);
+			if( Shutdown_Fast(pid) ) {
+				msg->deliveryStatus( DCMsg::DELIVERY_SUCCEEDED );
+			}
+			return;
 			break;
 		case SIGSTOP:
-			return Suspend_Process(pid);
+			if( Suspend_Process(pid) ) {
+				msg->deliveryStatus( DCMsg::DELIVERY_SUCCEEDED );
+			}
+			return;
 			break;
 		case SIGCONT:
-			return Continue_Process(pid);
+			if( Continue_Process(pid) ) {
+				msg->deliveryStatus( DCMsg::DELIVERY_SUCCEEDED );
+			}
+			return;
 			break;
-		default:
+#ifdef WIN32
+		case SIGTERM:
+				// Under Windows, use Shutdown_Graceful to send
+				// WM_CLOSE to a non DC process; otherwise use a DC
+				// signal.  Under UNIX, we just use the default logic
+				// below to determine whether we should send a UNIX
+				// SIGTERM or a DC signal.
+			if ( pid != mypid && target_has_dcpm == FALSE ) {
+				if( Shutdown_Graceful(pid) ) {
+					msg->deliveryStatus( DCMsg::DELIVERY_SUCCEEDED );
+				}
+				return;
+			}
+			break;
+#endif
+		default: {
 #ifndef WIN32
-			// If we are on Unix, and we are not sending a 'special' signal,
-			// and our child is not a daemon-core process, then just send
-			// the signal as usual via kill()
-			if ( target_has_dcpm == FALSE ) {
+			bool use_kill = false;
+			if( pid == mypid ) {
+					// Never never send unix signals directly to self,
+					// because the signal handlers all just turn around
+					// and call Send_Signal() again.
+				use_kill = false;
+			}
+			else if( target_has_dcpm == FALSE ) {
+				use_kill = true;
+			}
+			else if( target_has_dcpm == TRUE &&
+			         (sig == SIGUSR1 || sig == SIGUSR2 || sig == SIGQUIT ||
+			          sig == SIGTERM) )
+			{
+					// Try using kill(), even though this is a
+					// daemon-core process we are signalling.  We do
+					// this, because kill() is less prone to failure
+					// than the network-message method, and it never
+					// blocks.  (In the current implementation, the
+					// UDP message call may block if it needs to use a
+					// temporary TCP connection to establish a session
+					// key.)
+
+				use_kill = true;
+			}
+
+			if ( use_kill ) {
 				const char* tmp = signalName(sig);
 				dprintf( D_DAEMONCORE,
 						 "Send_Signal(): Doing kill(%d,%d) [%s]\n",
@@ -4102,10 +4217,18 @@ int DaemonCore::Send_Signal(pid_t pid, int sig)
 				int status = ::kill(pid, sig);
 				set_priv(priv);
 				// return 1 if kill succeeds, 0 otherwise
-				return (status >= 0);
+				if (status >= 0) {
+					msg->deliveryStatus( DCMsg::DELIVERY_SUCCEEDED );
+				}
+				else if( target_has_dcpm == TRUE ) {
+						// kill() failed.  Fall back on a UDP message.
+					break;
+				}
+				return;
 			}
 #endif  // not defined Win32
 			break;
+		}
 	}
 
 	// a Signal is sent via UDP if going to a different process or
@@ -4143,7 +4266,8 @@ int DaemonCore::Send_Signal(pid_t pid, int sig)
 				write(async_pipe[1],"!",1);
 			}
 #endif
-			return TRUE;
+			msg->deliveryStatus( DCMsg::DELIVERY_SUCCEEDED );
+			return;
 		} else {
 			// send signal to same process, different thread.
 			// we will still need to go out via UDP so that our call
@@ -4160,42 +4284,26 @@ int DaemonCore::Send_Signal(pid_t pid, int sig)
 			dprintf(D_ALWAYS,
 				"Send_Signal: ERROR Attempt to send signal %d to pid %d, but pid %d has no command socket\n",
 				sig,pid,pid);
-			return FALSE;
+			return;
 		}
 
 		is_local = pidinfo->is_local;
 		destination = pidinfo->sinful_string;
 	}
 
-	Daemon d( DT_ANY, destination );
+	classy_counted_ptr<Daemon> d = new Daemon( DT_ANY, destination );
+	Stream::stream_type sock_type = Stream::reli_sock;
+	int timeout = 20;
+	bool blocking = !nonblocking;
+
 	// now destination process is local, send via UDP; if remote, send via TCP
 	if ( is_local == TRUE ) {
-		sock = (Stream *)(d.startCommand(DC_RAISESIGNAL, Stream::safe_sock, 3));
-	} else {
-		sock = (Stream *)(d.startCommand(DC_RAISESIGNAL, Stream::reli_sock, 20));
+		sock_type = Stream::safe_sock;
+		if( !nonblocking ) timeout = 3;
 	}
 
-	if (!sock) {
-		dprintf(D_ALWAYS,"Send_Signal: ERROR Connect to %s failed.\n",
-				destination);
-		return FALSE;
-	}
-
-	// send the signal out as a DC_RAISESIGNAL command
-	sock->encode();
-	if ( (!sock->code(sig)) ||
-		 (!sock->end_of_message()) ) {
-		dprintf(D_ALWAYS,
-				"Send_Signal: ERROR sending signal %d to pid %d\n",sig,pid);
-		delete sock;
-		return FALSE;
-	}
-
-	delete sock;
-
-	dprintf(D_DAEMONCORE,
-					"Send_Signal: sent signal %d to pid %d\n",sig,pid);
-	return TRUE;
+	msg->messengerDelivery( true ); // we really are sending this message
+	d->sendMsg( msg, sock_type, timeout, blocking );
 }
 
 int DaemonCore::Shutdown_Fast(pid_t pid)

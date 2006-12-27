@@ -36,10 +36,13 @@
 
 class DaemonCoreSockAdapterClass {
  public:
-	typedef int (DaemonCore::*Register_Socket_fnptr)(Stream*,char*,SocketHandlercpp,char*,Service*,DCpermission);
+	typedef int (DaemonCore::*Register_Socket_fnptr)(Stream*,const char*,SocketHandlercpp,const char*,Service*,DCpermission);
 	typedef int (DaemonCore::*Cancel_Socket_fnptr)( Stream *sock );
     typedef int (DaemonCore::*Register_DataPtr_fnptr)( void *data );
     typedef void *(DaemonCore::*GetDataPtr_fnptr)();
+	typedef int (DaemonCore::*Register_Timer_fnptr)(unsigned deltawhen,Eventcpp event,char * event_descrip,Service* s);
+	typedef bool (DaemonCore::*TooManyRegisteredSockets_fnptr)(int fd,MyString *msg);
+
 
 	DaemonCoreSockAdapterClass(): m_daemonCore(0) {}
 
@@ -48,13 +51,17 @@ class DaemonCoreSockAdapterClass {
 		Register_Socket_fnptr Register_Socket,
 		Cancel_Socket_fnptr Cancel_Socket,
 		Register_DataPtr_fnptr Register_DataPtr,
-		GetDataPtr_fnptr GetDataPtrFun)
+		GetDataPtr_fnptr GetDataPtrFun,
+		Register_Timer_fnptr Register_Timer,
+		TooManyRegisteredSockets_fnptr TooManyRegisteredSockets)
 	{
 		m_daemonCore = daemonCore;
 		m_Register_Socket_fnptr = Register_Socket;
 		m_Cancel_Socket_fnptr = Cancel_Socket;
 		m_Register_DataPtr_fnptr = Register_DataPtr;
 		m_GetDataPtr_fnptr = GetDataPtrFun;
+		m_Register_Timer_fnptr = Register_Timer;
+		m_TooManyRegisteredSockets_fnptr = TooManyRegisteredSockets;
 	}
 
 		// These functions all have the same interface as the corresponding
@@ -65,11 +72,13 @@ class DaemonCoreSockAdapterClass {
 	Cancel_Socket_fnptr m_Cancel_Socket_fnptr;
 	Register_DataPtr_fnptr m_Register_DataPtr_fnptr;
 	GetDataPtr_fnptr m_GetDataPtr_fnptr;
+	Register_Timer_fnptr m_Register_Timer_fnptr;
+	TooManyRegisteredSockets_fnptr m_TooManyRegisteredSockets_fnptr;
 
     int Register_Socket (Stream*              iosock,
-                         char *               iosock_descrip,
+                         const char *         iosock_descrip,
                          SocketHandlercpp     handlercpp,
-                         char *               handler_descrip,
+                         const char *         handler_descrip,
                          Service*             s,
                          DCpermission         perm = ALLOW)
 	{
@@ -93,6 +102,24 @@ class DaemonCoreSockAdapterClass {
 		ASSERT(m_daemonCore);
 		return (m_daemonCore->*m_GetDataPtr_fnptr)();
 	}
+    int Register_Timer (unsigned     deltawhen,
+                        Eventcpp        event,
+                        char *       event_descrip, 
+                        Service*     s = NULL)
+	{
+		ASSERT(m_daemonCore);
+		return (m_daemonCore->*m_Register_Timer_fnptr)(
+			deltawhen,
+			event,
+			event_descrip,
+			s);
+	}
+	bool TooManyRegisteredSockets(int fd=-1,MyString *msg=NULL)
+	{
+		ASSERT(m_daemonCore);
+		return (m_daemonCore->*m_TooManyRegisteredSockets_fnptr)(fd,msg);
+	}
+
 	bool isEnabled()
 	{
 		return m_daemonCore != NULL;

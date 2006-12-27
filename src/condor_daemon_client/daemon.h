@@ -34,7 +34,7 @@
 #include "KeyCache.h"
 #include "CondorError.h"
 #include "command_strings.h"
-
+#include "dc_message.h"
 
 /** 
   Class used to pass around and store information about a given
@@ -77,7 +77,7 @@
   address files, multiple network interface config parameters, etc),
   we can add the code to support it in one place, instead of peppered
   throughout the entire source tree.  */
-class Daemon {
+class Daemon: public ClassyCountedPtr {
 public:
 		/** Constructor.  Takes the type of the daemon you want
 		  (basically, the subsystem, though we use a daemon_t enum.
@@ -388,6 +388,17 @@ public:
 			@return see definition of StartCommandResult enumeration.
 		*/
 	StartCommandResult startCommand_nonblocking( int cmd, Sock* sock, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data );
+
+		/**
+		 * Asynchronously send a message (command + whatever) to the
+		 * daemon.  Both this daemon object and the msg object should
+		 * be allocated on the heap so that they are not deleted
+		 * before this operation completes.  Garbage collection is
+		 * handled via reference-counting ala ClassyCountedPtr.
+		 * @param msg - the message to send
+		 * @return void - all error handling should happen in DCMsg
+		 */
+	void sendMsg( classy_counted_ptr<DCMsg> msg, Stream::stream_type st=Stream::reli_sock, int timeout=0, bool blocking=false );
 
 		/**
 		 * Contact another daemon and initiate the time offset range 

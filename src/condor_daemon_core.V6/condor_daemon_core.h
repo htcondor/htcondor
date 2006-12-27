@@ -58,6 +58,7 @@
 #include "condor_pidenvid.h"
 #include "condor_arglist.h"
 #include "env.h"
+#include "daemon.h"
 
 #if defined(WIN32)
 #include "pipe.WIN32.h"
@@ -158,6 +159,37 @@ int BindAnyCommandPort(ReliSock *rsock, SafeSock *ssock);
     </UL>
 */
 extern char *mySubSystem;
+
+class DCSignalMsg: public DCMsg {
+ public:
+	DCSignalMsg(pid_t pid, int s): DCMsg(DC_RAISESIGNAL)
+		{m_pid = pid; m_signal = s; m_messenger_delivery = false;}
+
+	int theSignal() {return m_signal;}
+	pid_t thePid() {return m_pid;}
+
+	char const *signalName();
+
+	bool codeMsg( DCMessenger *messenger, Sock *sock );
+
+	bool writeMsg( DCMessenger *messenger, Sock *sock )
+		{return codeMsg(messenger,sock);}
+	bool readMsg( DCMessenger *messenger, Sock *sock )
+		{return codeMsg(messenger,sock);}
+
+	virtual void reportFailure( DCMessenger *messenger );
+	virtual void reportSuccess( DCMessenger *messenger );
+
+	bool messengerDelivery() {return m_messenger_delivery;}
+	void messengerDelivery(bool flag) {m_messenger_delivery = flag;}
+
+ private:
+	pid_t m_pid;
+	int m_signal;
+		// true if DaemonCore sends the signal through some means
+		// other than delivery of this network message through DCMessenger
+	bool m_messenger_delivery;
+};
 
 //-----------------------------------------------------------------------------
 /** This class badly needs documentation, doesn't it? 
@@ -360,7 +392,15 @@ class DaemonCore : public Service
         @param sig The signal to send
         @return Not_Yet_Documented
     */
-    int Send_Signal (pid_t pid, int sig);
+    bool Send_Signal (pid_t pid, int sig);
+
+	/**  Send a signal to a process, as a nonblocking operation.
+		 If the caller cares about the success/failure status, this
+		 can be obtained by subclassing DCSignalMsg and overriding
+		 the message delivery hooks.
+		 @param msg The pid and signal to send as a DCSignalMsg
+	 */
+	void Send_Signal_nonblocking(classy_counted_ptr<DCSignalMsg> msg);
 	//@}
 
 
@@ -464,9 +504,9 @@ class DaemonCore : public Service
         @return -1 if iosock is NULL, -2 is reregister, 0 or above on success
     */
     int Register_Socket (Stream*           iosock,
-                         char *            iosock_descrip,
+                         const char *      iosock_descrip,
                          SocketHandler     handler,
-                         char *            handler_descrip,
+                         const char *      handler_descrip,
                          Service *         s                = NULL,
                          DCpermission      perm             = ALLOW);
 
@@ -480,9 +520,9 @@ class DaemonCore : public Service
         @return -1 if iosock is NULL, -2 is reregister, 0 or above on success
     */
     int Register_Socket (Stream*              iosock,
-                         char *               iosock_descrip,
+                         const char *         iosock_descrip,
                          SocketHandlercpp     handlercpp,
-                         char *               handler_descrip,
+                         const char *         handler_descrip,
                          Service*             s,
                          DCpermission         perm = ALLOW);
 
@@ -492,7 +532,7 @@ class DaemonCore : public Service
         @return -1 if iosock is NULL, -2 is reregister, 0 or above on success
     */
     int Register_Command_Socket (Stream*      iosock,
-                                 char *       descrip = NULL ) {
+                                 const char * descrip = NULL ) {
         return Register_Socket (iosock,
                                 descrip,
                                 (SocketHandler)NULL,
@@ -1070,10 +1110,10 @@ class DaemonCore : public Service
                         int is_cpp);
 
     int Register_Socket(Stream* iosock,
-                        char *iosock_descrip,
+                        const char *iosock_descrip,
                         SocketHandler handler, 
                         SocketHandlercpp handlercpp,
-                        char *handler_descrip,
+                        const char *handler_descrip,
                         Service* s, 
                         DCpermission perm,
                         int is_cpp);
@@ -1097,6 +1137,8 @@ class DaemonCore : public Service
                         int is_cpp);
 
 	void CheckForTimeSkip(time_t time_before, time_t okay_delta);
+
+	void Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocking);
 
 	MyString GetCommandsInAuthLevel(DCpermission perm);
 
