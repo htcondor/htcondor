@@ -129,7 +129,7 @@ public:
 
 	int operator== (const counted_ptr& r)
 	{
-		if ( itsCounter == itsCounter ) {
+		if ( itsCounter == r.itsCounter ) {
 			return 1;
 		}
 		if ( itsCounter && itsCounter->ptr &&
