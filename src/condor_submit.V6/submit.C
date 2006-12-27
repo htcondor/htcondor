@@ -1188,14 +1188,7 @@ SetExecutable()
 	copySpool = condor_param( CopyToSpool, "CopyToSpool" );
 	if( copySpool == NULL)
 	{
-		copySpool = (char *)malloc(16);
-		if ( Remote ) {
-			strcpy(copySpool,"FALSE");
-		} else if ( JobUniverse == CONDOR_UNIVERSE_GRID ) {
-			strcpy(copySpool, "FALSE");
-		} else {
-			strcpy(copySpool, "TRUE");
-		}
+		copySpool = (char *)strdup("FALSE");
 	}
 
 	// generate initial checkpoint file
