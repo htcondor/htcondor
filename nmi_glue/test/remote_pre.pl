@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre.pl,v 1.2.2.5 2006-12-14 19:51:39 bt Exp $
+# $Id: remote_pre.pl,v 1.2.2.6 2006-12-28 18:54:22 bt Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
@@ -241,6 +241,7 @@ print FIX "QUEUE_ALL_USERS_TRUSTED 	= TRUE\n";
 # for HOSTALLOW_WRITE which causes it to EXCEPT on submit
 # till set to some legal value. Old was most insecure..
 print FIX "HOSTALLOW_WRITE 			= *\n";
+print FIX "NUM_CPUS 			= 1\n";
 
 # Allow a default heap size for java(addresses issues on x86_rhas_3)
 # May address some of the other machines with Java turned off also
@@ -353,7 +354,9 @@ close PIDFILE;
 
 # Give the master time to start before jobs are submitted.
 $scheddadr = `$BaseDir/condor/bin/condor_config_val SCHEDD_ADDRESS_FILE`;
+print "<<SCHEDD_ADDRESS_FILE is $scheddadr\n";
 if(!$scheddadr =~/Not defined/) {
+	print "We are waiting for the file to exist\n";
 	# Where is the schedd address file? wait for it to exist
 	$havescheddaddr = "no";
 	while($havescheddaddr ne "yes") { 
@@ -365,7 +368,12 @@ if(!$scheddadr =~/Not defined/) {
 			sleep 10;
 		}
 	}
+} else {
+	print "We are not waiting for the file to exist\n";
+	print "SCHEDD_ADDRESS_FILE is not defined\n";
+	sleep 45;
 }
+
 
 sub safe_copy {
     my( $src, $dest ) = @_;
