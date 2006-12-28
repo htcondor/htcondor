@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre.pl,v 1.2.2.3 2006-10-03 14:41:42 bt Exp $
+# $Id: remote_pre.pl,v 1.2.2.3.14.1 2006-12-28 21:10:44 bt Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
@@ -201,7 +201,7 @@ while( <ORIG> ) {
 
 # ADD size for log files and debug level
 # default settings are in condor_config, set here to override 
-print FIX "ALL_DEBUG               = \n";
+print FIX "ALL_DEBUG               = D_FULLDEBUG\n";
 
 print FIX "MAX_COLLECTOR_LOG       = $logsize\n";
 print FIX "COLLECTOR_DEBUG         = \n";
@@ -240,6 +240,7 @@ print FIX "QUEUE_ALL_USERS_TRUSTED 	= TRUE\n";
 # for HOSTALLOW_WRITE which causes it to EXCEPT on submit
 # till set to some legal value. Old was most insecure..
 print FIX "HOSTALLOW_WRITE 			= *\n";
+print FIX "NUM_CPUS 			= 1\n";
 
 # Allow a default heap size for java(addresses issues on x86_rhas_3)
 # May address some of the other machines with Java turned off also
