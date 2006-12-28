@@ -25,19 +25,21 @@
 #define CONDOR_REF_COUNTED_H
 
 
-/* Notes on ClassyCountedPtr.
+/* Notes on ClassyCountedPtr and classy_counted_ptr<>.
 
-   This is a base class for classes that support explicit reference
-   counting (where a zero reference count causes deletion).
+   ClassyCountedPtr is a base class for classes that support explicit
+   reference counting (where a zero reference count causes deletion).
+   classy_counted_ptr<> is a template "smart pointer", nearly
+   identical to counted_ptr<>, that automatically calls the
+   ClassyCountedPtr methods to increment/decrement the reference
+   count.
 
-   A good alternative to this class is the counted_ptr template, which
-   provides implicit reference counting without modifying your class.
-   However, there are cases where it is better to modify your class to
-   explicitly support reference counting (see below).  If you do this,
-   you can optionally use classy_counted_ptr, a template class that
-   handles the reference counting for you with the same interface as
-   counted_ptr, but which only works on classes derived from
-   ClassyCountedPtr.
+   Whereas the counted_ptr template provides implicit reference
+   counting without modifying your class, classy_counted_ptr requires
+   that your class be derived from ClassyCountedPtr.  There are cases
+   where it is better to modify your class to explicitly support
+   reference counting (see below), and others where it is more
+   convenient not to modify the class.
 
    An example of when to use ClassyCountedPtr is when you find that
    you need to create a ref-counted reference to "this".  The awkward
@@ -51,9 +53,14 @@
    have to worry about different versions of the reference count
    floating around.
 
-   Example usage:
+   Example usage of ClassyCountedPtr:
+
    class MyClass: public ClassyCountedPtr {
    }
+
+   // Given the above definition of MyClass, we can now
+   // explicitly trigger reference-counting by calling
+   // inc/decRefCount().
 
    MyClass *x = new MyClass();
    x->incRefCount();
@@ -63,15 +70,24 @@
 
    x->decRefCount();
 
+   // No further references to the value of x should be made, because
+   // we have triggered a decrement of our reference to the object.
    // If the reference count dropped to zero, x has now been deleted.
-   // No further references to it should be made.
 
-   Example using classy_counted_ptr:
+
+   Example using classy_counted_ptr with MyClass as defined above:
+
    MyClass *x = new MyClass();
    classy_counted_ptr<MyClass> p(x);
 
-   // Now inc/decRefCount() are called automatically in the constructor
-   // and destructor of p.  You can use p as if it was a pointer, like x.
+   // Now, instead of explicitly calling x->inc/decRefCount(), we just
+   // let classy_counted_ptr do that for us.  At this point in the
+   // code, p has already incremented the reference count.  When p
+   // goes out of scope or gets pointed at a different object, it will
+   // decrement the reference count.  You can use p as if it was a
+   // pointer to the object, like x.  Example:
+
+   p->myFunction(blah,blah);
 
 */
 
@@ -125,6 +141,10 @@ public:
     bool unique()   const throw()
         {return (itsPtr ? itsPtr->refCount() == 1 : true);}
 
+		// Unfortunately, the following auto-conversion to a
+		// base-class does not work on the windows compiler, so until
+		// windows supports it, this is disabled.
+#if 0
 		// The following template allows auto-conversion of a
 		// classy_counted_ptr<DerivedClass> to classy_counted_ptr<BaseClass>.
 	template<class baseType>
@@ -132,6 +152,7 @@ public:
 	{
 		return classy_counted_ptr<baseType>(itsPtr);
 	}
+#endif
 
 	int operator== (const classy_counted_ptr& r)
 	{

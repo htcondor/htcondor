@@ -8281,7 +8281,7 @@ send_vacate(match_rec* match,int cmd)
 
 	dprintf( D_FULLDEBUG, "Called send_vacate( %s, %d )\n", match->peer, cmd );
 
-	startd->sendMsg( msg, Stream::safe_sock, STARTD_CONTACT_TIMEOUT );
+	startd->sendMsg( msg.get(), Stream::safe_sock, STARTD_CONTACT_TIMEOUT );
 }
 
 void
@@ -12086,7 +12086,7 @@ void
 Scheduler::sendSignalToShadow(pid_t pid,int sig,PROC_ID proc)
 {
 	classy_counted_ptr<DCShadowKillMsg> msg = new DCShadowKillMsg(pid,sig,proc);
-	daemonCore->Send_Signal_nonblocking(msg);
+	daemonCore->Send_Signal_nonblocking(msg.get());
 
 		// When this operation completes, the handler in DCShadowKillMsg
 		// will take care of setting shadow_rec->preempted = TRUE.
