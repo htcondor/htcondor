@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre.pl,v 1.2.2.6 2006-12-28 18:54:22 bt Exp $
+# $Id: remote_pre.pl,v 1.2.2.7 2006-12-28 21:12:31 bt Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
@@ -202,7 +202,7 @@ while( <ORIG> ) {
 
 # ADD size for log files and debug level
 # default settings are in condor_config, set here to override 
-print FIX "ALL_DEBUG               = \n";
+print FIX "ALL_DEBUG               = D_FULLDEBUG\n";
 
 print FIX "MAX_COLLECTOR_LOG       = $logsize\n";
 print FIX "COLLECTOR_DEBUG         = \n";
