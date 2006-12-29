@@ -4303,7 +4303,7 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 	}
 
 	msg->messengerDelivery( true ); // we really are sending this message
-	d->sendMsg( msg, sock_type, timeout, blocking );
+	d->sendMsg( msg.get(), sock_type, timeout, blocking );
 }
 
 int DaemonCore::Shutdown_Fast(pid_t pid)
