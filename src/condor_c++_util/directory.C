@@ -85,11 +85,11 @@ StatInfo::StatInfo( const char *path )
 	stat_file( (const char*)fullpath );
 }
 
-StatInfo::StatInfo( const char *dirpath, const char *filename )
+StatInfo::StatInfo( const char *param_dirpath, const char *param_filename )
 {
-	this->filename = strnewp( filename );
-	this->dirpath = make_dirpath( dirpath );
-	fullpath = dircat( dirpath, filename );
+	this->filename = strnewp( param_filename );
+	this->dirpath = make_dirpath( param_dirpath );
+	fullpath = dircat( param_dirpath, param_filename );
 	stat_file( (const char*)fullpath );
 }
 
