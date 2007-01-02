@@ -50,6 +50,14 @@ the executable to the spool directory for each job (or job cluster) is almost
 never actually desired.  Previously, the default was \Expr{True} in all
 cases except for the grid universe and remote submissions.
 
+\item More types of file-transfer errors now result in the job going
+on hold, with a specific error message about what went wrong.  The new
+cases involve failures to write output files to disk on the submit
+side (e.g. a full disk).  As always, the specific error number is
+recorded in \Attr{HoldReasonSubCode}, so you can enforce an automated
+error handling policy using \AdAttr{periodic\_release} or
+\AdAttr{periodic\_remove}.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
