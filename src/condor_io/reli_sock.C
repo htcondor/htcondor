@@ -534,7 +534,7 @@ ReliSock::get_file( filesize_t *size, int fd, bool flush_buffers )
 				dprintf( D_ALWAYS,
 						 "ReliSock::get_file: write() returned %d: %s "
 						 "(errno=%d)\n", rval, strerror(errno), errno );
-				return -1;
+				return GET_FILE_WRITE_FAILED;
 			} else if( rval == 0 ) {
 					/*
 					  write() shouldn't really return 0 at all.

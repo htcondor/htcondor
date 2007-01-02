@@ -47,6 +47,7 @@ class Condor_MD_MAC;
 
 #define GET_FILE_OPEN_FAILED -2
 #define PUT_FILE_OPEN_FAILED -2
+#define GET_FILE_WRITE_FAILED -3
 
 class ReliSock : public Sock {
 	friend class Authentication;
@@ -117,6 +118,7 @@ public:
 
     /// returns <0 on failure, 0 for ok
 	//  failure codes: GET_FILE_OPEN_FAILED  (errno contains specific error)
+	//                 GET_FILE_WRITE_FAILED (errno contains specific error)
 	//                 -1                    (all other errors)
 	int get_file_with_permissions(filesize_t *size, const char *desination,
 								  bool flush_buffers=false);

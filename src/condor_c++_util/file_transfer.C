@@ -1490,7 +1490,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 			error_buf.sprintf("%s at %s failed to receive file %s",
 			                  mySubSystem,s->sender_ip_str(),fullname);
 			download_success = false;
-			if(rc == GET_FILE_OPEN_FAILED) {
+			if(rc == GET_FILE_OPEN_FAILED || rc == GET_FILE_WRITE_FAILED) {
 				// errno is well defined in this case
 
 				error_buf.replaceString("receive","write to");
