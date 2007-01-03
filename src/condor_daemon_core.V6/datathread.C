@@ -24,6 +24,7 @@
 #include "condor_common.h"
 #include "condor_daemon_core.h"
 #include "condor_debug.h"
+#include "HashTable.h"
 
 
 /// Support object for Create_Thread_With_Data

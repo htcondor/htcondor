@@ -44,7 +44,6 @@
 #include "command_strings.h"
 #include "condor_classad.h"
 #include "condor_secman.h"
-#include "HashTable.h"
 #include "KeyCache.h"
 #include "list.h"
 #include "extArray.h"
@@ -65,6 +64,8 @@
 #endif
 
 #define DEBUG_SETTABLE_ATTR_LISTS 0
+
+template <class Key, class Value> class HashTable; // forward declaration
 
 static const int KEEP_STREAM = 100;
 static const int CLOSE_STREAM = 101;

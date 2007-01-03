@@ -25,6 +25,7 @@
 #include "condor_daemon_core.h"
 #include "KeyCache.h"
 #include "string_list.h"
+#include "HashTable.h"
 
 extern bool operator==(const struct in_addr a, const struct in_addr b);
 

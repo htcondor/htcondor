@@ -82,6 +82,7 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "../condor_io/condor_rw.h"
 #include "httpget.h"
 #include "daemon_core_sock_adapter.h"
+#include "HashTable.h"
 
 // Make this the last include to fix assert problems on Win32 -- see
 // the comments about assert at the end of condor_debug.h to understand
