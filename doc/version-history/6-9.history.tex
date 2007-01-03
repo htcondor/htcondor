@@ -58,6 +58,15 @@ recorded in \Attr{HoldReasonSubCode}, so you can enforce an automated
 error handling policy using \AdAttr{periodic\_release} or
 \AdAttr{periodic\_remove}.
 
+\item Added the \Macro{<SUBSYS>\_DAEMON\_AD\_FILE}
+configuration variable, which is similar to the 
+\Macro{<SUBSYS>\_ADDRESS\_FILE}
+as described in section~\ref{param:SubsysAddressFile} on
+page~\pageref{param:SubsysAddressFile}.
+This new variable will be used in future versions of Condor, but is
+not necessary for 6.9.1.
+
+
 \end{itemize}
 
 \noindent Bugs Fixed:
