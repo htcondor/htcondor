@@ -2,11 +2,11 @@
 use CondorTest;
 use CondorPersonal;
 use Cwd;
-
-$cmd_template = "job_quill_basic.template";
+$quillpassword = "x_job_quill_basic.template";
 $testname = 'job_quill_basic - Simple parallel job with security on';
 $cmd = "job_quill_basic.cmd";
 $corename = "job_quill_basic";
+$supwfile = "x_job_quill_supw";
 $topdir = getcwd();
 
 # where am I running
@@ -24,18 +24,24 @@ $myfullpgsqlloc = $topdir . "/" . $myquillname;
 $myfullpgsqlinstalllog = $topdir . "/" . $myquillname . "/postgress_install.log" ;
 $mypgsqltarfile = "x_quill_postgresql-8.1.4.tar.gz";
 $mypgsqlversion = "postgresql-8.1.4";
+$mycondorconfigadd = "x_quill_config_postsrc";
 my $myresult;
 
+my $newpath = $ENV{PATH} = "$myfullpgsqlloc" . "/bin:" . $ENV{PATH};
+
+print "NEW Path is now <<$newpath>>\n";
+
+my $pginstall = 0;
 system("mkdir $myquillname");
 if( -d $myquillname ) {
-	$result = system("./x_quill_pgsqlinstall.pl $myfullpgsqlloc $myfullpgsqlinstalllog $mypgsqltarfile $mypgsqlversion");
-	print "Result of Quill Postgresssql db install job is  $result\n";
+	system("cp $supwfile $myquillname");
+	$pgresult = system("./x_quill_pgsqlinstall.pl $myfullpgsqlloc $myfullpgsqlinstalllog $mypgsqltarfile $mypgsqlversion $mycondorconfigadd");
+	print "Result of Quill Postgresssql db install job is  $pgresult\n";
 	system("cp -r $myfullpgsqlinstalllog $mysaveme");
 } else {
 	die "Could not create Quill postgress db install location\n";;
 }
 
-exit;
 system("mkdir $mysaveme");
 
 $mysubmitnm = $corename . $mypid . ".cmd";
@@ -52,19 +58,29 @@ $mycorenmout = $corename . ".out";
 print "Master PID is $mypid\n";
 print "Master PID submit file is $mysubmitnm\n";
 
-# my $configrem = CondorPersonal::DebugOn();
-#my $configrem = CondorPersonal::StartCondor("x_param.quill" ,"quill");
-#my @quill = split /\+/, $configrem;
-#my $quillconfig = shift @quill;
-#my $quillport = shift @quill;
+my $configrem = CondorPersonal::DebugOn();
+my $configrem = CondorPersonal::StartCondor("x_param.quill" ,"quill");
+my @quill = split /\+/, $configrem;
+my $quillconfig = shift @quill;
+my $quillport = shift @quill;
 
-#print "---Quill config is $quillconfig and remote port is $quillport---\n";
+print "---Quill config is $quillconfig and remote port is $quillport---\n";
 
 $ENV{CONDOR_CONFIG} = $quillconfig;
 
-#print "Set config to $quillconfig\n";
+$spool = `condor_config_val spool`;
+chomp($spool);
+print "Spool for quill is <$spool>>\n";
+$cmdforsys = "cp " . $quillpassword . " " . $spool . "/.quillwritepassword";
+print "Command to create quill password file is <<<$cmdforsys>>>\n";
 
-#my $pcresult = system("./job_quill_basic.pl $mysubmitnm");
+system("$cmdforsys");
+print "Set config to $quillconfig\n";
+
+exit;
+
+my $pcresult = 0;
+#$pcresult = system("./job_quill_basic.pl $mysubmitnm");
 #print "Result of job_quill_basic job is  $pcresult\n";
 
 $result = system("./x_quill_pgsqlstop.pl $myfullpgsqlloc ");
@@ -88,7 +104,8 @@ if( -e "$mysubmitnmlog" )
 	system("cp $mysubmitnmlog $mycorenmlog");
 }
 
-if( $result != 0 )
+
+if( $pcresult != 0 )
 {
 	exit(1);
 }
