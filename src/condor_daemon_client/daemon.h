@@ -36,6 +36,8 @@
 #include "command_strings.h"
 #include "dc_message.h"
 
+template <class p> class counted_ptr; // Forward declaration
+
 /** 
   Class used to pass around and store information about a given
   daemon.  You instantiate one of these objects and pass in the type
@@ -545,6 +547,12 @@ protected:
 		*/
 	bool readAddressFile( const char* subsys );
 
+		/** Code for parsing a locally-written classad, which should
+			contain everything about the daemon
+			@return true if we found everthing in the ad, false if not
+		*/
+	bool readLocalClassAd( const char* subsys );
+
 		/** Initialize one of our values from the given ClassAd* and
 			attribute name.  This is shared code when we query the
 			collector to locate a daemon and get the address, version
@@ -561,6 +569,9 @@ protected:
 		*/
 	bool initStringFromAd( ClassAd* ad, const char* attrname,
 						   char** value_str );
+
+	bool initStringFromAd(counted_ptr<class ClassAd>& ad, const char* attrname, 
+		char** value_str );
 
 		/* 
 		   These helpers prevent memory leaks.  Whenever we want to

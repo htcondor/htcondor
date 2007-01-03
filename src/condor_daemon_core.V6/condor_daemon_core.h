@@ -1075,6 +1075,9 @@ class DaemonCore : public Service
         // could return and properly dispatch the EXCEPT monster.
 	int			  	  soap_ssl_sock;
 
+	char 	*localAdFile;
+	void	UpdateLocalAd(ClassAd *daemonAd); 
+
   private:      
 
 	ReliSock* dc_rsock;	// tcp command socket

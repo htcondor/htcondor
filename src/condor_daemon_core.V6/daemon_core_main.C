@@ -191,6 +191,24 @@ clean_files()
 			// Since we param()'ed for this, we need to free it now.
 		free( addrFile );
 	}
+	
+	if(daemonCore) {
+		if( daemonCore->localAdFile ) {
+			if( unlink(daemonCore->localAdFile) < 0 ) {
+				dprintf( D_ALWAYS, 
+						 "DaemonCore: ERROR: Can't delete classad file %s\n",
+						 daemonCore->localAdFile );
+			} else {
+				if( DebugFlags & (D_FULLDEBUG | D_DAEMONCORE) ) {
+					dprintf( D_DAEMONCORE, "Removed local classad file %s\n", 
+							 daemonCore->localAdFile );
+				}
+			}
+			free( daemonCore->localAdFile );
+			daemonCore->localAdFile = NULL;
+		}
+	}
+
 }
 
 
@@ -264,7 +282,6 @@ drop_addr_file()
 		}
 	}
 }
-
 
 void
 drop_pid_file() 

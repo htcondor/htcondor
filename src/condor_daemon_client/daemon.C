@@ -43,6 +43,8 @@
 #include "condor_netdb.h"
 #include "daemon_core_sock_adapter.h"
 
+#include "counted_ptr.h"
+
 extern char *mySubSystem;
 
 
@@ -98,7 +100,7 @@ Daemon::Daemon( daemon_t type, const char* name, const char* pool )
 			_name = strnewp( name );
 		}
 	} 
-	dprintf( D_HOSTNAME, "New Daemon obj (%s) name: \"%s\", pool: "
+	dprintf( D_HOSTNAME, "New Daemon obj (%s) name: \"%s\", pool: "  
 			 "\"%s\", addr: \"%s\"\n", daemonString(_type), 
 			 _name ? _name : "NULL", _pool ? _pool : "NULL",
 			 _addr ? _addr : "NULL" );
@@ -1282,7 +1284,10 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype, bool query_collector)
 		// address of the daemon in question.
 
 	if( _is_local ) {
-		readAddressFile( subsys );
+		bool foundLocalAd = readLocalClassAd( subsys );
+		if(!foundLocalAd) {
+			readAddressFile( subsys );
+		}
 	}
 
 	if ((! _addr) && (!query_collector)) {
@@ -1798,6 +1803,69 @@ Daemon::readAddressFile( const char* subsys )
 	return rval;
 }
 
+bool
+Daemon::readLocalClassAd( const char* subsys )
+{
+	char* addr_file;
+	FILE* addr_fp;
+	ClassAd *adFromFile;
+	MyString param_name;
+	MyString buf;
+
+	param_name.sprintf( "%s_DAEMON_AD_FILE", subsys );
+	addr_file = param( param_name.Value() );
+	if( ! addr_file ) {
+		return false;
+	}
+
+	dprintf( D_HOSTNAME, "Finding classad for local daemon, "
+			 "%s is \"%s\"\n", param_name.Value(), addr_file );
+
+	if( ! (addr_fp = fopen(addr_file, "r")) ) {
+		dprintf( D_HOSTNAME,
+				 "Failed to open classad file %s: %s (errno %d)\n",
+				 addr_file, strerror(errno), errno );
+		free( addr_file );
+		return false;
+	}
+		// now that we've got a FILE*, we should free this so we don't
+		// leak it.
+	free( addr_file );
+	addr_file = NULL;
+
+	int adIsEOF, errorReadingAd, adEmpty = 0;
+	adFromFile = new ClassAd(addr_fp, "...", adIsEOF, errorReadingAd, adEmpty);
+	ASSERT(adFromFile);
+	counted_ptr<ClassAd> smart_ad_ptr(adFromFile);
+	
+	fclose(addr_fp);
+
+	if(errorReadingAd) {
+		return false;	// did that just leak adFromFile?
+	}
+
+	// construct the IP_ADDR attribute
+	buf.sprintf( "%sIpAddr", subsys );
+	if( initStringFromAd(smart_ad_ptr, buf.Value(), &_addr) ) {
+		_tried_locate = true;		
+	} else { return false; }
+
+	if( initStringFromAd( smart_ad_ptr, ATTR_VERSION, &_version ) ) {
+		_tried_init_version = true;
+	} else { return false; }
+
+	initStringFromAd( smart_ad_ptr, ATTR_PLATFORM, &_platform );
+
+	initStringFromAd( smart_ad_ptr, ATTR_NAME, &_name );
+
+	if( initStringFromAd( smart_ad_ptr, ATTR_MACHINE, &_full_hostname ) ) {
+		initHostnameFromFull();
+		_tried_init_hostname = false;
+	} else { return false; }
+
+	return true;
+}
+
 
 bool
 Daemon::initStringFromAd( ClassAd* ad, const char* attrname, char** value )
@@ -1821,11 +1889,17 @@ Daemon::initStringFromAd( ClassAd* ad, const char* attrname, char** value )
 		delete [] *value;
 	}
 	*value = strnewp(tmp);
-	dprintf( D_HOSTNAME, "Found %s in ClassAd from collector, "
+	dprintf( D_HOSTNAME, "Found %s in ClassAd from ClassAd, "
 			 "using \"%s\"\n", attrname, tmp );
 	free( tmp );
 	tmp = NULL;
 	return true;
+}
+
+bool
+Daemon::initStringFromAd( counted_ptr<class ClassAd>& ad, const char* attrname, char** value )
+{
+	return initStringFromAd( ad.get(), attrname, value);
 }
 
 

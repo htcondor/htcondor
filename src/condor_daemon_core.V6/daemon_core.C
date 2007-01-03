@@ -357,6 +357,8 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	file_descriptor_safety_limit = 0; // 0 indicates: needs to be computed
 
 	soap = new struct soap;
+	
+	localAdFile = NULL;
 }
 
 // DaemonCore destructor. Delete the all the various handler tables, plus
@@ -470,6 +472,13 @@ DaemonCore::~DaemonCore()
 	}
 
 	delete soap;
+
+		
+	if(localAdFile) {
+		free(localAdFile);
+		localAdFile = NULL;
+	}
+	
 #ifdef WIN32
 	 DeleteCriticalSection(&Big_fat_mutex);
 #endif
@@ -8329,3 +8338,31 @@ DaemonCore::CheckForTimeSkip(time_t time_before, time_t okay_delta)
 		p->fn(p->data, delta);
 	}
 }
+
+
+void
+DaemonCore::UpdateLocalAd(ClassAd *daemonAd) 
+{
+    FILE    *AD_FILE;
+    char    localAd_path[100];
+
+    sprintf( localAd_path, "%s_DAEMON_AD_FILE", mySubSystem );
+
+	//localAdFile is a global from daemon_core_main.C
+    if( localAdFile ) {
+        free( localAdFile );
+    }
+    localAdFile = param( localAd_path );
+
+    if( localAdFile ) {
+        if( (AD_FILE = fopen(localAdFile, "w")) ) {
+            daemonAd->fPrint(AD_FILE);
+            fclose( AD_FILE );
+        } else {
+            dprintf( D_ALWAYS,
+                     "DaemonCore: ERROR: Can't open daemon address file %s\n",
+                     localAdFile );
+        }
+    }
+}
+

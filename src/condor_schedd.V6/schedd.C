@@ -9741,6 +9741,13 @@ Scheduler::Init()
 	sprintf( expr, "%s = \"%s\"", ATTR_MACHINE, my_full_hostname() ); 
 	ad->Insert(expr);
 		
+	// This is foul, but a SCHEDD_ADTYPE _MUST_ have a NUM_USERS attribute
+	// (see condor_classad/classad.C
+	// Since we don't know how many there are yet, just say 0, it will get
+	// fixed in count_job() -Erik 12/18/2006
+	sprintf(expr, "%s = %d", ATTR_NUM_USERS, 0);
+    ad->Insert(expr);
+
 #if WANT_QUILL
 	// Put the quill stuff into the add as well
 	if (quill_enabled == TRUE) {
@@ -9818,6 +9825,7 @@ Scheduler::Init()
 		CronMgr->Initialize( );
 	}
 
+	daemonCore->UpdateLocalAd(ad);
 	first_time_in_init = false;
 }
 
