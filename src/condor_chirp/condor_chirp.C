@@ -25,7 +25,7 @@
  */
 
 
-#include <condor_common.h>
+#include "condor_common.h"
 #include "chirp_client.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -52,7 +52,7 @@ chirp_get_one_file(char *remote, char *local) {
 	if (strcmp(local, "-") == 0) {
 		wfd = stdout;
 	} else {
-		wfd = ::fopen(local, "wb+");
+		wfd = ::safe_fopen_wrapper(local, "wb+");
 	}
 
 	if (wfd == NULL) {
@@ -108,7 +108,7 @@ chirp_put_one_file(char *local, char *remote, char *mode, int perm) {
 	if (strcmp(local, "-") == 0) {
 		rfd = stdin;
 	} else {
-		rfd = ::fopen(local, "rb");
+		rfd = ::safe_fopen_wrapper(local, "rb");
 	}
 
 	if (rfd == NULL) {

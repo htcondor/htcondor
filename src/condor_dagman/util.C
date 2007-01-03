@@ -72,7 +72,7 @@ int util_popen (ArgList &args) {
 int util_create_lock_file(const char *lockFileName, bool abortDuplicates) {
 	int result = 0;
 
-	FILE *fp = fopen( lockFileName, "w" );
+	FILE *fp = safe_fopen_wrapper( lockFileName, "w" );
 	if ( fp == NULL ) {
 		debug_printf( DEBUG_QUIET,
 					"ERROR: could not open lock file %s for writing.\n",
@@ -171,7 +171,7 @@ int util_create_lock_file(const char *lockFileName, bool abortDuplicates) {
 int util_check_lock_file(const char *lockFileName) {
 	int result = 0;
 
-	FILE *fp = fopen( lockFileName, "r" );
+	FILE *fp = safe_fopen_wrapper( lockFileName, "r" );
 	if ( fp == NULL ) {
 		debug_printf( DEBUG_QUIET,
 					"ERROR: could not open lock file %s for reading.\n",

@@ -344,7 +344,7 @@ createPidFile(const char* pidfile)
     S_IRUSR | S_IWUSR | // user read/write
     S_IRGRP | S_IWGRP | // group read/write
     S_IROTH | S_IWOTH;  // everyone read/write
-  int fd = open(pidfile, O_WRONLY | O_CREAT | O_EXCL, pidfile_mode);
+  int fd = safe_open_wrapper(pidfile, O_WRONLY | O_CREAT | O_EXCL, pidfile_mode);
   if( fd == -1 ){
     perror("ERROR: Could not create the pid file");
     return NULL;
@@ -378,7 +378,7 @@ undertaker_main( int  /* argc */ , char ** /* argv */,
 {
 
 		// Open the pid file 
-	FILE* fp = fopen(pidfile, "r");
+	FILE* fp = safe_fopen_wrapper(pidfile, "r");
 	if( fp == NULL ){
 		fprintf(stderr, "ERROR: Failure occured attempting to open the pidfile [%s]: %s\n", 
 				pidfile, strerror(errno));
@@ -414,7 +414,7 @@ undertaker_main( int  /* argc */ , char ** /* argv */,
 			// only optional don't fail if we can't
 		if( retVal == PROCAPI_SUCCESS ){
 				// append it to pid file
-			FILE* pid_fp = fopen(pidfile, "a");
+			FILE* pid_fp = safe_fopen_wrapper(pidfile, "a");
 			if( pid_fp != NULL ){
 				procId.writeConfirmationOnly(pid_fp);
 			}

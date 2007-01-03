@@ -103,7 +103,7 @@ open_file( const char *name )
 {
 	int		fd;
 
-	fd = open( name, O_RDWR | O_CREAT, 0664 );
+	fd = safe_open_wrapper( name, O_RDWR | O_CREAT, 0664 );
 	if( fd < 0 ) {
 		perror( name );
 		exit( 1 );

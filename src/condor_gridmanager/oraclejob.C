@@ -881,7 +881,7 @@ int OracleJob::doSubmit2()
 		goto doSubmit2_error_exit;
 	}
 
-	exec_fp = fopen( exec_file, "r" );
+	exec_fp = safe_fopen_wrapper( exec_file, "r" );
 	if ( exec_fp == NULL ) {
 		dprintf( D_ALWAYS, "fopen of exec file failed\n" );
 		goto doSubmit2_error_exit;

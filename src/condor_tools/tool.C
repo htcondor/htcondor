@@ -1668,7 +1668,7 @@ printAdToFile(ClassAd *ad, char* filename) {
 	FILE *fp;
 
 	if ( filename ) {
-	    if ( (fp = fopen(filename,"a")) == NULL ) {
+	    if ( (fp = safe_fopen_wrapper(filename,"a")) == NULL ) {
 			printf ( "ERROR appending to %s.\n", filename );
 			return FALSE;
 		}

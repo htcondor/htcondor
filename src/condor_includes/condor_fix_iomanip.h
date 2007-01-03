@@ -1,3 +1,4 @@
+
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
@@ -20,13 +21,31 @@
   * RIGHT.
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-#ifndef JOB_LEASE_H
-#define JOB_LEASE_H
+#if !defined(__CONDOR_FIX_CLASSAD_DISTRIBUTION_H) && defined(__cplusplus)
+#define __CONDOR_FIX_CLASSAD_DISTRIBUTION_H
 
+	/* Save what we redefined open() and fopen() to be, if anything.
+ 	*/
+#ifndef _CONDOR_ALLOW_OPEN
+#	define _CONDOR_OPEN_SAVE open
+#	undef open
+#endif
+#ifndef _CONDOR_ALLOW_FOPEN
+#	define _CONDOR_FOPEN_SAVE fopen
+#	undef fopen
+#endif
 
-void SetDefaultJobLeaseDuration( int duration );
+#include <iomanip>
+using namespace std;
 
-bool CalculateJobLease( const ClassAd *job_ad, int &new_expiration,
-						int default_duration = -1 );
+	/* Restore the open() and fopen() macros back to what they were
+	 */
+#ifdef _CONDOR_OPEN_SAVE
+#	define open _CONDOR_OPEN_SAVE
+#endif
+#ifdef _CONDOR_FOPEN_SAVE
+#	define fopen _CONDOR_FOPEN_SAVE
+#endif
+
 
 #endif

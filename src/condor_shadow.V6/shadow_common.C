@@ -720,7 +720,7 @@ InitJobAd(int cluster, int proc)
 			ipc_fp = stdin;
 			is_stdin = true;
 		} else {
-			ipc_fp = fopen(IpcFile,"r");
+			ipc_fp = safe_fopen_wrapper(IpcFile,"r");
 		}
 		dprintf( D_FULLDEBUG, "Reading job ClassAd from %s\n",
 				 is_stdin ? "STDIN" : IpcFile );

@@ -64,7 +64,7 @@ main( int argc, char* argv[] )
 	sprintf( filename, "/tmp/test-uids.%d", (int)pid );
 	printf( "trying to write info to %s\n", filename );
 
-	fp = fopen( filename, "w" );
+	fp = safe_fopen_wrapper( filename, "w" );
 	if( ! fp ) {
 		fprintf( stderr, "Can't open %s: errno %d (%s)\n",
 				 filename, errno, strerror(errno) );

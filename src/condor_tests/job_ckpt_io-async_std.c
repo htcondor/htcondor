@@ -33,6 +33,7 @@
 */
 
 #define _POSIX_SOURCE
+#define _CONDOR_ALLOW_OPEN 1
 
 #if defined(IRIX)
 #include "condor_common.h"

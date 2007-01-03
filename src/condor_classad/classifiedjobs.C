@@ -25,11 +25,12 @@
 // requirements.
 //
 
+#define _CONDOR_ALLOW_OPEN 1	// because fstream interface defines open
 #include "condor_common.h"
 #include "condor_classad.h"
+#include "condor_fix_fstream.h"
 #include "condor_classifiedjobs.h"
 
-#include <fstream.h>
 
 Class::Class(ExprTree* classDef)
 {

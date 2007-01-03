@@ -105,7 +105,7 @@ StatInfo::StatInfo( int fd )
 #ifdef WIN32
 StatInfo::StatInfo( const char* dirpath, const char* filename, 
 					time_t time_access, time_t time_create, 
-					time_t time_modify, unsigned long fsize,
+					time_t time_modify, filesize_t fsize,
 					bool is_dir, bool is_symlink )
 {
 	this->dirpath = strnewp( dirpath );
@@ -378,11 +378,11 @@ Directory::~Directory()
 #endif
 }
 
-unsigned long
+filesize_t
 Directory::GetDirectorySize()
 {
 	const char* thefile = NULL;
-	unsigned long dir_size = 0;
+	filesize_t dir_size = 0;
 
 	Set_Access_Priv();
 
@@ -1299,7 +1299,7 @@ create_temp_file() {
 	do {
 		sprintf (filename, "%s/tmp.%d.%d", temp_dir, mypid, timestamp++);
 	} while ((--retry_count > 0) && 
-			 ((fd=open (filename, O_EXCL | O_CREAT, S_IREAD | S_IWRITE)) == -1));
+			 ((fd=safe_open_wrapper(filename, O_EXCL | O_CREAT, S_IREAD | S_IWRITE)) == -1));
 
 	if (fd == -1) {
 		return NULL;

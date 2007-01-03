@@ -403,7 +403,7 @@ ParallelShadow::emailTerminateEvent( int exitReason, update_style_t kind )
 	MyString str;
 	char *s;
 
-	mailer = msg.open( jobAd, exitReason );
+	mailer = msg.open_stream( jobAd, exitReason );
 	if( ! mailer ) {
 			// nothing to do
 		return;

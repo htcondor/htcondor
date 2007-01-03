@@ -262,7 +262,7 @@ int main(int argc, char* argv[])
 
   // Open the output file
   FILE* outfile=stdout;
-  if (FileName.Length()>0) outfile=fopen(FileName.Value(),"w");
+  if (FileName.Length()>0) outfile=safe_fopen_wrapper(FileName.Value(),"w");
 
   int LineCount=0;
 
@@ -336,7 +336,7 @@ int TimeLine(const MyString& TimeFileName,int FromDate, int ToDate, int Res)
   double Interval=double(ToDate-FromDate)/double(Res);
   float RelT;
   time_t T;
-  FILE* TimeFile=fopen(TimeFileName.Value(),"w");
+  FILE* TimeFile=safe_fopen_wrapper(TimeFileName.Value(),"w");
   if (!TimeFile) return -1;
   for (int i=0; i<=Res; i++) {
     T=(time_t)FromDate+((int)Interval*i);

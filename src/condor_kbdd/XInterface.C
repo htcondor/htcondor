@@ -225,8 +225,8 @@ XInterface::Connect()
 
 	dprintf(D_FULLDEBUG, "XInterface::Connect\n");
 	// fopen the Utmp.  If we fail, bail...
-	if ((utmp_fp=fopen(UtmpName,"r")) == NULL) {
-		if ((utmp_fp=fopen(AltUtmpName,"r")) == NULL) {                      
+	if ((utmp_fp=safe_fopen_wrapper(UtmpName,"r")) == NULL) {
+		if ((utmp_fp=safe_fopen_wrapper(AltUtmpName,"r")) == NULL) {                      
 			EXCEPT("fopen of \"%s\" (and \"%s\") failed!", UtmpName,
 				AltUtmpName);                        
 		}                             

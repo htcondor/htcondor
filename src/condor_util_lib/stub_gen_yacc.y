@@ -39,6 +39,8 @@
 %type <param_mode> use_type
 
 %{
+#define _CONDOR_ALLOW_OPEN 1
+#define _CONDOR_ALLOW_FOPEN 1
 #include "condor_common.h"
 #include "scanner.h"
 extern int yyline;

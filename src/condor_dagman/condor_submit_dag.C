@@ -265,7 +265,7 @@ MyString makeString(int iValue)
 
 bool fileExists(const MyString &strFile)
 {
-	int fd = open(strFile.Value(), O_RDONLY);
+	int fd = safe_open_wrapper(strFile.Value(), O_RDONLY);
 	if (fd == -1)
 		return false;
 	close(fd);
@@ -327,7 +327,7 @@ void ensureOutputFilesExist(const SubmitDagOptions &opts)
 
 void writeSubmitFile(/* const */ SubmitDagOptions &opts)
 {
-	FILE *pSubFile = fopen(opts.strSubFile.Value(), "w");
+	FILE *pSubFile = safe_fopen_wrapper(opts.strSubFile.Value(), "w");
 	if (!pSubFile)
 	{
 		fprintf( stderr, "ERROR: unable to create submit file %s\n",

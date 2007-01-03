@@ -1126,7 +1126,7 @@ condor__declareFile(struct soap *soap,
 		result.response.message = "Unknown job";
 	} else {
 		CondorError errstack;
-		if (job->declare_file(MyString(name), size, errstack)) {
+		if (job->declare_file(MyString(name), (filesize_t)size, errstack)) {
 			result.response.code =
 				(condor__StatusCode) errstack.code();
 			result.response.message =

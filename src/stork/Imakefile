@@ -44,6 +44,7 @@ CFLAGS  = $(STD_C_FLAGS) $(STORK_FLAGS)
 
 /* internal Stork utilities library */
 UTIL_LIB_OBJS = \
+	../condor_c++_util/condor_open.o \
 	dap_utility.o \
 	dap_client_interface.o
 STORK_UTIL = libstorkutil.a

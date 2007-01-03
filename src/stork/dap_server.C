@@ -28,6 +28,7 @@
  * February 2002 - ...
  * ==========================================================================*/
 
+#include "condor_common.h"
 #include "dap_server.h"
 #include "dap_server_interface.h"
 #include "dap_classad_reader.h"
@@ -168,7 +169,7 @@ open_module_stdio(	classad::ClassAd*   ad,
 		return false;
 	}
 	module_stdio[ MODULE_STDIN_INDEX ] =
-		open( path.c_str(), O_RDONLY);
+		safe_open_wrapper( path.c_str(), O_RDONLY);
 	if ( module_stdio[ MODULE_STDIN_INDEX ] < 0 ) {
 		dprintf(D_ALWAYS, "error: job %d open input file %s: %s\n",
 				dap_id, path.c_str(), strerror(errno) );
@@ -184,7 +185,7 @@ open_module_stdio(	classad::ClassAd*   ad,
 		return false;
 	}
 	module_stdio[ MODULE_STDOUT_INDEX ] =
-		open( path.c_str(), O_WRONLY|O_CREAT|O_APPEND, 0644);
+		safe_open_wrapper( path.c_str(), O_WRONLY|O_CREAT|O_APPEND, 0644);
 	if ( module_stdio[ MODULE_STDOUT_INDEX ] < 0 ) {
 		dprintf(D_ALWAYS, "error: job %d open output file %s: %s\n",
 				dap_id, path.c_str(), strerror(errno) );
@@ -200,7 +201,7 @@ open_module_stdio(	classad::ClassAd*   ad,
 		return false;
 	}
 	module_stdio[ MODULE_STDERR_INDEX ] =
-		open( path.c_str(), O_WRONLY|O_CREAT|O_APPEND, 0644);
+		safe_open_wrapper( path.c_str(), O_WRONLY|O_CREAT|O_APPEND, 0644);
 	if ( module_stdio[ MODULE_STDERR_INDEX ] < 0 ) {
 		dprintf(D_ALWAYS, "error: job %d open error file %s: %s\n",
 				dap_id, path.c_str(), strerror(errno) );
@@ -766,7 +767,7 @@ void process_request(classad::ClassAd *currentAd)
 				return;
 			}
 			priv_state old_priv = set_user_priv();
-			int fd = open (cred_file_name, O_WRONLY | O_CREAT, 0600 );
+			int fd = safe_open_wrapper(cred_file_name, O_WRONLY | O_CREAT, 0600 );
 			if (fd > -1) {
 				if ( fchmod (fd, S_IRUSR | S_IWUSR) < 0 ) {
 					dprintf( D_ALWAYS,
@@ -1519,7 +1520,7 @@ int write_requests_to_file(ReliSock * sock)
 			return FALSE;
 		}
 		priv_state old_priv = set_user_priv();
-		int fd = open (cred_file_name, O_WRONLY | O_CREAT, 0600);
+		int fd = safe_open_wrapper(cred_file_name, O_WRONLY | O_CREAT, 0600);
 		if (fd < 0) {
 			set_priv(old_priv);
 			dprintf(D_ALWAYS,
@@ -1983,7 +1984,7 @@ int dap_reaper(std::string modify_s, int pid,int exit_status)
 		if (!strcmp(dap_type, "reserve")){
 				//this part commented temporarily, required by nest_reserve
 				/*
-				  f = fopen(fname, "r");
+				  f = safe_fopen_wrapper(fname, "r");
 				  fgets( linebuf, MAXSTR, f);
 
 				  modify_s += "lot_id = ";
@@ -2093,7 +2094,7 @@ int dap_reaper(std::string modify_s, int pid,int exit_status)
 		dprintf(D_ALWAYS, "number of attempts = %d\n", num_attempts);
     
 
-		if ( (f = fopen(fname, "r")) == NULL ){
+		if ( (f = safe_fopen_wrapper(fname, "r")) == NULL ){
 			dprintf(
 				D_ALWAYS,
 				"%s:%d: No error details for pid %d(file %s): (%d)%s\n",

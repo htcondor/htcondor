@@ -27,8 +27,7 @@
 #include "condor_string.h"
 #include "strupr.h"
 
-#include <iostream>
-using namespace std;
+#include "condor_fix_iostream.h"
 /*--------------------------------------------------------------------
  *
  * Constructors and Destructors

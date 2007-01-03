@@ -20,8 +20,8 @@
   * RIGHT.
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-#include "dap_constants.h"
 #include "condor_common.h"
+#include "dap_constants.h"
 #include "dap_client_interface.h"
 #include "dap_classad_reader.h"
 #include "dap_utility.h"
@@ -247,7 +247,7 @@ int main(int argc, char **argv)
   //open the submit file
   if(read_from_stdin) adfile = stdin;
   else {
-    adfile = fopen(fname,"r");
+    adfile = safe_fopen_wrapper(fname,"r");
     if (adfile == NULL) {
       fprintf(stderr, "Cannot open submit file %s: %s\n",fname, strerror(errno) );
       exit(1);
@@ -360,7 +360,7 @@ int main(int argc, char **argv)
             return 1;
         }
 
-		FILE * fp = fopen (proxy_file_name.c_str(), "r");
+		FILE * fp = safe_fopen_wrapper(proxy_file_name.c_str(), "r");
 		if (fp) {
 			proxy = (char*)malloc ((proxy_size+1)*sizeof(char));
             ASSERT(proxy);

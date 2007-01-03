@@ -21,7 +21,6 @@
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 #include "constants2.h"
-#include <fstream.h>
 
 
 void MakeLongLine(char ch1,

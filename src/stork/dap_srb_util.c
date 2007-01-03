@@ -27,6 +27,7 @@
  * April 2000
  * ==========================================================================*/
 
+#include "condor_common.h"
 #include "dap_srb_util.h"
 #include "dap_constants.h"
 #include <stdio.h>
@@ -229,7 +230,7 @@ const char * srbResource(void)
 	}
 	strcpy(file, home);
 	strcat(file, SRBENV);
-	fp = fopen(file, "r");
+	fp = safe_fopen_wrapper(file, "r", 0644);
 	if (! fp) {
 #ifdef _DEBUG
 		fprintf(stderr, "open %s for read: %s\n", file, strerror(errno) );

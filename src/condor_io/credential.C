@@ -134,7 +134,7 @@ int X509_Credential :: forward_credential(ReliSock *sock)
 
 
 	if (crd_name && !stat(crd_name,&buf)){
-		fp = fopen(crd_name,"r");
+		fp = safe_fopen_wrapper(crd_name,"r");
 		if (fp){
 			proxy_length = buf.st_size;
 			proxy_buffer = (char*) malloc(proxy_length);
@@ -235,7 +235,7 @@ int X509_Credential :: receive_credential(ReliSock *sock, char* name)
 	strcat(proxy_file,"/");
 	strcat(proxy_file,where);
 	strcat(proxy_file,".x509");
-	fp = fopen(proxy_file,"w");
+	fp = safe_fopen_wrapper(proxy_file,"w");
 	if (fwrite(proxy_buffer,proxy_length,1,fp) == 1){
 		fclose(fp);
 		return 0;

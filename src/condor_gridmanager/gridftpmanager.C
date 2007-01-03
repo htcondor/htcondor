@@ -576,7 +576,7 @@ bool GridftpServer::SubmitServerJob()
 
 	snprintf( mapfile, sizeof(mapfile), "%s/grid-mapfile",
 			  GridmanagerScratchDir );
-	mapfile_fp = fopen( mapfile, "w" );
+	mapfile_fp = safe_fopen_wrapper( mapfile, "w" );
 	if ( mapfile_fp == NULL ) {
 		dprintf( D_ALWAYS, "GridftpServer::SubmitServerJob: Failed to open "
 				 "%s for write, errno=%d\n", mapfile, errno );
@@ -838,7 +838,7 @@ bool GridftpServer::ReadUrlBase()
 	FILE *out_fp;
 
 	out_name.sprintf( "%s/%s", GridmanagerScratchDir, STDOUT_NAME );
-	out_fp = fopen( out_name.Value(), "r" );
+	out_fp = safe_fopen_wrapper( out_name.Value(), "r" );
 	if ( out_fp == NULL ) {
 		dprintf( D_ALWAYS, "GridftpServer::ReadUrlBase: Failed to open "
 				 "'%s': errno=%d\n", out_name.Value(), errno );
@@ -862,7 +862,7 @@ bool GridftpServer::ReadUrlBase()
 		return false;
 	}
 
-	FILE *out = fopen( m_outputFile, "r" );
+	FILE *out = safe_fopen_wrapper( m_outputFile, "r" );
 	if ( out == NULL ) {
 		dprintf( D_ALWAYS, "GridftpServer::ReadUrlBase: Failed to open "
 				 "'%s': %d\n", m_outputFile, errno );
@@ -975,7 +975,7 @@ bool GridftpServer::CheckPortError()
 	FILE *err_fp;
 
 	err_name.sprintf( "%s/%s", GridmanagerScratchDir, STDERR_NAME );
-	err_fp = fopen( err_name.Value(), "r" );
+	err_fp = safe_fopen_wrapper( err_name.Value(), "r" );
 	if ( err_fp == NULL ) {
 		dprintf( D_ALWAYS, "GridftpServer::CheckPortError: Failed to "
 				 "open '%s': errno=%d\n", err_name.Value(), errno );

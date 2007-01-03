@@ -858,7 +858,7 @@ Starter::execOldStarter( void )
 		if( resmgr->is_smp() ) {
 			execl( s_path, "condor_starter", hostname, 
 						 daemonCore->InfoCommandSinfulString(), 
-						 "-a", s_claim->rip()->r_id_str, 0 );
+						 "-a", s_claim->rip()->r_id_str, (void*)NULL );
 			tmp_errno = errno;
 				// If we got this far, there was an error in execl().
 			dprintf( D_ALWAYS, 
@@ -869,7 +869,7 @@ Starter::execOldStarter( void )
 				 tmp_errno, strerror(tmp_errno) );
 		} else {			
 			execl( s_path, "condor_starter", hostname, 
-						 daemonCore->InfoCommandSinfulString(), 0 );
+						 daemonCore->InfoCommandSinfulString(), (void*)NULL );
 			tmp_errno = errno;
 				// If we got this far, there was an error in execl().
 			dprintf( D_ALWAYS, 

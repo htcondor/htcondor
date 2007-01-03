@@ -29,7 +29,7 @@
 #include "test.h"
 
 #include <stdio.h>
-#include <iostream>
+#include "condor_fix_iostream.h"
 #include <string.h>
 #include <sys/types.h>
 #include <unistd.h>

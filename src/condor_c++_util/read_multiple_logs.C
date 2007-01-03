@@ -30,6 +30,7 @@
 #ifndef WANT_NAMESPACES
 #define WANT_NAMESPACES
 #endif
+#include "condor_fix_iostream.h"
 #include "classad_distribution.h"
 #endif
 #include "fs_util.h"
@@ -385,10 +386,10 @@ MultiLogFiles::readFileToString(const MyString &strFilename)
 	dprintf( D_FULLDEBUG, "MultiLogFiles::readFileToString(%s)\n",
 				strFilename.Value() );
 
-	FILE *pFile = fopen(strFilename.Value(), "r");
+	FILE *pFile = safe_fopen_wrapper(strFilename.Value(), "r");
 	if (!pFile) {
 		dprintf( D_ALWAYS, "MultiLogFiles::readFileToString: "
-				"fopen(%s) failed with errno %d (%s)\n", strFilename.Value(),
+				"safe_fopen_wrapper(%s) failed with errno %d (%s)\n", strFilename.Value(),
 				errno, strerror(errno) );
 		return "";
 	}
@@ -547,7 +548,7 @@ MultiLogFiles::readFile(char const *filename,std::string& buf)
     char chunk[4000];
 	MyString rtnVal;
 
-	int fd = open(filename, O_RDONLY);
+	int fd = safe_open_wrapper(filename, O_RDONLY);
 	if (fd < 0) {
 		rtnVal.sprintf("error opening submit file %s: %s",
 				filename, strerror(errno) );

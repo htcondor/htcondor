@@ -868,7 +868,7 @@ find_file(const char *env_name, const char *file_name)
 		str += "/";
 		str += file_name;
 		config_source = strdup( str.Value() );
-		if( (fd = open( config_source, O_RDONLY )) < 0 ) {
+		if( (fd = safe_open_wrapper( config_source, O_RDONLY )) < 0 ) {
 			free( config_source );
 			config_source = NULL;
 		} else {
@@ -883,7 +883,7 @@ find_file(const char *env_name, const char *file_name)
 		strcat( config_source, tilde );
 		strcat( config_source, "/" );
 		strcat( config_source, file_name );
-		if( (fd = open( config_source, O_RDONLY)) < 0 ) {
+		if( (fd = safe_open_wrapper( config_source, O_RDONLY)) < 0 ) {
 			free( config_source );
 			config_source = NULL;
 		} else {
@@ -904,7 +904,7 @@ find_file(const char *env_name, const char *file_name)
 			strcat(config_source, globus_location);
 			strcat(config_source, "/etc/");
 			strcat(config_source, file_name); 
-			if( (fd = open( config_source, O_RDONLY)) < 0 ) {
+			if( (fd = safe_open_wrapper( config_source, O_RDONLY)) < 0 ) {
 				free( config_source );
 				config_source = NULL;
 			} else {
@@ -969,7 +969,7 @@ find_file(const char *env_name, const char *file_name)
 						// to make a mapping to the UNC path. For reasons
 						// I don't fully understand, some sites need the 
 						// mapping, and some don't. If it works, great; if 
-						// not, try the open() anyways, and at worst we'll
+						// not, try the safe_open_wrapper() anyways, and at worst we'll
 						// fail fast and the user can fix their file server.
 					}
 
@@ -980,7 +980,7 @@ find_file(const char *env_name, const char *file_name)
 
 				if( !(is_piped_command(config_source) &&
 					  is_valid_command(config_source)) && 
-					(fd = open( config_source, O_RDONLY)) < 0 ) {
+					(fd = safe_open_wrapper( config_source, O_RDONLY)) < 0 ) {
 
 					free( config_source );
 					config_source = NULL;
@@ -1611,10 +1611,10 @@ set_persistent_config(char *admin, char *config)
 		tmp_filename.sprintf( "%s.tmp", filename.Value() );
 		do {
 			unlink( tmp_filename.Value() );
-			fd = open( tmp_filename.Value(), O_WRONLY|O_CREAT|O_EXCL, 0644 );
+			fd = safe_open_wrapper( tmp_filename.Value(), O_WRONLY|O_CREAT|O_EXCL, 0644 );
 		} while (fd == -1 && errno == EEXIST); 
 		if( fd < 0 ) {
-			dprintf( D_ALWAYS, "open(%s) returned %d '%s' (errno %d) in "
+			dprintf( D_ALWAYS, "safe_open_wrapper(%s) returned %d '%s' (errno %d) in "
 					 "set_persistent_config()\n", tmp_filename.Value(),
 					 fd, strerror(errno), errno );
 			ABORT;
@@ -1663,10 +1663,10 @@ set_persistent_config(char *admin, char *config)
 	tmp_filename.sprintf( "%s.tmp", toplevel_persistent_config.Value() );
 	do {
 		unlink( tmp_filename.Value() );
-		fd = open( tmp_filename.Value(), O_WRONLY|O_CREAT|O_EXCL, 0644 );
+		fd = safe_open_wrapper( tmp_filename.Value(), O_WRONLY|O_CREAT|O_EXCL, 0644 );
 	} while (fd == -1 && errno == EEXIST); 
 	if( fd < 0 ) {
-		dprintf( D_ALWAYS, "open(%s) returned %d '%s' (errno %d) in "
+		dprintf( D_ALWAYS, "safe_open_wrapper(%s) returned %d '%s' (errno %d) in "
 				 "set_persistent_config()\n", tmp_filename.Value(),
 				 fd, strerror(errno), errno );
 		ABORT;

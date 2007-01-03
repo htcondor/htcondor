@@ -251,7 +251,7 @@ drop_addr_file()
 	addrFile = param( addr_file );
 
 	if( addrFile ) {
-		if( (ADDR_FILE = fopen(addrFile, "w")) ) {
+		if( (ADDR_FILE = safe_fopen_wrapper(addrFile, "w")) ) {
 			fprintf( ADDR_FILE, "%s\n", 
 					 daemonCore->InfoCommandSinfulString() );
 			fprintf( ADDR_FILE, "%s\n", CondorVersion() );
@@ -276,7 +276,7 @@ drop_pid_file()
 		return;
 	}
 
-	if( (PID_FILE = fopen(pidFile, "w")) ) {
+	if( (PID_FILE = safe_fopen_wrapper(pidFile, "w")) ) {
 		fprintf( PID_FILE, "%lu\n", 
 				 (unsigned long)daemonCore->getpid() ); 
 		fclose( PID_FILE );
@@ -312,7 +312,7 @@ do_kill()
 			pidFile = tmp;
 		}
 	}
-	if( (PID_FILE = fopen(pidFile, "r")) ) {
+	if( (PID_FILE = safe_fopen_wrapper(pidFile, "r")) ) {
 		fscanf( PID_FILE, "%lu", &tmp_ul_int ); 
 		pid = (pid_t)tmp_ul_int;
 		fclose( PID_FILE );
@@ -733,7 +733,7 @@ handle_fetch_log( Service *service, int cmd, Stream *s )
 		full_filename += ext;
 	}
 
-	int fd = open(full_filename.Value(),O_RDONLY);
+	int fd = safe_open_wrapper(full_filename.Value(),O_RDONLY);
 	if(fd<0) {
 		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log: can't open file %s\n",full_filename.Value());
 		result = DC_FETCH_LOG_RESULT_CANT_OPEN;
@@ -1574,7 +1574,7 @@ int main( int argc, char** argv )
 		// with it.  Unfortunately, some 3rd party tools were writing
 		// directly to these FDs.  Now, you might not that that this
 		// would be a problem, right?  Unfortunately, once you close
-		// an FD (say, 1 or 2), then next open() or socket() call can
+		// an FD (say, 1 or 2), then next safe_open_wrapper() or socket() call can
 		// / will now return 1 (or 2).  So, when libfoo.a thinks it
 		// fprintf()ing an error message to fd 2 (the FD behind
 		// stderr), it's actually sending that message over a socket
@@ -1599,7 +1599,7 @@ int main( int argc, char** argv )
 		// /dev/null.
 
 		if ( is_master ) {
-			int	fd_null = open( NULL_FILE, O_RDWR );
+			int	fd_null = safe_open_wrapper( NULL_FILE, O_RDWR );
 			if ( fd_null < 0 ) {
 				fprintf( stderr, "Unable to open %s: %s\n", NULL_FILE, strerror(errno) );
 				dprintf( D_ALWAYS, "Unable to open %s: %s\n", NULL_FILE, strerror(errno) );

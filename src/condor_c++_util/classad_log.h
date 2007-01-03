@@ -93,6 +93,8 @@ public:
 	void SetMaxHistoricalLogs(int max);
 	int GetMaxHistoricalLogs();
 
+	time_t GetOrigLogBirthdate() {return m_original_log_birthdate;}
+
 protected:
 	/** Returns handle to active transaction.  Upon return of this
 		method, any active transaction is forgotten.  It is the caller's
@@ -125,6 +127,7 @@ private:
 	Transaction *active_transaction;
 	int max_historical_logs;
 	unsigned long historical_sequence_number;
+	time_t m_original_log_birthdate;
 
 	bool SaveHistoricalLogs();
 };
@@ -142,7 +145,8 @@ private:
 	virtual int ReadBody(FILE *fp);
 
 	unsigned long historical_sequence_number;
-	time_t timestamp; //time is logged for purely informational purposes
+	time_t timestamp; //when was the the first record originally written,
+					  // regardless of how many times the log has rotated
 };
 
 class LogNewClassAd : public LogRecord {

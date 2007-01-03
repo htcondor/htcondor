@@ -329,7 +329,7 @@ _condor_open_lock_file(const char *DebugLock,int flags, mode_t perm)
 	}
 
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
-	lock_fd = open(DebugLock,flags,perm);
+	lock_fd = safe_open_wrapper(DebugLock,flags,perm);
 	if( lock_fd < 0 ) {
 		save_errno = errno;
 		if( save_errno == ENOENT ) {
@@ -353,7 +353,7 @@ _condor_open_lock_file(const char *DebugLock,int flags, mode_t perm)
 					} else {
 						/* It worked as root, so chown() the
 						   new directory and set a flag so we
-						   retry the open(). */
+						   retry the safe_open_wrapper(). */
 #ifndef WIN32
 						chown( dirpath, get_condor_uid(),
 							   get_condor_gid() );
@@ -369,7 +369,7 @@ _condor_open_lock_file(const char *DebugLock,int flags, mode_t perm)
 				}
 			} else {
 					/* We succeeded in creating the directory,
-					   try the open() again */
+					   try the safe_open_wrapper() again */
 				retry = 1;
 			}
 				/* At this point, we're done with this, so
@@ -377,7 +377,7 @@ _condor_open_lock_file(const char *DebugLock,int flags, mode_t perm)
 			free( dirpath );
 		}
 		if( retry ) {
-			lock_fd = open(DebugLock,flags,perm);
+			lock_fd = safe_open_wrapper(DebugLock,flags,perm);
 			if( lock_fd < 0 ) {
 				save_errno = errno;
 			}
@@ -682,7 +682,7 @@ _condor_fd_panic( int line, char* file )
 		(void)close( i );
 	}
 	if( DebugFile[0] ) {
-		DebugFP = fopen(DebugFile[0], "a");
+		DebugFP = safe_fopen_wrapper(DebugFile[0], "a", 0644);
 	}
 
 	if( DebugFP == NULL ) {
@@ -746,7 +746,7 @@ open_debug_file(int debug_level, char flags[])
 	   since PRIV_CONDOR changes euid now. */
 
 	errno = 0;
-	if( (fp=fopen(DebugFile[debug_level],flags)) == NULL ) {
+	if( (fp=safe_fopen_wrapper(DebugFile[debug_level],flags,0644)) == NULL ) {
 		save_errno = errno;
 #if !defined(WIN32)
 		if( errno == EMFILE ) {
@@ -804,7 +804,7 @@ _condor_dprintf_exit( int error_code, const char* msg )
 	tmp = param( "LOG" );
 	if( tmp ) {
 		sprintf( buf, "%s/dprintf_failure.%s", tmp, get_mySubSystem() );
-		fail_fp = fopen( buf, "w" );
+		fail_fp = safe_fopen_wrapper( buf, "w",0644 );
 		if( fail_fp ) {
 			fprintf( fail_fp, "%s", header );
 			fprintf( fail_fp, "%s", msg );

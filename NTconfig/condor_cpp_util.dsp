@@ -260,6 +260,15 @@ SOURCE="..\src\condor_c++_util\condor_md.C"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\condor_open.C"
+# SUBTRACT CPP /YX /Yc /Yu
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\condor_open.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\condor_parameters.C"
 # End Source File
 # Begin Source File

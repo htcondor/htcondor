@@ -46,6 +46,10 @@ JobQueueSnapshot::~JobQueueSnapshot()
 		delete(jqDB);
 	}
 	jqDB = NULL;
+	if (curClusterAd) {
+		delete curClusterAd;
+		curClusterAd = 0;
+	}
 }
 
 //! prepare iteration of Job Ads in the job queue database
@@ -388,6 +392,9 @@ JobQueueSnapshot::iterateAllClassAds(ClassAd*& ad)
 	
 	st1 = getNextProcAd(ad);
 	while(st1 == DONE_PROCADS_CUR_CLUSTERAD) {
+		if (curClusterAd) {
+			delete curClusterAd;
+		}
 		st2 = getNextClusterAd(curClusterId, curClusterAd);
 		
 			//a sanity check for a race condition that should never occur

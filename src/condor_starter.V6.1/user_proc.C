@@ -201,7 +201,7 @@ UserProc::openStdFile( std_file_type type, const char* attr,
 		// initialize this to -2 to mean "not specified".  if we have
 		// success, we'll have a valid fd (>=0).  if there's an error
 		// opening something, we'll return -1 which our callers
-		// consider a failed open().
+		// consider a failed safe_open_wrapper().
 	int fd = -2;
 	const char* filename;
 	bool wants_stream = false;
@@ -324,13 +324,13 @@ UserProc::openStdFile( std_file_type type, const char* attr,
 		///////////////////////////////////////////////////////
 
 	if( is_output ) {
-		fd = open( filename, O_WRONLY|O_CREAT|O_TRUNC, 0666 );
+		fd = safe_open_wrapper( filename, O_WRONLY|O_CREAT|O_TRUNC, 0666 );
 		if( fd < 0 ) {
 				// if failed, try again without O_TRUNC
-			fd = open( filename, O_WRONLY|O_CREAT, 0666 );
+			fd = safe_open_wrapper( filename, O_WRONLY|O_CREAT, 0666 );
 		}
 	} else {
-		fd = open( filename, O_RDONLY );
+		fd = safe_open_wrapper( filename, O_RDONLY );
 	}
 	if( fd < 0 ) {
 		int open_errno = errno;

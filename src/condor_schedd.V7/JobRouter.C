@@ -128,7 +128,7 @@ JobRouter::GetInstanceLock() {
 	lock_fullname += DIR_DELIM_CHAR;
 	lock_fullname += lock_basename;
 
-	m_router_lock_fd = open(lock_fullname.c_str(),O_CREAT|O_APPEND|O_WRONLY,0600);
+	m_router_lock_fd = safe_open_wrapper(lock_fullname.c_str(),O_CREAT|O_APPEND|O_WRONLY,0600);
 	if(m_router_lock_fd == -1) {
 		EXCEPT("Failed to open lock file %s: %s",lock_fullname.c_str(),strerror(errno));
 	}

@@ -210,7 +210,7 @@ CondorVersionInfo::get_version_from_file(const char* filename,
 	static const char *readonly = "r";
 #endif
 
-	FILE *fp = fopen(filename,readonly);
+	FILE *fp = safe_fopen_wrapper(filename,readonly);
 
 	if ( !fp ) {
 		// file not found
@@ -292,7 +292,7 @@ CondorVersionInfo::get_platform_from_file(const char* filename,
 	static const char *readonly = "r";
 #endif
 
-	FILE *fp = fopen(filename,readonly);
+	FILE *fp = safe_fopen_wrapper(filename,readonly);
 
 	if ( !fp ) {
 		// file not found

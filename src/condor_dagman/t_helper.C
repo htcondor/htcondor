@@ -24,7 +24,7 @@
 #include "condor_common.h"
 #include <cassert>
 #include <string>
-#include <fstream>
+#include "condor_fix_fstream.h"
 #include "helper.h"
 #include "condor_config.h"
 

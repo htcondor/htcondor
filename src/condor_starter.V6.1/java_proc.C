@@ -248,11 +248,11 @@ java_exit_mode_t JavaProc::ClassifyExit( int status )
 
 	if(normal_exit) {
 		dprintf(D_ALWAYS,"JavaProc: JVM exited normally with code %d\n",exit_code);
-		file = fopen(startfile,"r");
+		file = safe_fopen_wrapper(startfile,"r");
 		if(file) {
 			dprintf(D_ALWAYS,"JavaProc: Wrapper left start record %s\n",startfile);
 			fclose(file);
-			file = fopen(endfile,"r");
+			file = safe_fopen_wrapper(endfile,"r");
 			if(file) {
 				dprintf(D_ALWAYS,"JavaProc: Wrapper left end record %s\n",endfile);
 				fields = fscanf(file,"%10s",tmp); // no more than sizeof(tmp)

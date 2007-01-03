@@ -169,7 +169,7 @@ void write_logs_to_file(int sockfd)
     
     line[n] = '\0';
 
-    logfile = fopen(logfilename, "a");
+    logfile = safe_fopen_wrapper(logfilename, "a");
 
     if (logfile == NULL) {
       fprintf(stderr, "Cannot open file:%s\n",logfilename);

@@ -133,7 +133,7 @@ int main(int argc, char *argv[])
     mypid = getpid();
     snprintf(fname, MAXSTR, "out.%d", mypid);
 
-    f = fopen(fname, "w");
+    f = safe_fopen_wrapper(fname, "w");
     fprintf(f, "CASTOR SRM error: %s", error_str);
     fclose(f);  
   }

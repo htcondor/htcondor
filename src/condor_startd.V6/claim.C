@@ -1713,7 +1713,7 @@ ClaimId::dropFile( int vm_id )
 
 	filename_new += ".new";
 
-	FILE* NEW_FILE = fopen( filename_new.Value(), "w" );
+	FILE* NEW_FILE = safe_fopen_wrapper( filename_new.Value(), "w" );
 	if( ! NEW_FILE ) {
 		dprintf( D_ALWAYS,
 				 "ERROR: can't open claim id file: %s: %s (errno: %d)\n",

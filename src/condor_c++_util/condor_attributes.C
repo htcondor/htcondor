@@ -308,6 +308,7 @@ const char *ATTR_JOB_STATUS_ON_RELEASE    = "JobStatusOnRelease";
 const char *ATTR_JOB_UNIVERSE             = "JobUniverse";
 const char *ATTR_JOB_GRID_TYPE			 = "JobGridType";
 const char *ATTR_JOB_WALL_CLOCK_CKPT		 = "WallClockCheckpoint";
+const char *ATTR_JOB_QUEUE_BIRTHDATE		 = "JobQueueBirthdate";
 const char *ATTR_KEYBOARD_IDLE            = "KeyboardIdle";
 const char *ATTR_KEYSTORE_FILE            = "KeystoreFile";
 const char *ATTR_KEYSTORE_ALIAS           = "KeystoreAlias";

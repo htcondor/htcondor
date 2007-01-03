@@ -125,7 +125,7 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		tmpFilename = condor_basename( filename );
 	}
 
-	FILE *fp = fopen(tmpFilename, "r");
+	FILE *fp = safe_fopen_wrapper(tmpFilename, "r");
 	if(fp == NULL) {
 		if(DEBUG_LEVEL(DEBUG_QUIET)) {
 			debug_printf( DEBUG_QUIET, "Could not open file %s for input\n", filename);

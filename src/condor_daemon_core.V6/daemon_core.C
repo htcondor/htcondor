@@ -6137,7 +6137,7 @@ int DaemonCore::Create_Process(
 
 			// Re-open 'em to point at /dev/null as place holders
 			if ( num_closed ) {
-				int	fd_null = open( NULL_FILE, O_RDWR );
+				int	fd_null = safe_open_wrapper( NULL_FILE, O_RDWR );
 				if ( fd_null < 0 ) {
 					dprintf( D_ALWAYS, "Unable to open %s: %s\n", NULL_FILE,
 							 strerror(errno) );

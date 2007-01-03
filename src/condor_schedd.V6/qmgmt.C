@@ -670,6 +670,13 @@ SetMaxHistoricalLogs(int max_historical_logs)
 	JobQueue->SetMaxHistoricalLogs(max_historical_logs);
 }
 
+time_t
+GetOriginalJobQueueBirthdate()
+{
+	return JobQueue->GetOrigLogBirthdate();
+}
+
+
 void
 InitJobQueue(const char *job_queue_name,int max_historical_logs)
 {
@@ -1972,7 +1979,7 @@ SetMyProxyPassword (int cluster_id, int proc_id, const char *pwd) {
 	}
 
 	// Create the file
-	int fd = open (filename, O_CREAT | O_WRONLY, S_IREAD | S_IWRITE);
+	int fd = safe_open_wrapper(filename, O_CREAT | O_WRONLY, S_IREAD | S_IWRITE);
 	if (fd < 0) {
 		set_priv(old_priv);
 		return -1;
@@ -2036,7 +2043,7 @@ int GetMyProxyPassword (int cluster_id, int proc_id, char ** value) {
 	
 	char filename[_POSIX_PATH_MAX];
 	sprintf (filename, "%s/mpp.%d.%d", Spool, cluster_id, proc_id);
-	int fd = open (filename, O_RDONLY);
+	int fd = safe_open_wrapper(filename, O_RDONLY);
 	if (fd < 0) {
 		set_priv(old_priv);
 		return -1;
@@ -3594,7 +3601,7 @@ static void AppendHistory(ClassAd* ad)
   // that are larger than 2GB. On systems where O_LARGEFILE isn't defined, 
   // the Condor source defines it to be 0 which has no effect. So we'll take
  // advantage of large files where we can, but not where we can't.
-  int fd = open(JobHistoryFileName,
+  int fd = safe_open_wrapper(JobHistoryFileName,
                 O_RDWR|O_CREAT|O_APPEND|O_LARGEFILE,
                 0644);
   if (fd < 0) {

@@ -73,7 +73,7 @@ convertHistoryFile(const char *oldHistoryFileName)
 {
 	MyString NewHistoryFileName;
 
-	FILE *OldLogFile = fopen( oldHistoryFileName, "r");
+	FILE *OldLogFile = safe_fopen_wrapper( oldHistoryFileName, "r");
 	if( !OldLogFile ) {
 		fprintf(stderr, "History file (%s) not found.\n", oldHistoryFileName);
 		exit(1);
@@ -82,7 +82,7 @@ convertHistoryFile(const char *oldHistoryFileName)
 	NewHistoryFileName = oldHistoryFileName;
 	NewHistoryFileName += ".new";
 
-	FILE *NewLogFile = fopen( NewHistoryFileName.Value(), "w");
+	FILE *NewLogFile = safe_fopen_wrapper( NewHistoryFileName.Value(), "w");
 	if( !NewLogFile ) {
 		fprintf(stderr, "Can't create new history file (%s).\n", NewHistoryFileName.Value());
 		exit(1);

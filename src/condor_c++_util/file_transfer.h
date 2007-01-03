@@ -35,10 +35,31 @@
 
 class FileTransfer;	// forward declatation
 
+
+struct CatalogEntry {
+	time_t		modification_time;
+	filesize_t	filesize;
+
+	// if support for hashes is added, it requires memory management of the
+	// data pointed to.  (hash table iterator copies Values, so you'll need a
+	// copy operator that does a deep copy, or use a large enough static array)
+	//
+	//void		*hash;
+	//void		hash[SIZE_OF_HASH];
+	//
+	//
+	// likewise if you add signatures and all that PKI jazz.
+	//
+	// ZKM
+};
+
+
 typedef HashTable <MyString, FileTransfer *> TranskeyHashTable;
 typedef HashTable <int, FileTransfer *> TransThreadHashTable;
+typedef HashTable <MyString, CatalogEntry *> FileCatalogHashTable;
 
 typedef int		(Service::*FileTransferHandler)(FileTransfer *);
+
 
 class FileTransfer {
 
@@ -231,6 +252,7 @@ class FileTransfer {
 	bool upload_changed_files;
 	int m_final_transfer_flag;
 	time_t last_download_time;
+	FileCatalogHashTable* last_download_catalog;
 	int ActiveTransferTid;
 	time_t TransferStart;
 	int TransferPipe[2];
@@ -253,6 +275,12 @@ class FileTransfer {
 	ReliSock *simple_sock;
 	MyString download_filename_remaps;
 
+	// called to construct the catalog of files in a direcotry
+	bool BuildFileCatalog(time_t spool_time = 0, const char* iwd = NULL, FileCatalogHashTable **catalog = NULL);
+
+	// called to lookup the catalog entry of file
+	bool LookupInFileCatalog(const char *fname, time_t *mod_time, filesize_t *filesize);
+
 	// Called internally by DoUpload() in order to handle common wrapup tasks.
 	int ExitDoUpload(filesize_t *total_bytes, ReliSock *s, priv_state saved_priv, bool socket_default_crypto, bool upload_success, bool do_upload_ack, bool do_download_ack, bool try_again, int hold_code, int hold_subcode, char const *upload_error_desc,int DoUpload_exit_line);
 
@@ -267,3 +295,4 @@ class FileTransfer {
 };
 
 #endif
+

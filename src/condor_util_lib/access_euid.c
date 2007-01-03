@@ -67,10 +67,10 @@ access_euid(const char *path, int mode)
 	}
 
 	if ((R_OK == 0) || (mode & R_OK)) {
-		f = fopen(path, "r");
+		f = safe_fopen_wrapper(path, "r", 0644);
 		if (f == NULL) {
 			if( ! errno ) {
-				dprintf( D_ALWAYS, "WARNING: fopen() failed, but "
+				dprintf( D_ALWAYS, "WARNING: safe_fopen_wrapper() failed, but "
 						 "errno is still 0!  Beware of misleading "
 						 "error messages\n" );
 			}
@@ -80,10 +80,10 @@ access_euid(const char *path, int mode)
 	}
 
 	if ((W_OK == 0) || (mode & W_OK)) {
-		f = fopen(path, "a"); /* don't truncate the file! */
+		f = safe_fopen_wrapper(path, "a", 0644); /* don't truncate the file! */
 		if (f == NULL) {
 			if( ! errno ) {
-				dprintf( D_ALWAYS, "WARNING: fopen() failed, but "
+				dprintf( D_ALWAYS, "WARNING: safe_fopen_wrapper() failed, but "
 						 "errno is still 0!  Beware of misleading "
 						 "error messages\n" );
 			}

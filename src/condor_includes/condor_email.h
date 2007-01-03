@@ -67,7 +67,7 @@ public:
 		/** If you want to write your own text, you can open a new
 			message and get back the FILE*
 		*/
-	FILE* open( ClassAd* ad, int exit_reason = -1,
+	FILE* open_stream( ClassAd* ad, int exit_reason = -1,
 				const char* subject = NULL );
 	
 		/** Write exit info about the job into an open Email.
