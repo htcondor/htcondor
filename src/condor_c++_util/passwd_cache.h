@@ -26,8 +26,8 @@
 
 #include <grp.h>
 #include "MyString.h"
-#include "HashTable.h"
 
+template <class Key, class Value> class HashTable;
 
 typedef struct group_entry {
 	gid_t 	*gidlist;		/* groups this user is a member of */

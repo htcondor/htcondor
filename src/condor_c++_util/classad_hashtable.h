@@ -28,7 +28,7 @@
    class seems to duplicate functionality in the MyString class.  :-(
 */
 
-#include <iosfwd>
+//#include <iosfwd>
 
 #include "HashTable.h"
 #include "MyString.h"
@@ -46,7 +46,7 @@ public:
 	void sprint(MyString &s);
 	HashKey& operator= (const HashKey& from);
 	const char* value() { if (key) return key; else return "\0"; };
-	friend std::ostream& operator<< (std::ostream &out, const HashKey &); 
+	//friend std::ostream& operator<< (std::ostream &out, const HashKey &); 
     friend bool operator== (const HashKey &, const HashKey &);
 	friend int hashFunction(const HashKey &key, int numBuckets);
 private:

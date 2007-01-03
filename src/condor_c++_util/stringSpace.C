@@ -41,10 +41,10 @@ hashFunction (const MyString &str, int numBuckets)
 
 
 StringSpace::
-StringSpace (int initial_size, bool makeCaseSensitive) : 
-	stringSpace ((int) (1.25 * initial_size), &hashFunction) 
+StringSpace (int initial_size, bool makeCaseSensitive)
 {
 	SSStringEnt filler;
+	stringSpace = new HashTable<MyString,int>((int) (1.25 * initial_size), &hashFunction);
 
 	// initiliaze the string table
 	filler.inUse     = false;
@@ -77,6 +77,7 @@ StringSpace::
 ~StringSpace ()
 {
 	purge ();
+	delete stringSpace;
 	return;
 }
 
@@ -127,7 +128,7 @@ purge ()
 	number_of_slots_filled = 0;
 
 	// clean up the hash table
-	stringSpace.clear();
+	stringSpace->clear();
 	return;
 }
 
@@ -148,7 +149,7 @@ getCanonical (char* &str, StringSpaceAdoptionMethod adopt)
 	}
 
 	// case 1:  already exists in space
-	if (stringSpace.lookup (myStr, index) == 0) 
+	if (stringSpace->lookup (myStr, index) == 0) 
 	{
 		switch (adopt)
         {
@@ -197,7 +198,7 @@ getCanonical (char* &str, StringSpaceAdoptionMethod adopt)
 	}
 
     // insert into hash table
-    if (stringSpace.insert (myStr, index) == 0) return index;
+    if (stringSpace->insert (myStr, index) == 0) return index;
 
     // some problem
 	return -1;
@@ -343,7 +344,7 @@ SSString::dispose ()
             default:
                 break;
         }
-		context->stringSpace.remove( str );
+		context->stringSpace->remove( str );
 		// Adjust the variables that track our strTable usage. 
 		context->number_of_slots_filled--;
 		if (context->number_of_slots_filled < 0) {
@@ -396,4 +397,15 @@ dump (void)
 	printf ("\nDone\n");
 	return;
 }
+
+int 
+StringSpace::checkFor (char *str)		// check if string is in the space
+{
+	int canonical_index;
+	if (stringSpace->lookup (str, canonical_index) != 0) {
+		canonical_index = -1;
+	}
+	return canonical_index;
+}
+
 

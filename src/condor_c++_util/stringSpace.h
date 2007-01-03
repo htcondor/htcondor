@@ -24,10 +24,10 @@
 #define __STRING_SPACE_H__
 
 
-#include "HashTable.h"
 #include "MyString.h"
 #include "extArray.h"
 
+template <class Key, class Value> class HashTable;
 
 enum StringSpaceAdoptionMethod
 {
@@ -170,7 +170,7 @@ class StringSpace
 		int         adoptMode; 
 	};
 
-	HashTable<MyString,int>  stringSpace;	
+	HashTable<MyString,int>  *stringSpace;	
 	bool                     caseSensitive;
 	ExtArray<SSStringEnt>    strTable;
 	// The next couple of variables help us keep
@@ -256,16 +256,6 @@ operator[] (int id)
 		the_string = NULL;
 	}
 	return the_string;
-}
-
-inline int 
-StringSpace::checkFor (char *str)		// check if string is in the space
-{
-	int canonical_index;
-	if (stringSpace.lookup (str, canonical_index) != 0) {
-		canonical_index = -1;
-	}
-	return canonical_index;
 }
 
 inline int 

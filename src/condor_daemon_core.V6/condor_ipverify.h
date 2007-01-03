@@ -40,11 +40,12 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
-#include "HashTable.h"
 #include "string_list.h"
 #include "net_string_list.h"
 #include "MyString.h"
 #include "condor_perms.h"
+
+template <class Key, class Value> class HashTable; // forward declaration
 
 /// Not_Yet_Ducumented
 static const int USERVERIFY_ALLOW = 0;
@@ -130,30 +131,7 @@ private:
 			deny_users  = NULL;
 			behavior = USERVERIFY_USE_TABLE;
 		}
-		~PermTypeEntry() {
-			if (allow_hosts)
-				delete allow_hosts;
-			if (deny_hosts)
-				delete deny_hosts;
-			if (allow_users) {
-				MyString    key;
-				StringList* value;
-				allow_users->startIterations();
-				while (allow_users->iterate(key, value)) {
-					delete value;
-				}
-				delete allow_users;
-			}
-			if (deny_users) {
-				MyString    key;
-				StringList* value;
-				deny_users->startIterations();
-				while (deny_users->iterate(key, value)) {
-					delete value;
-				}
-				delete deny_users;
-			}
-		}
+		~PermTypeEntry(); 
 	};
 	
 
