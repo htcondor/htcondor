@@ -170,6 +170,13 @@ FILE* safe_fopen_wrapper(const char *fn, const char *flags, mode_t mode)
 		r = stdio_mode_to_open_flag(flags, &open_flags, 0);
 	} else {
 		r = stdio_mode_to_open_flag(flags, &open_flags, 1);
+		if(strcmp(fn, NULL_FILE) == 0) {
+			/* Truncating /dev/null (or NUL:) is nonsensical
+			 * and at least one platform (Solaris 8) won't
+			 * let you. 
+			 */
+			open_flags &= ~O_TRUNC;
+		}
 		open_flags |= O_CREAT;
 	}
 
