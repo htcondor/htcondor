@@ -24,6 +24,7 @@
 
 #include "condor_common.h" 
 #include "condor_snutils.h"
+#include "condor_debug.h"
 
 /*
 ** Compatibility routine for systems that don't have an snprintf
@@ -150,20 +151,23 @@ vprintf_length(const char *format, va_list args)
 	FILE  *null_output;
 
 	null_output = safe_fopen_wrapper(NULL_FILE, "w", 0644);
-
-	if (NULL != null_output) {
-#ifdef va_copy
-        va_list copyargs;
-
-        va_copy(copyargs, args);
-		length = vfprintf(null_output, format, copyargs);
-        va_end(copyargs);
-#else
-		length = vfprintf(null_output, format, args);
-#endif
-		fclose(null_output);
-	} else {
-		length = -1;
+	if(NULL == null_output) {
+		/* We used to return -1 in this case, but realistically, 
+		 * what is our caller going to do?  Indeed, at least some
+		 * callers ignored the case and merrily stomped over memory.
+		 */
+		EXCEPT("Unable to open null file (%s). Needed for formatting purposes.", NULL_FILE);
 	}
+
+#ifdef va_copy
+	va_list copyargs;
+
+	va_copy(copyargs, args);
+	length = vfprintf(null_output, format, copyargs);
+	va_end(copyargs);
+#else
+	length = vfprintf(null_output, format, args);
+#endif
+	fclose(null_output);
 	return length;
 }
