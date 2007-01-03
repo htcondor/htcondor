@@ -25,6 +25,7 @@
 #include "ad_printmask.h"
 #include "ListCache.h"
 #include "YourString.h"
+#include "HashTable.h"
 
 template class List<Formatter>;
 template class Item<Formatter>;

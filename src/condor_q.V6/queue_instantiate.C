@@ -25,6 +25,7 @@
 #include "extArray.h"
 #include "MyString.h"
 #include "condor_classad.h"
+#include "HashTable.h"
 
 typedef struct {
 	int cluster;
