@@ -32,6 +32,7 @@
 #include "condor_ver_info.h"
 #include "condor_attributes.h"
 #include "exit.h"
+#include "HashTable.h"
 
 // Initialize static data members
 const int GridUniverseLogic::job_added_delay = 3;
