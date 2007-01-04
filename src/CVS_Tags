@@ -1,3 +1,9 @@
+01/04/07 V6_8-merge-3
+  The state of the V6_8-branch for another merge back to the trunk.
+  This includes everything that went into 6.8.3, a bugfix for
+  using ClassAd functions with grid universe jobs, and some test
+  changes.
+
 01/04/07 V6_8_3-merge-2
   The state of the V6_8_3-branch before merging back to V6_8-branch.
   This is a tiny merge that just contains a small build fix.
