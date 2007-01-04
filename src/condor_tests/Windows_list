@@ -1,4 +1,12 @@
 # Test List for Windows Tests
+cmd_q_shows-hold
+job_core_copytospool_van
+job_core_hold_sched
+job_core_initialdir_van
+job_core_max-running_local
+job_core_plus_sched
+#job_condorc_ab_van off pending windows work gnats 786
+# old tests
 job_core_output_van
 job_core_input_van
 job_core_err_van

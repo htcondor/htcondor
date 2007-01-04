@@ -650,7 +650,7 @@ GlobusResource::ReadMonitorJobStatusFile()
 		EXCEPT("Consistency problem for GlobusResource::ReadMonitorJobStatusFile %s, null job status file name\n", resourceName);
 	}
 
-	fp = fopen( monitorJobStatusFile, "r" );
+	fp = safe_fopen_wrapper( monitorJobStatusFile, "r" );
 	if ( fp == NULL ) {
 		dprintf( D_ALWAYS, "Failed to open GridMonitor job status file %s\n",
 				 monitorJobStatusFile );
@@ -719,7 +719,7 @@ GlobusResource::ReadMonitorLogFile()
 			EXCEPT("Consistency problem for GlobusResource::ReadMonitorLogFile %s, null monitor log file name\n", resourceName);
 	}
 
-	fp = fopen( monitorLogFile, "r" );
+	fp = safe_fopen_wrapper( monitorLogFile, "r" );
 	if ( fp == NULL ) {
 		dprintf( D_ALWAYS, "Failed to open GridMonitor log file %s\n",
 				 monitorLogFile );

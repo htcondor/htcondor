@@ -249,6 +249,7 @@ extern const char * ATTR_JOB_STATUS_ON_RELEASE;
 extern const char * ATTR_JOB_UNIVERSE;
 extern const char * ATTR_JOB_GRID_TYPE;
 extern const char * ATTR_JOB_WALL_CLOCK_CKPT;
+extern const char * ATTR_JOB_QUEUE_BIRTHDATE;
 extern const char * ATTR_KEYBOARD_IDLE;
 extern const char * ATTR_KEYSTORE_FILE;
 extern const char * ATTR_KEYSTORE_ALIAS;

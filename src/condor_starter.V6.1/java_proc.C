@@ -176,11 +176,11 @@ Save the last exception name as the 'name', and look for
 three specific middle types to save as the 'type'.
 */
 
-int JavaProc::ParseExceptionLine( const char *line, char *name, char *type )
+int JavaProc::ParseExceptionLine( const char *line, char *exname, char *type )
 {
 	char *copy, *tok, *last;
 
-	name[0] = 0;
+	exname[0] = 0;
 	type[0] = 0;
 
 	copy = strdup(line);
@@ -202,7 +202,7 @@ int JavaProc::ParseExceptionLine( const char *line, char *name, char *type )
 	}
 
 	if(last) {
-		strcpy(name,last);
+		strcpy(exname,last);
 		free(copy);
 		return 1;
 	} else {
@@ -248,11 +248,11 @@ java_exit_mode_t JavaProc::ClassifyExit( int status )
 
 	if(normal_exit) {
 		dprintf(D_ALWAYS,"JavaProc: JVM exited normally with code %d\n",exit_code);
-		file = fopen(startfile,"r");
+		file = safe_fopen_wrapper(startfile,"r");
 		if(file) {
 			dprintf(D_ALWAYS,"JavaProc: Wrapper left start record %s\n",startfile);
 			fclose(file);
-			file = fopen(endfile,"r");
+			file = safe_fopen_wrapper(endfile,"r");
 			if(file) {
 				dprintf(D_ALWAYS,"JavaProc: Wrapper left end record %s\n",endfile);
 				fields = fscanf(file,"%10s",tmp); // no more than sizeof(tmp)

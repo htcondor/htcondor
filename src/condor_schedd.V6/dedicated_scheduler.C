@@ -483,8 +483,8 @@ ResList::sortByRank(ClassAd *rankAd) {
 
 /* static */ int
 ResList::machineSortByRank(const void *left, const void *right) {
-	struct rankSortRec *lhs = (struct rankSortRec *)left;
-	struct rankSortRec *rhs = (struct rankSortRec *)right;
+	const struct rankSortRec *lhs = (const struct rankSortRec *)left;
+	const struct rankSortRec *rhs = (const struct rankSortRec *)right;
 
 	return lhs->rank > rhs->rank;
 }
@@ -1008,7 +1008,7 @@ DedicatedScheduler::negotiate( Stream* s, char* negotiator_name )
 NegotiationResult
 DedicatedScheduler::negotiateRequest( ClassAd* req, Stream* s, 
 									  char* negotiator_name, 
-									  int reqs_matched, int max_reqs )
+									  int reqs_matched, int /*max_reqs*/ )
 {
 	char	temp[512];
 	char	*claim_id = NULL;	// ClaimId for each match made
@@ -2102,7 +2102,7 @@ void
 DedicatedScheduler::listDedicatedJobs( int debug_level )
 {
 	int cluster, proc;
-	char owner[100];
+	char owner_str[100];
 
 	if( ! idle_clusters ) {
 		dprintf( debug_level, "DedicatedScheduler: No dedicated jobs\n" );
@@ -2114,10 +2114,10 @@ DedicatedScheduler::listDedicatedJobs( int debug_level )
 	for( i=0; i<=last; i++ ) {
 		cluster = (*idle_clusters)[i];
 		proc = 0;
-		owner[0] = '\0';
-		GetAttributeString( cluster, proc, ATTR_OWNER, owner ); 
+		owner_str[0] = '\0';
+		GetAttributeString( cluster, proc, ATTR_OWNER, owner_str ); 
 		dprintf( debug_level, "Dedicated job: %d.%d %s\n", cluster,
-				 proc, owner );
+				 proc, owner_str );
 	}
 }
 
@@ -2294,19 +2294,19 @@ DedicatedScheduler::addToSchedulingGroup(ClassAd *r) {
 
 void
 DedicatedScheduler::listDedicatedResources( int debug_level,
-											ClassAdList* resources )
+											ClassAdList* resource_list )
 {
 	ClassAd* ad;
 
-	if( ! resources ) {
+	if( ! resource_list ) {
 		dprintf( debug_level, "DedicatedScheduler: "
 				 "No dedicated resources\n" );
 		return;
 	}
 	dprintf( debug_level, "DedicatedScheduler: Listing all "
 			 "possible dedicated resources - \n" );
-	resources->Rewind();
-	while( (ad = resources->Next()) ) {
+	resource_list->Rewind();
+	while( (ad = resource_list->Next()) ) {
 		displayResource( ad, "   ", debug_level );
 	}
 }
@@ -2481,7 +2481,7 @@ DedicatedScheduler::addReconnectAttributes(AllocationNode *allocation)
 }
 
 char *
-DedicatedScheduler::matchToHost(match_rec *mrec, int cluster, int proc) {
+DedicatedScheduler::matchToHost(match_rec *mrec, int /*cluster*/, int /*proc*/) {
 
 	if( mrec->my_match_ad ) {
 		char* tmp = NULL;
@@ -2758,8 +2758,8 @@ DedicatedScheduler::computeSchedule( void )
 				unclaimed_candidates_jobs->Rewind();
 				while( (ad = unclaimed_candidates->Next()) ) {
 						// Make a resource request out of this job
-					ClassAd *job = unclaimed_candidates_jobs->Next();
-					generateRequest( job );
+					ClassAd *ajob = unclaimed_candidates_jobs->Next();
+					generateRequest( ajob );
 				}
 				
 				if( idle_candidates ) {
@@ -3926,22 +3926,22 @@ match_rec*
 DedicatedScheduler::getMrec( ClassAd* ad, char* buf )
 {
 	char my_buf[512];
-	char* name;
+	char* match_name;
 	match_rec* mrec;
 
 	if( buf ) {
-		name = buf;
+		match_name = buf;
 	} else {
-		name = my_buf;
+		match_name = my_buf;
 	}
-	name[0] = '\0';
+	match_name[0] = '\0';
 
-	if( ! ad->LookupString(ATTR_NAME, name) ) {
+	if( ! ad->LookupString(ATTR_NAME, match_name) ) {
 		dprintf( D_ALWAYS, "ERROR in DedicatedScheduler::getMrec(): "
 				 "No %s in ClassAd!\n", ATTR_NAME );
 		return NULL;
 	}
-	HashKey key(name);
+	HashKey key(match_name);
 	if( all_matches->lookup(key, mrec) < 0 ) {
 		return NULL;
 	}
@@ -4251,16 +4251,16 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 			ClassAd *machine = NULL;
 			while ( (machine = machines.Next())) {
 					// Now lookup machine here...
-				char *name;
-				machine->LookupString( ATTR_NAME, &name);
+				char *mach_name;
+				machine->LookupString( ATTR_NAME, &mach_name);
 
-				dprintf( D_FULLDEBUG, "Trying to match %s to %s\n", name, host);
-				if (strcmp(name, host) == 0) {
+				dprintf( D_FULLDEBUG, "Trying to match %s to %s\n", mach_name, host);
+				if (strcmp(mach_name, host) == 0) {
 					machines.DeleteCurrent();
-					free(name);
+					free(mach_name);
 					break;
 				}
-				free(name);
+				free(mach_name);
 			}
 
 			
@@ -4474,8 +4474,8 @@ findAvailTime( match_rec* mrec )
 int
 clusterSortByPrioAndDate( const void *ptr1, const void* ptr2 )
 {
-	int cluster1 = *((int*)ptr1);
-	int cluster2 = *((int*)ptr2);
+	int cluster1 = *((const int*)ptr1);
+	int cluster2 = *((const int*)ptr2);
 	int qdate1, qdate2;
 
 	int prio1, prio2;
@@ -4544,8 +4544,8 @@ deallocMatchRec( match_rec* mrec )
 // Comparision function for sorting machines
 int
 RankSorter(const void *ptr1, const void *ptr2) {
-	PreemptCandidateNode *n1 = (PreemptCandidateNode *) ptr1;
-	PreemptCandidateNode *n2 = (PreemptCandidateNode *) ptr2;
+	const PreemptCandidateNode *n1 = (const PreemptCandidateNode *) ptr1;
+	const PreemptCandidateNode *n2 = (const PreemptCandidateNode *) ptr2;
 
 	if (n1->rank < n2->rank) {
 		return -1;

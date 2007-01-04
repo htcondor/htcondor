@@ -57,6 +57,7 @@ HashTable <HashKey, ProxySubject *> SubjectsByName( 50, hashFunction );
 
 static bool proxymanager_initialized = false;
 static int CheckProxies_tid = TIMER_UNSET;
+static char *masterProxyDirectory = NULL;
 
 int CheckProxies_interval = 600;		// default value
 int minProxy_time = 3 * 60;				// default value
@@ -108,6 +109,8 @@ bool InitializeProxyManager( const char *proxy_dir )
 	CheckProxies_tid = daemonCore->Register_Timer( 1, CheckProxies_interval,
 												   (TimerHandler)&CheckProxies,
 												   "CheckProxies", NULL );
+
+	masterProxyDirectory = strdup( proxy_dir );
 
 	ReconfigProxyManager();
 
@@ -208,7 +211,7 @@ AcquireProxy( const ClassAd *job_ad, MyString &error, int notify_tid )
 				Proxy *new_master = new Proxy;
 				new_master->id = next_proxy_id++;
 				MyString tmp;
-				tmp.sprintf( "%s/master_proxy.%d", GridmanagerScratchDir,
+				tmp.sprintf( "%s/master_proxy.%d", masterProxyDirectory,
 							 new_master->id );
 				new_master->proxy_filename = strdup( tmp.Value() );
 				new_master->num_references = 0;
@@ -294,7 +297,7 @@ AcquireProxy( const ClassAd *job_ad, MyString &error, int notify_tid )
 			Proxy *new_master = new Proxy;
 			new_master->id = next_proxy_id++;
 			MyString tmp;
-			tmp.sprintf( "%s/master_proxy.%d", GridmanagerScratchDir,
+			tmp.sprintf( "%s/master_proxy.%d", masterProxyDirectory,
 						 new_master->id );
 			new_master->proxy_filename = strdup( tmp.Value() );
 			new_master->num_references = 0;
@@ -778,7 +781,7 @@ int RefreshProxyThruMyProxy(Proxy * proxy)
 	// Create temporary file to store myproxy-get-delegation's stderr
 	myProxyEntry->get_delegation_err_filename = create_temp_file();
 	chmod (myProxyEntry->get_delegation_err_filename, 0600);
-	myProxyEntry->get_delegation_err_fd = open (myProxyEntry->get_delegation_err_filename,O_RDWR);
+	myProxyEntry->get_delegation_err_fd = safe_open_wrapper(myProxyEntry->get_delegation_err_filename,O_RDWR);
 	if (myProxyEntry->get_delegation_err_fd == -1) {
 		dprintf (D_ALWAYS, "Error opening file %s\n",
 				 myProxyEntry->get_delegation_err_filename);
@@ -883,7 +886,7 @@ int MyProxyGetDelegationReaper(Service *, int exitPid, int exitStatus)
 
 		char buff[500];
 		buff[0]='\0';
-		int fd = open (matched_entry->get_delegation_err_filename, O_RDONLY);
+		int fd = safe_open_wrapper(matched_entry->get_delegation_err_filename, O_RDONLY);
 		if (fd != -1) {
 			int bytes_read = read (fd, buff, 499);
 			close (fd);

@@ -79,7 +79,7 @@ int hashFuncChars( char const *key, int numBuckets)
 {
     unsigned int i = 0;
     if(key) for(;*key;key++) {
-        i += *(unsigned char *)key;
+        i += *(const unsigned char *)key;
     }
     return i % numBuckets;
 }

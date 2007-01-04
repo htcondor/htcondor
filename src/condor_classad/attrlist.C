@@ -45,7 +45,7 @@ extern char* mySubSystem;
 // Chris Torek's world famous hashing function
 // Modified to be case-insensitive
 static int torekHash(const YourString &s, int length) {
-	unsigned hash = 0;
+	int hash = 0;
 
 	const char *p = s.s;
 	while (*p) {

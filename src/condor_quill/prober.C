@@ -49,7 +49,7 @@ Prober::~Prober()
 // Accessors
 //**************************************************************************
 void
-Prober::setJobQueueName(char* jqn)
+Prober::setJobQueueName(const char* jqn)
 {
 	if(!jqn) {
 		EXCEPT("Expecting jqn to be not null here\n");
@@ -154,6 +154,15 @@ Prober::probe(ClassAdLogEntry *curCALogEntry,
 	
 	if (st != FILE_READ_SUCCESS) {
 		return PROBE_ERROR;
+	}
+
+	if ( caLogParser.getCurCALogEntry()->op_type !=
+		 CondorLogOp_LogHistoricalSequenceNumber )
+	{
+		EXCEPT("ERROR: quill prober expects first classad log entry to be "
+				"type %d, but sees %d instead.",
+				CondorLogOp_LogHistoricalSequenceNumber,
+				caLogParser.getCurCALogEntry()->op_type);
 	}
 
 	dprintf(D_ALWAYS, "first log entry: %s %s %s\n", 

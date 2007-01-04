@@ -724,7 +724,6 @@ CheckThisEvent(int line, CheckEvents &ce, const ULogEvent *event,
 		CheckEvents::check_event_result_t expectedResult, bool &result)
 {
 	MyString		errorMsg;
-	bool			failedHere = false;
 
 	printf("Testing %s (%d.%d.%d)... ", event->eventName(), event->cluster,
 			event->proc, event->subproc);

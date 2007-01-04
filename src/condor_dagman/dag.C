@@ -55,7 +55,7 @@
 
 //---------------------------------------------------------------------------
 void touch (const char * filename) {
-    int fd = open(filename, O_RDWR | O_CREAT, 0600);
+    int fd = safe_open_wrapper(filename, O_RDWR | O_CREAT, 0600);
     if (fd == -1) {
         debug_error( 1, DEBUG_QUIET, "Error: can't open %s\n", filename );
     }
@@ -185,7 +185,7 @@ Dag::~Dag() {
 
 //-------------------------------------------------------------------------
 void
-Dag::InitializeDagFiles( const char *lockFileName, bool deleteOldLogs )
+Dag::InitializeDagFiles( bool deleteOldLogs )
 {
 		// if there is an older version of the log files,
 		// we need to delete these.
@@ -510,13 +510,13 @@ bool Dag::ProcessOneEvent (int logsource, ULogEventOutcome outcome,
 			case ULOG_JOB_ABORTED:
 				ProcessAbortEvent(event, job, recovery);
 					// Make sure we don't count finished jobs as idle.
-				ProcessNotIdleEvent(event, job);
+				ProcessNotIdleEvent(job);
 				break;
               
 			case ULOG_JOB_TERMINATED:
 				ProcessTerminatedEvent(event, job, recovery);
 					// Make sure we don't count finished jobs as idle.
-				ProcessNotIdleEvent(event, job);
+				ProcessNotIdleEvent(job);
 				break;
 
 			case ULOG_POST_SCRIPT_TERMINATED:
@@ -524,19 +524,19 @@ bool Dag::ProcessOneEvent (int logsource, ULogEventOutcome outcome,
 				break;
 
 			case ULOG_SUBMIT:
-				ProcessSubmitEvent(event, job, recovery);
-				ProcessIsIdleEvent(event, job);
+				ProcessSubmitEvent(job, recovery);
+				ProcessIsIdleEvent(job);
 				break;
 
 			case ULOG_JOB_EVICTED:
 			case ULOG_JOB_SUSPENDED:
 			case ULOG_JOB_HELD:
 			case ULOG_SHADOW_EXCEPTION:
-				ProcessIsIdleEvent(event, job);
+				ProcessIsIdleEvent(job);
 				break;
 
 			case ULOG_EXECUTE:
-				ProcessNotIdleEvent(event, job);
+				ProcessNotIdleEvent(job);
 				break;
 
 			case ULOG_JOB_UNSUSPENDED:
@@ -933,7 +933,7 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 
 //---------------------------------------------------------------------------
 void
-Dag::ProcessSubmitEvent(const ULogEvent *event, Job *job, bool recovery) {
+Dag::ProcessSubmitEvent(Job *job, bool recovery) {
 
 	if ( !job ) {
 		return;
@@ -994,7 +994,7 @@ Dag::ProcessSubmitEvent(const ULogEvent *event, Job *job, bool recovery) {
 
 //---------------------------------------------------------------------------
 void
-Dag::ProcessIsIdleEvent(const ULogEvent *event, Job *job) {
+Dag::ProcessIsIdleEvent(Job *job) {
 
 	if ( !job ) {
 		return;
@@ -1013,7 +1013,7 @@ Dag::ProcessIsIdleEvent(const ULogEvent *event, Job *job) {
 
 //---------------------------------------------------------------------------
 void
-Dag::ProcessNotIdleEvent(const ULogEvent *event, Job *job) {
+Dag::ProcessNotIdleEvent(Job *job) {
 
 	if ( !job ) {
 		return;
@@ -1333,7 +1333,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 	continue;  // while( numSubmitsThisCycle < max_submits_per_interval )
       }
       debug_printf( DEBUG_VERBOSE,
-		    "  using new submit file (%s) from helper\n",
+		    "  using new submit file (%s) from helper for node %s\n",
 		    cmd_file.Value(), job->GetJobName() );
       free( helper );
       helper = NULL;
@@ -1749,7 +1749,7 @@ void Dag::RemoveRunningScripts ( ) const {
 //-----------------------------------------------------------------------------
 void Dag::Rescue (const char * rescue_file, const char * datafile,
 			bool useDagDir) const {
-    FILE *fp = fopen(rescue_file, "w");
+    FILE *fp = safe_fopen_wrapper(rescue_file, "w");
     if (fp == NULL) {
         debug_printf( DEBUG_QUIET, "Could not open %s for writing.\n",
 					  rescue_file);
@@ -2160,7 +2160,7 @@ Dag::DumpDotFile(void)
 		temp_dot_file_name = current_dot_file_name + ".temp";
 
 		unlink(temp_dot_file_name.Value());
-		temp_dot_file = fopen(temp_dot_file_name.Value(), "w");
+		temp_dot_file = safe_fopen_wrapper(temp_dot_file_name.Value(), "w");
 		if (temp_dot_file == NULL) {
 			debug_dprintf(D_ALWAYS, DEBUG_NORMAL,
 						  "Can't create dot file '%s'\n", 
@@ -2288,7 +2288,7 @@ Dag::IncludeExtraDotCommands(
 {
 	FILE *include_file;
 
-	include_file = fopen(_dot_include_file_name, "r");
+	include_file = safe_fopen_wrapper(_dot_include_file_name, "r");
 	if (include_file == NULL) {
         debug_printf(DEBUG_NORMAL, "Can't open dot include file %s\n",
 					_dot_include_file_name);
@@ -2438,7 +2438,7 @@ Dag::ChooseDotFileName(MyString &dot_file_name)
 			FILE *fp;
 
 			dot_file_name.sprintf("%s.%d", _dot_file_name, _dot_file_name_suffix);
-			fp = fopen(dot_file_name.Value(), "r");
+			fp = safe_fopen_wrapper(dot_file_name.Value(), "r");
 			if (fp != NULL) {
 				fclose(fp);
 				_dot_file_name_suffix++;

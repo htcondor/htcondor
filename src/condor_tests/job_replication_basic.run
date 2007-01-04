@@ -35,7 +35,7 @@ print "Working directory is $topDirectory\n";
 
 # Operating system environment variables of the test
 my $currentHost = `hostname`;
-chomp($currentHost);
+CondorTest::fullchomp($currentHost);
 
 my $currentIp   = &GetMyIpAddress();
 my $pId         = $$;
@@ -216,7 +216,7 @@ foreach my $hadIndex (1 .. $hadsNumber)
 			"$topDirectory/$personalCondorParametersName", 
 			"_instance$hadIndex");
 	($configurationFiles[$hadIndex], $collectorPorts[$hadIndex]) =
-		split(/:/, $configurationFileAndCollectorPort);
+		split(/\+/, $configurationFileAndCollectorPort);
 	&LogControl($logsDirectory, &FormatTime(time()) . 
 			": instance #$hadIndex ($configurationFiles[$hadIndex]) going up");
 }
@@ -231,7 +231,7 @@ $controlString = '';
 # Condor configuration parameters
 my $hadConnectionTimeout = &CondorConfigVal("$currentIp:$collectorPorts[1]", 
 											'HAD_CONNECTION_TIMEOUT'); 
-chomp($hadConnectionTimeout);
+CondorTest::fullchomp($hadConnectionTimeout);
 my $hadCycleInterval     = 2 * (2 * $hadConnectionTimeout * $hadsNumber + 1);
 my $negotiatorTime       = $hadCycleInterval * 3 + 1;
 my $hadUsePrimary        = &CondorConfigVal("$currentIp:$collectorPorts[1]",
@@ -603,7 +603,7 @@ sub TestingSystemConsistency
     my $classAdLifeTime = &CondorConfigVal(
 		"$currentIp:$collectorPorts[$nonFailingHads[0]]", 
 		'CLASSAD_LIFETIME');
-    chomp($classAdLifeTime);
+    CondorTest::fullchomp($classAdLifeTime);
 
     $message .= $checker . $checkerName . "\n";
 
@@ -878,7 +878,7 @@ sub CorrectAccountantFormat
 		my @accountantContents = <ACCOUNTANT>;
 		close(ACCOUNTANT);
 
-		chomp(@accountantContents);
+		CondorTest::fullchomp(@accountantContents);
 
 		foreach my $accountantLine (@accountantContents)
 		{
@@ -939,7 +939,7 @@ sub CorrectAccountantFormat
 		my @accountantVersionContents = <ACCOUNTANT_VERSION>;
 		close(ACCOUNTANT_VERSION);
 
-		chomp(@accountantVersionContents);
+		CondorTest::fullchomp(@accountantVersionContents);
 
 		# The accountant version includes 2 components, each one appearing 
 		# on a separate line
@@ -1285,7 +1285,7 @@ sub RaiseMachines
 #				"$topDirectory/$personalCondorParametersName", 
 #				"_instance$hadIndex");
 #    	($configurationFiles[$hadIndex], $collectorPorts[$hadIndex]) =
-#        	split(/:/, $configurationFileAndCollectorPort);
+#        	split(/\+/, $configurationFileAndCollectorPort);
 		my $condorLogsDirectory = "$topDirectory/$pId/" . $pId . "_instance" .
                                   $hadIndex . "/log";
         print "$condorLogsDirectory\n";

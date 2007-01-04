@@ -28,6 +28,7 @@
 #include "syscall_numbers.h"
 #include "condor_debug.h"
 #include "condor_file_info.h"
+#include "internet.h"
 
 int open_tcp_stream( unsigned int ip_addr, unsigned short port );
 int open_file_stream( const char *file, int flags, size_t *len );
@@ -86,7 +87,7 @@ open_file_stream( const char *file, int flags, size_t *len )
 	support daemons for the starter/shadow in addition to the user job
 	and AIX doesn't have a syscall() */
 #if defined(AIX)
-		fd = open(local_path, flags, 0644);
+		fd = safe_open_wrapper(local_path, flags, 0644);
 #else
 		fd = syscall( SYS_open, local_path, flags, 0664 );
 #endif

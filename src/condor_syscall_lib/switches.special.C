@@ -415,6 +415,10 @@ open() so that it follows the same code path in Condor.
 
 int creat(const char *path, mode_t mode)
 {
+	/* This should NOT be the safe_open_wrapper() since it is an entry point
+		for the user program and we don't want to change the user programs
+		behavior.
+	*/
 	return open((char*)path, O_WRONLY | O_CREAT | O_TRUNC, mode);
 }
 

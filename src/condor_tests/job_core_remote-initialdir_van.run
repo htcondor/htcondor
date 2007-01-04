@@ -15,7 +15,7 @@ $ExitSuccess = sub
 	my $output;
 	$output = <output_fd>;
 	close( output_fd );
-	chomp($output);
+	CondorTest::fullchomp($output);
 
 	print "Output from pwd: $output\n";
 	if( $output ne "/tmp" ) {

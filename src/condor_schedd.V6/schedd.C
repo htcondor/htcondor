@@ -542,7 +542,15 @@ Scheduler::check_claim_request_timeouts()
 				                 RequestClaimTimeout - time(NULL);
 				if(time_left < 0) {
 					dprintf(D_ALWAYS,"timed out requesting claim from %s\n",rec->peer);
-					send_vacate(rec, RELEASE_CLAIM);
+						// We could just do send_vacate() here and
+						// wait for the startd contact socket to call
+						// us back when the connection closes.
+						// However, this means that if send_vacate()
+						// fails (e.g. times out setting up security
+						// session), we keep calling it over and over,
+						// timing out each time, without ever
+						// removing the match.
+					DelMrec(rec);
 				}
 			}
 		}
@@ -732,6 +740,9 @@ Scheduler::count_jobs()
 		ad->Insert(tmp);
 	}
 
+	sprintf(tmp, "%s = %d", ATTR_JOB_QUEUE_BIRTHDATE,
+			 GetOriginalJobQueueBirthdate());
+	ad->Insert (tmp);
 
         // Tell negotiator to send us the startd ad
 	sprintf(tmp, "%s = True", ATTR_WANT_RESOURCE_AD );
@@ -7402,15 +7413,15 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	
 #endif
 	
-	if ((inouterr[0] = open(input, O_RDONLY, S_IREAD)) < 0) {
+	if ((inouterr[0] = safe_open_wrapper(input, O_RDONLY, S_IREAD)) < 0) {
 		dprintf ( D_FAILURE|D_ALWAYS, "Open of %s failed, errno %d\n", input, errno );
 		cannot_open_files = true;
 	}
-	if ((inouterr[1] = open(output, O_WRONLY | O_CREAT | O_TRUNC, S_IREAD|S_IWRITE)) < 0) {
+	if ((inouterr[1] = safe_open_wrapper(output, O_WRONLY | O_CREAT | O_TRUNC, S_IREAD|S_IWRITE)) < 0) {
 		dprintf ( D_FAILURE|D_ALWAYS, "Open of %s failed, errno %d\n", output, errno );
 		cannot_open_files = true;
 	}
-	if ((inouterr[2] = open(error, O_WRONLY | O_CREAT | O_TRUNC, S_IREAD|S_IWRITE)) < 0) {
+	if ((inouterr[2] = safe_open_wrapper(error, O_WRONLY | O_CREAT | O_TRUNC, S_IREAD|S_IWRITE)) < 0) {
 		dprintf ( D_FAILURE|D_ALWAYS, "Open of %s failed, errno %d\n", error, errno );
 		cannot_open_files = true;
 	}
@@ -11692,7 +11703,7 @@ Scheduler::claimLocalStartd()
 		claim_id[0] = '\0';	// so we notice if we fail to read
 			// note: claim file written w/ condor priv by the startd
 		priv_state old_priv = set_condor_priv(); 
-		FILE* fp=fopen(filename,"r");
+		FILE* fp=safe_fopen_wrapper(filename,"r");
 		if ( fp ) {
 			fscanf(fp,"%150s\n",claim_id);
 			fclose(fp);

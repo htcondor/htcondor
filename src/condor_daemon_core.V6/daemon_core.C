@@ -575,10 +575,16 @@ bool DaemonCore::TooManyRegisteredSockets(int fd,MyString *msg)
 		return false;
 	}
 
+		// The following heuristic is only appropriate on systems where
+		// file descriptor numbers are allocated using the lowest
+		// available number.
+#if !defined(WIN32)
 	if( fd > fds_used ) {
 			// Assume fds are allocated always lowest number first
 		fds_used = fd;
 	}
+#endif
+
 	if( fds_used > file_descriptor_safety_limit ) {
 		if( registered_socket_count < MIN_REGISTERED_SOCKET_SAFETY_LIMIT ) {
 			// We don't have very many sockets registered, but
@@ -865,7 +871,7 @@ PidEnvID* DaemonCore::InfoEnvironmentID(PidEnvID *penvid, int pid)
 			PIDENVID_OVERSIZED)
 		{
 			EXCEPT( "DaemonCore::InfoEnvironmentID: Programmer error. "
-				"Tried to overstuff a PidEntryID array.\n" );
+				"Tried to overstuff a PidEntryID array." );
 		}
 
 	} else {
@@ -1131,7 +1137,7 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 			(*sockTable)[i].is_connect_pending = false;
 			break;
 		default:
-			EXCEPT("Adding CEDAR socket of unknown type\n");
+			EXCEPT("Adding CEDAR socket of unknown type");
 			break;
 	}
 	(*sockTable)[i].handler = handler;
@@ -1430,7 +1436,7 @@ int DaemonCore::Register_Pipe(int pipe_end, char* pipe_descrip,
 
 	// Make certain that entry i is empty.
 	if ( (*pipeTable)[i].index != -1 ) {
-        EXCEPT("Pipe table fubar!  nPipe = %d\n", nPipe );
+        EXCEPT("Pipe table fubar!  nPipe = %d", nPipe );
 	}
 
 	// Verify that this piepfd has not already been registered
@@ -1691,7 +1697,7 @@ DaemonCore::Read_Pipe(int pipe_end, void* buffer, int len)
 	int index = pipe_end - PIPE_INDEX_OFFSET;
 	if (index < 0) {
 		dprintf(D_ALWAYS, "Read_Pipe: invalid pipe_end: %d\n", pipe_end);
-		EXCEPT("Read_Pipe\n");
+		EXCEPT("Read_Pipe");
 	}
 
 #if defined(WIN32)
@@ -1714,7 +1720,7 @@ DaemonCore::Write_Pipe(int pipe_end, const void* buffer, int len)
 	int index = pipe_end - PIPE_INDEX_OFFSET;
 	if (index < 0) {
 		dprintf(D_ALWAYS, "Write_Pipe: invalid pipe_end: %d\n", pipe_end);
-		EXCEPT("Write_Pipe: invalid pipe end\n");
+		EXCEPT("Write_Pipe: invalid pipe end");
 	}
 
 #if defined(WIN32)
@@ -2153,6 +2159,8 @@ void DaemonCore::Driver()
 		sigdelset(&fullset, SIGBUS);     // so we get a core right away
 		sigdelset(&fullset, SIGFPE);     // so we get a core right away
 		sigdelset(&fullset, SIGTRAP);    // so gdb works when it uses SIGTRAP
+		sigdelset(&fullset, SIGPROF);    // so gprof works
+
 	sigemptyset( &emptyset );
 	char asyncpipe_buf[10];
 #endif
@@ -2411,7 +2419,7 @@ void DaemonCore::Driver()
 			if(tmpErrno != EINTR)
 			// not just interrupted by a signal...
 			{
-				EXCEPT("DaemonCore: select() returned an unexpected error: %d (%s)\n",tmpErrno,strerror(tmpErrno));
+				EXCEPT("DaemonCore: select() returned an unexpected error: %d (%s)",tmpErrno,strerror(tmpErrno));
 			}
 		}
 #else
@@ -2810,15 +2818,87 @@ int DaemonCore::ServiceCommandSocket()
 	return commands_served;
 }
 
+
+int DaemonCore::HandleReqSocketTimerHandler()
+{
+	Stream *stream = NULL;
+
+	/*  We have been waiting for an incoming connection to have something
+		to read.  If this timer handler fired, we are sick of waiting.
+		So cancel the socket registration and close the incoming socket.
+	*/
+
+		// get the socket stream we've been waiting for.
+	stream = (Stream*) GetDataPtr();
+	ASSERT(stream);
+	ASSERT( stream->type() == Stream::reli_sock );
+
+		// cancel its registration
+	Cancel_Socket(stream);
+		
+		// and blow it away
+	dprintf(D_ALWAYS,"Closing socket from %s - no data received\n",
+			sin_to_string(((Sock*)stream)->endpoint()));
+	delete stream;
+
+	return TRUE;
+}
+
+
+int DaemonCore::HandleReqSocketHandler(Stream *stream)
+{
+	int* timeout_tid = NULL;
+
+	/*  We have been waiting for an incoming connection to have something
+		to read.  If this timer handler fired, our wait is over.
+		So cancel the timer we set to test
+		for a timeout, and handle the request.
+	*/
+
+	timeout_tid = (int *) GetDataPtr();
+	ASSERT(timeout_tid);
+
+	Cancel_Timer(*timeout_tid);
+	delete timeout_tid;	// was allocated in HandleReq() with new
+
+	// now cancel the socket callback registration that got us here.
+	// we need to cancel before we call HandleReq(), because the command
+	// handler invoked by HandleReq() may also decide to register this socket,
+	// and we don't want it registered twice.
+	Cancel_Socket(stream);
+
+	// now call HandleReq to actually do the work of servicing this request.
+	int ret_val =  HandleReq(stream);
+
+	// if the handler doesn't want to keep the socket, delete it here.
+	if ( ret_val != KEEP_STREAM ) {
+		delete stream;
+	}
+
+	// always tell the driver to leave the stream alone, since we already
+	// deleted it above if it needed to go away.
+	return KEEP_STREAM;
+}
+
+
 int DaemonCore::HandleReq(int socki)
 {
+	Stream *insock;
+	
+	insock = (*sockTable)[socki].iosock;
+
+	return HandleReq(insock);
+}
+
+int DaemonCore::HandleReq(Stream *insock)
+{
 	Stream				*stream = NULL;
-	Stream				*insock;
+
 	int					is_tcp;
 	int                 req;
 	int					index, j;
 	int					reqFound = FALSE;
-	int					result;
+	int					result = FALSE;
 	int					old_timeout;
     int                 perm         = USER_AUTH_FAILURE;
     char                user[256];
@@ -2830,8 +2910,7 @@ int DaemonCore::HandleReq(int socki)
 	bool is_http_post = false;	// must initialize to false
 	bool is_http_get = false;   // must initialize to false
 
-
-	insock = (*sockTable)[socki].iosock;
+	ASSERT(insock);
 
 	switch ( insock->type() ) {
 		case Stream::reli_sock :
@@ -2842,9 +2921,7 @@ int DaemonCore::HandleReq(int socki)
 			break;
 		default:
 			// unrecognized Stream sock
-			dprintf(D_ALWAYS,
-						"DaemonCore: HandleReq(): unrecognized Stream sock\n");
-			return FALSE;
+			EXCEPT("DaemonCore: HandleReq(): unrecognized Stream sock");
 	}
 
 	CondorError errstack;
@@ -2861,6 +2938,49 @@ int DaemonCore::HandleReq(int socki)
 				dprintf(D_ALWAYS, "DaemonCore: accept() failed!");
 				// return KEEP_STEAM cuz insock is a listen socket
 				return KEEP_STREAM;
+			}
+				// we have just accepted a socket.  if there is nothing available yet
+				// to read on this socket, we don't want to block here, so instead
+				// register it.  Also set a timer just in case nothing ever arrives, so 
+				// we can reclaim our socket.  
+				// NOTE: don't register if we got here via ServiceCommandSocket() to 
+				// prevent stack overflow!!
+			if ( ((ReliSock *)stream)->bytes_available_to_read() < 4 &&
+				 inServiceCommandSocket_flag == FALSE ) 
+			{
+					// set a timer for 20 seconds, in case nothing ever arrives...
+				int tid = daemonCore->Register_Timer(
+									20,		// years of careful research.... ;)
+									(Eventcpp) &DaemonCore::HandleReqSocketTimerHandler,
+									"DaemonCore::HandleReqSocketTimerHandler",
+									this);
+					// stash the socket with the timer 
+				daemonCore->Register_DataPtr((void*)stream);
+					// now register the socket itself.  note we needed to set the
+					// timer first because we want to register the timer id with 
+					// the socket handler, and Register_DataPtr only effects the
+					// most recent event handler registered.
+				int tmp_result = daemonCore->Register_Socket(stream,
+								"Incoming command",
+								(SocketHandlercpp) &DaemonCore::HandleReqSocketHandler,
+								"DaemonCore::HandleReqSocketHandler",
+								this);
+				if ( tmp_result >= 0 )  {	
+						// on socket register success
+					int* stashed_tid = new int;
+					*stashed_tid = tid;
+						// register the timer id with the sock, so we can cancel it.
+					daemonCore->Register_DataPtr((void*)stashed_tid);
+						// return -- we'll come back when there is something to read
+						// use KEEP_STREAM so the socket we just registered isn't closed.
+					return KEEP_STREAM;		
+				} else {
+						// on socket register failure
+						// just cancel the timeout and fall-thru (i.e. service
+						// the request synchronously with a 1 second timeout
+						// reading the command int).
+					daemonCore->Cancel_Timer(tid);
+				}
 			}
 		}
 		// if the not a listen socket, then just assign stream to insock
@@ -2884,7 +3004,7 @@ int DaemonCore::HandleReq(int socki)
 
 
 		// get the info, if there is any
-		char * cleartext_info = (char*)((SafeSock*)stream)->isIncomingDataMD5ed();
+		const char * cleartext_info = ((SafeSock*)stream)->isIncomingDataMD5ed();
 		char * sess_id = NULL;
 		char * return_address_ss = NULL;
 
@@ -2974,7 +3094,7 @@ int DaemonCore::HandleReq(int socki)
 
 
 		// get the info, if there is any
-		cleartext_info = (char*)((SafeSock*)stream)->isIncomingDataEncrypted();
+		cleartext_info = ((SafeSock*)stream)->isIncomingDataEncrypted();
 		sess_id = NULL;
 		return_address_ss = NULL;
 
@@ -3080,9 +3200,9 @@ int DaemonCore::HandleReq(int socki)
 		// with a more foolproof method.
 	char tmpbuf[5];
 	memset(tmpbuf,0,sizeof(tmpbuf));
-	if ( is_tcp && (insock != stream) ) {
+	if ( is_tcp ) {
 		int nro = condor_read(((Sock*)stream)->get_file_desc(),
-			tmpbuf, sizeof(tmpbuf) - 1, 10, MSG_PEEK);
+			tmpbuf, sizeof(tmpbuf) - 1, 1, MSG_PEEK);
 	}
 	if ( strstr(tmpbuf,"GET") ) {
 		if ( param_boolean("ENABLE_WEB_SERVER",false) ) {
@@ -3154,20 +3274,19 @@ int DaemonCore::HandleReq(int socki)
 		free(cursoap);
 		dprintf(D_ALWAYS, "Completed servicing HTTP request\n");
 
-		((Sock*)stream)->_sock = INVALID_SOCKET; // so CEDAR won't close it again
-		delete stream;	// clean up CEDAR socket
-		CheckPrivState();	// Make sure we didn't leak our priv state
-		curr_dataptr = NULL; // Clear curr_dataptr
-			// Return KEEP_STEAM cuz we wanna keep our listen socket open
-		return KEEP_STREAM;
+			// gsoap already closed the socket.  so set the socket in
+			// the underlying CEDAR object to INVALID_SOCKET, so
+			// CEDAR won't close it again when we delete the object.
+		((Sock*)stream)->_sock = INVALID_SOCKET; 
+
+		result = TRUE;
+		goto finalize;
 	}
 
 	if (only_allow_soap) {
 		dprintf(D_ALWAYS,
 			"Received CEDAR command during SOAP transaction... queueing\n");
-		if ( stream != insock ) {
-				// we did an accept, so we know this is TCP
-
+		if ( is_tcp ) {
 			dprintf(D_DAEMONCORE,
 					"stream fd being queued: %d\n",
 					((Sock *) stream)->get_file_desc());
@@ -3176,12 +3295,13 @@ int DaemonCore::HandleReq(int socki)
 		return KEEP_STREAM;
 	}
 
-	// read in the command from the stream with a timeout value of 20 seconds
-	old_timeout = stream->timeout(20);
+	// read in the command from the stream with a timeout value of just 1 second,
+	// since we know there is already some data waiting for us.
+	old_timeout = stream->timeout(1);
 	result = stream->code(req);
-	// For now, lets keep the timeout, so all command handlers are called with
+	// For now, lets set a 20 second timeout, so all command handlers are called with
 	// a timeout of 20 seconds on their socket.
-	// stream->timeout(old_timeout);
+	stream->timeout(20);
 	if(!result) {
 		char const *ip = stream->endpoint_ip_str();
 		if(!ip) {
@@ -3189,14 +3309,8 @@ int DaemonCore::HandleReq(int socki)
 		}
 		dprintf(D_ALWAYS,
 			"DaemonCore: Can't receive command request from %s (perhaps a timeout?)\n", ip);
-		if ( insock != stream )	{   // delete stream only if we did an accept
-			delete stream;
-		} else {
-			stream->set_crypto_key(false, NULL);
-			stream->set_MD_mode(MD_OFF, NULL);
-			stream->end_of_message();
-		}
-		return KEEP_STREAM;
+		result = FALSE;
+		goto finalize;
 	}
 
 	if (req == DC_AUTHENTICATE) {
@@ -3437,10 +3551,10 @@ int DaemonCore::HandleReq(int socki)
 							free (rkey);
 						} else {
 							memset (rbuf, 0, 24);
-							dprintf ( D_SECURITY, "DC_AUTHENTICATE: unable to generate key - no crypto available!\n");
-							result = FALSE;
+							dprintf ( D_SECURITY, "DC_AUTHENTICATE: unable to generate key - no crypto available!\n");							
 							free( crypto_method );
 							crypto_method = NULL;
+							result = FALSE;
 							goto finalize;
 						}
 
@@ -6070,7 +6184,6 @@ int DaemonCore::Create_Process(
 				char *nametmp = (char *) malloc( namelen );
 				if ( NULL == nametmp ) {
 					dprintf( D_ALWAYS, "malloc(%d) failed!\n", namelen );
-					free( (void *) origname );
 					exit(ENOMEM);
 				}
 
@@ -6153,7 +6266,7 @@ int DaemonCore::Create_Process(
 
 			// Re-open 'em to point at /dev/null as place holders
 			if ( num_closed ) {
-				int	fd_null = open( NULL_FILE, O_RDWR );
+				int	fd_null = safe_open_wrapper( NULL_FILE, O_RDWR );
 				if ( fd_null < 0 ) {
 					dprintf( D_ALWAYS, "Unable to open %s: %s\n", NULL_FILE,
 							 strerror(errno) );
@@ -6487,7 +6600,7 @@ int DaemonCore::Create_Process(
 		PIDENVID_OK)
 	{
 		EXCEPT( "Create_Process: More ancestor environment IDs found than "
-				"PIDENVID_MAX which is currently %d. Programmer Error.\n", 
+				"PIDENVID_MAX which is currently %d. Programmer Error.",
 				PIDENVID_MAX );
 	}
 	if (pidenvid_append_direct(&pidtmp->penvid, 
@@ -6495,7 +6608,7 @@ int DaemonCore::Create_Process(
 	{
 		EXCEPT( "Create_Process: Cannot add child pid to PidEnvID table "
 				"because there aren't enough entries. PIDENVID_MAX is "
-				"currently %d! Programmer Error.\n", PIDENVID_MAX );
+				"currently %d! Programmer Error.", PIDENVID_MAX );
 	}
 
 	/* add it to the pid table */
@@ -6849,7 +6962,7 @@ DaemonCore::Inherit( void )
 		ptmp=strtok(NULL," ");
 		while ( ptmp && (*ptmp != '0') ) {
 			if (numInheritedSocks >= MAX_SOCKS_INHERITED) {
-				EXCEPT("MAX_SOCKS_INHERITED reached.\n");
+				EXCEPT("MAX_SOCKS_INHERITED reached.");
 			}
 			switch ( *ptmp ) {
 				case '1' :
@@ -6952,7 +7065,7 @@ DaemonCore::InitCommandSocket( int command_port )
 									   (char*)&on, sizeof(on))) ||
 				(!dc_ssock->setsockopt(SOL_SOCKET, SO_REUSEADDR,
 									   (char*)&on, sizeof(on))) ) {
-				EXCEPT( "setsockopt() SO_REUSEADDR failed\n" );
+				EXCEPT( "setsockopt() SO_REUSEADDR failed" );
 			}
 
 			/* Set no delay to disable Nagle, since we buffer all our 
@@ -6978,26 +7091,23 @@ DaemonCore::InitCommandSocket( int command_port )
 		// drops on the floor.
 	if( strcmp(mySubSystem,"COLLECTOR") == 0 ) {
 		int desired_size;
-		char *tmp;
-
-		if( (tmp=param("COLLECTOR_SOCKET_BUFSIZE")) ) {
-			desired_size = atoi(tmp);
-			free(tmp);
-		} else {
-				// default to 1 meg of buffers.  Gulp!
-			desired_size = 1024000;
-		}
 
 			// set the UDP (ssock) read size to be large, so we do not
 			// drop incoming updates.
-		int final_size = dc_ssock->set_os_buffers( desired_size );
+		desired_size = param_integer( "COLLECTOR_SOCKET_BUFSIZE",
+									  10000 * 1024, 1024 );
+		int final_udp = dc_ssock->set_os_buffers( desired_size );
+
 
 			// and also set the outgoing TCP write size to be large so the
 			// collector is not blocked on the network when answering queries
-		dc_rsock->set_os_buffers( desired_size, true );
+		desired_size = param_integer("COLLECTOR_TCP_SOCKET_BUFSIZE",
+									 128 * 1024, 1024 );
+		int final_tcp = dc_rsock->set_os_buffers( desired_size, true );
 
-		dprintf( D_FULLDEBUG,"Reset OS socket buffer size to %dk\n",
-				 final_size / 1024 );
+		dprintf( D_FULLDEBUG,
+				 "Reset OS socket buffer size to %dk (UDP), %dk (TCP).\n",
+				 final_udp / 1024, final_tcp / 1024 );
 	}
 
 #ifdef WANT_NETMAN
@@ -8355,7 +8465,7 @@ DaemonCore::UpdateLocalAd(ClassAd *daemonAd)
     localAdFile = param( localAd_path );
 
     if( localAdFile ) {
-        if( (AD_FILE = fopen(localAdFile, "w")) ) {
+        if( (AD_FILE = safe_fopen_wrapper(localAdFile, "w")) ) {
             daemonAd->fPrint(AD_FILE);
             fclose( AD_FILE );
         } else {

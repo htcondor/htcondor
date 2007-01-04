@@ -51,11 +51,11 @@ class NordugridResource : public BaseResource
 	char *proxySubject;
 	GahpClient *gahp;
 
+	static HashTable <HashKey, NordugridResource *> ResourcesByName;
+
  private:
 	void DoPing( time_t& ping_delay, bool& ping_complete,
 				 bool& ping_succeeded  );
-	static HashTable <HashKey, NordugridResource *> ResourcesByName;
-
 };
 
 #endif

@@ -99,6 +99,7 @@ request_pipe_handler(Service*, int) {
 	// check for an error in GetNextLine
 	if (request_buffer.IsError() || request_buffer.IsEOF()) {
 		dprintf (D_ALWAYS, "Request pipe closed. Exiting...\n");
+		DC_Exit (1);
 	}
 
 	return TRUE;

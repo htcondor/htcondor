@@ -1,0 +1,107 @@
+#! /usr/bin/env perl
+use CondorTest;
+use CondorPersonal;
+use Cwd;
+
+$cmd_template = "job_quill_basic.template";
+$testname = 'job_quill_basic - Simple parallel job with security on';
+$cmd = "job_quill_basic.cmd";
+$corename = "job_quill_basic";
+$topdir = getcwd();
+
+# where am I running
+$dummyhost = "gamgee.cs.wisc.edu";
+$currenthost = `hostname`;
+CondorTest::fullchomp($currenthost);
+
+system("date");
+print "Dummyhost was $dummyhost and really running on $currenthost\n";
+
+$mypid = $$;
+$mysaveme = $corename . ".saveme";
+$myquillname = "pgsql" . $mypid;
+$myfullpgsqlloc = $topdir . "/" . $myquillname;
+$myfullpgsqlinstalllog = $topdir . "/" . $myquillname . "/postgress_install.log" ;
+$mypgsqltarfile = "x_quill_postgresql-8.1.4.tar.gz";
+$mypgsqlversion = "postgresql-8.1.4";
+my $myresult;
+
+system("mkdir $myquillname");
+if( -d $myquillname ) {
+	$result = system("./x_quill_pgsqlinstall.pl $myfullpgsqlloc $myfullpgsqlinstalllog $mypgsqltarfile $mypgsqlversion");
+	print "Result of Quill Postgresssql db install job is  $result\n";
+	system("cp -r $myfullpgsqlinstalllog $mysaveme");
+} else {
+	die "Could not create Quill postgress db install location\n";;
+}
+
+exit;
+system("mkdir $mysaveme");
+
+$mysubmitnm = $corename . $mypid . ".cmd";
+$mysubmitnmcmdout = $corename . $mypid . ".cmd.out";
+$mysubmitnmlog = $corename . $mypid . ".log";
+$mysubmitnmerr = $corename . $mypid . ".err";
+$mysubmitnmout = $corename . $mypid . ".out";
+$mycorenm = $corename . ".cmd";
+$mycorenmcmdout = $corename . ".cmd.out";
+$mycorenmlog = $corename . ".log";
+$mycorenmerr = $corename . ".err";
+$mycorenmout = $corename . ".out";
+
+print "Master PID is $mypid\n";
+print "Master PID submit file is $mysubmitnm\n";
+
+# my $configrem = CondorPersonal::DebugOn();
+#my $configrem = CondorPersonal::StartCondor("x_param.quill" ,"quill");
+#my @quill = split /\+/, $configrem;
+#my $quillconfig = shift @quill;
+#my $quillport = shift @quill;
+
+#print "---Quill config is $quillconfig and remote port is $quillport---\n";
+
+$ENV{CONDOR_CONFIG} = $quillconfig;
+
+#print "Set config to $quillconfig\n";
+
+#my $pcresult = system("./job_quill_basic.pl $mysubmitnm");
+#print "Result of job_quill_basic job is  $pcresult\n";
+
+$result = system("./x_quill_pgsqlstop.pl $myfullpgsqlloc ");
+print "Result of Quill Postgresssql db stop job is  $result\n";
+
+system("cp -r $mypid $mysaveme");
+system("cp *quill_basic* $mysaveme");
+
+if( -e "$mysubmitnm" )
+{
+	system("cp $mysubmitnm $mycorenm");
+}
+
+if( -e "$mysubmitnmout" )
+{
+	system("cp $mysubmitnmcmdout $mycorenmcmdout");
+}
+
+if( -e "$mysubmitnmlog" )
+{
+	system("cp $mysubmitnmlog $mycorenmlog");
+}
+
+if( $result != 0 )
+{
+	exit(1);
+}
+
+my @adarray;
+my $status = 1;
+my $cmd = "condor_off -master";
+$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+if(!$status)
+{
+	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	exit(1)
+}
+
+system("date");
+

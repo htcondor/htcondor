@@ -1,4 +1,5 @@
 #! /usr/bin/env perl
+use CondorTest;
 
 my $log = $ARGV[0];
 my $option = $ARGV[1];
@@ -12,7 +13,7 @@ my $line;
 open(OLDOUT, "<$log");
 while(<OLDOUT>)
 {
-	chomp;
+	CondorTest::fullchomp($_);
 	$line = $_;
 	#print "--$line--\n";
 	if( $line =~ /^\s*(hello)\s*$/ )

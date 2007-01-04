@@ -79,7 +79,7 @@ bool StreamHandler::Init( const char *fn, const char *sn, bool io )
 	return true;
 }
 
-int StreamHandler::Handler( int fd )
+int StreamHandler::Handler( int  /* fd */)
 {
 	int result;
 	int actual;

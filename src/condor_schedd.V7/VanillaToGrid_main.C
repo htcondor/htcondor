@@ -42,7 +42,7 @@ void die(const char * s) {
 }
 
 MyString slurp_file(const char * filename) {
-	int fd = open(filename, O_RDONLY);
+	int fd = safe_open_wrapper(filename, O_RDONLY);
 	if(fd == -1) {
 		die("failed to open input");
 	}
@@ -61,7 +61,7 @@ MyString slurp_file(const char * filename) {
 }
 
 void write_file(const char * filename, const char * data) {
-	FILE * f = fopen(filename, "w");
+	FILE * f = safe_fopen_wrapper(filename, "w");
 	if( ! f ) {
 		die("Failed to open output");
 	}
@@ -219,7 +219,7 @@ int grid2vanilla(int argc, char **argv)
 int main(int argc, char **argv) 
 {
 	config(); // Initialize param.
-	char * progname = basename(argv[0]);
+	const char * progname = condor_basename(argv[0]);
 	if(progname[0] == 'v') {
 		return vanilla2grid(argc,argv);
 	} else if(progname[0] == 'g') {

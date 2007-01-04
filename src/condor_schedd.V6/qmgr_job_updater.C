@@ -253,7 +253,7 @@ QmgrJobUpdater::updateJob( update_t type )
 			// No special attributes needed...
 		break;
 	default:
-		EXCEPT( "QmgrJobUpdater::updateJob: Unknown update type (%d)!" );
+		EXCEPT( "QmgrJobUpdater::updateJob: Unknown update type (%d)!", type );
 	}
 	if( final_update && ! has_history ) {
 			// there's no history file on this machine, and this job
@@ -384,7 +384,7 @@ QmgrJobUpdater::watchAttribute( const char* attr, update_t type  )
 				"with U_PERIODIC" );
 		break;
 	default:
-		EXCEPT( "QmgrJobUpdater::watchAttribute: Unknown update type (%d)!" );
+		EXCEPT( "QmgrJobUpdater::watchAttribute: Unknown update type (%d)!", type );
 		break;
 	}
 

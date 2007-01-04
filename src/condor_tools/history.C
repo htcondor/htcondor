@@ -337,7 +337,7 @@ main(int argc, char* argv[])
 	  	}
 	  }
 		  // query history table
-	  if (st == HISTORY_EMPTY) {
+	  if (historySnapshot->isHistoryEmpty()) {
 		  printf("No historical jobs in the database match your query\n");
 	  }
 	  historySnapshot->release();
@@ -760,7 +760,7 @@ static void readHistoryFromFile(char *JobHistoryFileName, char* constraint, Expr
     bool BOF = false; // Beginning Of File
     MyString buf;
     
-    FILE* LogFile=fopen(JobHistoryFileName,"r");
+    FILE* LogFile=safe_fopen_wrapper(JobHistoryFileName,"r");
     
 	if (!LogFile) {
         fprintf(stderr,"History file (%s) not found or empty.\n", JobHistoryFileName);

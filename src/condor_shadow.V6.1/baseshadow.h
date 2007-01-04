@@ -230,7 +230,7 @@ class BaseShadow : public Service
 
 		/** A local dprintf maker that uses dprintf_va...
 		 */
-	void dprintf( int flags, char* fmt, ... );
+	void dprintf( int flags, char* fmt, ... ) CHECK_PRINTF_FORMAT(3,4);
 
 		/// Returns the jobAd for this job
 	ClassAd *getJobAd() { return jobAd; }

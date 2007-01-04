@@ -122,7 +122,7 @@ JICLocalFile::readClassAdFromFile( void )
 	FILE* fp;
 
 	if( filename ) {
-		fp = fopen( filename, "r" );
+		fp = safe_fopen_wrapper( filename, "r" );
 		if( ! fp ) {
 			dprintf( D_ALWAYS, "failed to open \"%s\" for reading: %s "
 					 "(errno %d)\n", filename, strerror(errno), errno );

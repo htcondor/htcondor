@@ -21,6 +21,7 @@
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 #include "condor_common.h"
+#include "condor_string.h"
 
 //strip off newline if exists
 char *

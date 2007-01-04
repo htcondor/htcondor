@@ -18,7 +18,7 @@ $submitted = sub {
 	my $cluster = $info{"cluster"};
 	my $program = $info{"executable"};
 	my $spool = `condor_config_val SPOOL`;
-	chomp($spool);
+	CondorTest::fullchomp($spool);
 
 	print "Checking spool dir --$spool--\n";
 	print "Executable is $program\n";

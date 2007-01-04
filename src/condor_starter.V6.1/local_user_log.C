@@ -127,7 +127,7 @@ LocalUserLog::initNoLogging( void )
 
 
 bool
-LocalUserLog::logExecute( ClassAd* ad )
+LocalUserLog::logExecute( ClassAd*  /* ad */ )
 {
 	if( ! is_initialized ) {
 		EXCEPT( "LocalUserLog::logExecute() called before init()" );
@@ -179,7 +179,7 @@ LocalUserLog::logSuspend( ClassAd* ad )
 
 
 bool
-LocalUserLog::logContinue( ClassAd* ad )
+LocalUserLog::logContinue( ClassAd*  /* ad */ )
 {
 	if( ! is_initialized ) {
 		EXCEPT( "LocalUserLog::logContinue() called before init()" );

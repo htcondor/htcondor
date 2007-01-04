@@ -1,10 +1,48 @@
+01/04/07 V6_8-merge-3
+  The state of the V6_8-branch for another merge back to the trunk.
+  This includes everything that went into 6.8.3, a bugfix for
+  using ClassAd functions with grid universe jobs, and some test
+  changes.
+
+01/04/07 V6_8_3-merge-2
+  The state of the V6_8_3-branch before merging back to V6_8-branch.
+  This is a tiny merge that just contains a small build fix.
+
+01/03/07 V6_8_3-merge-1
+  The state of the V6_8_3-branch before merging back to V6_8-branch.
+
+12/05/06 V6_8_3-{root,branch}
+  The branch for V6_8_3 off of V6_8-branch.
+
 12/04/06 V69-Technion-ha1-{root,branch}
   A branch for continuing Technion development of the HA code, based
   on BUILD-V6_9-trunk-2006-11-30
 
+11/22/06 V6_9-GCB_optimization-{root,branch}
+  The 6.9 branch for GCB connection optimization work. Needed
+  because it relies on a GCB that isn't part of the externals.
+  Created from the TRUNK.
+
+11/21/06 V6_8-Technion_ha1-merge-1
+  Merge-from state of V6_8-Technion_ha1-branch for the first (and
+  probably only) merge into V6_8-branch
+
+11/21/06 V6_8-Technion_ha1-{root,branch}
+  The 6.8 branch for for Technion's latest HAD fixes. Created from 
+  BUILD-V6_8-branch-2006-11-18.
+
+11/14/06 V6_8-oracle-3-{root,branch}
+  The 3nd branch for an oracle version of Quill. Created from 
+  BUILD-V6_8-branch-2006-11-14. Condor-C is broken at that build tag,
+  but we don't need Condor-C for Quill so I'm ignoring it. 
+
 11/02/06 V69-jyoon-vm-{root,branch}
   A branch for Jaeyoung Yoon's Virtual Machine work. Started from 
   BUILD-V6_9-trunk-2006-11-1
+
+10/30/06 V6_8-oracle-2-{root,branch}
+  The 2nd branch for an oracle version of Quill. Created from 
+  BUILD-V6_8-branch-2006-10-30
 
 10/18/06 V6_9-quillpp-5-{root,branch}
   The start of the 5th development branch for quill++. Started from
@@ -12,6 +50,9 @@
 
 10/18/06 V6_9_0-{root,branch}
   The branch for 6.9.0 off HEAD from BUILD-V6_9-trunk-2006-10-18.
+
+10/17/06  V6_8_2-envaware-branch
+  A branch of the 6.8.2 that use envaware technology.
 
 10/17/06 V6_8-merge-2
   The state of the V6_8-branch for another merge back to the trunk.

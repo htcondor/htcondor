@@ -60,7 +60,7 @@ send_a_file( const char *local, const char *remote, int perm )
 	start = get_time();
 
 		/* Open the local file */
-	if( (local_fd=open(local,O_RDONLY,0)) < 0 ) {
+	if( (local_fd=safe_open_wrapper(local,O_RDONLY,0)) < 0 ) {
 		dprintf( D_FULLDEBUG, "Failed to open \"%s\" locally, errno = %d\n",
 														local, errno);
 		return -1;
@@ -137,7 +137,8 @@ get_file( const char *remote, const char *local, int mode )
 	}
 
 		/* open the local file */
-	if( (local_fd=open(local,O_WRONLY|O_CREAT|O_TRUNC,mode)) < 0 ) {
+	if( (local_fd=safe_open_wrapper(local,O_WRONLY|O_CREAT|O_TRUNC,mode)) < 0 ) 
+	{
 		dprintf( D_FULLDEBUG, "Failed to open \"%s\" locally, errno = %d\n",
 														local, errno);
 		return -1;

@@ -70,7 +70,7 @@ $execute = sub
 	foreach $line (@adarray)
 	{
 		my $line = "";
-		chomp($_);
+		CondorTest::fullchomp($_);
 		$line = $_;
 		if( $line =~ /^RemoteHost.*/ )
 		{

@@ -20,13 +20,9 @@
   * RIGHT.
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-#include <string.h>
-#include <iostream>
-#include <stdarg.h>
-#include "simplelist.h"
-
 #ifndef JOB_LEASE_H
 #define JOB_LEASE_H
+
 
 void SetDefaultJobLeaseDuration( int duration );
 

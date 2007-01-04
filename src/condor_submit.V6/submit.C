@@ -569,7 +569,6 @@ main( int argc, char *argv[] )
 	char	**ptr;
 	char	*cmd_file = NULL;
 	int dag_pause = 0;
-	int i;
 
 	setbuf( stdout, NULL );
 
@@ -769,7 +768,7 @@ main( int argc, char *argv[] )
 		// no file specified, read from stdin
 		fp = stdin;
 	} else {
-		if( (fp=fopen(cmd_file,"r")) == NULL ) {
+		if( (fp=safe_fopen_wrapper(cmd_file,"r")) == NULL ) {
 			fprintf( stderr, "\nERROR: Failed to open command file (%s)\n",
 						strerror(errno));
 			exit(1);
@@ -870,7 +869,7 @@ main( int argc, char *argv[] )
 	}
 
 	// Deallocate some memory just to keep Purify happy
-	for (i=0;i<JobAdsArrayLen;i++) {
+	for (int i=0;i<JobAdsArrayLen;i++) {
 		delete JobAdsArray[i];
 	}
 
@@ -3751,7 +3750,7 @@ SetUserLog()
 		free(ulog_entry);
 
 		// check that the log is a valid path
-		FILE* test = fopen(ulog.Value(), "a+");
+		FILE* test = safe_fopen_wrapper(ulog.Value(), "a+");
 		if (!test) {
 			fprintf(stderr,
 				"\nWARNING: Invalid log file: \"%s\" (%s)\n", ulog.Value(),
@@ -3916,7 +3915,7 @@ SetForcedAttributes()
 	while( ( forcedAttributes.iterate( name, value ) ) )
 	{
 		// expand the value; and insert it into the job ad
-		exValue = expand_macro( (char*)value.Value(), ProcVars, PROCVARSIZE );
+		exValue = expand_macro( value.Value(), ProcVars, PROCVARSIZE );
 		if( !exValue )
 		{
 			fprintf( stderr, "\nWarning: Unable to expand macros in \"%s\"."
@@ -5059,9 +5058,9 @@ queue(int num)
 bool
 findClause( const char* buffer, const char* attr_name )
 {
-	char* ptr;
+	const char* ptr;
 	int len = strlen( attr_name );
-	for( ptr = (char*)buffer; *ptr; ptr++ ) {
+	for( ptr = buffer; *ptr; ptr++ ) {
 		if( strincmp(attr_name,ptr,len) == MATCH ) {
 			return true;
 		}
@@ -5470,7 +5469,7 @@ check_open( const char *name, int flags )
 		delete list;
 	}
 
-	if( (fd=open(strPathname.Value(),flags | O_LARGEFILE,0664)) < 0 ) {
+	if( (fd=safe_open_wrapper(strPathname.Value(),flags | O_LARGEFILE,0664)) < 0 ) {
 		fprintf( stderr, "\nERROR: Can't open \"%s\"  with flags 0%o (%s)\n",
 				 strPathname.Value(), flags, strerror( errno ) );
 		DoCleanup(0,0,NULL);

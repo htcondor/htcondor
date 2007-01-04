@@ -24,7 +24,7 @@
 #include "MyString.h"
 #include "MapFile.h"
 
-#include <iostream>
+#include "condor_fix_iostream.h"
 
 
 /*

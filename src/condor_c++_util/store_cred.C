@@ -74,7 +74,7 @@ char* getStoredCredential(const char *username, const char *domain)
 
 	// open the pool password file with root priv
 	priv_state priv = set_root_priv();
-	FILE* fp = fopen(filename, "r");
+	FILE* fp = safe_fopen_wrapper(filename, "r");
 	set_priv(priv);
 	free(filename);
 	if (fp == NULL) {
@@ -86,13 +86,13 @@ char* getStoredCredential(const char *username, const char *domain)
 	// make sure the file owner matches our real uid
 	struct stat st;
 	if (fstat(fileno(fp), &st) == -1) {
-		dprintf(D_ALWAYS, "fstat failed on POOL_PASSWORD_FILE (%s), %s (errno: %d)\n",
+		dprintf(D_ALWAYS, "fstat failed on SEC_PASSWORD_FILE (%s), %s (errno: %d)\n",
 			filename, strerror(errno), errno);
 		fclose(fp);
 		return NULL;
 	}
 	if (st.st_uid != get_my_uid()) {
-		dprintf(D_ALWAYS, "error: POOL_PASSWORD_FILE must be owned by Condor's real uid\n");
+		dprintf(D_ALWAYS, "error: SEC_PASSWORD_FILE must be owned by Condor's real uid\n");
 		fclose(fp);
 		return NULL;
 	}
@@ -119,9 +119,14 @@ char* getStoredCredential(const char *username, const char *domain)
 int store_cred_service(const char *user, const char *pw, int mode)
 {
 	char *at = strchr(user, '@');
-	if ((at == NULL) || (at == user) ||
-	    (memcmp(user, POOL_PASSWORD_USERNAME, at - user) != 0)) {
-		dprintf(D_FULLDEBUG, "store_cred: only pool password is supported on UNIX\n");
+	if ((at == NULL) || (at == user)) {
+		dprintf(D_ALWAYS, "store_cred: malformed user name\n");
+		return FAILURE;
+	}
+	if ((at - user != strlen(POOL_PASSWORD_USERNAME)) ||
+	    (memcmp(user, POOL_PASSWORD_USERNAME, at - user) != 0))
+	{
+		dprintf(D_ALWAYS, "store_cred: only pool password is supported on UNIX\n");
 		return FAILURE;
 	}
 
@@ -148,7 +153,7 @@ int store_cred_service(const char *user, const char *pw, int mode)
 			break;
 		}
 		priv_state priv = set_root_priv();
-		int fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+		int fd = safe_open_wrapper(filename, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
 		set_priv(priv);
 		if (fd == -1) {
 			dprintf(D_ALWAYS, "store_cred_service: open failed on %s\n", filename);
@@ -401,7 +406,10 @@ void store_cred_handler(void *, int i, Stream *s)
 		}
 		else {
 				// we don't allow updates to the pool password through this interface
-			if ((mode != QUERY_MODE) && (memcmp(user, POOL_PASSWORD_USERNAME, tmp - user) == 0)) {
+			if ((mode != QUERY_MODE) &&
+			    (tmp - user == strlen(POOL_PASSWORD_USERNAME)) &&
+			    (memcmp(user, POOL_PASSWORD_USERNAME, tmp - user) == 0))
+			{
 				dprintf(D_ALWAYS, "ERROR: attempt to set pool password via STORE_CRED! (must use STORE_POOL_CRED)\n");
 				answer = FAILURE;
 			} else {
@@ -635,7 +643,10 @@ store_cred(const char* user, const char* pw, int mode, Daemon* d, bool force) {
 			dprintf(D_ALWAYS, "store_cred: user not in user@domain format\n");
 			return FAILURE;
 		}
-		if ((mode == ADD_MODE) && (memcmp(POOL_PASSWORD_USERNAME, user, tmp - user) == 0)) {
+		if ((mode == ADD_MODE) &&
+		    (tmp - user == strlen(POOL_PASSWORD_USERNAME)) &&
+		    (memcmp(POOL_PASSWORD_USERNAME, user, tmp - user) == 0))
+		{
 			cmd = STORE_POOL_CRED;
 			user = tmp + 1;	// we only need to send the domain name for STORE_POOL_CRED
 		}

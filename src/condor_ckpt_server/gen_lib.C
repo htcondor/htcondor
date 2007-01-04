@@ -24,10 +24,9 @@
 #include "gen_lib.h"
 #include "constants2.h"
 
-
-#include <iostream>
-#include <iomanip>
-using namespace std;
+#include "condor_fix_iostream.h"
+#include "condor_fix_fstream.h"
+#include "condor_fix_iomanip.h"
 
 void MakeLongLine(char ch1,
                   char ch2)

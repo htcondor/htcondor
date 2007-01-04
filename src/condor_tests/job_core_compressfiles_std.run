@@ -26,14 +26,14 @@ $ExitSuccess = sub {
 	# load up inputs in order
 	while(<IN>)
 	{
-		chomp($_);
+		CondorTest::fullchomp($_);
 		push @input, $_; # add to beginning
 	}
 	close(IN);
 	while(<OUT>)
 	{
 		my $in = shift @input;
-		chomp($_);
+		CondorTest::fullchomp($_);
 		if( $in ne $_ )
 		{
 			die "Input and output vary! $in ne $_\n";

@@ -493,7 +493,7 @@ int http_copy_file(struct soap *soap, const char *name, const char *type)
 	    return 404; /* HTTP not found */
   }
   char * full_name = dircat(web_root_dir,name);
-  fd = fopen(full_name, "rb"); /* open file to copy */
+  fd = safe_fopen_wrapper(full_name, "rb"); /* open file to copy */
   delete [] full_name;
   free(web_root_dir);
   if (!fd) {

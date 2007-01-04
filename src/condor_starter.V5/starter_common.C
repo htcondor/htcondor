@@ -272,7 +272,7 @@ support_job_wrapper(char *a_out_name, ArgList *args)
 
 		// now reset a_out_name and insert new argv[0]
 	strcpy(a_out_name,wrapper);
-	args->InsertArg(basename(wrapper),0);
+	args->InsertArg(condor_basename(wrapper),0);
 
 		// and finally free wrapper, which was malloced by param()
 	free(wrapper);

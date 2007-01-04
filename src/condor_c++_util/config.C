@@ -139,7 +139,7 @@ Read_config( const char* config_source, BUCKET** table,
 		}
 	} else {
 		is_pipe_cmd = false;
-		conf_fp = fopen(config_source, "r");
+		conf_fp = safe_fopen_wrapper(config_source, "r");
 		if( conf_fp == NULL ) {
 			printf("Can't open file %s\n", config_source);
 			return( -1 );
@@ -495,6 +495,30 @@ getline_implementation( FILE *fp, int requested_bufsize )
 	}
 }
 
+/* 
+** Utility function to get an integer from a string.
+** Returns: -1 if input is NULL, -2 if input is invalid, 0 for success
+*/
+int
+string_to_long( const char *s, long *valuep )
+{
+	// Verify that we have a valid pointer
+	if ( !s ) {
+		return -1;
+	}
+
+	// Call strtol(), verify that it liked the input
+	char	*endp;
+	long	value = strtol( s, &endp, 10 );
+	if ( (const char *)endp == s ) {
+		return -2;
+	}
+
+	// Done, get out of here
+	*valuep = value;
+	return 0;
+}
+
 /*
 ** Expand parameter references of the form "left$(middle)right".  This
 ** is deceptively simple, but does handle multiple and or nested references.
@@ -547,12 +571,61 @@ expand_macro( const char *value, BUCKET **table, int table_size, char *self )
 				}
 			}
 			if( tvalue == NULL ) {
-				EXCEPT("$RANDOM_CHOICE() macro in config file empty!",name);
+				EXCEPT("$RANDOM_CHOICE() macro in config file empty!" );
 			}
 
 			rval = (char *)MALLOC( (unsigned)(strlen(left) + strlen(tvalue) +
 											  strlen(right) + 1));
 			(void)sprintf( rval, "%s%s%s", left, tvalue, right );
+			FREE( tmp );
+			tmp = rval;
+		}
+
+		if( !self && get_special_var("$RANDOM_INTEGER",false,tmp, &left, &name, 
+			&right) ) 
+		{
+			all_done = false;
+			StringList entries(name, ",");
+
+			entries.rewind();
+			const char *tmp2;
+
+			tmp2 = entries.next();
+			long	min_value;
+			if ( string_to_long( tmp2, &min_value ) < 0 ) {
+				EXCEPT( "$RANDOM_INTEGER() config macro: invalid min!" );
+			}
+
+			tmp2 = entries.next();
+			long	max_value;
+			if ( string_to_long( tmp2, &max_value ) < 0 ) {
+				EXCEPT( "$RANDOM_INTEGER() config macro: invalid max!" );
+			}
+
+			tmp2 = entries.next();
+			long	step = 1;
+			if ( string_to_long( tmp2, &step ) < -1 ) {
+				EXCEPT( "$RANDOM_INTEGER() config macro: invalid step!" );
+			}
+
+			if ( step < 1 ) {
+				EXCEPT( "$RANDOM_INTEGER() config macro: invalid step!" );
+			}
+			if ( min_value > max_value ) {
+				EXCEPT( "$RANDOM_INTEGER() config macro: min > max!" );
+			}
+
+			// Generate the random value
+			long	range = step + max_value - min_value;
+			long 	num = range / step;
+			long	random_value =
+				min_value + (get_random_int() % num) * step;
+
+			// And, convert it to a string
+			char	buf[128];
+			snprintf( buf, sizeof(buf)-1, "%ld", random_value );
+			buf[sizeof(buf)-1] = '\0';
+			rval = strdup( buf );
 			FREE( tmp );
 			tmp = rval;
 		}

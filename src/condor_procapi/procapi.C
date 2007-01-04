@@ -218,7 +218,7 @@ ProcAPI::getProcInfoRaw(pid_t pid, procInfoRaw& procRaw, int& status){
 	
 		// open /proc/<pid>
 	sprintf( path, "/proc/%d", pid );
-	if( (fd = open(path, O_RDONLY)) < 0 ) {
+	if( (fd = safe_open_wrapper(path, O_RDONLY)) < 0 ) {
 		switch(errno) {
 
 			case ENOENT:
@@ -430,7 +430,7 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 
 		// pids, memory usage, and age can be found in 'psinfo':
 	sprintf( path, "/proc/%d/psinfo", pid );
-	if( (fd = open(path, O_RDONLY)) < 0 ) {
+	if( (fd = safe_open_wrapper(path, O_RDONLY)) < 0 ) {
 
 		switch(errno) {
 			case ENOENT:
@@ -487,7 +487,7 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
   // other than '0' in 2.6.  I have seen a value returned for 
   // major faults, but not that often.  These values are suspicious.
 	sprintf( path, "/proc/%d/usage", pid );
-	if( (fd = open(path, O_RDONLY) ) < 0 ) {
+	if( (fd = safe_open_wrapper(path, O_RDONLY) ) < 0 ) {
 
 		switch(errno) {
 			case ENOENT:
@@ -740,7 +740,7 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 		status = PROCAPI_OK;
 		initProcInfoRaw(procRaw);
 
-		if( (fp = fopen(path, "r")) == NULL ) {
+		if( (fp = safe_fopen_wrapper(path, "r")) == NULL ) {
 			if( errno == ENOENT ) {
 				// /proc/pid doesn't exist
 				status = PROCAPI_NOPID;
@@ -860,7 +860,7 @@ ProcAPI::fillProcInfoEnv(piPTR pi)
 
 		// open the environment proc file
 	sprintf( path, "/proc/%d/environ", pi->pid );
-	fd = open(path, O_RDONLY);
+	fd = safe_open_wrapper(path, O_RDONLY);
 
 	// Unlike other things set up into the pi structure, this is optional
 	// since it can only help us if it is here...
@@ -986,7 +986,7 @@ ProcAPI::checkBootTime(long now)
 		unsigned long uptime_boottime = 0;
 
 		// get uptime_boottime
-		if( (fp = fopen("/proc/uptime","r")) ) {
+		if( (fp = safe_fopen_wrapper("/proc/uptime","r")) ) {
 			double uptime=0;
 			double junk=0;
 			fgets( s, 256, fp );
@@ -999,7 +999,7 @@ ProcAPI::checkBootTime(long now)
 		}
 
 		// get stat_boottime
-		if( (fp = fopen("/proc/stat", "r")) ) {
+		if( (fp = safe_fopen_wrapper("/proc/stat", "r")) ) {
 			fgets( s, 256, fp );
 			while( strstr(s, "btime") == NULL ) {
 				fgets( s, 256, fp );
@@ -1508,7 +1508,7 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 	char path[MAXPATHLEN];
 	struct procstat prs;
 	sprintf(path,"/proc/%d/status",pid);
-	if( (fp = fopen( path, "r" )) == NULL ) {
+	if( (fp = safe_fopen_wrapper( path, "r" )) == NULL ) {
 		dprintf( D_FULLDEBUG, "ProcAPI: /proc/%d/status not found!\n", pid);
 		free(kp);
 		return PROCAPI_FAILURE;
@@ -4073,7 +4073,7 @@ int
 ProcAPI::generateConfirmTime(long& confirm_time, int& status){
 
 		// open the uptime file
-	FILE* fp = fopen("/proc/uptime", "r");
+	FILE* fp = safe_fopen_wrapper("/proc/uptime", "r");
 	if( fp == NULL ) {
 		dprintf(D_ALWAYS, "Failed to open /proc/uptime: %s\n", 
 				strerror(errno)

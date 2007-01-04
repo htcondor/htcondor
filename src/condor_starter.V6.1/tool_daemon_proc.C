@@ -208,9 +208,9 @@ ToolDaemonProc::StartJob()
 	/* Bail out if we couldn't open the std files correctly */
 	if( fds[0] == -1 || fds[1] == -1 || fds[2] == -1 ) {
 			/* only close ones that had been opened correctly */
-		for( int i=0; i<=2; i++ ) {
-			if( fds[i] >= 0 ) {
-				close(fds[i]);
+		for( int fdindex=0; fdindex<=2; fdindex++ ) {
+			if( fds[fdindex] >= 0 ) {
+				close(fds[fdindex]);
 			}
 		}
 		dprintf(D_ALWAYS, "Failed to open some/all of the std files...\n");
@@ -303,7 +303,7 @@ ToolDaemonProc::StartJob()
 
 
 int
-ToolDaemonProc::JobCleanup(int pid, int status)
+ToolDaemonProc::JobCleanup(int pid, int /*status*/)
 {
     dprintf( D_FULLDEBUG, "Inside ToolDaemonProc::JobCleanup()\n" );
 
@@ -440,7 +440,7 @@ ToolDaemonProc::Hold()
 
 
 bool
-ToolDaemonProc::PublishUpdateAd( ClassAd* ad ) 
+ToolDaemonProc::PublishUpdateAd( ClassAd* /*ad*/ ) 
 {
     dprintf( D_FULLDEBUG, "Inside ToolDaemonProc::PublishUpdateAd()\n" );
     // Nothing special for us to do.

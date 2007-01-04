@@ -58,8 +58,8 @@ int main(int argc, char *argv[])
 
   //reset(inbuffer);
   
-  fin = fopen(argv[1], "r");
-  fout = fopen(argv[2], "w");
+  fin = safe_fopen_wrapper(argv[1], "r");
+  fout = safe_fopen_wrapper(argv[2], "w");
 
   int size;
 

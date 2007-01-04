@@ -14,8 +14,7 @@
 #endif
 #include "condor_netdb.h"
 
-#include <fstream>
-using namespace std;
+#include "condor_fix_fstream.h"
 
 // for MD5 blocks computation
 #define FILE_CHUNK_SIZE               (100)

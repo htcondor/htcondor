@@ -37,79 +37,77 @@ public:
 	//! destructor
 	virtual ~JobQueueDatabase() {};
 
-	//! connect to DBMS
+		// connection handling routines
 	virtual QuillErrCode		connectDB() = 0;
-	//! connect to DBMS
 	virtual QuillErrCode		connectDB(const char* connect) = 0;
-	//! disconnect from DBMS
 	virtual QuillErrCode		disconnectDB() = 0;
 
-	//! begin Transaction
+		// transaction handling routines
 	virtual QuillErrCode		beginTransaction() = 0;
-	//! commit Transaction
 	virtual QuillErrCode		commitTransaction() = 0;
-	//! abort Transaction
 	virtual QuillErrCode		rollbackTransaction() = 0;
 
-	//! execute a command
-	/*! execute SQL which doesn't have any retrieved result, such as
-	 *  insert, delete, and udpate.
-	 */
+
+		// query and command handling routines
 	virtual QuillErrCode		execCommand(const char* sql) = 0;
-	//! execute a SQL query
-	virtual QuillErrCode		execQuery(const char* sql) = 0;
-
-
 	virtual QuillErrCode		execCommand(const char* sql, 
 											int &num_result,
 											int &db_err_code) = 0;
-	//! execute a SQL query
+	virtual QuillErrCode		execQuery(const char* sql) = 0;
 	virtual QuillErrCode		execQuery(const char* sql,
 										  int &num_result) = 0;
 
-	//! get a result for the executed SQL
+		// copy command handling routines
+	virtual QuillErrCode		sendBulkData(char* data) = 0;
+	virtual QuillErrCode		sendBulkDataEnd() = 0;
+
+		// result set accessors - all except the history table accessors are 
+		// cursor based. the history based accessors automatically fetch 
+		// next n results using the cursor
 	virtual const char*	        getValue(int row, int col) = 0;
+	virtual const char*         getJobQueueProcAds_StrValue(int row, 
+															int col) = 0;
+	virtual const char*         getJobQueueProcAds_NumValue(int row, 
+															int col) = 0;
+	virtual const char*         getJobQueueClusterAds_StrValue(int row, 
+															   int col) = 0;
+	virtual const char*         getJobQueueClusterAds_NumValue(int row, 
+															   int col) = 0;
+	virtual QuillErrCode        getHistoryHorValue(SQLQuery *queryhor, 
+												   int row, 
+												   int col, 
+												   char **value) = 0;
+	virtual QuillErrCode        getHistoryVerValue(SQLQuery *queryver, 
+												   int row, 
+												   int col, 
+												   char **value) = 0;
+
+		// history schema metadata routines
 	virtual const char*         getHistoryHorFieldName(int col) = 0;
 	virtual const int           getHistoryHorNumFields() = 0;
 
-	//! release query result
-	virtual QuillErrCode		releaseHistoryResults() = 0;
-	virtual QuillErrCode        releaseJobQueueResults() = 0;
+		// cursor declaration and reclamation routines
+	virtual QuillErrCode        openCursorsHistory(SQLQuery *,
+												   SQLQuery *,
+												   bool) = 0;
+	virtual QuillErrCode        closeCursorsHistory(SQLQuery *,
+													SQLQuery *,
+													bool) = 0;
+		// result set deallocation routines
 	virtual QuillErrCode        releaseQueryResult() = 0;
+	virtual QuillErrCode        releaseJobQueueResults() = 0;
+	virtual QuillErrCode		releaseHistoryResults() = 0;
 
-	//! get a DBMS error message
+		// get the error string
 	virtual char*	getDBError() = 0;
 
-	//! put bulk data into DBMS
-	virtual QuillErrCode		sendBulkData(char* data) = 0;
-	//! put an end flag for bulk loading
-	virtual QuillErrCode		sendBulkDataEnd() = 0;
-
-		//
-		// Job Queue DB processing methods
-		//
-	//! get the queue from the database
-	virtual QuillErrCode        getJobQueueDB(int *, int, int *, int, char *, bool,
+		// high level job queue fetching code - the corresponding 
+		// functionality for history is now done inside getHistoryHorValue 
+		// and getHistoryVerValue
+	virtual QuillErrCode        getJobQueueDB(int *, int, int *, int, 
+											  char *, bool,
 											  int&, int&, int&, int&) = 0;
-	//! get a value retrieved from ProcAds_Str table
-	virtual const char*         getJobQueueProcAds_StrValue(int row, 
-															int col) = 0;
-	//! get a value retrieved from ProcAds_Num table
-	virtual const char*         getJobQueueProcAds_NumValue(int row, 
-															int col) = 0;
-	//! get a value retrieved from ClusterAds_Str table
-	virtual const char*         getJobQueueClusterAds_StrValue(int row, 
-															   int col) = 0;
-	//! get a value retrieved from ClusterAds_Num table
-	virtual const char*         getJobQueueClusterAds_NumValue(int row, 
-															   int col) = 0;
-
-	//! get the history from the database
-	virtual QuillErrCode        queryHistoryDB(SQLQuery *,SQLQuery *,bool,int&,int&) = 0;
-
-	virtual const char*         getHistoryHorValue(int row, int col) = 0;
-	virtual const char*         getHistoryVerValue(int row, int col) = 0;
-
+		// for printing useful warning messages 
 	virtual int 		getDatabaseVersion() = 0;
 protected:
 	char	*con_str;	//!< connection string

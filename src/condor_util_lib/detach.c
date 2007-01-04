@@ -34,7 +34,7 @@ detach( void )
 {
 #if !defined(HPUX) && !defined(Solaris)
 	int		fd;
-	if( (fd=open("/dev/tty",O_RDWR,0)) < 0 ) {
+	if( (fd=safe_open_wrapper("/dev/tty",O_RDWR,0)) < 0 ) {
 			/* There's no /dev/tty, nothing to detach from */
 		return;
 	}

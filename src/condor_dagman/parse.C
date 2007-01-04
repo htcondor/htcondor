@@ -125,7 +125,7 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		tmpFilename = condor_basename( filename );
 	}
 
-	FILE *fp = fopen(tmpFilename, "r");
+	FILE *fp = safe_fopen_wrapper(tmpFilename, "r");
 	if(fp == NULL) {
 		if(DEBUG_LEVEL(DEBUG_QUIET)) {
 			debug_printf( DEBUG_QUIET, "Could not open file %s for input\n", filename);
@@ -540,9 +540,9 @@ parse_parent(
 	while ((jobName = strtok (NULL, DELIMITERS)) != NULL) {
 		const char *jobNameOrig = jobName; // for error output
 		MyString tmpJobName = munge_job_name(jobName);
-		const char *jobName = tmpJobName.Value();
+		const char *jobName2 = tmpJobName.Value();
 
-		Job * job = dag->GetJob(jobName);
+		Job * job = dag->GetJob(jobName2);
 		if (job == NULL) {
 			debug_printf( DEBUG_QUIET, 
 						  "%s (line %d): Unknown Job %s\n",

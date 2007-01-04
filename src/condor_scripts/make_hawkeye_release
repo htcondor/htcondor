@@ -39,12 +39,11 @@ my $Install = "install";
 my $Examples = "condor_examples";
 my $CondorRel = "condor_release";
 my $Scripts = "condor_scripts";
-#my $ClassAdViewer = "/p/condor/workspaces/shared/wenger/dist/";
 my $ReleaseDir = "../Hawkeye-Release";
 my $TestMode = 0;
 
 # Script version, etc
-my $Version = "0.3";
+my $Version = "0.3.1";
 my $Usage = "$0 [-t|-T] version os cpu lib\n".
   "Example: $0 1.2.3 linux x86 glibc23-dynamic\n";
 
@@ -100,6 +99,15 @@ die "$Temp exists" if ( -d $Temp );
 # Check modules dir
 die "No '$Modules' dir!" if ( ! -d $Modules );
 die "'$Modules' is empty!" if ( ! -f "$Modules/df" );
+
+my $ReleaseTarball;
+{
+    my $TarBall = sprintf( "Hawkeye-%s-%s-%s-%s.tar.gz",
+			   $HawkeyeVersion, $HawkeyeOs,
+			   $HawkeyeCpu, $HawkeyeLib );
+    $ReleaseTarball = "$ReleaseDir/$TarBall";
+}
+die "$ReleaseTarball exists!" if ( -f $ReleaseTarball );
 
 # Make the hawkeye release dir
 print "Creating the Hawkeye directory..\n";
@@ -171,7 +179,6 @@ my $BinTarBall = "release.tar";
 
 # Copy in the last minute pieces..
 CopyAll( $CondorRel, $AssembleDir, "*hawkeye*", undef );
-#CopyAll( $ClassAdViewer, $AssembleDir, "h*tgz*", undef );
 
 # Create the install script
 {
@@ -191,15 +198,11 @@ do { print "\n-- TestMode -> $Temp; done --\n"; exit; } if ( $TestMode == 2 );
 
 # Now, make the release tarball...
 {
-    my $TarBall = sprintf( "Hawkeye-%s-%s-%s-%s.tar.gz",
-			   $HawkeyeVersion, $HawkeyeOs,
-			   $HawkeyeCpu, $HawkeyeLib );
-    my $TarBallPath = "$ReleaseDir/$TarBall";
-    print "\nCreating release tarball '$TarBallPath'...  ";
-    system( "tar --gzip -C $Temp -cf $TarBallPath ." );
+    print "\nCreating release tarball '$ReleaseTarball'...  ";
+    system( "tar --gzip -C $Temp -cf $ReleaseTarball ." );
     print "Done\n";
-    system( "ls -l $TarBallPath" );
-    system( "tar --gzip -tvf $TarBallPath" );
+    system( "ls -l $ReleaseTarball" );
+    system( "tar --gzip -tvf $ReleaseTarball" );
 }
 
 # Clean up the temp dir

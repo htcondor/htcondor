@@ -127,6 +127,7 @@ CONLIBAPI_OBJ = \
 	libcondorapi_stubs.o \
 	$(SETEUID_OBJ) \
 	$(SETEGID_OBJ) \
+	condor_open.o \
 	condor_attributes.o
 
 DAEMON_CLIENT_OBJ = daemon.o daemon_types.o dc_shadow.o dc_startd.o \
@@ -164,7 +165,7 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	gahp_common.o \
 	condor_arglist.o store_cred.o \
 	exponential_backoff.o \
-	my_popen.o 
+	my_popen.o condor_open.o
 
 library_target(cplus_lib.a,$(OBJ))
 library_target(liburl.a,$(URL_OBJ))

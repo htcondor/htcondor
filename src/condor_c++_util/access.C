@@ -102,12 +102,12 @@ void attempt_access_handler(Service *, int i, Stream *s)
 	case ACCESS_READ:
 		dprintf( D_FULLDEBUG, "Checking file %s for read permission.\n", 
 				 filename );
-		open_result = open( filename, O_RDONLY | O_LARGEFILE, 0666 );
+		open_result = safe_open_wrapper( filename, O_RDONLY | O_LARGEFILE, 0666 );
 		break;
 	case ACCESS_WRITE:
 		dprintf( D_FULLDEBUG, "Checking file %s for write permission.\n",
 				 filename );
-		open_result = open( filename, O_WRONLY | O_LARGEFILE, 0666 );
+		open_result = safe_open_wrapper( filename, O_WRONLY | O_LARGEFILE, 0666 );
 		break;
 	default:
 		dprintf( D_ALWAYS, "ATTEMPT_ACCESS: Unknown access mode.\n" );
@@ -123,7 +123,7 @@ void attempt_access_handler(Service *, int i, Stream *s)
 			dprintf( D_FULLDEBUG, "ATTEMPT_ACCESS: "
 					 "File %s doesn't exist.\n", filename );
 		} else {
-			dprintf( D_FULLDEBUG, "ATTEMPT_ACCESS: open() failed, "
+			dprintf( D_FULLDEBUG, "ATTEMPT_ACCESS: safe_open_wrapper() failed, "
 					 "errno: %d\n", errno_result );
 		}
 		answer = FALSE;

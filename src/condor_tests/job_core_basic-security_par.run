@@ -10,7 +10,7 @@ $corename = "job_core_basic-security_par";
 # where am I running
 $dummyhost = "gamgee.cs.wisc.edu";
 $currenthost = `hostname`;
-chomp($currenthost);
+CondorTest::fullchomp($currenthost);
 
 system("date");
 print "Dummyhost was $dummyhost and really running on $currenthost\n";
@@ -36,7 +36,7 @@ print "Master PID submit file is $mysubmitnm\n";
 # my $configrem = CondorPersonal::DebugOn();
 # get a remote scheduler running (side b)
 my $configrem = CondorPersonal::StartCondor("x_param.basicparallel-security" ,"parallel");
-my @parallel = split /:/, $configrem;
+my @parallel = split /\+/, $configrem;
 my $parallelconfig = shift @parallel;
 my $parallelport = shift @parallel;
 
@@ -55,7 +55,7 @@ open(CSUB,">$mysubmitnm") || die "Can't open new submit file $mysubmitnm: $!\n";
 open(TPLATE,"<$cmd_template") || die "Can't open submit file template $cmd_template: $!\n";
 while(<TPLATE>)
 {
-	chomp($_);
+	CondorTest::fullchomp($_);
 	$line = $_;
 	if( $line =~ /^\s*log\s*= .*$/)
 	{

@@ -12,7 +12,7 @@ $corename = "job_condorc_abc_van";
 # where are we running
 $dummyhost = "gamgee.cs.wisc.edu";
 $currenthost = `hostname`;
-chomp($currenthost);
+CondorTest::fullchomp($currenthost);
 print "Running on $currenthost\n";
 
 $mypid = $$;
@@ -33,7 +33,7 @@ print "Master PID submit file is $mysubmitnm\n";
 
 # get a remote scheduler running (side c)
 my $configrem = CondorPersonal::StartCondor("x_param.condorcremote" ,"remote");
-my @remote = split /:/, $configrem;
+my @remote = split /\+/, $configrem;
 my $remconfig = shift @remote;
 my $remport = shift @remote;
 
@@ -41,7 +41,7 @@ print "---Remote config(c) is $remconfig and remote port is $remport---\n";
 
 # get a middle scheduler running (side b)
 my $configmid = CondorPersonal::StartCondor("x_param.condorcmiddle" ,"middle");
-my @middle = split /:/, $configmid;
+my @middle = split /\+/, $configmid;
 my $midconfig = shift @middle;
 my $midport = shift @middle;
 
@@ -53,7 +53,7 @@ open(CSUB,">$mysubmitnm") || die "Can't open new submit file $mysubmitnm: $!\n";
 open(TPLATE,"<$cmd_template") || die "Can't open submit file template $cmd_template: $!\n";
 while(<TPLATE>)
 {
-	chomp($_);
+	CondorTest::fullchomp($_);
 	$line = $_;
 	if( $line =~ /^\s*remote_pool\s*=\s*($dummyhost):\s*(\d+)\s*$/ )
 	{
@@ -103,7 +103,7 @@ sleep 10;
 
 # get a local scheduler running (side a)
 my $configloc = CondorPersonal::StartCondor("x_param.condorclocal" ,"local");
-my @local = split /:/, $configloc;
+my @local = split /\+/, $configloc;
 my $locconfig = shift @local;
 my $locport = shift @local;
 

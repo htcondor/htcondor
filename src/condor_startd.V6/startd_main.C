@@ -344,7 +344,7 @@ main_init( int, char* argv[] )
 		//////////////////////////////////////////////////
 	main_reaper = daemonCore->Register_Reaper( "reaper_starters", 
 		(ReaperHandler)reaper, "reaper" );
-	assert(main_reaper != FALSE);
+	ASSERT(main_reaper != FALSE);
 
 	daemonCore->Set_Default_Reaper( main_reaper );
 

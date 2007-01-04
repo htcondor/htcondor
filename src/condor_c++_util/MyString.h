@@ -219,7 +219,7 @@ class MyString
 	 *  Assuming, of course, that you don't run out of memory. 
 	 *  The returns true if it succeeded, false otherwise.
 	 */
-	bool sprintf(const char *format, ...);
+	bool sprintf(const char *format, ...) CHECK_PRINTF_FORMAT(2,3);
 
 	/** Fills a MyString with what you would have gotten from vsprintf.
 	 *  This is handy if you define your own printf-like functions.
@@ -228,7 +228,7 @@ class MyString
 	bool vsprintf(const char *format, va_list args);
 
 	/** Like sprintf, but this appends to existing data. */
-	bool sprintf_cat(const char *format, ...);
+	bool sprintf_cat(const char *format, ...) CHECK_PRINTF_FORMAT(2,3);
 
 	/** Like vsprintf, but this appends to existing data. */
 	bool vsprintf_cat(const char *format, va_list args);

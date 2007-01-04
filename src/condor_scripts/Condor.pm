@@ -492,7 +492,7 @@ sub IsAbsolutePath
 {
 	my $testpath = shift;
 	my $os = "$^O";
-	chomp($os);
+	fullchomp($os);
 
 	#print "---$os---\n";
 
@@ -607,7 +607,7 @@ sub Monitor
 		}
 		$line = <SUBMIT_LOG>;
 	}
-	chomp $line;
+	fullchomp($line);
 	$linenum++;
 
       PARSE:
@@ -648,7 +648,7 @@ sub Monitor
 			}
 			$line = <SUBMIT_LOG>;
 		}
-	    chomp $line;
+	    fullchomp($line);
 	    $linenum++;
 
 	    if( $line =~ /^\s+\(0\) Job was not checkpointed\./ )
@@ -710,7 +710,7 @@ sub Monitor
 			}
 			$line = <SUBMIT_LOG>;
 		}
-	    chomp $line;
+	    fullchomp($line);
 	    $linenum++;
 
 	    # terminated successfully
@@ -749,7 +749,7 @@ sub Monitor
 			}
 			$line = <SUBMIT_LOG>;
 		}
-		chomp $line;
+	    fullchomp($line);
 		$linenum++;
 
 		if( $line =~ /^\s+\(1\) Corefile in: (.*)/ )
@@ -810,7 +810,7 @@ sub Monitor
 			}
 			$line = <SUBMIT_LOG>;
 		}
-	    chomp $line;
+	    fullchomp($line);
 	    $linenum++;
 
 		$info{'shadowerror'} = $line;
@@ -964,7 +964,7 @@ sub ParseSubmitFile
     debug( "reading submit file...\n" );
     while( <SUBMIT_FILE> )
     {
-	chomp;
+	fullchomp($_);	# do a windows strip, fine for linux
 	$line++;
 
 	# skip comments & blank lines
@@ -990,7 +990,7 @@ sub ParseSubmitFile
 	    # compress whitespace and remove trailing newline for readability
 		# Don't change white space. Some environment tests expect tabs to stay tabs.
 	    # $value =~ s/\s+/ /g;
-	    chomp $value;
+	    fullchomp($value);
 
 	
 		# Do proper environment substitution
@@ -1057,6 +1057,23 @@ sub safe_WEXITSTATUS {
 	} else {
 		return WEXITSTATUS($status);
 	}
+}
+
+#
+# Cygwin's perl chomp does not remove cntrl-m but this one will
+# and linux and windows can share the same code. The real chomp
+# totals the number or changes but I currently return the modified
+# array. bt 10/06
+#
+
+sub fullchomp
+{
+	push (@_,$_) if( scalar(@_) == 0);
+	foreach my $arg (@_) {
+		$arg =~ s/\012+$//;
+		$arg =~ s/\015+$//;
+	}
+	return(0);
 }
 
 1;

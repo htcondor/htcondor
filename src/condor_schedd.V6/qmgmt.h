@@ -84,6 +84,7 @@ extern "C" {
 void InitJobQueue(const char *job_queue_name,int max_historical_logs);
 void InitQmgmt();
 void SetMaxHistoricalLogs(int max_historical_logs);
+time_t GetOriginalJobQueueBirthdate();
 void CleanJobQueue();
 void DestroyJobQueue( void );
 int handle_q(Service *, int, Stream *sock);

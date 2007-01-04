@@ -258,7 +258,7 @@ clearANDCustomConstraints (void)
 QueryResult CondorQuery::
 addConstraint (const int cat, const char *value)
 {
-	return (QueryResult) query.addString (cat, (char *) value);
+	return (QueryResult) query.addString (cat, value);
 }
 
 
@@ -282,7 +282,7 @@ addConstraint (const int cat, const float value)
 QueryResult CondorQuery::
 addANDConstraint (const char *value)
 {
-	return (QueryResult) query.addCustomAND ((char *) value);
+	return (QueryResult) query.addCustomAND (value);
 }
 
 
@@ -290,7 +290,7 @@ addANDConstraint (const char *value)
 QueryResult CondorQuery::
 addORConstraint (const char *value)
 {
-	return (QueryResult) query.addCustomOR ((char *) value);
+	return (QueryResult) query.addCustomOR (value);
 }
 
 

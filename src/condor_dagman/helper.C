@@ -24,17 +24,17 @@
 // File: Helper.cpp
 // Author: Francesco Giacomini, INFN <Francesco.Giacomini@cnaf.infn.it>
 
-// $Id: helper.C,v 1.5 2006-10-17 09:38:39 wright Exp $
+// $Id: helper.C,v 1.6 2007-01-04 21:04:28 gquinn Exp $
 
 #include "condor_common.h"
 #include "helper.h"
 
 #if defined(BUILD_HELPER)
-#include <fstream>
+#include "condor_fix_fstream.h"
 #include <sstream>
 #include <cstdlib>		// for system()
 #include <string.h>		// for strlen()
-#include <iostream>
+#include "condor_fix_iostream.h"
 //#include "condor_debug.h"
 #include "condor_config.h"
 

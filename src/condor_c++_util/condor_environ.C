@@ -60,7 +60,7 @@ EnvGetName( CONDOR_ENVIRON which )
 	switch ( local->flag )
 	{
 	case  ENV_FLAG_NONE:
-        tmps = strdup((char *) local->string);
+        tmps = strdup(local->string);
 		break;
     case ENV_FLAG_DISTRO:
 		// Yeah, this allocates a couple more bytes than required, but

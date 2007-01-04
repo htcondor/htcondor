@@ -1,4 +1,5 @@
 #! /usr/bin/env perl
+use CondorTest;
 
 
 my $arg = $ARGV[0];
@@ -11,7 +12,7 @@ open(OLDOUT, "<$old");
 open(NEWOUT, ">$new");
 while(<OLDOUT>)
 {
-	chomp;
+	CondorTest::fullchomp($_);
 	print NEWOUT "$_\n";
 }
 print NEWOUT "$arg\n";

@@ -285,7 +285,7 @@ int Sock::move_descriptor_up()
 #ifdef Solaris
 	/* On Solaris, the silly stdio library will fail if the underlying
 	 * file descriptor is > 255.  Thus if we have lots of sockets open,
-	 * calls to fopen() will start to fail on Solaris.  In Condor, this 
+	 * calls to safe_fopen_wrapper() will start to fail on Solaris.  In Condor, this 
 	 * usually means dprintf() will EXCEPT.  So to avoid this, we reserve
 	 * sockets between 101 and 255 to be ONLY for files/pipes, and NOT
 	 * for network sockets.  We acheive this by moving the underlying
@@ -403,7 +403,6 @@ int Sock::bindWithin(const int low_port, const int high_port)
 	int this_trial = start_trial;
 	do {
 		sockaddr_in		sin;
-		priv_state old_priv;
 		int bind_return_val;
 
 		memset(&sin, 0, sizeof(sockaddr_in));
@@ -416,6 +415,7 @@ int Sock::bindWithin(const int low_port, const int high_port)
 		sin.sin_port = htons((u_short)this_trial++);
 
 #ifndef WIN32
+		priv_state old_priv;
 		if (this_trial <= 1024) {
 			// use root priv for the call to bind to allow privileged ports
 			old_priv = PRIV_UNKNOWN;
@@ -456,7 +456,6 @@ int Sock::bindWithin(const int low_port, const int high_port)
 int Sock::bind(int is_outgoing, int port)
 {
 	sockaddr_in		sin;
-	priv_state old_priv;
 	int bind_return_value;
 
 	// Following lines are added because some functions in condor call
@@ -520,6 +519,7 @@ int Sock::bind(int is_outgoing, int port)
 		sin.sin_port = htons((u_short)port);
 
 #ifndef WIN32
+		priv_state old_priv;
 		if(port < 1024) {
 			// use root priv for the call to bind to allow privileged ports
 			old_priv = PRIV_UNKNOWN;
@@ -570,7 +570,6 @@ int Sock::set_os_buffers(int desired_size, bool set_write_buf)
 	int previous_size = 0;
 	int attempt_size = 0;
 	int command;
-	int ret_val;
 	SOCKET_LENGTH_TYPE temp;
 
 	if (_state == sock_virgin) assign();
@@ -593,27 +592,27 @@ int Sock::set_os_buffers(int desired_size, bool set_write_buf)
 		We want to set the socket buffer size to be as close
 		to the desired size as possible.  Unfortunatly, there is no
 		contant defined which states the maximum size possible.  So
-		we keep raising it up 2k at a time until (a) we got up to the
+		we keep raising it up 1k at a time until (a) we got up to the
 		desired value, or (b) it is not increasing anymore.  We ignore
-		errors (-1) values from setsockopt since on some platforms this 
-		could signal a value which is to low...
+		the return value from setsockopt since on some platforms this 
+		could signal a value which is too low...
 	*/
 	 
 	do {
-		attempt_size += 2000;
+		attempt_size += 1024;
 		if ( attempt_size > desired_size ) {
 			attempt_size = desired_size;
 		}
-		ret_val = setsockopt(SOL_SOCKET,command,
-			(char*)&attempt_size,sizeof(int));
-		if ( ret_val < 0 )
-			continue;
+		(void) setsockopt( SOL_SOCKET, command,
+						   (char*)&attempt_size, sizeof(int) );
+
 		previous_size = current_size;
 		temp = sizeof(int);
-		::getsockopt(_sock,SOL_SOCKET,command,
-			(char*)&current_size,&temp);
-	} while ( ((ret_val < 0) || (previous_size < current_size))
-				&& (attempt_size < desired_size) );
+		::getsockopt( _sock, SOL_SOCKET, command,
+ 					  (char*)&current_size, &temp );
+
+	} while ( ( previous_size < current_size ) &&
+			  ( attempt_size < desired_size  ) );
 
 	return current_size;
 }
@@ -1195,6 +1194,50 @@ Sock::set_timeout_multiplier(int secs)
    int old_val = timeout_multiplier;
    timeout_multiplier = secs;
    return old_val;
+}
+
+int
+Sock::bytes_available_to_read()
+{
+	/*	Does this platform have FIONREAD? 
+		I think every platform support this, at least for network sockets.
+		So for now, just fail the build if it looks bad.
+		If the build does ever happen to fail here,
+		we should improve this code to use autoconf to detect if FIONREAD 
+		is available, and if it is not, implement this method by doing a non-blocking
+		MSG_PEEK recv() call.  
+	*/
+#ifndef FIONREAD
+#error FIONREAD is not defined!  Fix me by seeing code comment.
+#endif
+
+		/* if stream not assigned to a sock, do it now	*/
+	if (_state == sock_virgin) assign();
+	if ( (_state != sock_assigned) &&  
+				(_state != sock_connect) &&
+				(_state != sock_bound) )  {
+		return -1;
+	}
+
+		/* sigh.  on win32, FIONREAD wants an ulong*, and on Unix an int*. */
+#ifdef WIN32
+	unsigned long num_bytes;
+#else
+	int num_bytes;
+#endif
+
+	if (ioctlsocket(_sock, FIONREAD, &num_bytes) < 0) {
+			return -1;
+	}
+
+		/* Make certain our cast is safe to do */
+	if ( num_bytes > INT_MAX ) {
+		return -1;
+	}
+	
+	int ret_val = (int) num_bytes;	// explicit cast to prevent warnings
+
+	return ret_val;
 }
 
 /* NOTE: on timeout() we return the previous timeout value, or a -1 on an error.

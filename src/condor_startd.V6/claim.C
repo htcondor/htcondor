@@ -122,7 +122,7 @@ Claim::~Claim()
 void
 Claim::vacate() 
 {
-	assert( c_id );
+	ASSERT( c_id );
 		// warn the client of this claim that it's being vacated
 	if( c_client && c_client->addr() ) {
 		c_client->vacate( c_id->id() );
@@ -1726,7 +1726,7 @@ ClaimId::dropFile( int vm_id )
 
 	filename_new += ".new";
 
-	FILE* NEW_FILE = fopen( filename_new.Value(), "w" );
+	FILE* NEW_FILE = safe_fopen_wrapper( filename_new.Value(), "w" );
 	if( ! NEW_FILE ) {
 		dprintf( D_ALWAYS,
 				 "ERROR: can't open claim id file: %s: %s (errno: %d)\n",

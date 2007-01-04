@@ -30,7 +30,7 @@ sub load_up_lines
 	open(IN,"<submit_macros_java.out") || die "Can not open submit_macros_java.out: $!\n";
 	while(<IN>)
 	{
-		chomp;
+		CondorTest::fullchomp($_);
 		push @lines, $_;
 	}
 };

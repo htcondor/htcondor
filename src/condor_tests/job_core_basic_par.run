@@ -13,7 +13,7 @@ $corename = "job_core_basic_par";
 # where am I running
 $dummyhost = "gamgee.cs.wisc.edu";
 $currenthost = `hostname`;
-chomp($currenthost);
+CondorTest::fullchomp($currenthost);
 
 system("date");
 print "Dummyhost was $dummyhost and really running on $currenthost\n";
@@ -39,7 +39,7 @@ $mycorenmout = $corename . ".out";
 # my $configrem = CondorPersonal::DebugOn();
 # get a remote scheduler running (side b)
 my $configrem = CondorPersonal::StartCondor("x_param.basicparallel" ,"parallel");
-my @parallel = split /:/, $configrem;
+my @parallel = split /\+/, $configrem;
 my $parallelconfig = shift @parallel;
 my $parallelport = shift @parallel;
 
@@ -58,7 +58,7 @@ open(CSUB,">$mysubmitnm") || die "Can't open new submit file $mysubmitnm: $!\n";
 open(TPLATE,"<$cmd_template") || die "Can't open submit file template $cmd_template: $!\n";
 while(<TPLATE>)
 {
-	chomp($_);
+	CondorTest::fullchomp($_);
 	$line = $_;
 	if( $line =~ /^\s*log\s*= .*$/)
 	{

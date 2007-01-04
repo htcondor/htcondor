@@ -111,7 +111,7 @@ OsProc::StartJob()
 		// prepend full path to executable name
 		MyString full_name;
 		full_name.sprintf("%s%c%s",job_iwd,DIR_DELIM_CHAR,JobName);
-		ASSERT(full_name.Length() < sizeof(JobName));
+		ASSERT(((unsigned)full_name.Length()) < sizeof(JobName));
 		strcpy(JobName,full_name.Value());
 	}
 
@@ -321,14 +321,17 @@ OsProc::StartJob()
 
 		// Grab the full environment back out of the Env object 
 	if(DebugFlags & D_FULLDEBUG) {
-		MyString env_str;
-		job_env.getDelimitedStringForDisplay(&env_str);
-		dprintf(D_FULLDEBUG, "Env = %s\n", env_str.Value());
+		MyString env_string;
+		job_env.getDelimitedStringForDisplay(&env_string);
+		dprintf(D_FULLDEBUG, "Env = %s\n", env_string.Value());
 	}
 
 	// Check to see if we need to start this process paused, and if
 	// so, pass the right flag to DC::Create_Process().
-	int job_opt_mask = DCJOBOPT_NO_ENV_INHERIT;
+	int job_opt_mask = 0;
+	if (!param_boolean("JOB_INHERITS_STARTER_ENVIRONMENT",false)) {
+		job_opt_mask = 	DCJOBOPT_NO_ENV_INHERIT;
+	}
 	int suspend_job_at_exec = 0;
 	JobAd->LookupBool( ATTR_SUSPEND_JOB_AT_EXEC, suspend_job_at_exec);
 	if( suspend_job_at_exec ) {

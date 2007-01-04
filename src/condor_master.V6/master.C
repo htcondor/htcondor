@@ -966,7 +966,7 @@ lock_or_except( const char* file_name )
 				// because it's a service.
 	MasterLockFD=_condor_open_lock_file(file_name,O_WRONLY|O_CREAT|O_APPEND,S_IRUSR|S_IWUSR);
 	if( MasterLockFD < 0 ) {
-		EXCEPT( "can't open(%s,O_WRONLY|O_CREAT|O_APPEND,S_IRUSR|S_IWUSR) - errno %i", 
+		EXCEPT( "can't safe_open_wrapper(%s,O_WRONLY|O_CREAT|O_APPEND,S_IRUSR|S_IWUSR) - errno %i", 
 			file_name, errno );
 	}
 

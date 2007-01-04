@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre.pl,v 1.4 2006-10-17 09:38:09 wright Exp $
+# $Id: remote_pre.pl,v 1.5 2007-01-04 21:03:17 gquinn Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
@@ -194,6 +194,7 @@ while( <ORIG> ) {
     print FIX "NEGOTIATOR_HOST = \n";
     print FIX "COLLECTOR_ADDRESS_FILE = \$(LOG)/.collector_address\n";
     print FIX "NEGOTIATOR_ADDRESS_FILE = \$(LOG)/.negotiator_address\n";
+    print FIX "SCHEDD_ADDRESS_FILE = \$(LOG)/.scheduler_address\n";
   } else {
     print FIX;
   }
@@ -201,7 +202,7 @@ while( <ORIG> ) {
 
 # ADD size for log files and debug level
 # default settings are in condor_config, set here to override 
-print FIX "ALL_DEBUG               = \n";
+print FIX "ALL_DEBUG               = D_FULLDEBUG\n";
 
 print FIX "MAX_COLLECTOR_LOG       = $logsize\n";
 print FIX "COLLECTOR_DEBUG         = \n";
@@ -240,6 +241,7 @@ print FIX "QUEUE_ALL_USERS_TRUSTED 	= TRUE\n";
 # for HOSTALLOW_WRITE which causes it to EXCEPT on submit
 # till set to some legal value. Old was most insecure..
 print FIX "HOSTALLOW_WRITE 			= *\n";
+print FIX "NUM_CPUS 			= 1\n";
 
 # Allow a default heap size for java(addresses issues on x86_rhas_3)
 # May address some of the other machines with Java turned off also
@@ -258,13 +260,15 @@ if( ($ENV{NMI_PLATFORM} =~ /hpux_11/) )
 if( ($ENV{NMI_PLATFORM} =~ /winnt/) ) {
 	my $mypath = $ENV{PATH};
 	print FIX "USER_JOB_WRAPPER = $Win32BaseDir/condor/bin/exe_switch.bat\n";
+	print FIX "CONDOR_HOST = \$(IP_ADDRESS)\n";
+	print FIX "NEGOTIATOR_INTERVAL = 20\n";
 	print FIX "START = TRUE\n";
 	print FIX "PREEMPT = FALSE\n";
 	print FIX "SUSPEND = FALSE\n";
 	print FIX "KILL = FALSE\n";
+	print FIX "WANT_SUSPEND = FALSE\n";
+    print FIX "WANT_VACATE = FALSE\n";
 	print FIX "COLLECTOR_NAME = Personal Condor for Tests\n";
-	print FIX "CONDOR_HOST = 127.0.0.1\n";
-	print FIX "NETWORK_INTERFACE = 127.0.0.1\n";
 	print FIX "ALL_DEBUG = D_FULLDEBUG\n";
 	# insure path from framework is injected into the new pool
 	print FIX "environment=\"PATH=\'$mypath\'\"\n";
@@ -349,8 +353,27 @@ print PIDFILE "$master_pid";
 close PIDFILE;   
 
 # Give the master time to start before jobs are submitted.
-print "Sleeping for 30 seconds to give the master time to start.\n";
-sleep 30;
+$scheddadr = `$BaseDir/condor/bin/condor_config_val SCHEDD_ADDRESS_FILE`;
+print "<<SCHEDD_ADDRESS_FILE is $scheddadr\n";
+if(!$scheddadr =~/Not defined/) {
+	print "We are waiting for the file to exist\n";
+	# Where is the schedd address file? wait for it to exist
+	$havescheddaddr = "no";
+	while($havescheddaddr ne "yes") { 
+		print "Looking for $scheddadr\n";
+		if( -f $scheddadr ) {
+			print "Found it!!!! \n";
+			$havescheddaddr = "yes";
+		} else {
+			sleep 10;
+		}
+	}
+} else {
+	print "We are not waiting for the file to exist\n";
+	print "SCHEDD_ADDRESS_FILE is not defined\n";
+	sleep 45;
+}
+
 
 sub safe_copy {
     my( $src, $dest ) = @_;

@@ -118,9 +118,9 @@ ClassAdLogParser::openFile(bool ex) {
 			// The job_queue.log has cr/nls at the end on windows
 			// so open in text mode only there
 #ifdef WIN32
-		log_fd = open(job_queue_name, O_RDONLY | O_TEXT);
+		log_fd = safe_open_wrapper(job_queue_name, O_RDONLY | O_TEXT);
 #else
-		log_fd = open(job_queue_name, O_RDONLY);
+		log_fd = safe_open_wrapper(job_queue_name, O_RDONLY);
 #endif
 		
 		if (log_fd < 0) {
@@ -130,7 +130,7 @@ ClassAdLogParser::openFile(bool ex) {
 	}
 	else { // File Stream I/O Operations
 		// open a job_queue.log file
-		log_fp = fopen(job_queue_name, "r");
+		log_fp = safe_fopen_wrapper(job_queue_name, "r");
 
 		if (log_fp == NULL) {
 			dprintf(D_ALWAYS, "[QUILL] Unable to open the job_queue.log file!\n");
@@ -155,7 +155,7 @@ ClassAdLogParser::closeFile(bool ex) {
 
 
 void
-ClassAdLogParser::setJobQueueName(char* jqn)
+ClassAdLogParser::setJobQueueName(const char* jqn)
 {
 	strcpy(job_queue_name, jqn);
 }

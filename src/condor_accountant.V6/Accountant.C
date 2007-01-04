@@ -668,7 +668,7 @@ void Accountant::UpdatePriorities()
 	LastUpdateTime=T;
 	return;
   }
-  float AgingFactor=(float) pow(0.5,float(TimePassed)/HalfLifePeriod);
+  float AgingFactor=(float) ::pow(0.5,float(TimePassed)/HalfLifePeriod);
   LastUpdateTime=T;
   SetAttributeInt(AcctRecord,LastUpdateTimeAttr,LastUpdateTime);
 

@@ -111,6 +111,7 @@ SOURCE=..\src\condor_classad\classad_util.C
 # Begin Source File
 
 SOURCE=..\src\condor_classad\classifiedjobs.C
+# SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
 

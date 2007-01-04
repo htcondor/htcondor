@@ -44,6 +44,7 @@
 use FileHandle;
 use POSIX "sys_wait_h";
 use Cwd;
+use CondorTest;
 
 # configuration options
 $test_dir = ".";            # directory in which to find test programs
@@ -118,9 +119,17 @@ if( ! @compilers ) {
     die "error: no compiler subdirectories found\n" unless @compilers;
 }
 
+foreach $name (@compilers) {
+	print "Compiler:$name\n";
+}
 
 # now we find the tests we care about.
 if( @testlist ) {
+
+foreach $name (@testlist) {
+	print "Testlist:$name\n";
+}
+
     # we were explicitly given a # list on the command-line
     foreach $test (@testlist) {
 	if( ! ($test =~ /(.*)\.run$/) ) {
@@ -136,9 +145,9 @@ if( @testlist ) {
     print "found a runfile: $testfile\n";
     open(TESTFILE, $testfile) || die "Can't open $testfile\n";
     while( <TESTFILE> ) {
-	chomp();
-	#//($compiler, $test) = split('\/');
+	CondorTest::fullchomp($_);
 	$test = $_;
+	#//($compiler, $test) = split('\/');
 	if( ! ($test =~ /(.*)\.run$/) ) {
 	    $test = "$test.run";
 	}
@@ -165,8 +174,9 @@ if( @testlist ) {
 	my @toptests;
 	open(QUICK,"<list_quick")|| die "Can't open list_quick\n";
 	while(<QUICK>) {
-		chomp();
-		$moretests = $_ . ".run";
+		CondorTest::fullchomp($_);
+		$tmp = $_;
+		$moretests = $tmp . ".run";
 		push @toptests,$moretests;
 	}
 	close(QUICK);
@@ -181,7 +191,7 @@ if( $skipfile ) {
     print "found a skipfile: $skipfile \n";
     open(SKIPFILE, $skipfile) || die "Can't open $skipfile\n";
     while(<SKIPFILE>) {
-	chomp();
+	CondorTest::fullchomp($_);
 	$test = $_;
 	foreach $compiler (@compilers) {
 	    # $skip_hash{"$compiler"}->{"$test"} = 1;
@@ -282,7 +292,7 @@ foreach $compiler (@compilers)
         {
                 $failure = `grep 'FAILURE' $test{$child}.out`;
                 $failure =~ s/^.*FAILURE[: ]//;
-                chomp $failure;
+                CondorTest::fullchomp($failure);
                 $failure = "failed" if $failure =~ /^\s*$/;
 
                 if ($isXML){

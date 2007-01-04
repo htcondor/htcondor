@@ -196,7 +196,7 @@ XferSummary::log_transfer(time_t now, transferinfo *tinfo, bool success_flag,
 	char peer_IP[20];
 
 	if (log_file == 0) {
-		log_file = fopen("TransferLog", "a");
+		log_file = safe_fopen_wrapper("TransferLog", "a");
 	}
 	if (log_file == 0) {
 		return;
@@ -226,7 +226,7 @@ get_file_size(char *path)
 	int		fd;
 	unsigned long answer;
 
-	fd = open(path, O_RDONLY, 0);
+	fd = safe_open_wrapper(path, O_RDONLY, 0);
 	if (fd < 0) {
 		return 0;
 	}

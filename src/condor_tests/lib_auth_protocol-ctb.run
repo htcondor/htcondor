@@ -16,7 +16,7 @@ $mycmdfile = "lib_auth_protocol-ctb.cmd";
 # where am I running
 $dummyhost = "gamgee.cs.wisc.edu";
 $currenthost = `hostname`;
-chomp($currenthost);
+CondorTest::fullchomp($currenthost);
 
 system("date");
 print "Dummyhost was $dummyhost and really running on $currenthost\n";
@@ -46,7 +46,7 @@ system("mkdir $mysaveme");
 	open(TPLATE,"<$param_template") || die "Can't open param template $param_template: $!\n";
 	while(<TPLATE>)
 	{
-		chomp($_);
+		CondorTest::fullchomp($_);
 		$line = $_;
 		if( $line =~ /^\s*secprepostsrc\s*=\s*.*$/ )
 		{
@@ -65,7 +65,7 @@ system("mkdir $mysaveme");
 
 	#my $configsec = CondorPersonal::DebugOn();
 	my $configsec = CondorPersonal::StartCondor($myparamname ,"protocol", $mypid);
-	my @securitypool = split /:/, $configsec;
+	my @securitypool = split /\+/, $configsec;
 	my $secconfig = shift @securitypool;
 	my $secport = shift @securitypool;
 

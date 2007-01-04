@@ -34,6 +34,7 @@
 # include "condor_attributes.h"
 # include "condor_classad.h"
 # include "condor_adtypes.h"
+# include "MyString.h"
 
 static Registration regi;                   // this is the registration for 
                                             // the AttrList type names. It 
@@ -562,9 +563,15 @@ GetSequenceNumber (void)
 //
 // This member function tests whether two ClassAds match mutually.
 //
+
+// Parsing a classad from a string is slow.  Really slow.  We match
+// ads frequently, so cache the "MY.Requirements" tree so we only
+// need to parse it once.
+
+ExprTree *reqsTree = 0;
+
 int ClassAd::IsAMatch(ClassAd* temp)
 {
-    ExprTree *tree;
     EvalResult *val;
 
     if(!temp)
@@ -590,12 +597,11 @@ int ClassAd::IsAMatch(ClassAd* temp)
         EXCEPT("Warning : you ran out of memory -- quitting !");
     }
 
-    Parse("MY.Requirements", tree);           // convention.
+    if (reqsTree == 0) Parse("MY.Requirements", reqsTree);       // convention.
 
-    tree->EvalTree(this, temp, val);         // match in one direction.
+    reqsTree->EvalTree(this, temp, val);         // match in one direction.
     if(!val || val->type != LX_INTEGER)
     {
-        delete tree;
 	delete val;
 	return 0;
     }
@@ -603,16 +609,14 @@ int ClassAd::IsAMatch(ClassAd* temp)
     {
       if(!val->i)
       {
-	  delete tree;
 	  delete val;
 	  return 0; 
       }
     }
 
-    tree->EvalTree(temp, this, val);         // match in the other direction.
+    reqsTree->EvalTree(temp, this, val);      // match in the other direction.
     if(!val || val->type != LX_INTEGER)
     {
-        delete tree;
 	delete val;
 	return 0;
     }
@@ -620,13 +624,11 @@ int ClassAd::IsAMatch(ClassAd* temp)
     {
         if(!val->i)
 	{
-	    delete tree;
 	    delete val;
 	    return 0; 
         }
     }  
 
-    delete tree;
     delete val;
     return 1;   
 }
@@ -645,7 +647,6 @@ bool operator<= (ClassAd &lhs, ClassAd &rhs)
 
 bool operator>= (ClassAd &lhs, ClassAd &rhs)
 {
-	ExprTree *tree;
 	EvalResult *val;	
 	
 	if( (lhs.GetMyTypeNumber()!=rhs.GetTargetTypeNumber()) &&
@@ -659,23 +660,20 @@ bool operator>= (ClassAd &lhs, ClassAd &rhs)
 		EXCEPT("Out of memory -- quitting");
 	}
 
-	Parse ("MY.Requirements", tree);
-	tree -> EvalTree (&rhs, &lhs, val);
+	if (reqsTree == 0) Parse ("MY.Requirements", reqsTree);
+	reqsTree -> EvalTree (&rhs, &lhs, val);
 	if (!val || val->type != LX_INTEGER)
 	{
-		delete tree;	
 		delete val;
 		return false;
 	}
 	else
 	if (!val->i)
 	{
-		delete tree;	
 		delete val;
 		return false;
 	}
 
-	delete tree;
 	delete val;
 	return true;
 }

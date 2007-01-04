@@ -63,7 +63,7 @@ public:
 		//! set the next offset. IMPOSSIBLE_OFFSET is just a default value	
 	void 	setNextOffset(long offset = IMPOSSIBLE_OFFSET);
 	//!	set a job queue file name
-	void	setJobQueueName(char* jqn);
+	void	setJobQueueName(const char* jqn);
 	//!	get a job queue file name
 	char*	getJobQueueName();
 	//!	get a current file offset

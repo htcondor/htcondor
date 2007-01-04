@@ -776,7 +776,7 @@ Resource::leave_preempting_state( void )
 int
 Resource::init_classad( void )
 {
-	assert( resmgr->config_classad );
+	ASSERT( resmgr->config_classad );
 	if( r_classad ) delete(r_classad);
 	r_classad = new ClassAd( *resmgr->config_classad );
 

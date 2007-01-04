@@ -21,7 +21,7 @@
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#include <condor_common.h>
+#include "condor_common.h"
 #include "HashTable.h"
 #include "stringSpace.h"
 #include "condor_debug.h"

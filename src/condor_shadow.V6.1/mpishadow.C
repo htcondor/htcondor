@@ -370,7 +370,7 @@ MPIShadow::startMaster()
     char pgfilename[128];
     sprintf( pgfilename, "%s/procgroup.%d.%d", getIwd(), getCluster(), 
 			 getProc() );
-    if( (pg=fopen( pgfilename, "w" )) == NULL ) {
+    if( (pg=safe_fopen_wrapper( pgfilename, "w" )) == NULL ) {
         dprintf( D_ALWAYS, "Failure to open %s for writing, errno %d\n", 
                  pgfilename, errno );
         shutDown( JOB_NOT_STARTED );
@@ -762,7 +762,7 @@ MPIShadow::emailTerminateEvent( int exitReason, update_style_t kind )
 	MyString str;
 	char *s;
 
-	mailer = msg.open( jobAd, exitReason );
+	mailer = msg.open_stream( jobAd, exitReason );
 	if( ! mailer ) {
 			// nothing to do
 		return;

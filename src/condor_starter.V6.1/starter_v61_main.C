@@ -676,7 +676,7 @@ parseArgs( int argc, char* argv [] )
 
 
 int
-main_config( bool is_full )
+main_config( bool /*is_full*/ )
 {
 	Starter->Config();
 	return 0;

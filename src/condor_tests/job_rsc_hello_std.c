@@ -21,6 +21,7 @@
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 #define _POSIX_SOURCE
+#define _CONDOR_ALLOW_OPEN 1
 
 #if defined(HPUX)
 /*#include "condor_common.h"*/

@@ -46,7 +46,7 @@ int transfer_from_file_to_file(char *src_file, char *dest_file)
       src_filesize = src_filestat.st_size;
 
     //open the input file for reading
-    in_fd = open(src_file, O_RDONLY);
+    in_fd = safe_open_wrapper(src_file, O_RDONLY);
     if (in_fd < 0){
       fprintf(stdout,"Error in opening file : %s\n",src_file);
       free(buf);
@@ -97,7 +97,7 @@ int transfer_from_file_to_file(char *src_file, char *dest_file)
     }
 
     //open the output file for writing
-    out_fd = open(dest_file, O_CREAT | O_RDWR, 00777);
+    out_fd = safe_open_wrapper(dest_file, O_CREAT | O_RDWR, 00777);
     if (out_fd < 0){
       fprintf(stdout,"Error in opening file : %s\n",dest_file);
       free(buf);

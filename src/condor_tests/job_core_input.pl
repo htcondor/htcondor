@@ -1,9 +1,11 @@
 #! /usr/bin/env perl
+use CondorTest;
+
 #BEGIN {$^W=1}  #warnings enabled
 
 while( <> )
 {
-	chomp($_);
+	CondorTest::fullchomp($_);
 	print "$_\n";
 }
 

@@ -20,6 +20,7 @@
   * RIGHT.
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+#include "condor_common.h"
 #include "dap_classad_reader.h"
 #include "dap_utility.h"
 #include "dap_error.h"
@@ -80,7 +81,7 @@ int getValue(classad::ClassAd *currentAd, char *attr, char *attrval)
 	  std::string adbuffer = "";
       FILE *f;
       
-      f = fopen(filename, "r");
+      f = safe_fopen_wrapper(filename, "r");
       if (f == NULL){
 	dprintf(D_ALWAYS, "error in opening file: %s\n", filename);
 	return DAP_ERROR;
@@ -107,9 +108,9 @@ ClassAd_Reader::ClassAd_Reader(char *fname)
 
   currentAd = NULL;
   
-  adfile = fopen(fname,"r");
+  adfile = safe_fopen_wrapper(fname,"r");
   //printf("classad:open:%d\n",++num_files);
-  if (adfile == NULL) adfile = fopen(fname,"w");
+  if (adfile == NULL) adfile = safe_fopen_wrapper(fname,"w");
   if (adfile == NULL) {
     dprintf(D_ALWAYS,"cannot open file:%s\n",fname);
   exit(1);

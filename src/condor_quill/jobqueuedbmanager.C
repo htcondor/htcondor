@@ -106,7 +106,7 @@ JobQueueDBManager::getWritePassword(char *write_passwd_fname) {
 	FILE *fp = NULL;
 	char *passwd = (char *) malloc(64 * sizeof(char));
 
-	fp = fopen(write_passwd_fname, "r");
+	fp = safe_fopen_wrapper(write_passwd_fname, "r");
 	if(fp == NULL) {
 		EXCEPT("Unable to open password file %s\n", write_passwd_fname);
 	}
@@ -347,8 +347,8 @@ JobQueueDBManager::config(bool reconfig)
 void
 JobQueueDBManager::setJobQueueFileName(const char* jqName)
 {
-	prober->setJobQueueName((char*)jqName);
-	caLogParser->setJobQueueName((char*)jqName);
+	prober->setJobQueueName(jqName);
+	caLogParser->setJobQueueName(jqName);
 }
 
 //! get the parser
@@ -445,6 +445,27 @@ JobQueueDBManager::maintain()
 	totalSqlProcessed += lastBatchSqlProcessed;
 
 	fst = caLogParser->closeFile();
+
+	if (ret_st == SUCCESS) {
+		time_t clock;
+		char           *sql_str;
+		
+		(void)time(  (time_t *)&clock );
+		
+			/* update the last report time in jobqueuepollinginfo */
+		sql_str = (char *) malloc(MAX_FIXED_SQL_STR_LENGTH * sizeof(char));
+		memset(sql_str, 0, MAX_FIXED_SQL_STR_LENGTH);
+		sprintf(sql_str, 
+				"UPDATE JobQueuePollingInfo SET last_poll_time = %ld",
+				clock);
+		
+		connectDB(NOT_IN_XACT);
+		jqDatabase->execCommand(sql_str);
+		disconnectDB(NOT_IN_XACT);
+		if(sql_str)
+			free(sql_str);
+	}
+
 	return ret_st;
 }
 
@@ -873,6 +894,7 @@ JobQueueDBManager::buildAndWriteJobQueue()
 
 		//construct the in memory job queue and history
 	if (buildJobQueue(jobQueue) == FAILURE) {
+		delete jobQueue;
 		return FAILURE;
 	}
 
@@ -887,6 +909,7 @@ JobQueueDBManager::buildAndWriteJobQueue()
 		// For history tables, send INSERT to DBMS - all part of
 		// bulk loading
 	if (loadJobQueue(jobQueue) == FAILURE) {
+		delete jobQueue;
 		return FAILURE;
 	}
 
@@ -946,10 +969,6 @@ JobQueueDBManager::addOldJobQueueRecords() {
 		EXCEPT("No SPOOL variable found in config file\n");
 	}
   
-	jqfile = (char *) malloc(_POSIX_PATH_MAX * sizeof(char));
-	jqfileroot = (char *) malloc(_POSIX_PATH_MAX * sizeof(char));
-	sprintf(jqfileroot, "%s/job_queue.log", spool);
-
 		//for the first old job queue file, we need to read past the last offset 
 		//for successive files, we'll read from the beginning
 	parser.setNextOffset(((ClassAdLogEntry *)caLogParser->getCurCALogEntry())->next_offset);
@@ -961,6 +980,10 @@ JobQueueDBManager::addOldJobQueueRecords() {
 		return FAILURE; 
 	}
 
+	jqfile = (char *) malloc(_POSIX_PATH_MAX * sizeof(char));
+	jqfileroot = (char *) malloc(_POSIX_PATH_MAX * sizeof(char));
+	sprintf(jqfileroot, "%s/job_queue.log", spool);
+
 	for(long int i=lastseqnum; i < curprobedseqnum; i++) {
 			//dont clean up state of job queue tables if this is the first file in the list
 			//as we will start processing it from somewhere in the middle in which case we
@@ -970,7 +993,7 @@ JobQueueDBManager::addOldJobQueueRecords() {
 			
 			if(st == FAILURE) {
 				displayDBErrorMsg("addOldJobQueueRecords unable to clean up job queue tables --- ERROR");
-				return FAILURE; 
+				break; 
 			}
 		}
 		sprintf(jqfile, "%s.%ld", jqfileroot, i);
@@ -1126,17 +1149,17 @@ JobQueueDBManager::processLogEntry(int op_type, JobQueueCollection* jobQueue)
 			break;
 		}
 		job_id_type = getProcClusterIds(key, cid, pid);
-		ClassAd* ad = new ClassAd();
-		ad->SetMyTypeName("Job");
-		ad->SetTargetTypeName("Machine");
+		ClassAd* new_ad = new ClassAd();
+		new_ad->SetMyTypeName("Job");
+		new_ad->SetTargetTypeName("Machine");
 
 		switch(job_id_type) {
 		case IS_CLUSTER_ID:
-			jobQueue->insertClusterAd(cid, ad);
+			jobQueue->insertClusterAd(cid, new_ad);
 			break;
 
 		case IS_PROC_ID:
-			jobQueue->insertProcAd(cid, pid, ad);
+			jobQueue->insertProcAd(cid, pid, new_ad);
 			break;
 
 		default:
@@ -1160,20 +1183,20 @@ JobQueueDBManager::processLogEntry(int op_type, JobQueueCollection* jobQueue)
 			break;
 
 		case IS_PROC_ID: {
-			ClassAd *clusterad = jobQueue->find(cid);
-			ClassAd *procad = jobQueue->find(cid,pid);
-			if(!clusterad || !procad) {
+			ClassAd *cluster_ad = jobQueue->find(cid);
+			ClassAd *proc_ad = jobQueue->find(cid,pid);
+			if(!cluster_ad || !proc_ad) {
 			    dprintf(D_ALWAYS, 
 						"[QUILL] Destroy ClassAd --- Cannot find clusterad "
 						"or procad in memory job queue");
 				st = FAILURE; 
 				break;
 			}
-			ClassAd *clusterad_new = new ClassAd(*clusterad);
-			ClassAd *historyad = new ClassAd(*procad);
+			ClassAd *cluster_ad_new = new ClassAd(*cluster_ad);
+			ClassAd *history_ad = new ClassAd(*proc_ad);
 
-			historyad->ChainToAd(clusterad_new);
-			jobQueue->insertHistoryAd(cid,pid,historyad);
+			history_ad->ChainToAd(cluster_ad_new);
+			jobQueue->insertHistoryAd(cid,pid,history_ad);
 			jobQueue->removeProcAd(cid, pid);
 			
 			break;
@@ -1196,9 +1219,9 @@ JobQueueDBManager::processLogEntry(int op_type, JobQueueCollection* jobQueue)
 
 		switch(job_id_type) {
 		case IS_CLUSTER_ID: {
-			ClassAd* ad = jobQueue->findClusterAd(cid);
-			if (ad != NULL) {
-				ad->Assign(name, newvalue);
+			ClassAd* cluster_ad = jobQueue->findClusterAd(cid);
+			if (cluster_ad != NULL) {
+				cluster_ad->Assign(name, newvalue);
 			}
 			else {
 				dprintf(D_ALWAYS, 
@@ -1208,9 +1231,9 @@ JobQueueDBManager::processLogEntry(int op_type, JobQueueCollection* jobQueue)
 			break;
 		}
 		case IS_PROC_ID: {
-			ClassAd* ad = jobQueue->findProcAd(cid, pid);
-			if (ad != NULL) {
-				ad->Assign(name, newvalue);
+			ClassAd* proc_ad = jobQueue->findProcAd(cid, pid);
+			if (proc_ad != NULL) {
+				proc_ad->Assign(name, newvalue);
 			}
 			else {
 				dprintf(D_ALWAYS, 
@@ -1236,13 +1259,13 @@ JobQueueDBManager::processLogEntry(int op_type, JobQueueCollection* jobQueue)
 
 		switch(job_id_type) {
 		case IS_CLUSTER_ID: {
-			ClassAd* ad = jobQueue->findClusterAd(cid);
-			ad->Delete(name);
+			ClassAd* cluster_ad = jobQueue->findClusterAd(cid);
+			cluster_ad->Delete(name);
 			break;
 		}
 		case IS_PROC_ID: {
-			ClassAd* ad = jobQueue->findProcAd(cid, pid);
-			ad->Delete(name);
+			ClassAd* proc_ad = jobQueue->findProcAd(cid, pid);
+			proc_ad->Delete(name);
 			break;
 		}
 		default:
@@ -1302,45 +1325,43 @@ JobQueueDBManager::processLogEntry(int op_type, bool exec_later, ClassAdLogParse
 	case CondorLogOp_LogHistoricalSequenceNumber: 
 		break;
 	case CondorLogOp_NewClassAd:
-		if (parser->getNewClassAdBody(key, mytype, targettype) == FAILURE) {
-			return FAILURE; 
+		st = parser->getNewClassAdBody(key, mytype, targettype);
+		if (st == FAILURE) {
+			break;
 		}
-		st = processNewClassAd(key, mytype, targettype, exec_later);
-			
+		st = processNewClassAd(key, mytype, targettype, exec_later);			
 		break;
 	case CondorLogOp_DestroyClassAd:
-		if (parser->getDestroyClassAdBody(key) == FAILURE) {
-			return FAILURE;
+		st = parser->getDestroyClassAdBody(key);
+		if (st == FAILURE) {
+			break;
 		}		
-		st = processDestroyClassAd(key, exec_later);
-			
+		st = processDestroyClassAd(key, exec_later);			
 		break;
 	case CondorLogOp_SetAttribute:
-		if (parser->getSetAttributeBody(key, name, value) == FAILURE) {
-			return FAILURE;
+		st = parser->getSetAttributeBody(key, name, value);
+		if (st == FAILURE) {
+			break;
 		}
-		st = processSetAttribute(key, name, value, exec_later);
-			
+		st = processSetAttribute(key, name, value, exec_later);			
 		break;
 	case CondorLogOp_DeleteAttribute:
-		if (parser->getDeleteAttributeBody(key, name) == FAILURE) {
-			return FAILURE;
+		st = parser->getDeleteAttributeBody(key, name);
+		if (st == FAILURE) {
+			break;
 		}
-		st = processDeleteAttribute(key, name, exec_later);
-		
+		st = processDeleteAttribute(key, name, exec_later);		
 		break;
 	case CondorLogOp_BeginTransaction:
 		st = processBeginTransaction(exec_later);
-
 		break;
 	case CondorLogOp_EndTransaction:
 		st = processEndTransaction(exec_later);
-
 		break;
 	default:
 		dprintf(D_ALWAYS, "[QUILL] Unsupported Job Queue Command [%d]\n", 
 				op_type);
-		return FAILURE;
+		st = FAILURE;
 		break;
 	}
 
@@ -1377,7 +1398,7 @@ JobQueueDBManager::getProcClusterIds(const char* key, char* cid, char* pid)
 {
 	int key_len, i;
 	long iCid;
-	char*	pid_in_key;
+	const char*	pid_in_key;
 
 	if (key == NULL) { 
 		return IS_UNKNOWN_ID;
@@ -1402,7 +1423,7 @@ JobQueueDBManager::getProcClusterIds(const char* key, char* cid, char* pid)
 	sprintf(cid,"%ld", iCid);
 
 		//i+1 since i is the '.' character
-	pid_in_key = (char*)(key + (i + 1));
+	pid_in_key = (const char*)(key + (i + 1));
 	strcpy(pid, pid_in_key);
 
 	if (atol(pid) == -1) { // Cluster ID
@@ -2300,6 +2321,8 @@ JobQueueDBManager::checkSchema()
 
 		// execute DB schema check!
 	ret_st = jqDatabase->execQuery(sql_str, num_result);
+		// free the query result since its no longer needed
+	jqDatabase->releaseQueryResult();
 
 	if (ret_st == SUCCESS && num_result == SCHEMA_SYS_TABLE_NUM) {
 		dprintf(D_ALWAYS, "Schema Check OK!\n");
@@ -2366,18 +2389,69 @@ JobQueueDBManager::checkSchema()
 		return FAILURE;
 	}
 
-	jqDatabase->releaseQueryResult();
-
 	strcpy(sql_str, SCHEMA_VERSION_STR); 
 		// SCHEMA_VERSION_STR is defined in quill_dbschema_def.h
 
 	ret_st = jqDatabase->execQuery(sql_str, num_result);
 
 	if (ret_st == SUCCESS && num_result == SCHEMA_VERSION_COUNT) {
+		const char *tmp_ptr1, *tmp_ptr2, *tmp_ptr3, *tmp_ptr4;
+
+		int major, minor, back_to_major, back_to_minor;
+		
+		tmp_ptr1 = jqDatabase->getValue(0,0);
+		tmp_ptr2 = jqDatabase->getValue(0,1);
+		tmp_ptr3 = jqDatabase->getValue(0,2);
+		tmp_ptr4 = jqDatabase->getValue(0,3);
+
+		if  (!tmp_ptr1 || !tmp_ptr2 || !tmp_ptr3 || !tmp_ptr4) {
+			jqDatabase->releaseQueryResult();
+			return FAILURE;
+		}
+		
+		major = atoi(tmp_ptr1);		
+		minor = atoi(tmp_ptr2);
+		back_to_major = atoi(tmp_ptr3);
+		back_to_minor = atoi(tmp_ptr4);
+		
 		dprintf(D_ALWAYS, "Schema Version Check OK!\n");
+
+			// free the query result because we dont need it anymore
+		jqDatabase->releaseQueryResult();
+
+		if ((major == 1 ) && (minor == 0) && (back_to_major == 1) && 
+			(back_to_minor == 0)) {
+				// we need to upgrade the schema to add a last_poll_time
+				// column into the jobqueuepollinginfo table
+			strcpy(sql_str, SCHEMA_CREATE_JOBQUEUEPOLLINGINFO_UPDATE1);
+			ret_st = jqDatabase->execCommand(sql_str);
+			if(ret_st == FAILURE) {
+				disconnectDB(NOT_IN_XACT);
+				return FAILURE;
+			}
+
+				// and also update the minor in schema version			
+			if (jqDatabase->beginTransaction() == FAILURE) {			
+				return FAILURE;			   				 
+			}
+			
+			strcpy(sql_str, SCHEMA_VERSION_TABLE_UPDATE);
+			ret_st = jqDatabase->execCommand(sql_str);
+			if(ret_st == FAILURE) {
+				disconnectDB(ABORT_XACT);
+				return FAILURE;
+			}
+			if (jqDatabase->commitTransaction() == FAILURE) {
+				disconnectDB(ABORT_XACT);
+				return FAILURE;						
+			}
+		}
 		// this would be a good place to check if the version matchedup
 		// instead of just seeing if we got something back
 	} else {
+		// if for some reason its not freed above already
+		jqDatabase->releaseQueryResult();
+
 		// create a schema version table. this is cut and paste from
 		// above, so revamp this once it's working
 		if (jqDatabase->beginTransaction() == FAILURE) {			
@@ -2395,10 +2469,8 @@ JobQueueDBManager::checkSchema()
 			disconnectDB(ABORT_XACT);
 			return FAILURE;			   				 
 		}
-
 	}
 	disconnectDB(NOT_IN_XACT);
-	jqDatabase->releaseQueryResult();
 	return SUCCESS;
 }
 

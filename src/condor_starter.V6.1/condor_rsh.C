@@ -55,7 +55,7 @@ int main ( int argc, char *argv[] ) {
 	FILE* fp;
 		// We don't want to exit if we can't open this file!
 	int droppings = true;
-	if ( (fp=fopen( "/tmp/dropping", "a" )) == NULL ) {
+	if ( (fp=safe_fopen_wrapper( "/tmp/dropping", "a" )) == NULL ) {
 		droppings = false;
 	}
 #endif

@@ -94,6 +94,7 @@ condor_dirname(const char *path)
 	}
 }
 
+#if 0
 /*
   DEPRECATED: because of non-const return value.
 
@@ -125,6 +126,7 @@ dirname( const char* path )
 {
 	return condor_dirname( path );
 }
+#endif
 
 
 /* 

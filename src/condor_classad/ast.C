@@ -1294,10 +1294,13 @@ ExprTree*
 SubOp::DeepCopy(void) const
 {
 	SubOp  *copy;
-	ExprTree  *copy_of_larg;
+	ExprTree  *copy_of_larg = NULL;
 	ExprTree  *copy_of_rarg;
 
-	copy_of_larg = lArg->DeepCopy();
+	if(lArg) {
+		copy_of_larg = lArg->DeepCopy();
+	}
+	ASSERT(rArg);
 	copy_of_rarg = rArg->DeepCopy();
 
 	copy = new SubOp(copy_of_larg, copy_of_rarg);
@@ -1544,7 +1547,7 @@ void Function::PrintToStr(char *s)
 		arg->PrintToStr(s);
 		i++;
 		if (i < num_args) {
-			strcat(s, "; ");
+			strcat(s, ", ");
 		}
 	}
 	strcat(s, ")");

@@ -1,4 +1,5 @@
 #!/usr/bin/env perl
+use CandorTest;
 
 use strict;
 
@@ -12,7 +13,7 @@ print LOG "Started at $start\n";
 open(TESTS,"ls $pattern | ");
 while(<TESTS>)
 {
-	chomp;
+	CondorTest::fullchomp($_);
 	my $now = localtime;
 	my $filebase = "";
 	my $currentfile = $_;

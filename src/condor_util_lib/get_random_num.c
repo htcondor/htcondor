@@ -22,6 +22,7 @@
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h" 
+#include "condor_random_num.h"
 
 /* srand48, lrand48, and drand48 seem to be available on all Condor
    platforms except WIN32.  -Jim B. */
@@ -48,7 +49,7 @@ int set_seed(int seed)
 
 /* returns a random positive integer, trying to use best random number
    generator available on each platform */
-int get_random_int()
+int get_random_int( void )
 {
 	if (!initialized) {
 		set_seed(0);
@@ -63,7 +64,7 @@ int get_random_int()
 
 /* returns a random floating point number in this range: [0.0, 1.0), trying
    to use best random number generator available on each platform */
-float get_random_float()
+float get_random_float( void )
 {
 	if (!initialized) {
 		set_seed(0);
@@ -78,7 +79,7 @@ float get_random_float()
 
 /* returns a random unsigned integer, trying to use best random number
    generator available on each platform */
-unsigned int get_random_uint()
+unsigned int get_random_uint( void )
 {
 	if (!initialized) {
 		set_seed(0);

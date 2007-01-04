@@ -19,7 +19,7 @@ $mycmdfile = "lib_auth_protocol-pw.cmd";
 # where am I running
 $dummyhost = "gamgee.cs.wisc.edu";
 $currenthost = `hostname`;
-chomp($currenthost);
+CondorTest::fullchomp($currenthost);
 
 system("date");
 print "Dummyhost was $dummyhost and really running on $currenthost\n";
@@ -50,7 +50,7 @@ open(CSUB,">$postsrc") || die "Can't open new submit file $myparamname: $!\n";
 open(TPLATE,"<$postsrc_template") || die "Can't open param template $postsrc_template: $!\n";
 while(<TPLATE>)
 {
-	chomp($_);
+	CondorTest::fullchomp($_);
 	$line = $_;
 	if( $line =~ /^\s*SEC_PASSWORD_FILE\s*=\s*.*$/ )
 	{
@@ -66,7 +66,7 @@ close(CSUB);
 
 #my $configsec = CondorPersonal::DebugOn();
 my $configsec = CondorPersonal::StartCondor($myparamname ,"protocol", $mypid);
-my @securitypool = split /:/, $configsec;
+my @securitypool = split /\+/, $configsec;
 my $secconfig = shift @securitypool;
 my $secport = shift @securitypool;
 

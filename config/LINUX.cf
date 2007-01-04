@@ -104,7 +104,12 @@
 #define HAS_SETLINEBUF			YES
 #define MALLOC_DEBUG			NO
 #define HAS_DLOPEN			YES
+
+#if IS_LINUX_SLES9
+#define HAS_RPM				NO
+#else
 #define HAS_RPM				YES
+#endif
 
 
 /**************************************************************************

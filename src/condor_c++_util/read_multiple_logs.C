@@ -30,6 +30,7 @@
 #ifndef WANT_NAMESPACES
 #define WANT_NAMESPACES
 #endif
+#include "condor_fix_iostream.h"
 #include "classad_distribution.h"
 #endif
 #include "fs_util.h"
@@ -385,10 +386,10 @@ MultiLogFiles::readFileToString(const MyString &strFilename)
 	dprintf( D_FULLDEBUG, "MultiLogFiles::readFileToString(%s)\n",
 				strFilename.Value() );
 
-	FILE *pFile = fopen(strFilename.Value(), "r");
+	FILE *pFile = safe_fopen_wrapper(strFilename.Value(), "r");
 	if (!pFile) {
 		dprintf( D_ALWAYS, "MultiLogFiles::readFileToString: "
-				"fopen(%s) failed with errno %d (%s)\n", strFilename.Value(),
+				"safe_fopen_wrapper(%s) failed with errno %d (%s)\n", strFilename.Value(),
 				errno, strerror(errno) );
 		return "";
 	}
@@ -412,10 +413,17 @@ MultiLogFiles::readFileToString(const MyString &strFilename)
 
 	fseek(pFile, 0, SEEK_SET);
 	char *psBuf = new char[iLength+1];
+		/*  We now clear the buffer to ensure there will be a NULL at the
+			end of our buffer after the fread().  Why no just do
+				psBuf[iLength] = 0  ?
+			Because on Win32, iLength may not point to the end of 
+			the buffer because \r\n are converted into \n because
+			the file is opened in text mode.  
+		*/
+	memset(psBuf,0,iLength+1);
 	fread(psBuf, 1, iLength, pFile);
 	fclose(pFile);
 
-	psBuf[iLength] = 0;
 	strToReturn = psBuf;
 	delete [] psBuf;
 
@@ -540,7 +548,7 @@ MultiLogFiles::readFile(char const *filename,std::string& buf)
     char chunk[4000];
 	MyString rtnVal;
 
-	int fd = open(filename, O_RDONLY);
+	int fd = safe_open_wrapper(filename, O_RDONLY);
 	if (fd < 0) {
 		rtnVal.sprintf("error opening submit file %s: %s",
 				filename, strerror(errno) );

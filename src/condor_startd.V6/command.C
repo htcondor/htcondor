@@ -1084,10 +1084,10 @@ accept_request_claim( Resource* rip )
 	RemoteOwner[0] = '\0';
 
 		// There should not be a pre claim object now.
-	assert( rip->r_pre == NULL );
+	ASSERT( rip->r_pre == NULL );
 
 	Stream* stream = rip->r_cur->requestStream();
-	assert( stream );
+	ASSERT( stream );
 	Sock* sock = (Sock*)stream;
 
 	stream->encode();

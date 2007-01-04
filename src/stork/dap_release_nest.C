@@ -20,6 +20,7 @@
   * RIGHT.
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+#include "condor_common.h"
 #include "dap_constants.h"
 #include "dap_logger.h"
 #include "dap_error.h"
@@ -83,7 +84,7 @@ int main(int argc, char *argv[])
     mypid = getpid();
     snprintf(fname, MAXSTR, "%s/out.%d", work_dir, mypid);
 
-    f = fopen(fname, "w");
+    f = safe_fopen_wrapper((fname, "w");
     fprintf(f, "error in release: (NeST error: %d)", nest_status);
     fclose(f);  
   }

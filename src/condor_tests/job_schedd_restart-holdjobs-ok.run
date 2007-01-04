@@ -1,0 +1,87 @@
+#! /usr/bin/env perl
+use CondorTest;
+use CondorPersonal;
+
+$cmd_template = "job_schedd_restart-holdjobs-ok.template";
+$testname = 'job_schedd_restart-holdjobs-ok - Simple parallel job with security on';
+$cmd = "job_schedd_restart-holdjobs-ok.cmd";
+$corename = "job_schedd_restart-holdjobs-ok";
+
+# where am I running
+$dummyhost = "gamgee.cs.wisc.edu";
+$currenthost = `hostname`;
+CondorTest::fullchomp($currenthost);
+
+system("date");
+print "Dummyhost was $dummyhost and really running on $currenthost\n";
+
+$mypid = $$;
+$mysaveme = $corename . ".saveme";
+system("mkdir $mysaveme");
+
+$mysubmitnm = $corename . $mypid . ".cmd";
+$mysubmitnmcmdout = $corename . $mypid . ".cmd.out";
+$mysubmitnmlog = $corename . $mypid . ".log";
+$mysubmitnmerr = $corename . $mypid . ".err";
+$mysubmitnmout = $corename . $mypid . ".out";
+$mycorenm = $corename . ".cmd";
+$mycorenmcmdout = $corename . ".cmd.out";
+$mycorenmlog = $corename . ".log";
+$mycorenmerr = $corename . ".err";
+$mycorenmout = $corename . ".out";
+
+print "Master PID is $mypid\n";
+print "Master PID submit file is $mysubmitnm\n";
+
+# my $configrem = CondorPersonal::DebugOn();
+# get a remote scheduler running (side b)
+my $configrem = CondorPersonal::StartCondor("x_param.scheddrestart" ,"scheddrestart");
+my @parallel = split /\+/, $configrem;
+my $parallelconfig = shift @parallel;
+my $parallelport = shift @parallel;
+
+print "---Parallel config is $parallelconfig and remote port is $parallelport---\n";
+
+$ENV{CONDOR_CONFIG} = $parallelconfig;
+
+print "Set config to $parallelconfig\n";
+
+my $result = system("./job_schedd_restart-holdjobs-ok.pl $mysubmitnm");
+print "Result of job_schedd_restart-holdjobs-ok job is  $result\n";
+
+
+system("cp -r $mypid $mysaveme");
+system("cp *schedd_restart-holdjobs-ok* $mysaveme");
+
+if( -e "$mysubmitnm" )
+{
+	system("cp $mysubmitnm $mycorenm");
+}
+
+if( -e "$mysubmitnmout" )
+{
+	system("cp $mysubmitnmcmdout $mycorenmcmdout");
+}
+
+if( -e "$mysubmitnmlog" )
+{
+	system("cp $mysubmitnmlog $mycorenmlog");
+}
+
+if( $result != 0 )
+{
+	exit(1);
+}
+
+my @adarray;
+my $status = 1;
+my $cmd = "condor_off -master";
+$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+if(!$status)
+{
+	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	exit(1)
+}
+
+system("date");
+

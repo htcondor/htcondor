@@ -55,7 +55,7 @@ In response, fork a new IOProxyHandler child to deal with the stream.
 Returns KEEP_STREAM if the stream is still valid, ~KEEP_STREAM otherwise.
 */
 
-int IOProxy::connect_callback( Stream *stream )
+int IOProxy::connect_callback( Stream * /*stream*/ )
 {
 	ReliSock *client = new ReliSock;
 	bool accept_client = false;
@@ -122,7 +122,7 @@ bool IOProxy::init( const char *config_file )
 		goto failure;
 	}
 
-	fd = open(config_file,O_CREAT|O_TRUNC|O_WRONLY,0700);
+	fd = safe_open_wrapper(config_file,O_CREAT|O_TRUNC|O_WRONLY,0700);
 	if(fd<0) {
 		dprintf(D_ALWAYS,"IOProxy: couldn't write to %s: %s\n",config_file,strerror(errno));
 		goto failure;

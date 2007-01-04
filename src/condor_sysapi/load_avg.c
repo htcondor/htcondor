@@ -164,7 +164,7 @@ kernel_load_avg(void)
 	}
 
 	if ( Kmem < 0 ) {
-		if ( (Kmem=open("/dev/kmem",O_RDONLY,0)) < 0 ) {
+		if ( (Kmem=safe_open_wrapper("/dev/kmem",O_RDONLY,0)) < 0 ) {
 			dprintf(D_ALWAYS,"open /dev/kmem failed, errno=%d\n",errno);
 			RETURN;
 		}
@@ -244,7 +244,7 @@ sysapi_load_avg_raw(void)
 	// Kernel Version 2.0.0:
 	// 0.03 0.03 0.09 2/42 15582
 
-    proc=fopen("/proc/loadavg","r");
+    proc=safe_fopen_wrapper("/proc/loadavg","r",0644);
     if(!proc)
 	return -1;
 

@@ -51,7 +51,10 @@ class SQLQuery
 	~SQLQuery ();
 
 	//getters and setters 
-	char * getQuery(); 
+	char * getQuery();
+	char * getDeclareCursorStmt();
+	char * getFetchCursorStmt();
+	char * getCloseCursorStmt();
 	void setQuery(query_types qtype, void **parameters);
 	query_types getType();
 
@@ -63,6 +66,11 @@ class SQLQuery
 
   private:
 	char *query_str;
+
+    //applicable only for cursor queries
+	char *declare_cursor_str; 
+	char *fetch_cursor_str; 
+	char *close_cursor_str; 
 	query_types type;
 
 	int createQueryString(query_types qtype, void **parameters);

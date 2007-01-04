@@ -126,6 +126,7 @@ class GlobusJob : public BaseJob
 	int numRestartAttempts;
 	int numRestartAttemptsThisSubmit;
 	time_t jmProxyExpireTime;
+	bool proxyRefreshRefused;
 	time_t outputWaitLastGrowth;
 	int outputWaitOutputSize;
 	int outputWaitErrorSize;

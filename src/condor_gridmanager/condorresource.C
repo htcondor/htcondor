@@ -66,6 +66,7 @@ CondorResource *CondorResource::FindOrCreateResource( const char * resource_name
 		resource = new CondorResource( resource_name, pool_name,
 									   proxy_subject );
 		ASSERT(resource);
+		resource->Reconfig();
 		ResourcesByName.insert( HashKey( HashName( resource_name,
 												   pool_name,
 												   proxy_subject ) ),
@@ -281,7 +282,6 @@ int CondorResource::DoScheddPoll()
 
 		if ( rc == 0 ) {
 			for ( int i = 0; i < num_status_ads; i++ ) {
-				int rc;
 				int cluster, proc;
 				MyString job_id_string;
 				CondorJob *job;

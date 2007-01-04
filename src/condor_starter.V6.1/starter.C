@@ -24,9 +24,6 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_config.h"
-#if defined(__GNUG__)
-#pragma implementation "list.h"
-#endif
 #include "starter.h"
 #include "script_proc.h"
 #include "vanilla_proc.h"
@@ -95,8 +92,8 @@ CStarter::~CStarter()
 
 
 bool
-CStarter::Init( JobInfoCommunicator* my_jic, const char* orig_cwd,
-				bool is_gridshell, int stdin_fd, int stdout_fd, 
+CStarter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
+				bool is_gsh, int stdin_fd, int stdout_fd, 
 				int stderr_fd )
 {
 	if( ! my_jic ) {
@@ -108,9 +105,9 @@ CStarter::Init( JobInfoCommunicator* my_jic, const char* orig_cwd,
 	jic = my_jic;
 
 	if( orig_cwd ) {
-		this->orig_cwd = strdup( orig_cwd );
+		this->orig_cwd = strdup( original_cwd );
 	}
-	this->is_gridshell = is_gridshell;
+	this->is_gridshell = is_gsh;
 	starter_stdin_fd = stdin_fd;
 	starter_stdout_fd = stdout_fd;
 	starter_stderr_fd = stderr_fd;
@@ -759,7 +756,7 @@ CStarter::removeDeferredJobs() {
 		error += this->jic->jobCluster();
 		error += ".";
 		error += this->jic->jobProc();
-		EXCEPT( (char*)error.Value() );
+		EXCEPT( error.Value() );
 		ret = false;
 	}
 	return ( ret );

@@ -29,7 +29,7 @@
 #ifdef LINT
 /* VARARGS */
 _EXCEPT_(foo)
-char	*foo;
+const char	*foo;
 { printf( foo ); }
 #else /* LINT */
 
@@ -42,7 +42,7 @@ int		SetSyscalls(int);
 extern int		_condor_dprintf_works;
 
 void
-_EXCEPT_(char *fmt, ...)
+_EXCEPT_(const char *fmt, ...)
 {
 	va_list pvar;
 	char buf[ BUFSIZ ];

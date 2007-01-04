@@ -201,11 +201,11 @@ UserProc::openStdFile( std_file_type type, const char* attr,
 		// initialize this to -2 to mean "not specified".  if we have
 		// success, we'll have a valid fd (>=0).  if there's an error
 		// opening something, we'll return -1 which our callers
-		// consider a failed open().
+		// consider a failed safe_open_wrapper().
 	int fd = -2;
 	const char* filename;
 	bool wants_stream = false;
-	const char* name = NULL;
+	const char* stream_name = NULL;
 	const char* phrase = NULL;
 	bool is_output = true;
 	bool is_null_file = false;
@@ -219,17 +219,17 @@ UserProc::openStdFile( std_file_type type, const char* attr,
 	case SFT_IN:
 		is_output = false;
 		phrase = "standard input";
-		name = "stdin";
+		stream_name = "stdin";
 		break;
 	case SFT_OUT:
 		is_output = true;
 		phrase = "standard output";
-		name = "stdout";
+		stream_name = "stdout";
 		break;
 	case SFT_ERR:
 		is_output = true;
 		phrase = "standard error";
-		name = "stderr";
+		stream_name = "stderr";
 		break;
 	}
 
@@ -304,7 +304,7 @@ UserProc::openStdFile( std_file_type type, const char* attr,
 		//////////////////////
 	if( wants_stream && ! is_null_file ) {
 		StreamHandler *handler = new StreamHandler;
-		if( !handler->Init(filename, name, is_output) ) {
+		if( !handler->Init(filename, stream_name, is_output) ) {
 			MyString err_msg;
 			err_msg.sprintf( "unable to establish %s stream", phrase );
 			Starter->jic->notifyStarterError( err_msg.Value(), true,
@@ -324,13 +324,13 @@ UserProc::openStdFile( std_file_type type, const char* attr,
 		///////////////////////////////////////////////////////
 
 	if( is_output ) {
-		fd = open( filename, O_WRONLY|O_CREAT|O_TRUNC, 0666 );
+		fd = safe_open_wrapper( filename, O_WRONLY|O_CREAT|O_TRUNC, 0666 );
 		if( fd < 0 ) {
 				// if failed, try again without O_TRUNC
-			fd = open( filename, O_WRONLY|O_CREAT, 0666 );
+			fd = safe_open_wrapper( filename, O_WRONLY|O_CREAT, 0666 );
 		}
 	} else {
-		fd = open( filename, O_RDONLY );
+		fd = safe_open_wrapper( filename, O_RDONLY );
 	}
 	if( fd < 0 ) {
 		int open_errno = errno;

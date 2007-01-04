@@ -23,7 +23,6 @@
 #ifndef _Condor_Accountant_H_
 #define _Condor_Accountant_H_
 
-#include <iostream.h>
 
 #include "condor_classad.h"
 // #include "classad_log.h"

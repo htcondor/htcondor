@@ -20,6 +20,7 @@
   * RIGHT.
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+#include "condor_common.h"
 #include "dap_constants.h"
 #include "dap_error.h"
 #include "dap_performance_monitor.h"
@@ -147,17 +148,17 @@ int main(int argc, char* argv[])
     sprintf(fname_A,"%s_A",argv[3]);
     sprintf(fname_C,"%s_C",argv[3]);
 
-    if ( (foutA = fopen(fname_A, "w")) == NULL ){
+    if ( (foutA = safe_fopen_wrapper((fname_A, "w")) == NULL ){
       printf("Error in creating file : %s\n", fname_A);
       return DAP_ERROR;
     }
-    if ( (foutC = fopen(fname_C, "w")) == NULL ){
+    if ( (foutC = safe_fopen_wrapper((fname_C, "w")) == NULL ){
       printf("Error in creating file : %s\n", fname_C);
       return DAP_ERROR;
     }
   }
   else{ //logtype == STORK
-    if ( (fout = fopen(argv[3], "w")) == NULL ){
+    if ( (fout = safe_fopen_wrapper((argv[3], "w")) == NULL ){
     printf("Error in creating file : %s\n", argv[3]);
     return DAP_ERROR;
     }

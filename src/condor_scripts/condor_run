@@ -62,8 +62,10 @@ chomp $pwd;
 
 # check arguments
 if (!defined($ARGV[0]) || $ARGV[0] eq "-h" || $ARGV[0] eq "-help") {
-    print "usage: $0 \"shell-cmd\"\n";
+    print "usage: $0 [-u <universe>] \"shell-cmd\"\n";
     print "\twhere shell-cmd is any Unix shell statement.\n";
+    print "\t-u lets you set the universe to which the job is submitted.\n";
+    print "\t   The default is vanilla.\n";
     print "\tEnvironment variables CONDOR_ARCH, CONDOR_OPSYS, and\n";
     print "\tCONDOR_REQUIREMENTS may specify remote machine's Arch,\n";
     print "\tOpSys, and any additional requirements.\n";
@@ -149,16 +151,16 @@ open(SUBMIT, "condor_submit .condor_submit.$$ 2>&1 |") ||
 while(<SUBMIT>) {
     if (/^1 job\(s\) submitted to cluster (\d+)./) {
 	($cluster) = $1;
-    } elsif (/WARNING/) {
-	&abort("Condor does not have write permission to this directory.\n");
+    } elsif (/WARNING.*Invalid log file/ ||
+	     /WARNING.*is not writable by condor/) {
+	print STDERR $_;
+	&abort("Failed to submit Condor job.\n");
     } else {
 	$submit_errors .= $_;
     }
 }
-close(SUBMIT) || 
-    &abort("Failed to run condor_submit.  Please check your path.\n");
 
-if (!defined($cluster)) {
+if (!close(SUBMIT) || !defined($cluster)) {
     print STDERR $submit_errors;
     &abort("Failed to submit Condor job.\n");
 }

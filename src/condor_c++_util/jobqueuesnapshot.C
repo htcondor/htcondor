@@ -46,6 +46,10 @@ JobQueueSnapshot::~JobQueueSnapshot()
 		delete(jqDB);
 	}
 	jqDB = NULL;
+	if (curClusterAd) {
+		delete curClusterAd;
+		curClusterAd = 0;
+	}
 }
 
 //! prepare iteration of Job Ads in the job queue database
@@ -77,6 +81,11 @@ JobQueueSnapshot::startIterateAllClassAds(int *clusterarray,
 
 	if(jqDB->beginTransaction() == FAILURE) {
 		printf("Error while querying the database: unable to start new transaction");
+		return FAILURE;
+	}
+
+	if(jqDB->execCommand("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE") == FAILURE) {
+		printf("Error while setting xact isolation level to serializable\n");
 		return FAILURE;
 	}
 
@@ -383,6 +392,9 @@ JobQueueSnapshot::iterateAllClassAds(ClassAd*& ad)
 	
 	st1 = getNextProcAd(ad);
 	while(st1 == DONE_PROCADS_CUR_CLUSTERAD) {
+		if (curClusterAd) {
+			delete curClusterAd;
+		}
 		st2 = getNextClusterAd(curClusterId, curClusterAd);
 		
 			//a sanity check for a race condition that should never occur

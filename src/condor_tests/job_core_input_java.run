@@ -23,7 +23,7 @@ $ExitSuccess = sub {
 #	if(!defined($args)) {
 #		die "Can't pull arguments from submit file";
 #	}
-#	chomp($args);
+#	CondorTest::fullchomp($args);
 #	my(@args_reqd) = split / /, $args;
 
 #	$output = $info{"output"};

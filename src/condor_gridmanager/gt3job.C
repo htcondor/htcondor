@@ -272,7 +272,7 @@ GT3Job::GT3Job( ClassAd *classad )
 
 		token = str.GetNextToken( " ", false );
 		if ( !token || stricmp( token, "gt3" ) ) {
-			error_string.sprintf( "%S not of type gt3", ATTR_GRID_RESOURCE );
+			error_string.sprintf( "%s not of type gt3", ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
 

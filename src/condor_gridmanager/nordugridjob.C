@@ -138,6 +138,15 @@ void NordugridJobReconfig()
 
 	tmp_int = param_integer( "GRIDMANAGER_JOB_PROBE_INTERVAL", 5 * 60 );
 	NordugridJob::setProbeInterval( tmp_int );
+
+	// Tell all the resource objects to deal with their new config values
+	NordugridResource *next_resource;
+
+	NordugridResource::ResourcesByName.startIterations();
+
+	while ( NordugridResource::ResourcesByName.iterate( next_resource ) != 0 ) {
+		next_resource->Reconfig();
+	}
 }
 
 bool NordugridJobAdMatch( const ClassAd *job_ad ) {
@@ -881,7 +890,7 @@ MyString *NordugridJob::buildSubmitRSL()
 	// If we're transferring the executable, strip off the path for the
 	// remote machine, since it refers to the submit machine.
 	if ( transfer_exec ) {
-		*rsl += basename( executable );
+		*rsl += condor_basename( executable );
 	} else {
 		*rsl += executable;
 	}
@@ -927,14 +936,14 @@ MyString *NordugridJob::buildSubmitRSL()
 	// execute bit on the transferred executable.
 	if ( transfer_exec ) {
 		*rsl += ")(excutables=";
-		*rsl += basename( executable );
+		*rsl += condor_basename( executable );
 	}
 
 	if ( jobAd->LookupString( ATTR_JOB_INPUT, &attr_value ) == 1) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
 		if ( ! nullFile(attr_value) ) {
 			*rsl += ")(stdin=";
-			*rsl += basename(attr_value);
+			*rsl += condor_basename(attr_value);
 		}
 		free( attr_value );
 		attr_value = NULL;
@@ -962,7 +971,7 @@ MyString *NordugridJob::buildSubmitRSL()
 		// only add to list if not NULL_FILE (i.e. /dev/null)
 		if ( ! nullFile(attr_value) ) {
 			*rsl += ")(stdout=";
-			*rsl += basename(attr_value);
+			*rsl += condor_basename(attr_value);
 		}
 		free( attr_value );
 		attr_value = NULL;
@@ -972,7 +981,7 @@ MyString *NordugridJob::buildSubmitRSL()
 		// only add to list if not NULL_FILE (i.e. /dev/null)
 		if ( ! nullFile(attr_value) ) {
 			*rsl += ")(stderr=";
-			*rsl += basename(attr_value);
+			*rsl += condor_basename(attr_value);
 		}
 		free( attr_value );
 	}

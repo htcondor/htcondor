@@ -48,7 +48,6 @@ usage( char *cmd )
 	fprintf(stderr,"    -collector\n");
 	fprintf(stderr,"    -negotiator\n");
 	fprintf(stderr,"    -kbdd\n");
-	fprintf(stderr,"    -dagman\n"); 
 	fprintf(stderr,"    -view_collector\n");
 	fprintf(stderr,"The subsystem name plus optional extension specifies the log file.\n");
 	fprintf(stderr,"Possible subsystem names (anything with an entry XXX_LOG in remote config file):\n");
@@ -104,7 +103,7 @@ int main( int argc, char *argv[] )
             dprintf_config ("TOOL", 2);
 		} else if(argv[i][0]=='-') {
 			type = stringToDaemonType(&argv[i][1]);
-			if(type==DT_NONE) {
+			if( type == DT_NONE || type == DT_DAGMAN) {
 				usage(argv[0]);
 				exit(1);
 			}

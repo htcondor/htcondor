@@ -40,7 +40,7 @@ int ftruncate( int file_handle, long size ) {
 int truncate( const char *path, long size ) {
 	int fh;
 	
-	if ( fh = open(path, O_RDWR | O_CREAT, S_IREAD | S_IWRITE) != -1 ) {
+	if ( fh = safe_open_wrapper(path, O_RDWR | O_CREAT, S_IREAD | S_IWRITE) != -1 ) {
 		return ftruncate(fh, size);
 	} else {
 		return -1; // couldn't open file, and _open has set errno.

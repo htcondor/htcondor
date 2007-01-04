@@ -31,15 +31,15 @@ void
 printNoCollectorContact( FILE* fp, const char* addr, bool verbose )
 {
 	char error_message[1000];
-	char *collector_host;
-	bool needs_free = false;
+	const char *collector_host = NULL;
+	char *free_param = NULL;
 
 	if (addr != NULL) {
-		collector_host = (char*)addr; 
+		collector_host = addr; 
 	} else {
-		collector_host = param("COLLECTOR_HOST");
-		if( collector_host ) { 
-			needs_free = true;
+		free_param = param("COLLECTOR_HOST");
+		if( free_param ) { 
+			collector_host = free_param;
 		}
 	}
 	sprintf( error_message, 
@@ -72,7 +72,7 @@ printNoCollectorContact( FILE* fp, const char* addr, bool verbose )
 		print_wrapped_text( error_message, fp );
 	}
 
-	if( needs_free ) {
-		free( collector_host );
+	if( free_param ) {
+		free( free_param );
 	}
 }

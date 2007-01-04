@@ -120,7 +120,7 @@ int main( int argc, char *argv[] )
 	Sock *sock;
 	int eof,error,empty;
 
-	file = fopen(filename,"r");
+	file = safe_fopen_wrapper(filename,"r");
 	if(!file) {
 		fprintf(stderr,"couldn't open %s: %s\n",filename,strerror(errno));
 		return 1;

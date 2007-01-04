@@ -187,7 +187,7 @@ ReliSock::get_x509_delegation( filesize_t *size, const char *destination,
 
 	if ( flush_buffers ) {
 		int rc = 0;
-		int fd = open( destination, O_WRONLY, 0 );
+		int fd = safe_open_wrapper( destination, O_WRONLY, 0 );
 		if ( fd < 0 ) {
 			rc = fd;
 		} else {

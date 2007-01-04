@@ -161,6 +161,11 @@ public:
     */
 	int timeout(int sec);
     
+	/** get the number of bytes available to read without blocking.
+		@return number of bytes, or -1 on failure
+	*/
+	int bytes_available_to_read();
+
 	/*
 	**	Stream protocol
 	*/

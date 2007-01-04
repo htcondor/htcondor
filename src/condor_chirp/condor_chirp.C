@@ -25,7 +25,7 @@
  */
 
 
-#include <condor_common.h>
+#include "condor_common.h"
 #include "chirp_client.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -44,7 +44,7 @@ chirp_client_connect_starter()
     int result;
 
 	snprintf(path, _POSIX_PATH_MAX, "%s%c%s",getenv("_CONDOR_SCRATCH_DIR"),DIR_DELIM_CHAR,"chirp.config");
-    file = fopen(path,"r");
+    file = safe_fopen_wrapper(path,"r");
     if(!file) { 
 		fprintf(stderr, "Can't open chirp.config file\n");
 		return 0;
@@ -94,7 +94,7 @@ chirp_get_one_file(char *remote, char *local) {
 	if (strcmp(local, "-") == 0) {
 		wfd = stdout;
 	} else {
-		wfd = ::fopen(local, "wb+");
+		wfd = ::safe_fopen_wrapper(local, "wb+");
 	}
 
 	if (wfd == NULL) {
@@ -150,7 +150,7 @@ chirp_put_one_file(char *local, char *remote, char *mode, int perm) {
 	if (strcmp(local, "-") == 0) {
 		rfd = stdin;
 	} else {
-		rfd = ::fopen(local, "rb");
+		rfd = ::safe_fopen_wrapper(local, "rb");
 	}
 
 	if (rfd == NULL) {

@@ -10,8 +10,7 @@
 
 #include "Version.h"
 #include "FilesOperations.h"
-#include <fstream>
-using namespace std;
+#include "condor_fix_fstream.h"
 
 time_t Version::m_lastModifiedTime = -1;
 

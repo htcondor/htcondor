@@ -104,7 +104,7 @@ class CheckEvents {
 	/** Set the event checking level.
 	    @param What "bad" events to allow.
 	*/
-	void SetAllowEvents(int allowEvents) { this->allowEvents = allowEvents; }
+	void SetAllowEvents(int newAllowEvents) { allowEvents = newAllowEvents; }
 
 	/** Check an event to see if it's consistent with previous events.
 		@param The event to check.

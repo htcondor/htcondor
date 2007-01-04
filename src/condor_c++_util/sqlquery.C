@@ -45,6 +45,9 @@ SQLQuery::
 SQLQuery ()
 {
   query_str = 0;
+  declare_cursor_str = 0;
+  fetch_cursor_str = 0;
+  close_cursor_str = 0;
 }
 
 SQLQuery::
@@ -57,7 +60,14 @@ SQLQuery (query_types qtype, void **parameters)
 SQLQuery::
 ~SQLQuery ()
 {
-  if(query_str) free(query_str);
+  if(query_str) 
+	  free(query_str);
+  if(declare_cursor_str) 
+	  free(declare_cursor_str);
+  if(fetch_cursor_str) 
+	  free(fetch_cursor_str);
+  if(close_cursor_str) 
+	  free(close_cursor_str);
 }
 
 query_types SQLQuery::
@@ -72,6 +82,24 @@ getQuery()
   return query_str;
 }
 
+char * SQLQuery::
+getDeclareCursorStmt() 
+{
+  return declare_cursor_str;
+}
+
+char * SQLQuery::
+getFetchCursorStmt() 
+{
+  return fetch_cursor_str;
+}
+
+char * SQLQuery::
+getCloseCursorStmt() 
+{
+  return close_cursor_str;
+}
+
 void SQLQuery::
 setQuery(query_types qtype, void **parameters) 
 {
@@ -81,77 +109,121 @@ setQuery(query_types qtype, void **parameters)
 int SQLQuery::
 createQueryString(query_types qtype, void **parameters) {  
   query_str = (char *) malloc(MAX_QUERY_SIZE * sizeof(char));
+  declare_cursor_str = (char *) malloc(MAX_QUERY_SIZE * sizeof(char));
+  fetch_cursor_str = (char *) malloc(MAX_QUERY_SIZE * sizeof(char));
+  close_cursor_str = (char *) malloc(MAX_QUERY_SIZE * sizeof(char));
+
   switch(qtype) {
     
   case HISTORY_ALL_HOR:
-    sprintf(query_str, 
-	    "SELECT * FROM HISTORY_HORIZONTAL ORDER BY CID, PID;");
+	sprintf(declare_cursor_str, 
+			"DECLARE HISTORY_ALL_HOR_CUR CURSOR FOR SELECT * FROM HISTORY_HORIZONTAL ORDER BY CID, PID;");
+	sprintf(fetch_cursor_str,
+			"FETCH FORWARD 100 FROM HISTORY_ALL_HOR_CUR");
+	sprintf(close_cursor_str,
+			"CLOSE HISTORY_ALL_HOR_CUR");
     break;
   case HISTORY_ALL_VER:
-    sprintf(query_str, 
-	    "SELECT * FROM HISTORY_VERTICAL ORDER BY CID, PID;");
+	sprintf(declare_cursor_str, 
+			"DECLARE HISTORY_ALL_VER_CUR CURSOR FOR SELECT * FROM HISTORY_VERTICAL ORDER BY CID, PID;");
+	sprintf(fetch_cursor_str,
+			"FETCH FORWARD 5000 FROM HISTORY_ALL_VER_CUR");
+	sprintf(close_cursor_str,
+			"CLOSE HISTORY_ALL_VER_CUR");
     break;
   case HISTORY_CLUSTER_HOR:
-    sprintf(query_str, 
-	    "SELECT * FROM HISTORY_HORIZONTAL WHERE cid=%d ORDER BY CID, PID;",
-	    *((int *)parameters[0]));
+	sprintf(declare_cursor_str, 
+			"DECLARE HISTORY_CLUSTER_HOR_CUR CURSOR FOR SELECT * FROM HISTORY_HORIZONTAL WHERE cid=%d ORDER BY CID, PID;",
+			*((int *)parameters[0]));
+	sprintf(fetch_cursor_str,
+			"FETCH FORWARD 100 FROM HISTORY_CLUSTER_HOR_CUR");
+	sprintf(close_cursor_str,
+			"CLOSE HISTORY_CLUSTER_HOR_CUR");
     break;
   case HISTORY_CLUSTER_VER:
-    sprintf(query_str, 
-	    "SELECT * FROM HISTORY_VERTICAL WHERE cid=%d ORDER BY CID, PID;",
-	    *((int *)parameters[0]));
+	sprintf(declare_cursor_str, 
+			"DECLARE HISTORY_CLUSTER_VER_CUR CURSOR FOR SELECT * FROM HISTORY_VERTICAL WHERE cid=%d ORDER BY CID, PID;",
+			*((int *)parameters[0]));
+	sprintf(fetch_cursor_str,
+			"FETCH FORWARD 5000 FROM HISTORY_CLUSTER_VER_CUR");
+	sprintf(close_cursor_str,
+			"CLOSE HISTORY_CLUSTER_VER_CUR");
     break;
   case HISTORY_CLUSTER_PROC_HOR:
-    sprintf(query_str, 
-	    "SELECT * FROM HISTORY_HORIZONTAL WHERE cid=%d and pid=%d ORDER BY CID, PID;",
-	    *((int *)parameters[0]), *((int *)parameters[1]));
+    sprintf(declare_cursor_str, 
+			"DECLARE HISTORY_CLUSTER_PROC_HOR_CUR CURSOR FOR SELECT * FROM HISTORY_HORIZONTAL WHERE cid=%d and pid=%d ORDER BY CID, PID;",
+			*((int *)parameters[0]), *((int *)parameters[1]));
+	sprintf(fetch_cursor_str,
+			"FETCH FORWARD 100 FROM HISTORY_CLUSTER_PROC_HOR_CUR");
+	sprintf(close_cursor_str,
+			"CLOSE HISTORY_CLUSTER_PROC_HOR_CUR");
     break;  
   case HISTORY_CLUSTER_PROC_VER:
-    sprintf(query_str, 
-			"SELECT * FROM HISTORY_VERTICAL WHERE cid=%d and pid=%d "
+    sprintf(declare_cursor_str, 
+			"DECLARE HISTORY_CLUSTER_PROC_VER_CUR CURSOR FOR SELECT * FROM HISTORY_VERTICAL WHERE cid=%d and pid=%d "
 			"ORDER BY CID, PID;",
 			*((int *)parameters[0]), *((int *)parameters[1]));
+	sprintf(fetch_cursor_str,
+			"FETCH FORWARD 5000 FROM HISTORY_CLUSTER_PROC_VER_CUR");
+	sprintf(close_cursor_str,
+			"CLOSE HISTORY_CLUSTER_PROC_VER_CUR");
     break;  
   case HISTORY_OWNER_HOR:
-	  sprintf(query_str,
-			  "SELECT * FROM HISTORY_HORIZONTAL WHERE \"Owner\"='\"%s\"' "
-			  "ORDER BY CID,PID;",
-			  ((char *)parameters[0]));
+	sprintf(declare_cursor_str,
+			"DECLARE HISTORY_OWNER_HOR_CUR CURSOR FOR SELECT * FROM HISTORY_HORIZONTAL WHERE \"Owner\"='\"%s\"' "
+			"ORDER BY CID,PID;",
+			((char *)parameters[0]));
+	sprintf(fetch_cursor_str,
+			"FETCH FORWARD 100 FROM HISTORY_OWNER_HOR_CUR");
+	sprintf(close_cursor_str,
+			"CLOSE HISTORY_OWNER_HOR_CUR");
 	  break;
   case HISTORY_OWNER_VER:
-	  sprintf(query_str,
-			  "SELECT hv.cid,hv.pid,hv.attr,hv.val FROM "
-			  "HISTORY_HORIZONTAL hh, HISTORY_VERTICAL hv "
-			  "WHERE hh.cid=hv.cid AND hh.pid=hv.pid AND hh.\"Owner\"='\"%s\"'"
-			  " ORDER BY CID,PID;",
-			  ((char *)parameters[0]));
-	  break;
+	sprintf(declare_cursor_str,
+			"DECLARE HISTORY_OWNER_VER_CUR CURSOR FOR SELECT hv.cid,hv.pid,hv.attr,hv.val FROM "
+			"HISTORY_HORIZONTAL hh, HISTORY_VERTICAL hv "
+			"WHERE hh.cid=hv.cid AND hh.pid=hv.pid AND hh.\"Owner\"='\"%s\"'"
+			" ORDER BY CID,PID;",
+			((char *)parameters[0]));
+	sprintf(fetch_cursor_str,
+			"FETCH FORWARD 5000 FROM HISTORY_OWNER_VER_CUR");
+	sprintf(close_cursor_str,
+			"CLOSE HISTORY_OWNER_VER_CUR");
+	break;
   case HISTORY_COMPLETEDSINCE_HOR:
-	  sprintf(query_str,
-			  "SELECT * FROM History_Horizontal "
-			  "WHERE \"CompletionDate\" > "
-			  "date_part('epoch', '%s'::timestamp with time zone) "
-			  "ORDER BY cid,pid;",
-			  ((char *)parameters[0]));
+	sprintf(declare_cursor_str,
+			"DECLARE HISTORY_COMPLETEDSINCE_HOR_CUR CURSOR FOR SELECT * FROM History_Horizontal "
+			"WHERE \"CompletionDate\" > "
+			"date_part('epoch', '%s'::timestamp with time zone) "
+			"ORDER BY cid,pid;",
+			((char *)parameters[0]));
+	sprintf(fetch_cursor_str,
+			"FETCH FORWARD 100 FROM HISTORY_COMPLETEDSINCE_HOR_CUR");
+	sprintf(close_cursor_str,
+			"CLOSE HISTORY_COMPLETEDSINCE_HOR_CUR");
     break;
   case HISTORY_COMPLETEDSINCE_VER:
-	  sprintf(query_str,
-			  "SET enable_mergejoin=false; "
-			  "SELECT hv.cid,hv.pid,hv.attr,hv.val FROM "
-			  "HISTORY_HORIZONTAL hh, HISTORY_VERTICAL hv "
-			  "WHERE hh.cid=hv.cid AND hh.pid=hv.pid AND "
-			  "hh.\"CompletionDate\" > "
-			  "date_part('epoch', '%s'::timestamp with time zone) "
-			  "ORDER BY hh.cid,hh.pid;",
-			  ((char *)parameters[0]));
+	sprintf(declare_cursor_str,
+			"SET enable_mergejoin=false; "
+			"DECLARE HISTORY_COMPLETEDSINCE_VER_CUR CURSOR FOR SELECT hv.cid,hv.pid,hv.attr,hv.val FROM "
+			"HISTORY_HORIZONTAL hh, HISTORY_VERTICAL hv "
+			"WHERE hh.cid=hv.cid AND hh.pid=hv.pid AND "
+			"hh.\"CompletionDate\" > "
+			"date_part('epoch', '%s'::timestamp with time zone) "
+			"ORDER BY hh.cid,hh.pid;",
+			((char *)parameters[0]));
+	sprintf(fetch_cursor_str,
+			"FETCH FORWARD 5000 FROM HISTORY_COMPLETEDSINCE_VER_CUR");
+	sprintf(close_cursor_str,
+			"CLOSE HISTORY_COMPLETEDSINCE_VER_CUR");
     break;
   case QUEUE_AVG_TIME:
-	  sprintf(query_str, avg_time_template);
-	  break;
-	  
+	sprintf(query_str, avg_time_template);
+	break;
+	
   default:
-	  EXCEPT("Incorrect query type specified\n");
-	  return -1;
+	EXCEPT("Incorrect query type specified\n");
+	return -1;
   }
   return 1;
 }
@@ -160,5 +232,8 @@ void SQLQuery::
 Print() 
 {
   printf("Query = %s\n", query_str);
+  printf("DeclareCursorStmt = %s\n", declare_cursor_str);
+  printf("FetchCursorStmt = %s\n", fetch_cursor_str);
+  printf("CloseCursorStmt = %s\n", close_cursor_str);
 }
 
