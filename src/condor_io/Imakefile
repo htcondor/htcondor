@@ -69,6 +69,10 @@ release_copy_target($(GCB_BIN)/gcb_relay_server,libexec,gcb_relay_server,EXECUTA
 strip_copy_target($(GCB_BIN)/gcb_relay_server,libexec,gcb_relay_server,EXECUTABLE_MODE)
 static_copy_target($(GCB_BIN)/gcb_relay_server_static,libexec,gcb_relay_server,EXECUTABLE_MODE)
 
+public_copy_target($(GCB_BIN)/gcb_broker_query,sbin,gcb_broker_query,EXECUTABLE_MODE)
+strip_copy_target($(GCB_BIN)/gcb_broker_query,sbin,gcb_broker_query,EXECUTABLE_MODE)
+static_copy_target($(GCB_BIN)/gcb_broker_query_static,sbin,gcb_broker_query,EXECUTABLE_MODE)
+
 #endif /* HAVE_EXT_GCB */
 
 
