@@ -160,11 +160,13 @@ vprintf_length(const char *format, va_list args)
 	}
 
 #ifdef va_copy
+	{
 	va_list copyargs;
 
 	va_copy(copyargs, args);
 	length = vfprintf(null_output, format, copyargs);
 	va_end(copyargs);
+	}
 #else
 	length = vfprintf(null_output, format, args);
 #endif
