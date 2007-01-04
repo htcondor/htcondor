@@ -74,6 +74,11 @@ PowerPC architecture.
 \item The \Condor{schedd} now maintains a birthdate for the job queue. 
 Nothing in Condor currently uses this feature, but future versions of \Condor{quill} may require it. 
 
+\item There is a new configuration file macro
+\MacroNI{RANDOM\_INTEGER}(min,max[,step]).  It produces a
+pseudo-random integer within the range \verb@min@ and \verb@max@,
+inclusive at configuration time.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
