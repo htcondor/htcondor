@@ -1547,7 +1547,7 @@ void Function::PrintToStr(char *s)
 		arg->PrintToStr(s);
 		i++;
 		if (i < num_args) {
-			strcat(s, "; ");
+			strcat(s, ", ");
 		}
 	}
 	strcat(s, ")");
