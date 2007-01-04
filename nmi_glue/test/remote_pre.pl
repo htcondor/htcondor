@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre.pl,v 1.2.2.7 2006-12-28 21:12:31 bt Exp $
+# $Id: remote_pre.pl,v 1.2.2.8 2007-01-04 22:45:49 bt Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
@@ -253,6 +253,11 @@ if( ($ENV{NMI_PLATFORM} =~ /hpux_11/) )
     # HPUX11 build machine in NMI doesn't seem to have the files we're
     # looking for...
     print FIX "ARCH = HPPA2\n";
+}
+
+if( ($ENV{NMI_PLATFORM} =~ /ppc64_sles_9/) )
+	# evil work around for bad JIT compiler
+	print FIX "JAVA_EXTRA_ARGUMENTS = -Djaava.compiler = \"\"\n";
 }
 
 # Add a job wrapper for windows.... and a few other things which
