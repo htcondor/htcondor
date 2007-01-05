@@ -2670,6 +2670,8 @@ void DaemonCore::Driver()
 							}
 						}
 
+						char *handlerName = NULL;
+
 						// if the user provided a handler for this socket, then
 						// call it now.  otherwise, call the daemoncore
 						// HandleReq() handler which strips off the command
@@ -2683,7 +2685,8 @@ void DaemonCore::Driver()
 									"Calling Handler <%s> for Socket <%s>\n",
 									(*sockTable)[i].handler_descrip,
 									(*sockTable)[i].iosock_descrip);
-							dprintf(D_COMMAND, "Calling Handler <%s>\n", (*sockTable)[i].handler_descrip);
+							handlerName = strdup((*sockTable)[i].handler_descrip);
+							dprintf(D_COMMAND, "Calling Handler <%s>\n", handlerName);
 						}
 
 						// Update curr_dataptr for GetDataPtr()
@@ -2692,12 +2695,14 @@ void DaemonCore::Driver()
 						if ( (*sockTable)[i].handler ) {
 							// a C handler
 							result = (*( (*sockTable)[i].handler))( (*sockTable)[i].service, (*sockTable)[i].iosock);
-							dprintf(D_COMMAND, "Return from Handler <%s>\n", (*sockTable)[i].handler_descrip);
+							dprintf(D_COMMAND, "Return from Handler <%s>\n", handlerName);
+							free(handlerName);
 						} else 
 						if ( (*sockTable)[i].handlercpp ) {
 							// a C++ handler
 							result = ((*sockTable)[i].service->*( (*sockTable)[i].handlercpp))((*sockTable)[i].iosock);
-							dprintf(D_COMMAND, "Return from Handler <%s>\n", (*sockTable)[i].handler_descrip);
+							dprintf(D_COMMAND, "Return from Handler <%s>\n", handlerName);
+							free(handlerName);
 						}
 						else
 							// no handler registered, so this is a command
