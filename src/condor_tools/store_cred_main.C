@@ -23,13 +23,13 @@
 
 #include "condor_common.h"
 
+#include "daemon.h"
 #include "condor_config.h"
 #include "store_cred.h"
 #include "my_username.h"
 #include "condor_distribution.h"
 #include "basename.h"
 #include "dynuser.h"
-#include "daemon.h"
 #include "get_daemon_name.h"
 
 #if defined(WIN32)

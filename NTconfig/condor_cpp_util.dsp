@@ -366,6 +366,14 @@ SOURCE=..\src\condor_daemon_client\dc_collector.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_daemon_client\dc_message.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_daemon_client\dc_message.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_daemon_client\dc_schedd.C
 # End Source File
 # Begin Source File
