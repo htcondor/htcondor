@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre.pl,v 1.2.2.8 2007-01-04 22:45:49 bt Exp $
+# $Id: remote_pre.pl,v 1.2.2.9 2007-01-05 15:28:55 bt Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
@@ -255,7 +255,7 @@ if( ($ENV{NMI_PLATFORM} =~ /hpux_11/) )
     print FIX "ARCH = HPPA2\n";
 }
 
-if( ($ENV{NMI_PLATFORM} =~ /ppc64_sles_9/) )
+if( ($ENV{NMI_PLATFORM} =~ /ppc64_sles_9/) ) {
 	# evil work around for bad JIT compiler
 	print FIX "JAVA_EXTRA_ARGUMENTS = -Djaava.compiler = \"\"\n";
 }
