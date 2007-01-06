@@ -1,3 +1,8 @@
+01/05/07 V6_8_3
+  The official V6_8_3 release is a copy of BUILD-V6_8_3-branch-2007-1-4.
+  All platforms built on NMI runid 39240 except Windows, which was built
+  by Todd T.
+
 01/04/07 V6_8-merge-3
   The state of the V6_8-branch for another merge back to the trunk.
   This includes everything that went into 6.8.3, a bugfix for
