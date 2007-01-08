@@ -1,3 +1,6 @@
+01/08/07 V6_9_1-{root,branch}
+  The branch for V6_9_1 off of the trunk.
+
 01/04/07 V6_8-merge-3
   The state of the V6_8-branch for another merge back to the trunk.
   This includes everything that went into 6.8.3, a bugfix for
