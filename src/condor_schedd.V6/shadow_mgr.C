@@ -53,9 +53,9 @@
 //--------------------------------------------------
 
 
-Shadow::Shadow( const char* path, ClassAd* ad )
+Shadow::Shadow( const char* path_arg, ClassAd* ad )
 {
-	s_path = strnewp( path );
+	s_path = strnewp( path_arg );
 	s_ad = ad;
 
 	int is_dc = 0;
