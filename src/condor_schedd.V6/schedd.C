@@ -11617,11 +11617,9 @@ Scheduler::claimLocalStartd()
 {
 	Daemon startd(DT_STARTD,NULL,NULL);
 	char *startd_addr = NULL;	// local startd sinful string
-	PROC_ID matching_jobid;
 	int vm_id;
 	int number_of_claims = 0;
 	char claim_id[155];	
-	ClassAd* candidate_job_ad = NULL;
 	MyString vm_state;
 	char job_owner[150];
 
@@ -11644,13 +11642,6 @@ Scheduler::claimLocalStartd()
 				//120 * 60);	// maximum = 120 minutes
 	if ( time(NULL) - NegotiationRequestTime < claimlocal_interval ) {
 			// we have negotiated recently, no need to calim the local startd
-		return false;
-	}
-
-		// Grab the any job out of the queue.
-	candidate_job_ad = GetNextJob(1);	// start job queue iteration
-	if (!candidate_job_ad) {
-			// if we didn't find any jobs, return since there is nothing to do
 		return false;
 	}
 
@@ -11683,7 +11674,7 @@ Scheduler::claimLocalStartd()
 		/*	For each machine ad, make a match rec and enqueue a request
 			to claim the resource.
 		 */
-	while ( (machine_ad = result.Next()) && candidate_job_ad ) {
+	while ( (machine_ad = result.Next()) ) {
 
 		vm_id = 0;		
 		machine_ad->LookupInteger(ATTR_VIRTUAL_MACHINE_ID,vm_id);
@@ -11718,30 +11709,19 @@ Scheduler::claimLocalStartd()
 			continue;
 		}
 
-			/*	
-				Grab any job from the hashtable that matches by searching the
-				job queue in hashtable order.  
-				We do this since we have no idea which owner has the highest 
-				priorty anyway (that info is in the negotiator).
-				Perhaps someday here we should sort to put the jobs into FIFO,
-				but for this first pass we're happy to run _any_ queued job.
-			*/
-		if ( !(*candidate_job_ad == *machine_ad) ) { 
-				// we failed to match, try the next job.
-			candidate_job_ad = GetNextJob(0);
-			if ( !candidate_job_ad ) {
-					// out of jobs.  start over w/ the next startd ad.
-				daemonCore->ServiceCommandSocket();	// let user commands run
-				candidate_job_ad = GetNextJob(1);	// restart job iteration
-				continue;	// loop back and try next startd ad
-			}
-		}
+		PROC_ID matching_jobid;
+		matching_jobid.proc = -1;
 
-			/* Fetch the job_id and user from the matching job. */
-		candidate_job_ad->LookupInteger(ATTR_CLUSTER_ID, matching_jobid.cluster);
-		candidate_job_ad->LookupInteger(ATTR_PROC_ID, matching_jobid.proc);
+		FindRunnableJob(matching_jobid,machine_ad,NULL);
+		if( matching_jobid.proc < 0 ) {
+				// out of jobs.  start over w/ the next startd ad.
+			continue;
+		}
+		ClassAd *jobad = GetJobAd( matching_jobid.cluster, matching_jobid.proc );
+		ASSERT( jobad );
+
 		job_owner[0]='\0';
-		candidate_job_ad->LookupString(ATTR_OWNER,job_owner,sizeof(job_owner));
+		jobad->LookupString(ATTR_OWNER,job_owner,sizeof(job_owner));
 		ASSERT(job_owner[0]);
 
 		match_rec* mrec = AddMrec( claim_id, startd_addr, &matching_jobid, machine_ad,

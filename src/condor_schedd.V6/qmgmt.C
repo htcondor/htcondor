@@ -3436,27 +3436,21 @@ bool BuildPrioRecArray(bool no_match_found /*default false*/) {
 }
 
 /*
- * Find the job with the highest priority that matches with my_match_ad (which
- * is a startd ad).  We first try to find a match within the same cluster.  If
- * a match is not found, we scan the entire queue for jobs submitted from the
- * same owner which match.
- * If my_match_ad is NULL, this pool has an older negotiator,
- * so we just scan within the current cluster for the highest priority job.
+ * Find the job with the highest priority that matches with
+ * my_match_ad (which is a startd ad).  If user is NULL, get a job for
+ * any user; o.w. only get jobs for specified user.
  */
 void FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad, 
 					 char * user)
 {
 	ClassAd				*ad;
+	bool match_any_user = (user == NULL) ? true : false;
 
-		// First, see if jobid points to a runnable job.  If it does,
-		// there's no need to iterate through PrioRec array, since we
-		// requested matches in priority order in the first place.
-		// And, we'd like to start the job we used to get the match if
-		// possible, just to keep things simple.
-	if (jobid.proc >= 0 && Runnable(&jobid)) {
-		return;
-	}
+	ASSERT(my_match_ad);
 
+		// indicate failure by setting proc to -1.  do this now
+		// so if we bail out early anywhere, we say we failed.
+	jobid.proc = -1;	
 
 	// BIOTECH
 	char *biotech = param("BIOTECH");
@@ -3465,16 +3459,11 @@ void FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad,
 		ad = GetNextJob(1);
 		while (ad != NULL) {
 			if ( Runnable(ad) ) {
-				if ( (my_match_ad && 
-					     (*ad == ((ClassAd &)(*my_match_ad)))) 
-					 || (my_match_ad == NULL) ) 
+				if ( *ad == ((ClassAd &)(*my_match_ad)) )
 				{
 					ad->LookupInteger(ATTR_CLUSTER_ID, jobid.cluster);
 					ad->LookupInteger(ATTR_PROC_ID, jobid.proc);
-					if( scheduler.AlreadyMatched(&jobid) ) {
-						jobid.proc = -1;
-					}
-					else {
+					if( !scheduler.AlreadyMatched(&jobid) ) {
 						break;
 					}
 				}
@@ -3483,12 +3472,6 @@ void FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad,
 		}
 		return;
 	}
-
-		// indicate failure by setting proc to -1.  do this now
-		// so if we bail out early anywhere, we say we failed.
-	jobid.proc = -1;	
-
-	ASSERT(my_match_ad);
 
 	HashTable<int,int> autocluster_rejected(N_PrioRecs,hashFuncInt,rejectDuplicateKeys);
 	MyString owner = user;
@@ -3510,7 +3493,13 @@ void FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad,
 
 	do {
 		for (i=0; i < N_PrioRecs; i++) {
-			if ( strcmp(PrioRec[i].owner,owner.Value()) != 0 ) {
+			if ( PrioRec[i].owner[0] == '\0' ) {
+					// This record has been disabled, because it is no longer
+					// runnable.
+				continue;
+			}
+			else if ( !match_any_user && strcmp(PrioRec[i].owner,owner.Value()) != 0 ) {
+					// Owner doesn't match.
 				continue;
 			}
 
@@ -3540,6 +3529,17 @@ void FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad,
 						// Prevent this job from being considered in any
 						// future iterations through the list.
 					PrioRec[i].owner[0] = '\0';
+
+						// Ensure that PrioRecArray is rebuilt
+						// eventually, because changes in the status
+						// of AlreadyMatched() can happen without
+						// changes to the status of the job, (not the
+						// normal case, but still possible) so the
+						// dirty flag may not get set when the job
+						// is no longer AlreadyMatched() unless we
+						// set it here and keep rebuilding the array.
+
+					PrioRecArrayIsDirty = true;
 				}
 				else {
 
