@@ -1881,7 +1881,8 @@ SetTransferFiles()
 	// object will take care of transferring the data back to the
 	// correct path.
 
-	if ( (should_transfer != STF_NO && JobUniverse != CONDOR_UNIVERSE_GRID) ||
+	if ( (should_transfer != STF_NO && JobUniverse != CONDOR_UNIVERSE_GRID &&
+		  JobUniverse != CONDOR_UNIVERSE_STANDARD) ||
 		 Remote ) {
 
 		char output[_POSIX_PATH_MAX + 32];
