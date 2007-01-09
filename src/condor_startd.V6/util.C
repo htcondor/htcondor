@@ -40,15 +40,16 @@ check_perms()
 		// We want execute to be world-writable w/ the sticky bit set.  
 
 	if (stat(exec_path, &st) < 0) {
-		EXCEPT( "stat exec path (%s), errno: %d", exec_path, errno ); 
+		EXCEPT( "stat exec path (%s), errno: %d (%s)", exec_path, errno,
+				strerror( errno ) ); 
 	}
 
 	if ((st.st_mode & desired_mode) != desired_mode) {
 		dprintf(D_FULLDEBUG, "Changing permission on %s\n", exec_path);
 		mode = st.st_mode | desired_mode;
 		if (chmod(exec_path, mode) < 0) {
-			EXCEPT( "chmod exec path (%s), errno: %d", exec_path,
-					errno );  
+			EXCEPT( "chmod exec path (%s), errno: %d (%s)", exec_path,
+					errno, strerror( errno ) );
 		}
 	}
 }
