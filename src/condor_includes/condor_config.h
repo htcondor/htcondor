@@ -29,6 +29,8 @@
 #include "MyString.h"
 #endif
 
+#define CONDOR_GCB_INVALID_BROKER "0.0.0.1"
+
 typedef struct bucket {
 	char	*name;
 	char	*value;

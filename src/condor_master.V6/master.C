@@ -43,6 +43,11 @@
 #include "strupr.h"
 #include "condor_environ.h"
 #include "store_cred.h"
+#include "setenv.h"
+
+#if HAVE_EXT_GCB
+#include "GCB.h"
+#endif
 
 #ifdef WIN32
 
@@ -1166,10 +1171,91 @@ void StartConfigServer()
 }
 #endif
 
+#if HAVE_EXT_GCB
+void
+gcb_broker_down_handler( Service *ignore )
+{
+	int num_slots;
+	const char *our_broker = GetEnv( "GCB_INAGENT" );
+	const char *next_broker = NULL;
+	bool found_broker = false;
+	char *str = param( "NET_REMAP_INAGENT" );
+	StringList brokers( str );
+	free( str );
+
+	if ( our_broker == NULL ) {
+		dprintf( D_ALWAYS, "Lost connection to current GCB broker, "
+				 "but GCB_INAGENT is undefined!?\n" );
+		return;
+	}
+	dprintf( D_ALWAYS, "Lost connection to current GCB broker %s. "
+			 "Will attempt to reconnect\n", our_broker );
+
+	brokers.remove( our_broker );
+
+	if ( brokers.isEmpty() ) {
+			// No other brokers to query
+		return;
+	}
+
+	brokers.rewind();
+
+	while ( (next_broker = brokers.next()) ) {
+		if ( GCB_broker_query( next_broker, GCB_DATA_QUERY_FREE_SOCKS,
+							   &num_slots ) == 0 ) {
+			found_broker = true;
+			break;
+		}
+	}
+
+	if ( found_broker ) {
+		dprintf( D_ALWAYS, "Found alternate GCB broker %s. "
+				 "Restarting all daemons.\n", next_broker );
+		restart_everyone();
+	} else {
+		dprintf( D_ALWAYS, "No alternate GCB brokers found. "
+				 "Will try again later.\n" );
+	}
+}
+
+void
+gcbBrokerDownCallback()
+{
+		// BEWARE! This function is called by GCB. Most likely, either
+		// DaemonCore is blocked on a select() or CEDAR is blocked on a
+		// network operation. So we register a daemoncore timer to do
+		// the real work.
+	daemonCore->Register_Timer( 0, (TimerHandler)gcb_broker_down_handler,
+								"gcb_broker_down_handler" );
+}
+
+void
+gcb_recovery_failed_handler( Service *ignore )
+{
+	dprintf(D_ALWAYS, "GCB failed to recover from a failure with the "
+			"Broker. Restarting all daemons\n");
+	restart_everyone();
+}
+
+void
+gcbRecoveryFailedCallback()
+{
+		// BEWARE! This function is called by GCB. Most likely, either
+		// DaemonCore is blocked on a select() or CEDAR is blocked on a
+		// network operation. So we register a daemoncore timer to do
+		// the real work.
+	daemonCore->Register_Timer( 0, (TimerHandler)gcb_recovery_failed_handler,
+								"gcb_recovery_failed_handler" );
+}
+#endif
 
 void
 main_pre_dc_init( int argc, char* argv[] )
 {
+		// If we don't clear this, then we'll use the same GCB broker
+		// as our parent or previous incarnation. If there's a list of
+		// brokers, we want to choose from the whole list.
+	UnsetEnv( "NET_REMAP_ENABLE" );
 }
 
 
@@ -1212,6 +1298,39 @@ main_pre_command_sock_init()
 	dprintf (D_FULLDEBUG, "Obtained lock on %s.\n", lock_file.Value() );
 #endif
 
+#if HAVE_EXT_GCB
+	if ( GetEnv("GCB_INAGENT") ) {
+			// Set up our master-specific GCB failure callbacks
+			// TODO The timeout should be configurable
+		GCB_Broker_down_callback_set( gcbBrokerDownCallback, 300 );
+		GCB_Recovery_failed_callback_set( gcbRecoveryFailedCallback );
+	}
+
+	if ( GetEnv("GCB_INAGENT") &&
+		 param_boolean( "MASTER_WAITS_FOR_GCB_BROKER", true ) ) {
+
+			// We can't talk to any of our GCB brokers. Wait and retry
+			// until it works.
+		int delay = 20;
+
+		while ( !strcmp( GetEnv("GCB_INAGENT"), CONDOR_GCB_INVALID_BROKER ) ) {
+				// TODO send email to admin
+				// TODO make delay between retries configurable?
+				// TODO break out of this loop if admin disables GCB or 
+				//   inserts valid broker into list?
+				//   that would require rereading the entire config file
+			dprintf(D_ALWAYS, "Can't talk to any GCB brokers. "
+					"Waiting for one to become available "
+					"(retry in %d seconds).\n", delay);
+			sleep(delay);
+			condor_net_remap_config(true);
+			delay *= 2;
+			if ( delay > 3600 ) {
+				delay = 3600;
+			}
+		}
+	}
+#endif
 }
 
 void init_firewall_exceptions() {

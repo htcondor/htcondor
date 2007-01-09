@@ -38,6 +38,10 @@
 #include "setenv.h"
 #include "time_offset.h"
 
+#if HAVE_EXT_GCB
+#include "GCB.h"
+#endif
+
 #define _NO_EXTERN_DAEMON_CORE 1	
 #include "condor_daemon_core.h"
 
@@ -1231,6 +1235,24 @@ handle_dc_sigquit( Service*, int )
 	return TRUE;
 }
 
+void
+handle_gcb_recovery_failed( Service *ignore )
+{
+	dprintf( D_ALWAYS, "GCB failed to recover from a failure with the "
+			 "Broker. Performing fast shutdown.\n" );
+	main_shutdown_fast();
+}
+
+static void
+gcb_recovery_failed_callback()
+{
+		// BEWARE! This function is called by GCB. Most likely, either
+		// DaemonCore is blocked on a select() or CEDAR is blocked on a
+		// network operation. So we register a daemoncore timer to do
+		// the real work.
+	daemonCore->Register_Timer( 0, (TimerHandler)handle_gcb_recovery_failed,
+								"handle_gcb_recovery_failed" );
+}
 
 // This is the main entry point for daemon core.  On WinNT, however, we
 // have a different, smaller main which checks if "-f" is ommitted from
@@ -1760,6 +1782,11 @@ int main( int argc, char** argv )
 		 fcntl(daemonCore->async_pipe[1],F_SETFL,O_NONBLOCK) == -1 ) {
 			EXCEPT("Failed to create async pipe");
 	}
+#endif
+
+#if HAVE_EXT_GCB
+		// Set up our GCB failure callback
+	GCB_Recovery_failed_callback_set( gcb_recovery_failed_callback );
 #endif
 
 	main_pre_command_sock_init();

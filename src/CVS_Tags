@@ -1,3 +1,8 @@
+01/04/07 V6_9-GCB_optimization-merge-1
+  The state of the V6_9-GCB_optimization-branch for an initial merge
+  back to the trunk. This mostly includes changes to Condor to make
+  better use of the new support in GCB for broker failure recovery.
+
 01/08/07 V6_9_1-{root,branch}
   The branch for V6_9_1 off of the trunk.
 
