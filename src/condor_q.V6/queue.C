@@ -2811,7 +2811,7 @@ doRunAnalysisToBuffer( ClassAd *request )
 				}  
 			}
 			if (!uses_matchmaking) {
-				sprintf( return_buff, "%s\nWARNING: Analysis is only meaningful for Globus universe jobs using matchmaking.\n", return_buff);
+				sprintf( return_buff, "%s\nWARNING: Analysis is only meaningful for Grid universe jobs using matchmaking.\n", return_buff);
 			}
 			break;
 
