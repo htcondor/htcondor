@@ -3956,7 +3956,6 @@ DedicatedScheduler::isPossibleToSatisfy( CAList* jobs, int max_hosts )
 	int req;
 	StringList names;
 	char name_buf[512];
-	char* name;
 	match_rec* mrec;
 	
 	dprintf( D_FULLDEBUG, 
@@ -3975,7 +3974,7 @@ DedicatedScheduler::isPossibleToSatisfy( CAList* jobs, int max_hosts )
 
 	ClassAd *job;
 	jobs->Rewind();
-	int num_matches = 0;
+	int matchCount = 0;
 	while( (job = jobs->Next()) ) {
 		candidate_resources.Rewind();
 		while( (candidate = candidate_resources.Next()) ) {
@@ -3987,20 +3986,21 @@ DedicatedScheduler::isPossibleToSatisfy( CAList* jobs, int max_hosts )
 			}
 			if( req ) {
 				candidate_resources.DeleteCurrent();
-				num_matches++;
+				matchCount++;
 				name_buf[0] = '\0';
 				candidate->LookupString( ATTR_NAME, name_buf );
 				names.append( name_buf );
 				jobs->DeleteCurrent();
 
-				if( num_matches == max_hosts ) {
+				if( matchCount == max_hosts ) {
 					// We've found all we need for this job.
 					// Set the scheduled flag on any match records we used
 					// for satisfying this job so we don't release them
 					// prematurely. 
 					names.rewind();
-					while( (name = names.next()) ) {
-						HashKey key(name);
+					char* machineName;
+					while( (machineName = names.next()) ) {
+						HashKey key(machineName);
 						if( all_matches->lookup(key, mrec) >= 0 ) {
 							mrec->scheduled = true;
 						}
@@ -4248,11 +4248,11 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 
 			machines.Rewind();
 
-			ClassAd *machine = NULL;
-			while ( (machine = machines.Next())) {
+			ClassAd *machineAd = NULL;
+			while ( (machineAd = machines.Next())) {
 					// Now lookup machine here...
 				char *mach_name;
-				machine->LookupString( ATTR_NAME, &mach_name);
+				machineAd->LookupString( ATTR_NAME, &mach_name);
 
 				dprintf( D_FULLDEBUG, "Trying to match %s to %s\n", mach_name, host);
 				if (strcmp(mach_name, host) == 0) {
@@ -4264,7 +4264,7 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 			}
 
 			
-			if (machine == NULL) {
+			if (machineAd == NULL) {
 					// Uh oh...
 				dprintf( D_ALWAYS, "Dedicated Scheduler:: couldn't find machine %s to reconnect to\n", host);
 				machinesToAllocate.Rewind();
@@ -4279,13 +4279,13 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 			}
 
 			char *sinful;
-			machine->LookupString(ATTR_MY_ADDRESS, &sinful);
+			machineAd->LookupString(ATTR_MY_ADDRESS, &sinful);
 
 			dprintf(D_FULLDEBUG, "Target address is %s\n", sinful);
 
 			match_rec *mrec = 
 				new match_rec(claim, sinful, &id,
-						  machine, owner(), NULL);
+						  machineAd, owner(), NULL);
 
 			mrec->setStatus(M_CLAIMED);
 
@@ -4294,7 +4294,7 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 
 			jobsToAllocate.Append(job);
 
-			machinesToAllocate.Append(machine);
+			machinesToAllocate.Append(machineAd);
 		}
 	}
 
