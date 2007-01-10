@@ -41,7 +41,12 @@ void parseSetDoNameMunge(bool doit);
  */
 bool parse (Dag *dag, const char * filename, bool useDagDir);
 
-bool isKeyWord( const char *token );
+/**
+ * Determine whether the given token is a DAGMan reserved word.
+ * @param The token we're testing.
+ * @return True iff the token is a reserved word.
+ */
+bool isReservedWord( const char *token );
 //void DFSVisit (Job * job);
 #endif
 

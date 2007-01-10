@@ -125,8 +125,9 @@ IsValidNodeName( Dag *dag, const char *name, MyString &whynot )
 		whynot = "empty node name (name == \"\")";
 		return false;
 	}
-	if( isKeyWord( name ) ) {
-		whynot.sprintf( "invalid node name: '%s' is a DAGMan keyword", name );
+	if( isReservedWord( name ) ) {
+		whynot.sprintf( "invalid node name: '%s' is a DAGMan reserved word",
+					name );
 		return false;
 	}
 	ASSERT( dag != NULL );

@@ -288,6 +288,8 @@ Dag::AddDependency( Job* parent, Job* child )
 	if( !parent || !child ) {
 		return false;
 	}
+	debug_printf( DEBUG_DEBUG_2, "Dag::AddDependency(%s, %s)\n",
+				parent->GetJobName(), child->GetJobName());
 	if( !parent->AddChild( child ) ) {
 		return false;
 	}

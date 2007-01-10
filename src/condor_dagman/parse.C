@@ -66,12 +66,9 @@ void exampleSyntax (const char * example) {
 
 
 bool
-isKeyWord( const char *token )
+isReservedWord( const char *token )
 {
-    static const char * keywords[] = {
-        "JOB", "PARENT", "CHILD", "PRE", "POST", "DONE", "Retry", "SCRIPT",
-		"DOT", "DAP", "DATA", "ABORT-DAG-ON"
-    };
+    static const char * keywords[] = { "PARENT", "CHILD" };
     static const unsigned int numKeyWords = sizeof(keywords) / 
 		                                    sizeof(const char *);
 
@@ -404,9 +401,9 @@ parse_script(
 					  filename, lineNumber );
 		exampleSyntax (example);
 		return false;
-	} else if (isKeyWord(jobName)) {
+	} else if (isReservedWord(jobName)) {
 		debug_printf( DEBUG_QUIET,
-					  "%s (line %d): JobName cannot be a keyword\n",
+					  "%s (line %d): JobName cannot be a reserved word\n",
 					  filename, lineNumber );
 		exampleSyntax (example);
 		return false;
