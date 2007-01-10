@@ -1,3 +1,9 @@
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{\label{sec:History-6-8}Stable Release Series 6.8}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -23,8 +29,6 @@ Please see the updated table of available platforms in
 section~\ref{sec:Availability} on page~\pageref{sec:Availability}.
 
 The details of each version are described below.
-
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-6-8-4}Version 6.8.4}
@@ -55,7 +59,14 @@ attribute was not found.
 
 \begin{itemize}
 
-\item None.
+\item Fixed a bug in \Condor{submit} that caused standard universe jobs
+to be unable to open their standard output or standard error, if
+\SubmitCmd{should\_transfer\_files} is \SubmitCmd{YES} or 
+\SubmitCmd{IF\_NEEDED} in the submit description file.
+
+\item Fixed a bug in \Condor{glidein} that could cause it to request the
+queue unknown when submitting its setup job to GRAM, leading to
+failures.
 
 \end{itemize}
 
@@ -78,7 +89,9 @@ attribute was not found.
 
 \begin{itemize}
 
-\item Performed a security audit of all places where Condor opens files to make certain files are opened with a reasonable permission mode and with the
+\item Performed a security audit of all places where Condor opens files,
+to make certain files are opened with a reasonable permission mode
+and with the
 O\_EXCL flag whenever possible.
 
 \end{itemize}
@@ -88,35 +101,36 @@ O\_EXCL flag whenever possible.
 
 \begin{itemize}
 
-\item Added \MacroNI{JOB\_INHERITS\_STARTER\_ENVIRONMENT}.  When set
-to true, this causes jobs to inherit all environment variables from
-\Condor{starter}.  This is useful for glidein jobs that need to access
+\item Added the \Macro{JOB\_INHERITS\_STARTER\_ENVIRONMENT}configuration
+macro.  When set
+to \Expr{True}, jobs inherit all environment variables from
+the \Condor{starter}.  This is useful for glidein jobs that need to access
 environment variables from the batch system running the glidein daemons.
-The default for this configuration setting is false, so existing behavior
+The default for this configuration macro is \Expr{False}, so existing behavior
 is unchanged.  This feature does not apply to standard and pvm universe
 jobs.
 
-\item Changed the default UDP recieve buffer for the
+\item Changed the default UDP receive buffer for the
 \Condor{collector} from 1M to 10M.  This value can be configured with
-the (existing) COLLECTOR\_SOCKET\_BUFSIZE parameter.
+the (existing) \MacroNI{COLLECTOR\_SOCKET\_BUFSIZE} macro.
 
-\Note For some Linux distributions, it may be neccessary to configure
+\Note For some Linux distributions, it may be necessary to configure
 a larger value than the default; this parameter is
 /proc/sys/net/core/rmem\_max .  You can see the values that the
 \Condor{collector} actually used by enabling D\_FULLDEBUG for the
-collector and looking at the log line that looks like this:
+\Condor{collector} and looking at the log line that looks like this:
 
 Reset OS socket buffer size to 2048k (UDP), 255k (TCP).
 
-\item Added a new configuration parameter to control the size of the
-TCP send buffers for the \Condor{collector}.  This parameter used to
-be the same as COLLECTOR\_SOCKET\_BUFSIZE.  The new parameter is
-COLLECTOR\_TCP\_SOCKET\_BUFSIZE, and defaults to 128K.
+\item Added a new configuration macro to control the size of the
+TCP send buffers for the \Condor{collector}.  This macro used to
+be the same as \MacroNI{COLLECTOR\_SOCKET\_BUFSIZE}.  The new macro is
+\Macro{COLLECTOR\_TCP\_SOCKET\_BUFSIZE}, and it defaults to 128K.
 
 \item Added a clipped port for SuSE Linux Enterprise Server 9 running on the 
 PowerPC architecture.  Note the known bug below.
 
-\item The \Condor{schedd} now maintains a birthdate for the job queue. 
+\item The \Condor{schedd} now maintains a birth date for the job queue. 
 Nothing in Condor currently uses this feature, but future versions of \Condor{quill} may require it. 
 
 \item There is a new configuration file macro
@@ -130,21 +144,23 @@ inclusive at configuration time.
 
 \begin{itemize}
 
-\item Fixed a deadlock situation between the schedd and startd than can
-significantly impact the schedd's performance.  The likelyhood of the
+\item Fixed a deadlock situation between the \Condor{schedd} and
+the \Condor{startd} that can
+significantly impact the \Condor{schedd}'s performance.  The likelihood of the
 deadlock increased based upon the number of VMs advertised by the
-startd.
+\Condor{startd}.
 
 \item Fixed a bug reading the user job log on Windows that caused
-occasional dagman confusion (thanks to Fairview Software, Inc, for
-both finding the bug and writing a patch).
+occasional DAGMan confusion.
+Thanks to Fairview Software, Inc. for
+both finding the bug and writing a patch.
 
 \item Fixed a denial of service problem: Condor daemons no longer freeze
-for 20 seconds when a client connects to them and then sends no data
-(this behavior is common with port scanners).
+for 20 seconds when a client connects to them and then sends no data.
+This behavior is common with port scanners.
 
 \item Fixed a race condition with \Condor{quill} caused by
-\Prog{postgresql}'s default transaction isolation level being ``read
+\Prog{PostgreSQL}'s default transaction isolation level being ``read
 committed''. 
 This bug would cause truncated \Condor{q} reads when using Quill.
 
@@ -157,56 +173,59 @@ turned off with \Condor{off} \Opt{-fast}.
   The bug seems to have been most likely to appear on x86\_64 Linux
   machines, but could potentially affect all platforms.
 
-\item Fixed a problem with \condor{history} when running with quill enabled
+\item Fixed a problem with \Condor{history} when running with Quill enabled,
 which caused it to allocate an unbounded amount of memory.
 
-\item Fixed a problem with \condor{q} when running with quill which caused
+\item Fixed a problem with \Condor{q} when running with Quill, which caused
 it to silently truncate the printing of the job queue.
 
-\item Fixed a bug in the \condor{gridmanager} that caused the following
-configuration files parameters to be ignored for grid-type condor and
+\item Fixed a bug in the \Condor{gridmanager} that caused the following
+configuration files parameters to be ignored for grid types condor and
 nordugrid jobs: \MacroNI{GRIDMANAGER\_RESOURCE\_PROBE\_INTERVAL},
 \MacroNI{GRIDMANAGER\_MAX\_PENDING\_SUBMITS\_PER\_RESOURCE}, and
 \MacroNI{GRIDMANAGER\_MAX\_SUBMITTED\_JOBS\_PER\_RESOURCE}.
 
-\item Fixed a bug in \condor{run} that caused it to abort on non-fatal
-warnings from \condor{submit} and print incorrect error messages.
+\item Fixed a bug in \Condor{run} that caused it to abort on non-fatal
+warnings from \Condor{submit} and print incorrect error messages.
 
-\item Fixed a bug in the \condor{gridmanager} dealing with grid-type gt4
-grid universe jobs. If the job's standard output or error wasn't specified
-in the job ad, the \condor{gridmanager} would create an improper GRAM
+\item Fixed a bug in the \Condor{gridmanager} dealing with grid type gt4
+grid universe jobs. If the job's standard output or error was not specified
+in the job ClassAd, the \Condor{gridmanager} would create an improper GRAM
 RSL string, causing the job to fail.
 
-\item Fixed a bug in the \condor{gridmanager} that could cause it to
+\item Fixed a bug in the \Condor{gridmanager} that could cause it to
 delegate the wrong credential when refreshing the credentials for a
-grid-type gt4 grid universe job.
+grid type gt4 grid universe job.
 
-\item The \condor{gridmanager} could get into a state where it would no
-longer start up Globus jobmanagers for grid-type gt2 grid universe jobs
+\item The \Condor{gridmanager} could get into a state where it would no
+longer start up Globus jobmanagers for grid type gt2 grid universe jobs,
 if previous requests failed due to connection errors. This bug has been
 fixed.
 
 \item The \Condor{c-gahp} now properly exits when the pipe to its parent
 goes away. Before, it would fill its log with large amounts of useless
-messages before exiting several minutes later.
+messages, before exiting several minutes later.
 
-\item Fixed a bug where a problem opening standard input, output, or error
+\item Fixed a bug where a problem opening standard input, output, or error,
 the standard universe might generate an incorrect warning in the 
 \Condor{shadow}'s log.
 
-\item The \condor{gridmanager} now recovers properly when a proxy refresh
-fails for a gt2 grid universe job in stage-out state. Before, the job
+\item The \Condor{gridmanager} now recovers properly when a proxy refresh
+fails for a gt2 grid universe job in the stage-out state. Before, the job
 would become held with a hold reason of ``Globus error 3: an I/O operation
 failed''.
 
-\item A number of fixes to minor typos and misformatting in Condor's log files.
+\item A number of fixes to minor typos and incorrect formatting in
+Condor's log files.
 
-\item When \MacroNI{REQUEST\_CLAIM\_TIMEOUT} was reached and \Condor{schedd}
-failed to contact \Condor{startd} to release the claim, the schedd would
+\item When \MacroNI{REQUEST\_CLAIM\_TIMEOUT} was reached and the
+\Condor{schedd}
+failed to contact the \Condor{startd} to release the claim, the 
+\Condor{schedd} would
 periodically try releasing the claim indefinitely, possibly resulting in
 a lengthy communication delay each time.
 
-\item Under Windows, condor daemons such as \Condor{schedd} were sometimes
+\item Under Windows, Condor daemons such as the \Condor{schedd} were sometimes
 limiting their use of pending connect operations more than they should
 have.  This would result in the message, ``file descriptor safety level
 exceeded''.
@@ -214,7 +233,7 @@ exceeded''.
 \item \Condor{fetchlog} no longer allows or documents the -dagman option.
 The option's appearance was an error.  The option never worked.
 
-\item \Condor{schedd} ensures that the initial job queue log file
+\item The \Condor{schedd} ensures that the initial job queue log file
 contains a sequence number for use by Quill.  This fixes a case in
 which no sequence number was inserted, because the initial rotation of
 this (empty) file failed.  Quill also now reports exactly what the
@@ -227,7 +246,7 @@ sandbox (for example, using the \Opt{-s} or \Opt{-r} option to
 \Condor{submit}), an erroneous file permissions check in the
 \Condor{schedd} would result in a failed submission.
 
-\item \Condor{startd} would crash shortly after startup if the
+\item The \Condor{startd} would crash shortly after start up if the
 \MacroNI{RANK} expression contained any use of the unary minus
 operator.  This patch should also fix any other cases where Condor
 daemons crashed due to the use of the unary minus operator in ClassAd
@@ -245,7 +264,7 @@ name. This bug was thought to have been fixed in Condor 6.8.0.
 
 \item Fixed problems with \Condor{store\_cred} behaving strangely when
 storing or removing a user name that is some initial substring of
-``condor\_pool''. Specifying such a username would be incorrectly
+``condor\_pool''. Specifying such a user name would be incorrectly
 interpreted as equivalent to specifying the \Opt{-c} option.
 
 \item Fixed a problem with \Condor{glidein} spewing lots of text to
@@ -255,28 +274,28 @@ the screen when checking the status of a job it submitted.
 
   \begin{itemize}
 
-  \item New axis.jar from Globus that fixes a thread safety bug that
+  \item A new \File{axis.jar} from Globus fixes a thread safety bug that
   can cause lockups in subscriptions for WS notifications. See Globus
   Bugzilla 4858
   (\URL{http://bugzilla.globus.org/bugzilla/show\_bug.cgi?id=4858}).
 
   \item Fixed bugs that caused memory related to destroyed jobs to not
-  be reclaimed in both client and server.
+  be reclaimed in both the client and the server.
 
   \item Removed redundant usage of Secure Message, Secure Conversation,
-  and Transport Security when talking to a WS GRAM service. Now, just
+  and Transport Security when talking to a WS GRAM service. Now, only
   Transport Security is used.
 
   \end{itemize}
 
 \item Fixed memory leaks in \Condor{quill}.
 
-\item Fixed bug that might have caused the \Condor{startd} problems
+\item Fixed a bug that might have caused \Condor{startd} problems
 launching the \Condor{starter} for the standard universe on 64-bit systems.
 
 \item Improved Condor's file transfer.  If you request that Condor
 automatically transfer back your output, it now detects changes better.
-Previously, it would only transfer back files that had a timestamp newer
+Previously, it would only transfer back files that had a more recent timestamp 
 than the spool date.  Now, it will transfer back any file that has changed
 in date (including being dated in the past) or changed in size.
 
@@ -292,8 +311,10 @@ architecture has compatibility problems with this release of Condor.  The
 problem exhibits itself as the \Condor{startd} hanging, never reporting itself
 to the \Condor{collector}.  The workaround is to either disable the Java
 universe (set \MacroNI{JAVA} to an empty string), or disable just-in-time
-compilation when running in the Java universe with the following configuraiton
-setting: \begin{verbatim} JAVA_EXTRA_ARGUMENTS = -Djava.compiler=""
+compilation when running in the Java universe with the following configuration
+setting:
+\begin{verbatim}
+  JAVA_EXTRA_ARGUMENTS = -Djava.compiler=""
 \end{verbatim}
 
 \end{itemize}
