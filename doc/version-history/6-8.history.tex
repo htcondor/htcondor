@@ -55,7 +55,14 @@ attribute was not found.
 
 \begin{itemize}
 
-\item None.
+\item Fixed a bug in \Condor{submit} that caused standard universe jobs
+to be unable to open their standard output or standard error, if
+\SubmitCmd{should\_transfer\_files} is \SubmitCmd{YES} or 
+\SubmitCmd{IF\_NEEDED} in the submit description file.
+
+\item Fixed a bug in \Condor{glidein} that could cause it to request the
+queue unknown when submitting its setup job to GRAM, leading to
+failures.
 
 \end{itemize}
 
