@@ -224,7 +224,7 @@ protected:
     int test_checkpoint;
     
  private:
-    ClassAdCollection(const ClassAdCollection &collection) : viewTree(NULL) { return; }
+    ClassAdCollection(const ClassAdCollection &collection) : ClassAdCollectionInterface(), viewTree(NULL) { return; }
     ClassAdCollection &operator=(const ClassAdCollection &collection) { return *this; }
 
     bool AddClassAd_Transaction(const std::string &key, ClassAd *newAd);

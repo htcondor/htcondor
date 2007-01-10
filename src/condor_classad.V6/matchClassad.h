@@ -150,7 +150,7 @@ class MatchClassAd : public ClassAd
         // to be private so we don't have to write them, or worry about
         // them being inappropriately used. The day we want them, we can 
         // write them. 
-        MatchClassAd(const MatchClassAd &match)            { return;       }
+        MatchClassAd(const MatchClassAd &match) : ClassAd(){ return;       }
         MatchClassAd &operator=(const MatchClassAd &match) { return *this; }
 
 };

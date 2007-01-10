@@ -90,7 +90,7 @@ public:
 
 private:
 	FILE *_file;
-    FileLexerSource(const FileLexerSource &source)            { return;       }
+    FileLexerSource(const FileLexerSource &source) : LexerSource() { return;  }
     FileLexerSource &operator=(const FileLexerSource &source) { return *this; }
 };
 
@@ -110,7 +110,7 @@ public:
 
 private:
 	std::istream *_stream;
-    InputStreamLexerSource(const InputStreamLexerSource &source)            { return;       }
+    InputStreamLexerSource(const InputStreamLexerSource &source) : LexerSource() { return;       }
     InputStreamLexerSource &operator=(const InputStreamLexerSource &source) { return *this; }
 };
 
@@ -130,7 +130,7 @@ public:
 private:
 	const char *_string;
 	int         _offset;
-    CharLexerSource(const CharLexerSource &source)            { return;       }
+    CharLexerSource(const CharLexerSource &source) : LexerSource() { return;       }
     CharLexerSource &operator=(const CharLexerSource &source) { return *this; }
 };
 
@@ -151,7 +151,7 @@ public:
 private:
 	const std::string *_string;
 	int                _offset;
-    StringLexerSource(const StringLexerSource &source)            { return;       }
+    StringLexerSource(const StringLexerSource &source) : LexerSource() { return;       }
     StringLexerSource &operator=(const StringLexerSource &source) { return *this; }
 };
 
