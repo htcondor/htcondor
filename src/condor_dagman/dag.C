@@ -327,8 +327,6 @@ bool
 Dag::DetectCondorLogGrowth () {
 
 	if( _condorLogFiles.number() <= 0 ) {
-		debug_printf( DEBUG_DEBUG_1, "WARNING: DetectCondorLogGrowth() called "
-					  "but no Condor log defined\n" );
 		return false;
 	}
 
@@ -353,8 +351,6 @@ Dag::DetectCondorLogGrowth () {
 //-------------------------------------------------------------------------
 bool Dag::DetectDaPLogGrowth () {
 	if( _storkLogFiles.number() <= 0 ) {
-		debug_printf( DEBUG_DEBUG_1, "WARNING: DetectDaPLogGrowth() called "
-					  "but no Stork log defined\n" );
 		return false;
 	}
 
