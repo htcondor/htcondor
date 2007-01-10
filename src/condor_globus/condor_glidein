@@ -1010,7 +1010,7 @@ sub do_remote_setup() {
 	GRIDMAP=\$BASEDIR/grid-security/grid-mapfile
 	TRUSTED_CA=\$BASEDIR/grid-security/certificates
 
-	if [ "$GLOBUS_SH_TAR" = "" ]; then
+	if [ "\$GLOBUS_SH_TAR" = "" ]; then
 		#We must not have gotten executed via globus-sh-exec.
 		#(In the old days, that is how this script worked.)
 		#Set up the utility variables that we need.
@@ -1205,12 +1205,20 @@ EOF
 	$archdir_arg =~ s/\$/\$(DOLLAR)/g;
 	$localdir_arg =~ s/\$/\$(DOLLAR)/g;
 
+	# We print the globus_rsl line in the submit file only if we
+	# have a definite 'queue' value to tell gram
+	my $globus_rsl = "";
+	if ( $CONTACT_SETUP_QUEUE ne "" &&
+	     $CONTACT_SETUP_QUEUE ne "unknown" ) {
+	    $globus_rsl = "globus_rsl = (queue=$CONTACT_SETUP_QUEUE)";
+	}
+
 	open( SETUP_SUBMIT_FILE, ">$glidein_setup_submit" );
 
 	print SETUP_SUBMIT_FILE <<"EOF";
 	universe = Globus
 	GlobusScheduler = $CONTACT_SETUP
-	GlobusRSL = (queue=$CONTACT_SETUP_QUEUE)
+	$globus_rsl
 	executable = $glidein_remote_setup
 	arguments = $basedir_arg $archdir_arg $arch $localdir_arg $SERVER_URL $force_setup
 	#avoid trouble with scratch directory creation
