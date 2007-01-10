@@ -1,3 +1,9 @@
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{\label{sec:History-6-9}Development Release Series 6.9}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -13,11 +19,14 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item The 6.9.1 release contains all of the bug fixes and enhancements
+  from the 6.8.x series up to and including version 6.8.3.
+
 \item Version 1.4.0 of the Generic Connection Broker (GCB) library is
   now used for building Condor, and it is the 1.4.0 versions of the
   \Prog{gcb\_broker} and \Prog{gcb\_relay\_server} programs that are
   included in this release.
-  This version of GCB includes a number of enhancements used by Condor
+  This version of GCB includes enhancements used by Condor
   along with a new GCB-related command-line tool:
   \Prog{gcb\_broker\_query}.
   For more information about GCB, see section~\ref{sec:GCB} on
@@ -44,36 +53,36 @@ log many more messages.
 improvements regarding scalability and race conditions.
 
 % Gnats PR 774
-\item Added the DAGMAN\_SUBMIT\_DEPTH\_FIRST configuration macro which
-causes \Condor{dagman} to submit ready nodes in more-or-less depth-first
-order if set to \Expr{True}.  (The default behavior is to submit
-the ready nodes in breadth-first order.)
+\item Added the \Macro{DAGMAN\_SUBMIT\_DEPTH\_FIRST} configuration macro,
+which causes \Condor{dagman} to submit ready nodes in more-or-less depth-first
+order, if set to \Expr{True}.  The default behavior is to submit
+the ready nodes in breadth-first order.
 
-\item Added configuration parameter \Macro{USE\_PROCESS\_GROUPS}. If it's
-set to False, then Condor daemons on unix machines will not create new 
+\item Added configuration parameter \Macro{USE\_PROCESS\_GROUPS}.
+If it is set to \Expr{False},
+then Condor daemons on Unix machines will not create new 
 sessions or process groups. This is intended for use with Glidein, as
-we've had reports that some batch systems can't properly track jobs that
-create new process groups. The default value is True.
+we have had reports that some batch systems cannot properly track jobs that
+create new process groups. The default value is \Expr{True}.
 
-\item The default value for the submit file attribute
-\Attr{copy\_to\_spool} has been changed to \Expr{False}, because copying
+\item The default value for the submit file command
+\SubmitCmd{copy\_to\_spool} has been changed to \Expr{False}, because copying
 the executable to the spool directory for each job (or job cluster) is almost
-never actually desired.  Previously, the default was \Expr{True} in all
-cases except for the grid universe and remote submissions.
+never desired.  Previously, the default was \Expr{True} in all
+cases, except for grid universe jobs and remote submissions.
 
-\item More types of file-transfer errors now result in the job going
+\item More types of file transfer errors now result in the job going
 on hold, with a specific error message about what went wrong.  The new
 cases involve failures to write output files to disk on the submit
-side (e.g. a full disk).  As always, the specific error number is
+side (for example, when the disk is full).
+As always, the specific error number is
 recorded in \Attr{HoldReasonSubCode}, so you can enforce an automated
-error handling policy using \AdAttr{periodic\_release} or
-\AdAttr{periodic\_remove}.
+error handling policy using \SubmitCmd{periodic\_release} or
+\SubmitCmd{periodic\_remove}.
 
 \item Added the \Macro{<SUBSYS>\_DAEMON\_AD\_FILE}
 configuration variable, which is similar to the 
-\Macro{<SUBSYS>\_ADDRESS\_FILE}
-as described in section~\ref{param:SubsysAddressFile} on
-page~\pageref{param:SubsysAddressFile}.
+\MacroNI{<SUBSYS>\_ADDRESS\_FILE}.
 This new variable will be used in future versions of Condor, but is
 not necessary for 6.9.1.
 
@@ -84,27 +93,28 @@ not necessary for 6.9.1.
 
 \begin{itemize}
 
-\item Fixed bug in \Condor{master} so that it will now send Obituary
-emails when it kills child processes it considers are hung.
+\item Fixed a bug in the \Condor{master} so that it will now send obituary
+e-mails when it kills child processes that it considers hung.
 
 \item \Condor{configure} used to always make a personal Condor with
-\Opt{--install} even when \Opt{--type} called for only "execute" or
-"submit" types.  Now, \Condor{configure} honors the \Opt{--type}
+\Opt{--install} even when \Opt{--type} called for only execute or
+submit types.  Now, \Condor{configure} honors the \Opt{--type}
 argument, even when using \Opt{--install}.
 If \Opt{--type} is not specified, the default is to still install a
-full personal Condor with the following daemons: Master, Collector,
-Negotiator, Schedd, Startd. 
+full personal Condor with the following daemons: 
+\Condor{master}, \Condor{collector},
+\Condor{negotiator}, \Condor{schedd}, \Condor{startd}. 
 
 \item While removing, putting on hold, or vacating a large number of
-jobs, it was possible for \Condor{schedd} and \Condor{shadow} to
-temporarily deadlock with each other.  This has been solved under unix,
-but not yet under windows.
+jobs, it was possible for the \Condor{schedd} and the \Condor{shadow} to
+temporarily deadlock with each other.  This has been fixed under Unix,
+but not yet under Windows.
 
-\item It was possible for \Condor{schedd} to block until timing out
-when trying to release a claim to a startd that could not be reached
-through the network (e.g. the machine hosting the startd was turned
-off).  The connection from the schedd to the startd in this case is
-now created in a non-blocking way.
+\item Communication from a \Condor{schedd} to a \Condor{startd}
+now occurs in a nonblocking manner.
+This fixes the problem of the \Condor{schedd} blocking 
+when the claimed machine running the \Condor{startd}
+cannot be reached, for example because the machine is turned off.
 
 \end{itemize}
 
@@ -147,17 +157,17 @@ the user's GSI credential.
 \Condor{schedd}. When enabled, this will cause the \Condor{schedd} to
 write out a copy of each job's ClassAd when it leaves the job
 queue. The directory to place these files in is determined by the
-parameter \Macro{PER\_JOB\_HISTORY\_DIR}. It is the resposibilty of
-whatever external entity (e.g. an accounting or monitoring system) is
+parameter \Macro{PER\_JOB\_HISTORY\_DIR}. It is the responsibility of
+whatever external entity (for example, an accounting or monitoring system) is
 using these files to remove them as it completes its processing.
 
-\item \Condor{chirp} command now supports writing messages to the userlog.
+\item \Condor{chirp} command now supports writing messages to the user log.
 
 \item \Condor{chirp} getattr and putattr now send all classad getattr
 and putattr commands to the proc 0 classad, which allows multiple proc
-parallel jobs to use proc 0 as a scratchpad.
+parallel jobs to use proc 0 as a scratch pad.
 
-\item Parallel jobs now suport an \Attr{AllRemoteHosts} attribute,
+\item Parallel jobs now support an \Attr{AllRemoteHosts} attribute,
 which lists all the hosts across all procs in a cluster.
 
 \item The \Macro{DAGMAN\_ABORT\_DUPLICATES} config macro (which causes
