@@ -5993,7 +5993,10 @@ Scheduler::StartJobs()
 		if(!Runnable(&id))
 		// find the job in the cluster with the highest priority
 		{
-			FindRunnableJob(id,rec->my_match_ad,rec->user);
+			id.proc = -1;
+			if( rec->my_match_ad ) {
+				FindRunnableJob(id,rec->my_match_ad,rec->user);
+			}
 		}
 		if(id.proc < 0)
 		// no more jobs to run
@@ -10363,7 +10366,7 @@ Scheduler::AddMrec(char* id, char* peer, PROC_ID* jobId, const ClassAd* my_match
 		// rejection by the startd.
 
 	ClassAd *job_ad = GetJobAd(jobId->cluster,jobId->proc);
-	if( job_ad ) {
+	if( job_ad && rec->my_match_ad ) {
 		float new_startd_rank = 0;
 		if( rec->my_match_ad->EvalFloat(ATTR_RANK, job_ad, new_startd_rank) ) {
 			rec->my_match_ad->Assign(ATTR_CURRENT_RANK, new_startd_rank);
