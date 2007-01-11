@@ -4232,10 +4232,11 @@ void DaemonCore::Send_Signal_nonblocking(classy_counted_ptr<DCSignalMsg> msg) {
 			msg->messageSent( NULL, NULL );
 			break;
 		case DCMsg::DELIVERY_FAILED:
-			msg->messageSendFailed( NULL );
-			break;
 		case DCMsg::DELIVERY_PENDING:
-			EXCEPT("Unexpected pending status for fake message delivery.\n");
+				// Send_Signal() typically only sets the delivery status to
+				// SUCCEEDED; so if things fail, the status will remain
+				// PENDING.
+			msg->messageSendFailed( NULL );
 			break;
 		}
 	}
