@@ -800,14 +800,20 @@ V6_9_0_EXT	-a V6_9_COMMON_EXT \
                    externals/bundles/drmaa/1.4 \
                    externals/bundles/gt4gahp/1.5
 
-# Externals needed for 6.9.1.  (Same as 6.9.0, but update DRMAA to 1.5)
+# Externals needed for 6.9.1.
 V6_9_1_EXT	-a V6_9_COMMON_EXT \
                    externals/bundles/gcb/1.4.0 \
                    externals/bundles/drmaa/1.5 \
                    externals/bundles/gt4gahp/1.6
 
+# Externals needed for 6.9.2.
+V6_9_2_EXT	-a V6_9_COMMON_EXT \
+                   externals/bundles/gcb/1.4.0 \
+                   externals/bundles/drmaa/1.5 \
+                   externals/bundles/gt4gahp/1.6
+
 # Externals needed for the head of the V6_9-branch (a.k.a. the TRUNK)
-V6_9_EXT	-a V6_9_1_EXT
+V6_9_EXT	-a V6_9_2_EXT
 
 
 #---------------------------------------------------------------------
