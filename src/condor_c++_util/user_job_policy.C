@@ -505,6 +505,7 @@ UserPolicy::AnalyzePolicy( int mode )
 	/* Should I hold on exit? */
 	m_fire_expr = ATTR_ON_EXIT_HOLD_CHECK;
 	if( ! m_ad->EvalBool(ATTR_ON_EXIT_HOLD_CHECK, m_ad, on_exit_hold) ) {
+		m_fire_source = FS_JobAttribute;
 		return UNDEFINED_EVAL;
 	}
 	if( on_exit_hold ) {
@@ -516,6 +517,7 @@ UserPolicy::AnalyzePolicy( int mode )
 	/* Should I remove on exit? */
 	m_fire_expr = ATTR_ON_EXIT_REMOVE_CHECK;
 	if( ! m_ad->EvalBool(ATTR_ON_EXIT_REMOVE_CHECK, m_ad, on_exit_remove) ) {
+		m_fire_source = FS_JobAttribute;
 		return UNDEFINED_EVAL;
 	}
 	if( on_exit_remove ) {
