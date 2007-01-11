@@ -32,7 +32,8 @@ The details of each version are described below.
 \item Node names in \Condor{dagman} DAG files can now be DAG
 keywords, except for PARENT and CHILD.
 
-\item None.
+\item Improved the log message when \Attr{OnExitRemove} or
+\Attr{OnExitHold} evaluates to UNDEFINED.
 
 \end{itemize}
 
@@ -40,7 +41,11 @@ keywords, except for PARENT and CHILD.
 
 \begin{itemize}
 
-\item None.
+\item Under various circumstances, condor 6.9.1 daemons would abort
+with the message, ``ERROR: Unexpected pending status for fake message
+delivery.''  A specific example is when \Attr{OnExitRemove} or
+\Attr{OnExitHold} evaluated to UNDEFINED.  This caused the
+\Condor{schedd} to abort.
 
 \end{itemize}
 
