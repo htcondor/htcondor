@@ -47,6 +47,13 @@ delivery.''  A specific example is when \Attr{OnExitRemove} or
 \Attr{OnExitHold} evaluated to UNDEFINED.  This caused the
 \Condor{schedd} to abort.
 
+\item In Condor 6.9.1, the \Condor{schedd} would die during startup
+when trying to reconnect to running jobs for which the \Condor{schedd}
+could not find a startd ClassAd.  This would happen shortly after
+logging the following message: ``Could not find machine ClassAds for
+one or more jobs.  May be flocking, or machine may be down.
+Attempting to reconnect anyway.''
+
 \end{itemize}
 
 \noindent Known Bugs:
