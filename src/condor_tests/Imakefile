@@ -86,6 +86,22 @@ TESTCLASS(job_had_basic,core)
 TESTCLASS(job_had_basic,quick)
 #endif
 
+/*
+DESC(job_quill_basic," Basic Quill Daemon Test")
+RUN(job_quill_basic)
+TESTCLASS(job_quill_basic,core)
+TESTCLASS(job_quill_basic,quick)
+TESTCLASS(job_quill_basic,btdebug)
+*/
+
+#if defined( IS_X86_64_LINUX_RHEL3 )
+DESC(job_ligo_x86-64-chkpttst," LIGO Fedora 4 chkpt Test")
+RUN(job_ligo_x86-64-chkpttst)
+TESTCLASS(job_ligo_x86-64-chkpttst,core)
+TESTCLASS(job_ligo_x86-64-chkpttst,quick)
+TESTCLASS(job_ligo_x86-64-chkpttst,btdebug)
+#endif
+
 #if !defined(IS_PPC_AIX)
 DESC(lib_procapi_pidtracking-snapshot,"Fast Termination Child Cleanup Test")
 RUN(lib_procapi_pidtracking-snapshot)
@@ -97,13 +113,11 @@ DESC(lib_auth_protocol-fs,"FS authentication test")
 RUN(lib_auth_protocol-fs)
 TESTCLASS(lib_auth_protocol-fs,core)
 TESTCLASS(lib_auth_protocol-fs,quick)
-TESTCLASS(lib_auth_protocol-fs,btdebug)
 
 DESC(lib_auth_protocol-ctb,"CTB authentication test")
 RUN(lib_auth_protocol-ctb)
 TESTCLASS(lib_auth_protocol-ctb,core)
 TESTCLASS(lib_auth_protocol-ctb,quick)
-TESTCLASS(lib_auth_protocol-ctb,btdebug)
 
 /* GNATS 764 - SSL missing on Dux 5.1 and HPUX 11 machines */
 #if !defined( IS_ALPHA_DUX5) && !defined( IS_HPUX11 )
@@ -111,32 +125,27 @@ DESC(lib_auth_protocol-ssl,"SSL authentication test")
 RUN(lib_auth_protocol-ssl)
 TESTCLASS(lib_auth_protocol-ssl,core)
 TESTCLASS(lib_auth_protocol-ssl,quick)
-TESTCLASS(lib_auth_protocol-ssl,btdebug)
 
 DESC(lib_auth_protocol-pw,"PW authentication test")
 RUN(lib_auth_protocol-pw)
 TESTCLASS(lib_auth_protocol-pw,core)
 TESTCLASS(lib_auth_protocol-pw,quick)
-TESTCLASS(lib_auth_protocol-pw,btdebug)
 
 DESC(lib_auth_protocol-gsi,"GSI authentication test")
 RUN(lib_auth_protocol-gsi)
 TESTCLASS(lib_auth_protocol-gsi,core)
 TESTCLASS(lib_auth_protocol-gsi,quick)
-TESTCLASS(lib_auth_protocol-gsi,btdebug)
 #endif
 
 DESC(lib_auth_protocol-negot,"16 way negotiation test - frist 8")
 RUN(lib_auth_protocol-negot)
 TESTCLASS(lib_auth_protocol-negot,core)
 TESTCLASS(lib_auth_protocol-negot,quick)
-TESTCLASS(lib_auth_protocol-negot,btdebug)
 
 DESC(lib_auth_protocol-negot-prt2,"16 way negotiation test - last 8")
 RUN(lib_auth_protocol-negot-prt2)
 TESTCLASS(lib_auth_protocol-negot-prt2,core)
 TESTCLASS(lib_auth_protocol-negot-prt2,quick)
-TESTCLASS(lib_auth_protocol-negot-prt2,btdebug)
 
 /* Turned off on Free BSD port GNATS 766 */
 
@@ -210,7 +219,6 @@ DESC(job_core_output_java,"Java Universe: basic output test")
 RUN(job_core_output_java)
 TESTCLASS(job_core_output_java,core)
 TESTCLASS(job_core_output_java,quick)
-TESTCLASS(job_core_output_java,btdebug)
 
 DESC(job_core_hold_java,"Java Universe: basic output test")
 RUN(job_core_hold_java)
@@ -221,13 +229,11 @@ DESC(job_core_initialdir_java,"Java Universe: basic output test")
 RUN(job_core_initialdir_java)
 TESTCLASS(job_core_initialdir_java,core)
 TESTCLASS(job_core_initialdir_java,quick)
-TESTCLASS(job_core_initialdir_java,btdebug)
 
 DESC(job_core_input_java,"Java Universe: basic output test")
 RUN(job_core_input_java)
 TESTCLASS(job_core_input_java,core)
 TESTCLASS(job_core_input_java,quick)
-TESTCLASS(job_core_input_java,btdebug)
 
 /*
 ** This test is simply submit and getting things in the job ads
@@ -237,7 +243,6 @@ DESC(job_core_plus_java,"Java Universe: basic output test")
 RUN(job_core_plus_java)
 TESTCLASS(job_core_plus_java,core)
 TESTCLASS(job_core_plus_java,quick)
-TESTCLASS(job_core_plus_java,btdebug)
 ***************************************************************
 */
 #endif
@@ -251,7 +256,6 @@ DESC(soap_job_tests,"Soap: currently 10 different interface tests")
 RUN(soap_job_tests)
 TESTCLASS(soap_job_tests,core)
 TESTCLASS(soap_job_tests,quick)
-TESTCLASS(soap_job_tests,btdebug)
 #endif
 
 
