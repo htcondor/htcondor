@@ -33,7 +33,7 @@
 
 extern "C" int lock_file( int fd, LOCK_TYPE type, bool do_block );
 
-FileLock::FileLock( int f, FILE *fp ) : fd(f), fp(fp)
+FileLock::FileLock( int f, FILE *fp_arg ) : fd(f), fp(fp_arg)
 {
 	blocking = TRUE;
 	state = UN_LOCK;
