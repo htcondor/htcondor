@@ -634,12 +634,16 @@ MyString::init()
 
 int operator==(const MyString& S1, const MyString& S2) 
 {
-    if ((!S1.Data || !S1.Length()) && (!S2.Data || !S2.Length())) {
+    if ((!S1.Data || !S1.Len) && (!S2.Data || !S2.Len)) {
 		return 1;
 	}
     if (!S1.Data || !S2.Data) {
 		return 0;
 	}
+	if (S1.Len != S2.Len) {
+		return 0;
+	}
+
     if (strcmp(S1.Data,S2.Data)==0) { 
 		return 1;
 	}

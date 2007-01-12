@@ -31,9 +31,10 @@ static int
 hashFunction (const MyString &str, int numBuckets)
 {
 	int i = str.Length() - 1, hashVal = 0;
+	const char *s = str.GetCStr(); // Index throug the raw char * for speed
 	while (i >= 0) 
 	{
-		hashVal += str[i];
+		hashVal += s[i];
 		i--;
 	}
 	return (hashVal % numBuckets);
