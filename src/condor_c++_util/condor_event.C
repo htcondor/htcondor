@@ -1120,14 +1120,14 @@ RemoteErrorEvent::~RemoteErrorEvent()
 }
 
 void
-RemoteErrorEvent::setHoldReasonCode(int hold_reason_code)
+RemoteErrorEvent::setHoldReasonCode(int hold_reason_code_arg)
 {
-	this->hold_reason_code = hold_reason_code;
+	this->hold_reason_code = hold_reason_code_arg;
 }
 void
-RemoteErrorEvent::setHoldReasonSubCode(int hold_reason_subcode)
+RemoteErrorEvent::setHoldReasonSubCode(int hold_reason_subcode_arg)
 {
-	this->hold_reason_subcode = hold_reason_subcode;
+	this->hold_reason_subcode = hold_reason_subcode_arg;
 }
 
 int
@@ -2752,10 +2752,10 @@ toClassAd()
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
 	
-	const char* reason = getReason();
+	const char* hold_reason = getReason();
 	MyString buf2;
-	if ( reason ) {
-		buf2.sprintf("%s = \"%s\"", ATTR_HOLD_REASON,reason);
+	if ( hold_reason ) {
+		buf2.sprintf("%s = \"%s\"", ATTR_HOLD_REASON,hold_reason);
 		if( !myad->Insert(buf2.Value()) ) return NULL;
 	}
 	buf2.sprintf("%s = %d",ATTR_HOLD_REASON_CODE,code);
@@ -2877,10 +2877,10 @@ toClassAd()
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
 	
-	const char* reason = getReason();
-	if( reason ) {
+	const char* release_reason = getReason();
+	if( release_reason ) {
 		MyString buf2;
-		buf2.sprintf("Reason = \"%s\"", reason);
+		buf2.sprintf("Reason = \"%s\"", release_reason);
 		if( !myad->Insert(buf2.Value()) ) return NULL;
 	}
 

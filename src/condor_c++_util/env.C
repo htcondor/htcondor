@@ -566,7 +566,7 @@ Env::getDelimitedStringV1RawOrV2Quoted(MyString *result,MyString *error_msg) con
 }
 
 bool
-Env::getDelimitedStringV2Raw(MyString *result,MyString *error_msg,bool mark_v2) const
+Env::getDelimitedStringV2Raw(MyString *result,MyString * /*error_msg*/, bool mark_v2) const
 {
 	MyString var, val;
 	SimpleList<MyString> env_list;
