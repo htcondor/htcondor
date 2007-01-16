@@ -58,7 +58,7 @@ private:
 	int status;
 	int stat_errno;
 	int	fd;
-	const char *path;
+	char *path;
 };
 
 

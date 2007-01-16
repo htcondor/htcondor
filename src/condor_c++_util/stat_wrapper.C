@@ -35,24 +35,24 @@ extern "C" {
 }
 #endif
 
-StatWrapper::StatWrapper( const char *path )
+StatWrapper::StatWrapper( const char *path_arg )
 {
-	this->path = strdup( path );
+	this->path = strdup( path_arg );
 	this->fd = -1;
 	DoStat( this->path );
 }
 
-StatWrapper::StatWrapper( int fd )
+StatWrapper::StatWrapper( int fd_arg )
 {
 	this->path = NULL;
-	this->fd = fd;
+	this->fd = fd_arg;
 	DoStat( fd );
 }
 
 StatWrapper::~StatWrapper( void )
 {
 	if ( path ) {
-		free ( (void*) path );
+		free ( path );
 		path = NULL;
 	}
 }
@@ -68,7 +68,7 @@ StatWrapper::Retry( void )
 }
 
 int
-StatWrapper::DoStat( const char *path )
+StatWrapper::DoStat( const char *path_arg )
 {
 	int lstat_rc;
 	int lstat_errno;
@@ -89,10 +89,10 @@ StatWrapper::DoStat( const char *path )
 #	define LSTAT_FUNC lstat
 #endif
 
-	status = ::STAT_FUNC( path, &stat_buf );
+	status = ::STAT_FUNC( path_arg, &stat_buf );
 	stat_errno = errno;
 #if !defined(WIN32)
-	lstat_rc = ::LSTAT_FUNC( path, &lstat_buf );
+	lstat_rc = ::LSTAT_FUNC( path_arg, &lstat_buf );
 	lstat_errno = errno;
 #else
 	// Windows doesn't have lstat, so just copy the stat_buf
@@ -110,17 +110,17 @@ StatWrapper::DoStat( const char *path )
 }
 
 int
-StatWrapper::DoStat( int fd )
+StatWrapper::DoStat( int fd_arg )
 {
 #if HAVE_STAT64
 	name = "fstat64";
-	status = ::fstat64( fd, &stat_buf );
+	status = ::fstat64( fd_arg, &stat_buf );
 #elif HAVE__STATI64
 	name = "_fstati64";
-	status = ::_fstati64( fd, &stat_buf );
+	status = ::_fstati64( fd_arg, &stat_buf );
 #else
 	name = "fstat";
-	status = ::fstat( fd, &stat_buf );
+	status = ::fstat( fd_arg, &stat_buf );
 #endif
 
 	stat_errno = errno;

@@ -56,7 +56,7 @@ readline(int fd, char *buf)
 
 
 static
-int open_http( const char *name, int flags, size_t n_bytes )
+int open_http( const char *name, int flags, size_t  /*n_bytes*/ )
 {
 	struct sockaddr_in	sin;
 	int		sock_fd;
