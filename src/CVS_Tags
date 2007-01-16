@@ -1,3 +1,10 @@
+01/16/07 V6_9-GCB-2-{root,branch}
+  Branched off of BUILD-V6_9-trunk-2007-1-16.  Temporary branch
+  for GCB work.  Until the GCB external is updated, this branch
+  won't build.  We're not yet updating the GCB external because
+  more changes to GCB may be necessary.  This should be a
+  relatively short lived branch.
+
 01/12/07 V6_9-quillpp-6-{root,branch}
   The start of the 6th development branch for quill++. The root of this
   branch is the same as V6_9_1-root
