@@ -352,9 +352,9 @@ void writeSubmitFile(/* const */ SubmitDagOptions &opts)
     fprintf(pSubFile, "error\t\t= %s\n", opts.strLibLog.Value());
     fprintf(pSubFile, "log\t\t= %s\n", opts.strSchedLog.Value());
     fprintf(pSubFile, "remove_kill_sig\t= SIGUSR1\n" );
-		// ensure DAGMan is automatically requeued by the schedd if it
-		// exits abnormally or is killed (e.g., during a reboot)
-    fprintf(pSubFile, "on_exit_remove\t= ( ExitSignal == 11 || (ExitCode >=0 && ExitCode <= 2))\n" );
+    fprintf(pSubFile, "#ensure DAGMan is automatically requeued by the schedd if it\n");
+    fprintf(pSubFile, "#exits abnormally or is killed (e.g., during a reboot)\n");
+    fprintf(pSubFile, "on_exit_remove\t= ( ExitSignal =?= 11 || (ExitCode =!= UNDEFINED && ExitCode >=0 && ExitCode <= 2))\n" );
     fprintf(pSubFile, "copy_to_spool\t= False\n" );
 
 	ArgList args;
