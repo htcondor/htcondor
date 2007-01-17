@@ -68,6 +68,10 @@ to be unable to open their standard output or standard error, if
 queue unknown when submitting its setup job to GRAM, leading to
 failures.
 
+\item The \Attr{OnExitRemove} expression generated for DAGMan by
+\Condor{submit\_dag} evaluated to UNDEFINED for some values of
+\Attr{ExitCode}, causing \Condor{dagman} to go on hold.
+
 \end{itemize}
 
 \noindent Known Bugs:
