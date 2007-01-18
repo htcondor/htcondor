@@ -82,7 +82,8 @@ print "make dag result is <<$makeresult>>\n";
 
 $cmd = "$dagnm";
 $testname = 'Condor submit dag - stork transfer test';
-$dagman_args = "-v -storklog `condor_config_val LOG`/Stork.user_log";
+#$dagman_args = "-v -storklog `condor_config_val LOG`/Stork.user_log";
+$dagman_args = "-v ";
 
 print "Callling ./x_runstorkdag.pl\n";
 $now = getcwd();
