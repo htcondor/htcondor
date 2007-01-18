@@ -8,6 +8,12 @@
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
 
+01/18/07 pr777-{root,branch}
+  Branch off of the trunk for fixing Gnats PR 777 (better ways of 
+  specifying config options for DAGs).  I guess it should really be
+  V6_9-pr777-{root,branch}, but the branching doc doesn't seem super-
+  clear about branching from the trunk.
+
 01/10/07 V6_9_1-root and V6_9_1-branch
    A branch for the 6.9.1 manual, created from
    V6_9_1-root on the trunk for doc.
