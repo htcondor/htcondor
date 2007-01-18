@@ -1052,9 +1052,9 @@ Directory::Recursive_Chown(const char *username, const char *domain) {
 // The rest of the functions in this file are global functions and can
 // be used with or without a Directory or StatInfo object.
 
+#ifdef WIN32
 bool 
 recursive_chown(const char *path, const char *username, const char *domain) {
-#ifdef WIN32
 	// WINDOWS
 	
 	// On Windows, we really just want an ACL that gives us Full control.
@@ -1073,11 +1073,17 @@ recursive_chown(const char *path, const char *username, const char *domain) {
 	
 	return recursive_chown_win32(path, &po);
 
+}
+
 #else
+
+bool 
+recursive_chown(const char *, const char *, const char *) {
 	// UNIX - needs implementation.
 	return false;
-#endif
 }
+
+#endif
 
 #ifdef WIN32
 
