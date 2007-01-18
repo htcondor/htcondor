@@ -1,3 +1,9 @@
+01/18/07 pr777-{root,branch}
+  Branch off of the trunk for fixing Gnats PR 777 (better ways of
+  specifying config options for DAGs).  I guess it should really be
+  V6_9-pr777-{root,branch}, but the branching doc doesn't seem super-
+  clear about branching from the trunk.
+
 01/16/07 V6_9-GCB-2-{root,branch}
   Branched off of BUILD-V6_9-trunk-2007-1-16.  Temporary branch
   for GCB work.  Until the GCB external is updated, this branch
