@@ -2249,7 +2249,7 @@ These macros control the \Condor{master}.
 \item[\Macro{MASTER\_BACKOFF\_CONSTANT} and
   \Macro{MASTER\_<name>\_BACKOFF\_CONSTANT}]
   \label{param:MasterBackoffConstant}
-  When a daemon crashs, \Condor{master} uses an exponential back off
+  When a daemon crashes, \Condor{master} uses an exponential back off
   delay before restarting it; see the discussion at the end of this
   section for a detailed discussion on how these parameters work together.
   These settings define the constant value of the expression used to
@@ -5454,6 +5454,23 @@ you may also want to set \MacroNI{DAGMAN\_RETRY\_SUBMIT\_FIRST} and
 \Macro{DAGMAN\_RETRY\_NODE\_FIRST} to \Expr{True}.
 If not defined, \MacroNI{DAGMAN\_SUBMIT\_DEPTH\_FIRST} defaults to
 \Expr{false}.
+
+\item[\Macro{DAGMAN\_ON\_EXIT\_REMOVE}]
+\label{param:DAGManOnExitRemove}
+The \Attr{OnExitRemove} expression put into the \Condor{dagman} submit
+file by \Condor{submit\_dag}.
+The default expression is designed to ensure that \Condor{dagman} is
+automatically re-queued by the schedd if it exits abnormally or is
+killed (e.g., during a reboot).  If this results in \Condor{dagman}
+staying in the queue when it should exit, you may want to change
+to a less restrictive expression, for example:
+\begin{verbatim}
+(ExitBySignal == false || ExitSignal =!= 9)
+\end{verbatim}
+If not defined, \MacroNI{DAGMAN\_ON\_EXIT\_REMOVE} defaults to
+\begin{verbatim}
+( ExitSignal =?= 11 || (ExitCode =!= UNDEFINED && ExitCode >=0 && ExitCode <= 2))
+\end{verbatim}
 
 \end{description}
 
