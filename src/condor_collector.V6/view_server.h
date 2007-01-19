@@ -53,7 +53,7 @@ typedef enum {
 struct GeneralRecord {
 	float Data[VIEW_STATE_MAX];
 	GeneralRecord() {
-		for( int i=0; i<(int)VIEW_STATE_MAX_OFFSET; i++ ) {
+		for( int i=0; i<(int)VIEW_STATE_MAX; i++ ) {
 			Data[i] = 0.0;
 		}
 	};
