@@ -72,6 +72,10 @@ failures.
 \Condor{submit\_dag} evaluated to UNDEFINED for some values of
 \Attr{ExitCode}, causing \Condor{dagman} to go on hold.
 
+\item Garbage numbers (i.e. random bits from memory) were sometimes
+being written to the pool history file in the field representing the
+backfill state.
+
 \end{itemize}
 
 \noindent Known Bugs:
