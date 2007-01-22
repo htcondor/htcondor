@@ -59,6 +59,11 @@ attribute was not found.
 
 \begin{itemize}
 
+\item Fixed a bug in \Condor{q} that only happened when running 
+with a Quill database and using the long (-l) option.  The bug was 
+introduced in 6.8.3.  The bug truncated the output of \Condor{q}, and
+only displayed some of the job attributes.
+
 \item Fixed a bug in \Condor{submit} that caused standard universe jobs
 to be unable to open their standard output or standard error, if
 \SubmitCmd{should\_transfer\_files} is \SubmitCmd{YES} or 
