@@ -2252,16 +2252,6 @@ show_queue( char* v1, char* v2, char* v3, char* v4, bool useDB )
 			}
 		}
 
-			// collapse all the ad chaining.
-			// we do this to fix issues with duplicate ad attributes
-			// appearing when doing condor_q -l with quill, etc.
-		jobs.Open();
-		while( ( job = jobs.Next() ) ) {
-				// Deep copy; do not delete cluster ad!
-			job->ChainCollapse(true);	
-		}
-		jobs.Close();
-		
 			// initialize counters
 		malformed = 0; idle = 0; running = 0; unexpanded = 0, held = 0;
 		
