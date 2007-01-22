@@ -208,6 +208,10 @@ class JobQueueDBManager : public Service
 		//! on a timely basis
 	int             purgeOldHistoryRows();
 
+		//! After the history purge, we need to reindex all the
+		//! tables.
+	int             reindexTables();
+
 		//! split key into cid and pid
 	JobIdType	    getProcClusterIds(const char* key, 
 						char* cid, 
@@ -258,6 +262,8 @@ class JobQueueDBManager : public Service
 
 	int	pollingTimeId;		//!< timer handler id of pollingTime function
 	int	pollingPeriod;		//!< polling time period in seconds
+
+	int reindexTimeId; 		//!< timer handler id for reindex tables
 
 	char*	multi_sql_str;		//!< buffer for SQL
 

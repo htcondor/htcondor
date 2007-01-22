@@ -48,6 +48,7 @@ JobQueueDBManager::JobQueueDBManager()
 {
 	pollingTimeId = -1;
 	purgeHistoryTimeId = -1;
+	reindexTimeId = -1;
 
 	totalSqlProcessed = 0;
 	lastBatchSqlProcessed = 0;
@@ -553,6 +554,7 @@ JobQueueDBManager::purgeOldHistoryRows()
 	int		i;
 	char 	sql_str[sqlNum][256];
 
+	dprintf(D_ALWAYS, "Starting purge of old History rows\n");
 	sprintf(sql_str[0],
 			"DELETE FROM History_Vertical WHERE cid IN (SELECT cid FROM "
 			"History_Horizontal WHERE \"EnteredHistoryTable\" < "
@@ -606,9 +608,59 @@ JobQueueDBManager::purgeOldHistoryRows()
 		}
 		disconnectDB(NOT_IN_XACT);
 	}
+
+	dprintf(D_ALWAYS, "Finished purge of old History rows\n");
+
+	daemonCore->Reset_Timer(reindexTimeId, 5);
 	return SUCCESS;
 }
 
+/*! After we purge history, and optionally vacuum, postgres
+ *  sometimes needs the history table reindexed.
+ *  This can take some time, so do it in a separate handler from
+ *  the above deletion, so quill is more responsive
+ */
+int
+JobQueueDBManager::reindexTables()
+{
+	const int		sqlNum = 6;
+	int		i;
+	char 	*sql_str[sqlNum];
+
+	// Skip reindexing iff QUILL_SHOULD_REINDEX is false
+	if (param_boolean("QUILL_SHOULD_REINDEX",true) == false) {
+		return SUCCESS;
+	}
+
+	sql_str[0] = "REINDEX table history_horizontal;";
+	sql_str[1] = "REINDEX table history_vertical;";
+	sql_str[2] = "REINDEX table clusterads_Num;";
+	sql_str[3] = "REINDEX table clusterads_Str;";
+	sql_str[4] = "REINDEX table procads_Num;";
+	sql_str[5] = "REINDEX table procads_Str;";
+
+	dprintf(D_ALWAYS, "Begin Reindexing postgres tables\n");
+
+	if(connectDB(NOT_IN_XACT) == FAILURE) {
+		displayDBErrorMsg("Reindex tables unable to connect--- ERROR");
+		return FAILURE;
+	}
+
+	for (i = 0; i < 2; i++) {
+		if (jqDatabase->execCommand(sql_str[i]) == FAILURE) {
+			displayDBErrorMsg("Reindex tables --- ERROR");
+			disconnectDB(NOT_IN_XACT);
+			return FAILURE; 
+		}
+	}
+
+	disconnectDB(NOT_IN_XACT);
+	dprintf(D_ALWAYS, "Finish Reindexing postgres tables\n");
+
+	// Need to reset the timer to keep it alive
+	daemonCore->Reset_Timer(reindexTimeId, 3600 * historyCleaningInterval); 
+	return SUCCESS;
+}
 
 /*! connect to DBMS
  *  \return the result status
@@ -2514,6 +2566,11 @@ JobQueueDBManager::registerTimers()
 		purgeHistoryTimeId = -1;
 	}
 
+	if (reindexTimeId >= 0) {
+		daemonCore->Cancel_Timer(reindexTimeId);
+		reindexTimeId = -1;
+	}
+
 		// register timer handlers
 	pollingTimeId = daemonCore->Register_Timer(
 								  0, 
@@ -2523,11 +2580,15 @@ JobQueueDBManager::registerTimers()
 		//historyCleaningInterval is specified in units of hours so
 		//we multiply it by 3600 to get the # of seconds 
 	purgeHistoryTimeId = daemonCore->Register_Timer(
-						   historyCleaningInterval*3600, 
-						   historyCleaningInterval*3600,
+						   5, 
+						   historyCleaningInterval *3600,
 						   (Eventcpp)&JobQueueDBManager::purgeOldHistoryRows, 
 						   "JobQueueDBManager::purgeOldHistoryRows", 
 						   this);
+	reindexTimeId = daemonCore->Register_Timer(
+						   10,
+								  (Eventcpp)&JobQueueDBManager::reindexTables, 
+								  "JobQueueDBManager::reindexTables", this);
 }
 
 
