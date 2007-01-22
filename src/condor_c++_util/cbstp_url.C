@@ -26,8 +26,8 @@
 #include "internet.h"
 #include "condor_debug.h"
 
-int condor_bytes_stream_open_ckpt_file( const char *name, int flags, 
-									   size_t n_bytes )
+int condor_bytes_stream_open_ckpt_file( const char *name, int  /*flags*/, 
+									   size_t /*n_bytes*/ )
 {
 	struct sockaddr_in	sin;
 	int		sock_fd;
