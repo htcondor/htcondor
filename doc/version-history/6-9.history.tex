@@ -50,6 +50,11 @@ until one is working. This waiting can be disabled by setting
 If the chosen broker fails and recovery is not possible or another broker
 is available, the \Condor{master} will restart all of the daemons.
 
+\item When using GCB, communications between parent and child
+Condor daemons on the same host no longer use the GCB broker.
+This improves scalability and also allows a single host to
+continue functioning if the GCB broker is unavailable.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
