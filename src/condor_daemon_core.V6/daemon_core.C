@@ -29,8 +29,10 @@
 
 #include "condor_common.h"
 #include "stdsoap2.h"
+#include "condor_socket_types.h"
 
 #if HAVE_EXT_GCB
+#include "GCB.h"
 extern "C" {
 void Generic_stop_logging();
 }
@@ -818,23 +820,12 @@ int DaemonCore::InfoCommandPort()
 // change on you.  Plus, realize static buffers aren't exactly thread safe!
 char * DaemonCore::InfoCommandSinfulString(int pid)
 {
-	static char *myown_sinful_string = NULL;
 	static char somepid_sinful_string[28];
 
 	// if pid is -1, we want info on our own process, else we want info
 	// on a process created with Create_Process().
 	if ( pid == -1 ) {
-		if ( initial_command_sock == -1 ) {
-			// there is no command sock!
-			return NULL;
-		}
-
-		if ( myown_sinful_string == NULL ) {
-			myown_sinful_string = strdup(
-				sock_to_string( (*sockTable)[initial_command_sock].sockd ) );
-		}
-
-		return myown_sinful_string;
+		return InfoCommandSinfulStringMyself(false);
 	} else {
 		PidEntry *pidinfo = NULL;
 		if ((pidTable->lookup(pid, pidinfo) < 0)) {
@@ -847,8 +838,45 @@ char * DaemonCore::InfoCommandSinfulString(int pid)
 		}
 		strncpy(somepid_sinful_string,pidinfo->sinful_string,
 			sizeof(somepid_sinful_string) );
+		somepid_sinful_string[sizeof(somepid_sinful_string)-1] = 0; // Stupid strncpy
 		return somepid_sinful_string;
 	}
+}
+
+
+// NOTE: InfoCommandSinfulStringMyself always returns a pointer to a _static_ buffer!
+// This means you'd better copy or strdup the result if you expect it to never
+// change on you.  Plus, realize static buffers aren't exactly thread safe!
+char * DaemonCore::InfoCommandSinfulStringMyself(bool noGCB)
+{
+	static char * sinful_gcb_yes = NULL;
+	static char * sinful_gcb_no = NULL;
+
+	if ( initial_command_sock == -1 ) {
+		// there is no command sock!
+		return NULL;
+	}
+
+#	if HAVE_EXT_GCB
+		if( noGCB ) {
+			if( sinful_gcb_no == NULL ) {
+				struct sockaddr_in addr;
+				SOCKET_LENGTH_TYPE addr_len = sizeof(addr);
+				SOCKET sockd = (*sockTable)[initial_command_sock].sockd;
+				if( GCB_real_getsockname(sockd, (struct sockaddr *)&addr, &addr_len) < 0 ) {
+					return "";
+				}
+				sinful_gcb_no = strdup( sin_to_string( &addr ) );
+			}
+			return sinful_gcb_no;
+		}
+#	endif
+
+	if( sinful_gcb_yes == NULL ) {
+		sinful_gcb_yes = strdup(
+			sock_to_string( (*sockTable)[initial_command_sock].sockd ) );
+	}
+	return sinful_gcb_yes;
 }
 
 // Lookup the environment id set for a particular pid, or if -1 then the
@@ -5408,7 +5436,11 @@ int DaemonCore::Create_Process(
 
 	inheritbuf.sprintf("%lu ",(unsigned long)mypid);
 
-	inheritbuf += InfoCommandSinfulString();
+		// true = Give me a real local address, circumventing
+		//  GCB's trickery if present.  As this address is
+		//  intended for my own children on the same machine,
+		//  this should be safe.
+	inheritbuf += InfoCommandSinfulStringMyself(true);
 
 	if ( sock_inherit_list ) {
 		inherit_handles = TRUE;
@@ -5530,7 +5562,7 @@ int DaemonCore::Create_Process(
         inheritSockFds[numInheritSockFds++] = ssock.get_file_desc();
 	}
 	inheritbuf += " 0";
-	
+
 	/* this will be the pidfamily ancestor identification information */
 	time_t time_of_fork;
 	unsigned int mii;

@@ -302,6 +302,21 @@ class DaemonCore : public Service
         @return A pointer into a <b>static buffer</b>, or NULL on error */
     char* InfoCommandSinfulString (int pid = -1);
 
+
+    /** Returns the Sinful String <host:port> of the DaemonCore
+		command socket of this process
+		@param noGCB 
+			- If false, return whatever getpeername provides,
+		       which may be a white lie if GCB is involved.
+			- If true, return the "real" local address, no GCB
+			   deception allowed.  Note that the true (no GCB deception)
+			   result should not be passed to another machine; doing
+			   so defeats the entire point of GCB.  This functionality
+			   is provided only for passing to other processes on the
+			   same machine as an optimization.
+        @return A pointer into a <b>static buffer</b>, or NULL on error */
+	char * InfoCommandSinfulStringMyself(bool noGCB);
+
 	/** Returns a pointer to the penvid passed in if successful
 		in determining the environment id for the pid, or NULL if unable
 		to determine.
