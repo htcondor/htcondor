@@ -81,6 +81,13 @@ failures.
 being written to the pool history file in the field representing the
 backfill state.
 
+% Gnats PR 798
+\item \Condor{submit\_dag} now generates a submit file
+(\File{.condor.sub}) for \Condor{dagman} that sends \File{stdout} and
+\File{stderr} to separate files.  (This has always been recommended,
+and recent versions of Condor cause \File{stdout} and \File{stderr} to
+overwrite each other if they are directed to the same file.)
+
 \end{itemize}
 
 \noindent Known Bugs:
