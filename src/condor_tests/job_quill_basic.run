@@ -19,28 +19,61 @@ print "Dummyhost was $dummyhost and really running on $currenthost\n";
 
 $mypid = $$;
 $mysaveme = $corename . ".saveme";
+
 $myquillname = "pgsql" . $mypid;
 $myfullpgsqlloc = $topdir . "/" . $myquillname;
 $myfullpgsqlinstalllog = $topdir . "/" . $myquillname . "/postgress_install.log" ;
 $mypgsqltarfile = "x_quill_postgresql-8.1.4.tar.gz";
 $mypgsqlversion = "postgresql-8.1.4";
+$myextralibs = $topdir . "/libs/lib";
+
+$myrdlnname = "rdln" . $mypid;
+$myfullrdlnloc = $topdir . "/libs";
+$myfullrdlninstalllog = $topdir . "/" . $myrdlnname . "/rdln.log" ;
+$myrdlntarfile = "x_quill_readline-5.2.tar.gz";
+$myrdlnversion = "readline-5.2";
+
 $mycondorconfigadd = "x_quill_config_postsrc";
 my $myresult;
 
+$topdir = getcwd();
+$installdir = $topdir . "/perllib";
+$ENV{PERL5LIB} = $installdir . "/lib/site_perl" . ":" . $installdir . "/lib/perl5/site_perl" . ":" . $installdir . "/lib64/perl5/site_perl" . ":" . $installdir . "/lib64/site_perl" . ":" . $installdir . "/Library/Perl";
+print "Adjusted Perl Library search to $ENV{PERL5LIB}\n";
 my $newpath = $ENV{PATH} = "$myfullpgsqlloc" . "/bin:" . $ENV{PATH};
 
 print "NEW Path is now <<$newpath>>\n";
 
+chdir("$topdir");
+$perlinstall = system("./x_quill_buildperlmods.pl");
+print "Perl module install result was $perlinstall\n";
+
+system("mkdir $myfullrdlnloc");
+
+$rdlnresult = system("./x_quill_readlineinstall.pl $myfullrdlnloc $myfullrdlninstalllog $myrdlntarfile $myrdlnversion ");
+print "Readline install result was $rdlninstall\n";
+
+chdir("$topdir");
 my $pginstall = 0;
 system("mkdir $myquillname");
 if( -d $myquillname ) {
 	system("cp $supwfile $myquillname");
-	$pgresult = system("./x_quill_pgsqlinstall.pl $myfullpgsqlloc $myfullpgsqlinstalllog $mypgsqltarfile $mypgsqlversion $mycondorconfigadd");
+	$pgresult = system("./x_quill_pgsqlinstall.pl $myfullpgsqlloc $myfullpgsqlinstalllog $mypgsqltarfile $mypgsqlversion $mycondorconfigadd $myextralibs");
 	print "Result of Quill Postgresssql db install job is  $pgresult\n";
+	if($pgresult != 0) {
+		die "Could not start POSTGRESS\n";
+	}
 	system("cp -r $myfullpgsqlinstalllog $mysaveme");
 } else {
 	die "Could not create Quill postgress db install location\n";;
 }
+
+if($pgresult != 0) {
+	#die "Failed to build and install Postgress\n";
+}
+
+
+chdir("$topdir");
 
 system("mkdir $mysaveme");
 
@@ -77,11 +110,9 @@ print "Command to create quill password file is <<<$cmdforsys>>>\n";
 system("$cmdforsys");
 print "Set config to $quillconfig\n";
 
-exit;
-
 my $pcresult = 0;
-#$pcresult = system("./job_quill_basic.pl $mysubmitnm");
-#print "Result of job_quill_basic job is  $pcresult\n";
+$pcresult = system("./job_quill_basic.pl $mysubmitnm");
+print "Result of job_quill_basic job is  $pcresult\n";
 
 $result = system("./x_quill_pgsqlstop.pl $myfullpgsqlloc ");
 print "Result of Quill Postgresssql db stop job is  $result\n";
@@ -104,11 +135,6 @@ if( -e "$mysubmitnmlog" )
 	system("cp $mysubmitnmlog $mycorenmlog");
 }
 
-
-if( $pcresult != 0 )
-{
-	exit(1);
-}
 
 my @adarray;
 my $status = 1;

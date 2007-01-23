@@ -9,6 +9,7 @@ my $installlog = $ARGV[1];
 my $tarfile = $ARGV[2];
 my $pgsqlversion = $ARGV[3];
 my $condorconfigadd = $ARGV[4];
+my $morelibs = $ARGV[5];
 
 my $startpostmasterport = 5432;
 my $postmasterinc = int(rand(100));
@@ -42,20 +43,34 @@ my $mynewpgfile = "../postgres-data/pg_hba.new";
 
 
 chdir("$prefix");
-system("tar -zxvf ../$tarfile");
+$dotar = system("tar -zxvf ../$tarfile");
+if($dotar != 0) {
+	die "TAR EXTRACTION OF $tarfile FAILED\n";
+}
 chdir("$pgsqlversion");
-system("./configure --prefix=$prefix");
-system("make");
-system("make install");
+#$doconfigure = system("./configure --prefix=$prefix --libdir=$morelibs");
+$doconfigure = system("./configure --prefix=$prefix --without-readlines");
+if($doconfigure != 0) {
+	die "Configure failed\n";
+}
+$domake = system("make");
+if($domake != 0) {
+	die "Make failed\n";
+}
+$doinstall = system("make install");
+if($doinstall != 0) {
+	die "Install failed\n";
+}
 system("mkdir $prefix/postgres-data");
 
 print "Create db\n";
 #system("$prefix/bin/initdb -D $prefix/postgres-data --auth=password --pwfile=../../x_job_quill_supw") ;
-system("$prefix/bin/initdb -D $prefix/postgres-data") ;
+$initdb = system("$prefix/bin/initdb -D $prefix/postgres-data") ;
+if($initdb != 0) {
+	die "Initdb failed\n";
+}
 
 # customize postgress before starting it
-
-system("pwd;ls;pwd");
 
 open(OLD,"<$mypostgresqlconf") || die "Can not open original conf file: $mypostgresqlconf($!)\n";
 open(NEW,">$mynewpostgresqlconf") || die "Can not open original conf file: $mynewpostgresqlconf($!)\n";
@@ -63,18 +78,22 @@ open(NEW,">$mynewpostgresqlconf") || die "Can not open original conf file: $myne
 while(<OLD>) {
 	print NEW "$_";
 }
+
 open(EXTRA,"<$myquillchanges") || die "Can not open quill conf file: $myquillchanges($!)\n";
 # add quill changes
 while(<EXTRA>) {
 	print NEW "$_";
 }
+
 print  NEW "port = 5432\n";
 close(NEW);
 close(OLD);
 close(EXTRA);
 
-system("rm -f $mypostgresqlconf");
-system("cp $mynewpostgresqlconf $mypostgresqlconf");
+$mvconf = system("mv $mynewpostgresqlconf $mypostgresqlconf");
+if($mvconf != 0) {
+	die "INstalling modified configuration file <<$mypostgresqlconf>> failed\n";
+}
 
 open(OLD,"<$mypgfile") || die "Can not open original conf file: $mypgfile($!)\n";
 open(NEW,">$mynewpgfile") || die "Can not open original conf file: $mynewpgfile($!)\n";
@@ -88,7 +107,10 @@ print NEW "host all quillwriter 0.0.0.0 0.0.0.0 password\n";
 close(NEW);
 
 system("rm -f $mypgfile");
-system("cp $mynewpgfile $mypgfile");
+$mmvconf = system("cp $mynewpgfile $mypgfile");
+if($mvconf != 0) {
+	die "INstalling modified configuration file <<$mypgfile>> failed\n";
+}
 
 my $dbup = "no";
 my $trylimit = 1;
@@ -114,14 +136,17 @@ while (( $dbup ne "yes") && ($trylimit <= 10) ) {
 		close(OLD);
 		close(NEW);
 		system("rm -f $mypostgresqlconf");
-		system("cp $mynewpostgresqlconf $mypostgresqlconf");
+		$mvconf = system("cp $mynewpostgresqlconf $mypostgresqlconf");
+		if($mvconf != 0) {
+			die "INstalling modified configuration file <<$mypostgresqlconf>> failed\n";
+		}
 	} else {
 		$dbup = "yes";
 	}
 }
 
 if($trylimit > 10) {
-	exit(0);
+	die	"Tried 10 times to find a good port!!!!\n";;
 } else {
 	open(OLD,"<$condorchanges") || die "Can not open original conf file: $mypostgresqlconf($!)\n";
 	open(NEW,">$newcondorchanges") || die "Can not open original conf file: $mynewpostgresqlconf($!)\n";
@@ -136,7 +161,10 @@ if($trylimit > 10) {
 	close(OLD);
 	close(NEW);
 	system("rm -f $condorchanges");
-	system("cp $newcondorchanges $condorchanges");
+	$mvconf = system("cp $newcondorchanges $condorchanges");
+	if($mvconf != 0) {
+		die "INstalling modified configuration file <<$condorchanges>> failed\n";
+	}
 }
 
 # add quillreader and quillwriter
@@ -182,9 +210,12 @@ $command->soft_close();
 
 #system("$prefix/bin/createuser quillwriter --createdb --no-adduser --pwprompt");
 
-system("$prefix/bin/createdb --port $startpostmasterport test");
+$docreatedb = system("$prefix/bin/createdb --port $startpostmasterport test");
+if($docreatedb != 0) {
+	die "Failed to create test db\n";
+}
 
 #system("$prefix/bin/psql test");
 
 
-exit($startpostmasterport);
+exit(0);
