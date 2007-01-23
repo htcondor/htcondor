@@ -321,7 +321,7 @@ MapFile::PerformMapping(Regex & regex,
 
 void
 MapFile::PerformSubstitution(ExtArray<MyString> & groups,
-							 const MyString input,
+							 const MyString /*input*/,
 							 const MyString pattern,
 							 MyString & output)
 {
