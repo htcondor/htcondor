@@ -553,6 +553,16 @@ protected:
 		*/
 	bool readLocalClassAd( const char* subsys );
 
+		/** Initialize any daemon values we can from the given classad.
+			This function should be called whenever we obtain a daemon ad
+			and want to extract information about the daemon from it.
+			@param ad The ClassAd you want to extract daemon information
+			    from
+			@return true if we found everything in the ad, false if not
+		 */
+	bool getInfoFromAd( const ClassAd* ad );
+	bool getInfoFromAd( counted_ptr<class ClassAd>& ad );
+
 		/** Initialize one of our values from the given ClassAd* and
 			attribute name.  This is shared code when we query the
 			collector to locate a daemon and get the address, version

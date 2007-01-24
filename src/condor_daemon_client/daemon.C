@@ -137,49 +137,7 @@ Daemon::Daemon( ClassAd* ad, daemon_t type, const char* pool )
 		_pool = NULL;
 	}
 
-		// construct the appropriate IP_ADDR attribute
-	MyString addr_attr = _subsys;
-	addr_attr += "IpAddr";
-
-	char *tmp = NULL;
-	ad->LookupString( ATTR_NAME, &tmp );
-	if( tmp ) {
-		_name = strnewp( tmp );
-		free( tmp );
-		tmp = NULL;
-	} 
-
-	ad->LookupString( addr_attr.GetCStr(), &tmp );
-	if( tmp ) {
-		_addr = strnewp( tmp );
-		free( tmp );
-		tmp = NULL;
-		_tried_locate = true;		
-	} 
-
-	ad->LookupString( ATTR_MACHINE, &tmp );
-	if( tmp ) {
-		_full_hostname = strnewp( tmp );
-		free( tmp );
-		tmp = NULL;
-		initHostnameFromFull();
-		_tried_init_hostname = false;
-	} 
-
-	ad->LookupString( ATTR_VERSION, &tmp );
-	if( tmp ) {
-		_version = strnewp( tmp );
-		free( tmp );
-		tmp = NULL;
-		_tried_init_version = true;
-	} 
-
-	ad->LookupString( ATTR_PLATFORM, &tmp );
-	if( tmp ) {
-		_platform = strnewp( tmp );
-		free( tmp );
-		tmp = NULL;
-	} 
+	getInfoFromAd( ad );
 
 	dprintf( D_HOSTNAME, "New Daemon obj (%s) name: \"%s\", pool: "
 			 "\"%s\", addr: \"%s\"\n", daemonString(_type), 
@@ -1359,15 +1317,9 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype, bool query_collector)
 			return false; 
 		}
 
-		// construct the IP_ADDR attribute
-		buf.sprintf( "%sIpAddr", subsys );
-		if( ! initStringFromAd(scan, buf.Value(), &_addr) ) {
+		if ( ! getInfoFromAd( scan ) ) {
 			return false;
 		}
-			// The version and platfrom aren't critical, so don't
-			// return failure if we can't find them...
-		initStringFromAd( scan, ATTR_VERSION, &_version );
-		initStringFromAd( scan, ATTR_PLATFORM, &_platform );
 	}
 
 		// Now that we have the sinful string, fill in the port. 
@@ -1844,26 +1796,109 @@ Daemon::readLocalClassAd( const char* subsys )
 		return false;	// did that just leak adFromFile?
 	}
 
-	// construct the IP_ADDR attribute
-	buf.sprintf( "%sIpAddr", subsys );
-	if( initStringFromAd(smart_ad_ptr, buf.Value(), &_addr) ) {
-		_tried_locate = true;		
-	} else { return false; }
+	return getInfoFromAd( smart_ad_ptr );
+}
 
-	if( initStringFromAd( smart_ad_ptr, ATTR_VERSION, &_version ) ) {
+
+bool 
+Daemon::getInfoFromAd( const ClassAd* ad )
+{
+	MyString buf = "";
+	MyString buf2 = "";
+	MyString addr_attr_name = "";
+	char *our_network_name = NULL;
+		// TODO Which attributes should trigger a failure if we don't find
+		// them in the ad? Just _addr?
+	bool ret_val = true;
+	bool found_addr = false;
+
+		// We look for _name first because we use it, if available, for
+		// error messages if we fail  to find the other attributes.
+	initStringFromAd( ad, ATTR_NAME, &_name );
+
+		// Search for the daemon's address. This can be in one of
+		// several attributes in the classad. Search through the possible
+		// attributes until we find a match.
+		// In the future, _addr may become a list of addresses. In that
+		// case, we'd want to include all possible matches in the list.
+	if ( ad->LookupString( ATTR_PRIVATE_NETWORK_IP_ADDR, buf ) &&
+		 ad->LookupString( ATTR_PRIVATE_NETWORK_NAME, buf2 ) &&
+		 ( our_network_name = param( "PRIVATE_NETWORK_NAME" ) ) ) {
+
+		StringList addr_list( buf.Value(), ", " );
+		StringList network_list( buf2.Value(), "," );
+
+		addr_list.rewind();
+		network_list.rewind();
+		if ( !addr_list.isEmpty() && !network_list.isEmpty() &&
+			 strcmp( network_list.next(), our_network_name ) == 0 ) {
+
+			New_addr( strnewp( addr_list.next() ) );
+			found_addr = true;
+			addr_attr_name = ATTR_PRIVATE_NETWORK_IP_ADDR;
+		}
+	}
+	free( our_network_name );
+
+	if ( !found_addr && ad->LookupString( ATTR_PUBLIC_NETWORK_IP_ADDR, buf ) ) {
+		StringList addr_list( buf.Value(), ", " );
+
+		addr_list.rewind();
+		if ( !addr_list.isEmpty() ) {
+			New_addr( strnewp( addr_list.next() ) );
+			found_addr = true;
+			addr_attr_name = ATTR_PUBLIC_NETWORK_IP_ADDR;
+		}
+	}
+
+	if ( !found_addr ) {
+		// construct the IP_ADDR attribute
+		buf.sprintf( "%sIpAddr", _subsys );
+		if ( ad->LookupString( buf.Value(), buf2 ) ) {
+			New_addr( strnewp( buf2.Value() ) );
+			found_addr = true;
+			addr_attr_name = buf;
+		}
+	}
+
+	if ( found_addr ) {
+		dprintf( D_HOSTNAME, "Found %s in ClassAd, using \"%s\"\n",
+				 addr_attr_name.Value(), _addr );
+		_tried_locate = true;
+	} else {
+		dprintf( D_ALWAYS, "Can't find address in classad for %s %s\n",
+				 daemonString(_type), _name ? _name : "" );
+		buf.sprintf( "Can't find address in classad for %s %s",
+					 daemonString(_type), _name ? _name : "" );
+		newError( CA_LOCATE_FAILED, buf.Value() );
+
+		ret_val = false;
+	}
+
+
+	if( initStringFromAd( ad, ATTR_VERSION, &_version ) ) {
 		_tried_init_version = true;
-	} else { return false; }
+	} else {
+		ret_val = false;
+	}
 
-	initStringFromAd( smart_ad_ptr, ATTR_PLATFORM, &_platform );
+	initStringFromAd( ad, ATTR_PLATFORM, &_platform );
 
-	initStringFromAd( smart_ad_ptr, ATTR_NAME, &_name );
-
-	if( initStringFromAd( smart_ad_ptr, ATTR_MACHINE, &_full_hostname ) ) {
+	if( initStringFromAd( ad, ATTR_MACHINE, &_full_hostname ) ) {
 		initHostnameFromFull();
 		_tried_init_hostname = false;
-	} else { return false; }
+	} else {
+		ret_val = false;
+	}
 
-	return true;
+	return ret_val;
+}
+
+
+bool
+Daemon::getInfoFromAd( counted_ptr<class ClassAd>& ad )
+{
+	return getInfoFromAd( ad.get() );
 }
 
 
@@ -1889,8 +1924,8 @@ Daemon::initStringFromAd( ClassAd* ad, const char* attrname, char** value )
 		delete [] *value;
 	}
 	*value = strnewp(tmp);
-	dprintf( D_HOSTNAME, "Found %s in ClassAd from ClassAd, "
-			 "using \"%s\"\n", attrname, tmp );
+	dprintf( D_HOSTNAME, "Found %s in ClassAd, using \"%s\"\n",
+			 attrname, tmp );
 	free( tmp );
 	tmp = NULL;
 	return true;
