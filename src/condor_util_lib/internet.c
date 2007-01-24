@@ -143,7 +143,9 @@ sock_to_string(SOCKET sockd)
 char const *
 sock_peer_to_string( SOCKET fd, char *buf, size_t buflen, char const *unknown )
 {
+	/* This value is never used.
 	char const *sinful = sock_to_string( fd );
+	*/
 
 	struct sockaddr_in who;
 	SOCKET_LENGTH_TYPE addr_len;
@@ -524,7 +526,7 @@ string_to_ip( const char* addr )
 			ip = sin_addr.s_addr;
 		}
 	} else {
-		EXCEPT( "is_valid_sinful(\"%s\") is true, but can't find ':'" );
+		EXCEPT( "is_valid_sinful(\"%s\") is true, but can't find ':'", addr );
 	}
 	free( sinful );
 	return ip;

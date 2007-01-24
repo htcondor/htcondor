@@ -216,13 +216,13 @@ int pseudo_get_file_info_new( const char *logical_name, char *actual_url )
 	/* The incoming logical name might be a simple, relative, or complete path */
 	/* We need to examine both the full path and the simple name. */
 
-	filename_split( (char*) logical_name, split_dir, split_file );
+	filename_split( logical_name, split_dir, split_file );
 	complete_path( logical_name, full_path );
 
 	/* Any name comparisons must check the logical name, the simple name, and the full path */
 
 	if(Shadow->getJobAd()->LookupString(ATTR_FILE_REMAPS,remap_list) &&
-	  (filename_remap_find( remap_list.Value(), (char*) logical_name, remap ) ||
+	  (filename_remap_find( remap_list.Value(), logical_name, remap ) ||
 	   filename_remap_find( remap_list.Value(), split_file, remap ) ||
 	   filename_remap_find( remap_list.Value(), full_path, remap ))) {
 
@@ -611,7 +611,7 @@ pseudo_ulog( ClassAd *ad )
 			//to be logged as ShadowExceptionEvents, rather than
 			//RemoteErrorEvents.  The result is ugly, but guaranteed to
 			//be compatible with other user-log reading tools.
-			BaseShadow::log_except((char *)critical_error);
+			BaseShadow::log_except(critical_error);
 			event_already_logged = true;
 		}
 	}
@@ -627,7 +627,7 @@ pseudo_ulog( ClassAd *ad )
 	}
 
 	if(put_job_on_hold) {
-		char const *hold_reason = critical_error;
+		hold_reason = critical_error;
 		if(!hold_reason) {
 			hold_reason = "Job put on hold by remote host.";
 		}
@@ -640,7 +640,7 @@ pseudo_ulog( ClassAd *ad )
 		Shadow->exception_already_logged = true;
 
 		//lame: at the time of this writing, EXCEPT does not want const:
-		EXCEPT((char *)critical_error);
+		EXCEPT(critical_error);
 	}
 
 	delete event;

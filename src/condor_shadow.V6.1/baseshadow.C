@@ -1002,7 +1002,7 @@ BaseShadow::checkSwap( void )
 
 // Note: log_except is static
 void
-BaseShadow::log_except(char *msg)
+BaseShadow::log_except(const char *msg)
 {
 	// log shadow exception event
 	ShadowExceptionEvent event;

@@ -2161,7 +2161,7 @@ void DaemonCore::Driver()
 			memset(buf, 0, sizeof(buf) );
 			bool	do_out = true, do_err = true;
 			bool	do_fd1 = true, do_fd2 = true;
-			for ( int i=0;  i<16*1024;  i++ )
+			for ( i=0;  i<16*1024;  i++ )
 			{
 				if ( do_out && fwrite( buf, sizeof(buf), 1, stdout ) != 1 )
 				{
@@ -3500,13 +3500,6 @@ int DaemonCore::HandleReq(Stream *insock)
 
 					// generate a new session
 
-					int    mypid = 0;
-#ifdef WIN32
-					mypid = ::GetCurrentProcessId();
-#else
-					mypid = ::getpid();
-#endif
-
 					// generate a unique ID.
 					MyString tmpStr;
 					tmpStr.sprintf( "%s:%i:%i:%i", my_hostname(), mypid,
@@ -3912,9 +3905,9 @@ int DaemonCore::HandleReq(Stream *insock)
 
 		// grab the user from the socket
         if (is_tcp) {
-            const char *t = ((ReliSock*)stream)->getFullyQualifiedUser();
-			if (t) {
-				strcpy(user, t);
+            const char *u = ((ReliSock*)stream)->getFullyQualifiedUser();
+			if (u) {
+				strcpy(user, u);
 			}
         } else {
 			// user is filled in above, but we should make it part of

@@ -86,6 +86,7 @@ FILE			*setmntent();
 struct mntent	*getmntent();
 char			*strdup();
 
+int
 getmnt( start, buf, bufsize, mode, path )
 int				*start;
 struct fs_data	buf[];
@@ -171,6 +172,7 @@ struct fs_data	*ent;
 
 /*FILE			*setmntent();*/
 
+int
 getmnt( start, buf, bufsize, mode, path )
 int				*start;
 struct fs_data	buf[];

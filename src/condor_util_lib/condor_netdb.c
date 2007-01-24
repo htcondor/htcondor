@@ -26,6 +26,7 @@
 #include "condor_debug.h"
 #include "internet.h"
 #include "condor_socket_types.h"
+#include "condor_netdb.h"
 
 /* SPECIAL NAMES:
  *
@@ -40,7 +41,7 @@
  * we roll our own version for checking NO_DNS. :-(
  */
 static int
-nodns_enabled()
+nodns_enabled( void )
 {
 	int rc = 0;
 	char *value = param( "NO_DNS" );

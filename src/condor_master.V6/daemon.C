@@ -185,7 +185,7 @@ daemon::runs_on_this_host()
 		} else {
 			if (this_host_addr_list == 0) {
 				if (condor_gethostname(hostname, sizeof(hostname)) < 0) {
-					EXCEPT( "gethostname(0x%x,%d)", hostname, 
+					EXCEPT( "gethostname(0x%p,%d)", hostname, 
 						   sizeof(hostname));
 				}
 				if( (hp=condor_gethostbyname(hostname)) == 0 ) {

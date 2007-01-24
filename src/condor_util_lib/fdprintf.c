@@ -32,5 +32,5 @@ int fdprintf (int fd, const char *fmt, ...)
 
 	va_start (pvar, fmt);
 	if ((len = vsprintf (buffer, fmt, pvar)) < 0) return -1;
-	return write (fd, buffer, len);
+	return write (fd, buffer, (size_t)len);
 }

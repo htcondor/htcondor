@@ -250,7 +250,7 @@ class BaseShadow : public Service
     char *getOwner() { return owner; }
 
 		/// Called by EXCEPT handler to log to user log
-	static void log_except(char *msg);
+	static void log_except(const char *msg);
 
 	//set by pseudo_ulog() to suppress "Shadow exception!"
 	bool exception_already_logged;

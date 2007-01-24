@@ -50,7 +50,7 @@ const char TotallyWild[] = "*";
 static int
 compute_perm_hash(const struct in_addr &in_addr, int numBuckets)
 {
-	unsigned int h = *((unsigned int *)&in_addr);
+	const unsigned int h = *((const unsigned int *)&in_addr);
 	return ( h % numBuckets );
 }
 
@@ -718,8 +718,9 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
 
 			// check for matching subnets in ip/mask style
 			char tmpbuf[16];
-			cur_byte = (unsigned char *) &(sin->sin_addr);
-			sprintf(tmpbuf, "%u.%u.%u.%u", cur_byte[0], cur_byte[1], cur_byte[2], cur_byte[3]);
+			const unsigned char *byte_array = (const unsigned char *) &(sin->sin_addr);
+			sprintf(tmpbuf, "%u.%u.%u.%u", byte_array[0], byte_array[1],
+					byte_array[2], byte_array[3]);
 
 			StringList * userList;
 			if ( PermTypeArray[perm]->allow_hosts &&
@@ -757,7 +758,6 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
 			i = 0;
 			while ( thehost ) {
                 MyString     host(thehost);
-                StringList * userList;
                 if ( PermTypeArray[perm]->allow_hosts &&
                      (hoststring = PermTypeArray[perm]->allow_hosts->
                       string_anycase_withwildcard(thehost))) {
