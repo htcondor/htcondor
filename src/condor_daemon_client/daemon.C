@@ -1903,7 +1903,7 @@ Daemon::getInfoFromAd( counted_ptr<class ClassAd>& ad )
 
 
 bool
-Daemon::initStringFromAd( ClassAd* ad, const char* attrname, char** value )
+Daemon::initStringFromAd( const ClassAd* ad, const char* attrname, char** value )
 {
 	if( ! value ) {
 		EXCEPT( "Daemon::initStringFromAd() called with NULL value!" );

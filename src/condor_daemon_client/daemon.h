@@ -577,7 +577,7 @@ protected:
 			@param value_str Pointer to the place to store the result
 			@return true on success, false on failure (can't find attr)
 		*/
-	bool initStringFromAd( ClassAd* ad, const char* attrname,
+	bool initStringFromAd( const ClassAd* ad, const char* attrname,
 						   char** value_str );
 
 	bool initStringFromAd(counted_ptr<class ClassAd>& ad, const char* attrname, 
