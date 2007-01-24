@@ -92,6 +92,10 @@ overwrite each other if they are directed to the same file.)
 The \condor{gridmanager} would create an invalid RSL for these jobs
 and save their output to the wrong location in some cases.
 
+\item \Condor{glidein} now properly escapes glidein tarball URLs that
+contain characters that have special meaning to GRAM RSL. It also turns
+on TCP updates to the collector if they are enabled on the submit machine.
+
 \end{itemize}
 
 \noindent Known Bugs:
