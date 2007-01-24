@@ -322,11 +322,15 @@ _condor_itoa(long quantity, char *out, int base)
 		p = out;
 		while( *p == '0' ) p++;
 		
-			/* no leading zeros */
+			/* If there were no leading zeros, then each byte was translated
+				into 2 ascii characters */
 		if( p == out ) {
-			return sizeof(unsigned long);
+			return sizeof(unsigned long)*2;
 		}		
-		numchars = sizeof(unsigned long) - (p - out);
+		/* if there were leading zeros, then subtract from the total ascii
+			characters that could have been written the amount of ascii
+			characters actually written */
+		numchars = (sizeof(unsigned long)*2) - (p - out);
 		
 			/* strip out the leading zeros */
 		q = out;
