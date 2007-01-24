@@ -43,7 +43,7 @@ public:
 	~HistorySnapshot();
 
 	//! high level method
-	QuillErrCode sendQuery(SQLQuery *, SQLQuery *, bool);
+	QuillErrCode sendQuery(SQLQuery *, SQLQuery *, bool, bool fileformat = false);
 
 	//! used to determine whether result set is empty
 	bool isHistoryEmpty() { return isHistoryEmptyFlag; }
@@ -72,7 +72,7 @@ private:
 	QuillErrCode getNextAd_Hor(AttrList *&ad, SQLQuery *queryver);
 	QuillErrCode printResults(SQLQuery *queryhor, 
 							  SQLQuery *queryver, 
-							  bool longformat);
+							  bool longformat, bool fileformat = false);
 };
 
 #endif
