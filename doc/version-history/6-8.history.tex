@@ -88,6 +88,10 @@ backfill state.
 and recent versions of Condor cause \File{stdout} and \File{stderr} to
 overwrite each other if they are directed to the same file.)
 
+\item Fixed several bugs for grid-type nordugrid jobs.
+The \condor{gridmanager} would create an invalid RSL for these jobs
+and save their output to the wrong location in some cases.
+
 \end{itemize}
 
 \noindent Known Bugs:
