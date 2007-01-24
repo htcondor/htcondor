@@ -73,3 +73,9 @@ UtcTime::difference( UtcTime* other_time )
 	return me - other;
 }
 
+bool
+operator==(const UtcTime &lhs, const UtcTime &rhs) 
+{
+	return ((lhs.seconds() == rhs.seconds()) &&
+			(lhs.microseconds() == rhs.microseconds()) );
+}

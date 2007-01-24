@@ -42,10 +42,10 @@ public:
 	void getTime( void );
 
 		/// Return the last computed epoch time in seconds
-	long seconds( void ) { return sec; };
+	long seconds( void ) const { return sec; };
 
 		/// Return mircosecond field of the last computed epoch time
-	long microseconds( void ) { return usec; };
+	long microseconds( void ) const { return usec; };
 
 		/** How much time elapsed between the two times.  This method
 			subtracts the time of the other UtcTime object we're
@@ -62,6 +62,8 @@ private:
 	long sec;
 	long usec;
 };
+
+bool operator==(const UtcTime &lhs, const UtcTime &rhs);
 
 #endif /* _CONDOR_UTC_TIME_H */
 
