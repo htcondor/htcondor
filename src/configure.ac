@@ -1805,7 +1805,7 @@ AC_DEFINE(HAVE_BOINC,1,[are we compiling support for backfill with BOINC])
 
 # GCB only matters and works if we have GNU ld...
 if test x$_cv_ld_is_gnu = xyes; then
-  CONDOR_EXTERNAL_VERSION([gcb],[1.4.0])
+  CONDOR_EXTERNAL_VERSION([gcb],[1.4.1])
 fi
 
 else
