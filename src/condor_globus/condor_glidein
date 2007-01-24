@@ -163,6 +163,11 @@ sub do_submit() {
 		$GLOBUSENV .= "_condor_SKIP_AUTHENTICATION=$skipauth;";
 	}
 
+	chomp( $usetcp = `$CONFIGVAL UPDATE_COLLECTOR_WITH_TCP 2>/dev/null` );
+	if ( $usetcp ne "" ) {
+		$GLOBUSENV .= "_condor_UPDATE_COLLECTOR_WITH_TCP=$usetcp;";
+	}
+
 	if ( $master_run_time ) {
 		$GLOBUSENV .= "_condor_DaemonStopTime=DaemonStartTime+(${master_run_time}*60);";
 	}
@@ -1220,7 +1225,8 @@ EOF
 	GlobusScheduler = $CONTACT_SETUP
 	$globus_rsl
 	executable = $glidein_remote_setup
-	arguments = $basedir_arg $archdir_arg $arch $localdir_arg $SERVER_URL $force_setup
+    # Manually quote the URL in case it has characters meaningful to RSL
+	arguments = $basedir_arg $archdir_arg $arch $localdir_arg '$SERVER_URL' $force_setup
 	#avoid trouble with scratch directory creation
 	remote_initialdir = /tmp
 	output = $glidein_setup_output
