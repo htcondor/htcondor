@@ -48,7 +48,8 @@ HistorySnapshot::~HistorySnapshot()
 QuillErrCode
 HistorySnapshot::sendQuery(SQLQuery *queryhor, 
 						   SQLQuery *queryver, 
-						   bool longformat)
+						   bool longformat,
+						   bool fileformat)
 {
   QuillErrCode st;
   
@@ -74,7 +75,8 @@ HistorySnapshot::sendQuery(SQLQuery *queryhor,
   
   st = printResults(queryhor, 
 					queryver, 
-					longformat);
+					longformat,
+					fileformat);
   
   if (st != SUCCESS) {
 	  printf("Error while querying the history cursors: %s\n", jqDB->getDBError());
@@ -101,11 +103,14 @@ HistorySnapshot::sendQuery(SQLQuery *queryhor,
 QuillErrCode
 HistorySnapshot::printResults(SQLQuery *queryhor, 
 							  SQLQuery *queryver, 
-							  bool longformat) {
+							  bool longformat, bool fileformat) {
   AttrList *ad = 0;
   QuillErrCode st = SUCCESS;
 
   // initialize index variables
+   
+  off_t offset = 0, last_line = 0;
+
   cur_historyads_hor_index = 0;  	
   cur_historyads_ver_index = 0;
 
@@ -129,7 +134,27 @@ HistorySnapshot::printResults(SQLQuery *queryhor,
           // tuples from vertical which join with a horizontal tuple
 		  if(st != SUCCESS && st != DONE_HISTORY_VER_CURSOR) 
 			  break;
-		  ad->fPrint(stdout); printf("\n"); 
+		  if (fileformat) { // Print out the job ads in history file format, i.e., print the *** delimiters
+			  MyString owner, ad_str, temp;
+			  int compl_date;
+
+			  ad->sPrint(ad_str);
+                       if (!ad->LookupString(ATTR_OWNER, owner))
+                                 owner = "NULL";
+                         if (!ad->LookupInteger(ATTR_COMPLETION_DATE, compl_date))
+                                 compl_date = 0;
+                         temp.sprintf("*** Offset = %ld ClusterId = %d ProcId = %d Owner = \"%s\" CompletionDate = %d\n",
+                                        offset - last_line, curClusterId_hor, curProcId_hor, owner.GetCStr(), compl_date);
+
+                         offset += ad_str.Length() + temp.Length();
+                         last_line = temp.Length();
+                         fprintf(stdout, "%s", ad_str.GetCStr());
+                         fprintf(stdout, "%s", temp.GetCStr());
+                 }     else {
+                         ad->fPrint(stdout);
+                         printf("\n");
+                 }
+
 	  } 
 	  else {
 		  displayJobShort(ad);
