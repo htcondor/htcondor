@@ -89,6 +89,9 @@ static char *GMStateNames[] = {
 #define REMOTE_STATE_FINISHED		7
 #define REMOTE_STATE_PENDING		8
 
+#define REMOTE_STDOUT_NAME	"_condor_stdout"
+#define REMOTE_STDERR_NAME	"_condor_stderr"
+
 // Filenames are case insensitive on Win32, but case sensitive on Unix
 #ifdef WIN32
 #	define file_strcmp _stricmp
@@ -878,7 +881,7 @@ MyString *NordugridJob::buildSubmitRSL()
 
 	//Start off the RSL
 	attr_value = param( "FULL_HOSTNAME" );
-	rsl->sprintf( "&(savestate=yes)(action=request)(lrmstype=pbs)(hostname=%s)", attr_value );
+	rsl->sprintf( "&(savestate=yes)(action=request)(hostname=%s)", attr_value );
 	free( attr_value );
 	attr_value = NULL;
 
@@ -886,7 +889,7 @@ MyString *NordugridJob::buildSubmitRSL()
 	jobAd->LookupString( ATTR_JOB_CMD, &executable );
 	jobAd->LookupBool( ATTR_TRANSFER_EXECUTABLE, transfer_exec );
 
-	*rsl += "(arguments=";
+	*rsl += "(executable=";
 	// If we're transferring the executable, strip off the path for the
 	// remote machine, since it refers to the submit machine.
 	if ( transfer_exec ) {
@@ -927,7 +930,7 @@ MyString *NordugridJob::buildSubmitRSL()
 					rsl_args += rsl_stringify(args.GetArg(i));
 				}
 			}
-			*rsl += ' ';
+			*rsl += ")(arguments=";
 			*rsl += rsl_args;
 		}
 	}
@@ -935,7 +938,7 @@ MyString *NordugridJob::buildSubmitRSL()
 	// If we're transferring the executable, tell Nordugrid to set the
 	// execute bit on the transferred executable.
 	if ( transfer_exec ) {
-		*rsl += ")(excutables=";
+		*rsl += ")(executables=";
 		*rsl += condor_basename( executable );
 	}
 
@@ -970,8 +973,7 @@ MyString *NordugridJob::buildSubmitRSL()
 	if ( jobAd->LookupString( ATTR_JOB_OUTPUT, &attr_value ) == 1) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
 		if ( ! nullFile(attr_value) ) {
-			*rsl += ")(stdout=";
-			*rsl += condor_basename(attr_value);
+			*rsl += ")(stdout=" REMOTE_STDOUT_NAME;
 		}
 		free( attr_value );
 		attr_value = NULL;
@@ -980,8 +982,7 @@ MyString *NordugridJob::buildSubmitRSL()
 	if ( jobAd->LookupString( ATTR_JOB_ERROR, &attr_value ) == 1) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
 		if ( ! nullFile(attr_value) ) {
-			*rsl += ")(stderr=";
-			*rsl += condor_basename(attr_value);
+			*rsl += ")(stderr=" REMOTE_STDERR_NAME;
 		}
 		free( attr_value );
 	}
@@ -1092,8 +1093,8 @@ StringList *NordugridJob::buildStageOutList()
 	if ( transfer && jobAd->LookupString( ATTR_JOB_OUTPUT, buf ) == 1) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
 		if ( ! nullFile(buf.Value()) ) {
-			if ( !stage_list->file_contains( buf.Value() ) ) {
-				stage_list->append( buf.Value() );
+			if ( !stage_list->file_contains( REMOTE_STDOUT_NAME ) ) {
+				stage_list->append( REMOTE_STDOUT_NAME );
 			}
 		}
 	}
@@ -1103,8 +1104,8 @@ StringList *NordugridJob::buildStageOutList()
 	if ( transfer && jobAd->LookupString( ATTR_JOB_ERROR, buf ) == 1) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
 		if ( ! nullFile(buf.Value()) ) {
-			if ( !stage_list->file_contains( buf.Value() ) ) {
-				stage_list->append( buf.Value() );
+			if ( !stage_list->file_contains( REMOTE_STDERR_NAME ) ) {
+				stage_list->append( REMOTE_STDERR_NAME );
 			}
 		}
 	}
@@ -1138,10 +1139,13 @@ StringList *NordugridJob::buildStageOutLocalList( StringList *stage_list )
 
 	stage_list->rewind();
 	while ( (remote_name = stage_list->next()) ) {
-		if ( stdout_name == remote_name || stderr_name == remote_name ) {
-				// stdout and stderr don't get remapped, and their paths
-				// are evaluated locally
-			strncpy( local_name, remote_name, sizeof(local_name) );
+			// stdout and stderr don't get remapped, and their paths
+			// are evaluated locally
+		if ( strcmp( REMOTE_STDOUT_NAME, remote_name ) == 0 ) {
+			strncpy( local_name, stdout_name.Value(), sizeof(local_name) );
+			local_name[sizeof(local_name)-1] = '\0';
+		} else if ( strcmp( REMOTE_STDERR_NAME, remote_name ) == 0 ) {
+			strncpy( local_name, stderr_name.Value(), sizeof(local_name) );
 			local_name[sizeof(local_name)-1] = '\0';
 		} else if( remaps && filename_remap_find( remaps, remote_name,
 												  local_name ) ) {
