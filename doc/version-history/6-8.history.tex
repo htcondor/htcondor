@@ -47,6 +47,21 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Added new tool \Condor{dump\_history} which will
+enable schema migration to future quill schema versions.
+
+\item Quill can now automatically rebuild the indexes on the
+postgres database tables.  Some sites were reporting that even
+with auto vacuuming turned on, the indexes on the tables were 
+growing without bounds.  Rebuilding the indexes fixes that problem.
+Rebuilding is disabled by setting the parameter QUILL\_SHOULD\_REINDEX
+to false.  Reindexing happens immediately after the history file
+is purged of old data. So, if quill is configured to never delete
+history data, the tables are never reindexed.  Also, \Condor{quill}
+was changed so that the history deletion also happens at start time.
+This ensures that old history rows are deleted if quill crashes
+before the scheduled deletion time.
+
 \item Added more information to StarterLog for an error message
 involved in file transfers: ``Download acknowledgment missing
 attribute: Result.''  The extra information is a full dump of the
