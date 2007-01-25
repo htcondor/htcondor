@@ -2611,10 +2611,7 @@ void DaemonCore::Driver()
 							EXCEPT("No pipe handler callback");
 						}
 
-						dprintf(D_COMMAND,"Return from  pipe Handler <%s> for Pipe end=%d <%s>\n",
-									(*pipeTable)[i].handler_descrip,
-									pipe_end,
-									(*pipeTable)[i].pipe_descrip);
+						dprintf(D_COMMAND,"Return from pipe Handler\n");
 
 						(*pipeTable)[i].in_handler = false;
 
