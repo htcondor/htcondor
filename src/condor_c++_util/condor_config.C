@@ -547,12 +547,12 @@ real_config(char* host, int wantsQuiet)
 		if( !strcmp( macro_name, "START_owner" ) ) {
 			char *pretext = "Owner == \"";
 			char *posttext = "\"";
-			char *tmp = (char *)malloc( strlen( pretext ) + strlen( varvalue )
+			char *ownerstr = (char *)malloc( strlen( pretext ) + strlen( varvalue )
 										+ strlen( posttext ) );
-			sprintf( tmp, "%s%s%s", pretext, varvalue, posttext );
-			insert( "START", tmp, ConfigTab, TABLESIZE );
+			sprintf( ownerstr, "%s%s%s", pretext, varvalue, posttext );
+			insert( "START", ownerstr, ConfigTab, TABLESIZE );
 			extra_info->AddEnvironmentParam("START");
-			free( tmp );
+			free( ownerstr );
 		}
 		// ignore "_CONDOR_" without any macro name attached
 		else if( macro_name[0] != '\0' ) {
@@ -722,7 +722,7 @@ process_locals( char* param_name, char* host )
 }
 
 int compareFiles(const void *a, const void *b) {
-	 return strcmp(*(char **)a, *(char **)b);
+	 return strcmp(*(char *const*)a, *(char *const*)b);
 }
 
 // examine each file in a directory and treat it as a config file
@@ -760,7 +760,7 @@ process_directory( char* dirlist, char* host )
 				// don't consider directories
 				// maybe we should squash symlinks here...
 				if(! files->IsDirectory() ) {
-					paths[i] = strdup((char *)files->GetFullPath());
+					paths[i] = strdup(files->GetFullPath());
 					i++;
 				}
 			}
