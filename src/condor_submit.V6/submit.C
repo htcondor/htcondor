@@ -3240,6 +3240,12 @@ SetEnvironment()
 				// not support 'environment2' syntax.
 				continue;
 			}
+			if( !envobject.IsSafeEnvV2Value(environ[i]) ) {
+					// Silently filter out environment values containing
+					// unsafe characters.  Example: newlines cause the
+					// schedd to EXCEPT in 6.8.3.
+				continue;
+			}
 
 			// don't override submit file environment settings
 			// check if environment variable is set in submit file

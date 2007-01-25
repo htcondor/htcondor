@@ -249,6 +249,25 @@ Env::IsSafeEnvV1Value(char const *str,char delim)
 	return !str[safe_length];
 }
 
+bool
+Env::IsSafeEnvV2Value(char const *str)
+{
+	// This is used to detect whether the given environment value
+	// is unexpressable in the environment2 syntax.
+
+	if(!str) return false;
+
+	// Newline is an unsafe character, because the schedd (as of
+	// 6.8.3) cannot handle newlines in ClassAd attributes.
+
+	char specials[] = {'\n','\0'};
+
+	size_t safe_length = strcspn(str,specials);
+
+	// If safe_length goes to the end of the string, we are okay.
+	return !str[safe_length];
+}
+
 void
 Env::WriteToDelimitedString(char const *input,MyString &output) {
 	// Append input to output.
@@ -566,7 +585,7 @@ Env::getDelimitedStringV1RawOrV2Quoted(MyString *result,MyString *error_msg) con
 }
 
 bool
-Env::getDelimitedStringV2Raw(MyString *result,MyString *error_msg,bool mark_v2) const
+Env::getDelimitedStringV2Raw(MyString *result,MyString * /*error_msg*/,bool mark_v2) const
 {
 	MyString var, val;
 	SimpleList<MyString> env_list;
