@@ -139,6 +139,13 @@ to abort).
 
 \begin{itemize}
 
+\item In this release,
+the command \Condor{q} \Arg{-long} does not work when querying
+the Quill database.
+Instead, use the command
+\Condor{q} \Arg{-direct quilld} \Arg{-long},
+or use a previous version of \Condor{q}.
+
 \item Performed a security audit of all places where Condor opens files,
 to make certain files are opened with a reasonable permission mode
 and with the
@@ -364,7 +371,7 @@ universe (set \MacroNI{JAVA} to an empty string), or disable just-in-time
 compilation when running in the Java universe with the following configuration
 setting:
 \begin{verbatim}
-  JAVA_EXTRA_ARGUMENTS = -Djava.compiler=""
+  JAVA_EXTRA_ARGUMENTS = -Djava.compiler=NONE
 \end{verbatim}
 
 \end{itemize}
