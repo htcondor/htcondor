@@ -111,6 +111,13 @@ and save their output to the wrong location in some cases.
 contain characters that have special meaning to GRAM RSL. It also turns
 on TCP updates to the collector if they are enabled on the submit machine.
 
+\item When using the submit file option getenv=true, environment
+variables containing a newline in their value are no longer inserted
+into the job's environment.  \Condor{schedd} does not allow newlines
+in ClassAd values, so the attempt to insert such values was resulting
+in failure to submit the job (and was in fact causing \Condor{schedd}
+to abort).
+
 \end{itemize}
 
 \noindent Known Bugs:
