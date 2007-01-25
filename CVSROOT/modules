@@ -808,7 +808,7 @@ V6_9_1_EXT	-a V6_9_COMMON_EXT \
 
 # Externals needed for 6.9.2.
 V6_9_2_EXT	-a V6_9_COMMON_EXT \
-                   externals/bundles/gcb/1.4.0 \
+                   externals/bundles/gcb/1.4.1 \
                    externals/bundles/drmaa/1.5 \
                    externals/bundles/gt4gahp/1.6
 
