@@ -1186,12 +1186,17 @@ daemon::InitProcFam( int pid, PidEnvID *penvid )
 		EXCEPT( "Out of memory!" );
 	}
 
-	procfam_tid = daemonCore->
-		Register_Timer( 15, 60,
-						(TimerHandlercpp)&ProcFamily::takesnapshot,
-						"ProcFamily::takesnapshot", procfam );
-	if( procfam_tid < 0 ) {
-		EXCEPT( "Can't register timer for ProcFamily::takesnapshot" );
+	int snapshot_interval = param_integer("MASTER_SNAPSHOT_INTERVAL",
+	                                      60);
+	if (snapshot_interval != 0) {
+		procfam_tid =
+			daemonCore->Register_Timer(15,
+			                           snapshot_interval,
+			                           (TimerHandlercpp)&ProcFamily::takesnapshot,
+			                           "ProcFamily::takesnapshot", procfam );
+		if( procfam_tid < 0 ) {
+			EXCEPT( "Can't register timer for ProcFamily::takesnapshot" );
+		}
 	}
 }
 
