@@ -613,6 +613,10 @@ class Dag {
 		// down thru the call stack.
 	bool		_recovery;
 
+		// Default Condor ID to use in reseting a node's Condor ID on
+		// retry.
+	static const CondorID	_defaultCondorId;
+
 };
 
 #endif /* #ifndef DAG_H */

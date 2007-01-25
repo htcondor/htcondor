@@ -53,6 +53,8 @@
 #include "helper.h"
 #endif
 
+const CondorID Dag::_defaultCondorId;
+
 //---------------------------------------------------------------------------
 void touch (const char * filename) {
     int fd = safe_open_wrapper(filename, O_RDWR | O_CREAT, 0600);
@@ -1259,6 +1261,9 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 
 	ASSERT( job->GetStatus() == Job::STATUS_READY );
 
+		// Resetting the Condor ID here fixes PR 799.  wenger 2007-01-24.
+	job->_CondorID = _defaultCondorId;
+
 	if( job->NumParents() > 0 && dm.submit_delay == 0 &&
 				TotalLogFileCount() > 1 ) {
 			// if we don't already have a submit_delay, sleep for one
@@ -1307,6 +1312,8 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 	helper = NULL;
 
 	// NOTE: this failure short-circuits the "retry" feature
+	debug_printf( DEBUG_NORMAL, "Shortcutting node %s retries because "
+				"of helper command failure\n", job->GetJobName() );
 	job->retries = job->GetRetryMax();
 
 	if( job->_scriptPost ) {
@@ -1390,6 +1397,8 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 		// because it's already exhausted a number of retries
 		// (maybe we should make sure dm.max_submit_attempts >
 		// job->retries before assuming this is a good idea...)
+		debug_printf( DEBUG_NORMAL, "Shortcutting node %s retries because "
+					"of submit failure(s)\n", job->GetJobName() );
         job->retries = job->GetRetryMax();
 
         if( job->_scriptPost ) {
