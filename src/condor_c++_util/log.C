@@ -174,7 +174,7 @@ LogRecord::ReadHeader(FILE *fp)
 
 
 int
-LogRecord::ReadTail(FILE *fp)
+LogRecord::ReadTail(FILE *  /*fp*/)
 {
 	return( 0 );
 }
