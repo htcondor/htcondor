@@ -28,6 +28,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Added \Opt{-dump} to \Condor{config\_val} which will print out all of
+the macros defined in any of the local configuraiton files found by the 
+program. \Condor{config\_val} \Opt{-dump} \Opt{-v} will print out all of
+the locally defined configuration variable as well as exactly where they are
+found. The output format of the \Opt{-dump} option will most likely change
+in a future revision of Condor.
+
 % Gnats PR 671
 \item Node names in \Condor{dagman} DAG files can now be DAG
 keywords, except for PARENT and CHILD.
