@@ -265,30 +265,66 @@ main( int argc, char* argv[] )
 		}
 	}
 
-	/* XXX -dump only currently spits out *locally* found variables */
+	/* XXX -dump only currently spits out variables found through the
+		configuration file(s) available to this tool. Environment overloads
+		would be reflected. */
 	if (dump_all_variables == true) {
 		ExtArray<ParamValue> *pvs = NULL;
 		ParamValue pv;
 		MyString upname;
 		int j;
+		char *source = NULL;
+		char *hostname = NULL;
+
+		hostname = param("FULL_HOSTNAME");
+		if (hostname == NULL) {
+			hostname = "<unknown hostname>";
+		}
 
 		pvs = param_all();
 
-		printf("# Showing local config file macros only!\n\n");
+		fprintf(stdout, 
+			"# Showing macros from configuration files(s) only.\n");
+		fprintf(stdout, 
+			"# Environment overloads will be honored.\n\n");
 
+		fprintf(stdout, 
+			"# Configuration file(s) on %s searched for this output:\n",
+			hostname);
+
+		// dump all the files I found.
+		if (global_config_source.Length() > 0) {
+			fprintf( stdout, "#\t%s\n", global_config_source.Value() );
+		}
+		if (global_root_config_source.Length() > 0) {
+			fprintf( stdout, "#\t%s\n", global_root_config_source.Value() );
+		}
+		local_config_sources.rewind();
+		while ( (source = local_config_sources.next()) != NULL ) {
+			fprintf( stdout, "#\t%s\n", source );
+		}
+
+		fprintf( stdout, "\n");
+
+		// dump the configuration file attributes.
 		for (j = 0; j < pvs->getlast() + 1; j++) {
 			pv = (*pvs)[j];
 			upname = pv.name;
 			upname.upper_case();
 
 			if (verbose) {
-				printf("Line %d, File %s\n", 
+				fprintf(stdout, "# Line %d, File %s\n", 
 					pv.lnum, pv.filename.Value());
 			}
-			printf("%s = %s\n\n", upname.Value(), pv.value.Value());
+			fprintf(stdout, "%s = %s\n\n", upname.Value(), pv.value.Value());
 			
 		}
+		fflush( stdout );
 
+		if (hostname != NULL) {
+			free(hostname);
+			hostname = NULL;
+		}
 		delete pvs;
 
 		my_exit( 0 );
