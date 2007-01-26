@@ -286,11 +286,14 @@ main( int argc, char* argv[] )
 		fprintf(stdout, 
 			"# Showing macros from configuration files(s) only.\n");
 		fprintf(stdout, 
-			"# Environment overloads will be honored.\n\n");
+			"# Environment overloads were honored.\n\n");
+
+		fprintf(stdout,
+			"# Configuration from machine: %s\n",
+			hostname);
 
 		fprintf(stdout, 
-			"# Configuration file(s) on %s searched for this output:\n",
-			hostname);
+			"# Contributing configuration file(s):\n");
 
 		// dump all the files I found.
 		if (global_config_source.Length() > 0) {
