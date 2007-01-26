@@ -51,6 +51,8 @@
 #include "daemon_types.h"
 #include "internet.h"
 #include "condor_distribution.h"
+#include "string_list.h"
+#include "simplelist.h"
 
 char	*MyName;
 char	*mySubSystem = NULL;
@@ -116,6 +118,7 @@ usage()
 	fprintf( stderr, "   -tilde\t\t(return the path to the Condor home directory)\n" );
 	fprintf( stderr, "   -owner\t\t(return the owner of the condor_config_val process)\n" );
 	fprintf( stderr, "   -verbose\t\t(print information about where variables are defined)\n" );
+	fprintf( stderr, "   -dump\t\t(print locally defined variables)\n" );
 	fprintf( stderr, "   -config\t\t(print the locations of found config files)\n" );
 	my_exit( 1 );
 }
@@ -133,6 +136,7 @@ main( int argc, char* argv[] )
 	int		i;
 	bool	ask_a_daemon = false;
 	bool    verbose = false;
+	bool    dump_all_variables = false;
 	bool    print_config_sources = false;
 	
 	PrintType pt = CONDOR_NONE;
@@ -212,6 +216,8 @@ main( int argc, char* argv[] )
 			print_config_sources = true;
 		} else if( match_prefix( argv[i], "-verbose" ) ) {
 			verbose = true;
+		} else if( match_prefix( argv[i], "-dump" ) ) {
+			dump_all_variables = true;
 		} else if( match_prefix( argv[i], "-" ) ) {
 			usage();
 		} else {
@@ -257,6 +263,36 @@ main( int argc, char* argv[] )
 		if (print_config_sources) {
 			PrintConfigSources();
 		}
+	}
+
+	/* XXX -dump only currently spits out *locally* found variables */
+	if (dump_all_variables == true) {
+		ExtArray<ParamValue> *pvs = NULL;
+		ParamValue pv;
+		MyString upname;
+		int j;
+
+		pvs = param_all();
+
+		printf("# Showing local config file macros only!\n\n");
+
+		for (j = 0; j < pvs->getlast() + 1; j++) {
+			pv = (*pvs)[j];
+			upname = pv.name;
+			upname.upper_case();
+
+			if (verbose) {
+				printf("Line %d, File %s\n", 
+					pv.lnum, pv.filename.Value());
+			}
+			printf("%s = %s\n\n", upname.Value(), pv.value.Value());
+			
+		}
+
+		delete pvs;
+
+		my_exit( 0 );
+
 	}
 
 	if( pool && ! name ) {

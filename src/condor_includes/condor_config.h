@@ -27,6 +27,8 @@
 
 #include "condor_classad.h"
 #include "MyString.h"
+#include "string_list.h"
+#include "simplelist.h"
 #endif
 
 #define CONDOR_GCB_INVALID_BROKER "0.0.0.1"
@@ -36,6 +38,54 @@ typedef struct bucket {
 	char	*value;
 	struct bucket	*next;
 } BUCKET;
+
+#if defined(__cplusplus)
+// used by param_all();
+class ParamValue {
+	public:
+
+	// name of macro
+	MyString name;
+	// the expression that is the value of the macro
+	MyString value;
+	// Which file the macro is found in
+	MyString filename;
+	// on what line is the macro found in.
+	int lnum;
+	// where this configuration information came from (localhost, another
+	// machine, etc, etc, etc)
+	MyString source;
+
+	ParamValue() { 
+		name = "";
+		value = "";
+		filename = "";
+		lnum = -1;
+		source = "";
+	}
+
+	ParamValue(const ParamValue &old) {
+		name = old.name;
+		value = old.value;
+		filename = old.filename;
+		lnum = old.lnum;
+		source = old.source;
+	}
+
+	ParamValue& operator=(const ParamValue &rhs) {
+		if (this == &rhs) {
+			return *this;
+		}
+
+		name = rhs.name;
+		value = rhs.value;
+		filename = rhs.filename;
+		lnum = rhs.lnum;
+
+		return *this;
+	}
+};
+#endif
 
 
 /*
@@ -50,6 +100,7 @@ typedef struct bucket {
 	extern MyString global_root_config_source;
 	extern StringList local_config_sources;
 
+	ExtArray<ParamValue>* param_all(void);
     int param_integer( const char *name, int default_value,
 					   int min_value = INT_MIN, int max_value = INT_MAX );
     float param_float( const char *name, float default_value,

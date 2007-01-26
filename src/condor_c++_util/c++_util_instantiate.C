@@ -37,9 +37,11 @@
 #include "daemon.h"
 #include "condor_cred_base.h"
 #include "condor_credential.h"
+#include "condor_config.h"
 
 #include "passwd_cache.h"
 
+template class ExtArray<ParamValue>;
 template class List<char>; 		template class Item<char>;
 template class List<int>; 		template class Item<int>;
 template class SimpleList<int>; 

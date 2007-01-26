@@ -124,6 +124,8 @@ MyString global_config_source;
 MyString global_root_config_source;
 StringList local_config_sources;
 
+static int ParamValueNameAscendingSort(const void *l, const void *r);
+
 
 // Function implementations
 
@@ -226,6 +228,85 @@ validate_entries() {
 	if(invalid_entries > 0) {
 		EXCEPT(output.Value());
 	}
+}
+
+// return a list sorted by macro name of all of the macro values found in the
+// locally defined files.
+ExtArray<ParamValue>*
+param_all(void)
+{
+	ExtArray<ParamValue> *pvs = NULL;
+	MyString filename;
+	int line_number;
+	MyString str;
+	HASHITER it = hash_iter_begin( ConfigTab, TABLESIZE );
+	char *name = NULL;
+	char *value = NULL;
+	int i;
+	ParamValue *sort_array = NULL;
+
+	pvs = new ExtArray<ParamValue>;
+	ASSERT(pvs);
+
+	// walk the config table and insert everything I found into the list.
+	i = 0;
+	while( ! hash_iter_done(it) ) {
+		name = hash_iter_key(it);
+		value = hash_iter_value(it);
+		param_get_location(name, filename, line_number);
+
+		(*pvs)[i].name = name;
+		(*pvs)[i].value = value;
+		(*pvs)[i].filename = filename;
+		(*pvs)[i].lnum = line_number;
+		(*pvs)[i].source = "Local Config File";
+
+		i++;
+
+		hash_iter_next(it);
+	}
+	hash_iter_delete(&it);
+
+	// Sort the list based upon name
+	// qsort and extArray don't play nice together...
+
+	// copy the data to a new POD array
+
+	sort_array = new ParamValue[pvs->getlast() + 1];
+	ASSERT(sort_array);
+
+	for (i = 0; i < pvs->getlast() + 1; i++) {
+		sort_array[i] = (*pvs)[i];
+	}
+
+	// sort it 
+	qsort(sort_array, pvs->getlast() + 1, sizeof(ParamValue),
+		ParamValueNameAscendingSort);
+
+	// copy it back into the ExtArray
+	for (i = 0; i < pvs->getlast() + 1; i++) {
+		(*pvs)[i] = sort_array[i];
+	}
+	
+	delete [] sort_array;
+
+	return pvs;
+}
+
+static int ParamValueNameAscendingSort(const void *l, const void *r)
+{
+	const ParamValue *left = (const ParamValue*)l;
+	const ParamValue *right = (const ParamValue*)r;
+
+	if (left->name < right->name) {
+		return -1;
+	}
+
+	if (left->name > right->name) {
+		return 1;
+	}
+
+	return 0;
 }
 
 
