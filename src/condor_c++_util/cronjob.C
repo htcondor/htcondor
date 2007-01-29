@@ -36,10 +36,10 @@
 #define STDERR_READBUF_SIZE	128
 
 // Cron's Line StdOut Buffer constructor
-CronJobOut::CronJobOut( class CronJobBase *job ) :
+CronJobOut::CronJobOut( class CronJobBase *job_arg ) :
 		LineBuffer( STDOUT_LINEBUF_SIZE )
 {
-	this->job = job;
+	this->job = job_arg;
 }
 
 // Output function
@@ -120,15 +120,15 @@ CronJobOut::GetLineFromQueue( void )
 }
 
 // Cron's Line StdErr Buffer constructor
-CronJobErr::CronJobErr( class CronJobBase *job ) :
+CronJobErr::CronJobErr( class CronJobBase *job_arg ) :
 		LineBuffer( 128 )
 {
-	this->job = job;
+	this->job = job_arg;
 }
 
 // StdErr Output function
 int
-CronJobErr::Output( const char *buf, int len )
+CronJobErr::Output( const char *buf, int   /*len*/ )
 {
 	dprintf( D_FULLDEBUG, "%s: %s\n", job->GetName( ), buf );
 
@@ -137,7 +137,7 @@ CronJobErr::Output( const char *buf, int len )
 }
 
 // CronJob constructor
-CronJobBase::CronJobBase( const char *mgrName, const char *jobName )
+CronJobBase::CronJobBase( const char *   /*mgrName*/, const char *jobName )
 {
 	// Reset *everything*
 	period = UINT_MAX;
@@ -752,7 +752,7 @@ CronJobBase::TodoWrite( void )
 // Data is available on Standard Out.  Read it!
 //  Note that we set the pipe to be non-blocking when we created it
 int
-CronJobBase::StdoutHandler ( int pipe )
+CronJobBase::StdoutHandler ( int   /*pipe*/ )
 {
 	char			buf[STDOUT_READBUF_SIZE];
 	int				bytes;
@@ -819,7 +819,7 @@ CronJobBase::StdoutHandler ( int pipe )
 // Data is available on Standard Error.  Read it!
 //  Note that we set the pipe to be non-blocking when we created it
 int
-CronJobBase::StderrHandler ( int pipe )
+CronJobBase::StderrHandler ( int   /*pipe*/ )
 {
 	char			buf[STDERR_READBUF_SIZE];
 	int				bytes;
@@ -993,13 +993,13 @@ CronJobBase::KillJob( bool force )
 
 // Set the job timer
 int
-CronJobBase::SetTimer( unsigned first, unsigned period )
+CronJobBase::SetTimer( unsigned first, unsigned period_arg )
 {
 	// Reset the timer
 	if ( runTimer >= 0 )
 	{
-		daemonCore->Reset_Timer( runTimer, first, period );
-		if( period == TIMER_NEVER ) {
+		daemonCore->Reset_Timer( runTimer, first, period_arg );
+		if( period_arg == TIMER_NEVER ) {
 			dprintf( D_FULLDEBUG, "Cron: timer ID %d reset to first: %u, "
 					 "period: NEVER\n", runTimer, first );
 		} else {
@@ -1020,7 +1020,7 @@ CronJobBase::SetTimer( unsigned first, unsigned period )
 			   (TimerHandlercpp)& CronJobBase::RunJob );
 		runTimer = daemonCore->Register_Timer(
 			first,
-			period,
+			period_arg,
 			handler,
 			"RunJob",
 			this );
@@ -1028,7 +1028,7 @@ CronJobBase::SetTimer( unsigned first, unsigned period )
 			dprintf( D_ALWAYS, "Cron: Failed to create timer\n" );
 			return -1;
 		}
-		if( period == TIMER_NEVER ) {
+		if( period_arg == TIMER_NEVER ) {
 			dprintf( D_FULLDEBUG, "Cron: new timer ID %d set to first: %u, "
 					 "period: NEVER\n", runTimer, first );
 		} else {
@@ -1088,9 +1088,9 @@ CronJobBase::KillTimer( unsigned seconds )
 
 // Convert state value into string (for printing)
 const char *
-CronJobBase::StateString( CronJobState state )
+CronJobBase::StateString( CronJobState state_arg )
 {
-	switch( state )
+	switch( state_arg )
 	{
 	case CRON_IDLE:
 		return "Idle";
