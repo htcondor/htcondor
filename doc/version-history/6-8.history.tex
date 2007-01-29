@@ -127,6 +127,15 @@ to abort).
 with a POST script and retries initially runs but fails, and then
 has all \Condor{submit} attempts fail on the retry.
 
+\item Fixed a problem in the Windows installer where the
+\Macro{DAEMON\_LIST} parameter would be incorrectly set if the ``Join
+an existing Condor pool'' option was selected or the ``Submit jobs to
+Condor pool'' option was unchecked.  In the first case, a
+\Condor{collector} and \Condor{negotiator} would incorrectly be run on
+the machine. In the second case, a \Condor{schedd} would incorrectly
+be run. The problem exists in all previous 6.8 and 6.9 series
+releases.
+
 \end{itemize}
 
 \noindent Known Bugs:
