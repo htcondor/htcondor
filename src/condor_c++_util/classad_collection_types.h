@@ -96,7 +96,7 @@ public:
     FullFlag=fullFlag;
   }
 
-  virtual bool CheckClassAd(ClassAd* Ad) {
+  virtual bool CheckClassAd(ClassAd*  /*Ad*/) {
     return FullFlag;
   }
 
@@ -179,7 +179,7 @@ public:
     Values=values;
   }
 
-  virtual bool CheckClassAd(ClassAd* Ad) {
+  virtual bool CheckClassAd(ClassAd*  /*Ad*/) {
     return true;
   }
 

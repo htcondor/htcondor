@@ -31,8 +31,8 @@
 // Constructor (initialization)
 //----------------------------------------------------------------------------------
 
-ClassAdCollection::ClassAdCollection(const char* filename,int max_historical_logs) 
-  : ClassAdLog(filename,max_historical_logs), Collections(97, HashFunc)
+ClassAdCollection::ClassAdCollection(const char* filename,int max_historical_logs_arg) 
+  : ClassAdLog(filename,max_historical_logs_arg), Collections(97, HashFunc)
 {
   LastCoID=0;
   Collections.insert(LastCoID,new ExplicitCollection("",true));
@@ -108,9 +108,9 @@ bool ClassAdCollection::NewClassAd(const char* key, ClassAd* ad)
     R_expr=expr->RArg();
 	value = NULL;
     R_expr->PrintToNewStr(&value);
-    LogRecord* log=new LogSetAttribute(key,name,value);
+    LogRecord* l=new LogSetAttribute(key,name,value);
 	free(value);
-    ClassAdLog::AppendLog(log);
+    ClassAdLog::AppendLog(l);
   }
   // return AddClassAd(0,key);
   return true;
