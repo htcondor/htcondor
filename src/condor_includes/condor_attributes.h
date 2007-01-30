@@ -626,11 +626,11 @@ typedef struct
 // The actual list of variables indexed by CONDOR_ATTR
 static CONDOR_ATTR_ELEM CondorAttrList[] =
 {
-	{ ATTRE_CONDOR_LOAD_AVG,"%sLoadAvg",		ATTR_FLAG_DISTRO_CAP },
-	{ ATTRE_CONDOR_ADMIN,	"%sAdmin",			ATTR_FLAG_DISTRO_CAP },
-	{ ATTRE_PLATFORM,		"%sPlatform",		ATTR_FLAG_DISTRO_CAP },
-	{ ATTRE_TOTAL_LOAD,		"Total%sLoadAvg",	ATTR_FLAG_DISTRO_CAP },
-	{ ATTRE_VERSION,		"%sVersion",		ATTR_FLAG_DISTRO_CAP },
+	{ ATTRE_CONDOR_LOAD_AVG,"%sLoadAvg",		ATTR_FLAG_DISTRO_CAP, 0 },
+	{ ATTRE_CONDOR_ADMIN,	"%sAdmin",			ATTR_FLAG_DISTRO_CAP, 0 },
+	{ ATTRE_PLATFORM,		"%sPlatform",		ATTR_FLAG_DISTRO_CAP, 0 },
+	{ ATTRE_TOTAL_LOAD,		"Total%sLoadAvg",	ATTR_FLAG_DISTRO_CAP, 0 },
+	{ ATTRE_VERSION,		"%sVersion",		ATTR_FLAG_DISTRO_CAP, 0 },
 	// ....
 };
 #endif		// _CONDOR_ATTR_MAIN
