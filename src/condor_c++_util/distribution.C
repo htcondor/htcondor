@@ -30,7 +30,7 @@ Distribution::Distribution()
 		SetDistribution( "condor" );
 }
 
-int Distribution::Init( int argc, char **argv )
+int Distribution::Init( int  /*argc*/, char **argv )
 {
 	char	*argv0 = argv[0];
 
