@@ -1299,8 +1299,9 @@ param_integer( const char *name, int default_value,
 			   int min_value, int max_value )
 {
 	int result;
-	int fields;
+	long long_result;
 	char *string;
+	char *endptr = NULL;
 
 	ASSERT( name );
 	string = param( name );
@@ -1310,20 +1311,35 @@ param_integer( const char *name, int default_value,
 		return default_value;
 	}
 
-	fields = sscanf( string, "%d", &result );
+	long_result = strtol(string,&endptr,10);
+	result = long_result;
 
-	if( fields != 1 ) {
-		dprintf( D_CONFIG, "WARNING: %s not an integer (\"%s\"), using "
+	ASSERT(endptr);
+	if( endptr != string ) {
+		while( isspace(*endptr) ) {
+			endptr++;
+		}
+	}
+	bool valid = (endptr != string && *endptr == '\0');
+
+	if( !valid ) {
+		dprintf( D_ALWAYS, "WARNING: %s not an integer (\"%s\"), using "
+				 "default value of %d\n", name, string, default_value );
+		result = default_value;
+	}
+	else if( (long)result != long_result ) {
+		dprintf( D_ALWAYS, "WARNING: %s is out of bounds for an integer "
+				 "(\"%s\"), using "
 				 "default value of %d\n", name, string, default_value );
 		result = default_value;
 	}
 	else if( result < min_value ) {
-		dprintf( D_CONFIG, "WARNING: %s too low (%d), using minimum "
+		dprintf( D_ALWAYS, "WARNING: %s too low (%d), using minimum "
 				 "value of %d\n", name, result, min_value );
 		result = min_value;
 	}
 	else if( result > max_value ) {
-		dprintf( D_CONFIG, "WARNING: %s too high (%d), using maximum "
+		dprintf( D_ALWAYS, "WARNING: %s too high (%d), using maximum "
 				 "value of %d\n", name, result, max_value );
 		result = max_value;
 	}
@@ -1343,8 +1359,8 @@ param_float( const char *name, float default_value,
 			   float min_value, float max_value )
 {
 	float result;
-	int fields;
 	char *string;
+	char *endptr = NULL;
 
 	ASSERT( name );
 	string = param( name );
@@ -1354,9 +1370,17 @@ param_float( const char *name, float default_value,
 		return default_value;
 	}
 
-	fields = sscanf( string, "%f", &result );
+	result = strtof(string,&endptr);
 
-	if( fields != 1 ) {
+	ASSERT(endptr);
+	if( endptr != string ) {
+		while( isspace(*endptr) ) {
+			endptr++;
+		}
+	}
+	bool valid = (endptr != string && *endptr == '\0');
+
+	if( !valid ) {
 		dprintf( D_CONFIG, "WARNING: %s not an float (\"%s\"), using "
 				 "default value of %f\n", name, string, default_value );
 		result = default_value;
@@ -1388,6 +1412,8 @@ param_boolean( const char *name, const bool default_value )
 {
 	bool result;
 	char *string;
+	char *endptr;
+	bool valid = true;
 
 	ASSERT( name );
 	string = param( name );
@@ -1397,23 +1423,39 @@ param_boolean( const char *name, const bool default_value )
 		return default_value;
 	}
 
-	switch ( string[0] ) {
-		case 'T':
-		case 't':
-		case '1':
-			result = true;
-			break;
-		case 'F':
-		case 'f':
-		case '0':
-			result = false;
-			break;
-		default:
-		    dprintf( D_CONFIG, "WARNING: %s not a boolean (\"%s\"), using "
-					 "default value of %s\n", name, string,
-					 default_value ? "True" : "False" );
-			result = default_value;
-			break;
+	endptr = string;
+	if( strncasecmp(endptr,"true",4) == 0 ) {
+		endptr+=4;
+		result = true;
+	}
+	else if( strncasecmp(endptr,"1",1) == 0 ) {
+		endptr+=1;
+		result = true;
+	}
+	else if( strncasecmp(endptr,"false",5) == 0 ) {
+		endptr+=5;
+		result = false;
+	}
+	else if( strncasecmp(endptr,"0",1) == 0 ) {
+		endptr+=1;
+		result = false;
+	}
+	else {
+		valid = false;
+	}
+
+	while( isspace(*endptr) ) {
+		endptr++;
+	}
+	if( *endptr != '\0' ) {
+		valid = false;
+	}
+
+	if( !valid ) {
+		dprintf( D_ALWAYS, "WARNING: %s not a boolean (\"%s\"), using "
+				 "default value of %s\n", name, string,
+				 default_value ? "True" : "False" );
+		result = default_value;
 	}
 
 	free( string );
