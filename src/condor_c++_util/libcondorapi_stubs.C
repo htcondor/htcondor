@@ -67,18 +67,18 @@ char* param(const char *str)
 	return NULL;
 }
 
-int param_integer(const char *name, int default_value)
+int param_integer(const char *, int default_value)
 {
 	return default_value;
 }
 
 END_C_DECLS
-int param_integer(const char *name, int default_value, int min, int max)
+int param_integer(const char *, int default_value, int, int)
 {
 	return default_value;
 }
 
-bool param_boolean( const char *name, const bool default_value )
+bool param_boolean( const char *, const bool default_value )
 {
 	return default_value;
 }
@@ -94,48 +94,48 @@ bool param_boolean( const char *name, const bool default_value )
 Stream::~Stream(){};
 
 /* stub the entire Stream interface :( */
-	int Stream::code(void *&foo) { return not_impl(); }
-	int Stream::code(char &foo) { return not_impl(); }
-	int Stream::code(unsigned char &foo) { return not_impl(); }
-	int Stream::code(int &foo){ return not_impl(); }
-	int Stream::code(unsigned int &foo){ return not_impl(); }
-	int Stream::code(long &foo){ return not_impl(); }
-	int Stream::code(unsigned long &foo){ return not_impl(); }
+	int Stream::code(void *&) { return not_impl(); }
+	int Stream::code(char &) { return not_impl(); }
+	int Stream::code(unsigned char &) { return not_impl(); }
+	int Stream::code(int &){ return not_impl(); }
+	int Stream::code(unsigned int &){ return not_impl(); }
+	int Stream::code(long &){ return not_impl(); }
+	int Stream::code(unsigned long &){ return not_impl(); }
 #ifndef WIN32
-	int Stream::code(long long &foo){ return not_impl(); }
-	int Stream::code(unsigned long long &foo){ return not_impl(); }
+	int Stream::code(long long &){ return not_impl(); }
+	int Stream::code(unsigned long long &){ return not_impl(); }
 #endif
 
-	int Stream::code(short &foo){ return not_impl(); }
-	int Stream::code(unsigned short &foo){ return not_impl(); }
-	int Stream::code(float &foo){ return not_impl(); }
-	int Stream::code(double &foo){ return not_impl(); }
-	int Stream::code(char *&foo){ return not_impl(); }
-	int Stream::code(char *&foo, int &bar){ return not_impl(); }
-	int Stream::code_bytes(void *foo, int bar){ return not_impl(); }
-	int Stream::code_bytes_bool(void *foo, int bar){ return not_impl(); }
-	int Stream::code(PROC_ID &foo){ return not_impl(); }
-	int Stream::code(STARTUP_INFO &foo){ return not_impl(); }
-	int Stream::code(PORTS &foo){ return not_impl(); }
-	int Stream::code(StartdRec &foo){ return not_impl(); }
-	int Stream::code(open_flags_t &foo){ return not_impl(); }
-	int Stream::code(struct stat &foo){ return not_impl(); }
-	int Stream::code(condor_errno_t &foo){ return not_impl(); }
+	int Stream::code(short &){ return not_impl(); }
+	int Stream::code(unsigned short &){ return not_impl(); }
+	int Stream::code(float &){ return not_impl(); }
+	int Stream::code(double &){ return not_impl(); }
+	int Stream::code(char *&){ return not_impl(); }
+	int Stream::code(char *&, int &){ return not_impl(); }
+	int Stream::code_bytes(void *, int ){ return not_impl(); }
+	int Stream::code_bytes_bool(void *, int ){ return not_impl(); }
+	int Stream::code(PROC_ID &){ return not_impl(); }
+	int Stream::code(STARTUP_INFO &){ return not_impl(); }
+	int Stream::code(PORTS &){ return not_impl(); }
+	int Stream::code(StartdRec &){ return not_impl(); }
+	int Stream::code(open_flags_t &){ return not_impl(); }
+	int Stream::code(struct stat &){ return not_impl(); }
+	int Stream::code(condor_errno_t &){ return not_impl(); }
 #if !defined(WIN32)
-	int Stream::code(condor_signal_t &foo){ return not_impl(); }
-	int Stream::code(fcntl_cmd_t &foo){ return not_impl(); }
-	int Stream::code(struct rusage &foo){ return not_impl(); }
-	int Stream::code(struct statfs &foo){ return not_impl(); }
-	int Stream::code(struct timezone &foo){ return not_impl(); }
-	int Stream::code(struct timeval &foo){ return not_impl(); }
-	int Stream::code(struct utimbuf &foo){ return not_impl(); }
-	int Stream::code(struct rlimit &foo){ return not_impl(); }
-	int Stream::code_array(gid_t *&foo, int &bar){ return not_impl(); }
-	int Stream::code(struct utsname &foo){ return not_impl(); }
+	int Stream::code(condor_signal_t &){ return not_impl(); }
+	int Stream::code(fcntl_cmd_t &){ return not_impl(); }
+	int Stream::code(struct rusage &){ return not_impl(); }
+	int Stream::code(struct statfs &){ return not_impl(); }
+	int Stream::code(struct timezone &){ return not_impl(); }
+	int Stream::code(struct timeval &){ return not_impl(); }
+	int Stream::code(struct utimbuf &){ return not_impl(); }
+	int Stream::code(struct rlimit &){ return not_impl(); }
+	int Stream::code_array(gid_t *&, int &){ return not_impl(); }
+	int Stream::code(struct utsname &){ return not_impl(); }
 #endif // !defined(WIN32)
 #if HAS_64BIT_STRUCTS
-	int Stream::code(struct stat64 &foo){ return not_impl(); }
-	int Stream::code(struct rlimit64 &foo){ return not_impl(); }
+	int Stream::code(struct stat64 &){ return not_impl(); }
+	int Stream::code(struct rlimit64 &){ return not_impl(); }
 #endif
 void Stream::allow_one_empty_message() { not_impl(); }
 int Stream::put(char *){ return not_impl(); }
@@ -146,13 +146,13 @@ GenericQuery::GenericQuery(void) {}
 GenericQuery::~GenericQuery(void) {}
 
 /* stubs for query object. */
-QueryResult clearStringConstraints  (const int foo) 
+QueryResult clearStringConstraints  (const int ) 
 { return (QueryResult)not_impl();}
 
-QueryResult clearIntegerConstraints (const int foo)
+QueryResult clearIntegerConstraints (const int )
 { return (QueryResult)not_impl();}
 
-QueryResult clearFloatConstraints   (const int foo)
+QueryResult clearFloatConstraints   (const int )
 { return (QueryResult)not_impl();}
 
 void		clearORCustomConstraints(void) 
@@ -161,10 +161,10 @@ void		clearORCustomConstraints(void)
 void		clearANDCustomConstraints(void) 
 { not_impl(); }
 
-QueryResult CondorQuery::addConstraint (const int foo, const char *bar) 
+QueryResult CondorQuery::addConstraint (const int , const char *) 
 { return (QueryResult)not_impl();}
 
-QueryResult CondorQuery::addConstraint (const int foo , const int bar)
+QueryResult CondorQuery::addConstraint (const int , const int )
 { return (QueryResult)not_impl();}
 
 QueryResult CondorQuery::addConstraint (const int, const float)
@@ -176,13 +176,13 @@ QueryResult CondorQuery::addORConstraint (const char *)
 QueryResult CondorQuery::CondorQuery::addANDConstraint (const char *)
 { return (QueryResult)not_impl();}
 
-QueryResult CondorQuery::fetchAds (ClassAdList &foo, const char bar[], CondorError* errstack)
+QueryResult CondorQuery::fetchAds (ClassAdList &, const char [], CondorError* )
 { return (QueryResult)not_impl();}
 
-QueryResult CondorQuery::filterAds (ClassAdList &foo, ClassAdList &bar)
+QueryResult CondorQuery::filterAds (ClassAdList &, ClassAdList &)
 { return (QueryResult)not_impl();}
 
-QueryResult CondorQuery::getQueryAd (ClassAd &foo)
+QueryResult CondorQuery::getQueryAd (ClassAd &)
 { return (QueryResult)not_impl();}
 
 // overloaded operators
@@ -195,18 +195,18 @@ QueryResult CondorQuery::getQueryAd (ClassAd &foo)
 /*CondorQuery	&CondorQuery::operator=  (CondorQuery &)*/
 /*	{ return (CondorQuery)not_impl();}*/
 
-CondorQuery::CondorQuery(AdTypes foo) { not_impl();} 
+CondorQuery::CondorQuery(AdTypes ) { not_impl();} 
 
 CondorQuery::~CondorQuery() {} 
 
 char*
 my_ip_string() {not_impl(); return 0;}
 
-void ConvertDefaultIPToSocketIP(char const *attr_name,char const *old_expr_string,char **new_expr_string,Stream& s) {
+void ConvertDefaultIPToSocketIP(char const *,char const *,char **,Stream& ) {
 	not_impl();
 }
 
-void ConvertDefaultIPToSocketIP(char const *attr_name,char **expr_string,Stream& s) {
+void ConvertDefaultIPToSocketIP(char const *,char **,Stream& ) {
 	not_impl();
 }
 
@@ -214,5 +214,5 @@ void ConvertDefaultIPToSocketIP(char const *attr_name,char **expr_string,Stream&
 
 Regex::Regex() {not_impl();}
 Regex::~Regex() {not_impl();}
-bool Regex::compile(MyString const& a, char const** b, int* c, int d) {not_impl();return false;}
-bool Regex::match(MyString const& a, ExtArray<MyString>* b) {not_impl();return false;}
+bool Regex::compile(MyString const& , char const** , int* , int ) {not_impl();return false;}
+bool Regex::match(MyString const& , ExtArray<MyString>* ) {not_impl();return false;}
