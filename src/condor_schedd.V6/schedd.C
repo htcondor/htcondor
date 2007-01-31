@@ -541,7 +541,7 @@ Scheduler::check_claim_request_timeouts()
 				time_t time_left = rec->entered_current_status + \
 				                 RequestClaimTimeout - time(NULL);
 				if(time_left < 0) {
-					dprintf(D_ALWAYS,"timed out requesting claim from %s\n",rec->peer);
+					dprintf(D_ALWAYS,"timed out requesting claim from %s after REQUEST_CLAIM_TIMEOUT=%d seconds\n",rec->peer,RequestClaimTimeout);
 						// We could just do send_vacate() here and
 						// wait for the startd contact socket to call
 						// us back when the connection closes.
@@ -9644,14 +9644,7 @@ Scheduler::Init()
 		if( tmp ) free( tmp );
 	}
 
-	tmp = param("REQUEST_CLAIM_TIMEOUT");
-	if(!tmp) {
-		RequestClaimTimeout = 60*30; //30 minutes by default
-	} else {
-		RequestClaimTimeout = atoi(tmp);
-		free(tmp);
-		tmp = NULL;
-	}
+	RequestClaimTimeout = param_integer("REQUEST_CLAIM_TIMEOUT",60*30);
 
 #if WANT_QUILL
 
