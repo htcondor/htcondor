@@ -93,6 +93,26 @@ protected:
 		/// Initialize our local UserLog-writing code.
 	virtual bool initLocalUserLog( void );
 
+		/** Set a timer to call Starter::allJobsDone() so we retry
+		    our attempts to cleanup the job, update the job queue, etc.
+		*/
+	void retryJobCleanup( void );
+
+		/// DaemonCore timer handler to actually do the retry.
+	int retryJobCleanupHandler( void );
+
+		/// Timer id for the job cleanup retry handler.
+	int m_cleanup_retry_tid;
+
+		/// Number of times we have retried job cleanup.
+	int m_num_cleanup_retries;
+
+		/// Maximum number of times we will retry job cleanup.
+	int m_max_cleanup_retries;
+
+		/// How long to delay between attempts to retry job cleanup.
+	int m_cleanup_retry_delay;
+
 		/// The value we will exit with to tell our schedd what happened
 	int exit_code;
 

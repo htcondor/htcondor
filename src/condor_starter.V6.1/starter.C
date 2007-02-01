@@ -1058,6 +1058,11 @@ CStarter::allJobsDone( void )
 			CleanedUpJobList.DeleteCurrent();
 			delete job;
 		} else {
+				// This could fail because either we're talking to a
+				// shadow and got disconnected, or we're talking to
+				// the schedd and failed to update the job queue.
+				// TODO: make this accurate for local universe,
+				// e.g. by adding a JIC method to print this?
 			dprintf( D_ALWAYS, "JobExit() failed, waiting for job "
 					 "lease to expire or for a reconnect attempt\n" );
 			return;
