@@ -60,12 +60,12 @@ ClassAdLog::ClassAdLog() : table(1024, hashFunction)
 
 }
 
-ClassAdLog::ClassAdLog(const char *filename,int max_historical_logs) : table(1024, hashFunction)
+ClassAdLog::ClassAdLog(const char *filename,int max_historical_logs_arg) : table(1024, hashFunction)
 {
 	strcpy(log_filename, filename);
 	active_transaction = NULL;
 
-	this->max_historical_logs = max_historical_logs;
+	this->max_historical_logs = max_historical_logs_arg;
 	historical_sequence_number = 1;
 	m_original_log_birthdate = time(NULL);
 
@@ -154,8 +154,8 @@ ClassAdLog::AppendLog(LogRecord *log)
 {
 	if (active_transaction) {
 		if (active_transaction->EmptyTransaction()) {
-			LogBeginTransaction *log = new LogBeginTransaction;
-			active_transaction->AppendLog(log);
+			LogBeginTransaction *l = new LogBeginTransaction;
+			active_transaction->AppendLog(l);
 		}
 		active_transaction->AppendLog(log);
 	} else {
@@ -184,7 +184,7 @@ ClassAdLog::SaveHistoricalLogs()
 	if(!max_historical_logs) return true;
 
 	MyString new_histfile;
-	if(!new_histfile.sprintf("%s.%d",log_filename,historical_sequence_number))
+	if(!new_histfile.sprintf("%s.%lu",log_filename,historical_sequence_number))
 	{
 		dprintf(D_ALWAYS,"Aborting save of historical log: out of memory.\n");
 		return false;
@@ -198,7 +198,7 @@ ClassAdLog::SaveHistoricalLogs()
 	}
 
 	MyString old_histfile;
-	if(!old_histfile.sprintf("%s.%d",log_filename,historical_sequence_number - max_historical_logs))
+	if(!old_histfile.sprintf("%s.%lu",log_filename,historical_sequence_number - max_historical_logs))
 	{
 		dprintf(D_ALWAYS,"Aborting cleanup of historical logs: out of memory.\n");
 		return true; // this is not a fatal error
@@ -396,7 +396,6 @@ bool
 ClassAdLog::AddAttrsFromTransaction(const char *key, ClassAd &ad)
 {
 	char *val = NULL;
-	bool adexists = false;
 	ClassAd *attrsFromTransaction;
 
 	if ( !key ) {
@@ -605,14 +604,14 @@ ClassAdLog::LogState(FILE *fp)
 	} 
 }
 
-LogHistoricalSequenceNumber::LogHistoricalSequenceNumber(unsigned long historical_sequence_number,time_t timestamp)
+LogHistoricalSequenceNumber::LogHistoricalSequenceNumber(unsigned long historical_sequence_number_arg,time_t timestamp_arg)
 {
 	op_type = CondorLogOp_LogHistoricalSequenceNumber;
-	this->historical_sequence_number = historical_sequence_number;
-	this->timestamp = timestamp;
+	this->historical_sequence_number = historical_sequence_number_arg;
+	this->timestamp = timestamp_arg;
 }
 int
-LogHistoricalSequenceNumber::Play(void *data_structure)
+LogHistoricalSequenceNumber::Play(void *  /*data_structure*/)
 {
 	// Would like to update ClassAdLog here, but we only have
 	// a pointer to the classad hash table, so ClassAdLog must
@@ -649,7 +648,7 @@ LogHistoricalSequenceNumber::WriteBody(FILE *fp)
 	sprintf(buf,"%lu CreationTimestamp %lu",
 		historical_sequence_number,timestamp);
 	int len = strlen(buf);
-	return (fwrite(buf, 1, len, fp) < len) ? -1: len;
+	return (fwrite(buf, 1, len, fp) < (unsigned)len) ? -1: len;
 }
 
 LogNewClassAd::LogNewClassAd(const char *k, const char *m, const char *t)
@@ -699,18 +698,18 @@ LogNewClassAd::WriteBody(FILE* fp)
 {
 	int rval, rval1;
 	rval = fwrite(key, sizeof(char), strlen(key), fp);
-	if (rval < strlen(key)) return -1;
+	if (rval < (int)strlen(key)) return -1;
 	rval1 = fwrite( " ", sizeof(char), 1, fp);
 	if (rval1 < 1) return -1;
 	rval += rval1;
 	rval1 = fwrite(mytype, sizeof(char), strlen(mytype), fp);
-	if (rval1 < strlen(mytype)) return -1;
+	if (rval1 < (int)strlen(mytype)) return -1;
 	rval += rval1;
 	rval1 = fwrite(" ", sizeof(char), 1, fp);
 	if (rval1 < 1) return -1;
 	rval += rval1;
 	rval1 = fwrite(targettype, sizeof(char), strlen(targettype),fp);
-	if (rval1 < strlen(targettype)) return -1;
+	if (rval1 < (int)strlen(targettype)) return -1;
 	return rval + rval1;
 }
 
