@@ -1,6 +1,6 @@
-1/30/07 V6_7-eventd_v2-merge-2
-   Merge from tag as it is merge to a branch 
-   off the trunk and abandoned in 6_7.
+02/01/07 V6_7-pre_merge-eventd_v2-merge-2
+         V6_7-post_merge-eventd_v2-merge-2
+  Merger of new eventd to trunk
 
 01/18/07 pr777-{root,branch}
   Branch off of the trunk for fixing Gnats PR 777 (better ways of
