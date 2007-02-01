@@ -141,10 +141,6 @@ JICLocalSchedd::notifyJobExit( int exit_status, int reason,
 	static bool did_final_ad_publish = false;
 	static bool did_schedd_update = false;
 
-	static int num_times = 0;
-	num_times++;
-	dprintf(D_ALWAYS, "In JICLocalSchedd::notifyJobExit: num: %d, notify: %d, publish: %d, update: %d\n", num_times, did_local_notify, did_final_ad_publish, did_schedd_update);
-
 		// Call our parent's version of this method to handle all the
 		// common-case stuff, like writing to the local userlog,
 		// writing an output classad (if desired, etc).  
