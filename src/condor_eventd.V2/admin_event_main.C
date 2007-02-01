@@ -1,0 +1,100 @@
+/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+#include "condor_common.h"
+#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_debug.h"
+#include "condor_config.h"
+#include "admin_event.h"
+
+/* Using daemoncore, you get the benefits of a logging system with dprintf
+	and you can read config files automatically. To start testing
+	your daemon, run it with "-f -t" until you start specifying
+	a config file to use(the daemon will automatically look in
+	/etc/condor_config, ~condor/condor_config, or the env var
+	CONDOR_CONFIG if -t is not specifed).  -f means run in the
+	foreground, -t means print the debugging output to the terminal.
+*/
+
+//-------------------------------------------------------------
+
+// about self
+char* mySubSystem = "EVENTD";		// used by Daemon Core
+AdminEvent	*admin_event;
+
+//-------------------------------------------------------------
+
+int main_init(int argc, char *argv[])
+{
+	dprintf(D_FULLDEBUG, "main_init() called\n");
+
+	admin_event = new AdminEvent;
+	admin_event->init();
+
+	// Read our Configuration parameters
+	//config(true);
+
+	return TRUE;
+}
+
+//-------------------------------------------------------------
+
+int 
+main_config( bool is_full )
+{
+	dprintf(D_FULLDEBUG, "main_config() called\n");
+	admin_event->config(is_full);
+	return TRUE;
+}
+
+//-------------------------------------------------------------
+
+int main_shutdown_fast()
+{
+	dprintf(D_FULLDEBUG, "main_shutdown_fast() called\n");
+	DC_Exit(0);
+	return TRUE;	// to satisfy c++
+}
+
+//-------------------------------------------------------------
+
+int main_shutdown_graceful()
+{
+	dprintf(D_FULLDEBUG, "main_shutdown_graceful() called\n");
+	DC_Exit(0);
+	return TRUE;	// to satisfy c++
+}
+
+//-------------------------------------------------------------
+
+void
+main_pre_dc_init( int argc, char* argv[] )
+{
+		// dprintf isn't safe yet...
+}
+
+
+void
+main_pre_command_sock_init( )
+{
+}
+

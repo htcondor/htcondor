@@ -26,6 +26,7 @@
 
 #include "condor_common.h"
 #include "condor_classad.h"
+#include "condor_query.h"
 #include "condor_io.h"
 #include "enum_utils.h"
 
@@ -122,6 +123,12 @@ public:
 						const char* claim_id,
 						ClassAd* reply, 
 						int timeout = -1 );
+
+	bool vacateClaim( const char* name );
+
+	bool checkpointJob( const char* name );
+
+	bool getAds( ClassAdList &adsList, const char* name );
 
  private:
 	char* claim_id;

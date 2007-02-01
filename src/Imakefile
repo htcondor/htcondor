@@ -66,7 +66,8 @@
 		tools KbddProgs collector.V6 PvmProgs dagman userlog Eventd \
 		GlobusProgs starter.V6.1 shadow.V6.1 dcskel c-gahp had \
 		CreddProgs StorkProgs \
-		QuillProgs DeploymentTools
+		QuillProgs DeploymentTools \
+		eventd.V2
 
 #define Libraries \
 		util_lib daemon_core.V6 daemon_client classad c++_util	\
@@ -244,6 +245,7 @@ condor_object_target(master.V6)
 condor_object_target(q.V6)
 condor_object_target(rm.V6)
 condor_object_target(submit.V6)
+condor_object_target(eventd.V2)
 
 condor_object_target(ckpt)
 condor_object_target(syscall_lib)

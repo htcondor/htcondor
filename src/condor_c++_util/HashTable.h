@@ -517,6 +517,7 @@ int HashTable<Index,Value>::clear()
 
   chainsUsedLen = 0;
   chainsUsedFreeList = endOfFreeList;
+  numElems = 0;
 
   return 0;
 }

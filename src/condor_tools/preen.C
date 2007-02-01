@@ -233,6 +233,7 @@ check_spool_dir()
 	well_known_list.append( "Accountant.log" );
 	well_known_list.append( "Accountantnew.log" );
 	well_known_list.append( "local_univ_execute" );
+	well_known_list.append( "EventdShutdownRate.log" );
 
 	// connect to the Q manager
 	if (!(qmgr = ConnectQ (0))) {

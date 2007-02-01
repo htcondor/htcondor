@@ -1,3 +1,7 @@
+1/30/07 V6_7-eventd_v2-merge-2
+   Merge from tag as it is merge to a branch 
+   off the trunk and abandoned in 6_7.
+
 01/18/07 pr777-{root,branch}
   Branch off of the trunk for fixing Gnats PR 777 (better ways of
   specifying config options for DAGs).  I guess it should really be
@@ -124,6 +128,10 @@
   The official V6_8_1 release is a copy of BUILD-V6_7-branch-2006-9-17.
   All platforms built on NMI runid 31207 except windows, which was built
   on Greg Q's laptop.
+
+8/23/06 V6_7-eventd_v2-merge-1
+   Merge from tag as it is merge to a branch 
+   off the trunk and abandoned in 6_7.
 
 08/21/06 V6_9-eventd_v2-{root,branch}
   A new branch to merge v6_7 branch for the eventd developement

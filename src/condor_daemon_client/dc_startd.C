@@ -551,6 +551,142 @@ DCStartd::delegateX509Proxy( const char* proxy )
 	return reply;
 }
 
+bool 
+DCStartd::vacateClaim( const char* name )
+{
+	setCmdStr( "vacateClaim" );
+
+	bool  result;
+	ReliSock reli_sock;
+	reli_sock.timeout(20);   // years of research... :)
+	if( ! reli_sock.connect(_addr) ) {
+		MyString err = "DCStartd::vacateClaim: ";
+		err += "Failed to connect to startd (";
+		err += _addr;
+		err += ')';
+		newError( CA_CONNECT_FAILED, err.Value() );
+		return false;
+	}
+
+	int cmd = VACATE_CLAIM;
+
+	result = startCommand( cmd, (Sock*)&reli_sock ); 
+	if( ! result ) {
+		MyString err = "DCStartd::vacateClaim: ";
+		err += "Failed to send command ";
+		err += "PCKPT_JOB";
+		err += " to the startd";
+		newError( CA_COMMUNICATION_ERROR, err.Value() );
+		return false;
+	}
+
+	if( ! reli_sock.code((char *)name) ) {
+		MyString err = "DCStartd::vacateClaim: ";
+		err += "Failed to send Name to the startd";
+		newError( CA_COMMUNICATION_ERROR, err.Value() );
+		return false;
+	}
+	if( ! reli_sock.eom() ) {
+		MyString err = "DCStartd::vacateClaim: ";
+		err += "Failed to send EOM to the startd";
+		newError( CA_COMMUNICATION_ERROR, err.Value() );
+		return false;
+	}
+		
+	return true;
+}
+
+bool 
+DCStartd::checkpointJob( const char* name )
+{
+	dprintf( D_FULLDEBUG, "Entering DCStartd::checkpointJob(%s)\n",
+			 name );
+
+	setCmdStr( "checkpointJob" );
+
+	bool  result;
+	ReliSock reli_sock;
+	reli_sock.timeout(20);   // years of research... :)
+	if( ! reli_sock.connect(_addr) ) {
+		MyString err = "DCStartd::checkpointJob: ";
+		err += "Failed to connect to startd (";
+		err += _addr;
+		err += ')';
+		newError( CA_CONNECT_FAILED, err.Value() );
+		return false;
+	}
+
+	int cmd = PCKPT_JOB;
+
+	result = startCommand( cmd, (Sock*)&reli_sock ); 
+	if( ! result ) {
+		MyString err = "DCStartd::checkpointJob: ";
+		err += "Failed to send command ";
+		err += "PCKPT_JOB";
+		err += " to the startd";
+		newError( CA_COMMUNICATION_ERROR, err.Value() );
+		return false;
+	}
+
+		// Now, send the name
+	if( ! reli_sock.code((char *)name) ) {
+		MyString err = "DCStartd::checkpointJob: ";
+		err += "Failed to send Name to the startd";
+		newError( CA_COMMUNICATION_ERROR, err.Value() );
+		return false;
+	}
+	if( ! reli_sock.eom() ) {
+		MyString err = "DCStartd::checkpointJob: ";
+		err += "Failed to send EOM to the startd";
+		newError( CA_COMMUNICATION_ERROR, err.Value() );
+		return false;
+	}
+		// we're done
+	dprintf( D_FULLDEBUG, "DCStartd::checkpointJob: "
+			 "successfully sent command\n" );
+	return true;
+}
+
+
+bool 
+DCStartd::getAds( ClassAdList &adsList, const char* name )
+{
+	CondorError errstack;
+	// fetch the query
+	QueryResult q;
+	CondorQuery* query;
+	ClassAd *ad;
+	char* addr;
+
+	// instantiate query object
+	if (!(query = new CondorQuery (STARTD_AD))) {
+		dprintf( D_ALWAYS, "Error:  Out of memory\n");
+		return(false);
+	}
+
+	if( this->locate() ){
+		addr = this->addr();
+		q = query->fetchAds(adsList, addr, &errstack);
+		if (q != Q_OK) {
+        	if (q == Q_COMMUNICATION_ERROR) {
+            	dprintf( D_ALWAYS, "%s\n", errstack.getFullText(true) );
+        	}
+        	else {
+            	dprintf (D_ALWAYS, "Error:  Could not fetch ads --- %s\n",
+                     	getStrQueryResult(q));
+        	}
+			delete query;
+        	return (false);
+		}
+	} else {
+		delete query;
+		return(false);
+	}
+
+	delete query;
+	return(true);
+}
+
 bool
 DCStartd::checkClaimId( void )
 {
