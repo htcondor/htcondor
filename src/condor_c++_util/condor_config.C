@@ -1351,14 +1351,14 @@ param_integer( const char *name, int default_value,
  * Return the [single precision] floating point value associated with the named
  * parameter.  If the value is not defined or not a valid float, then return
  * the default_value argument.  The min_value and max_value arguments are
- * optional and default to FLT_MIN and FLT_MAX.
+ * optional and default to DBL_MIN and DBL_MAX.
  */
 
-float
-param_float( const char *name, float default_value,
-			   float min_value, float max_value )
+double
+param_double( const char *name, double default_value,
+			   double min_value, double max_value )
 {
-	float result;
+	double result;
 	char *string;
 	char *endptr = NULL;
 
@@ -1370,7 +1370,7 @@ param_float( const char *name, float default_value,
 		return default_value;
 	}
 
-	result = strtof(string,&endptr);
+	result = strtod(string,&endptr);
 
 	ASSERT(endptr);
 	if( endptr != string ) {
@@ -1382,17 +1382,17 @@ param_float( const char *name, float default_value,
 
 	if( !valid ) {
 		dprintf( D_CONFIG, "WARNING: %s not an float (\"%s\"), using "
-				 "default value of %f\n", name, string, default_value );
+				 "default value of %lf\n", name, string, default_value );
 		result = default_value;
 	}
 	else if( result < min_value ) {
-		dprintf( D_CONFIG, "WARNING: %s too low (%f), using minimum "
-				 "value of %f\n", name, result, min_value );
+		dprintf( D_CONFIG, "WARNING: %s too low (%lf), using minimum "
+				 "value of %lf\n", name, result, min_value );
 		result = min_value;
 	}
 	else if( result > max_value ) {
-		dprintf( D_CONFIG, "WARNING: %s too high (%f), using maximum "
-				 "value of %f\n", name, result, max_value );
+		dprintf( D_CONFIG, "WARNING: %s too high (%lf), using maximum "
+				 "value of %lf\n", name, result, max_value );
 		result = max_value;
 	}
 	free( string );

@@ -315,7 +315,7 @@ static float getGroupPriorityFactor(const MyString& CustomerName)
 	groupPrioFactorConfig.sprintf("GROUP_PRIO_FACTOR_%s",
 			GroupName.Value() );
 #define ERR_CONVERT_DEFPRIOFACTOR   (-1.0)
-	float tmpPriorityFactor = param_float(groupPrioFactorConfig.Value(),
+	double tmpPriorityFactor = param_double(groupPrioFactorConfig.Value(),
 			   ERR_CONVERT_DEFPRIOFACTOR);
 	if (tmpPriorityFactor != ERR_CONVERT_DEFPRIOFACTOR) {
 		priorityFactor = tmpPriorityFactor;

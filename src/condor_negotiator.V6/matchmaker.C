@@ -916,8 +916,8 @@ negotiationTime ()
             } else {
                 // Next look for a floating point dynamic quota.
                 tmpstr.sprintf("GROUP_QUOTA_DYNAMIC_%s", groups);
-                float quota_fraction =
-                    param_float(
+                double quota_fraction =
+                    param_double(
                         tmpstr.Value(),     // name
                         0.0,                // default value
                         0.0,                // min value
