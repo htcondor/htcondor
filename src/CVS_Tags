@@ -1,3 +1,10 @@
+02/02/07 V6_8_4
+  The official V6_8_4 release is a copy of BUILD-V6_8-branch-2007-2-1.
+  All platforms built on NMI runid 41381.
+
+02/02/07 V6_8_4-{root,branch}
+  The branch for V6_8_4 off of V6_8-branch.
+
 02/01/07 V6_8-dagman-PR806-{root,branch}
   A branch for DAGMan changes related to Gnats PR 806.  I have some
   changes implemented that I want to get into CVS, but I don't want to
