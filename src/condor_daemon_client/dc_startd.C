@@ -580,7 +580,7 @@ DCStartd::vacateClaim( const char* name )
 		return false;
 	}
 
-	if( ! reli_sock.code((char *)name) ) {
+	if( ! reli_sock.code((unsigned char *)name) ) {
 		MyString err = "DCStartd::vacateClaim: ";
 		err += "Failed to send Name to the startd";
 		newError( CA_COMMUNICATION_ERROR, err.Value() );
@@ -629,7 +629,7 @@ DCStartd::checkpointJob( const char* name )
 	}
 
 		// Now, send the name
-	if( ! reli_sock.code((char *)name) ) {
+	if( ! reli_sock.code((unsigned char *)name) ) {
 		MyString err = "DCStartd::checkpointJob: ";
 		err += "Failed to send Name to the startd";
 		newError( CA_COMMUNICATION_ERROR, err.Value() );
