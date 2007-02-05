@@ -347,9 +347,9 @@ ProcFamily::takesnapshot()
 								ExtArray<pid_t> detached_family;
 								detached_family[0] = 0;
 								if (ProcAPI::getPidFamily(currpid,&m_penvid,detached_family,ignore_status) != PROCAPI_FAILURE) {
-									for (int i = 0; detached_family[i] != 0; i++) {
-										if (detached_family[i] != currpid) {
-											pidfamily[j] = detached_family[i];
+									for (int ii = 0; detached_family[ii] != 0; ii++) {
+										if (detached_family[ii] != currpid) {
+											pidfamily[j] = detached_family[ii];
 											j++;
 										}
 									}
