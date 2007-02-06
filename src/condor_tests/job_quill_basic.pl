@@ -17,6 +17,73 @@ my $releasehandled = "no";
 my $successhandled = "no";
 my $aborthandled = "no";
 
+
+#######################
+#
+# compare_3arrays_byrows
+#
+#   We examine each line from an array and verify that each array has the same contents
+#   by having a value for each key equalling the number of arrays. First used to
+#   compare output from condor_q -direct quilld, schedd and rdbms
+
+sub compare_3arrays_byrows
+{
+	$location = 0;
+
+	my $harray1, $harray2, $harray3;
+	$harray1 = shift;
+	$harray2 = shift;
+	$harray3 = shift;
+	$href = shift;
+
+	print "Make sure they all have the same number of entries\n";
+
+	my $count1, $count2, $count3;
+
+	$count1 = $#{$harray1};
+	$count2 = $#{$harray2};
+	$count3 = $#{$harray3};
+
+	if ( ($count1 == $count2) && ($count1 == $count3)) {
+		print "Good the sizes<<$count1>> match up!!!!\n";
+	} else {
+		print "Compare failed because $count1, $count2 and $count3 are not the same\n";
+		return(1);
+	}
+
+	$current = "";
+
+	#print "Skip items follow:\n";
+	#while (($key, $value) = each %{$href}) {
+		#print "$key => $value\n";
+	#}
+
+	while( $location < ($count1 + 1)) {
+		# look at current item
+		$current = ${$harray1}[$location];
+		$current =~ /^\s*(\w*)\s*=\s*(.*)\s*$/;
+		$thiskey = $1;
+		#print "Current<<$current>> Thiskey<<$thiskey>>\n";
+		#print "${$href}{$thiskey}\n";
+		if($current =~ /^.*Submitter.*$/) {
+			#print "Skip Submitter entry\n";
+		} elsif( exists ${$href}{$thiskey}) {
+			#print "Skip compare of -$thiskey-\n";
+		} else {
+			if((${$harray1}[$location] eq ${$harray2}[$location]) && (${$harray1}[$location] eq ${$harray3}[$location])) {
+				#print "Good match:${$harray1}[$location]\n";
+			} else {
+				print "Match FAIL position <<$location>>: 1: ${$harray1}[$location] 2: ${$harray2}[$location] 3: ${$harray3}[$location]\n";
+				return(1);
+			}
+		}
+
+		$location = $location + 1;
+	}
+
+	return(0);
+};
+
 $abort = sub
 {
 	if($aborthandled eq "no") {
@@ -51,13 +118,14 @@ $submitted = sub
 
 	if($submithandled eq "no") {
 		$submithandled = "yes";
+
 sleep(60);
 
 		print "submitted\n";
 		print "Collecting queue details from schedd\n";
 		my @adarray;
 		my $adstatus = 1;
-		my $adcmd = "condor_q -direct schedd $cluster";
+		my $adcmd = "condor_q -long  -direct schedd $cluster";
 		$adstatus = CondorTest::runCondorTool($adcmd,\@adarray,2);
 		if(!$adstatus)
 		{
@@ -72,7 +140,7 @@ sleep(60);
 		print "Collecting queue details from quilld\n";
 		my @bdarray;
 		my $bdstatus = 1;
-		my $bdcmd = "condor_q -direct quilld $cluster";
+		my $bdcmd = "condor_q -long  -direct quilld $cluster";
 		$bdstatus = CondorTest::runCondorTool($bdcmd,\@bdarray,2);
 		if(!$bdstatus)
 		{
@@ -87,7 +155,7 @@ sleep(60);
 		print "Collecting rdbms details from quilld\n";
 		my @cdarray;
 		my $cdstatus = 1;
-		my $cdcmd = "condor_q -direct quilld $cluster";
+		my $cdcmd = "condor_q -long  -direct quilld $cluster";
 		$cdstatus = CondorTest::runCondorTool($cdcmd,\@cdarray,2);
 		if(!$cdstatus)
 		{
@@ -99,10 +167,26 @@ sleep(60);
 		#{
 			#print "$line\n";
 		#}
-		$startrow = CondorTest::find_pattern_in_array("OWNER", \@cdarray);
+		$startrow = CondorTest::find_pattern_in_array("MyType", \@cdarray);
 		print "Start row returned is $startrow\n";
 		print "Size of array is $#cdarray\n";
-		$result = CondorTest::compare_arrays($startrow, $#cdarray, 3, \@adarray, \@bdarray, \@cdarray);
+		%skip = ("Submitter", 1, "LocalSysCpu", 1, "LocalUserCpu", 1,
+					"Rank", 1, "RemoteSysCpu", 1, "RemoteWallClockTime", 1,
+					"ServerTime", 1, "RemoteUserCpu", 1);
+		system("date");
+		@adarray = sort(@adarray);
+		@bdarray = sort(@bdarray);
+		@cdarray = sort(@cdarray);
+		print "Done sorting arrays\n";
+		system("date");
+		$result = compare_3arrays_byrows(\@adarray, \@bdarray, \@cdarray, \%skip);
+		if( $result != 0 ) {
+			my @ddarray;
+			my $ddstatus = 1;
+			my $ddcmd = "condor_rm $cluster";
+			$ddstatus = CondorTest::runCondorTool($ddcmd,\@ddarray,2);
+			die "Ads from all three sources were not the same!!!\n";
+		}
 		my @ddarray;
 		my $ddstatus = 1;
 		my $ddcmd = "condor_rm $cluster";

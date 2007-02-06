@@ -49,7 +49,7 @@ if($dotar != 0) {
 }
 chdir("$pgsqlversion");
 #$doconfigure = system("./configure --prefix=$prefix --libdir=$morelibs");
-$doconfigure = system("./configure --prefix=$prefix --without-readlines");
+$doconfigure = system("./configure --prefix=$prefix --without-readline");
 if($doconfigure != 0) {
 	die "Configure failed\n";
 }
@@ -172,8 +172,8 @@ print "Create quillreader\n";
 $command = Expect->spawn("$prefix/bin/createuser quillreader --port $startpostmasterport --no-createdb --no-adduser --pwprompt")||
 	die "Could not start program: $!\n";
 $command->log_stdout(0);
-unless($command->expect(10,"Enter password for new role:")) {
-	die "Password request never happened\n";
+unless($command->expect(10,"Enter password for new user:")) {
+	die "Quillreader Password request never happened\n";
 }
 print $command "biqN9ihm\n";
 
@@ -182,18 +182,18 @@ unless($command->expect(10,"Enter it again:")) {
 }
 print $command "biqN9ihm\n";
 
-unless($command->expect(10,"Shall the new role be allowed to create more new roles? (y/n)")) {
-	die "Password request never happened\n";
-}
-print $command "n\n";
-$command->soft_close();
+#unless($command->expect(10,"Shall the new role be allowed to create more new roles? (y/n)")) {
+	#die "Password request never happened\n";
+#}
+#print $command "n\n";
+#$command->soft_close();
 
 print "Create quillwriter\n";
 $command = Expect->spawn("$prefix/bin/createuser quillwriter --port $startpostmasterport --createdb --no-adduser --pwprompt")||
 	die "Could not start program: $!\n";
 $command->log_stdout(0);
-unless($command->expect(10,"Enter password for new role:")) {
-	die "Password request never happened\n";
+unless($command->expect(10,"Enter password for new user:")) {
+	die "Quillwriter Password request never happened\n";
 }
 print $command "biqN9ihm\n";
 
@@ -202,10 +202,10 @@ unless($command->expect(10,"Enter it again:")) {
 }
 print $command "biqN9ihm\n";
 
-unless($command->expect(10,"Shall the new role be allowed to create more new roles? (y/n)")) {
-	die "Password request never happened\n";
-}
-print $command "n\n";
+#unless($command->expect(10,"Shall the new role be allowed to create more new roles? (y/n)")) {
+	#die "Password request never happened\n";
+#}
+#print $command "n\n";
 $command->soft_close();
 
 #system("$prefix/bin/createuser quillwriter --createdb --no-adduser --pwprompt");
