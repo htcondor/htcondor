@@ -10627,24 +10627,23 @@ Scheduler::AlreadyMatched(PROC_ID* id)
 bool
 sendAlive( match_rec* mrec )
 {
-	SafeSock	sock;
-	char		*id = NULL;
-	
-    sock.timeout(STARTD_CONTACT_TIMEOUT);
-	sock.encode();
+	classy_counted_ptr<DCStartd> startd = new DCStartd( mrec->peer );
+	classy_counted_ptr<DCStringMsg> msg = new DCStringMsg( ALIVE, mrec->id );
 
-	DCStartd d( mrec->peer );
-	id = mrec->id;
+	msg->setSuccessDebugLevel(D_PROTOCOL);
 
-	dprintf (D_PROTOCOL,"## 6. Sending alive msg to %s\n", id);
+	dprintf (D_PROTOCOL,"## 6. Sending alive msg to %s\n", mrec->id);
 
-	if( !sock.connect(mrec->peer) || !d.startCommand ( ALIVE, &sock) ||
-	    !sock.code(id) || !sock.end_of_message()) {
-			// UDP transport out of buffer space!
-		dprintf(D_ALWAYS, "\t(Can't send alive message to %s)\n",
-				mrec->peer);
+	startd->sendMsg( msg.get(), Stream::safe_sock, STARTD_CONTACT_TIMEOUT );
+
+	if( msg->deliveryStatus() == DCMsg::DELIVERY_FAILED ) {
+			// Status may also be DELIVERY_PENDING, in which case, we
+			// do not know whether it will succeed or not.  Since the
+			// return code from this function is not terribly
+			// important, we just return true in that case.
 		return false;
 	}
+
 		/* TODO: Someday, espcially once the accountant is done, 
 		   the startd should send a keepalive ACK back to the schedd.  
 		   If there is no shadow to this machine, and we have not 
