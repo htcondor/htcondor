@@ -37,7 +37,7 @@
 void
 usage( char *cmd )
 {
-	fprintf(stderr,"Usage: %s [options] <update-command> <classad-filename>\n",cmd);
+	fprintf(stderr,"Usage: %s [options] <update-command> [<classad-filename>]\n",cmd);
 	fprintf(stderr,"Where options are:\n");
 	fprintf(stderr,"    -help             Display options\n");
 	fprintf(stderr,"    -version          Display Condor version\n");
@@ -86,7 +86,7 @@ int main( int argc, char *argv[] )
 				// dprintf to console
 			Termlog = 1;
 			dprintf_config ("TOOL", 2 );
-		} else if(argv[i][0]!='-') {
+		} else if(argv[i][0]!='-' || !strcmp(argv[i],"-")) {
 			if(command==-1) {
 				command = getCollectorCommandNum(argv[i]);
 				if(command==-1) {
@@ -108,19 +108,18 @@ int main( int argc, char *argv[] )
 		}
 	}
 
-	if(!filename) {
-		fprintf(stderr,"You must give a filename containing a ClassAd.\n\n");
-		usage(argv[0]);
-		exit(1);
-	}
-
 	FILE *file;
 	ClassAd *ad;
 	Daemon *collector;
 	Sock *sock;
 	int eof,error,empty;
 
-	file = safe_fopen_wrapper(filename,"r");
+	if(!filename || !strcmp(filename,"-")) {
+		file = stdin;
+		filename = "(stdin)";
+	} else {
+		file = safe_fopen_wrapper(filename,"r");
+	}
 	if(!file) {
 		fprintf(stderr,"couldn't open %s: %s\n",filename,strerror(errno));
 		return 1;
