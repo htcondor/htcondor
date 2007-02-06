@@ -68,7 +68,7 @@ static int code_access_request(Stream *socket, char *&filename, int &mode,
 
 }
 
-void attempt_access_handler(Service *, int i, Stream *s)
+void attempt_access_handler(Service *, int  /*i*/, Stream *s)
 {
 	char *filename = NULL;
 	int mode;

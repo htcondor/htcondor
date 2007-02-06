@@ -97,7 +97,7 @@ CondorVersionInfo::compare_build_dates(const char* VersionString1) const
 
 bool
 CondorVersionInfo::is_compatible(const char* other_version_string, 
-								 const char* other_subsys) const
+								 const char*  /*other_subsys*/) const
 {
 	VersionData_t other_ver;
 
