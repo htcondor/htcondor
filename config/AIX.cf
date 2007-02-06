@@ -10,7 +10,7 @@ PRELINK_CPP = /usr/local/bin/ld.gnu
 PRELINK_CPP_FLAGS = -Ur -u main
 
 /* specifically ask for the C++ libraries to be statically linked */
-#define PlatformLdFlags -Wl,-berok -Wl,-bstatic -lstdc++ -Wl,-bdynamic -lcfg -lodm -lcrypt -lc -static-libgcc
+#define PlatformLdFlags -nodefaultlibs -Wl,-berok -Wl,-bstatic -lgcc -lgcc_eh -lstdc++ -Wl,-bdynamic -lcfg -lodm -lcrypt -lc -lm
 
 /* we also need to link test suite jobs with the same mess */
 #define TestPlatformLdFlags PlatformLdFlags
