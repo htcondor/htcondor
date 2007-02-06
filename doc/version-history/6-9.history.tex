@@ -64,6 +64,12 @@ Condor daemons on the same host no longer use the GCB broker.
 This improves scalability and also allows a single host to
 continue functioning if the GCB broker is unavailable.
 
+\item The \Condor{schedd} now uses non-blocking methods to send the
+``alive'' message to the \Condor{startd} when renewing the job lease.
+This prevents the \Condor{schedd} from blocking for 20 seconds while
+trying to connect to a machine that has become disconnected from the
+network.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
