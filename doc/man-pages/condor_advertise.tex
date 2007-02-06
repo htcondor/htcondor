@@ -6,7 +6,7 @@
 \oOpt{-debug}
 \oOpt{-tcp}
 \Arg{update-command}
-\Arg{classad-filename}
+\oArg{classad-filename}
 
 \index{Condor commands!condor\_advertise}
 \index{condor\_advertise command}
@@ -14,8 +14,10 @@
 \Description
 \Condor{advertise} sends a classad to the collector daemon on
 the central manager machine.
-The classad is contained in a file,
-which is specified by the second required argument.
+The classad may be contained in a file,
+whose name is given as the final argument. If the file
+argument is missing or equal to ``-'', then the classad is read
+from standard input.
 Which daemon's classad to update is specified by the first
 required argument.
 The \Arg{update-command} may be one of the following strings:
