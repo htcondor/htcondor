@@ -214,7 +214,7 @@ PGSQLDatabase::rollbackTransaction()
 QuillErrCode 
 PGSQLDatabase::execCommand(const char* sql, 
 						   int &num_result,
-						   int &db_err_code)
+						   int & /*db_err_code*/)
 {
 	PGresult 	*result;
 	char*		num_result_str = NULL;
@@ -234,9 +234,14 @@ PGSQLDatabase::execCommand(const char* sql,
 			"[SQL EXECUTION ERROR2] %s\n", PQerrorMessage(connection));
 		dprintf(D_ALWAYS, 
 			"[SQL: %s]\n", sql);
-		db_err_code =  atoi(PQresultErrorField(result, PG_DIAG_SQLSTATE));
-		dprintf(D_ALWAYS, 
-			"[SQLERRORCODE: %d]\n", db_err_code);
+
+		// Looks like PQresultErrorField returns null in this case
+		// so don't dereference it
+
+		//db_err_code =  atoi(PQresultErrorField(result, PG_DIAG_SQLSTATE));
+		//dprintf(D_ALWAYS, 
+		//	"[SQLERRORCODE: %d]\n", db_err_code);
+
 		PQclear(result);
 		return FAILURE;
 	}
@@ -304,7 +309,7 @@ PGSQLDatabase::execQuery(const char* sql,
 
 QuillErrCode
 PGSQLDatabase::execQuery(const char* sql, 
-						 PGresult*& result) {
+						 PGresult*& /*result*/) {
 	int num_result = 0;
 	return execQuery(sql, queryRes, num_result);
 }
@@ -386,8 +391,8 @@ PGSQLDatabase::releaseHistoryResults()
  *		
  */
 QuillErrCode
-PGSQLDatabase::getJobQueueDB(int *clusterarray, int numclusters, int *procarray, int numprocs,
-			     char *owner, bool isfullscan,
+PGSQLDatabase::getJobQueueDB(int *clusterarray, int numclusters, int *procarray, int   /*numprocs*/,
+			     char *  /*owner*/, bool isfullscan,
 			     int& procAdsStrRes_num, int& procAdsNumRes_num, 
 			     int& clusterAdsStrRes_num, int& clusterAdsNumRes_num)
 {
