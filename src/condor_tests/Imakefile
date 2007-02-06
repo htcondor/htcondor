@@ -706,10 +706,10 @@ TESTCLASS(job_filexfer_output_van,quick)
 /*
 	GNATS 548 perl md5 module missing on HPUX 10 machine(s)
 */
-DESC(job_filexfer_md5_van,"Vanilla: Can we move 200 megs and not impact md5 checksum?")
-RUN(job_filexfer_md5_van)
-TESTCLASS(job_filexfer_md5_van,filexfer)
-TESTCLASS(job_filexfer_md5_van,quick)
+DESC(job_filexfer_md5-remote_van,"Vanilla: Can we move 200 megs and not impact md5 checksum?")
+RUN(job_filexfer_md5-remote_van)
+TESTCLASS(job_filexfer_md5-remote_van,filexfer)
+TESTCLASS(job_filexfer_md5-remote_van,quick)
 #endif
 
 /* Dagman Tests */
