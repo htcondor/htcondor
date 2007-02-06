@@ -902,7 +902,7 @@ FileTransfer::ComputeFilesToSend()
 				// file was not found.  send it.
 				dprintf( D_FULLDEBUG, 
 						 "Sending new file %s, time==%ld, size==%ld\n",	
-						 f, dir.GetModifyTime(), dir.GetFileSize() );
+						 f, dir.GetModifyTime(), (long) dir.GetFileSize() );
 				send_it = true;
 			}
 			else if(final_files_to_send.file_contains(f)) {
@@ -2504,7 +2504,7 @@ bool FileTransfer::BuildFileCatalog(time_t spool_time, const char* iwd, FileCata
 	//
 	Directory file_iterator(iwd);
 	const char * f = NULL;
-	while( f = file_iterator.Next() ) {
+	while( (f = file_iterator.Next()) ) {
 		if (!file_iterator.IsDirectory()) {
 			CatalogEntry *tmpentry = 0;
 			tmpentry = new CatalogEntry;
