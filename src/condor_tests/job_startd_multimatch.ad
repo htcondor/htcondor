@@ -1,0 +1,12 @@
+MyType = "Machine"
+TargetType = "Job"
+Name = "resource1"
+ResourceName = "condor foo.cs.wisc.edu"
+Requirements = True
+Rank = 0.0
+CurrentRank = 0.0
+Activity = "Idle"
+State = "Unclaimed"
+WantClaiming = False
+WantAdRevaluate = True
+UpdateSequenceNumber = 2

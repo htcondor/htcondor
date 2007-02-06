@@ -1,0 +1,116 @@
+#! /usr/bin/env perl
+use CondorTest;
+use CondorPersonal;
+
+CondorPersonal::DebugOff();
+Condor::DebugOff();
+
+$cmd_template = "job_startd_multimatch.template";
+$testname = 'job_startd_multimatch - Startd Multimatch job';
+$cmd = "job_startd_multimatch.cmd";
+$corename = "job_startd_multimatch";
+$localpostsrc = "x_startd_multimatch_postsrc";
+$interval = 120;
+$jobcount = 5;
+
+# where am I running
+$dummyhost = "gamgee.cs.wisc.edu";
+$currenthost = `hostname`;
+CondorTest::fullchomp($currenthost);
+
+system("date");
+print "Dummyhost was $dummyhost and really running on $currenthost\n";
+
+$mypid = $$;
+$mysaveme = $corename . ".saveme";
+system("mkdir $mysaveme");
+
+$mysubmitnm = $corename . $mypid . ".cmd";
+$mysubmitnmcmdout = $corename . $mypid . ".cmd.out";
+$mysubmitnmlog = $corename . $mypid . ".log" ;
+$mysubmitnmerr = $corename . $mypid . ".err" . "\$(NODE)";
+$mysubmitnmout = $corename . $mypid . ".out" . "\$(NODE)";
+$mycorenm = $corename . ".cmd";
+$mycorenmcmdout = $corename . ".cmd.out";
+$mycorenmlog = $corename . ".log";
+$mycorenmerr = $corename . ".err";
+$mycorenmout = $corename . ".out";
+
+#print "Master PID is $mypid\n";
+#print "Master PID submit file is $mysubmitnm\n";
+
+#create a pid specific cmd file
+#system("cp $mycorenm $mysubmitnm");
+$myline = "";
+open(NEWSUB,">$mysubmitnm") || die "Could not create test submit file $mysubmitnm: $!\n";
+open(TEMPLATE,"<$mycorenm") || die "Could not open submit template: $mycorenm:$!\n";
+while(<TEMPLATE>) {
+	$myline = "$_";
+	if($myline =~ /^.*queue.*$/) {
+		print NEWSUB "queue  $jobcount\n";
+	} elsif($myline =~ /^.*log\s*=.*$/) {
+		print NEWSUB "log =  $mysubmitnmlog\n";
+	} else {
+		print NEWSUB "$myline";
+	}
+}
+close(NEWSUB);
+close(TEMPLATE);
+open(LOCAL,">$localpostsrc") || die "Could not open local config addition:$!\n";
+print LOCAL "NEGOTIATOR_INTERVAL = $interval\n";
+close(LOCAL);
+
+# my $configrem = CondorPersonal::DebugOn();
+# get a remote scheduler running (side b)
+my $configrem = CondorPersonal::StartCondor("x_param.startdmultimatch" ,"startdmultimatch");
+my @multimatch = split /\+/, $configrem;
+my $multimatchconfig = shift @multimatch;
+my $multimatchport = shift @multimatch;
+
+print "---Startd Multimatch config is $multimatchconfig and remote port is $multimatchport---\n";
+
+
+$ENV{CONDOR_CONFIG} = $multimatchconfig;
+
+print "Set config to $multimatchconfig\n";
+
+my $result = system("./job_startd_multimatch.pl $mysubmitnm $jobcount $interval");
+print "Result of basic startd_multimatch  job is  $result\n";
+
+exit(1);
+
+system("cp -r $mypid $mysaveme");
+system("cp *job_startd_multimatch* $mysaveme");
+
+if( -e "$mysubmitnm" )
+{
+	system("cp $mysubmitnm $mycorenm");
+}
+
+if( -e "$mysubmitnmout" )
+{
+	system("cp $mysubmitnmcmdout $mycorenmcmdout");
+}
+
+if( -e "$mysubmitnmlog" )
+{
+	system("cp $mysubmitnmlog $mycorenmlog");
+}
+
+if( $result != 0 )
+{
+	exit(1);
+}
+
+my @adarray;
+my $status = 1;
+my $cmd = "condor_off -master";
+$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+if(!$status)
+{
+	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	exit(1)
+}
+
+system("date");
+
