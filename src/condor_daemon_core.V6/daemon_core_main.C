@@ -51,7 +51,7 @@
 #if HAVE_EXT_COREDUMPER
 #include "google/coredumper.h"
 #endif
-#if HAVE_RESOLV_H && (HAVE_RES_INIT || HAVE___RES_INIT)
+#if HAVE_RESOLV_H && HAVE_DECL_RES_INIT
 #include <resolv.h>
 #endif
 
@@ -997,7 +997,7 @@ unix_sigusr2(int)
 void
 dc_reconfig( bool is_full )
 {
-#if HAVE_RESOLV_H && (HAVE_RES_INIT || HAVE___RES_INIT)
+#if HAVE_RESOLV_H && HAVE_DECL_RES_INIT
 		// re-initialize dns info (e.g. IP addresses of nameservers)
 	res_init();
 #endif

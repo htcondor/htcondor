@@ -1476,8 +1476,7 @@ AC_CHECK_TYPES([__int64])
 ############################################################
 
 AC_CHECK_FUNCS([stat64])
-AC_CHECK_FUNCS([res_init])
-AC_CHECK_FUNCS([__res_init])
+AC_CHECK_DECLS([res_init],[],[],[#include<resolv.h>])
 AC_CHECK_FUNC(dlopen, ,AC_CHECK_LIB(dl, dlopen))
 AC_CHECK_FUNC(crypt, ,AC_CHECK_LIB(crypt,crypt))
 
