@@ -916,9 +916,9 @@ TRUNK_BUILD	-a V6_9_BUILD
 # NOTE: most of this is cruft and should probably be pruned some day
 ######################################################################
 
-# The V6_9-privsep-branch added the condor_procd and condor_transferd
-# directories
-V6_9_PRIVSEP_SRC       -a V6_9_SRC src/condor_procd src/condor_transferd
+# The V6_9-privsep-branch added the condor_procd, condor_transferd, and
+# condor_privsep directories
+V6_9_PRIVSEP_SRC       -a V6_9_SRC src/condor_procd src/condor_transferd src/condor_privsep
 V6_9_PRIVSEP_UNIX_CODE -a TOOLS V6_9_PRIVSEP_SRC
 V6_9_PRIVSEP_NT_CODE   -a NT_TOOLS NT_PROGRAMS V6_9_PRIVSEP_SRC
 V6_9_PRIVSEP_CODE      -a TOOLS NT_TOOLS NT_PROGRAMS V6_9_PRIVSEP_SRC
