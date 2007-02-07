@@ -20,7 +20,6 @@
 \oOpt{-setuponly}
 \oOpt{-setup\_here}
 \oOptArg{-setup\_jobmanager}{jobmanager}
-\oOptArg{-scheduler}{name}
 \oOptArg{-suffix}{suffix}
 \oOptArg{-useconfig}{filename}
 \oOptArg{-usestartup}{filename}
@@ -161,6 +160,10 @@ if you have trouble getting the system to work.
     \OptItem{\Opt{-setuponly}}{
         Performs only the placement of files on the Globus resource.
         This option cannot be run simultaneously with \Opt{-runonly} }
+    \OptItem{\Opt{-forcesetup}}{
+        During setup, force copying of files, even if the target files
+        already exist.  Use this if you want to push out changes to
+        the glidein configuration.}
     \OptItem{\Opt{-setup\_here}}{
         Runs the setup process directly instead of submitting a setup
 	job to the remote Globus resource.  For example, this may
@@ -177,12 +180,6 @@ if you have trouble getting the system to work.
         name is the same as the tarball name minus the tar.gz.  For
 	example: 6.6.5-i686-pc-Linux-2.4 }
 
-    \OptItem{\OptArg{-scheduler}{name}}{
-	Selects the Globus job scheduler type.
-	Defaults to \Arg{fork}.
-	NOTE: Contact strings which already contain the scheduler
-	type will \emph{not} be overridden by this option.
-	}
     \OptItem{\OptArg{-queue}{name}}{
 	The argument \Arg{name} is a string which specifies which
 	job queue is to be used for submission on the Globus resource.
@@ -268,8 +265,10 @@ if you have trouble getting the system to work.
         This option makes the setup process copy the startup script
         you specify, rather than generating one from scratch.
         }
-    \OptItem{\Opt{-suffix}{X}}{
+    \OptItem{\OptArg{-suffix}{X}}{
         Suffix to use when generating files.  Default is process id. }
+    \OptItem{\Opt{-edg}}{
+        Use EDG MDS schema to query GRIS. }
     \OptItem{\OptArg{-gsi\_daemon\_name}{cert\_name}}{
         Using this option turns on GSI authentication in the glidein
         configuration.  The argument to this option is the GSI
