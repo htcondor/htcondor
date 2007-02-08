@@ -105,9 +105,9 @@ ClassAdCronJob::ProcessOutput( const char *line )
 		if ( OutputAdCount != 0 ) {
 
 			// Insert the 'LastUpdate' field
-			const char      *prefix = GetPrefix( );
-			if ( prefix ) {
-				MyString    Update( prefix );
+			const char      *lu_prefix = GetPrefix( );
+			if ( lu_prefix ) {
+				MyString    Update( lu_prefix );
 				Update += "LastUpdate = ";
 				char    tmpBuf [ 20 ];
 				sprintf( tmpBuf, "%ld", (long) time( NULL ) );
