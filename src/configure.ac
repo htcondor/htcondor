@@ -1456,7 +1456,10 @@ AC_CHECK_HEADERS([sys/statvfs.h])
 AC_CHECK_HEADERS([sys/vfs.h])
 AC_CHECK_HEADERS([sys/mount.h])
 AC_CHECK_HEADERS([ustat.h])
-AC_CHECK_HEADERS([resolv.h])
+AC_CHECK_HEADERS([resolv.h],[],[],[
+#include<sys/types.h>
+#include<netinet/in.h>
+#include<arpa/nameser.h>])
 
 
 ############################################################
@@ -1476,10 +1479,14 @@ AC_CHECK_TYPES([__int64])
 ############################################################
 
 AC_CHECK_FUNCS([stat64])
-AC_CHECK_DECLS([res_init],[],[],[#include<resolv.h>])
 AC_CHECK_FUNC(dlopen, ,AC_CHECK_LIB(dl, dlopen))
 AC_CHECK_FUNC(crypt, ,AC_CHECK_LIB(crypt,crypt))
 
+AC_CHECK_DECLS([res_init],[],[],[
+#include<sys/types.h>
+#include<netinet/in.h>
+#include<arpa/nameser.h>
+#include<resolv.h>])
 
 AC_CHECK_FUNCS(statfs statvfs)
 dnl
