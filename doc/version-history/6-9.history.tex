@@ -28,6 +28,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Added configuration parameter \Macro{DEDICATED\_SCHEDULER\_USE\_FIFO}
+which defaults to true.  When false, the dedicated scheduler will
+use a best-fit algorithm to schedule parallel jobs.  This setting is
+not recommended, as it can cause starvation.  When true, the dedicated
+scheduler will schedule jobs in a first-in, first-out manner.
+
 \item Added \Opt{-dump} to \Condor{config\_val} which will print out
 all of the macros defined in any of the configuration files found by
 the program.
