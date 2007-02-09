@@ -1,3 +1,13 @@
+02/09/07 V6_9-cron-{root,branch}
+  Well, well, well... look who's back from the dead! That's right,
+  when most thought that my Condor hacking days were long gone, I've
+  come back out of nowhere with a vengence. You can try to sweat over
+  what I'm going to do with this branch, but I think you should just let
+  it slide like that time I hit your mom with a can of reduced fat
+  coconut milk. Anyway, now that's out of the way. This branch was
+  made from BUILD-V6_9-trunk-2007-2-8 and will be used to merge
+  my cron code that never made it into the Condor trunk.
+
 02/01/07 V6_7-pre_merge-eventd_v2-merge-2
          V6_7-post_merge-eventd_v2-merge-2
   Merger of new eventd to trunk
