@@ -44,7 +44,7 @@ class MpiResource : public RemoteResource {
 	virtual void printExit( FILE *fp );
 
 	int node( void ) { return node_num; };
-	void setNode( int node ) { node_num = node; };
+	void setNode( int node_arg ) { node_num = node_arg; };
 
 		/** Call RemoteResource::resourceExit() and log a
 			NodeTerminatedEvent to the UserLog
