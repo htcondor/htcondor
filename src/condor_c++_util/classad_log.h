@@ -176,7 +176,7 @@ public:
 	char *get_key() { return strdup(key); }
 
 private:
-	virtual int WriteBody(FILE* fp) { int r=fwrite(key, sizeof(char), strlen(key), fp); return r < strlen(key) ? -1 : r;}
+	virtual int WriteBody(FILE* fp) { int r=fwrite(key, sizeof(char), strlen(key), fp); return r < ((int)strlen(key)) ? -1 : r;}
 	virtual int ReadBody(FILE* fp);
 
 	char *key;
@@ -223,7 +223,7 @@ public:
 	virtual ~LogBeginTransaction(){};
 private:
 
-	virtual int WriteBody(FILE* fp) {return 0;}
+	virtual int WriteBody(FILE* /*fp*/) {return 0;}
 	virtual int ReadBody(FILE* fp);
 
 };
@@ -233,7 +233,7 @@ public:
 	LogEndTransaction() { op_type = CondorLogOp_EndTransaction; }
 	virtual ~LogEndTransaction(){};
 private:
-	virtual int WriteBody(FILE* fp) {return 0;}
+	virtual int WriteBody(FILE* /*fp*/) {return 0;}
 	virtual int ReadBody(FILE* fp);
 
 };
