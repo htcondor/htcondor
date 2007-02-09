@@ -182,7 +182,7 @@ ParallelShadow::getResources( void )
     char *host = NULL;
     char *claim_id = NULL;
     MpiResource *rr;
-	int cluster;
+	int clusterid;
 	char buf[128];
 
     int numProcs=0;    // the # of procs to come
@@ -192,7 +192,7 @@ ParallelShadow::getResources( void )
 	int nodenum = 1;
 	ReliSock* sock;
 
-	cluster = getCluster();
+	clusterid = getCluster();
     rr = ResourceList[0];
 	rr->getClaimId( claim_id );
 
@@ -205,8 +205,8 @@ ParallelShadow::getResources( void )
 	}
 		
 	sock->encode();
-	if( ! sock->code(cluster) ) {
-		EXCEPT( "Can't send cluster (%d) to schedd\n", cluster );
+	if( ! sock->code(clusterid) ) {
+		EXCEPT( "Can't send cluster (%d) to schedd\n", clusterid );
 	}
 	if( ! sock->code(claim_id) ) {
 		EXCEPT( "Can't send ClaimId to schedd\n" );
@@ -287,7 +287,7 @@ ParallelShadow::getResources( void )
 			char buffer[1024];
 			sprintf (buffer, "%s = \"%s%c%s\"", ATTR_REMOTE_SPOOL_DIR, 
 				param("SPOOL"), DIR_DELIM_CHAR, 
-				gen_ckpt_name(0, cluster, 0, 0));
+				gen_ckpt_name(0, clusterid, 0, 0));
 			tmp_ad->Insert(buffer);
 
 			rr->setJobAd( tmp_ad );
@@ -468,6 +468,8 @@ ParallelShadow::emailTerminateEvent( int exitReason, update_style_t kind )
 		fprintf ( mailer, "MPICH library catches\nSIGSEGV and exits" );
 		fprintf ( mailer, "with a status of one.\n" );
 	}
+
+	msg.writeCustom(jobAd);
 
 	fprintf( mailer, "\nHave a nice day.\n" );
 }
@@ -659,7 +661,7 @@ ParallelShadow::replaceNode ( ClassAd *ad, int nodenum ) {
 
 
 int
-ParallelShadow::updateFromStarter(int command, Stream *s)
+ParallelShadow::updateFromStarter(int  /*command*/, Stream *s)
 {
 	ClassAd update_ad;
     ClassAd *jobad = getJobAd();
@@ -827,7 +829,7 @@ ParallelShadow::getExitReason( void )
 
 
 bool
-ParallelShadow::setMpiMasterInfo( char* str )
+ParallelShadow::setMpiMasterInfo( char*   /*str*/ )
 {
 	return false;
 }
@@ -864,7 +866,7 @@ ParallelShadow::exitCode( void )
 
 
 void
-ParallelShadow::resourceBeganExecution( RemoteResource* rr )
+ParallelShadow::resourceBeganExecution( RemoteResource*   /*rr*/ )
 {
 	bool all_executing = true;
 
@@ -893,7 +895,7 @@ ParallelShadow::resourceBeganExecution( RemoteResource* rr )
 
 
 void
-ParallelShadow::resourceReconnected( RemoteResource* rr )
+ParallelShadow::resourceReconnected( RemoteResource*  /*rr*/ )
 {
 		//EXCEPT( "impossible: MPIShadow doesn't support reconnect" );
 }
