@@ -3026,7 +3026,12 @@ DedicatedScheduler::computeSchedule( void )
 		}
 
 		
-		if( isPossibleToSatisfy(jobs, max_hosts) ) {
+		// Support best fit scheduling by setting this parameter
+		// This may cause starvation of large jobs, so use cautiously!
+
+		bool fifo = param_boolean("DEDICATED_SCHEDULER_USE_FIFO", true);
+
+		if( fifo && isPossibleToSatisfy(jobs, max_hosts) ) {
 				// Yes, we could run it.  Stop here.
 			dprintf( D_FULLDEBUG, "Could satisfy job %d in the future, "
 					 "done computing schedule\n", cluster );
