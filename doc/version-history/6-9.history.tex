@@ -85,6 +85,10 @@ standard input.
 \item Unix Condor daemons now reinitialize their DNS
 configuration (e.g. IP addresses of the nameservers) on reconfig.
 
+% Gnats PR 777
+\item A configuration file for \Condor{dagman} can now be specified
+in a DAG file or on the \Condor{submit\_dag} command line.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -280,7 +284,7 @@ parallel jobs to use proc 0 as a scratch pad.
 \item Parallel jobs now support an \Attr{AllRemoteHosts} attribute,
 which lists all the hosts across all procs in a cluster.
 
-\item The \Macro{DAGMAN\_ABORT\_DUPLICATES} config macro (which causes
+\item The \Macro{DAGMAN\_ABORT\_DUPLICATES} configuration macro (which causes
 \Condor{dagman} to abort itself if it detects another \Condor{dagman}
 running on the same DAG) now defaults to \Expr{True} instead of
 \Expr{False}.

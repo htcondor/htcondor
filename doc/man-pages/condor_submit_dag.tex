@@ -17,6 +17,7 @@
 \oOptArg{-debug}{level}
 \oOpt{-usedagdir}
 \oOptArg{-outfile\_dir}{directory}
+\oOptArg{-config}{ConfigFileName}
 \Arg{DAGInputFile1}
 \oArg{{DAGInputFile2} \Dots {DAGInputFileN} }
 
@@ -109,6 +110,16 @@ description.
      or specified with an absolute path.
      Without this option, the \File{.dagman.out} file is placed in the
      same directory as the first DAG input file listed on the command line.
+     }
+  \OptItem{\OptArg{-config}{ConfigFileName}}{
+     Specifies a configuration file to be used for this DAGMan run.
+     Note that the options specified in the configuration file apply to all
+     DAGs if multiple DAGs are specified.  Further note that it is a
+     fatal error if the configuration file specified by this option
+     conflicts with a configuration file specified in any of the DAG
+     files, if they specify one.  For more information about how
+     \Condor{dagman} configuration files work, see
+     section~\ref{sec:DAGConfig}.
      }
   \end{Options}
 

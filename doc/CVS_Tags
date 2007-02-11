@@ -8,6 +8,11 @@
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
 
+02/09/07 pr777-merge-1
+  The state of the pr777-branch for a merge back to the trunk.  Changes
+  on the branch have been code reviewed and documented; there shouldn't
+  need to be any more changes on the branch.
+
 01/18/07 pr777-{root,branch}
   Branch off of the trunk for fixing Gnats PR 777 (better ways of 
   specifying config options for DAGs).  I guess it should really be

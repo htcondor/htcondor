@@ -77,11 +77,11 @@ other job procs of that job that are still running.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{DAGMan!input file example}
-The input file used by DAGMan specifies seven items:
+The input file used by DAGMan specifies eight items:
 \begin{enumerate}
 \item
-A list of the jobs in the DAG. This serves to name each jobs
-and specify each jobs's Condor submit description file.
+A list of the jobs in the DAG. This serves to name each job
+and specify each job's Condor submit description file.
 \item
 A list of any data placement jobs in the DAG.
 This serves to name each of these jobs and
@@ -99,6 +99,8 @@ Number of times to retry if a node within the DAG fails (optional).
 The definition of macros associated with a node (optional).
 \item
 A node exit value that will abort the entire DAG (optional).
+\item
+A configuration file (optional).
 \end{enumerate}
 
 Comments may be placed in the input file that describes the DAG.
@@ -155,7 +157,7 @@ The first section of the input file lists
 all the jobs that appear in the DAG.
 Each job to be managed by Condor is described by a single line
 called a \Arg{JOB} Entry.
-The syntax used for each \Arg{JOB} Entry is
+The syntax used for each \Arg{JOB} entry is
 
 \Arg{JOB} \Arg{JobName} \Arg{SubmitDescriptionFileName} \oArg{DONE}
 
@@ -185,7 +187,7 @@ completed programs.
 
 The \Arg{DATA} keyword specifies a job to be managed by the Stork data
 placement server.  
-The syntax used for each \Arg{DATA} Entry is
+The syntax used for each \Arg{DATA} entry is
 
 \Arg{DATA} \Arg{JobName} \Arg{SubmitDescriptionFileName} \oArg{DONE}
 
@@ -435,7 +437,7 @@ of upper and lower case).
 \index{DAGMan!ABORT-DAG-ON}
 The seventh type of item in the DAG input file provides a way
 to abort the entire DAG if a given node returns a specific exit
-code.  The syntax for ABORT-DAG-ON:
+code.  The syntax for \Arg{ABORT-DAG-ON} is
 
 \Arg{ABORT-DAG-ON} \Arg{JobName} \Arg{AbortExitValue}
 \oArg{RETURN \textless{DAGReturnValue}\textgreater}
@@ -473,6 +475,29 @@ value with the RETURN keyword.
 The DAG abort return value
 can be used for DAGs within DAGs,
 allowing an inner DAG to cause an abort of an outer DAG.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{CONFIG}
+
+\index{DAGMan!CONFIG}
+
+The \Arg{CONFIG} keyword specifies a configuration file to be used
+to set \Condor{dagman} configuration options when running this DAG.
+The syntax for \Arg{CONFIG} is
+
+\Arg{CONFIG} \Arg{ConfigFileName}
+
+If the DAG file contains a line like this:
+
+\begin{verbatim}
+    CONFIG dagman.config
+\end{verbatim}
+
+the configuration values in the file \File{dagman.config} will be used
+for this DAG.
+
+For more information about how \Condor{dagman} configuration files work,
+see section~\ref{sec:DAGConfig}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Submit Description File}
@@ -1074,8 +1099,44 @@ run each node job in the proper directory.
 \subsection{\label{sec:DAGConfig}Configuration}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+Configuration macros for \Condor{dagman} can be specified in several
+ways:
+\begin{enumerate}
+\item
+In a Condor configuration file.
+\item
+With an environment variable (prepend "\_CONDOR\_" to the macro name).
+\item
+In a \Condor{dagman}-specific configuration file specified in the DAG
+file or on the \Condor{submit\_dag} command line.
+\item
+For some configuration macros, there is a corresponding \Condor{submit\_dag}
+command line (e.g., \MacroNI{DAGMAN\_MAX\_JOBS\_SUBMITTED}/
+\OptArg{-maxjobs}).
+\end{enumerate}
+
+In the above list, configuration values specified later in the list
+override ones specified earlier (e.g., a value specified on the
+\Condor{submit\_dag} command line overrides corresponding values in any
+configuration file; a value specified in a DAGMan-specific configuration
+file overrides values specified in a general Condor configuration file).
+
+Non-\Condor{dagman}, non-daemoncore configuration macros in a
+\Condor{dagman}-specific configuration file are ignored.
+
+Only a single configuration file can be specified for a given
+\Condor{dagman} run.  For example, if one file is specified in a DAG,
+and a different file is specified on the \Condor{submit\_dag} command
+line, this is a fatal error at submit time.  The same is true if
+different configuration files are specified in multiple DAG files
+referenced in a single \Condor{submit\_dag} command.
+
+If multiple DAGs are run in a single \Condor{dagman} run, the
+configuration options specified in the \Condor{dagman} configuration
+file, if any, apply to all DAGs, even if some of the DAGs specify no
+configuration file.
+
 Configuration variables relating to DAGMan may be found
-in 
-section~\ref{sec:DAGMan-Config-File-Entries}.
+in section~\ref{sec:DAGMan-Config-File-Entries}.
 
 \index{DAGMan|)}
