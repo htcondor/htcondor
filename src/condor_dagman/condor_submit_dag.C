@@ -59,6 +59,7 @@ struct SubmitDagOptions
 	MyString strDagmanPath;
 	bool useDagDir;
 	MyString strDebugDir;
+	MyString strConfigFile;
 	
 	// non-command line options
 	MyString strLibLog;
@@ -85,6 +86,7 @@ struct SubmitDagOptions
 		iDebugLevel = 3;
 		primaryDagFile = "";
 		useDagDir = false;
+		strConfigFile = "";
 	}
 
 };
@@ -215,6 +217,13 @@ submitDag( SubmitDagOptions &opts )
 			opts.strJobLog = storkLogFiles.next();
 		}
 		printf("Done.\n");
+	}
+
+	MyString	msg;
+	if ( !GetConfigFile( opts.dagFiles, opts.useDagDir,
+				opts.strConfigFile, msg) ) {
+		fprintf( stderr, "ERROR: %s\n", msg.Value() );
+		return 1;
 	}
 
 	writeSubmitFile(opts);
@@ -446,6 +455,15 @@ void writeSubmitFile(/* const */ SubmitDagOptions &opts)
 	Env env;
 	env.SetEnv("_CONDOR_DAGMAN_LOG",opts.strDebugLog.Value());
 	env.SetEnv("_CONDOR_MAX_DAGMAN_LOG=0");
+	if ( opts.strConfigFile != "" ) {
+		if ( access( opts.strConfigFile.Value(), F_OK ) != 0 ) {
+			fprintf( stderr, "ERROR: unable to read config file %s "
+						"(error %d, %s)\n",
+						opts.strConfigFile.Value(), errno, strerror(errno) );
+			exit(1);
+		}
+		env.SetEnv("_CONDOR_DAGMAN_CONFIG_FILE", opts.strConfigFile.Value());
+	}
 
 	MyString env_str;
 	MyString env_errors;
@@ -560,6 +578,18 @@ void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[])
 			else if (strArg.find("-out") != -1) // -outfile_dir
 			{
 				opts.strDebugDir = argv[++iArg];
+			}
+			else if (strArg.find("-con") != -1) // -config
+			{
+				opts.strConfigFile = argv[++iArg];
+					// Internally we deal with all configuration file paths
+					// as full paths, to make it easier to determine whether
+					// several paths point to the same file.
+				MyString	errMsg;
+				if (!MakePathAbsolute(opts.strConfigFile, errMsg)) {
+					fprintf( stderr, "%s\n", errMsg.Value() );
+	    			exit( 1 );
+				}
 			}
 			else
 			{

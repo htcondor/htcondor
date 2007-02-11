@@ -38,6 +38,14 @@
 
 void ExitSuccess();
 
+	// From condor_c++_util/condor_config.C
+	// Note: these functions are declared 'extern "C"' where they're
+	// implemented; if we don't do that here we get a link failure
+	// (I think because of the name mangling).  wenger 2007-02-09.
+extern "C" void process_config_source( char* file, char* name,
+			char* host, int required );
+extern "C" bool is_piped_command(const char* filename);
+
 //---------------------------------------------------------------------------
 char* mySubSystem = "DAGMAN";         // used by Daemon Core
 
@@ -104,12 +112,38 @@ Dagman::~Dagman()
 	}
 }
 
-
+	// 
+	// In Config() we get DAGMan-related configuration values.  This
+	// is a three-step process:
+	// 1. Get the name of the DAGMan-specific config file (if any).
+	// 2. If there is a DAGMan-specific config file, process it so
+	//    that its values are added to the configuration.
+	// 3. Get the values we want from the configuration.
+	//
 bool
 Dagman::Config()
 {
 		// Note: debug_printfs are DEBUG_NORMAL here because when we
 		// get here we haven't processed command-line arguments yet.
+
+		// Get and process the DAGMan-specific config file (if any)
+		// before getting any of the other parameters.
+	char *dagman_config_file = param( "DAGMAN_CONFIG_FILE" );
+	if ( dagman_config_file ) {
+		debug_printf( DEBUG_NORMAL, "Using DAGMan config file: %s\n",
+					dagman_config_file );
+			// We do this test here because the corresponding error
+			// message from the config code doesn't show up in dagman.out.
+		if ( access( dagman_config_file, R_OK ) != 0 &&
+					!is_piped_command( dagman_config_file ) ) {
+			debug_printf( DEBUG_NORMAL,
+						"ERROR: Can't read DAGMan config file: %s\n",
+						dagman_config_file );
+    		DC_Exit( EXIT_ERROR );
+		}
+		process_config_source( dagman_config_file, "DAGMan config",
+					NULL, true );
+	}
 
 	submit_delay = param_integer( "DAGMAN_SUBMIT_DELAY", 0, 0, 60 );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_SUBMIT_DELAY setting: %d\n",
@@ -242,7 +276,11 @@ Dagman::Config()
 int
 main_config( bool )
 {
-	dagman.Config();
+		// This is commented out because, even if we get new config
+		// values here, they don't get passed to the Dag object (which
+		// is where most of them actually take effect).  (See Gnats
+		// PR 808.)  wenger 2007-02-09
+	// dagman.Config();
 	return 0;
 }
 

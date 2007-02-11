@@ -738,6 +738,13 @@ MultiLogFiles::getQueueCountFromSubmitFile(const MyString &strSubFilename,
 
 ///////////////////////////////////////////////////////////////////////////////
 
+// Note: it would probably make sense to have this method use the new
+// getValuesFromFile() method in order to reduce more-or-less duplicate
+// code.  However, I'm just leaving it alone for now.  If
+// getJobLogsFromSubmitFiles() were to use getValuesFromFile(),
+// getValuesFromFile() would have to have another argument to specify
+// the number of tokens to skip between the keyword and the value.
+
 MyString
 MultiLogFiles::getJobLogsFromSubmitFiles(const MyString &strDagFileName,
             const MyString &jobKeyword, const MyString &dirKeyword,
@@ -836,6 +843,64 @@ MultiLogFiles::getJobLogsFromSubmitFiles(const MyString &strDagFileName,
 				if (!bAlreadyInList) {
 						// Note: append copies the string here.
 					listLogFilenames.append(strLogFilename.Value());
+				}
+			}
+		}
+	}	
+
+	return "";
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+MyString
+MultiLogFiles::getValuesFromFile(const MyString &fileName, 
+			const MyString &keyword, StringList &values)
+{
+
+	MyString	errorMsg;
+	StringList	logicalLines;
+	if ( (errorMsg = fileNameToLogicalLines( fileName,
+				logicalLines )) != "" ) {
+		return errorMsg;
+	}
+
+	const char *	logicalLine;
+	while ( (logicalLine = logicalLines.next()) ) {
+
+		if ( strcmp(logicalLine, "") ) {
+
+				// Note: StringList constructor removes leading
+				// whitespace from lines.
+			StringList	tokens(logicalLine, " \t");
+			tokens.rewind();
+
+			if ( !stricmp(tokens.next(), keyword.Value()) ) {
+
+					// Get the value.
+				const char *newValue = tokens.next();
+				if ( !newValue || !strcmp( newValue, "") ) {
+					MyString result = MyString( "Improperly-formatted DAG "
+								"file: value missing after keyword <" ) +
+								keyword + ">";
+			    	return result;
+				}
+
+					// Add the value we just found to the values list
+					// (if it's not already in the list -- we don't want
+					// duplicates).
+				values.rewind();
+				char *existingValue;
+				bool alreadyInList = false;
+				while ( (existingValue = values.next()) ) {
+					if (!strcmp( existingValue, newValue ) ) {
+						alreadyInList = true;
+					}
+				}
+
+				if (!alreadyInList) {
+						// Note: append copies the string here.
+					values.append(newValue);
 				}
 			}
 		}

@@ -48,6 +48,18 @@ public:
 			const MyString &jobKeyword, const MyString &dirKeyword,
 			StringList &listLogFilenames);
 
+		/** Gets values from a file, where the file contains lines of
+			the form
+				<keyword> <value>
+			with arbitrary whitespace between the two tokens.
+			@param fileName: the name of the file to parse
+			@param keyword: the keyword string
+			@param values: the list of values found
+			@return "" if okay, an error message otherwise
+		*/
+	static MyString getValuesFromFile(const MyString &fileName,
+			const MyString &keyword, StringList &values);
+
 	    /** Gets the log file from a Condor submit file.
 		    on success, the return value will be the log file name
 		    on failure, it will be ""

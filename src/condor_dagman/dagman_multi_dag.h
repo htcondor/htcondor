@@ -52,5 +52,28 @@ bool GetLogFiles(/* const */ StringList &dagFiles, bool useDagDir,
 bool LogFileNfsError(/* const */ StringList &condorLogFiles,
 			/* const */ StringList &storkLogFiles);
 
+/** Get the configuration file, if any, specified by the given list of
+	DAG files.  If more than one DAG file specifies a configuration file,
+	they must specify the same file.
+	@param dagFiles: the list of DAG files
+	@param useDagDir: run DAGs in directories from DAG file paths 
+			if true
+	@param configFile: holds the path to the config file; if a config
+			file is specified on the command line, configFile should
+			be set to that value before this method is called; the
+			value of configFile will be changed if it's not already
+			set and the DAG file(s) specify a configuration file
+	@param errMsg: a MyString to receive any error message
+	@return true if the operation succeeded; otherwise false
+*/
+bool GetConfigFile(/* const */ StringList &dagFiles, bool useDagDir,
+			MyString &configFile, MyString &errMsg);
+
+/** Make the given path into an absolute path, if it is not already.
+	@param filePath: the path to make absolute (filePath is changed)
+	@param errMsg: a MyString to receive any error message.
+	@return true if the operation succeeded; otherwise false
+*/
+bool MakePathAbsolute(MyString &filePath, MyString &errMsg);
 
 #endif /* #ifndef DAGMAN_MULTI_DAG_H */

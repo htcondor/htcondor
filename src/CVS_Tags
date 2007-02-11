@@ -1,3 +1,8 @@
+02/09/07 pr777-merge-1
+  The state of the pr777-branch for a merge back to the trunk.  Changes
+  on the branch have been code reviewed and documented; there shouldn't
+  need to be any more changes on the branch.
+
 02/09/07 V6_9-cron-{root,branch}
   Well, well, well... look who's back from the dead! That's right,
   when most thought that my Condor hacking days were long gone, I've
