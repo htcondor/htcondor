@@ -421,10 +421,10 @@ SEC_ADMINISTRATOR_AUTHENTICATION = REQUIRED
 SEC_READ_AUTHENTICATION          = OPTIONAL
 \end{verbatim}
 
-The \verb@DEFAULT@ value for \verb@<context>@ is utilized
-by Condor when none of the specific policy settings
-(\verb@CLIENT@, \verb@READ@, \verb@WRITE@, etc.)
-are present.
+The \verb@DEFAULT@ value for \verb@<context>@ provides a way
+to set a policy for all access levels
+(\verb@READ@, \verb@WRITE@, etc.)
+that do not have a specific configuration variable defined.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:security-negotiation-methods}Configuration for 
@@ -459,7 +459,7 @@ encryption methods.
 \index{security!authentication}
 
 The client side of any communication uses one of two macros
-to configure authentication:
+to specify whether authentication is to occur:
 \index{SEC\_DEFAULT\_AUTHENTICATION macro@\texttt{SEC\_DEFAULT\_AUTHENTICATION} macro}
 \index{configuration macro!\texttt{SEC\_DEFAULT\_AUTHENTICATION}}
 \index{SEC\_CLIENT\_AUTHENTICATION macro@\texttt{SEC\_CLIENT\_AUTHENTICATION} macro}
@@ -469,7 +469,9 @@ to configure authentication:
     SEC_CLIENT_AUTHENTICATION
 \end{verbatim}
 
-For the daemon side, there are seven macros to configure authentication:
+For the daemon side, there are seven macros to specify whether
+authentication is to take place, based upon the necessary
+access level:
 \index{SEC\_DEFAULT\_AUTHENTICATION macro@\texttt{SEC\_DEFAULT\_AUTHENTICATION} macro}
 \index{configuration macro!\texttt{SEC\_DEFAULT\_AUTHENTICATION}}
 \index{SEC\_READ\_AUTHENTICATION macro@\texttt{SEC\_READ\_AUTHENTICATION} macro}
@@ -482,6 +484,8 @@ For the daemon side, there are seven macros to configure authentication:
 \index{configuration macro!\texttt{SEC\_CONFIG\_AUTHENTICATION}}
 \index{SEC\_OWNER\_AUTHENTICATION macro@\texttt{SEC\_OWNER\_AUTHENTICATION} macro}
 \index{configuration macro!\texttt{SEC\_OWNER\_AUTHENTICATION}}
+\index{SEC\_DAEMON\_AUTHENTICATION macro@\texttt{SEC\_DAEMON\_AUTHENTICATION} macro}
+\index{configuration macro!\texttt{SEC\_DAEMON\_AUTHENTICATION}}
 \index{SEC\_NEGOTIATOR\_AUTHENTICATION macro@\texttt{SEC\_NEGOTIATOR\_AUTHENTICATION} macro}
 \index{configuration macro!\texttt{SEC\_NEGOTIATOR\_AUTHENTICATION}}
 \begin{verbatim}
@@ -491,6 +495,7 @@ For the daemon side, there are seven macros to configure authentication:
     SEC_ADMINISTRATOR_AUTHENTICATION
     SEC_CONFIG_AUTHENTICATION
     SEC_OWNER_AUTHENTICATION
+    SEC_DAEMON_AUTHENTICATION
     SEC_NEGOTIATOR_AUTHENTICATION
 \end{verbatim}
 
@@ -508,8 +513,8 @@ SEC_DEFAULT_AUTHENTICATION = REQUIRED
 and does not contain any other security configuration for
 \verb@AUTHENTICATION@, then this default defines the daemon's needs
 for authentication over all access levels.
-Where a specific macro is present, its value takes
-precedence over any default given.
+Where a specific macro is defined, the more specific value takes
+precedence over the default definition.
 
 
 If authentication is to be done, then the communicating parties
@@ -535,9 +540,8 @@ macros
 \index{configuration macro!\texttt{SEC\_WRITE\_AUTHENTICATION\_METHODS}}
 \index{SEC\_ADMINISTRATOR\_AUTHENTICATION\_METHODS macro@\texttt{SEC\_ADMINISTRATOR\_AUTHENTICATION\_METHODS} macro}
 \index{configuration macro!\texttt{SEC\_ADMINISTRATOR\_AUTHENTICATION\_METHODS}}
-% commented out June 04, as it has not been implemented
-%\index{SEC\_DAEMON\_AUTHENTICATION\_METHODS macro@\texttt{SEC\_DAEMON\_AUTHENTICATION\_METHODS} macro}
-%\index{configuration macro!\texttt{SEC\_DAEMON\__AUTHENTICATION\_METHODS}}
+\index{SEC\_DAEMON\_AUTHENTICATION\_METHODS macro@\texttt{SEC\_DAEMON\_AUTHENTICATION\_METHODS} macro}
+\index{configuration macro!\texttt{SEC\_DAEMON\_AUTHENTICATION\_METHODS}}
 \index{SEC\_CONFIG\_AUTHENTICATION\_METHODS macro@\texttt{SEC\_CONFIG\_AUTHENTICATION\_METHODS} macro}
 \index{configuration macro!\texttt{SEC\_CONFIG\_AUTHENTICATION\_METHODS}}
 \index{SEC\_OWNER\_AUTHENTICATION\_METHODS macro@\texttt{SEC\_OWNER\_AUTHENTICATION\_METHODS} macro}
@@ -551,17 +555,16 @@ macros
     SEC_ADMINISTRATOR_AUTHENTICATION_METHODS
     SEC_CONFIG_AUTHENTICATION_METHODS
     SEC_OWNER_AUTHENTICATION_METHODS
+    SEC_DAEMON_AUTHENTICATION_METHODS
     SEC_NEGOTIATOR_AUTHENTICATION_METHODS
 \end{verbatim}
-% commented out June 04, as it has not been implemented
-%   SEC_DAEMON_AUTHENTICATION_METHODS
 The methods are
 given as a comma-separated list of acceptable values.
 These variables list the authentication methods that are available
 to be used.
-The ordering of the list gives preference;
+The ordering of the list defines preference;
 the first item in the list indicates the highest preference.
-The values will be 
+Defined values are
 \begin{verbatim}
     GSI
     KERBEROS
@@ -572,7 +575,6 @@ The values will be
     CLAIMTOBE
     ANONYMOUS
 \end{verbatim}
-%   PASSWORD
 
 For example, a client may be configured with:
 \begin{verbatim}
@@ -583,9 +585,9 @@ and a daemon the client is trying to contact with:
 SEC_DEFAULT_AUTHENTICATION_METHODS = GSI
 \end{verbatim}
 
-Negotiation will determine that GSI authentication is the only
+Security negotiation will determine that GSI authentication is the only
 compatible choice. If there are multiple compatible authentication
-methods, negotiation will determine the list of acceptable methods and
+methods, security negotiation will make a list of acceptable methods and
 they will be tried in order until one succeeds. 
 
 As another example, the macro
@@ -601,13 +603,18 @@ will be tried first, and if there is a failure for any reason, then
 NTSSPI will be tried. 
 
 
-By default, all of the \verb@SEC_<access-level>_AUTHENTICATION@ are
-\verb@OPTIONAL@,
-except for operations which modify the job queue (such as
-\Condor{q} and \Condor{rm}) which are \verb@REQUIRED@.
-
-By default on Unix, the authentication methods are \verb@FS@, \verb@KERBEROS@,
-\verb@GSI@, while on Windows they are \verb@NTSSPI@, \verb@KERBEROS@, \verb@GSI@. 
+If the configuration for a machine does not define any variable
+for \MacroNI{SEC\_<access-level>\_AUTHENTICATION},
+then Condor uses a default value of \verb@OPTIONAL@.
+Authentication will be required for
+any operation which modifies the job queue,
+such as \Condor{qedit} and \Condor{rm}.
+If the configuration for a machine does not define any variable
+for \MacroNI{SEC\_<access-level>\_AUTHENTICATION\_METHODS},
+the default value for a Unix machine is \verb@FS@, \verb@KERBEROS@,
+\verb@GSI@. 
+This default value for a Windows machine is
+\verb@NTSSPI@, \verb@KERBEROS@, \verb@GSI@. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:GSI-Authentication}GSI Authentication}
@@ -623,65 +630,54 @@ The basics of GSI are well-documented elsewhere, such as
 A simple introduction to this type of authentication
 defines Condor's use of terminology,
 and it illuminates the needed items that Condor must access to
-do authentication.
+do this authentication.
 Assume that 
 A authenticates to B.
-In this example, A is the client, and B is the server.
-For Condor's purposes, both the client and the server
-will either be a daemon
-or a user (running a Condor command such as \Condor{status}).
+In this example, A is the client, and B is the daemon within
+their communication.
 This example's one-way authentication implies that B
 is verifying the identity of A,
 using the certificate A provides,
-together with B's own set of trusted CAs (Certification Authorities).
-Client A provides its certificate (or proxy) to server B.
+and utilizing B's own set of trusted CAs (Certification Authorities).
+Client A provides its certificate (or proxy) to daemon B.
 B does two things:
 B checks that the certificate is valid,
 and B checks to see that the CA that signed A's certificate
 is one that B trusts.
 
-For this specific authentication protocol,
+For the GSI authentication protocol,
 an X.509 certificate is required.
 \index{certificate!X.509}
 Files with predetermined names hold a certificate,
 a key, and optionally, a proxy.
-A separate directory has one or more files, each of which contains
-a trusted CA.
+A separate directory has one or more files that become the list of
+trusted CAs.
 
 Allowing Condor to do this GSI authentication
 requires knowledge of the locations of
-the client-side certificate and the server-side list of
+the client A's certificate and the daemon B's list of
 trusted CAs.
-For a Condor daemon, these locations are determined
+When one side of the communication (as either client A or daemon B)
+is a Condor daemon, these locations are determined
 by configuration or by default locations.
-For a user, these locations are determined by the
+When one side of the communication (as a client A)
+is a user of Condor (the process owner of a Condor tool,
+for example \Condor{submit}), these locations are determined by the
 pre-set values of environment variables or by default locations.
 
 \begin{description}
-\item[Server-side Configuration]
+\item[GSI certificate locations for Condor daemons]
 
 For a Condor daemon, the certificate may be a single host certificate,
 \index{host certificate}
 and all Condor daemons on the same machine may share the same certificate.
 In some cases, the certificate can also be copied to other machines,
 where local copies are necessary.
-This can only be done in cases where a single host certificate can
+This may occur only in cases where a single host certificate can
 match multiple host names, something that is beyond the scope of this
 manual. 
 The certificates must be protected by access rights to files,
 since the password file is not encrypted.
-
-%Condor users (those who submit jobs) can also use
-%the X.509-based authentication.
-%These users must also
-%have valid X.509 certificates signed by a trusted CA.
-%For use when submitting jobs,
-%the certificate is used to generate a proxy:
-%\index{proxy}
-%a combination of certificate and password that is valid only
-%for a specific (and usually short) time period.
-%A proxy is used so that the user does  
-%not need to be present (to give a password) when a job is executed.
 
 The specification of the location of the necessary files
 through configuration uses the following precedence.
@@ -705,7 +701,7 @@ Note that no proxy is assumed in this case.
 If the \MacroNI{GSI\_DAEMON\_DIRECTORY} is not defined, 
 or when defined,
 the location may be overridden with specific configuration
-variables that specify the complete path and filename of 
+variables that specify the complete path and file name of 
 the certificate with
   \begin{description}
   \item{\Macro{GSI\_DAEMON\_CERT}}
@@ -752,58 +748,13 @@ This single macro covers all communications, but could be
 replaced with a set of macros that require authentication for
 only specific communications.
 
-In this example, only the \MacroNI{GSI} method can be used. 
-If another methods is acceptable (perhaps \MacroNI{KERBEROS}, then
-placing this method first within the list will cause Condor to give
-preference to this method over GSI, or vice-versa. 
-
 The macro \MacroNI{GSI\_DAEMON\_DIRECTORY} is specified
 to give
 Condor a single place to find the daemon's certificate.
-This path may be a directory or a shared file system such as AFS. 
+This path may be a directory on a shared file system such as AFS. 
 Alternatively, this path name can point to 
 local copies of the certificate stored
 in a local file system.
-
-
-\item[User side Set Up]
-
-The user specifies the location of a certificate, proxy, etc.
-in one of two ways:
-\begin{enumerate}
-\item
-Environment variables give the location of necessary items.
-  \begin{description}
-  \item{\Env{X509\_USER\_PROXY} gives the path and file name of the proxy.
-  This proxy will have been created using the \Prog{grid-proxy-init} program, 
-  which will place the proxy in the \File{/tmp}
-  directory with the file name being determined by the format:
-  \begin{verbatim}
-  /tmp/x509up_uXXXX
-  \end{verbatim}
-  The specific file name is given by substituting the \verb@XXXX@
-  characters with the UID of the user.
-  Note that when a valid proxy is used, the certificate and key locations
-  are not needed.  }
-  \item{\Env{X509\_USER\_CERT} gives the path and file name of the
-  certificate. It is also used if a proxy location has been checked,
-  but the proxy is no longer valid.  }
-  \item{\Env{X509\_USER\_KEY} gives the path and file name of the
-  key. Note that most keys are password encrypted, such that knowing
-  the location could not lead to using the key.  }
-  \item{\Env{X509\_CERT\_DIR} gives the path to the directory 
-  containing the list of trusted CAs. }
-  \end{description}
-
-\item
-Without environment variables to give locations of necessary
-certificate information,
-Condor uses a default directory for the user.
-This directory is given by 
-\begin{verbatim}
-$(HOME)/.globus
-\end{verbatim}
-\end{enumerate}
 
 When a daemon acts as the client within authentication,
 the daemon needs a listing of those from which it
@@ -824,7 +775,12 @@ example configuration above.
 
 Condor will also need a way to map an X.509 distinguished
 name to a Condor user id.
-This is done in an administrator-maintained file called an X.509 map file,
+There are two ways to accomplish this mapping.
+For a first way to specify the mapping, see
+section~\ref{sec:Security-Unified-Map-File}
+to use Condor's unified map file.
+The second way to do the mapping is within
+an administrator-maintained GSI-specific file called an X.509 map file,
 mapping from X509 Distinguished Name (DN) to Condor user id.
 It is similar to a Globus grid map file except that it is only used for
 mapping to a user id, not for authorization. 
@@ -861,6 +817,48 @@ then the third place Condor looks for the map file is given by
 /etc/grid-security/grid-mapfile
 \end{verbatim}
 
+
+\item[GSI certificate locations for Users]
+
+The user specifies the location of a certificate, proxy, etc.
+in one of two ways:
+\begin{enumerate}
+\item
+Environment variables give the location of necessary items.
+
+  \Env{X509\_USER\_PROXY} gives the path and file name of the proxy.
+  This proxy will have been created using the \Prog{grid-proxy-init} program, 
+  which will place the proxy in the \File{/tmp}
+  directory with the file name being determined by the format:
+  \begin{verbatim}
+  /tmp/x509up_uXXXX
+  \end{verbatim}
+  The specific file name is given by substituting the \verb@XXXX@
+  characters with the UID of the user.
+  Note that when a valid proxy is used, the certificate and key locations
+  are not needed. 
+
+  \Env{X509\_USER\_CERT} gives the path and file name of the
+  certificate. It is also used if a proxy location has been checked,
+  but the proxy is no longer valid.  
+
+  \Env{X509\_USER\_KEY} gives the path and file name of the
+  key. Note that most keys are password encrypted, such that knowing
+  the location could not lead to using the key. 
+
+  \Env{X509\_CERT\_DIR} gives the path to the directory 
+  containing the list of trusted CAs. 
+
+\item
+Without environment variables to give locations of necessary
+certificate information,
+Condor uses a default directory for the user.
+This directory is given by 
+\begin{verbatim}
+$(HOME)/.globus
+\end{verbatim}
+\end{enumerate}
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -868,17 +866,25 @@ then the third place Condor looks for the map file is given by
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{authentication!Kerberos}
 \index{Kerberos authentication}
-If Kerberos is used for authentication, then 
+
+If Kerberos is used for authentication,
+then a mapping from a
+Kerberos domain (called a realm) to a Condor UID domain is necessary.
+There are two ways to accomplish this mapping.
+For a first way to specify the mapping, see
+section~\ref{sec:Security-Unified-Map-File}
+to use Condor's unified map file.
+A second way to specify the mapping defines
 the configuration variable
 \Macro{KERBEROS\_MAP\_FILE}
-is used to define a path to an administrator-maintained file that
-contains Kerberos domain (called a realm) to Condor UID domain mapping.
+to define a path to an administrator-maintained Kerberos-specific 
+map file.
 The configuration syntax is
 \begin{verbatim}
 KERBEROS_MAP_FILE = /path/to/etc/condor.kmap
 \end{verbatim}
 
-Lines within the map file have the syntax
+Lines within this map file have the syntax
 \begin{verbatim}
    KERB.REALM = UID.domain.name
 \end{verbatim}
@@ -930,11 +936,12 @@ SEC_ADMINISTRATOR_AUTHENTICATION_METHODS = KERBEROS
 \end{verbatim}
 \normalsize
 
-Kerberos authentication requires access to various files that
+Kerberos authentication on Unix platforms
+requires access to various files that
 usually are only accessible by the root user.
 At this time,
-the only supported way to use KERBEROS authentication is to start
-daemons Condor as root.
+the only supported way to use KERBEROS authentication on Unix platforms
+is to start daemons Condor as user \Login{root}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Password-Authentication} Password Authentication}
@@ -1094,6 +1101,12 @@ for testing purposes only.
 \index{authentication|)}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Security-Unified-Map-File}The Unified Map File for Authentication}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{security!unified map file}
+\Todo
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Security-Encryption}Encryption}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{security!encryption}
@@ -1120,9 +1133,8 @@ For the daemon, there are seven macros to enable or disable encryption:
 \index{configuration macro!\texttt{SEC\_WRITE\_ENCRYPTION}}
 \index{SEC\_ADMINISTRATOR\_ENCRYPTION macro@\texttt{SEC\_ADMINISTRATOR\_ENCRYPTION} macro}
 \index{configuration macro!\texttt{SEC\_ADMINISTRATOR\_ENCRYPTION}}
-% commented out June 04, as it has not been implemented
-%\index{SEC\_DAEMON\_ENCRYPTION macro@\texttt{SEC\_DAEMON\_ENCRYPTION} macro}
-%\index{configuration macro!\texttt{SEC\_DAEMON\_ENCRYPTION}}
+\index{SEC\_DAEMON\_ENCRYPTION macro@\texttt{SEC\_DAEMON\_ENCRYPTION} macro}
+\index{configuration macro!\texttt{SEC\_DAEMON\_ENCRYPTION}}
 \index{SEC\_CONFIG\_ENCRYPTION macro@\texttt{SEC\_CONFIG\_ENCRYPTION} macro}
 \index{configuration macro!\texttt{SEC\_CONFIG\_ENCRYPTION}}
 \index{SEC\_OWNER\_ENCRYPTION macro@\texttt{SEC\_OWNER\_ENCRYPTION} macro}
@@ -1136,10 +1148,9 @@ For the daemon, there are seven macros to enable or disable encryption:
     SEC_ADMINISTRATOR_ENCRYPTION
     SEC_CONFIG_ENCRYPTION
     SEC_OWNER_ENCRYPTION
+    SEC_DAEMON_ENCRYPTION
     SEC_NEGOTIATOR_ENCRYPTION
 \end{verbatim}
-% commented out June 04, as it has not been implemented
-%   SEC_DAEMON_ENCRYPTION
 
 As an example, the macro defined in the configuration file
 for a daemon as
@@ -1181,9 +1192,8 @@ macros
 \index{configuration macro!\texttt{SEC\_WRITE\_CRYPTO\_METHODS}}
 \index{SEC\_ADMINISTRATOR\_CRYPTO\_METHODS macro@\texttt{SEC\_ADMINISTRATOR\_CRYPTO\_METHODS} macro}
 \index{configuration macro!\texttt{SEC\_ADMINISTRATOR\_CRYPTO\_METHODS}}
-% commented out June 04, as it has not been implemented
-%\index{SEC\_DAEMON\_CRYPTO\_METHODS macro@\texttt{SEC\_DAEMON\_CRYPTO\_METHODS} macro}
-%\index{configuration macro!\texttt{SEC\_DAEMON\_CRYPTO\_METHODS}}
+\index{SEC\_DAEMON\_CRYPTO\_METHODS macro@\texttt{SEC\_DAEMON\_CRYPTO\_METHODS} macro}
+\index{configuration macro!\texttt{SEC\_DAEMON\_CRYPTO\_METHODS}}
 \index{SEC\_CONFIG\_CRYPTO\_METHODS macro@\texttt{SEC\_CONFIG\_CRYPTO\_METHODS} macro}
 \index{configuration macro!\texttt{SEC\_CONFIG\_CRYPTO\_METHODS}}
 \index{SEC\_OWNER\_CRYPTO\_METHODS macro@\texttt{SEC\_OWNER\_CRYPTO\_METHODS} macro}
@@ -1197,10 +1207,9 @@ macros
     SEC_ADMINISTRATOR_CRYPTO_METHODS
     SEC_CONFIG_CRYPTO_METHODS
     SEC_OWNER_CRYPTO_METHODS
+    SEC_DAEMON_CRYPTO_METHODS
     SEC_NEGOTIATOR_CRYPTO_METHODS
 \end{verbatim}
-% commented out June 04, as it has not been implemented
-%   SEC_DAEMON_CRYPTO_METHODS
 
 The methods are
 given as a comma-separated list of acceptable values.

@@ -5073,9 +5073,12 @@ The value 0 means there is no limit. The default value is 10.
 
 \item[\Macro{GAHP}]
 \label{param:Gahp} The full path to the binary of the GAHP server.
+This configuration variable is no longer used.
+Use \MacroNI{GT2\_GAHP} at section~\ref{param:GT2GAHP} instead.
 
 \item[\Macro{GAHP\_ARGS}]
 \label{param:GahpArgs} Arguments to be passed to the GAHP server.
+This configuration variable is no longer used.
 
 \item[\Macro{GRIDMANAGER\_GAHP\_CALL\_TIMEOUT}]
 \label{param:GridmanagerGahpCallTimeout} The number of seconds after
@@ -5091,14 +5094,9 @@ commands that can be pending at any time. The default is 50.
 to retry a command that failed due to a timeout or a failed connection.
 The default is 3.
 
-\item[\Macro{GRIDMANAGER\_SYNC\_JOB\_IO\_INTERVAL}]
-\label{param:GridmanagerSyncJobIoInterval} The number of seconds between
-periodic syncs of streamed output to disk. The default is 5 minutes
-(300 seconds).
-
 \item[\Macro{GRIDMANAGER\_GLOBUS\_COMMIT\_TIMEOUT}]
 \label{param:GridmanagerGlobusCommitTimeout}  The duration, in seconds, of the
-two phase commit timeout to Globus.  This maps directly to the \texttt{two\_phase} setting in the Globus RSL.
+two phase commit timeout to Globus for gt2 jobs only.  This maps directly to the \texttt{two\_phase} setting in the Globus RSL.
 
 % configuration variable introduced into Condor due to Globus a GAHP
 % bug.  Users with Globus where this bug has been fixed should never
@@ -5125,15 +5123,81 @@ two phase commit timeout to Globus.  This maps directly to the \texttt{two\_phas
 
 \item[\Macro{GLOBUS\_GATEKEEPER\_TIMEOUT}]
 \label{param:GlobusGatekeeperTimeout} The number of seconds after
-which if a grid
+which if a gt2 grid
 universe job fails to ping the gatekeeper,
 the job will be put on hold.
 Defaults to 5 days (in seconds).
 
-\item[\Macro{GT3\_GAHP\_LOG}]
-\label{param:GT3GAHPLog} The complete path name to
-a file where the GT3 GAHP may write information to be used in debugging
-related to GT3 job submission.
+\item[\Macro{C\_GAHP\_LOG}]
+\label{param:CGAHPLog} The complete path and file name of the
+Condor GAHP server's log.
+There is no default value. The expected location as defined
+in the example configuration is \File{/temp/CGAHPLog.\MacroUNI{USERNAME}}.
+
+\item[\Macro{MAX\_C\_GAHP\_LOG}]
+\label{param:MaxCGAHPLog} The maximum size of the \MacroNI{C\_GAHP\_LOG}.
+
+\item[\Macro{C\_GAHP\_WORKER\_THREAD\_LOG}]
+\label{param:CGAHPWorkerThreadLog} The complete path and file name of the
+Condor GAHP worker process' log.
+There is no default value. The expected location as defined
+in the example configuration is \File{/temp/CGAHPWorkerLog.\MacroUNI{USERNAME}}.
+
+\item[\Macro{GLITE\_LOCATION}]
+\label{param:GLITELocation} The complete path to the directory
+containing the Glite software.
+There is no default value. The expected location as given
+in the example configuration is \File{\MacroUNI{LIB}/glite}.
+The necessary Glite software is included with Condor,
+and is required for pbs and lsf jobs.
+
+\item[\Macro{CONDOR\_GAHP}]
+\label{param:CondorGAHP} The complete path and file name of the
+Condor GAHP executable.
+There is no default value. The expected location as given
+in the example configuration is \File{\MacroUNI{SBIN}/condor\_c-gahp}.
+
+\item[\Macro{GT2\_GAHP}]
+\label{param:GT2GAHP} The complete path and file name of the
+GT2 GAHP executable.
+There is no default value. The expected location as given
+in the example configuration is \File{\MacroUNI{SBIN}/gahp\_server}.
+
+\item[\Macro{GT3\_GAHP}]
+\label{param:GT3GAHP} The complete path and file name of the
+wrapper script that invokes the GT3 GAHP executable.
+There is no default value. The expected location as given
+in the example configuration is \File{\MacroUNI{SBIN}/gt3\_gahp}.
+
+\item[\Macro{GT4\_GAHP}]
+\label{param:GT4GAHP} The complete path and file name of the
+wrapper script that invokes the GT4 GAHP executable.
+There is no default value. The expected location as given
+in the example configuration is \File{\MacroUNI{SBIN}/gt4\_gahp}.
+
+\item[\Macro{PBS\_GAHP}]
+\label{param:PBSGAHP} The complete path and file name of the
+PBS GAHP executable.
+There is no default value. The expected location as given
+in the example configuration is \File{\MacroUNI{GLITE\_LOCATION}/bin/batch\_gahp}.
+
+\item[\Macro{LSF\_GAHP}]
+\label{param:LSFGAHP} The complete path and file name of the
+LSF GAHP executable.
+There is no default value. The expected location as given
+in the example configuration is \File{\MacroUNI{GLITE\_LOCATION}/bin/batch\_gahp}.
+
+\item[\Macro{UNICORE\_GAHP}]
+\label{param:UnicoreGAHP} The complete path and file name of the
+wrapper script that invokes the Unicore GAHP executable.
+There is no default value. The expected location as given
+in the example configuration is \File{\MacroUNI{SBIN}/unicore\_gahp}.
+
+\item[\Macro{NORDUGRID\_GAHP}]
+\label{param:NorduGridGAHP} The complete path and file name of the
+wrapper script that invokes the NorduGrid GAHP executable.
+There is no default value. The expected location as given
+in the example configuration is \File{\MacroUNI{SBIN}/nordugrid\_gahp}.
 
 \end{description}
 
