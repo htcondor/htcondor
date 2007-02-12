@@ -8,6 +8,15 @@
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
 
+02/12/07 V6_8-pre-merge-V6_8_4-merge-1
+         V6_8-post-merge-V6_8_4-merge-1
+   The state of the doc directory in V6_8-branch before and after
+   merging changes from the V6_8_4-branch as tagged V6_8_4-merge-1.
+
+02/12/07 V6_8_4-merge-1
+   The state of the doc directory in the V6_8_4-branch for a merge
+   into V6_8-branch.
+
 01/30/07 V6_8_4-root and V6_8_4-branch
    A branch for the 6.8.4 doc series of the manual, created from
    V6_8_4-root on the V6_8-branch of doc.
