@@ -128,7 +128,7 @@ Returns the number of bytes read, or an error.
 ssize_t memory_file::read( char *data, size_t length )
 {
 
-	if( (data==0) || (length<0) || (pointer<0) ) return -1;
+	if( (data==0) || (pointer<0) ) return -1;
 	if( pointer>=filesize ) return 0;
 
 	if(length==0) return 0;
@@ -147,7 +147,7 @@ Returns the number of bytes written, or an error.
 
 ssize_t memory_file::write( char *data, size_t length )
 {
-	if( (data==0) || (length<0) || (pointer<0) ) return -1;
+	if( (data==0) || (pointer<0) ) return -1;
 
 	if(length==0) return 0;
 
