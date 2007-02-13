@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_post.pl,v 1.2.2.4 2006-09-14 16:08:06 wright Exp $
+# $Id: remote_post.pl,v 1.2.2.5 2007-02-13 17:45:13 bt Exp $
 # post script for Condor testsuite runs
 ######################################################################
 
@@ -151,14 +151,14 @@ while( <TASKFILE> ) {
       die "Can't chdir($SrcDir/$testdir/$compiler): $!\n";
 
     # first copy the files that MUST be there.
-    copy_file( "$testname.run.out", $resultdir, true );
+    copy_file( "$testname*.run.out", $resultdir, true );
 
     # these files are all optional.  if they exist, we'll save 'em, if
     # they do not, we don't worry about it.
-    copy_file( "$testname.out*", $resultdir, false );
-    copy_file( "$testname.err*", $resultdir, false );
-    copy_file( "$testname.log", $resultdir, false );
-    copy_file( "$testname.cmd.out", $resultdir, false );
+    copy_file( "$testname*.out*", $resultdir, false );
+    copy_file( "$testname*.err*", $resultdir, false );
+    copy_file( "$testname*.log", $resultdir, false );
+    copy_file( "$testname*.cmd.out", $resultdir, false );
 
     # if it exists, tarup the 'saveme' subdirectory for this test, which
     # may contain test debug info etc.
