@@ -31,6 +31,10 @@ $mypwfile = $mytopdir . "/x_auth_poolpasswd";
 $myvariation = 1;
 $mysaveme = $corename . ".saveme";
 system("mkdir $mysaveme");
+$mypiddir = $mysaveme . "/" . $mypid;
+system("mkdir $mypiddir");
+#make a symbolic link for personal condor module to use
+system("ln -s $mypiddir $mypid");
 
 #print "$line\n";
 $mysubmitnm = $corename . $mypid . ".cmd";
@@ -92,7 +96,6 @@ $ENV{CONDOR_CONFIG} = $secconfig;
 my $result = system("./x_lib_auth_protocol.pl $mypid \"protocol\" $mytestnegotiation_result $mycmdfile");
 print "Result of crafted lib_auth_protocol job is  $result\n";
 
-system("cp -r $mypid $mysaveme");
 system("cp *$corename* $mysaveme");
 
 if( -e "$mysubmitnm" )
