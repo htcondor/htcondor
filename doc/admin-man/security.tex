@@ -10,14 +10,14 @@ access a Condor pool and what privileges they have when using the
 pool.  This section covers these topics.
 
 There is a distinction between the
-kinds of resource attacks Condor can prevent,
-and the kids of attacks Condor cannot prevent.
+kinds of resource attacks Condor can defeat,
+and the kinds of attacks Condor cannot defeat.
 Condor cannot
 prevent security breaches of users that can elevate their privilege to
 the root or administrator account.
 Condor does not run user jobs in
 sandboxes (standard universe jobs are a partial exception to this),
-so Condor cannot prevent malicious actions by user jobs.
+so Condor cannot defeat all malicious actions by user jobs.
 An example of a malicious job is
 one that launches a distributed denial of service attack.
 Condor assumes that users are trustworthy.
@@ -27,29 +27,40 @@ In addition, Condor provides encryption and
 integrity checking, to ensure that data (both Condor's data and user
 jobs' data) has not been examined or tampered with.
 
-Broadly speaking, aspects of security in
+Broadly speaking, the aspects of security in
 Condor may be categorized and described: 
 
 \begin{description}
 
+\item[Users] Authorization or capability in an operating system is
+based on a process owner.
+Both those that submit jobs and Condor daemons
+become process owners.
+The Condor system prefers that Condor daemons are run as the user
+\Login{root}, while other common operations are owned by a
+user of Condor.
+Operations that do not belong to either \Login{root} or a Condor user
+are often owned by the \Login{condor} user.
+See Section~\ref{sec:uids} for more detail.
+
 \item[Authentication] 
-A proper identification of a user is accomplished by the
+Proper identification of a user is accomplished by the
 process of authentication.
 It attempts to distinguish between real users and impostors.
 By default, Condor's authentication uses the user id (UID)
 to determine identity,
-but Condor can use a variety of authentication mechanisms,
+but Condor can choose among a variety of authentication mechanisms,
 including the stronger  authentication methods Kerberos and GSI.
 
 \item[Authorization] Authorization specifies who is allowed
 to do what.
 Some users are allowed to submit jobs,
-while other users are allowed Condor administration privileges.
+while other users are allowed administrative priveleges over Condor itself.
 Condor provides authorization on either a per-user or on
 a per-machine basis.
 
 \item[Privacy] Condor may encrypt data sent across the network, which
-(normally) prevents others from viewing the data.
+prevents others from viewing the data.
 With persistence and sufficient computing power,
 decryption is possible. 
 Condor can encrypt the data sent for internal communication, 
@@ -67,15 +78,6 @@ Note that the integrity information is only for network
 transmissions: data stored on disk does not have this integrity
 information. 
 
-\item[Users] Because authorization or capability in an operating system is
-based on a process owner, which process owner (or user) a job or
-Condor daemon is run as is critical.
-The Condor system prefers that Condor daemons are run as the user
-\Login{root}, while other common operations are to be owned by a
-separate user.  This is usually the \Login{condor} user, but any user
-can be chosen.
-See Section~\ref{sec:uids} for more detail.
-
 \end{description}
 
 
@@ -84,23 +86,22 @@ See Section~\ref{sec:uids} for more detail.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 At the heart of Condor's security model is the notion that 
-the execution of individual commands are subject to access
-checks. 
-For example, the job submission command (\Condor{submit}) can be restricted
-in such a way that only a certain set of users are allowed to use it.
-A user outside of this authorized list of users would be prevented from
-submitting jobs for execution in Condor.
+communications are subject to various security checks. 
+A request from one Condor daemon to another may require
+authentication to prevent subversion of the system.
+A request from a user of Condor may need to be denied
+due to the confidential nature of the request.
+The security model handles these example situations
+and many more.
 
-A possible solution, but one that does not scale well,
-maintains a list of authorized users for 
-every individual operation that Condor supports.
-Instead, Condor commands are
-categorized into groups called \Term{access levels},
-based on the type of operation performed.
-The user of a specific commands must be authorized at
-an access level.
+Requests to Condor are
+categorized into groups of \Term{access levels},
+based on the type of operation requested.
+The user of a specific request must be authorized at
+the required access level.
 For example,
-the \Condor{status} command requires the \DCPerm{READ} access level.
+the executing the \Condor{status} command requires
+the \DCPerm{READ} access level.
 Actions that accomplish management tasks,
 such as shutting down or restarting of a daemon
 require an \DCPerm{ADMINISTRATOR} access level.
@@ -115,7 +116,7 @@ The client is the party that initiates the command,
 and the daemon is the party that processes the command and responds.
 In some cases it is easy to distinguish the
 client from the daemon, while in other cases it is not as easy.
-Condor tools such as \Condor{submit} and \Condor{config\_val} are client tools.
+Condor tools such as \Condor{submit} and \Condor{config\_val} are clients.
 They send commands to daemons and act as clients in all their communications.
 For example, the \Condor{submit} command communicates
 with the \Condor{schedd}.
@@ -128,251 +129,29 @@ Once a match has been found,
 the \Condor{schedd} daemon acts as a client and contacts the
 \Condor{startd} daemon.
 
-All the basic ideas of Condor's security model
-are implemented using configuration.
+Condor's security model
+is implemented using configuration.
 Commands in Condor are executed over TCP/IP network connections.
 While network communication enables Condor to manage
 resources that are distributed across an organization (or beyond),
 it also brings in security challenges.
 Condor must have ways of ensuring that commands are being sent
 by trustworthy users.
-Jobs are operating on sensitive data must be allowed to be
-encrypted such that the data is not seen by outsiders.
+Jobs that are operating on sensitive data must be allowed to use
+encryption such that the data is not seen by outsiders.
 Jobs may need assurance that data has not been tampered with.
 These issues
 can be addressed with Condor's authentication,
 encryption, and integrity features.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Security-Negotiation}Security Negotiation}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-Because of the wide range of environments and security demands necessary,
-Condor must be flexible.
-Configuration provides this flexibility.
-The process by which Condor determines the security settings that will
-be used when a connection is established is called
-\Term{security negotiation}.
-Security negotiation's primary purpose is to determine which
-of the features of authentication, encryption, and integrity checking
-will be enabled for a connection.
-In addition, since Condor supports multiple
-technologies for authentication and encryption,
-security negotiation also
-determines which technologies is chosen for the connection.
-
-%The issue of allowing flexible configuration of security options is
-%complicated by the fact that Condor components that wish to interact
-%may be configured to use different security options. This should not
-%preclude the interaction from taking place. Pretend Frida, an
-%aggressive cycle-scavenger, runs a variety of Condor tools from her
-%workstation.  She would prefer not to use authentication as part of
-%her interactions with Condor (because she thinks it's a waste of
-%CPU). A \Condor{schedd} that she submits jobs to, however, refuses to
-%accept any job unless it can be sure of the submitter's identity, and
-%thus wishes to force authentication. Given the \Condor{schedd}'s
-%policy, Frida would rather her jobs run even if she does have to
-%authenticate first, so job submission should be allowed to commence
-%(with authentication turned on, of course).
-
-Security negotiation is a completely separate process from
-matchmaking, and should not be confused with any specific function of
-the \Condor{negotiator} daemon.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:security-negotiation-features}Configuration}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-The macro names that determine what features will be used during
-client-daemon communication follow the pattern:
-\begin{verbatim}
-    SEC_<context>_<feature>
-\end{verbatim}
-
-The \verb@<feature>@
-portion of the macro name determines which security feature's
-policy is being set.
-\verb@<feature>@ may be any one of
-\begin{verbatim}
-    AUTHENTICATION
-    ENCRYPTION
-    INTEGRITY
-    NEGOTIATION
-\end{verbatim}
-
-The \verb@<context>@ component of the security policy macros can be
-used to craft a fine-grained security policy based on the type of
-communication taking place.
-\verb@<context>@ may be any one of
-\begin{verbatim}
-    CLIENT
-    READ
-    WRITE
-    ADMINISTRATOR
-    CONFIG
-    OWNER
-    DAEMON
-    NEGOTIATOR
-    DEFAULT
-\end{verbatim}
-
-These configuration macros may be set to any of the following
-values:
-\begin{verbatim}
-    REQUIRED
-    PREFERRED
-    OPTIONAL
-    NEVER 
-\end{verbatim}
-
-Security negotiation resolves various client-daemon combinations
-of desired security features in order to set a policy.
-
-As an example, consider Frida the scientist.
-Frida wants to avoid authentication when possible.
-She sets
-\begin{verbatim}
-    SEC_DEFAULT_AUTHENTICATION = OPTIONAL
-\end{verbatim}
-The \Condor{schedd} that she would like to submit to, however, is
-operated by a security-conscious system administrator who dutifully
-sets:
-\begin{verbatim}
-    SEC_DEFAULT_AUTHENTICATION = REQUIRED
-\end{verbatim}
-When Frida submits her jobs, Condor's security negotiation will
-determine that authentication will be used and allows the command to
-continue.
-
-Table~\ref{table:Security-Negotiation} shows how security negotiation
-resolves various client-daemon combinations of security feature policy
-settings.
-Within the table, Yes means the feature will be
-used during communication.
-No means it will not.
-Fail means that the policy settings are incompatible and the communication
-cannot continue.
-Frida's (client) setting of
-\verb@OPTIONAL@ along with the \Condor{schedd}'s (daemon) setting of
-\verb@REQUIRED@ results in authentication being enabled for their
-communications.
-
-\begin{table}[tb]
-\centering
-\label{table:Security-Negotiation}
-\begin{tabular}{|c|c|c|c|c|c|}
-  \hline
-  \multicolumn{2}{|c|}{\hfill} & \multicolumn{4}{c|}{Daemon Setting} \\
-  \cline{3-6}
-  \multicolumn{2}{|c|}{\hfill} & NEVER & OPTIONAL & PREFERRED & REQUIRED \\
-  \hline
-  \hfill & NEVER & No & No & No & Fail \\
-  \cline{2-6}
-  Client & OPTIONAL & No & No & Yes* & Yes* \\
-  \cline{2-6}
-  Setting & PREFERRED & No* & Yes & Yes & Yes \\
-  \cline{2-6}
-  \hfill & REQUIRED & Fail & Yes & Yes & Yes \\
-  \hline
-  \multicolumn{6}{|l|}{\footnotesize{
-      *These combinations will result in failure for the
-       NEGOTIATION feature}} \\
-  \hline
-\end{tabular}
-\caption{How negotiation resolves whether a given security
-         feature will be used. }
-\end{table}
-
-
-It is important to note that these features are not completely
-independent of each other. In particular, no other security features
-are possible unless \verb@NEGOTIATION@ is used. In addition, neither
-\verb@ENCRYPTION@ or \verb@INTEGRITY@ may be used on a connection
-unless \verb@AUTHENTICATION@ is enabled (since authentication is
-needed to provide a secure key exchange).
-
-%It may seems strange that \verb@NEGOTIATION@ is part of the above
-%list. How can Condor components negotiate regarding whether or not
-%they'll negotiate? The answer is that the protocol for determining
-%whether negotiation will be used is much less flexible. Table X is
-%annotated to show cases where the \verb@NEGOTIATION@ policy fails to
-%reach a ``correct' result.
-
-Setting \verb@SEC_CLIENT_<feature>@ will determine the policy for all
-outgoing commands. Policy for incoming commands (i.e for the daemon
-side) takes a more fine-grained approach that allows different
-settings depending on the access level of the command being
-received. For example, it may be desirable to have all administrative
-actions (\DCPerm{ADMINISTRATOR}=level commands) require authentication
-but not be so strict regarding inquiries on pool status
-(\DCPerm{READ}-level commands). Such a policy could include the
-settings:
-\begin{verbatim}
-SEC_ADMINISTRATOR_AUTHENTICATION = REQUIRED
-SEC_READ_AUTHENTICATION = OPTIONAL
-\end{verbatim}
-
-Finally, the \verb@DEFAULT@ value for \verb@<context>@ will be checked
-by Condor if none of the specific policy settings (CLIENT, READ,
-WRITE, etc.) are present. This makes it possible to set a baseline
-policy with a single macro setting.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:security-negotiation-methods}Configuration for the
-Negotiation of Security Methods}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-Deciding what security features will be enabled for a connection is
-just one part of security negotiation. Given a specific feature,
-Condor can support a variety of \emph{methods}, or technologies, for
-enabling that feature. Currently, authentication and encryption both
-support multiple methods.
-
-Since multiple protocols are available for the authentication and
-encryption features of Condor, communicating daemons must have a way
-to decide what protocol to use. This is decided as part of security
-negotiation.
-
-Configuration macros that determine the policy used for negotiating
-methods to use for authentication and encryption, respectively, are of
-the forms:
-\begin{verbatim}
-SEC_<context>_AUTHENTICATION_METHODS
-SEC_<context>_CRYPTO_METHODS
-\end{verbatim}
-
-The \verb@<context>@ part has the same meaning as it does for the
-feature policy macros discussed above, allowing policy to be tailored
-depending on the type of communication.
-
-These macros can be set to a comma- or space-delimited list of
-possible methods to use. See the individual sections on authentication
-(\ref{sec:Security-Authentication}) and encryption
-(\ref{sec:Security-Encryption}) for all possible names.
-
-For example, a client may be configured with:
-\begin{verbatim}
-SEC_CLIENT_AUTHENTICATION_METHODS = FS, GSI
-\end{verbatim}
-and a daemon the client is trying to contact with:
-\begin{verbatim}
-SEC_DEFAULT_AUTHENTICATION_METHODS = GSI
-\end{verbatim}
-
-Negotiation will determine that GSI authentication is the only
-compatible choice. If there are multiple compatible authentication
-methods, negotiation will determine the list of acceptable methods and
-they will be tried in order until one succeeds. The next section will
-discuss authentication in more detail.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Security-access-levels}Access Level Descriptions}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{security!access levels}
 Authorization is granted based on specified access levels.
-Access levels are granted for users by configuration settings.
-The following describes the various access levels provided
-by Condor.
+This list describes each access level,
+and provides examples of their usage.
 
 \begin{description}
 
@@ -429,6 +208,14 @@ by Condor.
    The owner of that machine should be able to cause the removal
    of a job running on the machine.
 
+\item[\DCPerm{DAEMON}] \label{sec-level-daemon} This access level
+   is used for commands that are internal to the operation of
+   Condor.  An example of this internal operation is when the
+   \Condor{startd} daemon sends
+   its ClassAd updates to the \Condor{collector} daemon.
+   Authorization at this access level should only be given to
+   the user account under which the Condor daemons run.
+
 \item[\DCPerm{NEGOTIATOR}] \label{sec-level-negotiator} This 
    access level is used specifically to verify that commands are
    sent by the \Condor{negotiator} daemon.
@@ -441,51 +228,229 @@ by Condor.
 
 \end{description}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Security-Negotiation}Security Negotiation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Because of the wide range of environments and security demands necessary,
+Condor must be flexible.
+Configuration provides this flexibility.
+The process by which Condor determines the security settings that will
+be used when a connection is established is called
+\Term{security negotiation}.
+Security negotiation's primary purpose is to determine which
+of the features of authentication, encryption, and integrity checking
+will be enabled for a connection.
+In addition, since Condor supports multiple
+technologies for authentication and encryption,
+security negotiation also
+determines which technology is chosen for the connection.
+
+%The issue of allowing flexible configuration of security options is
+%complicated by the fact that Condor components that wish to interact
+%may be configured to use different security options. This should not
+%preclude the interaction from taking place. Pretend Frida, an
+%aggressive cycle-scavenger, runs a variety of Condor tools from her
+%workstation.  She would prefer not to use authentication as part of
+%her interactions with Condor (because she thinks it's a waste of
+%CPU). A \Condor{schedd} that she submits jobs to, however, refuses to
+%accept any job unless it can be sure of the submitter's identity, and
+%thus wishes to force authentication. Given the \Condor{schedd}'s
+%policy, Frida would rather her jobs run even if she does have to
+%authenticate first, so job submission should be allowed to commence
+%(with authentication turned on, of course).
+
+Security negotiation is a completely separate process from
+matchmaking, and should not be confused with any specific function of
+the \Condor{negotiator} daemon.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Security-sample1} Example of Daemon-Side Security Configuration}
+\subsubsection{\label{sec:security-negotiation-features}Configuration}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\index{security!sample daemon-side configuration}
-A configuration file is provided when Condor is installed.
-No security features are enabled within the configuration as
-distributed.
-Included as comments within the configuration file is an example 
-suggesting settings that enable security features.
-Here is that example of the daemon-side portion.
-
-% from Zach  (3/7/03)
-\footnotesize
+The configuration macro names that determine what features will be used during
+client-daemon communication follow the pattern:
 \begin{verbatim}
-SEC_DEFAULT_AUTHENTICATION         = REQUIRED
-SEC_DEFAULT_ENCRYPTION             = REQUIRED
-SEC_DEFAULT_INTEGRITY              = REQUIRED
-
-SEC_DEFAULT_AUTHENTICATION_METHODS = KERBEROS, FS
-SEC_DEFAULT_CRYPTO_METHODS         = 3DES, BLOWFISH
-\end{verbatim}
-\normalsize
-
-This set of configuration macros forces security features
-to be used at all times.
-All communication is authenticated with Kerberos, unless the client
-does not use Kerberos, but supports File System (FS) authentication,
-in which case FS authentication is used.
-All communication is both encrypted and integrity checked to make sure
-that messages are not modified or corrupted. 
-The encryption is preferably with triple DES, but Blowfish will be
-used if the client does not use 3DES, but does use Blowfish.
-
-Security negotiation configuration variables are not included in this
-suggested configuration.
-The default (when undefined) will be to set
-\begin{verbatim}
-SEC_DEFAULT_NEGOTIATION = OPTIONAL
+    SEC_<context>_<feature>
 \end{verbatim}
 
-Note that this example configuration requires that all Condor daemons be
-version 6.3.3 or later, since previous versions will not have
-the ability to do secure communication.
+The \verb@<feature>@
+portion of the macro name determines which security feature's
+policy is being set.
+\verb@<feature>@ may be any one of
+\begin{verbatim}
+    AUTHENTICATION
+    ENCRYPTION
+    INTEGRITY
+    NEGOTIATION
+\end{verbatim}
+
+The \verb@<context>@ component of the security policy macros can be
+used to craft a fine-grained security policy based on the type of
+communication taking place.
+\verb@<context>@ may be any one of
+\begin{verbatim}
+    CLIENT
+    READ
+    WRITE
+    ADMINISTRATOR
+    CONFIG
+    OWNER
+    DAEMON
+    NEGOTIATOR
+    DEFAULT
+\end{verbatim}
+
+Any of these constructed configuration macros may be set to
+any of the following values:
+\begin{verbatim}
+    REQUIRED
+    PREFERRED
+    OPTIONAL
+    NEVER 
+\end{verbatim}
+
+Security negotiation resolves various client-daemon combinations
+of desired security features in order to set a policy.
+
+As an example, consider Frida the scientist.
+Frida wants to avoid authentication when possible.
+She sets
+\begin{verbatim}
+    SEC_DEFAULT_AUTHENTICATION = OPTIONAL
+\end{verbatim}
+The machine running the \Condor{schedd}
+to which Frida will remotely submit jobs,
+however,
+is operated by a security-conscious system administrator who dutifully
+sets:
+\begin{verbatim}
+    SEC_DEFAULT_AUTHENTICATION = REQUIRED
+\end{verbatim}
+When Frida submits her jobs, Condor's security negotiation 
+determines that authentication will be used, and allows the command to
+continue.
+
+Whether or not security negotiation occurs depends on the
+setting at both the client and daemon side of the 
+configuration variable(s) defined by \MacroNI{SEC\_*\_NEGOTIATION}.
+\MacroNI{SEC\_DEFAULT\_NEGOTIATION} is a variable representing
+the entire set of configuration variables for \MacroNI{NEGOTIATION}.
+For the client side setting,
+the only definitions that make sense are \Expr{REQUIRED} and \Expr{NEVER}.
+For the daemon side setting,
+the \Expr{PREFERRED} value makes no sense.
+Table~\ref{table:Sec-Negotiation} shows how security negotiation
+resolves various client-daemon combinations of security negotiation policy
+settings.
+Within the table, Yes means the security negotiation will take place.
+No means it will not.
+Fail means that the policy settings are incompatible and the communication
+cannot continue.
+
+\begin{table}[tb]
+\centering
+\begin{tabular}{|c|c|c|c|c|}
+  \hline
+  \multicolumn{2}{|c|}{\hfill} & \multicolumn{3}{c|}{Daemon Setting} \\
+  \cline{3-5}
+  \multicolumn{2}{|c|}{\hfill} & NEVER & OPTIONAL & REQUIRED \\
+  \hline
+  \cline{2-5}
+  Client & NEVER & No & No & Fail \\
+  \cline{2-5}
+  Setting & REQUIRED & Fail & Yes & Yes \\
+  \hline
+\end{tabular}
+\caption{\label{table:Sec-Negotiation}Resolution of security negotiation.  }
+\end{table}
+
+
+Enabling authentication, encryption, and integrity checks is
+dependent on security negotiation taking place.
+The enabled security negotiation further sets the policy for
+these other features.
+Table~\ref{table:Sec-Resolution} shows how security features
+are resolved for client-daemon combinations of security feature policy
+settings.
+Like Table~\ref{table:Sec-Negotiation},
+Yes means the feature will be utilized.
+No means it will not.
+Fail implies incompatibility and the feature cannot be resolved.
+
+
+\begin{table}[tb]
+\centering
+\begin{tabular}{|c|c|c|c|c|c|}
+  \hline
+  \multicolumn{2}{|c|}{\hfill} & \multicolumn{4}{c|}{Daemon Setting} \\
+  \cline{3-6}
+  \multicolumn{2}{|c|}{\hfill} & NEVER & OPTIONAL & PREFERRED & REQUIRED \\
+  \hline
+  \hfill & NEVER & No & No & No & Fail \\
+  \cline{2-6}
+  Client & OPTIONAL & No & No & Yes & Yes \\
+  \cline{2-6}
+  Setting & PREFERRED & No & Yes & Yes & Yes \\
+  \cline{2-6}
+  \hfill & REQUIRED & Fail & Yes & Yes & Yes \\
+  \hline
+\end{tabular}
+\caption{\label{table:Sec-Resolution}Resolution of security features. }
+\end{table}
+
+
+The enabling of encryption and/or integrity checks is dependent on
+authentication taking place.
+The authentication provides a key exchange.
+The key is needed for both encryption and integrity checks.
+
+Setting \verb@SEC_CLIENT_<feature>@ determines the policy for all
+outgoing commands.
+The policy for incoming commands
+(the daemon side of the communication)
+takes a more fine-grained approach that implements a set of
+access levels for the received command.
+For example, it is desirable to have all incoming administrative
+requests require authentication.
+Inquiries on pool status may not be so restrictive.
+To implement this, the administrator configures the policy:
+
+\begin{verbatim}
+SEC_ADMINISTRATOR_AUTHENTICATION = REQUIRED
+SEC_READ_AUTHENTICATION          = OPTIONAL
+\end{verbatim}
+
+The \verb@DEFAULT@ value for \verb@<context>@ provides a way
+to set a policy for all access levels
+(\verb@READ@, \verb@WRITE@, etc.)
+that do not have a specific configuration variable defined.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:security-negotiation-methods}Configuration for 
+Security Methods}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Authentication and encryption can each be accomplished by a variety
+of methods or technologies.
+Which method is utilized is determined during
+security negotiation.
+
+The configuration macros that determine the methods
+to use for authentication and/or encryption are
+\begin{verbatim}
+SEC_<context>_AUTHENTICATION_METHODS
+SEC_<context>_CRYPTO_METHODS
+\end{verbatim}
+
+These macros are defined by a comma or space delimited list of
+possible methods to use.
+Section \ref{sec:Security-Authentication} lists all implemented
+authentication methods.
+Section \ref{sec:Security-Encryption} lists all implemented
+encryption methods.
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Security-Authentication}Authentication}
@@ -493,7 +458,8 @@ the ability to do secure communication.
 \index{authentication|(}
 \index{security!authentication}
 
-The client uses one of two macros to configure authentication:
+The client side of any communication uses one of two macros
+to specify whether authentication is to occur:
 \index{SEC\_DEFAULT\_AUTHENTICATION macro@\texttt{SEC\_DEFAULT\_AUTHENTICATION} macro}
 \index{configuration macro!\texttt{SEC\_DEFAULT\_AUTHENTICATION}}
 \index{SEC\_CLIENT\_AUTHENTICATION macro@\texttt{SEC\_CLIENT\_AUTHENTICATION} macro}
@@ -503,20 +469,23 @@ The client uses one of two macros to configure authentication:
     SEC_CLIENT_AUTHENTICATION
 \end{verbatim}
 
-For the daemon, there are seven macros to configure authentication:
+For the daemon side, there are seven macros to specify whether
+authentication is to take place, based upon the necessary
+access level:
+\index{SEC\_DEFAULT\_AUTHENTICATION macro@\texttt{SEC\_DEFAULT\_AUTHENTICATION} macro}
+\index{configuration macro!\texttt{SEC\_DEFAULT\_AUTHENTICATION}}
 \index{SEC\_READ\_AUTHENTICATION macro@\texttt{SEC\_READ\_AUTHENTICATION} macro}
 \index{configuration macro!\texttt{SEC\_READ\_AUTHENTICATION}}
 \index{SEC\_WRITE\_AUTHENTICATION macro@\texttt{SEC\_WRITE\_AUTHENTICATION} macro}
 \index{configuration macro!\texttt{SEC\_WRITE\_AUTHENTICATION}}
 \index{SEC\_ADMINISTRATOR\_AUTHENTICATION macro@\texttt{SEC\_ADMINISTRATOR\_AUTHENTICATION} macro}
 \index{configuration macro!\texttt{SEC\_ADMINISTRATOR\_AUTHENTICATION}}
-% commented out June 04, as it has not been implemented
-%\index{SEC\_DAEMON\_AUTHENTICATION macro@\texttt{SEC\_DAEMON\_AUTHENTICATION} macro}
-%\index{configuration macro!\texttt{SEC\_DAEMON\_AUTHENTICATION}}
 \index{SEC\_CONFIG\_AUTHENTICATION macro@\texttt{SEC\_CONFIG\_AUTHENTICATION} macro}
 \index{configuration macro!\texttt{SEC\_CONFIG\_AUTHENTICATION}}
 \index{SEC\_OWNER\_AUTHENTICATION macro@\texttt{SEC\_OWNER\_AUTHENTICATION} macro}
 \index{configuration macro!\texttt{SEC\_OWNER\_AUTHENTICATION}}
+\index{SEC\_DAEMON\_AUTHENTICATION macro@\texttt{SEC\_DAEMON\_AUTHENTICATION} macro}
+\index{configuration macro!\texttt{SEC\_DAEMON\_AUTHENTICATION}}
 \index{SEC\_NEGOTIATOR\_AUTHENTICATION macro@\texttt{SEC\_NEGOTIATOR\_AUTHENTICATION} macro}
 \index{configuration macro!\texttt{SEC\_NEGOTIATOR\_AUTHENTICATION}}
 \begin{verbatim}
@@ -526,10 +495,9 @@ For the daemon, there are seven macros to configure authentication:
     SEC_ADMINISTRATOR_AUTHENTICATION
     SEC_CONFIG_AUTHENTICATION
     SEC_OWNER_AUTHENTICATION
+    SEC_DAEMON_AUTHENTICATION
     SEC_NEGOTIATOR_AUTHENTICATION
 \end{verbatim}
-% commented out June 04, as it has not been implemented
-%   SEC_DAEMON_AUTHENTICATION
 
 As an example, the macro defined in the configuration file
 for a daemon as
@@ -545,8 +513,8 @@ SEC_DEFAULT_AUTHENTICATION = REQUIRED
 and does not contain any other security configuration for
 \verb@AUTHENTICATION@, then this default defines the daemon's needs
 for authentication over all access levels.
-Where a specific macro is present, its value takes
-precedence over any default given.
+Where a specific macro is defined, the more specific value takes
+precedence over the default definition.
 
 
 If authentication is to be done, then the communicating parties
@@ -572,9 +540,8 @@ macros
 \index{configuration macro!\texttt{SEC\_WRITE\_AUTHENTICATION\_METHODS}}
 \index{SEC\_ADMINISTRATOR\_AUTHENTICATION\_METHODS macro@\texttt{SEC\_ADMINISTRATOR\_AUTHENTICATION\_METHODS} macro}
 \index{configuration macro!\texttt{SEC\_ADMINISTRATOR\_AUTHENTICATION\_METHODS}}
-% commented out June 04, as it has not been implemented
-%\index{SEC\_DAEMON\_AUTHENTICATION\_METHODS macro@\texttt{SEC\_DAEMON\_AUTHENTICATION\_METHODS} macro}
-%\index{configuration macro!\texttt{SEC\_DAEMON\__AUTHENTICATION\_METHODS}}
+\index{SEC\_DAEMON\_AUTHENTICATION\_METHODS macro@\texttt{SEC\_DAEMON\_AUTHENTICATION\_METHODS} macro}
+\index{configuration macro!\texttt{SEC\_DAEMON\_AUTHENTICATION\_METHODS}}
 \index{SEC\_CONFIG\_AUTHENTICATION\_METHODS macro@\texttt{SEC\_CONFIG\_AUTHENTICATION\_METHODS} macro}
 \index{configuration macro!\texttt{SEC\_CONFIG\_AUTHENTICATION\_METHODS}}
 \index{SEC\_OWNER\_AUTHENTICATION\_METHODS macro@\texttt{SEC\_OWNER\_AUTHENTICATION\_METHODS} macro}
@@ -588,17 +555,16 @@ macros
     SEC_ADMINISTRATOR_AUTHENTICATION_METHODS
     SEC_CONFIG_AUTHENTICATION_METHODS
     SEC_OWNER_AUTHENTICATION_METHODS
+    SEC_DAEMON_AUTHENTICATION_METHODS
     SEC_NEGOTIATOR_AUTHENTICATION_METHODS
 \end{verbatim}
-% commented out June 04, as it has not been implemented
-%   SEC_DAEMON_AUTHENTICATION_METHODS
 The methods are
 given as a comma-separated list of acceptable values.
 These variables list the authentication methods that are available
 to be used.
-The ordering of the list gives preference;
+The ordering of the list defines preference;
 the first item in the list indicates the highest preference.
-The values will be 
+Defined values are
 \begin{verbatim}
     GSI
     KERBEROS
@@ -609,9 +575,22 @@ The values will be
     CLAIMTOBE
     ANONYMOUS
 \end{verbatim}
-%   PASSWORD
 
-As an example, the macro
+For example, a client may be configured with:
+\begin{verbatim}
+SEC_CLIENT_AUTHENTICATION_METHODS = FS, GSI
+\end{verbatim}
+and a daemon the client is trying to contact with:
+\begin{verbatim}
+SEC_DEFAULT_AUTHENTICATION_METHODS = GSI
+\end{verbatim}
+
+Security negotiation will determine that GSI authentication is the only
+compatible choice. If there are multiple compatible authentication
+methods, security negotiation will make a list of acceptable methods and
+they will be tried in order until one succeeds. 
+
+As another example, the macro
 \begin{verbatim}
 SEC_DEFAULT_AUTHENTICATION_METHODS = KERBEROS, NTSSPI
 \end{verbatim}
@@ -624,13 +603,18 @@ will be tried first, and if there is a failure for any reason, then
 NTSSPI will be tried. 
 
 
-By default, all of the \verb@SEC_<access-level>_AUTHENTICATION@ are
-\verb@OPTIONAL@,
-except for operations which modify the job queue (such as
-\Condor{q} and \Condor{rm}) which are \verb@REQUIRED@.
-
-By default on Unix, the authentication methods are \verb@FS@, \verb@KERBEROS@,
-\verb@GSI@, while on Windows they are \verb@NTSSPI@, \verb@KERBEROS@, \verb@GSI@. 
+If the configuration for a machine does not define any variable
+for \MacroNI{SEC\_<access-level>\_AUTHENTICATION},
+then Condor uses a default value of \verb@OPTIONAL@.
+Authentication will be required for
+any operation which modifies the job queue,
+such as \Condor{qedit} and \Condor{rm}.
+If the configuration for a machine does not define any variable
+for \MacroNI{SEC\_<access-level>\_AUTHENTICATION\_METHODS},
+the default value for a Unix machine is \verb@FS@, \verb@KERBEROS@,
+\verb@GSI@. 
+This default value for a Windows machine is
+\verb@NTSSPI@, \verb@KERBEROS@, \verb@GSI@. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:GSI-Authentication}GSI Authentication}
@@ -646,65 +630,54 @@ The basics of GSI are well-documented elsewhere, such as
 A simple introduction to this type of authentication
 defines Condor's use of terminology,
 and it illuminates the needed items that Condor must access to
-do authentication.
+do this authentication.
 Assume that 
 A authenticates to B.
-In this example, A is the client, and B is the server.
-For Condor's purposes, both the client and the server
-will either be a daemon
-or a user (running a Condor command such as \Condor{status}).
+In this example, A is the client, and B is the daemon within
+their communication.
 This example's one-way authentication implies that B
 is verifying the identity of A,
 using the certificate A provides,
-together with B's own set of trusted CAs (Certification Authorities).
-Client A provides its certificate (or proxy) to server B.
+and utilizing B's own set of trusted CAs (Certification Authorities).
+Client A provides its certificate (or proxy) to daemon B.
 B does two things:
 B checks that the certificate is valid,
 and B checks to see that the CA that signed A's certificate
 is one that B trusts.
 
-For this specific authentication protocol,
+For the GSI authentication protocol,
 an X.509 certificate is required.
 \index{certificate!X.509}
 Files with predetermined names hold a certificate,
 a key, and optionally, a proxy.
-A separate directory has one or more files, each of which contains
-a trusted CA.
+A separate directory has one or more files that become the list of
+trusted CAs.
 
 Allowing Condor to do this GSI authentication
 requires knowledge of the locations of
-the client-side certificate and the server-side list of
+the client A's certificate and the daemon B's list of
 trusted CAs.
-For a Condor daemon, these locations are determined
+When one side of the communication (as either client A or daemon B)
+is a Condor daemon, these locations are determined
 by configuration or by default locations.
-For a user, these locations are determined by the
+When one side of the communication (as a client A)
+is a user of Condor (the process owner of a Condor tool,
+for example \Condor{submit}), these locations are determined by the
 pre-set values of environment variables or by default locations.
 
 \begin{description}
-\item[Server-side Configuration]
+\item[GSI certificate locations for Condor daemons]
 
 For a Condor daemon, the certificate may be a single host certificate,
 \index{host certificate}
 and all Condor daemons on the same machine may share the same certificate.
 In some cases, the certificate can also be copied to other machines,
 where local copies are necessary.
-This can only be done in cases where a single host certificate can
+This may occur only in cases where a single host certificate can
 match multiple host names, something that is beyond the scope of this
 manual. 
 The certificates must be protected by access rights to files,
 since the password file is not encrypted.
-
-%Condor users (those who submit jobs) can also use
-%the X.509-based authentication.
-%These users must also
-%have valid X.509 certificates signed by a trusted CA.
-%For use when submitting jobs,
-%the certificate is used to generate a proxy:
-%\index{proxy}
-%a combination of certificate and password that is valid only
-%for a specific (and usually short) time period.
-%A proxy is used so that the user does  
-%not need to be present (to give a password) when a job is executed.
 
 The specification of the location of the necessary files
 through configuration uses the following precedence.
@@ -728,7 +701,7 @@ Note that no proxy is assumed in this case.
 If the \MacroNI{GSI\_DAEMON\_DIRECTORY} is not defined, 
 or when defined,
 the location may be overridden with specific configuration
-variables that specify the complete path and filename of 
+variables that specify the complete path and file name of 
 the certificate with
   \begin{description}
   \item{\Macro{GSI\_DAEMON\_CERT}}
@@ -775,58 +748,13 @@ This single macro covers all communications, but could be
 replaced with a set of macros that require authentication for
 only specific communications.
 
-In this example, only the \MacroNI{GSI} method can be used. 
-If another methods is acceptable (perhaps \MacroNI{KERBEROS}, then
-placing this method first within the list will cause Condor to give
-preference to this method over GSI, or vice-versa. 
-
 The macro \MacroNI{GSI\_DAEMON\_DIRECTORY} is specified
 to give
 Condor a single place to find the daemon's certificate.
-This path may be a directory or a shared file system such as AFS. 
+This path may be a directory on a shared file system such as AFS. 
 Alternatively, this path name can point to 
 local copies of the certificate stored
 in a local file system.
-
-
-\item[User side Set Up]
-
-The user specifies the location of a certificate, proxy, etc.
-in one of two ways:
-\begin{enumerate}
-\item
-Environment variables give the location of necessary items.
-  \begin{description}
-  \item{\Env{X509\_USER\_PROXY} gives the path and file name of the proxy.
-  This proxy will have been created using the \Prog{grid-proxy-init} program, 
-  which will place the proxy in the \File{/tmp}
-  directory with the file name being determined by the format:
-  \begin{verbatim}
-  /tmp/x509up_uXXXX
-  \end{verbatim}
-  The specific file name is given by substituting the \verb@XXXX@
-  characters with the UID of the user.
-  Note that when a valid proxy is used, the certificate and key locations
-  are not needed.  }
-  \item{\Env{X509\_USER\_CERT} gives the path and file name of the
-  certificate. It is also used if a proxy location has been checked,
-  but the proxy is no longer valid.  }
-  \item{\Env{X509\_USER\_KEY} gives the path and file name of the
-  key. Note that most keys are password encrypted, such that knowing
-  the location could not lead to using the key.  }
-  \item{\Env{X509\_CERT\_DIR} gives the path to the directory 
-  containing the list of trusted CAs. }
-  \end{description}
-
-\item
-Without environment variables to give locations of necessary
-certificate information,
-Condor uses a default directory for the user.
-This directory is given by 
-\begin{verbatim}
-$(HOME)/.globus
-\end{verbatim}
-\end{enumerate}
 
 When a daemon acts as the client within authentication,
 the daemon needs a listing of those from which it
@@ -847,7 +775,12 @@ example configuration above.
 
 Condor will also need a way to map an X.509 distinguished
 name to a Condor user id.
-This is done in an administrator-maintained file called an X.509 map file,
+There are two ways to accomplish this mapping.
+For a first way to specify the mapping, see
+section~\ref{sec:Security-Unified-Map-File}
+to use Condor's unified map file.
+The second way to do the mapping is within
+an administrator-maintained GSI-specific file called an X.509 map file,
 mapping from X509 Distinguished Name (DN) to Condor user id.
 It is similar to a Globus grid map file except that it is only used for
 mapping to a user id, not for authorization. 
@@ -884,6 +817,48 @@ then the third place Condor looks for the map file is given by
 /etc/grid-security/grid-mapfile
 \end{verbatim}
 
+
+\item[GSI certificate locations for Users]
+
+The user specifies the location of a certificate, proxy, etc.
+in one of two ways:
+\begin{enumerate}
+\item
+Environment variables give the location of necessary items.
+
+  \Env{X509\_USER\_PROXY} gives the path and file name of the proxy.
+  This proxy will have been created using the \Prog{grid-proxy-init} program, 
+  which will place the proxy in the \File{/tmp}
+  directory with the file name being determined by the format:
+  \begin{verbatim}
+  /tmp/x509up_uXXXX
+  \end{verbatim}
+  The specific file name is given by substituting the \verb@XXXX@
+  characters with the UID of the user.
+  Note that when a valid proxy is used, the certificate and key locations
+  are not needed. 
+
+  \Env{X509\_USER\_CERT} gives the path and file name of the
+  certificate. It is also used if a proxy location has been checked,
+  but the proxy is no longer valid.  
+
+  \Env{X509\_USER\_KEY} gives the path and file name of the
+  key. Note that most keys are password encrypted, such that knowing
+  the location could not lead to using the key. 
+
+  \Env{X509\_CERT\_DIR} gives the path to the directory 
+  containing the list of trusted CAs. 
+
+\item
+Without environment variables to give locations of necessary
+certificate information,
+Condor uses a default directory for the user.
+This directory is given by 
+\begin{verbatim}
+$(HOME)/.globus
+\end{verbatim}
+\end{enumerate}
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -891,17 +866,25 @@ then the third place Condor looks for the map file is given by
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{authentication!Kerberos}
 \index{Kerberos authentication}
-If Kerberos is used for authentication, then 
+
+If Kerberos is used for authentication,
+then a mapping from a
+Kerberos domain (called a realm) to a Condor UID domain is necessary.
+There are two ways to accomplish this mapping.
+For a first way to specify the mapping, see
+section~\ref{sec:Security-Unified-Map-File}
+to use Condor's unified map file.
+A second way to specify the mapping defines
 the configuration variable
 \Macro{KERBEROS\_MAP\_FILE}
-is used to define a path to an administrator-maintained file that
-contains Kerberos domain (called a realm) to Condor UID domain mapping.
+to define a path to an administrator-maintained Kerberos-specific 
+map file.
 The configuration syntax is
 \begin{verbatim}
 KERBEROS_MAP_FILE = /path/to/etc/condor.kmap
 \end{verbatim}
 
-Lines within the map file have the syntax
+Lines within this map file have the syntax
 \begin{verbatim}
    KERB.REALM = UID.domain.name
 \end{verbatim}
@@ -953,11 +936,12 @@ SEC_ADMINISTRATOR_AUTHENTICATION_METHODS = KERBEROS
 \end{verbatim}
 \normalsize
 
-Kerberos authentication requires access to various files that
+Kerberos authentication on Unix platforms
+requires access to various files that
 usually are only accessible by the root user.
 At this time,
-the only supported way to use KERBEROS authentication is to start
-daemons Condor as root.
+the only supported way to use KERBEROS authentication on Unix platforms
+is to start daemons Condor as user \Login{root}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Password-Authentication} Password Authentication}
@@ -1115,6 +1099,239 @@ It is included in Condor and in the list of authentication methods
 for testing purposes only.
 
 \index{authentication|)}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Security-Unified-Map-File}The Unified Map File for Authentication}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{security!unified map file}
+\Todo
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Security-Encryption}Encryption}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{security!encryption}
+Encryption provides privacy support between two communicating parties.
+Through configuration macros, both the client and the daemon
+can specify whether encryption is required for further communication.
+
+The client uses one of two macros to enable or disable encryption:
+\index{SEC\_DEFAULT\_ENCRYPTION macro@\texttt{SEC\_DEFAULT\_ENCRYPTION} macro}
+\index{configuration macro!\texttt{SEC\_DEFAULT\_ENCRYPTION}}
+\index{SEC\_CLIENT\_ENCRYPTION macro@\texttt{SEC\_CLIENT\_ENCRYPTION} macro}
+\index{configuration macro!\texttt{SEC\_CLIENT\_ENCRYPTION}}
+\begin{verbatim}
+    SEC_DEFAULT_ENCRYPTION
+    SEC_CLIENT_ENCRYPTION
+\end{verbatim}
+
+For the daemon, there are seven macros to enable or disable encryption:
+\index{SEC\_DEFAULT\_ENCRYPTION macro@\texttt{SEC\_DEFAULT\_ENCRYPTION} macro}
+\index{configuration macro!\texttt{SEC\_DEFAULT\_ENCRYPTION}}
+\index{SEC\_READ\_ENCRYPTION macro@\texttt{SEC\_READ\_ENCRYPTION} macro}
+\index{configuration macro!\texttt{SEC\_READ\_ENCRYPTION}}
+\index{SEC\_WRITE\_ENCRYPTION macro@\texttt{SEC\_WRITE\_ENCRYPTION} macro}
+\index{configuration macro!\texttt{SEC\_WRITE\_ENCRYPTION}}
+\index{SEC\_ADMINISTRATOR\_ENCRYPTION macro@\texttt{SEC\_ADMINISTRATOR\_ENCRYPTION} macro}
+\index{configuration macro!\texttt{SEC\_ADMINISTRATOR\_ENCRYPTION}}
+\index{SEC\_DAEMON\_ENCRYPTION macro@\texttt{SEC\_DAEMON\_ENCRYPTION} macro}
+\index{configuration macro!\texttt{SEC\_DAEMON\_ENCRYPTION}}
+\index{SEC\_CONFIG\_ENCRYPTION macro@\texttt{SEC\_CONFIG\_ENCRYPTION} macro}
+\index{configuration macro!\texttt{SEC\_CONFIG\_ENCRYPTION}}
+\index{SEC\_OWNER\_ENCRYPTION macro@\texttt{SEC\_OWNER\_ENCRYPTION} macro}
+\index{configuration macro!\texttt{SEC\_OWNER\_ENCRYPTION}}
+\index{SEC\_NEGOTIATOR\_ENCRYPTION macro@\texttt{SEC\_NEGOTIATOR\_ENCRYPTION} macro}
+\index{configuration macro!\texttt{SEC\_NEGOTIATOR\_ENCRYPTION}}
+\begin{verbatim}
+    SEC_DEFAULT_ENCRYPTION
+    SEC_READ_ENCRYPTION
+    SEC_WRITE_ENCRYPTION
+    SEC_ADMINISTRATOR_ENCRYPTION
+    SEC_CONFIG_ENCRYPTION
+    SEC_OWNER_ENCRYPTION
+    SEC_DAEMON_ENCRYPTION
+    SEC_NEGOTIATOR_ENCRYPTION
+\end{verbatim}
+
+As an example, the macro defined in the configuration file
+for a daemon as
+\begin{verbatim}
+SEC_CONFIG_ENCRYPTION = REQUIRED
+\end{verbatim}
+signifies that any communication that changes a daemon's configuration
+must be encrypted.
+If a daemon's configuration contains
+\begin{verbatim}
+SEC_DEFAULT_ENCRYPTION = REQUIRED
+\end{verbatim}
+and does not contain any other security configuration for
+ENCRYPTION, then this default defines the daemon's needs
+for encryption over all access levels.
+Where a specific macro is present, its value takes
+precedence over any default given.
+
+If encryption is to be done, then the communicating parties
+must find (negotiate) a mutually acceptable method of
+encryption to be used.
+A list of acceptable methods may be provided by the client, using the
+macros
+\index{SEC\_DEFAULT\_CRYPTO\_METHODS macro@\texttt{SEC\_DEFAULT\_CRYPTO\_METHODS} macro}
+\index{configuration macro!\texttt{SEC\_DEFAULT\_CRYPTO\_METHODS}}
+\index{SEC\_CLIENT\_CRYPTO\_METHODS macro@\texttt{SEC\_CLIENT\_CRYPTO\_METHODS} macro}
+\index{configuration macro!\texttt{SEC\_CLIENT\_CRYPTO\_METHODS}}
+\begin{verbatim}
+    SEC_DEFAULT_CRYPTO_METHODS
+    SEC_CLIENT_CRYPTO_METHODS
+\end{verbatim}
+A list of acceptable methods may be provided by the daemon, using the
+macros
+\index{SEC\_DEFAULT\_CRYPTO\_METHODS macro@\texttt{SEC\_DEFAULT\_CRYPTO\_METHODS} macro}
+\index{configuration macro!\texttt{SEC\_DEFAULT\_CRYPTO\_METHODS}}
+\index{SEC\_READ\_CRYPTO\_METHODS macro@\texttt{SEC\_READ\_CRYPTO\_METHODS} macro}
+\index{configuration macro!\texttt{SEC\_READ\_CRYPTO\_METHODS}}
+\index{SEC\_WRITE\_CRYPTO\_METHODS macro@\texttt{SEC\_WRITE\_CRYPTO\_METHODS} macro}
+\index{configuration macro!\texttt{SEC\_WRITE\_CRYPTO\_METHODS}}
+\index{SEC\_ADMINISTRATOR\_CRYPTO\_METHODS macro@\texttt{SEC\_ADMINISTRATOR\_CRYPTO\_METHODS} macro}
+\index{configuration macro!\texttt{SEC\_ADMINISTRATOR\_CRYPTO\_METHODS}}
+\index{SEC\_DAEMON\_CRYPTO\_METHODS macro@\texttt{SEC\_DAEMON\_CRYPTO\_METHODS} macro}
+\index{configuration macro!\texttt{SEC\_DAEMON\_CRYPTO\_METHODS}}
+\index{SEC\_CONFIG\_CRYPTO\_METHODS macro@\texttt{SEC\_CONFIG\_CRYPTO\_METHODS} macro}
+\index{configuration macro!\texttt{SEC\_CONFIG\_CRYPTO\_METHODS}}
+\index{SEC\_OWNER\_CRYPTO\_METHODS macro@\texttt{SEC\_OWNER\_CRYPTO\_METHODS} macro}
+\index{configuration macro!\texttt{SEC\_OWNER\_CRYPTO\_METHODS}}
+\index{SEC\_NEGOTIATOR\_CRYPTO\_METHODS macro@\texttt{SEC\_NEGOTIATOR\_CRYPTO\_METHODS} macro}
+\index{configuration macro!\texttt{SEC\_NEGOTIATOR\_CRYPTO\_METHODS}}
+\begin{verbatim}
+    SEC_DEFAULT_CRYPTO_METHODS
+    SEC_READ_CRYPTO_METHODS
+    SEC_WRITE_CRYPTO_METHODS
+    SEC_ADMINISTRATOR_CRYPTO_METHODS
+    SEC_CONFIG_CRYPTO_METHODS
+    SEC_OWNER_CRYPTO_METHODS
+    SEC_DAEMON_CRYPTO_METHODS
+    SEC_NEGOTIATOR_CRYPTO_METHODS
+\end{verbatim}
+
+The methods are
+given as a comma-separated list of acceptable values.
+These variables list the encryption methods that are available
+to be used.
+The ordering of the list gives preference;
+the first item in the list indicates the highest preference.
+Possible values are
+\begin{verbatim}
+    3DES
+    BLOWFISH
+\end{verbatim}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Security-Integrity}Integrity}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{security!integrity}
+
+An integrity check assures that the messages between communicating parties
+have not been tampered with.
+Any change, such as addition, modification, or deletion can
+be detected.
+Through configuration macros, both the client and the daemon
+can specify whether an integrity check is required of further communication.
+
+The client uses one of two macros to enable or disable an integrity check:
+\index{SEC\_DEFAULT\_INTEGRITY macro@\texttt{SEC\_DEFAULT\_INTEGRITY} macro}
+\index{configuration macro!\texttt{SEC\_DEFAULT\_INTEGRITY}}
+\index{SEC\_CLIENT\_INTEGRITY macro@\texttt{SEC\_CLIENT\_INTEGRITY} macro}
+\index{configuration macro!\texttt{SEC\_CLIENT\_INTEGRITY}}
+\begin{verbatim}
+    SEC_DEFAULT_INTEGRITY
+    SEC_CLIENT_INTEGRITY
+\end{verbatim}
+
+For the daemon, there are seven macros to enable or disable an integrity check:
+\index{SEC\_DEFAULT\_INTEGRITY macro@\texttt{SEC\_DEFAULT\_INTEGRITY} macro}
+\index{configuration macro!\texttt{SEC\_DEFAULT\_INTEGRITY}}
+\index{SEC\_READ\_INTEGRITY macro@\texttt{SEC\_READ\_INTEGRITY} macro}
+\index{configuration macro!\texttt{SEC\_READ\_INTEGRITY}}
+\index{SEC\_WRITE\_INTEGRITY macro@\texttt{SEC\_WRITE\_INTEGRITY} macro}
+\index{configuration macro!\texttt{SEC\_WRITE\_INTEGRITY}}
+\index{SEC\_ADMINISTRATOR\_INTEGRITY macro@\texttt{SEC\_ADMINISTRATOR\_INTEGRITY} macro}
+\index{configuration macro!\texttt{SEC\_ADMINISTRATOR\_INTEGRITY}}
+% commented out June 04, as it has not been implemented
+%\index{SEC\_DAEMON\_INTEGRITY macro@\texttt{SEC\_DAEMON\_INTEGRITY} macro}
+%\index{configuration macro!\texttt{SEC\_DAEMON\_INTEGRITY}}
+\index{SEC\_CONFIG\_INTEGRITY macro@\texttt{SEC\_CONFIG\_INTEGRITY} macro}
+\index{configuration macro!\texttt{SEC\_CONFIG\_INTEGRITY}}
+\index{SEC\_OWNER\_INTEGRITY macro@\texttt{SEC\_OWNER\_INTEGRITY} macro}
+\index{configuration macro!\texttt{SEC\_OWNER\_INTEGRITY}}
+\index{SEC\_NEGOTIATOR\_INTEGRITY macro@\texttt{SEC\_NEGOTIATOR\_INTEGRITY} macro}
+\index{configuration macro!\texttt{SEC\_NEGOTIATOR\_INTEGRITY}}
+\begin{verbatim}
+    SEC_DEFAULT_INTEGRITY
+    SEC_READ_INTEGRITY
+    SEC_WRITE_INTEGRITY
+    SEC_ADMINISTRATOR_INTEGRITY
+    SEC_CONFIG_INTEGRITY
+    SEC_OWNER_INTEGRITY
+    SEC_NEGOTIATOR_INTEGRITY
+\end{verbatim}
+% commented out June 04, as it has not been implemented
+%   SEC_DAEMON_INTEGRITY
+
+As an example, the macro defined in the configuration file
+for a daemon as
+\begin{verbatim}
+SEC_CONFIG_INTEGRITY = REQUIRED
+\end{verbatim}
+signifies that any communication that changes a daemon's configuration
+must have its integrity assured.
+If a daemon's configuration contains
+\begin{verbatim}
+SEC_DEFAULT_INTEGRITY = REQUIRED
+\end{verbatim}
+and does not contain any other security configuration for
+\verb@INTEGRITY@, then this default defines the daemon's needs
+for integrity checks over all access levels.
+Where a specific macro is present, its value takes
+precedence over any default given.
+
+A signed MD5 checksum is currently the only available method
+for integrity checking.
+Its use is implied whenever integrity checks occur.
+If more methods are implemented, then there will be further
+macros to allow both the client and the daemon to specify
+which methods are acceptable.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Security-sample1} Example of Daemon-Side Security Configuration}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{security!sample daemon-side configuration}
+A configuration file is provided when Condor is installed.
+No security features are enabled within the configuration as
+distributed.
+Included as comments within the configuration file is an example 
+suggesting settings that enable security features.
+Here is that example of the daemon-side portion.
+
+\footnotesize
+\begin{verbatim}
+SEC_DEFAULT_NEGOTIATION     = REQUIRED
+SEC_DEFAULT_AUTHENTICATION  = REQUIRED
+SEC_DEFAULT_ENCRYPTION      = REQUIRED
+SEC_DEFAULT_INTEGRITY       = REQUIRED
+
+SEC_DEFAULT_AUTHENTICATION_METHODS = KERBEROS, FS
+SEC_DEFAULT_CRYPTO_METHODS         = 3DES, BLOWFISH
+\end{verbatim}
+\normalsize
+
+This set of configuration macros forces security negotiation to occur,
+and sets the features to be used at all times.
+All communication is authenticated with Kerberos, unless the client
+does not use Kerberos, but supports File System (FS) authentication,
+in which case FS authentication is used.
+All communication is both encrypted and integrity checked to make sure
+that messages are not modified or corrupted. 
+The encryption is preferably with triple DES, but Blowfish will be
+used if the client does not use 3DES, but does use Blowfish.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Security-Authorization}Authorization}
@@ -1398,203 +1615,6 @@ ALLOW_OWNER           = username@cs.wisc.edu/hostname.cs.wisc.edu
 In this example the owner has a login of
 \verb@username@, and the machine's name is represented by
 \verb@hostname@.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Security-Encryption}Encryption}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{security!encryption}
-Encryption provides privacy support between two communicating parties.
-Through configuration macros, both the client and the daemon
-can specify whether encryption is required for further communication.
-
-The client uses one of two macros to enable or disable encryption:
-\index{SEC\_DEFAULT\_ENCRYPTION macro@\texttt{SEC\_DEFAULT\_ENCRYPTION} macro}
-\index{configuration macro!\texttt{SEC\_DEFAULT\_ENCRYPTION}}
-\index{SEC\_CLIENT\_ENCRYPTION macro@\texttt{SEC\_CLIENT\_ENCRYPTION} macro}
-\index{configuration macro!\texttt{SEC\_CLIENT\_ENCRYPTION}}
-\begin{verbatim}
-    SEC_DEFAULT_ENCRYPTION
-    SEC_CLIENT_ENCRYPTION
-\end{verbatim}
-
-For the daemon, there are seven macros to enable or disable encryption:
-\index{SEC\_DEFAULT\_ENCRYPTION macro@\texttt{SEC\_DEFAULT\_ENCRYPTION} macro}
-\index{configuration macro!\texttt{SEC\_DEFAULT\_ENCRYPTION}}
-\index{SEC\_READ\_ENCRYPTION macro@\texttt{SEC\_READ\_ENCRYPTION} macro}
-\index{configuration macro!\texttt{SEC\_READ\_ENCRYPTION}}
-\index{SEC\_WRITE\_ENCRYPTION macro@\texttt{SEC\_WRITE\_ENCRYPTION} macro}
-\index{configuration macro!\texttt{SEC\_WRITE\_ENCRYPTION}}
-\index{SEC\_ADMINISTRATOR\_ENCRYPTION macro@\texttt{SEC\_ADMINISTRATOR\_ENCRYPTION} macro}
-\index{configuration macro!\texttt{SEC\_ADMINISTRATOR\_ENCRYPTION}}
-% commented out June 04, as it has not been implemented
-%\index{SEC\_DAEMON\_ENCRYPTION macro@\texttt{SEC\_DAEMON\_ENCRYPTION} macro}
-%\index{configuration macro!\texttt{SEC\_DAEMON\_ENCRYPTION}}
-\index{SEC\_CONFIG\_ENCRYPTION macro@\texttt{SEC\_CONFIG\_ENCRYPTION} macro}
-\index{configuration macro!\texttt{SEC\_CONFIG\_ENCRYPTION}}
-\index{SEC\_OWNER\_ENCRYPTION macro@\texttt{SEC\_OWNER\_ENCRYPTION} macro}
-\index{configuration macro!\texttt{SEC\_OWNER\_ENCRYPTION}}
-\index{SEC\_NEGOTIATOR\_ENCRYPTION macro@\texttt{SEC\_NEGOTIATOR\_ENCRYPTION} macro}
-\index{configuration macro!\texttt{SEC\_NEGOTIATOR\_ENCRYPTION}}
-\begin{verbatim}
-    SEC_DEFAULT_ENCRYPTION
-    SEC_READ_ENCRYPTION
-    SEC_WRITE_ENCRYPTION
-    SEC_ADMINISTRATOR_ENCRYPTION
-    SEC_CONFIG_ENCRYPTION
-    SEC_OWNER_ENCRYPTION
-    SEC_NEGOTIATOR_ENCRYPTION
-\end{verbatim}
-% commented out June 04, as it has not been implemented
-%   SEC_DAEMON_ENCRYPTION
-
-As an example, the macro defined in the configuration file
-for a daemon as
-\begin{verbatim}
-SEC_CONFIG_ENCRYPTION = REQUIRED
-\end{verbatim}
-signifies that any communication that changes a daemon's configuration
-must be encrypted.
-If a daemon's configuration contains
-\begin{verbatim}
-SEC_DEFAULT_ENCRYPTION = REQUIRED
-\end{verbatim}
-and does not contain any other security configuration for
-ENCRYPTION, then this default defines the daemon's needs
-for encryption over all access levels.
-Where a specific macro is present, its value takes
-precedence over any default given.
-
-If encryption is to be done, then the communicating parties
-must find (negotiate) a mutually acceptable method of
-encryption to be used.
-A list of acceptable methods may be provided by the client, using the
-macros
-\index{SEC\_DEFAULT\_CRYPTO\_METHODS macro@\texttt{SEC\_DEFAULT\_CRYPTO\_METHODS} macro}
-\index{configuration macro!\texttt{SEC\_DEFAULT\_CRYPTO\_METHODS}}
-\index{SEC\_CLIENT\_CRYPTO\_METHODS macro@\texttt{SEC\_CLIENT\_CRYPTO\_METHODS} macro}
-\index{configuration macro!\texttt{SEC\_CLIENT\_CRYPTO\_METHODS}}
-\begin{verbatim}
-    SEC_DEFAULT_CRYPTO_METHODS
-    SEC_CLIENT_CRYPTO_METHODS
-\end{verbatim}
-A list of acceptable methods may be provided by the daemon, using the
-macros
-\index{SEC\_DEFAULT\_CRYPTO\_METHODS macro@\texttt{SEC\_DEFAULT\_CRYPTO\_METHODS} macro}
-\index{configuration macro!\texttt{SEC\_DEFAULT\_CRYPTO\_METHODS}}
-\index{SEC\_READ\_CRYPTO\_METHODS macro@\texttt{SEC\_READ\_CRYPTO\_METHODS} macro}
-\index{configuration macro!\texttt{SEC\_READ\_CRYPTO\_METHODS}}
-\index{SEC\_WRITE\_CRYPTO\_METHODS macro@\texttt{SEC\_WRITE\_CRYPTO\_METHODS} macro}
-\index{configuration macro!\texttt{SEC\_WRITE\_CRYPTO\_METHODS}}
-\index{SEC\_ADMINISTRATOR\_CRYPTO\_METHODS macro@\texttt{SEC\_ADMINISTRATOR\_CRYPTO\_METHODS} macro}
-\index{configuration macro!\texttt{SEC\_ADMINISTRATOR\_CRYPTO\_METHODS}}
-% commented out June 04, as it has not been implemented
-%\index{SEC\_DAEMON\_CRYPTO\_METHODS macro@\texttt{SEC\_DAEMON\_CRYPTO\_METHODS} macro}
-%\index{configuration macro!\texttt{SEC\_DAEMON\_CRYPTO\_METHODS}}
-\index{SEC\_CONFIG\_CRYPTO\_METHODS macro@\texttt{SEC\_CONFIG\_CRYPTO\_METHODS} macro}
-\index{configuration macro!\texttt{SEC\_CONFIG\_CRYPTO\_METHODS}}
-\index{SEC\_OWNER\_CRYPTO\_METHODS macro@\texttt{SEC\_OWNER\_CRYPTO\_METHODS} macro}
-\index{configuration macro!\texttt{SEC\_OWNER\_CRYPTO\_METHODS}}
-\index{SEC\_NEGOTIATOR\_CRYPTO\_METHODS macro@\texttt{SEC\_NEGOTIATOR\_CRYPTO\_METHODS} macro}
-\index{configuration macro!\texttt{SEC\_NEGOTIATOR\_CRYPTO\_METHODS}}
-\begin{verbatim}
-    SEC_DEFAULT_CRYPTO_METHODS
-    SEC_READ_CRYPTO_METHODS
-    SEC_WRITE_CRYPTO_METHODS
-    SEC_ADMINISTRATOR_CRYPTO_METHODS
-    SEC_CONFIG_CRYPTO_METHODS
-    SEC_OWNER_CRYPTO_METHODS
-    SEC_NEGOTIATOR_CRYPTO_METHODS
-\end{verbatim}
-% commented out June 04, as it has not been implemented
-%   SEC_DAEMON_CRYPTO_METHODS
-
-The methods are
-given as a comma-separated list of acceptable values.
-These variables list the encryption methods that are available
-to be used.
-The ordering of the list gives preference;
-the first item in the list indicates the highest preference.
-Possible values are
-\begin{verbatim}
-    3DES
-    BLOWFISH
-\end{verbatim}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Security-Integrity}Integrity}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{security!integrity}
-
-An integrity check assures that the messages between communicating parties
-have not been tampered with.
-Any change, such as addition, modification, or deletion can
-be detected.
-Through configuration macros, both the client and the daemon
-can specify whether an integrity check is required of further communication.
-
-The client uses one of two macros to enable or disable an integrity check:
-\index{SEC\_DEFAULT\_INTEGRITY macro@\texttt{SEC\_DEFAULT\_INTEGRITY} macro}
-\index{configuration macro!\texttt{SEC\_DEFAULT\_INTEGRITY}}
-\index{SEC\_CLIENT\_INTEGRITY macro@\texttt{SEC\_CLIENT\_INTEGRITY} macro}
-\index{configuration macro!\texttt{SEC\_CLIENT\_INTEGRITY}}
-\begin{verbatim}
-    SEC_DEFAULT_INTEGRITY
-    SEC_CLIENT_INTEGRITY
-\end{verbatim}
-
-For the daemon, there are seven macros to enable or disable an integrity check:
-\index{SEC\_DEFAULT\_INTEGRITY macro@\texttt{SEC\_DEFAULT\_INTEGRITY} macro}
-\index{configuration macro!\texttt{SEC\_DEFAULT\_INTEGRITY}}
-\index{SEC\_READ\_INTEGRITY macro@\texttt{SEC\_READ\_INTEGRITY} macro}
-\index{configuration macro!\texttt{SEC\_READ\_INTEGRITY}}
-\index{SEC\_WRITE\_INTEGRITY macro@\texttt{SEC\_WRITE\_INTEGRITY} macro}
-\index{configuration macro!\texttt{SEC\_WRITE\_INTEGRITY}}
-\index{SEC\_ADMINISTRATOR\_INTEGRITY macro@\texttt{SEC\_ADMINISTRATOR\_INTEGRITY} macro}
-\index{configuration macro!\texttt{SEC\_ADMINISTRATOR\_INTEGRITY}}
-% commented out June 04, as it has not been implemented
-%\index{SEC\_DAEMON\_INTEGRITY macro@\texttt{SEC\_DAEMON\_INTEGRITY} macro}
-%\index{configuration macro!\texttt{SEC\_DAEMON\_INTEGRITY}}
-\index{SEC\_CONFIG\_INTEGRITY macro@\texttt{SEC\_CONFIG\_INTEGRITY} macro}
-\index{configuration macro!\texttt{SEC\_CONFIG\_INTEGRITY}}
-\index{SEC\_OWNER\_INTEGRITY macro@\texttt{SEC\_OWNER\_INTEGRITY} macro}
-\index{configuration macro!\texttt{SEC\_OWNER\_INTEGRITY}}
-\index{SEC\_NEGOTIATOR\_INTEGRITY macro@\texttt{SEC\_NEGOTIATOR\_INTEGRITY} macro}
-\index{configuration macro!\texttt{SEC\_NEGOTIATOR\_INTEGRITY}}
-\begin{verbatim}
-    SEC_DEFAULT_INTEGRITY
-    SEC_READ_INTEGRITY
-    SEC_WRITE_INTEGRITY
-    SEC_ADMINISTRATOR_INTEGRITY
-    SEC_CONFIG_INTEGRITY
-    SEC_OWNER_INTEGRITY
-    SEC_NEGOTIATOR_INTEGRITY
-\end{verbatim}
-% commented out June 04, as it has not been implemented
-%   SEC_DAEMON_INTEGRITY
-
-As an example, the macro defined in the configuration file
-for a daemon as
-\begin{verbatim}
-SEC_CONFIG_INTEGRITY = REQUIRED
-\end{verbatim}
-signifies that any communication that changes a daemon's configuration
-must have its integrity assured.
-If a daemon's configuration contains
-\begin{verbatim}
-SEC_DEFAULT_INTEGRITY = REQUIRED
-\end{verbatim}
-and does not contain any other security configuration for
-\verb@INTEGRITY@, then this default defines the daemon's needs
-for integrity checks over all access levels.
-Where a specific macro is present, its value takes
-precedence over any default given.
-
-A signed MD5 checksum is currently the only available method
-for integrity checking.
-Its use is implied whenever integrity checks occur.
-If more methods are implemented, then there will be further
-macros to allow both the client and the daemon to specify
-which methods are acceptable.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

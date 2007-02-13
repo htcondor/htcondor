@@ -30,6 +30,7 @@ section~\ref{sec:Availability} on page~\pageref{sec:Availability}.
 
 The details of each version are described below.
 
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-6-8-4}Version 6.8.4}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -47,17 +48,45 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Added new tool \Condor{dump\_history} which will
+enable schema migration to future Quill schema versions.
+
+\item Quill can now automatically rebuild the indexes on the
+\Prog{PostgreSQL} database tables.  Some sites reported that even
+with auto vacuuming turned on, the indexes on the tables were 
+growing without bounds.  Rebuilding the indexes fixes that problem.
+Rebuilding is disabled by setting the parameter 
+\Macro{QUILL\_SHOULD\_REINDEX}
+to \Expr{False}.  Reindexing happens immediately after the history file
+is purged of old data. So, if Quill is configured to never delete
+history data, the tables are never reindexed.  Also, \Condor{quill}
+was changed so that the history deletion also happens at start time.
+This ensures that old history rows are deleted if Quill crashes
+before the scheduled deletion time.
+
 \item Added more information to StarterLog for an error message
-involved in file transfers: ``Download acknowledgment missing
-attribute: Result.''  The extra information is a full dump of the
+involved in file transfers: 
+\begin{verbatim}
+Download acknowledgment missing attribute: Result.
+\end{verbatim}
+The extra information is a full dump of the
 ClassAd that was received, in order to help determine why the expected
 attribute was not found.
+
+\item Added output to the \File{dagman.out} file documenting when
+\Condor{dagman} shortcuts node retries because of \Condor{submit}
+failures or a helper command failure.
 
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a bug in \Condor{q} that only happened when running 
+with a Quill database and using the long (-l) option.  The bug was 
+introduced in 6.8.3.  The bug truncated the output of \Condor{q}, and
+only displayed some of the job attributes.
 
 \item Fixed a bug in \Condor{submit} that caused standard universe jobs
 to be unable to open their standard output or standard error, if
@@ -67,6 +96,66 @@ to be unable to open their standard output or standard error, if
 \item Fixed a bug in \Condor{glidein} that could cause it to request the
 queue unknown when submitting its setup job to GRAM, leading to
 failures.
+
+\item The \Attr{OnExitRemove} expression generated for DAGMan by
+\Condor{submit\_dag} evaluated to UNDEFINED for some values of
+\Attr{ExitCode}, causing \Condor{dagman} to go on hold.
+
+\item Fixed a bug in which garbage values (random bits from memory)
+were sometimes
+written to the pool history file in the field representing the
+backfill state.
+
+% Gnats PR 798
+\item \Condor{submit\_dag} now generates a submit file
+(\File{.condor.sub}) for \Condor{dagman} that sends \File{stdout} and
+\File{stderr} to separate files.  This has always been recommended,
+and recent versions of Condor cause \File{stdout} and \File{stderr} to
+overwrite each other if they are directed to the same file.
+
+\item Fixed several bugs for grid type \SubmitCmd{nordugrid} jobs.
+The \Condor{gridmanager} would create an invalid RSL for these jobs
+and save their output to the wrong location in some cases.
+
+\item \Condor{glidein} now properly escapes glidein tarball URLs that
+contain characters that have special meaning to GRAM RSL. It also turns
+on TCP updates to the \Condor{collector},
+if they are enabled on the submit machine.
+
+\item When using the submit file option \SubmitCmd{getenv=true},
+environment
+variables containing a newline in their value are no longer inserted
+into the job's environment.  The \Condor{schedd} daemon
+does not allow newlines
+within ClassAd values, so the attempt to insert such values resulted
+in failure of job submission and caused the \Condor{schedd} daemon
+to abort.
+
+% Gnats PR 799
+\item Fixed a bug that caused \Condor{dagman} to hang if a node
+with a POST script and retries initially runs but fails, and then
+has all \Condor{submit} attempts fail on the retry.
+
+\item Fixed a problem in the Windows installer where the
+\Macro{DAEMON\_LIST} parameter would be incorrectly set if the ``Join
+an existing Condor pool'' option was selected or the ``Submit jobs to
+Condor pool'' option was unchecked.  In the first case, a
+\Condor{collector} and \Condor{negotiator} would incorrectly be run on
+the machine. In the second case, a \Condor{schedd} would incorrectly
+be run. The problem exists in all previous 6.8 and 6.9 series
+releases.
+
+\item Fixed a bug in the handling of local universe jobs
+for a very busy \Condor{schedd} daemon.
+When a local universe job completed, the \Condor{starter} might not
+be able to connect to the \Condor{schedd} daemon to update final information
+about the job, such as the exit status.
+Under this circumstance,
+the \Condor{starter} would hang indefinitely.
+The bug is fixed by having the \Condor{starter} attempt
+to retry a few times (with a delay in between each attempt) before
+exiting with a fatal error.
+The fatal error causes the job to restart.
 
 \end{itemize}
 
@@ -88,6 +177,13 @@ failures.
 \noindent Release Notes:
 
 \begin{itemize}
+
+\item In this release,
+the command \Condor{q} \Arg{-long} does not work when querying
+the Quill database.
+Instead, use the command
+\Condor{q} \Arg{-direct quilld} \Arg{-long},
+or use a previous version of \Condor{q}.
 
 \item Performed a security audit of all places where Condor opens files,
 to make certain files are opened with a reasonable permission mode
@@ -314,7 +410,7 @@ universe (set \MacroNI{JAVA} to an empty string), or disable just-in-time
 compilation when running in the Java universe with the following configuration
 setting:
 \begin{verbatim}
-  JAVA_EXTRA_ARGUMENTS = -Djava.compiler=""
+  JAVA_EXTRA_ARGUMENTS = -Djava.compiler=NONE
 \end{verbatim}
 
 \end{itemize}

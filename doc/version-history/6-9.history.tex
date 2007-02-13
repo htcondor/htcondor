@@ -143,6 +143,8 @@ and would also issue no warnings in the logs.
   This version of GCB includes enhancements used by Condor
   along with a new GCB-related command-line tool:
   \Prog{gcb\_broker\_query}.
+  Condor 6.9.1 will not work properly with older versions of the
+  \Prog{gcb\_broker} or \Prog{gcb\_relay\_server}.
   For more information about GCB, see section~\ref{sec:GCB} on
   page~\pageref{sec:GCB}. 
 
@@ -236,7 +238,18 @@ cannot be reached, for example because the machine is turned off.
 
 \begin{itemize}
 
-\item None.
+\item Under various circumstances, condor 6.9.1 daemons abort
+with the message, ``ERROR: Unexpected pending status for fake message
+delivery.''  A specific example is when \Attr{OnExitRemove} or
+\Attr{OnExitHold} evaluated to UNDEFINED, which causes the
+\Condor{schedd} to abort.
+
+\item In Condor 6.9.1, the \Condor{schedd} will die during startup
+when trying to reconnect to running jobs for which the \Condor{schedd}
+can not find a startd ClassAd.  This happens shortly after
+logging the following message: ``Could not find machine ClassAds for
+one or more jobs.  May be flocking, or machine may be down.
+Attempting to reconnect anyway.''
 
 \end{itemize}
 

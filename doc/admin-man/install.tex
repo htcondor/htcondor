@@ -1006,55 +1006,8 @@ the installation.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:install-rpms} RPMs}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\index{installation!using Linux RPMs}
-\index{RPM installation on Linux}
-RPMs are available in \VersionNotice.
-This packaging method provides for installation and configuration
-in one easy step.
-It is currently available for Linux systems only.
-
-The format of the installation command is
-\begin{verbatim}
-  rpm -i <filename> --prefix=<installation dir>
-\end{verbatim}
-
-The user provides the path name to the directory
-used for the installation.
-The \Prog{rpm} program calls \Condor{configure} to do portions
-of the installation.
-If the condor user is present on the system,
-the installation script will
-assume that that is the effective user that Condor should run as
-(see 
-section~\ref{sec:uids} on
-page~\pageref{sec:uids}).
-If the condor user is not present,
-the daemon user 
-will be used.
-This user will be present on all Linux systems. 
-Note that the user can later be changed by running the \Condor{configure}
-program using the \Opt{owner} option, of the format:
-\begin{verbatim}
-  condor_configure  --owner=<user>
-\end{verbatim}
-
-After a successful installation,
-the \Macro{CONDOR\_CONFIG} configuration 
-variable must be set to point to
-\begin{verbatim}
-   <installation dir>/etc/condor_config
-\end{verbatim}
-before starting Condor daemons or invoking Condor tools.
-
-RPM upgrade (\Opt{-u} option) does not currently
-work for Condor \VersionNotice.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{installed-now-what}
-Condor is installed... now what?}
+Condor is installed Under Unix ... now what?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Now that Condor has been installed on your machine(s), there are a few
@@ -1193,6 +1146,57 @@ some user other than root, see section~\ref{sec:Non-Root} on
 page~\pageref{sec:Non-Root}.
 
 \end{enumerate}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{admin-man/install-windows.tex}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:install-rpms} RPMs}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{installation!using Linux RPMs}
+\index{RPM installation on Linux}
+RPMs are available in \VersionNotice.
+This packaging method provides for installation and configuration
+in one easy step.
+It is currently available for Linux systems only.
+
+The format of the installation command is
+\begin{verbatim}
+  rpm -i <filename> --prefix=<installation dir>
+\end{verbatim}
+
+The user provides the path name to the directory
+used for the installation.
+The \Prog{rpm} program calls \Condor{configure} to do portions
+of the installation.
+If the condor user is present on the system,
+the installation script will
+assume that that is the effective user that Condor should run as
+(see 
+section~\ref{sec:uids} on
+page~\pageref{sec:uids}).
+If the condor user is not present,
+the daemon user 
+will be used.
+This user will be present on all Linux systems. 
+Note that the user can later be changed by running the \Condor{configure}
+program using the \Opt{owner} option, of the format:
+\begin{verbatim}
+  condor_configure  --owner=<user>
+\end{verbatim}
+
+After a successful installation,
+the \Macro{CONDOR\_CONFIG} configuration 
+variable must be set to point to
+\begin{verbatim}
+   <installation dir>/etc/condor_config
+\end{verbatim}
+before starting Condor daemons or invoking Condor tools.
+
+RPM upgrade (\Opt{-u} option) does not currently
+work for Condor \VersionNotice.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:upgrade-directions}Upgrading - Installing a Newer
