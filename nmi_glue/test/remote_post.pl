@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_post.pl,v 1.2.2.5 2007-02-13 17:45:13 bt Exp $
+# $Id: remote_post.pl,v 1.2.2.6 2007-02-13 21:28:50 bt Exp $
 # post script for Condor testsuite runs
 ######################################################################
 
@@ -155,10 +155,15 @@ while( <TASKFILE> ) {
 
     # these files are all optional.  if they exist, we'll save 'em, if
     # they do not, we don't worry about it.
-    copy_file( "$testname*.out*", $resultdir, false );
-    copy_file( "$testname*.err*", $resultdir, false );
-    copy_file( "$testname*.log", $resultdir, false );
-    copy_file( "$testname*.cmd.out", $resultdir, false );
+
+	@savefiles = glob "$testname*.out* $testname*.err* $testname*.log $testname*.cmd.out";
+	foreach $target (@savefiles) {
+		copy_file( $target, $resultdir, false );
+	}
+    #copy_file( "$testname*.out*", $resultdir, false );
+    #copy_file( "$testname*.err*", $resultdir, false );
+    #copy_file( "$testname*.log", $resultdir, false );
+    #copy_file( "$testname*.cmd.out", $resultdir, false );
 
     # if it exists, tarup the 'saveme' subdirectory for this test, which
     # may contain test debug info etc.
