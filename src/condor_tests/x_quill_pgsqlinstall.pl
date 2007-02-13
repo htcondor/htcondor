@@ -10,6 +10,7 @@ my $tarfile = $ARGV[2];
 my $pgsqlversion = $ARGV[3];
 my $condorconfigadd = $ARGV[4];
 my $morelibs = $ARGV[5];
+my $testsrc = $ARGV[6];
 
 my $startpostmasterport = 5432;
 my $postmasterinc = int(rand(100));
@@ -31,24 +32,23 @@ print "Random increment if needed will be <<$postmasterinc>>\n";
 # need the hostname for a name to ipaddr conversion
 
 # for when we configure postgress for quill
-my $mypostgresqlconf = "../postgres-data/postgresql.conf";
-my $mynewpostgresqlconf = "../postgres-data/postgresql.new";
-my $myquillchanges = "../../x_postgress_quill.conf";
+my $mypostgresqlconf = $prefix . "/postgres-data/postgresql.conf";
+my $mynewpostgresqlconf = $prefix . "/postgres-data/postgresql.new";
+my $myquillchanges = $testsrc . "/x_postgress_quill.conf";
 
-my $condorchanges = "../../$condorconfigadd";
-my $newcondorchanges = "../../$condorconfigadd" . ".new";
+my $condorchanges = "$condorconfigadd";
+my $newcondorchanges = "$condorconfigadd" . ".new";
 
-my $mypgfile = "../postgres-data/pg_hba.conf";
-my $mynewpgfile = "../postgres-data/pg_hba.new";
+my $mypgfile = $prefix . "/postgres-data/pg_hba.conf";
+my $mynewpgfile = $prefix . "/postgres-data/pg_hba.new";
 
 
 chdir("$prefix");
-$dotar = system("tar -zxvf ../$tarfile");
+$dotar = system("tar -zxvf $tarfile");
 if($dotar != 0) {
 	die "TAR EXTRACTION OF $tarfile FAILED\n";
 }
 chdir("$pgsqlversion");
-#$doconfigure = system("./configure --prefix=$prefix --libdir=$morelibs");
 $doconfigure = system("./configure --prefix=$prefix --without-readline");
 if($doconfigure != 0) {
 	die "Configure failed\n";
@@ -64,22 +64,20 @@ if($doinstall != 0) {
 system("mkdir $prefix/postgres-data");
 
 print "Create db\n";
-#system("$prefix/bin/initdb -D $prefix/postgres-data --auth=password --pwfile=../../x_job_quill_supw") ;
 $initdb = system("$prefix/bin/initdb -D $prefix/postgres-data") ;
 if($initdb != 0) {
 	die "Initdb failed\n";
 }
 
 # customize postgress before starting it
-
-open(OLD,"<$mypostgresqlconf") || die "Can not open original conf file: $mypostgresqlconf($!)\n";
-open(NEW,">$mynewpostgresqlconf") || die "Can not open original conf file: $mynewpostgresqlconf($!)\n";
+open(OLD,"<$mypostgresqlconf") || die "1 Can not open original conf file: $mypostgresqlconf($!)\n";
+open(NEW,">$mynewpostgresqlconf") || die "2 Can not open original conf file: $mynewpostgresqlconf($!)\n";
 # get original configuration
 while(<OLD>) {
 	print NEW "$_";
 }
 
-open(EXTRA,"<$myquillchanges") || die "Can not open quill conf file: $myquillchanges($!)\n";
+open(EXTRA,"<$myquillchanges") || die "3 Can not open quill conf file: $myquillchanges($!)\n";
 # add quill changes
 while(<EXTRA>) {
 	print NEW "$_";
@@ -95,8 +93,8 @@ if($mvconf != 0) {
 	die "INstalling modified configuration file <<$mypostgresqlconf>> failed\n";
 }
 
-open(OLD,"<$mypgfile") || die "Can not open original conf file: $mypgfile($!)\n";
-open(NEW,">$mynewpgfile") || die "Can not open original conf file: $mynewpgfile($!)\n";
+open(OLD,"<$mypgfile") || die "4 Can not open original conf file: $mypgfile($!)\n";
+open(NEW,">$mynewpgfile") || die "5 Can not open original conf file: $mynewpgfile($!)\n";
 # get original configuration
 while(<OLD>) {
 	print NEW "$_";
@@ -122,8 +120,8 @@ while (( $dbup ne "yes") && ($trylimit <= 10) ) {
 	sleep(10);
 	if(!(-f "$prefix/postgres-data/postmaster.pid")) {
 		$trylimit = $trylimit + 1;
-		open(OLD,"<$mypostgresqlconf") || die "Can not open original conf file: $mypostgresqlconf($!)\n";
-		open(NEW,">$mynewpostgresqlconf") || die "Can not open original conf file: $mynewpostgresqlconf($!)\n";
+		open(OLD,"<$mypostgresqlconf") || die "6 Can not open original conf file: $mypostgresqlconf($!)\n";
+		open(NEW,">$mynewpostgresqlconf") || die "7 Can not open original conf file: $mynewpostgresqlconf($!)\n";
 		while(<OLD>) {
 			if( $_ =~ /^port\s+=\s+/ ){
 				$startpostmasterport = $startpostmasterport + $postmasterinc;
@@ -148,8 +146,8 @@ while (( $dbup ne "yes") && ($trylimit <= 10) ) {
 if($trylimit > 10) {
 	die	"Tried 10 times to find a good port!!!!\n";;
 } else {
-	open(OLD,"<$condorchanges") || die "Can not open original conf file: $mypostgresqlconf($!)\n";
-	open(NEW,">$newcondorchanges") || die "Can not open original conf file: $mynewpostgresqlconf($!)\n";
+	open(OLD,"<$condorchanges") || die "8 Can not open original conf file: $condorchanges($!)\n";
+	open(NEW,">$newcondorchanges") || die "9 Can not open original conf file: $newcondorchanges($!)\n";
 	while(<OLD>) {
 		if( $_ =~ /^QUILL_DB_IP_ADDR/ ){
 			print NEW "QUILL_DB_IP_ADDR = \$(CONDOR_HOST):$startpostmasterport\n";
@@ -172,7 +170,7 @@ print "Create quillreader\n";
 $command = Expect->spawn("$prefix/bin/createuser quillreader --port $startpostmasterport --no-createdb --no-adduser --pwprompt")||
 	die "Could not start program: $!\n";
 $command->log_stdout(0);
-unless($command->expect(10,"Enter password for new user:")) {
+unless($command->expect(10,"Enter password for new role:")) {
 	die "Quillreader Password request never happened\n";
 }
 print $command "biqN9ihm\n";
@@ -182,17 +180,17 @@ unless($command->expect(10,"Enter it again:")) {
 }
 print $command "biqN9ihm\n";
 
-#unless($command->expect(10,"Shall the new role be allowed to create more new roles? (y/n)")) {
-	#die "Password request never happened\n";
-#}
-#print $command "n\n";
-#$command->soft_close();
+unless($command->expect(10,"Shall the new role be allowed to create more new roles? (y/n)")) {
+	die "Password request never happened\n";
+}
+print $command "n\n";
+$command->soft_close();
 
 print "Create quillwriter\n";
 $command = Expect->spawn("$prefix/bin/createuser quillwriter --port $startpostmasterport --createdb --no-adduser --pwprompt")||
 	die "Could not start program: $!\n";
 $command->log_stdout(0);
-unless($command->expect(10,"Enter password for new user:")) {
+unless($command->expect(10,"Enter password for new role:")) {
 	die "Quillwriter Password request never happened\n";
 }
 print $command "biqN9ihm\n";
@@ -202,10 +200,10 @@ unless($command->expect(10,"Enter it again:")) {
 }
 print $command "biqN9ihm\n";
 
-#unless($command->expect(10,"Shall the new role be allowed to create more new roles? (y/n)")) {
-	#die "Password request never happened\n";
-#}
-#print $command "n\n";
+unless($command->expect(10,"Shall the new role be allowed to create more new roles? (y/n)")) {
+	die "Password request never happened\n";
+}
+print $command "n\n";
 $command->soft_close();
 
 #system("$prefix/bin/createuser quillwriter --createdb --no-adduser --pwprompt");

@@ -8,6 +8,7 @@ $cmd = "job_quill_basic.cmd";
 $corename = "job_quill_basic";
 $supwfile = "x_job_quill_supw";
 $topdir = getcwd();
+$ourtarfile = "x_quill_postgresql-8.2.3.tar.gz";
 
 # where am I running
 $dummyhost = "gamgee.cs.wisc.edu";
@@ -24,36 +25,47 @@ $myquillname = "pgsql" . $mypid;
 $myfullpgsqlloc = $topdir . "/" . $myquillname;
 $myfullpgsqlinstalllog = $topdir . "/" . $myquillname . "/postgress_install.log" ;
 
-# find the version of the current external
-$mypostgressworld = "../../externals/bundles/postgresql";
-$mypostgresspath = "";
+system("mkdir $mysaveme");
+$mypiddir = $mysaveme . "/" . $mypid;
+$myquillpiddir = $mysaveme . "/" . $mypid . "/" . $myquillname;
+system("mkdir $mypiddir");
+system("mkdir $myquillpiddir");
+#make a symbolic link for personal condor module to use
+system("ln -s $mypiddir $mypid");
+system("ln -s $myquillpiddir $myquillname");
 
-opendir( POSTG, $mypostgressworld) || die "Error opening version dir<$mypostgressworld>: $!\n";
-@versions = readdir( POSTG );
-# filter out . and .. and CVS
-@versions = grep !/^\.\.?$/, @versions;
-@versions = grep !/CVS/, @versions;
-$keepversion;
-foreach $version (@versions) {
-	print "PG version is: $version\n";
-	$keepversion = $version;
+
+if($ourtarfile eq "") {
+	# find the version of the current external
+	$mypostgressworld = "../../externals/bundles/postgresql";
+	$mypostgresspath = "";
+
+	opendir( POSTG, $mypostgressworld) || die "Error opening version dir<$mypostgressworld>: $!\n";
+	@versions = readdir( POSTG );
+	# filter out . and .. and CVS
+	@versions = grep !/^\.\.?$/, @versions;
+	@versions = grep !/CVS/, @versions;
+	$keepversion;
+	foreach $version (@versions) {
+		print "PG version is: $version\n";
+		$keepversion = $version;
+	}
+	print "keepversion is <<$keepversion>>";
+	
+	$mypostgresspath = $mypostgressworld . "/" . $keepversion . "/" ;
+	$mypgsqlversion = "postgresql-$keepversion";
+	$mypgsqltarfile = $mypostgresspath . $mypgsqlversion . ".tar.gz";
+	$usetarfile = $topdir . "/" . $mypgsqlversion . ".tar.gz";
+	print "Postgress tar file is $mypgsqltarfile \n";
+	system("cp $mypgsqltarfile .");
+} else {
+	$usetarfile = $topdir . "/" . $ourtarfile;
+	$mypgsqlversion = "postgresql-8.2.3";
 }
-print "keepversion is <<$keepversion>>";
-
-$mypostgresspath = $mypostgressworld . "/" . $keepversion . "/" ;
-$mypgsqlversion = "postgresql-$keepversion";
-$mypgsqltarfile = $mypostgresspath . $mypgsqlversion . ".tar.gz";
-print "Postgress tar file is $mypgsqltarfile \n";
 
 $myextralibs = $topdir . "/libs/lib";
 
-$myrdlnname = "rdln" . $mypid;
-$myfullrdlnloc = $topdir . "/libs";
-$myfullrdlninstalllog = $topdir . "/" . $myrdlnname . "/rdln.log" ;
-$myrdlntarfile = "x_quill_readline-5.2.tar.gz";
-$myrdlnversion = "readline-5.2";
-
-$mycondorconfigadd = "x_quill_config_postsrc";
+$mycondorconfigadd = $topdir . "/x_quill_config_postsrc";
 my $myresult;
 
 $topdir = getcwd();
@@ -68,16 +80,11 @@ chdir("$topdir");
 $perlinstall = system("./x_quill_buildperlmods.pl");
 print "Perl module install result was $perlinstall\n";
 
-system("mkdir $myfullrdlnloc");
-
-$rdlnresult = system("./x_quill_readlineinstall.pl $myfullrdlnloc $myfullrdlninstalllog $myrdlntarfile $myrdlnversion ");
-print "Readline install result was $rdlninstall\n";
-
 chdir("$topdir");
-system("mkdir $myquillname");
+system("mkdir -p $myquillname");
 if( -d $myquillname ) {
 	system("cp $supwfile $myquillname");
-	$pgresult = system("./x_quill_pgsqlinstall.pl $myfullpgsqlloc $myfullpgsqlinstalllog $mypgsqltarfile $mypgsqlversion $mycondorconfigadd $myextralibs");
+	$pgresult = system("./x_quill_pgsqlinstall.pl $myfullpgsqlloc $myfullpgsqlinstalllog $usetarfile $mypgsqlversion $mycondorconfigadd $myextralibs $topdir");
 	print "Result of Quill Postgresssql db install job is  <<$pgresult>>\n";
 	if($pgresult != 0) {
 		print "Could not start POSTGRESS\n";
@@ -96,8 +103,6 @@ if($pgresult != 0) {
 
 
 chdir("$topdir");
-
-system("mkdir $mysaveme");
 
 $mysubmitnm = $corename . $mypid . ".cmd";
 $mysubmitnmcmdout = $corename . $mypid . ".cmd.out";
@@ -144,11 +149,10 @@ if($pgresult == 0) {
 	$pcresult = system("./job_quill_basic.pl $mysubmitnm");
 	print "Result of job_quill_basic job is  $pcresult\n";
 
-	$result = system("./x_quill_pgsqlstop.pl $myfullpgsqlloc ");
-	print "Result of Quill Postgresssql db stop job is  $result\n";
+	#$result = system("./x_quill_pgsqlstop.pl $myfullpgsqlloc ");
+	#print "Result of Quill Postgresssql db stop job is  $result\n";
 }
 
-system("cp -r *$mypid $mysaveme");
 system("cp *quill_basic* $mysaveme");
 
 if( -e "$mysubmitnm" )
@@ -175,6 +179,12 @@ if(!$status)
 {
 	print "Test failure due to Condor Tool Failure<$cmd>\n";
 	exit(1)
+}
+if($pcresult == 0) {
+	print "Setup allow test which then WORKED!!!......\n";
+} else {
+	print "Setup allow test which then failed......\n";
+	exit(1);
 }
 
 system("date");
