@@ -546,6 +546,8 @@ Here is a list of the commands:
 
 \item [Suspend] Suspend a running application within a specific COD claim.
 
+\item [Renew] Renew the lease to a COD claim.
+
 \item [Resume] Resume a suspended application on a specific COD claim.
 
 \item [Deactivate] Shut down an application, but hold onto the COD claim
@@ -591,7 +593,7 @@ The following sections describe each option in greater detail.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{COD!condor\_cod\_request command} 
 
-A user must be granted authorization to a create COD
+A user must be granted authorization to create COD
 claims on a specific machine.
 In addition, when the user uses these COD claims, the application
 binary or script they wish to run (and any input data) must be
@@ -711,6 +713,19 @@ So, if the \Condor{startd} daemon is restarted for any reason, all existing
 COD claims will be destroyed and the new \Condor{startd} daemon will not
 recognize any attempts to use the previous claims.
 
+Also note that it is your responsibility to ensure that the claim is
+eventually removed (see section~\ref{sec:cod-claim-release}).  Failure
+to remove the COD claim will result in the \Condor{startd} continuing
+to hold a record of the claim for as long as \Condor{startd} continues
+running.  If a very large number of such claims are accumulated by the
+\Condor{startd}, this can impact its performance.  Even worse: if a
+COD claim is unintentionally left in an activated state, this results
+in the suspension of any batch job running on the same resource for as
+long as the claim remains activated.  For this reason, an optional
+\Opt{-lease} argument is supported by \Condor{cod\_request}.  This
+tells the \Condor{startd} to automatically release the COD claim after
+the specified number of seconds unless the lease is renewed with
+\Condor{cod\_renew}.  The default lease is infinitely long.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -827,6 +842,26 @@ The COD job may not be running
 because it is already suspended or because the job was never spawned on
 the given COD claim in the first place.
 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:cod-claim-resume}Renew}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{COD!condor\_cod\_renew command} 
+
+This command tells the \Condor{startd} to renew the lease on the COD
+claim for the amount of lease time specified when the claim was
+created.  See section~\ref{sec:cod-claim-request} for more information
+on using leases.
+
+The \Condor{cod\_renew} tool supports only the \Opt{-id} option to
+specify the COD claim ID the user wishes to renew.
+For example:
+\begin{verbatim}
+condor_cod_renew -id "<claim_id>"
+\end{verbatim}
+
+If the user attempts to renew a COD job that no longer exists,
+\Condor{cod\_renew} exits with an error message.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:cod-claim-resume}Resume}

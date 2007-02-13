@@ -89,6 +89,12 @@ configuration (e.g. IP addresses of the nameservers) on reconfig.
 \item A configuration file for \Condor{dagman} can now be specified
 in a DAG file or on the \Condor{submit\_dag} command line.
 
+\item Added \Condor{cod} option \Opt{-lease} for creation of COD claims
+with a limited duration lease.  This provides automatic cleanup of COD
+claims that are not renewed by the user.  The default lease is infinitely
+long, so existing behavior is unchanged unless \Opt{-lease} is explicitly
+specified.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
