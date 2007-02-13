@@ -33,14 +33,14 @@ int ExponentialBackoff::NEXT_SEED = 1;
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
-ExponentialBackoff::ExponentialBackoff(int min, int max, double base){
+ExponentialBackoff::ExponentialBackoff(int minimum, int maximum, double b){
 	int theSeed = NEXT_SEED;
 	NEXT_SEED++;
-	init(min, max, base, theSeed);
+	init(minimum, maximum, b, theSeed);
 }
 
-ExponentialBackoff::ExponentialBackoff(int min, int max, double base, int seed){
-	init(min,max,base,seed);
+ExponentialBackoff::ExponentialBackoff(int minimum, int maximum, double b, int s){
+	init(minimum,maximum,b,s);
 }
 
 ExponentialBackoff::ExponentialBackoff(const ExponentialBackoff& orig){
@@ -62,18 +62,18 @@ ExponentialBackoff::~ExponentialBackoff(){
 }
 
 void
-ExponentialBackoff::init(int min, int max, double base, int seed){
-	this->min = min;
-	this->max = max;
-	this->base = base;
-	this->seed = seed;
+ExponentialBackoff::init(int minimum, int maximum, double b, int s){
+	this->min = minimum;
+	this->max = maximum;
+	this->base = b;
+	this->seed = s;
 
 		// init the internals
 	this->tries = 0;
-	this->prevBackoff = min;
+	this->prevBackoff = minimum;
 
 		// seed the PRNG
-	set_seed(seed);
+	set_seed(s);
 }
 
 void
