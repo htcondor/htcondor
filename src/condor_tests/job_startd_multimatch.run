@@ -24,6 +24,10 @@ print "Dummyhost was $dummyhost and really running on $currenthost\n";
 $mypid = $$;
 $mysaveme = $corename . ".saveme";
 system("mkdir $mysaveme");
+$mypiddir = $mysaveme . "/" . $mypid;
+system("mkdir $mypiddir");
+#make a symbolic link for personal condor module to use
+system("ln -s $mypiddir $mypid");
 
 $mysubmitnm = $corename . $mypid . ".cmd";
 $mysubmitnmcmdout = $corename . $mypid . ".cmd.out";
@@ -79,7 +83,6 @@ print "Result of basic startd_multimatch  job is  $result\n";
 
 exit(1);
 
-system("cp -r $mypid $mysaveme");
 system("cp *job_startd_multimatch* $mysaveme");
 
 if( -e "$mysubmitnm" )
