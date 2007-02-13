@@ -195,6 +195,7 @@
 #define CA_DEACTIVATE_CLAIM     (CA_AUTH_CMD_BASE+4)
 #define CA_SUSPEND_CLAIM        (CA_AUTH_CMD_BASE+5)
 #define CA_RESUME_CLAIM         (CA_AUTH_CMD_BASE+6)
+#define CA_RENEW_LEASE_FOR_CLAIM (CA_AUTH_CMD_BASE+7)
 // other commands that use the ClassAd-only protocol 
 // CA_LOCATE_STARTER used to be (CA_AUTH_CMD_BASE+7), but no more 
 // CA_RECONNECT_JOB used to be  (CA_AUTH_CMD_BASE+8), but no more 

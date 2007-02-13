@@ -107,10 +107,10 @@ CODMgr::findClaimByPid( pid_t pid )
 
 
 Claim*
-CODMgr::addClaim( ) 
+CODMgr::addClaim( int lease_duration ) 
 {
 	Claim* new_claim;
-	new_claim = new Claim( rip, true );
+	new_claim = new Claim( rip, true, lease_duration );
 	new_claim->beginClaim();
 	claims.Append( new_claim );
 	return new_claim;
@@ -508,6 +508,22 @@ CODMgr::suspend( Stream* s, ClassAd* req, Claim* claim )
 	return FALSE;
 }
 
+int
+CODMgr::renew( Stream* s, ClassAd* req, Claim* claim )
+{
+	MyString line;
+	ClassAd reply;
+
+	claim->alive();
+
+	line = ATTR_RESULT;
+	line += " = \"";
+	line += getCAResultString( CA_SUCCESS );
+	line += '"';
+	reply.Insert( line.Value() );
+
+	return sendCAReply( s, "CA_RENEW_LEASE_FOR_CLAIM", &reply );
+}
 
 int
 CODMgr::resume( Stream* s, ClassAd* req, Claim* claim )

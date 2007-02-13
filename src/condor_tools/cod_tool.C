@@ -62,6 +62,7 @@ FILE* JOBAD_PATH = NULL;
 int cluster_id = -1;
 int proc_id = -1;
 int timeout = -1;
+int lease_time = -1;
 bool needs_id = true;
 VacateType vacate_type = VACATE_GRACEFUL;
 
@@ -139,6 +140,9 @@ main( int argc, char *argv[] )
 		break;
 	case CA_RELEASE_CLAIM:
 		rval = startd.releaseClaim( vacate_type, &reply, timeout );
+		break;
+	case CA_RENEW_LEASE_FOR_CLAIM:
+		rval = startd.renewLeaseForClaim( &reply, timeout );
 		break;
 	}
 
@@ -267,6 +271,10 @@ void
 fillRequestAd( ClassAd* req )
 {
 	fillRequirements( req );
+
+	if( lease_time != -1 ) {
+		req->Assign( ATTR_JOB_LEASE_DURATION, lease_time );
+	}
 }
 
 
@@ -406,6 +414,8 @@ getCommandFromArgv( int argc, char* argv[] )
 		return CA_SUSPEND_CLAIM;
 	} else if( !strcmp( cmd_str, "resume" ) ) {
 		return CA_RESUME_CLAIM;
+	} else if( !strcmp( cmd_str, "renew" ) ) {
+		return CA_RENEW_LEASE_FOR_CLAIM;
 	} else {
 		fprintf( stderr, "ERROR: unknown command \"%s\"\n", my_name );
 		usage( "cod" );
@@ -727,6 +737,22 @@ parseArgv( int argc, char* argv[] )
 				// understand what the hell's going on. :)
 				// // // // // // // // // // // // // // // // // //
 
+		case 'l':
+			if( strncmp("-lease", *tmp, strlen(*tmp)) == 0 ) {
+				if( cmd != CA_REQUEST_CLAIM ) {
+					invalid( *tmp );
+				}
+				tmp++;
+				if( ! (tmp && *tmp) ) {
+					another( "-lease" );
+				}
+				lease_time = atoi( *tmp );
+			}
+			else {
+				invalid( *tmp );
+			}
+			break;
+
 		case 't':
 			if( strncmp("-timeout", *tmp, strlen(*tmp)) ) {
 				invalid( *tmp );
@@ -847,6 +873,9 @@ printCmd( int cmd )
 		fprintf( stderr, "   resume\t\tResume the job on a given "
 				 "claim\n" ); 
 		break;
+	case CA_RENEW_LEASE_FOR_CLAIM:
+		fprintf( stderr, "   renew\t\tRenew the lease for this claim\n");
+		break;
 	}
 }
 		
@@ -877,6 +906,7 @@ usage( char *str )
 		printCmd( CA_DEACTIVATE_CLAIM );
 		printCmd( CA_SUSPEND_CLAIM );
 		printCmd( CA_RESUME_CLAIM );
+		printCmd( CA_RENEW_LEASE_FOR_CLAIM );
 		fprintf( stderr, "use %s [command] -help for more "
 				 "information on a given command\n", str ); 
 		exit( 1 );
@@ -893,7 +923,7 @@ usage( char *str )
 	}
 
 	fprintf( stderr, "Usage: %s [target] [general-opts]%s\n", str,
-			 has_cmd_opt ? " [command-opts]" : "" );
+			 has_cmd_opt ? " [command-opts]" : "");
 
 	printCmd( cmd );
 	
@@ -933,6 +963,7 @@ usage( char *str )
 	case CA_REQUEST_CLAIM:
 		fprintf( stderr, "   -requirements expr\tFind a resource "
 				 "that matches the boolean expression\n" );
+		fprintf( stderr, "   -lease N\t\tNumber of seconds to wait for lease renewal\n");
 		break;
 
 	case CA_ACTIVATE_CLAIM:

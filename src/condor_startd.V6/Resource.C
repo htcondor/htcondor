@@ -669,10 +669,10 @@ Resource::claimIsActive( void )
 
 
 Claim*
-Resource::newCODClaim( void )
+Resource::newCODClaim( int lease_duration )
 {
 	Claim* claim;
-	claim = r_cod_mgr->addClaim();
+	claim = r_cod_mgr->addClaim(lease_duration);
 	if( ! claim ) {
 		dprintf( D_ALWAYS, "Failed to create new COD Claim!\n" );
 		return NULL;

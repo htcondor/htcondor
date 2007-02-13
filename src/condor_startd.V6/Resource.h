@@ -127,7 +127,7 @@ public:
 
 	bool	claimIsActive( void ); 
 
-	Claim*	newCODClaim( void );
+	Claim*	newCODClaim( int lease_duration );
 
 		// Called when the starter of one of our claims exits
 	void	starterExited( Claim* cur_claim );	

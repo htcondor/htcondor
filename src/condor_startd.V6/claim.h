@@ -114,7 +114,7 @@ private:
 class Claim : public Service
 {
 public:
-	Claim( Resource*, bool is_cod = false );
+	Claim( Resource*, bool is_cod = false, int lease_duration = -1 );
 	~Claim();
 
 		// Operations you can perform on a Claim

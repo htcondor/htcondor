@@ -40,7 +40,7 @@ public:
 
 	void publish( ClassAd* ad, amask_t mask );
 	
-	Claim* addClaim();
+	Claim* addClaim(int lease_duration);
 	bool removeClaim( Claim* c );
 
 	void starterExited( Claim* c );
@@ -60,6 +60,7 @@ public:
 	int deactivate( Stream* s, ClassAd* req, Claim* claim );
 	int suspend( Stream* s, ClassAd* req, Claim* claim );
 	int resume( Stream* s, ClassAd* req, Claim* claim );
+	int renew( Stream* s, ClassAd* req, Claim* claim );
 
 private:
 

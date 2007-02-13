@@ -39,7 +39,7 @@
 // Claim
 ///////////////////////////////////////////////////////////////////////////
 
-Claim::Claim( Resource* rip, bool is_cod )
+Claim::Claim( Resource* rip, bool is_cod, int lease_duration )
 {
 	c_client = new Client;
 	c_id = new ClaimId( is_cod );
@@ -55,7 +55,7 @@ Claim::Claim( Resource* rip, bool is_cod )
 	c_match_tid = -1;
 	c_lease_tid = -1;
 	c_aliveint = -1;
-	c_lease_duration = -1;
+	c_lease_duration = lease_duration;
 	c_cluster = -1;
 	c_proc = -1;
 	c_global_job_id = NULL;
@@ -607,11 +607,7 @@ Claim::beginClaim( void )
 	ASSERT( c_state == CLAIM_UNCLAIMED );
 	changeState( CLAIM_IDLE );
 
-	if( ! c_is_cod ) {
-			// if we're an opportunistic claim, we want to start our
-			// claim timer, too.  
-		startLeaseTimer();
-	}
+	startLeaseTimer();
 }
 
 void
@@ -703,7 +699,6 @@ Claim::setaliveint( int alive )
 	c_lease_duration = max_claim_alives_missed * alive;
 }
 
-
 void
 Claim::saveJobInfo( ClassAd* request_ad )
 {
@@ -758,6 +753,10 @@ void
 Claim::startLeaseTimer()
 {
 	if( c_lease_duration < 0 ) {
+		if( c_is_cod ) {
+				// COD claims have no lease by default.
+			return;
+		}
 		dprintf( D_ALWAYS, "Warning: starting ClaimLease timer before "
 				 "lease duration set.\n" );
 		c_lease_duration = 1200;
@@ -799,6 +798,19 @@ Claim::cancelLeaseTimer()
 int
 Claim::leaseExpired()
 {
+	c_lease_tid = -1;
+
+	if( c_is_cod ) {
+		dprintf( D_FAILURE|D_ALWAYS, "COD claim %s lease expired "
+				 "(client must not have called 'condor_cod renew' within %d seconds)\n", id(), c_lease_duration );
+		if( removeClaim(false) ) {
+				// There is no starter, so remove immediately.
+				// Otherwise, we will be removed when starter exits.
+			getCODMgr()->removeClaim(this);
+		}
+		return TRUE;
+	}
+
 	Resource* rip = resmgr->get_by_cur_id( id() );
 	if( !rip ) {
 		EXCEPT( "Can't find resource of expired claim" );
@@ -824,7 +836,12 @@ Claim::alive()
 {
 	dprintf( D_PROTOCOL, "Keep alive for ClaimId %s\n", id() );
 		// Process a keep alive command
-	daemonCore->Reset_Timer( c_lease_tid, c_lease_duration, 0 );
+	if( c_lease_tid == -1 ) {
+		startLeaseTimer();
+	}
+	else {
+		daemonCore->Reset_Timer( c_lease_tid, c_lease_duration, 0 );
+	}
 }
 
 

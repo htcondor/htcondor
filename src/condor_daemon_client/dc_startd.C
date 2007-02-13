@@ -408,6 +408,30 @@ DCStartd::releaseClaim( VacateType type, ClassAd* reply,
 	}
 }
 
+bool
+DCStartd::renewLeaseForClaim( ClassAd* reply, int timeout ) 
+{
+	setCmdStr( "renewLeaseForClaim" );
+	if( ! checkClaimId() ) {
+		return false;
+	}
+
+	ClassAd req;
+
+		// Add our own attributes to the request ad we're sending
+	req.Assign(ATTR_COMMAND,getCommandString(CA_RENEW_LEASE_FOR_CLAIM));
+
+	req.Assign(ATTR_CLAIM_ID,claim_id);
+
+ 		// since release could take a while, if we didn't already get
+		// told what timeout to use, set the timeout to 0 so we don't
+		// bail out prematurely...
+	if( timeout < 0 ) {
+		return sendCACmd( &req, reply, true, 0 );
+	} else {
+		return sendCACmd( &req, reply, true, timeout );
+	}
+}
 
 bool
 DCStartd::locateStarter( const char* global_job_id, 

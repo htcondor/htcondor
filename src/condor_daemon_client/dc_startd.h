@@ -119,6 +119,8 @@ public:
 	bool releaseClaim( VacateType type, ClassAd* reply,
 					   int timeout = -1 );
 
+	bool renewLeaseForClaim( ClassAd* reply, int timeout );
+
 	bool locateStarter( const char* global_job_id, 
 						const char* claim_id,
 						ClassAd* reply, 

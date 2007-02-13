@@ -1528,6 +1528,7 @@ caRequestCODClaim( Stream *s, char* cmd_str, ClassAd* req_ad )
 	MyString err_msg;
 	ExprTree *tree, *rhs;
 	ReliSock* rsock = (ReliSock*)s;
+	int lease_duration = 0;
 	const char* owner = rsock->getOwner();
 
 	if( ! authorizedForCOD(owner) ) {
@@ -1572,8 +1573,11 @@ caRequestCODClaim( Stream *s, char* cmd_str, ClassAd* req_ad )
 		// done with this now, so don't leak it
 	free( requirements_str );
 
+	if( !req_ad->LookupInteger(ATTR_JOB_LEASE_DURATION, lease_duration) ) {
+		lease_duration = -1;
+	}
 		// try to create the new claim
-	claim = rip->newCODClaim();
+	claim = rip->newCODClaim( lease_duration );
 	if( ! claim ) {
 		return sendErrorReply( s, cmd_str, CA_FAILURE, 
 							   "Can't create new COD claim" );
@@ -1854,6 +1858,9 @@ command_classad_handler( Service*, int dc_cmd, Stream* s )
 		break;
 	case CA_REQUEST_CLAIM:
 		EXCEPT( "Already handled CA_REQUEST_CLAIM, shouldn't be here\n" );
+		break;
+	case CA_RENEW_LEASE_FOR_CLAIM:
+		rval = cod_mgr->renew( s, &ad, claim );
 		break;
 	default:
 		unknownCmd( s, cmd_str );
