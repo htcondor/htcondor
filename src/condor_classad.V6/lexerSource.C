@@ -23,6 +23,7 @@
 
 #include "common.h"
 #include "lexerSource.h"
+#include <iostream>
 using namespace std;
 
 /*--------------------------------------------------------------------

@@ -28,13 +28,8 @@
 #include "common.h"
 #include "value.h"
 
-#if defined (__GNUC__) && (__GNUC__<3)
-#include <ostream.h>
-#else
-#include <ostream>
-#endif
-
 BEGIN_NAMESPACE( classad )
+
 
 // forward declarations
 class ExprTree;

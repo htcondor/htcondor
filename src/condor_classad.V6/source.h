@@ -25,7 +25,7 @@
 #define __SOURCE_H__
 
 #include <vector>
-#include <iostream>
+#include <iosfwd>
 #include "lexer.h"
 
 BEGIN_NAMESPACE( classad )

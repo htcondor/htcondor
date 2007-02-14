@@ -25,7 +25,7 @@
 #define __LEXER_SOURCE_H__
 
 #include "common.h"
-#include <iostream>
+#include <iosfwd>
 
 /*
  * LexerSource is a class that provides an abstract interface to the

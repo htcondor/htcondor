@@ -27,6 +27,8 @@
 #include "condor_classad.h"
 #endif
 
+#include <iostream>
+
 using namespace std;
 #ifdef WANT_NAMESPACES
 using namespace classad;
