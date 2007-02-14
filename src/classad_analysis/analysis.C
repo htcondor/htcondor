@@ -27,6 +27,8 @@
 #include "simplelist.h"
 #include "extArray.h"
 
+#include <iostream>
+
 using namespace std;
 
 ClassAdAnalyzer::
