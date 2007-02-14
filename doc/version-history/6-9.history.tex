@@ -95,6 +95,12 @@ claims that are not renewed by the user.  The default lease is infinitely
 long, so existing behavior is unchanged unless \Opt{-lease} is explicitly
 specified.
 
+% This is barely a feature, but it's definately not a bug fix. It's
+% more of a change in behavior.
+\item \Macro{STARTD\_DEBUG} can now be empty, indicating a default, minimal
+log level. It now defaults to empty.
+Previously it had to be non-empty and defaulted to include D\_COMMAND.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
