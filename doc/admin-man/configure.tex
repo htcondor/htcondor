@@ -1688,6 +1688,14 @@ section~\ref{sec:Networking} on page~\pageref{sec:Networking}.
   This configuration variable is intended for use by developers for
   debugging purposes, where communication timeouts interfere.
 
+\item[\Macro{NONBLOCKING\_COLLECTOR\_UPDATE}]
+  \label{param:NonblockingCollectorUpdate}
+  \Todo
+
+\item[\Macro{NEGOTIATOR\_USE\_NONBLOCKING\_STARTD\_CONTACT}]
+  \label{param:NegotiatorUseNonblockingStartdContact}
+  \Todo
+
 \end{description}
 
 The following settings are specific to enabling Generic Connection
@@ -1698,25 +1706,30 @@ section~\ref{sec:GCB} on page~\pageref{sec:GCB}.
 \begin{description}
 
 \item[\Macro{NET\_REMAP\_ENABLE}] 
+  \label{param:NetRemapEnable}
   If defined to \Expr{True}, this setting will enable a network
   remapping service for Condor.
   The service to use is controlled by \MacroNI{NET\_REMAP\_SERVICE},
   described below.
   This boolean value defaults to \Expr{False}.
 
-\item[\Macro{NET\_REMAP\_SERVICE}] If \MacroNI{NET\_REMAP\_ENABLE} is
+\item[\Macro{NET\_REMAP\_SERVICE}]
+  \label{param:NetRemapService}
+  If \MacroNI{NET\_REMAP\_ENABLE} is
   defined to \Expr{True}, this setting controls what network remapping
   service should be used.
   Currently, the only value supported is \verb@GCB@.
   The default is undefined.
 
 \item[\Macro{NET\_REMAP\_INAGENT}]
+  \label{param:NetRemapInagent}
   Hosts with the GCB network remapping service enabled that require a
   GCB broker (see the section on GCB referenced above for more
   details) specify the IP address of their broker with this setting.
   The default is undefined.
 
 \item[\Macro{NET\_REMAP\_ROUTE}]
+  \label{param:NetRemapRoute}
   Hosts with the GCB network remapping service enabled that would like
   to use a GCB routing table 
   GCB broker (again, see the section on GCB for more details) specify
@@ -4333,13 +4346,22 @@ as:
   \MacroNI{SUBMIT\_EXPRS}. 
 
 \item[\Macro{LOG\_ON\_NFS\_IS\_ERROR}] \label{param:LogOnNfsIsError}
-A boolean value that controls whether \Condor{submit} prohibits
-job submit files with user log files on NFS.  If
-\MacroNI{LOG\_ON\_NFS\_IS\_ERROR} is set to \Expr{True}, such
-submit files will be rejected.  If \MacroNI{LOG\_ON\_NFS\_IS\_ERROR}
-is set to \Expr{False}, submitting such a file results in a
-warning, but the job will be submitted.  If not defined,
-\MacroNI{LOG\_ON\_NFS\_IS\_ERROR} defaults to \Expr{False}.
+  A boolean value that controls whether \Condor{submit} prohibits
+  job submit files with user log files on NFS.  If
+  \MacroNI{LOG\_ON\_NFS\_IS\_ERROR} is set to \Expr{True}, such
+  submit files will be rejected.  If \MacroNI{LOG\_ON\_NFS\_IS\_ERROR}
+  is set to \Expr{False}, submitting such a file results in a
+  warning, but the job will be submitted.  If not defined,
+  \MacroNI{LOG\_ON\_NFS\_IS\_ERROR} defaults to \Expr{False}.
+
+\item[\Macro{SUBMIT\_MAX\_PROCS\_IN\_CLUSTER}]
+  \label{param:SubmitMaxProcsInCluster}
+  An integer value that limits the maximum number of jobs that would
+  be assigned within a single cluster.  Job submissions that would exceed
+  the defined value fail, issuing an error message, and with no jobs
+  submitted.
+  The default value is 0, which does not limit the number of jobs
+  assigned a single cluster number.
 
 \end{description}
 
