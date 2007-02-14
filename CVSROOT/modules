@@ -735,6 +735,7 @@ V6_8_COMMON_EXT	-a EXT_COMMON \
                    externals/bundles/pcre/5.0 \
                    externals/bundles/openssl/0.9.8 \
                    externals/bundles/postgresql/8.0.2 \
+                   externals/bundles/postgresql/8.2.3 \
                    externals/bundles/gcb/1.3.2 \
                    externals/bundles/unicoregahp/1.2.0 \
                    externals/bundles/nordugridgahp/1.1.0 \
@@ -793,6 +794,7 @@ V6_9_COMMON_EXT		-a EXT_COMMON \
                    externals/bundles/pcre/5.0 \
                    externals/bundles/openssl/0.9.8 \
                    externals/bundles/postgresql/8.0.2 \
+                   externals/bundles/postgresql/8.2.3 \
                    externals/bundles/unicoregahp/1.2.0 \
                    externals/bundles/nordugridgahp/1.1.0 \
                    externals/bundles/linuxlibcheaders \
