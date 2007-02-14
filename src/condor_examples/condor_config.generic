@@ -1405,6 +1405,43 @@ PVMGS			= $(SBIN)/condor_pvmgs
 
 
 ##--------------------------------------------------------------------
+##  condor_procd
+##--------------------------------------------------------------------
+##  
+# the path to the procd binary
+#
+PROCD = $(SBIN)/condor_procd
+
+# the path to the procd "address"
+#   - on UNIX this will be a named pipe, I've created a subdirectory of
+#     LOCAL_DIR for storing this pipe (other named pipe will also be
+#     created in this directory when the procd is responding to a
+#     client)
+#   - on Windows, this will be a named pipe as well (but named pipes on
+#     Windows are not even close to the same thing as named pipes on
+#     UNIX) the actually named will be something like:
+#         \\.\pipe\condor_procd
+#
+PROCD_ADDRESS = $(LOCK)/procd_address
+
+# The procd currently uses a very simplistic logging system
+#
+PROCD_LOG = $(LOG)/ProcLog
+
+# If set to true, this will make the procd send a SIGSTOP to itself
+# before doing anything else, so you can step in and attach a debugger
+#
+PROCD_DEBUG = False
+
+# This is the maximum period that the procd will use for taking
+# snapshots (the actual period may be lower if a condor daemon registers
+# a family for which it wants more frequent snapshots)
+#
+PROCD_MAX_SNAPSHOT_INTERVAL = 60
+
+
+
+##--------------------------------------------------------------------
 ##  condor_submit
 ##--------------------------------------------------------------------
 ##  If you want condor_submit to automatically append an expression to
