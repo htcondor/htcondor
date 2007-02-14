@@ -27,6 +27,7 @@
 #include "classad_merge.h"
 #include "vm_common.h"
 #include "VMRegister.h"
+#include <math.h>
 
 
 ResMgr::ResMgr()

@@ -23,6 +23,7 @@
 
 #include "condor_common.h"
 #include "startd.h"
+#include <math.h>
 
 
 MachAttributes::MachAttributes()

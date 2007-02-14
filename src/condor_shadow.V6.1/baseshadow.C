@@ -34,6 +34,7 @@
 #include "enum_utils.h"
 #include "condor_holdcodes.h"
 
+#include <math.h>
 
 // these are declared static in baseshadow.h; allocate space here
 UserLog BaseShadow::uLog;

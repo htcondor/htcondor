@@ -1021,7 +1021,7 @@ init_user_ids_implementation( const char username[], int is_quiet )
 
 
 int
-init_user_ids( const char username[], const char domain[] ) {
+init_user_ids( const char username[], const char /*domain*/[] ) {
 	// we ignore the domain parameter on UNIX
 	return init_user_ids_implementation( username, 0 );
 }

@@ -25,6 +25,7 @@
 #include "condor_debug.h"
 #include "condor_io.h"
 #include "time_offset.h"
+#include <math.h>
 
 // --------------------------------------------
 // CEDAR STUBS
