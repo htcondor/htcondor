@@ -77,6 +77,7 @@
 #include "condor_netdb.h"
 #include "fs_util.h"
 #include "condor_mkstemp.h"
+#include "tdman.h"
 
 
 
@@ -3085,7 +3086,14 @@ Scheduler::spoolJobFilesWorkerThread(void *arg, Stream* s)
 	ret_val = generalJobFilesWorkerThread(arg,s);
 		// Now we sleep here for one second.  Why?  So we are certain
 		// to transfer back output files even if the job ran for less 
-		// than one second.
+		// than one second. This is because:
+		// stat() can't tell the difference between:
+		//   1) A job starts up, touches a file, and exits all in one second
+		//   2) A job starts up, doesn't touch the file, and exits all in one 
+		//      second
+		// So if we force the start time of the job to be one second later than
+		// the time we know the files were written, stat() should be able
+		// to perceive what happened, if anything.
 		dprintf(D_ALWAYS,"Scheduler::spoolJobFilesWorkerThread(void *arg, Stream* s) NAP TIME\n");
 	sleep(1);
 	return ret_val;
@@ -3140,6 +3148,9 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 			dprintf(D_FULLDEBUG,"generalJobFilesWorkerThread(): "
 					"transfer files for job %d.%d\n",cluster,proc);
 		}
+
+		dprintf(D_ALWAYS, "The submitting job ad as the FileTransferObject sees it\n");
+		ad->dPrint(D_ALWAYS);
 
 			// Create a file transfer object, with schedd as the server
 		result = ftrans.SimpleInit(ad, true, true, rsock);
@@ -3237,7 +3248,10 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 	}
 }
 
-
+// This function is used BOTH for uploading and downloading files to the
+// schedd. Which path selected is determined by the command passed to this
+// function. This function should really be split into two different handlers,
+// one for uploading the spool, and one for downloading it. 
 int
 Scheduler::spoolJobFiles(int mode, Stream* s)
 {
@@ -3286,50 +3300,75 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 
 	rsock->decode();
 
-	if ( mode == SPOOL_JOB_FILES_WITH_PERMS || mode == TRANSFER_DATA_WITH_PERMS ) {
-		peer_version = NULL;
-		if ( !rsock->code(peer_version) ) {
-			dprintf( D_ALWAYS,
-					 "spoolJobFiles(): failed to read peer_version\n" );
-			refuse(s);
-			return FALSE;
-		}
-			// At this point, we are responsible for deallocating
-			// peer_version with free()
+	switch(mode) {
+		case SPOOL_JOB_FILES_WITH_PERMS: // uploading perm files to schedd
+		case TRANSFER_DATA_WITH_PERMS:	// downloading perm files from schedd
+			peer_version = NULL;
+			if ( !rsock->code(peer_version) ) {
+				dprintf( D_ALWAYS,
+					 	"spoolJobFiles(): failed to read peer_version\n" );
+				refuse(s);
+				return FALSE;
+			}
+				// At this point, we are responsible for deallocating
+				// peer_version with free()
+			break;
+
+		default:
+			// Non perm commands don't encode a peer version string
+			break;
 	}
 
-	if ( mode == SPOOL_JOB_FILES || mode == SPOOL_JOB_FILES_WITH_PERMS ) {
+
+	// Here the protocol differs somewhat between uploading and downloading.
+	// So watch out in terms of understanding this.
+	switch(mode) {
+		// uploading files to schedd
+		// decode the number of jobs I'm about to be sent, and verify the
+		// number.
+		case SPOOL_JOB_FILES:
+		case SPOOL_JOB_FILES_WITH_PERMS:
 			// read the number of jobs involved
-//		if ( !rsock->code(JobAdsArrayLen) || JobAdsArrayLen <= 0 ) {
-		if ( !rsock->code(JobAdsArrayLen) ) {
+			if ( !rsock->code(JobAdsArrayLen) ) {
+					dprintf( D_ALWAYS, "spoolJobFiles(): "
+						 	"failed to read JobAdsArrayLen (%d)\n",
+							JobAdsArrayLen );
+					refuse(s);
+					return FALSE;
+			}
+			if ( JobAdsArrayLen <= 0 ) {
 				dprintf( D_ALWAYS, "spoolJobFiles(): "
-						 "failed to read JobAdsArrayLen (%d)\n",JobAdsArrayLen );
+					 	"read bad JobAdsArrayLen value %d\n", JobAdsArrayLen );
 				refuse(s);
 				return FALSE;
-		}
-		if ( JobAdsArrayLen <= 0 ) {
-			dprintf( D_ALWAYS, "spoolJobFiles(): "
-					 "read bad JobAdsArrayLen value %d\n", JobAdsArrayLen );
-			refuse(s);
-			return FALSE;
-		}
-		rsock->eom();
-		dprintf(D_FULLDEBUG,"spoolJobFiles(): read JobAdsArrayLen - %d\n",JobAdsArrayLen);
+			}
+			rsock->eom();
+			dprintf(D_FULLDEBUG,"spoolJobFiles(): read JobAdsArrayLen - %d\n",
+					JobAdsArrayLen);
+	
+			if (JobAdsArrayLen <= 0) {
+				refuse(s);
+				return FALSE;
+			}
+			break;
 
-		if (JobAdsArrayLen <= 0) {
-			refuse(s);
-			return FALSE;
-		}
-	}
-
-	if ( mode == TRANSFER_DATA || mode == TRANSFER_DATA_WITH_PERMS ) {
+		// downloading files from schedd
+		// Decode a constraint string which will be used to gather the jobs out
+		// of the queue, which I can then determine what to transfer out of.
+		case TRANSFER_DATA:
+		case TRANSFER_DATA_WITH_PERMS:
 			// read constraint string
-		if ( !rsock->code(constraint_string) || constraint_string == NULL ) {
-				dprintf( D_ALWAYS, "spoolJobFiles(): "
-						 "failed to read constraint string\n" );
-				refuse(s);
-				return FALSE;
-		}
+			if ( !rsock->code(constraint_string) || constraint_string == NULL )
+			{
+					dprintf( D_ALWAYS, "spoolJobFiles(): "
+						 	"failed to read constraint string\n" );
+					refuse(s);
+					return FALSE;
+			}
+			break;
+
+		default:
+			break;
 	}
 
 	jobs = new ExtArray<PROC_ID>;
@@ -3339,43 +3378,56 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 
 	time_t now = time(NULL);
 
-	if ( mode == SPOOL_JOB_FILES || mode == SPOOL_JOB_FILES_WITH_PERMS ) {
-		for (i=0; i<JobAdsArrayLen; i++) {
-			rsock->code(a_job);
-				// Only add jobs to our list if the caller has permission to do so;
-				// cuz only the owner of a job (or queue super user) is allowed
-				// to transfer data to/from a job.
-			if (OwnerCheck(a_job.cluster,a_job.proc)) {
-				(*jobs)[i] = a_job;
-				SetAttributeInt(a_job.cluster,a_job.proc,ATTR_STAGE_IN_START,now);
+	switch(mode) {
+		// uploading files to schedd 
+		case SPOOL_JOB_FILES:
+		case SPOOL_JOB_FILES_WITH_PERMS:
+			for (i=0; i<JobAdsArrayLen; i++) {
+				rsock->code(a_job);
+					// Only add jobs to our list if the caller has permission 
+					// to do so.
+					// cuz only the owner of a job (or queue super user) 
+					// is allowed to transfer data to/from a job.
+				if (OwnerCheck(a_job.cluster,a_job.proc)) {
+					(*jobs)[i] = a_job;
+					SetAttributeInt(a_job.cluster,a_job.proc,
+									ATTR_STAGE_IN_START,now);
+				}
 			}
-		}
-	}
+			break;
 
-	if ( mode == TRANSFER_DATA || mode == TRANSFER_DATA_WITH_PERMS ) {
-		JobAdsArrayLen = 0;
-		ClassAd * tmp_ad = GetNextJobByConstraint(constraint_string,1);
-		while (tmp_ad) {
-			if ( tmp_ad->LookupInteger(ATTR_CLUSTER_ID,a_job.cluster) &&
-				 tmp_ad->LookupInteger(ATTR_PROC_ID,a_job.proc) &&
-				 OwnerCheck(a_job.cluster, a_job.proc) )
+		// downloading files from schedd
+		case TRANSFER_DATA:
+		case TRANSFER_DATA_WITH_PERMS:
 			{
-				(*jobs)[JobAdsArrayLen++] = a_job;
+			ClassAd * tmp_ad = GetNextJobByConstraint(constraint_string,1);
+			JobAdsArrayLen = 0;
+			while (tmp_ad) {
+				if ( tmp_ad->LookupInteger(ATTR_CLUSTER_ID,a_job.cluster) &&
+				 	tmp_ad->LookupInteger(ATTR_PROC_ID,a_job.proc) &&
+				 	OwnerCheck(a_job.cluster, a_job.proc) )
+				{
+					(*jobs)[JobAdsArrayLen++] = a_job;
+				}
+				tmp_ad = GetNextJobByConstraint(constraint_string,0);
 			}
-			tmp_ad = GetNextJobByConstraint(constraint_string,0);
-		}
-		dprintf(D_FULLDEBUG, "Scheduler::spoolJobFiles: "
-			"TRANSFER_DATA/WITH_PERMS: %d jobs matched constraint %s\n",
-			JobAdsArrayLen, constraint_string);
-		if (constraint_string) free(constraint_string);
-			// Now set ATTR_STAGE_OUT_START
-		for (i=0; i<JobAdsArrayLen; i++) {
-				// TODO --- maybe put this in a transaction?
-			SetAttributeInt((*jobs)[i].cluster,(*jobs)[i].proc,ATTR_STAGE_OUT_START,now);
-		}
+			dprintf(D_FULLDEBUG, "Scheduler::spoolJobFiles: "
+				"TRANSFER_DATA/WITH_PERMS: %d jobs matched constraint %s\n",
+				JobAdsArrayLen, constraint_string);
+			if (constraint_string) free(constraint_string);
+				// Now set ATTR_STAGE_OUT_START
+			for (i=0; i<JobAdsArrayLen; i++) {
+					// TODO --- maybe put this in a transaction?
+				SetAttributeInt((*jobs)[i].cluster,(*jobs)[i].proc,
+								ATTR_STAGE_OUT_START,now);
+			}
+			}
+			break;
+
+		default:
+			break;
 
 	}
-
 
 	unsetQSock();
 
@@ -3391,44 +3443,54 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 	thread_arg->peer_version = peer_version;
 	thread_arg->jobs = jobs;
 
-	if ( mode == SPOOL_JOB_FILES || mode == SPOOL_JOB_FILES_WITH_PERMS ) {
-		if ( spool_reaper_id == -1 ) {
-			spool_reaper_id = daemonCore->Register_Reaper(
-					"spoolJobFilesReaper",
-					(ReaperHandlercpp) &Scheduler::spoolJobFilesReaper,
-					"spoolJobFilesReaper",
-					this
-				);
-		}
+	switch(mode) {
+		// uploading files to the schedd
+		case SPOOL_JOB_FILES:
+		case SPOOL_JOB_FILES_WITH_PERMS:
+			if ( spool_reaper_id == -1 ) {
+				spool_reaper_id = daemonCore->Register_Reaper(
+						"spoolJobFilesReaper",
+						(ReaperHandlercpp) &Scheduler::spoolJobFilesReaper,
+						"spoolJobFilesReaper",
+						this
+					);
+			}
 
 
 			// Start a new thread (process on Unix) to do the work
-		tid = daemonCore->Create_Thread(
-				(ThreadStartFunc) &Scheduler::spoolJobFilesWorkerThread,
-				(void *)thread_arg,
-				s,
-				spool_reaper_id
-				);
-	}
+			tid = daemonCore->Create_Thread(
+					(ThreadStartFunc) &Scheduler::spoolJobFilesWorkerThread,
+					(void *)thread_arg,
+					s,
+					spool_reaper_id
+					);
+			break;
 
-	if ( mode == TRANSFER_DATA || mode == TRANSFER_DATA_WITH_PERMS ) {
-		if ( transfer_reaper_id == -1 ) {
-			transfer_reaper_id = daemonCore->Register_Reaper(
-					"transferJobFilesReaper",
-					(ReaperHandlercpp) &Scheduler::transferJobFilesReaper,
-					"transferJobFilesReaper",
-					this
-				);
-		}
+		// downloading files from the schedd
+		case TRANSFER_DATA:
+		case TRANSFER_DATA_WITH_PERMS:
+			if ( transfer_reaper_id == -1 ) {
+				transfer_reaper_id = daemonCore->Register_Reaper(
+						"transferJobFilesReaper",
+						(ReaperHandlercpp) &Scheduler::transferJobFilesReaper,
+						"transferJobFilesReaper",
+						this
+					);
+			}
 
 			// Start a new thread (process on Unix) to do the work
-		tid = daemonCore->Create_Thread(
-				(ThreadStartFunc) &Scheduler::transferJobFilesWorkerThread,
-				(void *)thread_arg,
-				s,
-				transfer_reaper_id
-				);
+			tid = daemonCore->Create_Thread(
+					(ThreadStartFunc) &Scheduler::transferJobFilesWorkerThread,
+					(void *)thread_arg,
+					s,
+					transfer_reaper_id
+					);
+			break;
+
+		default:
+			break;
 	}
+
 
 	if ( tid == FALSE ) {
 		free(thread_arg);
@@ -6195,6 +6257,7 @@ Scheduler::StartJobHandler()
 	PROC_ID* job_id=NULL;
 	int cluster, proc;
 	int status;
+	bool use_privsep;
 
 		// clear out our timer id since the hander just went off
 	StartJobTimer = -1;
@@ -6239,6 +6302,28 @@ Scheduler::StartJobHandler()
 			continue;
 		}
 
+		if ( param_boolean("PRIVSEP_ENABLED", false) ) {
+			// If there is no available transferd for this job (and it 
+			// requires it), then start one and put the job back into the queue
+			if ( jobNeedsTransferd(cluster, proc, srec->universe) ) {
+				if (! availableTransferd(cluster, proc) ) {
+					dprintf(D_ALWAYS, 
+						"Deferring job start until transferd is registered\n");
+
+					// stop the running of this job
+					mark_job_stopped( job_id );
+					RemoveShadowRecFromMrec(srec);
+					delete srec;
+				
+					// start up a transferd for this job.
+					startTransferd(cluster, proc);
+
+					continue;
+				}
+			}
+		}
+			
+
 			// if we got this far, we're definitely starting the job,
 			// so deal with the aboutToSpawnJobHandler hook...
 		int universe = srec->universe;
@@ -6266,6 +6351,127 @@ Scheduler::StartJobHandler()
 		tryNextJob();
 		return;
 	}
+}
+
+bool
+Scheduler::jobNeedsTransferd( int cluster, int proc, int univ )
+{
+	ClassAd *jobad = GetJobAd(cluster, proc);
+	ASSERT(jobad);
+
+	/////////////////////////////////////////////////////////////////////////
+	// Selection of a transferd is universe based. It all depends upon
+	// whether or not transfer_input/output_files is available for the
+	// universe in question.
+	/////////////////////////////////////////////////////////////////////////
+
+	switch(univ) {
+		case CONDOR_UNIVERSE_VANILLA:
+		case CONDOR_UNIVERSE_JAVA:
+		case CONDOR_UNIVERSE_MPI:
+		case CONDOR_UNIVERSE_PARALLEL:
+			return true;
+			break;
+
+		default:
+			return false;
+			break;
+	}
+
+	return false;
+}
+
+bool
+Scheduler::availableTransferd( int cluster, int proc )
+{
+	TransferDaemon *td = NULL;
+
+	return availableTransferd(cluster, proc, td);
+}
+
+bool
+Scheduler::availableTransferd( int cluster, int proc, TransferDaemon *&td_ref )
+{
+	MyString fquser;
+	TransferDaemon *td = NULL;
+	ClassAd *jobad = GetJobAd(cluster, proc);
+
+	ASSERT(jobad);
+
+	jobad->LookupString(ATTR_USER, fquser);
+
+	td_ref = NULL;
+
+	td = m_tdman.find_td_by_user(fquser);
+	if (td == NULL) {
+		return false;
+	}
+
+	// only return true if there is a transferd ready and waiting for this
+	// user
+	if (td->get_status() == TD_REGISTERED) {
+		dprintf(D_ALWAYS, "Scheduler::availableTransferd() "
+			"Found a transferd for user %s\n", fquser.Value());
+		td_ref = td;
+		return true;
+	}
+
+	return false;
+}
+
+bool
+Scheduler::startTransferd( int cluster, int proc )
+{
+	MyString fquser;
+	MyString rand_id;
+	TransferDaemon *td = NULL;
+	ClassAd *jobad = NULL;
+	MyString desc;
+
+	// just do a quick check in case a higher layer had already started one
+	// for this job.
+	if (availableTransferd(cluster, proc)) {
+		return true;
+	}
+
+	jobad = GetJobAd(cluster, proc);
+	ASSERT(jobad);
+
+	jobad->LookupString(ATTR_USER, fquser);
+
+	/////////////////////////////////////////////////////////////////////////
+	// It could be that a td had already been started, but hadn't registered
+	// yet. In that case, consider it started.
+	/////////////////////////////////////////////////////////////////////////
+
+	td = m_tdman.find_td_by_user(fquser);
+	if (td == NULL) {
+		// No td found at all in any state, so start one.
+
+		// XXX fix this rand_id to be dealt with better, like maybe the tdman
+		// object assigns it or something.
+		rand_id.randomlyGenerateHex(64);
+		td = new TransferDaemon(fquser, rand_id, TD_PRE_INVOKED);
+		ASSERT(td != NULL);
+
+		// set up the default registration callback
+		desc = "Transferd Registration callback";
+		td->set_reg_callback(desc,
+			(TDRegisterCallback)
+			 	&Scheduler::td_register_callback, this);
+
+		// set up the default reaper callback
+		desc = "Transferd Reaper callback";
+		td->set_reaper_callback(desc,
+			(TDReaperCallback)
+				&Scheduler::td_reaper_callback, this);
+	
+		// Have the td manager object start this td up.
+		// XXX deal with failure here a bit better.
+		m_tdman.invoke_a_td(td);
+	}
+
+	return true;
 }
 
 
@@ -6355,6 +6561,7 @@ Scheduler::spawnShadow( shadow_rec* srec )
 	bool nt_resource = false;
  	char* match_opsys = NULL;
  	char* match_version = NULL;
+	TransferDaemon *td = NULL;
 
 		// Until we're restorting the match ClassAd on reconnected, we
 		// wouldn't know if the startd we want to talk to supports the
@@ -6485,6 +6692,50 @@ Scheduler::spawnShadow( shadow_rec* srec )
 	}
 
 	MyString argbuf;
+
+	// send the location of the transferd the shadow should use for
+	// this user. Due to the nasty method of command line argument parsing
+	// by the shadow, this should be first on the command line.
+	if ( param_boolean("PRIVSEP_ENABLED", false) ) {
+		switch( universe ) {
+			case CONDOR_UNIVERSE_VANILLA:
+			case CONDOR_UNIVERSE_JAVA:
+			case CONDOR_UNIVERSE_MPI:
+			case CONDOR_UNIVERSE_PARALLEL:
+				if (! availableTransferd(job_id->cluster, job_id->proc, td) )
+				{
+					dprintf(D_ALWAYS,
+						"Scheduler::spawnShadow() Race condition hit. "
+						"Thought transferd was available and it wasn't. "
+						"stopping execution of job.\n");
+
+					mark_job_stopped(job_id);
+					if( find_shadow_rec(job_id) ) { 
+						// we already added the srec to our tables..
+						delete_shadow_rec( srec );
+						srec = NULL;
+					}
+				}
+				args.AppendArg("--transferd");
+				args.AppendArg(td->get_sinful());
+				break;
+
+			case CONDOR_UNIVERSE_PVM:
+				/* no transferd for this universe */
+				break;
+
+			case CONDOR_UNIVERSE_STANDARD:
+				/* no transferd for this universe */
+				break;
+
+		default:
+			EXCEPT( "StartJobHandler() does not support %d universe jobs",
+					universe );
+			break;
+
+		}
+	}
+
 	if ( sh_reads_file ) {
 		if( sh_is_dc ) { 
 			argbuf.sprintf("%d.%d",job_id->cluster,job_id->proc);
@@ -6511,6 +6762,7 @@ Scheduler::spawnShadow( shadow_rec* srec )
 		args.AppendArg(job_id->cluster);
 		args.AppendArg(job_id->proc);
 	}
+
 
 	rval = spawnJobHandlerRaw( srec, shadow_path, args, NULL, "shadow",
 							   sh_is_dc, sh_reads_file );
@@ -6725,9 +6977,8 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 	   Someday, hopefully soon, we'll fix this and spawn the
 	   shadow/handler with PRIV_USER_FINAL... */
 	pid = daemonCore->Create_Process( path, args, PRIV_ROOT, rid, 
-									  is_dc, env, NULL, FALSE, NULL, 
+									  is_dc, env, NULL, NULL, NULL, 
 									  std_fds_p, niceness );
-
 	if( pid == FALSE ) {
 		MyString arg_string;
 		args.GetArgsStringForDisplay(&arg_string);
@@ -6976,7 +7227,7 @@ Scheduler::start_pvm(match_rec* mrec, PROC_ID *job_id)
 		
 		pid = daemonCore->Create_Process( shadow_path, args, PRIV_ROOT, 
 										  shadowReaperId,
-										  FALSE, NULL, NULL, FALSE, 
+										  FALSE, NULL, NULL, NULL, 
 										  NULL, fds );
 
 		delete( shadow_obj );
@@ -7505,8 +7756,8 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	
 	pid = daemonCore->Create_Process( a_out_name, args, PRIV_USER_FINAL, 
 									  shadowReaperId, FALSE,
-									  &envobject, iwd, FALSE, NULL, inouterr,
-									  niceness, DCJOBOPT_NO_ENV_INHERIT );
+									  &envobject, iwd, NULL, NULL, inouterr,
+									  niceness, NULL, DCJOBOPT_NO_ENV_INHERIT );
 	
 	// now close those open fds - we don't want them here.
 	for ( i=0 ; i<3 ; i++ ) {
@@ -9882,6 +10133,10 @@ Scheduler::Register()
 			"DELEGATE_GSI_CRED_SCHEDD",
 			(CommandHandlercpp)&Scheduler::updateGSICred,
 			"updateGSICred", this, WRITE);
+	 daemonCore->Register_Command(REQUEST_SANDBOX_LOCATION,
+			"REQUEST_SANDBOX_LOCATION",
+			(CommandHandlercpp)&Scheduler::requestSandboxLocation,
+			"requestSandboxLocation", this, WRITE);
 
 	// Command handler for testing file access.  I set this as WRITE as we
 	// don't want people snooping the permissions on our machine.
@@ -9926,6 +10181,9 @@ Scheduler::Register()
 
 	// Now is a good time to instantiate the GridUniverse
 	_gridlogic = new GridUniverseLogic;
+
+	// Initialize the Transfer Daemon Manager's handlers as well
+	m_tdman.register_handlers();
 }
 
 void

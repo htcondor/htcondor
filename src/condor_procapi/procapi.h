@@ -27,12 +27,10 @@
 //@author Mike Yoder
 
 /* Here are the necessary #includes */
-#include "condor_common.h"
-#include "condor_uid.h"
-#include "HashTable.h"
-#include "extArray.h"
+#include "condor_system.h"
 #include "condor_pidenvid.h"
 #include "processid.h"
+#include "HashTable.h"
 
 #ifndef WIN32 // all the below is for UNIX
 
@@ -138,7 +136,6 @@ enum {
 
 	// general failure
 	PROCAPI_FAILURE
-
 };
 
 // status about various calls to procapi.
@@ -185,8 +182,10 @@ enum {
 */
 #if defined(WIN32)
 typedef __int64 birthday_t;
+#define PROCAPI_BIRTHDAY_FORMAT "%I64d"
 #else
 typedef long birthday_t;
+#define PROCAPI_BIRTHDAY_FORMAT "%lu"
 #endif
 
 /** This is the structure that is returned from the getProcInfo() 
@@ -268,8 +267,10 @@ struct procInfo {
   /// pointer to next procInfo, if one exists.
   struct procInfo *next;
 
+#if !defined(WIN32)
   // the owner of this process
   uid_t owner;
+#endif
 
   // Any ancestor process identification environment variables.
   // This is always initialzed to something, but might not be filled
@@ -293,7 +294,9 @@ typedef struct procInfoRaw{
 	long majfault;
 	pid_t pid;
 	pid_t ppid;
+#if !defined(WIN32)
 	uid_t owner;
+#endif
 	
 		// Times are different on Windows
 #ifndef WIN32
@@ -427,31 +430,6 @@ class ProcAPI {
   */
   static int getProcInfo ( pid_t pid, piPTR& pi, int &status );
 
-  /** getProcSetInfo gets information on a set of pids.  These pids are 
-      specified by an array of pids that has 'numpids' elements.  The
-      information is summed for all the pids ( except for age ) and returned
-      in pi.
-
-      @param pids An array of pids that you want info on.
-      @param pi  A pointer to a procInfo structure.
-      @return A -1 is returned if a pid's info can't be returned, 0 otherwise.
-      @see procInfo
-  */
-  static int getProcSetInfo ( pid_t *pids, int numpids, piPTR& pi, int &status );
-
-  /** getFamilyInfo returns a procInfo struct for a process and all
-      processes which are descended from that process ( children, children
-      of children, etc ).  
-
-      @param pid The pid of the 'elder' process you want info on.
-      @param pi  A pointer to a procInfo structure.
-      @param status  A variable detailing how well the operation went.
-      @return A -1 is returned on failure, 0 otherwise.
-      @see procInfo
-  */
-  static int getFamilyInfo ( pid_t pid, piPTR& pi, PidEnvID *penvid, 
-  		int &status );
-
   /** Feed this function a procInfo struct and it'll print it out for you. 
 
       @param pi A pointer to a procInfo structure.
@@ -461,25 +439,18 @@ class ProcAPI {
   static void printProcInfo ( piPTR pi );
   static void printProcInfo ( FILE* fp, piPTR pi );
 
-  /** This function returns a list of pids that are 'descendents' of that pid.
-      I call this a 'family' of pids.  This list is put into pidFamily, which
-      I assume is an already-allocated array.  This array will be terminated
-      with a 0 at its end.  This array will never exceed 512 elemets.
+  /* returns a list of procInfo structures, for every process on the system.
+     the list can be traversed using the "next" fields of the procInfo structures.
 
-      @param pid The 'elder' pid of the family you want a list of pids for.
-      @param pidFamily An array for holding pids in the family
-      @return A -1 is returned on failure, otherwise the number of pids in the array.
+	@return a procInfo list representing all processes on the system
   */
-  static int getPidFamily( pid_t pid, PidEnvID *penvid, ExtArray<pid_t>& pidFamily,
-  			int &status );
+  static procInfo* getProcInfoList();
 
-  /* returns all pids owned by a specific user.
-   	
-	 @param pidFamily An array for holding pids in the family
-	 @param searchLogin A string specifying the owner who's pids we want
-	 @return A -1 is returned on failure, otherwise the number of pids in the array.
+  /* used to deallocate the memory for a list of procInfo structures
+
+	@param The list to deallocate
   */
-  static int getPidFamilyByLogin( const char *searchLogin, ExtArray<pid_t>& pidFamily );
+  static void freeProcInfoList(procInfo*);
 
 	  /*	
 		Creates a ProcessId from the given pid.
@@ -518,55 +489,6 @@ class ProcAPI {
 	  */
   static int confirmProcessId(ProcessId& procId, int& status);
   
-  
-
-#ifdef WANT_STANDALONE_DEBUG
-  /** This is a menu driver for tests 1-7.  Please don't try and break it. */
-  static void runTests();
-
-  /** This first test demonstrates the creation and monitoring of
-      a simple family of processes.  This process forks off copies
-      of itself, and each of these children allocate some memory,
-      touch each page of it, do some cpu-intensive work, and then
-      deallocate the memory they allocated. They then sleep for a
-      minute and exit.  These children are monitored individually
-      and as a family of processes. */
-  static void test1();
-
-  /** This test is similar to test 1, except that the children are
-      forked off in a different way.  In this case, the parent forks
-      a child, which itself forks a child, which forks a child, etc.  It
-      is still possible to monitor this group by getting the
-      family info for the parent pid.  */
-  static void test2();
-  
-  /** This test determines if you can get information on processes
-      other than those you own.  If you get a summary of all the
-      processes in the system ( parent=1 ) then you can. */
-  static void test3();
-
-  /** This test checks the getProcSetInfo() function.  The user is 
-      asked for pids, and the sum of their information is returned. */
-  static void test4();
-  
-  /** This is a quick test of getPidFamily().  It forks off some
-      processes and it'll print out the pids associated with these children */
-  static void test5();
-
-  /** Here's the test of cpu usage monitoring over time.  I'll
-      fork off a process, which will alternate between sleeping
-      and working.  I'll return info on that process. */
-  static void test6();
-
-  /** This is the nifty test.  Given a name of an executable, this test
-      does and fork() and then an exec(), basically starting up a child
-      process that is that program.  This child program and its descendents
-      are monitored once every 10 seconds and the results printed out.
-      I have had success with all sorts of programs, even a monster like
-      Netscape ( /s/netscape-4/bin/netscape ) */
-  static void test_monitor ( char * jobname );
-#endif  // of WANT_STANDALONE_DEBUG
-
  private:
 
   /** Default constructor.  It's private so that no one really
@@ -574,11 +496,10 @@ class ProcAPI {
   ProcAPI() {};		
 
   static void initpi ( piPTR& );                  // initialization of pi.
-  static int isinfamily ( pid_t *, int, PidEnvID*, piPTR ); 
-  // used by buildFamily & NT equiv.
 
+#if !defined(WIN32)
   static uid_t getFileOwner(int fd); // used to get process owner from /proc
-  static void closeFamilyHandles(); // closes all open handles for the family
+#endif
 
   /**  
 	Returns the raw OS stored data about the given pid.  Does no conversion
@@ -591,7 +512,7 @@ class ProcAPI {
 	@param procRaw  A reference to a procInfoRaw structure.
 	@param status An indicator of the reason why a success or failure happened
 	@return A 0 on success, and number less than 0 on failure.
- */
+  */
   static int getProcInfoRaw(pid_t pid, procInfoRaw& procRaw, int &status);
 
 	  /**
@@ -640,18 +561,13 @@ class ProcAPI {
 #endif
 								 );
 
-#ifndef WIN32
   static int buildPidList();                      // just what it says
   static int buildProcInfoList();                 // ditto.
-  static int buildFamily( pid_t, PidEnvID *, int & ); // builds + sums procInfo list
-  static int getNumProcs();                       // guess.
   static long secsSinceEpoch();                   // used for wall clock age
   static double convertTimeval ( struct timeval );// convert timeval to double
   static pid_t getAndRemNextPid();                // used in pidList deconstruction
   static void deallocPidList();                   // these deallocate their
   static void deallocAllProcInfos();              // respective lists.
-  static void deallocProcFamily();
-#endif // not defined WIN32
 
 #ifdef WANT_STANDALONE_DEBUG
   static void sprog1 ( pid_t *, int, int );       // used by test1.
@@ -660,11 +576,7 @@ class ProcAPI {
 
 #ifdef WIN32 // some windoze-specific thingies:
 
-  static void makeFamily( pid_t dadpid,  PidEnvID *penvid, pid_t *allpids,
-		  int numpids, pid_t* &fampids, int &famsize );
-  static void getAllPids( pid_t* &pids, int &numpids );
-  static int multiInfo ( pid_t *pidlist, int numpids, piPTR &pi );
-  static int isinlist( pid_t pid, pid_t *pidlist, int numpids ); 
+  static int GetProcessPerfData();
   static DWORD GetSystemPerfData ( LPTSTR pValue );
   static double LI_to_double ( LARGE_INTEGER );
   static PPERF_OBJECT_TYPE firstObject( PPERF_DATA_BLOCK pPerfData );
@@ -673,34 +585,28 @@ class ProcAPI {
   static PERF_COUNTER_DEFINITION *nextCounter( PERF_COUNTER_DEFINITION *pCounterDef);
   static PERF_INSTANCE_DEFINITION *firstInstance( PERF_OBJECT_TYPE *pObject );
   static PERF_INSTANCE_DEFINITION *nextInstance(PERF_INSTANCE_DEFINITION *pInstance);
-  
+
   static void grabOffsets ( PPERF_OBJECT_TYPE );
       // pointer to perfdata block - where all the performance data lives.
   static PPERF_DATA_BLOCK pDataBlock;
   
   static struct Offset *offsets;
-  static ExtArray<HANDLE> familyHandles;
 
 #endif // WIN32 poop.
 
   /* Using condor's HashTable template class.  I'm storing a procHashNode, 
      hashed on a pid. */
   static HashTable <pid_t, procHashNode *> *procHash;
-  friend int hashFunc ( const pid_t& pid, int numbuckets );
-
-#ifndef WIN32 // these aren't used by the NT version...
+  friend int pidHashFunc ( const pid_t& pid, int numbuckets );
 
   // private data structures:
-  static pidlistPTR pidList;      // this will be a linked list of all processes
-                           // in the system.  Built by buildpidlist()
-
   static piPTR allProcInfos; // this will be a linked list of 
-                           // procinfo structures, one for each process
-                           // whose /proc information is available.
+                             // procinfo structures, one for each process
+                             // whose /proc information is available.
 
-  static piPTR procFamily; // a linked list ( using links in the procInfo
-                           // struct ) of processes in the desired 'family'
-                           // (a process + its descendants)
+#ifndef WIN32
+  static pidlistPTR pidList;      // this will be a linked list of all processes
+                                  // in the system.  Built by buildpidlist()
 
   static int pagesize;     // pagesize is the size of memory pages, in k.
                            // It's here so the call getpagesize() only needs

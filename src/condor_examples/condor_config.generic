@@ -460,6 +460,22 @@ GLIDEIN_SITES =
 ## By default, Condor will delegate rather than copy.
 DELEGATE_JOB_GSI_CREDENTIALS = True
 
+## This setting controls the default behaviour for the spooling of files
+## into, or out of, the Condor system by such tools as condor_submit
+## and condor_transfer_data. Here is the list of valid settings for this
+## parameter and what they mean:
+##
+##   stm_use_schedd_only
+##      Ask the condor_schedd to solely store/retreive the sandbox
+##
+##   stm_use_transferd
+##      Ask the condor_schedd for a location of a condor_transferd, then
+##      store/retreive the sandbox from the transferd itself.
+##
+## The allowed values are case insensitive.
+## The default of this parameter if not specified is: stm_use_schedd_only
+SANDBOX_TRANSFER_METHOD = stm_use_schedd_only
+
 ##--------------------------------------------------------------------
 ##  Settings that control the daemon's debugging output:
 ##--------------------------------------------------------------------

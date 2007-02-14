@@ -643,7 +643,7 @@ GahpServer::Startup()
 			FALSE,			// do not want a command port
 			&newenv,	  	// env
 			NULL,			// cwd
-			FALSE,			// new process group?
+			NULL,			// process family info
 			NULL,			// network sockets to inherit
 			io_redirect 	// redirect stdin/out/err
 			);

@@ -149,10 +149,8 @@ daemon::daemon(char *name, bool is_daemon_core, bool is_ha )
 	stop_tid = -1;
 	stop_fast_tid = -1;
  	hard_kill_tid = -1;
-	procfam_tid = -1;
 	stop_state = NONE;
 	needs_update = FALSE;
-	procfam = NULL;
 	num_controllees = 0;
 
 #if 0
@@ -699,6 +697,13 @@ int daemon::RealStart( )
 		}
     }
 
+	// set up a FamilyInfo structure so Daemon Core registers a process family
+	// for this daemon with the procd
+	//
+	FamilyInfo fi;
+	fi.max_snapshot_interval = param_integer("PID_SNAPSHOT_INTERVAL", 60);
+	fi.login = NULL;
+
 	pid = daemonCore->Create_Process(
 				process_name,	// program to exec
 				args,			// args
@@ -707,7 +712,7 @@ int daemon::RealStart( )
 				command_port,	// port to use for command port; TRUE=choose one dynamically
 				&env,			// environment
 				NULL,			// current working directory
-				TRUE);			// new_process_group flag; we want a new group
+				&fi);			// we want a new process family
 
 	if ( pid == FALSE ) {
 		// Create_Process failed!
@@ -751,16 +756,6 @@ int daemon::RealStart( )
 		needs_update = FALSE;
 		daemons.UpdateCollector();
 	}
-
-	PidEnvID penvid;
-
-	pidenvid_init(&penvid);
-
-	// If there isn't any ancestor information, that is ok.
-	daemonCore->InfoEnvironmentID(&penvid, pid);
-
-	// Create a ProcFamily object for this daemon.
-	InitProcFam( pid, &penvid );
 
 	return pid;	
 }
@@ -984,10 +979,6 @@ daemon::Exited( int status )
 		// entire process family.
 	KillFamily();
 
-		// Now that we're done with that and the pid is gone, we can
-		// delete our ProcFamily object now.
-	DeleteProcFam();
-
 		// Set flag saying if it exited cuz it was not responding
 	was_not_responding = daemonCore->Was_Not_Responding(pid);
 
@@ -1161,8 +1152,14 @@ daemon::Kill( int sig )
 void
 daemon::KillFamily( void ) 
 {
-	if( ! procfam ) return;
-	procfam->hardkill();
+	if( pid == 0 ) {
+		return;
+	}
+	if (daemonCore->Kill_Family(pid) == FALSE) {
+		dprintf(D_ALWAYS,
+		        "error killing process family of daemon with pid %u\n",
+		        pid);
+	}
 }
 
 
@@ -1177,43 +1174,6 @@ daemon::Reconfig()
 	DoConfig( false );
 	Kill( SIGHUP );
 }
-
-
-void
-daemon::InitProcFam( int pid, PidEnvID *penvid )
-{
-		// If there's one there already, kill it.
-	DeleteProcFam();
-
-	procfam = new ProcFamily( pid, penvid, PRIV_ROOT );
-	if( ! procfam ) {
-		EXCEPT( "Out of memory!" );
-	}
-
-	procfam_tid = daemonCore->
-		Register_Timer( 15, 60,
-						(TimerHandlercpp)&ProcFamily::takesnapshot,
-						"ProcFamily::takesnapshot", procfam );
-	if( procfam_tid < 0 ) {
-		EXCEPT( "Can't register timer for ProcFamily::takesnapshot" );
-	}
-}
-
-
-void
-daemon::DeleteProcFam( void )
-{
-	if( procfam_tid >= 0 ) {
-		daemonCore->Cancel_Timer( procfam_tid );
-		procfam_tid = -1;
-	}
-
-	if( procfam ) {
-		delete procfam;
-		procfam = NULL;
-	}
-}
-
 
 int
 daemon::SetupHighAvailability( void )
@@ -1402,6 +1362,7 @@ Daemons::Daemons()
 	all_daemons_gone_action = MASTER_RESET;
 	immediate_restart = FALSE;
 	immediate_restart_master = FALSE;
+	procd = NULL;
 }
 
 
@@ -1746,6 +1707,11 @@ Daemons::InitMaster()
 		GetTimeStamp(daemon_ptr[master]->watch_name);
 	daemon_ptr[master]->startTime = time(0);
 	daemon_ptr[master]->pid = daemonCore->getpid();
+
+		// start the procd
+	procd = new ProcD;
+	ASSERT(procd != NULL);
+	procd->start();
 }
 
 
@@ -2011,10 +1977,14 @@ Daemons::AllDaemonsGone()
 		break;
 	case MASTER_RESTART:
 		dprintf( D_ALWAYS, "All daemons are gone.  Restarting.\n" );
+		ASSERT(procd != NULL);
+		delete procd;
 		FinishRestartMaster();
 		break;
 	case MASTER_EXIT:
 		dprintf( D_ALWAYS, "All daemons are gone.  Exiting.\n" );
+		ASSERT(procd != NULL);
+		delete procd;
 		master_exit(0);
 		break;
 	}

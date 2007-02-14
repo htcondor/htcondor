@@ -519,8 +519,24 @@ int main (int argc, char **argv)
 		everythingOkay = false;
 	}
 
+	// Test random string generation
+	MyString rnd;
 
+	rnd.randomlyGenerate("1", 5);
+	if (rnd == "11111") {
+		printf("Ok: randomlyGenerate() worked in line %d.\n", __LINE__);
+	} else {
+	   	printf("FAILED: randomlyGenerate() error in line %d.\n", __LINE__);
+		everythingOkay = false;
+	}
 
+	rnd.randomlyGenerate("0123456789", 64);
+	if (rnd.Length() == 64) {
+		printf("Ok: randomlyGenerate() worked in line %d.\n", __LINE__);
+	} else {
+	   	printf("FAILED: randomlyGenerate() error in line %d.\n", __LINE__);
+		everythingOkay = false;
+	}
 
 
     // ---- Final summary.

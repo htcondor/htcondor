@@ -41,24 +41,6 @@ extern dynuser* myDynuser;
 
 extern CStarter *Starter;
 
-VanillaProc::VanillaProc( ClassAd *jobAd ) : OsProc( jobAd )
-{
-	family = NULL;
-	snapshot_tid = -1;
-}
-
-VanillaProc::~VanillaProc()
-{
-	if (family) {
-		delete family;
-	}
-	if ( snapshot_tid != -1 ) {
-		daemonCore->Cancel_Timer(snapshot_tid);
-		snapshot_tid = -1;
-	}
-}
-
-
 int
 VanillaProc::StartJob()
 {
@@ -123,53 +105,34 @@ VanillaProc::StartJob()
 	}	// end of if executable name ends in .bat
 #endif
 
-	// call OsProc to start it up; if success, create the ProcFamily
-	if (OsProc::StartJob()) {
-		
-		// success!  create a ProcFamily
-		PidEnvID penvid;
+	// set up a FamilyInfo structure to tell OsProc to register a family
+	// with the ProcD in its call to DaemonCore::Create_Process
+	//
+	FamilyInfo fi;
 
-		pidenvid_init(&penvid);
+	// take snapshots at no more than 15 seconds in between, by default
+	//
+	fi.max_snapshot_interval = param_integer("PID_SNAPSHOT_INTERVAL", 15);
 
-		// if there is no information on this pid, that's ok
-		daemonCore->InfoEnvironmentID(&penvid, JobPid);
-
-		family = new ProcFamily(JobPid, &penvid, PRIV_USER);
-		ASSERT(family);
-
-		const char* run_jobs_as = NULL;
-		bool dedicated_account = false;
-
-		// See if we want our family built by login if we're using
-		// specific run accounts. (default is no)
-		// If we're local universe, we definitely want this to be NO,
-		// since we're running the job as the user on the submit
-		// machine, and we do NOT want to track the procfamily by the
-		// login!!!  -Derek <wright@cs.wisc.edu> 2004-11-05
-		if( job_universe != CONDOR_UNIVERSE_LOCAL ) {
-			dedicated_account = param_boolean( "EXECUTE_LOGIN_IS_DEDICATED",
-											   false );
-		}
-
-		// we support running the job as other users if the user
-		// is specifed in the config file, and the account's password
-		// is properly stored in our credential stash.
-		if (dedicated_account) {
-			// set ProcFamily to find decendants via a common login name
-			run_jobs_as = get_user_loginname();
-			dprintf(D_FULLDEBUG, "Building procfamily by login \"%s\"\n",
-					run_jobs_as);
-			family->setFamilyLogin(run_jobs_as);
-		}
-
-		// take a snapshot of the family every 15 seconds
-		snapshot_tid = daemonCore->Register_Timer(2, 15, 
-			(TimerHandlercpp)&ProcFamily::takesnapshot, 
-			"ProcFamily::takesnapshot", family);
-
-		return TRUE;
+	// use login-based family tracking if EXECUTE_LOGIN_IS_DEDICATED is
+	// set and we're not starting a local universe job
+	//
+	fi.login = NULL;
+	bool dedicated_account = false;
+	if (job_universe != CONDOR_UNIVERSE_LOCAL) {
+		dedicated_account = param_boolean("EXECUTE_LOGIN_IS_DEDICATED",
+		                                  false);
 	}
-	return FALSE;
+	if (dedicated_account) {
+		fi.login = get_user_loginname();
+		dprintf(D_FULLDEBUG,
+		        "Tracking process family by login \"%s\"\n",
+		        fi.login);
+	}
+
+	// have OsProc start the job
+	//
+	return OsProc::StartJob(&fi);
 }
 
 
@@ -178,29 +141,25 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 {
 	dprintf( D_FULLDEBUG, "In VanillaProc::PublishUpdateAd()\n" );
 
-	unsigned long max_image;
-	long sys_time, user_time;
-	char buf[200];
+	ProcFamilyUsage usage;
+	if (daemonCore->Get_Family_Usage(JobPid, usage) == FALSE) {
 
-	if ( !family ) {
-		// we do not have a job family beneath us 
-		dprintf( D_FULLDEBUG, "Leaving VanillaProc::PublishUpdateAd(): "
-				 "No job family!\n" );
+		dprintf(D_ALWAYS,
+		        "error getting family usage in VanillaProc::PublishUpdateAd()\n");
 		return false;
 	}
 
-		// Gather the info we care about
-	family->get_cpu_usage( sys_time, user_time );
-	family->get_max_imagesize( max_image );
-	num_pids = family->size();
+		// Publish the info we care about into the ad.
+	char buf[200];
+	sprintf( buf, "%s=%lu", ATTR_JOB_REMOTE_SYS_CPU, usage.sys_cpu_time );
+	ad->InsertOrUpdate( buf );
+	sprintf( buf, "%s=%lu", ATTR_JOB_REMOTE_USER_CPU, usage.user_cpu_time );
+	ad->InsertOrUpdate( buf );
+	sprintf( buf, "%s=%lu", ATTR_IMAGE_SIZE, usage.max_image_size );
+	ad->InsertOrUpdate( buf );
 
-		// Publish it into the ad.
-	sprintf( buf, "%s=%lu", ATTR_JOB_REMOTE_SYS_CPU, sys_time );
-	ad->InsertOrUpdate( buf );
-	sprintf( buf, "%s=%lu", ATTR_JOB_REMOTE_USER_CPU, user_time );
-	ad->InsertOrUpdate( buf );
-	sprintf( buf, "%s=%lu", ATTR_IMAGE_SIZE, max_image );
-	ad->InsertOrUpdate( buf );
+		// Update our knowledge of how many processes the job has
+	num_pids = usage.num_procs;
 
 		// Now, call our parent class's version
 	return OsProc::PublishUpdateAd( ad );
@@ -212,14 +171,6 @@ VanillaProc::JobCleanup(int pid, int status)
 {
 	dprintf(D_FULLDEBUG,"in VanillaProc::JobCleanup()\n");
 
-	// ok, the parent exited.  make certain all decendants are dead.
-	family->hardkill();
-
-	if( snapshot_tid >= 0 ) {
-		daemonCore->Cancel_Timer(snapshot_tid);
-	}
-	snapshot_tid = -1;
-
 		// This will reset num_pids for us, too.
 	return OsProc::JobCleanup( pid, status );
 }
@@ -229,12 +180,15 @@ void
 VanillaProc::Suspend()
 {
 	dprintf(D_FULLDEBUG,"in VanillaProc::Suspend()\n");
-
+	
 	// suspend the user job
-	if ( family ) {
-		family->suspend();
+	if (JobPid != -1) {
+		if (daemonCore->Suspend_Family(JobPid) == FALSE) {
+			dprintf(D_ALWAYS,
+			        "error suspending family in VanillaProc::Suspend()\n");
+		}
 	}
-
+	
 	// set our flag
 	is_suspended = true;
 }
@@ -243,10 +197,13 @@ void
 VanillaProc::Continue()
 {
 	dprintf(D_FULLDEBUG,"in VanillaProc::Continue()\n");
-
+	
 	// resume user job
-	if ( family ) {
-		family->resume();
+	if (JobPid != -1) {
+		if (daemonCore->Continue_Family(JobPid) == FALSE) {
+			dprintf(D_ALWAYS,
+			        "error continuing family in VanillaProc::Continue()\n");
+		}
 	}
 
 	// set our flag
@@ -257,8 +214,8 @@ bool
 VanillaProc::ShutdownGraceful()
 {
 	dprintf(D_FULLDEBUG,"in VanillaProc::ShutdownGraceful()\n");
-
-	if ( !family ) {
+	
+	if ( JobPid == -1 ) {
 		// there is no process family yet, probably because we are still
 		// transferring files.  just return true to say we're all done,
 		// and that way the starter class will simply delete us and the
@@ -266,13 +223,18 @@ VanillaProc::ShutdownGraceful()
 		return true;
 	}
 
+	// WE USED TO.....
+	//
 	// take a snapshot before we softkill the parent job process.
 	// this helps ensure that if the parent exits without killing
 	// the kids, our JobExit() handler will get em all.
-	family->takesnapshot();
+	//
+	// TODO: should we make an explicit call to the procd here to tell
+	// it to take a snapshot???
 
 	// now softkill the parent job process.  this is exactly what
 	// OsProc::ShutdownGraceful does, so call it.
+	//
 	return OsProc::ShutdownGraceful();	
 }
 
@@ -280,8 +242,8 @@ bool
 VanillaProc::ShutdownFast()
 {
 	dprintf(D_FULLDEBUG,"in VanillaProc::ShutdownFast()\n");
-
-	if ( !family ) {
+	
+	if ( JobPid == -1 ) {
 		// there is no process family yet, probably because we are still
 		// transferring files.  just return true to say we're all done,
 		// and that way the starter class will simply delete us and the
@@ -293,9 +255,11 @@ VanillaProc::ShutdownFast()
 	// in potentially swapping the job back into memory if our next
 	// step is to hard kill it.
 	requested_exit = true;
-	family->hardkill();
+
+	// FINDOUT: when we are being shutdown fast, do we still update the
+	// shadow with the latest usage information about the job???
+	//
+	daemonCore->Kill_Family(JobPid);
+
 	return false;	// shutdown is pending, so return false
 }
-
-
-

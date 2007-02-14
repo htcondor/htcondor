@@ -25,7 +25,6 @@
 #define _CONDOR_DAEMON_PROC_H
 
 #include "user_proc.h"
-#include "killfamily.h"
 
 /** This is a "Tool" process in the TDP or "Tool Daemon Protocol"
 	world.  This implements the Condor side of the TDP for spawning a
@@ -40,9 +39,6 @@ class ToolDaemonProc : public UserProc
 public:
 		/// Constructor
 	ToolDaemonProc( ClassAd *jobAd, int application_pid );
-
-		/// Destructor
-	virtual ~ToolDaemonProc();
 
 		/** Here we do things like set_user_ids(), get the executable, 
 			get the args, env, cwd from the classad, open the input,
@@ -107,11 +103,6 @@ protected:
 private:
 
 	int ApplicationPid;
-
-	ProcFamily *family;
-
-	// timer id for periodically taking a ProcFamily snapshot
-	int snapshot_tid;
 };
 
 

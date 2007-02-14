@@ -53,6 +53,7 @@
 #include "condor_classad_namedlist.h"
 #include "env.h"
 //#include "condor_crontab.h"
+#include "tdman.h"
 
 extern  int         STARTD_CONTACT_TIMEOUT;
 const	int			NEGOTIATOR_CONTACT_TIMEOUT = 30;
@@ -178,7 +179,6 @@ typedef enum {
 	NO_SHADOW_MPI,
 } NoShadowFailure_t;
 
-
 // These are the args to contactStartd that get stored in the queue.
 class ContactStartdArgs
 {
@@ -195,7 +195,6 @@ private:
 	char *csa_sinful;
 	bool csa_is_dedicated;
 };
-
 
 class Scheduler : public Service
 {
@@ -247,6 +246,8 @@ class Scheduler : public Service
 	int				transferJobFilesReaper(int,int);
 	void			PeriodicExprHandler( void );
 
+	int				requestSandboxLocation(int mode, Stream* s);
+
 	// match managing
 	int 			publish( ClassAd *ad );
     match_rec*      AddMrec(char*, char*, PROC_ID*, const ClassAd*, char*, char*);
@@ -270,6 +271,11 @@ class Scheduler : public Service
 	void			spawnLocalStarter( shadow_rec* );
 	bool			claimLocalStartd();
 	bool			isStillRunnable( int cluster, int proc, int &status ); 
+	bool			jobNeedsTransferd( int cluster, int proc, int univ ); 
+	bool			availableTransferd( int cluster, int proc ); 
+	bool			availableTransferd( int cluster, int proc, 
+						TransferDaemon *&td_ref ); 
+	bool			startTransferd( int cluster, int proc ); 
 	UserLog*		InitializeUserLog( PROC_ID job_id );
 	bool			WriteAbortToUserLog( PROC_ID job_id );
 	bool			WriteHoldToUserLog( PROC_ID job_id );
@@ -343,6 +349,34 @@ class Scheduler : public Service
 	shadow_rec*		add_shadow_rec(shadow_rec*);
 	void			add_shadow_rec_pid(shadow_rec*);
 	void			HadException( match_rec* );
+
+	// Callbacks which are notifications from the TDMan object about
+	// registrations and reaping of transfer daemons
+	// These functions DO NOT own the memory passed to them.
+	TdAction td_register_callback(TransferDaemon *td);
+	TdAction td_reaper_callback(long pid, int status, TransferDaemon *td);
+
+	// Callbacks to handle transfer requests for clients uploading files into
+	// Condor's control.
+	// These functions DO NOT own the memory passed to them.
+	TreqAction treq_upload_pre_push_callback(TransferRequest *treq, 
+		TransferDaemon *td);
+	TreqAction treq_upload_post_push_callback(TransferRequest *treq, 
+		TransferDaemon *td);
+	TreqAction treq_upload_update_callback(TransferRequest *treq, 
+		TransferDaemon *td, ClassAd *update);
+	TreqAction treq_upload_reaper_callback(TransferRequest *treq);
+
+	// Callbacks to handle transfer requests for clients downloading files
+	// out of Condor's control.
+	// These functions DO NOT own the memory passed to them.
+	TreqAction treq_download_pre_push_callback(TransferRequest *treq, 
+		TransferDaemon *td);
+	TreqAction treq_download_post_push_callback(TransferRequest *treq, 
+		TransferDaemon *td);
+	TreqAction treq_download_update_callback(TransferRequest *treq, 
+		TransferDaemon *td, ClassAd *update);
+	TreqAction treq_download_reaper_callback(TransferRequest *treq);
 
 		// Used to manipulate the "extra ads" (read:Hawkeye)
 	int adlist_register( const char *name );
@@ -457,6 +491,9 @@ private:
 		// You can read or write the values, but don't go
 		// deleting the pointer!
 	GridJobCounts * GetGridJobCounts(UserIdentity user_identity);
+
+	// The object which manages the various transferds.
+	TDMan m_tdman;
 
 	// useful names
 	char*			CondorAdministrator;

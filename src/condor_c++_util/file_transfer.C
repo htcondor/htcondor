@@ -226,6 +226,8 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 
 	// user must give us an initial working directory.
 	if (Ad->LookupString(ATTR_JOB_IWD, buf) != 1) {
+		dprintf(D_FULLDEBUG, 
+			"FileTransfer::SimpleInit: Job Ad did not have an iwd!\n");
 		return 0;
 	}
 	Iwd = strdup(buf);
@@ -235,6 +237,8 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	if ( want_check_perms ) {
 		if (Ad->LookupString(ATTR_OWNER, buf) != 1) {
 			// no owner specified in ad
+			dprintf(D_FULLDEBUG, 
+				"FileTransfer::SimpleInit: Job Ad did not have an owner!\n");
 			return 0;		
 		}
 #ifdef WIN32

@@ -29,6 +29,7 @@
 #include "condor_io.h"
 #include "enum_utils.h"
 #include "daemon.h"
+#include "MyString.h"
 
 
 typedef enum {
@@ -248,6 +249,25 @@ public:
 	bool spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError * errstack);
 
 	bool receiveJobSandbox(const char* constraint, CondorError * errstack, int * numdone = 0);
+
+
+	bool register_transferd(MyString sinful, MyString id, int timeout, 
+		ReliSock **regsock_ptr, CondorError *errstack);
+	
+
+	// Request a sandbox location for a set of ads described by a
+	// constraint as applied to the job queue
+	bool requestSandboxLocation(int direction, MyString &constraint, 
+		int protocol, ClassAd *respad, CondorError * errstack);
+
+	// Request a sandbox location for a set of specific job ids.
+	bool requestSandboxLocation(int direction, int JobAdsArrayLen, 
+		ClassAd* JobAdsArray[], int protocol, ClassAd *respad, 
+		CondorError * errstack);
+		
+	// Request a sandbox location using a raw request classad.
+	bool requestSandboxLocation(ClassAd *reqad, ClassAd *respad,
+		CondorError * errstack);
 
 	bool updateGSIcredential(const int cluster, const int proc, 
 		const char* path_to_proxy_file, CondorError * errstack);

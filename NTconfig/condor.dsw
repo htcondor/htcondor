@@ -131,6 +131,15 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name condor_transferer
     End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_procd
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_procd_client
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_softkill
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -494,6 +503,9 @@ Package=<5>
 
 Package=<4>
 {{{
+    Begin Project Dependency
+    Project_Dep_Name condor_procd_client
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -921,6 +933,33 @@ Package=<4>
 
 ###############################################################################
 
+Project: "condor_procd"=".\condor_procd.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name condor_procapi
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "condor_procd_client"=".\condor_procd_client.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
 Project: "condor_q"=".\condor_q.dsp" - Package Owner=<4>
 
 Package=<5>
@@ -1154,6 +1193,18 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name condor_procapi
     End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "condor_softkill"=".\condor_softkill.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
 }}}
 
 ###############################################################################

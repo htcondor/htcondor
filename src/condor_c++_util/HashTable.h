@@ -25,7 +25,7 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
-#include "proc.h"	// for PROC_ID
+#include "MyString.h"
 
 // a generic hash bucket class
 
@@ -701,10 +701,11 @@ int hashFuncUInt( const unsigned int& n, int numBuckets );
 /// hash function for string versions of job id's ("cluster.proc")
 int hashFuncJobIdStr( char* const & key, int numBuckets );
 
-/// hash function for PROC_ID versions of job ids (cluster.proc)
-int hashFuncPROC_ID( const PROC_ID &procID, int numBuckets);
-
 /// hash function for char* string
 int hashFuncChars(char const *key, int numBuckets);
+
+/// hash function for Mystring string
+int hashFuncMyString( const MyString &key, int numBuckets);
+
 
 #endif // HASH_H

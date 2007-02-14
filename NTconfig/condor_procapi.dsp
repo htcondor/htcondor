@@ -97,13 +97,5 @@ SOURCE=..\src\condor_procapi\processid.C
 
 SOURCE=..\src\condor_procapi\processid.h
 # End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_procapi\procinterface.C
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_procapi\procinterface.h
-# End Source File
 # End Target
 # End Project

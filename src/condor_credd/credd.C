@@ -850,7 +850,7 @@ int RefreshProxyThruMyProxy(X509CredentialWrapper * proxy)
 					FALSE,							// want_command_port
 					&myEnv,							// env
 					NULL,							// cwd		
-					FALSE,							// new_process_group
+					NULL,							// family_info
 					NULL,							// sock_inherit_list
 					arrIO);							// in/out/err streams
   													// nice_inc

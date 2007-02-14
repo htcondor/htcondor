@@ -1,0 +1,55 @@
+#
+# The master will start a condor_procd and then the controller, which will
+# fire up a drone tree and execute a test script.
+#
+DAEMON_LIST = MASTER, CONTROLLER
+
+#
+# Make the master log everything and start fresh each time
+#
+MASTER_DEBUG = D_ALL
+TRUNC_MASTER_LOG_ON_OPEN = True
+
+#
+# condor_procd configuation
+#
+
+PROCD = $(PROCD_NORMAL)
+PROCD_NORMAL = $(SBIN)/condor_procd
+PROCD_VALGRIND = /s/std/bin/valgrind \
+                 --tool=memcheck \
+                 --leak-check=full \
+                 --show-reachable=yes \
+                 --log-file-exactly=$(LOG)/procd.valgrind \
+                 $(SBIN)/condor_procd
+PROCD_ADDRESS = $(LOCAL_DIR)/procd/procd_pipe
+PROCD_LOG = $(LOG)/procd.log
+PROCD_DEBUG = False
+
+#
+# Disable periodic snapshots completely (the controller will explicitly
+# tell the condor_procd when to take snapshots)
+#
+PROCD_MAX_SNAPSHOT_INTERVAL = -1
+PID_SNAPSHOT_INTERVAL = -1
+
+#
+# Controller (and drone) information
+#
+DEVELOPMENT_DIR = /scratch/gquinn/V6_9-privsep-branch/src/condor_procd
+CONTROLLER = $(LOCAL_DIR)/procd_test_controller.sh
+CONTROLLER_ARGS = $(CONTROLLER_BIN) \
+                  $(LOCAL_DIR)/test.$(PROCD_TEST_NUMBER) \
+                  $(LOG)/controller.out.$(PROCD_TEST_NUMBER) \
+				  $(LOG)/controller.err.$(PROCD_TEST_NUMBER) \
+                  $(PROCD_ADDRESS) \
+                  $(DRONE_BIN)
+CONTROLLER_BIN = $(DEVELOPMENT_DIR)/procd_test_controller
+DRONE_BIN = $(DEVELOPMENT_DIR)/procd_test_drone
+
+#
+# The test number to run (this will normally be overridden by the
+# environment variable _CONDOR_PROCD_TEST_NUMBER, but we'll provide
+# a default here
+#
+PROCD_TEST_NUMBER = 1

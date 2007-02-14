@@ -25,8 +25,6 @@
 #define _CONDOR_VANILLA_PROC_H
 
 #include "os_proc.h"
-#include "killfamily.h"
-
 
 /* forward reference */
 class SafeSock;
@@ -37,10 +35,7 @@ class SafeSock;
 class VanillaProc : public OsProc
 {
 public:
-		/// Constructor
-	VanillaProc( ClassAd * jobAd );
-		/// Destructor
-	virtual ~VanillaProc();
+	VanillaProc(ClassAd* jobAd) : OsProc(jobAd) { }
 
 		/** call OsProc::StartJob(), make a new ProcFamily with new
 			process as head. */
@@ -72,14 +67,6 @@ public:
 			@return true if success, false if failure
 		*/
 	virtual bool PublishUpdateAd( ClassAd* ad );
-
-protected:
-
-private:
-	ProcFamily *family;
-
-	// timer id for periodically taking a ProcFamily snapshot
-	int snapshot_tid;
 };
 
 #endif

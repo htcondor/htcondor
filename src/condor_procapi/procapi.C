@@ -22,30 +22,38 @@
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
+#include "condor_debug.h"
 #include "procapi.h"
 #include "procapi_internal.h"
-#include "condor_debug.h"
 
-int hashFunc( const pid_t& pid, int numbuckets );
+int pidHashFunc( const pid_t& pid, int numbuckets );
+
 HashTable <pid_t, procHashNode *> * ProcAPI::procHash = 
-    new HashTable <pid_t, procHashNode *> ( PHBUCKETS, hashFunc );  
+    new HashTable <pid_t, procHashNode *> ( PHBUCKETS, pidHashFunc );
+
+piPTR ProcAPI::allProcInfos = NULL;
 
 #ifndef WIN32
-piPTR ProcAPI::procFamily	= NULL;
-piPTR ProcAPI::allProcInfos = NULL;
-pidlistPTR ProcAPI::pidList	= NULL;
+pidlistPTR ProcAPI::pidList = NULL;
 int ProcAPI::pagesize		= 0;
 #ifdef LINUX
 long unsigned ProcAPI::boottime	= 0;
 long ProcAPI::boottime_expiration = 0;
 #endif // LINUX
 #else // WIN32
+
 #include "ntsysinfo.h"
 static CSysinfo ntSysInfo;	// for getting parent pid on NT
+
+	// Windows gives us birthday in 100ns ticks since 01/01/1601
+	// (11644473600 seconds before 01/01/1970)
+const __int64 EPOCH_SHIFT = 11644473600;
+
 PPERF_DATA_BLOCK ProcAPI::pDataBlock	= NULL;
-ExtArray<HANDLE> ProcAPI::familyHandles;
-struct Offset * ProcAPI::offsets		= NULL;
+struct Offset * ProcAPI::offsets	= NULL;
+
 #endif // WIN32
+
 int ProcAPI::MAX_SAMPLES = 5;
 int ProcAPI::DEFAULT_PRECISION_RANGE = 4;
 
@@ -72,9 +80,8 @@ ProcAPI::~ProcAPI() {
         // deallocate stuff like crazy.
 #ifndef WIN32
     deallocPidList();
-    deallocAllProcInfos();
-    deallocProcFamily();
 #endif
+    deallocAllProcInfos();
 
     struct procHashNode * phn;
     procHash->startIterations();
@@ -83,12 +90,9 @@ ProcAPI::~ProcAPI() {
     
     delete procHash;
 
-	closeFamilyHandles();
-    
 #ifdef WIN32
     if ( offsets )
         free ( offsets );
-    
     if ( pDataBlock )
         free ( pDataBlock );
 #endif
@@ -212,10 +216,6 @@ ProcAPI::getProcInfoRaw(pid_t pid, procInfoRaw& procRaw, int& status){
 		// set the sample time
 	procRaw.sample_time = secsSinceEpoch();
 
-		// up our privledges
-	priv_state priv = set_root_priv();
-
-	
 		// open /proc/<pid>
 	sprintf( path, "/proc/%d", pid );
 	if( (fd = safe_open_wrapper(path, O_RDONLY)) < 0 ) {
@@ -241,8 +241,6 @@ ProcAPI::getProcInfoRaw(pid_t pid, procInfoRaw& procRaw, int& status){
 				break;
 		}
 
-			// reset our privledges
-		set_priv( priv );
 		return PROCAPI_FAILURE;
 	}
 
@@ -253,9 +251,6 @@ ProcAPI::getProcInfoRaw(pid_t pid, procInfoRaw& procRaw, int& status){
 				 pid );
 
 		close( fd );
-
-			// reset our privledges
-		set_priv( priv );
 
 		status = PROCAPI_UNSPECIFIED;
 		return PROCAPI_FAILURE;
@@ -283,9 +278,6 @@ ProcAPI::getProcInfoRaw(pid_t pid, procInfoRaw& procRaw, int& status){
 
 		close( fd );
 		
-			// reset our privledges
-		set_priv( priv );
-
 		status = PROCAPI_UNSPECIFIED;
 		return PROCAPI_FAILURE;
 	}
@@ -316,9 +308,6 @@ ProcAPI::getProcInfoRaw(pid_t pid, procInfoRaw& procRaw, int& status){
 
 		close ( fd );
 
-			// reset our privledges
-		set_priv( priv );
-
 		status = PROCAPI_UNSPECIFIED;
 		return PROCAPI_FAILURE;
 	}
@@ -330,9 +319,6 @@ ProcAPI::getProcInfoRaw(pid_t pid, procInfoRaw& procRaw, int& status){
 
 	// close the /proc/pid file
 	close ( fd );
-
-		// reset our privledges
-	set_priv( priv );
 
 	return PROCAPI_SUCCESS;
 }
@@ -424,10 +410,6 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 		// set the sample time
 	procRaw.sample_time = secsSinceEpoch();
 
-		// up our privledges
-	priv_state priv = set_root_priv();
-
-
 		// pids, memory usage, and age can be found in 'psinfo':
 	sprintf( path, "/proc/%d/psinfo", pid );
 	if( (fd = safe_open_wrapper(path, O_RDONLY)) < 0 ) {
@@ -453,8 +435,6 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 				break;
 		}
 
-		set_priv( priv );
-
 		return PROCAPI_FAILURE;
 	} 
 
@@ -464,8 +444,6 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 			"ProcAPI: Unexpected short read while reading %s.\n", path );
 
 		status = PROCAPI_GARBLED;
-
-		set_priv( priv );
 
 		return PROCAPI_FAILURE;
 	}
@@ -510,8 +488,6 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 				break;
 		}
 
-		set_priv( priv );
-
 		return PROCAPI_FAILURE;
 
 	}
@@ -522,8 +498,6 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 			"ProcAPI: Unexpected short read while reading %s.\n", path );
 
 		status = PROCAPI_GARBLED;
-
-		set_priv( priv );
 
 		return PROCAPI_FAILURE;
 	}
@@ -536,9 +510,6 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 	procRaw.user_time_2 = prusage.pr_utime.tv_nsec;
 	procRaw.sys_time_1 = prusage.pr_stime.tv_sec;
 	procRaw.sys_time_2 = prusage.pr_stime.tv_nsec;
-
-		// reset our privledges
-	set_priv( priv );
 
 	return PROCAPI_SUCCESS;
 }
@@ -724,10 +695,6 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 		// set the sample time
 	procRaw.sample_time = secsSinceEpoch();
 
-		// up our privledges
-	priv_state priv = set_root_priv();
-	
-
 	// read the entry a certain number of times since it appears that linux
 	// often simply does something stupid while reading.
 	sprintf( path, "/proc/%d/stat", pid );
@@ -822,8 +789,6 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 			fp = NULL;
 		}
 
-		set_priv( priv );
-
 		return PROCAPI_FAILURE;
 	}
 
@@ -837,9 +802,6 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 	procRaw.user_time_2 = 0;
 	procRaw.sys_time_2 = 0;
 	
-		// relower our privledges
-	set_priv( priv );
-
 	return PROCAPI_SUCCESS;
 }
 
@@ -854,9 +816,6 @@ ProcAPI::fillProcInfoEnv(piPTR pi)
 	char *env_buffer = NULL;
 	char *env_tmp;
 	int multiplier = 2;
-
-		// up our privledges
-	priv_state priv = set_root_priv();
 
 		// open the environment proc file
 	sprintf( path, "/proc/%d/environ", pi->pid );
@@ -958,9 +917,6 @@ ProcAPI::fillProcInfoEnv(piPTR pi)
 		env_environ = NULL;
 	}
 
-		//relower our permissions
-	set_priv( priv );
-
 	return PROCAPI_SUCCESS;
 }
 
@@ -988,9 +944,9 @@ ProcAPI::checkBootTime(long now)
 		// get uptime_boottime
 		if( (fp = safe_fopen_wrapper("/proc/uptime","r")) ) {
 			double uptime=0;
-			double junk=0;
+			double dummy=0;
 			fgets( s, 256, fp );
-			if (sscanf( s, "%lf %lf", &uptime, &junk ) >= 1) {
+			if (sscanf( s, "%lf %lf", &uptime, &dummy ) >= 1) {
 				// uptime is number of seconds since boottime
 				// convert to nearest time stamp
 				uptime_boottime = (unsigned long)(now - uptime + 0.5);
@@ -1133,9 +1089,6 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 		// set the sample time
 	procRaw.sample_time = secsSinceEpoch();
 
-		// up our privledges
-	priv_state priv = set_root_priv();
-
 		// get the process info
 	struct pst_status buf;
 	if ( pstat_getproc( &buf, sizeof(buf), 0, pid ) < 0 ) {
@@ -1150,8 +1103,6 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 				"ProcAPI: Error in pstat_getproc(%d): %d(%s)\n",
 				 pid, errno, strerror(errno) );
 		}
-
-		set_priv( priv );
 
 		return PROCAPI_FAILURE;
 	}
@@ -1174,9 +1125,6 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 	procRaw.pid		= buf.pst_pid;
 	procRaw.ppid	= buf.pst_ppid;
 	procRaw.owner  	= buf.pst_uid;
-
-		// relower our permissions
-	set_priv( priv );
 
 		// success
 	return PROCAPI_SUCCESS;
@@ -1600,15 +1548,12 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status )
 	pi->user_time 		= (long) (procRaw.user_time / procRaw.object_frequency);
     pi->sys_time  		= (long) (procRaw.sys_time / procRaw.object_frequency);
 
-		// Windows gives us birthday in 100ns ticks since 01/01/1601
-		// (11644473600 seconds before 01/01/1970)
-	const __int64 EPOCH_SHIFT = 11644473600;
 	pi->creation_time 	= (long) (procRaw.creation_time / procRaw.object_frequency - EPOCH_SHIFT);
 	double cpu_time = (double)procRaw.cpu_time / procRaw.object_frequency;
 	double now_secs = (double)procRaw.sample_time / procRaw.object_frequency;
 
 		// calculate the age
-	double age_wrong_scale = procRaw.sample_time - (procRaw.creation_time);
+	double age_wrong_scale = procRaw.sample_time - procRaw.creation_time;
 	pi->age = (long)(age_wrong_scale / procRaw.object_frequency);
 
 			// copy the remainder of the field
@@ -1692,33 +1637,10 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 	}
 	
 	// pid appears to still be around, so get the stats on it
-
-    DWORD dwStatus;  // return status of fn. calls
-
-/* Note to whom it may concern:  we DO NOT need to set_root_priv here!
-   NT makes this stuff available to any old process.  I've left this
-   in and commented out for demonstration purposes, and have removed
-   the rest of the priv stuff from the NT code. */
-//	priv_state priv = set_root_priv();
-
-        // '2' is the 'system' , '230' is 'process'  
-        // I hope these numbers don't change over time... 
-    dwStatus = GetSystemPerfData ( TEXT("230") );
-
-    if( dwStatus != ERROR_SUCCESS ) {
-        dprintf( D_ALWAYS, "ProcAPI: getProcInfo() failed to get "
-				 "performance info.\n");
+	if (GetProcessPerfData() != PROCAPI_SUCCESS) {
 		status = PROCAPI_UNSPECIFIED;
-        return PROCAPI_FAILURE;
-    }
-
-        // somehow we don't have the process data -> panic
-    if( pDataBlock == NULL ) {
-        dprintf( D_ALWAYS, "ProcAPI: getProcInfo() failed to make "
-				 "pDataBlock.\n");
-		status = PROCAPI_UNSPECIFIED;
-        return PROCAPI_FAILURE;
-    }
+		return PROCAPI_FAILURE;
+	}
     
     PPERF_OBJECT_TYPE pThisObject;
     PPERF_INSTANCE_DEFINITION pThisInstance;
@@ -1728,7 +1650,7 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
     pThisObject = firstObject (pDataBlock);
   
     procRaw.sample_time = pThisObject->PerfTime.QuadPart;
-    procRaw.object_frequency  = pThisObject->PerfFreq.QuadPart;
+    procRaw.object_frequency = pThisObject->PerfFreq.QuadPart;
 
     if( !offsets ) {      // If we haven't yet gotten the offsets, grab 'em.
         grabOffsets( pThisObject );
@@ -1784,6 +1706,107 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 
 		// success
     return PROCAPI_SUCCESS;
+}
+
+// the Windows version of buildProcInfos(); since we always pull information about
+// all processes out of HKEY_PERFORMANCE_DATA, this is not much different from
+// what happens above in getProcInfoRaw
+//
+int
+ProcAPI::buildProcInfoList()
+{
+	deallocAllProcInfos();
+
+	if (GetProcessPerfData() != PROCAPI_SUCCESS) {
+		return PROCAPI_FAILURE;
+	}
+
+	// If we haven't yet gotten the offsets, grab 'em.
+	//
+	PPERF_OBJECT_TYPE pThisObject = firstObject(pDataBlock);
+    if( !offsets ) {
+        grabOffsets( pThisObject );
+	}
+	PPERF_INSTANCE_DEFINITION pThisInstance = firstInstance(pThisObject);
+
+	__int64 sampleObjectTime = pThisObject->PerfTime.QuadPart;
+	__int64 objectFrequency  = pThisObject->PerfFreq.QuadPart;
+
+    // loop through each instance in data
+	//
+	DWORD ctrblk;
+    int instanceNum = 0;
+    while( instanceNum < pThisObject->NumInstances ) {
+
+		procInfo* pi;
+
+        ctrblk = ((DWORD)pThisInstance) + pThisInstance->ByteLength;
+
+		LARGE_INTEGER elt = *(LARGE_INTEGER*)(ctrblk + offsets->elapsed);
+        LARGE_INTEGER pt = *(LARGE_INTEGER*)(ctrblk + offsets->pctcpu);
+        LARGE_INTEGER ut = *(LARGE_INTEGER*)(ctrblk + offsets->utime);
+        LARGE_INTEGER st = *(LARGE_INTEGER*)(ctrblk + offsets->stime);
+
+		pi = NULL;
+		initpi(pi);
+
+        pi->pid = *(pid_t*)(ctrblk + offsets->procid);
+		pi->ppid = ntSysInfo.GetParentPID(pi->pid);
+
+        pi->imgsize = *(long*)(ctrblk + offsets->imgsize) / 1024;
+        pi->rssize = *(long*)(ctrblk + offsets->rssize) / 1024;
+
+		pi->user_time = (long)(ut.QuadPart / objectFrequency);
+		pi->sys_time = (long) (st.QuadPart / objectFrequency);
+
+		// I do not understand why someting called "elapsed time" actually returns
+		// creation time ?!?!
+		pi->birthday = elt.QuadPart;
+		pi->creation_time 	= (long)(pi->birthday / objectFrequency - EPOCH_SHIFT);
+
+		pi->age = (long)((sampleObjectTime - pi->birthday) / objectFrequency);
+
+                        /* We figure out the cpu usage (a total counter, not a
+                           percent!) and the total page faults here. */
+		double cpu = LI_to_double( pt ) / objectFrequency;
+		long faults = *(long*)(ctrblk + offsets->faults);
+
+		/* figure out the %cpu and %faults */
+		do_usage_sampling (pi, cpu, faults, 0, sampleObjectTime / objectFrequency);
+
+		pi->next = allProcInfos;
+		allProcInfos = pi;
+
+		pThisInstance = nextInstance( pThisInstance );
+		instanceNum++;
+	}
+
+	return PROCAPI_SUCCESS;
+}
+
+int
+ProcAPI::GetProcessPerfData()
+{
+	DWORD dwStatus;  // return status of fn. calls
+
+        // '2' is the 'system' , '230' is 'process'  
+        // I hope these numbers don't change over time... 
+    dwStatus = GetSystemPerfData ( TEXT("230") );
+
+    if( dwStatus != ERROR_SUCCESS ) {
+        dprintf( D_ALWAYS,
+		         "ProcAPI: failed to get process data from registry\n");
+        return PROCAPI_FAILURE;
+    }
+
+        // somehow we don't have the process data -> panic
+    if( pDataBlock == NULL ) {
+        dprintf( D_ALWAYS,
+		         "ProcAPI: failed to make pDataBlock.\n");
+        return PROCAPI_FAILURE;
+    }
+
+	return PROCAPI_SUCCESS;
 }
 
 #elif defined(AIX)
@@ -2093,655 +2116,42 @@ ProcAPI::do_usage_sampling( piPTR& pi,
 	
 }
 
-#ifndef WIN32
-/* getProcSetInfo returns the sum of the procInfo structs for a set
-   of pids.  These pids are specified by an array of pids ('pids') that
-   has 'numpids' elements. */
-int
-ProcAPI::getProcSetInfo( pid_t *pids, int numpids, piPTR& pi, int &status ) 
+procInfo*
+ProcAPI::getProcInfoList()
 {
-	piPTR temp = NULL;
-	int val = 0;
-	priv_state priv;
-	int info_status;
-	int fatal_failure = FALSE;
-
-	// This *could* allocate memory and make pi point to it if 
-	// pi == NULL. It is up to the caller to get rid of it.
-	initpi ( pi );
-
-	status = PROCAPI_OK;
-
-	if( numpids <= 0 || pids == NULL ) {
-			// We were passed nothing, so there's no work to do and we
-			// should return immediately before we dereference
-			// something we shouldn't be touching.
-		return PROCAPI_SUCCESS;
-	}
-
-	priv = set_root_priv();
-
-	for( int i=0; i<numpids; i++ ) {
-
-		val = getProcInfo( pids[i], temp, info_status );
-
-		switch( val ) {
-		
-			case PROCAPI_SUCCESS:
-
-				pi->imgsize   += temp->imgsize;
-				pi->rssize    += temp->rssize;
-				pi->minfault  += temp->minfault;
-				pi->majfault  += temp->majfault;
-				pi->user_time += temp->user_time;
-				pi->sys_time  += temp->sys_time;
-				pi->cpuusage  += temp->cpuusage;
-				if( temp->age > pi->age ) {
-					pi->age = temp->age;
-				}
-
-				break;
-
-			case PROCAPI_FAILURE:
-
-				switch(info_status) {
-
-					case PROCAPI_NOPID:
-						/* We warn about this error, but ignore it since if 
-							this pid isn't around, we don't compute any
-							usage information for it. */
-
-						dprintf( D_FULLDEBUG, 	
-								"ProcAPI::getProcSetInfo(): Pid %d does "
-					 			"not exist, ignoring.\n", pids[i] );
-
-						break;
-
-					case PROCAPI_PERM:
-						/* The known methods why can happen are that 
-							getPidFamily() returned something bogus, or
-							a race condition is hit that signifies a
-							situation between when a pid was alive in the 
-							pidfamily array when this function was entered,
-							but exited and was replaced by another pid owned
-							by someone else before this for loop got to it
-							in the array. So, we'll warn on it, but it won't
-							be a fatal error. */
-
-						dprintf( D_FULLDEBUG, 
-								"ProcAPI::getProcSetInfo(): Suspicious "
-								"permission error getting info for pid %lu.\n",
-								(unsigned long)pids[i] );
-						break;
-
-					default:
-						dprintf( D_ALWAYS, 
-							"ProcAPI::getProcSetInfo(): Unspecified return "
-					 		"status (%d) from a failed getProcInfo(%lu)\n", 
-							info_status, (unsigned long)pids[i] );
-
-						fatal_failure = TRUE;
-
-					break;
-				}
-			break;
-
-			default:
-				EXCEPT("ProcAPI::getProcSetInfo(): Invalid return code. "
-						"Programmer error!");
-				break;
-		}
-	}
-
-	if( temp ) { 
-		delete temp;
-	}
-
-	set_priv( priv );
-
-	if (fatal_failure == TRUE) {
-		// Don't really know how to group the various failures of the above code
-		status = PROCAPI_UNSPECIFIED;
-		return PROCAPI_FAILURE;
-	}
-
-	return PROCAPI_SUCCESS;
-}
-#endif
-
-#ifdef WIN32
-// There is a much better way to do this in WIN32...we get all instances
-// of all processes at once anyway...
-int
-ProcAPI::getProcSetInfo( pid_t *pids, int numpids, piPTR& pi, int &status ) {
-
-	// This *could* allocate memory and make pi point to it if 
-	// pi == NULL. It is up to the caller to get rid of it.
-    initpi( pi );
-
-	status = PROCAPI_OK;
-
-	if( numpids <= 0 || pids == NULL ) {
-			// We were passed nothing, so there's no work to do and we
-			// should return immediately before we dereference
-			// something we shouldn't be touching.
-		return PROCAPI_SUCCESS;
-	}
-
-	DWORD dwStatus;  // return status of fn. calls
-
-        // '2' is the 'system' , '230' is 'process'  
-        // I hope these numbers don't change over time... 
-    dwStatus = GetSystemPerfData( TEXT("230") );
-    
-    if( dwStatus != ERROR_SUCCESS ) {
-        dprintf( D_ALWAYS, "ProcAPI::getProcSetInfo failed to get "
-				 "performance info.\n");
-
-		status = PROCAPI_UNSPECIFIED;
-        return PROCAPI_FAILURE;
-    }
-
-        // somehow we don't have the process data -> panic
-    if( pDataBlock == NULL ) {
-        dprintf( D_ALWAYS, "ProcAPI::getProcSetInfo failed to make "
-				 "pDataBlock.\n");
-
-		status = PROCAPI_UNSPECIFIED;
-        return PROCAPI_FAILURE;
-    }
-    
-    PPERF_OBJECT_TYPE pThisObject = firstObject (pDataBlock);
-
-    if( !offsets ) {	// If we haven't yet gotten the offsets, grab 'em.
-        grabOffsets( pThisObject );
-    }
-
-        // create local copy of pids.
-	pid_t *localpids = (pid_t*) malloc ( sizeof (pid_t) * numpids );
-	if (localpids == NULL) {
-		EXCEPT( "ProcAPI:getProcSetInfo: Out of Memory!");
-	}
-
-	for( int i=0 ; i<numpids ; i++ ) {
-		localpids[i] = pids[i];
-	}
-	
-	multiInfo( localpids, numpids, pi );
-
-	free(localpids);
-
-	return PROCAPI_SUCCESS;
-}
-
-
-int
-ProcAPI::getFamilyInfo ( pid_t daddypid, piPTR& pi, PidEnvID *penvid,
-			int &status ) 
-{
-
-	status = PROCAPI_OK;
-
-	// This *could* allocate memory and make pi point to it if 
-	// pi == NULL. It is up to the caller to get rid of it.
-    initpi ( pi );
-
-	if ( daddypid == 0 ) {
-		return PROCAPI_SUCCESS;
-	}
-	
-	DWORD dwStatus;  // return status of fn. calls
-
-		// '2' is the 'system' , '230' is 'process'  
-        // I hope these numbers don't change over time... 
-    dwStatus = GetSystemPerfData ( TEXT("230") );
-    
-    if ( dwStatus != ERROR_SUCCESS ) {
-        dprintf( D_ALWAYS, "ProcAPI::getProcSetInfo failed to get "
-				 "performance info.\n");
-		status = PROCAPI_UNSPECIFIED;
-        return PROCAPI_FAILURE;
-    }
-
-        // somehow we don't have the process data -> panic
-    if ( pDataBlock == NULL ) {
-        dprintf( D_ALWAYS, "ProcAPI::getProcSetInfo failed to make "
-				 "pDataBlock.\n");
-		status = PROCAPI_UNSPECIFIED;
-        return PROCAPI_FAILURE;
-    }
-    
-    PPERF_OBJECT_TYPE pThisObject = firstObject (pDataBlock);
-
-    if ( !offsets )      // If we haven't yet gotten the offsets, grab 'em.
-        grabOffsets( pThisObject );
-    
-	pid_t *allpids;
-	pid_t *familypids;
-	int numpids, familysize;
-
-	// allpids gets allocated and filled in with pids.  numpids also returned.
-	getAllPids( allpids, numpids );
-
-	// returns the familypids resulting from the daddypid
-	makeFamily( daddypid, penvid, allpids, numpids, familypids, familysize );
-
-	multiInfo( familypids, familysize, pi );
-
-	delete [] allpids;
-	delete [] familypids;
-
-	return PROCAPI_SUCCESS;
-}
-
-int
-ProcAPI::getPidFamily( pid_t daddypid, PidEnvID *penvid, ExtArray<pid_t>& pidFamily, 
-	int &status ) 
-{
-
-	status = PROCAPI_FAMILY_ALL;
-
-	if ( daddypid == 0 ) {
-		pidFamily[0] = 0;
-		return PROCAPI_SUCCESS;
-	}
-
-	DWORD dwStatus;  // return status of fn. calls
-
-        // '2' is the 'system' , '230' is 'process'  
-        // I hope these numbers don't change over time... 
-    dwStatus = GetSystemPerfData ( TEXT("230") );
-    
-	if ( dwStatus != ERROR_SUCCESS ) {
-        dprintf( D_ALWAYS, 
-				 "ProcAPI::getProcSetInfo failed to get performance info.\n");
-		status = PROCAPI_UNSPECIFIED;
-        return PROCAPI_FAILURE;
-    }
-
-        // somehow we don't have the process data -> panic
-    if ( pDataBlock == NULL ) {
-        dprintf( D_ALWAYS, 
-				 "ProcAPI::getProcSetInfo failed to make pDataBlock.\n");
-		status = PROCAPI_UNSPECIFIED;
-        return PROCAPI_FAILURE;
-    }
-    
-    PPERF_OBJECT_TYPE pThisObject = firstObject (pDataBlock);
-
-    if ( !offsets )      // If we haven't yet gotten the offsets, grab 'em.
-        grabOffsets( pThisObject );
-    
-	pid_t *allpids;
-	pid_t *familypids;
-	int numpids, familysize;
-
-	// allpids gets allocated and filled in with pids.  numpids also returned.
-	getAllPids( allpids, numpids );
-
-	// returns the familypids resulting from the daddypid
-	makeFamily( daddypid, penvid, allpids, numpids, familypids, familysize );
-	
-	for ( int q=0 ; q<familysize ; q++ ) {
-		pidFamily[q] = familypids[q];
-	}
-
-	pidFamily[familysize] = 0;
-
-	delete [] allpids;
-	delete [] familypids;
-
-	return PROCAPI_SUCCESS;
-}
-
-void
-ProcAPI::makeFamily( pid_t dadpid, PidEnvID *penvid, pid_t *allpids, 
-		int numpids, pid_t* &fampids, int &famsize ) 
-{
-
-	pid_t *parentpids = new pid_t[numpids];
-	fampids = new pid_t[numpids];  // just might include everyone...
-
-	for( int i=0 ; i<numpids ; i++ ) {
-		parentpids[i] = ntSysInfo.GetParentPID( allpids[i] );
-	}
-
-	famsize = 1;
-	fampids[0] = dadpid;
-	int numadditions = 1;
-
-	CSysinfo csi;
-
-	procInfo pi;
-
-	while( numadditions > 0 ) {
-		numadditions = 0;
-		for( int j=0; j<numpids; j++ ) {
-			
-			// only need to initialize these aspects of the procInfo for 
-			// isinfamily().
-			pi.ppid = parentpids[j];
-			pi.pid = allpids[j];
-			pidenvid_init(&pi.penvid);
-
-			if( isinfamily(fampids, famsize, penvid, &pi) ) {
-
-				// now make sure the parent pid is older than its child
-				if (csi.ComparePidAge(allpids[j], parentpids[j]) == -1 ) {
-
-					dprintf(D_FULLDEBUG, "ProcAPI: pid %d is older than "
-							"its (presumed) parent (%d), so we're leaving it "
-						   "out.\n", allpids[j], parentpids[j]);	
-
-				} else { 
-				
-					fampids[famsize] = allpids[j];
-					parentpids[j] = 0;
-					allpids[j] = 0;
-					famsize++;
-					numadditions++;
-				}
-			}
-		}
-	}
-	delete [] parentpids;
-}
-
-// allocate space for pids and fill in.
-void
-ProcAPI::getAllPids( pid_t* &pids, int &numpids ) {
-
-    PPERF_OBJECT_TYPE pThisObject = firstObject (pDataBlock);
-    PPERF_INSTANCE_DEFINITION pThisInstance = firstInstance(pThisObject);
-	numpids = pThisObject->NumInstances;
-	pids = new pid_t[numpids];
-	DWORD ctrblk;
-		
-	for( int i=0 ; i<numpids ; i++ ) {
-        ctrblk = ((DWORD)pThisInstance) + pThisInstance->ByteLength;
-        pids[i] = (pid_t) *((pid_t*)(ctrblk + offsets->procid));
-        pThisInstance = nextInstance(pThisInstance);        
-	}
-}
-
-
-// We assume that the pDataBlock and offsets are all set up, and we have a
-// set of pids (pidslist) to get info on.  Totals returned in pi.
-int
-ProcAPI::multiInfo( pid_t *pidlist, int numpids, piPTR &pi ) {
-
-    PPERF_OBJECT_TYPE pThisObject = firstObject (pDataBlock);
-    PPERF_INSTANCE_DEFINITION pThisInstance = firstInstance(pThisObject);
-
-    double sampleObjectTime = LI_to_double ( pThisObject->PerfTime );
-    double objectFrequency  = LI_to_double ( pThisObject->PerfFreq );
-
-		// at this point we're all set to march through the data block to find
-        // the pids that we want
-    DWORD ctrblk;
-	int instanceNum = 0;
-    pid_t thispid;
-    
-	pi->ppid = -1;  // not possible for a set...
-	pi->minfault  = 0;  // not supported by NT; all faults lumped into major.
-	long maxage = 0;
-	long total_faults = 0, faults = 0;
-	double total_cpu = 0.0, cpu = 0.0;
-
-	// loop through each instance in data, checking to see if on list
-
-    while( instanceNum < pThisObject->NumInstances ) {
-        
-        ctrblk = ((DWORD)pThisInstance) + pThisInstance->ByteLength;
-        thispid = (pid_t) *((pid_t*)(ctrblk + offsets->procid));
-
-        if( isinlist(thispid, pidlist, numpids) != -1 ) {
-
-            LARGE_INTEGER elt= (LARGE_INTEGER) 
-                *((LARGE_INTEGER*)(ctrblk + offsets->elapsed));
-			LARGE_INTEGER pt = (LARGE_INTEGER) 
-                *((LARGE_INTEGER*)(ctrblk + offsets->pctcpu));
-			LARGE_INTEGER ut = (LARGE_INTEGER) 
-                *((LARGE_INTEGER*)(ctrblk + offsets->utime));
-			LARGE_INTEGER st = (LARGE_INTEGER) 
-                *((LARGE_INTEGER*)(ctrblk + offsets->stime));
-
-			pi->pid      =  thispid;
-			pi->imgsize  += (long) (*((long*)(ctrblk + offsets->imgsize ))) 
-				/ 1024;
-			pi->rssize   += (long) (*((long*)(ctrblk + offsets->rssize  ))) 
-				/ 1024;
-			pi->user_time+= (long) (LI_to_double( ut ) / objectFrequency);
-			pi->sys_time += (long) (LI_to_double( st ) / objectFrequency);
-			/* we put the actual ag in here for do_usage_sampling
-			   purposes, and then set it to the max at the end */
-			pi->age = (long) ((sampleObjectTime - LI_to_double ( elt )) 
-                              / objectFrequency);
-			if ( pi->age > maxage ) {
-				maxage = pi->age;
-			}
-				/* Creation time of this process, used in identification. */
-			pi->creation_time = (long) ((sampleObjectTime/objectFrequency) - 
-									((sampleObjectTime - LI_to_double(elt)) /
-									 objectFrequency) ); 
-
-			/* We figure out the cpu usage (a total counter, not a 
-			   percent!) and the total page faults here. */
-            cpu = LI_to_double( pt ) / objectFrequency;
-			faults = (long) *((long*)(ctrblk + offsets->faults  ));
-
-			/* for this pid, figure out the %cpu and %faults */
-			do_usage_sampling ( pi, cpu, faults, 0, 
-				sampleObjectTime/objectFrequency );
-
-			/* stuff these percentages back into a running total */
-			total_cpu += pi->cpuusage;
-			total_faults += pi->majfault;
-			/* ready for use by next pid... */
-			pi->cpuusage = 0.0;
-			pi->majfault = 0;
-		}
-
-    // go to the next one...
-		instanceNum++;
-        pThisInstance = nextInstance( pThisInstance );        
-    }    
-
-	pi->pid = 0;    // It's the sum of many pids...
-	pi->age = maxage;  // age is simply the max of the group.  
-	pi->creation_time = (long) ((sampleObjectTime/objectFrequency) - maxage );
-	pi->cpuusage = total_cpu;   // put our totals in here.
-	pi->majfault = total_faults;  // ditto.
-    return 0;
-}
-
-#endif // WIN32
-
-#ifndef WIN32
-
-/* This function returns a list of pids that are 'descendents' of that pid.
-     I call this a 'family' of pids.  This list is put into pidFamily, which
-     I assume is an already-allocated array.  This array will be terminated
-     with a 0 for a pid at its end.  A -1 is returned on failure, 0 otherwise.
-*/
-int
-ProcAPI::getPidFamily( pid_t pid, PidEnvID *penvid, ExtArray<pid_t>& pidFamily, 
-	int &status )
-{
-	int fam_status;
-	int rval;
-
-#ifndef HPUX
+#if !defined(WIN32) && !defined(HPUX) && !defined(AIX)
 	buildPidList();
 #endif
 
-	buildProcInfoList();
-
-	rval = buildFamily(pid, penvid, fam_status);
-
-	switch (rval)
-	{
-		case PROCAPI_SUCCESS:
-			switch (fam_status)
-			{
-				case PROCAPI_FAMILY_ALL:
-					status = PROCAPI_FAMILY_ALL;
-					break;
-
-				case PROCAPI_FAMILY_SOME:
-					status = PROCAPI_FAMILY_SOME;
-					break;
-
-				default:
-					/* This shouldn't happen, but if it does */
-					EXCEPT( "ProcAPI::buildFamily() returned an "
-						"incorrect status on success! Programmer error!\n" );
-					break;
-			}
-			
-			break;
-
-		case PROCAPI_FAILURE:
-
-			// no family at all found, clean up and get out 
-
-			deallocPidList();
-			deallocAllProcInfos();
-			deallocProcFamily();
-
-			status = PROCAPI_FAMILY_NONE;
-			return PROCAPI_FAILURE;
-
-			break;
-
-		default:
-			break;
+	if (buildProcInfoList() != PROCAPI_SUCCESS) {
+		dprintf(D_ALWAYS,
+		        "ProcAPI: error retrieving list of process data\n");
+		deallocAllProcInfos();
 	}
 
-	piPTR current = procFamily;  // get descendents and elder pid.
-	int i=0;
-	while( (current != NULL) ) {
-		pidFamily[i] = current->pid;
-		i++;
-		current = current->next;
-	}
-  
-	pidFamily[i] = 0;
-
-		// deallocate all the lists of stuff...don't leave stale info
-		// lying around. 
+#if !defined(WIN32) && !defined(HPUX) && !defined(AIX)
 	deallocPidList();
-	deallocAllProcInfos();
-	deallocProcFamily();
-
-	return PROCAPI_SUCCESS;
-}
-
-/* This is the "given a pid, return information on that pid + all of its
-   children" function.  Actually, this returns information on all of its
-   _decendants_, in case the target pid forks a child that forks a child....
-
-   Every OS EXCEPT for HPUX uses the following method:
-
-   This function uses getProcInfo() so all the OS-specific stuff is hidden
-   there, not here.  First, buildpidlist() gets all the pids in the system.
-   Then, the linked list 'allProcInfos' is built using that information.
-
-   Lastly, the 'procFamily' is built by scanning 'allProcInfos' repeatedly.
-*/
-int
-ProcAPI::getFamilyInfo( pid_t daddypid, piPTR& pi, PidEnvID *penvid, 
-		int &status ) 
-{
-	int fam_status;
-	int rval;
-
-	// assume I'll find everything I was asked for.
-	status = PROCAPI_FAMILY_ALL;
-
-#ifndef HPUX        // everyone except HPUX needs a pidlist built.
-	buildPidList();
 #endif
 
-	buildProcInfoList();  // HPUX has its own version of this, too.
+	procInfo* ret = allProcInfos;
+	allProcInfos = NULL;
 
-	rval = buildFamily(daddypid, penvid, fam_status);
-	switch (rval)
-	{
-		case PROCAPI_SUCCESS:
-			switch (fam_status)
-			{
-				case PROCAPI_FAMILY_ALL:
-					status = PROCAPI_FAMILY_ALL;
-					break;
-
-				case PROCAPI_FAMILY_SOME:
-					status = PROCAPI_FAMILY_SOME;
-					break;
-
-				default:
-					/* This shouldn't happen, but if it does */
-					EXCEPT( "ProcAPI::getFamilyInfo() returned an "
-						"incorrect status on success! Programmer error!\n" );
-					break;
-			}
-			
-			break;
-
-		case PROCAPI_FAILURE:
-
-			// no family at all found, clean up and get out 
-
-			deallocPidList();
-			deallocAllProcInfos();
-			deallocProcFamily();
-
-			status = PROCAPI_FAMILY_NONE;
-			return PROCAPI_FAILURE;
-
-			break;
-
-		default:
-			/* nothing to do */
-			break;
-	}
-
-		// now, procFamily points to a list of the procInfos in that
-		// family. 
-	// This *could* allocate memory and make pi point to it if 
-	// pi == NULL. It is up to the caller to get rid of it.
-	initpi( pi );
-
-	pi->pid      = procFamily->pid;   // overall pid is this pid.
-	pi->ppid     = procFamily->ppid;  // overall parent is parent's parent
-	pi->age      = procFamily->age;   // let age simply be the age of the elder
-
-	piPTR current = procFamily;
-
-	while( current != NULL ) {
-
-		pi->imgsize   += current->imgsize;
-		pi->rssize    += current->rssize;
-		pi->minfault  += current->minfault;
-		pi->majfault  += current->majfault;
-		pi->user_time += current->user_time;
-		pi->sys_time  += current->sys_time;
-		pi->cpuusage  += current->cpuusage;
-		current = current->next;
-	}
-
-	pi->next = NULL;
-
-		// deallocate all the lists of stuff...don't leave stale info
-		// lying around. 
-	deallocPidList();
-	deallocAllProcInfos();
-	deallocProcFamily();
-
-	return PROCAPI_SUCCESS;
+	return ret;
 }
 
-#endif // not defined WIN32
+void
+ProcAPI::freeProcInfoList(procInfo* pi)
+{
+	if( pi != NULL ) {
+		piPTR prev;
+		piPTR temp = pi;
+		while( temp != NULL ) {
+			prev = temp;
+			temp = temp->next;
+			delete prev;
+		}
+	}
+}
 
 /* initpi is a simple function that sets everything in a procInfo
    structure to a default value.  */
@@ -2761,7 +2171,9 @@ ProcAPI::initpi ( piPTR& pi ) {
 	pi->pid      = -1;
 	pi->ppid     = -1;
 	pi->next     = NULL;
+#if !defined(WIN32)
 	pi->owner    = 0;
+#endif
 
 	pidenvid_init(&pi->penvid);
 }
@@ -2771,7 +2183,7 @@ ProcAPI::initProcInfoRaw(procInfoRaw& procRaw){
 	memset(&procRaw, 0, sizeof(procInfoRaw));
 }
 
-#ifndef WIN32  // Doesn't come close to working in WIN32...sigh.
+#ifndef WIN32
 
 /* This function returns the next pid in the pidlist.  That pid is then 
    removed from the pidList.  A -1 is returned when there are no more pids.
@@ -2810,7 +2222,6 @@ ProcAPI::buildPidList() {
 	struct dirent *direntp;
 	pidlistPTR current;
 	pidlistPTR temp;
-	priv_state priv = set_root_priv();
 
 		// make a header node for the pidList:
 	deallocPidList();
@@ -2834,15 +2245,11 @@ ProcAPI::buildPidList() {
 		pidList = pidList->next;
 		delete temp;           // remove header node.
 
-		set_priv( priv );
-
 		return PROCAPI_SUCCESS;
 	} 
 
 	delete pidList;        // remove header node.
 	pidList = NULL;
-
-	set_priv( priv );
 
 	return PROCAPI_FAILURE;
 }
@@ -2858,8 +2265,6 @@ ProcAPI::buildPidList() {
 
 	pidlistPTR current;
 	pidlistPTR temp;
-
-	priv_state priv = set_root_priv();
 
 		// make a header node for the pidList:
 	deallocPidList();
@@ -2883,7 +2288,6 @@ ProcAPI::buildPidList() {
 		//
 	if (sysctl(mib, 4, NULL, &bufSize, NULL, 0) < 0) {
 		 //perror("Failure calling sysctl");
-		set_priv( priv );
 		return PROCAPI_FAILURE;
 	}	
 
@@ -2892,7 +2296,6 @@ ProcAPI::buildPidList() {
 	origBufSize = bufSize;
 	if ( sysctl(mib, 4, kp, &bufSize, NULL, 0) < 0) {
 		free(kprocbuf);
-		set_priv( priv );
 		return PROCAPI_FAILURE;
 	}
 
@@ -2912,8 +2315,6 @@ ProcAPI::buildPidList() {
 
 	free(kprocbuf);
 
-	set_priv( priv );
-
 	return PROCAPI_SUCCESS;
 }
 
@@ -2925,8 +2326,6 @@ ProcAPI::buildPidList() {
 
 	pidlistPTR current;
 	pidlistPTR temp;
-
-	priv_state priv = set_root_priv();
 
 		// make a header node for the pidList:
 	deallocPidList();
@@ -2946,7 +2345,6 @@ ProcAPI::buildPidList() {
 	mib[3] = 0;
 	if (sysctl(mib, 3, NULL, &bufSize, NULL, 0) < 0) {
 		 //perror("Failure calling sysctl");
-		set_priv( priv );
 		return PROCAPI_FAILURE;
 	}	
 
@@ -2955,7 +2353,6 @@ ProcAPI::buildPidList() {
 	origBufSize = bufSize;
 	if ( sysctl(mib, 3, kp, &bufSize, NULL, 0) < 0) {
 		free(kprocbuf);
-		set_priv( priv );
 		return PROCAPI_FAILURE;
 	}
 
@@ -2978,8 +2375,6 @@ ProcAPI::buildPidList() {
 	delete temp;           // remove header node.
 
 	free(kprocbuf);
-
-	set_priv( priv );
 
 	return PROCAPI_SUCCESS;
 }
@@ -3169,167 +2564,6 @@ ProcAPI::buildProcInfoList() {
 }
 #endif
 
-/* buildFamily takes a list of procInfo structs pointed to by 
-   allProcInfos and an ancestor pid 'daddypid' and builds a list
-   of all procInfo structs and points 'procFamily' to it.
-*/
-int
-ProcAPI::buildFamily( pid_t daddypid, PidEnvID *penvid, int &status ) {
-
-		// array of pids in family.  Size # pids.
-	pid_t *familypids;
-	int familysize = 0;
-	int numprocs;
-
-	// assume that I'm going to find the daddy and all of the descendants...
-	status = PROCAPI_FAMILY_ALL;
-
-	if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_PROCFAMILY) ) {
-		dprintf( D_FULLDEBUG, 
-				 "ProcAPI::buildFamily() called w/ parent: %d\n", daddypid );
-	}
-
-	numprocs = getNumProcs();
-	deallocProcFamily();
-	procFamily = NULL;
-
-		// make an array of size # processes for quick lookup of pids in family
-	familypids = new pid_t[numprocs];
-
-		// get the daddypid's procInfo struct
-	piPTR pred, current, familyend;
-
-	// find the daddy pid out of the linked list of all of the processes
-	current = allProcInfos;
-	while( (current != NULL) && (current->pid != daddypid) ) {
-		pred = current;
-		current = current->next;
-	}
-
-	if (current != NULL) {
-		dprintf( D_FULLDEBUG, 
-			"ProcAPI::buildFamily() Found daddypid on the system: %u\n", 
-			current->pid );
-	}
-
-	// if the daddy pid isn't in the list, then check and see if there are any
-	// children of that pid. If so, pick one to be the conceptual daddy of the
-	// rest of them regardless of actual parentage.
-	if( current == NULL ) {
-		current = allProcInfos;
-		while( (current != NULL) && 
-				(pidenvid_match(penvid, &current->penvid) != PIDENVID_MATCH))
-		{
-			pred = current;
-			current = current->next;
-		}
-
-		if (current != NULL) {
-
-			// found something that was most likely a descendant of daddypid
-			status = PROCAPI_FAMILY_SOME;
-
-			dprintf(D_FULLDEBUG, 
-				"ProcAPI::buildFamily() Parent pid %u is gone. "
-				"Found descendant %u via ancestor environment "
-				"tracking and assigning as new \"parent\".\n", 
-				daddypid, current->pid);
-		}
-	}
-
-	// if we couldn't find the daddy pid we were originally looking for, or 
-	// any children of said pid (which are members of the daddy pid's family
-	// according to the ancestor environment variables condor supplies)
-	// then truly give up.
-	if( current == NULL ) {
-
-		delete [] familypids;
-
-		dprintf( D_FULLDEBUG, "ProcAPI::buildFamily failed: parent %d "
-				 "not found on system.\n", daddypid );
-
-		status = PROCAPI_FAMILY_NONE;
-
-		return PROCAPI_FAILURE;
-	}
-
-	// In the case where we truly found the daddy pid, then procFamily will
-	// point to it. In the case where we found a child of the daddy pid, then
-	// that (arbitrarily chosen) child will become the daddy pid in spirit.
-
-		// special case: daddy is first on list:
-	if( allProcInfos == current ) {
-		procFamily = allProcInfos;
-		allProcInfos = allProcInfos->next;
-		procFamily->next = NULL;
-	} else {  // regular case: daddy somewhere in middle
-		procFamily = current;
-		pred->next = current->next;
-		procFamily->next = NULL;
-	}
-
-	// take whatever we found as a daddy pid proc structure and use that pid.
-	// the caller expects the oth index of this array to contain the daddy pid.
-	familypids[0] = current->pid;
-	familyend = procFamily;
-	familysize = 1;
-
-		// now, procFamily points at the procInfo struct for the
-		// ancestral pid ( daddypid ).  Its pid is the 0th element in
-		// familypids, and familyend will always point to the end of
-		// the procFamily list.
-
-	int numadditions = 1;
-  
-	while( numadditions != 0 ) {
-		numadditions = 0;
-		current = allProcInfos;
-		while( current != NULL ) {
-			if( isinfamily(familypids, familysize, penvid, current) ) {
-				familypids[familysize] = current->pid;
-				familysize++;
-
-				familyend->next = current;
-
-				if( current != allProcInfos ) {
-					current = current->next;
-					pred->next = current;
-				} else {
-					current = allProcInfos = allProcInfos->next;          
-				}
-
-				familyend = familyend->next;
-				familyend->next = NULL;
-				
-				numadditions++;
-
-			} else {
-				pred = current;
-				current = current->next;    
-			}
-		}
-	}
-	delete [] familypids;
-
-	return PROCAPI_SUCCESS;
-}
-
-/* This function returns the nuber of processes that allProcInfos 
-   points at.  It is assumed that allProcInfos points to all the 
-   processes in the system ( that buildProcInfoList has been called )
-*/
-int
-ProcAPI::getNumProcs() {
-	int nump;
-	piPTR temp;
-	temp = allProcInfos;
-	for( nump=0; temp != NULL; nump++ ) {
-		temp = temp->next;
-	}
-	return nump;
-}
-
-
 /* sec_since_epoch() gets the number of seconds since the 
    epoch.  Used to find the age of a process.  It uses the 
    time() function.  (Which is suprisingly supported by everyone!)
@@ -3345,40 +2579,6 @@ ProcAPI::convertTimeval ( struct timeval t ) {
 	return (double) t.tv_sec + ( t.tv_usec * 1.0e-6 );
 }
 #endif // not defined WIN32...sigh.
-
-// Hey, here are two functions that can be used by both win32 and unix....
-int
-ProcAPI::isinfamily( pid_t *fam, int size, PidEnvID *penvid, piPTR child ) 
-{
-	for( int i=0; i<size; i++ ) {
-		// if the child's parent pid is one of the values in the family, then 
-		// the child is actually a child of one of the pids in the fam array.
-		if( child->ppid == fam[i] ) {
-
-			if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_PROCFAMILY) ) {
-				dprintf( D_FULLDEBUG, "Pid %u is in family of %u\n", 
-					child->pid, fam[i] );
-			}
-
-			return true;
-		}
-
-		// check to see if the daddy's ancestor pids are a subset of the
-		// child's, if so, then the child is a descendent of the daddy pid.
-		if (pidenvid_match(penvid, &child->penvid) == PIDENVID_MATCH) {
-
-			if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_PROCFAMILY) ) {
-				dprintf( D_FULLDEBUG, 
-					"Pid %u is predicted to be in family of %u\n", 
-					child->pid, fam[i] );
-			}
-
-			return true;
-		}
-	}
-
-	return false;
-}
 
 void
 ProcAPI::printProcInfo( piPTR pi ) {
@@ -3433,38 +2633,17 @@ ProcAPI::deallocPidList() {
 	}
 }
 
-void 
-ProcAPI::deallocAllProcInfos() {
-	if( allProcInfos != NULL ) {
-		piPTR prev;
-		piPTR temp = allProcInfos;
-		while( temp != NULL ) {
-			prev = temp;
-			temp = temp->next;
-			delete prev;
-		}
-		allProcInfos = NULL;
-	}
-}
-
-void
-ProcAPI::deallocProcFamily() {
-	if( procFamily != NULL ) {
-		piPTR prev;
-		piPTR temp = procFamily;
-		while( temp != NULL ) {
-			prev = temp;
-			temp = temp->next;
-			delete prev;
-		}
-		procFamily = NULL;
-	}
-}
-
 #endif // not defined WIN32
 
+void 
+ProcAPI::deallocAllProcInfos() {
+
+	freeProcInfoList(allProcInfos);
+	allProcInfos = NULL;
+}
+
 int
-hashFunc( const pid_t& pid, int numbuckets ) {
+pidHashFunc( const pid_t& pid, int numbuckets ) {
 	return pid % numbuckets;   
 }
 
@@ -3572,26 +2751,6 @@ void ProcAPI::grabOffsets ( PPERF_OBJECT_TYPE pThisObject ) {
     offsets->procid = pThisCounter->CounterOffset;   // process id
 }
 
-
-int ProcAPI::isinlist( pid_t pid, pid_t *pidlist, int numpids ) {
-	bool found = false;
-	int i = 0;
-    
-	while ( ( !found ) && ( i < numpids ) ) {
-		if ( pidlist[i] == pid )
-			found = true;
-		else
-            i++;
-	}
-    
-	if ( !found ) {
-		return -1;
-	}
-	else {
-		return i;
-	}
-}
-
 /* This function exists to convert a LARGE_INTEGER into a double.  This is
    Needed because several numbers returned by my performance monitoring stuff
    are in the LARGE_INTEGER format, which is a struct of two longs, the LowPart
@@ -3661,184 +2820,6 @@ DWORD ProcAPI::GetSystemPerfData ( LPTSTR pValue )
   }
 }
 #endif // WIN32
-
-int
-ProcAPI::getPidFamilyByLogin( const char *searchLogin, ExtArray<pid_t>& pidFamily )
-{
-#ifndef WIN32
-
-	// first, get the Login's uid, since that's what's stored in
-	// the ProcInfo structure.
-	ASSERT(searchLogin);
-	struct passwd *pwd = getpwnam(searchLogin);
-	uid_t searchUid = pwd->pw_uid;
-
-	// now iterate through allProcInfos to find processes
-	// owned by the given uid
-	piPTR cur = allProcInfos;
-	int fam_index = 0;
-
-#ifndef HPUX        // everyone except HPUX needs a pidlist built.
-	buildPidList();
-#endif
-
-	buildProcInfoList();  // HPUX has its own version of this, too.
-
-	// buildProcInfoList() just changed allProcInfos pointer, so update cur.
-	cur = allProcInfos;
-
-	while ( cur != NULL ) {
-		if ( cur->owner == searchUid ) {
-			dprintf(D_PROCFAMILY,
-				  "ProcAPI: found pid %d owned by %s (uid=%d)\n",
-				  cur->pid, searchLogin, searchUid);
-			pidFamily[fam_index] = cur->pid;
-			fam_index++;
-		}
-		cur = cur->next;
-	}
-	pidFamily[fam_index] = (pid_t)0;
-	
-	return PROCAPI_SUCCESS;
-#else
-	// Win32 version
-	ExtArray<pid_t> pids(256);
-	int num_pids;
-	int index_pidFamily = 0;
-	int index_familyHandles = 0;
-	BOOL ret;
-	HANDLE procToken;
-	HANDLE procHandle;
-	TOKEN_INFORMATION_CLASS tic;
-	VOID *tokenData;
-	DWORD sizeRqd;
-	CHAR str[80];
-	DWORD strSize;
-	CHAR str2[80];
-	DWORD str2Size;
-	SID_NAME_USE sidType;
-
-	closeFamilyHandles();
-
-	ASSERT(searchLogin);
-
-	// get a list of all pids on the system
-	num_pids = ntSysInfo.GetPIDs(pids);
-
-	// loop through pids comparing process owner
-	for (int s=0; s<num_pids; s++) {
-
-		// find owner for pid pids[s]
-		
-	// again, this is assumed to be wrong, so I'm 
-	// nixing it for now.
-	// skip the daddy_pid, we already added it to our list
-//		  if ( pids[s] == daddy_pid ) {
-//			  continue;
-//		  }
-
-		  // get a handle for the process
-		  procHandle=OpenProcess(PROCESS_QUERY_INFORMATION,
-			FALSE, pids[s]);
-		  if (procHandle == NULL)
-		  {
-			  // Unable to open the process for query - try next pid
-			  continue;			
-		  }
-
-		  // get a handle for the access token used
-		  // by the process
-		  ret=OpenProcessToken(procHandle,
-			TOKEN_QUERY, &procToken);
-		  if (!ret)
-		  {
-			  // Unable to open the access token.
-			  CloseHandle(procHandle);
-			  continue;
-		  }
-
-		  // ----- Get user information -----
-
-		  // specify to return user info
-		  tic=TokenUser;
-
-		  // find out how much mem is needed
-		  ret=GetTokenInformation(procToken, tic, NULL, 0,
-			&sizeRqd);
-
-		  // allocate that memory
-		  tokenData=(TOKEN_USER *) GlobalAlloc(GPTR,
-			sizeRqd);
-		  if (tokenData == NULL)
-		  {
-			EXCEPT("Unable to allocate memory.");
-		  }
-
-		  // actually get the user info
-		  ret=GetTokenInformation(procToken, tic,
-			tokenData, sizeRqd, &sizeRqd);
-		  if (!ret)
-		  {
-			// Unable to get user info.
-			CloseHandle(procToken);
-			GlobalFree(tokenData);
-			CloseHandle(procHandle);
-			continue;
-		  }
-
-		  // specify size of string buffers
-		  strSize=str2Size=80;
-
-		  // convert user SID into a name and domain
-		  ret=LookupAccountSid(NULL,
-			((TOKEN_USER *)tokenData)->User.Sid,
-			str, &strSize, str2, &str2Size, &sidType);
-		  if (!ret)
-		  {
-		    // Unable to look up SID.
-			CloseHandle(procToken);
-			GlobalFree(tokenData);
-			CloseHandle(procHandle);
-			continue;
-		  }
-
-		  // release memory, handles
-		  GlobalFree(tokenData);
-		  CloseHandle(procToken);
-
-		  // user is now in variable str, domain in str2
-
-		  // see if it is the login prefix we are looking for
-		  if ( strincmp(searchLogin,str,strlen(searchLogin))==0 ) {
-			  // a match!  add to our list.   
-			  pidFamily[index_pidFamily++] = pids[s];
-			  // and add the procHandle to a list as well; we keep the
-			  // handle open so the pid is not reused by NT between now and
-			  // when the caller actually does something with this pid.
-			  familyHandles[index_familyHandles++] = procHandle;
-			  dprintf(D_PROCFAMILY,
-				  "getPidFamilyByLogin: found pid %d owned by %s\n",
-				  pids[s],str);
-		  } else {
-			  // not a match; close the handle to this process
-			  CloseHandle(procHandle);
-		  }
-
-	}	// end of for loop looping through all pids
-
-	// denote end of list with a zero entry
-	pidFamily[index_pidFamily] = 0;
-
-	if ( index_pidFamily > 0 ) {
-		// return success
-		return PROCAPI_SUCCESS;
-	}
-
-	// return failure
-	return PROCAPI_FAILURE;
-
-#endif  // of WIN32
-}
 
 int
 ProcAPI::createProcessId(pid_t pid, ProcessId*& pProcId, int& status, int* precision_range){
@@ -4136,19 +3117,3 @@ ProcAPI::generateConfirmTime(long& confirm_time, int& status){
 }
 
 #endif // not linux
-
-
-
-void
-ProcAPI::closeFamilyHandles()
-{
-	// This function is a no-op on Unix...
-#ifdef WIN32
-	int i;
-	for ( i=0; i < (familyHandles.getlast() + 1); i++ ) {
-		CloseHandle( familyHandles[i] );
-	}
-	familyHandles.truncate(-1);
-#endif // of Win32
-	return;
-}

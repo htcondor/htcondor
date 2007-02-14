@@ -42,7 +42,6 @@
 #include "MyString.h"
 #include "get_full_hostname.h"
 #include "condor_random_num.h"
-#include "killfamily.h"
 #include "../condor_procapi/procapi.h"
 #include "misc_utils.h"
 #include "get_daemon_name.h"

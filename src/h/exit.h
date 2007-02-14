@@ -58,6 +58,9 @@
 /* The job exited with an exception */
 #define JOB_EXCEPTION	4
 
+/* used for general exception exiting testing for daemons */
+#define EXIT_EXCEPTION	JOB_EXCEPTION
+
 /* Not enough memory to start the shadow */
 #define JOB_NO_MEM		(5 + EXIT_CODE_OFFSET)
 

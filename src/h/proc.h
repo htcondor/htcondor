@@ -27,8 +27,14 @@
 #include "condor_universe.h"
 #include "condor_header_features.h"
 
+#if defined(__cplusplus)
+#include "MyString.h"
+#include "extArray.h"
+#endif
+
 #define NEW_PROC 1
 
+// a handy little structure used in a lot of places
 typedef struct {
 	int		cluster;
 	int		proc;
@@ -206,6 +212,9 @@ END_C_DECLS
 // Put C++ definitions here
 #if defined(__cplusplus)
 bool operator==( const PROC_ID a, const PROC_ID b);
+int hashFuncPROC_ID( const PROC_ID &, int);
+void procids_to_mystring(ExtArray<PROC_ID> *procids, MyString &str);
+ExtArray<PROC_ID>* mystring_to_procids(MyString &str);
 #endif
 
 #define ICKPT -1

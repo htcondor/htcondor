@@ -28,8 +28,6 @@
 
 #include "env.h"
 
-#include "killfamily.h"
-
 	// Reason user process exited (or didn't execute)
 typedef enum {
 	ABNORMAL_EXIT,	// process exited abnormally due to signal
@@ -198,8 +196,6 @@ private:
 		// CPU guaranteed by transfer of ckpt or termination of job
 	clock_t	guaranteed_user_time;
 	clock_t	guaranteed_sys_time;
-
-	ProcFamily *family;
 
 	// number of pids that are currently suspended
 	int		pids_suspended;

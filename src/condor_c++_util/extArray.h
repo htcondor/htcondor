@@ -40,8 +40,13 @@ class ExtArray
 	Element &operator[] (int);
 
 	// control functions
+	// How big the internal valid array storage is.
 	int	getsize (void) const;
+	// The index of the last thing entered into the array 
 	int	getlast (void) const;
+	// The number of entries in the array aka the length
+	int length (void) const;
+
 	Element *getarray (void);
 	void resize (int);
 	void truncate (int);
@@ -236,6 +241,14 @@ inline int ExtArray<Element>::
 getsize (void) const
 {
 	return size;
+}
+
+template <class Element>
+inline int ExtArray<Element>::
+length (void) const
+{
+	// if nothing is in the array, getlast() returns -1...
+	return this->getlast() + 1;
 }
 
 

@@ -158,6 +158,7 @@
 #define DELEGATE_GSI_CRED_SCHEDD	(SCHED_VERS+99) // delegate refreshed gsi proxy to schedd
 #define DELEGATE_GSI_CRED_STARTER (SCHED_VERS+100) // delegate refreshed gsi proxy to starter
 #define DELEGATE_GSI_CRED_STARTD (SCHED_VERS+101) // delegate gsi proxy to startd
+#define REQUEST_SANDBOX_LOCATION (SCHED_VERS+102) // get the sinful of a transferd
 
 // HAD-related commands
 #define HAD_ALIVE_CMD                   (HAD_COMMANDS_BASE + 0)
@@ -334,6 +335,7 @@ const int INVALIDATE_ADS_GENERIC = 59;
 #define FILETRANS_UPLOAD (FILETRANSFER_BASE+0)
 #define FILETRANS_DOWNLOAD (FILETRANSFER_BASE+1)
 
+
 /*
 *** Condor Password Daemon Commands
 */
@@ -353,20 +355,6 @@ const int INVALIDATE_ADS_GENERIC = 59;
 #define RECEIVE_JOBAD		   (DCSHADOW_BASE+4)
 
 
-#define STORK_BASE 80000
-#define STORK_SUBMIT (STORK_BASE+0)
-#define STORK_REMOVE (STORK_BASE+1)
-#define STORK_STATUS (STORK_BASE+2)
-#define STORK_LIST 	 (STORK_BASE+3)
-
-#define CREDD_BASE 81000	
-#define CREDD_STORE_CRED (CREDD_BASE+0)
-#define CREDD_GET_CRED (CREDD_BASE+1)
-#define CREDD_REMOVE_CRED (CREDD_BASE+2)
-#define CREDD_QUERY_CRED (CREDD_BASE+3)
-#define CREDD_GET_PASSWD (CREDD_BASE+99)	// used by the Win32 credd only
-#define CREDD_NOP (CREDD_BASE+100)			// used by the Win32 credd only
-
 /*
 *** Used only in THE TOOL to choose the condor_squawk option.
 */
@@ -379,6 +367,43 @@ const int INVALIDATE_ADS_GENERIC = 59;
 #define GRIDMAN_CHECK_LEASES (DCGRIDMANAGER_BASE+0)
 #define GRIDMAN_REMOVE_JOBS SIGUSR1
 #define GRIDMAN_ADD_JOBS SIGUSR2
+
+/*
+*** Commands used by the transfer daemon
+*/
+#define TRANSFERD_BASE 74000
+/* This is used by the schedd when a transferd registers itself */
+#define TRANSFERD_REGISTER		(TRANSFERD_BASE+0)
+/* a channel under which a transferd may be sent control message such as
+	being informed of a new a new transfer request 
+*/
+#define TRANSFERD_CONTROL_CHANNEL	(TRANSFERD_BASE+1)
+/* Files are being written to the transferd for storage */
+#define TRANSFERD_WRITE_FILES	(TRANSFERD_BASE+2)
+/* files are being read from the transferd's storage */
+#define TRANSFERD_READ_FILES	(TRANSFERD_BASE+3)
+
+
+/*
+*** Commands used by the stork daemon
+*/
+#define STORK_BASE 80000
+#define STORK_SUBMIT (STORK_BASE+0)
+#define STORK_REMOVE (STORK_BASE+1)
+#define STORK_STATUS (STORK_BASE+2)
+#define STORK_LIST 	 (STORK_BASE+3)
+
+/*
+*** Commands used by the credd daemon
+*/
+#define CREDD_BASE 81000	
+#define CREDD_STORE_CRED (CREDD_BASE+0)
+#define CREDD_GET_CRED (CREDD_BASE+1)
+#define CREDD_REMOVE_CRED (CREDD_BASE+2)
+#define CREDD_QUERY_CRED (CREDD_BASE+3)
+#define CREDD_GET_PASSWD (CREDD_BASE+99)	// used by the Win32 credd only
+#define CREDD_NOP (CREDD_BASE+100)			// used by the Win32 credd only
+
 
 /*
 *** Replies used in various stages of various protocols

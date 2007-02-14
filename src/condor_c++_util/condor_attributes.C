@@ -626,6 +626,31 @@ const char *ATTR_HAD_INDEX     = "HadIndex";
 const char *ATTR_TERMINATION_PENDING	= "TerminationPending";
 const char *ATTR_TERMINATION_EXITREASON	= "TerminationExitReason";
 
+// Attributes used in clasads that go back and forth between a submitting
+// client, the schedd, and the transferd while negotiating for a place to
+// put/get a sandbox of files and then for when actually putting/getting the
+// files themselves..
+const char *ATTR_TREQ_DIRECTION = "TransferDirection";
+const char *ATTR_TREQ_INVALID_REQUEST = "InvalidRequest";
+const char *ATTR_TREQ_INVALID_REASON = "InvalidReason";
+const char *ATTR_TREQ_HAS_CONSTRAINT = "HasConstraint";
+const char *ATTR_TREQ_JOBID_LIST = "JobIDList";
+const char *ATTR_TREQ_PEER_VERSION = "PeerVersion";
+const char *ATTR_TREQ_FTP = "FileTransferProtocol"; 
+const char *ATTR_TREQ_TD_SINFUL = "TDSinful"; 
+const char *ATTR_TREQ_TD_ID = "TDID"; 
+const char *ATTR_TREQ_CONSTRAINT = "Constraint";
+const char *ATTR_TREQ_JOBID_ALLOW_LIST = "JobIDAllowList";
+const char *ATTR_TREQ_JOBID_DENY_LIST = "JobIDDenyList";
+const char *ATTR_TREQ_WILL_BLOCK = "WillBlock";
+const char *ATTR_TREQ_CAPABILITY = "Capability";
+const char *ATTR_TREQ_NUM_TRANSFERS = "NumberOfTransfers";
+const char *ATTR_TREQ_UPDATE_STATUS = "UpdateStatus";
+const char *ATTR_TREQ_UPDATE_REASON = "UpdateReason";
+const char *ATTR_TREQ_SIGNALED = "Signaled";
+const char *ATTR_TREQ_SIGNAL = "Signal";
+const char *ATTR_TREQ_EXIT_CODE = "ExitCode";
+
 // This is a record of the job exit status from a standard universe job exit
 // via waitpid. It is in the job ad to implement the terminate_pending
 // feature. It has to be here because of rampant global variable usage in the

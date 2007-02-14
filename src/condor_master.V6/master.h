@@ -26,9 +26,9 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "../condor_daemon_core.V6/condor_lock.h"
 #include "dc_collector.h"
-#include "killfamily.h"
 #include "condor_pidenvid.h"
 #include "env.h"
+#include "procd.h"
 
 enum AllGoneT { MASTER_RESTART, MASTER_EXIT, MASTER_RESET };
 enum ReaperT { DEFAULT_R, ALL_R, NO_R };
@@ -82,8 +82,6 @@ public:
 	void	Kill( int );
 	void	KillFamily( void );
 	void	Reconfig();
-	void	InitProcFam( int pid, PidEnvID *penvid );
-	void	DeleteProcFam( void );
 
 	int		SetupController( void );
 	int		RegisterControllee( class daemon * );
@@ -110,9 +108,6 @@ private:
 	StopStateT stop_state;
 
 	int		was_not_responding;
-
-	ProcFamily*	procfam;
-	int		procfam_tid;
 
 	CondorLock	*ha_lock;
 	bool	is_ha;
@@ -205,7 +200,7 @@ private:
 	int master;  		// index of the master in our daemon table
 	AllGoneT all_daemons_gone_action;
 	ReaperT reaper;
-
+	ProcD* procd;
 };
 
 #endif /* _CONDOR_MASTER_H */

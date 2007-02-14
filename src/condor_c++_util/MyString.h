@@ -103,6 +103,14 @@ class MyString
 	 *  to '\0' truncates the string to end at that position. */
 	void setChar(int pos, char value);
 
+	/** Clears the current string in the MyString, and fills it with a
+	 *	randomly generated set derived from 'set' of len characters. */
+	void randomlyGenerate(const char *set, int len);
+
+	/** Clears the current string in the MyString, and fills it with 
+	 *	randomly generated [0-9a-f] values up to len size */
+	void randomlyGenerateHex(int len);
+
 	//@}
 
 	// ----------------------------------------

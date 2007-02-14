@@ -31,7 +31,11 @@
 #include "simplelist.h"
 #include "list.h"
 #include "schedd_api.h"
+#include "tdman.h"
 //#include "condor_crontab.h"
+
+template class SimpleList<TransferRequest*>;
+template class HashTable<MyString, TransferRequest*>;
 
 template class HashTable<MyString, JobFile>;
 template class List<FileInfo>;
@@ -65,6 +69,13 @@ template class ExtArray<PROC_ID>;
 template class ExtArray<OwnerData>;
 template class SimpleList<Shadow*>;
 template class HashTable<int, ExtArray<PROC_ID> *>;
+
+template class HashTable<MyString, TransferDaemon*>;
+template class HashBucket<MyString, TransferDaemon*>;
+template class HashTable<MyString, MyString>;
+template class HashBucket<MyString, MyString>;
+template class HashTable<long, TransferDaemon*>;
+template class HashBucket<long, TransferDaemon*>;
 
 // for condor-G
 template class HashTable<MyString,GridUniverseLogic::gman_node_t *>;

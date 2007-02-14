@@ -117,6 +117,7 @@ class ArgList {
 	char const *GetArg(int n) const;        //return nth arg
 
 	void AppendArg(char const *arg);
+	void AppendArg(MyString arg);
 	void AppendArg(int arg);
 	void InsertArg(char const *arg,int position);
 	void RemoveArg(int position);

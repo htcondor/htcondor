@@ -129,9 +129,6 @@ UserProc::~UserProc()
 	if ( core_name ) {
 		delete [] core_name;
 	}
-	if ( family ) {
-		delete family;
-	}
 }
 
 
@@ -687,23 +684,9 @@ UserProc::execute()
 		delete new_reli;
 	}
 
-	/* No daemoncore, so create a PidEnvID class based off of what
-		ancestor variables this process has which the child should have
-		a superset of. */
-	PidEnvID penvid;
-
-	pidenvid_init(&penvid);
-	if (pidenvid_filter_and_insert(&penvid, environ) == 
-			PIDENVID_OVERSIZED)
-	{
-		EXCEPT("UserProc::execute(): Too many ancestor variables! Programmer "
-				"Error!\n");
-	}
-
-	if ( job_class == CONDOR_UNIVERSE_VANILLA ) {
-		family = new ProcFamily(pid, &penvid, PRIV_USER);
-		family->takesnapshot();
-	}
+	// removed some vanilla-specific code here
+	//
+	ASSERT(job_class != CONDOR_UNIVERSE_VANILLA);
 }
 
 // inline void
@@ -807,10 +790,9 @@ UserProc::handle_termination( int exit_st )
 	user_job_pid = pid;
 	pid = 0;
 
-	// the parent process exited; make certain kids are all gone as well
-	if ( job_class == CONDOR_UNIVERSE_VANILLA ) {
-		family->hardkill();
-	}
+	// removed some vanilla-specific code here
+	//
+	ASSERT(job_class != CONDOR_UNIVERSE_VANILLA);
 
 	priv_state priv;
 
@@ -904,36 +886,9 @@ UserProc::send_sig( int sig )
 		// might do something we'll regret in the morning. -Derek 8/29/97
 	priv = set_user_priv();  
 
-	if ( job_class == CONDOR_UNIVERSE_VANILLA ) {
-		// Here we call ProcFamily methods to forward the signal to all of our
-		// decendents, since a VANILLA job in condor can fork.  But first,
-		// we block all of our async events, since killkids is relatively
-		// slow, could potentially do a  popen and runs /bin/ps, etc.  
-		// Thus it is not re-enterant. -Todd Tannenbaum, 5/9/95
-		switch (sig) {
-		case SIGTERM:
-			family->softkill(sig);
-			break;
-		case SIGSTOP:
-			family->suspend();
-			pids_suspended = family->size();
-			break;
-		case SIGCONT:
-			family->resume();
-			pids_suspended = 0;
-			break;
-		case SIGKILL:
-			family->hardkill();
-			break;
-		default:
-			if (kill(pid,SIGCONT) < 0) {
-				EXCEPT( "kill(%d,SIGCONT)", pid );
-			}
-			if (kill(pid,sig) < 0) {
-				EXCEPT( "kill(%d,%d)", pid, sig );
-			}
-		}
-	}
+	// removed some vanilla-specific code here
+	//
+	ASSERT(job_class != CONDOR_UNIVERSE_VANILLA);
 
 	if ( job_class != CONDOR_UNIVERSE_VANILLA )
 	if( sig != SIGCONT ) {
@@ -1323,8 +1278,6 @@ UserProc::UserProc( STARTUP_INFO &s ) :
 	restart = s.is_restart;
 	coredump_limit_exists = s.coredump_limit_exists;
 	coredump_limit = s.coredump_limit;
-
-	family = NULL;
 }
 
 void

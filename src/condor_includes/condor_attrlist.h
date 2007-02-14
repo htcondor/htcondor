@@ -159,6 +159,7 @@ class AttrList : public AttrListAbstract
 		// AssignExpr() is equivalent to Insert("variable = value") without
 		// the value being wrapped in quotes.
 		int AssignExpr(char const *variable,char const *value);
+		int Assign(char const *variable, MyString &value);
 		int Assign(char const *variable,char const *value);
 		int Assign(char const *variable,int value);
 		int Assign(char const *variable,float value);

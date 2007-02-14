@@ -52,7 +52,6 @@ int main()
 	while (1) {
 			
 		ProcAPI::getProcInfo( pids[0], pi, status );
-//		ProcAPI::getFamilyInfo( pids[0], pi, &penvid, status );
 //		ProcAPI::getProcSetInfo( pids, 3, pi, status );
 
 		ProcAPI::printProcInfo ( pi );

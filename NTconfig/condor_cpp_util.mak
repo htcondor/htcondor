@@ -27,10 +27,10 @@ NULL=nul
 
 !IF  "$(CFG)" == "condor_cpp_util - Win32 Debug"
 
-OUTDIR=..\Debug
-INTDIR=..\Debug
+OUTDIR=.\..\Debug
+INTDIR=.\..\Debug
 # Begin Custom Macros
-OutDir=..\Debug
+OutDir=.\..\Debug
 # End Custom Macros
 
 ALL : "$(OUTDIR)\condor_cpp_util.lib"
@@ -54,6 +54,7 @@ CLEAN :
 	-@erase "$(INTDIR)\condor_config.obj"
 	-@erase "$(INTDIR)\condor_environ.obj"
 	-@erase "$(INTDIR)\condor_event.obj"
+	-@erase "$(INTDIR)\condor_ftp.obj"
 	-@erase "$(INTDIR)\condor_id.obj"
 	-@erase "$(INTDIR)\condor_md.obj"
 	-@erase "$(INTDIR)\condor_open.obj"
@@ -78,6 +79,7 @@ CLEAN :
 	-@erase "$(INTDIR)\dc_shadow.obj"
 	-@erase "$(INTDIR)\dc_startd.obj"
 	-@erase "$(INTDIR)\dc_starter.obj"
+	-@erase "$(INTDIR)\dc_transferd.obj"
 	-@erase "$(INTDIR)\directory.obj"
 	-@erase "$(INTDIR)\distribution.obj"
 	-@erase "$(INTDIR)\domain_tools.obj"
@@ -102,7 +104,6 @@ CLEAN :
 	-@erase "$(INTDIR)\job_lease.obj"
 	-@erase "$(INTDIR)\jobqueuesnapshot.obj"
 	-@erase "$(INTDIR)\KeyCache.obj"
-	-@erase "$(INTDIR)\killfamily.obj"
 	-@erase "$(INTDIR)\linebuffer.obj"
 	-@erase "$(INTDIR)\log.obj"
 	-@erase "$(INTDIR)\log_transaction.obj"
@@ -123,6 +124,7 @@ CLEAN :
 	-@erase "$(INTDIR)\pgsqldatabase.obj"
 	-@erase "$(INTDIR)\print_wrapped_text.obj"
 	-@erase "$(INTDIR)\proc_id.obj"
+	-@erase "$(INTDIR)\process_control.WINDOWS.obj"
 	-@erase "$(INTDIR)\read_multiple_logs.obj"
 	-@erase "$(INTDIR)\Regex.obj"
 	-@erase "$(INTDIR)\setenv.obj"
@@ -137,6 +139,7 @@ CLEAN :
 	-@erase "$(INTDIR)\time_offset.obj"
 	-@erase "$(INTDIR)\tmp_dir.obj"
 	-@erase "$(INTDIR)\token_cache.obj"
+	-@erase "$(INTDIR)\transfer_request.obj"
 	-@erase "$(INTDIR)\translation_utils.obj"
 	-@erase "$(INTDIR)\uids.obj"
 	-@erase "$(INTDIR)\usagemon.obj"
@@ -213,6 +216,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\condor_config.obj" \
 	"$(INTDIR)\condor_environ.obj" \
 	"$(INTDIR)\condor_event.obj" \
+	"$(INTDIR)\condor_ftp.obj" \
 	"$(INTDIR)\condor_id.obj" \
 	"$(INTDIR)\condor_md.obj" \
 	"$(INTDIR)\condor_open.obj" \
@@ -236,6 +240,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\dc_shadow.obj" \
 	"$(INTDIR)\dc_startd.obj" \
 	"$(INTDIR)\dc_starter.obj" \
+	"$(INTDIR)\dc_transferd.obj" \
 	"$(INTDIR)\directory.obj" \
 	"$(INTDIR)\distribution.obj" \
 	"$(INTDIR)\domain_tools.obj" \
@@ -260,7 +265,6 @@ LIB32_OBJS= \
 	"$(INTDIR)\job_lease.obj" \
 	"$(INTDIR)\jobqueuesnapshot.obj" \
 	"$(INTDIR)\KeyCache.obj" \
-	"$(INTDIR)\killfamily.obj" \
 	"$(INTDIR)\linebuffer.obj" \
 	"$(INTDIR)\log.obj" \
 	"$(INTDIR)\log_transaction.obj" \
@@ -281,6 +285,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\pgsqldatabase.obj" \
 	"$(INTDIR)\print_wrapped_text.obj" \
 	"$(INTDIR)\proc_id.obj" \
+	"$(INTDIR)\process_control.WINDOWS.obj" \
 	"$(INTDIR)\read_multiple_logs.obj" \
 	"$(INTDIR)\Regex.obj" \
 	"$(INTDIR)\setenv.obj" \
@@ -295,6 +300,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\time_offset.obj" \
 	"$(INTDIR)\tmp_dir.obj" \
 	"$(INTDIR)\token_cache.obj" \
+	"$(INTDIR)\transfer_request.obj" \
 	"$(INTDIR)\translation_utils.obj" \
 	"$(INTDIR)\uids.obj" \
 	"$(INTDIR)\usagemon.obj" \
@@ -312,10 +318,10 @@ LIB32_OBJS= \
 
 !ELSEIF  "$(CFG)" == "condor_cpp_util - Win32 Release"
 
-OUTDIR=..\Release
-INTDIR=..\Release
+OUTDIR=.\..\Release
+INTDIR=.\..\Release
 # Begin Custom Macros
-OutDir=..\Release
+OutDir=.\..\Release
 # End Custom Macros
 
 ALL : "$(OUTDIR)\condor_cpp_util.lib"
@@ -339,6 +345,7 @@ CLEAN :
 	-@erase "$(INTDIR)\condor_config.obj"
 	-@erase "$(INTDIR)\condor_environ.obj"
 	-@erase "$(INTDIR)\condor_event.obj"
+	-@erase "$(INTDIR)\condor_ftp.obj"
 	-@erase "$(INTDIR)\condor_id.obj"
 	-@erase "$(INTDIR)\condor_md.obj"
 	-@erase "$(INTDIR)\condor_open.obj"
@@ -363,6 +370,7 @@ CLEAN :
 	-@erase "$(INTDIR)\dc_shadow.obj"
 	-@erase "$(INTDIR)\dc_startd.obj"
 	-@erase "$(INTDIR)\dc_starter.obj"
+	-@erase "$(INTDIR)\dc_transferd.obj"
 	-@erase "$(INTDIR)\directory.obj"
 	-@erase "$(INTDIR)\distribution.obj"
 	-@erase "$(INTDIR)\domain_tools.obj"
@@ -387,7 +395,6 @@ CLEAN :
 	-@erase "$(INTDIR)\job_lease.obj"
 	-@erase "$(INTDIR)\jobqueuesnapshot.obj"
 	-@erase "$(INTDIR)\KeyCache.obj"
-	-@erase "$(INTDIR)\killfamily.obj"
 	-@erase "$(INTDIR)\linebuffer.obj"
 	-@erase "$(INTDIR)\log.obj"
 	-@erase "$(INTDIR)\log_transaction.obj"
@@ -408,6 +415,7 @@ CLEAN :
 	-@erase "$(INTDIR)\pgsqldatabase.obj"
 	-@erase "$(INTDIR)\print_wrapped_text.obj"
 	-@erase "$(INTDIR)\proc_id.obj"
+	-@erase "$(INTDIR)\process_control.WINDOWS.obj"
 	-@erase "$(INTDIR)\read_multiple_logs.obj"
 	-@erase "$(INTDIR)\Regex.obj"
 	-@erase "$(INTDIR)\setenv.obj"
@@ -422,6 +430,7 @@ CLEAN :
 	-@erase "$(INTDIR)\time_offset.obj"
 	-@erase "$(INTDIR)\tmp_dir.obj"
 	-@erase "$(INTDIR)\token_cache.obj"
+	-@erase "$(INTDIR)\transfer_request.obj"
 	-@erase "$(INTDIR)\translation_utils.obj"
 	-@erase "$(INTDIR)\uids.obj"
 	-@erase "$(INTDIR)\usagemon.obj"
@@ -497,6 +506,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\condor_config.obj" \
 	"$(INTDIR)\condor_environ.obj" \
 	"$(INTDIR)\condor_event.obj" \
+	"$(INTDIR)\condor_ftp.obj" \
 	"$(INTDIR)\condor_id.obj" \
 	"$(INTDIR)\condor_md.obj" \
 	"$(INTDIR)\condor_open.obj" \
@@ -520,6 +530,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\dc_shadow.obj" \
 	"$(INTDIR)\dc_startd.obj" \
 	"$(INTDIR)\dc_starter.obj" \
+	"$(INTDIR)\dc_transferd.obj" \
 	"$(INTDIR)\directory.obj" \
 	"$(INTDIR)\distribution.obj" \
 	"$(INTDIR)\domain_tools.obj" \
@@ -544,7 +555,6 @@ LIB32_OBJS= \
 	"$(INTDIR)\job_lease.obj" \
 	"$(INTDIR)\jobqueuesnapshot.obj" \
 	"$(INTDIR)\KeyCache.obj" \
-	"$(INTDIR)\killfamily.obj" \
 	"$(INTDIR)\linebuffer.obj" \
 	"$(INTDIR)\log.obj" \
 	"$(INTDIR)\log_transaction.obj" \
@@ -565,6 +575,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\pgsqldatabase.obj" \
 	"$(INTDIR)\print_wrapped_text.obj" \
 	"$(INTDIR)\proc_id.obj" \
+	"$(INTDIR)\process_control.WINDOWS.obj" \
 	"$(INTDIR)\read_multiple_logs.obj" \
 	"$(INTDIR)\Regex.obj" \
 	"$(INTDIR)\setenv.obj" \
@@ -579,6 +590,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\time_offset.obj" \
 	"$(INTDIR)\tmp_dir.obj" \
 	"$(INTDIR)\token_cache.obj" \
+	"$(INTDIR)\transfer_request.obj" \
 	"$(INTDIR)\translation_utils.obj" \
 	"$(INTDIR)\uids.obj" \
 	"$(INTDIR)\usagemon.obj" \
@@ -730,6 +742,12 @@ SOURCE="..\src\condor_c++_util\condor_environ.C"
 SOURCE="..\src\condor_c++_util\condor_event.C"
 
 "$(INTDIR)\condor_event.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE="..\src\condor_c++_util\condor_ftp.C"
+
+"$(INTDIR)\condor_ftp.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
@@ -913,6 +931,12 @@ SOURCE=..\src\condor_daemon_client\dc_starter.C
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
+SOURCE=..\src\condor_daemon_client\dc_transferd.C
+
+"$(INTDIR)\dc_transferd.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
 SOURCE="..\src\condor_c++_util\directory.C"
 
 "$(INTDIR)\directory.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
@@ -1057,12 +1081,6 @@ SOURCE="..\src\condor_c++_util\KeyCache.C"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
-SOURCE="..\src\condor_c++_util\killfamily.C"
-
-"$(INTDIR)\killfamily.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
-
-
 SOURCE="..\src\condor_c++_util\linebuffer.C"
 
 "$(INTDIR)\linebuffer.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
@@ -1201,6 +1219,12 @@ SOURCE="..\src\condor_c++_util\proc_id.C"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
+SOURCE="..\src\condor_c++_util\process_control.WINDOWS.C"
+
+"$(INTDIR)\process_control.WINDOWS.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
 SOURCE="..\src\condor_c++_util\read_multiple_logs.C"
 
 "$(INTDIR)\read_multiple_logs.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
@@ -1282,6 +1306,12 @@ SOURCE="..\src\condor_c++_util\tmp_dir.C"
 SOURCE="..\src\condor_c++_util\token_cache.C"
 
 "$(INTDIR)\token_cache.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE="..\src\condor_c++_util\transfer_request.C"
+
+"$(INTDIR)\transfer_request.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 

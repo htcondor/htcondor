@@ -25,6 +25,7 @@
 #include "MyString.h"
 #include "condor_snutils.h"
 #include "condor_string.h"
+#include "condor_random_num.h"
 #include "strupr.h"
 
 #include "condor_fix_iostream.h"
@@ -614,6 +615,49 @@ MyString::trim( void )
 	if ( begin != 0 || end != Length() - 1 ) {
 		*this = Substr(begin, end);
 	}
+}
+
+// if len is 10, this means 10 random ascii characters from the set.
+void
+MyString::randomlyGenerate(const char *set, int len)
+{
+	int i;
+	int idx;
+	int set_len;
+
+    if (!set) {
+		// passed in NULL set, so automatically MyString is empty
+		if (Data) {
+			Data[0] = '\0';
+		}
+		Len = 0;
+		// leave capacity alone.
+		return;
+	}
+
+	// start over from scratch with this string.
+    if (Data) {
+		delete[] Data;
+	}
+
+	Data = new char[len+1]; 
+	Data[len] = '\0';
+	Len = len;
+	capacity = len;
+
+	set_len = strlen(set);
+
+	// now pick randomly from the set and fill stuff in
+	for (i = 0; i < len ; i++) {
+		idx = get_random_int() % set_len;
+		Data[i] = set[idx];
+	}
+}
+
+void
+MyString::randomlyGenerateHex(int len)
+{
+	randomlyGenerate("0123456789abcdef", len);
 }
 
 void

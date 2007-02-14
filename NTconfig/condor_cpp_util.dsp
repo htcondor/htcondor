@@ -248,6 +248,10 @@ SOURCE="..\src\condor_c++_util\condor_event.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\condor_ftp.C"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\condor_id.C"
 # End Source File
 # Begin Source File
@@ -403,6 +407,14 @@ SOURCE=..\src\condor_daemon_client\dc_starter.C
 # Begin Source File
 
 SOURCE=..\src\condor_daemon_client\dc_starter.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_daemon_client\dc_transferd.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_daemon_client\dc_transferd.h
 # End Source File
 # Begin Source File
 
@@ -578,14 +590,6 @@ SOURCE="..\src\condor_c++_util\KeyCache.C"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\condor_c++_util\killfamily.C"
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\condor_c++_util\killfamily.h"
-# End Source File
-# Begin Source File
-
 SOURCE="..\src\condor_c++_util\linebuffer.C"
 # End Source File
 # Begin Source File
@@ -731,6 +735,14 @@ SOURCE="..\src\condor_c++_util\proc_id.C"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\process_control.WINDOWS.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\process_control.WINDOWS.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\query_result_type.h"
 # End Source File
 # Begin Source File
@@ -848,6 +860,10 @@ SOURCE="..\src\condor_c++_util\token_cache.C"
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\token_cache.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\transfer_request.C"
 # End Source File
 # Begin Source File
 

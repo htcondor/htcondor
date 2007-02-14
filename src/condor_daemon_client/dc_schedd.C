@@ -31,6 +31,7 @@
 #include "proc.h"
 #include "file_transfer.h"
 #include "condor_version.h"
+#include "condor_ftp.h"
 
 
 // // // // //
@@ -38,8 +39,8 @@
 // // // // //
 
 
-DCSchedd::DCSchedd( const char* name, const char* pool ) 
-	: Daemon( DT_SCHEDD, name, pool )
+DCSchedd::DCSchedd( const char* the_name, const char* the_pool ) 
+	: Daemon( DT_SCHEDD, the_name, the_pool )
 {
 }
 
@@ -409,6 +410,344 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 	rsock.eom();
 
 	if(numdone) { *numdone = JobAdsArrayLen; }
+
+	return true;
+}
+
+// when a transferd registers itself, it identifies who it is. The connection
+// is then held open and the schedd periodically might send more transfer
+// requests to the transferd. Also, if the transferd dies, the schedd is 
+// informed quickly and reliably due to the closed connection.
+bool
+DCSchedd::register_transferd(MyString sinful, MyString id, int timeout, 
+		ReliSock **regsock_ptr, CondorError *errstack) 
+{
+	ReliSock *rsock;
+	int invalid_request = 0;
+	char *tmp = NULL;
+	ClassAd regad;
+	ClassAd respad;
+	MyString errstr;
+	MyString reason;
+
+	if (regsock_ptr != NULL) {
+		// Our caller wants a pointer to the socket we used to succesfully
+		// register the claim. The NULL pointer will represent failure and
+		// this will only be set to something real if everything was ok.
+		*regsock_ptr = NULL;
+	}
+
+	// This call with automatically connect to _addr, which was set in the
+	// constructor of this object to be the schedd in question.
+	rsock = (ReliSock*)startCommand(TRANSFERD_REGISTER, Stream::reli_sock,
+		timeout, errstack);
+
+	if( ! rsock ) {
+		dprintf( D_ALWAYS, "DCSchedd::register_transferd: "
+				 "Failed to send command (TRANSFERD_REGISTER) "
+				 "to the schedd\n" );
+		errstack->push("DC_SCHEDD", 1, 
+			"Failed to start a TRANSFERD_REGISTER command.");
+		return false;
+	}
+
+		// First, if we're not already authenticated, force that now. 
+	if (!forceAuthentication( rsock, errstack )) {
+		dprintf( D_ALWAYS, "DCSchedd::register_transferd authentication "
+				"failure: %s\n", errstack->getFullText() );
+		errstack->push("DC_SCHEDD", 1, 
+			"Failed to authenticate properly.");
+		return false;
+	}
+
+	rsock->encode();
+
+	// set up my registration request.
+	regad.Assign(ATTR_TREQ_TD_SINFUL, sinful);
+	regad.Assign(ATTR_TREQ_TD_ID, id);
+
+	// This is the initial registration identification ad to the schedd
+	// It contains:
+	//	ATTR_TREQ_TD_SINFUL
+	//	ATTR_TREQ_TD_ID
+	regad.put(*rsock);
+	rsock->eom();
+
+	// Get the response from the schedd.
+	rsock->decode();
+
+	// This is the response ad from the schedd:
+	// It contains:
+	//	ATTR_TREQ_INVALID_REQUEST
+	//
+	// OR
+	// 
+	//	ATTR_TREQ_INVALID_REQUEST
+	//	ATTR_TREQ_INVALID_REASON
+	respad.initFromStream(*rsock);
+	rsock->eom();
+
+	respad.LookupInteger(ATTR_TREQ_INVALID_REQUEST, invalid_request);
+
+	if (invalid_request == FALSE) {
+		// not an invalid request
+		*regsock_ptr = rsock;
+		return true;
+	}
+
+	respad.LookupString(ATTR_TREQ_INVALID_REASON, reason);
+	errstr.sprintf("Schedd refused registration: %s", reason.Value());
+	errstack->push("DC_SCHEDD", 1, errstr.Value());
+
+	return false;
+}
+
+/*
+[Request Sandbox Location Ad]
+
+FileTransferProtocol = "CondorInternalFileTransfer"
+PeerVersion = "..."
+HasConstraint = TRUE
+Constraint = "(cluster == 120 && procid == 0)"
+
+OR
+
+FileTransferProtocol = "CondorInternalFileTransfer"
+PeerVersion = "..."
+HasConstraint = FALSE
+NumJobIDs = 10
+JobIDs = "12.0,12.1,12.2,12.3,12.4,12.5,12.6,12.7,12.8,12.9"
+*/
+
+// using jobids structure so the schedd doesn't have to iterate over all the
+// job ads.
+bool 
+DCSchedd::requestSandboxLocation(int direction, 
+	int JobAdsArrayLen, ClassAd* JobAdsArray[], int protocol, 
+	ClassAd *respad, CondorError * errstack)
+{
+	StringList sl;
+	ClassAd reqad;
+	MyString str;
+	int i;
+	int cluster, proc;
+	char *tmp = NULL;
+
+	////////////////////////////////////////////////////////////////////////
+	// This request knows exactly which jobs it wants to talk about, so
+	// just compact them into the classad to send to the schedd.
+	////////////////////////////////////////////////////////////////////////
+
+	reqad.Assign(ATTR_TREQ_DIRECTION, direction);
+	reqad.Assign(ATTR_TREQ_PEER_VERSION, CondorVersion());
+	reqad.Assign(ATTR_TREQ_HAS_CONSTRAINT, false);
+
+	for (i = 0; i < JobAdsArrayLen; i++) {
+		if (!JobAdsArray[i]->LookupInteger(ATTR_CLUSTER_ID,cluster)) {
+			dprintf(D_ALWAYS,"DCSchedd:requestSandboxLocation: "
+					"Job ad %d did not have a cluster id\n",i);
+			return false;
+		}
+		if (!JobAdsArray[i]->LookupInteger(ATTR_PROC_ID,proc)) {
+			dprintf(D_ALWAYS,"DCSchedd:requestSandboxLocation(): "
+					"Job ad %d did not have a proc id\n",i);
+			return false;
+		}
+		
+		str.sprintf("%d.%d", cluster, proc);
+
+		// make something like: 1.0, 1.1, 1.2, ....
+		sl.append(str.Value());
+	}
+
+	tmp = sl.print_to_string();
+
+	reqad.Assign(ATTR_TREQ_JOBID_LIST, tmp);
+
+	free(tmp);
+	tmp = NULL;
+
+	// XXX This should be a realized function to convert between the
+	// protocol enum and a string description. That way both functions can
+	// use it and it won't seem so bad.
+	switch(protocol) {
+		case FTP_CFTP:
+			reqad.Assign(ATTR_TREQ_FTP, FTP_CFTP);
+			break;
+		default:
+			dprintf(D_ALWAYS, "DCSchedd::requestSandboxLocation(): "
+				"Can't make a request for a sandbox with an unknown file "
+				"transfer protocol!");
+			return false;
+			break;
+	}
+
+	// now connect to the schedd and get the response.
+	return requestSandboxLocation(&reqad, respad, errstack);
+}
+
+// using a constraint for which the schedd must iterate over all the jobads.
+bool 
+DCSchedd::requestSandboxLocation(int direction, MyString &constraint, 
+	int protocol, ClassAd *respad, CondorError * errstack)
+{
+	ClassAd reqad;
+
+	////////////////////////////////////////////////////////////////////////
+	// This request specifies a collection of job ads as defined by a
+	// constraint. Later, then the transfer actually happens to the transferd,
+	// this constraint will get converted to actual job ads at that time and
+	// the client will have to get them back so it knows what to send.
+	////////////////////////////////////////////////////////////////////////
+
+	reqad.Assign(ATTR_TREQ_DIRECTION, direction);
+	reqad.Assign(ATTR_TREQ_PEER_VERSION, CondorVersion());
+	reqad.Assign(ATTR_TREQ_HAS_CONSTRAINT, true);
+	reqad.Assign(ATTR_TREQ_CONSTRAINT, constraint.Value());
+
+	// XXX This should be a realized function to convert between the
+	// protocol enum and a string description. That way both functions can
+	// use it and it won't seem so bad.
+	switch(protocol) {
+		case FTP_CFTP:
+			reqad.Assign(ATTR_TREQ_FTP, FTP_CFTP);
+			break;
+		default:
+			dprintf(D_ALWAYS, "DCSchedd::requestSandboxLocation(): "
+				"Can't make a request for a sandbox with an unknown file "
+				"transfer protocol!");
+			return false;
+			break;
+	}
+
+	// now connect to the schedd and get the response.
+	return requestSandboxLocation(&reqad, respad, errstack);
+}
+
+
+// I'm going to ask the schedd for where I can put the files for the jobs I've
+// specified. The schedd is going to respond with A) a message telling me it
+// has the answer right away, or B) an answer telling me I have to wait 
+// an unknown length of time for the schedd to schedule me a place to put it.
+bool 
+DCSchedd::requestSandboxLocation(ClassAd *reqad, ClassAd *respad, 
+	CondorError * errstack)
+{
+	ReliSock rsock;
+	int will_block;
+	ClassAd status_ad;
+
+	rsock.timeout(20);   // years of research... :)
+	if( ! rsock.connect(_addr) ) {
+		dprintf( D_ALWAYS, "DCSchedd::requestSandboxLocation(): "
+				 "Failed to connect to schedd (%s)\n", _addr );
+		return false;
+	}
+	if( ! startCommand(REQUEST_SANDBOX_LOCATION, (Sock*)&rsock, 0,
+						   errstack) ) {
+		dprintf( D_ALWAYS, "DCSchedd::requestSandboxLocation(): "
+				 "Failed to send command (REQUEST_SANDBOX_LOCATION) "
+				 "to schedd (%s)\n", _addr );
+		return false;
+	}
+
+		// First, if we're not already authenticated, force that now. 
+	if (!forceAuthentication( &rsock, errstack )) {
+		dprintf( D_ALWAYS, "DCSchedd: authentication failure: %s\n",
+				 errstack->getFullText() );
+		return false;
+	}
+
+	rsock.encode();
+
+	///////////////////////////////////////////////////////////////////////
+	// Send my sandbox location request packet to the schedd.
+	///////////////////////////////////////////////////////////////////////
+
+	// This request ad will either contain:
+	//	ATTR_TREQ_PEER_VERSION
+	//	ATTR_TREQ_HAS_CONSTRAINT
+	//	ATTR_TREQ_JOBID_LIST
+	//	ATTR_TREQ_FTP
+	// 
+	// OR
+	//
+	//	ATTR_TREQ_DIRECTION
+	//	ATTR_TREQ_PEER_VERSION
+	//	ATTR_TREQ_HAS_CONSTRAINT
+	//	ATTR_TREQ_CONSTRAINT
+	//	ATTR_TREQ_FTP
+	dprintf(D_ALWAYS, "Sending request ad.\n");
+	if (reqad->put(rsock) != 1) {
+		dprintf(D_ALWAYS,"DCSchedd:requestSandboxLocation(): "
+				"Can't send reqad to the schedd\n");
+		return false;
+	}
+	rsock.eom();
+
+	rsock.decode();
+
+	///////////////////////////////////////////////////////////////////////
+	// Read back a response ad which will tell me which jobs the schedd
+	// said I could modify and whether or not I'm am going to have to block
+	// before getting the payload of the transferd location/capability ad.
+	///////////////////////////////////////////////////////////////////////
+
+	// This status ad will contain
+	//	ATTR_TREQ_INVALID_REQUEST (set to true)
+	//	ATTR_TREQ_INVALID_REASON
+	//
+	// OR
+	//	ATTR_TREQ_INVALID_REQUEST (set to false)
+	//	ATTR_TREQ_JOBID_ALLOW_LIST
+	//	ATTR_TREQ_JOBID_DENY_LIST
+	//	ATTR_TREQ_WILL_BLOCK
+
+	dprintf(D_ALWAYS, "Receiving status ad.\n");
+	if (status_ad.initFromStream(rsock) == 0) {
+		dprintf(D_ALWAYS, "Schedd closed connection to me. Aborting sandbox "
+			"submission.\n");
+		return false;
+	}
+	rsock.eom();
+
+	status_ad.LookupInteger(ATTR_TREQ_WILL_BLOCK, will_block);
+
+	dprintf(D_ALWAYS, "Client will %s\n", will_block==1?"block":"not block");
+
+	if (will_block == 1) {
+		// set to 20 minutes.
+		rsock.timeout(60*20);
+	}
+
+	///////////////////////////////////////////////////////////////////////
+	// Read back the payload ad from the schedd about the transferd location
+	// and capability string I can use for the fileset I wish to transfer.
+	///////////////////////////////////////////////////////////////////////
+
+	// read back the response ad from the schedd which contains a 
+	// td sinful string, and a capability. These represent my ability to
+	// read/write a certain fileset somewhere.
+
+	// This response ad from the schedd will contain:
+	//
+	//	ATTR_TREQ_INVALID_REQUEST (set to true)
+	//	ATTR_TREQ_INVALID_REASON
+	//
+	// OR
+	//
+	//	ATTR_TREQ_INVALID_REQUEST (set to false)
+	//	ATTR_TREQ_CAPABILITY
+	//	ATTR_TREQ_TD_SINFUL
+	//	ATTR_TREQ_JOBID_ALLOW_LIST
+
+	dprintf(D_ALWAYS, "Receiving response ad.\n");
+	if (respad->initFromStream(rsock) != 1) {
+		dprintf(D_ALWAYS,"DCSchedd:requestSandboxLocation(): "
+				"Can't receive respond ad from the schedd\n");
+		return false;
+	}
+	rsock.eom();
 
 	return true;
 }

@@ -23,6 +23,7 @@
 
 #include "condor_common.h"
 #include "HashTable.h"
+#include "proc.h"
 
 int
 hashFuncInt( const int& n, int numBuckets )
@@ -82,4 +83,9 @@ int hashFuncChars( char const *key, int numBuckets)
         i += *(const unsigned char *)key;
     }
     return i % numBuckets;
+}
+
+int hashFuncMyString( const MyString &key, int numBuckets)
+{
+    return hashFuncChars(key.Value(), numBuckets);
 }

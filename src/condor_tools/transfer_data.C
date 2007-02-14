@@ -29,10 +29,14 @@
 #include "condor_version.h"
 #include "condor_ver_info.h"
 #include "dc_schedd.h"
+#include "dc_transferd.h"
 #include "condor_distribution.h"
 #include "basename.h"
 #include "internet.h"
 #include "MyString.h"
+#include "condor_attributes.h"
+#include "condor_classad.h"
+#include "condor_ftp.h"
 
 
 const char	*MyName = NULL;
@@ -40,6 +44,8 @@ MyString global_constraint;
 bool had_error = false;
 DCSchedd* schedd = NULL;
 bool All = false;
+
+SandboxTransferMethod st_method = STM_USE_SCHEDD_ONLY;
 
 void usage();
 void procArg(const char*);
@@ -61,6 +67,10 @@ usage()
 	fprintf( stderr, "  -name schedd_name   Connect to the given schedd\n" );
 	fprintf( stderr, "  -pool hostname      Use the given central manager to find daemons\n" );
 	fprintf( stderr, "  -addr <ip:port>     Connect directly to the given \"sinful string\"\n" );
+	fprintf( stderr, "  -stm <method>\t\thow to move a sandbox out of Condor\n" );
+	fprintf( stderr, "               \t\tAvailable methods:\n\n" );
+	fprintf( stderr, "               \t\t\tstm_use_schedd_only\n" );
+	fprintf( stderr, "               \t\t\tstm_use_transferd\n\n" );
 	fprintf( stderr, " and where [constraints] is one or more of:\n" );
 	fprintf( stderr, "  cluster.proc        transfer data for the given job\n");
 	fprintf( stderr, "  cluster             transfer data for the given cluster of jobs\n");
@@ -172,6 +182,8 @@ main(int argc, char *argv[])
 	char* pool = NULL;
 	char* scheddName = NULL;
 	char* scheddAddr = NULL;
+	MyString method;
+	char *tmp;
 
 	myDistro->Init( argc, argv );
 	MyName = condor_basename(argv[0]);
@@ -181,6 +193,17 @@ main(int argc, char *argv[])
 	install_sig_handler(SIGPIPE, SIG_IGN );
 #endif
 
+	// dig around in the config file looking for what the config file says
+	// about getting files from Condor. This defaults with the global variable
+	// initialization.
+	tmp = param( "SANDBOX_TRANSFER_METHOD" );
+	if ( tmp != NULL ) {
+		method = tmp;
+		free( tmp );
+		string_to_stm( method, st_method );
+	}
+
+	// parse the arguments.
 	for( argv++; (arg = *argv); argv++ ) {
 		if( arg[0] == '-' ) {
 			if( ! arg[1] ) {
@@ -258,6 +281,16 @@ main(int argc, char *argv[])
 				}
 				pool = strdup( *argv );
 				break;
+			case 's':
+				argv++;
+				if( ! *argv ) {
+					fprintf( stderr, "%s: -stm requires another argument\n", 
+							 MyName);
+					exit(1);
+				}				
+				method = *argv;
+				string_to_stm(method, st_method);
+				break;
 			case 'v':
 				version();
 				break;
@@ -278,6 +311,15 @@ main(int argc, char *argv[])
 			args[nArgs] = arg;
 			nArgs++;
 		}
+	}
+
+	// Check to make sure we have a valid sandbox transfer mechanism.
+	if (st_method == STM_UNKNOWN) {
+		fprintf( stderr,
+			"%s: Unknown sandbox transfer method: %s\n", MyName,
+			method.Value());
+		usage();
+		exit(1);
 	}
 
 	if( ! (All || nArgs) ) {
@@ -336,17 +378,82 @@ main(int argc, char *argv[])
 		exit(1);
 	}
 
-		// And now, do the work.
 	fprintf(stdout,"Fetching data files...\n");
-	CondorError errstack;
-	result = schedd->receiveJobSandbox(global_constraint.Value(),&errstack);
-	if ( !result ) {
-		fprintf( stderr, "\n%s\n", errstack.getFullText(true) );
-		fprintf( stderr, "ERROR: Failed to spool job files.\n" );
-		exit(1);
-	}
 
+	switch(st_method) {
+		case STM_USE_SCHEDD_ONLY:
+			{ // start block
 
+			// Get the sandbox directly from the schedd.
+			// And now, do the work.
+			CondorError errstack;
+			result = schedd->receiveJobSandbox(global_constraint.Value(),
+				&errstack);
+			if ( !result ) {
+				fprintf( stderr, "\n%s\n", errstack.getFullText(true) );
+				fprintf( stderr, "ERROR: Failed to spool job files.\n" );
+				exit(1);
+			}
+		
+			// All done
+			return 0;
+
+			} //end block
+			break;
+
+		case STM_USE_TRANSFERD:
+			{ // start block
+
+			// NEW METHOD where we ask the schedd for a transferd, then get the
+			// files from the transferd
+
+			CondorError errstack;
+			ClassAd respad;
+			int invalid;
+			MyString reason;
+			MyString td_sinful;
+			MyString td_cap;
+
+			result = schedd->requestSandboxLocation(FTPD_DOWNLOAD, 
+				global_constraint, FTP_CFTP, &respad, &errstack);
+			if ( !result ) {
+				fprintf( stderr, "\n%s\n", errstack.getFullText(true) );
+				fprintf( stderr, "ERROR: Failed to spool job files.\n" );
+				exit(1);
+			}
+
+			respad.LookupInteger(ATTR_TREQ_INVALID_REQUEST, invalid);
+			if (invalid == TRUE) {
+				fprintf( stderr, "ERROR: Failed to spool job files.\n" );
+				respad.LookupString(ATTR_TREQ_INVALID_REASON, reason);
+				fprintf( stderr, "%s\n", reason.Value());
+				exit(EXIT_FAILURE);
+			}
+
+			respad.LookupString(ATTR_TREQ_TD_SINFUL, td_sinful);
+			respad.LookupString(ATTR_TREQ_CAPABILITY, td_cap);
+
+			dprintf(D_ALWAYS, 
+				"td: %s, cap: %s\n", td_sinful.Value(), td_cap.Value());
+
+			DCTransferD dctd(td_sinful.Value());
+
+			result = dctd.download_job_files(&respad, &errstack);
+			if ( !result ) {
+				fprintf( stderr, "\n%s\n", errstack.getFullText(true) );
+				fprintf( stderr, "ERROR: Failed to spool job files.\n" );
+				exit(1);
+			}
+
+			} // end block
+		break;
+
+		default:
+			EXCEPT("PROGRAMMER ERROR: st_method must be known.");
+			break;
+		}
+
+	// All done
 	return 0;
 }
 

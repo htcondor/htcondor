@@ -348,7 +348,7 @@ AbstractReplicatorStateMachine::download( const char* daemonSinfulString )
         FALSE,                        // command port needed?
         NULL,                         // env
         NULL,                         // cwd
-        FALSE                         // new process group
+        NULL                          // process family info
         );
     if( transfererPid == FALSE ) {
         dprintf( D_ALWAYS,
@@ -432,7 +432,7 @@ AbstractReplicatorStateMachine::upload( const char* daemonSinfulString )
         FALSE,                        // command port needed?
         NULL,                         // envs
         NULL,                         // cwd
-        FALSE                         // new process group
+        NULL                          // process family info
         );
     if ( transfererPid == FALSE ) {
 		dprintf( D_PROC,

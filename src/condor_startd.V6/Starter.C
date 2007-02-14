@@ -53,9 +53,9 @@ Starter::Starter()
 
 Starter::Starter( const Starter& s )
 {
-	if( s.s_claim || s.s_pid || s.s_procfam || s.s_family_size
-		|| s.s_pidfamily || s.s_birthdate 
-		|| s.s_port1 >= 0 || s.s_port2 >= 0 ) {
+	if( s.s_claim || s.s_pid || s.s_birthdate ||
+	    s.s_port1 >= 0 || s.s_port2 >= 0 )
+	{
 		EXCEPT( "Trying to copy a Starter object that's already running!" );
 	}
 
@@ -82,11 +82,7 @@ Starter::initRunData( void )
 {
 	s_claim = NULL;
 	s_pid = 0;		// pid_t can be unsigned, so use 0, not -1
-	s_procfam = NULL;
-	s_family_size = 0;
-	s_pidfamily = NULL;
 	s_birthdate = 0;
-	s_last_snapshot = 0;
 	s_kill_tid = -1;
 	s_port1 = -1;
 	s_port2 = -1;
@@ -95,10 +91,6 @@ Starter::initRunData( void )
 #if HAVE_BOINC
 	s_is_boinc = false;
 #endif /* HAVE_BOINC */
-
-		// Initialize our procInfo structure so we don't use any
-		// values until we've actually computed them.
-	memset( (void*)&s_pinfo, 0, (size_t)sizeof(s_pinfo) );
 }
 
 
@@ -108,13 +100,6 @@ Starter::~Starter()
 
 	if (s_path) {
 		delete [] s_path;
-	}
-	if( s_procfam ) {
-		delete s_procfam;
-	}
-	if( s_pidfamily ) {
-		delete [] s_pidfamily;
-		s_pidfamily = NULL;
 	}
 	if( s_ad ) {
 		delete( s_ad );
@@ -440,8 +425,8 @@ Starter::reallykill( int signo, int type )
 
 	if( is_dc() ) {
 			// With DaemonCore, fow now convert a request to kill a
-			// process group into a request to kill a pid family via
-			// ProcFamily
+			// process group into a request to kill a process family via
+			// DaemonCore
 		if ( type == 1 ) {
 			type = 2;
 		}
@@ -516,7 +501,11 @@ Starter::reallykill( int signo, int type )
 					 "In Starter::killkids() with %s\n", signame );
 			EXCEPT( "Starter::killkids() can only handle SIGKILL!" );
 		}
-		s_procfam->hardkill();  // This really sends SIGKILL
+		if (daemonCore->Kill_Family(s_pid) == FALSE) {
+			dprintf(D_ALWAYS,
+			        "error killing process family of starter with pid %u\n",
+				s_pid);
+		}
 		break;
 	}
 
@@ -559,20 +548,9 @@ Starter::spawn( time_t now, Stream* s )
 	if( s_pid == 0 ) {
 		dprintf( D_ALWAYS, "ERROR: exec_starter returned %d\n", s_pid );
 	} else {
-
-		PidEnvID penvid;
-
-		// if there isn't any ancestor information for this pid, that is ok.
-		daemonCore->InfoEnvironmentID(&penvid, s_pid);
-		
 		s_birthdate = now;
-		s_procfam = new ProcFamily( s_pid, &penvid, PRIV_ROOT );
-
-		dprintf( D_PROCFAMILY, 
-				 "Created new ProcFamily w/ pid %d as the parent.\n",
-				 s_pid ); 
-		recomputePidFamily( now );
 	}
+
 	return s_pid;
 }
 
@@ -584,8 +562,12 @@ Starter::exited()
 	cancelKillTimer();
 
 		// Just for good measure, try to kill what's left of our whole
-		// pid family.  
-	s_procfam->hardkill();
+		// pid family.
+	if (daemonCore->Kill_Family(s_pid) == FALSE) {
+		dprintf(D_ALWAYS,
+		        "error killing process family of starter with pid %u\n",
+		        s_pid);
+	}
 
 		// Now, delete any files lying around.
 	cleanup_execute_dir( s_pid );
@@ -757,9 +739,13 @@ Starter::execDCStarter( ArgList const &args, Env const *env,
 				 args_string.Value() );
 	}
 
+	FamilyInfo fi;
+	fi.max_snapshot_interval = pid_snapshot_interval;
+	fi.login = NULL;
+
 	s_pid = daemonCore->
 		Create_Process( final_path, *final_args, PRIV_ROOT, reaper_id,
-						TRUE, final_env, NULL, TRUE, inherit_list, std_fds );
+						TRUE, final_env, NULL, &fi, inherit_list, std_fds );
 	if( s_pid == FALSE ) {
 		dprintf( D_ALWAYS, "ERROR: exec_starter failed!\n");
 		s_pid = 0;
@@ -774,6 +760,8 @@ Starter::execOldStarter( void )
 #if defined(WIN32) /* THIS IS UNIX SPECIFIC */
 	return 0;
 #else
+	// don't allow this if GLEXEC_STARTER is true
+	//
 	if( param_boolean( "GLEXEC_STARTER", false ) ) {
 		// we don't support using glexec to spawn the old starter
 		dprintf( D_ALWAYS,
@@ -782,66 +770,38 @@ Starter::execOldStarter( void )
 		return 0;
 	}
 
-	char* hostname = s_claim->client()->host();
-	int i;
-	int pid;
-	int n_fds = getdtablesize();
-	int main_sock = s_port1;
-	int err_sock = s_port2;
-	int tmp_errno;
+	// set up the standard file descriptors
+	//
+	int std[3];
+	std[0] = s_port1;
+	std[1] = s_port1;
+	std[2] = s_port2;
 
-#if defined(Solaris)
-	sigset_t set;
-	if( sigprocmask(SIG_SETMASK,0,&set)  == -1 ) {
-		EXCEPT("Error in reading procmask, errno = %d (%s)", errno,
-			   strerror(errno));
-	}
-	for (i=0; i < MAXSIG; i++) {
-		block_signal(i);
-	}
-#else
-	int omask = sigblock(-1);
-#endif
-
-	if( (pid = fork()) < 0 ) {
-		EXCEPT( "Failed to fork starter, errno = %d (%s)", errno,
-				strerror( errno ) );
+	// set up the starter's arguments
+	//
+	ArgList args;
+	args.AppendArg("condor_starter");
+	args.AppendArg(s_claim->client()->host());
+	args.AppendArg(daemonCore->InfoCommandSinfulString());
+	if (resmgr->is_smp()) {
+		args.AppendArg("-a");
+		args.AppendArg(s_claim->rip()->r_id_str);
 	}
 
-	if (pid) {	/* The parent */
-		/*
-		  (void)sigblock(omask);
-		  */
-#if defined(Solaris)
-		if ( sigprocmask(SIG_SETMASK, &set, 0)  == -1 ) {
-			EXCEPT("Error in setting procmask, errno = %d (%s)", errno,
-				   strerror(errno));
-		}
-#else
-		(void)sigsetmask(omask);
-#endif
-		(void)close(main_sock);
-		(void)close(err_sock);
+	// set up the signal mask (block everything, which is what the old
+	// starter expects)
+	//
+	sigset_t full_mask;
+	sigfillset(&full_mask);
 
-		dprintf(D_ALWAYS,
-				"exec_starter( %s, %d, %d ) : pid %d\n",
-				hostname, main_sock, err_sock, pid);
-		dprintf(D_ALWAYS, "execl(%s, \"condor_starter\", %s, 0)\n",
-				s_path, hostname);
-	} else {	/* the child */
+	// set up a structure for telling DC to track the starter's process
+	// family
+	//
+	FamilyInfo family_info;
+	family_info.max_snapshot_interval = pid_snapshot_interval;
+	family_info.login = NULL;
 
-			/* 
-			   NOTE: Since we're in the child, we don't want to call
-			   EXCEPT() or weird things will try to happen, as the
-			   forked child tries to vacate starter, update the CM,
-			   etc.  So, just dprintf() and exit(), instead.
-			*/
-		
-		/*
-		 * N.B. The child is born with TSTP blocked, so he can be
-		 * sure to set up his handler before accepting it.
-		 */
-
+	// HISTORICAL COMMENTS:
 		/*
 		 * This should not change process groups because the
 		 * condor_master daemon may want to do a killpg at some
@@ -862,74 +822,41 @@ Starter::execOldStarter( void )
 			 * Don't create a new process group if the config file says
 			 * not to.
 			 */
-		if ( param_boolean( "USE_PROCESS_GROUPS", true ) ) {
-			if ( setsid() < 0 ) {
-				dprintf( D_ALWAYS, 
-						 "setsid() failed in child, errno: %d (%s)\n", errno,
-						 strerror( errno ) );
-				exit( 4 );
-			}
-		}
+	// END of HISTORICAL COMMENTS
+	//
+	// Create_Process now will param for USE_PROCESS_GROUPS internally and
+	// call setsid if needed.
 
-			// Now, dup the special socks to their well-known fds.
-		if( dup2(main_sock,0) < 0 ) {
-			dprintf( D_ALWAYS, "dup2(%d,0) failed in child, errno: %d (%s)\n",
-					 main_sock, errno, strerror( errno ) ); 
-			exit( 4 );
-		}
-		if( dup2(main_sock,1) < 0 ) {
-			dprintf( D_ALWAYS, "dup2(%d,1) failed in child, errno: %d (%s)\n",
-					 main_sock, errno, strerror( errno ) );
-			exit( 4 );
-		}
-		if( dup2(err_sock,2) < 0 ) {
-			dprintf( D_ALWAYS, "dup2(%d,2) failed in child, errno: %d (%s)\n",
-					 err_sock, errno, strerror( errno ) );
-			exit( 4 );
-		}
+	// call Create_Process
+	//
+	int pid = daemonCore->Create_Process(s_path,       // path to binary
+	                                     args,         // arguments
+	                                     PRIV_ROOT,    // start as root
+	                                     main_reaper,  // reaper
+	                                     FALSE,        // no command port
+	                                     NULL,         // inherit our env
+	                                     NULL,         // inherit out cwd
+	                                     &family_info, // new family
+	                                     NULL,         // no inherited socks
+	                                     std,          // std FDs
+	                                     0,            // zero nice inc
+	                                     &full_mask,   // signal mask
+	                                     0);           // DC job opts
 
-			// Close everything else to prevent fd leaks and other
-			// problems. 
-		for(i = 3; i<n_fds; i++) {
-			(void) close(i);
-		}
+	// clean up the "ports"
+	//
+	(void)close(s_port1);
+	(void)close(s_port2);
 
-		/*
-		 * Starter must be exec'd as root so it can change to client's
-		 * uid and gid.
-		 */
-		set_root_priv();
-		if( resmgr->is_smp() ) {
-			execl( s_path, "condor_starter", hostname, 
-						 daemonCore->InfoCommandSinfulString(), 
-						 "-a", s_claim->rip()->r_id_str, (void*)NULL );
-			tmp_errno = errno;
-				// If we got this far, there was an error in execl().
-			dprintf( D_ALWAYS, 
-			  "ERROR: execl(%s, condor_starter, %s, %s, -a, %s, 0) "
-			  	"errno: %d(%s)\n",
-			  s_path, daemonCore->InfoCommandSinfulString(), hostname,
-			  s_claim->rip()->r_id_str==NULL?"(NIL)":s_claim->rip()->r_id_str, 
-				 tmp_errno, strerror(tmp_errno) );
-		} else {			
-			execl( s_path, "condor_starter", hostname, 
-						 daemonCore->InfoCommandSinfulString(), (void*)NULL );
-			tmp_errno = errno;
-				// If we got this far, there was an error in execl().
-			dprintf( D_ALWAYS, 
-				 "ERROR: execl(%s, condor_starter, %s, %s, 0) "
-				 "errno: %d (%s)\n", 
-				 s_path, daemonCore->InfoCommandSinfulString(), hostname,
-				 tmp_errno, strerror(tmp_errno) );
-
-		}
-		exit( 4 );
+	// check for error
+	//
+	if (pid == FALSE) {
+		dprintf(D_ALWAYS, "execOldStarter: Create_Process error\n");
+		return 0;
 	}
-	if ( pid < 0 ) {
-		pid = 0;
-	}
+
 	return pid;
-#endif // !defined(WIN32)
+#endif
 }
 
 #if !defined(WIN32)
@@ -1203,95 +1130,21 @@ Starter::dprintf( int flags, char* fmt, ... )
 float
 Starter::percentCpuUsage( void )
 {
-	int status;
-
-	time_t now = time(NULL);
-	if( now - s_last_snapshot >= pid_snapshot_interval ) { 
-		recomputePidFamily( now );
+	if (daemonCore->Get_Family_Usage(s_pid, s_usage) == FALSE) {
+		EXCEPT( "Starter::percentCpuUsage(): Fatal error getting process "
+		        "info for the starter and decendents" ); 
 	}
 
 	if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_LOAD) ) {
-		printPidFamily( D_FULLDEBUG, 
-						"Computing percent CPU usage with pids: " );
+		dprintf( D_FULLDEBUG,
+		        "Starter::percentCpuUsage(): Percent CPU usage "
+		        "for the family of starter with pid %u is: %f\n",
+		        s_pid,
+		        s_usage.percent_cpu );
 	}
 
-		// ProcAPI wants a non-const pointer reference, so we need
-		// a temporary.
-	procInfo *pinfoPTR = &s_pinfo;
-	if( (ProcAPI::getProcSetInfo(s_pidfamily, s_family_size,
-								 pinfoPTR, status) == PROCAPI_FAILURE) ) {
-
-			// If we failed, it might be b/c our pid family has stale
-			// info, so before we give up for real, recompute and try
-			// once more.
-		printPidFamily(D_FULLDEBUG, 
-			"Starter::percentCpuUsage(): Failed trying to get cpu usage "
-			"with this family: ");  
-
-		recomputePidFamily();
-
-		printPidFamily(D_FULLDEBUG, 
-			"Starter::percentCpuUsage(): Maybe that family was stale, "
-			"attempting recomputed family: ");  
-
-		if( (ProcAPI::getProcSetInfo( s_pidfamily, s_family_size, 
-									  pinfoPTR, status) == PROCAPI_FAILURE) ) {
-			EXCEPT( "Starter::percentCpuUsage(): Fatal error getting process "
-					"info for the starter and decendents" ); 
-		}
-	}
-	if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_LOAD) ) {
-		dprintf( D_FULLDEBUG, "Starter::percentCpuUsage(): Percent CPU usage "
-								"for those pids is: %f\n", s_pinfo.cpuusage );
-	}
-	return s_pinfo.cpuusage;
+	return s_usage.percent_cpu;
 }
-
-
-void
-Starter::recomputePidFamily( time_t now ) 
-{
-	if( !s_procfam ) {
-		dprintf( D_PROCFAMILY, 
-		 "Starter::recompute_pidfamily: ERROR: No ProcFamily object.\n" );
-		return;
-	}
-	dprintf( D_PROCFAMILY, "Recomputing pid family\n" );
-	s_procfam->takesnapshot();
-	if( s_pidfamily ) {
-		delete [] s_pidfamily;
-		s_pidfamily = NULL;
-	}
-	s_family_size = s_procfam->currentfamily( s_pidfamily );
-	if( ! s_family_size ) {
-		dprintf( D_ALWAYS, 
-			"WARNING: No processes found in starter's family\n" );
-	}
-	if( now ) {
-		s_last_snapshot = now;
-	} else {
-		s_last_snapshot = time( NULL );
-	}
-}
-
-
-void
-Starter::printPidFamily( int dprintf_level, char* header ) 
-{
-	MyString msg;
-	char numbuf[32];
-
-	if( header ) {
-		msg += header;
-	}
-	int i;
-	for( i=0; i<s_family_size; i++ ) {
-		snprintf( numbuf, 32, "%d ", s_pidfamily[i] );
-		msg += numbuf;
-	}
-	dprintf( dprintf_level, "%s\n", msg.Value() );
-}
-
 
 unsigned long
 Starter::imageSize( void )
@@ -1299,7 +1152,7 @@ Starter::imageSize( void )
 		// we assume we're only asked for this after we've already
 		// computed % cpu usage and we've already got this info
 		// sitting here...
-	return s_pinfo.imgsize;
+	return s_usage.total_image_size;
 }
 
 

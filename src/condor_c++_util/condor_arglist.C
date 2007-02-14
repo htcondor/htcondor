@@ -206,6 +206,12 @@ ArgList::GetArg(int n) const {
 }
 
 void
+ArgList::AppendArg(MyString arg) {
+	ASSERT(arg.Value());
+	ASSERT(args_list.Append(arg.Value()));
+}
+
+void
 ArgList::AppendArg(char const *arg) {
 	ASSERT(arg);
 	ASSERT(args_list.Append(arg));

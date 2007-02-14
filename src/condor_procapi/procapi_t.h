@@ -35,10 +35,8 @@
 
 // number of times to run each test
 const int PROC_INFO_NUMTIMES = 1;
-const int FAMILY_INFO_NUMTIMES = 1;
 const int PERM_NUMTIMES = 1;
 const int SET_INFO_NUMTIMES = 1;
-const int PID_FAMILY_NUMTIMES = 1;
 const int CPU_USAGE_NUMTIMES = 1;
 const int MEM_INFO_NUMTIMES = 1;
 
@@ -59,11 +57,6 @@ const int PROC_INFO_DEPTH = 3;
 // (20%)
 const float PROC_INFO_RSS_MARGIN = .35f;
 
-//constants for faminfo_t //////////////////////////////
-const int FAMILY_INFO_BREADTH = 2;
-const int FAMILY_INFO_DEPTH = 3;
-const float FAMILY_INFO_RSS_MARGIN = .35f;
-
 //constants for set_t///////////////////////////////////
 const int SET_INFO_DEPTH = 3;
 const int SET_INFO_BREADTH = 2;
@@ -75,10 +68,6 @@ const float SET_INFO_IMG_MARGIN = .1f;
 const float SET_INFO_MIN_MARGIN = .2f;
 const float SET_INFO_MAJ_MARGIN = .2f;
 
-//constants for test pidfam_t///////////////////////////////////
-const int PID_FAMILY_DEPTH = 4;
-const int PID_FAMILY_BREADTH = 1;
-
 // run_tests is called by the main function and runs each of the seven tests
 // a number of times specified above.  It returns 1 if all the tests completed
 // successfully,  -1 if at least one failed  
@@ -87,14 +76,10 @@ int run_tests(void);
 
 // tests getProcInfo 
 int getProcInfo_test(bool verbose);
-// tests getFamilyInfo
-int getFamilyInfo_test(bool verbose);
 // tests permission can I see the proc info for init
 int permission_test(bool verbose);
 // tests getProcSetInfo against getFamily info
 int getProcSetInfo_test(bool verbose);
-// tests getPidFamily
-int getPidFamily_test(bool verbose);
 // tests cpuusage via getProcInfo
 int cpuusage_test(bool verbose);
 

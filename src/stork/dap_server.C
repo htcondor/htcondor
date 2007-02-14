@@ -442,7 +442,7 @@ bool transfer_dap(char *dap_id, char *src_url, char *dest_url, const ArgList &ar
 		 FALSE,							// do not want a command port
 		 &myEnv,	                 	// environment
 		 Log_dir,						// current working directory
-		 FALSE,							// do not create a new process group
+		 NULL,							// do not register a process family
 		 NULL,							// list of socks to inherit
 		 module_stdio					// child stdio file descriptors
 		 								// nice increment = 0
@@ -511,7 +511,7 @@ void reserve_dap(char *dap_id, char *reserve_id, char *reserve_size, char *durat
 		 FALSE,							// do not want a command port
 		 NULL,  		              	// colon seperated environment string
 		 Log_dir,						// current working directory
-		 FALSE,							// do not create a new process group
+		 NULL,							// do not register a process family
 		 NULL,							// list of socks to inherit
 		 module_stdio					// child stdio file descriptors
 		 								// nice increment = 0
@@ -602,7 +602,7 @@ void release_dap(char *dap_id, char *reserve_id, char *dest_url)
 		 FALSE,							// do not want a command port
 		 NULL, 			               	// colon seperated environment string
 		 Log_dir,						// current working directory
-		 FALSE,							// do not create a new process group
+		 NULL,							// do not register a process family
 		 NULL,							// list of socks to inherit
 		 module_stdio					// child stdio file descriptors
 		 								// nice increment = 0
@@ -664,7 +664,7 @@ void requestpath_dap(char *dap_id, char *src_url, char *dest_url)
 		 FALSE,							// do not want a command port
 		 NULL,  		              	// colon seperated environment string
 		 Log_dir,						// current working directory
-		 FALSE,							// do not create a new process group
+		 NULL,							// do not register a process family
 		 NULL,							// list of socks to inherit
 		 module_stdio					// child stdio file descriptors
 		 								// nice increment = 0

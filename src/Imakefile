@@ -67,7 +67,7 @@
 		GlobusProgs starter.V6.1 shadow.V6.1 dcskel c-gahp had \
 		CreddProgs StorkProgs \
 		QuillProgs DeploymentTools \
-		eventd.V2
+		eventd.V2 transferd procd
 
 #define Libraries \
 		util_lib daemon_core.V6 daemon_client classad c++_util	\
@@ -75,6 +75,7 @@
 		io condor_ckpt_server/ckpt_server_api.a			\
 		condor_schedd.V6/libqmgmt.a				\
 		condor_accountant.V6/libacct.a StdUnvLibs NetmanLibs	\
+		condor_procd/procd_client.a \
 		chirp AnalysisLibs
 
 #if HAS_STATIC
@@ -224,6 +225,7 @@ condor_object_target(accountant.V6)
 condor_object_target(ckpt_server)
 
 condor_object_target(shadow.V6)
+condor_object_target(transferd)
 condor_object_target(starter.V5)
 
 #if WANT_QUILL
@@ -273,6 +275,7 @@ condor_object_target(scripts)
 condor_object_target(starter.V6.1)
 condor_object_target(shadow.V6.1)
 condor_object_target(c-gahp)
+condor_object_target(procd)
 condor_object_target(dcskel)
 
 #if HAVE_EXT_DRMAA
@@ -299,6 +302,7 @@ object_target(Stork,stork)
 object_target(DeploymentTools,deployment_tools)
 
 single_target(condor_procapi,libprocapi.a)
+single_target(condor_procd,procd_client.a)
 single_target(condor_sysapi,libsysapi.a)
 single_target(condor_schedd.V6,libqmgmt.a)
 single_target(condor_accountant.V6,libacct.a)

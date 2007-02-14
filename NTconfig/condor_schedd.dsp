@@ -176,6 +176,10 @@ SOURCE=..\src\condor_schedd.V6\schedd_main.C
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_schedd.V6\schedd_td.C
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_schedd.V6\scheduler.h
 # End Source File
 # Begin Source File
@@ -207,6 +211,14 @@ SOURCE=..\src\condor_schedd.V6\soap_scheddStub.C
 # Begin Source File
 
 SOURCE=..\src\condor_schedd.V6\soap_scheddStub.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_schedd.V6\tdman.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_schedd.V6\tdman.h
 # End Source File
 # End Target
 # End Project

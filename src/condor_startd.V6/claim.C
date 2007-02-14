@@ -937,15 +937,17 @@ Claim::spawnStarter( time_t now, Stream* s )
 
 	changeState( CLAIM_RUNNING );
 
+		// WE USED TO....
+		//
 		// Fake ourselves out so we take another snapshot in 15
 		// seconds, once the starter has had a chance to spawn the
 		// user job and the job as (hopefully) done any initial
 		// forking it's going to do.  If we're planning to check more
 		// often that 15 seconds, anyway, don't bother with this.
-	if( pid_snapshot_interval > 15 ) {
-		c_starter->set_last_snapshot( (now + 15) -
-									  pid_snapshot_interval );
-	} 
+		//
+		// TODO: should we set a timer here to tell the procd
+		// explicitly to take a snapshot in 15 seconds???
+
 	return TRUE;
 }
 

@@ -99,6 +99,14 @@ SOURCE=..\src\condor_master.V6\master.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_master.V6\procd.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_master.V6\procd.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_master.V6\service.WIN32.C
 # End Source File
 # Begin Source File

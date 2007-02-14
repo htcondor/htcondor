@@ -692,7 +692,7 @@ CronJobBase::RunProcess( void )
 		FALSE,				// Command port?  No
 		&env, 		 		// Env to give to child
 		cwd.GetCStr(),		// Starting CWD
-		FALSE,				// New process group?
+		NULL,				// Process family info
 		NULL,				// Socket list
 		childFds,			// Stdin/stdout/stderr
 		0 );				// Nice increment

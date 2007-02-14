@@ -139,9 +139,6 @@ my_popen(const char *const_cmd, const char *mode, int want_stderr)
 	}
 	SetHandleInformation(hParentPipe, HANDLE_FLAG_INHERIT, 0);
 
-	// initialize PROCESS_INFORMATION
-	memset(&pi, 0, sizeof(PROCESS_INFORMATION));
-
 	// initialize STARTUPINFO to set standard handles
 	memset(&si, 0, sizeof(STARTUPINFO));
 	si.cb = sizeof(STARTUPINFO);
@@ -260,7 +257,8 @@ my_pclose(FILE *fp)
 extern "C" int
 my_system(const char *cmd)
 {
-	return my_pclose(my_popen(cmd, "w", FALSE));
+	FILE* fp = my_popen(cmd, "w", FALSE);
+	return (fp != NULL) ? my_pclose(fp) : -1;
 }
 
 #else
@@ -405,13 +403,15 @@ my_pclose(FILE *fp)
 extern "C" int
 my_systemv(char *const args[])
 {
-	return my_pclose(my_popenv(args, "w", FALSE));
+	FILE* fp = my_popenv(args, "w", FALSE);
+	return (fp != NULL) ? my_pclose(fp) : -1;
 }
 
 int
 my_system(ArgList &args)
 {
-	return my_pclose(my_popen(args, "w", FALSE));
+	FILE* fp = my_popen(args, "w", FALSE);
+	return (fp != NULL) ? my_pclose(fp): -1;
 }
 
 #if !defined(WIN32)

@@ -306,7 +306,7 @@ main_init( int argc, char ** const argv )
 										FALSE,			// no command port
 										NULL,
 										NULL,
-										FALSE,
+										NULL,
 										NULL,
 										std_fds);
 

@@ -31,7 +31,6 @@
 #define _CONDOR_STARTD_STARTER_H
 
 #include "../condor_procapi/procapi.h"
-#include "killfamily.h"
 class Claim;
 
 class Starter : public Service
@@ -46,7 +45,6 @@ public:
 
 	char*	path() {return s_path;};
 	time_t	birthdate( void ) {return s_birthdate;};
-	time_t	last_snapshot( void ) {return s_last_snapshot;};
 	bool	kill(int);
 	bool	killpg(int);
 	void	killkids(int);
@@ -55,7 +53,6 @@ public:
 	bool	is_dc() {return s_is_dc;};
 	bool	isCOD(); 
 	bool	active();
-	void	set_last_snapshot( time_t val ) { s_last_snapshot = val; };
 	float	percentCpuUsage( void );
 	unsigned long	imageSize( void );
 
@@ -116,10 +113,6 @@ private:
 	int		startKillTimer( void );	    // Timer for how long we're willing 
 	void	cancelKillTimer( void );	// to "hardkill" before we SIGKILL
 
-		// helpers related to computing percent cpu usage
-	void	printPidFamily( int dprintf_level, char* header );
-	void	recomputePidFamily( time_t now = 0 );
-
 		// data that will be the same across all instances of this
 		// starter (i.e. things that are valid for copying)
 	ClassAd* s_ad;
@@ -128,21 +121,17 @@ private:
 
 		// data that only makes sense once this Starter object has
 		// been assigned to a given resource and spawned.
-	Claim*	s_claim;
-	pid_t	s_pid;
-	pid_t*	s_pidfamily;
-	int		s_family_size;
-	ProcFamily*	s_procfam;
-	time_t	s_birthdate;
-	time_t	s_last_snapshot;
-	int		s_kill_tid;		// DC timer id for hard killing
-	procInfo	s_pinfo;	// aggregate ProcAPI info for starter & job
-	int		s_port1;
-	int		s_port2;
+	Claim*          s_claim;
+	pid_t           s_pid;
+	ProcFamilyUsage s_usage;
+	time_t          s_birthdate;
+	int             s_kill_tid;		// DC timer id for hard killing
+	int             s_port1;
+	int             s_port2;
 #if HAVE_BOINC
-	bool 	s_is_boinc;
+	bool            s_is_boinc;
 #endif /* HAVE_BOINC */
-	int		s_reaper_id;
+	int             s_reaper_id;
 
 };
 

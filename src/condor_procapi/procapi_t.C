@@ -20,6 +20,7 @@
   * RIGHT.
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
 #include "procapi_t.h"
 #include <strings.h>
 
@@ -93,10 +94,10 @@ int run_tests(void) {
     printf ( "Test | Description\n" );
     printf ( "----   -----------\n" );
     printf ( " 1     Simple fork; monitor processes & family.\n" );
-    printf ( " 2     Complex fork; monitor family.\n" );
+    printf ( " 2 n/a Complex fork; monitor family.\n" );
     printf ( " 3     Determines if you can look at procs you don't own.\n");
     printf ( " 4 n/a Tests procSetInfo...asks for pids, returns info.\n");
-    printf ( " 5     Tests getPidFamily...forks kids & finds them again.\n");
+    printf ( " 5 n/a Tests getPidFamily...forks kids & finds them again.\n");
     printf ( " 6     Tests cpu usage over time.\n");
     printf ( " 7 n/a Fork a process; monitor it.  There's no return.\n\n");
     }
@@ -123,27 +124,6 @@ int run_tests(void) {
       printf("test 1 failed!\n");
     }
     
-
-    //performing the getFamilyInfo test/////////
-    test_success = true;
-    
-    printf("Performing test 2\n");
-    for(int i = 0; i < FAMILY_INFO_NUMTIMES; i++){
-      temp = getFamilyInfo_test(verbose);
-      
-      if(temp < 0){
-	printf("test 2 failed in trial %d\n", i);
-	success = temp;
-	test_success = false;
-      }
-    }
-    if(test_success){
-      printf("test 2 successfully completed %d trials!\n",FAMILY_INFO_NUMTIMES );
-    }
-    else{
-      printf("test 2 failed!\n");
-    }
-
     //performing the permissions test/////////
     test_success = true;
     
@@ -164,6 +144,7 @@ int run_tests(void) {
       printf("test 3 failed!\n");
     }
 
+#if 0
     // performing the getProcSetInfo test////////////
     test_success = true;
 
@@ -183,25 +164,8 @@ int run_tests(void) {
     else{
       printf("test 4 failed!\n");
     }
-    //performing the getPidFamily test/////////////
-    test_success = true;
+#endif
 
-    printf("Performing test 5\n");
-    for(int i = 0; i < PID_FAMILY_NUMTIMES; i++){
-      temp = getPidFamily_test(verbose);
-      
-      if(temp < 0){
-	printf("test 5 failed in trial %d\n", i);
-	success = temp;
-	test_success = false;
-      }
-    }
-    if(test_success){
-      printf("test 5 successfully completed %d trials!\n",PID_FAMILY_NUMTIMES );
-    }
-    else{
-      printf("test 5 failed!\n");
-    }
     // performing the cpuusage test//////////
     test_success = true;
 
@@ -265,7 +229,7 @@ void test_monitor ( char * jobname ) {
 
   for(i = 0; i < 9; i++) {
     sleep ( 10  );
-    if ( ProcAPI::getFamilyInfo( child, pi, &penvid, status ) 
+    if ( ProcAPI::getProcInfo( child, pi, status ) 
 								== PROCAPI_FAILURE) 
 	{
       printf ( "Problem getting information.  Exiting.\n");

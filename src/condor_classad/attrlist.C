@@ -2592,6 +2592,13 @@ AssignExpr(char const *variable,char const *value)
 
 	return Insert(buf.GetCStr());
 }
+
+int AttrList::
+Assign(char const *variable, MyString &value)
+{
+	return Assign(variable, value.Value());
+}
+
 int AttrList::
 Assign(char const *variable,char const *value)
 {

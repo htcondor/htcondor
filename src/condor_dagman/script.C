@@ -106,7 +106,7 @@ Script::BackgroundRun( int reaperId )
 
 	_pid = daemonCore->Create_Process( cmd, args,
 									   PRIV_UNKNOWN, reaperId, FALSE,
-									   NULL, NULL, FALSE, NULL, NULL, 0 );
+									   NULL, NULL, NULL, NULL, NULL, 0 );
     delete [] cmd;
 
 	if ( !tmpDir.Cd2MainDir( errMsg ) ) {

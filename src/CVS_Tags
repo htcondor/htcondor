@@ -1,3 +1,6 @@
+02/12/07  V6_9-privsep-merge-1
+  The state of the V6_9-privsep-branch before merging back to the trunk.
+
 02/09/07 pr777-merge-1
   The state of the pr777-branch for a merge back to the trunk.  Changes
   on the branch have been code reviewed and documented; there shouldn't

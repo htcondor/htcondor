@@ -148,9 +148,12 @@ protected:
 		SFT_IN, SFT_OUT, SFT_ERR
 	};
 
-	int openStdFile( std_file_type type, const char* attr, 
-					 bool allow_dash, bool &used_starter_fd,
-					 const char* log_header );
+	int openStdFile( std_file_type type,
+	                 const char* attr, 
+	                 bool allow_dash,
+	                 const char* log_header,
+	                 MyString* priv_sep_arg,
+	                 bool &used_starter_fd );
 
 private:
 

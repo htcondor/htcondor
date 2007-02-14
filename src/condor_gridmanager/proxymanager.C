@@ -812,7 +812,7 @@ int RefreshProxyThruMyProxy(Proxy * proxy)
 					FALSE,
 					&myEnv,
 					NULL,	// cwd
-					FALSE, // new proc group
+					NULL,  // process family info
 					NULL,  // socket inherit
 					arrIO); // in/out/err streams
 

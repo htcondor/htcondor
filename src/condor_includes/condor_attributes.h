@@ -566,6 +566,28 @@ extern const char * ATTR_HAD_INDEX;
 extern const char * ATTR_TERMINATION_PENDING;
 extern const char * ATTR_TERMINATION_EXITREASON;
 
+extern const char * ATTR_TREQ_DIRECTION;
+extern const char * ATTR_TREQ_INVALID_REQUEST;
+extern const char * ATTR_TREQ_INVALID_REASON;
+extern const char * ATTR_TREQ_HAS_CONSTRAINT;
+extern const char * ATTR_TREQ_JOBID_LIST;
+extern const char * ATTR_TREQ_PEER_VERSION;
+extern const char * ATTR_TREQ_FTP;
+extern const char * ATTR_TREQ_TD_SINFUL;
+extern const char * ATTR_TREQ_TD_ID;
+extern const char * ATTR_TREQ_CONSTRAINT;
+extern const char * ATTR_TREQ_JOBID_ALLOW_LIST;
+extern const char * ATTR_TREQ_JOBID_DENY_LIST;
+extern const char * ATTR_TREQ_CAPABILITY;
+extern const char * ATTR_TREQ_WILL_BLOCK;
+extern const char * ATTR_TREQ_NUM_TRANSFERS;
+extern const char * ATTR_TREQ_UPDATE_STATUS;
+extern const char * ATTR_TREQ_UPDATE_REASON;
+extern const char *ATTR_TREQ_SIGNALED;
+extern const char *ATTR_TREQ_SIGNAL;
+extern const char *ATTR_TREQ_EXIT_CODE;
+
+
 // This is a record of the job exit status from a standard universe job exit
 // via waitpid. It is in the job ad to implement the terminate_pending
 // feature. It has to be here because of rampant global variable usage in the

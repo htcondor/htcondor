@@ -46,7 +46,7 @@ int permission_test(bool verbose) {
   printf ( "processes in the system ( parent=1 ) then you can.\n\n" );
   }
 
-  if ( ProcAPI::getFamilyInfo( 1, pi, &penvid, status ) == PROCAPI_FAILURE ){
+  if ( ProcAPI::getProcInfo( 1, pi, status ) == PROCAPI_FAILURE ){
       printf ( "Unable to get info on process 1 (init)\n");
   }
   else{

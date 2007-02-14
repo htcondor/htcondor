@@ -7,7 +7,7 @@ LIB = $(DAEMONCORE_LIB) $(STD_LIBS)
 
 soapobjs(master)
 
-OBJ = master.o daemon.o $(SOAP_OBJS)
+OBJ = master.o daemon.o procd.o $(SOAP_OBJS)
 
 public_c_plus_target($(NAME),sbin,$(OBJ),$(LIB))
 

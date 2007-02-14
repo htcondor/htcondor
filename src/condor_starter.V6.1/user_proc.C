@@ -194,9 +194,12 @@ UserProc::PublishToEnv( Env* proc_env )
 
 
 int
-UserProc::openStdFile( std_file_type type, const char* attr, 
-					   bool allow_dash, bool &used_starter_fd,
-					   const char* log_header )
+UserProc::openStdFile( std_file_type type,
+                       const char* attr, 
+                       bool allow_dash,
+                       const char* log_header,
+                       MyString* priv_sep_arg,
+                       bool &used_starter_fd )
 {
 		// initialize this to -2 to mean "not specified".  if we have
 		// success, we'll have a valid fd (>=0).  if there's an error
@@ -273,10 +276,61 @@ UserProc::openStdFile( std_file_type type, const char* attr,
 		// Deal with special cases
 		///////////////////////////////////////////////////////
 
+		//////////////////////////////////////////////////////////
+		// Priv sep (we can't directly open the user job's files)
+		//////////////////////////////////////////////////////////
+	if (priv_sep_arg != NULL) {
+			// there are two general cases here:
+			//   1) we need to open some file, but its owned by the user;
+			//      in this case, we return the name of the file in
+			//      priv_sep_arg and just return our own std in/out/err
+			//      (it doesn't really matter what we return since it will
+			//       just be dup2'ed over by the priv sep switchboard)
+			//   2) we want to pass an FD that we can open (such as /dev/null
+			//      or a pipe for streaming i/o; in this case, we return "-"
+			//      in priv_sep_arg (this tells the priv sep switchboard to
+			//      just pass through whatever FD it inherited) and of course
+			//      return the FD that we want to pass down to the job
+			//
+			// here we initialize priv_sep_arg to default to case 2
+		*priv_sep_arg = "-";
+	}
+
+		//////////////////////
+		// Use streaming I/O
+		//////////////////////
+	if( wants_stream && ! is_null_file ) {
+		StreamHandler *handler = new StreamHandler;
+		if( !handler->Init(filename, name, is_output) ) {
+			MyString err_msg;
+			err_msg.sprintf( "unable to establish %s stream", phrase );
+			Starter->jic->notifyStarterError( err_msg.Value(), true,
+			    is_output ? CONDOR_HOLD_CODE_UnableToOpenOutputStream :
+			                CONDOR_HOLD_CODE_UnableToOpenInputStream, 0 );
+			return -1;
+		}
+		fd = handler->GetJobPipe();
+		dprintf( D_ALWAYS, "%s: streaming from remote file %s\n",
+				 log_header, filename );
+		return fd;
+	}
+
+	if (priv_sep_arg != NULL) {
+			// at this point, we'll set priv_sep_arg to the name of the
+			// file that needs to be opened - unless it's /dev/null, in
+			// which case we'll keep it at "-" and open /dev/null
+			// ourselves
+		if (!is_null_file) {
+			*priv_sep_arg = filename;
+		}
+	}
+
 		////////////////////////////////////
 		// Use the starter's equivalent fd
 		////////////////////////////////////
-	if( allow_dash && filename[0] == '-' && ! filename[1] ) {
+	if( (priv_sep_arg != NULL && !is_null_file) ||
+	    (allow_dash && filename[0] == '-' && ! filename[1]) )
+	{
 			// use the starter's fd
 		used_starter_fd = true;
 		switch( type ) {
@@ -298,26 +352,6 @@ UserProc::openStdFile( std_file_type type, const char* attr,
 		}
 		return fd;
 	}
-
-		//////////////////////
-		// Use streaming I/O
-		//////////////////////
-	if( wants_stream && ! is_null_file ) {
-		StreamHandler *handler = new StreamHandler;
-		if( !handler->Init(filename, stream_name, is_output) ) {
-			MyString err_msg;
-			err_msg.sprintf( "unable to establish %s stream", phrase );
-			Starter->jic->notifyStarterError( err_msg.Value(), true,
-			    is_output ? CONDOR_HOLD_CODE_UnableToOpenOutputStream :
-			                CONDOR_HOLD_CODE_UnableToOpenInputStream, 0 );
-			return -1;
-		}
-		fd = handler->GetJobPipe();
-		dprintf( D_ALWAYS, "%s: streaming from remote file %s\n",
-				 log_header, filename );
-		return fd;
-	}
-
 
 		///////////////////////////////////////////////////////
 		// The regular case of a local file 

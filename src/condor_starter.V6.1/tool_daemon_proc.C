@@ -45,26 +45,11 @@ extern CStarter *Starter;
 ToolDaemonProc::ToolDaemonProc( ClassAd *jobAd, int application_pid )
 {
     dprintf( D_FULLDEBUG, "In ToolDaemonProc::ToolDaemonProc()\n" );
-	family = NULL;
     JobAd = jobAd;
     job_suspended = false;
 	ApplicationPid = application_pid;
-	snapshot_tid = -1;
 
 }
-
-
-ToolDaemonProc::~ToolDaemonProc()
-{
-	if (family) {
-		delete family;
-	}
-	if ( snapshot_tid != -1 ) {
-		daemonCore->Cancel_Timer(snapshot_tid);
-		snapshot_tid = -1;
-	}
-}
-
 
 int
 ToolDaemonProc::StartJob()
@@ -196,14 +181,26 @@ ToolDaemonProc::StartJob()
 	priv_state priv;
 	priv = set_user_priv();
 
-	fds[0] = openStdFile( SFT_IN, ATTR_TOOL_DAEMON_INPUT, false, foo,
-						  "Tool Daemon Input file" );
+	fds[0] = openStdFile( SFT_IN,
+	                      ATTR_TOOL_DAEMON_INPUT,
+	                      false,
+	                      "Tool Daemon Input file",
+	                      NULL,
+	                      foo );
 
-	fds[1] = openStdFile( SFT_OUT, ATTR_TOOL_DAEMON_OUTPUT, false, foo,
-						  "Tool Daemon Output file" );
+	fds[1] = openStdFile( SFT_OUT,
+	                      ATTR_TOOL_DAEMON_OUTPUT,
+	                      false,
+	                      "Tool Daemon Output file",
+	                      NULL,
+	                      foo );
 
-	fds[2] = openStdFile( SFT_ERR, ATTR_TOOL_DAEMON_ERROR, false, foo,
-						  "Tool Daemon Error file" );
+	fds[2] = openStdFile( SFT_ERR,
+	                      ATTR_TOOL_DAEMON_ERROR,
+	                      false,
+	                      "Tool Daemon Error file",
+	                      NULL,
+	                      foo );
 
 	/* Bail out if we couldn't open the std files correctly */
 	if( fds[0] == -1 || fds[1] == -1 || fds[2] == -1 ) {
@@ -224,6 +221,23 @@ ToolDaemonProc::StartJob()
 		// Misc + Exec
 		// // // // // // 
 
+	// set up the FamilyInfo structure we will be using to track the tool
+	// daemon's process family
+	//
+	FamilyInfo fi;
+	fi.max_snapshot_interval = 15;
+	bool dedicated_account = false;
+	if (job_universe != CONDOR_UNIVERSE_LOCAL) {
+		dedicated_account = param_boolean("EXECUTE_LOGIN_IS_DEDICATED",
+		                                  false);
+	}
+	if (dedicated_account) {
+		fi.login = get_user_loginname();
+		dprintf(D_FULLDEBUG,
+		        "Tracking process family by login \"%s\"\n",
+		        fi.login);
+	}
+
 	char* ptmp = param( "JOB_RENICE_INCREMENT" );
 	if ( ptmp ) {
 		nice_inc = atoi(ptmp);
@@ -240,8 +254,8 @@ ToolDaemonProc::StartJob()
 
 	JobPid = daemonCore->
 		Create_Process( DaemonName, DaemonArgs,
-						PRIV_USER_FINAL, 1, FALSE, &job_env, job_iwd, TRUE,
-						NULL, fds, nice_inc, DCJOBOPT_NO_ENV_INHERIT );
+		                PRIV_USER_FINAL, 1, FALSE, &job_env, job_iwd, &fi,
+		                NULL, fds, nice_inc, NULL, DCJOBOPT_NO_ENV_INHERIT );
 
 		//NOTE: Create_Process() saves the errno for us if it is an
 		//"interesting" error.
@@ -274,29 +288,6 @@ ToolDaemonProc::StartJob()
 
 		job_start_time.getTime();
 
-		// success!  create a ProcFamily
-		PidEnvID penvid;
-
-		pidenvid_init(&penvid);
-
-		daemonCore->InfoEnvironmentID(&penvid, JobPid);
-
-		family = new ProcFamily(JobPid, &penvid, PRIV_USER);
-		ASSERT(family);
-
-#ifdef WIN32
-		// we only support running jobs as user nobody for the first pass
-		char nobody_login[60];
-		//sprintf(nobody_login,"condor-run-dir_%d",daemonCore->getpid());
-		sprintf(nobody_login,"condor-run-%d",daemonCore->getpid());
-		// set ProcFamily to find decendants via a common login name
-		family->setFamilyLogin(nobody_login);
-#endif
-
-		// take a snapshot of the family every 15 seconds
-		snapshot_tid = daemonCore->Register_Timer(2, 15, 
-			(TimerHandlercpp)&ProcFamily::takesnapshot, 
-			"ProcFamily::takesnapshot", family);
 		return TRUE;
 	}
 }
@@ -314,14 +305,12 @@ ToolDaemonProc::JobCleanup(int pid, int /*status*/)
 	
 		job_exit_time.getTime();
 
-		family->hardkill ();
-
-		if( snapshot_tid >= 0 ) {
-			daemonCore->Cancel_Timer(snapshot_tid);
+		if (daemonCore->Kill_Family(JobPid) == FALSE) {
+			dprintf(D_ALWAYS,
+			        "error killing process family for job cleanup\n");
 		}
-		snapshot_tid = -1;
 
-        return 1;
+		return 1;
     } 
 
     return 0;
@@ -343,8 +332,11 @@ ToolDaemonProc::Suspend()
 		dprintf(D_FULLDEBUG,"in ToolDaemonProc::Suspend()\n");
 
 		// suspend the tool daemon job
-	if ( family ) {
-		family->suspend();
+	if ( JobPid != -1 ) {
+		if (daemonCore->Suspend_Family(JobPid) == FALSE) {
+			dprintf(D_ALWAYS,
+			        "error suspending process family\n");
+		}
 	}
 
         // set our flag
@@ -355,11 +347,14 @@ void
 ToolDaemonProc::Continue()
 {
 	dprintf(D_FULLDEBUG,"in ToolDaemonProc::Continue()\n");
-
+	
 	// resume user job
-	if ( family ) {
-		family->resume();
+	if ( JobPid != -1 ) {
+		if (daemonCore->Continue_Family(JobPid) == FALSE) {
+			dprintf(D_ALWAYS, "error continuing process family\n");
+		}
 	}
+
         // set our flag
 	job_suspended = false;
 }
@@ -370,7 +365,7 @@ ToolDaemonProc::ShutdownGraceful()
 {
   dprintf(D_FULLDEBUG,"in ToolDaemonProc::ShutdownGraceful()\n");
 
-	if ( !family ) {
+	if ( JobPid == -1 ) {
 		// there is no process family yet, probably because we are still
 		// transferring files.  just return true to say we're all done,
 		// and that way the starter class will simply delete us and the
@@ -378,10 +373,14 @@ ToolDaemonProc::ShutdownGraceful()
 		return true;
 	}
 
+    // WE USED TO...
+    //
     // take a snapshot before we softkill the parent job process.
-	// this helps ensure that if the parent exits without killing
-	// the kids, our JobExit() handler will get em all.
-	family->takesnapshot();
+    // this helps ensure that if the parent exits without killing
+    // the kids, our JobExit() handler will get em all.
+    //
+    // TODO: should we explicitly call out to the procd here to tell
+    // it to take a snapshot???
 
 	// now softkill the parent job process.
     if( job_suspended ) {
@@ -397,7 +396,7 @@ ToolDaemonProc::ShutdownFast()
 {
   	dprintf(D_FULLDEBUG,"in ToolDaemonProc::ShutdownFast()\n");
 
-	if ( !family ) {
+	if ( JobPid == -1 ) {
 		// there is no process family yet, probably because we are still
 		// transferring files.  just return true to say we're all done,
 		// and that way the starter class will simply delete us and the
@@ -409,7 +408,11 @@ ToolDaemonProc::ShutdownFast()
 	// in potentially swapping the job back into memory if our next
 	// step is to hard kill it.
 //    requested_exit = true;
-	family->hardkill();
+
+	if (daemonCore->Kill_Family(JobPid) == FALSE) {
+		dprintf(D_ALWAYS,
+		        "error killing process family for fast shutdown\n");
+	}
 
     return false;	// return false says shutdown is pending
 }

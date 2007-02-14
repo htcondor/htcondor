@@ -1055,6 +1055,9 @@ Daemon::locate( void )
 	case DT_QUILL:
 		rval = getDaemonInfo( "QUILL", SCHEDD_AD );
 		break;
+	case DT_TRANSFERD:
+		rval = getDaemonInfo( "TRANSFERD", ANY_AD );
+		break;
 	default:
 		EXCEPT( "Unknown daemon type (%d) in Daemon::init", (int)_type );
 	}

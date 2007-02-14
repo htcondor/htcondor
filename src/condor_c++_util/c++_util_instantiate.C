@@ -25,7 +25,6 @@
 #include "simplelist.h"
 #include "extArray.h"
 #include "stringSpace.h"
-#include "killfamily.h"
 #include "HashTable.h"
 #include "condor_classad.h"
 #include "classad_collection_types.h"
@@ -38,20 +37,22 @@
 #include "condor_cred_base.h"
 #include "condor_credential.h"
 #include "condor_config.h"
+#include "condor_transfer_request.h"
 
 #include "passwd_cache.h"
 
 template class ExtArray<ParamValue>;
+template class SimpleList<ClassAd*>;
 template class List<char>; 		template class Item<char>;
 template class List<int>; 		template class Item<int>;
 template class SimpleList<int>; 
 template class SimpleList<float>;
+template class ExtArray<PROC_ID>;
 template class ExtArray<char *>;
 template class ExtArray<int>;
 template class ExtArray<MyString>;
 template class ExtArray<StringSpace::SSStringEnt>;
 template class ExtArray<StringSpace*>;
-template class ExtArray<ProcFamily::a_pid>;
 template class HashTable<int, BaseCollection*>;
 template class HashBucket<int, BaseCollection*>;
 template class Set<MyString>;
