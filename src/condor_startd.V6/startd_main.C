@@ -487,12 +487,6 @@ init_params( int first_time)
 		free( tmp );
 	}
 
-	tmp = param( "STARTD_DEBUG" );
-	if( tmp == NULL ) {
-		EXCEPT( "STARTD_DEBUG not defined in config file" );
-	}
-	free( tmp );
-
 	if( accountant_host ) {
 		free( accountant_host );
 	}
