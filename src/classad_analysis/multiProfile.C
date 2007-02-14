@@ -24,6 +24,8 @@
 #include "condor_common.h"
 #include "multiProfile.h"
 
+#include <iostream>
+
 MultiProfile::
 MultiProfile( )
 {

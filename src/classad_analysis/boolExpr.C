@@ -25,6 +25,8 @@
 #include "list.h"
 #include "Stack.h"
 
+#include <iostream>
+
 BoolExpr::
 BoolExpr( )
 {

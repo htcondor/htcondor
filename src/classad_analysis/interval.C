@@ -24,6 +24,8 @@
 #include "condor_common.h"
 #include "interval.h"
 
+#include <iostream>
+
 using namespace std;
 
 // Interval methods
