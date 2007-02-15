@@ -5608,6 +5608,14 @@ X.509 proxy to be used in GSI authentication.
 When this configuration variable is defined, use of this proxy
 takes precedence over use of a certificate and key.
 
+\item[\Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS}]
+\label{param:DelegateJobGSICredentials} 
+A boolean value that defaults to \Expr{True} for Condor version 6.7.19
+and more recent versions.
+When \Expr{True}, a job's GSI X.509 credentials are delegated,
+instead of being copied.
+This results in a more secure communication when not encrypted.
+
 \item[\Macro{GRIDMAP}]
 \label{param:GridMap}
 The complete path and file name of the Globus Gridmap file.
