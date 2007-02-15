@@ -189,11 +189,11 @@ int store_cred_service(const char *user, const char *pw, int mode)
 		break;
 	}
 	case QUERY_MODE: {
-		char *pw = getStoredCredential(POOL_PASSWORD_USERNAME, NULL);
-		if (pw) {
+		char *password = getStoredCredential(POOL_PASSWORD_USERNAME, NULL);
+		if (password) {
 			answer = SUCCESS;
-			SecureZeroMemory(pw, MAX_PASSWORD_LENGTH);
-			free(pw);
+			SecureZeroMemory(password, MAX_PASSWORD_LENGTH);
+			free(password);
 		}
 		else {
 			answer = FAILURE_NOT_FOUND;
@@ -548,7 +548,7 @@ static int code_store_cred(Stream *socket, char* &user, char* &pw, int &mode) {
 	
 }
 
-void store_pool_cred_handler(void *, int i, Stream *s)
+void store_pool_cred_handler(void *, int  /*i*/, Stream *s)
 {
 	int result;
 	char *pw = NULL;
