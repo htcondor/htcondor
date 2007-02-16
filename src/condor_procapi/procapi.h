@@ -27,6 +27,7 @@
 //@author Mike Yoder
 
 /* Here are the necessary #includes */
+#include "condor_common.h"
 #include "condor_system.h"
 #include "condor_pidenvid.h"
 #include "processid.h"

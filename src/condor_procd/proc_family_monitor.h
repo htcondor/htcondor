@@ -23,6 +23,7 @@
 #ifndef _PROC_FAMILY_MONITOR_H
 #define _PROC_FAMILY_MONITOR_H
 
+#include "condor_common.h"
 #include "../condor_procapi/procapi.h"
 #include "condor_pidenvid.h"
 #include "tree.h"
