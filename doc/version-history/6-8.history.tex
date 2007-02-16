@@ -62,6 +62,12 @@ server was unavailable.
 \item The Solaris 9 Condor package can be used under Solaris 10 again.
 Changes in 6.7.20 broke this compatibility.
 
+% PR 806
+\item \Condor{dagman} now does a better job (especially in recovery mode)
+of detecting potentially incorrect submit events (those with Condor IDs
+not matching what is expected).
+
+
 \end{itemize}
 
 \noindent Known Bugs:
