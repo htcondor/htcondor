@@ -35,6 +35,7 @@
 #ifndef WANT_NAMESPACES
 #define WANT_NAMESPACES
 #endif
+#include "classad_distribution.h"
 
 #include "MyString.h"
 
@@ -43,11 +44,6 @@
 #define CREDATTR_OWNER "Owner"
 #define CREDATTR_ORIG_OWNER "OrigOwner"
 #define CREDATTR_DATA_SIZE "DataSize"
-
-// forward declaration of a class in a namespace!
-namespace classad {
-	class ClassAd;
-}
 
 class Credential {
 
