@@ -64,11 +64,21 @@ LocalClient::start_connection(void* buffer, int len)
 
 	// set up iovec structs for the pid, the serial number, and the payload
 	//
-	vector[0].iov_base = &m_pid;
+	// memcpy is used to set the iov_base because its type varies.  on some
+	// platforms it is (void*) and on some it is (char*).
+	//
+	void *tmpptr;
+
+	tmpptr = &m_pid;
+	memcpy(&(vector[0].iov_base), &tmpptr, sizeof(void*));
 	vector[0].iov_len = sizeof(pid_t);
-	vector[1].iov_base = &m_serial_number;
+
+	tmpptr = &m_serial_number;
+	memcpy(&(vector[1].iov_base), &tmpptr, sizeof(void*));
 	vector[1].iov_len = sizeof(int);
-	vector[2].iov_base = buffer;
+
+	tmpptr = buffer;
+	memcpy(&(vector[2].iov_base), &tmpptr, sizeof(void*));
 	vector[2].iov_len = len;
 
 	// finally, call out to the named pipe writer
