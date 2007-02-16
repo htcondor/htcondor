@@ -5,4 +5,4 @@ error = job_quill_basic.err
 log = job_quill_basic.log
 Notification = NEVER
 hold = true
-queue 1000
+queue 750

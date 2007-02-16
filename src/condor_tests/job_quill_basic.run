@@ -8,7 +8,8 @@ $cmd = "job_quill_basic.cmd";
 $corename = "job_quill_basic";
 $supwfile = "x_job_quill_supw";
 $topdir = getcwd();
-$ourtarfile = "x_quill_postgresql-8.2.3.tar.gz";
+#$ourtarfile = "x_quill_postgresql-8.1.4.tar.gz";
+$ourtarfile = "";
 
 # where am I running
 $dummyhost = "gamgee.cs.wisc.edu";
@@ -60,7 +61,7 @@ if($ourtarfile eq "") {
 	system("cp $mypgsqltarfile .");
 } else {
 	$usetarfile = $topdir . "/" . $ourtarfile;
-	$mypgsqlversion = "postgresql-8.2.3";
+	$mypgsqlversion = "postgresql-8.1.4";
 }
 
 $myextralibs = $topdir . "/libs/lib";
@@ -149,8 +150,8 @@ if($pgresult == 0) {
 	$pcresult = system("./job_quill_basic.pl $mysubmitnm");
 	print "Result of job_quill_basic job is  $pcresult\n";
 
-	#$result = system("./x_quill_pgsqlstop.pl $myfullpgsqlloc ");
-	#print "Result of Quill Postgresssql db stop job is  $result\n";
+	$result = system("./x_quill_pgsqlstop.pl $myfullpgsqlloc ");
+	print "Result of Quill Postgresssql db stop job is  $result\n";
 }
 
 system("cp *quill_basic* $mysaveme");
@@ -170,7 +171,6 @@ if( -e "$mysubmitnmlog" )
 	system("cp $mysubmitnmlog $mycorenmlog");
 }
 
-
 my @adarray;
 my $status = 1;
 my $cmd = "condor_off -master";
@@ -181,9 +181,9 @@ if(!$status)
 	exit(1)
 }
 if($pcresult == 0) {
-	print "Setup allow test which then WORKED!!!......\n";
+	print "Setup allowed test which then WORKED!!!......\n";
 } else {
-	print "Setup allow test which then failed......\n";
+	print "Setup allowed test which then failed......\n";
 	exit(1);
 }
 

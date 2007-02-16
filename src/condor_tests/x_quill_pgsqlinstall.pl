@@ -49,7 +49,7 @@ if($dotar != 0) {
 	die "TAR EXTRACTION OF $tarfile FAILED\n";
 }
 chdir("$pgsqlversion");
-$doconfigure = system("./configure --prefix=$prefix --without-readline");
+$doconfigure = system("./configure --prefix=$prefix --without-readline --disable-shared");
 if($doconfigure != 0) {
 	die "Configure failed\n";
 }

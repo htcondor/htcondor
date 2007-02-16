@@ -71,7 +71,7 @@ sub compare_3arrays_byrows
 			#print "Skip compare of -$thiskey-\n";
 		} else {
 			if((${$harray1}[$location] eq ${$harray2}[$location]) && (${$harray1}[$location] eq ${$harray3}[$location])) {
-				#print "Good match:${$harray1}[$location]\n";
+				#print "Good match:${$harray1}[$location] at entry $location\n";
 			} else {
 				print "Match FAIL position <<$location>>: 1: ${$harray1}[$location] 2: ${$harray2}[$location] 3: ${$harray3}[$location]\n";
 				return(1);
@@ -79,6 +79,7 @@ sub compare_3arrays_byrows
 		}
 
 		$location = $location + 1;
+		#print "Location now <<$location>>\n";
 	}
 
 	return(0);
@@ -119,7 +120,7 @@ $submitted = sub
 	if($submithandled eq "no") {
 		$submithandled = "yes";
 
-sleep(60);
+sleep(30);
 
 		print "submitted\n";
 		print "Collecting queue details from schedd\n";
@@ -180,17 +181,12 @@ sleep(60);
 		print "Done sorting arrays\n";
 		system("date");
 		$result = compare_3arrays_byrows(\@adarray, \@bdarray, \@cdarray, \%skip);
+		# save the time and leave the jobs behind before stopping condor
 		if( $result != 0 ) {
-			my @ddarray;
-			my $ddstatus = 1;
-			my $ddcmd = "condor_rm $cluster";
-			$ddstatus = CondorTest::runCondorTool($ddcmd,\@ddarray,2);
 			die "Ads from all three sources were not the same!!!\n";
 		}
-		my @ddarray;
-		my $ddstatus = 1;
-		my $ddcmd = "condor_rm $cluster";
-		$ddstatus = CondorTest::runCondorTool($ddcmd,\@ddarray,2);
+		print "$testname: SUCCESS\n";
+		exit(0);
 	}
 
 };
