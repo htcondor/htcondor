@@ -145,8 +145,13 @@ DEPS(lib_userlog,x_write_joblog.exe)
 TESTCLASS(lib_userlog,lib)
 TESTCLASS(lib_userlog,quick)
 
-/*
-****************** Tests being readied for prime time **********************
+#if defined(IS_I386_LINUX_RH9) || defined(IS_I386_LINUX_RH80) || defined(IS_I386_LINUX_RH72) || defined(IS_I386_LINUX_RHEL3) || defined(IS_CONDOR_FREEBSD) || defined(IS_X86_64_LINUX_RHEL3) || defined(IS_PPC_OSX_10_3) || defined(IS_CONDOR_PPC_LINUX_SLES9) || defined(IS_IA64_LINUX_SLES81) || defined(IS_IA64_LINUX_RHEL3) 
+DESC(job_quill_basic,"Basic Quill Test")
+RUN(job_quill_basic)
+TESTCLASS(job_quill_basic,core)
+TESTCLASS(job_quill_basic,quick)
+TESTCLASS(job_quill_basic,btdebug)
+#endif
 
 DESC(job_core_basic_par,"Basic Parallel Universe")
 RUN(job_core_basic_par)
@@ -154,17 +159,14 @@ TESTCLASS(job_core_basic_par,core)
 TESTCLASS(job_core_basic_par,quick)
 TESTCLASS(job_core_basic_par,btdebug)
 
+/*
+****************** Tests being readied for prime time **********************
+
 DESC(job_core_basic-security_par,"Basic Parallel Universe w/security on")
 RUN(job_core_basic-security_par)
 TESTCLASS(job_core_basic-security_par,core)
 TESTCLASS(job_core_basic-security_par,quick)
 TESTCLASS(job_core_basic-security_par,btdebug)
-
-DESC(job_quill_basic,"Basic Quill Test")
-RUN(job_quill_basic)
-TESTCLASS(job_quill_basic,core)
-TESTCLASS(job_quill_basic,quick)
-TESTCLASS(job_quill_basic,btdebug)
 
 DESC(job_stork_file-file,"Basic stork Test")
 RUN(job_stork_file-file)
