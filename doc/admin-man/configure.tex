@@ -1690,11 +1690,17 @@ section~\ref{sec:Networking} on page~\pageref{sec:Networking}.
 
 \item[\Macro{NONBLOCKING\_COLLECTOR\_UPDATE}]
   \label{param:NonblockingCollectorUpdate}
-  \Todo
+  A boolean value that defaults to \Expr{True}.
+  When \Expr{True}, the establishment of TCP connections
+  to the \Condor{collector} daemon
+  for a security-enabled pool are done in a nonblocking manner.
 
 \item[\Macro{NEGOTIATOR\_USE\_NONBLOCKING\_STARTD\_CONTACT}]
   \label{param:NegotiatorUseNonblockingStartdContact}
-  \Todo
+  A boolean value that defaults to \Expr{True}.
+  When \Expr{True}, the establishment of TCP connections
+  from the \Condor{negotiator} daemon to the \Condor{startd} daemon
+  for a security-enabled pool are done in a nonblocking manner.
 
 \end{description}
 
