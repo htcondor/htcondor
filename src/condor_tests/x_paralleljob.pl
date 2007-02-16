@@ -23,9 +23,6 @@ if( $nodenum == 0 ) {
 	print "Looking for $mygoal messages in node 0 job....\n";
 	print "socket is $newsocketname\n";
 	print "Node <0> waiting.....\n"; 
-	#unlink($newsocketname);
-
-	#system("mkdir $mypid");
 	chdir("$mypid");
 	my $server = IO::Socket::UNIX->new(Local => $newsocketname,
 								Type  => SOCK_DGRAM)
@@ -55,8 +52,10 @@ if( $nodenum == 0 ) {
 	print "Node <$nodenum>\n"; 
 	print "socket is $newsocketname\n";
 	chdir("$mypid");
-	system("pwd");
-	system("ls");
+	while( !(-S "$newsocketname")) {
+		sleep 1;
+		print "waiting for socket\n";
+	}
 	my $client = IO::Socket::UNIX->new(Peer => "$newsocketname",
 								Type  => SOCK_DGRAM,
 								Timeout => 10)
