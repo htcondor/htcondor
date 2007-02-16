@@ -1,9 +1,21 @@
+02/15/07 V6_8-dagman-PR806-merge-1
+  The state of the V6_8-dagman-PR806-branch for a merge to the trunk.
+  Note that there are modifications committed beyond this tag on the
+  branch, but Peter and I decided to abandon them.  (In terms of the
+  actual source code, this tag is the same thing as
+  V6_8-dagman-PR806-branch-phase1.)
+
 02/02/07 V6_8_4
   The official V6_8_4 release is a copy of BUILD-V6_8-branch-2007-2-1.
   All platforms built on NMI runid 41381.
 
 02/02/07 V6_8_4-{root,branch}
   The branch for V6_8_4 off of V6_8-branch.
+
+02/01/07 V6_8-dagman-PR806-branch-phase1
+  This branch has DAGMan fixes related to PR 806.  Phase 1 has stuff
+  I'm sure I want to merge back into V6_8; there is other stuff committed
+  beyond this tag, but I'm not sure that should actually be released.
 
 02/01/07 V6_8-dagman-PR806-{root,branch}
   A branch for DAGMan changes related to Gnats PR 806.  I have some

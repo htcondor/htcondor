@@ -190,8 +190,9 @@ class Dag {
 	    @param The event.
 		@param The job corresponding to this event.
 		@param Whether we're in recovery mode.
+		@param Whether the submit event is considered "sane".
 	*/
-	void ProcessSubmitEvent(Job *job, bool recovery);
+	void ProcessSubmitEvent(Job *job, bool recovery, bool &submitEventIsSane);
 
 	/** Process an event indicating that a job is in an idle state.
 	    Note that this method only does processing relating to keeping
@@ -444,7 +445,7 @@ class Dag {
 
 		// takes a userlog event and returns the corresponding node
 	Job* LogEventNodeLookup( int logsource, const ULogEvent* event,
-				bool recovery );
+				bool &submitEventIsSane );
 
 		// check whether a userlog event is sane, or "impossible"
 
@@ -455,8 +456,7 @@ class Dag {
 		// earlier in the submit command's stdout (which we stashed in
 		// the Job object)
 
-	bool SanityCheckSubmitEvent( const CondorID condorID, const Job* node,
-								 const bool recovery );
+	bool SanityCheckSubmitEvent( const CondorID condorID, const Job* node );
 
 		// The log file name specified by the -Condorlog command line
 		// argument (not used for much anymore).

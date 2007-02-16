@@ -482,7 +482,9 @@ bool Dag::ProcessOneEvent (int logsource, ULogEventOutcome outcome,
 	case ULOG_OK:
 		{
 			ASSERT( event != NULL );
-			Job *job = LogEventNodeLookup( logsource, event, recovery );
+			bool submitEventIsSane;
+			Job *job = LogEventNodeLookup( logsource, event,
+						submitEventIsSane );
 			PrintEvent( DEBUG_VERBOSE, event, job );
 			if( !job ) {
 					// event is for a job outside this DAG; ignore it
@@ -521,7 +523,7 @@ bool Dag::ProcessOneEvent (int logsource, ULogEventOutcome outcome,
 				break;
 
 			case ULOG_SUBMIT:
-				ProcessSubmitEvent(job, recovery);
+				ProcessSubmitEvent(job, recovery, submitEventIsSane);
 				ProcessIsIdleEvent(job);
 				break;
 
@@ -930,24 +932,35 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 
 //---------------------------------------------------------------------------
 void
-Dag::ProcessSubmitEvent(Job *job, bool recovery) {
+Dag::ProcessSubmitEvent(Job *job, bool recovery, bool &submitEventIsSane) {
 
 	if ( !job ) {
 		return;
 	}
 
-	job->_queuedNodeJobProcs++;
+		//
+		// If we got an "insane" submit event for a node that currently
+		// has a job in the queue, we don't want to increment
+		// the job proc count and jobs submitted counts here, because
+		// if we get a terminated event corresponding to the "original"
+		// Condor ID, we won't decrement the counts at that time.
+		//
+	if ( submitEventIsSane || job->GetStatus() != Job::STATUS_SUBMITTED ) {
+		job->_queuedNodeJobProcs++;
+	}
 
 		// Note:  in non-recovery mode, we increment _numJobsSubmitted
 		// in SubmitReadyJobs().
 	if ( recovery ) {
-		job->_Status = Job::STATUS_SUBMITTED;
-
-			// Only increment the submitted job count on
-			// the *first* proc of a job.
-		if( job->_queuedNodeJobProcs == 1 ) {
-			_numJobsSubmitted++;
+		if ( submitEventIsSane || job->GetStatus() != Job::STATUS_SUBMITTED ) {
+				// Only increment the submitted job count on
+				// the *first* proc of a job.
+			if( job->_queuedNodeJobProcs == 1 ) {
+				_numJobsSubmitted++;
+			}
 		}
+
+		job->_Status = Job::STATUS_SUBMITTED;
 		return;
 	}
 
@@ -2602,9 +2615,11 @@ Dag::RemoveDependency( Job *parent, Job *child, MyString &whynot )
 
 Job*
 Dag::LogEventNodeLookup( int logsource, const ULogEvent* event,
-			bool recovery )
+			bool &submitEventIsSane )
 {
 	ASSERT( event );
+	submitEventIsSane = false;
+
 	Job *node = NULL;
 	CondorID condorID( event->cluster, event->proc, event->subproc );
 
@@ -2642,7 +2657,8 @@ Dag::LogEventNodeLookup( int logsource, const ULogEvent* event,
 						 "DAG Node: %1023s", nodeName ) == 1 ) {
 				node = GetJob( nodeName );
 				if( node ) {
-					SanityCheckSubmitEvent( condorID, node, recovery );
+					submitEventIsSane = SanityCheckSubmitEvent( condorID,
+								node );
 					node->_CondorID = condorID;
 				}
 			} else {
@@ -2745,10 +2761,13 @@ Dag::EventSanityCheck( int logsource, const ULogEvent* event,
 // in the submit command's stdout (which we stashed in the Job object)
 
 bool
-Dag::SanityCheckSubmitEvent( const CondorID condorID, const Job* node,
-							 const bool recovery )
+Dag::SanityCheckSubmitEvent( const CondorID condorID, const Job* node )
 {
-	if( recovery ) {
+		// Changed this if from "if( recovery )" during work on PR 806 --
+		// this is better because if you get two submit events for the
+		// same node you'll still get a warning in recovery mode.
+		// wenger 2007-01-31.
+	if( node->_CondorID == _defaultCondorId ) {
 			// we no longer have the submit command stdout to check against
 		return true;
 	}
