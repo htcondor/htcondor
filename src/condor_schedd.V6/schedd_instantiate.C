@@ -65,15 +65,12 @@ template class Item<shadow_rec*>;
 template class SimpleList<PROC_ID>;
 template class ExtArray<MyString*>;
 template class ExtArray<bool>;
-template class ExtArray<PROC_ID>;
 template class ExtArray<OwnerData>;
 template class SimpleList<Shadow*>;
 template class HashTable<int, ExtArray<PROC_ID> *>;
 
 template class HashTable<MyString, TransferDaemon*>;
 template class HashBucket<MyString, TransferDaemon*>;
-template class HashTable<MyString, MyString>;
-template class HashBucket<MyString, MyString>;
 template class HashTable<long, TransferDaemon*>;
 template class HashBucket<long, TransferDaemon*>;
 
