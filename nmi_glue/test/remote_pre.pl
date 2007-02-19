@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre.pl,v 1.2.2.10 2007-01-16 19:15:51 bt Exp $
+# $Id: remote_pre.pl,v 1.2.2.11 2007-02-19 22:45:36 bt Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
@@ -258,6 +258,11 @@ if( ($ENV{NMI_PLATFORM} =~ /hpux_11/) )
 if( ($ENV{NMI_PLATFORM} =~ /ppc64_sles_9/) ) {
 	# evil work around for bad JIT compiler
 	print FIX "JAVA_EXTRA_ARGUMENTS = -Djava.compiler=NONE\n";
+}
+
+if( ($ENV{NMI_PLATFORM} =~ /ppc64_macos_10.3/) ) {
+	# evil work around for macos
+	print FIX "JAVA_EXTRA_ARGUMENTS = -Djava.vm.vendor=Apple\n";
 }
 
 # Add a job wrapper for windows.... and a few other things which
