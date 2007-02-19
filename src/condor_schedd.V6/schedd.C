@@ -6561,7 +6561,6 @@ Scheduler::spawnShadow( shadow_rec* srec )
 	bool nt_resource = false;
  	char* match_opsys = NULL;
  	char* match_version = NULL;
-	TransferDaemon *td = NULL;
 
 		// Until we're restorting the match ClassAd on reconnected, we
 		// wouldn't know if the startd we want to talk to supports the
@@ -6697,6 +6696,7 @@ Scheduler::spawnShadow( shadow_rec* srec )
 	// this user. Due to the nasty method of command line argument parsing
 	// by the shadow, this should be first on the command line.
 	if ( param_boolean("PRIVSEP_ENABLED", false) ) {
+		TransferDaemon *td = NULL;
 		switch( universe ) {
 			case CONDOR_UNIVERSE_VANILLA:
 			case CONDOR_UNIVERSE_JAVA:

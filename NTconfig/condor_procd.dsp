@@ -86,6 +86,10 @@ LINK32=link.exe
 # Name "condor_procd - Win32 Debug"
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\condor_open.C"
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_util_lib\condor_pidenvid.c
 # End Source File
 # Begin Source File

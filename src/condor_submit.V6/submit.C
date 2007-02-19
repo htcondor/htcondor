@@ -843,7 +843,7 @@ main( int argc, char *argv[] )
 
 	if (Quiet) {
 		int this_cluster = -1, job_count=0;
-		for (int i=0; i <= CurrentSubmitInfo; i++) {
+		for (i=0; i <= CurrentSubmitInfo; i++) {
 			if (SubmitInfo[i].cluster != this_cluster) {
 				if (this_cluster != -1) {
 					fprintf(stdout, "%d job(s) submitted to cluster %d.\n",
@@ -953,7 +953,7 @@ main( int argc, char *argv[] )
 	}
 
 	// Deallocate some memory just to keep Purify happy
-	for (int i=0;i<JobAdsArrayLen;i++) {
+	for (i=0;i<JobAdsArrayLen;i++) {
 		delete JobAdsArray[i];
 	}
 

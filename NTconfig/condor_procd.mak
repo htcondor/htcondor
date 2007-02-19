@@ -48,6 +48,7 @@ CLEAN :"condor_procapi - Win32 ReleaseCLEAN"
 !ELSE 
 CLEAN :
 !ENDIF 
+	-@erase "$(INTDIR)\condor_open.obj"
 	-@erase "$(INTDIR)\condor_pidenvid.obj"
 	-@erase "$(INTDIR)\dprintf_lite.obj"
 	-@erase "$(INTDIR)\local_server.WINDOWS.obj"
@@ -124,6 +125,7 @@ LINK32_OBJS= \
 	"$(INTDIR)\procd_common.obj" \
 	"$(INTDIR)\procd_main.obj" \
 	"$(INTDIR)\process_control.WINDOWS.obj" \
+	"$(INTDIR)\condor_open.obj" \
 	"$(OUTDIR)\condor_procapi.lib"
 
 "$(OUTDIR)\condor_procd.exe" : "$(OUTDIR)" $(DEF_FILE) $(LINK32_OBJS)
@@ -154,6 +156,7 @@ CLEAN :"condor_procapi - Win32 DebugCLEAN"
 !ELSE 
 CLEAN :
 !ENDIF 
+	-@erase "$(INTDIR)\condor_open.obj"
 	-@erase "$(INTDIR)\condor_pidenvid.obj"
 	-@erase "$(INTDIR)\dprintf_lite.obj"
 	-@erase "$(INTDIR)\local_server.WINDOWS.obj"
@@ -232,6 +235,7 @@ LINK32_OBJS= \
 	"$(INTDIR)\procd_common.obj" \
 	"$(INTDIR)\procd_main.obj" \
 	"$(INTDIR)\process_control.WINDOWS.obj" \
+	"$(INTDIR)\condor_open.obj" \
 	"$(OUTDIR)\condor_procapi.lib"
 
 "$(OUTDIR)\condor_procd.exe" : "$(OUTDIR)" $(DEF_FILE) $(LINK32_OBJS)
@@ -257,27 +261,33 @@ LINK32_OBJS= \
 
 "condor_procapi - Win32 Release" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_procapi.mak" CFG="condor_procapi - Win32 Release" 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_procapi.mak CFG="condor_procapi - Win32 Release" 
    cd "."
 
 "condor_procapi - Win32 ReleaseCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_procapi.mak" CFG="condor_procapi - Win32 Release" RECURSE=1 CLEAN 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_procapi.mak CFG="condor_procapi - Win32 Release" RECURSE=1 CLEAN 
    cd "."
 
 !ELSEIF  "$(CFG)" == "condor_procd - Win32 Debug"
 
 "condor_procapi - Win32 Debug" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_procapi.mak" CFG="condor_procapi - Win32 Debug" 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_procapi.mak CFG="condor_procapi - Win32 Debug" 
    cd "."
 
 "condor_procapi - Win32 DebugCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_procapi.mak" CFG="condor_procapi - Win32 Debug" RECURSE=1 CLEAN 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_procapi.mak CFG="condor_procapi - Win32 Debug" RECURSE=1 CLEAN 
    cd "."
 
 !ENDIF 
+
+SOURCE="..\src\condor_c++_util\condor_open.C"
+
+"$(INTDIR)\condor_open.obj" : $(SOURCE) "$(INTDIR)"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
 
 SOURCE=..\src\condor_util_lib\condor_pidenvid.c
 
