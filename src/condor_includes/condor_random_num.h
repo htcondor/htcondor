@@ -28,9 +28,9 @@ extern "C" {
 #endif
 
 int set_seed(int seed);
-int get_random_int();
-unsigned int get_random_uint();
-float get_random_float();
+int get_random_int(void);
+unsigned int get_random_uint(void);
+float get_random_float(void);
 
 #if defined(__cplusplus)
 }
