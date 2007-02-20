@@ -111,6 +111,7 @@ BSC32_SBRS= \
 LINK32=link.exe
 LINK32_FLAGS=../Release/condor_common.obj ../Release/condor_common_c.obj $(CONDOR_LIB) $(CONDOR_LIBPATH) $(CONDOR_GSOAP_LIB) $(CONDOR_GSOAP_LIBPATH) $(CONDOR_KERB_LIB) $(CONDOR_KERB_LIBPATH) $(CONDOR_PCRE_LIB) $(CONDOR_PCRE_LIBPATH) $(CONDOR_GLOBUS_LIB) $(CONDOR_GLOBUS_LIBPATH) $(CONDOR_OPENSSL_LIB) $(CONDOR_POSTGRESQL_LIB) $(CONDOR_OPENSSL_LIBPATH) $(CONDOR_POSTGRESQL_LIBPATH) /nologo /subsystem:console /pdb:none /map:"$(INTDIR)\condor_procd.map" /debug /machine:I386 /out:"$(OUTDIR)\condor_procd.exe" 
 LINK32_OBJS= \
+	"$(INTDIR)\condor_open.obj" \
 	"$(INTDIR)\condor_pidenvid.obj" \
 	"$(INTDIR)\dprintf_lite.obj" \
 	"$(INTDIR)\local_server.WINDOWS.obj" \
@@ -125,7 +126,6 @@ LINK32_OBJS= \
 	"$(INTDIR)\procd_common.obj" \
 	"$(INTDIR)\procd_main.obj" \
 	"$(INTDIR)\process_control.WINDOWS.obj" \
-	"$(INTDIR)\condor_open.obj" \
 	"$(OUTDIR)\condor_procapi.lib"
 
 "$(OUTDIR)\condor_procd.exe" : "$(OUTDIR)" $(DEF_FILE) $(LINK32_OBJS)
@@ -221,6 +221,7 @@ BSC32_SBRS= \
 LINK32=link.exe
 LINK32_FLAGS=../Debug/condor_common.obj ..\Debug\condor_common_c.obj $(CONDOR_LIB) $(CONDOR_LIBPATH) $(CONDOR_GSOAP_LIB) $(CONDOR_GSOAP_LIBPATH) $(CONDOR_KERB_LIB) $(CONDOR_KERB_LIBPATH) $(CONDOR_PCRE_LIB) $(CONDOR_PCRE_LIBPATH) $(CONDOR_GLOBUS_LIB) $(CONDOR_GLOBUS_LIBPATH) $(CONDOR_OPENSSL_LIB) $(CONDOR_POSTGRESQL_LIB) $(CONDOR_OPENSSL_LIBPATH) $(CONDOR_POSTGRESQL_LIBPATH) /nologo /subsystem:console /incremental:yes /pdb:"$(OUTDIR)\condor_procd.pdb" /debug /machine:I386 /out:"$(OUTDIR)\condor_procd.exe" /pdbtype:sept 
 LINK32_OBJS= \
+	"$(INTDIR)\condor_open.obj" \
 	"$(INTDIR)\condor_pidenvid.obj" \
 	"$(INTDIR)\dprintf_lite.obj" \
 	"$(INTDIR)\local_server.WINDOWS.obj" \
@@ -235,7 +236,6 @@ LINK32_OBJS= \
 	"$(INTDIR)\procd_common.obj" \
 	"$(INTDIR)\procd_main.obj" \
 	"$(INTDIR)\process_control.WINDOWS.obj" \
-	"$(INTDIR)\condor_open.obj" \
 	"$(OUTDIR)\condor_procapi.lib"
 
 "$(OUTDIR)\condor_procd.exe" : "$(OUTDIR)" $(DEF_FILE) $(LINK32_OBJS)
@@ -261,24 +261,24 @@ LINK32_OBJS= \
 
 "condor_procapi - Win32 Release" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F .\condor_procapi.mak CFG="condor_procapi - Win32 Release" 
+   $(MAKE) /$(MAKEFLAGS) /F ".\condor_procapi.mak" CFG="condor_procapi - Win32 Release" 
    cd "."
 
 "condor_procapi - Win32 ReleaseCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F .\condor_procapi.mak CFG="condor_procapi - Win32 Release" RECURSE=1 CLEAN 
+   $(MAKE) /$(MAKEFLAGS) /F ".\condor_procapi.mak" CFG="condor_procapi - Win32 Release" RECURSE=1 CLEAN 
    cd "."
 
 !ELSEIF  "$(CFG)" == "condor_procd - Win32 Debug"
 
 "condor_procapi - Win32 Debug" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F .\condor_procapi.mak CFG="condor_procapi - Win32 Debug" 
+   $(MAKE) /$(MAKEFLAGS) /F ".\condor_procapi.mak" CFG="condor_procapi - Win32 Debug" 
    cd "."
 
 "condor_procapi - Win32 DebugCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F .\condor_procapi.mak CFG="condor_procapi - Win32 Debug" RECURSE=1 CLEAN 
+   $(MAKE) /$(MAKEFLAGS) /F ".\condor_procapi.mak" CFG="condor_procapi - Win32 Debug" RECURSE=1 CLEAN 
    cd "."
 
 !ENDIF 

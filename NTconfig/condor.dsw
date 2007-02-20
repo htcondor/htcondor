@@ -224,6 +224,9 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name condor_util_lib
     End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_procd_client
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -259,6 +262,9 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name condor_daemon_core
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_procd_client
     End Project Dependency
 }}}
 
@@ -301,6 +307,9 @@ Package=<4>
 {{{
     Begin Project Dependency
     Project_Dep_Name condor_chirp_client
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_cpp_util
     End Project Dependency
 }}}
 
@@ -419,6 +428,9 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name condor_procapi
     End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_procd_client
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -491,6 +503,9 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name condor_util_lib
     End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_procd_client
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -503,9 +518,6 @@ Package=<5>
 
 Package=<4>
 {{{
-    Begin Project Dependency
-    Project_Dep_Name condor_procd_client
-    End Project Dependency
 }}}
 
 ###############################################################################
@@ -538,6 +550,9 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name condor_procapi
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_procd_client
     End Project Dependency
 }}}
 
@@ -662,6 +677,9 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name condor_procapi
     End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_procd_client
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -694,6 +712,9 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name condor_util_lib
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_procd_client
     End Project Dependency
 }}}
 
@@ -791,6 +812,9 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name condor_procapi
     End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_procd_client
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -826,6 +850,9 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name condor_procapi
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_procd_client
     End Project Dependency
 }}}
 
@@ -1061,6 +1088,9 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name condor_sysapi
     End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_procd_client
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -1093,6 +1123,9 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name condor_procapi
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_procd_client
     End Project Dependency
 }}}
 
@@ -1157,6 +1190,9 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name condor_procapi
     End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_procd_client
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -1192,6 +1228,9 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name condor_procapi
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_procd_client
     End Project Dependency
 }}}
 
@@ -1238,6 +1277,9 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name condor_sysapi
     End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_procd_client
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -1273,6 +1315,9 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name condor_qmgmt
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_procd_client
     End Project Dependency
 }}}
 
@@ -1510,6 +1555,9 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name condor_sysapi
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_procd_client
     End Project Dependency
 }}}
 
