@@ -97,7 +97,11 @@ public class CondorJavaInfo {
 
 			if( name.equals("line.separator") ) continue;
 
-			System.out.print( UnDotString(name) + " = \"" + value + "\"");
+			// This is a bit evil, but because old classads don't
+			// deal with escaped double quotes very well. This might be
+			// revisited in the future.
+			System.out.print( UnDotString(name) + " = \"" + 
+				value.replace('"', '\'') + "\"");
 
 			if( newmode ) {
 				System.out.println(";");
