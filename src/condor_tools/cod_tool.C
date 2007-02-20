@@ -187,7 +187,7 @@ printOutput( ClassAd* reply, DCStartd* startd )
 		fprintf( stderr, "Successfully sent %s to startd at %s\n", 
 				 getCommandString(cmd), startd->addr() ); 
 		fprintf( stderr, "WARNING: You did not specify "
-				 "-classad_path, printing to STDOUT\n" );
+				 "-classad, printing to STDOUT\n" );
 		reply->fPrint( stdout );
 		fprintf( stderr, "ID of new claim is: \"%s\"\n", claim_id );
 		free( claim_id );
@@ -452,7 +452,7 @@ parseCOpt( char* opt, char* arg )
  		// first, try to understand what the option is they passed,
 		// given what kind of cod command we want to send.  -cluster
 		// is only valid for activate, so if we're not doing that, we
-		// can assume they want -classadpath
+		// can assume they want -classad
 
 	char _cpath[] = "-classad";
 	char _clust[] = "-cluster";
