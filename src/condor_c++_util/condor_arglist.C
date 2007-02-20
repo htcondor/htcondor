@@ -394,7 +394,7 @@ ArgList::AppendArgsV1Raw_win32(char const *args,MyString *error_msg)
 }
 
 bool
-ArgList::AppendArgsV1Raw_unix(char const *args,MyString *error_msg)
+ArgList::AppendArgsV1Raw_unix(char const *args,MyString *  /*error_msg*/)
 {
 	MyString buf = "";
 	bool parsed_token = false;
@@ -696,7 +696,7 @@ ArgList::V1RawToV1Wacked(MyString const &v1_raw,MyString *result)
 }
 
 bool
-ArgList::GetArgsStringV2Raw(MyString *result,MyString *error_msg,int start_arg) const
+ArgList::GetArgsStringV2Raw(MyString *result,MyString * /*error_msg*/,int start_arg) const
 {
 	join_args(args_list,result,start_arg);
 	return true;
@@ -762,7 +762,7 @@ ArgList::~ArgList()
 }
 
 bool
-ArgList::GetArgsStringWin32(MyString *result,int skip_args,MyString *error_msg) const
+ArgList::GetArgsStringWin32(MyString *result,int skip_args,MyString * /*error_msg*/) const
 {
 	ASSERT(result);
 	SimpleListIterator<MyString> it(args_list);
@@ -929,9 +929,9 @@ ArgList::V1WackedToV1Raw(char const *v1_input,MyString *v1_raw,MyString *errmsg)
 }
 
 void
-ArgList::SetArgV1Syntax(ArgV1Syntax v1_syntax)
+ArgList::SetArgV1Syntax(ArgV1Syntax v1_syntax_param)
 {
-	this->v1_syntax = v1_syntax;
+	this->v1_syntax = v1_syntax_param;
 }
 
 void
