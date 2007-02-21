@@ -138,8 +138,8 @@ Condor_Credential_M :: Condor_Credential_M(const char * userid)
     strncpy(userid_, userid, strlen(userid));
 }
 
-Condor_Credential_M :: Condor_Credential_M(const char   * userid,
-					   ReliSock     * sock)
+Condor_Credential_M :: Condor_Credential_M(const char   *  /*userid*/,
+					   ReliSock     *  /*sock*/)
   : userid_ (NULL),
     credMap_(new Condor_Cred_Map())
 
