@@ -146,6 +146,8 @@ print "Set config to $quillconfig\n";
 my $pcresult = 0;
 my $result = 0;
 
+print "Everything ready to test the running condor\n";
+system("date");
 if($pgresult == 0) {
 	$pcresult = system("./job_quill_basic.pl $mysubmitnm");
 	print "Result of job_quill_basic job is  $pcresult\n";
