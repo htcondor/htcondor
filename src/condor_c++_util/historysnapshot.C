@@ -49,7 +49,9 @@ QuillErrCode
 HistorySnapshot::sendQuery(SQLQuery *queryhor, 
 						   SQLQuery *queryver, 
 						   bool longformat,
-						   bool fileformat)
+						   bool fileformat,
+						   bool custForm,
+						   AttrListPrintMask *pmask)
 {
   QuillErrCode st;
   
@@ -76,7 +78,9 @@ HistorySnapshot::sendQuery(SQLQuery *queryhor,
   st = printResults(queryhor, 
 					queryver, 
 					longformat,
-					fileformat);
+					fileformat,
+					custForm,
+					pmask);
   
   if (st != SUCCESS) {
 	  printf("Error while querying the history cursors: %s\n", jqDB->getDBError());
@@ -103,7 +107,8 @@ HistorySnapshot::sendQuery(SQLQuery *queryhor,
 QuillErrCode
 HistorySnapshot::printResults(SQLQuery *queryhor, 
 							  SQLQuery *queryver, 
-							  bool longformat, bool fileformat) {
+							  bool longformat, bool fileformat,
+							  bool custForm, AttrListPrintMask *pmask) {
   AttrList *ad = 0;
   QuillErrCode st = SUCCESS;
 
@@ -114,7 +119,7 @@ HistorySnapshot::printResults(SQLQuery *queryhor,
   cur_historyads_hor_index = 0;  	
   cur_historyads_ver_index = 0;
 
-  if (!longformat) {
+  if (!longformat && !custForm) {
 	  short_header();
   }
 
@@ -157,7 +162,12 @@ HistorySnapshot::printResults(SQLQuery *queryhor,
 
 	  } 
 	  else {
-		  displayJobShort(ad);
+	  	if (custForm == true) {
+			ASSERT(pmask != NULL);
+			pmask->display(stdout, ad);
+		} else {
+			displayJobShort(ad);
+		}
 	  }
   }
 
