@@ -28,9 +28,24 @@ foreach $thing (@everything) {
 		} elsif($thing =~ /^\d+$/) {
 			system("rm -rf $thing");
 			print "Removed:$thing\n";
+		} elsif($thing =~ /^job_\d+_dir$/) {
+			system("rm -rf $thing");
+			print "Removed:$thing\n";
+		} elsif($thing =~ /^initd_van$/) {
+			system("rm -rf $thing");
+			print "Removed:$thing\n";
+		} elsif($thing =~ /^initd$/) {
+			system("rm -rf $thing");
+			print "Removed:$thing\n";
+		} elsif($thing =~ /^soaptests$/) {
+			system("rm -rf $thing");
+			print "Removed:$thing\n";
 		}
 	} else {
 		if($thing =~ /^\d+$/) {
+			system("rm -rf $thing");
+			print "Removed:$thing\n";
+		} elsif($thing =~ /^vsystem\d+$/) {
 			system("rm -rf $thing");
 			print "Removed:$thing\n";
 		} elsif($thing =~ /^.*\d+\.log.*$/) {
