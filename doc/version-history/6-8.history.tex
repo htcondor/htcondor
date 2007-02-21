@@ -55,6 +55,9 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug where \Condor{history} did not honor the \Opt{-format} flag
+properly when Quill was in use.
+
 \item Fixed a bug where a java property which included surrounding double quotes
 would cause the detection of a java virtual machine to go awry. 
 The fix, which may change in the future, changes any extra double quotes
