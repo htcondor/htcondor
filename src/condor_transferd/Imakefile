@@ -17,6 +17,8 @@ OBJ =	td_main.o \
 		td_instantiate.o \
 		$(SOAP_OBJS)
 
+template_inst(td_instantiate.C,td_instantiate.o)
+
 public_c_plus_target($(NAME),sbin,$(OBJ),$(LIB))
 
 html:
