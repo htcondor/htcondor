@@ -172,9 +172,9 @@ my $database;
 my $username;
 my $password;
 my $mysqlhost;
-my $DB_CONNECT_STR;
-my $RUN_TABLE;
-my $TASK_TABLE;
+my $db;
+my $RUN_TABLE = "Run";
+my $TASK_TABLE = "Task";
 
 # These next 3 paths are initialized at runtime based on the
 # environment or the defaults supplied above
@@ -188,7 +188,6 @@ my $nmi_submit;
 # Directory for Condor binaries we schould use (actually, these are
 # only used by nmi_submit, but set still have to find them) 
 my $condor_bin;
-
 
 ######################################################################
 # Actual work of the script
@@ -289,29 +288,23 @@ sub initializeDB
     }
 
     # parse the NMI-specific config file to get useful settings
-    my $fh = new IO::File $nmiconf, 'r';
-    die "Could not open $nmiconf: $!" unless defined $fh;
-    NmiConf::parse(\%conf_nmi, $fh);
-    $fh->close;
+    %conf_nmi = NmiConf::init($nmiconf);
 
-    # Initialize database parameters from NMi config file
+    ## ---------------------------------------------
+    ## Database Connection
+    ## ---------------------------------------------
+    my $DB_HOST = $conf_nmi{'DB_HOST'};
+    my $DB_PORT = $conf_nmi{'DB_PORT'};
+    my $DB_NAME = $conf_nmi{'DB_NAME'};
+    my $DB_READER_USER = $conf_nmi{'DB_READER_USER'};
+    my $DB_READER_PASS = $conf_nmi{'DB_READER_PASS'};
 
-    # first, make sure the ones we require are all there...
-    for my $key qw(database username password mysqlhost) {
-        die "FATAL: $0: config file $nmiconf does not contain value for $key"
-            unless exists $conf_nmi{$key};
+    my $DB_CONNECT_STR = "DBI:mysql:database=$DB_NAME;host=$DB_HOST".
+                         ($DB_PORT ? ";port=$DB_PORT" : "");
+    $db = DBI->connect($DB_CONNECT_STR, $DB_READER_USER, $DB_READER_PASS);
+    unless (defined $db) {
+       die("ERROR: Could not connect to database: ${DBI::errstr}\n");
     }
-
-    $database = $conf_nmi{'database'};
-    $username = $conf_nmi{'username'};
-    $password = $conf_nmi{'password'};
-    $mysqlhost = $conf_nmi{'mysqlhost'};
-    $DB_CONNECT_STR = "DBI:mysql:database=$database;host=$mysqlhost";
-    if( defined $conf_nmi{'mysqlport'} and exists $conf_nmi{'mysqlport'} ) {
-        $DB_CONNECT_STR .= ";port=${conf_nmi{'mysqlport'}}";
-    }
-    $RUN_TABLE = "Run";
-    $TASK_TABLE = "Task";
 }
 
 
@@ -1184,8 +1177,6 @@ sub getPlatformsFromRunid() {
     my @platforms = ();
     my $platform;
 
-    my $db = DBI->connect("$DB_CONNECT_STR","$username","$password")
-        || die "Could not connect to database: $!\n";
     my $cmd_str = qq/SELECT DISTINCT platform from $TASK_TABLE WHERE
         runid='$runid'/;
     print "$cmd_str\n";
