@@ -700,6 +700,8 @@ DedicatedScheduler::initialize( void )
 	dummy_job.Insert( buf );
 	sprintf( buf, "%s = %d", ATTR_JOB_STATUS, IDLE );
 	dummy_job.Insert( buf );
+	sprintf( buf, "%s = %d", ATTR_IMAGE_SIZE, 10 ); // WANT_SUSPEND often needs this
+	dummy_job.Insert( buf );
 	config_fill_ad( &dummy_job );
 
 		// Next, register our special MPI shadow reaper
