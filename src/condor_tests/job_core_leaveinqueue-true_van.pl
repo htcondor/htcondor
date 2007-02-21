@@ -28,40 +28,45 @@ $success = sub
 {
 	my %info = @_;
 	my $cluster = $info{"cluster"};
+	my $return = 1;
 
-	sleep 10;
-	print "Good, job should be done but left in the queue!!!\n";
-	my $qstat = CondorTest::getJobStatus($cluster);
-	while($qstat == -1)
+	my @adarray;
+	my $status = 1;
+	my $cmd = "condor_q $cluster";
+	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+	if(!$status)
 	{
-		print "Job status unknown - wait a bit\n";
-		sleep 2;
-		$qstat = CondorTest::getJobStatus($cluster);
+		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		exit(1)
 	}
-	if( $qstat != COMPLETED )
+	foreach my $line (@adarray)
 	{
-		die "Job not still found in queue in completed state\n";
-	}
-	else
-	{
-		my @adarray;
-		my $status = 1;
-		my $cmd = "condor_rm $cluster";
-		$status = CondorTest::runCondorTool($cmd,\@adarray,2);
-		if(!$status)
-		{
-			print "Test failure due to Condor Tool Failure<$cmd>\n";
-			exit(1)
-		}
-		my $cmd = "condor_rm -forcex $cluster";
-		$status = CondorTest::runCondorTool($cmd,\@adarray,2);
-		if(!$status)
-		{
-			print "Test failure due to Condor Tool Failure<$cmd>\n";
-			exit(1)
+		print "$line\n";
+		if($line =~ /$cluster/) {
+			print "Following Line shows it is still in the queue...\n";
+			print "$line\n";
+			$return = 0;
 		}
 	}
-
+	print "job should be done AND left in the queue!!\n";
+	my @bdarray;
+	my @cdarray;
+	my $status = 1;
+	my $cmd = "condor_rm $cluster";
+	$status = CondorTest::runCondorTool($cmd,\@bdarray,2);
+	if(!$status)
+	{
+		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		exit(1)
+	}
+	$cmd = "condor_rm -forcex $cluster";
+	$status = CondorTest::runCondorTool($cmd,\@cdarray,2);
+	if(!$status)
+	{
+		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		exit(1)
+	}
+	exit($return);
 };
 
 $submitted = sub
