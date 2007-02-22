@@ -12,6 +12,7 @@ my $coreName     = 'job_had_basic';
 my $testingSystemConfigName      = 'job_had_basic.cfg';
 my $personalCondorParametersName = 'x_param.had';
 my $localPostSourceName          = 'job_had_basic.localpostsrc';
+my $localPostSourceTemplate      = 'job_had_basic.locpostsrc.template';
 #my $condorConfigName             = 'condor_config';
 #my $localCondorConfigName        = 'condor_config.local';
 my $topDirectory = getcwd();
@@ -160,6 +161,7 @@ foreach my $hadIndex (1 .. $hadsNumber)
 	# with different ports numbers
 	#my $localConfigFile = &GetCondorLocalConfigurationFile();
 	my $localPostSourceFile = "$topDirectory/$localPostSourceName";
+	my $localPostSourceTemplate = "$topDirectory/$localPostSourceTemplate";
 	my $hadPort         = HAD_STARTING_PORT + $hadIndex;
 	my $replicationPort = REPLICATION_STARTING_PORT + $hadIndex;
 	my $collectorPort   = COLLECTOR_STARTING_PORT + $hadIndex;
@@ -167,40 +169,46 @@ foreach my $hadIndex (1 .. $hadsNumber)
 	my $negotiatorPort  = NEGOTIATOR_STARTING_PORT + $hadIndex; 
 	my $startdPort      = STARTD_STARTING_PORT + $hadIndex;
 	
-	&ImplantLine($localPostSourceFile, 'COLLECTOR_ARGS', "-p $collectorPort");
-	&ImplantLine($localPostSourceFile, 'HAD_ARGS', "-p $hadPort");
-	&ImplantLine($localPostSourceFile, 'REPLICATION_ARGS', 
-												   "-p $replicationPort");
-	&ImplantLine($localPostSourceFile, 'NEGOTIATOR_ARGS', "-p $negotiatorPort");
-	&ImplantLine($localPostSourceFile, 'SCHEDD_ARGS', "-p $scheddPort");
-	&ImplantLine($localPostSourceFile, 'STARTD_ARGS', "-p $startdPort");
-	&ImplantLine($localPostSourceFile, 'HAD_LIST', "$hadList");
-	&ImplantLine($localPostSourceFile, 'REPLICATION_LIST', "$replicationList");
-#	&ImplantLine($localPostSourceFile, 'COLLECTOR_HOST', "$collectorList");
-	&ImplantLine($localPostSourceFile, 'MASTER_NAME', "Master$hadIndex");
-	&ImplantLine($localPostSourceFile, 'STARTD_NAME', "Startd$hadIndex");
-#	&ImplantLine($localPostSourceFile, 'HAD_NAME', "HAD \#$hadIndex");
-	&ImplantLine($localPostSourceFile, 'HAD_USE_REPLICATION', 'false');
-	&ImplantLine($localPostSourceFile, 'HAD_CONNECTION_TIMEOUT', '2');
-	&ImplantLine($localPostSourceFile, 'HAD_USE_PRIMARY', 'true');
-	&ImplantLine($localPostSourceFile, 'MAX_HAD_LOG', '6400000');
-	&ImplantLine($localPostSourceFile, 'HAD_DEBUG', 'D_FAILURE');
-	&ImplantLine($localPostSourceFile, 'HAD_LOG', '$(LOG)/HADLog.$(HOSTNAME)');
-	&ImplantLine($localPostSourceFile, 'MASTER_NEGOTIATOR_CONTROLLER', 
-				'HAD');
-	
-	&ImplantLine($localPostSourceFile, 'DAEMON_LIST', 
-		'COLLECTOR, MASTER, NEGOTIATOR, SCHEDD, STARTD, HAD');
-	&ImplantLine($localPostSourceFile, 'DC_DAEMON_LIST',
-		'MASTER, STARTD, SCHEDD, KBDD, COLLECTOR, NEGOTIATOR, EVENTD, ' . 
-		'VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, HAWKEYE, HAD');
-	&ImplantLine($localPostSourceFile, 'HAD', '$(SBIN)/condor_had');
-	&ImplantLine($localPostSourceFile, 'HOSTALLOW_ADMINISTRATOR', 
-				'$(COLLECTOR_HOST)');
-	&ImplantLine($localPostSourceFile, 'HOSTALLOW_NEGOTIATOR',
-				'$(COLLECTOR_HOST)');
-	&ImplantLine($localPostSourceFile, 'HOSTALLOW_NEGOTIATOR_SCHEDD',
-                '$(COLLECTOR_HOST)');
+	my $line = "";
+	open(TEMPLATE,"<$localPostSourceTemplate") ||
+		die "Can not open template for final local config settings($localPostSourceTemplate): $?\n";
+	open(POSTSRC,">$localPostSourceFile") ||
+		die "Can not open final local config settings($localPostSourceFile): $?\n";
+	while(<TEMPLATE>) {
+		chomp();
+		$line = $_;
+		if($line =~ /^COLLECTOR_ARGS\s=.*$/) {
+			print POSTSRC "COLLECTOR_ARGS = -p $collectorPort\n";
+		} elsif ($line =~ /^HAD_ARGS\s=.*$/) {
+			print POSTSRC "HAD_ARGS = -p $hadPort\n";
+		} elsif ($line =~ /^REPLICATION_ARGS\s=.*$/) {
+			print POSTSRC "REPLICATION_ARGS = -p $replicationPort\n";
+		} elsif ($line =~ /^NEGOTIATOR_ARGS\s=.*$/) {
+			print POSTSRC "NEGOTIATOR_ARGS = -p $negotiatorPort\n";
+		} elsif ($line =~ /^SCHEDD_ARGS\s=.*$/) {
+			print POSTSRC "SCHEDD_ARGS = -p $scheddPort\n";
+		} elsif ($line =~ /^STARTD_ARGS\s=.*$/) {
+			print POSTSRC "STARTD_ARGS = -p $startdPort\n";
+		} elsif ($line =~ /^HAD_LIST\s=.*$/) {
+			print POSTSRC "HAD_LIST = $hadList\n";
+		} elsif ($line =~ /^REPLICATION_LIST\s=.*$/) {
+			print POSTSRC "REPLICATION_LIST = $replicationList\n";
+		} elsif ($line =~ /^COLLECTOR_HOST\s=.*$/) {
+#	&ImplantLine($localPostSourceFile, 'COLLECTOR_HOST', "$collectorList\n");
+			#print POSTSRC "COLLECTOR_HOST = $collectorList\n";
+		} elsif ($line =~ /^MASTER_NAME\s=.*$/) {
+			print POSTSRC "MASTER_NAME = Master$hadIndex\n";
+		} elsif ($line =~ /^STARTD_NAME\s=.*$/) {
+			print POSTSRC "STARTD_NAME = Startd$hadIndex\n";
+		} elsif ($line =~ /^HAD_NAME\s=.*$/) {
+#	&ImplantLine($localPostSourceFile, 'HAD_NAME', "HAD \#$hadIndex\n");
+			#print POSTSRC "HAD_NAME = HAD \#$hadIndex\n";
+		} else {
+			print POSTSRC "$line\n";
+		}
+	}
+	close(TEMPLATE);
+	close(POSTSRC);
 	# Generate condor instance: we configure each instance so that no possible
 	# clash can happen between different condor daemons of all the instances
 	my $configurationFileAndCollectorPort =
@@ -1168,52 +1176,57 @@ sub RaiseMachines
 				$hadsStatus[$hadIndex] eq RAISED ||
 				$hadRaiseTimers[$hadIndex] >= $time;
 		
+		print "Raise hadindex <<$hadIndex>>\n";
 		# Restart condor instance
 #		my $localConfigFile = &GetCondorLocalConfigurationFile();
 		my $localPostSourceFile = "$topDirectory/$localPostSourceName";
+		my $localPostSourceTemplate = "$topDirectory/$localPostSourceTemplate";
 		my $hadPort         = HAD_STARTING_PORT + $hadIndex;
     	my $replicationPort = REPLICATION_STARTING_PORT + $hadIndex;
     	my $collectorPort   = COLLECTOR_STARTING_PORT + $hadIndex;
     	my $scheddPort      = SCHEDD_STARTING_PORT + $hadIndex;
     	my $negotiatorPort  = NEGOTIATOR_STARTING_PORT + $hadIndex;
 
-		&ImplantLine($localPostSourceFile, 'COLLECTOR_ARGS', 
-													   "-p $collectorPort");
-	    &ImplantLine($localPostSourceFile, 'HAD_ARGS', "-p $hadPort");
-	    &ImplantLine($localPostSourceFile, 'REPLICATION_ARGS', 
-													   "-p $replicationPort");
-		&ImplantLine($localPostSourceFile, 'NEGOTIATOR_ARGS', 
-													   "-p $negotiatorPort");
-		&ImplantLine($localPostSourceFile, 'SCHEDD_ARGS', "-p $scheddPort");
-		&ImplantLine($localPostSourceFile, 'STARTD_ARGS', "-p $startdPort");
-		&ImplantLine($localPostSourceFile, 'HAD_LIST', $hadList);
-		&ImplantLine($localPostSourceFile, 'REPLICATION_LIST', 
-													   $replicationList);
-#		&ImplantLine($localPostSourceFile, 'COLLECTOR_HOST', "$collectorList");
-		&ImplantLine($localPostSourceFile, 'MASTER_NAME', "Master$hadIndex");
-		&ImplantLine($localPostSourceFile, 'STARTD_NAME', "Startd$hadIndex");
-#		&ImplantLine($localPostSourceFile, 'HAD_NAME', "HAD \#$hadIndex");
-		&ImplantLine($localPostSourceFile, 'HAD_USE_REPLICATION', 'false');
-		&ImplantLine($localPostSourceFile, 'HAD_CONNECTION_TIMEOUT', '2');
-    	&ImplantLine($localPostSourceFile, 'HAD_USE_PRIMARY', 'true');
-    	&ImplantLine($localPostSourceFile, 'MAX_HAD_LOG', '6400000');
-    	&ImplantLine($localPostSourceFile, 'HAD_DEBUG', 'D_FAILURE');
-    	&ImplantLine($localPostSourceFile, 'HAD_LOG', 
-				'$(LOG)/HADLog.$(HOSTNAME)');
-    	&ImplantLine($localPostSourceFile, 'MASTER_NEGOTIATOR_CONTROLLER', 
-				'HAD');
-		&ImplantLine($localPostSourceFile, 'DAEMON_LIST', 
-        	'COLLECTOR, MASTER, NEGOTIATOR, SCHEDD, STARTD, HAD');
-    	&ImplantLine($localPostSourceFile, 'DC_DAEMON_LIST',
-        	'MASTER, STARTD, SCHEDD, KBDD, COLLECTOR, NEGOTIATOR, EVENTD, ' .
-        	'VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, HAWKEYE, HAD');
-
-		&ImplantLine($localPostSourceFile, 'HAD', '$(SBIN)/condor_had');
-		&ImplantLine($localPostSourceFile, 'HOSTALLOW_ADMINISTRATOR',                 				'$(COLLECTOR_HOST)');
-    	&ImplantLine($localPostSourceFile, 'HOSTALLOW_NEGOTIATOR',
-                	'$(COLLECTOR_HOST)');
-    	&ImplantLine($localPostSourceFile, 'HOSTALLOW_NEGOTIATOR_SCHEDD',
-                	'$(COLLECTOR_HOST)');
+	my $line = "";
+	open(TEMPLATE,"<$localPostSourceTemplate") ||
+		die "Can not open template for final local config settings($localPostSourceTemplate): $?\n";
+	open(POSTSRC,">$localPostSourceFile") ||
+		die "Can not open final local config settings($localPostSourceFile): $?\n";
+	while(<TEMPLATE>) {
+		chomp();
+		$line = $_;
+		if($line =~ /^COLLECTOR_ARGS\s=.*$/) {
+			print POSTSRC "COLLECTOR_ARGS = -p $collectorPort\n";
+		} elsif ($line =~ /^HAD_ARGS\s=.*$/) {
+			print POSTSRC "HAD_ARGS = -p $hadPort\n";
+		} elsif ($line =~ /^REPLICATION_ARGS\s=.*$/) {
+			print POSTSRC "REPLICATION_ARGS = -p $replicationPort\n";
+		} elsif ($line =~ /^NEGOTIATOR_ARGS\s=.*$/) {
+			print POSTSRC "NEGOTIATOR_ARGS = -p $negotiatorPort\n";
+		} elsif ($line =~ /^SCHEDD_ARGS\s=.*$/) {
+			print POSTSRC "SCHEDD_ARGS = -p $scheddPort\n";
+		} elsif ($line =~ /^STARTD_ARGS\s=.*$/) {
+			print POSTSRC "STARTD_ARGS = -p $startdPort\n";
+		} elsif ($line =~ /^HAD_LIST\s=.*$/) {
+			print POSTSRC "HAD_LIST = $hadList\n";
+		} elsif ($line =~ /^REPLICATION_LIST\s=.*$/) {
+			print POSTSRC "REPLICATION_LIST = $replicationList\n";
+		} elsif ($line =~ /^COLLECTOR_HOST\s=.*$/) {
+#	&ImplantLine($localPostSourceFile, 'COLLECTOR_HOST', "$collectorList\n");
+			#print POSTSRC "COLLECTOR_HOST = $collectorList\n";
+		} elsif ($line =~ /^MASTER_NAME\s=.*$/) {
+			print POSTSRC "MASTER_NAME = Master$hadIndex\n";
+		} elsif ($line =~ /^STARTD_NAME\s=.*$/) {
+			print POSTSRC "STARTD_NAME = Startd$hadIndex\n";
+		} elsif ($line =~ /^HAD_NAME\s=.*$/) {
+#	&ImplantLine($localPostSourceFile, 'HAD_NAME', "HAD \#$hadIndex\n");
+			#print POSTSRC "HAD_NAME = HAD \#$hadIndex\n";
+		} else {
+			print POSTSRC "$line\n";
+		}
+	}
+	close(TEMPLATE);
+	close(POSTSRC);
     	my $configurationFileAndCollectorPort =
         	CondorPersonal::StartCondor(
 				"$topDirectory/$personalCondorParametersName", 
