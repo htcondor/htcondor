@@ -1422,7 +1422,7 @@ PROCD = $(SBIN)/condor_procd
 #     UNIX); the name will be something like:
 #         \\.\pipe\condor_procd
 #
-PROCD_ADDRESS = $(LOCK)/procd_address
+PROCD_ADDRESS = $(LOCK)/procd_pipe
 
 # The procd currently uses a very simplistic logging system
 #
