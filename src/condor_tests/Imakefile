@@ -603,11 +603,6 @@ RUN(job_core_plus_sched)
 TESTCLASS(job_core_plus_sched,core)
 TESTCLASS(job_core_plus_sched,quick)
 
-DESC(job_core_priority_sched,"Scheduler: Verify respect for job priority")
-RUN(job_core_priority_sched)
-TESTCLASS(job_core_priority_sched,core)
-TESTCLASS(job_core_priority_sched,quick)
-
 /*
 DESC(job_core_priority_van,"Vanilla: Verify respect for job priority")
 RUN(job_core_priority_van)
@@ -897,6 +892,14 @@ compiler_list:
 
 #endif /* ! IS_CLIPPED */
 
+resubmit::
+	./x_makeclean.pl
+
+check:: resubmit
+	./batch_test.pl -r 1500
+
+check-serialized:: resubmit
+	./x_runtests.pl -c quick -t 1200
 
 /***********************************************************************
    Empty rules to make our top-level Imakefile happy
