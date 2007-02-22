@@ -31,7 +31,10 @@ foreach $thing (@everything) {
 		} elsif($thing =~ /^job_\d+_dir$/) {
 			system("rm -rf $thing");
 			print "Removed:$thing\n";
-		} elsif($thing =~ /^initd_van$/) {
+		} elsif($thing =~ /^initd_.*$/) {
+			system("rm -rf $thing");
+			print "Removed:$thing\n";
+		} elsif($thing =~ /^TestingSystem$/) {
 			system("rm -rf $thing");
 			print "Removed:$thing\n";
 		} elsif($thing =~ /^initd$/) {
@@ -68,3 +71,13 @@ foreach $thing (@everything) {
 }
 	
 
+# now clean compiler directories
+chdir("g77");
+system("rm *.err *.out *.log");
+chdir("..");
+chdir("gcc");
+system("rm *.err *.out *.log");
+chdir("..");
+chdir("g++");
+system("rm *.err *.out *.log");
+chdir("..");
