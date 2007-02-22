@@ -64,7 +64,7 @@ TransferRequest::check_schema(void)
 
 	/* Check to make sure it exists */
 	if (m_ip->Lookup(ATTR_IP_PROTOCOL_VERSION) == NULL) {
-		EXCEPT("TransferRequest::check_schema() Failed due to missing %d attribute",
+		EXCEPT("TransferRequest::check_schema() Failed due to missing %s attribute",
 			ATTR_IP_PROTOCOL_VERSION);
 	}
 
@@ -78,17 +78,17 @@ TransferRequest::check_schema(void)
 
 	/* for now, just check existance of attribute, but not type */
 	if (m_ip->Lookup(ATTR_IP_NUM_TRANSFERS) == NULL) {
-		EXCEPT("TransferRequest::check_schema() Failed due to missing %d "
+		EXCEPT("TransferRequest::check_schema() Failed due to missing %s "
 			"attribute", ATTR_IP_NUM_TRANSFERS);
 	}
 
 	if (m_ip->Lookup(ATTR_IP_TRANSFER_SERVICE) == NULL) {
-		EXCEPT("TransferRequest::check_schema() Failed due to missing %d "
+		EXCEPT("TransferRequest::check_schema() Failed due to missing %s "
 			"attribute", ATTR_IP_TRANSFER_SERVICE);
 	}
 
 	if (m_ip->Lookup(ATTR_IP_PEER_VERSION) == NULL) {
-		EXCEPT("TransferRequest::check_schema() Failed due to missing %d "
+		EXCEPT("TransferRequest::check_schema() Failed due to missing %s "
 			"attribute", ATTR_IP_PEER_VERSION);
 	}
 
@@ -199,7 +199,7 @@ TransferRequest::set_transfer_service(const char *mode)
 }
 
 void
-TransferRequest::set_transfer_service(TreqMode mode)
+TransferRequest::set_transfer_service(TreqMode  /*mode*/)
 {
 	// XXX TODO
 }

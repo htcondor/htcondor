@@ -122,8 +122,8 @@ X509Credential::GetCredentialName() {
 }
 
 void
-X509Credential::SetCredentialName(const char * name) {
-	myproxy_credential_name = name?name:"";
+X509Credential::SetCredentialName(const char * name_param) {
+	myproxy_credential_name = name_param?name_param:"";
 }
 
 
@@ -133,8 +133,8 @@ X509Credential::GetMyProxyUser() {
 }
 
 void
-X509Credential::SetMyProxyUser(const char * name) {
-	myproxy_user = name?name:"";
+X509Credential::SetMyProxyUser(const char * name_param) {
+	myproxy_user = name_param?name_param:"";
 }
 
 
