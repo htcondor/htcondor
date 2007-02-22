@@ -80,6 +80,12 @@ BEGIN {
 	next
 }
 
+# PROCD_ADDRESS needs to refer to a valid name for a Windows named
+# pipe
+/^PROCD_ADDRESS/ {
+	print "PROCD_ADDRESS = \\\\.\\pipe\\condor_procd_pipe"
+	next
+}
 
 # If we made it here, print out the line unchanged
 {print $0}

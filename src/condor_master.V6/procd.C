@@ -90,9 +90,9 @@ ProcD::ProcD() :
 	// on Windows, we need to tell the procd what program to use to send
 	// softkills
 	//
-	m_softkill_binary = param("SOFTKILL_BINARY");
+	m_softkill_binary = param("WINDOWS_SOFTKILL");
 	if (m_softkill_binary == NULL) {
-		EXCEPT("error: SOFTKILL_BINARY not defined");
+		EXCEPT("error: WINDOWS_SOFTKILL not defined");
 	}
 #endif
 

@@ -4611,9 +4611,9 @@ int DaemonCore::Shutdown_Graceful(pid_t pid)
 	// target process and post a WM_CLOSE to it
 	//
 	ArgList args;
-	char* softkill_binary = param("SOFTKILL_BINARY");
+	char* softkill_binary = param("WINDOWS_SOFTKILL");
 	if (softkill_binary == NULL) {
-		dprintf(D_ALWAYS, "cannot send softkill since SOFTKILL_BINARY is undefined\n");
+		dprintf(D_ALWAYS, "cannot send softkill since WINDOWS_SOFTKILL is undefined\n");
 		return FALSE;
 	}
 	args.AppendArg(softkill_binary);

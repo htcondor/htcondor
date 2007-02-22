@@ -1413,13 +1413,13 @@ PVMGS			= $(SBIN)/condor_pvmgs
 PROCD = $(SBIN)/condor_procd
 
 # the path to the procd "address"
-#   - on UNIX this will be a named pipe, I've created a subdirectory of
-#     LOCAL_DIR for storing this pipe (other named pipe will also be
-#     created in this directory when the procd is responding to a
-#     client)
+#   - on UNIX this will be a named pipe; we'll put it in the
+#     $(LOCK) directory by default (note that multiple named pipes
+#     will be created in this directory for when the procd responds
+#     to its clients)
 #   - on Windows, this will be a named pipe as well (but named pipes on
 #     Windows are not even close to the same thing as named pipes on
-#     UNIX) the actually named will be something like:
+#     UNIX); the name will be something like:
 #         \\.\pipe\condor_procd
 #
 PROCD_ADDRESS = $(LOCK)/procd_address
@@ -1439,7 +1439,10 @@ PROCD_DEBUG = False
 #
 PROCD_MAX_SNAPSHOT_INTERVAL = 60
 
-
+# On Windows, we send a process a "soft kill" via a WM_CLOSE message.
+# This binary is used by the ProcD (and other Condor daemons if PRIVSEP
+# is not enabled) to help when sending soft kills.
+WINDOWS_SOFTKILL = $(SBIN)/condor_softkill
 
 ##--------------------------------------------------------------------
 ##  condor_submit
