@@ -5821,12 +5821,27 @@ int DaemonCore::Create_Process(
 			// regardless of whether or not we made an "official" unix
 			// process group above, ALWAYS contact the procd to register
 			// ourselves
+			//
+			// NOTE: only on Linux do we pass the structure with the
+			// environment tracking info in it, since Linux is currently
+			// the only platform for which ProcAPI can read process'
+			// environments. this is important because on MacOS, sending
+			// this structure makes the write to the ProcD's named pipe exceed
+			// PIPE_BUF, which means the write wouldn't be atomic (which
+			// means data from multiple ProcD clients could be interleaved,
+			// causing major badness)
+			//
 			ASSERT(m_procd_client != NULL);
+#if defined(LINUX)
+			PidEnvID* penvid_ptr = &penvid;
+#else
+			PidEnvID* penvid_ptr = NULL;
+#endif
 			bool ok =
 				m_procd_client->register_subfamily(pid,
 			                                       ::getppid(),
 				                                   family_info->max_snapshot_interval,
-				                                   &penvid,
+				                                   penvid_ptr,
 				                                   family_info->login);
 			if (!ok) {
 				errno = 31;
