@@ -733,7 +733,7 @@ Claim::saveJobInfo( ClassAd* request_ad )
 		dprintf( D_FULLDEBUG,
 				 "Resetting ClaimLease timer (%d) with new duration\n", 
 				 c_lease_tid );
-	} else {
+	} else if( !c_is_cod ) {
 		c_lease_duration = max_claim_alives_missed * c_aliveint;
 		dprintf( D_FULLDEBUG, "%s not defined: using %d ("
 				 "alive_interval [%d] * max_missed [%d]\n", 
