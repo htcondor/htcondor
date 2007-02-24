@@ -271,7 +271,7 @@ ScheduledShutdownEvent::ScheduledShutdownEvent(const char name[],
 		dprintf(D_FULLDEBUG, "Shutdown slow start interval set to %d "
 				"seconds.\n", SlowStartInterval);
 
-		EventInterval = param("EVENTD_INTERVAL",900);
+		EventInterval = param_integer("EVENTD_INTERVAL",900);
 		
 		tmp = param("EVENTD_ROUTING_INFO");
 		if (tmp) {
@@ -319,7 +319,7 @@ ScheduledShutdownEvent::ScheduledShutdownEvent(const char name[],
 		StartdValidWindow = param_integer("UPDATE_INTERVAL",300);
 		StartdValidWindow *= 2;
 
-		RescheduleInterval = param("EVENTD_MIN_RESCHEDULE_INTERVAL",60);
+		RescheduleInterval = param_integer("EVENTD_MIN_RESCHEDULE_INTERVAL",60);
 	}
 
 	NumScheduledShutdownEvents++;
@@ -327,7 +327,7 @@ ScheduledShutdownEvent::ScheduledShutdownEvent(const char name[],
 	// start a periodic cleanup timer if we haven't already
 	if (CleanupTid < 0) {
 		int CleanupInterval;
-		CleanupInterval = param("EVENTD_SHUTDOWN_CLEANUP_INTERVAL",3600);
+		CleanupInterval = param_integer("EVENTD_SHUTDOWN_CLEANUP_INTERVAL",3600);
 		dprintf(D_FULLDEBUG, "Shutdown cleanup interval set to %d "
 				"seconds.\n", CleanupInterval);
 		// do our first cleanup soon (in 10 minutes), because we may

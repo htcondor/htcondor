@@ -87,7 +87,7 @@ EventDaemon::Config()
 	dprintf(D_FULLDEBUG, "Event interval set to %d seconds.\n",
 			EventInterval);
 
-	MaxEventPreparation = param("EVENTD_MAX_PREPARATION",0);
+	MaxEventPreparation = param_integer("EVENTD_MAX_PREPARATION",0);
 	dprintf(D_FULLDEBUG, "Max event preparation set to %d minutes.\n",
 			MaxEventPreparation);
 	MaxEventPreparation *= 60; // convert to seconds
