@@ -134,13 +134,7 @@ MachAttributes::compute( amask_t how_much )
 		dprintf( D_FULLDEBUG, "%s = \"%s\"\n", ATTR_SUBNET,
 				 m_subnet );
 
-		char *tmp = param( "IDLE_INTERVAL" );
-		if (tmp) {
-			m_idle_interval = atoi(tmp);
-			free(tmp);
-		} else {
-			m_idle_interval = -1;
-		}
+		m_idle_interval = param_integer( "IDLE_INTERVAL", -1 );
 
 			// checkpoint platform signature
 		if (m_ckptpltfrm) {

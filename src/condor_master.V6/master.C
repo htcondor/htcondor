@@ -608,14 +608,6 @@ init_params()
 		dprintf( D_FULLDEBUG, "Using name: %s\n", MasterName );
 	}
 			
-		// In general, for numeric values, we set our variable to 0,
-		// param for it, and if there's an entry, we call atoi() on
-		// the string to convert it to an int.  If the string doesn't
-		// contain a valid number, atoi() will return 0.  So, if our
-		// variable is still 0 after everything is done, either there
-		// was no entry, or the entry was an invalid number.  In both
-		// cases, we'll want to use our default.  -Derek
-
 	tmp = param( "START_MASTER" );
 	if( tmp ) {
 		if( *tmp == 'F' || *tmp == 'f' ) {
@@ -657,131 +649,32 @@ init_params()
 		free( tmp );
 	}
 
-	Lines = 0;
-	tmp = param("OBITUARY_LOG_LENGTH");
-	if( tmp ) {
-		Lines = atoi( tmp );
-		free( tmp );
-	} 
-	if( !Lines ) {
-		Lines = 20;
-	}
+	Lines = param_integer("OBITUARY_LOG_LENGTH",20);
 
-	master_backoff_constant = 0;
-	tmp = param( "MASTER_BACKOFF_CONSTANT" );
-	if( tmp ) {
-		master_backoff_constant = atoi( tmp );
-		free( tmp );
-	} 
-	if( master_backoff_constant <= 0 ) {
-		master_backoff_constant = 9;
-	}
+	master_backoff_constant = param_integer( "MASTER_BACKOFF_CONSTANT", 9, 1 );
 
-	master_backoff_ceiling = 0;
-	tmp = param( "MASTER_BACKOFF_CEILING" );
-	if( tmp ) {
-		master_backoff_ceiling = atoi( tmp );
-		free( tmp );
-	} 
-	if( master_backoff_ceiling <= 0 ) {
-		master_backoff_ceiling = 3600;
-	}
+	master_backoff_ceiling = param_integer( "MASTER_BACKOFF_CEILING", 3600,1 );
 
-	master_backoff_factor = 0;
-	tmp = param( "MASTER_BACKOFF_FACTOR" );
-    if( tmp ) {
-        master_backoff_factor = atof( tmp );
-		free( tmp );
-    } 
+	master_backoff_factor = param_double( "MASTER_BACKOFF_FACTOR", 2.0, 0 );
 	if( master_backoff_factor <= 0.0 ) {
     	master_backoff_factor = 2.0;
     }
 	
-	master_recover_time = 0;
-	tmp = param( "MASTER_RECOVER_FACTOR" );
-    if( tmp ) {
-        master_recover_time = atoi( tmp );
-		free( tmp );
-    } 
-	if( master_recover_time <= 0 ) {
-    	master_recover_time = 300;
-    }
-	
-	update_interval = 0;
-	tmp = param( "MASTER_UPDATE_INTERVAL" );
-    if( tmp ) {
-        update_interval = atoi( tmp );
-		free( tmp );
-    } 
-	if( !update_interval ) {
-        update_interval = 5 * MINUTE;
-    }
+	master_recover_time = param_integer( "MASTER_RECOVER_FACTOR", 300, 1 );
 
-	check_new_exec_interval = 0;
-	tmp = param( "MASTER_CHECK_NEW_EXEC_INTERVAL" );
-    if( tmp ) {
-        check_new_exec_interval = atoi( tmp );
-		if( tmp[0] != '0' && check_new_exec_interval == 0 ) { 
-				// They put something there other than "0", but atoi()
-				// got confused.  Warn them and set it.
-			dprintf( D_ALWAYS, "Warning, can't parse value in "
-					 "%s: \"%s\", using default of 5 minutes\n",
-					 "MASTER_CHECK_NEW_EXEC_INTERVAL", tmp );
-			check_new_exec_interval = 5 * MINUTE;
-		}
-		free( tmp );
-    } else {
-        check_new_exec_interval = 5 * MINUTE;
-    }
+	update_interval = param_integer( "MASTER_UPDATE_INTERVAL", 5 * MINUTE, 1 );
 
-	new_bin_delay = 0;
-	tmp = param( "MASTER_NEW_BINARY_DELAY" );
-	if( tmp ) {
-		new_bin_delay = atoi( tmp );
-		free( tmp );
-	}
-	if( !new_bin_delay ) {
-		new_bin_delay = 2 * MINUTE;
-	}
+	check_new_exec_interval = param_integer( "MASTER_CHECK_NEW_EXEC_INTERVAL", 5*MINUTE );
 
-	preen_interval = 0;
-	tmp = param( "PREEN_INTERVAL" );
-	if( tmp ) {
-		preen_interval = atoi( tmp );
-		free( tmp );
-	} 
-	if( !preen_interval ) {
-		preen_interval = 24 * HOUR;
-	}
+	new_bin_delay = param_integer( "MASTER_NEW_BINARY_DELAY", 2*MINUTE, 1 );
 
-	shutdown_fast_timeout = 0;
-	tmp = param( "SHUTDOWN_FAST_TIMEOUT" );
-	if( tmp ) {
-		shutdown_fast_timeout = atoi( tmp );
-		free( tmp );
-	}
-	if( !shutdown_fast_timeout ) {
-		shutdown_fast_timeout = 5 * MINUTE;
-	}
+	preen_interval = param_integer( "PREEN_INTERVAL", 24*HOUR, 1 );
 
-	shutdown_graceful_timeout = 0;
-	tmp = param( "SHUTDOWN_GRACEFUL_TIMEOUT" );
-	if( tmp ) {
-		shutdown_graceful_timeout = atoi( tmp );
-		free( tmp );
-	}
-	if( !shutdown_graceful_timeout ) {
-		shutdown_graceful_timeout = 30 * MINUTE;
-	}
+	shutdown_fast_timeout = param_integer( "SHUTDOWN_FAST_TIMEOUT", 5*MINUTE, 1 );
 
-	AllowAdminCommands = TRUE;
-	tmp = param( "ALLOW_ADMIN_COMMANDS" );
-	if( tmp ) {
-		if( *tmp == 'F' || *tmp == 'f' ) {
-			AllowAdminCommands = FALSE;
-		}
-		free( tmp );	
-	}
+	shutdown_graceful_timeout = param_integer( "SHUTDOWN_GRACEFUL_TIMEOUT", 30*MINUTE, 1 );
+
+	AllowAdminCommands = param_boolean( "ALLOW_ADMIN_COMMANDS", true );
 
 	if( FS_Preen ) {
 		free( FS_Preen );

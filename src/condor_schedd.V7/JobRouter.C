@@ -239,33 +239,15 @@ JobRouter::config() {
 
 	SetRoutingTable(new_routes);
 
-	char *max_jobs = param("JOB_ROUTER_MAX_JOBS");
-	if(max_jobs) {
-		m_max_jobs = atoi(max_jobs);
-		free(max_jobs);
-	}
-	else {
-		m_max_jobs = -1; // no maximum
-	}
+		// default is no maximum (-1)
+	m_max_jobs = param_integer("JOB_ROUTER_MAX_JOBS",-1);
 
-	char *max_job_mirror_update_lag = param("MAX_JOB_MIRROR_UPDATE_LAG");
-	if(max_job_mirror_update_lag) {
-		m_max_job_mirror_update_lag = atoi(max_job_mirror_update_lag);
-		free(max_job_mirror_update_lag);
-	}
-	else {
-		m_max_job_mirror_update_lag = 600;
-	}
+	m_max_job_mirror_update_lag = param_integer("MAX_JOB_MIRROR_UPDATE_LAG",600);
 
 
 		// read the polling period and if one is not specified use 
 		// default value of 10 seconds
-	char *polling_period_str = param("JOB_ROUTER_POLLING_PERIOD");
-	m_job_router_polling_period = 10;
-	if(polling_period_str) {
-		m_job_router_polling_period = atoi(polling_period_str);
-		free(polling_period_str);
-	}
+	m_job_router_polling_period = param_integer("JOB_ROUTER_POLLING_PERIOD",10);
 
 		// clear previous timers
 	if (m_job_router_polling_timer >= 0) {

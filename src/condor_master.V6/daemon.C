@@ -395,49 +395,20 @@ daemon::DoConfig( bool init )
 		}
 	}
 
-	m_backoff_constant = master_backoff_constant;
 	sprintf(buf, "MASTER_%s_BACKOFF_CONSTANT", name_in_config_file );
-	tmp = param( buf );
-	if( tmp ) {
-		m_backoff_constant = atoi( tmp );
-		free( tmp );
-	} 
-	if( m_backoff_constant <= 0 ) {
-		m_backoff_constant = master_backoff_constant;
-	}
+	m_backoff_constant = param_integer( buf, master_backoff_constant, 1 );
 
-	m_backoff_ceiling = 0;
 	sprintf(buf, "MASTER_%s_BACKOFF_CEILING", name_in_config_file );
-	tmp = param( buf );
-	if( tmp ) {
-		m_backoff_ceiling = atoi( tmp );
-		free( tmp );
-	} 
-	if( m_backoff_ceiling <= 0 ) {
-		m_backoff_ceiling = master_backoff_ceiling;
-	}
+	m_backoff_ceiling = param_integer( buf, master_backoff_ceiling, 1 );
 
-	m_backoff_factor = 0;
 	sprintf(buf, "MASTER_%s_BACKOFF_FACTOR", name_in_config_file );
-	tmp = param( buf );
-    if( tmp ) {
-        m_backoff_factor = atof( tmp );
-		free( tmp );
-    } 
+	m_backoff_factor = param_double( buf, master_backoff_factor, 0 );
 	if( m_backoff_factor <= 0.0 ) {
     	m_backoff_factor = master_backoff_factor;
     }
 	
-	m_recover_time = 0;
 	sprintf(buf, "MASTER_%s_RECOVER_FACTOR", name_in_config_file );
-	tmp = param( buf );
-    if( tmp ) {
-        m_recover_time = atoi( tmp );
-		free( tmp );
-    } 
-	if( m_recover_time <= 0 ) {
-    	m_recover_time = master_recover_time;
-    }
+	m_recover_time = param_integer( buf, master_recover_time, 1 );
 
 
 	// Weiru

@@ -149,13 +149,7 @@ void Accountant::Initialize()
       RemoteUserPriorityFactor=1;
   }
 
-  tmp = param("MAX_ACCOUNTANT_DATABASE_SIZE");
-  if( tmp ) {
-	  MaxAcctLogSize = atoi( tmp );
-	  free(tmp);
-  } else {
-	  MaxAcctLogSize = 1000000;
-  }
+  MaxAcctLogSize = param_integer("MAX_ACCOUNTANT_DATABASE_SIZE",1000000);
 
   tmp = param("SPOOL");
   if(tmp) {

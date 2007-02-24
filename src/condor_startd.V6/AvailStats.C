@@ -136,20 +136,9 @@ AvailStats::compute( amask_t how_much )
 	if( !compute_avail_stats ) return;
 	if( IS_STATIC(how_much) && IS_SHARED(how_much) ) {
 
-		char *tmp = param("STARTD_AVAIL_CONFIDENCE");
-		if( tmp ) {
-			as_avail_confidence = atof(tmp);
-			if( as_avail_confidence < 0.0 || as_avail_confidence > 1.0 ) {
-				as_avail_confidence = 0.8f;
-			}
-			free(tmp);
-		}
+		as_avail_confidence = param_double("STARTD_AVAIL_CONFIDENCE", as_avail_confidence, 0, 1);
 
-		tmp = param("STARTD_MAX_AVAIL_PERIOD_SAMPLES");
-		if( tmp ) {
-			as_max_avail_periods = atoi(tmp);
-			free(tmp);
-		}
+		as_max_avail_periods = param_integer("STARTD_MAX_AVAIL_PERIOD_SAMPLES", as_max_avail_periods);
 	}
 
 	if( IS_UPDATE(how_much) && IS_SHARED(how_much) ) {

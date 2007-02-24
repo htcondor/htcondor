@@ -312,17 +312,13 @@ void
 ResMgr::init_resources( void )
 {
 	int i;
-	char *tmp;
 	CpuAttributes** new_cpu_attrs;
 
 		// These things can only be set once, at startup, so they
 		// don't need to be in build_cpu_attrs() at all.
-	if( (tmp = param("MAX_VIRTUAL_MACHINE_TYPES")) ) {
-		max_types = atoi( tmp ) + 1;
-		free( tmp );
-	} else {
-		max_types = 11;
-	}
+	max_types = param_integer("MAX_VIRTUAL_MACHINE_TYPES", 10);
+	max_types += 1;
+
 		// The reason this isn't on the stack is b/c of the variable
 		// nature of max_types. *sigh*  
 	type_strings = new StringList*[max_types];
@@ -625,12 +621,10 @@ ResMgr::countTypes( int** array_ptr, bool except )
 	}
 
 	for( i=1; i<max_types; i++ ) {
-		new_type_nums[i] = 0;
 		sprintf( buf, "NUM_VIRTUAL_MACHINES_TYPE_%d", i );
-		if( (tmp = param(buf)) ) {
+		new_type_nums[i] = param_integer( buf, 0 );
+		if ( new_type_nums[i] ) {
 			num_set = 1;
-			new_type_nums[i] = atoi( tmp );
-			free( tmp );
 			num += new_type_nums[i];
 		}
 	}
@@ -642,12 +636,7 @@ ResMgr::countTypes( int** array_ptr, bool except )
 			// We haven't found any special types yet.  Therefore,
 			// we're evenly dividing things, so we only have to figure
 			// out how many nodes to advertise.
-		if( (tmp = param("NUM_VIRTUAL_MACHINES")) ) { 
-			new_type_nums[0] = atoi( tmp );
-			free( tmp );
-		} else {
-			new_type_nums[0] = num_cpus();
-		}
+		new_type_nums[0] = param_integer("NUM_VIRTUAL_MACHINES",num_cpus());
 		num = new_type_nums[0];
 	}
 	*array_ptr = new_type_nums;

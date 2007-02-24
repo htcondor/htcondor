@@ -238,13 +238,7 @@ ToolDaemonProc::StartJob()
 		        fi.login);
 	}
 
-	char* ptmp = param( "JOB_RENICE_INCREMENT" );
-	if ( ptmp ) {
-		nice_inc = atoi(ptmp);
-		free(ptmp);
-	} else {
-		nice_inc = 0;
-	}
+	nice_inc = param_integer( "JOB_RENICE_INCREMENT", 0 );
 
 	MyString args_string;
 	DaemonArgs.GetArgsStringForDisplay(&args_string);

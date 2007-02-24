@@ -326,23 +326,7 @@ init_params()
 
 	// We can configure how many times the starter wishes to attempt to
 	// pull over the initial checkpoint
-	if ( (tmp=param( "EXEC_TRANSFER_ATTEMPTS" )) == NULL)
-	{
-		ExecTransferAttempts = 3;
-	}
-	else
-	{
-		ExecTransferAttempts = atoi(tmp);
-		// This catches errors on atoi(), and if the user did something stupid
-		if (ExecTransferAttempts < 1)
-		{
-			dprintf( D_ALWAYS, "Please check your EXEC_TRANSFER_ATTEMPTS "
-			"macro. It must be a number greater than or equal to one. "
-			"Defaulting EXEC_TRANSFER_ATTEMPTS to 3.\n") ;
-			ExecTransferAttempts = 3;
-		}
-		free(tmp);
-	}
+	ExecTransferAttempts = param_integer( "EXEC_TRANSFER_ATTEMPTS", 3, 1 );
 }
 
 /*

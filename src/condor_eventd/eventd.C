@@ -83,26 +83,14 @@ EventDaemon::Config()
 		free(tmp);
 	}
 
-	tmp = param("EVENTD_INTERVAL");
-	if (tmp) {
-		EventInterval = atoi(tmp);
-		free(tmp);
-		dprintf(D_FULLDEBUG, "Event interval set to %d seconds.\n",
-				EventInterval);
-	} else {
-		EventInterval = 900;
-	}
+	EventInterval = param_integer("EVENTD_INTERVAL",900);
+	dprintf(D_FULLDEBUG, "Event interval set to %d seconds.\n",
+			EventInterval);
 
-	tmp = param("EVENTD_MAX_PREPARATION");
-	if (tmp) {
-		MaxEventPreparation = atoi(tmp);
-		free(tmp);
-		dprintf(D_FULLDEBUG, "Max event preparation set to %d minutes.\n",
-				MaxEventPreparation);
-		MaxEventPreparation *= 60; // convert to seconds
-	} else {
-		MaxEventPreparation = 0;
-	}
+	MaxEventPreparation = param("EVENTD_MAX_PREPARATION",0);
+	dprintf(D_FULLDEBUG, "Max event preparation set to %d minutes.\n",
+			MaxEventPreparation);
+	MaxEventPreparation *= 60; // convert to seconds
 
 	if (TimeoutTid >= 0) {
 		daemonCore->Cancel_Timer(TimeoutTid);

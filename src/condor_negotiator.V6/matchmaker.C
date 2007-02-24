@@ -204,37 +204,15 @@ reinitialize ()
 
 	// get timeout values
 
- 	tmp = param("NEGOTIATOR_INTERVAL");
-	if( tmp ) {
-		NegotiatorInterval = atoi(tmp);
-		free( tmp );
-	} else {
-		NegotiatorInterval = 300;
-	}
+ 	NegotiatorInterval = param_integer("NEGOTIATOR_INTERVAL",300);
 
-	tmp = param("NEGOTIATOR_TIMEOUT");
-	if( tmp ) {
-		NegotiatorTimeout = atoi(tmp);
-		free( tmp );
-	} else {
-		NegotiatorTimeout = 30;
-	}
+	NegotiatorTimeout = param_integer("NEGOTIATOR_TIMEOUT",30);
 
- 	tmp = param("NEGOTIATOR_MAX_TIME_PER_SUBMITTER");
-	if( tmp ) {
-		MaxTimePerSubmitter = atoi(tmp);
-		free( tmp );
-	} else {
-		MaxTimePerSubmitter = 31536000; // up to 1 year per submitter
-	}
+	// up to 1 year per submitter by default
+ 	MaxTimePerSubmitter = param_integer("NEGOTIATOR_MAX_TIME_PER_SUBMITTER",31536000);
 
- 	tmp = param("NEGOTIATOR_MAX_TIME_PER_PIESPIN");
-	if( tmp ) {
-		MaxTimePerSpin = atoi(tmp);
-		free( tmp );
-	} else {
-		MaxTimePerSpin = 31536000; // up to 1 year per spin
-	}
+	// up to 1 year per spin by default
+ 	MaxTimePerSpin = param_integer("NEGOTIATOR_MAX_TIME_PER_PIESPIN",31536000);
 
 	// deal with a possibly resized socket cache, or create the socket
 	// cache if this is the first time we got here.
@@ -246,20 +224,14 @@ reinitialize ()
 	//
 	// the user must call condor_restart to actually shrink the sockCache.
 
-	tmp = param("NEGOTIATOR_SOCKET_CACHE_SIZE");
-	if (tmp) {
-		int size = atoi(tmp);
-		dprintf (D_ALWAYS,"NEGOTIATOR_SOCKET_CACHE_SIZE = %d\n", size);
-		if (sockCache) {
-			sockCache->resize(size);
-		} else {
-			sockCache = new SocketCache(size);
-		}
-		free(tmp);
+	int socket_cache_size = param_integer("NEGOTIATOR_SOCKET_CACHE_SIZE",0);
+	if( socket_cache_size ) {
+		dprintf (D_ALWAYS,"NEGOTIATOR_SOCKET_CACHE_SIZE = %d\n", socket_cache_size);
+	}
+	if (sockCache) {
+		sockCache->resize(socket_cache_size);
 	} else {
-		if (!sockCache) {
-			sockCache = new SocketCache();
-		}
+		sockCache = new SocketCache(socket_cache_size);
 	}
 
 	// get PreemptionReq expression

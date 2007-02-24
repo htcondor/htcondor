@@ -84,7 +84,8 @@ bool	compute_avail_stats = false;
 
 char* Name = NULL;
 
-int		pid_snapshot_interval = 50;
+#define DEFAULT_PID_SNAPSHOT_INTERVAL 50
+int		pid_snapshot_interval = DEFAULT_PID_SNAPSHOT_INTERVAL;
     // How often do we take snapshots of the pid families? 
 
 char*	mySubSystem = "STARTD";
@@ -468,53 +469,20 @@ init_params( int first_time)
     
 	Collectors = new_collector_list;
 
-	tmp = param( "POLLING_INTERVAL" );
-	if( tmp == NULL ) {
-		polling_interval = 5;
-	} else {
-		polling_interval = atoi( tmp );
-		free( tmp );
-	}
+	polling_interval = param_integer( "POLLING_INTERVAL", 5 );
 
-	tmp = param( "UPDATE_INTERVAL" );
-	if( tmp == NULL ) {
-		update_interval = 300;
-	} else {
-		update_interval = atoi( tmp );
-		if(update_interval<=0) {
-			EXCEPT("Invalid value for UPDATE_INTERVAL: %s\n",tmp);
-		}
-		free( tmp );
-	}
+	update_interval = param_integer( "UPDATE_INTERVAL", 300, 1 );
 
 	if( accountant_host ) {
 		free( accountant_host );
 	}
 	accountant_host = param("ACCOUNTANT_HOST");
 
-	tmp = param( "MATCH_TIMEOUT" );
-	if( !tmp ) {
-		match_timeout = 120;
-	} else {
-		match_timeout = atoi( tmp );
-		free( tmp );
-	}
+	match_timeout = param_integer( "MATCH_TIMEOUT", 120 );
 
-	tmp = param( "KILLING_TIMEOUT" );
-	if( !tmp ) {
-		killing_timeout = 30;
-	} else {
-		killing_timeout = atoi( tmp );
-		free( tmp );
-	}
+	killing_timeout = param_integer( "KILLING_TIMEOUT", 30 );
 
-	tmp = param( "MAX_CLAIM_ALIVES_MISSED" );
-	if( !tmp ) {
-		max_claim_alives_missed = 6;
-	} else {
-		max_claim_alives_missed = atoi( tmp );
-		free( tmp );
-	}
+	max_claim_alives_missed = param_integer( "MAX_CLAIM_ALIVES_MISSED", 6 );
 
 	sysapi_reconfig();
 
@@ -543,57 +511,21 @@ init_params( int first_time)
 		free( tmp );
 	}
 
-	tmp = param( "VIRTUAL_MACHINES_CONNECTED_TO_CONSOLE" );
-	if( !tmp ) {
-		tmp = param( "CONSOLE_VMS" );
-	}
-	if( !tmp ) {
-		tmp = param( "CONSOLE_CPUS" );
-	}
-	if( !tmp ) {
-		console_vms = resmgr->m_attr->num_cpus();
-	} else {
-		console_vms = atoi( tmp );
-		free( tmp );
-	}
+	console_vms = param_integer( "VIRTUAL_MACHINES_CONNECTED_TO_CONSOLE",
+	              param_integer( "CONSOLE_VMS",
+	              param_integer( "CONSOLE_CPUS",
+	              resmgr->m_attr->num_cpus())));
 
-	tmp = param( "VIRTUAL_MACHINES_CONNECTED_TO_KEYBOARD" );
-	if( !tmp ) {
-		tmp = param( "KEYBOARD_VMS" );
-	}
-	if( !tmp ) {
-		tmp = param( "KEYBOARD_CPUS" );
-	}
-	if( !tmp ) {
-		keyboard_vms = 1;
-	} else {
-		keyboard_vms = atoi( tmp );
-		free( tmp );
-	}
+	keyboard_vms = param_integer( "VIRTUAL_MACHINES_CONNECTED_TO_KEYBOARD",
+	               param_integer( "KEYBOARD_VMS",
+	               param_integer( "KEYBOARD_CPUS", 1)));
 
-	tmp = param( "DISCONNECTED_KEYBOARD_IDLE_BOOST" );
-	if( !tmp ) {
-		disconnected_keyboard_boost = 1200;
-	} else {
-		disconnected_keyboard_boost = atoi( tmp );
-		free( tmp );
-	}
+	disconnected_keyboard_boost = param_integer( "DISCONNECTED_KEYBOARD_IDLE_BOOST", 1200 );
 
-	startd_noclaim_shutdown = 0;
-	tmp = param( "STARTD_NOCLAIM_SHUTDOWN" );
-	if( tmp ) {
-		startd_noclaim_shutdown = atoi( tmp );
-		free( tmp );
-	}
+	startd_noclaim_shutdown = param_integer( "STARTD_NOCLAIM_SHUTDOWN", 0 );
 
 	compute_avail_stats = false;
-	tmp = param( "STARTD_COMPUTE_AVAIL_STATS" );
-	if( tmp ) {
-		if( tmp[0] == 'T' || tmp[0] == 't' ) {
-			compute_avail_stats = true;
-		}
-		free( tmp );
-	}
+	compute_avail_stats = param_boolean( "STARTD_COMPUTE_AVAIL_STATS", false );
 
 	tmp = param( "STARTD_NAME" );
 	if( tmp ) {
@@ -605,11 +537,7 @@ init_params( int first_time)
 		free( tmp );
 	}
 
-	tmp = param( "PID_SNAPSHOT_INTERVAL" );
-	if( tmp ) {
-		pid_snapshot_interval = atoi( tmp );
-		free( tmp );
-	}
+	pid_snapshot_interval = param_integer( "PID_SNAPSHOT_INTERVAL", DEFAULT_PID_SNAPSHOT_INTERVAL );
 
 	if( valid_cod_users ) {
 		delete( valid_cod_users );

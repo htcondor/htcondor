@@ -130,11 +130,8 @@ main_init(int argc, char* argv[])
 		free( tmp );
 	}
 
-	tmp = param( "MAX_JOB_QUEUE_LOG_ROTATIONS" );
-	int max_historical_logs = 1; // save jsut 1 historical job queue log by default
-	if( tmp ) {
-		max_historical_logs = atoi(tmp);
-	}
+	int max_historical_logs = param_integer( "MAX_JOB_QUEUE_LOG_ROTATIONS", DEFAULT_MAX_JOB_QUEUE_LOG_ROTATIONS );
+
 	InitJobQueue(job_queue_name,max_historical_logs);
 	mark_jobs_idle();
 

@@ -103,7 +103,7 @@ Server::~Server()
 
 void Server::Init()
 {
-	char		*ckpt_server_dir, *level, *interval, *collection_log;
+	char		*ckpt_server_dir, *collection_log;
 	char		*tmp;
 	char        log_msg[256];
 	char        hostname[100];
@@ -148,21 +148,8 @@ void Server::Init()
 		free( ckpt_server_dir );
 	}
 
-	level = param( "CKPT_SERVER_REPLICATION_LEVEL" );
-	if( level ) {
-		replication_level = atoi(level);
-		free( level );
-	} else {
-		replication_level = 0;
-	}
-
-	interval = param( "CKPT_SERVER_INTERVAL" );
-	if( interval ) {
-		reclaim_interval = atoi(interval);
-		free( interval );
-	} else {
-		reclaim_interval = RECLAIM_INTERVAL;
-	}
+	replication_level = param_integer( "CKPT_SERVER_REPLICATION_LEVEL",0 );
+	reclaim_interval = param_integer( "CKPT_SERVER_INTERVAL",RECLAIM_INTERVAL );
 
 	collection_log = param( "CKPT_SERVER_CLASSAD_FILE" );
 	if ( collection_log ) {
@@ -174,45 +161,11 @@ void Server::Init()
 		CkptClassAds = NULL;
 	}
 
-	interval = param( "CKPT_SERVER_CLEAN_INTERVAL" );
-	if (interval) {
-		clean_interval = atoi(interval);
-		free(interval);
-	} else {
-		clean_interval = CLEAN_INTERVAL;
-	}
-
-	tmp = param( "CKPT_SERVER_SOCKET_BUFSIZE" );
-	if (tmp) {
-		socket_bufsize = atoi(tmp);
-		free(tmp);
-	} else {
-		socket_bufsize = 0;
-	}
-
-	tmp = param( "CKPT_SERVER_MAX_PROCESSES" );
-	if (tmp) {
-		max_xfers = atoi(tmp);
-		free(tmp);
-	} else {
-		max_xfers = DEFAULT_XFERS;
-	}
-
-	tmp = param( "CKPT_SERVER_MAX_STORE_PROCESSES" );
-	if (tmp) {
-		max_store_xfers = atoi(tmp);
-		free(tmp);
-	} else {
-		max_store_xfers = max_xfers;
-	}
-
-	tmp = param( "CKPT_SERVER_MAX_RESTORE_PROCESSES" );
-	if (tmp) {
-		max_restore_xfers = atoi(tmp);
-		free(tmp);
-	} else {
-		max_restore_xfers = max_xfers;
-	}
+	clean_interval = param_integer( "CKPT_SERVER_CLEAN_INTERVAL",CLEAN_INTERVAL );
+	socket_bufsize = param_integer( "CKPT_SERVER_SOCKET_BUFSIZE",0 );
+	max_xfers = param_integer( "CKPT_SERVER_MAX_PROCESSES",DEFAULT_XFERS );
+	max_store_xfers = param_integer( "CKPT_SERVER_MAX_STORE_PROCESSES",max_xfers );
+	max_restore_xfers = param_integer( "CKPT_SERVER_MAX_RESTORE_PROCESSES",max_xfers );
 
 	max_replicate_xfers = max_store_xfers/5;
 
@@ -227,13 +180,7 @@ void Server::Init()
 			ManageBandwidth = false;
 		}
 		free(tmp);
-		tmp = param( "NETWORK_HORIZON" );
-		if (tmp) {
-			NetworkHorizon = atoi(tmp);
-			free(tmp);
-		} else {
-			NetworkHorizon = 300;
-		}
+		NetworkHorizon = param_integer( "NETWORK_HORIZON",300 );
 	}
 #endif
 

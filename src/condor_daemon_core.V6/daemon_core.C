@@ -2051,8 +2051,6 @@ void DaemonCore::DumpSocketTable(int flag, const char* indent)
 int
 DaemonCore::ReInit()
 {
-	char *tmp;
-	char buf[50];
 	static int tid = -1;
 
 		// Reset our IpVerify object
@@ -2075,14 +2073,11 @@ DaemonCore::ReInit()
 	// Setup a timer to send child keepalives to our parent, if we have
 	// a daemon core parent.
 	if ( ppid ) {
-		max_hang_time = 0;
-		sprintf(buf,"%s_NOT_RESPONDING_TIMEOUT",mySubSystem);
-		if ( !(tmp=param(buf)) ) {
-			tmp = param("NOT_RESPONDING_TIMEOUT");
-		}
-		if ( tmp ) {
-			max_hang_time = atoi(tmp);
-			free(tmp);
+		MyString buf;
+		buf.sprintf("%s_NOT_RESPONDING_TIMEOUT",mySubSystem);
+		max_hang_time = param_integer(buf.Value(),-1);
+		if( max_hang_time == -1 ) {
+			max_hang_time = param_integer("NOT_RESPONDING_TIMEOUT",0);
 		}
 		if ( !max_hang_time ) {
 			max_hang_time = 60 * 60;	// default to 1 hour
@@ -6846,13 +6841,8 @@ DaemonCore::InitCommandSocket( int command_port )
 		// usage.  We increase our UDP read buffers here so we
 		// don't drop those messages.
 	if( strcmp(mySubSystem,"NEGOTIATOR") == 0 ) {
-		int desired_size;
-		char *tmp;
-
-		if( (tmp=param("NEGOTIATOR_SOCKET_BUFSIZE")) ) {
-			desired_size = atoi( tmp );
-			free( tmp );
-
+		int desired_size = param_integer("NEGOTIATOR_SOCKET_BUFSIZE",0);
+		if( desired_size ) {
 				// set the UDP (ssock) read size to be large, so we do
 				// not drop incoming updates.
 			int final_size = dc_ssock->set_os_buffers( desired_size );

@@ -107,12 +107,7 @@ void ViewServer::Init()
     daemonCore->Register_Command(QUERY_HIST_CKPTSRVR_LIST,"QUERY_HIST_CKPTSRVR_LIST",
         (CommandHandler)ReceiveHistoryQuery,"ReceiveHistoryQuery",NULL,READ);
 
-	tmp=param("UPDATE_INTERVAL");
-	int InitialDelay=300;
-	if (tmp) {
-		InitialDelay=atoi(tmp);
-		free(tmp);
-	}
+	int InitialDelay=param_integer("UPDATE_INTERVAL",300);
 
 	// Add View Server Flag to class ad
 	ad->Insert("ViewServer = True");
@@ -149,6 +144,7 @@ void ViewServer::Config()
 {
 	MyString history_dir_buf;
 	char const *history_dir;
+	char* tmp;
 	dprintf(D_ALWAYS, "In ViewServer::Config()\n");
 	
 	// Configure Collector daemon
@@ -158,22 +154,10 @@ void ViewServer::Config()
 
 	// Specialized configuration
 
-	char* tmp=param("POOL_HISTORY_SAMPLING_INTERVAL");
-	if (!tmp) {
-		HistoryInterval=60;
-	} else {
-		HistoryInterval=atoi(tmp);
-		free(tmp);
-	}
+	HistoryInterval=param_integer("POOL_HISTORY_SAMPLING_INTERVAL",60);
 
-	int MaxStorage;
-	tmp=param("POOL_HISTORY_MAX_STORAGE");
-	if (!tmp) {
-		MaxStorage=10000000;
-	} else {
-		MaxStorage=atoi(tmp);
-		free(tmp);
-	}
+	int MaxStorage=param_integer("POOL_HISTORY_MAX_STORAGE",10000000);
+
 	MaxFileSize=MaxStorage/(HistoryLevels*DataSetCount*2);
 
 	tmp=param("POOL_HISTORY_DIR");

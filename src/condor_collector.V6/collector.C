@@ -936,38 +936,10 @@ void CollectorDaemon::Config()
     int     ClassadLifetime;
     int     MasterCheckInterval;
 
-    tmp = param ("CLIENT_TIMEOUT");
-    if( tmp ) {
-        ClientTimeout = atoi( tmp );
-        free( tmp );
-    } else {
-        ClientTimeout = 30;
-    }
-
-    tmp = param ("QUERY_TIMEOUT");
-    if( tmp ) {
-        QueryTimeout = atoi( tmp );
-        free( tmp );
-    } else {
-        QueryTimeout = 60;
-    }
-
-    tmp = param ("CLASSAD_LIFETIME");
-    if( tmp ) {
-        ClassadLifetime = atoi( tmp );
-        free( tmp );
-    } else {
-        ClassadLifetime = 900;
-    }
-
-    tmp = param ("MASTER_CHECK_INTERVAL");
-    if( tmp ) {
-        MasterCheckInterval = atoi( tmp );
-        free( tmp );
-    } else {
-        MasterCheckInterval = 0;
-        // MasterCheckInterval = 10800;    // three hours
-    }
+    ClientTimeout = param_integer ("CLIENT_TIMEOUT",30);
+    QueryTimeout = param_integer ("QUERY_TIMEOUT",60);
+    ClassadLifetime = param_integer ("CLASSAD_LIFETIME",900);
+    MasterCheckInterval = param_integer ("MASTER_CHECK_INTERVAL",0);
 
     if (CollectorName) free (CollectorName);
     CollectorName = param("COLLECTOR_NAME");
@@ -986,13 +958,8 @@ void CollectorDaemon::Config()
             free(tmp);
             tmp = NULL;
     }
-	int i;
-    char* tmp1 = param("COLLECTOR_UPDATE_INTERVAL");
-    if ( tmp1 ) {
-            i = atoi(tmp1);
-    } else {
-            i = 900;                // default to 15 minutes
-    }
+	int i = param_integer("COLLECTOR_UPDATE_INTERVAL",900); // default 15 min
+
     if ( tmp && i ) {
 		if( updateCollector ) {
 				// we should just delete it.  since we never use TCP
@@ -1022,8 +989,6 @@ void CollectorDaemon::Config()
 
     if (tmp)
         free(tmp);
-    if (tmp1)
-        free(tmp1);
 
     // set the appropriate parameters in the collector engine
     collector.setClientTimeout( ClientTimeout );
@@ -1052,27 +1017,23 @@ void CollectorDaemon::Config()
        }
     }
 
-	tmp = param( "COLLECTOR_SOCKET_CACHE_SIZE" );
-	if( tmp ) {
-		int size = atoi( tmp );
-		if( size ) {
-			if( size < 0 || size > 64000 ) {
-					// the upper bound here is because a TCP port
-					// can't be any bigger than 64K (65536).  however,
-					// b/c of reserved ports and some other things, we
-					// leave it at 64000, just to be safe...
-				EXCEPT( "COLLECTOR_SOCKET_CACHE_SIZE must be between "
-						"0 and 64000 (you used: %s)", tmp );
+		// the upper bound here is because a TCP port can't be any
+		// bigger than 64K (65536).  however, b/c of reserved ports
+		// and some other things, we leave it at 64000, just to be
+		// safe...
+	int size = param_integer( "COLLECTOR_SOCKET_CACHE_SIZE",-1,0,64000 );
+	if( size == -1 ) {
+		delete sock_cache;
+		sock_cache = NULL;
+	}
+	else {
+		if( sock_cache ) {
+			if( size > sock_cache->size() ) {
+				sock_cache->resize( size );
 			}
-			if( sock_cache ) {
-				if( size > sock_cache->size() ) {
-					sock_cache->resize( size );
-				}
-			} else {
-				sock_cache = new SocketCache( size );
-			}
-		} 
-		free( tmp );
+		} else {
+			sock_cache = new SocketCache( size );
+		}
 	}
 	if( sock_cache ) {
 		dprintf( D_FULLDEBUG, 
@@ -1082,44 +1043,17 @@ void CollectorDaemon::Config()
 		dprintf( D_FULLDEBUG, "No SocketCache, will refuse TCP updates\n" );
 	}		
 
-    tmp = param ("COLLECTOR_CLASS_HISTORY_SIZE");
-    if( tmp ) {
-		int	size = atoi( tmp );
-		free( tmp );
-        collectorStats.setClassHistorySize( size );
-    } else {
-        collectorStats.setClassHistorySize( 1024 );
-    }
+	size = param_integer ("COLLECTOR_CLASS_HISTORY_SIZE",1024);
+	collectorStats.setClassHistorySize( size );
 
-    tmp = param ("COLLECTOR_DAEMON_STATS");
-	if( tmp ) {
-		if( ( *tmp == 't' || *tmp == 'T' ) ) {
-			collectorStats.setDaemonStats( true );
-		} else {
-			collectorStats.setDaemonStats( false );
-		}
-		free( tmp );
-	} else {
-		collectorStats.setDaemonStats( true );
-	}
+	bool collector_daemon_stats = param_boolean ("COLLECTOR_DAEMON_STATS",true);
+	collectorStats.setDaemonStats( collector_daemon_stats );
 
-    tmp = param ("COLLECTOR_DAEMON_HISTORY_SIZE");
-    if( tmp ) {
-		int	size = atoi( tmp );
-		free( tmp );
-        collectorStats.setDaemonHistorySize( size );
-    } else {
-        collectorStats.setDaemonHistorySize( 128 );
-    }
+    size = param_integer ("COLLECTOR_DAEMON_HISTORY_SIZE",128);
+    collectorStats.setDaemonHistorySize( size );
 
-    tmp = param ("COLLECTOR_QUERY_WORKERS");
-    if( tmp ) {
-		int	num = atoi( tmp );
-		free( tmp );
-        forkQuery.setMaxWorkers( num );
-    } else {
-        forkQuery.setMaxWorkers( 0 );
-    }
+    size = param_integer ("COLLECTOR_QUERY_WORKERS",0);
+    forkQuery.setMaxWorkers( size );
 
     return;
 }

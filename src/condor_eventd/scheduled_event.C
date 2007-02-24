@@ -267,24 +267,11 @@ ScheduledShutdownEvent::ScheduledShutdownEvent(const char name[],
 
 	if (NumScheduledShutdownEvents == 0) {
 
-		tmp = param("EVENTD_SHUTDOWN_SLOW_START_INTERVAL");
-		if (tmp) {
-			SlowStartInterval = atoi(tmp);
-			free(tmp);
-			dprintf(D_FULLDEBUG, "Shutdown slow start interval set to %d "
-					"seconds.\n", SlowStartInterval);
-		} else {
-			SlowStartInterval = 0;
-		}
+		SlowStartInterval = param_integer("EVENTD_SHUTDOWN_SLOW_START_INTERVAL",0);
+		dprintf(D_FULLDEBUG, "Shutdown slow start interval set to %d "
+				"seconds.\n", SlowStartInterval);
 
-		tmp = param("EVENTD_INTERVAL");
-		if (tmp) {
-			EventInterval = atoi(tmp);
-			free(tmp);
-		} else {
-			EventInterval = 900;
-		}
-
+		EventInterval = param("EVENTD_INTERVAL",900);
 		
 		tmp = param("EVENTD_ROUTING_INFO");
 		if (tmp) {
@@ -329,22 +316,10 @@ ScheduledShutdownEvent::ScheduledShutdownEvent(const char name[],
 			free(tmp);
 		}
 
-		tmp = param("UPDATE_INTERVAL");
-		if (tmp) {
-			StartdValidWindow = atoi(tmp);
-			StartdValidWindow *= 2;
-			free(tmp);
-		} else {
-			StartdValidWindow = 600;
-		}
+		StartdValidWindow = param_integer("UPDATE_INTERVAL",300);
+		StartdValidWindow *= 2;
 
-		tmp = param("EVENTD_MIN_RESCHEDULE_INTERVAL");
-		if (tmp) {
-			RescheduleInterval = atoi(tmp);
-			free(tmp);
-		} else {
-			RescheduleInterval = 60;
-		}
+		RescheduleInterval = param("EVENTD_MIN_RESCHEDULE_INTERVAL",60);
 	}
 
 	NumScheduledShutdownEvents++;
@@ -352,15 +327,9 @@ ScheduledShutdownEvent::ScheduledShutdownEvent(const char name[],
 	// start a periodic cleanup timer if we haven't already
 	if (CleanupTid < 0) {
 		int CleanupInterval;
-		tmp = param("EVENTD_SHUTDOWN_CLEANUP_INTERVAL");
-		if (tmp) {
-			CleanupInterval = atoi(tmp);
-			free(tmp);
-			dprintf(D_FULLDEBUG, "Shutdown cleanup interval set to %d "
-					"seconds.\n", CleanupInterval);
-		} else {
-			CleanupInterval = 3600; // one hour
-		}
+		CleanupInterval = param("EVENTD_SHUTDOWN_CLEANUP_INTERVAL",3600);
+		dprintf(D_FULLDEBUG, "Shutdown cleanup interval set to %d "
+				"seconds.\n", CleanupInterval);
 		// do our first cleanup soon (in 10 minutes), because we may
 		// have been away for a while, but give a little time for the
 		// collector to get new ads

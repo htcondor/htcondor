@@ -6908,13 +6908,7 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 
         /* Get the handler's nice increment.  For now, we just use the
 		   same config attribute for all handlers. */
-    char *nice_config = param( "SHADOW_RENICE_INCREMENT" );
-    int niceness = 0;
-    if( nice_config ) {
-        niceness = atoi( nice_config );
-        free( nice_config );
-        nice_config = NULL;
-    }
+    int niceness = param_integer( "SHADOW_RENICE_INCREMENT",0 );
 
 	int rid;
 	if( ( srec->universe == CONDOR_UNIVERSE_MPI) ||
@@ -7745,14 +7739,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	}
 
         // get the job's nice increment
-	{
-		char *nice_config = param( "SCHED_UNIV_RENICE_INCREMENT" );
-		if( nice_config ) {
-			niceness = atoi( nice_config );
-			free( nice_config );
-			nice_config = NULL;
-		}
-	}
+	niceness = param_integer( "SCHED_UNIV_RENICE_INCREMENT",niceness );
 	
 	pid = daemonCore->Create_Process( a_out_name, args, PRIV_USER_FINAL, 
 									  shadowReaperId, FALSE,
@@ -9619,39 +9606,17 @@ Scheduler::Init()
         }
     }
 
-	 tmp = param( "SCHEDD_INTERVAL" );
-	 if( ! tmp ) {
-		  SchedDInterval = 300;
-	 } else {
-		  SchedDInterval = atoi( tmp );
-		  free( tmp );
-	 }
+	SchedDInterval = param_integer( "SCHEDD_INTERVAL", 300 );
 
 	SchedDMinInterval = param_integer("SCHEDD_MIN_INTERVAL",5);
 
-	tmp = param( "QUEUE_CLEAN_INTERVAL" );
-	if( ! tmp ) {
-		QueueCleanInterval = 24*60*60;	// every 24 hours
-	} else {
-		QueueCleanInterval = atoi( tmp );
-		free( tmp );
-	}
+	// default every 24 hours
+	QueueCleanInterval = param_integer( "QUEUE_CLEAN_INTERVAL",24*60*60 );
 
-	tmp = param( "WALL_CLOCK_CKPT_INTERVAL" );
-	if( ! tmp ) {
-		WallClockCkptInterval = 60*60;	// every hour
-	} else {
-		WallClockCkptInterval = atoi( tmp );
-		free( tmp );
-	}
+	// default every hour
+	WallClockCkptInterval = param_integer( "WALL_CLOCK_CKPT_INTERVAL",60*60 );
 
-	tmp = param( "JOB_START_DELAY" );
-	if( ! tmp ) {
-		JobStartDelay = 2;
-	} else {
-		JobStartDelay = atoi( tmp );
-		free( tmp );
-	}
+	JobStartDelay = param_integer( "JOB_START_DELAY", 2 );
 	
 	JobStartCount =	param_integer(
 						"JOB_START_COUNT",			// name
@@ -9661,13 +9626,7 @@ Scheduler::Init()
 
 	JobsThisBurst = -1;
 
-	tmp = param( "MAX_JOBS_RUNNING" );
-	if( ! tmp ) {
-		MaxJobsRunning = 200;
-	} else {
-		MaxJobsRunning = atoi( tmp );
-		free( tmp );
-	}
+	MaxJobsRunning = param_integer( "MAX_JOBS_RUNNING", 200 );
 	
 		//
 		// Start Local Universe Expression
@@ -9803,33 +9762,18 @@ Scheduler::Init()
 	if (flock_collector_hosts) free(flock_collector_hosts);
 	if (flock_negotiator_hosts) free(flock_negotiator_hosts);
 
-	tmp = param( "RESERVED_SWAP" );
-	 if( !tmp ) {
-		  ReservedSwap = 5 * 1024;				/* 5 megabytes */
-	 } else {
-		  ReservedSwap = atoi( tmp ) * 1024; /* Value specified in megabytes */
-		  free( tmp );
-	 }
+	/* default 5 megabytes */
+	ReservedSwap = param_integer( "RESERVED_SWAP", 5 );
+	ReservedSwap *= 1024;
 
-	tmp = param( "SHADOW_SIZE_ESTIMATE" );
-	 if( ! tmp ) {
-		  ShadowSizeEstimate = DEFAULT_SHADOW_SIZE;
-	 } else {
-		  ShadowSizeEstimate = atoi( tmp );	/* Value specified in kilobytes */
-		  free( tmp );
-	 }
+	/* Value specified in kilobytes */
+	ShadowSizeEstimate = param_integer( "SHADOW_SIZE_ESTIMATE",DEFAULT_SHADOW_SIZE );
 
-	tmp = param("ALIVE_INTERVAL");
+	alive_interval = param_integer("ALIVE_INTERVAL",300,0,leaseAliveInterval);
 		// Don't allow the user to specify an alive interval larger
 		// than leaseAliveInterval, or the startd may start killing off
 		// jobs before ATTR_JOB_LEASE_DURATION has passed, thereby screwing
 		// up the operation of the disconnected shadow/starter feature.
-	 if(!tmp) {
-		alive_interval = MIN(leaseAliveInterval,300);
-	 } else {
-		  alive_interval = MIN(atoi(tmp),leaseAliveInterval);
-		  free(tmp);
-	}
 
 		//
 		// This HashTable is used to figure out the next runtime
@@ -9856,43 +9800,14 @@ Scheduler::Init()
 		//
 //	this->cronTabsExclude = new Queue<PROC_ID>;
 
-	tmp = param("MAX_SHADOW_EXCEPTIONS");
-	 if(!tmp) {
-		MaxExceptions = 5;
-	 } else {
-		  MaxExceptions = atoi(tmp);
-		  free(tmp);
-	}
+	MaxExceptions = param_integer("MAX_SHADOW_EXCEPTIONS", 5);
 
-	 tmp = param("MANAGE_BANDWIDTH");
-	 if (!tmp) {
-		 ManageBandwidth = false;
-	 } else {
-		 if (tmp[0] == 'T' || tmp[0] == 't') {
-			 ManageBandwidth = true;
-		 } else {
-			 ManageBandwidth = false;
-		 }
-		 free(tmp);
-	 }
+	ManageBandwidth = param_boolean("MANAGE_BANDWIDTH", false);
 
-	tmp = param("PERIODIC_EXPR_INTERVAL");
-	if(!tmp) {
-		PeriodicExprInterval = 300;
-	} else {
-		PeriodicExprInterval = atoi(tmp);
-		free(tmp);
-		tmp = NULL;
-	}
+	PeriodicExprInterval = param_integer("PERIODIC_EXPR_INTERVAL", 300);
 
 	if ( first_time_in_init ) {	  // cannot be changed on the fly
-		tmp = param( "GRIDMANAGER_PER_JOB" );
-		if( !tmp || tmp[0] == 'f' || tmp[0] == 'F' ) {
-			gridman_per_job = false;
-		} else {
-			gridman_per_job = true;
-		}
-		if( tmp ) free( tmp );
+		gridman_per_job = param_boolean( "GRIDMANAGER_PER_JOB", false );
 	}
 
 	RequestClaimTimeout = param_integer("REQUEST_CLAIM_TIMEOUT",60*30);
@@ -10294,8 +10209,6 @@ prio_compar(prio_rec* a, prio_rec* b)
 void
 Scheduler::reconfig()
 {
-	char *tmpbuf;
-
 	Init();
 	RegisterTimers();			// reset timers
 
@@ -10307,11 +10220,8 @@ Scheduler::reconfig()
 
 	timeout();
 
-	tmpbuf = param( "MAX_JOB_QUEUE_LOG_ROTATIONS" );
-	if(tmpbuf) {
-		SetMaxHistoricalLogs(atoi(tmpbuf));
-		free(tmpbuf);
-	}
+	int max_saved_rotations = param_integer( "MAX_JOB_QUEUE_LOG_ROTATIONS", DEFAULT_MAX_JOB_QUEUE_LOG_ROTATIONS );
+	SetMaxHistoricalLogs(max_saved_rotations);
 }
 
 // This function is called by a timer when we are shutting down

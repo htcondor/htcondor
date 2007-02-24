@@ -319,12 +319,8 @@ main(int argc, char *argv[] )
 	dprintf( D_ALWAYS, "** %s\n", CondorPlatform() );
 	dprintf( D_ALWAYS, "*******************************************\n" );
 
-	if( (tmp=param("RESERVED_SWAP")) == NULL ) {
-		reserved_swap = 5 * 1024;			/* 5 megabytes */
-	} else {
-		reserved_swap = atoi( tmp ) * 1024;	/* Value specified in megabytes */
-		free( tmp );
-	}
+	reserved_swap = param_integer("RESERVED_SWAP", 5);
+	reserved_swap *= 1024; /* megabytes -> kb */
 
 	free_swap = sysapi_swap_space();
 
@@ -463,71 +459,19 @@ main(int argc, char *argv[] )
 		LastCkptServer = NULL;
 	}
 
-	tmp = param( "MAX_DISCARDED_RUN_TIME" );
-	if (tmp) {
-		MaxDiscardedRunTime = atoi(tmp);
-		free(tmp);
-	} else {
-		MaxDiscardedRunTime = 3600;
-	}
+	MaxDiscardedRunTime = param_integer( "MAX_DISCARDED_RUN_TIME", 3600 );
 
-	tmp = param( "COMPRESS_PERIODIC_CKPT" );
-	if (tmp && (tmp[0] == 'T' || tmp[0] == 't')) {
-		CompressPeriodicCkpt = TRUE;
-	} else {
-		CompressPeriodicCkpt = FALSE;
-	}
-	if (tmp) {
-        free(tmp);
-    }
+	CompressPeriodicCkpt = param_boolean( "COMPRESS_PERIODIC_CKPT", false );
 
-	tmp = param( "PERIODIC_MEMORY_SYNC" );
-	if (tmp && (tmp[0] == 'T' || tmp[0] == 't')) {
-		PeriodicSync = TRUE;
-	} else {
-		PeriodicSync = FALSE;
-	}
-	if (tmp) {
-        free(tmp);
-    }
+	PeriodicSync = param_boolean( "PERIODIC_MEMORY_SYNC", false );
 
-	tmp = param( "COMPRESS_VACATE_CKPT" );
-	if (tmp && (tmp[0] == 'T' || tmp[0] == 't')) {
-		CompressVacateCkpt = TRUE;
-	} else {
-		CompressVacateCkpt = FALSE;
-	}
-	if (tmp) {
-        free(tmp);
-    }
+	CompressVacateCkpt = param_boolean( "COMPRESS_VACATE_CKPT", false );
 
-	tmp = param( "SLOW_CKPT_SPEED" );
-	if (tmp) {
-		SlowCkptSpeed = atoi(tmp);
-		free(tmp);
-	} else {
-		SlowCkptSpeed = 0;
-	}
+	SlowCkptSpeed = param_integer( "SLOW_CKPT_SPEED", 0 );
 
 #ifdef WANT_NETMAN
-	tmp = param("MANAGE_BANDWIDTH");
-	if (!tmp) {
-		ManageBandwidth = false;
-	} else {
-		if (tmp[0] == 'T' || tmp[0] == 't') {
-			ManageBandwidth = true;
-		} else {
-			ManageBandwidth = false;
-		}
-		free(tmp);
-		tmp = param("NETWORK_HORIZON");
-		if (!tmp) {
-			NetworkHorizon = 300;
-		} else {
-			NetworkHorizon = atoi(tmp);
-			free(tmp);
-		}
-	}
+	ManageBandwidth = param_boolean("MANAGE_BANDWIDTH",false);
+	NetworkHorizon = param_integer("NETWORK_HORIZON",300);
 #endif
 
 	// Install signal handlers such that all signals are blocked when inside

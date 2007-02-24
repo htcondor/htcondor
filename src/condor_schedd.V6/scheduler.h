@@ -58,6 +58,8 @@
 extern  int         STARTD_CONTACT_TIMEOUT;
 const	int			NEGOTIATOR_CONTACT_TIMEOUT = 30;
 
+#define DEFAULT_MAX_JOB_QUEUE_LOG_ROTATIONS 1
+
 extern	DLL_IMPORT_MAGIC char**		environ;
 
 class match_rec;

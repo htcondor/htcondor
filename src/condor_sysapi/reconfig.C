@@ -123,62 +123,26 @@ sysapi_reconfig(void)
         free( tmp );
     }
 
-	tmp = param( "STARTD_HAS_BAD_UTMP" );
-	if( tmp && (*tmp == 'T' || *tmp =='t') ) {
-		_sysapi_startd_has_bad_utmp = TRUE;
-	} else {
-		_sysapi_startd_has_bad_utmp = FALSE;
-	}
-	if (tmp) free(tmp);
+	_sysapi_startd_has_bad_utmp = param_boolean_int( "STARTD_HAS_BAD_UTMP", FALSE );
 
 	/* configuration setup for free_fs_blocks.c */
-	tmp = param( "RESERVE_AFS_CACHE" );
-	if( tmp && (*tmp == 'T' || *tmp == 't')) {
-		_sysapi_reserve_afs_cache = TRUE;
-	} else {
-		_sysapi_reserve_afs_cache = FALSE;
-	}
-	if (tmp) free(tmp);
+	_sysapi_reserve_afs_cache = param_boolean_int( "RESERVE_AFS_CACHE", FALSE );
 #endif /* ! WIN32 */
 
-	_sysapi_reserve_disk = 0;
-	tmp = param( "RESERVED_DISK" );
-	if( tmp ) {
-		_sysapi_reserve_disk = atoi( tmp ) * 1024;    /* Parameter is in meg */
-		free( tmp );
-	}
+	_sysapi_reserve_disk = param_integer( "RESERVED_DISK", 0 );
+	_sysapi_reserve_disk *= 1024;    /* Parameter is in meg */
 
-	_sysapi_ncpus = 0;
-	tmp = param( "NUM_CPUS" );
-	if( tmp ) {
-		_sysapi_ncpus = atoi( tmp );
-		free( tmp );
-	}
+	_sysapi_ncpus = param_integer( "NUM_CPUS", 0 );
 
-	_sysapi_max_ncpus = 0;
-	tmp = param( "MAX_NUM_CPUS" );
-	if( tmp ) {
-		_sysapi_max_ncpus = atoi( tmp );
-		if(_sysapi_max_ncpus < 0) {
-			_sysapi_max_ncpus = 0;
-		}
-		free( tmp );
+	_sysapi_max_ncpus = param_integer( "MAX_NUM_CPUS", 0 );
+	if(_sysapi_max_ncpus < 0) {
+		_sysapi_max_ncpus = 0;
 	}
 
 
-	_sysapi_memory = 0;
-	tmp = param( "MEMORY" );
-	if( tmp ) {
-		_sysapi_memory = atoi( tmp );
-		free( tmp );
-	}
+	_sysapi_memory = param_integer( "MEMORY", 0 );
 
-	_sysapi_reserve_memory = 0;
-	tmp = param( "RESERVED_MEMORY" );
-	if( tmp ) {
-		_sysapi_reserve_memory = atoi( tmp );
-		free( tmp );
-	}
+	_sysapi_reserve_memory = param_integer( "RESERVED_MEMORY", 0 );
 
 	/* _sysapi_ckptpltfrm is either set to NULL, or whatever 
 		CHECKPOINT_PLATFORM says in the config file. If set to NULL,

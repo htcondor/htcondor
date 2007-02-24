@@ -328,22 +328,10 @@ void BaseShadow::config()
 	}
 	if (tmp) free(tmp);
 
-	reconnect_ceiling = 0;
-	tmp = param( "RECONNECT_BACKOFF_CEILING" );
-	if( tmp ) {
-		reconnect_ceiling = atoi( tmp );
-		free( tmp );
-	} 
-	if( !reconnect_ceiling ) {
-		reconnect_ceiling = 300;
-	}
+	reconnect_ceiling = param_integer( "RECONNECT_BACKOFF_CEILING", 300 );
 
-	reconnect_e_factor = 0;
-	tmp = param( "RECONNECT_BACKOFF_FACTOR" );
-    if( tmp ) {
-        reconnect_e_factor = atof( tmp );
-		free( tmp );
-    } 
+	reconnect_e_factor = 0.0;
+	reconnect_e_factor = param_double( "RECONNECT_BACKOFF_FACTOR", 2.0, 0.0 );
 	if( !reconnect_e_factor ) {
     	reconnect_e_factor = 2.0;
     }
@@ -974,14 +962,9 @@ BaseShadow::checkSwap( void )
 {
 	int	reserved_swap, free_swap;
 	char* tmp;
-	tmp = param( "RESERVED_SWAP" );
-	if( tmp ) {
-			// Reserved swap is specified in megabytes
-		reserved_swap = atoi( tmp ) * 1024;	
-		free( tmp );
-	} else {
-		reserved_swap = 5 * 1024;
-	}
+		// Reserved swap is specified in megabytes
+	reserved_swap = param_integer( "RESERVED_SWAP", 5 );
+	reserved_swap *= 1024;
 
 	if( reserved_swap == 0 ) {
 			// We're not supposed to care about swap space at all, so

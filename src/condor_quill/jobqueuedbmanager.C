@@ -219,27 +219,11 @@ JobQueueDBManager::config(bool reconfig)
 
 		// read the polling period and if one is not specified use 
 		// default value of 10 seconds
-	char *pollingPeriod_str = param("QUILL_POLLING_PERIOD");
-	if(pollingPeriod_str) {
-		pollingPeriod = atoi(pollingPeriod_str);
-		free(pollingPeriod_str);
-		pollingPeriod_str = NULL;
-	}
-	else {
-		pollingPeriod = 10;
-	}
+	pollingPeriod = param_integer("QUILL_POLLING_PERIOD",10);
   
 		// length of history to keep; 
 		// use default value of 6 months = 180 days :)
-	char *purgeHistoryDuration_str = param("QUILL_HISTORY_DURATION");
-	if(purgeHistoryDuration_str) {
-		purgeHistoryDuration = atoi(purgeHistoryDuration_str);
-		free(purgeHistoryDuration_str);
-		purgeHistoryDuration_str = NULL;
-	}
-	else {
-		purgeHistoryDuration = 180;  //default of 6 months
-	}
+	purgeHistoryDuration = param_integer("QUILL_HISTORY_DURATION",180);
 
 		/* 
 		   the following parameters specifies the frequency of calling
@@ -252,15 +236,7 @@ JobQueueDBManager::config(bool reconfig)
 		   the administrator.  By default, it is 24 hours. 
 		*/
 	
-	char *historyCleaningInterval_str = param("QUILL_HISTORY_CLEANING_INTERVAL");
-	if(historyCleaningInterval_str) {
-		historyCleaningInterval = atoi(historyCleaningInterval_str);
-		free(historyCleaningInterval_str);
-		historyCleaningInterval_str = NULL;
-	}
-	else {
-		historyCleaningInterval = 24;  //default of 24 hours
-	}
+	historyCleaningInterval = param_integer("QUILL_HISTORY_CLEANING_INTERVAL",24);
   
 	dprintf(D_ALWAYS, "Using Job Queue File %s\n", jobQueueLogFile);
 	dprintf(D_ALWAYS, "Using Database IpAddress = %s\n", jobQueueDBIpAddress);

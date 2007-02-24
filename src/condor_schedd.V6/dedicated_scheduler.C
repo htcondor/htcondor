@@ -735,19 +735,8 @@ DedicatedScheduler::reconfig( void )
 	static int old_unused_timeout = 0;
 
 	char* tmp;
-	tmp = param( "UNUSED_CLAIM_TIMEOUT" );
-	if( tmp ) {
-		unused_timeout = atoi( tmp );
-		if( !unused_timeout && tmp[0] != '0' ) {
-			dprintf( D_ALWAYS, "ERROR: invalid value for "
-					 "UNUSED_CLAIM_TIMEOUT: \"%s\", "
-					 "using 10 minute default\n", tmp );
-			unused_timeout = 600;
-		}
-		free( tmp );
-	} else {
-		unused_timeout = 600;
-	}
+	unused_timeout = param_integer( "UNUSED_CLAIM_TIMEOUT", 600 );
+
 	if( old_unused_timeout && (old_unused_timeout != unused_timeout) ) {
 			// We've got a new value.  We should re-check our sanity. 
 		dprintf( D_FULLDEBUG, "New value for UNUSED_CLAIM_TIMEOUT (%d)\n", 
