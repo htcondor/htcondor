@@ -1347,6 +1347,13 @@ param_integer( const char *name, int default_value,
 	return result;
 }
 
+int param_integer_c( const char *name, int default_value,
+					   int min_value, int max_value)
+{
+	return param_integer( name, default_value, min_value, max_value );
+}
+
+
 /*
  * Return the [single precision] floating point value associated with the named
  * parameter.  If the value is not defined or not a valid float, then return

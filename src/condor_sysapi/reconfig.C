@@ -129,20 +129,20 @@ sysapi_reconfig(void)
 	_sysapi_reserve_afs_cache = param_boolean_int( "RESERVE_AFS_CACHE", FALSE );
 #endif /* ! WIN32 */
 
-	_sysapi_reserve_disk = param_integer( "RESERVED_DISK", 0 );
+	_sysapi_reserve_disk = param_integer_c( "RESERVED_DISK", 0, INT_MIN, INT_MAX );
 	_sysapi_reserve_disk *= 1024;    /* Parameter is in meg */
 
-	_sysapi_ncpus = param_integer( "NUM_CPUS", 0 );
+	_sysapi_ncpus = param_integer_c( "NUM_CPUS", 0, 0, INT_MAX );
 
-	_sysapi_max_ncpus = param_integer( "MAX_NUM_CPUS", 0 );
+	_sysapi_max_ncpus = param_integer_c( "MAX_NUM_CPUS", 0, 0, INT_MAX );
 	if(_sysapi_max_ncpus < 0) {
 		_sysapi_max_ncpus = 0;
 	}
 
 
-	_sysapi_memory = param_integer( "MEMORY", 0 );
+	_sysapi_memory = param_integer_c( "MEMORY", 0, 0, INT_MAX );
 
-	_sysapi_reserve_memory = param_integer( "RESERVED_MEMORY", 0 );
+	_sysapi_reserve_memory = param_integer_c( "RESERVED_MEMORY", 0, INT_MIN, INT_MAX );
 
 	/* _sysapi_ckptpltfrm is either set to NULL, or whatever 
 		CHECKPOINT_PLATFORM says in the config file. If set to NULL,
