@@ -78,8 +78,17 @@ my $newpath = $ENV{PATH} = "$myfullpgsqlloc" . "/bin:" . $ENV{PATH};
 print "NEW Path is now <<$newpath>>\n";
 
 chdir("$topdir");
+
+print "About to install Perl Modules: <<<";
+system("date");
+print ">>>\n";
+
 $perlinstall = system("./x_quill_buildperlmods.pl");
 print "Perl module install result was $perlinstall\n";
+
+print "About to install Postgres: <<<";
+system("date");
+print ">>>\n";
 
 chdir("$topdir");
 system("mkdir -p $myquillname");
@@ -104,6 +113,10 @@ if($pgresult != 0) {
 
 
 chdir("$topdir");
+
+print "About to set up Condor Personal : <<<";
+system("date");
+print ">>>\n";
 
 $mysubmitnm = $corename . $mypid . ".cmd";
 $mysubmitnmcmdout = $corename . $mypid . ".cmd.out";
@@ -131,6 +144,9 @@ my $quillconfig = shift @quill;
 my $quillport = shift @quill;
 
 print "---Quill config is $quillconfig and remote port is $quillport---\n";
+print "About to start jobs and test : <<<";
+system("date");
+print ">>>\n";
 
 $ENV{CONDOR_CONFIG} = $quillconfig;
 

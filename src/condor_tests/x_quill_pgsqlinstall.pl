@@ -117,6 +117,7 @@ my $trylimit = 1;
 while (( $dbup ne "yes") && ($trylimit <= 10) ) {
 	$pmaster_start = system("$prefix/bin/pg_ctl -D $prefix/postgres-data -l $prefix/postgres-data/logfile start");
 	print "starting postmaster result<<<<<$pmaster_start>>>>>\n";
+	system("date");
 	sleep(10);
 	if(!(-f "$prefix/postgres-data/postmaster.pid")) {
 		$trylimit = $trylimit + 1;
@@ -213,6 +214,8 @@ if($docreatedb != 0) {
 	die "Failed to create test db\n";
 }
 
+print "Postgress built and set up: ";
+system("date");
 #system("$prefix/bin/psql test");
 
 

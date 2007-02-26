@@ -53,9 +53,10 @@ if( $nodenum == 0 ) {
 	print "socket is $newsocketname\n";
 	chdir("$mypid");
 	while( !(-S "$newsocketname")) {
-		sleep 1;
+		sleep 6;
 		print "waiting for socket\n";
 	}
+	print "Ready to write my message<< node $nodenum>>\n";
 	my $client = IO::Socket::UNIX->new(Peer => "$newsocketname",
 								Type  => SOCK_DGRAM,
 								Timeout => 10)

@@ -122,7 +122,9 @@ $submitted = sub
 
 sleep(30);
 
-		print "submitted\n";
+		print "submitted: <<<";
+		system("date");
+		print ">>>\n";
 		print "Collecting queue details from schedd\n";
 		my @adarray;
 		my $adstatus = 1;
