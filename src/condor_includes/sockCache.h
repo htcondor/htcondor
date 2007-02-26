@@ -29,11 +29,13 @@
 // ReliSock.  so, just do the declaration ourselves...
 class ReliSock;
 
+#define DEFAULT_SOCKET_CACHE_SIZE 16
+
 class SocketCache
 {
 public:
 		// ctor/dtor
-	SocketCache( int size = 16 );
+	SocketCache( int size = DEFAULT_SOCKET_CACHE_SIZE );
 	~SocketCache();
 
 	void resize( int size );

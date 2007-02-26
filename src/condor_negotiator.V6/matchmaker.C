@@ -224,7 +224,7 @@ reinitialize ()
 	//
 	// the user must call condor_restart to actually shrink the sockCache.
 
-	int socket_cache_size = param_integer("NEGOTIATOR_SOCKET_CACHE_SIZE",0);
+	int socket_cache_size = param_integer("NEGOTIATOR_SOCKET_CACHE_SIZE",DEFAULT_SOCKET_CACHE_SIZE,1);
 	if( socket_cache_size ) {
 		dprintf (D_ALWAYS,"NEGOTIATOR_SOCKET_CACHE_SIZE = %d\n", socket_cache_size);
 	}
