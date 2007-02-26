@@ -46,6 +46,7 @@ static const int DEFAULT_MAXREAPS = 100;
 static const int DEFAULT_PIDBUCKETS = 11;
 static const int ERRNO_EXEC_AS_ROOT = 666666;
 static const int ERRNO_PID_COLLISION = 666667;
+static const int ERRNO_REGISTRATION_FAILED = 666668;
 static const int DEFAULT_MAX_PID_COLLISIONS = 9;
 static const char* DEFAULT_INDENT = "DaemonCore--> ";
 static const int MAX_TIME_SKIP = (60*20); //20 minutes
@@ -5839,9 +5840,9 @@ int DaemonCore::Create_Process(
 				                                   penvid_ptr,
 				                                   family_info->login);
 			if (!ok) {
-				errno = 31;
+				errno = ERRNO_REGISTRATION_FAILED;
 				write(errorpipe[1], &errno, sizeof(errno));
-				exit(errno);
+				exit(4);
 			}
 		}
 
@@ -6171,6 +6172,12 @@ int DaemonCore::Create_Process(
 				dprintf( D_ALWAYS, "Create_Process: child failed because "
 						 "%s process was still root before exec()\n",
 						 priv_to_string(priv) );
+				break;
+
+			case ERRNO_REGISTRATION_FAILED:
+				dprintf( D_ALWAYS, "Create_Process: child failed becuase "
+				         "there was a failure registering a family with "
+				         "the ProcD\n" );
 				break;
 
 			case ERRNO_PID_COLLISION:
