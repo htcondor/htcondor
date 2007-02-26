@@ -148,7 +148,7 @@ private:
 	// common functionality for unregistering a subfamily (used by both
 	// the public unregister_subfamily method and delete_unwatched_families)
 	//
-	bool unregister_subfamily(Tree<ProcFamily*>*);
+	void unregister_subfamily(Tree<ProcFamily*>*);
 
 	// delete all family objects in the given tree (called by destructor)
 	//

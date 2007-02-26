@@ -30,22 +30,23 @@ ProcFamilyMonitor::ProcFamilyMonitor(pid_t pid,
 	m_family_table(11, pidHashFunc, rejectDuplicateKeys),
 	m_member_table(PHBUCKETS, pidHashFunc, rejectDuplicateKeys),
 	m_pid_tracker(this),
-    m_login_tracker(this),
-    m_environment_tracker(this),
-    m_parent_tracker(this)
+	m_login_tracker(this),
+	m_environment_tracker(this),
+	m_parent_tracker(this)
 {
 	// the snapshot interval must either be non-negative or -1, which
 	// means infinite (higher layers should enforce this)
 	//
 	ASSERT(snapshot_interval >= -1);
 
-	// create the "root" family; set the watcher to 0, which means this
-	// family is unwatched
+	// create the "root" family; set the watcher pid to be the same as
+	// the root pid: there's some special logic in delete_unwatched_families
+	// to EXCEPT if we see that the root process has exited
 	//
 	ProcFamily* family = new ProcFamily(this,
 	                                    pid,
 	                                    birthday,
-	                                    0,
+	                                    pid,
 	                                    snapshot_interval);
 
 	// make sure we're tracking this family by its root pid/birthday
@@ -189,7 +190,19 @@ ProcFamilyMonitor::unregister_subfamily(pid_t pid)
 		return false;
 	}
 
-	return unregister_subfamily(tree);
+	// make sure its not the "root family" (which can't be unregistered)
+	//
+	if (tree->get_parent() == NULL) {
+		dprintf(D_ALWAYS,
+		        "unregister_subfamily failure: cannot unregister root family\n");
+		return false;
+	}
+
+	// do the deed
+	//
+	unregister_subfamily(tree);
+
+	return true;
 }
 
 int
@@ -503,11 +516,16 @@ ProcFamilyMonitor::delete_unwatched_families(Tree<ProcFamily*>* tree)
 		return;
 	}
 
-	// it looks like the watcher has exited; unregister the subfamily
+	// it looks like the watcher has exited; if this family is the
+	// "root family", then this means the Master has gone away and
+	// we should die. otherwise, simply unregister the unwatched
+	// family
 	//
+	if (tree->get_parent() == NULL) {
+		EXCEPT("master has exited");
+	}
 	pid_t root_pid = tree->get_data()->get_root_pid();
-	bool ok = unregister_subfamily(tree);
-	ASSERT(ok);
+	unregister_subfamily(tree);
 
 	dprintf(D_ALWAYS,
 	        "watcher %u of family with root %u has died; family removed\n",
@@ -515,18 +533,9 @@ ProcFamilyMonitor::delete_unwatched_families(Tree<ProcFamily*>* tree)
 	        root_pid);
 }
 
-bool
+void
 ProcFamilyMonitor::unregister_subfamily(Tree<ProcFamily*>* tree)
 {
-	// make sure this family isn't the root family
-	//
-	Tree<ProcFamily*>* parent = tree->get_parent();
-	if (parent == NULL) {
-		dprintf(D_ALWAYS,
-		        "unregister_subfamily failure: can't unregister root family\n");
-		return false;
-	}
-
 	// remove any information that these families might have registered with
 	// our tracker objects
 	//
@@ -542,7 +551,8 @@ ProcFamilyMonitor::unregister_subfamily(Tree<ProcFamily*>* tree)
 	// this will move all family members of the current
 	// family up into its parent family
 	//
-	tree->get_data()->give_away_members(parent->get_data());
+	ASSERT(tree->get_parent() != NULL);
+	tree->get_data()->give_away_members(tree->get_parent()->get_data());
 
 	// remove the current node from the tree, reparenting all
 	// children up to our parent
@@ -555,8 +565,6 @@ ProcFamilyMonitor::unregister_subfamily(Tree<ProcFamily*>* tree)
 	//
 	delete tree->get_data();
 	delete tree;
-
-	return true;
 }
 
 void
