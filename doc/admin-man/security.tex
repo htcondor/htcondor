@@ -567,6 +567,7 @@ the first item in the list indicates the highest preference.
 Defined values are
 \begin{verbatim}
     GSI
+    SSL
     KERBEROS
     PASSWORD
     FS
@@ -862,6 +863,12 @@ $(HOME)/.globus
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:SSL-Authentication}SSL Authentication}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{authentication!SSL}
+\Todo
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Kerberos-Authentication}Kerberos Authentication}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{authentication!Kerberos}
@@ -1104,7 +1111,42 @@ for testing purposes only.
 \subsection{\label{sec:Security-Unified-Map-File}The Unified Map File for Authentication}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{security!unified map file}
-\Todo
+
+Condor's unified map file allows the mappings
+from authenticated names to a Condor canonical user name
+to be specified as a single list within a single file. 
+Each mapping is on its own line of the unified map file.
+Each line contains 3 fields, separated by white space 
+(space or tab characters):
+\begin{enumerate}
+\item{The name of the authentication method to which the mapping applies.}
+\item{A regular expression representing the authenticated name
+to be mapped.}
+\item{The canonical Condor user name.}
+\end{enumerate}
+
+Allowable authentication method names are the same as used to define
+any of the configuration variables \MacroNI{SEC\_*\_AUTHENTICATION\_METHODS},
+as repeated here:
+\begin{verbatim}
+    GSI
+    SSL
+    KERBEROS
+    PASSWORD
+    FS
+    FS_REMOTE
+    NTSSPI
+    CLAIMTOBE
+    ANONYMOUS
+\end{verbatim}
+
+The fields that represent an authenticated name and the canonical
+Condor user name may utilize regular expressions as defined 
+by PCRE (Perl-Compatible Regular Expressions).
+Due to this, more than one line (mapping) within the unified
+map file may match.
+Lookups are therefore defined to use the first mapping that
+matches.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Security-Encryption}Encryption}
