@@ -74,7 +74,7 @@ ProcFamilyMonitor::~ProcFamilyMonitor()
 	delete m_tree;
 }
 
-bool
+proc_family_error_t
 ProcFamilyMonitor::register_subfamily(pid_t root_pid,
                                       pid_t watcher_pid,
                                       int max_snapshot_interval,
@@ -87,7 +87,7 @@ ProcFamilyMonitor::register_subfamily(pid_t root_pid,
 		dprintf(D_ALWAYS,
 		        "register_subfamily failure: bad root pid: %u\n",
 		        root_pid);
-		return false;
+		return PROC_FAMILY_ERROR_BAD_ROOT_PID;
 	}
 
 	// watcher pid must be non-negative; zero indicates the subfamily
@@ -98,7 +98,7 @@ ProcFamilyMonitor::register_subfamily(pid_t root_pid,
 		dprintf(D_ALWAYS,
 		        "register_subfamily failure; bad watcher pid: %u\n",
 		        watcher_pid);
-		return false;
+		return PROC_FAMILY_ERROR_BAD_WATCHER_PID;
 	}
 
 	// max_snapshot interval must either be non-negative, or -1
@@ -108,7 +108,7 @@ ProcFamilyMonitor::register_subfamily(pid_t root_pid,
 		dprintf(D_ALWAYS,
 		        "register_subfamily failure: bad max snapshot interval: %d\n",
 		        max_snapshot_interval);
-		return false;
+		return PROC_FAMILY_ERROR_BAD_SNAPSHOT_INTERVAL;
 	}
 
 	// get our family tree state as up to date as possible
@@ -126,7 +126,7 @@ ProcFamilyMonitor::register_subfamily(pid_t root_pid,
 		dprintf(D_ALWAYS,
 		        "register_subfamily failure: pid %u not in process tree\n",
 		        root_pid);
-		return false;
+		return PROC_FAMILY_ERROR_PROCESS_NOT_FAMILY;
 	}
 
 	// finally create the new family
@@ -173,10 +173,10 @@ ProcFamilyMonitor::register_subfamily(pid_t root_pid,
 	        root_pid,
 	        watcher_pid);
 
-	return true;
+	return PROC_FAMILY_ERROR_SUCCESS;
 }
 
-bool
+proc_family_error_t
 ProcFamilyMonitor::unregister_subfamily(pid_t pid)
 {
 	// lookup the family
@@ -187,7 +187,7 @@ ProcFamilyMonitor::unregister_subfamily(pid_t pid)
 		dprintf(D_ALWAYS,
 		        "unregister_subfamily failure: family with root %u not found\n",
 		        pid);
-		return false;
+		return PROC_FAMILY_ERROR_FAMILY_NOT_FOUND;
 	}
 
 	// make sure its not the "root family" (which can't be unregistered)
@@ -195,14 +195,14 @@ ProcFamilyMonitor::unregister_subfamily(pid_t pid)
 	if (tree->get_parent() == NULL) {
 		dprintf(D_ALWAYS,
 		        "unregister_subfamily failure: cannot unregister root family\n");
-		return false;
+		return PROC_FAMILY_ERROR_UNREGISTER_ROOT;
 	}
 
 	// do the deed
 	//
 	unregister_subfamily(tree);
 
-	return true;
+	return PROC_FAMILY_ERROR_SUCCESS;
 }
 
 int
@@ -211,7 +211,7 @@ ProcFamilyMonitor::get_snapshot_interval()
 	return get_snapshot_interval(m_tree);
 }
 
-bool
+proc_family_error_t
 ProcFamilyMonitor::signal_process(pid_t pid, int sig)
 {
 	// make sure signals are only sent to subtree roots
@@ -222,7 +222,7 @@ ProcFamilyMonitor::signal_process(pid_t pid, int sig)
 		dprintf(D_ALWAYS,
 		        "signal_process failure: family with root %u not found\n",
 				pid);
-		return false;
+		return PROC_FAMILY_ERROR_FAMILY_NOT_FOUND;
 	}
 
 	// look up the Member so we can get at the procInfo struct
@@ -233,7 +233,7 @@ ProcFamilyMonitor::signal_process(pid_t pid, int sig)
 		dprintf(D_ALWAYS,
 		        "signal_process failure: family root pid %u not found\n",
 		        pid);
-		return false;
+		return PROC_FAMILY_ERROR_PROCESS_NOT_FOUND;
 	}
 	procInfo* pi = pm->get_proc_info();
 	ASSERT(pi);
@@ -241,10 +241,10 @@ ProcFamilyMonitor::signal_process(pid_t pid, int sig)
 	dprintf(D_ALWAYS, "sending signal %d to process %u\n", sig, pid);
 	send_signal(pi, sig);
 
-	return true;
+	return PROC_FAMILY_ERROR_SUCCESS;
 }
 
-bool
+proc_family_error_t
 ProcFamilyMonitor::signal_family(pid_t pid, int sig)
 {
 	// find the family
@@ -255,7 +255,7 @@ ProcFamilyMonitor::signal_family(pid_t pid, int sig)
 		dprintf(D_ALWAYS,
 		        "signal_family error: family with root %u not found\n",
 		        pid);
-		return false;
+		return PROC_FAMILY_ERROR_FAMILY_NOT_FOUND;
 	}
 
 	// get as up to date as possible
@@ -267,10 +267,10 @@ ProcFamilyMonitor::signal_family(pid_t pid, int sig)
 	dprintf(D_ALWAYS, "sending signal %d to family with root %u\n", sig, pid);
 	signal_family(tree, sig);
 
-	return true;
+	return PROC_FAMILY_ERROR_SUCCESS;
 }
 
-bool
+proc_family_error_t
 ProcFamilyMonitor::get_family_usage(pid_t pid, ProcFamilyUsage* usage)
 {
 	// find the family
@@ -281,7 +281,7 @@ ProcFamilyMonitor::get_family_usage(pid_t pid, ProcFamilyUsage* usage)
 		dprintf(D_ALWAYS,
 		        "get_family_usage failure: family with root %u not found\n",
 		        pid);
-		return false;
+		return PROC_FAMILY_ERROR_FAMILY_NOT_FOUND;
 	}
 
 	// get as up to date as possible
@@ -299,7 +299,7 @@ ProcFamilyMonitor::get_family_usage(pid_t pid, ProcFamilyUsage* usage)
 	usage->num_procs = 0;
 	get_family_usage(tree, usage);
 
-	return true;
+	return PROC_FAMILY_ERROR_SUCCESS;
 }
 
 void

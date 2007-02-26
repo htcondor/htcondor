@@ -76,13 +76,13 @@ ProcFamilyServer::register_subfamily()
 		m_server.read_data(login, login_len);
 	}
 
-	bool ok = m_monitor.register_subfamily(root_pid,
-	                                       watcher_pid,
-	                                       max_snapshot_interval,
-	                                       penvid,
-	                                       login);
+	proc_family_error_t err = m_monitor.register_subfamily(root_pid,
+	                                                       watcher_pid,
+	                                                       max_snapshot_interval,
+	                                                       penvid,
+	                                                       login);
 
-	m_server.write_data(&ok, sizeof(bool));
+	m_server.write_data(&err, sizeof(proc_family_error_t));
 }
 
 void
@@ -92,10 +92,10 @@ ProcFamilyServer::get_usage()
 	m_server.read_data(&pid, sizeof(pid_t));
 
 	ProcFamilyUsage usage;
-	bool ok = m_monitor.get_family_usage(pid, &usage);
+	proc_family_error_t err = m_monitor.get_family_usage(pid, &usage);
 	
-	m_server.write_data(&ok, sizeof(bool));
-	if (ok) {
+	m_server.write_data(&err, sizeof(proc_family_error_t));
+	if (err == PROC_FAMILY_ERROR_SUCCESS) {
 		m_server.write_data(&usage, sizeof(ProcFamilyUsage));
 	}
 }
@@ -109,9 +109,9 @@ ProcFamilyServer::signal_process()
 	int sig;
 	m_server.read_data(&sig, sizeof(int));
 
-	bool ok = m_monitor.signal_process(pid, sig);
+	proc_family_error_t err = m_monitor.signal_process(pid, sig);
 
-	m_server.write_data(&ok, sizeof(bool));
+	m_server.write_data(&err, sizeof(proc_family_error_t));
 }
 
 void
@@ -120,9 +120,9 @@ ProcFamilyServer::suspend_family()
 	pid_t pid;
 	m_server.read_data(&pid, sizeof(pid_t));
 
-	bool ok = m_monitor.signal_family(pid, SIGSTOP);
+	proc_family_error_t err = m_monitor.signal_family(pid, SIGSTOP);
 
-	m_server.write_data(&ok, sizeof(bool));
+	m_server.write_data(&err, sizeof(proc_family_error_t));
 }
 
 void
@@ -131,9 +131,9 @@ ProcFamilyServer::continue_family()
 	pid_t pid;
 	m_server.read_data(&pid, sizeof(pid_t));
 
-	bool ok = m_monitor.signal_family(pid, SIGCONT);
+	proc_family_error_t err = m_monitor.signal_family(pid, SIGCONT);
 
-	m_server.write_data(&ok, sizeof(bool));
+	m_server.write_data(&err, sizeof(proc_family_error_t));
 }
 
 void ProcFamilyServer::kill_family()
@@ -141,9 +141,9 @@ void ProcFamilyServer::kill_family()
 	pid_t pid;
 	m_server.read_data(&pid, sizeof(pid_t));
 
-	bool ok = m_monitor.signal_family(pid, SIGKILL);
+	proc_family_error_t err = m_monitor.signal_family(pid, SIGKILL);
 
-	m_server.write_data(&ok, sizeof(bool));
+	m_server.write_data(&err, sizeof(proc_family_error_t));
 }
 
 void
@@ -152,9 +152,9 @@ ProcFamilyServer::unregister_family()
 	pid_t pid;
 	m_server.read_data(&pid, sizeof(pid_t));
 
-	bool ok = m_monitor.unregister_subfamily(pid);
+	proc_family_error_t err = m_monitor.unregister_subfamily(pid);
 
-	m_server.write_data(&ok, sizeof(bool));
+	m_server.write_data(&err, sizeof(proc_family_error_t));
 }
 
 #if defined(PROCD_DEBUG)
@@ -173,16 +173,16 @@ ProcFamilyServer::snapshot()
 {
 	m_monitor.snapshot();
 
-	bool ok = true;
+	proc_family_error_t err = PROC_FAMILY_ERROR_SUCCESS;
 
-	m_server.write_data(&ok, sizeof(bool));
+	m_server.write_data(&err, sizeof(proc_family_error_t));
 }
 
 void
 ProcFamilyServer::quit()
 {
-	bool ok = true;
-	m_server.write_data(&ok, sizeof(bool));
+	proc_family_error_t err = PROC_FAMILY_ERROR_SUCCESS;
+	m_server.write_data(&err, sizeof(proc_family_error_t));
 }
 
 void

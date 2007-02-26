@@ -1424,9 +1424,13 @@ PROCD = $(SBIN)/condor_procd
 #
 PROCD_ADDRESS = $(LOCK)/procd_pipe
 
-# The procd currently uses a very simplistic logging system
+# The procd currently uses a very simplistic logging system. Since this
+# log will not be rotated like other Condor logs, it is only recommended
+# to set PROCD_LOG when attempting to debug a problem. In other Condor
+# daemons, turning on D_PROCFAMILY will result in that daemon logging
+# all of its interactions with the ProcD.
 #
-PROCD_LOG = $(LOG)/ProcLog
+#PROCD_LOG = $(LOG)/ProcLog
 
 # If set to true, this will make the procd send a SIGSTOP to itself
 # before doing anything else, so you can step in and attach a debugger

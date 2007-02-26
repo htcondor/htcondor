@@ -26,7 +26,7 @@
 
 #include "condor_common.h"
 
-// command identifiers for communicatoin with the procd"
+// command identifiers for communication with the ProcD
 //
 enum proc_family_command_t {
 	PROC_FAMILY_REGISTER_SUBFAMILY,
@@ -41,6 +41,31 @@ enum proc_family_command_t {
 	PROC_FAMILY_QUIT
 };
 
+// return codes for ProcD operations
+//
+// IMPORTANT: if you ever add a value to this enum, you MUST also add
+// an entry to the proc_family_error_strings array (defined in
+// proc_family_io.C)
+//
+enum proc_family_error_t {
+	PROC_FAMILY_ERROR_SUCCESS,
+	PROC_FAMILY_ERROR_BAD_ROOT_PID,
+	PROC_FAMILY_ERROR_BAD_WATCHER_PID,
+	PROC_FAMILY_ERROR_BAD_SNAPSHOT_INTERVAL,
+	PROC_FAMILY_ERROR_FAMILY_NOT_FOUND,
+	PROC_FAMILY_ERROR_PROCESS_NOT_FOUND,
+	PROC_FAMILY_ERROR_PROCESS_NOT_FAMILY,
+	PROC_FAMILY_ERROR_UNREGISTER_ROOT
+};
+
+// an array of readable string representations of the above
+// return codes
+//
+extern const char* proc_family_error_strings[];
+
+// structure for retrieving process family usage data from
+// the ProcD
+//
 struct ProcFamilyUsage {
 	long          user_cpu_time;
 	long          sys_cpu_time;

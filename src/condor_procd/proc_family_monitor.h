@@ -54,29 +54,29 @@ public:
 	// create a "subfamily", which can then be signalled and accounted
 	// for as a unit
 	//
-	bool register_subfamily(pid_t,
-	                        pid_t,
-	                        int,
-	                        PidEnvID* = NULL,
-	                        char* = NULL);
+	proc_family_error_t register_subfamily(pid_t,
+	                                       pid_t,
+	                                       int,
+	                                       PidEnvID* = NULL,
+	                                       char* = NULL);
 
 	// remove a subfamily
 	//
-	bool unregister_subfamily(pid_t);
+	proc_family_error_t unregister_subfamily(pid_t);
 
 	// for sending signals to a single process
 	//
-	bool signal_process(pid_t, int);
+	proc_family_error_t signal_process(pid_t, int);
 
 	// send a signal to all processes in the family with the given
 	// root pid and all subfamilies
 	//
-	bool signal_family(pid_t, int);
+	proc_family_error_t signal_family(pid_t, int);
 
 	// get resource usage information about a family (and all
 	// subfamilies)
 	//
-	bool get_family_usage(pid_t, ProcFamilyUsage*);
+	proc_family_error_t get_family_usage(pid_t, ProcFamilyUsage*);
 
 	// return the time that the procd should ewait in between taking
 	// snapshots. this is the minimum of all the "maximum snapshot
