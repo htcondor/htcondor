@@ -111,11 +111,13 @@ bool passwd_cache::cache_groups(const char* user) {
 		}
 
 		/* get the number of groups from the OS first */
-		group_cache_entry->gidlist_sz = ::getgroups(0, NULL);
+		int ret = ::getgroups(0,NULL);
 
-		if ( group_cache_entry->gidlist_sz < 0 ) {
+		if ( ret < 0 ) {
 			result = false;
 		} else {
+			group_cache_entry->gidlist_sz = ret;
+
 			/* now get the group list */
 			if ( group_cache_entry->gidlist != NULL ) {
 				delete[] group_cache_entry->gidlist;
