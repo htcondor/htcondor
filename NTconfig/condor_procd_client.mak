@@ -39,6 +39,7 @@ ALL : "$(OUTDIR)\condor_procd_client.lib"
 CLEAN :
 	-@erase "$(INTDIR)\local_client.WINDOWS.obj"
 	-@erase "$(INTDIR)\proc_family_client.obj"
+	-@erase "$(INTDIR)\proc_family_io.obj"
 	-@erase "$(INTDIR)\vc60.idb"
 	-@erase "$(OUTDIR)\condor_procd_client.lib"
 
@@ -87,7 +88,8 @@ LIB32=link.exe -lib
 LIB32_FLAGS=/nologo /out:"$(OUTDIR)\condor_procd_client.lib" 
 LIB32_OBJS= \
 	"$(INTDIR)\local_client.WINDOWS.obj" \
-	"$(INTDIR)\proc_family_client.obj"
+	"$(INTDIR)\proc_family_client.obj" \
+	"$(INTDIR)\proc_family_io.obj"
 
 "$(OUTDIR)\condor_procd_client.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -108,6 +110,7 @@ ALL : "$(OUTDIR)\condor_procd_client.lib"
 CLEAN :
 	-@erase "$(INTDIR)\local_client.WINDOWS.obj"
 	-@erase "$(INTDIR)\proc_family_client.obj"
+	-@erase "$(INTDIR)\proc_family_io.obj"
 	-@erase "$(INTDIR)\vc60.idb"
 	-@erase "$(INTDIR)\vc60.pdb"
 	-@erase "$(OUTDIR)\condor_procd_client.lib"
@@ -157,7 +160,8 @@ LIB32=link.exe -lib
 LIB32_FLAGS=/nologo /out:"$(OUTDIR)\condor_procd_client.lib" 
 LIB32_OBJS= \
 	"$(INTDIR)\local_client.WINDOWS.obj" \
-	"$(INTDIR)\proc_family_client.obj"
+	"$(INTDIR)\proc_family_client.obj" \
+	"$(INTDIR)\proc_family_io.obj"
 
 "$(OUTDIR)\condor_procd_client.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -186,6 +190,12 @@ SOURCE=..\src\condor_procd\local_client.WINDOWS.C
 SOURCE=..\src\condor_procd\proc_family_client.C
 
 "$(INTDIR)\proc_family_client.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\src\condor_procd\proc_family_io.C
+
+"$(INTDIR)\proc_family_io.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
