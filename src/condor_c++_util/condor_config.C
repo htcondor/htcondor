@@ -1323,25 +1323,28 @@ param_integer( const char *name, int default_value,
 	bool valid = (endptr != string && *endptr == '\0');
 
 	if( !valid ) {
-		dprintf( D_ALWAYS, "WARNING: %s not an integer (\"%s\"), using "
-				 "default value of %d\n", name, string, default_value );
-		result = default_value;
+		EXCEPT( "%s in the condor configuration is not an integer (%s)."
+		        "  Please set it to an integer in the range %d to %d"
+		        " (default %d).",
+		        name, string, min_value, max_value, default_value );
 	}
 	else if( (long)result != long_result ) {
-		dprintf( D_ALWAYS, "WARNING: %s is out of bounds for an integer "
-				 "(\"%s\"), using "
-				 "default value of %d\n", name, string, default_value );
-		result = default_value;
+		EXCEPT( "%s in the condor configuration is out of bounds for an integer (%s)."
+		        "  Please set it to an integer in the range %d to %d"
+		        " (default %d).",
+		        name, string, min_value, max_value, default_value );
 	}
 	else if( result < min_value ) {
-		dprintf( D_ALWAYS, "WARNING: %s too low (%d), using minimum "
-				 "value of %d\n", name, result, min_value );
-		result = min_value;
+		EXCEPT( "%s in the condor configuration is too low (%s)."
+		        "  Please set it to an integer in the range %d to %d"
+		        " (default %d).",
+		        name, string, min_value, max_value, default_value );
 	}
 	else if( result > max_value ) {
-		dprintf( D_ALWAYS, "WARNING: %s too high (%d), using maximum "
-				 "value of %d\n", name, result, max_value );
-		result = max_value;
+		EXCEPT( "%s in the condor configuration is too high (%s)."
+		        "  Please set it to an integer in the range %d to %d"
+		        " (default %d).",
+		        name, string, min_value, max_value, default_value );
 	}
 	free( string );
 	return result;
@@ -1388,19 +1391,22 @@ param_double( const char *name, double default_value,
 	bool valid = (endptr != string && *endptr == '\0');
 
 	if( !valid ) {
-		dprintf( D_CONFIG, "WARNING: %s not an float (\"%s\"), using "
-				 "default value of %lf\n", name, string, default_value );
-		result = default_value;
+		EXCEPT( "%s in the condor configuration is not a valid floating point number (%s)."
+		        "  Please set it to a number in the range %lg to %lg"
+		        " (default %lg).",
+		        name, string, min_value, max_value, default_value );
 	}
 	else if( result < min_value ) {
-		dprintf( D_CONFIG, "WARNING: %s too low (%lf), using minimum "
-				 "value of %lf\n", name, result, min_value );
-		result = min_value;
+		EXCEPT( "%s in the condor configuration is too low (%s)."
+		        "  Please set it to a number in the range %lg to %lg"
+		        " (default %lg).",
+		        name, string, min_value, max_value, default_value );
 	}
 	else if( result > max_value ) {
-		dprintf( D_CONFIG, "WARNING: %s too high (%lf), using maximum "
-				 "value of %lf\n", name, result, max_value );
-		result = max_value;
+		EXCEPT( "%s in the condor configuration is too high (%s)."
+		        "  Please set it to a number in the range %lg to %lg"
+		        " (default %lg).",
+		        name, string, min_value, max_value, default_value );
 	}
 	free( string );
 	return result;
@@ -1459,10 +1465,9 @@ param_boolean( const char *name, const bool default_value )
 	}
 
 	if( !valid ) {
-		dprintf( D_ALWAYS, "WARNING: %s not a boolean (\"%s\"), using "
-				 "default value of %s\n", name, string,
-				 default_value ? "True" : "False" );
-		result = default_value;
+		EXCEPT( "%s in the condor configuration  is not a valid boolean (\"%s\")."
+		        "  Please set it to True or False (default is %s)",
+		        name, string, default_value ? "True" : "False" );
 	}
 
 	free( string );
