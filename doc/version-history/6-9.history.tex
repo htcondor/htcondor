@@ -127,8 +127,9 @@ Attempting to reconnect anyway.''
 
 \item Improved Condor's validity checking of configuration values.
 For example, in some cases where Condor was expecting an integer but
-was given an expression such as 12*60, it would interpret this as 12
-and would also issue no warnings in the logs.
+was given an expression such as 12*60, it would silently interpret
+this as 12.  Such cases now result in the condor daemon exiting
+after issuing an error message into the log file.
 
 \end{itemize}
 
