@@ -55,6 +55,9 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug that could cause the \Condor{schedd} to crash if it
+received too many matches in one negotiation cycle (more than 1000 on linux).
+
 \item Fixed a bug where \Condor{history} did not honor the \Opt{-format} flag
 properly when Quill was in use.
 
