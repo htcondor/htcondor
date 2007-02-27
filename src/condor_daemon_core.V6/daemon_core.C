@@ -525,10 +525,16 @@ int DaemonCore::FileDescriptorSafetyLimit()
 {
 	if( file_descriptor_safety_limit == 0 ) {
 #if defined(WIN32)
-			// on Windows NT, it appears you can open up zillions of sockets
-		int file_descriptor_max = 2000;
+			// on Windows NT, it appears you can open up zillions of sockets,
+			// but only FD_SETSIZE can be put into an fd_set
+		int file_descriptor_max = FD_SETSIZE;
 #else
+			// On unix, fd_set restricts you to fds up to FD_SETSIZE-1
+			// for select()
 		int file_descriptor_max = getdtablesize();
+		if ( FD_SETSIZE < file_descriptor_max ) {
+			file_descriptor_max = FD_SETSIZE;
+		}
 #endif
 		// Set the danger level at 80% of the max
 		file_descriptor_safety_limit = file_descriptor_max - file_descriptor_max/5;
