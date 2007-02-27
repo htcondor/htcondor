@@ -269,7 +269,7 @@ foreach $compiler (@compilers)
  		eval {
             alarm($test_retirement);
 			$res = system("perl $test_program > $test_program.out 2>&1");
-			if($res != 0) { print "Can not run tests!!! \n"; exit(1); }
+			if($res != 0) { print "Perl test($test_program) returned <<$res>>!!! \n"; exit(1); }
 			exit(0);
 		};
 
