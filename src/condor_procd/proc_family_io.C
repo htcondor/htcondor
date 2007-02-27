@@ -32,6 +32,7 @@ const char* proc_family_error_strings[] = {
 	"ERROR: Invalid root PID",
 	"ERROR: Invalid watcher PID",
 	"ERROR: Invalid snapshot interval",
+	"ERROR: A family with the given root PID is already registered",
 	"ERROR: No family with the given PID is registered",
 	"ERROR: The given PID is not found on the system",
 	"ERROR: The given PID is not part of the family tree",

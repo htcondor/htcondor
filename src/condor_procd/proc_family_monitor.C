@@ -81,6 +81,8 @@ ProcFamilyMonitor::register_subfamily(pid_t root_pid,
                                       PidEnvID* penvid,
                                       char* login)
 {
+	int ret;
+
 	// root pid must be positive
 	//
 	if (root_pid <= 0) {
@@ -120,13 +122,23 @@ ProcFamilyMonitor::register_subfamily(pid_t root_pid,
 	// created subfamily is in a family we are already tracking
 	//
 	ProcFamilyMember* member;
-	int ret;
 	ret = m_member_table.lookup(root_pid, member);
 	if (ret == -1) {
 		dprintf(D_ALWAYS,
 		        "register_subfamily failure: pid %u not in process tree\n",
 		        root_pid);
 		return PROC_FAMILY_ERROR_PROCESS_NOT_FAMILY;
+	}
+
+	// make sure this process isn't already the root of a family
+	//
+	Tree<ProcFamily*>* tree;
+	ret = m_family_table.lookup(root_pid, tree);
+	if (ret != -1) {
+		dprintf(D_ALWAYS,
+		        "register_subfamily: pid %u already registered\n",
+		        root_pid);
+		return PROC_FAMILY_ERROR_ALREADY_REGISTERED;
 	}
 
 	// finally create the new family
