@@ -22,6 +22,7 @@
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
+#include "condor_mkstemp.h"
 #include "startd.h"
 #include "vm_common.h"
 
@@ -636,18 +637,10 @@ command_delegate_gsi_cred( Service*, int, Stream* stream )
 	// create a temporary file to hold the proxy and set it
 	// to mode 600
 	char tmp_str[] = "/tmp/startd_tmp_proxy.XXXXXX";
-	int fd = mkstemp( tmp_str );
+	int fd = condor_mkstemp( tmp_str );
 	if( fd == -1 ) {
 		dprintf( D_ALWAYS,
 		         "error creating temp file for proxy: %s (%d)\n",
-		         strerror( errno ), errno );
-		sock->end_of_message();
-		reply( sock, CONDOR_ERROR );
-		return FALSE;
-	}
-	if( fchmod( fd, S_IRUSR | S_IWUSR ) == -1 ) {
-		dprintf( D_ALWAYS,
-		         "error setting permissions on temp file for proxy: %s (%d)\n",
 		         strerror( errno ), errno );
 		sock->end_of_message();
 		reply( sock, CONDOR_ERROR );
