@@ -224,21 +224,21 @@ doContactSchedd()
 
 		// Perform the appropriate command on the current batch
 		ClassAd * result_ad= NULL;
-		if (current_command->command == SchedDRequest::SDC_REMOVE_JOB)  {
+		if (this_command == SchedDRequest::SDC_REMOVE_JOB)  {
 			errstack.clear();
 			result_ad=
 				dc_schedd.removeJobs (
 					&id_list,
 					this_reason,
 					&errstack);
-		} else if (current_command->command == SchedDRequest::SDC_HOLD_JOB) {
+		} else if (this_command == SchedDRequest::SDC_HOLD_JOB) {
 			errstack.clear();
 			result_ad=
 				dc_schedd.holdJobs (
 					&id_list,
 					this_reason,
 			 		&errstack);
-		} else if (current_command->command == SchedDRequest::SDC_RELEASE_JOB)  {
+		} else if (this_command == SchedDRequest::SDC_RELEASE_JOB)  {
 			errstack.clear();
 			result_ad=
 				dc_schedd.releaseJobs (
