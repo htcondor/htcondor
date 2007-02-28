@@ -606,26 +606,32 @@ command_delegate_gsi_cred( Service*, int, Stream* stream )
 	//
 	sock->decode();			 
 	char* id = NULL;
-        if( ! sock->code(id) ) {
-                dprintf( D_ALWAYS, "error reading claim id\n" );
-                return FALSE;
-        }
-        Resource* rip = resmgr->get_by_cur_id( id );
-        if( !rip ) {
-                dprintf( D_ALWAYS,
-		         "error finding resource with claim id (%s)\n", id );
-                free( id );
-                return FALSE;
-        }
-        free( id );
+    if( ! sock->code(id) ) {
+        dprintf( D_ALWAYS, "error reading claim id\n" );
+			// If we couldn't read it, no sense trying to reply ERROR.
+        return FALSE;
+    }
 
-	// make sure the resource is claimed/idle
-        State s = rip->state();
-	Activity a = rip->activity();
-        if( (s != claimed_state) || (a != idle_act) ) {
-                rip->log_ignore( DELEGATE_GSI_CRED_STARTD, s, a );
-                return FALSE;
-        }
+    Claim* claim = resmgr->getClaimById( id );
+    if( !claim ) {
+        dprintf( D_ALWAYS,
+                 "error finding resource with claim id (%s)\n", id );
+        free( id );
+		reply( sock, CONDOR_ERROR );
+        return FALSE;
+    }
+    free( id );
+
+	// Make sure the claim is idle
+	if (claim->state() != CLAIM_IDLE) {
+		Resource* rip = claim->rip();
+		rip->dprintf(D_ALWAYS,
+					 "Got %s for a %s claim (not idle), ignoring.\n",
+					 getCommandString(DELEGATE_GSI_CRED_STARTD),
+					 getClaimStateString(claim->state()));
+		reply( sock, CONDOR_ERROR );
+		return FALSE;
+	}
 
 	// create a temporary file to hold the proxy and set it
 	// to mode 600
@@ -690,7 +696,7 @@ command_delegate_gsi_cred( Service*, int, Stream* stream )
 	// we have the proxy - now stash its location in the Claim's
 	// Client object so we can get at it when we launch the
 	// starter
-	rip->r_cur->client()->setProxyFile( tmp_str );
+	claim->client()->setProxyFile( tmp_str );
 
 	return TRUE;
 }

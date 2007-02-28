@@ -43,7 +43,7 @@
 #include "dc_collector.h"
 #include "sig_install.h"
 #include "basename.h"
-
+#include "globus_utils.h"
 
 // Global variables
 int cmd = 0;
@@ -57,6 +57,7 @@ char* classad_path = NULL;
 char* requirements = NULL;
 char* job_keyword = NULL;
 char* jobad_path = NULL;
+char* proxy_file = NULL;
 FILE* CA_PATH = NULL;
 FILE* JOBAD_PATH = NULL;
 int cluster_id = -1;
@@ -117,6 +118,7 @@ main( int argc, char *argv[] )
 	}
 
 	bool rval;
+	int irval;
 	ClassAd reply;
 	ClassAd ad;
 
@@ -127,7 +129,8 @@ main( int argc, char *argv[] )
 		break;
 	case CA_ACTIVATE_CLAIM:
 		fillActivateAd( &ad );
-		rval = startd.activateClaim( &ad, &reply, timeout );
+		irval = startd.activateClaim( &ad, &reply, timeout );
+		rval = (irval == OK);
 		break;
 	case CA_SUSPEND_CLAIM:
 		rval = startd.suspendClaim( &reply, timeout );
@@ -143,6 +146,10 @@ main( int argc, char *argv[] )
 		break;
 	case CA_RENEW_LEASE_FOR_CLAIM:
 		rval = startd.renewLeaseForClaim( &reply, timeout );
+		break;
+	case DELEGATE_GSI_CRED_STARTD:
+		irval = startd.delegateX509Proxy( proxy_file );
+		rval = (irval == OK);
 		break;
 	}
 
@@ -416,6 +423,8 @@ getCommandFromArgv( int argc, char* argv[] )
 		return CA_RESUME_CLAIM;
 	} else if( !strcmp( cmd_str, "renew" ) ) {
 		return CA_RENEW_LEASE_FOR_CLAIM;
+	} else if( !strcmp( cmd_str, "delegate_proxy" ) ) {
+		return DELEGATE_GSI_CRED_STARTD;
 	} else {
 		fprintf( stderr, "ERROR: unknown command \"%s\"\n", my_name );
 		usage( "cod" );
@@ -764,6 +773,17 @@ parseArgv( int argc, char* argv[] )
 			timeout = atoi( *tmp );
 			break;
 
+	    case 'x':
+			if( strncmp("-x509proxy", *tmp, strlen(*tmp)) ) {
+				invalid( *tmp );
+			} 
+			tmp++;
+			if( ! (tmp && *tmp) ) {
+				another( "-x509proxy" );
+			}
+			proxy_file = *tmp;
+			break;
+
 		case 'p':
 			parsePOpt( tmp[0], tmp[1] );
 			tmp++;
@@ -820,6 +840,15 @@ parseArgv( int argc, char* argv[] )
 		usage( my_name );
 	}
 
+	if (cmd == DELEGATE_GSI_CRED_STARTD && !proxy_file) {
+		proxy_file = get_x509_proxy_filename();
+		if (!proxy_file) {
+			fprintf( stderr,
+					 "\nERROR: can't determine proxy filename to delegate\n" );
+			exit(1);
+		}
+	}
+
 	if( jobad_path ) {
 		if( ! strcmp(jobad_path, "-") ) {
 			JOBAD_PATH = stdin;
@@ -866,15 +895,17 @@ printCmd( int cmd )
 				 "any running job\n" ); 
 		break;
 	case CA_SUSPEND_CLAIM:
-		fprintf( stderr, "   suspend\t\tSuspend the job on a given "
-				 "claim\n" ); 
+		fprintf( stderr, "   suspend\t\tSuspend the job on a given claim\n" ); 
 		break;
 	case CA_RESUME_CLAIM:
-		fprintf( stderr, "   resume\t\tResume the job on a given "
-				 "claim\n" ); 
+		fprintf( stderr, "   resume\t\tResume the job on a given claim\n" ); 
 		break;
 	case CA_RENEW_LEASE_FOR_CLAIM:
 		fprintf( stderr, "   renew\t\tRenew the lease for this claim\n");
+		break;
+	case DELEGATE_GSI_CRED_STARTD:
+		fprintf( stderr, "   delegate_proxy\tDelegate an x509 proxy to the "
+				 "claim\n" );
 		break;
 	}
 }
@@ -907,6 +938,7 @@ usage( char *str )
 		printCmd( CA_SUSPEND_CLAIM );
 		printCmd( CA_RESUME_CLAIM );
 		printCmd( CA_RENEW_LEASE_FOR_CLAIM );
+		printCmd( DELEGATE_GSI_CRED_STARTD );
 		fprintf( stderr, "use %s [command] -help for more "
 				 "information on a given command\n", str ); 
 		exit( 1 );
@@ -983,6 +1015,11 @@ usage( char *str )
 	case CA_RELEASE_CLAIM:
 	case CA_DEACTIVATE_CLAIM:
 		printFast();
+		break;
+
+	case DELEGATE_GSI_CRED_STARTD:
+		fprintf( stderr, "   -x509proxy filename\tDelegate the proxy in the "
+				 "specified file\n" );
 		break;
 	}
 
