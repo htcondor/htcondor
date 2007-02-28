@@ -81,9 +81,9 @@ bool
 Regex::compile(const MyString & pattern,
 			   const char ** errptr,
 			   int * erroffset,
-			   int options)
+			   int options_param)
 {
-	re = pcre_compile(pattern.GetCStr(), options, errptr, erroffset, NULL);
+	re = pcre_compile(pattern.GetCStr(), options_param, errptr, erroffset, NULL);
 
 	return (NULL != re);
 }

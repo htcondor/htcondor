@@ -136,8 +136,8 @@ short_print(
 		int CompDate,
         int time,
         int status,
-        int prio,
-        int image_size,
+        int  /*prio*/,
+        int  /*image_size*/,
         const char *cmd
         ) {
 		MyString SubmitDateStr=format_date(date);
