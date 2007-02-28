@@ -100,6 +100,15 @@ claims that are not renewed by the user.  The default lease is infinitely
 long, so existing behavior is unchanged unless \Opt{-lease} is explicitly
 specified.
 
+\item Added \Condor{cod} command \Opt{delegate\_proxy} which will
+delegate an x509 proxy to the requested COD claim.
+This is primarily useful for sites wishing to use glexec to spawn the
+\Condor{starter} used for COD jobs.
+The new command optionally takes an \Opt{-x509proxy} argument to
+specify the proxy file.
+If this argument is not present, \Condor{cod} will search for the
+proxy using the same logic as \Condor{submit} does.
+
 % This is barely a feature, but it's definately not a bug fix. It's
 % more of a change in behavior.
 \item \Macro{STARTD\_DEBUG} can now be empty, indicating a default, minimal

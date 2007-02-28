@@ -556,6 +556,11 @@ Here is a list of the commands:
 \item [Release] Destroy a specific COD claim, and shut down any job that is
   currently running on it.
 
+\item [Delegate proxy] Send an x509 proxy credential to the specific
+  COD claim (optional, only required in rare cases like using glexec
+  to spawn the \Condor{starter} at the execute machine where the COD
+  job is running).
+
 \end{description}
 
 To issue these commands, a user or application invokes the 
@@ -963,8 +968,40 @@ If \Opt{-fast} is not specified, the default behavior is to use a
 graceful shutdown, sending whatever signal is specified in the
 \Attr{KillSig} attribute for the job (SIGTERM by default).
 
-
 % Karen has read to this point in this file. 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:cod-claim-delegate}Delegate proxy}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{COD!condor\_cod\_delegate\_proxy command} 
+
+In some cases, a user will want to delegate a copy of their user
+credentials (in the form of an x509 proxy) to the machine where one of
+their COD jobs will run.
+For example, sites wishing to spawn the \Condor{starter} using glexec
+will need a copy of this credential before the claim can be activated.
+Therefore, beginning with Condor version 6.9.2, COD users have access
+to a new command, called \verb@delegate_proxy@.
+If users do not specifically require this proxy delegation, this
+command should not be used and the rest of this section can be skipped.
+
+The \verb@delegate_proxy@ command optionally takes a \Opt{-x509proxy}
+argument to specify the path to the proxy file to use.
+Otherwise, it uses the same discovery logic that \Condor{submit} uses
+to find the user's currently active proxy.
+
+Just like every other COD command (except \verb@request@), this
+command requires a valid COD claim id (specified with \Opt{-id}) to
+indicate what COD claim you wish to delegate the credentials to.
+
+This command can only be sent to idle COD claims, so it should be done
+before \verb@activate@ is run for the first time.
+However, once a proxy has been delegated, it can be reused by
+successive claim activations, so normally this step only has to happen
+once, not before every activate.
+If a proxy is going to expire, and a new one should be sent, this
+should only happen after the existing COD claim has been deactivated.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:cod-limitations}Limitations of COD Support in Condor}
