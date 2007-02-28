@@ -301,7 +301,7 @@ UserProc::openStdFile( std_file_type type,
 		//////////////////////
 	if( wants_stream && ! is_null_file ) {
 		StreamHandler *handler = new StreamHandler;
-		if( !handler->Init(filename, name, is_output) ) {
+		if( !handler->Init(filename, stream_name, is_output) ) {
 			MyString err_msg;
 			err_msg.sprintf( "unable to establish %s stream", phrase );
 			Starter->jic->notifyStarterError( err_msg.Value(), true,
