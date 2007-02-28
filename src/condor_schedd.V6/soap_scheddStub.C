@@ -704,9 +704,9 @@ condor__removeCluster(struct soap *soap,
         }
 	}
 
-	if (abortJobsByConstraint(constraint.GetCStr(),
-							  reason,
-							  transaction->id ? false : true)) {
+	if (!abortJobsByConstraint(constraint.GetCStr(),
+							   reason,
+							   transaction->id ? false : true)) {
 		result.response.code = FAIL;
 		result.response.message = "Failed to abort jobs in the cluster";
 	} else {
