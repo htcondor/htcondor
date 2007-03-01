@@ -6359,6 +6359,9 @@ Scheduler::jobNeedsTransferd( int cluster, int proc, int univ )
 	ClassAd *jobad = GetJobAd(cluster, proc);
 	ASSERT(jobad);
 
+	// XXX remove this when shadow/starter usage is implemented
+	return false;
+
 	/////////////////////////////////////////////////////////////////////////
 	// Selection of a transferd is universe based. It all depends upon
 	// whether or not transfer_input/output_files is available for the
@@ -6695,7 +6698,9 @@ Scheduler::spawnShadow( shadow_rec* srec )
 	// send the location of the transferd the shadow should use for
 	// this user. Due to the nasty method of command line argument parsing
 	// by the shadow, this should be first on the command line.
-	if ( param_boolean("PRIVSEP_ENABLED", false) ) {
+	if ( param_boolean("PRIVSEP_ENABLED", false) && 
+			jobNeedsTransferd(job_id->cluster, job_id->proc, universe) )
+	{
 		TransferDaemon *td = NULL;
 		switch( universe ) {
 			case CONDOR_UNIVERSE_VANILLA:
