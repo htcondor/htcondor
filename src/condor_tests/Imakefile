@@ -97,13 +97,11 @@ DESC(lib_auth_protocol-fs,"FS authentication test")
 RUN(lib_auth_protocol-fs)
 TESTCLASS(lib_auth_protocol-fs,core)
 TESTCLASS(lib_auth_protocol-fs,quick)
-TESTCLASS(lib_auth_protocol-fs,btdebug)
 
 DESC(lib_auth_protocol-ctb,"CTB authentication test")
 RUN(lib_auth_protocol-ctb)
 TESTCLASS(lib_auth_protocol-ctb,core)
 TESTCLASS(lib_auth_protocol-ctb,quick)
-TESTCLASS(lib_auth_protocol-ctb,btdebug)
 
 /* GNATS 764 - SSL missing on Dux 5.1 and HPUX 11 machines */
 #if !defined( IS_ALPHA_DUX5) && !defined( IS_HPUX11 )
@@ -111,32 +109,27 @@ DESC(lib_auth_protocol-ssl,"SSL authentication test")
 RUN(lib_auth_protocol-ssl)
 TESTCLASS(lib_auth_protocol-ssl,core)
 TESTCLASS(lib_auth_protocol-ssl,quick)
-TESTCLASS(lib_auth_protocol-ssl,btdebug)
 
 DESC(lib_auth_protocol-pw,"PW authentication test")
 RUN(lib_auth_protocol-pw)
 TESTCLASS(lib_auth_protocol-pw,core)
 TESTCLASS(lib_auth_protocol-pw,quick)
-TESTCLASS(lib_auth_protocol-pw,btdebug)
 
 DESC(lib_auth_protocol-gsi,"GSI authentication test")
 RUN(lib_auth_protocol-gsi)
 TESTCLASS(lib_auth_protocol-gsi,core)
 TESTCLASS(lib_auth_protocol-gsi,quick)
-TESTCLASS(lib_auth_protocol-gsi,btdebug)
 #endif
 
 DESC(lib_auth_protocol-negot,"16 way negotiation test - frist 8")
 RUN(lib_auth_protocol-negot)
 TESTCLASS(lib_auth_protocol-negot,core)
 TESTCLASS(lib_auth_protocol-negot,quick)
-TESTCLASS(lib_auth_protocol-negot,btdebug)
 
 DESC(lib_auth_protocol-negot-prt2,"16 way negotiation test - last 8")
 RUN(lib_auth_protocol-negot-prt2)
 TESTCLASS(lib_auth_protocol-negot-prt2,core)
 TESTCLASS(lib_auth_protocol-negot-prt2,quick)
-TESTCLASS(lib_auth_protocol-negot-prt2,btdebug)
 
 /* Turned off on Free BSD port GNATS 766 */
 
@@ -152,8 +145,13 @@ DEPS(lib_userlog,x_write_joblog.exe)
 TESTCLASS(lib_userlog,lib)
 TESTCLASS(lib_userlog,quick)
 
-/*
-****************** Tests being readied for prime time **********************
+#if defined(IS_I386_LINUX_RH9) || defined(IS_I386_LINUX_RH80) || defined(IS_I386_LINUX_RH72) || defined(IS_I386_LINUX_RHEL3) || defined(IS_CONDOR_FREEBSD) || defined(IS_X86_64_LINUX_RHEL3) || defined(IS_PPC_OSX_10_3) || defined(IS_CONDOR_PPC_LINUX_SLES9) || defined(IS_IA64_LINUX_SLES81) || defined(IS_IA64_LINUX_RHEL3) 
+DESC(job_quill_basic,"Basic Quill Test")
+RUN(job_quill_basic)
+TESTCLASS(job_quill_basic,core)
+TESTCLASS(job_quill_basic,quick)
+TESTCLASS(job_quill_basic,btdebug)
+#endif
 
 DESC(job_core_basic_par,"Basic Parallel Universe")
 RUN(job_core_basic_par)
@@ -161,11 +159,32 @@ TESTCLASS(job_core_basic_par,core)
 TESTCLASS(job_core_basic_par,quick)
 TESTCLASS(job_core_basic_par,btdebug)
 
+/*
+****************** Tests being readied for prime time **********************
+
 DESC(job_core_basic-security_par,"Basic Parallel Universe w/security on")
 RUN(job_core_basic-security_par)
 TESTCLASS(job_core_basic-security_par,core)
 TESTCLASS(job_core_basic-security_par,quick)
 TESTCLASS(job_core_basic-security_par,btdebug)
+
+DESC(job_stork_file-file,"Basic stork Test")
+RUN(job_stork_file-file)
+TESTCLASS(job_stork_file-file,core)
+TESTCLASS(job_stork_file-file,quick)
+TESTCLASS(job_stork_file-file,btdebug)
+
+DESC(job_dagman_stork-file-file,"Basic stork dag Test")
+RUN(job_dagman_stork-file-file)
+TESTCLASS(job_dagman_stork-file-file,core)
+TESTCLASS(job_dagman_stork-file-file,quick)
+TESTCLASS(job_dagman_stork-file-file,btdebug)
+
+DESC(job_dagman_stork-remove,"Basic stork dag w/remove Test")
+RUN(job_dagman_stork-remove)
+TESTCLASS(job_dagman_stork-remove,core)
+TESTCLASS(job_dagman_stork-remove,quick)
+TESTCLASS(job_dagman_stork-remove,btdebug)
 
 ****************** Tests being readied for prime time **********************
 */
@@ -197,10 +216,6 @@ TESTCLASS(job_schedd_job-tracking_van,core)
 TESTCLASS(job_schedd_job-tracking_van,quick)
 #endif /* 0 -- test disabled */
 
-/*
-Gnats bugs 723 726
-*/
-#if !defined( IS_PPC_OSX_10_3 )
 DESC(job_core_err_java,"Java Universe: basic error test")
 RUN(job_core_err_java)
 TESTCLASS(job_core_err_java,core)
@@ -210,7 +225,6 @@ DESC(job_core_output_java,"Java Universe: basic output test")
 RUN(job_core_output_java)
 TESTCLASS(job_core_output_java,core)
 TESTCLASS(job_core_output_java,quick)
-TESTCLASS(job_core_output_java,btdebug)
 
 DESC(job_core_hold_java,"Java Universe: basic output test")
 RUN(job_core_hold_java)
@@ -221,13 +235,11 @@ DESC(job_core_initialdir_java,"Java Universe: basic output test")
 RUN(job_core_initialdir_java)
 TESTCLASS(job_core_initialdir_java,core)
 TESTCLASS(job_core_initialdir_java,quick)
-TESTCLASS(job_core_initialdir_java,btdebug)
 
 DESC(job_core_input_java,"Java Universe: basic output test")
 RUN(job_core_input_java)
 TESTCLASS(job_core_input_java,core)
 TESTCLASS(job_core_input_java,quick)
-TESTCLASS(job_core_input_java,btdebug)
 
 /*
 ** This test is simply submit and getting things in the job ads
@@ -237,21 +249,18 @@ DESC(job_core_plus_java,"Java Universe: basic output test")
 RUN(job_core_plus_java)
 TESTCLASS(job_core_plus_java,core)
 TESTCLASS(job_core_plus_java,quick)
-TESTCLASS(job_core_plus_java,btdebug)
 ***************************************************************
 */
-#endif
 
 /*
 Gnats bugs 723 and 724
 Gnats bug 790 for john memory failings
 */
-#if !defined( IS_CONDOR_PPC_LINUX_SLES9) && !defined( IS_CONDOR_PPC_LINUX_YD30 ) && !defined( IS_I386_LINUX_RHEL3 ) && !defined( IS_ALPHA_DUX5 )
+#if !defined( IS_CONDOR_PPC_LINUX_SLES9 ) && !defined( IS_CONDOR_PPC_LINUX_YD30 ) && !defined( IS_I386_LINUX_RHEL3 ) && !defined( IS_ALPHA_DUX5 )
 DESC(soap_job_tests,"Soap: currently 10 different interface tests")
 RUN(soap_job_tests)
 TESTCLASS(soap_job_tests,core)
 TESTCLASS(soap_job_tests,quick)
-TESTCLASS(soap_job_tests,btdebug)
 #endif
 
 
@@ -594,11 +603,6 @@ RUN(job_core_plus_sched)
 TESTCLASS(job_core_plus_sched,core)
 TESTCLASS(job_core_plus_sched,quick)
 
-DESC(job_core_priority_sched,"Scheduler: Verify respect for job priority")
-RUN(job_core_priority_sched)
-TESTCLASS(job_core_priority_sched,core)
-TESTCLASS(job_core_priority_sched,quick)
-
 /*
 DESC(job_core_priority_van,"Vanilla: Verify respect for job priority")
 RUN(job_core_priority_van)
@@ -632,13 +636,11 @@ DESC(job_schedd_restart-holdjobs-ok,"Held queue ok after schedd restart")
 RUN(job_schedd_restart-holdjobs-ok)
 TESTCLASS(job_schedd_restart-holdjobs-ok,core)
 TESTCLASS(job_schedd_restart-holdjobs-ok,quick)
-TESTCLASS(job_schedd_restart-holdjobs-ok,btdebug)
 
 DESC(job_schedd_restart-runningjobs-ok,"Running queue ok after schedd restart")
 RUN(job_schedd_restart-runningjobs-ok)
 TESTCLASS(job_schedd_restart-runningjobs-ok,core)
 TESTCLASS(job_schedd_restart-runningjobs-ok,quick)
-TESTCLASS(job_schedd_restart-runningjobs-ok,btdebug)
 
 /* File Transfer Tests */
 
@@ -696,10 +698,10 @@ TESTCLASS(job_filexfer_output_van,quick)
 /*
 	GNATS 548 perl md5 module missing on HPUX 10 machine(s)
 */
-DESC(job_filexfer_md5_van,"Vanilla: Can we move 200 megs and not impact md5 checksum?")
-RUN(job_filexfer_md5_van)
-TESTCLASS(job_filexfer_md5_van,filexfer)
-TESTCLASS(job_filexfer_md5_van,quick)
+DESC(job_filexfer_md5-remote_van,"Vanilla: Can we move 200 megs and not impact md5 checksum?")
+RUN(job_filexfer_md5-remote_van)
+TESTCLASS(job_filexfer_md5-remote_van,filexfer)
+TESTCLASS(job_filexfer_md5-remote_van,quick)
 #endif
 
 /* Dagman Tests */
@@ -890,6 +892,14 @@ compiler_list:
 
 #endif /* ! IS_CLIPPED */
 
+resubmit::
+	./x_makeclean.pl
+
+check:: resubmit
+	./batch_test.pl -r 1500
+
+check-serialized:: resubmit
+	./x_runtests.pl -c quick -t 1200
 
 /***********************************************************************
    Empty rules to make our top-level Imakefile happy

@@ -21,6 +21,10 @@ print "Dummyhost was $dummyhost and really running on $currenthost\n";
 $mypid = $$;
 $mysaveme = $corename . ".saveme";
 system("mkdir $mysaveme");
+$mypiddir = $mysaveme . "/" . $mypid;
+system("mkdir $mypiddir");
+#make a symbolic link for personal condor module to use
+system("ln -s $mypiddir $mypid");
 
 $mysubmitnm = $corename . $mypid . ".cmd";
 $mysubmitnmout = $corename . $mypid . ".cmd.out";
@@ -103,7 +107,6 @@ system("condor_status -pool $currenthost:$remport -schedd -format '%s\n' Name");
 my $result = system("./job_condorc_ab_van.pl $mysubmitnm");
 print "Result of crafted Condor-C job is  $result\n";
 
-system("cp -r $mypid $mysaveme");
 system("cp *condorc* $mysaveme");
 
 if( -e "$mysubmitnm" )

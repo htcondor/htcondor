@@ -13,5 +13,10 @@ my $prefix = $ARGV[0];
 #select(STDOUT);
  #$| = 1;
 
-system("$prefix/bin/pg_ctl -D $prefix/postgres-data stop");
+$stipit = system("$prefix/bin/pg_ctl -D $prefix/postgres-data stop");
+if( $stipit != 0 ) {
+	die "Stop of postgress failed\n";
+} 
 
+print "Stop of Postgress was good......\n";
+exit(o);

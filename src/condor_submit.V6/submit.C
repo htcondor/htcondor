@@ -1958,7 +1958,8 @@ SetTransferFiles()
 	// object will take care of transferring the data back to the
 	// correct path.
 
-	if ( (should_transfer != STF_NO && JobUniverse != CONDOR_UNIVERSE_GRID) ||
+	if ( (should_transfer != STF_NO && JobUniverse != CONDOR_UNIVERSE_GRID &&
+		  JobUniverse != CONDOR_UNIVERSE_STANDARD) ||
 		 Remote ) {
 
 		char output[_POSIX_PATH_MAX + 32];
@@ -3314,6 +3315,12 @@ SetEnvironment()
 				// in the 'environment1' syntax.  This avoids breaking
 				// our ability to submit jobs to older startds that do
 				// not support 'environment2' syntax.
+				continue;
+			}
+			if( !envobject.IsSafeEnvV2Value(environ[i]) ) {
+					// Silently filter out environment values containing
+					// unsafe characters.  Example: newlines cause the
+					// schedd to EXCEPT in 6.8.3.
 				continue;
 			}
 

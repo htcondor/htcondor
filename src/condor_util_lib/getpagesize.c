@@ -34,7 +34,7 @@
 /*
 ** Compatibility routine for systems which don't have this call.
 */
-getpagesize()
+int getpagesize()
 {
 	return NBPG;
 }

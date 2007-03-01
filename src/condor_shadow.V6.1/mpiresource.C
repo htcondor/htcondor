@@ -52,7 +52,6 @@ MpiResource::resourceExit( int reason, int status )
 
 		// Also log a NodeTerminatedEvent to the ULog
 
-	NodeTerminatedEvent event;
 	switch( reason ) {
 	case JOB_COREDUMPED:
 	case JOB_EXITED:

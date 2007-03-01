@@ -23,6 +23,10 @@ print "Dummyhost was $dummyhost and really running on $currenthost\n";
 $mypid = $$;
 $mysaveme = $corename . ".saveme";
 system("mkdir $mysaveme");
+$mypiddir = $mysaveme . "/" . $mypid;
+system("mkdir $mypiddir");
+#make a symbolic link for personal condor module to use
+system("ln -s $mypiddir $mypid");
 
 $mysubmitnm = $corename . $mypid . ".cmd";
 $mysubmitnmout = $corename . $mypid . ".cmd.out";
@@ -86,7 +90,8 @@ print "make dag result is <<$makeresult>>\n";
 
 $cmd = "$dagnm";
 $testname = 'Condor submit dag - stork transfer test';
-$dagman_args = "-v -storklog `condor_config_val LOG`/Stork.user_log";
+#$dagman_args = "-v -storklog `condor_config_val LOG`/Stork.user_log";
+$dagman_args = "-v ";
 
 print "Callling ./x_runstorkdag.pl\n";
 $now = getcwd();
@@ -100,7 +105,6 @@ my $data_result = system("./x_test_md5data.pl --oldfile=$src_url --newfile=$dest
 print "Result of crafted Stork job is  $data_result\n";
 
 system("rm -f $dest_url*");
-system("cp -r $mypid $mysaveme");
 system("cp job_stork_file-file.stork* $mysaveme");
 
 if( -e "$mysubmitnm" )

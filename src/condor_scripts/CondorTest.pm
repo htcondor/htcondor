@@ -924,4 +924,82 @@ sub changeDaemonState
 	return(0);
 }
 
+#######################
+#
+# find_pattern_in_array
+#
+#	Find the array index which contains a particular pattern.
+#
+# 	First used to strip off variant line in output from
+#	condor_q -direct when passed quilld, schedd and rdbms
+#	prior to comparing the arrays collected from the output
+#	of each command....
+
+sub find_pattern_in_array
+{
+    $pattern = shift;
+    $harray = shift;
+    $place = 0;
+
+    Condor::debug( "Looking for <<$pattern>> size <<$#{$harray}>>\n");
+    foreach $member (@{$harray}) {
+        #Condor::debug( "consider $member\n");
+        if($member =~ /.*$pattern.*/) {
+            Condor::debug( "Found <<$member>> line $place\n");
+            return($place);
+        } else {
+            $place = $place + 1;
+        }
+    }
+    print "Got to end without finding it....<<$pattern>>\n";
+    return(-1);
+}
+
+#######################
+#
+# compare_arrays
+#
+#	We hash each line from an array and verify that each array has the same contents
+# 	by having a value for each key equalling the number of arrays. First used to
+#	compare output from condor_q -direct quilld, schedd and rdbms
+
+sub compare_arrays
+{
+    $startrow = shift;
+    $endrow = shift;
+    $numargs = shift;
+    %lookup = ();
+    $counter = 0;
+    Condor::debug( "Check $numargs starting row $startrow end row $endrow\n");
+    while($counter < $numargs) {
+        $href = shift;
+        my $thisrow = 0;
+        for $item (@{$href}) {
+            if( $thisrow >= $startrow) {
+                if($counter == 0) {
+                    #initialize each position
+                    $lookup{$item} = 1;
+                } else {
+                    $lookup{$item} = $lookup{$item} + 1;
+                    Condor::debug( "Set at:<$lookup{$item}:$item>\n");
+                }
+                #Condor::debug( "Store: $item\n");
+            } else {
+                Condor::debug( "Skip: $item\n");
+            }
+            $thisrow = $thisrow + 1;
+        }
+        $counter = $counter + 1;
+    }
+    #loaded up..... now look!
+    foreach $key (keys %lookup) {
+        Condor::debug( " $key equals $lookup{$key}\n");
+		if($lookup{$key} != $numargs) {
+			print "Arrays are not the same! key <$key> is $lookup{$key} and not $numargs\n";
+			return(1);
+		}
+    }
+	return(0);
+}
+
 1;

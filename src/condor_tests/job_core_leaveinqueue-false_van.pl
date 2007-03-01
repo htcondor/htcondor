@@ -29,25 +29,26 @@ $success = sub
 	my %info = @_;
 	my $cluster = $info{"cluster"};
 
-	sleep 10;
 	print "Good, job should be done but NOT left in the queue!!!\n";
-	my $qstat = CondorTest::getJobStatus($cluster);
-	if($qstat == -1)
+	my @adarray;
+	my $status = 1;
+	my $cmd = "condor_q $cluster";
+	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+	if(!$status)
 	{
-		print "Job status unknown - exactly what we want..\n";
-		exit(0);
+		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		exit(1)
 	}
-	if( $qstat == COMPLETED )
+	foreach my $line (@adarray)
 	{
-		sleep 4;	# wait and test again
-		my $qstat = CondorTest::getJobStatus($cluster);
-		if($qstat == -1)
-		{
-			print "Job status unknown - exactly what we want..\n";
-			exit(0);
+		print "$line\n";
+		if($line =~ /^\s*$cluster\..*$/) {
+			print "$line\n";
+			die "job should be done but NOT left in the queue!!\n";
 		}
-		die "Job should not still be found in queue\n";
 	}
+	print "Job not in queue as exxpected\n";
+	exit(0);
 };
 
 $submitted = sub

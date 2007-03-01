@@ -107,7 +107,7 @@ Daemon::Daemon( daemon_t type, const char* name, const char* pool )
 }
 
 
-Daemon::Daemon( ClassAd* ad, daemon_t type, const char* pool ) 
+Daemon::Daemon( const ClassAd* ad, daemon_t type, const char* pool ) 
 {
 	if( ! ad ) {
 		EXCEPT( "Daemon constructor called with NULL ClassAd!" );
@@ -1143,13 +1143,12 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype, bool query_collector)
 		// be used directly.  Further name resolution is not necessary.
 	if( nameHasPort ) {
 		struct in_addr sin_addr;
-		char buf[128];
 		
 		dprintf( D_HOSTNAME, "Port %d specified in name\n", _port );
 
 		if( is_ipaddr(host, &sin_addr) ) {
-			sprintf( buf, "<%s:%d>", host, _port );
-			New_addr( strnewp(buf) );
+			buf.sprintf( "<%s:%d>", host, _port );
+			New_addr( strnewp(buf.Value()) );
 			dprintf( D_HOSTNAME,
 					"Host info \"%s\" is an IP address\n", host );
 		} else {
@@ -1159,8 +1158,8 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype, bool query_collector)
 			tmp = get_full_hostname( host, &sin_addr );
 			if( ! tmp ) {
 					// With a hostname, this is a fatal Daemon error.
-				sprintf( buf, "unknown host %s", host );
-				newError( CA_LOCATE_FAILED, buf );
+				buf.sprintf( "unknown host %s", host );
+				newError( CA_LOCATE_FAILED, buf.Value() );
 				if (host) free( host );
 
 					// We assume this is a transient DNS failure.  Therefore,
@@ -1170,9 +1169,9 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype, bool query_collector)
 
 				return false;
 			}
-			sprintf( buf, "<%s:%d>", inet_ntoa(sin_addr), _port );
-			dprintf( D_HOSTNAME, "Found IP address and port %s\n", buf );
-			New_addr( strnewp(buf) );
+			buf.sprintf( "<%s:%d>", inet_ntoa(sin_addr), _port );
+			dprintf( D_HOSTNAME, "Found IP address and port %s\n", buf.Value() );
+			New_addr( strnewp(buf.Value()) );
 			New_full_hostname( tmp );
 		}
 

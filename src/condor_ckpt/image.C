@@ -1255,7 +1255,6 @@ SegMap::Read( int fd, ssize_t pos )
 	int		bytes_to_go;
 	int		read_size;
 	long	saved_len = len;
-	int 	saved_prot = prot;
 	RAW_ADDR	saved_core_loc = core_loc;
 	int segSize;
 	int zfd;
@@ -1381,7 +1380,7 @@ SegMap::Read( int fd, ssize_t pos )
 	ptr = (char *)saved_core_loc;
 
 	dprintf(D_ALWAYS, 
-		"About to overwrite %p bytes starting at 0x%x(%s)\n", 
+		"About to overwrite %d bytes starting at 0x%p(%s)\n", 
 			bytes_to_go, ptr, name);
 
 #if defined(COMPRESS_CKPT)

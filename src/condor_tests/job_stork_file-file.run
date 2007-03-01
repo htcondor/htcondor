@@ -23,6 +23,10 @@ print "Dummyhost was $dummyhost and really running on $currenthost\n";
 $mypid = $$;
 $mysaveme = $corename . ".saveme";
 system("mkdir $mysaveme");
+$mypiddir = $mysaveme . "/" . $mypid;
+system("mkdir $mypiddir");
+#make a symbolic link for personal condor module to use
+system("ln -s $mypiddir $mypid");
 
 $mysubmitnm = $corename . $mypid . ".cmd";
 $mysubmitnmout = $corename . $mypid . ".cmd.out";
@@ -153,7 +157,6 @@ else
 
 system("rm -f $dest_url*");
 
-system("cp -r $mypid $mysaveme");
 system("cp job_stork_file-file.stork* $mysaveme");
 
 if( -e "$mysubmitnm" )

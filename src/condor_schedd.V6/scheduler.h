@@ -224,6 +224,7 @@ class Scheduler : public Service
 	int				delayedNegotiatorHandler(Stream *);
 	int				negotiate(int, Stream *);
 	int				reschedule_negotiator(int, Stream *);
+
 	int				reschedule_negotiator_timer() { return reschedule_negotiator(0, NULL); }
 	void			vacate_service(int, Stream *);
 	AutoCluster		autocluster;
@@ -467,6 +468,7 @@ private:
 	int				StartJobTimer;
 	int				timeoutid;		// daemoncore timer id for timeout()
 	int				startjobsid;	// daemoncore timer id for StartJobs()
+	int				jobThrottleNextJobDelay;	// used by jobThrottle()
 
 	int				shadowReaperId; // daemoncore reaper id for shadows
 

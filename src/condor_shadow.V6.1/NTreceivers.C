@@ -711,7 +711,6 @@ do_REMOTE_syscall()
 	  {
 		char *  logical_name;
 		char *  actual_url;
-		condor_errno_t terrno;
  
 		actual_url = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
 		memset( actual_url, 0, (unsigned)_POSIX_PATH_MAX );
@@ -759,7 +758,6 @@ do_REMOTE_syscall()
 	case CONDOR_get_job_attr:
 	  {
 		char *  attrname = 0;
-		condor_errno_t terrno;
 
 		assert( syscall_sock->code(attrname) );
 		assert( syscall_sock->end_of_message() );;
@@ -792,7 +790,6 @@ do_REMOTE_syscall()
 	  {
 		char *  attrname = 0;
 		char *  expr = 0;
-		condor_errno_t terrno;
 
 		assert( syscall_sock->code(expr) );
 		assert( syscall_sock->code(attrname) );
@@ -817,7 +814,6 @@ do_REMOTE_syscall()
 	case CONDOR_constrain:
 	  {
 		char *  expr = 0;
-		condor_errno_t terrno;
 
 		assert( syscall_sock->code(expr) );
 		assert( syscall_sock->end_of_message() );;

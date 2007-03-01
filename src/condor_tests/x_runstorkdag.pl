@@ -27,7 +27,8 @@ foreach my $arg  (@ARGV)
 	print "$arg ";
 }
 print "\n";
-$dagman_args = "-v -storklog `condor_config_val LOG`/Stork.user_log";
+#$dagman_args = "-v -storklog `condor_config_val LOG`/Stork.user_log";
+$dagman_args = "-v ";
 
 chdir("$dir");
 

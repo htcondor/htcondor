@@ -394,6 +394,7 @@ JobQueueSnapshot::iterateAllClassAds(ClassAd*& ad)
 	while(st1 == DONE_PROCADS_CUR_CLUSTERAD) {
 		if (curClusterAd) {
 			delete curClusterAd;
+			curClusterAd = NULL;
 		}
 		st2 = getNextClusterAd(curClusterId, curClusterAd);
 		

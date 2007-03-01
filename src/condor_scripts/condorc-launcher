@@ -79,6 +79,8 @@ if ( $? != 0 || ! -d $LOG_DIR ) {
 	$LOG_DIR = "/tmp";
 }
 
+# Set a longer timeout for our condor commands
+$ENV{_condor_TOOL_TIMEOUT_MULTIPLIER} = "4";
 
 # initialize variables that will be used throughput our run
 if(not defined $config_condor_host) {
@@ -108,21 +110,23 @@ while ( <CQ> ) {
 		my $key = "${line[3]}#${line[2]}";
 
 		if ( defined $job_groups{$key} ) {
-			debug_print(5, "Two schedd jobs for same site,subject!\n");
-		} else {
-			# Remove 'gt2 ' from the beginning of GridResource
-			$line[4] =~ s/gt2 //;
-
-			$job_groups{$key} = {
-				'uniquename'    => "${line[2]}",
-				'proxyfile'       => "${line[1]}",
-				'sitename'        => "${line[3]}",
-				'sitegatekeeper'  => "${line[4]}",
-				'scheddjobid'     => "${line[0]}",
-				'scheddstatus'    => $line[5],
-				'numjobs'         => 0
-				};
+			debug_print(5, "Two schedd jobs for same site,subject! " .
+					"Removing old job ${$job_groups{$key}}{'scheddjobid'}\n");
+			system( "condor_rm ${$job_groups{$key}}{'scheddjobid'}" );
 		}
+
+		# Remove 'gt2 ' from the beginning of GridResource
+		$line[4] =~ s/gt2 //;
+
+		$job_groups{$key} = {
+			'uniquename'    => "${line[2]}",
+			'proxyfile'       => "${line[1]}",
+			'sitename'        => "${line[3]}",
+			'sitegatekeeper'  => "${line[4]}",
+			'scheddjobid'     => "${line[0]}",
+			'scheddstatus'    => $line[5],
+			'numjobs'         => 0
+			};
 	}
 }
 
@@ -173,7 +177,12 @@ while ( 1 ) { # or until no user jobs left <-- Is this still true?  I think not.
 
 	}
 
-	close( CQ );
+	# If we can't get the list of jobs, when we have nothing to act on.
+	# Try again later.
+	if ( !close( CQ ) ) {
+		debug_print( 1, "condor_q of user jobs timed out\n" );
+		next;
+	}
 
 	# check queue for schedd jobs (see if any have disappeared)
 	##########################################
@@ -206,7 +215,12 @@ while ( 1 ) { # or until no user jobs left <-- Is this still true?  I think not.
 
 	}
 
-	close( CQ );
+	# If we can't get the list of jobs, then we have nothing to act on.
+	# Try again later.
+	if ( !close( CQ ) ) {
+		debug_print( 1, "condor_q of launcher jobs timed out\n" );
+		next;
+	}
 
 	# submit schedds as needed
 	##########################################
@@ -259,7 +273,7 @@ while ( 1 ) { # or until no user jobs left <-- Is this still true?  I think not.
 			# update proxy?
 		}
 	}
-
+} continue {
 	if(getppid() == 1) {
 		debug_print(9, "My parent disappeared.  Assuming he exitted.  Quitting\n");
 		exit(1);

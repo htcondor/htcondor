@@ -30,6 +30,7 @@
 #include "classad_collection.h"
 #include "history_utils.h"
 #include "quill_enums.h"
+#include "ad_printmask.h"
 
 //! HistorySnapshot
 /*! it provides interface to iterate the query result 
@@ -43,7 +44,9 @@ public:
 	~HistorySnapshot();
 
 	//! high level method
-	QuillErrCode sendQuery(SQLQuery *, SQLQuery *, bool);
+	QuillErrCode sendQuery(SQLQuery *, SQLQuery *, bool, 
+		bool fileformat = false, bool custForm = false, 
+		AttrListPrintMask *pmask = NULL);
 
 	//! used to determine whether result set is empty
 	bool isHistoryEmpty() { return isHistoryEmptyFlag; }
@@ -72,7 +75,9 @@ private:
 	QuillErrCode getNextAd_Hor(AttrList *&ad, SQLQuery *queryver);
 	QuillErrCode printResults(SQLQuery *queryhor, 
 							  SQLQuery *queryver, 
-							  bool longformat);
+							  bool longformat, bool fileformat = false,
+							  bool custForm = false, 
+							  AttrListPrintMask *pmask = NULL);
 };
 
 #endif

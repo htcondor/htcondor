@@ -1515,7 +1515,7 @@ obtainAdsFromCollector (
 				char *exprStr = param("STARTD_AD_REEVAL_EXPR");
 				if (!exprStr) {
 						// This matches the "old" semantic.
-					exprStr = strdup("my.UpdateSequenceNumber > target.UpdateSequenceNumber");
+					exprStr = strdup("target.UpdateSequenceNumber > my.UpdateSequenceNumber");
 				}
 
 				ExprTree *expr = NULL;

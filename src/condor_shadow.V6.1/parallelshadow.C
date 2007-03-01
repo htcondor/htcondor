@@ -182,7 +182,7 @@ ParallelShadow::getResources( void )
     char *host = NULL;
     char *claim_id = NULL;
     MpiResource *rr;
-	int clusterid;
+	int job_cluster;
 	char buf[128];
 
     int numProcs=0;    // the # of procs to come
@@ -192,7 +192,7 @@ ParallelShadow::getResources( void )
 	int nodenum = 1;
 	ReliSock* sock;
 
-	clusterid = getCluster();
+	job_cluster = getCluster();
     rr = ResourceList[0];
 	rr->getClaimId( claim_id );
 
@@ -205,8 +205,8 @@ ParallelShadow::getResources( void )
 	}
 		
 	sock->encode();
-	if( ! sock->code(clusterid) ) {
-		EXCEPT( "Can't send cluster (%d) to schedd\n", clusterid );
+	if( ! sock->code(job_cluster) ) {
+		EXCEPT( "Can't send cluster (%d) to schedd\n", job_cluster );
 	}
 	if( ! sock->code(claim_id) ) {
 		EXCEPT( "Can't send ClaimId to schedd\n" );
@@ -287,7 +287,7 @@ ParallelShadow::getResources( void )
 			char buffer[1024];
 			sprintf (buffer, "%s = \"%s%c%s\"", ATTR_REMOTE_SPOOL_DIR, 
 				param("SPOOL"), DIR_DELIM_CHAR, 
-				gen_ckpt_name(0, clusterid, 0, 0));
+				gen_ckpt_name(0, job_cluster, 0, 0));
 			tmp_ad->Insert(buffer);
 
 			rr->setJobAd( tmp_ad );
@@ -733,7 +733,7 @@ ParallelShadow::findResource( int node )
 	int i;
 	for( i=0; i<=ResourceList.getlast() ; i++ ) {
 		mpi_res = ResourceList[i];
-		if( node == mpi_res->node() ) {
+		if( node == mpi_res->getNode() ) {
 			return mpi_res;
 		}
 	}

@@ -43,7 +43,7 @@ class MpiResource : public RemoteResource {
 		/** Special format... */
 	virtual void printExit( FILE *fp );
 
-	int node( void ) { return node_num; };
+	int getNode( void ) { return node_num; };
 	void setNode( int node_arg ) { node_num = node_arg; };
 
 		/** Call RemoteResource::resourceExit() and log a

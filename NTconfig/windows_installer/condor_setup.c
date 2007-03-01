@@ -30,17 +30,17 @@ struct Options {
 } Opt = { '\0', '\0', '\0', '\0', NULL, NULL, NULL, NULL, NULL, 
 	NULL, NULL, NULL, NULL, NULL};
 
-const char *short_options = ":c:d:e:i:j:v:n::p:o:r:a:s::t:m:h";
+const char *short_options = ":c:d:e:i:j:v:n:p:o:r:a:s:t:m:h";
 static struct option long_options[] =
 { 
-	{"acctdomain",              optional_argument, 0, 'a'},
+	{"acctdomain",              required_argument, 0, 'a'},
 	{"hostallowread",           required_argument, 0, 'e'},
 	{"hostallowwrite",          required_argument, 0, 't'},
 	{"hostallowadministrator",  required_argument, 0, 'i'},
-	{"newpool",                 optional_argument, 0, 'n'},
+	{"newpool",                 required_argument, 0, 'n'},
 	{"runjobs",                 required_argument, 0, 'r'},
-	{"vacatejobs",              optional_argument, 0, 'v'},
-	{"submitjobs",              optional_argument, 0, 's'},
+	{"vacatejobs",              required_argument, 0, 'v'},
+	{"submitjobs",              required_argument, 0, 's'},
 	{"condoremail",             required_argument, 0, 'c'},
 	{"jvmlocation",             required_argument, 0, 'j'},
 	{"poolname",                required_argument, 0, 'p'},

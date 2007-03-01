@@ -1,3 +1,17 @@
+03/01/07 trunk-{pre,post}_merge-V6_8-merge-4
+  the state of the trunk before merging in the V6_8-branch as tagged
+  at V6_8-merge-4
+
+02/28/07 V6_8-merge-4
+  The state of the V6_8-branch for another merge back to the trunk.
+
+02/15/07 V6_8-dagman-PR806-merge-1
+  The state of the V6_8-dagman-PR806-branch for a merge to the trunk.
+  Note that there are modifications committed beyond this tag on the
+  branch, but Peter and I decided to abandon them.  (In terms of the
+  actual source code, this tag is the same thing as
+  V6_8-dagman-PR806-branch-phase1.)
+
 02/14/07  trunk-{pre,post}_merge-V6_9-privsep-merge-1
   The state of the trunk before and after merging in V6_9-privsep-branch
   as tagged at V6_9-privsep-merge-1
@@ -20,9 +34,27 @@
   made from BUILD-V6_9-trunk-2007-2-8 and will be used to merge
   my cron code that never made it into the Condor trunk.
 
+02/02/07 V6_8_4
+  The official V6_8_4 release is a copy of BUILD-V6_8-branch-2007-2-1.
+  All platforms built on NMI runid 41381.
+
+02/02/07 V6_8_4-{root,branch}
+  The branch for V6_8_4 off of V6_8-branch.
+
 02/01/07 V6_7-pre_merge-eventd_v2-merge-2
          V6_7-post_merge-eventd_v2-merge-2
   Merger of new eventd to trunk
+
+02/01/07 V6_8-dagman-PR806-branch-phase1
+  This branch has DAGMan fixes related to PR 806.  Phase 1 has stuff
+  I'm sure I want to merge back into V6_8; there is other stuff committed
+  beyond this tag, but I'm not sure that should actually be released.
+
+02/01/07 V6_8-dagman-PR806-{root,branch}
+  A branch for DAGMan changes related to Gnats PR 806.  I have some
+  changes implemented that I want to get into CVS, but I don't want to
+  actually put them onto a "normal" branch before talking with Peter.
+  Created from BUILD-V6_8-branch-2007-2.
 
 01/18/07 pr777-{root,branch}
   Branch off of the trunk for fixing Gnats PR 777 (better ways of
@@ -48,6 +80,11 @@
 
 01/08/07 V6_9_1-{root,branch}
   The branch for V6_9_1 off of the trunk.
+
+01/05/07 V6_8_3
+  The official V6_8_3 release is a copy of BUILD-V6_8_3-branch-2007-1-4.
+  All platforms built on NMI runid 39240 except Windows, which was built
+  by Todd T.
 
 01/04/07 V6_8-merge-3
   The state of the V6_8-branch for another merge back to the trunk.

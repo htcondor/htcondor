@@ -62,7 +62,8 @@ struct SubmitDagOptions
 	MyString strConfigFile;
 	
 	// non-command line options
-	MyString strLibLog;
+	MyString strLibOut;
+	MyString strLibErr;
 	MyString strDebugLog;
 	MyString strSchedLog;
 	MyString strSubFile;
@@ -110,7 +111,8 @@ int main(int argc, char *argv[])
 	myDistro->Init( argc, argv );
 	parseCommandLine(opts, argc, argv);
 	
-	opts.strLibLog = opts.primaryDagFile + ".lib.out";
+	opts.strLibOut = opts.primaryDagFile + ".lib.out";
+	opts.strLibErr = opts.primaryDagFile + ".lib.err";
 
 	if ( opts.strDebugDir != "" ) {
 		opts.strDebugLog = opts.strDebugDir + DIR_DELIM_STRING +
@@ -233,8 +235,10 @@ submitDag( SubmitDagOptions &opts )
 			opts.strSubFile.Value());
 	printf("Log of DAGMan debugging messages                 : %s\n",
 		   	opts.strDebugLog.Value());
-	printf("Log of Condor library debug messages             : %s\n", 
-			opts.strLibLog.Value());
+	printf("Log of Condor library output                     : %s\n", 
+			opts.strLibOut.Value());
+	printf("Log of Condor library error messages             : %s\n", 
+			opts.strLibErr.Value());
 	printf("Log of the life of condor_dagman itself          : %s\n",
 		   	opts.strSchedLog.Value());
 	printf("\n");
@@ -287,7 +291,8 @@ void ensureOutputFilesExist(const SubmitDagOptions &opts)
 	{
 		unlink(opts.strSubFile.Value());
 		unlink(opts.strSchedLog.Value());
-		unlink(opts.strLibLog.Value());
+		unlink(opts.strLibOut.Value());
+		unlink(opts.strLibErr.Value());
 		unlink(opts.strRescueFile.Value());
 	}
 
@@ -298,10 +303,16 @@ void ensureOutputFilesExist(const SubmitDagOptions &opts)
 				 opts.strSubFile.Value() );
 		bHadError = true;
 	}
-	if (fileExists(opts.strLibLog))
+	if (fileExists(opts.strLibOut))
 	{
 		fprintf( stderr, "ERROR: \"%s\" already exists.\n",
-				 opts.strLibLog.Value() );
+				 opts.strLibOut.Value() );
+		bHadError = true;
+	}
+	if (fileExists(opts.strLibErr))
+	{
+		fprintf( stderr, "ERROR: \"%s\" already exists.\n",
+				 opts.strLibErr.Value() );
 		bHadError = true;
 	}
 	if (fileExists(opts.strSchedLog))
@@ -357,8 +368,8 @@ void writeSubmitFile(/* const */ SubmitDagOptions &opts)
     fprintf(pSubFile, "universe\t= scheduler\n");
     fprintf(pSubFile, "executable\t= %s\n", opts.strDagmanPath.Value());
 	fprintf(pSubFile, "getenv\t\t= True\n");
-	fprintf(pSubFile, "output\t\t= %s\n", opts.strLibLog.Value());
-    fprintf(pSubFile, "error\t\t= %s\n", opts.strLibLog.Value());
+	fprintf(pSubFile, "output\t\t= %s\n", opts.strLibOut.Value());
+    fprintf(pSubFile, "error\t\t= %s\n", opts.strLibErr.Value());
     fprintf(pSubFile, "log\t\t= %s\n", opts.strSchedLog.Value());
     fprintf(pSubFile, "remove_kill_sig\t= SIGUSR1\n" );
 

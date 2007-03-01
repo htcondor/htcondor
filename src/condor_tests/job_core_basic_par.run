@@ -21,12 +21,16 @@ print "Dummyhost was $dummyhost and really running on $currenthost\n";
 $mypid = $$;
 $mysaveme = $corename . ".saveme";
 system("mkdir $mysaveme");
+$mypiddir = $mysaveme . "/" . $mypid;
+system("mkdir $mypiddir");
+#make a symbolic link for personal condor module to use
+system("ln -s $mypiddir $mypid");
 
 $mysubmitnm = $corename . $mypid . ".cmd";
 $mysubmitnmcmdout = $corename . $mypid . ".cmd.out";
-$mysubmitnmlog = $corename . $mypid . ".log";
-$mysubmitnmerr = $corename . $mypid . ".err";
-$mysubmitnmout = $corename . $mypid . ".out";
+$mysubmitnmlog = $corename . $mypid . ".log" ;
+$mysubmitnmerr = $corename . $mypid . ".err" . "\$(NODE)";
+$mysubmitnmout = $corename . $mypid . ".out" . "\$(NODE)";
 $mycorenm = $corename . ".cmd";
 $mycorenmcmdout = $corename . ".cmd.out";
 $mycorenmlog = $corename . ".log";
@@ -78,6 +82,12 @@ while(<TPLATE>)
 		#print "New error name: $errornm\n";
 		print CSUB "error = $errornm\n";
 	}
+	elsif( $line =~ /^(.*)basic_par_socket(.*)$/)
+	{
+		my $newargs = $1 . " " . $mypid . " " . $2; 
+		#print "New  args are < $newargs >\n";
+		print CSUB "$newargs\n";
+	}
 	else
 	{
 		#print "template: $line\n";
@@ -87,11 +97,11 @@ while(<TPLATE>)
 close(TPLATE);
 close(CSUB);
 
+
 my $result = system("./job_core_basic_par.pl $mysubmitnm");
 print "Result of basic paarallel  job is  $result\n";
 
 
-system("cp -r $mypid $mysaveme");
 system("cp *job_core_basic_par* $mysaveme");
 
 if( -e "$mysubmitnm" )

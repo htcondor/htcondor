@@ -109,7 +109,7 @@ linux_getExecPath( void )
 
 #if defined( Solaris )
 char*
-solaris_getExecPath()
+solaris_getExecPath( void )
 {
 	const char* name;
 	char* cwd = NULL;
@@ -254,7 +254,7 @@ darwin_NSGetArgv_getExecPath( char* buf, size_t* bufsize )
 
 
 char*
-darwin_getExecPath()
+darwin_getExecPath( void )
 {
 	char buf[MAXPATHLEN];
 	char full_buf[MAXPATHLEN];
@@ -308,7 +308,7 @@ darwin_getExecPath()
 #if defined(CONDOR_FREEBSD4)
 // This assumes procfs!
 char*
-freebsd_getExecPath()
+freebsd_getExecPath( void )
 {
 	int rval;
 	char* full_path;
@@ -341,7 +341,7 @@ freebsd_getExecPath()
 }
 #elif defined(CONDOR_FREEBSD5) || defined(CONDOR_FREEBSD6) || defined(CONDOR_FREEBSD7)
 char*
-freebsd_getExecPath()
+freebsd_getExecPath( void )
 {
 	return (NULL);
 	/*

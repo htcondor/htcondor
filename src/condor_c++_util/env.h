@@ -183,6 +183,10 @@ class Env {
 		// ; or | delimited string.
 	static bool IsSafeEnvV1Value(char const *str,char delim='\0');
 
+		// Returns true if string is safe to insert in new-style
+		// environment string.
+	static bool IsSafeEnvV2Value(char const *str);
+
 		// Return the appropriate environment delimiter for this opsys.
 	static char GetEnvV1Delimiter(char const *opsys=NULL);
 

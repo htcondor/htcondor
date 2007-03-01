@@ -22,10 +22,28 @@ $execute = sub {
 
 $wanterror = sub {
 	my %args = @_;
-	my $error = $args{"ErrorMessage"};
-	print "Good Job FAILED --$error--.\n";
-	print "$testname: SUCCESS\n";
-	exit(0);
+
+	my $errmsg = $args{"ErrorMessage"};
+
+    if($errmsg =~ /^.*died abnormally.*$/) {
+        print "BAD. Submit died was to fail but with error 1\n";
+        print "$testname: Failure\n";
+        exit(1);
+    } elsif($errmsg =~ /^.*\(\s*returned\s*(\d+)\s*\).*$/) {
+        if($1 == 1) {
+            print "Good. Job was not to submit with File Transfer off and input files requested\n";
+            print "$testname: SUCCESS\n";
+            exit(0);
+        } else {
+            print "BAD. Submit was to fail but with error 1 not <<$1>>\n";
+            print "$testname: Failure\n";
+            exit(1);
+        }
+    } else {
+            print "BAD. Submit failure mode unexpected....\n";
+            print "$testname: Failure\n";
+            exit(1);
+    }
 };
 
 $success = sub

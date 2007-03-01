@@ -48,7 +48,11 @@ use CondorTest;
 
 # configuration options
 $test_dir = ".";            # directory in which to find test programs
-$test_timeout = 60*60*18;   # seconds until we decide a test is hung
+$test_retirement = 1800;	# seconds for an individual test timeout - 30 minutes
+$hush = 0;
+
+# set up to recover from tests which hang
+$SIG{ALRM} = sub { die "timeout" };
 
 # setup
 STDOUT->autoflush();   # disable command buffering of stdout
@@ -69,6 +73,7 @@ $ENV{PATH} = $ENV{PATH} . ":" . $Basedir;
 # -f[ile] <filename>: use this file as the list of tests to run
 # -s[kip] <filename>: use this file as the list of tests to skip
 # -t[estname] <test-name>: just run this test
+# -q[uiet]: hush
 #
 while( $_ = shift( @ARGV ) ) {
   SWITCH: {
@@ -84,6 +89,10 @@ while( $_ = shift( @ARGV ) ) {
                 $skipfile = shift(@ARGV);
                 next SWITCH;
         }
+        if( /-r.*/ ) { #retirement timeout
+                $test_retirement = shift(@ARGV);
+                next SWITCH;
+        }
         if( /-t.*/ ) {
                 push(@testlist, shift(@ARGV));
                 next SWITCH;
@@ -91,6 +100,10 @@ while( $_ = shift( @ARGV ) ) {
         if( /-xml.*/ ) {
                 $isXML = 1;
                 print "xml output format selected\n";
+                next SWITCH;
+        }
+        if( /-q.*/ ) {
+                $hush = 1;
                 next SWITCH;
         }
   }
@@ -120,14 +133,18 @@ if( ! @compilers ) {
 }
 
 foreach $name (@compilers) {
-	print "Compiler:$name\n";
+	if($hush == 0) { 
+		print "Compiler:$name\n";
+	}
 }
 
 # now we find the tests we care about.
 if( @testlist ) {
 
 foreach $name (@testlist) {
-	print "Testlist:$name\n";
+	if($hush == 0) { 
+		print "Testlist:$name\n";
+	}
 }
 
     # we were explicitly given a # list on the command-line
@@ -224,10 +241,14 @@ foreach $compiler (@compilers)
 	$ENV{PATH} = $ENV{PATH} . ":" . $compilerdir;
 
     # fork a child to run each test program
-    print "submitting $compiler tests ";
+	if($hush == 0) { 
+    	print "submitting $compiler tests ";
+	}
     foreach $test_program (@{$test_suite{"$compiler"}})
     {
-        print ".";
+		if($hush == 0) { 
+        	print ".";
+		}
 
         #next if $skip_hash{$compiler}->{$test_program};
         $pid = fork();
@@ -244,23 +265,31 @@ foreach $compiler (@compilers)
 
         # if we're the child, start test program
 
-        # kill ourselves with SIGALARM if we run for more than 18 hours
-        alarm $test_timeout;
+		my $res;
+ 		eval {
+            alarm($test_retirement);
+			$res = system("perl $test_program > $test_program.out 2>&1");
+			if($res != 0) { print "Perl test($test_program) returned <<$res>>!!! \n"; exit(1); }
+			exit(0);
+		};
 
-		if( ! -f $test_program ) {
-			print "Test does not exist<$test_program>!!!\n";
-		}
-		if( ! -x $test_program ) {
-			print "Test is not executable<$test_program>!!!\n";
-		}
+		if($@) {
+            if($@ =~ /timeout/) {
+                print "$test_program            Timeout\n";
+				exit(1);
+            } else {
+                alarm(0);
+				exit(0);
+            }
+        }
+		exit(0);
 
-        # exec the test itself
-	exec( "perl $test_program > $test_program.out 2>&1" ) ||
-		print "could not exec $test_program!!!!!!<error:$!>\n";
     }
 
     # wait for each test to finish and print outcome
-    print "\n";
+	if($hush == 0) { 
+    	print "\n";
+	}
     while( $child = wait() ) {
         # if there are no more children, we're done
         last if $child == -1;
@@ -321,7 +350,9 @@ foreach $compiler (@compilers)
         }
     } # end while
 
-    print "\n";
+	if($hush == 0) {
+    	print "\n";
+	}
 	if($compiler ne "\.") {
     	chdir ".." || die "error switching to directory ..: $!\n";
 	}
@@ -335,7 +366,9 @@ if ($isXML){
 }
 
 
-print "$num_success successful, $num_failed failed\n";
+if( $hush == 0 ) {
+	print "$num_success successful, $num_failed failed\n";
+}
 
 open( OUTF, ">successful_tests" )
     || die "error opening \"successful_tests\": $!\n";

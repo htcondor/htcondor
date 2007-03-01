@@ -927,7 +927,7 @@ void parse_resource_manager_string( const char *string, char **host,
 {
 	char *p;
 	char *q;
-	int len = strlen( string );
+	size_t len = strlen( string );
 
 	char *my_host = (char *)calloc( len+1, sizeof(char) );
 	char *my_port = (char *)calloc( len+1, sizeof(char) );

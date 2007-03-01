@@ -42,7 +42,8 @@ if(!$dest_url) { help(); die "Must call this with --dest_url=somename!\n"; }
 
 $cmd = "$dagnm";
 $testname = 'Condor submit dag - stork transfer test';
-$dagman_args = "-v -storklog `condor_config_val LOG`/Stork.user_log";
+#$dagman_args = "-v -storklog `condor_config_val LOG`/Stork.user_log";
+$dagman_args = "-v ";
 
 if(! -d $root)
 {
@@ -71,6 +72,7 @@ print DAG "[\n";
 print DAG "		dap_type = transfer;\n";
 print DAG "		src_url = \"file:$src_url\";\n";
 print DAG "		dest_url = \"file:$dest_url\";\n";
+print DAG "		log = \"$dagdir/stork.log\";\n";
 print DAG "]\n";
 close(DAG);
 

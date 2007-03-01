@@ -565,10 +565,16 @@ int DaemonCore::FileDescriptorSafetyLimit()
 {
 	if( file_descriptor_safety_limit == 0 ) {
 #if defined(WIN32)
-			// on Windows NT, it appears you can open up zillions of sockets
-		int file_descriptor_max = 2000;
+			// on Windows NT, it appears you can open up zillions of sockets,
+			// but only FD_SETSIZE can be put into an fd_set
+		int file_descriptor_max = FD_SETSIZE;
 #else
+			// On unix, fd_set restricts you to fds up to FD_SETSIZE-1
+			// for select()
 		int file_descriptor_max = getdtablesize();
+		if ( FD_SETSIZE < file_descriptor_max ) {
+			file_descriptor_max = FD_SETSIZE;
+		}
 #endif
 		// Set the danger level at 80% of the max
 		file_descriptor_safety_limit = file_descriptor_max - file_descriptor_max/5;
@@ -2222,7 +2228,7 @@ void DaemonCore::Driver()
 			memset(buf, 0, sizeof(buf) );
 			bool	do_out = true, do_err = true;
 			bool	do_fd1 = true, do_fd2 = true;
-			for ( int i=0;  i<16*1024;  i++ )
+			for ( i=0;  i<16*1024;  i++ )
 			{
 				if ( do_out && fwrite( buf, sizeof(buf), 1, stdout ) != 1 )
 				{
@@ -3571,13 +3577,6 @@ int DaemonCore::HandleReq(Stream *insock)
 
 					// generate a new session
 
-					int    mypid = 0;
-#ifdef WIN32
-					mypid = ::GetCurrentProcessId();
-#else
-					mypid = ::getpid();
-#endif
-
 					// generate a unique ID.
 					MyString tmpStr;
 					tmpStr.sprintf( "%s:%i:%i:%i", my_hostname(), mypid,
@@ -3983,9 +3982,9 @@ int DaemonCore::HandleReq(Stream *insock)
 
 		// grab the user from the socket
         if (is_tcp) {
-            const char *t = ((ReliSock*)stream)->getFullyQualifiedUser();
-			if (t) {
-				strcpy(user, t);
+            const char *u = ((ReliSock*)stream)->getFullyQualifiedUser();
+			if (u) {
+				strcpy(user, u);
 			}
         } else {
 			// user is filled in above, but we should make it part of

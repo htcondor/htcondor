@@ -103,7 +103,7 @@ public:
 			query a collector to locate it.  You can also optionally
 			pass in the name of the collector you got it from.
 		*/
-	Daemon( ClassAd* ad, daemon_t type, const char* pool );
+	Daemon( const ClassAd* ad, daemon_t type, const char* pool );
 
 		/// Copy constructor (implemented via deepCopy())
 	Daemon( const Daemon &copy );

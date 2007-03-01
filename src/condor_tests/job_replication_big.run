@@ -53,6 +53,11 @@ my $jobsOutputsDirectory    = "$jobsDirectory/Outputs";
 my $logsDirectory           = "$testingSystemDirectory/Logs";
 
 mkdir "$testingSystemDirectory";
+mkdir "$savemeDirectory";
+$mypiddir = $savemeDirectory . "/" . $pId;
+system("mkdir $mypiddir");
+#make a symbolic link for personal condor module to use
+system("ln -s $mypiddir $pId");
 
 #mkdir "$configurationsDirectory";
 mkdir "$jobsDirectory";
@@ -1478,7 +1483,7 @@ sub MoveAllToSaveDirectory
 	close(ERROR_LOG);
 
 	mkdir $savemeDirectory if(! -d $savemeDirectory);
-	`mv $testingSystemDirectory $pId $savemeDirectory`;
+	`mv $testingSystemDirectory $savemeDirectory`;
 }
 
 sub GenerateJobs

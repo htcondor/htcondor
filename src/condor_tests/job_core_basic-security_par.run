@@ -18,6 +18,10 @@ print "Dummyhost was $dummyhost and really running on $currenthost\n";
 $mypid = $$;
 $mysaveme = $corename . ".saveme";
 system("mkdir $mysaveme");
+$mypiddir = $mysaveme . "/" . $mypid;
+system("mkdir $mypiddir");
+#make a symbolic link for personal condor module to use
+system("ln -s $mypiddir $mypid");
 
 $mysubmitnm = $corename . $mypid . ".cmd";
 $mysubmitnmcmdout = $corename . $mypid . ".cmd.out";
@@ -88,7 +92,6 @@ my $result = system("./job_core_basic_par.pl $mysubmitnm");
 print "Result of basic paarallel  job is  $result\n";
 
 
-system("cp -r $mypid $mysaveme");
 system("cp *job_core_basic-security_par* $mysaveme");
 
 if( -e "$mysubmitnm" )

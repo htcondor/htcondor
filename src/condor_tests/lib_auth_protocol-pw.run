@@ -8,7 +8,9 @@ Condor::DebugOff();
 
 $myparamname = "x_param.protocol-pw";
 $postsrc_template = "x_secpw_configpostsrc.template";
+$map_template = "x_secpw_mapfile.template";
 $postsrc = "x_secpw_configpostsrc";
+$mapfile = "x_secpw_mapfile";
 
 $testname = 'lib_auth_protocol-pw - Security Protocol PASSWORD Authentication Test';
 $corename = "lib_auth_protocol-pw";
@@ -28,9 +30,14 @@ $pid = $$;
 $mypid = $pid;
 $mytopdir = getcwd();
 $mypwfile = $mytopdir . "/x_auth_poolpasswd";
+$mymapfile = $mytopdir . "/x_secpw_mapfile";
 $myvariation = 1;
 $mysaveme = $corename . ".saveme";
 system("mkdir $mysaveme");
+$mypiddir = $mysaveme . "/" . $mypid;
+system("mkdir $mypiddir");
+#make a symbolic link for personal condor module to use
+system("ln -s $mypiddir $mypid");
 
 #print "$line\n";
 $mysubmitnm = $corename . $mypid . ".cmd";
@@ -44,7 +51,7 @@ $mycorenmlog = $corename . ".log";
 print "Master PID is $mypid\n";
 print "Master PID submit file is $mysubmitnm\n";
 
-# Edit submit file to submit to scheduler at securitypool (side b) schedd.
+# Edit security password file and map file
 my $line;
 open(CSUB,">$postsrc") || die "Can't open new submit file $myparamname: $!\n";
 open(TPLATE,"<$postsrc_template") || die "Can't open param template $postsrc_template: $!\n";
@@ -55,6 +62,35 @@ while(<TPLATE>)
 	if( $line =~ /^\s*SEC_PASSWORD_FILE\s*=\s*.*$/ )
 	{
 		print CSUB "SEC_PASSWORD_FILE = $mypwfile\n";
+	}
+	elsif( $line =~ /^\s*CERTIFICATE_MAP_FILE\s*=\s*.*$/ )
+	{
+		print CSUB "CERTIFICATE_MAP_FILE = $mymapfile\n";
+	}
+	else
+	{
+		print CSUB "$line\n";
+	}
+}
+close(TPLATE);
+close(CSUB);
+
+# Edit security password file and map file
+my $line;
+
+my $username = `whoami`;
+chomp($username);
+print "Our user is <<<$username>>>\n";
+
+open(CSUB,">$mapfile") || die "Can't open new submit file $myparamname: $!\n";
+open(TPLATE,"<$map_template") || die "Can't open param template $postsrc_template: $!\n";
+while(<TPLATE>)
+{
+	CondorTest::fullchomp($_);
+	$line = $_;
+	if( $line =~ /^(\s*PASSWORD\s*\(\.\*\))s*.*$/ )
+	{
+		print CSUB "$1 $username \n";
 	}
 	else
 	{
@@ -92,7 +128,6 @@ $ENV{CONDOR_CONFIG} = $secconfig;
 my $result = system("./x_lib_auth_protocol.pl $mypid \"protocol\" $mytestnegotiation_result $mycmdfile");
 print "Result of crafted lib_auth_protocol job is  $result\n";
 
-system("cp -r $mypid $mysaveme");
 system("cp *$corename* $mysaveme");
 
 if( -e "$mysubmitnm" )

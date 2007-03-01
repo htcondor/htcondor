@@ -187,7 +187,7 @@ MPIShadow::getResources( void )
     char *host = NULL;
     char *claim_id = NULL;
     MpiResource *rr;
-	int cluster;
+	int job_cluster;
 	char buf[128];
 
     int numProcs=0;    // the # of procs to come
@@ -197,7 +197,7 @@ MPIShadow::getResources( void )
 	int nodenum = 1;
 	ReliSock* sock;
 
-	cluster = getCluster();
+	job_cluster = getCluster();
     rr = ResourceList[0];
 	rr->getClaimId( claim_id );
 
@@ -210,8 +210,8 @@ MPIShadow::getResources( void )
 	}
 		
 	sock->encode();
-	if( ! sock->code(cluster) ) {
-		EXCEPT( "Can't send cluster (%d) to schedd\n", cluster );
+	if( ! sock->code(job_cluster) ) {
+		EXCEPT( "Can't send cluster (%d) to schedd\n", job_cluster );
 	}
 	if( ! sock->code(claim_id) ) {
 		EXCEPT( "Can't send ClaimId to schedd\n" );
@@ -1048,7 +1048,7 @@ MPIShadow::findResource( int node )
 	int i;
 	for( i=0; i<=ResourceList.getlast() ; i++ ) {
 		mpi_res = ResourceList[i];
-		if( node == mpi_res->node() ) {
+		if( node == mpi_res->getNode() ) {
 			return mpi_res;
 		}
 	}

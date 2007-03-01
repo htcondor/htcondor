@@ -54,8 +54,11 @@ JICLocalSchedd::JICLocalSchedd( const char* classad_filename,
 			 schedd_addr );
 
 	job_updater = NULL;
+	m_cleanup_retry_tid = -1;
+	m_num_cleanup_retries = 0;
+	m_max_cleanup_retries = param_integer("LOCAL_UNIVERSE_MAX_JOB_CLEANUP_RETRIES", 5);
+	m_cleanup_retry_delay = param_integer("LOCAL_UNIVERSE_JOB_CLEANUP_RETRY_DELAY", 30);
 }
-
 
 
 JICLocalSchedd::~JICLocalSchedd()
@@ -65,6 +68,10 @@ JICLocalSchedd::~JICLocalSchedd()
 	}
 	if( job_updater ) {
 		delete job_updater;
+	}
+	if( m_cleanup_retry_tid >= 0 ) {
+		daemonCore->Cancel_Timer(m_cleanup_retry_tid);
+		m_cleanup_retry_tid = -1;
 	}
 }
 
@@ -128,64 +135,90 @@ bool
 JICLocalSchedd::notifyJobExit( int exit_status, int reason, 
 							   UserProc* user_proc )
 {
-	bool rval;
+
+		// Remember what steps we've completed, in case we need to retry.
+	static bool did_local_notify = false;
+	static bool did_final_ad_publish = false;
+	static bool did_schedd_update = false;
 
 		// Call our parent's version of this method to handle all the
 		// common-case stuff, like writing to the local userlog,
 		// writing an output classad (if desired, etc).  
-	JICLocal::notifyJobExit( exit_status, reason, user_proc );
-
-		// Now, we've got to update the job queue.  In this case, we
-		// want to publish all the same attribute we'd otherwise send
-		// to the shadow, but instead, just stick them directly into
-		// our copy of the job classad.
-	Starter->publishPreScriptUpdateAd( job_ad );
-	user_proc->PublishUpdateAd( job_ad );
-	Starter->publishPostScriptUpdateAd( job_ad );
-
-		// Once all the attributes have been published into our copy
-		// of the job classad, we can just tell our updater object to
-		// do the rest...
-	update_t up_type;
-	switch( reason ) {
-	case JOB_NOT_CKPTED:
-		up_type = U_EVICT;
-		break;
-	case JOB_COREDUMPED:
-	case JOB_EXITED:
-		up_type = U_TERMINATE;
-		break;
-	case JOB_KILLED:
-		if( had_remove ) {
-			up_type = U_REMOVE;
-		} else if ( had_hold ) {
-			up_type = U_HOLD;
-		} else {
-			EXCEPT( "Impossible: exit reason is JOB_KILLED, but neither "
-					"had_hold or had_remove are TRUE!" );
+	if (!did_local_notify) {
+		if (!JICLocal::notifyJobExit(exit_status, reason, user_proc)) {
+			dprintf( D_ALWAYS, "JICLocal::notifyJobExit() failed - "
+					 "scheduling retry\n" );
+			retryJobCleanup();
+			return false;
 		}
-		break;
-	case JOB_MISSED_DEFERRAL_TIME:
-		up_type = U_REMOVE;
-			//
-			// Set the exit code to be the deferral exit code
-			//
-		exit_code = JOB_MISSED_DEFERRAL_TIME;
-		break;
-	default:
-		EXCEPT( "Programmer error: unknown reason (%d) in "
-				"JICLocalSchedd::notifyJobExit", reason );
-		break;
+		did_local_notify = true;
 	}
-	rval = job_updater->updateJob( up_type );
+
+	if (!did_final_ad_publish) {
+			// Prepare to update the job queue.  In this case, we want
+			// to publish all the same attribute we'd otherwise send
+			// to the shadow, but instead, just stick them directly
+			// into our copy of the job classad.
+		Starter->publishPreScriptUpdateAd( job_ad );
+		user_proc->PublishUpdateAd( job_ad );
+		Starter->publishPostScriptUpdateAd( job_ad );
+		did_final_ad_publish = true;
+	}
+
+	if (!did_schedd_update) {
+			// Once all the attributes have been published into our
+			// copy of the job classad, we can just tell our updater
+			// object to do the rest...
+		update_t up_type;
+		switch( reason ) {
+		case JOB_NOT_CKPTED:
+			up_type = U_EVICT;
+			break;
+		case JOB_COREDUMPED:
+		case JOB_EXITED:
+			up_type = U_TERMINATE;
+			break;
+		case JOB_KILLED:
+			if( had_remove ) {
+				up_type = U_REMOVE;
+			} else if ( had_hold ) {
+				up_type = U_HOLD;
+			} else {
+				EXCEPT( "Impossible: exit reason is JOB_KILLED, but "
+						"neither had_hold or had_remove are TRUE!" );
+			}
+			break;
+		case JOB_MISSED_DEFERRAL_TIME:
+			up_type = U_REMOVE;
+				//
+				// Set the exit code to be the deferral exit code
+				//
+			exit_code = JOB_MISSED_DEFERRAL_TIME;
+			break;
+		default:
+			EXCEPT( "Programmer error: unknown reason (%d) in "
+					"JICLocalSchedd::notifyJobExit", reason );
+			break;
+		}
+		if (!job_updater->updateJob(up_type)) {
+			dprintf( D_ALWAYS,
+					 "Failed to update job queue - attempting to retry.\n" );
+			retryJobCleanup();
+			return false;
+		}
+		did_schedd_update = true;
+	}
 
 		// once the job's been updated in the queue, we can also try
 		// sending email notification, if desired.
+		// This returns void, so there's no way to test for failure.
+		// Therefore, we don't bother with retry.
 	Email msg;
 	msg.sendExit( job_ad, reason );
 
-		// return the value we got from updateJob()...
-	return rval;
+		// If we got this far, we're sure we completed everything
+		// successfully, so return success.
+	return true;
 }
 
 
@@ -220,3 +253,28 @@ JICLocalSchedd::initLocalUserLog( void )
 }
 
 
+void
+JICLocalSchedd::retryJobCleanup( void )
+{
+    m_num_cleanup_retries++;
+	if (m_num_cleanup_retries > m_max_cleanup_retries) {
+		EXCEPT("Maximum number of job cleanup retry attempts (%d) reached",
+				m_max_cleanup_retries);
+	}
+	ASSERT(m_cleanup_retry_tid == -1);
+	m_cleanup_retry_tid = daemonCore->Register_Timer(m_cleanup_retry_delay, 0,
+					(TimerHandlercpp)&JICLocalSchedd::retryJobCleanupHandler,
+					"retry job cleanup", this);
+	dprintf(D_FULLDEBUG, "Will retry job cleanup in %d seconds\n",
+			 m_cleanup_retry_delay);
+}
+
+
+int
+JICLocalSchedd::retryJobCleanupHandler( void )
+{
+    m_cleanup_retry_tid = -1;
+    dprintf(D_ALWAYS, "Retrying job cleanup, calling allJobsDone()\n");
+    Starter->allJobsDone();
+    return TRUE;
+}

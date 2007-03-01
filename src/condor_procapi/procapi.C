@@ -2417,18 +2417,20 @@ ProcAPI::buildProcInfoList() {
 		for( i=0 ; i<count; i++ ) {
 			temp = new procInfo;
 
-			temp->imgsize   = ( pst[i].pst_vdsize + pst[i].pst_vtsize 
-								+ pst[i].pst_vssize )   * pagesize;
-			temp->rssize    = pst[i].pst_rssize * pagesize;
-			temp->minfault  = pst[i].pst_minorfaults;
-			temp->majfault  = pst[i].pst_majorfaults;
-			temp->user_time = pst[i].pst_utime;
-			temp->sys_time  = pst[i].pst_stime;
-			temp->age       = secsSinceEpoch() - pst[i].pst_start;
-			temp->cpuusage  = pst[i].pst_pctcpu * 100;
-			temp->pid       = pst[i].pst_pid;
-			temp->ppid      = pst[i].pst_ppid;
-			temp->next      = NULL;
+			temp->imgsize       = ( pst[i].pst_vdsize + pst[i].pst_vtsize 
+			                      + pst[i].pst_vssize )   * pagesize;
+			temp->rssize        = pst[i].pst_rssize * pagesize;
+			temp->minfault      = pst[i].pst_minorfaults;
+			temp->majfault      = pst[i].pst_majorfaults;
+			temp->user_time     = pst[i].pst_utime;
+			temp->sys_time      = pst[i].pst_stime;
+			temp->creation_time = pst[i].pst_start;
+			temp->birthday      = pst[i].pst_start;
+			temp->age           = secsSinceEpoch() - pst[i].pst_start;
+			temp->cpuusage      = pst[i].pst_pctcpu * 100;
+			temp->pid           = pst[i].pst_pid;
+			temp->ppid          = pst[i].pst_ppid;
+			temp->next          = NULL;
 			
 			// save the newly created node into the list
 			current->next = temp;
@@ -2509,6 +2511,7 @@ ProcAPI::buildProcInfoList() {
 			pi->pid = pent[i].pi_pid;
 			pi->ppid = pent[i].pi_ppid;
 			pi->creation_time = pent[i].pi_start;
+			pi->birthday = pent[i].pi_start;
 
 			pi->cpuusage = 0.0; /* XXX fixme compute it */
 			

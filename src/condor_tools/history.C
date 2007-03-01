@@ -318,18 +318,24 @@ main(int argc, char* argv[])
 	  }
 	  dbconn = getDBConnStr(quillName,dbIpAddr,dbName,queryPassword);
 	  historySnapshot = new HistorySnapshot(dbconn);
-	  printf ("\n\n-- Quill: %s : %s : %s\n", quillName, 
+	  if (!customFormat) {
+		  printf ("\n\n-- Quill: %s : %s : %s\n", quillName, 
 			  dbIpAddr, dbName);
+		}		
 	  
-	  st = historySnapshot->sendQuery(&queryhor, &queryver, longformat);
+	  st = historySnapshot->sendQuery(&queryhor, &queryver, longformat,
+	  	false, customFormat, &mask);
+
 		  //if there's a failure here and if we're not posing a query on a 
 		  //remote quill daemon, we should instead query the local file
 	  if(st == FAILURE) {
 	        printf( "-- Database at %s not reachable\n", dbIpAddr);
 		if(!remotequill) {
 		  char *tmp = param("HISTORY");
+	  if (!customFormat) {
 		  printf( "--Failing over to the history file at %s instead --\n",
 				  tmp ? tmp : "(null)" );
+	  }
 		  if(!tmp) {
 			free(tmp);
 		  }
