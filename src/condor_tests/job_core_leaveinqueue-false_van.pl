@@ -42,7 +42,7 @@ $success = sub
 	foreach my $line (@adarray)
 	{
 		print "$line\n";
-		if($line =~ /$cluster/) {
+		if($line =~ /^\s*$cluster\..*$/) {
 			print "$line\n";
 			die "job should be done but NOT left in the queue!!\n";
 		}
