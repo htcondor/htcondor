@@ -156,7 +156,8 @@ vprintf_length(const char *format, va_list args)
 		 * what is our caller going to do?  Indeed, at least some
 		 * callers ignored the case and merrily stomped over memory.
 		 */
-		EXCEPT("Unable to open null file (%s). Needed for formatting purposes.", NULL_FILE);
+		EXCEPT("Unable to open null file (%s). Needed for formatting "
+			   "purposes. errno=%d (%s)", NULL_FILE, errno, strerror(errno));
 	}
 
 #ifdef va_copy
