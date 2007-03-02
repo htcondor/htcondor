@@ -324,10 +324,10 @@ UserProc::openStdFile( std_file_type type, const char* attr,
 		///////////////////////////////////////////////////////
 
 	if( is_output ) {
-		fd = safe_open_wrapper( filename, O_WRONLY|O_CREAT|O_TRUNC, 0666 );
+		fd = safe_open_wrapper( filename, O_WRONLY|O_CREAT|O_TRUNC|O_APPEND, 0666 );
 		if( fd < 0 ) {
 				// if failed, try again without O_TRUNC
-			fd = safe_open_wrapper( filename, O_WRONLY|O_CREAT, 0666 );
+			fd = safe_open_wrapper( filename, O_WRONLY|O_CREAT|O_APPEND, 0666 );
 		}
 	} else {
 		fd = safe_open_wrapper( filename, O_RDONLY );
