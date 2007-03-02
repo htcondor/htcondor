@@ -83,6 +83,11 @@ not matching what is expected).
 to zero length, rather than deleting them.  This prevents breaking the
 link if a user log file is set up as a link.
 
+\item When starting a gridftp server to handle file transfers for gt4
+grid jobs, the \Condor{gridmanager} now properly sets the
+GLOBUS\_TCP\_PORT\_RANGE and GLOBUS\_TCP\_SOURCE\_RANGE environment
+variables if appropriate.
+
 \end{itemize}
 
 \noindent Known Bugs:
