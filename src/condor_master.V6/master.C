@@ -544,7 +544,7 @@ handle_subsys_command( int cmd, Stream* stream )
 		free( subsys );
 		return FALSE;
 	}
-	dprintf( D_COMMAND, "Handling daemon-specific command for \"%s\"\n", 
+	dprintf( D_ALWAYS, "Handling daemon-specific command for \"%s\"\n", 
 			 subsys );
 	free( subsys );
 
