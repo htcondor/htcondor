@@ -609,11 +609,11 @@ bool GridftpServer::SubmitServerJob()
 		// outgoing LOWPORT/HIGHPORT settings, pass them through
 		// to globus via the appropriate environment variables.
 	if ( get_port_range( FALSE, &low_port, &high_port ) == TRUE ) {
-		buff.sprintf( "%d.%d", low_port, high_port );
+		buff.sprintf( "%d,%d", low_port, high_port );
 		env_obj.SetEnv( "GLOBUS_TCP_PORT_RANGE", buff.Value() );
 	}
 	if ( get_port_range( TRUE, &low_port, &high_port ) == TRUE ) {
-		buff.sprintf( "%d.%d", low_port, high_port );
+		buff.sprintf( "%d,%d", low_port, high_port );
 		env_obj.SetEnv( "GLOBUS_TCP_SOURCE_RANGE", buff.Value() );
 	}
 
