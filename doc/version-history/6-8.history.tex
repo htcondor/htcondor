@@ -78,6 +78,10 @@ Changes in 6.7.20 broke this compatibility.
 of detecting potentially incorrect submit events (those with Condor IDs
 not matching what is expected).
 
+% PR 814
+\item \Condor{dagman} now truncates existing node job user log files
+to zero length, rather than deleting them.  This prevents breaking the
+link if a user log file is set up as a link.
 
 \end{itemize}
 
