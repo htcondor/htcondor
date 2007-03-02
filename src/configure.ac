@@ -939,10 +939,6 @@ C_CXX_OPTION(gcc, -Wendif-labels, comp_option_Wendif_labels, [])
 # Warn on arithmatic with void*, cause you don't know the size...
 C_CXX_OPTION(gcc, -Wpointer-arith, comp_option_Wpointer_arith, [])
 
-# Warn if a prototype causes a type conversion thqt is different from what would
-# happen to the same argument in the absence of a prototype.
-C_CXX_OPTION(gcc, -Wconversion, comp_option_Wconversion, [])
-
 # Warn whenever a type qualifier (like const) is cast away.
 C_CXX_OPTION(gcc, -Wcast-qual, comp_option_Wcast_qual, [])
 
