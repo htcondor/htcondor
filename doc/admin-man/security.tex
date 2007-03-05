@@ -55,7 +55,7 @@ including the stronger  authentication methods Kerberos and GSI.
 \item[Authorization] Authorization specifies who is allowed
 to do what.
 Some users are allowed to submit jobs,
-while other users are allowed administrative priveleges over Condor itself.
+while other users are allowed administrative privileges over Condor itself.
 Condor provides authorization on either a per-user or on
 a per-machine basis.
 
@@ -866,7 +866,47 @@ $(HOME)/.globus
 \subsubsection{\label{sec:SSL-Authentication}SSL Authentication}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{authentication!SSL}
-\Todo
+SSL authentication is similar to GSI authentication,
+but without GSI's delegation (proxy) capabilities.
+SSL utilizes X.509 certificates.
+
+While SSL requires that a server
+(the daemon side of a communication within Condor)
+provides its certificate thereby
+authenticating to a client,
+Condor is more interested in the reverse.
+Condor servers need to verify the identity of the client.
+Therefore, all SSL authentication is mutual authentication
+in Condor.
+
+The names and locations of certificates for clients,
+servers, and their trusted CAs are defined by
+configuration variables for Condor daemons.
+Environment variables provide definitions,
+where the authenticating entity is the user of
+a Condor daemon or tool.
+The naming of these configuration variables identifies
+either \MacroNI{CLIENT} or \MacroNI{SERVER}.
+The \MacroNI{CLIENT} initiates a communication.
+
+The configuration variable \Macro{SSL\_SERVER\_CERTFILE}
+or \Macro{SSL\_CLIENT\_CERTFILE} defines
+the path and file name of the authenticating
+entity's public certificate file.
+The path and file name of the private key file 
+is defined by \Macro{SSL\_SERVER\_KEYFILE}
+or \Macro{SSL\_CLIENT\_KEYFILE}.
+
+The configuration variable \Macro{SSL\_SERVER\_CAFILE}
+or \Macro{SSL\_CLIENT\_CAFILE} defines the path and file name
+of a single trusted CA's certificate.
+Alternatively, with  more than one trusted CA,
+the configuration variable \Macro{SSL\_SERVER\_CADIR}
+or \Macro{SSL\_CLIENT\_CADIR} defines a directory containing 
+one or more trusted CA certificates.
+The file name for 
+the desired CA's certificate is determined utilizing
+the certificate provided in the authentication.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Kerberos-Authentication}Kerberos Authentication}
@@ -1115,6 +1155,10 @@ for testing purposes only.
 Condor's unified map file allows the mappings
 from authenticated names to a Condor canonical user name
 to be specified as a single list within a single file. 
+The location of the unified map file is defined 
+by the configuration variable
+\Macro{CERTIFICATE\_MAPFILE}; it specifies the
+path and file name of the unified map file.
 Each mapping is on its own line of the unified map file.
 Each line contains 3 fields, separated by white space 
 (space or tab characters):

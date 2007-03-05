@@ -5666,6 +5666,71 @@ for a change from the default value.
 \label{param:SecPasswordFile} For Unix machines, the path and file name
 of  the file containing the pool password for password authentication.
 
+\item[\Macro{SSL\_SERVER\_CAFILE}]
+\label{param:SSLServerCAFile}  The path and file name of
+the file containing the single trusted CA's certificate
+for the server side of a communication authenticating 
+with SSL.
+
+\item[\Macro{SSL\_SERVER\_CADIR}]
+\label{param:SSLServerCADir}  
+The path to a directory that may contain the 
+certificates for multiple trusted CAs 
+for the server side of a communication authenticating 
+with SSL.
+When defined, the authenticating entity's certificate 
+is utilized to identify the trusted CA's certificate
+within the directory.
+
+\item[\Macro{SSL\_SERVER\_CERTFILE}]
+\label{param:SSLServerCertfile}  
+The path and file name of
+the file containing the public certificate
+for the server side of a communication authenticating
+with SSL.
+
+\item[\Macro{SSL\_SERVER\_KEYFILE}]
+\label{param:SSLServerKeyfile}
+The path and file name of
+the file containing the private key
+for the server side of a communication authenticating
+with SSL.
+
+\item[\Macro{SSL\_CLIENT\_CAFILE}]
+\label{param:SSLClientCAFile} 
+The path and file name of
+the file containing the single trusted CA's certificate
+for the client side of a communication authenticating 
+with SSL.
+
+\item[\Macro{SSL\_CLIENT\_CADIR}]
+\label{param:SSLClientCADir} 
+The path to a directory that may contain the 
+certificates for multiple trusted CAs 
+for the client side of a communication authenticating 
+with SSL.
+When defined, the authenticating entity's certificate 
+is utilized to identify the trusted CA's certificate
+within the directory.
+
+\item[\Macro{SSL\_CLIENT\_CERTFILE}]
+\label{param:SSLClientCertfile}
+The path and file name of
+the file containing the public certificate
+for the client side of a communication authenticating
+with SSL.
+
+\item[\Macro{SSL\_CLIENT\_KEYFILE}]
+\label{param:SSLClientKeyfile}
+The path and file name of
+the file containing the private key
+for the client side of a communication authenticating
+with SSL.
+
+\item[\Macro{CERTIFICATE\_MAPFILE}]
+\label{param:CertificateMapfile}
+A path and file name of the unified map file.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
