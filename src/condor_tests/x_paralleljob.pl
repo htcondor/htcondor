@@ -52,15 +52,25 @@ if( $nodenum == 0 ) {
 	print "Node <$nodenum>\n"; 
 	print "socket is $newsocketname\n";
 	chdir("$mypid");
+	my $count = 0;
+	my $client;
 	while( !(-S "$newsocketname")) {
 		sleep 6;
 		print "waiting for socket\n";
 	}
-	print "Ready to write my message<< node $nodenum>>\n";
-	my $client = IO::Socket::UNIX->new(Peer => "$newsocketname",
+	while($count < 10){
+		$client = IO::Socket::UNIX->new(Peer => "$newsocketname",
 								Type  => SOCK_DGRAM,
-								Timeout => 10)
-	or die $@;
+								Timeout => 10);
+		if($client) {
+			print "Ready to write my message<< node $nodenum>>\n";
+			last;
+		}
+		sleep 1;
+	}
+	if($count == 10) {
+		die "Could never open handle to server\n";
+	}
 
 	$client->send("hello world");
 }
