@@ -236,10 +236,16 @@ MultiLogFiles::TruncateLogs(StringList &logFileNames)
         if ( access( filename, F_OK) == 0 ) {
 		    dprintf( D_ALWAYS, "MultiLogFiles: truncating older "
 						"version of %s\n", filename);
-		    if (truncate(filename, 0) == -1) {
+			int fd = open( filename, O_WRONLY | O_TRUNC );
+			if (fd == -1) {
 		        dprintf( D_ALWAYS, "MultiLogFiles error: can't "
-							"remove %s\n", filename );
-		    }
+							"truncate %s\n", filename );
+		    } else {
+				if (close( fd ) == -1) {
+		        	dprintf( D_ALWAYS, "MultiLogFiles error: can't "
+								"close %s\n", filename );
+				}
+			}
 		}
 	}
 }
