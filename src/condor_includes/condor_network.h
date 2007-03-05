@@ -49,7 +49,7 @@ extern "C" {
 
 #if defined( __STDC__) || defined(__cplusplus)
 int do_connect ( const char *host, const char *service, u_short port );
-int tcp_accept_timeout( int ConnectionSock, struct sockaddr *sin, 
+int tcp_accept_timeout( int ConnectionSock, struct sockaddr *sinful, 
 						int *len, int timeout );
 #else
 int do_connect ();
