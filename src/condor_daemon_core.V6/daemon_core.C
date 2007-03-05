@@ -3430,8 +3430,17 @@ int DaemonCore::HandleReq(Stream *insock)
 				} else {
 					// the session->id() and the_sid strings should be identical.
 
-					dprintf (D_SECURITY, "DC_AUTHENTICATE: resuming session id %s given to %s:\n",
-								session->id(), sin_to_string(session->addr()));
+					if (DebugFlags & D_SECURITY) {
+						char *return_addr = NULL;
+						if(session->policy()) {
+							session->policy()->LookupString(ATTR_SEC_SERVER_COMMAND_SOCK,&return_addr);
+						}
+						dprintf (D_SECURITY, "DC_AUTHENTICATE: resuming session id %s%s%s:\n",
+						         session->id(),
+						         return_addr ? " with return address " : "",
+						         return_addr ? return_addr : "");
+						free(return_addr);
+					}
 				}
 
 				if (session->key()) {
@@ -3793,18 +3802,29 @@ int DaemonCore::HandleReq(Stream *insock)
 					char *dur = NULL;
 					the_policy->LookupString(ATTR_SEC_SESSION_DURATION, &dur);
 
+					char *return_addr = NULL;
+					the_policy->LookupString(ATTR_SEC_SERVER_COMMAND_SOCK, &return_addr);
+
 					int expiration_time = time(0) + atoi(dur);
 
 					// add the key to the cache
-					KeyCacheEntry tmp_key(the_sid, sock->endpoint(), the_key, the_policy, expiration_time);
+
+					// This is a session for incoming connections, so
+					// do not pass in sock->endpoint() as addr,
+					// because then this key would get confused for an
+					// outgoing session to a daemon with that IP and
+					// port as its command socket.
+					KeyCacheEntry tmp_key(the_sid, NULL, the_key, the_policy, expiration_time);
 					sec_man->session_cache->insert(tmp_key);
-					dprintf (D_SECURITY, "DC_AUTHENTICATE: added session id %s to cache for %s seconds!\n", the_sid, dur);
+					dprintf (D_SECURITY, "DC_AUTHENTICATE: added incoming session id %s to cache for %s seconds (return address is %s).\n", the_sid, dur, return_addr ? return_addr : "unknown");
 					if (DebugFlags & D_FULLDEBUG) {
 						the_policy->dPrint(D_SECURITY);
 					}
 
 					free( dur );
 					dur = NULL;
+					free( return_addr );
+					return_addr = NULL;
 				}
 			}
 		}
