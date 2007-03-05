@@ -88,6 +88,13 @@ grid jobs, the \Condor{gridmanager} now properly sets the
 GLOBUS\_TCP\_PORT\_RANGE and GLOBUS\_TCP\_SOURCE\_RANGE environment
 variables if appropriate.
 
+\item Fixed a bug that could cause a security session to get deleted
+by the server (e.g. \Condor{schedd}) before the client
+(e.g. \Condor{shadow}) was done using it.  The result of this problem
+was communication failure the next time the client tried to connect to
+the server.  In some cases, this caused jobs to be requeued (to be run
+again), because the final update of to the job queue failed.
+
 \end{itemize}
 
 \noindent Known Bugs:
