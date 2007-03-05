@@ -63,6 +63,9 @@ if($doinstall != 0) {
 }
 system("mkdir $prefix/postgres-data");
 
+system("date");
+print "Build of postgres done......\n";
+
 print "Create db\n";
 $initdb = system("$prefix/bin/initdb -D $prefix/postgres-data") ;
 if($initdb != 0) {
