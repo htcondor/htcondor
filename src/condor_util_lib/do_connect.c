@@ -40,7 +40,7 @@ unsigned short find_port_num( const char *service_name,
 char *mk_config_name( const char *service_name );
 char *param( const char *name );
 
-int tcp_connect_timeout( int sockfd, struct sockaddr *sin, int len,
+int tcp_connect_timeout( int sockfd, struct sockaddr *sinful, int len,
 						int timeout );
 int do_connect_with_timeout( const char* host, const char* service, 
 							 u_short port, int timeout );
@@ -57,7 +57,7 @@ int
 do_connect_with_timeout( const char* host, const char* service, 
 						 u_short port, int timeout ) 
 {
-	struct sockaddr_in	sin;
+	struct sockaddr_in	sinful;
 	struct hostent		*hostentp;
 	int					status;
 	int					fd;
@@ -77,7 +77,7 @@ do_connect_with_timeout( const char* host, const char* service,
 	_condor_local_bind( TRUE, fd );
 
     if (host[0]=='<'){ /* dhaval */
-    	string_to_sin(host,&sin);
+    	string_to_sin(host,&sinful);
     } else {
 		hostentp = condor_gethostbyname( host );
 		if( hostentp == NULL ) {
@@ -90,17 +90,17 @@ do_connect_with_timeout( const char* host, const char* service,
 			return( -1 );
 		}
 		port = find_port_num( service, port );
-		memset( (char *)&sin,0,sizeof(sin) );
-		memcpy( (char *)&sin.sin_addr, hostentp->h_addr, (unsigned)hostentp->h_length );
-		sin.sin_family = hostentp->h_addrtype;
-		sin.sin_port = htons(port);
+		memset( (char *)&sinful,0,sizeof(sinful) );
+		memcpy( (char *)&sinful.sin_addr, hostentp->h_addr, (unsigned)hostentp->h_length );
+		sinful.sin_family = hostentp->h_addrtype;
+		sinful.sin_port = htons(port);
 	}
 
 	if (timeout == 0) {
-		status = connect(fd,(struct sockaddr *)&sin,sizeof(sin));
+		status = connect(fd,(struct sockaddr *)&sinful,sizeof(sinful));
 	} else {
-		status = tcp_connect_timeout(fd, (struct sockaddr*)&sin, 
-									 sizeof(sin), timeout);
+		status = tcp_connect_timeout(fd, (struct sockaddr*)&sinful, 
+									 sizeof(sinful), timeout);
 		if (status == fd) {
 			status = 0;
 		}
@@ -120,7 +120,7 @@ int
 udp_connect( char* host, u_short port )
 {
 	int		sock;
-	struct sockaddr_in	sin;
+	struct sockaddr_in	sinful;
 	struct hostent		*hostentp;
 
 	hostentp = condor_gethostbyname( host );
@@ -142,12 +142,12 @@ udp_connect( char* host, u_short port )
 		/* TRUE means this is an outgoing connection */
 	_condor_local_bind( TRUE, sock );
 
-	memset( (char *)&sin,0,sizeof(sin) );
-	memcpy( (char *)&sin.sin_addr, hostentp->h_addr, (unsigned)hostentp->h_length );
-	sin.sin_family = hostentp->h_addrtype;
-	sin.sin_port = htons( (u_short)port );
+	memset( (char *)&sinful,0,sizeof(sinful) );
+	memcpy( (char *)&sinful.sin_addr, hostentp->h_addr, (unsigned)hostentp->h_length );
+	sinful.sin_family = hostentp->h_addrtype;
+	sinful.sin_port = htons( (u_short)port );
 
-	if( connect(sock,(struct sockaddr *)&sin,sizeof(sin)) < 0 ) {
+	if( connect(sock,(struct sockaddr *)&sinful,sizeof(sinful)) < 0 ) {
 		perror( "connect" );
 		exit( 1 );
 	}
@@ -239,7 +239,7 @@ mk_config_name( const char *service_name )
                                  sockfd itself if connect succeeds
 */
 
-int tcp_connect_timeout( int sockfd, struct sockaddr *sin, int len,
+int tcp_connect_timeout( int sockfd, struct sockaddr *sinful, int len,
 						int timeout ) 
 {
 	int 			on=1, off=0;
@@ -261,7 +261,7 @@ int tcp_connect_timeout( int sockfd, struct sockaddr *sin, int len,
 	}
 #endif
 
-	if( connect(sockfd, sin,len) < 0 ) {
+	if( connect(sockfd, sinful,len) < 0 ) {
 		tmp_errno = errno;
 		switch( errno ) {
 		    case EINPROGRESS:
@@ -323,7 +323,7 @@ int tcp_connect_timeout( int sockfd, struct sockaddr *sin, int len,
  NOT TESTED.  --raghu 5/23
 */
 
-int tcp_accept_timeout(int ConnectionSock, struct sockaddr *sin, int *len,
+int tcp_accept_timeout(int ConnectionSock, struct sockaddr *sinful, int *len,
                        int timeout) 
 {
 	int             count;
@@ -361,7 +361,7 @@ int tcp_accept_timeout(int ConnectionSock, struct sockaddr *sin, int *len,
     if( count == 0 ) {
 		return -2;
     } else if( FD_ISSET(ConnectionSock,&readfds) ) {
-		newsock =  accept( ConnectionSock, (struct sockaddr *)sin, &slt_len);
+		newsock =  accept( ConnectionSock, (struct sockaddr *)sinful, &slt_len);
 		if ( newsock > -1 ) {
 			int on = 1;
 			setsockopt( newsock, SOL_SOCKET, SO_KEEPALIVE, (char*)&on,
@@ -369,8 +369,7 @@ int tcp_accept_timeout(int ConnectionSock, struct sockaddr *sin, int *len,
 		}
 		return (newsock);
     } else {
-		EXCEPT( "select: unknown connection, readfds = 0x%x, count = %d",
-			   readfds, count );
+		EXCEPT( "select: unknown connection, count = %d", count );
     }
    
     return -1; 
