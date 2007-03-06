@@ -215,6 +215,7 @@ match_rec::match_rec( char* claim_id, char* p, PROC_ID* job_id,
 	sent_alive_interval = false;
 	allocated = false;
 	scheduled = false;
+	needs_release_claim = false;
 }
 
 
@@ -5180,6 +5181,7 @@ void
 Scheduler::vacate_service(int, Stream *sock)
 {
 	char	*claim_id = NULL;
+	match_rec *mrec;
 
 	dprintf( D_ALWAYS, "Got VACATE_SERVICE from %s\n", 
 			 sin_to_string(((Sock*)sock)->endpoint()) );
@@ -5188,10 +5190,19 @@ Scheduler::vacate_service(int, Stream *sock)
 		dprintf (D_ALWAYS, "Failed to get ClaimId\n");
 		return;
 	}
-	if( DelMrec(claim_id) < 0 ) {
+	if( matches->lookup(claim_id, mrec) != 0 ) {
 			// We couldn't find this match in our table, perhaps it's
 			// from a dedicated resource.
 		dedicated_scheduler.DelMrec( claim_id );
+	}
+	else {
+			// The startd has sent us VACATE_SERVICE
+			// (a.k.a. RELEASE_CLAIM) because it has destroyed the
+			// claim.  There is therefore no need for us to send
+			// RELEASE_CLAIM to the startd.
+		mrec->needs_release_claim = false;
+
+		DelMrec( mrec );
 	}
 	FREE (claim_id);
 	dprintf (D_PROTOCOL, "## 7(*)  Completed vacate_service\n");
@@ -5471,6 +5482,7 @@ Scheduler::startdContactSockHandler( Stream *sock )
 	dprintf ( D_FULLDEBUG, "Got mrec data pointer %p\n", mrec );
 
 	mrec->setStatus( M_CLAIMED ); // we assume things will work out.
+	mrec->needs_release_claim = true;
 
 	// Now, we set the timeout on the socket to 1 second.  Since we 
 	// were called by as a Register_Socket callback, this should not 
@@ -5499,6 +5511,7 @@ Scheduler::startdContactSockHandler( Stream *sock )
 		}
 	} else if( reply == NOT_OK ) {
 		dprintf( D_PROTOCOL, "(Request was NOT accepted)\n" );
+		mrec->needs_release_claim = false;
 		BAILOUT;
 	} else {
 		dprintf( D_ALWAYS, "Unknown reply from startd.\n");
@@ -6068,7 +6081,6 @@ Scheduler::StartJobs()
 					"match (%s) out of jobs (cluster id %d); relinquishing\n",
 					rec->id, id.cluster);
 			Relinquish(rec);
-			DelMrec(rec);
 			continue;
 		}
 
@@ -6088,7 +6100,6 @@ Scheduler::StartJobs()
 			dprintf(D_ALWAYS,"Failed to start job %s; relinquishing\n",
 					rec->id);
 			Relinquish(rec);
-			DelMrec(rec);
 			mark_job_stopped( &id );
 
 					/* We want to send some email to the administrator
@@ -8901,7 +8912,6 @@ Scheduler::child_exit(int pid, int status)
 			case JOB_NOT_STARTED:
 				if( !srec->removed && srec->match ) {
 					Relinquish(srec->match);
-					DelMrec(srec->match);
 				}
 				break;
 			case JOB_SHADOW_USAGE:
@@ -10540,7 +10550,9 @@ Scheduler::DelMrec(char* id)
 	}
 
 	// release the claim on the startd
-	send_vacate(rec, RELEASE_CLAIM);
+	if( rec->needs_release_claim) {
+		send_vacate(rec, RELEASE_CLAIM);
+	}
 
 	dprintf( D_ALWAYS, "Match record (%s, %d, %d) deleted\n",
 			 rec->peer, rec->cluster, rec->proc ); 
@@ -10598,40 +10610,18 @@ Scheduler::FindSrecByProcID(PROC_ID proc)
 void
 Scheduler::Relinquish(match_rec* mrec)
 {
-	// SC2000
-	//ReliSock	*sock;
-	SafeSock	*sock;
-	int				flag = FALSE;
-
 	if (!mrec) {
 		dprintf(D_ALWAYS, "Scheduler::Relinquish - mrec is NULL, can't relinquish\n");
 		return;
 	}
 
-	// inform the startd
-
-	DCStartd d( mrec->peer );
-	sock = (SafeSock*)d.startCommand(RELINQUISH_SERVICE, Stream::safe_sock, STARTD_CONTACT_TIMEOUT);
-
-	if(!sock) {
-		dprintf(D_ALWAYS, "Can't connect to startd %s\n", mrec->peer);
-	}
-	else if(!sock->put(mrec->id) || !sock->end_of_message())
-	{
-		dprintf(D_ALWAYS, "Can't relinquish startd. Match record is:\n");
-		dprintf(D_ALWAYS, "%s\t%s\n", mrec->id,	mrec->peer);
-	}
-	else
-	{
-		dprintf(D_PROTOCOL,"## 7. Relinquished startd. Match record is:\n");
-		dprintf(D_PROTOCOL, "\t%s\t%s\n", mrec->id,	mrec->peer);
-		flag = TRUE;
-	}
-	delete sock;
 
 // SC2000 - ifdef'd to 0 because there is no accountant, so just skip over
 // all this stuff for now. Todd / Erik Nov 22 2000
 #if 0
+	ReliSock	*sock;
+	int				flag = FALSE;
+
 	// inform the accountant
 	if(!AccountantName)
 	{
@@ -10675,18 +10665,10 @@ Scheduler::Relinquish(match_rec* mrec)
 		}
 		delete sock;
 	}
+
 #endif 
 
-	if(flag)
-	{
-		dprintf(D_PROTOCOL, "## 7. Successfully relinquished match:\n");
-		dprintf(D_PROTOCOL, "\t%s\t%s\n", mrec->id,	mrec->peer);
-	}
-	else
-	{
-		dprintf(D_ALWAYS, "Couldn't relinquish match:\n");
-		dprintf(D_ALWAYS, "%s\t%s\n", mrec->id,	mrec->peer);
-	}
+	DelMrec(mrec);
 }
 
 match_rec *
@@ -10881,7 +10863,6 @@ Scheduler::HadException( match_rec* mrec )
 				 "Match for cluster %d has had %d shadow exceptions, relinquishing.\n",
 				 mrec->cluster, mrec->num_exceptions );
 		Relinquish(mrec);
-		DelMrec(mrec);
 	}
 }
 

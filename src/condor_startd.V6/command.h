@@ -95,7 +95,7 @@ int command_classad_handler( Service*, int, Stream* );
 int match_info( Resource*, char* );
 
 // Schedd Agent requests a claim
-int request_claim( Resource*, char*, Stream* ); 
+int request_claim( Resource*, Claim *, char*, Stream* ); 
 
 // Accept claim from schedd agent
 int	accept_request_claim( Resource* ); 

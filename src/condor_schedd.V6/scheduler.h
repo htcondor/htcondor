@@ -121,6 +121,7 @@ class match_rec
 	bool			sent_alive_interval;
 	bool			allocated;	// For use by the DedicatedScheduler
 	bool			scheduled;	// For use by the DedicatedScheduler
+	bool			needs_release_claim;
 
 		// Set the mrec status to the given value (also updates
 		// entered_current_status)

@@ -250,11 +250,35 @@ command_request_claim( Service*, int cmd, Stream* stream )
 	State s = rip->state();
 	if( s == preempting_state ) {
 		rip->log_ignore( REQUEST_CLAIM, s );
+		free( id );
 		refuse( stream );
-		rval = FALSE;
-	} else {
-		rval = request_claim( rip, id, stream );
+		return FALSE;
 	}
+
+	Claim *claim = NULL;
+	if( rip->state() == claimed_state ) {
+		if( rip->r_pre_pre ) {
+			claim = rip->r_pre_pre;
+		}
+		else {
+			claim = rip->r_pre;
+		}
+	} else {
+		claim = rip->r_cur;
+	}
+	ASSERT( claim );
+	if( !claim->idMatches(id) ) {
+			// This request doesn't match the right claim ID.  It must
+			// match one of the other claim IDs associated with this
+			// resource (e.g. because the negotiator matched the job
+			// against a stale machine ClassAd).
+		rip->log_ignore( REQUEST_CLAIM, s );
+		free( id );
+		refuse( stream );
+		return FALSE;
+	}
+
+	rval = request_claim( rip, claim, id, stream );
 	free( id );
 	return rval;
 }
@@ -759,7 +783,7 @@ abort_claim( Resource* rip )
 
 
 int
-request_claim( Resource* rip, char* id, Stream* stream )
+request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 {
 		// Formerly known as "reqservice"
 
@@ -784,16 +808,7 @@ request_claim( Resource* rip, char* id, Stream* stream )
 		   state anymore (and it's the current claim at that point).
 		   -Derek Wright 3/11/99 
 		*/
-	if( rip->state() == claimed_state ) {
-		if(rip->r_pre_pre) {
-			rip->r_pre_pre->cancel_match_timer();
-		}
-		else {
-			rip->r_pre->cancel_match_timer();
-		}
-	} else {
-		rip->r_cur->cancel_match_timer();
-	}
+	claim->cancel_match_timer();
 
 		// Get the classad of the request.
 	if( !req_classad->initFromStream(*stream) ) {
@@ -815,19 +830,8 @@ request_claim( Resource* rip, char* id, Stream* stream )
 			rip->dprintf( D_FULLDEBUG, "Alive interval = %d\n", interval );
 		}
 			// Now, store them into r_cur or r_pre, as appropiate
-		if ( rip->state() == claimed_state ) {
-			if(rip->r_pre_pre) {
-				rip->r_pre_pre->setaliveint( interval );
-				rip->r_pre_pre->client()->setaddr( client_addr );
-			}
-			else {
-				rip->r_pre->setaliveint( interval );
-				rip->r_pre->client()->setaddr( client_addr );
-			}
-		} else {
-			rip->r_cur->setaliveint( interval );
-			rip->r_cur->client()->setaddr( client_addr );
-		}
+		claim->setaliveint( interval );
+		claim->client()->setaddr( client_addr );
 		free( client_addr );
 		client_addr = NULL;
 	} else {
