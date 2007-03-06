@@ -32,23 +32,39 @@ $success = sub
 	print "Good, job should be done but NOT left in the queue!!!\n";
 	my @adarray;
 	my $status = 1;
+	my $delay = 1;
+	my $backoffmax = 17; #(1 + 2 + 4 + 8 + 16 = 31 seconds max)
+	my $foundit = 0;
 	my $cmd = "condor_q $cluster";
-	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
-	if(!$status)
-	{
-		print "Test failure due to Condor Tool Failure<$cmd>\n";
-		exit(1)
-	}
-	foreach my $line (@adarray)
-	{
-		print "$line\n";
-		if($line =~ /^\s*$cluster\..*$/) {
+	while( $delay < $backoffmax) {
+		$foundit = 0;
+		$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+		if(!$status)
+		{
+			print "Test failure due to Condor Tool Failure<$cmd>\n";
+			exit(1)
+		}
+		foreach my $line (@adarray)
+		{
 			print "$line\n";
-			die "job should be done but NOT left in the queue!!\n";
+			if($line =~ /^\s*$cluster\..*$/) {
+				print "$line\n";
+				print "job should be done but NOT left in the queue!!\n";
+				$foundit = 1;
+			}
+		}
+		if($foundit == 1) {
+			sleep $delay;
+			$delay = 2 * $delay;
+			next;
+		} else {
+			print "Job not in queue as expected\n";
+			exit(0);
 		}
 	}
-	print "Job not in queue as exxpected\n";
-	exit(0);
+	if($foundit == 1) {
+		die "Job still in the queue after multiple looks\n";
+	}
 };
 
 $submitted = sub
