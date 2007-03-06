@@ -409,6 +409,14 @@ stdin_pipe_handler(Service*, int pipe) {
 					// INITIALIZE_FROM_FILE (since our worker reads from
 					// the file on every use.
 				gahp_output_return_success();
+			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_INITIALIZE_FROM_FILE) == 0) {
+					// Forward this request to both workers, since both
+					// need to know which proxy to use.
+				flush_request (0,
+							   command);
+				flush_request (1,
+							   command);
+				gahp_output_return_success();
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_JOB_STAGE_IN) == 0) {
 				flush_request (1, 	// worker for stage in requests
 							   command);
