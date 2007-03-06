@@ -211,12 +211,17 @@ Dag::InitializeDagFiles( bool deleteOldLogs )
 		// have DAGMan keep its own log independant of
 		// Condor -- but Miron hates that idea...
 
+		// One note about this (see PR 813) -- adding DAGMan's Condor ID
+		// to the submit events could cause problems in recovery mode --
+		// DAGMan would have to know the Condor ID of the DAGMan that
+		// did the run that is being recovered...  wenger 2007-03-02
+
 	if( deleteOldLogs ) {
 	debug_printf( DEBUG_VERBOSE,
-				  "Deleting any older versions of log files...\n" );
+				  "Truncating any older versions of log files...\n" );
 
-	MultiLogFiles::DeleteLogs( _condorLogFiles );
-	MultiLogFiles::DeleteLogs( _storkLogFiles );
+	MultiLogFiles::TruncateLogs( _condorLogFiles );
+	MultiLogFiles::TruncateLogs( _storkLogFiles );
 
 	if ( _condorLogName != NULL ) touch (_condorLogName);  //<-- DAP
 	}

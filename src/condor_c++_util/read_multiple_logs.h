@@ -90,9 +90,10 @@ public:
 	static int getQueueCountFromSubmitFile(const MyString &strSubFilename,
 	            const MyString &directory, MyString &errorMsg);
 
-	    /** Deletes the given log files.
+	    /** Truncates the given log files to zero length (as opposed to
+			deleting them, which breaks things if the log file is a link).
 		 */
-	static void DeleteLogs(StringList &logFileNames);
+	static void TruncateLogs(StringList &logFileNames);
 
 		/** Determines whether the given set of log files have any
 			members that are on NFS.

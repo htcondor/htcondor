@@ -7661,11 +7661,11 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		dprintf ( D_FAILURE|D_ALWAYS, "Open of %s failed, errno %d\n", input, errno );
 		cannot_open_files = true;
 	}
-	if ((inouterr[1] = safe_open_wrapper(output, O_WRONLY | O_CREAT | O_TRUNC, S_IREAD|S_IWRITE)) < 0) {
+	if ((inouterr[1] = safe_open_wrapper(output, O_WRONLY | O_CREAT | O_TRUNC | O_APPEND, S_IREAD|S_IWRITE)) < 0) {
 		dprintf ( D_FAILURE|D_ALWAYS, "Open of %s failed, errno %d\n", output, errno );
 		cannot_open_files = true;
 	}
-	if ((inouterr[2] = safe_open_wrapper(error, O_WRONLY | O_CREAT | O_TRUNC, S_IREAD|S_IWRITE)) < 0) {
+	if ((inouterr[2] = safe_open_wrapper(error, O_WRONLY | O_CREAT | O_TRUNC | O_APPEND, S_IREAD|S_IWRITE)) < 0) {
 		dprintf ( D_FAILURE|D_ALWAYS, "Open of %s failed, errno %d\n", error, errno );
 		cannot_open_files = true;
 	}

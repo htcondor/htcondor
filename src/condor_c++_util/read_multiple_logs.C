@@ -228,18 +228,24 @@ ReadMultipleUserLogs::getInitializedLogCount() const
 ///////////////////////////////////////////////////////////////////////////////
 
 void
-MultiLogFiles::DeleteLogs(StringList &logFileNames)
+MultiLogFiles::TruncateLogs(StringList &logFileNames)
 {
     logFileNames.rewind();
 	char *filename;
 	while ( (filename = logFileNames.next()) ) {
         if ( access( filename, F_OK) == 0 ) {
-		    dprintf( D_ALWAYS, "MultiLogFiles: deleting older "
+		    dprintf( D_ALWAYS, "MultiLogFiles: truncating older "
 						"version of %s\n", filename);
-		    if (remove (filename) == -1) {
+			int fd = safe_open_no_create( filename, O_WRONLY | O_TRUNC );
+			if (fd == -1) {
 		        dprintf( D_ALWAYS, "MultiLogFiles error: can't "
-							"remove %s\n", filename );
-		    }
+							"truncate %s\n", filename );
+		    } else {
+				if (close( fd ) == -1) {
+		        	dprintf( D_ALWAYS, "MultiLogFiles error: can't "
+								"close %s\n", filename );
+				}
+			}
 		}
 	}
 }
