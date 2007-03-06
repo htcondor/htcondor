@@ -1192,6 +1192,25 @@ map file may match.
 Lookups are therefore defined to use the first mapping that
 matches.
 
+The default map file contains a mapping that matches for
+each authentication method that Condor implements.
+The unusual string for the GSI authentication
+entry instructs Condor to use GSI-specific way of locating
+the needed GSI map file,
+as shown in 
+section~\ref{sec:GSI-Authentication}.
+The default map file:
+\begin{verbatim}
+FS (.*) \1
+FS_REMOTE (.*) \1
+GSI (.*) GSS_ASSIST_GRIDMAP
+SSL (.*) \1
+KERBEROS (.*) \1
+NTSSPI (.*) \1
+CLAIMTOBE (.*) \1
+PASSWORD (.*) \1
+\end{verbatim}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Security-Encryption}Encryption}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
