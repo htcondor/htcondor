@@ -24,6 +24,9 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 
+int copy_file(const char *old_filename, const char *new_filename);
+int hardlink_or_copy_file(const char *old_filename, const char *new_filename);
+
 int
 copy_file(const char *old_filename, const char *new_filename)
 {
