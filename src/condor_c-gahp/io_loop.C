@@ -401,8 +401,10 @@ stdin_pipe_handler(Service*, int pipe) {
 					GAHP_COMMAND_RESULTS,
 					GAHP_COMMAND_QUIT,
 					GAHP_COMMAND_VERSION,
-					GAHP_COMMAND_COMMANDS};
-				gahp_output_return (commands, 15);
+					GAHP_COMMAND_COMMANDS,
+					GAHP_COMMAND_INITIALIZE_FROM_FILE,
+					GAHP_COMMAND_REFRESH_PROXY_FROM_FILE};
+				gahp_output_return (commands, 20);
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_REFRESH_PROXY_FROM_FILE) == 0) {
 					// For now, just return success. This will work if
 					// the file is the same as that given to
