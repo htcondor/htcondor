@@ -97,6 +97,10 @@ communication failure the next time the client tried to connect to
 the server.  In some cases, this caused jobs to be requeued to be run
 again, because the final update of the job queue failed.
 
+\item Fixed a bug in the \Condor{c-gahp} that caused it to not use the 
+user's credential for authentication with the remote schedd on some 
+connections.
+
 \end{itemize}
 
 \noindent Known Bugs:
