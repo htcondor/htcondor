@@ -236,7 +236,7 @@ MultiLogFiles::TruncateLogs(StringList &logFileNames)
         if ( access( filename, F_OK) == 0 ) {
 		    dprintf( D_ALWAYS, "MultiLogFiles: truncating older "
 						"version of %s\n", filename);
-			int fd = open( filename, O_WRONLY | O_TRUNC );
+			int fd = safe_open_no_create( filename, O_WRONLY | O_TRUNC );
 			if (fd == -1) {
 		        dprintf( D_ALWAYS, "MultiLogFiles error: can't "
 							"truncate %s\n", filename );
