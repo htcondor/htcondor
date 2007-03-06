@@ -3434,7 +3434,7 @@ DedicatedScheduler::DelMrec( char* id )
 	HashKey key( id );
 	if( all_matches_by_id->lookup(key, rec) < 0 ) {
 		dprintf( D_FULLDEBUG, "mrec for \"%s\" not found -- " 
-				 "match not deleted\n", id );
+				 "match not deleted (but perhaps it was deleted previously)\n", id );
 		return false;
 	}
 
