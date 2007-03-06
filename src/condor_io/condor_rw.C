@@ -121,13 +121,21 @@ condor_read( SOCKET fd, char *buf, int sz, int timeout, int flags )
 			case 1:
 				break;
 
-			default:
+			default: {
+				int the_error;
+#ifdef WIN32
+				the_error = WSAGetLastError();
+#else
+				the_error = errno;
+#endif
 				dprintf( D_ALWAYS, "condor_read(): select() "
-						 "returns %d, assuming failure reading %d bytes from %s.\n",
+						 "returns %d, assuming failure reading %d bytes from %s (errno=%d).\n",
 						 nfound,
 						 sz,
-						 sock_peer_to_string(fd, sinbuf, sizeof(sinbuf), "unknown source") );
+						 sock_peer_to_string(fd, sinbuf, sizeof(sinbuf), "unknown source"),
+						 the_error );
 				return -1;
+			}
 			}
 		}
 
