@@ -98,7 +98,7 @@ _condor_full_write(int fd, const void *ptr, size_t nbytes)
 
 		nleft -= nwritten;
 			/* On Win32, void* does not default to "byte", so we cast it */
-		ptr   = ((char*) ptr) + nwritten;
+		ptr   = ((const char*) ptr) + nwritten;
 	}
 	
 	/* return how much was actually written, which could include 0 */
