@@ -23,24 +23,13 @@ Configuration Files}
 
 The Condor configuration files are used to customize how Condor
 operates at a given site.  The basic configuration as shipped with
-Condor works well for most sites, with few exceptions.
-
-See section~\ref{sec:install} on
-page~\pageref{sec:install}
-for details on where
-Condor's configuration files are found.
+Condor works well for most sites.
 
 Each Condor program will, as part of its initialization process,
 configure itself by calling a library routine which parses the
 various configuration files that might be used including pool-wide,
 platform-specific, machine-specific, and root-owned configuration files.
-
-The order in which attributes are defined is important, since later
-definitions will override existing definitions.
-This is particularly important if configuration files are broken up
-using the \Macro{LOCAL\_CONFIG\_FILE} setting described in
-sections~\ref{sec:Condor-wide-Config-File-Entries}
-and~\ref{sec:Multiple-Platforms} below.
+Environment variables may also contribute to the configuration.
 
 The result of configuration is a list of key/value pairs.
 Each key is a configuration variable name,
@@ -52,8 +41,41 @@ Those configuration variables that express the policy for
 starting and stopping of jobs appear as expressions in the
 configuration file.
 However, these expressions (for configuration) are string literals.
-Other portions of Condor use these strings as expressions,
+At appropriate times,
+Condor daemons and tools use these strings as expressions,
 parsing them in order to do evaluation.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Ordering-Config-File}Ordered Evaluation to
+Set the Configuation} 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{configuration file!evaluation order}
+
+Multiple files, as well as a program's environment variables
+determine the configuration.
+The order in which attributes are defined is important, as later
+definitions override existing definitions.
+The order in which the (multiple) configuration files are parsed 
+is designed to ensure the security of the system.
+Attributes which must be set a specific way 
+must appear in the last file to be parsed.
+Both the naive and the malicious Condor user are prevented
+from subverting the system through its configuration.
+The order in which files are parsed is
+\begin{enumerate}
+\item global configuration file
+\item local configuration file
+\item global root-owned configuration file
+\item local root-owned configuration file
+\end{enumerate}
+
+The locations for these files are as given in
+section~\ref{sec:Config-File-Locations} on
+page~\pageref{sec:Config-File-Locations}.
+
+% info here about _condor_ environment variables, and where
+% they fit into the ordered evaluation
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -394,6 +416,7 @@ determined automatically at runtime but which can be overwritten.
 Since \MacroUNI{ARCH} and \MacroUNI{OPSYS} will automatically be set to the
 correct values, we recommend that you do not overwrite them.
 Only do so if you know what you are doing.
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -6138,11 +6161,6 @@ quill-for-schedd_name@machinename.fully.qualified.address
   to query the central manager in order to find the Quill daemon.
 \end{description}
 
-
-% commented out by Karen in Nov 06
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%\input{admin-man/root-config.tex}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
