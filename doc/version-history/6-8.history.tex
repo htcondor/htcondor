@@ -247,7 +247,18 @@ The fatal error causes the job to restart.
 
 \begin{itemize}
 
-\item None.
+% Gnats PR 813
+\item Setting \MacroNI{DAGMAN\_DELETE\_OLD\_LOGS} to false can cause
+\Condor{dagman} to have problems (including hanging), especially
+when running a rescue DAG.  If you want to keep your old user log
+files, the best thing to do is to rename them before each
+\Condor{dagman} run.  If you do run with
+\MacroNI{DAGMAN\_DELETE\_OLD\_LOGS} set to false, check your
+\File{dagman.out} file for error messages about submit event
+Condor IDs not matching the expected value.  If you get such an
+error, you will probably have to \Condor{rm} the \Condor{dagman}
+job, remove or rename the old user log file(s) and run the rescue DAG.
+(Note: this bug also applies to earlier versions of \Condor{dagman}.)
 
 \end{itemize}
 
