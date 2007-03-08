@@ -48,7 +48,7 @@ parsing them in order to do evaluation.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Ordering-Config-File}Ordered Evaluation to
-Set the Configuation} 
+Set the Configuration} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{configuration file!evaluation order}
 
@@ -4521,7 +4521,7 @@ These macros affect the \Condor{collector}.
   your pool is small or your central manager has very little RAM, considering
   setting this parameter to a lower value (perhaps 256000 or 128000).
 
-\Note For some Linux distributions, it may be neccessary to configure
+\Note For some Linux distributions, it may be necessary to configure
 a larger value than the default; this parameter is
 /proc/sys/net/core/rmem\_max .  You can see the values that the
 \Condor{collector} actually used by enabling D\_FULLDEBUG for the
@@ -4836,7 +4836,7 @@ group users.
   \end{verbatim}
 
 \item[\Macro{GROUP\_QUOTA\_<groupname>}] \label{param:GroupQuotaGroupname}
-  A positive integer  to represent a static quota specifing
+  A positive integer  to represent a static quota specifying
   the exact number of machines owned by this group.
   Note that Condor does not verify or check consistency of quota values.
   % When both are defined, static quotas supersede dynamic quotas. 
@@ -5589,6 +5589,17 @@ If not defined, \MacroNI{DAGMAN\_ON\_EXIT\_REMOVE} defaults to
 \begin{verbatim}
 ( ExitSignal =?= 11 || (ExitCode =!= UNDEFINED && ExitCode >=0 && ExitCode <= 2))
 \end{verbatim}
+
+\item[\Macro{DAGMAN\_ABORT\_ON\_SCARY\_SUBMIT}]
+\label{param:DAGManAbortOnScarySubmit}
+A boolean value that controls whether to abort a DAG upon detection of
+a ``scary'' submit event (one in which the Condor ID does not match
+the expected value).  Note that in all versions prior to 6.9.3,
+\Condor{dagman} has \emph{not} aborted a DAG upon detection of
+a ``scary'' submit event (this behavior is what now happens if
+\MacroNI{DAGMAN\_ABORT\_ON\_SCARY\_SUBMIT} is set to \Expr{false}).
+If not defined, \MacroNI{DAGMAN\_ABORT\_ON\_SCARY\_SUBMIT} defaults to
+\Expr{true}.
 
 \end{description}
 
