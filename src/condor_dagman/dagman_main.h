@@ -129,6 +129,10 @@ class Dagman {
 		// to breadth-first).
 	bool submitDepthFirst;
 
+		// Whether to abort on a "scary" submit event (Condor ID doesn't
+		// match expected value).
+	bool abortOnScarySubmit;
+
 		// the Condor job id of the DAGMan job
 	CondorID DAGManJobId;
 

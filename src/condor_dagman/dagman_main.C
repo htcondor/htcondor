@@ -268,6 +268,10 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_ABORT_DUPLICATES setting: %d\n",
 				abortDuplicates );
 
+	abortOnScarySubmit = param_boolean( "DAGMAN_ABORT_ON_SCARY_SUBMIT", true );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_ABORT_ON_SCARY_SUBMIT setting: %d\n",
+				abortOnScarySubmit );
+
 	return true;
 }
 
@@ -593,6 +597,7 @@ int main_init (int argc, char ** const argv) {
 						  dagman.retryNodeFirst, dagman.condorRmExe,
 						  dagman.storkRmExe, &dagman.DAGManJobId,
 						  dagman.prohibitMultiJobs, dagman.submitDepthFirst );
+	dagman.dag->SetAbortOnScarySubmit( dagman.abortOnScarySubmit );
 
     if( dagman.dag == NULL ) {
         EXCEPT( "ERROR: out of memory!\n");

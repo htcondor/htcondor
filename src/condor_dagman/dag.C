@@ -148,6 +148,7 @@ Dag::Dag( /* const */ StringList &dagFiles, char *condorLogName,
 	_nextSubmitTime = 0;
 	_nextSubmitDelay = 1;
 	_recovery = false;
+	_abortOnScarySubmit = true;
 
 	return;
 }
@@ -2787,16 +2788,31 @@ Dag::SanityCheckSubmitEvent( const CondorID condorID, const Job* node )
 			// we no longer have the submit command stdout to check against
 		return true;
 	}
+
 	if( condorID._cluster == node->_CondorID._cluster ) {
 		return true;
 	}
-	debug_printf( DEBUG_QUIET,
-				  "ERROR: node %s: job ID in userlog submit event (%d.%d) "
-				  "doesn't match ID reported earlier by submit command "
-				  "(%d.%d)!  Trusting the userlog for now, but this is "
-				  "scary!\n",
-				  node->GetJobName(), condorID._cluster, condorID._proc,
-				  node->_CondorID._cluster, node->_CondorID._proc );
+
+	MyString message;
+	message.sprintf( "ERROR: node %s: job ID in userlog submit event (%d.%d) "
+				"doesn't match ID reported earlier by submit command "
+				"(%d.%d)!", 
+				node->GetJobName(), condorID._cluster, condorID._proc,
+				node->_CondorID._cluster, node->_CondorID._proc );
+
+	if ( _abortOnScarySubmit ) {
+		debug_printf( DEBUG_QUIET, "%s  Aborting DAG; set "
+					"DAGMAN_ABORT_ON_SCARY_SUBMIT to false if you are "
+					"*sure* this shouldn't cause an abort.\n",
+					message.Value() );
+		main_shutdown_rescue( EXIT_ERROR );
+		return true;
+	} else {
+		debug_printf( DEBUG_QUIET,
+					"%s  Trusting the userlog for now (because of "
+					"DAGMAN_ABORT_ON_SCARY_SUBMIT setting), but this is "
+					"scary!\n", message.Value() );
+	}
 	return false;
 }
 

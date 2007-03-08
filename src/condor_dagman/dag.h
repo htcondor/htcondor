@@ -99,6 +99,14 @@ class Dag {
     ///
     ~Dag();
 
+	/** Set the _abortOnScarySubmit value -- controls whether we abort
+		the DAG on "scary" submit events.
+		@param The abortOnScarySubmit value
+	*/
+	void SetAbortOnScarySubmit( bool abortOnScarySubmit ) {
+		_abortOnScarySubmit = abortOnScarySubmit;
+	}
+
 	/** Initialize log files, lock files, etc.
 	*/
 	void InitializeDagFiles( bool deleteOldLogs );
@@ -604,6 +612,8 @@ class Dag {
 		// Whether to submit ready nodes in depth-first order (as opposed
 		// to breadth-first order).
 	bool		_submitDepthFirst;
+
+	bool		_abortOnScarySubmit;
 
 		// The next time we're allowed to try submitting a job -- 0 means
 		// go ahead and submit right away.
