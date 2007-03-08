@@ -592,6 +592,11 @@ The main concern is twofold.  First, the files must be there when the service
 is started.  Second, the files must always be in the same spot (including
 drive letter), no matter who is logged into the machine.  
 
+Note also that when installing manually, you will need to create the
+directories that Condor will expect to be present given your
+configuration. This normally is simply a matter of creating the
+\File{log}, \File{spool}, and \File{execute} directories.
+
 \end{description}
 
 

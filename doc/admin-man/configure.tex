@@ -23,24 +23,13 @@ Configuration Files}
 
 The Condor configuration files are used to customize how Condor
 operates at a given site.  The basic configuration as shipped with
-Condor works well for most sites, with few exceptions.
-
-See section~\ref{sec:install} on
-page~\pageref{sec:install}
-for details on where
-Condor's configuration files are found.
+Condor works well for most sites.
 
 Each Condor program will, as part of its initialization process,
 configure itself by calling a library routine which parses the
 various configuration files that might be used including pool-wide,
 platform-specific, machine-specific, and root-owned configuration files.
-
-The order in which attributes are defined is important, since later
-definitions will override existing definitions.
-This is particularly important if configuration files are broken up
-using the \Macro{LOCAL\_CONFIG\_FILE} setting described in
-sections~\ref{sec:Condor-wide-Config-File-Entries}
-and~\ref{sec:Multiple-Platforms} below.
+Environment variables may also contribute to the configuration.
 
 The result of configuration is a list of key/value pairs.
 Each key is a configuration variable name,
@@ -52,8 +41,41 @@ Those configuration variables that express the policy for
 starting and stopping of jobs appear as expressions in the
 configuration file.
 However, these expressions (for configuration) are string literals.
-Other portions of Condor use these strings as expressions,
+At appropriate times,
+Condor daemons and tools use these strings as expressions,
 parsing them in order to do evaluation.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Ordering-Config-File}Ordered Evaluation to
+Set the Configuation} 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{configuration file!evaluation order}
+
+Multiple files, as well as a program's environment variables
+determine the configuration.
+The order in which attributes are defined is important, as later
+definitions override existing definitions.
+The order in which the (multiple) configuration files are parsed 
+is designed to ensure the security of the system.
+Attributes which must be set a specific way 
+must appear in the last file to be parsed.
+Both the naive and the malicious Condor user are prevented
+from subverting the system through its configuration.
+The order in which files are parsed is
+\begin{enumerate}
+\item global configuration file
+\item local configuration file
+\item global root-owned configuration file
+\item local root-owned configuration file
+\end{enumerate}
+
+The locations for these files are as given in
+section~\ref{sec:Config-File-Locations} on
+page~\pageref{sec:Config-File-Locations}.
+
+% info here about _condor_ environment variables, and where
+% they fit into the ordered evaluation
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -252,7 +274,7 @@ file would be.
 
 An example:
 \begin{verbatim}
-LOCAL\_CONFIG\_FILE = /bin/make_the_config|
+LOCAL_CONFIG_FILE = /bin/make_the_config|
 \end{verbatim}
 
 Program \Prog{/bin/make\_the\_config} is executed, and its output
@@ -394,6 +416,7 @@ determined automatically at runtime but which can be overwritten.
 Since \MacroUNI{ARCH} and \MacroUNI{OPSYS} will automatically be set to the
 correct values, we recommend that you do not overwrite them.
 Only do so if you know what you are doing.
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1688,6 +1711,20 @@ section~\ref{sec:Networking} on page~\pageref{sec:Networking}.
   This configuration variable is intended for use by developers for
   debugging purposes, where communication timeouts interfere.
 
+\item[\Macro{NONBLOCKING\_COLLECTOR\_UPDATE}]
+  \label{param:NonblockingCollectorUpdate}
+  A boolean value that defaults to \Expr{True}.
+  When \Expr{True}, the establishment of TCP connections
+  to the \Condor{collector} daemon
+  for a security-enabled pool are done in a nonblocking manner.
+
+\item[\Macro{NEGOTIATOR\_USE\_NONBLOCKING\_STARTD\_CONTACT}]
+  \label{param:NegotiatorUseNonblockingStartdContact}
+  A boolean value that defaults to \Expr{True}.
+  When \Expr{True}, the establishment of TCP connections
+  from the \Condor{negotiator} daemon to the \Condor{startd} daemon
+  for a security-enabled pool are done in a nonblocking manner.
+
 \end{description}
 
 The following settings are specific to enabling Generic Connection
@@ -1698,25 +1735,30 @@ section~\ref{sec:GCB} on page~\pageref{sec:GCB}.
 \begin{description}
 
 \item[\Macro{NET\_REMAP\_ENABLE}] 
+  \label{param:NetRemapEnable}
   If defined to \Expr{True}, this setting will enable a network
   remapping service for Condor.
   The service to use is controlled by \MacroNI{NET\_REMAP\_SERVICE},
   described below.
   This boolean value defaults to \Expr{False}.
 
-\item[\Macro{NET\_REMAP\_SERVICE}] If \MacroNI{NET\_REMAP\_ENABLE} is
+\item[\Macro{NET\_REMAP\_SERVICE}]
+  \label{param:NetRemapService}
+  If \MacroNI{NET\_REMAP\_ENABLE} is
   defined to \Expr{True}, this setting controls what network remapping
   service should be used.
   Currently, the only value supported is \verb@GCB@.
   The default is undefined.
 
 \item[\Macro{NET\_REMAP\_INAGENT}]
+  \label{param:NetRemapInagent}
   Hosts with the GCB network remapping service enabled that require a
   GCB broker (see the section on GCB referenced above for more
   details) specify the IP address of their broker with this setting.
   The default is undefined.
 
 \item[\Macro{NET\_REMAP\_ROUTE}]
+  \label{param:NetRemapRoute}
   Hosts with the GCB network remapping service enabled that would like
   to use a GCB routing table 
   GCB broker (again, see the section on GCB for more details) specify
@@ -4197,15 +4239,18 @@ Defaults to 1200 (20 minutes).
   in the submit file, the user's setting takes precedence.
 
 \item[\Macro{JOB\_INHERITS\_STARTER\_ENVIRONMENT}]
-\label{param:JobInheritsStarterEnvironment} When set to true, this
-causes jobs to inherit all environment variables from
-\Condor{starter}.  This is useful for glidein jobs that need to
+\label{param:JobInheritsStarterEnvironment} 
+A boolean value that defaults to \Expr{False}.
+When \Expr{True},
+it causes jobs to inherit all environment variables from 
+the \Condor{starter}.
+This is useful for glidein jobs that need to
 access environment variables from the batch system running the glidein
-daemons.  If the user job or \Macro{STARTER\_JOB\_ENVIRONMENT} defines
-an environment variable that also happens to be in \Condor{starter}'s
-environment, the the former overrides the latter in the job's
-environment.  The default for this configuration setting is false.
-This feature does not apply to standard and pvm universe jobs.
+daemons.
+When both the user job and \MacroNI{STARTER\_JOB\_ENVIRONMENT} define
+an environment variable that is in the \Condor{starter}'s
+environment, the user job's definition takes precedence.
+This variable does not apply to standard or pvm universe jobs.
 
 \end{description}
 
@@ -4330,13 +4375,22 @@ as:
   \MacroNI{SUBMIT\_EXPRS}. 
 
 \item[\Macro{LOG\_ON\_NFS\_IS\_ERROR}] \label{param:LogOnNfsIsError}
-A boolean value that controls whether \Condor{submit} prohibits
-job submit files with user log files on NFS.  If
-\MacroNI{LOG\_ON\_NFS\_IS\_ERROR} is set to \Expr{True}, such
-submit files will be rejected.  If \MacroNI{LOG\_ON\_NFS\_IS\_ERROR}
-is set to \Expr{False}, submitting such a file results in a
-warning, but the job will be submitted.  If not defined,
-\MacroNI{LOG\_ON\_NFS\_IS\_ERROR} defaults to \Expr{False}.
+  A boolean value that controls whether \Condor{submit} prohibits
+  job submit files with user log files on NFS.  If
+  \MacroNI{LOG\_ON\_NFS\_IS\_ERROR} is set to \Expr{True}, such
+  submit files will be rejected.  If \MacroNI{LOG\_ON\_NFS\_IS\_ERROR}
+  is set to \Expr{False}, submitting such a file results in a
+  warning, but the job will be submitted.  If not defined,
+  \MacroNI{LOG\_ON\_NFS\_IS\_ERROR} defaults to \Expr{False}.
+
+\item[\Macro{SUBMIT\_MAX\_PROCS\_IN\_CLUSTER}]
+  \label{param:SubmitMaxProcsInCluster}
+  An integer value that limits the maximum number of jobs that would
+  be assigned within a single cluster.  Job submissions that would exceed
+  the defined value fail, issuing an error message, and with no jobs
+  submitted.
+  The default value is 0, which does not limit the number of jobs
+  assigned a single cluster number.
 
 \end{description}
 
@@ -5617,6 +5671,14 @@ X.509 proxy to be used in GSI authentication.
 When this configuration variable is defined, use of this proxy
 takes precedence over use of a certificate and key.
 
+\item[\Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS}]
+\label{param:DelegateJobGSICredentials} 
+A boolean value that defaults to \Expr{True} for Condor version 6.7.19
+and more recent versions.
+When \Expr{True}, a job's GSI X.509 credentials are delegated,
+instead of being copied.
+This results in a more secure communication when not encrypted.
+
 \item[\Macro{GRIDMAP}]
 \label{param:GridMap}
 The complete path and file name of the Globus Gridmap file.
@@ -5660,6 +5722,71 @@ for a change from the default value.
 \item[\Macro{SEC\_PASSWORD\_FILE}]
 \label{param:SecPasswordFile} For Unix machines, the path and file name
 of  the file containing the pool password for password authentication.
+
+\item[\Macro{SSL\_SERVER\_CAFILE}]
+\label{param:SSLServerCAFile}  The path and file name of
+the file containing the single trusted CA's certificate
+for the server side of a communication authenticating 
+with SSL.
+
+\item[\Macro{SSL\_SERVER\_CADIR}]
+\label{param:SSLServerCADir}  
+The path to a directory that may contain the 
+certificates for multiple trusted CAs 
+for the server side of a communication authenticating 
+with SSL.
+When defined, the authenticating entity's certificate 
+is utilized to identify the trusted CA's certificate
+within the directory.
+
+\item[\Macro{SSL\_SERVER\_CERTFILE}]
+\label{param:SSLServerCertfile}  
+The path and file name of
+the file containing the public certificate
+for the server side of a communication authenticating
+with SSL.
+
+\item[\Macro{SSL\_SERVER\_KEYFILE}]
+\label{param:SSLServerKeyfile}
+The path and file name of
+the file containing the private key
+for the server side of a communication authenticating
+with SSL.
+
+\item[\Macro{SSL\_CLIENT\_CAFILE}]
+\label{param:SSLClientCAFile} 
+The path and file name of
+the file containing the single trusted CA's certificate
+for the client side of a communication authenticating 
+with SSL.
+
+\item[\Macro{SSL\_CLIENT\_CADIR}]
+\label{param:SSLClientCADir} 
+The path to a directory that may contain the 
+certificates for multiple trusted CAs 
+for the client side of a communication authenticating 
+with SSL.
+When defined, the authenticating entity's certificate 
+is utilized to identify the trusted CA's certificate
+within the directory.
+
+\item[\Macro{SSL\_CLIENT\_CERTFILE}]
+\label{param:SSLClientCertfile}
+The path and file name of
+the file containing the public certificate
+for the client side of a communication authenticating
+with SSL.
+
+\item[\Macro{SSL\_CLIENT\_KEYFILE}]
+\label{param:SSLClientKeyfile}
+The path and file name of
+the file containing the private key
+for the client side of a communication authenticating
+with SSL.
+
+\item[\Macro{CERTIFICATE\_MAPFILE}]
+\label{param:CertificateMapfile}
+A path and file name of the unified map file.
 
 \end{description}
 
@@ -6068,11 +6195,6 @@ quill-for-schedd_name@machinename.fully.qualified.address
   to query the central manager in order to find the Quill daemon.
 \end{description}
 
-
-% commented out by Karen in Nov 06
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%\input{admin-man/root-config.tex}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

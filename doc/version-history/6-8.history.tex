@@ -30,6 +30,90 @@ section~\ref{sec:Availability} on page~\pageref{sec:Availability}.
 
 The details of each version are described below.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-6-8-5}Version 6.8.5}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a bug that could cause the \Condor{schedd} to crash if it
+received too many matches in one negotiation cycle (more than 1000 on a
+Linux platform).
+
+\item Fixed a bug where \Condor{history} did not honor the \Opt{-format} flag
+properly when Quill was in use.
+
+\item Fixed a bug where a java property which included surrounding double quotes
+would cause the detection of a java virtual machine to go awry. 
+The fix, which may change in the future, changes any extra double quotes
+in a property value to single quotes.
+
+\item A bug has been fixed in the \Condor{quill} daemon which would
+cause it to crash in some circumstances when the Postgres database
+server was unavailable.
+
+\item The Solaris 9 Condor package can be used under Solaris 10 again.
+Changes in 6.7.20 broke this compatibility.
+
+% PR 806
+\item \Condor{dagman} now does a better job, especially in recovery mode,
+of detecting potentially incorrect submit events .
+Those have Condor IDs not matching what is expected.
+
+% PR 814
+\item \Condor{dagman} now truncates existing node job user log files
+to zero length, rather than deleting the log files.  This prevents breaking the
+link if a user log file is set up as a link.
+
+\item When starting a GridFTP server to handle file transfers for gt4
+grid jobs, the \Condor{gridmanager} now properly sets the
+GLOBUS\_TCP\_PORT\_RANGE and GLOBUS\_TCP\_SOURCE\_RANGE environment
+variables if appropriate.
+
+\item Fixed a bug that could cause a security session to get deleted
+by the server (for example, the \Condor{schedd}) before the client
+(for example, the \Condor{shadow}) was done using it.
+This bug can be observed as
+communication failure the next time the client tried to connect to
+the server.  In some cases, this caused jobs to be requeued to be run
+again, because the final update of the job queue failed.
+
+\item Fixed a bug in the \Condor{c-gahp} that caused it to not use the 
+user's credential for authentication with the remote schedd on some 
+connections.
+
+\item The \Condor{c-gahp} now properly lists all of the commands it
+supports in response to the COMMANDS command.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-6-8-4}Version 6.8.4}
@@ -57,9 +141,9 @@ with auto vacuuming turned on, the indexes on the tables were
 growing without bounds.  Rebuilding the indexes fixes that problem.
 Rebuilding is disabled by setting the parameter 
 \Macro{QUILL\_SHOULD\_REINDEX}
-to \Expr{False}.  Reindexing happens immediately after the history file
+to \Expr{False}.  Re-indexing happens immediately after the history file
 is purged of old data. So, if Quill is configured to never delete
-history data, the tables are never reindexed.  Also, \Condor{quill}
+history data, the tables are never re-indexed.  Also, \Condor{quill}
 was changed so that the history deletion also happens at start time.
 This ensures that old history rows are deleted if Quill crashes
 before the scheduled deletion time.
@@ -163,7 +247,18 @@ The fatal error causes the job to restart.
 
 \begin{itemize}
 
-\item None.
+% Gnats PR 813
+\item Setting \MacroNI{DAGMAN\_DELETE\_OLD\_LOGS} to false can cause
+\Condor{dagman} to have problems (including hanging), especially
+when running a rescue DAG.  If you want to keep your old user log
+files, the best thing to do is to rename them before each
+\Condor{dagman} run.  If you do run with
+\MacroNI{DAGMAN\_DELETE\_OLD\_LOGS} set to false, check your
+\File{dagman.out} file for error messages about submit event
+Condor IDs not matching the expected value.  If you get such an
+error, you will probably have to \Condor{rm} the \Condor{dagman}
+job, remove or rename the old user log file(s) and run the rescue DAG.
+(Note: this bug also applies to earlier versions of \Condor{dagman}.)
 
 \end{itemize}
 

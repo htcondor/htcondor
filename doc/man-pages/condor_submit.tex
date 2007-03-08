@@ -2041,8 +2041,9 @@ In addition to the normal macro, there is also a special kind of macro
 called a \Term{substitution macro}
 \index{substitution macro!in submit description file}
 that allows the substitution of
-expressions defined on the resource machine itself (gotten after a match
-to the machine has been made) into specific expressions within the
+a ClassAd attribute value defined on the resource machine itself
+(gotten after a match to the machine has been made)
+into specific commands within the
 submit description file. The substitution macro is of the form:
 \begin{verbatim} 
 $$(attribute)
@@ -2075,6 +2076,20 @@ argument = $$(input_file_path:/usr/foo)
 \end{verbatim}
 On the machine, if the attribute \Attr{input\_file\_path} is not
 defined, then the path \File{/usr/foo} is used instead.
+
+A further extension to the syntax of the substitution macro allows the
+evaluation of a ClassAd expression to define the value.
+As all substitution macros, the expression is evaluated after
+a match has been made.
+Therefore, the expression may refer to machine attributes
+by prefacing them with the scope resolution prefix \Attr{TARGET.},
+as specified in section~\ref{ClassAd:evaluation}.
+To place a ClassAd expression into the substitution macro,
+square brackets are added to delimit the expression.
+The syntax appears as:
+\begin{verbatim} 
+$$([ClassAd expression])
+\end{verbatim}
 
 \index{\$ENV!in submit description file}
 \index{submit commands!\$ENV macro}
