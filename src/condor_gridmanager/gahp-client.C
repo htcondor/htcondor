@@ -759,10 +759,17 @@ GahpServer::Initialize( Proxy *proxy )
 	master_proxy->cached_expiration = 0;
 
 		// Give the server our x509 proxy.
-	if ( command_initialize_from_file( master_proxy->proxy->proxy_filename ) == false ) {
-		dprintf( D_ALWAYS, "GAHP: Failed to initialize from file\n" );
-		return false;
+
+		// It's possible for a gahp to support the proxy caching commands
+		// but not INITIALIZE_FROM_FILE
+	if ( m_commands_supported->contains_anycase( "INITIALIZE_FROM_FILE" ) ) {
+		if ( command_initialize_from_file( master_proxy->proxy->proxy_filename ) == false ) {
+			dprintf( D_ALWAYS, "GAHP: Failed to initialize from file\n" );
+			return false;
+		}
 	}
+
+	current_proxy = master_proxy;
 
 	if ( can_cache_proxies ) {
 		if ( cacheProxyFromFile( master_proxy ) == false ) {
@@ -776,7 +783,6 @@ GahpServer::Initialize( Proxy *proxy )
 	}
 
 	master_proxy->cached_expiration = master_proxy->proxy->expiration_time;
-	current_proxy = master_proxy;
 
 	is_initialized = true;
 
@@ -965,10 +971,15 @@ GahpServer::doProxyCheck()
 	if ( master_proxy->proxy->expiration_time >
 		 master_proxy->cached_expiration ) {
 
+			// It's possible for a gahp to support the proxy caching
+			// commands but not REFRESH_PROXY_FROM_FILE
 		static const char *command = "REFRESH_PROXY_FROM_FILE";
-		if ( command_initialize_from_file( master_proxy->proxy->proxy_filename,
-										   command) == false ) {
-			EXCEPT( "Failed to refresh proxy!" );
+		if ( m_commands_supported->contains_anycase( command ) ) {
+			if ( command_initialize_from_file(
+										master_proxy->proxy->proxy_filename,
+										command) == false ) {
+				EXCEPT( "Failed to refresh proxy!" );
+			}
 		}
 
 		if ( can_cache_proxies ) {
@@ -1118,7 +1129,9 @@ GahpClient::getVersion()
 void
 GahpClient::setNormalProxy( Proxy *proxy )
 {
-	ASSERT(server->can_cache_proxies);
+	if ( !server->can_cache_proxies ) {
+		return;
+	}
 	if ( normal_proxy != NULL && proxy == normal_proxy->proxy ) {
 		return;
 	}
@@ -1133,7 +1146,9 @@ GahpClient::setNormalProxy( Proxy *proxy )
 void
 GahpClient::setDelegProxy( Proxy *proxy )
 {
-	ASSERT(server->can_cache_proxies);
+	if ( !server->can_cache_proxies ) {
+		return;
+	}
 	if ( deleg_proxy != NULL && proxy == deleg_proxy->proxy ) {
 		return;
 	}
