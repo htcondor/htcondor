@@ -12,49 +12,6 @@ This is the development release series of Condor.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{\label{sec:New-6-9-3}Version 6.9.3}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\noindent Release Notes:
-
-\begin{itemize}
-
-\item None.
-
-\end{itemize}
-
-
-\noindent New Features:
-
-\begin{itemize}
-
-\item None.
-
-\end{itemize}
-
-\noindent Bugs Fixed:
-
-\begin{itemize}
-
-\item When an update to the \Condor{collector} from the
-\Condor{startd} is lost, it is possible for multiple claims to the
-same resource to be handed out by the \Condor{negotiator}.  This is
-still true.  What is fixed is that these multiple claims will not
-result in mutual annihilation of the various attempts to use the
-resource.  Instead, the first claim to be successfully requested will
-proceed and the others will be rejected.
-
-\end{itemize}
-
-\noindent Known Bugs:
-
-\begin{itemize}
-
-\item None.
-
-\end{itemize}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-6-9-2}Version 6.9.2}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
