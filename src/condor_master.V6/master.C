@@ -1076,6 +1076,13 @@ gcb_broker_down_handler( Service *ignore )
 	StringList brokers( str );
 	free( str );
 
+	if ( param_boolean( "MASTER_WAITS_FOR_GCB_BROKER", true ) == false ) {
+		dprintf( D_ALWAYS, "Lost connection to current GCB broker. "
+				 "Restarting.\n" );
+		restart_everyone();
+		return;
+	}
+
 	if ( our_broker == NULL ) {
 		dprintf( D_ALWAYS, "Lost connection to current GCB broker, "
 				 "but GCB_INAGENT is undefined!?\n" );
@@ -1202,8 +1209,8 @@ main_pre_command_sock_init()
 	if ( GetEnv("GCB_INAGENT") &&
 		 param_boolean( "MASTER_WAITS_FOR_GCB_BROKER", true ) ) {
 
-			// We can't talk to any of our GCB brokers. Wait and retry
-			// until it works.
+			// If we can't talk to any of our GCB brokers, then wait
+			// and retry until we find a working one.
 		int delay = 20;
 
 		while ( !strcmp( GetEnv("GCB_INAGENT"), CONDOR_GCB_INVALID_BROKER ) ) {
