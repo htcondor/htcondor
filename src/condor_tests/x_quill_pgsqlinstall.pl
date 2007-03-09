@@ -13,7 +13,7 @@ my $morelibs = $ARGV[5];
 my $testsrc = $ARGV[6];
 
 my $startpostmasterport = 5432;
-my $postmasterinc = int(rand(100));
+my $postmasterinc = int(rand(100) + 13);
 
 print "Original port request is <<$startpostmasterport>>\n";
 print "Random increment if needed will be <<$postmasterinc>>\n";
