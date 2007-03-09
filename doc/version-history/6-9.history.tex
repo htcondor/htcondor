@@ -35,6 +35,11 @@ expected value).  This behavior can be restored to the previous
 behavior (print a warning but continue) by setting the new
 \MacroNI{DAGMAN\_ABORT\_ON\_SCARY\_SUBMIT} macro to \Expr{False}.
 
+\item When the \Condor{master} detects that its GCB broker is unavailable
+and there is a list of alternative brokers,
+it will restart immediately if \Attr{MASTER\_WAITS\_FOR\_GCB\_BROKER} is
+set to False instead of waiting for another broker to became available.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
