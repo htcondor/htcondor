@@ -373,18 +373,13 @@ condor_net_remap_config( bool force_param )
             // Env: InAgent
             if( (str = param("NET_REMAP_INAGENT")) ) {
 					// NET_REMAP_INAGENT is a list of GCB brokers.
-				int max_slots = 0;
-				const char *best_broker = NULL;
 				const char *next_broker;
-				StringList brokers( str );
+				StringList all_brokers( str );
+				StringList working_brokers;
 
-					// TODO Here, we pick the GCB broker that has the most
-					//   available ports. This could potentially overload
-					//   one broker if a bunch of masters start up at the
-					//   same time. If this becomes a problem, we
-					//   should consider changing this to random choice.
-				brokers.rewind();
-				while ( (next_broker = brokers.next()) ) {
+					// Pick a random working GCB broker.
+				all_brokers.rewind();
+				while ( (next_broker = all_brokers.next()) ) {
 					int rc = 0;
 					int num_slots = 0;
 
@@ -393,15 +388,22 @@ condor_net_remap_config( bool force_param )
 										   GCB_DATA_QUERY_FREE_SOCKS,
 										   &num_slots );
 #endif
-					if ( rc == 0 && num_slots > max_slots ) {
-						best_broker = next_broker;
-						max_slots = num_slots;
+					if ( rc == 0 ) {
+						working_brokers.append( next_broker );
 					}
 				}
 
-				if ( best_broker ) {
-					dprintf( D_FULLDEBUG,"Using GCB broker %s\n",best_broker );
-					SetEnv( "GCB_INAGENT", best_broker );
+				if ( working_brokers.number() > 0 ) {
+					int rand_entry = (get_random_int() % working_brokers.number()) + 1;
+					int i = 0;
+					working_brokers.rewind();
+					while ( (i < rand_entry) &&
+							(next_broker=working_brokers.next()) ) {
+						i++;
+					}
+
+					dprintf( D_FULLDEBUG,"Using GCB broker %s\n",next_broker );
+					SetEnv( "GCB_INAGENT", next_broker );
 				} else {
 						// TODO How should we indicate that we tried and
 						//   failed to find a working broker? For now, we
