@@ -97,6 +97,11 @@ communication failure the next time the client tried to connect to
 the server.  In some cases, this caused jobs to be requeued to be run
 again, because the final update of the job queue failed.
 
+\item If a grid job becomes held while it's still submitted to the remote
+resource and is then removed, the \Condor{gridmanager} will now attempt
+to remove the job from the remote resource before letting it leave the
+local job queue.
+
 \item Fixed a bug in the \Condor{c-gahp} that caused it to not use the 
 user's credential for authentication with the remote schedd on some 
 connections.
