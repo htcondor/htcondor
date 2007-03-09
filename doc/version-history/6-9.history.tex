@@ -39,6 +39,8 @@ behavior (print a warning but continue) by setting the new
 and there is a list of alternative brokers,
 it will restart immediately if \Attr{MASTER\_WAITS\_FOR\_GCB\_BROKER} is
 set to False instead of waiting for another broker to became available.
+\Condor{glidein} now sets \Attr{MASTER\_WAITS\_FOR\_GCB\_BROKER} to False
+in its configuration file.
 
 \item When using GCB and a list of brokers is available, the
 \Condor{master} will now pick a random broker rather than the least-loaded
