@@ -55,6 +55,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug where Condor would erroneously say a scheduler
+universe's executable was missing or not executable if the scheduler
+universe job had been submitted with CopyToSpool == False in the submit
+description file and the user had a umask which prevented the condor
+user from following the search path to the user owned executable.
+
 \item Fixed a bug that could cause the \Condor{schedd} to crash if it
 received too many matches in one negotiation cycle (more than 1000 on a
 Linux platform).
