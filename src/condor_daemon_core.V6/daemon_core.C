@@ -1340,6 +1340,12 @@ int DaemonCore::Create_Pipe( int *pipe_ends,
 	write_handle = new WritePipeEnd(w, overlapped_write_flag, nonblocking_write, psize);
 #else
 	// Unix
+
+	// Shut the compiler up
+	can_register_read;
+	can_register_write;
+	psize;
+
 	bool failed = false;
 	int filedes[2];
 	if ( pipe(filedes) == -1 ) {
@@ -1404,6 +1410,12 @@ int DaemonCore::Inherit_Pipe(int fd, bool is_write, bool can_register, bool nonb
 		pipe_handle = new ReadPipeEnd(h, can_register, nonblocking, psize);
 	}
 #else
+		// Shut the compiler up
+	is_write;
+	can_register;
+	nonblocking;
+	psize;
+
 	pipe_handle = fd;
 #endif
 
@@ -3187,7 +3199,8 @@ int DaemonCore::HandleReq(Stream *insock)
 	char tmpbuf[5];
 	memset(tmpbuf,0,sizeof(tmpbuf));
 	if ( is_tcp ) {
-		int nro = condor_read(((Sock*)stream)->get_file_desc(),
+			// TODO Should we be ignoring the return value of condor_read?
+		condor_read(((Sock*)stream)->get_file_desc(),
 			tmpbuf, sizeof(tmpbuf) - 1, 1, MSG_PEEK);
 	}
 	if ( strstr(tmpbuf,"GET") ) {
@@ -7140,7 +7153,7 @@ DaemonCore::HandleDC_SIGCHLD(int sig)
 #endif // of ifndef WIN32
 
 int
-DaemonCore::HandleDC_SERVICEWAITPIDS(int sig)
+DaemonCore::HandleDC_SERVICEWAITPIDS(int)
 {
 	WaitpidEntry wait_entry;
 

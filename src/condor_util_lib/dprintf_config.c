@@ -54,16 +54,18 @@ void	_condor_gcb_dprintf_va( int flags, char* fmt, va_list args );
 extern void Generic_set_log_va(void(*app_log_va)(int level, char *fmt, va_list args));
 #endif
 
+/* logfd is the descriptor to use if the log output goes to a tty */
 void
-dprintf_config( subsys, logfd )
-char *subsys;
-int logfd;		/* logfd is the descriptor to use if the log output goes to a tty */
+dprintf_config( char *subsys, int logfd )
 {
 	char pname[ BUFSIZ ];
 	char *pval, *param();
 	static int first_time = 1;
 	int want_truncate;
 	int debug_level;
+
+		/* Shut the compiler up */
+	logfd;
 
 	/*  
 	**  We want to initialize this here so if we reconfig and the

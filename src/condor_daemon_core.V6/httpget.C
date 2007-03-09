@@ -79,14 +79,14 @@ static int http_get_init(struct soap *soap, struct http_get_data *data, int (*ha
   return SOAP_OK;
 }
 
-static int http_get_copy(struct soap *soap, struct soap_plugin *dst, struct soap_plugin *src)
+static int http_get_copy(struct soap * /* soap */, struct soap_plugin *dst, struct soap_plugin *src)
 {  if (!(dst->data = (struct http_get_data*)malloc(sizeof(struct http_get_data))))
       return SOAP_EOM;
    memcpy(dst->data, src->data, sizeof(struct http_get_data));
    return SOAP_OK; 
 }
 
-static void http_get_delete(struct soap *soap, struct soap_plugin *p)
+static void http_get_delete(struct soap * /* soap */, struct soap_plugin *p)
 { free(p->data); /* free allocated plugin data (this function is not called for shared plugin data) */
 }
 

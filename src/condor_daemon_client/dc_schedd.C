@@ -678,7 +678,7 @@ DCSchedd::delegateGSIcredential(const int cluster, const int proc,
 }
 
 ClassAd*
-DCSchedd::actOnJobs( JobAction action, const char* action_str, 
+DCSchedd::actOnJobs( JobAction action, const char* /* action_str */, 
 					 const char* constraint, StringList* ids, 
 					 const char* reason, const char* reason_attr,
 					 action_result_type_t result_type,

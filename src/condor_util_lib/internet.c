@@ -241,6 +241,9 @@ calc_subnet_name(char* host)
 	unsigned int	host_ordered_addr;
 	unsigned int		net_ordered_addr;
 
+		/* Shut the compiler up */
+	host;
+
 	if ( !(host_ordered_addr = my_ip_addr()) ) {
 		return strdup("");
 	}

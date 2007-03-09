@@ -455,7 +455,7 @@ public:
 			next_in_list->DCCollectorGoingAway();
 		}
 	}
-	static void startUpdateCallback(bool success,Sock *sock,CondorError *errstack,void *misc_data) {
+	static void startUpdateCallback(bool success,Sock *sock,CondorError * /* errstack */,void *misc_data) {
 		UpdateData *ud = (UpdateData *)misc_data;
 
 			// We got here because a nonblocking call to startCommand()

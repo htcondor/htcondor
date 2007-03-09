@@ -27,7 +27,7 @@
 
 static
 int condor_file_open_ckpt_file( const char *name, int flags, 
-									   size_t n_bytes )
+								size_t /* n_bytes */ )
 {
 	if( flags & O_WRONLY ) {
 		return safe_open_wrapper( name, O_CREAT | O_TRUNC | O_WRONLY, 0664 );

@@ -62,14 +62,14 @@ strincmp( register char* s1, register char* s2, register int n )
 /*
 ** Return a pointer to the first occurence of pattern in string.
 */
-char *
+const char *
 substr( const char* string, const char* pattern )
 {
-	char	*str;
+	const char	*str;
 	int		n;
 
 	n = strlen( pattern );
-	for( str=(char*)string; *str; str++ ) {
+	for( str=string; *str; str++ ) {
 		if( strncmp(str,pattern,n) == 0 ) {
 			return str;
 		}

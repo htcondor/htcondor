@@ -228,6 +228,11 @@ getmnt( int* start, struct fs_data buf[], unsigned int bufsize,
 	int				i;
 	int				lim;
 
+		/* Shut the compiler up */
+	start;
+	mode;
+	path;
+
 	if( (tab=setmntent("/etc/mtab","r")) == NULL ) {
 		perror( "setmntent" );
 		exit( 1 );

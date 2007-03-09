@@ -986,7 +986,7 @@ lock_or_except( const char* file_name )
  ** them to do so also.
  */
 int
-main_config( bool is_full )
+main_config( bool /* is_full */ )
 {
 		// Re-read the config files and create a new classad
 	init_classad(); 
@@ -1168,7 +1168,7 @@ void StartConfigServer()
 
 
 void
-main_pre_dc_init( int argc, char* argv[] )
+main_pre_dc_init( int /* argc */, char** /* argv */ )
 {
 }
 

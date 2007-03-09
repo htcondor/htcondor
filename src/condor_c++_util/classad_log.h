@@ -223,7 +223,7 @@ public:
 	virtual ~LogBeginTransaction(){};
 private:
 
-	virtual int WriteBody(FILE* fp) {return 0;}
+	virtual int WriteBody(FILE* /* fp */) {return 0;}
 	virtual int ReadBody(FILE* fp);
 
 };
@@ -233,7 +233,7 @@ public:
 	LogEndTransaction() { op_type = CondorLogOp_EndTransaction; }
 	virtual ~LogEndTransaction(){};
 private:
-	virtual int WriteBody(FILE* fp) {return 0;}
+	virtual int WriteBody(FILE* /* fp */) {return 0;}
 	virtual int ReadBody(FILE* fp);
 
 };

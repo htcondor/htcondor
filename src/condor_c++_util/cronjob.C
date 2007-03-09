@@ -128,7 +128,7 @@ CronJobErr::CronJobErr( class CronJobBase *job ) :
 
 // StdErr Output function
 int
-CronJobErr::Output( const char *buf, int len )
+CronJobErr::Output( const char *buf, int /* len */ )
 {
 	dprintf( D_FULLDEBUG, "%s: %s\n", job->GetName( ), buf );
 
@@ -137,7 +137,7 @@ CronJobErr::Output( const char *buf, int len )
 }
 
 // CronJob constructor
-CronJobBase::CronJobBase( const char *mgrName, const char *jobName )
+CronJobBase::CronJobBase( const char * /* mgrName */, const char *jobName )
 {
 	// Reset *everything*
 	period = UINT_MAX;
@@ -752,7 +752,7 @@ CronJobBase::TodoWrite( void )
 // Data is available on Standard Out.  Read it!
 //  Note that we set the pipe to be non-blocking when we created it
 int
-CronJobBase::StdoutHandler ( int pipe )
+CronJobBase::StdoutHandler ( int /* pipe */ )
 {
 	char			buf[STDOUT_READBUF_SIZE];
 	int				bytes;
@@ -819,7 +819,7 @@ CronJobBase::StdoutHandler ( int pipe )
 // Data is available on Standard Error.  Read it!
 //  Note that we set the pipe to be non-blocking when we created it
 int
-CronJobBase::StderrHandler ( int pipe )
+CronJobBase::StderrHandler ( int /* pipe */ )
 {
 	char			buf[STDERR_READBUF_SIZE];
 	int				bytes;

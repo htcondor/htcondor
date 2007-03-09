@@ -216,11 +216,14 @@ email_open_implementation(char *Mailer, char *const final_args[])
 #else /* unix */
 
 FILE *
-email_open_implementation(char *Mailer, char *const final_args[])
+email_open_implementation(char * Mailer, char *const final_args[])
 {
 	FILE *mailerstream;
 	pid_t pid;
 	int pipefds[2];
+
+		/* Shut the compiler up */
+	Mailer;
 
 	/* The gist of this code is to exec a mailer whose stdin is dup2'ed onto
 		the write end of a pipe. The parent gets the fdopen'ed read end

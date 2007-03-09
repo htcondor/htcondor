@@ -613,7 +613,7 @@ LogHistoricalSequenceNumber::LogHistoricalSequenceNumber(unsigned long historica
 	this->timestamp = timestamp;
 }
 int
-LogHistoricalSequenceNumber::Play(void *data_structure)
+LogHistoricalSequenceNumber::Play(void * /* data_structure */)
 {
 	// Would like to update ClassAdLog here, but we only have
 	// a pointer to the classad hash table, so ClassAdLog must

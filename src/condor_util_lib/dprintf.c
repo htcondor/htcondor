@@ -135,7 +135,7 @@ void
 _condor_dprintf_va( int flags, const char* fmt, va_list args )
 {
 	struct tm *tm, *localtime();
-	time_t clock;
+	time_t clock_now;
 #if !defined(WIN32)
 	sigset_t	mask, omask;
 	mode_t		old_umask;
@@ -232,9 +232,9 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 
 		/* Grab the time info only once, instead of inside the for
 		   loop.  -Derek 9/14 */
-	memset((void*)&clock,0,sizeof(time_t)); // just to stop Purify UMR errors
-	(void)time(  (time_t *)&clock );
-	tm = localtime( (time_t *)&clock );
+	memset((void*)&clock_now,0,sizeof(time_t)); // just to stop Purify UMR errors
+	(void)time(  &clock_now );
+	tm = localtime( &clock_now );
 
 		/* print debug message to catch-all debug file plus files */
 		/* registered for other debug levels */
@@ -316,7 +316,7 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 }
 
 int
-_condor_open_lock_file(const char *DebugLock,int flags, mode_t perm)
+_condor_open_lock_file(const char *filename,int flags, mode_t perm)
 {
 	int	retry = 0;
 	int save_errno = 0;
@@ -324,12 +324,12 @@ _condor_open_lock_file(const char *DebugLock,int flags, mode_t perm)
 	char*		dirpath = NULL;
 	int lock_fd;
 
-	if( !DebugLock ) {
+	if( !filename ) {
 		return -1;
 	}
 
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
-	lock_fd = safe_open_wrapper(DebugLock,flags,perm);
+	lock_fd = safe_open_wrapper(filename,flags,perm);
 	if( lock_fd < 0 ) {
 		save_errno = errno;
 		if( save_errno == ENOENT ) {
@@ -339,7 +339,7 @@ _condor_open_lock_file(const char *DebugLock,int flags, mode_t perm)
 				   we created it as root, we need to try to
 				   chown() it to condor.
 				*/ 
-			dirpath = condor_dirname( DebugLock );
+			dirpath = condor_dirname( filename );
 			errno = 0;
 			if( mkdir(dirpath, 0777) < 0 ) {
 				if( errno == EACCES ) {
@@ -377,7 +377,7 @@ _condor_open_lock_file(const char *DebugLock,int flags, mode_t perm)
 			free( dirpath );
 		}
 		if( retry ) {
-			lock_fd = safe_open_wrapper(DebugLock,flags,perm);
+			lock_fd = safe_open_wrapper(filename,flags,perm);
 			if( lock_fd < 0 ) {
 				save_errno = errno;
 			}
@@ -781,10 +781,10 @@ _condor_dprintf_exit( int error_code, const char* msg )
 	char tail[_POSIX_PATH_MAX];
 	int wrote_warning = FALSE;
 	struct tm *tm;
-	time_t clock;
+	time_t clock_now;
 
-	(void)time( (time_t *)&clock );
-	tm = localtime( (time_t *)&clock );
+	(void)time( &clock_now );
+	tm = localtime( &clock_now );
 
 	sprintf( header, "%d/%d %02d:%02d:%02d "
 			 "dprintf() had a fatal error in pid %d\n", 

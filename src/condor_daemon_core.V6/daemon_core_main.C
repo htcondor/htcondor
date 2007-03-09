@@ -673,7 +673,7 @@ handle_reconfig( Service*, int cmd, Stream* )
 }
 
 int
-handle_fetch_log( Service *service, int cmd, Stream *s )
+handle_fetch_log( Service *, int, Stream *s )
 {
 	char *name = NULL;
 	ReliSock *stream = (ReliSock*) s;

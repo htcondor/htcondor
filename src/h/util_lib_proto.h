@@ -90,7 +90,7 @@ char * shorten ( char *state );
 int free_status_line ( STATUS_LINE *line );
 int print_header ( FILE *fp );
 char * format_seconds ( int t_sec );
-char * substr ( char *string, char *pattern );
+const char * substr ( char *string, char *pattern );
 void update_rusage( register struct rusage *ru1, register struct rusage *ru2 );
 int sysapi_swap_space ( void );
 int sysapi_disk_space(const char *filename);
