@@ -613,6 +613,7 @@ IS_GLIDEIN = True
 STARTD_EXPRS = IS_GLIDEIN, START, DaemonStopTime
 
 PREEN_INTERVAL = 0
+MASTER_WAITS_FOR_GCB_BROKER = False
 EOF
 	if( $config_gsi ) {
 	    print CONDOR_CONFIG <<"EOF";
