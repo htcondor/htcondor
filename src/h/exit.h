@@ -106,6 +106,18 @@
 /* There is a fatal error with dprintf() */
 #define DPRINTF_ERROR 44
 
+
+/***********************************************************************
+  Exit codes for DaemonCore daemons to communicate with the
+  condor_master.  To avoid potential conflicts with the above, and
+  since we only anticipate a tiny number of these, we count down from
+  the EXIT_CODE_OFFSET (100).
+***********************************************************************/
+
+/* The daemon exited and does not want to be restarted automatically. */
+#define DAEMON_NO_RESTART (EXIT_CODE_OFFSET - 1)
+
+
 BEGIN_C_DECLS
 int generate_exit_code( int input_code );
 

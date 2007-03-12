@@ -908,19 +908,30 @@ daemon::HardKill()
 void
 daemon::Exited( int status )
 {
-	char buf1[256];
-	char buf2[256];
-	sprintf( buf1, "The %s (pid %d) ", name_in_config_file, pid );
-	if( WIFSIGNALED(status) ) {
-		sprintf( buf2, "died due to %s", 
-			daemonCore->GetExceptionString(status) );
-	} else {
-		sprintf( buf2, "exited with status %d", WEXITSTATUS(status) );
+	MyString msg;
+	msg.sprintf( "The %s (pid %d) ", name_in_config_file, pid );
+	bool had_failure = true;
+	if (daemonCore->Was_Not_Responding(pid)) {
+		msg += "was killed because it was no longer responding";
 	}
-	if ( daemonCore->Was_Not_Responding(pid) ) {
-		sprintf( buf2, "was killed because it was no longer responding");
+	else if (WIFSIGNALED(status)) {
+		msg += "died due to ";
+		msg += daemonCore->GetExceptionString(status);
 	}
-	dprintf( D_FAILURE|D_ALWAYS, "%s%s\n", buf1, buf2 );
+	else {
+		msg += "exited with status ";
+		msg += WEXITSTATUS(status);
+		if( WEXITSTATUS(status) == DAEMON_NO_RESTART ) {
+			had_failure = false;
+			msg += " (daemon will not restart automatically)";
+			on_hold = true;
+		}
+	}
+	int d_flag = D_ALWAYS;
+	if( had_failure ) {
+		d_flag |= D_FAILURE;
+    }
+	dprintf(d_flag, "%s\n", msg.Value());
 
 		// For HA, release the lock
 	if ( is_ha && ha_lock ) {
@@ -990,11 +1001,14 @@ daemon::Obituary( int status )
 	}
 #endif
 
-	// Just return if process exited with status 0.  If everthing's
-	// ok, why bother sending email?
+	// Just return if process exited with status 0, if we failed to
+	// execute it in the first place, or if it exited intentionally
+	// telling us not to restart it.  If everthing's ok, why bother
+	// sending email?
 	if ( (WIFEXITED(status)) && 
 		 ( (WEXITSTATUS(status) == 0 ) || 
-		   (WEXITSTATUS(status) == JOB_EXEC_FAILED ) ) ) {
+		   (WEXITSTATUS(status) == JOB_EXEC_FAILED) ||
+		   (WEXITSTATUS(status) == DAEMON_NO_RESTART) ) ) {
 		return;
 	}
 
