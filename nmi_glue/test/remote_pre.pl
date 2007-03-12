@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre.pl,v 1.7 2007-03-01 18:21:39 zmiller Exp $
+# $Id: remote_pre.pl,v 1.8 2007-03-12 15:14:45 bt Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
@@ -228,6 +228,10 @@ print FIX "STARTER_DEBUG           = D_NODATE\n";
 
 print FIX "MAX_MASTER_LOG          = $logsize\n";
 print FIX "MASTER_DEBUG            = D_COMMAND\n";
+
+# add procd log
+
+print FIX "PROCD_LOG 			= \$(LOG)/ProcdLog\n";
 
 # Add a shorter check time for periodic policy issues
 print FIX "PERIODIC_EXPR_INTERVAL = 15\n";
