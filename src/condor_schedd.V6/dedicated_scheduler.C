@@ -1225,7 +1225,7 @@ DedicatedScheduler::negotiateRequest( ClassAd* req, Stream* s,
 			if( all_matches->lookup(HashKey(machine_name), dummy) == 0) {
 					// Already have this match
 				dprintf(D_ALWAYS, "DedicatedScheduler::negotiate sent match for %s, but we've already got it, deleting old one\n", machine_name);
-				DelMrec(claim_id);
+				DelMrec(dummy);
 			}
 
 				// Next, insert this match_rec into our hashtables
