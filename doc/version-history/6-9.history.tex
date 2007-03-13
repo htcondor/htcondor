@@ -19,7 +19,62 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+%% This is important (and thus, I believe, worth of being a top
+%% level release note) because it will surprise anyone upgrading
+%% an existing pool or repackaging Condor binaries (say, for
+%% custom glideins, or as .deb packages for a local pool.)
+% This is part of the privilege seperation work, but the procd
+% is required even if you're not turning privsep on.
+% Questions should go to the privsep team: psilord, zmiller, etc.
+\item As part of ongoing security enhancements, Condor now has a
+new, required daemon: \Condor{procd}.  This daemon is
+automatically started by the \Condor{master}, you do not need to
+add it to \Macro{DAEMON\_LIST}.  New installations should not
+need to do anything; the default configuration file is correctly
+set.  Installations upgrading to 6.9.2 from previous versions
+will need to ensure several things are done.  
+1. Be sure to install \Condor{procd} into your Condor \Macro{SBIN} directory. 
+2. Add ``\Code{PROCD = \$(SBIN)/condor\_procd}'' to your Condor configuration. 
+3. Add ``\Code{PROCD\_ADDRESS = \$(LOCK)/procd\_pipe}'' to your Condor configuration. 
+On Windows there are two additional steps:
+4. Be sure to install \Condor{softkill} into your Condor \Macro{SBIN} directory. 
+5. Add ``\Code{WINDOWS\_SOFTKILL = \$(SBIN)/condor\_softkill}'' to your Condor configuration. 
+
+% This isn't quite so important, but it's not really a feature or
+% a bug, just a change.  It is a change that may surprise some
+% users.  The full list of settings impacted is
+% pretty long.  So far the below is just a small fraction,
+% primarily being added because an external user was suprised by
+% this when testing a 6.9.2-prerelease. For anyone curious or
+% inspired to flesh out the list, here's the checkin that caused
+% this:
+% http://bonsai.cs.wisc.edu/bonsai/cvsquery.cgi?who=danb&whotype=match&sortby=Date&date=explicit&mindate=02%2F23%2F2007+19%3A15&maxdate=02%2F23%2F2007+19%3A30
+% (To do the search yourself, search for checkins by danb between
+% 02/23/2007 19:15 and 02/23/2007 19:30 )
+% To determine if a variable is impacted, look at the removed
+% code and confirm that it used the default if the setting was 0.
+% Then if the new code sets a minimum of 1 (the third argument to
+% param_integer), it's impacted.
+\item Some configuration settings that previously accepted 0 no
+longer do so.  Instead the daemon using the setting will exit
+with an error message listing the acceptable range to its log.
+For these settings 0 was equivalent to requesting the default.
+As this was undocumented and confusing behavior it is no longer
+present.  To request a setting use its default, either comment it
+out, or set it to nothing (``\Code{EXAMPLE\_SETTING=}'').
+Setting impacted include but are not limited to: 
+% From condor_master.V6/master.C 1.82 to 1.83:
+\Macro{MASTER\_BACKOFF\_CONSTANT},
+\Macro{MASTER\_BACKOFF\_CEILING},
+\Macro{MASTER\_RECOVER\_FACTOR},
+\Macro{MASTER\_UPDATE\_INTERVAL},
+\Macro{MASTER\_NEW\_BINARY\_DELAY},
+\Macro{PREEN\_INTERVAL},
+\Macro{SHUTDOWN\_FAST\_TIMEOUT},
+\Macro{SHUTDOWN\_GRACEFUL\_TIMEOUT},
+% From condor_master.V6/daemon.C 1.68 to 1.69:},
+\Macro{MASTER\_<name>\_BACKOFF\_CONSTANT},
+\Macro{MASTER\_<name>\_BACKOFF\_CEILING},
 
 \end{itemize}
 
