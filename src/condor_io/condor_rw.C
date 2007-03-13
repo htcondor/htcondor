@@ -128,7 +128,6 @@ condor_read( SOCKET fd, char *buf, int sz, int timeout, int flags )
 						 the_error );
 				return -1;
 			}
-			}
 		}
 
 		nro = recv(fd, &buf[nr], sz - nr, flags);
