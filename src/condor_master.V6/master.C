@@ -663,7 +663,11 @@ init_params()
 
 	new_bin_delay = param_integer( "MASTER_NEW_BINARY_DELAY", 2*MINUTE, 1 );
 
-	preen_interval = param_integer( "PREEN_INTERVAL", 24*HOUR, 1 );
+	preen_interval = param_integer( "PREEN_INTERVAL", 24*HOUR, 0 );
+	if(preen_interval == 0) {
+		EXCEPT("PREEN_INTERVAL in the condor configuration is too low (0).  Please set it to an integer in the range 1 to %d (default %d).  To disable condor_preen entirely, comment out PREEN.", INT_MAX, 24*HOUR);
+
+	}
 
 	shutdown_fast_timeout = param_integer( "SHUTDOWN_FAST_TIMEOUT", 5*MINUTE, 1 );
 
