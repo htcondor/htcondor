@@ -924,6 +924,11 @@ daemon::Exited( int status )
 		if( WEXITSTATUS(status) == DAEMON_NO_RESTART ) {
 			had_failure = false;
 			msg += " (daemon will not restart automatically)";
+				// The "on_hold" flag is the magic that makes this
+				// feature work.  Once a daemon has this set, the
+				// master won't restart it (Restart() exits
+				// immediately), and it doesn't check executable
+				// timestamps and restart based on that, either.
 			on_hold = true;
 		}
 	}
