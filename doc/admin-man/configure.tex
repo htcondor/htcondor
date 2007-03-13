@@ -60,22 +60,35 @@ The order in which the (multiple) configuration files are parsed
 is designed to ensure the security of the system.
 Attributes which must be set a specific way 
 must appear in the last file to be parsed.
-Both the naive and the malicious Condor user are prevented
+This prevents both the naive and the malicious Condor user 
 from subverting the system through its configuration.
-The order in which files are parsed is
+The order in which items are parsed is
 \begin{enumerate}
 \item global configuration file
 \item local configuration file
 \item global root-owned configuration file
 \item local root-owned configuration file
+\item specific environment variables prefixed with \MacroNI{\_CONDOR\_}
 \end{enumerate}
 
 The locations for these files are as given in
 section~\ref{sec:Config-File-Locations} on
 page~\pageref{sec:Config-File-Locations}.
 
-% info here about _condor_ environment variables, and where
-% they fit into the ordered evaluation
+Some Condor tools utilize environment variables to set their
+configuration.
+These tools search for specifically-named environment variables.
+The variables are prefixed by the string \MacroNI{\_CONDOR\_}
+or \MacroNI{\_condor\_}.
+The tools strip off the prefix, and utilize what remains
+as configuration.
+As the use of environment variables is the last within
+the ordered evaluation, 
+the environment variable definition is used.
+The security of the system is not compromised,
+as only specific variables are considered for definition
+in this manner, not any environment variables with
+the \MacroNI{\_CONDOR\_} prefix.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -720,7 +733,7 @@ File System Configuration File Entries''.
 \item[\Macro{LOCAL\_CONFIG\_DIR}] \label{param:LocalConfigDir} 
   Beginning in Condor 6.7.18, a directory may be used as a container for 
   local configuration files. 
-  The files found in the directory are sorted into lexigraphical order, and 
+  The files found in the directory are sorted into lexicographical order, and 
   then each file is treated as though it was listed in 
   \MacroNI{LOCAL\_CONFIG\_FILE}. 
   \MacroNI{LOCAL\_CONFIG\_DIR} is processed before any files listed in 
@@ -1386,7 +1399,7 @@ server, shadow, and starter, none of which use DaemonCore yet).
   Keep in mind that this directory should not be placed on an NFS
   mount where ``root-squashing'' is in effect, or else Condor daemons
   running as root will not be able to write to them.
-  A directory (only writable by root) on the local filesystem is
+  A directory (only writable by root) on the local file system is
   usually the best location for this directory.
 
 \item[\Macro{SETTABLE\_ATTRS\Dots}] \label{param:SettableAttrs} All
@@ -1773,7 +1786,7 @@ section~\ref{sec:GCB} on page~\pageref{sec:GCB}.
 \index{configuration!shared file system configuration variables}
 
 These macros control how Condor interacts with various shared and
-network file systems.  If you are using AFS as your shared filesystem,
+network file systems.  If you are using AFS as your shared file system,
 be sure to read section~\ref{sec:Condor-AFS} on Using Condor with
 AFS.
 For information on submitting jobs under shared file systems,
@@ -1856,7 +1869,7 @@ section~\ref{sec:shared-fs}.
   However, at some sites, there may be multiple UID spaces that do
   not clearly correspond to Internet domain names.
   In these cases, administrators may wish to use names to describe the
-  UID domains which are not substrings of the hostnames of the
+  UID domains which are not substrings of the host names of the
   machines.
   For this to work, Condor must not do this regular security check.
   If the \MacroNI{TRUST\_UID\_DOMAIN} setting is defined to \Expr{True},
@@ -2827,7 +2840,7 @@ Configuring The Startd Policy.
   change to take effect (by using ``\condor{restart} -startd'').
 
 \item[\Macro{COUNT\_HYPERTHREAD\_CPUS}] \label{param:CountHyperthreadCpus}
-  This macro controls how Condor sees hyperthreaded
+  This macro controls how Condor sees hyper threaded
   processors. When set to \Expr{True} (the default), it includes virtual CPUs in
   the default value of \MacroNI{NUM\_CPUS}. On dedicated cluster nodes, 
   counting virtual CPUs can sometimes improve total throughput at the expense 
@@ -3807,7 +3820,7 @@ These macros control the \Condor{schedd}.
   evicted or when the job completes.  When the \Condor{schedd} crashes, the run
   time for jobs that are currently running will not be added to the
   counter (and so, the run time counter may become smaller than the
-  cpu time counter).  The \Condor{schedd} saves run time ``checkpoints''
+  CPU time counter).  The \Condor{schedd} saves run time ``checkpoints''
   periodically for running jobs so if the \Condor{schedd} crashes, only run
   time since the last checkpoint is lost.  This macro controls how
   often the \Condor{schedd} saves run time checkpoints.  It is defined in terms
@@ -5124,8 +5137,8 @@ still recognized, but the name has changed to be
 \label{param:GridmanagerMaxJobmanagersPerResource}
 For grid jobs of type \SubmitCmd{gt2}, limits the number of globus-job-manager
 processes that the \Condor{gridmanager} lets run at a time on
-the remote headnode. Allowing too many globus-job-managers to run
-causes severe load on the headnode, possibly making it
+the remote head node. Allowing too many globus-job-managers to run
+causes severe load on the headnote, possibly making it
 non-functional.
 This number may be exceeded if it is reduced through the use
 of \Condor{reconfig} while the \Condor{gridmanager} is running
