@@ -33,6 +33,7 @@
 #include "condor_socket_types.h"
 #include "condor_string.h"
 #include "condor_netdb.h"
+#include "selector.h"
 
 _condorMsgID SafeSock::_outMsgID = {0, 0, 0, 0};
 unsigned long SafeSock::_noMsgs = 0;
@@ -356,28 +357,17 @@ int SafeSock::get_bytes(void *dta, int size)
 {
 	while(!_msgReady) {
 		if(_timeout > 0) {
-			struct timeval timer;
-			fd_set readfds;
-			int nfds=0, nfound;
-			timer.tv_sec = _timeout;
-			timer.tv_usec = 0;
-#if !defined(WIN32) // nfds is ignored on WIN32
-			nfds = _sock + 1;
-#endif
-			FD_ZERO(&readfds);
-			FD_SET(_sock, &readfds);
+			Selector selector;
+			selector.set_timeout( _timeout );
+			selector.add_fd( _sock, Selector::IO_READ );
 				
-			nfound = select( nfds, &readfds, 0, 0, &timer );
-			switch(nfound) {
-				case 0:
+			selector.execute();
+			if ( selector.timed_out() ) {
+				return 0;
+			} else if ( !selector.has_ready() ) {
+					dprintf(D_NETWORK, "select returns %d, recv failed\n",
+							selector.select_retval());
 					return 0;
-					break;
-				case 1:
-					break;
-				default:
-					dprintf(D_NETWORK, "select returns %d, recv failed\n", nfound );
-					return 0;
-					break;
 			}
 		}
 		(void)handle_incoming_packet();
@@ -445,30 +435,18 @@ int SafeSock::get_ptr(void *&ptr, char delim)
 
 	while(!_msgReady) {
 		if(_timeout > 0) {
-			struct timeval timer;
-			fd_set readfds;
-			int nfds=0, nfound;
-			timer.tv_sec = _timeout;
-			timer.tv_usec = 0;
-#if !defined(WIN32) // nfds is ignored on WIN32
-			nfds = _sock + 1;
-#endif
-			FD_ZERO(&readfds);
-			FD_SET(_sock, &readfds);
+			Selector selector;
+			selector.set_timeout( _timeout );
+			selector.add_fd( _sock, Selector::IO_READ );
 				
-			nfound = select( nfds, &readfds, 0, 0, &timer );
-			switch(nfound) {
-				case 0:
-					return 0;
-					break;
-				case 1:
-					break;
-				default:
+			selector.execute();
+			if ( selector.timed_out() ) {
+				return 0;
+			} else if ( !selector.has_ready() ) {
 					dprintf(D_NETWORK,
 					        "select returns %d, recv failed\n",
-						  nfound );
+						  selector.select_retval() );
 					return 0;
-					break;
 			}
 		}
 		(void)handle_incoming_packet();
@@ -489,30 +467,18 @@ int SafeSock::peek(char &c)
 {
 	while(!_msgReady) {
 		if(_timeout > 0) {
-			struct timeval timer;
-			fd_set readfds;
-			int nfds=0, nfound;
-			timer.tv_sec = _timeout;
-			timer.tv_usec = 0;
-#if !defined(WIN32) // nfds is ignored on WIN32
-			nfds = _sock + 1;
-#endif
-			FD_ZERO(&readfds);
-			FD_SET(_sock, &readfds);
+			Selector selector;
+			selector.set_timeout( _timeout );
+			selector.add_fd( _sock, Selector::IO_READ );
 				
-			nfound = select( nfds, &readfds, 0, 0, &timer );
-			switch(nfound) {
-				case 0:
-					return 0;
-					break;
-				case 1:
-					break;
-				default:
+			selector.execute();
+			if ( selector.timed_out() ) {
+				return 0;
+			} else if ( !selector.has_ready() ) {
 					dprintf(D_NETWORK,
 					        "select returns %d, recv failed\n",
-						  nfound );
+						  selector.select_retval() );
 					return 0;
-					break;
 			}
 		}
 		(void)handle_incoming_packet();
@@ -863,30 +829,18 @@ int SafeSock::getMsgSize()
 
 	while(!_msgReady) {
 		if(_timeout > 0) {
-			struct timeval timer;
-			fd_set readfds;
-			int nfds=0, nfound;
-			timer.tv_sec = _timeout;
-			timer.tv_usec = 0;
-#if !defined(WIN32) // nfds is ignored on WIN32
-			nfds = _sock + 1;
-#endif
-			FD_ZERO(&readfds);
-			FD_SET(_sock, &readfds);
+			Selector selector;
+			selector.set_timeout( _timeout );
+			selector.add_fd( _sock, Selector::IO_READ );
 				
-			nfound = select( nfds, &readfds, 0, 0, &timer );
-			switch(nfound) {
-				case 0:
-					return 0;
-					break;
-				case 1:
-					break;
-				default:
+			selector.execute();
+			if ( selector.timed_out() ) {
+				return 0;
+			} else if ( !selector.has_ready() ) {
 					dprintf(D_NETWORK,
 					        "select returns %d, recv failed\n",
-						  nfound );
+						  selector.select_retval() );
 					return FALSE;
-					break;
 			}
 		}
 		(void)handle_incoming_packet();

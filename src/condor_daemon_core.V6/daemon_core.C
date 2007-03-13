@@ -89,6 +89,7 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "httpget.h"
 #include "daemon_core_sock_adapter.h"
 #include "HashTable.h"
+#include "selector.h"
 
 // Make this the last include to fix assert problems on Win32 -- see
 // the comments about assert at the end of condor_debug.h to understand
@@ -564,18 +565,9 @@ int DaemonCore::RegisteredSocketCount()
 int DaemonCore::FileDescriptorSafetyLimit()
 {
 	if( file_descriptor_safety_limit == 0 ) {
-#if defined(WIN32)
-			// on Windows NT, it appears you can open up zillions of sockets,
-			// but only FD_SETSIZE can be put into an fd_set
-		int file_descriptor_max = FD_SETSIZE;
-#else
-			// On unix, fd_set restricts you to fds up to FD_SETSIZE-1
-			// for select()
-		int file_descriptor_max = getdtablesize();
-		if ( FD_SETSIZE < file_descriptor_max ) {
-			file_descriptor_max = FD_SETSIZE;
-		}
-#endif
+			// Our max is the maxiumum file descriptor that our Selector
+			// class says it can handle.
+		int file_descriptor_max = Selector::fd_select_size();
 		// Set the danger level at 80% of the max
 		file_descriptor_safety_limit = file_descriptor_max - file_descriptor_max/5;
 		if( file_descriptor_safety_limit < MIN_FILE_DESCRIPTOR_SAFETY_LIMIT ) {
@@ -2195,12 +2187,10 @@ DaemonCore::Only_Allow_Soap(int duration)
 // incoming messages or requests and invoke corresponding handlers.
 void DaemonCore::Driver()
 {
-	int			rv;					// return value from select
+	Selector	selector;
 	int			i;
 	int			tmpErrno;
-	struct timeval	timer;
-	struct timeval *ptimer;
-	int temp;
+	time_t		timeout;
 	int result;
 	time_t connect_timeout, min_connect_timeout;
 
@@ -2311,30 +2301,23 @@ void DaemonCore::Driver()
 		//   and service this outstanding signal and yet we do not
 		//   starve commands...
 
-		temp = 0;
+		timeout = 0;
 		if ( !only_allow_soap ) {	// call timers unless only allowing soap
-			temp = t.Timeout();
+			timeout = t.Timeout();
 		}
 
 		if ( sent_signal == TRUE ) {
-			temp = 0;
+			timeout = 0;
 		}
-		timer.tv_sec = temp;
-		timer.tv_usec = 0;
-		if ( temp < 0 ) {
-			ptimer = NULL;
-		} else {
-			ptimer = &timer;		// no timeout on the select() desired
+		if ( timeout < 0 ) {
+			timeout = TIME_T_NEVER;
 		}
 
 		// Setup what socket descriptors to select on.  We recompute this
 		// every time because 1) some timeout handler may have removed/added
 		// sockets, and 2) it ain't that expensive....
-		FD_ZERO(&readfds);
-		FD_ZERO(&writefds);
-		FD_ZERO(&exceptfds);
+		selector.reset();
 		min_connect_timeout = 0;
-		int maxfd = 0;
 		for (i = 0; i < nSock; i++) {
 			if ( (*sockTable)[i].iosock ) {	// if a valid entry....
 					// Setup our fdsets
@@ -2343,8 +2326,8 @@ void DaemonCore::Driver()
 						// connect is ready to write.  when connect
 						// is ready, select will set the writefd set
 						// on success, or the exceptfd set on failure.
-					FD_SET( (*sockTable)[i].sockd,&writefds);
-					FD_SET( (*sockTable)[i].sockd,&exceptfds);
+					selector.add_fd( (*sockTable)[i].sockd, Selector::IO_WRITE );
+					selector.add_fd( (*sockTable)[i].sockd, Selector::IO_EXCEPT );
 
 					// If this connection attempt times out sooner than
 					// our select timeout, adjust the select timeout.
@@ -2355,19 +2338,16 @@ void DaemonCore::Driver()
 							min_connect_timeout = connect_timeout;
 						}
 						connect_timeout -= time(NULL);
-						if(connect_timeout < timer.tv_sec) {
+						if(connect_timeout < timeout) {
 							if(connect_timeout < 0) connect_timeout = 0;
-							timer.tv_sec = connect_timeout;
+							timeout = connect_timeout;
 						}
 					}
 				} else {
 						// we want to be woken when there is something
 						// to read.
-					FD_SET( (*sockTable)[i].sockd,&readfds);
+					selector.add_fd( (*sockTable)[i].sockd, Selector::IO_READ );
 				}
-                if ( (*sockTable)[i].sockd >= maxfd ) {
-                    maxfd = (*sockTable)[i].sockd + 1;
-                }
             }
 		}
 
@@ -2378,19 +2358,16 @@ void DaemonCore::Driver()
 		for (i = 0; i < nPipe; i++) {
 			if ( (*pipeTable)[i].index != -1 ) {	// if a valid entry....
 				int pipefd = (*pipeHandleTable)[(*pipeTable)[i].index];
-				if ( pipefd >= maxfd ) {
-					maxfd = pipefd + 1;
-				}
 				switch( (*pipeTable)[i].handler_type ) {
 				case HANDLE_READ:
-					FD_SET(pipefd,&readfds);
+					selector.add_fd( pipefd, Selector::IO_READ );
 					break;
 				case HANDLE_WRITE:
-					FD_SET(pipefd,&writefds);
+					selector.add_fd( pipefd, Selector::IO_WRITE );
 					break;
 				case HANDLE_READ_WRITE:
-					FD_SET(pipefd,&readfds);
-					FD_SET(pipefd,&writefds);
+					selector.add_fd( pipefd, Selector::IO_READ );
+					selector.add_fd( pipefd, Selector::IO_WRITE );
 					break;
 				}
 			}
@@ -2399,10 +2376,7 @@ void DaemonCore::Driver()
 		// Add the read side of async_pipe to the list of file descriptors to
 		// select on.  We write to async_pipe if a unix async signal
 		// is delivered after we unblock signals and before we block on select.
-		FD_SET(async_pipe[0],&readfds);
-        if ( async_pipe[0] >= maxfd ) {
-            maxfd = async_pipe[0] + 1;
-        }
+		selector.add_fd( async_pipe[0], Selector::IO_READ );
 #endif
 
 		if ( only_allow_soap ) {
@@ -2415,20 +2389,16 @@ void DaemonCore::Driver()
 				continue;
 			} else {
 				// only allow soap commands for a while longer
-				timer.tv_sec = only_allow_soap - now;
-				FD_ZERO(&readfds);
-				FD_ZERO(&writefds);
-				FD_ZERO(&exceptfds);
-				FD_SET( (*sockTable)[initial_command_sock].sockd, &readfds );
+				timeout = only_allow_soap - now;
+				selector.reset();
+				selector.add_fd( (*sockTable)[initial_command_sock].sockd,
+								 Selector::IO_READ );
 					// This is ugly, and will break if the sockTable
 					// is ever "compacted" or otherwise rearranged
 					// after sockets are registered into it.
 				if (-1 != soap_ssl_sock) {
-					int soap_sock_fd = (*sockTable)[soap_ssl_sock].sockd;
-					FD_SET( soap_sock_fd, &readfds );
-					if ( soap_sock_fd >= maxfd ) {
-						maxfd = soap_sock_fd + 1;
-					}
+					selector.add_fd( (*sockTable)[soap_ssl_sock].sockd,
+									 Selector::IO_READ );
 				}
 			}
 		}
@@ -2448,12 +2418,12 @@ void DaemonCore::Driver()
 		LeaveCriticalSection(&Big_fat_mutex);
 #endif
 
+		selector.set_timeout( timeout );
+
 		errno = 0;
 		time_t time_before = time(NULL);
-		rv = select( maxfd, (SELECT_FDSET_PTR) &readfds,
-					 (SELECT_FDSET_PTR) &writefds,
-					 (SELECT_FDSET_PTR) &exceptfds, ptimer );
-		CheckForTimeSkip(time_before, timer.tv_sec);
+		selector.execute();
+		CheckForTimeSkip(time_before, timeout);
 
 
 		tmpErrno = errno;
@@ -2470,27 +2440,23 @@ void DaemonCore::Driver()
 		// set it to FALSE after we block the signals again.
 		async_sigs_unblocked = FALSE;
 
-		if(rv < 0) {
-			if(tmpErrno != EINTR)
+		if ( selector.failed() ) {
 			// not just interrupted by a signal...
-			{
 				EXCEPT("DaemonCore: select() returned an unexpected error: %d (%s)",tmpErrno,strerror(tmpErrno));
-			}
 		}
 #else
 		// Windoze
 		EnterCriticalSection(&Big_fat_mutex);
-		if ( rv == SOCKET_ERROR ) {
+		if ( selector.select_retval() == SOCKET_ERROR ) {
 			EXCEPT("select, error # = %d",WSAGetLastError());
 		}
 #endif
 
-		if(rv==0 && min_connect_timeout && min_connect_timeout < time(NULL)) {
+		if ( selector.has_ready() ||
+			 ( selector.timed_out() && 
+			   min_connect_timeout && min_connect_timeout < time(NULL) ) ) {
 			// No socket activity has happened, but a connection attempt
 			// has timed out, so do enter the following section.
-			rv = 1;
-		}
-		if (rv > 0) {	// connection requested
 
 			bool recheck_status = false;
 			//bool call_soap_handler = false;
@@ -2508,9 +2474,10 @@ void DaemonCore::Driver()
 							(*sockTable)[i].iosock->connect_timeout_time();
 						bool connect_timed_out =
 							connect_timeout != 0 && connect_timeout < time(NULL);
-
-						if ( (FD_ISSET((*sockTable)[i].sockd, &writefds)) ||
-							 (FD_ISSET((*sockTable)[i].sockd, &exceptfds)) ||
+						if ( selector.fd_ready( (*sockTable)[i].sockd,
+												Selector::IO_WRITE ) ||
+							 selector.fd_ready( (*sockTable)[i].sockd,
+												Selector::IO_EXCEPT ) ||
 							 connect_timed_out )
 						{
 							// A connection pending socket has been
@@ -2525,7 +2492,8 @@ void DaemonCore::Driver()
 							}
 						}
 					} else {
-						if (FD_ISSET((*sockTable)[i].sockd, &readfds))
+						if ( selector.fd_ready( (*sockTable)[i].sockd,
+												Selector::IO_READ ) )
 						{
 							(*sockTable)[i].call_handler = true;
 						}
@@ -2549,11 +2517,11 @@ void DaemonCore::Driver()
 #else
 					// For Unix, check if select set the bit
 					int pipefd = (*pipeHandleTable)[(*pipeTable)[i].index];
-					if( FD_ISSET(pipefd, &readfds) )
+					if ( selector.fd_ready( pipefd, Selector::IO_READ ) )
 					{
 						(*pipeTable)[i].call_handler = true;
 					}
-					if (FD_ISSET(pipefd, &writefds))
+					if ( selector.fd_ready( pipefd, Selector::IO_WRITE ) )
 					{
 						(*pipeTable)[i].call_handler = true;
 					}
@@ -2597,16 +2565,11 @@ void DaemonCore::Driver()
 #else
 							// UNIX
 							int pipefd = (*pipeHandleTable)[(*pipeTable)[i].index];
-							FD_ZERO(&readfds);
-							FD_SET(pipefd,&readfds);
-							struct timeval stimeout;
-							stimeout.tv_sec = 0;	// set timeout for a poll
-							stimeout.tv_usec = 0;
-							int sresult = select( pipefd + 1,
-								(SELECT_FDSET_PTR) &readfds,
-								(SELECT_FDSET_PTR) 0,(SELECT_FDSET_PTR) 0,
-								&stimeout );
-							if ( sresult == 0 ) {
+							selector.reset();
+							selector.set_timeout( 0 );
+							selector.add_fd( pipefd, Selector::IO_READ );
+							selector.execute();
+							if ( selector.timed_out() ) {
 								// nothing available, try the next entry...
 								continue;
 							}
@@ -2687,17 +2650,13 @@ void DaemonCore::Driver()
 							// read on the pipe could block?  to prevent this, we need
 							// to check one more time to make certain the pipe is ready
 							// for reading.
-							FD_ZERO(&readfds);
-							FD_SET( (*sockTable)[i].sockd,&readfds);
-							struct timeval stimeout;
-							stimeout.tv_sec = 0;	// set timeout for a poll
-							stimeout.tv_usec = 0;
+							selector.reset();
+							selector.set_timeout( 0 );// set timeout for a poll
+							selector.add_fd( (*sockTable)[i].sockd,
+											 Selector::IO_READ );
 
-							int sresult = select( (*sockTable)[i].sockd + 1,
-								(SELECT_FDSET_PTR) &readfds,
-								(SELECT_FDSET_PTR) 0,(SELECT_FDSET_PTR) 0,
-								&stimeout );
-							if ( sresult == 0 ) {
+							selector.execute();
+							if ( selector.timed_out() ) {
 								// nothing available, try the next entry...
 								continue;
 							}
@@ -2823,10 +2782,8 @@ DaemonCore::CheckPrivState( void )
 
 int DaemonCore::ServiceCommandSocket()
 {
+	Selector selector;
 	int commands_served = 0;
-	fd_set		fds;
-	int			rv = 0;					// return value from select
-	struct timeval	timer;
 
 	// Just return if there is no command socket
 	if ( initial_command_sock == -1 )
@@ -2834,42 +2791,37 @@ int DaemonCore::ServiceCommandSocket()
 	if ( !( (*sockTable)[initial_command_sock].iosock) )
 		return 0;
 
+	// Setting timeout to 0 means do not block, i.e. just poll the socket
+	selector.set_timeout( 0 );
+	selector.add_fd( (*sockTable)[initial_command_sock].sockd,
+					 Selector::IO_READ );
+
 	inServiceCommandSocket_flag = TRUE;
 	do {
 
-		// Set select timer sec & usec to 0 means do not block, i.e.
-		// just poll the socket
-		timer.tv_sec = 0;
-		timer.tv_usec = 0;
-
-		FD_ZERO(&fds);
-		FD_SET( (*sockTable)[initial_command_sock].sockd,&fds);
 		errno = 0;
-		rv = select((*sockTable)[initial_command_sock].sockd + 1,
-                (SELECT_FDSET_PTR) &fds, NULL, NULL, &timer);
+		selector.execute();
 #ifndef WIN32
 		// Unix
-		if(rv < 0) {
-			if(errno != EINTR) {
+		if ( selector.failed() ) {
 				// not just interrupted by a signal...
 				EXCEPT("select, error # = %d", errno);
-			}
 		}
 #else
 		// Win32
-		if ( rv == SOCKET_ERROR ) {
+		if ( selector.select_retval() == SOCKET_ERROR ) {
 			EXCEPT("select, error # = %d",WSAGetLastError());
 		}
 #endif
 
-		if ( rv > 0) {		// a connection was requested
+		if ( selector.has_ready() ) {
 			HandleReq( initial_command_sock );
 			commands_served++;
 				// Make sure we didn't leak our priv state
 			CheckPrivState();
 		}
 
-	} while ( rv > 0 );		// loop until no more commands waiting on socket
+	} while ( selector.has_ready() );	// loop until no more commands waiting on socket
 
 	inServiceCommandSocket_flag = FALSE;
 	return commands_served;

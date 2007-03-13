@@ -28,6 +28,7 @@
 #include "condor_io.h"
 #include "condor_debug.h"
 #include "internet.h"
+#include "selector.h"
 
 /*
  * Returns true if the given error number indicates
@@ -58,17 +59,17 @@ static int errno_is_temporary( int e )
 int
 condor_read( SOCKET fd, char *buf, int sz, int timeout, int flags )
 {
+	Selector selector;
 	int nr = 0, nro;
 	unsigned int start_time, cur_time;
-	struct timeval timer;
-	fd_set readfds;
-	int nfds = 0, nfound;
 	char sinbuf[SINFUL_STRING_BUF_SIZE];
 	
 	/* PRE Conditions. */
 	ASSERT(fd >= 0);     /* Need valid file descriptor */
 	ASSERT(buf != NULL); /* Need real memory to put data into */
 	ASSERT(sz > 0);      /* Need legit size on buffer */
+
+	selector.add_fd( fd, Selector::IO_READ );
 	
 	if ( timeout > 0 ) {
 		start_time = time(NULL);
@@ -85,7 +86,7 @@ condor_read( SOCKET fd, char *buf, int sz, int timeout, int flags )
 
 			// If it hasn't yet been longer then we said we would wait...
 			if( start_time + timeout > cur_time ) {
-				timer.tv_sec = (start_time + timeout) - cur_time;
+				selector.set_timeout( (start_time + timeout) - cur_time );
 			} else {
 				dprintf( D_ALWAYS, 
 						 "condor_read(): timeout reading %d bytes from %s.\n",
@@ -95,33 +96,24 @@ condor_read( SOCKET fd, char *buf, int sz, int timeout, int flags )
 			}
 			
 			cur_time = 0;
-			timer.tv_usec = 0;
-#ifndef WIN32
-			nfds = fd + 1;
-#endif
-			FD_ZERO( &readfds );
-			FD_SET( fd, &readfds );
 
 			if( DebugFlags & D_FULLDEBUG && DebugFlags & D_NETWORK ) {
-				dprintf(D_FULLDEBUG, "condor_read(): nfds=%d\n", nfds);
+				dprintf(D_FULLDEBUG, "condor_read(): fd=%d\n", fd);
 			}
-			nfound = select( nfds, &readfds, 0, 0, &timer );
+			selector.execute();
 			if( DebugFlags & D_FULLDEBUG && DebugFlags & D_NETWORK ) {
-				dprintf(D_FULLDEBUG, "condor_read(): nfound=%d\n", nfound);
+				dprintf(D_FULLDEBUG, "condor_read(): select returned %d\n", 
+						selector.select_retval());
 			}
 
-			switch(nfound) {
-			case 0:
+			if ( selector.timed_out() ) {
 				dprintf( D_ALWAYS, 
 						 "condor_read(): timeout reading %d bytes from %s.\n",
 						 sz,
 						 sock_peer_to_string(fd, sinbuf, sizeof(sinbuf), "unknown source") );
 				return -1;
 
-			case 1:
-				break;
-
-			default: {
+			} else if ( !selector.has_ready() ) {
 				int the_error;
 #ifdef WIN32
 				the_error = WSAGetLastError();
@@ -130,7 +122,7 @@ condor_read( SOCKET fd, char *buf, int sz, int timeout, int flags )
 #endif
 				dprintf( D_ALWAYS, "condor_read(): select() "
 						 "returns %d, assuming failure reading %d bytes from %s (errno=%d).\n",
-						 nfound,
+						 selector.select_retval(),
 						 sz,
 						 sock_peer_to_string(fd, sinbuf, sizeof(sinbuf), "unknown source"),
 						 the_error );
@@ -192,13 +184,9 @@ condor_read( SOCKET fd, char *buf, int sz, int timeout, int flags )
 int
 condor_write( SOCKET fd, char *buf, int sz, int timeout, int flags )
 {
+	Selector selector;
 	int nw = 0, nwo = 0;
 	unsigned int start_time = 0, cur_time = 0;
-	struct timeval timer;
-	fd_set writefds;
-	fd_set readfds;
-	fd_set exceptfds;
-	int nfds = 0, nfound = 0;
 	char tmpbuf[1];
 	int nro;
 	bool select_for_read = true;
@@ -209,11 +197,10 @@ condor_write( SOCKET fd, char *buf, int sz, int timeout, int flags )
 	ASSERT(sz > 0);      /* Can't write buffers that are have no data */
 	ASSERT(fd >= 0);     /* Need valid file descriptor */
 	ASSERT(buf != NULL); /* Need valid buffer to write */
-	
-	
-	memset( &timer, 0, sizeof( struct timeval ) );
-	memset( &writefds, 0, sizeof( fd_set ) );
-	memset( &readfds, 0, sizeof( fd_set ) );
+
+	selector.add_fd( fd, Selector::IO_READ );
+	selector.add_fd( fd, Selector::IO_WRITE );
+	selector.add_fd( fd, Selector::IO_EXCEPT );
 	
 	if(timeout > 0) {
 		start_time = time(NULL);
@@ -231,7 +218,7 @@ condor_write( SOCKET fd, char *buf, int sz, int timeout, int flags )
 				}
 
 				if( start_time + timeout > cur_time ) {
-					timer.tv_sec = (start_time + timeout) - cur_time;
+					selector.set_timeout( (start_time + timeout) - cur_time );
 				} else {
 					dprintf( D_ALWAYS, "condor_write(): "
 							 "timed out writing %d bytes to %s\n",
@@ -241,42 +228,33 @@ condor_write( SOCKET fd, char *buf, int sz, int timeout, int flags )
 				}
 			
 				cur_time = 0;
-				timer.tv_usec = 0;
 
-#ifndef WIN32
-				nfds = fd + 1;
-#endif
-				FD_ZERO( &writefds );
-				FD_SET( fd, &writefds );
-				FD_ZERO( &exceptfds );
-				FD_SET( fd, &exceptfds );
-				
-				FD_ZERO( &readfds );
+					// The write and except sets are added at the top of
+					// this function, since we always want to select on
+					// them.
 				if( select_for_read ) {
 						// Also, put it in the read fds, so we'll wake
 						// up if the socket is closed
-					FD_SET( fd, &readfds );
+					selector.add_fd( fd, Selector::IO_READ );
+				} else {
+					selector.delete_fd( fd, Selector::IO_READ );
 				}
-				nfound = select( nfds, &readfds, &writefds, &exceptfds, 
-								 &timer ); 
+				selector.execute();
 
 					// unless we decide we need to select() again, we
 					// want to break out of our while() loop now that
 					// we've actually performed a select()
 				needs_select = false;
 
-				switch(nfound) {
-				case 0:
+				if ( selector.timed_out() ) {
 					dprintf( D_ALWAYS, "condor_write(): "
 							 "timed out writing %d bytes to %s\n",
 							 sz,
 							 sock_peer_to_string(fd, sinbuf, sizeof(sinbuf), "unknown source") );
 					return -1;
 				
-				case 1:
-				case 2:
-				case 3:
-					if( FD_ISSET(fd, &readfds) ) {
+				} else if ( selector.has_ready() ) {
+					if ( selector.fd_ready( fd, Selector::IO_READ ) ) {
 							// see if the socket was closed
 						nro = recv(fd, tmpbuf, 1, MSG_PEEK);
 						if( nro == -1 ) {
@@ -320,12 +298,11 @@ condor_write( SOCKET fd, char *buf, int sz, int timeout, int flags )
 						needs_select = true;
 						select_for_read = false;
 					}
-					break;
-				default:
+				} else {
 					dprintf( D_ALWAYS, "condor_write(): select() "
 							 "returns %d, assuming failure "
 							 "writing %d bytes to %s.\n",
-							 nfound,
+							 selector.select_retval(),
 							 sz,
 							 sock_peer_to_string(fd, sinbuf, sizeof(sinbuf), "unknown source") );
 					return -1;

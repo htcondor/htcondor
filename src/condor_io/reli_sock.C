@@ -30,6 +30,7 @@
 #include "condor_socket_types.h"
 #include "condor_md.h"
 #include "stat_wrapper.h"
+#include "selector.h"
 
 #ifdef WIN32
 #include <mswsock.h>	// For TransmitFile()
@@ -144,30 +145,18 @@ ReliSock::accept( ReliSock	&c )
 	}
 
 	if (_timeout > 0) {
-		struct timeval	timer;
-		fd_set			readfds;
-		int				nfds=0, nfound;
-		timer.tv_sec = _timeout;
-		timer.tv_usec = 0;
-#if !defined(WIN32) // nfds is ignored on WIN32
-		nfds = _sock + 1;
-#endif
-		FD_ZERO( &readfds );
-		FD_SET( _sock, &readfds );
+		Selector		selector;
+		selector.set_timeout( _timeout );
+		selector.add_fd( _sock, Selector::IO_READ );
 
-		nfound = select( nfds, &readfds, 0, 0, &timer );
+		selector.execute();
 
-		switch(nfound) {
-		case 0:
+		if( selector.timed_out() ) {
 			return FALSE;
-			break;
-		case 1:
-			break;
-		default:
+		} else if ( !selector.has_ready() ) {
 			dprintf( D_ALWAYS, "select returns %d, connect failed\n",
-				nfound );
+				selector.select_retval() );
 			return FALSE;
-			break;
 		}
 	}
 

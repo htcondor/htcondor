@@ -64,6 +64,8 @@ typedef int     (Service::*Eventcpp)();
 // This value, passed for "when", will cause the timer to never expire
 const unsigned	TIMER_NEVER = 0xffffffff;
 
+const time_t TIME_T_NEVER	= 0x7fffffff;
+
 
 //-----------------------------------------------------------------------------
 /// Not_Yet_Documented

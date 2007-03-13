@@ -31,8 +31,6 @@ static char* DEFAULT_INDENT = "DaemonCore--> ";
 
 static	TimerManager*	_t = NULL;
 
-const time_t TIME_T_NEVER	= 0x7fffffff;
-
 	/*	MAX_FIRES_PER_TIMEOUT sets the maximum number of timer handlers
 		we will invoke per call to Timeout().  This limit prevents timers
 		from starving other kinds other DC handlers (i.e. it make certain

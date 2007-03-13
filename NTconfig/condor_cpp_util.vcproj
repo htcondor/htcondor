@@ -524,6 +524,12 @@
 		<File
 			RelativePath="..\src\condor_c++_util\which.h">
 		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\selector.C">
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\selector.h">
+		</File>
 	</Files>
 	<Globals>
 	</Globals>

@@ -34,6 +34,7 @@
 #include "get_port_range.h"
 #include "condor_netdb.h"
 #include "daemon_core_sock_adapter.h"
+#include "selector.h"
 
 #if !defined(WIN32)
 #define closesocket close
@@ -759,10 +760,7 @@ Sock::do_connect_finish()
 			// select() below.
 
 		while ( _state == sock_connect_pending ) {
-			struct timeval	timer;
-			fd_set			writefds;
-			fd_set			exceptfds;
-			int				nfds=0, nfound;
+			Selector		selector;
 			int				timeleft = connect_state.this_try_timeout_time - time(NULL);
 			if( connect_state.non_blocking_flag ) {
 				timeleft = 0;
@@ -774,30 +772,23 @@ Sock::do_connect_finish()
 					// clock must have shifted
 				timeleft = _timeout;
 			}
-			timer.tv_sec = timeleft;
-			timer.tv_usec = 0;
-#if !defined(WIN32) // nfds is ignored on WIN32
-			nfds = _sock + 1;
-#endif
-			FD_ZERO( &writefds );
-			FD_SET( _sock, &writefds );
-			FD_ZERO( &exceptfds );
-			FD_SET( _sock, &exceptfds );
+			selector.reset();
+			selector.set_timeout( timeleft );
+			selector.add_fd( _sock, Selector::IO_WRITE );
+			selector.add_fd( _sock, Selector::IO_EXCEPT );
 
-			nfound = ::select( nfds, 0, &writefds, &exceptfds, &timer );
+			selector.execute();
 
-			if( nfound == 0 ) {
+			if( selector.timed_out() ) {
 				if( !connect_state.non_blocking_flag ) {
 					cancel_connect();
 				}
 				break; // select timed out
 			}
-			if( nfound < 0 ) {
-#if !defined(WIN32)
-				if(errno == EINTR) {
-					continue; // select() was interrupted by a signal
-				}
-#endif
+			if( selector.signalled() ) {
+				continue;
+			}
+			if( selector.failed() ) {
 #if defined(WIN32)
 				setConnectFailureErrno(WSAGetLastError(),"select");
 #else
@@ -820,7 +811,7 @@ Sock::do_connect_finish()
 				cancel_connect();
 				break; // done with select() loop
 			}
-			else if( FD_ISSET(_sock,&exceptfds) ) {
+			else if( selector.fd_ready(_sock,Selector::IO_EXCEPT) ) {
 					// In some cases, test_connection() lies, so we
 					// have to rely on select() to detect the problem.
 				_state = sock_bound;
@@ -1639,27 +1630,22 @@ This function is invoked whenever a SIGIO arrives.  When this happens, we don't 
 
 static void async_handler( int s )
 {
+	Selector selector;
 	int i;
-	fd_set set;
-	int success;
-	struct timeval zero;
 
-	zero.tv_sec = 0;
-	zero.tv_usec = 0;
-
-	FD_ZERO( &set );
+	selector.set_timeout( 0 );
 
 	for( i=0; i<table_size; i++ ) {
 		if( handler_table[i] ) {
-			FD_SET( i, &set );
+			selector.add_fd( i, Selector::IO_READ );
 		}
 	}
 
-	success = ::select( table_size, &set, 0, 0, &zero );
+	selector.execute();
 
-	if( success>0 ) {
+	if( selector.has_ready() ) {
 		for( i=0; i<table_size; i++ ) {
-			if( FD_ISSET( i, &set ) ) {
+			if( selector.fd_ready( i, Selector::IO_READ ) ) {
 				handler_table[i](stream_table[i]);
 			}
 		}

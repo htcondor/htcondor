@@ -1363,8 +1363,6 @@ class DaemonCore : public Service
 
     void free_descrip(char *p) { if(p &&  p != EMPTY_DESCRIP) free(p); }
     
-    fd_set              readfds,writefds,exceptfds; 
-
     struct in_addr      negotiator_sin_addr;    // used by Verify method
 
 #ifdef WIN32

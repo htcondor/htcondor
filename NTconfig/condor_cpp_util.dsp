@@ -921,5 +921,13 @@ SOURCE="..\src\condor_c++_util\windows_firewall.C"
 
 SOURCE="..\src\condor_c++_util\windows_firewall.h"
 # End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_c++_util\selector.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_c++_util\selector.h
+# End Source File
 # End Target
 # End Project
