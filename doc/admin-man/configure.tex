@@ -2475,13 +2475,10 @@ will not want to change them for any reason.
   \MacroNI{<SUBSYS>\_ADDRESS\_FILE}. 
 
 \item[\Macro{SECONDARY\_COLLECTOR\_LIST}]
-  \label{param:SecondaryCollectorList} This macro lists the host names
-  of secondary collectors.  A secondary collector is a machine
-  running a \Condor{collector} daemon that is not the central manager.
-  A secondary collector makes it possible to execute administrative
-  commands in the pool when the central manager is down by using the
-  \Opt{-pool} argument to specify the name of a secondary collector to
-  use to locate the \Condor{master} daemon.
+  \label{param:SecondaryCollectorList} This macro has been removed
+  as of Condor version 6.9.3.
+  Just use the \Macro{COLLECTOR\_HOST} setting, which can define a
+  list of collectors.
 
 \item[\Macro{ALLOW\_ADMIN\_COMMANDS}]
   \label{param:AllowAdminCommands} If set to NO for a given host, this
