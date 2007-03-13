@@ -38,11 +38,10 @@ class ClassAdList;
 /** Basically, a SimpleList of Daemon objects.  This is slightly
 	more complicated than that, and provides some useful, shared
 	functionality that would otherwise have to be duplicated in all
-	the places that need a list of Daemon objects (the flocking
-	schedd and the SECONDARY_COLLECTORS list in the master, for
-	example).  In particular, the code to initialize the list and
-	instantiate all the Daemon objects, and the destructor which
-	properly cleans up all the memory and destroys all the objects. 
+	the places that need a list of Daemon object.  In particular, the
+	code to initialize the list and instantiate all the Daemon
+	objects, and the destructor which properly cleans up all the
+	memory and destroys all the objects.
 */
 
 class DaemonList {

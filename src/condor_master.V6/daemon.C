@@ -52,7 +52,6 @@ extern char*	FS_Preen;
 extern			ClassAd* ad;
 extern int		NT_ServiceFlag; // TRUE if running on NT as an NT Service
 extern CollectorList*	Collectors;
-extern DaemonList* secondary_collectors;
 
 extern time_t	GetTimeStamp(char* file);
 extern int 	   	NewExecutable(char* file, time_t* tsp);
@@ -2105,20 +2104,6 @@ Daemons::UpdateCollector()
 
 	if (Collectors) {
 		Collectors->sendUpdates (UPDATE_MASTER_AD, ad, NULL, true);
-	}
-
-	if (secondary_collectors) {
-		secondary_collectors->rewind();
-		Daemon* d;
-		DCCollector* col;
-		while( secondary_collectors->next(d) ) {
-			col = (DCCollector*)d;
-			if( ! col->sendUpdate(UPDATE_MASTER_AD, ad, NULL, true) ) {
-				dprintf( D_ALWAYS, "Can't send UPDATE_MASTER_AD to "
-						 "collector %s: %s\n", 
-						 col->updateDestination(), col->error() );
-			}
-		}
 	}
 
 		// Reset the timer so we don't do another period update until 

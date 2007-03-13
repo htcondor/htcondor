@@ -104,7 +104,6 @@ int		preen_interval;
 int		new_bin_delay;
 char	*MasterName = NULL;
 CollectorList *Collectors = NULL;
-DaemonList* secondary_collectors = NULL;
 
 int		master_backoff_constant = 9;
 int		master_backoff_ceiling = 3600;
@@ -166,10 +165,6 @@ cleanup_memory( void )
 	if ( Collectors ) {
 		delete Collectors;
 		Collectors = NULL;
-	}
-	if ( secondary_collectors ) {
-		delete secondary_collectors;
-		secondary_collectors = NULL;
 	}
 }
 
@@ -681,20 +676,6 @@ init_params()
 	}
 	FS_Preen = param( "PREEN" );
 
-	tmp = param( "SECONDARY_COLLECTOR_LIST" );
-	if( tmp ) {
-		if( secondary_collectors ) {
-			delete secondary_collectors;
-		}
-		secondary_collectors = new DaemonList();
-		secondary_collectors->init( DT_COLLECTOR, tmp );
-		free(tmp);
-	} else {
-		if( secondary_collectors ) {
-			delete secondary_collectors;
-			secondary_collectors = NULL;
-		}
-	}
 }
 
 
