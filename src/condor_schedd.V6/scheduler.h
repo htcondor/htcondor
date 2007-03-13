@@ -399,10 +399,6 @@ class Scheduler : public Service
 	// info about our central manager
 	CollectorList* 	Collectors;
 
-		// ckireyev: we can no longer stash the Negotiator object
-		// since the negotiator host may change on the fly
-	//Daemon*			Negotiator;
-
 		// object to manage our various shadows and their ClassAds
 	ShadowMgr shadow_mgr;
 
