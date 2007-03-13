@@ -29,7 +29,8 @@
 int LocalClient::m_next_serial_number = 0;
 
 LocalClient::LocalClient(const char* server_addr) :
-	m_writer(server_addr)
+	m_writer(server_addr),
+	m_reader(NULL)
 {
 	// make sure that each time this process instantiates another local
 	// client object, a different serial number is used
@@ -39,22 +40,28 @@ LocalClient::LocalClient(const char* server_addr) :
 
 	m_pid = getpid();
 
-	char* my_addr = named_pipe_make_addr(server_addr,
-	                                     m_pid,
-	                                     m_serial_number);
-	m_reader = new NamedPipeReader(my_addr);
-	ASSERT(m_reader != NULL);
-	delete[] my_addr;
+	m_addr = named_pipe_make_addr(server_addr,
+	                              m_pid,
+	                              m_serial_number);
 }
 
 LocalClient::~LocalClient()
 {
-	delete m_reader;
+	delete[] m_addr;
+
+	if (m_reader != NULL) {
+		delete m_reader;
+	}
 }
 
 void
 LocalClient::start_connection(void* buffer, int len)
 {
+	// create a named pipe reader to receive the response
+	//
+	m_reader = new NamedPipeReader(m_addr);
+	ASSERT(m_reader != NULL);
+
 	// we need to write our pid and serial number, followed by the given
 	// payload. the trick here is that this write needs to be atomic so
 	// that requests aren't interleaved when the server reads them. thus,
@@ -89,6 +96,9 @@ LocalClient::start_connection(void* buffer, int len)
 void
 LocalClient::end_connection()
 {
+	ASSERT(m_reader != NULL);
+	delete m_reader;
+	m_reader = NULL;
 }
 
 void
