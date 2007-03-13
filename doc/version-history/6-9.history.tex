@@ -56,6 +56,10 @@ one.
 
 \begin{itemize}
 
+\item On unix systems, Condor can now handle file descriptors larger than
+FD\_SETSIZE when using the select system call. Previously, file descriptors
+largers than FD\_SETSIZE would cause memory corruption and crashes.
+
 \item When an update to the \Condor{collector} from the
 \Condor{startd} is lost, it is possible for multiple claims to the
 same resource to be handed out by the \Condor{negotiator}.  This is
