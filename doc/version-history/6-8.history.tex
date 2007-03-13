@@ -55,11 +55,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Fixed a bug where Condor would erroneously say a scheduler
-universe's executable was missing or not executable if the scheduler
-universe job had been submitted with CopyToSpool == False in the submit
-description file and the user had a umask which prevented the condor
-user from following the search path to the user owned executable.
+\item Fixed a bug where Condor erroneously indicates that a scheduler
+universe's job executable is missing or not executable, if the scheduler
+universe job had been submitted with
+\SubmitCmd{CopyToSpool = false} in the submit
+description file, and the user had a umask which prevented the user
+named \Login{condor} from following the search path to the
+user owned executable.
 
 \item Fixed a bug that could cause the \Condor{schedd} to crash if it
 received too many matches in one negotiation cycle (more than 1000 on a
@@ -69,12 +71,12 @@ Linux platform).
 properly when Quill was in use.
 
 \item Fixed a bug where a java property which included surrounding double quotes
-would cause the detection of a java virtual machine to go awry. 
+caused the detection of a java virtual machine to go awry. 
 The fix, which may change in the future, changes any extra double quotes
-in a property value to single quotes.
+within a property value to single quotes.
 
-\item A bug has been fixed in the \Condor{quill} daemon which would
-cause it to crash in some circumstances when the Postgres database
+\item Fixed a bug in which the \Condor{quill} daemon 
+crashed occasionally when the Postgres database
 server was unavailable.
 
 \item The Solaris 9 Condor package can be used under Solaris 10 again.
@@ -82,7 +84,7 @@ Changes in 6.7.20 broke this compatibility.
 
 % PR 806
 \item \Condor{dagman} now does a better job, especially in recovery mode,
-of detecting potentially incorrect submit events .
+of detecting potentially incorrect submit events.
 Those have Condor IDs not matching what is expected.
 
 % PR 814
