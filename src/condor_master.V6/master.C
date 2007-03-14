@@ -103,7 +103,6 @@ int		check_new_exec_interval;
 int		preen_interval;
 int		new_bin_delay;
 char	*MasterName = NULL;
-CollectorList *Collectors = NULL;
 
 int		master_backoff_constant = 9;
 int		master_backoff_ceiling = 3600;
@@ -161,10 +160,6 @@ cleanup_memory( void )
 	if ( FS_Preen ) {
 		free( FS_Preen );
 		FS_Preen = NULL;
-	}
-	if ( Collectors ) {
-		delete Collectors;
-		Collectors = NULL;
 	}
 }
 
@@ -613,10 +608,6 @@ init_params()
 		free( tmp );
 	}
 
-	if( Collectors ) {
-		delete( Collectors );
-	}
-	Collectors = CollectorList::create();
 		
 	StartDaemons = TRUE;
 	tmp = param("START_DAEMONS");

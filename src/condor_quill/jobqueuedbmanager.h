@@ -101,7 +101,6 @@ class JobQueueDBManager : public Service
 	static char *   fillEscapeCharacters(char *str);
 	
  private:
-	CollectorList 	*collectors;
 	ClassAd 	    *ad;
 	
 		//! create the QUILL_AD that's sent to the collector

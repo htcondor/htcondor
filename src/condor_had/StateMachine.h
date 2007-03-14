@@ -51,7 +51,6 @@ typedef enum {
     LEADER_STATE = 4
 }STATES;
 
-class CollectorList;
 class Daemon;
 /*
   class HADStateMachine
@@ -186,7 +185,6 @@ protected:
 
     ClassAd*       m_classAd;
     // info about our central manager
-    CollectorList* m_collectorsList;
     int            m_updateCollectorTimerId;
     int            m_updateCollectorInterval;
 };

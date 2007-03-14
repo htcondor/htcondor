@@ -51,7 +51,6 @@
 #include "proc.h"
 #include "exit.h"
 #include "dc_startd.h"
-#include "dc_collector.h"
 
 extern Scheduler scheduler;
 extern DedicatedScheduler dedicated_scheduler;
@@ -2136,16 +2135,13 @@ DedicatedScheduler::getDedicatedResourceInfo( void )
 
 		// This should fill in resources with all the classads we care
 		// about
-	CollectorList * collectors = CollectorList::create();
+	CollectorList *collectors = daemonCore->getCollectorList();
 	if (collectors->query (query, *resources) == Q_OK) {
-		delete collectors;
-
 		dprintf( D_FULLDEBUG, "Found %d potential dedicated resources\n",
 				 resources->Length() );
 		return true;
 	}
 
-	delete collectors;
 	dprintf (D_ALWAYS, "Unable to run query %s\n",  constraint);
 	return false;
 }
@@ -3589,9 +3585,8 @@ DedicatedScheduler::publishRequestAd( void )
 	sprintf( tmp, "%s = 0", ATTR_FLOCKED_JOBS );
 	ad.InsertOrUpdate( tmp );
 
-		// Now, we can actually send this off to the CM:
-		// Port doesn't matter, since we've got the sinful string. 
-	scheduler.Collectors->sendUpdates( UPDATE_SUBMITTOR_AD, &ad, NULL, true );
+		// Now, we can actually send this off to the CM.
+	daemonCore->sendUpdates( UPDATE_SUBMITTOR_AD, &ad, NULL, true );
 }
 
 
@@ -4151,9 +4146,10 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 		}
 	}
 
-		// Now we have the big constraint with all the machines in it, send it away 
-		// to the Collector...
-	if (scheduler.Collectors->query(query, ads) != Q_OK) {
+		// Now we have the big constraint with all the machines in it,
+		// send it away to the Collector...
+	CollectorList* collectors = daemonCore->getCollectorList();
+	if (collectors->query(query, ads) != Q_OK) {
 		dprintf(D_ALWAYS, "DedicatedScheduler could not query Collector\n");
 	}
 

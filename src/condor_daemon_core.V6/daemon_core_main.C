@@ -1055,6 +1055,9 @@ dc_reconfig( bool is_full )
 
 	daemonCore->InitSettableAttrsLists();
 
+		// (Re)initialize the collector list for ClassAd updates
+	daemonCore->initCollectorList();
+
 		// If requested to do so in the config file, do a segv now.
 		// This is to test our handling/writing of a core file.
 	char* ptmp;
@@ -1796,6 +1799,9 @@ int main( int argc, char** argv )
 		// Set up our GCB failure callback
 	GCB_Recovery_failed_callback_set( gcb_recovery_failed_callback );
 #endif
+
+	// Initialize the collector list for ClassAd updates (if any).
+	daemonCore->initCollectorList();
 
 	main_pre_command_sock_init();
 

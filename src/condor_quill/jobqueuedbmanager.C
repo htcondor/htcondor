@@ -65,9 +65,6 @@ JobQueueDBManager::JobQueueDBManager()
 JobQueueDBManager::~JobQueueDBManager()
 {
 		// release Objects
-	if (collectors) {
-		delete collectors;
-	}
 	if (prober != NULL) {
 		delete prober;
 	}
@@ -2674,8 +2671,6 @@ void JobQueueDBManager::createQuillAd(void) {
 	sprintf( expr, "%s = \"%s\"", ATTR_QUILL_DB_NAME, jobQueueDBName );
 	ad->Insert(expr);
 
-	collectors = CollectorList::create();
-  
 	if(tmp) free(tmp);
 	if(quill_query_passwd) free(quill_query_passwd);
 	if(quill_name) free(quill_name);
@@ -2716,7 +2711,7 @@ JobQueueDBManager::pollingTime()
 
 	updateQuillAd();
 
-	collectors->sendUpdates ( UPDATE_QUILL_AD, ad, NULL, true );
+	daemonCore->sendUpdates ( UPDATE_QUILL_AD, ad, NULL, true );
 	
 	dprintf(D_ALWAYS, "++++++++ Sent schedd ad to collector ++++++++\n");
 }

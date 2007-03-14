@@ -25,7 +25,6 @@
 #define __WIN_CREDD__
 
 #include "condor_daemon_core.h"
-#include "daemon_list.h"
 
 class CredDaemon : public Service {
 
@@ -45,8 +44,6 @@ private:
 	void invalidate_ad();
 
 	char* m_name;
-
-	CollectorList *m_collectors;
 
 	int m_update_collector_tid;
 	int m_update_collector_interval;

@@ -23,26 +23,20 @@
 
 #include "Scheduler.h"
 #include "condor_config.h"
-#include "dc_collector.h"
 #include "get_daemon_name.h"
 
 Scheduler::Scheduler() {
 	log_reader_polling_timer = -1;
 	log_reader_polling_period = 10;
-	m_collectors = NULL;
 	m_public_ad_update_timer = -1;
 	m_public_ad_update_interval = -1;
 }
 
 Scheduler::~Scheduler() {
-	if(m_collectors) {
-		delete m_collectors;
-	}
 }
 
 void
 Scheduler::init() {
-	m_collectors = CollectorList::create();
 	config();
 }
 
@@ -152,10 +146,10 @@ Scheduler::TimerHandler_JobLogPolling() {
 
 void
 Scheduler::TimerHandler_UpdateCollector() {
-	//m_collectors->sendUpdates(UPDATE_SCHEDD_AD, &m_public_ad);
+	//daemonCore->sendUpdates(UPDATE_SCHEDD_AD, &m_public_ad);
 }
 
 void
 Scheduler::InvalidatePublicAd() {
-	//m_collectors->sendUpdates(INVALIDATE_SCHEDD_ADS, &m_public_ad);
+	//daemonCore->sendUpdates(INVALIDATE_SCHEDD_ADS, &m_public_ad);
 }

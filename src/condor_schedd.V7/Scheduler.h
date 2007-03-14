@@ -51,7 +51,6 @@ private:
 
 	classad::ClassAdCollection ad_collection;
 	JobLogReader job_log_reader;
-	class CollectorList *m_collectors;
 
 	int log_reader_polling_timer;
 	int log_reader_polling_period;

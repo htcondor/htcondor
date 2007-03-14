@@ -36,7 +36,7 @@ char* mySubSystem = "CREDD";		// used by Daemon Core
 
 CredDaemon *credd;
 
-CredDaemon::CredDaemon() : m_name(NULL), m_collectors(NULL), m_update_collector_tid(-1)
+CredDaemon::CredDaemon() : m_name(NULL), m_update_collector_tid(-1)
 {
 
 	reconfig();
@@ -68,8 +68,6 @@ CredDaemon::~CredDaemon()
 {
 	// tell our collector we're going away
 	invalidate_ad();
-
-	delete m_collectors;
 }
 
 void
@@ -88,9 +86,6 @@ CredDaemon::reconfig()
 
 	// fill in our classad
 	initialize_classad();
-
-	if (m_collectors != NULL) delete m_collectors;
-	m_collectors = CollectorList::create();
 
 	// reset the timer (if it exists) to update the collector
 	if (m_update_collector_tid != -1) {
@@ -123,8 +118,7 @@ CredDaemon::initialize_classad()
 void
 CredDaemon::update_collector()
 {
-	ASSERT(m_collectors != NULL);
-	m_collectors->sendUpdates(UPDATE_AD_GENERIC, &m_classad, NULL, true);
+	daemonCore->sendUpdates(UPDATE_AD_GENERIC, &m_classad, NULL, true);
 }
 
 void
@@ -138,7 +132,7 @@ CredDaemon::invalidate_ad()
 	line.sprintf("%s = %s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME, m_name);
     query_ad.Insert(line.Value());
 
-	m_collectors->sendUpdates(INVALIDATE_ADS_GENERIC, &query_ad, NULL, true);
+	daemonCore->sendUpdates(INVALIDATE_ADS_GENERIC, &query_ad, NULL, true);
 }
 
 void

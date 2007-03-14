@@ -383,6 +383,8 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	soap = new struct soap;
 	
 	localAdFile = NULL;
+
+	m_collector_list = NULL;
 }
 
 // DaemonCore destructor. Delete the all the various handler tables, plus
@@ -508,6 +510,11 @@ DaemonCore::~DaemonCore()
 		localAdFile = NULL;
 	}
 	
+	if (m_collector_list) {
+		delete m_collector_list;
+		m_collector_list = NULL;
+	}
+
 #ifdef WIN32
 	 DeleteCriticalSection(&Big_fat_mutex);
 #endif
@@ -8186,4 +8193,28 @@ DaemonCore::UpdateLocalAd(ClassAd *daemonAd)
         }
     }
 }
+
+
+void
+DaemonCore::initCollectorList() {
+	if (m_collector_list) {
+		delete m_collector_list;
+	}
+	m_collector_list = CollectorList::create();
+}
+
+
+CollectorList*
+DaemonCore::getCollectorList() {
+	return m_collector_list;
+}
+
+
+int
+DaemonCore::sendUpdates( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblock )
+{
+	ASSERT(m_collector_list);
+	return m_collector_list->sendUpdates(cmd, ad1, ad2, nonblock);
+}
+
 

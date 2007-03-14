@@ -313,7 +313,6 @@ Scheduler::Scheduler() :
 	N_Owners = 0;
 	NegotiationRequestTime = 0;
 
-	Collectors = NULL;
 		//gotiator = NULL;
 	CondorAdministrator = NULL;
 	Mail = NULL;
@@ -396,10 +395,6 @@ Scheduler::~Scheduler()
 		// they're already getting cleaned up, so if we do it again,
 		// we'll seg fault.
 
-
-	if ( Collectors ) {
-		delete( Collectors );
-	}
 	if (CondorAdministrator)
 		free(CondorAdministrator);
 	if (Mail)
@@ -752,11 +747,10 @@ Scheduler::count_jobs()
 	ad->InsertOrUpdate(tmp);
 
 		// Update collectors
-	int num_updates = Collectors->sendUpdates ( UPDATE_SCHEDD_AD, ad, NULL, true );
+	int num_updates = daemonCore->sendUpdates(UPDATE_SCHEDD_AD, ad, NULL, true);
 	dprintf( D_FULLDEBUG, 
 			 "Sent HEART BEAT ad to %d collectors. Number of submittors=%d\n",
-			 num_updates,
-				 N_Owners );   
+			 num_updates, N_Owners );   
 
 	// send the schedd ad to our flock collectors too, so we will
 	// appear in condor_q -global and condor_status -schedd
@@ -811,10 +805,9 @@ Scheduler::count_jobs()
 			   Owners[i].Name, UidDomain );
 
 		// Update collectors
-	  int num_updates = Collectors->sendUpdates( UPDATE_SUBMITTOR_AD, ad, NULL, true );
+	  int num_updates = daemonCore->sendUpdates(UPDATE_SUBMITTOR_AD, ad, NULL, true);
 	  dprintf( D_ALWAYS, "Sent ad to %d collectors for %s@%s\n", 
-				 num_updates,
-				 Owners[i].Name, UidDomain );
+			   num_updates, Owners[i].Name, UidDomain );
 	}
 
 	// update collector of the pools with which we are flocking, if
@@ -947,8 +940,9 @@ Scheduler::count_jobs()
 
 		// Update collectors
 	  int num_updates = 
-		  Collectors->sendUpdates( UPDATE_SUBMITTOR_AD, ad, NULL, true );
-	  dprintf (D_ALWAYS, "Sent owner (0 jobs) ad to %d collectors\n", num_updates);
+		  daemonCore->sendUpdates(UPDATE_SUBMITTOR_AD, ad, NULL, true);
+	  dprintf(D_ALWAYS, "Sent owner (0 jobs) ad to %d collectors\n",
+			  num_updates);
 
 	  // also update all of the flock hosts
 	  int i;
@@ -5672,7 +5666,8 @@ Scheduler::checkReconnectQueue( void )
 		query.addORConstraint( constraint.Value() );
 	}
 
-	if (Collectors->query (query, ads) != Q_OK) {
+	CollectorList *collectors = daemonCore->getCollectorList();
+	if (collectors->query(query, ads) != Q_OK) {
 		dprintf( D_ALWAYS, "ERROR: failed to query collectors\n");
 			// TODO! deal violently with this failure. ;)
 		jobsToReconnect.Rewind();
@@ -9464,15 +9459,10 @@ Scheduler::Init()
 		free(tmp);
 	}
 
-
 	if( Spool ) free( Spool );
 	if( !(Spool = param("SPOOL")) ) {
 		EXCEPT( "No spool directory specified in config file" );
 	}
-
-
-	if ( Collectors ) delete ( Collectors );
-	Collectors = CollectorList::create();
 
 	if( CondorAdministrator ) free( CondorAdministrator );
 	if( ! (CondorAdministrator = param("CONDOR_ADMIN")) ) {
@@ -10365,7 +10355,7 @@ Scheduler::invalidate_ads()
 
 
 		// Update collectors
-	Collectors->sendUpdates ( INVALIDATE_SCHEDD_ADS, ad, NULL, false );
+	daemonCore->sendUpdates(INVALIDATE_SCHEDD_ADS, ad, NULL, false);
 
 	if (N_Owners == 0) return;	// no submitter ads to invalidate
 
@@ -10374,7 +10364,7 @@ Scheduler::invalidate_ads()
 			 Name );
     ad->InsertOrUpdate( line );
 
-	Collectors->sendUpdates ( INVALIDATE_SUBMITTOR_ADS, ad, NULL, false );
+	daemonCore->sendUpdates(INVALIDATE_SUBMITTOR_ADS, ad, NULL, false);
 
 
 	Daemon* d;

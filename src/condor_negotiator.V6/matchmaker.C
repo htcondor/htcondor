@@ -81,8 +81,6 @@ Matchmaker ()
 	
 	stashedAds = new AdHash(1000, HashFunc);
 
-	Collectors = NULL;
-	
 	MatchList = NULL;
 	cachedAutoCluster = -1;
 	cachedName = NULL;
@@ -118,9 +116,6 @@ Matchmaker::
 	delete NegotiatorPreJobRank;
 	delete NegotiatorPostJobRank;
 	delete sockCache;
-	if (Collectors) {
-		delete Collectors;
-	}
 	if (MatchList) {
 		delete MatchList;
 	}
@@ -304,14 +299,11 @@ reinitialize ()
 	netman.Config();
 #endif
 
-	if (Collectors) {
-		delete Collectors;
-	}
-	Collectors = CollectorList::create( );
 
 	char *preferred_collector = param ("COLLECTOR_HOST_FOR_NEGOTIATOR");
-	Collectors->resortLocal( preferred_collector );
 	if ( preferred_collector ) {
+		CollectorList* collectors = daemonCore->getCollectorList();
+		collectors->resortLocal( preferred_collector );
 		free( preferred_collector );
 	}
 
@@ -1387,6 +1379,7 @@ obtainAdsFromCollector (
 	int newSequence, oldSequence, reevaluate_ad;
 	char    *remoteHost = NULL;
 	MyString buffer;
+	CollectorList* Collectors = daemonCore->getCollectorList();
 
 	if ( want_simple_matching ) {
 		CondorQuery publicQuery(STARTD_AD);
@@ -3016,10 +3009,9 @@ init_public_ad()
 void
 Matchmaker::updateCollector() {
 	dprintf(D_FULLDEBUG, "enter Matchmaker::updateCollector\n");
-
    
-	if (Collectors && publicAd) {
-		Collectors->sendUpdates (UPDATE_NEGOTIATOR_AD, publicAd, NULL, true);
+	if (publicAd) {
+		daemonCore->sendUpdates(UPDATE_NEGOTIATOR_AD, publicAd, NULL, true);
 	}
 
 			// Reset the timer so we don't do another period update until 
@@ -3032,16 +3024,12 @@ Matchmaker::updateCollector() {
 void
 Matchmaker::invalidateNegotiatorAd( void )
 {
-	if( ! Collectors ) {
-		return;
-	}
-
-	ClassAd invalidate_ad;
+	ClassAd cmd_ad;
 	MyString line;
 
 		// Set the correct types
-	invalidate_ad.SetMyTypeName( QUERY_ADTYPE );
-	invalidate_ad.SetTargetTypeName( NEGOTIATOR_ADTYPE );
+	cmd_ad.SetMyTypeName( QUERY_ADTYPE );
+	cmd_ad.SetTargetTypeName( NEGOTIATOR_ADTYPE );
 
 		// We only want to invalidate this negotiator.  using our
 		// sinful string seems like the safest bet for that, since
@@ -3050,7 +3038,7 @@ Matchmaker::invalidateNegotiatorAd( void )
 	line.sprintf( "%s = %s == \"%s\"", ATTR_REQUIREMENTS,
 				  ATTR_NEGOTIATOR_IP_ADDR,
 				  daemonCore->InfoCommandSinfulString() );
-	invalidate_ad.Insert( line.Value() );
+	cmd_ad.Insert( line.Value() );
 
-	Collectors->sendUpdates( INVALIDATE_NEGOTIATOR_ADS, &invalidate_ad, NULL, false );
+	daemonCore->sendUpdates( INVALIDATE_NEGOTIATOR_ADS, &cmd_ad, NULL, false );
 }

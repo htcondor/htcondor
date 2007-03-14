@@ -396,9 +396,6 @@ class Scheduler : public Service
 	int				shadow_prio_recs_consistent();
 	void			mail_problem_message();
 	
-	// info about our central manager
-	CollectorList* 	Collectors;
-
 		// object to manage our various shadows and their ClassAds
 	ShadowMgr shadow_mgr;
 

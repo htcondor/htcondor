@@ -45,8 +45,6 @@
 #include "daemon_types.h"
 #include "internet.h"
 #include "list.h"
-// for CollectorList
-#include "daemon_list.h"
 // for 'my_username'
 #include "my_username.h"
 #include "StateMachine.h"
@@ -93,7 +91,6 @@ HADStateMachine::init()
     replicationDaemonSinfulString = NULL;
     // classad-specific initializations
     m_classAd = NULL;
-    m_collectorsList = NULL;
     m_updateCollectorTimerId = -1;
     m_updateCollectorInterval = -1;
 }
@@ -142,10 +139,6 @@ HADStateMachine::finalize()
 		delete m_classAd;
     	m_classAd = NULL;
 	}
-	if( m_collectorsList != NULL ) {
-    	delete m_collectorsList;
-    	m_collectorsList = NULL;
-    }
 	utilCancelTimer( m_updateCollectorTimerId );
     m_updateCollectorInterval = -1;
 }
@@ -235,10 +228,6 @@ HADStateMachine::softReconfigure()
 		delete m_classAd;
     	m_classAd = NULL;
 	}
-	if( m_collectorsList != NULL ) {
-		delete m_collectorsList;
-    	m_collectorsList = NULL;
-	}
 	// reconfiguration
 	char* buffer = NULL;
 
@@ -295,7 +284,6 @@ HADStateMachine::softReconfigure()
 
 	dprintf(D_ALWAYS, "HADStateMachine::softReconfigure classad information\n");
     initializeClassAd( );
-    m_collectorsList = CollectorList::create();
     m_updateCollectorInterval = param_integer ("HAD_UPDATE_INTERVAL",
                                              DEFAULT_HAD_UPDATE_INTERVAL );
     /*buffer = param( "HAD_UPDATE_INTERVAL" );
@@ -1117,7 +1105,7 @@ HADStateMachine::updateCollectors()
 
     if (m_classAd) {
         int successfulUpdatesNumber =
-            m_collectorsList->sendUpdates (UPDATE_HAD_AD, m_classAd, NULL, true);
+            daemonCore->sendUpdates (UPDATE_HAD_AD, m_classAd, NULL, true);
         dprintf( D_ALWAYS, "HADStateMachine::updateCollectors %d "
                     "successful updates\n", successfulUpdatesNumber);
     }
@@ -1144,7 +1132,7 @@ HADStateMachine::updateCollectorsClassAd(const MyString& isHadActive)
     m_classAd->InsertOrUpdate( line.GetCStr( ) );
 
     int successfulUpdatesNumber =
-        m_collectorsList->sendUpdates ( UPDATE_HAD_AD, m_classAd, NULL, true );
+        daemonCore->sendUpdates ( UPDATE_HAD_AD, m_classAd, NULL, true );
     dprintf( D_ALWAYS, "HADStateMachine::updateCollectorsClassAd %d "
                     "successful updates\n", successfulUpdatesNumber);
 }

@@ -340,9 +340,9 @@ vmapi_findDaemon( char *host_name, daemon_t real_dt)
 {
 	Daemon *collector;
 	Daemon *found;
-	Collectors->rewind();
-
-	while (Collectors->next(collector)) {
+	CollectorList* collectors = daemonCore->getCollectorList();
+	collectors->rewind();
+	while (collectors->next(collector)) {
 		found = _FindDaemon( host_name, real_dt, collector);
 		if( !found )
 			continue;

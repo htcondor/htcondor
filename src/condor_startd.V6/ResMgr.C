@@ -1306,17 +1306,13 @@ ResMgr::force_benchmark( void )
 
 
 int
-ResMgr::send_update( int cmd, ClassAd* public_ad, ClassAd* private_ad, bool nonblocking )
+ResMgr::send_update( int cmd, ClassAd* public_ad, ClassAd* private_ad,
+					 bool nonblock )
 {
-	int num = 0;
-
-	if( Collectors ) {
-		num = Collectors->sendUpdates (cmd, public_ad, private_ad, nonblocking);
-	}  
-
 		// Increment the resmgr's count of updates.
 	num_updates++;
-	return num;
+		// Actually do the updates, and return the # of updates sent.
+	return daemonCore->sendUpdates(cmd, public_ad, private_ad, nonblock);
 }
 
 
@@ -1357,15 +1353,15 @@ ResMgr::report_updates( void )
 		return;
 	}
 
-	if( Collectors ) {
+	CollectorList* collectors = daemonCore->getCollectorList();
+	if( collectors ) {
 		MyString list;
 		Daemon * collector;
-		Collectors->rewind();
-		while (Collectors->next (collector)) {
+		collectors->rewind();
+		while (collectors->next (collector)) {
 			list += collector->fullHostname();
 			list += " ";
 		}
-
 		dprintf( D_FULLDEBUG,
 				 "Sent %d update(s) to the collector (%s)\n", 
 				 num_updates, list.Value());

@@ -102,7 +102,6 @@ extern	StringList* startd_job_exprs;
 extern	StringList* startd_vm_exprs;
 
 // Hosts
-extern	CollectorList*	Collectors;
 extern	char*	accountant_host;
 
 // Others

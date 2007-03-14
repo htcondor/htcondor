@@ -58,6 +58,7 @@
 #include "condor_arglist.h"
 #include "env.h"
 #include "daemon.h"
+#include "daemon_list.h"
 #include "../condor_procd/proc_family_client.h"
 
 #if defined(WIN32)
@@ -1040,13 +1041,8 @@ class DaemonCore : public Service
 		processing of SOAP calls.
 		@param seconds The number of seconds to only permit SOAP callbacks
 	*/
-
 	void Only_Allow_Soap(int duration);
 	
-    SelfMonitorData monitor_data;
-
-	MapFile * mapfile;
-  	
         // A little info on the "soap_ssl_sock"... There once was a
         // bug known as the "single transaction problem" and it made
         // the SOAP code very sad because it meant that if anything in
@@ -1108,8 +1104,44 @@ class DaemonCore : public Service
         // could return and properly dispatch the EXCEPT monster.
 	int			  	  soap_ssl_sock;
 
+	MapFile * mapfile;
+  	
+    SelfMonitorData monitor_data;
+
 	char 	*localAdFile;
 	void	UpdateLocalAd(ClassAd *daemonAd); 
+
+		/**
+		   Initialize the list of collectors this daemon is configured
+		   to communicate with.  This is handled automatically by
+		   DaemonCore, so individual daemons should not all this
+		   themselves.  Unfortunately, this has to be public, since
+		   it's called by daemon_core_main.C, given that there's no
+		   generic "initialize" method where this could be handled.
+		*/
+	void initCollectorList(void);
+
+		/**
+		   @return A pointer to the CollectorList object that holds
+		   all of the collectors this daemons is configured to
+		   communicate with.
+		*/
+	CollectorList* getCollectorList(void);
+
+		/**
+		   Send the given ClassAd(s) to all of the collectors defined
+		   in the COLLECTOR_HOST setting. Now that DaemonCore manages
+		   this list of collectors, daemons only need to invoke this
+		   method to send out their updates.
+		   @param cmd The update command to send (e.g. UPDATE_STARTD_AD)
+		   @param ad1 The primary ClassAd to send.
+		   @param ad2 The secondary ClassAd to send. Usually NULL,
+		     except in the case of startds sending the "private" ad.
+		   @param nonblock Should the update use non-blocking communication.
+		   @return The number of successful updates that were sent.
+		*/
+	int sendUpdates(int cmd, ClassAd* ad1, ClassAd* ad2 = NULL,
+					bool nonblock = false);
 
   private:      
 
@@ -1431,6 +1463,8 @@ class DaemonCore : public Service
 	};
 
     List<TimeSkipWatcher> m_TimeSkipWatchers;
+
+	CollectorList* m_collector_list;
 };
 
 #ifndef _NO_EXTERN_DAEMON_CORE

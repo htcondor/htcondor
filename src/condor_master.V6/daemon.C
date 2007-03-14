@@ -51,7 +51,6 @@ extern int		new_bin_delay;
 extern char*	FS_Preen;
 extern			ClassAd* ad;
 extern int		NT_ServiceFlag; // TRUE if running on NT as an NT Service
-extern CollectorList*	Collectors;
 
 extern time_t	GetTimeStamp(char* file);
 extern int 	   	NewExecutable(char* file, time_t* tsp);
@@ -534,19 +533,14 @@ int daemon::RealStart( )
 			// the port on this machine, is to go through all of the
 			// collectors until we find the one for THIS machine. Then
 			// get the port from that entry
-
-		if (!Collectors) {
-			Collectors =  CollectorList::create();
-		}
-
-
 		command_port = -1;
 
-		if (Collectors) {
+		CollectorList* collectors = NULL;
+		if ((collectors = daemonCore->getCollectorList())) {
 			char * my_hostname = my_full_hostname();
 			Daemon * daemon;
-			Collectors->rewind();
-			while (Collectors->next (daemon)) {
+			collectors->rewind();
+			while (collectors->next (daemon)) {
 				if (same_host (my_hostname, 
 							   daemon->fullHostname())) {
 					command_port = daemon->port();
@@ -2097,10 +2091,7 @@ Daemons::UpdateCollector()
 
 	Update(ad);
     daemonCore->monitor_data.ExportData(ad);
-
-	if (Collectors) {
-		Collectors->sendUpdates (UPDATE_MASTER_AD, ad, NULL, true);
-	}
+	daemonCore->sendUpdates(UPDATE_MASTER_AD, ad, NULL, true);
 
 		// Reset the timer so we don't do another period update until 
 	daemonCore->Reset_Timer( update_tid, update_interval, update_interval );
