@@ -24,4 +24,7 @@ arguments. XXX figure out how I'm going to model this parameter... */
 #undef WANT_PVM
 #define WANT_PVM NO
 
+#if IS_GLIBC23
+#define WANT_NEW_CLASSADS          YES
+#endif
 
