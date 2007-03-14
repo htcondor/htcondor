@@ -1,8 +1,7 @@
-all_target(libacct.a condor_accountant)
+all_target(libacct.a)
 
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
 CFLAGS = $(STD_C_FLAGS)
-LIB = libacct.a $(DAEMONCORE_LIB) $(STD_LIBS)
 
 soapobjs(accountant)
 
@@ -11,9 +10,6 @@ LIB_OBJ = Accountant.o $(SOAP_OBJS)
 OBJ = main.o
 
 library_target(libacct.a,$(LIB_OBJ))
-
-c_plus_target(condor_accountant,$(OBJ),$(LIB))
-pure_c_plus_target(condor_accountant.pure,$(OBJ),$(LIB))
 
 release:: all
 stripped:: all
