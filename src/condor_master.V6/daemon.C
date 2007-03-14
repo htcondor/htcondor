@@ -2093,10 +2093,6 @@ Daemons::Update( ClassAd* ca )
 void
 Daemons::UpdateCollector()
 {
-	int		error_debug;
-
-	error_debug = D_ALWAYS;
-
 	dprintf(D_FULLDEBUG, "enter Daemons::UpdateCollector\n");
 
 	Update(ad);
