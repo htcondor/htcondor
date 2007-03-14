@@ -144,6 +144,7 @@ ProcD::start()
 	// start constructing the argument list
 	//
 	ArgList args;
+	args.SetArgV1SyntaxToCurrentPlatform();
 	MyString err;
 	if (!args.AppendArgsV1RawOrV2Quoted(m_binary_path, &err)) {
 		EXCEPT("error constructing procd command line: %s", err.Value());
