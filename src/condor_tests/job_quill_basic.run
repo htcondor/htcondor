@@ -99,7 +99,11 @@ if( -d $myquillname ) {
 	if($pgresult != 0) {
 		print "Could not start POSTGRESS\n";
 	}
+	print "cp -r $myfullpgsqlinstalllog $mysaveme start......\n";
+	system("date");
 	system("cp -r $myfullpgsqlinstalllog $mysaveme");
+	print "cp -r $myfullpgsqlinstalllog $mysaveme end......\n";
+	system("date");
 } else {
 	$pgresult = 7;
 	print "Could not create Quill postgress db install location\n";;
