@@ -1015,13 +1015,27 @@ daemon::Obituary( int status )
 
     char buf[1000];
 
+	MyString email_subject;
+	email_subject.sprintf("Problem %s: %s ", my_full_hostname(), condor_basename(process_name));
+	if ( was_not_responding ) {
+		email_subject += "killed (unresponsive)";
+	} else {
+		MyString fmt;
+		if( WIFSIGNALED(status) ) {
+			fmt.sprintf("died (%d)", WTERMSIG(status));
+		} else {
+			fmt.sprintf("exited (%d)", WEXITSTATUS(status));
+		}
+		email_subject += fmt;
+	}
+
     sprintf( buf, "%s_ADMIN_EMAIL", name_in_config_file );
     char *address = param(buf);
     if(address) {
-        mailer = email_open(address,"Problem");
+        mailer = email_open(address, email_subject.Value());
         free(address);
     } else {
-        mailer = email_admin_open("Problem");
+        mailer = email_admin_open(email_subject.Value());
     }
 
     if( mailer == NULL ) {
