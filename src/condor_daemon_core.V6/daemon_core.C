@@ -385,6 +385,9 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	localAdFile = NULL;
 
 	m_collector_list = NULL;
+	m_wants_restart = true;
+	m_in_daemon_shutdown = false;
+	m_in_daemon_shutdown_fast = false;
 }
 
 // DaemonCore destructor. Delete the all the various handler tables, plus
@@ -8213,8 +8216,64 @@ DaemonCore::getCollectorList() {
 int
 DaemonCore::sendUpdates( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblock )
 {
+	ASSERT(ad1);
 	ASSERT(m_collector_list);
+
+		// Now's our chance to evaluate the DAEMON_SHUTDOWN expressions.
+	if (!m_in_daemon_shutdown_fast &&
+		evalExpr(ad1, "DAEMON_SHUTDOWN_FAST", ATTR_DAEMON_SHUTDOWN_FAST,
+				 "starting fast shutdown"))	{
+			// Daemon wants to quickly shut itself down and not restart.
+		m_wants_restart = false;
+		m_in_daemon_shutdown_fast = true;
+		daemonCore->Send_Signal( daemonCore->getpid(), SIGQUIT );
+	}
+	else if (!m_in_daemon_shutdown &&
+			 evalExpr(ad1, "DAEMON_SHUTDOWN", ATTR_DAEMON_SHUTDOWN,
+					  "starting graceful shutdown")) {
+		m_wants_restart = false;
+		m_in_daemon_shutdown = true;
+		daemonCore->Send_Signal( daemonCore->getpid(), SIGTERM );
+	}
+
+		// Even if we just decided to shut ourselves down, we should
+		// still send the updates originally requested by the caller.
 	return m_collector_list->sendUpdates(cmd, ad1, ad2, nonblock);
 }
 
 
+bool
+DaemonCore::wantsRestart()
+{
+	return m_wants_restart;
+}
+
+
+bool
+DaemonCore::evalExpr( ClassAd* ad, const char* param_name,
+					  const char* attr_name, const char* message )
+{
+	bool value = false;
+	char* expr = param(param_name);
+	if (!expr) {
+		expr = param(attr_name);
+	}
+	if (expr) {
+		if (!ad->AssignExpr(attr_name, expr)) {
+			dprintf( D_ALWAYS|D_FAILURE,
+					 "ERROR: Failed to parse %s expression \"%s\"\n",
+					 attr_name, expr );
+			free(expr);
+			return false;
+		}
+		int result = 0;
+		if (ad->EvalBool(attr_name, NULL, result) && result) {
+			dprintf( D_ALWAYS,
+					 "The %s expression \"%s\" evaluated to TRUE: %s\n",
+					 attr_name, expr, message );
+			value = true;
+		}
+		free(expr);
+	}
+	return value;
+}

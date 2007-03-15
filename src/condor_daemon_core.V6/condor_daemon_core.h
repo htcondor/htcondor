@@ -1143,6 +1143,14 @@ class DaemonCore : public Service
 	int sendUpdates(int cmd, ClassAd* ad1, ClassAd* ad2 = NULL,
 					bool nonblock = false);
 
+		/**
+		   Indicates if this daemon wants to be restarted by its
+		   parent or not.  Usually true, unless one of the
+		   DAEMON_SHUTDOWN expressions was TRUE, in which case we do
+		   not want to be automatically restarted.
+		*/
+	bool wantsRestart( void );
+
   private:      
 
 	ReliSock* dc_rsock;	// tcp command socket
@@ -1464,7 +1472,28 @@ class DaemonCore : public Service
 
     List<TimeSkipWatcher> m_TimeSkipWatchers;
 
+		/**
+		   Evaluate a DC-specific policy expression and return the
+		   result.  Prints a message to the log if the expr evaluates
+		   to TRUE.
+		   @param ad ClassAd to evaluate the expression in.
+		   @param param_name Name of the config file parameter that
+		     defines the expression.
+		   @param attr_name Name of the ClassAd attribute for this
+		     expression.
+		   @param message Additional text to include in the log
+		     message when the expression evaluates to TRUE.
+		   @return true if the expression exists and evaluates to
+		     TRUE, false otherwise.
+		*/
+	bool evalExpr( ClassAd* ad, const char* param_name,
+				   const char* attr_name, const char* message );
+
 	CollectorList* m_collector_list;
+
+	bool m_wants_restart;
+	bool m_in_daemon_shutdown;
+	bool m_in_daemon_shutdown_fast;
 };
 
 #ifndef _NO_EXTERN_DAEMON_CORE

@@ -37,6 +37,7 @@
 #include "soap_core.h"
 #include "setenv.h"
 #include "time_offset.h"
+#include "exit.h"
 
 #if HAVE_EXT_GCB
 #include "GCB.h"
@@ -228,6 +229,17 @@ DC_Exit( int status )
 		// address file or the pid file.
 	clean_files();
 
+		// See if this daemon wants to be restarted (true by
+		// default).  If so, use the given status.  Otherwise, use the
+		// special code to tell our parent not to restart us.
+	int exit_status;
+	if (daemonCore->wantsRestart()) {
+		exit_status = status;
+	}
+	else {
+		exit_status = DAEMON_NO_RESTART;
+	}
+
 		// Now, delete the daemonCore object, since we allocated it. 
 	delete daemonCore;
 	daemonCore = NULL;
@@ -248,10 +260,10 @@ DC_Exit( int status )
 		  cleared out our config hashtable, too.  Derek 2004-11-23
 		*/
 	dprintf( D_ALWAYS, "**** %s (%s_%s) EXITING WITH STATUS %d\n",
-			 myName, myDistro->Get(), mySubSystem, status );
+			 myName, myDistro->Get(), mySubSystem, exit_status );
 
-		// Finally, exit with the status we were given.
-	exit( status );
+		// Finally, exit with the appropriate status.
+	exit( exit_status );
 }
 
 

@@ -96,6 +96,8 @@ extern const char * ATTR_CURRENT_JOBS_RUNNING;
 extern const char * ATTR_CURRENT_RANK;
 extern const char * ATTR_CURRENT_TIME;
 extern const char * ATTR_DAEMON_START_TIME;
+extern const char * ATTR_DAEMON_SHUTDOWN;
+extern const char * ATTR_DAEMON_SHUTDOWN_FAST;
 extern const char * ATTR_DAG_NODE_NAME;
 extern const char * ATTR_DAG_NODE_NAME_ALT;
 extern const char * ATTR_DAGMAN_JOB_ID;
