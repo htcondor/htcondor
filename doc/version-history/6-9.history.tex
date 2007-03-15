@@ -50,6 +50,24 @@ in its configuration file.
 \Condor{master} will now pick a random broker rather than the least-loaded
 one.
 
+\item All Condor daemons now evaluate some ClassAd expressions
+  whenever they are about to publish an update to the
+  \Condor{collector}.
+  Currently, the two supported expressions are:
+  \begin{description}
+  \item[\Macro{DAEMON\_SHUTDOWN}]
+    If TRUE, the daemon will gracefully shut itself down and will not
+    be restarted by the \Condor{master} (as if it sent itself a
+    \Condor{off} command).
+  \item[\Macro{DAEMON\_SHUTDOWN\_FAST}]
+    If TRUE, the daemon will quickly shut itself down and will not be
+    restarted by the \Condor{master} (as if it sent itself a
+    \Condor{off} command using the \Opt{-fast} option).
+  \end{description}
+  For more information about these expressions, see
+  section~\ref{param:DaemonShutdown} on
+  page~\pageref{param:DaemonShutdown}.
+
 \end{itemize}
 
 \noindent Bugs Fixed:

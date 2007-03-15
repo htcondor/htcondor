@@ -1526,6 +1526,42 @@ server, shadow, and starter, none of which use DaemonCore yet).
     STARTD_ATTRS = MY_STRING, NUMBER, BOOL1, BOOL2
   \end{verbatim}
 
+\item[\Macro{DAEMON\_SHUTDOWN}] \label{param:DaemonShutdown}
+  Starting with Condor version 6.9.3, whenever a daemon is about to
+  publish a ClassAd update to the \Condor{collector}, it will evaluate
+  this expression.
+  If it evalutes to TRUE, the daemon will gracefully shut itself down
+  and will not be restarted by the \Condor{master} (as if it sent
+  itself a \Condor{off} command).
+  The expression is evaluated in the context of the ClassAd that is
+  being sent to the \Condor{collector}, so it can reference any
+  attributes that can be seen with
+  \verb@condor_status -long [-daemon_type]@ (for example,
+  \verb@condor_status -long [-master]@ for the \Condor{master}).
+  Since each daemon's ClassAd will contain different attributes,
+  administrators should define these shutdown expressions specific to
+  each daemon, for example:
+  \begin{verbatim}
+    STARTD.DAEMON_SHUTDOWN = when to shutdown the startd
+    MASTER.DAEMON_SHUTDOWN = when to shutdown the master
+  \end{verbatim}
+  Normally, these expressions would not be necessary, so if not
+  defined, they default to FALSE.
+  One possible use case is for Condor glide-in, to have the
+  \Condor{startd} shut itself down if it has not been claimed by a job
+  after a certain period of time.
+
+  \Note This functionality does not work in conjuction with Condor's
+  high-availability support (see section~\ref{sec:high-availability}
+  on page~\pageref{sec:high-availability} for more information).
+  If you enable high-availability for a particular daemon, you should
+  not define this expression.
+
+\item[\Macro{DAEMON\_SHUTDOWN\_FAST}] \label{param:DaemonShutdownFast}
+  Identical to \MacroNI{DAEMON\_SHUTDOWN} (defined above), except the
+  daemon will use the fast shutdown mode (as if it sent itself a
+  \Condor{off} command using the \Opt{-fast} option).
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
