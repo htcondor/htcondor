@@ -2401,13 +2401,15 @@ void DaemonCore::Driver()
 
 		errno = 0;
 		time_t time_before = time(NULL);
+		time_t okay_delta = ptimer->tv_sec;
+
 		rv = select( maxfd, (SELECT_FDSET_PTR) &readfds,
 					 (SELECT_FDSET_PTR) &writefds,
 					 (SELECT_FDSET_PTR) &exceptfds, ptimer );
-		CheckForTimeSkip(time_before, timer.tv_sec);
-
 
 		tmpErrno = errno;
+
+		CheckForTimeSkip(time_before, okay_delta);
 
 #ifndef WIN32
 		// Unix
