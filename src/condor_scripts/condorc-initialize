@@ -86,11 +86,11 @@ sub main {
 	} else {
 		submit($glite_path,'condorc-authorizer');
 	}
-	print "Starting Condor-C VO Authorizer\n";
-	if ( check( "condorc-vo-authorizer" ) == 0 ) {
-		print "Skipping Condor-C VO Authorizer\n";
+	print "Starting Condor-C VO Advertiser\n";
+	if ( check( "condorc-vo-advertiser" ) == 0 ) {
+		print "Skipping Condor-C VO Advertiser\n";
 	} else {
-		submit($glite_path,'condorc-vo-authorizer');
+		submit($glite_path,'condorc-vo-advertiser');
 	}
 }
 
