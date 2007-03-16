@@ -1333,7 +1333,6 @@ Daemons::Daemons()
 	all_daemons_gone_action = MASTER_RESET;
 	immediate_restart = FALSE;
 	immediate_restart_master = FALSE;
-	procd = NULL;
 }
 
 
@@ -1678,11 +1677,6 @@ Daemons::InitMaster()
 		GetTimeStamp(daemon_ptr[master]->watch_name);
 	daemon_ptr[master]->startTime = time(0);
 	daemon_ptr[master]->pid = daemonCore->getpid();
-
-		// start the procd
-	procd = new ProcD;
-	ASSERT(procd != NULL);
-	procd->start();
 }
 
 
@@ -1948,14 +1942,10 @@ Daemons::AllDaemonsGone()
 		break;
 	case MASTER_RESTART:
 		dprintf( D_ALWAYS, "All daemons are gone.  Restarting.\n" );
-		ASSERT(procd != NULL);
-		delete procd;
 		FinishRestartMaster();
 		break;
 	case MASTER_EXIT:
 		dprintf( D_ALWAYS, "All daemons are gone.  Exiting.\n" );
-		ASSERT(procd != NULL);
-		delete procd;
 		master_exit(0);
 		break;
 	}

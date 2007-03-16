@@ -37,10 +37,6 @@ NamedPipeReader::NamedPipeReader(const char* addr)
 
 	// make the FIFO node in the filesystem
 	//
-	dprintf(D_ALWAYS, "NamedPipeReader::NamedPipeReader() Making named "
-		"pipe '%s' as uid: %u, euid: %u, gid %u, egid %u\n", 
-		addr, getuid(), geteuid(), getgid(), getegid());
-
 	if (mkfifo(addr, 0600) == -1) {
 		EXCEPT("mkfifo of %s error: %s (%d)", addr, strerror(errno), errno);
 	}

@@ -25,17 +25,17 @@
 #define _PROC_FAMILY_CLIENT_H
 
 #include "proc_family_io.h"
-#include "local_client.h"
 #include "../condor_procapi/procapi.h"
+
+class Service;
+class LocalClient;
 
 class ProcFamilyClient {
 
 public:
-	// construct a new ProcFamilyClient instance that will
-	// communicate with a ProcFamilyServer at the given
-	// "address"
-	//
-	ProcFamilyClient(const char*);
+
+	ProcFamilyClient();
+	~ProcFamilyClient();
 
 	// tell the procd to start tracking a new subfamily
 	//
@@ -76,10 +76,6 @@ public:
 	//
 	bool snapshot();
 
-	// tell the procd to exit
-	//
-	bool quit();
-
 #if defined(PROCD_DEBUG)
 	// tell the procd to dump out its state, then return our
 	// LocalClient object so that a tester can read the state
@@ -90,18 +86,36 @@ public:
 #endif
 
 private:
-	// our pid
-	//
-	pid_t m_pid;
-
-	// the server's address
-	//
-	LocalClient m_client;
 
 	// common code for killing, suspending, and
 	// continuing a family
 	//
 	bool signal_family(pid_t, proc_family_command_t);
+
+	// start a procd
+	//
+	void start_procd(char* address);
+
+	// tell the procd to exit
+	//
+	void stop_procd();
+
+	// reaper for the ProcD
+	//
+	static int procd_reaper(Service*, int, int);
+
+	// count of the number of instantiated objects
+	//
+	static int s_num_objects;
+
+	// the ProcD's pid, if we started one and haven't told it to exit yet;
+	// otherwise, -1
+	//
+	static int s_procd_pid;
+
+	// object for managing our connection to the ProcD
+	//
+	LocalClient* m_client;
 };
 
 #endif

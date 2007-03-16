@@ -248,18 +248,7 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 
 	// our pointer to the ProcFamilyClient object is initially NULL. the
 	// object will be created the first time Create_Process is called with
-	// a non-NULL family_info argument. this is for two reasons:
-	//
-	//   - in the master, it is needed for correctness. when a ProcFamilyClient
-	//     is created, it will open a named pipe to the procd. since the master
-	//     is the one who starts the procd, it can't create a ProcFamilyClient
-	//     object on startup, because the open will fail. delaying
-	//     ProcFamilyClient creation until its actually needed resolves this
-	//     problem
-	//
-	//   - as a side bonus, we'll never create a ProcFamilyClient object in
-	//     daemons that don't use it. which as of now, is everything but the
-	//     master, startd, and starter
+	// a non-NULL family_info argument
 	//
 	m_procd_client = NULL;
 
@@ -473,7 +462,6 @@ DaemonCore::~DaemonCore()
 
 	if (m_procd_client != NULL) {
 		delete m_procd_client;
-		m_procd_client = NULL;
 	}
 
 	for( i=0; i<LAST_PERM; i++ ) {
@@ -5173,13 +5161,8 @@ int DaemonCore::Create_Process(
 	// families
 	//
 	if ((family_info != NULL) && (m_procd_client == NULL)) {
-		char* procd_address = param("PROCD_ADDRESS");
-		if (procd_address == NULL) {
-			EXCEPT("error: PROCD_ADDRESS not in configuration\n");
-		}
-		m_procd_client = new ProcFamilyClient(procd_address);
+		m_procd_client = new ProcFamilyClient();
 		ASSERT(m_procd_client);
-		free(procd_address);
 	}
 
 #ifdef WIN32
@@ -5491,6 +5474,7 @@ int DaemonCore::Create_Process(
 	// the process
 	//
 	if (family_info != NULL) {
+		ASSERT(m_procd_client != NULL);
 		bool ok =
 			m_procd_client->register_subfamily(newpid,
 			                                   getpid(),
@@ -5846,12 +5830,12 @@ int DaemonCore::Create_Process(
 			// means data from multiple ProcD clients could be interleaved,
 			// causing major badness)
 			//
-			ASSERT(m_procd_client != NULL);
 #if defined(LINUX)
 			PidEnvID* penvid_ptr = &penvid;
 #else
 			PidEnvID* penvid_ptr = NULL;
 #endif
+			ASSERT(m_procd_client != NULL);
 			bool ok =
 				m_procd_client->register_subfamily(pid,
 			                                       ::getppid(),

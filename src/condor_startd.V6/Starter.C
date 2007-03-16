@@ -1074,6 +1074,16 @@ Starter::prepareForGlexec( const ArgList& orig_args, const Env* orig_env,
 	log_dir += "/log";
 	glexec_env.SetEnv ( "_CONDOR_LOG", log_dir.Value());
 
+	// PROCD_ADDRESS: the Starter that we are about to create will
+	// not have access to our ProcD. we'll explicitly set PROCD_ADDRESS
+	// to be in its LOG directory. the Starter will see that its
+	// PROCD_ADDRESS knob is different from what it inherits in
+	// CONDOR_PROCD_ADDRESS, and know it needs to create its own ProcD
+	//
+	MyString procd_address = log_dir;
+	procd_address += "/procd_pipe";
+	glexec_env.SetEnv( "_CONDOR_PROCD_ADDRESS", procd_address.Value() );
+
 	return true;
 }
 
