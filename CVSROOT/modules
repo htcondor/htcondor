@@ -791,7 +791,6 @@ V6_9_COMMON_EXT		-a EXT_COMMON \
                    externals/bundles/krb5/1.4.3 \
                    externals/bundles/gahp/1.0.15 \
                    externals/bundles/gt3gahp/2.0 \
-                   externals/bundles/gsoap/2.7.6c \
                    externals/bundles/srb/3.2.1 \
                    externals/bundles/pcre/5.0 \
                    externals/bundles/openssl/0.9.8 \
@@ -814,6 +813,7 @@ V6_9_0_EXT	-a V6_9_COMMON_EXT \
 # Externals needed for 6.9.1.
 V6_9_1_EXT	-a V6_9_COMMON_EXT \
                    externals/bundles/classads/0.9.8-b3 \
+                   externals/bundles/gsoap/2.7.6c \
                    externals/bundles/gcb/1.4.0 \
                    externals/bundles/drmaa/1.5 \
                    externals/bundles/gt4gahp/1.6
@@ -821,6 +821,7 @@ V6_9_1_EXT	-a V6_9_COMMON_EXT \
 # Externals needed for 6.9.2.
 V6_9_2_EXT	-a V6_9_COMMON_EXT \
                    externals/bundles/classads/0.9.8-b4 \
+                   externals/bundles/gsoap/2.7.6c \
                    externals/bundles/gcb/1.4.1 \
                    externals/bundles/drmaa/1.5 \
                    externals/bundles/gt4gahp/1.6
@@ -828,6 +829,7 @@ V6_9_2_EXT	-a V6_9_COMMON_EXT \
 # Externals needed for 6.9.3.
 V6_9_3_EXT	-a V6_9_COMMON_EXT \
                    externals/bundles/classads/0.9.8-b4 \
+                   externals/bundles/gsoap/2.7.6c-p1 \
                    externals/bundles/gcb/1.4.2 \
                    externals/bundles/drmaa/1.5 \
                    externals/bundles/gt4gahp/1.6
