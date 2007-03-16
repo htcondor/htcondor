@@ -32,6 +32,7 @@
 #ifndef WANT_NAMESPACES
 #define WANT_NAMESPACES
 #endif
+#include "condor_fix_iostream.h"
 #include "classad_distribution.h"
 
 void write_dap_log(char *logfilename, char *status, char *param1, char *value1, char *param2 = NULL, char *value2 = NULL, char *param3 = NULL, char *value3 = NULL, char *param4 = NULL, char *value4 = NULL, char *param5 = NULL, char *value5 = NULL, char *param6 = NULL, char *value6 = NULL);

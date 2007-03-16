@@ -35,6 +35,7 @@
 #ifndef WANT_NAMESPACES
 #define WANT_NAMESPACES
 #endif
+#include "condor_fix_iostream.h"
 #include "classad_distribution.h"
 
 #include "MyString.h"

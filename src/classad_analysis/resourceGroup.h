@@ -25,6 +25,7 @@
 #define __RESOURCEGROUP_H__
 
 #define WANT_NAMESPACES
+#include "condor_fix_iostream.h"
 #include "classad_distribution.h"
 #include "list.h"
 

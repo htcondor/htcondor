@@ -30,6 +30,7 @@
 #include "dap_constants.h"
 
 #define WANT_NAMESPACES
+#include "condor_fix_iostream.h"
 #include "classad_distribution.h"
 
 class ClassAd_Reader{

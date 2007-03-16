@@ -24,6 +24,7 @@
 #define _DAP_CLIENT_INTERFACE_H
 
 #define WANT_NAMESPACES
+#include "condor_fix_iostream.h"
 #include "classad_distribution.h"
 
 /** dap_submit()
