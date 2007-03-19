@@ -56,6 +56,29 @@ or administrators will ever have a use for this command.
 If it is desired to update or set a classad attribute, the
 \Condor{config\_val} command is the proper command to use.
 
+For those administrators who do need \Condor{advertise}, you can 
+optionally include these attributes:
+
+DaemonStartTime - The time the service you are advertising
+started running.  Measured in seconds since the Unix epoch.
+
+UpdateSequenceNumber - An integer that begins at 0 and increments by
+one each time you re-advertise the same ad.
+
+If both of the above are included, the \Condor{collector} will
+automatically include the following attributes:
+
+UpdatesTotal - The actual number of advertisements for this
+daemon that the collector has seen.
+
+UpdatesLost - The number of advertisements that for this daemon
+that the collector expected to see, but didn't.
+
+UpdatesSequenced - The total of UpdatesTotal and UpdatesLost.
+
+UpdatesHistory - See \Macro{COLLECTOR\_DAEMON\_HISTORY\_SIZE} in
+section~\ref{sec:Collector-Config-File-Entries}.
+
 \ExitStatus
 
 \Condor{advertise} will exit with a status value of 0 (zero) upon success,
