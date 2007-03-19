@@ -1432,11 +1432,6 @@ PROCD_ADDRESS = $(LOCK)/procd_pipe
 #
 #PROCD_LOG = $(LOG)/ProcLog
 
-# If set to true, this will make the procd send a SIGSTOP to itself
-# before doing anything else, so you can step in and attach a debugger
-#
-PROCD_DEBUG = False
-
 # This is the maximum period that the procd will use for taking
 # snapshots (the actual period may be lower if a condor daemon registers
 # a family for which it wants more frequent snapshots)
