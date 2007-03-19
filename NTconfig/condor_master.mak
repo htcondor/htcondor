@@ -25,6 +25,9 @@ NULL=
 NULL=nul
 !ENDIF 
 
+CPP=cl.exe
+RSC=rc.exe
+
 !IF  "$(CFG)" == "condor_master - Win32 Debug"
 
 OUTDIR=.\..\Debug
@@ -50,7 +53,6 @@ CLEAN :
 !ENDIF 
 	-@erase "$(INTDIR)\daemon_master.obj"
 	-@erase "$(INTDIR)\master.obj"
-	-@erase "$(INTDIR)\procd.obj"
 	-@erase "$(INTDIR)\service.WIN32.obj"
 	-@erase "$(INTDIR)\soap_masterC.obj"
 	-@erase "$(INTDIR)\soap_masterServer.obj"
@@ -65,40 +67,7 @@ CLEAN :
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
-CPP=cl.exe
 CPP_PROJ=/nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c 
-
-.c{$(INTDIR)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cpp{$(INTDIR)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cxx{$(INTDIR)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.c{$(INTDIR)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cpp{$(INTDIR)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cxx{$(INTDIR)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-RSC=rc.exe
 BSC32=bscmake.exe
 BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_master.bsc" 
 BSC32_SBRS= \
@@ -108,7 +77,6 @@ LINK32_FLAGS=../Debug/condor_common.obj ..\Debug\condor_common_c.obj $(CONDOR_LI
 LINK32_OBJS= \
 	"$(INTDIR)\daemon_master.obj" \
 	"$(INTDIR)\master.obj" \
-	"$(INTDIR)\procd.obj" \
 	"$(INTDIR)\service.WIN32.obj" \
 	"$(INTDIR)\soap_masterC.obj" \
 	"$(INTDIR)\soap_masterServer.obj" \
@@ -153,7 +121,6 @@ CLEAN :
 !ENDIF 
 	-@erase "$(INTDIR)\daemon_master.obj"
 	-@erase "$(INTDIR)\master.obj"
-	-@erase "$(INTDIR)\procd.obj"
 	-@erase "$(INTDIR)\service.WIN32.obj"
 	-@erase "$(INTDIR)\soap_masterC.obj"
 	-@erase "$(INTDIR)\soap_masterServer.obj"
@@ -166,8 +133,36 @@ CLEAN :
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
-CPP=cl.exe
 CPP_PROJ=/nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c 
+BSC32=bscmake.exe
+BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_master.bsc" 
+BSC32_SBRS= \
+	
+LINK32=link.exe
+LINK32_FLAGS=../Release/condor_common.obj ../Release/condor_common_c.obj $(CONDOR_LIB) $(CONDOR_LIBPATH) $(CONDOR_GSOAP_LIB) $(CONDOR_GSOAP_LIBPATH) $(CONDOR_KERB_LIB) $(CONDOR_KERB_LIBPATH) $(CONDOR_PCRE_LIB) $(CONDOR_PCRE_LIBPATH) $(CONDOR_GLOBUS_LIB) $(CONDOR_GLOBUS_LIBPATH) $(CONDOR_OPENSSL_LIB) $(CONDOR_POSTGRESQL_LIB) $(CONDOR_OPENSSL_LIBPATH) $(CONDOR_POSTGRESQL_LIBPATH) /nologo /subsystem:console /pdb:none /map:"$(INTDIR)\condor_master.map" /debug /machine:I386 /out:"$(OUTDIR)\condor_master.exe" /SWAPRUN:NET 
+LINK32_OBJS= \
+	"$(INTDIR)\daemon_master.obj" \
+	"$(INTDIR)\master.obj" \
+	"$(INTDIR)\service.WIN32.obj" \
+	"$(INTDIR)\soap_masterC.obj" \
+	"$(INTDIR)\soap_masterServer.obj" \
+	"$(INTDIR)\soap_masterStub.obj" \
+	"$(INTDIR)\uuid_lib.WIN32.obj" \
+	"..\src\condor_util_lib\condor_util.lib" \
+	"$(OUTDIR)\condor_cpp_util.lib" \
+	"$(OUTDIR)\condor_classad.lib" \
+	"$(OUTDIR)\condor_daemon_core.lib" \
+	"$(OUTDIR)\condor_io.lib" \
+	"$(OUTDIR)\condor_sysapi.lib" \
+	"$(OUTDIR)\condor_procapi.lib" \
+	"$(OUTDIR)\condor_procd_client.lib"
+
+"$(OUTDIR)\condor_master.exe" : "$(OUTDIR)" $(DEF_FILE) $(LINK32_OBJS)
+    $(LINK32) @<<
+  $(LINK32_FLAGS) $(LINK32_OBJS)
+<<
+
+!ENDIF 
 
 .c{$(INTDIR)}.obj::
    $(CPP) @<<
@@ -198,38 +193,6 @@ CPP_PROJ=/nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_M
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
-
-RSC=rc.exe
-BSC32=bscmake.exe
-BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_master.bsc" 
-BSC32_SBRS= \
-	
-LINK32=link.exe
-LINK32_FLAGS=../Release/condor_common.obj ../Release/condor_common_c.obj $(CONDOR_LIB) $(CONDOR_LIBPATH) $(CONDOR_GSOAP_LIB) $(CONDOR_GSOAP_LIBPATH) $(CONDOR_KERB_LIB) $(CONDOR_KERB_LIBPATH) $(CONDOR_PCRE_LIB) $(CONDOR_PCRE_LIBPATH) $(CONDOR_GLOBUS_LIB) $(CONDOR_GLOBUS_LIBPATH) $(CONDOR_OPENSSL_LIB) $(CONDOR_POSTGRESQL_LIB) $(CONDOR_OPENSSL_LIBPATH) $(CONDOR_POSTGRESQL_LIBPATH) /nologo /subsystem:console /pdb:none /map:"$(INTDIR)\condor_master.map" /debug /machine:I386 /out:"$(OUTDIR)\condor_master.exe" /SWAPRUN:NET 
-LINK32_OBJS= \
-	"$(INTDIR)\daemon_master.obj" \
-	"$(INTDIR)\master.obj" \
-	"$(INTDIR)\procd.obj" \
-	"$(INTDIR)\service.WIN32.obj" \
-	"$(INTDIR)\soap_masterC.obj" \
-	"$(INTDIR)\soap_masterServer.obj" \
-	"$(INTDIR)\soap_masterStub.obj" \
-	"$(INTDIR)\uuid_lib.WIN32.obj" \
-	"..\src\condor_util_lib\condor_util.lib" \
-	"$(OUTDIR)\condor_cpp_util.lib" \
-	"$(OUTDIR)\condor_classad.lib" \
-	"$(OUTDIR)\condor_daemon_core.lib" \
-	"$(OUTDIR)\condor_io.lib" \
-	"$(OUTDIR)\condor_sysapi.lib" \
-	"$(OUTDIR)\condor_procapi.lib" \
-	"$(OUTDIR)\condor_procd_client.lib"
-
-"$(OUTDIR)\condor_master.exe" : "$(OUTDIR)" $(DEF_FILE) $(LINK32_OBJS)
-    $(LINK32) @<<
-  $(LINK32_FLAGS) $(LINK32_OBJS)
-<<
-
-!ENDIF 
 
 
 !IF "$(NO_EXTERNAL_DEPS)" != "1"
@@ -460,12 +423,6 @@ SOURCE=..\src\condor_master.V6\daemon_master.C
 SOURCE=..\src\condor_master.V6\master.C
 
 "$(INTDIR)\master.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
-
-
-SOURCE=..\src\condor_master.V6\procd.C
-
-"$(INTDIR)\procd.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
