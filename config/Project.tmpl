@@ -62,8 +62,8 @@ SNPRINTF_FLAGS =
 #define PurifyPlatformLdFlags
 #endif
 
-#if HAS_RPM
-MakeRPMs = perl condor_scripts/make_public_rpms
+#if HAVE_RPM
+MakeRPMs = perl condor_scripts/make_public_rpms $(RPM_CMD)
 #else
 MakeRPMs =
 #endif

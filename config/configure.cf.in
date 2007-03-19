@@ -112,6 +112,8 @@ JAVAC = @JAVAC@
 #define HAVE_JAR @HAVE_JAR@
 JAR = @JAR@
 
+#define HAVE_RPM @HAVE_RPM@
+RPM_CMD = @RpmCmd@
 
 TAR_CMD = @TarCmd@
 

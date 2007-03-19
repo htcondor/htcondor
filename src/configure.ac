@@ -1423,6 +1423,33 @@ fi
 AC_SUBST(HAVE_JAR,$_cv_have_jar)
 AC_SUBST(JAR,$ac_jar)
 
+# there might be two kinds of rpm on a machine, 'rpm' and 'rpmbuild'
+# use the latter if we have it.
+if test $_cv_linux_distro = "SLES9"; then
+	# rpm is broken on some platforms, so just turn them off.
+  	AC_MSG_WARN( [rpm generation has been disabled for this architecture] )
+	_cv_have_rpm="NO"
+else
+	# everyone else gets a normal check.
+	AC_PATH_PROG(ac_rpmcmd,rpmbuild,no,[$PATH])
+	if test $ac_rpmcmd = "no"; then
+		AC_PATH_PROG(ac_rpmcmd,rpm,no,[$PATH])
+		if test $ac_rpmcmd = "no"; then
+  			AC_MSG_WARN( [rpm/rpmbuild not found, so no rpms on this architecture] )
+  			_cv_have_rpm="NO"
+
+			# This is ok since MakeRPM is blank in Project.tmpl
+			AC_SUBST(RpmCmd,[])
+		else
+  			_cv_have_rpm="YES"
+			AC_SUBST(RpmCmd,$ac_rpmcmd)
+		fi
+	else
+  	_cv_have_rpm="YES"
+	AC_SUBST(RpmCmd,$ac_rpmcmd)
+	fi
+fi
+AC_SUBST(HAVE_RPM,$_cv_have_rpm)
 
 ############################################################
 # checks for libraries
