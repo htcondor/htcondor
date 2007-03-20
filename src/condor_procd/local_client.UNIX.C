@@ -55,7 +55,7 @@ LocalClient::~LocalClient()
 }
 
 void
-LocalClient::start_connection(void* buffer, int len)
+LocalClient::start_connection(void* payload_buf, int payload_len)
 {
 	// create a named pipe reader to receive the response
 	//
@@ -65,32 +65,28 @@ LocalClient::start_connection(void* buffer, int len)
 	// we need to write our pid and serial number, followed by the given
 	// payload. the trick here is that this write needs to be atomic so
 	// that requests aren't interleaved when the server reads them. thus,
-	// we use a gather-write
+	// we use a single write
+
+	// copy into the write buffer:
+	//   1) our pid
+	//   2) our serial number
+	//   3) the payload
 	//
-	struct iovec vector[3];
+	int msg_len = sizeof(pid_t) + sizeof(int) + payload_len;
+	char* msg_buf = new char[msg_len];
+	ASSERT(msg_buf != NULL);
+	char* ptr = msg_buf;
+	*(pid_t*)ptr = m_pid;
+	ptr += sizeof(pid_t);
+	*(int*)ptr = m_serial_number;
+	ptr += sizeof(int);
+	memcpy(ptr, payload_buf, payload_len);
 
-	// set up iovec structs for the pid, the serial number, and the payload
+	// now call out to the named pipe writer
 	//
-	// memcpy is used to set the iov_base because its type varies.  on some
-	// platforms it is (void*) and on some it is (char*).
-	//
-	void *tmpptr;
+	m_writer.write_data(msg_buf, msg_len);
 
-	tmpptr = &m_pid;
-	memcpy(&(vector[0].iov_base), &tmpptr, sizeof(void*));
-	vector[0].iov_len = sizeof(pid_t);
-
-	tmpptr = &m_serial_number;
-	memcpy(&(vector[1].iov_base), &tmpptr, sizeof(void*));
-	vector[1].iov_len = sizeof(int);
-
-	tmpptr = buffer;
-	memcpy(&(vector[2].iov_base), &tmpptr, sizeof(void*));
-	vector[2].iov_len = len;
-
-	// finally, call out to the named pipe writer
-	//
-	m_writer.write_data_vector(vector, 3);
+	delete[] msg_buf;
 }
 
 void
