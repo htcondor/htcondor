@@ -134,6 +134,15 @@ supports in response to the COMMANDS command.
 \item Removed the 5096-character restriction on the length of DAG
 macro values (and names) in \Condor{dagman}.
 
+\item Condor-G will now notice when jobs are missing from the status
+reports sent by the Grid Monitor.
+Jobs can disappear for short periods of time under normal circumstances,
+but a prolonged absence is often a sign of problems on the remote machine.
+The amount of time that a job can go missing from the Grid Monitor
+status reports before the \Condor{gridmanager} reacts can be set by the
+new configuration parameter \Macro{GRID\_MONITOR\_NO\_STATUS\_TIMEOUT}.
+The default is 15 minutes.
+
 \end{itemize}
 
 \noindent Known Bugs:
