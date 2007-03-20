@@ -29,6 +29,7 @@
 #include "local_client.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "setenv.h"
+#include "directory.h"
 
 // helper function for logging the return code from a ProcD
 // operation
@@ -61,6 +62,30 @@ ProcFamilyClient::ProcFamilyClient()
 	//
 	char* addr = param("PROCD_ADDRESS");
 	if (addr == NULL) {
+		// setup a good default for PROCD_ADDRESS.
+		// result should be in a malloced buffer *addr, just as if
+		// param had found it.
+#ifdef WIN32
+		// Win32
+		addr = strdup("//./pipe/procd_pipe");
+#else
+		// Unix - default to $(LOCK)/procd_pipe
+		char *lockdir = param("LOCK");
+		if (!lockdir) {
+			lockdir = param("LOG");
+		}
+		if (lockdir) {
+			char *temp = dircat(lockdir,"procd_pipe");
+			ASSERT(temp);
+				// temp is allocated with new, we want to allocate
+				// addr with malloc.
+			addr = strdup(temp);
+			delete [] temp;
+		}
+#endif
+	}
+
+	if (addr == NULL) {
 		EXCEPT("PROCD_ADDRESS not defined");
 	}
 
@@ -87,6 +112,10 @@ ProcFamilyClient::ProcFamilyClient()
 	//
 	m_client = new LocalClient(addr);
 	ASSERT(m_client != NULL);
+
+	if ( addr ) {
+		free(addr);
+	}
 }
 
 ProcFamilyClient::~ProcFamilyClient()
@@ -447,7 +476,23 @@ ProcFamilyClient::start_procd(char* address)
 	//
 	char* path = param("PROCD");
 	if (path == NULL) {
-		EXCEPT("error: PROCD not defined in configuration");
+		// Setup a default of PROCD=$(SBIN)/condor_procd
+		char *binpath = param("SBIN");
+		if (!binpath) {
+			binpath = param("BIN");
+		}
+		if ( binpath ) {
+			char *temp = dircat(binpath,"condor_procd");
+			ASSERT(temp);
+				// Note: temp allocated with new char[]; we want
+				// path to be allocated with malloc.
+			path = strdup(temp);
+			free(binpath);
+			delete [] temp;
+		}
+		if ( path == NULL ) {
+			EXCEPT("error: PROCD not defined in configuration");
+		}
 	}
 	MyString err;
 	if (!args.AppendArgsV1RawOrV2Quoted(path, &err)) {
@@ -517,8 +562,25 @@ ProcFamilyClient::start_procd(char* address)
 	//
 	char* softkill_path = param("WINDOWS_SOFTKILL");
 	if (softkill_path == NULL) {
+		// Setup a default of $(SBIN)/condor_softkill.exe
+		char *binpath = param("SBIN");
+		if (!binpath) {
+			binpath = param("BIN");
+		}
+		if ( binpath ) {
+			char *temp = dircat(binpath,"condor_softkill.exe");
+			ASSERT(temp);
+				// Note: temp allocated with new char[]; we want
+				// path to be allocated with malloc.
+			softkill_path = strdup(temp);
+			free(binpath);
+			delete [] temp;
+		}
+	}
+
+	if ( softkill_path == NULL ) {
 		dprintf(D_ALWAYS,
-		        "WINDOWS_SOFTKILL undefined; ProcD won't be able to send WM_CLOSE to jobs");
+	        "WINDOWS_SOFTKILL undefined; ProcD won't be able to send WM_CLOSE to jobs");
 	}
 	else {
 		args.AppendArg("-K");
