@@ -34,6 +34,21 @@
 
 char *strnewp( const char * );
 
+// Like strstr(), but case-insensitive
+char *strcasestr( const char *string, const char *pattern )
+{
+	char	*str;
+	int		n;
+
+	n = strlen( pattern );
+	for( str=(char*)string; *str; str++ ) {
+		if( strncasecmp(str,pattern,n) == 0 ) {
+			return str;
+		}
+	}
+	return NULL;
+}
+
 int
 StringList::isSeparator( char x )
 {
@@ -289,6 +304,23 @@ StringList::contains_withwildcard(const char *string, bool anycase)
 		}
 
 		if ( asterisk == x ) {
+			char *asterisk2 = strrchr(x,'*');
+			if ( asterisk2 && asterisk2[1] == '\0' ) {
+				// asterisks at start and end behavior
+				char *pos;
+				*asterisk2 = '\0';
+				if (anycase) {
+					pos = strcasestr(string,&x[1]);
+				} else {
+					pos = strstr(string,&x[1]);
+				}
+				*asterisk2 = '*';
+				if ( pos ) {
+					return x;
+				} else {
+					continue;
+				}
+			}
 			// asterisk at the start behavior
 			matchstart = NULL;
 			matchend = &(x[1]);
