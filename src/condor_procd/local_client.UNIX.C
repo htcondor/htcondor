@@ -76,9 +76,9 @@ LocalClient::start_connection(void* payload_buf, int payload_len)
 	char* msg_buf = new char[msg_len];
 	ASSERT(msg_buf != NULL);
 	char* ptr = msg_buf;
-	*(pid_t*)ptr = m_pid;
+	memcpy(ptr, &m_pid, sizeof(pid_t));
 	ptr += sizeof(pid_t);
-	*(int*)ptr = m_serial_number;
+	memcpy(ptr, &m_serial_number, sizeof(int));
 	ptr += sizeof(int);
 	memcpy(ptr, payload_buf, payload_len);
 
