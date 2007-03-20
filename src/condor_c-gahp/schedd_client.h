@@ -58,6 +58,7 @@ extern int contactScheddTid;
 
 
 extern bool useXMLClassads;
+extern char *proxySubjectName;
 
 // initialization
 void Init();

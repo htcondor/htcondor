@@ -53,6 +53,10 @@ int contact_schedd_interval = 20;
 // Do we use XML-formatted classads when talking to our invoker
 bool useXMLClassads = false;
 
+// What is the subject name of our jobs' GSI proxies? This is taken from
+// INITIALIZE_FROM_FILE and is added to GSI_DAEMON_NAME
+char *proxySubjectName = NULL;
+
 // Queue for pending commands to schedd
 template class SimpleList<SchedDRequest*>;
 SimpleList <SchedDRequest*> command_queue;
@@ -1232,25 +1236,13 @@ handle_gahp_command(char ** argv, int argc) {
 			SetEnv( "X509_USER_PROXY", argv[1] );
 			UnsetEnv( "X509_USER_CERT" );
 			UnsetEnv( "X509_USER_KEY" );
-			char *subject = x509_proxy_identity_name( argv[1] );
-			char *daemon_subjects = param( "GSI_DAEMON_NAME" );
-			MyString buff;
-			if ( daemon_subjects ) {
-				buff.sprintf( "%s,%s", daemon_subjects, subject );
-			} else {
-				buff.sprintf( "%s", subject );
+			proxySubjectName = x509_proxy_identity_name( argv[1] );
+			if ( !proxySubjectName ) {
+				dprintf( D_ALWAYS, "Failed to query certificate identity "
+						 "from %s\n",  argv[1] );
+				return TRUE;
 			}
-			dprintf( D_ALWAYS, "Setting %s=%s\n", "_condor_GSI_DAEMON_NAME", buff.Value() );
-			SetEnv( "_condor_GSI_DAEMON_NAME", buff.Value() );
-			if ( subject ) {
-				free( subject );
-			}
-			if ( daemon_subjects ) {
-				free( daemon_subjects );
-			}
-			daemonCore->Send_Signal( daemonCore->getpid(), SIGHUP );
-			// TODO set any config values needed
-			// TODO trigger a reconfig
+			Reconfig();
 			init_done = true;
 		}
 		return TRUE;
