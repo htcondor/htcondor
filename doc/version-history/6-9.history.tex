@@ -72,6 +72,12 @@ one.
 died, exited, or been killed, it now notes the name of the machine, the
 daemon's name, and a summary of the situation in the Subject line.
 
+\item Anyplace in a Condor configuration or submit description file where
+wildcards may be used, you can now place wildcards at both the beginning
+and end of the string pattern (i.e. match strings that contain the text
+between the wildcards anywhere in the string). Previously, only one
+wildcard could appear in the string pattern.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
