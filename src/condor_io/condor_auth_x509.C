@@ -438,7 +438,7 @@ int Condor_Auth_X509::nameGssToLocal(const char * GSSClientname)
 	}
 
 	if ( major_status != GSS_S_COMPLETE) {
-		dprintf(D_SECURITY, "Unable to map GSI user name %s to local id.\n", GSSClientname);
+		// REDUNDANT dprintf(D_SECURITY, "Unable to map GSI user name %s to local id.\n", GSSClientname);
 		return 0;
 	}
 
@@ -775,15 +775,17 @@ int Condor_Auth_X509::authenticate_server_gss(CondorError* errstack)
     else {
         // Try to map DN to local name (in the format of name@domain)
         if ( (status = nameGssToLocal(GSSClientname) ) == 0) {
-			errstack->pushf("GSI", GSI_ERR_AUTHENTICATION_FAILED,
-				"Failed to map %s to a local user.  Check the grid-mapfile.",
-				GSSClientname);
-            dprintf(D_SECURITY, "Could not map user's DN to local name.\n");
+            dprintf(D_SECURITY, "gss_assist_gridmap does not contain an entry for %s\n", GSSClientname);
         }
         else {
-            dprintf(D_SECURITY,"Valid GSI connection established to %s\n", 
+            dprintf(D_SECURITY,"gss_assist_gridmap contains an entry for %s\n", 
                     GSSClientname);
         }
+
+		// XXX FIXME ZKM
+		// i am making failure to be mapped a non-fatal error at this point.
+		status = 1;
+
         mySock_->encode();
         if (!mySock_->code(status) || !mySock_->end_of_message()) {
 			errstack->push("GSI", GSI_ERR_COMMUNICATIONS_ERROR,
