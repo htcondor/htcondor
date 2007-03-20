@@ -93,6 +93,7 @@ GlobusResource::GlobusResource( const char *resource_name,
 	monitorJobStatusFile = NULL;
 	monitorLogFile = NULL;
 	logFileTimeoutLastReadTime = 0;
+	jobStatusFileLastUpdate = 0;
 	initialMonitorStart = true;
 	gahp = NULL;
 }
@@ -360,6 +361,7 @@ GlobusResource::CheckMonitor()
 			if(status == RFS_OK) {
 				dprintf(D_FULLDEBUG, "Read grid_monitor status file for %s successfully\n", resourceName);
 				jobStatusFileLastReadTime = time(NULL);
+				jobStatusFileLastUpdate = time(NULL);
 				daemonCore->Reset_Timer( checkMonitorTid, 30 );
 
 			} else if(status == RFS_PARTIAL) {
@@ -689,17 +691,30 @@ GlobusResource::ReadMonitorJobStatusFile()
 				if ( status == GLOBUS_GRAM_PROTOCOL_JOB_STATE_DONE ) {
 					status=GLOBUS_GRAM_PROTOCOL_JOB_STATE_STAGE_OUT;
 				}
-					// Don't flood the GlobusJob objects and the log file
+					// Don't flood the log file
 					// with a long stream of identical job status updates.
+					// We do need to send identical job status updates to
+					// the job so that it can track the last time we
+					// received an update on its status.
 				if ( status != job->globusState ) {
 					dprintf(D_FULLDEBUG,"Sending callback of %d to %d.%d (%s)\n",status,job->procID.cluster,job->procID.proc, resourceName);
-					job->GramCallback( status, 0 );
 				}
+				job->GramCallback( status, 0 );
 			}
 		}
 	}
 
 	fclose( fp );
+
+	int limit = param_integer( "GRID_MONITOR_NO_STATUS_TIMEOUT", 15*60 );
+	int now = time(NULL);
+	GlobusJob *next_job;
+	registeredJobs.Rewind();
+	while ( registeredJobs.Next( next_job ) != 0 ) {
+		if ( now > next_job->lastRemoteStatusUpdate + limit ) {
+			next_job->SetEvaluateState();
+		}
+	}
 
 	if(found_eof)
 		return RFS_OK;
