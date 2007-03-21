@@ -130,6 +130,7 @@ void CondorJobReconfig()
 	while ( CondorResource::ResourcesByName.iterate( next_resource ) != 0 ) {
 		next_resource->Reconfig();
 	}
+
 }
 
 bool CondorJobAdMatch( const ClassAd *job_ad ) {
@@ -1232,7 +1233,7 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 	ExprTree *new_expr, *old_expr;
 
 	int index;
-	const char *attrs_to_copy[] = {
+	const char *default_attrs_to_copy[] = {
 		ATTR_BYTES_SENT,
 		ATTR_BYTES_RECVD,
 		ATTR_COMPLETION_DATE,
@@ -1259,6 +1260,28 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 
 	if ( remote_ad == NULL ) {
 		return;
+	}
+
+	char **attrs_to_copy;
+	StringList sl(NULL, ", ");
+
+	char *config_attrs_to_copy = param("CONDORC_ATTRS_TO_COPY");
+
+	bool freeAttrs = false;
+
+	if (config_attrs_to_copy == NULL) {
+		// use the defaults
+		attrs_to_copy = (char **)default_attrs_to_copy;
+	} else {
+		freeAttrs = true;
+		sl.initializeFromString(config_attrs_to_copy);
+		sl.rewind();
+		attrs_to_copy = new char *[sl.number() + 1];
+		for (int i = 0; i < sl.number(); i++) {
+			attrs_to_copy[i] = sl.next();
+		}
+		attrs_to_copy[sl.number()] = NULL;
+		free(config_attrs_to_copy);
 	}
 
 	dprintf( D_FULLDEBUG, "(%d.%d) Processing remote job status ad\n",
@@ -1304,6 +1327,15 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 		if ( new_expr != NULL && ( old_expr == NULL || !(*old_expr == *new_expr) ) ) {
 			jobAd->Insert( new_expr->DeepCopy() );
 		}
+	}
+
+	if (freeAttrs) {
+		int i = 0;
+		while (attrs_to_copy[i] != NULL) {
+			free(attrs_to_copy[i]);
+			i++;
+		}
+		delete [] attrs_to_copy;
 	}
 
 	requestScheddUpdate( this );
