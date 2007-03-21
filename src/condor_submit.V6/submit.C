@@ -3754,12 +3754,6 @@ SetUserLog()
 	char *ulog_entry = condor_param( UserLogFile, ATTR_ULOG_FILE );
 
 	if (ulog_entry) {
-		if (whitespace(ulog_entry)) {
-			fprintf( stderr, "\nERROR: Only one %s can be specified.\n",
-					 UserLogFile );
-			DoCleanup(0,0,NULL);
-			exit( 1 );
-		}
 		MyString ulog = full_path(ulog_entry);
 		free(ulog_entry);
 
