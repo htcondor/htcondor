@@ -5264,7 +5264,20 @@ int DaemonCore::Create_Process(
 			}
 		}
 		else {
-			job_environ.MergeFrom((const char**)_environ);
+			char* my_env = GetEnvironmentStrings();
+			if (my_env == NULL) {
+				dprintf(D_ALWAYS,
+				        "GetEnvironmentStrings error: %u\n",
+				        GetLastError());
+			}
+			else {
+				job_environ.MergeFrom(my_env);
+				if (FreeEnvironmentStrings(my_env) == FALSE) {
+					dprintf(D_ALWAYS,
+					        "FreeEnvironmentStrings error: %u\n",
+					        GetLastError());
+				}
+			}
 		}
 
 			// now add in env vars from user
