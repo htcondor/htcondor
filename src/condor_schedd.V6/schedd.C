@@ -1628,16 +1628,15 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 			job_ad->LookupString(ATTR_OWNER,owner);
 			job_ad->LookupString(ATTR_NT_DOMAIN,domain);
 			if (! init_user_ids(owner, domain) ) {
-				char tmpstr[255];
+				MyString msg;
 				dprintf(D_ALWAYS, "init_user_ids() failed - putting job on "
 					   "hold.\n");
 #ifdef WIN32
-				snprintf(tmpstr, 255,
-					   	"Bad or missing credential for user: %s", owner);
+				msg.sprintf("Bad or missing credential for user: %s", owner);
 #else
-				snprintf(tmpstr, 255, "Unable to switch to user: %s", owner);
+				msg.sprintf("Unable to switch to user: %s", owner);
 #endif
-				holdJob(job_id.cluster, job_id.proc, tmpstr, 
+				holdJob(job_id.cluster, job_id.proc, msg.Value(), 
 					false, false, true, false, false);
 				return;
 			}
