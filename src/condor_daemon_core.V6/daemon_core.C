@@ -6621,6 +6621,15 @@ DaemonCore::Kill_Family(pid_t pid)
 }
 
 void
+DaemonCore::Proc_Family_Cleanup()
+{
+	if (m_procd_client) {
+		delete m_procd_client;
+		m_procd_client = NULL;
+	}
+}
+
+void
 DaemonCore::Inherit( void )
 {
 	char *inheritbuf = NULL;

@@ -1730,6 +1730,13 @@ void
 Daemons::FinalRestartMaster()
 {
 	int i;
+
+		// Tell DaemonCore to cleanup the ProcFamily subsystem. We need
+		// to do this here since we are about to restart without calling
+		// DC_Exit
+		//
+	daemonCore->Proc_Family_Cleanup();
+	
 #ifndef WIN32
 	int	max_fds = getdtablesize();
 

@@ -129,6 +129,7 @@ ProcFamilyClient::~ProcFamilyClient()
 	//
 	if ((s_procd_pid != -1) && (s_num_objects == 0)) {
 		stop_procd();
+		UnsetEnv("CONDOR_PROCD_ADDRESS");
 	}
 
 	// delete our LocalClient object
