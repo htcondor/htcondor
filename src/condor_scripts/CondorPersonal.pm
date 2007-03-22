@@ -860,7 +860,7 @@ sub StartPersonalCondor
 		# note: on windows all binaaries in bin!
 		$personalmaster = $localdir . "bin/condor_master -f &";
 	} else {
-		$personalmaster = $localdir . "sbin/condor_master";
+		$personalmaster = $localdir . "sbin/condor_master -f &";
 	}
 
 	#set up to use the existing generated configfile
