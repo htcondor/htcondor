@@ -4062,6 +4062,19 @@ These macros control the \Condor{schedd}.
   this configuration variable identifies members of a group. 
   Each machine within a group sets this configuration variable with 
   a string that identifies the group.
+
+\item[\Macro{PER\_JOB\_HISTORY\_DIR}]
+  \label{param:PerJobHistoryDir}
+  If set to a directory writable by the Condor user, when a job
+  leaves the \Condor{schedd}'s queue, a copy of its ClassAd will
+  be written in that directory.  The files are named ``history.''
+  with the job's cluster and process number appended.  For
+  example, job 35.2 will result in a file named ``history.35.2''.
+  Condor does not rotate or delete the files, so without an
+  external entity to clean the directory it can grow very large.
+  This option defaults to being unset.  When not set, no such
+  files are written.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
