@@ -232,7 +232,17 @@ universe jobs.
 
 \begin{itemize}
 
-\item None.
+\item \Condor{glidein} generates a default config file that is missing
+the new required procd parameters.  It also sets
+\MacroNI{PREEN\_INTERVAL} to an invalid value (0).  To fix this,
+remove the setting of \MacroNI{PREEN\_INTERVAL} and add the following
+lines:
+
+\begin{verbatim}
+PROCD = $(SBIN)/condor_procd
+PROCD_LOG = $(LOG)/ProcLog
+PROCD_ADDRESS = $(LOCK)/procd_address
+\end{verbatim}
 
 \end{itemize}
 
