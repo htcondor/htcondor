@@ -155,6 +155,29 @@ while (( $dbup ne "yes") && ($trylimit <= 10) ) {
 		}
 	} else {
 		$dbup = "yes";
+		print "Looking for listen on port....\n";
+		my @statports = `netstat -a`;
+		foreach $netstatport (@statports) {
+			chomp($netstatport);
+			if( $netstatport =~ /^.*:$startpostmasterport.*LISTEN.*$/) {
+				print "Yup its listening: <<<$netstatport>>>\n";
+				$dbup = "yes";
+				last;
+			} elsif( $netstatport =~ /^.*\.postgresql.*LISTEN.*$/) {
+				print "Yup its listening: <<<$netstatport>>>\n";
+				$dbup = "yes";
+				last;
+			} elsif($netstatport =~ /^.*LISTEN.*$startpostmasterport.*$/) {
+				print "Yup its listening: <<<$netstatport>>>\n";
+				$dbup = "yes";
+				last;
+			} else {
+				print "skip: $netstatport\n";
+			}
+		}
+		if($dbup eq "no") {
+				print "They lied.... nothing on port (($startpostmasterport))\n";
+		}
 	}
 }
 

@@ -172,8 +172,8 @@ if($pgresult == 0) {
 	$pcresult = system("./job_quill_basic.pl $mysubmitnm");
 	print "Result of job_quill_basic job is  $pcresult\n";
 
-	$result = system("./x_quill_pgsqlstop.pl $myfullpgsqlloc ");
-	print "Result of Quill Postgresssql db stop job is  $result\n";
+	#$result = system("./x_quill_pgsqlstop.pl $myfullpgsqlloc ");
+	#print "Result of Quill Postgresssql db stop job is  $result\n";
 }
 
 system("cp *quill_basic* $mysaveme");
