@@ -1,13 +1,29 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_declare.pl,v 1.2 2006-07-25 18:15:42 wright Exp $
+# $Id: remote_declare.pl,v 1.2.2.1 2007-03-23 01:55:42 bt Exp $
 # generate list of all tests to run
 ######################################################################
 
 my $BaseDir = $ENV{BASE_DIR} || die "BASE_DIR not in environment!\n";
 my $SrcDir = $ENV{SRC_DIR} || die "SRC_DIR not in environment!\n";
 my $TaskFile = "$BaseDir/tasklist.nmi";
+
+my %CustomTimeouts;
+my $TimeoutFile = "$SrcDir/condor_tests/TimeoutChanges";
+# Do we have a file with non-default timeouts for some tests?
+if( -f "$TimeoutFile") {
+	open(TIMEOUTS,"<$TimeoutFile") || die "Failed to open $TimeoutFile: $!\n";
+	my $line;
+	while(<TIMEOUTS>) {
+		chomp($_);
+		$line = $_;
+		if($line =~ /^\s*(\w*)\s+(\d*)\s*$/) {
+			print "Custom Timeout: $1:$2\n";
+			$CustomTimeouts{"$1"} = $2;
+		}
+	}
+}
 
 # file which contains the list of tests to run on Windows
 my $WinTestList = "$SrcDir/condor_tests/Windows_list";
@@ -146,7 +162,13 @@ print "**** Writing out tests to tasklist.nmi\n";
 print "****************************************************\n";
 $unique_tests = 0;
 foreach $task (sort keys %tasklist ) {
-    print TASKFILE $task . "\n";
+	$temp = $CustomTimeouts{"$task"};
+	if( exists $CustomTimeouts{"$task"} ) {
+    	print TASKFILE $task . " " . $CustomTimeouts{"$task"} . "\n";
+    	print "CustomTimeout:$task $temp\n";
+	} else {
+    	print TASKFILE $task . "\n";
+	}
     $unique_tests++;
 }
 close( TASKFILE );
