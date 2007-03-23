@@ -170,6 +170,11 @@ proxy using the same logic as \Condor{submit} does.
 log level. It now defaults to empty.
 Previously it had to be non-empty and defaulted to include D\_COMMAND.
 
+\item The addition of the \Condor{procd} daemon means that all process
+family monitoring and control logic is no longer replicated in each
+Condor daemon that needs it. This improves Condor's scalability,
+particularly on machines with many processes.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
