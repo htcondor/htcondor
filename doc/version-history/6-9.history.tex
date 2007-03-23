@@ -78,6 +78,11 @@ and end of the string pattern (i.e. match strings that contain the text
 between the wildcards anywhere in the string). Previously, only one
 wildcard could appear in the string pattern.
 
+\item Added optional configuration setting
+\MacroNI{NEGOTIATOR\_MATCH\_EXPRS}.  This allows the negotiator to
+insert expressions into the matched ClassAd.  See
+page~\pageref{param:NegotiatorMatchExprs} for more information.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -95,6 +100,9 @@ still true.  What is fixed is that these multiple claims will not
 result in mutual annihilation of the various attempts to use the
 resource.  Instead, the first claim to be successfully requested will
 proceed and the others will be rejected.
+
+\item \Condor{glidein} was setting \MacroNI{PREEN}=0 in the default
+configuration, but this is no longer a legal value, as of 6.9.2.
 
 \end{itemize}
 
