@@ -137,6 +137,19 @@ DESC(cmd_q_shows-hold,"Condor_q shows hold")
 RUN(cmd_q_shows-hold)
 TESTCLASS(cmd_q_shows-hold,core)
 TESTCLASS(cmd_q_shows-hold,quick)
+TESTCLASS(cmd_q_shows-hold,btdebug)
+
+DESC(cmd_q_shows-run,"Condor_q shows run")
+RUN(cmd_q_shows-run)
+TESTCLASS(cmd_q_shows-run,core)
+TESTCLASS(cmd_q_shows-run,quick)
+TESTCLASS(cmd_q_shows-run,btdebug)
+
+DESC(cmd_q_shows-global,"Condor_q shows global")
+RUN(cmd_q_shows-global)
+TESTCLASS(cmd_q_shows-global,core)
+TESTCLASS(cmd_q_shows-global,quick)
+TESTCLASS(cmd_q_shows-global,btdebug)
 
 DESC(lib_userlog,"Exercise the userlog interface write and read all events");
 RUN(lib_userlog)
@@ -145,7 +158,7 @@ DEPS(lib_userlog,x_write_joblog.exe)
 TESTCLASS(lib_userlog,lib)
 TESTCLASS(lib_userlog,quick)
 
-#if defined(IS_I386_LINUX_RH9) || defined(IS_I386_LINUX_RH80) || defined(IS_I386_LINUX_RH72) || defined(IS_I386_LINUX_RHEL3) || defined(IS_X86_64_LINUX_RHEL3) || defined(IS_PPC_OSX_10_3) || defined(IS_CONDOR_PPC_LINUX_SLES9) || defined(IS_IA64_LINUX_SLES81) || defined(IS_IA64_LINUX_RHEL3) 
+#if defined(IS_I386_CONDOR_FREEBSD) || defined(IS_I386_LINUX_RH9) || defined(IS_I386_LINUX_RH80) || defined(IS_I386_LINUX_RH72) || defined(IS_I386_LINUX_RHEL3) || defined(IS_X86_64_LINUX_RHEL3) || defined(IS_PPC_OSX_10_3) || defined(IS_CONDOR_PPC_LINUX_SLES9) || defined(IS_IA64_LINUX_SLES81) || defined(IS_IA64_LINUX_RHEL3) 
 DESC(job_quill_basic,"Basic Quill Test")
 RUN(job_quill_basic)
 TESTCLASS(job_quill_basic,core)
