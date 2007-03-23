@@ -62,6 +62,7 @@ package CondorPersonal;
 #	condorlocal		Name for condor local config 		condor_config.local			$personal_local
 #	condor			"install" or path to tarball 									$condordistribution
 #	collector	 	Used to define COLLECTOR_HOST									$collectorhost
+#	nameschedd	 	Used to define SCHEDD_NAME			cat(name and collector)		$scheddname
 #	condorhost	 	Used to define CONDOR_HOST										$condorhost
 #	ports			Select dynamic or normal ports		dynamic						$portchanges	
 #   vms				sets NUM_CPUS NUM_VMS				none
@@ -104,6 +105,7 @@ my $localdir;
 my $condorlocaldir;
 my $pid = $$;
 my $version = ""; # remote, middle, ....... for naming schedd "schedd . pid . version"
+my $mastername = ""; # master_$verison
 
 BEGIN
 {
@@ -547,6 +549,7 @@ sub TunePersonalCondor
 	CondorTest::fullchomp($myhost);
 	my @domainparts = split /\./, $myhost;
 	my $condorhost = "";
+	my $collectorhost = "";
 	my $mpid = "";
 	my $localdir = shift;
 
@@ -580,6 +583,21 @@ sub TunePersonalCondor
 	{
 		$collectorhost = $control{"collector"};
 	}
+
+	# was a special schedd name called out?
+	if( exists $control{"nameschedd"} )
+	{
+		$temp = $control{"nameschedd"};
+		debug("request schedd name $temp\n");
+		if( !(exists $control{"collector"})) {
+			die "Schedd must be named relative to passed in collector!!!\n";
+		} else {
+			$scheddname = $collectorhost . $temp;
+			debug("Naming schedd <<$scheddname>>\n");
+		}
+		$collectorhost = $control{"collector"};
+	}
+
 
 	# was a special domain called out?
 	if( exists $control{"condordomain"} )
@@ -658,7 +676,7 @@ sub TunePersonalCondor
 	my $line;
 	#system("ls;pwd");
 	#print "***************** opening $personal_template as config file template *****************\n";
-	open(TEMPLATE,"<$personal_template")  || die "Can not open template: $!\n";
+	open(TEMPLATE,"<$personal_template")  || die "Can not open template<<$personal_template>>: $!\n";
 	debug( "want to open new config file as $topleveldir/$personal_config\n");
 	open(NEW,">$topleveldir/$personal_config") || die "Can not open new config file: $!\n";
 	while(<TEMPLATE>)
@@ -755,7 +773,15 @@ sub TunePersonalCondor
 			print NEW "COLLECTOR_HOST = \$(CONDOR_HOST):0\n";
 		}
 
-		print NEW "SCHEDD_NAME = schedd$mpid$version\n";
+		if(exists $control{"nameschedd"}) {
+			print NEW "SCHEDD_NAME = $scheddname\n";
+		} else {
+			print NEW "SCHEDD_NAME = schedd$mpid$version\n";
+		}
+
+		$mastername = "master" . "_" . $version;
+		print NEW "MASTER_NAME = $mastername\n";
+
 		print NEW "NEGOTIATOR_HOST = \$(CONDOR_HOST):0\n";
 		print NEW "COLLECTOR_ADDRESS_FILE = \$(LOG)/.collector_address\n";
 		print NEW "NEGOTIATOR_ADDRESS_FILE = \$(LOG)/.negotiator_address\n";
@@ -773,10 +799,12 @@ sub TunePersonalCondor
 		if( $collectorhost )
 		{
 			print NEW "COLLECTOR_HOST = $collectorhost\n";
+			debug("COLLECTOR_HOST is $collectorhost\n");
 		}
 		else
 		{
 			print NEW "COLLECTOR_HOST = \$(CONDOR_HOST)\n";
+			debug("COLLECTOR_HOST is \$(CONDOR_HOST)\n");
 		}
 
 		print NEW "NEGOTIATOR_HOST = \$(CONDOR_HOST)\n";
@@ -877,18 +905,23 @@ sub StartPersonalCondor
 	{
 		# probably not running with this config so treat it like a start case
 		#die "Should be set with a new config file but LOST!\n";
+		print "Condor state is LOST\n";
 		debug( "start up the personal condor!--$personalmaster--\n");
 		system($personalmaster);
 		system("condor_config_val -v log");
 	}
 	elsif( $condorstate eq "matched not running" )
 	{
+		print "Condor state is matched not running\n";
 		debug( "start up the personal condor!--$personalmaster--\n");
 		system($personalmaster);
 		system("condor_config_val -v log");
 	}
 	elsif( $condorstate eq "matched running" )
 	{
+		print "Condor state is matched running\n";
+		debug(" about to turn off this master and then turn on this master\n");
+		system("condor_config_val -v log");
 		debug( "restart the personal condor!\n");
 		system("condor_off -master");
 		sleep 5;
