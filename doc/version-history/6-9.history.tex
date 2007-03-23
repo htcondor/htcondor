@@ -200,6 +200,14 @@ was given an expression such as 12*60, it would silently interpret
 this as 12.  Such cases now result in the condor daemon exiting
 after issuing an error message into the log file.
 
+\item When sending a \Code{WM\_CLOSE} message to a process on Windows,
+Condor daemons now invoke the helper program \Condor{softkill} to do
+so. This prevents the daemon from needing to temporarily swtich away
+from its dedicated service Window Station and Desktop. It also fixes a
+bug where daemons would leak Window Station and Desktop handles. This
+was mainly a problem in the \Condor{schedd} when running many scheduler
+universe jobs.
+
 \end{itemize}
 
 \noindent Known Bugs:
