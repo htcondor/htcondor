@@ -76,6 +76,16 @@ Setting impacted include but are not limited to:
 \Macro{MASTER\_<name>\_BACKOFF\_CONSTANT},
 \Macro{MASTER\_<name>\_BACKOFF\_CEILING},
 
+% I'm checking this in commented since I'm not surewhat disclosure
+% policy we want to use. Only CDF (Igor) uses the GLEXEC_STARTER
+% functionality, so I think it'd be wise to run it by him before
+% documenting this publicly.
+%
+%\item Fixed a security vulnerability in the \Macro{GLEXEC\_STARTER}
+%feature. In previous versions when the \Condor{startd} received the
+%user proxy, it placed it in a temporary file that for a short window
+%of time could be opened for reading by any user on the system.
+
 \end{itemize}
 
 
