@@ -582,6 +582,9 @@ MASTER = \$(SBIN)/condor_master
 MASTER_LOG = \$(LOG)/MasterLog
 STARTD = \$(SBIN)/condor_startd
 STARTER = \$(SBIN)/condor_starter
+PROCD = \$(SBIN)/condor_procd
+PROCD_LOG = \$(LOG)/ProcLog
+PROCD_ADDRESS = \$(LOCK)/procd_address
 
 STARTER_PVM = \$(SBIN)/condor_starter.pvm
 STARTER_STD = \$(SBIN)/condor_starter.std
@@ -596,7 +599,7 @@ $NEGOTIATOR_SETTING
 COLLECTOR_HOST = $COLLECTOR_HOST
 
 LOCK = \$(LOG)
-STARTD_LOG = \$(LOG)/StartdLog
+STARTD_LOG = \$(LOG)/StartLog
 STARTER_LOG = \$(LOG)/StarterLog
 
 STARTD_DEBUG = D_COMMAND
