@@ -1,0 +1,207 @@
+#! /usr/bin/env perl
+use CondorTest;
+use CondorPersonal;
+
+CondorPersonal::DebugOff();
+Condor::DebugOff();
+
+$cmd_template = "cmd_q_multi.template";
+$testname = 'cmd_q_multi - Simple Condor-C A&B with Vanilla job';
+$corename = "cmd_q_multi";
+
+# where am I running
+$dummyhost = "gamgee.cs.wisc.edu";
+$currenthost = `hostname`;
+chomp($currenthost);
+$primarycollector = $currenthost;
+
+CondorTest::fullchomp($currenthost);
+
+system("date");
+print "Dummyhost was $dummyhost and really running on $currenthost\n";
+
+$mypid = $$;
+$mysaveme = $corename . ".saveme";
+system("mkdir $mysaveme");
+$mypiddir = $mysaveme . "/" . $mypid;
+system("mkdir $mypiddir");
+#make a symbolic link for personal condor module to use
+system("ln -s $mypiddir $mypid");
+
+$mysubmitnm = $corename . $mypid . ".cmd";
+$mysubmitnmout = $corename . $mypid . ".cmd.out";
+$mysubmitnmlog = $corename . $mypid . ".log";
+$mysubmitnmout = $corename . $mypid . ".out";
+$mycorenm = $corename . ".cmd";
+$mycorenmout = $corename . ".cmd.out";
+$mycorenmlog = $corename . ".log";
+
+print "Master PID is $mypid\n";
+print "Master PID submit file is $mysubmitnm\n";
+
+# get a local scheduler running (side a)
+my $configloc = CondorPersonal::StartCondor("x_param.cmdq-multi" ,"local");
+my @local = split /\+/, $configloc;
+my $locconfig = shift @local;
+my $locport = shift @local;
+
+print "---local config is $locconfig and local port is $locport---\n";
+
+$primarycollector = $primarycollector . ":" . $locport;
+
+print "Primary collector for other nodes <<$primarycollector>>\n";
+
+$saveconfig = $ENV{CONDOR_CONFIG};
+$ENV{CONDOR_CONFIG} = $locconfig;
+system("condor_config_val COLLECTOR_HOST");
+$ENV{CONDOR_CONFIG} = $saveconfig;
+
+my $line;
+open(SCHEDDSRC,"<x_param.cmdq-multi.template") || die "Could not open x_param.cmdq-multi.template: $!\n";
+open(SCHEDDONE,">x_param.cmdq-multi-one") || die "Could not open x_param.cmdq-multi-one: $!\n";
+while(<SCHEDDSRC>) {
+	$line = $_;
+	chomp($line);
+	if($line =~ /^\s*nameschedd\s*=.*$/) {
+		print SCHEDDONE "nameschedd = scheddone\n";
+	} elsif($line =~ /^\s*collector\s*=.*$/) {
+		print SCHEDDONE "collector  = $primarycollector\n";
+	} else {
+		print SCHEDDONE "$line\n";
+	}
+}
+close(SCHEDDSRC);
+close(SCHEDDONE);
+
+# my $configscheddone = CondorPersonal::DebugOn();
+# get another node running
+my $configscheddone = CondorPersonal::StartCondor("x_param.cmdq-multi-one" ,"scheddone");
+my @scheddone = split /\+/, $configscheddone;
+my $scheddoneconfig = shift @scheddone;
+my $scheddoneport = shift @scheddone;
+
+print "---scheddone config is $scheddoneconfig and scheddone port is $scheddoneport---\n";
+
+my $bail = 0;
+
+# submit into scheddone
+$ENV{CONDOR_CONFIG} = $scheddoneconfig;
+
+my $forever = CondorTest::verbose_system("./x_cmdrunforever.pl");
+if($forever != 0) {
+	print "Bailing because running job failed to submit\n";
+	$bail = 1;
+}
+
+# submit into collector node schedd
+$ENV{CONDOR_CONFIG} = $locconfig;
+
+my $holdone;
+if($bail != 1) {
+	my $holdone = CondorTest::verbose_system("./x_cmdstartonhold.pl");
+	if($holdone != 0) {
+		print "Bailing because running job failed to submit\n";
+		$bail = 1;
+	}
+}
+
+my $cmdstatus;
+my @adarray;
+my $sched1 = "master_local";
+my $sched2 = "master_scheddone";
+
+# allow time for all the nodes to update the collector
+# by allowing N attempts
+my $nattempts = 5;
+my $count = 0;
+my $done = 0;
+my $found1 = 0;
+my $found2 = 0;
+
+if($bail != 1) {
+	while($count < $nattempts) {
+		$found1 = 0;
+		$found2 = 0;
+		my $cmd = "condor_q -global";
+		$cmdstatus =
+		$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
+    	if(!$cmdstatus)
+    	{
+        	print "Test failure due to Condor Tool Failure<$cmd>\n";
+        	exit(1)
+    	}
+		foreach $line (@adarray) {
+			if($line =~ /^.*($sched1).*$/) {
+				print "found $sched1: $line\n";
+				$found1 = 1;
+			} elsif($line =~ /^.*($sched2).*$/) {
+				print "found $sched2: $line\n";
+				$found2 = 1;
+			} else {
+				#print "skip: $line\n";
+			}
+		}
+		if(($found1 == 1) && ($found2 == 1)){
+			print "Happy and quitting\n";
+			$done = 1;
+			last;
+		} else {
+			print "Unhappy: <$found1> && <$found2>\n";
+		}
+
+		$count = $count + 1;
+		sleep($count * 2);
+	}
+}
+
+system("cp *condorc* $mysaveme");
+
+if( -e "$mysubmitnm" )
+{
+	system("cp $mysubmitnm $mycorenm");
+}
+
+if( -e "$mysubmitnmout" )
+{
+	system("cp $mysubmitnmout $mycorenmout");
+}
+
+if( -e "$mysubmitnmlog" )
+{
+	system("cp $mysubmitnmlog $mycorenmlog");
+}
+
+# still set to local config
+# $ENV{CONDOR_CONFIG} = $locconfig;
+
+my @adarray;
+my $status = 1;
+my $cmd = "condor_off -master";
+$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+if(!$status)
+{
+	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	exit(1)
+}
+
+$ENV{CONDOR_CONFIG} = $scheddoneconfig;
+
+$status = 1;
+$cmd = "condor_off -master";
+$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+if(!$status)
+{
+	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	exit(1)
+}
+system("date");
+
+if( $done == 0 )
+{
+	# actual test failed but we allowed cleanup
+	exit(1);
+}
+
+print "cmd_q_shows-global SUCCESS\n";
+system("date");
+exit(0);
