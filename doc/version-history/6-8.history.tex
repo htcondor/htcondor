@@ -68,6 +68,11 @@ available for X86\_64 native ports of Condor.
 
 \begin{itemize}
 
+\item Fixed a bug where if \Opt{-lc} was specified multiple times for
+the compiler when using \Condor{compile} (some tools like \Prog{pgf90}
+do this), \Condor{compile} would fail to link the application and emit
+a multiply defined symbol error for many symbols.
+
 \item Fixed a bug where Condor erroneously indicates that a scheduler
 universe's job executable is missing or not executable, if the scheduler
 universe job had been submitted with
