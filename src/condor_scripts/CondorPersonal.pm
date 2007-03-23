@@ -775,12 +775,12 @@ sub TunePersonalCondor
 
 		if(exists $control{"nameschedd"}) {
 			print NEW "SCHEDD_NAME = $scheddname\n";
+			$mastername = "master" . "_" . $version;
+			print NEW "MASTER_NAME = $mastername\n";
 		} else {
 			print NEW "SCHEDD_NAME = schedd$mpid$version\n";
 		}
 
-		$mastername = "master" . "_" . $version;
-		print NEW "MASTER_NAME = $mastername\n";
 
 		print NEW "NEGOTIATOR_HOST = \$(CONDOR_HOST):0\n";
 		print NEW "COLLECTOR_ADDRESS_FILE = \$(LOG)/.collector_address\n";
