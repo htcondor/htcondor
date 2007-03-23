@@ -93,6 +93,14 @@ Setting impacted include but are not limited to:
 
 \begin{itemize}
 
+\item On UNIX, an execute-side Condor installation can run without
+root privileges and still execute jobs as different users, properly
+clean up when a job exits, and correctly enforce policies specified by
+the Condor administrator and resource owners. Privileged functionality
+has been separated into a well-defined set of functions provided by a
+setuid helper program. This feature currently does not work for the
+standard or PVM universes.
+
 %%\item added bogus ImageSize to bogus dedicated scheduler
 %%jobAd used only for claiming.  This fixes some problems with
 %%startd WANT_SUSPEND going to undefined, but we don't document
