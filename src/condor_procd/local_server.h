@@ -77,6 +77,7 @@ private:
 #if defined(WIN32)
 	HANDLE m_pipe;
 	HANDLE m_event;
+	OVERLAPPED* m_accept_overlapped;
 #else
 	char* m_pipe_addr;
 	NamedPipeReader m_reader;

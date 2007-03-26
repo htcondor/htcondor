@@ -24,7 +24,8 @@
 #include "condor_common.h"
 #include "local_server.h"
 
-LocalServer::LocalServer(const char* pipe_addr)
+LocalServer::LocalServer(const char* pipe_addr) :
+	m_accept_overlapped(NULL)
 {
 	// TODO: create the named pipe with a security descriptor that denies
 	// access to NT AUTHORITY\NETWORK and grants access to the "condor"
@@ -65,22 +66,35 @@ LocalServer::set_client_principal(char*)
 
 bool LocalServer::accept_connection(int timeout)
 {
-	// initiate a nonblocking "accept"
+	// initiate a nonblocking "accept", if one isn't already pending
 	//
-	OVERLAPPED overlapped;
-	overlapped.Offset = 0;
-	overlapped.OffsetHigh = 0;
-	overlapped.hEvent = m_event;
-	if (ConnectNamedPipe(m_pipe, &overlapped) == TRUE) {
-		return true;
-	}
+	if (m_accept_overlapped == NULL) {
 
-	// ConnectNamedPipe did not return immediate success; make sure
-	// the error code indicates a pending operation
-	//
-	DWORD error = GetLastError();
-	if (error != ERROR_IO_PENDING) {
-		EXCEPT("ConnectNamedPipe error: %u", error);
+		m_accept_overlapped = new OVERLAPPED;
+		ASSERT(m_accept_overlapped != NULL);
+		m_accept_overlapped->Offset = 0;
+		m_accept_overlapped->OffsetHigh = 0;
+		m_accept_overlapped->hEvent = m_event;
+
+		BOOL bresult = ConnectNamedPipe(m_pipe, m_accept_overlapped);
+		DWORD error = GetLastError();
+
+		// if ConnectNamedPipe returns TRUE or if GetLastError returns
+		// ERROR_PIPE_CONNECTED, then we have a connection and can just
+		// return
+		//
+		if ((bresult == TRUE) || (error == ERROR_PIPE_CONNECTED)) {
+			delete m_accept_overlapped;
+			m_accept_overlapped = NULL;
+			return true;
+		}
+
+		// ConnectNamedPipe did not return immediate success; make sure
+		// the error code indicates a pending operation
+		//
+		if (error != ERROR_IO_PENDING) {
+			EXCEPT("ConnectNamedPipe error: %u", error);
+		}
 	}
 
 	// wait up to timeout seconds for a client connection
@@ -97,9 +111,11 @@ bool LocalServer::accept_connection(int timeout)
 	//
 	ASSERT(result == WAIT_OBJECT_0);
 	DWORD ignored;
-	if (GetOverlappedResult(m_pipe, &overlapped, &ignored, TRUE) == FALSE) {
+	if (GetOverlappedResult(m_pipe, m_accept_overlapped, &ignored, TRUE) == FALSE) {
 		EXCEPT("GetOverlappedResult error: %u", GetLastError());
 	}
+	delete m_accept_overlapped;
+	m_accept_overlapped = NULL;
 
 	return true;
 }
