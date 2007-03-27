@@ -249,6 +249,9 @@ doContactSchedd()
 					&id_list,
 					this_reason,
 					&errstack);
+		} else {
+			EXCEPT( "Unexpected command type %d in doContactSchedd",
+					this_command );
 		}
 
 		// Analyze the result ad
