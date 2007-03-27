@@ -29,6 +29,9 @@
 #include "my_hostname.h"
 #include "get_daemon_name.h"
 #include "sig_install.h"
+#include "daemon.h"
+#include "dc_schedd.h"
+#include "MyString.h"
 
 #include "condor_qmgr.h"
 #include "condor_distribution.h"
@@ -52,14 +55,13 @@ void ProcArg( const char * );
 int calc_prio( int old_prio );
 void init_user_credentials();
 
-char* DaemonName = NULL;
 
 	// Tell folks how to use this program
 void
 usage()
 {
 	fprintf( stderr, "Usage: %s [{+|-}priority ] [-p priority] ", MyName );
-	fprintf( stderr, "[ -a ] [-n schedd_name] [user | cluster | cluster.proc] ...\n");
+	fprintf( stderr, "[ -a ] [-n schedd_name] [ -pool pool_name ] [user | cluster | cluster.proc] ...\n");
 	exit( 1 );
 }
 
@@ -71,6 +73,10 @@ main( int argc, char *argv[] )
 	int				nArgs = 0;
 	int				i;
 	Qmgr_connection	*q;
+	MyString pool_name;
+	MyString schedd_name;
+	MyString schedd_daemon_name;
+	MyString DaemonName;
 
 	MyName = argv[0];
 	myDistro->Init( argc, argv );
@@ -92,11 +98,19 @@ main( int argc, char *argv[] )
 		if( (arg[0] == '-' || arg[0] == '+') && isdigit(arg[1]) ) {
 			PrioAdjustment = compute_adj(arg);
 			AdjustmentSet = TRUE;
-		} else if( arg[0] == '-' && arg[1] == 'p' ) {
+		} else if( strcmp(arg, "-p") == MATCH) {
 			argv++;
 			NewPriority = atoi(*argv);
 			PrioritySet = TRUE;
-		} else if( arg[0] == '-' && arg[1] == 'n' ) {
+		} else if( strcmp(arg, "-pool") == MATCH) {
+			argv++;
+			if( ! *argv ) {
+				fprintf( stderr, "%s: -pool requires another argument\n", 
+						 MyName);
+				exit(1);
+			}				
+			pool_name = *argv;
+		} else if( strcmp(arg, "-n") == MATCH) {
 			// use the given name as the schedd name to connect to
 			argv++;
 			if( ! *argv ) {
@@ -104,15 +118,38 @@ main( int argc, char *argv[] )
 						 MyName);
 				exit(1);
 			}				
-			if( !(DaemonName = get_daemon_name(*argv)) ) { 
-				fprintf( stderr, "%s: unknown host %s\n", 
-						 MyName, get_host_part(*argv) );
-				exit(1);
-			}
+			schedd_name = *argv;
 		} else {
 			args[nArgs] = arg;
 			nArgs++;
 		}
+	}
+
+	// Ensure that if -pool is specified, -n was also specified.
+	if (pool_name != "" && schedd_name == "") {
+		fprintf(stderr, "%s: -pool also requires -n to be specified\n", MyName);
+		exit(1);
+	}
+
+	// specifically allow a NULL return value for the strings. 
+	DCSchedd schedd(schedd_name.Value() == "" ? NULL : schedd_name.Value(),
+					pool_name.Value() == "" ? NULL : pool_name.Value());
+
+	if ( schedd.locate() == false ) {
+		if (schedd_name == "") {
+			fprintf( stderr, "%s: ERROR: Can't find address of local schedd\n",
+				MyName );
+			exit(1);
+		}
+
+		if (pool_name == "") {
+			fprintf( stderr, "%s: No such schedd named %s in local pool\n", 
+				 MyName, schedd_name.Value() );
+		} else {
+			fprintf( stderr, "%s: No such schedd named %s in pool %s\n", 
+				 MyName, schedd_name.Value(), pool_name.Value() );
+		}
+		exit(1);
 	}
 
 	if( PrioritySet == FALSE && AdjustmentSet == FALSE ) {
@@ -122,15 +159,12 @@ main( int argc, char *argv[] )
 		exit(1);
 	}
 
-		// Open job queue
-	q = ConnectQ(DaemonName);
+	// Open job queue
+	DaemonName = schedd.addr();
+	q = ConnectQ((char*)DaemonName.Value());
 	if( !q ) {
-		if( DaemonName ) {
-			fprintf( stderr, "Failed to connect to queue manager %s\n", 
-					 DaemonName );
-		} else {
-			fprintf( stderr, "Failed to connect to local queue manager\n" );
-		}
+		fprintf( stderr, "Failed to connect to queue manager %s\n", 
+				 DaemonName.Value() );
 		exit(1);
 	}
 	for(i = 0; i < nArgs; i++)
@@ -282,3 +316,5 @@ void ProcArg(const char* arg)
 		fprintf(stderr, "Warning: unrecognized \"%s\" skipped\n", arg);
 	}
 }
+
+#include "../condor_daemon_core.V6/daemon_core_stubs.h"

@@ -30,11 +30,14 @@
 #include "get_daemon_name.h"
 #include "condor_attributes.h"
 #include "condor_distribution.h"
+#include "daemon.h"
+#include "dc_schedd.h"
+#include "MyString.h"
 
 void
 usage(char name[])
 {
-	fprintf(stderr, "Usage: %s [-n schedd-name] { cluster | cluster.proc | owner | -constraint constraint } attribute-name attribute-value ...\n", name);
+	fprintf(stderr, "Usage: %s [-n schedd-name] [-pool pool-name] { cluster | cluster.proc | owner | -constraint constraint } attribute-name attribute-value ...\n", name);
 	exit(1);
 }
 
@@ -52,11 +55,13 @@ ProtectedAttribute(char attr[])
 int
 main(int argc, char *argv[])
 {
-	char *DaemonName = NULL; 
+	MyString DaemonName;
 	MyString constraint;
 	Qmgr_connection *q;
 	int nextarg = 1, cluster, proc;
 	bool UseConstraint = false;
+	MyString schedd_name;
+	MyString pool_name;
 
 	myDistro->Init( argc, argv );
 	config();
@@ -69,6 +74,7 @@ main(int argc, char *argv[])
 		usage(argv[0]);
 	}
 
+	// if it is present, it must be first
 	if (argv[1][0] == '-' && argv[1][1] == 'n') {
 		// use the given name as the schedd name to connect to
 		if (argc < 3) {
@@ -76,23 +82,46 @@ main(int argc, char *argv[])
 					argv[0]);
 			exit(1);
 		}				
-		if (!(DaemonName = get_daemon_name(argv[2]))) { 
-			fprintf(stderr, "%s: unknown host %s\n", 
-					argv[0], get_host_part(argv[2]) );
-			exit(1);
-		}
+		schedd_name = argv[2];
 		nextarg = 3;
 	}
 
-		// Open job queue 
-	q = ConnectQ(DaemonName);
-	if( !q ) {
-		if( DaemonName ) {
-			fprintf( stderr, "Failed to connect to queue manager %s\n", 
-					 DaemonName );
-		} else {
-			fprintf( stderr, "Failed to connect to local queue manager\n" );
+	// if it is present, it must be just after -n flag
+	if (argv[3][0] == '-' && argv[3][1] == 'p') {
+		if (argc < 5) {
+			fprintf(stderr, "%s: -pool requires another argument\n", 
+					argv[0]);
+			exit(1);
 		}
+		pool_name = argv[4];
+		nextarg = 5;
+	}
+
+	DCSchedd schedd(schedd_name.GetCStr(), pool_name.GetCStr());
+	if ( schedd.locate() == false ) {
+		if (schedd_name == "") {
+			fprintf( stderr, "%s: ERROR: Can't find address of local schedd\n",
+				argv[0] );
+			exit(1);
+		}
+
+		if (pool_name == "") {
+			fprintf( stderr, "%s: No such schedd named %s in local pool\n",
+				argv[0], schedd_name.Value() );
+		} else {
+			fprintf( stderr, "%s: No such schedd named %s in "
+				"pool %s\n",
+				argv[0], schedd_name.Value(), pool_name.Value() );
+		}
+		exit(1);
+	}
+
+	// Open job queue 
+	DaemonName = schedd.addr();
+	q = ConnectQ((char*)DaemonName.Value());
+	if( !q ) {
+		fprintf( stderr, "Failed to connect to queue manager %s\n", 
+				 DaemonName.Value() );
 		exit(1);
 	}
 
@@ -175,3 +204,4 @@ main(int argc, char *argv[])
 	return 0;
 }
 
+#include "../condor_daemon_core.V6/daemon_core_stubs.h"
