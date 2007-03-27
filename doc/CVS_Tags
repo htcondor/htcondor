@@ -8,6 +8,10 @@
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
 
+03/27/07 V6_8-merge-10
+   The state of the doc directory in the V6_8-branch for a merge
+   into V6_9_2-branch.
+
 03/08/07 V6_8-merge-9
    The state of the doc directory in the V6_8-branch for a merge
    into the trunk. (Bypassing 6.9.1 due to imminent 6.9.2 release.)
