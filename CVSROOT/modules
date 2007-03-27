@@ -964,6 +964,9 @@ V6_9_QUILL_CODE	-a V6_9_CODE \
 			src/condor_tt \
 			src/condor_dbmsd
 
+V6_9_QUILL_ALL		-a DOC V6_9_QUILL_CODE
+V6_9_QUILL_BUILD -a V6_9_QUILL_ALL DOC externals
+
 
 ######################################################################
 # Miscellaneous module definitions
