@@ -33,6 +33,7 @@
 #define _CONDOR_ALLOW_FOPEN 1
 #include "condor_common.h"
 #include "condor_open.h"
+#include "condor_debug.h"
 
 
 
@@ -356,6 +357,8 @@ int stdio_mode_to_open_flag(const char* flags, int* mode, int create_file)
 // close the file descriptor if the fdopen fails.
 FILE* safe_fdopen(int fd, const char* flags)
 {
+		// Don't call fdopen() if the fd is -1. This preserves the errno
+		// from the failed open().
     if (fd == -1)  {
 		return NULL;
     }
