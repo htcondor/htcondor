@@ -259,7 +259,7 @@ doContactSchedd()
 		}
 		else {
 			result_ad->dPrint (D_FULLDEBUG);
-			if ( current_command->command == SchedDRequest::SDC_RELEASE_JOB ) {
+			if ( this_command == SchedDRequest::SDC_RELEASE_JOB ) {
 				do_reschedule = true;
 			}
 		}
