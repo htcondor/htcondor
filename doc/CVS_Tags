@@ -8,6 +8,24 @@
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
 
+03/28/07 trunk-pre-merge-V6_9_2-merge-1
+         trunk-post-merge-V6_9_2-merge-1
+   The state of the doc directory in trunk before and after
+   merging changes from the V6_9_2-branch as tagged V6_9_2-merge-1.
+
+03/28/07 V6_9_2-merge-1
+   The state of the doc directory in the V6_9_2-branch for a first
+   time merge into the trunk.
+
+03/27/07 V6_9_2-pre-merge-V6_8-merge-10
+         V6_9_2-post-merge-V6_8-merge-10
+   The state of the doc directory in V6_9_2-branch before and after
+   merging changes from the V6_8-branch as tagged V6_8-merge-10.
+
+03/27/07 V6_8-merge-10
+   The state of the doc directory in the V6_8-branch for a merge
+   into V6_9_2-branch.
+
 03/08/07 V6_9_2-root and V6_9_2-branch
    A branch for the 6.9.2 manual, created from
    V6_9_2-root on the trunk for doc.
