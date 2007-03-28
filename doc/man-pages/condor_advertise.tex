@@ -36,6 +36,39 @@ The \Arg{update-command} may be one of the following strings:
 \item[UPDATE\_STORAGE\_AD]
 \end{description}
 
+\Condor{advertise} can also be used to invalidate and delete
+classads currently held by the collector daemon.  In this case
+the \Arg{update-command} will be one of the following strings:
+\begin{description}
+\item[INVALIDATE\_STARTD\_ADS]
+\item[INVALIDATE\_SCHEDD\_ADS]
+\item[INVALIDATE\_MASTER\_ADS]
+\item[INVALIDATE\_GATEWAY\_ADS]
+\item[INVALIDATE\_CKPT\_SRVR\_ADS]
+\item[INVALIDATE\_NEGOTIATOR\_ADS]
+\item[INVALIDATE\_HAD\_ADS]
+\item[INVALIDATE\_ADS\_GENERIC]
+\item[INVALIDATE\_SUBMITTOR\_ADS]
+\item[INVALIDATE\_COLLECTOR\_ADS]
+\item[INVALIDATE\_LICENSE\_ADS]
+\item[INVALIDATE\_STORAGE\_ADS]
+\end{description}
+
+When an INVALIDATE command is given the provided classad consists
+of only three entries.  "MyType" should always be set to "Query."
+"TargetType" should be set to the MyType of the ad you want to
+delete.  "Requirements" is an expression evaluated in the context
+of ads of TargetType.  When Requirements evaluates to TRUE, the
+matching ad is invalidated.  For example, the following ad, when
+used with INVALIDATE\_STARTD\_ADS will delete the classad for the
+machine named condor.example.com.
+\begin{verbatim}
+MyType = "Query"
+TargetType = "Machine"
+Requirements = Name == "condor.example.com"
+\end{verbatim}
+
+
 \begin{Options}
     \ToolArgsBaseDesc
     \OptItem{\OptArgnm{-pool}{centralmanagerhostname[:portname]}}
@@ -57,6 +90,29 @@ It is unlikely that either Condor users (those who submit jobs)
 or administrators will ever have a use for this command.
 If it is desired to update or set a classad attribute, the
 \Condor{config\_val} command is the proper command to use.
+
+For those administrators who do need \Condor{advertise}, you can 
+optionally include these attributes:
+
+DaemonStartTime - The time the service you are advertising
+started running.  Measured in seconds since the Unix epoch.
+
+UpdateSequenceNumber - An integer that begins at 0 and increments by
+one each time you re-advertise the same ad.
+
+If both of the above are included, the \Condor{collector} will
+automatically include the following attributes:
+
+UpdatesTotal - The actual number of advertisements for this
+daemon that the collector has seen.
+
+UpdatesLost - The number of advertisements that for this daemon
+that the collector expected to see, but didn't.
+
+UpdatesSequenced - The total of UpdatesTotal and UpdatesLost.
+
+UpdatesHistory - See \Macro{COLLECTOR\_DAEMON\_HISTORY\_SIZE} in
+section~\ref{sec:Collector-Config-File-Entries}.
 
 \ExitStatus
 

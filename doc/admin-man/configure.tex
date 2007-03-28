@@ -60,22 +60,35 @@ The order in which the (multiple) configuration files are parsed
 is designed to ensure the security of the system.
 Attributes which must be set a specific way 
 must appear in the last file to be parsed.
-Both the naive and the malicious Condor user are prevented
+This prevents both the naive and the malicious Condor user 
 from subverting the system through its configuration.
-The order in which files are parsed is
+The order in which items are parsed is
 \begin{enumerate}
 \item global configuration file
 \item local configuration file
 \item global root-owned configuration file
 \item local root-owned configuration file
+\item specific environment variables prefixed with \MacroNI{\_CONDOR\_}
 \end{enumerate}
 
 The locations for these files are as given in
 section~\ref{sec:Config-File-Locations} on
 page~\pageref{sec:Config-File-Locations}.
 
-% info here about _condor_ environment variables, and where
-% they fit into the ordered evaluation
+Some Condor tools utilize environment variables to set their
+configuration.
+These tools search for specifically-named environment variables.
+The variables are prefixed by the string \MacroNI{\_CONDOR\_}
+or \MacroNI{\_condor\_}.
+The tools strip off the prefix, and utilize what remains
+as configuration.
+As the use of environment variables is the last within
+the ordered evaluation, 
+the environment variable definition is used.
+The security of the system is not compromised,
+as only specific variables are considered for definition
+in this manner, not any environment variables with
+the \MacroNI{\_CONDOR\_} prefix.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -720,7 +733,7 @@ File System Configuration File Entries''.
 \item[\Macro{LOCAL\_CONFIG\_DIR}] \label{param:LocalConfigDir} 
   Beginning in Condor 6.7.18, a directory may be used as a container for 
   local configuration files. 
-  The files found in the directory are sorted into lexigraphical order, and 
+  The files found in the directory are sorted into lexicographical order, and 
   then each file is treated as though it was listed in 
   \MacroNI{LOCAL\_CONFIG\_FILE}. 
   \MacroNI{LOCAL\_CONFIG\_DIR} is processed before any files listed in 
@@ -837,7 +850,7 @@ File System Configuration File Entries''.
   history file will be rotated. If it is false, then it will not be
   rotated, and it will grow indefinitely, to the limits allowed by the
   operating system. If this is not defined, it is assumed to be
-  true. The rotated files wil be stored in the same directory as the
+  true. The rotated files will be stored in the same directory as the
   history file. 
 
 \item[\Macro{MAX\_HISTORY\_LOG}] \label{param:MaxHistoryLog}
@@ -1386,7 +1399,7 @@ server, shadow, and starter, none of which use DaemonCore yet).
   Keep in mind that this directory should not be placed on an NFS
   mount where ``root-squashing'' is in effect, or else Condor daemons
   running as root will not be able to write to them.
-  A directory (only writable by root) on the local filesystem is
+  A directory (only writable by root) on the local file system is
   usually the best location for this directory.
 
 \item[\Macro{SETTABLE\_ATTRS\Dots}] \label{param:SettableAttrs} All
@@ -1809,7 +1822,7 @@ section~\ref{sec:GCB} on page~\pageref{sec:GCB}.
 \index{configuration!shared file system configuration variables}
 
 These macros control how Condor interacts with various shared and
-network file systems.  If you are using AFS as your shared filesystem,
+network file systems.  If you are using AFS as your shared file system,
 be sure to read section~\ref{sec:Condor-AFS} on Using Condor with
 AFS.
 For information on submitting jobs under shared file systems,
@@ -1892,7 +1905,7 @@ section~\ref{sec:shared-fs}.
   However, at some sites, there may be multiple UID spaces that do
   not clearly correspond to Internet domain names.
   In these cases, administrators may wish to use names to describe the
-  UID domains which are not substrings of the hostnames of the
+  UID domains which are not substrings of the host names of the
   machines.
   For this to work, Condor must not do this regular security check.
   If the \MacroNI{TRUST\_UID\_DOMAIN} setting is defined to \Expr{True},
@@ -2343,7 +2356,7 @@ These macros control the \Condor{master}.
 \item[\Macro{MASTER\_BACKOFF\_FACTOR} and
       \Macro{MASTER\_<name>\_BACKOFF\_FACTOR}]
   \label{param:MasterBackoffFactor}
-  When a daemon crashs, \Condor{master} uses an exponential back off
+  When a daemon crashes, \Condor{master} uses an exponential back off
   delay before restarting it; see the discussion at the end of this
   section for a detailed discussion on how these parameters work together.
   This setting is the base of the
@@ -2358,7 +2371,7 @@ These macros control the \Condor{master}.
 \item[\Macro{MASTER\_BACKOFF\_CEILING} and
       \Macro{MASTER\_<name>\_BACKOFF\_CEILING}]
   \label{param:MasterBackoffCeiling}
-  When a daemon crashs, \Condor{master} uses an exponential back off
+  When a daemon crashes, \Condor{master} uses an exponential back off
   delay before restarting it; see the discussion at the end of this
   section for a detailed discussion on how these parameters work together.
   This entry determines the maximum amount of time you want the master
@@ -2860,7 +2873,7 @@ Configuring The Startd Policy.
   change to take effect (by using ``\condor{restart} -startd'').
 
 \item[\Macro{COUNT\_HYPERTHREAD\_CPUS}] \label{param:CountHyperthreadCpus}
-  This macro controls how Condor sees hyperthreaded
+  This macro controls how Condor sees hyper threaded
   processors. When set to \Expr{True} (the default), it includes virtual CPUs in
   the default value of \MacroNI{NUM\_CPUS}. On dedicated cluster nodes, 
   counting virtual CPUs can sometimes improve total throughput at the expense 
@@ -2904,6 +2917,13 @@ Configuring The Startd Policy.
   A string that identifies the dedicated scheduler.
   See section~\ref{sec:Configure-Dedicated-Resource}
   on page~\pageref{sec:Configure-Dedicated-Resource} for details.
+
+\item[\Macro{STARTD\_NOCLAIM\_SHUTDOWN}] \label{param:StartdNoclaimShutdown}
+  The number of seconds to run without receiving a claim before
+  shutting Condor down on this machine.  Defaults to unset, which
+  means to never shut down.  This is primarily intended for \condor{glidein}.
+  Use in other situations is not recommended.
+
 \end{description}
 
 These macros control if the \Condor{startd} daemon should perform
@@ -3150,7 +3170,7 @@ and older macros and syntax.
   If \MacroNI{STARTD\_CRON\_NAME}
   is defined, then this configuration macro name is changed from
   \MacroNI{STARTD\_CRON\_CONFIG\_VAL} to
-  \MacroNI{\MacroUNI{STARTD\_CRON\_NAME}\_CONFIG\_VAL}.  Exmaple:
+  \MacroNI{\MacroUNI{STARTD\_CRON\_NAME}\_CONFIG\_VAL}.  Example:
 
 \begin{verbatim}
   HAWKEYE_CONFIG_VAL = /usr/local/condor/bin/condor_config_val
@@ -3833,7 +3853,7 @@ These macros control the \Condor{schedd}.
   evicted or when the job completes.  When the \Condor{schedd} crashes, the run
   time for jobs that are currently running will not be added to the
   counter (and so, the run time counter may become smaller than the
-  cpu time counter).  The \Condor{schedd} saves run time ``checkpoints''
+  CPU time counter).  The \Condor{schedd} saves run time ``checkpoints''
   periodically for running jobs so if the \Condor{schedd} crashes, only run
   time since the last checkpoint is lost.  This macro controls how
   often the \Condor{schedd} saves run time checkpoints.  It is defined in terms
@@ -5163,8 +5183,8 @@ still recognized, but the name has changed to be
 \label{param:GridmanagerMaxJobmanagersPerResource}
 For grid jobs of type \SubmitCmd{gt2}, limits the number of globus-job-manager
 processes that the \Condor{gridmanager} lets run at a time on
-the remote headnode. Allowing too many globus-job-managers to run
-causes severe load on the headnode, possibly making it
+the remote head node. Allowing too many globus-job-managers to run
+causes severe load on the headnote, possibly making it
 non-functional.
 This number may be exceeded if it is reduced through the use
 of \Condor{reconfig} while the \Condor{gridmanager} is running
@@ -5780,66 +5800,70 @@ for a change from the default value.
 \label{param:SecPasswordFile} For Unix machines, the path and file name
 of  the file containing the pool password for password authentication.
 
-\item[\Macro{SSL\_SERVER\_CAFILE}]
-\label{param:SSLServerCAFile}  The path and file name of
-the file containing the single trusted CA's certificate
+
+\item[\Macro{AUTH\_SSL\_SERVER\_CAFILE}]
+\label{param:AuthSSLServerCAFile}  The path and file name of
+a file containing one or more trusted CA's certificates
 for the server side of a communication authenticating 
 with SSL.
 
-\item[\Macro{SSL\_SERVER\_CADIR}]
-\label{param:SSLServerCADir}  
+\item[\Macro{AUTH\_SSL\_CLIENT\_CAFILE}]
+\label{param:AuthSSLClientCAFile} The path and file name of
+a file containing one or more trusted CA's certificates
+for the client side of a communication authenticating 
+with SSL.
+
+
+\item[\Macro{AUTH\_SSL\_SERVER\_CADIR}]
+\label{param:AuthSSLServerCADir}  
 The path to a directory that may contain the 
-certificates for multiple trusted CAs 
+certificates (each in its own file) for multiple trusted CAs 
 for the server side of a communication authenticating 
 with SSL.
 When defined, the authenticating entity's certificate 
 is utilized to identify the trusted CA's certificate
 within the directory.
 
-\item[\Macro{SSL\_SERVER\_CERTFILE}]
-\label{param:SSLServerCertfile}  
-The path and file name of
-the file containing the public certificate
-for the server side of a communication authenticating
-with SSL.
-
-\item[\Macro{SSL\_SERVER\_KEYFILE}]
-\label{param:SSLServerKeyfile}
-The path and file name of
-the file containing the private key
-for the server side of a communication authenticating
-with SSL.
-
-\item[\Macro{SSL\_CLIENT\_CAFILE}]
-\label{param:SSLClientCAFile} 
-The path and file name of
-the file containing the single trusted CA's certificate
-for the client side of a communication authenticating 
-with SSL.
-
-\item[\Macro{SSL\_CLIENT\_CADIR}]
-\label{param:SSLClientCADir} 
+\item[\Macro{AUTH\_SSL\_CLIENT\_CADIR}]
+\label{param:AuthSSLClientCADir} 
 The path to a directory that may contain the 
-certificates for multiple trusted CAs 
+certificates (each in its own file) for multiple trusted CAs 
 for the client side of a communication authenticating 
 with SSL.
 When defined, the authenticating entity's certificate 
 is utilized to identify the trusted CA's certificate
 within the directory.
 
-\item[\Macro{SSL\_CLIENT\_CERTFILE}]
-\label{param:SSLClientCertfile}
+
+\item[\Macro{AUTH\_SSL\_SERVER\_CERTFILE}]
+\label{param:AuthSSLServerCertfile}  
+The path and file name of
+the file containing the public certificate
+for the server side of a communication authenticating
+with SSL.
+
+\item[\Macro{AUTH\_SSL\_CLIENT\_CERTFILE}]
+\label{param:AuthSSLClientCertfile}
 The path and file name of
 the file containing the public certificate
 for the client side of a communication authenticating
 with SSL.
 
-\item[\Macro{SSL\_CLIENT\_KEYFILE}]
-\label{param:SSLClientKeyfile}
+
+\item[\Macro{AUTH\_SSL\_SERVER\_KEYFILE}]
+\label{param:AuthSSLServerKeyfile}
+The path and file name of
+the file containing the private key
+for the server side of a communication authenticating
+with SSL.
+
+\item[\Macro{AUTH\_SSL\_CLIENT\_KEYFILE}]
+\label{param:AuthSSLClientKeyfile}
 The path and file name of
 the file containing the private key
 for the client side of a communication authenticating
 with SSL.
+
 
 \item[\Macro{CERTIFICATE\_MAPFILE}]
 \label{param:CertificateMapfile}
@@ -5884,7 +5908,7 @@ These macros affect the high availability operation of Condor.
   
 \item[\Macro{HA\_LOCK\_URL}] \label{param:HALockURL} This macro
   specifies the URL that the \Condor{master} processes use to
-  syncronize for the \emph{High Availability} service.
+  synchronize for the \emph{High Availability} service.
   Currently, only file URLs are supported; for example,
   \File{file:/share/spool}.  Note that this URL must be identical
   for all \Condor{master} processes sharing this resource.  For
@@ -6304,8 +6328,9 @@ Configuration File Macros Affecting APIs}
   A complete path to the directory containing all the files served
   by the web server.
 
-\item[\Macro{ENABLE\_SOAP\_SSL}]
-  \label{param:EnableSoapSSL}
+\item[\MacroB{<SUBSYS>\_ENABLE\_SOAP\_SSL}]
+  \label{param:SubsysEnableSoapSSL}
+  \index{SUBSYS\_ENABLE\_SOAP\_SSL macro@\texttt{<SUBSYS>\_ENABLE\_SOAP\_SSL} macro}
   A boolean value that defaults to \Expr{False}.
   When \Expr{True}, enables SOAP over SSL for the specified
   \MacroNI{<SUBSYS>}.
