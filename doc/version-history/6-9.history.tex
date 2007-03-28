@@ -19,11 +19,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item The \Macro{SECONDARY\_COLLECTOR\_LIST} configuration setting has
+\item The \Macro{SECONDARY\_COLLECTOR\_LIST} configuration variable has
   been removed.
-  Sites relying on this functionality should just use the
-  \Macro{COLLECTOR\_HOST} setting, instead, since that can be used to
-  define a list of collector hosts.
+  Sites relying on this variable should instead use the configuration
+  variable \Macro{COLLECTOR\_HOST}. It may be used to
+  define a list of \Condor{collector} daemon hosts.
 
 \end{itemize}
 
@@ -33,11 +33,14 @@ The details of each version are described below.
 \begin{itemize}
 
 % Gnats PR 806
-\item \Condor{dagman} now aborts the DAG on ``scary'' submit events
-(submit events where the Condor ID of the event does not match the
-expected value).  This behavior can be restored to the previous
-behavior (print a warning but continue) by setting the new
-\MacroNI{DAGMAN\_ABORT\_ON\_SCARY\_SUBMIT} macro to \Expr{False}.
+\item \Condor{dagman} now aborts the DAG on ``scary'' submit events.
+These are submit events in which
+the Condor ID of the event does not match the
+expected value.
+Previously, \Condor{dagman} printed a warning, but continued.
+To restore Condor to the previous behavior,
+set the new \MacroNI{DAGMAN\_ABORT\_ON\_SCARY\_SUBMIT} configuration variable
+to \Expr{False}.
 
 \item When the \Condor{master} detects that its GCB broker is unavailable
 and there is a list of alternative brokers,
