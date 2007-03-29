@@ -44,10 +44,10 @@ to \Expr{False}.
 
 \item When the \Condor{master} detects that its GCB broker is unavailable
 and there is a list of alternative brokers,
-it will restart immediately if \Attr{MASTER\_WAITS\_FOR\_GCB\_BROKER} is
-set to False instead of waiting for another broker to became available.
-\Condor{glidein} now sets \Attr{MASTER\_WAITS\_FOR\_GCB\_BROKER} to False
-in its configuration file.
+it will restart immediately if \Macro{MASTER\_WAITS\_FOR\_GCB\_BROKER} is
+set to \Expr{False} instead of waiting for another broker to became available.
+\Condor{glidein} now sets \MacroNI{MASTER\_WAITS\_FOR\_GCB\_BROKER}
+to  \Expr{False} in its configuration file.
 
 \item When using GCB and a list of brokers is available, the
 \Condor{master} will now pick a random broker rather than the least-loaded
@@ -59,11 +59,11 @@ one.
   Currently, the two supported expressions are:
   \begin{description}
   \item[\Macro{DAEMON\_SHUTDOWN}]
-    If TRUE, the daemon will gracefully shut itself down and will not
+    If \Expr{True}, the daemon will gracefully shut itself down and will not
     be restarted by the \Condor{master} (as if it sent itself a
     \Condor{off} command).
   \item[\Macro{DAEMON\_SHUTDOWN\_FAST}]
-    If TRUE, the daemon will quickly shut itself down and will not be
+    If \Expr{True}, the daemon will quickly shut itself down and will not be
     restarted by the \Condor{master} (as if it sent itself a
     \Condor{off} command using the \Opt{-fast} option).
   \end{description}
