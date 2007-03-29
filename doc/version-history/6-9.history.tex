@@ -29,16 +29,20 @@ The details of each version are described below.
 \item As part of ongoing security enhancements, Condor now has a
 new, required daemon: \Condor{procd}.  This daemon is
 automatically started by the \Condor{master}, you do not need to
-add it to \Macro{DAEMON\_LIST}.  New installations should not
-need to do anything; the default configuration file is correctly
-set.  Installations upgrading to 6.9.2 from previous versions
-will need to ensure several things are done.  
-1. Be sure to install \Condor{procd} into your Condor \Macro{SBIN} directory. 
-2. Add ``\Code{PROCD = \$(SBIN)/condor\_procd}'' to your Condor configuration. 
-3. Add ``\Code{PROCD\_ADDRESS = \$(LOCK)/procd\_pipe}'' to your Condor configuration. 
-On Windows there are two additional steps:
-4. Be sure to install \Condor{softkill} into your Condor \Macro{SBIN} directory. 
-5. Add ``\Code{WINDOWS\_SOFTKILL = \$(SBIN)/condor\_softkill}'' to your Condor configuration. 
+add it to \Macro{DAEMON\_LIST}.  
+However, you must be certain to update the \Condor{master}
+if you update any of the other Condor daemons.
+%Commented out the below since the defaults are in the code.
+%New installations should not
+%need to do anything; the default configuration file is correctly
+%set.  Installations upgrading to 6.9.2 from previous versions
+%will need to ensure several things are done.  
+%1. Be sure to install \Condor{procd} into your Condor \Macro{SBIN} directory. 
+%2. Add ``\Code{PROCD = \$(SBIN)/condor\_procd}'' to your Condor configuration. 
+%3. Add ``\Code{PROCD\_ADDRESS = \$(LOCK)/procd\_pipe}'' to your Condor configuration. 
+%On Windows there are two additional steps:
+%4. Be sure to install \Condor{softkill} into your Condor \Macro{SBIN} directory. 
+%5. Add ``\Code{WINDOWS\_SOFTKILL = \$(SBIN)/condor\_softkill}'' to your Condor configuration. 
 
 % This isn't quite so important, but it's not really a feature or
 % a bug, just a change.  It is a change that may surprise some
@@ -75,6 +79,14 @@ Setting impacted include but are not limited to:
 % From condor_master.V6/daemon.C 1.68 to 1.69:},
 \Macro{MASTER\_<name>\_BACKOFF\_CONSTANT},
 \Macro{MASTER\_<name>\_BACKOFF\_CEILING},
+
+\item Version 1.4.1 of the Generic Connection Broker (GCB) is
+  now used for building Condor.  This version of GCB fixes a timing bug
+  where a client may incorrectly think a network connection has been established,
+  and also guards against an unresponsive client from causing a denial of
+  service by the broker.
+  For more information about GCB, see section~\ref{sec:GCB} on
+  page~\pageref{sec:GCB}. 
 
 % I'm checking this in commented since I'm not surewhat disclosure
 % policy we want to use. Only CDF (Igor) uses the GLEXEC_STARTER
@@ -220,7 +232,7 @@ after issuing an error message into the log file.
 
 \item When sending a \Code{WM\_CLOSE} message to a process on Windows,
 Condor daemons now invoke the helper program \Condor{softkill} to do
-so. This prevents the daemon from needing to temporarily swtich away
+so. This prevents the daemon from needing to temporarily switch away
 from its dedicated service Window Station and Desktop. It also fixes a
 bug where daemons would leak Window Station and Desktop handles. This
 was mainly a problem in the \Condor{schedd} when running many scheduler
@@ -232,17 +244,9 @@ universe jobs.
 
 \begin{itemize}
 
-\item \Condor{glidein} generates a default config file that is missing
-the new required procd parameters.  It also sets
+\item \Condor{glidein} generates a default config file that sets
 \MacroNI{PREEN\_INTERVAL} to an invalid value (0).  To fix this,
-remove the setting of \MacroNI{PREEN\_INTERVAL} and add the following
-lines:
-
-\begin{verbatim}
-PROCD = $(SBIN)/condor_procd
-PROCD_LOG = $(LOG)/ProcLog
-PROCD_ADDRESS = $(LOCK)/procd_address
-\end{verbatim}
+remove the setting of \MacroNI{PREEN\_INTERVAL}.
 
 \end{itemize}
 
