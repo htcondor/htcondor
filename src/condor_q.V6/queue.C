@@ -2515,6 +2515,7 @@ doRunAnalysisToBuffer( ClassAd *request )
 	int		jobState;
 	int		niceUser;
 	int		universe;
+	int		jobMatched = false;
 
 	int 	fReqConstraint 	= 0;
 	int		fOffConstraint 	= 0;
@@ -2538,6 +2539,7 @@ doRunAnalysisToBuffer( ClassAd *request )
 	request->LookupInteger( ATTR_CLUSTER_ID, cluster );
 	request->LookupInteger( ATTR_PROC_ID, proc );
 	request->LookupInteger( ATTR_JOB_STATUS, jobState );
+	request->LookupBool( ATTR_JOB_MATCHED, jobMatched );
 	if( jobState == RUNNING ) {
 		sprintf( return_buff,
 			"---\n%03d.%03d:  Request is being serviced\n\n", cluster, 
@@ -2553,6 +2555,18 @@ doRunAnalysisToBuffer( ClassAd *request )
 	if( jobState == REMOVED ) {
 		sprintf( return_buff,
 			"---\n%03d.%03d:  Request is removed.\n\n", cluster, 
+			proc );
+		return return_buff;
+	}
+	if( jobState == COMPLETED ) {
+		sprintf( return_buff,
+			"---\n%03d.%03d:  Request is completed.\n\n", cluster, 
+			proc );
+		return return_buff;
+	}
+	if ( jobMatched ) {
+		sprintf( return_buff,
+			"---\n%03d.%03d:  Request has been matched.\n\n", cluster, 
 			proc );
 		return return_buff;
 	}
