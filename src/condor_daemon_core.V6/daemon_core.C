@@ -6344,8 +6344,10 @@ int DaemonCore::Create_Process(
 
 			// and ( finally ) exec:
 		if( HAS_DCJOBOPT_NO_ENV_INHERIT(job_opt_mask) ) {
+			pidenvid_optimize_final_env(unix_env);
 			exec_results =  execve(namebuf, unix_args, unix_env);
 		} else {
+			pidenvid_optimize_final_env(environ);
 			exec_results =  execv(namebuf, unix_args);
 		}
 		if( exec_results == -1 )

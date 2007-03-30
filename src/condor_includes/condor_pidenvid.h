@@ -156,6 +156,22 @@ void pidenvid_copy(PidEnvID *to, PidEnvID *from);
 /* dump out the structure to the debugging logs */
 void pidenvid_dump(PidEnvID *penvid, int dlvl);
 
+/* Move pidenvid entries near the front of the environment array,
+   because linux only lets us see the first 4k of the environment in
+   /proc/<pid>/environ.  Unfortunately, just because we order things
+   this way in the process that we spawn doesn't mean it will order
+   things this way in the children that it creates (for example,
+   /bin/bash appears to completely reorder everything when it spawns
+   children).
+*/
+void pidenvid_shuffle_to_front(char **env);
+
+/* do optimizations of the environment array to increases chances of
+   tracking by pidenvid entries working
+   (e.g. this calls pidenvid_shuffle_to_front() under Linux)
+*/
+void pidenvid_optimize_final_env(char **env);
+
 END_C_DECLS
 
 #endif
