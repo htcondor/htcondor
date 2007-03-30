@@ -137,12 +137,12 @@ The priority values are used at allocation time.
 In addition, Condor preempts machine claims and reallocates them when
 conditions change.
 
-To ensure that preemptions do not lead to \Term{thrashing},
-a \Macro{PREEMPTION\_REQUIREMENTS} expression is defined to specify the
-conditions that must be met for a preemption to occur.
-It is usually defined to deny preemption if a current running job
-has been running for a relatively short period of time.
-This effectively limits the number of preemptions per resource per time
+To ensure that preemptions do not lead to \Term{thrashing}, a
+\Macro{PREEMPTION\_REQUIREMENTS} negotiator configuration expression is
+defined to specify the conditions that must be met for a preemption to
+occur.  It is usually defined to deny preemption if a current running
+job has been running for a relatively short period of time.  This
+effectively limits the number of preemptions per resource per time
 interval.
 
 Note that \MacroNI{PREEMPTION\_REQUIREMENTS} only applies to preemptions
