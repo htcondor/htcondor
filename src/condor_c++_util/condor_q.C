@@ -189,12 +189,14 @@ addAND (char *value)
 }
 
 int CondorQ::
-fetchQueue (ClassAdList &list, ClassAd *ad, CondorError* errstack)
+fetchQueue (ClassAdList &list, StringList &attrs, ClassAd *ad, CondorError* errstack)
 {
 	Qmgr_connection *qmgr;
 	ClassAd 		filterAd;
 	int     		result;
 	char    		scheddString [32];
+
+	bool useFastPath = false;
 
 	// make the query ad
 	if ((result = query.makeQuery (filterAd)) != Q_OK)
@@ -213,6 +215,7 @@ fetchQueue (ClassAdList &list, ClassAd *ad, CondorError* errstack)
 			errstack->push("TEST", 0, "FOO");
 			return Q_SCHEDD_COMMUNICATION_ERROR;
 		}
+		useFastPath = true;
 	}
 	else
 	{
@@ -222,17 +225,18 @@ fetchQueue (ClassAdList &list, ClassAd *ad, CondorError* errstack)
 
 		if( !(qmgr = ConnectQ( scheddString, connect_timeout, true, errstack)) )
 			return Q_SCHEDD_COMMUNICATION_ERROR;
+
 	}
 
 	// get the ads and filter them
-	getAndFilterAds (filterAd, list);
+	getAndFilterAds (filterAd, attrs, list, useFastPath);
 
 	DisconnectQ (qmgr);
 	return Q_OK;
 }
 
 int CondorQ::
-fetchQueueFromHost (ClassAdList &list, char *host, CondorError* errstack)
+fetchQueueFromHost (ClassAdList &list, StringList &attrs, char *host, CondorError* errstack)
 {
 	Qmgr_connection *qmgr;
 	ClassAd 		filterAd;
@@ -258,14 +262,14 @@ fetchQueueFromHost (ClassAdList &list, char *host, CondorError* errstack)
 		return Q_SCHEDD_COMMUNICATION_ERROR;
 
 	// get the ads and filter them
-	result = getAndFilterAds (filterAd, list);
+	result = getAndFilterAds (filterAd, attrs, list, false);
 
 	DisconnectQ (qmgr);
 	return result;
 }
 
 int CondorQ::
-fetchQueueFromDB (ClassAdList &list, char *dbconn, CondorError* errstack)
+fetchQueueFromDB (ClassAdList &list, char *dbconn, CondorError*  /*errstack*/)
 {
 #if WANT_QUILL
 	ClassAd 		filterAd;
@@ -326,7 +330,7 @@ fetchQueueFromDB (ClassAdList &list, char *dbconn, CondorError* errstack)
 }
 
 int CondorQ::
-fetchQueueFromHostAndProcess ( char *host, process_function process_func, CondorError* errstack )
+fetchQueueFromHostAndProcess ( char *host, StringList &attrs, process_function process_func, bool useFastPath, CondorError* errstack)
 {
 	Qmgr_connection *qmgr;
 	ClassAd 		filterAd;
@@ -352,14 +356,14 @@ fetchQueueFromHostAndProcess ( char *host, process_function process_func, Condor
 		return Q_SCHEDD_COMMUNICATION_ERROR;
 
 	// get the ads and filter them
-	result = getFilterAndProcessAds (filterAd, process_func);
+	result = getFilterAndProcessAds (filterAd, attrs, process_func, useFastPath);
 
 	DisconnectQ (qmgr);
 	return result;
 }
 
 int CondorQ::
-fetchQueueFromDBAndProcess ( char *dbconn, process_function process_func, CondorError* errstack )
+fetchQueueFromDBAndProcess ( char *dbconn, process_function process_func, CondorError*  /*errstack*/ )
 {
 #if WANT_QUILL
 	ClassAd 		filterAd;
@@ -484,7 +488,7 @@ void CondorQ::rawDBQuery(char *dbconn, CondorQQueryType qType) {
 }
 
 int CondorQ::
-getFilterAndProcessAds( ClassAd &queryad, process_function process_func )
+getFilterAndProcessAds( ClassAd &queryad, StringList &attrs, process_function process_func, bool useAll )
 {
 	char		*constraint;
 	ExprTree	*tree;
@@ -497,6 +501,21 @@ getFilterAndProcessAds( ClassAd &queryad, process_function process_func )
 
 	tree->RArg()->PrintToNewStr(&constraint);
 
+	if (useAll) {
+	// The fast case with the new protocol
+	ClassAdList list;
+	char *attrs_str = attrs.print_to_string();
+	GetAllJobsByConstraint(constraint, attrs_str, list);
+	free(attrs_str);
+	list.Rewind();
+	while ((ad = list.Next())) {
+		if ( ( *process_func )( ad ) ) {
+			//delete(ad);
+		}
+	}
+	} else {
+
+	// slow case, using old protocol
 	if ((ad = GetNextJobByConstraint(constraint, 1)) != NULL) {
 		// Process the data and insert it into the list
 		if ( ( *process_func )( ad ) ) {
@@ -509,6 +528,8 @@ getFilterAndProcessAds( ClassAd &queryad, process_function process_func )
 				delete(ad);
 			}
 		}
+	}
+
 	}
 
 	free(constraint);
@@ -525,11 +546,10 @@ getFilterAndProcessAds( ClassAd &queryad, process_function process_func )
 
 
 int CondorQ::
-getAndFilterAds (ClassAd &queryad, ClassAdList &list)
+getAndFilterAds (ClassAd &queryad, StringList &attrs, ClassAdList &list, bool useAllJobs)
 {
 	char		*constraint;
 	ExprTree	*tree;
-	ClassAd		*ad;
 
 	tree = queryad.Lookup(ATTR_REQUIREMENTS);
 	if (!tree) {
@@ -537,11 +557,19 @@ getAndFilterAds (ClassAd &queryad, ClassAdList &list)
 	}
 	tree->RArg()->PrintToNewStr(&constraint);
 
+	if (useAllJobs) {
+	char *attrs_str = attrs.print_to_string();
+	GetAllJobsByConstraint(constraint, attrs_str, list);
+	free(attrs_str);
+
+	} else {
+	ClassAd		*ad;
 	if ((ad = GetNextJobByConstraint(constraint, 1)) != NULL) {
 		list.Insert(ad);
 		while((ad = GetNextJobByConstraint(constraint, 0)) != NULL) {
 			list.Insert(ad);
 		}
+	}
 	}
 
 	free(constraint);
@@ -556,7 +584,7 @@ getAndFilterAds (ClassAd &queryad, ClassAdList &list)
 }
 
 
-int JobSort(ClassAd *job1, ClassAd *job2, void *data)
+int JobSort(ClassAd *job1, ClassAd *job2, void *  /*data*/)
 {
 	int cluster1=0, cluster2=0, proc1=0, proc2=0;
 

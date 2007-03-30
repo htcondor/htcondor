@@ -226,6 +226,7 @@ char *dbIpAddr = NULL;
 char *dbName = NULL;
 char *queryPassword = NULL;
 
+StringList attrs; // The list of attrs we want, "" for all
 static void freeConnectionStrings() {
 	if(quillName) {
 		free(quillName);
@@ -829,6 +830,8 @@ processCommandLineArguments (int argc, char *argv[])
 	int i, cluster, proc;
 	char *arg, *at, *daemonname;
 	
+	attrs.initializeFromString("ClusterId,ProcID,QDate,RemoteUserCPU,JobStatus,JobPrio,ImageSize,Owner,Cmd,Args");
+
 	for (i = 1; i < argc; i++)
 	{
 		if( *argv[i] != '-' ) {
@@ -863,12 +866,14 @@ processCommandLineArguments (int argc, char *argv[])
 		if (match_prefix (arg, "long")) {
 			verbose = 1;
 			summarize = 0;
+			attrs.clearAll();
 		} 
 		else
 		if (match_prefix (arg, "xml")) {
 			use_xml = 1;
 			verbose = 1;
 			summarize = 0;
+			attrs.clearAll();
 		}
 		else
 		if (match_prefix (arg, "pool")) {
@@ -1108,6 +1113,12 @@ processCommandLineArguments (int argc, char *argv[])
 						 "format and attribute parameters\n" );
 				exit( 1 );
 			}
+			if (customFormat == false) {
+				// first time here
+				attrs.clearAll();
+			}
+			attrs.append(argv[i+2]);
+				
 			customFormat = true;
 			mask.registerFormat( argv[i+1], argv[i+2] );
 			usingPrintMask = true;
@@ -1125,12 +1136,14 @@ processCommandLineArguments (int argc, char *argv[])
 		else
 		if (match_prefix( arg , "analyze")) {
 			analyze = true;
+			attrs.clearAll();
 		}
         else
         if (match_prefix( arg, "better-analyze")) {
 #ifdef WANT_CLASSAD_ANALYSIS
             analyze = true;
             better_analyze = true;
+			attrs.clearAll();
 #else
             fprintf(stderr, "Sorry, the -better-analyze option is not available "
                             "on this platform.\n");
@@ -1141,11 +1154,13 @@ processCommandLineArguments (int argc, char *argv[])
 		if (match_prefix( arg, "run")) {
 			Q.add (CQ_STATUS, RUNNING);
 			run = true;
+			attrs.clearAll();
 		}
 		else
 		if (match_prefix( arg, "hold") || match_prefix( arg, "held")) {
 			Q.add (CQ_STATUS, HELD);		
 			show_held = true;
+			attrs.clearAll();
 		}
 		else
 		if (match_prefix( arg, "goodput")) {
@@ -1153,20 +1168,24 @@ processCommandLineArguments (int argc, char *argv[])
 			// real-estate, so they're mutually exclusive
 			goodput = true;
 			show_io = false;
+			attrs.clearAll();
 		}
 		else
 		if (match_prefix( arg, "cputime")) {
 			cputime = true;
 			JOB_TIME = "CPU_TIME";
+			attrs.clearAll();
 		}
 		else
 		if (match_prefix( arg, "currentrun")) {
 			current_run = true;
+			attrs.clearAll();
 		}
 		else
 		if( match_prefix( arg, "globus" ) ) {
 			Q.addAND( "GlobusStatus =!= UNDEFINED" );
 			globus = true;
+			attrs.clearAll();
 		}
 		else
 		if( match_prefix( arg, "debug" ) ) {
@@ -1180,12 +1199,15 @@ processCommandLineArguments (int argc, char *argv[])
 			// real-estate, so they're mutually exclusive
 			show_io = true;
 			goodput = false;
+			attrs.clearAll();
 		}   
 		else if( match_prefix( arg, "dag" ) ) {
 			dag = true;
+			attrs.clearAll();
 		}   
 		else if (match_prefix(arg, "expert")) {
 			expert = true;
+			attrs.clearAll();
 		}
         else if (match_prefix(arg, "jobads")) {
 			if (argc <= i+1) {
@@ -1972,8 +1994,15 @@ show_queue_buffered( char* v1, char* v2, char* v3, char* v4, bool useDB )
 #endif /* WANT_QUILL */
 	} else {
 			// fetch queue from schedd and stash it in output_buffer.
-		if( Q.fetchQueueFromHostAndProcess( scheddAddr,
+		Daemon schedd(DT_SCHEDD, scheddName);
+		const char *version = schedd.version();
+		CondorVersionInfo v(version);
+		bool useFastPath = v.built_since_version(6,9,3);
+printf("GGTGGTGGT useFastPath is %d, version is %s\n", useFastPath, version);
+
+		if( Q.fetchQueueFromHostAndProcess( scheddAddr, attrs,
 											process_buffer_line,
+											useFastPath,
 											&errstack) != Q_OK ) {
 			fprintf(stderr,
 				"\n-- Failed to fetch ads from: %s : %s\n%s\n",
@@ -2201,7 +2230,7 @@ show_queue( char* v1, char* v2, char* v3, char* v4, bool useDB )
 #endif /* WANT_QUILL */
 		} else {
 				// fetch queue from schedd	
-			if( Q.fetchQueueFromHost(jobs, scheddAddr, &errstack) != Q_OK ) {
+			if( Q.fetchQueueFromHost(jobs, attrs,scheddAddr, &errstack) != Q_OK ) {
 				fprintf( stderr,
 					"\n-- Failed to fetch ads from: %s : %s\n%s\n",
 					scheddAddr, scheddMachine, errstack.getFullText(true) );

@@ -89,9 +89,9 @@ class CondorQ
 	// fetch the job ads from the schedd corresponding to the given classad
 	// which pass the criterion specified by the constraints; default is
 	// from the local schedd
-	int fetchQueue (ClassAdList &, ClassAd * = 0, CondorError* errstack = 0);
-	int fetchQueueFromHost (ClassAdList &, char * = 0, CondorError* errstack = 0);
-	int fetchQueueFromHostAndProcess ( char *, process_function process_func, CondorError* errstack = 0);
+	int fetchQueue (ClassAdList &, StringList &attrs, ClassAd * = 0, CondorError* errstack = 0);
+	int fetchQueueFromHost (ClassAdList &, StringList &attrs, char * = 0, CondorError* errstack = 0);
+	int fetchQueueFromHostAndProcess ( char *, StringList &attrs, process_function process_func, bool useFastPath, CondorError* errstack = 0);
 	
 		// fetch the job ads from database 	
 	int fetchQueueFromDB (ClassAdList &, char * = 0, CondorError* errstack = 0);
@@ -114,8 +114,8 @@ class CondorQ
 	char owner[MAXOWNERLEN];
 	
 	// helper functions
-	int getAndFilterAds( ClassAd &, ClassAdList & );
-	int getFilterAndProcessAds( ClassAd &, process_function );
+	int getAndFilterAds( ClassAd &, StringList &attrs, ClassAdList &, bool useAll );
+	int getFilterAndProcessAds( ClassAd &, StringList &attrs, process_function, bool useAll );
 };
 
 int JobSort(ClassAd *job1, ClassAd *job2, void *data);
