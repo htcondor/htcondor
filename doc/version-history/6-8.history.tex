@@ -152,6 +152,11 @@ The default is 15 minutes.
 is already completed or if a grid universe job being analyzed has already
 been matched.
 
+\item In \Condor{shadow}, when forwarding an updated X509 proxy to an
+executing job, the logic for whether to delegate or copy the proxy 
+(determined by configuration parameter
+\Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS}) was reversed.
+
 \end{itemize}
 
 \noindent Known Bugs:
