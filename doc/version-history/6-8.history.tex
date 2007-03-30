@@ -157,6 +157,14 @@ executing job, the logic for whether to delegate or copy the proxy
 (determined by configuration parameter
 \Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS}) was reversed.
 
+\item Made a small improvement to the reliability of Condor's process
+ancestry tracking under Linux.  However, jobs that create children
+with more than 4096 bytes of environment are still problematic, due to
+a Linux kernel limitation that prevents reading more than 4k from
+/proc/<pid>/environ.  The only truly reliable way to ensure that
+Condor is aware of all processes spawned by a unix job is to use
+\MacroNI{VMx\_USER}.
+
 \end{itemize}
 
 \noindent Known Bugs:
