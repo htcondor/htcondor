@@ -44,21 +44,21 @@ $executed = sub
 		}
 		close(BEFORE);
 
-		$status = CondorTest::changeDaemonState( "schedd", "off", 150 );
+		$status = CondorTest::changeDaemonState( "schedd", "off", 9 );
 		if(!$status)
 		{
 			print "Test failure: could not turn scheduler off!\n";
 			exit(1)
 		}
 
-		$status = CondorTest::changeDaemonState( "startd", "off", 150 );
+		$status = CondorTest::changeDaemonState( "startd", "off", 9 );
 		if(!$status)
 		{
 			print "Test failure: could not turn scheduler off!\n";
 			exit(1)
 		}
 
-		$status = CondorTest::changeDaemonState( "schedd", "on", 150 );
+		$status = CondorTest::changeDaemonState( "schedd", "on", 9 );
 		if(!$status)
 		{
 			print "Test failure: could not turn scheduler on!\n";
