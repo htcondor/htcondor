@@ -1998,7 +1998,6 @@ show_queue_buffered( char* v1, char* v2, char* v3, char* v4, bool useDB )
 		const char *version = schedd.version();
 		CondorVersionInfo v(version);
 		bool useFastPath = v.built_since_version(6,9,3);
-printf("GGTGGTGGT useFastPath is %d, version is %s\n", useFastPath, version);
 
 		if( Q.fetchQueueFromHostAndProcess( scheddAddr, attrs,
 											process_buffer_line,
