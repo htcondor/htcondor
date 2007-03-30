@@ -740,6 +740,78 @@ do_Q_request(ReliSock *syscall_sock)
 		return 0;
 	}
 
+	case CONDOR_GetAllJobsByConstraint:
+	  {
+		char *constraint=NULL;
+		char *projection=NULL;
+		ClassAd *ad;
+		int terrno;
+		int initScan = 1;
+
+		if ( !(syscall_sock->code(constraint)) ) {
+			if (constraint != NULL) {
+				free(constraint);
+				constraint = NULL;
+			}
+			return -1;
+		}
+		if ( !(syscall_sock->code(projection)) ) {
+			if (projection != NULL) {
+				free(constraint);
+				free(projection);
+				projection = NULL;
+			}
+			return -1;
+		}
+		dprintf( D_SYSCALLS, "	constraint = %s\n", constraint );
+
+		assert( syscall_sock->end_of_message() );;
+
+		StringList sl(projection);
+
+		syscall_sock->encode();
+
+		do {
+			errno = 0;
+
+			ad = GetNextJobByConstraint( constraint, initScan );
+			initScan=0; // one first time through, otherwise 0
+
+			terrno = errno;
+			rval = ad ? 0 : -1;
+			dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+
+			assert( syscall_sock->code(rval) );
+
+			if( rval < 0 ) {
+				assert( syscall_sock->code(terrno) );
+			}
+
+			if( rval >= 0 ) {
+				if (sl.number() != 0) {
+					ClassAd shortAd;
+					shortAd.SetMyTypeName("Job");
+					shortAd.SetTargetTypeName("Machine");
+
+					sl.rewind();
+					while (char *attr = sl.next()) {
+						ExprTree *tree = ad->Lookup(attr);
+						if (tree) shortAd.Insert(tree->DeepCopy());
+					}
+					assert( shortAd.put(*syscall_sock) );
+				} else {
+					assert( ad->put(*syscall_sock) );
+				}
+				FreeJobAd(ad);
+			}
+		} while (rval >= 0);
+		assert( syscall_sock->end_of_message() );;
+
+		free( (char *)constraint );
+		free( (char *)projection );
+		return -1; 
+	}
+
 	} /* End of switch */
 
 	return -1;

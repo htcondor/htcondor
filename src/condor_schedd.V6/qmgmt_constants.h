@@ -45,3 +45,4 @@
 #define CONDOR_BeginTransaction		10023			/* Todd */
 #define CONDOR_AbortTransaction 	10024			/* Carey */
 #define CONDOR_SetTimerAttribute	10025			/* Jaime */
+#define CONDOR_GetAllJobsByConstraint 10026

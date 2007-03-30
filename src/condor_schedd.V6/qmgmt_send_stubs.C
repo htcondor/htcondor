@@ -672,36 +672,74 @@ GetNextJobByConstraint( char *constraint, int initScan )
 {
 	int	rval;
 
-		CurrentSysCall = CONDOR_GetNextJobByConstraint;
+	CurrentSysCall = CONDOR_GetNextJobByConstraint;
 
-		qmgmt_sock->encode();
-		assert( qmgmt_sock->code(CurrentSysCall) );
-		assert( qmgmt_sock->code(initScan) );
-		assert( qmgmt_sock->code(constraint) );
+	qmgmt_sock->encode();
+	assert( qmgmt_sock->code(CurrentSysCall) );
+	assert( qmgmt_sock->code(initScan) );
+	assert( qmgmt_sock->code(constraint) );
+	assert( qmgmt_sock->end_of_message() );
+
+	qmgmt_sock->decode();
+	assert( qmgmt_sock->code(rval) );
+	if( rval < 0 ) {
+		assert( qmgmt_sock->code(terrno) );
 		assert( qmgmt_sock->end_of_message() );
+		errno = terrno;
+		return NULL;
+	}
 
-		qmgmt_sock->decode();
-		assert( qmgmt_sock->code(rval) );
-		if( rval < 0 ) {
-			assert( qmgmt_sock->code(terrno) );
-			assert( qmgmt_sock->end_of_message() );
-			errno = terrno;
-			return NULL;
-		}
+	ClassAd *ad = new ClassAd;
 
-		ClassAd *ad = new ClassAd;
+	if ( ! (ad->initFromStream(*qmgmt_sock)) ) {
+		delete ad;
+		errno = ETIMEDOUT;
+		return NULL;
+	}
 
-		if ( ! (ad->initFromStream(*qmgmt_sock)) ) {
-			delete ad;
-			errno = ETIMEDOUT;
-			return NULL;
-		}
-
-		assert( qmgmt_sock->end_of_message() );
+	assert( qmgmt_sock->end_of_message() );
 
 	return ad;
 }
 
+ClassAd *
+GetAllJobsByConstraint( char *constraint, char *projection, ClassAdList &list)
+{
+	int	rval;
+
+		CurrentSysCall = CONDOR_GetAllJobsByConstraint;
+
+		qmgmt_sock->encode();
+		assert( qmgmt_sock->code(CurrentSysCall) );
+		assert( qmgmt_sock->code(constraint) );
+		assert( qmgmt_sock->code(projection) );
+		assert( qmgmt_sock->end_of_message() );
+
+
+		qmgmt_sock->decode();
+		while (true) {
+			assert( qmgmt_sock->code(rval) );
+			if( rval < 0 ) {
+				assert( qmgmt_sock->code(terrno) );
+				assert( qmgmt_sock->end_of_message() );
+				errno = terrno;
+				return NULL;
+			}
+
+			ClassAd *ad = new ClassAd;
+
+			if ( ! (ad->initFromStream(*qmgmt_sock)) ) {
+				delete ad;
+				errno = ETIMEDOUT;
+				return NULL;
+			}
+			list.Insert(ad);
+
+		};
+		assert( qmgmt_sock->end_of_message() );
+
+	return 0;
+}
 #if defined(__cplusplus)
 }
 #endif
