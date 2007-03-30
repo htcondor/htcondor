@@ -2494,7 +2494,6 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 		char *bigbuf2 = NULL;
 		char *attribute_value = NULL;
 		PROC_ID job_id;
-		shadow_rec *srec;
 		ClassAd *startd_ad;
 		ClassAd *expanded_ad;
 		int index;
@@ -2518,17 +2517,14 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 			startd_ad = NULL;
 			scheduler.resourcesByProcID->lookup(job_id,startd_ad);
 		} else {
-			// Not a Globus job... find startd ad via the shadow rec
-			if ((srec = scheduler.FindSrecByProcID(job_id)) == NULL) {
-				// pretty weird... no shadow, nothing we can do
-				return expanded_ad;
-			}
-			if ( srec->match == NULL ) {
+			// Not a Globus job... find startd ad via the match rec
+			match_rec *mrec = scheduler.FindMrecByJobID( job_id );
+			if( !mrec ) {
 				// pretty weird... no match rec, nothing we can do
 				// could be a PVM job?
 				return expanded_ad;
 			}
-			startd_ad = srec->match->my_match_ad;
+			startd_ad = mrec->my_match_ad;
 		}
 
 			// Make a stringlist of all attribute names in job ad.
@@ -2794,6 +2790,37 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 				}
 			}
 
+		}
+
+		if ( startd_ad ) {
+				// Copy NegotiatorMatchExprXXX attributes from startd ad
+				// to the job ad.  These attributes were inserted by the
+				// negotiator.
+			startd_ad->ResetName();
+			char const *name;
+			size_t len = strlen(ATTR_NEGOTIATOR_MATCH_EXPR);
+			while( (name=startd_ad->NextNameOriginal()) ) {
+				if( !strncmp(name,ATTR_NEGOTIATOR_MATCH_EXPR,len) ) {
+					ExprTree *expr = startd_ad->Lookup(name);
+					ASSERT(expr);
+					expr = expr->RArg();
+					if( !expr ) {
+						continue;
+					}
+					char *value = NULL;
+					expr->PrintToNewStr( &value );
+					ASSERT(value);
+					expanded_ad->AssignExpr(name,value);
+
+					MyString match_exp_name = MATCH_EXP;
+					match_exp_name += name;
+					if ( SetAttribute(cluster_id,proc_id,match_exp_name.Value(),value) < 0 )
+					{
+						EXCEPT("Failed to store '%s=%s' into job ad %d.%d",
+						       match_exp_name.Value(), value, cluster_id, proc_id);
+					}
+				}
+			}
 		}
 
 		if ( startd_ad && job_universe == CONDOR_UNIVERSE_GRID ) {

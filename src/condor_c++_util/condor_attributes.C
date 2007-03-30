@@ -652,6 +652,7 @@ const char *ATTR_TREQ_UPDATE_REASON = "UpdateReason";
 const char *ATTR_TREQ_SIGNALED = "Signaled";
 const char *ATTR_TREQ_SIGNAL = "Signal";
 const char *ATTR_TREQ_EXIT_CODE = "ExitCode";
+const char *ATTR_NEGOTIATOR_MATCH_EXPR = "NegotiatorMatchExpr";
 
 // This is a record of the job exit status from a standard universe job exit
 // via waitpid. It is in the job ad to implement the terminate_pending

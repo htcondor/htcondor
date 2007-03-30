@@ -240,6 +240,42 @@ reinitialize ()
 		}
 	}
 
+	NegotiatorMatchExprNames.clearAll();
+	NegotiatorMatchExprValues.clearAll();
+	tmp = param("NEGOTIATOR_MATCH_EXPRS");
+	if( tmp ) {
+		NegotiatorMatchExprNames.initializeFromString( tmp );
+		free( tmp );
+		tmp = NULL;
+
+			// Now read in the values of the macros in the list.
+		NegotiatorMatchExprNames.rewind();
+		char const *expr_name;
+		while( (expr_name=NegotiatorMatchExprNames.next()) ) {
+			char *expr_value = param( expr_name );
+			if( !expr_value ) {
+				dprintf(D_ALWAYS,"Warning: NEGOTIATOR_MATCH_EXPRS references a macro '%s' which is not defined in the configuration file.\n",expr_name);
+				NegotiatorMatchExprNames.deleteCurrent();
+				continue;
+			}
+			NegotiatorMatchExprValues.append( expr_value );
+			free( expr_value );
+		}
+
+			// Now change the names of the ExprNames so they have the prefix
+			// "MatchExpr" that is expected by the schedd.
+		size_t prefix_len = strlen(ATTR_NEGOTIATOR_MATCH_EXPR);
+		NegotiatorMatchExprNames.rewind();
+		while( (expr_name=NegotiatorMatchExprNames.next()) ) {
+			if( strncmp(expr_name,ATTR_NEGOTIATOR_MATCH_EXPR,prefix_len) != 0 ) {
+				MyString new_name = ATTR_NEGOTIATOR_MATCH_EXPR;
+				new_name += expr_name;
+				NegotiatorMatchExprNames.insert(new_name.Value());
+				NegotiatorMatchExprNames.deleteCurrent();
+			}
+		}
+	}
+
 	dprintf (D_ALWAYS,"ACCOUNTANT_HOST = %s\n", AccountantHost ? 
 			AccountantHost : "None (local)");
 	dprintf (D_ALWAYS,"NEGOTIATOR_INTERVAL = %d sec\n",NegotiatorInterval);
@@ -833,6 +869,14 @@ negotiationTime ()
 		// for ads which have RemoteUser set, add RemoteUserPrio
 		addRemoteUserPrios( startdAds ); 
 	}
+
+		// We insert NegotiatorMatchExprXXX attributes into the
+		// "matched ad".  In the negotiator, this means the machine ad.
+		// The schedd will later propogate these attributes into the
+		// matched job ad that is sent to the startd.  So in different
+		// matching contexts, the negotiator match exprs are in different
+		// ads, but they should always be in at least one.
+	insertNegotiatorMatchExprs( startdAds );
 
 	char *groups = param("GROUP_NAMES");
 	if ( groups ) {
@@ -2466,6 +2510,33 @@ public:
 	}
 };
 
+void Matchmaker::
+insertNegotiatorMatchExprs( ClassAdList &cal )
+{
+	ClassAd *ad;
+	cal.Open();
+	while( ( ad = cal.Next() ) ) {
+		insertNegotiatorMatchExprs( ad );
+	}
+	cal.Close();
+}
+
+void Matchmaker::
+insertNegotiatorMatchExprs(ClassAd *ad)
+{
+	ASSERT(ad);
+
+	NegotiatorMatchExprNames.rewind();
+	NegotiatorMatchExprValues.rewind();
+	char const *expr_name;
+	while( (expr_name=NegotiatorMatchExprNames.next()) ) {
+		char const *expr_value = NegotiatorMatchExprValues.next();
+		ASSERT(expr_value);
+
+		ad->AssignExpr(expr_name,expr_value);
+	}
+}
+
 int Matchmaker::
 matchmakingProtocol (ClassAd &request, ClassAd *offer, 
 						ClassAdList &startdPvtAds, Sock *sock,
@@ -2542,6 +2613,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 		free(replacementReqStr);
 		free(savedReqStr);
 	}	
+
 	// ---- real matchmaking protocol begins ----
 	// 1.  contact the startd 
 	if ( want_claiming ) {

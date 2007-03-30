@@ -135,6 +135,8 @@ class Matchmaker : public Service
 										   double &, double &);
 		char *getCapability (const char *, const char *, ClassAdList &);
 		void addRemoteUserPrios( ClassAdList& );
+		void insertNegotiatorMatchExprs(ClassAd *ad);
+		void insertNegotiatorMatchExprs( ClassAdList &cal );
 		void reeval( ClassAd *ad );
 		void updateNegCycleEndTime(time_t startTime, ClassAd *submitter);
 		static int HashFunc(const MyString &Key, int TableSize);
@@ -164,6 +166,9 @@ class Matchmaker : public Service
         ExprTree *DynQuotaMachConstraint;   // Filter machineAds by this
                                             // constraint before calculating
                                             // dynamic quotas.  Added for CDF.
+
+		StringList NegotiatorMatchExprNames;
+		StringList NegotiatorMatchExprValues;
 
 		CollectorList* Collectors;
 

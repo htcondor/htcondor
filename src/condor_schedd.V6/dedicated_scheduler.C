@@ -1316,7 +1316,7 @@ DedicatedScheduler::contactStartd( ContactStartdArgs *args )
 			 mrec->user, mrec->peer, mrec->cluster,
 			 mrec->proc ); 
 
-	if( !claimStartd(mrec, &dummy_job, true) ) {
+	if( !claimStartd(mrec, true) ) {
 		DelMrec(mrec);
 	}
 }

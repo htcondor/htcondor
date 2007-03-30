@@ -588,7 +588,7 @@ extern const char * ATTR_TREQ_UPDATE_REASON;
 extern const char *ATTR_TREQ_SIGNALED;
 extern const char *ATTR_TREQ_SIGNAL;
 extern const char *ATTR_TREQ_EXIT_CODE;
-
+extern const char * ATTR_NEGOTIATOR_MATCH_EXPR;
 
 // This is a record of the job exit status from a standard universe job exit
 // via waitpid. It is in the job ad to implement the terminate_pending

@@ -5231,15 +5231,7 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 			 mrec->user, mrec->peer, mrec->cluster,
 			 mrec->proc ); 
 
-	ClassAd *jobAd = GetJobAd( mrec->cluster, mrec->proc );
-	if( ! jobAd ) {
-		dprintf( D_ALWAYS, "failed to find job %d.%d\n", mrec->cluster,
-				 mrec->proc ); 
-		DelMrec( mrec );
-		return;
-	}
-
-	if( ! claimStartd(mrec, jobAd, false) ) {
+	if( ! claimStartd(mrec, false) ) {
 		DelMrec( mrec );
 		return;
 	}
@@ -5247,7 +5239,7 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 
 
 bool
-claimStartd( match_rec* mrec, ClassAd* job_ad, bool is_dedicated )
+claimStartd( match_rec* mrec, bool is_dedicated )
 {
 	DCStartd matched_startd ( mrec->peer, NULL );
 	Sock* sock = NULL;
@@ -5293,7 +5285,7 @@ claimStartd( match_rec* mrec, ClassAd* job_ad, bool is_dedicated )
 
 
 bool
-claimStartdConnected( Sock *sock, match_rec* mrec, ClassAd* job_ad, bool is_dedicated )
+claimStartdConnected( Sock *sock, match_rec* mrec, ClassAd *job_ad, bool is_dedicated )
 {
 	DCStartd matched_startd ( mrec->peer, NULL );
 
@@ -5412,18 +5404,22 @@ Scheduler::startdContactConnectHandler( Stream *sock )
 
 	dprintf ( D_FULLDEBUG, "Got mrec data pointer %p\n", mrec );
 
-	ClassAd *jobAd = GetJobAd( mrec->cluster, mrec->proc );
+		// We need an expanded job ad here so that the startd can see
+		// NegotiatorMatchExpr values.
+	ClassAd *jobAd = GetJobAd( mrec->cluster, mrec->proc, true );
 	if( ! jobAd ) {
-		dprintf( D_ALWAYS, "failed to find job %d.%d\n", mrec->cluster,
+		dprintf( D_ALWAYS, "failed to find/expand job %d.%d\n", mrec->cluster,
 				 mrec->proc ); 
 		DelMrec( mrec );
 		return FALSE;
 	}
 
-	if(!claimStartdConnected( (Sock *)sock, mrec, jobAd, false )) {
+	if( !claimStartdConnected( (Sock *)sock, mrec, jobAd, false ) ) {
 		DelMrec( mrec );
+		delete jobAd;
 		return FALSE;
 	}
+	delete jobAd;
 
 	// The stream will be closed when we get a callback
 	// in startdContactSockHandler.  Keep it open for now.

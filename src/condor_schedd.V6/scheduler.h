@@ -619,8 +619,8 @@ private:
 // Other prototypes
 int		get_job_prio(ClassAd *ad, bool compute_autoclusters = false);
 extern void set_job_status(int cluster, int proc, int status);
-extern bool claimStartd( match_rec* mrec, ClassAd* job_ad, bool is_dedicated );
-extern bool claimStartdConnected( Sock *sock, match_rec* mrec, ClassAd* job_ad, bool is_dedicated );
+extern bool claimStartd( match_rec* mrec, bool is_dedicated );
+extern bool claimStartdConnected( Sock *sock, match_rec* mrec, ClassAd *job_ad, bool is_dedicated );
 extern bool sendAlive( match_rec* mrec );
 extern void fixReasonAttrs( PROC_ID job_id, JobAction action );
 extern bool moveStrAttr( PROC_ID job_id, const char* old_attr,  
