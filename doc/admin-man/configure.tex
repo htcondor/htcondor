@@ -4884,9 +4884,31 @@ These macros affect the \Condor{negotiator}.
 \item[\Macro{NEGOTIATOR\_MAX\_TIME\_PER\_SUBMITTER}] \label{param:NegotiatorMaxTimePerSubmitter} This macro limits the amount of time the negotiator will 
 spend with a submitter. It defaults to one year.
 
+\item[\Macro{NEGOTIATOR\_MATCH\_EXPRS}]
+\label{param:NegotiatorMatchExprs} This macro specifies a list of macro names
+that are inserted as ClassAd attributes into matched job ClassAds.
+The attribute name in the ClassAd will be given the prefix
+NegotiatorMatchExpr if the macro name doesn't already begin with that.
+Example:
+
+\begin{verbatim}
+NegotiatorName = "My Negotiator"
+NEGOTIATOR_MATCH_EXPRS = NegotiatorName
+\end{verbatim}
+
+As a result of the above configuration, jobs that are matched by this
+negotiator will contain the following attribute when they are sent to
+the startd:
+
+\begin{verbatim}
+NegotiatorMatchExprNegotiatorName = "My Negotiator"
+\end{verbatim}
+
+The expressions inserted by the negotiator may be useful in startd
+policy expressions when the startd belongs to multiple condor pools.
+
 \end{description}
-The following configuration macros affect negotiation for 
-group users.
+The following configuration macros affect negotiation for group users.
 \begin{description}
 
 \item[\Macro{GROUP\_NAMES}] \label{param:GroupNames}
