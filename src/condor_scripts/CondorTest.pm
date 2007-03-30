@@ -849,10 +849,9 @@ sub changeDaemonState
 	my $timeout = 0;
 	my $daemon = shift;
 	my $state = shift;
-	$timeout = shift;
+	$timeout = shift; # picks up number of tries... back off on how soon we try.
 	my $counter = 0;
 	my $cmd = "";
-	my $timeout_increment = 5;
 	my $foundTotal = "no";
 	my $status;
 	my @cmdarray1, @cmdarray2;
@@ -873,11 +872,12 @@ sub changeDaemonState
 		exit(1);
 	}
 
+	my $sleeptime = 0;
 	$cmd = "condor_status -$daemon";
 	while($counter < $timeout ) {
 		$foundTotal = "no";
 		@cmdarray2 = {};
-		print "about to run $cmd\n";
+		print "about to run $cmd try $counter previous sleep $sleeptime\n";
 		$status = CondorTest::runCondorTool($cmd,\@cmdarray2,2);
 		if(!$status)
 		{
@@ -908,16 +908,18 @@ sub changeDaemonState
 				# is running again
 				return(1);
 			} else {
-				sleep($timeout_increment);
-				$counter = $counter + $timeout_increment;
+				$counter = $counter + 1;
+				$sleeptime = ($counter**2);
+				sleep($sleeptime);
 			}
 		} elsif( $state eq "off" ) {
 			if($foundTotal eq "no") {
 				#is stopped
 				return(1);
 			} else {
-				sleep($timeout_increment);
-				$counter = $counter + $timeout_increment;
+				$counter = $counter + 1;
+				$sleeptime = ($counter**2);
+				sleep($sleeptime);
 			}
 		}
 
