@@ -165,6 +165,14 @@ a Linux kernel limitation that prevents reading more than 4k from
 Condor is aware of all processes spawned by a unix job is to use
 \MacroNI{VMx\_USER}.
 
+\item \Condor{glidein} option \Opt{-run\_here} no longer fails when the
+current working directory is not in PATH.
+
+\item \Condor{glidein} option \Opt{-runtime} would cause runtime errors
+at startup under some batch systems.  The problematic parentheses characters
+are no longer generated as part of the environment value that is set by
+this option.
+
 \end{itemize}
 
 \noindent Known Bugs:
