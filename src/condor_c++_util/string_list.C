@@ -305,7 +305,7 @@ StringList::contains_withwildcard(const char *string, bool anycase)
 
 		if ( asterisk == x ) {
 			char *asterisk2 = strrchr(x,'*');
-			if ( asterisk2 && asterisk2[1] == '\0' ) {
+			if ( asterisk2 && asterisk2[1] == '\0' && asterisk2 != asterisk) {
 				// asterisks at start and end behavior
 				char *pos;
 				*asterisk2 = '\0';
