@@ -376,6 +376,11 @@ elif test $os = "Darwin" ; then
 		_cv_osx_vers=`$SW_VERS | $GREP ^ProductVersion | $PERL -pe 's/^ProductVersion\:\s+(\d+)\.(\d+).*$/$1_$2/'`
 		_cv_opsys_vers="OSX_$_cv_osx_vers"
 	fi
+
+	# append the product version to the sysname, so we can differentiate
+	# between different ports
+	tmp=`echo $_cv_osx_vers | $PERL -pe 's/_//g'`
+	_cv_sysname="${_cv_sysname}${tmp}"
 	
 	# now figure out the kernel revision. Under macosx this will have
 	# the form: major.minor.patch
