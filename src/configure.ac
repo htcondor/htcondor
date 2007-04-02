@@ -1425,7 +1425,7 @@ AC_SUBST(JAR,$ac_jar)
 
 # there might be two kinds of rpm on a machine, 'rpm' and 'rpmbuild'
 # use the latter if we have it.
-if test $_cv_linux_distro = "SLES9"; then
+if test "x$_cv_linux_distro" = "xSLES9"; then
 	# rpm is broken on some platforms, so just turn them off.
   	AC_MSG_WARN( [rpm generation has been disabled for this architecture] )
 	_cv_have_rpm="NO"
