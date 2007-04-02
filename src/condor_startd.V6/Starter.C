@@ -920,22 +920,26 @@ Starter::prepareForGlexec( const ArgList& orig_args, const Env* orig_env,
 		return false;
 	}
 
-	// cons up a command line for popen.  we want to run this:
-	// /bin/sh -c 'WHOAMI=`whoami`;cd <user_dir>;umask 077;
-	//    mkdir -p condor.<startd_pid>.<vm>.$WHOAMI;
-	//    cd condor.<startd_pid>.<vm>.$WHOAMI;
-	//    mkdir -p execute;mkdir -p log;
-	//    echo $WHOAMI
+	// cons up a command line for popen. we'll run the
+	// script $(LIBEXEC)/glexec_starter_setup.sh, which
+	// will create the starter's "private directory" (and
+	// its log and execute subdirectories). this directory
+	// will be a subdirectory of <glexec_user_dir> named:
+	//   condor.<startd_pid>.<slot_num>.<username>
 	//
-	// (where <user_dir> is the glexec_user_dir param'ed above,
-	//  <startd_pid> is our pid, and <vm> is the vm id)
+	// Since we don't know a priori what <username> is, the
+	// script will write that to its stdout for us.
+	//
+	// <glexec_user_dir>, <startd_pid>, and <slot_num> are
+	// passed as arguments to the script
 
 	// parse the glexec args for invoking whoami.  do not free them yet,
 	// except on an error, as we use them again below.
 	MyString whoami_err;
 	ArgList  glexec_whoami_args;
+	glexec_whoami_args.SetArgV1SyntaxToCurrentPlatform();
 	if( ! glexec_whoami_args.AppendArgsV1RawOrV2Quoted( glexec_argstr,
-						     &whoami_err ) ) {
+	                                                    &whoami_err ) ) {
 		dprintf( D_ALWAYS,
 		         "GLEXEC: failed to parse GLEXEC from config: %s\n",
 		         whoami_err.Value() );
@@ -943,29 +947,20 @@ Starter::prepareForGlexec( const ArgList& orig_args, const Env* orig_env,
 		return 0;
 	}
 
-	// add the rest of the args for the whoami / mkdir mojo
-	MyString glexec_whoami_arg;
-	char* shell_path = param("SH");
-	if (shell_path) {
-			// glexec refuses to follow symlinks, so we offer
-			// the "SH" knob as a workaround
-		glexec_whoami_args.AppendArg(shell_path);
-		free(shell_path);
+	// set up the rest of the arguments for the glexec setup script
+	char* libexec = param("LIBEXEC");
+	if (libexec == NULL) {
+		dprintf( D_ALWAYS,
+		         "GLEXEC: LIBEXEC not defined; can't find setup script\n" );
+		free( glexec_argstr );
 	}
-	else {
-		glexec_whoami_args.AppendArg("/bin/sh");
-	}
-	glexec_whoami_args.AppendArg("-c");
-	int my_pid = getpid();
-	glexec_whoami_arg = "WHOAMI=`whoami`;cd ";
-	glexec_whoami_arg += glexec_user_dir.Value();
-	glexec_whoami_arg += ";umask 077;";
-	glexec_whoami_arg.sprintf_cat("mkdir -p condor.%d.%s.$WHOAMI;",
-	                              my_pid, s_claim->rip()->r_id_str);
-	glexec_whoami_arg.sprintf_cat("cd condor.%d.%s.$WHOAMI;",
-	                              my_pid, s_claim->rip()->r_id_str);
-	glexec_whoami_arg += "mkdir -p execute;mkdir -p log;echo $WHOAMI";
-	glexec_whoami_args.AppendArg( glexec_whoami_arg.Value() );
+	MyString setup_script = libexec;
+	free(libexec);
+	setup_script += "/glexec_starter_setup.sh";
+	glexec_whoami_args.AppendArg(setup_script.Value());
+	glexec_whoami_args.AppendArg(glexec_user_dir.Value());
+	glexec_whoami_args.AppendArg(daemonCore->getpid());
+	glexec_whoami_args.AppendArg(s_claim->rip()->r_id_str);
 
 	// debug info.  this display format totally screws up the quoting, but
 	// popen gets it right.
@@ -989,15 +984,15 @@ Starter::prepareForGlexec( const ArgList& orig_args, const Env* orig_env,
 	// glexec works.
 	UnsetEnv( "SSL_CLIENT_CERT");
 
-
 	// first strip off carriage return from the username
 	glexec_username.setChar(glexec_username.Length()-1, '\0');
 	dprintf (D_ALWAYS, "GLEXEC: got '%s' from my_popen.\n",
 			glexec_username.Value());
 
 	// update glexec_user_dir to include condor.<startd_pid>.<vm>.<username>
-	glexec_user_dir.sprintf_cat("/condor.%d.%s.%s", my_pid,
-	                            s_claim->rip()->r_id_str,
+	glexec_user_dir.sprintf_cat("/condor.%d.%s.%s",
+	                            daemonCore->getpid(),
+								s_claim->rip()->r_id_str,
 	                            glexec_username.Value());
 	dprintf (D_ALWAYS, "GLEXEC: userdir is '%s'\n",
 			glexec_user_dir.Value());
