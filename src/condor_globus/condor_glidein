@@ -169,7 +169,7 @@ sub do_submit() {
 	}
 
 	if ( $master_run_time ) {
-		$GLOBUSENV .= "_condor_DaemonStopTime=DaemonStartTime+(${master_run_time}*60);";
+		$GLOBUSENV .= "_condor_DaemonStopTime=DaemonStartTime+" . $master_run_time*60 . ";";
 	}
 
 	chop $GLOBUSENV;
@@ -1002,6 +1002,7 @@ sub do_remote_setup() {
 	my $glidein_remote_setup = "glidein_remote_setup$suffix";
 	open( REM_SETUP, ">$glidein_remote_setup" );
 	print REM_SETUP<<"EOF";
+#!/bin/sh
 
 	BASEDIR=\$1
 	ARCHDIR=\$2
@@ -1172,7 +1173,7 @@ EOF
 	    $archdir_arg  =~ s/\$\(HOME\)/$ENV{'HOME'}/g;
 	    $localdir_arg =~ s/\$\(HOME\)/$ENV{'HOME'}/g;
 
-	    my $setup_here_pid = open(SETUP_HERE_FH, "$glidein_remote_setup '$basedir_arg' '$archdir_arg' '$arch' '$localdir_arg' '$SERVER_URL' '$force_setup' >& $glidein_setup_output|");
+	    my $setup_here_pid = open(SETUP_HERE_FH, "./$glidein_remote_setup '$basedir_arg' '$archdir_arg' '$arch' '$localdir_arg' '$SERVER_URL' '$force_setup' >& $glidein_setup_output|");
 
 	    my $output_pos = 0;
 	    while( 1 ) {
