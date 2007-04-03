@@ -224,6 +224,7 @@ ProcFamily::give_away_members(ProcFamily* parent)
 		member->m_family = parent;
 		member = member->m_next;
 	}
+	member->m_family = parent;
 
 	// attach the end of our list to the beginning of
 	// the parent's
