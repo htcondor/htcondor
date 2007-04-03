@@ -369,14 +369,14 @@ ProcFamilyMonitor::snapshot()
 
 	// print info about all procInfo allocations
 	//
-	procInfo* pi = pi_list;
-	while (pi != NULL) {
-		dprintf(D_ALWAYS,
-		        "PROCINFO ALLOCATION: %p for pid %u\n",
-		        pi,
-		        pi->pid);
-		pi = pi->next;
-	}
+	//procInfo* pi = pi_list;
+	//while (pi != NULL) {
+	//	dprintf(D_ALWAYS,
+	//	        "PROCINFO ALLOCATION: %p for pid %u\n",
+	//	        pi,
+	//	        pi->pid);
+	//	pi = pi->next;
+	//}
 
 	// scan through the latest snapshot looking for processes
 	// that we've seen before in previous calls to snapshot();

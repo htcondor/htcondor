@@ -45,19 +45,15 @@ ProcFamily::ProcFamily(ProcFamilyMonitor* monitor,
 
 ProcFamily::~ProcFamily()
 {
-	dprintf(D_ALWAYS,
-	        "ProcFamily destructor for family %u\n",
-	        m_root_pid);
-
 	// delete our member list
 	//
 	ProcFamilyMember* member = m_member_list;
 	while (member != NULL) {
 		ProcFamilyMember* next_member = member->m_next;
-		dprintf(D_ALWAYS,
-		        "PROCINFO DEALLOCATION: %p for pid %u\n",
-		        member->m_proc_info,
-		        member->m_proc_info->pid);
+		//dprintf(D_ALWAYS,
+		//        "PROCINFO DEALLOCATION: %p for pid %u\n",
+		//        member->m_proc_info,
+		//        member->m_proc_info->pid);
 		delete member->m_proc_info;
 		delete member;
 		member = next_member;
@@ -193,10 +189,10 @@ ProcFamily::remove_exited_processes()
 			if (next_member != NULL) {
 				next_member->m_prev = prev;
 			}
-			dprintf(D_ALWAYS,
-			        "PROCINFO DEALLOCATION: %p for pid %u\n",
-			        member->m_proc_info,
-			        member->m_proc_info->pid);
+			//dprintf(D_ALWAYS,
+			//        "PROCINFO DEALLOCATION: %p for pid %u\n",
+			//        member->m_proc_info,
+			//        member->m_proc_info->pid);
 			delete member->m_proc_info;
 			delete member;
 		}

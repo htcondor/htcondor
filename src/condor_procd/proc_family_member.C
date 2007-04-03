@@ -28,16 +28,12 @@
 void
 ProcFamilyMember::still_alive(procInfo* pi)
 {
-	dprintf(D_ALWAYS,
-	        "still_alive for pid %u\n",
-	        pi->pid);
-
 	// update our procInfo
 	//
-	dprintf(D_ALWAYS,
-	        "PROCINFO DEALLOCATION: %p for pid %u\n",
-	        m_proc_info,
-	        m_proc_info->pid);
+	//dprintf(D_ALWAYS,
+	//        "PROCINFO DEALLOCATION: %p for pid %u\n",
+	//        m_proc_info,
+	//        m_proc_info->pid);
 	delete m_proc_info;
 	m_proc_info = pi;
 
