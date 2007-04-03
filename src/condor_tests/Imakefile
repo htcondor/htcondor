@@ -145,13 +145,11 @@ TESTCLASS(cmd_q_shows-run,core)
 TESTCLASS(cmd_q_shows-run,quick)
 TESTCLASS(cmd_q_shows-run,btdebug)
 
-/*
 DESC(cmd_q_shows-global,"Condor_q shows global")
 RUN(cmd_q_shows-global)
 TESTCLASS(cmd_q_shows-global,core)
 TESTCLASS(cmd_q_shows-global,quick)
 TESTCLASS(cmd_q_shows-global,btdebug)
-*/
 
 DESC(lib_userlog,"Exercise the userlog interface write and read all events");
 RUN(lib_userlog)
