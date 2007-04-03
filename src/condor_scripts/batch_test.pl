@@ -370,21 +370,29 @@ if( $hush == 0 ) {
 	print "$num_success successful, $num_failed failed\n";
 }
 
+open( SUMOUTF, ">>successful_tests_summary" )
+    || die "error opening \"successful_tests_summary\": $!\n";
 open( OUTF, ">successful_tests" )
     || die "error opening \"successful_tests\": $!\n";
 for $test_name (@successful_tests)
 {
     print OUTF "$test_name\n";
+    print SUMOUTF "$test_name\n";
 }
 close OUTF;
+close SUMOUTF;
 
+open( SUMOUTF, ">>failed_tests_summary" )
+    || die "error opening \"failed_tests_summary\": $!\n";
 open( OUTF, ">failed_tests" )
     || die "error opening \"failed_tests\": $!\n";
 for $test_name (@failed_tests)
 {
     print OUTF "$test_name\n";
+    print SUMOUTF "$test_name\n";
 }
 close OUTF;
+close SUMOUTF;
 
 exit $num_failed;
 
