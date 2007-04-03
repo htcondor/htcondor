@@ -376,8 +376,8 @@ open( OUTF, ">successful_tests" )
     || die "error opening \"successful_tests\": $!\n";
 for $test_name (@successful_tests)
 {
-    print OUTF "$test_name\n";
-    print SUMOUTF "$test_name\n";
+    print OUTF "$test_name 0\n";
+    print SUMOUTF "$test_name 0\n";
 }
 close OUTF;
 close SUMOUTF;
@@ -388,8 +388,8 @@ open( OUTF, ">failed_tests" )
     || die "error opening \"failed_tests\": $!\n";
 for $test_name (@failed_tests)
 {
-    print OUTF "$test_name\n";
-    print SUMOUTF "$test_name\n";
+    print OUTF "$test_name 1\n";
+    print SUMOUTF "$test_name 1\n";
 }
 close OUTF;
 close SUMOUTF;
