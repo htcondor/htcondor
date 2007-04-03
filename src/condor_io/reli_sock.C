@@ -479,7 +479,7 @@ ReliSock::get_file( filesize_t *size, const char *destination, bool flush_buffer
 	result = get_file( size, fd,flush_buffers);
 
 	if(::close(fd)!=0) {
-		dprintf(D_ALWAYS, "close failed in ReliSock::get_file\n");
+		dprintf(D_ALWAYS, "ReliSock: get_file: close failed, errno = %d (%s)\n", errno, strerror(errno));
 		return -1;
 	}
 
@@ -627,7 +627,7 @@ ReliSock::put_file( filesize_t *size, const char *source)
 	result = put_file( size, fd);
 
 	if (::close(fd) < 0) {
-		dprintf(D_ALWAYS, "ReliSock: put_file: close failed, errno = %d\n", errno);
+		dprintf(D_ALWAYS, "ReliSock: put_file: close failed, errno = %d (%s)\n", errno, strerror(errno));
 		return -1;
 	}
 
