@@ -39,20 +39,34 @@ ParentTracker::find_processes(procInfo*& pi_list)
 bool
 ParentTracker::check_process(procInfo* pi)
 {
+	// first, the parent pid needs to exist in one of
+	// our monitored families
+	//
 	ProcFamilyMember* pm = m_monitor->lookup_member(pi->ppid);
+	if (pm == NULL) {
+		return false;
+	}
 
-	if ((pm != NULL) && (pm->get_proc_info()->birthday <= pi->birthday)) {	
+	// HACK: if the family has a root pid of 0, it means its
+	// the "not in any of the ProcD's families" family
+	//
+	if (pm->get_proc_family()->get_root_pid() == 0) {
+		return false;
+	}
 
-		// found a parent; add it to the correct family and remove it from
-		// our procInfo list
-		//
-		dprintf(D_ALWAYS,
-		        "adding %d to %d based on ppid\n",
-		        pi->pid,
-		        pm->get_proc_family()->get_root_pid());
-			
-		pm->get_proc_family()->add_member(pi);
-		
+	// if the (supposed) parent's birthday is after our
+	// own, its definitely not a valid link
+	//
+	if (pm->get_proc_info()->birthday > pi->birthday) {
+		return false;
+	}
+
+	// looks good; now try to update the family (if no change
+	// is made, add_member_to_family will return false)
+	//
+	if (m_monitor->add_member_to_family(pm->get_proc_family(),
+	                                    pi,
+	                                    "PARENT")) {
 		keep_checking = true;
 		return true;
 	}

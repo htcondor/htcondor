@@ -24,9 +24,11 @@
 #ifndef _ENVIRONMENT_TRACKER_H
 #define _ENVIRONMENT_TRACKER_H
 
-#include "condor_pidenvid.h"
 #include "proc_family_tracker.h"
+#include "tracker_helper_list.h"
+#include "condor_pidenvid.h"
 #include "proc_family.h"
+#include "proc_family_monitor.h"
 
 class EnvironmentTracker : public ProcFamilyTracker {
 
@@ -36,10 +38,7 @@ public:
 
 	void add_mapping(ProcFamily* family, PidEnvID* penvid)
 	{
-		PidEnvID* tmp = new PidEnvID;
-		ASSERT(tmp != NULL);
-		pidenvid_copy(tmp, penvid);
-		m_list.add_mapping(EnvironmentTag(tmp), family);
+		m_list.add_mapping(EnvironmentTag(penvid), family);
 	}
 
 	void remove_mapping(ProcFamily* family)
@@ -54,7 +53,7 @@ public:
 	{
 		ProcFamily* family = m_list.find_family(pi);
 		if (family != NULL) {
-			family->add_member(pi);
+			m_monitor->add_member_to_family(family, pi, "ENV");
 			return true;
 		}
 		return false;

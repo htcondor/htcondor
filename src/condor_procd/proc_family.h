@@ -46,10 +46,10 @@ public:
 	// user login
 	//
 	ProcFamily(ProcFamilyMonitor* monitor,
-	           pid_t              root_pid,
-	           birthday_t         root_birthday,
-	           pid_t              watcher_pid,
-	           int                max_snapshot_interval);
+	           pid_t              root_pid = 0,
+	           birthday_t         root_birthday = 0,
+	           pid_t              watcher_pid = 0,
+	           int                max_snapshot_interval = -1);
 
 	// cleanup time!
 	//

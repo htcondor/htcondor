@@ -142,8 +142,25 @@ ProcFamily::remove_exited_processes()
 		ProcFamilyMember* next_member = member->m_next;
 
 		if (!member->m_still_alive) {
-		
-			dprintf(D_ALWAYS, "%d is dead\n", member->m_proc_info->pid);
+
+			// HACK for logging: if our root pid is 0, we
+			// know this to mean that we are actually the
+			// family that holds all processes that aren't
+			// in the monitored family; this hack should go
+			// away when we pull out a separate ProcGroup
+			// class
+			//
+			if (m_root_pid != 0) {
+				dprintf(D_ALWAYS,
+				        "process %u (of family %u) has exited\n",
+				        member->m_proc_info->pid,
+				        m_root_pid);
+			}
+			else {
+				dprintf(D_ALWAYS,
+				        "process %u (not in monitored family) has exited\n",
+				        member->m_proc_info->pid);
+			}
 
 			// account for usage from this process
 			//
@@ -173,8 +190,6 @@ ProcFamily::remove_exited_processes()
 		}
 		else {
 
-			dprintf(D_ALWAYS, "clearing alive bit on %u\n", member->m_proc_info->pid);
-		
 			// clear still_alive bit for next time around
 			//
 			member->m_still_alive = false;

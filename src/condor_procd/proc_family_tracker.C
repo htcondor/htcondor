@@ -27,15 +27,9 @@
 void
 ProcFamilyTracker::find_processes(procInfo*& pi_list)
 {
-	procInfo** prev_ptr = &pi_list;
 	procInfo* curr = pi_list;
 	while(curr != NULL) {
-		if (check_process(curr)) {
-			*prev_ptr = curr->next;
-		}
-		else {
-			prev_ptr = &curr->next;
-		}
+		check_process(curr);
 		curr = curr->next;
 	}
 }

@@ -27,6 +27,7 @@
 #include "../condor_procapi/procapi.h"
 
 class ProcFamilyMonitor;
+class ProcFamily;
 
 class ProcFamilyTracker {
 
@@ -38,9 +39,9 @@ public:
 	
 	virtual void find_processes(procInfo*&);
 
+protected:
 	virtual bool check_process(procInfo*) = 0;
 
-protected:
 	ProcFamilyMonitor* m_monitor;
 };
 
