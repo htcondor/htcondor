@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_task.pl,v 1.2.2.3 2006-09-12 17:00:26 wright Exp $
+# $Id: remote_task.pl,v 1.2.2.4 2007-04-03 20:33:37 bt Exp $
 # run a test in the Condor testsuite
 # return val is the status of the test
 # 0 = built and passed
@@ -130,7 +130,6 @@ if( $batchteststatus != 0 ) {
     $teststatus = 0;
 }
 
-
 ######################################################################
 # print output from .run script to stdout of this task, and final exit
 ######################################################################
@@ -164,6 +163,27 @@ if( ! -f $run_out_full ) {
         print "\n\nERROR: failed to open $run_out_full: $!\n";
     }
 }
+
+# if the status is unusual (not 0 or 1 ) edit the failed summary file
+my $line = "";
+if(($teststatus != 0) && ($teststatus != 1)){
+	open(ERRORS,"<failed_tests_summary") || die "Can't open failed_tests_summary: !$\n";
+	open(NEWERRORS,">failed_tests_summary.new") || die "Can't open failed_tests_summary.new: !$\n";
+	while(<ERRORS>){
+		chomp($_);
+		$line = $_;
+		if($line =~ /^(.*$testname)\s+\d*.*$/) {
+			print NEWERRORS "$1 $teststatus\n";
+		} else {
+			print NEWERRORS "$line\n";
+		}
+	}
+}
+copy_file("failed_tests_summary.new", "failed_tests_summary");
+
+# Save current passed and failed summary
+copy_file("failed_tests_summary", "$BaseDir/../failed_tests_summary");
+copy_file("successful_tests_summary", "$BaseDir/../successful_tests_summary");
 
 exit $teststatus;
 
