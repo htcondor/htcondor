@@ -584,21 +584,6 @@ sub TunePersonalCondor
 		$collectorhost = $control{"collector"};
 	}
 
-	# was a special schedd name called out?
-	if( exists $control{"nameschedd"} )
-	{
-		$temp = $control{"nameschedd"};
-		debug("request schedd name $temp\n");
-		if( !(exists $control{"collector"})) {
-			die "Schedd must be named relative to passed in collector!!!\n";
-		} else {
-			$scheddname = $collectorhost . $temp;
-			debug("Naming schedd <<$scheddname>>\n");
-		}
-		$collectorhost = $control{"collector"};
-	}
-
-
 	# was a special domain called out?
 	if( exists $control{"condordomain"} )
 	{
@@ -767,15 +752,19 @@ sub TunePersonalCondor
 		if( $collectorhost )
 		{
 			print NEW "COLLECTOR_HOST = $collectorhost\n";
+			debug("COLLECTOR_HOST = $collectorhost\n");
 		}
 		else
 		{
 			print NEW "COLLECTOR_HOST = \$(CONDOR_HOST):0\n";
+			debug("COLLECTOR_HOST = \$(CONDOR_HOST):0\n");
 		}
 
+		# For simulated pools, we need schedds and master to have unique names
 		if(exists $control{"nameschedd"}) {
-			print NEW "SCHEDD_NAME = $scheddname\n";
 			$mastername = "master" . "_" . $version;
+			debug("MASTERNAME now master + $version($mastername)\n");
+			print NEW "SCHEDD_NAME = $mastername\n";
 			print NEW "MASTER_NAME = $mastername\n";
 		} else {
 			print NEW "SCHEDD_NAME = schedd$mpid$version\n";
@@ -783,6 +772,7 @@ sub TunePersonalCondor
 
 
 		print NEW "NEGOTIATOR_HOST = \$(CONDOR_HOST):0\n";
+		print NEW "MASTER_ADDRESS_FILE = \$(LOG)/.master_address\n";
 		print NEW "COLLECTOR_ADDRESS_FILE = \$(LOG)/.collector_address\n";
 		print NEW "NEGOTIATOR_ADDRESS_FILE = \$(LOG)/.negotiator_address\n";
 		print NEW "CONDOR_HOST = $condorhost\n";
@@ -922,8 +912,8 @@ sub StartPersonalCondor
 		print "Condor state is matched running\n";
 		debug(" about to turn off this master and then turn on this master\n");
 		system("condor_config_val -v log");
-		debug( "restart the personal condor!\n");
-		system("condor_off -master");
+		#debug( "restart the personal condor!\n");
+		#system("condor_off -master");
 		sleep 5;
 		system($personalmaster);
 	}
