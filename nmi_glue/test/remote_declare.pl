@@ -1,13 +1,14 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_declare.pl,v 1.2.2.1 2007-03-23 01:55:42 bt Exp $
+# $Id: remote_declare.pl,v 1.2.2.2 2007-04-04 18:23:27 bt Exp $
 # generate list of all tests to run
 ######################################################################
 
 my $BaseDir = $ENV{BASE_DIR} || die "BASE_DIR not in environment!\n";
 my $SrcDir = $ENV{SRC_DIR} || die "SRC_DIR not in environment!\n";
 my $TaskFile = "$BaseDir/tasklist.nmi";
+my $UserdirTaskFile = "$BaseDir/../tasklist.nmi";
 
 my %CustomTimeouts;
 my $TimeoutFile = "$SrcDir/condor_tests/TimeoutChanges";
@@ -45,6 +46,7 @@ foreach $class (@classlist) {
 # Make sure we can write to the tasklist file, and have the filehandle
 # open for use throughout the rest of the script.
 open( TASKFILE, ">$TaskFile" ) || die "Can't open $TaskFile: $!\n"; 
+open( USERTASKFILE, ">$UserdirTaskFile" ) || die "Can't open $UserdirTaskFile: $!\n"; 
 
 
 ######################################################################
@@ -165,13 +167,16 @@ foreach $task (sort keys %tasklist ) {
 	$temp = $CustomTimeouts{"$task"};
 	if( exists $CustomTimeouts{"$task"} ) {
     	print TASKFILE $task . " " . $CustomTimeouts{"$task"} . "\n";
+    	print USERTASKFILE $task . " " . $CustomTimeouts{"$task"} . "\n";
     	print "CustomTimeout:$task $temp\n";
 	} else {
     	print TASKFILE $task . "\n";
+    	print USERTASKFILE $task . "\n";
 	}
     $unique_tests++;
 }
 close( TASKFILE );
+close( USERTASKFILE );
 print "Wrote $unique_tests unique tests\n";
 exit(0);
 
