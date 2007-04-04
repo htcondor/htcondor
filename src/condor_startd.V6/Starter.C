@@ -865,14 +865,14 @@ Starter::prepareForGlexec( const ArgList& orig_args, const Env* orig_env,
                            ArgList& glexec_args, Env& glexec_env )
 {
 	// if GLEXEC_STARTER is set, use glexec to invoke the
-	// starter (and fail if we can't). this involves:
+	// starter (or fail if we can't). this involves:
 	//   - verifying that we have a delegated proxy from
 	//     the user stored, since we need to hand it to
 	//     glexec so it can look up the UID/GID
-	//   - invoking 'glexec whoami' to find out the target username
-	//   - creating a directory /tmp/condor.<startd_pid>.<vm>.<username>
-	//     for the copied proxy to go into, as well as the StarterLog and
-	//     execute dir
+	//   - invoking 'glexec_starter_setup.sh' via glexec to
+	//     setup the starter's "private directory" for a copy
+	//     of the job's proxy to go into, as well as the StarterLog
+	//     and execute dir
 	//   - adding the contents of the GLEXEC config param
 	//     to the front of the command line
 	//   - setting up glexec's environment (setting the
@@ -899,17 +899,26 @@ Starter::prepareForGlexec( const ArgList& orig_args, const Env* orig_env,
 	while( pem_str.readLine( fp, true ) );
 	fclose( fp );
 
-	// param for the user dir for glexec to use, put it into a MyString, and
-	// free it.  default to /tmp if not defined.
-	char *glexec_user_dir_tmp = param("GLEXEC_USER_DIR");
-	MyString glexec_user_dir;
-	if (glexec_user_dir_tmp) {
-		glexec_user_dir = glexec_user_dir_tmp;
-		free(glexec_user_dir_tmp);
-		glexec_user_dir_tmp = NULL;
-	} else {
-		glexec_user_dir = "/tmp";
-	}
+	// using the file name of the proxy that was stashed ealier, construct
+	// the name of the starter's "private directory". the naming scheme is
+	// (where XXXXXX is randomly generated via condor_mkstemp):
+	//   - $(GLEXEC_USER_DIR)/startd-tmp-proxy-XXXXXX
+	//       - startd's copy of the job's proxy
+	//   - $(GLEXEC_USER_DIR)/starter-tmp-dir-XXXXXX
+	//       - starter's private dir
+	//
+	MyString glexec_private_dir;
+	char* dir_part = condor_dirname(s_claim->client()->proxyFile());
+	ASSERT(dir_part != NULL);
+	glexec_private_dir = dir_part;
+	free(dir_part);
+	glexec_private_dir += "/starter-tmp-dir-";
+	char* random_part = s_claim->client()->proxyFile();
+	random_part += strlen(random_part) - 6;
+	glexec_private_dir += random_part;
+	dprintf(D_ALWAYS,
+	        "GLEXEC: starter private dir is '%s'\n",
+	        glexec_private_dir.Value());
 
 	// get the glexec command line prefix from config
 	char* glexec_argstr = param( "GLEXEC" );
@@ -920,29 +929,24 @@ Starter::prepareForGlexec( const ArgList& orig_args, const Env* orig_env,
 		return false;
 	}
 
-	// cons up a command line for popen. we'll run the
+	// cons up a command line for my_system. we'll run the
 	// script $(LIBEXEC)/glexec_starter_setup.sh, which
 	// will create the starter's "private directory" (and
-	// its log and execute subdirectories). this directory
-	// will be a subdirectory of <glexec_user_dir> named:
-	//   condor.<startd_pid>.<slot_num>.<username>
-	//
-	// Since we don't know a priori what <username> is, the
-	// script will write that to its stdout for us.
-	//
-	// <glexec_user_dir>, <startd_pid>, and <slot_num> are
-	// passed as arguments to the script
+	// its log and execute subdirectories). the value of
+	// glexec_private_dir will be passed as an argument to
+	// the script
 
-	// parse the glexec args for invoking whoami.  do not free them yet,
-	// except on an error, as we use them again below.
-	MyString whoami_err;
-	ArgList  glexec_whoami_args;
-	glexec_whoami_args.SetArgV1SyntaxToCurrentPlatform();
-	if( ! glexec_whoami_args.AppendArgsV1RawOrV2Quoted( glexec_argstr,
-	                                                    &whoami_err ) ) {
+	// parse the glexec args for invoking glexec_starter_setup.sh.
+	// do not free them yet, except on an error, as we use them
+	// again below.
+	MyString setup_err;
+	ArgList  glexec_setup_args;
+	glexec_setup_args.SetArgV1SyntaxToCurrentPlatform();
+	if( ! glexec_setup_args.AppendArgsV1RawOrV2Quoted( glexec_argstr,
+	                                                   &setup_err ) ) {
 		dprintf( D_ALWAYS,
 		         "GLEXEC: failed to parse GLEXEC from config: %s\n",
-		         whoami_err.Value() );
+		         setup_err.Value() );
 		free( glexec_argstr );
 		return 0;
 	}
@@ -957,15 +961,13 @@ Starter::prepareForGlexec( const ArgList& orig_args, const Env* orig_env,
 	MyString setup_script = libexec;
 	free(libexec);
 	setup_script += "/glexec_starter_setup.sh";
-	glexec_whoami_args.AppendArg(setup_script.Value());
-	glexec_whoami_args.AppendArg(glexec_user_dir.Value());
-	glexec_whoami_args.AppendArg(daemonCore->getpid());
-	glexec_whoami_args.AppendArg(s_claim->rip()->r_id_str);
+	glexec_setup_args.AppendArg(setup_script.Value());
+	glexec_setup_args.AppendArg(glexec_private_dir.Value());
 
 	// debug info.  this display format totally screws up the quoting, but
-	// popen gets it right.
+	// my_system gets it right.
 	MyString disp_args;
-	glexec_whoami_args.GetArgsStringForDisplay(&disp_args, 0);
+	glexec_setup_args.GetArgsStringForDisplay(&disp_args, 0);
 	dprintf (D_ALWAYS, "GLEXEC: about to glexec: ** %s **\n",
 			disp_args.Value());
 
@@ -973,35 +975,24 @@ Starter::prepareForGlexec( const ArgList& orig_args, const Env* orig_env,
 	// that it knows who to map to.  the pipe outputs the username that glexec
 	// ended up using, on a single text line by itself.
 	SetEnv( "SSL_CLIENT_CERT", pem_str.Value() );
-	FILE * glexec_pipe;
-	glexec_pipe = my_popen(glexec_whoami_args, "r", FALSE);
-	MyString glexec_username;
-	glexec_username.readLine(glexec_pipe);
-	my_pclose(glexec_pipe);
+
+	int ret = my_system(glexec_setup_args);
+	if ( ret != 0 ) {
+		dprintf(D_ALWAYS,
+		        "GLEXEC: error creating private dir: my_system returned %d\n",
+		        ret);
+	}
 
 	// clean up, since there's private info in there.  i wish we didn't have to
 	// put this in the environment to begin with, but alas, that's just how
 	// glexec works.
 	UnsetEnv( "SSL_CLIENT_CERT");
 
-	// first strip off carriage return from the username
-	glexec_username.setChar(glexec_username.Length()-1, '\0');
-	dprintf (D_ALWAYS, "GLEXEC: got '%s' from my_popen.\n",
-			glexec_username.Value());
-
-	// update glexec_user_dir to include condor.<startd_pid>.<vm>.<username>
-	glexec_user_dir.sprintf_cat("/condor.%d.%s.%s",
-	                            daemonCore->getpid(),
-								s_claim->rip()->r_id_str,
-	                            glexec_username.Value());
-	dprintf (D_ALWAYS, "GLEXEC: userdir is '%s'\n",
-			glexec_user_dir.Value());
-
 	// now prepare the starter command line, starting with glexec and its
 	// options (if any).
 	MyString err;
 	if( ! glexec_args.AppendArgsV1RawOrV2Quoted( glexec_argstr,
-						     &err ) ) {
+	                                             &err ) ) {
 		dprintf( D_ALWAYS,
 		         "failed to parse GLEXEC from config: %s\n",
 		         err.Value() );
@@ -1041,10 +1032,8 @@ Starter::prepareForGlexec( const ArgList& orig_args, const Env* orig_env,
 	// this needs to be in a directory owned by that user, and not world
 	// writable.  glexec enforces this.  hence, all the whoami/mkdir mojo
 	// above.
-	MyString child_proxy_file = glexec_user_dir;
-	child_proxy_file += "/";
-	child_proxy_file += condor_basename(s_claim->client()->proxyFile());
-	child_proxy_file += ".starter";
+	MyString child_proxy_file = glexec_private_dir;
+	child_proxy_file += "/glexec_starter_proxy";
 	dprintf (D_ALWAYS, "GLEXEC: setting GLEXEC_TARGET_PROXY to %s\n",
 		child_proxy_file.Value());
 	glexec_env.SetEnv( "GLEXEC_TARGET_PROXY", child_proxy_file.Value() );
@@ -1058,14 +1047,14 @@ Starter::prepareForGlexec( const ArgList& orig_args, const Env* orig_env,
 	// the EXECUTE dir should be owned by the mapped user.  we created this
 	// earlier, and now we override it in the condor_config via the
 	// environment.
-	MyString execute_dir = glexec_user_dir;
+	MyString execute_dir = glexec_private_dir;
 	execute_dir += "/execute";
 	glexec_env.SetEnv ( "_CONDOR_EXECUTE", execute_dir.Value());
 
 	// the LOG dir should be owned by the mapped user.  we created this
 	// earlier, and now we override it in the condor_config via the
 	// environment.
-	MyString log_dir = glexec_user_dir;
+	MyString log_dir = glexec_private_dir;
 	log_dir += "/log";
 	glexec_env.SetEnv ( "_CONDOR_LOG", log_dir.Value());
 

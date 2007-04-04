@@ -607,7 +607,7 @@ command_delegate_gsi_cred( Service*, int, Stream* stream )
 	//    NOT_OK otherwise
 	//
 	if( ! sock->end_of_message() ) {
-		dprintf( D_ALWAYS, "error receiving end of message\n" );
+		dprintf( D_ALWAYS, "end of message error (1)\n" );
 		return FALSE;
 	}
 	if ( ! param_boolean( "GLEXEC_STARTER", false ) ) {
@@ -660,8 +660,21 @@ command_delegate_gsi_cred( Service*, int, Stream* stream )
 
 	// create a temporary file to hold the proxy and set it
 	// to mode 600
-	char tmp_str[] = "/tmp/startd_tmp_proxy.XXXXXX";
-	int fd = condor_mkstemp( tmp_str );
+	MyString proxy_file;
+	char* glexec_user_dir = param("GLEXEC_USER_DIR");
+	if (glexec_user_dir != NULL) {
+		proxy_file = glexec_user_dir;
+		free(glexec_user_dir);
+	}
+	else {
+		proxy_file = "/tmp";
+	}
+	proxy_file += "/startd-tmp-proxy-XXXXXX";
+	char* proxy_file_tmp = strdup(proxy_file.Value());
+	ASSERT(proxy_file_tmp != NULL);
+	int fd = condor_mkstemp( proxy_file_tmp );
+	proxy_file = proxy_file_tmp;
+	free( proxy_file_tmp );
 	if( fd == -1 ) {
 		dprintf( D_ALWAYS,
 		         "error creating temp file for proxy: %s (%d)\n",
@@ -672,7 +685,9 @@ command_delegate_gsi_cred( Service*, int, Stream* stream )
 	}
 	close( fd );
 
-	dprintf( D_FULLDEBUG, "writing temporary proxy to: %s\n", tmp_str );
+	dprintf( D_FULLDEBUG,
+	         "writing temporary proxy to: %s\n",
+	         proxy_file.Value() );
 
 	// sender decides whether to use delegation or simply copy
 	int use_delegation;
@@ -684,7 +699,7 @@ command_delegate_gsi_cred( Service*, int, Stream* stream )
 	int rv;
 	filesize_t dont_care;
 	if( use_delegation ) {
-		rv = sock->get_x509_delegation( &dont_care, tmp_str );
+		rv = sock->get_x509_delegation( &dont_care, proxy_file.Value() );
 	}
 	else {
 		dprintf( D_FULLDEBUG,
@@ -696,24 +711,27 @@ command_delegate_gsi_cred( Service*, int, Stream* stream )
 			reply( sock, CONDOR_ERROR );
 			return FALSE;
 		}
-		rv = sock->get_file( &dont_care, tmp_str );
+		rv = sock->get_file( &dont_care, proxy_file.Value() );
 	}
 	if( rv == -1 ) {
-		dprintf( D_ALWAYS,
-		         "Error: couldn't get proxy\n");
+		dprintf( D_ALWAYS, "Error: couldn't get proxy\n");
 		sock->end_of_message();
+		reply( sock, NOT_OK );
+		return FALSE;
+	}
+	if ( !sock->end_of_message() ) {
+		dprintf( D_ALWAYS, "end of message error (2)\n" );
 		reply( sock, NOT_OK );
 		return FALSE;
 	}
 	
 	// that's it - return success
-	sock->end_of_message();
 	reply( sock, OK );
 
 	// we have the proxy - now stash its location in the Claim's
 	// Client object so we can get at it when we launch the
 	// starter
-	claim->client()->setProxyFile( tmp_str );
+	claim->client()->setProxyFile( proxy_file.Value() );
 
 	return TRUE;
 }
