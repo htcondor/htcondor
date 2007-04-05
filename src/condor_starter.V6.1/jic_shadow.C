@@ -355,6 +355,9 @@ JICShadow::allJobsDone( void )
 			// true if job exited on its own
 		bool final_transfer = (requested_exit == false);	
 
+		int timeout = param_integer( "STARTER_UPLOAD_TIMEOUT", 30 );
+		filetrans->setClientSocketTimeout(timeout);
+
 			// The user job may have created files only readable
 			// by the user, so set_user_priv here.
 		priv_state saved_priv = set_user_priv();
