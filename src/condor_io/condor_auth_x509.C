@@ -438,7 +438,6 @@ int Condor_Auth_X509::nameGssToLocal(const char * GSSClientname)
 	}
 
 	if ( major_status != GSS_S_COMPLETE) {
-		// REDUNDANT dprintf(D_SECURITY, "Unable to map GSI user name %s to local id.\n", GSSClientname);
 		return 0;
 	}
 
@@ -773,9 +772,15 @@ int Condor_Auth_X509::authenticate_server_gss(CondorError* errstack)
                   "Condor GSI authentication failure" );
     }
     else {
+		// store the raw subject name for later mapping
+		setAuthenticatedName(GSSClientname);
+
         // Try to map DN to local name (in the format of name@domain)
         if ( (status = nameGssToLocal(GSSClientname) ) == 0) {
-            dprintf(D_SECURITY, "gss_assist_gridmap does not contain an entry for %s\n", GSSClientname);
+			errstack->pushf("GSI", GSI_ERR_AUTHENTICATION_FAILED,
+				"Failed to gss_assist_gridmap %s to a local user.  "
+				"Check the grid-mapfile.", GSSClientname);
+			dprintf(D_SECURITY, "gss_assist_gridmap does not contain an entry for %s\n", GSSClientname);
         }
         else {
             dprintf(D_SECURITY,"gss_assist_gridmap contains an entry for %s\n", 

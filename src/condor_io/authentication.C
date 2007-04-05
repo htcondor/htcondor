@@ -377,7 +377,11 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 				// is in fact inefficient.  when the x509 auth gets clean up though,
 				// this will be the correct place to do this.
 
-				((Condor_Auth_X509*)authenticator_)->nameGssToLocal( authentication_name );
+				if (((Condor_Auth_X509*)authenticator_)->nameGssToLocal( authentication_name )) {
+					// if succesfully, return from here.  otherwise, fall
+					// through to the code below which inserts a default map.
+					return;
+				}
 
 				// that function calls setRemoteUser() and setRemoteDomain().
 				//
