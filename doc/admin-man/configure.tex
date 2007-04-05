@@ -1785,10 +1785,9 @@ section~\ref{sec:GCB} on page~\pageref{sec:GCB}.
 
 \item[\Macro{NET\_REMAP\_ENABLE}] 
   \label{param:NetRemapEnable}
-  If defined to \Expr{True}, this setting will enable a network
+  A boolean variable, that when defined to \Expr{True}, enables a network 
   remapping service for Condor.
-  The service to use is controlled by \MacroNI{NET\_REMAP\_SERVICE},
-  described below.
+  The service to use is controlled by \MacroNI{NET\_REMAP\_SERVICE}.
   This boolean value defaults to \Expr{False}.
 
 \item[\Macro{NET\_REMAP\_SERVICE}]
@@ -1801,18 +1800,40 @@ section~\ref{sec:GCB} on page~\pageref{sec:GCB}.
 
 \item[\Macro{NET\_REMAP\_INAGENT}]
   \label{param:NetRemapInagent}
-  Hosts with the GCB network remapping service enabled that require a
-  GCB broker (see the section on GCB referenced above for more
-  details) specify the IP address of their broker with this setting.
-  The default is undefined.
+  A comma or space-separated list of IP addresses for GCB brokers.
+  Upon start up, the \Condor{master} discovers which brokers from
+  among the list is working, and the \Condor{master} chooses the
+  one with the smallest load.
+  There is no default if undefined.
 
 \item[\Macro{NET\_REMAP\_ROUTE}]
   \label{param:NetRemapRoute}
   Hosts with the GCB network remapping service enabled that would like
   to use a GCB routing table 
-  GCB broker (again, see the section on GCB for more details) specify
-  The full path to their routing table with this setting.
-  The default is undefined.
+  GCB broker specify
+  the full path to their routing table with this setting.
+  There is no default value if undefined.
+
+\item[\Macro{MASTER\_WAITS\_FOR\_GCB\_BROKER}]
+  \label{param:MasterWaitsForGCBBroker}
+  A boolean value that defaults to \Expr{True}.
+  This variable determines the behavior of the \Condor{master}
+  upon start up with GCB enabled.
+  With no GCB broker working, 
+  if \MacroNI{MASTER\_WAITS\_FOR\_GCB\_BROKER} is \Expr{True},
+  the \Condor{master} waits while attempting to find a
+  working GCB broker.
+  With no GCB broker working, 
+  if \MacroNI{MASTER\_WAITS\_FOR\_GCB\_BROKER} is \Expr{False},
+  the \Condor{master} fails and exits, without restarting.
+
+  The value of \MacroNI{MASTER\_WAITS\_FOR\_GCB\_BROKER} is not
+  relevant for the \Condor{master} that has already successfully
+  communicated with a working GCB broker.
+% Note for 6.9.3:
+% The set up task of \Condor{glidein} explicitly sets
+% \MacroNI{MASTER\_WAITS\_FOR\_GCB\_BROKER} to \Expr{False} in the
+% configuration file it produces.
 
 \end{description}
 
