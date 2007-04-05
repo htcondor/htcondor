@@ -70,6 +70,15 @@ available for X86\_64 native ports of Condor.
 
 \begin{itemize}
 
+\item Removed periodic re-indexing of the quill history\_vertical table.
+This should not be needed with the current schema, and should speed
+up database re-indexing operations.
+
+\item Fixed a bug that would cause the dedicated scheduler to
+crash if the schedd was suspended or blocked for more than roughly 10 minutes.
+The most likely cause of this suspension is if the schedd executable was
+mounted from a remote NFS file system.
+
 \item Fixed a bug where if \Opt{-lc} was specified multiple times for
 the compiler when using \Condor{compile} (some tools like \Prog{pgf90}
 do this), \Condor{compile} would fail to link the application and emit
