@@ -1988,7 +1988,7 @@ GahpClient::now_pending(const char *command,const char *buf,
 	server->read_argv(return_line);
 	if ( return_line.argc == 0 || return_line.argv[0][0] != 'S' ) {
 		// Badness !
-		EXCEPT("Bad %s Request",command);
+		EXCEPT("Bad %s Request",pending_command);
 	}
 
 	pending_submitted_to_gahp = true;
