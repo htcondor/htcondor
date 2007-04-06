@@ -312,15 +312,28 @@ MachAttributes::benchmark( Resource* rip, int force )
 		rip->change_state( benchmarking_act );
 	}
 
+		// The MIPS calculation occassionally returns a negative number.
+		// Our best guess for the cause is that times() is returning a
+		// smaller value after the calculation than before. So we
+		// explicitly check for that here and log what we see.
+		// See condor-admin #14595
+	struct tms before, after;
 	dprintf( D_FULLDEBUG, "About to compute mips\n" );
+	times(&before);
 	int new_mips_calc = sysapi_mips();
+	times(&after);
 	dprintf( D_FULLDEBUG, "Computed mips: %d\n", new_mips_calc );
+	if ( new_mips_calc <= 0 ) {
+		dprintf( D_ALWAYS, "Non-positive MIPS calculated! ticks before: %d, "
+				 "ticks after: %d\n", before.tms_utime, after.tms_utime );
+	}
 
 	if ( m_mips == -1 ) {
 			// first time we've done benchmarks
 		m_mips = new_mips_calc;
-	} else {
-			// compute a weighted average
+	} else if ( new_mips_calc > 0 ) {
+			// compute a weighted average,
+			// but only if our new calculation is positive
 		m_mips = (m_mips * 3 + new_mips_calc) / 4;
 	}
 
