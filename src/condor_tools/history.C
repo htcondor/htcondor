@@ -48,12 +48,24 @@
 
 static void Usage(char* name) 
 {
+	printf ("Usage: %s [options]\n\twhere [options] are\n"
+		"\t\t-help\t\t\tThis screen\n"
+		"\t\t-f <file>\t\tRead history data from specified file\n"
+		"\t\t-backwards\t\tList jobs in reverse chronological order\n"
+		"\t\t-match <number>\t\tLimit the number of jobs displayed\n"
+		"\t\t-format <fmt> <attr>\tPrint attribute attr using format fmt\n"		
+		"\t\t-long\t\t\tVerbose output (entire classads)\n"
+		"\t\t-constraint <expr>\tAdd constraint on classads\n"
 #if WANT_QUILL
-  printf("Usage: %s [-l] [-f history-filename] [-backwards] [-match number] [-name quill-name] [-format spec attribute] [-constraint expr | cluster_id | cluster_id.proc_id | owner | -completedsince date/time]\n",name);
-#else 
-  printf("Usage: %s [-l] [-f history-filename] [-backwards] [-match number] [-format spec attribute] [-constraint expr | cluster_id | cluster_id.proc_id | owner]\n",name);
-#endif /* WANT_QUILL */
-
+		"\t\t-name <quill-name>\tRead history data from Quill database\n"
+		"\t\t-completedsince <time>\tDisplay jobs completed on/after time\n"
+#endif
+		"\t\trestriction list\n"
+		"\twhere each restriction may be one of\n"
+		"\t\t<cluster>\t\tGet information about specific cluster\n"
+		"\t\t<cluster>.<proc>\tGet information about specific job\n"
+		"\t\t<owner>\t\t\tInformation about jobs owned by <owner>\n",
+			name);
   exit(1);
 }
 
