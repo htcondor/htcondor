@@ -1369,8 +1369,7 @@ ensureAuthenticated(ReliSock * rsock, CondorError & errstack)
 
 // Based on Scheduler::updateGSICred
 static bool
-updateX509Proxy(int cmd, ReliSock * rsock, const char * path,
-				const char * local_user)
+updateX509Proxy(int cmd, ReliSock * rsock, const char * path)
 {
 	ASSERT(rsock);
 	ASSERT(path);
@@ -1380,37 +1379,6 @@ updateX509Proxy(int cmd, ReliSock * rsock, const char * path,
 	rsock->decode();
 
 	dprintf(D_FULLDEBUG, "Remote side requests to update X509 proxy at %s\n", path);
-
-	CondorError errstack;
-	if( ! ensureAuthenticated(rsock, errstack) )
-	{
-			// we failed to authenticate, we should bail out now
-			// since we don't know what user is trying to perform
-			// this action.
-			// TODO: it'd be nice to print out what failed, but we
-			// need better error propagation for that...
-		errstack.push( "SCHEDD", SCHEDD_ERR_UPDATE_GSI_CRED_FAILED,
-				"Failure to update X509 proxy - Authentication failed" );
-		dprintf( D_ALWAYS, "updateX509Proxy() aborting: %s\n",
-				 errstack.getFullText() );
-		refuse(rsock);
-		return false;
-	}
-
-	const char * remote_owner = rsock->getOwner();
-	if( ! remote_owner ) {
-		dprintf(D_ALWAYS, "Failure to update X509 proxy: anonymous remote user not permitted\n");
-		refuse(rsock);
-		return false;
-	}
-	// TODO: Confirm that the user has already been filtered for WRITE permission (see qmgmt.C's OwnerCheck if I need to roll my own)
-	if( strcmp(local_user, remote_owner) != MATCH ) {
-		dprintf(D_ALWAYS, "Failure to update X509 proxy: wrong remote user (local: %s, remote: %s\n",
-			local_user, remote_owner);
-		refuse(rsock);
-		return false;
-	}
-	dprintf(D_FULLDEBUG, "updateX509Proxy: remote user of %s is same as local.\n", remote_owner);
 
 	MyString tmp_path(path);
 	tmp_path += ".tmp";
@@ -1472,17 +1440,13 @@ JICShadow::updateX509Proxy(int cmd, ReliSock * s)
 		refuse(s);
 		return false;
 	}
-	MyString local_user;
-	if( ! job_ad->LookupString(ATTR_OWNER, local_user) ) {
-		EXCEPT("My job lacks an owner\n"); 
-	}
 	MyString path;
 	if( ! job_ad->LookupString(ATTR_X509_USER_PROXY, path) ) {
 		dprintf(D_ALWAYS, "Refusing shadow's request to update proxy as this job has no proxy\n");
 		return false;
 	}
 	const char * proxyfilename = condor_basename(path.Value());
-	return ::updateX509Proxy(cmd, s, proxyfilename, local_user.Value());
+	return ::updateX509Proxy(cmd, s, proxyfilename);
 }
 
 

@@ -136,16 +136,6 @@ DCStarter::updateX509Proxy( const char * filename)
 				 errstack.getFullText());
 		return XUS_Error;
 	}
-		// If we're not already authenticated, force that now. 
-	if (!forceAuthentication( &rsock, &errstack )) {
-		dprintf( D_ALWAYS, 
-			"Problem connecting to starter to update X509 user proxy. "
-			"It's possible the starter is version 6.7.11 or earlier "
-			"and does not support updating proxies.  "
-			"(Failed to autheDCStarter::updateX509Proxy authentication failure: %s)\n",
-				 errstack.getFullText() );
-		return XUS_Error;
-	}
 
 		// Send the gsi proxy
 	filesize_t file_size = 0;	// will receive the size of the file
@@ -190,16 +180,6 @@ DCStarter::delegateX509Proxy( const char * filename)
 		dprintf( D_ALWAYS, "DCStarter::delegateX509Proxy: "
 				 "Failed send command to the starter: %s\n",
 				 errstack.getFullText());
-		return XUS_Error;
-	}
-		// If we're not already authenticated, force that now. 
-	if (!forceAuthentication( &rsock, &errstack )) {
-		dprintf( D_ALWAYS, 
-			"Problem connecting to starter to delegate X509 user proxy. "
-			"It's possible the starter is version 6.7.18 or earlier "
-			"and does not support delegating proxies.  "
-			"(Failed to autheDCStarter::delegateX509Proxy authentication failure: %s)\n",
-				 errstack.getFullText() );
 		return XUS_Error;
 	}
 
