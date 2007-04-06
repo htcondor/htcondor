@@ -1543,7 +1543,7 @@ server, shadow, and starter, none of which use DaemonCore yet).
   Starting with Condor version 6.9.3, whenever a daemon is about to
   publish a ClassAd update to the \Condor{collector}, it will evaluate
   this expression.
-  If it evalutes to TRUE, the daemon will gracefully shut itself down
+  If it evaluates to TRUE, the daemon will gracefully shut itself down
   and will not be restarted by the \Condor{master} (as if it sent
   itself a \Condor{off} command).
   The expression is evaluated in the context of the ClassAd that is
@@ -1564,7 +1564,7 @@ server, shadow, and starter, none of which use DaemonCore yet).
   \Condor{startd} shut itself down if it has not been claimed by a job
   after a certain period of time.
 
-  \Note This functionality does not work in conjuction with Condor's
+  \Note This functionality does not work in conjunction with Condor's
   high-availability support (see section~\ref{sec:high-availability}
   on page~\pageref{sec:high-availability} for more information).
   If you enable high-availability for a particular daemon, you should
@@ -1801,10 +1801,9 @@ section~\ref{sec:GCB} on page~\pageref{sec:GCB}.
 \item[\Macro{NET\_REMAP\_INAGENT}]
   \label{param:NetRemapInagent}
   A comma or space-separated list of IP addresses for GCB brokers.
-  Upon start up, the \Condor{master} discovers which brokers from
-  among the list is working, and the \Condor{master} chooses the
-  one with the smallest load.
-  There is no default if undefined.
+  Upon start up, the \Condor{master} chooses one at random from
+  among the working brokers in the list.
+  There is no default if not defined.
 
 \item[\Macro{NET\_REMAP\_ROUTE}]
   \label{param:NetRemapRoute}
@@ -1818,22 +1817,24 @@ section~\ref{sec:GCB} on page~\pageref{sec:GCB}.
   \label{param:MasterWaitsForGCBBroker}
   A boolean value that defaults to \Expr{True}.
   This variable determines the behavior of the \Condor{master}
-  upon start up with GCB enabled.
-  With no GCB broker working, 
+  with GCB enabled.
+  With no GCB broker working upon either the start up of the \Condor{master}, 
+  or once the \Condor{master} has successfully communicated with a
+  GCB broker, but the communication fails,
   if \MacroNI{MASTER\_WAITS\_FOR\_GCB\_BROKER} is \Expr{True},
   the \Condor{master} waits while attempting to find a
   working GCB broker.
-  With no GCB broker working, 
+  With no GCB broker working upon the start up of the \Condor{master}, 
   if \MacroNI{MASTER\_WAITS\_FOR\_GCB\_BROKER} is \Expr{False},
   the \Condor{master} fails and exits, without restarting.
+  Once the \Condor{master} has successfully communicated with a
+  GCB broker, but the communication fails,
+  if \MacroNI{MASTER\_WAITS\_FOR\_GCB\_BROKER} is \Expr{False},
+  the \Condor{master} kills all its children, exits, and restarts.
 
-  The value of \MacroNI{MASTER\_WAITS\_FOR\_GCB\_BROKER} is not
-  relevant for the \Condor{master} that has already successfully
-  communicated with a working GCB broker.
-% Note for 6.9.3:
-% The set up task of \Condor{glidein} explicitly sets
-% \MacroNI{MASTER\_WAITS\_FOR\_GCB\_BROKER} to \Expr{False} in the
-% configuration file it produces.
+  The set up task of \Condor{glidein} explicitly sets
+  \MacroNI{MASTER\_WAITS\_FOR\_GCB\_BROKER} to \Expr{False} in the
+  configuration file it produces.
 
 \end{description}
 
