@@ -186,6 +186,12 @@ at startup under some batch systems.  The problematic parentheses characters
 are no longer generated as part of the environment value that is set by
 this option.
 
+\item On rare occasions, the \Condor{startd} will compute a negative MIPS
+rating when performing benchmarks on the machine. This caused the
+\Attr{Mips} attribute to disappear from the machine ad. Now, the
+\Condor{startd} ignores these bogus results. The cause of the negative MIPS
+ratings is still unknown.
+
 \end{itemize}
 
 \noindent Known Bugs:
