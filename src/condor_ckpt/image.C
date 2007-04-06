@@ -1205,7 +1205,7 @@ Image::Read()
 		// Make sure we have a valid file descriptor to read from
 	if( fd < 0 && file_name && file_name[0] ) {
 //		if( (fd=open_url(file_name,O_RDONLY)) < 0 ) {
-			if( (fd=open_ckpt_file(file_name,O_RDONLY)) < 0 ) {
+			if( (fd=open_ckpt_file(file_name,O_RDONLY,0)) < 0 ) {
 				dprintf( D_ALWAYS, "open_ckpt_file failed: %s",
 						 strerror(errno));
 				return -1;
