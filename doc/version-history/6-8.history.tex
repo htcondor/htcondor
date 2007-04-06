@@ -167,6 +167,8 @@ been matched.
 executing job, the logic for whether to delegate or copy the proxy 
 (determined by configuration parameter
 \Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS}) was reversed.
+The authentication logic for this operation was also incorrect, causing the
+operation to fail in many instances.
 
 \item Made a small improvement to the reliability of Condor's process
 ancestry tracking under Linux.  However, jobs that create children
