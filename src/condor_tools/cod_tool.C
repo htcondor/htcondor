@@ -605,7 +605,7 @@ parseArgv( int argc, char* argv[] )
 				invalid( *tmp );
 			} 
 			Termlog = 1;
-			dprintf_config ("TOOL", 2);
+			dprintf_config ("TOOL");
 			break;
 
 		case 'a':

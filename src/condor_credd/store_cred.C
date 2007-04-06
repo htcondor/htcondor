@@ -115,7 +115,7 @@ int main(int argc, char **argv)
 
 					// dprintf to console
 				Termlog = 1;
-				dprintf_config ("TOOL", 2 );
+				dprintf_config ("TOOL");
 
 				break;
 			case 'S':

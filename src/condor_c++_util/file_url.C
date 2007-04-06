@@ -26,8 +26,7 @@
 #include "url_condor.h"
 
 static
-int condor_file_open_ckpt_file( const char *name, int flags, 
-								size_t /* n_bytes */ )
+int condor_file_open_ckpt_file( const char *name, int flags )
 {
 	if( flags & O_WRONLY ) {
 		return safe_open_wrapper( name, O_CREAT | O_TRUNC | O_WRONLY, 0664 );

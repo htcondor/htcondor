@@ -1010,7 +1010,6 @@ bool SetPrivilege(
 
 #ifdef PERM_OBJ_DEBUG
 
-extern void dprintf_config( char* subsys, FILE* logfd );
 extern void set_debug_flags( char *strflags );
 extern "C" FILE	*DebugFP;
 

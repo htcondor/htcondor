@@ -33,7 +33,6 @@
 #include "my_hostname.h"
 #include "my_username.h"
 
-int open_url(char *, int, int);
 extern "C" int		strcmp_until(const char *, const char *, const char);
 
 ReliSock *qmgmt_sock = NULL;

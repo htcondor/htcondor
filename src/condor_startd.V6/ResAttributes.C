@@ -129,7 +129,7 @@ MachAttributes::compute( amask_t how_much )
 		if( m_subnet ) {
 			free( m_subnet );
 		}
-		m_subnet = calc_subnet_name( my_full_hostname() );
+		m_subnet = calc_subnet_name();
 		dprintf( D_FULLDEBUG, "%s = \"%s\"\n", ATTR_SUBNET,
 				 m_subnet );
 

@@ -51,7 +51,7 @@ main(int argc, char **argv)
 {
 		// Set up the dprintf stuff...
 	Termlog = true;
-	dprintf_config("test_log_reader", 2);
+	dprintf_config("test_log_reader");
 	DebugFlags = D_ALWAYS;
 
 	int		result = 0;

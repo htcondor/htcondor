@@ -49,7 +49,7 @@ int main(int argc, char **argv)
 {
 		// Set up the dprintf stuff...
 	Termlog = true;
-	dprintf_config("test_check_events", 2);
+	dprintf_config("test_check_events");
 	DebugFlags = D_ALWAYS;
 
 	bool			result = true;

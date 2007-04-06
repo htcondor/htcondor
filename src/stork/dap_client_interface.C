@@ -129,7 +129,7 @@ stork_parse_global_opts(
 			case 'd':
 				// -debug
 				Termlog = 1;
-				dprintf_config ("TOOL", 2 );
+				dprintf_config ("TOOL");
 				argc--;	// Account for one global arg processed
 				break;
 			case 'n':

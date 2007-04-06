@@ -1172,7 +1172,7 @@ processCommandLineArguments (int argc, char *argv[])
 		if( match_prefix( arg, "debug" ) ) {
 			// dprintf to console
 			Termlog = 1;
-			dprintf_config ("TOOL", 2 );
+			dprintf_config ("TOOL" );
 		}
 		else
 		if (match_prefix(arg,"io")) {

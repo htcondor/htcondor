@@ -507,7 +507,7 @@ main( int argc, char *argv[] )
 			break;
 		case 'd':
 			Termlog = 1;
-			dprintf_config ("TOOL", 2);
+			dprintf_config ("TOOL");
 			break;
 		case 'g':
 			fast = false;

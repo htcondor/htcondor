@@ -231,7 +231,7 @@ struct sockaddr_in  *from;
 }
 
 char *
-calc_subnet_name(char* host)
+calc_subnet_name()
 {
 	char			subnetname[MAXHOSTNAMELEN];
 	char			*subnet_ptr;
@@ -240,9 +240,6 @@ calc_subnet_name(char* host)
 	struct			in_addr	in;
 	unsigned int	host_ordered_addr;
 	unsigned int		net_ordered_addr;
-
-		/* Shut the compiler up */
-	host;
 
 	if ( !(host_ordered_addr = my_ip_addr()) ) {
 		return strdup("");

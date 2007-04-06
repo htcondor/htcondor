@@ -259,17 +259,14 @@ Email::sendAction( ClassAd* ad, const char* reason,
 }
 
 
+/*
 void
 Email::sendError( ClassAd* ad, const char* err_summary, 
 				  const char* err_msg )
 {
 		// TODO!
-
-		// Shut the compiler up
-	ad;
-	err_summary;
-	err_msg;
 }
+*/
 
 
 FILE*

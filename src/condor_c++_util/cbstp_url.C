@@ -26,8 +26,10 @@
 #include "internet.h"
 #include "condor_debug.h"
 
-int condor_bytes_stream_open_ckpt_file( const char *name, int /* flags */, 
-										size_t /* n_bytes */ )
+// We need to match a function prototype in class URLProtocol, but we
+// don't care about flags, as we're just going to connect to a socket
+// and puke bytes at it.
+int condor_bytes_stream_open_ckpt_file( const char *name, int /* flags */ )
 {
 	struct sockaddr_in	sin;
 	int		sock_fd;

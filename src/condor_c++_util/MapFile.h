@@ -75,7 +75,6 @@ class MapFile
 
 	void
 	PerformSubstitution(ExtArray<MyString> & groups,
-						const MyString input,
 						const MyString pattern,
 						MyString & output);
 

@@ -994,7 +994,7 @@ Image::Write( const char *ckpt_file )
 	 * in a signal handler; open_url calls malloc() and this messes up
 	 * checkpointing on SGI IRIX6 bigtime!!  so it is commented out for
 	 * now until we get rid of all mallocs in open_url() -Todd T, 2/97 */
-	// if( (fd=open_url(ckpt_file,O_WRONLY|O_TRUNC|O_CREAT,len)) < 0 ) {
+	// if( (fd=open_url(ckpt_file,O_WRONLY|O_TRUNC|O_CREAT)) < 0 ) {
 		sprintf( tmp_name, "%s.tmp", ckpt_file );
 		dprintf( D_ALWAYS, "Tmp name is \"%s\"\n", tmp_name );
 #if defined(COMPRESS_CKPT)
@@ -1204,8 +1204,8 @@ Image::Read()
 
 		// Make sure we have a valid file descriptor to read from
 	if( fd < 0 && file_name && file_name[0] ) {
-//		if( (fd=open_url(file_name,O_RDONLY,0)) < 0 ) {
-			if( (fd=open_ckpt_file(file_name,O_RDONLY,0)) < 0 ) {
+//		if( (fd=open_url(file_name,O_RDONLY)) < 0 ) {
+			if( (fd=open_ckpt_file(file_name,O_RDONLY)) < 0 ) {
 				dprintf( D_ALWAYS, "open_ckpt_file failed: %s",
 						 strerror(errno));
 				return -1;

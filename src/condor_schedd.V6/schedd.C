@@ -8604,7 +8604,7 @@ Scheduler::NotifyUser(shadow_rec* srec, char* msg, int status, int JobStatus)
 
 /*
 	sprintf(url, "mailto:%s", owner);
-	if ((fd = open_url(url, O_WRONLY, 0)) < 0) {
+	if ((fd = open_url(url, O_WRONLY)) < 0) {
 		EXCEPT("condor_open_mailto_url(%s, %d, 0)", owner, O_WRONLY, 0);
 	}
 

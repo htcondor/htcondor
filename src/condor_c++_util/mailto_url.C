@@ -28,8 +28,7 @@
 #include "url_condor.h"
 
 static
-int condor_open_mailto_url( const char *name, int flags, 
-									   size_t n_bytes )
+int condor_open_mailto_url( const char *name, int flags )
 {
 	char	*mail_prog = 0;
 	char	filter_url[1000];
@@ -45,7 +44,7 @@ int condor_open_mailto_url( const char *name, int flags,
 
 	sprintf(filter_url, "filter:%s %s", mail_prog, name);
 	free(mail_prog);
-	return open_url(filter_url, flags, n_bytes);
+	return open_url(filter_url, flags);
 }
 
 

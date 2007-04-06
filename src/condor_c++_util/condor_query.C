@@ -205,8 +205,10 @@ CondorQuery (AdTypes qType)
 
 // copy ctor; makes deep copy
 CondorQuery::
-CondorQuery (const CondorQuery & /* from */)
+CondorQuery (const CondorQuery &from)
 {
+		// Unimplemented!
+	from;
 }
 
 
@@ -214,6 +216,14 @@ CondorQuery (const CondorQuery & /* from */)
 CondorQuery::
 ~CondorQuery ()
 {	
+}
+
+// assignment
+CondorQuery &CondorQuery::
+operator= (const CondorQuery &)
+{
+		// Unimplemented!
+	return *this;
 }
 
 

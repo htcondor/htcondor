@@ -116,7 +116,7 @@ void Server::Init()
 	num_replicate_xfers = 0;
 
 	config();
-	dprintf_config( mySubSystem, 2 );
+	dprintf_config( mySubSystem );
 
 	set_condor_priv();
 

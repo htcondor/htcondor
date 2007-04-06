@@ -267,7 +267,6 @@ private:
 			assumes we were killed in the middle of the command, and
 			aborts the transaction.
 			@param action What action we're supposed to perform
-			@param action_str String describing the action
 			@param constraint Constraint to operate on, or NULL
 			@param ids StringList of ids to operate on, or NULL
 			@param reason A string describing what we're doing
@@ -279,7 +278,7 @@ private:
 			if we couldn't get any results.  The caller must delete
 			this ClassAd when they are done with the results.
 		*/
-	ClassAd* actOnJobs( JobAction action, const char* action_str, 
+	ClassAd* actOnJobs( JobAction action, 
 						const char* constraint, StringList* ids, 
 						const char* reason, const char* reason_attr,
 						action_result_type_t result_type,

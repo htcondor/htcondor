@@ -32,10 +32,10 @@
 #include "condor_attributes.h"
 #include "condor_version.h"
 #include "my_hostname.h"
+#include "internet.h"
 
 
 extern "C" {
-	char* calc_subnet_name(char*);
 	char* getwd( char* );
 }
 
@@ -78,7 +78,7 @@ XferSummary::init()
 	}
 
 	if( subnet ) { free( subnet ); }
-	subnet = (char *)calc_subnet_name(NULL);
+	subnet = calc_subnet_name();
 
 	/* pwd is an array defined for this class to be of path_max size */
 	if( ! getcwd( pwd, _POSIX_PATH_MAX ) ) {

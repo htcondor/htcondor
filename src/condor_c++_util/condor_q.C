@@ -265,7 +265,7 @@ fetchQueueFromHost (ClassAdList &list, char *host, CondorError* errstack)
 }
 
 int CondorQ::
-fetchQueueFromDB (ClassAdList &list, char *dbconn, CondorError* /* errstack */)
+fetchQueueFromDB (ClassAdList &list, char *dbconn, CondorError* errstack)
 {
 #if WANT_QUILL
 	ClassAd 		filterAd;
@@ -359,7 +359,7 @@ fetchQueueFromHostAndProcess ( char *host, process_function process_func, Condor
 }
 
 int CondorQ::
-fetchQueueFromDBAndProcess ( char *dbconn, process_function process_func, CondorError* /* errstack */ )
+fetchQueueFromDBAndProcess ( char *dbconn, process_function process_func, CondorError* errstack )
 {
 #if WANT_QUILL
 	ClassAd 		filterAd;

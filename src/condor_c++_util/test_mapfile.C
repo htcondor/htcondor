@@ -41,7 +41,7 @@ main(int argc, char **argv)
 	MapFile map;
 	int line;
 
-		//dprintf_config("TOOL", 2);
+		//dprintf_config("TOOL");
 
 	if (0 != (line = map.ParseCanonicalizationFile(canonical_filename))) {
 		cout << "Error parsing line " << line << " of " << canonical_filename << "." << endl;

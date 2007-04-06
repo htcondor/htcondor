@@ -311,7 +311,7 @@ main(int argc, char *argv[] )
 	*/ 
 	set_condor_priv();
 
-	dprintf_config( mySubSystem, SHADOW_LOG );
+	dprintf_config( mySubSystem );
 	DebugId = whoami;
 
 	dprintf( D_ALWAYS, "******* Standard Shadow starting up *******\n" );

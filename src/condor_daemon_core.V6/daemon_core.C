@@ -1342,6 +1342,7 @@ int DaemonCore::Create_Pipe( int *pipe_ends,
 	// Unix
 
 	// Shut the compiler up
+	// These parameters are needed on Windows
 	can_register_read;
 	can_register_write;
 	psize;
@@ -1411,6 +1412,7 @@ int DaemonCore::Inherit_Pipe(int fd, bool is_write, bool can_register, bool nonb
 	}
 #else
 		// Shut the compiler up
+		// These parameters are needed on Windows
 	is_write;
 	can_register;
 	nonblocking;
@@ -3202,7 +3204,7 @@ int DaemonCore::HandleReq(Stream *insock)
 	memset(tmpbuf,0,sizeof(tmpbuf));
 	if ( is_tcp ) {
 			// TODO Should we be ignoring the return value of condor_read?
-		condor_read(((Sock*)stream)->get_file_desc(),
+		int nro = condor_read(((Sock*)stream)->get_file_desc(),
 			tmpbuf, sizeof(tmpbuf) - 1, 1, MSG_PEEK);
 	}
 	if ( strstr(tmpbuf,"GET") ) {

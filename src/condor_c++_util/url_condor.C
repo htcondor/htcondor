@@ -32,7 +32,7 @@ extern void include_urls();
 static URLProtocol *protocol_list = 0;
 
 URLProtocol::URLProtocol(char *protocol_key, char *protocol_name, 
-				int (*protocol_open_func)(const char *, int, size_t))
+						 open_function_type protocol_open_func)
 {
 	key = strdup(protocol_key);
 	name = strdup(protocol_name);
@@ -111,7 +111,7 @@ FindURLProtocolForName(const char *name)
 
 extern "C" {
 int 
-open_url( const char *name, int flags, size_t n_bytes )
+open_url( const char *name, int flags )
 {
 	URLProtocol	*this_protocol;
 	char		*ptr;
@@ -121,7 +121,7 @@ open_url( const char *name, int flags, size_t n_bytes )
 	if (this_protocol) {
 		ptr = (char *)strchr((const char *)name, ':');
 		ptr++;
-		rval = this_protocol->call_open_func(ptr, flags, n_bytes);
+		rval = this_protocol->call_open_func(ptr, flags);
 	} else {
 		rval = -1;
 	}

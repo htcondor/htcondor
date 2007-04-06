@@ -85,7 +85,7 @@ int main( int argc, char *argv[] )
 		} else if(!strcmp(argv[i],"-debug")) {
 				// dprintf to console
 			Termlog = 1;
-			dprintf_config ("TOOL", 2 );
+			dprintf_config ("TOOL");
 		} else if(argv[i][0]!='-') {
 			if(command==-1) {
 				command = getCollectorCommandNum(argv[i]);
