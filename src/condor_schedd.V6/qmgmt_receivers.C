@@ -795,9 +795,20 @@ do_Q_request(ReliSock *syscall_sock)
 
 					sl.rewind();
 					while (char *attr = sl.next()) {
+						StringList internals;
+						StringList externals; // shouldn't have any
+
+						ad->GetReferences(attr, internals, externals);
+						internals.rewind();
+
+						while (char *indirect_attr = internals.next()) {
+							ExprTree *tree = ad->Lookup(indirect_attr);
+							if (tree) shortAd.Insert(tree->DeepCopy());
+						}
 						ExprTree *tree = ad->Lookup(attr);
 						if (tree) shortAd.Insert(tree->DeepCopy());
 					}
+
 					assert( shortAd.put(*syscall_sock) );
 				} else {
 					assert( ad->put(*syscall_sock) );
