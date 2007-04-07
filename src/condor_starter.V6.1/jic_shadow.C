@@ -1349,31 +1349,12 @@ refuse(ReliSock * s)
 	s->eom();
 }
 
-static bool
-ensureAuthenticated(ReliSock * rsock, CondorError & errstack)
-{
-	if( rsock->isAuthenticated()) {
-		return true;
-	}
-
-	char * p = SecMan::getSecSetting ("SEC_%s_AUTHENTICATION_METHODS", "WRITE");
-	MyString methods;
-	if (p) {
-		methods = p;
-		free (p);
-	} else {
-		methods = SecMan::getDefaultAuthenticationMethods();
-	}
-	return rsock->authenticate(methods.Value(), &errstack);
-}
-
 // Based on Scheduler::updateGSICred
 static bool
 updateX509Proxy(int cmd, ReliSock * rsock, const char * path)
 {
 	ASSERT(rsock);
 	ASSERT(path);
-	ASSERT(local_user);
 
 	rsock->timeout(10);
 	rsock->decode();
