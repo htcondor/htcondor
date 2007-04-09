@@ -281,6 +281,13 @@ Condor_Auth_Base * auth = NULL;
 	}
 	dprintf(D_SECURITY, "Authentication was a %s.\n", retval == 1 ? "Success" : "FAILURE" );
 
+
+	// at this point, all methods have set the raw authenticated name available
+	// via getAuthenticatedName().
+
+	dprintf (D_ALWAYS, "ZKM: setting default map to %s\n", authenticator_->getRemoteFQU());
+
+
 	// check to see if CERTIFICATE_MAPFILE was defined.  if so, use it.  if
 	// not, do nothing.  the user and domain have been filled in by the
 	// authentication method itself, so just leave that alone.
@@ -300,18 +307,19 @@ Condor_Auth_Base * auth = NULL;
 		const char * name_to_map = authenticator_->getAuthenticatedName();
 		if (name_to_map) {
 			dprintf (D_SECURITY, "ZKM: name to map is '%s'\n", name_to_map);
-
 			dprintf (D_SECURITY, "ZKM: pre-map: current user is '%s'\n", authenticator_->getRemoteUser());
 			dprintf (D_SECURITY, "ZKM: pre-map: current domain is '%s'\n", authenticator_->getRemoteDomain());
 			map_authentication_name_to_canonical_name(auth_status, method_used, name_to_map);
-			dprintf (D_SECURITY, "ZKM: post-map: current user is '%s'\n", authenticator_->getRemoteUser());
-			dprintf (D_SECURITY, "ZKM: post-map: current domain is '%s'\n", authenticator_->getRemoteDomain());
-			dprintf (D_SECURITY, "ZKM: post-map: current FQU is '%s'\n", authenticator_->getRemoteFQU());
-
 		} else {
 			dprintf (D_SECURITY, "ZKM: name to map is null, not mapping.\n");
 		}
 	}
+	// for now, let's be a bit more verbose and print this to D_SECURITY.
+	// yeah, probably all of the log lines that start with ZKM: should be
+	// updated.  oh, i wish there were a D_ZKM, but alas, we're out of bits.
+	dprintf (D_SECURITY, "ZKM: post-map: current user is '%s'\n", authenticator_->getRemoteUser());
+	dprintf (D_SECURITY, "ZKM: post-map: current domain is '%s'\n", authenticator_->getRemoteDomain());
+	dprintf (D_SECURITY, "ZKM: post-map: current FQU is '%s'\n", authenticator_->getRemoteFQU());
 
 	mySock->allow_one_empty_message();
 	return ( retval );
@@ -350,7 +358,7 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 		}
 		global_map_file_load_attempted = true;
 	} else {
-		dprintf (D_ALWAYS, "ZKM: NOT parsing map file.\n");
+		dprintf (D_SECURITY, "ZKM: map file already loaded.\n");
 	}
 
 	dprintf (D_ALWAYS, "ZKM: attempting to map '%s'\n", authentication_name);
@@ -369,19 +377,10 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 			//
 			if ((authentication_type == CAUTH_GSI) && (canonical_user == "GSS_ASSIST_GRIDMAP")) {
 #if defined(GSI_AUTHENTICATION)
-				// hack for now: call a function in the GSI object to map it, just
-				// so the globus code stays in that object and out of this one.
-				//
-				// at the moment, this function has already been invoked during
-				// the authentication itself, so this really isn't necessary and
-				// is in fact inefficient.  when the x509 auth gets clean up though,
-				// this will be the correct place to do this.
+				// it's already been done.  we just need to return here so we don't
+				// set anything below.
 
-				if (((Condor_Auth_X509*)authenticator_)->nameGssToLocal( authentication_name )) {
-					// if succesfully, return from here.  otherwise, fall
-					// through to the code below which inserts a default map.
-					return;
-				}
+				// ((Condor_Auth_X509*)authenticator_)->nameGssToLocal( authentication_name );
 
 				// that function calls setRemoteUser() and setRemoteDomain().
 				//
@@ -411,22 +410,6 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 		} else {
 			dprintf (D_ALWAYS, "ZKM: did not find user %s.\n", canonical_user.Value());
 		}
-	}
-
-	// do some sane 'default' map, which is the method concatenated with a ':'
-	// and the authenticated name.
-	MyString user;
-	user = method_string;
-	user += ':';
-	user += authentication_name;
-
-	dprintf (D_ALWAYS, "ZKM: using default map to %s\n", user.Value());
-	authenticator_->setRemoteUser( user.Value() );
-
-	char* domain = param("UID_DOMAIN");
-	if (domain) {
-		authenticator_->setRemoteDomain( domain );
-		free(domain);
 	}
 
 }
