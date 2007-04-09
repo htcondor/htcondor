@@ -357,7 +357,6 @@ bool IpVerify :: has_user(UserPerm_t * perm, const char * user, int & mask, MySt
 
     // Last resort, see if the wild card is in the list
     if (found == -1) {
-        MyString tmp;
         // see if the user is total wild
         userid = TotallyWild;
         found  = perm->lookup(userid, mask);
@@ -390,15 +389,6 @@ IpVerify::add_hash_entry(const struct in_addr & sin_addr, const char * user, int
         userid = MyString(user);
 	}
     else {
-        // Convert domain to lower case 
-        char * lower = strdup(user);
-        char * at = strchr(lower, '@');
-        if (at) {
-            while (*(++at) != '\0') {
-                *at = tolower((int) *at);
-            }
-        }
-        free(lower);
         perm = new UserPerm_t(42, compute_host_hash);
         if (PermHashTable->insert(sin_addr, perm) != 0) {
             delete perm;
@@ -649,7 +639,7 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
 	memcpy(&sin_addr,&sin->sin_addr,sizeof(sin_addr));
 	mask = 0;	// must initialize to zero because we logical-or bits into this
 
-    if (who == NULL) {
+    if (who == NULL || *who == '\0') {
         who = TotallyWild;
     }
 	switch ( perm ) {
