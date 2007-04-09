@@ -495,6 +495,9 @@ public:
 	/// For stream types that support it, this returns the ip address we are connecting to.
 	virtual char const *endpoint_ip_str() = 0;
 
+	/// For stream types that support it, this returns the authenticated user name.
+	virtual const char *getFullyQualifiedUser() const = 0;
+
 	/** Get this stream's type.
         @return the type of this stream
     */
