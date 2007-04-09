@@ -317,15 +317,22 @@ MachAttributes::benchmark( Resource* rip, int force )
 		// smaller value after the calculation than before. So we
 		// explicitly check for that here and log what we see.
 		// See condor-admin #14595
-	struct tms before, after;
 	dprintf( D_FULLDEBUG, "About to compute mips\n" );
+#ifndef WIN32
+	struct tms before, after;
 	times(&before);
+#endif
 	int new_mips_calc = sysapi_mips();
+#ifndef WIN32
 	times(&after);
+#endif
 	dprintf( D_FULLDEBUG, "Computed mips: %d\n", new_mips_calc );
 	if ( new_mips_calc <= 0 ) {
-		dprintf( D_ALWAYS, "Non-positive MIPS calculated! ticks before: %d, "
-				 "ticks after: %d\n", before.tms_utime, after.tms_utime );
+		dprintf( D_ALWAYS, "Non-positive MIPS calculated!\n" );
+#ifndef WIN32
+		dprintf( D_ALWAYS, "   ticks before: %d, ticks after: %d\n",
+			 before.tms_utime, after.tms_utime );
+#endif
 	}
 
 	if ( m_mips == -1 ) {
