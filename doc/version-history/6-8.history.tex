@@ -201,6 +201,11 @@ POST script was run.
 usage to grow over time when job or machine ClassAds made use of
 ClassAd functions that do regular expression matching operations.
 
+\item Fixed a bug that was preventing Condor daemons from caching DNS
+information for hosts authenticated via HOSTALLOW settings (i.e. no
+strong authentication).  The collector, in particular, should spend
+much less time on IP to hostname lookups.
+
 \end{itemize}
 
 \noindent Known Bugs:
