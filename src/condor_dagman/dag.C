@@ -827,9 +827,15 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 			// user log.  Therefore, condor_dagman doesn't know abou them,
 			// and can think the post script was run before all retries
 			// were exhausted.  wenger 2004-11-23.
-		ASSERT( job->GetStatus() == Job::STATUS_POSTRUN || recovery );
-
-		_postRunNodeCount--;
+		if ( job->GetStatus() == Job::STATUS_POSTRUN ) {
+			_postRunNodeCount--;
+		} else {
+			ASSERT( recovery );
+			// If we get here, it means that, in the run we're recovering,
+			// the POST script for a node was run without any indication
+			// in the log that the node was run.  This probably means that
+			// all submit attempts on the node failed.  wenger 2007-04-09.
+		}
 
 		PostScriptTerminatedEvent *termEvent =
 			(PostScriptTerminatedEvent*) event;
