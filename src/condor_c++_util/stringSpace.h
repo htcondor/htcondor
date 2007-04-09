@@ -28,6 +28,7 @@
 #include "extArray.h"
 
 template <class Key, class Value> class HashTable;
+class YourSensitiveString;
 
 enum StringSpaceAdoptionMethod
 {
@@ -97,7 +98,7 @@ class StringSpace
      * Constructor. Creates the string space. The initial size of the
      * hash table in which we store the strings is an optional
      * parameter */
-	StringSpace (int initial_size=256, bool makeCaseSensitive=true);
+	StringSpace (int initial_size=15000);
 
 	/** Destructor. This will explicitly free all the memory associated 
      * with the strings. 
@@ -170,8 +171,7 @@ class StringSpace
 		int         adoptMode; 
 	};
 
-	HashTable<MyString,int>  *stringSpace;	
-	bool                     caseSensitive;
+	class HashTable<YourSensitiveString,int>  *stringSpace;
 	ExtArray<SSStringEnt>    strTable;
 	// The next couple of variables help us keep
 	// track of where we can put things into the strTable.

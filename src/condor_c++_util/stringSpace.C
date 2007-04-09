@@ -26,26 +26,51 @@
 #include "stringSpace.h"
 #include "condor_debug.h"
 
-// hash function for strings
-static int 
-hashFunction (const MyString &str, int numBuckets)
-{
-	int i = str.Length() - 1, hashVal = 0;
-	const char *s = str.GetCStr(); // Index throug the raw char * for speed
-	while (i >= 0) 
-	{
-		hashVal += s[i];
-		i--;
+// YourSensitiveString is a case-sensitive string class that holds a
+// string pointer (no copying or freeing) for use in a HashTable.
+
+class YourSensitiveString {
+public:
+	YourSensitiveString() : m_str(0) {}
+	YourSensitiveString(char const *str) {
+		m_str = str;
 	}
-	return (hashVal % numBuckets);
+	bool operator ==(const YourSensitiveString &rhs) {
+		return strcmp(m_str,rhs.m_str) == 0;
+	}
+	void operator =(char const *str) {
+		m_str = str;
+	}
+	static int hashFunction(const YourSensitiveString &s, int hash_length);
+
+private:
+	char const *m_str;
+};
+
+template class HashTable<YourSensitiveString,int>;
+
+// hash function for strings
+// Chris Torek's world famous hashing function
+int YourSensitiveString::hashFunction(const YourSensitiveString &s, int hash_length) {
+	int hash = 0;
+
+	const char *p = s.m_str;
+	while (*p) {
+		hash = 33 * hash + *p;
+		p++;
+	}
+
+	return (abs(hash) % hash_length);
 }
 
 
 StringSpace::
-StringSpace (int initial_size, bool makeCaseSensitive)
+StringSpace (int initial_size)
 {
 	SSStringEnt filler;
-	stringSpace = new HashTable<MyString,int>((int) (1.25 * initial_size), &hashFunction);
+	stringSpace = new HashTable<YourSensitiveString,int>(
+		(int) (1.25 * initial_size),
+		&YourSensitiveString::hashFunction );
 
 	// initiliaze the string table
 	filler.inUse     = false;
@@ -53,17 +78,6 @@ StringSpace (int initial_size, bool makeCaseSensitive)
 	filler.adoptMode = SS_INVALID;
 	filler.refCount  = 0;
 	strTable.fill (filler);
-
-	// Two things to note:
-	// 1. We used to be able to set the case sensitivity in a separate
-	//    function, but there are cases where that would give bad 
-	//    results, like if we inserted a capitalized string, then
-	//    switched to case insensitive.
-	// 2. The way we achieve case insensitivity is by converting 
-	//    strings to lower case. That sucks: we should be insensitive
-	//    but case-preserving. I'm thinking about this one.
-	// --Alain Roy 30-Aug-2001
-	caseSensitive = makeCaseSensitive;
 
 	// Set up our tracking of the strTable
 	first_free_slot = 0;
@@ -136,21 +150,14 @@ purge ()
 int StringSpace::
 getCanonical (char* &str, StringSpaceAdoptionMethod adopt)
 {
-	int index;
-	MyString myStr(str);
-
 	// sanity check
 	if (!str) return -1;
 
-	// if case insensitive, convert to lower case
-	if( !caseSensitive ) {
-		for( int i = myStr.Length(); i >= 0 ; i-- ) {
-			myStr.setChar(i, tolower( myStr[i] ));
-		}
-	}
+	YourSensitiveString yourStr(str);
+	int index;
 
 	// case 1:  already exists in space
-	if (stringSpace->lookup (myStr, index) == 0) 
+	if (stringSpace->lookup (yourStr, index) == 0) 
 	{
 		switch (adopt)
         {
@@ -199,7 +206,8 @@ getCanonical (char* &str, StringSpaceAdoptionMethod adopt)
 	}
 
     // insert into hash table
-    if (stringSpace->insert (myStr, index) == 0) return index;
+	yourStr = strTable[index].string;
+    if (stringSpace->insert (yourStr, index) == 0) return index;
 
     // some problem
 	return -1;
@@ -323,7 +331,8 @@ SSString::dispose ()
     // if it is a valid reference, decrement refcount and check it is zero
     if (context && (--context->strTable[index].refCount) == 0)
     {
-		MyString str( context->strTable[index].string );
+		YourSensitiveString str( context->strTable[index].string );
+		context->stringSpace->remove( str );
 
         switch (context->strTable[index].adoptMode)
         {
@@ -345,7 +354,7 @@ SSString::dispose ()
             default:
                 break;
         }
-		context->stringSpace->remove( str );
+
 		// Adjust the variables that track our strTable usage. 
 		context->number_of_slots_filled--;
 		if (context->number_of_slots_filled < 0) {
@@ -403,10 +412,9 @@ int
 StringSpace::checkFor (char *str)		// check if string is in the space
 {
 	int canonical_index;
-	if (stringSpace->lookup (str, canonical_index) != 0) {
+	YourSensitiveString yourStr(str);
+	if (stringSpace->lookup (yourStr, canonical_index) != 0) {
 		canonical_index = -1;
 	}
 	return canonical_index;
 }
-
-
