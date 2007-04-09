@@ -131,7 +131,7 @@ by the server (for example, the \Condor{schedd}) before the client
 (for example, the \Condor{shadow}) was done using it.
 This bug can be observed as
 communication failure the next time the client tried to connect to
-the server.  In some cases, this caused jobs to be requeued to be run
+the server.  In some cases, this caused jobs to be re-queued to be run
 again, because the final update of the job queue failed.
 
 \item If a grid job becomes held while it's still submitted to the remote
@@ -191,6 +191,11 @@ rating when performing benchmarks on the machine. This caused the
 \Attr{Mips} attribute to disappear from the machine ad. Now, the
 \Condor{startd} ignores these bogus results. The cause of the negative MIPS
 ratings is still unknown.
+
+% PR 826
+\item Fixed a bug that caused \Condor{dagman} to hang if it processed,
+in recovery mode, a node for which all submit attempts failed and a
+POST script was run.
 
 \end{itemize}
 
