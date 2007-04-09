@@ -197,6 +197,10 @@ ratings is still unknown.
 in recovery mode, a node for which all submit attempts failed and a
 POST script was run.
 
+\item Fixed a bug that would cause the \Condor{negotiator}'s memory
+usage to grow over time when job or machine ClassAds made use of
+ClassAd functions that do regular expression matching operations.
+
 \end{itemize}
 
 \noindent Known Bugs:
