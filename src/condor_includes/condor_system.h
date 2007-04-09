@@ -86,7 +86,10 @@
 #include "condor_fix_access.h"
 #include "condor_file_lock.h"
 #include "condor_fix_assert.h"
-//#include "condor_fix_iomanip.h"
+
+#if defined(WIN32)
+#include "condor_fix_iomanip.h"
+#endif
 
 
 /**********************************************************************
