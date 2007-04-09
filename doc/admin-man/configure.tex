@@ -2669,11 +2669,11 @@ Configuring The Startd Policy.
   terms of seconds and defaults to 300 (5 minutes).
   
 \item[\Macro{MAXJOBRETIREMENTTIME}] \label{param:MaxJobRetirementTime}
-  An integer value representing the number of seconds allotted as
-  a retirement. The default value of 0 (when the configuration
-  variable is not present) implements the expected policy that
-  there is no retirement time.
-  See \MacroNI{MAXJOBRETIREMENTTIME} in
+  An integer value representing the number of seconds a preempted job
+  will be allowed to run before being evicted. The default value of 0
+  (when the configuration variable is not present) implements the
+  expected policy that there is no retirement time.  See
+  \MacroNI{MAXJOBRETIREMENTTIME} in
   section~\ref{sec:State-Expression-Summary} for further explanation.
 
 \item[\Macro{CLAIM\_WORKLIFE}] \label{param:ClaimWorklife}

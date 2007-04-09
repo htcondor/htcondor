@@ -1361,7 +1361,26 @@ default.)
 
 Once the job finishes or if the retirement time expires, the machine
 enters the Preempting state.
-  
+
+This expression is evaluated in the context of the job ClassAd, so it
+may refer to attributes of the current job as well as machine
+attributes.  The expression is continually re-evaluated while the job
+is running, so it is possible, though unusual, to have an expression
+that changes over time.  For example, if you want the retirement time
+to drop to 0 if an especially high priority job is waiting for the
+current job to retire, you could use \AdAttr{PreemptingRank} in the
+expression.  Example:
+
+\begin{verbatim}
+MaxJobRetirementTime = 3600 * ( \
+  MY.PreemptingRank =?= UNDEFINED || \
+  PreemptingRank < 600)
+\end{verbatim}
+
+In this example, the retirement time is 3600 seconds, but if a job gets
+matched to this machine and it has a \AdAttr{PreemptingRank} of 600 or more,
+the retirement time drops to 0 and the current job is immediately preempted.
+
 \item[\Expr{WANT\_VACATE}] This is checked only when the
   \Expr{PREEMPT} expression is TRUE and the machine enters the
   Preempting state.
