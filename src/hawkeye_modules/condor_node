@@ -21,6 +21,7 @@ my %Config = (
 	      MasterOwnerList => "",
 	      DaemonOwnerList => "",
 	      UserOwnerList => "",
+	      IgnoreCmdRe => "",
 	     );
 
 # Do it
@@ -42,6 +43,8 @@ sub Init {
     $Config{DaemonOwnerList} = $Tmp if ( $Tmp ne "" );
     $Tmp = HawkeyeLib::ReadConfig( "_user_owners", "" );
     $Config{UserOwnerList} = $Tmp if ( $Tmp ne "" );
+    $Tmp = HawkeyeLib::ReadConfig( "_ignore_cmd_re", "" );
+    $Config{IgnoreCmdRe} = $Tmp if ( $Tmp ne "" );
 }
 
 
@@ -61,7 +64,7 @@ sub RunIt {
 		      "NumShadows"	=> 0,
 		      "NumRunaway"	=> 0,
 		      "Vms"		=> "",
-		      "RunawayPids"	=> [],
+		      "RunawayPids"	=> { },
 		     );
 
     # List of owners, keyed by type
@@ -108,6 +111,7 @@ sub RunIt {
 	 condor_master	=> {
 			    Attr => "NumMasters",
 			    Owner => "Master",
+			    NeverRunAway => 1,
 			   },
 	 condor_schedd	=> {
 			    Attr => "NumSchedds",
@@ -123,6 +127,19 @@ sub RunIt {
 			   },
 	);
 
+    my @RunAwayReList;
+    push( @RunAwayReList, "condor_execute" );
+    push( @RunAwayReList, "hawkeye_startd" );
+    foreach my $Name ( keys %CondorProgTable )
+    {
+	if ( not exists $CondorProgTable{$Name}{NeverRunAway} )
+	{
+	    push( @RunAwayReList, $Name );
+	}
+    }
+    my $RunAwayRe = "(" . join( "|", @RunAwayReList ) . ")";
+    #print STDERR "RunAwayRe = /$RunAwayRe/\n";
+
     # Run a 'ps' and gather some info...
     my $Cmd = "/bin/ps -eo user,pid,ppid,comm,args";
     if ( ! open( PS, "$Cmd|" ) )
@@ -131,20 +148,25 @@ sub RunIt {
     }
     else
     {
+	my $IgnoreRe = $Config{IgnoreCmdRe};
 	while ( <PS> )
 	{
 	    chomp;
 	    my ( $User, $Pid, $Ppid, @ProgString ) = split;
 	    my $ProgString = join(" ", @ProgString);
-	    next if ( ! ( $ProgString =~ /condor/ ) );
+
+	    next if (/^USER\s+PID\s+PPID/ );
+	    next if ( ( $IgnoreRe ne "" ) and
+		      ( $ProgString =~ /$IgnoreRe/ ) );
 
 	    # Starter with PPID == 1
 	    if ( 1 == $Ppid )
 	    {
-		if ( $ProgString =~ /condor(_starter|_exec|\/execute)/ )
+		if ( $ProgString =~ /$RunAwayRe/ )
 		{
 		    $CondorInfo{NumRunaway}++;
-		    push( @{$CondorInfo{RunawayPids}}, $Pid );
+		    $CondorInfo{RunawayPids}{$Pid} = $ProgString;
+		    #print STDERR "'$ProgString' is a runaway\n";
 		}
 	    }
 
@@ -215,7 +237,8 @@ sub RunIt {
 			if (  ( $Interesting{$Key}{Required} ) &&
 					    ( ! exists $AdInfo{$Key} )  )
 			{
-			    print STDERR "Throwing out ad because '$Key' is missing\n";
+			    print STDERR
+				"Throwing out ad because '$Key' is missing\n";
 			    %AdInfo = ( );
 			    next READLINE;
 			}
@@ -308,6 +331,19 @@ sub RunIt {
 	    $Hash->Add( $Key,
 			HawkeyePublish::TypeString,
 			join( ",", @{$CondorInfo{$Key}} ) );
+	}
+	elsif ( ref( $CondorInfo{$Key} ) eq "HASH" )
+	{
+	    my @List = keys %{$CondorInfo{$Key}};
+	    $Hash->Add( $Key,
+			HawkeyePublish::TypeString,
+			join( ",", @List ) );
+	    foreach my $ListKey ( @List )
+	    {
+		$Hash->Add( $Key . "_" . $ListKey,
+			    HawkeyePublish::TypeAuto,
+			    $CondorInfo{$Key}{$ListKey} );
+	    }
 	}
 	else
 	{
