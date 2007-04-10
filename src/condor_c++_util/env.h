@@ -178,6 +178,7 @@ class Env {
 	char **getStringArray() const;
 
 	bool GetEnv(MyString const &var,MyString &val) const;
+	const char *GetEnv(MyString const &var) const;
 
 		// Returns true if string is safe to insert in old-style
 		// ; or | delimited string.
