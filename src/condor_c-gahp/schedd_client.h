@@ -56,9 +56,9 @@ extern int contactScheddTid;
 #define GAHP_NULL_PARAM "NULL"
 
 
-
 extern bool useXMLClassads;
 extern char *proxySubjectName;
+extern int contact_schedd_interval;
 
 // initialization
 void Init();

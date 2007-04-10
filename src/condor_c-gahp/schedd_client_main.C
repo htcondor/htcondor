@@ -32,9 +32,6 @@
 #include "io_loop.h"
 #include "PipeBuffer.h"
 
-// How often we contact the schedd (secs)
-extern int contact_schedd_interval;
-
 
 char *mySubSystem = "C_GAHP_WORKER_THREAD";	// used by Daemon Core
 
@@ -156,8 +153,6 @@ init_pipes() {
 
 void
 Init() {
-	contact_schedd_interval = 
-		param_integer ("C_GAHP_CONTACT_SCHEDD_DELAY", 20);
 }
 
 void
@@ -167,6 +162,9 @@ Register() {
 void
 Reconfig()
 {
+	contact_schedd_interval = 
+		param_integer ("C_GAHP_CONTACT_SCHEDD_DELAY", 20);
+
 	useXMLClassads = param_boolean( "GAHP_USE_XML_CLASSADS", false );
 
 		// When GSI authentication is used, we're willing to trust schedds
