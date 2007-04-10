@@ -870,7 +870,7 @@ sub RunNegotiator( $ )
     # publish the name of the one we have.
     my @List = keys %NegoNames;
     my $Current = "UNKNOWN";
-    $Current = $NegoNames{@List[0]} if ( scalar @List == 1 );
+    $Current = $NegoNames{$List[0]} if ( scalar @List == 1 );
     $Hash->Add( "Negotiators_Current",
 		HawkeyePublish::TypeString,
 		$Current );
