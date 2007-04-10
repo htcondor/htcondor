@@ -26,7 +26,7 @@ sub DoConfig( )
     # Prevent recursion
     if ( exists $ENV{HAWKEYE_MODULE} )
     {
-	print STDERR "$$: Recustion detected in Hawkeye module '" .
+	print STDERR "$$: Recursion detected in Hawkeye module '" .
 	    $ENV{HAWKEYE_MODULE} . "'\n";
 	sleep( 5 );
 	die;
