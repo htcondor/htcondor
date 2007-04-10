@@ -62,7 +62,7 @@ included.
 \item The functionality embodied in \Condor{q} \Opt{-better-analyze} is now
 available for X86\_64 native ports of Condor.
 
-\item We now supply distinct native ports for MacOSX 10.3 and 10.4.
+\item We now supply distinct, native ports for Mac OS X 10.3 and 10.4.
 
 \end{itemize}
 
@@ -71,12 +71,14 @@ available for X86\_64 native ports of Condor.
 \begin{itemize}
 
 \item Removed periodic re-indexing of the quill history\_vertical table.
-This should not be needed with the current schema, and should speed
+This should not be needed with the current schema, and it should speed
 up database re-indexing operations.
 
 \item Fixed a bug that would cause the dedicated scheduler to
-crash if the schedd was suspended or blocked for more than roughly 10 minutes.
-The most likely cause of this suspension is if the schedd executable was
+crash, if the \Condor{schedd} was suspended or blocked
+for more than approximately 10 minutes.
+The most likely cause of a suspension
+is a \Condor{schedd} executable
 mounted from a remote NFS file system.
 
 \item Fixed a bug where if \Opt{-lc} was specified multiple times for
@@ -85,21 +87,23 @@ do this), \Condor{compile} would fail to link the application and emit
 a multiply defined symbol error for many symbols.
 
 \item Fixed a bug where Condor erroneously indicates that a scheduler
-universe's job executable is missing or not executable, if the scheduler
+universe's job executable is missing or not executable.
+This occurred if the scheduler
 universe job had been submitted with
 \SubmitCmd{CopyToSpool = false} in the submit
 description file, and the user had a umask which prevented the user
 named \Login{condor} from following the search path to the
-user owned executable.
+user-owned executable.
 
 \item Fixed a bug that could cause the \Condor{schedd} to crash if it
 received too many matches in one negotiation cycle (more than 1000 on a
 Linux platform).
 
-\item Fixed a bug where \Condor{history} did not honor the \Opt{-format} flag
-properly when Quill was in use.
+\item Fixed a bug in which \Condor{history} did not honor the \Opt{-format} flag
+properly when Quill is in use.
 
-\item Fixed a bug where a java property which included surrounding double quotes
+\item Fixed a bug in which a java property that includes
+surrounding double quote marks
 caused the detection of a java virtual machine to go awry. 
 The fix, which may change in the future, changes any extra double quotes
 within a property value to single quotes.
@@ -175,7 +179,7 @@ ancestry tracking under Linux.  However, jobs that create children
 with more than 4096 bytes of environment are still problematic, due to
 a Linux kernel limitation that prevents reading more than 4k from
 /proc/<pid>/environ.  The only truly reliable way to ensure that
-Condor is aware of all processes spawned by a unix job is to use
+Condor is aware of all processes spawned by a Unix job is to use
 \MacroNI{VMx\_USER}.
 
 \item \Condor{glidein} option \Opt{-run\_here} no longer fails when the
