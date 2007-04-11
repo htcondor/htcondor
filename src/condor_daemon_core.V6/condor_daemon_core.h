@@ -242,6 +242,12 @@ class DaemonCore : public Service
     */
     int ReInit();
 
+		/**
+		   Re-read anything that the daemonCore object got from the
+		   config file that might have changed on a reconfig.
+		*/
+    void reconfig();
+
     /** Not_Yet_Documented
         @param perm Not_Yet_Documented
         @param sin  Not_Yet_Documented
@@ -990,12 +996,6 @@ class DaemonCore : public Service
 		*/
 	priv_state Register_Priv_State( priv_state priv );
 	
-		/** Initialize our array of StringLists that we use to verify
-			if a given request to set a configuration variable with
-			condor_config_val should be allowed.
-		*/
-	void InitSettableAttrsLists( void );
-
 		/** Check the table of attributes we're willing to allow users
 			at hosts of different permission levels to change to see
 			if we should allow the given request to succeed.
@@ -1110,16 +1110,6 @@ class DaemonCore : public Service
 
 	char 	*localAdFile;
 	void	UpdateLocalAd(ClassAd *daemonAd); 
-
-		/**
-		   Initialize the list of collectors this daemon is configured
-		   to communicate with.  This is handled automatically by
-		   DaemonCore, so individual daemons should not all this
-		   themselves.  Unfortunately, this has to be public, since
-		   it's called by daemon_core_main.C, given that there's no
-		   generic "initialize" method where this could be handled.
-		*/
-	void initCollectorList(void);
 
 		/**
 		   @return A pointer to the CollectorList object that holds
@@ -1460,6 +1450,11 @@ class DaemonCore : public Service
 
 	priv_state Default_Priv_State;
 
+		/** Initialize our array of StringLists that we use to verify
+			if a given request to set a configuration variable with
+			condor_config_val should be allowed.
+		*/
+	void InitSettableAttrsLists( void );
 	bool InitSettableAttrsList( const char* subsys, int i );
 	StringList* SettableAttrsLists[LAST_PERM];
 
@@ -1491,9 +1486,18 @@ class DaemonCore : public Service
 
 	CollectorList* m_collector_list;
 
+		/**
+		   Initialize the list of collectors this daemon is configured
+		   to communicate with.  This is handled automatically by
+		   DaemonCore, so individual daemons should not all this
+		   themselves.
+		*/
+	void initCollectorList(void);
+
 	bool m_wants_restart;
 	bool m_in_daemon_shutdown;
 	bool m_in_daemon_shutdown_fast;
+
 };
 
 #ifndef _NO_EXTERN_DAEMON_CORE

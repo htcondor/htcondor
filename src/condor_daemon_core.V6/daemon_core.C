@@ -2142,6 +2142,17 @@ DaemonCore::ReInit()
 	return TRUE;
 }
 
+void
+DaemonCore::reconfig(void) {
+		// Initialize the collector list for ClassAd updates
+	initCollectorList();
+
+		// Initialize the StringLists that contain the attributes we
+		// will allow people to set with condor_config_val from
+		// various kinds of hosts (ADMINISTRATOR, CONFIG, WRITE, etc). 
+	InitSettableAttrsLists();
+}
+
 int
 DaemonCore::Verify(DCpermission perm, const struct sockaddr_in *sin, const char * fqu )
 {

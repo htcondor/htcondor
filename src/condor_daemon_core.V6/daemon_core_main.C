@@ -1049,9 +1049,12 @@ dc_reconfig( bool is_full )
 	// it will go there.  the location of LOG may have changed, so redo it here.
 	drop_core_in_log();
 
-	// If we're doing a full reconfig, call ReInit to clear out the
-	// DNS info we have cashed for the IP verify code. Also clear out
-	// the passwd cache.
+	// Re-read everything from the config file DaemonCore itself cares about.
+	daemonCore->reconfig();
+
+	// If we're doing a full reconfig, also call ReInit to clear out
+	// the DNS info we have cashed for the IP verify code. Also clear
+	// out the passwd cache.
 	if( is_full ) {
 		daemonCore->ReInit();
 		clear_passwd_cache();
@@ -1064,11 +1067,6 @@ dc_reconfig( bool is_full )
 	if( pidFile ) {
 		drop_pid_file();
 	}
-
-	daemonCore->InitSettableAttrsLists();
-
-		// (Re)initialize the collector list for ClassAd updates
-	daemonCore->initCollectorList();
 
 		// If requested to do so in the config file, do a segv now.
 		// This is to test our handling/writing of a core file.
@@ -1812,9 +1810,6 @@ int main( int argc, char** argv )
 	GCB_Recovery_failed_callback_set( gcb_recovery_failed_callback );
 #endif
 
-	// Initialize the collector list for ClassAd updates (if any).
-	daemonCore->initCollectorList();
-
 	main_pre_command_sock_init();
 
 		// SETUP COMMAND SOCKET
@@ -1954,6 +1949,11 @@ int main( int argc, char** argv )
 	// periodic timer.  -Derek Wright <wright@cs.wisc.edu> 1/28/99 
 	daemonCore->ReInit();
 
+	// Call daemonCore's reconfig(), which reads everything else from
+	// the config file that daemonCore cares about and initializes
+	// private data members, etc.
+	daemonCore->reconfig();
+
 	// zmiller
 	// look in the env for ENV_PARENT_ID
 	const char* envName = EnvGetName ( ENV_PARENT_ID );
@@ -1972,12 +1972,6 @@ int main( int argc, char** argv )
 	// now re-set the identity so that any children we spawn will have it
 	// in their environment
 	SetEnv( envName, daemonCore->sec_man->my_unique_id() );
-
-
-		// Initialize the StringLists that contain the attributes we
-		// will allow people to set with condor_config_val from
-		// various kinds of hosts (ADMINISTRATOR, CONFIG, WRITE, etc). 
-	daemonCore->InitSettableAttrsLists();
 
 		// SETUP SOAP SOCKET
 	init_soap(daemonCore->soap);
