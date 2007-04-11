@@ -798,8 +798,6 @@ init_classad()
 	ad->SetTargetTypeName("");
 
 	char line[100];
-	sprintf(line, "%s = \"%s\"", ATTR_MACHINE, my_full_hostname() );
-	ad->Insert(line);
 
 	char* defaultName = NULL;
 	if( MasterName ) {

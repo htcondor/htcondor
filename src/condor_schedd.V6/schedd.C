@@ -9893,9 +9893,6 @@ Scheduler::Init()
 	sprintf( expr, "%s = \"%s\"", ATTR_NAME, Name );
 	ad->Insert(expr);
 
-	sprintf( expr, "%s = \"%s\"", ATTR_MACHINE, my_full_hostname() ); 
-	ad->Insert(expr);
-		
 	// This is foul, but a SCHEDD_ADTYPE _MUST_ have a NUM_USERS attribute
 	// (see condor_classad/classad.C
 	// Since we don't know how many there are yet, just say 0, it will get

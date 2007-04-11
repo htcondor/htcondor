@@ -1305,9 +1305,6 @@ Resource::publish( ClassAd* cap, amask_t mask )
 	}
 
 	if( IS_PUBLIC(mask) && IS_STATIC(mask) ) {
-		sprintf( line, "%s = \"%s\"", ATTR_MACHINE, my_full_hostname() );
-		cap->Insert( line );
-
 			// Since the Rank expression itself only lives in the
 			// config file and the r_classad (not any obejects), we
 			// have to insert it here from r_classad.  If Rank is

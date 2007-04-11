@@ -57,7 +57,6 @@ Scheduler::InitPublicAd() {
 	m_public_ad.SetMyTypeName( SCHEDD_ADTYPE );
 	m_public_ad.SetTargetTypeName( "" );
 
-	m_public_ad.Assign(ATTR_MACHINE,my_full_hostname());
 	m_public_ad.Assign(ATTR_NAME,m_name.c_str());
 
         // Publish all DaemonCore-specific attributes, which also handles

@@ -340,12 +340,8 @@ HADStateMachine::initializeClassAd()
     name.sprintf( "%s@%s -p %d", userName, my_full_hostname( ),
 				  daemonCore->InfoCommandPort( ) );
     free( userName );
-    // two following attributes: ATTR_NAME and ATTR_MACHINE are mandatory
-    // in order to be accepted by collector
+    // ATTR_NAME is mandatory in order to be accepted by collector
     line.sprintf( "%s = \"%s\"", ATTR_NAME, name.GetCStr( ) );
-    m_classAd->Insert(line.Value());
-
-    line.sprintf( "%s = \"%s\"", ATTR_MACHINE, my_full_hostname() );
     m_classAd->Insert(line.Value());
 
     line.sprintf( "%s = \"%s\"", ATTR_MY_ADDRESS,
@@ -379,6 +375,9 @@ HADStateMachine::initializeClassAd()
 	// publishing had's real index in list of hads
 	line.sprintf( "%s = \"%d\"", ATTR_HAD_INDEX, hadList.number() - 1 - m_selfId);
 	m_classAd->Insert(line.Value());
+
+	// publish all of the DC-specific attributes, SUBSYS_ATTRS, etc.
+	daemonCore->publish(m_classAd);
 }
 
 /***********************************************************

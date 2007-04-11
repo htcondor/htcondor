@@ -3551,9 +3551,6 @@ DedicatedScheduler::publishRequestAd( void )
         // SCHEDD_ATTRS for us.
     daemonCore->publish(&ad);
 
-	sprintf( tmp, "%s = \"%s\"", ATTR_MACHINE, my_full_hostname() );  
-	ad.InsertOrUpdate( tmp );
-
 	sprintf( tmp, "%s = \"%s\"", ATTR_SCHEDD_IP_ADDR, 
 			 scheduler.dcSockSinful() );
 	ad.InsertOrUpdate( tmp );

@@ -2654,8 +2654,6 @@ void JobQueueDBManager::createQuillAd(void) {
 		delete [] scheddName;
 	}
 
-	sprintf( expr, "%s = \"%s\"", ATTR_MACHINE, my_full_hostname() ); 
-	ad->Insert(expr);
   
 		// Put in our sinful string.  Note, this is never going to
 		// change, so we only need to initialize it once.

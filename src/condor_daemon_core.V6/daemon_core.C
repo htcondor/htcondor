@@ -8251,6 +8251,9 @@ DaemonCore::publish(ClassAd *ad) {
 		// config file:
 	config_fill_ad(ad);
 
+		// Every daemon wants ATTR_MACHINE to be the full hostname:
+	ad->Assign(ATTR_MACHINE, my_full_hostname());
+
 		// Publish our network identification attributes:
 	tmp = privateNetworkName();
 	if (tmp) {

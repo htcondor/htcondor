@@ -3048,9 +3048,6 @@ init_public_ad()
 	publicAd->SetMyTypeName(NEGOTIATOR_ADTYPE);
 	publicAd->SetTargetTypeName("");
 
-	line.sprintf ("%s = \"%s\"", ATTR_MACHINE, my_full_hostname());
-	publicAd->Insert(line.Value());
-
 	char* defaultName = NULL;
 	if( NegotiatorName ) {
 		line.sprintf("%s = \"%s\"", ATTR_NAME, NegotiatorName );

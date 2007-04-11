@@ -1138,8 +1138,6 @@ void CollectorDaemon::init_classad(int interval)
     ad->SetTargetTypeName("");
 
     char *tmp;
-    ad->Assign(ATTR_MACHINE, my_full_hostname());
-
     tmp = param( "CONDOR_ADMIN" );
     if( tmp ) {
         ad->Assign( ATTR_CONDOR_ADMIN, tmp );

@@ -102,8 +102,6 @@ CredDaemon::initialize_classad()
 	m_classad.SetTargetTypeName("");
 
 	MyString line;
-	line.sprintf("%s = \"%s\"", ATTR_MACHINE, my_full_hostname());
-	m_classad.Insert(line.Value());
 
 	line.sprintf("%s = \"%s\"", ATTR_NAME, m_name );
 	m_classad.Insert(line.Value());

@@ -716,13 +716,6 @@ JICShadow::publishStarterInfo( ClassAd* ad )
 	ad->Insert( tmp );
 	free( tmp );
 
-	tmp_val = my_full_hostname();
-	size = strlen(tmp_val) + strlen(ATTR_MACHINE) + 5;
-	tmp = (char*) malloc( size * sizeof(char) );
-	sprintf( tmp, "%s=\"%s\"", ATTR_MACHINE, tmp_val );
-	ad->Insert( tmp );
-	free( tmp );
-
 	int vm = Starter->getMyVMNumber();
 	MyString line = ATTR_NAME;
 	line += "=\"";
@@ -741,8 +734,6 @@ JICShadow::publishStarterInfo( ClassAd* ad )
 	sprintf( tmp, "%s=\"%s\"", ATTR_STARTER_IP_ADDR, tmp_val );
 	ad->Insert( tmp );
 	free( tmp );
-
-	ad->Assign( ATTR_VERSION, CondorVersion() );
 
 	tmp_val = param( "ARCH" );
 	size = strlen(tmp_val) + strlen(ATTR_ARCH) + 5;
@@ -775,6 +766,9 @@ JICShadow::publishStarterInfo( ClassAd* ad )
 	sprintf( tmp, "%s=TRUE", ATTR_HAS_RECONNECT );
 	ad->Insert( tmp );
 	free( tmp );
+
+		// Finally, publish all the DC-managed attributes.
+	daemonCore->publish(ad);
 }
 
 
