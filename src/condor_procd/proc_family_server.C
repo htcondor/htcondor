@@ -195,7 +195,6 @@ ProcFamilyServer::wait_loop()
 	while(!quit_received) {
 
 		snapshot_interval = m_monitor.get_snapshot_interval();
-		dprintf(D_ALWAYS, "current snapshot interval: %d\n", snapshot_interval);
 		if (snapshot_interval == -1) {
 			snapshot_countdown = -1;
 		}
@@ -205,7 +204,6 @@ ProcFamilyServer::wait_loop()
 
 		// see if we need to run our timer handler
 		//
-		dprintf(D_ALWAYS, "snapshot countdown is %d\n", snapshot_countdown);
 		if (snapshot_countdown == 0) {
 			m_monitor.snapshot();
 			snapshot_countdown = snapshot_interval;
@@ -219,7 +217,6 @@ ProcFamilyServer::wait_loop()
 			// next time around by explicitly setting the
 			// countdown to zero
 			//
-			dprintf(D_ALWAYS, "timeout!\n");
 			snapshot_countdown = 0;
 			continue;
 		}

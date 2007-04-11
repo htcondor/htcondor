@@ -28,7 +28,6 @@
 #include "dc_collector.h"
 #include "condor_pidenvid.h"
 #include "env.h"
-#include "procd.h"
 
 enum AllGoneT { MASTER_RESTART, MASTER_EXIT, MASTER_RESET };
 enum ReaperT { DEFAULT_R, ALL_R, NO_R };
@@ -200,7 +199,6 @@ private:
 	int master;  		// index of the master in our daemon table
 	AllGoneT all_daemons_gone_action;
 	ReaperT reaper;
-	ProcD* procd;
 };
 
 #endif /* _CONDOR_MASTER_H */

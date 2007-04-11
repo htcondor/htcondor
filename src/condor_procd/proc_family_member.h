@@ -30,7 +30,7 @@ class ProcFamily;
 
 class ProcFamilyMember {
 
-		friend class ProcFamily;
+	friend class ProcFamily;
 
 public:
 	ProcFamily* get_proc_family() { return m_family; }

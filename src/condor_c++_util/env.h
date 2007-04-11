@@ -112,6 +112,10 @@ class Env {
 		// array of key=value strings.
 	bool MergeFrom( char const * const *stringArray );
 
+		// Add (or overwrite) environment entries from a NULL-delimited
+		// character string
+	bool MergeFrom( char const * );
+
 		// Add (or overwrite) environment entries from another
 		// environment object.
 	void MergeFrom( Env const &env );

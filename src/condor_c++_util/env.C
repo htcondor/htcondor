@@ -218,6 +218,25 @@ Env::MergeFrom( char const * const *stringArray )
 	return true;
 }
 
+bool
+Env::MergeFrom( char const * env_str )
+{
+	if ( !env_str ) {
+		return false;
+	}
+	const char *ptr = env_str;
+	while ( *ptr != '\0' ) {
+		// a Windows environment block typically contains stuff like
+		// '=::=::\' and '=C:=C:\some\path'; SetEnv will return an error
+		// for strings like these, so we'll just silently ignore errors
+		// from SetEnv and insert what we can
+		//
+		SetEnv( ptr );
+		ptr += strlen(ptr) + 1;
+	}
+	return true;
+}
+
 void
 Env::MergeFrom( Env const &env )
 {

@@ -30,6 +30,10 @@ ProcFamilyMember::still_alive(procInfo* pi)
 {
 	// update our procInfo
 	//
+	//dprintf(D_ALWAYS,
+	//        "PROCINFO DEALLOCATION: %p for pid %u\n",
+	//        m_proc_info,
+	//        m_proc_info->pid);
 	delete m_proc_info;
 	m_proc_info = pi;
 
@@ -57,8 +61,11 @@ ProcFamilyMember::move_to_subfamily(ProcFamily* subfamily)
 	// change ourself to the new family
 	m_family = subfamily;
 
-	// ad add ourself to its list (we should be the only one)
-	ASSERT(m_family->m_member_list == NULL);
-	m_prev = m_next = NULL;
+	// and add ourself to its list
+	m_prev = NULL;
+	m_next = m_family->m_member_list;
+	if (m_family->m_member_list != NULL) {
+		m_family->m_member_list->m_prev = this;
+	}
 	m_family->m_member_list = this;
 }

@@ -33,6 +33,9 @@
 int
 main()
 {
+	extern FILE* debug_fp;
+	debug_fp = stderr;
+
 	LocalServer server(PIPE_ADDR);
 
 	while (true) {

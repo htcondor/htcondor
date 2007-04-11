@@ -2556,6 +2556,10 @@ ProcAPI::buildProcInfoList() {
 			current = temp;
 			temp = NULL;
 		}
+		else if (temp != NULL) {
+			delete temp;
+			temp = NULL;
+		}
 	}
 
 		// we're done; remove header node.

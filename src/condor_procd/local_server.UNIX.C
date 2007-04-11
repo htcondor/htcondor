@@ -42,9 +42,20 @@ LocalServer::~LocalServer()
 void
 LocalServer::set_client_principal(char* uid_str)
 {
-	uid_t uid = atoi(uid_str);
-	ASSERT(uid != 0);
-	m_reader.change_owner(uid);
+	uid_t client_uid = atoi(uid_str);
+	ASSERT(client_uid != 0);
+
+	uid_t my_uid = geteuid();
+	if (my_uid == 0) {
+		m_reader.change_owner(client_uid);
+	}
+	else {
+		if (my_uid != client_uid) {
+			EXCEPT("running as UID %u; can't allow connections from UID %u\n",
+			       my_uid,
+			       client_uid);
+		}
+	}
 }
 
 bool

@@ -26,6 +26,7 @@
 
 #include "proc_family_tracker.h"
 #include "tracker_helper_list.h"
+#include "proc_family_monitor.h"
 
 class ProcFamily;
 
@@ -49,7 +50,7 @@ public:
 	{
 		ProcFamily* family = m_list.find_family(pi);
 		if (family != NULL) {
-			family->add_member(pi);
+			m_monitor->add_member_to_family(family, pi, "PID");
 			return true;
 		}
 		return false;

@@ -1,3 +1,10 @@
+04/11/07 trunk-{pre,post}_merge-V6_9_2-merge-1
+  the state of the trunk before merging in the V6_9_2-branch as tagged
+  at V6_9_2-merge-1
+
+04/11/07 V6_9_2-merge-1
+  the state of the V6_9_2-branch for the only merge to the trunk.
+
 03/23/07 V6)9-ian_sca-{root,branch}
   Branch for research code involving signed ClassAds.  This branch
   was made from BUILD-V6_9_2-branch-2007-3-14.

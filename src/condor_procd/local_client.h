@@ -69,6 +69,7 @@ private:
 	static int m_next_serial_number;
 	int m_serial_number;
 	pid_t m_pid;
+	char* m_addr;
 	NamedPipeWriter m_writer;
 	NamedPipeReader* m_reader;
 #endif

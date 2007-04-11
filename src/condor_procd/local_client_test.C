@@ -36,6 +36,9 @@ using namespace std;
 int
 main()
 {
+	extern FILE* debug_fp;
+	debug_fp = stderr;
+
 	LocalClient client(PIPE_ADDR);
 
 	while (true) {

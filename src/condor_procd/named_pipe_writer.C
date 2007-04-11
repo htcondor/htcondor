@@ -72,28 +72,3 @@ NamedPipeWriter::write_data(void* buffer, int len)
 		}
 	}
 }
-
-void
-NamedPipeWriter::write_data_vector(struct iovec* vector, int count)
-{
-	// calculate the total length of the vectored data
-	//
-	int total_len = 0;
-	for (int i = 0; i < count; i++) {
-		total_len += vector[i].iov_len;
-	}
-
-	ASSERT(total_len < PIPE_BUF);
-
-	// do the writev
-	//
-	int bytes = writev(m_pipe, vector, count);
-	if (bytes != total_len) {
-		if (bytes == -1) {
-			EXCEPT("write error: %s (%d)", strerror(errno), errno);
-		}
-		else {
-			EXCEPT("error: wrote %d of %d bytes", bytes, total_len);
-		}
-	}
-}

@@ -23,21 +23,45 @@
 
 #include "condor_common.h"
 #include "proc_family_monitor.h"
+#include "pid_tracker.h"
+#include "login_tracker.h"
+#include "environment_tracker.h"
+#include "parent_tracker.h"
 
 ProcFamilyMonitor::ProcFamilyMonitor(pid_t pid,
                                      birthday_t birthday,
                                      int snapshot_interval) :
+	m_everybody_else(NULL),
 	m_family_table(11, pidHashFunc, rejectDuplicateKeys),
-	m_member_table(PHBUCKETS, pidHashFunc, rejectDuplicateKeys),
-	m_pid_tracker(this),
-	m_login_tracker(this),
-	m_environment_tracker(this),
-	m_parent_tracker(this)
+	m_member_table(PHBUCKETS, pidHashFunc, rejectDuplicateKeys)
 {
 	// the snapshot interval must either be non-negative or -1, which
 	// means infinite (higher layers should enforce this)
 	//
 	ASSERT(snapshot_interval >= -1);
+
+	// create our "tracker" objects that provide the various methods
+	// for tracking process families
+	//
+	m_pid_tracker = new PIDTracker(this);
+	ASSERT(m_pid_tracker != NULL);
+	m_login_tracker = new LoginTracker(this);
+	ASSERT(m_login_tracker != NULL);
+	m_environment_tracker = new EnvironmentTracker(this);
+	ASSERT(m_environment_tracker != NULL);
+	m_parent_tracker = new ParentTracker(this);
+	ASSERT(m_parent_tracker != NULL);
+
+	// create the "family" that will serve as a container for all processes
+	// that are not in the family that we are tracking
+	//
+	// TODO: we currently use the ProcFamily object for this, but we
+	// don't need much of what's in there. we should pull out the logic
+	// that we need for this object into some kind of "ProcGroup" base
+	// class
+	//
+	m_everybody_else = new ProcFamily(this);
+	ASSERT(m_everybody_else != NULL);
 
 	// create the "root" family; set the watcher pid to be the same as
 	// the root pid: there's some special logic in delete_unwatched_families
@@ -48,14 +72,16 @@ ProcFamilyMonitor::ProcFamilyMonitor(pid_t pid,
 	                                    birthday,
 	                                    pid,
 	                                    snapshot_interval);
+	ASSERT(family != NULL);
 
 	// make sure we're tracking this family by its root pid/birthday
 	//
-	m_pid_tracker.add_mapping(family, pid, birthday);
+	m_pid_tracker->add_mapping(family, pid, birthday);
 
 	// make this family the root-level tree node
 	//
 	m_tree = new Tree<ProcFamily*>(family);
+	ASSERT(m_tree != NULL);
 
 	// and insert the tree into our hash table for families
 	//
@@ -72,6 +98,11 @@ ProcFamilyMonitor::~ProcFamilyMonitor()
 {
 	delete_all_families(m_tree);
 	delete m_tree;
+	delete m_everybody_else;
+	delete m_parent_tracker;
+	delete m_environment_tracker;
+	delete m_login_tracker;
+	delete m_pid_tracker;
 }
 
 proc_family_error_t
@@ -123,7 +154,7 @@ ProcFamilyMonitor::register_subfamily(pid_t root_pid,
 	//
 	ProcFamilyMember* member;
 	ret = m_member_table.lookup(root_pid, member);
-	if (ret == -1) {
+	if ((ret == -1) || (member->get_proc_family() == m_everybody_else)) {
 		dprintf(D_ALWAYS,
 		        "register_subfamily failure: pid %u not in process tree\n",
 		        root_pid);
@@ -151,14 +182,14 @@ ProcFamilyMonitor::register_subfamily(pid_t root_pid,
 
 	// register any pidenvid or login info with the tracker objects
 	//
-	m_pid_tracker.add_mapping(family,
-	                          root_pid,
-	                          member->get_proc_info()->birthday);
+	m_pid_tracker->add_mapping(family,
+	                           root_pid,
+	                           member->get_proc_info()->birthday);
 	if (login != NULL) {
-		m_login_tracker.add_entry(family, login);
+		m_login_tracker->add_entry(family, login);
 	}
 	if (penvid != NULL) {
-		m_environment_tracker.add_mapping(family, penvid);
+		m_environment_tracker->add_mapping(family, penvid);
 	}
 
 	// find the family that will be this new subfamily's parent and create
@@ -173,6 +204,10 @@ ProcFamilyMonitor::register_subfamily(pid_t root_pid,
 
 	// move the new family's root process into the correct family
 	//
+	dprintf(D_ALWAYS,
+	        "moving process %u into new subfamily %u\n",
+	        root_pid,
+	        root_pid);
 	member->move_to_subfamily(family);
 
 	// and insert the tree into our hash table for families
@@ -212,6 +247,9 @@ ProcFamilyMonitor::unregister_subfamily(pid_t pid)
 
 	// do the deed
 	//
+	dprintf(D_ALWAYS,
+	        "unregistering family with root pid %u\n",
+	        pid);
 	unregister_subfamily(tree);
 
 	return PROC_FAMILY_ERROR_SUCCESS;
@@ -302,6 +340,9 @@ ProcFamilyMonitor::get_family_usage(pid_t pid, ProcFamilyUsage* usage)
 
 	// get usage from the requested family and all subfamilies
 	//
+	dprintf(D_ALWAYS,
+	        "gathering usage data for family with root pid %u\n",
+	        pid);
 	ASSERT(usage != NULL);
 	usage->user_cpu_time = 0;
 	usage->sys_cpu_time = 0;
@@ -317,7 +358,7 @@ ProcFamilyMonitor::get_family_usage(pid_t pid, ProcFamilyUsage* usage)
 void
 ProcFamilyMonitor::snapshot()
 {
-	dprintf(D_ALWAYS, "taking a snapshot\n");
+	dprintf(D_ALWAYS, "taking a snapshot...\n");
 
 	// get a snapshot of all processes on the system
 	// TODO: should we do something here if ProcAPI returns a NULL result?
@@ -326,13 +367,25 @@ ProcFamilyMonitor::snapshot()
 	//
 	procInfo* pi_list = ProcAPI::getProcInfoList();
 
+	// print info about all procInfo allocations
+	//
+	//procInfo* pi = pi_list;
+	//while (pi != NULL) {
+	//	dprintf(D_ALWAYS,
+	//	        "PROCINFO ALLOCATION: %p for pid %u\n",
+	//	        pi,
+	//	        pi->pid);
+	//	pi = pi->next;
+	//}
+
 	// scan through the latest snapshot looking for processes
-	// that we've determined to be in families we are monitoring
-	// in previous calls to snapshot(); for each such process we
-	// find:
+	// that we've seen before in previous calls to snapshot();
+	// for each such process we find:
 	//   - call its ProcFamilyMember's still_alive method, which
 	//     will mark it as such and update its procInfo
-	//   - remove its procInfo struct from pi_list
+	//   - remove its procInfo struct from pi_list, since this
+	//     process's family membership was already determined in
+	//     a previous snapshot
 	//
 	procInfo** prev_ptr = &pi_list;
 	procInfo* curr = pi_list;
@@ -349,7 +402,6 @@ ProcFamilyMonitor::snapshot()
 			//
 			*prev_ptr = curr->next;
 			pm->still_alive(curr);
-			dprintf(D_ALWAYS, "marking %u still alive\n", curr->pid);
 		}
 		else {
 			// this process is not in any of our families, so it stays
@@ -366,9 +418,10 @@ ProcFamilyMonitor::snapshot()
 	// still_alive method of ProcFamilyMember called in the loop above)
 	//
 	remove_exited_processes(m_tree);
+	m_everybody_else->remove_exited_processes();
 
-	// we've now handled all processes that we've determined to be in monitored
-	// families in previous calls to snapshot(). now we have to handle the
+	// we've now handled all processes that we've seen
+	// in previous calls to snapshot(). now we have to handle the
 	// rest by determining whether they belong in any of the families we're
 	// monitoring. for this, we rely on our set of "tracker" objects.
 	//
@@ -379,18 +432,34 @@ ProcFamilyMonitor::snapshot()
 	//       it has cleared its environment. if we run m_parent_tracker before
 	//       m_environment_tracker in this case, the child will not be found)
 	//
-	m_pid_tracker.find_processes(pi_list);
-	m_login_tracker.find_processes(pi_list);
-	m_environment_tracker.find_processes(pi_list);
-	m_parent_tracker.find_processes(pi_list);
+	m_pid_tracker->find_processes(pi_list);
+	m_login_tracker->find_processes(pi_list);
+	m_environment_tracker->find_processes(pi_list);
+	m_parent_tracker->find_processes(pi_list);
+
+	// at this point, any procInfo structures in pi_list that aren't in
+	// m_member_table are processes that (a) we haven't seen before, and
+	// (b) don't belong in the family tree. we'll now add all such processes
+	// to m_everybody_else
+	//
+	curr = pi_list;
+	while (curr != NULL) {
+		ProcFamilyMember* pfm;
+		int ret = m_member_table.lookup(curr->pid, pfm);
+		if (ret == -1) {
+			dprintf(D_ALWAYS,
+			        "no methods have determined process %u to be in a monitored family\n",
+			        curr->pid);
+			m_everybody_else->add_member(curr);
+		}
+		curr = curr->next;
+	}
 
 	// cleanup any families whose "watchers" have exited
 	//
 	delete_unwatched_families(m_tree);
 
-	// free up the procInfo's that we haven't taken ownership of
-	//
-	ProcAPI::freeProcInfoList(pi_list);
+	dprintf(D_ALWAYS, "...snapshot complete\n");
 }
 
 void
@@ -413,6 +482,75 @@ ProcFamilyMonitor::lookup_member(pid_t pid)
 	ProcFamilyMember* pm;
 	int ret = m_member_table.lookup(pid, pm);
 	return (ret != -1) ? pm : NULL;
+}
+
+bool
+ProcFamilyMonitor::add_member_to_family(ProcFamily* pf,
+                                        procInfo* pi,
+                                        char* method_str)
+{
+	// see if this process has already been inserted into a family
+	//
+	ProcFamilyMember* pfm;
+	int ret = m_member_table.lookup(pi->pid, pfm);
+	if (ret == -1) {
+
+		// this process is not already associated with a family;
+		// just go ahead and insert it
+		//
+		dprintf(D_ALWAYS,
+		        "method %s: found family %u for process %u\n",
+		        method_str,
+		        pf->get_root_pid(),
+		        pi->pid);
+		pf->add_member(pi);
+		return true;
+	}
+	else if (pf != pfm->get_proc_family()) {
+
+		// this process is already associated with a family; if
+		// pf is a subfamily of the family that the process is
+		// already assigned to (i.e. pf is a "more specific"
+		// match), then move the process
+		//
+		Tree<ProcFamily*>* node;
+		ret = m_family_table.lookup(pf->get_root_pid(), node);
+		ASSERT(ret != -1);
+		while(node->get_parent() != NULL) {
+			node = node->get_parent();
+			if (node->get_data() == pfm->get_proc_family()) {
+				dprintf(D_ALWAYS,
+				        "method %s: found family %u for process %u "
+				        	"(more specific than current family %u)\n",
+				        method_str,
+				        pf->get_root_pid(),
+				        pi->pid,
+				        pfm->get_proc_family()->get_root_pid());
+				pfm->move_to_subfamily(pf);
+				return true;
+			}
+		}
+
+		dprintf(D_ALWAYS,
+		        "method %s: found family %u for process %u "
+		        	"(less specific - ignoring)\n",
+		        method_str,
+		        pf->get_root_pid(),
+		        pi->pid);
+		return false;
+	}
+	else {
+
+		// this process is already in pf; there's nothing to do
+		//
+		dprintf(D_ALWAYS,
+		        "method %s: found family %u for process %u "
+		        	"(already determined)\n",
+		        method_str,
+		        pf->get_root_pid(),
+		        pi->pid);
+		return false;
+	}
 }
 
 int
@@ -508,10 +646,6 @@ ProcFamilyMonitor::delete_unwatched_families(Tree<ProcFamily*>* tree)
 	//
 	pid_t watcher_pid = tree->get_data()->get_watcher_pid();
 	if (watcher_pid == 0) {
-		dprintf(D_ALWAYS,
-		        "still around: root = %u, watcher = %u\n",
-		        tree->get_data()->get_root_pid(),
-				watcher_pid);
 		return;
 	}
 	ProcFamilyMember* member;
@@ -521,10 +655,6 @@ ProcFamilyMonitor::delete_unwatched_families(Tree<ProcFamily*>* tree)
 	{
 		// this family's watcher is still around; do nothing
 		//
-		dprintf(D_ALWAYS,
-		        "still around: root = %u, watcher = %u\n",
-		        tree->get_data()->get_root_pid(),
-				watcher_pid);
 		return;
 	}
 
@@ -551,9 +681,9 @@ ProcFamilyMonitor::unregister_subfamily(Tree<ProcFamily*>* tree)
 	// remove any information that these families might have registered with
 	// our tracker objects
 	//
-	m_pid_tracker.remove_mapping(tree->get_data());
-	m_login_tracker.remove_entry(tree->get_data());
-	m_environment_tracker.remove_mapping(tree->get_data());
+	m_pid_tracker->remove_mapping(tree->get_data());
+	m_login_tracker->remove_entry(tree->get_data());
+	m_environment_tracker->remove_mapping(tree->get_data());
 
 	// get rid of the hash table entry for this family
 	//

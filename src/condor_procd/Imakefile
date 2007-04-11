@@ -28,6 +28,14 @@ library_target(procd_client.a,$(LIB_OBJ))
 c_plus_nowrap_target(procd_dump,procd_dump.o,procd_client.a $(STD_LIBS))
 c_plus_nowrap_target(procd_quit,procd_quit.o,procd_client.a $(STD_LIBS))
 
+LOCAL_SERVER_TEST_OBJ=local_server_test.o local_server.UNIX.o \
+                      named_pipe_reader.o named_pipe_writer.o named_pipe_util.o
+c_plus_target(local_server_test,$(LOCAL_SERVER_TEST_OBJ),$(STD_LIBS))
+
+LOCAL_CLIENT_TEST_OBJ=local_client_test.o local_client.UNIX.o \
+                      named_pipe_reader.o named_pipe_writer.o named_pipe_util.o
+c_plus_target(local_client_test,$(LOCAL_CLIENT_TEST_OBJ),$(STD_LIBS))
+
 html:
 release:: all
 stripped:: all

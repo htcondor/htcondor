@@ -27,6 +27,7 @@
 #include "proc_family_tracker.h"
 #include "tracker_helper_list.h"
 #include "proc_family.h"
+#include "proc_family_monitor.h"
 
 class LoginTracker : public ProcFamilyTracker {
 
@@ -36,16 +37,14 @@ public:
 
 	void add_entry(ProcFamily* family, char* login)
 	{
-		char* tmp = strdup(login);
-		ASSERT(tmp != NULL);
-		m_list.add_mapping(LoginTag(tmp), family);
+		m_list.add_mapping(LoginTag(login), family);
 	}
 
 	void remove_entry(ProcFamily* family)
 	{
 		LoginTag tmp;
 		if (m_list.remove_mapping(family, &tmp)) {
-			free(tmp.get_login());
+			delete[] tmp.get_login();
 		}
 	}
 
@@ -53,7 +52,7 @@ public:
 	{
 		ProcFamily* family = m_list.find_family(pi);
 		if (family != NULL) {
-			family->add_member(pi);
+			m_monitor->add_member_to_family(family, pi, "LOGIN");
 			return true;
 		}
 		return false;

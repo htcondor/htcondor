@@ -213,6 +213,12 @@ Condor_Auth_Base& Condor_Auth_Base :: setRemoteDomain(const char * domain)
         }
     }
 
+	if(fqu_) {
+		free(fqu_);
+		fqu_ = NULL;
+	}
+		
+
     return *this;
 }
 
@@ -242,6 +248,11 @@ Condor_Auth_Base& Condor_Auth_Base :: setRemoteUser( const char *owner )
         free(remoteUser_);
         remoteUser_ = NULL;
     }
+	if(fqu_) {
+		free(fqu_);
+		fqu_ = NULL;
+	}
+
     if ( owner ) {
         remoteUser_ = strdup( owner );   // strdup uses new
     }

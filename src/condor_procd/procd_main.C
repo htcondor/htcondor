@@ -275,11 +275,5 @@ main(int argc, char* argv[])
 	//
 	server.wait_loop();
 
-	// cleanup before exiting
-	//
-	if (debug_fp != NULL) {
-		fclose(debug_fp);
-	}
-
 	return 0;
 }

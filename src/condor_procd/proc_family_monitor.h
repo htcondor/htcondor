@@ -29,15 +29,16 @@
 #include "tree.h"
 #include "proc_family.h"
 #include "proc_family_io.h"
-#include "pid_tracker.h"
-#include "login_tracker.h"
-#include "environment_tracker.h"
-#include "parent_tracker.h"
 #include "procd_common.h"
 
 #if defined(PROCD_DEBUG)
 #include "local_server.h"
 #endif
+
+class PIDTracker;
+class LoginTracker;
+class EnvironmentTracker;
+class ParentTracker;
 
 class ProcFamilyMonitor {
 
@@ -97,10 +98,20 @@ public:
 	void remove_member(ProcFamilyMember*);
 	ProcFamilyMember* lookup_member(pid_t pid);
 
+	// used by tracker classes to make associations between
+	// processes and families we're monitoring
+	//
+	bool add_member_to_family(ProcFamily*, procInfo*, char*);
+
 private:
 	// the tree structure for the families we're tracking
 	//
 	Tree<ProcFamily*> *m_tree;
+
+	// a ProcFamily object in which to put all processes that are not
+	// in the family that we're tracking
+	//
+	ProcFamily* m_everybody_else;
 
 	// keep a hash of all families we are tracking, keyed by the "root"
 	// process's pid
@@ -115,10 +126,10 @@ private:
 	// the "tracker" objects we use for finding processes that belong
 	// to the families we're tracking
 	//
-	PIDTracker         m_pid_tracker;
-	LoginTracker       m_login_tracker;
-	EnvironmentTracker m_environment_tracker;
-	ParentTracker      m_parent_tracker;
+	PIDTracker*         m_pid_tracker;
+	LoginTracker*       m_login_tracker;
+	EnvironmentTracker* m_environment_tracker;
+	ParentTracker*      m_parent_tracker;
 
 	// find the minimum of all the ProcFamilys' requested "maximum
 	// snapshot intervals"

@@ -1359,7 +1359,6 @@ Daemons::Daemons()
 	all_daemons_gone_action = MASTER_RESET;
 	immediate_restart = FALSE;
 	immediate_restart_master = FALSE;
-	procd = NULL;
 }
 
 
@@ -1704,11 +1703,6 @@ Daemons::InitMaster()
 		GetTimeStamp(daemon_ptr[master]->watch_name);
 	daemon_ptr[master]->startTime = time(0);
 	daemon_ptr[master]->pid = daemonCore->getpid();
-
-		// start the procd
-	procd = new ProcD;
-	ASSERT(procd != NULL);
-	procd->start();
 }
 
 
@@ -1762,6 +1756,13 @@ void
 Daemons::FinalRestartMaster()
 {
 	int i;
+
+		// Tell DaemonCore to cleanup the ProcFamily subsystem. We need
+		// to do this here since we are about to restart without calling
+		// DC_Exit
+		//
+	daemonCore->Proc_Family_Cleanup();
+	
 #ifndef WIN32
 	int	max_fds = getdtablesize();
 
@@ -1974,14 +1975,10 @@ Daemons::AllDaemonsGone()
 		break;
 	case MASTER_RESTART:
 		dprintf( D_ALWAYS, "All daemons are gone.  Restarting.\n" );
-		ASSERT(procd != NULL);
-		delete procd;
 		FinishRestartMaster();
 		break;
 	case MASTER_EXIT:
 		dprintf( D_ALWAYS, "All daemons are gone.  Exiting.\n" );
-		ASSERT(procd != NULL);
-		delete procd;
 		master_exit(0);
 		break;
 	}

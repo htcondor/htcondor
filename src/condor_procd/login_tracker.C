@@ -88,13 +88,14 @@ LoginTracker::LoginTag::test(procInfo* pi)
 	                             sid_buffer,
 	                             sid_length,
 	                             &sid_length);
-	if (result != NULL) {
+	if (result == FALSE) {
 		dprintf(D_ALWAYS,
 		        "login_match: GetTokenInformation error: %u\n",
 		        GetLastError());
 		free(sid_buffer);
 		CloseHandle(token_handle);
 		CloseHandle(process_handle);
+		return false;
 	}
 
 	// ok, now lookup the user name corresponding to the SID we just got

@@ -901,6 +901,12 @@ class DaemonCore : public Service
     int Continue_Family(pid_t);
     int Kill_Family(pid_t);
 
+	/** Used to explicitly cleanup our ProcFamilyClient object
+	    (used by the Master before it restarts, since in that
+	    case the DaemonCore destructor won't be called)
+	*/
+	void Proc_Family_Cleanup();
+
     /** @name Data pointer functions.
         These functions deal with
         associating a pointer to data with a registered callback.

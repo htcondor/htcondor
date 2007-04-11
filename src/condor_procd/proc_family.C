@@ -50,6 +50,10 @@ ProcFamily::~ProcFamily()
 	ProcFamilyMember* member = m_member_list;
 	while (member != NULL) {
 		ProcFamilyMember* next_member = member->m_next;
+		//dprintf(D_ALWAYS,
+		//        "PROCINFO DEALLOCATION: %p for pid %u\n",
+		//        member->m_proc_info,
+		//        member->m_proc_info->pid);
 		delete member->m_proc_info;
 		delete member;
 		member = next_member;
@@ -142,8 +146,25 @@ ProcFamily::remove_exited_processes()
 		ProcFamilyMember* next_member = member->m_next;
 
 		if (!member->m_still_alive) {
-		
-			dprintf(D_ALWAYS, "%d is dead\n", member->m_proc_info->pid);
+
+			// HACK for logging: if our root pid is 0, we
+			// know this to mean that we are actually the
+			// family that holds all processes that aren't
+			// in the monitored family; this hack should go
+			// away when we pull out a separate ProcGroup
+			// class
+			//
+			if (m_root_pid != 0) {
+				dprintf(D_ALWAYS,
+				        "process %u (of family %u) has exited\n",
+				        member->m_proc_info->pid,
+				        m_root_pid);
+			}
+			else {
+				dprintf(D_ALWAYS,
+				        "process %u (not in monitored family) has exited\n",
+				        member->m_proc_info->pid);
+			}
 
 			// account for usage from this process
 			//
@@ -168,13 +189,15 @@ ProcFamily::remove_exited_processes()
 			if (next_member != NULL) {
 				next_member->m_prev = prev;
 			}
+			//dprintf(D_ALWAYS,
+			//        "PROCINFO DEALLOCATION: %p for pid %u\n",
+			//        member->m_proc_info,
+			//        member->m_proc_info->pid);
 			delete member->m_proc_info;
 			delete member;
 		}
 		else {
 
-			dprintf(D_ALWAYS, "clearing alive bit on %u\n", member->m_proc_info->pid);
-		
 			// clear still_alive bit for next time around
 			//
 			member->m_still_alive = false;
@@ -209,6 +232,7 @@ ProcFamily::give_away_members(ProcFamily* parent)
 		member->m_family = parent;
 		member = member->m_next;
 	}
+	member->m_family = parent;
 
 	// attach the end of our list to the beginning of
 	// the parent's
