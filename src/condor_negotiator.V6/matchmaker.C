@@ -3040,7 +3040,7 @@ sort()
 void Matchmaker::
 init_public_ad()
 {
-	static MyString line;
+	MyString line;
 
 	if( publicAd ) delete( publicAd );
 	publicAd = new ClassAd();
