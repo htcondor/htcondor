@@ -22,6 +22,7 @@ my %Config = (
 	      DaemonOwnerList => "",
 	      UserOwnerList => "",
 	      IgnoreCmdRe => "",
+	      ExtraCmdList => "",
 	     );
 
 # Do it
@@ -45,6 +46,8 @@ sub Init {
     $Config{UserOwnerList} = $Tmp if ( $Tmp ne "" );
     $Tmp = HawkeyeLib::ReadConfig( "_ignore_cmd_re", "" );
     $Config{IgnoreCmdRe} = $Tmp if ( $Tmp ne "" );
+    $Tmp = HawkeyeLib::ReadConfig( "_extra_cmd_list", "" );
+    $Config{ExtraCmdList} = $Tmp if ( $Tmp ne "" );
 }
 
 
@@ -129,7 +132,12 @@ sub RunIt {
 
     my @RunAwayReList;
     push( @RunAwayReList, "condor_execute" );
-    push( @RunAwayReList, "hawkeye_startd" );
+    if ( $Config{ExtraCmdList} ne "" )
+    {
+	my $Tmp = $Config{ExtraCmdList};
+	$Tmp =~ s/\//\\\//g;
+	push( @RunAwayReList, split( /\s*,\s*/, $Tmp ) );
+    }
     foreach my $Name ( keys %CondorProgTable )
     {
 	if ( not exists $CondorProgTable{$Name}{NeverRunAway} )
@@ -138,7 +146,7 @@ sub RunIt {
 	}
     }
     my $RunAwayRe = "(" . join( "|", @RunAwayReList ) . ")";
-    #print STDERR "RunAwayRe = /$RunAwayRe/\n";
+    print STDERR "RunAwayRe = /$RunAwayRe/\n";
 
     # Run a 'ps' and gather some info...
     my $Cmd = "/bin/ps -eo user,pid,ppid,comm,args";
