@@ -8258,9 +8258,8 @@ DaemonCore::publish(ClassAd *ad) {
 	tmp = privateNetworkName();
 	if (tmp) {
 		ad->Assign(ATTR_PRIVATE_NETWORK_NAME, tmp);
-	}
-	tmp = privateNetworkIpAddr();
-	if (tmp) {
+		tmp = privateNetworkIpAddr();
+		ASSERT(tmp);
 		ad->Assign(ATTR_PRIVATE_NETWORK_IP_ADDR, tmp);
 	}
 	tmp = publicNetworkIpAddr();
