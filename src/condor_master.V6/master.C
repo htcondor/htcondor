@@ -797,28 +797,22 @@ init_classad()
 	ad->SetMyTypeName(MASTER_ADTYPE);
 	ad->SetTargetTypeName("");
 
-	char line[100];
-
-	char* defaultName = NULL;
-	if( MasterName ) {
-		sprintf(line, "%s = \"%s\"", ATTR_NAME, MasterName );
+	if (MasterName) {
+		ad->Assign(ATTR_NAME, MasterName);
 	} else {
-		defaultName = default_daemon_name();
-		if( ! defaultName ) {
+		char* default_name = default_daemon_name();
+		if( ! default_name ) {
 			EXCEPT( "default_daemon_name() returned NULL" );
 		}
-		sprintf(line, "%s = \"%s\"", ATTR_NAME, defaultName );
-		delete [] defaultName;
+		ad->Assign(ATTR_NAME, default_name);
+		delete [] default_name;
 	}
-	ad->Insert(line);
 
-	sprintf(line, "%s = \"%s\"", ATTR_MASTER_IP_ADDR,
-			daemonCore->InfoCommandSinfulString() );
-	ad->Insert(line);
+		// CRUFT
+	ad->Assign(ATTR_MASTER_IP_ADDR, daemonCore->InfoCommandSinfulString());
 
 #if !defined(WIN32)
-	sprintf(line, "%s = %d", ATTR_REAL_UID, (int)getuid() );
-	ad->Insert(line);
+	ad->Assign(ATTR_REAL_UID, (int)getuid());
 #endif
 
 		// Initialize all the DaemonCore-provided attributes
