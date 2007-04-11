@@ -35,3 +35,16 @@ Parameter: USER_OWNERS
 Similar to DAEMON_OWNERS, but specifies the valid owners of the user
 jobs that Condor is executing.
 Example: DAEMON_OWNERS = user1,user2,user3
+
+Parameter: IGNORE_CMD_RE
+A perl regular expression which, if specified, is compared to each
+"command" in generating the runaway list.  If the command matches this
+regular expression, it is excluded from the runaway list.
+Example: IGNORE_CMD_RE = ghost|pool
+
+Parameter: EXTRA_CMD_LIST
+A list of "commands" used in generating the runaway list.  The default
+behaviour is to match any condor daemon process or "condor_cmd.exe"
+which is owned by init (and, thus, orphaned).  If specified, this
+comma separated list will also be matched against.
+Example: EXTRA_CMD_LIST = hawkeye_startd,my_extra_prog
