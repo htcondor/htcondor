@@ -388,6 +388,7 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	m_wants_restart = true;
 	m_in_daemon_shutdown = false;
 	m_in_daemon_shutdown_fast = false;
+	m_private_network_name = NULL;
 }
 
 // DaemonCore destructor. Delete the all the various handler tables, plus
@@ -516,6 +517,11 @@ DaemonCore::~DaemonCore()
 	if (m_collector_list) {
 		delete m_collector_list;
 		m_collector_list = NULL;
+	}
+
+	if (m_private_network_name) {
+		free(m_private_network_name);
+		m_private_network_name = NULL;
 	}
 
 #ifdef WIN32
@@ -911,6 +917,26 @@ char * DaemonCore::InfoCommandSinfulStringMyself(bool noGCB)
 			sock_to_string( (*sockTable)[initial_command_sock].sockd ) );
 	}
 	return sinful_gcb_yes;
+}
+
+const char*
+DaemonCore::publicNetworkIpAddr(void) {
+	return (const char*) InfoCommandSinfulString();
+}
+
+
+const char*
+DaemonCore::privateNetworkIpAddr(void) {
+# if HAVE_EXT_GCB
+	return (const char*) InfoCommandSinfulStringMyself(true);
+# endif /* HAVE_EXT_GCB */
+	return NULL;
+}
+
+
+const char*
+DaemonCore::privateNetworkName(void) {
+	return (const char*)m_private_network_name;
 }
 
 // Lookup the environment id set for a particular pid, or if -1 then the
@@ -2142,8 +2168,15 @@ DaemonCore::ReInit()
 	return TRUE;
 }
 
+
 void
 DaemonCore::reconfig(void) {
+		// Grab a copy of our private network name (if any).
+	if (m_private_network_name) {
+		free(m_private_network_name);
+	}
+	m_private_network_name = param("PRIVATE_NETWORK_NAME");
+
 		// Initialize the collector list for ClassAd updates
 	initCollectorList();
 
@@ -2152,6 +2185,7 @@ DaemonCore::reconfig(void) {
 		// various kinds of hosts (ADMINISTRATOR, CONFIG, WRITE, etc). 
 	InitSettableAttrsLists();
 }
+
 
 int
 DaemonCore::Verify(DCpermission perm, const struct sockaddr_in *sin, const char * fqu )
@@ -8206,6 +8240,29 @@ DaemonCore::UpdateLocalAd(ClassAd *daemonAd)
                      localAdFile );
         }
     }
+}
+
+
+void
+DaemonCore::publish(ClassAd *ad) {
+	const char* tmp;
+
+		// Every ClassAd needs the common attributes directly from the
+		// config file:
+	config_fill_ad(ad);
+
+		// Publish our network identification attributes:
+	tmp = privateNetworkName();
+	if (tmp) {
+		ad->Assign(ATTR_PRIVATE_NETWORK_NAME, tmp);
+	}
+	tmp = privateNetworkIpAddr();
+	if (tmp) {
+		ad->Assign(ATTR_PRIVATE_NETWORK_IP_ADDR, tmp);
+	}
+	tmp = publicNetworkIpAddr();
+	ASSERT(tmp);
+	ad->Assign(ATTR_PUBLIC_NETWORK_IP_ADDR, tmp);
 }
 
 

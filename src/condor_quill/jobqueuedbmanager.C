@@ -22,8 +22,6 @@
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
-
-//for the config_fill_ad call
 #include "condor_config.h"
 
 //for the ATTR_*** variables stuff
@@ -2607,7 +2605,9 @@ void JobQueueDBManager::createQuillAd(void) {
 	ad->SetMyTypeName(QUILL_ADTYPE);
 	ad->SetTargetTypeName("");
   
-	config_fill_ad(ad);
+		// Publish all DaemonCore-specific attributes, which also handles
+        // QUILL_ATTRS for us.
+    daemonCore->publish(ad);
 
 		// schedd info is used to identify the schedd 
 		// corresponding to this quill 

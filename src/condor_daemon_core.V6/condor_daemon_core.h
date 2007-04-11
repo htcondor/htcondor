@@ -335,6 +335,30 @@ class DaemonCore : public Service
         @return A pointer into a <b>static buffer</b>, or NULL on error */
 	char * InfoCommandSinfulStringMyself(bool noGCB);
 
+		/**
+		   @return Pointer to a static buffer containing the daemon's
+		   public IP address and port.  Same as InfoCommandSinfulString()
+		   but with a more obvious name which matches the underlying
+		   ClassAd attribute where it is advertised.
+		*/
+	const char* publicNetworkIpAddr(void);
+
+		/**
+		   @return Pointer to a static buffer containing the daemon's
+		   true, local IP address and port if GCB is involved,
+		   otherwise NULL.  Nearly the same as
+		   InfoCommandSinfulStringMyself(true) but with a more obvious
+		   name which matches the underlying ClassAd attribute where
+		   it is advertised.
+		*/
+	const char* privateNetworkIpAddr(void);
+
+		/**
+		   @return The daemon's private network name, or NULL if there
+		   is none (i.e., it's on the public internet).
+		*/
+	const char* privateNetworkName(void);
+
 	/** Returns a pointer to the penvid passed in if successful
 		in determining the environment id for the pid, or NULL if unable
 		to determine.
@@ -1112,6 +1136,16 @@ class DaemonCore : public Service
 	void	UpdateLocalAd(ClassAd *daemonAd); 
 
 		/**
+		   Publish all DC-specific attributes into the given ClassAd.
+		   Every daemon should call this method on its own copy of its
+		   ClassAd, so that these attributes are available in the
+		   daemon itself (e.g. in the startd's ClassAd used for
+		   evaluating the policy expressions), instead of calling this
+		   automatically just when the ad is sent to the collector.
+		*/
+	void	publish(ClassAd *ad);
+
+		/**
 		   @return A pointer to the CollectorList object that holds
 		   all of the collectors this daemons is configured to
 		   communicate with.
@@ -1497,6 +1531,8 @@ class DaemonCore : public Service
 	bool m_wants_restart;
 	bool m_in_daemon_shutdown;
 	bool m_in_daemon_shutdown_fast;
+
+	char* m_private_network_name;
 
 };
 

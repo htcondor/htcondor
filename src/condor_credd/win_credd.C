@@ -112,7 +112,9 @@ CredDaemon::initialize_classad()
 			daemonCore->InfoCommandSinfulString() );
 	m_classad.Insert(line.Value());
 
-	config_fill_ad(&m_classad);
+        // Publish all DaemonCore-specific attributes, which also handles
+        // SUBSYS_ATTRS for us.
+    daemonCore->publish(&m_classad);
 }
 
 void

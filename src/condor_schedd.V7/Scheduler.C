@@ -60,7 +60,9 @@ Scheduler::InitPublicAd() {
 	m_public_ad.Assign(ATTR_MACHINE,my_full_hostname());
 	m_public_ad.Assign(ATTR_NAME,m_name.c_str());
 
-	config_fill_ad( &m_public_ad );
+        // Publish all DaemonCore-specific attributes, which also handles
+        // SCHEDD_ATTRS for us.
+    daemonCore->publish(&m_public_ad);
 }
 
 void

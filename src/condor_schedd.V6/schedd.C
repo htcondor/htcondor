@@ -729,6 +729,7 @@ Scheduler::count_jobs()
 	sprintf(tmp, "%s = %d", ATTR_TOTAL_REMOVED_JOBS, JobsRemoved);
 	ad->Insert (tmp);
 
+    daemonCore->publish(ad);
     daemonCore->monitor_data.ExportData(ad);
 	extra_ads.Publish( ad );
     
@@ -9886,7 +9887,7 @@ Scheduler::Init()
 	ad->SetMyTypeName(SCHEDD_ADTYPE);
 	ad->SetTargetTypeName("");
 
-	config_fill_ad( ad );
+    daemonCore->publish(ad);
 
 		// Throw name and machine into the classad.
 	sprintf( expr, "%s = \"%s\"", ATTR_NAME, Name );

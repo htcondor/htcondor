@@ -1158,9 +1158,9 @@ void CollectorDaemon::init_classad(int interval)
             ad->Assign( ATTR_UPDATE_INTERVAL, 24*interval );
     }
 
-    // In case COLLECTOR_EXPRS is set, fill in our ClassAd with those
-    // expressions.
-    config_fill_ad( ad );      
+		// Publish all DaemonCore-specific attributes, which also handles
+		// COLLECTOR_ATTRS for us.
+	daemonCore->publish(ad);
 }
 
 void 

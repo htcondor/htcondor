@@ -3547,7 +3547,9 @@ DedicatedScheduler::publishRequestAd( void )
 	ad.SetMyTypeName(SCHEDD_ADTYPE);
 	ad.SetTargetTypeName(STARTD_ADTYPE);
 
-	config_fill_ad( &ad );
+        // Publish all DaemonCore-specific attributes, which also handles
+        // SCHEDD_ATTRS for us.
+    daemonCore->publish(&ad);
 
 	sprintf( tmp, "%s = \"%s\"", ATTR_MACHINE, my_full_hostname() );  
 	ad.InsertOrUpdate( tmp );

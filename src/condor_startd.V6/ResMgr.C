@@ -148,10 +148,10 @@ ResMgr::init_config_classad( void )
 		}
 	}
 
-		// Now, bring in anything the user has said to include
-	config_fill_ad( config_classad );
+	// Publish all DaemonCore-specific attributes, which also handles
+	// STARTD_ATTRS for us.
+	daemonCore->publish(config_classad);
 }
-
 
 
 #if HAVE_BACKFILL

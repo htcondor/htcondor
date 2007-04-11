@@ -2104,6 +2104,7 @@ Daemons::UpdateCollector()
 	dprintf(D_FULLDEBUG, "enter Daemons::UpdateCollector\n");
 
 	Update(ad);
+    daemonCore->publish(ad);
     daemonCore->monitor_data.ExportData(ad);
 	daemonCore->sendUpdates(UPDATE_MASTER_AD, ad, NULL, true);
 

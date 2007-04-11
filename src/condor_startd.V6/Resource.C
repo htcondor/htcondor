@@ -1332,6 +1332,7 @@ Resource::publish( ClassAd* cap, amask_t mask )
 
 			// Include everything from STARTD_EXPRS.
 			// And then include everything from VMx_STARTD_EXPRS
+		daemonCore->publish(cap);
 		config_fill_ad( cap, r_id_str );
 
 			// Also, include a VM ID attribute, since it's handy for

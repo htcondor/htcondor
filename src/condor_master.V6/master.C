@@ -823,9 +823,8 @@ init_classad()
 	ad->Insert(line);
 #endif
 
-		// In case MASTER_EXPRS is set, fill in our ClassAd with those
-		// expressions. 
-	config_fill_ad( ad ); 	
+		// Initialize all the DaemonCore-provided attributes
+	daemonCore->publish( ad ); 	
 }
 
 #ifndef WIN32

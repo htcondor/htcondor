@@ -3073,9 +3073,9 @@ init_public_ad()
 	publicAd->Insert(line.Value());
 #endif
 
-		// In case MASTER_EXPRS is set, fill in our ClassAd with those
-		// expressions. 
-	config_fill_ad( publicAd ); 	
+        // Publish all DaemonCore-specific attributes, which also handles
+        // NEGOTIATOR_ATTRS for us.
+    daemonCore->publish(publicAd);
 }
 
 void
