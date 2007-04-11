@@ -1,0 +1,5 @@
+#! /usr/bin/env perl
+use CondorTest;
+
+	die "This test always fails\n";
+
