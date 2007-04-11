@@ -146,7 +146,7 @@ sub RunIt {
 	}
     }
     my $RunAwayRe = "(" . join( "|", @RunAwayReList ) . ")";
-    print STDERR "RunAwayRe = /$RunAwayRe/\n";
+    #print STDERR "RunAwayRe = /$RunAwayRe/\n";
 
     # Run a 'ps' and gather some info...
     my $Cmd = "/bin/ps -eo user,pid,ppid,comm,args";
