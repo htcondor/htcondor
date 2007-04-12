@@ -231,7 +231,7 @@ sub do_submit() {
 		open( SUBMIT, "|$submit" );
 	}
 	print SUBMIT <<"EOF";
-Universe = Globus
+Universe = Grid
 
 Executable = $archdir/$startup_name
 
@@ -243,7 +243,7 @@ Transfer_Executable = False
 
 GlobusRSL = ${GLOBUSRSL}
 
-GlobusScheduler = $CONTACT
+Grid_Resource = gt2 $CONTACT
 
 Notification = Never
 Queue
@@ -1222,8 +1222,8 @@ EOF
 	open( SETUP_SUBMIT_FILE, ">$glidein_setup_submit" );
 
 	print SETUP_SUBMIT_FILE <<"EOF";
-	universe = Globus
-	GlobusScheduler = $CONTACT_SETUP
+	universe = Grid
+	Grid_Resource = gt2 $CONTACT_SETUP
 	$globus_rsl
 	executable = $glidein_remote_setup
     # Manually quote the URL in case it has characters meaningful to RSL
