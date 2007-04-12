@@ -132,7 +132,7 @@ LoginTracker::LoginTag::test(procInfo* pi)
 
 // constructor on UNIX looks up the UID for the login name
 //
-LoginTracker::LoginTag::LoginTag(char* login)
+LoginTracker::LoginTag::LoginTag(char* login) : m_login(login)
 {
 	errno = 0;
 	struct passwd *pwd = getpwnam(login);
