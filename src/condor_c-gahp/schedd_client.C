@@ -574,8 +574,6 @@ doContactSchedd()
 		error = FALSE;
 		BeginTransaction();
 		
-		current_command->status = SchedDRequest::SDCS_PENDING;
-			
 		current_command->classad->ResetExpr();
 		ExprTree *tree;
 		while( (tree = current_command->classad->NextExpr()) ) {
@@ -666,8 +664,6 @@ update_report_result:
 			error = FALSE;
 			BeginTransaction();
 		
-			current_command->status = SchedDRequest::SDCS_PENDING;
-
 			int i;
 			for (i=0; i<current_command->num_jobs; i++) {
 			

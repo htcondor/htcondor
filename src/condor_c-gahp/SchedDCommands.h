@@ -130,15 +130,11 @@ public:
 	// Status of the command
 	enum {
 		SDCS_NEW,
-		SDCS_PENDING,
 		SDCS_COMPLETED,
-		SDCS_ERROR,
 	} status;
 
 	// Command being sent
 typedef enum {
-		SDC_NOOP,
-		SDC_ERROR,
 		SDC_REMOVE_JOB,
 		SDC_HOLD_JOB,
 		SDC_RELEASE_JOB,
