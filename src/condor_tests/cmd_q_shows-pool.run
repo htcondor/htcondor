@@ -112,6 +112,9 @@ my @adarray;
 my $sched1 = "master_" . $mypid . "local" . "@" . $currenthost;;
 my $sched2 = "master_" . $mypid . "scheddone" . "@" . $currenthost;;
 
+#Place condor_q back into the original condor config
+#and aim the -global -pool command at this new collector.
+$ENV{CONDOR_CONFIG} = $saveconfig;
 print "Looking for sched1($sched1) and sched2($sched2)\n";
 
 # allow time for all the nodes to update the collector
@@ -123,10 +126,11 @@ my $found1 = 0;
 
 if($bail != 1) {
 	my @schedds = ( $sched1, $sched2 );
-		print "Looking for condor_q -pool $primarycollector\n";
+	foreach $schedd (@schedds) {
+		print "Looking for condor_q -global -pool $primarycollector\n";
 		while($count < $nattempts) {
 			$found1 = 0;
-			my $cmd = "condor_q -pool $primarycollector";
+			my $cmd = "condor_q -global -pool $primarycollector";
 			$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
 	    	if(!$cmdstatus)
 	    	{
@@ -141,7 +145,7 @@ if($bail != 1) {
 					print "found $schedd: $line\n";
 					$found1 = 1;
 				} else {
-					print "skip: $line\n";
+					#print "skip: $line\n";
 				}
 			}
 			if($found1 == 1){
@@ -158,9 +162,10 @@ if($bail != 1) {
 		if($found1 == 0) {
 			last;
 		}
+	}
 }
 
-system("cp *cmd_q_shows-pool* $mysaveme");
+system("cp *cmd_q_shows-global* $mysaveme");
 
 if( -e "$mysubmitnm" )
 {
@@ -208,6 +213,6 @@ if( $done == 0 )
 	exit(1);
 }
 
-print "cmd_q_shows-pool SUCCESS\n";
+print "cmd_q_shows-global SUCCESS\n";
 system("date");
 exit(0);
