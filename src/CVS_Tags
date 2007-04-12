@@ -1,3 +1,9 @@
+04/12/07 V6_9-cron-2-{root,branch}
+  Oh snap! I tried once and didn't get very far, but here it is 
+  again: a merge branch for my 1 year old Cron code. This branch
+  was made from BUILD-V6_9-trunk-2007-4-12-pavlo and will be used to
+  merge my cron code that never made it into the Condor trunk.
+
 04/11/07 trunk-{pre,post}_merge-V6_9_2-merge-1
   the state of the trunk before merging in the V6_9_2-branch as tagged
   at V6_9_2-merge-1
