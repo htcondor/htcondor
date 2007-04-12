@@ -830,7 +830,7 @@ processCommandLineArguments (int argc, char *argv[])
 	int i, cluster, proc;
 	char *arg, *at, *daemonname;
 	
-	attrs.initializeFromString("ClusterId,ProcID,QDate,RemoteUserCPU,JobStatus,JobPrio,ImageSize,Owner,Cmd,Args");
+	attrs.initializeFromString("ClusterId,ProcID,QDate,RemoteUserCPU,JobStatus,ServerTime,ShadowBday,RemoteWallClockTime,JobPrio,ImageSize,Owner,Cmd,Args");
 
 	for (i = 1; i < argc; i++)
 	{
