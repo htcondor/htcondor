@@ -242,7 +242,7 @@ stork_submit (
 	}
 	free (_request);
 
-	sock->code ((int)cred_size);
+	sock->code ((int*)&cred_size);
 	if (cred_size) {
 		char * _cred = strdup (cred);  
 		sock->code_bytes (_cred, cred_size);

@@ -16,11 +16,16 @@
 	$(Fortran) $(FFLAGS) -c $< -o $@
 
 #if HAVE_CC_PIC_FLAG
+/* These rules are a bit scary, basically when we build a shared library of
+	something, we adjust the filename from foo.o to foo-pic.o, and then use
+	these particular suffix rules to compile them mixing in the
+	shared library goo we need. Also, sometimes we can't build these files with
+	-fstack-protect, so we turn that off on some platforms. */
 %-pic.o: %.c
-	$(CC) $(CC_PIC_FLAGS) $(STD_C_FLAGS) -c $< -o $@
+	$(CC) $(CC_PIC_FLAGS) $(STD_C_FLAGS) $(GCC_NO_STACK_PROTECTOR) -c $< -o $@
 
 %-pic.o: %.C
-	$(CPlusPlus) $(CC_PIC_FLAGS) $(C_PLUS_FLAGS) -c $< -o $@
+	$(CPlusPlus) $(CC_PIC_FLAGS) $(C_PLUS_FLAGS) $(GCC_NO_STACK_PROTECTOR) -c $< -o $@
 
 /* make functions to help produce pic versions of things... */
 picobjs = $(patsubst %.o,%-pic.o,$(1))

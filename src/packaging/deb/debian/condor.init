@@ -1,0 +1,51 @@
+#! /bin/sh
+#
+# /etc/init.d/condor: start and stop the "Condor workload management system"
+
+PATH=/sbin:/bin:/usr/sbin:/usr/bin
+DAEMON=condor_master
+NAME=condor
+DESC=Condor
+CONF=/etc/$NAME/${NAME}_config
+
+test -f /usr/sbin/$DAEMON || exit 0
+if [ ! -f $CONF ]; then
+    echo "condor config not found: $CONF"
+    echo "       please provide a configuration"
+    exit 0
+fi
+
+set -e
+
+case "$1" in
+    start)
+        echo -n "Starting $DESC: "
+	start-stop-daemon --start --quiet --pidfile /var/run/$NAME.pid \
+	    --exec /usr/sbin/$DAEMON
+	echo "$NAME."
+	;;
+    stop)
+        echo -n "Stopping $DESC (fast-shutdown mode): "
+	    # send SIGQUIT to the condor_master, which initiates its fast
+            # shutdown method.  The master itself will start sending
+            # SIGKILL to all it's children if they're not gone in 20
+            # seconds.
+	killall -QUIT $DAEMON &>/dev/null || echo -n " *not running* "
+	echo "$NAME."
+	;;
+    reload|force-reload)
+	echo "Reloading $DESC configuration files."
+	/usr/sbin/condor_reconfig
+	;;
+    restart)
+        $0 stop
+	$0 start
+	;;
+    *)
+	N=/etc/init.d/$NAME
+	echo "Usage: $N {start|stop|restart|reload|force-reload}" >&2
+	exit 1
+	;;
+esac
+
+exit 0

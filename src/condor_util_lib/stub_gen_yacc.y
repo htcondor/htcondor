@@ -57,6 +57,7 @@ struct node * mk_param_node( char *type, char *name,
 	int is_in, int is_out, int is_vararg );
 struct node * mk_action_param_node( char *name, int is_ref, char *mult );
 struct node *insert_node( struct node *list, struct node *new_elem );
+struct node *append_node( struct node *list, struct node *new_elem );
 void display_node( struct node * );
 void output_switch( struct node * );
 void display_list( struct node * );

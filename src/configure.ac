@@ -255,10 +255,17 @@ elif test $os = "Linux" ; then
        ;;
     esac
   elif test -f "/etc/debian_version" ; then
-    _deb_vers=`cat /etc/debian_version | sed 's/\./_/g'`;
-    _cv_linux_distro="DEBIAN_`echo _deb_vers`"
-    AC_MSG_WARN([Condor is not yet ported to Debian Linux distributions])
-    AC_MSG_WARN([You may have trouble building and/or packaging Condor]) 
+    _deb_vers=`cat /etc/debian_version`;
+    case "$_deb_vers" in
+     "4.0" )
+       _cv_linux_distro="DEBIAN40"
+       ;;
+     * )
+       AC_MSG_WARN([Condor is not yet ported to Debian version $_suse_vers])
+       AC_MSG_WARN([You may have trouble building and/or packaging Condor]) 
+       _cv_linux_distro="DEBIAN_UNKNOWN"
+       ;;
+	 esac
   else
     AC_MSG_WARN([Unrecognised Linux distribution])
     AC_MSG_WARN([You may have trouble building and/or packaging Condor]) 
@@ -729,6 +736,12 @@ case "$gcc_vers" in
     CompilerMinor="3"
     CompilerPatch="4"
     ;;
+ "3.3.5" )
+    CompilerKind="GCC"
+    CompilerMajor="3"
+    CompilerMinor="3"
+    CompilerPatch="5"
+    ;;
  "3.4.2" )
     CompilerKind="GCC"
     CompilerMajor="3"
@@ -759,6 +772,24 @@ case "$gcc_vers" in
     CompilerMinor="0"
     CompilerPatch="1"
     ;;
+ "4.0.2" )
+    CompilerKind="GCC"
+    CompilerMajor="4"
+    CompilerMinor="0"
+    CompilerPatch="2"
+    ;;
+ "4.0.3" )
+    CompilerKind="GCC"
+    CompilerMajor="4"
+    CompilerMinor="0"
+    CompilerPatch="3"
+    ;;
+ "4.1.2" )
+    CompilerKind="GCC"
+    CompilerMajor="4"
+    CompilerMinor="1"
+    CompilerPatch="2"
+    ;;
  * )
    AC_MSG_RESULT([ERROR])
    AC_MSG_ERROR([Condor will not compile with gcc version $gcc_vers])
@@ -775,7 +806,7 @@ AC_SUBST(CompilerPatch,$CompilerPatch)
 GET_GCC_VALUE([libgcc.a],[-print-libgcc-file-name],[gcc_libc])
 GET_GCC_VALUE([libstdc++.a],[--print-file-name=libstdc++.a],[lib_std_cpp])
 # this gcc3+ specific library is used for standard universe linking
-if test "X$CompilerKind" = "XGCC" && test "X$CompilerMajor" = "X3" ; then
+if test "X$CompilerKind" = "XGCC" && test "X$CompilerMajor" = "X3" -o "X$CompilerMajor" = "X4"; then
   GET_GCC_VALUE([libgcc_eh.a],[--print-file-name=libgcc_eh.a],[lib_gcc_eh])
 fi
 
@@ -993,7 +1024,10 @@ C_CXX_OPTION(gcc, -Wmissing-prototypes, comp_option_Wmissing_prototypes, [])
 # See if the wonderful stack protection feature is available
 #########
 # Put guards around arrays on the stack, and check them on function exit.
-C_CXX_OPTION(gcc, -fstack-protector, comp_option_fstack_protector, [])
+C_CXX_OPTION(gcc, -fstack-protector, comp_option_stack_protector, [])
+# sometimes we need to turn them off too, this overrides the above if both
+# appear on the command line.
+C_CXX_OPTION(gcc, -fno-stack-protector, comp_option_no_stack_protector, [])
 
 #########
 # determine if gcc has -rdynamic to keep backtrace symbols for debugging
@@ -1736,7 +1770,7 @@ fi
 
 # For now, we hardcode that non-i386/X86_64 platforms are clipped and don't
 # need an external glibc for anything...
-if test "x$_cv_libc_kind" = "xGLIBC" -a \( "x$_cv_arch" = "xI386" -o "x$_cv_arch" = "xX86_64" \); then
+if test "x$_cv_libc_kind" = "xGLIBC" -a \( "x$_cv_arch" = "xI386" -o "x$_cv_arch" = "xX86_64" \) ; then
 
   _cv_libc_full_vers="$_cv_libc_major.$_cv_libc_minor.$_cv_libc_patch"
   case "$_cv_libc_full_vers" in
@@ -1756,9 +1790,12 @@ if test "x$_cv_libc_kind" = "xGLIBC" -a \( "x$_cv_arch" = "xI386" -o "x$_cv_arch
     CONDOR_EXTERNAL_VERSION([glibc],[2.3.2.27.9.7])
     ;;
   "2.3.4" )
-  	# I'm using this here to avoid a full port of Condor to the centos 4 OS.
+	# I'm using this here to avoid a full port of Condor to the centos 4 OS.
 	# XXX Also, one must use gcc 3.2.2 instead of as shipped gcc 3.4.4 to 
 	# compile this package.
+    CONDOR_EXTERNAL_VERSION([glibc],[2.3.2.27.9.7])
+    ;;
+  "2.3.6" )
     CONDOR_EXTERNAL_VERSION([glibc],[2.3.2.27.9.7])
     ;;
   * )  

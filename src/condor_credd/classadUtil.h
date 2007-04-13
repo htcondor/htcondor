@@ -35,8 +35,8 @@ using namespace std;
 
 BEGIN_NAMESPACE( classad )
 
-bool getOldClassAd( Stream *sock, classad::ClassAd& ad );
-bool putOldClassAd ( Stream *sock, classad::ClassAd& ad );
+bool getOldClassAd( Stream *sock, ClassAd& ad );
+bool putOldClassAd ( Stream *sock, ClassAd& ad );
 
 END_NAMESPACE // classad
 #endif // __CLASSADUTIL_H__
