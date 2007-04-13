@@ -1111,22 +1111,17 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype, bool query_collector)
 	}
 
 		// If we were not passed a name or an addr, check the
-		// config file for a subsystem_NAME, e.g. SCHEDD_NAME=XXXX
+		// config file for a subsystem_HOST, e.g. SCHEDD_HOST=XXXX
 	if( ! _name ) {
-		buf.sprintf( "%s_NAME", subsys );
-		char *specified_name = param( buf.Value() );
-		if (!specified_name) {
-			// CRUFT: Still nothing, check subsystem_HOST for legacy configs
-			buf.sprintf("%s_HOST", subsys);
-			char *specified_name = param(buf.Value());
-		}
-		if (specified_name) {
+		buf.sprintf( "%s_HOST", subsys );
+		char *specified_host = param( buf.Value() );
+		if ( specified_host ) {
 				// Found an entry.  Use this name.
-			_name = strnewp(specified_name);
+			_name = strnewp( specified_host );
 			dprintf( D_HOSTNAME, 
 					 "No name given, but %s defined to \"%s\"\n",
-					 buf.Value(), specified_name );
-			free(specified_name);
+					 buf.Value(), specified_host );
+			free(specified_host);
 		}
 	}
 	if( _name ) {
