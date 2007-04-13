@@ -193,10 +193,15 @@ manual page.
   \OptItem{\OptArg{-usestartup}{startup\_file}}{
     The set up task copies the specified startup script,
     rather than generating one.  }
-  \OptItem{\OptArg{-setup\_jobmanager}{jobmanager-fork}}{
+  \OptItem{\OptArg{-setup\_jobmanager}{jobmanagername}}{
     Identifies the jobmanager on the remote grid resource
     to receive the files during the set up task.  If a
-    reasonable default can be discovered through MDS, this is optional. }
+    reasonable default can be discovered through MDS, this is optional.
+    \oArg{jobmanagername} is a string representing any gt2
+    name for the job manager.  The correct string in most cases
+    will be \oArg{jobmanager-fork}.
+    Other common strings may be \oArg{jobmanager}, \oArg{jobmanager-condor},
+    \oArg{jobmanager-pbs}, and \oArg{jobmanager-lsf}. }
 \end{description}
 
 \subsection*{Execute Task Options}
