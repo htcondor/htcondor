@@ -114,18 +114,16 @@ VanillaProc::StartJob()
 	//
 	fi.max_snapshot_interval = param_integer("PID_SNAPSHOT_INTERVAL", 15);
 
-	// use login-based family tracking if EXECUTE_LOGIN_IS_DEDICATED is
-	// set and we're not starting a local universe job
-	//
 	fi.login = NULL;
-	bool dedicated_account = false;
-	if (job_universe != CONDOR_UNIVERSE_LOCAL) {
-		dedicated_account = param_boolean("EXECUTE_LOGIN_IS_DEDICATED",
-		                                  false);
-	}
+	bool dedicated_account = Starter->jic->getExecuteAccountIsDedicated();
+
 	if (dedicated_account) {
+			// using login-based family tracking
 		fi.login = get_user_loginname();
-		dprintf(D_FULLDEBUG,
+			// The following message is documented in the manual as the
+			// way to tell whether the dedicated execution account
+			// configuration is being used.
+		dprintf(D_ALWAYS,
 		        "Tracking process family by login \"%s\"\n",
 		        fi.login);
 	}

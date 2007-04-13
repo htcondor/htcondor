@@ -35,5 +35,7 @@ domainAndNameMatch( const char *account1,
 void
 getDomainAndName( char* namestr, char* &domain, char* &name );
 
+void
+joinDomainAndName( char const *domain, char const *name, class MyString &result );
 
 #endif  /* __DOMAIN_TOOLS_H */

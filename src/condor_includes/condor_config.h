@@ -106,6 +106,7 @@ class ParamValue {
     double param_double( const char *name, double default_value,
 					   double min_value = DBL_MIN, double max_value = DBL_MAX );
 	bool param_boolean( const char *name, const bool default_value );
+	bool param_boolean_expr( const char *name, bool default_value, ClassAd const *me, ClassAd const *target );
 	bool param_get_location(const char *parameter, MyString &filename,
 							int &line_number);
 

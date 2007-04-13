@@ -23,6 +23,8 @@
 
 #include "condor_common.h"
 #include "domain_tools.h"
+#include "condor_debug.h"
+#include "MyString.h"
 
 bool
 domainAndNameMatch( const char *account1,
@@ -50,3 +52,14 @@ getDomainAndName( char* namestr, char* &domain, char* &name ) {
 	}
 }
 
+void
+joinDomainAndName( char const *domain, char const *name, class MyString &result )
+{
+	ASSERT( name );
+	if( !domain ) {
+		result = name;
+	}
+	else {
+		result.sprintf("%s\\%s",domain,name);
+	}
+}

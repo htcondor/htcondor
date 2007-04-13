@@ -55,6 +55,7 @@ JobInfoCommunicator::JobInfoCommunicator()
 	had_hold = false;
 	change_iwd = false;
 	user_priv_is_initialized = false;
+	m_execute_account_is_dedicated = false;
 }
 
 
@@ -372,6 +373,72 @@ JobInfoCommunicator::initUserPrivNoOwner( void )
 	return true;
 }
 
+bool
+JobInfoCommunicator::allowRunAsOwner( bool default_allow, bool default_request )
+{
+	ASSERT( job_ad );
+
+		// First check if our policy allows RunAsOwner
+		// Eval as an expression so a policy such as this can be specified:
+		// TARGET.RunAsOwner =?= True
+
+	bool run_as_owner = param_boolean_expr( "STARTER_ALLOW_RUNAS_OWNER",
+	                                        default_allow, NULL, job_ad );
+
+		// Next check if the job has requested runas_owner
+	if( run_as_owner ) {
+		bool user_wants_runas_owner = default_request;
+		job_ad->LookupBool(ATTR_JOB_RUNAS_OWNER,user_wants_runas_owner);
+		if ( !user_wants_runas_owner ) {
+			run_as_owner = false;
+		}
+	}
+
+	return run_as_owner;
+}
+
+bool
+JobInfoCommunicator::checkDedicatedExecuteAccounts( char const *name )
+{
+	char const *EXECUTE_LOGIN_IS_DEDICATED = "EXECUTE_LOGIN_IS_DEDICATED";
+	char const *DEDICATED_EXECUTE_ACCOUNT_REGEXP = "DEDICATED_EXECUTE_ACCOUNT_REGEXP";
+	char *old_param_val = param(EXECUTE_LOGIN_IS_DEDICATED);
+	if( old_param_val ) {
+		dprintf(D_ALWAYS,
+		        "WARNING: %s is deprecated.  Please use %s instead.\n",
+		        EXECUTE_LOGIN_IS_DEDICATED,
+		        DEDICATED_EXECUTE_ACCOUNT_REGEXP);
+		free(old_param_val);
+		return param_boolean(EXECUTE_LOGIN_IS_DEDICATED,false);
+	}
+	char *pattern_string = param(DEDICATED_EXECUTE_ACCOUNT_REGEXP);
+	if( !pattern_string || !*pattern_string ) {
+		free(pattern_string);
+		return false;
+	}
+
+		// force the matching of the whole string
+	MyString full_pattern;
+	full_pattern.sprintf("^%s$",pattern_string);
+
+	Regex re;
+	char const *errstr = NULL;
+	int erroffset = 0;
+
+	if( !re.compile( full_pattern.Value(), &errstr, &erroffset, 0 ) ) {
+		EXCEPT("Invalid regular expression for %s (%s): %s",
+			   DEDICATED_EXECUTE_ACCOUNT_REGEXP,
+			   pattern_string,
+			   errstr);
+	}
+	free( pattern_string );
+
+	if( re.match( name ) ) {
+		return true;
+	}
+	return false;
+}
+
 #ifdef WIN32
 #include "my_username.h"
 bool
@@ -380,7 +447,10 @@ JobInfoCommunicator::initUserPrivWindows( void )
 	// Win32
 	// taken origionally from OsProc::StartJob.  Here we create the
 	// user and initialize user_priv.
-	
+
+	// By default, assume execute login may be shared by other processes.
+	setExecuteAccountIsDedicated( false );
+
 	// we support running the job as other users if the user
 	// is specifed in the config file, and the account's password
 	// is properly stored in our credential stash.
@@ -388,19 +458,11 @@ JobInfoCommunicator::initUserPrivWindows( void )
 	char *name = NULL;
 	char *domain = NULL;
 	bool init_priv_succeeded = true;
-	bool run_as_owner = param_boolean("STARTER_ALLOW_RUNAS_OWNER",false);
+	bool run_as_owner = allowRunAsOwner( false, false );
 
 	if ( run_as_owner ) {
-		if( ! job_ad ) {
-			EXCEPT( "initUserPrivWindows() called with no job ad!" );
-		}
-
-		bool user_wants_runas_owner = false;
-		job_ad->LookupBool(ATTR_JOB_RUNAS_OWNER,user_wants_runas_owner);
-		if ( user_wants_runas_owner ) {
-			job_ad->LookupString(ATTR_OWNER,&name);
-			job_ad->LookupString(ATTR_NT_DOMAIN,&domain);
-		}
+		job_ad->LookupString(ATTR_OWNER,&name);
+		job_ad->LookupString(ATTR_NT_DOMAIN,&domain);
 	}
 
 	if ( !name ) {
@@ -438,6 +500,13 @@ JobInfoCommunicator::initUserPrivWindows( void )
 				"with condor_store_cred.\n", domain, name );
 			init_priv_succeeded = false;			
 		} 
+		else {
+			MyString login_name;
+			joinDomainAndName(name, domain, login_name);
+			if( checkDedicatedExecuteAccounts( login_name.Value() ) ) {
+				setExecuteAccountIsDedicated( true );
+			}
+		}
 
 	} else if ( !can_switch_ids() ) {
 		char *u = my_username();
@@ -450,11 +519,14 @@ JobInfoCommunicator::initUserPrivWindows( void )
 		}
 		free(u);
 		free(d);
-	} else if( ! init_user_ids("nobody", ".") ) {
-		
+	} else if( init_user_ids("nobody", ".") ) {
 		// just init a new nobody user; dynuser handles the rest.
 		// the "." means Local Machine to LogonUser
-	
+
+		setExecuteAccountIsDedicated( true );
+	}
+	else {
+		
 		dprintf( D_ALWAYS, "ERROR: Could not initialize user_priv "
 				 "as \"nobody\"\n" );
 		init_priv_succeeded = false;

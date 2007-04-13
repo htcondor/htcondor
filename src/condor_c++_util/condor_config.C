@@ -1478,6 +1478,43 @@ param_boolean( const char *name, const bool default_value )
 	return result;
 }
 
+bool
+param_boolean_expr( const char *name, bool default_value, ClassAd const *me, ClassAd const *target )
+{
+	char *expr;
+	bool value = default_value;
+
+	ASSERT( name );
+	expr = param( name );
+	if( ! expr ) {
+		dprintf( D_CONFIG, "%s is undefined, using default value of %s\n",
+				 name, default_value ? "True" : "False" );
+		return default_value;
+	}
+
+	if( expr && *expr ) {
+		ClassAd rhs;
+		if( me ) {
+			rhs = *me;
+		}
+
+		if( !rhs.AssignExpr( name, expr ) ) {
+			EXCEPT("Invalid expression for %s (%s) in config file.",
+			       name, expr);
+		}
+
+		int int_value = value;
+		if( !rhs.EvalBool(name,target,int_value) ) {
+			EXCEPT("Invalid result (not a boolean) for %s (%s) "
+			       "in condor configuration.",
+			       name, expr );
+		}
+		value = (int_value != 0);
+	}
+	free( expr );
+
+	return value;
+}
 
 char *
 macro_expand( const char *str )

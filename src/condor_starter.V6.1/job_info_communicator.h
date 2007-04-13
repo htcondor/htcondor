@@ -257,6 +257,15 @@ public:
 		 */
 	virtual bool updateX509Proxy( int cmd, ReliSock * s );
 
+		/** Return whether or not the uid chosen by initUserPriv() is
+			only for use by this job, so we can track the processes
+			spawned by the job via uid.
+		 */
+	bool getExecuteAccountIsDedicated( ) {
+		return m_execute_account_is_dedicated;
+	}
+
+
 
 protected:
 
@@ -275,6 +284,29 @@ protected:
 			@return true on success, false on failure
 		*/
 	virtual bool initUserPriv( void ) = 0;
+
+		/** Get the configuration (plus job) policy for whether to
+			try running the job as the owner of the job.  Unfortunately,
+			windows and unix have different defaults, so these are
+			taken as arguments to this function.  This function only
+			returns True if RunAsOwner is allowed by the starter and
+			requested by the job, (substituting in the default for
+			either of those if they are not specified).
+		 */
+	bool allowRunAsOwner( bool default_allow, bool default_request );
+
+		/** See if the specified name matches the list of dedicated
+			login accounts for executing jobs.
+		 */
+	bool checkDedicatedExecuteAccounts( char const *name );
+
+		/** This may be called by initUserPriv() to specify that the
+			chosen uid is only for use by this job, so we can track
+			the processes spawned by the job via uid.
+		*/
+	void setExecuteAccountIsDedicated( bool flag ) {
+		m_execute_account_is_dedicated = flag;
+	}
 
 		/** Initialize the priv_state code on Windows.  For now, this
 			is identical code, no matter what kind of JIC we're using,
@@ -361,6 +393,7 @@ protected:
 
 	bool user_priv_is_initialized;
 
+	bool m_execute_account_is_dedicated;
 };
 
 

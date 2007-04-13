@@ -781,19 +781,38 @@ JICShadow::addToOutputFiles( const char* filename )
 	filetrans->addOutputFile( filename );
 }
 
-
 bool
 JICShadow::initUserPriv( void )
 {
 
-#ifndef WIN32
-	// Unix
+#ifdef WIN32
+		// Windoze
+
+	return initUserPrivWindows();
+
+#else
+		// Unix
+
+		// by default, the uid we choose is assumed not to be
+		// dedicated to this job
+	setExecuteAccountIsDedicated( false );
 
 		// Before we go through any trouble, see if we even need
 		// ATTR_OWNER to initialize user_priv.  If not, go ahead and
 		// initialize it as appropriate.  
 	if( initUserPrivNoOwner() ) {
 		return true;
+	}
+
+	bool run_as_owner = allowRunAsOwner( true, true );
+
+	MyString owner;
+	if( run_as_owner ) {
+		if( job_ad->LookupString( ATTR_OWNER, owner ) != 1 ) {
+			dprintf( D_ALWAYS, "ERROR: %s not found in JobAd.  Aborting.\n", 
+			         ATTR_OWNER );
+			return false;
+		}
 	}
 
 		// First, we decide if we're in the same UID_DOMAIN as the
@@ -806,33 +825,31 @@ JICShadow::initUserPriv( void )
 		// in the password file, but the UID_DOMAIN's match, it's a
 		// fatal error.  If the UID_DOMAIN's just don't match, we
 		// initialize as "nobody".
-	
-	char* owner = NULL;
 
-	if( job_ad->LookupString( ATTR_OWNER, &owner ) != 1 ) {
-		dprintf( D_ALWAYS, "ERROR: %s not found in JobAd.  Aborting.\n", 
-				 ATTR_OWNER );
-		return false;
+	if( run_as_owner && !sameUidDomain() ) {
+		run_as_owner = false;
+		dprintf( D_FULLDEBUG, "Submit host is in different UidDomain\n" ); 
 	}
 
-	if( sameUidDomain() ) {
+	if( run_as_owner ) {
 			// Cool, we can try to use ATTR_OWNER directly.
 			// NOTE: we want to use the "quiet" version of
 			// init_user_ids, since if we're dealing with a
 			// "SOFT_UID_DOMAIN = True" scenario, it's entirely
 			// possible this call will fail.  We don't want to fill up
 			// the logs with scary and misleading error messages.
-		if( ! init_user_ids_quiet(owner) ) { 
+		if( init_user_ids_quiet(owner.Value()) ) {
+			dprintf( D_FULLDEBUG, "Initialized user_priv as \"%s\"\n", 
+			         owner.Value() );
+			if( checkDedicatedExecuteAccounts( owner.Value() ) ) {
+				setExecuteAccountIsDedicated( true );
+			}
+		}
+		else {
 				// There's a problem, maybe SOFT_UID_DOMAIN can help.
 			bool shadow_is_old = true;
-			bool try_soft_uid = false;
-			char* soft_uid = param( "SOFT_UID_DOMAIN" );
-			if( soft_uid ) {
-				if( soft_uid[0] == 'T' || soft_uid[0] == 't' ) {
-					try_soft_uid = true;
-				}
-				free( soft_uid );
-			}
+			bool try_soft_uid = param_boolean( "SOFT_UID_DOMAIN", false );
+
 			if( try_soft_uid ) {
 					// first, see if the shadow is new enough to
 					// support the RSC we need to do...
@@ -845,8 +862,7 @@ JICShadow::initUserPriv( void )
 					// need to do the RSC, we can just fail.
 				dprintf( D_ALWAYS, "ERROR: Uid for \"%s\" not found in "
 						 "passwd file and SOFT_UID_DOMAIN is False\n",
-						 owner ); 
-				free( owner );
+						 owner.Value() ); 
 				return false;
             }
 
@@ -859,8 +875,7 @@ JICShadow::initUserPriv( void )
 						 "condor_shadow on the submitting host is too old "
 						 "to support SOFT_UID_DOMAIN.  You must upgrade "
 						 "Condor on the submitting host to at least "
-						 "version 6.3.3.\n", owner ); 
-				free( owner );
+						 "version 6.3.3.\n", owner.Value() ); 
 				return false;
 			}
 
@@ -880,8 +895,7 @@ JICShadow::initUserPriv( void )
 						 "condor_shadow on the submitting host cannot "
 						 "support SOFT_UID_DOMAIN.  You must upgrade "
 						 "Condor on the submitting host to at least "
-						 "version 6.3.3.\n", owner );
-				free( owner );
+						 "version 6.3.3.\n", owner.Value() );
 				return false;
 			}
 
@@ -889,13 +903,11 @@ JICShadow::initUserPriv( void )
 			if( user_info.LookupInteger( ATTR_UID, user_uid ) != 1 ) {
 				dprintf( D_ALWAYS, "user_info ClassAd does not contain %s!\n", 
 						 ATTR_UID );
-				free( owner );
 				return false;
 			}
 			if( user_info.LookupInteger( ATTR_GID, user_gid ) != 1 ) {
 				dprintf( D_ALWAYS, "user_info ClassAd does not contain %s!\n", 
 						 ATTR_GID );
-				free( owner );
 				return false;
 			}
 
@@ -909,15 +921,10 @@ JICShadow::initUserPriv( void )
 				dprintf( D_ALWAYS, "ERROR: Could not initialize user "
 						 "priv with uid %d and gid %d\n", user_uid,
 						 user_gid );
-				free( owner );
 				return false;
 			}
-		} else {  
-			dprintf( D_FULLDEBUG, "Initialized user_priv as \"%s\"\n", 
-					 owner );
 		}
 	} else {
-		dprintf( D_FULLDEBUG, "Submit host is in different UidDomain\n" ); 
 
        // first see if we define VMx_USER in the config file
         char *nobody_user;
@@ -948,25 +955,20 @@ JICShadow::initUserPriv( void )
 		if( ! init_user_ids(nobody_user, NULL) ) { 
 			dprintf( D_ALWAYS, "ERROR: Could not initialize user_priv "
 					 "as \"%s\"\n", nobody_user );
-			free( owner );
 			free( nobody_user );
 			return false;
 		} else {
 			dprintf( D_FULLDEBUG, "Initialized user_priv as \"%s\"\n",
 				  nobody_user );
+			if( checkDedicatedExecuteAccounts( nobody_user ) ) {
+				setExecuteAccountIsDedicated( true );
+			}
 			free( nobody_user );
 		}			
 	}
-		// deallocate owner string so we don't leak memory.
-	free( owner );
+
 	user_priv_is_initialized = true;
 	return true;
-
-#else
-
-		// Windoze
-	return initUserPrivWindows();
-
 #endif
 }
 
