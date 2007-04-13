@@ -98,6 +98,15 @@ page~\pageref{param:NegotiatorMatchExprs} for more information.
 
 \item Increased speed of ClassAd parsing.
 
+\item Added \MacroNI{DEDICATED\_EXECUTE\_ACCOUNT\_REGEXP} and
+deprecated the boolean setting
+\MacroNI{EXECUTE\_LOGIN\_IS\_DEDICATED}, because the latter could not
+handle a policy where some jobs run as the job owner and some run as
+dedicated execution accounts.  Also added support for
+\MacroNI{STARTER\_ALLOW\_RUNAS\_OWNER} under unix.  See
+Section~\ref{param:DedicatedExecuteAccountRegexp} and
+Section~\ref{sec:RunAsNobody} for more information.
+
 \end{itemize}
 
 \noindent Bugs Fixed:

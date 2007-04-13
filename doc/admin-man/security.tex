@@ -2609,26 +2609,36 @@ only to run Condor jobs.
 \index{UID!potential risk running jobs as user nobody}
 \index{security!running jobs as user nobody}
 
-Under Unix, Condor runs jobs either as the user that submitted the jobs,
-or as the user called \Login{nobody}.
-Condor uses user \Login{nobody} if the value of the \MacroNI{UID\_DOMAIN}
-configuration variable of the
-submitting and executing machines are different.
+Under Unix, Condor runs jobs either as the user that submitted the
+jobs, or as the user called \Login{nobody}.  Condor uses user
+\Login{nobody} if the value of the \MacroNI{UID\_DOMAIN} configuration
+variable of the submitting and executing machines are different or if
+\Macro{STARTER\_ALLOW\_RUNAS\_OWNER} is false or if the job ClassAd
+contains \Attr{RunAsOwner}=False.  Under Windows, Condor by default
+runs jobs under a dynamically created local account that exists for
+the duration of the job, but it can optionally run the job as the user
+account that owns the job if \Macro{STARTER\_ALLOW\_RUNAS\_OWNER} is
+True and the job contains \Attr{RunAsOwner}=True.
 
-When Condor cleans up after a executing a vanilla universe job,
-it does the best that it can by
-deleting all of the processes started by the job.
-Unfortunately, it is possible to fool Condor,
-and leave processes behind after Condor has cleaned up.
-If the job is running as user \Login{nobody},
-it is possible for it to leave a lurker process lying in wait
-for the next job run as \Login{nobody}.
-The lurker process may prey maliciously on the next \Login{nobody} user job,
-wreaking havoc.
+When Condor cleans up after executing a vanilla universe job, it does
+the best that it can by deleting all of the processes started by the
+job.  During the life of the job, it also does its best to track the
+CPU usage of all processes created by the job.  There are a variety of
+mechanisms used by Condor to detect all such processes, but, in
+general, the only foolproof mechanism is for the job to run under a
+dedicated execution account (as it does under Windows by default).
+With all other mechanisms, it is possible to fool Condor, and leave
+processes behind after Condor has cleaned up.  In the case of a shared
+account, such as the unix user \Login{nobody}, it is possible for the
+job to leave a lurker process lying in wait for the next job run as
+\Login{nobody}.  The lurker process may prey maliciously on the next
+\Login{nobody} user job, wreaking havoc.
 
 Condor could prevent this problem by simply killing all processes run by
 the \Login{nobody} user, but this would annoy many system administrators.
 The \Login{nobody} user is often used for non-Condor system processes.
+It may also be used by other Condor jobs running on the same machine, if
+it is a multi-processor machine.
 
 Condor provides a two-part solution to this difficulty.
 First, create user accounts specifically for Condor to use instead
@@ -2636,53 +2646,47 @@ of user \Login{nobody}.
 These can be low-privilege accounts,
 as the \Login{nobody} user is.
 Create one of these accounts for each
-virtual machine per computer,
+virtual machine (i.e. job execution slot) per computer,
 so that distinct users can be used for concurrent processes.
 This prevents malicious behavior between
 processes running on distinct virtual machines.
 Section ~\ref{sec:Configuring-SMP} details virtual machines.
 For a sample machine with two virtual machines,
 create two users that are intended only to be used by Condor.
-As an example, call them \Login{nobody1} and \Login{nobody2}.
+As an example, call them \Login{cndrusr1} and \Login{cndrusr2}.
 Tell Condor about these users
 with the \Macro{VMx\_USER} configuration variables,
 where x is replaced with the
 virtual machine number. In this example:
 
 \begin{verbatim}
-   VM1_USER = nobody1
-   VM2_USER = nobody2
+   VM1_USER = cndrusr1
+   VM2_USER = cndrusr2
 \end{verbatim}
 
-Reconfigure Condor, so that Condor will make use of these users
-instead of the \Login{nobody} user.
-One more change is required to prevent lurker processes:
-tell Condor that these accounts are intended only to be used by Condor,
+Then tell Condor that these accounts are intended only to be used by Condor,
 so Condor can kill all the processes belonging to these users upon
 job completion.
-The configuration variable \Macro{EXECUTE\_LOGIN\_IS\_DEDICATED}
-is introduced and set to \ShortExpr{True} for this purpose.
+The configuration variable \Macro{DEDICATED\_EXECUTION\_ACCOUNT\_REGEXP}
+is introduced and set to a regular expression that matches the account
+names we have just created.
 
 \begin{verbatim}
-   EXECUTE_LOGIN_IS_DEDICATED = TRUE
+   DEDICATED_EXECUTION_ACCOUNT_REGEXP = cndrusr[0-9]+
+\end{verbatim}
+
+Finally, tell Condor not to run jobs as the job owner:
+
+\begin{verbatim}
+   STARTER_ALLOW_RUNAS_OWNER = False
 \end{verbatim}
 
 Notes:
 \begin{enumerate}
 
-\item{
-If \MacroNI{UID\_DOMAIN} is not set in the configuration, do not
-set \MacroNI{EXECUTE\_LOGIN\_IS\_DEDICATED}.
-In this case, lurker processes are not a concern,
-and other processes that a user may have running would be killed
-improperly.
-}
-
-\item{
-This only applies to vanilla universe and Java universe jobs.
-Standard universe jobs are not a concern,
-because they are not allowed to create new processes.
-}
+\item{ Currently, none of these configuration settings apply to
+standard universe jobs.  Normally, standard universe jobs do not
+create additional processes. }
 
 \item{
 On Windows, \MacroNI{VMx\_USER} will only work if the credential
@@ -2690,7 +2694,19 @@ of the specified user is stored on the execute machine
 using \Condor{store\_cred}.
 See the \Condor{store\_cred}
 manual page (in section~\ref{man-condor-store-cred})
-for details of this command.
+for details of this command.  However, the default behavior in Windows
+is to run jobs under a dynamically created dedicated execution account,
+so just using the default behavior is sufficient to avoid problems
+with lurker processes.
+}
+\item {
+You can tell if the starter is in fact treating the account as a
+dedicated account, because it will print a line such as the following
+in its log file:
+
+\begin{verbatim}
+Tracking process family by login "cndrusr1"
+\end{verbatim}
 }
 \end{enumerate}
 

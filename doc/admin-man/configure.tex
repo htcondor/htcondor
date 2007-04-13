@@ -1967,16 +1967,66 @@ section~\ref{sec:shared-fs}.
   user is stored on the execute machine using \Condor{store\_cred}.
   See Section~\ref{sec:RunAsNobody} for more information.
 
+\item[\Macro{STARTER\_ALLOW\_RUNAS\_OWNER}]
+  \label{param:StarterAllowRunAsOwner}
+  This is a boolean expression (evaluated with the job ad as the
+  target) that determins whether the job may run under the job owner's
+  account (true) or whether it will run as \MacroNI{VMx\_USER} or
+  nobody (false).  In unix, this defaults to true.  In windows, it
+  defaults to false.  The job ClassAd may also contain an attribute
+  \Attr{RunAsOwner} which is logically ANDed with the starter's
+  boolean value.  Under unix, if the job does not specify it, this
+  attribute defaults to true.  Under windows, it defaults to false.
+  In unix, if the \Attr{UidDomain} of the machine and job do not
+  match, then there is no possibility to run the job as the owner
+  anyway, so, in that case, this setting has no effect.  See
+  Section~\ref{sec:RunAsNobody} for more information.
+
+\item[\Macro{DEDICATED\_EXECUTE\_ACCOUNT\_REGEXP}]
+  \label{param:DedicatedExecuteAccountRegexp}
+  This is a regular expression (i.e. a string matching pattern) that
+  matches the account name(s) that are dedicated to running condor
+  jobs on the execute machine and which will never be used for more
+  than one job at a time.  The default matches no account name.  If
+  you have configured \MacroNI{VMx\_USER} to be a \emph{different}
+  account for each Condor VM, and no non-condor processes will ever be
+  run by these accounts, then this pattern should match the names of
+  all \MacroNI{VMx\_USER} accounts.  Jobs run under a dedicated
+  execute account are reliably tracked by Condor, whereas other jobs,
+  may spawn processes that Condor fails to detect.  Therefore, a
+  dedicated execution account provides more reliable tracking of CPU
+  usage by the job and it also guarantees that when the job exits, no
+  ``lurker'' processes are left behind.  When the job exits, condor
+  will attempt to kill all processes owned by the dedicated execution
+  account.  Example:
+
+\begin{verbatim}
+VM1_USER = cndrusr1
+VM2_USER = cndrusr2
+STARTER_ALLOW_RUNAS_OWNER = False
+DEDICATED_EXECUTE_ACCOUNT_REGEXP = cndrusr[0-9]+
+\end{verbatim}
+
+  You can tell if the starter is in fact treating the account as a
+  dedicated account, because it will print a line such as the following
+  in its log file:
+
+\begin{verbatim}
+Tracking process family by login "cndrusr1"
+\end{verbatim}
+
+
 \item[\Macro{EXECUTE\_LOGIN\_IS\_DEDICATED}]
   \label{param:ExecuteLoginIsDedicated}
-  A boolean value that defaults to \Expr{False}.
-  When \Expr{True},
-  Condor knows that users given by the \MacroNI{VMx\_USER}
-  configuration variable exist exclusively to be the owner of
-  Condor jobs.
-  When a Condor job belonging to one of these users completes,
-  Condor may use kill all jobs belonging to this user.
-  This avoids lurker jobs that the Condor job may have started.
+  This configuration setting is deprecated because it cannot handle the
+  case where some jobs run as dedicated accounts and some do not.  Use
+  \MacroNI{DEDICATED\_EXECUTE\_ACCOUNT\_REGEXP} instead.
+
+  A boolean value that defaults to \Expr{False}.  When \Expr{True},
+  Condor knows that all jobs are being run by dedicated execution
+  accounts (whether they are running as the job owner or as nobody or as
+  \MacroNI{VMx\_USER}).  Therefore, when the job exits, all processes
+  running under the same account will be killed.
 
 \item[\Macro{FILESYSTEM\_DOMAIN}] \label{param:FilesystemDomain}
   The \MacroNI{FILESYSTEM\_DOMAIN}
