@@ -1,0 +1,80 @@
+#! /usr/bin/env perl
+use CondorTest;
+
+$cmd = 'cmd_q_shows-sub.cmd';
+$cmdout = $cmd . ".out";
+$testname = 'cmd_q_shows-sub  ';
+
+$whoami = `whoami`;
+chomp($whoami);
+
+@adarray;
+
+$execute = sub {
+	my %info = @_;
+	print "Good we need to run to see it\n";
+
+	CondorTest::RegisterTimed($testname, $timed, 60);
+	my $cmd = "condor_q -sub $whoami";
+
+	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
+	if(!$cmdstatus)
+	{
+		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		exit(1)
+	}
+
+	my $submitline = "";
+	my $cluster = "";
+
+	open(CMD, "<$cmdout") || die "Can not find submit output:$!\n";;
+	while(<CMD>) {
+		chomp($_);
+		$submitline = $_;
+		if($submitline =~ /^.*cluster\s+(\d+).*$/) {
+			$cluster = $1;
+			print "Found my cluster which is $cluster!\n";
+		}
+		print "$_\n";
+	}
+
+	foreach $line (@adarray) {
+		chomp($line);
+		if($line =~ /^(\d+).\d+\s+(\w+).*$/) {
+			if(($cluster eq $1) && ($whoami eq $2)){
+				print "Score!!!!!\n";
+				$cmd = "condor_rm $cluster";
+				$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
+			}
+		}
+		print "$line\n";
+	}
+
+};
+
+$aborted = sub {
+	print "If all is good we abort our own job.......\n";
+	exit(0);
+};
+
+$ExitSuccess = sub {
+	my %info = @_;
+};
+
+$timed = sub
+{
+    die "Job should have ended by now. condor_q -sub $whoami broken!\n";
+};
+
+CondorTest::RegisterAbort($testname, $aborted);
+CondorTest::RegisterExecute($testname, $execute);
+CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
+
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+	print "$testname: SUCCESS\n";
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+
+
