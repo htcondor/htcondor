@@ -49,7 +49,7 @@ the Condor ID of the event does not match the
 expected value.
 Previously, \Condor{dagman} printed a warning, but continued.
 To restore Condor to the previous behavior,
-set the new \MacroNI{DAGMAN\_ABORT\_ON\_SCARY\_SUBMIT} configuration variable
+set the new \Macro{DAGMAN\_ABORT\_ON\_SCARY\_SUBMIT} configuration variable
 to \Expr{False}.
 
 \item When the \Condor{master} detects that its GCB broker is unavailable
@@ -92,18 +92,18 @@ between the wildcards anywhere in the string). Previously, only one
 wildcard could appear in the string pattern.
 
 \item Added optional configuration setting
-\MacroNI{NEGOTIATOR\_MATCH\_EXPRS}.  This allows the negotiator to
+\Macro{NEGOTIATOR\_MATCH\_EXPRS}.  This allows the negotiator to
 insert expressions into the matched ClassAd.  See
 page~\pageref{param:NegotiatorMatchExprs} for more information.
 
 \item Increased speed of ClassAd parsing.
 
-\item Added \MacroNI{DEDICATED\_EXECUTE\_ACCOUNT\_REGEXP} and
+\item Added \Macro{DEDICATED\_EXECUTE\_ACCOUNT\_REGEXP} and
 deprecated the boolean setting
-\MacroNI{EXECUTE\_LOGIN\_IS\_DEDICATED}, because the latter could not
+\Macro{EXECUTE\_LOGIN\_IS\_DEDICATED}, because the latter could not
 handle a policy where some jobs run as the job owner and some run as
 dedicated execution accounts.  Also added support for
-\MacroNI{STARTER\_ALLOW\_RUNAS\_OWNER} under unix.  See
+\Macro{STARTER\_ALLOW\_RUNAS\_OWNER} under unix.  See
 Section~\ref{param:DedicatedExecuteAccountRegexp} and
 Section~\ref{sec:RunAsNobody} for more information.
 
@@ -125,7 +125,7 @@ result in mutual annihilation of the various attempts to use the
 resource.  Instead, the first claim to be successfully requested will
 proceed and the others will be rejected.
 
-\item \Condor{glidein} was setting \MacroNI{PREEN\_INTERVAL}=0 in the default
+\item \Condor{glidein} was setting \Macro{PREEN\_INTERVAL}=0 in the default
 configuration, but this is no longer a legal value, as of 6.9.2.
 
 \item \Condor{glidein} was not setting necessary configuration parameters
@@ -374,7 +374,7 @@ universe jobs.
 \begin{itemize}
 
 \item \Condor{glidein} generates a default config file that sets
-\MacroNI{PREEN\_INTERVAL} to an invalid value (0).  To fix this,
+\Macro{PREEN\_INTERVAL} to an invalid value (0).  To fix this,
 remove the setting of \MacroNI{PREEN\_INTERVAL}.
 
 \item There are a couple of known issues with Condor's
@@ -464,7 +464,7 @@ error handling policy using \SubmitCmd{periodic\_release} or
 
 \item Added the \Macro{<SUBSYS>\_DAEMON\_AD\_FILE}
 configuration variable, which is similar to the 
-\MacroNI{<SUBSYS>\_ADDRESS\_FILE}.
+\Macro{<SUBSYS>\_ADDRESS\_FILE}.
 This new variable will be used in future versions of Condor, but is
 not necessary for 6.9.1.
 
