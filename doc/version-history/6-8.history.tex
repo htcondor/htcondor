@@ -217,6 +217,12 @@ much less time on IP to hostname lookups.
 now always sets \Attr{X509\_USER\_PROXY} in the job's environment
 to point to a copy of that proxy file.
 
+\item Fixed several bugs that could cause the \Condor{c-gahp} to time out
+when talking to the \Condor{schedd} and falsely report that commands
+completed successfully. A common result is grid type condor grid universe
+jobs being placed on hold because the \Condor{gridmanager} mistakenly
+thinks they disappeared from the remote \Condor{schedd}'s queue.
+
 \end{itemize}
 
 \noindent Known Bugs:
