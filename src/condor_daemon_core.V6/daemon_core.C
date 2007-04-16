@@ -2903,6 +2903,8 @@ int DaemonCore::HandleReq(Stream *insock)
 	int					result = FALSE;
 	int					old_timeout;
     int                 perm         = USER_AUTH_FAILURE;
+    char                user[256];
+	user[0] = '\0';
     ClassAd *the_policy     = NULL;
     KeyInfo *the_key        = NULL;
     char    *the_sid        = NULL;
@@ -3182,11 +3184,11 @@ int DaemonCore::HandleReq(Stream *insock)
 			}
 		}
 
-		if (who != NULL) {
-			((SafeSock*)stream)->setFullyQualifiedUser(who);
-			((SafeSock*)stream)->setAuthenticated(true);
+        if (who != NULL) {
+            ((SafeSock*)stream)->setFullyQualifiedUser(who);
+            ((SafeSock*)stream)->setAuthenticated(true);
 			dprintf (D_SECURITY, "DC_AUTHENTICATE: authenticated UDP message is from %s.\n", who);
-		}
+        }
 	}
 
 
@@ -3478,8 +3480,10 @@ int DaemonCore::HandleReq(Stream *insock)
 					the_policy->LookupString( ATTR_SEC_USER, &the_user);
 
 					if (the_user) {
-						((SafeSock*)stream)->setFullyQualifiedUser(the_user);
-						((SafeSock*)stream)->setAuthenticated(true);
+						// copy this to the HandleReq() scope
+						strcpy (user, the_user);
+						free( the_user );
+						the_user = NULL;
 					}
 				}
 				new_session = false;
@@ -3922,10 +3926,6 @@ int DaemonCore::HandleReq(Stream *insock)
 
 					// yep, they were.  deny.
 
-					const char *user = stream->getFullyQualifiedUser();
-					if( !user ) {
-						user = "";
-					}
 					dprintf(D_ALWAYS,
 						"DaemonCore: PERMISSION DENIED for %d via %s%s%s from host %s\n",
 						req,
@@ -3947,9 +3947,16 @@ int DaemonCore::HandleReq(Stream *insock)
 		// Check the daemon core permission for this command handler
 
 		// grab the user from the socket
-		const char *user = stream->getFullyQualifiedUser();
-		if( !user ) {
-			user = "";
+        if (is_tcp) {
+            const char *u = ((ReliSock*)stream)->getFullyQualifiedUser();
+			if (u) {
+				strcpy(user, u);
+			}
+        } else {
+			// user is filled in above, but we should make it part of
+			// the SafeSock too.
+			((SafeSock*)stream)->setFullyQualifiedUser(user);
+            ((SafeSock*)stream)->setAuthenticated(true);
 		}
 
 		if ( (perm = Verify(comTable[index].perm, ((Sock*)stream)->endpoint(), user)) != USER_AUTH_SUCCESS )
@@ -3980,11 +3987,7 @@ int DaemonCore::HandleReq(Stream *insock)
 		}
 
 	} else {
-        const char *user = stream->getFullyQualifiedUser();
-		if( !user ) {
-			user = "";
-		}
-		dprintf(D_ALWAYS,
+		dprintf(comTable[index].dprintf_flag,
 				"DaemonCore: Command received via %s%s%s from host %s\n",
 				(is_tcp) ? "TCP" : "UDP",
 				(user[0] != '\0') ? " from " : "",

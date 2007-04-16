@@ -920,7 +920,7 @@ void SafeSock::dumpSock()
 }
 #endif
 
-const char* SafeSock::getFullyQualifiedUser() const {
+const char* SafeSock::getFullyQualifiedUser() {
 	return _fqu;
 }
 

@@ -270,7 +270,7 @@ protected:
         
 	virtual void setFullyQualifiedUser(char * u);
 	///
-	virtual const char * getFullyQualifiedUser() const;
+	virtual const char * getFullyQualifiedUser();
 	///
 	virtual int encrypt(bool);
 	///
