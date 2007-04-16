@@ -67,7 +67,6 @@ void Register();
 // maintainence
 void Reconfig();
 
-void enqueue_result (int req_id, const char ** results, const int argc) ;
 int get_int (const char *, int *);
 int get_ulong (const char *, unsigned long *);
 int get_job_id (const char *, int *, int *);

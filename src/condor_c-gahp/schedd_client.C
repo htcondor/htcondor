@@ -67,6 +67,9 @@ PipeBuffer request_buffer;
 
 template class SimpleList <MyString*>;
 
+// Queue for command results to be written to our output pipe.
+SimpleList<MyString *> results_queue;
+
 int RESULT_OUTBOX = -1;
 int REQUEST_INBOX = -1;
 
@@ -75,6 +78,9 @@ int contactScheddTid = TIMER_UNSET;
 
 char *ScheddAddr = NULL;
 char *ScheddPool = NULL;
+
+void flush_results();
+void enqueue_result (int req_id, const char ** results, const int argc);
 
 extern char *myUserName;
 
@@ -964,6 +970,9 @@ submit_report_result:
 		dc_schedd.reschedule();
 	}
 
+		// Write all of our results to our parent.
+	flush_results();
+
 	dprintf (D_FULLDEBUG, "Finishing doContactSchedd()\n");
 
 	// Clean up the list
@@ -974,7 +983,7 @@ submit_report_result:
 			delete current_command;
 		}
 	}
-	
+
 	// Come back soon..
 	// QUESTION: Should this always be a fixed time period?
 	daemonCore->Reset_Timer( contactScheddTid, contact_schedd_interval );
@@ -1312,41 +1321,45 @@ enqueue_command (SchedDRequest * request) {
 }
 
 void
-enqueue_result (int req_id, const char ** results, const int argc) {
-	MyString buffer;
+flush_results()
+{
+	MyString *next_str;
 
-	// 1 Escape all the shit
-	// 2 Create a string that is a concatenation of the shit in #1
-	// 3 Flust the shit in #2 down the pipe (where shit ought to go)....
+	results_queue.Rewind();
+	while ( results_queue.Next( next_str ) ) {
+		daemonCore->Write_Pipe( RESULT_OUTBOX, next_str->Value(),
+								next_str->Length() );
+		delete next_str;
+	}
+	results_queue.Clear();
+}
 
-	buffer+= req_id;
+void
+enqueue_result (int req_id, const char ** results, const int argc)
+{
+	MyString *buffer = new MyString();
 
-	int i=0;
-	for (; i<argc; i++) {
+	*buffer += req_id;
 
-		buffer += " ";
-
-		char * escaped = escape_string ( (results[i]) ? results[i] : "NULL" );
-
-		buffer += escaped;
-
-		free (escaped);
+	for ( int i = 0; i < argc; i++ ) {
+		*buffer += ' ';
+		if ( results[i] == NULL ) {
+			*buffer += "NULL";
+		} else {
+			for ( int j = 0; results[i][j] != '\0'; j++ ) {
+				switch ( results[i][j] ) {
+				case ' ':
+				case '\\':
+				case '\r':
+				case '\n':
+					*buffer += '\\';
+				default:
+					*buffer += results[i][j];
+				}
+			}
+		}
 	}
 
-	buffer += "\n";
-
-	// Now flush:
-	daemonCore->Write_Pipe (RESULT_OUTBOX, buffer.Value(), buffer.Length());
+	*buffer += '\n';
+	results_queue.Append( buffer );
 }
-
-char *
-escape_string (const char * string) {
-	MyString my_string (string);
-	MyString escape_this (" \t\n\r\\");
-
-	MyString result = my_string.EscapeChars(escape_this, '\\');
-
-	return strdup(result.Value());
-}
-
-
