@@ -1068,6 +1068,8 @@ submit_report_result:
 	if ( failure_line_num ) {
 			// We had an error talking to the schedd. Take all of our
 			// incomplete commands and mark them as failed.
+			// TODO Consider retrying these commands, rather than
+			//   immediately marking them as failed.
 		if ( failure_errno == ETIMEDOUT ) {
 			dprintf( D_ALWAYS, "Timed out talking to schedd at line %d in "
 					 "doContactSchedd()\n", failure_line_num );
