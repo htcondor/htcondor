@@ -81,6 +81,15 @@ class GahpServer : public Service {
 	bool Startup();
 	bool Initialize(Proxy * proxy);
 
+	static const int m_buffer_size;
+	char *m_buffer;
+	int m_buffer_pos;
+	int m_buffer_end;
+	int buffered_read( int fd, void *buf, int count );
+	int buffered_peek();
+
+	bool m_in_results;
+
 	void read_argv(Gahp_Args &g_args);
 	void read_argv(Gahp_Args *g_args) { read_argv(*g_args); }
 	void write_line(const char *command);

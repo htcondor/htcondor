@@ -53,6 +53,8 @@ HashTable <HashKey, GahpServer *>
     GahpServer::GahpServersById( HASH_TABLE_SIZE,
 								 hashFunction );
 
+const int GahpServer::m_buffer_size = 4096;
+
 const char *escapeGahpString(const char * input);
 
 void GahpReconfig()
@@ -157,10 +159,15 @@ GahpServer::GahpServer(const char *id, const char *path, const ArgList *args)
 	ProxiesByFilename = NULL;
 
 	m_gahp_version[0] = '\0';
+	m_buffer_pos = 0;
+	m_buffer_end = 0;
+	m_buffer = (char *)malloc( m_buffer_size );
+	m_in_results = false;
 }
 
 GahpServer::~GahpServer()
 {
+	free( m_buffer );
 	if ( globus_gass_server_url != NULL ) {
 		free( globus_gass_server_url );
 	}
@@ -316,6 +323,40 @@ GahpClient::~GahpClient()
 }
 
 
+// This function has the same arguments as daemonCore->Read_Pipe() (which
+// it's meant to wrap), but the fd and count arguments are fixed. It's
+// intended to be called only by GahpServer::read_argv().
+// TODO: Incorporate buffered, non-blocking reading directly into
+//   GahpServer::read_argv().
+int
+GahpServer::buffered_read( int fd, void *buf, int count )
+{
+	ASSERT(fd == m_gahp_readfd);
+	ASSERT(count == 1);
+
+	if ( m_buffer_pos >= m_buffer_end ) {
+		int rc = daemonCore->Read_Pipe(fd, m_buffer, m_buffer_size );
+		m_buffer_pos = 0;
+		if ( rc <= 0 ) {
+			m_buffer_end = 0;
+			return rc;
+		} else {
+			m_buffer_end = rc;
+		}
+	}
+
+	((char *)buf)[0] = ((char *)m_buffer)[m_buffer_pos];
+	m_buffer_pos++;
+	return 1;
+}
+
+// Return the number of bytes in the buffer used by buffered_read().
+int
+GahpServer::buffered_peek()
+{
+	return m_buffer_end - m_buffer_pos;
+}
+
 void
 GahpServer::read_argv(Gahp_Args &g_args)
 {
@@ -344,7 +385,8 @@ GahpServer::read_argv(Gahp_Args &g_args)
 	for (;;) {
 
 		ASSERT(ibuf < buf_size);
-		result = daemonCore->Read_Pipe(m_gahp_readfd, &(buf[ibuf]), 1 );
+		//result = daemonCore->Read_Pipe(m_gahp_readfd, &(buf[ibuf]), 1 );
+		result = buffered_read(m_gahp_readfd, &(buf[ibuf]), 1 );
 
 		/* Check return value from read() */
 		if ( result < 0 ) {		/* Error - try reading again */
@@ -465,6 +507,15 @@ GahpServer::read_argv(Gahp_Args &g_args)
 				g_args.reset();
 				ibuf = 0;
 				continue;	// go back to the top of the for loop
+			}
+
+				// If we're not in the middle of a RESULTS command, then
+				// there shouldn't be anything left in the buffer. If
+				// there is, then it's probably a single 'R' indicating
+				// that the gahp has results for us.
+			if ( !m_in_results && buffered_peek() > 0 ) {
+				skip_next_r = true;
+				poll_real_soon();
 			}
 
 			return;
@@ -621,7 +672,7 @@ GahpServer::Startup()
 	}
 
 	if ( (daemonCore->Create_Pipe(stdin_pipefds, is_c_gahp) == FALSE) ||
-	     (daemonCore->Create_Pipe(stdout_pipefds, true) == FALSE) ||
+	     (daemonCore->Create_Pipe(stdout_pipefds, true, false, true) == FALSE) ||
 	     (daemonCore->Create_Pipe(stderr_pipefds, true, false, true) == FALSE)) 
 	{
 		dprintf(D_ALWAYS,"GahpServer::Startup - pipe() failed, errno=%d\n",
@@ -2044,6 +2095,8 @@ GahpServer::poll()
 	GahpClient* entry;
 	ExtArray<Gahp_Args*> result_lines;
 
+	m_in_results = true;
+
 		// We must set poll_pending to false before returning from this
 		// function!!
 	poll_pending = false;
@@ -2060,6 +2113,7 @@ GahpServer::poll()
 			// Badness !
 		dprintf(D_ALWAYS,"GAHP command 'RESULTS' failed\n");
 		delete result;
+		m_in_results = false;
 		return 0;
 	}
 	num_results = atoi(result->argv[1]);
@@ -2074,6 +2128,15 @@ GahpServer::poll()
 		read_argv(result);
 		result_lines[i] = result;
 		result = NULL;
+	}
+
+		// If there's anything left in the read buffer, then it's
+		// probably a single 'R' indicating that the gahp has more
+		// results for us.
+	m_in_results = false;
+	if ( buffered_peek() > 0 ) {
+		skip_next_r = true;
+		poll_real_soon();
 	}
 
 		// At this point, the Results command has compelted.  We needed
