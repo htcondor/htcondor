@@ -72,6 +72,9 @@ available for X86\_64 native ports of Condor.
 
 \begin{itemize}
 
+\item Fixed a bug where under certain conditions Condor's file logging codes
+would perform a segmentation fault.
+
 \item Removed periodic re-indexing of the quill history\_vertical table.
 This should not be needed with the current schema, and it should speed
 up database re-indexing operations.
