@@ -504,6 +504,7 @@ debug_unlock(int debug_level)
 	if (DebugFP) {
 		result = fflush( DebugFP );
 		if (result < 0) {
+				DebugUnlockBroken = 1;
 				_condor_dprintf_exit(errno, "Can't fflush debug log file\n");
 		}
 	}
@@ -530,6 +531,7 @@ debug_unlock(int debug_level)
 		if (DebugFP) {
 			int result = fclose( DebugFP );
 			if (result < 0) {
+				DebugUnlockBroken = 1;
 				_condor_dprintf_exit(errno, "Can't fclose debug log file\n");
 			}
 		}
