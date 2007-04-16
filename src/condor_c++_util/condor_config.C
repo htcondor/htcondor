@@ -1492,7 +1492,7 @@ param_boolean_expr( const char *name, bool default_value, ClassAd const *me, Cla
 		return default_value;
 	}
 
-	if( expr && *expr ) {
+	if( *expr ) {
 		ClassAd rhs;
 		if( me ) {
 			rhs = *me;
