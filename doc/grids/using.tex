@@ -183,8 +183,8 @@ The portions of this syntax specification enclosed within
 square brackets (\Lbr\ and \Rbr) are optional.
 On a machine where the jobmanager is listening on a nonstandard port,
 include the port number.
-The \verb@jobmanagername@
-is one of five strings:
+The \verb@jobmanagername@ is a site-specific string.
+The most common one is \verb@jobmanager-fork@, but others are
 \begin{verbatim}
 jobmanager
 jobmanager-condor
@@ -195,7 +195,7 @@ jobmanager-sge
 The Globus software running on the remote resource
 uses this string to identify and select the correct service
 to perform.
-Other \verb@jobmanagername@ strings may be used,
+Other \verb@jobmanagername@ strings are used,
 where additional services are defined and implemented.
 
 
@@ -575,7 +575,7 @@ square brackets (\Lbr\ and \Rbr) are optional.
 The \SubmitCmd{scheduler-string} field of \SubmitCmd{grid\_resource}
 indicates which job execution
 system should to be used on the remote system, to execute the job. One of
-these values is subsitituted for \SubmitCmd{scheduler-string}:
+these values is substituted for \SubmitCmd{scheduler-string}:
 \begin{verbatim}
 Fork
 Condor
@@ -910,7 +910,7 @@ condor_submit -p mypassword /home/user/myjob.submit
 \end{verbatim}
 \normalsize
 The argument list for \Condor{submit} defaults to
-being publically available.
+being publicly available.
 An attacker with a log in to the local machine could
 generate a simple shell script
 %  such as:
