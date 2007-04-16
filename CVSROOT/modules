@@ -269,7 +269,8 @@ V6_8_SRC		-a \
 			src/condor_tests \
 			src/deployment_tools \
 			src/hawkeye_modules \
-			src/stork
+			src/stork \
+			src/packaging
 
 V6_9_SRC		-a \
 			V6_8_SRC \
