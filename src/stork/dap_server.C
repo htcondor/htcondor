@@ -1098,9 +1098,16 @@ void regular_check_for_requests_in_process()
 					if (dap_queue.get_pid(pid, dap_id) == DAP_SUCCESS){
 
 						if (dap_queue.remove(dap_id) == DAP_SUCCESS){
-							dprintf(D_ALWAYS, "Killing process %d, and removing dap %s\n", 
+							dprintf(D_ALWAYS,
+									"Killing process %d and removing dap %s\n",
 									pid, dap_id);
-							if ( kill(pid, SIGKILL) < 0 ) {
+
+							priv_state priv;
+							priv = set_user_priv( );
+							int kill_status = kill( pid, SIGKILL );
+							set_priv( priv );
+
+							if ( kill_status < 0 ) {
 								dprintf( D_ALWAYS,
 										"%s:%d:kill pid %d error: (%d)%s\n",
 										__FILE__, __LINE__,
@@ -1108,6 +1115,7 @@ void regular_check_for_requests_in_process()
 										errno, strerror(errno)
 								);
 							}
+							
 
 							char attempts[MAXSTR], tempstr[MAXSTR];
 							std::string modify_s = "";
