@@ -537,7 +537,7 @@ DAEMONCORE_LIB = ../condor_daemon_core.V6/daemon_core.a $(COREDUMPER_LINK_LIB)
 
 
 /* common ld flags which should be first in the list */
-COM_LDFLAGS_F = $(GCC_RDYNAMIC_FLAG) -lm $(LDFLAGS) $(CONFIGURE_LIBS)
+COM_LDFLAGS_F = $(GCC_RDYNAMIC_FLAG) $(GCC_STACK_PROTECTOR) -lm $(LDFLAGS) $(CONFIGURE_LIBS)
 
 /* common ld flags which should be last in the list */
 COM_LDFLAGS_L = 

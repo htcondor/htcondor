@@ -59,6 +59,9 @@ GCC_RDYNAMIC_FLAG = @gcc_rdynamic_flag@
 /* Debugging flags common to C and C++ */
 COMP_DEBUG_FLAGS = -g @comp_option_Wall@ @comp_option_W@ @comp_option_Wextra@ @comp_option_Wfloat_equal@ @comp_option_Wshadow@ @comp_option_Wendif_labels@ @comp_option_Wpointer_arith@ @comp_option_Wconversion@ @comp_option_Wcast_qual@ @comp_option_Wcast_align@ @comp_option_Wvolatile_register_var@ @comp_option_stack_protector@
 
+/* This needs to have its own variable as we need to add it to our link lines */
+GCC_STACK_PROTECTOR = @comp_option_stack_protector@
+
 /* Our libcondorapi.so compilation needs this to turn off stack protection
 	since there appears to be a link time error related to it in the internal
 	compiler libraries for 4.1.2 on debian. We'll turn it off everywhere for
