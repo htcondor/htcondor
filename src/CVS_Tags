@@ -1,3 +1,9 @@
+04/17/07 V6_8-dag_node_cleanup-{root,branch]
+  The branch has changes related to cleaning up the node processing
+  code in DAGMan.  Finishing the cleanup should make it much easier to
+  fix PR 606 and PR 728.
+  Created form BUILD-V6_8-branch-2007-4-17.
+
 02/15/07 V6_8-dagman-PR806-merge-1
   The state of the V6_8-dagman-PR806-branch for a merge to the trunk.
   Note that there are modifications committed beyond this tag on the
