@@ -226,6 +226,11 @@ completed successfully. A common result is grid type condor grid universe
 jobs being placed on hold because the \Condor{gridmanager} mistakenly
 thinks they disappeared from the remote \Condor{schedd}'s queue.
 
+% PR 770
+\item Fixed a bug in Stork which was causing it to write the output and
+error log files as the wrong user, and read the input file as the wrong
+user.
+
 \end{itemize}
 
 \noindent Known Bugs:
