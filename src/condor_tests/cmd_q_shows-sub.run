@@ -8,13 +8,15 @@ $testname = 'cmd_q_shows-sub  ';
 $whoami = `whoami`;
 chomp($whoami);
 
+print "Looking for submitter $whoami\n";
+
 @adarray;
 
 $execute = sub {
 	my %info = @_;
 	print "Good we need to run to see it\n";
+	print "Looking for submitter $whoami\n";
 
-	CondorTest::RegisterTimed($testname, $timed, 60);
 	my $cmd = "condor_q -sub $whoami";
 
 	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
@@ -40,7 +42,7 @@ $execute = sub {
 
 	foreach $line (@adarray) {
 		chomp($line);
-		if($line =~ /^(\d+).\d+\s+(\w+).*$/) {
+		if($line =~ /^\s*(\d+).\d+\s+([\w\-]+).*$/) {
 			if(($cluster eq $1) && ($whoami eq $2)){
 				print "Score!!!!!\n";
 				$cmd = "condor_rm $cluster";
