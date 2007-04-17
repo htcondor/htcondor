@@ -25,6 +25,57 @@ specifically on the added resource.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{What \Condor{glidein} Does}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\Condor{glidein} works by installing and executing
+necessary Condor daemons and configuration on the remote resource,
+such that the resource reports to and joins the local pool.
+\Condor{glidein} accomplishes two separate tasks towards
+having a remote grid resource join the local Condor pool.
+They are the set up task and the execution task.
+
+The set up task generates necessary 
+configuration files and locates proper platform-dependent
+binaries for the Condor daemons.
+A script is also generated that can be used during
+the execution task to invoke the proper Condor daemons.
+These files are copied to the remote resource as necessary.
+The configuration variable \Macro{GLIDEIN\_SERVER\_URLS}
+defines a list of locations from which the necessary
+binaries are obtained.
+Default values cause binaries to be downloaded from the 
+UW site.
+See 
+section~\ref{param:GlideinServerURLS} 
+on page~\pageref{param:GlideinServerURLS}
+for a full definition of this configuration variable.
+
+When the files are correctly in place,
+the execution task starts the Condor daemons.
+\Condor{glidein} does this by submitting a Condor job
+to run under the grid universe.
+The job runs the \Condor{master} on the remote grid resource.
+The \Condor{master} invokes other daemons, which contact
+the local pool's \Condor{collector} to join the pool.
+The Condor daemons exit gracefully when no jobs run on the daemons for a
+preset period of time.
+
+Here is an example of how a glidein resource appears, similar to how
+any other machine appears.  The name has a
+slightly different form, in order to handle the possibility of
+multiple instances of glidein daemons inhabiting a multi-processor
+machine.
+
+\footnotesize
+\begin{verbatim}
+% condor_status | grep denal
+7591386@denal LINUX       INTEL  Unclaimed  Idle       3.700  24064  0+00:06:35
+
+\end{verbatim}
+\normalsize
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Configuration Requirements in the Local Pool}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{configuration!for glidein}
@@ -66,49 +117,7 @@ may coexist with other instances of Condor.
 resources join this personal Condor pool.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{What \Condor{glidein} Does}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\Condor{glidein} works by installing and executing
-necessary Condor daemons and configuration on the remote resource,
-such that the resource reports to and joins the local pool.
-\Condor{glidein} accomplishes two separate tasks towards
-having a remote grid resource join the local Condor pool.
-They are the set up task and the execution task.
-
-The set up task generates necessary 
-configuration files and locates proper platform-dependent
-binaries for the Condor daemons.
-A script is also generated that can be used during
-the execution task to invoke the proper Condor daemons.
-These files are copied to the remote resource as necessary.
-
-When the files are correctly in place,
-the execution task starts the Condor daemons.
-\Condor{glidein} does this by submitting a Condor job
-to run under the grid universe.
-The job runs the \Condor{master} on the remote grid resource.
-The \Condor{master} invokes other daemons, which contact
-the local pool's \Condor{collector} to join the pool.
-The Condor daemons exit gracefully when no jobs run on the daemons for a
-preset period of time.
-
-Here is an example of how a glidein resource appears, similar to how
-any other machine appears.  The name has a
-slightly different form, in order to handle the possibility of
-multiple instances of glidein daemons inhabiting a multi-processor
-machine.
-
-\footnotesize
-\begin{verbatim}
-% condor_status | grep denal
-7591386@denal LINUX       INTEL  Unclaimed  Idle       3.700  24064  0+00:06:35
-
-\end{verbatim}
-\normalsize
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Running Jobs on the Glidein Resource}
+\subsection{Running Jobs on the Remote Grid Resource After Glidein }
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Once the Globus resource has been added to the local Condor

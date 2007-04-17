@@ -5323,6 +5323,23 @@ These macros affect the \Prog{grid\_monitor}.
 \end{description}
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Grid-Config-File-Entries}Configuration File
+Entries Relating to Grid Usage and Glidein}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{configuration!grid and glidein configuration variables}
+These macros affect the Condor's usage of grid resources
+and glidein.
+\begin{description}
+\item[\Macro{GLIDEIN\_SERVER\_URLS}]
+  \label{param:GlideinServerURLS}
+  A comma or space-separated list of URLs that contain the binaries
+  that must be copied by \Condor{glidein}.
+  There are no default values, but working URLs that copy from the UW site
+  are provided in the distributed sample configuration files.
+
+\end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:DAGMan-Config-File-Entries}Configuration File 
