@@ -753,7 +753,7 @@ sub runCondorTool
 	my $catch = "runCTool$$";
 
 	# clean array before filling
-	#${arrayref} = -1;
+	@{arrayref} = ();
 	system("date");
 
 	while( !$done)
