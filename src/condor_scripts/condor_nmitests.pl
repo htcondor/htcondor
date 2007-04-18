@@ -31,6 +31,7 @@ GetOptions (
 		'condor=s' => \$cerror,
 		'unknown=s' => \$uerror,
 		'single=s' => \$singletest,
+		'who=s' => \$whoosetests,
 );
 
 %platformerrors;
@@ -52,10 +53,16 @@ if(!$singletest) {
 	}
 }
 	
+$foruser = "cndrauto";
+
+if($whoosetests) {
+	$foruser = $whoosetests;
+} 
+
 if(!$base) {
-	$base = "/nmi/run/cndrauto_nmi-s001.cs.wisc.edu_";
+	$base = "/nmi/run/" . $foruser . "_nmi-s001.cs.wisc.edu_";
 }
-$testbase = "cndrauto_nmi-s001.cs.wisc.edu_";
+$testbase = $foruser . "_nmi-s001.cs.wisc.edu_";
 
 $basedir = $base . $gid;
 #system("ls $basedir");
@@ -585,6 +592,7 @@ sub help
 		[-c/--condor]           Assign blame to Condor.
 		[-t/--tests]            Assign blame to tests.
 		[-u/--unknown]          Assign blame to Unknown.
+		[-w/--who]              Whoose test run?
 		\n";
 }
 
