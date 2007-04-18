@@ -14,10 +14,12 @@ struct Platform_info =>
 	unknown_errs => '$',
 	platform_errs => '$',
 	framework_errs => '$',
+	count_errs => '$',
 };
 
 
 GetOptions (
+		'arch=s' => \$arch,
         'base=s' => \$base,
         'gid=s' => \$gid,
         'help' => \$help,
@@ -28,6 +30,7 @@ GetOptions (
 		'tests=s' => \$terror,
 		'condor=s' => \$cerror,
 		'unknown=s' => \$uerror,
+		'single=s' => \$singletest,
 );
 
 %platformerrors;
@@ -35,15 +38,24 @@ GetOptions (
 
 if($help) { help(); exit(0); }
 
-if(!$gid) {
-	print "You must enter the build GID to check test data from!\n";
-	help();
-	exit(1);
+if(!$singletest) {
+	if(!$gid) {
+		print "You must enter the build GID to check test data from!\n";
+		help();
+		exit(1);
+	}
+} else {
+	if(!$arch) {
+		print "Can not evaluate single test without platform type!\n";
+		help();
+		exit(1);
+	}
 }
 	
 if(!$base) {
 	$base = "/nmi/run/cndrauto_nmi-s001.cs.wisc.edu_";
 }
+$testbase = "cndrauto_nmi-s001.cs.wisc.edu_";
 
 $basedir = $base . $gid;
 #system("ls $basedir");
@@ -59,58 +71,71 @@ my $platform = "";
 my $platformpost = "";
 my $buildtag = "";
 
-print "Opening build output for GID <$gid>\n";
-opendir DH, $basedir or die "Can not open Build Results<$basedir>:$!\n";
-foreach $file (readdir DH) {
-	if($file =~ /platform_post\.(.*).out/) {
-		$platformpost = $basedir . "/" . $file;
-		#print "$platformpost is for platform $1\n";
-		$platform = $1;
-		open(FH,"<$platformpost") || die "Unable to scrape<$file> for GID:$!\n";
-		$line = "";
-		while(<FH>) {
-			chomp($_);
-			$line = $_;
-			if($line =~ /^CNS:\s+gid\s+=\s+(.*)$/) {
-				#print "Platform $platform has GID $1\n";
-				$TestGIDs{"$platform"} = $1;
-			} elsif ($line =~ /^ENV:\s+NMI_tag\s+=\s+(.*)$/) {
-				$buildtag = $1;
+my $histold = "";
+my $histnew = "";
+
+if(!$singletest) {
+	print "Opening build output for GID <$gid>\n";
+	opendir DH, $basedir or die "Can not open Build Results<$basedir>:$!\n";
+	foreach $file (readdir DH) {
+		if($file =~ /platform_post\.(.*).out/) {
+			$platformpost = $basedir . "/" . $file;
+			#print "$platformpost is for platform $1\n";
+			$platform = $1;
+			open(FH,"<$platformpost") || die "Unable to scrape<$file> for GID:$!\n";
+			$line = "";
+			while(<FH>) {
+				chomp($_);
+				$line = $_;
+				if($line =~ /^CNS:\s+gid\s+=\s+(.*)$/) {
+					#print "Platform $platform has GID $1\n";
+					$TestGIDs{"$platform"} = $1;
+				} elsif ($line =~ /^ENV:\s+NMI_tag\s+=\s+(.*)$/) {
+					$buildtag = $1;
+				}
 			}
+			close(FH);
+		} elsif($file =~ /platform_pre\.(.*).out/) {
+			$platform = $1;
+			$BuildTargets{"$platform"} = 1;
 		}
-		close(FH);
-	} elsif($file =~ /platform_pre\.(.*).out/) {
-		$platform = $1;
-		$BuildTargets{"$platform"} = 1;
 	}
+	closedir DH;
+} else {
+	$realtestgid = $testbase . $singletest;
+	$TestGIDs{"$arch"} = $realtestgid;
+	$buildtag = "TagUnknown";
+	$histold = $buildtag . "-test_history";
+	$histnew = $buildtag . "-test_history.new";
 }
-closedir DH;
 
-my $bv = "";
-if($buildtag =~ /^BUILD-(V\d_\d)-.*$/) {
-	$bv = $1;
-}
-my $histold = $bv . "-test_history";
-my $histnew = $bv . "-test_history.new";
-
-print "Build Tag: $buildtag Release: $bv\n";
-print "***************************\n";
-print "Failed or Pending Builds: ";
-foreach  $key (sort keys %BuildTargets) {
-	if( exists $TestGIDs{"$key"} ) {
-		;
-	} else {
-		print "$key ";
+if(!$singletest) {
+	my $bv = "";
+	if($buildtag =~ /^BUILD-(V\d_\d)-.*$/) {
+		$bv = $1;
 	}
+	$histold = $bv . "-test_history";
+	$histnew = $bv . "-test_history.new";
+
+	print "Build Tag: $buildtag Release: $bv\n";
+	print "***************************\n";
+	print "Failed or Pending Builds: ";
+	foreach  $key (sort keys %BuildTargets) {
+		if( exists $TestGIDs{"$key"} ) {
+			;
+		} else {
+			print "$key ";
+		}
+	}
+	print "\n";
+	print "***************************\n";
 }
-print "\n";
-print "***************************\n";
 
 
-#print "These are what we will be looking at for test results:\n";
-#while(($key, $value) = each %TestGIDs) {
-	#print "$key => $value\n";
-#}
+print "These are what we will be looking at for test results:\n";
+while(($key, $value) = each %TestGIDs) {
+	print "$key => $value\n";
+}
 
 my $totalgood = 0;;
 my $totalbad = 0;;
@@ -122,6 +147,7 @@ my $totalcondorerr = 0;
 my $totalframeworkerr = 0;
 my $totalplatformerr = 0;
 my $totalunknownerr = 0;
+my $totalcounterr = 0;
 
 AnalyseTestGids();
 
@@ -159,12 +185,20 @@ PrintResults();
 
 my $missing = $totalexpected - $totaltests;
 
+
 print "********\n"; 
 print "	Build GID<$gid>:\n";
 print "	Totals Passed = $totalgood, Failed = $totalbad, ALL = $totaltests Expected = $totalexpected Missing = $missing\n";
 print "	Test = $totaltesterr, Condor = $totalcondorerr, Platform = $totalplatformerr, Framework = $totalframeworkerr\n";
 print "	Unknown = $totalunknownerr\n";
 print "********\n"; 
+
+if( $totalcounterr  > 0 ) {
+	print "\n";
+	print "*** NOTE: $totalcounterr platform(s) had Passed plus Failed != Expected\n";
+	print "\n";
+	print "********\n"; 
+}
 exit 0;
 
 sub CrunchErrors
@@ -262,6 +296,7 @@ sub CrunchErrors
 #	    unknown_errs => '$',
 #	    platform_errs => '$',
 #	    framework_errs => '$',
+#		count_errs => '$',
 #	};
 
 sub GetPlatformData
@@ -294,6 +329,9 @@ sub PrintResults()
 		$p = $platformresults[$contrl];
 		printf "%-11s (%d):		Passed = %d	Failed = %d	",$p->platform(),$p->expected(),
 			$p->passed(),$p->failed();
+		if($p->count_errs( ) > 0) {
+			printf " *** ",$p->test_errs();
+		}
 		if($p->test_errs( ) > 0) {
 			printf " T(%d) ",$p->test_errs();
 		}
@@ -330,6 +368,7 @@ sub PrintResults()
 #	    unknown_errs => '$',
 #	    platform_errs => '$',
 #	    framework_errs => '$',
+#		count_errs => '$',
 #	};
 
 sub AnalyseTestGids
@@ -370,6 +409,22 @@ sub AnalyseTestGids
 			$totalexpected = $totalexpected + $expected;
 		}
 
+		# Did we get what we expected??????
+		# We have to have expected and the tests need to have
+		# either $bad or $good not zero. They both are 0 while
+		# the tests are still running.
+		if(($expected > 0) && (($bad > 0) || ($good > 0))) {
+			$counttest = $bad + $good;
+			if($expected != $counttest) {
+				$entry->count_errs(1);
+				$totalcounterr = $totalcounterr + 1;
+			} else {
+				$entry->count_errs(0);
+			}
+		} else {
+			$entry->count_errs(0);
+		}
+			
 		AddHistExpected($key, $good, $bad, $expected);
 
 		$entry->platform("$key");
@@ -520,9 +575,11 @@ sub help
 	print "Usage: condor_nmitests.pl --gid=<string>
 	Options:
 		[-h/--help]             See this
+		[-a/--arch]             platform type for single test evaluation
 		[-b/--base]             Base location indexed by gid.
 		[-g/--gid]              ie: 1175825704_25640 { build gid tests came from }
 		                            assumes{/nmi/run/cndrauto_nmi-s001.cs.wisc.edu_}
+		[-s/--single]           ie: 1175825704_25640 { test gid to evaluate }
 		[-p/--platform]         Assign blame to platforms.
 		[-f/--framework]        Assign blame to framework.
 		[-c/--condor]           Assign blame to Condor.
