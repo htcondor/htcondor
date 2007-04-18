@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_task.pl,v 1.2.2.5 2007-04-04 21:02:48 bt Exp $
+# $Id: remote_task.pl,v 1.2.2.6 2007-04-18 22:57:00 bt Exp $
 # run a test in the Condor testsuite
 # return val is the status of the test
 # 0 = built and passed
@@ -77,7 +77,8 @@ if( !($ENV{NMI_PLATFORM} =~ /winnt/)) {
     print "BUILD TEST for $testname returned $buildstatus\n";
     if( $buildstatus != 0 ) {
         print "Build failed for $testname\n";
-        exit 2;
+		# add it to the failed tests summary file....
+		# we do that by continueing......
     }
 }
 
