@@ -4162,24 +4162,24 @@ These settings affect the \Condor{starter}.
   Unix mechanism that allows users to assign their own processes a lower 
   priority, such that these processes do not interfere with interactive
   use of the machine.
-  If you have machines with lots
-  of real memory and swap space, so that the only scarce resource is CPU time,
-  you may use this macro in conjunction with a policy that
+  For machines with lots
+  of real memory and swap space, such that the only scarce resource is CPU time,
+  use this macro in conjunction with a policy that
   allows Condor to always start jobs on the machines. 
   Condor jobs would always run,
-  but interactive response on your machines would never suffer.
-  You most likely will not notice Condor is
+  but interactive response on the machines would never suffer.
+  A user most likely will not notice Condor is
   running jobs.  See section~\ref{sec:Configuring-Policy} on
-  Configuring The Startd Policy for more details on setting up a
+  Startd Policy Configuration for more details on setting up a
   policy for starting and stopping jobs on a given machine.
 
-  The value is an arbitrary ClassAd expression,
-  evaluated by the \Condor{starter} daemon for each job just before the
-  job runs, and the expression can refer to any attribute in the job ClassAd.
+  The integer value is
+  set by the \Condor{starter} daemon for each job just before the
+  job runs.
   The range of allowable values are integers in the range of 0 to 19
   (inclusive),
   with a value of 19 being the lowest priority.  
-  If the expression evaluates to a value outside this range,
+  If the integer value is outside this range,
   then on a Unix machine, a value greater than 19 is auto-decreased to 19;
   a value less than 0 is treated as 0.
   For values outside this range, a Windows machine ignores the value
