@@ -911,6 +911,11 @@ File System Configuration File Entries''.
   % Default definition in config file: bogus value
   % Result if not defined or RHS is empty: autodiscovered domain, if any, is used.
 
+\item[\Macro{NO\_DNS}] \label{param:NoDNS}
+  A boolean value that defaults to \Expr{False}.
+  When \Expr{True}, Condor constructs host names using the host's IP address
+  together with the value defined for \MacroNI{DEFAULT\_DOMAIN\_NAME}. 
+
 \item[\Macro{CM\_IP\_ADDR}] \label{param:CMIPAddr}
   If neither \MacroNI{COLLECTOR\_HOST} nor 
   \MacroNI{COLLECTOR\_IP\_ADDR} macros are defined, then this
