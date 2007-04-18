@@ -132,10 +132,10 @@ if(!$singletest) {
 }
 
 
-print "These are what we will be looking at for test results:\n";
-while(($key, $value) = each %TestGIDs) {
-	print "$key => $value\n";
-}
+#print "These are what we will be looking at for test results:\n";
+#while(($key, $value) = each %TestGIDs) {
+	#print "$key => $value\n";
+#}
 
 my $totalgood = 0;;
 my $totalbad = 0;;
