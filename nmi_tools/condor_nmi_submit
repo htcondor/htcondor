@@ -113,8 +113,8 @@ my $default_condor_bin = "/usr/local/condor/bin";
 
 # Config file encapsulating dependencies on NMI framework.
 my $nmiconf;
-if( -f '/usr/local/nmi/etc/nmi.conf' ) {
-    $nmiconf = '/usr/local/nmi/etc/nmi.conf';
+if( -f '/nmi/etc/nmi.conf' ) {
+    $nmiconf = '/nmi/etc/nmi.conf';
 }
 
 ######################################################################
@@ -515,7 +515,7 @@ Where [options] can be any of:
 --nmi-glue=string  <nmi_glue directory containing customised glue scripts>
 --workspace=path   <directory containing Condor source to build> 
 --nmiconf=string   <full path to the NMI config file to use if needed
-                    (defaults to /usr/local/nmi/etc/nmi.conf)>
+                    (defaults to /nmi/etc/nmi.conf)>
 --desc=string      <arbitrary text for a human readable description of the job>
 --append=string    <arbitrary text to be appended to the NMI submit file>
 --submit-xtests    <should this run submit the cross-platform tests defined
