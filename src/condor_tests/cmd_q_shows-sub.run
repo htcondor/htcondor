@@ -17,7 +17,9 @@ $execute = sub {
 	print "Good we need to run to see it\n";
 	print "Looking for submitter $whoami\n";
 
-	my $cmd = "condor_q -sub $whoami";
+	# give it 5 minutes or die.
+	CondorTest::RegisterTimed($testname, $timed, 300);
+	my $cmd = "condor_q ";
 
 	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if(!$cmdstatus)
@@ -43,15 +45,33 @@ $execute = sub {
 	foreach $line (@adarray) {
 		chomp($line);
 		if($line =~ /^\s*(\d+).\d+\s+([\w\-]+).*$/) {
-			if(($cluster eq $1) && ($whoami eq $2)){
-				print "Score!!!!!\n";
-				$cmd = "condor_rm $cluster";
-				$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
-			}
+				$whoami = $2;
+				print "Determined who I am <$whoami>\n";
 		}
-		print "$line\n";
 	}
 
+	$cmd = "condor_q -sub $whoami ";
+
+	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
+	if(!$cmdstatus)
+	{
+		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		system("condor_rm $cluster"); # bail but pull job which never dies...
+		exit(1)
+	}
+
+	foreach $line (@adarray) {
+		chomp($line);
+
+		if($line =~ /^\s*(\d+).\d+\s+([\w\-]+).*$/) {
+			if(($cluster eq $1) && ($whoami eq $2)){
+				print "condor_q -sub $whoami found my job matching $cluster\n";
+				$cmd = "condor_rm $cluster";
+				$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,8);
+				return(0);
+			}
+		}
+	}
 };
 
 $aborted = sub {
