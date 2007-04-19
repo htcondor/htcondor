@@ -314,31 +314,31 @@ sub parseOptions
 
     GetOptions(
 # primary switch: build vs. test
-           'build'         => $opt_build,
-           'test'          => $opt_test,
+           'build'         => \$opt_build,
+           'test'          => \$opt_test,
 # global options
-           'help'          => $opt_help,
-           'debug'         => $opt_debug,
-           'notify=s'      => $opt_notify,
-           'platforms=s'   => $opt_platforms,
-           'nmi-glue=s'    => $opt_nmi_glue,
-           'workspace=s'   => $opt_workspace,
-           'tag=s'         => $opt_tag,
-           'module=s'      => $opt_module,
-           'nmiconf=s'     => $opt_nmiconf,
-           'desc=s'        => $opt_desc,
-           'append=s'      => $opt_append,
-           'submit-xtests!' => $opt_submit_xtests,
+           'help'          => \$opt_help,
+           'debug'         => \$opt_debug,
+           'notify=s'      => \$opt_notify,
+           'platforms=s'   => \$opt_platforms,
+           'nmi-glue=s'    => \$opt_nmi_glue,
+           'workspace=s'   => \$opt_workspace,
+           'tag=s'         => \$opt_tag,
+           'module=s'      => \$opt_module,
+           'nmiconf=s'     => \$opt_nmiconf,
+           'desc=s'        => \$opt_desc,
+           'append=s'      => \$opt_append,
+           'submit-xtests!' => \$opt_submit_xtests,
 # build-specific options
-           'nightly'       => $opt_nightly,
-           'externals=s'   => $opt_externals,
-           'without-tests' => $opt_without_tests,
+           'nightly'       => \$opt_nightly,
+           'externals=s'   => \$opt_externals,
+           'without-tests' => \$opt_without_tests,
 # test-specific options
-           'buildid=s'     => $opt_buildid,
-           'test-src=s'    => $opt_test_src,
-           'test-timeout=i' => $opt_test_timeout,
-           'test-args=s'   => $opt_test_args,
-           'input-platform=s' => $opt_input_platform,
+           'buildid=s'     => \$opt_buildid,
+           'test-src=s'    => \$opt_test_src,
+           'test-timeout=i' => \$opt_test_timeout,
+           'test-args=s'   => \$opt_test_args,
+           'input-platform=s' => \$opt_input_platform,
     );
 
     if( defined $opt_help ) {
