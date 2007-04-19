@@ -1111,6 +1111,14 @@ This macro
   will be locked before being written to.
   If \Expr{False}, Condor will not lock the file before writing.
 
+\item[\Macro{TOUCH\_LOG\_INTERVAL}] \label{param:TouchLogInterval}
+  The time interval in seconds between when daemons touch
+  their log files.  The change in last modification time for the
+  log file is useful when a daemon restarts after failure or shut down.
+  The last modification date is printed, and it provides an upper bound
+  on the length of time that the daemon was not running.
+  Defaults to 60 seconds.
+
 \item[\MacroB{<SUBSYS>\_DEBUG}] \label{param:SubsysDebug}
 \index{SUBSYS\_DEBUG macro@\texttt{<SUBSYS>\_DEBUG} macro}
   All of the
