@@ -1,0 +1,102 @@
+#! /usr/bin/env perl
+use CondorTest;
+
+$cmd = 'cmd_q_shows-format.cmd';
+$cmdout = $cmd . ".out";
+$testname = 'cmd_q_shows-format  ';
+
+$whoami = "";
+
+@adarray;
+
+$execute = sub {
+	my %info = @_;
+	print "Good we need to run to see it\n";
+
+	# give it 5 minutes or die.
+	CondorTest::RegisterTimed($testname, $timed, 300);
+	my $cmd = "condor_q";
+
+	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
+	if(!$cmdstatus)
+	{
+		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		exit(1)
+	}
+
+	my $submitline = "";
+	my $cluster = "";
+
+	open(CMD, "<$cmdout") || die "Can not find submit output:$!\n";;
+	while(<CMD>) {
+		chomp($_);
+		$submitline = $_;
+		if($submitline =~ /^.*cluster\s+(\d+).*$/) {
+			$cluster = $1;
+			print "Found my cluster which is $cluster!\n";
+		}
+	}
+
+
+ 	foreach $line (@adarray) {
+        chomp($line);
+        if($line =~ /^\s*(\d+).\d+\s+([\w\-]+).*$/) {
+                $whoami = $2;
+                print "Determined who I am <$whoami>\n";
+        }
+    }
+
+	$cmd = "condor_q -format \"%s\" Owner -format \" ClusterId = %d\n\" ClusterId";
+
+
+	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
+	if(!$cmdstatus)
+	{
+		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		exit(1)
+	}
+
+	$cmd = "condor_rm $cluster";
+
+	foreach $line (@adarray) {
+		chomp($line);
+		print "$line\n";;;
+		if($line =~ /^\s*$whoami\s+ClusterId\s+=\s+$clusters.*$/) {
+				print "Bingo: found <$line>\n";
+				$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,8);
+				return(0);
+		} else {
+			#print "<<<$line>>>\n";
+		}
+	}
+
+	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,8);
+	exit(1);
+};
+
+$aborted = sub {
+	print "If all is good we abort our own job.......\n";
+	exit(0);
+};
+
+$ExitSuccess = sub {
+	my %info = @_;
+};
+
+$timed = sub
+{
+    die "Job should have ended by now. condor_q -format broken!\n";
+};
+
+CondorTest::RegisterAbort($testname, $aborted);
+CondorTest::RegisterExecute($testname, $execute);
+CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
+
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+	print "$testname: SUCCESS\n";
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+
+
