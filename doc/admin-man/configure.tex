@@ -5105,6 +5105,15 @@ should ping it to test if it is up again.
 between pings of a remote resource that is currently down. The default
 is 5 minutes (300 seconds).
 
+\item[\Macro{GRIDMANAGER\_EMPTY\_RESOURCE\_DELAY}]
+  \label{param:GridmanagerEmptyResourceDelay} The number of seconds
+  that the \Condor{gridmanager} retains information about a grid
+  resource, once the \Condor{gridmanager} has no active jobs
+  on that resource.
+  An active job is a grid universe job that is in the queue,
+  but is not in the HELD state.
+  Defaults to 300 seconds.
+
 \item[\Macro{GRIDMANAGER\_MAX\_SUBMITTED\_JOBS\_PER\_RESOURCE}]
 \label{param:GridmanagerMaxSubmittedJobsPerResource}
 Limits the number of jobs
