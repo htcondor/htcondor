@@ -175,6 +175,24 @@ TESTCLASS(cmd_q_shows-analyze,core)
 TESTCLASS(cmd_q_shows-analyze,quick)
 TESTCLASS(cmd_q_shows-analyze,btdebug)
 
+DESC(cmd_q_shows-xml,"Condor_q shows xml")
+RUN(cmd_q_shows-xml)
+TESTCLASS(cmd_q_shows-xml,core)
+TESTCLASS(cmd_q_shows-xml,quick)
+TESTCLASS(cmd_q_shows-xml,btdebug)
+
+DESC(cmd_q_shows-cputime,"Condor_q shows cputime")
+RUN(cmd_q_shows-cputime)
+TESTCLASS(cmd_q_shows-cputime,core)
+TESTCLASS(cmd_q_shows-cputime,quick)
+TESTCLASS(cmd_q_shows-cputime,btdebug)
+
+DESC(cmd_q_shows-format,"Condor_q shows format")
+RUN(cmd_q_shows-format)
+TESTCLASS(cmd_q_shows-format,core)
+TESTCLASS(cmd_q_shows-format,quick)
+TESTCLASS(cmd_q_shows-format,btdebug)
+
 DESC(lib_userlog,"Exercise the userlog interface write and read all events");
 RUN(lib_userlog)
 DEPS(lib_userlog,x_read_joblog.exe)
