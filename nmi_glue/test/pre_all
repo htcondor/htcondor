@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: pre_all,v 1.2 2006-07-25 18:15:42 wright Exp $
+# $Id: pre_all,v 1.2.2.1 2007-04-23 17:44:42 pavlo Exp $
 # Submit-side NMI build system infrastructure to setup source
 # input for test jobs before the platform-specific stuff is called.
 # All we have to do is untar the common/results.tar.gz file so that
@@ -16,7 +16,7 @@ use Getopt::Long;
 $| = 1;
 
 GetOptions (
-    'src=s'           => $opt_src,
+    'src=s'           => \$opt_src,
 );
 
 # this is the default platform-independent input that's going to come

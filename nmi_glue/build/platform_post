@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: platform_post,v 1.2.2.1 2006-09-13 00:43:34 wright Exp $
+# $Id: platform_post,v 1.2.2.2 2007-04-23 17:44:40 pavlo Exp $
 # post script to cleanup platform-specific files on the submit side
 ######################################################################
 
@@ -9,9 +9,9 @@ use POSIX;
 use Getopt::Long;
 use vars qw/ $opt_without_tests $opt_test_args $opt_submit_xtests /;
 GetOptions(
-            'without-tests' => $opt_without_tests,
-            'test-args=s' => $opt_test_args,
-            'submit-xtests!' => $opt_submit_xtests,
+            'without-tests' => \$opt_without_tests,
+            'test-args=s' => \$opt_test_args,
+            'submit-xtests!' => \$opt_submit_xtests,
 );
 
 # we just want to chmod everything in the local directory (the
