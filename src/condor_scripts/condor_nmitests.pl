@@ -221,68 +221,127 @@ sub CrunchErrors
 	my $phost = "";
 	my $blame = 0;
 
+	#print "CrunchErrors called for type $type\n";
+
 	# how many platforms with test issues
 	my @tests = split /,/, $params;
-	foreach $test (@tests) {
-		$index = -1;
-		$pexpected = 0;
-		$pgood = 0;
-		$pbad = 0;
-		$blame = 0;
-		$phost = "";
 
-		# entire platform or some tests
-		@partial = split /:/, $test;
-		$index = GetPlatformData($partial[0]);
-		$p = $platformresults[$index];
+	if($tests[0] eq "all") {
+		# all of the expected results for all platforms are being 
+		# assessed to a single party
+		print "All test failure allocated to<<$type>>!!!!\n";
+		foreach $host (@platformresults) {
+			$pexpected = 0;
+			$pgood = 0;
+			$pbad = 0;
+			$blame = 0;
+			$phost = "";
 
-		#print "size 0f partial array is $#partial\n";
-		#print "crunch errors dedicated to $type\n";
+			$pexpected = $host->expected();
+			$pgood = $host->passed();
+			$pbad = $host->failed();
+			$phost = $host->platform();
 
-		$pexpected = $p->expected();
-		$pgood = $p->passed();
-		$pbad = $p->failed();
-		$phost = $p->platform();
+			#print "Current host is $phost\n";
 
-		if($pexpected == 0) {
-			$pexpected = GetHistExpected($phost);
-			$totalexpected = $totalexpected + $pexpected;
-			$totaltests = $totaltests + $pexpected;
+			if($pexpected == 0) {
+				$pexpected = GetHistExpected($phost);
+				$totalexpected = $totalexpected + $pexpected;
+				$totaltests = $totaltests + $pexpected;
 
-			$p->expected($pexpected);
+				$host->expected($pexpected);
+			}
+
+			$blame = $pexpected;
+
+			if($type eq "tests") {
+				$host->test_errs($blame);
+				$totaltesterr = $totaltesterr + $blame;
+			} elsif($type eq "condor") {
+				$host->condor_errs($blame);
+				$totalcondorerr = $totalcondorerr + $blame;
+			} elsif($type eq "platform") {
+				$host->platform_errs($blame);
+				$totalplatformerr = $totalplatformerr + $blame;
+			} elsif($type eq "framework") {
+				$host->framework_errs($blame);
+				$totalframeworkerr = $totalframeworkerr + $blame;
+			} elsif($type eq "unknown") {
+				$host->unknown_errs($blame);
+				$totalunknownerr = $totalunknownerr + $blame;
+			} else {
+				print "CLASS of problem unknown!!!!!!<$type>!!!!!!!\n";
+			}
 		}
+	} else {
+		# this is normal processing where we are assigning blame (full or
+		# partial) on a single platform
+		foreach $test (@tests) {
+			$index = -1;
+			$pexpected = 0;
+			$pgood = 0;
+			$pbad = 0;
+			$blame = 0;
+			$phost = "";
 
-		if(($pbad == 0) && ($pgood == 0)) {
-			$pbad = $pexpected;
-			$totalbad = $totalbad + $pbad;
-			$p->failed($pbad);
-			$totaltests = $totaltests + $pbad;
-		}
+			# entire platform or some tests
+			@partial = split /:/, $test;
+			$index = GetPlatformData($partial[0]);
 
-		if($#partial > 0) {
-			$blame = $partial[1];
-			#print "partial blame $partial[1]\n";
-		} else {
-			$blame = $pbad;
-		}
+			foreach $host (@platformresults) {
+				$p = $platformresults[$index];
 
-		if($type eq "tests") {
-			$p->test_errs($blame);
-			$totaltesterr = $totaltesterr + $blame;
-		} elsif($type eq "condor") {
-			$p->condor_errs($blame);
-			$totalcondorerr = $totalcondorerr + $blame;
-		} elsif($type eq "platform") {
-			$p->platform_errs($blame);
-			$totalplatformerr = $totalplatformerr + $blame;
-		} elsif($type eq "framework") {
-			$p->framework_errs($blame);
-			$totalframeworkerr = $totalframeworkerr + $blame;
-		} elsif($type eq "unknown") {
-			$p->unknown_errs($blame);
-			$totalunknownerr = $totalunknownerr + $blame;
-		} else {
-			print "CLASS of problem unknown!!!!!!<$type>!!!!!!!\n";
+				##print "size 0f partial array is $#partial\n";
+				#print "crunch errors dedicated to $type\n";
+
+				$pexpected = $p->expected();
+				$pgood = $p->passed();
+				$pbad = $p->failed();
+				$phost = $p->platform();
+
+				#print "Current host is $phost\n";
+
+				if($pexpected == 0) {
+					$pexpected = GetHistExpected($phost);
+					$totalexpected = $totalexpected + $pexpected;
+					$totaltests = $totaltests + $pexpected;
+
+					$p->expected($pexpected);
+				}
+
+				if(($pbad == 0) && ($pgood == 0)) {
+					$pbad = $pexpected;
+					$totalbad = $totalbad + $pbad;
+					$p->failed($pbad);
+					$totaltests = $totaltests + $pbad;
+				}
+
+				if($#partial > 0) {
+					$blame = $partial[1];
+					#print "partial blame $partial[1]\n";
+				} else {
+					$blame = $pbad;
+				}
+
+				if($type eq "tests") {
+					$p->test_errs($blame);
+					$totaltesterr = $totaltesterr + $blame;
+				} elsif($type eq "condor") {
+					$p->condor_errs($blame);
+					$totalcondorerr = $totalcondorerr + $blame;
+				} elsif($type eq "platform") {
+					$p->platform_errs($blame);
+					$totalplatformerr = $totalplatformerr + $blame;
+				} elsif($type eq "framework") {
+					$p->framework_errs($blame);
+					$totalframeworkerr = $totalframeworkerr + $blame;
+				} elsif($type eq "unknown") {
+					$p->unknown_errs($blame);
+					$totalunknownerr = $totalunknownerr + $blame;
+				} else {
+					print "CLASS of problem unknown!!!!!!<$type>!!!!!!!\n";
+				}
+			}
 		}
 	}
 }
