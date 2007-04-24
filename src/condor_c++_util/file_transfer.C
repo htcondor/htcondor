@@ -1149,8 +1149,7 @@ int
 FileTransfer::HandleCommands(Service *, int command, Stream *s)
 {
 	FileTransfer *transobject;
-	char transkeybuf[_POSIX_PATH_MAX];
-	char *transkey = transkeybuf;
+	char *transkey = NULL;
 
 	dprintf(D_FULLDEBUG,"entering FileTransfer::HandleCommands\n");
 
@@ -1164,6 +1163,7 @@ FileTransfer::HandleCommands(Service *, int command, Stream *s)
 	// (like in the case of the starter sending files back to the shadow)
 	sock->timeout(0);
 
+	// code() allocates memory for the string if the pointer is NULL.
 	if (!sock->code(transkey) ||
 		!sock->end_of_message() ) {
 		dprintf(D_FULLDEBUG,
@@ -1174,6 +1174,7 @@ FileTransfer::HandleCommands(Service *, int command, Stream *s)
 					"FileTransfer::HandleCommands read transkey=%s\n",transkey);
 
 	MyString key(transkey);
+	free(transkey);
 	if ( (TranskeyTable == NULL) || 
 		 (TranskeyTable->lookup(key,transobject) < 0) ) {		
 		// invalid transkey sent; send back 0 for failure
@@ -1456,9 +1457,9 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 	int rc;
 	int reply;
 	filesize_t bytes;
-	char filename[_POSIX_PATH_MAX];
-	char* p_filename = filename;
-	char fullname[_POSIX_PATH_MAX];
+	MyString filename;;
+	MyString fullname;
+	char *tmp_buf = NULL;
 	int final_transfer;
 	bool download_success = false;
 	bool try_again = true;
@@ -1521,10 +1522,15 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 			s->set_crypto_mode(false);
 		}
 
-		if( !s->code(p_filename) ) {
+		// code() allocates memory for the string if the pointer is NULL.
+		tmp_buf = NULL;
+		if( !s->code(tmp_buf) ) {
 			dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
 			return_and_resetpriv( -1 );
 		}
+		filename = tmp_buf;
+		free( tmp_buf );
+		tmp_buf = NULL;
 
 			/*
 			  if we want to change priv states but haven't done so
@@ -1540,24 +1546,24 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 
 		if( final_transfer || IsClient() ) {
 			char remap_filename[_POSIX_PATH_MAX*3];
-			if(filename_remap_find(download_filename_remaps.Value(),filename,remap_filename)) {
+			if(filename_remap_find(download_filename_remaps.Value(),filename.Value(),remap_filename)) {
 				if(!is_relative_to_cwd(remap_filename)) {
-					strcpy(fullname,remap_filename);
+					fullname = remap_filename;
 				}
 				else {
-					sprintf(fullname,"%s%c%s",Iwd,DIR_DELIM_CHAR,remap_filename);
+					fullname.sprintf("%s%c%s",Iwd,DIR_DELIM_CHAR,remap_filename);
 				}
-				dprintf(D_FULLDEBUG,"Remapped downloaded file from %s to %s\n",filename,remap_filename);
+				dprintf(D_FULLDEBUG,"Remapped downloaded file from %s to %s\n",filename.Value(),remap_filename);
 			}
 			else {
-				sprintf(fullname,"%s%c%s",Iwd,DIR_DELIM_CHAR,filename);
+				fullname.sprintf("%s%c%s",Iwd,DIR_DELIM_CHAR,filename.Value());
 			}
 #ifdef WIN32
 			// check for write permission on this file, if we are supposed to check
-			if ( perm_obj && (perm_obj->write_access(fullname) != 1) ) {
+			if ( perm_obj && (perm_obj->write_access(fullname.Value()) != 1) ) {
 				// we do _not_ have permission to write this file!!
 				error_buf.sprintf("Permission denied to write file %s!",
-				                   fullname);
+				                   fullname.Value());
 				dprintf(D_ALWAYS,"DoDownload: %s\n",error_buf.Value());
 				download_success = false;
 				try_again = false;
@@ -1569,7 +1575,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 			}
 #endif
 		} else {
-			sprintf(fullname,"%s%c%s",TmpSpoolSpace,DIR_DELIM_CHAR,filename);
+			fullname.sprintf("%s%c%s",TmpSpoolSpace,DIR_DELIM_CHAR,filename.Value());
 		}
 	
 		// On WinNT and apparently, some Unix, too, even doing an
@@ -1581,23 +1587,23 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		// time of the file we just wrote backwards in time by a few
 		// minutes!  MLOP!! Since we are doing this, we may as well
 		// not bother to fsync every file.
-//		dprintf(D_FULLDEBUG,"TODD filetransfer DoDownload fullname=%s\n",fullname);
+//		dprintf(D_FULLDEBUG,"TODD filetransfer DoDownload fullname=%s\n",fullname.Value());
 		if ( reply == 4 ) {
 			if ( s->end_of_message() ) {
-				rc = s->get_x509_delegation( &bytes, fullname );
+				rc = s->get_x509_delegation( &bytes, fullname.Value() );
 			} else {
 				rc = -1;
 			}
 		} else if ( TransferFilePermissions ) {
-			rc = s->get_file_with_permissions( &bytes, fullname );
+			rc = s->get_file_with_permissions( &bytes, fullname.Value() );
 		} else {
-			rc = s->get_file( &bytes, fullname );
+			rc = s->get_file( &bytes, fullname.Value() );
 		}
 
 		if( rc < 0 ) {
 			int the_error = errno;
 			error_buf.sprintf("%s at %s failed to receive file %s",
-			                  mySubSystem,s->sender_ip_str(),fullname);
+			                  mySubSystem,s->sender_ip_str(),fullname.Value());
 			download_success = false;
 			if(rc == GET_FILE_OPEN_FAILED) {
 				// errno is well defined in this case
@@ -1636,7 +1642,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 			timewrap.actime = current_time;		// set access time to now
 			timewrap.modtime = current_time - 180;	// set modify time to 3 min ago
 
-			utime(fullname,&timewrap);
+			utime(fullname.Value(),&timewrap);
 		}
 
 		if( !s->end_of_message() ) {
@@ -1822,8 +1828,8 @@ FileTransfer::SendTransferAck(Stream *s,bool success,bool try_again,int hold_cod
 void
 FileTransfer::CommitFiles()
 {
-	char buf[_POSIX_PATH_MAX];
-	char newbuf[_POSIX_PATH_MAX];
+	MyString buf;
+	MyString newbuf;
 	const char *file;
 
 	if ( IsClient() ) {
@@ -1837,16 +1843,16 @@ FileTransfer::CommitFiles()
 
 	Directory tmpspool( TmpSpoolSpace, desired_priv_state );
 
-	sprintf(buf,"%s%c%s",TmpSpoolSpace,DIR_DELIM_CHAR,COMMIT_FILENAME);
-	if ( access(buf,F_OK) >= 0 ) {
+	buf.sprintf("%s%c%s",TmpSpoolSpace,DIR_DELIM_CHAR,COMMIT_FILENAME);
+	if ( access(buf.Value(),F_OK) >= 0 ) {
 		// the commit file exists, so commit the files.
 		while ( (file=tmpspool.Next()) ) {
 			// don't commit the commit file!
 			if ( file_strcmp(file,COMMIT_FILENAME) == MATCH )
 				continue;
-			sprintf(buf,"%s%c%s",TmpSpoolSpace,DIR_DELIM_CHAR,file);
-			sprintf(newbuf,"%s%c%s",SpoolSpace,DIR_DELIM_CHAR,file);
-			if ( rotate_file(buf,newbuf) < 0 ) {
+			buf.sprintf("%s%c%s",TmpSpoolSpace,DIR_DELIM_CHAR,file);
+			newbuf.sprintf("%s%c%s",SpoolSpace,DIR_DELIM_CHAR,file);
+			if ( rotate_file(buf.Value(),newbuf.Value()) < 0 ) {
 				EXCEPT("FileTransfer CommitFiles Failed -- What Now?!?!");
 			}
 		}
@@ -1987,7 +1993,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 	int rc;
 	char *filename;
 	char *basefilename;
-	char fullname[_POSIX_PATH_MAX];
+	MyString fullname;
 	filesize_t bytes;
 	bool is_the_executable;
 	StringList * filelist = FilesToSend;
@@ -2024,14 +2030,6 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 		filelist->rewind();
 	}
 
-	// get ourselves a local copy that will be cleaned up if we exit
-	char *tmpSpool = param("SPOOL");
-	char Spool[_POSIX_PATH_MAX];
-	if (tmpSpool) {
-		strcpy (Spool, tmpSpool);
-		free (tmpSpool);
-	}
-
 	// record the state it was in when we started... the "default" state
 	bool socket_default_crypto = s->get_encryption();
 
@@ -2044,9 +2042,9 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 		dprintf(D_FULLDEBUG,"DoUpload: send file %s\n",filename);
 
 		if( filename[0] != '/' && filename[0] != '\\' && filename[1] != ':' ){
-			sprintf(fullname,"%s%c%s",Iwd,DIR_DELIM_CHAR,filename);
+			fullname.sprintf("%s%c%s",Iwd,DIR_DELIM_CHAR,filename);
 		} else {
-			strcpy(fullname,filename);
+			fullname = filename;
 		}
 
 		// check for read permission on this file, if we are supposed to check.
@@ -2054,10 +2052,10 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 		// directory.
 #ifdef WIN32
 		if( perm_obj && !is_the_executable &&
-			(perm_obj->read_access(fullname) != 1) ) {
+			(perm_obj->read_access(fullname.Value()) != 1) ) {
 			// we do _not_ have permission to read this file!!
 			upload_success = false;
-			error_desc.sprintf("error reading from %s: permission denied",fullname);
+			error_desc.sprintf("error reading from %s: permission denied",fullname.Value());
 			do_upload_ack = true;    // tell receiver that we failed
 			do_download_ack = true;
 			try_again = false; // put job on hold
@@ -2146,19 +2144,19 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 
 		if ( file_command == 4 ) {
 			if ( s->end_of_message() ) {
-				rc = s->put_x509_delegation( &bytes, fullname );
+				rc = s->put_x509_delegation( &bytes, fullname.Value() );
 			} else {
 				rc = -1;
 			}
 		} else if ( TransferFilePermissions ) {
-			rc = s->put_file_with_permissions( &bytes, fullname );
+			rc = s->put_file_with_permissions( &bytes, fullname.Value() );
 		} else {
-			rc = s->put_file( &bytes, fullname );
+			rc = s->put_file( &bytes, fullname.Value() );
 		}
 		if( rc < 0 ) {
 			int the_error = errno;
 			upload_success = false;
-			error_desc.sprintf("error sending %s",fullname);
+			error_desc.sprintf("error sending %s",fullname.Value());
 			if(rc == PUT_FILE_OPEN_FAILED) {
 				// In this case, put_file() has transmitted a zero-byte
 				// file in place of the failed one, so that we can
