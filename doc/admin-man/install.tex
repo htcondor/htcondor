@@ -1070,8 +1070,9 @@ or
 \begin{verbatim}
         ps -aux | egrep condor_
 \end{verbatim}
-depending on your flavor of Unix.  On your central manager machine you
-should have processes for:
+depending on your flavor of Unix.  
+On a central manager machine that can submit jobs as well
+as execute them, there will be processes for:
 \begin{itemize}
 	\item \condor{master}
 	\item \condor{collector}
@@ -1079,20 +1080,26 @@ should have processes for:
 	\item \condor{startd}
 	\item \condor{schedd}
 \end{itemize}
-On all other machines in your pool you should have processes for:
+On a central manager machine that does not submit jobs nor
+execute them, there will be processes for:
+\begin{itemize}
+	\item \condor{master}
+	\item \condor{collector}
+	\item \condor{negotiator}
+\end{itemize}
+For a machine that only submits jobs, there will be processes for:
+\begin{itemize}
+	\item \condor{master}
+	\item \condor{schedd}
+\end{itemize}
+For a machine that only executes jobs, there will be processes for:
 \begin{itemize}
 	\item \condor{master}
 	\item \condor{startd}
-	\item \condor{schedd}
 \end{itemize}
 (\Note On Alphas, there will also be a
 	\condor{kbdd} -- see section~\ref{sec:kbdd} on
-	page~\pageref{sec:kbdd} of the manual for details.)  If you
-	have set up a submit-only machine, you will only see:
-\begin{itemize}
-	\item \condor{master}
-	\item \condor{schedd}
-\end{itemize}
+	page~\pageref{sec:kbdd} of the manual for details.) 
 
 Once you are sure the Condor daemons are running, check to make sure
 that they are communicating with each other.  You can run
