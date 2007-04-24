@@ -1263,22 +1263,24 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 	}
 
 	char **attrs_to_copy;
-	StringList sl(NULL, ", ");
-
 	char *config_attrs_to_copy = param("CONDORC_ATTRS_TO_COPY");
-
 	bool freeAttrs = false;
 
 	if (config_attrs_to_copy == NULL) {
 		// use the defaults
 		attrs_to_copy = (char **)default_attrs_to_copy;
 	} else {
+		StringList sl(NULL, ", ");
 		freeAttrs = true;
 		sl.initializeFromString(config_attrs_to_copy);
 		sl.rewind();
 		attrs_to_copy = new char *[sl.number() + 1];
 		for (int i = 0; i < sl.number(); i++) {
-			attrs_to_copy[i] = sl.next();
+			MyString attribute(sl.next());
+			attrs_to_copy[i] = new char[ attribute.Length() + 1 ];
+			strcpy(attrs_to_copy[i], attribute.Value());
+			dprintf(D_FULLDEBUG, "Adding %s to list of attributes to "
+						   "copy from remote job ad.\n", attrs_to_copy[i]);
 		}
 		attrs_to_copy[sl.number()] = NULL;
 		free(config_attrs_to_copy);
