@@ -30,7 +30,7 @@ local directory on AFS.  If you've got NFS installed as well and want
 to have your \MacroNI{LOCAL\_DIR} for each machine on a shared file
 system, use NFS.  Otherwise, you should put the \MacroNI{LOCAL\_DIR} on
 a local partition on each machine in your pool.  This means that you
-should run \Condor{install} to install your release directory and
+should run \Condor{configure} to install your release directory and
 configure your pool, setting the \MacroNI{LOCAL\_DIR} parameter to some
 local partition.  When that's complete, log into each machine in your
 pool and run \Condor{init} to set up the local Condor directory.
