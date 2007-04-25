@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_task.pl,v 1.2.2.6 2007-04-18 22:57:00 bt Exp $
+# $Id: remote_task.pl,v 1.2.2.7 2007-04-25 13:38:00 bt Exp $
 # run a test in the Condor testsuite
 # return val is the status of the test
 # 0 = built and passed
@@ -43,6 +43,11 @@ my $compiler = $testinfo[1];
 if( ! $testname ) {
     c_die("Invalid input for testname\n");
 }
+
+#track time.....
+
+system("date");
+
 print "testname is $testname\n";
 if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
     if( $compiler ) {
