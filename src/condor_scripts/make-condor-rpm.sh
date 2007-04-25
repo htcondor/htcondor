@@ -31,11 +31,9 @@
 #   make-condor-rpm.sh condor-6.5.1.tar.gz /tmp [release-number]
 #
 # Notes:
-#  1) This script requires (the new) condor_configure at the root level 
-#  (i.e. in place of old condor_install)
-#  2) The RPM's install directory is /opt/condor-<version>,
+#  1) The RPM's install directory is /opt/condor-<version>,
 #    e.g. /opt/condor-6.5.1
-#  3) Condor .tar.gz file should follow naming convention:
+#  2) Condor .tar.gz file should follow naming convention:
 #    condor-<ver>-....tar.gz
 #
 # TO DO:
@@ -130,7 +128,6 @@ cd condor-${condor_version}
 
 echo "*** Untarring release.tar..."
 tar xf release.tar
-rm condor_install
 rm release.tar
 
 cd ${builddir}

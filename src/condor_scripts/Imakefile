@@ -1,4 +1,4 @@
-all_target(condor_install condor_init condor_compile ld condor_configure)
+all_target(condor_init condor_compile ld condor_configure)
 
 CFLAGS = $(STD_C_FLAGS)
 
@@ -71,7 +71,6 @@ XCOMM End translation of func(public_version_target)
 
 
 
-public_copy_target(condor_install,sbin,condor_install,EXECUTABLE_MODE)
 public_copy_target(condor_configure,sbin,condor_configure,EXECUTABLE_MODE)
 public_copy_target(condor_init,sbin,condor_init,EXECUTABLE_MODE)
 public_version_target(condor_updates_stats,sbin,condor_updates_stats,EXECUTABLE_MODE)

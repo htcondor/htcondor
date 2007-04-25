@@ -57,7 +57,7 @@ CONDOR_EXECUTE=`$CONFIG_VAL EXECUTE 2> /dev/null`
 CONDOR_LOCALCFG=`$CONFIG_VAL LOCAL_CONFIG_FILE 2> /dev/null`
 CONDOR_LOCK=`$CONFIG_VAL LOCK 2> /dev/null`
 
-# Create a soft link to the global config file.  (Added by condor_install) 
+# Create a soft link to the global config file.
 
 if [ -n "$CONDOR_LOCALDIR" ]; then
 	if [ ! -d $CONDOR_LOCALDIR ]; then

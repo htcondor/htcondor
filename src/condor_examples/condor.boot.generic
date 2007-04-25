@@ -13,9 +13,9 @@
 # platform to platform. 
 #
 # To customize, all you need to do is edit the MASTER line below.
-# condor_install (if run as root) will do that for you.  The PS line
-# should be the full path and arguments to a ps command that dumps out
-# all running processes.  This should be correct on all platforms.
+# The PS line should be the full path and arguments to a ps command
+# that dumps out all running processes.  This should be correct on all
+# platforms.
 #
 # Author: Derek Wright <wright@cs.wisc.edu> 2/27/98
 #

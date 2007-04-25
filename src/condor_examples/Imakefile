@@ -1,4 +1,4 @@
-FILES = README condor.generic condor_config.local.central.manager \
+FILES = README condor_config.local.central.manager \
 	condor_config.local.dedicated.resource \
 	condor_config.local.dedicated.submit \
 	condor_config.local.ckpt.server \

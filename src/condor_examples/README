@@ -1,7 +1,7 @@
 This directory contains various default Condor files for your use.
 The appropriate files are copied out of this directory and configured
-automatically by the condor_install script.  If you choose not to use
-condor_install (or don't have perl) you will have to do the
+automatically by the condor_configure script.  If you choose not to
+use condor_configure (or don't have perl) you will have to do the
 customization manually.
 
 Some files here are default config files for various Condor
