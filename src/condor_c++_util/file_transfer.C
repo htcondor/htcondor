@@ -78,20 +78,20 @@ struct download_info {
 };
 
 // Hash function for FileCatalogHashTable
-static int compute_filename_hash(const MyString &key, int numBuckets) 
+static unsigned int compute_filename_hash(const MyString &key) 
 {
-	return ( key.Hash() % numBuckets );
+	return key.Hash();
 }
 
 // Hash function for pid table.
-static int compute_transkey_hash(const MyString &key, int numBuckets) 
+static unsigned int compute_transkey_hash(const MyString &key) 
 {
-	return ( key.Hash() % numBuckets );
+	return key.Hash();
 }
 
-static int compute_transthread_hash(const int &pid, int numBuckets) 
+static unsigned int compute_transthread_hash(const int &pid) 
 {
-	return ( pid % numBuckets );
+	return (unsigned int)pid;
 }
 
 FileTransfer::FileTransfer()

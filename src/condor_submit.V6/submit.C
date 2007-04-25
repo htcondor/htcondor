@@ -77,7 +77,13 @@
 
 #include "list.h"
 
-static int hashFunction( const MyString&, int );
+// TODO: hashFunction() is case-insenstive, but when a MyString is the
+//   hash key, the comparison in HashTable is case-sensitive. Therefore,
+//   the case-insensitivity of hashFunction() doesn't complish anything.
+//   CheckFilesRead, CheckFilesWrite, and ClusterAdAttrs should be
+//   either completely case-sensitive (and use MyStringHash()) or
+//   completely case-insensitive (and use AttrKey and AttrKeyHashFunction).
+static unsigned int hashFunction( const MyString& );
 HashTable<AttrKey,MyString> forcedAttributes( 64, AttrKeyHashFunction );
 HashTable<MyString,int> CheckFilesRead( 577, hashFunction ); 
 HashTable<MyString,int> CheckFilesWrite( 577, hashFunction ); 
@@ -5861,16 +5867,17 @@ InsertJobExprString(const char * name, const char * val, bool clustercheck /*= t
 	InsertJobExpr(buf.Value(), clustercheck);
 }
 
-static int 
-hashFunction (const MyString &str, int numBuckets)
+static unsigned int 
+hashFunction (const MyString &str)
 {
-	 int i = str.Length() - 1, hashVal = 0;
+	 int i = str.Length() - 1;
+	 unsigned int hashVal = 0;
 	 while (i >= 0) 
 	 {
-		  hashVal += tolower(str[i]);
+		  hashVal += (unsigned int)tolower(str[i]);
 		  i--;
 	 }
-	 return (hashVal % numBuckets);
+	 return hashVal;
 }
 
 

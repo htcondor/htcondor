@@ -156,15 +156,9 @@ int STARTD_CONTACT_TIMEOUT = 45;
 struct shadow_rec *find_shadow_by_cluster( PROC_ID * );
 #endif
 
-int UserIdentity::HashFcn(const UserIdentity & index, int numBuckets)
+unsigned int UserIdentity::HashFcn(const UserIdentity & index)
 {
-	MyString username = index.username();
-	MyString domain = index.domain();
-	unsigned int i = 
-		hashFuncChars(username.Value(), numBuckets) +
-		hashFuncChars(domain.Value(), numBuckets);
-
-	return i % numBuckets;
+	return index.m_username.Hash() + index.m_domain.Hash();
 }
 
 
@@ -9261,9 +9255,9 @@ cleanup_ckpt_files(int cluster, int proc, const char *owner)
 }
 
 
-int pidHash(const int &pid, int numBuckets)
+unsigned int pidHash(const int &pid)
 {
-	return pid % numBuckets;
+	return pid;
 }
 
 

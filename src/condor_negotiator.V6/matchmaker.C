@@ -2809,8 +2809,8 @@ reeval(ClassAd *ad)
     free(remoteHost);
 }
 
-int Matchmaker::HashFunc(const MyString &Key, int TableSize) {
-	return Key.Hash() % TableSize;
+unsigned int Matchmaker::HashFunc(const MyString &Key) {
+	return Key.Hash();
 }
 
 Matchmaker::MatchListType::

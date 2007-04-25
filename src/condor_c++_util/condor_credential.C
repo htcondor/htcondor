@@ -39,9 +39,9 @@ typedef HashTable<Credential_t, Condor_Credential_B *> CredentialHash;
 //------------------------------------------
 // Hash function need by the hash table
 //------------------------------------------
-int hashFunction(const Credential_t & key, int bucket)
+unsigned int hashFunction(const Credential_t & key)
 {
-  return key%bucket;
+  return key;
 }
 
 class Condor_Cred_Map 

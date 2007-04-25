@@ -125,10 +125,10 @@ void ViewServer::Init()
 
 	for (int i=0; i<DataSetCount; i++) {
 		for (int j=0; j<HistoryLevels; j++) {
-			DataSet[i][j].AccData=new AccHash(1000,HashFunc);
+			DataSet[i][j].AccData=new AccHash(1000,MyStringHash);
 		}
 	}
-	GroupHash=new AccHash(100,HashFunc);
+	GroupHash=new AccHash(100,MyStringHash);
 
 	// File data format
 
@@ -228,15 +228,6 @@ void ViewServer::Shutdown()
 {
 	CollectorDaemon::Shutdown();
 	return;
-}
-
-//-------------------------------------------------------------------
-
-int ViewServer::HashFunc(const MyString& Key, int TableSize) {
-	int count=0;
-	int length=Key.Length();
-	for(int i=0; i<length; i++) count+=Key[i];
-	return (count % TableSize);
 }
 
 //-------------------------------------------------------------------

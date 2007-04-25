@@ -49,14 +49,13 @@ bool operator==(const HashKey &lhs, const HashKey &rhs)
 }
 
 
-int hashFunction(const HashKey &key, int numBuckets)
+unsigned int hashFunction(const HashKey &key)
 {
 	unsigned int bkt = 0;
 	int i;
 
 	if (key.key) {
 		for (i = 0; key.key[i]; bkt += key.key[i++]);
-		bkt %= numBuckets;
 	}
 
 	return bkt;
@@ -76,14 +75,15 @@ bool operator==(const AttrKey &lhs, const AttrKey &rhs)
 	return (strcasecmp(lhs.key, rhs.key) == 0);
 }
 
-int 
-AttrKeyHashFunction (const AttrKey &key, int numBuckets)
+unsigned int 
+AttrKeyHashFunction (const AttrKey &key)
 {
 	const char *str = key.value();
-	int i = strlen( str ) - 1, hashVal = 0;
+	int i = strlen( str ) - 1;
+	unsigned int hashVal = 0;
 	while (i >= 0) {
-		hashVal += tolower(str[i]);
+		hashVal += (unsigned int)tolower(str[i]);
 		i--;
 	}
-	return (hashVal % numBuckets);
+	return hashVal;
 }

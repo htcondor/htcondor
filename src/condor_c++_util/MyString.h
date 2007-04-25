@@ -199,7 +199,7 @@ class MyString
 	int FindChar(int Char, int FirstPos=0) const;
 
 	/** Calculates a hash function on the string. */
-	int Hash() const;
+	unsigned int Hash() const;
 
 	/** Returns the zero-based index of the first character of a
      *  substring, if it is contained within the MyString. Begins
@@ -347,6 +347,6 @@ private:
   
 };
 
-int MyStringHash( const MyString &str, int buckets );
+unsigned int MyStringHash( const MyString &str );
 
 #endif

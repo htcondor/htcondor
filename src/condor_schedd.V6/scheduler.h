@@ -145,7 +145,7 @@ class UserIdentity {
 		MyString domain() const { return m_domain; }
 
 			// For use in HashTables
-		static int HashFcn(const UserIdentity & index, int numBuckets);
+		static unsigned int HashFcn(const UserIdentity & index);
 	private:
 		MyString m_username;
 		MyString m_domain;

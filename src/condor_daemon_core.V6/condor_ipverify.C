@@ -47,18 +47,18 @@ const char TotallyWild[] = "*";
 
 
 // Hash function for Permission hash table
-static int
-compute_perm_hash(const struct in_addr &in_addr, int numBuckets)
+static unsigned int
+compute_perm_hash(const struct in_addr &in_addr)
 {
 	const unsigned int h = *((const unsigned int *)&in_addr);
-	return ( h % numBuckets );
+	return h;
 }
 
 // Hash function for AllowHosts hash table
-static int
-compute_host_hash( const MyString & str, int numBuckets )
+static unsigned int
+compute_host_hash( const MyString & str )
 {
-	return ( str.Hash() % numBuckets );
+	return ( str.Hash() );
 }
 
 // == operator for struct in_addr, also needed for hash table template

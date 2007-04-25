@@ -137,7 +137,7 @@ class Matchmaker : public Service
 		void addRemoteUserPrios( ClassAdList& );
 		void reeval( ClassAd *ad );
 		void updateNegCycleEndTime(time_t startTime, ClassAd *submitter);
-		static int HashFunc(const MyString &Key, int TableSize);
+		static unsigned int HashFunc(const MyString &Key);
 		friend int comparisonFunction (AttrList *, AttrList *,
 										void *);
 

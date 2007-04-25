@@ -194,9 +194,9 @@ extern char* mySubSystem;	// the subsys ID, such as SCHEDD
 TimerManager DaemonCore::t;
 
 // Hash function for pid table.
-static int compute_pid_hash(const pid_t &key, int numBuckets)
+static unsigned int compute_pid_hash(const pid_t &key)
 {
-	return ( key % numBuckets );
+	return (unsigned int)key;
 }
 
 // DaemonCore constructor.

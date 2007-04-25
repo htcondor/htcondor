@@ -27,16 +27,17 @@
 #include "condor_debug.h"
 
 // hash function for strings
-static int 
-hashFunction (const MyString &str, int numBuckets)
+static unsigned int 
+hashFunction (const MyString &str)
 {
-	int i = str.Length() - 1, hashVal = 0;
+	int i = str.Length() - 1;
+	unsigned int hashVal = 0;
 	while (i >= 0) 
 	{
-		hashVal += str[i];
+		hashVal += (unsigned char)str[i];
 		i--;
 	}
-	return (hashVal % numBuckets);
+	return hashVal;
 }
 
 

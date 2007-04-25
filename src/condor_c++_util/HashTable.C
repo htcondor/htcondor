@@ -24,32 +24,32 @@
 #include "condor_common.h"
 #include "HashTable.h"
 
-int
-hashFuncInt( const int& n, int numBuckets )
+unsigned int
+hashFuncInt( const int& n )
 {
 	if( n < 0 ) {
-		return (0 - n) % numBuckets;
+		return (0 - n);
 	}
-	return n % numBuckets;
+	return n;
 }
 
-int
-hashFuncLong( const long& n, int numBuckets )
+unsigned int
+hashFuncLong( const long& n )
 {
 	if( n < 0 ) {
-		return (0 - n) % numBuckets;
+		return (0 - n);
 	}
-	return n % numBuckets;
+	return n;
 }
 
-int
-hashFuncUInt( const unsigned int& n, int numBuckets )
+unsigned int
+hashFuncUInt( const unsigned int& n )
 {
-	return n % numBuckets;
+	return n;
 }
 
-int
-hashFuncJobIdStr( char* const & key, int numBuckets )
+unsigned int
+hashFuncJobIdStr( char* const & key )
 {
     unsigned int bkt = 0;
 	int i,j,size;
@@ -65,21 +65,21 @@ hashFuncJobIdStr( char* const & key, int numBuckets )
         }
     }
 
-    bkt %= numBuckets;
     return bkt;
 }
 
-int 
-hashFuncPROC_ID( const PROC_ID &procID, int numBuckets)
+unsigned int 
+hashFuncPROC_ID( const PROC_ID &procID )
 {
-	return ( (procID.cluster+(procID.proc*19)) % numBuckets );
+	return ( (procID.cluster+(procID.proc*19)) );
 }
 
-int hashFuncChars( char const *key, int numBuckets)
+unsigned int
+hashFuncChars( char const *key )
 {
     unsigned int i = 0;
     if(key) for(;*key;key++) {
         i += *(const unsigned char *)key;
     }
-    return i % numBuckets;
+    return i;
 }

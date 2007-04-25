@@ -30,8 +30,8 @@ IMPORTANT NOTE: Don't dprintf() in here, unless its a fatal error! */
 #include "passwd_cache.h"
 #include "condor_config.h"
 
-int compute_user_hash(const MyString &key, int numBuckets) {
-    return ( key.Hash() % numBuckets );
+unsigned int compute_user_hash(const MyString &key) {
+    return key.Hash();
 };
 
 passwd_cache::passwd_cache() {

@@ -48,12 +48,12 @@ public:
 	const char* value() { if (key) return key; else return "\0"; };
 	friend std::ostream& operator<< (std::ostream &out, const HashKey &); 
     friend bool operator== (const HashKey &, const HashKey &);
-	friend int hashFunction(const HashKey &key, int numBuckets);
+	friend unsigned int hashFunction(const HashKey &key);
 private:
 	char *key;
 };
 
-int hashFunction(const HashKey &, int);
+unsigned int hashFunction(const HashKey &);
 
 /* AttrKey makes a HashTable key from a char*, with case-insensitive
  * hashing/comparison. It's suitable for use with ClassAd attribute
@@ -74,6 +74,6 @@ private:
 	char *key;
 };
 
-int AttrKeyHashFunction( const AttrKey &, int );
+unsigned int AttrKeyHashFunction( const AttrKey & );
 
 #endif

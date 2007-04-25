@@ -26,7 +26,7 @@
 #include "procapi_internal.h"
 #include "condor_debug.h"
 
-int hashFunc( const pid_t& pid, int numbuckets );
+unsigned int hashFunc( const pid_t& pid );
 HashTable <pid_t, procHashNode *> * ProcAPI::procHash = 
     new HashTable <pid_t, procHashNode *> ( PHBUCKETS, hashFunc );  
 
@@ -3466,9 +3466,9 @@ ProcAPI::deallocProcFamily() {
 
 #endif // not defined WIN32
 
-int
-hashFunc( const pid_t& pid, int numbuckets ) {
-	return pid % numbuckets;   
+unsigned int
+hashFunc( const pid_t& pid ) {
+	return pid;   
 }
 
 // Warning: WIN32 stuff below.  Not for the faint of heart.

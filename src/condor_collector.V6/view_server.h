@@ -97,8 +97,6 @@ public:
 	static int StartdTotalFunc(void);
 	static int CkptScanFunc(ClassAd* ad);
 
-	static int HashFunc(const MyString& Key, int TableSize);
-
 private:
 
 	// Configuration variables
