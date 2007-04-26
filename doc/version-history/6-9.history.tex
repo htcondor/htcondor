@@ -146,6 +146,10 @@ for \Condor{procd} in the default glidein configuration.
 \item In 6.9.2, Condor daemons crashed after failing to authenticate a
 network connection.
 
+\item \Condor{status} will now accurately report the \Attr{ActvtyTime}
+  (activity time) value in Condor pools where not all machines are in
+  the same timezone, or if there is clock-skew between the hosts.
+
 \end{itemize}
 
 \noindent Known Bugs:
