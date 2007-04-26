@@ -113,6 +113,8 @@ condor_read( SOCKET fd, char *buf, int sz, int timeout, int flags )
 						 sock_peer_to_string(fd, sinbuf, sizeof(sinbuf), "unknown source") );
 				return -1;
 
+			} else if ( selector.signalled() ) {
+				continue;
 			} else if ( !selector.has_ready() ) {
 				int the_error;
 #ifdef WIN32
@@ -252,6 +254,9 @@ condor_write( SOCKET fd, char *buf, int sz, int timeout, int flags )
 							 sock_peer_to_string(fd, sinbuf, sizeof(sinbuf), "unknown source") );
 					return -1;
 				
+				} else if ( selector.signalled() ) {
+					needs_select = true;
+					continue;
 				} else if ( selector.has_ready() ) {
 					if ( selector.fd_ready( fd, Selector::IO_READ ) ) {
 							// see if the socket was closed
