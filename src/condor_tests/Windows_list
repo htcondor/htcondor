@@ -1,19 +1,28 @@
 # Test List for Windows Tests
 cmd_q_shows-hold
+cmd_q_shows-run
+cmd_q_shows-global
+cmd_q_shows-name
+cmd_q_shows-pool
+#cmd_q_shows-sub
+cmd_q_shows-analyze
+cmd_q_shows-xml
+cmd_q_shows-cputime
+cmd_q_shows-format
 job_core_copytospool_van
 job_core_hold_sched
 job_core_initialdir_van
 job_core_max-running_local
 job_core_plus_sched
-#job_condorc_ab_van off pending windows work gnats 786
+job_condorc_ab_van
+#job_condorc_abc_van
 # old tests
 job_core_output_van
 job_core_input_van
 job_core_err_van
 job_core_hold_van
 job_core_holdrelease_van
-#job_core_leaveinqueue_van timing changes broke under windows
-# turning it off short term 2/27/7
+job_core_leaveinqueue_van
 job_core_niceuser_van
 job_core_onexithold_van
 job_core_onexitrem_van
