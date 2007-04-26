@@ -24,14 +24,9 @@
 #include "condor_common.h"
 #include "token_cache.h"
 
-/* define our hash function */
-int compute_token_hash(const MyString &key, int numBuckets) {
-		return ( key.Hash() % numBuckets );
-}
-
 token_cache::token_cache() {
 	current_age = 1;
-	TokenTable = new TokenHashTable(10, compute_token_hash);
+	TokenTable = new TokenHashTable(10, MyStringHash);
 }
 
 token_cache::~token_cache() {
