@@ -303,6 +303,7 @@ extern const char * ATTR_MPI_IS_MASTER;
 extern const char * ATTR_MPI_MASTER_ADDR;
 extern const char * ATTR_PARALLEL_IS_MASTER;
 extern const char * ATTR_PARALLEL_MASTER_ADDR;
+extern const char * ATTR_MY_CURRENT_TIME;
 extern const char * ATTR_MY_TYPE;
 extern const char * ATTR_NAME;
 extern const char * ATTR_NICE_USER;

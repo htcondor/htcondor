@@ -8260,6 +8260,9 @@ DaemonCore::publish(ClassAd *ad) {
 		// config file:
 	config_fill_ad(ad);
 
+		// Include our local current time.
+	ad->Assign(ATTR_MY_CURRENT_TIME, (int)time(NULL));
+
 		// Every daemon wants ATTR_MACHINE to be the full hostname:
 	ad->Assign(ATTR_MACHINE, my_full_hostname());
 
