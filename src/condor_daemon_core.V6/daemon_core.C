@@ -7416,7 +7416,7 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 			char *hdescrip = reapTable[i].handler_descrip;
 			if ( !hdescrip )
 				hdescrip = EMPTY_DESCRIP;
-			dprintf(D_DAEMONCORE,
+			dprintf(D_COMMAND,
 				"DaemonCore: %s %lu exited with status %d, invoking reaper "
 				"%d <%s>\n",
 				whatexited, (unsigned long)pid, exit_status, i+1, hdescrip);
@@ -7428,6 +7428,9 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 			if ( reapTable[i].handlercpp )
 				// a C++ handler
 				(reapTable[i].service->*(reapTable[i].handlercpp))(pid,exit_status);
+
+			dprintf(D_COMMAND,
+				"DaemonCore: return from reaper for pid %lu\n", (unsigned long)pid);
 
 				// Make sure we didn't leak our priv state
 			CheckPrivState();
