@@ -175,7 +175,7 @@ TESTCLASS(cmd_q_shows-analyze,core)
 TESTCLASS(cmd_q_shows-analyze,quick)
 TESTCLASS(cmd_q_shows-analyze,btdebug)
 
-#if defined(NEW_CLASSADS)
+#if defined(WANT_NEW_CLASSADS)
 DESC(cmd_q_shows-better-analyze,"Condor_q shows better-analyze")
 RUN(cmd_q_shows-better-analyze)
 TESTCLASS(cmd_q_shows-better-analyze,core)
