@@ -26,22 +26,22 @@
 
 
 // // // // // // // // // // // // 
-// BackfillVM
+// BackfillSlot
 // // // // // // // // // // // // 
 
-BackfillVM::BackfillVM( int vm_id )
+BackfillSlot::BackfillSlot( int slot_id )
 {
-	m_vm_id = vm_id;
+	m_slot_id = slot_id;
 }
 
 
-BackfillVM::~BackfillVM()
+BackfillSlot::~BackfillSlot()
 {
 }
 
 
 bool
-BackfillVM::enterActivity( Activity act )
+BackfillSlot::enterActivity( Activity act )
 {
 	if( m_activity == act ) {
 			// already there, nothing else to do
@@ -65,10 +65,10 @@ BackfillMgr::BackfillMgr()
 {
 	dprintf( D_FULLDEBUG, "Instantiating a BackfillMgr\n" );
 
-	m_num_vms = 0;
+	m_num_slots = 0;
 		// make sure our array is initialized with NULLs
-	m_vms.fill( NULL );
-	m_vms.setFiller( NULL );
+	m_slots.fill( NULL );
+	m_slots.setFiller( NULL );
 }
 
 

@@ -31,10 +31,10 @@
 
 
 /**
-   BackfillVM base class
+   BackfillSlot base class
 
    Defines a consistent interface the startd will use to interact with
-   a given computational instance of a backfill system on a single VM.
+   a given computational instance of a backfill system on a single slot.
    Depending on the backfill backend, there might be multiple programs
    running, or a single program where resources are given and
    reclaimed dynamically.  In both cases, Condor will still think of
@@ -44,13 +44,13 @@
    someday, others might be added, too.
 */
 
-class BackfillVM
+class BackfillSlot
 {
 public:
-	BackfillVM( int vm_id );
-	virtual ~BackfillVM() = 0;
+	BackfillSlot( int slot_id );
+	virtual ~BackfillSlot() = 0;
 
-	int getVMID() { return m_vm_id; };
+	int getSlotID() { return m_slot_id; };
 	virtual bool init() = 0;
 	virtual bool start() = 0;
 	virtual bool suspend() = 0;
@@ -62,7 +62,7 @@ public:
 protected:
 
 		/// Protected data
-	int        m_vm_id;
+	int        m_slot_id;
 	Activity   m_activity;
 	time_t     m_entered_current_activity;
 
@@ -76,7 +76,7 @@ protected:
 /**
    BackfillMgr base class
 
-   The BackfillMgr maintains a set of BackfillVM objects, and
+   The BackfillMgr maintains a set of BackfillSlot objects, and
    defines a consistent interface the startd will use to interact with
    a given backfill backend system.  Initially, there will only be
    derived classes for BOINC, but someday, others might be added.
@@ -110,21 +110,20 @@ public:
 		*/
 	virtual bool destroy() = 0;
 
-		// for any of these, using vm_id 0 means all VMs
-	virtual bool rmVM( int vm_id ) = 0;
-	virtual bool start( int vm_id ) = 0;
-	virtual bool suspend( int vm_id ) = 0;
-	virtual bool resume( int vm_id ) = 0;
-	virtual bool softkill( int vm_id ) = 0;
-	virtual bool hardkill( int vm_id ) = 0;
+		// for any of these, using slot_id 0 means all slots
+	virtual bool rmSlot( int slot_id ) = 0;
+	virtual bool start( int slot_id ) = 0;
+	virtual bool suspend( int slot_id ) = 0;
+	virtual bool resume( int slot_id ) = 0;
+	virtual bool softkill( int slot_id ) = 0;
+	virtual bool hardkill( int slot_id ) = 0;
 
 protected:
 
-	ExtArray<BackfillVM*> m_vms;
-	int m_num_vms;
+	ExtArray<BackfillSlot*> m_slots;
+	int m_num_slots;
 
 };
-
 
 
 #endif /* _CONDOR_BACKFILL_MGR_H */

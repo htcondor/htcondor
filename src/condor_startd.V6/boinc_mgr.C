@@ -30,23 +30,23 @@
 #include "boinc_mgr.h"
 
 
-BOINC_BackfillVM::BOINC_BackfillVM( int vm_id )
-	    : BackfillVM( vm_id )
+BOINC_BackfillSlot::BOINC_BackfillSlot( int slot_id )
+	    : BackfillSlot( slot_id )
 {
-	dprintf( D_FULLDEBUG, "New BOINC_BackfillVM (id %d) created\n", m_vm_id );
+	dprintf( D_FULLDEBUG, "New BOINC_BackfillSlot (id %d) created\n", m_slot_id );
 		// TODO
 }
 
 
-BOINC_BackfillVM::~BOINC_BackfillVM()
+BOINC_BackfillSlot::~BOINC_BackfillSlot()
 {
-	dprintf( D_FULLDEBUG, "BOINC_BackfillVM (id %d) deleted\n", m_vm_id );
+	dprintf( D_FULLDEBUG, "BOINC_BackfillSlot (id %d) deleted\n", m_slot_id );
 		// TODO
 }
 
 
 bool
-BOINC_BackfillVM::init()
+BOINC_BackfillSlot::init()
 {
 		// TODO
 	return true;
@@ -54,7 +54,7 @@ BOINC_BackfillVM::init()
 
 
 bool
-BOINC_BackfillVM::start()
+BOINC_BackfillSlot::start()
 {
 		// TODO
 	return true;
@@ -62,7 +62,7 @@ BOINC_BackfillVM::start()
 
 
 bool
-BOINC_BackfillVM::suspend()
+BOINC_BackfillSlot::suspend()
 {
 		// TODO
 	return true;
@@ -70,7 +70,7 @@ BOINC_BackfillVM::suspend()
 
 
 bool
-BOINC_BackfillVM::resume()
+BOINC_BackfillSlot::resume()
 {
 		// TODO
 	return true;
@@ -78,7 +78,7 @@ BOINC_BackfillVM::resume()
 
 
 bool
-BOINC_BackfillVM::softkill()
+BOINC_BackfillSlot::softkill()
 {
 		// TODO
 	return true;
@@ -86,7 +86,7 @@ BOINC_BackfillVM::softkill()
 
 
 bool
-BOINC_BackfillVM::hardkill()
+BOINC_BackfillSlot::hardkill()
 {
 		// TODO
 	return true;
@@ -94,7 +94,7 @@ BOINC_BackfillVM::hardkill()
 
 
 void
-BOINC_BackfillVM::publish( ClassAd* ad )
+BOINC_BackfillSlot::publish( ClassAd* ad )
 {
 		// TODO
 }
@@ -114,7 +114,7 @@ BOINC_BackfillMgr::~BOINC_BackfillMgr()
 {
 	dprintf( D_FULLDEBUG, "Destroying a BOINC_BackfillMgr\n" );
 	if( m_boinc_starter && m_boinc_starter->active() ) {
-			// our child is still around, hardkill "all" VMs
+			// our child is still around, hardkill "all" slots
 		hardkill( 0 );
 		delete m_boinc_starter;
 	}
@@ -178,7 +178,7 @@ bool
 BOINC_BackfillMgr::destroy()
 {
 	if( m_boinc_starter && m_boinc_starter->active() ) {
-			// our child is still around, hardkill "all" VMs
+			// our child is still around, hardkill "all" slots
 		hardkill( 0 );
 		m_delete_boinc_mgr = true;
 		return false;
@@ -189,7 +189,7 @@ BOINC_BackfillMgr::destroy()
 
 
 bool
-BOINC_BackfillMgr::addVM( BOINC_BackfillVM* boinc_vm )
+BOINC_BackfillMgr::addSlot( BOINC_BackfillSlot* boinc_slot )
 {
 		// TODO
 	return true;
@@ -197,21 +197,21 @@ BOINC_BackfillMgr::addVM( BOINC_BackfillVM* boinc_vm )
 
 
 bool
-BOINC_BackfillMgr::rmVM( int vm_id )
+BOINC_BackfillMgr::rmSlot( int slot_id )
 {
-	if( ! m_vms[vm_id] ) {
+	if( ! m_slots[slot_id] ) {
 		return false;
 	}
-	delete m_vms[vm_id];
-	m_vms[vm_id] = NULL;
-	m_num_vms--;
+	delete m_slots[slot_id];
+	m_slots[slot_id] = NULL;
+	m_num_slots--;
 
 		// let the corresponding Resource know we're no longer running
 		// a backfill client for it
-	Resource* rip = resmgr->get_by_vm_id( vm_id );
+	Resource* rip = resmgr->get_by_slot_id( slot_id );
 	if( ! rip ) {
-		dprintf( D_ALWAYS, "ERROR in BOINC_BackfillMgr::rmVM(): "
-				 "can't find resource with VM id %d\n", vm_id );
+		dprintf( D_ALWAYS, "ERROR in BOINC_BackfillMgr::rmSlot(): "
+				 "can't find resource with slot id %d\n", slot_id );
 		return false;
 	}
 	if( m_delete_boinc_mgr ) {
@@ -233,23 +233,23 @@ BOINC_BackfillMgr::rmVM( int vm_id )
 
 
 bool
-BOINC_BackfillMgr::start( int vm_id )
+BOINC_BackfillMgr::start( int slot_id )
 {
 	if( m_delete_boinc_mgr || resmgr->isShuttingDown() ) {
 			// we're trying to shutdown, don't spawn anything
 		return false;
 	}
 
-	if( m_vms[vm_id] ) {
-		dprintf( D_ALWAYS, "BackfillVM object for VM %d already exists\n",
-				 vm_id );
+	if( m_slots[slot_id] ) {
+		dprintf( D_ALWAYS, "BackfillSlot object for slot %d already exists\n",
+				 slot_id );
 		return true;
 	}
 
-	Resource* rip = resmgr->get_by_vm_id( vm_id );
+	Resource* rip = resmgr->get_by_slot_id( slot_id );
 	if( ! rip ) {
 		dprintf( D_ALWAYS, "ERROR in BOINC_BackfillMgr::start(): "
-				 "can't find resource with VM id %d\n", vm_id );
+				 "can't find resource with slot id %d\n", slot_id );
 		return false;
 	}
 	State s = rip->state();
@@ -257,22 +257,22 @@ BOINC_BackfillMgr::start( int vm_id )
 
 	if( s != backfill_state ) {
 		dprintf( D_ALWAYS, "ERROR in BOINC_BackfillMgr::start(): "
-				 "Resource for VM id %d not in Backfill state (%s/%s)\n",
-				 vm_id, state_to_string(s), activity_to_string(a) );
+				 "Resource for slot id %d not in Backfill state (%s/%s)\n",
+				 slot_id, state_to_string(s), activity_to_string(a) );
 		return false;
 	}
 	if( a != idle_act ) {
 		dprintf( D_ALWAYS, "ERROR in BOINC_BackfillMgr::start(): "
-				 "Resource for VM id %d not in Backfill/Idle (%s/%s)\n",
-				 vm_id, state_to_string(s), activity_to_string(a) );
+				 "Resource for slot id %d not in Backfill/Idle (%s/%s)\n",
+				 slot_id, state_to_string(s), activity_to_string(a) );
 		return false;
 	}
 
 	if( m_boinc_starter && m_boinc_starter->active() ) {
 			// already have a BOINC client running, allocate a new
-			// BackfillVM for this vm_id, and consider this done.
-		dprintf( D_FULLDEBUG, "VM %d wants to do backfill, already have "	
-				 "a BOINC client running (pid %d)\n", vm_id, 
+			// BackfillSlot for this slot_id, and consider this done.
+		dprintf( D_FULLDEBUG, "Slot %d wants to do backfill, already have "	
+				 "a BOINC client running (pid %d)\n", slot_id, 
 				 (int)m_boinc_starter->pid() );
 	} else { 
 		// no BOINC client running, we need to spawn it
@@ -284,13 +284,13 @@ BOINC_BackfillMgr::start( int vm_id )
 	}
 
 		// PHASE 2: split up slots, remove monolithic BOINC client
-	m_vms[vm_id] = new BOINC_BackfillVM( vm_id );
-	m_num_vms++;
+	m_slots[slot_id] = new BOINC_BackfillSlot( slot_id );
+	m_num_slots++;
 
-		// now that we have a BOINC client and a BOINC_BackfillVM
-		// object for this VM, change to Backfill/BOINC
-	dprintf( D_ALWAYS, "State change: BOINC client running for vm%d\n",
-			 vm_id ); 
+		// now that we have a BOINC client and a BOINC_BackfillSlot
+		// object for this slot, change to Backfill/BOINC
+	dprintf( D_ALWAYS, "State change: BOINC client running for slot%d\n",
+			 slot_id ); 
 	return rip->change_state( busy_act );
 }
 
@@ -383,9 +383,9 @@ BOINC_BackfillMgr::reaper( int pid, int status )
 	m_boinc_starter = NULL;
 
 		// once the client is gone, delete all our compute slots
-	int i, max = m_vms.getsize();
+	int i, max = m_slots.getsize();
 	for( i=0; i < max; i++ ) {
-		rmVM( i );
+		rmSlot( i );
 	}
 
 	if( resmgr->isShuttingDown() ) {
@@ -401,7 +401,7 @@ BOINC_BackfillMgr::reaper( int pid, int status )
 
 
 bool
-BOINC_BackfillMgr::suspend( int vm_id )
+BOINC_BackfillMgr::suspend( int slot_id )
 {
 		// TODO
 	return true;
@@ -409,7 +409,7 @@ BOINC_BackfillMgr::suspend( int vm_id )
 
 
 bool
-BOINC_BackfillMgr::resume( int vm_id )
+BOINC_BackfillMgr::resume( int slot_id )
 {
 		// TODO
 	return true;
@@ -417,7 +417,7 @@ BOINC_BackfillMgr::resume( int vm_id )
 
 
 bool
-BOINC_BackfillMgr::softkill( int vm_id )
+BOINC_BackfillMgr::softkill( int slot_id )
 {
 		// TODO
 	return true;
@@ -425,43 +425,43 @@ BOINC_BackfillMgr::softkill( int vm_id )
 
 
 bool
-BOINC_BackfillMgr::hardkill( int vm_id )
+BOINC_BackfillMgr::hardkill( int slot_id )
 {
 	if( ! (m_boinc_starter && m_boinc_starter->active()) ) {
 			// no BOINC client running, we're done
 		return true;
 	}
 
-		// PHASE 2: handle different vm_ids differently...
-	if( vm_id != 0 && m_num_vms > 1 ) {
-			// we're just trying to remove a single VM object, but
-			// there are other active BOINC VMs so we'll leave the
+		// PHASE 2: handle different slot_ids differently...
+	if( slot_id != 0 && m_num_slots > 1 ) {
+			// we're just trying to remove a single slot object, but
+			// there are other active BOINC slots so we'll leave the
 			// client running (on an SMP).  in this case, we'll just
 			// remove the one object and be done immediately.
-		if( ! m_vms[vm_id] ) {
+		if( ! m_slots[slot_id] ) {
 			dprintf( D_ALWAYS, "ERROR in BOINC_BackfillMgr::hardkill(%d) "
-					 "no BackfillVM object with that id\n", vm_id );
+					 "no BackfillSlot object with that id\n", slot_id );
 			return false;
 		}
-		return rmVM( vm_id );
+		return rmSlot( slot_id );
 	}
 
 		// if we're here, we're done and we should really kill the
-		// BOINC client. so, we can wait to remove the VM objects
+		// BOINC client. so, we can wait to remove the slot objects
 		// until the reaper goes off...
 	return killClient();
 }
 
 
 bool
-BOINC_BackfillMgr::walk( BoincVmMember member_func )
+BOINC_BackfillMgr::walk( BoincSlotMember member_func )
 {
 	bool rval = true;
-	int i, num = 0, max = m_vms.getsize();
-	for( i = 0; num < m_num_vms && i < max; i++ ) {
-		if( m_vms[i] ) { 
+	int i, num = 0, max = m_slots.getsize();
+	for( i = 0; num < m_num_slots && i < max; i++ ) {
+		if( m_slots[i] ) { 
 			num++;
-			if( ! (((BOINC_BackfillVM*)m_vms[i])->*(member_func))() ) {
+			if( ! (((BOINC_BackfillSlot*)m_slots[i])->*(member_func))() ) {
 				rval = false;
 			}
 		}

@@ -25,11 +25,11 @@
 
 #include "backfill_mgr.h"
 
-class BOINC_BackfillVM : public BackfillVM
+class BOINC_BackfillSlot : public BackfillSlot
 {
 public:
-	BOINC_BackfillVM( int vm_id );
-	virtual ~BOINC_BackfillVM();
+	BOINC_BackfillSlot( int slot_id );
+	virtual ~BOINC_BackfillSlot();
 
 	virtual bool init();
 	virtual bool start();
@@ -42,7 +42,7 @@ public:
 };
 
 
-typedef bool (BOINC_BackfillVM::*BoincVmMember)();
+typedef bool (BOINC_BackfillSlot::*BoincSlotMember)();
 
 class BOINC_BackfillMgr : public BackfillMgr
 {
@@ -60,19 +60,19 @@ public:
 		*/
 	virtual bool destroy();
 
-	virtual bool addVM( BOINC_BackfillVM* boinc_vm );
+	virtual bool addSlot( BOINC_BackfillSlot* boinc_slot );
 
-		// for any of these, vm_id==0 means all VMs
-	virtual bool rmVM( int vm_id );
-	virtual bool start( int vm_id );
-	virtual bool suspend( int vm_id );
-	virtual bool resume( int vm_id );
-	virtual bool softkill( int vm_id );
-	virtual bool hardkill( int vm_id );
+		// for any of these, slot_id==0 means all slots
+	virtual bool rmSlot( int slot_id );
+	virtual bool start( int slot_id );
+	virtual bool suspend( int slot_id );
+	virtual bool resume( int slot_id );
+	virtual bool softkill( int slot_id );
+	virtual bool hardkill( int slot_id );
 
 	int reaper( int pid, int status );
 
-	bool walk( BoincVmMember );
+	bool walk( BoincSlotMember );
 
 protected:
 	bool spawnClient( void );

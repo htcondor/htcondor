@@ -40,8 +40,8 @@ template class SimpleList<VMMachine*>;
 
 
 #if HAVE_BACKFILL
-class BackfillVM;
-template class ExtArray<BackfillVM*>;
+class BackfillSlot;
+template class ExtArray<BackfillSlot*>;
 #endif /* HAVE_BACKFILL */
 
 

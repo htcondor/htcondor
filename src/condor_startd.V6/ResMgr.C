@@ -1232,7 +1232,7 @@ ResMgr::get_by_name( char* name )
 
 
 Resource*
-ResMgr::get_by_vm_id( int id )
+ResMgr::get_by_slot_id( int id )
 {
 	if( ! resources ) {
 		return NULL;
@@ -1244,6 +1244,13 @@ ResMgr::get_by_vm_id( int id )
 		}
 	}
 	return NULL;
+}
+
+
+// Deprecated (might not even need to be released).
+Resource*
+ResMgr::get_by_vm_id( int id ) {
+	return this->get_by_slot_id(id);
 }
 
 

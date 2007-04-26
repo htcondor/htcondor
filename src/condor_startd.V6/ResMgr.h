@@ -152,6 +152,7 @@ public:
 	Resource*	get_by_cur_id(char*);	// Find rip by ClaimId of r_cur
 	Resource*	get_by_any_id(char*);	// Find rip by r_cur or r_pre
 	Resource*	get_by_name(char*);		// Find rip by r_name
+	Resource*	get_by_slot_id(int);	// Find rip by r_id
 	Resource*	get_by_vm_id(int);		// Find rip by r_id
 	State		state( void );			// Return the machine state
 
