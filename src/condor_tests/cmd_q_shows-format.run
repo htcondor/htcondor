@@ -9,13 +9,9 @@ $whoami = "";
 
 @adarray;
 
-$execute = sub {
+$submit = sub {
 	my %info = @_;
-	print "Good we need to run to see it\n";
-
-	# give it 5 minutes or die.
-	CondorTest::RegisterTimed($testname, $timed, 300);
-	my $cmd = "condor_q";
+	my $cmd = "condor_q -format \"%s\" Owner -format \" ClusterId = %d\n\" ClusterId";
 
 	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if(!$cmdstatus)
@@ -31,23 +27,13 @@ $execute = sub {
 	while(<CMD>) {
 		chomp($_);
 		$submitline = $_;
+		print "Scraping cluster from submit file\n";
+		print "hmmmm<$submitline>\n";
 		if($submitline =~ /^.*cluster\s+(\d+).*$/) {
 			$cluster = $1;
 			print "Found my cluster which is $cluster!\n";
 		}
 	}
-
-
- 	foreach $line (@adarray) {
-        chomp($line);
-        if($line =~ /^\s*(\d+).\d+\s+([\w\-]+).*$/) {
-                $whoami = $2;
-                print "Determined who I am <$whoami>\n";
-        }
-    }
-
-	$cmd = "condor_q -format \"%s\" Owner -format \" ClusterId = %d\n\" ClusterId";
-
 
 	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if(!$cmdstatus)
@@ -60,13 +46,13 @@ $execute = sub {
 
 	foreach $line (@adarray) {
 		chomp($line);
-		print "$line\n";;;
-		if($line =~ /^\s*$whoami\s+ClusterId\s+=\s+$clusters.*$/) {
-				print "Bingo: found <$line>\n";
+		print "$line\n";
+		if($line =~ /^\s*([\w\-]+)\s+ClusterId\s+=\s+$clusters.*$/) {
+				print "Bingo: found <$line> shows I am $1\n";
 				$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,8);
 				return(0);
 		} else {
-			#print "<<<$line>>>\n";
+			print "<<<$line>>>\n";
 		}
 	}
 
@@ -83,13 +69,8 @@ $ExitSuccess = sub {
 	my %info = @_;
 };
 
-$timed = sub
-{
-    die "Job should have ended by now. condor_q -format broken!\n";
-};
-
 CondorTest::RegisterAbort($testname, $aborted);
-CondorTest::RegisterExecute($testname, $execute);
+CondorTest::RegisterSubmit($testname, $submit);
 CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {

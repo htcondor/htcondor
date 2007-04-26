@@ -13,7 +13,6 @@ chomp($whoami);
 
 $submit = sub {
 	my %info = @_;
-	print "Good we need to run to see it\n";
 
 	my $foundcluster = 0;
 	my $foundanalyze = 0;
@@ -70,14 +69,8 @@ $ExitSuccess = sub {
 	my %info = @_;
 };
 
-$timed = sub
-{
-    die "Job should have ended by now. condor_q -sub $whoami broken!\n";
-};
-
 CondorTest::RegisterSubmit( $testname, $submit );
 CondorTest::RegisterAbort($testname, $aborted);
-#CondorTest::RegisterExecute($testname, $execute);
 CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {

@@ -24,6 +24,8 @@ $execute = sub {
 	if(!$status)
 	{
 		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		$cmd = "condor_rm $cluster";
+		$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 		exit(1)
 	}
 	foreach $line (@adarray) {
@@ -57,11 +59,6 @@ $abort = sub {
 $success = sub
 {
 	die "/Remove/Abort is expected event trail!\n";
-};
-
-$timed = sub
-{
-	die "Job should have ended by now. Hold/Realease broken!\n";
 };
 
 CondorTest::RegisterExecute($testname, $execute);
