@@ -112,6 +112,13 @@ dedicated execution accounts.  Also added support for
 Section~\ref{param:DedicatedExecuteAccountRegexp} and
 Section~\ref{sec:RunAsNobody} for more information.
 
+\item All Condor daemons now publish a \Attr{MyCurrentTime} attribute
+  which is the current local time at the time the update was generated
+  and sent to the \Condor{collector}.
+  This is in addition to the \Attr{LastHeardFrom} attribute which is
+  inserted by the \Condor{collector} (the current local time at the
+  collector when the update is received).
+
 \end{itemize}
 
 \noindent Bugs Fixed:
