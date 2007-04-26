@@ -285,9 +285,10 @@ Condor_Auth_Base * auth = NULL;
 	// at this point, all methods have set the raw authenticated name available
 	// via getAuthenticatedName().
 
-	dprintf (D_ALWAYS, "ZKM: setting default map to %s\n",
-			authenticator_->getRemoteFQU()?authenticator_->getRemoteFQU():"(null)");
-
+	if(authenticator_) {
+		dprintf (D_ALWAYS, "ZKM: setting default map to %s\n",
+				 authenticator_->getRemoteFQU()?authenticator_->getRemoteFQU():"(null)");
+	}
 
 	// check to see if CERTIFICATE_MAPFILE was defined.  if so, use it.  if
 	// not, do nothing.  the user and domain have been filled in by the
@@ -320,12 +321,14 @@ Condor_Auth_Base * auth = NULL;
 	// for now, let's be a bit more verbose and print this to D_SECURITY.
 	// yeah, probably all of the log lines that start with ZKM: should be
 	// updated.  oh, i wish there were a D_ZKM, but alas, we're out of bits.
-	dprintf (D_SECURITY, "ZKM: post-map: current user is '%s'\n",
-			authenticator_->getRemoteUser()?authenticator_->getRemoteUser():"(null)");
-	dprintf (D_SECURITY, "ZKM: post-map: current domain is '%s'\n",
-			authenticator_->getRemoteDomain()?authenticator_->getRemoteDomain():"(null)");
-	dprintf (D_SECURITY, "ZKM: post-map: current FQU is '%s'\n",
-			authenticator_->getRemoteFQU()?authenticator_->getRemoteFQU():"(null)");
+	if( authenticator_ ) {
+		dprintf (D_SECURITY, "ZKM: post-map: current user is '%s'\n",
+				 authenticator_->getRemoteUser()?authenticator_->getRemoteUser():"(null)");
+		dprintf (D_SECURITY, "ZKM: post-map: current domain is '%s'\n",
+				 authenticator_->getRemoteDomain()?authenticator_->getRemoteDomain():"(null)");
+		dprintf (D_SECURITY, "ZKM: post-map: current FQU is '%s'\n",
+				 authenticator_->getRemoteFQU()?authenticator_->getRemoteFQU():"(null)");
+	}
 
 	mySock->allow_one_empty_message();
 	return ( retval );
