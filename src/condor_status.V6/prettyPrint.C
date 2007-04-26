@@ -208,15 +208,13 @@ printStartdNormal (ClassAd *ad)
 			first = false;
 		}
 
-		pm.display (stdout, ad);
-		if( ad->LookupInteger( ATTR_ENTERED_CURRENT_ACTIVITY , actvty ) &&
-			ad->LookupInteger( ATTR_LAST_HEARD_FROM , now ) )
-		{
+		pm.display(stdout, ad);
+		if (ad->LookupInteger(ATTR_ENTERED_CURRENT_ACTIVITY, actvty)
+			&& (ad->LookupInteger(ATTR_MY_CURRENT_TIME, now) ||
+				ad->LookupInteger(ATTR_LAST_HEARD_FROM, now))) {
 			actvty = now - actvty;
-			printf( "%s\n", format_time( actvty ) );
-		}
-		else
-		{
+			printf("%s\n", format_time(actvty));
+		} else {
 			printf(" [Unknown]\n");
 		}
 	}
