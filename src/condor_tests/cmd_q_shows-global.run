@@ -6,8 +6,8 @@ CondorPersonal::DebugOff();
 Condor::DebugOff();
 
 $cmd_template = "cmd_q_multi.template";
-$testname = 'cmd_q_multi - Simple Condor-C A&B with Vanilla job';
-$corename = "cmd_q_multi";
+$testname = 'cmd_q_shows-global - condor_q -global test';
+$corename = "cmd_q_shows-global";
 
 # where am I running
 $dummyhost = "gamgee.cs.wisc.edu";
