@@ -8,6 +8,24 @@
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
 
+04/27/07 trunk-pre-merge-V6_9_2-merge-3
+         trunk-post-merge-V6_9_2-merge-3
+   The state of the doc directory in trunk before and after
+   merging changes from the V6_9_2-branch as tagged V6_9_2-merge-3.
+
+04/27/07 V6_9_2-merge-3
+   The state of the doc directory in the V6_9_2-branch for a
+   merge into the trunk.
+
+04/27/07 V6_9_2-pre-merge-V6_8-merge-11
+         V6_9_2-post-merge-V6_8-merge-11
+   The state of the doc directory in V6_9_2-branch before and after
+   merging changes from the V6_8-branch as tagged V6_8-merge-11.
+
+04/27/07 V6_8-merge-11
+   The state of the doc directory in the V6_8-branch for a merge
+   into V6_9_2-branch.
+
 04/18/07 V6_9-quillpp-8-{branch, root} 
 	Another development branch for Quill++. Based from 
 	BUILD-V6_9-trunk-2007-4-16. (On doc, there will likely be no changes,
