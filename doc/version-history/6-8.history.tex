@@ -155,6 +155,9 @@ connections.
 \item The \Condor{c-gahp} now properly lists all of the commands it
 supports in response to the COMMANDS command.
 
+\item Fix a bug in how the \Condor{c-gahp} updates configuration parameter
+\Macro{GSI\_DAEMON\_NAME} to include the job's credential if it has one.
+
 % Gnats PR 815
 \item Removed the 5096-character restriction on the length of DAG
 macro values (and names) in \Condor{dagman}.
