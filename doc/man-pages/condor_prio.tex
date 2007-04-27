@@ -4,6 +4,7 @@
 \oOptArg{-p}{priority}
 \oOptArg{+ \Bar -}{value}
 \oOptArg{-n}{schedd\_name}
+\oOptArg{-pool}{pool\_name}
 \Arg{cluster \Bar cluster.process \Bar username \Bar -a}
 
 \index{Condor commands!condor\_prio}
@@ -42,7 +43,9 @@ on Condor's priority scheme.
     \OptItem{\OptArg{-p}{priority}}{Set priority to the specified value}
     \OptItem{\OptArg{+ \Bar -}{value}}{Change priority by the specified value}
     \OptItem{\OptArg{-n}{schedd\_name}}{Change priority of jobs queued
-    at the specified schedd} 
+		at the specified schedd in the local pool}
+    \OptItem{\OptArg{-pool}{pool\_name}}{Change priority of jobs queued at 
+		the specified schedd in the specified pool} 
     \OptItem{\Opt{-a}}{Change priority of all the jobs in the queue}
 \end{Options}
 

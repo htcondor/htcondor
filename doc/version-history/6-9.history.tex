@@ -406,6 +406,10 @@ COD job runs as is different than the UID of the opportunistic job or
 any other COD jobs that are running on the execute machine when the
 COD claim is activated.
 
+\item The \Macro{EXECUTE\_LOGIN\_IS\_DEDICATED} feature has been found
+to be broken on UNIX platforms. Its use will cause the \Condor{procd}
+to crash, bringing down the other Condor daemons with it.
+
 \end{itemize}
 
 

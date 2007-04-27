@@ -911,6 +911,11 @@ File System Configuration File Entries''.
   % Default definition in config file: bogus value
   % Result if not defined or RHS is empty: autodiscovered domain, if any, is used.
 
+\item[\Macro{NO\_DNS}] \label{param:NoDNS}
+  A boolean value that defaults to \Expr{False}.
+  When \Expr{True}, Condor constructs host names using the host's IP address
+  together with the value defined for \MacroNI{DEFAULT\_DOMAIN\_NAME}. 
+
 \item[\Macro{CM\_IP\_ADDR}] \label{param:CMIPAddr}
   If neither \MacroNI{COLLECTOR\_HOST} nor 
   \MacroNI{COLLECTOR\_IP\_ADDR} macros are defined, then this
@@ -1105,6 +1110,14 @@ This macro
   a user's job log (as specified in a submit description file)
   will be locked before being written to.
   If \Expr{False}, Condor will not lock the file before writing.
+
+\item[\Macro{TOUCH\_LOG\_INTERVAL}] \label{param:TouchLogInterval}
+  The time interval in seconds between when daemons touch
+  their log files.  The change in last modification time for the
+  log file is useful when a daemon restarts after failure or shut down.
+  The last modification date is printed, and it provides an upper bound
+  on the length of time that the daemon was not running.
+  Defaults to 60 seconds.
 
 \item[\MacroB{<SUBSYS>\_DEBUG}] \label{param:SubsysDebug}
 \index{SUBSYS\_DEBUG macro@\texttt{<SUBSYS>\_DEBUG} macro}
@@ -2774,11 +2787,11 @@ Configuring The Startd Policy.
   terms of seconds and defaults to 300 (5 minutes).
   
 \item[\Macro{MAXJOBRETIREMENTTIME}] \label{param:MaxJobRetirementTime}
-  An integer value representing the number of seconds allotted as
-  a retirement. The default value of 0 (when the configuration
-  variable is not present) implements the expected policy that
-  there is no retirement time.
-  See \MacroNI{MAXJOBRETIREMENTTIME} in
+  An integer value representing the number of seconds a preempted job
+  will be allowed to run before being evicted. The default value of 0
+  (when the configuration variable is not present) implements the
+  expected policy that there is no retirement time.  See
+  \MacroNI{MAXJOBRETIREMENTTIME} in
   section~\ref{sec:State-Expression-Summary} for further explanation.
 
 \item[\Macro{CLAIM\_WORKLIFE}] \label{param:ClaimWorklife}
@@ -4280,24 +4293,24 @@ These settings affect the \Condor{starter}.
   Unix mechanism that allows users to assign their own processes a lower 
   priority, such that these processes do not interfere with interactive
   use of the machine.
-  If you have machines with lots
-  of real memory and swap space, so that the only scarce resource is CPU time,
-  you may use this macro in conjunction with a policy that
+  For machines with lots
+  of real memory and swap space, such that the only scarce resource is CPU time,
+  use this macro in conjunction with a policy that
   allows Condor to always start jobs on the machines. 
   Condor jobs would always run,
-  but interactive response on your machines would never suffer.
-  You most likely will not notice Condor is
+  but interactive response on the machines would never suffer.
+  A user most likely will not notice Condor is
   running jobs.  See section~\ref{sec:Configuring-Policy} on
-  Configuring The Startd Policy for more details on setting up a
+  Startd Policy Configuration for more details on setting up a
   policy for starting and stopping jobs on a given machine.
 
-  The value is an arbitrary ClassAd expression,
-  evaluated by the \Condor{starter} daemon for each job just before the
-  job runs, and the expression can refer to any attribute in the job ClassAd.
+  The integer value is
+  set by the \Condor{starter} daemon for each job just before the
+  job runs.
   The range of allowable values are integers in the range of 0 to 19
   (inclusive),
   with a value of 19 being the lowest priority.  
-  If the expression evaluates to a value outside this range,
+  If the integer value is outside this range,
   then on a Unix machine, a value greater than 19 is auto-decreased to 19;
   a value less than 0 is treated as 0.
   For values outside this range, a Windows machine ignores the value
@@ -5232,6 +5245,15 @@ should ping it to test if it is up again.
 between pings of a remote resource that is currently down. The default
 is 5 minutes (300 seconds).
 
+\item[\Macro{GRIDMANAGER\_EMPTY\_RESOURCE\_DELAY}]
+  \label{param:GridmanagerEmptyResourceDelay} The number of seconds
+  that the \Condor{gridmanager} retains information about a grid
+  resource, once the \Condor{gridmanager} has no active jobs
+  on that resource.
+  An active job is a grid universe job that is in the queue,
+  but is not in the HELD state.
+  Defaults to 300 seconds.
+
 \item[\Macro{GRIDMANAGER\_MAX\_SUBMITTED\_JOBS\_PER\_RESOURCE}]
 \label{param:GridmanagerMaxSubmittedJobsPerResource}
 Limits the number of jobs
@@ -5463,6 +5485,23 @@ These macros affect the \Prog{grid\_monitor}.
 \end{description}
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Grid-Config-File-Entries}Configuration File
+Entries Relating to Grid Usage and Glidein}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{configuration!grid and glidein configuration variables}
+These macros affect the Condor's usage of grid resources
+and glidein.
+\begin{description}
+\item[\Macro{GLIDEIN\_SERVER\_URLS}]
+  \label{param:GlideinServerURLS}
+  A comma or space-separated list of URLs that contain the binaries
+  that must be copied by \Condor{glidein}.
+  There are no default values, but working URLs that copy from the UW site
+  are provided in the distributed sample configuration files.
+
+\end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:DAGMan-Config-File-Entries}Configuration File 

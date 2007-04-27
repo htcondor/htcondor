@@ -59,8 +59,12 @@ included.
 
 \begin{itemize}
 
+\item A clipped port to x86 Debian 4.0 has been added.
+
 \item The functionality embodied in \Condor{q} \Opt{-better-analyze} is now
 available for X86\_64 native ports of Condor.
+
+\item We now supply distinct, native ports for Mac OS X 10.3 and 10.4.
 
 \end{itemize}
 
@@ -68,27 +72,43 @@ available for X86\_64 native ports of Condor.
 
 \begin{itemize}
 
+\item Fixed a bug where under certain conditions Condor's file logging codes
+would perform a segmentation fault.
+
+\item Removed periodic re-indexing of the quill history\_vertical table.
+This should not be needed with the current schema, and it should speed
+up database re-indexing operations.
+
+\item Fixed a bug that would cause the dedicated scheduler to
+crash, if the \Condor{schedd} was suspended or blocked
+for more than approximately 10 minutes.
+The most likely cause of a suspension
+is a \Condor{schedd} executable
+mounted from a remote NFS file system.
+
 \item Fixed a bug where if \Opt{-lc} was specified multiple times for
 the compiler when using \Condor{compile} (some tools like \Prog{pgf90}
 do this), \Condor{compile} would fail to link the application and emit
 a multiply defined symbol error for many symbols.
 
 \item Fixed a bug where Condor erroneously indicates that a scheduler
-universe's job executable is missing or not executable, if the scheduler
+universe's job executable is missing or not executable.
+This occurred if the scheduler
 universe job had been submitted with
 \SubmitCmd{CopyToSpool = false} in the submit
 description file, and the user had a umask which prevented the user
 named \Login{condor} from following the search path to the
-user owned executable.
+user-owned executable.
 
 \item Fixed a bug that could cause the \Condor{schedd} to crash if it
 received too many matches in one negotiation cycle (more than 1000 on a
 Linux platform).
 
-\item Fixed a bug where \Condor{history} did not honor the \Opt{-format} flag
-properly when Quill was in use.
+\item Fixed a bug in which \Condor{history} did not honor the \Opt{-format} flag
+properly when Quill is in use.
 
-\item Fixed a bug where a java property which included surrounding double quotes
+\item Fixed a bug in which a java property that includes
+surrounding double quote marks
 caused the detection of a java virtual machine to go awry. 
 The fix, which may change in the future, changes any extra double quotes
 within a property value to single quotes.
@@ -120,7 +140,7 @@ by the server (for example, the \Condor{schedd}) before the client
 (for example, the \Condor{shadow}) was done using it.
 This bug can be observed as
 communication failure the next time the client tried to connect to
-the server.  In some cases, this caused jobs to be requeued to be run
+the server.  In some cases, this caused jobs to be re-queued to be run
 again, because the final update of the job queue failed.
 
 \item If a grid job becomes held while it's still submitted to the remote
@@ -147,6 +167,76 @@ The amount of time that a job can go missing from the Grid Monitor
 status reports before the \Condor{gridmanager} reacts can be set by the
 new configuration parameter \Macro{GRID\_MONITOR\_NO\_STATUS\_TIMEOUT}.
 The default is 15 minutes.
+
+\item \Condor{q} -analyze will now print a warning if a job being analyzed
+is already completed or if a grid universe job being analyzed has already
+been matched.
+
+\item In \Condor{shadow}, when forwarding an updated X509 proxy to an
+executing job, the logic for whether to delegate or copy the proxy 
+(determined by configuration parameter
+\Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS}) was reversed.
+The authentication logic for this operation was also incorrect, causing the
+operation to fail in many instances.
+
+\item Made a small improvement to the reliability of Condor's process
+ancestry tracking under Linux.  However, jobs that create children
+with more than 4096 bytes of environment are still problematic, due to
+a Linux kernel limitation that prevents reading more than 4k from
+/proc/<pid>/environ.  The only truly reliable way to ensure that
+Condor is aware of all processes spawned by a Unix job is to use
+\MacroNI{VMx\_USER}.
+
+\item \Condor{glidein} option \Opt{-run\_here} no longer fails when the
+current working directory is not in PATH.
+
+\item \Condor{glidein} option \Opt{-runtime} would cause runtime errors
+at startup under some batch systems.  The problematic parentheses characters
+are no longer generated as part of the environment value that is set by
+this option.
+
+\item On rare occasions, the \Condor{startd} will compute a negative MIPS
+rating when performing benchmarks on the machine. This caused the
+\Attr{Mips} attribute to disappear from the machine ad. Now, the
+\Condor{startd} ignores these bogus results. The cause of the negative MIPS
+ratings is still unknown.
+
+% PR 826
+\item Fixed a bug that caused \Condor{dagman} to hang if it processed,
+in recovery mode, a node for which all submit attempts failed and a
+POST script was run.
+
+\item Fixed a bug that would cause the \Condor{negotiator}'s memory
+usage to grow over time when job or machine ClassAds made use of
+ClassAd functions that do regular expression matching operations.
+
+\item Fixed a bug that was preventing Condor daemons from caching DNS
+information for hosts authenticated via HOSTALLOW settings (i.e. no
+strong authentication).  The collector, in particular, should spend
+much less time on IP to hostname lookups.
+
+\item When a job has an X509 proxy file (as indicated by the
+\Attr{X509UserProxy} attribute in the job ad), the \Condor{starter}
+now always sets \Attr{X509\_USER\_PROXY} in the job's environment
+to point to a copy of that proxy file.
+
+\item Fixed several bugs that could cause the \Condor{c-gahp} to time out
+when talking to the \Condor{schedd} and falsely report that commands
+completed successfully. A common result is grid type condor grid universe
+jobs being placed on hold because the \Condor{gridmanager} mistakenly
+thinks they disappeared from the remote \Condor{schedd}'s queue.
+
+% PR 771
+\item Fixed a bug in Stork which was causing it to write the output and
+error log files as the wrong user, and read the input file as the wrong
+user.
+
+% PR 773
+\item Fixed a bug in Stork which was causing it to kill hung jobs
+as the wrong user.
+
+\item Fixed some possible static buffer overflows related to the
+transferring of a job's data files.
 
 \end{itemize}
 

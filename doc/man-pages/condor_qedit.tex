@@ -2,6 +2,7 @@
 {modify job attributes}
 \Synopsis \SynProg{\Condor{qedit}}
 \oOptArg{-n}{schedd-name}
+\oOptArg{-pool}{pool-name}
 \Arg{\{cluster \Bar cluster.proc \Bar owner \Bar -constraint constraint\}}
 \Arg{attribute-name}
 \Arg{attribute-value}
@@ -20,10 +21,13 @@ expression).
 
 \begin{Options}
     \OptItem{\OptArg{-n}{schedd-name}}{Modify job attributes in the queue of the specified schedd}
+    \OptItem{\OptArg{-pool}{pool-name}}{Modify job attributes in the queue of the schedd specified in the specified pool}
 \end{Options}
 
 \Examples
 \begin{verbatim}
+% condor_qedit -name north.cs.wisc.edu -pool condor.cs.wisc.edu 249.0 answer 42
+Set attribute "answer".
 % condor_qedit -name perdita 1849.0 In '"myinput"'
 Set attribute "In".
 % condor_qedit jbasney NiceUser TRUE

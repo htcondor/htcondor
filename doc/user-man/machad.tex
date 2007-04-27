@@ -242,6 +242,25 @@ In that case, \AdAttr{RemoteUser} would hold the name of the entity
 currently using the resource, while \AdAttr{RemoteOwner} would hold
 the name of the entity that claimed the resource.
 
+\index{ClassAd machine attribute (in Claimed State)!PreemptingOwner}
+\item[\AdAttr{PreemptingOwner}:] The name of the user who is preempting
+the job that is currently running on this resource.
+
+\index{ClassAd machine attribute (in Claimed State)!PreemptingUser}
+\item[\AdAttr{PreemptingUser}:] The name of the user who is preempting
+the job that is currently running on this resource.  The relationship
+between \AdAttr{PreemptingUser} and \AdAttr{PreemptingOwner} is the same
+as the relationship between \AdAttr{RemoteUser} and \AdAttr{RemoteOwner}.
+
+\index{ClassAd machine attribute (in Claimed State)!PreemptingRank}
+\item[\AdAttr{PreemptingRank}:] A float which represents this machine
+owner's affinity for running the Condor job which is waiting for the
+current job to finish or be preempted.  If not currently hosting a
+Condor job, \AdAttr{PreemptingRank} is undefined.  When a machine is
+claimed and there is already a job running, the attribute's value is
+computed by evaluating the machine's \AdAttr{Rank} expression with
+respect to the preempting job's ClassAd.
+
 \index{ClassAd machine attribute (in Claimed State)!TotalClaimRunTime}
 \item[\AdAttr{TotalClaimRunTime}:] A running total of the amount of
 time (in seconds) that all jobs (under the same claim) ran
