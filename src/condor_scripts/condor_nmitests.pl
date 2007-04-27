@@ -242,7 +242,7 @@ sub CrunchErrors
 			$pbad = $host->failed();
 			$phost = $host->platform();
 
-			#print "Current host is $phost\n";
+			print "Current host is $phost\n";
 
 			if($pexpected == 0) {
 				$pexpected = GetHistExpected($phost);
@@ -288,10 +288,10 @@ sub CrunchErrors
 			@partial = split /:/, $test;
 			$index = GetPlatformData($partial[0]);
 
-			foreach $host (@platformresults) {
 				$p = $platformresults[$index];
+				$blame = 0;
 
-				##print "size 0f partial array is $#partial\n";
+				#print "size 0f partial array is $#partial\n";
 				#print "crunch errors dedicated to $type\n";
 
 				$pexpected = $p->expected();
@@ -341,7 +341,6 @@ sub CrunchErrors
 				} else {
 					print "CLASS of problem unknown!!!!!!<$type>!!!!!!!\n";
 				}
-			}
 		}
 	}
 }
