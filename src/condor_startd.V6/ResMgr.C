@@ -1725,13 +1725,10 @@ ResMgr::makeAdList( ClassAdList *list )
 		// collector normally does this, so if we're servicing a
 		// QUERY_STARTD_ADS commannd, we need to do this ourselves or
 		// some timing stuff won't work. 
-	char buf[1024];
-	sprintf( buf, "%s = %d", ATTR_LAST_HEARD_FROM, (int)cur_time );
-
 	for( i=0; i<nresources; i++ ) {
 		ad = new ClassAd;
 		resources[i]->publish( ad, A_ALL_PUB ); 
-		ad->Insert( buf );
+		ad->Assign( ATTR_LAST_HEARD_FROM, (int)cur_time );
 		list->Insert( ad );
 	}
 }
