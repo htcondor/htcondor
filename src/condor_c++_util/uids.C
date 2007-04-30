@@ -864,7 +864,7 @@ set_user_ids_implementation( uid_t uid, gid_t gid, const char *username,
 
 	if( UserIdsInited && UserUid != uid && !is_quiet ) {
 		dprintf( D_ALWAYS, 
-				 "warning: setting UserUid to %d, was %d previosly\n",
+				 "warning: setting UserUid to %d, was %d previously\n",
 				 uid, UserUid );
 	}
 	UserUid = uid;
