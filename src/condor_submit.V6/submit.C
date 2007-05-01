@@ -79,7 +79,13 @@
 
 #include "list.h"
 
-static int hashFunction( const MyString&, int );
+// TODO: hashFunction() is case-insenstive, but when a MyString is the
+//   hash key, the comparison in HashTable is case-sensitive. Therefore,
+//   the case-insensitivity of hashFunction() doesn't complish anything.
+//   CheckFilesRead, CheckFilesWrite, and ClusterAdAttrs should be
+//   either completely case-sensitive (and use MyStringHash()) or
+//   completely case-insensitive (and use AttrKey and AttrKeyHashFunction).
+static unsigned int hashFunction( const MyString& );
 HashTable<AttrKey,MyString> forcedAttributes( 64, AttrKeyHashFunction );
 HashTable<MyString,int> CheckFilesRead( 577, hashFunction ); 
 HashTable<MyString,int> CheckFilesWrite( 577, hashFunction ); 
@@ -623,7 +629,7 @@ main( int argc, char *argv[] )
 			} else if ( match_prefix( ptr[0], "-debug" ) ) {
 				// dprintf to console
 				Termlog = 1;
-				dprintf_config( "TOOL", 2 );
+				dprintf_config( "TOOL" );
 			} else if ( match_prefix( ptr[0], "-spool" ) ) {
 				Remote++;
 				DisableFileChecks = 1;
@@ -3831,12 +3837,6 @@ SetUserLog()
 	char *ulog_entry = condor_param( UserLogFile, ATTR_ULOG_FILE );
 
 	if (ulog_entry) {
-		if (whitespace(ulog_entry)) {
-			fprintf( stderr, "\nERROR: Only one %s can be specified.\n",
-					 UserLogFile );
-			DoCleanup(0,0,NULL);
-			exit( 1 );
-		}
 		MyString ulog = full_path(ulog_entry);
 		free(ulog_entry);
 
@@ -5960,16 +5960,17 @@ InsertJobExprString(const char * name, const char * val, bool clustercheck /*= t
 	InsertJobExpr(buf.Value(), clustercheck);
 }
 
-static int 
-hashFunction (const MyString &str, int numBuckets)
+static unsigned int 
+hashFunction (const MyString &str)
 {
-	 int i = str.Length() - 1, hashVal = 0;
+	 int i = str.Length() - 1;
+	 unsigned int hashVal = 0;
 	 while (i >= 0) 
 	 {
-		  hashVal += tolower(str[i]);
+		  hashVal += (unsigned int)tolower(str[i]);
 		  i--;
 	 }
-	 return (hashVal % numBuckets);
+	 return hashVal;
 }
 
 
@@ -6046,32 +6047,4 @@ isTrue( const char* attr )
 	return false;
 }
 
-/************************************
-	The following are dummy stubs for the DaemonCore class to allow
-	tools using DCSchedd to link.  DaemonCore is brought in
-	because of the FileTransfer object.
-	These stub functions will become obsoluete once we start linking
-	in the real DaemonCore library with the tools, -or- once
-	FileTransfer is broken down.
-*************************************/
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
-	DaemonCore* daemonCore = NULL;
-	int DaemonCore::Kill_Thread(int) { return 0; }
-//char * DaemonCore::InfoCommandSinfulString(int) { return NULL; }
-	int DaemonCore::Register_Command(int,char*,CommandHandler,char*,Service*,
-		DCpermission,int) {return 0;}
-	int DaemonCore::Register_Reaper(char*,ReaperHandler,
-		char*,Service*) {return 0;}
-	int DaemonCore::Create_Thread(ThreadStartFunc,void*,Stream*,
-		int) {return 0;}
-	int DaemonCore::Suspend_Thread(int) {return 0;}
-	int DaemonCore::Continue_Thread(int) {return 0;}
-//	int DaemonCore::Register_Reaper(int,char*,ReaperHandler,ReaperHandlercpp,
-//		char*,Service*,int) {return 0;}
-//	int DaemonCore::Register_Reaper(char*,ReaperHandlercpp,
-//		char*,Service*) {return 0;}
-//	int DaemonCore::Register_Command(int,char*,CommandHandlercpp,char*,Service*,
-//		DCpermission,int) {return 0;}
-/**************************************/
-
-
+#include "../condor_daemon_core.V6/daemon_core_stubs.h"

@@ -129,7 +129,7 @@ stork_parse_global_opts(
 			case 'd':
 				// -debug
 				Termlog = 1;
-				dprintf_config ("TOOL", 2 );
+				dprintf_config ("TOOL");
 				argc--;	// Account for one global arg processed
 				break;
 			case 'n':
@@ -242,7 +242,7 @@ stork_submit (
 	}
 	free (_request);
 
-	sock->code ((int)cred_size);
+	sock->code ((int*)&cred_size);
 	if (cred_size) {
 		char * _cred = strdup (cred);  
 		sock->code_bytes (_cred, cred_size);

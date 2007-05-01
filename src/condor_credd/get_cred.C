@@ -36,7 +36,7 @@ int main(int argc, char **argv)
   int cred_size = 0;
 
   DCCredd credd(credd_sin);
-  if (credd.getCredentialData (cred_name, (void*)cred_data, cred_size, errorstack)) {
+  if (credd.getCredentialData ((const char*)cred_name, (void*&)cred_data, cred_size, errorstack)) {
       printf ("Received %d \n%s\n", cred_size, cred_data);
 	  return 0;
   } else {

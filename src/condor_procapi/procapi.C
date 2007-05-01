@@ -26,7 +26,7 @@
 #include "procapi.h"
 #include "procapi_internal.h"
 
-int pidHashFunc( const pid_t& pid, int numbuckets );
+unsigned int pidHashFunc( const pid_t& pid );
 
 HashTable <pid_t, procHashNode *> * ProcAPI::procHash = 
     new HashTable <pid_t, procHashNode *> ( PHBUCKETS, pidHashFunc );
@@ -2649,9 +2649,9 @@ ProcAPI::deallocAllProcInfos() {
 	allProcInfos = NULL;
 }
 
-int
-pidHashFunc( const pid_t& pid, int numbuckets ) {
-	return pid % numbuckets;   
+unsigned int
+pidHashFunc( const pid_t& pid ) {
+	return pid;   
 }
 
 // Warning: WIN32 stuff below.  Not for the faint of heart.

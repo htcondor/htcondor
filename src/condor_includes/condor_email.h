@@ -107,8 +107,10 @@ public:
 	void sendExitWithBytes( ClassAd* ad, int exit_reason,
 							float run_sent, float run_recv,
 							float tot_sent, float tot_recv );
+		/* TODO
 	void sendError( ClassAd* ad, const char* err_summary, 
 					const char* err_msg );
+		*/
 	void sendHold( ClassAd* ad, const char* reason );
 	void sendRemove( ClassAd* ad, const char* reason );
 

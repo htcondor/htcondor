@@ -24,16 +24,17 @@
 #define _build_job_env_H_
 
 #include "condor_classad.h"
-#include "condor_string.h"
+#include "env.h"
 
-typedef HashTable<MyString,MyString> StringMap;
 /** Given a job's classad, return environment variables job should get.
 
-Note that anything set should be overridable by the user (notably using the
-"env=" option in the submit file).
+The Env object passed in is assumed to already contain the environment
+variables given by the user in the job ad (in the Env or Environment
+attribute). The variables set here may or may no override those already
+set, as deemed appropriate.
 
 This includes:
-- X509_USER_PROXY
+- X509_USER_PROXY (will override what's already set in job_env)
 
 This should eventually include:
 - Condor provided environment like _CONDOR_SCRATCH_DIR
@@ -47,15 +48,14 @@ Typical use might look something like this (taken from
 condor_starter.V6.1/starter.C)
 
 		Env * proc_env; // Comes from outside
+		ClassAd JobAd; // Comes from outside
 		bool using_file_transfer; // Comes from outside
-		StringMap classenv = build_job_env(JobAd, using_file_transfer);
-		sm.startIterations();
-		MyString key,value;
-		while(sm.iterate(key,value)) {
-			proc_env->Put(key.Value(),value.Value());
-		}
+		build_job_env(*proc_env, JobAd, using_file_transfer);
 
 Input:
+
+job_env - The environment of the job. Any environment changes will be made
+to this object.
 
 ad - The jobs classad.  It is assumed that ATTR_JOB_IWD is set to
 something meanful _locally_.  (condor_starter.V6.1 rewrites
@@ -66,6 +66,6 @@ using_file_transfer - Was file transfer used?  Relevant because
 sometimes we need to rewrite paths.
 
 */
-StringMap build_job_env(const ClassAd & ad, bool using_file_transfer);
+void build_job_env(Env &job_env, const ClassAd & ad, bool using_file_transfer);
 
 #endif /* _build_job_env_H_ */

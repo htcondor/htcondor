@@ -40,13 +40,13 @@ $| = 1;
 
 use vars qw/ $opt_help $opt_sys $opt_version $opt_libc $opt_tarcmd $opt_cpcmd $opt_target/;
 
-GetOptions ( 'help'              => $opt_help,
-             'sys=s'             => $opt_sys,
-             'version=s'         => $opt_version,
-             'libc=s'            => $opt_libc,
-             'tarcmd=s'          => $opt_tarcmd,
-             'cpcmd=s'           => $opt_cpcmd,
-             'target=s'          => $opt_target);
+GetOptions ( 'help'              => \$opt_help,
+             'sys=s'             => \$opt_sys,
+             'version=s'         => \$opt_version,
+             'libc=s'            => \$opt_libc,
+             'tarcmd=s'          => \$opt_tarcmd,
+             'cpcmd=s'           => \$opt_cpcmd,
+             'target=s'          => \$opt_target);
 
 # Deal with any command-line args we are passed:
 
@@ -176,6 +176,7 @@ $realskel="condor_release";
   "sun4x_57"      => "solaris27",
   "sun4x_58"      => "solaris28",
   "sun4x_59"      => "solaris29",
+  "i386_debian40"   => "linux",
   "i386_rh72"     => "linux",
   "i386_rh80"     => "linux",
   "i386_rh9"      => "linux",
@@ -192,13 +193,14 @@ $realskel="condor_release";
   "condor_ppc_sles9" => "linux",
   "condor_ppc_rhel3" => "linux",
   "x86_64_rhel3"  => "linux",
+  "x86_64_debian40" => "linux",
   "alpha_dux40"   => "dux40",
   "alpha_dux51"   => "dux51",
   "sgi_65"        => "irix65",
-  "i386_macosx"   => "MacOSX",
-  "ppc_macosx"    => "MacOSX",
-  "ppc_macosx_6"  => "MacOSX10.2",
-  "ppc_macosx_7"  => "MacOSX10.3",
+  "i386_macosx103"   => "MacOSX10.3",
+  "i386_macosx104"   => "MacOSX10.4",
+  "ppc_macosx103"    => "MacOSX10.3",
+  "ppc_macosx104"    => "MacOSX10.4",
   "hp_ux102"      => "hpux10.20",
   "hp_ux110"      => "hpux11.00",
   "ppc_aix51"	  => "aix5.1",
@@ -213,6 +215,7 @@ $realskel="condor_release";
   "sun4x_57"      => "Sparc",
   "sun4x_58"      => "Sparc",
   "sun4x_59"      => "Sparc",
+  "i386_debian40"   => "x86",
   "i386_rh72"     => "x86",
   "i386_rh80"     => "x86",
   "i386_rh9"      => "x86",
@@ -229,13 +232,14 @@ $realskel="condor_release";
   "condor_ppc_sles9" => "PPC",
   "condor_ppc_rhel3" => "PPC",
   "x86_64_rhel3"  => "x86_64",
+  "x86_64_debian40" => "x86_64",
   "alpha_dux40"   => "Alpha",
   "alpha_dux51"   => "Alpha",
   "sgi_65"        => "SGI",
-  "i386_macosx"   => "x86",
-  "ppc_macosx"    => "PPC",
-  "ppc_macosx_6"  => "PPC",
-  "ppc_macosx_7"  => "PPC",
+  "i386_macosx103"   => "x86",
+  "i386_macosx104"   => "x86",
+  "ppc_macosx103"    => "PPC",
+  "ppc_macosx104"    => "PPC",
   "hp_ux102"      => "HPPAR",
   "hp_ux110"      => "HPPAR",
   "ppc_aix51"	  => "aix",
@@ -250,6 +254,7 @@ $realskel="condor_release";
 # seperate values, or else we get identically named files and that's
 # no good at all!
 %libcname = (
+  "i386_debian40"   => "debian40",
   "i386_rh72"   => "glibc22",
   "i386_rh80"   => "redhat80",
   "i386_rh9"    => "glibc23",
@@ -258,6 +263,7 @@ $realskel="condor_release";
   "i386_centos43" => "centos43",
   "i386_centos44" => "centos44",
   "x86_64_rhel3"  => "rhel3",
+  "x86_64_debian40"  => "debian40",
   "i386_rhel3"  => "rhel3",
   "ia64_rh72"   => "glibc22",
   "ia64_rhel3"  => "rhel3",

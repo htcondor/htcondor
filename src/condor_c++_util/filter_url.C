@@ -33,7 +33,7 @@
 /** A filer url is of the form "filter:program {|URL}" **/
 
 static
-int condor_open_filter( const char *name, int flags, size_t n_bytes )
+int condor_open_filter( const char *name, int flags )
 {
 	char	*pipe_char;
 	int		child_fd = -1;;
@@ -50,7 +50,7 @@ int condor_open_filter( const char *name, int flags, size_t n_bytes )
 	if (pipe_char) {
 		*pipe_char = '\0';
 		pipe_char++;
-		child_fd = open_url(pipe_char, flags, n_bytes);
+		child_fd = open_url(pipe_char, flags);
 		if (child_fd < 0) {
 			return child_fd;
 		}

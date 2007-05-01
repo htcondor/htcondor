@@ -68,7 +68,7 @@ char *get_ftpd_response(int sock_fd, int resp_val)
 }
 
 static
-int open_ftp( const char *name, int flags, size_t n_bytes )
+int open_ftp( const char *name, int flags )
 {
 	struct sockaddr_in	sin;
 	int		sock_fd;
@@ -184,7 +184,7 @@ int open_ftp( const char *name, int flags, size_t n_bytes )
 
 	sprintf(ftp_cmd, "cbstp:<%d.%d.%d.%d:%d>", ip_addr[0], ip_addr[1], 
 		   ip_addr[2], ip_addr[3], port[0] << 8 | port[1]);
-	rval = open_url(ftp_cmd, flags, n_bytes);
+	rval = open_url(ftp_cmd, flags);
 	if (flags == O_WRONLY) {
 		get_ftpd_response(sock_fd, FTP_CONNECTED_RESP);
 	}

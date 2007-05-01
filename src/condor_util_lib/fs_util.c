@@ -137,7 +137,9 @@ detect_nfs_statfs( const char *path, BOOLEAN *is_nfs )
 			// file doesn't exist yet, so check parent directory.
 			char *dirname;
 			dirname = condor_dirname(path);
+# ifdef FS_UTIL_TEST
 			printf("checking %s instead...\n", dirname);
+# endif
 # if (STATFS_ARGS == 2)
 			status = statfs( dirname, &buf );
 # elif (STATFS_ARGS == 4)
@@ -150,8 +152,8 @@ detect_nfs_statfs( const char *path, BOOLEAN *is_nfs )
 
 	if ( status < 0 ) {
 #	  if (!defined FS_UTIL_TEST )
-		dprintf( D_ALWAYS, "statfs() failed: %d/%s\n",
-				 errno, strerror( errno ) );
+		dprintf( D_ALWAYS, "statfs(%s) failed: %d/%s\n",
+				 path, errno, strerror( errno ) );
 #	  endif
 		return -1;
 	}

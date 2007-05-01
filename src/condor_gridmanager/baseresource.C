@@ -193,6 +193,9 @@ void BaseResource::UnregisterJob( BaseJob *job )
 
 	if ( IsEmpty() ) {
 		int delay = param_integer( "GRIDMANAGER_EMPTY_RESOURCE_DELAY", 5*60 );
+		if ( delay < 0 ) {
+			delay = 0;
+		}
 		deleteMeTid = daemonCore->Register_Timer( delay,
 								(TimerHandlercpp)&BaseResource::DeleteMe,
 								"BaseResource::DeleteMe", (Service*)this );

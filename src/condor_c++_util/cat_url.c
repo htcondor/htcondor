@@ -35,14 +35,14 @@ char	*argv[];
 
 	if (argv[1][0] == '-' && argv[1][1] == 'w') {
 		read_fd = 0;
-		write_fd = open_url(argv[2], O_WRONLY, 0);
+		write_fd = open_url(argv[2], O_WRONLY);
 		argv++;
 		argc--;
 	}
 
 	for (i = 1; i < argc; i++) {
 		if (read_fd) {
-			read_fd = open_url(argv[i], O_RDONLY, 0);
+			read_fd = open_url(argv[i], O_RDONLY);
 		}
 		if (read_fd >= 0) {
 			do {

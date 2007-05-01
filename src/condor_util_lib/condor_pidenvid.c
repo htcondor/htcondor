@@ -245,6 +245,57 @@ void pidenvid_dump(PidEnvID *penvid, int dlvl)
 	}
 }
 
+void
+pidenvid_shuffle_to_front(char **env)
+{
+	size_t count;
+	size_t prefix_len = strlen( PIDENVID_PREFIX );
+	int changed;
 
+	for( count=0; env[count]; count++ );
 
+	if( count == 0 ) {
+		return; // no environment
+	}
 
+		// March through backwards and bubble up any pidenvid entries.
+		// This preserves the order of other stuff in the environment,
+		// in case it matters.
+
+	do {
+		size_t i;
+
+		changed = 0;
+		for( i=count-1; i; i-- ) {
+			if( !strncmp(env[i],PIDENVID_PREFIX,prefix_len) ) {
+				size_t j;
+					// We found a pidenv entry.  Bubble it up until we
+					// hit the beginning of the array or another
+					// pidenvid entry.
+				for( j=i; j--; ) {
+					char *prev = env[j];
+					if( !strncmp(prev,PIDENVID_PREFIX,prefix_len) ) {
+						break; // we hit another pidenvid entry
+					}
+						// swap positions
+					changed = 1;
+					env[j] = env[i];
+					env[i] = prev;
+					i = j;
+				}
+				if( i==0 ) {
+					break;
+				}
+			}
+		}
+
+	} while( changed );
+}
+
+void
+pidenvid_optimize_final_env(char **env)
+{
+#if defined(LINUX)
+	pidenvid_shuffle_to_front(env);
+#endif
+}

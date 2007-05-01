@@ -55,9 +55,7 @@ extern void Generic_set_log_va(void(*app_log_va)(int level, char *fmt, va_list a
 #endif
 
 void
-dprintf_config( subsys, logfd )
-char *subsys;
-int logfd;		/* logfd is the descriptor to use if the log output goes to a tty */
+dprintf_config( char *subsys )
 {
 	char pname[ BUFSIZ ];
 	char *pval, *param();

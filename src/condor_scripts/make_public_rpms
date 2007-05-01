@@ -31,10 +31,20 @@
 # successfully.  
 ######################################################################
 
+# The first argument must be the full path to the rpm binary we will be using.
+if ( !defined($ARGV[0]) || ! -e $ARGV[0] ) {
+	die "No full path to rpm command specified!";
+}
+if (! -x $ARGV[0]) {
+	die "rpm command is not executable!";
+}
+$rpm_cmd = $ARGV[0];
+
 # First, set up a few variables and make sure we can find the script
 # we'll eventually need to call to do the actualy RPM creation.
 chdir( ".." ) || die "Can't chdir(..): $!\n";
 chomp($root = `pwd`);
+print "rpm build commmand: $rpm_cmd\n";
 print "root: $root\n";
 $make_rpm = "$root/src/condor_scripts/make-condor-rpm.sh";
 if( ! -f $make_rpm ) {
@@ -83,7 +93,7 @@ foreach $tarball (@tarballs) {
     print "************************************************************\n";
     print "Making rpms out of $tarball\n";
     print "************************************************************\n";
-    open( RPM, "$make_rpm $tarball $build_dir|" ) 
+    open( RPM, "$make_rpm $tarball $rpm_cmd $build_dir|" ) 
 	|| die "can't open condor-make-rpm.sh as a pipe: $!\n";
     while( <RPM> ) {
 	print;

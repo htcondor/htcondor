@@ -43,16 +43,27 @@ my $mypgfile = $prefix . "/postgres-data/pg_hba.conf";
 my $mynewpgfile = $prefix . "/postgres-data/pg_hba.new";
 
 
+system("date");
+print "Extracting Postgres Source.....\n";
+
 chdir("$prefix");
-$dotar = system("tar -zxvf $tarfile");
+$dotar = system("tar -zxf $tarfile");
 if($dotar != 0) {
 	die "TAR EXTRACTION OF $tarfile FAILED\n";
 }
+
+system("date");
+print "Configuring Postgres Source.....\n";
+
 chdir("$pgsqlversion");
 $doconfigure = system("./configure --prefix=$prefix --without-readline --disable-shared");
 if($doconfigure != 0) {
 	die "Configure failed\n";
 }
+
+system("date");
+print "Making Postgres Source.....\n";
+
 $domake = system("make");
 if($domake != 0) {
 	die "Make failed\n";
@@ -144,6 +155,29 @@ while (( $dbup ne "yes") && ($trylimit <= 10) ) {
 		}
 	} else {
 		$dbup = "yes";
+		print "Looking for listen on port....\n";
+		my @statports = `netstat -a`;
+		foreach $netstatport (@statports) {
+			chomp($netstatport);
+			if( $netstatport =~ /^.*:$startpostmasterport.*LISTEN.*$/) {
+				print "Yup its listening: <<<$netstatport>>>\n";
+				$dbup = "yes";
+				last;
+			} elsif( $netstatport =~ /^.*\.postgresql.*LISTEN.*$/) {
+				print "Yup its listening: <<<$netstatport>>>\n";
+				$dbup = "yes";
+				last;
+			} elsif($netstatport =~ /^.*LISTEN.*$startpostmasterport.*$/) {
+				print "Yup its listening: <<<$netstatport>>>\n";
+				$dbup = "yes";
+				last;
+			} else {
+				print "skip: $netstatport\n";
+			}
+		}
+		if($dbup eq "no") {
+				print "They lied.... nothing on port (($startpostmasterport))\n";
+		}
 	}
 }
 
@@ -168,6 +202,9 @@ if($trylimit > 10) {
 		die "INstalling modified configuration file <<$condorchanges>> failed\n";
 	}
 }
+
+system("date");
+print "Configuring Postgres for Quil\n";
 
 # add quillreader and quillwriter
 print "Create quillreader\n";
@@ -211,6 +248,9 @@ print $command "n\n";
 $command->soft_close();
 
 #system("$prefix/bin/createuser quillwriter --createdb --no-adduser --pwprompt");
+
+system("date");
+print "Create DB for Quil\n";
 
 $docreatedb = system("$prefix/bin/createdb --port $startpostmasterport test");
 if($docreatedb != 0) {

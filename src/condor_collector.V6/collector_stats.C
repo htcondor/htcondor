@@ -32,7 +32,7 @@
 #include "collector_engine.h"
 
 // The hash function to use
-static int hashFunction (const StatsHashKey &key, int numBuckets)
+static unsigned int hashFunction (const StatsHashKey &key)
 {
     unsigned int bkt = 0;
 	const char *p;
@@ -40,8 +40,6 @@ static int hashFunction (const StatsHashKey &key, int numBuckets)
     for (p = key.type.GetCStr(); p && *p; bkt += *p++);
     for (p = key.name.GetCStr(); p && *p; bkt += *p++);
     for (p = key.ip_addr.GetCStr(); p && *p; bkt += *p++);
-
-    bkt %= numBuckets;
 
     return bkt;
 }

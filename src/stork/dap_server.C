@@ -47,9 +47,9 @@
 #include "classad_distribution.h"
 #define DAP_CATALOG_NAMESPACE	"stork."
 
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
- * These are the default values for some global Stork parameters.                        
- * They will be overwritten by the values in the Stork Config file.                   
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * These are the default values for some global Stork parameters.
+ * They will be overwritten by the values in the Stork Config file.
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 unsigned long Max_num_jobs;            //max number of concurrent jobs running
 unsigned long Max_retry;               //max number of times a job will be retried 
@@ -152,6 +152,7 @@ open_module_stdio(	classad::ClassAd*   ad,
 {
 	std::string path;
 	int dap_id;
+	priv_state priv;
 
 	module_stdio[ MODULE_STDIN_INDEX ] = -1;
 	module_stdio[ MODULE_STDOUT_INDEX ] = -1;
@@ -168,8 +169,12 @@ open_module_stdio(	classad::ClassAd*   ad,
 		dprintf(D_ALWAYS, "error: job %d empty input file path\n", dap_id);
 		return false;
 	}
+
+	priv = set_user_priv();
 	module_stdio[ MODULE_STDIN_INDEX ] =
 		safe_open_wrapper( path.c_str(), O_RDONLY);
+	set_priv( priv );
+
 	if ( module_stdio[ MODULE_STDIN_INDEX ] < 0 ) {
 		dprintf(D_ALWAYS, "error: job %d open input file %s: %s\n",
 				dap_id, path.c_str(), strerror(errno) );
@@ -184,8 +189,12 @@ open_module_stdio(	classad::ClassAd*   ad,
 				dap_id);
 		return false;
 	}
+
+	priv = set_user_priv();
 	module_stdio[ MODULE_STDOUT_INDEX ] =
 		safe_open_wrapper( path.c_str(), O_WRONLY|O_CREAT|O_APPEND, 0644);
+	set_priv( priv );
+
 	if ( module_stdio[ MODULE_STDOUT_INDEX ] < 0 ) {
 		dprintf(D_ALWAYS, "error: job %d open output file %s: %s\n",
 				dap_id, path.c_str(), strerror(errno) );
@@ -200,8 +209,12 @@ open_module_stdio(	classad::ClassAd*   ad,
 				dap_id);
 		return false;
 	}
+
+	priv = set_user_priv();
 	module_stdio[ MODULE_STDERR_INDEX ] =
 		safe_open_wrapper( path.c_str(), O_WRONLY|O_CREAT|O_APPEND, 0644);
+	set_priv( priv );
+
 	if ( module_stdio[ MODULE_STDERR_INDEX ] < 0 ) {
 		dprintf(D_ALWAYS, "error: job %d open error file %s: %s\n",
 				dap_id, path.c_str(), strerror(errno) );
@@ -1085,9 +1098,16 @@ void regular_check_for_requests_in_process()
 					if (dap_queue.get_pid(pid, dap_id) == DAP_SUCCESS){
 
 						if (dap_queue.remove(dap_id) == DAP_SUCCESS){
-							dprintf(D_ALWAYS, "Killing process %d, and removing dap %s\n", 
+							dprintf(D_ALWAYS,
+									"Killing process %d and removing dap %s\n",
 									pid, dap_id);
-							if ( kill(pid, SIGKILL) < 0 ) {
+
+							priv_state priv;
+							priv = set_user_priv( );
+							int kill_status = kill( pid, SIGKILL );
+							set_priv( priv );
+
+							if ( kill_status < 0 ) {
 								dprintf( D_ALWAYS,
 										"%s:%d:kill pid %d error: (%d)%s\n",
 										__FILE__, __LINE__,
@@ -1095,6 +1115,7 @@ void regular_check_for_requests_in_process()
 										errno, strerror(errno)
 								);
 							}
+							
 
 							char attempts[MAXSTR], tempstr[MAXSTR];
 							std::string modify_s = "";

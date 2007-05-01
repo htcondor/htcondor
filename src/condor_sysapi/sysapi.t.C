@@ -31,7 +31,7 @@ int
 main(int argc, char** argv)
 {
 	Termlog = 1;
-	dprintf_config("TOOL", 2);
+	dprintf_config("TOOL");
 
 	set_debug_flags("D_ALWAYS");
 	config();

@@ -55,6 +55,7 @@ class GlobusResource : public BaseResource
 		{ return jmLimit; };
 
 	bool GridJobMonitorActive() { return monitorActive; }
+	int LastGridJobMonitorUpdate() { return jobStatusFileLastUpdate; }
 
 	static const char *CanonicalName( const char *name );
 	static const char *HashName( const char *resource_name,
@@ -115,6 +116,12 @@ class GlobusResource : public BaseResource
 		// last time we got some sort of result back.  Used for the "Thing have
 		// been failing over and over for too long" timeout.
 	int logFileTimeoutLastReadTime;
+
+		// This reports the time we saw a new complete job status file
+		// from the grid monitor (and therefore sent out job status
+		// updates to the job objects). This time is not updated when the
+		// grid-monitor is (re)submitted.
+	time_t jobStatusFileLastUpdate;
 
 		// When true, the monitor is submitted as if it was from scratch.
 		// (Say, the first time, or after a _long_ delay after encountering

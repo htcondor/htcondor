@@ -50,6 +50,9 @@
 
 #elif defined( IS_LINUX )
 #  define PlatformIncludeFile <LINUX.cf>
+#  if defined( IS_LINUX_DEBIAN40 )
+#    define OSVersionIncludeFile <LINUX_DEBIAN.cf>
+#  endif
 #  if defined( IS_I386 ) 
 #    define ArchIncludeFile <LINUX_I386.cf>
 #  elif defined( IS_ALPHA )

@@ -401,13 +401,23 @@ stdin_pipe_handler(Service*, int pipe) {
 					GAHP_COMMAND_RESULTS,
 					GAHP_COMMAND_QUIT,
 					GAHP_COMMAND_VERSION,
-					GAHP_COMMAND_COMMANDS};
-				gahp_output_return (commands, 15);
+					GAHP_COMMAND_COMMANDS,
+					GAHP_COMMAND_INITIALIZE_FROM_FILE,
+					GAHP_COMMAND_REFRESH_PROXY_FROM_FILE};
+				gahp_output_return (commands, 20);
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_REFRESH_PROXY_FROM_FILE) == 0) {
 					// For now, just return success. This will work if
 					// the file is the same as that given to
 					// INITIALIZE_FROM_FILE (since our worker reads from
 					// the file on every use.
+				gahp_output_return_success();
+			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_INITIALIZE_FROM_FILE) == 0) {
+					// Forward this request to both workers, since both
+					// need to know which proxy to use.
+				flush_request (0,
+							   command);
+				flush_request (1,
+							   command);
 				gahp_output_return_success();
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_JOB_STAGE_IN) == 0) {
 				flush_request (1, 	// worker for stage in requests

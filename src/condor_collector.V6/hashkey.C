@@ -67,18 +67,17 @@ static int sumOverString(const MyString &str)
 	return sum;
 }
 
-int stringHashFunction (const MyString &str, int numBuckets)
+unsigned int stringHashFunction (const MyString &str)
 {
-	return sumOverString(str) % numBuckets;
+	return sumOverString(str);
 }
 
-int adNameHashFunction (const AdNameHashKey &key, int numBuckets)
+unsigned int adNameHashFunction (const AdNameHashKey &key)
 {
     unsigned int bkt = 0;
 
     bkt += sumOverString(key.name);
     bkt += sumOverString(key.ip_addr);
-    bkt %= numBuckets;
 
     return bkt;
 }

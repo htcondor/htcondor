@@ -32,9 +32,6 @@
 #include "io_loop.h"
 #include "PipeBuffer.h"
 
-// How often we contact the schedd (secs)
-extern int contact_schedd_interval;
-
 
 char *mySubSystem = "C_GAHP_WORKER_THREAD";	// used by Daemon Core
 
@@ -156,8 +153,6 @@ init_pipes() {
 
 void
 Init() {
-	contact_schedd_interval = 
-		param_integer ("C_GAHP_CONTACT_SCHEDD_DELAY", 20);
 }
 
 void
@@ -167,7 +162,27 @@ Register() {
 void
 Reconfig()
 {
+	contact_schedd_interval = 
+		param_integer ("C_GAHP_CONTACT_SCHEDD_DELAY", 20);
+
 	useXMLClassads = param_boolean( "GAHP_USE_XML_CLASSADS", false );
+
+		// When GSI authentication is used, we're willing to trust schedds
+		// which have the same credential as the job
+	if ( proxySubjectName ) {
+		char *daemon_subjects = param( "GSI_DAEMON_NAME" );
+		if ( daemon_subjects ) {
+			MyString buff;
+			buff.sprintf( "%s,%s", daemon_subjects, proxySubjectName );
+			dprintf( D_ALWAYS, "Setting %s=%s\n", "GSI_DAEMON_NAME",
+					 buff.Value() );
+				// We must use our daemon subsystem prefix in case the
+				// admin used it in the config file.
+			config_insert( "C_GAHP_WORKER_THREAD.GSI_DAEMON_NAME",
+						   buff.Value() );
+			free( daemon_subjects );
+		}
+	}
 }
 
 

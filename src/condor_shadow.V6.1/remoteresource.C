@@ -1570,7 +1570,7 @@ RemoteResource::updateX509Proxy(const char * filename)
 			 starterAddress );
 
 	DCStarter::X509UpdateStatus ret = DCStarter::XUS_Error;
-	if ( param_boolean( "DELEGATE_JOB_GSI_CREDENTIALS", true ) == false ) {
+	if ( param_boolean( "DELEGATE_JOB_GSI_CREDENTIALS", true ) == true ) {
 		ret = starter.delegateX509Proxy(filename);
 	}
 	if ( ret != DCStarter::XUS_Okay ) {

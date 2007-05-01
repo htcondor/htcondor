@@ -851,7 +851,7 @@ lock_or_except( const char* file_name )
  ** them to do so also.
  */
 int
-main_config( bool is_full )
+main_config( bool /* is_full */ )
 {
 		// Re-read the config files and create a new classad
 	init_classad(); 
@@ -1117,7 +1117,7 @@ gcbRecoveryFailedCallback()
 #endif
 
 void
-main_pre_dc_init( int argc, char* argv[] )
+main_pre_dc_init( int /* argc */, char*[] /* argv */ )
 {
 		// If we don't clear this, then we'll use the same GCB broker
 		// as our parent or previous incarnation. If there's a list of

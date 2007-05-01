@@ -151,6 +151,27 @@ int main() {
 		window = (DENT *)voidstar;
 	}
 	close(fd);
+
+	results = unlink("testdir/first");
+	if(results == -1) {
+		perror("unlink testdir/first");
+		return -1;
+	}
+	results = unlink("testdir/second");
+	if(results == -1) {
+		perror("unlink testdir/second");
+		return -1;
+	}
+	results = unlink("testdir/third");
+	if(results == -1) {
+		perror("unlink testdir/third");
+		return -1;
+	}
+	results = rmdir("testdir");
+	if(results == -1) {
+		perror("unlink testdir");
+		return -1;
+	}
 	
 	/* this is not a transitive boolean, because it implies I found
 		_certain_ expected files. */

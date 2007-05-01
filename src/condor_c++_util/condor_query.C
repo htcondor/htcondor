@@ -207,6 +207,7 @@ CondorQuery (AdTypes qType)
 CondorQuery::
 CondorQuery (const CondorQuery & /*from*/)
 {
+		// Unimplemented!
 }
 
 
@@ -214,6 +215,14 @@ CondorQuery (const CondorQuery & /*from*/)
 CondorQuery::
 ~CondorQuery ()
 {	
+}
+
+// assignment
+CondorQuery &CondorQuery::
+operator= (const CondorQuery &)
+{
+		// Unimplemented!
+	return *this;
 }
 
 

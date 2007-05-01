@@ -524,7 +524,7 @@ int main(int argc, char **argv) {
 	result = 0;
 
 	Termlog = 1;
-	dprintf_config ("TOOL", 2 );
+	dprintf_config ("TOOL" );
 
 	isOn = wfh.firewallIsOn();
 

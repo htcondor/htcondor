@@ -61,7 +61,7 @@ DCSchedd::holdJobs( const char* constraint, const char* reason,
 				 "constraint is NULL, aborting\n" );
 		return NULL;
 	}
-	return actOnJobs( JA_HOLD_JOBS, "hold", constraint, NULL, 
+	return actOnJobs( JA_HOLD_JOBS, constraint, NULL, 
 					  reason, ATTR_HOLD_REASON, result_type,
 					  notify_scheduler, errstack );
 }
@@ -78,7 +78,7 @@ DCSchedd::removeJobs( const char* constraint, const char* reason,
 				 "constraint is NULL, aborting\n" );
 		return NULL;
 	}
-	return actOnJobs( JA_REMOVE_JOBS, "remove", constraint, NULL,
+	return actOnJobs( JA_REMOVE_JOBS, constraint, NULL,
 					  reason, ATTR_REMOVE_REASON, result_type,
 					  notify_scheduler, errstack );
 }
@@ -95,7 +95,7 @@ DCSchedd::removeXJobs( const char* constraint, const char* reason,
 				 "constraint is NULL, aborting\n" );
 		return NULL;
 	}
-	return actOnJobs( JA_REMOVE_X_JOBS, "removeX", constraint, NULL,
+	return actOnJobs( JA_REMOVE_X_JOBS, constraint, NULL,
 					  reason, ATTR_REMOVE_REASON, result_type,
 					  notify_scheduler, errstack );
 }
@@ -112,7 +112,7 @@ DCSchedd::releaseJobs( const char* constraint, const char* reason,
 				 "constraint is NULL, aborting\n" );
 		return NULL;
 	}
-	return actOnJobs( JA_RELEASE_JOBS, "release", constraint, NULL,
+	return actOnJobs( JA_RELEASE_JOBS, constraint, NULL,
 					  reason, ATTR_RELEASE_REASON, result_type,
 					  notify_scheduler, errstack );
 }
@@ -129,7 +129,7 @@ DCSchedd::holdJobs( StringList* ids, const char* reason,
 				 "list of jobs is NULL, aborting\n" );
 		return NULL;
 	}
-	return actOnJobs( JA_HOLD_JOBS, "hold", NULL, ids, reason,
+	return actOnJobs( JA_HOLD_JOBS, NULL, ids, reason,
 					  ATTR_HOLD_REASON, result_type,
 					  notify_scheduler, errstack );
 }
@@ -146,7 +146,7 @@ DCSchedd::removeJobs( StringList* ids, const char* reason,
 				 "list of jobs is NULL, aborting\n" );
 		return NULL;
 	}
-	return actOnJobs( JA_REMOVE_JOBS, "remove", NULL, ids,
+	return actOnJobs( JA_REMOVE_JOBS, NULL, ids,
 					  reason, ATTR_REMOVE_REASON, result_type,
 					  notify_scheduler, errstack );
 }
@@ -163,7 +163,7 @@ DCSchedd::removeXJobs( StringList* ids, const char* reason,
 				 "list of jobs is NULL, aborting\n" );
 		return NULL;
 	}
-	return actOnJobs( JA_REMOVE_X_JOBS, "removeX", NULL, ids,
+	return actOnJobs( JA_REMOVE_X_JOBS, NULL, ids,
 					  reason, ATTR_REMOVE_REASON, result_type,
 					  notify_scheduler, errstack );
 }
@@ -180,7 +180,7 @@ DCSchedd::releaseJobs( StringList* ids, const char* reason,
 				 "list of jobs is NULL, aborting\n" );
 		return NULL;
 	}
-	return actOnJobs( JA_RELEASE_JOBS, "release", NULL, ids,
+	return actOnJobs( JA_RELEASE_JOBS, NULL, ids,
 					  reason, ATTR_RELEASE_REASON, result_type,
 					  notify_scheduler, errstack );
 }
@@ -198,15 +198,12 @@ DCSchedd::vacateJobs( const char* constraint, VacateType vacate_type,
 		return NULL;
 	}
 	JobAction cmd;
-	const char* cmd_str = NULL;
 	if( vacate_type == VACATE_FAST ) {
 		cmd = JA_VACATE_FAST_JOBS;
-		cmd_str = "vacate-fast";
 	} else {
 		cmd = JA_VACATE_JOBS;
-		cmd_str = "vacate";
 	}
-	return actOnJobs( cmd, cmd_str, constraint, NULL, NULL, NULL,
+	return actOnJobs( cmd, constraint, NULL, NULL, NULL,
 					  result_type, notify_scheduler, errstack );
 }
 
@@ -223,15 +220,12 @@ DCSchedd::vacateJobs( StringList* ids, VacateType vacate_type,
 		return NULL;
 	}
 	JobAction cmd;
-	const char* cmd_str = NULL;
 	if( vacate_type == VACATE_FAST ) {
 		cmd = JA_VACATE_FAST_JOBS;
-		cmd_str = "vacate-fast";
 	} else {
 		cmd = JA_VACATE_JOBS;
-		cmd_str = "vacate";
 	}
-	return actOnJobs( cmd, cmd_str, NULL, ids, NULL, NULL,
+	return actOnJobs( cmd, NULL, ids, NULL, NULL,
 					  result_type, notify_scheduler, errstack );
 }
 
@@ -1017,7 +1011,7 @@ DCSchedd::delegateGSIcredential(const int cluster, const int proc,
 }
 
 ClassAd*
-DCSchedd::actOnJobs( JobAction action, const char* action_str, 
+DCSchedd::actOnJobs( JobAction action,
 					 const char* constraint, StringList* ids, 
 					 const char* reason, const char* reason_attr,
 					 action_result_type_t result_type,

@@ -41,7 +41,7 @@ public:
 	void operator =(char const *str) {
 		m_str = str;
 	}
-	static int hashFunction(const YourSensitiveString &s, int hash_length);
+	static unsigned int hashFunction(const YourSensitiveString &s);
 
 private:
 	char const *m_str;
@@ -51,16 +51,16 @@ template class HashTable<YourSensitiveString,int>;
 
 // hash function for strings
 // Chris Torek's world famous hashing function
-int YourSensitiveString::hashFunction(const YourSensitiveString &s, int hash_length) {
-	int hash = 0;
+unsigned int YourSensitiveString::hashFunction(const YourSensitiveString &s) {
+	unsigned int hash = 0;
 
 	const char *p = s.m_str;
 	while (*p) {
-		hash = 33 * hash + *p;
+		hash = 33 * hash + (unsigned char)(*p);
 		p++;
 	}
 
-	return (abs(hash) % hash_length);
+	return hash;
 }
 
 

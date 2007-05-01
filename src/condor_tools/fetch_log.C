@@ -100,7 +100,7 @@ int main( int argc, char *argv[] )
 			exit(0);
 		} else if(!strcmp(argv[i],"-debug")) {
             Termlog = 1;
-            dprintf_config ("TOOL", 2);
+            dprintf_config ("TOOL");
 		} else if(argv[i][0]=='-') {
 			type = stringToDaemonType(&argv[i][1]);
 			if( type == DT_NONE || type == DT_DAGMAN) {

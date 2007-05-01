@@ -19,6 +19,11 @@ SYSNAME = @_cv_sysname@
 #define IS_@_cv_opsys@ YES
 #define IS_@_cv_arch@ YES
 
+/* So these are usable in shell scripts which include this file */
+ARCHITECTURE = Architecture
+PLATFORM = Platform
+DISTRIBUTION = Distribution
+
 /*
   If we're glibc, the next few lines will define what version we are,
   if not, they'll just be blank.
@@ -42,7 +47,7 @@ C_COMP_PATCH = -DC_COMP_PATCH_@CompilerKind@_@CompilerMajor@_@CompilerMinor@_@Co
 CCOMPILER_ID = $(C_COMP_KIND) $(C_COMP_MAJOR) $(C_COMP_MINOR) $(C_COMP_PATCH)
 /* compiler related libraries and .o files we need */
 LIB_STDCPP = @lib_std_cpp@
-#if IS_C_COMP_KIND_GCC && IS_C_COMP_MAJOR_GCC_3
+#if IS_C_COMP_KIND_GCC && ( IS_C_COMP_MAJOR_GCC_3 || IS_C_COMP_MAJOR_GCC_4 )
 LIB_GCC_EH = @lib_gcc_eh@
 #endif
 GCC_LIBC = @gcc_libc@
@@ -52,7 +57,16 @@ GCC_STATIC_LIBS = $(GCC_STATIC_LD_FLAG) -lstdc++ -lgcc
 GCC_RDYNAMIC_FLAG = @gcc_rdynamic_flag@
 
 /* Debugging flags common to C and C++ */
-COMP_DEBUG_FLAGS = -g @comp_option_Wall@ @comp_option_W@ @comp_option_Wextra@ @comp_option_Wfloat_equal@ @comp_option_Wshadow@ @comp_option_Wendif_labels@ @comp_option_Wpointer_arith@ @comp_option_Wcast_qual@ @comp_option_Wcast_align@ @comp_option_Wvolatile_register_var@ @comp_option_fstack_protector@
+COMP_DEBUG_FLAGS = -g @comp_option_Wall@ @comp_option_W@ @comp_option_Wextra@ @comp_option_Wfloat_equal@ @comp_option_Wshadow@ @comp_option_Wendif_labels@ @comp_option_Wpointer_arith@ @comp_option_Wcast_qual@ @comp_option_Wcast_align@ @comp_option_Wvolatile_register_var@ @comp_option_stack_protector@
+
+/* This needs to have its own variable as we need to add it to our link lines */
+GCC_STACK_PROTECTOR = @comp_option_stack_protector@
+
+/* Our libcondorapi.so compilation needs this to turn off stack protection
+	since there appears to be a link time error related to it in the internal
+	compiler libraries for 4.1.2 on debian. We'll turn it off everywhere for
+	that library now so I can sort it out later. */
+GCC_NO_STACK_PROTECTOR = @comp_option_no_stack_protector@
 
 /* C specific debugging flags */
 GCC_DEBUG_FLAGS = @comp_option_Wnested_externs@ @comp_option_Wstrict_prototypes@ @comp_option_Wmissing_prototypes@ 
@@ -112,6 +126,8 @@ JAVAC = @JAVAC@
 #define HAVE_JAR @HAVE_JAR@
 JAR = @JAR@
 
+#define HAVE_RPM @HAVE_RPM@
+RPM_CMD = @RpmCmd@
 
 TAR_CMD = @TarCmd@
 

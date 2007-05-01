@@ -653,9 +653,9 @@ int Error::_EvalTree(const AttrList*, const AttrList*,  EvalResult* val)
 }
 //--------------------------------
 
-void ExprTree::GetReferences(const AttrList *base_attlrist,
-							 StringList &internal_references,
-							 StringList &external_references) const
+void ExprTree::GetReferences(const AttrList * /* base_attlrist */,
+							 StringList & /* internal_references */,
+							 StringList & /* external_references */) const
 {
 	return;
 }
@@ -1866,8 +1866,8 @@ int Function::FunctionSharedLibrary(
 #endif
 
 int Function::FunctionGetTime(
-	int number_of_args,         // IN:  size of evaluated args array
-	EvalResult *evaluated_args, // IN:  the arguments to the function
+	int /* number_of_args */,          // IN:  size of evaluated args array
+	EvalResult * /* evaluated_args */, // IN:  the arguments to the function
 	EvalResult *result)         // OUT: the result of calling the function
 {
 	time_t current_time = time(NULL);
@@ -2386,8 +2386,8 @@ int Function::FunctionIfThenElse(
 }
 
 int Function::FunctionClassadDebugFunction(
-	int number_of_args,         
-	EvalResult *evaluated_args, 
+	int /* number_of_args */,         
+	EvalResult * /* evaluated_args */, 
 	EvalResult *result)         
 {
     classad_debug_function_run = true;

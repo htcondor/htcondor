@@ -119,8 +119,8 @@ static void WritePerJobHistoryFile(ClassAd*);
 
 // Create a hash table which, given a cluster id, tells how
 // many procs are in the cluster
-static inline int compute_clustersize_hash(const int &key,int numBuckets) {
-	return ( key % numBuckets );
+static inline unsigned int compute_clustersize_hash(const int &key) {
+	return key;
 }
 typedef HashTable<int, int> ClusterSizeHashTable_t;
 static ClusterSizeHashTable_t *ClusterSizeHashTable = 0;

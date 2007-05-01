@@ -37,7 +37,7 @@ extern "C" char *param(char *);
 extern char *getenv( const char *);
 
 static
-int condor_open_cfilter_url( const char *name, int flags, size_t n_bytes )
+int condor_open_cfilter_url( const char *name, int flags )
 {
 	char	*gzip_prog = 0;
 	char	filter_url[1000];
@@ -74,7 +74,7 @@ int condor_open_cfilter_url( const char *name, int flags, size_t n_bytes )
 	} else {
 		sprintf(filter_url, "filter:%s %s", gzip_prog, gzip_flags);
 	}
-	return open_url(filter_url, flags, n_bytes);
+	return open_url(filter_url, flags);
 }
 
 

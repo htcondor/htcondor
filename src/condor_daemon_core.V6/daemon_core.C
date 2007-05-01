@@ -202,9 +202,9 @@ extern char* mySubSystem;	// the subsys ID, such as SCHEDD
 TimerManager DaemonCore::t;
 
 // Hash function for pid table.
-static int compute_pid_hash(const pid_t &key, int numBuckets)
+static unsigned int compute_pid_hash(const pid_t &key)
 {
-	return ( key % numBuckets );
+	return (unsigned int)key;
 }
 
 // DaemonCore constructor.
@@ -1422,6 +1422,13 @@ int DaemonCore::Create_Pipe( int *pipe_ends,
 	write_handle = new WritePipeEnd(w, overlapped_write_flag, nonblocking_write, psize);
 #else
 	// Unix
+
+	// Shut the compiler up
+	// These parameters are needed on Windows
+	can_register_read;
+	can_register_write;
+	psize;
+
 	bool failed = false;
 	int filedes[2];
 	if ( pipe(filedes) == -1 ) {
@@ -1486,6 +1493,13 @@ int DaemonCore::Inherit_Pipe(int fd, bool is_write, bool can_register, bool nonb
 		pipe_handle = new ReadPipeEnd(h, can_register, nonblocking, psize);
 	}
 #else
+		// Shut the compiler up
+		// These parameters are needed on Windows
+	is_write;
+	can_register;
+	nonblocking;
+	psize;
+
 	pipe_handle = fd;
 #endif
 
@@ -2465,11 +2479,13 @@ void DaemonCore::Driver()
 
 		errno = 0;
 		time_t time_before = time(NULL);
-		selector.execute();
-		CheckForTimeSkip(time_before, timeout);
+		time_t okay_delta = timeout;
 
+		selector.execute();
 
 		tmpErrno = errno;
+
+		CheckForTimeSkip(time_before, okay_delta);
 
 #ifndef WIN32
 		// Unix
@@ -3253,6 +3269,7 @@ int DaemonCore::HandleReq(Stream *insock)
 	char tmpbuf[5];
 	memset(tmpbuf,0,sizeof(tmpbuf));
 	if ( is_tcp ) {
+			// TODO Should we be ignoring the return value of condor_read?
 		int nro = condor_read(((Sock*)stream)->get_file_desc(),
 			tmpbuf, sizeof(tmpbuf) - 1, 1, MSG_PEEK);
 	}
@@ -6147,8 +6164,10 @@ int DaemonCore::Create_Process(
 
 			// and ( finally ) exec:
 		if( HAS_DCJOBOPT_NO_ENV_INHERIT(job_opt_mask) ) {
+			pidenvid_optimize_final_env(unix_env);
 			exec_results =  execve(namebuf, unix_args, unix_env);
 		} else {
+			pidenvid_optimize_final_env(environ);
 			exec_results =  execv(namebuf, unix_args);
 		}
 		if( exec_results == -1 )
@@ -7009,7 +7028,7 @@ DaemonCore::HandleDC_SIGCHLD(int sig)
 #endif // of ifndef WIN32
 
 int
-DaemonCore::HandleDC_SERVICEWAITPIDS(int sig)
+DaemonCore::HandleDC_SERVICEWAITPIDS(int)
 {
 	WaitpidEntry wait_entry;
 

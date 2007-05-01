@@ -472,7 +472,17 @@ REMOVE_JOBS_signalHandler( int signal )
 {
 	dprintf(D_FULLDEBUG,"Received REMOVE_JOBS signal\n");
 
-	RequestContactSchedd();
+	// For held jobs that are still submitted to remote resources
+	// (i.e. GridJobId defined) which are then removed, we need
+	// to trigger an add-jobs query so that we attempt to cancel
+	// them before taking them out of the schedd's queue.
+	// TODO This is an imperfect solution. The gridmanager may
+	//   connect to the schedd after the removal but before the
+	//   REMOVE_JOBS signal is sent.
+	if ( !addJobsSignaled ) {
+		RequestContactSchedd();
+		addJobsSignaled = true;
+	}
 
 	return TRUE;
 }

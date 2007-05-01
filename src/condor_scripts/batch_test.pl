@@ -50,6 +50,7 @@ use CondorTest;
 $test_dir = ".";            # directory in which to find test programs
 $test_retirement = 1800;	# seconds for an individual test timeout - 30 minutes
 $hush = 0;
+$timestamp = 0;
 
 # set up to recover from tests which hang
 $SIG{ALRM} = sub { die "timeout" };
@@ -74,6 +75,7 @@ $ENV{PATH} = $ENV{PATH} . ":" . $Basedir;
 # -s[kip] <filename>: use this file as the list of tests to skip
 # -t[estname] <test-name>: just run this test
 # -q[uiet]: hush
+# -m[arktime]: time stamp
 #
 while( $_ = shift( @ARGV ) ) {
   SWITCH: {
@@ -106,6 +108,10 @@ while( $_ = shift( @ARGV ) ) {
                 $hush = 1;
                 next SWITCH;
         }
+        if( /-m.*/ ) {
+                $timestamp = 1;
+                next SWITCH;
+        }
   }
 }
 
@@ -130,6 +136,10 @@ if( ! @compilers ) {
     @compilers = grep !/CVS/, @compilers;
     closedir TEST_DIR;
     die "error: no compiler subdirectories found\n" unless @compilers;
+}
+
+if($timestamp == 1) {
+	system("date");
 }
 
 foreach $name (@compilers) {
@@ -370,21 +380,29 @@ if( $hush == 0 ) {
 	print "$num_success successful, $num_failed failed\n";
 }
 
+open( SUMOUTF, ">>successful_tests_summary" )
+    || die "error opening \"successful_tests_summary\": $!\n";
 open( OUTF, ">successful_tests" )
     || die "error opening \"successful_tests\": $!\n";
 for $test_name (@successful_tests)
 {
-    print OUTF "$test_name\n";
+    print OUTF "$test_name 0\n";
+    print SUMOUTF "$test_name 0\n";
 }
 close OUTF;
+close SUMOUTF;
 
+open( SUMOUTF, ">>failed_tests_summary" )
+    || die "error opening \"failed_tests_summary\": $!\n";
 open( OUTF, ">failed_tests" )
     || die "error opening \"failed_tests\": $!\n";
 for $test_name (@failed_tests)
 {
-    print OUTF "$test_name\n";
+    print OUTF "$test_name 1\n";
+    print SUMOUTF "$test_name 1\n";
 }
 close OUTF;
+close SUMOUTF;
 
 exit $num_failed;
 

@@ -231,7 +231,7 @@ struct sockaddr_in  *from;
 }
 
 char *
-calc_subnet_name(char* host)
+calc_subnet_name()
 {
 	char			subnetname[MAXHOSTNAMELEN];
 	char			*subnet_ptr;

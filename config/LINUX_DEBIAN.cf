@@ -1,0 +1,15 @@
+/* Things specific to LINUX_DEBIAN machines */
+
+/* Due to two problems we turn off the full port for Debian:
+
+	1. -fstack-protect has a support library that our glibc doesn't have and
+		we need to copy its functionality for standard universe to link.
+
+	2. C++ exception handling in stdc++ assumes that the glibc is compiled
+		with TLS, but ours isn't and doesn't compile out of the box with
+		TLS.
+	
+*/
+
+#undef IS_CLIPPED
+#define IS_CLIPPED  YES

@@ -851,9 +851,8 @@ static bool parse_dot(Dag *dag, const char *filename, int lineNumber)
 //-----------------------------------------------------------------------------
 static bool parse_vars(Dag *dag, const char *filename, int lineNumber) {
 	const char* example = "Vars JobName VarName1=\"value1\" VarName2=\"value2\"";
-	const int maxLen = 5096;
-	char name[maxLen];
-	char value[maxLen];
+	MyString name;
+	MyString value;
 
 	const char *jobName = strtok( NULL, DELIMITERS );
 	const char *jobNameOrig = jobName; // for error output
@@ -887,12 +886,11 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber) {
 
 		// copy name char-by-char until we hit a symbol or whitespace
 		// names are limited to alphanumerics and underscores
-		char* nameWriter = name;
-		while( (isalnum(*str) || *str == '_') && (nameWriter-name < maxLen) )
-			*nameWriter++ = *str++;
-		*nameWriter = '\0';
+		while( isalnum(*str) || *str == '_' ) {
+			name += *str++;
+		}
 
-		if(name[0] == '\0') { // no alphanumeric symbols at all were written into name,
+		if(name.Length() == '\0') { // no alphanumeric symbols at all were written into name,
 		                      // just something weird, which we'll print
 			debug_printf(DEBUG_QUIET, "%s (line %d): Unexpected symbol: \"%c\"\n", filename,
 				lineNumber, *str);
@@ -904,7 +902,7 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber) {
 			str++;
 		if(*str != '=') {
 			debug_printf(DEBUG_QUIET, "%s (line %d): No \"=\" for \"%s\"\n", filename,
-				lineNumber, name);
+				lineNumber, name.Value());
 			return false;
 		}
 		str++;
@@ -913,7 +911,7 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber) {
 		
 		if(*str != '"') {
 			debug_printf(DEBUG_QUIET, "%s (line %d): %s's value must be quoted\n", filename,
-				lineNumber, name);
+				lineNumber, name.Value());
 			return false;
 		}
 
@@ -921,14 +919,8 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber) {
 		// the two escape sequences: \\ and \"
 		bool stillInQuotes = true;
 		bool escaped       = false;
-		int i = 0;
 		do {
-			value[i++] = *(++str);
-			if(i >= maxLen) {
-				debug_printf(DEBUG_QUIET, "%s (line %d): Sorry, value lengths are restricted "
-					"to %d characters maximum\n", filename, lineNumber, maxLen);
-				return false;
-			}
+			value += *(++str);
 			
 			if(*str == '\0') {
 				debug_printf(DEBUG_QUIET, "%s (line %d): Missing end quote\n", filename,
@@ -938,10 +930,12 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber) {
 			
 			if(!escaped) {
 				if(*str == '"') {
-					i--; // we don't want that last " in the string
+					// we don't want that last " in the string
+					value.setChar( value.Length() - 1, '\0' );
 					stillInQuotes = false;
 				} else if(*str == '\\') {
-					i--; // on the next pass it will be filled in appropriately
+					// on the next pass it will be filled in appropriately
+					value.setChar( value.Length() - 1, '\0' );
 					escaped = true;
 					continue;
 				} else if(*str == '\'') { // these would mess the command line up 
@@ -960,7 +954,6 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber) {
 				escaped = false; // being escaped only lasts for one character
 			}
 		} while(stillInQuotes);
-		value[i] = '\0';
 
 		*str++;
 
@@ -969,11 +962,11 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber) {
 		tmpName.lower_case();
 		if ( tmpName.find( "queue" ) == 0 ) {
 			debug_printf(DEBUG_QUIET, "Illegal variable name: %s; variable "
-						"names cannot begin with \"queue\"\n", name );
+						"names cannot begin with \"queue\"\n", name.Value() );
 			return false;
 		}
 		
-		debug_printf(DEBUG_VERBOSE, "Argument added, Name=\"%s\"\tValue=\"%s\"\n", name, value);
+		debug_printf(DEBUG_VERBOSE, "Argument added, Name=\"%s\"\tValue=\"%s\"\n", name.Value(), value.Value());
 		job->varNamesFromDag->Append(new MyString(name));
 		job->varValsFromDag->Append(new MyString(value));
 	}

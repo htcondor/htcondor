@@ -173,6 +173,8 @@ LogRecord::ReadHeader(FILE *fp)
 }
 
 
+// The ReadBody() function in all of our child classes consume the newline
+// at the end of every line, so we have nothing to read.
 int
 LogRecord::ReadTail(FILE *  /*fp*/)
 {

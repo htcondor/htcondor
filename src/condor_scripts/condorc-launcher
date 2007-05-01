@@ -94,6 +94,8 @@ if(not defined $config_condor_admin) {
 }
 $config_mail = "/usr/bin/mail";
 
+# This invocation of open() will spawn a shell, so it normally can't fail.
+# Therefore, we must check the close() for any failures.
 debug_print(4, "Startup: Scanning queue for existing schedds\n");
 # scan the queue for any schedd jobs already submitted
 # format: <Cluster>.<Proc> <x509proxy> <uniquename> <sitename> <sitegatekeeper> <job status>
@@ -130,7 +132,10 @@ while ( <CQ> ) {
 	}
 }
 
-close( CQ );
+# If the exit status of condor_q is 32512 (exited with status 127), the
+# probable cause is that the shell couldn't find condor_q in the path.
+# We want to die in that case, but not if condor_q itself returns non-zero.
+close( CQ ) || $? != 32512 || die( "Can't run condor_q" );
 
 while ( 1 ) { # or until no user jobs left <-- Is this still true?  I think not.
 	debug_print(3, "###########################\n");

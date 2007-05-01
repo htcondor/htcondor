@@ -305,7 +305,7 @@ public:
   void Print(int CoID);
 
   /// A hash function used by the hash table objects (used internally).
-  static int HashFunc(const int& Key, int TableSize) { return (Key % TableSize); }
+  static unsigned int HashFunc(const int& Key) { return (unsigned int)Key; }
 
   //@}
   //------------------------------------------------------------------------

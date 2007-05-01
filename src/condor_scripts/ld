@@ -362,7 +362,8 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
 				elif [ $os = "OSF1" ]; then
                  	ldargs=`echo $ldargs $CONDOR_CLIB -lm -lc`
 				else
-                 	ldargs=`echo $ldargs $CONDOR_CLIB -lc`
+					# don't add -lc for linux, since we provide our own.
+                 	ldargs=`echo $ldargs $CONDOR_CLIB `
 				fi
                 lgcc=true 
               else

@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_task.pl,v 1.3 2006-09-25 21:14:02 zmiller Exp $
+# $Id: remote_task.pl,v 1.4 2007-05-01 20:22:56 jfrey Exp $
 # run a test in the Condor testsuite
 # return val is the status of the test
 # 0 = built and passed
@@ -43,6 +43,11 @@ my $compiler = $testinfo[1];
 if( ! $testname ) {
     c_die("Invalid input for testname\n");
 }
+
+#track time.....
+
+system("date");
+
 print "testname is $testname\n";
 if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
     if( $compiler ) {
@@ -77,7 +82,8 @@ if( !($ENV{NMI_PLATFORM} =~ /winnt/)) {
     print "BUILD TEST for $testname returned $buildstatus\n";
     if( $buildstatus != 0 ) {
         print "Build failed for $testname\n";
-        exit 2;
+		# add it to the failed tests summary file....
+		# we do that by continueing......
     }
 }
 
@@ -130,7 +136,6 @@ if( $batchteststatus != 0 ) {
     $teststatus = 0;
 }
 
-
 ######################################################################
 # print output from .run script to stdout of this task, and final exit
 ######################################################################
@@ -164,6 +169,27 @@ if( ! -f $run_out_full ) {
         print "\n\nERROR: failed to open $run_out_full: $!\n";
     }
 }
+
+# if the status is unusual (not 0 or 1 ) edit the failed summary file
+my $line = "";
+#if(($teststatus != 0) && ($teststatus != 1)){
+	#open(ERRORS,"<failed_tests_summary") || die "Can't open failed_tests_summary: !$\n";
+	#open(NEWERRORS,">failed_tests_summary.new") || die "Can't open failed_tests_summary.new: !$\n";
+	#while(<ERRORS>){
+		#chomp($_);
+		#$line = $_;
+		#if($line =~ /^(.*$testname)\s+\d*.*$/) {
+			#print NEWERRORS "$1 $teststatus\n";
+		#} else {
+			#print NEWERRORS "$line\n";
+		#}
+	#}
+#}
+#copy_file("failed_tests_summary.new", "failed_tests_summary");
+
+# Save current passed and failed summary
+copy_file("failed_tests_summary", "$BaseDir/../failed_tests_summary");
+copy_file("successful_tests_summary", "$BaseDir/../successful_tests_summary");
 
 exit $teststatus;
 

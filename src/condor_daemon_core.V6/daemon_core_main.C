@@ -709,7 +709,7 @@ handle_reconfig( Service*, int cmd, Stream* )
 }
 
 int
-handle_fetch_log( Service *service, int cmd, Stream *s )
+handle_fetch_log( Service *, int, Stream *s )
 {
 	char *name = NULL;
 	ReliSock *stream = (ReliSock*) s;
@@ -1043,7 +1043,7 @@ dc_reconfig( bool is_full )
 	}
 
 	// Reinitialize logging system; after all, LOG may have been changed.
-	dprintf_config(mySubSystem,2);
+	dprintf_config(mySubSystem);
 	
 	// again, chdir to the LOG directory so that if we dump a core
 	// it will go there.  the location of LOG may have changed, so redo it here.
@@ -1598,7 +1598,7 @@ int main( int argc, char** argv )
 		}
 		
 			// Actually set up logging.
-		dprintf_config(mySubSystem,2);
+		dprintf_config(mySubSystem);
 	}
 
 		// run as condor 99.9% of the time, so studies tell us.
@@ -1706,7 +1706,7 @@ int main( int argc, char** argv )
 		}
 		
 			// Actually set up logging.
-		dprintf_config(mySubSystem,2);
+		dprintf_config(mySubSystem);
 	}
 
 		// Now that we have the daemonCore object, we can finally

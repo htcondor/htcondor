@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre.pl,v 1.8 2007-03-12 15:14:45 bt Exp $
+# $Id: remote_pre.pl,v 1.9 2007-05-01 20:22:56 jfrey Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
@@ -235,6 +235,7 @@ print FIX "PROCD_LOG 			= \$(LOG)/ProcdLog\n";
 
 # Add a shorter check time for periodic policy issues
 print FIX "PERIODIC_EXPR_INTERVAL = 15\n";
+print FIX "NEGOTIATOR_INTERVAL = 20\n";
 
 # turn on soap for testing
 print FIX "ENABLE_SOAP            	= TRUE\n";
@@ -275,7 +276,6 @@ if( ($ENV{NMI_PLATFORM} =~ /winnt/) ) {
 	my $mypath = $ENV{PATH};
 	print FIX "USER_JOB_WRAPPER = $Win32BaseDir/condor/bin/exe_switch.bat\n";
 	print FIX "CONDOR_HOST = \$(IP_ADDRESS)\n";
-	print FIX "NEGOTIATOR_INTERVAL = 20\n";
 	print FIX "START = TRUE\n";
 	print FIX "PREEMPT = FALSE\n";
 	print FIX "SUSPEND = FALSE\n";

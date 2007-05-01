@@ -180,7 +180,7 @@ init_logging()
 
 	if( is_local ) {
 			// Use regular, local logging.
-		dprintf_config( mySubSystem, -1 );	// Log file on local machine 
+		dprintf_config( mySubSystem );	// Log file on local machine 
 	} else {
 			// Set up to do logging through the shadow
 		close( fileno(stderr) );

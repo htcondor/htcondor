@@ -35,15 +35,8 @@ template class  HashTable<MyString,ClassTotal*>;
 
 template class  HashBucket<MyString,ClassTotal*>;
 
-int hashFunc (const MyString &key, int size)
-{
-	int j = 0;
-	for (int i = key.Length()-1; i; i--) j+= key[i];
-	return (j % size);
-}
-
 TrackTotals::
-TrackTotals (ppOption m) : allTotals(16, hashFunc)
+TrackTotals (ppOption m) : allTotals(16, MyStringHash)
 {
 	ppo = m;
 	malformed = 0;

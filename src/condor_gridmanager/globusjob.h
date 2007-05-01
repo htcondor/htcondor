@@ -115,6 +115,7 @@ class GlobusJob : public BaseJob
 	GlobusResource *myResource;
 	int communicationTimeoutTid;
 	time_t lastProbeTime;
+	time_t lastRemoteStatusUpdate;
 	bool probeNow;
 	time_t enteredCurrentGmState;
 	time_t enteredCurrentGlobusState;

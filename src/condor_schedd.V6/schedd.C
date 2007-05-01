@@ -157,16 +157,9 @@ int STARTD_CONTACT_TIMEOUT = 45;
 struct shadow_rec *find_shadow_by_cluster( PROC_ID * );
 #endif
 
-
-int UserIdentity::HashFcn(const UserIdentity & index, int numBuckets)
+unsigned int UserIdentity::HashFcn(const UserIdentity & index)
 {
-	MyString username = index.username();
-	MyString domain = index.domain();
-	unsigned int i = 
-		hashFuncChars(username.Value(), numBuckets) +
-		hashFuncChars(domain.Value(), numBuckets);
-
-	return i % numBuckets;
+	return index.m_username.Hash() + index.m_domain.Hash();
 }
 
 
@@ -1612,16 +1605,15 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 			job_ad->LookupString(ATTR_OWNER,owner);
 			job_ad->LookupString(ATTR_NT_DOMAIN,domain);
 			if (! init_user_ids(owner, domain) ) {
-				char tmpstr[255];
+				MyString msg;
 				dprintf(D_ALWAYS, "init_user_ids() failed - putting job on "
 					   "hold.\n");
 #ifdef WIN32
-				snprintf(tmpstr, 255,
-					   	"Bad or missing credential for user: %s", owner);
+				msg.sprintf("Bad or missing credential for user: %s", owner);
 #else
-				snprintf(tmpstr, 255, "Unable to switch to user: %s", owner);
+				msg.sprintf("Unable to switch to user: %s", owner);
 #endif
-				holdJob(job_id.cluster, job_id.proc, tmpstr, 
+				holdJob(job_id.cluster, job_id.proc, msg.Value(), 
 					false, false, true, false, false);
 				return;
 			}
@@ -7518,70 +7510,27 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	userJob = GetJobAd(job_id->cluster,job_id->proc);
 	ASSERT(userJob);
 
-	// make sure file is executable
-	strcpy(a_out_name, gen_ckpt_name(Spool, job_id->cluster, ICKPT, 0));
-	errno = 0;
-#ifndef WIN32
-	if( chmod(a_out_name, 0755) < 0 ) { 
-#else
-// WIN32
-// We can't change execute permissions on NT with chmod 
-// (we'd have to change the file extension to .exe, .com, .bat or .cmd)
-// So instead, just check if it is executable. 
-	filestat = new StatInfo(a_out_name);
-	is_executable = false;
-	if ( filestat ) {
-		is_executable = filestat->IsExecutable();
-		delete filestat;
-		filestat = NULL;
-	}
-	if ( !is_executable ) {
-#endif
-		// If the chmod failed, it could be because the user submitted
-		// the job with copy_to_spool = false and therefore it is not
-		// in the SPOOL directory.  So check where the 
-		// ClassAd says the executable is.
-		a_out_name[0] = '\0';
-		userJob->LookupString(ATTR_JOB_CMD,a_out_name,sizeof(a_out_name));
-		if (a_out_name[0]=='\0') {
-			holdJob(job_id->cluster, job_id->proc, 
-				"Executable unknown - not specified in job ad!",
-				false, false, true, false, false );
-			goto wrapup;
-		}
-		
-		// at least make certain the file is still there, and that
-		// it is exectuable by at least user or group or other.
-		filestat = new StatInfo(a_out_name);
-		is_executable = false;
-		if ( filestat ) {
-			is_executable = filestat->IsExecutable();
-			delete filestat;
-		}
-		if ( !is_executable ) {
-			char tmpstr[255];
-			snprintf(tmpstr, 255, "File '%s' is missing or not executable", a_out_name);
-			holdJob(job_id->cluster, job_id->proc, tmpstr,
-					false, false, true, false, false);
-			goto wrapup;
-		}
-	}
-	
+	// who is this job going to run as...
 	if (GetAttributeString(job_id->cluster, job_id->proc, 
 		ATTR_OWNER, owner) < 0) {
 		dprintf(D_FULLDEBUG, "Scheduler::start_sched_universe_job"
 			"--setting owner to \"nobody\"\n" );
 		sprintf(owner, "nobody");
 	}
+
 	// get the nt domain too, if we have it
 	GetAttributeString(job_id->cluster, job_id->proc, ATTR_NT_DOMAIN, domain);
 
+	// sanity check to make sure this job isn't going to start as root.
 	if (stricmp(owner, "root") == 0 ) {
 		dprintf(D_ALWAYS, "Aborting job %d.%d.  Tried to start as root.\n",
 			job_id->cluster, job_id->proc);
 		goto wrapup;
 	}
-	
+
+	// switch to the user in question to make some checks about what I'm 
+	// about to execute and then to execute.
+
 	if (! init_user_ids(owner, domain) ) {
 		char tmpstr[255];
 #ifdef WIN32
@@ -7593,6 +7542,74 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 				false, false, true, false, false);
 		goto wrapup;
 	}
+
+	priv = set_user_priv(); // need user's privs...
+
+	// Here we are going to look into the spool directory which contains the
+	// user's executables as the user. Be aware that even though the spooled
+	// executable probably is owned by Condor in most circumstances, we
+	// must ensure the user can at least execute it.
+
+	strcpy(a_out_name, gen_ckpt_name(Spool, job_id->cluster, ICKPT, 0));
+	errno = 0;
+	filestat = new StatInfo(a_out_name);
+	ASSERT(filestat);
+
+	if (filestat->Error() == SIGood) {
+		is_executable = filestat->IsExecutable();
+
+		if (!is_executable) {
+			// The file is present, but the user cannot execute it? Put the job
+			// on hold.
+			set_priv( priv );  // back to regular privs...
+
+			holdJob(job_id->cluster, job_id->proc, 
+				"Spooled executable is not executable!",
+				false, false, true, false, false );
+
+			delete filestat;
+			filestat = NULL;
+
+			goto wrapup;
+		}
+	}
+
+	delete filestat;
+	filestat = NULL;
+
+	if ( !is_executable ) {
+		// If we have determined that the executable is not present in the
+		// spool, then it must be in the user's initialdir, or wherever they 
+		// specified in the classad. Either way, it must be executable by them.
+
+		// Sanity check the classad to ensure we have an executable.
+		a_out_name[0] = '\0';
+		userJob->LookupString(ATTR_JOB_CMD,a_out_name,sizeof(a_out_name));
+		if (a_out_name[0]=='\0') {
+			set_priv( priv );  // back to regular privs...
+			holdJob(job_id->cluster, job_id->proc, 
+				"Executable unknown - not specified in job ad!",
+				false, false, true, false, false );
+			goto wrapup;
+		}
+		
+		// Now check, as the user, if we may execute it.
+		filestat = new StatInfo(a_out_name);
+		is_executable = false;
+		if ( filestat ) {
+			is_executable = filestat->IsExecutable();
+			delete filestat;
+		}
+		if ( !is_executable ) {
+			char tmpstr[255];
+			snprintf(tmpstr, 255, "File '%s' is missing or not executable", a_out_name);
+			set_priv( priv );  // back to regular privs...
+			holdJob(job_id->cluster, job_id->proc, tmpstr,
+					false, false, true, false, false);
+			goto wrapup;
+		}
+	}
+	
 	
 	// Get std(in|out|err)
 	if (GetAttributeString(job_id->cluster, job_id->proc, ATTR_JOB_INPUT,
@@ -7608,8 +7625,6 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		error) < 0) {
 		sprintf(error, NULL_FILE);
 	}
-	
-	priv = set_user_priv(); // need user's privs...
 	
 	if (GetAttributeString(job_id->cluster, job_id->proc, ATTR_JOB_IWD,
 		iwd) < 0) {
@@ -8743,7 +8758,7 @@ Scheduler::NotifyUser(shadow_rec* srec, char* msg, int status, int JobStatus)
 
 /*
 	sprintf(url, "mailto:%s", owner);
-	if ((fd = open_url(url, O_WRONLY, 0)) < 0) {
+	if ((fd = open_url(url, O_WRONLY)) < 0) {
 		EXCEPT("condor_open_mailto_url(%s, %d, 0)", owner, O_WRONLY, 0);
 	}
 
@@ -9399,9 +9414,9 @@ cleanup_ckpt_files(int cluster, int proc, const char *owner)
 }
 
 
-int pidHash(const int &pid, int numBuckets)
+unsigned int pidHash(const int &pid)
 {
-	return pid % numBuckets;
+	return pid;
 }
 
 

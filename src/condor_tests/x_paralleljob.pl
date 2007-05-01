@@ -66,7 +66,7 @@ if( $nodenum == 0 ) {
 			print "Ready to write my message<< node $nodenum>>\n";
 			last;
 		}
-		sleep 1;
+		sleep (2 * $count);
 	}
 	if($count == 10) {
 		die "Could never open handle to server\n";

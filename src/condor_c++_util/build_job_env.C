@@ -24,25 +24,21 @@
 
 #include "condor_common.h"
 #include "condor_classad.h"
-#include "condor_string.h"
 #include "condor_attributes.h"
 #include "basename.h"
 #include "directory.h"
-#include "basename.h"
 #include "build_job_env.h"
 #include "HashTable.h"
 
 #define X509_USER_PROXY "X509_USER_PROXY"
 
-StringMap build_job_env(const ClassAd & ad, bool using_file_transfer)
+void build_job_env(Env &job_env, const ClassAd & ad, bool using_file_transfer)
 {
-	StringMap results(1,MyStringHash,updateDuplicateKeys);// rejectDuplicateKeys?
-
 	MyString Iwd;
 	if( ! ad.LookupString(ATTR_JOB_IWD, Iwd) ) {
 		ASSERT(0);
 		dprintf(D_ALWAYS, "Job ClassAd lacks required attribute %s.  Job's environment may be incorrect.\n", ATTR_JOB_IWD);
-		return results;
+		return;
 	}
 
 	MyString X509Path;
@@ -62,10 +58,8 @@ StringMap build_job_env(const ClassAd & ad, bool using_file_transfer)
 			delete [] newpath; // dircat returnned newed memory.
 
 		}
-		results.insert(X509_USER_PROXY, X509Path.Value());
+		job_env.SetEnv(X509_USER_PROXY, X509Path.Value());
 	}
-
-	return results;
 }
 
 #if 0

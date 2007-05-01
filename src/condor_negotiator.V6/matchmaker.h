@@ -139,7 +139,7 @@ class Matchmaker : public Service
 		void insertNegotiatorMatchExprs( ClassAdList &cal );
 		void reeval( ClassAd *ad );
 		void updateNegCycleEndTime(time_t startTime, ClassAd *submitter);
-		static int HashFunc(const MyString &Key, int TableSize);
+		static unsigned int HashFunc(const MyString &Key);
 		friend int comparisonFunction (AttrList *, AttrList *,
 										void *);
 

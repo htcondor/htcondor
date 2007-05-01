@@ -94,6 +94,10 @@ email_corefile_tail( FILE* output, const char * subsystem_name )
 
 		(void)fclose(input);
 	}
+#else
+		// Shut the compiler up
+	output;
+	subsystem_name;
 #endif	// of ifdef WIN32
 }
 

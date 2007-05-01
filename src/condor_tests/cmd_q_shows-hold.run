@@ -11,28 +11,11 @@ sub RUNNING{2};
 
 my $alreadydone=0;
 
-$execute = sub {
-	my %args = @_;
-	my $cluster = $args{"cluster"};
-
-	print "Putting cluster $cluster on hold\n";
-	my @adarray;
-	my $status = 1;
-	my $cmd = "condor_hold $cluster";
-	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
-	if(!$status)
-	{
-		print "Test failure due to Condor Tool Failure<$cmd>\n";
-		exit(1)
-	}
-
-};
-
 $abort = sub {
 	print "Job is gone now, cool.\n";
 };
 
-$hold = sub
+$submit = sub
 {
 	my %args = @_;
 	my $cluster = $args{"cluster"};
@@ -58,9 +41,9 @@ $hold = sub
 			print "Got HOLD_REASON header line.......\n";
 			$header = 1;
 		}
-		if( $line =~ /.*condor_hold.*/ )
+		if( $line =~ /.*submitted on hold.*/ )
 		{
-			print "Yup reason is condor_hold.......\n";
+			print "Yup reason is submitted on hold.......\n";
 			$reason = 1;
 		}
 	}
@@ -109,14 +92,8 @@ $success = sub
 	die "Hold/Release/Remove/Abort is expected event trail!\n";
 };
 
-$timed = sub
-{
-	die "Job should have ended by now. Hold/Realease broken!\n";
-};
-
-CondorTest::RegisterExecute($testname, $execute);
+CondorTest::RegisterSubmit($testname, $submit);
 CondorTest::RegisterAbort($testname, $abort);
-CondorTest::RegisterHold($testname, $hold);
 CondorTest::RegisterRelease($testname, $release);
 CondorTest::RegisterExitedSuccess($testname, $success);
 

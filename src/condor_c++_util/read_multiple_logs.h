@@ -209,7 +209,7 @@ public:
 protected:
 	friend class CheckEvents;
 
-	static int hashFuncJobID(const CondorID &key, int numBuckets);
+	static unsigned int hashFuncJobID(const CondorID &key);
 
 private:
 	void cleanup();

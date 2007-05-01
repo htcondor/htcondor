@@ -78,8 +78,7 @@ char *subsys_arg = NULL;
 
 template class HashBucket<MyString, bool>;
 template class HashTable<MyString, bool>;
-int hashFunction( const MyString& key, int num_buckets );
-HashTable<MyString, bool> addresses_sent( 100, hashFunction );
+HashTable<MyString, bool> addresses_sent( 100, MyStringHash );
 
 
 // The pure-tools (PureCoverage, Purify, etc) spit out a bunch of
@@ -507,7 +506,7 @@ main( int argc, char *argv[] )
 			break;
 		case 'd':
 			Termlog = 1;
-			dprintf_config ("TOOL", 2);
+			dprintf_config ("TOOL");
 			break;
 		case 'g':
 			fast = false;
@@ -1690,12 +1689,6 @@ printAdToFile(ClassAd *ad, char* filename) {
     return TRUE;
 }
 
-
-int
-hashFunction( const MyString& key, int num_buckets )
-{
-	return key.Hash() % num_buckets;
-}
 
 int strncmp_auto(const char *s1, const char *s2)
 {

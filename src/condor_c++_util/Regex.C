@@ -121,6 +121,7 @@ Regex::match(const MyString & string,
 		}
 	}
 
+	free(ovector);
 	return rc > 0;
 }
 

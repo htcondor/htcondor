@@ -28,13 +28,13 @@ using namespace std;
 BEGIN_NAMESPACE( classad )
 
 
-bool getOldClassAd( Stream *sock, classad::ClassAd& ad )
+bool getOldClassAd( Stream *sock, ClassAd& ad )
 {
-	classad::ClassAdParser	parser;
+	ClassAdParser	parser;
 	int 			numExprs;
 	string			buffer;
 	char			*tmp;
-	classad::ClassAd			*upd=NULL;
+	ClassAd			*upd=NULL;
 	static char		*inputLine = new char[ 10240 ];
 
 
@@ -73,7 +73,7 @@ bool getOldClassAd( Stream *sock, classad::ClassAd& ad )
 
 #if 0
 		// put exprs into ad
-	classad::ClassAd *tmpAd = new classad::ClassAd( );
+	ClassAd *tmpAd = new ClassAd( );
 	tmpAd->Update( *upd );
 	tmpAd = tmpAd->AddExplicitTargetRefs( );
 #endif
@@ -86,21 +86,21 @@ bool getOldClassAd( Stream *sock, classad::ClassAd& ad )
 	return true;
 }
 
-bool classad::putOldClassAd ( Stream *sock, classad::ClassAd& ad )
+bool putOldClassAd ( Stream *sock, ClassAd& ad )
 {
-	classad::ClassAdUnParser	unp;
+	ClassAdUnParser	unp;
 	string			buf;
-	classad::ExprTree		*expr;
+	ExprTree		*expr;
 
 	int numExprs=0;
-	classad::ClassAdIterator itor(ad);
+	ClassAdIterator itor;
 	while( !itor.IsAfterLast( ) ) {
-		itor.CurrentAttribute( buf, (const classad::ExprTree *)expr );
+		itor.CurrentAttribute( buf, (const ExprTree *&)expr );
 		if( strcasecmp( "MyType", buf.c_str( ) ) != 0 && 
 				strcasecmp( "TargetType", buf.c_str( ) ) != 0 ) {
 			numExprs++;
 		}
-		itor.NextAttribute( buf, (const classad::ExprTree *) expr );
+		itor.NextAttribute( buf, (const ExprTree *&) expr );
 	}
 	
 	sock->encode( );
@@ -109,8 +109,8 @@ bool classad::putOldClassAd ( Stream *sock, classad::ClassAd& ad )
 	}
 		
 	for( itor.ToFirst(); !itor.IsAfterLast(); itor.NextAttribute(buf, (const
-					classad::ExprTree *) expr) ) {
-		itor.CurrentAttribute( buf, (const classad::ExprTree *) expr );
+					ExprTree *&) expr) ) {
+		itor.CurrentAttribute( buf, (const ExprTree *&) expr );
 		if( strcasecmp( "MyType", buf.c_str( ) ) == 0 || 
 				strcasecmp( "TargetType", buf.c_str( ) ) == 0 ) {
 			continue;

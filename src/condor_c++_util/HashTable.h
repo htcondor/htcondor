@@ -51,7 +51,7 @@ template <class Index, class Value>
 class HashTable {
  public:
   HashTable( int tableSize,
-			 int (*hashfcn)( const Index &index, int numBuckets ),
+			 unsigned int (*hashfcn)( const Index &index ),
 			 duplicateKeyBehavior_t behavior = allowDuplicateKeys );
   HashTable( const HashTable &copy);
   const HashTable& operator=(const HashTable &copy);
@@ -91,7 +91,7 @@ class HashTable {
 
   int tableSize;                                // size of hash table
   HashBucket<Index, Value> **ht;                // actual hash table
-  int (*hashfcn)(const Index &index, int numBuckets); // user-provided hash function
+  unsigned int (*hashfcn)(const Index &index);  // user-provided hash function
   duplicateKeyBehavior_t duplicateKeyBehavior;        // duplicate key behavior
   int currentBucket;
   HashBucket<Index, Value> *currentItem;
@@ -107,8 +107,7 @@ class HashTable {
 
 template <class Index, class Value>
 HashTable<Index,Value>::HashTable( int tableSz,
-								   int (*hashF)( const Index &index,
-												 int numBuckets),
+								   unsigned int (*hashF)( const Index &index ),
 								   duplicateKeyBehavior_t behavior ) :
 	tableSize(tableSz), hashfcn(hashF)
 {
@@ -254,13 +253,7 @@ template <class Index, class Value>
 int HashTable<Index,Value>::insert(const Index &index,const  Value &value)
 {
   int temp;
-  int idx = hashfcn(index, tableSize);
-  // do sanity check on return value from hash func
-  if ( (idx < 0) || (idx >= tableSize) ) {
-    dprintf( D_ALWAYS, "hashfcn() is broken "
-			 "(returned %d when tablesize = %d)!\n", idx, tableSize );
-    return -1;
-  }
+  int idx = (int)(hashfcn(index) % tableSize);
 
   HashBucket<Index, Value> *bucket;
 
@@ -329,11 +322,7 @@ int HashTable<Index,Value>::insert(const Index &index,const  Value &value)
 template <class Index, class Value>
 int HashTable<Index,Value>::lookup(const Index &index, Value &value) const
 {
-  int idx = hashfcn(index, tableSize);
-  // do sanity check on return value from hash func
-  if ( (idx < 0) || (idx >= tableSize) ) {
-    return -1;
-  }
+  int idx = (int)(hashfcn(index) % tableSize);
 
   HashBucket<Index, Value> *bucket = ht[idx];
   while(bucket) {
@@ -361,11 +350,7 @@ int HashTable<Index,Value>::lookup(const Index &index, Value &value) const
 template <class Index, class Value>
 int HashTable<Index,Value>::lookup(const Index &index, Value* &value ) const
 {
-  int idx = hashfcn(index, tableSize);
-  // do sanity check on return value from hash func
-  if ( (idx < 0) || (idx >= tableSize) ) {
-    return -1;
-  }
+  int idx = (int)(hashfcn(index) % tableSize);
 
   HashBucket<Index, Value> *bucket = ht[idx];
   while(bucket) {
@@ -400,11 +385,7 @@ int HashTable<Index,Value>::getNext(Index &index, void *current,
   HashBucket<Index, Value> *bucket;
 
   if (!current) {
-    int idx = hashfcn(index, tableSize);
-  	// do sanity check on return value from hash func
-  	if ( (idx < 0) || (idx >= tableSize) ) {
-   		return -1;
-  	}
+    int idx = (int)(hashfcn(index) % tableSize);
     bucket = ht[idx];
   } else {
     bucket = (HashBucket<Index, Value> *)current;
@@ -433,13 +414,8 @@ int HashTable<Index,Value>::getNext(Index &index, void *current,
 template <class Index, class Value>
 int HashTable<Index,Value>::remove(const Index &index)
 {
-  	int idx = hashfcn(index, tableSize);
+  	int idx = (int)(hashfcn(index) % tableSize);
 	int i;
-
-  	// do sanity check on return value from hash func
-  	if ( (idx < 0) || (idx >= tableSize) ) {
-   		return -1;
-  	}
 
   	HashBucket<Index, Value> *bucket = ht[idx];
   	HashBucket<Index, Value> *prevBuc = ht[idx];
@@ -690,22 +666,22 @@ void HashTable<Index,Value>::dump()
 #endif // DEBUGHASH
 
 /// basic hash function for an unpredictable integer key
-int hashFuncInt( const int& n, int numBuckets );
+unsigned int hashFuncInt( const int& n );
 
 /// basic hash function for an unpredictable integer key
-int hashFuncLong( const long& n, int numBuckets );
+unsigned int hashFuncLong( const long& n );
 
 /// basic hash function for an unpredictable unsigned integer key
-int hashFuncUInt( const unsigned int& n, int numBuckets );
+unsigned int hashFuncUInt( const unsigned int& n );
 
 /// hash function for string versions of job id's ("cluster.proc")
-int hashFuncJobIdStr( char* const & key, int numBuckets );
+unsigned int hashFuncJobIdStr( char* const & key );
 
 /// hash function for char* string
-int hashFuncChars(char const *key, int numBuckets);
+unsigned int hashFuncChars( char const *key );
 
 /// hash function for Mystring string
-int hashFuncMyString( const MyString &key, int numBuckets);
+unsigned int hashFuncMyString( const MyString &key );
 
 
 #endif // HASH_H

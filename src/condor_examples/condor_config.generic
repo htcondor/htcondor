@@ -291,7 +291,7 @@ HOSTALLOW_READ_STARTD     = $(HOSTALLOW_READ), $(FLOCK_FROM)
 ##  obvious security implications, so only grant this kind of
 ##  permission for custom attributes that you define for your own use
 ##  at your pool (custom attributes about your machines that are
-##  published with the STARTD_EXPRS setting, for example).
+##  published with the STARTD_ATTRS setting, for example).
 #SETTABLE_ATTRS_OWNER = your_custom_attribute, another_custom_attr
 
 ##  You can also define daemon-specific versions of each of these
@@ -1061,52 +1061,62 @@ RunBenchmarks : (LastBenchmark == 0 ) || ($(BenchmarkTimer) >= (4 * $(HOUR)))
 ##  "/dev/" portion of the pathname.
 #CONSOLE_DEVICES = mouse, console
 
-##  The STARTD_EXPRS entry allows you to have the startd advertise
-##  arbitrary expressions from the config file in its ClassAd.  Give
-##  the comma-separated list of entries from the config file you want
-##  in the startd ClassAd.
-##  Note: because of the different syntax of the config file and
+
+##  The STARTD_ATTRS (and legacy STARTD_EXPRS) entry allows you to
+##  have the startd advertise arbitrary attributes from the config
+##  file in its ClassAd.  Give the comma-separated list of entries
+##  from the config file you want in the startd ClassAd.
+##  NOTE: because of the different syntax of the config file and
 ##  ClassAds, you might have to do a little extra work to get a given
-##  entry into the ClassAd.  In particular, ClassAds require "'s
-##  around your strings.  Numeric values can go in directly, as can
-##  boolean expressions.  For example, if you wanted the startd to
-##  advertise its list of console devices, when it's configured to run
-##  benchmarks, and how often it sends updates to the central manager,
-##  you'd have to define the following helper macro:
+##  entry into the ClassAd.  In particular, ClassAds require double
+##  quotes (") around your strings.  Numeric values can go in
+##  directly, as can boolean expressions.  For example, if you wanted
+##  the startd to advertise its list of console devices, when it's
+##  configured to run benchmarks, and how often it sends updates to
+##  the central manager, you'd have to define the following helper
+##  macro:
 #MY_CONSOLE_DEVICES = "$(CONSOLE_DEVICES)"
-##  Note: this must come before you define STARTD_EXPRS because macros
+##  Note: this must come before you define STARTD_ATTRS because macros
 ##  must be defined before you use them in other macros or
 ##  expressions.
-##  Then, you'd set the STARTD_EXPRS setting to this:
-#STARTD_EXPRS = MY_CONSOLE_DEVICES, RunBenchmarks, UPDATE_INTERVAL
+##  Then, you'd set the STARTD_ATTRS setting to this:
+#STARTD_ATTRS = MY_CONSOLE_DEVICES, RunBenchmarks, UPDATE_INTERVAL
 ##
-## STARTD_EXRS and STARTD_ATTRS can be defined on a per-VM basis
-## The startd builds the list of things to advertise by combining
-## the the lists in this order: STARTD_EXPRS, VMx_STARTD_EXPRS, 
-## STARTD_ATTRS, VMx_STARTD_ATTRS. In the below example, the startd
-## ad for VM1 will have the value for favorite_color, favorite_season,
-## and favorite_movie, and VM2 will have favorite_color, favorite_season,
-## and favorite_song
+##  STARTD_ATTRS can also be defined on a per-VM basis.
+
+##  The startd builds the list of attributes to advertise by combining
+##  the lists in this order: STARTD_ATTRS, VMx_STARTD_ATTRS.
+##  In the below example, the startd ad for VM1 will have the value
+##  for favorite_color, favorite_season, and favorite_movie, and VM2
+##  will have favorite_color, favorite_season, and favorite_song
 ##
-#STARTD_EXPRS = favorite_color, favorite_season
-#VM1_STARTD_EXRS = favorite_movie
-#VM2_STARTD_EXPRS = favorite_song
+#STARTD_ATTRS = favorite_color, favorite_season
+#VM1_STARTD_ATTRS = favorite_movie
+#VM2_STARTD_ATTRS = favorite_song
 ##
-## Attributes themselves in the STARTD_EXPRS and STARTD_ATTRS list can 
-## also be on a per-VM basis.  In the below example, the startd ads will be:
+##  Attributes in the STARTD_ATTRS list can also be on a per-VM basis.
+##  For example, the following configuration:
+##
+#favorite_color = "blue"
+#favorite_season = "spring"
+#VM2_favorite_color = "green"
+#VM3_favorite_season = "summer"
+#STARTD_ATTRS = favorite_color, favorite_season
+##
+##  will result in the following attributes in the VM classified
+##  ads:
+##
 ## VM1 - favorite_color = "blue"; favorite_season = "spring"
 ## VM2 - favorite_color = "green"; favorite_season = "spring"
 ## VM3 - favorite_color = "blue"; favorite_season = "summer"
 ##
-#favorite_color = "blue"
-#favorite_season = "spring"
-#STARTD_EXPRS = favorite_color, favorite_season
-#VM2_favorite_color = "green"
-#VM3_favorite_season = "summer"
-
-#
+##  Finally, the recommended default value for this setting, is to
+##  publish the COLLECTOR_HOST setting as a string.  This can be
+##  useful using the "$$(COLLECTOR_HOST)" syntax in the submit file
+##  for jobs to know (for example, via their environment) what pool
+##  they're running in.
 COLLECTOR_HOST_STRING = "$(COLLECTOR_HOST)"
-STARTD_EXPRS = COLLECTOR_HOST_STRING
+STARTD_ATTRS = COLLECTOR_HOST_STRING
 
 ##  When the startd is claimed by a remote user, it can also advertise
 ##  arbitrary attributes from the ClassAd of the job its working on.

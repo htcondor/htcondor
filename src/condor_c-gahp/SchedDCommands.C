@@ -23,6 +23,7 @@
 
 
 #include "SchedDCommands.h"
+#include "condor_attributes.h"
 
 
 SchedDRequest * SchedDRequest::createRemoveRequest (const int request_id, int cluster_id, int proc_id, const char * reason) {
@@ -145,6 +146,9 @@ SchedDRequest * SchedDRequest::createJobStageInRequest (const int request_id,
 	req->classad = new ClassAd (*classad);
 	req->constraint = NULL;
 	req->reason = NULL;
+
+	req->classad->LookupInteger( ATTR_CLUSTER_ID, req->cluster_id );
+	req->classad->LookupInteger( ATTR_PROC_ID, req->proc_id );
 
 	req->command = SDC_JOB_STAGE_IN;
 	req->status = SDCS_NEW;

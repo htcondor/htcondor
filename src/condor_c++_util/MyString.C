@@ -427,13 +427,13 @@ MyString::FindChar(int Char, int FirstPos) const
     return tmp-Data;
 }
 
-int 
+unsigned int 
 MyString::Hash() const 
 {
 	int i;
 	unsigned int result = 0;
 	for(i = 0; i < Len; i++) {
-		result += i*Data[i];
+		result += i*((unsigned char)Data[i]);
 	}
 	return result;
 }	  
@@ -850,9 +850,9 @@ MyString::GetNextToken(const char *delim, bool skipBlankTokens)
  *
  *--------------------------------------------------------------------*/
 
-int MyStringHash( const MyString &str, int buckets )
+unsigned int MyStringHash( const MyString &str )
 {
-	return str.Hash()%buckets;
+	return str.Hash();
 }
 
 

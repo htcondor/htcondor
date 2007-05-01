@@ -46,21 +46,13 @@ static int make_tmp_dir = -1;  // -1 = unknown, 0 = no tmp dir, 1 = mkdir
 GridUniverseLogic* _gridlogic = NULL;
 
 
-// hash function for Owner names
-static int 
-gman_pid_table_hash (const MyString &str, int numBuckets)
-{
-	return (str.Hash() % numBuckets);
-}
-
-
 GridUniverseLogic::GridUniverseLogic() 
 {
 	// This class should only be instantiated once
 	ASSERT( gman_pid_table == NULL );
 
 	// Make our hashtable
-	gman_pid_table = new GmanPidTable_t(10,&gman_pid_table_hash);
+	gman_pid_table = new GmanPidTable_t(10,&MyStringHash);
 
 	// Register a reaper for this grid managers
 	rid = daemonCore->Register_Reaper("GManager",

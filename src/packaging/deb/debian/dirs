@@ -1,0 +1,6 @@
+etc/condor
+var/log/condor
+var/spool/condor
+var/spool/condor/spool
+var/spool/condor/execute
+var/spool/condor/cred

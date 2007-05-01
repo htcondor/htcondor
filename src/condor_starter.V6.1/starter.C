@@ -1153,17 +1153,7 @@ CStarter::PublishToEnv( Env* proc_env )
 		// Probing this (file transfer) ourselves is complicated.  The JIC
 		// already does it.  Steal his answer.
 		bool using_file_transfer = jic->usingFileTransfer();
-		StringMap classenv = build_job_env(*jobAd, using_file_transfer);
-		classenv.startIterations();
-		MyString key,value;
-		while(classenv.iterate(key,value)) {
-			MyString dummy;
-			if( ! proc_env->GetEnv(key,dummy) ) {
-				// Only set the variable if it wasn't already
-				// set (let user settings override).
-				proc_env->SetEnv(key.Value(),value.Value());
-			}
-		}
+		build_job_env( *proc_env, *jobAd, using_file_transfer );
 	} else {
 		dprintf(D_ALWAYS, "Unable to find job ad for job.  Environment may be incorrect\n");
 	}

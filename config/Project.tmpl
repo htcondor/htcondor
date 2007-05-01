@@ -62,8 +62,8 @@ SNPRINTF_FLAGS =
 #define PurifyPlatformLdFlags
 #endif
 
-#if HAS_RPM
-MakeRPMs = perl condor_scripts/make_public_rpms
+#if HAVE_RPM
+MakeRPMs = perl condor_scripts/make_public_rpms $(RPM_CMD)
 #else
 MakeRPMs =
 #endif
@@ -538,7 +538,7 @@ PROCD_CLIENT_LIB = ../condor_procd/procd_client.a
 
 
 /* common ld flags which should be first in the list */
-COM_LDFLAGS_F = $(GCC_RDYNAMIC_FLAG) -lm $(LDFLAGS) $(CONFIGURE_LIBS)
+COM_LDFLAGS_F = $(GCC_RDYNAMIC_FLAG) $(GCC_STACK_PROTECTOR) -lm $(LDFLAGS) $(CONFIGURE_LIBS)
 
 /* common ld flags which should be last in the list */
 COM_LDFLAGS_L = 

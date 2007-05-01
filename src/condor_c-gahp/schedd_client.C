@@ -53,6 +53,10 @@ int contact_schedd_interval = 20;
 // Do we use XML-formatted classads when talking to our invoker
 bool useXMLClassads = false;
 
+// What is the subject name of our jobs' GSI proxies? This is taken from
+// INITIALIZE_FROM_FILE and is added to GSI_DAEMON_NAME
+char *proxySubjectName = NULL;
+
 // Queue for pending commands to schedd
 template class SimpleList<SchedDRequest*>;
 SimpleList <SchedDRequest*> command_queue;
@@ -63,6 +67,9 @@ PipeBuffer request_buffer;
 
 template class SimpleList <MyString*>;
 
+// Queue for command results to be written to our output pipe.
+SimpleList<MyString *> results_queue;
+
 int RESULT_OUTBOX = -1;
 int REQUEST_INBOX = -1;
 
@@ -71,6 +78,9 @@ int contactScheddTid = TIMER_UNSET;
 
 char *ScheddAddr = NULL;
 char *ScheddPool = NULL;
+
+void flush_results();
+void enqueue_result (int req_id, const char ** results, const int argc);
 
 extern char *myUserName;
 
@@ -122,6 +132,8 @@ doContactSchedd()
 	char error_msg[1000];
 	CondorError errstack;
 	bool do_reschedule = false;
+	int failure_line_num = 0;
+	int failure_errno = 0;
 
 	// Try connecting to schedd
 	DCSchedd dc_schedd ( ScheddAddr, ScheddPool );
@@ -245,6 +257,9 @@ doContactSchedd()
 					&id_list,
 					this_reason,
 					&errstack);
+		} else {
+			EXCEPT( "Unexpected command type %d in doContactSchedd",
+					this_command );
 		}
 
 		// Analyze the result ad
@@ -255,7 +270,7 @@ doContactSchedd()
 		}
 		else {
 			result_ad->dPrint (D_FULLDEBUG);
-			if ( current_command->command == SchedDRequest::SDC_RELEASE_JOB ) {
+			if ( this_command == SchedDRequest::SDC_RELEASE_JOB ) {
 				do_reschedule = true;
 			}
 		}
@@ -543,7 +558,13 @@ doContactSchedd()
 		sprintf (error_msg, "Error connecting to schedd %s", ScheddAddr);
 		dprintf (D_ALWAYS, "%s\n", error_msg);
 	} else {
+		errno = 0;
 		AbortTransaction(); // Just so we can call BeginTransaction() in the loop
+		if ( errno == ETIMEDOUT ) {
+			failure_line_num = __LINE__;
+			failure_errno = errno;
+			goto contact_schedd_disconnect;
+		}
 	}
 
 
@@ -565,10 +586,14 @@ doContactSchedd()
 			goto update_report_result;
 		
 		error = FALSE;
+		errno = 0;
 		BeginTransaction();
-		
-		current_command->status = SchedDRequest::SDCS_PENDING;
-			
+		if ( errno == ETIMEDOUT ) {
+			failure_line_num = __LINE__;
+			failure_errno = errno;
+			goto contact_schedd_disconnect;
+		}
+
 		current_command->classad->ResetExpr();
 		ExprTree *tree;
 		while( (tree = current_command->classad->NextExpr()) ) {
@@ -587,6 +612,11 @@ doContactSchedd()
 					if( SetAttributeByConstraint(current_command->constraint,
 												lhstr,
 												rhstr) == -1 ) {
+						if ( errno == ETIMEDOUT ) {
+							failure_line_num = __LINE__;
+							failure_errno = errno;
+							goto contact_schedd_disconnect;
+						}
 						sprintf (error_msg, "ERROR: Failed (errno=%d) to SetAttributeByConstraint %s=%s for constraint %s",
 									errno, lhstr, rhstr, current_command->constraint );
 						dprintf ( D_ALWAYS, "%s\n", error_msg);
@@ -597,6 +627,11 @@ doContactSchedd()
 											current_command->proc_id,
 											lhstr,
 											rhstr) == -1 ) {
+						if ( errno == ETIMEDOUT ) {
+							failure_line_num = __LINE__;
+							failure_errno = errno;
+							goto contact_schedd_disconnect;
+						}
 						sprintf (error_msg, "ERROR: Failed to SetAttribute() %s=%s for job %d.%d",
 										 lhstr, rhstr, current_command->cluster_id,  current_command->proc_id);
 						dprintf ( D_ALWAYS, "%s\n", error_msg);
@@ -623,15 +658,25 @@ update_report_result:
 			enqueue_result (current_command->request_id, result, 2);
 			current_command->status = SchedDRequest::SDCS_COMPLETED;
 			if ( qmgr_connection != NULL ) {
+				errno = 0;
 				AbortTransaction();
+				if ( errno == ETIMEDOUT ) {
+					failure_line_num = __LINE__;
+					failure_errno = errno;
+					goto contact_schedd_disconnect;
+				}
 			}
 		} else {
+			if ( CloseConnection() < 0 ) {
+				failure_line_num = __LINE__;
+				failure_errno = errno;
+				goto contact_schedd_disconnect;
+			}
 			const char * result[] = {
 				GAHP_RESULT_SUCCESS,
 				NULL };
 			enqueue_result (current_command->request_id, result, 2);
 			current_command->status = SchedDRequest::SDCS_COMPLETED;
-			CloseConnection();
 		} // fi
 
 	} // elihw
@@ -657,10 +702,14 @@ update_report_result:
 			error = TRUE;
 		} else {
 			error = FALSE;
+			errno = 0;
 			BeginTransaction();
+			if ( errno == ETIMEDOUT ) {
+				failure_line_num = __LINE__;
+				failure_errno = errno;
+				goto contact_schedd_disconnect;
+			}
 		
-			current_command->status = SchedDRequest::SDCS_PENDING;
-
 			int i;
 			for (i=0; i<current_command->num_jobs; i++) {
 			
@@ -679,6 +728,11 @@ update_report_result:
 									   ATTR_TIMER_REMOVE_CHECK,
 									   duration) < 0) {
 
+					if ( errno == ETIMEDOUT ) {
+						failure_line_num = __LINE__;
+						failure_errno = errno;
+						goto contact_schedd_disconnect;
+					}
 					dprintf (D_ALWAYS, 
 							 "Unable to SetTimerAttribute(%d, %d), errno=%d\n",
 							 current_command->expirations[i].cluster,
@@ -711,9 +765,20 @@ update_report_result:
 			enqueue_result (current_command->request_id, result, 3);
 			current_command->status = SchedDRequest::SDCS_COMPLETED;
 			if ( qmgr_connection != NULL ) {
+				errno = 0;
 				AbortTransaction();
+				if ( errno == ETIMEDOUT ) {
+					failure_line_num = __LINE__;
+					failure_errno = errno;
+					goto contact_schedd_disconnect;
+				}
 			}
 		} else {
+			if ( CloseConnection() < 0 ) {
+				failure_line_num = __LINE__;
+				failure_errno = errno;
+				goto contact_schedd_disconnect;
+			}
 			const char * result[] = {
 				GAHP_RESULT_SUCCESS,
 				NULL,
@@ -721,7 +786,6 @@ update_report_result:
 			};
 			enqueue_result (current_command->request_id, result, 3);
 			current_command->status = SchedDRequest::SDCS_COMPLETED;
-			CloseConnection();
 		} // fi
 
 	} // elihw UPDATE_LEASE requests
@@ -746,11 +810,22 @@ update_report_result:
 			goto submit_report_result;
 		}
 
+		errno = 0;
 		BeginTransaction();
+		if ( errno == ETIMEDOUT ) {
+			failure_line_num = __LINE__;
+			failure_errno = errno;
+			goto contact_schedd_disconnect;
+		}
 		error = FALSE;
 
 		if ((ClusterId = NewCluster()) >= 0) {
 			ProcId = NewProc (ClusterId);
+		}
+		if ( errno == ETIMEDOUT ) {
+			failure_line_num = __LINE__;
+			failure_errno = errno;
+			goto contact_schedd_disconnect;
 		}
 
 		if ( ClusterId < 0 ) {
@@ -812,8 +887,20 @@ update_report_result:
 			// Special case for the job lease
 			int expire_time;
 			if ( current_command->classad->LookupInteger( ATTR_TIMER_REMOVE_CHECK, expire_time ) ) {
-				SetTimerAttribute( ClusterId, ProcId, ATTR_TIMER_REMOVE_CHECK,
-								   expire_time - time(NULL) );
+				if ( SetTimerAttribute( ClusterId, ProcId,
+										ATTR_TIMER_REMOVE_CHECK,
+										expire_time - time(NULL) ) == -1 ) {
+					if ( errno == ETIMEDOUT ) {
+						failure_line_num = __LINE__;
+						failure_errno = errno;
+						goto contact_schedd_disconnect;
+					}
+					sprintf (error_msg, "ERROR: Failed to SetTimerAttribute %s=%c for job %d.%d",
+							 ATTR_TIMER_REMOVE_CHECK, expire_time - time(NULL), ClusterId, ProcId );
+					dprintf ( D_ALWAYS, "%s\n", error_msg);
+					error = TRUE;
+					goto submit_report_result;
+				}
 				current_command->classad->Delete( ATTR_TIMER_REMOVE_CHECK );
 			}
 
@@ -838,6 +925,11 @@ update_report_result:
 				} else if( SetAttribute (ClusterId, ProcId,
 											lhstr,
 											rhstr) == -1 ) {
+					if ( errno == ETIMEDOUT ) {
+						failure_line_num = __LINE__;
+						failure_errno = errno;
+						goto contact_schedd_disconnect;
+					}
 					sprintf (error_msg, "ERROR: Failed to SetAttribute %s=%s for job %d.%d",
 									 lhstr, rhstr, ClusterId, ProcId );
 					dprintf ( D_ALWAYS, "%s\n", error_msg);
@@ -862,16 +954,26 @@ submit_report_result:
 									error_msg };
 			enqueue_result (current_command->request_id, result, 3);
 			if ( qmgr_connection != NULL ) {
+				errno = 0;
 				AbortTransaction();
+				if ( errno == ETIMEDOUT ) {
+					failure_line_num = __LINE__;
+					failure_errno = errno;
+					goto contact_schedd_disconnect;
+				}
 			}
 			current_command->status = SchedDRequest::SDCS_COMPLETED;
 		} else {
+			if ( CloseConnection() < 0 ) {
+				failure_line_num = __LINE__;
+				failure_errno = errno;
+				goto contact_schedd_disconnect;
+			}
 			const char * result[] = {
 									GAHP_RESULT_SUCCESS,
 									job_id_buff,
 									NULL };
 			enqueue_result (current_command->request_id, result, 3);
-			CloseConnection();
 			current_command->status = SchedDRequest::SDCS_COMPLETED;
 		}
 	} // elihw
@@ -911,6 +1013,11 @@ submit_report_result:
 					FreeJobAd(next_ad);
 				}
 				next_ad = GetNextJobByConstraint( current_command->constraint, 0 );
+			}
+			if ( errno == ETIMEDOUT ) {
+				failure_line_num = __LINE__;
+				failure_errno = errno;
+				goto contact_schedd_disconnect;
 			}
 
 			// now output this list of classads into a result
@@ -953,13 +1060,74 @@ submit_report_result:
 	}	//elihw
 
 	
+ contact_schedd_disconnect:
 	if ( qmgr_connection != NULL ) {
 		DisconnectQ (qmgr_connection, FALSE);
+	}
+
+	if ( failure_line_num ) {
+			// We had an error talking to the schedd. Take all of our
+			// incomplete commands and mark them as failed.
+			// TODO Consider retrying these commands, rather than
+			//   immediately marking them as failed.
+		if ( failure_errno == ETIMEDOUT ) {
+			dprintf( D_ALWAYS, "Timed out talking to schedd at line %d in "
+					 "doContactSchedd()\n", failure_line_num );
+			sprintf( error_msg, "Timed out talking to schedd" );
+		} else {
+			dprintf( D_ALWAYS, "Error talking to schedd at line %d in "
+					 "doContactSchedd(), errno=%d (%s)\n", failure_line_num,
+					 failure_errno, strerror(failure_errno) );
+			sprintf( error_msg, "Error talking to schedd" );
+		}
+		command_queue.Rewind();
+		while (command_queue.Next(current_command)) {
+			if ( current_command->status != SchedDRequest::SDCS_NEW ) {
+				continue;
+			}
+			switch( current_command->command ) {
+			case SchedDRequest::SDC_UPDATE_JOB:
+			case SchedDRequest::SDC_UPDATE_CONSTRAINED:
+			{
+				const char *result[2] = { GAHP_RESULT_FAILURE, error_msg };
+				enqueue_result (current_command->request_id, result, 2);
+				current_command->status = SchedDRequest::SDCS_COMPLETED;
+			}
+				break;
+			case SchedDRequest::SDC_UPDATE_LEASE:
+			{
+				const char *result[3] = { GAHP_RESULT_FAILURE, error_msg, NULL };
+				enqueue_result (current_command->request_id, result, 3);
+				current_command->status = SchedDRequest::SDCS_COMPLETED;
+			}
+				break;
+			case SchedDRequest::SDC_SUBMIT_JOB:
+			{
+				const char *result[3] = { GAHP_RESULT_FAILURE, "-1.-1", error_msg };
+				enqueue_result (current_command->request_id, result, 3);
+				current_command->status = SchedDRequest::SDCS_COMPLETED;
+			}
+				break;
+			case SchedDRequest::SDC_STATUS_CONSTRAINED:
+			{
+				const char *result[3] = { GAHP_RESULT_FAILURE, error_msg, "0" };
+				enqueue_result (current_command->request_id, result, 3);
+				current_command->status = SchedDRequest::SDCS_COMPLETED;
+			}
+				break;
+			default:
+					// Do nothing
+				;
+			}
+		}
 	}
 
 	if ( do_reschedule ) {
 		dc_schedd.reschedule();
 	}
+
+		// Write all of our results to our parent.
+	flush_results();
 
 	dprintf (D_FULLDEBUG, "Finishing doContactSchedd()\n");
 
@@ -971,7 +1139,7 @@ submit_report_result:
 			delete current_command;
 		}
 	}
-	
+
 	// Come back soon..
 	// QUESTION: Should this always be a fixed time period?
 	daemonCore->Reset_Timer( contactScheddTid, contact_schedd_interval );
@@ -1232,25 +1400,13 @@ handle_gahp_command(char ** argv, int argc) {
 			SetEnv( "X509_USER_PROXY", argv[1] );
 			UnsetEnv( "X509_USER_CERT" );
 			UnsetEnv( "X509_USER_KEY" );
-			char *subject = x509_proxy_identity_name( argv[1] );
-			char *daemon_subjects = param( "GSI_DAEMON_NAME" );
-			MyString buff;
-			if ( daemon_subjects ) {
-				buff.sprintf( "%s,%s", daemon_subjects, subject );
-			} else {
-				buff.sprintf( "%s", subject );
+			proxySubjectName = x509_proxy_identity_name( argv[1] );
+			if ( !proxySubjectName ) {
+				dprintf( D_ALWAYS, "Failed to query certificate identity "
+						 "from %s\n",  argv[1] );
+				return TRUE;
 			}
-			dprintf( D_ALWAYS, "Setting %s=%s\n", "_condor_GSI_DAEMON_NAME", buff.Value() );
-			SetEnv( "_condor_GSI_DAEMON_NAME", buff.Value() );
-			if ( subject ) {
-				free( subject );
-			}
-			if ( daemon_subjects ) {
-				free( daemon_subjects );
-			}
-			daemonCore->Send_Signal( daemonCore->getpid(), SIGHUP );
-			// TODO set any config values needed
-			// TODO trigger a reconfig
+			Reconfig();
 			init_done = true;
 		}
 		return TRUE;
@@ -1321,41 +1477,45 @@ enqueue_command (SchedDRequest * request) {
 }
 
 void
-enqueue_result (int req_id, const char ** results, const int argc) {
-	MyString buffer;
+flush_results()
+{
+	MyString *next_str;
 
-	// 1 Escape all the shit
-	// 2 Create a string that is a concatenation of the shit in #1
-	// 3 Flust the shit in #2 down the pipe (where shit ought to go)....
+	results_queue.Rewind();
+	while ( results_queue.Next( next_str ) ) {
+		daemonCore->Write_Pipe( RESULT_OUTBOX, next_str->Value(),
+								next_str->Length() );
+		delete next_str;
+	}
+	results_queue.Clear();
+}
 
-	buffer+= req_id;
+void
+enqueue_result (int req_id, const char ** results, const int argc)
+{
+	MyString *buffer = new MyString();
 
-	int i=0;
-	for (; i<argc; i++) {
+	*buffer += req_id;
 
-		buffer += " ";
-
-		char * escaped = escape_string ( (results[i]) ? results[i] : "NULL" );
-
-		buffer += escaped;
-
-		free (escaped);
+	for ( int i = 0; i < argc; i++ ) {
+		*buffer += ' ';
+		if ( results[i] == NULL ) {
+			*buffer += "NULL";
+		} else {
+			for ( int j = 0; results[i][j] != '\0'; j++ ) {
+				switch ( results[i][j] ) {
+				case ' ':
+				case '\\':
+				case '\r':
+				case '\n':
+					*buffer += '\\';
+				default:
+					*buffer += results[i][j];
+				}
+			}
+		}
 	}
 
-	buffer += "\n";
-
-	// Now flush:
-	daemonCore->Write_Pipe (RESULT_OUTBOX, buffer.Value(), buffer.Length());
+	*buffer += '\n';
+	results_queue.Append( buffer );
 }
-
-char *
-escape_string (const char * string) {
-	MyString my_string (string);
-	MyString escape_this (" \t\n\r\\");
-
-	MyString result = my_string.EscapeChars(escape_this, '\\');
-
-	return strdup(result.Value());
-}
-
-

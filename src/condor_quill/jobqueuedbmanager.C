@@ -594,7 +594,7 @@ JobQueueDBManager::purgeOldHistoryRows()
 int
 JobQueueDBManager::reindexTables()
 {
-	const int		sqlNum = 6;
+	const int		sqlNum = 5;
 	int		i;
 	char 	*sql_str[sqlNum];
 
@@ -604,11 +604,14 @@ JobQueueDBManager::reindexTables()
 	}
 
 	sql_str[0] = "REINDEX table history_horizontal;";
-	sql_str[1] = "REINDEX table history_vertical;";
-	sql_str[2] = "REINDEX table clusterads_Num;";
-	sql_str[3] = "REINDEX table clusterads_Str;";
-	sql_str[4] = "REINDEX table procads_Num;";
-	sql_str[5] = "REINDEX table procads_Str;";
+	sql_str[1] = "REINDEX table clusterads_Num;";
+	sql_str[2] = "REINDEX table clusterads_Str;";
+	sql_str[3] = "REINDEX table procads_Num;";
+	sql_str[4] = "REINDEX table procads_Str;";
+
+	// The DB folks ensure us that the following very 
+	// slow reindex should not be needed.
+	//sql_str[5] = "REINDEX table history_vertical;";
 
 	dprintf(D_ALWAYS, "Begin Reindexing postgres tables\n");
 
@@ -617,7 +620,7 @@ JobQueueDBManager::reindexTables()
 		return FAILURE;
 	}
 
-	for (i = 0; i < 2; i++) {
+	for (i = 0; i < sqlNum; i++) {
 		if (jqDatabase->execCommand(sql_str[i]) == FAILURE) {
 			displayDBErrorMsg("Reindex tables --- ERROR");
 			disconnectDB(NOT_IN_XACT);

@@ -616,8 +616,8 @@ public_copy_target($(GLIBC_DIR)/libresolv.a,lib,libcondor_resolv.a,OBJECT_MODE)
 
 #endif /* ! IS_CLIPPED && IS_GLIBC */
 
+#if ! IS_CLIPPED && (IS_C_COMP_MAJOR_GCC_3 || IS_C_COMP_MAJOR_GCC_4)
 
-#if ! IS_CLIPPED && IS_C_COMP_MAJOR_GCC_3
 /*
    Starting with gcc3, we are going to ship three internal libraries
    that come with the compiler that we are going to use to replace

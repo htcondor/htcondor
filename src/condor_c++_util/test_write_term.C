@@ -50,7 +50,7 @@ main(int argc, char **argv)
 {
 		// Set up the dprintf stuff...
 	Termlog = true;
-	dprintf_config("test_write_term", 2);
+	dprintf_config("test_write_term");
 	DebugFlags = D_ALWAYS;
 
 	int		result = 0;

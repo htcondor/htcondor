@@ -68,14 +68,33 @@ CredDaemon::~CredDaemon()
 {
 	// tell our collector we're going away
 	invalidate_ad();
+
+	if (m_name != NULL) {
+		free(m_name);
+	}
 }
 
 void
 CredDaemon::reconfig()
 {
-	// get our daemon name
-	if (m_name != NULL) delete[] m_name;
-	m_name = default_daemon_name();
+	// get our daemon name; if CREDD_HOST is defined, we use it
+	// as our name. this is because clients that have CREDD_HOST
+	// defined will query the Collector for a CredD ad that has
+	// a name matching its setting for CREDD_HOST. but CREDD_HOST
+	// will not necessarily match what default_daemon_name()
+	// returns - for example, if CREDD_HOST is set to a DNS alias
+	//
+	if (m_name != NULL) {
+		free(m_name);
+	}
+	m_name = param("CREDD_HOST");
+	if (m_name == NULL) {
+		char* tmp = default_daemon_name();
+		ASSERT(tmp != NULL);
+		m_name = strdup(tmp);
+		ASSERT(m_name != NULL);
+		delete[] tmp;
+	}
 	if(m_name == NULL) {
 		EXCEPT("default_daemon_name() returned NULL");
 	}

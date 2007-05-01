@@ -40,9 +40,9 @@
 #   + Don't require root
 #   + Allow release to be set
 
-if [ $# -ne 2 -a $# -ne 3 ]
+if [ $# -ne 3 -a $# -ne 4 ]
 then
-    echo "Usage: make-condor-rpm.sh <condor_dist.tar.gz> <build-dir> [release]"
+    echo "Usage: make-condor-rpm.sh <condor_dist.tar.gz> <rpmcmd> <build-dir> [release]"
     echo "       The build directory needs to have about twice as much space as"
     echo "       the untarred Condor distribution. /tmp will be okay on most machines."
 	echo "       Release is optional"
@@ -56,20 +56,25 @@ if [ ! -e $1 ]; then
 	exit 3
 fi
 
-if [ ! -e $2 ]; then 
-	echo "$2 does not exist."
+if [ ! -x $2 ]; then
+	echo "$2 is not executable."
 	exit 3
 fi
 
-if [ ! -d $2 ]; then 
-	echo "$2 is not a directory."
+if [ ! -e $3 ]; then 
+	echo "$3 does not exist."
 	exit 3
 fi
 
-if [ -z $3 ]; then
+if [ ! -d $3 ]; then 
+	echo "$3 is not a directory."
+	exit 3
+fi
+
+if [ -z $4 ]; then
 	release="1"
 else
-	release=$3
+	release=$4
 fi
 
 base_name=`basename $1`
@@ -80,7 +85,8 @@ naked_name=`echo $base_name | sed -e 's/.tar.gz//'`
 condor_version=`perl -e '@v=split(/-/, $ARGV[0]); print $v[1];' $1`;
 echo "*** This appears to be Condor version: $condor_version"
 
-builddir=${2}/make-condor-rpm
+rpm_build_cmd=${2}
+builddir=${3}/make-condor-rpm
 
 if [ -e ${builddir} ]; then
 	echo "*** Removing old build directory: ${builddir}..."
@@ -197,12 +203,8 @@ EOF
 # Build RPM
 echo "*** Building the RPM..."
 
-# determine if I should use rpm or rpmbuild
-if [ `rpm -bb --help > /dev/null 2>&1` ]; then
-	RPMBUILD_CMD="rpm"
-else
-	RPMBUILD_CMD="rpmbuild"
-fi
+# The determination to use rpm, rpmbuild, or whatever happened with configure.
+RPMBUILD_CMD=${rpm_build_cmd}
 
 echo "$RPMBUILD_CMD --define "_topdir rpmbuild" -bb condor.spec"
 $RPMBUILD_CMD --define "_topdir rpmbuild" -bb condor.spec

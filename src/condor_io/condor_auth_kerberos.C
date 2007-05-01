@@ -984,9 +984,9 @@ int Condor_Auth_Kerberos :: map_domain_name(const char * domain)
 
 }
 
-static int compute_string_hash(const MyString& str, int numBuckets)
+static unsigned int compute_string_hash(const MyString& str)
 {
-	return ( str.Hash() % numBuckets );
+	return str.Hash();
 }
 
 int Condor_Auth_Kerberos :: init_realm_mapping()

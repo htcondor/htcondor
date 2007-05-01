@@ -598,7 +598,7 @@ class ProcAPI {
   /* Using condor's HashTable template class.  I'm storing a procHashNode, 
      hashed on a pid. */
   static HashTable <pid_t, procHashNode *> *procHash;
-  friend int pidHashFunc ( const pid_t& pid, int numbuckets );
+  friend unsigned int pidHashFunc ( const pid_t& pid );
 
   // private data structures:
   static piPTR allProcInfos; // this will be a linked list of 

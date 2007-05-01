@@ -113,7 +113,6 @@ class CondorQuery
   public:
 	// ctor/dtor
 	CondorQuery (AdTypes);
-	CondorQuery (const CondorQuery &);
 	~CondorQuery ();
 
 	// clear constraints
@@ -142,9 +141,13 @@ class CondorQuery
 
 	// overloaded operators
 	friend std::ostream &operator<< (std::ostream &, CondorQuery &); 	// display
-	CondorQuery    &operator=  (CondorQuery &);				// assignment
 
   private:
+		// These are unimplemented, so make them private so that they
+		// can't be used.
+	CondorQuery (const CondorQuery &);
+	CondorQuery &operator= (const CondorQuery &);				// assignment
+
 	int         command;
 	AdTypes     queryType;
 	GenericQuery query;

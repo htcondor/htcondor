@@ -212,7 +212,7 @@ END_C_DECLS
 // Put C++ definitions here
 #if defined(__cplusplus)
 bool operator==( const PROC_ID a, const PROC_ID b);
-int hashFuncPROC_ID( const PROC_ID &, int);
+unsigned int hashFuncPROC_ID( const PROC_ID & );
 void procids_to_mystring(ExtArray<PROC_ID> *procids, MyString &str);
 ExtArray<PROC_ID>* mystring_to_procids(MyString &str);
 #endif

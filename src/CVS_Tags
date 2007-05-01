@@ -1,3 +1,22 @@
+05/01/07 V6_8-merge-6
+  The state of the V6_8-branch for another merge back to the trunk.
+  This has everything that will go into 6.8.5, except possibly some
+  last-minute bug-fixes.
+
+04/18/07 V6_8-PR606-{root,branch}
+  This branch has changes related to fixing PR 606 (always run POST script,
+  even if PRE script fails) and possibly PR 728 (ABORT-DAG-ON should not
+  shortcut full node).  Note: these changes may be abandoned in favor of
+  the changes on V6_8-dag_node_cleanup-branch, but I wanted to at least
+  commit what I've done so far.
+  Created from BUILD-V6_8-branch-2007-4-17.
+
+04/17/07 V6_8-dag_node_cleanup-{root,branch}
+  This branch has changes related to cleaning up the node processing
+  code in DAGMan.  Finishing the cleanup should make it much easier to
+  fix PR 606 and PR 728.
+  Created from BUILD-V6_8-branch-2007-4-17.
+
 04/16/07 V6_9-quillpp-8-{branch, root} 
     Another development branch for Quill++. Based from 
     BUILD-V6_9-trunk-2007-4-16. 

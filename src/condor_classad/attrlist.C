@@ -44,16 +44,16 @@ extern char* mySubSystem;
 
 // Chris Torek's world famous hashing function
 // Modified to be case-insensitive
-static int torekHash(const YourString &s, int length) {
-	int hash = 0;
+static unsigned int torekHash(const YourString &s) {
+	unsigned int hash = 0;
 
 	const char *p = s.s;
 	while (*p) {
-		hash = 33 * hash + tolower(*p);
+		hash = 33 * hash + (unsigned char)tolower(*p);
 		p++;
 	}
 
-	return (abs(hash) % length);
+	return hash;
 }
 
 static const int hash_size = 79; // prime research

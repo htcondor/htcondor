@@ -213,7 +213,7 @@ main(int argc, char *argv[])
 			case 'd':
 				// dprintf to console
 				Termlog = 1;
-				dprintf_config ("TOOL", 2 );
+				dprintf_config ("TOOL");
 				break;
 			case 'c':
 				args[nArgs] = arg;

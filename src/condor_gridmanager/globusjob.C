@@ -626,6 +626,7 @@ GlobusJob::GlobusJob( ClassAd *classad )
 	jmUnreachable = false;
 	jmDown = false;
 	lastProbeTime = 0;
+	lastRemoteStatusUpdate = 0;
 	probeNow = false;
 	enteredCurrentGmState = time(NULL);
 	enteredCurrentGlobusState = time(NULL);
@@ -2610,6 +2611,8 @@ void GlobusJob::UpdateGlobusState( int new_state, int new_error_code )
 {
 	bool allow_transition;
 
+	lastRemoteStatusUpdate = time(NULL);
+
 	allow_transition = AllowTransition( new_state, globusState );
 
 	if ( allow_transition ) {
@@ -2682,6 +2685,8 @@ void GlobusJob::UpdateGlobusState( int new_state, int new_error_code )
 
 void GlobusJob::GramCallback( int new_state, int new_error_code )
 {
+	lastRemoteStatusUpdate = time(NULL);
+
 	if ( AllowTransition(new_state,
 						 callbackGlobusState ?
 						 callbackGlobusState :
@@ -3459,6 +3464,11 @@ GlobusJob::JmShouldSleep()
 		return false;
 	}
 
+	int limit = param_integer( "GRID_MONITOR_NO_STATUS_TIMEOUT", 15*60 );
+	if ( myResource->LastGridJobMonitorUpdate() >
+		 lastRemoteStatusUpdate + limit ) {
+		return false;
+	}
 	if ( myResource->GridJobMonitorActive() == false ) {
 		return false;
 	}

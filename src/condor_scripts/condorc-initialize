@@ -49,13 +49,24 @@ sub main {
 	my $sbin_path = $bin_path;
 	$sbin_path =~ s|/bin/*|/sbin|;
 
-	my $globus_path = $ENV{GLOBUS_LOCATION};
-	if ( $globus_path eq "" ) {
-		$globus_path = "/opt/globus";
+	my $globus_path;
+	if ( $ENV{GLOBUS_LOCATION} eq "" ) {
+		$globus_path = "/opt/globus/bin";
+	} else {
+		$globus_path = $ENV{GLOBUS_LOCATION} . "/bin";
 	}
-	-r "$globus_path/bin/openssl" || die("Can't find openssl");
-	
-	$ENV{PATH} = "$bin_path:$sbin_path:$globus_path/bin:$ENV{PATH}";
+	-r "$globus_path/grid-proxy-info" || die("Can't find grid-proxy-info");
+
+	my $openssl_path = "/usr/bin";
+	-r "$openssl_path/openssl" || die("Can't find openssl");
+
+	# We want to use /usr/bin/openssl instead of Globus's openssl because
+	# it's 0.9.7 instead of 0.9.6. The two versions produce different
+	# names for the email attribute in X509 subject names. Current versions
+    # of Condor use 0.9.7, so when the launcher creates a grid-mapfile for
+    # the launched schedd to use, it wants to use 0.9.7-formatted subject
+    # names.
+	$ENV{PATH} = "$bin_path:$sbin_path:$openssl_path:$globus_path:$ENV{PATH}";
 
 	print "Starting Condor-C Launcher\n";
 	if ( check( "condorc-launcher" ) == 0 ) {
@@ -75,11 +86,11 @@ sub main {
 	} else {
 		submit($glite_path,'condorc-authorizer');
 	}
-	print "Starting Condor-C VO Authorizer\n";
-	if ( check( "condorc-vo-authorizer" ) == 0 ) {
-		print "Skipping Condor-C VO Authorizer\n";
+	print "Starting Condor-C VO Advertiser\n";
+	if ( check( "condorc-vo-advertiser" ) == 0 ) {
+		print "Skipping Condor-C VO Advertiser\n";
 	} else {
-		submit($glite_path,'condorc-vo-authorizer');
+		submit($glite_path,'condorc-vo-advertiser');
 	}
 }
 
