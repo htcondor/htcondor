@@ -1082,13 +1082,12 @@ RunBenchmarks : (LastBenchmark == 0 ) || ($(BenchmarkTimer) >= (4 * $(HOUR)))
 ##  Then, you'd set the STARTD_ATTRS setting to this:
 #STARTD_ATTRS = MY_CONSOLE_DEVICES, RunBenchmarks, UPDATE_INTERVAL
 ##
-##  STARTD_ATTRS can also be defined on a per-VM basis.
-
-##  The startd builds the list of attributes to advertise by combining
-##  the lists in this order: STARTD_ATTRS, VMx_STARTD_ATTRS.
-##  In the below example, the startd ad for VM1 will have the value
-##  for favorite_color, favorite_season, and favorite_movie, and VM2
-##  will have favorite_color, favorite_season, and favorite_song
+##  STARTD_ATTRS can also be defined on a per-VM basis.  The startd
+##  builds the list of attributes to advertise by combining the lists
+##  in this order: STARTD_ATTRS, VMx_STARTD_ATTRS.  In the below
+##  example, the startd ad for VM1 will have the value for
+##  favorite_color, favorite_season, and favorite_movie, and VM2 will
+##  have favorite_color, favorite_season, and favorite_song
 ##
 #STARTD_ATTRS = favorite_color, favorite_season
 #VM1_STARTD_ATTRS = favorite_movie
