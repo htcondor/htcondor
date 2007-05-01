@@ -7705,6 +7705,15 @@ int DaemonCore::HungChildTimeout()
 	// is currently no timer set.
 	pidentry->hung_tid = -1;
 
+	WaitpidEntry wp;
+	wp.child_pid = hung_child_pid;
+	if( WaitpidQueue.IsMember( wp ) ) {
+			// This process has exited, but we have not gotten around to
+			// reaping it yet.  Do nothing.
+		dprintf(D_FULLDEBUG,"Canceling hung child timer for pid %d, because it has exited but has not been reaped yet.\n",hung_child_pid);
+		return FALSE;
+	}
+
 	// set a flag in the PidEntry so a reaper can discover it was killed
 	// because it was hung.
 	pidentry->was_not_responding = TRUE;
