@@ -1,3 +1,8 @@
+05/01/07 V6_8-merge-6
+  The state of the V6_8-branch for another merge back to the trunk.
+  This has everything that will go into 6.8.5, except possibly some
+  last-minute bug-fixes.
+
 04/18/07 V6_8-PR606-{root,branch}
   This branch has changes related to fixing PR 606 (always run POST script,
   even if PRE script fails) and possibly PR 728 (ABORT-DAG-ON should not
