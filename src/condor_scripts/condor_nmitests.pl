@@ -188,7 +188,9 @@ if($uerror) {
 	CrunchErrors( "unknown", $uerror );
 }
 
+#AnalyseTestGids();
 PrintResults();
+SweepTotals();
 
 my $missing = $totalexpected - $totaltests;
 
@@ -253,7 +255,11 @@ sub CrunchErrors
 			}
 
 			$blame = $pexpected;
+			$pbad = $blame;
+			$pgood = 0;
 
+			$host->passed(0);
+			$host->failed($blame);
 			if($type eq "tests") {
 				$host->test_errs($blame);
 				$totaltesterr = $totaltesterr + $blame;
@@ -454,11 +460,9 @@ sub AnalyseTestGids
 			$testresults = $platbasedir . "/" . $file;
 			if($file =~ /^successful_tests_summary$/) {
 				$good = CountLines($testresults);
-				$totalgood = $totalgood + $good;
 				#print "$key: $good passed\n";
 			} elsif($file =~ /^failed_tests_summary$/) {
 				$bad = CountLines($testresults);
-				$totalbad = $totalbad + $bad;
 				#print "$key: $bad failed\n";
 			} elsif($file =~ /^tasklist.nmi$/) {
 				$expected = CountLines($testresults);
@@ -630,6 +634,17 @@ sub AddHistExpected {
 
 }
 
+sub SweepTotals
+{
+	$totalgood = 0;
+	$totalbad = 0;
+	$pbad = 0;
+	$pgood = 0;
+	foreach $host (@platformresults) {
+		$totalgood = $totalgood + $host->passed();
+		$totalbad = $totalbad + $host->failed();
+	}
+}
 ##########################################
 #
 # print help
