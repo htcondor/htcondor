@@ -244,6 +244,20 @@ transferring of a job's data files.
 \item Jobs with standard output and error going to the same file should
 not lose data in the common case.
 
+\item Heavily loaded condor daemons (e.g. \Condor{schedd}) had a
+problem when they got behind processing the exit status of child
+process (e.g. \Condor{shadow}).  The problem was that the daemon would
+continue to expect status updates from its child, even after the child
+had exited, and when the daemon decided that the lack of status
+updates meant that the child was hung, the daemon would try to kill
+any process that happened to have the same pid as the child which had
+already exited.  In the case of the schedd, this would also result in
+the job run attempt being marked as a failure and the job would remain
+in the queue to run again.  Condor no longer activates the ``hung child''
+procedure for jobs which have exited but which have not yet had their
+exit status processed internally by the daemon.
+
+
 \end{itemize}
 
 \noindent Known Bugs:
