@@ -35,6 +35,7 @@
 #include "directory.h"
 #include "iso_dates.h"
 #include "basename.h" // for condor_dirname
+#include "match_prefix.h"
 
 #include "history_utils.h"
 
@@ -139,11 +140,11 @@ main(int argc, char* argv[])
       longformat=TRUE;   
     }
     
-    else if (strcmp(argv[i],"-backwards") == 0) {
+    else if (match_prefix(argv[i],"-backwards")) {
         backwards=TRUE;
     }
 
-    else if (strcmp(argv[i],"-match") == 0) {
+    else if (match_prefix(argv[i],"-match")) {
         i++;
         if (argc <= i) {
             fprintf(stderr,
@@ -155,7 +156,7 @@ main(int argc, char* argv[])
     }
 
 #if WANT_QUILL
-    else if(strcmp(argv[i], "-name")==0) {
+    else if(match_prefix(argv[i], "-name")) {
 		i++;
 		if (argc <= i) {
 			fprintf( stderr,
@@ -193,10 +194,10 @@ main(int argc, char* argv[])
 		JobHistoryFileName=argv[i];
 		readfromfile = true;
     }
-    else if (strcmp(argv[i],"-help")==0) {
+    else if (match_prefix(argv[i],"-help")) {
 		Usage(argv[0]);
     }
-    else if (strcmp(argv[i],"-format")==0) {
+    else if (match_prefix(argv[i],"-format")) {
 		if (argc <= i + 2) {
 			fprintf(stderr,
 					"Error: Argument -format requires a spec and "
@@ -209,7 +210,7 @@ main(int argc, char* argv[])
 		customFormat = true;
 		i += 2;
     }
-    else if (strcmp(argv[i],"-constraint")==0) {
+    else if (match_prefix(argv[i],"-constraint")) {
 		if (i+1==argc || constraint) break;
 		sprintf(tmp,"(%s)",argv[i+1]);
 		constraint=tmp;
@@ -217,7 +218,7 @@ main(int argc, char* argv[])
 		readfromfile = true;
     }
 #if WANT_QUILL
-    else if (strcmp(argv[i],"-completedsince")==0) {
+    else if (match_prefix(argv[i],"-completedsince")) {
 		i++;
 		if (argc <= i) {
 			fprintf(stderr,
