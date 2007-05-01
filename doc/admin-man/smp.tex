@@ -426,33 +426,34 @@ average or state of each VM) get the special header appended.
 Configuring STARTD\_EXPRS on a per-VM basis}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-The \Expr{STARTD\_EXPRS} and \Expr{STARTD\_ATTRS} settings can be
-configured on a per-VM basis.
+The \Expr{STARTD\_ATTRS} (and legacy \Expr{STARTD\_EXPRS}) settings
+can be configured on a per-VM basis.
 The \Condor{startd} daemon builds the list of items to
-advertise by combining the the lists in this order:
+advertise by combining the lists in this order:
 \begin{enumerate}
-\item{\Expr{STARTD\_EXPRS}}
-\item{\Expr{VMx\_STARTD\_EXPRS}}
 \item{\Expr{STARTD\_ATTRS}}
+\item{\Expr{STARTD\_EXPRS}}
 \item{\Expr{VMx\_STARTD\_ATTRS}} 
+\item{\Expr{VMx\_STARTD\_EXPRS}}
 \end{enumerate}
 
-In this example, the \Condor{startd} ClassAd for
-VM1 will have values for 
-\Attr{favorite\_color}, \Attr{favorite\_season},
-and \Attr{favorite\_movie}.
-VM2 will have values for 
-\Attr{favorite\_color}, \Attr{favorite\_season}, and \Attr{favorite\_song}.
-
+For example, consider the following configuration:
 \begin{verbatim}
 STARTD_EXPRS = favorite_color, favorite_season
 VM1_STARTD_EXRS = favorite_movie
 VM2_STARTD_EXPRS = favorite_song
 \end{verbatim}
 
+This will result in the \Condor{startd} ClassAd for
+VM1 defining values for 
+\Attr{favorite\_color}, \Attr{favorite\_season},
+and \Attr{favorite\_movie}.
+VM2 will have values for 
+\Attr{favorite\_color}, \Attr{favorite\_season}, and \Attr{favorite\_song}.
+
 Attributes themselves in the \Expr{STARTD\_EXPRS}
 and \Expr{STARTD\_ATTRS} list 
-can also be on a per-VM basis.  
+can also be defined on a per-VM basis.  
 Here is another example:
 
 \begin{verbatim}
