@@ -157,10 +157,10 @@ windows_hard_kill(DWORD pid)
 // stupid hash function for DWORD (need by the hash tables
 // used in the suspend/contiunue code below)
 //
-static int
-hash_func(const DWORD& n, int num_buckets)
+static unsigned int
+hash_func(const DWORD& n)
 {
-	return n % num_buckets;
+	return n;
 }
 
 // stupid object for getting the list of threads for a process
