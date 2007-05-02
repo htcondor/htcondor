@@ -106,9 +106,21 @@ class ClassAd : public AttrList
 
 		// misc
 		class ClassAd*	FindNext();
-        virtual int	fPrint(FILE*);				// print the AttrList to a file
-		int         sPrint(MyString &output);   
+			// When printing as_XML, the XML headers and footers
+			// are NOT added.  This is so you can wrap a whole set
+			// of classads in a single header.  
+			// Callers will want to use something like the following:
+			//
+			// #include "condor_xml_classads.h"
+			// ClassAdXMLUnparser unparser;
+			// MyString out;
+			// unparser.AddXMLFileHeader(out);
+			// classad.sPrint(out);
+			// unparser.AddXMLFileFooter(out);
+        virtual int	fPrint(FILE*, bool as_XML = false);				// print the AttrList to a file
+		int         sPrint(MyString &output, bool as_XML = false);   
 		void		dPrint( int );				// dprintf to given dprintf level
+
 		void		clear( void );				// clear out all attributes
 
 		// poor man's update function until ClassAd Update Protocol  --RR

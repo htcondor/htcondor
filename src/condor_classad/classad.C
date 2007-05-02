@@ -35,6 +35,7 @@
 # include "condor_classad.h"
 # include "condor_adtypes.h"
 # include "MyString.h"
+# include "condor_xml_classads.h"
 
 static Registration regi;                   // this is the registration for 
                                             // the AttrList type names. It 
@@ -683,12 +684,21 @@ bool operator>= (ClassAd &lhs, ClassAd &rhs)
 // print the whole ClassAd into a file. The expressions are in infix notation.
 // Returns FALSE if the file pointer is NULL; TRUE otherwise.
 ////////////////////////////////////////////////////////////////////////////////
-int ClassAd::fPrint(FILE* f)
+int ClassAd::fPrint(FILE* f, bool as_XML /* = false */)
 {
 	if(!f)
 	{
 		return FALSE;
 	}
+
+	if( as_XML ) {
+		MyString out;
+		sPrint(out, true);
+		fprintf(f, "%s", out.Value());
+		return TRUE;
+	}
+
+
     fprintf(f, "MyType = ");
     fprintf(f, "%c", '"');
 	if(GetMyTypeName())
@@ -710,8 +720,17 @@ int ClassAd::fPrint(FILE* f)
 ////////////////////////////////////////////////////////////////////////////////
 // Append a ClassAd to a string.
 ////////////////////////////////////////////////////////////////////////////////
-int ClassAd::sPrint(MyString &output)
+int ClassAd::sPrint(MyString &output, bool as_XML /* = false */)
 {
+	if( as_XML ) {
+		ClassAdXMLUnparser  unparser;
+		MyString            xml;
+		unparser.SetUseCompactSpacing(false);
+		unparser.Unparse(this, xml);
+		output += xml;
+		return TRUE;
+	}
+
 	output += "MyType = \"";
 	if(GetMyTypeName())
 	{
