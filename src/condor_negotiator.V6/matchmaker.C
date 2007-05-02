@@ -2774,9 +2774,9 @@ void Matchmaker::
 addRemoteUserPrios( ClassAdList &cal )
 {
 	ClassAd	*ad;
-	char	remoteUser[64];
-	char	buffer[128];
-	char    vm_prefix[16];
+	MyString	remoteUser;
+	MyString	buffer;
+	MyString    vm_prefix;
 	float	prio;
 	int     totalVMs, i;
 	float     preemptingRank;
@@ -2785,35 +2785,32 @@ addRemoteUserPrios( ClassAdList &cal )
 	while( ( ad = cal.Next() ) ) {
 			// If there is a preempting user, use that for computing remote user prio.
 			// Otherwise, use the current user.
-		if( ad->LookupString( ATTR_PREEMPTING_ACCOUNTING_GROUP , remoteUser ) ||
-			ad->LookupString( ATTR_PREEMPTING_USER , remoteUser ) ||
-			ad->LookupString( ATTR_ACCOUNTING_GROUP , remoteUser ) ||
-			ad->LookupString( ATTR_REMOTE_USER , remoteUser ) ) 
+		if (ad->LookupString(ATTR_PREEMPTING_ACCOUNTING_GROUP, remoteUser) ||
+			ad->LookupString(ATTR_PREEMPTING_USER, remoteUser) ||
+			ad->LookupString(ATTR_ACCOUNTING_GROUP, remoteUser) ||
+			ad->LookupString(ATTR_REMOTE_USER, remoteUser)) 
 		{
-			prio = (float) accountant.GetPriority( remoteUser );
-			(void) sprintf( buffer , "%s = %f" , ATTR_REMOTE_USER_PRIO , prio );
-			ad->Insert( buffer );
+			prio = (float) accountant.GetPriority(remoteUser.Value());
+			ad->Assign(ATTR_REMOTE_USER_PRIO, prio); 
 		}
-		if( ad->LookupFloat( ATTR_PREEMPTING_RANK, preemptingRank ) ) {
-				// There is already a preempting claim (waiting for the previous
-				// claim to retire), so set current rank to the preempting
-				// rank, since any new preemption must trump the
-				// current preempter.
-			sprintf( buffer, "%s = %f", ATTR_CURRENT_RANK, preemptingRank );
-			ad->Insert( buffer );
+		if (ad->LookupFloat( ATTR_PREEMPTING_RANK, preemptingRank)) {
+				// There is already a preempting claim (waiting for
+				// the previous claim to retire), so set current rank
+				// to the preempting rank, since any new preemption
+				// must trump the current preempter.
+			ad->Assign(ATTR_CURRENT_RANK, preemptingRank);
 		}
-		if( ad->LookupInteger( ATTR_TOTAL_VIRTUAL_MACHINES, totalVMs) ) {
+		if (ad->LookupInteger( ATTR_TOTAL_VIRTUAL_MACHINES, totalVMs)) {
 			for(i = 1; i <= totalVMs; i++) {
-				snprintf( vm_prefix, 16, "vm%d_", i);
-				strcpy(buffer, vm_prefix);
-				strcat(buffer, ATTR_REMOTE_USER);
-				if( ad->LookupString( buffer , remoteUser ) ) {
-					// If there is a user on that VM, stick that user's priority
-					// into the ad	
-					prio = (float) accountant.GetPriority( remoteUser );
-					(void) sprintf( buffer , "%s%s = %f" , vm_prefix, 
-									ATTR_REMOTE_USER_PRIO , prio );
-					ad->Insert( buffer );
+				vm_prefix.sprintf("vm%d_", i);
+				buffer.sprintf("%s%s", vm_prefix.Value(), ATTR_REMOTE_USER);
+				if (ad->LookupString(buffer.Value(), remoteUser)) {
+					// If there is a user on that VM, stick that
+					// user's priority into the ad
+					prio = (float) accountant.GetPriority(remoteUser.Value());
+					buffer.sprintf("%s%s", vm_prefix.Value(),
+								   ATTR_REMOTE_USER_PRIO);
+					ad->Assign(buffer.Value(), prio);
 				}	
 			}
 		}
