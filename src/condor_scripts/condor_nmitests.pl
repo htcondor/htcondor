@@ -244,7 +244,7 @@ sub CrunchErrors
 			$pbad = $host->failed();
 			$phost = $host->platform();
 
-			print "Current host is $phost\n";
+			#print "Current host is $phost\n";
 
 			if($pexpected == 0) {
 				$pexpected = GetHistExpected($phost);
