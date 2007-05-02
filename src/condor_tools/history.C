@@ -36,6 +36,7 @@
 #include "iso_dates.h"
 #include "basename.h" // for condor_dirname
 #include "match_prefix.h"
+#include "condor_xml_classads.h"
 
 #include "history_utils.h"
 
@@ -88,6 +89,7 @@ static	QueryResult result;
 static	CondorQuery	quillQuery(QUILL_AD);
 static	ClassAdList	quillList;
 static  bool longformat=false;
+static  bool use_xml=false;
 static  bool customFormat=false;
 static  bool backwards=false;
 static  AttrListPrintMask mask;
@@ -139,6 +141,11 @@ main(int argc, char* argv[])
     if (strcmp(argv[i],"-l")==0) {
       longformat=TRUE;   
     }
+
+    else if (match_prefix(argv[i],"-xml")) {
+		use_xml = true;	
+		longformat = true;
+	}
     
     else if (match_prefix(argv[i],"-backwards")) {
         backwards=TRUE;
@@ -773,7 +780,7 @@ static void readHistoryFromFile(char *JobHistoryFileName, char* constraint, Expr
     int EndFlag   = 0;
     int ErrorFlag = 0;
     int EmptyFlag = 0;
-    AttrList *ad = NULL;
+    ClassAd *ad = NULL;
 
     long offset = 0;
     bool BOF = false; // Beginning Of File
@@ -799,6 +806,14 @@ static void readHistoryFromFile(char *JobHistoryFileName, char* constraint, Expr
         offset = findLastDelimiter(LogFile, JobHistoryFileName);	
     }
 
+
+	if(longformat && use_xml) {
+		ClassAdXMLUnparser unparser;
+		MyString out;
+		unparser.AddXMLFileHeader(out);
+		printf("%s\n", out.Value());
+	}
+
     while(!EndFlag) {
 
         if (backwards) { // Read history file backwards
@@ -818,7 +833,7 @@ static void readHistoryFromFile(char *JobHistoryFileName, char* constraint, Expr
             }
         }
       
-        if( !( ad=new AttrList(LogFile,"***", EndFlag, ErrorFlag, EmptyFlag) ) ){
+        if( !( ad=new ClassAd(LogFile,"***", EndFlag, ErrorFlag, EmptyFlag) ) ){
             fprintf( stderr, "Error:  Out of memory\n" );
             exit( 1 );
         } 
@@ -841,7 +856,7 @@ static void readHistoryFromFile(char *JobHistoryFileName, char* constraint, Expr
         }
         if (!constraint || EvalBool(ad, constraintExpr)) {
             if (longformat) { 
-                ad->fPrint(stdout); printf("\n"); 
+				ad->fPrint(stdout, use_xml); printf("\n"); 
             } else {
                 if (customFormat) {
                     mask.display(stdout, ad);
@@ -870,6 +885,12 @@ static void readHistoryFromFile(char *JobHistoryFileName, char* constraint, Expr
             ad = NULL;
         }
     }
+	if(longformat && use_xml) {
+		ClassAdXMLUnparser unparser;
+		MyString out;
+		unparser.AddXMLFileFooter(out);
+		printf("%s\n", out.Value());
+	}
     fclose(LogFile);
     return;
 }
