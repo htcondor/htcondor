@@ -355,6 +355,8 @@ sub find_config_file {
 	return $ENV{CONDOR_CONFIG};
     } elsif (-f "/etc/condor/condor_config") {
 	return "/etc/condor/condor_config"; 
+    } elsif (-f "/usr/local/etc/condor_config") {
+	return "/usr/local/etc/condor_config"; 
     } elsif (-f "$release_dir/etc/condor_config") {
 	return "$release_dir/etc/condor_config";
     }

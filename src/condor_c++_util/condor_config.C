@@ -35,9 +35,15 @@
 
   When looking for the global config source, config() checks the
   "CONDOR_CONFIG" environment variable to find its location.  If that
-  doesn't exist, it looks in /etc/condor.  If the condor_config isn't
-  there, it tries ~condor/.  If none of the above locations contain a
-  config source, config() prints an error message and exits.
+  doesn't exist, we look in the following locations:
+     
+      1) /etc/condor/
+      2) /usrlocal/etc/
+      3) ~condor/
+      4) ${GLOBUS_LOCATION}/etc/
+
+  If none of the above locations contain a config source, config()
+  prints an error message and exits.
 
   The root config source is found in the same way, except no environment
   variable is checked.  
@@ -990,59 +996,53 @@ find_file(const char *env_name, const char *file_name)
 	}
 
 # ifdef UNIX
-	// Only look in /etc/condor, ~condor, and $GLOBUS_LOCATION/etc on Unix.
 
 	if( ! config_source ) {
-		// try /etc/condor/file_name
-		MyString	str( "/etc/" );
-		str += myDistro->Get();
-		str += "/";
-		str += file_name;
-		config_source = strdup( str.Value() );
-		if( (fd = safe_open_wrapper( config_source, O_RDONLY )) < 0 ) {
-			free( config_source );
-			config_source = NULL;
-		} else {
-			close( fd );
+			//
+			// List of condor_config file locations we'll try to open
+			// As soon as we find one, we'll stop looking
+			//
+		int locations_length = 4;
+		MyString locations[locations_length];
+			//
+			// 1) /etc/condor/condor_config
+			//
+		locations[0].sprintf( "/etc/%s/%s", myDistro->Get(), file_name );
+			//
+			// 2) /usr/local/etc/condor_config (FreeBSD)
+			//
+		locations[1].sprintf( "/usr/local/etc/%s",  file_name );
+			//
+			// 3) ~condor/condor_config
+			//
+		locations[2].sprintf( "%s/%s", tilde, file_name );
+			//
+			// 4) ${GLOBUS_LOCATION}/etc/condor_config
+			//
+		char *globus_location;
+		if ( (globus_location = getenv("GLOBUS_LOCATION")) ) {
+			locations[3].sprintf( "%s/etc/%s", globus_location, file_name );
 		}
-	}
-	if( ! config_source && tilde ) {
-		// try ~condor/file_name
-		config_source = (char *)malloc( 
-			(strlen(tilde) + strlen(file_name) + 2) * sizeof(char) ); 
-		config_source[0] = '\0';
-		strcat( config_source, tilde );
-		strcat( config_source, "/" );
-		strcat( config_source, file_name );
-		if( (fd = safe_open_wrapper( config_source, O_RDONLY)) < 0 ) {
-			free( config_source );
-			config_source = NULL;
-		} else {
-			close( fd );
-		}
-	}
-    // For Condor-G, also check off of GLOBUS_LOCATION.
-	if( ! config_source ) {
-		char *globus_location;      
-	
-		if( (globus_location = getenv("GLOBUS_LOCATION")) ) {
-	
-			config_source = (char *)malloc( ( strlen(globus_location) +
-                                            strlen("/etc/") +   
-                                            strlen(file_name) + 3 ) 
-                                          * sizeof(char) );	
-			config_source[0] = '\0';
-			strcat(config_source, globus_location);
-			strcat(config_source, "/etc/");
-			strcat(config_source, file_name); 
-			if( (fd = safe_open_wrapper( config_source, O_RDONLY)) < 0 ) {
+
+		int ctr;	
+		for ( ctr = 0 ; ctr < locations_length; ctr++ ) {
+				//
+				// Only use this file if the path isn't empty and
+				// if we can read it properly
+				//
+			config_source = strdup( locations[ctr].Value() );
+			if( locations[ctr].IsEmpty() ||
+			    (fd = safe_open_wrapper( config_source, O_RDONLY )) < 0 ) {
 				free( config_source );
 				config_source = NULL;
 			} else {
 				close( fd );
+				dprintf( D_FULLDEBUG, "Reading condor configuration "
+						      "from '%s'\n", config_source ); 
+				break;
 			}
-		}
-	} 
+		} // FOR
+	} // IF
 # elif defined WIN32	// ifdef UNIX
 	// Only look in the registry on WinNT.
 	HKEY	handle;
