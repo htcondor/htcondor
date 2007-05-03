@@ -28,9 +28,10 @@
 	and you can read config files automatically. To start testing
 	your daemon, run it with "-f -t" until you start specifying
 	a config file to use(the daemon will automatically look in
-	/etc/condor_config, /usr/local/etc/condor_config, ~condor/condor_config,
-        or the env CONDOR_CONFIG if -t is not specifed).  -f means run in the
-	foreground, -t means print the debugging output to the terminal.
+	/etc/condor_config, /usr/local/etc/condor_config,
+	~condor/condor_config, or the env CONDOR_CONFIG if -t is not
+	specifed).  -f means run in the foreground, -t means print the
+	debugging output to the terminal.
 */
 
 //-------------------------------------------------------------
