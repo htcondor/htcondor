@@ -29,7 +29,7 @@
  * DCMsg before the includes.
  */
 class DCMessenger;
-class DCMsg
+class DCMsg;
 
 #include "daemon.h"
 #include "classy_counted_ptr.h"
