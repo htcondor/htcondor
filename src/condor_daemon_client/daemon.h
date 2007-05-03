@@ -24,6 +24,12 @@
 #ifndef CONDOR_DAEMON_H
 #define CONDOR_DAEMON_H
 
+/* We have circular references between Daemon (declared in this file)
+ * and DCMsg (declared in dc_message.h), so we need to foward declare
+ * Daemon before the includes.
+ */
+class Daemon;
+
 #include "condor_common.h"
 #include "condor_io.h"
 #include "condor_classad.h"

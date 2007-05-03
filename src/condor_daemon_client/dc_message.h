@@ -24,6 +24,13 @@
 #ifndef DC_MESSAGE_H
 #define DC_MESSAGE_H
 
+/* We have circular references between DCMsg (declared in this file)
+ * and Daemon (declared in daemon.h), so we need to foward declare
+ * DCMsg before the includes.
+ */
+class DCMessenger;
+class DCMsg
+
 #include "daemon.h"
 #include "classy_counted_ptr.h"
 #include "dc_service.h"

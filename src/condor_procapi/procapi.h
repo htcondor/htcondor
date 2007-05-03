@@ -374,6 +374,11 @@ struct procHashNode {
   bool garbage;
 };
 
+/** pidHashFunc() is the hashing function used by ProcAPI for its
+ *  HashTable of processes. Other code may want to use it for their
+ *  own pid-keyed HashTables. The condor_procd does.
+ */
+unsigned int pidHashFunc ( const pid_t& pid );
 
 /** The ProcAPI class returns information about running processes.  It is
     possible to get information for:
