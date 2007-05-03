@@ -38,7 +38,7 @@
   doesn't exist, we look in the following locations:
      
       1) /etc/condor/
-      2) /usrlocal/etc/
+      2) /usr/local/etc/
       3) ~condor/
       4) ${GLOBUS_LOCATION}/etc/
 
@@ -997,52 +997,44 @@ find_file(const char *env_name, const char *file_name)
 
 # ifdef UNIX
 
-	if( ! config_source ) {
-			//
-			// List of condor_config file locations we'll try to open
-			// As soon as we find one, we'll stop looking
-			//
+	if (!config_source) {
+			// List of condor_config file locations we'll try to open.
+			// As soon as we find one, we'll stop looking.
 		int locations_length = 4;
 		MyString locations[locations_length];
-			//
 			// 1) /etc/condor/condor_config
-			//
 		locations[0].sprintf( "/etc/%s/%s", myDistro->Get(), file_name );
-			//
 			// 2) /usr/local/etc/condor_config (FreeBSD)
-			//
-		locations[1].sprintf( "/usr/local/etc/%s",  file_name );
-			//
-			// 3) ~condor/condor_config
-			//
-		locations[2].sprintf( "%s/%s", tilde, file_name );
-			//
+		locations[1].sprintf( "/usr/local/etc/%s", file_name );
+		if (tilde) {
+				// 3) ~condor/condor_config
+			locations[2].sprintf( "%s/%s", tilde, file_name );
+		}
 			// 4) ${GLOBUS_LOCATION}/etc/condor_config
-			//
 		char *globus_location;
-		if ( (globus_location = getenv("GLOBUS_LOCATION")) ) {
+		if ((globus_location = getenv("GLOBUS_LOCATION"))) {
 			locations[3].sprintf( "%s/etc/%s", globus_location, file_name );
 		}
 
 		int ctr;	
-		for ( ctr = 0 ; ctr < locations_length; ctr++ ) {
-				//
+		for (ctr = 0 ; ctr < locations_length; ctr++) {
 				// Only use this file if the path isn't empty and
-				// if we can read it properly
-				//
-			config_source = strdup( locations[ctr].Value() );
-			if( locations[ctr].IsEmpty() ||
-			    (fd = safe_open_wrapper( config_source, O_RDONLY )) < 0 ) {
-				free( config_source );
-				config_source = NULL;
-			} else {
-				close( fd );
-				dprintf( D_FULLDEBUG, "Reading condor configuration "
-						      "from '%s'\n", config_source ); 
-				break;
+				// if we can read it properly.
+			if (!locations[ctr].IsEmpty()) {
+				config_source = strdup(locations[ctr].Value());
+				if ((fd = safe_open_wrapper(config_source, O_RDONLY)) < 0) {
+					free(config_source);
+					config_source = NULL;
+				} else {
+					close(fd);
+					dprintf(D_FULLDEBUG, "Reading condor configuration "
+							"from '%s'\n", config_source); 
+					break;
+				}
 			}
 		} // FOR
 	} // IF
+
 # elif defined WIN32	// ifdef UNIX
 	// Only look in the registry on WinNT.
 	HKEY	handle;
