@@ -326,7 +326,7 @@ sub CrunchErrors
 					$blame = $partial[1];
 					#print "partial blame $partial[1]\n";
 				} else {
-					$blame = $pbad;
+					$blame = ($pexpected - $pgood);
 				}
 
 				if($type eq "tests") {
@@ -544,7 +544,7 @@ sub GetHistExpected {
 
 	if(!(-f "$histold")) {
 		print "No history file....\n";
-		return(-1);
+		return(0);
 	}
 
 	#print "Looking for expetced for $platform\n";
@@ -552,20 +552,14 @@ sub GetHistExpected {
 	while(<OLD>) {
 		chomp($_);
 		$line = $_;
-		if($line =~ /^(.*):\s*Passed\s*=\s*(\d+)\s*Failed\s*=\s*(\d+)\s*Expected\s*=\s*(\d+)*$/) {
-			#print "Found $1:";
-			if($platform eq $1) {
-				#print "Like it!\n";
-				close(OLD);
-				return($4);
-			}
-			#print "Do not like it!\n";
-		} else {
-			#print "Bad line: $line\n";
+		if($line =~ /^$platform:\s*Passed\s*=\s*(\d+)\s*Failed\s*=\s*(\d+)\s*Expected\s*=\s*(\d+)*$/) {
+			#print "Found $platform:";
+			close(OLD);
+			return($3);
 		}
 	}
 	close(OLD);
-	return(-1);
+	return(0);
 }
 
 ##########################################
@@ -598,22 +592,22 @@ sub AddHistExpected {
 	while(<OLD>) {
 		chomp($_);
 		$line = $_;
-		if($line =~ /^(.*):\s*Passed\s=\s*(\d+)\s*Failed\s=\s*(\d+)\s*Expected\s=\s*(\d+)*$/) {
-			if($1 eq $platform) {
+		if($line =~ /^\s*$platform:\s*Passed\s*=\s*(\d+)\s+Failed\s=\s*([\-]*\d+)\s+Expected\s*=\s*(\d+).*$/) {
 				$found = 1;
-				if(($expected != $4) && ($expected != 0)) {
-					#print "New expected changed from $4 to $expected for $platform\n";
+				#print "found $platform p=$1 f=$2 e=$3\n";
+				if(($expected != $3) && ($expected != 0)) {
+					#print "New expected changed from $3 to $expected for $platform\n";
 					print NEW "$platform: Passed = $pass Failed = $fail Expected = $expected\n";
-				} elsif(($expected == 0) && ($newexpected > 0)) {
+				} elsif(($expected <= 0) && ($newexpected > 0)) {
+					#print "$platform expected from 0 to $newexpected\n";
 					print NEW "$platform: Passed = $pass Failed = $fail Expected = $newexpected\n";
 				} else {
 					#print "Keeping old values, test not done\n";
 					print NEW "$line\n"; # keep  old values
 				}
-			} else {
-				print NEW "$line\n"; # keep the other platforms
-			}
 		} else {
+			#print "No match on platform line!!!!\n";
+			#print "<<$line>>\n";
 			print NEW "$line\n"; # well I don't expect anything else but who knows... save it
 		}
 	}
