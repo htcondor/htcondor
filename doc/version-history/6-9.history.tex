@@ -43,7 +43,7 @@ The details of each version are described below.
 file, the job can now run with job leases and the job will continue
 to run for the lease duration should the submit machine crash.  Previously,
 jobs with streaming i/o would be evicted if the submit machine crashed.
-While the submit machine is done, if the job tried to issue a streaming
+While the submit machine is down, if the job tried to issue a streaming
 read or write, the job will block until the submit machine returns or the
 job lease expires.
 
