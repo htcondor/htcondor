@@ -30,24 +30,44 @@ $success = sub
 	my $cluster = $info{"cluster"};
 	my $return = 1;
 
+	my $done = 0;
+	my $retrycount = 0;
 	my @adarray;
 	my $status = 1;
-	my $cmd = "condor_q $cluster";
+	my $cmd = "condor_q -format \"%s\" Owner -format \" ClusterId = %d\" ClusterId -format \" Status = %d\n\" JobStatus";
 	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
-	if(!$status)
-	{
-		print "Test failure due to Condor Tool Failure<$cmd>\n";
-		exit(1)
-	}
-	foreach my $line (@adarray)
-	{
-		print "$line\n";
-		if($line =~ /$cluster/) {
-			print "Following Line shows it is still in the queue...\n";
+	while($done == 0) {
+		if(!$status) {
+			print "Test failure due to Condor Tool Failure<$cmd>\n";
+			exit(1)
+		}
+		foreach my $line (@adarray) {
 			print "$line\n";
-			$return = 0;
+			if($line =~ /^\s*([\w\-\.]+)\s+ClusterId\s*=\s*$cluster\s*Status\s*=\s*(\d+)\s*.*$/) {
+				print "Following Line shows it is still in the queue...\n";
+				print "$line\n";
+				if($2 != COMPLETED) {
+					$retrycount = $retrycount +1;
+					if($retrycount == 4) {
+						print "Can not find the cluster completed in the queue\n";
+						last;
+					} else {
+						next;
+						sleep((2 * $retrycount));
+					}
+				}
+				print "Found the cluster completed in the queue\n";
+				$done = 1;
+				$return = 0;
+				last;
+			}
 		}
 	}
+	if($done == 0) {
+		# we never found completed
+		$return = 1;
+	}
+
 	print "job should be done AND left in the queue!!\n";
 	my @bdarray;
 	my @cdarray;
