@@ -738,6 +738,96 @@ sub getJobStatus
 # upon failure
 #
 
+#sub runCondorTool
+#{
+#	my $trymultiplier = 1;
+#	my $start_time = time; #get start time
+#	my $delta_time = 0;
+#	my $status = 1;
+#	my $done = 0;
+#	my $cmd = shift;
+#	my $arrayref = shift;
+#	my $multiplier = shift;
+#	my $force = "";
+#	$force = shift;
+#	my $count = 0;
+#	my $catch = "runCTool$$";
+
+#	# clean array before filling
+#	@{arrayref} = ();
+#	system("date");
+
+#	while( !$done)
+#	{
+#		my @tmparray;
+#		Condor::debug( "Try command <$cmd>\n");
+#		open(PULL, "$cmd 2>$catch |");
+#		while(<PULL>)
+#		{
+#			fullchomp($_);
+#			Condor::debug( "Process: $_\n");
+#			push @tmparray, $_; # push @{$arrayref}, $_;
+#			$count += 1;
+#		}
+#		close(PULL);
+#		$status = $? >> 8;
+#		Condor::debug("Status is $status after command\n");
+#		if( $status != 0 )
+#		{
+#			my $current_time = time;
+#			$delta_time = $current_time - $start_time;
+#			print "runCondorTool: its been $delta_time since call\n";
+#			if( $trymultiplier )
+#			{
+#				$trymultiplier = 0;
+#				$ENV{_CONDOR_TOOL_TIMEOUT_MULTIPLIER} = $multiplier;
+#			}
+#			else
+#			{
+#				print "runCondorTool: $cmd timestamp $start_time failed!\n";
+#				if( !open( MACH, "<$catch" )) { 
+#					warn "Can't look at command output <$catch>:$!\n";
+#				} else {
+#    				while(<MACH>) {
+#        				print "ERROR: $_";
+#    				}
+#    				close(MACH);
+#				}
+#				return(0);
+#			}
+#		}
+#		else
+#		{
+#			$line = "";
+#			foreach $value (@tmparray)
+#			{
+#				push @{$arrayref}, $value;
+#			}
+#			$done = 1;
+#			# There are times like the security tests when we want
+#			# to see the stderr even when the command works.
+#			if( $force ne "" ) {
+#				if( !open( MACH, "<$catch" )) { 
+#					warn "Can't look at command output <$catch>:$!\n";
+#				} else {
+#    				while(<MACH>) {
+#						fullchomp($_);
+#						$line = $_;
+#						push @{$arrayref}, $line;
+#    				}
+#    				close(MACH);
+#				}
+#			}
+#			my $current_time = time;
+#			$delta_time = $current_time - $start_time;
+#			Condor::debug("runCondorTool: its been $delta_time since call\n");
+#		}
+#	}
+#	Condor::debug( "runCondorTool: $cmd worked!\n");
+
+#	return(1);
+#}
+
 sub runCondorTool
 {
 	my $trymultiplier = 1;
@@ -754,11 +844,12 @@ sub runCondorTool
 	my $catch = "runCTool$$";
 
 	# clean array before filling
-	@{arrayref} = ();
 	system("date");
 
-	while( !$done)
-	{
+	my $attempts = 4;
+	my $count = 0;
+	while( $count < $attempts) {
+		@{arrayref} = (); #empty return array...
 		my @tmparray;
 		Condor::debug( "Try command <$cmd>\n");
 		open(PULL, "$cmd 2>$catch |");
@@ -772,18 +863,8 @@ sub runCondorTool
 		close(PULL);
 		$status = $? >> 8;
 		Condor::debug("Status is $status after command\n");
-		if( $status != 0 )
+		if(( $status != 0 ) && ($attepts == ($count + 1)))
 		{
-			my $current_time = time;
-			$delta_time = $current_time - $start_time;
-			print "runCondorTool: its been $delta_time since call\n";
-			if( $trymultiplier )
-			{
-				$trymultiplier = 0;
-				$ENV{_CONDOR_TOOL_TIMEOUT_MULTIPLIER} = $multiplier;
-			}
-			else
-			{
 				print "runCondorTool: $cmd timestamp $start_time failed!\n";
 				if( !open( MACH, "<$catch" )) { 
 					warn "Can't look at command output <$catch>:$!\n";
@@ -794,7 +875,6 @@ sub runCondorTool
     				close(MACH);
 				}
 				return(0);
-			}
 		}
 		else
 		{
@@ -821,11 +901,14 @@ sub runCondorTool
 			my $current_time = time;
 			$delta_time = $current_time - $start_time;
 			Condor::debug("runCondorTool: its been $delta_time since call\n");
+			return(1);
 		}
+		$count = $count + 1;
+		sleep((2*$count));
 	}
 	Condor::debug( "runCondorTool: $cmd worked!\n");
 
-	return(1);
+	return(0);
 }
 
 #
