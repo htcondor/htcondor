@@ -212,7 +212,7 @@ StreamHandler::ReconnectAll() {
 	return 0;
 }
 
-int 
+bool
 StreamHandler::Reconnect() {
 	int flags;
 	HandlerType handler_mode;
@@ -248,13 +248,14 @@ StreamHandler::Reconnect() {
 		REMOTE_CONDOR_lseek(remote_fd,offset,SEEK_SET);
 		if (errno == ETIMEDOUT) {
 			Disconnect();
-			return 0;
+			return false;
 		}
 		errno = 0;
 		int actual = REMOTE_CONDOR_write(remote_fd,buffer,pending);
 		if (errno == ETIMEDOUT) {
 			Disconnect();
 			return 0;
+			return false;
 		}
 		if(actual!=pending) {
 			EXCEPT("StreamHandler: %s: couldn't write to %s: %s (%d!=%d) \n",streamname,filename,strerror(errno),actual,pending);
@@ -268,30 +269,29 @@ StreamHandler::Reconnect() {
 		this->Handler(0);
 	}
 
-
-	return 0;
+	return true;
 }
 
-int
+void
 StreamHandler::Disconnect() {
 
 	dprintf(D_ALWAYS, "Streaming i/o handler disconnecting %s from shadow\n", filename);
 	connected=false;
 	daemonCore->Cancel_Pipe(handler_pipe);
-	return 0;
 }
 
 // On reconnect, the submit OS may have crashed and lost our precious
 // output bytes.  We only save the last buffer's worth of data
 // check the current size of the file.  If it is complete, or within a
 // buffer's length, we're OK.  Otherwise, except
-int
+bool
 StreamHandler::VerifyOutputFile() {
 	errno = 0;
 	off_t size = REMOTE_CONDOR_lseek(remote_fd,0,SEEK_END);
 	
 	if (size == (off_t)-1) {
 		EXCEPT("StreamHandler: cannot lseek to output file %s on reconnect: %d\n", filename, errno);
+		return false;
 	}
 
 	if (size < offset) {
@@ -299,6 +299,7 @@ StreamHandler::VerifyOutputFile() {
 		// survive the reboot (or maybe someone else mucked with the file
 		// in the interim.  Rerun the whole job
 		EXCEPT("StreamHandler: output file %s is length %d, expected at least %d\n", filename, (int)size, (int)offset);
+		return false;
 	}
-	return 0;
+	return true;
 }

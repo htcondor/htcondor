@@ -52,9 +52,9 @@ private:
 	static int num_handlers;
 
 
-	int Reconnect();
-	int Disconnect();
-	int VerifyOutputFile();
+	bool Reconnect();
+	void Disconnect();
+	bool VerifyOutputFile();
 
 	bool done;
 	bool connected;
