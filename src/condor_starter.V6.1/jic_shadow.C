@@ -40,6 +40,7 @@
 #include "classad_command_util.h"
 #include "directory.h"
 #include "nullfile.h"
+#include "stream_handler.h"
 
 extern CStarter *Starter;
 ReliSock *syscall_sock = NULL;
@@ -549,6 +550,8 @@ JICShadow::reconnect( ReliSock* s, ClassAd* ad )
 	dprintf( D_FULLDEBUG, "Using new syscall sock <%s:%d>\n",
 			 syscall_sock->endpoint_ip_str(), 
 			 syscall_sock->endpoint_port() );
+
+	StreamHandler::ReconnectAll();
 
 	if( job_cleanup_disconnected ) {
 			/*

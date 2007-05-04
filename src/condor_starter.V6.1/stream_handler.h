@@ -36,6 +36,7 @@ public:
 	int Handler( int fd );
 	int GetJobPipe();
 
+	static int ReconnectAll();
 private:
 	char	buffer[STREAM_BUFFER_SIZE];
 	char	filename[_POSIX_PATH_MAX];
@@ -46,6 +47,18 @@ private:
 	int	handler_pipe;
 	int	remote_fd;
 	off_t	offset;
+
+	static StreamHandler *handlers[];
+	static int num_handlers;
+
+
+	int Reconnect();
+	int Disconnect();
+	int VerifyOutputFile();
+
+	bool done;
+	bool connected;
+	int pending;
 };
 
 

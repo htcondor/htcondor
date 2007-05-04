@@ -3951,7 +3951,7 @@ SetJobLease( void )
 	int lease_duration = 0;
 	char *tmp = condor_param( "job_lease_duration", ATTR_JOB_LEASE_DURATION );
 	if( ! tmp ) {
-		if( universeCanReconnect(JobUniverse) && !stream_std_file ) {
+		if( universeCanReconnect(JobUniverse)) {
 				/*
 				  if the user didn't define a lease duration, but is
 				  submitting a job from a universe that supports
@@ -3983,11 +3983,7 @@ SetJobLease( void )
 		}
 		lease_duration = 20;
 	}
-	if( stream_std_file ) {
-		fprintf( stderr, "\nERROR: job_lease_duration cannot be used with stream_input, stream_output, or stream_error.\n");
-		DoCleanup(0,0,NULL);
-		exit(1);
-	}
+
 	MyString val = ATTR_JOB_LEASE_DURATION;
 	val += "=";
 	val += lease_duration;
