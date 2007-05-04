@@ -39,6 +39,14 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item If a user job requests streaming input or output in the submit
+file, the job can now run with job leases and the job will continue
+to run for the lease duration should the submit machine crash.  Previously,
+jobs with streaming i/o would be evicted if the submit machine crashed.
+While the submit machine is done, if the job tried to issue a streaming
+read or write, the job will block until the submit machine returns or the
+job lease expires.
+
 % condor-admin 15254
 \item Added new configuration knob \Macro{STARTER\_UPLOAD\_TIMEOUT}
 which sets the timeout for the starter to upload output files to the
