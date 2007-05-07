@@ -224,6 +224,14 @@ SOURCE=..\src\condor_includes\condor_cronmgr.h
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\condor_crontab.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\condor_crontab.h"
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_daemon_client\condor_daemon_client.h
 # End Source File
 # Begin Source File
@@ -297,6 +305,14 @@ SOURCE="..\src\condor_c++_util\condor_state.C"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\condor_user_policy.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\condor_user_policy.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\condor_ver_info.C"
 # End Source File
 # Begin Source File
@@ -359,6 +375,14 @@ SOURCE=..\src\condor_daemon_client\daemon_types.C
 # Begin Source File
 
 SOURCE=..\src\condor_daemon_client\daemon_types.h
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\date_util.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\date_util.h"
 # End Source File
 # Begin Source File
 
@@ -763,6 +787,14 @@ SOURCE="..\src\condor_c++_util\Regex.C"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\selector.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\selector.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\Set.h"
 # End Source File
 # Begin Source File
@@ -920,14 +952,6 @@ SOURCE="..\src\condor_c++_util\windows_firewall.C"
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\windows_firewall.h"
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_c++_util\selector.C
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_c++_util\selector.h
 # End Source File
 # End Target
 # End Project
