@@ -111,6 +111,11 @@ Save information about the installation in the specified file. This is normally
 only needed when condor_configure is called by a higher-level script, not when
 invoked by a person.
 
+--overwrite
+Always overwrite the contents of the 'sbin' directory in the installation directory.
+By default, Condor will make a backup copy of the original 'sbin' and create a new
+'sbin' directory containing only the new binaries.
+
 --verbose
 Print more information. 
 
