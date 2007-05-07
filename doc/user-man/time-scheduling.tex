@@ -1,0 +1,293 @@
+\documentclass[a4paper, 11pt]{article}
+\usepackage{setspace}
+
+\newcommand{\AdAttr}[1]{\texttt{#1}}	% ClassAd Attribute name
+\newcommand{\Attr}[1]{\texttt{#1}}	% ClassAd Attribute name again
+\newcommand{\SubmitCmd}[1]{\textbf{#1}}		% Submit command
+\newcommand{\Macro}[1]{\texttt{#1} \index{#1 macro@\texttt{#1} macro} \index{configuration macro!\texttt{#1}}}
+\newcommand{\Prog}[1]{\textit{#1}}              	% Program name
+
+%
+%  To help with typing in names of condor commands
+%    e.g., condor_submit == \Condor{submit}
+\newcommand{\Condor}[1]{\Prog{condor\_#1}}
+\newcommand{\condor}[1]{condor\_#1}
+
+
+\begin{document}
+
+\doublespacing
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Job Execution Time Scheduling}
+\label{sec:job-executetime-scheduling}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Introduction....
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Job Deferral}
+\label{sec:jobdeferral}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The job deferral functionality in Condor allows one to specify the exact date and time that a job should begin execution. Condor will attempt to match the job to an execution machine just like any other job, however, the job will wait until the exact time to begin execution. A job can also allow some flexibility for Condor to execute jobs even if they miss their execution time.
+
+%%%%%
+\subsubsection{Deferred Execution Time}
+\label{sec:jobdeferral-deferraltime}
+%%%%%
+A job's deferral time is the exact time that Condor should attempt to execute the job. The deferral time attribute is defined as an expression that evaluates to a Unix Epoch timestamp (the number of seconds elapsed since 00:00:00 on January 1, 1970, Coordinated Universal Time). This is the time that Condor will beging to execute the job.
+
+After a job is matched and all of its files have been transfered to an execution machine, Condor checks to see if the job's ad contains a deferral time. If it does, Condor calculates the number of seconds from the execution machine's current system time to the job's deferred execution time. If a job misses its execution time, that is, if the deferral time is in the past, the job is evicted from the execution machine and put on hold in the queue. If the execution time is in the future, the job is deferred until the execution time: While a job is deferred by Condor, its \AdAttr{JobStatus} is marked as Running. When the execution time arrives, the job begins to execute.
+
+Condor's behavior when it is issued job queue commands is the same for a deferred job as it is with a job that is currently executing. If a job is deferred when a Hold command is issued, the job is removed from the execution machine and is put on hold in the job queue. If a job is deferred when a Suspend command is issued, the job will continue to be deferred until its execution time; when the execution time arrives, Condor will begin execution the job but then immediately suspend it.
+
+A job that specifies a job deferral time will not be matched with a \Condor{startd} version less than 6.7.14 (December 2005).
+
+%%%%%
+\subsubsection{Missed Execution Window}
+\label{sec:jobdeferral-deferralwindow}
+%%%%%
+As stated in Section \ref{sec:jobdeferral-deferraltime}, if a job defining a deferral time arrives at an execution machine after the execution time already occurred, the job is evicted from the machine and put on hold in the job queue. This can occur, for instance, if the transfer of the files needed by a job took too long because of a slow network connection. The missed deferral window allows a job to specify that Condor should still execute a job that missed its execution time.
+
+The deferral window attribute expression is evaluated as to how far back in the past in seconds after the deferral time Condor is allowed to still execute a job. When a job arrives at an execution machine and its deferral time is less than the execution machine's current system time, Condor calculates the difference in seconds from the current time to the job's deferred execution time. If this difference is less than or equal to the deferral window, the job begins execution immediately. If this difference is greater than the deferral window, the job is evicted from the execution machine and is put on hold in the job queue.
+
+%%%%%
+\subsubsection{Examples}
+\label{sec:jobdeferral-examples}
+%%%%%
+We now present examples of how the job deferral time, deferral window, and the preparation time is used in Condor.
+
+Execute the job on January 1st, 2006 at 12:00 pm:
+
+\begin{verbatim} 
+   DeferralTime      = 1136138400
+\end{verbatim} 
+
+In this example, the job is always deferred for 60 seconds before
+executing on the execution machine:
+
+\begin{verbatim} 
+   DeferralTime      = (CurrentTime + 60)
+\end{verbatim}
+
+In this example, \SubmitCmd{DeferralTime} always evaluates to 60 seconds
+in the past from the execution machine's current system time, but the job is still allowed to execute because the \SubmitCmd{DeferralWindow} is 120 seconds:
+
+\begin{verbatim} 
+   DeferralTime     = (CurrentTime - 60)
+   DeferralWindow   = 120
+\end{verbatim}
+
+If a job defines a deferral time far in the future matches to an execution machine, potential computation cycles are lost because the deferred job has claimed the machine but is not actually executing. Other jobs could execute in the time that job was waiting for its deferral time. Thus, in the example below a job is scheduled to execute on January 1st, 2010 at 12:00 pm, but its \SubmitCmd{APPEND\_REQUIREMENTS} attribute prevents it from being matched until 60 seconds before the job should begin execution. 
+
+\begin{verbatim}
+   DeferralTime       = 1262368800
+   AppendRequirements = ($(DeferralTime) - CurrentTime) < 60
+\end{verbatim}
+
+%%%%%
+\subsubsection{Limitations}
+\label{sec:jobdeferral-limitations}
+%%%%%
+There are some limitations to Condor's job deferral feature.
+
+\begin{itemize}
+\item Job deferral is not available for Scheduler universe jobs. Scheduler universe jobs are not executed under the control of the \Condor{starter} daemon, which is needed to defer the job until the correct execution time. A Scheduler universe job ad defining the \AdAttr{DeferralTime} attribute producs a fatal error if it is submitted to \Condor{submit}.
+
+\item The time that the job begins to execute is based on the execution machine's system clock, and not the submission machine's system clock. Please be mindful of the ramifications that may occur if a job is suppose to execute at specific time and the two clock's are dramatically different.
+
+\item A job's \AdAttr{JobStatus} is always in the Running state when it is being deferred. There is currently no way to distinguish a job that is actually executing from a job that is being deferred for execution. 
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{CronTab Scheduling}
+\label{sec:crontab}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Condor's CronTab scheduling functionality allows jobs to be scheduled to executed periodically. A job's execution schedule is defined by scheduling attributes in its ad using notation much like the cron daemon in Unix systems. The scheduling and execution of jobs using Condor's CronTab feature, however, is different from Unix systems; the traditional cron daemon examines users' cron tables every minute to determine if any command need to be executed. Instead of polling the job queue looking for jobs to run every minute, Condor specifies the next execution time for a job in an expression appended to the job's \SubmitCmd{Requirements} attribute. A job's execution time is stored as the \SubmitCmd{DeferralTime} attribute (Section \ref{sec:jobdeferral}).
+
+Also, unlike the Unix cron daemon, Condor never runs more than one instance of a job at the same time. For example, if a job that is scheduled to execute every five minutes always takes ten minutes to finish, Condor will not reschedule a new runtime for the job until the job's last execution completes.
+
+%%%%%
+\subsubsection{Job Attributes}
+\label{sec:crontab-attributes}
+%%%%%
+A job's CronTab schedule is defined by a set job ad attributes. Condor uses these attributes to calculate when the next execution time for a job is.
+
+Table \ref{tab:crontab-attributes} on page \pageref{tab:crontab-attributes} lists the attributes that define an execution schedule for a job in Condor. At least one of these attributes must be defined in order for Condor to calculate an execution schedule. If one CronTab attribute is defined, the default for all the other CronTab attributes is to use all the values in the allowed values ranges.
+
+\begin{table}
+   \begin{center}
+   \begin{tabular}{ll}
+   Attribute & Allowed Values \\
+   \hline
+   \SubmitCmd{CronMinute} & 0 - 59 \\
+   \SubmitCmd{CronHour} & 0 - 23 \\
+   \SubmitCmd{CronDayOfMonth} & 1 - 31 \\
+   \SubmitCmd{CronMonth} & 1 - 12 \\
+   \SubmitCmd{CronDayOfWeek} & 0 - 7 (Sunday is 0 or 7)\\
+   \end{tabular}
+   \end{center}
+   \caption{The list of attributes used for CronTab scheduling and their value ranges}
+   \label{tab:crontab-attributes}
+\end{table}
+
+Please note that the day of a job's execution can be specified by both the \SubmitCmd{CronDayOfMonth} and the \SubmitCmd{CronDayOfWeek} attributes. If both attributes are restricted (are not '*') in a job ad, the next runtime will be when \emph{either} field matches. See the example in Section \ref{sec:crontab-examples}.
+
+%%%%%
+\subsubsection{Operators}
+\label{sec:crontab-operators}
+%%%%%
+For each CronTab attribute, there are several ways of specifying multiple values within the allowed value ranges:
+
+\begin{description}
+   \item[All Values ``*'']
+   The asterisk operator specifies that all of the allowed values for a
+   particular attribute are used for scheduling. For example, the 
+   \SubmitCmd{CronMonth} attribute below would be evaluated as the list of
+   all the months in the year (1,2,3,4,5,6,7,8,9,10,11,12), and thus, a job
+   is allowed to run any month in the year:
+   
+   \begin{verbatim}
+      CRON_MONTH   = *
+   \end{verbatim}
+
+   \item[Ranges ``-'']
+   A range creates a set of integers from all the allowed values between two
+   integers separted by a hyphen. The specified range is inclusive, and the
+   lefthand integer must be less than the righthand integer. For example,
+   the \SubmitCmd{CronHour} attribute below would be evaluated as all the
+   hours from 12:00 am (midnight) to 4:00 am (0,1,2,3,4):
+   
+   \begin{verbatim}
+      CronHour   = 0-4
+   \end{verbatim}
+   
+   \item[Lists ``,'']
+   A list is the union of the values or ranges seperated by commas. Multiple
+   enteries of the same number are ignored. In the example below,
+   \SubmitCmd{CronMinute} evaluates to 15,20,25,30 and \SubmitCmd{CronHour}
+   evaluates to 0,1,2,3,9,10,11,12,15
+   
+   \begin{verbatim}
+      CronMinute = 15,20,25,30
+      CronHour   = 0-3,9-12,15
+   \end{verbatim}
+      
+   \item[Steps ``/'']
+   Steps are used to only select specific numbers from a range based on 
+   some interval. A step is is declared by appending a range or the all
+   values operator with a forward slash ``/'' followed by an integer
+   value. In the example below, the \SubmitCmd{CronMinute}
+   attribute is evaluated as every five minutes within the specified
+   range (10,15,20,25,30) while the \SubmitCmd{CronHour} is evaluated as 
+   every three hours during the day (0,3,6,9,12,15,18,21).
+   
+   \begin{verbatim}
+      CronMinute = 10-30/5
+      CronHour   = */3
+   \end{verbatim}
+
+\end{description}
+
+%%%%%
+\subsubsection{Job Preparation Time}
+\label{sec:jobdeferral-preptime}
+%%%%%
+When a job uses the CronTab functionality, the next runtime that is calculated is
+the time that Condor will send the job's information to an execution machine.
+This may be impractical for jobs that require large files to be transferred to
+the execution machine before the job is started; by the time that all the 
+files have been transferred the job may miss its execution time. This will cause
+jobs to be continuously sent to the execution machine but always fail because Condor was not able to transfer all the necessary files before the execution time.
+
+To mitigate this problem, a job can define the \SubmitCmd{CronPrepTime}
+attribute to specify how many seconds before the actual runtime should the
+job be matched and sent to the execution machine. This allows Condor to
+make any preparations that are necessary for the job before it executes. If
+the preparation is complete and there is still more time before the job
+is to begin execution, the job is deferred.
+
+In the job ad sample below, a job is scheduled to execute at the top of every hour.
+But the job will be matched and sent to the execution machine five minutes
+before the next runtime. For example, if a job is submitted at 09:30 then the 
+next runtime will be 10:00 but Condor will attempt to send the job to
+its execution machine at 09:55.
+
+\begin{verbatim}
+   CronHour      = *
+   CronPrepTime  = 300
+\end{verbatim}
+
+%%%%%
+\subsubsection{Scheduling}
+\label{sec:crontab-scheduling}
+%%%%%
+When a job using the CronTab functionality is submitted to Condor, the \Condor{schedd} uses the job's CronTab attributes (Section \ref{sec:crontab-attributes}) to calculate the next time the job should run. Execution times are determined based on the current time rounded up to the next minute. This value is stored as the job's \AdAttr{DeferralTime} attribute. A new execution time is calculated for a job when the job first enters the job queue, the job is re-queued, or the job is released from being held. New execution times for \emph{all} jobs in the job queue using the CronTab functionality are re-calculated when a reconfiguration or a restart command is issued to the
+\Condor{schedd} daemon.
+
+A job's execution time is not always the same time that a job will receive a match and be sent to the execution machine. This is because the next time that the \Condor{schedd} will poll the job queue for job's to run may be after a job should begin execution. The job may also need to be  sent to the execution machine before its execution time if the \SubmitCmd{CronPrepTime} attribute is
+specified (Section \ref{sec:crontab-preptime}). Thus, the \Condor{schedd} attempts to start a job when the following pseudo-code boolean expression evaluates to true:
+
+\begin{verbatim}
+   ( CurrentTime + ScheddInterval ) >= ( DeferralTime - CronPrepTime )
+\end{verbatim}
+
+If the \SubmitCmd{CurrentTime} plus the number of seconds until the next time the \Condor{schedd} will check the job queue is greater than or equal to the time that the job should be submitted to the execution machine, than the job will be submitted now.
+
+Jobs using the CronTab functionality are not automatically re-queued by Condor after their execution is complete. Users must specify an appropriate \AdAttr{OnExitRemove} attribute expression to ensure that their jobs are re-queued. When a job is re-queued it will maintain the original cluster and proc id.
+
+%%%%%%
+\subsubsection{Examples}
+\label{sec:crontab-examples}
+%%%%%%
+Here are some examples of how to schedule job's in Condor to
+run at multifarious times. Please note that it is not necessary to 
+explicitly define each attribute; the default value is '*'.
+
+Run 23 minutes after every two hours, every day of the week:
+
+\begin{verbatim}
+   CronMinute      = 23
+   CronHour        = 0-23/2
+   CronDayOfMonth  = *
+   CronMonth       = *
+   CronDayOfWeek   = *
+\end{verbatim}
+
+Run at 10:30 pm on May 10th to May 20th, as well as every 
+remaining Monday in the month of May:
+
+\begin{verbatim}
+   CronMinute      = 30
+   CronHour        = 20
+   CronDayOfMonth  = 10-20
+   CronMonth       = 5
+   CronDayOfWeek   = 2
+\end{verbatim}
+
+Run on every 10 minutes and every 6 minutes before noon 
+on January 18th with a 2 minute prep time:
+
+\begin{verbatim}
+   CronMinute      = */10,*/6
+   CronHour        = 0-11
+   CronDayOfMonth  = 18
+   CronMonth       = 1
+   CronDayOfWeek   = *
+   CronPrepTime    = 120
+\end{verbatim}
+
+%%%%%%
+\subsubsection{Limitations}
+\label{sec:crontab-limitations}
+%%%%%%
+Because the Scheduler universe does not support job deferral times (Section \ref{sec:jobdeferral-limitations}), the CronTab functionality is not available for Scheduler universe jobs as well.
+
+The \Condor{schedd} is unable to guarantee that Vanilla universe or Standard universe jobs are scheduled for reoccurring execution at intervals less than \Macro{ScheddInterval}. When a Vanilla/Standard universe job completes execution and is placed back into the job queue, it may not be marked idle until after the next time it was suppose to run if the next run time is less than \Macro{ScheddInterval}. This problem does not afflict Local universe jobs.
+
+Condor cannot guarentee that a job will run at every instance specified by a CronTab schedule, especially for Vanilla universe jobs. A job must be matched with an execution machine like a normal job; if it is unable to find a match, then Condor will miss its chance for executing the job and the job must wait for the next execution time specified by the CronTab schedule.
+
+%Condor also assumes that the \Condor{schedd}'s system clock will not flucuate widly. If the system time is moved forward, the current execution times for job's will be in the past, and thus will be re-calculated. If the system time moves backwards, however, Condor will not re-calculate execution times because the 
+
+\end{document}
