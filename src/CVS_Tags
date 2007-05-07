@@ -1,3 +1,6 @@
+05/07/07 V6_8_5-{root,branch}
+  The branch for V6_8_5 off of V6_8-branch.
+
 05/01/07 V6_8-merge-6
   The state of the V6_8-branch for another merge back to the trunk.
   This has everything that will go into 6.8.5, except possibly some
