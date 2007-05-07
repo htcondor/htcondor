@@ -39,6 +39,23 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Local universe jobs now support policy expression evaluation, which includes
+the \AdAttr{ON\_EXIT\_REMOVE}, \AdAttr{ON\_EXIT\_HOLD}, \AdAttr{PERIODIC\_REMOVE},
+\AdAttr{PERIODIC\_HOLD}, and \AdAttr{PERIODIC\_RELEASE} attributes. The periodic
+expressions are evaluated at intervals determined by the
+\Macro{PERIODIC\_EXPR\_INTERVAL} configuration macro.
+
+\item Jobs can be scheduled to executed periodically, similar to the crontab
+functionality found in Unix systems. The \Condor{schedd} calculates the next
+runtime for a job based on the new \AdAttr{CRON\_MINUTE}, \AdAttr{CRON\_HOUR},
+\AdAttr{CRON\_DAY\_OF\_MONTH}, \AdAttr{CRON\_MONTH}, and
+\AdAttr{CRON\_DAY\_OF\_WEEK} attributes. A preparation time defined by the
+\AdAttr{CRON\_PREP\_TIME} attribute allows a job to be submitted to the
+execution machine before the actual time the job is to begin execution.
+Jobs that would like to be run repeatedly will need to define the
+the \AdAttr{ON\_EXIT\_REMOVE} attribute properly so that they are
+re-queued after executing each time.
+
 \item Condor now looks for its configuration file in \tt{/usr/local/etc}
 if the \Macro{CONDOR\_CONFIG} environment variable is not set and there is
 no condor\_config file located in \tt{/etc/condor}. This allows a default
