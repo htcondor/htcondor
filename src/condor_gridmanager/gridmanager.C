@@ -1018,6 +1018,7 @@ contact_schedd_next_add_job:
 
 	// Delete existing jobs
 	/////////////////////////////////////////////////////
+	errno = 0;
 	BeginTransaction();
 	if ( errno == ETIMEDOUT ) {
 		failure_line_num = __LINE__;
