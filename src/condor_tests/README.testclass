@@ -49,5 +49,6 @@ DESCRIPTION OF CURRENTLY USED TEST CLASSES
 
 quick        - very short-running tests
 long	     - long-running tests that should run less frequently
+local		 - tests for local universe
 
 TODO!!!

@@ -24,13 +24,10 @@
 #ifndef _SHADOW_USER_POLICY_H
 #define _SHADOW_USER_POLICY_H
 
+#include "condor_user_policy.h"
 #include "condor_common.h"
 #include "baseshadow.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "condor_classad.h"
-#include "user_job_policy.h"
-
-
 
 class BaseShadow;
 
@@ -39,7 +36,7 @@ class BaseShadow;
 	@see UserPolicy
 	@author Derek Wright
 */
-class ShadowUserPolicy : public Service
+class ShadowUserPolicy : public BaseUserPolicy
 {
  public:
 
@@ -53,29 +50,7 @@ class ShadowUserPolicy : public Service
 		 */
 	void init( ClassAd* job_ad_ptr, BaseShadow* shadow_ptr );
 
-		/// Start a timer to evaluate the periodic policy
-	void startTimer( void );
-
-		/// Cancel our periodic timer
-	void cancelTimer( void );
-
-		/** Check the UserPolicy to see if we should do anything
-			special with the job once it has exited.  This method will
-			act on the return value from UserPolicy.AnalyzePolicy(),
-			and perform all the necessary actions as appropriate.
-		*/
-	void checkAtExit( void );
-
-		/** Check the UserPolicy to see if we should do anything
-			special with the job as it is running.  This method will
-			act on the return value from UserPolicy.AnalyzePolicy(),
-			and perform all the necessary actions as appropriate.
-			This method is registered as a periodic timer handler
-			while the job is executing.
-		*/
-	void checkPeriodic( void );
-
- private:
+ protected:
 
 		/** This function is called whenever the UserPolicy code has
 			decided to do something with the job.  In all cases, we
@@ -89,15 +64,18 @@ class ShadowUserPolicy : public Service
 			UserPolicy::AnalyzePolicy(). 
 		*/
 	void doAction( int action, bool is_periodic );
-
-	void UpdateJobTime( float *old_run_time );
-	void RestoreJobTime( float old_run_time );
+	
+		/**
+		 * Figure out the when the job was started. The times will be
+		 * the number of seconds elapsed since 00:00:00 on January 1, 1970,
+		 * Coordinated Universal Time (UTC)
+		 * 
+		 * @return the UTC timestamp of the job's birthday
+		 **/
+	int getJobBirthday( );
 
 		// Data
-	UserPolicy user_policy;
 	BaseShadow* shadow;
-	ClassAd* job_ad;
-	int tid;
 
 };
 

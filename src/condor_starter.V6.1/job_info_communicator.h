@@ -73,6 +73,23 @@ public:
 	void setStdin( const char* path );
 	void setStdout( const char* path );
 	void setStderr( const char* path );
+	
+		// // // // // // // // // // // //
+		// Job Actions
+		// // // // // // // // // // // //
+		
+		/**
+		 * These are to perform specific actions against a job,
+		 * which is different from methods such as gotHold() which
+		 * are merely just a way for a Starter to tell us that a
+		 * change occurred. These need to be implemented in the
+		 * derived classes. Currently, on JICLocalSchedd only has
+		 * any real logic to do something with these.
+		 **/
+	virtual bool holdJob( const char* ) = 0;
+	virtual bool removeJob( const char* ) = 0;
+	virtual bool terminateJob( const char* ) = 0;
+	virtual bool requeueJob( const char* ) = 0;
 
 		// // // // // // // // // // // //
 		// Information about the job 

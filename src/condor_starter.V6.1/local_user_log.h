@@ -110,13 +110,6 @@ public:
 		*/
 	bool logJobExit( ClassAd* ad, int exit_reason );
 
-
-private:
-
-		// // // // // // // // // // // //
-		// Private helper methods
-		// // // // // // // // // // // //
-
 		/** Log a terminate event for this job.
 		*/
 	bool logTerminate( ClassAd* ad );
@@ -128,6 +121,21 @@ private:
 			@param checkpointed did this job checkpoint or not?
 		*/
 	bool logEvict( ClassAd* ad, bool checkpointed );
+	
+		/**
+		 * Writes an EVICT event to the user log with the requeue flag
+		 * set to true. We will stuff information about why the job
+		 * exited into the event object, such as the exit signal.
+		 * 
+		 * @param ad - the job to update the user log for
+		 * @param checkpointed - whether the job was checkpointed or not
+		 **/
+	bool logRequeueEvent( ClassAd* ad, bool checkpointed );
+
+private:
+		// // // // // // // // // // // //
+		// Private helper methods
+		// // // // // // // // // // // //
 
 		/** Since both logTerminate() and logEvict() want to include
 			rusage information, we have a shared helper function to
@@ -135,7 +143,6 @@ private:
 			initialize an rusage structure.
 		*/ 
 	struct rusage getRusageFromAd( ClassAd* ad );
-
 
 		// // // // // // // // // // // //
 		// Private data members

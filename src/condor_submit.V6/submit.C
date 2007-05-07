@@ -40,7 +40,6 @@
 #include "condor_scanner.h"
 #include "condor_distribution.h"
 #include "condor_ver_info.h"
-//#include "condor_crontab.h"
 #if !defined(WIN32)
 #include <pwd.h>
 #include <sys/stat.h>
@@ -76,6 +75,8 @@
 #include "fs_util.h"
 #include "dc_transferd.h"
 #include "condor_ftp.h"
+#include "condor_crontab.h"
+#include "../condor_schedd.V6/scheduler.h"
 
 #include "list.h"
 
@@ -150,6 +151,15 @@ char* tdp_input = NULL;
 #if defined(WIN32)
 char* RunAsOwnerCredD = NULL;
 #endif
+
+//
+// The default polling interval for the schedd
+//
+extern const int SCHEDD_INTERVAL_DEFAULT;
+//
+// The default job deferral prep time
+//
+extern const int JOB_DEFERRAL_PREP_DEFAULT;
 
 char* LogNotesVal = NULL;
 char* UserNotesVal = NULL;
@@ -285,8 +295,24 @@ char    *ParallelScriptShadow  = "parallel_script_shadow";
 char    *ParallelScriptStarter = "parallel_script_starter"; 
 
 char    *MaxJobRetirementTime = "max_job_retirement_time";
-char	*DeferralTime = "deferral_time";
+
+//
+// Job Deferral Parameters
+//
+char	*DeferralTime	= "deferral_time";
 char	*DeferralWindow = "deferral_window";
+char	*DeferralPrep	= "deferral_prep";
+
+//
+// CronTab Parameters
+// The index value below should be the # of parameters
+//
+const int CronFields = 5;
+char	*CronMinute		= "cron_minute";
+char	*CronHour		= "cron_hour";
+char	*CronDayOfMonth	= "cron_day_of_month";
+char	*CronMonth		= "cron_month";
+char	*CronDayOfWeek	= "cron_day_of_week";
 
 #if defined(WIN32)
 char	*RunAsOwner = "run_as_owner";
@@ -314,6 +340,7 @@ void 	SetPriority();
 void 	SetNotification();
 void	SetWantRemoteIO(void);
 void 	SetNotifyUser ();
+void 	SetCronTab();
 void	SetRemoteInitialDir();
 void	SetExitRequirements();
 void 	SetArguments();
@@ -719,7 +746,7 @@ main( int argc, char *argv[] )
 	// ensure I have a known transfer method
 	if (STMethod == STM_UNKNOWN) {
 		fprintf( stderr, 
-			"%s: Unknown sandbox transfer method: %s\n", method.Value());
+			"%s: Unknown sandbox transfer method: %s\n", MyName, method.Value());
 		usage();
 		exit(1);
 	}
@@ -3056,6 +3083,65 @@ SetNotifyUser()
 	}
 }
 
+/**
+ * We search to see if the ad has any CronTab attributes defined
+ * If so, then we will check to make sure they are using the 
+ * proper syntax and then stuff them in the ad
+ **/
+void
+SetCronTab()
+{
+		//
+		// For convienence I put all the attributes in array
+		// and just run through the ad looking for them
+		//
+	const char* attributes[] = { CronMinute,
+								 CronHour,
+								 CronDayOfMonth,
+								 CronMonth,
+								 CronDayOfWeek,
+								};
+	int ctr;
+	char *param = NULL;
+	for ( ctr = 0; ctr < CronFields; ctr++ ) {
+		param = condor_param( attributes[ctr], CronTab::attributes[ctr] );
+		if ( param != NULL ) {
+				//
+				// We'll try to be nice and validate it first
+				//
+			MyString error;
+			if ( ! CronTab::validateParameter( ctr, param, error ) ) {
+				fprintf( stderr, "ERROR: %s\n", error.Value() );
+				DoCleanup( 0, 0, NULL );
+				exit( 1 );
+			}
+				//
+				// Go ahead and stuff it in the job ad now
+				// The parameters must be wrapped in quotation marks
+				//				
+			sprintf (buffer, "%s = \"%s\"", CronTab::attributes[ctr], param );
+			InsertJobExpr (buffer);
+			free( param );
+			NeedsJobDeferral = true;
+		}		
+	} // FOR
+		//
+		// Validation
+		// Because the scheduler universe doesn't use a Starter,
+		// we can't let them use the CronTab scheduling which needs 
+		// to be able to use the job deferral feature
+		//
+	if ( NeedsJobDeferral && JobUniverse == CONDOR_UNIVERSE_SCHEDULER ) {
+		fprintf( stderr, "\nCronTab scheduling does not work for scheduler "
+						 "universe jobs.\n"
+						 "Consider submitting this job using the local "
+						 "universe, instead\n" );
+		DoCleanup( 0, 0, NULL );
+		fprintf( stderr, "Error in submit file\n" );
+		exit(1);
+	} // validation	
+}
+
 void
 SetMatchListLen()
 {
@@ -3228,41 +3314,77 @@ SetJobDeferral() {
 		sprintf (buffer, "%s = %s", ATTR_DEFERRAL_TIME, temp );
 		InsertJobExpr (buffer);
 		free( temp );
+		NeedsJobDeferral = true;
+	}
+	
+		//
+		// If this job needs the job deferral functionality, we
+		// need to make sure we always add in the DeferralWindow
+		// and the DeferralPrep attributes.
+		// We have a separate if clause because SetCronTab() can
+		// also set NeedsJobDeferral
+		//
+	if ( NeedsJobDeferral ) {		
+			//
+			// Job Deferral Window
+			// The window allows for some slack if the Starter
+			// misses the exact execute time for a job
+			//
+		temp = condor_param( DeferralWindow, ATTR_DEFERRAL_WINDOW );
+		if ( temp != NULL ) {
+			sprintf (buffer, "%s = %s", ATTR_DEFERRAL_WINDOW, temp );	
+			free( temp );
+		} else {
+			sprintf( buffer, "%s = 0", ATTR_DEFERRAL_WINDOW );
+		}
+		InsertJobExpr (buffer);
+	
+			//
+			// Job Deferral Prep Time
+			// This is how many seconds before the job should run it is
+			// sent over to the starter
+			//
+		temp = condor_param( DeferralPrep, ATTR_DEFERRAL_PREP );
+		if ( temp != NULL ) {
+			sprintf (buffer, "%s = %s", ATTR_DEFERRAL_PREP, temp );	
+			free( temp );
+		} else {
+			sprintf( buffer, "%s = %d", ATTR_DEFERRAL_PREP,
+										JOB_DEFERRAL_PREP_DEFAULT );
+		}
+		InsertJobExpr (buffer);
 		
 			//
-			// We set this flag to true so that SetRequirements()
-			// will add the HasDeferral requirement
-			// Hack to skip Local universe for now
+			// Schedd Polling Interval
+			// We need make sure we have this in the job ad as well
+			// because it is used by the Requirements expression generated
+			// in check_requirements() for job deferral 
 			//
-		if ( JobUniverse != CONDOR_UNIVERSE_LOCAL ) { 
-			NeedsJobDeferral = true;
+		temp = param( "SCHEDD_INTERVAL" );
+		if ( temp != NULL ) {
+			sprintf( buffer, "%s = %s", ATTR_SCHEDD_INTERVAL, temp );
+			free( temp );
+		} else {
+			sprintf( buffer, "%s = %d", ATTR_SCHEDD_INTERVAL,
+										SCHEDD_INTERVAL_DEFAULT );
 		}
-	}
-	
-		//
-		// Job Deferral Window
-		// The window allows for some slack if the Starter
-		// misses the exact execute time for a job
-		//
-	temp = condor_param( DeferralWindow, ATTR_DEFERRAL_WINDOW );
-	if ( temp != NULL ) {
-		sprintf (buffer, "%s = %s", ATTR_DEFERRAL_WINDOW, temp );
 		InsertJobExpr (buffer);
-		free( temp );
-	}
 	
-		//
-		// Validation
-		// Because the scheduler universe doesn't use a Starter,
-		// we can't let them use the job deferral feature
-		//
-	if ( NeedsJobDeferral && JobUniverse == CONDOR_UNIVERSE_SCHEDULER ) {
-		fprintf( stderr, "\nScheduler universe jobs are unable to support "
-						 "job deferral submissions.\n" );
-		DoCleanup( 0, 0, NULL );
-		fprintf( stderr, "Error in submit file\n" );
-		exit(1);
-	} // validation	
+			//
+			// Validation
+			// Because the scheduler universe doesn't use a Starter,
+			// we can't let them use the job deferral feature
+			//
+		if ( JobUniverse == CONDOR_UNIVERSE_SCHEDULER ) {
+			fprintf( stderr, "\nJob deferral scheduling does not work for scheduler "
+							 "universe jobs.\n"
+							 "Consider submitting this job using the local "
+							 "universe, instead\n" );
+			DoCleanup( 0, 0, NULL );
+			fprintf( stderr, "Error in submit file\n" );
+			exit(1);
+		} // validation	
+	}
 }
 
 void
@@ -5027,11 +5149,17 @@ queue(int num)
 #endif
 		SetPerFileEncryption();  // must be called _before_ SetRequirements()
 		SetImageSize();		// must be called _after_ SetTransferFiles()
-		SetJobDeferral();	// must be called _before SetRequirements()
 		
 			//
-			// Must be called _after_ SetTransferFiles(), SetJobDeferral()
-			// and SetPerFileEncryption()
+			// SetCronTab() must be called before SetJobDeferral()
+			// Both of these need to be called before SetRequirements()
+			//
+		SetCronTab();
+		SetJobDeferral();
+		
+			//
+			// Must be called _after_ SetTransferFiles(), SetJobDeferral(),
+			// SetCronTab(), and SetPerFileEncryption()
 			//
 		SetRequirements();	
 		
@@ -5415,11 +5543,47 @@ check_requirements( char *orig )
 			//
 			// Add the HasJobDeferral to the attributes so that it will
 			// match with a Starter that can actually provide this feature
+			// We only need to do this if the job's universe isn't local
+			// This is because the schedd doesn't pull out the Starter's
+			// machine ad when trying to match local universe jobs
 			//
+			//
+		if ( JobUniverse != CONDOR_UNIVERSE_LOCAL ) {
+			(void)strcat( answer, " && (" );
+			(void)strcat( answer, ATTR_HAS_JOB_DEFERRAL );
+			(void)strcat( answer, ")" );
+		}
+		
+			//
+			//
+			// Prepare our new requirement attribute
+			// This nifty expression will evaluate to true when
+			// the job's prep start time is before the next schedd
+			// polling interval. We also have a nice clause to prevent
+			// our job from being matched and executed after it could
+			// possibly run
+			//
+			//	( ( ATTR_CURRENT_TIME + ATTR_SCHEDD_INTERVAL ) >= 
+			//	  ( ATTR_DEFERRAL_TIME - ATTR_DEFERRAL_PREP ) )
+			//  &&
+			//    ( ATTR_CURRENT_TIME < 
+			//    ( ATTR_DEFFERAL_TIME + ATTR_DEFERRAL_WINDOW ) )
+			//  )
+			//
+		MyString attrib;
+		attrib.sprintf( "( ( %s + %s ) >= ( %s - %s ) ) && "\
+						"( %s < ( %s + %s ) )",
+						ATTR_CURRENT_TIME,
+						ATTR_SCHEDD_INTERVAL,
+						ATTR_DEFERRAL_TIME,
+						ATTR_DEFERRAL_PREP,
+						ATTR_CURRENT_TIME,
+						ATTR_DEFERRAL_TIME,
+						ATTR_DEFERRAL_WINDOW );
 		(void)strcat( answer, " && (" );
-		(void)strcat( answer, ATTR_HAS_JOB_DEFERRAL );
-		(void)strcat( answer, ")" );
-	}
+		(void)strcat( answer, attrib.Value() );
+		(void)strcat( answer, ")" );			
+	} // !seenBefore
 
 #if defined(WIN32)
 		//

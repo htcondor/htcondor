@@ -140,6 +140,13 @@ main_init(int argc, char* argv[])
 		// clear out auto cluster id attributes
 		WalkJobQueue( (int(*)(ClassAd *))clear_autocluster_id );
 	}
+	
+		//
+		// Update the SchedDInterval attributes in jobs if they
+		// have it defined. This will be for JobDeferral and
+		// CronTab jobs
+		//
+	WalkJobQueue( (int(*)(ClassAd *))::updateSchedDInterval );
 
 		// Initialize the dedicated scheduler stuff
 	dedicated_scheduler.initialize();

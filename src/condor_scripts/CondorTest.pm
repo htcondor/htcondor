@@ -53,7 +53,7 @@ BEGIN
 
 sub Reset
 {
-    %machine_ads = {};
+    %machine_ads = ();
 	Condor::Reset();
 }
 
@@ -199,6 +199,16 @@ sub RegisterTimed
 	# when we call "runTest" and similar calls at the start.
 
 	CheckTimedRegistrations();
+}
+
+sub RemoveTimed
+{
+    my $handle = shift || croak "missing handle argument";
+
+    $test{$handle}{"RegisterTimed"} = undef;
+    $test{$handle}{"RegisterTimedWait"} = undef;
+    Condor::debug( "Remove timer.......\n");
+    Condor::RemoveTimed( );
 }
 
 sub DefaultOutputTest

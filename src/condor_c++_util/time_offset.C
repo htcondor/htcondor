@@ -370,4 +370,3 @@ time_offset_initPacket() {
 	packet.localDepart = time( NULL );	
 	return ( packet );
 }
-

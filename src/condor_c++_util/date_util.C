@@ -22,6 +22,7 @@
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "date_util.h"
+#include "condor_common.h"
 #include <math.h>
   
 //

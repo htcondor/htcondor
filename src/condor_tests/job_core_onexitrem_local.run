@@ -1,0 +1,30 @@
+#! /usr/bin/env perl
+use CondorTest;
+
+$testname = 'Condor ON_EXIT_REMOVE policy test - local U';
+
+my $nostatus = CondorTest::verbose_system("./job_core_onexitrem-false_local.pl");
+my $willstatus = CondorTest::verbose_system("./job_core_onexitrem-true_local.pl");
+
+my %listoftests; 
+$listoftests{"corename"} = "job_core_onexitrem_local";
+$listoftests{"tests"} = [ "job_core_onexitrem-false_local", "job_core_onexitrem-true_local"];
+$listoftests{"extensions"} = [ ".cmd", ".cmd.out", ".err", ".out", ".log"];
+CondorTest::MergeOutputFiles(\%listoftests);
+
+if($nostatus != 0)
+{
+	print "ON_EXIT_REMOVE: failed no trigger test\n";
+}
+
+if($willstatus != 0)
+{
+	print "ON_EXIT_REMOVE: failed trigger test\n";
+}
+
+if(($willstatus != 0) || ($nostatus != 0))
+{
+	die "Failed one ON_EXIT_REMOVE test\n";
+}
+
+

@@ -68,7 +68,7 @@ sub Reset
     $cluster = 0;
     $num_active_jobs = 0;
     $saw_submit = 0;
-    %submit_info = {};
+    %submit_info = ();
 
 	$submit_time = 0;
 	$timer_time = 0;
@@ -476,10 +476,16 @@ sub RegisterTimed
     my $sub = shift || croak "missing callback argument";
     my $delta = shift || croak "missing time argument";
 
-	#print "timer set for $delta\n";
 	$timer_time = time;
     $TimedCallback = $sub;
 	$TimedCallbackWait = $delta;
+}
+
+sub RemoveTimed
+{
+    $timer_time = undef;
+    $TimedCallback = undef;
+    $TimedCallbackWait = undef;
 }
 
 sub Wait

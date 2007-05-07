@@ -1,0 +1,13 @@
+#! /usr/bin/env perl
+use CondorTest;
+
+$testname = 'Condor Job Deferral Test REMOVE - Vanilla Universe';
+
+##
+## We need to pass what universe we would like to test
+##
+my $result = CondorTest::verbose_system("./job_core_time-deferral-remove.pl vanilla");
+if ( $result != 0 ) {
+	die( "$testname FAILED!\n" );
+}
+exit(0);

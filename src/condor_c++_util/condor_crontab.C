@@ -21,13 +21,13 @@
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#include "condor_crontab.h"
 #include "condor_common.h"
+#include "condor_crontab.h"
 #include "condor_classad.h"
 #include "condor_debug.h"
 #include "MyString.h"
 #include "extArray.h"
-//#include "RegExer.h"
+#include "regex.h"
 #include "date_util.h"
 
 //
@@ -39,51 +39,41 @@ const char* CronTab::attributes[] = {	ATTR_CRON_MINUTES,
 										ATTR_CRON_MONTHS,
 										ATTR_CRON_DAYS_OF_WEEK
 };
-
+	
 //
-// Setup the regex we will use to validate the cron
-// parameters. Since C++ does not have static initialization
-// blocks, we can't check here to make sure the object was 
-// initialized properly. We will have to check in CronTab::init()
-// Since the pattern is hardcoded, we better have a good reason
-// for failing!
-// 
-//RegExer CronTab::regex( "[^\\/0-9"
-//						CRONTAB_DELIMITER
-//						CRONTAB_RANGE
-//						CRONTAB_STEP
-//						CRONTAB_WILDCARD
-//						"\\/*]" );
-						
+// We use a single Regex object for all instances of CronTab
 //
-// Default Constructor
-// 
+Regex CronTab::regex;
+		
+/**
+ * Default Constructor
+ **/
 CronTab::CronTab()
 {
-	//
-	// Do nothing!
-	//
 }
 
-//
-// Constructor
-// This constuctor can be given a ClassAd from which the schedule
-// values can be plucked out.
-//
+/**
+ * Constructor
+ * This constuctor can be given a ClassAd from which the schedule
+ * values can be plucked out. It is assumed that the ad will have
+ * at least one CronTab attribute defined.
+ * 
+ * @param ad - the ClassAd to pull the CronTab attributes from.
+ **/
 CronTab::CronTab( ClassAd *ad )
 {
 		//
 		// Pull out the different parameters from the ClassAd
 		//
-	char buffer[512];
 	for ( int ctr = 0; ctr < CRONTAB_FIELDS; ctr++ ) {
+		MyString buffer;
 			//
 			// First get out the parameter value
 			//
-		if ( ad->LookupString( this->attributes[ctr], buffer, 512 ) ) {
+		if ( ad->LookupString( this->attributes[ctr], buffer ) ) {
 			dprintf( D_FULLDEBUG, "CronTab: Pulled out '%s' for %s\n",
-							buffer, this->attributes[ctr] );
-			this->parameters[ctr] = new MyString( buffer );
+						buffer.Value(), this->attributes[ctr] );
+			this->parameters[ctr] = new MyString( buffer.Value() );
 			//
 			// The parameter is empty, we'll use the wildcard
 			//
@@ -93,19 +83,24 @@ CronTab::CronTab( ClassAd *ad )
 			this->parameters[ctr] = new MyString( CRONTAB_WILDCARD );
 		}
 	} // FOR
-		//
-		// Initialize
-		//
 	this->init();
 }
 
-//
-// Constuctor
-// Provided to add backwards capabilities for cronos.c
-// Using integers really limits what can be done for scheduling
-// The STAR constant has been replaced with CRONTAB_CRONOS_STAR
-// Note that we are also not providing scheduling down to the second
-//
+/**
+ * Constuctor
+ * Provided to add backwards capabilities for cronos.c
+ * Using integers really limits what can be done for scheduling
+ * The STAR constant has been replaced with CRONTAB_CRONOS_STAR
+ * Note that we are also not providing scheduling down to the second
+ * These arguments can only be single values. If you want to use the more
+ * complex syntax you'll have to use strings
+ * 
+ * @param minutes - the minutes attribute (0 - 59)
+ * @param hours - the hours attribute (0 - 23)
+ * @param days_of_month - a day in a month (1 - 31, depending on the month)
+ * @param months - the months attribute (1 - 12)
+ * @param days_of_week - a day in the week (0 - 7, Sunday is 0 or 7)
+ **/
 CronTab::CronTab(	int minutes,
 					int hours,
 					int days_of_month,
@@ -140,17 +135,20 @@ CronTab::CronTab(	int minutes,
 	} else {
 		this->parameters[CRONTAB_DOW_IDX] = new MyString( days_of_week );
 	}
-		//
-		// Initialize
-		//
 	this->init();
 }
-								
-//
-// Constructor
-// Instead of being given a ClassAd, we can be given string values
-// following the same format to create a cron schedule
-//
+
+/**
+ * Constructor
+ * Instead of being given a ClassAd, we can be given string values
+ * following the same format to create a cron schedule
+ * 
+ * @param minutes
+ * @param hours
+ * @param days_of_month
+ * @param months
+ * @param days_of_week
+ **/
 CronTab::CronTab(	const char* minutes,
 					const char* hours,
 					const char* days_of_month,
@@ -164,22 +162,16 @@ CronTab::CronTab(	const char* minutes,
 	this->parameters[CRONTAB_DOM_IDX]		= new MyString( days_of_month );
 	this->parameters[CRONTAB_MONTHS_IDX]	= new MyString( months );
 	this->parameters[CRONTAB_DOW_IDX]		= new MyString( days_of_week );
-	
-		//
-		// Initialize
-		//
+
 	this->init();
 }
 
-//
-// Deconstructor
-// Remove our array lists and parameters that we have
-// dynamically allocated
-//
+/**
+ * Deconstructor
+ * Remove our array lists and parameters that we have
+ * dynamically allocated
+ **/
 CronTab::~CronTab() {
-		//
-		// 'delete []' didn't work so I'm doing this
-		//
 	int ctr;
 	for ( ctr = 0; ctr < CRONTAB_FIELDS; ctr++ ) {
 		if ( this->ranges[ctr] )		delete this->ranges[ctr];
@@ -187,14 +179,16 @@ CronTab::~CronTab() {
 	} // FOR
 }
 
-//
-// needsCronTab()
-// This is a static helper method that is given a ClassAd object
-// and will return true a CronTab scheduler object should be 
-// created for it. This is for convience so that we are not
-// instantiating a CronTab object for every ClassAd and then
-// checking if the initialization failed
-//
+/**
+ * This is a static helper method that is given a ClassAd object
+ * and will return true a CronTab scheduler object should be 
+ * created for it. This is for convience so that we are not
+ * instantiating a CronTab object for every ClassAd and then
+ * checking if the initialization failed
+ *
+ * @param ad - the ClassAd to check whether it has CronTab attributes
+ * @return true if this ad has defined a CronTab schedule
+ **/
 bool
 CronTab::needsCronTab( ClassAd *ad ) {
 		//
@@ -202,13 +196,12 @@ CronTab::needsCronTab( ClassAd *ad ) {
 		// one of the attributes in the ClassAd
 		//
 	bool ret = false;
-	char buffer[512];
 	int ctr;
 	for ( ctr = 0; ctr < CRONTAB_FIELDS; ctr++ ) {
 			//
 			// As soon as we find one we can quit
 			//
-		if ( ad->LookupString( CronTab::attributes[ctr], buffer ) ) {
+		if ( ad->Lookup( CronTab::attributes[ctr] ) ) {
 			ret = true;
 			break;
 		}
@@ -216,9 +209,15 @@ CronTab::needsCronTab( ClassAd *ad ) {
 	return ( ret );
 }
 
-//
-// validate()
-//
+/**
+ * Validate that all the CronTab parameters in a ClassAd are
+ * valid syntax. If not, we'll report an error message in 
+ * the string passed in
+ *
+ * @param ad - the ClassAd to check the syntax for
+ * @param error - where the error message will be stored if there's a problem
+ * @return true if ad had valid CronTab paramter syntax
+ **/
 bool
 CronTab::validate( ClassAd *ad, MyString &error ) {
 	bool ret = true;
@@ -227,44 +226,53 @@ CronTab::validate( ClassAd *ad, MyString &error ) {
 		// If one our attribute fields is defined, then check
 		// to make sure that it has valid syntax
 		//
-	char *buffer = NULL;
 	int ctr;
 	for ( ctr = 0; ctr < CRONTAB_FIELDS; ctr++ ) {
-		MyString curError;
+		MyString buffer;
 			//
 			// If the validation fails, we keep going
 			// so that they can see all the error messages about
 			// their parameters at once
 			//
 		if ( ad->LookupString( CronTab::attributes[ctr], buffer ) ) {
-			if ( !CronTab::validateParameter( ctr, buffer, curError ) ) {
+			MyString curError;
+			if ( !CronTab::validateParameter( ctr, buffer.Value(), curError ) ) {
 				ret = false;
-					//
-					// Add this error message to our list
-					//
 				error += curError;
 				error += "\n";
 			}
-			free( buffer );
 		}
 	} // FOR
 	return ( ret );
 }
 
-
-//
-// getError()
-// Get back all the error messages that may have occured for
-// this instantiation of the object
-//
+/**
+ * Get back all the error messages that may have occured for
+ * this instantiation of the object. This is different from
+ * the error messages created by the static helper methods
+ * 
+ * @return the error message for this object
+ **/
 MyString
 CronTab::getError() {
 	return ( this->errorLog );
 }
 
-//
-// validateParameter()
-//
+/**
+ * Validates that a single parameter has valid syntax. We are passed
+ * which attribute index we are testing so that we can have an 
+ * informative error message. Our validation isn't very strict.
+ * We use a regular expression to make sure that there are no
+ * characeters other than the ones that we allow
+ *
+ * @param attribute_idx - the index for this parameter in CronTab::attributes
+ * @param parameter - the parameter string to validate
+ * @param error - where the error message will be stored if there's a problem
+ * @return true if the parameter was a valid CronTab attribute
+ * 
+ * @TODO Write a more complicated regex that validates syntax and not
+ * 		 just the characters
+ **/
 bool
 CronTab::validateParameter( int attribute_idx, const char *parameter,
 							MyString &error ) {
@@ -273,7 +281,8 @@ CronTab::validateParameter( int attribute_idx, const char *parameter,
 		// Make sure there are only valid characters 
 		// in the parameter string
 		//
-	if ( false ) { //CronTab::regex.match( (char*)parameter ) ) {
+	MyString temp(parameter);
+	if ( CronTab::regex.match( temp ) ) {
 		error  = "Invalid parameter value '";
 		error += parameter;
 		error += "' for ";
@@ -283,14 +292,33 @@ CronTab::validateParameter( int attribute_idx, const char *parameter,
 	return ( ret );
 }
 
-//
-// init()
-// Initializes our object to prepare it for being asked 
-// what the next run time should be. If a parameter is invalid
-// we will not allow them to query us for runtimes
-//
+/**
+ * Initializes our object to prepare it for being asked 
+ * what the next run time should be. If a parameter is invalid
+ * we will not allow them to query us for runtimes
+ **/
 void
 CronTab::init() {
+		//
+		// There should be only one Regex object shared for all instances
+		// of our object since the pattern that it needs to match is the same
+		// So we only need to compile the pattern once
+		//
+	if ( ! CronTab::regex.isInitialized() ) {
+		const char *errptr;
+		int erroffset;
+		MyString pattern( CRONTAB_PARAMETER_PATTERN ) ;
+			//
+			// It's a big problem if we can't compile the pattern, so
+			// we'll want to dump out right now
+			//
+		if ( ! CronTab::regex.compile( pattern, &errptr, &erroffset )) {
+			MyString error = "CronTab: Failed to compile Regex - ";
+			error += pattern;
+			EXCEPT( (char*)error.Value() );
+		}
+	}
+	
 		//
 		// Set the last runtime as empty
 		//
@@ -299,23 +327,6 @@ CronTab::init() {
 		// We're invalid until we parse all the parameters
 		//
 	this->valid = false;
-	
-		//
-		// Check to see if we were able to instantiate our
-		// regex object statically
-		//
-//	if ( &CronTab::regex == NULL || CronTab::regex.getErrno() != 0 ) {
-//		MyString errorMessage("CronTab: Failed to instantiate Regex - ");
-//			//
-//			// Pluck out the error message
-//			//
-//		if ( &CronTab::regex == NULL ) {
-//			errorMessage += CronTab::regex.getStrerror();
-//		} else {
-//			errorMessage += "Unable to allocate memory";
-//		}
-//		EXCEPT( (char*)errorMessage.Value() );
-//	}
 	
 		//
 		// Now run through all the parameters and create the cron schedule
@@ -338,9 +349,6 @@ CronTab::init() {
 	bool failed = false;
 	int ctr;
 	for ( ctr = 0; ctr < CRONTAB_FIELDS; ctr++ ) {
-			//
-			// Instantiate our queue
-			//
 		this->ranges[ctr] = new ExtArray<int>();			
 			//
 			// Call to expand the parameter
@@ -365,13 +373,15 @@ CronTab::init() {
 	return;
 }  
 
-//
-// nextRunTime()
-// Returns the next execution time for our cron schedule from
-// the current time
-// The times are the number of seconds elapsed since 00:00:00 on
-// January 1, 1970, Coordinated Universal Time (UTC)
-//
+/**
+ * Returns the next execution time for our cron schedule from
+ * the current time. The times are the number of seconds
+ * elapsed since 00:00:00 on January 1, 1970, Coordinated Universal Time (UTC)
+ * If no valid run time could be calculated, this method will
+ * return CRONTAB_INVALID
+ * 
+ * @return the next run time for the object's schedule starting at the current time
+ **/
 long
 CronTab::nextRunTime( ) {
 		//
@@ -380,23 +390,27 @@ CronTab::nextRunTime( ) {
 	return ( this->nextRunTime( (long)time( NULL ) ) );
 }
 
-//
-// nextRunTime()
-// Returns the next execution time for our cron schedule from the
-// provided timestamp. We will only return an execution time if we
-// have been initialized properly and the valid flag is true. The 
-// timestamp that we calculate here will be stored and can be accessed
-// again with lastRun().
-// The times are the number of seconds elapsed since 00:00:00 on
-// January 1, 1970, Coordinated Universal Time (UTC)
-//
-// This may be useful if somebody wants to figure out the next 5 runs
-// for a job if they keep feeding us the times we return
-//
+/**
+ * Returns the next execution time for our cron schedule from the
+ * provided timestamp. We will only return an execution time if we
+ * have been initialized properly and the valid flag is true. The 
+ * timestamp that we calculate here will be stored and can be accessed
+ * again with lastRun().
+ * The times are the number of seconds elapsed since 00:00:00 on
+ * January 1, 1970, Coordinated Universal Time (UTC)
+ * If no valid run time could be calculated, this method will
+ * return CRONTAB_INVALID
+ * 
+ * This may be useful if somebody wants to figure out the next 5 runs
+ * for a job if they keep feeding us the times we return
+ * 
+ * @param timestamp - the starting time to get the next run time for
+ * @return the next run time for the object's schedule
+ **/
 long
 CronTab::nextRunTime( long timestamp ) {
 	long runtime = CRONTAB_INVALID;
-	struct tm	*tm;
+	struct tm *tm;
 
 		//
 		// We can only look for the next runtime if we 
@@ -447,6 +461,10 @@ CronTab::nextRunTime( long timestamp ) {
 	
 		//
 		// If we get a match then create the timestamp for it
+		// Notice that we have to set explicitly set the the seconds,
+		// offset the month by 1, and change the year to be based
+		// off of 1900. We also use the same daylight saving time
+		// attribute from when got the time struct up above
 		//
 	if ( this->matchFields( fields, match, CRONTAB_FIELDS - 2 ) ) {
 		struct tm matchTime;
@@ -467,8 +485,8 @@ CronTab::nextRunTime( long timestamp ) {
 			//
 		if ( runtime < timestamp ) {
 			dprintf( D_FULLDEBUG, "CronTab: Generated a runtime that is in "
-								  "the past (%d < %d)\n",	(int)runtime,
-							   								(int)timestamp );
+								  "the past (%d < %d)\n",
+								  (int)runtime, (int)timestamp );
 			runtime = CRONTAB_INVALID;
 		}
 		
@@ -478,33 +496,38 @@ CronTab::nextRunTime( long timestamp ) {
 		//
 	} else {
 		dprintf( D_FULLDEBUG, "CronTab: Failed to find a match for timestamp %d\n",
-														(int)timestamp );
+							  (int)timestamp );
 	}
 	
 	this->lastRunTime = runtime;
 	return ( runtime );
 }
 
-//
-// matchFields()
-// Important helper function that actually does the grunt work of
-// find the next runtime. We need to be given an array of the different
-// time fields so that we can match the current time with different 
-// parameters. The function will recursively call itself until
-// it can find a match at the MINUTES level. If one recursive call
-// cannot find a match, it will return false and the previous level
-// will increment its range index by one and try to find a match. On the 
-// the subsequent call useFirst will be set to true meaning that the level
-// does not need to look for a value in the range that is greater than or
-// equal to the current time value. If the failing returns to the MONTHS level, 
-// that means we've exhausted all our possiblities from the current time to the
-// the end of the year. So we'll increase the year by 1 and try the same logic again
-// using January 1st as the starting point.
-// The array match will contain the timestamp information of the job's
-// next run time
-//
+/**
+ * Important helper function that actually does the grunt work of
+ * find the next runtime. We need to be given an array of the different
+ * time fields so that we can match the current time with different 
+ * parameters. The function will recursively call itself until
+ * it can find a match at the MINUTES level. If one recursive call
+ * cannot find a match, it will return false and the previous level
+ * will increment its range index by one and try to find a match. On the 
+ * the subsequent call useFirst will be set to true meaning that the level
+ * does not need to look for a value in the range that is greater than or
+ * equal to the current time value. If the failing returns to the MONTHS level, 
+ * that means we've exhausted all our possiblities from the current time to the
+ * the end of the year. So we'll increase the year by 1 and try the same logic again
+ * using January 1st as the starting point.
+ * The array match will contain the timestamp information of the job's
+ * next run time
+ * 
+ * @param curTime - an array of time attributes for where we start our calculations
+ * @param match - an array of time attributes that is the next run time
+ * @param attribute_idx - the index for the current parameter in CronTab::attributes
+ * @param useFirst - whether we should base ourselves off of Jan 1st
+ * @return true if we able to find a new run time
+ **/
 bool
-CronTab::matchFields( int *curTime, int *match, int ctr, bool useFirst )
+CronTab::matchFields( int *curTime, int *match, int attribute_idx, bool useFirst )
 {
 		//
 		// Whether we need to tell the next level above that they
@@ -515,7 +538,7 @@ CronTab::matchFields( int *curTime, int *match, int ctr, bool useFirst )
 		//
 		// First initialize ourself to know that we don't have a match
 		//
-	match[ctr] = -1;
+	match[attribute_idx] = -1;
 	
 		//
 		// Special Day of Week Handling
@@ -524,24 +547,24 @@ CronTab::matchFields( int *curTime, int *match, int ctr, bool useFirst )
 		// week in the range.
 		//
 	ExtArray<int> *curRange = NULL;
-	if ( ctr == CRONTAB_DOM_IDX ) {
+	if ( attribute_idx == CRONTAB_DOM_IDX ) {
 			//
 			// We have to take the current month & year
 			// and convert the days of the week range into
 			// days of the month
 			//
-		curRange = new ExtArray<int>( *this->ranges[ctr] );
-		int firstDay = dayOfWeek(	match[CRONTAB_MONTHS_IDX],
-									1,
-									match[CRONTAB_YEARS_IDX] );
-		int ctr2, cnt;
-		for ( ctr2 = 0, cnt = this->ranges[CRONTAB_DOW_IDX]->getlast();
-				ctr2 <= cnt;
-				ctr2++ ) {
+		curRange = new ExtArray<int>( *this->ranges[attribute_idx] );
+		int firstDay = dayOfWeek( match[CRONTAB_MONTHS_IDX],
+								  1,
+								  match[CRONTAB_YEARS_IDX] );
+		int ctr, cnt;
+		for ( ctr = 0, cnt = this->ranges[CRONTAB_DOW_IDX]->getlast();
+			  ctr <= cnt;
+			  ctr++ ) {
 				//
 				// Now figure out all the days for this specific day of the week
 				//
-			int day = (this->ranges[CRONTAB_DOW_IDX]->getElementAt(ctr2) - firstDay) + 1;
+			int day = (this->ranges[CRONTAB_DOW_IDX]->getElementAt(ctr) - firstDay) + 1;
 			while ( day <= CRONTAB_DAY_OF_MONTH_MAX ) {
 				if ( day > 0 && !this->contains( *curRange, day ) ) {
 					curRange->add( day );
@@ -558,7 +581,7 @@ CronTab::matchFields( int *curTime, int *match, int ctr, bool useFirst )
 		// Otherwise we'll just use the unmodified range
 		//
 	} else {
-		curRange = this->ranges[ctr];
+		curRange = this->ranges[attribute_idx];
 	}
 
 		//
@@ -566,10 +589,10 @@ CronTab::matchFields( int *curTime, int *match, int ctr, bool useFirst )
 		// If our value isn't in the list, then we'll take the next one
 		//
 	bool ret = false;
-	int rangeIdx, cnt;
-	for ( rangeIdx = 0, cnt = this->ranges[ctr]->getlast();
-		  rangeIdx <= cnt;
-		  rangeIdx++ ) {
+	int range_idx, cnt;
+	for ( range_idx = 0, cnt = this->ranges[attribute_idx]->getlast();
+		  range_idx <= cnt;
+		  range_idx++ ) {
 			//
 			// Two ways to make a match:
 			//
@@ -583,31 +606,31 @@ CronTab::matchFields( int *curTime, int *match, int ctr, bool useFirst )
 			//	   level, when they call us again they'll ask
 			//	   us to just use the first value that we can
 			//
-		int value = this->ranges[ctr]->getElementAt( rangeIdx );
-		if ( useFirst || value >= curTime[ctr] ) {
+		int value = this->ranges[attribute_idx]->getElementAt( range_idx );
+		if ( useFirst || value >= curTime[attribute_idx] ) {
 				//
 				// If this value is greater than the current time value,
 				// ask the next level to useFirst
 				//
-			if ( value > curTime[ctr] ) nextUseFirst = true;
+			if ( value > curTime[attribute_idx] ) nextUseFirst = true;
 				//
 				// Day of Month Check!
 				// If this day doesn't exist in this month for
 				// the current year in our search, we have to skip it
 				//
-			if ( ctr == CRONTAB_DOM_IDX ) {
+			if ( attribute_idx == CRONTAB_DOM_IDX ) {
 				int maxDOM = daysInMonth( 	match[CRONTAB_MONTHS_IDX],
 											match[CRONTAB_YEARS_IDX] );
 				if ( value > maxDOM ) {
 					continue;
 				}
 			}
-			match[ctr] = value;
+			match[attribute_idx] = value;
 				//
 				// If we're the last field for the crontab (i.e. minutes),
 				// then we should have a valid time now!
 				//
-			if ( ctr == CRONTAB_MINUTES_IDX ) {
+			if ( attribute_idx == CRONTAB_MINUTES_IDX ) {
 				ret = true;
 				break;
 				
@@ -619,7 +642,7 @@ CronTab::matchFields( int *curTime, int *match, int ctr, bool useFirst )
 				// if they can
 				//
 			} else {
-				ret = this->matchFields( curTime, match, ctr - 1, nextUseFirst );
+				ret = this->matchFields( curTime, match, attribute_idx - 1, nextUseFirst );
 				nextUseFirst = true;
 				if ( ret ) break;
 			}
@@ -632,35 +655,39 @@ CronTab::matchFields( int *curTime, int *match, int ctr, bool useFirst )
 		// can change the year in the matching for leap years
 		// We will call ourself to make a nice little loop!
 		//
-	if ( !ret && ctr == CRONTAB_MONTHS_IDX ) {
+	if ( !ret && attribute_idx == CRONTAB_MONTHS_IDX ) {
 		match[CRONTAB_YEARS_IDX]++;	
-		ret = this->matchFields( curTime, match, ctr, true );
+		ret = this->matchFields( curTime, match, attribute_idx, true );
 	}
 	
 		//
 		// We only need to delete curRange if we had
 		// instantiated a new object for it
 		//
-	if ( ctr == CRONTAB_DOM_IDX && curRange ) delete curRange;
+	if ( attribute_idx == CRONTAB_DOM_IDX && curRange ) delete curRange;
 	
 	return ( ret );
 }
 
-//
-// expandParameter()
-// This is the logic that is used to take a parameter string
-// given for a specific field in the cron schedule and expand it
-// out into a range of int's that can be looked up quickly later on
-// We must be given the index number of the field we're going to parse
-// and a min/max for the range of values allowed for the attribute.
-// If the parameter is invalid, we will report an error and return false
-// This will prevent them from querying nextRunTime() for runtimes
-//
+/**
+ * This is the logic that is used to take a parameter string
+ * given for a specific field in the cron schedule and expand it
+ * out into a range of int's that can be looked up quickly later on
+ * We must be given the index number of the field we're going to parse
+ * and a min/max for the range of values allowed for the attribute.
+ * If the parameter is invalid, we will report an error and return false
+ * This will prevent them from querying nextRunTime() for runtimes
+ * 
+ * @param attribute_idx - the index for the parameter in CronTab::attributes
+ * @param min - the mininum value in the range for this parameter
+ * @param max - the maximum value in the range for this parameter
+ * @return true if we were able to create the range of values
+ **/
 bool
 CronTab::expandParameter( int attribute_idx, int min, int max )
 {
-	MyString *param 		= this->parameters[attribute_idx];
-	ExtArray<int> *list 	= this->ranges[attribute_idx];
+	MyString *param = this->parameters[attribute_idx];
+	ExtArray<int> *list	= this->ranges[attribute_idx];
 	
 		//
 		// Make sure the parameter is valid
@@ -684,7 +711,6 @@ CronTab::expandParameter( int attribute_idx, int min, int max )
 		// Remove any spaces
 		//
 	param->replaceString(" ", "");
-
 	
 		//
 		// Now here's the tricky part! We need to expand their parameter
@@ -835,10 +861,13 @@ CronTab::expandParameter( int attribute_idx, int min, int max )
 	return ( true );
 }
 
-//
-// contains()
-// Just checks to see if a value is in an array
-//
+/**
+ * Just checks to see if a value is in an array
+ * 
+ * @param list - the array to search for the value
+ * @param elt - the value to search for in the array
+ * @return true if the element exists in the list
+ **/
 bool
 CronTab::contains( ExtArray<int> &list, const int &elt ) 
 {
@@ -860,11 +889,12 @@ CronTab::contains( ExtArray<int> &list, const int &elt )
 	return ( ret );
 }
 
-//
-// sort()
-// Ye' Olde Insertion Sort!
-// This is here so I can sort ExtArray<int>'s
-//
+/**
+ * Ascending Insertion Sort
+ * This is here so I can sort ExtArray<int>'s
+ * 
+ * @param list - the array to sort
+ **/
 void
 CronTab::sort( ExtArray<int> &list )
 {
@@ -880,4 +910,3 @@ CronTab::sort( ExtArray<int> &list )
 	} // FOR
 	return;
 }
-

@@ -23,6 +23,15 @@
 #include "condor_common.h"
 #include "RegExer.h"
 
+// ===============================================
+// !!! THIS FILE HAS BEEN DEPRECATED !!!
+//
+// This will not compile on Windows. 
+// Use Regex.C instead!
+//
+// Andy Pavlo - pavlo@cs.wisc.edu
+// 01/05/2006
+// ===============================================
 
 // zero out the entire object
 void RegExer::base_init() {

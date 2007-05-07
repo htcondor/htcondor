@@ -375,7 +375,7 @@ void UserPolicy::Init(ClassAd *ad)
 
 void UserPolicy::SetDefaults()
 {
-	char buf[8192];
+	MyString buf;
 
 	ExprTree *ph_expr = m_ad->Lookup(ATTR_PERIODIC_HOLD_CHECK);
 	ExprTree *pr_expr = m_ad->Lookup(ATTR_PERIODIC_REMOVE_CHECK);
@@ -386,28 +386,28 @@ void UserPolicy::SetDefaults()
 	/* if the default user policy expressions do not exist, then add them
 		here and now with the usual defaults */
 	if (ph_expr == NULL) {
-		sprintf(buf, "%s = FALSE", ATTR_PERIODIC_HOLD_CHECK);
-		m_ad->Insert(buf);
+		buf.sprintf( "%s = FALSE", ATTR_PERIODIC_HOLD_CHECK );
+		m_ad->Insert( buf.Value() );
 	}
 
 	if (pr_expr == NULL) {
-		sprintf(buf, "%s = FALSE", ATTR_PERIODIC_REMOVE_CHECK);
-		m_ad->Insert(buf);
+		buf.sprintf( "%s = FALSE", ATTR_PERIODIC_REMOVE_CHECK );
+		m_ad->Insert( buf.Value() );
 	}
 
 	if (pl_expr == NULL) {
-		sprintf(buf, "%s = FALSE", ATTR_PERIODIC_RELEASE_CHECK);
-		m_ad->Insert(buf);
+		buf.sprintf( "%s = FALSE", ATTR_PERIODIC_RELEASE_CHECK );
+		m_ad->Insert( buf.Value() );
 	}
 
 	if (oeh_expr == NULL) {
-		sprintf(buf, "%s = FALSE", ATTR_ON_EXIT_HOLD_CHECK);
-		m_ad->Insert(buf);
+		buf.sprintf( "%s = FALSE", ATTR_ON_EXIT_HOLD_CHECK );
+		m_ad->Insert( buf.Value() );
 	}
 
 	if (oer_expr == NULL) {
-		sprintf(buf, "%s = TRUE", ATTR_ON_EXIT_REMOVE_CHECK);
-		m_ad->Insert(buf);
+		buf.sprintf( "%s = TRUE", ATTR_ON_EXIT_REMOVE_CHECK );
+		m_ad->Insert( buf.Value() );
 	}
 }
 

@@ -24,6 +24,7 @@
 #ifndef CONDOR_CLASSAD_UTIL_H
 #define CONDOR_CLASSAD_UTIL_H
 
+#include "condor_classad.h"
 #include "string_list.h"
 
 bool EvalBool(ClassAd *ad, const char *constraint);

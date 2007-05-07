@@ -148,7 +148,6 @@ LocalUserLog::logExecute( ClassAd*  /* ad */ )
 }
 
 
-
 bool
 LocalUserLog::logSuspend( ClassAd* ad )
 {
@@ -258,7 +257,11 @@ LocalUserLog::logTerminate( ClassAd* ad )
 	}
 
 	JobTerminatedEvent event;
-
+	
+		//
+		// This will fill out the event with the appropriate
+		// information we need about how the job ended
+		//
 	int int_value = 0;
 	bool exited_by_signal = false;
 	if( ad->LookupBool(ATTR_ON_EXIT_BY_SIGNAL, int_value) ) {
@@ -338,8 +341,82 @@ LocalUserLog::logEvict( ClassAd* ad, bool checkpointed )
 	return true;
 }
 
+/**
+ * Writes an EVICT event to the user log with the requeue flag
+ * set to true. We will stuff information about why the job
+ * exited into the event object, such as the exit signal.
+ * 
+ * @param ad - the job to update the user log for
+ * @param checkpointed - whether the job was checkpointed or not
+ **/
+bool
+LocalUserLog::logRequeueEvent( ClassAd* ad, bool checkpointed )
+{
+	struct rusage run_local_rusage;
+	run_local_rusage = this->getRusageFromAd( ad );
 
+	JobEvictedEvent event;
+	event.terminate_and_requeued = true;
 
+		//
+		// This will fill out the event with the appropriate
+		// information we need about how the job ended
+		// Copied from logTerminate()
+		// It would be nice to have a method that could populate all 
+		// this data for us regardless of the log event type, but alas
+		// the objects are not uniform (signal_number vs signalNumber)
+		//
+	int int_value = 0;
+	bool exited_by_signal = false;
+	if( ad->LookupBool(ATTR_ON_EXIT_BY_SIGNAL, int_value) ) {
+        if( int_value ) {
+            exited_by_signal = true;
+        } 
+    } else {
+		EXCEPT( "in LocalUserLog::logTerminate() "
+				"ERROR: ClassAd does not define %s!",
+				ATTR_ON_EXIT_BY_SIGNAL );
+	}
+
+    if( exited_by_signal ) {
+        event.normal = false;
+		if( ad->LookupInteger(ATTR_ON_EXIT_SIGNAL, int_value) ) {
+			event.signal_number = int_value;
+		} else {
+			EXCEPT( "in LocalUserLog::logTerminate() "
+					"ERROR: ClassAd does not define %s!",
+					ATTR_ON_EXIT_SIGNAL );
+		}
+    } else {
+        event.normal = true;
+		if( ad->LookupInteger(ATTR_ON_EXIT_CODE, int_value) ) {
+			event.return_value = int_value;
+		} else {
+			EXCEPT( "in LocalUserLog::logTerminate() "
+					"ERROR: ClassAd does not define %s!",
+					ATTR_ON_EXIT_CODE );
+		}
+    }
+    
+    	//
+    	// Grab the exit reason out of the ad
+    	//
+    MyString reason;
+	if ( ad->LookupString( ATTR_REQUEUE_REASON, reason ) ) {
+		event.setReason( reason.Value() );
+	}
+    
+	event.run_local_rusage = run_local_rusage;
+    event.checkpointed = checkpointed;
+	event.recvd_bytes = jic->bytesReceived();
+    event.sent_bytes = jic->bytesSent();
+    
+	if ( ! this->u_log.writeEvent(&event) ) {
+        dprintf( D_ALWAYS, "Unable to log ULOG_JOB_EVICTED event\n" );
+		return ( false );
+    }
+	return ( true );	
+}
 
 struct rusage
 LocalUserLog::getRusageFromAd( ClassAd* ad )

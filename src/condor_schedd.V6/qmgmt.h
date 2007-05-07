@@ -100,6 +100,7 @@ bool OwnerCheck2( ClassAd *ad, const char *test_owner );
 bool Reschedule();
 bool BuildPrioRecArray(bool no_match_found=false);
 void ClearPrioRecArray();
+ClassAd* GetNextJobByCluster( int, int );
 
 int get_myproxy_password_handler(Service *, int, Stream *sock);
 #if defined(__cplusplus)

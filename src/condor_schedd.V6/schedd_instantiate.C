@@ -32,7 +32,7 @@
 #include "list.h"
 #include "schedd_api.h"
 #include "tdman.h"
-//#include "condor_crontab.h"
+#include "condor_crontab.h"
 
 template class SimpleList<TransferRequest*>;
 template class HashTable<MyString, TransferRequest*>;
@@ -54,12 +54,13 @@ template class HashTable<PROC_ID, shadow_rec *>;
 template class HashBucket<PROC_ID,shadow_rec *>;
 template class HashTable<PROC_ID, ClassAd *>;
 template class HashBucket<PROC_ID, ClassAd *>;
-//template class HashTable<PROC_ID, CronTab *>;
-//template class HashBucket<PROC_ID, CronTab *>;
 template class HashTable<UserIdentity, GridJobCounts>;
 template class HashBucket<UserIdentity, GridJobCounts>;
+template class HashTable<PROC_ID, CronTab *>;
+template class HashBucket<PROC_ID, CronTab *>;
 template class Queue<shadow_rec*>;
 template class Queue<ContactStartdArgs*>;
+template class Queue<int>;
 template class List<shadow_rec*>;
 template class Item<shadow_rec*>;
 template class SimpleList<PROC_ID>;

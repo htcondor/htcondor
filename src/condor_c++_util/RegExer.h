@@ -23,6 +23,16 @@
 #ifndef REGEXER_INCLUDE
 #define REGEXER_INCLUDE
 
+// ===============================================
+// !!! THIS FILE HAS BEEN DEPRECATED !!!
+//
+// This will not compile on Windows. 
+// Use Regex.C instead!
+//
+// Andy Pavlo - pavlo@cs.wisc.edu
+// 01/05/2006
+// ===============================================
+
 #include "condor_common.h"
 #include <regex.h>
 

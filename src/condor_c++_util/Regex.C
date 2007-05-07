@@ -93,7 +93,7 @@ bool
 Regex::match(const MyString & string,
 			 ExtArray<MyString> * groups)
 {
-	if (!re) {
+	if ( ! this->isInitialized() ) {
 		return false;
 	}
 
@@ -125,6 +125,17 @@ Regex::match(const MyString & string,
 	return rc > 0;
 }
 
+/**
+ * If the object has been initialized properly and 
+ * can now match patterns, return true
+ * 
+ * @return true if a pattern was compiled successfully, false otherwise
+ **/
+bool
+Regex::isInitialized( )
+{
+	return ( this->re != NULL );
+}
 
 pcre *
 Regex::clone_re(pcre * re)

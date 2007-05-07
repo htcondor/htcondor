@@ -87,6 +87,19 @@ public:
 						 const char* alt_name = NULL );
 
 		// // // // // // // // // // // //
+		// Job Actions
+		// // // // // // // // // // // //
+
+		/** 
+		 * JICShadow does not need to implement these 
+		 * at this time
+		 **/ 
+	virtual bool holdJob( const char* ) { return ( false ); }
+	virtual bool removeJob( const char* ) { return ( false ); }
+	virtual bool terminateJob( const char* ) { return ( false ); }
+	virtual bool requeueJob( const char* ) { return ( false ); }
+
+		// // // // // // // // // // // //
 		// Job execution and state changes
 		// // // // // // // // // // // //
 

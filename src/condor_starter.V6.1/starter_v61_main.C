@@ -686,7 +686,7 @@ main_config( bool /*is_full*/ )
 int
 main_shutdown_fast()
 {
-	if ( Starter->ShutdownFast(0) ) {
+	if ( Starter->RemoteShutdownFast(0) ) {
 		// ShutdownFast says it is already finished, because there are
 		// no jobs to shutdown.  No need to stick around.
 		Starter->StarterExit(0);
@@ -698,7 +698,7 @@ main_shutdown_fast()
 int
 main_shutdown_graceful()
 {
-	if ( Starter->ShutdownGraceful(0) ) {
+	if ( Starter->RemoteShutdownGraceful(0) ) {
 		// ShutdownGraceful says it is already finished, because
 		// there are no jobs to shutdown.  No need to stick around.
 		Starter->StarterExit(0);
@@ -711,7 +711,7 @@ int exception_cleanup(int,int,char*errmsg)
 {
 	_EXCEPT_Cleanup = NULL;
 	Starter->jic->notifyStarterError(errmsg,true,0,0);
-	Starter->ShutdownFast(0);
+	Starter->RemoteShutdownFast(0);
 	return 0;
 }
 

@@ -26,6 +26,7 @@
 
 #include "jic_local_file.h"
 #include "qmgr_job_updater.h"
+#include "starter_user_policy.h"
 
 /** 
 	This is the child class of JICLocalFile (and therefore JICLocal
@@ -53,6 +54,60 @@ public:
 		/// Destructor
 	virtual ~JICLocalSchedd();
 
+		/// Initialize ourselves
+		/// This first will call JICLocal::init() then
+		/// initialize the user policy object
+	virtual bool init( void );
+	
+		/**
+		 * Puts the job on hold. The Starter actually does the 
+		 * dirty work, we just add the reason to the ad and email the
+		 * user. We set the exit_code to JOB_SHOULD_HOLD so that
+		 * schedd will put the job on hold in the queue. We do NOT need
+		 * to write an EVICT log event because JICLocalSchedd::notifyJobExit()
+		 * will take care of that for us.
+		 * 
+		 * @param reason - why the job is going on hold
+		 * @return true if the jobs were told to be put on hold
+		 */
+	virtual bool holdJob( const char* );
+	
+		/**
+		 * The job needs to be removed from the Starter. This
+		 * is more than just calling Starter->Remove() because we need
+		 * to stuff the remove reason in the job ad and update the job queue.
+		 * We also set the proper exit code for the Starter. We do NOT need
+		 * to write an EVICT log event because JICLocalSchedd::notifyJobExit()
+		 * will take care of that for us.
+		 * 
+		 * @param reason - why the job is being removed
+		 * @return true if the job was set to be removed
+		 **/
+	virtual bool removeJob( const char* );
+	
+		/*
+		 * The job exited on its own accord and its not to be requeued,
+		 * so we need to update the job and write a TERMINATE event 
+		 * into the user log. It is important that we do NOT set the
+		 * exit_code in here like we do in the other methods.
+		 * 
+		 * @param reason - why the job is being terminated
+		 * @return true if the job was set to be terminated
+		 **/
+	virtual bool terminateJob( const char* );
+	
+		/**
+		 * The job needs to be requeued back on the schedd, so 
+		 * we need to update the job ad, the queue, and write 
+		 * a REQUEUE event into the user log. We have to set
+		 * the proper exit code for the Starter so that the schedd
+		 * knows to put the job back on hold.
+		 * 
+		 * @param reason - why the job is being requeued
+		 * @return true if the job was set to be requeued
+		 **/
+	virtual bool requeueJob( const char* );
+
 	virtual void allJobsGone( void );
 
 		/// The starter has been asked to shutdown fast.
@@ -74,14 +129,22 @@ public:
 		*/
 	virtual bool getLocalJobAd( void );
 
-		/** Notify the schedd that the job exited.  Actually, all we
-			do here is update the job queue with final stats about the
-			run, our exit code will actually notify the schedd about
-			the job leaving the queue, etc.
-			@param exit_status The exit status from wait()
-			@param reason The Condor-defined exit reason
-			@param user_proc The UserProc that was running the job
-		*/
+		/**
+		 * A job is exiting the Starter and we need to take necessary
+		 * actions. First we will update the job's ad file with various
+		 * information about what the job did. Next, if the job completed on
+		 * its own, we'll want to call the StarterUserPolicy's checkAtExit(),
+		 * which handles writing any user log events and updating the job
+		 * queue back on the schedd. If the job is being killed from "unnatural"
+		 * causes, such as a condor_rm, then we will figure out the right
+		 * update type is for the job and write an EVICT event to the user log.
+		 * 
+		 * @param exit_status - the exit status of the job from wait()
+		 * @param reason - the Condor-defined reason why the job is exiting
+		 * @param user_proc - the Proc object for this job
+		 * @return true if the job was set to exit properly
+		 * @see h/exit.h
+		 **/
 	virtual bool notifyJobExit( int exit_status, int reason, 
 								UserProc* user_proc );  
 
@@ -122,8 +185,11 @@ protected:
 		/// object for managing updates to the schedd's job queue for
 		/// dynamic attributes in this job.
 	QmgrJobUpdater* job_updater;
+	
+		/// The UserPolicy object wrapper for doing periodic and check
+		/// at exit policy evaluations
+	StarterUserPolicy *starter_user_policy;
 
 };
-
 
 #endif /* _CONDOR_JIC_LOCAL_SCHEDD_H */

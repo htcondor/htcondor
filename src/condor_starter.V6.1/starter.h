@@ -66,15 +66,48 @@ public:
 
 	virtual int SpawnJob( void );
 
+		/*************************************************************
+		 * Starter Commands
+		 * We now have two versions of the old commands that the Starter
+		 * registers with daemon core. The "Remote" version of the 
+		 * function is what will registered. These functions will
+		 * first notify the JIC that an action is occuring then call
+		 * the regular version of the function. The reason why we do this
+		 * now is because we need to be able to do things internally
+		 * without the JIC thinking it was told from the outside
+		 *************************************************************/
+
+		/** Call Suspend() on all elements in JobList */
+	virtual int RemoteSuspend( int );
+	virtual bool Suspend( void );
+
+		/** Call Continue() on all elements in JobList */
+	virtual int RemoteContinue( int );
+	virtual bool Continue( void );
+
+		/** To do */
+	virtual int RemotePeriodicCkpt( int );
+	virtual bool PeriodicCkpt( void );
+
+		/** Call Remove() on all elements in JobList */
+	virtual int RemoteRemove( int );
+	virtual bool Remove( void );
+
+		/** Call Hold() on all elements in JobList */
+	virtual int RemoteHold(int);
+	virtual bool Hold( void );
+
 		/** Walk through list of jobs, call ShutDownGraceful on each.
 			@return 1 if no jobs running, 0 otherwise 
 		*/
-	virtual int ShutdownGraceful(int);
+	virtual int RemoteShutdownGraceful( int );
+	virtual bool ShutdownGraceful( void );
 
 		/** Walk through list of jobs, call ShutDownFast on each.
 			@return 1 if no jobs running, 0 otherwise 
 		*/
-	virtual int ShutdownFast(int);
+	virtual int RemoteShutdownFast( int );
+	virtual bool ShutdownFast( void );
 
 		/** Create the execute/dir_<pid> directory and chdir() into
 			it.  This can only be called once user_priv is initialized
@@ -85,7 +118,7 @@ public:
 		/**
 		 * Before a job is spawned, this method checks whether
 		 * a job has a deferrral time, which means we will need
-		 * to register timer to call jobEnvironmentReady()
+		 * to register timer to call SpawnPreScript()
 		 * when it is the correct time to run the job
 		 */
 	virtual bool jobWaitUntilExecuteTime( void );
@@ -102,27 +135,18 @@ public:
 			the job.
 		*/
 	virtual int jobEnvironmentReady( void );
+	
+		/**
+		 * 
+		 * 
+		 **/
+	virtual int SpawnPreScript( void );
 
 		/** Does final cleanup once all the jobs (and post script, if
 			any) have completed.  This deals with everything on the
 			CleanedUpJobList, notifies the JIC, etc.
 		*/
 	virtual void allJobsDone( void );
-
-		/** Call Suspend() on all elements in JobList */
-	virtual int Suspend(int);
-
-		/** Call Continue() on all elements in JobList */
-	virtual int Continue(int);
-
-		/** To do */
-	virtual int PeriodicCkpt(int);
-
-		/** Call Remove() on all elements in JobList */
-	virtual int Remove(int);
-
-		/** Call Hold() on all elements in JobList */
-	virtual int Hold(int);
 
 		/** Handles the exiting of user jobs.  If we're shutting down
 			and there are no jobs left alive, we exit ourselves.
@@ -214,6 +238,14 @@ private:
 	int starter_stdin_fd;
 	int starter_stdout_fd;
 	int starter_stderr_fd;
+	
+		//
+		// When set to true, that means the Starter was asked to
+		// suspend all jobs. This is used when jobs are started up
+		// after the Suspend call came in so that we don't start
+		// jobs when we shouldn't
+		//
+	bool suspended;
 	
 		//
 		// This is the id of the timer for when a job gets deferred

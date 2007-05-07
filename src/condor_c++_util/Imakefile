@@ -159,7 +159,7 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o selector.o \
 	translation_utils.o command_strings.o enum_utils.o \
 	condor_parameters.o extra_param_info.o classad_command_util.o \
 	domain_tools.o CondorError.o utc_time.o status_string.o \
-	time_offset.o condor_crontab.o date_util.o \
+	time_offset.o condor_crontab.o date_util.o condor_user_policy.o \
 	$(QUILL_OBJS) \
 	New_classads_obj setenv.o condor_id.o build_job_env.o job_lease.o \
 	gahp_common.o \

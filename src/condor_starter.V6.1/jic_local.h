@@ -51,7 +51,7 @@ public:
 		// // // // // // // // // // // //
 
 		/// Initialize ourselves
-	bool init( void );
+	virtual bool init( void );
 
 		/// Read anything relevent from the config file
 	void config( void );
@@ -95,6 +95,19 @@ public:
 	char* getJobStdFile( const char* attr_name,
 						 const char* alt_name = NULL );
 
+		// // // // // // // // // // // //
+		// Job Actions
+		// // // // // // // // // // // //
+
+		/** 
+		 * These just are just place holders so that things
+		 * will compile nicely. The logic that does real work
+		 * is in JICLocalSchedd
+		 **/ 
+	virtual bool holdJob( const char* ) { return ( false ); }
+	virtual bool removeJob( const char* ) { return ( false ); }
+	virtual bool terminateJob( const char* ) { return ( false ); }
+	virtual bool requeueJob( const char* ) { return ( false ); }
 
 		// // // // // // // // // // // //
 		// Job execution and state changes

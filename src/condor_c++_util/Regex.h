@@ -76,6 +76,14 @@ public:
 		 */
 	bool match(const MyString & string,
 			   ExtArray<MyString> * groups = NULL);
+			   
+		/**
+		 * If the object has been initialized properly and 
+		 * can now match patterns, return true
+		 * 
+		 * @return true if a pattern was compiled successfully, false otherwise
+		 **/
+	bool isInitialized( );
 
 private:
 
