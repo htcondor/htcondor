@@ -39,6 +39,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Condor now looks for its configuration file in \tt{/usr/local/etc}
+if the \Macro{CONDOR\_CONFIG} environment variable is not set and there is
+no condor\_config file located in \tt{/etc/condor}. This allows a default
+Condor installation to be more compatiable with FreeBSD.
+
 \item If a user job requests streaming input or output in the submit
 file, the job can now run with job leases and the job will continue
 to run for the lease duration should the submit machine crash.  Previously,
