@@ -273,6 +273,8 @@ class DedicatedScheduler : public Service {
 		// each job that can be reconnect to running startds
 	bool enqueueReconnectJob(PROC_ID id);
 
+    match_rec *FindMRecByJobID(PROC_ID job_id);
+
 	void			checkReconnectQueue( void );
 
 	int		rid;			// DC reaper id

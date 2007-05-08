@@ -2505,9 +2505,8 @@ DeleteAttribute(int cluster_id, int proc_id, const char *attr_name)
 	return 1;
 }
 
-
 ClassAd *
-GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
+dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad) 
 {
 	// This is prepended to attributes that we've already expanded,
 	// making them available if the match ad is no longer available.
@@ -2519,23 +2518,14 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 	//   MATCH_EXP_GlobusScheduler=foobarqux
 	const char * MATCH_EXP = "MATCH_EXP_";
 
-	char	key[_POSIX_PATH_MAX];
-	ClassAd	*ad;
-
-	strcpy(key, IdToStr(cluster_id,proc_id) );
-	if (JobQueue->LookupClassAd(key, ad)) {
-		if ( !expStartdAd ) {
-			// we're done, return the ad.
-			return ad;
-		}
+	int	job_universe = -1;
+	ad->LookupInteger(ATTR_JOB_UNIVERSE,job_universe);
 
 		// if we made it here, we have the ad, but
 		// expStartdAd is true.  so we need to dig up 
 		// the startd ad which matches this job ad.
 		char *bigbuf2 = NULL;
 		char *attribute_value = NULL;
-		PROC_ID job_id;
-		ClassAd *startd_ad;
 		ClassAd *expanded_ad;
 		int index;
 		char *left,*name,*right,*value,*tvalue;
@@ -2544,29 +2534,6 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 		// we must make a deep copy of the job ad; we do not
 		// want to expand the ad we have in memory.
 		expanded_ad = new ClassAd(*ad);  
-
-		job_id.cluster = cluster_id;
-		job_id.proc = proc_id;
-
-		// find the startd ad.  this is done differently if the job
-		// is a globus universe jobs or not.
-		int	job_universe;
-		ad->LookupInteger(ATTR_JOB_UNIVERSE,job_universe);
-		if ( job_universe == CONDOR_UNIVERSE_GRID ) {
-			// Globus job... find "startd ad" via our simple
-			// hash table.
-			startd_ad = NULL;
-			scheduler.resourcesByProcID->lookup(job_id,startd_ad);
-		} else {
-			// Not a Globus job... find startd ad via the match rec
-			match_rec *mrec = scheduler.FindMrecByJobID( job_id );
-			if( !mrec ) {
-				// pretty weird... no match rec, nothing we can do
-				// could be a PVM job?
-				return expanded_ad;
-			}
-			startd_ad = mrec->my_match_ad;
-		}
 
 			// Make a stringlist of all attribute names in job ad.
 			// Note: ATTR_JOB_CMD must be first in AttrsToExpand...
@@ -2848,17 +2815,17 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 					if( !expr ) {
 						continue;
 					}
-					char *value = NULL;
-					expr->PrintToNewStr( &value );
-					ASSERT(value);
-					expanded_ad->AssignExpr(name,value);
+					char *new_value = NULL;
+					expr->PrintToNewStr( &new_value );
+					ASSERT(new_value);
+					expanded_ad->AssignExpr(name,new_value);
 
 					MyString match_exp_name = MATCH_EXP;
 					match_exp_name += name;
-					if ( SetAttribute(cluster_id,proc_id,match_exp_name.Value(),value) < 0 )
+					if ( SetAttribute(cluster_id,proc_id,match_exp_name.Value(),new_value) < 0 )
 					{
 						EXCEPT("Failed to store '%s=%s' into job ad %d.%d",
-						       match_exp_name.Value(), value, cluster_id, proc_id);
+						       match_exp_name.Value(), new_value, cluster_id, proc_id);
 					}
 				}
 			}
@@ -3009,6 +2976,55 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 			return NULL;
 		else 
 			return expanded_ad;
+}
+
+
+ClassAd *
+GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
+{
+	char	key[_POSIX_PATH_MAX];
+	ClassAd	*ad;
+
+	strcpy(key, IdToStr(cluster_id,proc_id) );
+	if (JobQueue->LookupClassAd(key, ad)) {
+		if ( !expStartdAd ) {
+			// we're done, return the ad.
+			return ad;
+		}
+
+		ClassAd *startd_ad = NULL;
+		PROC_ID job_id;
+		job_id.cluster = cluster_id;
+		job_id.proc = proc_id;
+
+		// find the startd ad.  this is done differently if the job
+		// is a globus universe jobs or not.
+		int	job_universe = -1;
+		ad->LookupInteger(ATTR_JOB_UNIVERSE,job_universe);
+		if ( job_universe == CONDOR_UNIVERSE_GRID ) {
+			// Globus job... find "startd ad" via our simple
+			// hash table.
+			scheduler.resourcesByProcID->lookup(job_id,startd_ad);
+		} else {
+			// Not a Globus job... find startd ad via the match rec
+			match_rec *mrec;
+			if ((job_universe == CONDOR_UNIVERSE_PARALLEL) ||
+				(job_universe == CONDOR_UNIVERSE_MPI)) {
+			 	mrec = dedicated_scheduler.FindMRecByJobID( job_id );
+			} else {
+			 	mrec = scheduler.FindMrecByJobID( job_id );
+			}
+
+			if( !mrec ) {
+				// pretty weird... no match rec, nothing we can do
+				// could be a PVM job?
+				return new ClassAd(*ad);
+			}
+			startd_ad = mrec->my_match_ad;
+		}
+
+		return dollarDollarExpand(cluster_id, proc_id, ad, startd_ad);
+
 	} else {
 		// we could not find this job ad
 		return NULL;

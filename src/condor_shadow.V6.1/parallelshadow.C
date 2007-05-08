@@ -232,11 +232,6 @@ ParallelShadow::getResources( void )
 
         /* Now, do stuff for each proc: */
     for ( int i=0 ; i<numProcs ; i++ ) {
-		job_ad = new ClassAd();
-
-		if( !job_ad->initFromStream(*sock)  ) {
-            EXCEPT( "Failed to get job classad for proc %d", i );
-		}
         if( !sock->code( numInProc ) ) {
             EXCEPT( "Failed to get number of matches in proc %d", i );
         }
@@ -251,6 +246,12 @@ ParallelShadow::getResources( void )
             }
             dprintf( D_FULLDEBUG, "Got host: %s id: %s\n", host, claim_id );
             
+			job_ad = new ClassAd();
+
+			if( !job_ad->initFromStream(*sock)  ) {
+				EXCEPT( "Failed to get job classad for proc %d", i );
+			}
+
             if ( i==0 && j==0 ) {
 					/* 
 					   TODO: once this is just backup for if the

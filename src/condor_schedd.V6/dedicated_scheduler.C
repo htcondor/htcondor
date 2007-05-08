@@ -51,6 +51,7 @@
 #include "proc.h"
 #include "exit.h"
 #include "dc_startd.h"
+#include "qmgmt.h"
 
 extern Scheduler scheduler;
 extern DedicatedScheduler dedicated_scheduler;
@@ -1738,7 +1739,6 @@ DedicatedScheduler::giveMatches( int, Stream* stream )
 	int cluster;
 	char *id = NULL, *sinful = NULL;
 	MRecArray* matches;
-	ClassAd *job_ad;
 	int i, p, last;
 
 	dprintf( D_FULLDEBUG, "Entering DedicatedScheduler::giveMatches()\n" );
@@ -1824,17 +1824,9 @@ DedicatedScheduler::giveMatches( int, Stream* stream )
 	}
 
 	for( p=0; p<alloc->num_procs; p++ ) {
-		job_ad = new ClassAd( *((*alloc->jobs)[p]) );
 		matches = (*alloc->matches)[p];
 		last = matches->getlast() + 1; 
 		dprintf( D_FULLDEBUG, "In proc %d, num_matches: %d\n", p, last );
-		if( ! job_ad->put(*stream) ) {
-			dprintf( D_ALWAYS, "ERROR in giveMatches: "
-					 "can't send job classad for proc %d\n", p );
-			delete job_ad;
-			return FALSE;
-		}
-		delete job_ad;
 		if( ! stream->code(last) ) {
 			dprintf( D_ALWAYS, "ERROR in giveMatches: can't send "
 					 "number of matches (%d) for proc %d\n", last, p );
@@ -1842,6 +1834,7 @@ DedicatedScheduler::giveMatches( int, Stream* stream )
 		}			
 
 		for( i=0; i<last; i++ ) {
+			ClassAd *job_ad;
 			sinful = (*matches)[i]->peer;
 			id = (*matches)[i]->id;
 			if( ! stream->code(sinful) ) {
@@ -1855,6 +1848,15 @@ DedicatedScheduler::giveMatches( int, Stream* stream )
 						 "ClaimId for match %d of proc %d\n", i, p );
 				return FALSE;
 			}				
+			//job_ad = new ClassAd( *((*alloc->jobs)[p]) );
+			job_ad = dollarDollarExpand(0,0, (*alloc->jobs)[p], (*matches)[i]->my_match_ad);
+			if( ! job_ad->put(*stream) ) {
+				dprintf( D_ALWAYS, "ERROR in giveMatches: "
+						 "can't send job classad for proc %d\n", p );
+				delete job_ad;
+				return FALSE;
+			}
+			delete job_ad;
 		}
 	}
 	if( ! stream->end_of_message() ) {
@@ -4313,6 +4315,23 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 		}
 	}
 }	
+
+match_rec *      
+DedicatedScheduler::FindMRecByJobID(PROC_ID job_id) {
+	AllocationNode* alloc;
+	if( allocations->lookup(job_id.cluster, alloc) < 0 ) {
+		return NULL;
+	}
+
+	if (!alloc) {
+		return NULL;
+	}
+
+	MRecArray* cur_matches = (*alloc->matches)[0];
+	return ((*cur_matches)[0]);
+
+	
+}
 
 
 
