@@ -1,27 +1,8 @@
-\documentclass[a4paper, 11pt]{article}
-\usepackage{setspace}
-
-\newcommand{\AdAttr}[1]{\texttt{#1}}	% ClassAd Attribute name
-\newcommand{\Attr}[1]{\texttt{#1}}	% ClassAd Attribute name again
-\newcommand{\SubmitCmd}[1]{\textbf{#1}}		% Submit command
-\newcommand{\Macro}[1]{\texttt{#1} \index{#1 macro@\texttt{#1} macro} \index{configuration macro!\texttt{#1}}}
-\newcommand{\Prog}[1]{\textit{#1}}              	% Program name
-
-%
-%  To help with typing in names of condor commands
-%    e.g., condor_submit == \Condor{submit}
-\newcommand{\Condor}[1]{\Prog{condor\_#1}}
-\newcommand{\condor}[1]{condor\_#1}
-
-
-\begin{document}
-
-\doublespacing
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Job Execution Time Scheduling}
 \label{sec:job-executetime-scheduling}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Job Execution Time Scheduling}
 
 Introduction....
 
@@ -30,17 +11,17 @@ Introduction....
 \label{sec:jobdeferral}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-The job deferral functionality in Condor allows one to specify the exact date and time that a job should begin execution. Condor will attempt to match the job to an execution machine just like any other job, however, the job will wait until the exact time to begin execution. A job can also allow some flexibility for Condor to execute jobs even if they miss their execution time.
+The job deferral functionality in Condor allows one to specify the exact date and time that a job should begin execution. Condor will attempt to match the job to an execution machine just like any other job, however, the job will wait until the exact time to begin execution. A user can specify Condor to allow some flexibility to execute jobs that miss their execution time.
 
 %%%%%
 \subsubsection{Deferred Execution Time}
 \label{sec:jobdeferral-deferraltime}
 %%%%%
-A job's deferral time is the exact time that Condor should attempt to execute the job. The deferral time attribute is defined as an expression that evaluates to a Unix Epoch timestamp (the number of seconds elapsed since 00:00:00 on January 1, 1970, Coordinated Universal Time). This is the time that Condor will beging to execute the job.
+A job's deferral time is the exact time that Condor should attempt to execute the job. The deferral time attribute is defined as an expression that evaluates to a Unix Epoch timestamp (the number of seconds elapsed since 00:00:00 on January 1, 1970, Coordinated Universal Time). This is the time that Condor will begin to execute the job.
 
-After a job is matched and all of its files have been transfered to an execution machine, Condor checks to see if the job's ad contains a deferral time. If it does, Condor calculates the number of seconds from the execution machine's current system time to the job's deferred execution time. If a job misses its execution time, that is, if the deferral time is in the past, the job is evicted from the execution machine and put on hold in the queue. If the execution time is in the future, the job is deferred until the execution time: While a job is deferred by Condor, its \AdAttr{JobStatus} is marked as Running. When the execution time arrives, the job begins to execute.
+After a job is matched and all of its files have been transfered to an execution machine, Condor checks to see if the job's ad contains a deferral time. If it does, Condor calculates the number of seconds from the execution machine's current system time to the job's deferred execution time. If a job misses its execution time, that is, if the deferral time is in the past, the job is evicted from the execution machine and put on hold in the queue. If the execution time is in the future, the job is deferred until the execution time: while a job is deferred by Condor, its \AdAttr{JobStatus} is marked as Running. When the execution time arrives, the job begins to execute.
 
-Condor's behavior when it is issued job queue commands is the same for a deferred job as it is with a job that is currently executing. If a job is deferred when a Hold command is issued, the job is removed from the execution machine and is put on hold in the job queue. If a job is deferred when a Suspend command is issued, the job will continue to be deferred until its execution time; when the execution time arrives, Condor will begin execution the job but then immediately suspend it.
+Condor's behavior when it is issued job queue commands is the same for a deferred job as it is with a job that is currently executing. If a job is deferred when a Hold command is issued, the job is removed from the execution machine and is put on hold in the job queue. If a job is deferred when a Suspend command is issued, the job will continue to be deferred until its execution time; when the execution time arrives, Condor will begin the execution process for the job but immediately suspend it.
 
 A job that specifies a job deferral time will not be matched with a \Condor{startd} version less than 6.7.14 (December 2005).
 
@@ -48,7 +29,7 @@ A job that specifies a job deferral time will not be matched with a \Condor{star
 \subsubsection{Missed Execution Window}
 \label{sec:jobdeferral-deferralwindow}
 %%%%%
-As stated in Section \ref{sec:jobdeferral-deferraltime}, if a job defining a deferral time arrives at an execution machine after the execution time already occurred, the job is evicted from the machine and put on hold in the job queue. This can occur, for instance, if the transfer of the files needed by a job took too long because of a slow network connection. The missed deferral window allows a job to specify that Condor should still execute a job that missed its execution time.
+As stated in Section \ref{sec:jobdeferral-deferraltime}, if a job defining a deferral time arrives at an execution machine after the execution time already occurred, the job is evicted from the machine and put on hold in the job queue. This can occur, for instance, if the transfer of the files needed by a job took too long because of a slow network connection. The missed deferral window allows a user to specify that Condor should still execute a job that missed its execution time.
 
 The deferral window attribute expression is evaluated as to how far back in the past in seconds after the deferral time Condor is allowed to still execute a job. When a job arrives at an execution machine and its deferral time is less than the execution machine's current system time, Condor calculates the difference in seconds from the current time to the job's deferred execution time. If this difference is less than or equal to the deferral window, the job begins execution immediately. If this difference is greater than the deferral window, the job is evicted from the execution machine and is put on hold in the job queue.
 
@@ -93,11 +74,11 @@ If a job defines a deferral time far in the future matches to an execution machi
 There are some limitations to Condor's job deferral feature.
 
 \begin{itemize}
-\item Job deferral is not available for Scheduler universe jobs. Scheduler universe jobs are not executed under the control of the \Condor{starter} daemon, which is needed to defer the job until the correct execution time. A Scheduler universe job ad defining the \AdAttr{DeferralTime} attribute producs a fatal error if it is submitted to \Condor{submit}.
+\item Job deferral is not available for Scheduler universe jobs. Scheduler universe jobs are not executed under the control of the \Condor{starter} daemon, which is needed to defer the job until the correct execution time. A Scheduler universe job ad defining the \AdAttr{DeferralTime} attribute produces a fatal error if it is submitted to Condor with \Condor{submit}.
 
 \item The time that the job begins to execute is based on the execution machine's system clock, and not the submission machine's system clock. Please be mindful of the ramifications that may occur if a job is suppose to execute at specific time and the two clock's are dramatically different.
 
-\item A job's \AdAttr{JobStatus} is always in the Running state when it is being deferred. There is currently no way to distinguish a job that is actually executing from a job that is being deferred for execution. 
+\item A job's \AdAttr{JobStatus} is always in the Running state when it is deferred. There is currently no way to distinguish a job that is actually executing from a job that is being deferred for execution. 
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -154,7 +135,7 @@ For each CronTab attribute, there are several ways of specifying multiple values
 
    \item[Ranges ``-'']
    A range creates a set of integers from all the allowed values between two
-   integers separted by a hyphen. The specified range is inclusive, and the
+   integers separated by a hyphen. The specified range is inclusive, and the
    lefthand integer must be less than the righthand integer. For example,
    the \SubmitCmd{CronHour} attribute below would be evaluated as all the
    hours from 12:00 am (midnight) to 4:00 am (0,1,2,3,4):
@@ -164,8 +145,8 @@ For each CronTab attribute, there are several ways of specifying multiple values
    \end{verbatim}
    
    \item[Lists ``,'']
-   A list is the union of the values or ranges seperated by commas. Multiple
-   enteries of the same number are ignored. In the example below,
+   A list is the union of the values or ranges separated by commas. Multiple
+   entries of the same number are ignored. In the example below,
    \SubmitCmd{CronMinute} evaluates to 15,20,25,30 and \SubmitCmd{CronHour}
    evaluates to 0,1,2,3,9,10,11,12,15
    
@@ -192,7 +173,7 @@ For each CronTab attribute, there are several ways of specifying multiple values
 
 %%%%%
 \subsubsection{Job Preparation Time}
-\label{sec:jobdeferral-preptime}
+\label{sec:crontab-preptime}
 %%%%%
 When a job uses the CronTab functionality, the next runtime that is calculated is
 the time that Condor will send the job's information to an execution machine.
@@ -201,7 +182,7 @@ the execution machine before the job is started; by the time that all the
 files have been transferred the job may miss its execution time. This will cause
 jobs to be continuously sent to the execution machine but always fail because Condor was not able to transfer all the necessary files before the execution time.
 
-To mitigate this problem, a job can define the \SubmitCmd{CronPrepTime}
+To mitigate this problem, a user can define the \SubmitCmd{CronPrepTime}
 attribute to specify how many seconds before the actual runtime should the
 job be matched and sent to the execution machine. This allows Condor to
 make any preparations that are necessary for the job before it executes. If
@@ -286,8 +267,6 @@ Because the Scheduler universe does not support job deferral times (Section \ref
 
 The \Condor{schedd} is unable to guarantee that Vanilla universe or Standard universe jobs are scheduled for reoccurring execution at intervals less than \Macro{ScheddInterval}. When a Vanilla/Standard universe job completes execution and is placed back into the job queue, it may not be marked idle until after the next time it was suppose to run if the next run time is less than \Macro{ScheddInterval}. This problem does not afflict Local universe jobs.
 
-Condor cannot guarentee that a job will run at every instance specified by a CronTab schedule, especially for Vanilla universe jobs. A job must be matched with an execution machine like a normal job; if it is unable to find a match, then Condor will miss its chance for executing the job and the job must wait for the next execution time specified by the CronTab schedule.
+Condor cannot guarantee that a job will run at every instance specified by a CronTab schedule, especially for Vanilla universe jobs. A job must be matched with an execution machine like a normal job; if it is unable to find a match, then Condor will miss its chance for executing the job and the job must wait for the next execution time specified by the CronTab schedule.
 
 %Condor also assumes that the \Condor{schedd}'s system clock will not flucuate widly. If the system time is moved forward, the current execution times for job's will be in the past, and thus will be re-calculated. If the system time moves backwards, however, Condor will not re-calculate execution times because the 
-
-\end{document}
