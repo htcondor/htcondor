@@ -1689,8 +1689,8 @@ seconds elapsed since 00:00:00 on January 1, 1970, Coordinated
 Universal Time). A job using this option will be delayed for
 execution by the \Condor{starter} until the deferral
 time arrives. If the job misses its execution time, that is, if
-the deferral time is in the past, the job will be aborted and
-removed from the queue. The time that the job will start at is 
+the deferral time is in the past, the job will be put on hold
+in the queue. The time that the job will start at is
 based on the execution machine's system clock.
 
 The following example will set a job to run at exactly on
