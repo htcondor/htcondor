@@ -5,14 +5,259 @@
 \index{SOAP!Web Service API}
 \index{Simple Object Access Protocol(SOAP)}
 
+Condor's Web Service (WS) API provides a way for application developers
+to interact with Condor, without needing to utilize
+Condor's command-line tools.
+In keeping with the Condor philosophy of reliability and fault-tolerance,
+this API is designed to provide a simple and powerful way
+to interact with Condor.
 Condor daemons understand and implement
 the SOAP (Simple Object Access Protocol) XML API
 to provide a web service interface for Condor job submission
 and management.
 
-The API utilizes a two-phase commit mechanism to provide
-a transaction-based protocol.  
-This structure enhances reliability when using the API.
+To deal with the issues of reliability and fault-tolerance,
+a two-phase commit mechanism to provides a transaction-based protocol.  
+The following API description describes interaction
+between a client using the API and the \Condor{schedd} daemon
+to illustrate transactions
+for use in job submission and queue management functions.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{WebService-Transactions} Transactions}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+All applications using the API to interact with the \Condor{schedd}
+will need to use transactions.
+A transaction is
+an ACID unit of work (atomic, consistent, isolated, and durable).
+The API limits the lifetime of a transaction,
+and both the client (application) and the server
+(the \Condor{schedd} daemon)
+may place a limit on the lifetime.
+The server reserves the right to specify a maximum
+duration for a transaction. 
+
+
+The client initiates a transaction using the
+\Procedure{BeginTransaction} method. 
+It ends the transaction with either 
+a commit (using \Procedure{CommitTransaction})
+or an abort (using \Procedure{AbortTransaction}).
+
+% providing a timeout for the transaction.
+% The client is effectively granted a lease to a transaction. Instead
+% of providing a timeout that is a guess as to how long the transaction
+% is needed, the timeout is just the number of seconds that can elapse
+% between subsequent operations in a transaction. Essentially, a
+% transaction's timeout is extended each time the transaction is used.
+% The amount of time the transaction is extended is the timeout
+% initially passed to CreateTransaction(). If that timeout is not
+% sufficient there is also an ExtendTransaction() method that can be
+% used to modify the timeout. When a client is finished with a
+% transaction is will call either CommitTransaction() or
+% AbortTransaction(). In the former case, all the jobs submitted in the
+% transaction will be queued. In the latter case, everything that
+% occurred in the transaction will be undone. If a transaction expires,
+% i.e. its timeout is reached, AbortTransaction() is automatically
+% called on it.
+
+% This scheme provides a reasonable amount of utility for a client to
+% easily deal with transactions. To give the server some say in how its
+% resources will be utilized it reserves the right to specify a maximum
+% duration for a transaction. This happens when BeginTransaction() is
+% called by the client. The result of the call is not only a
+% transaction identifier for later use but also the timeout for the
+% transaction. That timeout is the actual timeout for the transaction.
+% It may be shorter or longer than what the client requested. Any
+% reasonable server will allow the timeout to be long enough for a
+% significant amount of work to be completed.
+
+Not all operations in the API need to be performed within a
+transaction.
+Some accept a null transaction.
+A null transaction is a SOAP message with
+\begin{verbatim}
+<transaction xsi:type="ns1:Transaction" xsi:nil="true"/> 
+\end{verbatim}
+Often this is achieved by passing the programming
+language's equivalent of \verb@null@ in place of a transaction identifier.
+It is possible that some operations will have access to more
+information when they are used inside a transaction. For instance, a
+\Procedure{GetJobAds}.
+query would have access to the jobs that are pending in a
+transaction, which are not committed and therefore not visible
+outside of the transaction. 
+Transactions are as ACID compliant as possible. 
+Therefore, do not query for information
+outside of a transaction on which to make a decision inside a
+transaction based on the query's results.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{WebService-Submission} Job Submission}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+A ClassAd is required to describe a job.
+The job ClassAd will be 
+submitted to the \Condor{schedd} within a transaction
+using the \Procedure{submit} method.
+The complexity of job ClassAd creation may be simplified
+by the \Procedure{CreateJobTemplate} method.
+It returns an instance of a ClassAd structure that may be
+further modified.
+A necessary part of the job ClassAd are the job attributes
+\Attr{ClusterId} and \Attr{ProcId}, which uniquely identify
+the cluster and the job within a cluster.
+Allocation and assignment of (monotonically increasing)
+\Attr{ClusterId} values utilize the \Procedure{newCluster} method.
+Jobs may be submitted within the assigned cluster only until
+the \Procedure{newCluster} method is invoked a subsequent time. 
+Each job is allocated and assigned a (monotonically increasing)
+\Attr{ProcId} within the current cluster using the \Procedure{newJob}
+method.
+Therefore, the sequence of method calls to submit a set of jobs
+initially calls \Procedure{newCluster}.
+This is followed by calls to \Procedure{newJob} and then \Procedure{submit}
+for each job within the cluster.
+
+As an example, here are sample cluster and job numbers that 
+result from the ordered calls to submission methods:
+\begin{enumerate}
+ \item
+ A call to \Procedure{newCluster}, assigns a \Attr{ClusterId} of 6.
+ \item
+ A call to \Procedure{newJob}, assigns a \Attr{ProcId} of 0, as
+ this is the first job within the cluster.
+ \item
+ A call to \Procedure{submit} results in a job submission numbered 6.0.
+ \item
+ A call to \Procedure{newJob}, assigns a \Attr{ProcId} of 1.
+ \item
+ A call to \Procedure{submit} results in a job submission numbered 6.1.
+ \item
+ A call to \Procedure{newJob}, assigns a \Attr{ProcId} of 2.
+ \item
+ A call to \Procedure{submit} results in a job submission numbered 6.2.
+ \item
+ A call to \Procedure{newCluster}, assigns a \Attr{ClusterId} of 7.
+ \item
+ A call to \Procedure{newJob}, assigns a \Attr{ProcId} of 0, as
+ this is the first job within the cluster.
+ \item
+ A call to \Procedure{submit} results in a job submission numbered 7.0.
+ \item
+ A call to \Procedure{newJob}, assigns a \Attr{ProcId} of 1.
+ \item
+ A call to \Procedure{submit} results in a job submission numbered 7.1.
+\end{enumerate}
+
+
+% The process of submitting a job involves more than creating a
+% job ClassAd and passing it to \Procedure{Submit}.
+% Before Submit() can be called a
+% cluster and job identifier must have been allocated. This is achieved
+% through the use of NewCluster() and NewJob(). These two calls will
+% return identifiers to be used in Submit(). The sequence of operations
+% that will typically occur is NewCluster() -> NewJob() -> Submit() ->
+% NewJob() -> Submit() -> NewCluster -> NewJob() -> etc. This sequence
+% is very important because new jobs can only be submitted to the most
+% recently created cluster. If NewCluster() is called twice in a row
+% producing identifiers 1 and 2, jobs can only be submitted to cluster 2.
+
+% In the simplest submission case, a client creates a JobAd and passes
+% it to Submit() and is finished. In the most common case, this will
+% not be enough information for the job to be run. There will be a need
+% for the job's input files and the job's executable, known as the
+% sand, i.e. the sand of the job's sandbox, to be transferred along
+% with the JobAd. To deal with sand movement a client can use the file
+% transfer functions of the API, described below. Unfortunately, the
+% statement of create a JobAd is often easier said than done. There
+% are many things that must to be present in a JobAd for it to be
+% accepted by the Schedd. To alleviate the problem of creating a JobAd
+% the Schedd also provides a mechanism to create a template of a JobAd.
+% This method is called CreateJobTemplate() and it returns a JobAd
+% which can readily be sent to Submit().
+
+There is the
+potential that a call to \Procedure{submit} will fail.
+Failure means that the
+job is in the queue,
+and it typically indicates that
+something needed by the job has not been sent.
+As a result the job has no hope in successfully running.
+It is possible to recover from
+such a failure by trying to resend information that the job will
+need. It is also completely acceptable to abort and make another
+attempt. To simplify the client's job in figuring out what the job
+requires, a \Procedure{discoverJobRequirements} method accepting a JobAd and
+returning a list of things that should be sent along with the job is
+provided.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{WebService-File-Transfer} File Transfer}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\Todo
+
+% A common job submission case also requires the job's
+% executable and input files to be transferred.
+% 
+% It is often the case that a job's sand will not already be present on
+% the machine where it will be executed. In this case it is necessary
+% to transfer the sand to the Schedd, where it will reside in a spool
+% location until needed. To transfer a job's sand the API provides two
+% methods, DeclareFile() and SendFile(), which work in tandem. For each
+% file needed by the job, a client should first call DeclareFile() and
+% then send the file's contents with SendFile(). The process of
+% transferring a file is broken into two operations because it is
+% entirely possible that files being sent to the Schedd may already
+% exist, and therefore resending a file is simply a waste of resources.
+% In such a case when a client performs a DeclareFile() it will be told
+% if it should bother sending the file or not. If the client is told to
+% send the file it can then use SendFile() which does not necessarily
+% send the entire file at one time. To deal with files that are more
+% than a few tens of megabytes the SendFile() operation works on chunks
+% of files, meaning a 100MB file can be sent in a series of SendFile()
+% calls. (NOTE: All data is base64 encoded before being sent with
+% SendFile(), which means there is a 33% increase in size for the data.)
+
+% The DeclareFile() operation takes a few critical arguments and a few
+% optional arguments. Firstly, the name of the file being sent and the
+% size of the file, in bytes, are critical. Second, the hash
+% information about the file is non-critical. The type of hash can be
+% specified as NOHASH for clients who just do not care to have their
+% files verified. Also, if NOHASH is used during DeclareFile(), there
+% is no reliable way for the server to discover if it already has the
+% file being declared.
+% So far all the API methods have dealt with sending files to the
+% Schedd. There are also methods for retrieving files. These methods
+% are mostly useful after a job has completed. The typical life-cycle
+% of a job is: first, birth with Submit(); second, execution, where the
+% job is hopefully productive; third, middle-age, where the completed
+% job waits around to be removed; last, old-age, where the job hauled
+% off to a history log. When a job enters middle-age, which a client
+% can discover by look at its JobStatus attribute (4 indicates the
+% Completed state), a client can use the GetFile() method to start
+% retrieving files output by the job. In the case where the client does
+% not know exactly what the job output, ListSpool() can be used to
+% discover all the files related to the job. Finally, there are two
+% ways that a job can enter old-age. First, a client can politely force
+% the job into old-age by calling CloseSpool(). Once this is done the
+% job is removed from the Schedd's queue and its files are no longer
+% available via ListSpool() and GetFile(). The second way a job can
+% enter old-age is by a configuration option in the Schedd. The
+% \Macro{SOAP\_LEAVE\_IN\_QUEUE} option, in a configuration file, specifies an
+% expression that, when evaluating to FALSE, will force the job into
+% old-age. This configuration option is quite important for the Schedd
+% because clients may not ever bother to call CloseSpool() and as a
+% result all jobs could stay in middle-age forever. An example of
+% \Macro{SOAP\_LEAVE\_IN\_QUEUE} is 
+% \begin{verbatim}
+% ((JobStatus==4) && ((ServerTime - CompletionDate) < (60 * 60 * 24)))
+% \end{verbatim}
+% which specifies that all jobs
+% should be forced into old-age if they have been in middle-age for a day.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{WebService-Implementation} Implementation Details}
