@@ -1330,6 +1330,47 @@ fi
 AC_MSG_RESULT([$STRIP])
 AC_SUBST([STRIP],[$STRIP])
 
+AC_PATH_PROG(ac_find,find,no,[$PATH])
+if test $ac_find = "no"; then
+  AC_MSG_WARN( [find not found, debuglink not supported] )
+  AC_SUBST(FindCmd,[""])
+else
+  AC_DEFINE(HAVE_FIND,[1],[Define to 1 if the tool 'find' is available])
+  AC_SUBST(FindCmd,$ac_find)
+fi
+
+AC_PATH_PROG(ac_objcopy,objcopy,no,[$PATH])
+if test $ac_objcopy = "no"; then
+  AC_SUBST(ObjcopyCmd,[""])
+else
+  AC_DEFINE(HAVE_OBJCOPY,[1],[Define to 1 if the tool 'objcopy' is available])
+  AC_SUBST(ObjcopyCmd,$ac_objcopy)
+fi
+
+# If objcopy is available, then figure out if it can do the debuglink
+# feature to allow us seperate debugging symbols and executables on 
+# unix builds ala windows.
+_cv_objcopy_keepdebug_flag=""
+_cv_objcopy_stripunneeded_flag=""
+_cv_objcopy_debuglink_flag=""
+if test ! $ac_objcopy = "no"; then
+	AC_MSG_CHECKING([if objcopy supports --add-gnu-debuglink]) 
+	`$ac_objcopy --help 2>&1 | $GREP add-gnu-debuglink > /dev/null 2>&1`
+	if test $? = 0; then
+		# If this flag exists, then the other ones I need should exist as well.
+		_cv_objcopy_keepdebug_flag="--only-keep-debug"
+		_cv_objcopy_stripunneeded_flag="--strip-unneeded"
+		_cv_objcopy_debuglink_flag="--add-gnu-debuglink"
+		AC_MSG_RESULT([yes])
+		AC_DEFINE(HAVE_OBJCOPY_DEBUGLINK,[1],[Define to 1 if objcopy can seperate the debugging symbols from an executable])
+	else
+		AC_MSG_RESULT([no])
+	fi
+fi
+AC_SUBST(OBJCOPY_KEEPDEBUG_FLAG,$_cv_objcopy_keepdebug_flag)
+AC_SUBST(OBJCOPY_STRIPUNNEEDED_FLAG,$_cv_objcopy_stripunneeded_flag)
+AC_SUBST(OBJCOPY_DEBUGLINK_FLAG,$_cv_objcopy_debuglink_flag)
+
 # We depend on some GNU-specific options to tar.  We also depend on
 # using --owner and --group, and want those to set the ownerships of
 # all files in the tarballs we create to 0.0 (root).  however, not all
@@ -1385,7 +1426,34 @@ fi
 if test "x$TarCmd" = "x"; then
   AC_MSG_ERROR([you system does not support tar features Condor requires for packaging our releases.  you must install a version of GNU tar which supports numeric arguments to --group and --owner (such as version 1.13 or higher), or add a $tar_err_msg, then re-run configure])
 fi
+
+# Tar uses an idiotic 10KB default io buffer block size, which makes for 
+# hideously slow tar operations. This isn't 1975 anymore, so I'm upping it 
+# to 2MB. This is 4096 * 512 (the default block size) and the size of most
+# drive caches these days. This option will
+# also make the smallest tarfile which can be made be padded to 2MB. However, 
+# we compress all of our tar files, so those fluffy zeros will compact nicely.
+# I wish tar wasn't so stupid about the read/write block sizes... :(
+CHECK_TAR_OPTION(["-b 4096"],[_cv_gnu_tar_blocksize_flag])
+if test "$_cv_gnu_tar_blocksize_flag" = "yes"; then
+	TarCmd="$TarCmd -b 4096"
+fi
+
 AC_SUBST(TarCmd,$TarCmd)
+
+# Check to see if tar supports --exclude
+CHECK_TAR_OPTION([--exclude=configure],[_cv_gnu_tar_exclude_flag])
+if test "$_cv_gnu_tar_exclude_flag" = "yes"; then
+	AC_DEFINE(HAVE_TAR_EXCLUDE_FLAG,[1],[Define to 1 is tar has --exclude option])
+fi
+
+# Check to see if tar supports --files-from
+echo "configure" > _test_file
+CHECK_TAR_OPTION([--files-from=_test_file],[_cv_gnu_tar_files_from_flag])
+if test "$_cv_gnu_tar_files_from_flag" = "yes"; then
+	AC_DEFINE(HAVE_TAR_FILES_FROM_FLAG,[1],[Define to 1 is tar has --files-from option])
+fi
+rm -f _test_file
 
 # We use "cp -r" to package parts of Condor.  However, we need to make
 # sure that it dereferences symlinks, instead of copying the links.
@@ -1489,6 +1557,26 @@ else
 	fi
 fi
 AC_SUBST(HAVE_RPM,$_cv_have_rpm)
+
+# Here we figure out whether or not the circumstances are correct for us
+# to be able to separate the debugging symbols from the executables and
+# package them into a tarball. for example, if say objcopy's debuglink flag
+# is available, but we can't exclude the files when making the tarballs, 
+# then turn the whole thing off.
+# NOTE: There is some problem with OSF1 that executables subjected to this
+# form of stripping become not executable anymore. I haven't looked into it
+# deeply, so for now I'll just turn this off for that platform.
+AC_MSG_CHECKING([for ability to produce debuglink tarball])
+if test "x$ac_find" != "xno" -a "x$ac_objcopy" != "xno" \
+		-a "x$_cv_objcopy_keepdebug_flag" != "x" \
+		-a "x$_cv_gnu_tar_exclude_flag" != "x" \
+		-a "x$_cv_gnu_tar_files_from_flag" != "x" \
+		-a ! "$os" = "OSF1"; then
+	AC_MSG_RESULT([yes])
+	AC_DEFINE(HAVE_DEBUGLINK_TARBALL,[1],[Define to 1 of you know you can produce the debuglink tarball])
+else
+	AC_MSG_RESULT([no])
+fi
 
 ############################################################
 # checks for libraries

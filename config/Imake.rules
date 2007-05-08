@@ -587,6 +587,27 @@ XCOMM End translation of func(release_recursive_copy_target)
 ***********************************************************************/
 
 /*
+** This function is the method by which the debugging symbols are stripped
+** from an executable. Sometimes, they are just stripped and that's it, 
+** other times the stripping of the file results in a debug file being made
+** which contains the debugging symbols. These debugging symbol files will
+** always have .dbg appended to the file name.
+*/
+#if HAVE_DEBUGLINK_TARBALL
+
+#ifndef strip_file
+#define strip_file(file)$(OBJCOPY_CMD) $(OBJCOPY_KEEPDEBUG_FLAG) file file.dbg && $(OBJCOPY_CMD) $(OBJCOPY_STRIPUNNEEDED_FLAG) file && $(OBJCOPY_CMD) $(OBJCOPY_DEBUGLINK_FLAG)=file.dbg file && chmod 0644 file.dbg
+#endif /* strip_file */
+
+#else
+
+#ifndef strip_file
+#define strip_file(file)$(STRIP) file
+#endif /* strip_file */
+
+#endif
+
+/*
 ** Copy a given file to the specified directory, with the given mode,
 ** and strip the binary.
 */
@@ -596,7 +617,7 @@ XCOMM Begin translation of func(strip_target) @@\
 $(STRIP_DIR)/dir/file: file			@@\
 	/bin/rm -f $(STRIP_DIR)/dir/file		@@\
 	cp file $(STRIP_DIR)/dir			@@\
-	$(STRIP) $(STRIP_DIR)/dir/file		@@\
+	strip_file($(STRIP_DIR)/dir/file) @@\
 	chmod mode $(STRIP_DIR)/dir/file		@@\
 stripped:: $(STRIP_DIR)/dir/file @@\
 XCOMM End translation of func(strip_target) 
@@ -718,7 +739,7 @@ $(STATIC_DIR)dir/program: program.static		@@\
 	/bin/rm -f $(STATIC_DIR)/dir/program		@@\
 	cp program.static $(STATIC_DIR)/dir/program	@@\
 	chmod EXECUTABLE_MODE $(STATIC_DIR)/dir/program	@@\
-	$(STRIP) $(STATIC_DIR)/dir/program		@@\
+	strip_file($(STATIC_DIR)/dir/program)		@@\
 $(STATIC_UNSTRIP_DIR)dir/program: program.static	@@\
 	/bin/rm -f $(STATIC_UNSTRIP_DIR)/dir/program	@@\
 	cp program.static $(STATIC_UNSTRIP_DIR)/dir/program	@@\
@@ -750,7 +771,7 @@ $(STATIC_DIR)/dir/program: program.static			@@\
 	/bin/rm -f $(STATIC_DIR)/dir/program			@@\
 	cp program.static $(STATIC_DIR)/dir/program		@@\
 	chmod EXECUTABLE_MODE $(STATIC_DIR)/dir/program		@@\
-	$(STRIP) $(STATIC_DIR)/dir/program			@@\
+	strip_file($(STATIC_DIR)/dir/program)			@@\
 $(STATIC_UNSTRIP_DIR)/dir/program: program.static		@@\
 	/bin/rm -f $(STATIC_UNSTRIP_DIR)/dir/program		@@\
 	cp program.static $(STATIC_UNSTRIP_DIR)/dir/program	@@\

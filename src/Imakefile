@@ -416,15 +416,34 @@ static_unstrip.tar: static manpages
 #define StaticTar
 #endif 
 
+#if HAVE_DEBUGLINK_TARBALL
+
+#define DebugLinkTar debugsyms.tar
+
+strip.tar: stripped manpages
+	rm -f strip_dir/release.tar
+	cd strip_dir && $(TAR_CMD) -cvf release.tar --exclude="*.dbg" AllFiles
+
+debugsyms.tar: stripped manpages
+	rm -f strip_dir/debugsyms.tar
+	rm -f strip_dir/debug_files.*
+	cd strip_dir && $(FIND) AllFiles -name "*.dbg" -print > debug_files.$$$$ && $(TAR_CMD) -cvf debugsyms.tar --files-from debug_files.$$$$ && rm -f debug_files.$$$$
+
+#else
+
+#define DebugLinkTar 
+
 strip.tar: stripped manpages
 	rm -f strip_dir/release.tar
 	cd strip_dir; $(TAR_CMD) -cvf release.tar AllFiles
+
+#endif /* HAVE_DEBUGLINK_TARBALL */
 
 unstrip.tar: release manpages
 	rm -f release_dir/release.tar
 	cd release_dir; $(TAR_CMD) -cvf release.tar AllFiles
 
-all_tarballs: strip.tar unstrip.tar StaticTar
+all_tarballs: strip.tar unstrip.tar StaticTar DebugLinkTar
 
 public: release all_tarballs
 	if test ! -d ../public; then mkdir ../public; fi
