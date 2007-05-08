@@ -266,6 +266,10 @@ family tracking logic to lose track of processes.
 \item Fixed a memory error that would cause \Condor{q} to sometimes
 crash when using Quill.
 
+\item Fixed a problem where the Windows \Condor{credd} would be
+inaccessible to other Condor components if \Macro{CREDD\_HOST} were
+set to a DNS alias and not the canonical DNS name.
+
 \end{itemize}
 
 \noindent Known Bugs:
