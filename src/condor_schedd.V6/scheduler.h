@@ -65,6 +65,15 @@ const	int			JOB_DEFERRAL_PREP_DEFAULT = 300; // seconds
 
 extern	DLL_IMPORT_MAGIC char**		environ;
 
+//
+// Given a ClassAd from the job queue, we check to see if it
+// has the ATTR_SCHEDD_INTERVAL attribute defined. If it does, then
+// then we will simply update it with the latest value
+// This needs to be here because it causes problems in schedd_main.C 
+// with new compilers (gcc 4.1+)
+//
+extern int updateSchedDInterval( ClassAd* );
+
 class match_rec;
 
 struct shadow_rec
