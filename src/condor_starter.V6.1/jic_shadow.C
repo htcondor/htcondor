@@ -356,7 +356,11 @@ JICShadow::allJobsDone( void )
 			// true if job exited on its own
 		bool final_transfer = (requested_exit == false);	
 
-		int timeout = param_integer( "STARTER_UPLOAD_TIMEOUT", 30 );
+			// The shadow may block on disk I/O for long periods of
+			// time, so set a big timeout on the starter's side of the
+			// file transfer socket.
+
+		int timeout = param_integer( "STARTER_UPLOAD_TIMEOUT", 200 );
 		filetrans->setClientSocketTimeout(timeout);
 
 			// The user job may have created files only readable
@@ -1553,7 +1557,6 @@ JICShadow::beginFileTransfer( void )
 		ASSERT( filetrans->Init(job_ad, false, PRIV_USER) );
 		filetrans->RegisterCallback(
 				  (FileTransferHandler)&JICShadow::transferCompleted,this );
-
 
 		if ( shadow_version == NULL ) {
 			dprintf( D_ALWAYS, "Can't determine shadow version for FileTransfer!\n" );
