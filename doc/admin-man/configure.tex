@@ -4403,6 +4403,14 @@ an environment variable that is in the \Condor{starter}'s
 environment, the user job's definition takes precedence.
 This variable does not apply to standard or pvm universe jobs.
 
+\item[\Macro{STARTER\_UPLOAD\_TIMEOUT}]
+\label{param:StarterUploadTimeout} 
+An integer value that specifies the network communication timeout to use
+when transferring files back to the submit machine.  The default value is
+200.  You may need to increase this value if the disk on the submit machine
+cannot keep up with large bursts of activity, such as many jobs all
+completing at the same time.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
