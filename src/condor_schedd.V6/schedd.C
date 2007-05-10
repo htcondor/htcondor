@@ -78,6 +78,7 @@
 #include "fs_util.h"
 #include "condor_mkstemp.h"
 #include "tdman.h"
+#include "utc_time.h"
 
 #define DEFAULT_SHADOW_SIZE 125
 #define DEFAULT_JOB_START_COUNT 1
@@ -103,11 +104,6 @@ extern "C"
 	int prio_compar(prio_rec*, prio_rec*);
 }
 
-extern void	FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad, 
-					 char * user);
-extern int Runnable(PROC_ID*);
-extern int Runnable(ClassAd*);
-
 extern char* Spool;
 extern char * Name;
 static char * NameInEnv = NULL;
@@ -125,11 +121,6 @@ extern char *DebugLock;
 
 extern Scheduler scheduler;
 extern DedicatedScheduler dedicated_scheduler;
-
-// priority records
-extern prio_rec *PrioRec;
-extern int N_PrioRecs;
-extern int grow_prio_recs(int);
 
 void cleanup_ckpt_files(int , int , char*);
 void send_vacate(match_rec*, int);
@@ -265,8 +256,6 @@ Scheduler::Scheduler() :
 	MyShadowSockName = NULL;
 	shadowCommandrsock = NULL;
 	shadowCommandssock = NULL;
-	SchedDInterval = 0;
-	SchedDMinInterval = 0;
 	QueueCleanInterval = 0; JobStartDelay = 0;
 	RequestClaimTimeout = 0;
 	MaxJobsRunning = 0;
@@ -328,6 +317,7 @@ Scheduler::Scheduler() :
 	StartJobTimer=-1;
 	timeoutid = -1;
 	startjobsid = -1;
+	periodicid = -1;
 
 #if WANT_QUILL
 	quill_enabled = FALSE;
@@ -473,21 +463,22 @@ void
 Scheduler::timeout()
 {
 	static bool min_interval_timer_set = false;
-	static time_t next_timeout = 0;
-	time_t right_now;
 
-	right_now = time(NULL);
-	if ( right_now < next_timeout ) {
+		// If we are called too frequently, delay.
+	int time_to_next_run = SchedDInterval.getTimeToNextRun();
+	if ( time_to_next_run > 0 ) {
 		if (!min_interval_timer_set) {
-			daemonCore->Reset_Timer(timeoutid,next_timeout - right_now,1);
-				// The line below fixes the "scheduler universe five-
-				// minute delay" bug (Gnats PR 532).  wenger 2005-08-30.
-			daemonCore->Reset_Timer(startjobsid,
-						next_timeout - right_now + 1, 1);
+			dprintf(D_FULLDEBUG,"Setting delay until next queue scan to %d seconds\n",time_to_next_run);
+
+			daemonCore->Reset_Timer(timeoutid,time_to_next_run,1);
+			daemonCore->Reset_Timer(startjobsid,time_to_next_run+1,1);
 			min_interval_timer_set = true;
 		}
 		return;
 	}
+
+	min_interval_timer_set = false;
+	SchedDInterval.setStartTimeNow();
 
 	count_jobs();
 
@@ -514,9 +505,9 @@ Scheduler::timeout()
 	}
 
 	/* Reset our timer */
-	daemonCore->Reset_Timer(timeoutid,SchedDInterval);
-	min_interval_timer_set = false;
-	next_timeout = right_now + SchedDMinInterval;
+	daemonCore->Reset_Timer(timeoutid,SchedDInterval.getDefaultInterval());
+
+	SchedDInterval.setFinishTimeNow();
 }
 
 void
@@ -642,7 +633,7 @@ Scheduler::count_jobs()
 			// then we should flock -- we need this case if the negotiator
 			// is down or simply ignoring us because our priority is so low
 			if ((current_time - Owners[i].NegotiationTimestamp >
-				 SchedDInterval*2) && (Owners[i].FlockLevel < MaxFlockLevel)) {
+				 SchedDInterval.getDefaultInterval()*2) && (Owners[i].FlockLevel < MaxFlockLevel)) {
 				Owners[i].FlockLevel++;
 				Owners[i].NegotiationTimestamp = current_time;
 				dprintf(D_ALWAYS,
@@ -1821,7 +1812,12 @@ periodic user policy expressions.
 void
 Scheduler::PeriodicExprHandler( void )
 {
+	PeriodicExprInterval.setStartTimeNow();
+
 	WalkJobQueue(PeriodicExprEval);
+
+	PeriodicExprInterval.setFinishTimeNow();
+	daemonCore->Reset_Timer( periodicid, PeriodicExprInterval.getTimeToNextRun() );
 }
 
 
@@ -4643,8 +4639,6 @@ Scheduler::negotiate(int command, Stream* s)
 	bool prio_rec_array_is_stale = !BuildPrioRecArray();
 	jobs = N_PrioRecs;
 
-	HashTable<int,int> autocluster_rejected(N_PrioRecs,hashFuncInt,rejectDuplicateKeys);
-
 	JobsStarted = 0;
 
 	// find owner in the Owners array
@@ -4694,7 +4688,7 @@ Scheduler::negotiate(int command, Stream* s)
 		id = PrioRec[i].id;
 
 		int junk; // don't care about the value
-		if ( autocluster_rejected.lookup( PrioRec[i].auto_cluster_id, junk ) == 0 ) {
+		if ( PrioRecAutoClusterRejected->lookup( PrioRec[i].auto_cluster_id, junk ) == 0 ) {
 				// We have already failed to match a job from this same
 				// autocluster with this machine.  Skip it.
 			continue;
@@ -4813,7 +4807,7 @@ Scheduler::negotiate(int command, Stream* s)
 				 case REJECTED:
 						// Always negotiate for all PVM job classes! 
 					if ( job_universe != CONDOR_UNIVERSE_PVM && !NegotiateAllJobsInCluster ) {
-						autocluster_rejected.insert( cur_cluster, 1 );
+						PrioRecAutoClusterRejected->insert( cur_cluster, 1 );
 					}
 					host_cnt = max_hosts + 1;
 					JobsRejected++;
@@ -5889,7 +5883,7 @@ updateSchedDInterval( ClassAd *job )
 			// This probably isn't a too serious problem if we
 			// are unable to update the job ad
 			//
-		if ( ! job->Assign( ATTR_SCHEDD_INTERVAL, scheduler.SchedDInterval ) ) {
+		if ( ! job->Assign( ATTR_SCHEDD_INTERVAL, (int)scheduler.SchedDInterval.getMaxInterval() ) ) {
 			PROC_ID id;
 			job->LookupInteger(ATTR_CLUSTER_ID, id.cluster);
 			job->LookupInteger(ATTR_PROC_ID, id.proc);
@@ -6193,8 +6187,8 @@ Scheduler::StartJobs()
 		StartLocalJobs();
 	}
 
-	/* Reset the our Timer */
-	daemonCore->Reset_Timer(startjobsid,SchedDInterval);
+	/* Reset our Timer */
+	daemonCore->Reset_Timer(startjobsid,SchedDInterval.getDefaultInterval());
 
 	dprintf(D_FULLDEBUG, "-------- Done starting jobs --------\n");
 }
@@ -9810,28 +9804,27 @@ Scheduler::Init()
 		// that use it (job deferral, crontab). 
 		// Except that this update must be after the queue is initialized
 		//
-	int orig_SchedDInterval = this->SchedDInterval;
-	tmp = param( "SCHEDD_INTERVAL" );
-	if( ! tmp ) {
-		SchedDInterval = SCHEDD_INTERVAL_DEFAULT;
-	} else {
-		SchedDInterval = atoi( tmp );
-		free( tmp );
-	}
+	int orig_SchedDInterval = SchedDInterval.getMaxInterval();;
+
+	SchedDInterval.setDefaultInterval( param_integer( "SCHEDD_INTERVAL", 300 ) );
+	SchedDInterval.setMaxInterval( SchedDInterval.getDefaultInterval() );
+
+	SchedDInterval.setMinInterval( param_integer("SCHEDD_MIN_INTERVAL",5) );
+
+	SchedDInterval.setTimeslice( param_double("SCHEDD_INTERVAL_TIMESLICE",0.05,0,1) );
+
 		//
 		// We only want to update if this is a reconfig
 		// If the schedd is just starting up, there isn't a job
 		// queue at this point
 		//
-	if ( !first_time_in_init && this->SchedDInterval != orig_SchedDInterval ) {
+	if ( !first_time_in_init && this->SchedDInterval.getMaxInterval() != orig_SchedDInterval ) {
 			// 
 			// This will only update the job's that have the old
 			// ScheddInterval attribute defined
 			//
 		WalkJobQueue( (int(*)(ClassAd *))::updateSchedDInterval );
 	}
-
-	SchedDMinInterval = param_integer("SCHEDD_MIN_INTERVAL",5);
 
 	// default every 24 hours
 	QueueCleanInterval = param_integer( "QUEUE_CLEAN_INTERVAL",24*60*60 );
@@ -10042,7 +10035,9 @@ Scheduler::Init()
 
 	ManageBandwidth = param_boolean("MANAGE_BANDWIDTH", false);
 
-	PeriodicExprInterval = param_integer("PERIODIC_EXPR_INTERVAL", 300);
+	PeriodicExprInterval.setMinInterval( param_integer("PERIODIC_EXPR_INTERVAL", 60) );
+
+	PeriodicExprInterval.setTimeslice( param_double("PERIODIC_EXPR_TIMESLICE", 0.01,0,1) );
 
 	if ( first_time_in_init ) {	  // cannot be changed on the fly
 		gridman_per_job = param_boolean( "GRIDMANAGER_PER_JOB", false );
@@ -10339,7 +10334,7 @@ Scheduler::Register()
 void
 Scheduler::RegisterTimers()
 {
-	static int cleanid = -1, wallclocktid = -1, periodicid=-1;
+	static int cleanid = -1, wallclocktid = -1;
 	// Note: aliveid is a data member of the Scheduler class
 	static int oldQueueCleanInterval = -1;
 
@@ -10387,8 +10382,11 @@ Scheduler::RegisterTimers()
 		wallclocktid = -1;
 	}
 
-	if (PeriodicExprInterval>0) {
-		periodicid = daemonCore->Register_Timer(PeriodicExprInterval,PeriodicExprInterval,
+	if (PeriodicExprInterval.getMinInterval()>0) {
+		int time_to_next_run = PeriodicExprInterval.getTimeToNextRun();
+		periodicid = daemonCore->Register_Timer(
+			time_to_next_run,
+			time_to_next_run,
 			(Eventcpp)&Scheduler::PeriodicExprHandler,"PeriodicExpr",this);
 	} else {
 		periodicid = -1;
@@ -11112,7 +11110,7 @@ Scheduler::publish( ClassAd *ad ) {
 		// -------------------------------------------------------
 	InsertIntoAd ( ad, "MySockName", MySockName );
 	InsertIntoAd ( ad, "MyShadowSockname", MyShadowSockName );
-	InsertIntoAd ( ad, "SchedDInterval", SchedDInterval );
+	InsertIntoAd ( ad, "SchedDInterval", SchedDInterval.getDefaultInterval() );
 	InsertIntoAd ( ad, "QueueCleanInterval", QueueCleanInterval );
 	InsertIntoAd ( ad, "JobStartDelay", JobStartDelay );
 	InsertIntoAd ( ad, "JobStartCount", JobStartCount );

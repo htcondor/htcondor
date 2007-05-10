@@ -49,7 +49,7 @@ static unsigned int torekHash(const YourString &s) {
 
 	const char *p = s.s;
 	while (*p) {
-		hash = 33 * hash + (unsigned char)tolower(*p);
+		hash = (hash<<5)+hash + (unsigned char)tolower(*p);
 		p++;
 	}
 
@@ -2423,6 +2423,7 @@ AttrList::initFromStream(Stream& s)
 	char *line;
     int numExprs;
 	int succeeded;
+	int bytes_read = 0;
 	
 	succeeded = 1;
 
@@ -2441,13 +2442,10 @@ AttrList::initFromStream(Stream& s)
     
     for(int i = 0; i < numExprs; i++) {
 
-		// This code used to read into a static buffer. 
-		// Happily, cedar will allocate a buffer for us instead. 
-		// That is much better, paticularly when people send around 
-		// large attributes (like the environment) which are bigger
-		// than the static buffer was.--Alain, 1-Nov-2001
+			// The following Stream::get() call will point 'line' to an
+			// internal stream buffer that we should not free.
 		line = NULL;
-        if(!s.code(line)) {
+        if(!s.get(line,bytes_read)) {
             succeeded = 0;
 			break;
         }
@@ -2455,9 +2453,6 @@ AttrList::initFromStream(Stream& s)
 		if (!Insert(line)) {
 			succeeded = 0;
 			break;
-		}
-		if (line != NULL) {
-			free(line);
 		}
     }
 

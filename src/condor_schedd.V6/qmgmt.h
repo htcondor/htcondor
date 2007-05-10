@@ -26,6 +26,7 @@
 #include "condor_classad.h"
 #include "condor_io.h"
 #include "log_transaction.h" // for Transaction
+#include "prio_rec.h"
 
 #define NEW_BORN	1
 #define DEATHS_DOOR	2
@@ -113,6 +114,18 @@ QmgmtPeer* getQmgmtConnectionInfo();
 bool OwnerCheck(int,int);
 bool OwnerCheck(ClassAd *, const char *);
 bool OwnerCheck2(ClassAd *, const char *);
+
+// priority records
+extern prio_rec *PrioRec;
+extern int N_PrioRecs;
+extern HashTable<int,int> *PrioRecAutoClusterRejected;
+extern int grow_prio_recs(int);
+
+extern void	FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad, 
+					 char * user);
+extern int Runnable(PROC_ID*);
+extern int Runnable(ClassAd*);
+
 #endif
 
 #endif /* _QMGMT_H */

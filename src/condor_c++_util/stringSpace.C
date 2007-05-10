@@ -56,7 +56,7 @@ unsigned int YourSensitiveString::hashFunction(const YourSensitiveString &s) {
 
 	const char *p = s.m_str;
 	while (*p) {
-		hash = 33 * hash + (unsigned char)(*p);
+		hash = (hash<<5)+hash + (unsigned char)*p;
 		p++;
 	}
 

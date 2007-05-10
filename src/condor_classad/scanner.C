@@ -52,12 +52,35 @@ const struct keywords keywords[] =
 	{"F",         1, LX_BOOL,      0}
 };
 
-static bool scan_keyword(char *&input, Token &token);
-static void scan_variable(char *&input, Token &token);
-static void scan_number(char *&input, Token &token);
-static void scan_string(char *&input, Token &token);
-static void scan_time(char *&input, Token  &token);
-static void scan_operator(char *&input, Token &token);
+/* This funky hash table is used to reduce overhead in scan_keyword()
+   when the input identifier can't possibly be a keyword.
+*/
+class _KeywordHash {
+public:
+	_KeywordHash() {
+		int k;
+			// mark all characters 1
+		memset(keyword_hash,1,sizeof(keyword_hash));
+			// mark all first characters of keywords 0 (both upper and lower)
+		for(k=NUMBER_OF_KEYWORDS; k--; ) {
+			char ch = keywords[k].keyword[0];
+			keyword_hash[(unsigned char)tolower(ch)] = 0;
+			keyword_hash[(unsigned char)toupper(ch)] = 0;
+		}
+	}
+	inline bool notAKeyword(const char *str) {
+		return keyword_hash[*(unsigned char *)str];
+	}
+private:
+	char keyword_hash[256];
+} KeywordHash;
+
+static bool scan_keyword(const char *&input, Token &token);
+static void scan_variable(const char *&input, Token &token);
+static void scan_number(const char *&input, Token &token);
+static void scan_string(const char *&input, Token &token);
+static void scan_time(const char *&input, Token  &token);
+static void scan_operator(const char *&input, Token &token);
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -101,7 +124,7 @@ Token::reset()
 
 #ifdef USE_NEW_SCANNER 
 
-void Scanner(char*& input, Token& token)
+void Scanner(const char *& input, Token& token)
 { 
     // skip white space
     token.length = 0;
@@ -130,11 +153,16 @@ void Scanner(char*& input, Token& token)
 }
 
 static bool scan_keyword(
-    char   *&input,
+    const char   *&input,
 	Token  &token)
 {
 	int  keyword_index;
 	bool is_keyword;
+
+	if( KeywordHash.notAKeyword(input) ) {
+		return false;
+	}
+		// might still not be a keyword, but at least there is a chance...
 
 	is_keyword = false;
 	
@@ -160,11 +188,11 @@ static bool scan_keyword(
 }
 
 static void scan_variable(
-    char   *&input,
+    const char   *&input,
     Token  &token)
 {
 	int  variable_length;
-	char *s;
+	const char *s;
 
 	variable_length = 0;
 	s = input;
@@ -195,10 +223,10 @@ static void scan_variable(
 }
 
 static void scan_number(
-    char   *&input,
+    const char   *&input,
 	Token  &token)
 {
-	char *digit_text;
+	const char *digit_text;
 
 	digit_text = input;
 
@@ -218,23 +246,23 @@ static void scan_number(
 		}
 
 		// Convert the float
-		token.floatVal = (float) strtod(input, &input);
+		token.floatVal = (float) strtod(input, (char **)&input);
 		token.type = LX_FLOAT; 
 	} else {
 		// It's just a plain integer
-		token.intVal = strtol(input, &input, 10);
+		token.intVal = strtol(input, (char **)&input, 10);
 		token.type = LX_INTEGER; 
 	}
 	return;
 }
 
 static void scan_string(
-    char   *&input,
+    const char   *&input,
 	Token  &token)
 {
 
 	int   string_length;
-	char *s;
+	const char *s;
 
 	// skip the initial quote mark 
 	input++;
@@ -299,11 +327,11 @@ static void scan_string(
 
 // We can time, which is just a string.
 static void scan_time(
-    char   *&input,
+    const char   *&input,
 	Token  &token)
 {
 	int   string_length;
-	char *s;
+	const char *s;
 
 	// skip the initial quote mark 
 	input++;
@@ -352,7 +380,7 @@ static void scan_time(
 }
 
 static void scan_operator(
-    char   *&input,
+    const char   *&input,
     Token  &token)
 {
 	switch(*input) {
@@ -502,7 +530,7 @@ static void scan_operator(
 }
 
 #else /* USE_NEW_SCANNER is not defined */
-void Scanner(char*& s, Token& t)
+void Scanner(const char *& s, Token& t)
 { 
     char	str[MAXVARNAME];
     char	*tmp;		// working variables

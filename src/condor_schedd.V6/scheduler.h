@@ -55,6 +55,7 @@
 #include "env.h"
 #include "tdman.h"
 #include "condor_crontab.h"
+#include "condor_timeslice.h"
 
 extern  int         STARTD_CONTACT_TIMEOUT;
 const	int			NEGOTIATOR_CONTACT_TIMEOUT = 30;
@@ -434,10 +435,10 @@ private:
 	NamedClassAdList extra_ads;
 
 	// parameters controling the scheduling and starting shadow
-	int				SchedDInterval;
-	int				SchedDMinInterval;
+	Timeslice       SchedDInterval;
+	Timeslice       PeriodicExprInterval;
+	int             periodicid;
 	int				QueueCleanInterval;
-	int				PeriodicExprInterval;
 	int             RequestClaimTimeout;
 	int				JobStartDelay;
 	int				JobStartCount;

@@ -43,9 +43,7 @@ Token &nextToken()
 
 static	int		alreadyRead;
 
-extern	void		Scanner(char*&, Token&);
-
-int ParseExpr(char*& s, ExprTree*&, int&);
+int ParseExpr(const char *& s, ExprTree*&, int&);
 
 #ifndef USE_STRING_SPACE_IN_CLASSADS
 static	char*	StrCpy(const char* str)
@@ -62,7 +60,7 @@ static	char*	StrCpy(const char* str)
 // to use. Once a token is read by this function, it can not be looked at again.
 ////////////////////////////////////////////////////////////////////////////////
 Token* 
-ReadToken(char*& s)
+ReadToken(const char *& s)
 {
     if(alreadyRead == TRUE) 
     {
@@ -78,7 +76,7 @@ ReadToken(char*& s)
 // read in is the same token. A token can be looked at for many times.
 ////////////////////////////////////////////////////////////////////////////////
 Token* 
-LookToken(char*& s)
+LookToken(const char *& s)
 {
     if(alreadyRead == TRUE)
     {
@@ -95,7 +93,7 @@ LookToken(char*& s)
 // then return TRUE; Otherwise return FALSE.
 ////////////////////////////////////////////////////////////////////////////////
 int 
-Match(LexemeType t, char*& s, int& count)
+Match(LexemeType t, const char *& s, int& count)
 {
     Token*	token;
 
@@ -115,7 +113,7 @@ Match(LexemeType t, char*& s, int& count)
 ///////////////////////////////////////////////////////////////////////////////
 
 int
-ParseFunction(char *functionName, char*& s, ExprTree*& newTree, int& count)
+ParseFunction(char *functionName, const char *& s, ExprTree*& newTree, int& count)
 {
 	int       parse_succeeded;
 	Token     *t;
@@ -171,7 +169,7 @@ ParseFunction(char *functionName, char*& s, ExprTree*& newTree, int& count)
 }
 
 int 
-ParseFactor(char*& s, ExprTree*& newTree, int& count)
+ParseFactor(const char *& s, ExprTree*& newTree, int& count)
 {
     Token*		t     = LookToken(s); // next token
 	ExprTree	*expr = NULL;
@@ -313,7 +311,7 @@ ParseFactor(char*& s, ExprTree*& newTree, int& count)
 }
   
 int 
-ParseX4(ExprTree* lArg, char*& s, ExprTree*& newTree, int& count)
+ParseX4(ExprTree* lArg, const char *& s, ExprTree*& newTree, int& count)
 {
     Token*			t       = LookToken(s);	// next token
     ExprTree*		subTree = NULL;
@@ -359,7 +357,7 @@ ParseX4(ExprTree* lArg, char*& s, ExprTree*& newTree, int& count)
 }
 
 int 
-ParseMultOp(char*& s, ExprTree*& newTree, int& count)
+ParseMultOp(const char *& s, ExprTree*& newTree, int& count)
 {
     ExprTree*	lArg = NULL;
 
@@ -372,7 +370,7 @@ ParseMultOp(char*& s, ExprTree*& newTree, int& count)
 }
 
 int 
-ParseX3(ExprTree* lArg, char*& s, ExprTree*& newTree, int& count)
+ParseX3(ExprTree* lArg, const char *& s, ExprTree*& newTree, int& count)
 {
     Token*			t       = LookToken(s);
     ExprTree*		subTree = NULL;
@@ -418,7 +416,7 @@ ParseX3(ExprTree* lArg, char*& s, ExprTree*& newTree, int& count)
 }
 
 int 
-ParseAddOp(char*& s, ExprTree*& newTree, int& count)
+ParseAddOp(const char *& s, ExprTree*& newTree, int& count)
 {
     Token*		t;
     ExprTree*	lArg = NULL;
@@ -450,7 +448,7 @@ ParseAddOp(char*& s, ExprTree*& newTree, int& count)
 }
 
 int 
-ParseX2p5(ExprTree* lArg, char*& s, ExprTree*& newTree, int& count)
+ParseX2p5(ExprTree* lArg, const char *& s, ExprTree*& newTree, int& count)
 {
     Token*		t       = LookToken(s);
     ExprTree*	subTree = NULL;
@@ -507,7 +505,7 @@ ParseX2p5(ExprTree* lArg, char*& s, ExprTree*& newTree, int& count)
 
 
 int 
-ParseEqualityOp(char*& s, ExprTree*& newTree, int& count)
+ParseEqualityOp(const char *& s, ExprTree*& newTree, int& count)
 {
     ExprTree*	lArg = NULL;
 
@@ -520,7 +518,7 @@ ParseEqualityOp(char*& s, ExprTree*& newTree, int& count)
 
 
 int 
-ParseX2(ExprTree* lArg, char*& s, ExprTree*& newTree, int& count)
+ParseX2(ExprTree* lArg, const char *& s, ExprTree*& newTree, int& count)
 {
     Token*		t       = LookToken(s);
     ExprTree*	subTree = NULL;
@@ -577,7 +575,7 @@ ParseX2(ExprTree* lArg, char*& s, ExprTree*& newTree, int& count)
 
 
 int 
-ParseSimpleExpr(char*& s, ExprTree*& newTree, int& count)
+ParseSimpleExpr(const char *& s, ExprTree*& newTree, int& count)
 {
     ExprTree*	lArg = NULL;
 
@@ -590,7 +588,7 @@ ParseSimpleExpr(char*& s, ExprTree*& newTree, int& count)
 
 
 int 
-ParseX1p5(ExprTree* lArg, char*& s, ExprTree*& newTree, int& count)
+ParseX1p5(ExprTree* lArg, const char *& s, ExprTree*& newTree, int& count)
 {
     Token*		t       = LookToken(s);
     ExprTree*	subTree = NULL;
@@ -614,7 +612,7 @@ ParseX1p5(ExprTree* lArg, char*& s, ExprTree*& newTree, int& count)
 
 
 int 
-ParseAndExpr(char*& s, ExprTree*& newTree, int& count)
+ParseAndExpr(const char *& s, ExprTree*& newTree, int& count)
 {
     ExprTree*	lArg = NULL;
 
@@ -627,7 +625,7 @@ ParseAndExpr(char*& s, ExprTree*& newTree, int& count)
 
 
 int 
-ParseX1(ExprTree* lArg, char*& s, ExprTree*& newTree, int& count)
+ParseX1(ExprTree* lArg, const char *& s, ExprTree*& newTree, int& count)
 {
     Token*		t       = LookToken(s);
     ExprTree*	subTree = NULL;
@@ -650,7 +648,7 @@ ParseX1(ExprTree* lArg, char*& s, ExprTree*& newTree, int& count)
 }
 
 int 
-ParseExpr(char*& s, ExprTree*& newTree, int& count)
+ParseExpr(const char *& s, ExprTree*& newTree, int& count)
 {
     ExprTree*	lArg = NULL;
 
@@ -662,7 +660,7 @@ ParseExpr(char*& s, ExprTree*& newTree, int& count)
 }
 
 int 
-ParseAssignExpr(char*& s, ExprTree*& newTree, int& count)
+ParseAssignExpr(const char *& s, ExprTree*& newTree, int& count)
 {
     Token*	t;
     ExprTree* 	lArg = NULL;
@@ -703,25 +701,13 @@ ParseAssignExpr(char*& s, ExprTree*& newTree, int& count)
 int 
 Parse(const char* s, ExprTree*& tree)
 {
-	char   *str;
-	char   *tmp;
 	int    count;
 
 	tree = NULL;
 
-	// Make a copy of the string we're parsing.  Unlike the old
-	// version (see below) we don't bite the dust when the string is
-	// really long. But I'm unsure why the original author of this
-	// code chose to copy the string at all. Is it really necessary? I
-	// suspect not, but I don't want to risk breaking all of Condor by
-	// changing it.--Alain 10-Sep-2001
-	str = (char *) malloc(strlen(s) + 1);
-	tmp = str;
-	strcpy(str, s);
-
 	count = 0;
     alreadyRead = TRUE;
-    if(ParseAssignExpr(tmp, tree, count))
+    if(ParseAssignExpr(s, tree, count))
     {
 		count = 0;
     } else if (tree != NULL) {
@@ -729,33 +715,5 @@ Parse(const char* s, ExprTree*& tree)
 		tree = NULL;
 	}
 	nextToken().reset();
-	free(str);
     return count;
-}
-
-// Old version of Parse()
-#if 0
-int 
-Parse(const char* s, ExprTree*& tree)
-{
-	char		str[ATTRLIST_MAX_EXPRESSION];
-    char*		tmp = str;	// parsing indicator
-    int			count = 0;	// count characters which has been read
-
-	strcpy(str, s);
-    alreadyRead = TRUE;
-    if(ParseAssignExpr(tmp, tree, count))
-    {
-		nextToken().reset();
-		return 0;
-    }
-	nextToken().reset();
-    return count;
-}
-#endif
-
-int 
-Parse(char* s, ExprTree*& tree)
-{
-	return Parse((const char *)s, tree);
 }

@@ -55,12 +55,14 @@ class Token
 #else
 		char		strVal[ATTRLIST_MAX_EXPRESSION];
 #endif
-		friend	void	Scanner(char *&input, Token &token);
+		friend	void	Scanner(const char *&input, Token &token);
 
 	private:
 
 		int		isString;
 
 };
+
+extern	void		Scanner(const char *&, Token&);
 
 #endif

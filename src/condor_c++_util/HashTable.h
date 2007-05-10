@@ -127,30 +127,6 @@ HashTable<Index,Value>::HashTable( int tableSz,
 	  tableSize = 5;
   }
 
-  // If tableSize is anything but tiny, round it up to
-  // the next prime number if a prime can be found within
-  // 35 of the specified size.  Using a prime for tableSize
-  // makes for faster lookups assuming the the hash func does
-  // a mod on tableSize.
-  if ( tableSize > 5 ) {
-	  for (i=tableSize;i<tableSize+35;i++) {
-			k = i / 2;	// should probably be square root...
-			j = 1;
-			while ( ++j < k ) {
-				// if ( (i / j)*j == i ) {
-				if ( (i % j) == 0 ) {
-					j = 0;
-					break;
-				}
-			}
-			if ( j ) {
-				// found a prime
-				tableSize = i;
-				break;
-			}
-	  }
-  }
-
   if (!(ht = new HashBucket<Index, Value>* [tableSize])) {
     fprintf(stderr, "Insufficient memory for hash table\n");
     exit(1);

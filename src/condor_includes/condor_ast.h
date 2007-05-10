@@ -480,6 +480,4 @@ class Function: public FunctionBase
 						EvalResult *result);
 };
 
-extern	int		Parse(const char*, ExprTree*&);
-
 #endif

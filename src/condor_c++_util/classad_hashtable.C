@@ -51,16 +51,16 @@ bool operator==(const HashKey &lhs, const HashKey &rhs)
 
 unsigned int hashFunction(const HashKey &key)
 {
-	unsigned int bkt = 0;
-	int i;
+	unsigned int hash = 0;
 
-	if (key.key) {
-		for (i = 0; key.key[i]; bkt += key.key[i++]);
+	const char *p = key.key;
+	while (*p) {
+		hash = (hash<<5)+hash + (unsigned char)*p;
+		p++;
 	}
 
-	return bkt;
+	return hash;
 }
-
 
 AttrKey& AttrKey::operator= (const AttrKey& from)
 {

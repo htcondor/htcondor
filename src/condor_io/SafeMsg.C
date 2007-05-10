@@ -919,6 +919,7 @@ _condorInMsg::_condorInMsg(const _condorMsgID mID,// the id of this message
 
 	// initialize temporary buffer to NULL
 	tempBuf = NULL;
+	tempBufLen = 0;
 
 	prevMsg = prev;
 	nextMsg = NULL;
@@ -1054,6 +1055,30 @@ bool _condorInMsg :: verifyMD(Condor_MD_MAC * mdChecker)
     return verified_;
 }
 
+void _condorInMsg::incrementCurData( int n ) {
+	curData += n;
+	passed += n;
+
+	if(curData == curDir->dEntry[curPacket].dLen) {
+		// current data page consumed
+		// delete the consumed data page and then go to the next page
+		free(curDir->dEntry[curPacket].dGram);
+		curDir->dEntry[curPacket].dGram = NULL;
+
+		if(++curPacket == SAFE_MSG_NO_OF_DIR_ENTRY) {
+			// was the last of the current dir
+			_condorDirPage* tempDir = headDir;
+			headDir = curDir = headDir->nextDir;
+			if(headDir) {
+				headDir->prevDir = NULL;
+			}
+			delete tempDir;
+			curPacket = 0;
+		}
+		curData = 0;
+	}
+}
+
 /* Get the next n bytes from the message:
  * Copy the next 'size' bytes of the message to 'dta'
  * param: dta - buffer to which data will be copied
@@ -1065,7 +1090,6 @@ bool _condorInMsg :: verifyMD(Condor_MD_MAC * mdChecker)
 int _condorInMsg::getn(char* dta, const int size)
 {
 	int len, total = 0;
-	_condorDirPage* tempDir;
 
 	if(!dta || passed + size > msgLen) {
         dprintf(D_NETWORK, "dta is NULL or more data than queued is requested\n");
@@ -1079,29 +1103,9 @@ int _condorInMsg::getn(char* dta, const int size)
 		memcpy(&dta[total],
 		       &(curDir->dEntry[curPacket].dGram[curData]), len);
 		total += len;
-		curData += len;
-
-		if(curData == curDir->dEntry[curPacket].dLen) {
-			// current data page consumed
-			// delete the consumed data page and then go to the next page
-			//delete[] curDir->dEntry[curPacket].dGram;
-			free(curDir->dEntry[curPacket].dGram);
-			curDir->dEntry[curPacket].dGram = NULL;
-
-			if(++curPacket == SAFE_MSG_NO_OF_DIR_ENTRY) {
-				// was the last of the current dir
-				tempDir = headDir;
-				headDir = curDir = headDir->nextDir;
-				if(headDir)
-					headDir->prevDir = NULL;
-				delete tempDir;;
-				curPacket = 0;
-			}
-			curData = 0;
-		}
+		incrementCurData(len);
 	} // of while(total..)
 
-	passed += total;
     if( D_FULLDEBUG & DebugFlags ) {
         dprintf(D_NETWORK, "%d bytes read from UDP[size=%ld, passed=%d]\n",
                 total, msgLen, passed);
@@ -1124,46 +1128,72 @@ int _condorInMsg::getPtr(void *&buf, char delim)
 {
 	_condorDirPage *tempDir;
 	int tempPkt, tempData;
-	int n = 1;
+	size_t n = 1;
 	int size;
-
-	if(tempBuf) {
-		free(tempBuf);
-		tempBuf = NULL;
-	}
 
 	tempDir = curDir;
 	tempPkt = curPacket;
 	tempData = curData;
-	while(tempDir->dEntry[tempPkt].dGram[tempData] != delim) {
 
-		if(++tempData == tempDir->dEntry[tempPkt].dLen) {
-			tempPkt++;
-			tempData = 0;
-			if(tempPkt == SAFE_MSG_NO_OF_DIR_ENTRY) {
-				if(!tempDir->nextDir) {
-					return -1;
-				}
-				tempDir = tempDir->nextDir;
-				tempPkt = 0;
-			} else if(!tempDir->dEntry[tempPkt].dGram) { // was the last packet
-				if( D_FULLDEBUG & DebugFlags )
-					dprintf(D_NETWORK,
-					        "\nSafeMsg::getPtr: get to end & '%c'\
-						  not found\n", delim);
+	bool copy_needed = false;
+	while(1) {
+		char *msgbuf = &tempDir->dEntry[tempPkt].dGram[tempData];
+		size_t msgbufsize = tempDir->dEntry[tempPkt].dLen - tempData;
+		char *delim_ptr = (char *)memchr(msgbuf,delim,msgbufsize);
+
+		if( delim_ptr ) {
+			n += delim_ptr - msgbuf;
+			if( n == msgbufsize ) {
+					// Need to copy the data in this case, because when
+					// buffer is consumed by incrementCurData(), it will
+					// be freed.
+				copy_needed = true;
+			}
+			if( !copy_needed ) {
+					// Special (common) case: the whole string is in one piece
+					// so just return a pointer to it and skip the drudgery
+					// of copying the bytes into another buffer.
+				incrementCurData(n);
+				buf = msgbuf;
+				return n;
+			}
+			break; // found delim
+		}
+		copy_needed = true; // string spans multiple buffers
+
+		n += msgbufsize;
+		tempPkt++;
+		tempData = 0;
+		if(tempPkt == SAFE_MSG_NO_OF_DIR_ENTRY) {
+			if(!tempDir->nextDir) {
 				return -1;
 			}
+			tempDir = tempDir->nextDir;
+			tempPkt = 0;
+		} else if(!tempDir->dEntry[tempPkt].dGram) { // was the last packet
+			if( D_FULLDEBUG & DebugFlags )
+				dprintf(D_NETWORK,
+				        "\nSafeMsg::getPtr: get to end & '%c'\
+					  not found\n", delim);
+			return -1;
 		}
-		n++;
-	} // end of while(tempDir->dEntry[...
+	}
+
 	if( D_FULLDEBUG & DebugFlags )
 		dprintf(D_NETWORK, "SafeMsg::_longMsg::getPtr:\
 		                    found delim = %c & length = %d\n",
 			  delim, n);
-	tempBuf = (char *)malloc(n);
-	if(!tempBuf) {
-		dprintf(D_ALWAYS, "getPtr, fail at malloc(%d)\n", n);
-		return -1;
+	if( n > tempBufLen ) {
+		if(tempBuf) {
+			free(tempBuf);
+		}
+		tempBuf = (char *)malloc(n);
+		if(!tempBuf) {
+			dprintf(D_ALWAYS, "getPtr, fail at malloc(%d)\n", n);
+			tempBufLen = 0;
+			return -1;
+		}
+		tempBufLen = n;
 	}
 	size = getn(tempBuf, n);
 	buf = tempBuf;

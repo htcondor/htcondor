@@ -64,7 +64,6 @@ extern int         NumberBackupHistoryFiles;
 extern char*       PerJobHistoryDir;
 extern Scheduler scheduler;
 extern DedicatedScheduler dedicated_scheduler;
-extern void Scanner(char*&, Token&);	// in classad library
 
 extern "C" {
 	int	prio_compar(prio_rec*, prio_rec*);
@@ -72,17 +71,12 @@ extern "C" {
 
 
 
-extern	int		Parse(const char*, ExprTree*&);
 extern  void    cleanup_ckpt_files(int, int, const char*);
 extern	bool	service_this_universe(int, ClassAd *);
 static QmgmtPeer *Q_SOCK = NULL;
 
 int		do_Q_request(ReliSock *);
-void	FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad,
-					 char * user);
 void	FindPrioJob(PROC_ID &);
-int		Runnable(PROC_ID*);
-int		Runnable(ClassAd*);
 
 static ClassAdCollection *JobQueue = 0;
 static int next_cluster_num = -1;
@@ -95,14 +89,15 @@ static time_t xact_start_time = 0;	// time at which the current transaction was 
 class Service;
 
 bool        PrioRecArrayIsDirty = true;
-UtcTime     PrioRecArrayTimestamp;
-double      PrioRecArrayLastBuildDuration = 0;
 // spend at most this fraction of the time rebuilding the PrioRecArray
 const double PrioRecRebuildMaxTimeSlice = 0.05;
 const double PrioRecRebuildMaxTimeSliceWhenNoMatchFound = 0.1;
+Timeslice   PrioRecArrayTimeslice;
 prio_rec	PrioRecArray[INITIAL_MAX_PRIO_REC];
 prio_rec	* PrioRec = &PrioRecArray[0];
 int			N_PrioRecs = 0;
+HashTable<int,int> *PrioRecAutoClusterRejected = NULL;
+
 static int 	MAX_PRIO_REC=INITIAL_MAX_PRIO_REC ;	// INITIAL_MAX_* in prio_rec.h
 
 const char HeaderKey[] = "0.0";
@@ -1940,11 +1935,9 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			// to make certain we scan the value the same way that
 			// the ClassAd library will (i.e. support exponential
 			// notation, etc).
-		char *avalue = strdup(attr_value);	// gotta dup it cuz Scanner could write
-		ASSERT(avalue);
-		char *save_avalue = avalue;	// scanner will modify avalue, so save it
+		char const *avalue = attr_value; // scanner will modify ptr, so save it
 		Scanner(avalue,token);
-		free(save_avalue);
+
 		if ( token.type == LX_INTEGER || token.type == LX_FLOAT ) {
 			// first, store the actual value
 			temp_buf = attr_name;
@@ -3466,7 +3459,7 @@ static void DoBuildPrioRecArray() {
 
 /*
  * Build an array of runnable jobs sorted by priority.  If there are
- * a lot of jobs in the queue, this can expensive, so avoid building
+ * a lot of jobs in the queue, this can be expensive, so avoid building
  * the array too often.
  * Arguments:
  *   no_match_found - caller can't find a runnable job matching
@@ -3476,6 +3469,24 @@ static void DoBuildPrioRecArray() {
  *   true if the array was rebuilt; false otherwise
  */
 bool BuildPrioRecArray(bool no_match_found /*default false*/) {
+
+		// caller expects PrioRecAutoClusterRejected to be instantiated
+		// (and cleared)
+	int hash_size = TotalJobsCount/4+1000;
+	if( PrioRecAutoClusterRejected &&
+	    PrioRecAutoClusterRejected->getTableSize() < 0.8*hash_size )
+	{
+		delete PrioRecAutoClusterRejected;
+		PrioRecAutoClusterRejected = NULL;
+	}
+	if( ! PrioRecAutoClusterRejected ) {
+		PrioRecAutoClusterRejected = new HashTable<int,int>(hash_size,hashFuncInt,rejectDuplicateKeys);
+		ASSERT( PrioRecAutoClusterRejected );
+	}
+	else {
+		PrioRecAutoClusterRejected->clear();
+	}
+
 	if( !PrioRecArrayIsDirty ) {
 		dprintf(D_FULLDEBUG,
 				"Reusing prioritized runnable job list because nothing has "
@@ -3483,20 +3494,14 @@ bool BuildPrioRecArray(bool no_match_found /*default false*/) {
 		return false;
 	}
 
-	UtcTime now;
-	now.getTime();
-	double age = now.difference(&PrioRecArrayTimestamp);
-
-	double time_slice;
 	if( no_match_found ) {
-		time_slice = PrioRecRebuildMaxTimeSliceWhenNoMatchFound;
+		PrioRecArrayTimeslice.setTimeslice( PrioRecRebuildMaxTimeSliceWhenNoMatchFound );
 	}
 	else {
-		time_slice = PrioRecRebuildMaxTimeSlice;
+		PrioRecArrayTimeslice.setTimeslice( PrioRecRebuildMaxTimeSlice );
 	}
 
-	if( age == 0 ||
-		PrioRecArrayLastBuildDuration/age > time_slice ) {
+	if( !PrioRecArrayTimeslice.isTimeToRun() ) {
 
 		dprintf(D_FULLDEBUG,
 				"Reusing prioritized runnable job list to save time.\n");
@@ -3504,16 +3509,15 @@ bool BuildPrioRecArray(bool no_match_found /*default false*/) {
 		return false;
 	}
 
+	PrioRecArrayTimeslice.setStartTimeNow();
 	PrioRecArrayIsDirty = false;
-	PrioRecArrayTimestamp = now;
 
 	DoBuildPrioRecArray();
 
-	now.getTime();
-	PrioRecArrayLastBuildDuration = now.difference(&PrioRecArrayTimestamp);
+	PrioRecArrayTimeslice.setFinishTimeNow();
 
 	dprintf(D_ALWAYS,"Rebuilt prioritized runnable job list in %.3fs.%s\n",
-			PrioRecArrayLastBuildDuration,
+			PrioRecArrayTimeslice.getLastDuration(),
 			no_match_found ? "  (Expedited rebuild because no match was found)" : "");
 
 	return true;
@@ -3557,7 +3561,6 @@ void FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad,
 		return;
 	}
 
-	HashTable<int,int> autocluster_rejected(N_PrioRecs,hashFuncInt,rejectDuplicateKeys);
 	MyString owner = user;
 	int at_sign_pos;
 	int i;
@@ -3595,7 +3598,7 @@ void FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad,
 			}	
 
 			int junk; // don't care about the value
-			if ( autocluster_rejected.lookup( PrioRec[i].auto_cluster_id, junk ) == 0 ) {
+			if ( PrioRecAutoClusterRejected->lookup( PrioRec[i].auto_cluster_id, junk ) == 0 ) {
 					// We have already failed to match a job from this same
 					// autocluster with this machine.  Skip it.
 				continue;
@@ -3604,7 +3607,7 @@ void FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad,
 			if ( ! (*ad == (ClassAd &)(*my_match_ad)) )
 				{
 						// Job and machine do not match.
-					autocluster_rejected.insert( PrioRec[i].auto_cluster_id, 1 );
+					PrioRecAutoClusterRejected->insert( PrioRec[i].auto_cluster_id, 1 );
 				}
 			else {
 				if(!Runnable(&PrioRec[i].id) || scheduler.AlreadyMatched(&PrioRec[i].id)) {

@@ -424,7 +424,15 @@ public:
 	int get(unsigned short &);
 	int get(float &);
 	int get(double &);
+		// If arg is NULL, this function mallocs memory that caller should free
+		// If arg is not NULL, this function blindly writes into caller's
+		// buffer without doing any bounds checking.
 	int get(char *&);
+		// If arg is NULL, this function points callers pointer to internal
+		// buffer that caller MUST NOT FREE.  This buffer may become invalid
+		// on subsequent call.
+		// If arg is not NULL, this function blindly writes into caller's
+		// buffer without doing any bounds checking.
 	int get(char *&, int &);
 
 	/*

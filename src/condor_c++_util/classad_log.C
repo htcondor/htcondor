@@ -51,8 +51,9 @@ if (ptr) free(ptr); \
 ptr = NULL;
 /************************************************************/
 
+#define CLASSAD_LOG_HASHTABLE_SIZE 20000
 
-ClassAdLog::ClassAdLog() : table(1024, hashFunction)
+ClassAdLog::ClassAdLog() : table(CLASSAD_LOG_HASHTABLE_SIZE, hashFunction)
 {
 	log_filename[0] = '\0';
 	active_transaction = NULL;
@@ -60,7 +61,7 @@ ClassAdLog::ClassAdLog() : table(1024, hashFunction)
 
 }
 
-ClassAdLog::ClassAdLog(const char *filename,int max_historical_logs_arg) : table(1024, hashFunction)
+ClassAdLog::ClassAdLog(const char *filename,int max_historical_logs_arg) : table(CLASSAD_LOG_HASHTABLE_SIZE, hashFunction)
 {
 	strcpy(log_filename, filename);
 	active_transaction = NULL;
@@ -133,7 +134,6 @@ ClassAdLog::ClassAdLog(const char *filename,int max_historical_logs_arg) : table
 			EXCEPT("write to %s failed, errno = %d", log_filename, errno);
 		}
 	}
-	TruncLog();
 }
 
 ClassAdLog::~ClassAdLog()

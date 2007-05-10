@@ -32,6 +32,7 @@
 #include "condor_exprtype.h"
 #include "condor_ast.h"
 #include "condor_attrlist.h"
+#include "condor_parser.h"
 
 #define		CLASSAD_MAX_ADTYPE			50
 

@@ -123,10 +123,15 @@ class _condorInMsg
 						 * bucket chain */
 		char *tempBuf;		/* temporary buffer to hold data being taken
 						 * from possibly multiple packets */
+		size_t tempBufLen;
         char * incomingMD5KeyId_;
         char * incomingEncKeyId_;
         unsigned char * md_;
         bool   verified_;
+
+			// advance current read position by n
+			// n must be <= remaining unread bytes in current chunk
+		inline void incrementCurData( int n );
 };
 
 static const int SAFE_MSG_MAX_PACKET_SIZE = 60000;
