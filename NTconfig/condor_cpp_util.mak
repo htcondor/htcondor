@@ -27,10 +27,10 @@ NULL=nul
 
 !IF  "$(CFG)" == "condor_cpp_util - Win32 Debug"
 
-OUTDIR=..\Debug
-INTDIR=..\Debug
+OUTDIR=.\..\Debug
+INTDIR=.\..\Debug
 # Begin Custom Macros
-OutDir=..\Debug
+OutDir=.\..\Debug
 # End Custom Macros
 
 ALL : "$(OUTDIR)\condor_cpp_util.lib"
@@ -52,6 +52,7 @@ CLEAN :
 	-@erase "$(INTDIR)\condor_arglist.obj"
 	-@erase "$(INTDIR)\condor_attributes.obj"
 	-@erase "$(INTDIR)\condor_config.obj"
+	-@erase "$(INTDIR)\condor_crontab.obj"
 	-@erase "$(INTDIR)\condor_environ.obj"
 	-@erase "$(INTDIR)\condor_event.obj"
 	-@erase "$(INTDIR)\condor_ftp.obj"
@@ -62,6 +63,7 @@ CLEAN :
 	-@erase "$(INTDIR)\condor_q.obj"
 	-@erase "$(INTDIR)\condor_query.obj"
 	-@erase "$(INTDIR)\condor_state.obj"
+	-@erase "$(INTDIR)\condor_user_policy.obj"
 	-@erase "$(INTDIR)\condor_ver_info.obj"
 	-@erase "$(INTDIR)\condor_version.obj"
 	-@erase "$(INTDIR)\CondorError.obj"
@@ -73,6 +75,7 @@ CLEAN :
 	-@erase "$(INTDIR)\daemon.obj"
 	-@erase "$(INTDIR)\daemon_list.obj"
 	-@erase "$(INTDIR)\daemon_types.obj"
+	-@erase "$(INTDIR)\date_util.obj"
 	-@erase "$(INTDIR)\dc_collector.obj"
 	-@erase "$(INTDIR)\dc_message.obj"
 	-@erase "$(INTDIR)\dc_schedd.obj"
@@ -127,6 +130,7 @@ CLEAN :
 	-@erase "$(INTDIR)\process_control.WINDOWS.obj"
 	-@erase "$(INTDIR)\read_multiple_logs.obj"
 	-@erase "$(INTDIR)\Regex.obj"
+	-@erase "$(INTDIR)\selector.obj"
 	-@erase "$(INTDIR)\setenv.obj"
 	-@erase "$(INTDIR)\sig_name.obj"
 	-@erase "$(INTDIR)\sqlquery.obj"
@@ -150,7 +154,6 @@ CLEAN :
 	-@erase "$(INTDIR)\vc60.pdb"
 	-@erase "$(INTDIR)\which.obj"
 	-@erase "$(INTDIR)\windows_firewall.obj"
-	-@erase "$(INTDIR)\selector.obj"
 	-@erase "$(OUTDIR)\condor_cpp_util.lib"
 	-@erase "..\Debug\condor_common.obj"
 	-@erase "..\Debug\condor_common.pch"
@@ -215,6 +218,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\condor_attributes.obj" \
 	"..\Debug\condor_common.obj" \
 	"$(INTDIR)\condor_config.obj" \
+	"$(INTDIR)\condor_crontab.obj" \
 	"$(INTDIR)\condor_environ.obj" \
 	"$(INTDIR)\condor_event.obj" \
 	"$(INTDIR)\condor_ftp.obj" \
@@ -225,6 +229,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\condor_q.obj" \
 	"$(INTDIR)\condor_query.obj" \
 	"$(INTDIR)\condor_state.obj" \
+	"$(INTDIR)\condor_user_policy.obj" \
 	"$(INTDIR)\condor_ver_info.obj" \
 	"$(INTDIR)\condor_version.obj" \
 	"$(INTDIR)\CondorError.obj" \
@@ -236,6 +241,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\daemon.obj" \
 	"$(INTDIR)\daemon_list.obj" \
 	"$(INTDIR)\daemon_types.obj" \
+	"$(INTDIR)\date_util.obj" \
 	"$(INTDIR)\dc_collector.obj" \
 	"$(INTDIR)\dc_message.obj" \
 	"$(INTDIR)\dc_schedd.obj" \
@@ -290,6 +296,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\process_control.WINDOWS.obj" \
 	"$(INTDIR)\read_multiple_logs.obj" \
 	"$(INTDIR)\Regex.obj" \
+	"$(INTDIR)\selector.obj" \
 	"$(INTDIR)\setenv.obj" \
 	"$(INTDIR)\sig_name.obj" \
 	"$(INTDIR)\sqlquery.obj" \
@@ -310,7 +317,6 @@ LIB32_OBJS= \
 	"$(INTDIR)\user_log.obj" \
 	"$(INTDIR)\utc_time.obj" \
 	"$(INTDIR)\which.obj" \
-	"$(INTDIR)\selector.obj" \
 	"$(INTDIR)\windows_firewall.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
@@ -320,10 +326,10 @@ LIB32_OBJS= \
 
 !ELSEIF  "$(CFG)" == "condor_cpp_util - Win32 Release"
 
-OUTDIR=..\Release
-INTDIR=..\Release
+OUTDIR=.\..\Release
+INTDIR=.\..\Release
 # Begin Custom Macros
-OutDir=..\Release
+OutDir=.\..\Release
 # End Custom Macros
 
 ALL : "$(OUTDIR)\condor_cpp_util.lib"
@@ -345,6 +351,7 @@ CLEAN :
 	-@erase "$(INTDIR)\condor_arglist.obj"
 	-@erase "$(INTDIR)\condor_attributes.obj"
 	-@erase "$(INTDIR)\condor_config.obj"
+	-@erase "$(INTDIR)\condor_crontab.obj"
 	-@erase "$(INTDIR)\condor_environ.obj"
 	-@erase "$(INTDIR)\condor_event.obj"
 	-@erase "$(INTDIR)\condor_ftp.obj"
@@ -355,6 +362,7 @@ CLEAN :
 	-@erase "$(INTDIR)\condor_q.obj"
 	-@erase "$(INTDIR)\condor_query.obj"
 	-@erase "$(INTDIR)\condor_state.obj"
+	-@erase "$(INTDIR)\condor_user_policy.obj"
 	-@erase "$(INTDIR)\condor_ver_info.obj"
 	-@erase "$(INTDIR)\condor_version.obj"
 	-@erase "$(INTDIR)\CondorError.obj"
@@ -366,6 +374,7 @@ CLEAN :
 	-@erase "$(INTDIR)\daemon.obj"
 	-@erase "$(INTDIR)\daemon_list.obj"
 	-@erase "$(INTDIR)\daemon_types.obj"
+	-@erase "$(INTDIR)\date_util.obj"
 	-@erase "$(INTDIR)\dc_collector.obj"
 	-@erase "$(INTDIR)\dc_message.obj"
 	-@erase "$(INTDIR)\dc_schedd.obj"
@@ -420,6 +429,7 @@ CLEAN :
 	-@erase "$(INTDIR)\process_control.WINDOWS.obj"
 	-@erase "$(INTDIR)\read_multiple_logs.obj"
 	-@erase "$(INTDIR)\Regex.obj"
+	-@erase "$(INTDIR)\selector.obj"
 	-@erase "$(INTDIR)\setenv.obj"
 	-@erase "$(INTDIR)\sig_name.obj"
 	-@erase "$(INTDIR)\sqlquery.obj"
@@ -441,7 +451,6 @@ CLEAN :
 	-@erase "$(INTDIR)\utc_time.obj"
 	-@erase "$(INTDIR)\vc60.idb"
 	-@erase "$(INTDIR)\which.obj"
-	-@erase "$(INTDIR)\selector.obj"
 	-@erase "$(INTDIR)\windows_firewall.obj"
 	-@erase "$(OUTDIR)\condor_cpp_util.lib"
 	-@erase "..\Release\condor_common.obj"
@@ -507,6 +516,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\condor_attributes.obj" \
 	"..\Release\condor_common.obj" \
 	"$(INTDIR)\condor_config.obj" \
+	"$(INTDIR)\condor_crontab.obj" \
 	"$(INTDIR)\condor_environ.obj" \
 	"$(INTDIR)\condor_event.obj" \
 	"$(INTDIR)\condor_ftp.obj" \
@@ -517,6 +527,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\condor_q.obj" \
 	"$(INTDIR)\condor_query.obj" \
 	"$(INTDIR)\condor_state.obj" \
+	"$(INTDIR)\condor_user_policy.obj" \
 	"$(INTDIR)\condor_ver_info.obj" \
 	"$(INTDIR)\condor_version.obj" \
 	"$(INTDIR)\CondorError.obj" \
@@ -528,6 +539,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\daemon.obj" \
 	"$(INTDIR)\daemon_list.obj" \
 	"$(INTDIR)\daemon_types.obj" \
+	"$(INTDIR)\date_util.obj" \
 	"$(INTDIR)\dc_collector.obj" \
 	"$(INTDIR)\dc_message.obj" \
 	"$(INTDIR)\dc_schedd.obj" \
@@ -582,6 +594,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\process_control.WINDOWS.obj" \
 	"$(INTDIR)\read_multiple_logs.obj" \
 	"$(INTDIR)\Regex.obj" \
+	"$(INTDIR)\selector.obj" \
 	"$(INTDIR)\setenv.obj" \
 	"$(INTDIR)\sig_name.obj" \
 	"$(INTDIR)\sqlquery.obj" \
@@ -602,7 +615,6 @@ LIB32_OBJS= \
 	"$(INTDIR)\user_log.obj" \
 	"$(INTDIR)\utc_time.obj" \
 	"$(INTDIR)\which.obj" \
-	"$(INTDIR)\selector.obj" \
 	"$(INTDIR)\windows_firewall.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
@@ -737,6 +749,12 @@ SOURCE="..\src\condor_c++_util\condor_config.C"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
+SOURCE="..\src\condor_c++_util\condor_crontab.C"
+
+"$(INTDIR)\condor_crontab.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
 SOURCE="..\src\condor_c++_util\condor_environ.C"
 
 "$(INTDIR)\condor_environ.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
@@ -812,6 +830,12 @@ SOURCE="..\src\condor_c++_util\condor_query.C"
 SOURCE="..\src\condor_c++_util\condor_state.C"
 
 "$(INTDIR)\condor_state.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE="..\src\condor_c++_util\condor_user_policy.C"
+
+"$(INTDIR)\condor_user_policy.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
@@ -896,6 +920,12 @@ SOURCE=..\src\condor_daemon_client\daemon_list.C
 SOURCE=..\src\condor_daemon_client\daemon_types.C
 
 "$(INTDIR)\daemon_types.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE="..\src\condor_c++_util\date_util.C"
+
+"$(INTDIR)\date_util.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
@@ -1241,6 +1271,12 @@ SOURCE="..\src\condor_c++_util\Regex.C"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
+SOURCE="..\src\condor_c++_util\selector.C"
+
+"$(INTDIR)\selector.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
 SOURCE="..\src\condor_c++_util\setenv.C"
 
 "$(INTDIR)\setenv.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
@@ -1358,12 +1394,6 @@ SOURCE="..\src\condor_c++_util\utc_time.C"
 SOURCE="..\src\condor_c++_util\which.C"
 
 "$(INTDIR)\which.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
-
-
-SOURCE="..\src\condor_c++_util\selector.C"
-
-"$(INTDIR)\selector.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
