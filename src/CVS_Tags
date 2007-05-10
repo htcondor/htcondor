@@ -1,3 +1,8 @@
+05/08/07 V6_9-clone-{root,branch}
+  This branch is for testing daemonCore changes related to the clone()
+  replacement for fork() under Linux.
+  Created from BUILD-V6_9-trunk-2007-4-30 V6_9-clone-root.
+
 05/01/07 V6_8-merge-6
   The state of the V6_8-branch for another merge back to the trunk.
   This has everything that will go into 6.8.5, except possibly some
