@@ -31,6 +31,7 @@
 #include "dynuser.h"
 #include "daemon.h"
 #include "get_daemon_name.h"
+#include "condor_string.h"
 
 #if defined(WIN32)
 #include "lsa_mgr.h"  // for CONFIG_MODE
@@ -41,6 +42,7 @@ struct StoreCredOptions {
 	char pw[MAX_PASSWORD_LENGTH + 1];
 	char username[MAX_PASSWORD_LENGTH + 1];
 	char *daemonname;
+	char *password_file;
 	bool help;
 };
 
@@ -79,6 +81,30 @@ int main(int argc, char *argv[]) {
 		usage();
 		goto cleanup;
 	}
+
+#if !defined(WIN32)
+	// if the -f argument was given, we just want to prompt for a password
+	// and write it to a file (in our weirdo XORed format)
+	//
+	if (options.password_file != NULL) {
+		if (options.pw[0] == '\0') {
+			pw = get_password();
+			printf("\n");
+		}
+		else {
+			pw = strnewp(options.pw);
+			SecureZeroMemory(options.pw, MAX_PASSWORD_LENGTH + 1);
+		}
+		result = write_password_file(options.password_file, pw);
+		SecureZeroMemory(pw, strlen(pw));
+		if (result != SUCCESS) {
+			fprintf(stderr,
+			        "error writing password file: %s\n",
+			        options.password_file);
+		}
+		goto cleanup;
+	}
+#endif
 
 	// determine the username to use
 	if ( strcmp(options.username, "") == 0 ) {
@@ -165,8 +191,7 @@ int main(int argc, char *argv[]) {
 				}
 			} else {
 				// got the passwd from the command line.
-				pw = new char[MAX_PASSWORD_LENGTH];
-				strncpy(pw, options.pw, MAX_PASSWORD_LENGTH);
+				pw = strnewp(options.pw);
 				SecureZeroMemory(options.pw, MAX_PASSWORD_LENGTH);
 			}
 			if ( pw || pool_password_delete) {
@@ -271,6 +296,7 @@ parseCommandLine(StoreCredOptions *opts, int argc, char *argv[]) {
 	opts->pw[0] = opts->pw[MAX_PASSWORD_LENGTH] = '\0';
 	opts->username[0] = opts->username[MAX_PASSWORD_LENGTH] = '\0';
 	opts->daemonname = NULL;
+	opts->password_file = NULL;;
 	opts->help = false;
 
 	bool err = false;
@@ -282,8 +308,9 @@ parseCommandLine(StoreCredOptions *opts, int argc, char *argv[]) {
 				if (!opts->mode) {
 					opts->mode = ADD_MODE;
 				}
-				else {
-					fprintf(stderr, "ERROR: exactly one command must be provided\n");
+				else if (opts->mode != ADD_MODE) {
+					fprintf(stderr,
+					        "ERROR: exactly one command must be provided\n");
 					usage();
 					err = true;
 				}
@@ -298,8 +325,9 @@ parseCommandLine(StoreCredOptions *opts, int argc, char *argv[]) {
 				if (!opts->mode) {
 					opts->mode = DELETE_MODE;
 				}
-				else {
-					fprintf(stderr, "ERROR: exactly one command must be provided\n");
+				else if (opts->mode != DELETE_MODE) {
+					fprintf(stderr,
+					        "ERROR: exactly one command must be provided\n");
 					usage();
 					err = true;
 				}
@@ -314,8 +342,9 @@ parseCommandLine(StoreCredOptions *opts, int argc, char *argv[]) {
 				if (!opts->mode) {
 					opts->mode = QUERY_MODE;
 				}
-				else {
-					fprintf(stderr, "ERROR: exactly one command must be provided\n");
+				else if (opts->mode != QUERY_MODE) {
+					fprintf(stderr,
+					        "ERROR: exactly one command must be provided\n");
 					usage();
 					err = true;
 				}
@@ -418,6 +447,17 @@ parseCommandLine(StoreCredOptions *opts, int argc, char *argv[]) {
 						optionNeedsArg(argv[i]);
 					}
 					break;
+#if !defined(WIN32)
+				case 'f':
+					if (i+1 >= argc) {
+						err = true;
+						optionNeedsArg(argv[i]);
+					}
+					opts->password_file = argv[i+1];
+					i++;
+					opts->mode = ADD_MODE;
+					break;
+#endif
 				case 'h':
 					opts->help = true;
 					break;
@@ -468,6 +508,9 @@ usage()
 	fprintf( stderr, "    -c                (update/query the condor pool password)\n");
 	fprintf( stderr, "    -p password       (use the specified password rather than prompting)\n" );
 	fprintf( stderr, "    -n name           (update/query to the named machine)\n" );
+#if !defined(WIN32)
+	fprintf( stderr, "    -f filename       (generate a pool password file)\n" );
+#endif
 	fprintf( stderr, "    -h                (display this message)\n" );
 	fprintf( stderr, "\n" );
 
