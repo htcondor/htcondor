@@ -6271,6 +6271,13 @@ Configuration File Macros Affecting APIs}
   In addition, web commands are considered a READ command,
   so the client will be checked by host-based security.
 
+\item[\Macro{SOAP\_LEAVE\_IN\_QUEUE}]
+  \label{param:SoapLeaveInQueue}
+  A boolean value that when \Expr{True},
+  causes a job in the completed state to remain in the queue,
+  instead of being removed based on the completion of file transfer.
+  There is no default value.
+
 \item[\Macro{WEB\_ROOT\_DIR}]
   \label{param:WebRootDir}
   A complete path to the directory containing all the files served
