@@ -980,9 +980,9 @@ pseudo_put_file_stream(
 		display_ip_addr( *ip_addr );
 		*ip_addr = ntohl(*ip_addr);
 		*port = ntohs( *port );
-		dprintf(D_ALWAYS,  "Returned addr\n");
+		dprintf(D_ALWAYS,  "StoreRequest returned addr:\n");
 		display_ip_addr( *ip_addr );
-		dprintf(D_ALWAYS, "Returned port %d\n", *port);
+		dprintf(D_ALWAYS, "at port: %d\n", *port);
 	} else {
 		rval = -1;
 	}
