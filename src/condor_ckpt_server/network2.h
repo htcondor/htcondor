@@ -108,7 +108,7 @@ extern "C" { int setsockopt(int, int, int, const void*, int); }
 
 extern "C" { char* GetIPName(struct in_addr machine_IP); }
 extern "C" { int I_bind(int socket_desc, 
-			 struct sockaddr_in* addr); }
+			 struct sockaddr_in* addr, int is_well_known); }
 extern "C" { char* gethostnamebyaddr(struct in_addr* addr); }
 extern "C" { char* getserveraddr(void); }
 extern "C" { int I_socket(void); }
