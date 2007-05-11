@@ -1709,6 +1709,9 @@ int AttrList::fPrint(FILE* f)
 		for(tmpElem = *chainedAttrs; tmpElem; tmpElem = tmpElem->next)
 		{
 			tmpLine = NULL;
+			if( tmpElem->tree->invisible ) {
+				continue;
+			}
 			tmpElem->tree->PrintToNewStr(&tmpLine);
 			if (tmpLine != NULL) {
 				fprintf(f, "%s\n", tmpLine);
@@ -1720,6 +1723,9 @@ int AttrList::fPrint(FILE* f)
     for(tmpElem = exprList; tmpElem; tmpElem = tmpElem->next)
     {
 		tmpLine = NULL;
+		if( tmpElem->tree->invisible ) {
+			continue;
+		}
         tmpElem->tree->PrintToNewStr(&tmpLine);
 		if (tmpLine != NULL) {
 			fprintf(f, "%s\n", tmpLine);
@@ -1745,6 +1751,9 @@ int AttrList::sPrint(MyString &output)
 		for(tmpElem = *chainedAttrs; tmpElem; tmpElem = tmpElem->next)
 		{
 			tmpLine = NULL;
+			if( tmpElem->tree->invisible ) {
+				continue;
+			}
 			tmpElem->tree->PrintToNewStr(&tmpLine);
 			if (tmpLine != NULL) {
 				output += tmpLine;
@@ -1757,6 +1766,9 @@ int AttrList::sPrint(MyString &output)
     for(tmpElem = exprList; tmpElem; tmpElem = tmpElem->next)
     {
 		tmpLine = NULL;
+		if( tmpElem->tree->invisible ) {
+			continue;
+		}
         tmpElem->tree->PrintToNewStr(&tmpLine);
 		if (tmpLine != NULL) {
 			output += tmpLine;
@@ -1785,6 +1797,9 @@ AttrList::dPrint( int level )
 		for(tmpElem = *chainedAttrs; tmpElem; tmpElem = tmpElem->next)
 		{
 			tmpLine = NULL;
+			if( tmpElem->tree->invisible ) {
+				continue;
+			}
 			tmpElem->tree->PrintToNewStr(&tmpLine);
 			if (tmpLine != NULL) {
 				dprintf( flag, "%s\n", tmpLine);
@@ -1796,6 +1811,9 @@ AttrList::dPrint( int level )
     for(tmpElem = exprList; tmpElem; tmpElem = tmpElem->next)
     {
 		tmpLine = NULL;
+		if( tmpElem->tree->invisible ) {
+			continue;
+		}
         tmpElem->tree->PrintToNewStr(&tmpLine);
 		if (tmpLine != NULL) {
 			dprintf( flag, "%s\n", tmpLine);
@@ -2221,13 +2239,21 @@ int AttrList::put(Stream& s)
 	bool			send_server_time = false;
 
     //get the number of expressions
-    for(elem = exprList; elem; elem = elem->next)
+    for(elem = exprList; elem; elem = elem->next) {
+		if( elem->tree->invisible ) {
+			continue;
+		}
         numExprs++;
+	}
 
 	if ( chainedAttrs ) {
 		// now count up all the chained ad attrs
-		for(elem = *chainedAttrs; elem; elem = elem->next)
+		for(elem = *chainedAttrs; elem; elem = elem->next) {
+			if( elem->tree->invisible ) {
+				continue;
+			}
 			numExprs++;
+		}
 	}
 
 	if ( mySubSystem && (strcmp(mySubSystem,"SCHEDD")==0) ) {
@@ -2247,6 +2273,9 @@ int AttrList::put(Stream& s)
 	// from this ad.
 	if ( chainedAttrs ) {
 		for(elem = *chainedAttrs; elem; elem = elem->next) {
+			if( elem->tree->invisible ) {
+				continue;
+			}
 			line = NULL;
 			elem->tree->PrintToNewStr(&line);
 			ConvertDefaultIPToSocketIP(elem->name,&line,s);
@@ -2258,6 +2287,9 @@ int AttrList::put(Stream& s)
 		}
 	}
     for(elem = exprList; elem; elem = elem->next) {
+		if( elem->tree->invisible ) {
+			continue;
+		}
         line = NULL;
         elem->tree->PrintToNewStr(&line);
 		ConvertDefaultIPToSocketIP(elem->name,&line,s);
@@ -2595,3 +2627,12 @@ Assign(char const *variable,bool value)
 	return Insert(buf.GetCStr());
 }
 
+bool AttrList::SetInvisible(char const *name)
+{
+	ExprTree *tree = Lookup(name);
+	if( tree ) {
+		tree->invisible = true;
+		return true;
+	}
+	return false;
+}

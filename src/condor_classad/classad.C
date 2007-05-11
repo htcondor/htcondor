@@ -182,8 +182,15 @@ ClassAd(FILE* f, char* d, int& i, int &err, int &empty)
         delete val;
     }
 
-    Delete("MyType");                        // eliminate redundant storage.
-    Delete("TargetType");
+		// We no longer remove MyType and TargetType from the
+		// attrlist, so they can be used in places such as
+		// COLLECTOR_REQUIREMENTS.  Just beware that these values
+		// should only be updated via the ClassAd::SetXXX() functions.
+	SetInvisible("MyType");
+	SetInvisible("TargetType");
+
+	//Delete("MyType");                        // eliminate redundant storage.
+	//Delete("TargetType");
 }
 
 ClassAd::ClassAd(char* s, char d) : AttrList(s, d)
@@ -266,11 +273,18 @@ ClassAd::ClassAd(char* s, char d) : AttrList(s, d)
         delete val;
     }
 
+		// We no longer remove MyType and TargetType from the
+		// attrlist, so they can be used in places such as
+		// COLLECTOR_REQUIREMENTS.  Just beware that these values
+		// should only be updated via the ClassAd::SetXXX() functions.
+	SetInvisible("MyType");
+	SetInvisible("TargetType");
+
 	// These are the deletes referred to above. We delete theses
 	// from the attribute list because we keep them separately, 
 	// apparently because it's convenient that way. 
-    Delete("MyType");
-    Delete("TargetType");
+    //Delete("MyType");
+    //Delete("TargetType");
 }
 
 ClassAd::ClassAd(const ClassAd& old) : AttrList((AttrList&) old)
@@ -367,6 +381,12 @@ void ClassAd::SetMyTypeName(const char *tempName)
     {
         EXCEPT("Warning : you ran out of memory -- quitting !");
     }
+		// Also set the corresponding attribute in the attrlist.
+		// Note that we call GetMyTypeName() instead of passing
+		// tempName directly, because of extra hackery that happens
+		// in that function.
+	Assign("MyType",GetMyTypeName());
+	SetInvisible("MyType");
 }
 
 //
@@ -426,6 +446,9 @@ void ClassAd::SetTargetTypeName(const char *tempName)
     {
         EXCEPT("Warning : you ran out of memory -- quitting !");
     }
+		// Store the value in the attrlist too.
+	Assign("TargetType",tempName);
+	SetInvisible("TargetType");
 }
 
 //

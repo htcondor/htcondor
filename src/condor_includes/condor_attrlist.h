@@ -155,6 +155,12 @@ class AttrList : public AttrListAbstract
 		int Assign(char const *variable,float value);
 		int Assign(char const *variable,bool value);
 
+		// Make an expression invisible.  This (hopefully temporary
+		// hack) is to prevent the special attributes MyType and
+		// MyTargetType from being printed multiple times, once from
+		// the hard-coded value, and once from the attrlist itself.
+		bool SetInvisible(char const *name);
+
 		// deletion of expressions	
         int			Delete(const char*); 	// delete the expr with the name
 

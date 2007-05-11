@@ -578,7 +578,7 @@ extern const char * MANAGED_SCHEDD;
 	// Schedd should manage as normal.  External process doesn't want back.
 extern const char * MANAGED_DONE;
 
-
+extern const char * COLLECTOR_REQUIREMENTS;
 
 // Enumerate the ones that can't be constant strings..
 typedef enum

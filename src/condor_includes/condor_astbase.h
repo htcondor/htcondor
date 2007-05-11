@@ -111,6 +111,8 @@ class ExprTree
 
 		char                unit;         // unit of the expression
 
+		bool                invisible;    // true for MyType, MyTargetType
+
 		// I added a contructor for this base class to initialize
 		// unit to something.  later we check to see if unit is "k"
 		// and without the contructor, we're doing that from unitialized
@@ -131,6 +133,7 @@ class ExprTree
 			}
 			string_space_references++;
 #endif
+			invisible = false;
 			return;
 		}
 		virtual ~ExprTree()

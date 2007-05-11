@@ -637,3 +637,5 @@ const char *MANAGED_EXTERNAL				 = "External";
 const char *MANAGED_SCHEDD				 = "Schedd";
 	// Schedd should manage as normal.  External process doesn't want back.
 const char *MANAGED_DONE				 = "ScheddDone";
+
+const char * COLLECTOR_REQUIREMENTS = "COLLECTOR_REQUIREMENTS";
