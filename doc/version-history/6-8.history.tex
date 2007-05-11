@@ -57,7 +57,13 @@ core files in addition to attaching to stripped executables during runtime.
 
 \begin{itemize}
 
-\item None.
+\item The \Condor{ckpt\_server} was fixed to honor \MacroNI{HIGHPORT}
+and \MacroNI{LOWPORT}. While the well-known ports for the checkpoint
+data server have not changed, the helper processes that perform the store
+and restore (which communicate directly with the standard universe job)
+now bind to ports within specified ranges. Note that this will limit
+the number of simultaneous store/restore requests to the number of
+available ports.
 
 \end{itemize}
 
