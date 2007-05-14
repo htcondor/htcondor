@@ -6518,7 +6518,7 @@ Scheduler::spawnShadow( shadow_rec* srec )
 		} else {
 			args.AppendArg(MyShadowSockName);
 			args.AppendArg(mrec->peer);
-			args.AppendArg(mrec->id);
+			args.AppendArg("*");
 			args.AppendArg(job_id->cluster);
 			args.AppendArg(job_id->proc);
 			args.AppendArg("-");

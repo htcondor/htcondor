@@ -867,8 +867,6 @@ part_send_job(
 	  }
   }
 
-  free(capability);
-               
   /* start flock : dhruba */
   sock->decode();
   memset( &stRec, '\0', sizeof(stRec) );
