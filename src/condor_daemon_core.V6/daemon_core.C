@@ -3574,7 +3574,8 @@ int DaemonCore::HandleReq(Stream *insock)
 								the_key = new KeyInfo(rbuf, 24, CONDOR_3DES);
 								break;
 							default:
-								dprintf ( D_SECURITY, "DC_AUTHENTICATE: this version doesn't support %s crypto.\n", crypto_method );
+								dprintf (D_SECURITY, "DC_AUTHENTICATE: generating RANDOM key for session %s...\n", the_sid);
+								the_key = new KeyInfo(rbuf, 24);
 								break;
 						}
 
