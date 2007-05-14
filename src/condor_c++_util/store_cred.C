@@ -258,10 +258,6 @@ extern "C" int DebugFlags;
 
 char* getStoredCredential(const char *username, const char *domain)
 {
-
-		// Hopefully we're
-		// running as LocalSystem here, otherwise we can't get at the 
-		// password stash.
 	lsa_mgr lsaMan;
 	char pw[255];
 	wchar_t w_fullname[512];
@@ -276,7 +272,9 @@ char* getStoredCredential(const char *username, const char *domain)
 	}
 
 	// make sure we're SYSTEM when we do this
+	priv_state priv = set_root_priv();
 	w_pw = lsaMan.query(w_fullname);
+	set_priv(priv);
 
 	if ( ! w_pw ) {
 		dprintf(D_ALWAYS, 
