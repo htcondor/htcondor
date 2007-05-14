@@ -44,6 +44,13 @@ memory, the schedd can now handle much larger job queues (e.g. 10s of
 thousands) without the severe degradation in performance that used to
 be the case.
 
+\item Added \MacroNI{SCHEDD\_INTERVAL\_TIMESLICE} and
+\MacroNI{PERIODIC\_EXPR\_TIMESLICE}.  These indicate the maximum
+fraction of time that the schedd will spend on the respective
+activities.  Previously, these activities were done on a fixed
+interval, so with very large job queue sizes, the fraction of time
+spent was increasing to unreasonable levels.
+
 \item Jobs in the parallel universe now can have \$\$ expanded in their
 ads in the same way as other universes.
 

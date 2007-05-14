@@ -3805,11 +3805,26 @@ These macros control the \Condor{schedd}.
   error (exception) before the \Condor{schedd} will relinquish
   the match associated with the dying shadow.  Defaults to 5.
 
-\item[\Macro{SCHEDD\_INTERVAL}] \label{param:ScheddInterval}  This
-  macro determines both how often the \Condor{schedd} sends a ClassAd
-  update to the \Condor{collector} and how often the \Condor{schedd}
-  daemon evaluates jobs.  It is defined in terms of seconds
-  and defaults to 300 (every 5 minutes).
+\item[\Macro{SCHEDD\_INTERVAL}] \label{param:ScheddInterval} This
+  macro determines the maximum interval for both how often the
+  \Condor{schedd} sends a ClassAd update to the \Condor{collector} and
+  how often the \Condor{schedd} daemon evaluates jobs.  It is defined
+  in terms of seconds and defaults to 300 (every 5 minutes).
+
+\item[\Macro{SCHEDD\_INTERVAL\_TIMESLICE}]
+\label{param:ScheddIntervalTimeslice} The bookkeeping done by the
+\Condor{schedd} takes more time when there are large numbers of jobs
+in the job queue.  However, when it is not too expensive to do this
+bookkeeping, it is best to keep the collector up to date with the
+latest state of the job queue.  Therefore, this macro is used to
+adjust the bookkeeping interval so that it is done more frequently
+when the cost of doing so is relatively small, and less frequently
+when the cost is high.  The default is 0.05, which means the schedd
+will adapt its bookkeeping interval to consume no more than 5\% of the
+total time available to the schedd.  The lower bound is configured by
+\Macro{SCHEDD\_MIN\_INTERVAL} (default 5 seconds), and the upper bound
+is configured by \Macro{SCHEDD\_INTERVAL} (default 300 seconds).
+
 
 % \item[\Macro{REAL\_TIME\_JOB\_SUSPEND\_UPDATES}] 
 %  \label{param:RealTimeJobSuspendUpdates}
@@ -3829,13 +3844,12 @@ These macros control the \Condor{schedd}.
 %  The default value and when not present in the configuration
 %  file is \Expr{False}.
   
-\item[\Macro{JOB\_START\_COUNT}] \label{param:JobStartCount}
-  This macro works together with the \Macro{JOB\_START\_DELAY} macro
-  to throttle job starts.
-  The default and minimum values for this
-  integer configuration variable are both 1.
-  Small values for this macro are preferred and will
-  minimize the load upon the \Condor{schedd} daemon.
+\item[\Macro{JOB\_START\_COUNT}] \label{param:JobStartCount} This
+  macro works together with the \Macro{JOB\_START\_DELAY} macro to
+  throttle job starts.  The default and minimum values for this
+  integer configuration variable are both 1.  Small values for this
+  macro are preferred and will minimize the load upon the
+  \Condor{schedd} daemon.
   
 \item[\Macro{JOB\_START\_DELAY}] \label{param:JobStartDelay}
   This integer-valued macro works together with the
@@ -4082,12 +4096,24 @@ These macros control the \Condor{schedd}.
   started.
 
 \item[\Macro{PERIODIC\_EXPR\_INTERVAL}]
-  \label{param:PeriodicExprInterval} This macro determines the period,
+  \label{param:PeriodicExprInterval} This macro determines the minimum period,
   in seconds, between evaluation of periodic job control expressions,
   such as periodic\_hold, periodic\_release, and periodic\_remove,
   given by the user in a Condor submit file. By default, this value is
-  300 seconds (5 minutes).  A value of 0 prevents the \Condor{schedd} from
+  60 seconds.  A value of 0 prevents the \Condor{schedd} from
   performing the periodic evaluations.
+
+\item[\Macro{PERIODIC\_EXPR\_TIMESLICE}]
+  \label{param:PeriodicExprTimeslice} This macro is used to adapt the
+  frequency with which the \Condor{schedd} evaluates periodic job
+  control expressions.  When the job queue is very large, the cost of
+  evaluating all of the ClassAds is high, so in order for the
+  \Condor{schedd} to continue to perform well, it makes sense to
+  evaluate these expressions less frequently.  The default timeslice
+  is 0.01, so the \Condor{schedd} will set the interval between
+  evaluations so that it spends only 1\% of its time in this activity.
+  The lower bound for the interval is configured by
+  \Macro{PERIODIC\_EXPR\_INTERVAL} (default 60 seconds).
 
 \item[\Macro{SCHEDD\_ASSUME\_NEGOTIATOR\_GONE}]
   \label{param:ScheddAssumeNegotiatorGone} This macro determines the period,
