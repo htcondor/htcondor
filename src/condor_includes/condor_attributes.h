@@ -64,6 +64,7 @@ extern const char * ATTR_CKPT_ARCH;
 extern const char * ATTR_CKPT_LAST_READ;
 extern const char * ATTR_CKPT_OPSYS;
 extern const char * ATTR_CLAIM_ID;
+extern const char * ATTR_CLAIM_IDS;
 extern const char * ATTR_CLAIM_STATE;
 extern const char * ATTR_CLAIM_TYPE;
 extern const char * ATTR_CLIENT_MACHINE;

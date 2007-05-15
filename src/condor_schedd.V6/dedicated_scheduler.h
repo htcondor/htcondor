@@ -219,7 +219,7 @@ class DedicatedScheduler : public Service {
 
 		// These are public, since the Scheduler class needs to call
 		// them from vacate_service and possibly other places, too.
-	bool DelMrec( char* id );
+	bool DelMrec( char const* id );
 	bool DelMrec( match_rec* rec );
 
 		/** Remove the given shadow record from any match records that

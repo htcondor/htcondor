@@ -33,6 +33,7 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "dc_starter.h"
 #include "directory.h"
+#include "condor_claimid_parser.h"
 
 // for remote syscalls, this is currently in NTreceivers.C.
 extern int do_REMOTE_syscall();
@@ -1297,7 +1298,8 @@ RemoteResource::locateReconnectStarter( void )
 	char *claimid = NULL;
 	getClaimId(claimid);
 
-	dprintf( D_FULLDEBUG, "gjid is %s claimid is %s\n", gjid, claimid);
+	ClaimIdParser idp( claimid );
+	dprintf( D_FULLDEBUG, "gjid is %s claimid is %s\n", gjid, idp.publicClaimId());
 	ClassAd reply;
 	if( dc_startd->locateStarter(gjid, claimid, &reply, 20) ) {
 			// it worked, save the results and return success.

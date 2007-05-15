@@ -1790,6 +1790,11 @@ AttrList::dPrint( int level )
     char			*tmpLine;
 	int				flag = D_NOHEADER | level;
 
+		// flag ATTR_CLAIM_ID as invisible, so we don't reveal the
+		// secret cookie in the logs
+	bool old_claimid_invis = SetInvisible(ATTR_CLAIM_ID,true);
+	bool old_claimids_invis = SetInvisible(ATTR_CLAIM_IDS,true);
+
 	// if this is a chained ad, print out chained attrs first. this is so
 	// if this ad is scanned in from a file, the chained attrs will get
 	// updated with attrs from this ad in case of duplicates.
@@ -1820,6 +1825,14 @@ AttrList::dPrint( int level )
 			free(tmpLine);
 		}
     }
+
+		// restore visibility (i.e. serializability) of claim id
+	if(!old_claimid_invis) {
+		SetInvisible(ATTR_CLAIM_ID,false);
+	}
+	if(!old_claimids_invis) {
+		SetInvisible(ATTR_CLAIM_IDS,false);
+	}
 }
 
 
@@ -2627,12 +2640,22 @@ Assign(char const *variable,bool value)
 	return Insert(buf.GetCStr());
 }
 
-bool AttrList::SetInvisible(char const *name)
+bool AttrList::SetInvisible(char const *name,bool invisible)
 {
 	ExprTree *tree = Lookup(name);
 	if( tree ) {
-		tree->invisible = true;
-		return true;
+		bool old_state = tree->invisible;
+		tree->invisible = invisible;
+		return old_state;
+	}
+	return invisible;
+}
+
+bool AttrList::GetInvisible(char const *name)
+{
+	ExprTree *tree = Lookup(name);
+	if( tree ) {
+		return tree->invisible;
 	}
 	return false;
 }

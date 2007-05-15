@@ -44,6 +44,22 @@
 
 extern char *CondorCertDir;
 
+static bool QmgmtMayAccessAttribute( int cluster_id, int proc_id, char const *attr_name ) {
+	ASSERT( attr_name );
+	if( !stricmp(attr_name,ATTR_CLAIM_ID) ) {
+		return false;
+	}
+	if( !stricmp(attr_name,ATTR_CLAIM_IDS) ) {
+		return false;
+	}
+	return true;
+}
+
+static void QmgmtHidePrivateAttributes( ClassAd *ad, bool hide ) {
+	ad->SetInvisible( ATTR_CLAIM_ID, hide );
+	ad->SetInvisible( ATTR_CLAIM_IDS, hide );
+}
+
 int
 do_Q_request(ReliSock *syscall_sock)
 {
@@ -426,7 +442,12 @@ do_Q_request(ReliSock *syscall_sock)
 		assert( syscall_sock->end_of_message() );;
 
 		errno = 0;
-		rval = GetAttributeFloat( cluster_id, proc_id, attr_name, &value );
+		if( QmgmtMayAccessAttribute( cluster_id, proc_id, attr_name ) ) {
+			rval = GetAttributeFloat( cluster_id, proc_id, attr_name, &value );
+		}
+		else {
+			rval = -1;
+		}
 		terrno = errno;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 
@@ -460,7 +481,12 @@ do_Q_request(ReliSock *syscall_sock)
 		assert( syscall_sock->end_of_message() );;
 
 		errno = 0;
-		rval = GetAttributeInt( cluster_id, proc_id, attr_name, &value );
+		if( QmgmtMayAccessAttribute( cluster_id, proc_id, attr_name ) ) {
+			rval = GetAttributeInt( cluster_id, proc_id, attr_name, &value );
+		}
+		else {
+			rval = -1;
+		}
 		terrno = errno;
 		if (rval < 0) {
 			dprintf( D_SYSCALLS, "GetAttributeInt(%d, %d, %s) not found.\n",
@@ -499,7 +525,12 @@ do_Q_request(ReliSock *syscall_sock)
 		assert( syscall_sock->end_of_message() );;
 
 		errno = 0;
-		rval = GetAttributeStringNew( cluster_id, proc_id, attr_name, &value );
+		if( QmgmtMayAccessAttribute( cluster_id, proc_id, attr_name ) ) {
+			rval = GetAttributeStringNew( cluster_id, proc_id, attr_name, &value );
+		}
+		else {
+			rval = -1;
+		}
 		terrno = errno;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 
@@ -536,7 +567,12 @@ do_Q_request(ReliSock *syscall_sock)
 		assert( syscall_sock->end_of_message() );;
 
 		errno = 0;
-		rval = GetAttributeExpr( cluster_id, proc_id, attr_name, value );
+		if( QmgmtMayAccessAttribute( cluster_id, proc_id, attr_name ) ) {
+			rval = GetAttributeExpr( cluster_id, proc_id, attr_name, value );
+		}
+		else {
+			rval = -1;
+		}
 		terrno = errno;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 
@@ -608,7 +644,10 @@ do_Q_request(ReliSock *syscall_sock)
 			assert( syscall_sock->code(terrno) );
 		}
 		if( rval >= 0 ) {
+			QmgmtHidePrivateAttributes( ad, true );
 			assert( ad->put(*syscall_sock) );
+				// no need to unhide the private attributes, since this
+				// ad is being thrown away
 		}
 		// Here we must really, truely delete the ad.  Why? Because
 		// when GetJobAd is called with the third bool argument set
@@ -641,7 +680,10 @@ do_Q_request(ReliSock *syscall_sock)
 			assert( syscall_sock->code(terrno) );
 		}
 		if( rval >= 0 ) {
+			QmgmtHidePrivateAttributes( ad, true );
 			assert( ad->put(*syscall_sock) );
+				// no need to unhide the private attributes, since this
+				// ad is being thrown away
 		}
 		FreeJobAd(ad);
 		free( (char *)constraint );
@@ -671,7 +713,10 @@ do_Q_request(ReliSock *syscall_sock)
 			assert( syscall_sock->code(terrno) );
 		}
 		if( rval >= 0 ) {
+			QmgmtHidePrivateAttributes( ad, true );
 			assert( ad->put(*syscall_sock) );
+				// no need to unhide the private attributes, since this
+				// ad is being thrown away
 		}
 		FreeJobAd(ad);
 		assert( syscall_sock->end_of_message() );;
@@ -708,7 +753,10 @@ do_Q_request(ReliSock *syscall_sock)
 			assert( syscall_sock->code(terrno) );
 		}
 		if( rval >= 0 ) {
+			QmgmtHidePrivateAttributes( ad, true );
 			assert( ad->put(*syscall_sock) );
+				// no need to unhide the private attributes, since this
+				// ad is being thrown away
 		}
 		FreeJobAd(ad);
 		free( (char *)constraint );

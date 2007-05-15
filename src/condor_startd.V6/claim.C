@@ -822,7 +822,7 @@ Claim::leaseExpired()
 void
 Claim::alive()
 {
-	dprintf( D_PROTOCOL, "Keep alive for ClaimId %s\n", id() );
+	dprintf( D_PROTOCOL, "Keep alive for ClaimId %s\n", publicClaimId() );
 		// Process a keep alive command
 	daemonCore->Reset_Timer( c_lease_tid, c_lease_duration, 0 );
 }
@@ -856,6 +856,16 @@ Claim::id( void )
 		return c_id->id();
 	} else {
 		return NULL;
+	}
+}
+
+char const*
+Claim::publicClaimId( void )
+{
+	if( c_id ) {
+		return c_id->publicClaimId();
+	} else {
+		return "";
 	}
 }
 
@@ -1639,7 +1649,8 @@ int
 newIdString( char** id_str_ptr )
 {
 		// ClaimId string is of the form:
-		// "<ip:port>#startd_bday#sequence_num"
+		// (keep this in sync with condor_claimid_parser)
+		// "<ip:port>#startd_bday#sequence_num#cookie"
 
 	static int sequence_num = 0;
 	sequence_num++;
@@ -1650,6 +1661,8 @@ newIdString( char** id_str_ptr )
 	id += (int)startd_startup;
 	id += '#';
 	id += sequence_num;
+	id += "#";
+	id += get_random_uint(); // this is the "top-secret" cookie
 	*id_str_ptr = strdup( id.Value() );
 	return sequence_num;
 }
@@ -1658,6 +1671,7 @@ newIdString( char** id_str_ptr )
 ClaimId::ClaimId( bool is_cod )
 {
 	int num = newIdString( &c_id );
+	claimid_parser.setClaimId(c_id);
 	if( is_cod ) { 
 		char buf[64];
 		sprintf( buf, "COD%d", num );

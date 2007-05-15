@@ -124,6 +124,7 @@ const char *ATTR_CKPT_ARCH				 = "CkptArch";
 const char *ATTR_CKPT_LAST_READ			 = "CkptLastRead";
 const char *ATTR_CKPT_OPSYS				 = "CkptOpSys";
 const char *ATTR_CLAIM_ID                 = "ClaimId";
+const char *ATTR_CLAIM_IDS                = "ClaimIds";
 const char *ATTR_CLAIM_STATE              = "ClaimState";
 const char *ATTR_CLAIM_TYPE               = "ClaimType";
 const char *ATTR_CLIENT_MACHINE           = "ClientMachine"; 

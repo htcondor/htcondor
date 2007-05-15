@@ -84,8 +84,9 @@ command_activate_claim( Service*, int cmd, Stream* stream )
 	}
 	rip = resmgr->get_by_cur_id( id );
 	if( !rip ) {
+		ClaimIdParser idp( id );
 		dprintf( D_ALWAYS, 
-				 "Error: can't find resource with ClaimId (%s)\n", id );
+				 "Error: can't find resource with ClaimId (%s)\n", idp.publicClaimId() );
 		free( id );
 		stream->end_of_message();
 		reply( stream, NOT_OK );
@@ -232,8 +233,9 @@ command_request_claim( Service*, int cmd, Stream* stream )
 
 	rip = resmgr->get_by_any_id( id );
 	if( !rip ) {
+		ClaimIdParser idp( id );
 		dprintf( D_ALWAYS, 
-				 "Error: can't find resource with ClaimId (%s)\n", id );
+				 "Error: can't find resource with ClaimId (%s)\n", idp.publicClaimId() );
 		free( id );
 		refuse( stream );
 		return FALSE;
@@ -275,8 +277,9 @@ command_release_claim( Service*, int cmd, Stream* stream )
 
 	rip = resmgr->get_by_any_id( id );
 	if( !rip ) {
+		ClaimIdParser idp( id );
 		dprintf( D_ALWAYS, 
-				 "Warning: can't find resource with ClaimId (%s)\n", id );
+				 "Warning: can't find resource with ClaimId (%s)\n", idp.publicClaimId() );
 		free( id );
 		refuse( stream );
 		return FALSE;
@@ -413,8 +416,9 @@ command_match_info( Service*, int cmd, Stream* stream )
 		// Find Resource object for this ClaimId
 	rip = resmgr->get_by_any_id( id );
 	if( !rip ) {
+		ClaimIdParser idp( id );
 		dprintf( D_ALWAYS, 
-				 "Error: can't find resource with ClaimId (%s)\n", id );
+				 "Error: can't find resource with ClaimId (%s)\n", idp.publicClaimId() );
 		free( id );
 		return FALSE;
 	}
@@ -637,6 +641,7 @@ request_claim( Resource* rip, char* id, Stream* stream )
 	float oldrank = 0;
 	char *client_addr = NULL;
 	int interval;
+	ClaimIdParser idp(id);
 
 	if( !rip->r_cur ) {
 		EXCEPT( "request_claim: no current claim object." );
@@ -719,7 +724,7 @@ request_claim( Resource* rip, char* id, Stream* stream )
 	}
 		
 	rip->dprintf( D_FULLDEBUG,
-				  "Received ClaimId from schedd (%s)\n", id );
+				  "Received ClaimId from schedd (%s)\n", idp.publicClaimId() );
 
 		// Make sure we're willing to run this job at all.  Verify that 
 		// the machine and job meet each other's requirements.
@@ -782,7 +787,7 @@ request_claim( Resource* rip, char* id, Stream* stream )
 			if(!rip->r_pre_pre->idMatches(id)) {
 				rip->dprintf( D_ALWAYS,
 							  "ClaimId from schedd (%s) doesn't match (%s)\n",
-							  id, rip->r_pre_pre->id() );
+							  idp.publicClaimId(), rip->r_pre_pre->publicClaimId() );
 				refuse( stream );
 				ABORT;
 			}
@@ -863,7 +868,7 @@ request_claim( Resource* rip, char* id, Stream* stream )
 		} else {
 			rip->dprintf( D_ALWAYS,
 					 "ClaimId from schedd (%s) doesn't match (%s)\n",
-					 id, rip->r_pre->id() );
+					 idp.publicClaimId(), rip->r_pre->publicClaimId() );
 			cmd = NOT_OK;
 		}
 	} else {
@@ -874,7 +879,7 @@ request_claim( Resource* rip, char* id, Stream* stream )
 		} else {
 			rip->dprintf( D_ALWAYS,
 					"ClaimId from schedd (%s) doesn't match (%s)\n",
-					id, rip->r_cur->id() );
+					idp.publicClaimId(), rip->r_cur->publicClaimId() );
 			cmd = NOT_OK;
 		}		
 	}	
@@ -1296,6 +1301,8 @@ int
 match_info( Resource* rip, char* id )
 {
 	int rval = FALSE;
+	ClaimIdParser idp(id);
+
 	rip->dprintf(D_ALWAYS, "match_info called\n");
 
 	switch( rip->state() ) {
@@ -1337,7 +1344,7 @@ match_info( Resource* rip, char* id )
 	case unclaimed_state:
 	case owner_state:
 		if( rip->r_cur->idMatches(id) ) {
-			rip->dprintf( D_ALWAYS, "Received match %s\n", id );
+			rip->dprintf( D_ALWAYS, "Received match %s\n", idp.publicClaimId() );
 
 			if( rip->destination_state() != no_state ) {
 					// we've already got a destination state.
