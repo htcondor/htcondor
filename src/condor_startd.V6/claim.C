@@ -34,6 +34,7 @@
 
 #include "condor_common.h"
 #include "startd.h"
+#include "condor_crypt.h"
 
 ///////////////////////////////////////////////////////////////////////////
 // Claim
@@ -1662,7 +1663,9 @@ newIdString( char** id_str_ptr )
 	id += '#';
 	id += sequence_num;
 	id += "#";
-	id += get_random_uint(); // this is the "top-secret" cookie
+	unsigned char *rand_bytes = Condor_Crypt_Base::randomKey(sizeof(int));
+	id += *((unsigned int *)rand_bytes); // this is the "top-secret" cookie
+	free( rand_bytes );
 	*id_str_ptr = strdup( id.Value() );
 	return sequence_num;
 }
