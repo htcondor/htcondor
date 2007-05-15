@@ -6484,6 +6484,19 @@ Scheduler::spawnShadow( shadow_rec* srec )
 	sh_is_dc = (int)shadow_obj->isDC();
 	bool sh_reads_file = shadow_obj->provides( ATTR_HAS_JOB_AD_FROM_FILE );
 	shadow_path = strdup( shadow_obj->path() );
+
+	if (universe == CONDOR_UNIVERSE_STANDARD 
+		&& !shadow_obj->builtSinceVersion(6, 8, 5)
+		&& !shadow_obj->builtSinceDate(5, 15, 2007)) {
+		dprintf(D_ALWAYS, "Your version of the condor_shadow is older than "
+			  "6.8.5, is incompatible with this version of the condor_schedd, "
+			  "and will not be able to run jobs.  "
+			  "Please upgrade your condor_shadow.  Aborting.\n");
+		noShadowForJob(srec, NO_SHADOW_PRE_6_8_5_STD);
+		delete( shadow_obj );
+		return;
+	}
+
 	if ( shadow_obj ) {
 		delete( shadow_obj );
 		shadow_obj = NULL;
@@ -6803,6 +6816,7 @@ Scheduler::noShadowForJob( shadow_rec* srec, NoShadowFailure_t why )
 	static bool notify_win32 = true;
 	static bool notify_dc_vanilla = true;
 	static bool notify_old_vanilla = true;
+	static bool notify_pre_6_8_5_std = true;
 
 	static char std_reason [] = 
 		"No condor_shadow installed that supports standard universe jobs";
@@ -6816,6 +6830,8 @@ Scheduler::noShadowForJob( shadow_rec* srec, NoShadowFailure_t why )
 	static char old_vanilla_reason [] = 
 		"No condor_shadow installed that supports vanilla jobs on "
 		"resources older than V6.3.3";
+	static char pre_6_8_5_std_reason [] = 
+		"No condor_shadow installed that is at least version 6.8.5";
 
 	PROC_ID job_id;
 	char* hold_reason;
@@ -6847,6 +6863,10 @@ Scheduler::noShadowForJob( shadow_rec* srec, NoShadowFailure_t why )
 	case NO_SHADOW_OLD_VANILLA:
 		hold_reason = old_vanilla_reason;
 		notify_admin = &notify_old_vanilla;
+		break;
+	case NO_SHADOW_PRE_6_8_5_STD:
+		hold_reason = pre_6_8_5_std_reason;
+		notify_admin = &notify_pre_6_8_5_std;
 		break;
 	case NO_SHADOW_RECONNECT:
 			// this is a special case, since we're not going to email
