@@ -693,7 +693,7 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 				break;
 			}
 
-			if( !ValidatePvtStartdClassAd(clientAd,pvtAd,sock) ) {
+			if( !ValidatePvtStartdClassAd(retVal,pvtAd,sock) ) {
 				delete pvtAd;
 				break;
 			}
