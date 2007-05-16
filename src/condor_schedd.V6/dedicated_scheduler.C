@@ -1163,8 +1163,11 @@ DedicatedScheduler::negotiateRequest( ClassAd* req, Stream* s,
 				return NR_ERROR;
 			}
 
-			dprintf( D_PROTOCOL, "## 4. Received ClaimId %s\n",
-					 claim_id ); 
+			{
+				ClaimIdParser idp( claim_id );
+				dprintf( D_PROTOCOL, "## 4. Received ClaimId %s\n",
+						 idp.publicClaimId() ); 
+			}
 
 			if ( my_match_ad ) {
 				dprintf( D_PROTOCOL, "Received match ad\n" );
@@ -2439,6 +2442,7 @@ DedicatedScheduler::addReconnectAttributes(AllocationNode *allocation)
 		for( int p=0; p<allocation->num_procs; p++ ) {
 
 			StringList claims;
+			StringList public_claims;
 			StringList remoteHosts;
 
 			int n = ((*allocation->matches)[p])->getlast();
@@ -2447,8 +2451,10 @@ DedicatedScheduler::addReconnectAttributes(AllocationNode *allocation)
 			for( int i=0; i<=n; i++ ) {
 					// Grab the claim from the mrec
 				char const *claim = (*(*allocation->matches)[p])[i]->claimId();
+				char const *publicClaim = (*(*allocation->matches)[p])[i]->publicClaimId();
 				claims.append(claim);
-				
+				public_claims.append(publicClaim);
+
 
 				char *hosts = matchToHost( (*(*allocation->matches)[p])[i], allocation->cluster, p);
 				remoteHosts.append(hosts);
@@ -2459,6 +2465,15 @@ DedicatedScheduler::addReconnectAttributes(AllocationNode *allocation)
 				SetAttributeString(allocation->cluster, p, ATTR_CLAIM_IDS, claims_str);
 				free(claims_str);
 				claims_str = NULL;
+			}
+
+				// For debugging purposes, store a user-visible version of
+				// the claim ids in the ClassAd as well.
+			char *public_claims_str = public_claims.print_to_string();
+			if ( public_claims_str ) {
+				SetAttributeString(allocation->cluster, p, ATTR_PUBLIC_CLAIM_IDS, public_claims_str);
+				free(public_claims_str);
+				public_claims_str = NULL;
 			}
 
 			char *hosts_str = remoteHosts.print_to_string();

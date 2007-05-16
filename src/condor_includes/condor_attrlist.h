@@ -171,6 +171,17 @@ class AttrList : public AttrListAbstract
 		// (Always returns false if the attribute does not exist.)
 		bool GetInvisible(char const *name);
 
+		// Returns true if given attribute is generally known to
+		// contain data which is private to the user.  Currently,
+		// this is just a hard-coded list global list of attribute
+		// names.
+		static bool ClassAdAttributeIsPrivate( char const *name );
+
+		// Calls SetInvisible() for each attribute that is generally
+		// known to contain private data.  Invisible attributes are
+		// excluded when serializing the ClassAd.
+		void SetPrivateAttributesInvisible(bool make_invisible);
+
 		// deletion of expressions	
         int			Delete(const char*); 	// delete the expr with the name
 

@@ -32,6 +32,7 @@
 #include "internet.h"            // sinful->hostname stuff
 #include "daemon.h"
 #include "env.h"
+#include "condor_claimid_parser.h"
 
 
 MPIShadow::MPIShadow() {
@@ -253,7 +254,8 @@ MPIShadow::getResources( void )
                  !sock->code( claim_id ) ) {
                 EXCEPT( "Problem getting resource %d, %d", i, j );
             }
-            dprintf( D_FULLDEBUG, "Got host: %s id: %s\n", host, claim_id );
+			ClaimIdParser idp( claim_id );
+            dprintf( D_FULLDEBUG, "Got host: %s id: %s\n", host, idp.publicClaimId() );
             
             if ( i==0 && j==0 ) {
 					/* 

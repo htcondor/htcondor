@@ -45,19 +45,7 @@
 extern char *CondorCertDir;
 
 static bool QmgmtMayAccessAttribute( int cluster_id, int proc_id, char const *attr_name ) {
-	ASSERT( attr_name );
-	if( !stricmp(attr_name,ATTR_CLAIM_ID) ) {
-		return false;
-	}
-	if( !stricmp(attr_name,ATTR_CLAIM_IDS) ) {
-		return false;
-	}
-	return true;
-}
-
-static void QmgmtHidePrivateAttributes( ClassAd *ad, bool hide ) {
-	ad->SetInvisible( ATTR_CLAIM_ID, hide );
-	ad->SetInvisible( ATTR_CLAIM_IDS, hide );
+	return !ClassAd::ClassAdAttributeIsPrivate( attr_name );
 }
 
 int
@@ -644,7 +632,7 @@ do_Q_request(ReliSock *syscall_sock)
 			assert( syscall_sock->code(terrno) );
 		}
 		if( rval >= 0 ) {
-			QmgmtHidePrivateAttributes( ad, true );
+			ad->SetPrivateAttributesInvisible( true );
 			assert( ad->put(*syscall_sock) );
 				// no need to unhide the private attributes, since this
 				// ad is being thrown away
@@ -680,10 +668,9 @@ do_Q_request(ReliSock *syscall_sock)
 			assert( syscall_sock->code(terrno) );
 		}
 		if( rval >= 0 ) {
-			QmgmtHidePrivateAttributes( ad, true );
+			ad->SetPrivateAttributesInvisible( true );
 			assert( ad->put(*syscall_sock) );
-				// no need to unhide the private attributes, since this
-				// ad is being thrown away
+			ad->SetPrivateAttributesInvisible( false );
 		}
 		FreeJobAd(ad);
 		free( (char *)constraint );
@@ -713,10 +700,9 @@ do_Q_request(ReliSock *syscall_sock)
 			assert( syscall_sock->code(terrno) );
 		}
 		if( rval >= 0 ) {
-			QmgmtHidePrivateAttributes( ad, true );
+			ad->SetPrivateAttributesInvisible( true );
 			assert( ad->put(*syscall_sock) );
-				// no need to unhide the private attributes, since this
-				// ad is being thrown away
+			ad->SetPrivateAttributesInvisible( false );
 		}
 		FreeJobAd(ad);
 		assert( syscall_sock->end_of_message() );;
@@ -753,10 +739,9 @@ do_Q_request(ReliSock *syscall_sock)
 			assert( syscall_sock->code(terrno) );
 		}
 		if( rval >= 0 ) {
-			QmgmtHidePrivateAttributes( ad, true );
+			ad->SetPrivateAttributesInvisible( true );
 			assert( ad->put(*syscall_sock) );
-				// no need to unhide the private attributes, since this
-				// ad is being thrown away
+			ad->SetPrivateAttributesInvisible( false );
 		}
 		FreeJobAd(ad);
 		free( (char *)constraint );

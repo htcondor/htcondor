@@ -1790,10 +1790,12 @@ AttrList::dPrint( int level )
     char			*tmpLine;
 	int				flag = D_NOHEADER | level;
 
-		// flag ATTR_CLAIM_ID as invisible, so we don't reveal the
-		// secret cookie in the logs
-	bool old_claimid_invis = SetInvisible(ATTR_CLAIM_ID,true);
-	bool old_claimids_invis = SetInvisible(ATTR_CLAIM_IDS,true);
+	if( !(DebugFlags & level) ) {
+		return;
+	}
+
+	// don't log private stuff into the (probably publicly visible) log file
+	SetPrivateAttributesInvisible(true);
 
 	// if this is a chained ad, print out chained attrs first. this is so
 	// if this ad is scanned in from a file, the chained attrs will get
@@ -1826,13 +1828,7 @@ AttrList::dPrint( int level )
 		}
     }
 
-		// restore visibility (i.e. serializability) of claim id
-	if(!old_claimid_invis) {
-		SetInvisible(ATTR_CLAIM_ID,false);
-	}
-	if(!old_claimids_invis) {
-		SetInvisible(ATTR_CLAIM_IDS,false);
-	}
+	SetPrivateAttributesInvisible(false);
 }
 
 
@@ -2658,4 +2654,25 @@ bool AttrList::GetInvisible(char const *name)
 		return tree->invisible;
 	}
 	return false;
+}
+
+bool AttrList::ClassAdAttributeIsPrivate( char const *name )
+{
+		// keep this in sync with SetPrivateAttributesInvisible()
+	if( stricmp(name,ATTR_CLAIM_ID) == 0 ) {
+			// This attribute contains the secret capability cookie
+		return true;
+	}
+	if( stricmp(name,ATTR_CLAIM_IDS) == 0 ) {
+			// This attribute contains secret capability cookies
+		return true;
+	}
+	return false;
+}
+
+void AttrList::SetPrivateAttributesInvisible(bool make_invisible)
+{
+		// keep this in sync with ClassAdAttributeIsPrivate()
+	SetInvisible(ATTR_CLAIM_ID,make_invisible);
+	SetInvisible(ATTR_CLAIM_IDS,make_invisible);
 }

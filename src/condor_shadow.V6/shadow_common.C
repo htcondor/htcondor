@@ -50,6 +50,7 @@
 #include "fileno.h"
 #include "exit.h"
 #include "job_report.h"
+#include "condor_claimid_parser.h"
 
 #if !defined( WCOREDUMP )
 #define  WCOREDUMP(stat)      ((stat)&WCOREFLG)
@@ -799,9 +800,10 @@ part_send_job(
 	  }
 
 		  // Send the capability
-	  dprintf(D_FULLDEBUG, "send capability %s\n", capability);
+	  ClaimIdParser idp( capability );
+	  dprintf(D_FULLDEBUG, "send capability %s\n", idp.publicClaimId() );
 	  if( !sock->code(capability) ) {
-		  dprintf( D_ALWAYS, "sock->put(\"%s\") failed\n", capability );
+		  dprintf( D_ALWAYS, "sock->put(\"%s\") failed\n",idp.publicClaimId());
 		  goto returnfailure;
 	  }
 
@@ -961,9 +963,10 @@ send_cmd_to_startd(char *sin_host, char *capability, int cmd)
 
     
   // send the capability
-  dprintf(D_FULLDEBUG, "send capability %s\n", capability);
+  ClaimIdParser idp( capability );
+  dprintf(D_FULLDEBUG, "send capability %s\n", idp.publicClaimId() );
   if(!sock->code(capability)){
-    dprintf( D_ALWAYS, "sock->code(%s) failed.\n", capability );
+    dprintf( D_ALWAYS, "sock->code(%s) failed.\n", idp.publicClaimId() );
     delete sock;
     return -3;
   }
@@ -975,7 +978,7 @@ send_cmd_to_startd(char *sin_host, char *capability, int cmd)
     return -4;
   }
   dprintf( D_FULLDEBUG, "Sent command %d to startd at %s with cap %s\n",
-		   cmd, sin_host, capability );
+		   cmd, sin_host, idp.publicClaimId() );
 
   delete sock;
 

@@ -7708,6 +7708,7 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 			// clobbers accurate info with a now-bogus value.
 
 		SetAttributeString( cluster, proc, ATTR_CLAIM_ID, mrec->claimId() );
+		SetAttributeString( cluster, proc, ATTR_PUBLIC_CLAIM_ID, mrec->publicClaimId() );
 		SetAttributeInt( cluster, proc, ATTR_LAST_JOB_LEASE_RENEWAL,
 						 (int)time(0) ); 
 
@@ -7963,18 +7964,31 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 		}
 	}
 	DeleteAttribute( cluster, proc, ATTR_REMOTE_HOST );
- 
+
 	if( pid ) {
 		char* last_claim = NULL;
-		GetAttributeStringNew( cluster, proc, ATTR_CLAIM_ID, &last_claim );
+		GetAttributeStringNew( cluster, proc, ATTR_PUBLIC_CLAIM_ID, &last_claim );
 		if( last_claim ) {
-			SetAttributeString( cluster, proc, ATTR_LAST_CLAIM_ID, 
+			SetAttributeString( cluster, proc, ATTR_LAST_PUBLIC_CLAIM_ID, 
+								last_claim );
+			free( last_claim );
+			last_claim = NULL;
+		}
+
+		GetAttributeStringNew( cluster, proc, ATTR_PUBLIC_CLAIM_IDS, &last_claim );
+		if( last_claim ) {
+			SetAttributeString( cluster, proc, ATTR_LAST_PUBLIC_CLAIM_IDS, 
 								last_claim );
 			free( last_claim );
 			last_claim = NULL;
 		}
 	}
+
 	DeleteAttribute( cluster, proc, ATTR_CLAIM_ID );
+	DeleteAttribute( cluster, proc, ATTR_PUBLIC_CLAIM_ID );
+
+	DeleteAttribute( cluster, proc, ATTR_CLAIM_IDS );
+	DeleteAttribute( cluster, proc, ATTR_PUBLIC_CLAIM_IDS );
 
 
 	DeleteAttribute( cluster, proc, ATTR_REMOTE_POOL );
