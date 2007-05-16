@@ -1269,6 +1269,9 @@ JobQueueDBManager::processLogEntry(int op_type, JobQueueCollection* jobQueue)
 			st = FAILURE; 
 			break;
 		}
+		if (strcmp(name, ATTR_CLAIM_ID) == 0) {
+			break;
+		}
 		newvalue = fillEscapeCharacters(value);
 		job_id_type = getProcClusterIds(key, cid, pid);
 
