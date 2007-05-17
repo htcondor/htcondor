@@ -775,6 +775,7 @@ JobQueueCollection::makeCopyStr(bool bStr, char* cid, char* pid, ClassAd* ad, ch
 		// MyType = "Job"
 		// TargetType = "Machine"
 	if (bStr == true) {
+/*
 		if (pid != NULL) {
 			sprintf(tmp_line_str, 
 					"%s\t%s\tMyType\t\"Job\"\n"
@@ -788,8 +789,9 @@ JobQueueCollection::makeCopyStr(bool bStr, char* cid, char* pid, ClassAd* ad, ch
 					cid, cid);
 		}
 
+*/
 		ret_str = (char*)malloc(strlen(tmp_line_str) + 1);
-		strcpy(ret_str, tmp_line_str);
+		ret_str[0] = '\0';
 	}
 	
 	ad->ResetExpr(); // for iteration initialization
@@ -797,6 +799,9 @@ JobQueueCollection::makeCopyStr(bool bStr, char* cid, char* pid, ClassAd* ad, ch
 	while((expr = (AssignOp*)(ad->NextExpr())) != NULL) {
 
 		nameExpr = (Variable*)expr->LArg(); // Name Express Tree
+		if (strcmp(nameExpr->Name(), ATTR_CLAIM_ID) == 0) {
+			continue;
+		}
 		valExpr = (String*)expr->RArg();	// Value Express Tree
 		val = valExpr->Value();					// Value
 		if (val == NULL) break;

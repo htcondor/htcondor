@@ -1829,6 +1829,9 @@ JobQueueDBManager::processSetAttribute(char* key,
 	char* newvalue;  
 	double doubleval = 0;
 
+	if (strcmp(name, ATTR_CLAIM_ID) == 0) {
+		return SUCCESS;
+	}
 	newvalue = fillEscapeCharacters(value);
 		// It could be ProcAd or ClusterAd
 		// So need to check
