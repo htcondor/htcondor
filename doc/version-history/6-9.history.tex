@@ -179,6 +179,12 @@ This brings \Condor{history} more in line \Condor{q}.
 
 \begin{itemize}
 
+\item When the \Condor{schedd} is issued a graceful shutdown command, any jobs
+that running with a job lease are allowed to keep running. When the \Condor{schedd}
+starts back up at a later time, it will spawn \Condor{shadow} to reconnect
+to the jobs if they are still executing. This mimics the same behavior as
+a fast shutdown.
+
 \item On unix systems, Condor can now handle file descriptors larger than
 FD\_SETSIZE when using the select system call. Previously, file descriptors
 largers than FD\_SETSIZE would cause memory corruption and crashes.
