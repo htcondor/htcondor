@@ -88,6 +88,12 @@ struct shadow_rec
 	int				removed;
 	bool			isZombie;	// added for Maui by stolley
 	bool			is_reconnect;
+		//
+		// This flag will cause the schedd to keep certain claim
+		// attributes for jobs with leases during a graceful shutdown
+		// This ensures that the job can reconnect when we come back up
+		//
+	bool			keepClaimAttributes;
 }; 
 
 struct OwnerData {
