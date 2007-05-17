@@ -216,7 +216,7 @@ for ( $ctr = 0, $cnt = scalar(@deltas); $ctr < $cnt; $ctr++ ) {
 		print FILE "DeferralWindow = $window\n";
 	}
 	if ($prep > 0) {
-		print FILE "DeferralPrep = $prep\n";
+		print FILE "DeferralPrepTime = $prep\n";
 	}
 	
 	##

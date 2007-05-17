@@ -19,7 +19,7 @@ CronDayOfWeek	= *
 ## 
 ## Preparation Time
 ##
-DeferralPrep	= 90
+CronPrepTime	= 90
 
 ##
 ## We only want to run it 2 times

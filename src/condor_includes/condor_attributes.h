@@ -102,7 +102,7 @@ extern const char * ATTR_DAG_NODE_NAME;
 extern const char * ATTR_DAG_NODE_NAME_ALT;
 extern const char * ATTR_DAGMAN_JOB_ID;
 extern const char * ATTR_DEFERRAL_OFFSET;
-extern const char * ATTR_DEFERRAL_PREP;
+extern const char * ATTR_DEFERRAL_PREP_TIME;
 extern const char * ATTR_DEFERRAL_TIME;
 extern const char * ATTR_DEFERRAL_WINDOW;
 extern const char * ATTR_DESTINATION;

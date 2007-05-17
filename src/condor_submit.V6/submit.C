@@ -300,8 +300,8 @@ char    *MaxJobRetirementTime = "max_job_retirement_time";
 // Job Deferral Parameters
 //
 char	*DeferralTime	= "deferral_time";
-char	*DeferralWindow = "deferral_window";
-char	*DeferralPrep	= "deferral_prep";
+char	*DeferralWindow 	= "deferral_window";
+char	*DeferralPrepTime	= "deferral_prep_time";
 
 //
 // CronTab Parameters
@@ -313,6 +313,7 @@ char	*CronHour		= "cron_hour";
 char	*CronDayOfMonth	= "cron_day_of_month";
 char	*CronMonth		= "cron_month";
 char	*CronDayOfWeek	= "cron_day_of_week";
+char	*CronPrepTime	= "cron_prep_time";
 
 #if defined(WIN32)
 char	*RunAsOwner = "run_as_owner";
@@ -3320,7 +3321,7 @@ SetJobDeferral() {
 		//
 		// If this job needs the job deferral functionality, we
 		// need to make sure we always add in the DeferralWindow
-		// and the DeferralPrep attributes.
+		// and the DeferralPrepTime attributes.
 		// We have a separate if clause because SetCronTab() can
 		// also set NeedsJobDeferral
 		//
@@ -3344,13 +3345,34 @@ SetJobDeferral() {
 			// This is how many seconds before the job should run it is
 			// sent over to the starter
 			//
-		temp = condor_param( DeferralPrep, ATTR_DEFERRAL_PREP );
-		if ( temp != NULL ) {
-			sprintf (buffer, "%s = %s", ATTR_DEFERRAL_PREP, temp );	
+			// NOTE: There are two separate attributes, CronPrepTime and
+			// DeferralPrepTime, but they are mapped to the same attribute
+			// in the job's classad (ATTR_DEFERRAL_PREP_TIME). This is just
+			// it is less confusing for users that are using one feature but
+			// not the other. CronPrepTime overrides DeferralPrepTime if they
+			// both are set. The manual should talk about this.
+			//
+		const char *prepParams[] = { CronPrepTime, DeferralPrepTime };
+		const char *altParams[]  = { ATTR_CRON_PREP_TIME, ATTR_DEFERRAL_PREP_TIME };
+		int ctr;
+		for (ctr = 0; ctr < 2; ctr++) {
+			temp = condor_param( prepParams[ctr], altParams[ctr] );
+			if ( temp != NULL ) {
+				break;
+			}
+		} // FOR
+			//
+			// If we have a parameter from the job file, use that value
+			//
+		if ( temp != NULL ){
+			sprintf (buffer, "%s = %s", ATTR_DEFERRAL_PREP_TIME, temp );	
 			free( temp );
+			//
+			// Otherwise, use the default value
+			//
 		} else {
-			sprintf( buffer, "%s = %d", ATTR_DEFERRAL_PREP,
-										JOB_DEFERRAL_PREP_DEFAULT );
+			sprintf( buffer, "%s = %d",
+				   ATTR_DEFERRAL_PREP_TIME, JOB_DEFERRAL_PREP_TIME_DEFAULT );
 		}
 		InsertJobExpr (buffer);
 		
@@ -5564,7 +5586,7 @@ check_requirements( char *orig )
 			// possibly run
 			//
 			//	( ( ATTR_CURRENT_TIME + ATTR_SCHEDD_INTERVAL ) >= 
-			//	  ( ATTR_DEFERRAL_TIME - ATTR_DEFERRAL_PREP ) )
+			//	  ( ATTR_DEFERRAL_TIME - ATTR_DEFERRAL_PREP_TIME ) )
 			//  &&
 			//    ( ATTR_CURRENT_TIME < 
 			//    ( ATTR_DEFFERAL_TIME + ATTR_DEFERRAL_WINDOW ) )
@@ -5576,7 +5598,7 @@ check_requirements( char *orig )
 						ATTR_CURRENT_TIME,
 						ATTR_SCHEDD_INTERVAL,
 						ATTR_DEFERRAL_TIME,
-						ATTR_DEFERRAL_PREP,
+						ATTR_DEFERRAL_PREP_TIME,
 						ATTR_CURRENT_TIME,
 						ATTR_DEFERRAL_TIME,
 						ATTR_DEFERRAL_WINDOW );
