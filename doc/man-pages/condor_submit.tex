@@ -1676,50 +1676,57 @@ specified in the command file, the system's user resource limit
 This limit is not used in HP-UX and DUX operating systems. 
 
 %%%%%%%%%%%%%%%%%%%
+%% cron_day_of_week
+%%%%%%%%%%%%%%%%%%%
+%\item[cron\_day\_of\_week = $<$Cron-evaluated Day$>$]
+%\index{submit commands!cron\_day\_of\_week}
+%\Todo
+
+%%%%%%%%%%%%%%%%%%%
+%% deferral_prep_time
+%%%%%%%%%%%%%%%%%%%
+
+\item[deferral\_prep\_time = $<$ClassAd Integer Expression$>$]
+\index{submit commands!deferral\_prep\_time}
+\Todo
+
+%%%%%%%%%%%%%%%%%%%
 %% deferral_time
 %%%%%%%%%%%%%%%%%%%
 
-\item[deferral\_time = $<$Unix Epoch Timestamp$>$]
+\item[deferral\_time = $<$ClassAd Integer Expression$>$]
 \index{submit commands!deferral\_time}
-This option allows a job to begin execution at a specific time
-instead of executing as soon as it arrives at the execution
-machine. The deferral time is an expression that must
-evaluate to a Unix Epoch timestamp (the number of
+Allows a job to specify the time at which its execution
+is to begin,
+instead of beginning execution as soon as it arrives at the execution
+machine. The deferral time is an expression that 
+evaluates to a Unix Epoch timestamp (the number of
 seconds elapsed since 00:00:00 on January 1, 1970, Coordinated
-Universal Time). A job using this option will be delayed for
-execution by the \Condor{starter} until the deferral
-time arrives. If the job misses its execution time, that is, if
-the deferral time is in the past, the job will be put on hold
-in the queue. The time that the job will start at is
-based on the execution machine's system clock.
+Universal Time). 
+Deferral time is evaluated with respect to the execution machine.
+This option delays the start of
+execution, but not the matching and claiming of
+a machine for the job.
+If the job is not available and ready to begin
+execution at the deferral time, it has missed its deferral time.
+A job that misses its deferral time will be put on hold
+in the queue. 
 
-The following example will set a job to run at exactly on
-January 1st, 2006 at 12:00 pm:
+See
+See section~\ref{sec:JobDeferral} for details of job leases.
+for further details and examples.
 
-\begin{verbatim} 
-   DeferralTime = 1136138400
-\end{verbatim} 
+To allow a job to run in the event of a missed deferral time,
+refer to \SubmitCmd{deferral\_window}.
 
-This example will cause a job to always wait 60 seconds after 
-it arrives at the execution machine before executing:
-
-\begin{verbatim} 
-   DeferralTime = (CurrentTime + 60)
-\end{verbatim}
-
-To allow for jobs to run even if the deferral time is missed,
-please refer to \SubmitCmd{deferral\_window}.
-
-Please note that scheduler universe jobs are unable to use this
-feature because they are not executed by the \Condor{starter}.
-A scheduler job will fail to be submitted if \Condor{deferral\_time}
-is defined in its submission file.
+Due to implementation details,
+a deferral time may not be used for scheduler universe jobs.
 
 %%%%%%%%%%%%%%%%%%%
 %% deferral_window
 %%%%%%%%%%%%%%%%%%%
 
-\item[deferral\_window = $<$number-of-seconds$>$]
+\item[deferral\_window = $<$ClassAd Integer Expression$>$]
 \index{submit commands!deferral\_window}
 The deferral window is used in conjunction with the
 \SubmitCmd{deferral\_time} command to allow jobs that
