@@ -65,6 +65,11 @@ now bind to ports within specified ranges. Note that this will limit
 the number of simultaneous store/restore requests to the number of
 available ports.
 
+% Gnats PR 846/condor-admin 15417
+\item Fixed a bug in \Condor{dagman} that caused recovery/bootstrap
+mode to be very slow on large DAGs (i.e., ones with hundreds of thousands
+of nodes).
+
 \end{itemize}
 
 \noindent Known Bugs:
