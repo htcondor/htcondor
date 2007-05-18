@@ -316,7 +316,7 @@ Dag::AddDependency( Job* parent, Job* child )
 }
 
 //-------------------------------------------------------------------------
-Job * Dag::GetJob (const JobID_t jobID) const {
+Job * Dag::FindNodeByNodeID (const JobID_t jobID) const {
 	Job *	job = NULL;
 	if ( _nodeIDHash.lookup(jobID, job) != 0 ) {
     	debug_printf( DEBUG_VERBOSE, "ERROR: job %d not found!\n", jobID);
@@ -1061,7 +1061,7 @@ Dag::ProcessNotIdleEvent(Job *job) {
 }
 
 //---------------------------------------------------------------------------
-Job * Dag::GetJob (const char * jobName) const {
+Job * Dag::FindNodeByName (const char * jobName) const {
 	if( !jobName ) {
 		return NULL;
 	}
@@ -1090,7 +1090,7 @@ Dag::NodeExists( const char* nodeName ) const
     return false;
   }
 
-	// Note:  we don't just call GetJob() here because that would print
+	// Note:  we don't just call FindNodeByName() here because that would print
 	// an error message if the node doesn't exist.
   Job *	job = NULL;
   if ( _nodeNameHash.lookup(nodeName, job) != 0 ) {
@@ -1108,7 +1108,7 @@ Dag::NodeExists( const char* nodeName ) const
 }
 
 //---------------------------------------------------------------------------
-Job * Dag::GetJob (int logsource, const CondorID condorID) const {
+Job * Dag::FindNodeByEventID (int logsource, const CondorID condorID) const {
 	if ( condorID._cluster == -1 ) {
 		return NULL;
 	}
@@ -1507,7 +1507,7 @@ int
 Dag::PreScriptReaper( const char* nodeName, int status )
 {
 	ASSERT( nodeName != NULL );
-	Job* job = GetJob( nodeName );
+	Job* job = FindNodeByName( nodeName );
 	ASSERT( job != NULL );
 	if ( job->GetStatus() != Job::STATUS_PRERUN ) {
 		EXCEPT( "Error: node %s is not in PRERUN state", job->GetJobName() );
@@ -1579,7 +1579,7 @@ int
 Dag::PostScriptReaper( const char* nodeName, int status )
 {
 	ASSERT( nodeName != NULL );
-	Job* job = GetJob( nodeName );
+	Job* job = FindNodeByName( nodeName );
 	ASSERT( job != NULL );
 	if ( job->GetStatus() != Job::STATUS_POSTRUN ) {
 		EXCEPT( "Node %s is not in POSTRUN state", job->GetJobName() );
@@ -1915,7 +1915,7 @@ void Dag::Rescue (const char * rescue_file, const char * datafile,
             SimpleListIterator<JobID_t> jobit (_queue);
             JobID_t jobID;
             while (jobit.Next(jobID)) {
-                Job * child = GetJob(jobID);
+                Job * child = FindNodeByNodeID( jobID );
                 ASSERT( child != NULL );
                 fprintf (fp, " %s", child->GetJobName());
             }
@@ -1950,7 +1950,7 @@ Dag::TerminateJob( Job* job, bool recovery )
     SimpleListIterator<JobID_t> iList (qp);
     JobID_t childID;
     while (iList.Next(childID)) {
-        Job * child = GetJob(childID);
+        Job * child = FindNodeByNodeID( childID );
         ASSERT( child != NULL );
         child->Remove(Job::Q_WAITING, job->GetJobID());
 		// if child has no more parents in its waiting queue, submit it
@@ -2036,7 +2036,7 @@ Dag::DFSVisit (Job * job)
 	
 	while (child_itr.Next(childID))
 	{
-		Job * child = GetJob (childID);
+		Job * child = FindNodeByNodeID( childID );
 		DFSVisit (child);
 	}
 
@@ -2074,7 +2074,7 @@ Dag::isCycle ()
 		child_list.ToBeforeFirst();
 		while (child_list.Next(childID))
 		{
-			Job * child = GetJob (childID);
+			Job * child = FindNodeByNodeID( childID );
 
 			//No child's DFS order should be smaller than parent's
 			if (child->_dfsOrder >= job->_dfsOrder) {
@@ -2121,7 +2121,7 @@ Dag::ParentListString( Job *node, const char delim ) const
 	parent_list.Initialize( node->GetQueueRef( Job::Q_PARENTS ) );
 	parent_list.ToBeforeFirst();
 	while( parent_list.Next( parentID ) ) {
-		parent = GetJob( parentID );
+		parent = FindNodeByNodeID( parentID );
 		parent_name = parent->GetJobName();
 		ASSERT( parent_name );
 		if( ! parents_str.IsEmpty() ) {
@@ -2435,7 +2435,7 @@ Dag::DumpDotFileArcs(FILE *temp_dot_file)
 		child_list.ToBeforeFirst();
 		while (child_list.Next(childID)) {
 			
-			child = GetJob (childID);
+			child = FindNodeByNodeID( childID );
 			
 			child_name  = child->GetJobName();
 			if (parent_name != NULL && child_name != NULL) {
@@ -2505,7 +2505,7 @@ Dag::RemoveNode( const char *name, MyString &whynot )
 		whynot = "name == NULL";
 		return false;
 	}
-	Job *node = GetJob( name );
+	Job *node = FindNodeByName( name );
 	if( !node ) {
 		whynot = "does not exist in DAG";
 		return false;
@@ -2654,7 +2654,7 @@ Dag::LogEventNodeLookup( int logsource, const ULogEvent* event,
 		// node, and we're done...
 
 	if( event->eventNumber != ULOG_SUBMIT ) {
-	  node = GetJob( logsource, condorID );
+	  node = FindNodeByEventID( logsource, condorID );
 	  if( node ) {
 	    return node;
 	  }
@@ -2681,7 +2681,7 @@ Dag::LogEventNodeLookup( int logsource, const ULogEvent* event,
 			char nodeName[1024] = "";
 			if ( sscanf( submit_event->submitEventLogNotes,
 						 "DAG Node: %1023s", nodeName ) == 1 ) {
-				node = GetJob( nodeName );
+				node = FindNodeByName( nodeName );
 				if( node ) {
 					submitEventIsSane = SanityCheckSubmitEvent( condorID,
 								node );
@@ -2714,7 +2714,7 @@ Dag::LogEventNodeLookup( int logsource, const ULogEvent* event,
 		event->cluster == -1 ) {
 		const PostScriptTerminatedEvent* pst_event =
 			(const PostScriptTerminatedEvent*)event;
-		node = GetJob( pst_event->dagNodeName );
+		node = FindNodeByName( pst_event->dagNodeName );
 		return node;
 	}
 

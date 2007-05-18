@@ -214,20 +214,20 @@ class Dag {
         @param the handle of the job in the DAG
         @return address of Job object, or NULL if not found
     */
-    Job * GetJob (const JobID_t jobID) const;
+    Job * FindNodeByNodeID (const JobID_t jobID) const;
 
     /** Get pointer to job with name jobName
         @param jobName the name of the job in the DAG
         @return address of Job object, or NULL if not found
     */
-    Job * GetJob (const char * jobName) const;
+    Job * FindNodeByName (const char * jobName) const;
 
-    /** Get pointer to job with condor ID condorID
+    /** Get pointer to job with condor or stork ID condorID
 		@param logsource The type of log from which events should be read.
         @param condorID the CondorID of the job in the DAG
         @return address of Job object, or NULL if not found
     */
-    Job * GetJob (int logsource, const CondorID condorID) const;
+    Job * FindNodeByEventID (int logsource, const CondorID condorID) const;
 
     /** Ask whether a node name exists in the DAG
         @param nodeName the name of the node in the DAG

@@ -415,7 +415,7 @@ parse_script(
 		MyString tmpJobName = munge_job_name(jobName);
 		jobName = tmpJobName.Value();
 
-		job = dag->GetJob(jobName);
+		job = dag->FindNodeByName( jobName );
 		if (job == NULL) {
 			debug_printf( DEBUG_QUIET, 
 						  "%s (line %d): Unknown Job %s\n",
@@ -507,7 +507,7 @@ parse_parent(
 		MyString tmpJobName = munge_job_name(jobName);
 		const char *jobName2 = tmpJobName.Value();
 
-		Job * job = dag->GetJob(jobName2);
+		Job * job = dag->FindNodeByName( jobName2 );
 		if (job == NULL) {
 			debug_printf( DEBUG_QUIET, 
 						  "%s (line %d): Unknown Job %s\n",
@@ -542,7 +542,7 @@ parse_parent(
 		MyString tmpJobName = munge_job_name(jobName);
 		const char *jobName2 = tmpJobName.Value();
 
-		Job * job = dag->GetJob(jobName2);
+		Job * job = dag->FindNodeByName( jobName2 );
 		if (job == NULL) {
 			debug_printf( DEBUG_QUIET, 
 						  "%s (line %d): Unknown Job %s\n",
@@ -613,7 +613,7 @@ parse_retry(
 	MyString tmpJobName = munge_job_name(jobName);
 	jobName = tmpJobName.Value();
 	
-	Job *job = dag->GetJob( jobName );
+	Job *job = dag->FindNodeByName( jobName );
 	if( job == NULL ) {
 		debug_printf( DEBUG_QUIET, 
 					  "%s (line %d): Unknown Job %s\n",
@@ -704,7 +704,7 @@ parse_abort(
 	MyString tmpJobName = munge_job_name(jobName);
 	jobName = tmpJobName.Value();
 	
-	Job *job = dag->GetJob( jobName );
+	Job *job = dag->FindNodeByName( jobName );
 	if( job == NULL ) {
 		debug_printf( DEBUG_QUIET, 
 					  "%s (line %d): Unknown Job %s\n",
@@ -861,7 +861,7 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber) {
 	MyString tmpJobName = munge_job_name(jobName);
 	jobName = tmpJobName.Value();
 
-	Job *job = dag->GetJob(jobName);
+	Job *job = dag->FindNodeByName( jobName );
 	if(job == NULL) {
 		debug_printf(DEBUG_QUIET, "%s (line %d): Unknown Job %s\n",
 					filename, lineNumber, jobNameOrig);
