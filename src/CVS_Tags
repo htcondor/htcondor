@@ -1,3 +1,7 @@
+05/21/07 V6_8-merge-7
+  State of V6_8 at the point where all 6.8.5-branch changes (plus whatever
+  else is hanging out on the 6.8 branch) are merged back to the trunk.
+
 05/21/07 V6_8-merge_pre-V6_8_5 and V6_8-merge_post-V6_8_5
   Merge tags on V6_8-branch before and after merging V6_8_5.
 
