@@ -122,23 +122,23 @@ int JavaProc::StartJob()
 	arg_buf.sprintf("-Dchirp.config=%s%cchirp.config",execute_dir,DIR_DELIM_CHAR);
 	args.AppendArg(arg_buf.Value());
 
-	char *vm_args1 = NULL;
-	char *vm_args2 = NULL;
-	MyString vm_args_error;
-	bool vm_args_success = true;
-	JobAd->LookupString(ATTR_JOB_JAVA_VM_ARGS1, &vm_args1);
-	JobAd->LookupString(ATTR_JOB_JAVA_VM_ARGS2, &vm_args2);
-	if(vm_args2) {
-		vm_args_success = args.AppendArgsV2Raw(vm_args2,&vm_args_error);
+	char *jvm_args1 = NULL;
+	char *jvm_args2 = NULL;
+	MyString jvm_args_error;
+	bool jvm_args_success = true;
+	JobAd->LookupString(ATTR_JOB_JAVA_VM_ARGS1, &jvm_args1);
+	JobAd->LookupString(ATTR_JOB_JAVA_VM_ARGS2, &jvm_args2);
+	if(jvm_args2) {
+		jvm_args_success = args.AppendArgsV2Raw(jvm_args2, &jvm_args_error);
 	}
-	else if(vm_args1) {
-		vm_args_success = args.AppendArgsV1Raw(vm_args1,&vm_args_error);
+	else if(jvm_args1) {
+		jvm_args_success = args.AppendArgsV1Raw(jvm_args1, &jvm_args_error);
 	}
-	free(vm_args1);
-	free(vm_args2);
-	if(!vm_args_success) {
-		dprintf(D_ALWAYS,"JavaProc: failed to parse VM args: %s\n",
-				vm_args_error.Value());
+	free(jvm_args1);
+	free(jvm_args2);
+	if (!jvm_args_success) {
+		dprintf(D_ALWAYS, "JavaProc: failed to parse JVM args: %s\n",
+				jvm_args_error.Value());
 		return 0;
 	}
 
