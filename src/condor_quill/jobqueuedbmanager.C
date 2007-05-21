@@ -1269,6 +1269,9 @@ JobQueueDBManager::processLogEntry(int op_type, JobQueueCollection* jobQueue)
 			st = FAILURE; 
 			break;
 		}
+		if (strcmp(name, ATTR_CLAIM_ID) == 0) {
+			break;
+		}
 		newvalue = fillEscapeCharacters(value);
 		job_id_type = getProcClusterIds(key, cid, pid);
 
@@ -1826,6 +1829,9 @@ JobQueueDBManager::processSetAttribute(char* key,
 	char* newvalue;  
 	double doubleval = 0;
 
+	if (strcmp(name, ATTR_CLAIM_ID) == 0) {
+		return SUCCESS;
+	}
 	newvalue = fillEscapeCharacters(value);
 		// It could be ProcAd or ClusterAd
 		// So need to check

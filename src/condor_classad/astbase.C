@@ -488,6 +488,7 @@ void ExprTree::CopyBaseExprTree(ExprTree * const recipient) const
 	recipient->unit         = unit;
 	recipient->type         = type;
 	recipient->evalFlag     = evalFlag;
+	recipient->invisible    = invisible;
 	return;
 }
 

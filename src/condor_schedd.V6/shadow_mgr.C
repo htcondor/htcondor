@@ -61,6 +61,13 @@ Shadow::Shadow( const char* path, ClassAd* ad )
 	int is_dc = 0;
 	ad->LookupBool( ATTR_IS_DAEMON_CORE, is_dc );
 	s_is_dc = (bool)is_dc;
+	char* version_string = NULL;
+	if (ad->LookupString(ATTR_VERSION, &version_string)) {
+		m_version_info = new CondorVersionInfo(version_string, "SHADOW", NULL);
+		free(version_string);
+	} else {
+		m_version_info = NULL;
+	}
 }
 
 
@@ -79,6 +86,14 @@ Shadow::Shadow( const Shadow& s )
 	}
 
 	s_is_dc = s.s_is_dc;
+
+	char* version_string = NULL;
+	if (s_ad->LookupString(ATTR_VERSION, &version_string)) {
+		m_version_info = new CondorVersionInfo(version_string, "SHADOW", NULL);
+		free(version_string);
+	} else {
+		m_version_info = NULL;
+	}
 }
 
 
@@ -89,6 +104,9 @@ Shadow::~Shadow()
 	}
 	if( s_ad ) {
 		delete( s_ad );
+	}
+	if (m_version_info) {
+		delete(m_version_info);
 	}
 }
 
@@ -120,6 +138,42 @@ Shadow::printInfo( int debug_level )
 		s_ad->dPrint( debug_level );
 	}
 	dprintf( debug_level | D_NOHEADER, "*** End of shadow info ***\n" ); 
+}
+
+
+bool
+Shadow::builtSinceVersion(int major, int minor, int sub_minor) {
+	if (m_version_info) {
+		return m_version_info->built_since_version(major, minor, sub_minor);
+	}
+		/*
+		  It doesn't even have a version string, we should return
+		  false and assume it's older than whatever we care about
+		  (e.g. this functionality was added for 6.8.5, and we *know*
+		  the shadow is returning a version string there).
+		*/
+	dprintf(D_ALWAYS, "ERROR: shadow classad does not contain version "
+			"information, it must be REALLY OLD.  "
+			"Please upgrade your shadow immediately.");
+	return false;
+}
+
+
+bool
+Shadow::builtSinceDate(int month, int day, int year) {
+	if (m_version_info) {
+		return m_version_info->built_since_date(month, day, year);
+	}
+		/*
+		  It doesn't even have a version string, we should return
+		  false and assume it's older than whatever we care about
+		  (e.g. this functionality was added for 6.8.5, and we *know*
+		  the shadow is returning a version string there).
+		*/
+	dprintf(D_ALWAYS, "ERROR: shadow classad does not contain version "
+			"information, it must be REALLY OLD.  "
+			"Please upgrade your shadow immediately.");
+	return false;
 }
 
 

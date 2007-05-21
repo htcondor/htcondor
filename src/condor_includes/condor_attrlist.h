@@ -155,6 +155,33 @@ class AttrList : public AttrListAbstract
 		int Assign(char const *variable,float value);
 		int Assign(char const *variable,bool value);
 
+		// Make an expression invisible when serializing the ClassAd.
+		// This (hopefully temporary hack) is to prevent the special
+		// attributes MyType and MyTargetType from being printed
+		// multiple times, once from the hard-coded value, and once
+		// from the attrlist itself.
+		// Returns the old invisibility state.  If the attribute doesn't
+		// exist, it returns the new invisibility state specified by
+		// the caller, so a caller wishing to restore state can
+		// optimize away the second call if desired, since this
+		// function does nothing when the attribute does not exist.
+		bool SetInvisible(char const *name,bool make_invisible=true);
+
+		// Returns invisibility state of the specified attribute.
+		// (Always returns false if the attribute does not exist.)
+		bool GetInvisible(char const *name);
+
+		// Returns true if given attribute is generally known to
+		// contain data which is private to the user.  Currently,
+		// this is just a hard-coded list global list of attribute
+		// names.
+		static bool ClassAdAttributeIsPrivate( char const *name );
+
+		// Calls SetInvisible() for each attribute that is generally
+		// known to contain private data.  Invisible attributes are
+		// excluded when serializing the ClassAd.
+		void SetPrivateAttributesInvisible(bool make_invisible);
+
 		// deletion of expressions	
         int			Delete(const char*); 	// delete the expr with the name
 

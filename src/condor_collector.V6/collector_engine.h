@@ -65,6 +65,9 @@ class CollectorEngine : public Service
 	// Publish stats into the collector's ClassAd
 	int publishStats( ClassAd *ad );
 
+		// returns true on success; false on failure (and sets error_desc)
+	bool setCollectorRequirements( char const *str, MyString &error_desc );
+
   private:
 	// the greater tables
 	enum {GREATER_TABLE_SIZE = 1024};
@@ -118,9 +121,13 @@ class CollectorEngine : public Service
 	// support for dynamically created tables
 	CollectorHashTable *findOrCreateTable(MyString &str);
 
+	bool ValidateClassAd(int command,ClassAd *clientAd,Sock *sock);
+	bool ValidatePvtStartdClassAd(ClassAd *publicAd,ClassAd *privateAd,Sock *sock);
+
 	// Statistics
 	CollectorStats	*collectorStats;
 
+	ClassAd *m_collector_requirements;
   public:
 	// pointer values for representing master states
 	static ClassAd* RECENTLY_DOWN;

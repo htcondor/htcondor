@@ -5734,6 +5734,9 @@ SaveClassAd ()
 
 	job->ResetExpr();
 	while( (tree = job->NextExpr()) ) {
+		if( tree->invisible ) {
+			continue;
+		}
 		lhstr = NULL;
 		rhstr = NULL;
 		if( (lhs = tree->LArg()) ) { lhs->PrintToNewStr (&lhstr); }

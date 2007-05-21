@@ -53,6 +53,47 @@ void simple_scramble(char* scrambled,  const char* orig, int len)
 	}
 }
 
+// writes a pool password file using the given password
+// returns SUCCESS or FAILURE
+//
+int write_password_file(const char* path, const char* password)
+{
+		int fd = safe_open_wrapper(path,
+		                           O_WRONLY | O_CREAT | O_TRUNC,
+		                           0600);
+		if (fd == -1) {
+			dprintf(D_ALWAYS,
+			        "store_cred_service: open failed on %s: %s (%d)\n",
+			        path,
+			        strerror(errno),
+					errno);
+			return FAILURE;
+		}
+		FILE *fp = fdopen(fd, "w");
+		if (fp == NULL) {
+			dprintf(D_ALWAYS,
+			        "store_cred_service: fdopen failed: %s (%d)\n",
+			        strerror(errno),
+			        errno);
+			return FAILURE;
+		}
+		size_t password_len = strlen(password);
+		char scrambled_password[MAX_PASSWORD_LENGTH + 1];
+		memset(scrambled_password, 0, MAX_PASSWORD_LENGTH + 1);
+		simple_scramble(scrambled_password, password, password_len);
+		size_t sz = fwrite(scrambled_password, 1, MAX_PASSWORD_LENGTH + 1, fp);
+		fclose(fp);
+		if (sz != MAX_PASSWORD_LENGTH + 1) {
+			dprintf(D_ALWAYS,
+			        "store_cred_service: "
+			            "error writing to password file: %s (%d)\n",
+					strerror(errno),
+			        errno);
+			return FAILURE;
+		}
+		return SUCCESS;
+}
+
 char* getStoredCredential(const char *username, const char *domain)
 {
 	// TODO: add support for multiple domains
@@ -62,13 +103,17 @@ char* getStoredCredential(const char *username, const char *domain)
 	}
 
 	if (strcmp(username, POOL_PASSWORD_USERNAME) != 0) {
-		dprintf(D_ALWAYS, "getStoredCredential: only pool password is supported on UNIX\n");
+		dprintf(D_ALWAYS,
+		        "getStoredCredential: "
+		            "only pool password is supported on UNIX\n");
 		return NULL;
 	} 
 
 	char *filename = param("SEC_PASSWORD_FILE");
 	if (filename == NULL) {
-		dprintf(D_ALWAYS, "error fetching pool password; SEC_PASSWORD_FILE not defined\n");
+		dprintf(D_ALWAYS,
+		        "error fetching pool password; "
+		            "SEC_PASSWORD_FILE not defined\n");
 		return NULL;
 	}
 
@@ -78,21 +123,29 @@ char* getStoredCredential(const char *username, const char *domain)
 	set_priv(priv);
 	free(filename);
 	if (fp == NULL) {
-		dprintf(D_FULLDEBUG, "error opening SEC_PASSWORD_FILE (%s), %s (errno: %d)\n",
-			filename, strerror(errno), errno);
+		dprintf(D_FULLDEBUG,
+		        "error opening SEC_PASSWORD_FILE (%s), %s (errno: %d)\n",
+		        filename,
+		        strerror(errno),
+		        errno);
 		return NULL;
 	}
 
 	// make sure the file owner matches our real uid
 	struct stat st;
 	if (fstat(fileno(fp), &st) == -1) {
-		dprintf(D_ALWAYS, "fstat failed on SEC_PASSWORD_FILE (%s), %s (errno: %d)\n",
-			filename, strerror(errno), errno);
+		dprintf(D_ALWAYS,
+		        "fstat failed on SEC_PASSWORD_FILE (%s), %s (errno: %d)\n",
+		        filename,
+		        strerror(errno),
+		        errno);
 		fclose(fp);
 		return NULL;
 	}
 	if (st.st_uid != get_my_uid()) {
-		dprintf(D_ALWAYS, "error: SEC_PASSWORD_FILE must be owned by Condor's real uid\n");
+		dprintf(D_ALWAYS,
+		        "error: SEC_PASSWORD_FILE must be owned "
+		            "by Condor's real uid\n");
 		fclose(fp);
 		return NULL;
 	}
@@ -145,7 +198,8 @@ int store_cred_service(const char *user, const char *pw, int mode)
 		answer = FAILURE;
 		size_t pw_sz = strlen(pw);
 		if (!pw_sz) {
-			dprintf(D_ALWAYS, "store_cred_service: empty password not allowed\n");
+			dprintf(D_ALWAYS,
+			        "store_cred_service: empty password not allowed\n");
 			break;
 		}
 		if (pw_sz > MAX_PASSWORD_LENGTH) {
@@ -153,27 +207,8 @@ int store_cred_service(const char *user, const char *pw, int mode)
 			break;
 		}
 		priv_state priv = set_root_priv();
-		int fd = safe_open_wrapper(filename, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+		answer = write_password_file(filename, pw);
 		set_priv(priv);
-		if (fd == -1) {
-			dprintf(D_ALWAYS, "store_cred_service: open failed on %s\n", filename);
-			break;
-		}
-		FILE *fp = fdopen(fd, "w");
-		if (fp == NULL) {
-			dprintf(D_ALWAYS, "store_cred_service: fdopen failed\n");
-			break;
-		}
-		char scrambled_pw[MAX_PASSWORD_LENGTH + 1];
-		memset(scrambled_pw, 0, MAX_PASSWORD_LENGTH + 1);
-		simple_scramble(scrambled_pw, pw, pw_sz);
-		size_t sz = fwrite(scrambled_pw, 1, MAX_PASSWORD_LENGTH + 1, fp);
-		fclose(fp);
-		if (sz != MAX_PASSWORD_LENGTH + 1) {
-			dprintf(D_ALWAYS, "store_cred_service: error writing to password file\n");
-			break;
-		}
-		answer = SUCCESS;
 		break;
 	}
 	case DELETE_MODE: {
@@ -189,11 +224,11 @@ int store_cred_service(const char *user, const char *pw, int mode)
 		break;
 	}
 	case QUERY_MODE: {
-		char *pw = getStoredCredential(POOL_PASSWORD_USERNAME, NULL);
-		if (pw) {
+		char *password = getStoredCredential(POOL_PASSWORD_USERNAME, NULL);
+		if (password != NULL) {
 			answer = SUCCESS;
-			SecureZeroMemory(pw, MAX_PASSWORD_LENGTH);
-			free(pw);
+			SecureZeroMemory(password, MAX_PASSWORD_LENGTH);
+			free(password);
 		}
 		else {
 			answer = FAILURE_NOT_FOUND;
@@ -223,10 +258,6 @@ extern "C" int DebugFlags;
 
 char* getStoredCredential(const char *username, const char *domain)
 {
-
-		// Hopefully we're
-		// running as LocalSystem here, otherwise we can't get at the 
-		// password stash.
 	lsa_mgr lsaMan;
 	char pw[255];
 	wchar_t w_fullname[512];
@@ -241,7 +272,9 @@ char* getStoredCredential(const char *username, const char *domain)
 	}
 
 	// make sure we're SYSTEM when we do this
+	priv_state priv = set_root_priv();
 	w_pw = lsaMan.query(w_fullname);
+	set_priv(priv);
 
 	if ( ! w_pw ) {
 		dprintf(D_ALWAYS, 
@@ -548,7 +581,7 @@ static int code_store_cred(Stream *socket, char* &user, char* &pw, int &mode) {
 	
 }
 
-void store_pool_cred_handler(void *, int i, Stream *s)
+void store_pool_cred_handler(void *, int, Stream *s)
 {
 	int result;
 	char *pw = NULL;

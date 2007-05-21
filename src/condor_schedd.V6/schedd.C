@@ -177,9 +177,9 @@ dc_reconfig()
 
 
 match_rec::match_rec( char* claim_id, char* p, PROC_ID* job_id, 
-					  const ClassAd *match, char *the_user, char *my_pool )
+					  const ClassAd *match, char *the_user, char *my_pool ):
+	ClaimIdParser(claim_id)
 {
-	id = strdup( claim_id );
 	peer = strdup( p );
 	origcluster = cluster = job_id->cluster;
 	proc = job_id->proc;
@@ -209,12 +209,8 @@ match_rec::match_rec( char* claim_id, char* p, PROC_ID* job_id,
 	scheduled = false;
 }
 
-
 match_rec::~match_rec()
 {
-	if( id ) {
-		free( id );
-	}
 	if( peer ) {
 		free( peer );
 	}
@@ -4852,8 +4848,11 @@ Scheduler::negotiate(int command, Stream* s)
 						// where everything upto the # is the sinful
 						// string of the startd
 
-					dprintf( D_PROTOCOL, 
-							 "## 4. Received ClaimId %s\n", claim_id );
+					{
+						ClaimIdParser idp(claim_id);
+						dprintf( D_PROTOCOL, 
+						         "## 4. Received ClaimId %s\n", idp.publicClaimId() );
+					}
 
 					if ( my_match_ad ) {
 						dprintf(D_PROTOCOL,"Received match ad\n");
@@ -5181,7 +5180,7 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 		return;
 	}
 
-    dprintf( D_FULLDEBUG, "%s %s %s %d.%d\n", mrec->id, 
+    dprintf( D_FULLDEBUG, "%s %s %s %d.%d\n", mrec->publicClaimId(), 
 			 mrec->user, mrec->peer, mrec->cluster,
 			 mrec->proc ); 
 
@@ -5238,7 +5237,7 @@ claimStartd( match_rec* mrec, ClassAd* job_ad, bool is_dedicated )
 		delete sock;
 		return false;
 	}
-	ASSERT(daemonCore->Register_DataPtr( strdup(mrec->id) ));
+	ASSERT(daemonCore->Register_DataPtr( strdup(mrec->claimId()) ));
 
 	mrec->setStatus( M_CONNECTING );
 
@@ -5271,7 +5270,7 @@ claimStartdConnected( Sock *sock, match_rec* mrec, ClassAd* job_ad, bool is_dedi
 
 	sock->encode();
 
-	if( !sock->put( mrec->id ) ) {
+	if( !sock->put( mrec->claimId() ) ) {
 		dprintf( D_ALWAYS, "Couldn't send ClaimId to startd.\n" );	
 		return false;
 	}
@@ -5330,7 +5329,7 @@ claimStartdConnected( Sock *sock, match_rec* mrec, ClassAd* job_ad, bool is_dedi
 			  (SocketHandlercpp)&Scheduler::startdContactSockHandler,
 			  to_startd, &scheduler, ALLOW );
 	}
-	daemonCore->Register_DataPtr( strdup(mrec->id) );
+	daemonCore->Register_DataPtr( strdup(mrec->claimId()) );
 
 	scheduler.addRegContact();
 
@@ -5439,7 +5438,7 @@ Scheduler::startdContactSockHandler( Stream *sock )
 	sock->timeout(1);
 
  	if( !sock->rcv_int(reply, TRUE) ) {
-		dprintf( D_ALWAYS, "Response problem from startd on %s (match %s).\n", mrec->peer, mrec->id );	
+		dprintf( D_ALWAYS, "Response problem from startd on %s (match %s).\n", mrec->peer, mrec->publicClaimId() );	
 		BAILOUT;
 	}
 
@@ -5744,7 +5743,8 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 
 	dprintf( D_FULLDEBUG, "Adding match record for disconnected job %d.%d "
 			 "(owner: %s)\n", cluster, proc, owner );
-	dprintf( D_FULLDEBUG, "ClaimId: %s\n", claim_id );
+	ClaimIdParser idp( claim_id );
+	dprintf( D_FULLDEBUG, "ClaimId: %s\n", idp.publicClaimId() );
 	if( pool ) {
 		dprintf( D_FULLDEBUG, "Pool: %s (via flocking)\n", pool );
 	}
@@ -5986,20 +5986,20 @@ Scheduler::StartJobs()
 	while(matches->iterate(rec) == 1) {
 		switch(rec->status) {
 		case M_UNCLAIMED:
-			dprintf(D_FULLDEBUG, "match (%s) unclaimed\n", rec->id);
+			dprintf(D_FULLDEBUG, "match (%s) unclaimed\n", rec->publicClaimId());
 			continue;
 		case M_CONNECTING:
-			dprintf(D_FULLDEBUG, "match (%s) waiting for connection\n", rec->id);
+			dprintf(D_FULLDEBUG, "match (%s) waiting for connection\n", rec->publicClaimId());
 			continue;
 		case M_STARTD_CONTACT_LIMBO:
 			dprintf ( D_FULLDEBUG, "match (%s) waiting for startd contact\n", 
-					  rec->id );
+					  rec->publicClaimId() );
 			continue;
 		case M_ACTIVE:
 		case M_CLAIMED:
 			if ( rec->shadowRec ) {
 				dprintf(D_FULLDEBUG, "match (%s) already running a job\n",
-						rec->id);
+						rec->publicClaimId());
 				continue;
 			}
 			// Go ahead and start a shadow.
@@ -6022,7 +6022,7 @@ Scheduler::StartJobs()
 		{
 			dprintf(D_ALWAYS,
 					"match (%s) out of jobs (cluster id %d); relinquishing\n",
-					rec->id, id.cluster);
+					rec->publicClaimId(), id.cluster);
 			Relinquish(rec);
 			DelMrec(rec);
 			continue;
@@ -6042,7 +6042,7 @@ Scheduler::StartJobs()
 		// match.
 
 			dprintf(D_ALWAYS,"Failed to start job %s; relinquishing\n",
-					rec->id);
+					rec->publicClaimId());
 			Relinquish(rec);
 			DelMrec(rec);
 			mark_job_stopped( &id );
@@ -6073,8 +6073,8 @@ Scheduler::StartJobs()
 			}
 			continue;
 		}
-		dprintf(D_FULLDEBUG, "Match (%s) - running %d.%d\n",rec->id,id.cluster,
-				id.proc);
+		dprintf(D_FULLDEBUG, "Match (%s) - running %d.%d\n",
+		        rec->publicClaimId(), id.cluster, id.proc);
 			// If we're reusing a match to start another job, then cluster
 			// and proc may have changed, so we keep them up-to-date here.
 			// This is important for Scheduler::AlreadyMatched().
@@ -6484,6 +6484,19 @@ Scheduler::spawnShadow( shadow_rec* srec )
 	sh_is_dc = (int)shadow_obj->isDC();
 	bool sh_reads_file = shadow_obj->provides( ATTR_HAS_JOB_AD_FROM_FILE );
 	shadow_path = strdup( shadow_obj->path() );
+
+	if (universe == CONDOR_UNIVERSE_STANDARD 
+		&& !shadow_obj->builtSinceVersion(6, 8, 5)
+		&& !shadow_obj->builtSinceDate(5, 15, 2007)) {
+		dprintf(D_ALWAYS, "Your version of the condor_shadow is older than "
+			  "6.8.5, is incompatible with this version of the condor_schedd, "
+			  "and will not be able to run jobs.  "
+			  "Please upgrade your condor_shadow.  Aborting.\n");
+		noShadowForJob(srec, NO_SHADOW_PRE_6_8_5_STD);
+		delete( shadow_obj );
+		return;
+	}
+
 	if ( shadow_obj ) {
 		delete( shadow_obj );
 		shadow_obj = NULL;
@@ -6518,7 +6531,7 @@ Scheduler::spawnShadow( shadow_rec* srec )
 		} else {
 			args.AppendArg(MyShadowSockName);
 			args.AppendArg(mrec->peer);
-			args.AppendArg(mrec->id);
+			args.AppendArg("*");
 			args.AppendArg(job_id->cluster);
 			args.AppendArg(job_id->proc);
 			args.AppendArg("-");
@@ -6527,7 +6540,7 @@ Scheduler::spawnShadow( shadow_rec* srec )
 			// CRUFT: pre-6.7.0 shadows...
 		args.AppendArg(MyShadowSockName);
 		args.AppendArg(mrec->peer);
-		args.AppendArg(mrec->id);
+		args.AppendArg(mrec->claimId());
 		args.AppendArg(job_id->cluster);
 		args.AppendArg(job_id->proc);
 	}
@@ -6565,8 +6578,8 @@ Scheduler::spawnShadow( shadow_rec* srec )
 		mrec->setStatus( M_ACTIVE );
 		mrec->cluster = job_id->cluster;
 		mrec->proc = job_id->proc;
-		dprintf(D_FULLDEBUG, "Match (%s) - running %d.%d\n", mrec->id,
-				mrec->cluster, mrec->proc );
+		dprintf(D_FULLDEBUG, "Match (%s) - running %d.%d\n",
+		        mrec->publicClaimId(), mrec->cluster, mrec->proc );
 
 		/*
 		  If we just spawned a reconnect shadow, we want to update
@@ -6803,6 +6816,7 @@ Scheduler::noShadowForJob( shadow_rec* srec, NoShadowFailure_t why )
 	static bool notify_win32 = true;
 	static bool notify_dc_vanilla = true;
 	static bool notify_old_vanilla = true;
+	static bool notify_pre_6_8_5_std = true;
 
 	static char std_reason [] = 
 		"No condor_shadow installed that supports standard universe jobs";
@@ -6816,6 +6830,8 @@ Scheduler::noShadowForJob( shadow_rec* srec, NoShadowFailure_t why )
 	static char old_vanilla_reason [] = 
 		"No condor_shadow installed that supports vanilla jobs on "
 		"resources older than V6.3.3";
+	static char pre_6_8_5_std_reason [] = 
+		"No condor_shadow installed that is at least version 6.8.5";
 
 	PROC_ID job_id;
 	char* hold_reason;
@@ -6847,6 +6863,10 @@ Scheduler::noShadowForJob( shadow_rec* srec, NoShadowFailure_t why )
 	case NO_SHADOW_OLD_VANILLA:
 		hold_reason = old_vanilla_reason;
 		notify_admin = &notify_old_vanilla;
+		break;
+	case NO_SHADOW_PRE_6_8_5_STD:
+		hold_reason = pre_6_8_5_std_reason;
+		notify_admin = &notify_pre_6_8_5_std;
 		break;
 	case NO_SHADOW_RECONNECT:
 			// this is a special case, since we're not going to email
@@ -7015,9 +7035,10 @@ Scheduler::start_pvm(match_rec* mrec, PROC_ID *job_id)
 	dprintf( D_ALWAYS, "First Line: %s", out_buf );
 	write(shadow_fd, out_buf, strlen(out_buf));
 
-	sprintf(out_buf, "%s %s %d %s\n", mrec->peer, mrec->id, old_proc,
+	sprintf(out_buf, "%s %s %d %s\n", mrec->peer, mrec->claimId(), old_proc,
 			hostname);
-	dprintf( D_ALWAYS, "sending %s", out_buf);
+	dprintf( D_ALWAYS, "sending %s %s %d %s",
+	         mrec->peer, mrec->publicClaimId(), old_proc, hostname);
 	write(shadow_fd, out_buf, strlen(out_buf));
 	return srp;
 #else
@@ -7686,7 +7707,8 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 			// or, in the case of ATTR_LAST_JOB_LEASE_RENEWAL,
 			// clobbers accurate info with a now-bogus value.
 
-		SetAttributeString( cluster, proc, ATTR_CLAIM_ID, mrec->id );
+		SetAttributeString( cluster, proc, ATTR_CLAIM_ID, mrec->claimId() );
+		SetAttributeString( cluster, proc, ATTR_PUBLIC_CLAIM_ID, mrec->publicClaimId() );
 		SetAttributeInt( cluster, proc, ATTR_LAST_JOB_LEASE_RENEWAL,
 						 (int)time(0) ); 
 
@@ -7942,18 +7964,31 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 		}
 	}
 	DeleteAttribute( cluster, proc, ATTR_REMOTE_HOST );
- 
+
 	if( pid ) {
 		char* last_claim = NULL;
-		GetAttributeStringNew( cluster, proc, ATTR_CLAIM_ID, &last_claim );
+		GetAttributeStringNew( cluster, proc, ATTR_PUBLIC_CLAIM_ID, &last_claim );
 		if( last_claim ) {
-			SetAttributeString( cluster, proc, ATTR_LAST_CLAIM_ID, 
+			SetAttributeString( cluster, proc, ATTR_LAST_PUBLIC_CLAIM_ID, 
+								last_claim );
+			free( last_claim );
+			last_claim = NULL;
+		}
+
+		GetAttributeStringNew( cluster, proc, ATTR_PUBLIC_CLAIM_IDS, &last_claim );
+		if( last_claim ) {
+			SetAttributeString( cluster, proc, ATTR_LAST_PUBLIC_CLAIM_IDS, 
 								last_claim );
 			free( last_claim );
 			last_claim = NULL;
 		}
 	}
+
 	DeleteAttribute( cluster, proc, ATTR_CLAIM_ID );
+	DeleteAttribute( cluster, proc, ATTR_PUBLIC_CLAIM_ID );
+
+	DeleteAttribute( cluster, proc, ATTR_CLAIM_IDS );
+	DeleteAttribute( cluster, proc, ATTR_PUBLIC_CLAIM_IDS );
 
 
 	DeleteAttribute( cluster, proc, ATTR_REMOTE_POOL );
@@ -8354,7 +8389,7 @@ send_vacate(match_rec* match,int cmd)
 
 	sock.encode();
 
-	if( !sock.put(match->id) ) {
+	if( !sock.put(match->claimId()) ) {
 		dprintf( D_ALWAYS, "Can't initialize sock to %s\n", match->peer);
 		return;
 	}
@@ -10411,7 +10446,7 @@ Scheduler::AddMrec(char* id, char* peer, PROC_ID* jobId, const ClassAd* my_match
 }
 
 int
-Scheduler::DelMrec(char* id)
+Scheduler::DelMrec(char const* id)
 {
 	match_rec *rec;
 	HashKey key(id);
@@ -10432,7 +10467,7 @@ Scheduler::DelMrec(char* id)
 
 	dprintf( D_ALWAYS, "Match record (%s, %d, %d) deleted\n",
 			 rec->peer, rec->cluster, rec->proc ); 
-	dprintf( D_FULLDEBUG, "ClaimId of deleted match: %s\n", rec->id );
+	dprintf( D_FULLDEBUG, "ClaimId of deleted match: %s\n", rec->publicClaimId() );
 	matches->remove(key);
 		// Remove this match from the associated shadowRec.
 	if (rec->shadowRec)
@@ -10452,7 +10487,7 @@ Scheduler::DelMrec(match_rec* match)
 		dprintf(D_ALWAYS, "Null parameter --- match not deleted\n");
 		return -1;
 	}
-	return DelMrec(match->id);
+	return DelMrec(match->claimId());
 }
 
 shadow_rec*
@@ -10498,15 +10533,15 @@ Scheduler::Relinquish(match_rec* mrec)
 	if(!sock) {
 		dprintf(D_ALWAYS, "Can't connect to startd %s\n", mrec->peer);
 	}
-	else if(!sock->put(mrec->id) || !sock->end_of_message())
+	else if(!sock->put(mrec->claimId()) || !sock->end_of_message())
 	{
 		dprintf(D_ALWAYS, "Can't relinquish startd. Match record is:\n");
-		dprintf(D_ALWAYS, "%s\t%s\n", mrec->id,	mrec->peer);
+		dprintf(D_ALWAYS, "%s\t%s\n", mrec->publicClaimId(), mrec->peer);
 	}
 	else
 	{
 		dprintf(D_PROTOCOL,"## 7. Relinquished startd. Match record is:\n");
-		dprintf(D_PROTOCOL, "\t%s\t%s\n", mrec->id,	mrec->peer);
+		dprintf(D_PROTOCOL, "\t%s\t%s\n", mrec->publicClaimId(), mrec->peer);
 		flag = TRUE;
 	}
 	delete sock;
@@ -10535,24 +10570,24 @@ Scheduler::Relinquish(match_rec* mrec)
 		else if(!sock->code(MySockName))
 		{
 			dprintf(D_ALWAYS,"Can't relinquish accountant. Match record is:\n");
-			dprintf(D_ALWAYS, "%s\t%s\n", mrec->id,	mrec->peer);
+			dprintf(D_ALWAYS, "%s\t%s\n", mrec->publicClaimId(), mrec->peer);
 		}
-		else if(!sock->put(mrec->id))
+		else if(!sock->put(mrec->claimId()))
 		{
 			dprintf(D_ALWAYS,"Can't relinquish accountant. Match record is:\n");
-			dprintf(D_ALWAYS, "%s\t%s\n", mrec->id,	mrec->peer);
+			dprintf(D_ALWAYS, "%s\t%s\n", mrec->publicClaimId(), mrec->peer);
 		}
 		else if(!sock->put(mrec->peer) || !sock->eom())
 		// This is not necessary to send except for being an extra checking
 		// because ClaimId uniquely identifies a match.
 		{
 			dprintf(D_ALWAYS,"Can't relinquish accountant. Match record is:\n");
-			dprintf(D_ALWAYS, "%s\t%s\n", mrec->id,	mrec->peer);
+			dprintf(D_ALWAYS, "%s\t%s\n", mrec->publicClaimId(), mrec->peer);
 		}
 		else
 		{
 			dprintf(D_PROTOCOL,"## 7. Relinquished acntnt. Match record is:\n");
-			dprintf(D_PROTOCOL, "\t%s\t%s\n", mrec->id,	mrec->peer);
+			dprintf(D_PROTOCOL, "\t%s\t%s\n", mrec->publicClaimId(), mrec->peer);
 			flag = TRUE;
 		}
 		delete sock;
@@ -10562,12 +10597,12 @@ Scheduler::Relinquish(match_rec* mrec)
 	if(flag)
 	{
 		dprintf(D_PROTOCOL, "## 7. Successfully relinquished match:\n");
-		dprintf(D_PROTOCOL, "\t%s\t%s\n", mrec->id,	mrec->peer);
+		dprintf(D_PROTOCOL, "\t%s\t%s\n", mrec->publicClaimId(), mrec->peer);
 	}
 	else
 	{
 		dprintf(D_ALWAYS, "Couldn't relinquish match:\n");
-		dprintf(D_ALWAYS, "%s\t%s\n", mrec->id,	mrec->peer);
+		dprintf(D_ALWAYS, "%s\t%s\n", mrec->publicClaimId(), mrec->peer);
 	}
 }
 
@@ -10632,18 +10667,16 @@ bool
 sendAlive( match_rec* mrec )
 {
 	SafeSock	sock;
-	char		*id = NULL;
 	
     sock.timeout(STARTD_CONTACT_TIMEOUT);
 	sock.encode();
 
 	DCStartd d( mrec->peer );
-	id = mrec->id;
 
-	dprintf (D_PROTOCOL,"## 6. Sending alive msg to %s\n", id);
+	dprintf (D_PROTOCOL,"## 6. Sending alive msg to %s\n", mrec->publicClaimId());
 
 	if( !sock.connect(mrec->peer) || !d.startCommand ( ALIVE, &sock) ||
-	    !sock.code(id) || !sock.end_of_message()) {
+	    !sock.put(mrec->claimId()) || !sock.end_of_message()) {
 			// UDP transport out of buffer space!
 		dprintf(D_ALWAYS, "\t(Can't send alive message to %s)\n",
 				mrec->peer);

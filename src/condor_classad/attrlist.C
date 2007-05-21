@@ -1709,6 +1709,9 @@ int AttrList::fPrint(FILE* f)
 		for(tmpElem = *chainedAttrs; tmpElem; tmpElem = tmpElem->next)
 		{
 			tmpLine = NULL;
+			if( tmpElem->tree->invisible ) {
+				continue;
+			}
 			tmpElem->tree->PrintToNewStr(&tmpLine);
 			if (tmpLine != NULL) {
 				fprintf(f, "%s\n", tmpLine);
@@ -1720,6 +1723,9 @@ int AttrList::fPrint(FILE* f)
     for(tmpElem = exprList; tmpElem; tmpElem = tmpElem->next)
     {
 		tmpLine = NULL;
+		if( tmpElem->tree->invisible ) {
+			continue;
+		}
         tmpElem->tree->PrintToNewStr(&tmpLine);
 		if (tmpLine != NULL) {
 			fprintf(f, "%s\n", tmpLine);
@@ -1745,6 +1751,9 @@ int AttrList::sPrint(MyString &output)
 		for(tmpElem = *chainedAttrs; tmpElem; tmpElem = tmpElem->next)
 		{
 			tmpLine = NULL;
+			if( tmpElem->tree->invisible ) {
+				continue;
+			}
 			tmpElem->tree->PrintToNewStr(&tmpLine);
 			if (tmpLine != NULL) {
 				output += tmpLine;
@@ -1757,6 +1766,9 @@ int AttrList::sPrint(MyString &output)
     for(tmpElem = exprList; tmpElem; tmpElem = tmpElem->next)
     {
 		tmpLine = NULL;
+		if( tmpElem->tree->invisible ) {
+			continue;
+		}
         tmpElem->tree->PrintToNewStr(&tmpLine);
 		if (tmpLine != NULL) {
 			output += tmpLine;
@@ -1778,6 +1790,13 @@ AttrList::dPrint( int level )
     char			*tmpLine;
 	int				flag = D_NOHEADER | level;
 
+	if( !(DebugFlags & level) ) {
+		return;
+	}
+
+	// don't log private stuff into the (probably publicly visible) log file
+	SetPrivateAttributesInvisible(true);
+
 	// if this is a chained ad, print out chained attrs first. this is so
 	// if this ad is scanned in from a file, the chained attrs will get
 	// updated with attrs from this ad in case of duplicates.
@@ -1785,6 +1804,9 @@ AttrList::dPrint( int level )
 		for(tmpElem = *chainedAttrs; tmpElem; tmpElem = tmpElem->next)
 		{
 			tmpLine = NULL;
+			if( tmpElem->tree->invisible ) {
+				continue;
+			}
 			tmpElem->tree->PrintToNewStr(&tmpLine);
 			if (tmpLine != NULL) {
 				dprintf( flag, "%s\n", tmpLine);
@@ -1796,12 +1818,17 @@ AttrList::dPrint( int level )
     for(tmpElem = exprList; tmpElem; tmpElem = tmpElem->next)
     {
 		tmpLine = NULL;
+		if( tmpElem->tree->invisible ) {
+			continue;
+		}
         tmpElem->tree->PrintToNewStr(&tmpLine);
 		if (tmpLine != NULL) {
 			dprintf( flag, "%s\n", tmpLine);
 			free(tmpLine);
 		}
     }
+
+	SetPrivateAttributesInvisible(false);
 }
 
 
@@ -2221,13 +2248,21 @@ int AttrList::put(Stream& s)
 	bool			send_server_time = false;
 
     //get the number of expressions
-    for(elem = exprList; elem; elem = elem->next)
+    for(elem = exprList; elem; elem = elem->next) {
+		if( elem->tree->invisible ) {
+			continue;
+		}
         numExprs++;
+	}
 
 	if ( chainedAttrs ) {
 		// now count up all the chained ad attrs
-		for(elem = *chainedAttrs; elem; elem = elem->next)
+		for(elem = *chainedAttrs; elem; elem = elem->next) {
+			if( elem->tree->invisible ) {
+				continue;
+			}
 			numExprs++;
+		}
 	}
 
 	if ( mySubSystem && (strcmp(mySubSystem,"SCHEDD")==0) ) {
@@ -2247,6 +2282,9 @@ int AttrList::put(Stream& s)
 	// from this ad.
 	if ( chainedAttrs ) {
 		for(elem = *chainedAttrs; elem; elem = elem->next) {
+			if( elem->tree->invisible ) {
+				continue;
+			}
 			line = NULL;
 			elem->tree->PrintToNewStr(&line);
 			ConvertDefaultIPToSocketIP(elem->name,&line,s);
@@ -2258,6 +2296,9 @@ int AttrList::put(Stream& s)
 		}
 	}
     for(elem = exprList; elem; elem = elem->next) {
+		if( elem->tree->invisible ) {
+			continue;
+		}
         line = NULL;
         elem->tree->PrintToNewStr(&line);
 		ConvertDefaultIPToSocketIP(elem->name,&line,s);
@@ -2595,3 +2636,43 @@ Assign(char const *variable,bool value)
 	return Insert(buf.GetCStr());
 }
 
+bool AttrList::SetInvisible(char const *name,bool invisible)
+{
+	ExprTree *tree = Lookup(name);
+	if( tree ) {
+		bool old_state = tree->invisible;
+		tree->invisible = invisible;
+		return old_state;
+	}
+	return invisible;
+}
+
+bool AttrList::GetInvisible(char const *name)
+{
+	ExprTree *tree = Lookup(name);
+	if( tree ) {
+		return tree->invisible;
+	}
+	return false;
+}
+
+bool AttrList::ClassAdAttributeIsPrivate( char const *name )
+{
+		// keep this in sync with SetPrivateAttributesInvisible()
+	if( stricmp(name,ATTR_CLAIM_ID) == 0 ) {
+			// This attribute contains the secret capability cookie
+		return true;
+	}
+	if( stricmp(name,ATTR_CLAIM_IDS) == 0 ) {
+			// This attribute contains secret capability cookies
+		return true;
+	}
+	return false;
+}
+
+void AttrList::SetPrivateAttributesInvisible(bool make_invisible)
+{
+		// keep this in sync with ClassAdAttributeIsPrivate()
+	SetInvisible(ATTR_CLAIM_ID,make_invisible);
+	SetInvisible(ATTR_CLAIM_IDS,make_invisible);
+}

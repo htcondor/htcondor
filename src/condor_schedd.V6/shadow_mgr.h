@@ -50,6 +50,7 @@
 
 #include "condor_classad.h"
 #include "simplelist.h"
+#include "condor_ver_info.h"
 
 
 class Shadow {
@@ -65,10 +66,14 @@ public:
 
 	void	printInfo( int debug_level );
 
+	bool builtSinceVersion(int major, int minor, int sub_minor);
+	bool builtSinceDate(int month, int day, int year);
+
 private:
 	ClassAd* s_ad;
 	char* s_path;
 	bool s_is_dc;
+	CondorVersionInfo* m_version_info;
 };
 
 
@@ -92,7 +97,6 @@ private:
         // This makes this class un-copy-able:
     ShadowMgr( const ShadowMgr& );
     ShadowMgr& operator = ( const ShadowMgr& );
-
 };
 
 

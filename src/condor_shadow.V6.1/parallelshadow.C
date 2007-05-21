@@ -34,6 +34,7 @@
 #include "env.h"
 #include "condor_config.h"
 #include "condor_ckpt_name.h"
+#include "condor_claimid_parser.h"
 
 ParallelShadow::ParallelShadow() {
     nextResourceToStart = 0;
@@ -246,7 +247,8 @@ ParallelShadow::getResources( void )
                  !sock->code( claim_id ) ) {
                 EXCEPT( "Problem getting resource %d, %d", i, j );
             }
-            dprintf( D_FULLDEBUG, "Got host: %s id: %s\n", host, claim_id );
+			ClaimIdParser idp( claim_id );
+            dprintf( D_FULLDEBUG, "Got host: %s id: %s\n", host, idp.publicClaimId() );
             
             if ( i==0 && j==0 ) {
 					/* 

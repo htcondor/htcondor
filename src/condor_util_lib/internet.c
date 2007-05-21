@@ -299,14 +299,19 @@ same_host(const char *h1, const char *h2)
 int
 host_in_domain( const char *host, const char *domain )
 {
-	const char	*ptr;
+    int skip;
 
-	for( ptr=host; *ptr; ptr++ ) {
-		if( stricmp(ptr,domain) == MATCH ) {
-			return TRUE;
-		}
-	}
-	return FALSE;
+    skip = strlen(host) - strlen(domain);
+    if( skip < 0 ) {
+        return FALSE;
+    }
+
+    if( stricmp(host+skip,domain) == MATCH ) {
+        if(skip==0 || host[skip-1] == '.' || domain[0] == '.' ) {
+            return TRUE;
+        }
+    }
+    return FALSE;
 }
 
 

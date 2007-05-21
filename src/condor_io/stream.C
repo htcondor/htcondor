@@ -1434,7 +1434,7 @@ Stream::put( double	d)
 
 
 int 
-Stream::put( char	*s)
+Stream::put( char const *s)
 {
 	int		len;
 
@@ -1473,7 +1473,7 @@ Stream::put( char	*s)
 
 
 int 
-Stream::put( char	*s, int		l)
+Stream::put( char const *s, int		l)
 {
     NETWORK_TRACE("put string \"" << s << "\" and int " <<   l);
 

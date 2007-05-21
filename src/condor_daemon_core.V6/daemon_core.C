@@ -2950,9 +2950,16 @@ int DaemonCore::HandleReq(Stream *insock)
 			if ( ((ReliSock *)stream)->bytes_available_to_read() < 4 &&
 				 inServiceCommandSocket_flag == FALSE ) 
 			{
-					// set a timer for 20 seconds, in case nothing ever arrives...
+					// set a timer for 200 seconds, in case nothing ever arrives...
+					// why 200 seconds -vs- the time honored 20 seconds?  
+					// since we are not blocking, we can afford to be more patient,
+					// and in fact it helps to be more patient here because 
+					// if a client does a non-blocking connect to us and then gets
+					// blocked talking to someone else, we want to minimize the chance
+					// of a timeout when the client gets back around to giving us
+					// some love.
 				int tid = daemonCore->Register_Timer(
-									20,		// years of careful research.... ;)
+									200,		
 									(Eventcpp) &DaemonCore::HandleReqSocketTimerHandler,
 									"DaemonCore::HandleReqSocketTimerHandler",
 									this);
@@ -3574,7 +3581,8 @@ int DaemonCore::HandleReq(Stream *insock)
 								the_key = new KeyInfo(rbuf, 24, CONDOR_3DES);
 								break;
 							default:
-								dprintf ( D_SECURITY, "DC_AUTHENTICATE: this version doesn't support %s crypto.\n", crypto_method );
+								dprintf (D_SECURITY, "DC_AUTHENTICATE: generating RANDOM key for session %s...\n", the_sid);
+								the_key = new KeyInfo(rbuf, 24);
 								break;
 						}
 

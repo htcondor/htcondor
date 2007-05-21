@@ -52,6 +52,7 @@
 #include "schedd_cronmgr.h"
 #include "condor_classad_namedlist.h"
 #include "env.h"
+#include "condor_claimid_parser.h"
 //#include "condor_crontab.h"
 
 const 	int			MAX_REJECTED_CLUSTERS = 1024;
@@ -89,12 +90,12 @@ struct OwnerData {
   JobsRunning=JobsIdle=JobsHeld=JobsFlocked=FlockLevel=OldFlockLevel=0; }
 };
 
-class match_rec
+class match_rec: public ClaimIdParser
 {
  public:
     match_rec(char*, char*, PROC_ID*, const ClassAd*, char*, char* pool);
 	~match_rec();
-    char*    		id;
+
     char*   		peer;
 	
 		// cluster of the job we used to obtain the match
@@ -175,6 +176,7 @@ typedef enum {
 	NO_SHADOW_OLD_VANILLA,
 	NO_SHADOW_RECONNECT,
 	NO_SHADOW_MPI,
+	NO_SHADOW_PRE_6_8_5_STD,
 } NoShadowFailure_t;
 
 
@@ -250,7 +252,7 @@ class Scheduler : public Service
 	// match managing
 	int 			publish( ClassAd *ad );
     match_rec*      AddMrec(char*, char*, PROC_ID*, const ClassAd*, char*, char*);
-    int         	DelMrec(char*);
+    int         	DelMrec(char const*);
     int         	DelMrec(match_rec*);
 	shadow_rec*		FindSrecByPid(int);
 	shadow_rec*		FindSrecByProcID(PROC_ID);

@@ -36,6 +36,7 @@
 #include "condor_string.h"  // for strlwr() and friends
 #include "get_daemon_name.h"
 #include "condor_netdb.h"
+#include "condor_claimid_parser.h"
 
 // the comparison function must be declared before the declaration of the
 // matchmaker class in order to preserve its static-ness.  (otherwise, it
@@ -2444,13 +2445,14 @@ public:
 
 	bool WriteMatchInfo(Sock *sock)
 	{
+		ClaimIdParser idp( m_capability.Value() );
 		ASSERT(sock);
 
 		// pass the startd MATCH_INFO and capability string
 		dprintf (D_FULLDEBUG, "      Sending MATCH_INFO/capability to %s\n",
 		         m_startdName.Value());
 		dprintf (D_FULLDEBUG, "      (Capability is \"%s\" )\n",
-		         m_capability.Value());
+		         idp.publicClaimId() );
 
 		if ( !sock->put ((char *)m_capability.Value()) || !sock->end_of_message())
 		{
@@ -2459,7 +2461,7 @@ public:
 			        m_startdName.Value() );
 			dprintf (D_FULLDEBUG,
 			        "      (Capability is \"%s\")\n",
-			        m_capability.Value() );
+			        idp.publicClaimId() );
 			return false;
 		}
 		return true;
