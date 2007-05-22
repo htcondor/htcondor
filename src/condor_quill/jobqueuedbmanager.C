@@ -1269,7 +1269,8 @@ JobQueueDBManager::processLogEntry(int op_type, JobQueueCollection* jobQueue)
 			st = FAILURE; 
 			break;
 		}
-		if (strcmp(name, ATTR_CLAIM_ID) == 0) {
+		if( ClassAd::ClassAdAttributeIsPrivate(name) ) {
+				// This hides private stuff like ClaimID.
 			break;
 		}
 		newvalue = fillEscapeCharacters(value);
