@@ -173,6 +173,13 @@ line tools.
 the new -xml option.
 This brings \Condor{history} more in line \Condor{q}.
 
+\item The \verb@$$@ substitution macro syntax now supports the insertion
+of litteral \verb@$$@ characters through the use of \verb@$$(DOLLARDOLLAR)@.
+Also, \verb@$$@ expansion is no longer recursive, so if the value being
+substituted in place of a \verb@$$@ macro itself contains \verb@$$@ characters,
+these are no longer interpreted as substitution macros but are instead
+inserted literally.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
