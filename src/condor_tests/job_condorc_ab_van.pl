@@ -25,8 +25,9 @@ $aborted = sub {
 $held = sub {
 	my %info = @_;
 	my $cluster = $info{"cluster"};
+	my $holdreason = $info{"holdreason"};
 
-	print "Held event not expected.....\n";
+	print "Held event not expected: $holdreason \n";
 	exit(1);
 };
 
