@@ -226,7 +226,7 @@ char *dbIpAddr = NULL;
 char *dbName = NULL;
 char *queryPassword = NULL;
 
-StringList attrs; // The list of attrs we want, "" for all
+StringList attrs(NULL, "\n");; // The list of attrs we want, "" for all
 static void freeConnectionStrings() {
 	if(quillName) {
 		free(quillName);
@@ -830,7 +830,7 @@ processCommandLineArguments (int argc, char *argv[])
 	int i, cluster, proc;
 	char *arg, *at, *daemonname;
 	
-	attrs.initializeFromString("ClusterId,ProcID,QDate,RemoteUserCPU,JobStatus,ServerTime,ShadowBday,RemoteWallClockTime,JobPrio,ImageSize,Owner,Cmd,Args");
+	attrs.initializeFromString("ClusterId\nProcID\nQDate\nRemoteUserCPU\nJobStatus\nServerTime\nShadowBday\nRemoteWallClockTime\nJobPrio\nImageSize\nOwner\nCmd\nArgs");
 
 	for (i = 1; i < argc; i++)
 	{

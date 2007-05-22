@@ -767,7 +767,7 @@ do_Q_request(ReliSock *syscall_sock)
 
 		assert( syscall_sock->end_of_message() );;
 
-		StringList sl(projection);
+		StringList sl(projection, "\n");
 
 		syscall_sock->encode();
 

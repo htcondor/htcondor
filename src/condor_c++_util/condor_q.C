@@ -504,7 +504,7 @@ getFilterAndProcessAds( ClassAd &queryad, StringList &attrs, process_function pr
 	if (useAll) {
 	// The fast case with the new protocol
 	ClassAdList list;
-	char *attrs_str = attrs.print_to_string();
+	char *attrs_str = attrs.print_to_delimed_string();
 	GetAllJobsByConstraint(constraint, attrs_str, list);
 	free(attrs_str);
 	list.Rewind();
