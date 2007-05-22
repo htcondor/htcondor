@@ -437,6 +437,7 @@ MultiLogFiles::readFileToString(const MyString &strFilename)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// Note: this method should get speeded up (see Gnats PR 846).
 
 MyString
 MultiLogFiles::loadLogFileNameFromSubFile(const MyString &strSubFilename,

@@ -25,7 +25,7 @@
 #include "check_events.h"
 #include "read_multiple_logs.h"
 
-#define JOB_HASH_SIZE 101 // prime
+#define JOB_HASH_SIZE 10007 // prime, allow for big DAG...
 
 //-----------------------------------------------------------------------------
 
