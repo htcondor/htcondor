@@ -26,7 +26,7 @@ $submit = sub {
 	}
 
 	my $submitline = "";
-	my $cluster = "";
+	my $cluster = -1;
 
 	open(CMD, "<$cmdout") || die "Can not find analyze output:$!\n";;
 	while(<CMD>) {
@@ -39,10 +39,15 @@ $submit = sub {
 		print "$_\n";
 	}
 
+	if ($cluster == -1) {
+		die("Can not find a cluster in $cmdout\n");	
+	}
+
 	foreach $line (@adarray) {
 		chomp($line);
+		print "Examing line $line\n";
 		if($line =~ /^\s*(\d+)\.(\d+):\s*Run\s+analysis\s+summary\.\s+.*$/) {
-				print "Score!!!!! found cluster $cluster\n";
+				print "Score!!!!! found cluster $1\n";
 				print "$line\n";
 				$foundcluster = 1;
 		}
@@ -53,11 +58,15 @@ $submit = sub {
 				$foundanalyze = 1;
 		}
 	}
-	if(($foundcluster) && ($foundanalyze)) {
-		$cmd = "condor_rm $cluster";
-		$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
-	}
 
+	$cmd = "condor_rm $cluster";
+	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
+
+	if(($foundcluster) && ($foundanalyze)) {
+		print "Found analyze output\n";
+	} else {
+		die("Could not parse condor_q -analyze output\n");
+	}
 };
 
 $aborted = sub {
