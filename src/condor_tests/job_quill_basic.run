@@ -46,11 +46,17 @@ if($ourtarfile eq "") {
 	# filter out . and .. and CVS
 	@versions = grep !/^\.\.?$/, @versions;
 	@versions = grep !/CVS/, @versions;
-	$keepversion;
+	$keepversion = "";
 	foreach $version (@versions) {
-		print "PG version is: $version\n";
-		$keepversion = $version;
+		if($version =~ /8.2.3/) {
+			print "PG version is: $version\n";
+			$keepversion = $version;
+		}
 	}
+	if($keepversion eq "") {
+		die "Can't find mandated 8.2.3 version of Postgres\n";
+	}
+
 	print "keepversion is <<$keepversion>>";
 	
 	$mypostgresspath = $mypostgressworld . "/" . $keepversion . "/" ;
@@ -110,7 +116,7 @@ if( -d $myquillname ) {
 }
 
 if($pgresult != 0) {
-	print "Failed to build and install Postgress\n";
+	die "Failed to build and install Postgress\n";
 } else {
 	print "Hmmmmmmmmmmmmmm build and install Postgress maybe worked........\n";
 }
