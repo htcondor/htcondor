@@ -2535,11 +2535,17 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad)
 		AttrsToExpand.append(ATTR_JOB_CMD);
 		ad->ResetName();
 		const char *attr_name = ad->NextNameOriginal();
-		while ( attr_name ) {
+		for ( ; attr_name; attr_name = ad->NextNameOriginal() ) {
+			if ( strncasecmp(attr_name,"MATCH_",6) == 0 ) {
+					// We do not want to expand MATCH_XXX attributes,
+					// because these are used to store the result of
+					// previous expansions, which could potentially
+					// contain literal $$(...) in the replacement text.
+				continue;
+			}
 			if ( stricmp(attr_name,ATTR_JOB_CMD) ) { 
 				AttrsToExpand.append(attr_name);
 			}
-			attr_name = ad->NextNameOriginal();
 		}
 
 		index = -1;	
@@ -2617,8 +2623,9 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad)
 			}
 
 			bool expanded_something = false;
+			int search_pos = 0;
 			while( !attribute_not_found &&
-					get_var(attribute_value,&left,&name,&right,NULL,true) )
+					get_var(attribute_value,&left,&name,&right,NULL,true,search_pos) )
 			{
 				expanded_something = true;
 				if (!startd_ad && job_universe != CONDOR_UNIVERSE_GRID) {
@@ -2650,6 +2657,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad)
 					MyString replacement_value;
 					replacement_value += left;
 					replacement_value += result;
+					search_pos = replacement_value.Length();
 					replacement_value += right;
 					MyString replacement_attr = curr_attr_to_expand;
 					replacement_attr += "=";
@@ -2681,7 +2689,12 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad)
 					// If it is not there, use the fallback.
 					// If no fallback value, then fail.
 
-					if ( startd_ad ) {
+					if( stricmp(name,"DOLLARDOLLAR") == 0 ) {
+							// replace $$(DOLLARDOLLAR) with literal $$
+						value = strdup("DOLLARDOLLAR = \"$$\"");
+						value_came_from_jobad = true;
+					}
+					else if ( startd_ad ) {
 							// We have a startd ad in memory, use it
 						value = startd_ad->sPrintExpr(NULL,0,name);
 						value_came_from_jobad = false;
@@ -2760,7 +2773,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad)
 											  + strlen(tvalue) 
 											  + strlen(right)
 											  + 1);
-					sprintf(bigbuf2,"%s%s%s",left,tvalue,right);
+					sprintf(bigbuf2,"%s%s%n%s",left,tvalue,&search_pos,right);
 					free(attribute_value);
 					attribute_value = (char *) malloc(  strlen(curr_attr_to_expand)
 													  + 3 // = and quotes

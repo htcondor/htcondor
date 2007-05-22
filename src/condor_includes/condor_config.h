@@ -206,7 +206,7 @@ extern "C" {
 
 	int get_var( register char *value, register char **leftp,
 	      register char **namep, register char **rightp, char *self=NULL,
-		  bool getdollardollar=false);
+		  bool getdollardollar=false, int search_pos=0);
 	int get_special_var( const char *prefix, bool only_id_chars, register char *value, register char **leftp,
 				 register char **namep, register char **rightp);
 }

@@ -811,13 +811,13 @@ tryagain:
 int
 get_var( register char *value, register char **leftp, 
 		 register char **namep, register char **rightp, char *self,
-		 bool getdollardollar)
+		 bool getdollardollar, int search_pos)
 {
 	char *left, *left_end, *name, *right;
 	char *tvalue;
 	int selflen = (self) ? strlen(self) : 0;
 
-	tvalue = value;
+	tvalue = value + search_pos;
 	left = value;
 
 	for(;;) {
@@ -912,6 +912,11 @@ tryagain:
 							// expanded.  To implement this, we have
 							// get_var() ignore $(DOLLAR) and we then
 							// handle it in expand_macro().
+							// Note that $$(DOLLARDOLLAR) is handled a little
+							// differently.  Instead of skipping over it,
+							// we treat it like anything else, and it is up
+							// to the caller to advance search_pos, so we
+							// don't run into the literal $$ again.
 						if ( !self && strincmp(name,DOLLAR_ID,namelen) == MATCH ) {
 							tvalue = name;
 							goto tryagain;
