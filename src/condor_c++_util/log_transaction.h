@@ -68,7 +68,7 @@ private:
 class Transaction {
 public:
 	Transaction();
-    void Commit(FILE* fp, void *data_structure);
+    void Commit(FILE* fp, void *data_structure, bool nondurable=false);
 	void AppendLog(LogRecord *);
 	LogRecord *FirstEntry() { return op_log.FirstEntry(); }
 	LogRecord *NextEntry(LogRecord *ptr) { return op_log.NextEntry(ptr); }

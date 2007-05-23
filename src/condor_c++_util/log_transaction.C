@@ -115,7 +115,7 @@ Transaction::Transaction()
 }
 
 void
-Transaction::Commit(FILE* fp, void *data_structure)
+Transaction::Commit(FILE* fp, void *data_structure, bool nondurable)
 {
 	LogRecord		*log;
 	int fd;
@@ -129,16 +129,18 @@ Transaction::Commit(FILE* fp, void *data_structure)
 		}
 		log->Play(data_structure);
 	}
-	if (fp != NULL){
-	  if (fflush(fp) !=0){
-	    EXCEPT("fflush inside a transaction failed, errno = %d",errno);
-	  }
-	  fd = fileno(fp);
-	  if (fd >= 0) {
-	    if (fsync(fd) < 0) {
-	      EXCEPT("fsync inside a transaction failed, errno = %d",errno);
-	    }
-	  }
+	if( !nondurable ) {
+		if (fp != NULL){
+			if (fflush(fp) !=0){
+				EXCEPT("fflush inside a transaction failed, errno = %d",errno);
+			}
+			fd = fileno(fp);
+			if (fd >= 0) {
+				if (fsync(fd) < 0) {
+					EXCEPT("fsync inside a transaction failed, errno = %d",errno);
+				}
+			}
+		}
 	}
 }
 

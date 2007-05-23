@@ -105,6 +105,18 @@ public:
   */
   bool AbortTransaction() { return ClassAdLog::AbortTransaction(); }
 
+  bool InTransaction() { return ClassAdLog::InTransaction(); }
+
+	  // increase non-durable commit level
+	  // if > 0, begin non-durable commits
+	  // return old level
+  int IncNondurableCommitLevel() { return ClassAdLog::IncNondurableCommitLevel(); }
+	  // decrease non-durable commit level and verify that it
+	  // matches old_level
+	  // if == 0, resume durable commits
+  void DecNondurableCommitLevel(int old_level ) { ClassAdLog::DecNondurableCommitLevel( old_level ); }
+
+
   ///
   Transaction* getActiveTransaction() { return ClassAdLog::getActiveTransaction(); }
   ///

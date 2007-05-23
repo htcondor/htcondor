@@ -72,6 +72,17 @@ public:
 	void BeginTransaction();
 	bool AbortTransaction();
 	void CommitTransaction();
+	void CommitNondurableTransaction();
+	bool InTransaction() { return active_transaction != NULL; }
+
+		// increase non-durable commit level
+		// if > 0, begin non-durable commits
+		// return old level
+	int IncNondurableCommitLevel();
+		// decrease non-durable commit level and verify that it
+		// matches old_level
+		// if == 0, resume durable commits
+	void DecNondurableCommitLevel(int old_level );
 
 	bool AdExistsInTableOrTransaction(const char *key);
 
@@ -128,6 +139,7 @@ private:
 	int max_historical_logs;
 	unsigned long historical_sequence_number;
 	time_t m_original_log_birthdate;
+	int m_nondurable_level;
 
 	bool SaveHistoricalLogs();
 };

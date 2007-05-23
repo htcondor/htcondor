@@ -58,6 +58,7 @@ ClassAdLog::ClassAdLog() : table(CLASSAD_LOG_HASHTABLE_SIZE, hashFunction)
 	log_filename[0] = '\0';
 	active_transaction = NULL;
 	log_fp = NULL;
+	m_nondurable_level = 0;
 
 }
 
@@ -65,6 +66,7 @@ ClassAdLog::ClassAdLog(const char *filename,int max_historical_logs_arg) : table
 {
 	strcpy(log_filename, filename);
 	active_transaction = NULL;
+	m_nondurable_level = 0;
 
 	this->max_historical_logs = max_historical_logs_arg;
 	historical_sequence_number = 1;
@@ -159,20 +161,22 @@ ClassAdLog::AppendLog(LogRecord *log)
 		}
 		active_transaction->AppendLog(log);
 	} else {
-	  //MD: using file pointer
-	  if (log_fp!=NULL) {
-	    if (log->Write(log_fp) < 0) {
-	      EXCEPT("write to %s failed, errno = %d", log_filename, errno);
-	    }
-	    //MD: flushing data -- using a file pointer
-	    if (fflush(log_fp) !=0){
-	      EXCEPT("flush to %s failed, errno = %d", log_filename, errno);
-	    }
-	    //MD: syncing the data as done before
-	    if (fsync(fileno(log_fp)) < 0) {
-	      EXCEPT("fsync of %s failed, errno = %d", log_filename, errno);
-	    }
-	  }
+			//MD: using file pointer
+		if (log_fp!=NULL) {
+			if (log->Write(log_fp) < 0) {
+				EXCEPT("write to %s failed, errno = %d", log_filename, errno);
+			}
+			if( m_nondurable_level == 0 ) {
+					//MD: flushing data -- using a file pointer
+				if (fflush(log_fp) !=0){
+					EXCEPT("flush to %s failed, errno = %d", log_filename, errno);
+				}
+					//MD: syncing the data as done before
+				if (fsync(fileno(log_fp)) < 0) {
+					EXCEPT("fsync of %s failed, errno = %d", log_filename, errno);
+				}
+			}
+		}
 		log->Play((void *)&table);
 		delete log;
 	}
@@ -299,6 +303,21 @@ ClassAdLog::TruncLog()
 
 }
 
+int
+ClassAdLog::IncNondurableCommitLevel()
+{
+	return m_nondurable_level++;
+}
+
+void
+ClassAdLog::DecNondurableCommitLevel(int old_level)
+{
+	if( --m_nondurable_level != old_level ) {
+		EXCEPT("ClassAdLog::DecNondurableCommitLevel(%d) with existing level %d\n",
+			   old_level, m_nondurable_level+1);
+	}
+}
+
 void
 ClassAdLog::BeginTransaction()
 {
@@ -328,10 +347,19 @@ ClassAdLog::CommitTransaction()
 	if (!active_transaction->EmptyTransaction()) {
 		LogEndTransaction *log = new LogEndTransaction;
 		active_transaction->AppendLog(log);
-		active_transaction->Commit(log_fp, (void *)&table);
+		bool nondurable = m_nondurable_level > 0;
+		active_transaction->Commit(log_fp, (void *)&table, nondurable );
 	}
 	delete active_transaction;
 	active_transaction = NULL;
+}
+
+void
+ClassAdLog::CommitNondurableTransaction()
+{
+	int old_level = IncNondurableCommitLevel();
+	CommitTransaction();
+	DecNondurableCommitLevel( old_level );
 }
 
 bool
