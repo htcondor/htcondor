@@ -580,7 +580,7 @@ ClassAdLog::LogState(FILE *fp)
 		while (attr_name) {
 			attr_val = NULL;
 			expr = ad->Lookup(attr_name);
-			if (expr) {
+			if (expr && !expr->invisible) {
 				expr->RArg()->PrintToNewStr(&attr_val);
 				log = new LogSetAttribute(key, attr_name, attr_val);
 				if (log->Write(fp) < 0) {
@@ -589,9 +589,9 @@ ClassAdLog::LogState(FILE *fp)
 				}
 				free(attr_val);
 				delete log;
-				delete [] attr_name;
-				attr_name = ad->NextName();
 			}
+			delete [] attr_name;
+			attr_name = ad->NextName();
 		}
 			// ok, now that we're done writing out this ad, restore the chain
 		ad->RestoreChain(chain);

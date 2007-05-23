@@ -56,6 +56,7 @@
 #include "tdman.h"
 #include "condor_crontab.h"
 #include "condor_timeslice.h"
+#include "condor_claimid_parser.h"
 
 extern  int         STARTD_CONTACT_TIMEOUT;
 const	int			NEGOTIATOR_CONTACT_TIMEOUT = 30;
@@ -110,12 +111,12 @@ struct OwnerData {
   JobsRunning=JobsIdle=JobsHeld=JobsFlocked=FlockLevel=OldFlockLevel=0; }
 };
 
-class match_rec
+class match_rec: public ClaimIdParser
 {
  public:
     match_rec(char*, char*, PROC_ID*, const ClassAd*, char*, char* pool);
 	~match_rec();
-    char*    		id;
+
     char*   		peer;
 	
 		// cluster of the job we used to obtain the match
@@ -199,6 +200,7 @@ typedef enum {
 	NO_SHADOW_OLD_VANILLA,
 	NO_SHADOW_RECONNECT,
 	NO_SHADOW_MPI,
+	NO_SHADOW_PRE_6_8_5_STD,
 } NoShadowFailure_t;
 
 // These are the args to contactStartd that get stored in the queue.
@@ -276,7 +278,7 @@ class Scheduler : public Service
 	// match managing
 	int 			publish( ClassAd *ad );
     match_rec*      AddMrec(char*, char*, PROC_ID*, const ClassAd*, char*, char*);
-    int         	DelMrec(char*);
+    int         	DelMrec(char const*);
     int         	DelMrec(match_rec*);
 	match_rec*      FindMrecByJobID(PROC_ID);
 	void            SetMrecJobID(match_rec *rec, int cluster, int proc);

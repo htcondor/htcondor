@@ -283,6 +283,7 @@ int CondorResource::DoScheddPoll()
 		if ( rc == 0 ) {
 			for ( int i = 0; i < num_status_ads; i++ ) {
 				int cluster, proc;
+				int rc2;
 				MyString job_id_string;
 				CondorJob *job;
 
@@ -297,9 +298,9 @@ int CondorResource::DoScheddPoll()
 				job_id_string.sprintf( "condor %s %s %d.%d", scheddName,
 									   poolName, cluster, proc );
 
-				rc = BaseJob::JobsByRemoteId.lookup( HashKey( job_id_string.Value() ),
-													 (BaseJob*&)job );
-				if ( rc == 0 ) {
+				rc2 = BaseJob::JobsByRemoteId.lookup( HashKey( job_id_string.Value() ),
+													  (BaseJob*&)job );
+				if ( rc2 == 0 ) {
 					job->NotifyNewRemoteStatus( status_ads[i] );
 					submittedJobs.Delete( job );
 				} else {
@@ -313,17 +314,19 @@ int CondorResource::DoScheddPoll()
 		}
 
 			// Check if any jobs were missing from the status result
-		CondorJob *job;
-		MyString job_id;
-		submittedJobs.Rewind();
-		while ( ( job = submittedJobs.Next() ) ) {
-			if ( job->jobAd->LookupString( ATTR_GRID_JOB_ID, job_id ) ) {
-					// We should have gotten a status ad for this job,
-					// but didn't. Tell the job that there may be something
-					// wrong by giving it a NULL status ad.
-				job->NotifyNewRemoteStatus( NULL );
+		if ( rc == 0 ) {
+			CondorJob *job;
+			MyString job_id;
+			submittedJobs.Rewind();
+			while ( ( job = submittedJobs.Next() ) ) {
+				if ( job->jobAd->LookupString( ATTR_GRID_JOB_ID, job_id ) ) {
+						// We should have gotten a status ad for this job,
+						// but didn't. Tell the job that there may be
+						// something wrong by giving it a NULL status ad.
+					job->NotifyNewRemoteStatus( NULL );
+				}
+				submittedJobs.DeleteCurrent();
 			}
-			submittedJobs.DeleteCurrent();
 		}
 
 		scheddStatusActive = false;

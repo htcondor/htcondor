@@ -1153,8 +1153,11 @@ DedicatedScheduler::negotiateRequest( ClassAd* req, Stream* s,
 				return NR_ERROR;
 			}
 
-			dprintf( D_PROTOCOL, "## 4. Received ClaimId %s\n",
-					 claim_id ); 
+			{
+				ClaimIdParser idp( claim_id );
+				dprintf( D_PROTOCOL, "## 4. Received ClaimId %s\n",
+						 idp.publicClaimId() ); 
+			}
 
 			if ( my_match_ad ) {
 				dprintf( D_PROTOCOL, "Received match ad\n" );
@@ -1220,7 +1223,7 @@ DedicatedScheduler::negotiateRequest( ClassAd* req, Stream* s,
 
 				// Next, insert this match_rec into our hashtables
 			all_matches->insert( HashKey(machine_name), mrec );
-			all_matches_by_id->insert( HashKey(mrec->id), mrec );
+			all_matches_by_id->insert( HashKey(mrec->claimId()), mrec );
 			num_matches++;
 			
 				/* 
@@ -1313,7 +1316,7 @@ DedicatedScheduler::contactStartd( ContactStartdArgs *args )
 	}
 
 
-    dprintf( D_FULLDEBUG, "%s %s %s %d.%d\n", mrec->id, 
+    dprintf( D_FULLDEBUG, "%s %s %s %d.%d\n", mrec->publicClaimId(), 
 			 mrec->user, mrec->peer, mrec->cluster,
 			 mrec->proc ); 
 
@@ -1412,7 +1415,7 @@ DedicatedScheduler::startdContactSockHandler( Stream *sock )
 	sock->timeout(1);
 
  	if( !sock->rcv_int(reply, TRUE) ) {
-		dprintf( D_ALWAYS, "Response problem from startd on %s (match %s).\n",mrec->peer,mrec->id );	
+		dprintf( D_ALWAYS, "Response problem from startd on %s (match %s).\n",mrec->peer,mrec->publicClaimId() );	
 		BAILOUT;
 	}
 
@@ -1501,7 +1504,7 @@ DedicatedScheduler::releaseClaim( match_rec* m_rec, bool use_tcp )
 	sock->connect( m_rec->peer );
 	sock->encode();
     d.startCommand( RELEASE_CLAIM, sock);
-	sock->put( m_rec->id );
+	sock->put( m_rec->claimId() );
 	sock->end_of_message();
 
 	if( DebugFlags & D_FULLDEBUG ) { 
@@ -1542,9 +1545,9 @@ DedicatedScheduler::deactivateClaim( match_rec* m_rec )
 
 	sock.encode();
 
-	if( !sock.put(m_rec->id) ) {
+	if( !sock.put(m_rec->claimId()) ) {
         	dprintf( D_ALWAYS, "ERROR in deactivateClaim(): "
-				 "Can't code ClaimId (%s)\n", m_rec->id );
+				 "Can't code ClaimId (%s)\n", m_rec->publicClaimId() );
 		return false;
 	}
 	if( !sock.end_of_message() ) {
@@ -1780,9 +1783,12 @@ DedicatedScheduler::giveMatches( int, Stream* stream )
 
 	if( strcmp(alloc->claim_id, id) ) {
 			// No match, abort
+		ClaimIdParser alloc_claim_id_p(alloc->claim_id);
+		ClaimIdParser id_p(id);
 		dprintf( D_ALWAYS, "ERROR in DedicatedScheduler::giveMatches: "
 				 "incorrect ClaimId (%s) given for cluster %d "
-				 "- aborting (expecting: %s)\n", id, cluster, alloc->claim_id );
+				 "- aborting (expecting: %s)\n", id_p.publicClaimId(),
+				 cluster, alloc_claim_id_p.publicClaimId() );
 			// TODO: other cleanup?
 		free( id );
 		return FALSE;
@@ -1836,14 +1842,13 @@ DedicatedScheduler::giveMatches( int, Stream* stream )
 		for( i=0; i<last; i++ ) {
 			ClassAd *job_ad;
 			sinful = (*matches)[i]->peer;
-			id = (*matches)[i]->id;
 			if( ! stream->code(sinful) ) {
 				dprintf( D_ALWAYS, "ERROR in giveMatches: can't send "
 						 "address (%s) for match %d of proc %d\n", 
 						 sinful, i, p );
 				return FALSE;
 			}				
-			if( ! stream->code(id) ) {
+			if( ! stream->put( (*matches)[i]->claimId() ) ) {
 				dprintf( D_ALWAYS, "ERROR in giveMatches: can't send "
 						 "ClaimId for match %d of proc %d\n", i, p );
 				return FALSE;
@@ -2403,7 +2408,7 @@ DedicatedScheduler::spawnJobs( void )
 			  aboutToSpawnJobHandler() hook to complete.
 			*/
 		allocation->status = A_RUNNING;
-		allocation->setClaimId( mrec->id );
+		allocation->setClaimId( mrec->claimId() );
 
 			// We must set all the match recs to point at this srec.
 		for( p=0; p<allocation->num_procs; p++ ) {
@@ -2427,6 +2432,7 @@ DedicatedScheduler::addReconnectAttributes(AllocationNode *allocation)
 		for( int p=0; p<allocation->num_procs; p++ ) {
 
 			StringList claims;
+			StringList public_claims;
 			StringList remoteHosts;
 
 			int n = ((*allocation->matches)[p])->getlast();
@@ -2434,9 +2440,11 @@ DedicatedScheduler::addReconnectAttributes(AllocationNode *allocation)
 				// Foreach node within this proc...
 			for( int i=0; i<=n; i++ ) {
 					// Grab the claim from the mrec
-				char *claim = (*(*allocation->matches)[p])[i]->id;
+				char const *claim = (*(*allocation->matches)[p])[i]->claimId();
+				char const *publicClaim = (*(*allocation->matches)[p])[i]->publicClaimId();
 				claims.append(claim);
-				
+				public_claims.append(publicClaim);
+
 
 				char *hosts = matchToHost( (*(*allocation->matches)[p])[i], allocation->cluster, p);
 				remoteHosts.append(hosts);
@@ -2447,9 +2455,18 @@ DedicatedScheduler::addReconnectAttributes(AllocationNode *allocation)
 
 			char *claims_str = claims.print_to_string();
 			if ( claims_str ) {
-				SetAttributeString(allocation->cluster, p, "ClaimIds", claims_str);
+				SetAttributeString(allocation->cluster, p, ATTR_CLAIM_IDS, claims_str);
 				free(claims_str);
 				claims_str = NULL;
+			}
+
+				// For debugging purposes, store a user-visible version of
+				// the claim ids in the ClassAd as well.
+			char *public_claims_str = public_claims.print_to_string();
+			if ( public_claims_str ) {
+				SetAttributeString(allocation->cluster, p, ATTR_PUBLIC_CLAIM_IDS, public_claims_str);
+				free(public_claims_str);
+				public_claims_str = NULL;
 			}
 
 			char *hosts_str = remoteHosts.print_to_string();
@@ -3409,12 +3426,12 @@ DedicatedScheduler::DelMrec( match_rec* rec )
 				 "match not deleted\n" );
 		return false;
 	}
-	return DelMrec( rec->id );
+	return DelMrec( rec->claimId() );
 }
 
 
 bool
-DedicatedScheduler::DelMrec( char* id )
+DedicatedScheduler::DelMrec( char const* id )
 {
 	match_rec* rec;
 
@@ -3430,8 +3447,9 @@ DedicatedScheduler::DelMrec( char* id )
 		// First, delete it from our table hashed on ClaimId. 
 	HashKey key( id );
 	if( all_matches_by_id->lookup(key, rec) < 0 ) {
+		ClaimIdParser cid(id);
 		dprintf( D_FULLDEBUG, "mrec for \"%s\" not found -- " 
-				 "match not deleted (but perhaps it was deleted previously)\n", id );
+				 "match not deleted (but perhaps it was deleted previously)\n", cid.publicClaimId() );
 		return false;
 	}
 
@@ -4223,7 +4241,7 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 		GetAttributeStringNew(id.cluster, id.proc, ATTR_REMOTE_HOSTS, &remote_hosts);
 
 		char *claims = NULL;
-		GetAttributeStringNew(id.cluster, id.proc, "ClaimIds", &claims);
+		GetAttributeStringNew(id.cluster, id.proc, ATTR_CLAIM_IDS, &claims);
 
 		StringList hosts(remote_hosts);
 		StringList claimList(claims);
@@ -4282,7 +4300,7 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 			mrec->setStatus(M_CLAIMED);
 
 			all_matches->insert(HashKey(host), mrec);
-			all_matches_by_id->insert(HashKey(mrec->id), mrec);
+			all_matches_by_id->insert(HashKey(mrec->claimId()), mrec);
 
 			jobsToAllocate.Append(job);
 

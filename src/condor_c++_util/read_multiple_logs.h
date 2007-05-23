@@ -228,6 +228,8 @@ private:
 	int				iLogFileCount;
 	LogFileEntry *	pLogFileEntries;
 
+		// Note: this table has one entry per log file, not one per
+		// Condor ID.
 	HashTable<CondorID, LogFileEntry *>	logHash;
 
 	// For instantiation in programs that use this class.

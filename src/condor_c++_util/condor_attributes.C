@@ -125,6 +125,9 @@ const char *ATTR_CKPT_ARCH				 = "CkptArch";
 const char *ATTR_CKPT_LAST_READ			 = "CkptLastRead";
 const char *ATTR_CKPT_OPSYS				 = "CkptOpSys";
 const char *ATTR_CLAIM_ID                 = "ClaimId";
+const char *ATTR_CLAIM_IDS                = "ClaimIds";
+const char *ATTR_PUBLIC_CLAIM_ID          = "PublicClaimId";
+const char *ATTR_PUBLIC_CLAIM_IDS         = "PublicClaimIds";
 const char *ATTR_CLAIM_STATE              = "ClaimState";
 const char *ATTR_CLAIM_TYPE               = "ClaimType";
 const char *ATTR_CLIENT_MACHINE           = "ClientMachine"; 
@@ -324,7 +327,8 @@ const char *ATTR_LAST_AVAIL_INTERVAL		 = "LastAvailInterval";
 const char *ATTR_LAST_BENCHMARK			 = "LastBenchmark";
 const char *ATTR_LAST_CKPT_SERVER		 = "LastCkptServer";
 const char *ATTR_LAST_CKPT_TIME			 = "LastCkptTime";
-const char *ATTR_LAST_CLAIM_ID            = "LastClaimId";
+const char *ATTR_LAST_PUBLIC_CLAIM_ID    = "LastPublicClaimId";
+const char *ATTR_LAST_PUBLIC_CLAIM_IDS   = "LastPublicClaimIds";
 const char *ATTR_LAST_CLAIM_STATE         = "LastClaimState";
 const char *ATTR_LAST_VACATE_TIME		 = "LastVacateTime";
 const char *ATTR_LAST_HEARD_FROM          = "LastHeardFrom";
@@ -672,3 +676,5 @@ const char *MANAGED_EXTERNAL				 = "External";
 const char *MANAGED_SCHEDD				 = "Schedd";
 	// Schedd should manage as normal.  External process doesn't want back.
 const char *MANAGED_DONE				 = "ScheddDone";
+
+const char * COLLECTOR_REQUIREMENTS = "COLLECTOR_REQUIREMENTS";

@@ -894,6 +894,22 @@ sub Monitor
 	    $info{'host'} = $3;
 	    $info{'sinful'} = "<$3:$4>";
 	    
+	    # read next line to see how job was held
+	    $line = <SUBMIT_LOG>;
+		while( ! defined $line )
+		{
+			sleep 2;
+			if(defined $TimedCallback)
+			{
+				CheckTimedCallback();
+			}
+			$line = <SUBMIT_LOG>;
+		}
+	    fullchomp($line);
+	    $linenum++;
+
+		$info{'holdreason'} = $line;
+
 	    debug( "Saw job held\n" );
 
 	    

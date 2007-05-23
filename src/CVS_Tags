@@ -1,7 +1,21 @@
+
+05/22/07 V6_9-pre_merge_V6_8-merge-7
+  Merge tags for mergine from V6_8-merge-7 (V6_8_5 changes).
+
+05/21/07 V6_8-merge-7
+  State of V6_8 at the point where all 6.8.5-branch changes (plus whatever
+  else is hanging out on the 6.8 branch) are merged back to the trunk.
+
+05/21/07 V6_8-merge_pre-V6_8_5 and V6_8-merge_post-V6_8_5
+  Merge tags on V6_8-branch before and after merging V6_8_5.
+
 05/08/07 V6_9-clone-{root,branch}
   This branch is for testing daemonCore changes related to the clone()
   replacement for fork() under Linux.
   Created from BUILD-V6_9-trunk-2007-4-30 V6_9-clone-root.
+
+05/07/07 V6_8_5-{root,branch}
+  The branch for V6_8_5 off of V6_8-branch.
 
 05/01/07 V6_8-merge-6
   The state of the V6_8-branch for another merge back to the trunk.

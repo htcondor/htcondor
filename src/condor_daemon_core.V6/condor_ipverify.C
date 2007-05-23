@@ -116,6 +116,7 @@ IpVerify::~IpVerify()
 }
 
 
+// this function needs an enema.
 int
 IpVerify::Init()
 {
@@ -191,25 +192,29 @@ IpVerify::Init()
             pOldAllow = NULL;
         }
         
-        // concat the two
-        if (perm_ints[i] != DAEMON) {
-            pAllow = merge(pNewAllow, pOldAllow);
-            if ((perm_ints[i] == WRITE) && pAllow) {
-                pCopyAllow = strdup(pAllow);
-            }
-        }
-        else {
-            if (pNewAllow) {
-                pAllow = merge(pNewAllow, 0);
-            }
-            else {
-                pAllow = merge(0, pCopyAllow);
-            }
-            if (pCopyAllow) {
-                free(pCopyAllow);
-                pCopyAllow = NULL;
-            }
-        }
+		// concat the two
+		pAllow = merge(pNewAllow, pOldAllow);
+
+		// if this is the WRITE authorization level, store a copy of the list
+		// in case the DAEMON level is undefined.  DAEMON happens to follow
+		// WRITE in the perm_ints[i] array we are stepping through.
+		if ((perm_ints[i] == WRITE) && pAllow) {
+			pCopyAllow = strdup(pAllow); 
+		}
+
+		// likewise, if this is the DAEMON level, and we don't have a value
+		// in pAllow, it means nothing was defined in the condor_config file
+		// and we should copy the value in pCopyAllow if that exists.
+		if ((perm_ints[i] == DAEMON) && pCopyAllow) {
+			if (!pAllow) {
+				pAllow = strdup(pCopyAllow);
+			}
+
+			// free the memory now, nothing else will use it other
+			// than this hack.
+			free(pCopyAllow);
+			pCopyAllow = NULL;
+		}
 
 		sprintf(buf,"DENY_%s_%s",perm_names[i],mySubSystem);
 		if ( (pNewDeny = param(buf)) == NULL ) {
@@ -223,24 +228,22 @@ IpVerify::Init()
             pOldDeny = param(buf);
         }
 
-        if (perm_ints[i] != DAEMON) {
-            pDeny = merge(pNewDeny, pOldDeny);
-            if ((perm_ints[i] == WRITE) && pDeny) {
-                pCopyDeny = strdup(pDeny);
-            }
-        }
-        else {
-            if (pNewDeny) {
-                pDeny = merge(pNewDeny, 0);
-            }
-            else {
-                pDeny = merge(0, pCopyDeny);
-            }
-            if (pCopyDeny) {
-                free(pCopyDeny);
-                pCopyDeny = NULL;
-            }
-        }
+		// concat the two
+		pDeny = merge(pNewDeny, pOldDeny);
+
+		// see above comments in Allow
+		if ((perm_ints[i] == WRITE) && pDeny) {
+			pCopyDeny = strdup(pDeny); 
+		}
+
+		// see above comments in Allow
+		if ((perm_ints[i] == DAEMON) && pCopyDeny) {
+			if (!pDeny) {
+				pDeny = strdup(pCopyDeny); 
+			}
+			free(pCopyDeny);
+			pCopyDeny = NULL;
+		}
 
 		if (pAllow && (DebugFlags & D_FULLDEBUG)) {
 			dprintf ( D_SECURITY, "IPVERIFY: allow: %s\n", pAllow);

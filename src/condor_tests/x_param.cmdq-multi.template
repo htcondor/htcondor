@@ -6,7 +6,6 @@ condor = nightlies
 condorconfig = condor_config
 condorlocal = condor_config.local
 localpostsrc = x_condorc_locconfigpostsrc
-condortemplate = x_condor_config_template
 condordaemons = master,schedd,startd
 nameschedd = scheddone
 collector = xxxxxxxxxxxxxxxx

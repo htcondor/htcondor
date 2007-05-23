@@ -790,7 +790,7 @@ JobQueueCollection::makeCopyStr(bool bStr, char* cid, char* pid, ClassAd* ad, ch
 		}
 
 		ret_str = (char*)malloc(strlen(tmp_line_str) + 1);
-		strcpy(ret_str, tmp_line_str);
+		ret_str[0] = '\0';
 	}
 	
 	ad->ResetExpr(); // for iteration initialization
@@ -798,6 +798,13 @@ JobQueueCollection::makeCopyStr(bool bStr, char* cid, char* pid, ClassAd* ad, ch
 	while((expr = (AssignOp*)(ad->NextExpr())) != NULL) {
 
 		nameExpr = (Variable*)expr->LArg(); // Name Express Tree
+		if ( expr->invisible ) {
+			continue;
+		}
+		if ( ClassAd::ClassAdAttributeIsPrivate(nameExpr->Name()) ) {
+				// This hides private stuff like ClaimID.
+			continue;
+		}
 		valExpr = (String*)expr->RArg();	// Value Express Tree
 		val = valExpr->Value();					// Value
 		if (val == NULL) break;

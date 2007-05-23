@@ -291,7 +291,7 @@ int Server::SetUpPort(u_short port)
   // Let OS choose address --Sonny 5/18/2005
   //memcpy((char*) &socket_addr.sin_addr, (char*) &server_addr, 
   //	 sizeof(struct in_addr));
-  if ((ret_code=I_bind(temp_sd, &socket_addr)) != CKPT_OK) {
+  if ((ret_code=I_bind(temp_sd, &socket_addr, TRUE)) != CKPT_OK) {
       dprintf(D_ALWAYS, "ERROR: I_bind() returned an error (#%d)\n", ret_code);
       exit(ret_code);
   }
@@ -721,7 +721,8 @@ void Server::ProcessServiceReq(int             req_id,
                 // let OS choose address
 				//server_sa.sin_addr = server_addr;
 				//server_sa.sin_port = htons(0);
-				if ((ret_code=I_bind(data_conn_sd, &server_sa)) != CKPT_OK) {
+				if ((ret_code=I_bind(data_conn_sd,&server_sa,FALSE)) != CKPT_OK)
+				{
 					dprintf( D_ALWAYS,
 							 "ERROR: I_bind() returned an error (#%d)\n", 
 							 ret_code );
@@ -741,6 +742,9 @@ void Server::ProcessServiceReq(int             req_id,
 			}
 			service_reply.req_status = htons(CKPT_OK);
 			strcpy(service_reply.capacity_free_ACD, "0");
+	  		sprintf(log_msg, "STATUS service address: %s:%d", 
+	  			inet_ntoa(server_addr), ntohs(service_reply.port));
+	  		Log(log_msg);
 			break;
 
 		case SERVICE_RENAME:
@@ -1364,7 +1368,7 @@ void Server::ProcessStoreReq(int            req_id,
     // Let OS choose address
 	//server_sa.sin_port = htons(0);
 	//server_sa.sin_addr = server_addr;
-	if ((err_code=I_bind(data_conn_sd, &server_sa)) != CKPT_OK) {
+	if ((err_code=I_bind(data_conn_sd, &server_sa,FALSE)) != CKPT_OK) {
 		sprintf(log_msg, "ERROR: I_bind() returns an error (#%d)", 
 				err_code);
 		Log(0, log_msg);
@@ -1384,6 +1388,9 @@ void Server::ProcessStoreReq(int            req_id,
 		   //   order
 		   store_reply.port = server_sa.sin_port;  
 	store_reply.req_status = htons(CKPT_OK);
+	sprintf(log_msg, "STORE service address: %s:%d", 
+		inet_ntoa(server_addr), ntohs(store_reply.port));
+	Log(log_msg);
 	if (net_write(req_sd, (char*) &store_reply, 
 				  sizeof(store_reply_pkt)) < 0) {
 		close(req_sd);
@@ -1680,7 +1687,7 @@ void Server::ProcessRestoreReq(int             req_id,
       server_sa.sin_family = AF_INET;
       //server_sa.sin_port = htons(0);
       //server_sa.sin_addr = server_addr;
-      if ((err_code=I_bind(data_conn_sd, &server_sa)) != CKPT_OK) {
+      if ((err_code=I_bind(data_conn_sd, &server_sa,FALSE)) != CKPT_OK) {
 		  sprintf(log_msg, "ERROR: I_bind() returns an error (#%d)", err_code);
 		  Log(0, log_msg);
 		  exit(ret_code);
@@ -1696,6 +1703,9 @@ void Server::ProcessRestoreReq(int             req_id,
       restore_reply.port = server_sa.sin_port;  
       restore_reply.file_size = htonl(chkpt_file_status.st_size);
       restore_reply.req_status = htons(CKPT_OK);
+	  sprintf(log_msg, "RESTORE service address: %s:%d", 
+	  	inet_ntoa(server_addr), ntohs(restore_reply.port));
+	  Log(log_msg);
       if (net_write(req_sd, (char*) &restore_reply, 
 					sizeof(restore_reply_pkt)) < 0) {
 		  close(req_sd);
@@ -1827,10 +1837,12 @@ void Server::ChildComplete()
 	char          log_msg[256];
 	int           temp;
 	bool	      success_flag = false;
+	bool          at_least_one_child = false;
 
 	memset((char *) &peer_addr, 0, sizeof(peer_addr));
 	
 	while ((child_pid=waitpid(-1, &exit_status, WNOHANG)) > 0) {
+		at_least_one_child = true;
 		if (WIFEXITED(exit_status)) {
 			exit_code = WEXITSTATUS(exit_status);
 		} else 	{
@@ -2007,7 +2019,9 @@ void Server::ChildComplete()
 		transfers.Delete(child_pid, success_flag, peer_addr, xfer_size);
     }
 	
-	if (child_pid < 0) {
+	// I should have processed at least one child. If not, then how did the
+	// SIGCHLD signal hanlder get called but I have nothing to reap?
+	if (child_pid < 0 && at_least_one_child == false) {
 		dprintf(D_ALWAYS, "ERROR from waitpid(): %d (%s)\n", errno,
 					strerror(errno));
 	}

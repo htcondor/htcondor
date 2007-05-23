@@ -317,8 +317,9 @@ stream_to_rip( Stream* stream )
 	}
 	rip = resmgr->get_by_cur_id( id );
 	if( !rip ) {
-		dprintf( D_FULLDEBUG, 
-				 "Warning: can't find resource with ClaimId (%s) -- perhaps this claim was already removed?\n", id );
+		ClaimIdParser idp( id );
+		dprintf( D_ALWAYS, 
+				 "Error: can't find resource with ClaimId (%s) -- perhaps this claim was already removed?\n", idp.publicClaimId() );
 		free( id );
 		return NULL;
 	}

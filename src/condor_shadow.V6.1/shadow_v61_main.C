@@ -165,9 +165,6 @@ readJobAd( void )
 			dprintf( D_JOB, "Saw ClassAd delimitor, stopping\n" );
 			break;
 		}
-		if( (DebugFlags & D_JOB) && (DebugFlags & D_FULLDEBUG) ) {
-			dprintf( D_JOB, "FILE: %s\n", line.Value() );
-		} 
         if( ! ad->Insert(line.Value()) ) {
 			EXCEPT( "Failed to insert \"%s\" into ClassAd!", line.Value() );
         }
@@ -176,6 +173,9 @@ readJobAd( void )
 		EXCEPT( "ERROR reading ClassAd from (%s): file is empty",
 				is_stdin ? "STDIN" : job_ad_file );
 	}
+	if( (DebugFlags & D_JOB) && (DebugFlags & D_FULLDEBUG) ) {
+		ad->dPrint( D_JOB );
+	} 
 	if( ! is_stdin ) {
 		fclose( fp );
 	}

@@ -11,7 +11,6 @@ condor = nightlies
 condorconfig = condor_config
 condorlocal = condor_config.local
 localpostsrc = x_startd_multimatch_postsrc
-condortemplate = x_condor_config_template
 condordaemons = master,schedd,collector,negotiator
 condordomain = cs.wisc.edu
 vms	= 8

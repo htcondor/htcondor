@@ -65,6 +65,9 @@ extern const char * ATTR_CKPT_ARCH;
 extern const char * ATTR_CKPT_LAST_READ;
 extern const char * ATTR_CKPT_OPSYS;
 extern const char * ATTR_CLAIM_ID;
+extern const char * ATTR_CLAIM_IDS;
+extern const char * ATTR_PUBLIC_CLAIM_ID;
+extern const char * ATTR_PUBLIC_CLAIM_IDS;
 extern const char * ATTR_CLAIM_STATE;
 extern const char * ATTR_CLAIM_TYPE;
 extern const char * ATTR_CLIENT_MACHINE;
@@ -264,7 +267,8 @@ extern const char * ATTR_LAST_AVAIL_INTERVAL;
 extern const char * ATTR_LAST_BENCHMARK;
 extern const char * ATTR_LAST_CKPT_SERVER;
 extern const char * ATTR_LAST_CKPT_TIME;
-extern const char * ATTR_LAST_CLAIM_ID;
+extern const char * ATTR_LAST_PUBLIC_CLAIM_ID;
+extern const char * ATTR_LAST_PUBLIC_CLAIM_IDS;
 extern const char * ATTR_LAST_CLAIM_STATE;
 extern const char * ATTR_LAST_VACATE_TIME;
 extern const char * ATTR_LAST_HEARD_FROM;
@@ -609,7 +613,7 @@ extern const char * MANAGED_SCHEDD;
 	// Schedd should manage as normal.  External process doesn't want back.
 extern const char * MANAGED_DONE;
 
-
+extern const char * COLLECTOR_REQUIREMENTS;
 
 // Enumerate the ones that can't be constant strings..
 typedef enum

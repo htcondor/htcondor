@@ -10,7 +10,6 @@ ports = dynamic
 condor = install
 condorconfig = condor_config
 condorlocal = condor_config.local
-condortemplate = x_condor_config_template
 condordaemons = master,schedd,collector,negotiator,startd,had
 #condordomain = cs.wisc.edu
 condordomain = cs.technion.ac.il

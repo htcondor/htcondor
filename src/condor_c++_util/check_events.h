@@ -215,6 +215,8 @@ class CheckEvents {
 			const CondorID &id, const JobInfo *info,
 			MyString &errorMsg, check_event_result_t &result);
 
+		// Map Condor ID to a JobInfo object.  This hash table will have
+		// one entry for each Condor job we process.
 	HashTable<CondorID, JobInfo *>	jobHash;
 
 	inline bool		AllowAlmostAll() { return allowEvents & ALLOW_ALMOST_ALL; }

@@ -399,8 +399,8 @@ public:
 	int put(unsigned short);
 	int put(float);
 	int put(double);
-	int put(char *);
-	int put(char *, int);
+	int put(char const *);
+	int put(char const *, int);
 
 
 	//	get operations

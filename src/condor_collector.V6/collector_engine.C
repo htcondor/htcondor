@@ -85,6 +85,7 @@ CollectorEngine::CollectorEngine (CollectorStats *stats ) :
 	masterCheckTimerID = -1;
 
 	collectorStats = stats;
+	m_collector_requirements = NULL;
 }
 
 
@@ -107,6 +108,11 @@ CollectorEngine::
 	killHashTable (NegotiatorAds);
 	killHashTable (HadAds);
 	GenericAds.walk(killGenericHashTable);
+
+	if(m_collector_requirements) {
+		delete m_collector_requirements;
+		m_collector_requirements = NULL;
+	}
 }
 
 
@@ -117,6 +123,30 @@ setClientTimeout (int timeout)
 		return 0;
 	clientTimeout = timeout;
 	return 1;
+}
+
+bool
+CollectorEngine::setCollectorRequirements( char const *str, MyString &error_desc )
+{
+	if( m_collector_requirements ) {
+		delete m_collector_requirements;
+		m_collector_requirements = NULL;
+	}
+
+	if( !str ) {
+		return true;
+	}
+
+	m_collector_requirements = new ClassAd();
+	if( !m_collector_requirements->AssignExpr(COLLECTOR_REQUIREMENTS, str) ) {
+		error_desc += "failed to parse expression";
+		if( m_collector_requirements ) {
+			delete m_collector_requirements;
+			m_collector_requirements = NULL;
+		}
+		return false;
+	}
+	return true;
 }
 
 
@@ -434,6 +464,178 @@ collect (int command, Sock *sock, sockaddr_in *from, int &insert)
 	return rval;
 }
 
+bool CollectorEngine::ValidatePvtStartdClassAd(ClassAd *publicAd,ClassAd *privateAd,Sock *sock)
+{
+	if( !m_collector_requirements ) {
+			// If the admin has not configured COLLECTOR_REQUIREMENTS, then
+			// we do not waste any time validating ClassAds, because
+			// (presumably) the admin has used some other method for
+			// making things secure (such as strong authentication).
+		return true;
+	}
+
+		// We don't directly evaluate COLLECTOR_REQUIREMENTS on the
+		// private ad, because we don't want admins to have to
+		// carefully craft their expressions to apply to both public
+		// and private ads.  We only get here if the public ad has
+		// already passed through the filter, so the only remaining
+		// thing to do is apply some hard-coded tests to make sure the
+		// private ad isn't spoofed: As of 6.8.5, the address in the
+		// claim id is used by the shadow when connecting to the
+		// startd, so ATTR_CAPABILITY and/or ATTR_CLAIM_ID (if present)
+		// in the private ad MUST contain the same IP address as
+		// advertised for the startd in the public startd ad.
+
+	MyString public_addr;
+	publicAd->LookupString(ATTR_MY_ADDRESS,public_addr);
+
+	MyString private_addr;
+	char const *attr = ATTR_MY_ADDRESS;
+	privateAd->LookupString(attr,private_addr);
+
+	if( public_addr != private_addr ) {
+		goto failed;
+	}
+
+	private_addr = "";
+	attr = ATTR_STARTD_IP_ADDR;
+	if( privateAd->LookupString(attr,private_addr) ) {
+		if( private_addr != public_addr ) {
+			goto failed;
+		}
+	}
+
+	private_addr = "";
+	attr = ATTR_CAPABILITY;
+	if( privateAd->LookupString(attr,private_addr) ) {
+		char *claim_addr = getAddrFromClaimId( private_addr.Value() );
+		if( public_addr != claim_addr ) {
+			free(claim_addr);
+			goto failed;
+		}
+		free(claim_addr);
+	}
+
+	private_addr = "";
+	attr = ATTR_CLAIM_ID;
+	if( privateAd->LookupString(attr,private_addr) ) {
+		char *claim_addr = getAddrFromClaimId( private_addr.Value() );
+		if( public_addr != claim_addr ) {
+			free(claim_addr);
+			goto failed;
+		}
+		free(claim_addr);
+	}
+
+	return true;
+failed:
+	dprintf(D_ALWAYS,
+			"%s VIOLATION: Invalid startd private ad from %s: "
+			"%s=%s (expecting address %s)\n",
+			COLLECTOR_REQUIREMENTS,
+			sock->get_sinful_peer(),
+			attr,
+			private_addr.Value(),
+			public_addr.Value());
+	return false;
+}
+
+bool CollectorEngine::ValidateClassAd(int command,ClassAd *clientAd,Sock *sock)
+{
+
+	if( !m_collector_requirements ) {
+			// no need to do any of the following checks if the admin has
+			// not configured any COLLECTOR_REQUIREMENTS
+		return true;
+	}
+
+
+	char const *ipattr = NULL;
+	switch( command ) {
+	  case UPDATE_STARTD_AD:
+		  ipattr = ATTR_STARTD_IP_ADDR;
+		  break;
+	  case UPDATE_SCHEDD_AD:
+	  case UPDATE_SUBMITTOR_AD:
+		  ipattr = ATTR_SCHEDD_IP_ADDR;
+		  break;
+	  case UPDATE_MASTER_AD:
+		  ipattr = ATTR_MASTER_IP_ADDR;
+		  break;
+	  case UPDATE_NEGOTIATOR_AD:
+		  ipattr = ATTR_NEGOTIATOR_IP_ADDR;
+		  break;
+	  case UPDATE_QUILL_AD:
+		  ipattr = ATTR_QUILL_DB_IP_ADDR;
+		  break;
+	  case UPDATE_COLLECTOR_AD:
+		  ipattr = ATTR_COLLECTOR_IP_ADDR;
+		  break;
+	  case UPDATE_LICENSE_AD:
+	  case UPDATE_CKPT_SRVR_AD:
+	  case UPDATE_STORAGE_AD:
+	  case UPDATE_HAD_AD:
+	  case UPDATE_AD_GENERIC:
+		  break;
+	default:
+		dprintf(D_ALWAYS,
+				"ERROR: Unexpected command %d from %s in ValidateClassAd()\n",
+				command,
+				sock->get_sinful_peer());
+		return false;
+	}
+
+	if(ipattr) {
+		MyString my_address;
+		MyString subsys_ipaddr;
+
+			// Some ClassAds contain two copies of the IP address,
+			// one named "MyAddress" and one named "<SUBSYS>IpAddr".
+			// If the latter exists, then it _must_ match the former,
+			// because people may be filtering in COLLECTOR_REQUIREMENTS
+			// on MyAddress, and we don't want them to have to worry
+			// about filtering on the older cruftier <SUBSYS>IpAddr.
+
+		if( clientAd->LookupString( ipattr, subsys_ipaddr ) ) {
+			clientAd->LookupString( ATTR_MY_ADDRESS, my_address );
+			if( my_address != subsys_ipaddr ) {
+				dprintf(D_ALWAYS,
+				        "%s VIOLATION: ClassAd from %s advertises inconsistent"
+				        " IP addresses: %s=%s, %s=%s\n",
+				        COLLECTOR_REQUIREMENTS,
+				        sock->get_sinful_peer(),
+				        ipattr, subsys_ipaddr.Value(),
+				        ATTR_MY_ADDRESS, my_address.Value());
+				return false;
+			}
+		}
+	}
+
+
+		// Now verify COLLECTOR_REQUIREMENTS
+	int collector_req_result = 0;
+	if( !m_collector_requirements->EvalBool(COLLECTOR_REQUIREMENTS,clientAd,collector_req_result) ) {
+		dprintf(D_ALWAYS,"WARNING: %s did not evaluate to a boolean result.\n",COLLECTOR_REQUIREMENTS);
+		collector_req_result = 0;
+	}
+	if( !collector_req_result ) {
+		static int details_shown=0;
+		bool show_details = (details_shown<10) || (DebugFlags & D_FULLDEBUG);
+		dprintf(D_ALWAYS,"%s VIOLATION: requirements do not match ad from %s.%s\n",
+				COLLECTOR_REQUIREMENTS,
+				sock ? sock->get_sinful_peer() : "(null)",
+				show_details ? " Contents of the ClassAd:" : " (turn on D_FULLDEBUG to see details)");
+		if( show_details ) {
+			details_shown += 1;
+			clientAd->dPrint(D_ALWAYS);
+		}
+
+		return false;
+	}
+
+	return true;
+}
+
 ClassAd *CollectorEngine::
 collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 {
@@ -448,7 +650,11 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 	if (repeatStartdAds == -1) {
 		repeatStartdAds = param_integer("COLLECTOR_REPEAT_STARTD_ADS",0);
 	}
-	
+
+	if( !ValidateClassAd(command,clientAd,sock) ) {
+		return NULL;
+	}
+
 	// mux on command
 	switch (command)
 	{
@@ -486,7 +692,12 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 				delete pvtAd;
 				break;
 			}
-			
+
+			if( !ValidatePvtStartdClassAd(retVal,pvtAd,sock) ) {
+				delete pvtAd;
+				break;
+			}
+
 			// insert the private ad into its hashtable --- use the same
 			// hash key as the public ad
 			(void) updateClassAd (StartdPrivateAds, "StartdPvtAd  ",

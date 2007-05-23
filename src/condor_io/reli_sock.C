@@ -648,7 +648,7 @@ ReliSock::put_file( filesize_t *size, int fd )
 
 	// Log what's going on
 	dprintf(D_FULLDEBUG,
-			"put_file: senting " FILESIZE_T_FORMAT " bytes\n", filesize);
+			"put_file: sending " FILESIZE_T_FORMAT " bytes\n", filesize);
 
 	// If the file has a non-zero size, send it
 	if ( filesize > 0 ) {

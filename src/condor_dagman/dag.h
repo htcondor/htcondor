@@ -224,20 +224,20 @@ class Dag {
         @param the handle of the job in the DAG
         @return address of Job object, or NULL if not found
     */
-    Job * GetJob (const JobID_t jobID) const;
+    Job * FindNodeByNodeID (const JobID_t jobID) const;
 
     /** Get pointer to job with name jobName
         @param jobName the name of the job in the DAG
         @return address of Job object, or NULL if not found
     */
-    Job * GetJob (const char * jobName) const;
+    Job * FindNodeByName (const char * jobName) const;
 
-    /** Get pointer to job with condor ID condorID
+    /** Get pointer to job with condor or stork ID condorID
 		@param logsource The type of log from which events should be read.
         @param condorID the CondorID of the job in the DAG
         @return address of Job object, or NULL if not found
     */
-    Job * GetJob (int logsource, const CondorID condorID) const;
+    Job * FindNodeByEventID (int logsource, const CondorID condorID) const;
 
     /** Ask whether a node name exists in the DAG
         @param nodeName the name of the node in the DAG
@@ -468,6 +468,22 @@ class Dag {
 
 	bool SanityCheckSubmitEvent( const CondorID condorID, const Job* node );
 
+		/** Get the appropriate hash table for event ID->node mapping,
+			according to whether this is a Condor or Stork node.
+			@param the node type/logsource (Condor or Stork) (see
+				Log_source and Job::job_type_t)
+			@return a pointer to the appropriate hash table
+		*/
+	HashTable<int, Job *> *		GetEventIDHash(int jobType);
+
+		/** Get the appropriate hash table for event ID->node mapping,
+			according to whether this is a Condor or Stork node.
+			@param the node type/logsource (Condor or Stork) (see
+				Log_source and Job::job_type_t)
+			@return a pointer to the appropriate hash table
+		*/
+	const HashTable<int, Job *> *		GetEventIDHash(int jobType) const;
+
 		// The log file name specified by the -Condorlog command line
 		// argument (not used for much anymore).
 	char *		_condorLogName;
@@ -511,6 +527,14 @@ class Dag {
 	HashTable<MyString, Job *>		_nodeNameHash;
 
 	HashTable<JobID_t, Job *>		_nodeIDHash;
+
+	// Hash by CondorID (really just by the cluster ID because all
+	// procs in the same cluster map to the same node).
+	HashTable<int, Job *>			_condorIDHash;
+
+	// Hash by StorkID (really just by the cluster ID because all
+	// procs in the same cluster map to the same node).
+	HashTable<int, Job *>			_storkIDHash;
 
     // Number of nodes that are done (completed execution)
     int _numNodesDone;

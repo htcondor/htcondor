@@ -985,6 +985,19 @@ void CollectorDaemon::Config()
 		}
 	}
 
+	tmp = param(COLLECTOR_REQUIREMENTS);
+	MyString collector_req_err;
+	if( !collector.setCollectorRequirements( tmp, collector_req_err ) ) {
+		EXCEPT("Handling of '%s=%s' failed: %s\n",
+			   COLLECTOR_REQUIREMENTS,
+			   tmp ? tmp : "(null)",
+			   collector_req_err.Value());
+	}
+	if( tmp ) {
+		free( tmp );
+		tmp = NULL;
+	}
+
 	init_classad(i);
 
     if (tmp)

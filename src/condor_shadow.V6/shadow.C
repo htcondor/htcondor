@@ -232,7 +232,7 @@ usage()
 }
 
 #if defined(__STDC__)
-	void regular_setup( char *host, char *cluster, char *proc, char* );
+	void regular_setup( char *host, char *cluster, char *proc );
 	void pipe_setup( char *cluster, char *proc, char* capability );
 	void open_named_pipe( const char *name, int mode, int target_fd );
 #else
@@ -271,7 +271,7 @@ main(int argc, char *argv[] )
 	char	*host = NULL, *cluster = NULL, *proc = NULL;
 	char	*use_afs = NULL, *use_nfs = NULL;
 	char	*use_ckpt_server = NULL;
-	char	*capability;
+	char	*bogus_capability;
 	int		i;
 
 	myDistro->Init( argc, argv );
@@ -351,16 +351,16 @@ main(int argc, char *argv[] )
 #endif /* WAIT_FOR_DEBUGGER */
 
 	if( strcmp("-pipe",argv[1]) == 0 ) {
-		capability = argv[2];
+		bogus_capability = argv[2];
 		cluster = argv[3];
 		proc = argv[4];
 		// read the big comment in the function for why this is here.
 		RemoveNewShadowDroppings(cluster, proc);
-		pipe_setup( cluster, proc, capability );
+		pipe_setup( cluster, proc, bogus_capability );
 	} else {
 		schedd = argv[1];
 		host = argv[2];
-		capability = argv[3];
+		bogus_capability = argv[3];
 		cluster = argv[4];
 		proc = argv[5];
 		if ( argc > 6 ) {
@@ -371,11 +371,9 @@ main(int argc, char *argv[] )
 		}
 		// read the big comment in the function for why this is here.
 		RemoveNewShadowDroppings(cluster, proc);
-		regular_setup( host, cluster, proc, capability );
+		regular_setup( host, cluster, proc );
 	}
 	scheddName = getenv( EnvGetName( ENV_SCHEDD_NAME ) );
-
-	GlobalCap = strdup(capability);
 
 #if 0
 		/* Don't want to share log file lock between child and pnarent */
@@ -1202,19 +1200,18 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 */
 void
 #if defined(NEW_PROC)
-send_job( PROC *proc, char *host, char *cap)
+send_job( PROC *proc, char *host )
 #else
-send_job( V2_PROC *proc, char *host, char *cap)
+send_job( V2_PROC *proc, char *host )
 #endif
 {
 	int reason, retval, sd1, sd2;
-	char*	capability = strdup(cap);
 
 	dprintf( D_FULLDEBUG, "Shadow: Entering send_job()\n" );
 
 		/* starter 0 - Regular starter */
 		/* starter 1 - PVM starter */
-	retval = part_send_job(0, host, reason, capability, schedd, proc, sd1, sd2, NULL);
+	retval = part_send_job(0, host, reason, GlobalCap, schedd, proc, sd1, sd2, NULL);
 	if (retval == -1) {
 		DoCleanup();
 		dprintf( D_ALWAYS, "********** Shadow Exiting(%d) **********\n",
@@ -1271,6 +1268,16 @@ start_job( char *cluster_id, char *proc_id )
 		JobAd->LookupInteger(ATTR_NUM_CKPTS, NumCkpts);
 	}
 
+		// Grab the ClaimID (a.k.a. "capability") from the job classad
+		// and put it in our global variable for use everywhere else.
+	if (GlobalCap) {
+		free(GlobalCap);
+		GlobalCap = NULL;
+	}
+    JobAd->LookupString(ATTR_CLAIM_ID, &GlobalCap);
+    if (! GlobalCap) {
+        EXCEPT("ad does not include %s!", ATTR_CLAIM_ID);
+    }
 
 #define TESTING
 #if !defined(HPUX) && !defined(TESTING)
@@ -1368,7 +1375,7 @@ send_vacate( char *host, char *capability )
 
 
 void
-regular_setup( char *host, char *cluster, char *proc, char *capability )
+regular_setup( char *host, char *cluster, char *proc )
 {
 	dprintf( D_ALWAYS,
 		"Hostname = \"%s\", Job = %s.%s\n",
@@ -1387,7 +1394,7 @@ regular_setup( char *host, char *cluster, char *proc, char *capability )
 	}
 	ExecutingHost = host;
 	start_job( cluster, proc );
-	send_job( Proc, host, capability );
+	send_job( Proc, host );
 }
 
 void

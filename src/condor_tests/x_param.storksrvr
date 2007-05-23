@@ -10,6 +10,5 @@ ports = dynamic
 condor = nightlies
 condorconfig = condor_config
 condorlocal = condor_config.local
-condortemplate = x_condor_config_template
 condordaemons = master,schedd,stork,collector,negotiator
 vms	= 1 

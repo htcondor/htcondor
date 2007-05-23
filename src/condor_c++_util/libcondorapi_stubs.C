@@ -138,7 +138,7 @@ Stream::~Stream(){};
 	int Stream::code(struct rlimit64 &){ return not_impl(); }
 #endif
 void Stream::allow_one_empty_message() { not_impl(); }
-int Stream::put(char *){ return not_impl(); }
+int Stream::put(char const *){ return not_impl(); }
 int Stream::get(char *&){ return not_impl(); }
 int Stream::get(char *&,int &){ return not_impl(); }
 

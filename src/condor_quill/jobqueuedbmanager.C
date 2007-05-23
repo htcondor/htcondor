@@ -1240,6 +1240,10 @@ JobQueueDBManager::processLogEntry(int op_type, JobQueueCollection* jobQueue)
 			st = FAILURE; 
 			break;
 		}
+		if( ClassAd::ClassAdAttributeIsPrivate(name) ) {
+				// This hides private stuff like ClaimID.
+			break;
+		}
 		newvalue = fillEscapeCharacters(value);
 		job_id_type = getProcClusterIds(key, cid, pid);
 
@@ -1797,6 +1801,9 @@ JobQueueDBManager::processSetAttribute(char* key,
 	char* newvalue;  
 	double doubleval = 0;
 
+	if ( ClassAd::ClassAdAttributeIsPrivate(name) ) {
+		return SUCCESS;
+	}
 	newvalue = fillEscapeCharacters(value);
 		// It could be ProcAd or ClusterAd
 		// So need to check

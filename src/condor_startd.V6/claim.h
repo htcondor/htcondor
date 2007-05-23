@@ -55,6 +55,7 @@
 
 #include "enum_utils.h"
 #include "Starter.h"
+#include "condor_claimid_parser.h"
 class CODMgr;
 
 
@@ -68,10 +69,12 @@ public:
 	char*	codId() {return c_cod_id;};
 	bool	matches( const char* id );
 	void	dropFile( int vm_id );
+	char const *publicClaimId() { return claimid_parser.publicClaimId(); }
 
 private:
     char*   c_id;       // ClaimId string
     char*   c_cod_id;   // COD Id for this Claim (NULL if not COD)
+	ClaimIdParser claimid_parser;
 };
 
 
@@ -169,6 +172,7 @@ public:
 	bool		isCOD()			{return c_is_cod;};
 	char*		codId()			{return c_id->codId();};
     char*       id();
+	char const *publicClaimId();
     bool        idMatches( const char* id );
 	Client* 	client() 		{return c_client;};
 	Resource* 	rip()			{return c_rip;};

@@ -267,6 +267,9 @@ QmgrJobUpdater::updateJob( update_t type )
 
 	job_ad->ResetExpr();
 	while( (tree = job_ad->NextDirtyExpr()) ) {
+		if( tree->invisible ) {
+			continue;
+		}
 		name = ((Variable*)tree->LArg())->Name();
 
 			// If we have the lists of attributes we care about and

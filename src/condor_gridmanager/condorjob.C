@@ -794,17 +794,24 @@ int CondorJob::doEvaluateState()
 				break;
 			}
 			if ( rc != GLOBUS_SUCCESS ) {
-				// unhandled error
-				dprintf( D_ALWAYS,
-						 "(%d.%d) condor_job_hold() failed: %s\n",
-						 procID.cluster, procID.proc, gahp->getErrorString() );
-				if ( !resourcePingComplete /* && connect failure */ ) {
-					connect_failure = true;
+				const char *err = gahp->getErrorString();
+				if ( strcmp( err, "Already done" ) ) {
+					dprintf( D_FULLDEBUG,
+							 "(%d.%d) Remote job is already held\n",
+							 procID.cluster, procID.proc );
+				} else {
+					// unhandled error
+					dprintf( D_ALWAYS,
+							 "(%d.%d) condor_job_hold() failed: %s\n",
+							 procID.cluster, procID.proc, err );
+					if ( !resourcePingComplete /* && connect failure */ ) {
+						connect_failure = true;
+						break;
+					}
+					errorString = err;
+					gmState = GM_HOLD;
 					break;
 				}
-				errorString = gahp->getErrorString();
-				gmState = GM_HOLD;
-				break;
 			}
 			gmState = GM_POLL_ACTIVE;
 			} break;
@@ -816,17 +823,24 @@ int CondorJob::doEvaluateState()
 				break;
 			}
 			if ( rc != GLOBUS_SUCCESS ) {
-				// unhandled error
-				dprintf( D_ALWAYS,
-						 "(%d.%d) condor_job_release() failed: %s\n",
-						 procID.cluster, procID.proc, gahp->getErrorString() );
-				if ( !resourcePingComplete /* && connect failure */ ) {
-					connect_failure = true;
+				const char *err = gahp->getErrorString();
+				if ( strcmp( err, "Already done" ) ) {
+					dprintf( D_FULLDEBUG,
+							 "(%d.%d) Remote job is already released\n",
+							 procID.cluster, procID.proc );
+				} else {
+					// unhandled error
+					dprintf( D_ALWAYS,
+							 "(%d.%d) condor_job_release() failed: %s\n",
+							 procID.cluster, procID.proc, err );
+					if ( !resourcePingComplete /* && connect failure */ ) {
+						connect_failure = true;
+						break;
+					}
+					errorString = err;
+					gmState = GM_HOLD;
 					break;
 				}
-				errorString = gahp->getErrorString();
-				gmState = GM_HOLD;
-				break;
 			}
 			gmState = GM_POLL_ACTIVE;
 			} break;

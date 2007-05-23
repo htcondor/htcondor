@@ -124,7 +124,7 @@ char* GetIPName(struct in_addr machine_IP)
 
 
 int I_bind(int                 socket_desc,
-	    struct sockaddr_in* addr)
+	    struct sockaddr_in* addr, int is_well_known)
 {
   int temp;
   int					on = 1;
@@ -138,25 +138,35 @@ int I_bind(int                 socket_desc,
   setsockopt(socket_desc, SOL_SOCKET, SO_LINGER,
 			 (char*)&linger, sizeof(linger));
 
-  bind_port = addr->sin_port;
+  // remember we did this transformation before calling this function...
+  // so undo it here.
+  bind_port = ntohs(addr->sin_port);
   if (bind_port < 1024) {
     // use root priv for the call to bind to allow privileged ports
     old_priv = set_root_priv();
   }
 
-  bind_return_value = bind(socket_desc, (struct sockaddr*)addr, temp);
+	if (is_well_known == TRUE) {
+		bind_return_value = bind(socket_desc, (struct sockaddr*)addr, temp)==0 ?
+ 						TRUE : FALSE;
+	} else {
+		/* There is a good chance that this binding will be given to a
+			user job for the purposes of an outgoing connection. So
+			mark it as such. */
+		bind_return_value = _condor_local_bind(TRUE, socket_desc);
+	}
 
   if (bind_port < 1024) {
     set_priv (old_priv);
   }
 
-  if (bind_return_value < 0)
+  if (bind_return_value == FALSE)
     {
       fprintf(stderr, "\nERROR:\n");
       fprintf(stderr, "ERROR:\n");
       fprintf(stderr, "ERROR: unable to bind socket (pid=%d)\n", 
 	      (int) getpid());
-	  fprintf(stderr, "\terrno = %d\n", errno);
+	  fprintf(stderr, "\tUnknown errno. Sorry.\n");
       fprintf(stderr, "ERROR:\n");
       fprintf(stderr, "ERROR:\n\n");
       return BIND_ERROR;
