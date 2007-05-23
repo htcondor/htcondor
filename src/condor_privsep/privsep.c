@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <assert.h>
 #include <libgen.h>
+#include <signal.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -39,6 +40,15 @@
 
 	function 6:  function_recursive_chown
 		6 uid gid dir_name
+
+	function 7:  function_open
+		7 uid gid path flags mode
+
+	function 8:  function_rename
+		8 uid gid old_path new_path
+
+	function 9:  function_chmod
+		9 uid gid path mode
 
 
 however, how do we tell the difference between the magic box failing and the
@@ -120,7 +130,7 @@ void assign_condor_execute_prefix_whitelist(char* val) {
 
 		// dup the dir
 		condor_execute_prefix_whitelist[dir_index] = strdup(dir_pointer);
-		printf("dir: %s\n", dir_pointer);
+		//printf("dir: %s\n", dir_pointer);
 		dir_index++;
 
 		// move the dir_pointer to the next entry (if there was one)
@@ -181,7 +191,7 @@ void assign_condor_execute_uid_whitelist(char* val) {
 
 		// convert the uid
 		condor_execute_uid_whitelist[uid_index] = atoi(uid_pointer);
-		printf("uid: %i\n", atoi(uid_pointer));
+		//printf("uid: %i\n", atoi(uid_pointer));
 		uid_index++;
 
 		// move the dir_pointer to the next entry (if there was one)
@@ -312,7 +322,7 @@ int ParseConfigFile() {
 		// zero the equals sign and move the pointer ahead to the value
 		*(equals++) = '\0';
 
-		printf("assigning %s to %s\n", linebuf, equals);
+		//printf("assigning %s to %s\n", linebuf, equals);
 		// linebuf is the variable name, equals is the value.
 		if(!assign_global_variable(linebuf, equals)) {
 			// bad variable name, fail
@@ -353,7 +363,7 @@ int helper_function_chown_dir(char *current_path, int from_uid, int to_uid) {
 
 	int result = 0;
 
-	printf ("current_path: %s\n", current_path);
+	//printf ("current_path: %s\n", current_path);
 	if ((dir = opendir(current_path)) == NULL) {
 		// cannot open.
 		return errno;
@@ -400,7 +410,7 @@ int helper_function_chown_dir(char *current_path, int from_uid, int to_uid) {
 			}
 		} else {
 			// lchown the entry.
-			printf("lchown(%s, %i, -1)\n", full_path, to_uid);
+			//printf("lchown(%s, %i, -1)\n", full_path, to_uid);
 
 			int errcode = 0;
 			errcode = lchown(full_path, to_uid, -1);
@@ -415,7 +425,7 @@ int helper_function_chown_dir(char *current_path, int from_uid, int to_uid) {
 	closedir(dir);
 
 	// lchown the passed in dir
-	printf("lchown(%s, %i, -1)\n", current_path, to_uid);
+	//printf("lchown(%s, %i, -1)\n", current_path, to_uid);
 
 	int errcode = 0;
 	errcode = lchown(current_path, to_uid, -1);
@@ -439,7 +449,7 @@ int helper_function_rmrf_dir(char *current_path) {
 
 	int result = 0;
 
-	printf ("current_path: %s\n", current_path);
+	//printf ("current_path: %s\n", current_path);
 	if ((dir = opendir(current_path)) == NULL) {
 		// cannot open.
 		return errno;
@@ -490,7 +500,7 @@ int helper_function_rmrf_dir(char *current_path) {
 			int errcode = 0;
 			//errcode = unlink(full_path);
 
-			printf("unlink(%s) -- type %i\n", full_path, dp->d_type);
+			//printf("unlink(%s) -- type %i\n", full_path, dp->d_type);
 
 			if (errcode) {
 				// couldn't unlink, so return failure
@@ -503,7 +513,7 @@ int helper_function_rmrf_dir(char *current_path) {
 
 	// all the contents are now succesfully removed, so remove the
 	// directory itself.
-	printf("rmdir(%s)\n", current_path);
+	//printf("rmdir(%s)\n", current_path);
 
 	result = 0;
 	//result = rmdir(current_path);
@@ -664,62 +674,43 @@ int function_spawn_user_job(char **args) {
 
 	// not yet implemented
 
-	// args[0-2] are the files to use for standard i/o
-	// args[3] is the executable
-	// args[4...] are passed through
+	// args[0] is the executable
+	// args[1...] are passed through
 
 	// make sure args are sane
-	if (!args[0] || !args[1] || !args[2] || !args[3]) {
+	if (!args[0]) {
 		return 81;
 	}
+
+	char* executable = args[0];
+	char** arguments = &args[0];
 
 	int result = 0;
 
 	// check the executable prefix whitelist -- nonzero means found
-	result = helper_function_check_string_whitelist(args[3], condor_execute_prefix_whitelist);
+	result = helper_function_check_string_whitelist(executable,
+	                                                condor_execute_prefix_whitelist);
 	if (!result) {
 		return 83;
 	}
 
 	// stat the file to check the owner (follow symlinks in this case)
 	struct stat st;
-	result = stat(args[3], &st);
+	result = stat(executable, &st);
 	if (result) {
 		return 84;
 	}
 
 	// check the executable uid whitelist -- nonzero means found
-	result = helper_function_check_int_whitelist(st.st_uid, condor_execute_uid_whitelist);
+	result = helper_function_check_int_whitelist(st.st_uid,
+	                                             condor_execute_uid_whitelist);
 	if (!result) {
 		return 85;
 	}
 
-	// open the FDs to use for standard i/o
-	// (if the argument is "-", just pass on whatever we inherited)
-	int i;
-	for (i = 0; i < 3; i++) {
-		if (args[i][0] == '-' && args[i][1] == '\0') {
-			continue;
-		}
-		int fd;
-		if (i == 0) {
-			fd = open(args[i], O_RDONLY);
-		}
-		else {
-			fd = open(args[i], O_WRONLY | O_CREAT | O_TRUNC, 0666);
-		}
-		if (fd == -1) {
-			return 86 + i;
-		}
-		if (dup2(fd, i) == -1) {
-			return 89 + i;
-		}
-		close(fd);
-	}
-
 	// if we got here, all checks have passed and we are already running as the
 	// target user.  so, spawn the job!
-	result = execv(args[3], &args[3]);
+	result = execv(executable, arguments);
 
 	// if we got here, execv failed!
 	return 119;
@@ -853,6 +844,34 @@ int function_cleanup_execute_dir(char **args) {
 
 int function_create_user_dir(char **args) {
 
+	if (!args[0] || !args[1] || !args[2] || args[3]) {
+		return 181;
+	}
+	
+	uid_t target_uid = atoi(args[0]);
+	if (target_uid == 0) {
+		return 182;
+	}
+	
+	gid_t target_gid = atoi(args[1]);
+	if (target_gid == 0) {
+		return 183;
+	}
+
+	char* pathname = args[2];
+
+	// first make the directory (as root)
+	//
+	if (mkdir(pathname, 0755) == -1) {
+		return 184;
+	}
+
+	// now chown it to the correct user and group
+	//
+	if (chown(pathname, target_uid, target_gid) == -1) {
+		return 185;
+	}
+
 	// success
 	return 0;
 }
@@ -875,11 +894,67 @@ int function_recursive_chown( char **args ) {
 	return 0;
 }
 
+int privsep_open_server(char*, int, mode_t);
+
+int function_open( char **args ) {
+
+	// verify the argument list is the right size
+	//
+	if (!args[0] || !args[1] || !args[2] || args[3]) {
+		return 190;
+	}
+
+	char* path = args[0];
+	int flags = atoi(args[1]);
+	mode_t mode = (mode_t)atoi(args[2]);
+	int result = privsep_open_server(path, flags, mode);
+	if (result != 0) {
+		return result;
+	}
+
+	// success
+	//
+	return 0;
+}
+
+int function_rename( char **args ) {
+
+	// verify the argument list is the right size
+	//
+	if (!args[0] || !args[1] || args[2]) {
+		return 201;
+	}
+
+	char* old_path = args[0];
+	char* new_path = args[1];
+	if (rename(old_path, new_path) == -1) {
+		return 202;
+	}
+
+	return 0;
+}
+
+int function_chmod( char **args ) {
+
+	// verify the argument list is the right size
+	//
+	if (!args[0] || !args[1] || args[2]) {
+		return 211;
+	}
+
+	char* path = args[0];
+	mode_t mode = (mode_t)atoi(args[1]);
+	if (chmod(path, mode) == -1) {
+		return 212;
+	}
+
+	return 0;
+}
+
 int main(int argc, char** argv) {
 
-
-	printf ("uid %i, euid %i, gid %i, egid %i\n",
-			getuid(), geteuid(), getgid(), getegid());
+	//printf ("uid %i, euid %i, gid %i, egid %i\n",
+	//		getuid(), geteuid(), getgid(), getegid());
 
 	// needs to be done as root
 	if (!ParseConfigFile()) {
@@ -906,14 +981,14 @@ int main(int argc, char** argv) {
 	// get the enumerated function
 	int function = atoi(argv[1]);
 
-	// function 1+6 remain root.  all others have a uid and gid passed on the
-	// command line.
+	// function 1, 5, and 6 remain root
+	// all others have a uid and gid passed on the command line
 
 	int target_uid = 0;
 	int target_gid = 0;
 
 	// consume and validate the uid and gid parameters
-	if ((function != 1) && (function != 6)) {
+	if ((function != 1) && (function != 5) && (function != 6)) {
 		// make sure the uid and gid strings are not null
 		if (!argv[2] || !argv[3]) {
 			return -1;
@@ -946,8 +1021,8 @@ int main(int argc, char** argv) {
 */
 
 
-	// become the final user for all functions except 1 + 6.
-	if ((function != 1) && (function != 6)) {
+	// become the final user for all functions except 1, 5, and 6.
+	if ((function != 1) && (function != 5) && (function != 6)) {
 		result = helper_function_set_identity(target_uid, target_gid);
 		if (result) {
 			// fail
@@ -955,7 +1030,7 @@ int main(int argc, char** argv) {
 		}
 	}
 
-	printf("invoking function %i\n", function);
+	//printf("invoking function %i\n", function);
 	fflush(0);
 
 	// now invoke the correct function
@@ -971,9 +1046,15 @@ int main(int argc, char** argv) {
 		case 4:
 			exit(function_cleanup_user_dir(&argv[4]));
 		case 5:
-			exit(function_create_user_dir(&argv[4]));
+			exit(function_create_user_dir(&argv[2]));
 		case 6:
 			exit(function_recursive_chown(&argv[2]));
+		case 7:
+			exit(function_open(&argv[4]));		
+		case 8:
+			exit(function_rename(&argv[4]));
+		case 9:
+			exit(function_chmod(&argv[4]));
 		default:
 			exit(205);
 	}

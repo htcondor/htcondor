@@ -76,7 +76,7 @@ static const int MIN_REGISTERED_SOCKET_SAFETY_LIMIT = 15;
 #include "condor_version.h"
 #include "setenv.h"
 #include "my_popen.h"
-#include "condor_privsep.h"
+#include "../condor_privsep/condor_privsep.h"
 #ifdef WIN32
 #include "exphnd.WIN32.h"
 #include "process_control.WINDOWS.h"
@@ -4362,7 +4362,7 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 	// if we're using priv sep, we may not have permission to send signals
 	// to our child processes; ask the ProcD to do it for us
 	//
-	if (privsep_is_enabled()) {
+	if (privsep_enabled()) {
 		if (!target_has_dcpm && pidinfo && pidinfo->new_process_group) {
 			ASSERT(m_procd_client != NULL);
 			bool ok =  m_procd_client->signal_process(pid, sig);

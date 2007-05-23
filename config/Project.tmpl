@@ -535,6 +535,7 @@ SYSAPI_LIB = ../condor_sysapi/libsysapi.a
 ACCT_LIB    = ../condor_accountant.V6/libacct.a
 DAEMONCORE_LIB = ../condor_daemon_core.V6/daemon_core.a $(COREDUMPER_LINK_LIB)
 PROCD_CLIENT_LIB = ../condor_procd/procd_client.a
+PRIVSEP_CLIENT_LIB = ../condor_privsep/privsep_client.a
 
 
 /* common ld flags which should be first in the list */
@@ -578,4 +579,5 @@ STD_LIBS = \
   $(PCRE_LIB) \
   $(GCB_LIB) \
   $(POST_EXT_LIBS) \
-  $(PROCD_CLIENT_LIB)
+  $(PROCD_CLIENT_LIB) \
+  $(PRIVSEP_CLIENT_LIB)

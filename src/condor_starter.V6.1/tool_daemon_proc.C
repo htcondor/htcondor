@@ -175,7 +175,6 @@ ToolDaemonProc::StartJob()
 		// initialize these to -2 to mean they're not specified.
 		// -1 will be treated as an error.
 	fds[0] = -2; fds[1] = -2; fds[2] = -2;
-	bool foo;
 
 		// in order to open these files we must have the user's privs:
 	priv_state priv;
@@ -184,23 +183,17 @@ ToolDaemonProc::StartJob()
 	fds[0] = openStdFile( SFT_IN,
 	                      ATTR_TOOL_DAEMON_INPUT,
 	                      false,
-	                      "Tool Daemon Input file",
-	                      NULL,
-	                      foo );
+	                      "Tool Daemon Input file");
 
 	fds[1] = openStdFile( SFT_OUT,
 	                      ATTR_TOOL_DAEMON_OUTPUT,
 	                      false,
-	                      "Tool Daemon Output file",
-	                      NULL,
-	                      foo );
+	                      "Tool Daemon Output file");
 
 	fds[2] = openStdFile( SFT_ERR,
 	                      ATTR_TOOL_DAEMON_ERROR,
 	                      false,
-	                      "Tool Daemon Error file",
-	                      NULL,
-	                      foo );
+	                      "Tool Daemon Error file");
 
 	/* Bail out if we couldn't open the std files correctly */
 	if( fds[0] == -1 || fds[1] == -1 || fds[2] == -1 ) {

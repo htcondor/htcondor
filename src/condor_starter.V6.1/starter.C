@@ -41,13 +41,12 @@
 #include "../condor_sysapi/sysapi.h"
 #include "build_job_env.h"
 #include "get_port_range.h"
-
 #include "perm.h"
 #include "filename_tools.h"
 #include "directory.h"
 #include "exit.h"
-
 #include "condor_auth_x509.h"
+#include "starter_privsep_helper.h"
 
 extern "C" int get_random_int();
 extern int main_shutdown_fast();
@@ -533,11 +532,16 @@ CStarter::createTempExecuteDir( void )
 	priv_state priv = set_condor_priv();
 #endif
 
-	if( mkdir(WorkingDir, 0777) < 0 ) {
-		dprintf( D_FAILURE|D_ALWAYS, "couldn't create dir %s: %s\n", 
-				 WorkingDir, strerror(errno) );
-		set_priv( priv );
-		return false;
+	if (privsep_enabled()) {
+		privsep_helper.initialize_sandbox(WorkingDir);
+	}
+	else {
+		if( mkdir(WorkingDir, 0777) < 0 ) {
+			dprintf( D_FAILURE|D_ALWAYS, "couldn't create dir %s: %s\n", 
+					 WorkingDir, strerror(errno) );
+			set_priv( priv );
+			return false;
+		}
 	}
 
 #ifdef WIN32
@@ -1551,6 +1555,10 @@ CStarter::removeTempExecuteDir( void )
 	if( is_gridshell ) {
 			// we didn't make our own directory, so just bail early
 		return true;
+	}
+
+	if (privsep_enabled()) {
+		privsep_helper.chown_sandbox_to_condor();
 	}
 
 	MyString dir_name = "dir_";

@@ -50,6 +50,10 @@ typedef int BOOL_T;
 
 #define XML_USERLOG_DEFAULT 0
 
+#if !defined(WIN32)
+#include <sys/types.h>
+#endif
+
 /** API for writing a log file.  Since an API for reading a log file
     was not originally needed, a ReadUserLog class did not exist,
     so it was not forseen to call this class WriteUserLog. <p>
@@ -114,7 +118,21 @@ class UserLog {
 		@return TRUE on success
     */
     bool initialize(const char *file, int c, int p, int s);
-    
+   
+#if !defined(WIN32)
+    /** Initialize the log file (PrivSep mode only)
+        @param uid the user's UID
+        @param gid the user's GID
+        @param file the path name of the log file to be written (copied)
+        @param c the condor ID cluster to put into each ULogEvent
+        @param p the condor ID proc    to put into each ULogEvent
+        @param s the condor ID subproc to put into each ULogEvent
+		@return TRUE on success
+    */
+    bool initialize(uid_t, gid_t, const char *, int, int, int);
+#endif
+
+
     /** Initialize the condorID, which will fill in the condorID
         for each ULogEvent passed to writeEvent().
 
@@ -160,6 +178,11 @@ class UserLog {
     /** The log file                 */  FILE     * fp;
     /** The log file lock            */  FileLock * lock;
 	/** Whether we use XML or not    */  bool       use_xml;
+
+#if !defined(WIN32)
+	/** PrivSep: the user's UID      */  uid_t      m_privsep_uid;
+	/** PrivSep: the user's GID      */  gid_t      m_privsep_gid;
+#endif
 };
 
 

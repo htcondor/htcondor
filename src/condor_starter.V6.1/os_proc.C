@@ -39,7 +39,7 @@
 #include "condor_uid.h"
 #include "filename_tools.h"
 #include "my_popen.h"
-#include "condor_privsep.h"
+#include "starter_privsep_helper.h"
 #ifdef WIN32
 #include "perm.h"
 #endif
@@ -56,7 +56,6 @@ OsProc::OsProc( ClassAd* ad )
 	is_suspended = false;
 	num_pids = 0;
 	dumped_core = false;
-	m_using_priv_sep = false;
 	UserProc::initialize();
 }
 
@@ -103,9 +102,16 @@ OsProc::StartJob(FamilyInfo* family_info)
 				 DIR_DELIM_CHAR, CONDOR_EXEC );
 
 		priv_state old_priv = set_user_priv();
-		int retval = chmod( JobName, 0755 );
+		bool ret;
+		if (privsep_enabled()) {
+			ret = privsep_helper.chmod(JobName, 0755);
+		}
+		else {
+			int retval = chmod( JobName, 0755 );
+			ret = (retval == 0);
+		}
 		set_priv( old_priv );
-		if( retval < 0 ) {
+		if( !ret ) {
 			dprintf ( D_ALWAYS, "Failed to chmod %s!\n",JobName );
 			return 0;
 		}
@@ -131,19 +137,6 @@ OsProc::StartJob(FamilyInfo* family_info)
 		}
 	} 
 
-#if !defined(WIN32)
-	// lookup the uid -- this probably only needs to be done for
-	// privsep.  also, it would be swank if this used the new mapfile
-	// object to map from canonical user to real UID using regex and
-	// all that.
-	char *owner = NULL;
-	uid_t owner_uid = -1;
-
-	ClassAd *job_ad = Starter->jic->jobClassAd();
-	job_ad->LookupString(ATTR_OWNER,&owner);
-	pcache()->get_user_uid(owner, owner_uid);
-#endif
-
 	ArgList args;
 
 		// Since we may be adding to the argument list, we may need to deal
@@ -158,69 +151,20 @@ OsProc::StartJob(FamilyInfo* family_info)
 		// The Java universe cannot tolerate an incorrect argv[0].
 		// For Java, set it correctly.  In a future version, we
 		// may consider removing the CONDOR_EXEC feature entirely.
-	if( job_universe==CONDOR_UNIVERSE_JAVA ) {
+		//
+		// PrivSep currently cannot handle an incorrect argv[0] either,
+		// since the Switchboard uses it as the file to exec
+		//
+	if( (job_universe == CONDOR_UNIVERSE_JAVA) || privsep_enabled() ) {
 		args.AppendArg(JobName);
 	} else {
 		args.AppendArg(CONDOR_EXEC);
 	}
 
-#if !defined(WIN32)
-	// support for privilege separation: currently, we'll just modify the
-	// command line so that Create_Process invokes the privsep swtichboard,
-	// which will switch UIDs, open the job's standard i/o FDs, and the exec
-	// the job
-	//
-	if (privsep_is_enabled()) {
-	
-		char* privsep_executable = param("PRIVSEP_EXECUTABLE");
-		if (privsep_executable == NULL) {
-			dprintf(D_ALWAYS, "error: PRIVSEP_EXECUTABLE not defined\n");
-			return 0;
-		}
-
-			// make certain the privsep switchboard exists and is executable
-		if( access(privsep_executable,X_OK) < 0 ) {
-			dprintf( D_ALWAYS, 
-					 "error: can't find/execute PRIVSEP_EXECUTABLE file %s\n",
-					 privsep_executable );
-			return 0;
-		}
-
-		m_using_priv_sep = true;
-
-		// call the magic box directly until i get a better API in place. :|
-
-		// now add the parameters to the privsep magic box:
-		//   3       - spawn user job
-		//   uid     - uid to run as
-		//   gid     - gid to run as
-		//   exec    - executable
-		//   args[]  - command line args (args[0] is exec)
-		args.AppendArg("3");
-		args.AppendArg(owner_uid);
-		args.AppendArg(owner_uid);
-
-		args.AppendArg(JobName);
-
-		// now change JobName to the magic box
-		strcpy( JobName, privsep_executable );
-		free(privsep_executable);
-
-		// the remainder of the args are added below
-	}
-#endif
-
 		// Support USER_JOB_WRAPPER parameter...
 
 	char *wrapper = NULL;
 	if( (wrapper=param("USER_JOB_WRAPPER")) ) {
-
-			// can't use a job wrapper in priv sep mode, yet
-		if( m_using_priv_sep ) {
-			dprintf( D_ALWAYS, "privsep combined with job wrapper not yet "
-					"supported.\n");
-			return 0;
-		}
 
 			// make certain this wrapper program exists and is executable
 		if( access(wrapper,X_OK) < 0 ) {
@@ -296,46 +240,20 @@ OsProc::StartJob(FamilyInfo* family_info)
 	priv_state priv;
 	priv = set_user_priv();
 
-		// is we're using priv sep, we pass a pointer to a MyString to
-		// the calls to openStdFile below; this tells openStdFile that
-		// we can't in general access the user's files, and openStdFile
-		// will return the name of the file to open, which we'll pass on
-		// as an argument to the privsep switchboard
-	MyString priv_sep_arg;
-	MyString* priv_sep_arg_ptr = NULL;
-	if (m_using_priv_sep) {
-		priv_sep_arg_ptr = &priv_sep_arg;
-	}
-
 	fds[0] = openStdFile( SFT_IN,
 	                      NULL,
 	                      true,
-	                      "Input file",
-	                      priv_sep_arg_ptr,
-	                      starter_stdin );
-	if (m_using_priv_sep) {
-		args.InsertArg(priv_sep_arg_ptr->Value(), 4);
-	}
+	                      "Input file");
 
 	fds[1] = openStdFile( SFT_OUT,
 	                      NULL,
 	                      true,
-	                      "Output file",
-	                      priv_sep_arg_ptr,
-	                      starter_stdout );
-	if (m_using_priv_sep) {
-		args.InsertArg(priv_sep_arg_ptr->Value(), 5);
-	}
+	                      "Output file");
 
 	fds[2] = openStdFile( SFT_ERR,
 	                      NULL,
 	                      true,
-	                      "Error file",
-	                      priv_sep_arg_ptr,
-	                      starter_stderr );
-	if (m_using_priv_sep) {
-		args.InsertArg(priv_sep_arg_ptr->Value(), 6);
-	}
+	                      "Error file");
 
 	/* Bail out if we couldn't open the std files correctly */
 	if( fds[0] == -1 || fds[1] == -1 || fds[2] == -1 ) {
@@ -354,35 +272,6 @@ OsProc::StartJob(FamilyInfo* family_info)
 		set_priv(priv); /* go back to original priv state before leaving */
 		return 0;
 	}
-
-		// // // // // // 
-		// Chown the sandbox to the user
-		// // // // // // 
-
-#if !defined(WIN32)
-	// again, call the magic box via my_system directly until a better
-	// API exists.
-	if( m_using_priv_sep ){
-	
-		char* privsep_executable = param("PRIVSEP_EXECUTABLE");
-		ASSERT(privsep_executable != NULL);
-	
-		ArgList magic_box_chown_args;
-		magic_box_chown_args.AppendArg(privsep_executable);
-		magic_box_chown_args.AppendArg(6);
-		magic_box_chown_args.AppendArg(owner_uid);
-		magic_box_chown_args.AppendArg(Starter->GetWorkingDir());
-
-		MyString args_string;
-		magic_box_chown_args.GetArgsStringForDisplay(&args_string,0);
-		dprintf(D_ALWAYS, "About to my_system: %s\n", args_string.Value());
-		int retval = my_system(magic_box_chown_args);
-		dprintf(D_ALWAYS, "return: %i\n", retval);
-
-		free(privsep_executable);
-	}
-#endif
-
 
 		// // // // // // 
 		// Misc + Exec
@@ -473,6 +362,13 @@ OsProc::StartJob(FamilyInfo* family_info)
 
 	set_priv ( priv );
 
+	if (privsep_enabled()) {
+		
+		privsep_helper.setup_exec_as_user(args);
+		ASSERT(strlen(args.GetArg(0)) < sizeof(JobName));
+		strcpy(JobName, args.GetArg(0));
+	}
+
 	JobPid = daemonCore->Create_Process( JobName, args, PRIV_USER_FINAL,
 					     1, FALSE, &job_env, job_iwd, family_info,
 					     NULL, fds, nice_inc, NULL, job_opt_mask );
@@ -554,31 +450,6 @@ OsProc::JobCleanup( int pid, int status )
 		// now be gone
 	num_pids = 0;
 
-#if !defined(WIN32)
-		// if we are using priv sep, we chowned the starter's working
-		// dir over to the user before spawning the job; now its time
-		// to chown back
-	if (m_using_priv_sep) {
-	
-		char* privsep_executable = param("PRIVSEP_EXECUTABLE");
-		ASSERT(privsep_executable != NULL);
-		
-		ArgList magic_box_chown_args;
-		magic_box_chown_args.AppendArg(privsep_executable);
-		magic_box_chown_args.AppendArg(6);
-		magic_box_chown_args.AppendArg(get_condor_uid());
-		magic_box_chown_args.AppendArg(Starter->GetWorkingDir());
-
-		MyString args_string;
-		magic_box_chown_args.GetArgsStringForDisplay(&args_string,0);
-		dprintf(D_ALWAYS, "About to my_system: %s\n", args_string.Value());
-		int retval = my_system(magic_box_chown_args);
-		dprintf(D_ALWAYS, "return: %i\n", retval);
-
-		free(privsep_executable);
-	}
-#endif
-
 		// check to see if the job dropped a core file.  if so, we
 		// want to rename that file so that it won't clobber other
 		// core files back at the submit site.  
@@ -618,6 +489,10 @@ OsProc::checkCoreFile( void )
 	MyString new_name;
 	new_name.sprintf( "core.%d.%d", Starter->jic->jobCluster(), 
 					  Starter->jic->jobProc() );
+
+	if (privsep_enabled()) {
+		privsep_helper.chown_sandbox_to_condor();
+	}
 
 		// Since Linux now writes out "core.pid" by default, we should
 		// search for that.  Try the JobPid of our first child:
@@ -666,7 +541,15 @@ OsProc::renameCoreFile( const char* old_name, const char* new_name )
 		// we need to do this rename as the user...
 	errno = 0;
 	old_priv = set_user_priv();
-	if( rename(old_full.Value(), new_full.Value()) != 0 ) {
+	int ret;
+	if (privsep_enabled()) {
+		ret = privsep_helper.rename(old_full.Value(), new_full.Value());
+		errno = ENOENT;
+	}
+	else {
+		ret = rename(old_full.Value(), new_full.Value());
+	}
+	if( ret != 0 ) {
 			// rename failed
 		t_errno = errno; // grab errno right away
 		rval = false;

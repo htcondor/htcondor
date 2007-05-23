@@ -26,9 +26,9 @@
 #include "condor_config.h"
 #include "starter.h"
 #include "condor_ver_info.h"
-
 #include "java_proc.h"
 #include "java_config.h"
+#include "starter_privsep_helper.h"
 
 extern CStarter * Starter;
 
@@ -247,51 +247,89 @@ java_exit_mode_t JavaProc::ClassifyExit( int status )
 	java_exit_mode_t exit_mode;
 
 	if(normal_exit) {
-		dprintf(D_ALWAYS,"JavaProc: JVM exited normally with code %d\n",exit_code);
-		file = safe_fopen_wrapper(startfile,"r");
+		dprintf(D_ALWAYS,
+		        "JavaProc: JVM exited normally with code %d\n",
+		        exit_code);
+		if (privsep_enabled()) {
+			file = privsep_helper.fopen_sandbox_file(startfile, "r");
+		}
+		else {
+			file = safe_fopen_wrapper(startfile,"r");
+		}
 		if(file) {
-			dprintf(D_ALWAYS,"JavaProc: Wrapper left start record %s\n",startfile);
+			dprintf(D_ALWAYS,
+			        "JavaProc: Wrapper left start record %s\n",
+			        startfile);
 			fclose(file);
-			file = safe_fopen_wrapper(endfile,"r");
+			if (privsep_enabled()) {
+				file = privsep_helper.fopen_sandbox_file(endfile, "r");
+			}
+			else {
+				file = safe_fopen_wrapper(endfile,"r");
+			}
 			if(file) {
-				dprintf(D_ALWAYS,"JavaProc: Wrapper left end record %s\n",endfile);
+				dprintf(D_ALWAYS,
+				        "JavaProc: Wrapper left end record %s\n",
+				        endfile);
 				fields = fscanf(file,"%10s",tmp); // no more than sizeof(tmp)
 				if(fields!=1) {
-					dprintf(D_FAILURE|D_ALWAYS,"JavaProc: Job called System.exit(%d)\n",exit_code);
+					dprintf(D_FAILURE|D_ALWAYS,
+					        "JavaProc: Job called System.exit(%d)\n",
+					        exit_code);
 					exit_mode = JAVA_EXIT_NORMAL;
 				} else if(!strcmp(tmp,"normal")) {
-					dprintf(D_FAILURE|D_ALWAYS,"JavaProc: Job returned from main()\n");
+					dprintf(D_FAILURE|D_ALWAYS,
+					        "JavaProc: Job returned from main()\n");
 					exit_mode = JAVA_EXIT_NORMAL;
 				} else if(!strcmp(tmp,"abnormal")) {	
 					ParseExceptionFile(file);
 					if(!strcmp(ex_type,"java.lang.Error")) {
-						dprintf(D_FAILURE|D_ALWAYS,"JavaProc: Job threw a %s (%s), will retry it later.\n",ex_name,ex_type);
+						dprintf(D_FAILURE|D_ALWAYS,
+					            "JavaProc: Job threw a %s (%s), "
+						            "will retry it later.\n",
+						        ex_name,
+						        ex_type);
 						exit_mode = JAVA_EXIT_SYSTEM_ERROR;
 					} else {
-						dprintf(D_FAILURE|D_ALWAYS,"JavaProc: Job threw a %s (%s), will return it to the user.\n",ex_name,ex_type);
+						dprintf(D_FAILURE|D_ALWAYS,
+						        "JavaProc: Job threw a %s (%s), "
+						            "will return it to the user.\n",
+						        ex_name,
+						        ex_type);
 						exit_mode = JAVA_EXIT_EXCEPTION;
 					}
 				} else if(!strcmp(tmp,"noexec")) {
 					ParseExceptionFile(file);
-					dprintf(D_FAILURE|D_ALWAYS,"JavaProc: Job could not be executed\n");
+					dprintf(D_FAILURE|D_ALWAYS,
+					        "JavaProc: Job could not be executed\n");
 					exit_mode = JAVA_EXIT_EXCEPTION;
 				} else {
-					dprintf(D_FAILURE|D_ALWAYS,"JavaProc: Unknown wrapper result '%s'\n",tmp);
+					dprintf(D_FAILURE|D_ALWAYS,
+					        "JavaProc: Unknown wrapper result '%s'\n",
+					        tmp);
 					exit_mode = JAVA_EXIT_SYSTEM_ERROR;
 				}
 				fclose(file);
 			} else {
-				dprintf(D_FAILURE|D_ALWAYS,"JavaProc: Wrapper did not leave end record %s\n",endfile);
-				dprintf(D_ALWAYS,"JavaProc: Thus, job called System.exit(%d)\n",exit_code);
+				dprintf(D_FAILURE|D_ALWAYS,
+				        "JavaProc: Wrapper did not leave end record %s\n",
+				        endfile);
+				dprintf(D_ALWAYS,
+				        "JavaProc: Thus, job called System.exit(%d)\n",
+				        exit_code);
 				exit_mode = JAVA_EXIT_NORMAL;
 			}
 		} else {
-			dprintf(D_FAILURE|D_ALWAYS,"JavaProc: Wrapper did not leave start record.\n");
-			dprintf(D_ALWAYS,"JavaProc: I'll assume Java is misconfigured here.\n");
+			dprintf(D_FAILURE|D_ALWAYS,
+			        "JavaProc: Wrapper did not leave start record.\n");
+			dprintf(D_ALWAYS,
+			        "JavaProc: I'll assume Java is misconfigured here.\n");
 			exit_mode = JAVA_EXIT_SYSTEM_ERROR;
 		}
 	} else {
-		dprintf(D_FAILURE|D_ALWAYS,"JavaProc: JVM exited abnormally with signal %d\n",sig_num);
+		dprintf(D_FAILURE|D_ALWAYS,
+		        "JavaProc: JVM exited abnormally with signal %d\n",
+		        sig_num);
 		exit_mode = JAVA_EXIT_SYSTEM_ERROR;
 	}
 

@@ -207,24 +207,24 @@ LINK32_OBJS= \
 
 "condor_chirp_client - Win32 Debug" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F .\condor_chirp_client.mak CFG="condor_chirp_client - Win32 Debug" 
+   $(MAKE) /$(MAKEFLAGS) /F ".\condor_chirp_client.mak" CFG="condor_chirp_client - Win32 Debug" 
    cd "."
 
 "condor_chirp_client - Win32 DebugCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F .\condor_chirp_client.mak CFG="condor_chirp_client - Win32 Debug" RECURSE=1 CLEAN 
+   $(MAKE) /$(MAKEFLAGS) /F ".\condor_chirp_client.mak" CFG="condor_chirp_client - Win32 Debug" RECURSE=1 CLEAN 
    cd "."
 
 !ELSEIF  "$(CFG)" == "condor_chirp - Win32 Release"
 
 "condor_chirp_client - Win32 Release" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F .\condor_chirp_client.mak CFG="condor_chirp_client - Win32 Release" 
+   $(MAKE) /$(MAKEFLAGS) /F ".\condor_chirp_client.mak" CFG="condor_chirp_client - Win32 Release" 
    cd "."
 
 "condor_chirp_client - Win32 ReleaseCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F .\condor_chirp_client.mak CFG="condor_chirp_client - Win32 Release" RECURSE=1 CLEAN 
+   $(MAKE) /$(MAKEFLAGS) /F ".\condor_chirp_client.mak" CFG="condor_chirp_client - Win32 Release" RECURSE=1 CLEAN 
    cd "."
 
 !ENDIF 
@@ -233,24 +233,24 @@ LINK32_OBJS= \
 
 "condor_cpp_util - Win32 Debug" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F .\condor_cpp_util.mak CFG="condor_cpp_util - Win32 Debug" 
+   $(MAKE) /$(MAKEFLAGS) /F ".\condor_cpp_util.mak" CFG="condor_cpp_util - Win32 Debug" 
    cd "."
 
 "condor_cpp_util - Win32 DebugCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F .\condor_cpp_util.mak CFG="condor_cpp_util - Win32 Debug" RECURSE=1 CLEAN 
+   $(MAKE) /$(MAKEFLAGS) /F ".\condor_cpp_util.mak" CFG="condor_cpp_util - Win32 Debug" RECURSE=1 CLEAN 
    cd "."
 
 !ELSEIF  "$(CFG)" == "condor_chirp - Win32 Release"
 
 "condor_cpp_util - Win32 Release" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F .\condor_cpp_util.mak CFG="condor_cpp_util - Win32 Release" 
+   $(MAKE) /$(MAKEFLAGS) /F ".\condor_cpp_util.mak" CFG="condor_cpp_util - Win32 Release" 
    cd "."
 
 "condor_cpp_util - Win32 ReleaseCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F .\condor_cpp_util.mak CFG="condor_cpp_util - Win32 Release" RECURSE=1 CLEAN 
+   $(MAKE) /$(MAKEFLAGS) /F ".\condor_cpp_util.mak" CFG="condor_cpp_util - Win32 Release" RECURSE=1 CLEAN 
    cd "."
 
 !ENDIF 

@@ -28,6 +28,7 @@
 #include "condor_uid.h"
 #include "basename.h"
 #include "exit.h"
+#include "starter_privsep_helper.h"
 
 
 LocalUserLog::LocalUserLog( JobInfoCommunicator* my_jic )
@@ -55,7 +56,21 @@ LocalUserLog::init( const char* filename, bool is_xml,
 	priv_state priv;
 	priv = set_user_priv();
 
-	if( ! u_log.initialize(filename, cluster, proc, subproc) ) {
+	bool ret;
+#if !defined(WIN32)
+	if (privsep_enabled()) {
+		uid_t uid;
+		gid_t gid;
+		privsep_helper.get_user_ids(uid, gid);
+		ret = u_log.initialize(uid, gid, filename, cluster, proc, subproc);
+	}
+	else {
+		ret = u_log.initialize(filename, cluster, proc, subproc);
+	}
+#else
+	ret = u_log.initialize(filename, cluster, proc, subproc);
+#endif
+	if( ! ret ) {
 		dprintf( D_ALWAYS, 
 				 "Failed to initialize Starter's UserLog, aborting\n" );
 		set_priv( priv );

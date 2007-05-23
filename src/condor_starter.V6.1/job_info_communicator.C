@@ -29,7 +29,7 @@
 #include "condor_config.h"
 #include "domain_tools.h"
 #include "basename.h"
-
+#include "../condor_privsep/condor_privsep.h"
 
 extern CStarter *Starter;
 
@@ -364,6 +364,12 @@ JobInfoCommunicator::initUserPrivNoOwner( void )
 		return false;
 	}
 #endif
+
+		// if we're using PrivSep, we need ATTR_OWNER
+	if (privsep_enabled()) {
+		return false;
+	}
+
 		// otherwise, we can't switch privs anyway, so consider
 		// ourselves done. :) 
 	dprintf( D_FULLDEBUG, 

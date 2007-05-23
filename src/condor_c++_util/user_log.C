@@ -31,6 +31,7 @@
 #include "condor_uid.h"
 #include "condor_xml_classads.h"
 #include "condor_config.h"
+#include "../condor_privsep/condor_privsep.h"
 
 
 static const char SynchDelimiter[] = "...\n";
@@ -38,10 +39,22 @@ static const char SynchDelimiter[] = "...\n";
 extern "C" char *find_env (const char *, const char *);
 extern "C" char *get_env_val (const char *);
 
-UserLog::UserLog (const char *owner, const char *domain, const char *file,
-				  int c, int p, int s, bool xml)
-    :  in_block(FALSE), path(0), fp(0), lock(NULL)
+UserLog::UserLog (const char *owner,
+                  const char *domain,
+                  const char *file,
+				  int c,
+                  int p,
+                  int s,
+                  bool xml) :
+	in_block(FALSE),
+	path(0),
+	fp(0),
+	lock(NULL)
 {
+#if !defined(WIN32)
+	m_privsep_uid = 0;
+	m_privsep_gid = 0;
+#endif
 	UserLog();
 	use_xml = xml;
 	initialize (owner, domain, file, c, p, s);
@@ -50,10 +63,21 @@ UserLog::UserLog (const char *owner, const char *domain, const char *file,
 /* This constructor is just like the constructor above, except
  * that it doesn't take a domain, and it passes NULL for the domain.
  * It's a convenience function, requested by our friends in LCG. */
-UserLog::UserLog (const char *owner, const char *file,
-				  int c, int p, int s, bool xml)
-    :  in_block(FALSE), path(0), fp(0), lock(NULL)
+UserLog::UserLog (const char *owner,
+                  const char *file,
+                  int c,
+                  int p,
+                  int s,
+                  bool xml) :
+	in_block(FALSE),
+	path(0),
+	fp(0),
+	lock(NULL)
 {
+#if !defined(WIN32)
+	m_privsep_uid = 0;
+	m_privsep_gid = 0;
+#endif
 	UserLog();
 	use_xml = xml;
 	initialize (owner, NULL, file, c, p, s);
@@ -136,11 +160,32 @@ initialize( const char *file, int c, int p, int s )
 	
 #ifndef WIN32
 	// Unix
-	if( (fd = safe_open_wrapper( path, O_CREAT | O_WRONLY, 0664 )) < 0 ) {
-		dprintf( D_ALWAYS, "UserLog::initialize: "
-				 "safe_open_wrapper(\"%s\") failed - errno %d (%s)\n", path, errno,
-				 strerror(errno) );
-		return FALSE;
+	if (privsep_enabled()) {
+		ASSERT(m_privsep_uid != 0);
+		ASSERT(m_privsep_gid != 0);
+		fd = privsep_open(m_privsep_uid,
+		                  m_privsep_gid,
+		                  path,
+		                  O_WRONLY | O_CREAT,
+		                  0664);
+		if (fd == -1) {
+			dprintf(D_ALWAYS,
+		            "UserLog::initialize: privsep_open(\"%s\") failed\n",
+			        path);
+			return FALSE;
+		}
+	}
+	else {
+		fd = safe_open_wrapper( path, O_CREAT | O_WRONLY, 0664 );
+		if( fd < 0 ) {
+			dprintf( D_ALWAYS,
+			         "UserLog::initialize: "
+			             "safe_open_wrapper(\"%s\") failed - errno %d (%s)\n",
+			         path,
+			         errno,
+			         strerror(errno) );
+			return FALSE;
+		}
 	}
 
 		// attach it to stdio stream
@@ -201,6 +246,26 @@ initialize( const char *owner, const char *domain, const char *file,
 
 	return res;
 }
+
+#if !defined(WIN32)
+bool
+UserLog::initialize( uid_t uid,
+                     gid_t gid,
+                     const char *file,
+                     int c,
+                     int p,
+                     int s )
+{
+	// this is only for use in the PrivSep world; make sure this is the case
+	//
+	ASSERT(privsep_enabled());
+
+	m_privsep_uid = uid;
+	m_privsep_gid = gid;
+
+	return initialize(file, c, p, s);
+}
+#endif
 
 bool UserLog::
 initialize( int c, int p, int s )

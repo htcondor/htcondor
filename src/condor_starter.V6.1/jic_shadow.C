@@ -41,6 +41,7 @@
 #include "directory.h"
 #include "nullfile.h"
 #include "stream_handler.h"
+#include "starter_privsep_helper.h"
 
 extern CStarter *Starter;
 ReliSock *syscall_sock = NULL;
@@ -353,6 +354,12 @@ JICShadow::allJobsDone( void )
 		// since we do not want to be interrupted by anything
 		// short of a hardkill. 
 	if( filetrans && ((requested_exit == false) || transfer_at_vacate) ) {
+
+			// make sure we can access the files
+		if (privsep_enabled()) {
+			privsep_helper.chown_sandbox_to_condor();
+		}
+	
 			// true if job exited on its own
 		bool final_transfer = (requested_exit == false);	
 
@@ -846,6 +853,9 @@ JICShadow::initUserPriv( void )
 			// possible this call will fail.  We don't want to fill up
 			// the logs with scary and misleading error messages.
 		if( init_user_ids_quiet(owner.Value()) ) {
+			if (privsep_enabled()) {
+				privsep_helper.initialize_user(owner.Value());
+			}
 			dprintf( D_FULLDEBUG, "Initialized user_priv as \"%s\"\n", 
 			         owner.Value() );
 			if( checkDedicatedExecuteAccounts( owner.Value() ) ) {
@@ -930,6 +940,11 @@ JICShadow::initUserPriv( void )
 						 user_gid );
 				return false;
 			}
+
+			if (privsep_enabled()) {
+				privsep_helper.initialize_user((uid_t)user_uid,
+				                               (gid_t)user_gid);
+			}
 		}
 	} else {
 
@@ -965,6 +980,9 @@ JICShadow::initUserPriv( void )
 			free( nobody_user );
 			return false;
 		} else {
+			if (privsep_enabled()) {
+				privsep_helper.initialize_user(nobody_user);
+			}
 			dprintf( D_FULLDEBUG, "Initialized user_priv as \"%s\"\n",
 				  nobody_user );
 			if( checkDedicatedExecuteAccounts( nobody_user ) ) {
@@ -1564,6 +1582,10 @@ JICShadow::beginFileTransfer( void )
 			filetrans->setPeerVersion( *shadow_version );
 		}
 
+		if (privsep_enabled()) {
+			privsep_helper.chown_sandbox_to_condor();
+		}
+
 		if( ! filetrans->DownloadFiles(false) ) { // do not block
 				// Error starting the non-blocking file transfer.  For
 				// now, consider this a fatal error
@@ -1583,6 +1605,9 @@ JICShadow::transferCompleted( FileTransfer *ftrans )
 		// Until "multi-starter" has meaning, it's ok to EXCEPT here,
 		// since there's nothing else for us to do.
 	if ( ftrans ) {
+		if (privsep_enabled()) {
+			privsep_helper.chown_sandbox_to_user();
+		}
 		FileTransfer::FileTransferInfo ft_info = ftrans->GetInfo();
 		if ( !ft_info.success ) {
 			if(!ft_info.try_again) {

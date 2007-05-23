@@ -217,3 +217,6 @@ Regex::Regex() {not_impl();}
 Regex::~Regex() {not_impl();}
 bool Regex::compile(MyString const& , char const** , int* , int ) {not_impl();return false;}
 bool Regex::match(MyString const& , ExtArray<MyString>* ) {not_impl();return false;}
+
+bool privsep_enabled() {not_impl();}
+int privsep_open(uid_t, gid_t, const char*, int, mode_t) { not_impl();}

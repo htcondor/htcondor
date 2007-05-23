@@ -251,6 +251,14 @@ SOURCE=..\src\condor_starter.V6.1\starter_class.C
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_starter.V6.1\starter_privsep_helper.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_starter.V6.1\starter_privsep_helper.WINDOWS.C
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_starter.V6.1\starter_user_policy.C
 # End Source File
 # Begin Source File

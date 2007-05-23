@@ -151,9 +151,7 @@ protected:
 	int openStdFile( std_file_type type,
 	                 const char* attr, 
 	                 bool allow_dash,
-	                 const char* log_header,
-	                 MyString* priv_sep_arg,
-	                 bool &used_starter_fd );
+	                 const char* log_header);
 
 private:
 
