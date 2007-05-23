@@ -1675,12 +1675,54 @@ specified in the command file, the system's user resource limit
 \mbox{``coredumpsize''} is used.
 This limit is not used in HP-UX and DUX operating systems. 
 
-%%%%%%%%%%%%%%%%%%%
-%% cron_day_of_week
-%%%%%%%%%%%%%%%%%%%
-%\item[cron\_day\_of\_week = $<$Cron-evaluated Day$>$]
-%\index{submit commands!cron\_day\_of\_week}
-%\Todo
+%%%%%%%%%%%%%%%%%%
+% cron_day_of_month
+%%%%%%%%%%%%%%%%%%
+\item[cron\_day\_of\_month = $<$Cron-evaluated Day$>$]
+\index{submit commands!cron\_day\_of\_month}
+The set of days of the month for which a deferral time applies.
+See section~\ref{sec:CronTab} for further details and examples.
+
+%%%%%%%%%%%%%%%%%%
+% cron_day_of_week
+%%%%%%%%%%%%%%%%%%
+\item[cron\_day\_of\_week = $<$Cron-evaluated Day$>$]
+\index{submit commands!cron\_day\_of\_week}
+The set of days of the week for which a deferral time applies.
+See section~\ref{sec:CronTab} for details, semantics, and examples.
+
+%%%%%%%%%%%%%%%%%%
+% cron_hour
+%%%%%%%%%%%%%%%%%%
+\item[cron\_hour = $<$Cron-evaluated Hour$>$]
+\index{submit commands!cron\_hour}
+The set of hours of the day for which a deferral time applies.
+See section~\ref{sec:CronTab} for details, semantics, and examples.
+
+%%%%%%%%%%%%%%%%%%
+% cron_minute
+%%%%%%%%%%%%%%%%%%
+\item[cron\_minute = $<$Cron-evaluated Minute$>$]
+\index{submit commands!cron\_minute}
+The set of minutes within an hour for which a deferral time applies.
+See section~\ref{sec:CronTab} for details, semantics, and examples.
+
+%%%%%%%%%%%%%%%%%%
+% cron_month
+%%%%%%%%%%%%%%%%%%
+\item[cron\_month = $<$Cron-evaluated Month$>$]
+\index{submit commands!cron\_month}
+The set of months within a year for which a deferral time applies.
+See section~\ref{sec:CronTab} for details, semantics, and examples.
+
+%%%%%%%%%%%%%%%%%%
+% cron_prep_time
+%%%%%%%%%%%%%%%%%%
+\item[cron\_prep\_time = $<$ClassAd Integer Expression$>$]
+\index{submit commands!cron\_prep\_time}
+Analogous to \SubmitCmd{deferral\_prep\_time}.
+The number of seconds prior to a job's deferral time that
+the job may be matched and sent to an execution machine.
 
 %%%%%%%%%%%%%%%%%%%
 %% deferral_prep_time
@@ -1688,7 +1730,10 @@ This limit is not used in HP-UX and DUX operating systems.
 
 \item[deferral\_prep\_time = $<$ClassAd Integer Expression$>$]
 \index{submit commands!deferral\_prep\_time}
-\Todo
+The number of seconds prior to a job's deferral time that
+the job may be matched and sent to an execution machine.
+
+See section~\ref{sec:JobDeferral} for further details.
 
 %%%%%%%%%%%%%%%%%%%
 %% deferral_time
@@ -1712,12 +1757,7 @@ execution at the deferral time, it has missed its deferral time.
 A job that misses its deferral time will be put on hold
 in the queue. 
 
-See
-See section~\ref{sec:JobDeferral} for details of job leases.
-for further details and examples.
-
-To allow a job to run in the event of a missed deferral time,
-refer to \SubmitCmd{deferral\_window}.
+See section~\ref{sec:JobDeferral} for further details and examples.
 
 Due to implementation details,
 a deferral time may not be used for scheduler universe jobs.
@@ -1730,20 +1770,9 @@ a deferral time may not be used for scheduler universe jobs.
 \index{submit commands!deferral\_window}
 The deferral window is used in conjunction with the
 \SubmitCmd{deferral\_time} command to allow jobs that
-miss their execution time to run anyway. The window is
-the number of seconds in the past Condor is willingly
-to run a job if the deferral time is missed.
+miss their deferral time to begin execution.
 
-In the example below, the \SubmitCmd{deferral\_time} always
-evaluate to 60 seconds in the past from the current time, but
-the job is still allowed to execute because the 
-\SubmitCmd{deferral\_window} is 120 seconds:
-
-\begin{verbatim} 
-   DeferralWindow = 120
-   DeferralTime   = (CurrentTime - 60)
-\end{verbatim}
-
+See section~\ref{sec:JobDeferral} for further details and examples.
 
 %%%%%%%%%%%%%%%%%%%
 %% image_size
