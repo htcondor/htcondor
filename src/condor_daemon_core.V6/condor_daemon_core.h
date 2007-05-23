@@ -218,6 +218,7 @@ class DCSignalMsg: public DCMsg {
 class DaemonCore : public Service
 {
   friend class TimerManager; 
+  friend class CreateProcessForkit;
 #ifdef WIN32
   friend int dc_main( int argc, char** argv );
   friend unsigned pidWatcherThread(void*);
@@ -1247,6 +1248,12 @@ class DaemonCore : public Service
                         int is_cpp);
 
 	void CheckForTimeSkip(time_t time_before, time_t okay_delta);
+
+		// If this platform supports clone() as a faster alternative to fork(), use it (or not).
+#ifdef HAVE_CLONE
+	bool m_use_clone_to_create_processes;
+	bool UseCloneToCreateProcesses() { return m_use_clone_to_create_processes; }
+#endif
 
 	void Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocking);
 

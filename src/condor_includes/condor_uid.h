@@ -62,7 +62,11 @@ typedef enum {
 	_priv_state_threshold
 } priv_state;
 
+// special flag passed as dologging value to _set_priv()
+#define NO_PRIV_MEMORY_CHANGES 999
+
 #define set_priv(s)	_set_priv(s, __FILE__, __LINE__, 1)
+#define set_priv_no_memory_changes(s) _set_priv(s, __FILE__, __LINE__, NO_PRIV_MEMORY_CHANGES)
 #define set_condor_priv() _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 1)
 #define set_user_priv()	_set_priv(PRIV_USER, __FILE__, __LINE__, 1)
 #define set_user_priv_final() _set_priv(PRIV_USER_FINAL, __FILE__, __LINE__, 1)

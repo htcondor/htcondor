@@ -38,6 +38,10 @@ void Generic_stop_logging();
 }
 #endif
 
+#if HAVE_CLONE
+#include <sched.h>
+#endif
+
 static const int DEFAULT_MAXCOMMANDS = 255;
 static const int DEFAULT_MAXSIGNALS = 99;
 static const int DEFAULT_MAXSOCKETS = 8;
@@ -378,6 +382,12 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	m_in_daemon_shutdown = false;
 	m_in_daemon_shutdown_fast = false;
 	m_private_network_name = NULL;
+
+#ifdef HAVE_CLONE
+		// This will be initialized from the config file, so just set to
+		// false here.
+	m_use_clone_to_create_processes = false;
+#endif
 }
 
 // DaemonCore destructor. Delete the all the various handler tables, plus
@@ -2173,6 +2183,9 @@ DaemonCore::ReInit()
 
 void
 DaemonCore::reconfig(void) {
+	// NOTE: this function is always called on initial startup, as well
+	// as at reconfig time.
+
 		// Grab a copy of our private network name (if any).
 	if (m_private_network_name) {
 		free(m_private_network_name);
@@ -2186,6 +2199,10 @@ DaemonCore::reconfig(void) {
 		// will allow people to set with condor_config_val from
 		// various kinds of hosts (ADMINISTRATOR, CONFIG, WRITE, etc). 
 	InitSettableAttrsLists();
+
+#if HAVE_CLONE
+	m_use_clone_to_create_processes = param_boolean("USE_CLONE_TO_CREATE_PROCESSES",true);
+#endif
 }
 
 
@@ -4968,9 +4985,683 @@ void exit(int status)
 }
 #endif
 
+#ifndef WIN32
+
+/*************************************************************
+ * CreateProcessForkit is a helper class for Create_Process. *
+ * It does the fork and exec, or something equivalent, such  *
+ * as a fast clone() and exec under Linux.                   *
+ *************************************************************/
+
+class CreateProcessForkit {
+public:
+	CreateProcessForkit(
+		const int (&the_errorpipe)[2],
+		const ArgList &the_args,
+		int the_job_opt_mask,
+		const Env *the_env,
+		const MyString &the_inheritbuf,
+		pid_t the_forker_pid,
+		time_t the_time_of_fork,
+		unsigned int the_mii,
+		const FamilyInfo *the_family_info,
+		const char *the_cwd,
+		const char *the_executable,
+		const char *the_executable_fullpath,
+		const int *the_std,
+		int the_numInheritSockFds,
+		const int (&the_inheritSockFds)[MAX_INHERIT_SOCKS],
+		int the_nice_inc,
+		const priv_state &the_priv,
+		int the_want_command_port,
+		const sigset_t *the_sigmask
+	): m_errorpipe(the_errorpipe), m_args(the_args),
+	   m_job_opt_mask(the_job_opt_mask), m_env(the_env),
+	   m_inheritbuf(the_inheritbuf), m_forker_pid(the_forker_pid),
+	   m_time_of_fork(the_time_of_fork), m_mii(the_mii),
+	   m_family_info(the_family_info), m_cwd(the_cwd),
+	   m_executable(the_executable),
+	   m_executable_fullpath(the_executable_fullpath), m_std(the_std),
+	   m_numInheritSockFds(the_numInheritSockFds),
+	   m_inheritSockFds(the_inheritSockFds), m_nice_inc(the_nice_inc),
+	   m_priv(the_priv), m_want_command_port(the_want_command_port),
+	   m_sigmask(the_sigmask), m_unix_args(0), m_unix_env(0)
+	{
+	}
+
+	~CreateProcessForkit() {
+			// We have to delete these here, in the case where child and parent share
+			// memory.
+		deleteStringArray(m_unix_args);
+		deleteStringArray(m_unix_env);
+	}
+
+	pid_t fork_exec();
+	void exec();
+	static int clone_fn( void *arg );
+
+private:
+		// Data passed to us from the parent:
+		// The following are mostly const, just to avoid accidentally
+		// making changes to the parent data from the child.  The parent
+		// should expect anything that is not const to potentially be
+		// modified.
+	const int (&m_errorpipe)[2];
+	const ArgList &m_args;
+	const int m_job_opt_mask;
+	const Env *m_env;
+	const MyString &m_inheritbuf;
+	const pid_t m_forker_pid;
+	const time_t m_time_of_fork;
+	const unsigned int m_mii;
+	const FamilyInfo *m_family_info;
+	const char *m_cwd;
+	const char *m_executable;
+	const char *m_executable_fullpath;
+	const int *m_std;
+	const int m_numInheritSockFds;
+	const int (&m_inheritSockFds)[MAX_INHERIT_SOCKS];
+	int m_nice_inc;
+	const priv_state &m_priv;
+	const int m_want_command_port;
+	const sigset_t *m_sigmask; // preprocessor macros prevent us from
+	                           // using the name "sigmask" here
+
+		// Data generated internally in the child that must be
+		// cleaned up in the destructor of this class in the
+		// case where parent and child share the same address space.
+	char **m_unix_args;
+	char **m_unix_env;
+	Env m_envobject;
+	PidEnvID m_penvid;
+};
+
+enum {
+        STACK_GROWS_UP,
+        STACK_GROWS_DOWN
+};
+static int stack_direction(volatile int *ptr=NULL) {
+    volatile int location;
+    if(!ptr) return stack_direction(&location);
+    if (ptr < &location) {
+        return STACK_GROWS_UP;
+    }
+
+    return STACK_GROWS_DOWN;
+}
+
+pid_t CreateProcessForkit::fork_exec() {
+	pid_t newpid;
+
+#if HAVE_CLONE
+		// Why use clone() instead of fork?  In current versions of
+		// Linux, fork() is slower for processes with lots of memory
+		// (e.g. a big schedd), because all the page tables have to be
+		// copied for the new process.  In a future version of Linux,
+		// there will supposedly be a fix for this (making the page
+		// tables themselves copy-on-write), but this does not exist
+		// in Linux 2.6 as of today.  We could use vfork(), but the
+		// limitations of what can be safely done from within the
+		// child of vfork() are too restrictive.  So instead, we use
+		// clone() with the CLONE_VM option, which creates a child
+		// that runs in the same address space as the parent,
+		// eliminating the extra overhead of spawning children from
+		// large processes.
+
+	if( daemonCore->UseCloneToCreateProcesses() ) {
+		dprintf(D_FULLDEBUG,"Create_Process: using fast clone() "
+		                    "to create child process.\n");
+
+			// The stack size must be big enough for everything that
+			// happens in CreateProcessForkit::clone_fn().  In some
+			// environments, some extra steps may need to be taken to
+			// make a stack on the heap (to mark it as executable), so
+			// we just do it using the parent's stack space and we use
+			// CLONE_VFORK to ensure the child is done with the stack
+			// before the parent throws it away.
+		const int stack_size = 16384;
+		char child_stack[stack_size];
+
+			// Beginning of stack is at end on all processors that run
+			// Linux, except for HP PA.  Here we just detect at run-time
+			// which way it goes.
+		char *child_stack_ptr = child_stack;
+		if( stack_direction() == STACK_GROWS_DOWN ) {
+			child_stack_ptr += stack_size;
+		}
+
+			// reason for flags passed to clone:
+			// CLONE_VM    - child shares same address space (so no time
+			//               wasted copying page tables)
+			// CLONE_VFORK - parent is suspended until child calls exec/exit
+			//               (so we do not throw away child's stack etc.)
+			// SIGCHLD     - we want this signal when child dies, as opposed
+			//               to some other non-standard signal
+
+		newpid = clone(
+			CreateProcessForkit::clone_fn,
+			child_stack_ptr,
+			(CLONE_VM|CLONE_VFORK|SIGCHLD),
+			this );
+
+			// Since we used the CLONE_VFORK flag, the child has exited
+			// or called exec by now.
+
+		return newpid;
+	}
+#endif
+
+	newpid = fork();
+	if( newpid == 0 ) {
+			// in child
+		exec(); // never returns
+	}
+
+	return newpid;
+}
+
+int CreateProcessForkit::clone_fn( void *arg ) {
+		// We are now in the child branch of the clone() system call.
+		// Our parent is suspended and we are in the same address space.
+		// Now it is time to exec().
+	((CreateProcessForkit *)arg)->exec();
+	return 0;
+}
+
+void CreateProcessForkit::exec() {
+	extern char **environ;
+
+		// Keep in mind that there are two cases:
+		//   1. We got here by forking, (cannot modify parent's memory)
+		//   2. We got here by cloning, (can modify parent's memory)
+		// So don't screw up the parent's memory and don't allocate any
+		// memory assuming it will be freed on exec() or exit().  All objects
+		// that allocate memory MUST BE in data structures that are cleaned
+		// up by the parent (e.g. this instance of CreateProcessForkit).
+		// We do have our own copy of the file descriptors and signal masks.
+
+		// Also note: all calls to exit() below are calling the DaemonCore
+		// version of exit(), which will call _exit(), like we want it to.
+
+		// make sure we're not going to try to share the lock file
+		// with our parent (if it's been defined).
+	if( LockFd >= 0 ) {
+		close( LockFd );
+		LockFd = -1;
+	}
+
+		// close the read end of our error pipe and set the
+		// close-on-exec flag on the write end
+	close(m_errorpipe[0]);
+	fcntl(m_errorpipe[1], F_SETFD, FD_CLOEXEC);
+
+		/********************************************************
+			  Make sure we're not about to re-use a PID that
+			  DaemonCore still thinks is valid.  We have this problem
+			  because our reaping code on UNIX makes use of a
+			  WaitpidQueue.  Whenever we get SIGCHLD, we call
+			  waitpid() as many times as we can, and save each result
+			  into a structure we stash in a queue.  Then, when we get
+			  the chance, we service the queue and call the associated
+			  reapers.  Unfortunately, this means that once we call
+			  waitpid(), the OS thinks the PID is gone and can be
+			  re-used.  In some pathological cases, we've had shadow
+			  PIDs getting re-used, such that the schedd thought there
+			  were two shadows with the same PID, and then all hell
+			  breaks loose with exit status values getting crossed,
+			  etc.  This is the infamous "jobs-run-twice" bug.  (GNATS
+			  #PR-256).  So, if we're in the very rare, unlucky case
+			  where we just fork()'ed a new PID that's sitting in the
+			  WaitpidQueue that daemoncore still hasn't called the
+			  reaper for and removed from the PID table, we need to
+			  write out a special errno to the errorpipe and exit.
+			  The parent will recognize the errno, and just re-try.
+			  Luckily, we've got a free copy of the PID table sitting
+			  in our address space (3 cheers for copy-on-write), so we
+			  can just do the lookup directly and be done with it.
+			  Derek Wright <wright@cs.wisc.edu> 2004-12-15
+		********************************************************/
+
+	pid_t pid = ::getpid();   // must use the real getpid, not DC's
+	DaemonCore::PidEntry* pidinfo = NULL;
+	if( (daemonCore->pidTable->lookup(pid, pidinfo) >= 0) ) {
+			// we've already got this pid in our table! we've got
+			// to bail out immediately so our parent can retry.
+		int child_errno = ERRNO_PID_COLLISION;
+		write(m_errorpipe[1], &child_errno, sizeof(child_errno));
+		exit(4);
+	}
+		// If we made it here, we didn't find the PID in our
+		// table, so it's safe to continue and eventually do the
+		// exec() in this process...
+
+		/////////////////////////////////////////////////////////////////
+		// figure out what stays and goes in the child's environment
+		/////////////////////////////////////////////////////////////////
+
+		// We may determine to seed the child's environment with the parent's.
+	if( HAS_DCJOBOPT_ENV_INHERIT(m_job_opt_mask) ) {
+		m_envobject.MergeFrom((const char**)environ);
+	}
+
+		// Put the caller's env requests into the job's environment, potentially
+		// adding/overriding things in the current env if the job was allowed to
+		// inherit the parent's environment.
+	if(m_env) {
+		m_envobject.MergeFrom(*m_env);
+	}
+
+		// if I have brought in the parent's environment, then ensure that
+		// after the caller's changes have been enacted, this overrides them.
+	if( HAS_DCJOBOPT_ENV_INHERIT(m_job_opt_mask) ) {
+
+			// add/override the inherit variable with the correct value
+			// for this process.
+		m_envobject.SetEnv( EnvGetName( ENV_INHERIT ), m_inheritbuf.Value() );
+
+			// Make sure PURIFY can open windows for the daemons when
+			// they start. This functionality appears to only exist when we've
+			// decided to inherit the parent's environment. I'm not sure
+			// what the ramifications are if we include it all the time so here
+			// it stays for now.
+		char *display;
+		display = param ( "PURIFY_DISPLAY" );
+		if ( display ) {
+			m_envobject.SetEnv( "DISPLAY", display );
+			free ( display );
+			char *purebuf;
+			purebuf = (char*)malloc(sizeof(char) * 
+									(strlen("-program-name=") + strlen(m_executable) + 
+									 1));
+			if (purebuf == NULL) {
+				EXCEPT("Create_Process: PUREOPTIONS is out of memory!");
+			}
+			sprintf ( purebuf, "-program-name=%s", m_executable );
+			m_envobject.SetEnv( "PUREOPTIONS", purebuf );
+			free(purebuf);
+		}
+	}
+
+		// Now we add/override  things that must ALWAYS be in the child's 
+		// environment regardless of what is already in the child's environment.
+
+		// BEGIN pid family environment id propogation 
+		// Place the pidfamily accounting entries into our 
+		// environment if we can and hope any children.
+		// This will help ancestors track their children a little better.
+		// We should be automatically propogating the pidfamily specifying
+		// env vars in the forker process as well.
+	char envid[PIDENVID_ENVID_SIZE];
+
+	pidenvid_init(&m_penvid);
+
+		// if we weren't inheriting the parent's environment, then grab out
+		// the parent's pidfamily history... and jam it into the child's 
+		// environment
+	if ( HAS_DCJOBOPT_NO_ENV_INHERIT(m_job_opt_mask) ) {
+		int i;
+			// The parent process could not have been exec'ed if there were 
+			// too many ancestor markers in its environment, so this check
+			// is more of an assertion.
+		if (pidenvid_filter_and_insert(&m_penvid, environ) ==
+			PIDENVID_OVERSIZED)
+			{
+				dprintf ( D_ALWAYS, "Create_Process: Failed to filter ancestor "
+						  "history from parent's environment because there are more "
+						  "than PIDENVID_MAX(%d) of them! Programmer Error.\n",
+						  PIDENVID_MAX );
+					// before we exit, make sure our parent knows something
+					// went wrong before the exec...
+				write(m_errorpipe[1], &errno, sizeof(errno));
+				exit(errno); // Yes, we really want to exit here.
+			}
+
+			// Propogate the ancestor history to the child's environment
+		for (i = 0; i < PIDENVID_MAX; i++) {
+			if (m_penvid.ancestors[i].active == TRUE) { 
+				m_envobject.SetEnv( m_penvid.ancestors[i].envid );
+			} else {
+					// After the first FALSE entry, there will never be
+					// true entries.
+				break;
+			}
+		}
+	}
+
+		// create the new ancestor entry for the child's environment
+	if (pidenvid_format_to_envid(envid, PIDENVID_ENVID_SIZE, 
+								 m_forker_pid, pid, m_time_of_fork, m_mii) == PIDENVID_BAD_FORMAT) 
+		{
+			dprintf ( D_ALWAYS, "Create_Process: Failed to create envid "
+					  "\"%s\" due to bad format. !\n", envid );
+				// before we exit, make sure our parent knows something
+				// went wrong before the exec...
+			write(m_errorpipe[1], &errno, sizeof(errno));
+			exit(errno); // Yes, we really want to exit here.
+		}
+
+		// if the new entry fits into the penvid, then add it to the 
+		// environment, else EXCEPT cause it is programmer's error 
+	if (pidenvid_append(&m_penvid, envid) == PIDENVID_OK) {
+		m_envobject.SetEnv( envid );
+	} else {
+		dprintf ( D_ALWAYS, "Create_Process: Failed to insert envid "
+				  "\"%s\" because its insertion would mean more than "
+				  "PIDENVID_MAX entries in a process! Programmer "
+				  "Error.\n", envid );
+			// before we exit, make sure our parent knows something
+			// went wrong before the exec...
+		write(m_errorpipe[1], &errno, sizeof(errno));
+		exit(errno); // Yes, we really want to exit here.
+	}
+		// END pid family environment id propogation 
+
+		// The child's environment:
+	m_unix_env = m_envobject.getStringArray();
+
+
+		/////////////////////////////////////////////////////////////////
+		// figure out what stays and goes in the job's arguments
+		/////////////////////////////////////////////////////////////////
+
+	if( m_args.Count() == 0 ) {
+		dprintf(D_DAEMONCORE, "Create_Process: Arg: NULL\n");
+		ArgList tmpargs;
+		tmpargs.AppendArg(m_executable);
+		m_unix_args = tmpargs.GetStringArray();
+	}
+	else {
+		if(DebugFlags & D_DAEMONCORE) {
+			MyString arg_string;
+			m_args.GetArgsStringForDisplay(&arg_string);
+			dprintf(D_DAEMONCORE, "Create_Process: Arg: %s\n", arg_string.Value());
+		}
+		m_unix_args = m_args.GetStringArray();
+	}
+
+
+		// check to see if this is a subfamily
+	if( ( m_family_info != NULL ) ) {
+
+			//create a new process group if we are supposed to
+		if(param_boolean( "USE_PROCESS_GROUPS", true )) {
+
+				// Set sid is the POSIX way of creating a new proc group
+			if( setsid() == -1 )
+				{
+					dprintf(D_ALWAYS, "Create_Process: setsid() failed: %s\n",
+							strerror(errno) );
+						// before we exit, make sure our parent knows something
+						// went wrong before the exec...
+					write(m_errorpipe[1], &errno, sizeof(errno));
+					exit(errno); // Yes, we really want to exit here.
+				}
+		}
+
+			// regardless of whether or not we made an "official" unix
+			// process group above, ALWAYS contact the procd to register
+			// ourselves
+			//
+			// NOTE: only on Linux do we pass the structure with the
+			// environment tracking info in it, since Linux is currently
+			// the only platform for which ProcAPI can read process'
+			// environments. this is important because on MacOS, sending
+			// this structure makes the write to the ProcD's named pipe exceed
+			// PIPE_BUF, which means the write wouldn't be atomic (which
+			// means data from multiple ProcD clients could be interleaved,
+			// causing major badness)
+			//
+#if defined(LINUX)
+		PidEnvID* penvid_ptr = &m_penvid;
+#else
+		PidEnvID* penvid_ptr = NULL;
+#endif
+		ASSERT(daemonCore->m_procd_client != NULL);
+		bool ok =
+			daemonCore->m_procd_client->register_subfamily(pid,
+											   ::getppid(),
+											   m_family_info->max_snapshot_interval,
+											   penvid_ptr,
+											   m_family_info->login);
+		if (!ok) {
+			errno = ERRNO_REGISTRATION_FAILED;
+			write(m_errorpipe[1], &errno, sizeof(errno));
+			exit(4);
+		}
+	}
+
+	int openfds = getdtablesize();
+
+		// Here we have to handle re-mapping of std(in|out|err)
+	if ( m_std ) {
+
+		dprintf ( D_DAEMONCORE, "Re-mapping std(in|out|err) in child.\n");
+
+		for (int i = 0; i < 3; i++) {
+			if ( m_std[i] > -1 ) {
+				int fd = m_std[i];
+				if (fd >= PIPE_INDEX_OFFSET) {
+						// this is a DaemonCore pipe we'd like to pass down.
+						// replace the std array entry, which is an index into
+						// the pipeHandleTable, with the actual file descriptor
+					int index = fd - PIPE_INDEX_OFFSET;
+					fd = (*daemonCore->pipeHandleTable)[index];
+				}
+				if ( ( dup2 ( fd, i ) ) == -1 ) {
+					dprintf( D_ALWAYS,
+							 "dup2 of m_std[%d] failed: %s (%d)\n",
+							 i,
+							 strerror(errno),
+							 errno );
+				}
+			} else {
+					// if we don't want to inherit it, we better close
+					// what's there
+				close( i );
+			}
+		}
+
+	} else {
+		MyString msg = "Just closed standard file fd(s): ";
+
+			// If we don't want to re-map these, close 'em.
+
+			// NRL 2006-08-10: Why do we do this?  See the comment
+			// in daemon_core_main.C before the block of code that
+			// closes std in/out/err in main() -- currently, about
+			// line 1570.
+
+			// However, make sure that its not in the inherit list first
+		int	num_closed = 0;
+		int	closed_fds[3];
+		for ( int q=0 ; (q<openfds) && (q<3) ; q++ ) {
+			bool found = FALSE;
+			for ( int k=0 ; k < m_numInheritSockFds ; k++ ) {
+				if ( m_inheritSockFds[k] == q ) {
+					found = TRUE;
+					break;
+				}
+			}
+				// Now, if we didn't find it in the inherit list, close it
+			if ( ( ! found ) && ( close ( q ) != -1 ) ) {
+				closed_fds[num_closed++] = q;
+				msg += q;
+				msg += ' ';
+			}
+		}
+		dprintf( D_DAEMONCORE, "%s\n", msg.Value() );
+
+			// Re-open 'em to point at /dev/null as place holders
+		if ( num_closed ) {
+			int	fd_null = safe_open_wrapper( NULL_FILE, O_RDWR );
+			if ( fd_null < 0 ) {
+				dprintf( D_ALWAYS, "Unable to open %s: %s\n", NULL_FILE,
+						 strerror(errno) );
+			} else {
+				int		i;
+				for ( i=0;  i<num_closed;  i++ ) {
+					if ( ( closed_fds[i] != fd_null ) &&
+						 ( dup2( fd_null, closed_fds[i] ) < 0 ) ) {
+						dprintf( D_ALWAYS,
+								 "Error dup2()ing %s -> %d: %s\n",
+								 NULL_FILE,
+								 closed_fds[i], strerror(errno) );
+					}
+				}
+					// Close the /dev/null descriptor _IF_ it's not stdin/out/err
+				if ( fd_null > 2 ) {
+					close( fd_null );
+				}
+			}
+		}
+	}
+
+
+		/* Re-nice ourself */
+	if( m_nice_inc > 0 ) {
+		if( m_nice_inc > 19 ) {
+			m_nice_inc = 19;
+		}
+		dprintf ( D_DAEMONCORE, "calling nice(%d)\n", m_nice_inc );
+		nice( m_nice_inc );
+	}
+
+	MyString msg = "Printing fds to inherit: ";
+	for ( int a=0 ; a<m_numInheritSockFds ; a++ ) {
+		msg += m_inheritSockFds[a];
+		msg += ' ';
+	}
+	dprintf( D_DAEMONCORE, "%s\n", msg.Value() );
+
+	dprintf ( D_DAEMONCORE, "About to exec \"%s\"\n", m_executable_fullpath );
+
+		// !! !! !! !! !! !! !! !! !! !! !! !!
+		// !! !! !! !! !! !! !! !! !! !! !! !!
+		/* No dprintfs allowed after this! */
+		// !! !! !! !! !! !! !! !! !! !! !! !!
+		// !! !! !! !! !! !! !! !! !! !! !! !!
+
+
+		// Now we want to close all fds that aren't in the
+		// sock_inherit_list.  however, this can really screw up
+		// dprintf() because if we've still got a value in
+		// DebugLock and therefore in LockFd, once we close that
+		// fd, we're going to get a fatal error if we try to
+		// dprintf().  so, we cannot print anything to the logs
+		// once we start this process!!!
+
+		// once again, make sure that if the dprintf code opened a
+		// lock file and has an fd, that we close it before we
+		// exec() so we don't leak it.
+#if HAVE_EXT_GCB
+		/*
+		  this method currently only lives in libGCB.a, so don't even
+		  try to param() or call this function unless we're on a
+		  platform where we're using the GCB external
+		*/
+	Generic_stop_logging();
+#endif
+
+	if( LockFd >= 0 ) {
+		close( LockFd );
+		LockFd = -1;
+	}
+
+	bool found;
+	for ( int j=3 ; j < openfds ; j++ ) {
+		if ( j == m_errorpipe[1] ) continue; // don't close our errorpipe!
+
+		found = FALSE;
+		for ( int k=0 ; k < m_numInheritSockFds ; k++ ) {
+			if ( m_inheritSockFds[k] == j ) {
+				found = TRUE;
+				break;
+			}
+		}
+
+		if( !found ) {
+			close( j );
+		}
+	}
+
+		// now head into the proper priv state...
+	if ( m_priv != PRIV_UNKNOWN ) {
+			// This is tricky in the case where we share memory with our
+			// parent.  It is fine for us to switch privs (parent and child
+			// are independent in this respect), but set_priv() does some
+			// internal bookkeeping that we don't want, because the parent
+			// will see these changes and will get confused.
+		set_priv_no_memory_changes( m_priv );
+
+			// From here on, the priv-switching code doesn't know our
+			// true priv state (i.e. the priv state we just switched to),
+			// because we told it not to make any persistent changes to
+			// memory.  That's ok, because we are about to exec ourselves
+			// into oblivion anyway.
+	}
+
+	if ( m_priv != PRIV_ROOT ) {
+			// Final check to make sure we're not root anymore.
+		if( getuid() == 0 ) {
+			int priv_errno = ERRNO_EXEC_AS_ROOT;
+			write(m_errorpipe[1], &priv_errno, sizeof(priv_errno));
+			exit(4);
+		}
+	}
+
+		// switch to the cwd now that we are in user priv state
+	if ( m_cwd && m_cwd[0] ) {
+		if( chdir(m_cwd) == -1 ) {
+				// before we exit, make sure our parent knows something
+				// went wrong before the exec...
+			write(m_errorpipe[1], &errno, sizeof(errno));
+			exit(errno); // Let's exit.
+		}
+	}
+
+		// if we're starting a non-DC process, modify the signal mask.
+		// by default (i.e. if sigmask is NULL), we unblock everything
+	if ( !m_want_command_port ) {
+		const sigset_t* new_mask = m_sigmask;
+		sigset_t empty_mask;
+		if (new_mask == NULL) {
+			sigemptyset(&empty_mask);
+			new_mask = &empty_mask;
+		}
+		if (sigprocmask(SIG_SETMASK, new_mask, NULL) == -1) {
+			write(m_errorpipe[1], &errno, sizeof(errno));
+			exit(errno);
+		}
+	}
+
+#if defined(LINUX) && defined(TDP)
+	if( HAS_DCJOBOPT_SUSPEND_ON_EXEC(m_job_opt_mask) ) {
+		if(ptrace(PTRACE_TRACEME, 0, 0, 0) == -1) {
+			write(m_errorpipe[1], &errno, sizeof(errno));
+			exit (errno);
+		}
+	}
+#endif
+
+	pidenvid_optimize_final_env(m_unix_env);
+
+		// and ( finally ) exec:
+	int exec_results;
+	exec_results =  execve(m_executable_fullpath, m_unix_args, m_unix_env);
+
+	if( exec_results == -1 ) {
+			// We no longer have privs to dprintf. :-(.
+			// Let's exit with our errno.
+			// before we exit, make sure our parent knows something
+			// went wrong before the exec...
+		write(m_errorpipe[1], &errno, sizeof(errno));
+		exit(errno); // Yes, we really want to exit here.
+	}
+}
+#endif
 
 int DaemonCore::Create_Process(
-			const char    *name,
+			const char    *executable,
 			ArgList const &args,
 			priv_state    priv,
 			int           reaper_id,
@@ -4990,6 +5681,8 @@ int DaemonCore::Create_Process(
 	int inheritSockFds[MAX_INHERIT_SOCKS];
 	int numInheritSockFds = 0;
 	extern char **environ;
+	MyString executable_buf;
+
 
 	//saved errno (if any) to pass back to caller
 	//Currently, only stuff that would be of interest to the user
@@ -4997,19 +5690,17 @@ int DaemonCore::Create_Process(
 	int return_errno = 0;
 	pid_t newpid = FALSE; //return FALSE to caller, by default
 
-	// Name buffer to really use
-	const char	*namebuf = strdup( name );
-	if ( NULL == namebuf ) {
-		dprintf( D_ALWAYS, "strdup failed!\n" );
-		return FALSE;
-	}
-
 	MyString inheritbuf;
 		// note that these are on the stack; they go away nicely
 		// upon return from this function.
 	ReliSock rsock;
 	SafeSock ssock;
 	PidEntry *pidtmp;
+
+	/* this will be the pidfamily ancestor identification information */
+	time_t time_of_fork;
+	unsigned int mii;
+	pid_t forker_pid;
 
 
 #ifdef WIN32
@@ -5030,9 +5721,12 @@ int DaemonCore::Create_Process(
 	int inherit_handles;
 	int max_pid_retry = 0;
 	static int num_pid_collisions = 0;
+	int errorpipe[2];
+	MyString executable_fullpath_buf;
+	char const *executable_fullpath = executable;
 #endif
 
-	dprintf(D_DAEMONCORE,"In DaemonCore::Create_Process(%s,...)\n",namebuf);
+	dprintf(D_DAEMONCORE,"In DaemonCore::Create_Process(%s,...)\n",executable ? executable : "NULL");
 
 	// First do whatever error checking we can that is not platform specific
 
@@ -5044,7 +5738,7 @@ int DaemonCore::Create_Process(
 	}
 
 	// check name validity
-	if ( !namebuf ) {
+	if ( !executable ) {
 		dprintf(D_ALWAYS,"Create_Process: null name to exec\n");
 		goto wrapup;
 	}
@@ -5177,11 +5871,6 @@ int DaemonCore::Create_Process(
         inheritSockFds[numInheritSockFds++] = ssock.get_file_desc();
 	}
 	inheritbuf += " 0";
-
-	/* this will be the pidfamily ancestor identification information */
-	time_t time_of_fork;
-	unsigned int mii;
-	pid_t forker_pid;
 
 	/* this stuff ends up in the child's environment to help processes
 		identify children/grandchildren/great-grandchildren/etc. */
@@ -5355,7 +6044,7 @@ int DaemonCore::Create_Process(
 	// failed.  So we init the part of the structure we care about and just
 	// ignore the return value.
 	loaded.fDOSImage = FALSE;
-	MapAndLoad((char *)namebuf, NULL, &loaded, FALSE, TRUE);
+	MapAndLoad((char *)executable, NULL, &loaded, FALSE, TRUE);
 	if (loaded.fDOSImage == TRUE)
 		bIs16Bit = true;
 	UnMapAndLoad(&loaded);
@@ -5363,12 +6052,12 @@ int DaemonCore::Create_Process(
 	// CreateProcess requires different params for 16-bit apps:
 	//		NULL for the app name
 	//		args begins with app name
-	namelen = strlen(namebuf);
+	namelen = strlen(executable);
 	if (bIs16Bit)
 	{
 		// surround the executable name with quotes or you'll have problems
 		// when the execute directory contains spaces!
-		strArgs = "\"" + MyString(namebuf) + MyString("\" ");
+		strArgs = "\"" + MyString(executable) + MyString("\" ");
 
 		// make sure we're only using backslashes
 		strArgs.replaceString("/", "\\", 0);
@@ -5379,20 +6068,20 @@ int DaemonCore::Create_Process(
 		dprintf(D_ALWAYS, "Create_Process: 16-bit job detected, args=%s\n", args);
 
 
-	} else if ( (stricmp(".bat",&(namebuf[namelen-4])) == 0) ||
-			(stricmp(".cmd",&(namebuf[namelen-4])) == 0) ) {
+	} else if ( (stricmp(".bat",&(executable[namelen-4])) == 0) ||
+			(stricmp(".cmd",&(executable[namelen-4])) == 0) ) {
 
 		char systemshell[_POSIX_PATH_MAX+1];
 
 		// next, stuff the extra cmd.exe args in with the arguments
-		strArgs = " /Q /C \"" + MyString(namebuf) + MyString("\" ");
+		strArgs = " /Q /C \"" + MyString(executable) + MyString("\" ");
 
 		// now find out where cmd.exe lives on this box and
 		// set it to our executable
 		::GetSystemDirectory(systemshell, MAX_PATH);
 		strncat(systemshell, "\\cmd.exe", _POSIX_PATH_MAX);
-		free((void*)namebuf);
-		namebuf = strdup(systemshell);
+		executable_buf = systemshell;
+		executable = executable_buf.Value();
 
 		// skip argv[0], since that will goof up the args to the batch
 		// script.
@@ -5400,7 +6089,7 @@ int DaemonCore::Create_Process(
 		args_success = args.GetArgsStringWin32(&strArgs,first_arg_to_copy,&args_errors);
 
 		dprintf(D_ALWAYS, "Executable is a batch script, so executing %s %s\n",
-			namebuf, strArgs.Value());
+			executable, strArgs.Value());
 	}
 	else {
 		first_arg_to_copy = 0;
@@ -5414,7 +6103,7 @@ int DaemonCore::Create_Process(
 
 	BOOL cp_result, gbt_result;
 	DWORD binType;
-	gbt_result = GetBinaryType(namebuf, &binType);
+	gbt_result = GetBinaryType(executable, &binType);
 
 	// test if the executable is either unexecutable, or if GetBinaryType()
 	// thinks its a DOS 16-bit app, but in reality the actual binary
@@ -5422,7 +6111,7 @@ int DaemonCore::Create_Process(
 	if ( !gbt_result || ( binType == SCS_DOS_BINARY && !bIs16Bit) ) {
 
 		dprintf(D_ALWAYS, "ERROR: %s is not a valid Windows executable\n",
-			   	namebuf);
+			   	executable);
 		cp_result = 0;
 
 		goto wrapup;
@@ -5448,7 +6137,7 @@ int DaemonCore::Create_Process(
 	}	
 
    	if ( priv != PRIV_USER_FINAL || !can_switch_ids() ) {
-		cp_result = ::CreateProcess(bIs16Bit ? NULL : namebuf,(char*)strArgs.Value(),NULL,
+		cp_result = ::CreateProcess(bIs16Bit ? NULL : executable,(char*)strArgs.Value(),NULL,
 			NULL,inherit_handles, create_process_flags,newenv,cwd,&si,&piProcess);
 	} else {
 		// here we want to create a process as user for PRIV_USER_FINAL
@@ -5498,7 +6187,7 @@ int DaemonCore::Create_Process(
 
 		priv_state s = set_user_priv();
 
-		cp_result = ::CreateProcessAsUser(user_token,bIs16Bit ? NULL : namebuf,
+		cp_result = ::CreateProcessAsUser(user_token,bIs16Bit ? NULL : executable,
 			(char *)strArgs.Value(),NULL,NULL, inherit_handles,
 			create_process_flags, newenv,cwd,&si,&piProcess);
 
@@ -5547,7 +6236,6 @@ int DaemonCore::Create_Process(
 	}
 #else
 	// START A NEW PROCESS ON UNIX
-	int exec_results;
 
 		// We have to do some checks on the executable name and the
 		// cwd before we fork.  We want to do these in priv state
@@ -5564,11 +6252,11 @@ int DaemonCore::Create_Process(
 	}
 
 	// First, check to see that the specified executable exists.
-	if( access(namebuf,F_OK | X_OK) < 0 ) {
+	if( access(executable,F_OK | X_OK) < 0 ) {
 		return_errno = errno;
 		dprintf( D_ALWAYS, "Create_Process: "
 				 "Cannot access specified executable \"%s\": "
-				 "errno = %d (%s)\n", namebuf, errno, strerror(errno) );
+				 "errno = %d (%s)\n", executable, errno, strerror(errno) );
 		if ( priv != PRIV_UNKNOWN ) {
 			set_priv( current_priv );
 		}
@@ -5595,6 +6283,29 @@ int DaemonCore::Create_Process(
 		set_priv( current_priv );
 	}
 
+		// if we're given a relative path (in name) AND we want to cwd
+		// here, we have to prepend stuff to name make it the full path.
+		// Otherwise, we change directory and execv fails.
+
+	if( cwd && (cwd[0] != '\0') ) {
+
+		if ( executable[0] != '/' ) {   // relative path
+			char currwd[_POSIX_PATH_MAX];
+			if ( getcwd( currwd, _POSIX_PATH_MAX ) == NULL ) {
+				dprintf ( D_ALWAYS, "Create_Process: getcwd failed\n" );
+				goto wrapup;
+			}
+
+			executable_fullpath_buf.sprintf("%s/%s", currwd, executable);
+			executable_fullpath = executable_fullpath_buf.Value();
+
+				// Finally, log it
+			dprintf ( D_DAEMONCORE, "Full path exec name: %s\n", executable_fullpath );
+		}
+
+	}
+
+
 		// Before we fork, we want to setup some communication with
 		// our child in case something goes wrong before the exec.  We
 		// don't want the child to exit if the exec fails, since we
@@ -5606,7 +6317,6 @@ int DaemonCore::Create_Process(
 		// If it is closed before there is any data sent, then the
 		// exec succeeded.  Otherwise, it reads the errno and returns
 		// that to the caller.  --Jim B. (Apr 13 2000)
-	int errorpipe[2];
 	if (pipe(errorpipe) < 0) {
 		dprintf(D_ALWAYS,"Create_Process: pipe() failed with errno %d (%s).\n",
 				errno, strerror(errno));
@@ -5640,555 +6350,36 @@ int DaemonCore::Create_Process(
 		}
 	}
 
-	newpid = fork();
-	if( newpid == 0 ) // Child Process
 	{
-			// make sure we're not going to try to share the lock file
-			// with our parent (if it's been defined).
-		if( LockFd >= 0 ) {
-			close( LockFd );
-			LockFd = -1;
-		}
+			// Create a "forkit" object to hold all the state that we need in the child.
+			// In some cases, the "fork" will actually be a clone() operation, which
+			// is why we have to package all the state into something we can pass to
+			// another function, rather than just doing it all inline here.
+		CreateProcessForkit forkit(
+			errorpipe,
+			args,
+			job_opt_mask,
+			env,
+			inheritbuf,
+			forker_pid,
+			time_of_fork,
+			mii,
+			family_info,
+			cwd,
+			executable,
+			executable_fullpath,
+			std,
+			numInheritSockFds,
+			inheritSockFds,
+			nice_inc,
+			priv,
+			want_command_port,
+			sigmask);
 
-			// close the read end of our error pipe and set the
-			// close-on-exec flag on the write end
-		close(errorpipe[0]);
-		fcntl(errorpipe[1], F_SETFD, FD_CLOEXEC);
-
-			/********************************************************
-			  Make sure we're not about to re-use a PID that
-			  DaemonCore still thinks is valid.  We have this problem
-			  because our reaping code on UNIX makes use of a
-			  WaitpidQueue.  Whenever we get SIGCHLD, we call
-			  waitpid() as many times as we can, and save each result
-			  into a structure we stash in a queue.  Then, when we get
-			  the chance, we service the queue and call the associated
-			  reapers.  Unfortunately, this means that once we call
-			  waitpid(), the OS thinks the PID is gone and can be
-			  re-used.  In some pathological cases, we've had shadow
-			  PIDs getting re-used, such that the schedd thought there
-			  were two shadows with the same PID, and then all hell
-			  breaks loose with exit status values getting crossed,
-			  etc.  This is the infamous "jobs-run-twice" bug.  (GNATS
-			  #PR-256).  So, if we're in the very rare, unlucky case
-			  where we just fork()'ed a new PID that's sitting in the
-			  WaitpidQueue that daemoncore still hasn't called the
-			  reaper for and removed from the PID table, we need to
-			  write out a special errno to the errorpipe and exit.
-			  The parent will recognize the errno, and just re-try.
-			  Luckily, we've got a free copy of the PID table sitting
-			  in our address space (3 cheers for copy-on-write), so we
-			  can just do the lookup directly and be done with it.
-			  Derek Wright <wright@cs.wisc.edu> 2004-12-15
-			********************************************************/
-
-		pid_t pid = ::getpid();   // must use the real getpid, not DC's
-		PidEntry* pidinfo = NULL;
-		if( (pidTable->lookup(pid, pidinfo) >= 0) ) {
-				// we've already got this pid in our table! we've got
-				// to bail out immediately so our parent can retry.
-			int child_errno = ERRNO_PID_COLLISION;
-			write(errorpipe[1], &child_errno, sizeof(child_errno));
-			exit(4);
-		}
-			// If we made it here, we didn't find the PID in our
-			// table, so it's safe to continue and eventually do the
-			// exec() in this process...
-
-		/////////////////////////////////////////////////////////////////
-		// figure out what stays and goes in the child's environment
-		/////////////////////////////////////////////////////////////////
-		char **unix_env;
-		Env envobject;
-
-		// We may determine to seed the child's environment with the parent's.
-		if( HAS_DCJOBOPT_ENV_INHERIT(job_opt_mask) ) {
-			envobject.MergeFrom((const char**)environ);
-		}
-
-		// Put the caller's env requests into the job's environment, potentially
-		// adding/overriding things in the current env if the job was allowed to
-		// inherit the parent's environment.
-		if(env) {
-			envobject.MergeFrom(*env);
-		}
-
-		// if I have brought in the parent's environment, then ensure that
-		// after the caller's changes have been enacted, this overrides them.
-		if( HAS_DCJOBOPT_ENV_INHERIT(job_opt_mask) ) {
-
-			// add/override the inherit variable with the correct value
-			// for this process.
-			envobject.SetEnv( EnvGetName( ENV_INHERIT ), inheritbuf.Value() );
-
-			// Make sure PURIFY can open windows for the daemons when
-			// they start. This functionality appears to only exist when we've
-			// decided to inherit the parent's environment. I'm not sure
-			// what the ramifications are if we include it all the time so here
-			// it stays for now.
-        	char *display;
-        	display = param ( "PURIFY_DISPLAY" );
-        	if ( display ) {
-            	envobject.SetEnv( "DISPLAY", display );
-            	free ( display );
-            	char *purebuf;
-				purebuf = (char*)malloc(sizeof(char) * 
-								(strlen("-program-name=") + strlen(namebuf) + 
-								1));
-				if (purebuf == NULL) {
-					EXCEPT("Create_Process: PUREOPTIONS is out of memory!");
-				}
-            	sprintf ( purebuf, "-program-name=%s", namebuf );
-            	envobject.SetEnv( "PUREOPTIONS", purebuf );
-				free(purebuf);
-        	}
-		}
-
-		// Now we add/override  things that must ALWAYS be in the child's 
-		// environment regardless of what is already in the child's environment.
-
-		// BEGIN pid family environment id propogation 
-		// Place the pidfamily accounting entries into our 
-		// environment if we can and hope any children.
-		// This will help ancestors track their children a little better.
-		// We should be automatically propogating the pidfamily specifying
-		// env vars in the forker process as well.
-		char envid[PIDENVID_ENVID_SIZE];
-		PidEnvID penvid;
-
-		pidenvid_init(&penvid);
-
-		// if we weren't inheriting the parent's environment, then grab out
-		// the parent's pidfamily history... and jam it into the child's 
-		// environment
-		if ( HAS_DCJOBOPT_NO_ENV_INHERIT(job_opt_mask) ) {
-			int i;
-			// The parent process could not have been exec'ed if there were 
-			// too many ancestor markers in its environment, so this check
-			// is more of an assertion.
-			if (pidenvid_filter_and_insert(&penvid, environ) ==
-					PIDENVID_OVERSIZED)
-			{
-				dprintf ( D_ALWAYS, "Create_Process: Failed to filter ancestor "
-				  	"history from parent's environment because there are more "
-					"than PIDENVID_MAX(%d) of them! Programmer Error.\n",
-					PIDENVID_MAX );
-				// before we exit, make sure our parent knows something
-				// went wrong before the exec...
-				write(errorpipe[1], &errno, sizeof(errno));
-				exit(errno); // Yes, we really want to exit here.
-			}
-
-			// Propogate the ancestor history to the child's environment
-			for (i = 0; i < PIDENVID_MAX; i++) {
-				if (penvid.ancestors[i].active == TRUE) { 
-					envobject.SetEnv( penvid.ancestors[i].envid );
-				} else {
-					// After the first FALSE entry, there will never be
-					// true entries.
-					break;
-				}
-			}
-		}
-
-		// create the new ancestor entry for the child's environment
-		if (pidenvid_format_to_envid(envid, PIDENVID_ENVID_SIZE, 
-				forker_pid, pid, time_of_fork, mii) == PIDENVID_BAD_FORMAT) 
-		{
-			dprintf ( D_ALWAYS, "Create_Process: Failed to create envid "
-				  	"\"%s\" due to bad format. !\n", envid );
-				// before we exit, make sure our parent knows something
-				// went wrong before the exec...
-			write(errorpipe[1], &errno, sizeof(errno));
-			exit(errno); // Yes, we really want to exit here.
-		}
-
-		// if the new entry fits into the penvid, then add it to the 
-		// environment, else EXCEPT cause it is programmer's error 
-		if (pidenvid_append(&penvid, envid) == PIDENVID_OK) {
-			envobject.SetEnv( envid );
-		} else {
-			dprintf ( D_ALWAYS, "Create_Process: Failed to insert envid "
-				  	"\"%s\" because its insertion would mean more than "
-					"PIDENVID_MAX entries in a process! Programmer "
-					"Error.\n", envid );
-				// before we exit, make sure our parent knows something
-				// went wrong before the exec...
-			write(errorpipe[1], &errno, sizeof(errno));
-			exit(errno); // Yes, we really want to exit here.
-		}
-		// END pid family environment id propogation 
-
-		// The child's environment:
-		unix_env = envobject.getStringArray();
-
-		/////////////////////////////////////////////////////////////////
-		// figure out what stays and goes in the job's arguments
-		/////////////////////////////////////////////////////////////////
-		char **unix_args;
-		
-		// set up the args to the process
-		if( args.Count() == 0 ) {
-			dprintf(D_DAEMONCORE, "Create_Process: Arg: NULL\n");
-			unix_args = new char*[2];
-			unix_args[0] = new char[strlen(namebuf)+1];
-			strcpy ( unix_args[0], namebuf );
-			unix_args[1] = 0;
-		}
-		else {
-			if(DebugFlags & D_DAEMONCORE) {
-				MyString arg_string;
-				args.GetArgsStringForDisplay(&arg_string);
-				dprintf(D_DAEMONCORE, "Create_Process: Arg: %s\n", arg_string.Value());
-			}
-			unix_args = args.GetStringArray();
-		}
-
-		// check to see if this is a subfamily
-		if( ( family_info != NULL ) ) {
-
-			//create a new process group if we are supposed to
-			if(param_boolean( "USE_PROCESS_GROUPS", true )) {
-
-				// Set sid is the POSIX way of creating a new proc group
-				if( setsid() == -1 )
-				{
-					dprintf(D_ALWAYS, "Create_Process: setsid() failed: %s\n",
-							strerror(errno) );
-						// before we exit, make sure our parent knows something
-						// went wrong before the exec...
-					write(errorpipe[1], &errno, sizeof(errno));
-					exit(errno); // Yes, we really want to exit here.
-				}
-			}
-
-			// regardless of whether or not we made an "official" unix
-			// process group above, ALWAYS contact the procd to register
-			// ourselves
-			//
-			// NOTE: only on Linux do we pass the structure with the
-			// environment tracking info in it, since Linux is currently
-			// the only platform for which ProcAPI can read process'
-			// environments. this is important because on MacOS, sending
-			// this structure makes the write to the ProcD's named pipe exceed
-			// PIPE_BUF, which means the write wouldn't be atomic (which
-			// means data from multiple ProcD clients could be interleaved,
-			// causing major badness)
-			//
-#if defined(LINUX)
-			PidEnvID* penvid_ptr = &penvid;
-#else
-			PidEnvID* penvid_ptr = NULL;
-#endif
-			ASSERT(m_procd_client != NULL);
-			bool ok =
-				m_procd_client->register_subfamily(pid,
-			                                       ::getppid(),
-				                                   family_info->max_snapshot_interval,
-				                                   penvid_ptr,
-				                                   family_info->login);
-			if (!ok) {
-				errno = ERRNO_REGISTRATION_FAILED;
-				write(errorpipe[1], &errno, sizeof(errno));
-				exit(4);
-			}
-		}
-
-			// if we're given a relative path (in name) AND we want to cwd
-			// here, we have to prepend stuff to name make it the full path.
-			// Otherwise, we change directory and execv fails.
-
-		if( cwd && (cwd[0] != '\0') ) {
-
-			if ( name[0] != '/' ) {   // relative path
-				char currwd[_POSIX_PATH_MAX];
-				if ( getcwd( currwd, _POSIX_PATH_MAX ) == NULL ) {
-					dprintf ( D_ALWAYS, "Create_Process: getcwd failed\n" );
-						// before we exit, make sure our parent knows something
-						// went wrong before the exec...
-					write(errorpipe[1], &errno, sizeof(errno));
-					exit(errno);
-				}
-
-				// Allocate a new buffer to store the modified name
-				const char	*origname = namebuf;
-				int			namelen = strlen( namebuf ) + strlen ( currwd ) + 2;
-
-				// Allocate the "final" buffer to use
-				char *nametmp = (char *) malloc( namelen );
-				if ( NULL == nametmp ) {
-					dprintf( D_ALWAYS, "malloc(%d) failed!\n", namelen );
-					exit(ENOMEM);
-				}
-
-				// Build the new (absolute) name in nametmp2
-				strcpy( nametmp, currwd );
-				strcat( nametmp, "/" );
-				strcat( nametmp, origname );
-
-				// Done with the original buffer
-				free( (void *) origname );
-
-				// Ok, we're done modifying the buffer, stuff it back
-				// into our const char * namebuf
-				namebuf = (const char *) nametmp;
-
-				// Finally, log it
-				dprintf ( D_DAEMONCORE, "Full path exec name: %s\n", namebuf );
-			}
-
-		}
-
-		int openfds = getdtablesize();
-
-			// Here we have to handle re-mapping of std(in|out|err)
-		if ( std ) {
-
-			dprintf ( D_DAEMONCORE, "Re-mapping std(in|out|err) in child.\n");
-
-			for (int i = 0; i < 3; i++) {
-				if ( std[i] > -1 ) {
-					if (std[i] >= PIPE_INDEX_OFFSET) {
-						// this is a DaemonCore pipe we'd like to pass down.
-						// replace the std array entry, which is an index into
-						// the pipeHandleTable, with the actual file descriptor
-						int index = std[i] - PIPE_INDEX_OFFSET;
-						std[i] = (*pipeHandleTable)[index];
-					}
-					if ( ( dup2 ( std[i], i ) ) == -1 ) {
-						dprintf( D_ALWAYS,
-						         "dup2 of std[%d] failed: %s (%d)\n",
-						         i,
-						         strerror(errno),
-								 errno );
-					}
-				} else {
-						// if we don't want to inherit it, we better close
-						// what's there
-					close( i );
-				}
-			}
-
-		} else {
-			MyString msg = "Just closed standard file fd(s): ";
-
-                // If we don't want to re-map these, close 'em.
-
-				// NRL 2006-08-10: Why do we do this?  See the comment
-				// in daemon_core_main.C before the block of code that
-				// closes std in/out/err in main() -- currently, about
-				// line 1570.
-
-			    // However, make sure that its not in the inherit list first
-			int	num_closed = 0;
-			int	closed_fds[3];
-            for ( int q=0 ; (q<openfds) && (q<3) ; q++ ) {
-				bool found = FALSE;
-				for ( int k=0 ; k < numInheritSockFds ; k++ ) {
-					if ( inheritSockFds[k] == q ) {
-						found = TRUE;
-						break;
-					}
-				}
-				// Now, if we didn't find it in the inherit list, close it
-                if ( ( ! found ) && ( close ( q ) != -1 ) ) {
-					closed_fds[num_closed++] = q;
-					msg += q;
-					msg += ' ';
-                }
-            }
-			dprintf( D_DAEMONCORE, "%s\n", msg.Value() );
-
-			// Re-open 'em to point at /dev/null as place holders
-			if ( num_closed ) {
-				int	fd_null = safe_open_wrapper( NULL_FILE, O_RDWR );
-				if ( fd_null < 0 ) {
-					dprintf( D_ALWAYS, "Unable to open %s: %s\n", NULL_FILE,
-							 strerror(errno) );
-				} else {
-					int		i;
-					for ( i=0;  i<num_closed;  i++ ) {
-						if ( ( closed_fds[i] != fd_null ) &&
-							 ( dup2( fd_null, closed_fds[i] ) < 0 ) ) {
-							dprintf( D_ALWAYS,
-									 "Error dup2()ing %s -> %d: %s\n",
-									 NULL_FILE,
-									 closed_fds[i], strerror(errno) );
-						}
-					}
-					// Close the /dev/null descriptor _IF_ it's not stdin/out/err
-					if ( fd_null > 2 ) {
-						close( fd_null );
-					}
-				}
-			}
-        }
-
-			/* here we want to put all the unix_env stuff into the
-			   environment.  We also want to drop CONDOR_INHERIT in.
-			   Thus, the environment should consist of
-			    - The parent's environment
-				- The stuff passed into Create_Process in env
-				- CONDOR_INHERIT
-			*/
-
-		for ( int j=0 ; (unix_env[j] && unix_env[j][0]) ; j++ ) {
-			if ( !SetEnv( unix_env[j] ) ) {
-				dprintf ( D_ALWAYS, "Create_Process: Failed to put "
-						  "\"%s\" into environment.\n", unix_env[j] );
-					// before we exit, make sure our parent knows something
-					// went wrong before the exec...
-				write(errorpipe[1], &errno, sizeof(errno));
-				exit(errno); // Yes, we really want to exit here.
-			}
-		}
-
-			// Place inheritbuf into the environment as
-			// env variable CONDOR_INHERIT
-			// SetEnv makes a copy of everything.
-		if( !SetEnv( EnvGetName( ENV_INHERIT ), inheritbuf.Value() ) ) {
-			dprintf(D_ALWAYS, "Create_Process: Failed to set %s env.\n",
-					EnvGetName( ENV_INHERIT ) );
-				// before we exit, make sure our parent knows something
-				// went wrong before the exec...
-			write(errorpipe[1], &errno, sizeof(errno));
-			exit(errno); // Yes, we really want to exit here.
-		}
-
-            /* Re-nice ourself */
-        if( nice_inc > 0 ) {
-			if( nice_inc > 19 ) {
-				nice_inc = 19;
-			}
-            dprintf ( D_DAEMONCORE, "calling nice(%d)\n", nice_inc );
-            nice( nice_inc );
-        }
-
-		MyString msg = "Printing fds to inherit: ";
-        for ( int a=0 ; a<numInheritSockFds ; a++ ) {
-			msg += inheritSockFds[a];
-			msg += ' ';
-        }
-        dprintf( D_DAEMONCORE, "%s\n", msg.Value() );
-
-		dprintf ( D_DAEMONCORE, "About to exec \"%s\"\n", namebuf );
-
-			// !! !! !! !! !! !! !! !! !! !! !! !!
-			// !! !! !! !! !! !! !! !! !! !! !! !!
-			/* No dprintfs allowed after this! */
-			// !! !! !! !! !! !! !! !! !! !! !! !!
-			// !! !! !! !! !! !! !! !! !! !! !! !!
-
-
-			// Now we want to close all fds that aren't in the
-			// sock_inherit_list.  however, this can really screw up
-			// dprintf() because if we've still got a value in
-			// DebugLock and therefore in LockFd, once we close that
-			// fd, we're going to get a fatal error if we try to
-			// dprintf().  so, we cannot print anything to the logs
-			// once we start this process!!!
-
-			// once again, make sure that if the dprintf code opened a
-			// lock file and has an fd, that we close it before we
-			// exec() so we don't leak it.
-#if HAVE_EXT_GCB
-		/*
-		  this method currently only lives in libGCB.a, so don't even
-		  try to param() or call this function unless we're on a
-		  platform where we're using the GCB external
-		*/
-        Generic_stop_logging();
-#endif
-
-		if( LockFd >= 0 ) {
-			close( LockFd );
-			LockFd = -1;
-		}
-
-		bool found;
-		for ( int j=3 ; j < openfds ; j++ ) {
-			if ( j == errorpipe[1] ) continue; // don't close our errorpipe!
-
-			found = FALSE;
-			for ( int k=0 ; k < numInheritSockFds ; k++ ) {
-                if ( inheritSockFds[k] == j ) {
-					found = TRUE;
-					break;
-				}
-			}
-
-			if( !found ) {
-				close( j );
-            }
-		}
-
-			// now head into the proper priv state...
-		if ( priv != PRIV_UNKNOWN ) {
-			set_priv(priv);
-		}
-
-		if ( priv != PRIV_ROOT ) {
-				// Final check to make sure we're not root anymore.
-			if( getuid() == 0 ) {
-				int priv_errno = ERRNO_EXEC_AS_ROOT;
-				write(errorpipe[1], &priv_errno, sizeof(priv_errno));
-				exit(4);
-			}
-		}
-
-			// switch to the cwd now that we are in user priv state
-		if ( cwd && cwd[0] ) {
-			if( chdir(cwd) == -1 ) {
-					// before we exit, make sure our parent knows something
-					// went wrong before the exec...
-				write(errorpipe[1], &errno, sizeof(errno));
-				exit(errno); // Let's exit.
-			}
-		}
-
-			// if we're starting a non-DC process, modify the signal mask.
-			// by default (i.e. if sigmask is NULL), we unblock everything
-		if ( !want_command_port ) {
-			sigset_t* new_mask = sigmask;
-			sigset_t empty_mask;
-			if (new_mask == NULL) {
-				sigemptyset(&empty_mask);
-				new_mask = &empty_mask;
-			}
-			if (sigprocmask(SIG_SETMASK, new_mask, NULL) == -1) {
-				write(errorpipe[1], &errno, sizeof(errno));
-				exit(errno);
-			}
-		}
-
-#if defined(LINUX) && defined(TDP)
-		if( HAS_DCJOBOPT_SUSPEND_ON_EXEC(job_opt_mask) ) {
-			if(ptrace(PTRACE_TRACEME, 0, 0, 0) == -1) {
-			    write(errorpipe[1], &errno, sizeof(errno));
-			    exit (errno);
-			}
-		}
-#endif
-
-			// and ( finally ) exec:
-		if( HAS_DCJOBOPT_NO_ENV_INHERIT(job_opt_mask) ) {
-			pidenvid_optimize_final_env(unix_env);
-			exec_results =  execve(namebuf, unix_args, unix_env);
-		} else {
-			pidenvid_optimize_final_env(environ);
-			exec_results =  execv(namebuf, unix_args);
-		}
-		if( exec_results == -1 )
-		{
-				// We no longer have privs to dprintf. :-(.
-				// Let's exit with our errno.
-				// before we exit, make sure our parent knows something
-				// went wrong before the exec...
-			write(errorpipe[1], &errno, sizeof(errno));
-			exit(errno); // Yes, we really want to exit here.
-		}
+		newpid = forkit.fork_exec();
 	}
-	else if( newpid > 0 ) // Parent Process
+
+	if( newpid > 0 ) // fork succeeded
 	{
 		// if we were told to set the child's signal mask, we ANDed
 		// those signals into our own mask right before the fork (see
@@ -6262,7 +6453,6 @@ int DaemonCore::Create_Process(
 					// default cleanup ourselves so we don't leak any
 					// memory or fds...
 				close(errorpipe[0]);
-				free( (void *) namebuf );
 					// we also need to close the command sockets we've
 					// got open sitting on our stack, so that if we're
 					// trying to spawn using a fixed port, we won't
@@ -6272,7 +6462,7 @@ int DaemonCore::Create_Process(
 				ssock.close();
 				dprintf( D_ALWAYS, "Re-trying Create_Process() to avoid "
 						 "PID re-use\n" );
-				return Create_Process( name, args, priv, reaper_id,
+				return Create_Process( executable, args, priv, reaper_id,
 									   want_command_port, env, cwd,
 									   family_info,
 									   sock_inherit_list, std,
@@ -6383,8 +6573,6 @@ int DaemonCore::Create_Process(
 	// the stack (rsock and ssock), they will get closed when we return.
 
  wrapup:
-	// Free up the name buffer
-	free( (void *) namebuf );
 
 #ifndef WIN32
 		// if we're here, it means we did NOT have a pid collision, or

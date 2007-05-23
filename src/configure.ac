@@ -1632,6 +1632,17 @@ AC_CHECK_FUNCS([stat64])
 AC_CHECK_FUNC(dlopen, ,AC_CHECK_LIB(dl, dlopen))
 AC_CHECK_FUNC(crypt, ,AC_CHECK_LIB(crypt,crypt))
 
+# If we can't find clone() on linux (for fast forking from large
+# processes), then somebody better understand why; so produce a fatal
+# error here.  Under IA64, there is a different interface to clone
+# (clone2), and the header files appear to be out of sync with the
+# library, so avoid using clone() on that architecture.
+# Also, ppc64 is not working with clone().  Disable until we have
+# reason to investigate.
+if test $os = "Linux" && test $arch != "ia64" && test $arch != "ppc64"; then
+  AC_CHECK_DECLS([clone,CLONE_VM,CLONE_VFORK],[AC_DEFINE([HAVE_CLONE],[1],[Define to 1 to use clone() for fast forking])],[AC_MSG_ERROR( [expecting to find clone() on this platform] )],[#include<sched.h>])
+fi
+
 AC_CHECK_DECLS([res_init],[],[],[
 #include<sys/types.h>
 #include<netinet/in.h>

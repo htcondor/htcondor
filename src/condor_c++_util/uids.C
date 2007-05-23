@@ -1138,7 +1138,24 @@ _set_priv(priv_state s, char file[], int line, int dologging)
 			dprintf( D_ALWAYS, "set_priv: Unknown priv state %d\n", (int)s);
 		}
 	}
-	if (dologging) log_priv(PrevPrivState, CurrentPrivState, file, line);
+	if( dologging == NO_PRIV_MEMORY_CHANGES ) {
+			// This is a special case for the call to set_priv from
+			// within a child process, just before exec(), where the
+			// child may be sharing memory with the parent, and
+			// therefore doesn't want to have set_priv() mess up the
+			// parent's memory of what priv state the parent is in.
+			// It is ok that we temporarily changed the
+			// CurrentPrivState variable above in a non-thread-safe
+			// way, because the parent is suspended, but before
+			// returning, we must set it back to what it was. For the
+			// rest of the life of the child, CurrentPrivState is a
+			// lie.
+		CurrentPrivState = PrevPrivState;
+	}
+	else if( dologging ) {
+		log_priv(PrevPrivState, CurrentPrivState, file, line);
+	}
+
 	return PrevPrivState;
 }	
 
