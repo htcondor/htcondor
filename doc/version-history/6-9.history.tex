@@ -51,6 +51,10 @@ activities.  Previously, these activities were done on a fixed
 interval, so with very large job queue sizes, the fraction of time
 spent was increasing to unreasonable levels.
 
+\item Under Intel Linux, added \Macro{USE\_CLONE\_TO\_CREATE\_PROCESSES}.
+This defaults to true and results in scalability improvements for processes
+using large amounts of memory (e.g. a schedd with a lot of jobs in the queue).
+
 \item Jobs in the parallel universe now can have \$\$ expanded in their
 ads in the same way as other universes.
 
