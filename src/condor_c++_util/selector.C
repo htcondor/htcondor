@@ -149,10 +149,23 @@ Selector::fd_select_size()
 void
 Selector::add_fd( int fd, IO_FUNC interest )
 {
+	// update max_fd (the highest valid index in fd_set's array) and also
+	// make sure we're not overflowing our fd_set
+	//
+#if defined(WIN32)
+	max_fd++;
+	if (max_fd > fd_select_size() - 1) {
+		EXCEPT("Selector::add_fd(): fd_set is full");
+	}
+#else
+	if( fd > max_fd ) {
+		max_fd = fd;
+	}
 	if ( fd < 0 || fd > fd_select_size() ) {
 		EXCEPT( "Selector::add_fd(): fd %d outside valid range 0-%d",
 				fd, _fd_select_size-1 );
 	}
+#endif
 
 	switch( interest ) {
 
@@ -169,19 +182,23 @@ Selector::add_fd( int fd, IO_FUNC interest )
 		break;
 
 	}
-
-	if( fd > max_fd ) {
-		max_fd = fd;
-	}
 }
 
 void
 Selector::delete_fd( int fd, IO_FUNC interest )
 {
+	// on Windows, we need to update max_fd since it keeps track of
+	// how many sockets are in our fd_set. in UNIX, just do a sanity
+	// check based on the value of fd
+	//
+#if defined(WIN32)
+	max_fd--;
+#else
 	if ( fd < 0 || fd > fd_select_size() ) {
 		EXCEPT( "Selector::delete_fd(): fd %d outside valid range 0-%d",
 				fd, _fd_select_size-1 );
 	}
+#endif
 
 	switch( interest ) {
 
@@ -280,9 +297,13 @@ Selector::fd_ready( int fd, IO_FUNC interest )
 		);
 	}
 
+#if !defined(WIN32)
+	// on UNIX, make sure the value of fd makes sense
+	//
 	if ( fd < 0 || fd > fd_select_size() ) {
 		return FALSE;
 	}
+#endif
 
 	switch( interest ) {
 
