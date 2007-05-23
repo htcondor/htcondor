@@ -24,7 +24,12 @@ $submit = sub {
 	if(!$cmdstatus)
 	{
 		print "Test failure due to Condor Tool Failure<$cmd>\n";
-		exit(1)
+		system("ps auxww | grep negotiator");
+		print "NegotiatorLog:--------------------------------\n";
+		system("cat `condor_config_val LOG`/NegotiatorLog");
+		print "condor_status -any -l:--------------------------------\n";
+		system("condor_status -any -l");
+		exit(1);
 	}
 
 	my $submitline = "";
