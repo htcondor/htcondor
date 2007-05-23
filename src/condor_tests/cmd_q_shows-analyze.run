@@ -18,6 +18,8 @@ $submit = sub {
 	my $foundanalyze = 0;
 	my $cmd = "condor_q -analyze";
 
+	Condor::DebugOn();
+
 	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if(!$cmdstatus)
 	{
