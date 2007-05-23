@@ -1830,7 +1830,7 @@ JobQueueDBManager::processSetAttribute(char* key,
 	char* newvalue;  
 	double doubleval = 0;
 
-	if (strcmp(name, ATTR_CLAIM_ID) == 0) {
+	if ( ClassAd::ClassAdAttributeIsPrivate(name) ) {
 		return SUCCESS;
 	}
 	newvalue = fillEscapeCharacters(value);
