@@ -2067,9 +2067,9 @@ It is a unique value assigned for the duration of the job
 that essentially identifies the machine on which a program is
 executing.
 
-\index{DOLLAR}
-If the dollar sign (\verb@$@) is desired as a literal character,
-then use
+\index{\$!as a literal character in a submit description file}
+To use the dollar sign character (\verb@$@) as a literal,
+without macro expansion, use
 \begin{verbatim}
 $(DOLLAR)
 \end{verbatim}
@@ -2128,9 +2128,12 @@ The syntax appears as:
 $$([ClassAd expression])
 \end{verbatim}
 
-\index{DOLLARDOLLAR}
-If you wish to insert a literal \verb@$$@ into a ClassAd string, you
-can do so by entering \verb@$$(DOLLARDOLLAR)@.
+\index{\$\$!as literal characters in a submit description file}
+To insert two dollar sign characters (\verb@$$@) as literals
+into a ClassAd string, use
+\begin{verbatim}
+$$(DOLLARDOLLAR)
+\end{verbatim}
 
 \index{\$ENV!in submit description file}
 \index{submit commands!\$ENV macro}
