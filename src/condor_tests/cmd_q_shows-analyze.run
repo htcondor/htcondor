@@ -18,6 +18,16 @@ $submit = sub {
 	my $foundanalyze = 0;
 	my $cmd = "condor_q -analyze";
 
+	# This is the first test run, so we need to make sure that
+	# the negotiator has reported to the collector.  If it started
+	# before the collector was ready, it would take five minutes
+	# for it to show up.
+
+	my @dummyarray;
+	CondorTest::runCondorTool("condor_reconfig -startd", \@dummyarray, 2);
+	CondorTest::runCondorTool("condor_reconfig -negotiator", \@dummyarray, 2);
+	sleep(20);
+
 	Condor::DebugOn();
 
 	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
