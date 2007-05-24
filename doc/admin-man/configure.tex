@@ -2657,6 +2657,12 @@ will not want to change them for any reason.
   to add firewall exceptions. A value of 0 means that Condor will
   retry indefinitely.
 
+\item[\Macro{USE\_PROCESS\_GROUPS}]
+  \label{param:UseProcessGroups} 
+  A boolean value that defaults to \Expr{True}.  When \Expr{False},
+  Condor daemons on Unix machines will \emph{not} create new sessions
+  or process groups. 
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
