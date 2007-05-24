@@ -75,9 +75,9 @@ Jobs that would like to be run repeatedly will need to define the
 the \AdAttr{ON\_EXIT\_REMOVE} attribute properly so that they are
 re-queued after executing each time.
 
-\item Condor now looks for its configuration file in \tt{/usr/local/etc}
+\item Condor now looks for its configuration file in \File{/usr/local/etc}
 if the \Macro{CONDOR\_CONFIG} environment variable is not set and there is
-no condor\_config file located in \tt{/etc/condor}. This allows a default
+no condor\_config file located in \File{/etc/condor}. This allows a default
 Condor installation to be more compatiable with FreeBSD.
 
 \item If a user job requests streaming input or output in the submit
