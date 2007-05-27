@@ -27,14 +27,20 @@
 #include "proc_family_io.h"
 #include "../condor_procapi/procapi.h"
 
-class Service;
 class LocalClient;
 
 class ProcFamilyClient {
 
 public:
 
-	ProcFamilyClient();
+	ProcFamilyClient() : m_initialized(false), m_client(NULL) { }
+
+	// we use a plain old member function instead of the constructor
+	// to do the real initialization work so that we can give our
+	// caller an indication if something goes wrong
+	//
+	bool initialize(const char*);
+
 	~ProcFamilyClient();
 
 	// tell the procd to start tracking a new subfamily
@@ -42,39 +48,44 @@ public:
 	bool register_subfamily(pid_t,
 	                        pid_t,
 	                        int,
-	                        PidEnvID* = NULL,
-	                        const char* = NULL);
+	                        PidEnvID*,
+	                        const char*,
+	                        bool&);
 
 	// ask the procd for usage information about a process
 	// family
 	//
-	bool get_usage(pid_t, ProcFamilyUsage&);
+	bool get_usage(pid_t, ProcFamilyUsage&, bool&);
 
 	// tell the procd to send a signal to a single process
 	//
-	bool signal_process(pid_t, int);
+	bool signal_process(pid_t, int, bool&);
 
 	// tell the procd to suspend a family tree
 	//
-	bool suspend_family(pid_t);
+	bool suspend_family(pid_t, bool&);
 
 	// tell the procd to continue a suspended family tree
 	//
-	bool continue_family(pid_t);
+	bool continue_family(pid_t, bool&);
 
 	// tell the procd to kill an entire family (and all
 	// subfamilies of that family)
 	//
-	bool kill_family(pid_t);
+	bool kill_family(pid_t, bool&);
 
 	// tell the procd we don't care about this family any
 	// more
 	//
-	bool unregister_family(pid_t);
+	bool unregister_family(pid_t, bool&);
 
 	// tell the procd to take a snapshot
 	//
-	bool snapshot();
+	bool snapshot(bool&);
+
+	// tell the procd to exit
+	//
+	bool quit(bool&);
 
 #if defined(PROCD_DEBUG)
 	// tell the procd to dump out its state, then return our
@@ -90,28 +101,11 @@ private:
 	// common code for killing, suspending, and
 	// continuing a family
 	//
-	bool signal_family(pid_t, proc_family_command_t);
+	bool signal_family(pid_t, proc_family_command_t, bool&);
 
-	// start a procd
+	// set true once we're properly initialized
 	//
-	void start_procd(char* address);
-
-	// tell the procd to exit
-	//
-	void stop_procd();
-
-	// reaper for the ProcD
-	//
-	static int procd_reaper(Service*, int, int);
-
-	// count of the number of instantiated objects
-	//
-	static int s_num_objects;
-
-	// the ProcD's pid, if we started one and haven't told it to exit yet;
-	// otherwise, -1
-	//
-	static int s_procd_pid;
+	bool m_initialized;
 
 	// object for managing our connection to the ProcD
 	//

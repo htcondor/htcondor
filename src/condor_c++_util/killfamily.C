@@ -30,7 +30,7 @@
 extern dynuser *myDynuser;
 #endif
 
-ProcFamily::ProcFamily( pid_t pid, PidEnvID *penvid, priv_state priv,
+KillFamily::KillFamily( pid_t pid, PidEnvID *penvid, priv_state priv,
 				int test_only )
 {
 	daddy_pid = pid;
@@ -48,16 +48,16 @@ ProcFamily::ProcFamily( pid_t pid, PidEnvID *penvid, priv_state priv,
 	searchLogin = NULL;
 
 #ifdef WIN32
-	// On Win32, all ProcFamily activity needs to be done as LocalSystem
+	// On Win32, all KillFamily activity needs to be done as LocalSystem
 	mypriv = PRIV_ROOT;
 #endif
 
 	dprintf( D_PROCFAMILY,
-			 "Created new ProcFamily w/ pid %d as parent\n", daddy_pid );
+			 "Created new KillFamily w/ pid %d as parent\n", daddy_pid );
 }
 
 
-ProcFamily::~ProcFamily()
+KillFamily::~KillFamily()
 {
 	if ( old_pids ) {
 		delete old_pids;
@@ -66,11 +66,11 @@ ProcFamily::~ProcFamily()
 		free(searchLogin);
 	}
 	dprintf( D_PROCFAMILY,
-			 "Deleted ProcFamily w/ pid %d as parent\n", daddy_pid );
+			 "Deleted KillFamily w/ pid %d as parent\n", daddy_pid );
 }
 
 void
-ProcFamily::setFamilyLogin( const char *login )
+KillFamily::setFamilyLogin( const char *login )
 {
 	if ( login ) {
 		if ( searchLogin )
@@ -80,41 +80,41 @@ ProcFamily::setFamilyLogin( const char *login )
 }
 
 void
-ProcFamily::hardkill()
+KillFamily::hardkill()
 {
-	dprintf(D_PROCFAMILY,"Entering ProcFamily::hardkill\n");
+	dprintf(D_PROCFAMILY,"Entering KillFamily::hardkill\n");
 	takesnapshot();
 	spree(SIGKILL, INFANTICIDE);
 }
 
 void
-ProcFamily::suspend()
+KillFamily::suspend()
 {
-	dprintf(D_PROCFAMILY,"Entering ProcFamily::suspend\n");
+	dprintf(D_PROCFAMILY,"Entering KillFamily::suspend\n");
 	takesnapshot();
 	spree(SIGSTOP, PATRICIDE);
 }
 
 void
-ProcFamily::resume()
+KillFamily::resume()
 {
 		// Shouldn't need to take a snapshot, since if the family is
 		// suspended, it hasn't been changing.
-	dprintf(D_PROCFAMILY,"Entering ProcFamily::resume\n");
+	dprintf(D_PROCFAMILY,"Entering KillFamily::resume\n");
 	spree(SIGCONT, INFANTICIDE);
 }
 
 void
-ProcFamily::softkill( int sig )
+KillFamily::softkill( int sig )
 {
-	dprintf(D_PROCFAMILY,"Entering ProcFamily::softkill sig=%d\n",sig);
+	dprintf(D_PROCFAMILY,"Entering KillFamily::softkill sig=%d\n",sig);
 	takesnapshot();
 	spree(SIGCONT, INFANTICIDE);
 	spree(sig, INFANTICIDE);
 }
 
 void
-ProcFamily::get_cpu_usage(long & sys_time, long & user_time)
+KillFamily::get_cpu_usage(long & sys_time, long & user_time)
 {
 	takesnapshot();
 	sys_time = exited_cpu_sys_time + alive_cpu_sys_time;
@@ -122,13 +122,13 @@ ProcFamily::get_cpu_usage(long & sys_time, long & user_time)
 }
 
 void
-ProcFamily::get_max_imagesize(unsigned long & max_image )
+KillFamily::get_max_imagesize(unsigned long & max_image )
 {
 	max_image = max_image_size;
 }
 
 void
-ProcFamily::safe_kill(a_pid *pid, int sig)
+KillFamily::safe_kill(a_pid *pid, int sig)
 {
 	priv_state priv;
 	pid_t inpid;
@@ -139,12 +139,12 @@ ProcFamily::safe_kill(a_pid *pid, int sig)
 	if ( inpid < 2 || daddy_pid < 2 ) {
 		if ( test_only_flag ) {
 			printf(
-				"ProcFamily::safe_kill: attempt to kill pid %d!\n",inpid);
+				"KillFamily::safe_kill: attempt to kill pid %d!\n",inpid);
 			} else {
 			dprintf(D_ALWAYS,
-				"ProcFamily::safe_kill: attempt to kill pid %d!\n",inpid);
+				"KillFamily::safe_kill: attempt to kill pid %d!\n",inpid);
 			dprintf(D_PROCFAMILY,
-				"ProcFamily::safe_kill: attempt to kill pid %d!\n",inpid);
+				"KillFamily::safe_kill: attempt to kill pid %d!\n",inpid);
 
 			}
 		return;
@@ -154,11 +154,11 @@ ProcFamily::safe_kill(a_pid *pid, int sig)
 
 	if ( test_only_flag ) {
 		printf(
-			"ProcFamily::safe_kill: about to kill pid %d with sig %d\n",
+			"KillFamily::safe_kill: about to kill pid %d with sig %d\n",
 			inpid, sig);
 	} else {
 		dprintf(D_PROCFAMILY,
-			"ProcFamily::safe_kill: about to kill pid %d with sig %d\n",
+			"KillFamily::safe_kill: about to kill pid %d with sig %d\n",
 			inpid, sig);
 	}
 
@@ -183,7 +183,7 @@ ProcFamily::safe_kill(a_pid *pid, int sig)
 
 			if ( daemonCore->Send_Signal(inpid,sig) == FALSE ) {
 				dprintf(D_PROCFAMILY,
-					"ProcFamily::safe_kill: Send_Signal(%d,%d) failed\n",
+					"KillFamily::safe_kill: Send_Signal(%d,%d) failed\n",
 					inpid,sig);
 			}
 
@@ -207,7 +207,7 @@ ProcFamily::safe_kill(a_pid *pid, int sig)
 #else
 		if ( kill(inpid,sig) < 0 ) {
 			dprintf(D_PROCFAMILY,
-				"ProcFamily::safe_kill: kill(%d,%d) failed, errno=%d\n",
+				"KillFamily::safe_kill: kill(%d,%d) failed, errno=%d\n",
 				inpid,sig,errno);
 		}
 #endif // WIN32
@@ -218,7 +218,7 @@ ProcFamily::safe_kill(a_pid *pid, int sig)
 
 
 void
-ProcFamily::spree(int sig,KILLFAMILY_DIRECTION direction)
+KillFamily::spree(int sig,KILLFAMILY_DIRECTION direction)
 {
 	int start = 0;
 	int i = -1;
@@ -243,8 +243,8 @@ ProcFamily::spree(int sig,KILLFAMILY_DIRECTION direction)
 	} while ( (*old_pids)[i].pid );
 }
 
-void
-ProcFamily::takesnapshot()
+int
+KillFamily::takesnapshot()
 {
 	ExtArray<a_pid> *new_pids;
 	struct procInfo *pinfo = NULL;
@@ -283,7 +283,7 @@ ProcFamily::takesnapshot()
 	if ( ret_val == PROCAPI_FAILURE ) {
 		// daddy_pid AND any detectable family must be gone from the set!
 		dprintf( D_PROCFAMILY,
-				 "ProcFamily::takesnapshot: getPidFamily(%d) failed. "
+				 "KillFamily::takesnapshot: getPidFamily(%d) failed. "
 				 "Could not find the pid or any family members.\n",
 				 daddy_pid );
 		pidfamily[0] = 0;
@@ -347,9 +347,9 @@ ProcFamily::takesnapshot()
 								ExtArray<pid_t> detached_family;
 								detached_family[0] = 0;
 								if (ProcAPI::getPidFamily(currpid,&m_penvid,detached_family,ignore_status) != PROCAPI_FAILURE) {
-									for (int ii = 0; detached_family[ii] != 0; ii++) {
-										if (detached_family[ii] != currpid) {
-											pidfamily[j] = detached_family[ii];
+									for (int k = 0; detached_family[k] != 0; k++) {
+										if (detached_family[k] != currpid) {
+											pidfamily[j] = detached_family[k];
 											j++;
 										}
 									}
@@ -473,18 +473,20 @@ ProcFamily::takesnapshot()
 
 	// set our priv state back to what it originally was
 	set_priv(priv);
+
+	return 0;
 }
 
 
 int
-ProcFamily::currentfamily( pid_t* & ptr  )
+KillFamily::currentfamily( pid_t* & ptr  )
 {
 	pid_t* tmp;
 	int i;
 
 	if( family_size <= 0 ) {
 		dprintf( D_ALWAYS,
-				 "ProcFamily::currentfamily: ERROR: family_size is 0\n" );
+				 "KillFamily::currentfamily: ERROR: family_size is 0\n" );
 		ptr = NULL;
 		return 0;
 	}
@@ -501,16 +503,16 @@ ProcFamily::currentfamily( pid_t* & ptr  )
 
 
 void
-ProcFamily::display()
+KillFamily::display()
 {
 	int i;
-	dprintf( D_PROCFAMILY, "ProcFamily: parent: %d family:", daddy_pid );
+	dprintf( D_PROCFAMILY, "KillFamily: parent: %d family:", daddy_pid );
 	for( i=0; i<family_size; i++ ) {
 		dprintf( D_PROCFAMILY | D_NOHEADER, " %d", (*old_pids)[i].pid );
 	}
 	dprintf( D_PROCFAMILY | D_NOHEADER, "\n" );
 
 	dprintf( D_PROCFAMILY,
-		"ProcFamily: alive_cpu_user = %ld, exited_cpu = %ld, max_image = %luk\n",
+		"KillFamily: alive_cpu_user = %ld, exited_cpu = %ld, max_image = %luk\n",
 		alive_cpu_user_time, exited_cpu_user_time, max_image_size);
 }

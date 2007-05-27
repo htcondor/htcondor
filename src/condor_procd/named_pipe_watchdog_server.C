@@ -23,51 +23,39 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
-#include "local_server.h"
+#include "named_pipe_watchdog_server.h"
+#include "named_pipe_util.h"
 
-#if defined(WIN32)
-#define PIPE_ADDR "\\\\.\\pipe\\local_server_test"
-#else
-#define PIPE_ADDR "/tmp/local_server_test"
-#endif
-
-int
-main()
+bool
+NamedPipeWatchdogServer::initialize(const char* path)
 {
-	Termlog = 1;
-	dprintf_config("TOOL");
+	ASSERT(!m_initialized);
 
-	LocalServer* server = new LocalServer;
-	ASSERT(server != NULL);
-	if (!server->initialize(PIPE_ADDR)) {
-		EXCEPT("unable to initialize LocalServer\n");
+	if (!named_pipe_create(path, m_read_fd, m_write_fd)) {
+		dprintf(D_ALWAYS,
+		        "failed to initialize watchdog named pipe at %s\n",
+		        path);
+		return false;
 	}
 
-	while (true) {
-		bool ready;
-		if (!server->accept_connection(10, ready)) {
-			EXCEPT("error in LocalServer::accept_connection\n");
-		}
-		if (ready) {
-			char c;
-			if (!server->read_data(&c, sizeof(char))) {
-				EXCEPT("error in LocalServer::read_data");
-			}
-			if (!server->write_data(&c, sizeof(char))) {
-				EXCEPT("error in LocalServer::write_data");
-			}
-			if (!server->close_connection()) {
-				EXCEPT("error in LocalServer::close_connection");
-			}
-			printf("received: %c\n", c);
-			if (c == 'q') {
-				break;
-			}
-		}
-		else {
-			printf("timeout!\n");
-		}
+	m_path = strdup(path);
+	ASSERT(m_path != NULL);
+
+	m_initialized = true;
+
+	return true;
+}
+
+NamedPipeWatchdogServer::~NamedPipeWatchdogServer()
+{
+	if (!m_initialized) {
+		return;
 	}
 
-	return 0;
+	close(m_write_fd);
+	close(m_read_fd);
+
+	unlink(m_path);
+
+	free(m_path);
 }

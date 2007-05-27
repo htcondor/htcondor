@@ -24,33 +24,53 @@
 #ifndef _NAMED_PIPE_WRITER_H
 #define _NAMED_PIPE_WRITER_H
 
-#include "condor_common.h"
+class NamedPipeWatchdog;
 
 class NamedPipeWriter {
 
 public:
-	// create a new FIFO for writing with the given
-	// "address" (which is really a node in the
+
+	NamedPipeWriter() : m_initialized(false),
+	                    m_pipe(-1),
+	                    m_watchdog(NULL) { }
+
+	// we use a plain old member function instead of the constructor
+	// to do the real initialization work so that we can give our
+	// caller an indication if something goes wrong
+	//
+	// init a new FIFO for writing with the given
+	// "address" (which is really a FIFO node in the
 	// filesystem)
 	//
-	NamedPipeWriter(const char*);
+	bool initialize(const char*);
 	
 	// clean up
 	//
 	~NamedPipeWriter();
 
+	// enable a watchdog on this writer
+	//
+	void set_watchdog(NamedPipeWatchdog*);
+
 	// write to the pipe
 	//
-	void write_data(void*, int);
-
-	// gather-write to the pipe
-	//
-	void write_data_vector(struct iovec*, int);
+	bool write_data(void*, int);
 
 private:
+
+	// set true one we're successfully initialized
+	//
+	bool m_initialized;
+
 	// a O_WRONLY file descriptor for our FIFO
 	//
 	int m_pipe;
+
+	// an optional watchdog; if set this gives us
+	// protection against hanging trying to talk to a
+	// crashed process
+	//
+	NamedPipeWatchdog* m_watchdog;
 };
 
 #endif

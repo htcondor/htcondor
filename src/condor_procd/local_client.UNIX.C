@@ -24,43 +24,112 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "local_client.h"
+#include "named_pipe_writer.h"
+#include "named_pipe_reader.h"
+#include "named_pipe_watchdog.h"
 #include "named_pipe_util.h"
 
-int LocalClient::m_next_serial_number = 0;
+int LocalClient::s_next_serial_number = 0;
 
-LocalClient::LocalClient(const char* server_addr) :
-	m_writer(server_addr),
-	m_reader(NULL)
+LocalClient::LocalClient() :
+	m_initialized(false),
+	m_serial_number(-1),
+	m_pid(0),
+	m_addr(NULL),
+	m_writer(NULL),
+	m_reader(NULL),
+	m_watchdog(NULL)
 {
+}
+
+bool
+LocalClient::initialize(const char* server_addr)
+{
+	ASSERT(!m_initialized);
+
+	// first, connect to the server's "watchdog server" pipe
+	//
+	char* watchdog_addr = named_pipe_make_watchdog_addr(server_addr);
+	m_watchdog = new NamedPipeWatchdog;
+	ASSERT(m_watchdog != NULL);
+	bool ok = m_watchdog->initialize(watchdog_addr);
+	delete[] watchdog_addr;
+	if (!ok) {
+		delete m_watchdog;
+		m_watchdog = NULL;
+		return false;
+	}
+
+	// now, connect to the server's "command" pipe
+	//
+	m_writer = new NamedPipeWriter;
+	ASSERT(m_writer != NULL);
+	if (!m_writer->initialize(server_addr)) {
+		delete m_writer;
+		m_writer = NULL;
+		delete m_watchdog;
+		m_watchdog = NULL;
+		return false;
+	}
+	m_writer->set_watchdog(m_watchdog);
+
 	// make sure that each time this process instantiates another local
 	// client object, a different serial number is used
 	//
-	m_serial_number = m_next_serial_number;
-	m_next_serial_number++;
+	m_serial_number = s_next_serial_number;
+	s_next_serial_number++;
 
+	// stash our pid, since we send it to the server with each command
+	// so it knows how to contact us
+	//
 	m_pid = getpid();
 
-	m_addr = named_pipe_make_addr(server_addr,
-	                              m_pid,
-	                              m_serial_number);
+	// store the address that we'll use to receive responses from
+	// the server
+	//
+	m_addr = named_pipe_make_client_addr(server_addr,
+	                                     m_pid,
+	                                     m_serial_number);
+
+	m_initialized = true;
+	return true;
 }
 
 LocalClient::~LocalClient()
 {
+	// nothing to do if we're not initialized
+	//
+	if (!m_initialized) {
+		return;
+	}
+
 	delete[] m_addr;
 
 	if (m_reader != NULL) {
 		delete m_reader;
 	}
+
+	delete m_writer;
+	delete m_watchdog;
 }
 
-void
+bool
 LocalClient::start_connection(void* payload_buf, int payload_len)
 {
+	ASSERT(m_initialized);
+
 	// create a named pipe reader to receive the response
 	//
-	m_reader = new NamedPipeReader(m_addr);
+	m_reader = new NamedPipeReader;
 	ASSERT(m_reader != NULL);
+	if (!m_reader->initialize(m_addr)) {
+		dprintf(D_ALWAYS,
+		        "LocalClient: error initializing NamedPipeReader\n");
+		delete m_reader;
+		m_reader = NULL;
+		return false;
+	}
+	m_reader->set_watchdog(m_watchdog);
 
 	// we need to write our pid and serial number, followed by the given
 	// payload. the trick here is that this write needs to be atomic so
@@ -84,21 +153,30 @@ LocalClient::start_connection(void* payload_buf, int payload_len)
 
 	// now call out to the named pipe writer
 	//
-	m_writer.write_data(msg_buf, msg_len);
-
+	if (!m_writer->write_data(msg_buf, msg_len)) {
+		dprintf(D_ALWAYS,
+		        "LocalClient: error sending message to server\n");
+		delete[] msg_buf;
+		return false;
+	}
 	delete[] msg_buf;
+
+	return true;
 }
 
 void
 LocalClient::end_connection()
 {
+	ASSERT(m_initialized);
+
 	ASSERT(m_reader != NULL);
 	delete m_reader;
 	m_reader = NULL;
 }
 
-void
+bool
 LocalClient::read_data(void* buffer, int len)
 {
-	m_reader->read_data(buffer, len);
+	ASSERT(m_initialized);
+	return m_reader->read_data(buffer, len);
 }

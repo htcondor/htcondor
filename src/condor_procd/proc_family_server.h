@@ -26,7 +26,8 @@
 
 #include "proc_family_io.h"
 #include "proc_family_monitor.h"
-#include "local_server.h"
+
+class LocalServer;
 
 class ProcFamilyServer {
 
@@ -36,15 +37,28 @@ public:
 	//
 	ProcFamilyServer(ProcFamilyMonitor&, const char*);
 
+	// clean up
+	//
+	~ProcFamilyServer();
+
 	// set the client principal who will be able to connect to this server
 	//
-	void set_client_principal(char* p) { m_server.set_client_principal(p); }
+	void set_client_principal(char*);
 
 	// the server wait loop
 	//
 	void wait_loop();
 
 private:
+
+	// helper for reading from the connected client
+	//
+	void read_from_client(void*, int);
+
+	// helper for writing to the connected client
+	//
+	void write_to_client(void*, int);
+
 	// handle a "register subfamily" command
 	//
 	void register_subfamily();
@@ -93,7 +107,7 @@ private:
 
 	// our secure local "server port"
 	//
-	LocalServer m_server;
+	LocalServer* m_server;
 };
 
 #endif

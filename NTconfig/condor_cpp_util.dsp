@@ -614,6 +614,14 @@ SOURCE="..\src\condor_c++_util\KeyCache.C"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\killfamily.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\killfamily.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\linebuffer.C"
 # End Source File
 # Begin Source File
@@ -752,6 +760,30 @@ SOURCE="..\src\condor_c++_util\print_wrapped_text.h"
 # Begin Source File
 
 SOURCE=..\src\h\proc.h
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\proc_family_direct.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\proc_family_direct.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\proc_family_interface.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\proc_family_interface.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\proc_family_proxy.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\proc_family_proxy.h"
 # End Source File
 # Begin Source File
 

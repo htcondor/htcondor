@@ -24,6 +24,19 @@
 #ifndef _NAMED_PIPE_UTIL_H
 #define _NAMED_PIPE_UTIL_H
 
-char* named_pipe_make_addr(const char*, pid_t, int);
+// make a pathname for a named pipe that includes the
+// given prefix, PID, and serial number
+//
+char* named_pipe_make_client_addr(const char*, pid_t, int);
+
+// make a pathname for a "watchdog server" named pipe
+//
+char* named_pipe_make_watchdog_addr(const char*);
+
+// a helper method to create a named pipe node in
+// the file system, and return a read and a write FDs
+// for the pipe
+//
+bool named_pipe_create(const char*, int&, int&);
 
 #endif

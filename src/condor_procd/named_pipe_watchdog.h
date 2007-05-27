@@ -21,70 +21,51 @@
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#ifndef _LOCAL_CLIENT_H
-#define _LOCAL_CLIENT_H
+#ifndef _NAMED_PIPE_WATCHDOG_H
+#define _NAMED_PIPE_WATCHDOG_H
 
-#include "condor_common.h"
+// This class can be used in conjuntion with the NamedPipeWatchdogServer
+// class to provide clients (e.g. using our LocalClient class to
+// communicate with another process that is using LocalServer) with
+// notifcation when the server has crashed. Specifically, when the
+// server crashes, the OS will close all its FDs, and as a result the
+// pipe that this class opens to the server will get an EOF.
 
-#if !defined(WIN32)
-class NamedPipeWriter;
-class NamedPipeReader;
-class NamedPipeWatchdog;
-#endif
-
-class LocalClient {
+class NamedPipeWatchdog {
 
 public:
 
-	LocalClient();
+	NamedPipeWatchdog() : m_initialized(false), m_pipe_fd(-1) { }
 
 	// we use a plain old member function instead of the constructor
 	// to do the real initialization work so that we can give our
 	// caller an indication if something goes wrong
 	//
-	// init a new LocalClient that will connect to a LocalServer at
-	// the given named pipe
+	// init a new watchdog to watch the server with the given
+	// "watchdog address"
 	//
 	bool initialize(const char*);
 
-	// clean up
+	// method for accessing the watchdog file descriptor
 	//
-	~LocalClient();
+	int get_file_descriptor();
 
-	// send the command contained in the given buffer
+	// clean up open FDs, file system droppings, and
+	// dynamically allocated memory
 	//
-	bool start_connection(void*, int);
-
-	// end a command
-	//
-	void end_connection();
-
-	// read response data from the server
-	//
-	bool read_data(void*, int);
+	~NamedPipeWatchdog();
 
 private:
 
-	// set true once we've been properly initialized
+	// set true once we're properly initialized
 	//
 	bool m_initialized;
 
-	// implementation is totally different depending on whether we're
-	// on Windows or UNIX. both use named pipes, but named pipes are not
-	// (nearly) the same beast between the two
+	// the file descriptor to the watchdog pipe; this is a descriptor
+	// for a read pipe end that will be closed when the its associated
+	// server shuts down or crashes
 	//
-#if defined(WIN32)
-	char*  m_pipe_addr;
-	HANDLE m_pipe;
-#else
-	static int         s_next_serial_number;
-	int                m_serial_number;
-	pid_t              m_pid;
-	char*              m_addr;
-	NamedPipeWriter*   m_writer;
-	NamedPipeReader*   m_reader;
-	NamedPipeWatchdog* m_watchdog;
-#endif
+	int m_pipe_fd;
 };
 
 #endif

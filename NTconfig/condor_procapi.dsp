@@ -91,6 +91,10 @@ SOURCE=..\src\condor_procapi\procapi.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_procapi\procapi_killfamily.C
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_procapi\processid.C
 # End Source File
 # Begin Source File

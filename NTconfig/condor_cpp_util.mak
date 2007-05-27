@@ -107,6 +107,7 @@ CLEAN :
 	-@erase "$(INTDIR)\job_lease.obj"
 	-@erase "$(INTDIR)\jobqueuesnapshot.obj"
 	-@erase "$(INTDIR)\KeyCache.obj"
+	-@erase "$(INTDIR)\killfamily.obj"
 	-@erase "$(INTDIR)\linebuffer.obj"
 	-@erase "$(INTDIR)\log.obj"
 	-@erase "$(INTDIR)\log_transaction.obj"
@@ -126,6 +127,9 @@ CLEAN :
 	-@erase "$(INTDIR)\perm.obj"
 	-@erase "$(INTDIR)\pgsqldatabase.obj"
 	-@erase "$(INTDIR)\print_wrapped_text.obj"
+	-@erase "$(INTDIR)\proc_family_direct.obj"
+	-@erase "$(INTDIR)\proc_family_interface.obj"
+	-@erase "$(INTDIR)\proc_family_proxy.obj"
 	-@erase "$(INTDIR)\proc_id.obj"
 	-@erase "$(INTDIR)\process_control.WINDOWS.obj"
 	-@erase "$(INTDIR)\read_multiple_logs.obj"
@@ -317,7 +321,11 @@ LIB32_OBJS= \
 	"$(INTDIR)\user_log.obj" \
 	"$(INTDIR)\utc_time.obj" \
 	"$(INTDIR)\which.obj" \
-	"$(INTDIR)\windows_firewall.obj"
+	"$(INTDIR)\windows_firewall.obj" \
+	"$(INTDIR)\killfamily.obj" \
+	"$(INTDIR)\proc_family_direct.obj" \
+	"$(INTDIR)\proc_family_interface.obj" \
+	"$(INTDIR)\proc_family_proxy.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -406,6 +414,7 @@ CLEAN :
 	-@erase "$(INTDIR)\job_lease.obj"
 	-@erase "$(INTDIR)\jobqueuesnapshot.obj"
 	-@erase "$(INTDIR)\KeyCache.obj"
+	-@erase "$(INTDIR)\killfamily.obj"
 	-@erase "$(INTDIR)\linebuffer.obj"
 	-@erase "$(INTDIR)\log.obj"
 	-@erase "$(INTDIR)\log_transaction.obj"
@@ -425,6 +434,9 @@ CLEAN :
 	-@erase "$(INTDIR)\perm.obj"
 	-@erase "$(INTDIR)\pgsqldatabase.obj"
 	-@erase "$(INTDIR)\print_wrapped_text.obj"
+	-@erase "$(INTDIR)\proc_family_direct.obj"
+	-@erase "$(INTDIR)\proc_family_interface.obj"
+	-@erase "$(INTDIR)\proc_family_proxy.obj"
 	-@erase "$(INTDIR)\proc_id.obj"
 	-@erase "$(INTDIR)\process_control.WINDOWS.obj"
 	-@erase "$(INTDIR)\read_multiple_logs.obj"
@@ -615,7 +627,11 @@ LIB32_OBJS= \
 	"$(INTDIR)\user_log.obj" \
 	"$(INTDIR)\utc_time.obj" \
 	"$(INTDIR)\which.obj" \
-	"$(INTDIR)\windows_firewall.obj"
+	"$(INTDIR)\windows_firewall.obj" \
+	"$(INTDIR)\killfamily.obj" \
+	"$(INTDIR)\proc_family_direct.obj" \
+	"$(INTDIR)\proc_family_interface.obj" \
+	"$(INTDIR)\proc_family_proxy.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -1115,6 +1131,12 @@ SOURCE="..\src\condor_c++_util\KeyCache.C"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
+SOURCE="..\src\condor_c++_util\killfamily.C"
+
+"$(INTDIR)\killfamily.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
 SOURCE="..\src\condor_c++_util\linebuffer.C"
 
 "$(INTDIR)\linebuffer.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
@@ -1244,6 +1266,24 @@ SOURCE="..\src\condor_c++_util\pgsqldatabase.C"
 SOURCE="..\src\condor_c++_util\print_wrapped_text.C"
 
 "$(INTDIR)\print_wrapped_text.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE="..\src\condor_c++_util\proc_family_direct.C"
+
+"$(INTDIR)\proc_family_direct.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE="..\src\condor_c++_util\proc_family_interface.C"
+
+"$(INTDIR)\proc_family_interface.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE="..\src\condor_c++_util\proc_family_proxy.C"
+
+"$(INTDIR)\proc_family_proxy.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 

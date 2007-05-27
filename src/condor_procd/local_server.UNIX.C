@@ -24,90 +24,192 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "local_server.h"
+#include "named_pipe_watchdog_server.h"
+#include "named_pipe_reader.h"
+#include "named_pipe_writer.h"
 #include "named_pipe_util.h"
 
-LocalServer::LocalServer(const char* pipe_addr) :
-	m_reader(pipe_addr),
+LocalServer::LocalServer() :
+	m_initialized(false),
+	m_pipe_addr(NULL),
+	m_watchdog_server(NULL),
+	m_reader(NULL),
 	m_writer(NULL)
 {
+}
+
+bool
+LocalServer::initialize(const char* pipe_addr)
+{
+	// now create a watchdog server; this allows clients
+	// to detect when we crash and avoid getting stuck trying
+	// to talk to us
+	//
+	char* watchdog_addr = named_pipe_make_watchdog_addr(pipe_addr);
+	m_watchdog_server = new NamedPipeWatchdogServer;
+	ASSERT(m_watchdog_server != NULL);
+	bool ok = m_watchdog_server->initialize(watchdog_addr);
+	delete[] watchdog_addr;
+	if (!ok) {
+		delete m_watchdog_server;
+		m_watchdog_server = NULL;
+		return false;
+	}
+
+	// now create our reader for getting client requests
+	//
+	m_reader = new NamedPipeReader;
+	ASSERT(m_reader != NULL);
+	if (!m_reader->initialize(pipe_addr)) {
+		delete m_watchdog_server;
+		m_watchdog_server = NULL;
+		delete m_reader;
+		m_reader = NULL;
+		return false;
+	}
+
+	// and stash a copy of our address, since its used as a
+	// component in the addresses of our clients
+	//
 	m_pipe_addr = strdup(pipe_addr);
 	ASSERT(m_pipe_addr != NULL);
+
+	m_initialized = true;
+	return true;
 }
 
 LocalServer::~LocalServer()
 {
+	// nothing to do if we're not initialized
+	//
+	if (!m_initialized) {
+		return;
+	}
+
 	free(m_pipe_addr);
-}
 
-void
-LocalServer::set_client_principal(char* uid_str)
-{
-	uid_t client_uid = atoi(uid_str);
-	ASSERT(client_uid != 0);
-
-	uid_t my_uid = geteuid();
-	if (my_uid == 0) {
-		m_reader.change_owner(client_uid);
-	}
-	else {
-		if (my_uid != client_uid) {
-			EXCEPT("running as UID %u; can't allow connections from UID %u\n",
-			       my_uid,
-			       client_uid);
-		}
-	}
+	// it's important to delete the watchdog server after
+	// the reader
+	//
+	delete m_reader;
+	delete m_watchdog_server;
 }
 
 bool
-LocalServer::accept_connection(int timeout)
+LocalServer::set_client_principal(const char* uid_str)
 {
+	ASSERT(m_initialized);
+
+	uid_t client_uid = atoi(uid_str);
+
+	// if the client says they're root, we can just leave the
+	// named pipe ownership as is
+	//
+	if (client_uid == 0) {
+		return true;
+	}
+
+	uid_t my_uid = geteuid();
+	if (my_uid == 0) {
+		if (!m_reader->change_owner(client_uid)) {
+			return false;
+		}
+	}
+	else {
+		if (my_uid != client_uid) {
+			dprintf(D_ALWAYS,
+			        "running as UID %u; can't allow connections from UID %u\n",
+			        my_uid,
+			        client_uid);
+			return false;
+		}
+	}
+
+	return true;
+}
+
+bool
+LocalServer::accept_connection(int timeout, bool &accepted)
+{
+	ASSERT(m_initialized);
+
+	// at this point, we should not have a writer (since we
+	// start without one and end_connection will have deleted
+	// any previous one)
+	//
 	ASSERT(m_writer == NULL);
 
 	// see if a connection arrives within the timeout period
 	//
-	if (!m_reader.poll(timeout)) {
+	bool ready;
+	if (!m_reader->poll(timeout, ready)) {
 		return false;
+	}
+	if (!ready) {
+		accepted = false;
+		return true;
 	}
 
 	// pipe is ready for reading; first grab the client's pid
 	// and serial number off the pipe
 	//
 	pid_t client_pid;
-	m_reader.read_data(&client_pid, sizeof(pid_t));
+	if (!m_reader->read_data(&client_pid, sizeof(pid_t))) {
+		dprintf(D_ALWAYS,
+		        "LocalServer: read of client PID failed\n");
+		return false;
+	}
 	int client_sn;
-	m_reader.read_data(&client_sn, sizeof(int));
+	if (!m_reader->read_data(&client_sn, sizeof(int))) {
+		dprintf(D_ALWAYS,
+		        "LocalServer: read of client SN failed\n");
+		return false;
+	}
 
 	// instantiate the NamedPipeWriter for responding to the
 	// client
 	//
-	char* client_addr = named_pipe_make_addr(m_pipe_addr,
-	                                         client_pid,
-	                                         client_sn);
-	m_writer = new NamedPipeWriter(client_addr);
+	m_writer = new NamedPipeWriter;
 	ASSERT(m_writer != NULL);
+	char* client_addr = named_pipe_make_client_addr(m_pipe_addr,
+	                                                client_pid,
+	                                                client_sn);
+	if (!m_writer->initialize(client_addr)) {
+		delete[] client_addr;
+		return false;
+	}
 	delete[] client_addr;
+
+	accepted = true;
+	return true;
+}
+
+bool
+LocalServer::close_connection()
+{
+	ASSERT(m_initialized);
+
+	// at this point, we should have a writer from the previous
+	// call to accept_connection
+	//
+	ASSERT(m_writer != NULL);
+
+	delete m_writer;
+	m_writer = NULL;
 
 	return true;
 }
 
-void
-LocalServer::close_connection()
-{
-	ASSERT(m_writer != NULL);
-	delete m_writer;
-	m_writer = NULL;
-}
-
-void
+bool
 LocalServer::read_data(void* buffer, int len)
 {
 	ASSERT(m_writer != NULL);
-	return m_reader.read_data(buffer, len);
+	return m_reader->read_data(buffer, len);
 }
 
-void
+bool
 LocalServer::write_data(void* buffer, int len)
 {
 	ASSERT(m_writer != NULL);
-	m_writer->write_data(buffer, len);
+	return m_writer->write_data(buffer, len);
 }

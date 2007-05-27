@@ -22,52 +22,43 @@
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
+#include "condor_config.h"
 #include "condor_debug.h"
-#include "local_server.h"
+#include "proc_family_interface.h"
+#include "proc_family_proxy.h"
+#include "proc_family_direct.h"
+#include "../condor_privsep/condor_privsep.h"
 
-#if defined(WIN32)
-#define PIPE_ADDR "\\\\.\\pipe\\local_server_test"
-#else
-#define PIPE_ADDR "/tmp/local_server_test"
-#endif
-
-int
-main()
+ProcFamilyInterface* ProcFamilyInterface::create(char* subsys)
 {
-	Termlog = 1;
-	dprintf_config("TOOL");
+	ProcFamilyInterface* ptr;
 
-	LocalServer* server = new LocalServer;
-	ASSERT(server != NULL);
-	if (!server->initialize(PIPE_ADDR)) {
-		EXCEPT("unable to initialize LocalServer\n");
+	bool is_master = ((subsys != NULL) && !strcmp(subsys, "MASTER"));
+
+	bool use_procd_default = !is_master;
+	if (param_boolean("USE_PROCD", use_procd_default)) {
+
+		// if we're not the Master, create the ProcFamilyProxy
+		// object with our subsystem as the address suffix; this
+		// avoids address collisions in case we have multiple
+		// daemons that all want to spawn ProcDs
+		//
+		char* address_suffix = is_master ? NULL : subsys;
+		ptr = new ProcFamilyProxy(address_suffix);
 	}
+	else if (privsep_enabled()) {
 
-	while (true) {
-		bool ready;
-		if (!server->accept_connection(10, ready)) {
-			EXCEPT("error in LocalServer::accept_connection\n");
-		}
-		if (ready) {
-			char c;
-			if (!server->read_data(&c, sizeof(char))) {
-				EXCEPT("error in LocalServer::read_data");
-			}
-			if (!server->write_data(&c, sizeof(char))) {
-				EXCEPT("error in LocalServer::write_data");
-			}
-			if (!server->close_connection()) {
-				EXCEPT("error in LocalServer::close_connection");
-			}
-			printf("received: %c\n", c);
-			if (c == 'q') {
-				break;
-			}
-		}
-		else {
-			printf("timeout!\n");
-		}
+		dprintf(D_ALWAYS,
+		        "PrivSep requires use of ProcD; "
+		            "ignoring USE_PROCD setting\n");
+		char* address_suffix = is_master ? NULL : subsys;
+		ptr = new ProcFamilyProxy;
 	}
+	else {
 
-	return 0;
+		ptr = new ProcFamilyDirect;
+	}
+	ASSERT(ptr != NULL);
+
+	return ptr;
 }

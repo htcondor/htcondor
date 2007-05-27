@@ -27,19 +27,26 @@
 #include "condor_common.h"
 
 #if !defined(WIN32)
-#include "named_pipe_reader.h"
-#include "named_pipe_writer.h"
+class NamedPipeWatchdogServer;
+class NamedPipeReader;
+class NamedPipeWriter;
 #endif
 
 class LocalServer {
 
 public:
 
-	// construct a new local server that listen for commands at the given
+	LocalServer();
+
+	// we use a plain old member function instead of the constructor
+	// to do the real initialization work so that we can give our
+	// caller an indication if something goes wrong
+	//
+	// init a new local server that listens for commands at the given
 	// "address" (which is a FIFO pathname on UNIX and a named pipe name
 	// on Windows)
 	//
-	LocalServer(const char*);
+	bool initialize(const char*);
 
 	// clean up
 	//
@@ -48,40 +55,46 @@ public:
 	// set the principal that is allows to connect to this server
 	// (on Windows, this will be a SID; on UNIX, as UID)
 	//
-	void set_client_principal(char*);
+	bool set_client_principal(const char*);
 
 	// wait up to the specified number of seconds to receive a client
-	// connection, returning true if one is received
+	// connection; second param is set to true if one is received,
+	// false otherwise
 	//
-	bool accept_connection(int);
+	bool accept_connection(int, bool&);
 
 	// close a connection, making it possible to accept another one
 	// via the accept_connection method
 	//
-	void close_connection();
+	bool close_connection();
 
 	// read data from a connected client
 	//
-	void read_data(void*, int);
+	bool read_data(void*, int);
 
 	// write data to a connected client
 	//
-	void write_data(void*, int);
+	bool write_data(void*, int);
 
 private:
+
+	// set once we're successfully initialized
+	//
+	bool m_initialized;
 
 	// implementation is totally different depending on whether we're
 	// on Windows or UNIX. both use named pipes, but named pipes are not
 	// (nearly) the same beast between the two
 	//
 #if defined(WIN32)
-	HANDLE m_pipe;
-	HANDLE m_event;
+	HANDLE      m_pipe;
+	HANDLE      m_event;
 	OVERLAPPED* m_accept_overlapped;
 #else
-	char* m_pipe_addr;
-	NamedPipeReader m_reader;
-	NamedPipeWriter* m_writer;
+	char*                    m_pipe_addr;
+	NamedPipeWatchdogServer* m_watchdog_server;
+	NamedPipeReader*         m_reader;
+	NamedPipeWriter*         m_writer;
 #endif
 };
 

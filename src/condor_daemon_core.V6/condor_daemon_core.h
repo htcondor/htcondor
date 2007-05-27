@@ -59,7 +59,9 @@
 #include "env.h"
 #include "daemon.h"
 #include "daemon_list.h"
-#include "../condor_procd/proc_family_client.h"
+
+#include "../condor_procd/proc_family_io.h"
+class ProcFamilyInterface;
 
 #if defined(WIN32)
 #include "pipe.WIN32.h"
@@ -897,12 +899,19 @@ class DaemonCore : public Service
 
     /** Methods for operating on a process family
     */
-    int Get_Family_Usage(pid_t, ProcFamilyUsage&);
+    int Get_Family_Usage(pid_t, ProcFamilyUsage&, bool full = false);
     int Suspend_Family(pid_t);
     int Continue_Family(pid_t);
     int Kill_Family(pid_t);
 
-	/** Used to explicitly cleanup our ProcFamilyClient object
+	/** Used to explicitly initialize our ProcFamilyInterface object.
+	    Calling this is not required - if not called, the object
+	    will be initialized on-demand: the first time Create_Process
+		is called with a non-NULL FamilyInfo argument
+	*/
+	void Proc_Family_Init();
+
+	/** Used to explicitly cleanup our ProcFamilyInterface object
 	    (used by the Master before it restarts, since in that
 	    case the DaemonCore destructor won't be called)
 	*/
@@ -1410,7 +1419,7 @@ class DaemonCore : public Service
     pid_t mypid;
     pid_t ppid;
 
-    ProcFamilyClient* m_procd_client;
+    ProcFamilyInterface* m_proc_family;
 
 #ifdef WIN32
     // note: as of WinNT 4.0, MAXIMUM_WAIT_OBJECTS == 64

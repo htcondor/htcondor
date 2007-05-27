@@ -448,7 +448,7 @@ Starter::reallykill( int signo, int type )
 				 s_pid, signo, signame );
 		break;
 	default:
-		EXCEPT( "Unknown type (%d) in Starter::reallykill\n" );
+		EXCEPT( "Unknown type (%d) in Starter::reallykill\n", type );
 	}
 
 	priv = set_root_priv();
@@ -1124,7 +1124,7 @@ Starter::dprintf( int flags, char* fmt, ... )
 float
 Starter::percentCpuUsage( void )
 {
-	if (daemonCore->Get_Family_Usage(s_pid, s_usage) == FALSE) {
+	if (daemonCore->Get_Family_Usage(s_pid, s_usage, true) == FALSE) {
 		EXCEPT( "Starter::percentCpuUsage(): Fatal error getting process "
 		        "info for the starter and decendents" ); 
 	}

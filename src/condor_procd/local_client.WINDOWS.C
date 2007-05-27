@@ -24,21 +24,44 @@
 #include "condor_common.h"
 #include "local_client.h"
 
-LocalClient::LocalClient(const char* pipe_addr) :
+LocalClient::LocalClient() :
+	m_initialized(false),
+	m_pipe_addr(NULL),
 	m_pipe(INVALID_HANDLE_VALUE)
 {
+}
+
+bool
+LocalClient::initialize(const char* pipe_addr)
+{
+	ASSERT(!m_initialized);
+
 	m_pipe_addr = strdup(pipe_addr);
 	ASSERT(m_pipe_addr != NULL);
+
+	m_initialized = true;
+	return true;
 }
 
 LocalClient::~LocalClient()
 {
+	if (!m_initialized) {
+		return;
+	}
+
+	if (m_pipe != INVALID_HANDLE_VALUE) {
+		CloseHandle(m_pipe);
+	}
+
 	free(m_pipe_addr);
 }
 
-void
+bool
 LocalClient::start_connection(void* buffer, int len)
 {
+	ASSERT(m_initialized);
+
+	ASSERT(m_pipe == INVALID_HANDLE_VALUE);
 	while (true) {
 		m_pipe = CreateFile(m_pipe_addr,                   // path to pipe
 		                    GENERIC_READ | GENERIC_WRITE,  // read-write access
@@ -52,32 +75,48 @@ LocalClient::start_connection(void* buffer, int len)
 		}
 		DWORD error = GetLastError();
 		if (error != ERROR_PIPE_BUSY) {
-			EXCEPT("CreateFile error: %u", error);
+			dprintf(D_ALWAYS, "CreateFile error: %u\n", error);
+			return false;
 		}
 		if (WaitNamedPipe(m_pipe_addr, NMPWAIT_WAIT_FOREVER) == FALSE) {
-			EXCEPT("WaitNamedPipe error: %u", GetLastError());
+			dprintf(D_ALWAYS, "WaitNamedPipe error: %u\n", GetLastError());
+			return false;
 		}
 	}
 
 	DWORD bytes;
 	if (WriteFile(m_pipe, buffer, len, &bytes, NULL) == FALSE) {
-		EXCEPT("WriteFile error: %u", GetLastError());
+		dprintf(D_ALWAYS, "WriteFile error: %u\n", GetLastError());
+		CloseHandle(m_pipe);
+		m_pipe = INVALID_HANDLE_VALUE;
+		return false;
 	}
 	ASSERT(bytes == len);
+
+	return true;
 }
 
 void
 LocalClient::end_connection()
 {
+	ASSERT(m_initialized);
+
+	ASSERT(m_pipe != INVALID_HANDLE_VALUE);
 	CloseHandle(m_pipe);
+	m_pipe = INVALID_HANDLE_VALUE;
 }
 
-void
+bool
 LocalClient::read_data(void* buffer, int len)
 {
+	ASSERT(m_initialized);
+
 	DWORD bytes;
 	if (ReadFile(m_pipe, buffer, len, &bytes, NULL) == FALSE) {
-		EXCEPT("ReadFile error: %u", GetLastError());
+		dprintf(D_ALWAYS, "ReadFile error: %u\n", GetLastError());
+		return false;
 	}
 	ASSERT(bytes == len);
+
+	return true;
 }

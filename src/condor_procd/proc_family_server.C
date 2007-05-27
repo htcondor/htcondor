@@ -26,10 +26,58 @@
 #include "proc_family_monitor.h"
 #include "local_server.h"
 
-ProcFamilyServer::ProcFamilyServer(ProcFamilyMonitor& monitor, const char* addr) :
-	m_monitor(monitor),
-	m_server(addr)
+ProcFamilyServer::ProcFamilyServer(ProcFamilyMonitor& monitor,
+                                   const char* addr) :
+	m_monitor(monitor)
 {
+	m_server = new LocalServer;
+	ASSERT(m_server != NULL);
+	if (!m_server->initialize(addr)) {
+		EXCEPT("ProcFamilyServer: could not initialize LocalServer");
+	}
+}
+
+ProcFamilyServer::~ProcFamilyServer()
+{
+	delete m_server;
+}
+
+void
+ProcFamilyServer::set_client_principal(char* p)
+{
+	if (!m_server->set_client_principal(p)) {
+		EXCEPT("ProcFamilyServer: error setting client principal\n");
+	}
+}
+
+void
+ProcFamilyServer::read_from_client(void* buf, int len)
+{
+	// TODO
+	//
+	// on UNIX, if we hit an error reading from a client we're
+	// screwed since all clients share a single named pipe for
+	// sending us commands and we expect that our clients write
+	// valid messages to us atomically
+	//
+	// on Windows, we get a dedicated connection and could do
+	// better - for now, however, we give up in any case
+	//
+	if (!m_server->read_data(buf, len)) {
+		EXCEPT("ProcFamilyServer: error reading from client\n");
+	}
+}
+
+void
+ProcFamilyServer::write_to_client(void* buf, int len)
+{
+	// write errors shouldn't kill us, so we'll just log them
+	// and plug on
+	//
+	if (!m_server->write_data(buf, len)) {
+		dprintf(D_ALWAYS,
+		        "ProcFamilyServer: error writing to client\n");
+	}
 }
 
 void
@@ -47,33 +95,33 @@ ProcFamilyServer::register_subfamily()
 	//
 
 	pid_t root_pid;
-	m_server.read_data(&root_pid, sizeof(pid_t));
+	read_from_client(&root_pid, sizeof(pid_t));
 
 	pid_t watcher_pid;
-	m_server.read_data(&watcher_pid, sizeof(pid_t));
+	read_from_client(&watcher_pid, sizeof(pid_t));
 
 	int max_snapshot_interval;
-	m_server.read_data(&max_snapshot_interval, sizeof(int));
+	read_from_client(&max_snapshot_interval, sizeof(int));
 
 	int penvid_len;
-	m_server.read_data(&penvid_len, sizeof(int));
+	read_from_client(&penvid_len, sizeof(int));
 
 	PidEnvID* penvid = NULL;
 	if (penvid_len) {
 		ASSERT(penvid_len == sizeof(PidEnvID));
 		penvid = new PidEnvID;
 		ASSERT(penvid != NULL);
-		m_server.read_data(penvid, penvid_len);
+		read_from_client(penvid, penvid_len);
 	}
 
 	int login_len;
-	m_server.read_data(&login_len, sizeof(int));
+	read_from_client(&login_len, sizeof(int));
 
 	char* login = NULL;
 	if (login_len) {
 		login = new char[login_len];
 		ASSERT(login != NULL);
-		m_server.read_data(login, login_len);
+		read_from_client(login, login_len);
 	}
 
 	proc_family_error_t err = m_monitor.register_subfamily(root_pid,
@@ -82,21 +130,21 @@ ProcFamilyServer::register_subfamily()
 	                                                       penvid,
 	                                                       login);
 
-	m_server.write_data(&err, sizeof(proc_family_error_t));
+	write_to_client(&err, sizeof(proc_family_error_t));
 }
 
 void
 ProcFamilyServer::get_usage()
 {
 	pid_t pid;
-	m_server.read_data(&pid, sizeof(pid_t));
+	read_from_client(&pid, sizeof(pid_t));
 
 	ProcFamilyUsage usage;
 	proc_family_error_t err = m_monitor.get_family_usage(pid, &usage);
 	
-	m_server.write_data(&err, sizeof(proc_family_error_t));
+	write_to_client(&err, sizeof(proc_family_error_t));
 	if (err == PROC_FAMILY_ERROR_SUCCESS) {
-		m_server.write_data(&usage, sizeof(ProcFamilyUsage));
+		write_to_client(&usage, sizeof(ProcFamilyUsage));
 	}
 }
 
@@ -104,57 +152,57 @@ void
 ProcFamilyServer::signal_process()
 {
 	pid_t pid;
-	m_server.read_data(&pid, sizeof(pid_t));
+	read_from_client(&pid, sizeof(pid_t));
 
 	int sig;
-	m_server.read_data(&sig, sizeof(int));
+	read_from_client(&sig, sizeof(int));
 
 	proc_family_error_t err = m_monitor.signal_process(pid, sig);
 
-	m_server.write_data(&err, sizeof(proc_family_error_t));
+	write_to_client(&err, sizeof(proc_family_error_t));
 }
 
 void
 ProcFamilyServer::suspend_family()
 {
 	pid_t pid;
-	m_server.read_data(&pid, sizeof(pid_t));
+	read_from_client(&pid, sizeof(pid_t));
 
 	proc_family_error_t err = m_monitor.signal_family(pid, SIGSTOP);
 
-	m_server.write_data(&err, sizeof(proc_family_error_t));
+	write_to_client(&err, sizeof(proc_family_error_t));
 }
 
 void
 ProcFamilyServer::continue_family()
 {
 	pid_t pid;
-	m_server.read_data(&pid, sizeof(pid_t));
+	read_from_client(&pid, sizeof(pid_t));
 
 	proc_family_error_t err = m_monitor.signal_family(pid, SIGCONT);
 
-	m_server.write_data(&err, sizeof(proc_family_error_t));
+	write_to_client(&err, sizeof(proc_family_error_t));
 }
 
 void ProcFamilyServer::kill_family()
 {
 	pid_t pid;
-	m_server.read_data(&pid, sizeof(pid_t));
+	read_from_client(&pid, sizeof(pid_t));
 
 	proc_family_error_t err = m_monitor.signal_family(pid, SIGKILL);
 
-	m_server.write_data(&err, sizeof(proc_family_error_t));
+	write_to_client(&err, sizeof(proc_family_error_t));
 }
 
 void
 ProcFamilyServer::unregister_family()
 {
 	pid_t pid;
-	m_server.read_data(&pid, sizeof(pid_t));
+	read_from_client(&pid, sizeof(pid_t));
 
 	proc_family_error_t err = m_monitor.unregister_subfamily(pid);
 
-	m_server.write_data(&err, sizeof(proc_family_error_t));
+	write_to_client(&err, sizeof(proc_family_error_t));
 }
 
 #if defined(PROCD_DEBUG)
@@ -162,9 +210,9 @@ void
 ProcFamilyServer::dump()
 {
 	pid_t pid;
-	m_server.read_data(&pid, sizeof(pid_t));
+	read_from_client(&pid, sizeof(pid_t));
 
-	m_monitor.output(m_server, pid);
+	m_monitor.output(*m_server, pid);
 }
 #endif
 
@@ -175,14 +223,14 @@ ProcFamilyServer::snapshot()
 
 	proc_family_error_t err = PROC_FAMILY_ERROR_SUCCESS;
 
-	m_server.write_data(&err, sizeof(proc_family_error_t));
+	write_to_client(&err, sizeof(proc_family_error_t));
 }
 
 void
 ProcFamilyServer::quit()
 {
 	proc_family_error_t err = PROC_FAMILY_ERROR_SUCCESS;
-	m_server.write_data(&err, sizeof(proc_family_error_t));
+	write_to_client(&err, sizeof(proc_family_error_t));
 }
 
 void
@@ -210,8 +258,12 @@ ProcFamilyServer::wait_loop()
 		}
 	
 		time_t time_before = time(NULL);
-		bool command_ready = m_server.accept_connection(snapshot_countdown);
-
+		bool command_ready;
+		bool ok = m_server->accept_connection(snapshot_countdown,
+		                                      command_ready);
+		if (!ok) {
+			EXCEPT("ProcFamilyServer: failed trying to accept client\n");
+		}
 		if (!command_ready) {
 			// timeout; make sure we execute the timer handler
 			// next time around by explicitly setting the
@@ -233,7 +285,7 @@ ProcFamilyServer::wait_loop()
 		// read the command int from the client
 		//
 		int command;
-		m_server.read_data(&command, sizeof(int));
+		read_from_client(&command, sizeof(int));
 
 		// execute the received command
 		//
@@ -296,6 +348,6 @@ ProcFamilyServer::wait_loop()
 				EXCEPT("unknown command %d received", command);
 		}
 
-		m_server.close_connection();
+		m_server->close_connection();
 	}
 }

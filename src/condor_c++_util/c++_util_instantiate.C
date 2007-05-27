@@ -38,8 +38,9 @@
 #include "condor_credential.h"
 #include "condor_config.h"
 #include "condor_transfer_request.h"
-
+#include "killfamily.h"
 #include "passwd_cache.h"
+#include "proc_family_direct.h"
 
 template class ExtArray<ParamValue>;
 template class SimpleList<ClassAd*>;
@@ -53,6 +54,7 @@ template class ExtArray<int>;
 template class ExtArray<MyString>;
 template class ExtArray<StringSpace::SSStringEnt>;
 template class ExtArray<StringSpace*>;
+template class ExtArray<KillFamily::a_pid>;
 template class HashTable<int, BaseCollection*>;
 template class HashBucket<int, BaseCollection*>;
 template class Set<MyString>;
@@ -77,3 +79,5 @@ template class SimpleList<Daemon*>;
 template class HashTable<Credential_t, Condor_Credential_B*>;
 template class SimpleList<MyString>;
 template class SimpleListIterator<MyString>;
+template class HashTable<pid_t, ProcFamilyDirectContainer*>;
+

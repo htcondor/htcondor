@@ -24,9 +24,17 @@
 #include "condor_common.h"
 #include "local_server.h"
 
-LocalServer::LocalServer(const char* pipe_addr) :
+LocalServer::LocalServer() :
+	m_initialized(false),
 	m_accept_overlapped(NULL)
 {
+}
+
+bool
+LocalServer::initialize(const char* pipe_addr)
+{
+	ASSERT(!m_initialized);
+
 	// TODO: create the named pipe with a security descriptor that denies
 	// access to NT AUTHORITY\NETWORK and grants access to the "condor"
 	// user
@@ -41,7 +49,10 @@ LocalServer::LocalServer(const char* pipe_addr) :
 						0,                                          // WaitNamedPipe default timeout
 						NULL);                                      // default security
 	if (m_pipe == INVALID_HANDLE_VALUE) {
-		EXCEPT("CreateNamedPipe error: %u", GetLastError());
+		dprintf(D_ALWAYS,
+		        "CreateNamedPipe error: %u\n",
+		        GetLastError());
+		return false;
 	}
 
 	m_event = CreateEvent(NULL,   // default security
@@ -49,22 +60,40 @@ LocalServer::LocalServer(const char* pipe_addr) :
 	                      TRUE,   // starts signalled
 	                      NULL);  // no name
 	if (m_event == NULL) {
-		EXCEPT("CreateEvent error: %u", GetLastError());
+		dprintf(D_ALWAYS,
+		        "CreateEvent error: %u\n",
+		        GetLastError());
+		CloseHandle(m_pipe);
+		return false;
 	}
+
+	m_initialized = true;
+	return true;
 }
 
 LocalServer::~LocalServer()
 {
+	// nothing to do if we're not initialized
+	//
+	if (!m_initialized) {
+		return;
+	}
+
 	CloseHandle(m_event);
 	CloseHandle(m_pipe);
 }
 
-void
-LocalServer::set_client_principal(char*)
+bool
+LocalServer::set_client_principal(const char*)
 {
+	// TODO: add the condor account to the DACL
+	// for the named pipe
+	//
+	return true;
 }
 
-bool LocalServer::accept_connection(int timeout)
+bool
+LocalServer::accept_connection(int timeout, bool& ready)
 {
 	// initiate a nonblocking "accept", if one isn't already pending
 	//
@@ -86,6 +115,7 @@ bool LocalServer::accept_connection(int timeout)
 		if ((bresult == TRUE) || (error == ERROR_PIPE_CONNECTED)) {
 			delete m_accept_overlapped;
 			m_accept_overlapped = NULL;
+			ready = true;
 			return true;
 		}
 
@@ -93,7 +123,8 @@ bool LocalServer::accept_connection(int timeout)
 		// the error code indicates a pending operation
 		//
 		if (error != ERROR_IO_PENDING) {
-			EXCEPT("ConnectNamedPipe error: %u", error);
+			dprintf(D_ALWAYS, "ConnectNamedPipe error: %u\n", error);
+			return false;
 		}
 	}
 
@@ -101,10 +132,12 @@ bool LocalServer::accept_connection(int timeout)
 	//
 	DWORD result = WaitForSingleObject(m_event, timeout * 1000);
 	if (result == WAIT_FAILED) {
-		EXCEPT("WaitForSingleObject error: %u", GetLastError());
+		dprintf(D_ALWAYS, "WaitForSingleObject error: %u\n", GetLastError());
+		return false;
 	}
 	if (result == WAIT_TIMEOUT) {
-		return false;
+		ready = false;
+		return true;
 	}
 
 	// a connection has been established; finalize the overlapped operation
@@ -112,26 +145,31 @@ bool LocalServer::accept_connection(int timeout)
 	ASSERT(result == WAIT_OBJECT_0);
 	DWORD ignored;
 	if (GetOverlappedResult(m_pipe, m_accept_overlapped, &ignored, TRUE) == FALSE) {
-		EXCEPT("GetOverlappedResult error: %u", GetLastError());
+		dprintf(D_ALWAYS, "GetOverlappedResult error: %u\n", GetLastError());
+		return false;
 	}
 	delete m_accept_overlapped;
 	m_accept_overlapped = NULL;
 
+	ready = true;
 	return true;
 }
 
-void
+bool
 LocalServer::close_connection()
 {
 	if (FlushFileBuffers(m_pipe) == FALSE) {
-		EXCEPT("FlushFileBuffers error: %u", GetLastError());
+		dprintf(D_ALWAYS, "FlushFileBuffers error: %u\n", GetLastError());
+		return false;
 	}
 	if (DisconnectNamedPipe(m_pipe) == FALSE) {
-		EXCEPT("DisconnectNamedPipe error: %u", GetLastError());
+		dprintf(D_ALWAYS, "DisconnectNamedPipe error: %u\n", GetLastError());
+		return false;
 	}
+	return true;
 }
 
-void
+bool
 LocalServer::read_data(void* buffer, int len)
 {
 	OVERLAPPED overlapped;
@@ -143,16 +181,20 @@ LocalServer::read_data(void* buffer, int len)
 	if (done == FALSE) {
 		DWORD error = GetLastError();
 		if (error != ERROR_IO_PENDING) {
-			EXCEPT("ReadFileError: %u", error);
+			dprintf(D_ALWAYS, "ReadFileError: %u\n", error);
+			return false;
 		}
 		if (GetOverlappedResult(m_pipe, &overlapped, &bytes, TRUE) == FALSE) {
-			EXCEPT("GetOverlappedResult error: %u", GetLastError());
+			dprintf(D_ALWAYS, "GetOverlappedResult error: %u\n", GetLastError());
+			return false;
 		}
 	}
 	ASSERT(bytes == len);
+
+	return true;
 }
 
-void
+bool
 LocalServer::write_data(void* buffer, int len)
 {
 	OVERLAPPED overlapped;
@@ -164,11 +206,15 @@ LocalServer::write_data(void* buffer, int len)
 	if (done == FALSE) {
 		DWORD error = GetLastError();
 		if (error != ERROR_IO_PENDING) {
-			EXCEPT("WriteFile error: %u", error);
+			dprintf(D_ALWAYS, "WriteFile error: %u\n", error);
+			return false;
 		}
 		if (GetOverlappedResult(m_pipe, &overlapped, &bytes, TRUE) == FALSE) {
-			EXCEPT("GetOverlappedResult error: %u", GetLastError());
+			dprintf(D_ALWAYS, "GetOverlappedResult error: %u\n", GetLastError());
+			return false;
 		}
 	}
 	ASSERT(bytes == len);
+
+	return true;
 }

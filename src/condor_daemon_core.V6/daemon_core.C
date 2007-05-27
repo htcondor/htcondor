@@ -94,6 +94,7 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "daemon_core_sock_adapter.h"
 #include "HashTable.h"
 #include "selector.h"
+#include "proc_family_interface.h"
 
 // Make this the last include to fix assert problems on Win32 -- see
 // the comments about assert at the end of condor_debug.h to understand
@@ -251,11 +252,11 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	mypid = ::getpid();
 #endif
 
-	// our pointer to the ProcFamilyClient object is initially NULL. the
+	// our pointer to the ProcFamilyInterface object is initially NULL. the
 	// object will be created the first time Create_Process is called with
 	// a non-NULL family_info argument
 	//
-	m_procd_client = NULL;
+	m_proc_family = NULL;
 
 	maxCommand = ComSize;
 	maxSig = SigSize;
@@ -477,8 +478,8 @@ DaemonCore::~DaemonCore()
 	}
 	delete pidTable;
 
-	if (m_procd_client != NULL) {
-		delete m_procd_client;
+	if (m_proc_family != NULL) {
+		delete m_proc_family;
 	}
 
 	for( i=0; i<LAST_PERM; i++ ) {
@@ -4381,8 +4382,8 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 	//
 	if (privsep_enabled()) {
 		if (!target_has_dcpm && pidinfo && pidinfo->new_process_group) {
-			ASSERT(m_procd_client != NULL);
-			bool ok =  m_procd_client->signal_process(pid, sig);
+			ASSERT(m_proc_family != NULL);
+			bool ok =  m_proc_family->signal_process(pid, sig);
 			if (ok) {
 				// set flag for success
 				msg->deliveryStatus( DCMsg::DELIVERY_SUCCEEDED );
@@ -5416,13 +5417,15 @@ void CreateProcessForkit::exec() {
 #else
 		PidEnvID* penvid_ptr = NULL;
 #endif
-		ASSERT(daemonCore->m_procd_client != NULL);
+		ASSERT(daemonCore->m_proc_family != NULL);
 		bool ok =
-			daemonCore->m_procd_client->register_subfamily(pid,
-											   ::getppid(),
-											   m_family_info->max_snapshot_interval,
-											   penvid_ptr,
-											   m_family_info->login);
+			daemonCore->m_proc_family->register_subfamily_child(
+				pid,
+				::getppid(),
+				m_family_info->max_snapshot_interval,
+				penvid_ptr,
+				m_family_info->login
+			);
 		if (!ok) {
 			errno = ERRNO_REGISTRATION_FAILED;
 			write(m_errorpipe[1], &errno, sizeof(errno));
@@ -5877,13 +5880,13 @@ int DaemonCore::Create_Process(
 	create_id(&time_of_fork, &mii);
 
 	// if this is the first time Create_Process is being called with a
-	// non-NULL family_info argument, create the ProcFamilyClient object
+	// non-NULL family_info argument, create the ProcFamilyInterface object
 	// that we'll use to interact with the procd for controlling process
 	// families
 	//
-	if ((family_info != NULL) && (m_procd_client == NULL)) {
-		m_procd_client = new ProcFamilyClient();
-		ASSERT(m_procd_client);
+	if ((family_info != NULL) && (m_proc_family == NULL)) {
+		m_proc_family = ProcFamilyInterface::create(mySubSystem);
+		ASSERT(m_proc_family);
 	}
 
 #ifdef WIN32
@@ -6208,13 +6211,13 @@ int DaemonCore::Create_Process(
 	// the process
 	//
 	if (family_info != NULL) {
-		ASSERT(m_procd_client != NULL);
+		ASSERT(m_proc_family != NULL);
 		bool ok =
-			m_procd_client->register_subfamily(newpid,
-			                                   getpid(),
-			                                   family_info->max_snapshot_interval,
-			                                   NULL,
-			                                   family_info->login);
+			m_proc_family->register_subfamily(newpid,
+			                                  getpid(),
+			                                  family_info->max_snapshot_interval,
+			                                  NULL,
+			                                  family_info->login);
 		if (!ok) {
 			EXCEPT("error registering process family with procd");
 		}
@@ -6393,9 +6396,10 @@ int DaemonCore::Create_Process(
 				       errno);
 			}
 		}
-	
+
 			// close the write end of our error pipe
 		close(errorpipe[1]);
+
 			// check our error pipe for any problems before the exec
 		int child_errno = 0;
 		if (read(errorpipe[0], &child_errno, sizeof(int)) == sizeof(int)) {
@@ -6417,8 +6421,7 @@ int DaemonCore::Create_Process(
 
 			case ERRNO_REGISTRATION_FAILED:
 				dprintf( D_ALWAYS, "Create_Process: child failed becuase "
-				         "there was a failure registering a family with "
-				         "the ProcD\n" );
+				         "it failed to register itself with the ProcD " );
 				break;
 
 			case ERRNO_PID_COLLISION:
@@ -6560,6 +6563,24 @@ int DaemonCore::Create_Process(
 	   int insert_result = pidTable->insert(newpid,pidtmp);
 	   assert( insert_result == 0);
 	}
+
+#if !defined(WIN32)
+	// here, we do any parent-side work needed to register the new process
+	// with our ProcFamily logic
+	//
+	if (family_info != NULL) {
+		if (!m_proc_family->register_subfamily_parent(newpid,
+		                                              getpid(),
+		                                              family_info->max_snapshot_interval,
+		                                              &pidtmp->penvid,
+		                                              family_info->login))
+		{
+			dprintf(D_ALWAYS,
+			        "Create_Process: error registering family for pid %u\n",
+			        newpid);
+		}
+	}
+#endif
 
 	dprintf(D_DAEMONCORE,
 		"Child Process: pid %lu at %s\n",
@@ -6815,39 +6836,48 @@ DaemonCore::Kill_Thread(int tid)
 }
 
 int
-DaemonCore::Get_Family_Usage(pid_t pid, ProcFamilyUsage& usage)
+DaemonCore::Get_Family_Usage(pid_t pid, ProcFamilyUsage& usage, bool full)
 {
-	ASSERT(m_procd_client != NULL);
-	return m_procd_client->get_usage(pid, usage);
+	ASSERT(m_proc_family != NULL);
+	return m_proc_family->get_usage(pid, usage, full);
 }
 
 int
 DaemonCore::Suspend_Family(pid_t pid)
 {
-	ASSERT(m_procd_client != NULL);
-	return m_procd_client->suspend_family(pid);
+	ASSERT(m_proc_family != NULL);
+	return m_proc_family->suspend_family(pid);
 }
 
 int
 DaemonCore::Continue_Family(pid_t pid)
 {
-	ASSERT(m_procd_client != NULL);
-	return m_procd_client->continue_family(pid);
+	ASSERT(m_proc_family != NULL);
+	return m_proc_family->continue_family(pid);
 }
 
 int
 DaemonCore::Kill_Family(pid_t pid)
 {
-	ASSERT(m_procd_client != NULL);
-	return m_procd_client->kill_family(pid);
+	ASSERT(m_proc_family != NULL);
+	return m_proc_family->kill_family(pid);
+}
+
+void
+DaemonCore::Proc_Family_Init()
+{
+	if (m_proc_family == NULL) {
+		m_proc_family = ProcFamilyInterface::create(mySubSystem);
+		ASSERT(m_proc_family);
+	}
 }
 
 void
 DaemonCore::Proc_Family_Cleanup()
 {
-	if (m_procd_client) {
-		delete m_procd_client;
-		m_procd_client = NULL;
+	if (m_proc_family) {
+		delete m_proc_family;
+		m_proc_family = NULL;
 	}
 }
 
@@ -7667,8 +7697,8 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 	// with the procd for this pid; if we have, unregister it now
 	//
 	if (pidentry->new_process_group == TRUE) {
-		ASSERT(m_procd_client != NULL);
-		if (!m_procd_client->unregister_family(pid)) {
+		ASSERT(m_proc_family != NULL);
+		if (!m_proc_family->unregister_family(pid)) {
 			dprintf(D_ALWAYS,
 			        "error unregistering pid %u with the procd\n",
 			        pid);

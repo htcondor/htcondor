@@ -32,6 +32,7 @@
 #include "condor_pidenvid.h"
 #include "processid.h"
 #include "HashTable.h"
+#include "extArray.h"
 
 #ifndef WIN32 // all the below is for UNIX
 
@@ -457,6 +458,42 @@ class ProcAPI {
 	@param The list to deallocate
   */
   static void freeProcInfoList(procInfo*);
+
+  // these functions are needed by the old process-family tracking
+  // logic, which is still used if "USE_PROCD = False" is set in
+  // condor_config
+  //
+  static int getPidFamily( pid_t pid,
+                           PidEnvID *penvid,
+                           ExtArray<pid_t>& pidFamily,
+                           int &status );
+  static int getPidFamilyByLogin( const char *searchLogin,
+                                  ExtArray<pid_t>& pidFamily );
+  static int getProcSetInfo ( pid_t *pids,
+                              int numpids,
+                              piPTR& pi,
+                              int &status );
+  static int isinfamily ( pid_t *, int, PidEnvID*, piPTR ); 
+#if defined(WIN32)
+  static ExtArray<HANDLE> familyHandles;
+  static void makeFamily( pid_t dadpid,
+                          PidEnvID *penvid,
+                          pid_t *allpids,
+                          int numpids,
+                          pid_t* &fampids,
+                          int &famsize );
+  static void getAllPids( pid_t* &pids, int &numpids );
+  static void closeFamilyHandles();
+  static int multiInfo( pid_t *pidlist, int numpids, piPTR &pi );
+  static int isinlist( pid_t pid, pid_t *pidlist, int numpids );
+#else
+  static piPTR procFamily;
+  static int buildFamily( pid_t,
+                          PidEnvID *,
+                          int & );
+  static void deallocProcFamily();
+  static int getNumProcs();
+#endif
 
 	  /*	
 		Creates a ProcessId from the given pid.

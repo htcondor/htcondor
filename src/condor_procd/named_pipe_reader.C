@@ -24,60 +24,37 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "named_pipe_reader.h"
+#include "named_pipe_watchdog.h"
+#include "named_pipe_util.h"
 
-NamedPipeReader::NamedPipeReader(const char* addr)
+bool
+NamedPipeReader::initialize(const char* addr)
 {
+	ASSERT(!m_initialized);
+
 	ASSERT(addr != NULL);
 	m_addr = strdup(addr);
 	ASSERT(m_addr != NULL);
 
-	// ensure the FIFO doesn't already exist
-	//
-	unlink(addr);
-
-	// make the FIFO node in the filesystem
-	//
-	if (mkfifo(addr, 0600) == -1) {
-		EXCEPT("mkfifo of %s error: %s (%d)", addr, strerror(errno), errno);
+	if (!named_pipe_create(addr, m_pipe, m_dummy_pipe)) {
+		dprintf(D_ALWAYS,
+		        "failed to initialize named pipe at %s\n",
+		        addr);
+		return false;
 	}
 
-	// open (as the current uid) the pipe end that we'll be reading requests 
-	// from (we do this with O_NONBLOCK because otherwise we'd deadlock
-	//  waiting for someone to open the pipe for writing)
-	//
-	m_pipe = safe_open_wrapper(addr, O_RDONLY | O_NONBLOCK);
-	if (m_pipe == -1) {
-		EXCEPT("open for read-only of %s failed: %s (%d)",
-		       addr,
-		       strerror(errno),
-		       errno);
-	}
-
-	// set the pipe back into blocking mode now that we have it open
-	//
-	int flags = fcntl(m_pipe, F_GETFL);
-	if (flags == -1) {
-		EXCEPT("fcntl error: %s (%d)", strerror(errno), errno);
-	}
-	if (fcntl(m_pipe, F_SETFL, flags & ~O_NONBLOCK) == -1) {
-		EXCEPT("fcntl error: %s (%d)", strerror(errno), errno);
-	}
-
-	// open our FIFO for writing as well; we won't actually ever write
-	// to this FD, but we keep this open to prevent EOF from ever being
-	// read from m_pipe
-	//
-	m_dummy_pipe = safe_open_wrapper(m_addr, O_WRONLY);
-	if (m_dummy_pipe == -1) {
-		EXCEPT("open for write-only of %s failed: %s (%d)",
-		       addr,
-		       strerror(errno),
-		       errno);
-	}
+	m_initialized = true;
+	return true;
 }
 
 NamedPipeReader::~NamedPipeReader()
 {
+	// nothing to do if we're not initialized
+	//
+	if (!m_initialized) {
+		return;
+	}
+
 	// close both FIFO FDs we have open
 	//
 	close(m_dummy_pipe);
@@ -93,38 +70,104 @@ NamedPipeReader::~NamedPipeReader()
 }
 
 void
+NamedPipeReader::set_watchdog(NamedPipeWatchdog* watchdog)
+{
+	ASSERT(m_initialized);
+	m_watchdog = watchdog;
+}
+
+bool
 NamedPipeReader::change_owner(uid_t uid)
 {
+	ASSERT(m_initialized);
+
 	// chown the pipe to the uid in question
 	//
 	if (chown(m_addr, uid, (gid_t)-1) < 0) {
-		EXCEPT("chown of %s error: %s (%d)", m_addr, strerror(errno), errno);
+		dprintf(D_ALWAYS,
+		        "chown of %s error: %s (%d)\n",
+		        m_addr,
+		        strerror(errno),
+		        errno);
+		return false;
 	}
+
+	return true;
 }
 
-void
+bool
 NamedPipeReader::read_data(void* buffer, int len)
 {
-	ASSERT(len < PIPE_BUF);
+	ASSERT(m_initialized);
+
+	// if this pipe has multiple writers, we need to ensure
+	// that our message size is no more than PIPE_BUF, otherwise
+	// messages could be interleaved
+	//
+	ASSERT(len <= PIPE_BUF);
+
+	// if we have a watchdog, we don't go right into a blocking
+	// read. instead, we select with both the real pipe and the
+	// watchdog pipe, which will close if our peer shuts down or
+	// crashes. note that we only return failure if the watchdog
+	// pipe has closed and the "real" pipe has nothing to read -
+	// this is to handle the case where our peer has written
+	// something for us to read and then exited
+	//
+	if (m_watchdog != NULL) {
+		fd_set read_fd_set;
+		FD_ZERO(&read_fd_set);
+		FD_SET(m_pipe, &read_fd_set);
+		int watchdog_pipe = m_watchdog->get_file_descriptor();
+		FD_SET(watchdog_pipe, &read_fd_set);
+		int max_fd = (m_pipe > watchdog_pipe) ? m_pipe : watchdog_pipe;
+		int ret = select(max_fd + 1, &read_fd_set, NULL, NULL, NULL);
+		if (ret == -1) {
+			dprintf(D_ALWAYS,
+			        "select error: %s (%d)\n",
+			        strerror(errno),
+			        errno);
+			return false;
+		}
+		if (FD_ISSET(watchdog_pipe, &read_fd_set) &&
+		    !FD_ISSET(m_pipe, &read_fd_set)
+		) {
+			dprintf(D_ALWAYS,
+			        "error reading from named pipe: "
+			            "watchdog pipe has closed\n");
+			return false;
+		}
+	}
 
 	int bytes = read(m_pipe, buffer, len);
 	if (bytes != len) {
 		if (bytes == -1) {
-			EXCEPT("read error: %s (%d)",
-			       strerror(errno),
-			       errno);
+			dprintf(D_ALWAYS,
+			        "read error: %s (%d)\n",
+			        strerror(errno),
+			        errno);
 		}
 		else {
-			EXCEPT("error: read %d of %d bytes",
-			       bytes,
-			       len);
+			dprintf(D_ALWAYS,
+			        "error: read %d of %d bytes\n",
+			        bytes,
+			        len);
 		}
+		return false;
 	}
+
+	return true;
 }
 
 bool
-NamedPipeReader::poll(int timeout)
+NamedPipeReader::poll(int timeout, bool& ready)
 {
+	// TODO: select on the watchdog pipe, if we have one. this
+	// currently isn't a big deal since we only use poll() on
+	// the server-side - which doesn't set a watchdog pipe
+
+	ASSERT(m_initialized);
+
 	ASSERT(timeout >= -1);
 
 	fd_set read_fd_set;
@@ -141,8 +184,14 @@ NamedPipeReader::poll(int timeout)
 
 	int ret = select(m_pipe + 1, &read_fd_set, NULL, NULL, tv_ptr);
 	if (ret == -1) {
-		EXCEPT("select error: %s (%d)", strerror(errno), errno);
+		dprintf(D_ALWAYS,
+		        "select error: %s (%d)\n",
+		        strerror(errno),
+		        errno);
+		return false;
 	}
 
-	return FD_ISSET(m_pipe, &read_fd_set);
+	ready = FD_ISSET(m_pipe, &read_fd_set);
+
+	return true;
 }
