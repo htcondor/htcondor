@@ -363,6 +363,11 @@ CODMgr::activate( Stream* s, ClassAd* req, Claim* claim )
 			// only want to do this if it worked...
 		claim->beginActivation( now );
 	}
+	else {
+			// otherwise, make sure everything goes back to normal
+			// with the opportunistic claim
+		interactionLogicCODStopped();
+	}
 
 	MyString line;
 	line.sprintf( "%s = \"%s\"", ATTR_RESULT, 
