@@ -732,6 +732,19 @@ command_delegate_gsi_cred( Service*, int, Stream* stream )
 	// that's it - return success
 	reply( sock, OK );
 
+	// if the claim already has an associated proxy, delete it
+	// before replacing it with the one we just got
+	char* old_proxy = claim->client()->proxyFile();
+	if (old_proxy != NULL) {
+		if (unlink(old_proxy) == -1) {
+			dprintf(D_ALWAYS,
+			        "error deleting old proxy %s before updating: %s (%d)\n",
+			        old_proxy,
+			        strerror(errno),
+			        errno);
+		}
+	}
+
 	// we have the proxy - now stash its location in the Claim's
 	// Client object so we can get at it when we launch the
 	// starter

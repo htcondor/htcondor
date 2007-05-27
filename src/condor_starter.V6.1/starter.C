@@ -1583,6 +1583,11 @@ CStarter::removeTempExecuteDir( void )
 void
 CStarter::exitAfterGlexec( int code )
 {
+	// tell Daemon Core to uninitialize its process family tracking
+	// subsystem. this will make sure that we tell our ProcD to exit,
+	// if we started one
+	daemonCore->Proc_Family_Cleanup();
+
 	// now we blow away the directory that the startd set up for us
 	// using glexec. this directory will be the parent directory of
 	// EXECUTE. we first "cd /", so that our working directory

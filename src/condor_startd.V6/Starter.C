@@ -976,17 +976,21 @@ Starter::prepareForGlexec( const ArgList& orig_args, const Env* orig_env,
 	// ended up using, on a single text line by itself.
 	SetEnv( "SSL_CLIENT_CERT", pem_str.Value() );
 
+	// create the starter's private dir
 	int ret = my_system(glexec_setup_args);
-	if ( ret != 0 ) {
-		dprintf(D_ALWAYS,
-		        "GLEXEC: error creating private dir: my_system returned %d\n",
-		        ret);
-	}
 
 	// clean up, since there's private info in there.  i wish we didn't have to
 	// put this in the environment to begin with, but alas, that's just how
 	// glexec works.
 	UnsetEnv( "SSL_CLIENT_CERT");
+
+	if ( ret != 0 ) {
+		dprintf(D_ALWAYS,
+		        "GLEXEC: error creating private dir: my_system returned %d\n",
+		        ret);
+		free( glexec_argstr );
+		return 0;
+	}
 
 	// now prepare the starter command line, starting with glexec and its
 	// options (if any).
@@ -1077,16 +1081,15 @@ Starter::cleanupAfterGlexec()
 	// remove the copy of the user proxy that we own
 	// (the starter should remove the one glexec created for it)
 	if( s_claim->client()->proxyFile() != NULL ) {
-		remove( s_claim->client()->proxyFile() );
+		if ( unlink( s_claim->client()->proxyFile() ) == -1) {
+			dprintf( D_ALWAYS,
+			         "error removing temporary proxy %s: %s (%d)\n",
+			         s_claim->client()->proxyFile(),
+			         strerror(errno),
+			         errno );
+		}
+		s_claim->client()->setProxyFile(NULL);
 	}
-
-	// should the starter clean up the StarterLog?  how about removing the
-	// directories if the other VMs are not running any jobs by this user (a
-	// nice potential race condition?)  right now, we litter.  however, the
-	// same dirs get reused if/when the user runs another job.
-	//
-	// and, at this point, there's nothing the startd can do unless we invoke
-	// glexec to clean up.
 }
 #endif // !WIN32
 
