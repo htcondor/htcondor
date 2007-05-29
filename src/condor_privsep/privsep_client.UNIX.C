@@ -28,6 +28,7 @@
 #include "condor_uid.h"
 #include "condor_arglist.h"
 #include "my_popen.h"
+#include "privsep_open.h"
 
 bool
 privsep_enabled()
@@ -39,6 +40,12 @@ privsep_enabled()
 		answer = (param_boolean("PRIVSEP_ENABLED", false) && !is_root());
 		first_time = false;
 	}
+
+#if defined(HPUX)
+	if (answer) {
+		EXCEPT("PRIVSEP_ENABLED not supported on this platform");
+	}
+#endif
 
 	return answer;
 }
@@ -69,6 +76,8 @@ privsep_setup_exec_as_user(uid_t uid, gid_t gid, ArgList& args)
 static int
 receive_fd(int switchboard_fd)
 {
+	int received_fd;
+
 	// set up a msghdr structure for our call to recvmsg
 	//
 	struct msghdr msg;
@@ -87,12 +96,20 @@ receive_fd(int switchboard_fd)
 	msg.msg_iov = iov;
 	msg.msg_iovlen = 1;
 
+#if !defined(PRIVSEP_OPEN_USE_ACCRIGHTS)
 	// control data (this is where we receive the FD)
 	//
 	char cmsg_buf[CMSG_LEN(sizeof(int))];
 	struct cmsghdr* cmsg = (struct cmsghdr*)cmsg_buf;
 	msg.msg_control = cmsg_buf;
 	msg.msg_controllen = CMSG_LEN(sizeof(int));
+#else
+	// set up the variable received_fd to get the
+	// file descriptor
+	//
+	msg.msg_accrights = (caddr_t)&received_fd;
+	msg.msg_accrightslen = sizeof(int);
+#endif
 
 	// receive it!
 	//
@@ -116,11 +133,11 @@ receive_fd(int switchboard_fd)
 		        "privsep_open: protocol error: didn't receive null byte\n");
 		return -1;
 	}
-	if (msg.msg_controllen ==  0) {
-		dprintf(D_ALWAYS, "privsep_open: protocol error: no control data\n");
-		return -1;
-	}
+#if !defined(PRIVSEP_OPEN_USE_ACCRIGHTS)
 	if (msg.msg_controllen != CMSG_LEN(sizeof(int))) {
+#else
+	if (msg.msg_accrightslen != sizeof(int)) {
+#endif
 		dprintf(D_ALWAYS,
 		        "privsep_open: protocol error: wrong control data size\n");
 		return -1;
@@ -128,9 +145,11 @@ receive_fd(int switchboard_fd)
 
 	// holy shit, it worked!
 	//
-	int fd = *(int*)CMSG_DATA(cmsg);
+#if !defined(PRIVSEP_OPEN_USE_ACCRIGHTS)
+	memcpy(&received_fd, CMSG_DATA(cmsg), sizeof(int));
+#endif
 
-	return fd;
+	return received_fd;
 }
 
 int
@@ -280,7 +299,7 @@ privsep_remove_dir(const char*)
 }
 
 bool
-privsep_chown_dir(uid_t uid, gid_t gid, const char* pathname)
+privsep_chown_dir(uid_t uid, gid_t, const char* pathname)
 {
 	ArgList privsep_chown_args;
 

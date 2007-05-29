@@ -1,3 +1,26 @@
+/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2006, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -5,7 +28,9 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
+#include <sys/uio.h>
 #include <fcntl.h>
+#include "privsep_open.h"
 
 static int
 send_fd(int client_fd, int fd)
@@ -29,16 +54,30 @@ send_fd(int client_fd, int fd)
 	msg.msg_iov = iov;
 	msg.msg_iovlen = 1;
 
+	// NOTE: this code currently causes a bus error on HPUX.
+	// I've been able to make the bus error go away by forcing
+	// the cmsg_buf buffer to be aligned, but even then the sendmsg
+	// call fails; for now I'm just going to document PrivSep on
+	// HPUX as not yet working
+	//
+#if !defined(PRIVSEP_OPEN_USE_ACCRIGHTS)
 	// the control message does the actual FD passing
 	//
-	char cmsg_buf[CMSG_LEN(sizeof(int))];
-	struct cmsghdr* cmsg = (struct cmsghdr*)cmsg_buf;
+	char cmsg_buf[CMSG_SPACE(sizeof(int))];
+	msg.msg_control = cmsg_buf;
+	msg.msg_controllen = CMSG_SPACE(sizeof(int));
+	struct cmsghdr* cmsg = CMSG_FIRSTHDR(&msg);
 	cmsg->cmsg_level = SOL_SOCKET;
 	cmsg->cmsg_type = SCM_RIGHTS;
 	cmsg->cmsg_len = CMSG_LEN(sizeof(int));
-	*(int*)CMSG_DATA(cmsg) = fd;
-	msg.msg_control = cmsg;
-	msg.msg_controllen = CMSG_LEN(sizeof(int));
+	memcpy(CMSG_DATA(cmsg), &fd, sizeof(int));
+#else
+	// setup the file descriptor to pass using the
+	// msg_accrights member
+	//
+	msg.msg_accrights = (caddr_t)&fd;
+	msg.msg_accrightslen = sizeof(int);
+#endif
 
 	// send it!
 	//

@@ -21,18 +21,24 @@
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#include "condor_common.h"
-#include "condor_debug.h"
-#include "condor_config.h"
-#include "condor_privsep.h"
+#ifndef _CONDOR_PRIVSEP_OPEN_H
+#define _CONDOR_PRIVSEP_OPEN_H
 
-// PrivSep on Windows: check back in a little while...
+// define CMSG_SPACE and CMSG_LEN macros for platforms that don't
+// have them
 
-bool
-privsep_enabled()
-{
-	if (param_boolean("PRIVSEP_ENABLED", false)) {
-		EXCEPT("PRIVSEP_ENABLED not supported on this platform");
-	}
-	return false;
-}
+#ifndef CMSG_SPACE
+#define CMSG_SPACE(len) (_CMSG_ALIGN(sizeof(struct cmsghdr)) + _CMSG_ALIGN(len))
+#endif
+
+#ifndef CMSG_LEN
+#define CMSG_LEN(len) (_CMSG_ALIGN(sizeof(struct cmsghdr)) + (len))
+#endif
+
+// DUX and Solaris use an older (and simpler) style of FD passing
+
+#if defined(DUX) || defined(Solaris)
+#define PRIVSEP_OPEN_USE_ACCRIGHTS
+#endif
+
+#endif
