@@ -73,10 +73,10 @@ if($whoosetests) {
 SetMonthYear();
 
 if(!$base) {
-	$base = "/nmi/run/" . $foruser . "_nmi-s001.cs.wisc.edu_";
-	$ymbase = "/nmi/run/" . $currentyear . "/" . $monthstring . "/"  . $foruser . "/" . $foruser . "_nmi-s001.cs.wisc.edu_";
+	$base = "/nmi/run/" . $foruser . "_nmi-s003.cs.wisc.edu_";
+	$ymbase = "/nmi/run/" . $currentyear . "/" . $monthstring . "/"  . $foruser . "/" . $foruser . "_nmi-s003.cs.wisc.edu_";
 }
-$testbase = $foruser . "_nmi-s001.cs.wisc.edu_";
+$testbase = $foruser . "_nmi-s003.cs.wisc.edu_";
 
 $basedir = $base . $gid;
 $ymbasedir = $ymbase . $gid;
@@ -288,7 +288,7 @@ sub CrunchErrors
 	if($tests[0] eq "all") {
 		# all of the expected results for all platforms are being 
 		# assessed to a single party
-		print "All test failure allocated to<<$type>>!!!!\n";
+		#print "All test failure allocated to<<$type>>!!!!\n";
 		foreach $host (@platformresults) {
 			$pexpected = 0;
 			$pgood = 0;
@@ -388,20 +388,26 @@ sub CrunchErrors
 				if($type eq "tests") {
 					$p->test_errs($blame);
 					$totaltesterr = $totaltesterr + $blame;
+					#print "Blame to <<$type>>\n";
 				} elsif($type eq "condor") {
 					$p->condor_errs($blame);
 					$totalcondorerr = $totalcondorerr + $blame;
+					#print "Blame to <<$type>>\n";
 				} elsif($type eq "platform") {
 					$p->platform_errs($blame);
 					$totalplatformerr = $totalplatformerr + $blame;
+					#print "Blame to <<$type>>\n";
 				} elsif($type eq "framework") {
 					$p->framework_errs($blame);
 					$totalframeworkerr = $totalframeworkerr + $blame;
+					#print "Blame to <<$type>>\n";
 				} elsif($type eq "unknown") {
 					$p->unknown_errs($blame);
 					$totalunknownerr = $totalunknownerr + $blame;
+					#print "Blame to <<$type>>\n";
 				} else {
 					print "CLASS of problem unknown!!!!!!<$type>!!!!!!!\n";
+					#print "Blame to <<$type>>\n";
 				}
 		}
 	}
@@ -449,11 +455,17 @@ sub PrintResults()
 	my $pformcount = $#platformresults;
 	my $contrl = 0;
 	my $p;
+
+
+
+
 	print "Problem Codes: T(test) C(condor) U(unknown) P(platform) F(framework)\n";
 	print "--------------------------------------------------------------------\n";
 	print "Platform (expected): 						Problem codes\n";
 	while($contrl <= $pformcount) {
 		$p = $platformresults[$contrl];
+	my $framecount = $p->framework_errs( );
+	#print "Into PrintResults and framework errors currently <<$framecount>>\n";
 		printf "%-16s (%d):		Passed = %d	Failed = %d	",$p->platform(),$p->expected(),
 			$p->passed(),$p->failed();
 		if($p->build_errs( ) > 0) {
@@ -477,7 +489,7 @@ sub PrintResults()
 		if($p->unknown_errs( ) > 0) {
 			printf " U(%d) ",$p->unknown_errs();
 		}
-		print "\n";;
+		print "\n";
 		$contrl = $contrl + 1;
 	}
 }
