@@ -856,7 +856,13 @@ static void readHistoryFromFile(char *JobHistoryFileName, char* constraint, Expr
         }
         if (!constraint || EvalBool(ad, constraintExpr)) {
             if (longformat) { 
-				ad->fPrint(stdout, use_xml); printf("\n"); 
+				if( use_xml ) {
+					ad->fPrintAsXML(stdout);
+				}
+				else {
+					ad->fPrint(stdout);
+				}
+				printf("\n"); 
             } else {
                 if (customFormat) {
                     mask.display(stdout, ad);

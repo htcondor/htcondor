@@ -118,8 +118,10 @@ class ClassAd : public AttrList
 			// unparser.AddXMLFileHeader(out);
 			// classad.sPrint(out);
 			// unparser.AddXMLFileFooter(out);
-        virtual int	fPrint(FILE*, bool as_XML = false);				// print the AttrList to a file
-		int         sPrint(MyString &output, bool as_XML = false);   
+        virtual int	fPrint(FILE*);				// print the AttrList to a file
+        int	fPrintAsXML(FILE* F);
+		int         sPrint(MyString &output);   
+		int         sPrintAsXML(MyString &output);
 		void		dPrint( int );				// dprintf to given dprintf level
 
 		void		clear( void );				// clear out all attributes

@@ -702,25 +702,30 @@ bool operator>= (ClassAd &lhs, ClassAd &rhs)
 	return true;
 }
 
-	
-////////////////////////////////////////////////////////////////////////////////
-// print the whole ClassAd into a file. The expressions are in infix notation.
-// Returns FALSE if the file pointer is NULL; TRUE otherwise.
-////////////////////////////////////////////////////////////////////////////////
-int ClassAd::fPrint(FILE* f, bool as_XML /* = false */)
+int ClassAd::fPrintAsXML(FILE* f)
 {
 	if(!f)
 	{
 		return FALSE;
 	}
 
-	if( as_XML ) {
-		MyString out;
-		sPrint(out, true);
-		fprintf(f, "%s", out.Value());
-		return TRUE;
-	}
+	MyString out;
+	sPrintAsXML(out);
+	fprintf(f, "%s", out.Value());
+	return TRUE;
+}
 
+	
+////////////////////////////////////////////////////////////////////////////////
+// print the whole ClassAd into a file. The expressions are in infix notation.
+// Returns FALSE if the file pointer is NULL; TRUE otherwise.
+////////////////////////////////////////////////////////////////////////////////
+int ClassAd::fPrint(FILE* f)
+{
+	if(!f)
+	{
+		return FALSE;
+	}
 
     fprintf(f, "MyType = ");
     fprintf(f, "%c", '"');
@@ -740,20 +745,21 @@ int ClassAd::fPrint(FILE* f, bool as_XML /* = false */)
 	return AttrList::fPrint(f);
 }
 
+int ClassAd::sPrintAsXML(MyString &output)
+{
+	ClassAdXMLUnparser  unparser;
+	MyString            xml;
+	unparser.SetUseCompactSpacing(false);
+	unparser.Unparse(this, xml);
+	output += xml;
+	return TRUE;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // Append a ClassAd to a string.
 ////////////////////////////////////////////////////////////////////////////////
-int ClassAd::sPrint(MyString &output, bool as_XML /* = false */)
+int ClassAd::sPrint(MyString &output)
 {
-	if( as_XML ) {
-		ClassAdXMLUnparser  unparser;
-		MyString            xml;
-		unparser.SetUseCompactSpacing(false);
-		unparser.Unparse(this, xml);
-		output += xml;
-		return TRUE;
-	}
-
 	output += "MyType = \"";
 	if(GetMyTypeName())
 	{
