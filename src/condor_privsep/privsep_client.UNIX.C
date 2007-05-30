@@ -99,10 +99,10 @@ receive_fd(int switchboard_fd)
 #if !defined(PRIVSEP_OPEN_USE_ACCRIGHTS)
 	// control data (this is where we receive the FD)
 	//
-	char cmsg_buf[CMSG_LEN(sizeof(int))];
-	struct cmsghdr* cmsg = (struct cmsghdr*)cmsg_buf;
+	char cmsg_buf[CMSG_SPACE(sizeof(int))];
 	msg.msg_control = cmsg_buf;
-	msg.msg_controllen = CMSG_LEN(sizeof(int));
+	msg.msg_controllen = CMSG_SPACE(sizeof(int));
+	struct cmsghdr* cmsg = CMSG_FIRSTHDR(&msg);
 #else
 	// set up the variable received_fd to get the
 	// file descriptor
