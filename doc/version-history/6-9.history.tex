@@ -78,7 +78,7 @@ re-queued after executing each time.
 \item Condor now looks for its configuration file in \File{/usr/local/etc}
 if the \Macro{CONDOR\_CONFIG} environment variable is not set and there is
 no condor\_config file located in \File{/etc/condor}. This allows a default
-Condor installation to be more compatiable with FreeBSD.
+Condor installation to be more compatible with FreeBSD.
 
 \item If a user job requests streaming input or output in the submit
 file, the job can now run with job leases and the job will continue
@@ -178,11 +178,18 @@ the new -xml option.
 This brings \Condor{history} more in line \Condor{q}.
 
 \item The \verb@$$@ substitution macro syntax now supports the insertion
-of litteral \verb@$$@ characters through the use of \verb@$$(DOLLARDOLLAR)@.
+of literal \verb@$$@ characters through the use of \verb@$$(DOLLARDOLLAR)@.
 Also, \verb@$$@ expansion is no longer recursive, so if the value being
 substituted in place of a \verb@$$@ macro itself contains \verb@$$@ characters,
 these are no longer interpreted as substitution macros but are instead
 inserted literally.
+
+\item When started as root on a Linux 64-bit x86 machine, Condor daemons will
+now leave core files in the log directory when they crash.  This matches
+Condor's behavior on most other Unix-like operating systems, including
+32-bit x86 versions of Linux.
+% Code: Google's coredumper library is now used on Linux x86-64.
+
 
 \end{itemize}
 
@@ -198,7 +205,7 @@ a fast shutdown.
 
 \item On unix systems, Condor can now handle file descriptors larger than
 FD\_SETSIZE when using the select system call. Previously, file descriptors
-largers than FD\_SETSIZE would cause memory corruption and crashes.
+larger than FD\_SETSIZE would cause memory corruption and crashes.
 
 \item When an update to the \Condor{collector} from the
 \Condor{startd} is lost, it is possible for multiple claims to the
