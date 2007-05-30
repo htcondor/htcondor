@@ -1077,9 +1077,9 @@ recursive_chown(const char *path, const char *username, const char *domain) {
 	// UNIX - needs implementation.
 
 	// Shut the compiler up
-	path;
-	username;
-	domain;
+	path = path;
+	username = username;
+	domain = domain;
 
 	return false;
 #endif

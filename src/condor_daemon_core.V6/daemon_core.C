@@ -1343,9 +1343,9 @@ int DaemonCore::Create_Pipe( int *pipe_ends,
 
 	// Shut the compiler up
 	// These parameters are needed on Windows
-	can_register_read;
-	can_register_write;
-	psize;
+	can_register_read = can_register_read;
+	can_register_write = can_register_write;
+	psize = psize;
 
 	bool failed = false;
 	int filedes[2];
@@ -1413,10 +1413,10 @@ int DaemonCore::Inherit_Pipe(int fd, bool is_write, bool can_register, bool nonb
 #else
 		// Shut the compiler up
 		// These parameters are needed on Windows
-	is_write;
-	can_register;
-	nonblocking;
-	psize;
+	is_write = is_write;
+	can_register = can_register;
+	nonblocking = nonblocking;
+	psize = psize;
 
 	pipe_handle = fd;
 #endif
