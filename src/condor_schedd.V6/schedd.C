@@ -2957,7 +2957,7 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 			// Backup the original IWD at submit time
 		if (buf) free(buf);
 		buf = NULL;
-		ad->LookupString(ATTR_JOB_IWD,&buf);
+		job_ad->LookupString(ATTR_JOB_IWD,&buf);
 		if ( buf ) {
 			sprintf(new_attr_value,"SUBMIT_%s",ATTR_JOB_IWD);
 			SetAttributeString(cluster,proc,new_attr_value,buf);
@@ -12435,13 +12435,13 @@ Scheduler::calculateCronTabSchedule( ClassAd *jobAd, bool calculate )
 			// First get the DeferralTime
 			//
 		int deferralTime = 0;
-		ad->EvalInteger( ATTR_DEFERRAL_TIME, NULL, deferralTime );
+		jobAd->EvalInteger( ATTR_DEFERRAL_TIME, NULL, deferralTime );
 			//
 			// Now look to see if they also have a DeferralWindow
 			//
 		int deferralWindow = 0;
 		if ( jobAd->Lookup( ATTR_DEFERRAL_WINDOW ) != NULL ) {
-			ad->EvalInteger( ATTR_DEFERRAL_WINDOW, NULL, deferralWindow );
+			jobAd->EvalInteger( ATTR_DEFERRAL_WINDOW, NULL, deferralWindow );
 		}
 			//
 			// Now if the current time is greater than the
