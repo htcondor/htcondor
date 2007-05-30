@@ -21,15 +21,9 @@
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <errno.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/socket.h>
-#include <sys/uio.h>
-#include <fcntl.h>
+#define _CONDOR_ALLOW_OPEN_AND_FOPEN
+
+#include "condor_common.h"
 #include "privsep_open.h"
 
 static int
