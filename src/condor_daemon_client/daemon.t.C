@@ -355,7 +355,7 @@ main(int argc, char* argv)
 	makeAndDisplayRegular( "puck.cs.wisc.edu", "condor" );
 
 	dprintf( dflag, "\nWe should find the startd, but not the others\n\n" );
-	makeAndDisplayRegular( "vm1@raven.cs.wisc.edu", NULL );
+	makeAndDisplayRegular( "slot1@raven.cs.wisc.edu", NULL );
 
 	dprintf( dflag, "\nUsing a bogus sinful string\n\n" );
 	Daemon d( DT_NEGOTIATOR, "<128.105.232.240:23232>" );

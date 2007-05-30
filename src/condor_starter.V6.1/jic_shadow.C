@@ -730,12 +730,12 @@ JICShadow::publishStarterInfo( ClassAd* ad )
 	ad->Insert( tmp );
 	free( tmp );
 
-	int vm = Starter->getMyVMNumber();
+	int slot = Starter->getMySlotNumber();
 	MyString line = ATTR_NAME;
 	line += "=\"";
-	if( vm ) { 
-		line += "vm";
-		line += vm;
+	if( slot ) { 
+		line += "slot";
+		line += slot;
 		line += '@';
 	}
 	line += my_full_hostname();
@@ -948,14 +948,14 @@ JICShadow::initUserPriv( void )
 		}
 	} else {
 
-       // first see if we define VMx_USER in the config file
+       // first see if we define SLOTx_USER in the config file
         char *nobody_user;
         char paramer[20];
-		int vm = Starter->getMyVMNumber();
-		if( ! vm ) {
-			vm = 1;
+		int slot = Starter->getMySlotNumber();
+		if( ! slot ) {
+			slot = 1;
 		}
-        sprintf( paramer, "VM%d_USER", vm );
+        sprintf( paramer, "SLOT%d_USER", slot );
         nobody_user = param(paramer);
 
         if ( nobody_user != NULL ) {

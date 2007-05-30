@@ -192,16 +192,16 @@ printStartdNormal (ClassAd *ad)
 		// print header if necessary
 		if (first)
 		{
-			printf ("\n%-13.13s %-11.11s %-6.6s %-10.10s %-10.10s %-6.6s "
+			printf ("\n%-18.18s %-10.10s %-6.6s %-9.9s %-8.8s %-6.6s "
 						"%-4.4s  %s\n\n", 
 					ATTR_NAME, opsys_name, arch_name, ATTR_STATE, ATTR_ACTIVITY, 
 					ATTR_LOAD_AVG, "Mem", "ActvtyTime");
 		
-			pm.registerFormat("%-13.13s ", ATTR_NAME, "[???????????] ");
-			pm.registerFormat("%-11.11s " , opsys_attr, "[?????????] ");
+			pm.registerFormat("%-18.18s ", ATTR_NAME, "[???????????] ");
+			pm.registerFormat("%-10.10s " , opsys_attr, "[?????????] ");
 			pm.registerFormat("%-6.6s " , arch_attr, "[????] ");
-			pm.registerFormat("%-10.10s ",  ATTR_STATE), "[????????] ";
-			pm.registerFormat("%-10.10s ",  ATTR_ACTIVITY, "[????????] ");
+			pm.registerFormat("%-9.9s ",  ATTR_STATE), "[????????] ";
+			pm.registerFormat("%-8.8s ",  ATTR_ACTIVITY, "[????????] ");
 			pm.registerFormat("%.3f  ",  ATTR_LOAD_AVG, "[???]  ");
 			pm.registerFormat("%4d",  ATTR_MEMORY, "[??]  ");
 

@@ -1170,7 +1170,7 @@ abort_file_stream_transfer()
 /* 
    We allocate bandwidth for checkpoint and executable transfers here
    (i.e., anything transferred using the file_stream protocol).  We
-   include the startd vm id so the matchmaker can uniquely identify
+   include the startd slot id so the matchmaker can uniquely identify
    checkpoint transfers to/from SMP machines.  The matchmaker may have
    already allocated the bandwidth for this transfer.  In that case,
    our request serves as an update on the amount of data we're
@@ -1184,7 +1184,7 @@ RequestCkptBandwidth()
 {
 	ClassAd request;
 	char buf[100], owner[100], user[100];
-	int nice_user = 0, vm_id = 1;
+	int nice_user = 0, slot_id = 1;
 
 	if (!ManageBandwidth) return;
 
@@ -1242,10 +1242,20 @@ RequestCkptBandwidth()
 	request.Insert(buf);
 	sprintf(buf, "%s = %d", ATTR_PROC_ID, Proc->id.proc);
 	request.Insert(buf);
- 	JobAd->LookupInteger(ATTR_REMOTE_VIRTUAL_MACHINE_ID, vm_id);
-	dprintf(D_ALWAYS, "vm_id = %d\n", vm_id);
- 	sprintf(buf, "%s = %d", ATTR_VIRTUAL_MACHINE_ID, vm_id);
+	if (param_boolean("ALLOW_VM_CRUFT", true)) {
+		if (!JobAd->LookupInteger(ATTR_REMOTE_SLOT_ID, slot_id)) {
+			JobAd->LookupInteger(ATTR_REMOTE_VIRTUAL_MACHINE_ID, slot_id);
+		}
+	} else {
+		JobAd->LookupInteger(ATTR_REMOTE_SLOT_ID, slot_id);
+	}
+	dprintf(D_ALWAYS, "slot_id = %d\n", slot_id);
+ 	sprintf(buf, "%s = %d", ATTR_SLOT_ID, slot_id);
  	request.Insert(buf);
+	if (param_boolean("ALLOW_VM_CRUFT", true)) {
+		sprintf(buf, "%s = %d", ATTR_VIRTUAL_MACHINE_ID, slot_id);
+		request.Insert(buf);
+	}
     // Using ip:pid as an identity of the process is not complete because of private
     // addresses are reusable. TODO (someday)
 	sprintf(buf, "%s = \"%u.%d\"", ATTR_TRANSFER_KEY, my_ip_addr(),

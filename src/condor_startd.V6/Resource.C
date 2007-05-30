@@ -41,9 +41,7 @@ Resource::Resource( CpuAttributes* cap, int rid )
 		tmp.sprintf( "%s%d", name_prefix, rid );
 		free( name_prefix );
 	} else { 
-			// for now, default to "vm", this will become "slot" or
-			// "s" or something in 6.9.x
-		tmp.sprintf( "vm%d", rid );
+		tmp.sprintf( "slot%d", rid );
 	}
 	r_id_str = strdup( tmp.Value() );
 	
@@ -344,8 +342,8 @@ Resource::shutdownAllClaims( bool graceful )
 		kill_claim();
 	}
 
-		// Tell the negotiator not to match any new jobs to this VM, since
-		// they would just be rejected by the startd anyway.
+		// Tell the negotiator not to match any new jobs to this slot,
+		// since they would just be rejected by the startd anyway.
 	r_reqexp->unavail();
 	update();
 
@@ -782,9 +780,9 @@ Resource::init_classad( void )
 
 	// Publish everything we know about.
 	this->publish( r_classad, A_PUBLIC | A_ALL | A_EVALUATED );
-		// NOTE: we don't use A_SHARED_VM here, since when
+		// NOTE: we don't use A_SHARED_SLOT here, since when
 		// init_classad is being called, we don't necessarily have
-		// classads for the other VMs, yet we'll publish the SHARED_VM
+		// classads for the other slots, yet we'll publish the SHARED_SLOT
 		// attrs after this...
 	
 	return TRUE;
@@ -891,7 +889,7 @@ Resource::final_update( void )
 	invalidate_ad.SetMyTypeName( QUERY_ADTYPE );
 	invalidate_ad.SetTargetTypeName( STARTD_ADTYPE );
 
-		// We only want to invalidate this VM.
+		// We only want to invalidate this slot.
 	sprintf( line, "%s = %s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME, 
 			 r_name );
 	invalidate_ad.Insert( line );
@@ -1328,15 +1326,16 @@ Resource::publish( ClassAd* cap, amask_t mask )
 		}
 
 			// Include everything from STARTD_EXPRS.
-			// And then include everything from VMx_STARTD_EXPRS
+			// And then include everything from SLOTx_STARTD_EXPRS
 		daemonCore->publish(cap);
 		config_fill_ad( cap, r_id_str );
 
-			// Also, include a VM ID attribute, since it's handy for
+			// Also, include a slot ID attribute, since it's handy for
 			// defining expressions, and other things.
-		
-		sprintf( line, "%s = %d", ATTR_VIRTUAL_MACHINE_ID, r_id );
-		cap->Insert( line );
+		cap->Assign(ATTR_SLOT_ID, r_id);
+		if (param_boolean("ALLOW_VM_CRUFT", true)) {
+			cap->Assign(ATTR_VIRTUAL_MACHINE_ID, r_id);
+		}
 	}		
 
 	if( IS_PUBLIC(mask) && IS_UPDATE(mask) ) {
@@ -1463,8 +1462,8 @@ Resource::publish( ClassAd* cap, amask_t mask )
 		free(tmp);
 	}
 
-	if( IS_PUBLIC(mask) && IS_SHARED_VM(mask) ) {
-		resmgr->publishVmAttrs( cap );
+	if( IS_PUBLIC(mask) && IS_SHARED_SLOT(mask) ) {
+		resmgr->publishSlotAttrs( cap );
 	}
 }
 
@@ -1519,9 +1518,9 @@ Resource::publishDeathTime( ClassAd* cap )
 }
 
 void
-Resource::publishVmAttrs( ClassAd* cap )
+Resource::publishSlotAttrs( ClassAd* cap )
 {
-	if( ! startd_vm_exprs ) {
+	if( ! startd_slot_attrs ) {
 		return;
 	}
 	if( ! cap ) {
@@ -1533,17 +1532,17 @@ Resource::publishVmAttrs( ClassAd* cap )
 	char* ptr;
 	MyString prefix = r_id_str;
 	prefix += '_';
-	startd_vm_exprs->rewind();
-	while( (ptr = startd_vm_exprs->next()) ) {
+	startd_slot_attrs->rewind();
+	while( (ptr = startd_slot_attrs->next()) ) {
 		caInsert( cap, r_classad, ptr, prefix.Value() );
 	}
 }
 
 
 void
-Resource::refreshVmAttrs( void )
+Resource::refreshSlotAttrs( void )
 {
-	resmgr->publishVmAttrs( r_classad );
+	resmgr->publishSlotAttrs( r_classad );
 }
 
 

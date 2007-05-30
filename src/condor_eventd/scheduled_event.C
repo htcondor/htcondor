@@ -623,7 +623,7 @@ ScheduledShutdownEvent::UpdateSchedule()
 			dprintf(D_ALWAYS, "Could not lookup %s\n", ATTR_MACHINE);
 			continue;
 		}
-		// If we have already vacated this vm, then we don't need to
+		// If we have already vacated this slot, then we don't need to
 		// try to schedule a vacate.  Note that the VacateList is only
 		// up-to-date if we are active.
 		if (active && VacateList && VacateList->contains(startdName)) {

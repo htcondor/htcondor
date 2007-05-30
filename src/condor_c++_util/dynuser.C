@@ -158,35 +158,35 @@ bool dynuser::init_user() {
 		
 
  		// How we initialize username: if we are the starter,
-		// we set it to be condor-reuse-vmX. However, if
+		// we set it to be condor-reuse-slotX. However, if
 		// reuse_account = false we initialize it to be 
 		// condor-run-<pid>.
 
 		char *logappend = NULL;
 		char* tmp = NULL;
-		char vm_num[10];
+		char slot_num[10];
 	 
 		if ( reuse_account ) {
 	
 			logappend = param("STARTER_LOG");
-			tmp = strstr(logappend, ".vm");
+			tmp = strstr(logappend, ".slot");
 			
 			if ( tmp ) {
 				
-				// copy the vm # from the log filename
+				// copy the slot # from the log filename
 	
-				strncpy(vm_num, tmp+1, 10);
-				vm_num[9] = '\0'; // make sure it's terminated
+				strncpy(slot_num, tmp+1, 10);
+				slot_num[9] = '\0'; // make sure it's terminated
 
 			} else {
 	
-				// must not be an smp machine, so just use vm #1
+				// must not be an smp machine, so just use slot #1
 		 		
-				dprintf(D_FULLDEBUG, "Dynuser: Couldn't param VM# - using 1 by default\n");
-				sprintf(vm_num,"vm1");
+				dprintf(D_FULLDEBUG, "Dynuser: Couldn't param slot# - using 1 by default\n");
+				sprintf(slot_num,"slot1");
 		 	}
 			int ret=snprintf(accountname, 100, 
-				ACCOUNT_PREFIX_REUSE "%s", vm_num);
+				ACCOUNT_PREFIX_REUSE "%s", slot_num);
 		 	if ( ret < 0 ) {
 		 		EXCEPT("account name to create too long");
 		 	}

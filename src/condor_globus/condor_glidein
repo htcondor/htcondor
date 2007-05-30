@@ -142,9 +142,9 @@ sub do_submit() {
 	else {
 		$GLOBUSENV .= "_condor_START_owner=$ENV{'LOGNAME'};";
 	}
-	if ( $vmcount != $cpucount ) {
-		$GLOBUSENV .= "_condor_VIRTUAL_MACHINE_TYPE_1=1/$vmcount;";
-		$GLOBUSENV .= "_condor_NUM_VIRTUAL_MACHINES_TYPE_1=$vmcount;";
+	if ( $slotcount != $cpucount ) {
+		$GLOBUSENV .= "_condor_SLOT_TYPE_1=1/$slotcount;";
+		$GLOBUSENV .= "_condor_NUM_SLOTS_TYPE_1=$slotcount;";
 	}
 
 		##Condor has trouble determining ARCH on some
@@ -389,8 +389,9 @@ print STDERR "	Valid options:\n"
 . "   -project <project>      Project to use on Globus resource\n"
 . "   -memory <Mbytes>        Amount of memory to request\n"
 . "   -count <CPU count>      Number of CPUs to request [default=1]\n"
-. "   -vms <VM count>         Number of virtual machines to split up\n"
-. "                            allocated resources into [default=<CPU count>]\n"
+. "   -slots <Slot count>     Number of slots to split up allocated resources\n"
+. "                             into [default=<CPU count>]\n"
+. "   -vms <Slot count>       Deprecated way to specify -slots\n"
 . "   -runtime <mins>         Maximum run time on Globus resource\n"
 . "   -idletime <mins>        Remote daemons exit gracefully after <mins>\n"
 . "                            without running a Condor job [default=20]\n"
@@ -414,7 +415,8 @@ sub parse_command_line() {
 	($NAME = $0) =~ s/.*\///; ## strip off directory path...
 	$idle_time = 20;
 	$cpucount = 1;
-	$vmcount = 0;
+	$slotcount = 0;
+	$vmcount = 0;    ## CRUFT
 	$basedir = '$(HOME)/Condor_glidein';
 	##don't set default archdir because it is built below from pool version, arch
 	$suffix = ".$$";
@@ -436,6 +438,7 @@ sub parse_command_line() {
 		"project=s" => \$project,
 		"memory=i" => \$memory,
 		"count=i" => \$cpucount,
+		"slots=i" => \$slotcount,
 		"vms=i" => \$vmcount,
 		"runtime=i" => \$globus_run_time,
 		"idletime=i" => \$idle_time,
@@ -468,15 +471,23 @@ sub parse_command_line() {
 	    || $gsi_daemon_name ne "" ) {
 	    $config_gsi = 1;
 	}
-
 	if ( $suffix ne "" && !($suffix =~ /\..*/) ) {
 	    $suffix = "." . $suffix;
 	}
-	if ( $vmcount == 0 ) {
-		$vmcount = $cpucount;
-	} elsif ( $cpucount % $vmcount ) {
-		return( "ERROR: $NAME --vms must be a factor of --count");
+	if ( $vmcount && $slotcount) {
+	    return( "ERROR: $NAME --vms and --slots conflict, just use --slots");
 	}
+	if ( $vmcount ) {
+	    print "WARNING: -vms is deprecated, use -slots instead\n";
+	    $slotcount = $vmcount;
+	}
+	if ( $slotcount == 0 ) {
+	    $slotcount = $cpucount;
+	}
+	if ( $cpucount % $slotcount ) {
+	    return( "ERROR: $NAME --slots must be a factor of --count");
+	}
+
 
 	if ( $localdir eq "" ) {
 		$localdir = "$basedir/local";

@@ -73,7 +73,7 @@ template <class p> class counted_ptr; // Forward declaration
 
   <p>Information provided by the Daemon class includes the daemon's
   name (which could be a "condor" name such as
-  "vm1@raven.cs.wisc.edu", or a full hostname), hostname, fully
+  "slot1@raven.cs.wisc.edu", or a full hostname), hostname, fully
   qualified hostname, address (sinful string), port, the type of the
   daemon (daemon_t enum), the pool it reports to (if it's a remote
   pool) and a bool that describes if the daemon is "local" (as
@@ -91,7 +91,7 @@ public:
 		  (basically, the subsystem, though we use a daemon_t enum.
 		  See daemon_types.h for details).  Also, you can pass in the
 		  name (a hostname, or Condor-name, such as
-		  "vm1@raven.cs.wisc.edu") of the particular daemon you care
+		  "slot1@raven.cs.wisc.edu") of the particular daemon you care
 		  about.  If you pass in a NULL (the default) for the name, we
 		  assume you want the "local" daemon.  Alternatively, you can
 		  pass in the "sinful string" of the daemon you care about.  
@@ -155,12 +155,12 @@ public:
 		  but might be something else.  For schedds (submit-only
 		  schedds, in particular), there might be a user name in front
 		  of the hostname, like "wright@raven.cs.wisc.edu".  For SMP
-		  startds, you might have a virtual machine id in front, like
-		  "vm2@raven.cs.wisc.edu".  Even if you instantiate the Daemon
-		  object with a NULL as the argument for the name (to get info
-		  on the local daemon), this function will always return the
-		  name of the specified daemon (it never returns NULL).
-		  @return The name of this daemon (not necessarily the
+		  startds, you might have a slot id in front, like
+		  "slot2@raven.cs.wisc.edu".  Even if you instantiate the
+		  Daemon object with a NULL as the argument for the name (to
+		  get info on the local daemon), this function will always
+		  return the name of the specified daemon (it never returns
+		  NULL).  @return The name of this daemon (not necessarily the
 		  hostname).
 		  */
 	char* name( void );

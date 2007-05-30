@@ -741,7 +741,7 @@ handle_fetch_log( Service *, int, Stream *s )
 
 	//If there is a dot in the name, it is of the form "<SUBSYS>.<ext>"
 	//Otherwise, it is "<SUBSYS>".  The file extension is used to
-	//handle such things as "StarterLog.vm1" and "StarterLog.cod"
+	//handle such things as "StarterLog.slot1" and "StarterLog.cod"
 
 	if(ext) {
 		strncpy(pname, name, ext-name);

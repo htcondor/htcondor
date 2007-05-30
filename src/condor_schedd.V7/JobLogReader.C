@@ -206,8 +206,8 @@ JobLogReader::ProcessLogEntry( ClassAdLogEntry *log_entry, classad::ClassAdColle
 		// The above will return false if the attribute doesn't exist
 		// in the ad.  However, this is expected, because the schedd
 		// sometimes will blindly delete attributes that do not exist
-		// (e.g. RemoteVirtualMachineID).  Therefore, we ignore the
-		// return value.
+		// (e.g. RemoteSlotID).  Therefore, we ignore the return
+		// value.
 
 		break;
 	}

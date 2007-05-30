@@ -6,4 +6,4 @@ condor = nightlies
 condorconfig = condor_config
 condorlocal = condor_config.local
 condordaemons = master,schedd,collector,startd,negotiator
-vms	= 10
+slots	= 10

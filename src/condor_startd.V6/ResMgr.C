@@ -316,7 +316,14 @@ ResMgr::init_resources( void )
 
 		// These things can only be set once, at startup, so they
 		// don't need to be in build_cpu_attrs() at all.
-	max_types = param_integer("MAX_VIRTUAL_MACHINE_TYPES", 10);
+	if (param_boolean("ALLOW_VM_CRUFT", true)) {
+		max_types = param_integer("MAX_SLOT_TYPES",
+								  param_integer("MAX_VIRTUAL_MACHINE_TYPES",
+												10));
+	} else {
+		max_types = param_integer("MAX_SLOT_TYPES", 10);
+	}
+
 	max_types += 1;
 
 		// The reason this isn't on the stack is b/c of the variable
@@ -330,7 +337,7 @@ ResMgr::init_resources( void )
 		// the startd, or else too much weirdness is possible.
 	initTypes( 1 );
 
-		// First, see how many VMs of each type are specified.
+		// First, see how many slots of each type are specified.
 	nresources = countTypes( &type_nums, true );
 
 	if( ! nresources ) {
@@ -355,7 +362,7 @@ ResMgr::init_resources( void )
 		resources[i] = new Resource( new_cpu_attrs[i], i+1 );
 	}
 
-		// We can now seed our IdDispenser with the right VM id. 
+		// We can now seed our IdDispenser with the right slot id. 
 	id_disp = new IdDispenser( num_cpus(), i+1 );
 
 		// Finally, we can free up the space of the new_cpu_attrs
@@ -389,11 +396,11 @@ ResMgr::reconfig_resources( void )
 		// any errors, just dprintf().
 	initTypes( 0 );
 
-		// First, see how many VMs of each type are specified.
+		// First, see how many slots of each type are specified.
 	num = countTypes( &new_type_nums, false );
 
 	if( typeNumCmp(new_type_nums, type_nums) ) {
-			// We want the same number of each VM type that we've got
+			// We want the same number of each slot type that we've got
 			// now.  We're done!
 		delete [] new_type_nums;
 		new_type_nums = NULL;
@@ -406,7 +413,7 @@ ResMgr::reconfig_resources( void )
 	if( ! new_cpu_attrs ) {
 			// There was an error, abort.  We still return true to
 			// indicate that we're done doing our thing...
-		dprintf( D_ALWAYS, "Aborting virtual machine type reconfig.\n" );
+		dprintf( D_ALWAYS, "Aborting slot type reconfig.\n" );
 		delete [] new_type_nums;
 		new_type_nums = NULL;
 		return true;
@@ -455,13 +462,13 @@ ResMgr::reconfig_resources( void )
 			}
 			if( (sorted_resources[t])[i]->type() ==
 				new_cpu_attrs[cur]->type() ) {
-					// We've already got a Resource for this VM, so we
+					// We've already got a Resource for this slot, so we
 					// can delete it.
 				delete new_cpu_attrs[cur];
 				continue;
 			}
 		}
-			// We're done with the new VMs of this type.  See if there
+			// We're done with the new slots of this type.  See if there
 			// are any Resources left over that need to be destroyed.
 		for( ; i<max_num; i++ ) {
 			if( (sorted_resources[t])[i] ) {
@@ -496,7 +503,7 @@ ResMgr::reconfig_resources( void )
 		rip->set_destination_state( delete_state );
 	}
 
-		// Finally, call our helper, so that if all the VMs we need to
+		// Finally, call our helper, so that if all the slots we need to
 		// get rid of are gone by now, we'll allocate the new ones. 
 	return processAllocList();
 }
@@ -520,16 +527,16 @@ ResMgr::buildCpuAttrs( int total, int* type_num_array, bool except )
 	num = 0;
 	for( i=0; i<max_types; i++ ) {
 		if( type_num_array[i] ) {
-			currentVMType = i;
+			m_current_slot_type = i;
 			for( j=0; j<type_num_array[i]; j++ ) {
-				cap = build_vm( i, except );
+				cap = buildSlot( i, except );
 				if( avail.decrement(cap) ) {
 					cap_array[num] = cap;
 					num++;
 				} else {
 						// We ran out of system resources.  
 					dprintf( D_ALWAYS, 
-							 "ERROR: Can't allocate %s virtual machine of type %d\n",
+							 "ERROR: Can't allocate %s slot of type %d\n",
 							 num_string(j+1), i );
 					dprintf( D_ALWAYS | D_NOHEADER, "\tRequesting: " );
 					cap->show_totals( D_ALWAYS );
@@ -553,40 +560,54 @@ ResMgr::buildCpuAttrs( int total, int* type_num_array, bool except )
 	return cap_array;
 }
 	
+static void
+_checkInvalidParam( const char* name, bool except ) {
+	char* tmp;
+	if ((tmp = param(name))) {
+		if (except) {
+			EXCEPT( "Can't define %s in the config file", name );
+		} else {
+			dprintf( D_ALWAYS, 
+					 "Can't define %s in the config file, ignoring\n",
+					 name ); 
+		}
+		free(tmp);
+	}
+}
 
 void
 ResMgr::initTypes( bool except )
 {
 	int i;
 	char* tmp;
-	char buf[128];
+	MyString buf;
 
-	sprintf( buf, "VIRTUAL_MACHINE_TYPE_0" );
-	if( (tmp = param(buf)) ) {
-		if( except ) {
-			EXCEPT( "Can't define %s in the config file", buf );
-		} else {
-			dprintf( D_ALWAYS, 
-					 "Can't define %s in the config file, ignoring\n",
-					 buf ); 
-		}
-		free(tmp);
-	}
+	_checkInvalidParam("SLOT_TYPE_0", except);
+		// CRUFT
+	_checkInvalidParam("VIRTUAL_MACHINE_TYPE_0", except);
 
-	if( ! type_strings[0] ) {
-			// Type 0 is the special type for evenly divided VMs. 
+	if (! type_strings[0]) {
+			// Type 0 is the special type for evenly divided slots. 
 		type_strings[0] = new StringList();
-		sprintf( buf, "1/%d", num_cpus() );
-		type_strings[0]->initializeFromString( buf );
+		buf.sprintf("1/%d", num_cpus());
+		type_strings[0]->initializeFromString(buf.Value());
 	}	
 
 	for( i=1; i < max_types; i++ ) {
 		if( type_strings[i] ) {
 			continue;
 		}
-		sprintf( buf, "VIRTUAL_MACHINE_TYPE_%d", i );
-		if( ! (tmp = param(buf)) ) {
-			continue;
+		buf.sprintf("SLOT_TYPE_%d", i);
+		tmp = param(buf.Value());
+		if (!tmp) {
+			if (param_boolean("ALLOW_VM_CRUFT", true)) {
+				buf.sprintf("VIRTUAL_MACHINE_TYPE_%d", i);
+				if (!(tmp = param(buf.Value()))) {
+					continue;
+				}
+			} else {
+				continue;
+			}
 		}
 		type_strings[i] = new StringList();
 		type_strings[i]->initializeFromString( tmp );
@@ -600,7 +621,8 @@ ResMgr::countTypes( int** array_ptr, bool except )
 {
 	int i, num=0, num_set=0;
 	char* tmp;
-	char buf[128];
+    MyString param_name;
+    MyString cruft_name;
 	int* new_type_nums = new int[max_types];
 
 	if( ! array_ptr ) {
@@ -608,22 +630,21 @@ ResMgr::countTypes( int** array_ptr, bool except )
 	}
 
 		// Type 0 is special, user's shouldn't define it.
-	sprintf( buf, "NUM_VIRTUAL_MACHINES_TYPE_0" );
-	if( (tmp = param(buf)) ) {
-		if( except ) {
-			EXCEPT( "Can't define %s in the config file", buf );
-		} else {
-			dprintf( D_ALWAYS, 
-					 "Can't define %s in the config file, ignoring\n",
-					 buf ); 
-		}
-		free(tmp);
-	}
+	_checkInvalidParam("NUM_SLOTS_TYPE_0", except);
+		// CRUFT
+	_checkInvalidParam("NUM_VIRTUAL_MACHINES_TYPE_0", except);
 
 	for( i=1; i<max_types; i++ ) {
-		sprintf( buf, "NUM_VIRTUAL_MACHINES_TYPE_%d", i );
-		new_type_nums[i] = param_integer( buf, 0 );
-		if ( new_type_nums[i] ) {
+		param_name.sprintf("NUM_SLOTS_TYPE_%d", i);
+		if (param_boolean("ALLOW_VM_CRUFT", true)) {
+			cruft_name.sprintf("NUM_VIRTUAL_MACHINES_TYPE_%d", i);
+			new_type_nums[i] = param_integer(param_name.Value(),
+											 param_integer(cruft_name.Value(),
+														   0));
+		} else {
+			new_type_nums[i] = param_integer(param_name.Value(), 0);
+		}
+		if (new_type_nums[i]) {
 			num_set = 1;
 			num += new_type_nums[i];
 		}
@@ -636,7 +657,13 @@ ResMgr::countTypes( int** array_ptr, bool except )
 			// We haven't found any special types yet.  Therefore,
 			// we're evenly dividing things, so we only have to figure
 			// out how many nodes to advertise.
-		new_type_nums[0] = param_integer("NUM_VIRTUAL_MACHINES",num_cpus());
+		if (param_boolean("ALLOW_VM_CRUFT", true)) {
+			new_type_nums[0] = param_integer("NUM_SLOTS",
+										  param_integer("NUM_VIRTUAL_MACHINES",
+														num_cpus()));
+		} else {
+			new_type_nums[0] = param_integer("NUM_SLOTS", num_cpus());
+		}
 		num = new_type_nums[0];
 	}
 	*array_ptr = new_type_nums;
@@ -658,7 +685,7 @@ ResMgr::typeNumCmp( int* a, int* b )
 
 
 CpuAttributes*
-ResMgr::build_vm( int type, bool except )
+ResMgr::buildSlot( int type, bool except )
 {
 	StringList* list = type_strings[type];
 	char *attr, *val;
@@ -677,8 +704,8 @@ ResMgr::build_vm( int type, bool except )
 				// it as a percentage and use that for everything.
 			share = parse_value( attr, except );
 			if( share <= 0 ) {
-				dprintf( D_ALWAYS, "ERROR: Bad description of machine type %d: ",
-						 currentVMType );
+				dprintf( D_ALWAYS, "ERROR: Bad description of slot type %d: ",
+						 m_current_slot_type );
 				dprintf( D_ALWAYS | D_NOHEADER,  "\"%s\" is invalid.\n", attr );
 				dprintf( D_ALWAYS | D_NOHEADER, 
 						 "\tYou must specify a percentage (like \"25%%\"), " );
@@ -707,8 +734,8 @@ ResMgr::build_vm( int type, bool except )
 			// case, parse_value() will return negative.
 		if( ! val[1] ) {
 			dprintf( D_ALWAYS, 
-					 "Can't parse attribute \"%s\" in description of machine type %d\n",
-					 attr, currentVMType );
+					 "Can't parse attribute \"%s\" in description of slot type %d\n",
+					 attr, m_current_slot_type );
 			if( except ) {
 				DC_Exit( 4 );
 			} else {	
@@ -735,8 +762,8 @@ ResMgr::build_vm( int type, bool except )
 				swap = share;
 			} else {
 				dprintf( D_ALWAYS,
-						 "You must specify a percent or fraction for swap in machine type %d\n", 
-						 currentVMType ); 
+						 "You must specify a percent or fraction for swap in slot type %d\n", 
+						 m_current_slot_type ); 
 				if( except ) {
 					DC_Exit( 4 );
 				} else {	
@@ -749,8 +776,8 @@ ResMgr::build_vm( int type, bool except )
 				disk = share;
 			} else {
 				dprintf( D_ALWAYS, 
-						 "You must specify a percent or fraction for disk in machine type %d\n", 
-						currentVMType ); 
+						 "You must specify a percent or fraction for disk in slot type %d\n", 
+						m_current_slot_type ); 
 				if( except ) {
 					DC_Exit( 4 );
 				} else {	
@@ -759,8 +786,8 @@ ResMgr::build_vm( int type, bool except )
 			}
 			break;
 		default:
-			dprintf( D_ALWAYS, "Unknown attribute \"%s\" in machine type %d\n", 
-					 attr, currentVMType );
+			dprintf( D_ALWAYS, "Unknown attribute \"%s\" in slot type %d\n", 
+					 attr, m_current_slot_type );
 			if( except ) {
 				DC_Exit( 4 );
 			} else {	
@@ -813,8 +840,8 @@ ResMgr::parse_value( const char* str, bool except )
 			// It's a fraction
 		*tmp = '\0';
 		if( ! tmp[1] ) {
-			dprintf( D_ALWAYS, "Can't parse attribute \"%s\" in description of machine type %d\n",
-					 foo, currentVMType );
+			dprintf( D_ALWAYS, "Can't parse attribute \"%s\" in description of slot type %d\n",
+					 foo, m_current_slot_type );
 			if( except ) {
 				DC_Exit( 4 );
 			} else {	
@@ -1247,13 +1274,6 @@ ResMgr::get_by_slot_id( int id )
 }
 
 
-// Deprecated (might not even need to be released).
-Resource*
-ResMgr::get_by_vm_id( int id ) {
-	return this->get_by_slot_id(id);
-}
-
-
 State
 ResMgr::state( void )
 {
@@ -1266,7 +1286,7 @@ ResMgr::state( void )
 	for( i = 0; i < nresources; i++ ) {
 		rip = resources[i];
 			// if there are *any* COD claims at all (active or not),
-			// we should say this machine is claimed so preen doesn't
+			// we should say this slot is claimed so preen doesn't
 			// try to clean up directories for the COD claim(s).
 		if( rip->r_cod_mgr->numClaims() > 0 ) {
 			return claimed_state;
@@ -1441,9 +1461,9 @@ ResMgr::compute( amask_t how_much )
 
 		// Finally, now that all the internal classads are up to date
 		// with all the attributes they could possibly have, we can
-		// publish the cross-VM attributes desired from
-		// STARTD_VM_ATTRS into each VM's internal ClassAd.
-	walk( &Resource::refresh_classad, A_SHARED_VM );
+		// publish the cross-slot attributes desired from
+		// STARTD_SLOT_ATTRS into each slots's internal ClassAd.
+	walk( &Resource::refresh_classad, A_SHARED_SLOT );
 
 		// Now that we're done, we can display all the values.
 	walk( &Resource::display, how_much );
@@ -1453,11 +1473,11 @@ ResMgr::compute( amask_t how_much )
 void
 ResMgr::publish( ClassAd* cp, amask_t how_much )
 {
-	char line[100];
-
 	if( IS_UPDATE(how_much) && IS_PUBLIC(how_much) ) {
-		sprintf( line, "%s=%d", ATTR_TOTAL_VIRTUAL_MACHINES, num_vms() );
-		cp->Insert( line ); 
+		cp->Assign(ATTR_TOTAL_SLOTS, numSlots());
+		if (param_boolean("ALLOW_VM_CRUFT", true)) { 
+			cp->Assign(ATTR_TOTAL_VIRTUAL_MACHINES, numSlots());
+		}
 	}
 
 	starter_mgr.publish( cp, how_much );
@@ -1465,14 +1485,14 @@ ResMgr::publish( ClassAd* cp, amask_t how_much )
 
 
 void
-ResMgr::publishVmAttrs( ClassAd* cap )
+ResMgr::publishSlotAttrs( ClassAd* cap )
 {
 	if( ! resources ) {
 		return;
 	}
 	int i;
 	for( i = 0; i < nresources; i++ ) {
-		resources[i]->publishVmAttrs( cap );
+		resources[i]->publishSlotAttrs( cap );
 	}
 }
 
@@ -1547,13 +1567,13 @@ ResMgr::assign_keyboard( void )
 		// Notice, we should also assign keyboard here, since if
 		// there's console activity, there's (by definition) keyboard 
 		// activity as well.
-	for( i = 0; i < console_vms  && i < nresources; i++ ) {
+	for( i = 0; i < console_slots  && i < nresources; i++ ) {
 		resources[i]->r_attr->set_console( console );
 		resources[i]->r_attr->set_keyboard( console );
 	}
 
 		// Finally, assign keyboard activity to all CPUS that care. 
-	for( i = 0; i < keyboard_vms && i < nresources; i++ ) {
+	for( i = 0; i < keyboard_slots && i < nresources; i++ ) {
 		resources[i]->r_attr->set_keyboard( keyboard );
 	}
 }
@@ -1753,7 +1773,7 @@ ResMgr::processAllocList( void )
 	CpuAttributes* cap;
 
 		// Copy over the old Resource pointers.  If nresources is 0
-		// (b/c we used to be configured to have no VMs), this won't
+		// (b/c we used to be configured to have no slots), this won't
 		// copy anything (and won't seg fault).
 	memcpy( (void*)new_resources, (void*)resources, 
 			(sizeof(Resource*)*nresources) );

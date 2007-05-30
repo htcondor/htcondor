@@ -12,4 +12,4 @@ condorlocal = condor_config.local
 localpostsrc = x_condorc_locconfigpostsrc
 
 ports = dynamic
-vms	= 1 
+slots	= 1 

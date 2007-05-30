@@ -33,12 +33,12 @@ char*	num_string( int );
 
 
 /* Returns the name of the local file the startd uses to write its
-   current claim id into.  If the given vm_id is 0, we assume a
-   non-SMP startd and use a generic name.  Otherwise, we append ".vmX"
+   current claim id into.  If the given slot_id is 0, we assume a
+   non-SMP startd and use a generic name.  Otherwise, we append ".slotX"
    to the filename we create.  The memory returned is allocated with
    malloc() and must be deallocated with free().
 */
-char* startdClaimIdFile( int vm_id );  
+char* startdClaimIdFile( int slot_id );  
 
 
 #if defined( __cplusplus )

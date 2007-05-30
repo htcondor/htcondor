@@ -189,10 +189,10 @@ ResState::eval( void )
 		// anything.  
 	rip->hackLoadForCOD();
 
-		// also, since we might be an SMP where other VMs just changed
-		// their state, we also want to re-publish the shared VM
-		// attributes so that other VMs can see those results.
-	rip->refreshVmAttrs();
+		// also, since we might be an SMP where other slots just changed
+		// their state, we also want to re-publish the shared slot
+		// attributes so that other slots can see those results.
+	rip->refreshSlotAttrs();
 
 	switch( r_state ) {
 

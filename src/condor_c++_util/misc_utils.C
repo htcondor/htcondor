@@ -70,7 +70,7 @@ num_string( int num )
 
 
 char*
-startdClaimIdFile( int vm_id )
+startdClaimIdFile( int slot_id )
 {
 	MyString filename;
 
@@ -95,9 +95,9 @@ startdClaimIdFile( int vm_id )
 		filename += ".startd_claim_id";
 	}
 
-	if( vm_id ) {
-		filename += ".vm";
-		filename += vm_id;
+	if( slot_id ) {
+		filename += ".slot";
+		filename += slot_id;
 	}			
 	return strdup( filename.Value() );
 }

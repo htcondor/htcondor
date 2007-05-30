@@ -30,6 +30,7 @@
 #include "internet.h"
 #include "collector_stats.h"
 #include "collector_engine.h"
+#include "condor_config.h"
 
 // The hash function to use
 static unsigned int hashFunction (const StatsHashKey &key)
@@ -627,7 +628,7 @@ CollectorDaemonStatsList::hashKey (StatsHashKey &key,
 
 	// The 'name'
 	char	buf[256]   = "";
-	char	vmbuf[256] = "";
+	MyString slot_buf = "";
 	if ( !ad->LookupString( ATTR_NAME, buf, sizeof(buf))  ) {
 
 		// No "Name" found; fall back to Machine
@@ -639,14 +640,18 @@ CollectorDaemonStatsList::hashKey (StatsHashKey &key,
 			return false;
 		}
 
-		// If there is a virtual machine ID, append it to Machine
-		int		vm;
-		if ( ad->LookupInteger( ATTR_VIRTUAL_MACHINE_ID, vm ) ) {
-			snprintf( vmbuf, sizeof(vmbuf), ":%d", vm );
+		// If there is a slot ID, append it to Machine
+		int	slot;
+		if (ad->LookupInteger( ATTR_SLOT_ID, slot)) {
+			slot_buf.sprintf(":%d", slot);
+		}
+		else if (param_boolean("ALLOW_VM_CRUFT", true) &&
+				 ad->LookupInteger(ATTR_VIRTUAL_MACHINE_ID, slot)) {
+			slot_buf.sprintf(":%d", slot);
 		}
 	}
 	key.name = buf;
-	key.name += vmbuf;
+	key.name += slot_buf.Value();
 
 	// get the IP and port of the daemon
 	if ( ad->LookupString (ATTR_MY_ADDRESS, buf, sizeof(buf) ) ) {

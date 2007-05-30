@@ -14,5 +14,5 @@ condordaemons = master,schedd,collector,negotiator,startd,had,replication
 condordomain = cs.wisc.edu
 #condordomain = cs.technion.ac.il
 collector=192.168.0.5:64101,192.168.0.5:64102,192.168.0.5:64103
-vms=1
+slots=1
 localpostsrc=job_replication_basic.localpostsrc

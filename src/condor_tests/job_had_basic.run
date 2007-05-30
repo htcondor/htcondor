@@ -142,7 +142,7 @@ foreach my $hadIndex (1 .. $hadsNumber)
 #				'LOCAL_CONFIG_FILE', "$topDirectory/$localCondorConfigName");
 &ImplantLine("$topDirectory/$personalCondorParametersName", 
 			 'collector', "$collectorList");
-#&ImplantLine("$topDirectory/$personalCondorParametersName", 'vms', 1);
+#&ImplantLine("$topDirectory/$personalCondorParametersName", 'slots', 1);
 #&ImplantLine($ENV{CONDOR_CONFIG}, 'COLLECTOR_HOST', "$collectorList");
 # Configure several Condor instances and start them
 foreach my $hadIndex (1 .. $hadsNumber)

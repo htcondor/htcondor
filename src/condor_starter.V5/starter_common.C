@@ -34,7 +34,6 @@
 #include "basename.h"
 #include "internet.h"
 
-
 extern int		EventSigs[];
 extern char*	InitiatingHost;
 extern char*	mySubSystem;
@@ -42,7 +41,7 @@ extern ReliSock	*SyscallStream;	// stream to shadow for remote system calls
 extern char*	UidDomain;				// Machines we share UID space with
 extern bool		TrustUidDomain;	// Should we trust what the submit side claims?
 
-char VirtualMachineName[25];
+MyString SlotName;
 
 /*
   Unblock all signals except those which will encode asynchronous
@@ -126,13 +125,13 @@ initial_bookeeping( int argc, char *argv[] )
 		free( tmp1 );
 		free( tmp2 );
 
-		// Stash logAppend as the VirtualMachineName
-		sprintf(VirtualMachineName,"CONDOR_VM=%s\0",logAppend);
+		// Stash logAppend as the SlotName
+		SlotName = logAppend;
 	} else {
 		// We were not told to append anything to the name of the
 		// log file.  This means we are not on an SMP machine,
-		// so set VirtualMachineName to be vm1 (i.e. cpu 1).
-		sprintf(VirtualMachineName,"CONDOR_VM=vm1\0");
+		// so set SlotName to be slot1 (i.e. cpu 1).
+		SlotName = "slot1";
 	}
 
 	init_logging();
@@ -355,4 +354,16 @@ determine_user_ids( uid_t &requested_uid, gid_t &requested_gid )
 		requested_gid = 60001;
 #endif
 
+}
+
+void
+setSlotEnv( Env* env_obj ) {
+	// add name of SMP slot (from startd) into environment
+	MyString slot_env;
+	slot_env.sprintf("CONDOR_SLOT=%s", SlotName.Value());
+	env_obj->SetEnv(slot_env.Value());
+	if (param_boolean("ALLOW_VM_CRUFT", true)) {
+		slot_env.sprintf("CONDOR_VM=%s", SlotName.Value());
+		env_obj->SetEnv(slot_env.Value());
+	}
 }

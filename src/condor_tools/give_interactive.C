@@ -426,7 +426,7 @@ void
 usage(const char *name)
 {
 	printf("\nUsage: %s [-m] -[n number] [-c c_expr] [-r r_expr] [-p pool] \n", name);
-	printf(" -m: Return entire machine, not virtual machines\n");
+	printf(" -m: Return entire machine, not slots\n");
 	printf(" -n num: Return num machines, where num is an integer "
 			"greater than zero\n");
 	printf(" -c c_expr: Use c_expr as the constraint expression\n");
@@ -451,9 +451,9 @@ main(int argc, char *argv[])
 	char *tmp;
 	int i;
 	char buffer[1024];
-	HashTable<HashKey, int>	*virtualMachineCounts;
+	HashTable<HashKey, int>	*slot_counts;
 
-	virtualMachineCounts = new HashTable <HashKey, int> (25, hashFunction); 
+	slot_counts = new HashTable <HashKey, int> (25, hashFunction); 
 	mySubSystem = "INTERACTIVE";
 	myDistro->Init( argc, argv );
 	config();
@@ -462,7 +462,7 @@ main(int argc, char *argv[])
 	for( ptr=argv+1,argc--; argc > 0; argc--,ptr++ ) {
 		if( ptr[0][0] == '-' ) {
 			switch( ptr[0][1] ) {
-			case 'm':	// want real machines, not virtual machines
+			case 'm':	// want real machines, not slots
 				WantMachineNames = true;
 				break;
 			case 'n':	// want specific number of machines
@@ -582,38 +582,43 @@ main(int argc, char *argv[])
 			exit(i+1);
 		}
 
-		// If we want the entire machine, and not just a VM...
+		// If we want the entire machine, and not just a slot...
 		if(WantMachineNames) {
 			if (offer->LookupString (ATTR_MACHINE, remoteHost) ) {
-				int virtMachCount;
-				int vmCountThusFar;
+				int slot_count;
+				int slot_count_thus_far;
 
 				HashKey key(remoteHost);
 
-				// How many VM's are on that machine?
-				if(! offer->LookupInteger (ATTR_TOTAL_VIRTUAL_MACHINES,
-										 virtMachCount) ) {
-						//printf("DEBUG: Setting virtMachineCount to 1\n");
-						virtMachCount = 1;
+				// How many slots are on that machine?
+				if (!offer->LookupInteger(ATTR_TOTAL_SLOTS, slot_count)) {
+					if (param_boolean("ALLOW_VM_CRUFT", true)) {
+						if (!offer->LookupInteger(ATTR_TOTAL_VIRTUAL_MACHINES,
+												  slot_count)) {
+							slot_count = 1;
+						}
+					} else {
+						slot_count = 1;
+					}
 				}
 
-				vmCountThusFar = 0;
+				slot_count_thus_far = 0;
 				// Keep track of what we've seen in a hashtable
-				if(!virtualMachineCounts->lookup(key, vmCountThusFar)) {
+				if(!slot_counts->lookup(key, slot_count_thus_far)) {
 					//printf("DEBUG: Already seen a %s %d times\n",
-					//		 remoteHost, vmCountThusFar);
-					virtualMachineCounts->remove(key);
+					//		 remoteHost, slot_count_thus_far);
+					slot_counts->remove(key);
 				}			
 
-				// If we don't have enough virtual machines to complete
-				// the set, stick it in the hash table, remove it from the
-				// list of startd ads, and keep looking.
+				// If we don't have enough slots to complete the set,
+				// stick it in the hash table, remove it from the list
+				// of startd ads, and keep looking.
 				// FIXME(?) This would probably blow up with bogus ads 
 				// (ie duplicate ads, but I dunno if those can happen)
-				if(++vmCountThusFar < virtMachCount) {
+				if(++slot_count_thus_far < slot_count) {
 					//printf("DEBUG: Adding %s with %d\n", remoteHost, 
-					//		vmCountThusFar);
-					virtualMachineCounts->insert(key, vmCountThusFar);
+					//		slot_count_thus_far);
+					slot_counts->insert(key, slot_count_thus_far);
 					startdAds.Delete(offer);
 					i--;
 					continue;

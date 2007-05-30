@@ -52,7 +52,7 @@ const int BATCH_SIZE				= 4;
 struct StartdStats {
 	StartdStats( const char Name[], int Universe, int ImageSize, int LastCheckpoint) :
 		universe(Universe), imagesize(ImageSize), lastcheckpoint(LastCheckpoint),
-		jobstart(0), virtualmachineid(0), remotetime(0), ckptmegs(0), ckptlength(0), 
+		jobstart(0), slotid(0), remotetime(0), ckptmegs(0), ckptlength(0), 
 		ckptmegspersec(0), ckpttime(0), ckptgroup(0), ckptdone(0)
 		{ 	
 			strcpy( name, Name); 
@@ -74,7 +74,7 @@ struct StartdStats {
 	int		imagesize;
 	int		lastcheckpoint;
 	int 	jobstart;
-	int		virtualmachineid;
+	int		slotid;
 	int 	remotetime;
 	// space for managing the benchmarking and checkpointing staging
 	int 	ckptmegs;

@@ -122,7 +122,7 @@
 #define GET_RESLIST			(SCHED_VERS+63)		// negotiator
 #define ATTEMPT_ACCESS		(SCHED_VERS+64) 	// schedd, test a file
 #define VACATE_CLAIM		(SCHED_VERS+65)     // vacate a given claim
-#define PCKPT_JOB			(SCHED_VERS+66)     // periodic ckpt a given VM
+#define PCKPT_JOB			(SCHED_VERS+66)     // periodic ckpt a given slot
 #define DAEMON_OFF			(SCHED_VERS+67)		// specific daemon, subsys follows 
 #define DAEMON_OFF_FAST		(SCHED_VERS+68)		// specific daemon, subsys follows 
 #define DAEMON_ON			(SCHED_VERS+69)		// specific daemon, subsys follows 
@@ -131,7 +131,7 @@
 #define PERMISSION_AND_AD	(SCHED_VERS+72) // negotiator is sending startad to schedd
 #define REQUEST_NETWORK		(SCHED_VERS+73)	// negotiator network mgmt
 #define VACATE_ALL_FAST		(SCHED_VERS+74)		// fast vacate for whole machine
-#define VACATE_CLAIM_FAST	(SCHED_VERS+75)  	// fast vacate for a given VM
+#define VACATE_CLAIM_FAST	(SCHED_VERS+75)  	// fast vacate for a given slot
 #define REJECTED_WITH_REASON (SCHED_VERS+76) // diagnostic version of REJECTED
 #define START_AGENT			(SCHED_VERS+77) // have the master start an agent
 #define ACT_ON_JOBS			(SCHED_VERS+78) // have the schedd act on some jobs (rm, hold, release)
@@ -154,7 +154,7 @@
 #define SET_BEGINTIME	(SCHED_VERS+95)		// negotiator
 #define SET_LASTTIME	(SCHED_VERS+96)		// negotiator
 #define STORE_POOL_CRED		(SCHED_VERS+97)	// master, store password for daemon-to-daemon shared secret auth (PASSWORD)
-#define VM_REGISTER	(SCHED_VERS+98)		// Virtual Machine
+#define VM_REGISTER	(SCHED_VERS+98)		// Virtual Machine (*not* "slot") ;)
 #define DELEGATE_GSI_CRED_SCHEDD	(SCHED_VERS+99) // delegate refreshed gsi proxy to schedd
 #define DELEGATE_GSI_CRED_STARTER (SCHED_VERS+100) // delegate refreshed gsi proxy to starter
 #define DELEGATE_GSI_CRED_STARTD (SCHED_VERS+101) // delegate gsi proxy to startd

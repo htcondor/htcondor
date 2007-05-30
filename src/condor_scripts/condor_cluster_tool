@@ -513,7 +513,7 @@ sub condor_up()
     while( <CMD> )
     {
 	chomp;
-	if ( /^vm\d+\@$node/ || /^$node/ )
+	if ( /^(vm|slot)\d+\@$node/ || /^$node/ )
 	{
 	    return 1;
 	}

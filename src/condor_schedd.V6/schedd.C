@@ -6207,7 +6207,7 @@ Scheduler::RequestBandwidth(int cluster, int proc, match_rec *rec)
 {
 	ClassAd request;
 	char buf[256], source[100], dest[100], user[200], *str;
-	int executablesize = 0, universe = CONDOR_UNIVERSE_VANILLA, vm=1;
+	int executablesize = 0, universe = CONDOR_UNIVERSE_VANILLA, slot=1;
 
 	GetAttributeString( cluster, proc, ATTR_USER, user );	// TODDCORE 
 	sprintf(buf, "%s = \"%s\"", ATTR_USER, user );
@@ -6223,9 +6223,15 @@ Scheduler::RequestBandwidth(int cluster, int proc, match_rec *rec)
 	sprintf(buf, "%s = \"%s\"", ATTR_REMOTE_HOST, rec->peer);
 	request.Insert(buf);
 	if (rec->my_match_ad) {
-		rec->my_match_ad->LookupInteger(ATTR_VIRTUAL_MACHINE_ID, vm);
+		if (param_boolean("ALLOW_VM_CRUFT", true)) {
+			if (!rec->my_match_ad->LookupInteger(ATTR_SLOT_ID, slot)) {
+				rec->my_match_ad->LookupInteger(ATTR_VIRTUAL_MACHINE_ID, slot);
+			}
+		} else {
+			rec->my_match_ad->LookupInteger(ATTR_SLOT_ID, slot);
+		}
 	}
-	sprintf(buf, "%s = %d", ATTR_VIRTUAL_MACHINE_ID, vm);
+	sprintf(buf, "%s = %d", ATTR_SLOT_ID, slot);
 	request.Insert(buf);
     
     SafeSock sock;
@@ -8011,9 +8017,9 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 				free( tmp );
 				tmp = NULL;
 			}
-			int vm = 1;
-			mrec->my_match_ad->LookupInteger( ATTR_VIRTUAL_MACHINE_ID, vm );
-			SetAttributeInt(cluster,proc,ATTR_REMOTE_VIRTUAL_MACHINE_ID,vm);
+			int slot = 1;
+			mrec->my_match_ad->LookupInteger( ATTR_SLOT_ID, slot );
+			SetAttributeInt(cluster,proc,ATTR_REMOTE_SLOT_ID,slot);
 		}
 		if( ! have_remote_host ) {
 				// CRUFT
@@ -8292,7 +8298,8 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 	}
 
 	DeleteAttribute( cluster, proc, ATTR_REMOTE_POOL );
-	DeleteAttribute( cluster, proc, ATTR_REMOTE_VIRTUAL_MACHINE_ID );
+	DeleteAttribute( cluster, proc, ATTR_REMOTE_SLOT_ID );
+	DeleteAttribute( cluster, proc, ATTR_REMOTE_VIRTUAL_MACHINE_ID ); // CRUFT
 	DeleteAttribute( cluster, proc, ATTR_SHADOW_BIRTHDATE );
 
 		// we want to commit all of the above changes before we
@@ -12083,12 +12090,12 @@ bool jobManagedDone(ClassAd * ad)
 bool 
 Scheduler::claimLocalStartd()
 {
-	Daemon startd(DT_STARTD,NULL,NULL);
+	Daemon startd(DT_STARTD, NULL, NULL);
 	char *startd_addr = NULL;	// local startd sinful string
-	int vm_id;
+	int slot_id;
 	int number_of_claims = 0;
 	char claim_id[155];	
-	MyString vm_state;
+	MyString slot_state;
 	char job_owner[150];
 
 	if ( NegotiationRequestTime==0 ) {
@@ -12122,7 +12129,7 @@ Scheduler::claimLocalStartd()
 	dprintf(D_ALWAYS,
 		"Haven't heard from negotiator, trying to claim local startd\n");
 
-		// Fetch all the vm (machine) ads from the local startd
+		// Fetch all the slot (machine) ads from the local startd
 	CondorError errstack;
 	CondorQuery query(STARTD_AD);
 	QueryResult q;
@@ -12144,19 +12151,20 @@ Scheduler::claimLocalStartd()
 		 */
 	while ( (machine_ad = result.Next()) ) {
 
-		vm_id = 0;		
-		machine_ad->LookupInteger(ATTR_VIRTUAL_MACHINE_ID,vm_id);
+		slot_id = 0;		
+		machine_ad->LookupInteger(ATTR_SLOT_ID, slot_id);
 
 			// first check if this startd is unclaimed
-		vm_state = " ";	// clear out old value before we reuse it
-		machine_ad->LookupString(ATTR_STATE,vm_state);
-		if ( vm_state != getClaimStateString(CLAIM_UNCLAIMED) ) {
-			dprintf(D_FULLDEBUG,"Local startd vm %d is not unclaimed\n", vm_id);
+		slot_state = " ";	// clear out old value before we reuse it
+		machine_ad->LookupString(ATTR_STATE, slot_state);
+		if ( slot_state != getClaimStateString(CLAIM_UNCLAIMED) ) {
+			dprintf(D_FULLDEBUG, "Local startd slot %d is not unclaimed\n",
+					slot_id);
 			continue;
 		}
 
 			// now get the location of the claim id file
-		char *filename = startdClaimIdFile(vm_id);
+		char *filename = startdClaimIdFile(slot_id);
 		if (!filename) continue;
 			// now open it as user condor and read out the claim
 		claim_id[0] = '\0';	// so we notice if we fail to read
@@ -12210,8 +12218,8 @@ Scheduler::claimLocalStartd()
 			ContactStartdArgs *args = 
 						new ContactStartdArgs(claim_id, startd_addr, false);
 			enqueueStartdContact(args);
-			dprintf(D_ALWAYS,"Claiming local startd vm %d at %s\n",
-				vm_id,startd_addr);
+			dprintf(D_ALWAYS, "Claiming local startd slot %d at %s\n",
+					slot_id, startd_addr);
 			number_of_claims++;
 		}	
 	}

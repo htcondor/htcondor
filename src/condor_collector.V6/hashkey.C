@@ -22,6 +22,7 @@
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 #include "condor_common.h"
 #include "condor_debug.h"
+#include "condor_config.h"
 #include "condor_classad.h"
 #include "HashTable.h"
 #include "hashkey.h"
@@ -196,19 +197,23 @@ makeStartdAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
 	// get the name of the startd;
 	// this gets complicated with ID
 	if ( !adLookup( "Start", ad, ATTR_NAME, NULL, hk.name, false ) ) {
-		logWarning( "Start",
-					ATTR_NAME, ATTR_MACHINE, ATTR_VIRTUAL_MACHINE_ID );
+		logWarning( "Start", ATTR_NAME, ATTR_MACHINE, ATTR_SLOT_ID );
 
 		// Get the machine name; if it's not there, give up
 		if ( !adLookup( "Start", ad, ATTR_MACHINE, NULL, hk.name, false ) ) {
 			logError( "Start", ATTR_NAME, ATTR_MACHINE );
 			return false;
 		}
-		// Finally, if there is a virtual machine ID, append it
-		int		vm;
-		if ( ad->LookupInteger( ATTR_VIRTUAL_MACHINE_ID, vm ) ) {
+		// Finally, if there is a slot ID, append it.
+		int	slot;
+		if (ad->LookupInteger( ATTR_SLOT_ID, slot)) {
 			hk.name += ":";
-			hk.name += vm;
+			hk.name += slot;
+		}
+		else if (param_boolean("ALLOW_VM_CRUFT", true) &&
+				 ad->LookupInteger(ATTR_VIRTUAL_MACHINE_ID, slot)) {
+			hk.name += ":";
+			hk.name += slot;
 		}
 	}
 

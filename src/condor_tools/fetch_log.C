@@ -62,7 +62,7 @@ usage( char *cmd )
 	fprintf(stderr,"    STARTER\n");
 	fprintf(stderr,"    KBDD\n");
 	fprintf(stderr,"\nExample 1: %s -debug coral STARTD\n",cmd);
-	fprintf(stderr,"\nExample 2: %s -debug coral STARTER.vm2\n\n",cmd);
+	fprintf(stderr,"\nExample 2: %s -debug coral STARTER.slot2\n\n",cmd);
 }
 
 void

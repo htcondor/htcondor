@@ -1268,7 +1268,7 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype, bool query_collector)
 				  query based on Machine, not Name.  This way, if
 				  people supply just the hostname of an SMP, we can
 				  still find the daemon.  For example, "condor_vacate
-				  host" will vacate all VMs on that host, but only if
+				  host" will vacate all slots on that host, but only if
 				  condor_vacate can find the address in the first
 				  place.  -Derek Wright 8/19/99 
 

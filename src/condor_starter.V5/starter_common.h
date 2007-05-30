@@ -32,6 +32,7 @@
 #include "my_hostname.h"
 #include "exit.h"
 #include "condor_arglist.h"
+#include "env.h"
 
 void init_params(void);
 void init_sig_mask();
@@ -41,6 +42,7 @@ void init_logging();
 void usage( char *my_name );
 ReliSock* NewConnection( int id );
 void support_job_wrapper(char *a_out_name,ArgList *args);
+void setSlotEnv( Env* env_obj );
 
 extern "C" int exception_cleanup(int,int,char*);
 

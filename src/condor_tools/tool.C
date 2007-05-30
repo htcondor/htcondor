@@ -196,10 +196,10 @@ usage( char *str )
 	case VACATE_CLAIM:
 		fprintf( stderr, 
 				 "  %s causes the condor_startd to vacate the running\n"
-				 "  job(s) on specific machines.  If you specify a virtual machine\n"
-				 "  (for example, \"vm1@hostname\"), only that machine will be\n"
+				 "  job(s) on specific machines.  If you specify a slot\n"
+				 "  (for example, \"slot1@hostname\"), only that slot will be\n"
 				 "  vacated.  If you specify just a hostname, all jobs running under\n"
-				 "  any virtual machines at that host will be vacated.  By default,\n"
+				 "  any slots at that host will be vacated.  By default,\n"
 				 "  the jobs will be checkpointed (if possible), though if you\n"
 				 "  specify the -fast option, they will be immediately killed.\n",
 				 str );
@@ -207,8 +207,7 @@ usage( char *str )
 	case PCKPT_JOB:
 		fprintf( stderr, "  %s %s\n  %s%s\n  %s%s\n", str, 
 				 "causes the condor_startd to perform a periodic", 
-				 "checkpoint on running jobs on specific (possibly virtual) ",
-				 "machines.",
+				 "checkpoint on running jobs on specific machines.",
 				 "The jobs continue to run once ", 
 				 "they are done checkpointing." );
 		break;
@@ -1069,7 +1068,7 @@ resolveNames( DaemonList* daemon_list, StringList* name_list )
 				// given (which we're holding in the variable "name")
 				// does NOT contain an '@' character... if it does, it
 				// means the end user is trying to find a specific
-				// startd (e.g. glide-in, a certain VM, etc).
+				// startd (e.g. glide-in, a certain slot, etc).
 			if( real_dt == DT_STARTD && ! strchr(name, '@') ) {
 				host = get_host_part( name );
 				ad->LookupString( ATTR_MACHINE, &tmp );
@@ -1093,13 +1092,13 @@ resolveNames( DaemonList* daemon_list, StringList* name_list )
 					  way, we won't get confused when dealing with SMP
 					  startds, or daemons with multiple names if the
 					  user just specified a hostname.  This also saves
-					  us when the user specifies a given vm on an SMP,
-					  and we match with whatever vm from the same host
+					  us when the user specifies a given slot on an SMP,
+					  and we match with whatever slot from the same host
 					  we hit first.  By inserting the name we're
 					  looking for, we just ensure we've got the right
-					  VM (since all we really care about is the
+					  slot (since all we really care about is the
 					  version and the ip/port, and those will
-					  obviously be the same for all VMs)
+					  obviously be the same for all slots)
 					*/
 				MyString attr = ATTR_NAME;
 				attr += "=\"";
@@ -1164,7 +1163,7 @@ doCommand( Daemon* d )
 		// now and use this bool in the rest of this function.  if
 		// we're doing a -all, if all we know is a sinful string, if
 		// it's a local vacate, or if we only have a hostname but no
-		// "vmX@...", we want to send a machine-wide command, not the
+		// "slotX@...", we want to send a machine-wide command, not the
 		// per-claim one.
 	bool is_per_claim_startd_cmd = false;
 	if( real_cmd == VACATE_CLAIM || real_cmd == PCKPT_JOB ) {
@@ -1207,7 +1206,7 @@ doCommand( Daemon* d )
 	switch(real_cmd) {
 	case VACATE_CLAIM:
 		if( is_per_claim_startd_cmd ) {
-				// we've got a specific VM, so send the claim after
+				// we've got a specific slot, so send the claim after
 				// the command.
 			if( fast ) {
 				my_cmd = VACATE_CLAIM_FAST;
@@ -1233,7 +1232,7 @@ doCommand( Daemon* d )
 
 	case PCKPT_JOB:
 		if( is_per_claim_startd_cmd ) {
-				// we've got a specific VM, so send the claim after
+				// we've got a specific slot, so send the claim after
 				// the command.
 			if( !d->startCommand(my_cmd, &sock, 0, &errstack) ) {
 				fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true));

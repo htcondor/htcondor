@@ -873,7 +873,7 @@ AdminEvent::pollStartdAds( ClassAdList &adsList, char *sinful, char *name )
 	dprintf(D_FULLDEBUG,"daemon name is %s\n",d->name());
 	dprintf(D_FULLDEBUG,"call getAds now.....\n");
 	dprintf(D_FULLDEBUG, 
-		"Want to get ads from  here ((%s)) and this vm ((%s))\n",sinful,name);
+		"Want to get ads from here (%s) and this slot (%s)\n",sinful,name);
 	fRes = d->getAds(adsList, name);
 	if(fRes) {
 		delete d;
@@ -894,7 +894,7 @@ AdminEvent::sendCheckpoint( char *sinful, char *name )
 	dprintf(D_FULLDEBUG,"daemon name is %s\n",d->name());
 	dprintf(D_FULLDEBUG,"call checkpointJob now.....\n");
 	dprintf(D_FULLDEBUG, 
-		"Want to checkpoint to here ((%s)) and this vm ((%s))\n",sinful,name);
+		"Want to checkpoint to here (%s) and this slot (%s)\n",sinful,name);
 	d->checkpointJob(name);
 	delete d;
 	return(0);
@@ -1192,7 +1192,7 @@ AdminEvent::standardUProcess( int batchsz, bool vacate )
 	MyString jobid;	
 	MyString ckptsrvr;
 
-	int		virtualmachineid;	
+	int		slotid;	
 	int		jobuniverse;	
 	int		jobstart;	
 	int		imagesize;	
@@ -1207,6 +1207,7 @@ AdminEvent::standardUProcess( int batchsz, bool vacate )
 
 	m_claimed_standard.Rewind();
 	while( (ad = m_claimed_standard.Next()) ){
+		slotid = -1;
 		ad->LookupString( ATTR_MACHINE, machine );
 		ad->LookupString( ATTR_MY_ADDRESS, sinful ); 
 		ad->LookupString( ATTR_NAME, name ); 
@@ -1219,7 +1220,13 @@ AdminEvent::standardUProcess( int batchsz, bool vacate )
 		ad->LookupInteger( ATTR_JOB_START, jobstart ); 
 		ad->LookupInteger( ATTR_JOB_UNIVERSE, jobuniverse ); 
 		ad->LookupInteger( ATTR_IMAGE_SIZE, imagesize ); 
-		ad->LookupInteger( ATTR_VIRTUAL_MACHINE_ID, virtualmachineid ); 
+		if (param_boolean("ALLOW_VM_CRUFT", true)) {
+			if (!ad->LookupInteger(ATTR_SLOT_ID, slotid)) {
+				ad->LookupInteger(ATTR_VIRTUAL_MACHINE_ID, slotid);
+			}
+		} else {
+			ad->LookupInteger(ATTR_SLOT_ID, slotid);
+		}
 		ad->LookupInteger( "MonitorSelfTime", remotetimeNow ); 
 		ad->LookupInteger( ATTR_LAST_PERIODIC_CHECKPOINT, 
 			lastperiodiccheckpoint ); 
@@ -1229,7 +1236,7 @@ AdminEvent::standardUProcess( int batchsz, bool vacate )
 			//dprintf(D_ALWAYS,"Must hash name %s \n",name.Value());
 			ss = new StartdStats(name.Value(), jobuniverse, imagesize, 
 				lastperiodiccheckpoint);
-			ss->virtualmachineid = virtualmachineid;
+			ss->slotid = slotid;
 			ss->jobstart = jobstart;
 			ss->remotetime = timeNow - remotetimeNow;
 			testtime = timeNow + ss->remotetime; /* adjust by remote diff */
@@ -1298,7 +1305,7 @@ AdminEvent::standardUDisplay_StartdStats( )
 		dprintf(D_FULLDEBUG,"Universe %d\n",ss->universe);
 		dprintf(D_FULLDEBUG,"Jobstart %d\n",ss->jobstart);
 		dprintf(D_FULLDEBUG,"LastCheckPoint %d\n",ss->lastcheckpoint);
-		dprintf(D_ALWAYS,"VirtualMachineId %d\n",ss->virtualmachineid);
+		dprintf(D_ALWAYS,"SlotId %d\n",ss->slotid);
 		dprintf(D_FULLDEBUG,"--------------------------------------\n");
 		dprintf(D_FULLDEBUG,"CkptTime %d\n",ss->ckpttime);
 		dprintf(D_FULLDEBUG,"CkptLength %d\n",ss->ckptlength);

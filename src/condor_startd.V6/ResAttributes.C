@@ -388,14 +388,14 @@ deal_with_benchmarks( Resource* rip )
 
 
 CpuAttributes::CpuAttributes( MachAttributes* map, 
-							  int vm_type,
+							  int slot_type,
 							  int num_cpus, 
 							  int num_phys_mem,
 							  float virt_mem_percent,
 							  float disk_percent )
 {
 	this->map = map;
-	c_type = vm_type;
+	c_type = slot_type;
 	c_num_cpus = num_cpus;
 	c_phys_mem = num_phys_mem;
 	c_virt_mem_percent = virt_mem_percent;

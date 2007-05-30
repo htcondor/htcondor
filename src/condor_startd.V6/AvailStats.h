@@ -35,7 +35,7 @@ public:
 	AvailStats();
 	~AvailStats();
 
-		// update stats on startd vm state change
+		// update stats on startd slot state change
 	void update( State new_state, Activity new_act );
 
 	void publish( ClassAd*, amask_t ); // publish avail stats to given CA

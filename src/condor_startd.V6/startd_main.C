@@ -51,7 +51,7 @@ char*	exec_path = NULL;
 
 // String Lists
 StringList *startd_job_exprs = NULL;
-StringList *startd_vm_exprs = NULL;
+StringList *startd_slot_attrs = NULL;
 static StringList *valid_cod_users = NULL; 
 
 // Hosts
@@ -67,8 +67,8 @@ int		max_claim_alives_missed;  // how many keepalives can we miss
 								  // until we timeout the claim
 time_t	startd_startup;		// Time when the startd started up
 
-int		console_vms = 0;	// # of nodes in an SMP that care about
-int		keyboard_vms = 0;  //   console and keyboard activity
+int		console_slots = 0;	// # of nodes in an SMP that care about
+int		keyboard_slots = 0;  //   console and keyboard activity
 int		disconnected_keyboard_boost;	// # of seconds before when we
 	// started up that we advertise as the last key press for
 	// resources that aren't connected to anything.  
@@ -78,7 +78,7 @@ int		startd_noclaim_shutdown = 0;
     // the plug" and tell the master to shutdown.
 
 bool	compute_avail_stats = false;
-	// should the startd compute vm availability statistics; currently 
+	// should the startd compute slot availability statistics; currently 
 	// false by default
 
 char* Name = NULL;
@@ -216,8 +216,8 @@ main_init( int, char* argv[] )
 	resmgr->walk( &Resource::refresh_classad, A_PUBLIC | A_EVALUATED ); 
 
 		// Now that everything is computed and published, we can
-		// finally put in the attrs shared across the different VMs
-	resmgr->walk( &Resource::refresh_classad, A_PUBLIC | A_SHARED_VM ); 
+		// finally put in the attrs shared across the different slots
+	resmgr->walk( &Resource::refresh_classad, A_PUBLIC | A_SHARED_SLOT ); 
 
 		// If we EXCEPT, don't leave any starters lying around.
 	_EXCEPT_Cleanup = do_cleanup;
@@ -375,7 +375,7 @@ main_config( bool is_full )
 
 		// Reread config file for global settings.
 	init_params(0);
-		// Process any changes in the VM type specifications
+		// Process any changes in the slot type specifications
 	done_allocating = resmgr->reconfig_resources();
 	if( done_allocating ) {
 		return finish_main_config();
@@ -464,25 +464,36 @@ init_params( int first_time)
 		startd_job_exprs->initializeFromString( ATTR_JOB_UNIVERSE );
 	}
 
-	if( startd_vm_exprs ) {
-		delete( startd_vm_exprs );
-		startd_vm_exprs = NULL;
+	if( startd_slot_attrs ) {
+		delete( startd_slot_attrs );
+		startd_slot_attrs = NULL;
 	}
-	tmp = param( "STARTD_VM_EXPRS" );
+	tmp = param( "STARTD_SLOT_ATTRS" );
+	if (!tmp) {
+		tmp = param( "STARTD_SLOT_EXPRS" );
+	}
+	if (param_boolean("ALLOW_VM_CRUFT", true) && !tmp) {
+		tmp = param( "STARTD_VM_ATTRS" );
+		if (!tmp) {
+			tmp = param( "STARTD_VM_EXPRS" );
+		}
+	}
 	if( tmp ) {
-		startd_vm_exprs = new StringList();
-		startd_vm_exprs->initializeFromString( tmp );
+		startd_slot_attrs = new StringList();
+		startd_slot_attrs->initializeFromString( tmp );
 		free( tmp );
 	}
 
-	console_vms = param_integer( "VIRTUAL_MACHINES_CONNECTED_TO_CONSOLE",
-	              param_integer( "CONSOLE_VMS",
-	              param_integer( "CONSOLE_CPUS",
-	              resmgr->m_attr->num_cpus())));
+	console_slots = param_integer( "SLOTS_CONNECTED_TO_CONSOLE",
+                    param_integer( "VIRTUAL_MACHINES_CONNECTED_TO_CONSOLE",
+                    param_integer( "CONSOLE_VMS",
+                    param_integer( "CONSOLE_CPUS",
+                    resmgr->m_attr->num_cpus()))));
 
-	keyboard_vms = param_integer( "VIRTUAL_MACHINES_CONNECTED_TO_KEYBOARD",
-	               param_integer( "KEYBOARD_VMS",
-	               param_integer( "KEYBOARD_CPUS", 1)));
+	keyboard_slots = param_integer( "SLOTS_CONNECTED_TO_KEYBOARD",
+                     param_integer( "VIRTUAL_MACHINES_CONNECTED_TO_KEYBOARD",
+                     param_integer( "KEYBOARD_VMS",
+                     param_integer( "KEYBOARD_CPUS", 1))));
 
 	disconnected_keyboard_boost = param_integer( "DISCONNECTED_KEYBOARD_IDLE_BOOST", 1200 );
 
@@ -565,7 +576,7 @@ startd_exit()
 			// clean-up stale claim-id files
 		int i;
 		char* filename;
-		for( i = 0; i <= resmgr->num_vms(); i++ ) { 
+		for( i = 0; i <= resmgr->numSlots(); i++ ) { 
 			filename = startdClaimIdFile( i );
 			unlink( filename );
 			free( filename );

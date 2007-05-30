@@ -270,7 +270,7 @@ JICLocal::initUserPriv( void )
 		/*
 		  If we're on windoze, and this is anything but a local
 		  universe job, we should immediately try the windoze-specific
-		  method for per-VM users, setting up a nobody account, etc,
+		  method for per-slot users, setting up a nobody account, etc,
 		  and be done with it.  However, if it's local universe, we
 		  basically want to do what we do for the unix case: find
 		  ATTR_OWNER (and ATTR_NT_DOMAIN) from the job ad and

@@ -92,7 +92,7 @@ main( int argc, char** argv )
     invalidate_ad.SetMyTypeName( QUERY_ADTYPE );
     invalidate_ad.SetTargetTypeName( STARTD_ADTYPE );
 
-        // We only want to invalidate this VM.
+        // We only want to invalidate this slot.
     sprintf( line, "%s = %s == \"%s\"", ATTR_REQUIREMENTS, ATTR_MACHINE,  
              host );
     invalidate_ad.Insert( line );

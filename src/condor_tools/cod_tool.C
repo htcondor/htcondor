@@ -235,7 +235,7 @@ void
 fillRequirements( ClassAd* req )
 {
 	MyString jic_req;
-	if( jobad_path ) {
+	if (jobad_path) {
 		jic_req = ATTR_HAS_JIC_LOCAL_STDIN;
 	} else {
 		jic_req = ATTR_HAS_JIC_LOCAL_CONFIG;
@@ -246,23 +246,37 @@ fillRequirements( ClassAd* req )
 	require = ATTR_REQUIREMENTS;
 	require += "=(";
 
-	int vm_id = 0;
-	if( name ) {
-		if( sscanf(name, "vm%d@", &vm_id) != 1 ) { 
-			vm_id = 0;
-		}
-	}
-
-	if( requirements ) {
+	if (requirements) {
 		require += requirements;
 		require += ")&&(";
 	}
-	if( vm_id > 0 ) {
-		require += ATTR_VIRTUAL_MACHINE_ID;
+	int slot_id = 0;
+	if (name) {
+		if (sscanf(name, "slot%d@", &slot_id) != 1) { 
+			slot_id = 0;
+		}
+	}
+	if (slot_id > 0) {
+		require += ATTR_SLOT_ID;
 		require += "==";
-		require += vm_id;
+		require += slot_id;
 		require += ")&&(";
 	}
+	else if (param_boolean("ALLOW_VM_CRUFT", true)) {
+		int vm_id = 0;
+		if (name) {
+			if (sscanf(name, "vm%d@", &vm_id) != 1) { 
+				vm_id = 0;
+			}
+		}
+		if (vm_id > 0) {
+			require += ATTR_VIRTUAL_MACHINE_ID;
+			require += "==";
+			require += vm_id;
+			require += ")&&(";
+		}
+	}
+
 	require += jic_req;
 	require += ')';
 

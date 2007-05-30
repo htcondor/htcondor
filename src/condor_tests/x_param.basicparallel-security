@@ -13,4 +13,4 @@ condorlocal = condor_config.local
 localpostsrc = x_basicparallel-security_locconfigpostsrc
 condordaemons = master,schedd,collector,negotiator,startd
 condordomain = cs.wisc.edu
-vms	= 8
+slots	= 8

@@ -1447,32 +1447,32 @@ CStarter::PublishToEnv( Env* proc_env )
 
 
 int
-CStarter::getMyVMNumber( void )
+CStarter::getMySlotNumber( void )
 {
 	
 	char *logappend = param("STARTER_LOG");		
 	char *tmp = NULL;
 		
-	int vm_number = 0; // default to 0, let our caller decide how to
-					   // interpret that.  
+	int slot_number = 0; // default to 0, let our caller decide how to 
+						 // interpret that.  
 			
 	if ( logappend ) {
 
-		// this could break if the user has ".vm" in the 
+		// this could break if the user has ".slot" in the 
 		// path to the starterlog, but considering it just looked
 		// for '.' until now, I think this assumption is safe-enough.
 
-		tmp = strstr(logappend, ".vm");
+		tmp = strstr(logappend, ".slot");
 		if ( tmp ) {				
-			if ( sscanf(tmp, ".vm%d", &vm_number) < 1 ) {
+			if ( sscanf(tmp, ".slot%d", &slot_number) < 1 ) {
 				// if we couldn't parse it, set it to 1.
-				vm_number = 0;
+				slot_number = 0;
 			}
 		} 
 		free(logappend);
 	}
 
-	return vm_number;
+	return slot_number;
 }
 
 

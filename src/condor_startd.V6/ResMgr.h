@@ -75,7 +75,7 @@ public:
 
 	void	compute( amask_t );
 	void	publish( ClassAd*, amask_t );
-	void	publishVmAttrs( ClassAd* );
+	void	publishSlotAttrs( ClassAd* );
 	void    refresh_benchmarks();
 
 	void	assign_load( void );
@@ -86,7 +86,7 @@ public:
 	bool	is_smp( void ) { return( num_cpus() > 1 ); }
 	int		num_cpus( void ) { return m_attr->num_cpus(); }
 	int		num_real_cpus( void ) { return m_attr->num_real_cpus(); }
-	int		num_vms( void ) { return nresources; }
+	int		numSlots( void ) { return nresources; }
 
 	int		send_update( int, ClassAd*, ClassAd*, bool nonblocking );
 	void	final_update( void );
@@ -153,7 +153,6 @@ public:
 	Resource*	get_by_any_id(char*);	// Find rip by r_cur or r_pre
 	Resource*	get_by_name(char*);		// Find rip by r_name
 	Resource*	get_by_slot_id(int);	// Find rip by r_id
-	Resource*	get_by_vm_id(int);		// Find rip by r_id
 	State		state( void );			// Return the machine state
 
 
@@ -171,7 +170,7 @@ public:
 	void		deleteResource( Resource* );
 
 	void		makeAdList( ClassAdList* );   // Make a list of the
-		// ClassAds from each VM we represent.
+		// ClassAds from each slot we represent.
 
 	void		markShutdown() { is_shutting_down = true; };
 	bool		isShuttingDown() { return is_shutting_down; };
@@ -193,8 +192,8 @@ private:
 	IdDispenser* id_disp;
 	bool 		is_shutting_down;
 
-		// Current virtual machine type we're parsing. 
-	int			currentVMType;		
+		// Current slot type we're parsing. 
+	int			m_current_slot_type;		
 
 	int		num_updates;
 	int		up_tid;		// DaemonCore timer id for update timer
@@ -215,9 +214,9 @@ private:
 	// List of Supplemental ClassAds to publish
 	NamedClassAdList				extra_ads;
 
-		// Builds a CpuAttributes object to represent the virtual
-		// machine described by the given machine type.
-	CpuAttributes*	build_vm( int type, bool except = false );	
+		// Builds a CpuAttributes object to represent the slot
+		// described by the given machine type.
+	CpuAttributes*	buildSlot( int type, bool except = false );	
 
 	    // Returns the percentage represented by the given fraction or
 		// percent string.
@@ -243,15 +242,15 @@ private:
 								   bool except = false );
 
 		// Initialize our type_strings array (a ResMgr data member)
-		// for all VM types.   
+		// for all slot types.   
 	void initTypes( bool except = false );
 
 		/*
-		  Count the number of each VM type specified in the config
+		  Count the number of each slot type specified in the config
 		  file.  If no type-specific entires are found, check for
 		  NUM_VIRTUAL_MACHINES, and return that for type 0.  If
 		  that's not defined, just use num_cpus() for type 0.  We
-		  return the total number of VMs to be used, and set the given
+		  return the total number of slots to be used, and set the given
 		  array pointer to point to a newly allocated array of ints,
 		  indexed by type number.  
 		*/

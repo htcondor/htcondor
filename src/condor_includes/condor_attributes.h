@@ -362,9 +362,11 @@ extern const char * ATTR_REMOTE_JOB_ID;
 extern const char * ATTR_REMOTE_OWNER;
 extern const char * ATTR_REMOTE_POOL;
 extern const char * ATTR_REMOTE_SCHEDD;
+extern const char * ATTR_REMOTE_SLOT_ID;
 extern const char * ATTR_REMOTE_SPOOL_DIR;
 extern const char * ATTR_REMOTE_USER;
 extern const char * ATTR_REMOTE_USER_PRIO;
+// Deprecated (cruft) -- use: ATTR_REMOTE_SLOT_ID 
 extern const char * ATTR_REMOTE_VIRTUAL_MACHINE_ID;
 extern const char * ATTR_REMOVE_KILL_SIG;
 extern const char * ATTR_REMOVE_REASON;
@@ -383,6 +385,7 @@ extern const char * ATTR_SCHEDD_IP_ADDR;
 extern const char * ATTR_SCHEDD_NAME;
 extern const char * ATTR_SCHEDULER;
 extern const char * ATTR_SHADOW_WAIT_FOR_DEBUG;
+extern const char * ATTR_SLOT_ID;
 extern const char * ATTR_SOURCE;
 extern const char * ATTR_STAGE_IN_START;
 extern const char * ATTR_STAGE_IN_FINISH;
@@ -437,7 +440,9 @@ extern const char * ATTR_TOTAL_LOCAL_RUNNING_JOBS;
 extern const char * ATTR_TOTAL_LOCAL_IDLE_JOBS;
 extern const char * ATTR_TOTAL_SCHEDULER_RUNNING_JOBS;
 extern const char * ATTR_TOTAL_SCHEDULER_IDLE_JOBS;
+extern const char * ATTR_TOTAL_SLOTS;
 extern const char * ATTR_TOTAL_TIME_IN_CYCLE;
+// Deprecated (cruft) -- use: ATTR_TOTAL_SLOTS;
 extern const char * ATTR_TOTAL_VIRTUAL_MACHINES;
 extern const char * ATTR_TOTAL_VIRTUAL_MEMORY;
 extern const char * ATTR_UID;
@@ -475,6 +480,7 @@ extern const char * ATTR_MAX_RUNNING_JOBS;
 #define ATTR_VERSION					AttrGetName( ATTRE_VERSION )
 extern const char * ATTR_SCHEDD_BIRTHDATE;
 extern const char * ATTR_SHADOW_VERSION;
+// Deprecated (cruft) -- use: ATTR_SLOT_ID
 extern const char * ATTR_VIRTUAL_MACHINE_ID;
 extern const char * ATTR_SHOULD_TRANSFER_FILES;
 extern const char * ATTR_WHEN_TO_TRANSFER_OUTPUT;

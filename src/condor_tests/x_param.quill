@@ -7,4 +7,4 @@ condorconfig = condor_config
 condorlocal = condor_config.local
 localpostsrc = x_quill_config_postsrc
 condordaemons = master,schedd,collector,startd,negotiator,quill
-vms	= 10
+slots	= 10

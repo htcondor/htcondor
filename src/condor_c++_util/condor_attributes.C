@@ -422,9 +422,11 @@ const char *ATTR_REMOTE_JOB_ID			 = "RemoteJobId";
 const char *ATTR_REMOTE_OWNER			 = "RemoteOwner";
 const char *ATTR_REMOTE_POOL				 = "RemotePool";
 const char *ATTR_REMOTE_SCHEDD			 = "RemoteSchedd";
+const char *ATTR_REMOTE_SLOT_ID          = "RemoteSlotID";
 const char *ATTR_REMOTE_SPOOL_DIR		 = "RemoteSpoolDir";
 const char *ATTR_REMOTE_USER              = "RemoteUser";
 const char *ATTR_REMOTE_USER_PRIO         = "RemoteUserPrio";
+// Deprecated (cruft) -- use: ATTR_REMOTE_SLOT_ID 
 const char *ATTR_REMOTE_VIRTUAL_MACHINE_ID = "RemoteVirtualMachineID";
 const char *ATTR_REMOVE_KILL_SIG          = "RemoveKillSig";
 const char *ATTR_REMOVE_REASON            = "RemoveReason";
@@ -443,6 +445,7 @@ const char *ATTR_SCHEDD_IP_ADDR           = "ScheddIpAddr";
 const char *ATTR_SCHEDD_NAME				 = "ScheddName";
 const char *ATTR_SCHEDULER				 = "Scheduler";
 const char *ATTR_SHADOW_WAIT_FOR_DEBUG    = "ShadowWaitForDebug";
+const char *ATTR_SLOT_ID				 = "SlotID";
 const char *ATTR_SOURCE					 = "Source";
 const char *ATTR_STAGE_IN_START           = "StageInStart";
 const char *ATTR_STAGE_IN_FINISH          = "StageInFinish";
@@ -497,7 +500,9 @@ const char *ATTR_TOTAL_LOCAL_RUNNING_JOBS = "TotalLocalJobsRunning";
 const char *ATTR_TOTAL_LOCAL_IDLE_JOBS	 = "TotalLocalJobsIdle";
 const char *ATTR_TOTAL_SCHEDULER_RUNNING_JOBS = "TotalSchedulerJobsRunning";
 const char *ATTR_TOTAL_SCHEDULER_IDLE_JOBS	 = "TotalSchedulerJobsIdle";
+const char *ATTR_TOTAL_SLOTS			 = "TotalSlots";
 const char *ATTR_TOTAL_TIME_IN_CYCLE		 = "TotalTimeInCycle";	
+// Deprecated (cruft) -- use: ATTR_TOTAL_SLOTS;
 const char *ATTR_TOTAL_VIRTUAL_MACHINES	 = "TotalVirtualMachines";
 const char *ATTR_TOTAL_VIRTUAL_MEMORY	 = "TotalVirtualMemory";
 const char *ATTR_UID						 = "Uid";
@@ -535,6 +540,7 @@ const char *ATTR_MAX_RUNNING_JOBS			 = "MaxRunningJobs";
 #define ATTR_VERSION					AttrGetName( ATTRE_VERSION )
 const char *ATTR_SCHEDD_BIRTHDATE		 = "ScheddBday";
 const char *ATTR_SHADOW_VERSION			 = "ShadowVersion";
+// Deprecated (cruft) -- use: ATTR_SLOT_ID
 const char *ATTR_VIRTUAL_MACHINE_ID		 = "VirtualMachineID";
 const char *ATTR_SHOULD_TRANSFER_FILES    = "ShouldTransferFiles";
 const char *ATTR_WHEN_TO_TRANSFER_OUTPUT  = "WhenToTransferOutput";

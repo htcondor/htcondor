@@ -9,4 +9,4 @@ localpostsrc = x_condorc_locconfigpostsrc
 condordaemons = master,schedd,startd
 nameschedd = scheddone
 collector = xxxxxxxxxxxxxxxx
-vms	= 1
+slots	= 1

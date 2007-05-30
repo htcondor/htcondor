@@ -187,10 +187,10 @@ public:
 		*/
 	JobInfoCommunicator* jic;
 
-		/** Returns the VM number we're running on, or 0 if we're not
-			running as a VM at all.
+		/** Returns the slot number we're running on, or 0 if we're not
+			running on a slot at all.
 		*/
-	int getMyVMNumber( void );
+	int getMySlotNumber( void );
 
 	bool isGridshell( void ) {return is_gridshell;};
 	const char* origCwd( void ) {return (const char*) orig_cwd;};

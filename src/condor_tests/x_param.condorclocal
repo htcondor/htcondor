@@ -12,4 +12,4 @@ condorconfig = condor_config
 condorlocal = condor_config.local
 localpostsrc = x_condorc_locconfigpostsrc
 condordaemons = master,schedd
-vms	= 1
+slots	= 1

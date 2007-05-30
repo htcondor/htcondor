@@ -55,15 +55,15 @@ are the names used for the bits (check out ResAttributes.h).
 
 in terms of special types of attributes, some things are *shared*
 attributes which are system-wide values that are shared among all the
-VMs (RAM is a good example... first you have to figure out the total
-RAM on the machine, then you divide it up for each VM according to the
-configuration).  some attributes are *summed* attributes, which are
-computed individually for each VM, and then the total is computed by
-adding up all the values (e.g. CondorLoadAverage).  some attributes
-are *evaluated*, which means they're just classad expressions that are
-evaluated for each VM.  it's actually a completely insane process to
-get all of this right for an SMP.  the interested reader can check
-out:
+slots (RAM is a good example... first you have to figure out the total
+RAM on the machine, then you divide it up for each slot according to
+the configuration).  some attributes are *summed* attributes, which
+are computed individually for each slot, and then the total is
+computed by adding up all the values (e.g. CondorLoadAverage).  some
+attributes are *evaluated*, which means they're just classad
+expressions that are evaluated for each slot.  it's actually a
+completely insane process to get all of this right for an SMP.  the
+interested reader can check out:
 
 ResMgr::compute()  [ResMgr.C, line 1207]
 

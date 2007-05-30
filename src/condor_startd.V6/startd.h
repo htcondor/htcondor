@@ -99,7 +99,7 @@ extern	char*	exec_path;
 // String Lists
 extern	StringList* console_devices;
 extern	StringList* startd_job_exprs;
-extern	StringList* startd_vm_exprs;
+extern	StringList* startd_slot_attrs;
 
 // Hosts
 extern	char*	accountant_host;
@@ -116,12 +116,10 @@ extern	int		max_claim_alives_missed;  // how many keepalives can we
 extern	int		last_x_event;		// Time of the last x event
 extern  time_t	startd_startup;		// Time when the startd started up
 
-extern	int		console_vms;	// # of virtual machines in an SMP
-								// machine that care when there's
-								// console activity 
-extern	int		keyboard_vms;	// # of virtual machines in an SMP
-								// machine that care when there's
-								// keyboard activity  
+extern	int		console_slots;	// # of slots in an SMP machine that
+								// care when there's console activity
+extern	int		keyboard_slots;	// # of slots in an SMP machine that
+								// care when there's keyboard activity  
 
 extern	int		disconnected_keyboard_boost;	
     // # of seconds before when we started up that we advertise as the
@@ -134,7 +132,7 @@ extern	int		startd_noclaim_shutdown;
 extern	char*	Name;			// The startd's name
 
 extern	bool	compute_avail_stats;
-	// should the startd compute vm availability statistics; currently 
+	// should the startd compute slot availability statistics; currently
 	// false by default
 
 extern	int		pid_snapshot_interval;	

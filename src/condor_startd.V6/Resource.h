@@ -89,8 +89,8 @@ public:
 	void	compute( amask_t mask);
 	void	publish( ClassAd*, amask_t );
     void	publishDeathTime( ClassAd* cap );
-	void	publishVmAttrs( ClassAd* );
-	void	refreshVmAttrs( void );
+	void	publishSlotAttrs( ClassAd* );
+	void	refreshSlotAttrs( void );
 
 		// Load Average related methods
 	float	condor_load( void ) {return r_attr->condor_load();};

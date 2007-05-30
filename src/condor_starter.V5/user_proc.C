@@ -68,8 +68,8 @@ enum
 
 #include "user_proc.h"
 
-extern char	*Execute;			// Name of directory where user procs execute
-extern char VirtualMachineName[];  // Virtual machine where we're allocated (SMP)
+extern char	*Execute;			 // Name of directory where user procs execute
+extern MyString SlotName;        // Slot where we're allocated (SMP)
 extern int ExecTransferAttempts; // attempts at bringing over the initial exec.
 
 extern "C" {
@@ -1222,8 +1222,8 @@ UserProc::UserProc( STARTUP_INFO &s ) :
 			   env_errors.Value(),s.env_v1or2);
 	}
 
-		// add name of SMP virtual machine (from startd) into environment
-	env_obj.SetEnv(VirtualMachineName);	
+		// add name of SMP slot (from startd) into environment
+	setSlotEnv(&env_obj);
 
 	/* Port regulation for user job */
 	int low_port, high_port;

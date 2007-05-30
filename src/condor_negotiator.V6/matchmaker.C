@@ -841,8 +841,8 @@ negotiationTime ()
 	// This _must_ come before trimming the startd ads.
 	int untrimmed_num_startds = startdAds.MyLength();
 
-    // Get number of available VMs in any state.
-    int numDynGroupVms = untrimmed_num_startds;
+    // Get number of available slots in any state.
+    int numDynGroupSlots = untrimmed_num_startds;
 
 	// Register a lookup function that passes through the list of all ads.
 	// ClassAdLookupRegister( lookup_global, &allAds );
@@ -895,19 +895,19 @@ negotiationTime ()
 		groupArray = new SimpleGroupEntry[ groupList.number() ];
 		ASSERT(groupArray);
 
-        // Restrict number of VMs available for dynamic quotas.
-        if ( numDynGroupVms && DynQuotaMachConstraint ) {
-            int matchedVms = startdAds.Count( DynQuotaMachConstraint );
-            if ( matchedVms ) {
+        // Restrict number of slots available for dynamic quotas.
+        if ( numDynGroupSlots && DynQuotaMachConstraint ) {
+            int matchedSlots = startdAds.Count( DynQuotaMachConstraint );
+            if ( matchedSlots ) {
                 dprintf(D_FULLDEBUG,
                     "GROUP_DYNAMIC_MACH_CONSTRAINT constraint reduces machine "
-                    "count from %d to %d\n", numDynGroupVms, matchedVms);
-                numDynGroupVms = matchedVms;
+                    "count from %d to %d\n", numDynGroupSlots, matchedSlots);
+                numDynGroupSlots = matchedSlots;
             } else {
                 dprintf(D_ALWAYS, "warning: 0 out of %d machines match "
                         "GROUP_DYNAMIC_MACH_CONSTRAINT for dynamic quotas\n",
-                        numDynGroupVms);
-                numDynGroupVms = 0;
+                        numDynGroupSlots);
+                numDynGroupSlots = 0;
             }
         }
 
@@ -934,10 +934,10 @@ negotiationTime ()
                     );
                 if (quota_fraction != 0.0) {
                     // use specified dynamic quota
-                    quota = (int)(quota_fraction * numDynGroupVms);
+                    quota = (int)(quota_fraction * numDynGroupSlots);
                     dprintf(D_FULLDEBUG,
-                        "group %s dynamic quota for %d VMs = %d\n",
-                            groups, numDynGroupVms, quota);
+                        "group %s dynamic quota for %d slots = %d\n",
+                            groups, numDynGroupSlots, quota);
                 } else {
                     // neither a static nor dynamic quota was defined
                     dprintf(D_ALWAYS,
@@ -2778,9 +2778,9 @@ addRemoteUserPrios( ClassAdList &cal )
 	ClassAd	*ad;
 	MyString	remoteUser;
 	MyString	buffer;
-	MyString    vm_prefix;
+	MyString    slot_prefix;
 	float	prio;
-	int     totalVMs, i;
+	int     total_slots, i;
 	float     preemptingRank;
 
 	cal.Open();
@@ -2802,18 +2802,30 @@ addRemoteUserPrios( ClassAdList &cal )
 				// must trump the current preempter.
 			ad->Assign(ATTR_CURRENT_RANK, preemptingRank);
 		}
-		if (ad->LookupInteger( ATTR_TOTAL_VIRTUAL_MACHINES, totalVMs)) {
-			for(i = 1; i <= totalVMs; i++) {
-				vm_prefix.sprintf("vm%d_", i);
-				buffer.sprintf("%s%s", vm_prefix.Value(), ATTR_REMOTE_USER);
-				if (ad->LookupString(buffer.Value(), remoteUser)) {
-					// If there is a user on that VM, stick that
-					// user's priority into the ad
-					prio = (float) accountant.GetPriority(remoteUser.Value());
-					buffer.sprintf("%s%s", vm_prefix.Value(),
-								   ATTR_REMOTE_USER_PRIO);
-					ad->Assign(buffer.Value(), prio);
-				}	
+		char* resource_prefix = param("STARTD_RESOURCE_PREFIX");
+		if (!resource_prefix) {
+			resource_prefix = strdup("slot");
+		}
+		total_slots = 0;
+		if (!ad->LookupInteger(ATTR_TOTAL_SLOTS, total_slots)) {
+			total_slots = 0;
+		}
+		if (!total_slots && (param_boolean("ALLOW_VM_CRUFT", true))) {
+			if (!ad->LookupInteger(ATTR_TOTAL_VIRTUAL_MACHINES, total_slots)) {
+				total_slots = 0;
+			}
+		}
+			// This won't fire if total_slots is still 0...
+		for(i = 1; i <= total_slots; i++) {
+			slot_prefix.sprintf("%s%d_", resource_prefix, i);
+			buffer.sprintf("%s%s", slot_prefix.Value(), ATTR_REMOTE_USER);
+			if (ad->LookupString(buffer.Value(), remoteUser)) {
+				// If there is a user on that slot, stick that
+				// user's priority into the ad
+				prio = (float) accountant.GetPriority(remoteUser.Value());
+				buffer.sprintf("%s%s", slot_prefix.Value(),
+							   ATTR_REMOTE_USER_PRIO);
+				ad->Assign(buffer.Value(), prio);
 			}
 		}
 	}

@@ -472,14 +472,14 @@ JobInfoCommunicator::initUserPrivWindows( void )
 	}
 
 	if ( !name ) {
-		char vm_user[255];
-		int vm_num = Starter->getMyVMNumber();
+		char slot_user[255];
+		int slot_num = Starter->getMySlotNumber();
 
-		if ( vm_num < 1 ) {
-			vm_num = 1;
+		if ( slot_num < 1 ) {
+			slot_num = 1;
 		}
-		sprintf(vm_user, "VM%d_USER", vm_num);
-		char *run_jobs_as = param(vm_user);
+		sprintf(slot_user, "SLOT%d_USER", slot_num);
+		char *run_jobs_as = param(slot_user);
 		if (run_jobs_as) {		
 			getDomainAndName(run_jobs_as, domain, name);
 				/* 

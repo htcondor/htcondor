@@ -227,7 +227,7 @@ MPIMasterProc::preparePortFile( void )
 		// for us here, the temporary execute directory has already
 		// been created, and it's already our cwd.  So, we can just
 		// use a filename of our choosing, and it'll already be unique
-		// across all VMs, it'll automatically get deleted, etc.
+		// across all slots, it'll automatically get deleted, etc.
 	port_file = strdup( "mpi_port_file" );
 
 		// To create this file, we've got to be in the user's priv

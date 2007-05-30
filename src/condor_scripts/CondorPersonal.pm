@@ -65,7 +65,7 @@ package CondorPersonal;
 #	nameschedd	 	Used to define SCHEDD_NAME			cat(name and collector)		$scheddname
 #	condorhost	 	Used to define CONDOR_HOST										$condorhost
 #	ports			Select dynamic or normal ports		dynamic						$portchanges	
-#   vms				sets NUM_CPUS NUM_VMS				none
+#   slots				sets NUM_CPUS NUM_SLOTS				none
 #   universe		parallel configuration of schedd	none						$personal_universe
 #
 #   Notes added 12/14/05 bt
@@ -813,13 +813,13 @@ sub TunePersonalCondor
 
 	# now we consider configuration requests
 
-	if( exists $control{"vms"} )
+	if( exists $control{"slots"} )
 	{
-		my $myvms = $control{"vms"};
-		debug( "VMs wanted! Number = $myvms\n");
-		print NEW "NUM_CPUS = $myvms\n";
-		print NEW "NUM_VIRTUAL_MACHINES = $myvms\n";
-		$gendatafile = $gendatafile . "_" . $myvms . "VMs";
+		my $myslots = $control{"slots"};
+		debug( "Slots wanted! Number = $myslots\n");
+		print NEW "NUM_CPUS = $myslots\n";
+		print NEW "NUM_SLOTS = $myslots\n";
+		$gendatafile = $gendatafile . "_" . $myslots . "Slots";
 	}
 
 	if($personal_sec_prepost_src ne "")

@@ -743,7 +743,7 @@ UWCS_NEGOTIATOR_PRE_JOB_RANK = RemoteOwner =?= UNDEFINED
 ##  would take place, allowing control to pass on to
 ##  PREEMPTION_RANK.
 #UWCS_NEGOTIATOR_POST_JOB_RANK = \
-# (RemoteOwner =?= UNDEFINED) * (KFlops - VirtualMachineID)
+# (RemoteOwner =?= UNDEFINED) * (KFlops - SlotID)
 
 ##  The negotiator will not preempt a job running on a given machine
 ##  unless the PREEMPTION_REQUIREMENTS expression evaluates to true
@@ -1082,32 +1082,32 @@ RunBenchmarks : (LastBenchmark == 0 ) || ($(BenchmarkTimer) >= (4 * $(HOUR)))
 ##  Then, you'd set the STARTD_ATTRS setting to this:
 #STARTD_ATTRS = MY_CONSOLE_DEVICES, RunBenchmarks, UPDATE_INTERVAL
 ##
-##  STARTD_ATTRS can also be defined on a per-VM basis.  The startd
+##  STARTD_ATTRS can also be defined on a per-slot basis.  The startd
 ##  builds the list of attributes to advertise by combining the lists
-##  in this order: STARTD_ATTRS, VMx_STARTD_ATTRS.  In the below
-##  example, the startd ad for VM1 will have the value for
-##  favorite_color, favorite_season, and favorite_movie, and VM2 will
-##  have favorite_color, favorite_season, and favorite_song
+##  in this order: STARTD_ATTRS, SLOTx_STARTD_ATTRS.  In the below
+##  example, the startd ad for slot1 will have the value for
+##  favorite_color, favorite_season, and favorite_movie, and slot2
+##  will have favorite_color, favorite_season, and favorite_song.
 ##
 #STARTD_ATTRS = favorite_color, favorite_season
-#VM1_STARTD_ATTRS = favorite_movie
-#VM2_STARTD_ATTRS = favorite_song
+#SLOT1_STARTD_ATTRS = favorite_movie
+#SLOT2_STARTD_ATTRS = favorite_song
 ##
-##  Attributes in the STARTD_ATTRS list can also be on a per-VM basis.
+##  Attributes in the STARTD_ATTRS list can also be on a per-slot basis.
 ##  For example, the following configuration:
 ##
 #favorite_color = "blue"
 #favorite_season = "spring"
-#VM2_favorite_color = "green"
-#VM3_favorite_season = "summer"
+#SLOT2_favorite_color = "green"
+#SLOT3_favorite_season = "summer"
 #STARTD_ATTRS = favorite_color, favorite_season
 ##
-##  will result in the following attributes in the VM classified
+##  will result in the following attributes in the slot classified
 ##  ads:
 ##
-## VM1 - favorite_color = "blue"; favorite_season = "spring"
-## VM2 - favorite_color = "green"; favorite_season = "spring"
-## VM3 - favorite_color = "blue"; favorite_season = "summer"
+## slot1 - favorite_color = "blue"; favorite_season = "spring"
+## slot2 - favorite_color = "green"; favorite_season = "spring"
+## slot3 - favorite_color = "blue"; favorite_season = "summer"
 ##
 ##  Finally, the recommended default value for this setting, is to
 ##  publish the COLLECTOR_HOST setting as a string.  This can be
@@ -1162,71 +1162,71 @@ STARTD_JOB_EXPRS = ImageSize, ExecutableSize, JobUniverse, NiceUser
 ##
 ##  By default, Condor will evenly divide the resources in an SMP
 ##  machine (such as RAM, swap space and disk space) among all the
-##  CPUs, and advertise each CPU as its own "virtual machine" with an
-##  even share of the system resources.  If you want something other
-##  than this, there are a few options available to you.  Please read
-##  the section on "Configuring The Startd for SMP Machines" in the
-##  Condor Administrator's Manual for full details.  The various
-##  settings are only briefly listed and described here.
+##  CPUs, and advertise each CPU as its own slot with an even share of
+##  the system resources.  If you want something other than this,
+##  there are a few options available to you.  Please read the section
+##  on "Configuring The Startd for SMP Machines" in the Condor
+##  Administrator's Manual for full details.  The various settings are
+##  only briefly listed and described here.
 ######
 
-##  The maximum number of different virtual machine types.
-#MAX_VIRTUAL_MACHINE_TYPES = 10
+##  The maximum number of different slot types.
+#MAX_SLOT_TYPES = 10
 
-##  Use this setting to define your own virtual machine types.  This
+##  Use this setting to define your own slot types.  This
 ##  allows you to divide system resources unevenly among your CPUs.
 ##  You must use a different setting for each different type you
 ##  define.  The "<N>" in the name of the macro listed below must be
-##  an integer from 1 to MAX_VIRTUAL_MACHINE_TYPES (defined above),
+##  an integer from 1 to MAX_SLOT_TYPES (defined above),
 ##  and you use this number to refer to your type.  There are many
 ##  different formats these settings can take, so be sure to refer to
 ##  the section on "Configuring The Startd for SMP Machines" in the
 ##  Condor Administrator's Manual for full details.  In particular,
-##  read the section titled "Defining Virtual Machine Types" to help
+##  read the section titled "Defining Slot Types" to help
 ##  understand this setting.  If you modify any of these settings, you
 ##  must restart the condor_start for the change to take effect.
-#VIRTUAL_MACHINE_TYPE_<N> = 1/4
-#VIRTUAL_MACHINE_TYPE_<N> = cpus=1, ram=25%, swap=1/4, disk=1/4
+#SLOT_TYPE_<N> = 1/4
+#SLOT_TYPE_<N> = cpus=1, ram=25%, swap=1/4, disk=1/4
 #  For example:
-#VIRTUAL_MACHINE_TYPE_1 = 1/8
-#VIRTUAL_MACHINE_TYPE_2 = 1/4
+#SLOT_TYPE_1 = 1/8
+#SLOT_TYPE_2 = 1/4
 
-##  If you define your own virtual machine types, you must specify how
-##  many virtual machines of each type you wish to advertise.  You do
+##  If you define your own slot types, you must specify how
+##  many slots of each type you wish to advertise.  You do
 ##  this with the setting below, replacing the "<N>" with the
 ##  corresponding integer you used to define the type above.  You can
 ##  change the number of a given type being advertised at run-time,
 ##  with a simple condor_reconfig.  
-#NUM_VIRTUAL_MACHINES_TYPE_<N> = M
+#NUM_SLOTS_TYPE_<N> = M
 #  For example:
-#NUM_VIRTUAL_MACHINES_TYPE_1 = 6
-#NUM_VIRTUAL_MACHINES_TYPE_2 = 1
+#NUM_SLOTS_TYPE_1 = 6
+#NUM_SLOTS_TYPE_2 = 1
 
-##  The number of evenly-divided virtual machines you want Condor to
+##  The number of evenly-divided slots you want Condor to
 ##  report to your pool (if less than the total number of CPUs).  This
 ##  setting is only considered if the "type" settings described above
 ##  are not in use.  By default, all CPUs are reported.  This setting
 ##  must be an integer ("N" isn't a valid setting, that's just used to
 ##  represent the default).
-#NUM_VIRTUAL_MACHINES = N
+#NUM_SLOTS = N
 
-##  How many of the virtual machines the startd is representing should
+##  How many of the slots the startd is representing should
 ##  be "connected" to the console (in other words, notice when there's
-##  console activity)?  This defaults to all virtual machines (N in a
+##  console activity)?  This defaults to all slots (N in a
 ##  machine with N CPUs).  This must be an integer ("N" isn't a valid
 ##  setting, that's just used to represent the default).
-#VIRTUAL_MACHINES_CONNECTED_TO_CONSOLE = N
+#SLOTS_CONNECTED_TO_CONSOLE = N
 
-##  How many of the virtual machines the startd is representing should
+##  How many of the slots the startd is representing should
 ##  be "connected" to the keyboard (for remote tty activity, as well
 ##  as console activity).  Defaults to 1.
-#VIRTUAL_MACHINES_CONNECTED_TO_KEYBOARD = 1
+#SLOTS_CONNECTED_TO_KEYBOARD = 1
 
-##  If there are virtual machines that aren't connected to the
+##  If there are slots that aren't connected to the
 ##  keyboard or the console (see the above two settings), the
 ##  corresponding idle time reported will be the time since the startd
 ##  was spawned, plus the value of this parameter.  It defaults to 20
-##  minutes.  We do this because, if the virtual machine is configured
+##  minutes.  We do this because, if the slot is configured
 ##  not to care about keyboard activity, we want it to be available to
 ##  Condor jobs as soon as the startd starts up, instead of having to
 ##  wait for 15 minutes or more (which is the default time a machine

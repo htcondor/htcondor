@@ -66,7 +66,7 @@ sub RunIt {
 		      "NumExecs"	=> 0,
 		      "NumShadows"	=> 0,
 		      "NumRunaway"	=> 0,
-		      "Vms"		=> "",
+		      "Slots"		=> "",
 		      "RunawayPids"	=> { },
 		     );
 
@@ -228,7 +228,7 @@ sub RunIt {
 	    );
 	if ( open( CSTAT, "condor_status -l -direct $ENV{HOST} |" ) )
 	{
-	    my @Vms;
+	    my @Slots;
 	    my %AdInfo;
 	  READLINE:
 	    while ( <CSTAT> )
@@ -253,21 +253,21 @@ sub RunIt {
 		    }
 
 		    # Ok, now pull  it apart..
-		    my $Vm = "";
-		    if ( $AdInfo{Name} =~ /(vm\d+)@(.*)/ )
+		    my $Slot = "";
+		    if ( $AdInfo{Name} =~ /(slot\d+)@(.*)/ )
 		    {
-			$Vm = $1;
-			push( @Vms, $Vm );
+			$Slot = $1;
+			push( @Slots, $Slot );
 		    }
 		    $CondorInfo{OpSys} = $AdInfo{OpSys};
 		    $CondorInfo{Arch} = $AdInfo{Arch};
 		    $CondorInfo{StarterAbilityList} = $AdInfo{StarterAbilityList}
 			if ( exists $AdInfo{StarterAbilityList} );
-		    $CondorInfo{"State$Vm"} = $AdInfo{State};
-		    $CondorInfo{"Activity$Vm"} = $AdInfo{Activity};
-		    $CondorInfo{"LoadAv$Vm"} = $AdInfo{LoadAvg};
-		    $CondorInfo{"Mem$Vm"} = $AdInfo{Memory};
-		    $CondorInfo{"ActivityTime$Vm"} =
+		    $CondorInfo{"State$Slot"} = $AdInfo{State};
+		    $CondorInfo{"Activity$Slot"} = $AdInfo{Activity};
+		    $CondorInfo{"LoadAv$Slot"} = $AdInfo{LoadAvg};
+		    $CondorInfo{"Mem$Slot"} = $AdInfo{Memory};
+		    $CondorInfo{"ActivityTime$Slot"} =
 			( $AdInfo{LastHeardFrom} - $AdInfo{EnteredCurrentActivity} );
 		    %AdInfo = ( );
 		    next;
@@ -285,7 +285,7 @@ sub RunIt {
 		$AdInfo{$Attr} = $Value;
 	    }
 	    close( CSTAT );
-	    $CondorInfo{Vms} = join( " ", @Vms );
+	    $CondorInfo{Slots} = join( " ", @Slots );
 	}
 	else
 	{
