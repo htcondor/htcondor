@@ -1969,13 +1969,13 @@ section~\ref{sec:shared-fs}.
   this check, set this configuration variable to \Expr{True}.
   Condor will then run the job under the user's UID.
 
-\item[\Macro{VMx\_USER}] \label{param:VMxUser}
+\item[\Macro{SLOTx\_USER}] \label{param:SlotXUser}
   The name of a user for Condor to use instead of
   user nobody,
   as part of a solution that plugs a security hole whereby
   a lurker process can prey on a subsequent job run as user name nobody. 
-  \MacroNI{x} is an integer associated with virtual machines.
-  On Windows, \MacroNI{VMx\_USER}
+  \MacroNI{x} is an integer associated with slots.
+  On Windows, \MacroNI{SLOTx\_USER}
   will only work if the credential of the specified
   user is stored on the execute machine using \Condor{store\_cred}.
   See Section~\ref{sec:RunAsNobody} for more information.
@@ -1984,7 +1984,7 @@ section~\ref{sec:shared-fs}.
   \label{param:StarterAllowRunAsOwner}
   This is a boolean expression (evaluated with the job ad as the
   target) that determins whether the job may run under the job owner's
-  account (true) or whether it will run as \MacroNI{VMx\_USER} or
+  account (true) or whether it will run as \MacroNI{SLOTx\_USER} or
   nobody (false).  In unix, this defaults to true.  In windows, it
   defaults to false.  The job ClassAd may also contain an attribute
   \Attr{RunAsOwner} which is logically ANDed with the starter's
@@ -2001,10 +2001,10 @@ section~\ref{sec:shared-fs}.
   matches the account name(s) that are dedicated to running condor
   jobs on the execute machine and which will never be used for more
   than one job at a time.  The default matches no account name.  If
-  you have configured \MacroNI{VMx\_USER} to be a \emph{different}
-  account for each Condor VM, and no non-condor processes will ever be
+  you have configured \MacroNI{SLOTx\_USER} to be a \emph{different}
+  account for each Condor slot, and no non-condor processes will ever be
   run by these accounts, then this pattern should match the names of
-  all \MacroNI{VMx\_USER} accounts.  Jobs run under a dedicated
+  all \MacroNI{SLOTx\_USER} accounts.  Jobs run under a dedicated
   execute account are reliably tracked by Condor, whereas other jobs,
   may spawn processes that Condor fails to detect.  Therefore, a
   dedicated execution account provides more reliable tracking of CPU
@@ -2014,8 +2014,8 @@ section~\ref{sec:shared-fs}.
   account.  Example:
 
 \begin{verbatim}
-VM1_USER = cndrusr1
-VM2_USER = cndrusr2
+SLOT1_USER = cndrusr1
+SLOT2_USER = cndrusr2
 STARTER_ALLOW_RUNAS_OWNER = False
 DEDICATED_EXECUTE_ACCOUNT_REGEXP = cndrusr[0-9]+
 \end{verbatim}
@@ -2038,7 +2038,7 @@ Tracking process family by login "cndrusr1"
   A boolean value that defaults to \Expr{False}.  When \Expr{True},
   Condor knows that all jobs are being run by dedicated execution
   accounts (whether they are running as the job owner or as nobody or as
-  \MacroNI{VMx\_USER}).  Therefore, when the job exits, all processes
+  \MacroNI{SLOTx\_USER}).  Therefore, when the job exits, all processes
   running under the same account will be killed.
 
 \item[\Macro{FILESYSTEM\_DOMAIN}] \label{param:FilesystemDomain}
@@ -2903,7 +2903,7 @@ Configuring The Startd Policy.
 \item[\Macro{STARTD\_SHOULD\_WRITE\_CLAIM\_ID\_FILE}] \label{param:StartdShouldWriteClaimIdFile}
   Starting with version 6.7.10, the \Condor{startd} can be configured
   to write out the \Attr{ClaimId} for the next available claim on all
-  virtual machines to separate files.
+  slots to separate files.
   This boolean attribute controls whether the \Condor{startd} should
   write these files.
   The default value is true.
@@ -2912,12 +2912,12 @@ Configuring The Startd Policy.
   This macro controls what file names are used if the above
   \MacroNI{STARTD\_SHOULD\_WRITE\_CLAIM\_ID\_FILE} is true.  By
   default, Condor will write the ClaimId into a file in the
-  \MacroU{LOG} directory called \File{.startd\_claim\_id.vmX}, where
-  \verb@X@ is the value of \Attr{VirtualMachineID}, the integer that
-  identifies a given virtual machine on the system, or \verb@1@ on a
-  single-VM machine.
+  \MacroU{LOG} directory called \File{.startd\_claim\_id.slotX}, where
+  \verb@X@ is the value of \Attr{SlotID}, the integer that
+  identifies a given slot on the system, or \verb@1@ on a
+  single-slot machine.
   If you define your own value for this setting, you should provide a
-  full path, and Condor will automatically append the \verb@.vmX@
+  full path, and Condor will automatically append the \verb@.slotX@
   portion of the file name.
 
 \item[\Macro{NUM\_CPUS}] \label{param:NumCpus}
@@ -2930,7 +2930,7 @@ Configuring The Startd Policy.
   single-CPU machine by having that machine treated like an SMP
   machine with multiple CPUs, which could have different Condor jobs
   running on each one.
-  Or, you can have an SMP machine advertise more virtual machines than
+  Or, you can have an SMP machine advertise more slots than
   it has CPUs.
   However, using this parameter will hurt the performance of the jobs,
   since you would now have multiple jobs running on the same CPU,
@@ -3092,27 +3092,27 @@ SMP Machines for details.
 \label{param:StartdResourcePrefix}
   A string which specifies what prefix to give the unique Condor
   resources that are advertised on SMP machines.
-  Currently, Condor uses the term \Term{virtual machine} to describe
-  these resources, so the default value for this setting is ``vm''.
+  Previously, Condor used the term \Term{virtual machine} to describe
+  these resources, so the default value for this setting was ``vm''.
   However, to avoid confusion with other kinds of virtual machines
-  (the ones created using tools like VMware or Xen), in a future
-  version of Condor, the current \Term{virtual machine} terminology
-  will change.
-  To aid in the transition to the new terms (and to provide a means
-  for sites that want to keep using ``vm'' even after the default has
-  changed), this setting enables sites to define what string the
+  (the ones created using tools like VMware or Xen), the old
+  \Term{virtual machine} terminology has been changed, and we now use
+  the term \Term{slot}.
+  Therefore, the default value of this prefix is now ``slot''.
+  If sites want to keep using ``vm'', or prefer something other
+  ``slot'', this setting enables sites to define what string the
   \Condor{startd} will use to name the individual resources on an SMP
   machine.
 
-\item[\Macro{VIRTUAL\_MACHINES\_CONNECTED\_TO\_CONSOLE}] 
-\label{param:VirtualMachinesConnectedToConsole}
+\item[\Macro{SLOTS\_CONNECTED\_TO\_CONSOLE}] 
+\label{param:SlotsConnectedToConsole}
   An integer which indicates how many of the virtual
   machines the \Condor{startd} is representing should be "connected" to the
   console (in other words, notice when there's console activity).
-  This defaults to all virtual machines (N in a machine with N CPUs).
+  This defaults to all slots (N in a machine with N CPUs).
 
-\item[\Macro{VIRTUAL\_MACHINES\_CONNECTED\_TO\_KEYBOARD}]
-\label{param:VirtualMachinesConnectedToKeyboard}
+\item[\Macro{SLOTS\_CONNECTED\_TO\_KEYBOARD}]
+\label{param:SlotsConnectedToKeyboard}
   An integer which indicates how many of the virtual
   machines the \Condor{startd} is representing should be "connected" to the
   keyboard (for remote tty activity, as well as console activity).
@@ -3120,11 +3120,11 @@ SMP Machines for details.
 
 \item[\Macro{DISCONNECTED\_KEYBOARD\_IDLE\_BOOST}]
 \label{param:DisconnectedKeyboardIdleBoost}
-  If there are virtual machines not connected to either the keyboard
+  If there are slots not connected to either the keyboard
   or the console, the corresponding idle time reported will be the
   time since the \Condor{startd} was spawned, plus the value of this macro.
   It defaults to 1200 seconds (20 minutes). 
-  We do this because if the virtual machine is configured not to care
+  We do this because if the slot is configured not to care
   about keyboard activity, we want it to be available to Condor jobs
   as soon as the \Condor{startd} starts up, instead of having to wait for 15
   minutes or more (which is the default time a machine must be idle
@@ -3134,85 +3134,92 @@ SMP Machines for details.
   before a job starts, but you still want jobs to start right away on
   some of your SMP nodes, increase this macro's value.
 
-\item[\Macro{STARTD\_VM\_EXPRS}]
-\label{param:StartdVMExprs}
+\item[\Macro{STARTD\_SLOT\_ATTRS}]
+\label{param:StartdSlotAttrs}
   The list of ClassAd attribute names that should be shared across all
-  virtual machines on the same machine.
+  slots on the same machine.
+  This setting was formerly know as \Macro{STARTD\_VM\_ATTRS} or
+  \Macro{STARTD\_VM\_EXPRS} (before version 6.9.3).
   For each attribute in the list, the attribute's value is taken from
-  each virtual machine's machine ClassAd and placed into the machine
-  ClassAd of all the other virtual machines within the machine.
-  For example, if the configuration file for a 2-VM machine
+  each slot's machine ClassAd and placed into the machine
+  ClassAd of all the other slots within the machine.
+  For example, if the configuration file for a 2-slot machine
   contains
 \begin{verbatim}
-        STARTD_VM_EXPRS = State, Activity, EnteredCurrentActivity
+        STARTD_SLOT_ATTRS = State, Activity, EnteredCurrentActivity
 \end{verbatim}
-  then the machine ClassAd for both virtual machines will contain
+  then the machine ClassAd for both slots will contain
   attributes that will be of the form:
 \begin{verbatim}
-     vm1_State = "Claimed"
-     vm1_Activity = "Busy"
-     vm1_EnteredCurrentActivity = 1075249233
-     vm2_State = "Unclaimed"
-     vm2_Activity = "Idle"
-     vm2_EnteredCurrentActivity = 1075240035
+     slot1_State = "Claimed"
+     slot1_Activity = "Busy"
+     slot1_EnteredCurrentActivity = 1075249233
+     slot2_State = "Unclaimed"
+     slot2_Activity = "Idle"
+     slot2_EnteredCurrentActivity = 1075240035
 \end{verbatim}
 
 
 \end{description}
 
-The following settings control the number of virtual machines reported
+The following settings control the number of slots reported
 for a given SMP host, and what attributes each one has.  
 They are only needed if you do not want to have an SMP machine report
-to Condor with a separate virtual machine for each CPU, with all
+to Condor with a separate slot for each CPU, with all
 shared system resources evenly divided among them.
 Please read section~\ref{sec:SMP-Divide} on
 page~\pageref{sec:SMP-Divide} for details on how to properly configure
 these settings to suit your needs.
 
-\Note You can only change the number of each type of virtual machine
+\Note You can only change the number of each type of slot
 the \Condor{startd} is reporting with a simple reconfig (such as
 sending a SIGHUP signal, or using the \Condor{reconfig} command).
-You cannot change the definition of the different virtual machine
+You cannot change the definition of the different slot
 types with a reconfig.  
 If you change them, you must restart the \Condor{startd} for the
 change to take effect (for example, using 
 \Code{condor\_restart -startd}).
 
+\Note Prior to version 6.9.3, any settings that included the term
+``slot'' used to use ``virtual machine'' or ``vm''.
+If you're looking for information about one of these older settings,
+search for the corresponding attribute names using ``slot'', instead.
+
 \begin{description}
 
-\item[\Macro{MAX\_VIRTUAL\_MACHINE\_TYPES}]
-\label{param:MaxVirtualMachineTypes}
-  The maximum number of different virtual machine types.  
+\item[\Macro{MAX\_SLOT\_TYPES}]
+\label{param:MaxSlotTypes}
+  The maximum number of different slot types.  
   Note: this is the maximum number of different \emph{types}, not of
-  actual virtual machines.
+  actual slots.
   Defaults to 10.  
   (You should only need to change this setting if you define more than
-  10 separate virtual machine types, which would be pretty rare.)
+  10 separate slot types, which would be pretty rare.)
 
-\item[\Macro{VIRTUAL\_MACHINE\_TYPE\_<N>}]
-\label{param:VirtualMachineTypeN}
-  This setting defines a given virtual machine type, by specifying
+\item[\Macro{SLOT\_TYPE\_<N>}]
+\label{param:SlotTypeN}
+  This setting defines a given slot type, by specifying
   what part of each shared system resource (like RAM, swap space, etc)
-  this kind of virtual machine gets.
+  this kind of slot gets.
   N can be any integer from 1 to the value of
-  \MacroUNI{MAX\_VIRTUAL\_MACHINE\_TYPES}, such as
-  \MacroNI{VIRTUAL\_MACHINE\_TYPE\_1}. 
+  \MacroUNI{MAX\_SLOT\_TYPES}, such as
+  \MacroNI{SLOT\_TYPE\_1}. 
   The format of this entry can be somewhat complex, so please refer to
   section~\ref{sec:SMP-Divide} on page~\pageref{sec:SMP-Divide} for
   details on the different possibilities.
 
-\item[\Macro{NUM\_VIRTUAL\_MACHINES\_TYPE\_<N>}]
-\label{param:NumVirtualMachinesTypeN}
-  This macro controls how many of a given virtual machine type
+\item[\Macro{NUM\_SLOTS\_TYPE\_<N>}]
+\label{param:NumSlotsTypeN}
+  This macro controls how many of a given slot type
   are actually reported to Condor.
   There is no default.
 
-\item[\Macro{NUM\_VIRTUAL\_MACHINES}]
-\label{param:NumVirtualMachines}
+\item[\Macro{NUM\_SLOTS}]
+\label{param:NumSlots}
   If your SMP machine is being evenly divided, and the virtual
   machine type settings described above are not being used, this
-  macro controls how many virtual machines will be reported.  
-  The default is one virtual machine for each CPU.
+  macro controls how many slots will be reported.  
+  The default is one slot for each CPU.
   This setting can be used to reserve some CPUs on an SMP which would
   not be reported to the Condor pool.
 
@@ -3282,7 +3289,7 @@ and older macros and syntax.
      \Condor{startd} to not automatically publish updates based on
      any cron modules. Instead, updates rely on the usual behavior for sending
      updates, which is periodic, based on the \Macro{UPDATE\_INTERVAL}
-     configuration setting, or whenever a given virtual machine
+     configuration setting, or whenever a given slot
      changes state.
      \item[\texttt{Always}] Causes the \Condor{startd} to always send a new
      update to the \Condor{collector} whenever any module exits.

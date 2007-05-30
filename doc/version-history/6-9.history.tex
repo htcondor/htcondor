@@ -19,6 +19,29 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item As of version 6.9.3, the entire Condor system has undergone a
+  major terminology change.
+  For almost 10 years, Condor has used the term \Term{virtual machine}
+  or \Term{vm} to refer to each distinct resource that could run a
+  Condor job (for example, each of the CPUs on an SMP machine).
+  Back when we choose this terminology, it made since, since each of
+  these resource was like an independent machine in your pool, with
+  its own state, classified ad, claims, and so on.
+  However, in recent years, the term \Term{virtual machine} is now
+  almost universally associated with the kinds of virtual machines
+  created using tools like VMware or Xen -- entire operating systems
+  running inside a given process (usually emulating the underlying
+  hardware) on a host machine.
+  So, to avoid confusion with these other kinds of virtual machines,
+  the old  \Term{virtual machine} terminology has been changed, and we
+  now use the term \Term{slot}.
+
+  Numerous configuration settings, command-line arguments to Condor
+  tools, classified ad attribute names, and so on, have all been
+  modified to reflect the new \Term{slot} terminology.
+  In general, the old settings and options will still work, but are
+  now deprecated.
+
 \item The deprecated \Condor{install} installation script has
   finally been removed.
   All sites should use \Condor{configure} when setting up a new Condor

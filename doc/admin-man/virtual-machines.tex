@@ -14,16 +14,20 @@ This allows Windows executables to run on a Linux machine,
 and Linux executables to run on a Windows machine.
 These virtual machine systems exist for the Intel x86 architecture.
 
-The term \Term{virtual machine} used in this section is different
-than use of the term in other parts of Condor,
-due to the historical evolution of Condor.
+In older versions of Condor, other parts of the system were also
+refered to as \Term{virtual machines}, but in all cases, those are now
+known as \Term{slots}.
 A virtual machine here describes the environment in which
 the outside operating system (called the host) emulates an inner operating
 system (called the inner virtual machine),
 such that an executable appears to run directly
 on the inner virtual machine.
-In other parts of Condor, a virtual machine refers to the
-multiple CPUs of an SMP machine, or refers to a Java virtual machine.
+In other parts of Condor, a \Term{slot} (formerly known as
+\Term{virtual machine}) refers to the multiple CPUs of an SMP
+machine.
+Also, be careful not to confuse the virtual machines discussed here
+with the Java Virtual Machine (JVM) referenced in other parts of this
+manual.
 
 Under Xen or VMware, 
 Condor has the flexibility to run a job on either the host

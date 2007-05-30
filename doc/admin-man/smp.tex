@@ -17,45 +17,44 @@ How Shared Resources are Represented to Condor}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 The way SMP machines are represented to the Condor system is that
-the shared resources are broken up into individual \Term{virtual
-machines} (each virtual machine is called a VM).
-Each VM can be matched and claimed by users.
-Each VM is represented by an individual ClassAd
+the shared resources are broken up into individual \Term{slots}.
+Each slot can be matched and claimed by users.
+Each slot is represented by an individual ClassAd
 (see the ClassAd reference, section~\ref{classad-reference}, for
 details). 
 In this way, each SMP machine will appear to the Condor system as
-a collection of separate VMs.  
+a collection of separate slots.  
 As an example, an SMP machine named
 vulture.cs.wisc.edu would appear to Condor as the
-multiple machines, named vm1@vulture.cs.wisc.edu,
-vm2@vulture.cs.wisc.edu,
-vm3@vulture.cs.wisc.edu, and so on.
+multiple machines, named slot1@vulture.cs.wisc.edu,
+slot2@vulture.cs.wisc.edu,
+slot3@vulture.cs.wisc.edu, and so on.
 
 The way that the \Condor{startd} breaks up the
-shared system resources into the different virtual machines  
+shared system resources into the different slots
 is configurable.
 All shared system resources (like RAM, disk space, swap space, etc.)
-can either be divided evenly among all the virtual machines, with each
-CPU getting its own virtual machine, or you can define your own
-\Term{virtual machine types}, so that resources can be unevenly
+can either be divided evenly among all the slots, with each
+CPU getting its own slot, or you can define your own
+\Term{slot types}, so that resources can be unevenly
 partitioned.  Regardless of the partioning scheme used, is important
-to remember the goal is to create a representative virtual machine
+to remember the goal is to create a representative slot
 ClassAd, to be used for matchmaking with jobs.  Condor does not
-directly enforce virtual machine shared resource allocations, and jobs
+directly enforce slot shared resource allocations, and jobs
 are free to oversubscribe to shared resources.
 
-Consider an example where two VMs are each defined with 50\Percent of
-available RAM.  The resultant ClassAd for each VM will advertise one
+Consider an example where two slots are each defined with 50\Percent of
+available RAM.  The resultant ClassAd for each slot will advertise one
 half the available RAM.  Users may submit jobs with RAM requirements
-that match these VMs.  However, jobs run on either VM are free to
+that match these slots.  However, jobs run on either slot are free to
 consume more than 50\Percent of available RAM.  Condor will not
-directly enforce a RAM utilization limit on either VM.  If a shared
+directly enforce a RAM utilization limit on either slot.  If a shared
 resource enforcement capability is needed, it is possible to write a
 Startd policy that will evict a job that oversubscribes to shared
 resources, see section \ref{sec:Config-SMP-Policy}.
 
 The following section gives details on how to configure Condor to
-divide the resources on an SMP machine into separate virtual machines.
+divide the resources on an SMP machine into separate slots.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:SMP-Divide}
@@ -63,28 +62,28 @@ Dividing System Resources in SMP Machines}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 This section describes the settings that allow you to define your own
-virtual machine types and to control how many virtual machines of each
+slot types and to control how many slots of each
 type are reported to Condor.
 
 There are two main ways to go about partitioning an SMP machine:
 
 \begin{description}
 
-\item[Define your own virtual machine types.]
+\item[Define your own slot types.]
   By defining your own types, you can specify what fraction of shared
   system resources (CPU, RAM, swap space and disk space) go to each
-  virtual machine.
+  slot.
   Once you define your own types, you can control how many of each
   type are reported at any given time.
 
 \item[Evenly divide all resources.]  
   If you do not define your own types, the \Condor{startd} will
-  automatically	partition your machine into virtual machines for you.
-  It will do so by placing a single CPU in each VM, and evenly dividing
-  all shared resources among the VMs.
+  automatically	partition your machine into slots for you.
+  It will do so by placing a single CPU in each slot, and evenly dividing
+  all shared resources among the slots.
   With this default partitioning, you only specify how many
-  VMs are reported at a time.
-  By default, all VMs are reported to Condor.
+  slots are reported at a time.
+  By default, all slots are reported to Condor.
 
 \end{description}
 
@@ -94,30 +93,30 @@ command to
 the \Condor{startd} daemon (sending a SIGHUP or using \Condor{reconfig}).
 However, the definitions for the types themselves cannot be changed
 with reconfiguration.
-If you change any VM type definitions, you must use \Condor{restart}
+If you change any slot type definitions, you must use \Condor{restart}
 \begin{verbatim}
 condor_restart -startd
 \end{verbatim}
 for that change to take effect.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:VM-Type-Define}
-Defining Virtual Machine Types}
+\subsubsection{\label{sec:Slot-Type-Define}
+Defining Slot Types}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-To define your own virtual machine types, add configuration file
+To define your own slot types, add configuration file
 parameters that list how much of each system resource you want in the
-given VM type.  Do this by defining configuration
+given slot type.  Do this by defining configuration
 variables of the form
-\Macro{VIRTUAL\_MACHINE\_TYPE\_<N>}.
+\Macro{SLOT\_TYPE\_<N>}.
 The \verb@<N>@ represents an integer (for example, 
-\MacroNI{VIRTUAL\_MACHINE\_TYPE\_1}), which specifies the virtual 
+\MacroNI{SLOT\_TYPE\_1}), which specifies the virtual 
 machine type defined.
-This number is used to configure how many VMs of this type
+This number is used to configure how many slots of this type
 are advertised.
 
 A type describes what share of the total system resources a given
-virtual machine has available to it.
+slot has available to it.
 
 The type can be defined by:
 \begin{itemize}
@@ -149,12 +148,12 @@ mem=50%
 
 Other attributes are dynamic, such as disk space and swap space.
 For these, specify a percentage or fraction of the total
-value that is allocated to each VM, instead of specifying absolute values.
+value that is allocated to each slot, instead of specifying absolute values.
 As the total values of these resources change on your machine, each
-VM will take its fraction of the total and report that as its
+slot will take its fraction of the total and report that as its
 available amount.
 
-The four attribute names are case insensitive when defining VM types.
+The four attribute names are case insensitive when defining slot types.
 The first letter of the attribute name distinguishes between
 the attributes.
 The four attributes, with several examples of acceptable names for
@@ -168,27 +167,27 @@ each are
 
 As an example, consider a
 host of 4 CPUs and 256 megs of RAM.
-Here are valid example VM type definitions. 
+Here are valid example slot type definitions. 
 Types 1-3 are all equivalent to each other, as are types 4-6
 
-\MacroNI{VIRTUAL\_MACHINE\_TYPE\_1} = cpus=2, ram=128, swap=25\%, disk=1/2
+\MacroNI{SLOT\_TYPE\_1} = cpus=2, ram=128, swap=25\%, disk=1/2
 
-\MacroNI{VIRTUAL\_MACHINE\_TYPE\_2} = cpus=1/2, memory=128, virt=25\%, disk=50\%
+\MacroNI{SLOT\_TYPE\_2} = cpus=1/2, memory=128, virt=25\%, disk=50\%
 
-\MacroNI{VIRTUAL\_MACHINE\_TYPE\_3} = c=1/2, m=50\%, v=1/4, disk=1/2
+\MacroNI{SLOT\_TYPE\_3} = c=1/2, m=50\%, v=1/4, disk=1/2
 
-\MacroNI{VIRTUAL\_MACHINE\_TYPE\_4} = c=25\%, m=64, v=1/4, d=25\%
+\MacroNI{SLOT\_TYPE\_4} = c=25\%, m=64, v=1/4, d=25\%
 
-\MacroNI{VIRTUAL\_MACHINE\_TYPE\_5} = 25\%
+\MacroNI{SLOT\_TYPE\_5} = 25\%
 
-\MacroNI{VIRTUAL\_MACHINE\_TYPE\_6} = 1/4
+\MacroNI{SLOT\_TYPE\_6} = 1/4
 
 
-The number of virtual machines of each type is set with the
+The number of slots of each type is set with the
 configuration variable
-\Macro{NUM\_VIRTUAL\_MACHINES\_TYPE\_<N>},
+\Macro{NUM\_SLOTS\_TYPE\_<N>},
 where N is the type as given in the
-\MacroNI{VIRTUAL\_MACHINE\_TYPE\_<N>}variable.
+\MacroNI{SLOT\_TYPE\_<N>}variable.
 
 Note that it is possible to set the configuration variables such
 that they specify an impossible configuration.
@@ -197,18 +196,18 @@ a message to its log attempting to indicate the configuration
 requirements that it could not implement.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Config-VM-Number}
+\subsubsection{\label{sec:Config-Slot-Number}
 Evenly Divided Resources}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-If you are not defining your own VM types, then all resources
-are divided equally among the VMs.
-The number of VMs within the SMP machine is the only attribute
+If you are not defining your own slot types, then all resources
+are divided equally among the slots.
+The number of slots within the SMP machine is the only attribute
 that needs to be defined.
 Its definition is accomplished by setting the configuration
-variable \Macro{NUM\_VIRTUAL\_MACHINES} to the
+variable \Macro{NUM\_SLOTS} to the
 integer number of machines desired.
-If variable \MacroNI{NUM\_VIRTUAL\_MACHINES} is not defined,
+If variable \MacroNI{NUM\_SLOTS} is not defined,
 it defaults to the number of CPUs within the SMP machine.
 
 
@@ -222,35 +221,35 @@ Section~\ref{sec:Configuring-Policy} details the Startd
 Policy Configuration.
 This section continues the discussion with respect to SMP machines.
 
-Each virtual machine within an SMP machine is treated as an
+Each slot within an SMP machine is treated as an
 independent machine,
 each with its own view of its machine state.
 There is a single set of policy expressions for the SMP machine
 as a whole.
-This policy may consider the VM state(s) in its expressions.
+This policy may consider the slot state(s) in its expressions.
 This makes some policies easy to set, but it makes
 other policies difficult or impossible to set.
 
 An easy policy to set
-configures how many of the virtual machines
+configures how many of the slots
 notice console or tty activity on the SMP as a whole.
-VMs that are not configured to notice any activity will report
+Slots that are not configured to notice any activity will report
 ConsoleIdle and KeyboardIdle times from when the
 \Condor{startd} daemon was started,
 (plus a configurable number of seconds).
 With this, you can set up a multiple CPU machine with
 the default policy
 settings plus add that the keyboard and console noticed by only one
-virtual machine.
+slot.
 Assuming a reasonable load average (see
 section~\ref{sec:SMP-Load} below on ``Load Average for SMP
-Machines''), only the one virtual machine will suspend or vacate its job
+Machines''), only the one slot will suspend or vacate its job
 when the owner starts typing at their machine again.
-The rest of the virtual machines could be matched with jobs and leave
+The rest of the slots could be matched with jobs and leave
 them running, even while the user was interactively using the
 machine. 
 If the default policy is used,
-all virtual machines notice
+all slots notice
 tty and console activity
 and
 currently running jobs would suspend or preempt.
@@ -258,8 +257,8 @@ currently running jobs would suspend or preempt.
 This example policy is
 controlled with the following configuration variables.
 \begin{itemize}
-\item \Macro{VIRTUAL\_MACHINES\_CONNECTED\_TO\_CONSOLE}
-\item \Macro{VIRTUAL\_MACHINES\_CONNECTED\_TO\_KEYBOARD}
+\item \Macro{SLOTS\_CONNECTED\_TO\_CONSOLE}
+\item \Macro{SLOTS\_CONNECTED\_TO\_KEYBOARD}
 \item \Macro{DISCONNECTED\_KEYBOARD\_IDLE\_BOOST}
 \end{itemize}
 
@@ -271,49 +270,49 @@ configuration file settings for the \Condor{startd}.
 % Karen's edit goes to this line.
 % need discussion here about what canNOT be done given the single
 % set  of policy expressions.
-The configuration of virtual machines allows each VM to advertise
+The configuration of slots allows each slot to advertise
 its own machine ClassAd.
 Yet, there is only one set of policy expressions for the SMP
 machine as a whole.
 This makes the implementation of certain types of policies impossible.
-While evaluating the state of one VM (within the SMP machine),
-the state of other VMs (again within the SMP machine) are not
+While evaluating the state of one slot (within the SMP machine),
+the state of other slots (again within the SMP machine) are not
 available.
-Decisions for one VM cannot be based on what other machines within the SMP
+Decisions for one slot cannot be based on what other machines within the SMP
 are doing.
 
-Specifically, the evaluation of a VM policy expression works in
+Specifically, the evaluation of a slot policy expression works in
 the following way.
 \begin{enumerate}
 \item 
 The configuration file specifies policy expressions that are shared among
-all of the VMs on the SMP machine.
+all of the slots on the SMP machine.
 \item 
-Each VM reads the configuration file and sets up its own machine ClassAd.
+Each slot reads the configuration file and sets up its own machine ClassAd.
 \item 
-Each VM is now separate from the others.  It has a
+Each slot is now separate from the others.  It has a
 different state, a different machine ClassAd, and if there is a job
 running, a separate job ad.
-Each VM periodically
+Each slot periodically
 evaluates the policy expressions, changing its own state
 as necessary.
-This occurs independently of the other VMs on the machine.
+This occurs independently of the other slots on the machine.
 So, if the \Condor{startd} daemon is evaluating a policy expression
-on a specific VM,
+on a specific slot,
 and the policy expression refers to \Attr{ProcID}, \Attr{Owner},
 or any attribute from a job ad,
 it \emph{always} refers to the ClassAd of the
-job running on the specific VM.
+job running on the specific slot.
 \end{enumerate}
 
-To set a different policy for the VMs within an SMP machine,
+To set a different policy for the slots within an SMP machine,
 a (\verb@SUSPEND@) policy will be of the form
 \begin{verbatim}
-SUSPEND = ( (VirtualMachineID == 1) && (PolicyForVM1) ) || \
-            ( (VirtualMachineID == 2) && (PolicyForVM2) )
+SUSPEND = ( (VirtualMachineID == 1) && (PolicyForSlot1) ) || \
+            ( (VirtualMachineID == 2) && (PolicyForSlot2) )
 \end{verbatim}
-where \verb@(PolicyForVM1)@ and \verb@(PolicyForVM2)@ are the
-desired expressions for each VM.
+where \verb@(PolicyForSlot1)@ and \verb@(PolicyForSlot2)@ are the
+desired expressions for each SLOT.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:SMP-Load}
@@ -328,42 +327,42 @@ In Condor, we maintain this view of the total load average and publish
 it in all resource ClassAds as \Attr{TotalLoadAvg}.
 
 Condor also provides a per-CPU load average for SMP machines.
-This nicely represents the model that each node on an SMP is a virtual machine,
+This nicely represents the model that each node on an SMP is a slot,
 separate from the other nodes.
 All of the default, single-CPU policy expressions can be used directly
 on SMP machines, without modification, since the \Attr{LoadAvg} and
-\Attr{CondorLoadAvg} attributes are the per-virtual machine versions,
+\Attr{CondorLoadAvg} attributes are the per-slot versions,
 not the total, SMP-wide versions.
 
 The per-CPU load average on SMP machines is a Condor invention. 
 No system call exists to ask the operating system for this value.
 Condor already computes the load average generated by Condor on each
-virtual machine.
+slot.
 It does this by close monitoring of all processes spawned by any of the
 Condor daemons, even ones that are orphaned and then inherited by
 \Prog{init}. 
-This Condor load average per virtual machine is reported as
+This Condor load average per slot is reported as
 the attribute
 \Attr{CondorLoadAvg} in all resource ClassAds, and the total Condor
 load average for the entire machine is reported as
 \Attr{TotalCondorLoadAvg}. 
 The total, system-wide load average for the entire
 machine  is reported as \Attr{TotalLoadAvg}.
-Basically, Condor walks through all the virtual machines and assigns out
+Basically, Condor walks through all the slots and assigns out
 portions of the total load average to each one. 
 First, Condor assigns the known Condor load average to each node that
 is generating load.  
 If there's any load average left in the total system load, it is
 considered an owner load.
-Any virtual machines Condor believes are in the Owner state (like
+Any slots Condor believes are in the Owner state (like
 ones that have keyboard activity), are the first to get assigned
 this owner load.
 Condor hands out owner load in increments of at most 1.0, so generally
-speaking, no virtual machine has a load average above 1.0.
+speaking, no slot has a load average above 1.0.
 If Condor runs out of total load average before it runs out of virtual
 machines, all the remaining machines believe that they have no load average
 at all.
-If, instead, Condor runs out of virtual machines and it still has owner
+If, instead, Condor runs out of slots and it still has owner
 load remaining, Condor starts assigning that load to Condor nodes as
 well,
 giving individual nodes with a load average higher than 1.0.
@@ -378,13 +377,13 @@ This section describes how the \Condor{startd} daemon
 handles its debugging messages for SMP machines.
 In general, a given log message will either be something that is
 machine-wide (like reporting the total system load average), or it
-will be specific to a given virtual machine.
-Any log entrees specific to a virtual machine have an extra
-header printed out in the entry: \texttt{vm\#:}.  
+will be specific to a given slot.
+Any log entrees specific to a slot have an extra
+header printed out in the entry: \texttt{slot\#:}.  
 So, for example, here's the output about system resources that are
 being gathered (with \Dflag{FULLDEBUG} and \Dflag{LOAD} turned on) on
 a 2-CPU machine with no Condor activity, and the keyboard connected to
-both virtual machines:
+both slots:
 \begin{verbatim}
 11/25 18:15 Swap space: 131064
 11/25 18:15 number of kbytes available for (/home/condor/execute): 1345063
@@ -394,91 +393,93 @@ both virtual machines:
 11/25 18:15 Load avg: 0.340000 0.800000 1.170000
 11/25 18:15 Idle Time: user= 0 , console= 4 seconds
 11/25 18:15 SystemLoad: 0.340   TotalCondorLoad: 0.000  TotalOwnerLoad: 0.340
-11/25 18:15 vm1: Idle time: Keyboard: 0        Console: 4
-11/25 18:15 vm1: SystemLoad: 0.340  CondorLoad: 0.000  OwnerLoad: 0.340
-11/25 18:15 vm2: Idle time: Keyboard: 0        Console: 4
-11/25 18:15 vm2: SystemLoad: 0.000  CondorLoad: 0.000  OwnerLoad: 0.000
-11/25 18:15 vm1: State: Owner           Activity: Idle
-11/25 18:15 vm2: State: Owner           Activity: Idle
+11/25 18:15 slot1: Idle time: Keyboard: 0        Console: 4
+11/25 18:15 slot1: SystemLoad: 0.340  CondorLoad: 0.000  OwnerLoad: 0.340
+11/25 18:15 slot2: Idle time: Keyboard: 0        Console: 4
+11/25 18:15 slot2: SystemLoad: 0.000  CondorLoad: 0.000  OwnerLoad: 0.000
+11/25 18:15 slot1: State: Owner           Activity: Idle
+11/25 18:15 slot2: State: Owner           Activity: Idle
 \end{verbatim}
 
-If, on the other hand, this machine only had one virtual machine
-connected to the keyboard and console, and the other VM was running a
+If, on the other hand, this machine only had one slot
+connected to the keyboard and console, and the other slot was running a
 job, it might look something like this:
 \begin{verbatim}
 11/25 18:19 Load avg: 1.250000 0.910000 1.090000
 11/25 18:19 Idle Time: user= 0 , console= 0 seconds
 11/25 18:19 SystemLoad: 1.250   TotalCondorLoad: 0.996  TotalOwnerLoad: 0.254
-11/25 18:19 vm1: Idle time: Keyboard: 0        Console: 0
-11/25 18:19 vm1: SystemLoad: 0.254  CondorLoad: 0.000  OwnerLoad: 0.254
-11/25 18:19 vm2: Idle time: Keyboard: 1496     Console: 1496
-11/25 18:19 vm2: SystemLoad: 0.996  CondorLoad: 0.996  OwnerLoad: 0.000
-11/25 18:19 vm1: State: Owner           Activity: Idle
-11/25 18:19 vm2: State: Claimed         Activity: Busy
+11/25 18:19 slot1: Idle time: Keyboard: 0        Console: 0
+11/25 18:19 slot1: SystemLoad: 0.254  CondorLoad: 0.000  OwnerLoad: 0.254
+11/25 18:19 slot2: Idle time: Keyboard: 1496     Console: 1496
+11/25 18:19 slot2: SystemLoad: 0.996  CondorLoad: 0.996  OwnerLoad: 0.000
+11/25 18:19 slot1: State: Owner           Activity: Idle
+11/25 18:19 slot2: State: Claimed         Activity: Busy
 \end{verbatim}
 
 As you can see, shared system resources are printed without the header
-(like total swap space), and VM-specific messages (like the load
-average or state of each VM) get the special header appended.  
+(like total swap space), and slot-specific messages (like the load
+average or state of each slot) get the special header appended.  
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:SMP-exprs}
-Configuring STARTD\_EXPRS on a per-VM basis}
+Configuring STARTD\_EXPRS on a per-slot basis}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-The \Expr{STARTD\_EXPRS} and \Expr{STARTD\_ATTRS} settings can be
-configured on a per-VM basis.
+The \Expr{STARTD\_ATTRS} (and legacy \Expr{STARTD\_EXPRS}) settings
+can be configured on a per-slot basis.
 The \Condor{startd} daemon builds the list of items to
-advertise by combining the the lists in this order:
+advertise by combining the lists in this order:
 \begin{enumerate}
-\item{\Expr{STARTD\_EXPRS}}
-\item{\Expr{VMx\_STARTD\_EXPRS}}
 \item{\Expr{STARTD\_ATTRS}}
-\item{\Expr{VMx\_STARTD\_ATTRS}} 
+\item{\Expr{STARTD\_EXPRS}}
+\item{\Expr{SLOTx\_STARTD\_ATTRS}}
+\item{\Expr{SLOTx\_STARTD\_EXPRS}}
 \end{enumerate}
 
-In this example, the \Condor{startd} ClassAd for
-VM1 will have values for 
-\Attr{favorite\_color}, \Attr{favorite\_season},
-and \Attr{favorite\_movie}.
-VM2 will have values for 
-\Attr{favorite\_color}, \Attr{favorite\_season}, and \Attr{favorite\_song}.
-
+For example, consider the following configuration:
 \begin{verbatim}
 STARTD_EXPRS = favorite_color, favorite_season
-VM1_STARTD_EXRS = favorite_movie
-VM2_STARTD_EXPRS = favorite_song
+SLOT1_STARTD_EXRS = favorite_movie
+SLOT2_STARTD_EXPRS = favorite_song
 \end{verbatim}
 
+This will result in the \Condor{startd} ClassAd for
+slot1 defining values for
+\Attr{favorite\_color}, \Attr{favorite\_season},
+and \Attr{favorite\_movie}.
+slot2 will have values for
+\Attr{favorite\_color}, \Attr{favorite\_season}, and \Attr{favorite\_song}.
+
 Attributes themselves in the \Expr{STARTD\_EXPRS}
-and \Expr{STARTD\_ATTRS} list 
-can also be on a per-VM basis.  
+and \Expr{STARTD\_ATTRS} list
+can also be defined on a per-slot basis.
 Here is another example:
 
 \begin{verbatim}
-favorite_color = "blue"
-favorite_season = "spring"
+favorite_color = ``blue''
+favorite_season = ``spring''
 STARTD_EXPRS = favorite_color, favorite_season
-VM2_favorite_color = "green"
-VM3_favorite_season = "summer"
+SLOT2_favorite_color = ``green''
+SLOT3_favorite_season = ``summer''
 \end{verbatim}
 
 For this example, the \Condor{startd} ClassAds are
 \begin{description}
-\item{VM1}:
+\item{slot1}:
 \begin{verbatim}
-favorite_color = "blue"
-favorite_season = "spring"
+favorite_color = ``blue''
+favorite_season = ``spring''
 \end{verbatim}
-\item{VM2}:
+\item{slot2}:
 \begin{verbatim}
-favorite_color = "green"
-favorite_season = "spring"
+favorite_color = ``green''
+favorite_season = ``spring''
 \end{verbatim}
-\item{VM3}:
+\item{slot3}:
 \begin{verbatim}
-favorite_color = "blue"
-favorite_season = "summer"
+favorite_color = ``blue''
+favorite_season = ``summer''
 \end{verbatim}
 \end{description}
 
