@@ -4488,6 +4488,32 @@ These macros affect the \Condor{collector}.
   and send e-mail about it.  It is defined in seconds and 
   defaults to 10800 (3 hours).
 
+\item[\Macro{COLLECTOR\_REQUIREMENTS}]
+  \label{param:CollectorRequirements} A boolean expression
+  that filters out unwanted ClassAd updates.  The
+  expression is evaluated for ClassAd updates that have 
+  passed through enabled security authorization checks.
+  The default behavior when this expression is not
+  defined is to allow all ClassAd updates to take place.
+  If \Expr{False}, a ClassAd update will be rejected.
+
+  Stronger security mechanisms are the better way to
+  authorize or deny updates to the \Condor{collector}.
+  This configuration variable exists to help those that
+  use host-based security, and
+  do not trust all processes that run on the hosts in the pool.
+  This configuration variable may be used to throw out ClassAds that
+  should not be allowed.  For example, for
+  \Condor{startd} daemons that run on a fixed port,
+  configure this expression to ensure that 
+  only machine ClassAds advertising the expected
+  fixed port are accepted.  As a convenience, before evaluating the
+  expression, some basic sanity checks are performed on the ClassAd to
+  ensure that all of the ClassAd attributes used by Condor to contain
+  IP:port information are consistent.  To validate this
+  information, the attribute to check is \AdAttr{TARGET.MyAddress}.
+ 
+
 \item[\Macro{CLIENT\_TIMEOUT}] \label{param:ClientTimeout} Network
   timeout that the \Condor{collector} uses when talking to any daemons
   or tools that are sending it a ClassAd update.
@@ -6270,6 +6296,13 @@ Configuration File Macros Affecting APIs}
   by the configuration variable \MacroNI{WEB\_ROOT\_DIR}.
   In addition, web commands are considered a READ command,
   so the client will be checked by host-based security.
+
+\item[\Macro{SOAP\_LEAVE\_IN\_QUEUE}]
+  \label{param:SoapLeaveInQueue}
+  A boolean value that when \Expr{True},
+  causes a job in the completed state to remain in the queue,
+  instead of being removed based on the completion of file transfer.
+  There is no default value.
 
 \item[\Macro{WEB\_ROOT\_DIR}]
   \label{param:WebRootDir}
