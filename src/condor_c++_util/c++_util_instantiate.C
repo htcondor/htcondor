@@ -81,3 +81,6 @@ template class SimpleList<MyString>;
 template class SimpleListIterator<MyString>;
 template class HashTable<pid_t, ProcFamilyDirectContainer*>;
 
+#if defined(Solaris)
+template class ExtArray<long>;
+#endif
