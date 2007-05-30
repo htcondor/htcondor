@@ -10,6 +10,7 @@
 #include <signal.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include "config.h"
 
 
 /* unix values */
@@ -424,10 +425,19 @@ int helper_function_chown_dir(char *current_path, int from_uid, int to_uid) {
 			}
 		} else {
 			// lchown the entry.
+			// (if we don't have lchown, use chown - but only if the
+			//  path doesn't refer to a symlink)
+
 			//printf("lchown(%s, %i, -1)\n", full_path, to_uid);
 
 			errcode = 0;
+#if defined(HAVE_LCHOWN)
 			errcode = lchown(full_path, to_uid, -1);
+#else
+			if (!S_ISLNK(st.st_mode)) {
+				errcode = chown(full_path, to_uid, -1);
+			}
+#endif
 
 			if (errcode) {
 				// couldn't unlink, so return failure
@@ -438,11 +448,13 @@ int helper_function_chown_dir(char *current_path, int from_uid, int to_uid) {
 
 	closedir(dir);
 
-	// lchown the passed in dir
-	//printf("lchown(%s, %i, -1)\n", current_path, to_uid);
+	// chown the passed in dir
+	// (we don't need to lchown here since we shouldn't be called
+	//  with a symlink as our argument)
 
-	errcode = 0;
-	errcode = lchown(current_path, to_uid, -1);
+	//printf("chown(%s, %i, -1)\n", current_path, to_uid);
+
+	errcode = chown(current_path, to_uid, -1);
 
 	if (errcode) {
 		// couldn't lchown, so return failure
