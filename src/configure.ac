@@ -1916,10 +1916,12 @@ fi
 
 # Google's coredumper is Linux specific and only officially supports
 # a few architectures.
-if test "$os" = "Linux" -a "x$_cv_arch" = "xI386" ; then
+if test "$os" = "Linux" -a \( "x$_cv_arch" = "xI386" -o "x$_cv_arch" = "xX86_64" \); then
     CONDOR_EXTERNAL_VERSION([coredumper],[0.2])
 	AC_SUBST(want_coredumper,YES)
 else
+	AC_MSG_CHECKING(coredumper)
+	AC_MSG_RESULT([no])
 	AC_SUBST(want_coredumper,NO)
 fi
 
