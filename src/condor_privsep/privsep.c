@@ -82,9 +82,14 @@ int  condor_gid = 0;
 
 void assign_condor_execute_prefix_whitelist(char* val) {
 
+	int num_dirs;
+	char* delim_finder;
+	int dir_index;
+	char* dir_pointer;
+
 	// clear old values, if they had already been set.
 	if(condor_execute_prefix_whitelist) {
-		int dir_index = 0;
+		dir_index = 0;
 		while(condor_execute_prefix_whitelist[dir_index]) {
 			free(condor_execute_prefix_whitelist[dir_index]);
 			dir_index++;
@@ -107,9 +112,9 @@ void assign_condor_execute_prefix_whitelist(char* val) {
 	// a NULL pointer terminates the list.
 
 	// first, count the number of entries
-	int num_dirs = 1;
-	char *delim_finder = val;
-	while(delim_finder = strchr(delim_finder, DIR_DELIMITER)) {
+	num_dirs = 1;
+	delim_finder = val;
+	while((delim_finder = strchr(delim_finder, DIR_DELIMITER))) {
 		num_dirs++;
 		delim_finder++;
 	}
@@ -119,8 +124,8 @@ void assign_condor_execute_prefix_whitelist(char* val) {
 	condor_execute_prefix_whitelist = (char**)malloc((num_dirs+1)*(sizeof(char*)));
 
 	// now, rescan, split on the delimiter, and dup the strings
-	int dir_index = 0;
-	char* dir_pointer = val;
+	dir_index = 0;
+	dir_pointer = val;
 	do {
 		// find the delimiter and zero it
 		delim_finder = strchr(dir_pointer, DIR_DELIMITER);
@@ -147,6 +152,11 @@ void assign_condor_execute_prefix_whitelist(char* val) {
 
 void assign_condor_execute_uid_whitelist(char* val) {
 
+	int num_uids;
+	char *delim_finder;
+	int uid_index;
+	char* uid_pointer;
+
 	// clear old values, if they had already been set.
 	if(condor_execute_uid_whitelist) {
 		free(condor_execute_uid_whitelist);
@@ -168,9 +178,9 @@ void assign_condor_execute_uid_whitelist(char* val) {
 	// a -1 value terminates the list.
 
 	// first, count the number of entries
-	int num_uids = 1;
-	char *delim_finder = val;
-	while(delim_finder = strchr(delim_finder, UID_DELIMITER)) {
+	num_uids = 1;
+	delim_finder = val;
+	while((delim_finder = strchr(delim_finder, UID_DELIMITER))) {
 		num_uids++;
 		delim_finder++;
 	}
@@ -180,8 +190,8 @@ void assign_condor_execute_uid_whitelist(char* val) {
 	condor_execute_uid_whitelist = (int*)malloc((num_uids+1)*(sizeof(int)));
 
 	// now split on the delimiter
-	int uid_index = 0;
-	char* uid_pointer = val;
+	uid_index = 0;
+	uid_pointer = val;
 	do {
 		// find the delimiter and zero it
 		delim_finder = strchr(uid_pointer, UID_DELIMITER);
@@ -289,14 +299,16 @@ int chomp(char* buf) {
 //
 // # blank lines allowed.
 
-int ParseConfigFile() {
+int ParseConfigFile(void) {
+
+	char linebuf[1024];
+	char *equals;
 
 	FILE* config = fopen( CONFIG_FILENAME, "rt");
 	if (config == NULL) {
 		return 0;
 	}
 
-	char linebuf[1024];
 	linebuf[1023] = '\0';
 
 	while(fgets(linebuf, 1024, config)) {
@@ -313,7 +325,7 @@ int ParseConfigFile() {
 		}
 
 		// find the equals sign delimiter
-		char *equals = strchr(linebuf, '=');
+		equals = strchr(linebuf, '=');
 		if(!equals) {
 			// no equals sign, fail
 			return 0;
@@ -346,6 +358,7 @@ int logprint(char* fmt, ...) {
 	}
 	fprintf(logfile, fmt);
 	fflush(logfile);
+	return 0;
 }
 
 
@@ -360,6 +373,8 @@ int helper_function_chown_dir(char *current_path, int from_uid, int to_uid) {
 
 	DIR *dir;
 	struct dirent *dp;
+	struct stat st;
+	int errcode;
 
 	int result = 0;
 
@@ -392,7 +407,6 @@ int helper_function_chown_dir(char *current_path, int from_uid, int to_uid) {
 		strcat(full_path, dp->d_name);
 
 		// we must lstat the file to see if it's a directory
-		struct stat st;
 		result = lstat(full_path, &st);
 		if (result) {
 			return errno;
@@ -412,7 +426,7 @@ int helper_function_chown_dir(char *current_path, int from_uid, int to_uid) {
 			// lchown the entry.
 			//printf("lchown(%s, %i, -1)\n", full_path, to_uid);
 
-			int errcode = 0;
+			errcode = 0;
 			errcode = lchown(full_path, to_uid, -1);
 
 			if (errcode) {
@@ -427,7 +441,7 @@ int helper_function_chown_dir(char *current_path, int from_uid, int to_uid) {
 	// lchown the passed in dir
 	//printf("lchown(%s, %i, -1)\n", current_path, to_uid);
 
-	int errcode = 0;
+	errcode = 0;
 	errcode = lchown(current_path, to_uid, -1);
 
 	if (errcode) {
@@ -446,6 +460,7 @@ int helper_function_rmrf_dir(char *current_path) {
 	// not yet implemented
 	DIR *dir;
 	struct dirent *dp;
+	struct stat st;
 
 	int result = 0;
 
@@ -478,7 +493,6 @@ int helper_function_rmrf_dir(char *current_path) {
 		strcat(full_path, dp->d_name);
 
 		// we must lstat the file to see if it's a directory
-		struct stat st;
 		result = lstat(full_path, &st);
 		if (result) {
 			return errno;
@@ -567,6 +581,8 @@ int helper_function_set_identity(int target_uid, int target_gid) {
 // list must be terminated with a -1
 int helper_function_check_int_whitelist(int test, int* whitelist) {
 
+	int current_index = 0;
+
 	if (!whitelist) {
 		// NULL list means everything is allowed?
 
@@ -574,7 +590,7 @@ int helper_function_check_int_whitelist(int test, int* whitelist) {
 		return 1;
 	}
 
-	int current_index = 0;
+	current_index = 0;
 	while(whitelist[current_index] != -1) {
 		if (test == whitelist[current_index]) {
 			// match!
@@ -595,6 +611,8 @@ int helper_function_check_int_whitelist(int test, int* whitelist) {
 // list must be terminated with a NULL
 int helper_function_check_string_whitelist(char* file, char** whitelist) {
 
+	int current_index;
+
 	if (!whitelist) {
 		// NULL list means everything is allowed?
 
@@ -602,7 +620,7 @@ int helper_function_check_string_whitelist(char* file, char** whitelist) {
 		return 1;
 	}
 
-	int current_index = 0;
+	current_index = 0;
 	while(whitelist[current_index]) {
 		int current_len = strlen(whitelist[current_index]);
 		if (strncmp(whitelist[current_index], file, current_len) == 0) {
@@ -621,6 +639,10 @@ int helper_function_check_string_whitelist(char* file, char** whitelist) {
 
 int function_spawn_procd(char** args) {
 
+	int master_pid;
+	char pidbuf[16];
+	char *exec_argv[3];
+
 	// stay root in this case!
 
 	// there should be no args for this function
@@ -631,14 +653,12 @@ int function_spawn_procd(char** args) {
 
 	// it's the master that spawned us, so get the ppid and pass that on the
 	// command line
-	int master_pid = (int)getppid();
+	master_pid = (int)getppid();
 
 	// now convert to a string
-	char pidbuf[16];
 	sprintf(pidbuf, "%i", master_pid);
 
 	// construct the argv array.
-	char *exec_argv[3];
 	exec_argv[0] = condor_procd;
 	exec_argv[1] = pidbuf;
 	exec_argv[2] = 0;
@@ -651,16 +671,18 @@ int function_spawn_procd(char** args) {
 
 int function_spawn_transferd(char **args) {
 
+	int result;
+	char *exec_argv[2];
+
 	// first, validate that args[0] is NULL
 	if (!args[0]) {
 		// fail!
 		return 41;
 	}
 
-	int result = 0;
+	result = 0;
 	
 	// construct the argv array.
-	char *exec_argv[2];
 	exec_argv[0] = condor_transferd;
 	exec_argv[1] = 0;
 	result = execv(condor_transferd, exec_argv);
@@ -672,7 +694,10 @@ int function_spawn_transferd(char **args) {
 
 int function_spawn_user_job(char **args) {
 
-	// not yet implemented
+	int result;
+	char* executable;
+	char** arguments;
+	struct stat st;
 
 	// args[0] is the executable
 	// args[1...] are passed through
@@ -682,10 +707,10 @@ int function_spawn_user_job(char **args) {
 		return 81;
 	}
 
-	char* executable = args[0];
-	char** arguments = &args[0];
+	executable = args[0];
+	arguments = &args[0];
 
-	int result = 0;
+	result = 0;
 
 	// check the executable prefix whitelist -- nonzero means found
 	result = helper_function_check_string_whitelist(executable,
@@ -695,7 +720,6 @@ int function_spawn_user_job(char **args) {
 	}
 
 	// stat the file to check the owner (follow symlinks in this case)
-	struct stat st;
 	result = stat(executable, &st);
 	if (result) {
 		return 84;
@@ -719,7 +743,8 @@ int function_spawn_user_job(char **args) {
 
 int old_function_spawn_user_job(char **args) {
 
-	// not yet implemented
+	int result;
+	struct stat st;
 
 	// args[0] is executable
 	// args[1...] are passed through
@@ -729,7 +754,7 @@ int old_function_spawn_user_job(char **args) {
 		return 81;
 	}
 
-	int result = 0;
+	result = 0;
 
 	// check the executable prefix whitelist -- nonzero means found
 	result = helper_function_check_string_whitelist(args[0], condor_execute_prefix_whitelist);
@@ -738,7 +763,6 @@ int old_function_spawn_user_job(char **args) {
 	}
 
 	// stat the file to check the owner (follow symlinks in this case)
-	struct stat st;
 	result = stat(args[0], &st);
 	if (result) {
 		return 84;
@@ -763,13 +787,16 @@ int old_function_spawn_user_job(char **args) {
 // this function will rm -rf a subdirectory
 int function_cleanup_user_dir(char **args) {
 
+	int result = 0;
+	char *path;
+	char *dir_location;
+
 	// first, validate that args[0], args[1], args[2] exist and args[3] is NULL
 	if (!(args[0] && args[1] == 0)) {
 		// fail!
 		return 121;
 	}
 
-	int result = 0;
 
 /*
 	// switch uid and gid to the expected user
@@ -781,8 +808,8 @@ int function_cleanup_user_dir(char **args) {
 
 	// the directory must have a dirname equal to condor_user_dir.
 	// dirname may modify its argument, so make a temp copy.
-	char *path = strdup(args[2]);
-	char *dir_location = dirname(path);
+	path = strdup(args[2]);
+	dir_location = dirname(path);
 	result = strcmp(dir_location, condor_user_dir);
 	free(path);
 	if (result) {
@@ -805,13 +832,15 @@ int function_cleanup_user_dir(char **args) {
 // this function will rm -rf a subdirectory of spool
 int function_cleanup_execute_dir(char **args) {
 
+	int result = 0;
+	char *path;
+	char *dir_location;
+
 	// first, validate that args[0], args[1], args[2] exist and args[3] is NULL
 	if (!(args[0] && args[1] && args[2] && args[3] == 0)) {
 		// fail!
 		return 161;
 	}
-
-	int result = 0;
 
 	// switch uid and gid to the expected user
 	result = helper_function_set_identity(args[0], args[1]);
@@ -821,8 +850,8 @@ int function_cleanup_execute_dir(char **args) {
 
 	// the directory must have a dirname equal to condor_spool_dir.
 	// dirname may modify its argument, so make a temp copy.
-	char *path = strdup(args[2]);
-	char *dir_location = dirname(path);
+	path = strdup(args[2]);
+	dir_location = dirname(path);
 	result = strcmp(dir_location, condor_execute_dir);
 	free(path);
 	if (result) {
@@ -844,21 +873,25 @@ int function_cleanup_execute_dir(char **args) {
 
 int function_create_user_dir(char **args) {
 
+	uid_t target_uid;
+	gid_t target_gid;
+	char* pathname;
+
 	if (!args[0] || !args[1] || !args[2] || args[3]) {
 		return 181;
 	}
 	
-	uid_t target_uid = atoi(args[0]);
+	target_uid = atoi(args[0]);
 	if (target_uid == 0) {
 		return 182;
 	}
 	
-	gid_t target_gid = atoi(args[1]);
+	target_gid = atoi(args[1]);
 	if (target_gid == 0) {
 		return 183;
 	}
 
-	char* pathname = args[2];
+	pathname = args[2];
 
 	// first make the directory (as root)
 	//
@@ -879,13 +912,16 @@ int function_create_user_dir(char **args) {
 
 int function_recursive_chown( char **args ) {
 
-	int target_uid = atoi(args[0]);
+	int target_uid;
+	int retval;
+
+	target_uid = atoi(args[0]);
 	if (!target_uid) {
 		// target_uid cannot be zero!  fail!
 		return -1;
 	}
 
-	int retval = helper_function_chown_dir( args[1], -1, target_uid );
+	retval = helper_function_chown_dir( args[1], -1, target_uid );
 
 	logprint("recursive_chown %s to uid %i returns %i\n", args[1],
 			target_uid, retval);
@@ -898,16 +934,22 @@ int privsep_open_server(char*, int, mode_t);
 
 int function_open( char **args ) {
 
+	char* path;
+	int flags;
+	mode_t mode;
+	int result;
+
 	// verify the argument list is the right size
 	//
 	if (!args[0] || !args[1] || !args[2] || args[3]) {
 		return 190;
 	}
 
-	char* path = args[0];
-	int flags = atoi(args[1]);
-	mode_t mode = (mode_t)atoi(args[2]);
-	int result = privsep_open_server(path, flags, mode);
+	path = args[0];
+	flags = atoi(args[1]);
+	mode = (mode_t)atoi(args[2]);
+
+	result = privsep_open_server(path, flags, mode);
 	if (result != 0) {
 		return result;
 	}
@@ -919,14 +961,17 @@ int function_open( char **args ) {
 
 int function_rename( char **args ) {
 
+	char* old_path;
+	char* new_path;
+
 	// verify the argument list is the right size
 	//
 	if (!args[0] || !args[1] || args[2]) {
 		return 201;
 	}
 
-	char* old_path = args[0];
-	char* new_path = args[1];
+	old_path = args[0];
+	new_path = args[1];
 	if (rename(old_path, new_path) == -1) {
 		return 202;
 	}
@@ -936,14 +981,17 @@ int function_rename( char **args ) {
 
 int function_chmod( char **args ) {
 
+	char* path;
+	mode_t mode;
+
 	// verify the argument list is the right size
 	//
 	if (!args[0] || !args[1] || args[2]) {
 		return 211;
 	}
 
-	char* path = args[0];
-	mode_t mode = (mode_t)atoi(args[1]);
+	path = args[0];
+	mode = (mode_t)atoi(args[1]);
 	if (chmod(path, mode) == -1) {
 		return 212;
 	}
@@ -952,6 +1000,13 @@ int function_chmod( char **args ) {
 }
 
 int main(int argc, char** argv) {
+
+	int result;
+	int calling_uid;
+	int calling_gid;
+	int target_uid;
+	int target_gid;
+	int function;
 
 	//printf ("uid %i, euid %i, gid %i, egid %i\n",
 	//		getuid(), geteuid(), getgid(), getegid());
@@ -962,8 +1017,8 @@ int main(int argc, char** argv) {
 	}
 
 	// verify the caller is the condor uid/gid
-	int calling_uid = getuid();
-	int calling_gid = getgid();
+	calling_uid = getuid();
+	calling_gid = getgid();
 /*
 	if (calling_uid != condor_uid) {
 		exit(201);
@@ -979,13 +1034,13 @@ int main(int argc, char** argv) {
 	}
 
 	// get the enumerated function
-	int function = atoi(argv[1]);
+	function = atoi(argv[1]);
 
 	// function 1, 5, and 6 remain root
 	// all others have a uid and gid passed on the command line
 
-	int target_uid = 0;
-	int target_gid = 0;
+	target_uid = 0;
+	target_gid = 0;
 
 	// consume and validate the uid and gid parameters
 	if ((function != 1) && (function != 5) && (function != 6)) {
@@ -1011,7 +1066,7 @@ int main(int argc, char** argv) {
 
 
 	// drop all supplementary groups in all cases
-	int result = 0;
+	result = 0;
 /*
 	result = setgroups(1, &target_gid);
 	if (result) {

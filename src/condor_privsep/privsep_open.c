@@ -35,6 +35,13 @@
 static int
 send_fd(int client_fd, int fd)
 {
+	struct iovec iov[1];
+	char buf[1];
+#if !defined(PRIVSEP_OPEN_USE_ACCRIGHTS)
+	char cmsg_buf[CMSG_SPACE(sizeof(int))];
+	struct cmsghdr* cmsg;
+#endif
+
 	// set up a msghdr struct for our call to sendmsg
 	//
 	struct msghdr msg;
@@ -46,8 +53,6 @@ send_fd(int client_fd, int fd)
 
 	// send a single null byte of in-band data
 	//
-	struct iovec iov[1];
-	char buf[1];
 	buf[0] = '\0';
 	iov[0].iov_base = buf;
 	iov[0].iov_len = 1;
@@ -63,10 +68,9 @@ send_fd(int client_fd, int fd)
 #if !defined(PRIVSEP_OPEN_USE_ACCRIGHTS)
 	// the control message does the actual FD passing
 	//
-	char cmsg_buf[CMSG_SPACE(sizeof(int))];
 	msg.msg_control = cmsg_buf;
 	msg.msg_controllen = CMSG_SPACE(sizeof(int));
-	struct cmsghdr* cmsg = CMSG_FIRSTHDR(&msg);
+	cmsg = CMSG_FIRSTHDR(&msg);
 	cmsg->cmsg_level = SOL_SOCKET;
 	cmsg->cmsg_type = SCM_RIGHTS;
 	cmsg->cmsg_len = CMSG_LEN(sizeof(int));
