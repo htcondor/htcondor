@@ -112,6 +112,13 @@ LocalServer::set_client_principal(const char* uid_str)
 	uid_t my_uid = geteuid();
 	if (my_uid == 0) {
 		if (!m_reader->change_owner(client_uid)) {
+			dprintf(D_ALWAYS,
+			        "LocalServer: error changing ownership on command pipe\n");
+			return false;
+		}
+		if (!m_watchdog_server->change_owner(client_uid)) {
+			dprintf(D_ALWAYS,
+			        "LocalServer: error changing ownership on watchdog pipe\n");
 			return false;
 		}
 	}

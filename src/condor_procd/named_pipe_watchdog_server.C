@@ -59,3 +59,22 @@ NamedPipeWatchdogServer::~NamedPipeWatchdogServer()
 
 	free(m_path);
 }
+
+bool
+NamedPipeWatchdogServer::change_owner(uid_t uid)
+{
+	ASSERT(m_initialized);
+
+	// chown the pipe to the uid in question
+	//
+	if (chown(m_path, uid, (gid_t)-1) < 0) {
+		dprintf(D_ALWAYS,
+		        "chown of %s error: %s (%d)\n",
+		        m_path,
+		        strerror(errno),
+		        errno);
+		return false;
+	}
+
+	return true;
+}
