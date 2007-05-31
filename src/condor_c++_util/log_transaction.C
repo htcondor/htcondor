@@ -29,106 +29,55 @@
 #include "log_transaction.h"
 #include "condor_debug.h"
 
-LogPtrList::~LogPtrList()
-{
-	LogPtrListEntry	*p, *q;
-	p = head;
-	while(p) {
-		q = p->GetNext();
-		delete p;
-		p = q;
-	}
-}
+#define TRANSACTION_HASH_LEN 10000
 
-
-void
-LogPtrList::NewEntry(LogRecord *ptr)
-{
-	LogPtrListEntry *entry;
-
-	entry = new LogPtrListEntry(ptr);
-	if (head == 0) {
-		head = entry;
-	} else {
-		last->SetNext(entry);
-	}
-	last = entry;
-}
-
-
-LogPtrListEntry *
-LogPtrList::FindEntry(LogRecord *target)
-{
-	LogPtrListEntry *ptr;
-
-	// We maintain a cache of one target and check it first to avoid searching
-	// the entire list.
-	if (last_find != 0) {
-		if (last_find->GetPtr() == target) {
-			return last_find;
-		}
-	}
-
-	for (ptr = head; ptr != 0; ptr = ptr->GetNext()) {
-		if (ptr->GetPtr() == target) {
-			last_find = ptr;
-			return last_find;
-		}
-	}
-	return 0;
-}
-
-
-LogRecord *
-LogPtrList::FirstEntry()
-{
-	if (head != 0) { 
-		return head->GetPtr();
-	} else {
-		return 0;
-	}
-}
-
-
-LogRecord *
-LogPtrList::NextEntry(LogRecord *prev)
-{
-	LogPtrListEntry *entry;
-
-	entry = FindEntry(prev);
-	if (entry != 0) {
-		if (entry->GetNext() == 0) {
-			return 0;
-		} else {
-			last_find = entry->GetNext();
-			return last_find->GetPtr();
-		}
-	} else {
-		return 0;
-	}
-}
-
-
-Transaction::Transaction()
+Transaction::Transaction(): op_log(TRANSACTION_HASH_LEN,YourSensitiveString::hashFunction,rejectDuplicateKeys)
 {
 	m_EmptyTransaction = true;
+	op_log_iterating = NULL;
+}
+
+Transaction::~Transaction()
+{
+	LogRecordList *l;
+	LogRecord		*log;
+	YourSensitiveString key;
+
+	op_log.startIterations();
+	while( op_log.iterate(key,l) ) {
+		ASSERT( l );
+		l->Rewind();
+		while( (log = l->Next()) ) {
+			delete log;
+		}
+		delete l;
+	}
+		// NOTE: the YourSensitiveString keys in this hash table now contain
+		// pointers to deallocated memory, as do the LogRecordList pointers.
+		// No further lookups in this hash table should be performed.
 }
 
 void
 Transaction::Commit(FILE* fp, void *data_structure, bool nondurable)
 {
+	LogRecordList *l;
 	LogRecord		*log;
 	int fd;
-	for (log = op_log.FirstEntry(); log != 0; 
-		 log = op_log.NextEntry(log)) 
-	{
-		if (fp != NULL) {
-			if (log->Write(fp) < 0) {
-				EXCEPT("write inside a transaction failed, errno = %d",errno);
+
+	op_log.startIterations();
+	while( op_log.iterate(l) ) {
+		ASSERT( l );
+		l->Rewind();
+		while( (log = l->Next()) ) {
+			if (fp != NULL) {
+				if (log->Write(fp) < 0) {
+					EXCEPT("write inside a transaction failed, errno = %d",errno);
+				}
 			}
+			log->Play(data_structure);
 		}
-		log->Play(data_structure);
 	}
+
 	if( !nondurable ) {
 		if (fp != NULL){
 			if (fflush(fp) !=0){
@@ -147,6 +96,36 @@ Transaction::Commit(FILE* fp, void *data_structure, bool nondurable)
 void
 Transaction::AppendLog(LogRecord *log)
 {
-	op_log.NewEntry(log);
 	m_EmptyTransaction = false;
+	char const *key = log->get_key();
+	YourSensitiveString key_obj = key ? key : "";
+
+	LogRecordList *l = NULL;
+	op_log.lookup(key_obj,l);
+	if( !l ) {
+		l = new LogRecordList;
+		op_log.insert(key_obj,l);
+	}
+	l->Append(log);
+}
+
+LogRecord *
+Transaction::FirstEntry(char const *key)
+{
+	YourSensitiveString key_obj = key;
+	op_log_iterating = NULL;
+	op_log.lookup(key_obj,op_log_iterating);
+
+	if( !op_log_iterating ) {
+		return NULL;
+	}
+
+	op_log_iterating->Rewind();
+	return op_log_iterating->Next();
+}
+LogRecord *
+Transaction::NextEntry()
+{
+	ASSERT( op_log_iterating );
+	return op_log_iterating->Next();
 }

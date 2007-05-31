@@ -156,6 +156,8 @@ private:
 	virtual int WriteBody(FILE *fp);
 	virtual int ReadBody(FILE *fp);
 
+	virtual char const *get_key() {return NULL;}
+
 	unsigned long historical_sequence_number;
 	time_t timestamp; //when was the the first record originally written,
 					  // regardless of how many times the log has rotated
@@ -166,9 +168,9 @@ public:
 	LogNewClassAd(const char *key, const char *mytype, const char *targettype);
 	virtual ~LogNewClassAd();
 	int Play(void *data_structure);
-	char *get_key() { return strdup(key); }
-	char *get_mytype() { return strdup(mytype); }
-	char *get_targettype() { return strdup(targettype); }
+	virtual char const *get_key() { return key; }
+	char const *get_mytype() { return mytype; }
+	char const *get_targettype() { return targettype; }
 
 private:
 	virtual int WriteBody(FILE *fp);
@@ -185,7 +187,7 @@ public:
 	LogDestroyClassAd(const char *key);
 	virtual ~LogDestroyClassAd();
 	int Play(void *data_structure);
-	char *get_key() { return strdup(key); }
+	virtual char const *get_key() { return key; }
 
 private:
 	virtual int WriteBody(FILE* fp) { int r=fwrite(key, sizeof(char), strlen(key), fp); return r < ((int)strlen(key)) ? -1 : r;}
@@ -200,9 +202,9 @@ public:
 	LogSetAttribute(const char *key, const char *name, const char *value);
 	virtual ~LogSetAttribute();
 	int Play(void *data_structure);
-	char *get_key() { return strdup(key); }
-	char *get_name() { return strdup(name); }
-	char *get_value() { return strdup(value); }
+	virtual char const *get_key() { return key; }
+	char const *get_name() { return name; }
+	char const *get_value() { return value; }
 
 private:
 	virtual int WriteBody(FILE* fp);
@@ -218,8 +220,8 @@ public:
 	LogDeleteAttribute(const char *key, const char *name);
 	virtual ~LogDeleteAttribute();
 	int Play(void *data_structure);
-	char *get_key() { return strdup(key); }
-	char *get_name() { return strdup(name); }
+	virtual char const *get_key() { return key; }
+	char const *get_name() { return name; }
 
 private:
 	virtual int WriteBody(FILE* fp);
@@ -238,6 +240,7 @@ private:
 	virtual int WriteBody(FILE* /*fp*/) {return 0;}
 	virtual int ReadBody(FILE* fp);
 
+	virtual char const *get_key() {return NULL;}
 };
 
 class LogEndTransaction : public LogRecord {
@@ -248,6 +251,7 @@ private:
 	virtual int WriteBody(FILE* /*fp*/) {return 0;}
 	virtual int ReadBody(FILE* fp);
 
+	virtual char const *get_key() {return NULL;}
 };
 
 LogRecord *InstantiateLogEntry(FILE* fp, int type);

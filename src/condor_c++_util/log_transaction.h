@@ -36,45 +36,24 @@
 */
 
 #include "log.h"
+#include "list.h"
+#include "HashTable.h"
+#include "MyString.h"
 
-class LogPtrListEntry {
-public:
-	LogPtrListEntry(LogRecord *my_ptr) { ptr = my_ptr; next = 0; }
-	~LogPtrListEntry() { delete ptr; }
-	LogRecord *GetPtr() { return ptr; }
-	LogPtrListEntry *GetNext() { return next; }
-	void SetNext(LogPtrListEntry *n) { next = n; }
-private:
-	LogRecord	*ptr;
-	LogPtrListEntry *next;
-};
-
-class LogPtrList {
-public:
-	LogPtrList() { head = 0; last = 0; last_find = 0;}
-	~LogPtrList();
-	void NewEntry(LogRecord *ptr);
-	LogPtrListEntry *FindEntry(LogRecord *ptr);
-	int IsInList(LogRecord *ptr) { return (FindEntry(ptr) != 0); }
-	LogRecord *FirstEntry();
-	LogRecord *NextEntry(LogRecord *ptr);
-private:
-	LogPtrListEntry *head;
-	LogPtrListEntry *last;
-	LogPtrListEntry *last_find;
-};
-
+typedef List<LogRecord> LogRecordList;
 
 class Transaction {
 public:
 	Transaction();
+	~Transaction();
     void Commit(FILE* fp, void *data_structure, bool nondurable=false);
 	void AppendLog(LogRecord *);
-	LogRecord *FirstEntry() { return op_log.FirstEntry(); }
-	LogRecord *NextEntry(LogRecord *ptr) { return op_log.NextEntry(ptr); }
+	LogRecord *FirstEntry(char const *key);
+	LogRecord *NextEntry();
 	bool EmptyTransaction() { return m_EmptyTransaction; }
 private:
-	LogPtrList op_log;
+	HashTable<YourSensitiveString,LogRecordList *> op_log;
+	LogRecordList *op_log_iterating;
 	bool m_EmptyTransaction;
 };
 

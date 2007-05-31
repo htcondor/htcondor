@@ -40,7 +40,6 @@ public:
 	
 	LogRecord();
 	virtual ~LogRecord();
-	LogRecord *get_next() { return next; }
 	int get_op_type() { return op_type; }
 
 	int Write(FILE *fp);
@@ -54,6 +53,8 @@ public:
 	static int readword(FILE*, char *&);
 	static int readline(FILE*, char *&);
 
+	virtual char const *get_key() = 0;
+
 protected:
 	int op_type;	/* This is the type of operation being performed */
 
@@ -61,9 +62,6 @@ private:
 	int WriteHeader(FILE *fp);
 	virtual int WriteBody(FILE *) { return 0; }
 	int WriteTail(FILE *fp);
-
-	LogRecord *next;
-	LogRecord *prev;
 };
 
 LogRecord *ReadLogEntry(int fd, LogRecord* (*InstantiateLogEntry)(int fd, int type));

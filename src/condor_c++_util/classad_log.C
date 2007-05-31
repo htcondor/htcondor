@@ -381,24 +381,16 @@ ClassAdLog::AdExistsInTableOrTransaction(const char *key)
 	}
 
 		// see what is going on in any current transaction
-	for (LogRecord *log = active_transaction->FirstEntry(); log; 
-		 log = active_transaction->NextEntry(log)) 
+	for (LogRecord *log = active_transaction->FirstEntry(key); log; 
+		 log = active_transaction->NextEntry()) 
 	{
 		switch (log->get_op_type()) {
 		case CondorLogOp_NewClassAd: {
-			char *lkey = ((LogNewClassAd *)log)->get_key();
-			if (strcmp(lkey, key) == 0) {
-				adexists = true;
-			}
-			free(lkey);
+			adexists = true;
 			break;
 		}
 		case CondorLogOp_DestroyClassAd: {
-			char *lkey = ((LogDestroyClassAd *)log)->get_key();
-			if (strcmp(lkey, key) == 0) {
-				adexists = false;
-			}
-			free(lkey);
+			adexists = false;
 			break;
 		}
 		default:
@@ -454,83 +446,65 @@ ClassAdLog::ExamineTransaction(const char *key, const char *name, char *&val, Cl
 
 	if (!active_transaction) return 0;
 
-	for (LogRecord *log = active_transaction->FirstEntry(); log; 
-		 log = active_transaction->NextEntry(log)) {
+	for (LogRecord *log = active_transaction->FirstEntry(key); log; 
+		 log = active_transaction->NextEntry()) {
 
 		switch (log->get_op_type()) {
 		case CondorLogOp_NewClassAd: {
 			if (AdDeleted) {	// check to see if ad is created after a delete
-				char *lkey = ((LogNewClassAd *)log)->get_key();
-				if (strcmp(lkey, key) == 0) {
-					AdDeleted = false;
-				}
-				free(lkey);
+				AdDeleted = false;
 			}
 			break;
 		}
 		case CondorLogOp_DestroyClassAd: {
-			char *lkey = ((LogDestroyClassAd *)log)->get_key();
-			if (strcmp(lkey, key) == 0) {
-				AdDeleted = true;
-				if ( ad ) {
-					delete ad;
-					ad = NULL;
-					attrsAdded = 0;
-				}
+			AdDeleted = true;
+			if ( ad ) {
+				delete ad;
+				ad = NULL;
+				attrsAdded = 0;
 			}
-			free(lkey);
 			break;
 		}
 		case CondorLogOp_SetAttribute: {
-			char *lkey = ((LogSetAttribute *)log)->get_key();
-			if (strcmp(lkey, key) == 0) {
-				char *lname = ((LogSetAttribute *)log)->get_name();
-				if (name && stricmp(lname, name) == 0) {
-					if (ValFound) {
-						free(val);
-					}
-					val = ((LogSetAttribute *)log)->get_value();
-					ValFound = true;
-					ValDeleted = false;
+			char const *lname = ((LogSetAttribute *)log)->get_name();
+			if (name && stricmp(lname, name) == 0) {
+				if (ValFound) {
+					free(val);
 				}
-				if (!name) {
-					if ( !ad ) {
-						ad = new ClassAd;
-						ASSERT(ad);
-					}
-					if (val) {
-						free(val);
-						val = NULL;
-					}
-					val = ((LogSetAttribute *)log)->get_value();
-					ad->AssignExpr(lname,val);
-					attrsAdded++;
-				}
-				free(lname);
+				val = strdup(((LogSetAttribute *)log)->get_value());
+				ValFound = true;
+				ValDeleted = false;
 			}
-			free(lkey);
+			if (!name) {
+				if ( !ad ) {
+					ad = new ClassAd;
+					ASSERT(ad);
+				}
+				if (val) {
+					free(val);
+					val = NULL;
+				}
+				val = strdup(((LogSetAttribute *)log)->get_value());
+				ad->AssignExpr(lname,val);
+				attrsAdded++;
+			}
 			break;
 		}
 		case CondorLogOp_DeleteAttribute: {
-			char *lkey = ((LogDeleteAttribute *)log)->get_key();
-			if (strcmp(lkey, key) == 0) {
-				char *lname = ((LogDeleteAttribute *)log)->get_name();
-				if (name && stricmp(lname, name) == 0) {
-					if (ValFound) {
-						free(val);
-					}
-					ValFound = false;
-					ValDeleted = true;
+			char const *lname = ((LogDeleteAttribute *)log)->get_name();
+			if (name && stricmp(lname, name) == 0) {
+				if (ValFound) {
+					free(val);
 				}
-				if (!name) {
-					if (ad) {
-						ad->Delete(lname);
-						attrsAdded--;
-					}
-				}
-				free(lname);
+				ValFound = false;
+				ValDeleted = true;
 			}
-			free(lkey);
+			if (!name) {
+				if (ad) {
+					ad->Delete(lname);
+					attrsAdded--;
+				}
+			}
 			break;
 		}
 		default:

@@ -31,6 +31,10 @@
 
 #include "condor_debug.h"
 
+class LogRecordHead: public LogRecord {
+	virtual char const *get_key() {return NULL;}
+};
+
 LogRecord::LogRecord()
 {
 }
@@ -185,7 +189,7 @@ LogRecord *
 ReadLogEntry(FILE *fp, LogRecord* (*InstantiateLogEntry)(FILE *fp, int type))
 {
 	LogRecord		*log_rec;
-	LogRecord		head_only;
+	LogRecordHead	head_only;
 	int				rval;
 
 	rval = head_only.ReadHeader(fp);

@@ -38,7 +38,12 @@
 #include "condor_credential.h"
 #include "condor_config.h"
 #include "condor_transfer_request.h"
+<<<<<<< c++_util_instantiate.C
+#include "log_transaction.h"
+
+=======
 #include "killfamily.h"
+>>>>>>> 1.17
 #include "passwd_cache.h"
 #include "proc_family_direct.h"
 
@@ -79,6 +84,9 @@ template class SimpleList<Daemon*>;
 template class HashTable<Credential_t, Condor_Credential_B*>;
 template class SimpleList<MyString>;
 template class SimpleListIterator<MyString>;
+template class List<LogRecord>;
+template class Item<LogRecord>;
+template class HashTable<YourSensitiveString,LogRecordList *>;
 template class HashTable<pid_t, ProcFamilyDirectContainer*>;
 
 #if defined(Solaris)

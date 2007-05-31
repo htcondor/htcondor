@@ -26,42 +26,7 @@
 #include "stringSpace.h"
 #include "condor_debug.h"
 
-// YourSensitiveString is a case-sensitive string class that holds a
-// string pointer (no copying or freeing) for use in a HashTable.
-
-class YourSensitiveString {
-public:
-	YourSensitiveString() : m_str(0) {}
-	YourSensitiveString(char const *str) {
-		m_str = str;
-	}
-	bool operator ==(const YourSensitiveString &rhs) {
-		return strcmp(m_str,rhs.m_str) == 0;
-	}
-	void operator =(char const *str) {
-		m_str = str;
-	}
-	static unsigned int hashFunction(const YourSensitiveString &s);
-
-private:
-	char const *m_str;
-};
-
 template class HashTable<YourSensitiveString,int>;
-
-// hash function for strings
-// Chris Torek's world famous hashing function
-unsigned int YourSensitiveString::hashFunction(const YourSensitiveString &s) {
-	unsigned int hash = 0;
-
-	const char *p = s.m_str;
-	while (*p) {
-		hash = (hash<<5)+hash + (unsigned char)*p;
-		p++;
-	}
-
-	return hash;
-}
 
 
 StringSpace::
