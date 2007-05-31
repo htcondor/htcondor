@@ -38,12 +38,8 @@
 #include "condor_credential.h"
 #include "condor_config.h"
 #include "condor_transfer_request.h"
-<<<<<<< c++_util_instantiate.C
 #include "log_transaction.h"
-
-=======
 #include "killfamily.h"
->>>>>>> 1.17
 #include "passwd_cache.h"
 #include "proc_family_direct.h"
 
