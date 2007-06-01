@@ -440,7 +440,7 @@ advertise by combining the lists in this order:
 For example, consider the following configuration:
 \begin{verbatim}
 STARTD_EXPRS = favorite_color, favorite_season
-SLOT1_STARTD_EXRS = favorite_movie
+SLOT1_STARTD_EXPRS = favorite_movie
 SLOT2_STARTD_EXPRS = favorite_song
 \end{verbatim}
 
@@ -457,29 +457,29 @@ can also be defined on a per-slot basis.
 Here is another example:
 
 \begin{verbatim}
-favorite_color = ``blue''
-favorite_season = ``spring''
+favorite_color = "blue"
+favorite_season = "spring"
 STARTD_EXPRS = favorite_color, favorite_season
-SLOT2_favorite_color = ``green''
-SLOT3_favorite_season = ``summer''
+SLOT2_favorite_color = "green"
+SLOT3_favorite_season = "summer"
 \end{verbatim}
 
 For this example, the \Condor{startd} ClassAds are
 \begin{description}
 \item{slot1}:
 \begin{verbatim}
-favorite_color = ``blue''
-favorite_season = ``spring''
+favorite_color = "blue"
+favorite_season = "spring"
 \end{verbatim}
 \item{slot2}:
 \begin{verbatim}
-favorite_color = ``green''
-favorite_season = ``spring''
+favorite_color = "green"
+favorite_season = "spring"
 \end{verbatim}
 \item{slot3}:
 \begin{verbatim}
-favorite_color = ``blue''
-favorite_season = ``summer''
+favorite_color = "blue"
+favorite_season = "summer"
 \end{verbatim}
 \end{description}
 
