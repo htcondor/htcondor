@@ -5,12 +5,15 @@
 \oOpt{-help} 
 
 \SynProg{\Condor{history}}
-\oOpt{-l} 
+\oOpt{-backwards}
+\oOptArg{-completedsince}{postgrestimestamp}
+\oOptArg{-constraint}{expr}
 \oOptArg{-f}{filename}
 \oOptArg{-format}{formatString AttributeName}
-\oOpt{-backwards}
-\oArg{-constraint expr \Bar cluster \Bar cluster.process \Bar owner \Bar
--completedsince postgrestimestamp}
+\oOpt{-l \Bar -long \Bar -xml} 
+\oOptArg{-match}{number}
+\oOptArg{-name}{quill-name}
+\oOpt{cluster \Bar cluster.process \Bar owner}
 
 \Description
 \Condor{history} displays a summary of all Condor jobs listed in the
@@ -59,18 +62,8 @@ for details on converting history files to the new format.
 
 \begin{Options}
   \OptItem{\Opt{-help}}{Display usage information and exit.}
-  \OptItem{\OptArg{-f}{filename}}{Use the specified file instead of the default     history file.}
   \OptItem{\Opt{-backwards}}{List jobs in reverse chronological
     order. The job most recently added to the history file is first.}
-  \OptItem{\OptArg{-match}{number}}{Limit the number of jobs displayed
-    to \Arg{number}.}
-  \OptItem{\OptArg{-name}{quill-name}}{Utilize the given Quill database
-    for history information, instead of the history file.}
-  \OptItem{\OptArg{-constraint}{expr}}{Display jobs that satisfy the
-    expression.}
-  \OptItem{\OptArg{-format}{formatSpec}{AttributeName}}{Display jobs
-    with a custom format. See \Condor{q} man page for details.}
-  \OptItem{\Opt{-l}}{Display job ads in long format.}
   \OptItem{\OptArg{-completedsince}{postgrestimestamp}}{When Quill
     is enabled, display only job
     ads that were in the Completed job state on or after the date and
@@ -78,6 +71,20 @@ for details on converting history files to the new format.
     The \Arg{postgrestimestamp} follows the syntax as given for
     \Prog{PostgreSQL} version 8.0. The behavior of this option
     is undefined when Quill is \emph{not} enabled. }
+  \OptItem{\OptArg{-constraint}{expr}}{Display jobs that satisfy the
+    expression.}
+  \OptItem{\OptArg{-f}{filename}}{Use the specified file instead of the default     history file.}
+  \OptItem{\OptArg{-format}{formatString}{AttributeName}}{Display jobs
+    with a custom format. See the \Condor{q} man page \Opt{-format} option
+    for details.}
+  \OptItem{\Opt{-l} or \Opt{-long}}{Display job ads in long format.}
+  \OptItem{\OptArg{-match}{number}}{Limit the number of jobs displayed
+    to \Arg{number}.}
+  \OptItem{\OptArg{-name}{quill-name}}{Utilize the given Quill database
+    for history information, instead of the history file.}
+  \OptItem{\Opt{-xml}}{Display job ClassAds in xml format.
+      The xml format is fully defined at
+      \URL{http://www.cs.wisc.edu/condor/classad/refman/}.}
 \end{Options}
 
 \Examples
