@@ -5,26 +5,27 @@
 \oOpt{-help}
 
 \SynProg{\Condor{store\_cred}}
+\Arg{add}
 \Lbr
 \Opt{-c} \verb@|@ \OptArg{-u}{username}
 \Rbr 
 \oOptArg{-p}{password}
 \oOptArg{-n}{machinename}
-\Optnm{add}
+\oOptArg{-f}{filename}
 
 \SynProg{\Condor{store\_cred}}
+\Arg{delete}
 \Lbr
 \Opt{-c} \verb@|@ \OptArg{-u}{username}
 \Rbr 
 \oOptArg{-n}{machinename}
-\Optnm{delete}
 
 \SynProg{\Condor{store\_cred}}
+\Arg{query}
 \Lbr
 \Opt{-c} \verb@|@ \OptArg{-u}{username}
 \Rbr 
 \oOptArg{-n}{machinename}
-\Optnm{query}
 
 \index{Condor commands!condor\_store\_cred}
 \index{condor\_store\_cred command}
@@ -54,31 +55,34 @@ among Condor daemons.
 The password is stashed in a persistent manner; it is maintained
 across system reboots.
 
+The \Arg{add} argument stores the current user's password securely
+in the registry. The user is prompted to enter the password
+twice for confirmation, and characters are not echoed.	If there
+is already a password stashed, the old password will be
+overwritten by the new password.
+
+The \Arg{delete} deletes the current password,
+if it exists.
+
+The \Arg{query} reports whether the password is stored or not.
+
 \begin{Options}
 
-	\OptItem{\Opt{add}}{Store the current user's password securely
-	in the registry. The user is prompted to enter the password
-	twice for confirmation, and characters are not echoed.	If there
-	is already have a password stashed, the old password will be
-	overwritten by the new password.}
+  \OptItem{\Opt{-c}}{Apply the option to the pool password.}
 
-	\OptItem{\Opt{delete}}{Delete the current password,
-	if it exists.}
+  \OptItem{\OptArg{-f}{filename}}{For Unix machines only,
+  generates a pool password file named \Arg{filename} that may be used
+  with the PASSWORD authentication method.}
 
-	\OptItem{\Opt{query}}{Report whether the password 
-	is stored or not.}
+  \OptItem{\Opt{-help}}{Displays a brief summary of command options.}
 
-	\OptItem{\Opt{-help}}{Displays a brief summary of command options.}
+  \OptItem{\OptArg{-n}{machinename}}{Apply the command on the
+  given machine.}
 
-	\OptItem{\Opt{-p} password}{Stores given password,
-	rather than prompting.}
+  \OptItem{\OptArg{-p}{password}}{Stores given password,
+  rather than prompting.}
 
-	\OptItem{\Opt{-c}}{Apply the option to the pool password.}
-
-	\OptItem{\Opt{-n} machinename}{Apply the command on the
-	given machine.}
-
-	\OptItem{\Opt{-u} username}{Specify the user name.}
+  \OptItem{\OptArg{-u}{username}}{Specify the user name.}
 
 \end{Options}
 

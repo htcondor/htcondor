@@ -429,14 +429,16 @@ set ARGS=%ARGS% RUNJOBS=C
 set ARGS=%ARGS% VACATEJOBS=Y
 set ARGS=%ARGS% SUBMITJOBS=Y
 set ARGS=%ARGS% CONDOREMAIL="you@yours.com"
+set ARGS=%ARGS% SMTPSERVER="smtp.localhost"
 set ARGS=%ARGS% HOSTALLOWREAD="*"
 set ARGS=%ARGS% HOSTALLOWWRITE="*"
 set ARGS=%ARGS% HOSTALLOWADMINISTATOR="$(FULL_HOSTNAME)"
 set ARGS=%ARGS% INSTALLDIR="C:\Condor"
+set ARGS=%ARGS% INSTALLDIR_NTS="C:\Condor"
 set ARGS=%ARGS% POOLHOSTNAME="$(FULL_HOSTNAME)"
 set ARGS=%ARGS% ACCOUNTINGDOMAIN="none"
 set ARGS=%ARGS% JVMLOCATION="C:\Windows\system32\java.exe"
-set ARGS=%ARGS% SMTPSERVER="smtp.localhost"
+set ARGS=%ARGS% STARTSERVICE="Y"
 
 msiexec /qb /l* condor-install-log.txt /i condor-6.7.18-winnt50-x86.msi %ARGS%
 \end{verbatim}
@@ -501,6 +503,11 @@ section~\ref{sec:Host-Security} on page~\pageref{sec:Host-Security}.
 \item[INSTALLDIR]
 defines the path to where Condor will be installed. 
 
+\item[INSTALLDIR\_NTS]
+should be set to whatever INSTALLDIR is set to, with the additional
+restriction that it cannot end in a backslash. The installer will be fixed
+in an upcoming version of Condor to not require this property.
+
 \item[POOLHOSTNAME]
 defines the host name of the pool's central manager. 
 
@@ -514,6 +521,12 @@ defines the path to Java virtual machine on the target machine.
 defines the host name of the SMTP server that the target machine is to
 use to send e-mail.
 \end{description}
+
+\begin{description}
+\item [STARTSERVICE = $<$ Y \Bar\ N $>$]
+determines whether the Condor service will be started after the installation
+completes.
+\end {description}
 
 After defining each of these properties for the MSI installer, the
 installer can be started with the \verb@msiexec@ command. The following

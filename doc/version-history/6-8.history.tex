@@ -31,6 +31,57 @@ section~\ref{sec:Availability} on page~\pageref{sec:Availability}.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-6-8-6}Version 6.8.6}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item On all UNIX ports of Condor except MacOSX, AIX, and Tru64, separate
+debug symbol files are now supported. This allows meaningful debugging of
+core files in addition to attaching to stripped executables during runtime.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item The \Condor{ckpt\_server} was fixed to honor \MacroNI{HIGHPORT}
+and \MacroNI{LOWPORT}. While the well-known ports for the checkpoint
+data server have not changed, the helper processes that perform the store
+and restore (which communicate directly with the standard universe job)
+now bind to ports within specified ranges. Note that this will limit
+the number of simultaneous store/restore requests to the number of
+available ports.
+
+% Gnats PR 846/condor-admin 15417
+\item Fixed a bug in \Condor{dagman} that caused recovery/bootstrap
+mode to be very slow on large DAGs (i.e., ones with hundreds of thousands
+of nodes).
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-6-8-5}Version 6.8.5}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -66,11 +117,23 @@ available for X86\_64 native ports of Condor.
 
 \item We now supply distinct, native ports for Mac OS X 10.3 and 10.4.
 
+\item There is a new configuration macro
+\MacroNI{COLLECTOR\_REQUIREMENTS} that may be used to filter out
+unwanted ClassAd updates.  For more information, see
+section~\ref{param:CollectorRequirements}.
+
+\item Added a \Opt{-f} option to \Condor{store\_cred}, which generates
+a pool password file that can be used for the PASSWORD authentication
+method on Unix Condor installations.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item The config file entry \Macro{HOSTALLOW\_DAEMON} is now looked at in
+addition to \Macro{ALLOW\_DAEMON}.
 
 \item Fixed a bug where under certain conditions Condor's file logging codes
 would perform a segmentation fault.
@@ -155,6 +218,9 @@ connections.
 \item The \Condor{c-gahp} now properly lists all of the commands it
 supports in response to the COMMANDS command.
 
+\item Fix a bug in how the \Condor{c-gahp} updates configuration parameter
+\Macro{GSI\_DAEMON\_NAME} to include the job's credential if it has one.
+
 % Gnats PR 815
 \item Removed the 5096-character restriction on the length of DAG
 macro values (and names) in \Condor{dagman}.
@@ -237,6 +303,51 @@ as the wrong user.
 
 \item Fixed some possible static buffer overflows related to the
 transferring of a job's data files.
+
+\item Jobs with standard output and error going to the same file should
+not lose data in the common case.
+
+\item Heavily loaded condor daemons (e.g. \Condor{schedd}) had a
+problem when they got behind processing the exit status of child
+process (e.g. \Condor{shadow}).  The problem was that the daemon would
+continue to expect status updates from its child, even after the child
+had exited, and when the daemon decided that the lack of status
+updates meant that the child was hung, the daemon would try to kill
+any process that happened to have the same pid as the child which had
+already exited.  In the case of the schedd, this would also result in
+the job run attempt being marked as a failure and the job would remain
+in the queue to run again.  Condor no longer activates the ``hung child''
+procedure for jobs which have exited but which have not yet had their
+exit status processed internally by the daemon.
+
+\item For grid-type condor jobs, made the \Condor{gridmanager} more
+tolerant of unexpected responses from the remote \condor{schedd}.
+
+\item On HPUX and AIX, fixed a bug that could cause Condor's process
+family tracking logic to lose track of processes.
+
+\item Fixed a memory error that would cause \Condor{q} to sometimes
+crash when using Quill.
+
+\item Fixed a problem where the Windows \Condor{credd} would be
+inaccessible to other Condor components if \Macro{CREDD\_HOST} were
+set to a DNS alias and not the canonical DNS name.
+
+\item Fixed a bug in the \Condor{shadow} on Windows where it would
+fail to correctly perform the PASSWORD authentication method.
+
+\item The Windows \Condor{credd} now uses the configuration parameter
+\Attr{CREDD\_HOST}, if defined, to set its name when advertising itself
+to the \Condor{collector}. Thus, if \Attr{CREDD\_HOST} is set to something
+other than then \Condor{credd}'s hostname, clients can still locate the
+daemon.
+
+\item Fixed a bug in the \Condor{c-gahp} that could cause it to not
+perform hold, release, or remove commands on jobs in the remote
+\Condor{schedd}.
+
+\item Fixed the default value of configuration parameter
+\Attr{STARTD\_AD\_REEVAL\_EXPR}.
 
 \end{itemize}
 

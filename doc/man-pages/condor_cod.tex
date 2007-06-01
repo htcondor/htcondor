@@ -87,15 +87,17 @@ section~\ref{sec:cod}
 for more a complete description of COD.
 
 \begin{Options}
-	\ToolArgsBaseDesc
-	\ToolLocateDesc
-	\OptItem{\Opt{request}}{Create a new COD claim}
-	\OptItem{\Opt{release}}{Relinquish a claim and kill any running job}
-	\OptItem{\Opt{activate}}{Start a job on a given claim}
-	\OptItem{\Opt{deactivate}}{Kill the current job, but keep the claim}
-	\OptItem{\Opt{suspend}}{Suspend the job on a given claim}
-	\OptItem{\Opt{renew}}{Renew the lease to the COD claim}
-	\OptItem{\Opt{resume}}{Resume the job on a given claim}
+  \ToolArgsBaseDesc
+  \ToolLocateDesc
+  \OptItem{\OptArg{-lease}{N}}{For the \Opt{request} of a new claim,
+    automatically release the claim after \Arg{N} seconds.}
+  \OptItem{\Opt{request}}{Create a new COD claim}
+  \OptItem{\Opt{release}}{Relinquish a claim and kill any running job}
+  \OptItem{\Opt{activate}}{Start a job on a given claim}
+  \OptItem{\Opt{deactivate}}{Kill the current job, but keep the claim}
+  \OptItem{\Opt{suspend}}{Suspend the job on a given claim}
+  \OptItem{\Opt{renew}}{Renew the lease to the COD claim}
+  \OptItem{\Opt{resume}}{Resume the job on a given claim}
 \end{Options}
 
 \GenRem
