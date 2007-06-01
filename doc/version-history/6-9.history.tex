@@ -24,26 +24,26 @@ The details of each version are described below.
   For almost 10 years, Condor has used the term \Term{virtual machine}
   or \Term{vm} to refer to each distinct resource that could run a
   Condor job (for example, each of the CPUs on an SMP machine).
-  Back when we choose this terminology, it made since, since each of
-  these resource was like an independent machine in your pool, with
-  its own state, classified ad, claims, and so on.
+  Back when we chose this terminology, it made sense, since each of
+  these resource was like an independent machine in a pool, with
+  its own state, ClassAd, claims, and so on.
   However, in recent years, the term \Term{virtual machine} is now
   almost universally associated with the kinds of virtual machines
-  created using tools like VMware or Xen -- entire operating systems
-  running inside a given process (usually emulating the underlying
-  hardware) on a host machine.
+  created using tools such as VMware and Xen.  Entire operating systems
+  run inside a given process, usually emulating the underlying
+  hardware on a host machine.
   So, to avoid confusion with these other kinds of virtual machines,
-  the old  \Term{virtual machine} terminology has been changed, and we
-  now use the term \Term{slot}.
+  the old  \Term{virtual machine} terminology has been replaced by
+  the term \Term{slot}.
 
   Numerous configuration settings, command-line arguments to Condor
-  tools, classified ad attribute names, and so on, have all been
+  tools, ClassAd attribute names, and so on, have all been
   modified to reflect the new \Term{slot} terminology.
   In general, the old settings and options will still work, but are
-  now deprecated.
+  now retired and may disappear in the future.
 
-\item The deprecated \Condor{install} installation script has
-  finally been removed.
+\item The \Condor{install} installation script has
+  been removed.
   All sites should use \Condor{configure} when setting up a new Condor
   installation.
 
@@ -101,7 +101,7 @@ re-queued after executing each time.
 \item Condor now looks for its configuration file in \File{/usr/local/etc}
 if the \Macro{CONDOR\_CONFIG} environment variable is not set and there is
 no condor\_config file located in \File{/etc/condor}. This allows a default
-Condor installation to be more compatible with FreeBSD.
+Condor installation to be more compatible with Free BSD.
 
 \item If a user job requests streaming input or output in the submit
 file, the job can now run with job leases and the job will continue
@@ -163,10 +163,10 @@ died, exited, or been killed, it now notes the name of the machine, the
 daemon's name, and a summary of the situation in the Subject line.
 
 \item Anyplace in a Condor configuration or submit description file where
-wildcards may be used, you can now place wildcards at both the beginning
+wild cards may be used, you can now place wild cards at both the beginning
 and end of the string pattern (i.e. match strings that contain the text
-between the wildcards anywhere in the string). Previously, only one
-wildcard could appear in the string pattern.
+between the wild cards anywhere in the string). Previously, only one
+wild card could appear in the string pattern.
 
 \item Added optional configuration setting
 \Macro{NEGOTIATOR\_MATCH\_EXPRS}.  This allows the negotiator to
@@ -180,7 +180,7 @@ deprecated the boolean setting
 \Macro{EXECUTE\_LOGIN\_IS\_DEDICATED}, because the latter could not
 handle a policy where some jobs run as the job owner and some run as
 dedicated execution accounts.  Also added support for
-\Macro{STARTER\_ALLOW\_RUNAS\_OWNER} under unix.  See
+\Macro{STARTER\_ALLOW\_RUNAS\_OWNER} under Unix.  See
 Section~\ref{param:DedicatedExecuteAccountRegexp} and
 Section~\ref{sec:RunAsNobody} for more information.
 
@@ -226,7 +226,7 @@ starts back up at a later time, it will spawn \Condor{shadow} to reconnect
 to the jobs if they are still executing. This mimics the same behavior as
 a fast shutdown.
 
-\item On unix systems, Condor can now handle file descriptors larger than
+\item On Unix systems, Condor can now handle file descriptors larger than
 FD\_SETSIZE when using the select system call. Previously, file descriptors
 larger than FD\_SETSIZE would cause memory corruption and crashes.
 
@@ -422,7 +422,7 @@ network.
 standard input.
 
 \item Unix Condor daemons now reinitialize their DNS
-configuration (e.g. IP addresses of the nameservers) on reconfig.
+configuration (e.g. IP addresses of the name servers) on reconfig.
 
 % Gnats PR 777
 \item A configuration file for \Condor{dagman} can now be specified
