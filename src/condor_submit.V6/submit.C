@@ -4092,7 +4092,7 @@ void
 SetJobLease( void )
 {
 	static bool warned_too_small = false;
-	int lease_duration = 0;
+	long lease_duration = 0;
 	char *tmp = condor_param( "job_lease_duration", ATTR_JOB_LEASE_DURATION );
 	if( ! tmp ) {
 		if( universeCanReconnect(JobUniverse)) {
@@ -4110,24 +4110,34 @@ SetJobLease( void )
 			return;
 		}
 	} else {
-		lease_duration = atoi( tmp );
-	}
-
-	if( lease_duration <= 0 ) {
-		fprintf( stderr, "\nERROR: invalid %s given: %s\n",
-				 ATTR_JOB_LEASE_DURATION, tmp );
-		DoCleanup(0,0,NULL);
-		exit( 1 );
-	}
-	if( lease_duration < 20 ) {
-		if( ! warned_too_small ) { 
-			fprintf( stderr, "\nWARNING: %s less than 20 seconds is not "
-					 "allowed, using 20 instead\n", ATTR_JOB_LEASE_DURATION );
-			warned_too_small = true;
+		char *endptr = NULL;
+		lease_duration = strtol(tmp, &endptr, 10);
+		if (endptr != tmp) {
+			while (isspace(*endptr)) {
+				endptr++;
+			}
 		}
-		lease_duration = 20;
+		bool valid = (endptr != tmp && *endptr == '\0');
+		if (!valid) {
+			fprintf(stderr, "\nERROR: invalid %s given: %s\n",
+					ATTR_JOB_LEASE_DURATION, tmp);
+			DoCleanup(0, 0, NULL);
+			exit(1);
+		}
+		if (lease_duration == 0) {
+				// User explicitly didn't want a lease, so we're done.
+			return;
+		}
+		else if (lease_duration < 20) {
+			if (! warned_too_small) { 
+				fprintf(stderr, "\nWARNING: %s less than 20 seconds is not "
+						"allowed, using 20 instead\n",
+						ATTR_JOB_LEASE_DURATION);
+				warned_too_small = true;
+			}
+			lease_duration = 20;
+		}
 	}
-
 	MyString val = ATTR_JOB_LEASE_DURATION;
 	val += "=";
 	val += lease_duration;
