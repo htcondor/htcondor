@@ -111,6 +111,14 @@ While the submit machine is down, if the job tried to issue a streaming
 read or write, the job will block until the submit machine returns or the
 job lease expires.
 
+\item Ever since version 6.7.19, \Condor{submit} has added a default
+  job lease duration of 20 minutes to all jobs that support these
+  leases.
+  However, there was no way to disable this functionality if a user
+  did not want job lease semantics.
+  Now, a user can place \verb@job_lease_duration = 0@ in their submit
+  file to manually disable the job lease.
+
 % condor-admin 15254
 \item Added new configuration knob \Macro{STARTER\_UPLOAD\_TIMEOUT}
 which sets the timeout for the starter to upload output files to the

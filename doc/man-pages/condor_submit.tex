@@ -1836,7 +1836,10 @@ directory in which the \Condor{submit} command is run.
 \item[job\_lease\_duration = $<$number-of-seconds$>$] For vanilla
 \index{submit commands!job\_lease\_duration}
 and java universe jobs only, the duration (in seconds) of a
-job lease.  The default value is undefined.
+job lease.
+The default value is twenty minutes for universes that support it.
+If a job lease is not desired, the value can be explicitly set to 0 to
+disable the job lease semantics.
 See section~\ref{sec:Job-Lease} for details of job leases.
 
 
