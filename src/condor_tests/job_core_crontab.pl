@@ -224,13 +224,30 @@ $success = sub {
 	}
 	if ( $h_runcount < 0 ) { 
 		print "Bad - Unable to get JobRunCount for Job $cluster.$job!\n";
+		print "$h_cmd\n";
+		print "+-----------------------------------------------+\n";
+		print "$temp\n";
+		print "+-----------------------------------------------+\n\n";
+		
+		##
+		## Check if the job is still in the queue?
+		##
+		$h_cmd = "condor_q";
+		if ( ! CondorTest::runCondorTool($h_cmd, \@result, 3) ) {
+			print "ERROR: Unable get job queue information<$h_cmd>\n";
+			exit(1);
+		}
+		print "$h_cmd\n";
+		print "+-----------------------------------------------+\n";
+		print "@result\n";
+		print "+-----------------------------------------------+\n";
 		exit(1);
 	}
 	##
 	## Make sure what we have and what the job's ad has is the same
 	##
 	if ( $run_ctr != $h_runcount ) {
-		print "Bad - Job $cluster.$job finished execution but it's JobRunCount ".
+		print "Bad - Job $cluster.$job finished execution but its JobRunCount ".
 			  "is $h_runcount. It should be $run_ctr!\n";
 		exit(1);
 	}
