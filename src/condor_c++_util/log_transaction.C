@@ -60,22 +60,17 @@ Transaction::~Transaction()
 void
 Transaction::Commit(FILE* fp, void *data_structure, bool nondurable)
 {
-	LogRecordList *l;
-	LogRecord		*log;
+	LogRecord *log;
 	int fd;
 
-	op_log.startIterations();
-	while( op_log.iterate(l) ) {
-		ASSERT( l );
-		l->Rewind();
-		while( (log = l->Next()) ) {
-			if (fp != NULL) {
-				if (log->Write(fp) < 0) {
-					EXCEPT("write inside a transaction failed, errno = %d",errno);
-				}
+	ordered_op_log.Rewind();
+	while( (log = ordered_op_log.Next()) ) {
+		if (fp != NULL) {
+			if (log->Write(fp) < 0) {
+				EXCEPT("write inside a transaction failed, errno = %d",errno);
 			}
-			log->Play(data_structure);
 		}
+		log->Play(data_structure);
 	}
 
 	if( !nondurable ) {
@@ -107,6 +102,7 @@ Transaction::AppendLog(LogRecord *log)
 		op_log.insert(key_obj,l);
 	}
 	l->Append(log);
+	ordered_op_log.Append(log);
 }
 
 LogRecord *

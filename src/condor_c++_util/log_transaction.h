@@ -53,6 +53,7 @@ public:
 	bool EmptyTransaction() { return m_EmptyTransaction; }
 private:
 	HashTable<YourSensitiveString,LogRecordList *> op_log;
+	LogRecordList ordered_op_log;
 	LogRecordList *op_log_iterating;
 	bool m_EmptyTransaction;
 };
