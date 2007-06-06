@@ -227,6 +227,8 @@ JobQueueSnapshot::getNextProcAd(ClassAd*& ad)
 	}
 	else {
 		ad = new ClassAd();
+		ad->SetMyTypeName("Job");
+		ad->SetTargetTypeName("Machine");
 	}
 
 		//the below two while loops is to iterate over 
