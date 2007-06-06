@@ -221,6 +221,14 @@ Condor's behavior on most other Unix-like operating systems, including
 32-bit x86 versions of Linux.
 % Code: Google's coredumper library is now used on Linux x86-64.
 
+\item The \Env{\_CONDOR\_SLOT} variable is now placed into the
+  environment for jobs of all universes.
+  This variable indicates what slot a given job is running on, and
+  will have the same value as the \AdAttr{SlotID} from the machine
+  classified ad where the job is running.
+  The \Env{\_CONDOR\_SLOT} variable replaces the deprecated
+  \Env{CONDOR\_VM} environment variable, which was only defined for
+  standard universe jobs.
 
 \end{itemize}
 

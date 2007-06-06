@@ -1756,15 +1756,25 @@ This directory is unique for
 every job that is run, and it's contents are deleted by Condor
 when the job stops running on a machine, no matter how the job completes.
 
+\item \Env{\_CONDOR\_SLOT}
+\index{\_CONDOR\_SLOT}
+\index{environment variables!\_CONDOR\_SLOT}
+gives the name of the slot (for SMP machines), on which the job is run.
+On machines with only a single slot, the value of this variable will be
+\verb@1@, just like the \AdAttr{SlotID} attribute in the machine's
+classified ad.
+This setting is available in all universes, and was added in version 6.9.3.
+See section~\ref{sec:Configuring-SMP} for more details about SMP
+machines and their configuration.
+
 \item \Env{CONDOR\_VM}
 \index{CONDOR\_VM}
 \index{environment variables!CONDOR\_VM}
-gives the name of the virtual machine (for SMP machines),
-on which the job is run.  This setting is only available in the
-standard universe.
-See 
-section~\ref{sec:Configuring-SMP} for more details about SMP
-machines and their configuration.
+equivalent to \Env{\_CONDOR\_SLOT} described above, except that it is
+only available in the standard universe.
+\Note: As of Condor version 6.9.3, this environment variable is deprecated.
+It will only be defined if the \Macro{ALLOW\_VM\_CRUFT} configuration
+setting is set to TRUE.
 
 \item \Env{X509\_USER\_PROXY}
 \index{X509\_USER\_PROXY}
