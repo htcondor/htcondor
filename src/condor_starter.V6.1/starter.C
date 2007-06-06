@@ -1425,6 +1425,15 @@ CStarter::PublishToEnv( Env* proc_env )
 	env_name += "SCRATCH_DIR";
 	proc_env->SetEnv( env_name.GetCStr(), GetWorkingDir() );
 
+		// slot identifier
+	env_name = base.GetCStr();
+	env_name += "SLOT";
+	int slot = getMySlotNumber();
+	if (!slot) {
+		slot = 1;
+	}
+	proc_env->SetEnv(env_name.GetCStr(), slot);
+
 		// pass through the pidfamily ancestor env vars this process
 		// currently has to the job.
 
