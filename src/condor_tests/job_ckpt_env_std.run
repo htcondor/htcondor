@@ -4,44 +4,69 @@ use CondorTest;
 
 $cmd = 'job_ckpt_env_std.cmd';
 $testname = 'Env Test';
+# This test can have variable output depending on condor configuration file
+# settings, the cluster/proc of the job, or environment variables. So were
+# going to specifically check if known specific lines are present in the
+# output.
+$OutputCheck = sub 
+{
+	my %info = @_;
+	my $line;
+	my %existence;
+	my $count;
+	# all of these lines must be present exactly as is in the output.
+	# Any other lines (addition arguments or environment variables)
+	# may be ignored.
+	my @present = (	'environ[0] = "alpha=a"',
+					'environ[1] = "bravo=b"',
+					'environ[2] = "charlie=c"',
+					'argv[1] = "foo"',
+					'argv[2] = "bar"',
+					'argv[3] = "glarch"',
+					'Environment vector OK',
+					'Argument vector OK',
+					'Environment vector OK',
+					'Argument vector OK',
+					'Environment vector OK',
+					'Argument vector OK',
+					'Normal End Of Job',
+				);
 
-$foo = <<"_EOX";
-environ[0] = "alpha=a"
-environ[1] = "bravo=b"
-environ[2] = "charlie=c"
-argv[1] = "foo"
-argv[2] = "bar"
-argv[3] = "glarch"
+	die "No output file '$info{\"output\"}' when one was expected.\n"
+		if (! -f $info{"output"});
 
-Environment vector OK
-Argument vector OK
+	# Grab the output, and use each line as a key to show what is present in
+	# the file.
+	@lines = `cat $info{"output"}`;
+	foreach $line (@lines) {
+		chomp $line;
+		$existence{$line} = 1;
+	}
 
-Environment vector OK
-Argument vector OK
+	# now, we check to see if all of the specified "keys" in the @present array
+	# exist in the existence hash with a value of one.
+	$count = 0;
+	foreach $line (@present) {
+		if ($existence{$line} != 1) {
+			print "FAILURE: Did not find expected line:\n";
+			print "$line\n";
+		} else {
+			$count++;
+		}
+	}
 
-Environment vector OK
-Argument vector OK
+	# If I found the same number of exact lines as I've specified then the
+	# output has been verified to contain at least those lines of output.
+	if ($count == scalar(@present)) {
+		return;
+	}
 
-Normal End Of Job
-_EOX
+	print "FAILURE : Expected " . scalar(@present) . " certain output lines " .
+		"to be present, but only saw $count of them.\n";
+    die "$testname: CondorTest::RunTest() failed\n";
+};
 
-@CondorTest::expected_output = split '\n', $foo;
-
-@CondorTest::skipped_output_lines = ( 4, 5, 6, 7 );
-# Line 4: 'environ[3] = "CONDOR_VM=vm1"', and we don't know what vm
-# we're going to run on, so just skip it.
-# Line 5: 'environ[4] = "_condor_BIND_ALL_INTERFACES=FALSE"'
-# we don't know (or care) if this should be TRUE or FALSE, so skip it.
-# Line 6: 'environ[5] = "CONDOR_SCRATCH_DIR=/tmp/condor/execute/dir_15341"'
-# this seems to be a new feature in the job env of a standard environment,
-# since the dir nuber always changes, we need to ignore this.
-# Line 7 'argv[0] = "condor_exec.1213.0"', and we don't know the
-# cluster number, so just skip it.
-
-print join "\n", @CondorTest::expected_output; 
-
-CondorTest::RegisterExitedSuccess( $testname,
-				   \&CondorTest::DefaultOutputTest );
+CondorTest::RegisterExitedSuccess( $testname, $OutputCheck );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
     print "$testname: SUCCESS\n";
