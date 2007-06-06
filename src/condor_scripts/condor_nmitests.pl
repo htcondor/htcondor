@@ -3,6 +3,7 @@ use Class::Struct;
 use Cwd;
 use Getopt::Long;
 use File::Copy;
+use DBI;
 
 struct Platform_info =>
 {
@@ -26,6 +27,7 @@ GetOptions (
 		'builds=s' => \$berror,
 		'branch=s' => \$branch,
         'gid=s' => \$gid,
+        'runid=s' => \$requestrunid,
         'help' => \$help,
         #'megs=i' => \$megs,
 		# types of blame
@@ -36,6 +38,7 @@ GetOptions (
 		'unknown=s' => \$uerror,
 		'single=s' => \$singletest,
 		'who=s' => \$whoosetests,
+		'month=s' => \$buildmonth,
 );
 
 %platformerrors;
@@ -51,7 +54,7 @@ $histverison = "";
 if($help) { help(); exit(0); }
 
 if(!$singletest && !$berror) {
-	if(!$gid) {
+	if(!($gid || $requestrunid)) {
 		print "You must enter the build GID to check test data from!\n";
 		help();
 		exit(1);
@@ -70,17 +73,18 @@ if($whoosetests) {
 	$foruser = $whoosetests;
 } 
 
-SetMonthYear();
+#SetMonthYear();
+my $basedir;
 
 if(!$base) {
-	$base = "/nmi/run/" . $foruser . "_nmi-s003.cs.wisc.edu_";
-	$ymbase = "/nmi/run/" . $currentyear . "/" . $monthstring . "/"  . $foruser . "/" . $foruser . "_nmi-s003.cs.wisc.edu_";
+	# test db access of base
+	DbConnect();
+	$basedir = FindBuildRunDir($requestrunid);
+	print "Have <<$basedir>> for basedir\n";
+	DbDisconnect();
+} else {
+	$basedir = $base . $gid;
 }
-$testbase = $foruser . "_nmi-s003.cs.wisc.edu_";
-
-$basedir = $base . $gid;
-$ymbasedir = $ymbase . $gid;
-#system("ls $basedir");
 
 my $TopDir = getcwd(); # current location hosting testhistory data and platform data cache
 my $CacheDir = "";     # level where different platform data files go.
@@ -104,14 +108,10 @@ my $histnew = "";
 
 if((!$singletest) && (!($berror =~ /all/))) {
 	print "Opening build output for GID <$gid>\n";
-	$builddir = "";
+	$builddir = $basedir;;
 	#print "Testing <<$basedir>>\n";
 	if(!(-d $basedir )) {
-		$builddir = $ymbasedir;;
-		#print "Switch to year based <<$builddir>>\n";
-	} else {
-		#print "DO NOT Switch to year based <<$builddir>>\n";
-		$builddir = $basedir;;
+		die "<<$basedir>> Does not exist\n";
 	}
 	opendir DH, $builddir or die "Can not open Build Results<$builddir>:$!\n";
 	foreach $file (readdir DH) {
@@ -266,6 +266,24 @@ if( $totalcounterr  > 0 ) {
 }
 
 exit 0;
+
+sub FindBuildRunDir
+{
+    my $url = "";
+    my $runid = shift;
+    my $extraction = $db->prepare("SELECT * FROM Run WHERE  \
+                runid = '$runid' \
+                ");
+    $extraction->execute();
+    while( my $sumref = $extraction->fetchrow_hashref() ){
+        $filepath = $sumref->{'filepath'};
+        $gid = $sumref->{'gid'};
+        #print "<<<$filepath>>><<<$gid>>>\n";
+        $url = $filepath . "/" . $gid;
+        print "Runid <$runid> is <$url>\n";
+		return($url);
+    }
+}
 
 sub CrunchErrors
 {
@@ -898,6 +916,10 @@ sub SetMonthYear
 	} else {
 		$monthstring = "$currentmonth";
 	}
+
+	if($buildmonth) {
+		$monthstring = $buildmonth;
+	}
 	$currentyear = $year + 1900;
 	print "Month <<$monthstring>> Year <<$currentyear>>\n";
 }
@@ -950,3 +972,15 @@ sub SetupAnalysisCache
 	}
 }
 
+
+sub DbConnect
+{
+    $db = DBI->connect("DBI:mysql:database=nmi_history;host=nmi-db", "nmipublic", "nmiReadOnly!"
+) || die "Could not connect to database: $!\n";
+    #print "Connected to db!\n";
+}
+
+sub DbDisconnect
+{
+    $db->disconnect;
+}
