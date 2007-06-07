@@ -859,7 +859,7 @@ sub runCondorTool
 	my $attempts = 4;
 	my $count = 0;
 	while( $count < $attempts) {
-		@{arrayref} = (); #empty return array...
+		@{$arrayref} = (); #empty return array...
 		my @tmparray;
 		Condor::debug( "Try command <$cmd>\n");
 		open(PULL, "$cmd 2>$catch |");
@@ -868,12 +868,11 @@ sub runCondorTool
 			fullchomp($_);
 			Condor::debug( "Process: $_\n");
 			push @tmparray, $_; # push @{$arrayref}, $_;
-			$count += 1;
 		}
 		close(PULL);
 		$status = $? >> 8;
 		Condor::debug("Status is $status after command\n");
-		if(( $status != 0 ) && ($attepts == ($count + 1)))
+		if(( $status != 0 ) && ($attempts == ($count + 1)))
 		{
 				print "runCondorTool: $cmd timestamp $start_time failed!\n";
 				if( !open( MACH, "<$catch" )) { 
@@ -886,8 +885,7 @@ sub runCondorTool
 				}
 				return(0);
 		}
-		else
-		{
+		if ($status == 0) {
 			$line = "";
 			foreach $value (@tmparray)
 			{
@@ -914,7 +912,7 @@ sub runCondorTool
 			return(1);
 		}
 		$count = $count + 1;
-		sleep((2*$count));
+		sleep((10*$count));
 	}
 	Condor::debug( "runCondorTool: $cmd worked!\n");
 
