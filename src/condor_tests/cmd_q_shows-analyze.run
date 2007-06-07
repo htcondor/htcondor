@@ -18,11 +18,25 @@ $submit = sub {
 	my $foundanalyze = 0;
 	my $cmd = "condor_q -analyze";
 
+	# This is the first test run, so we need to make sure that
+	# the negotiator has reported to the collector.  If it started
+	# before the collector was ready, it takes five minutes
+	# for it to show up in the collector.
+
+	sleep(300);
+
+	Condor::DebugOn();
+
 	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if(!$cmdstatus)
 	{
 		print "Test failure due to Condor Tool Failure<$cmd>\n";
-		exit(1)
+		system("ps auxww | grep negotiator");
+		print "NegotiatorLog:--------------------------------\n";
+		system("cat `condor_config_val LOG`/NegotiatorLog");
+		print "condor_status -any -l:--------------------------------\n";
+		system("condor_status -any -l");
+		exit(1);
 	}
 
 	my $submitline = "";
