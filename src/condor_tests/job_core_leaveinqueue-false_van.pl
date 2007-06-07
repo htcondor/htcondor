@@ -30,13 +30,13 @@ $success = sub
 	my $cluster = $info{"cluster"};
 
 	print "Good, job should be done but NOT left in the queue!!!\n";
-	my @adarray;
 	my $status = 1;
 	my $delay = 1;
 	my $backoffmax = 17; #(1 + 2 + 4 + 8 + 16 = 31 seconds max)
 	my $foundit = 0;
 	my $cmd = "condor_q $cluster";
 	while( $delay < $backoffmax) {
+		my @adarray;
 		$foundit = 0;
 		$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 		if(!$status)
