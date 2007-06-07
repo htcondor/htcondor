@@ -105,6 +105,7 @@ my $localdir;
 my $condorlocaldir;
 my $pid = $$;
 my $version = ""; # remote, middle, ....... for naming schedd "schedd . pid . version"
+my $procdpipe = "";
 my $mastername = ""; # master_$verison
 
 BEGIN
@@ -149,6 +150,8 @@ sub StartCondor
 	} else {
 		$mpid = shift; # assign process id
 	}
+
+	$procdpipe = $version . $mpid;
 
 	system("mkdir -p $topleveldir");
 	$topleveldir = $topleveldir . "/" . $mpid;
@@ -843,6 +846,11 @@ sub TunePersonalCondor
 			print NEW "$_";
 		}
 		close(POST);
+	}
+
+	# as of 6.9.3 we need unique pipes for each nested personal condor
+	if( $ENV{NMI_PLATFORM} =~ /win/ ){
+		print NEW "PROCD_ADDRESS = \\\\.\\$procdpipe\n";
 	}
 
 	close(NEW);
