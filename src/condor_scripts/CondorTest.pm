@@ -849,7 +849,7 @@ sub runCondorTool
 	my $attempts = 4;
 	my $count = 0;
 	while( $count < $attempts) {
-		@{arrayref} = (); #empty return array...
+		@{$arrayref} = (); #empty return array...
 		my @tmparray;
 		Condor::debug( "Try command <$cmd>\n");
 		open(PULL, "$cmd 2>$catch |");
