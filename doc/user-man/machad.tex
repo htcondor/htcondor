@@ -132,10 +132,10 @@ benchmark.
 the \AdAttr{Machine} attribute, but could be customized by the site
 administrator.
 On SMP machines, the \Condor{startd} will divide the CPUs up into separate
-virtual machines, each with with a unique name.
-These names will be of the form ``vm\#@full.hostname'', for example,
-``vm1@vulture.cs.wisc.edu'', which signifies virtual machine 1 from
-vulture.cs.wisc.edu. 
+slots, each with with a unique name.
+These names will be of the form ``slot\#@full.hostname'', for example,
+``slot1@vulture.cs.wisc.edu'', which signifies slot number 1 from
+vulture.cs.wisc.edu.
 %
 \index{ClassAd machine attribute!OpSys}
 \item[\AdAttr{OpSys}:] String describing the operating system running on this
@@ -171,6 +171,17 @@ finish before kicking it off if it needs to do so.  This is evaluated
 in the context of the job ClassAd, so it may refer to job attributes
 as well as machine attributes.
 %
+\index{ClassAd machine attribute!SlotID}
+\item[\AdAttr{SlotID}:] For SMP machines, the integer
+that identifies the slot.
+The value will be \verb@X@ for the slot with 
+\begin{verbatim}
+name="slotX@full.hostname"
+\end{verbatim}
+For non-SMP machines with one slot, the value will be 1.
+\Note This attribute was added in Condor version 6.9.3.
+For older versions of Condor, see \AdAttr{VirtualMachineID} below.
+%
 \index{ClassAd machine attribute!StartdIpAddr}
 \item[\AdAttr{StartdIpAddr}:] String with the IP and port address of the
 \Condor{startd} daemon which is publishing this machine ClassAd.
@@ -204,13 +215,10 @@ administrator which describes a cluster of machines which all have
 the same \File{passwd} file entries, and therefore all have the same logins.
 %
 \index{ClassAd machine attribute!VirtualMachineID}
-\item[\AdAttr{VirtualMachineID}:] For SMP machines, the integer
-that identifies the VM.
-The value will be \verb@X@ for the VM with 
-\begin{verbatim}
-name="vmX@full.hostname"
-\end{verbatim}
-For non-SMP machines with one virtual machine, the value will be 1.
+\item[\AdAttr{VirtualMachineID}:] 
+Starting with Condor version 6.9.3, this attribute is deprecated in
+favor of \AdAttr{SlotID} described above.
+This will only be present if \Macro{ALLOW\_VM\_CRUFT} is TRUE.
 %
 \index{ClassAd machine attribute!VirtualMemory}
 \item[\AdAttr{VirtualMemory}:] The amount of currently available virtual memory 

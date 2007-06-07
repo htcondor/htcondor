@@ -9,7 +9,7 @@
 \oOpt{-anybody}
 \oOptArg{-archdir}{dir}
 \oOptArg{-basedir}{basedir}
-\oOptArg{-count}{CPUcount}
+\oOptArg{-count}{CPU count}
 \oOpt{<Execute Task Options>}
 \oOpt{<Generate File Options>}
 \oOptArg{-gsi\_daemon\_name}{cert\_name}
@@ -24,7 +24,7 @@
 \oOpt{-runonly}
 \oOpt{<Set Up Task Options>}
 \oOptArg{-suffix}{suffix}
-\oOptArg{-vms}{VMcount}
+\oOptArg{-slots}{slot count}
 \Arg{<contact argument>}
 
 \index{Condor commands!condor\_glidein}
@@ -269,27 +269,26 @@ manual page.
     \OptItem{\OptArg{-memory}{MBytes}}{
 	The maximum memory size in Megabytes to request from the grid resource.
 	}
-    \OptItem{\OptArg{-count}{CPUcount}}{
+    \OptItem{\OptArg{-count}{CPU count}}{
 	The number of CPUs requested to join the local pool.
 	The default is 1. }
-    \OptItem{\OptArg{-vms}{VMcount}}{
+    \OptItem{\OptArg{-slots}{slot count}}{
         For machines with multiple CPUs, the CPUs maybe divided
-	up into virtual machines. \Arg{VMcount} is the number
-	of virtual machines that results.
+	up into slots. \Arg{slot count} is the number
+	of slots that results.
 	By default, Condor divides multiple-CPU resources such that
-	each CPU is a virtual machine, each with an equal share of RAM,
+	each CPU is a slot, each with an equal share of RAM,
 	disk, and swap space.
-	This option configures the number of virtual machines, so that
-	multi-threaded jobs can run in a virtual machine with multiple
+	This option configures the number of slots, so that
+	multi-threaded jobs can run in a slot with multiple
 	CPUs.
 	For example, if 4 CPUs are requested and 
-	\Opt{-vms} is not specified, Condor will
-	divide the request up into 4 virtual machines with 1 CPU each.
-	However, if \OptArg{-vms}{2} is specified,
-	Condor will divide the request up into 2 virtual machines with
-	2 CPUs each, and if \OptArg{-vms}{1} is
-	specified, Condor will put all 4 CPUs into one virtual
-	machine. }
+	\Opt{-slots} is not specified, Condor will
+	divide the request up into 4 slots with 1 CPU each.
+	However, if \OptArg{-slots}{2} is specified,
+	Condor will divide the request up into 2 slots with
+	2 CPUs each, and if \OptArg{-slots}{1} is
+	specified, Condor will put all 4 CPUs into one slot. }
     \OptItem{\OptArg{-idletime}{minutes}}{
 	The amount of time that a remote grid resource 
 	will remain idle state, before the daemons shut down.

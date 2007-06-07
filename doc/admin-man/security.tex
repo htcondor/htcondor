@@ -2642,23 +2642,22 @@ First, create user accounts specifically for Condor to use instead
 of user \Login{nobody}.
 These can be low-privilege accounts,
 as the \Login{nobody} user is.
-Create one of these accounts for each
-virtual machine (i.e. job execution slot) per computer,
+Create one of these accounts for each job execution slot per computer,
 so that distinct users can be used for concurrent processes.
 This prevents malicious behavior between
-processes running on distinct virtual machines.
-Section ~\ref{sec:Configuring-SMP} details virtual machines.
-For a sample machine with two virtual machines,
+processes running on distinct slots.
+Section ~\ref{sec:Configuring-SMP} details slots.
+For a sample machine with two compute slots,
 create two users that are intended only to be used by Condor.
 As an example, call them \Login{cndrusr1} and \Login{cndrusr2}.
 Tell Condor about these users
-with the \Macro{VMx\_USER} configuration variables,
-where x is replaced with the
-virtual machine number. In this example:
+with the \Macro{SLOTx\_USER} configuration variables,
+where x is replaced with the slot number.
+In this example:
 
 \begin{verbatim}
-   VM1_USER = cndrusr1
-   VM2_USER = cndrusr2
+   SLOT1_USER = cndrusr1
+   SLOT2_USER = cndrusr2
 \end{verbatim}
 
 Then tell Condor that these accounts are intended only to be used by Condor,
@@ -2686,7 +2685,7 @@ standard universe jobs.  Normally, standard universe jobs do not
 create additional processes. }
 
 \item{
-On Windows, \MacroNI{VMx\_USER} will only work if the credential
+On Windows, \MacroNI{SLOTx\_USER} will only work if the credential
 of the specified user is stored on the execute machine
 using \Condor{store\_cred}.
 See the \Condor{store\_cred}

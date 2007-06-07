@@ -233,9 +233,9 @@ configuration or defaults to the value 16.
 
 Each execute machine (those machines running a \Condor{startd} daemon)
 requires
-\Expr{ 5 + (5 * number of virtual machines advertised by that machine)}
+\Expr{ 5 + (5 * number of slots advertised by that machine)}
 ports.
-By default, the number of virtual machines advertised
+By default, the number of slots advertised
 will equal the number of physical CPUs in that machine.
 
 Submit machines (those machines running a \Condor{schedd} daemon)

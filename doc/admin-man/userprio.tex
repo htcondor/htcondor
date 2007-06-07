@@ -432,14 +432,14 @@ groups and individual users,
 as well as sets quotas
 (preferentially allocated number of machines)
 for the groups.
-A declared number of virtual machines specifies the quota for each group
+A declared number of slots specifies the quota for each group
 (see \MacroNI{GROUP\_QUOTA\_<groupname>}
 in section~\ref{sec:Negotiator-Config-File-Entries}).
 The sum of the quotas for all groups must be less than or equal to
-the number of virtual machines in the entire pool.
+the number of slots in the entire pool.
 If the sum is less than the number of
-virtual machines in the entire pool,
-the remaining machines are 
+slots in the entire pool,
+the slots are 
 allocated to the \verb@none@ group,
 comprised of the general
 users not submitting jobs in a group.

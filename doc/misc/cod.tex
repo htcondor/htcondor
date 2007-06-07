@@ -649,18 +649,18 @@ daemon running
 on the local machine (where the request command was issued).
 
 If the \Condor{startd} daemon to be used for the COD claim is an SMP
-machine and has multiple virtual machines, specify which resource on
+machine and has multiple slots, specify which resource on
 the machine to use for COD by providing the full name of the resource,
 not just the host name.
 For example:
 \begin{verbatim}
-condor_cod_request -name vm2@c02.cs.wisc.edu
+condor_cod_request -name slot2@c02.cs.wisc.edu
 \end{verbatim}
 
-A constraint on what virtual machine is desired may be provided,
+A constraint on what slot is desired may be provided,
 instead of specifying it by name.  
 For example, to run on machine c02.cs.wisc.edu,
-not caring which virtual machine is used,
+not caring which slot is used,
 so long as it the machine is not currently running a job,
 use something like:
 \begin{verbatim}

@@ -38,13 +38,13 @@ between the version 6.0 policy expressions and later versions.
 (a multi-CPU machine),
 also read section~\ref{sec:Configuring-SMP} for specific information on
 configuring the \Condor{startd} for SMP machines.  
-Each \Term{virtual machine} represented by the \Condor{startd} on an
+Each \Term{slot} represented by the \Condor{startd} on an
 SMP machine has its own \Term{state} and \Term{activity}
 (as described below). 
-In the future, each virtual machine will be able to have its
+In the future, each slot will be able to have its
 own individual policy expressions defined.
 Within this manual section, the word ``machine''
-refers to an individual virtual machine within
+refers to an individual slot within
 an SMP machine.
 \end{itemize}
 
@@ -88,7 +88,7 @@ machine in the machine's ClassAd to aid matchmaking with resource requests.
 The values of these attributes may be listed by using the command:
 \Prog{\condor{status} -l hostname}.
 On an SMP machine, the \Condor{startd} will break the machine up and advertise
-it as separate virtual machines, each with its own name and ClassAd.
+it as separate slots, each with its own name and ClassAd.
 The attributes themselves and what they represent are described below:
 
 \input{user-man/machad.tex}
@@ -982,10 +982,10 @@ If the machine owner starts typing on the console again,
 it is best to notice this as
 soon as possible to be able to start doing whatever 
 the machine owner wants at that point.
-For SMP machines, if any virtual machine is in the Claimed state, the
+For SMP machines, if any slot is in the Claimed state, the
 startd polls the machine frequently.
-If already polling one virtual machine, it does not
-cost much to evaluate the state of all the virtual machines at
+If already polling one slot, it does not
+cost much to evaluate the state of all the slots at
 the same time.
 
 There are a variety of events that may cause the startd to try to get
@@ -1229,13 +1229,13 @@ Backfill/Busy (transition \Bold{26}) to indicate that it is now
 performing a backfill computation.
 
 \Note On SMP machines, the \Condor{startd} will only spawn a single
-instance of the BOINC client, even if multiple virtual machines are
+instance of the BOINC client, even if multiple slots are
 available to run backfill jobs.
 Therefore, only the first machine to enter Backfill/Idle will cause a
 copy of the BOINC client to start running.
-If a given virtual machine on an SMP enters the Backfill state and a
+If a given slot on an SMP enters the Backfill state and a
 BOINC client is already running under this \Condor{startd}, the
-virtual machine will immediately enter Backfill/Busy without waiting
+slot will immediately enter Backfill/Busy without waiting
 to spawn another copy of the BOINC client.
 
 If the BOINC client ever exits on its own (which normally wouldn't
@@ -1956,50 +1956,50 @@ another machine becomes available.
 
 Condor may be configured with a policy that allows these potentially
 evicted jobs to be suspended instead.
-The configuration introduces the notion of a virtual machine,
+The configuration introduces the notion of a slot,
 even in the case of a single, physical CPU.
-The policy utilizes two virtual machines,
-one (called VM1 in the example) that runs jobs following
+The policy utilizes two slots,
+one (called slot1 in the example) that runs jobs following
 the normal policy implemented for all machines in the pool.
-The second virtual machine (called VM2 in the example) is 
+The second slot (called slot2 in the example) is 
 set to run jobs whenever it can, and suspend these jobs
-when VM1 is utilized.
+when slot1 is utilized.
 
 Section~\ref{sec:Startd-Config-File-Entries} contains details of
-the \Macro{STARTD\_VM\_EXPRS} configuration macro,
+the \Macro{STARTD\_SLOT\_EXPRS} configuration macro,
 utilized in this policy example.
 The configuration, with comments to illustrate the intended policy
 will appear much like this example.
 
 \footnotesize
 \begin{verbatim}
-# Lie to Condor, to achieve 2 virtual machines with only a single CPU
+# Lie to Condor, to achieve 2 slots with only a single CPU
 NUM_CPUS = 2
 
-# VM1 is the high-prio VM, while VM2 is the background VM...
-START = (VirtualMachineID == 1) && $(VM1_START) || \
-        (VirtualMachineID == 2) && $(VM2_START)
+# slot1 is the high-prio slot, while slot2 is the background slot...
+START = (SlotID == 1) && $(SLOT1_START) || \
+        (SlotID == 2) && $(SLOT2_START)
 
-# Only start jobs on VM1 if the job is marked as a high-priority job 
-VM1_START = (TARGET.IsHighPrioJob =?= TRUE)
+# Only start jobs on slot1 if the job is marked as a high-priority job 
+SLOT1_START = (TARGET.IsHighPrioJob =?= TRUE)
 
-# Only start jobs on VM2 if there is no job on VM1, and if the machine is
-# otherwise idle...  NOTE: the "Busy" activity is only in the Claimed
-# state, and only when there is an active job, so that is good enough
-# for our needs...
-VM2_START = ( (vm1_Activity != "Busy") && \ 
-              (KeyboardIdle > $(StartIdleTime)) && \
-	      ($(CPUIdle) || (State != "Unclaimed" && State != "Owner")) )
+# Only start jobs on slot2 if there is no job on slot1, and if the
+# machine is otherwise idle...  NOTE: the "Busy" activity is only in
+# the Claimed state, and only when there is an active job, so that is
+# good enough for our needs...
+SLOT2_START = ( (slot1_Activity != "Busy") && \ 
+                (KeyboardIdle > $(StartIdleTime)) && \
+	        ($(CPUIdle) || (State != "Unclaimed" && State != "Owner")) )
 
-# Only suspend jobs on VM2.  Suspend if there is keyboard activity or
-# if a job starts on VM1...
-SUSPEND = (VirtualMachineID == 2) && \
-          ( (vm1_Activity == "Busy") || ($(KeyboardBusy)) )
+# Only suspend jobs on slot2.  Suspend if there is keyboard activity or
+# if a job starts on slot1...
+SUSPEND = (SlotID == 2) && \
+          ( (slot1_Activity == "Busy") || ($(KeyboardBusy)) )
 
-# Since SUSPEND can only be TRUE on VM2, we can write the
-# CONTINUE expression specifically for VM2:
+# Since SUSPEND can only be TRUE on slot2, we can write the
+# CONTINUE expression specifically for slot2:
 CONTINUE = (KeyboardIdle > $(ContinueIdleTime)) && \
-           (vm1_Activity != "Busy")
+           (slot1_Activity != "Busy")
 
 \end{verbatim}
 \normalsize

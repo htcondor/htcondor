@@ -143,9 +143,8 @@ options} may be specified.
 
 	\item When using \Condor{status} on a pool with SMP machines,
 	you can either provide the hostname, in which case you will
-	get back information about all virtual machines that are
-	represented on that host, or you can list specific virtual
-	machines by name.  
+	get back information about all slots that are epresented on
+	that host, or you can list specific slots by name.
 	See the examples below for details.
 
 	\item If you specify host names, without domains, Condor will
@@ -191,40 +190,40 @@ For example, if you had a 4-CPU machine, named
 \begin{verbatim}
 % condor_status vulture
 
-Name          OpSys       Arch   State      Activity   LoadAv Mem   ActvtyTime
+Name               OpSys      Arch   State     Activity LoadAv Mem   ActvtyTime
 
-vm1@vulture.c SOLARIS26   INTEL  Owner      Idle       0.020  128   0+00:57:13
-vm2@vulture.c SOLARIS26   INTEL  Claimed    Busy       1.006  128   0+01:16:03
-vm3@vulture.c SOLARIS26   INTEL  Claimed    Busy       0.978  128   0+03:32:53
-vm4@vulture.c SOLARIS26   INTEL  Claimed    Busy       1.001  128   0+02:21:07
+slot1@vulture.cs.w LINUX      INTEL  Claimed   Busy     1.050   512  0+01:47:42
+slot2@vulture.cs.w LINUX      INTEL  Claimed   Busy     1.000   512  0+01:48:19
+slot3@vulture.cs.w LINUX      INTEL  Unclaimed Idle     0.070   512  1+11:05:32
+slot4@vulture.cs.w LINUX      INTEL  Unclaimed Idle     0.000   512  1+11:05:34
 
-                     Machines Owner Claimed Unclaimed Matched Preempting
+                     Total Owner Claimed Unclaimed Matched Preempting Backfill
 
-     INTEL/SOLARIS26        4     0       4         0       0          0
+         INTEL/LINUX     4     0       2         2       0          0        0
 
-               Total        4     0       4         0       0          0
+               Total     4     0       2         2       0          0        0
 \end{verbatim}
 \normalsize
 
 
 \underline{Example 2} To view information from a specific nodes of an
 SMP machine, specify the node directly.
-You do this by providing the name of the virtual machine.
-This has the form \texttt{vm\#@hostname}.
+You do this by providing the name of the slot.
+This has the form \texttt{slot\#@hostname}.
 For example:
 \footnotesize
 \begin{verbatim}
-% condor_status vm2@vulture
+% condor_status slot3@vulture
 
-Name          OpSys       Arch   State      Activity   LoadAv Mem   ActvtyTime
+Name               OpSys      Arch   State     Activity LoadAv Mem   ActvtyTime
 
-vm2@vulture.c SOLARIS26   INTEL  Claimed    Busy       1.006  128   0+01:16:03
+slot3@vulture.cs.w LINUX      INTEL  Unclaimed Idle     0.070   512  1+11:10:32
 
-                     Machines Owner Claimed Unclaimed Matched Preempting
+                     Total Owner Claimed Unclaimed Matched Preempting Backfill
 
-     INTEL/SOLARIS26        1     0       1         0       0          0
+         INTEL/LINUX     1     0       0         1       0          0        0
 
-               Total        1     0       1         0       0          0
+               Total     1     0       0         1       0          0        0
 \end{verbatim}
 \normalsize
 

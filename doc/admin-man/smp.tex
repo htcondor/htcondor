@@ -110,8 +110,7 @@ given slot type.  Do this by defining configuration
 variables of the form
 \Macro{SLOT\_TYPE\_<N>}.
 The \verb@<N>@ represents an integer (for example, 
-\MacroNI{SLOT\_TYPE\_1}), which specifies the virtual 
-machine type defined.
+\MacroNI{SLOT\_TYPE\_1}), which specifies the slot type defined.
 This number is used to configure how many slots of this type
 are advertised.
 
@@ -308,11 +307,11 @@ job running on the specific slot.
 To set a different policy for the slots within an SMP machine,
 a (\verb@SUSPEND@) policy will be of the form
 \begin{verbatim}
-SUSPEND = ( (VirtualMachineID == 1) && (PolicyForSlot1) ) || \
-            ( (VirtualMachineID == 2) && (PolicyForSlot2) )
+SUSPEND = ( (SlotID == 1) && (PolicyForSlot1) ) || \
+            ( (SlotID == 2) && (PolicyForSlot2) )
 \end{verbatim}
 where \verb@(PolicyForSlot1)@ and \verb@(PolicyForSlot2)@ are the
-desired expressions for each SLOT.
+desired expressions for each slot.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:SMP-Load}

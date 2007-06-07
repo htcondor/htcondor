@@ -32,8 +32,8 @@ constrained list.
 
 \begin{Options}
     \OptItem{\Opt{-help}}{Display usage information and exit}
-    \OptItem{\Opt{-m}}{Only search for entire machines.  Virtual
-        machines within an entire machine are not considered.}
+    \OptItem{\Opt{-m}}{Only search for entire machines.  
+        Slots within an entire machine are not considered.}
     \OptItem{\OptArg{-n}{num}}{Find and list up to \Arg{num} machines that
 	fulfill the specification. \Arg{num} is an integer greater than zero.}
     \OptItem{\OptArg{-c}{c\_expr}}{Constrain the search to only consider
@@ -90,7 +90,7 @@ condor_findhost -n 24 -c "kflops=?=undefined"
 \end{ManPage}
 
 %  Usage: condor_findhost [-m] -[n number] [-c c_expr] [-r r_expr] [-p pool] 
-%  -m: Return entire machine, not virtual machines
+%  -m: Return entire machine, not slots
 %  -n num: Return num machines, where num is an integer greater than zero
 %  -c c_expr: Use c_expr as the constraint expression
 %  -r r_expr: Use r_expr as the rank expression
