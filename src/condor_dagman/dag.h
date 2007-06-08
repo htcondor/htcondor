@@ -383,6 +383,11 @@ class Dag {
 		*/
 	void PrintDeferrals( debug_level_t level, bool force ) const;
 
+    	/** Print information about the nodes that are currently
+		    pending for.
+		*/
+    void PrintPendingNodes() const;
+
 		// non-exe failure codes for return value integers -- we
 		// represent DAGMan, batch-system, or other external errors
 		// with the integer return-code space *below* -64.  So, 0-255
@@ -398,6 +403,12 @@ class Dag {
 	const int MAX_SIGNAL;
 
 	bool ProhibitMultiJobs() const { return _prohibitMultiJobs; }
+
+		/** Set the interval for "pending node" reports.
+			@param interval The number of seconds without an event we
+			wait before reporting the pending nodes.
+		*/
+	void SetPendingNodeReportInterval( int interval );
 	
   protected:
 
@@ -636,6 +647,16 @@ class Dag {
 		// the PR 554 fix in PostScriptReaper -- otherwise it gets passed
 		// down thru the call stack.
 	bool		_recovery;
+
+		// The time interval (in seconds) at which to print pending
+		// node reports.
+	int			_pendingReportInterval;
+
+		// The last time we got a log event for a node job.
+	time_t		_lastEventTime;
+
+		// The last time we printed a pending node report.
+	time_t		_lastPendingNodePrintTime;
 
 		// Default Condor ID to use in reseting a node's Condor ID on
 		// retry.
