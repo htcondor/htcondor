@@ -734,7 +734,7 @@ JobRouter::GetCandidateJobs() {
 		ASSERT(ad);
 
 		bool all_routes_full;
-		JobRoute *route = ChooseRoute(ad,&all_routes_full);
+		route = ChooseRoute(ad,&all_routes_full);
 		if(!route) {
 			if(all_routes_full) {
 				dprintf(D_FULLDEBUG,"JobRouter: all routes are full (%d managed jobs).  Skipping further searches for candidate jobs.\n",NumManagedJobs());
@@ -1012,7 +1012,7 @@ RoutedJob::PrepareSharedX509UserProxy(JobRoute *route)
 }
 
 bool
-RoutedJob::CleanupSharedX509UserProxy(JobRoute *route)
+RoutedJob::CleanupSharedX509UserProxy(JobRoute * /*route*/)
 {
 	if(proxy_file_copy.size()) {
 		priv_state old_priv;
@@ -1066,6 +1066,7 @@ JobRouter::CheckSubmittedJobStatus(RoutedJob *job) {
 
 	if(job_status == REMOVED) {
 		dprintf(D_FULLDEBUG, "JobRouter (%s): found src job marked for removal\n",job->JobDesc().c_str());
+		WriteAbortEventToUserLog( *src_ad );
 		GracefullyRemoveJob(job);
 		return;
 	}
@@ -1625,7 +1626,7 @@ RoutedJob::JobDesc() {
 }
 
 bool
-RoutedJob::SetSrcJobAd(char const *key,classad::ClassAd *ad,classad::ClassAdCollection *ad_collection) {
+RoutedJob::SetSrcJobAd(char const *key,classad::ClassAd *ad,classad::ClassAdCollection * /*ad_collection*/ ) {
 
 	this->src_key = key;
 	this->src_proc_id = getProcByString(key);

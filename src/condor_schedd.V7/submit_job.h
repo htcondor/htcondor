@@ -166,6 +166,7 @@ bool remove_job(classad::ClassAd const &ad, int cluster, int proc, char const *r
 
 
 bool WriteTerminateEventToUserLog( classad::ClassAd const &ad );
+bool WriteAbortEventToUserLog( classad::ClassAd const &ad );
 bool EmailTerminateEvent( classad::ClassAd const &ad );
 
 

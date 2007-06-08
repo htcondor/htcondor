@@ -29,14 +29,15 @@
 #include "condor_attributes.h"
 #include "proc.h"
 #include "classad_newold.h"
-#define WANT_NAMESPACES
-#include "classad_distribution.h"
 #include "condor_uid.h"
 #include "condor_event.h"
 #include "user_log.c++.h"
 #include "condor_email.h"
 #include "condor_arglist.h"
 #include "format_time.h"
+#define WANT_NAMESPACES
+#undef open
+#include "classad_distribution.h"
 
 	// Simplify my error handling and reporting code
 class FailObj {
@@ -793,6 +794,30 @@ bool InitializeUserLog( classad::ClassAd const &job_ad, UserLog *ulog, bool *no_
 	return true;
 }
 
+bool InitializeAbortedEvent( JobAbortedEvent *event, classad::ClassAd const &job_ad )
+{
+	int cluster, proc;
+	char removeReason[256];
+
+		// This code is copied from gridmanager basejob.C with a small
+		// amount of refactoring.
+		// TODO: put this code in a common place.
+
+	job_ad.EvaluateAttrInt( ATTR_CLUSTER_ID, cluster );
+	job_ad.EvaluateAttrInt( ATTR_PROC_ID, proc );
+
+	dprintf( D_FULLDEBUG, 
+			 "(%d.%d) Writing abort record to user logfile\n",
+			 cluster, proc );
+
+	removeReason[0] = '\0';
+	job_ad.EvaluateAttrString( ATTR_REMOVE_REASON, removeReason,
+						   sizeof(removeReason) - 1 );
+
+	event->setReason( removeReason );
+	return true;
+}
+
 bool InitializeTerminateEvent( TerminatedEvent *event, classad::ClassAd const &job_ad )
 {
 	int cluster, proc;
@@ -901,6 +926,17 @@ bool WriteTerminateEventToUserLog( classad::ClassAd const &ad )
 	JobTerminatedEvent event;
 
 	if(!InitializeTerminateEvent(&event,ad)) {
+		return false;
+	}
+
+	return WriteEventToUserLog( event, ad );
+}
+
+bool WriteAbortEventToUserLog( classad::ClassAd const &ad )
+{
+	JobAbortedEvent event;
+
+	if(!InitializeAbortedEvent(&event,ad)) {
 		return false;
 	}
 

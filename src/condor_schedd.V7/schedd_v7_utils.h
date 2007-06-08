@@ -27,7 +27,7 @@
 #include <string>
 
 /// hash function for std::string
-int hashFuncStdString(std::string const & key, int numBuckets);
+unsigned int hashFuncStdString(std::string const & key);
 
 
 #if 0 /* Not currently needed. */

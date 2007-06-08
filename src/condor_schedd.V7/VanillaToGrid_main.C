@@ -27,7 +27,9 @@
 #include "submit_job.h"
 #include "classad_newold.h"
 #include "condor_attributes.h"
+#include "basename.h"
 #define WANT_NAMESPACES
+#undef open
 #include "classad_distribution.h"
 
 #include <libgen.h>

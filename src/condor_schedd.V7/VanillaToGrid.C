@@ -27,6 +27,7 @@
 #include "condor_universe.h"
 #include "VanillaToGrid.h"
 #define WANT_NAMESPACES
+#undef open
 #include "classad_distribution.h"
 
 

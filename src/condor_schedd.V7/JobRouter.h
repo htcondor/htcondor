@@ -28,6 +28,7 @@
 #include "HashTable.h"
 
 #define WANT_NAMESPACES
+#undef open
 #include "classad_distribution.h"
 
 class RoutedJob;

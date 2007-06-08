@@ -27,9 +27,9 @@
 #include "HashTable.h"
 
 
-int hashFuncStdString( std::string const & key, int numBuckets)
+unsigned int hashFuncStdString( std::string const & key)
 {
-    return hashFuncChars(key.c_str(),numBuckets);
+    return hashFuncChars(key.c_str());
 }
 
 #if 0 /*Not currently needed*/
