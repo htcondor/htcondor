@@ -65,6 +65,9 @@ extern char*       PerJobHistoryDir;
 extern Scheduler scheduler;
 extern DedicatedScheduler dedicated_scheduler;
 
+static FILE *HistoryFile_fp = NULL;
+static int HistoryFile_RefCount = 0;
+
 extern "C" {
 	int	prio_compar(prio_rec*, prio_rec*);
 }
@@ -1175,7 +1178,7 @@ unsetQmgmtConnection()
 /* We want to be able to call these things even from code linked in which
    is written in C, so we make them C declarations
 */
-extern "C" {
+extern "C++" {
 
 bool
 setQSock( ReliSock* rsock)
@@ -1460,7 +1463,7 @@ int DestroyProc(int cluster_id, int proc_id)
 		ad->LookupInteger(ATTR_COMPLETION_DATE,completion_time);
 		if ( !completion_time ) {
 			SetAttributeInt(cluster_id,proc_id,ATTR_COMPLETION_DATE,
-														(int)time(NULL));
+			                (int)time(NULL), true /*nondurable*/);
 		}
 	}
 
@@ -1521,11 +1524,18 @@ int DestroyProc(int cluster_id, int proc_id)
 	// Write a per-job history file (if PER_JOB_HISTORY_DIR param is set)
 	WritePerJobHistoryFile(ad);
 
-//	log = new LogDestroyClassAd(key);
-//	JobQueue->AppendLog(log);
+	bool already_in_transaction = InTransaction();
+	if( !already_in_transaction ) {
+		BeginTransaction(); // for performance
+	}
+
 	JobQueue->DestroyClassAd(key);
 
 	DecrementClusterSize(cluster_id);
+
+	if( !already_in_transaction ) {
+		CommitTransaction();
+	}
 
 		// remove any match (startd) ad stored w/ this job
 	RemoveMatchedAd(cluster_id,proc_id);
@@ -1727,7 +1737,7 @@ SetAttributeByConstraint(const char *constraint, const char *attr_name,
 
 int
 SetAttribute(int cluster_id, int proc_id, const char *attr_name,
-			 const char *attr_value)
+			 const char *attr_value, SetAttributeFlags_t flags )
 {
 //	LogSetAttribute	*log;
 	char			key[_POSIX_PATH_MAX];
@@ -1993,9 +2003,16 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		}
 	}
 
-//	log = new LogSetAttribute(key, attr_name, attr_value);
-//	JobQueue->AppendLog(log);
+	int old_nondurable_level = 0;
+	if( flags & NONDURABLE ) {
+		old_nondurable_level = JobQueue->IncNondurableCommitLevel();
+	}
+
 	JobQueue->SetAttribute(key, attr_name, attr_value);
+
+	if( flags & NONDURABLE ) {
+		JobQueue->DecNondurableCommitLevel( old_nondurable_level );
+	}
 
 	JobQueueDirty = true;
 
@@ -2180,6 +2197,11 @@ char * simple_decode (int key, const char * src) {
   return result;
 }
 
+bool
+InTransaction()
+{
+	return JobQueue->InTransaction();
+}
 
 void
 BeginTransaction()
@@ -2192,9 +2214,14 @@ BeginTransaction()
 
 
 void
-CommitTransaction()
+CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 {
-	JobQueue->CommitTransaction();
+	if( flags & NONDURABLE ) {
+		JobQueue->CommitNondurableTransaction();
+	}
+	else {
+		JobQueue->CommitTransaction();
+	}
 
 	xact_start_time = 0;
 }
@@ -3804,6 +3831,50 @@ void FindPrioJob(PROC_ID & job_id)
 	job_id.cluster = PrioRec[0].id.cluster;
 }
 
+static FILE *
+OpenHistoryFile() {
+		// Note that we are passing O_LARGEFILE, which lets us deal
+		// with files that are larger than 2GB. On systems where
+		// O_LARGEFILE isn't defined, the Condor source defines it to
+		// be 0 which has no effect. So we'll take advantage of large
+		// files where we can, but not where we can't.
+	if( !HistoryFile_fp ) {
+		int fd = safe_open_wrapper(JobHistoryFileName,
+                O_RDWR|O_CREAT|O_APPEND|O_LARGEFILE,
+                0644);
+		if( fd < 0 ) {
+			dprintf(D_ALWAYS,"ERROR opening history file (%s): %s\n",
+					JobHistoryFileName, strerror(errno));
+			return NULL;
+		}
+		HistoryFile_fp = fdopen(fd, "r+");
+		if ( !HistoryFile_fp ) {
+			dprintf(D_ALWAYS,"ERROR opening history file fp (%s): %s\n",
+					JobHistoryFileName, strerror(errno));
+			return NULL;
+		}
+	}
+	HistoryFile_RefCount++;
+	return HistoryFile_fp;
+}
+
+void
+CloseJobHistoryFile() {
+	ASSERT( HistoryFile_RefCount == 0 );
+	if( HistoryFile_fp ) {
+		fclose( HistoryFile_fp );
+		HistoryFile_fp = NULL;
+	}
+}
+
+static void
+RelinquishHistoryFile(FILE *fp) {
+	if( fp ) {
+		HistoryFile_RefCount--;
+	}
+		// keep the file open
+}
+
 // --------------------------------------------------------------------------
 // Write job ads to history file when they're destroyed
 // --------------------------------------------------------------------------
@@ -3827,52 +3898,40 @@ static void AppendHistory(ClassAd* ad)
   MaybeRotateHistory(ad_size);
 
   // save job ad to the log
-  // Note that we are passing O_LARGEFILE, which lets us deal with files
-  // that are larger than 2GB. On systems where O_LARGEFILE isn't defined, 
-  // the Condor source defines it to be 0 which has no effect. So we'll take
- // advantage of large files where we can, but not where we can't.
-  int fd = safe_open_wrapper(JobHistoryFileName,
-                O_RDWR|O_CREAT|O_APPEND|O_LARGEFILE,
-                0644);
-  if (fd < 0) {
-	dprintf(D_ALWAYS,"ERROR saving to history file (%s): %s\n",
-			JobHistoryFileName, strerror(errno));
-    failed = true;
+  FILE *LogFile = OpenHistoryFile();
+  if (!LogFile) {
+	  dprintf(D_ALWAYS,"ERROR saving to history file (%s): %s\n",
+			  JobHistoryFileName, strerror(errno));
+	  failed = true;
   } else {
-	  FILE *LogFile=fdopen(fd, "r+");
-      if (!LogFile) {
-          dprintf(D_ALWAYS,"ERROR saving to history file (%s): %s\n",
-                  JobHistoryFileName, strerror(errno));
-          failed = true;
-      } else {
-          int offset = findHistoryOffset(LogFile);
-          if (!ad->fPrint(LogFile)) {
-              dprintf(D_ALWAYS, 
-                      "ERROR: failed to write job class ad to history file %s\n",
-                      JobHistoryFileName);
-              fclose(LogFile);
-              failed = true;
-          } else {
-              int cluster, proc, completion;
-              MyString owner;
+	  int offset = findHistoryOffset(LogFile);
+	  if (!ad->fPrint(LogFile)) {
+		  dprintf(D_ALWAYS, 
+				  "ERROR: failed to write job class ad to history file %s\n",
+				  JobHistoryFileName);
+		  fclose(LogFile);
+		  failed = true;
+	  } else {
+		  int cluster, proc, completion;
+		  MyString owner;
 
-              if (!ad->LookupInteger("ClusterId", cluster)) {
-                  cluster = -1;
-              }
-              if (!ad->LookupInteger("ProcId", proc)) {
-                  proc = -1;
-              }
-              if (!ad->LookupInteger("CompletionDate", completion)) {
-                  completion = -1;
-              }
-              if (!ad->LookupString("Owner", owner)) {
-                  owner = "?";
-              }
-              fprintf(LogFile,
+		  if (!ad->LookupInteger("ClusterId", cluster)) {
+			  cluster = -1;
+		  }
+		  if (!ad->LookupInteger("ProcId", proc)) {
+			  proc = -1;
+		  }
+		  if (!ad->LookupInteger("CompletionDate", completion)) {
+			  completion = -1;
+		  }
+		  if (!ad->LookupString("Owner", owner)) {
+			  owner = "?";
+		  }
+		  fprintf(LogFile,
                       "*** Offset = %d ClusterId = %d ProcId = %d Owner = \"%s\" CompletionDate = %d\n",
-                      offset, cluster, proc, owner.Value(), completion);
-              fclose(LogFile);
-          }
+				  offset, cluster, proc, owner.Value(), completion);
+		  fflush( LogFile );
+		  RelinquishHistoryFile( LogFile );
       }
   }
 
@@ -3915,14 +3974,20 @@ static void MaybeRotateHistory(int size_to_append)
         // file rotation. 
         return;
     } else {
+		FILE *fp = OpenHistoryFile();
+		if( !fp ) {
+			return;
+		}
         filesize_t  history_file_size;
-        StatInfo    history_stat_info(JobHistoryFileName);
+        StatInfo    history_stat_info(fileno(fp));
+		history_file_size = history_stat_info.GetFileSize();
+		RelinquishHistoryFile( fp );
+
         if (history_stat_info.Error() == SINoFile) {
             ; // Do nothing, the history file doesn't exist
         } else if (history_stat_info.Error() != SIGood) {
             dprintf(D_ALWAYS, "Couldn't stat history file, will not rotate.\n");
         } else {
-            history_file_size = history_stat_info.GetFileSize();
             if (history_file_size + size_to_append > MaxHistoryFileSize) {
                 // Writing the new ClassAd will make the history file too 
                 // big, so we will rotate the history file after removing
@@ -4076,6 +4141,8 @@ static void RotateHistory(void)
     rotated_history_name += '.';
     rotated_history_name += iso_time;
     free(iso_time); // It was malloced by time_to_iso8601()
+
+	CloseJobHistoryFile();
 
     // Now rotate the file
     if (rotate_file(JobHistoryFileName, rotated_history_name.Value())) {

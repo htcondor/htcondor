@@ -79,37 +79,22 @@ class QmgmtPeer {
 
 
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
-void InitJobQueue(const char *job_queue_name,int max_historical_logs);
-void InitQmgmt();
+void CloseJobHistoryFile();
 void SetMaxHistoricalLogs(int max_historical_logs);
 time_t GetOriginalJobQueueBirthdate();
-void CleanJobQueue();
 void DestroyJobQueue( void );
 int handle_q(Service *, int, Stream *sock);
-bool setQSock( ReliSock* rsock );
-void unsetQSock( void );
-void BeginTransaction();
-void CommitTransaction();
-void AbortTransaction();
 void dirtyJobQueue( void );
 bool isQueueSuperUser( const char* user );
 bool OwnerCheck( ClassAd *ad, const char *test_owner );
 bool OwnerCheck2( ClassAd *ad, const char *test_owner );
-bool Reschedule();
 bool BuildPrioRecArray(bool no_match_found=false);
 void ClearPrioRecArray();
 extern ClassAd *dollarDollarExpand(int cid, int pid, ClassAd *job, ClassAd *res);
 ClassAd* GetNextJobByCluster( int, int );
 
 int get_myproxy_password_handler(Service *, int, Stream *sock);
-#if defined(__cplusplus)
-}
-#endif
 
-#if defined(__cplusplus)
 QmgmtPeer* getQmgmtConnectionInfo();
 bool OwnerCheck(int,int);
 bool OwnerCheck(ClassAd *, const char *);
@@ -125,7 +110,5 @@ extern void	FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad,
 					 char * user);
 extern int Runnable(PROC_ID*);
 extern int Runnable(ClassAd*);
-
-#endif
 
 #endif /* _QMGMT_H */

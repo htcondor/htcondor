@@ -100,6 +100,11 @@ public:
   */
   void CommitTransaction() { ClassAdLog::CommitTransaction(); }
 
+  /** Commit a transaction without forcing a sync to disk
+    @return nothing
+  */
+  void CommitNondurableTransaction() { ClassAdLog::CommitNondurableTransaction(); }
+
   /** Abort a transaction
     @return true if a transaction aborted, false if no transaction active
   */

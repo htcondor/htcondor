@@ -34,13 +34,13 @@
 
 
 int
-SetAttributeInt(int cl, int pr, const char *name, int val)
+SetAttributeInt(int cl, int pr, const char *name, int val, SetAttributeFlags_t flags )
 {
 	char buf[100];
 	int rval;
 
 	sprintf(buf,"%d",val);
-	rval = SetAttribute(cl,pr,name,buf);
+	rval = SetAttribute(cl,pr,name,buf,flags);
 	return(rval);
 }
 

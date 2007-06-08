@@ -267,12 +267,14 @@ do_Q_request(ReliSock *syscall_sock)
 	}
 
 	case CONDOR_SetAttribute:
+	case CONDOR_SetAttribute2:
 	  {
 		int cluster_id;
 		int proc_id;
 		char *attr_name=NULL;
 		char *attr_value=NULL;
 		int terrno;
+		SetAttributeFlags_t flags = 0;
 
 		assert( syscall_sock->code(cluster_id) );
 		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
@@ -280,6 +282,9 @@ do_Q_request(ReliSock *syscall_sock)
 		dprintf( D_SYSCALLS, "	proc_id = %d\n", proc_id );
 		assert( syscall_sock->code(attr_value) );
 		assert( syscall_sock->code(attr_name) );
+		if( request_num == CONDOR_SetAttribute2 ) {
+			assert( syscall_sock->code( flags ) );
+		}
 		if (attr_name) dprintf(D_SYSCALLS,"\tattr_name = %s\n",attr_name);
 		if (attr_value) dprintf(D_SYSCALLS,"\tattr_value = %s\n",attr_value);
 		assert( syscall_sock->end_of_message() );;
@@ -298,7 +303,7 @@ do_Q_request(ReliSock *syscall_sock)
 		else {
 			errno = 0;
 
-			rval = SetAttribute( cluster_id, proc_id, attr_name, attr_value );
+			rval = SetAttribute( cluster_id, proc_id, attr_name, attr_value, flags );
 			terrno = errno;
 			dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 		}

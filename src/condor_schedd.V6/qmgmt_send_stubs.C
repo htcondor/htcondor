@@ -1,3 +1,4 @@
+
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
@@ -27,6 +28,7 @@
 #include "condor_classad.h"
 #include "condor_fix_assert.h"
 #include "qmgmt_constants.h"
+#include "condor_qmgr.h"
 
 #if defined(assert)
 #undef assert
@@ -38,12 +40,8 @@ static int CurrentSysCall;
 extern ReliSock *qmgmt_sock;
 int terrno;
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
-
 int
-InitializeConnection( const char *owner )
+InitializeConnection( const char *owner, const char * /* domain */ )
 {
 	CurrentSysCall = CONDOR_InitializeConnection;
 
@@ -145,7 +143,7 @@ DestroyProc( int cluster_id, int proc_id )
 
 
 int
-DestroyCluster( int cluster_id )
+DestroyCluster( int cluster_id, const char * /*reason*/ )
 {
 	int	rval;
 
@@ -199,7 +197,7 @@ DestroyClusterByConstraint( char *constraint )
 
 
 int
-SetAttributeByConstraint( char *constraint, char *attr_name, char *attr_value )
+SetAttributeByConstraint( char const *constraint, char const *attr_name, char const *attr_value )
 {
 	int	rval;
 
@@ -207,9 +205,9 @@ SetAttributeByConstraint( char *constraint, char *attr_name, char *attr_value )
 
 		qmgmt_sock->encode();
 		assert( qmgmt_sock->code(CurrentSysCall) );
-		assert( qmgmt_sock->code(constraint) );
-		assert( qmgmt_sock->code(attr_value) );
-		assert( qmgmt_sock->code(attr_name) );
+		assert( qmgmt_sock->put(constraint) );
+		assert( qmgmt_sock->put(attr_value) );
+		assert( qmgmt_sock->put(attr_name) );
 		assert( qmgmt_sock->end_of_message() );
 
 		qmgmt_sock->decode();
@@ -227,18 +225,27 @@ SetAttributeByConstraint( char *constraint, char *attr_name, char *attr_value )
 
 
 int
-SetAttribute( int cluster_id, int proc_id, char *attr_name, char *attr_value )
+SetAttribute( int cluster_id, int proc_id, char const *attr_name, char const *attr_value, SetAttributeFlags_t flags )
 {
 	int	rval;
 
 		CurrentSysCall = CONDOR_SetAttribute;
+		if( flags ) {
+				// Added in 6.9.4, so any use of flags!=0 (e.g. in
+				// Condor-C) will break compatibility with earlier
+				// versions.
+			CurrentSysCall = CONDOR_SetAttribute2;
+		}
 
 		qmgmt_sock->encode();
 		assert( qmgmt_sock->code(CurrentSysCall) );
 		assert( qmgmt_sock->code(cluster_id) );
 		assert( qmgmt_sock->code(proc_id) );
-		assert( qmgmt_sock->code(attr_value) );
-		assert( qmgmt_sock->code(attr_name) );
+		assert( qmgmt_sock->put(attr_value) );
+		assert( qmgmt_sock->put(attr_name) );
+		if( flags ) {
+			assert( qmgmt_sock->code(flags) );
+		}
 		assert( qmgmt_sock->end_of_message() );
 
 		qmgmt_sock->decode();
@@ -255,7 +262,7 @@ SetAttribute( int cluster_id, int proc_id, char *attr_name, char *attr_value )
 }
 
 int
-SetTimerAttribute( int cluster_id, int proc_id, char *attr_name, int duration )
+SetTimerAttribute( int cluster_id, int proc_id, char const *attr_name, int duration )
 {
 	int	rval;
 
@@ -265,7 +272,7 @@ SetTimerAttribute( int cluster_id, int proc_id, char *attr_name, int duration )
 		assert( qmgmt_sock->code(CurrentSysCall) );
 		assert( qmgmt_sock->code(cluster_id) );
 		assert( qmgmt_sock->code(proc_id) );
-		assert( qmgmt_sock->code(attr_name) );
+		assert( qmgmt_sock->put(attr_name) );
 		assert( qmgmt_sock->code(duration) );
 		assert( qmgmt_sock->end_of_message() );
 
@@ -283,7 +290,7 @@ SetTimerAttribute( int cluster_id, int proc_id, char *attr_name, int duration )
 }
 
 int
-BeginTransaction()
+BeginTransaction_imp()
 {
 	int	rval;
 
@@ -306,8 +313,14 @@ BeginTransaction()
 	return rval;
 }
 
+void
+BeginTransaction()
+{
+	BeginTransaction_imp();
+}
+
 int
-AbortTransaction()
+AbortTransaction_imp()
 {
 	int	rval;
 
@@ -329,9 +342,14 @@ AbortTransaction()
 
 		assert( qmgmt_sock->end_of_message() );
 
-	return rval;
+		return rval;
 }
 
+void
+AbortTransaction()
+{
+	AbortTransaction_imp();
+}
 
 int
 CloseConnection()
@@ -388,7 +406,7 @@ GetAttributeFloat( int cluster_id, int proc_id, char *attr_name, float *value )
 
 
 int
-GetAttributeInt( int cluster_id, int proc_id, char *attr_name, int *value )
+GetAttributeInt( int cluster_id, int proc_id, char const *attr_name, int *value )
 {
 	int	rval;
 
@@ -398,7 +416,7 @@ GetAttributeInt( int cluster_id, int proc_id, char *attr_name, int *value )
 		assert( qmgmt_sock->code(CurrentSysCall) );
 		assert( qmgmt_sock->code(cluster_id) );
 		assert( qmgmt_sock->code(proc_id) );
-		assert( qmgmt_sock->code(attr_name) );
+		assert( qmgmt_sock->put(attr_name) );
 		assert( qmgmt_sock->end_of_message() );
 
 		qmgmt_sock->decode();
@@ -446,7 +464,7 @@ GetAttributeString( int cluster_id, int proc_id, char *attr_name, char *value )
 
 
 int
-GetAttributeStringNew( int cluster_id, int proc_id, char *attr_name, char **val )
+GetAttributeStringNew( int cluster_id, int proc_id, char const *attr_name, char **val )
 {
 	int	rval;
 
@@ -456,7 +474,7 @@ GetAttributeStringNew( int cluster_id, int proc_id, char *attr_name, char **val 
 	assert( qmgmt_sock->code(CurrentSysCall) );
 	assert( qmgmt_sock->code(cluster_id) );
 	assert( qmgmt_sock->code(proc_id) );
-	assert( qmgmt_sock->code(attr_name) );
+	assert( qmgmt_sock->put(attr_name) );
 	assert( qmgmt_sock->end_of_message() );
 
 	qmgmt_sock->decode();
@@ -477,7 +495,7 @@ GetAttributeStringNew( int cluster_id, int proc_id, char *attr_name, char **val 
 
 
 int
-GetAttributeExpr( int cluster_id, int proc_id, char *attr_name, char *value )
+GetAttributeExpr( int cluster_id, int proc_id, char const *attr_name, char *value )
 {
 	int	rval;
 
@@ -487,7 +505,7 @@ GetAttributeExpr( int cluster_id, int proc_id, char *attr_name, char *value )
 		assert( qmgmt_sock->code(CurrentSysCall) );
 		assert( qmgmt_sock->code(cluster_id) );
 		assert( qmgmt_sock->code(proc_id) );
-		assert( qmgmt_sock->code(attr_name) );
+		assert( qmgmt_sock->put(attr_name) );
 		assert( qmgmt_sock->end_of_message() );
 
 		qmgmt_sock->decode();
@@ -506,7 +524,7 @@ GetAttributeExpr( int cluster_id, int proc_id, char *attr_name, char *value )
 
 
 int
-DeleteAttribute( int cluster_id, int proc_id, char *attr_name )
+DeleteAttribute( int cluster_id, int proc_id, char const *attr_name )
 {
 	int	rval;
 
@@ -516,7 +534,7 @@ DeleteAttribute( int cluster_id, int proc_id, char *attr_name )
 		assert( qmgmt_sock->code(CurrentSysCall) );
 		assert( qmgmt_sock->code(cluster_id) );
 		assert( qmgmt_sock->code(proc_id) );
-		assert( qmgmt_sock->code(attr_name) );
+		assert( qmgmt_sock->put(attr_name) );
 		assert( qmgmt_sock->end_of_message() );
 
 		qmgmt_sock->decode();
@@ -564,7 +582,7 @@ SendSpoolFile( char *filename )
 #define assert(x) if (!(x)) { errno = ETIMEDOUT; return NULL; }
 
 ClassAd *
-GetJobAd( int cluster_id, int proc_id )
+GetJobAd( int cluster_id, int proc_id, bool /*expStartdAttrs*/ )
 {
 	int	rval;
 
@@ -599,7 +617,7 @@ GetJobAd( int cluster_id, int proc_id )
 
 
 ClassAd *
-GetJobByConstraint( char *constraint )
+GetJobByConstraint( char const *constraint )
 {
 	int	rval;
 
@@ -607,7 +625,7 @@ GetJobByConstraint( char *constraint )
 
 		qmgmt_sock->encode();
 		assert( qmgmt_sock->code(CurrentSysCall) );
-		assert( qmgmt_sock->code(constraint) );
+		assert( qmgmt_sock->put(constraint) );
 		assert( qmgmt_sock->end_of_message() );
 
 		qmgmt_sock->decode();
@@ -668,7 +686,7 @@ GetNextJob( int initScan )
 
 
 ClassAd *
-GetNextJobByConstraint( char *constraint, int initScan )
+GetNextJobByConstraint( char const *constraint, int initScan )
 {
 	int	rval;
 
@@ -677,7 +695,7 @@ GetNextJobByConstraint( char *constraint, int initScan )
 	qmgmt_sock->encode();
 	assert( qmgmt_sock->code(CurrentSysCall) );
 	assert( qmgmt_sock->code(initScan) );
-	assert( qmgmt_sock->code(constraint) );
+	assert( qmgmt_sock->put(constraint) );
 	assert( qmgmt_sock->end_of_message() );
 
 	qmgmt_sock->decode();
@@ -703,7 +721,7 @@ GetNextJobByConstraint( char *constraint, int initScan )
 }
 
 ClassAd *
-GetAllJobsByConstraint( char *constraint, char *projection, ClassAdList &list)
+GetAllJobsByConstraint_imp( char const *constraint, char const *projection, ClassAdList &list)
 {
 	int	rval;
 
@@ -711,8 +729,8 @@ GetAllJobsByConstraint( char *constraint, char *projection, ClassAdList &list)
 
 		qmgmt_sock->encode();
 		assert( qmgmt_sock->code(CurrentSysCall) );
-		assert( qmgmt_sock->code(constraint) );
-		assert( qmgmt_sock->code(projection) );
+		assert( qmgmt_sock->put(constraint) );
+		assert( qmgmt_sock->put(projection) );
 		assert( qmgmt_sock->end_of_message() );
 
 
@@ -740,6 +758,9 @@ GetAllJobsByConstraint( char *constraint, char *projection, ClassAdList &list)
 
 	return 0;
 }
-#if defined(__cplusplus)
+
+void
+GetAllJobsByConstraint( char const *constraint, char const *projection, ClassAdList &list)
+{
+	GetAllJobsByConstraint_imp(constraint,projection,list);
 }
-#endif

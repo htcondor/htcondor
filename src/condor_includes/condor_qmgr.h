@@ -37,16 +37,15 @@ typedef struct {
 
 typedef int (*scan_func)(ClassAd *ad);
 
+typedef unsigned char SetAttributeFlags_t;
+const SetAttributeFlags_t NONDURABLE = 1;
+
 #define SHADOW_QMGMT_TIMEOUT 300
 
 // QmgmtPeer* getQmgmtConnectionInfo();
 // bool setQmgmtConnectionInfo(QmgmtPeer *peer);
 void unsetQmgmtConnection();
 
-
-#if defined(__cplusplus)
-extern "C" {
-#endif
 
 int InitializeConnection(const char *, const char *);
 int InitializeReadOnlyConnection(const char * );
@@ -130,13 +129,13 @@ int SetAttributeStringByConstraint(const char *constraint, const char *attr,
 	quotes)
 	@return -1 on failure; 0 on success
 */
-int SetAttribute(int cluster, int proc, const char *attr, const char *value);
+int SetAttribute(int cluster, int proc, const char *attr, const char *value, SetAttributeFlags_t flags=0 );
 /** Set attr = value for job with specified cluster and proc.  The value
 	should be a valid ClassAd value (strings should be surrounded by
 	quotes)
 	@return -1 on failure; 0 on success
 */
-int SetAttributeInt(int cluster, int proc, const char *attr, int value);
+int SetAttributeInt(int cluster, int proc, const char *attr, int value, SetAttributeFlags_t flags = 0 );
 /** Set attr = value for job with specified cluster and proc.  The value
 	should be a valid ClassAd value (strings should be surrounded by
 	quotes)
@@ -165,8 +164,9 @@ int SetMyProxyPassword (int cluster, int proc, const char * pwd);
 
 
 int CloseConnection();
+bool InTransaction();
 void BeginTransaction();
-void CommitTransaction();
+void CommitTransaction(SetAttributeFlags_t flags=0);
 void AbortTransaction();
 void AbortTransactionAndRecomputeClusters();
 
@@ -265,10 +265,6 @@ int GetProc(int, int, PROC *);
 #endif
 
 bool Reschedule();
-
-#if defined(__cplusplus)
-}
-#endif
 
 #define SetAttributeExpr(cl, pr, name, val) SetAttribute(cl, pr, name, val);
 #define SetAttributeExprByConstraint(con, name, val) SetAttributeByConstraint(con, name, val);

@@ -2449,7 +2449,7 @@ jobIsFinishedDone( int cluster, int proc, void*, int )
 			 "jobIsFinished() completed, calling DestroyProc(%d.%d)\n",
 			 cluster, proc );
 	SetAttributeInt( cluster, proc, ATTR_JOB_FINISHED_HOOK_DONE,
-					 (int)time(NULL) );
+					 (int)time(NULL), NONDURABLE);
 	return DestroyProc( cluster, proc );
 }
 
@@ -7213,8 +7213,12 @@ Scheduler::start_std( match_rec* mrec , PROC_ID* job_id, int univ )
 	dprintf( D_FULLDEBUG, "Scheduler::start_std - job=%d.%d on %s\n",
 			job_id->cluster, job_id->proc, mrec->peer );
 
+	BeginTransaction();
 	mark_job_running(job_id);
 	SetAttributeInt(job_id->cluster, job_id->proc, ATTR_CURRENT_HOSTS, 1);
+		// nothing that has been written in this transaction needs to
+		// be immediately synced to disk
+	CommitTransaction( NONDURABLE );
 
 	// add job to run queue
 	shadow_rec* srec=add_shadow_rec( 0, job_id, univ, mrec, -1 );
@@ -7858,8 +7862,10 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	}
 	
 	dprintf ( D_ALWAYS, "Successfully created sched universe process\n" );
+	BeginTransaction();
 	mark_job_running(job_id);
 	SetAttributeInt(job_id->cluster, job_id->proc, ATTR_CURRENT_HOSTS, 1);
+	CommitTransaction();
 	WriteExecuteToUserLog( *job_id );
 
 		/* this is somewhat evil.  these values are absolutely
@@ -8291,21 +8297,22 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 		DeleteAttribute( cluster, proc, ATTR_CLAIM_IDS );
 		DeleteAttribute( cluster, proc, ATTR_PUBLIC_CLAIM_IDS );
 		DeleteAttribute( cluster, proc, ATTR_REMOTE_HOST );
+		DeleteAttribute( cluster, proc, ATTR_REMOTE_POOL );
+		DeleteAttribute( cluster, proc, ATTR_REMOTE_SLOT_ID );
+		DeleteAttribute( cluster, proc, ATTR_REMOTE_VIRTUAL_MACHINE_ID ); // CRUFT
 	} else {
 		dprintf( D_FULLDEBUG, "Job %d.%d has keepClaimAttributes set to true. "
 					    "Not removing %s and %s attributes.\n",
 					    cluster, proc, ATTR_CLAIM_ID, ATTR_REMOTE_HOST );
 	}
 
-	DeleteAttribute( cluster, proc, ATTR_REMOTE_POOL );
-	DeleteAttribute( cluster, proc, ATTR_REMOTE_SLOT_ID );
-	DeleteAttribute( cluster, proc, ATTR_REMOTE_VIRTUAL_MACHINE_ID ); // CRUFT
 	DeleteAttribute( cluster, proc, ATTR_SHADOW_BIRTHDATE );
 
 		// we want to commit all of the above changes before we
 		// call check_zombie() since it might do it's own
 		// transactions of one sort or another...
-	CommitTransaction();
+		// Nothing written in this transaction requires immediate sync to disk.
+	CommitTransaction( NONDURABLE );
 
 	check_zombie( pid, &(rec->job_id) );
 		// If the shadow went away, this match is no longer
@@ -8970,6 +8977,9 @@ set_job_status(int cluster, int proc, int status)
 {
 	int universe = CONDOR_UNIVERSE_STANDARD;
 	GetAttributeInt(cluster, proc, ATTR_JOB_UNIVERSE, &universe);
+
+	BeginTransaction();
+
 	if( ( universe == CONDOR_UNIVERSE_PVM) || 
 		( universe == CONDOR_UNIVERSE_MPI) ||
 		( universe == CONDOR_UNIVERSE_PARALLEL) ) {
@@ -8997,6 +9007,10 @@ set_job_status(int cluster, int proc, int status)
 		SetAttributeInt( cluster, proc,
 						 ATTR_LAST_SUSPENSION_TIME, 0 ); 
 	}
+
+		// Nothing written in this transaction requires immediate
+		// sync to disk.
+	CommitTransaction( NONDURABLE );
 }
 
 void
@@ -9509,8 +9523,7 @@ Scheduler::check_zombie(int pid, PROC_ID* job_id)
 			 pid, job_id, status );
 
 	// set cur-hosts to zero
-	SetAttributeInt( job_id->cluster, job_id->proc,
-					 ATTR_CURRENT_HOSTS, 0 ); 
+	SetAttributeInt( job_id->cluster, job_id->proc, ATTR_CURRENT_HOSTS, 0, NONDURABLE ); 
 
 	switch( status ) {
 	case RUNNING:
@@ -9870,6 +9883,7 @@ Scheduler::Init()
 		dprintf( D_FULLDEBUG, "No Accountant host specified in config file\n" );
 	}
 
+	CloseJobHistoryFile();
 	if( JobHistoryFileName ) free( JobHistoryFileName );
 	if( ! (JobHistoryFileName = param("HISTORY")) ) {
 		  dprintf(D_FULLDEBUG, "No history file specified in config file\n" );

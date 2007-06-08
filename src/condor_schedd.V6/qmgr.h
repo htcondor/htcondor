@@ -31,15 +31,7 @@
 
 #include "condor_io.h"
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
-
 class Service;
 int handle_q(Service *, int, Stream *sock);
-
-#if defined(__cplusplus)
-}
-#endif
 
 #endif /* _QMGR_H */
