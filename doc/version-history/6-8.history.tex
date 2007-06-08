@@ -51,6 +51,12 @@ The details of each version are described below.
 debug symbol files are now supported. This allows meaningful debugging of
 core files in addition to attaching to stripped executables during runtime.
 
+\item \Condor{dagman} now prints reports of pending nodes to the
+\File{dagman.out}, if it has been waiting more than
+\MacroNI{DAGMAN\_PENDING\_REPORT\_INTERVAL} seconds without seeing
+any node job events.  (This is to help diagnose the problem if
+\Condor{dagman} gets "stuck".)
+
 \end{itemize}
 
 \noindent Bugs Fixed:

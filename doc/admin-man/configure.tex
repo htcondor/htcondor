@@ -5641,6 +5641,19 @@ gets rerun on that DAG.  This should be quite rare, however.
 If not defined, \MacroNI{DAGMAN\_ABORT\_DUPLICATES} defaults to
 \Expr{False}.
 
+\item[\Macro{DAGMAN\_PENDING\_REPORT\_INTERVAL}]
+\label{param:DAGManPendingReportInterval}
+An integer value (in seconds) that controls how often \Condor{dagman}
+will print a report of pending nodes to the \File{dagman.out} file.
+Note that the report will only be printed if \Condor{dagman} has
+been waiting at least \MacroNI{DAGMAN\_PENDING\_REPORT\_INTERVAL}
+seconds without seeing any node job user log events, in order to
+avoid cluttering the \File{dagman.out} file.  (This feature is mainly
+intended to help diagnose "stuck" \Condor{dagman} processes that
+are waiting indefinitely for a job to finish.) If not defined,
+\MacroNI{DAGMAN\_PENDING\_REPORT\_INTERVAL} defaults to 600 seconds
+(10 minutes).
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
