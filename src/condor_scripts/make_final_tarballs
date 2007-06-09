@@ -519,6 +519,7 @@ sub runcmd() {
 	# or not.
 	if( ($? >> 8) != 0 ) {
 		if (!defined($shouldnt_die)) {
+			$out = join("\n", @out);
 	   		die "Can't $cmd: $out";
 		}
 	}
