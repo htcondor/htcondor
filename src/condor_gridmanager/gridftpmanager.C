@@ -411,8 +411,8 @@ bool GridftpServer::ScanSchedd()
 		// the old port.
 	expr.sprintf( "%s == \"%s\" && %s =?= True && ( %s == %d || %s == %d ) && "
 				  "( %s =!= Undefined || ( %s + ( %s == %d ) ) <= 1 )",
-				  ATTR_OWNER, Owner, ATTR_GRIDFTP_SERVER_JOB, ATTR_JOB_STATUS,
-				  IDLE, ATTR_JOB_STATUS, RUNNING,
+				  ATTR_OWNER, myUserName, ATTR_GRIDFTP_SERVER_JOB,
+				  ATTR_JOB_STATUS, IDLE, ATTR_JOB_STATUS, RUNNING,
 				  ATTR_REQUESTED_GRIDFTP_URL_BASE, ATTR_JOB_RUN_COUNT,
 				  ATTR_JOB_STATUS, IDLE );
 
@@ -554,7 +554,7 @@ bool GridftpServer::SubmitServerJob()
 		}
 	}
 
-	job_ad = CreateJobAd( Owner, CONDOR_UNIVERSE_SCHEDULER,
+	job_ad = CreateJobAd( myUserName, CONDOR_UNIVERSE_SCHEDULER,
 						  wrapper_path ? wrapper_path : server_path );
 
 	job_ad->Assign( ATTR_JOB_STATUS, HELD );
@@ -584,7 +584,7 @@ bool GridftpServer::SubmitServerJob()
 	}
 
 	if ( fprintf( mapfile_fp, "\"%s\" %s\n", m_proxy->subject->subject_name,
-				  Owner ) < 0 ) {
+				  myUserName ) < 0 ) {
 		dprintf( D_ALWAYS, "GridftpServer::SubmitServerJob: Failed to write "
 				 "to %s, errno=%d\n", mapfile, errno );
 		goto error_exit;

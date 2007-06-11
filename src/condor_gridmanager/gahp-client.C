@@ -689,7 +689,7 @@ GahpServer::Startup()
 	m_gahp_pid = daemonCore->Create_Process(
 			gahp_path,		// Name of executable
 			gahp_args,		// Args
-			PRIV_UNKNOWN,	// Priv State ---- keep the same 
+			PRIV_USER_FINAL,// Priv State ---- drop root if we have it
 			m_reaperid,		// id for our registered reaper
 			FALSE,			// do not want a command port
 			&newenv,	  	// env

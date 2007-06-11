@@ -57,8 +57,6 @@
 
 #define HASH_TABLE_SIZE			500
 
-extern char *myUserName;
-
 struct JobType
 {
 	char *Name;
@@ -116,8 +114,6 @@ DCSchedd *ScheddObj = NULL;
 bool firstScheddContact = true;
 int scheddFailureCount = 0;
 int maxScheddFailures = 10;	// Years of careful research...
-
-char *Owner = NULL;
 
 void RequestContactSchedd();
 int doContactSchedd();
@@ -306,11 +302,6 @@ Init()
 
 	// read config file
 	// initialize variables
-
-	Owner = my_username();
-	if ( Owner == NULL ) {
-		EXCEPT( "Can't determine username" );
-	}
 
 	if ( GridmanagerScratchDir == NULL ) {
 		EXCEPT( "Schedd didn't specify scratch dir with -S" );

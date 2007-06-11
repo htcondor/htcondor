@@ -45,7 +45,7 @@ extern char *ScheddAddr;
 extern DCSchedd *ScheddObj;
 extern char *ScheddJobConstraint;
 extern char *GridmanagerScratchDir;
-extern char *Owner;
+extern char *myUserName;
 
 // initialization
 void Init();
