@@ -241,6 +241,14 @@ Condor's behavior on most other Unix-like operating systems, including
   \Env{CONDOR\_VM} environment variable, which was only defined for
   standard universe jobs.
 
+\item Added a \Macro{USE\_PROCD} configuration parameter. If this
+parameter is set to true for a given daemon, the daemon will use the
+\Condor{procd} program to monitor process families. If set to false,
+the daemon will execute process family monitoring logic on its
+own. The \Condor{procd} is more scalable and is also an essential
+piece in the ongoing privilege separation effort. The disadvantage of
+using the ProcD is that it is newer, less-hardened code.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
